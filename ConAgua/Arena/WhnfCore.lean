@@ -9,7 +9,7 @@ slot, `:3546`), in L:
 
 | L | twin |
 |---|---|
-| `whnf_core(mode, cheap, vis, d, e)` | the knot's `whnfCore` slot: `whnfCoreStuckTag`, the memo (`whnfCoreCheapC` / `whnfCoreC`, at the current generation), `whnfCoreBody` |
+| `whnf_core(mode, cheap, vis, d, e)` | the knot's `whnfCore` slot: `whnfCoreStuckTag`, the memo (`whnfCoreCheapC` / `whnfCoreC`, at the mode's eager bit), `whnfCoreBody` |
 | `whnf_core_loop(mode, cheap, vis, d, e)` | `whnfCoreBody` = `whnfCoreLoop … whnfCoreLoopFuel` (an uncounted L loop) |
 | `whnf_core_step(mode, cheap, vis, d, e)` | `whnfCoreStep` (`(0, e)` done, `(1, e)` continue) |
 | `whnf_app(mode, vis, d, v, hd, vo, vn, same, ao, an, i)` | `whnfApp`: the head's arguments `vargs` a stack slice `(vo, vn)` at the top, the spine's arguments and nodes the slices `(ao, an)`, `(ao + an, an)` |
@@ -50,18 +50,18 @@ def whnfCoreL : FunDecl := lfn (mode, cheap, vis, d, e) locals (g, fd, j, dd, x,
   g := e >> 28;
   if g != 4 && g != 9 && g != 7 && g != 0 { return e };
   if cheap != 0 {
-    (fd, j, dd) := call wk_find(e, CTL.u64[115] << 32);
+    (fd, j, dd) := call wk_find(e, ((mode >> 1) & 1) << 32);
     if fd != 0 { return WKM.u64[j * 4 + 3] };
     x := call whnf_core_loop(mode, 1, vis, d, e);
-    (fd, j, dd) := call wk_find(e, CTL.u64[115] << 32);
-    u := call wk_put(e, CTL.u64[115] << 32, x, fd, j);
+    (fd, j, dd) := call wk_find(e, ((mode >> 1) & 1) << 32);
+    u := call wk_put(e, ((mode >> 1) & 1) << 32, x, fd, j);
     return x
   };
-  (fd, j, dd) := call wc_find(e, CTL.u64[115] << 32);
+  (fd, j, dd) := call wc_find(e, ((mode >> 1) & 1) << 32);
   if fd != 0 { return WCM.u64[j * 4 + 3] };
   x := call whnf_core_loop(mode, 0, vis, d, e);
-  (fd, j, dd) := call wc_find(e, CTL.u64[115] << 32);
-  u := call wc_put(e, CTL.u64[115] << 32, x, fd, j);
+  (fd, j, dd) := call wc_find(e, ((mode >> 1) & 1) << 32);
+  u := call wc_put(e, ((mode >> 1) & 1) << 32, x, fd, j);
   return x
 }
 
@@ -287,9 +287,9 @@ structure WhnfCoreProg (p : Prog) : Prop where
 /-- `inst1(e, v, d)` refines `instantiate1Fast coreWalkFuel e v d` (the exact counter). -/
 def Inst1OK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (M : ModeMaps) (G g e v d : Word), CoreS dn s₀.mem a₀ vis fe M G g → HW e → HW v →
+    (M : ModeMaps) (eb e v d : Word), CoreS dn s₀.mem a₀ vis fe M eb → HW e → HW v →
     CoreSpec p n "inst1" [e, v, d] (instantiate1Fast coreWalkFuel (decE e) (decE v) d.toNat) decH
-      s₀ a₀ dn vis fe M G g
+      s₀ a₀ dn vis fe M eb
 
 /-- The projection entry at field `i` of the table record at `q`, if any. -/
 def decEntry (a : Array Word) (f q : Word) (i : Nat) : Option IProjEntry :=
@@ -298,28 +298,28 @@ def decEntry (a : Array Word) (f q : Word) (i : Nat) : Option IProjEntry :=
 /-- `find_proj(vis, T, i)` refines `fe.findProj? T i`: `(0, _)` none, `(1, q)` the table record. -/
 def FindProjOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (M : ModeMaps) (G g T i : Word), CoreS dn s₀.mem a₀ vis fe M G g → HW T →
+    (M : ModeMaps) (eb T i : Word), CoreS dn s₀.mem a₀ vis fe M eb → HW T →
     CoreSpec p n "find_proj" [vis, T, i] (fe.findProj? (decI T) i.toNat)
       (fun r => decEntry (s₀.mem.arr64 EREC) (r.headD 0) (r.tail.headD 0) i.toNat) s₀ a₀ dn vis fe
-      M G g
+      M eb
 
 /-- `fire_ok(q, i, us)` refines `IProjEntry.fireOk` at the entry of table record `q`. -/
 def FireOkOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (M : ModeMaps) (G g q i us : Word) (tbl : IProjTable), CoreS dn s₀.mem a₀ vis fe M G g →
+    (M : ModeMaps) (eb q i us : Word) (tbl : IProjTable), CoreS dn s₀.mem a₀ vis fe M eb →
     HW us → decTbl (s₀.mem.arr64 EREC) q.toNat = some tbl →
     CoreSpec p n "fire_ok" [q, i, us] ((tbl.entry i.toNat).fireOk (decI us)) decBool s₀ a₀ dn vis
-      fe M G g
+      fe M eb
 
 /-- `iota_rec_at(mode, vis, d, hd, so, sn)` refines `iotaRecAt` (`WhnfIota.lean`). -/
 def IotaRecAtOK (p : Prog) (n : Nat) : Prop :=
   ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (M : ModeMaps) (G g mode d hd so sn : Word) (xs : Array EIdx), n ≤ F → n ≤ 2 ^ 62 →
-    SlotPre s₀ a₀ dn vis fe M G g mode → HW hd → SpineR s₀.mem so sn xs →
+    (M : ModeMaps) (eb mode d hd so sn : Word) (xs : Array EIdx), n ≤ F → n ≤ 2 ^ 62 →
+    SlotPre s₀ a₀ dn vis fe M eb mode → HW hd → SpineR s₀.mem so sn xs →
     so.toNat + sn.toNat ≤ (spTop s₀.mem).toNat →
     CoreSpec p n "iota_rec_at" [mode, vis, d, hd, so, sn]
       (iotaRecAt (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE hd) xs xs.size)
-      decOptR s₀ a₀ dn vis fe M G g ResW
+      decOptR s₀ a₀ dn vis fe M eb ResW
 
 /-- **The callees of this file not written here.** -/
 structure CoreCallees (p : Prog) : Prop where
@@ -345,94 +345,94 @@ variable (p : Prog) (hp : WhnfCoreProg p) (hw : WhnfCallees p) (hc : CoreCallees
 @[refines ConRon.Arena.whnfCoreStep]
 theorem whnfCoreStep_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (G g mode cheap d e : Word) (hs : SlotPre s₀ a₀ dn vis fe MM G g mode)
+    (MM : ModeMaps) (eb mode cheap d e : Word) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode)
     (he : HW e) :
     CoreSpec p (n + 1) "whnf_core_step" [mode, cheap, vis, d, e]
       (whnfCoreStep (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat
-        (decE e)) decStep s₀ a₀ dn vis fe MM G g ResW := sorry
+        (decE e)) decStep s₀ a₀ dn vis fe MM eb ResW := sorry
 
 /-- **`whnf_core_loop` refines `whnfCoreLoop` at every twin loop fuel `K ≥ n`.** -/
 @[refines ConRon.Arena.whnfCoreLoop]
 theorem whnfCoreLoop_refines (n : Nat) (hk : KnotUpTo p n) (F K : Nat) (hF : n ≤ F) (hK : n ≤ K)
     (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (MM : ModeMaps) (G g mode cheap d e : Word)
-    (hs : SlotPre s₀ a₀ dn vis fe MM G g mode) (he : HW e) :
+    (fe : IFEnv) (MM : ModeMaps) (eb mode cheap d e : Word)
+    (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e) :
     CoreSpec p (n + 1) "whnf_core_loop" [mode, cheap, vis, d, e]
       (whnfCoreLoop (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat K
-        (decE e)) decH s₀ a₀ dn vis fe MM G g := sorry
+        (decE e)) decH s₀ a₀ dn vis fe MM eb := sorry
 
 /-- **`whnf_core_loop` refines `whnfCoreBody`** (the loop at `whnfCoreLoopFuel = 2^62`). -/
 @[refines ConRon.Arena.whnfCoreBody]
 theorem whnfCoreBody_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F)
     (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (MM : ModeMaps) (G g mode cheap d e : Word)
-    (hs : SlotPre s₀ a₀ dn vis fe MM G g mode) (he : HW e) :
+    (fe : IFEnv) (MM : ModeMaps) (eb mode cheap d e : Word)
+    (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e) :
     CoreSpec p (n + 1) "whnf_core_loop" [mode, cheap, vis, d, e]
       (whnfCoreBody (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat
-        (decE e)) decH s₀ a₀ dn vis fe MM G g :=
+        (decE e)) decH s₀ a₀ dn vis fe MM eb :=
   whnfCoreLoop_refines p n hk F whnfCoreLoopFuel hF (by simp only [whnfCoreLoopFuel]; omega) hn s₀
-    a₀ dn vis fe MM G g mode cheap d e hs he
+    a₀ dn vis fe MM eb mode cheap d e hs he
 
 /-- **`whnf_app` refines `whnfApp`**: `vargs` the slice `(vo, vn)` at the top of the stack, the
 spine's arguments and nodes the slices `(ao, an)`, `(ao + an, an)` below it. -/
 @[refines ConRon.Arena.whnfApp]
 theorem whnfApp_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (G g mode d v hd vo vn same ao an i : Word)
-    (vargs args nodes : Array EIdx) (hs : SlotPre s₀ a₀ dn vis fe MM G g mode) (hv : HW v)
+    (MM : ModeMaps) (eb mode d v hd vo vn same ao an i : Word)
+    (vargs args nodes : Array EIdx) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (hv : HW v)
     (hhd : HW hd) (hva : SpineR s₀.mem vo vn vargs) (htop : spTop s₀.mem = vo + vn)
     (har : SpineR s₀.mem ao an args) (hno : SpineR s₀.mem (ao + an) an nodes)
     (hlo : ao.toNat + an.toNat + an.toNat ≤ vo.toNat) :
     CoreSpec p (n + 1) "whnf_app" [mode, vis, d, v, hd, vo, vn, same, ao, an, i]
       (whnfApp (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE v) (decE hd) vargs
-        (same != 0) args nodes i.toNat) decStep s₀ a₀ dn vis fe MM G g ResW := sorry
+        (same != 0) args nodes i.toNat) decStep s₀ a₀ dn vis fe MM eb ResW := sorry
 
 /-- **`beta_peel` refines `betaPeel t #[a] args i`.** -/
 @[refines ConRon.Arena.betaPeel]
 theorem betaPeel_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (vis : Word) (fe : IFEnv) (MM : ModeMaps) (G g t a ao an i : Word) (args : Array EIdx)
-    (hS : CoreS dn s₀.mem a₀ vis fe MM G g) (ht : HW t) (ha : HW a) (har : SpineR s₀.mem ao an args)
+    (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb t a ao an i : Word) (args : Array EIdx)
+    (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (ht : HW t) (ha : HW a) (har : SpineR s₀.mem ao an args)
     (hlo : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat) :
     CoreSpec p (n + 1) "beta_peel" [t, a, ao, an, i]
-      (betaPeel (decE t) #[decE a] args i.toNat) decStep s₀ a₀ dn vis fe MM G g ResW := sorry
+      (betaPeel (decE t) #[decE a] args i.toNat) decStep s₀ a₀ dn vis fe MM eb ResW := sorry
 
 /-- **`whnf_core_step_proj` refines `whnfCoreStepProj`.** -/
 @[refines ConRon.Arena.whnfCoreStepProj]
 theorem whnfCoreStepProj_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F)
     (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (MM : ModeMaps) (G g mode cheap d e sn i pe : Word)
-    (hs : SlotPre s₀ a₀ dn vis fe MM G g mode) (he : HW e) (hsn : HW sn) (hpe : HW pe) :
+    (fe : IFEnv) (MM : ModeMaps) (eb mode cheap d e sn i pe : Word)
+    (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e) (hsn : HW sn) (hpe : HW pe) :
     CoreSpec p (n + 1) "whnf_core_step_proj" [mode, cheap, vis, d, e, sn, i, pe]
       (whnfCoreStepProj (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat
-        (decE e) (decI sn) i.toNat (decE pe)) decStep s₀ a₀ dn vis fe MM G g ResW := sorry
+        (decE e) (decI sn) i.toNat (decE pe)) decStep s₀ a₀ dn vis fe MM eb ResW := sorry
 
 /-- **`reduce_proj_core` refines `reduceProjCore`.** -/
 @[refines ConRon.Arena.reduceProjCore]
 theorem reduceProjCore_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F)
     (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (MM : ModeMaps) (G g mode d sn i c : Word)
-    (hs : SlotPre s₀ a₀ dn vis fe MM G g mode) (hsn : HW sn) (hc' : HW c) :
+    (fe : IFEnv) (MM : ModeMaps) (eb mode d sn i c : Word)
+    (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (hsn : HW sn) (hc' : HW c) :
     CoreSpec p (n + 1) "reduce_proj_core" [mode, vis, d, sn, i, c]
       (reduceProjCore (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat
-        (decE c)) decOptR s₀ a₀ dn vis fe MM G g ResW := sorry
+        (decE c)) decOptR s₀ a₀ dn vis fe MM eb ResW := sorry
 
 /-- **`proj_cert` refines `projCertAt fe true`** (`projCert`). -/
 @[refines ConRon.Arena.projCert]
 theorem projCert_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (vis : Word) (fe : IFEnv) (MM : ModeMaps) (G g k ao an : Word) (args : Array EIdx)
-    (hS : CoreS dn s₀.mem a₀ vis fe MM G g) (hk' : HW k) (har : SpineR s₀.mem ao an args) :
+    (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb k ao an : Word) (args : Array EIdx)
+    (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (hk' : HW k) (har : SpineR s₀.mem ao an args) :
     CoreSpec p (n + 1) "proj_cert" [vis, k, ao, an] (projCert fe (decI k) args.toList) decBool s₀ a₀
-      dn vis fe MM G g := sorry
+      dn vis fe MM eb := sorry
 
 /-- **`proj_lit_to_ctor` refines `projLitToCtor`.** -/
 @[refines ConRon.Arena.projLitToCtor]
 theorem projLitToCtor_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F)
     (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (MM : ModeMaps) (G g mode d h : Word) (hs : SlotPre s₀ a₀ dn vis fe MM G g mode)
+    (fe : IFEnv) (MM : ModeMaps) (eb mode d h : Word) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode)
     (hh : HW h) :
     CoreSpec p (n + 1) "proj_lit_to_ctor" [mode, vis, d, h]
       (projLitToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h)) decH s₀ a₀ dn vis fe
-      MM G g := sorry
+      MM eb := sorry
 
 end specs
 

@@ -10,15 +10,15 @@ import ConAgua.Census.Attr
 `Caches`. This file has what the core's L code needs of it:
 
 * `flush_caches()` refines `flushCaches` under `CheckR` (`flushCaches_refinesC`);
-* a probe of a mode memo at the current generation is the twin's lookup (`ModeR.findE`,
-  `ModeR.findD`), a `find; put` is its insert and keeps the other generations' banks
-  (`ModeR.setE`, `ModeR.setD`, `Kept`);
+* a probe of a mode memo at the eager bit is the twin's lookup (`ModeR.findE`, `ModeR.findD`), a
+  `find; put` is its insert and keeps the other bank (`ModeR.setE`);
 * the same for the three constant caches (`MemoRV … VH` directly: `memoRV_findP`, `findR`);
 * the whole tier across one memo's `find; put` (`CoreRM.set_wc`, …): the other eight memos and the
   bank words by their frames.
 
-The second key word at generation `g` is `genW k2 g = k2 ||| g << 32`; for a one-handle key it is
-`g << 32` (`genW_zero`), which is what the L code computes from `CTL[115]`.
+The second key word at eager bit `eb` is `genW k2 eb = k2 ||| eb << 32`; for a one-handle key it
+is `eb << 32` (`genW_zero`), which is what the L code computes from the mode word,
+`((mode >> 1) & 1) << 32`.
 -/
 
 open ConRon.Arena
@@ -69,85 +69,62 @@ theorem flushCaches_refinesC (p : Prog) (hp : FlushProg p) (a₀ : AState) (n : 
 
 theorem genW_zero (g : Word) : genW 0 g = g <<< 32 := by simp [genW]
 
-/-- The other generations' banks are kept: an insert at `g` (or a run that only inserts at `g`
-and above `G`) leaves every generation `g' ≤ G`, `g' ≠ g` alone. -/
-def Kept {κ ν : Type} [BEq κ] [Hashable κ] (M M' : Std.HashMap (κ × Word) ν) (G g : Word) : Prop :=
-  ∀ (k : κ) (g' : Word), g' ≤ G → g' ≠ g → M'[(k, g')]? = M[(k, g')]?
-
-theorem Kept.refl {κ ν : Type} [BEq κ] [Hashable κ] (M : Std.HashMap (κ × Word) ν) (G g : Word) :
-    Kept M M G g := fun _ _ _ _ => rfl
-
-theorem Kept.trans {κ ν : Type} [BEq κ] [Hashable κ] {M₁ M₂ M₃ : Std.HashMap (κ × Word) ν}
-    {G g : Word} (h₁ : Kept M₁ M₂ G g) (h₂ : Kept M₂ M₃ G g) : Kept M₁ M₃ G g :=
-  fun k g' h1 h2 => (h₂ k g' h1 h2).trans (h₁ k g' h1 h2)
-
-theorem Kept.insert {κ ν : Type} [BEq κ] [Hashable κ] [LawfulBEq κ] (M : Std.HashMap (κ × Word) ν)
-    (G g : Word) (k : κ) (v : ν) : Kept M (M.insert (k, g) v) G g := by
-  intro k' g' _ hne
-  rw [Std.HashMap.getElem?_insert]
-  have : ¬ ((k, g) == (k', g')) = true := by simp [Ne.symm hne]
-  simp [this]
-
 section modeE
-variable {S : MemoSch} {m : Mem} {M : Std.HashMap (EIdx × Word) EIdx} {G g : Word}
-  {t : Std.HashMap EIdx EIdx}
+variable {S : MemoSch} {m : Mem} {M : Std.HashMap (EIdx × Word) EIdx} {eb : Word}
+  {t te : Std.HashMap EIdx EIdx}
 
-/-- **A probe of a one-handle mode memo** at the current generation: a hit is the twin table's
-entry, a miss its absence. -/
-theorem ModeR.findE (h : ModeR S eKeyG VH m M G g t) (hB : BankW BANKC m G g) (e : Word)
-    (he : e.toNat < 2 ^ 32) (hr : mfindG S m e (genW 0 g) ≠ []) :
-    ((mfindG S m e (genW 0 g)).headD 0 ≠ 0 →
-      t[decE e]? = some (decE (mvG S m ((mfindG S m e (genW 0 g)).tail.headD 0))) ∧
-      (mvG S m ((mfindG S m e (genW 0 g)).tail.headD 0)).toNat < 2 ^ 32) ∧
-    ((mfindG S m e (genW 0 g)).headD 0 = 0 → t[decE e]? = none) := by
-  have hg : g.toNat < 2 ^ 32 := by
-    obtain ⟨-, -, hgG, hGl, -⟩ := hB; rw [UInt64.le_iff_toNat_le] at hgG; omega
-  have := bank_find S bmKey _ VH m M h.memo g hg t h.bank e 0 ⟨he, rfl⟩ hr
+/-- **A probe of a one-handle mode memo** at the eager bit `eb`: a hit is the twin field's entry
+(a handle word), a miss its absence. -/
+theorem ModeR.findE (h : ModeR S eKeyG VH m M eb t te) (heb : eb ≤ 1) (e : Word)
+    (he : e.toNat < 2 ^ 32) (hr : mfindG S m e (genW 0 eb) ≠ []) :
+    ((mfindG S m e (genW 0 eb)).headD 0 ≠ 0 →
+      t[decE e]? = some (decE (mvG S m ((mfindG S m e (genW 0 eb)).tail.headD 0))) ∧
+      (mvG S m ((mfindG S m e (genW 0 eb)).tail.headD 0)).toNat < 2 ^ 32) ∧
+    ((mfindG S m e (genW 0 eb)).headD 0 = 0 → t[decE e]? = none) := by
+  have hg : eb.toNat < 2 ^ 32 := by rw [UInt64.le_iff_toNat_le] at heb; simp at heb; omega
+  have := bank_find S bmKey _ VH m M h.memo eb hg t h.cur e 0 ⟨he, rfl⟩ hr
   refine ⟨fun hh => ?_, this.2⟩
   obtain ⟨v, h1, h2, h3⟩ := this.1 hh
   exact ⟨h1.trans (congrArg some h2), h3⟩
 
-/-- **A `find; put` of a one-handle mode memo** at the current generation is the twin table's
-insert; the map grows by one entry at `g`. -/
-theorem ModeR.setE (hS : S.WF) (hc : S.cs + 1 ≠ BANKC ∧ S.cs + 1 ≠ BANKC + 1)
-    (h : ModeR S eKeyG VH m M G g t) (hB : BankW BANKC m G g) (e r : Word)
+/-- `genKey`'s decoding at a handle word and an eager bit. -/
+theorem eKeyG_dk (e eb : Word) (he : e.toNat < 2 ^ 32) (heb : eb ≤ 1) :
+    eKeyG.dk e (genW 0 eb) = (decE e, eb) := by
+  have hg : eb.toNat < 2 ^ 32 := by rw [UInt64.le_iff_toNat_le] at heb; simp at heb; omega
+  show (bmKey.dk e (genW 0 eb &&& 0xFFFFFFFF), genW 0 eb >>> 32) = _
+  rw [genW_lo 0 eb (by decide), genW_hi 0 eb (by decide) hg]; rfl
+
+/-- **A `find; put` of a one-handle mode memo** at the eager bit `eb` is the twin field's insert;
+the stored eager table is another bank and stays. -/
+theorem ModeR.setE (hS : S.WF) (h : ModeR S eKeyG VH m M eb t te) (heb : eb ≤ 1) (e r : Word)
     (he : e.toNat < 2 ^ 32) (hr : r.toNat < 2 ^ 32) (m' : Mem)
-    (hs : msetG S m e (genW 0 g) r = some m') :
-    ModeR S eKeyG VH m' (M.insert (decE e, g) (decE r)) G g (t.insert (decE e) (decE r)) ∧
-      BankW BANKC m' G g := by
-  have := bank_put S hS bmKey _ VH (fun _ _ _ _ _ h => h) BANKC hc m M
-    h.memo G g hB h.fresh t h.bank e 0 r ⟨he, rfl⟩ (decE r) ⟨rfl, hr⟩ m' hs
-  exact ⟨⟨this.1, this.2.1, this.2.2.1⟩, this.2.2.2⟩
+    (hs : msetG S m e (genW 0 eb) r = some m') :
+    ModeR S eKeyG VH m' (M.insert (decE e, eb) (decE r)) eb (t.insert (decE e) (decE r)) te := by
+  have hok : eKeyG.ok e (genW 0 eb) := by
+    show bmKey.ok e (genW 0 eb &&& 0xFFFFFFFF); rw [genW_lo 0 eb (by decide)]; exact ⟨he, rfl⟩
+  have hR := memoRV_set S hS eKeyG VH (fun _ _ _ _ _ h => h) m M h.memo e (genW 0 eb) r hok
+    (decE r) ⟨rfl, hr⟩ m' hs
+  rw [eKeyG_dk e eb he heb] at hR
+  refine ⟨hR, bank_set M eb t h.cur _ _, fun h0 => ?_, h.empty⟩
+  exact bank_other M eb 1 te (h.stored h0) (by rw [h0]; decide) _ _
 
 end modeE
 
 section modeD
-variable {S : MemoSch} {m : Mem} {M : Std.HashMap ((EIdx × EIdx) × Word) Bool} {G g : Word}
-  {t : Std.HashMap (EIdx × EIdx) Bool}
+variable {S : MemoSch} {m : Mem} {M : Std.HashMap ((EIdx × EIdx) × Word) Bool} {eb : Word}
+  {t te : Std.HashMap (EIdx × EIdx) Bool}
 
-/-- A probe of `defeqC` at the current generation. -/
-theorem ModeR.findD (h : ModeR S dKeyG VB m M G g t) (hB : BankW BANKC m G g) (a b : Word)
-    (ha : a.toNat < 2 ^ 32) (hb : b.toNat < 2 ^ 32) (hr : mfindG S m a (genW b g) ≠ []) :
-    ((mfindG S m a (genW b g)).headD 0 ≠ 0 →
-      t[(decE a, decE b)]? = some (decB (mvG S m ((mfindG S m a (genW b g)).tail.headD 0)))) ∧
-    ((mfindG S m a (genW b g)).headD 0 = 0 → t[(decE a, decE b)]? = none) := by
-  have hg : g.toNat < 2 ^ 32 := by
-    obtain ⟨-, -, hgG, hGl, -⟩ := hB; rw [UInt64.le_iff_toNat_le] at hgG; omega
-  have := bank_find S pairKey _ VB m M h.memo g hg t h.bank a b ⟨ha, hb⟩ hr
+/-- A probe of `defeqC` at the eager bit. -/
+theorem ModeR.findD (h : ModeR S dKeyG VB m M eb t te) (heb : eb ≤ 1) (a b : Word)
+    (ha : a.toNat < 2 ^ 32) (hb : b.toNat < 2 ^ 32) (hr : mfindG S m a (genW b eb) ≠ []) :
+    ((mfindG S m a (genW b eb)).headD 0 ≠ 0 →
+      t[(decE a, decE b)]? = some (decB (mvG S m ((mfindG S m a (genW b eb)).tail.headD 0)))) ∧
+    ((mfindG S m a (genW b eb)).headD 0 = 0 → t[(decE a, decE b)]? = none) := by
+  have hg : eb.toNat < 2 ^ 32 := by rw [UInt64.le_iff_toNat_le] at heb; simp at heb; omega
+  have := bank_find S pairKey _ VB m M h.memo eb hg t h.cur a b ⟨ha, hb⟩ hr
   refine ⟨fun hh => ?_, this.2⟩
   obtain ⟨v, h1, h2⟩ := this.1 hh
   exact h1.trans (congrArg some h2)
-
-/-- A `find; put` of `defeqC` at the current generation. -/
-theorem ModeR.setD (hS : S.WF) (hc : S.cs + 1 ≠ BANKC ∧ S.cs + 1 ≠ BANKC + 1)
-    (h : ModeR S dKeyG VB m M G g t) (hB : BankW BANKC m G g) (a b r : Word)
-    (ha : a.toNat < 2 ^ 32) (hb : b.toNat < 2 ^ 32) (m' : Mem)
-    (hs : msetG S m a (genW b g) r = some m') :
-    ModeR S dKeyG VB m' (M.insert ((decE a, decE b), g) (decB r)) G g
-        (t.insert (decE a, decE b) (decB r)) ∧ BankW BANKC m' G g := by
-  have := bank_put S hS pairKey _ VB (fun _ _ _ _ _ h => h) BANKC hc m M
-    h.memo G g hB h.fresh t h.bank a b r ⟨ha, hb⟩ (decB r) rfl m' hs
-  exact ⟨⟨this.1, this.2.1, this.2.2.1⟩, this.2.2.2⟩
 
 end modeD
 

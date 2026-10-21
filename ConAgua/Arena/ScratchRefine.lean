@@ -174,18 +174,16 @@ theorem dropScratch_run (a : AState) :
 
 /-- The `CTL` words `flush_caches()` writes. -/
 def flushCtl : List Word :=
-  [96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115,
+  [96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113,
    116, 117, 118, 119]
 
 theorem flushMem_frame (m : Mem) : MemFrame [] flushCtl m (flushMem m) :=
-  ((clearsL_frame coreSchs m).mono (by simp) (fun x h => by
+  (clearsL_frame coreSchs m).mono (by simp) (fun x h => by
     simp only [coreSchs, List.flatMap_cons, List.flatMap_nil, List.mem_append, List.mem_cons,
       List.not_mem_nil, or_false] at h
     simp only [flushCtl, List.mem_cons, List.not_mem_nil, or_false]
     rcases h with ((rfl | rfl) | (rfl | rfl) | (rfl | rfl) | (rfl | rfl) | (rfl | rfl) |
-      (rfl | rfl) | (rfl | rfl) | (rfl | rfl) | (rfl | rfl) | (rfl | rfl) | rfl | rfl) <;> decide)).trans
-    ((((MemFrame.setCtl _ 114 0).mono (by simp) (by simp [flushCtl])).trans
-      ((MemFrame.setCtl _ 115 0).mono (by simp) (by simp [flushCtl]))))
+      (rfl | rfl) | (rfl | rfl) | (rfl | rfl) | (rfl | rfl) | (rfl | rfl) | rfl | rfl) <;> decide)
 
 theorem flushCtl_ge : ∀ x ∈ flushCtl, 64 ≤ x.toNat := by simp [flushCtl]
 

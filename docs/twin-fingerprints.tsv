@@ -758,7 +758,7 @@ ConRon.Arena.failDanglingE	85495f579db31c74	4c9eaf78
 ConRon.Arena.failDanglingLs	300dc5f8e9f4a795	4c9eaf78
 ConRon.Arena.fieldDomsResolve	ca3cb9e55639bc51	4c9eaf78
 ConRon.Arena.findRule	a4334d7005a9cfbb	4c9eaf78
-ConRon.Arena.flushCaches	6a796364e41c7ec2	4c9eaf78
+ConRon.Arena.flushCaches	6a796364e41c7ec2	12752ca7
 ConRon.Arena.fuelSlack	fd8b283002488866	4c9eaf78
 ConRon.Arena.fvMapAt	6ea1e016185e7a81	4c9eaf78
 ConRon.Arena.fvarB	00587c5242090fdc	4c9eaf78
@@ -975,8 +975,8 @@ ConRon.Arena.litGuardNames	18ffa3954efa6eef	4c9eaf78
 ConRon.Arena.litMajorToCtor	0a3508734a803023	4c9eaf78
 ConRon.Arena.litToCtorIfNat	2cbe090c36d8f4f0	4c9eaf78
 ConRon.Arena.looseBVarsBoundedFast	60b05f0e13e49711	4c9eaf78
-ConRon.Arena.lvlEq?	f14a9e1b0ee97a73	4c9eaf78
-ConRon.Arena.lvlsEq?	d900530686cc7dd9	4c9eaf78
+ConRon.Arena.lvlEq?	da469e259acad1ff	12752ca7
+ConRon.Arena.lvlsEq?	90c28e7fd3dc8c8c	12752ca7
 ConRon.Arena.majorToCtor	36898a17d9cc0398	4c9eaf78
 ConRon.Arena.memberIdxAt?	965dc76f4bb7db91	4c9eaf78
 ConRon.Arena.mentionsAnyConst	b49fbb7b66e27c84	4c9eaf78
@@ -1224,7 +1224,7 @@ ConRon.Arena.reduceNatName	54f8cf5ffb486d52	4c9eaf78
 ConRon.Arena.reduceOpCvA	adf0c6a40a3bc865	4c9eaf78
 ConRon.Arena.reduceOpNames	3bf02d6476098912	4c9eaf78
 ConRon.Arena.reducePinGuard	2019eb2694fea054	4c9eaf78
-ConRon.Arena.reduceProjCore	bdc1da47bcdea4db	4c9eaf78
+ConRon.Arena.reduceProjCore	bdc1da47bcdea4db	12752ca7
 ConRon.Arena.reduceStoredOk	ef9061935281f09c	4c9eaf78
 ConRon.Arena.replaceApps	ae364eec022d11ed	4c9eaf78
 ConRon.Arena.replaceAppsGo	43d3f233b0722d6f	4c9eaf78
@@ -1331,7 +1331,7 @@ ConRon.Arena.viewN	c5bcd6543e78a518	4c9eaf78
 ConRon.Arena.viewProj	38ae85bc442ba358	4c9eaf78
 ConRon.Arena.viewSort	686a1928cf28ae75	4c9eaf78
 ConRon.Arena.whnf	d04e8a30494ea147	4c9eaf78
-ConRon.Arena.whnfApp	775e28ef7012e139	4c9eaf78
+ConRon.Arena.whnfApp	775e28ef7012e139	12752ca7
 ConRon.Arena.whnfBody	b9ff843f27755965	4c9eaf78
 ConRon.Arena.whnfCoreBody	23ce917a74d47f3a	4c9eaf78
 ConRon.Arena.whnfCoreCheapSet	0b478ff4853d0e68	12752ca7

@@ -260,19 +260,19 @@ namespace L.Arena
 open ConLeche
 
 /-- The core tier does not read the readback caches. -/
-theorem CoreRM.readLC {m : Mem} {c : Caches} {M : ModeMaps} {G g : Word} (h : CoreRM m c M G g)
-    (X : Std.HashMap LIdx Level) : CoreRM m { c with readLC := X } M G g :=
-  ⟨h.wc, h.wk, h.wh, h.inf, h.io, h.de, h.bank, h.ct, h.cv, h.rr, h.lq, h.lsq⟩
+theorem CoreRM.readLC {m : Mem} {c : Caches} {M : ModeMaps} {eb : Word} (h : CoreRM m c M eb)
+    (X : Std.HashMap LIdx Level) : CoreRM m { c with readLC := X } M eb :=
+  ⟨h.wc, h.wk, h.wh, h.inf, h.io, h.de, h.eb1, h.ct, h.cv, h.rr, h.lq, h.lsq⟩
 
 theorem lqSch_wf : lqSch.WF := ⟨by decide, by decide⟩
 theorem lsqSch_wf : lsqSch.WF := ⟨by decide, by decide⟩
 
 /-- **A `find; put` of `lvlEqC`** keeps the relation, the twin's table gaining the entry. -/
 theorem CoreS.set_lq {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
-    {fe : IFEnv} {M : ModeMaps} {G g : Word} (hS : CoreS dn m a vis fe M G g) (u v w : Word)
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) (u v w : Word)
     (hu : HW u) (hv : HW v) (hs : msetG lqSch m u v w = some m') :
     CoreS dn m' { a with caches := { a.caches with
-        lvlEqC := a.caches.lvlEqC.insert ((decI u : LIdx), (decI v : LIdx)) (decB w) } } vis fe M G g ∧
+        lvlEqC := a.caches.lvlEqC.insert ((decI u : LIdx), (decI v : LIdx)) (decB w) } } vis fe M eb ∧
       StackKept m m' := by
   have hf : MemFrame [105] [117] m m' := msetG_frame lqSch lqSch_wf m m' u v w hs
   have nA : ∀ b : ArrId, 96 ≤ b → b < 145 → b ≠ 105 → b ∉ [(105 : ArrId)] := fun b _ _ h hb => by
@@ -285,9 +285,9 @@ theorem CoreS.set_lq {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
       memoRV_frame S hS' K _ [105] [117] (by simpa using h1) (by simpa using h2) m m' hf
         (fun _ _ h => h) mp hR
   have mr : ∀ {κ ν : Type} [BEq κ] [Hashable κ] {S : MemoSch} {K : MemoKey (κ × Word)}
-      {VR : Mem → Word → ν → Prop} {M₀ : Std.HashMap (κ × Word) ν} {t : Std.HashMap κ ν}, S.WF →
-      VConst VR → S.arr ≠ 105 → S.cs ≠ 117 → ModeR S K VR m M₀ G g t →
-      ModeR S K VR m' M₀ G g t :=
+      {VR : Mem → Word → ν → Prop} {M₀ : Std.HashMap (κ × Word) ν} {t te : Std.HashMap κ ν}, S.WF →
+      VConst VR → S.arr ≠ 105 → S.cs ≠ 117 → ModeR S K VR m M₀ eb t te →
+      ModeR S K VR m' M₀ eb t te :=
     fun hS' hV h1 h2 h => h.frame hS' hV (by simpa using h1) (by simpa using h2) hf
   have frv : ∀ {κ : Type} [BEq κ] [Hashable κ] (S : MemoSch) (K : MemoKey κ)
       (mp : Std.HashMap κ EIdx), S.WF → S.arr ≠ 105 → S.cs ≠ 117 → MemoRV S K VH m mp →
@@ -305,7 +305,7 @@ theorem CoreS.set_lq {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
         mr (coreSch_wf _ _ (by decide) (by decide)) vh_const (by decide) (by decide) hS.core.inf,
         mr (coreSch_wf _ _ (by decide) (by decide)) vh_const (by decide) (by decide) hS.core.io,
         mr (coreSch_wf _ _ (by decide) (by decide)) vb_const (by decide) (by decide) hS.core.de,
-        hS.core.bank.frame (by simp [BANKC]) (by simp [BANKC]) hf,
+        hS.core.eb1,
         frv _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.ct,
         frv _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.cv,
         frv _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.rr,
@@ -345,11 +345,11 @@ theorem hw_encO (r : Bool) : HW (encO (some r)) := by
 /-- **The model of `lvl_eq_c` refines `lvlEq?`** under `CoreS`, at handles whose readbacks are
 defined: the twin runs, returns the decoded answer, and the relation holds after. -/
 theorem lvlEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
-    {fe : IFEnv} {M : ModeMaps} {G g : Word} (hS : CoreS dn m a vis fe M G g) (n : Nat) (u v : Word)
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) (n : Nat) (u v : Word)
     (hu : HW u) (hv : HW v) (lu lv : Level) (hdu : denoteL a.store.ls (decI u) = some lu)
     (hdv : denoteL a.store.ls (decI v) = some lv) (z : Word) (h : lvlEqCW n m u v = some (z, m')) :
     ∃ a', (lvlEq? (decI u) (decI v)).run a = .ok (decO z, a') ∧
-      CoreAfter dn m m' a' vis fe M G g ∧ HW z := by
+      CoreAfter dn m m' a' vis fe M eb ∧ HW z := by
   unfold lvlEqCW at h
   by_cases h0 : mfindG lqSch m u v = []
   · simp [h0] at h
@@ -359,8 +359,8 @@ theorem lvlEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     have hit := memoRG_hit lqSch pairKey decB m _ hS.core.lq u v h0 h1 ⟨hu, hv⟩
-    exact ⟨a, by rw [lvlEq?_hit a _ _ _ hit, decO_hit], ⟨M, G, hS, KeptAll.refl _ _ _,
-      StackKept.refl _, UInt64.le_refl _⟩, hw_hit _⟩
+    exact ⟨a, by rw [lvlEq?_hit a _ _ _ hit, decO_hit], ⟨M, hS, KeptAll.refl _ _,
+      StackKept.refl _⟩, hw_hit _⟩
   rw [if_neg h1] at h
   have miss := memoRG_miss lqSch pairKey decB m _ hS.core.lq u v ⟨hu, hv⟩ h0
     (by simpa using h1)
@@ -386,7 +386,7 @@ theorem lvlEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState
   obtain ⟨hS₁, hK₁⟩ := hS.frame hf₁ (by simp [LH]) (by simp)
   obtain ⟨X, hrun, hrl⟩ := lvlEq?_miss a (decI u) (decI v) lu lv hdu hdv hS.readL miss
   -- the state after the miss, before the insert
-  have hS₂ : CoreS dn m₁ { a with caches := { a.caches with readLC := X } } vis fe M G g :=
+  have hS₂ : CoreS dn m₁ { a with caches := { a.caches with readLC := X } } vis fe M eb :=
     ⟨⟨ArenaR.caches_irrel _ hS₁.arena.1, DerR.of_store _ _ _ hS₁.arena.2 rfl⟩, hS₁.core.readLC X,
       hS₁.pins,
       hS₁.env, hrl, fun h l e => hS₁.readLs h l e, hS₁.nwf⟩
@@ -396,7 +396,7 @@ theorem lvlEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState
     obtain ⟨rfl, rfl⟩ := h
     have ho := encO_zero (hz ▸ hz0)
     rw [ho] at hrun
-    refine ⟨_, hrun, ⟨M, G, ?_, KeptAll.refl _ _ _, hK₁, UInt64.le_refl _⟩, by unfold HW; decide⟩
+    refine ⟨_, hrun, ⟨M, ?_, KeptAll.refl _ _, hK₁⟩, by unfold HW; decide⟩
     simp only [ho, lvlEqIns]
     exact hS₂
   · cases hs : msetG lqSch m₁ u v (z₁ - 1) with
@@ -411,8 +411,7 @@ theorem lvlEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState
     | some r =>
     rw [eo] at hz hrun
     subst hz
-    refine ⟨_, by rw [hrun, decO_encO], ⟨M, G, ?_, KeptAll.refl _ _ _, hK₁.trans hK₃,
-      UInt64.le_refl _⟩, hw_encO _⟩
+    refine ⟨_, by rw [hrun, decO_encO], ⟨M, ?_, KeptAll.refl _ _, hK₁.trans hK₃⟩, hw_encO _⟩
     rw [encO_pred] at hS₃
     simpa [lvlEqIns] using hS₃
 
@@ -420,11 +419,11 @@ theorem lvlEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState
 `lvl_eq`), under `CoreS`, at level handles whose readbacks are defined. -/
 @[refines ConRon.Arena.lvlEq?]
 theorem lvlEqC_refines (p : Prog) (hp : LvlCacheProg p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (G g : Word)
-    (hS : CoreS dn s₀.mem a₀ vis fe M G g) (u v : Word) (hu : HW u) (hv : HW v) (lu lv : Level)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb : Word)
+    (hS : CoreS dn s₀.mem a₀ vis fe M eb) (u v : Word) (hu : HW u) (hv : HW v) (lu lv : Level)
     (hdu : denoteL a₀.store.ls (decI u) = some lu) (hdv : denoteL a₀.store.ls (decI v) = some lv) :
     CoreSpec p (n + 2) "lvl_eq_c" [u, v] (lvlEq? (decI u) (decI v)) (fun r => decO (r.headD 0))
-      s₀ a₀ dn vis fe M G g := by
+      s₀ a₀ dn vis fe M eb := by
   apply L.M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hI⟩ := L.M.of_run (P := fun s => s = s₀) hs hrun (lvlEqC_spec p hp n s₀ u v)
@@ -441,9 +440,9 @@ namespace L.Arena
 
 open ConLeche
 
-theorem CoreRM.readLsC {m : Mem} {c : Caches} {M : ModeMaps} {G g : Word} (h : CoreRM m c M G g)
-    (X : Std.HashMap LsIdx (List Level)) : CoreRM m { c with readLsC := X } M G g :=
-  ⟨h.wc, h.wk, h.wh, h.inf, h.io, h.de, h.bank, h.ct, h.cv, h.rr, h.lq, h.lsq⟩
+theorem CoreRM.readLsC {m : Mem} {c : Caches} {M : ModeMaps} {eb : Word} (h : CoreRM m c M eb)
+    (X : Std.HashMap LsIdx (List Level)) : CoreRM m { c with readLsC := X } M eb :=
+  ⟨h.wc, h.wk, h.wh, h.inf, h.io, h.de, h.eb1, h.ct, h.cv, h.rr, h.lq, h.lsq⟩
 
 /-- `readLevelsM` at a defined handle: its readback, and only `readLsC` changes. -/
 theorem readLevelsM_run' (a : AState) (h : LsIdx) (ls : List Level)
@@ -491,10 +490,10 @@ theorem lvlsEq?_hit (a : AState) (us vs : LsIdx) (r : Bool)
 
 /-- A `find; put` of `lvlsEqC` keeps the relation. -/
 theorem CoreS.set_lsq {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
-    {fe : IFEnv} {M : ModeMaps} {G g : Word} (hS : CoreS dn m a vis fe M G g) (u v w : Word)
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) (u v w : Word)
     (hu : HW u) (hv : HW v) (hs : msetG lsqSch m u v w = some m') :
     CoreS dn m' { a with caches := { a.caches with
-        lvlsEqC := a.caches.lvlsEqC.insert ((decI u : LsIdx), (decI v : LsIdx)) (decB w) } } vis fe M G g ∧
+        lvlsEqC := a.caches.lvlsEqC.insert ((decI u : LsIdx), (decI v : LsIdx)) (decB w) } } vis fe M eb ∧
       StackKept m m' := by
   have hf : MemFrame [106] [119] m m' := msetG_frame lsqSch lsqSch_wf m m' u v w hs
   have hq := memoRG_set lsqSch lsqSch_wf pairKey decB m _ hS.core.lsq u v w ⟨hu, hv⟩ m' hs
@@ -505,9 +504,9 @@ theorem CoreS.set_lsq {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
       memoRV_frame S hS' K _ [106] [119] (by simpa using h1) (by simpa using h2) m m' hf
         (fun _ _ h => h) mp hR
   have mr : ∀ {κ ν : Type} [BEq κ] [Hashable κ] {S : MemoSch} {K : MemoKey (κ × Word)}
-      {VR : Mem → Word → ν → Prop} {M₀ : Std.HashMap (κ × Word) ν} {t : Std.HashMap κ ν}, S.WF →
-      VConst VR → S.arr ≠ 106 → S.cs ≠ 119 → ModeR S K VR m M₀ G g t →
-      ModeR S K VR m' M₀ G g t :=
+      {VR : Mem → Word → ν → Prop} {M₀ : Std.HashMap (κ × Word) ν} {t te : Std.HashMap κ ν}, S.WF →
+      VConst VR → S.arr ≠ 106 → S.cs ≠ 119 → ModeR S K VR m M₀ eb t te →
+      ModeR S K VR m' M₀ eb t te :=
     fun hS' hV h1 h2 h => h.frame hS' hV (by simpa using h1) (by simpa using h2) hf
   have frv : ∀ {κ : Type} [BEq κ] [Hashable κ] (S : MemoSch) (K : MemoKey κ)
       (mp : Std.HashMap κ EIdx), S.WF → S.arr ≠ 106 → S.cs ≠ 119 → MemoRV S K VH m mp →
@@ -525,7 +524,7 @@ theorem CoreS.set_lsq {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
         mr (coreSch_wf _ _ (by decide) (by decide)) vh_const (by decide) (by decide) hS.core.inf,
         mr (coreSch_wf _ _ (by decide) (by decide)) vh_const (by decide) (by decide) hS.core.io,
         mr (coreSch_wf _ _ (by decide) (by decide)) vb_const (by decide) (by decide) hS.core.de,
-        hS.core.bank.frame (by simp [BANKC]) (by simp [BANKC]) hf,
+        hS.core.eb1,
         frv _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.ct,
         frv _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.cv,
         frv _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.rr,
@@ -539,12 +538,12 @@ theorem CoreS.set_lsq {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
 
 /-- **The model of `lvls_eq_c` refines `lvlsEq?`** under `CoreS`. -/
 theorem lvlsEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
-    {fe : IFEnv} {M : ModeMaps} {G g : Word} (hS : CoreS dn m a vis fe M G g) (n : Nat)
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) (n : Nat)
     (us vs : Word) (hu : HW us) (hv : HW vs) (lu lv : List Level)
     (hdu : denoteLs a.store.lss (decI us) = some lu) (hdv : denoteLs a.store.lss (decI vs) = some lv)
     (z : Word) (h : lvlsEqCW n m us vs = some (z, m')) :
     ∃ a', (lvlsEq? (decI us) (decI vs)).run a = .ok (decO z, a') ∧
-      CoreAfter dn m m' a' vis fe M G g ∧ HW z := by
+      CoreAfter dn m m' a' vis fe M eb ∧ HW z := by
   unfold lvlsEqCW at h
   by_cases h0 : mfindG lsqSch m us vs = []
   · simp [h0] at h
@@ -554,8 +553,8 @@ theorem lvlsEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AStat
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     have hit := memoRG_hit lsqSch pairKey decB m _ hS.core.lsq us vs h0 h1 ⟨hu, hv⟩
-    exact ⟨a, by rw [lvlsEq?_hit a _ _ _ hit, decO_hit], ⟨M, G, hS, KeptAll.refl _ _ _,
-      StackKept.refl _, UInt64.le_refl _⟩, hw_hit _⟩
+    exact ⟨a, by rw [lvlsEq?_hit a _ _ _ hit, decO_hit], ⟨M, hS, KeptAll.refl _ _,
+      StackKept.refl _⟩, hw_hit _⟩
   rw [if_neg h1] at h
   have miss := memoRG_miss lsqSch pairKey decB m _ hS.core.lsq us vs ⟨hu, hv⟩ h0
     (by simpa using h1)
@@ -588,7 +587,7 @@ theorem lvlsEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AStat
     ((reset_frame m).mono (by simp) (by simp)).trans hx.memFrame
   obtain ⟨hS₁, hK₁⟩ := hS.frame hf₁ (by simp [LH]) (by simp)
   obtain ⟨X, hrun, hrl⟩ := lvlsEq?_miss a (decI us) (decI vs) lu lv hdu hdv hS.readLs miss
-  have hS₂ : CoreS dn m₁ { a with caches := { a.caches with readLsC := X } } vis fe M G g :=
+  have hS₂ : CoreS dn m₁ { a with caches := { a.caches with readLsC := X } } vis fe M eb :=
     ⟨⟨ArenaR.caches_irrel _ hS₁.arena.1, DerR.of_store _ _ _ hS₁.arena.2 rfl⟩,
       hS₁.core.readLsC X, hS₁.pins, hS₁.env, fun h l e => hS₁.readL h l e, hrl, hS₁.nwf⟩
   by_cases hz0 : z₁ = 0
@@ -597,7 +596,7 @@ theorem lvlsEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AStat
     obtain ⟨rfl, rfl⟩ := h
     have ho := encO_zero (hz ▸ hz0)
     rw [ho] at hrun
-    refine ⟨_, hrun, ⟨M, G, ?_, KeptAll.refl _ _ _, hK₁, UInt64.le_refl _⟩, by unfold HW; decide⟩
+    refine ⟨_, hrun, ⟨M, ?_, KeptAll.refl _ _, hK₁⟩, by unfold HW; decide⟩
     simp only [ho, lvlsEqIns]
     exact hS₂
   · cases hs : msetG lsqSch m₁ us vs (z₁ - 1) with
@@ -612,20 +611,19 @@ theorem lvlsEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AStat
     | some r =>
     rw [eo] at hz hrun
     subst hz
-    refine ⟨_, by rw [hrun, decO_encO], ⟨M, G, ?_, KeptAll.refl _ _ _, hK₁.trans hK₃,
-      UInt64.le_refl _⟩, hw_encO _⟩
+    refine ⟨_, by rw [hrun, decO_encO], ⟨M, ?_, KeptAll.refl _ _, hK₁.trans hK₃⟩, hw_encO _⟩
     rw [encO_pred] at hS₃
     simpa [lvlsEqIns] using hS₃
 
 /-- **`lvls_eq_c` refines con-ron's `lvlsEq?`** (the verdict cache in front of `lvls_eq`). -/
 @[refines ConRon.Arena.lvlsEq?]
 theorem lvlsEqC_refines (p : Prog) (hp : LvlCacheProg p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (G g : Word)
-    (hS : CoreS dn s₀.mem a₀ vis fe M G g) (us vs : Word) (hu : HW us) (hv : HW vs)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb : Word)
+    (hS : CoreS dn s₀.mem a₀ vis fe M eb) (us vs : Word) (hu : HW us) (hv : HW vs)
     (lu lv : List Level) (hdu : denoteLs a₀.store.lss (decI us) = some lu)
     (hdv : denoteLs a₀.store.lss (decI vs) = some lv) :
     CoreSpec p (n + 2) "lvls_eq_c" [us, vs] (lvlsEq? (decI us) (decI vs))
-      (fun r => decO (r.headD 0)) s₀ a₀ dn vis fe M G g := by
+      (fun r => decO (r.headD 0)) s₀ a₀ dn vis fe M eb := by
   apply L.M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hI⟩ := L.M.of_run (P := fun s => s = s₀) hs hrun (lvlsEqC_spec p hp n s₀ us vs)
