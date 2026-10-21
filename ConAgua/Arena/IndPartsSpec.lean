@@ -385,11 +385,68 @@ theorem numCtorsOf_refines (p : Prog) (hp : p.lookup "num_ctors_of" = some numCt
   intro r s' ⟨h1, h2⟩
   exact ⟨h1, (numCtorsOfW_ok n s₀.mem off l (r.headD 0) ms hsmall hbnd hd h2)⟩
 
-/- `block_shape_num_ctors` refining `BlockShape.numCtors`: attempted and NOT finished this round.
-`numCtorsOf_refines` above is solid on its own (and used, unapplied, as a callee spec here), but
-`vcgen`'s callee-spec search for this two-argument sub-call (`num_ctors_of(o, l)`, `o`/`l` freshly
-read locals, not pass-through parameters) does not resolve `numCtorsOf_refines`'s `ms` against
-`bs.members` even with `hd2`/`hbnd2`/`ho'`/`hl'` in context (`finish` leaves a `?ms` metavariable
-and derives at least one spurious equation downstream). Left for the next round; see the report. -/
+/-! ## `BlockShape.numCtors`: the word-model idiom for a caller
+
+`vcgen`'s callee-spec search wants a callee spec with no decoder hypotheses (PLAN.md's
+"precondition-only arguments stay metavariables"): give it `numCtorsOf_spec` (the word-model
+spec), prove `block_shape_num_ctors`'s own word-model spec by `vcgen`, and only then, outside
+`vcgen`, compose with `numCtorsOfW_ok` and `decBS_some` to reach the twin value. -/
+
+theorem blockShapeNumCtorsW_spec (p : Prog) (hc : p.lookup "num_ctors_of" = some numCtorsOf)
+    (hp : p.lookup "block_shape_num_ctors" = some blockShapeNumCtors) (n : Nat) (s₀ : St)
+    (q : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "block_shape_num_ctors" [q]
+    ⦃fun r s' => s' = s₀ ∧
+      numCtorsOfW n s₀.mem (rdW (s₀.mem.arr64 IW) q) (rdW (s₀.mem.arr64 IW) (q + 1)) =
+        some (r.headD 0); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, blockShapeNumCtors]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, numCtorsOf_spec p hc n] <;>
+    finish [rdW_eq]
+
+/-- The model, decoded: `BlockShape.numCtors` at a `BlockShape` pointer `q`. -/
+theorem blockShapeNumCtorsW_ok (n : Nat) (m : Mem) (q r : Word) (bs : BlockShape)
+    (hq : decBS m q.toNat = some bs) (hb : q.toNat + 9 < 2 ^ 64)
+    (hol : ∀ o l, iwN m q.toNat = some o → iwN m (q.toNat + 1) = some l → o + l < 2 ^ 64)
+    (hsmall : ∀ i v, iwN m i = some v → v + 3 < 2 ^ 64)
+    (h : numCtorsOfW n m (rdW (m.arr64 IW) q) (rdW (m.arr64 IW) (q + 1)) = some r) :
+    r = UInt64.ofNat bs.numCtors := by
+  obtain ⟨o, l, ho, hl, hg⟩ := decAt_some (decBS_some hq).1
+  obtain ⟨ho', hob⟩ := iwN_rdW ho (by omega)
+  obtain ⟨hl', hlb⟩ := iwN_rdW hl (by omega)
+  have e1 : UInt64.ofNat (q.toNat + 1) = q + 1 := by
+    apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
+  rw [ofNat_toNat_word] at ho'
+  rw [e1] at hl'
+  have hoo : (UInt64.ofNat o).toNat = o := by simp [hob]
+  have hll : (UInt64.ofNat l).toNat = l := by simp [hlb]
+  have hd2 : decPL m (decMS m) (UInt64.ofNat o).toNat (UInt64.ofNat l).toNat =
+      some bs.members := by rw [hoo, hll]; exact hg
+  have hbnd2 : (UInt64.ofNat o).toNat + (UInt64.ofNat l).toNat < 2 ^ 64 := by
+    rw [hoo, hll]; exact hol o l ho hl
+  rw [ho', hl'] at h
+  rw [BlockShape.numCtors]
+  exact numCtorsOfW_ok n m (UInt64.ofNat o) (UInt64.ofNat l) r bs.members hsmall hbnd2 hd2 h
+
+/-- **`block_shape_num_ctors` is `BlockShape.numCtors`.** -/
+@[refines ConRon.Arena.BlockShape.numCtors]
+theorem blockShapeNumCtors_refines (p : Prog) (hc : p.lookup "num_ctors_of" = some numCtorsOf)
+    (hp : p.lookup "block_shape_num_ctors" = some blockShapeNumCtors) (n : Nat) (s₀ : St)
+    (q : Word) (bs : BlockShape) (hq : decBS s₀.mem q.toNat = some bs)
+    (hb : q.toNat + 9 < 2 ^ 64)
+    (hol : ∀ o l, iwN s₀.mem q.toNat = some o → iwN s₀.mem (q.toNat + 1) = some l →
+      o + l < 2 ^ 64)
+    (hsmall : ∀ i v, iwN s₀.mem i = some v → v + 3 < 2 ^ 64) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_shape_num_ctors" [q]
+    ⦃fun r s' => s' = s₀ ∧ r.headD 0 = UInt64.ofNat bs.numCtors; ⊤⦄ := by
+  cases n with
+  | zero =>
+    rw [invoke_eq _ hp]; simp only [callFn, blockShapeNumCtors]; vcgen [exec] <;> grind
+  | succ n =>
+    have h := blockShapeNumCtorsW_spec p hc hp n s₀ q
+    refine triple_post h ?_
+    intro r s' ⟨h1, h2⟩
+    exact ⟨h1, blockShapeNumCtorsW_ok n s₀.mem q (r.headD 0) bs hq hb hol hsmall h2⟩
 
 end L.Ind

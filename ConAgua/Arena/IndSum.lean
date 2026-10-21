@@ -414,6 +414,7 @@ the whole spine). Self-recursive, as the twin's `go` is (round 2: rewritten from
 def structPsAtGoL : FunDecl := lfn (o, nP, n, k) locals (res, b, ro, rl, res2, len2) {
   if n == 0 { res := call iw_alloc(0); return (res, 0) };
   b := call intern_bvar(o + nP - 1 - k);
+  if 4294967296 <= b { abort };
   (ro, rl) := call struct_ps_at_go(o, nP, n - 1, k + 1);
   (res2, len2) := call sl_cons(b, ro, rl);
   return (res2, len2)
