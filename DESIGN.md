@@ -1596,3 +1596,32 @@ files.
 ### `sorry`s
 
 None.
+
+### Not done this round, and why
+
+Seven tables landed (`zero`, `max`, `imax`, `param`, `sort`, `const`, `letE`); `bvar`, `fvar`,
+`proj` (a handle plus a `Nat` field each) were not attempted. Not because any attempt got stuck:
+none was started. Reasons to flag before starting one, for whoever picks this up next:
+
+* **A `Nat` field is not a handle.** Every table so far decodes a stored word back into a handle
+  (`decI`/`decE`, with `word_decI`/`isPersistent_decI` for the bound `< 2^32`) and compares
+  handles for the match/key. `bvar`'s `i : Nat`, `fvar`'s `idx : Nat`, `proj`'s `i : Nat` are
+  plain de Bruijn/field indices with no such decoding — `MatchOK`/`NewOK` there compare a stored
+  `Word` against `UInt64.ofNat n` directly, under a bound hypothesis (`n < 2^64`, as the
+  recommendation says), which is a different (if probably easy) fact than anything the `MatchOK`/
+  `NewOK` obligations have needed up to `letE`: every one of those was proved by `word_decI`/
+  `decE_eq` plumbing, not by a `Nat`/`Word` roundtrip. `lit`'s `natLitToConstructor`/pool slice
+  comparison is the nearest precedent in this codebase, but it goes through the limb pool, which
+  `bvar`/`fvar`/`proj`'s single small `Nat` should not need.
+* **`fvar`/`proj` mix a `Nat` and a handle in one record** (`fvar { idx : Nat, ty : EIdx }`,
+  `proj { n : NIdx, i : Nat, e : EIdx }`), so their `MatchOK`/`NewOK` need *both* kinds of
+  obligation at once, and their scratch-skip test (`eViewHasScratchChild`) reads only the handle
+  field(s), not the `Nat` one — worth checking that `MatchOK`'s statement composes cleanly
+  (conjunction of a `Nat` equality and a handle equality) before assuming it is "just like
+  `const`'s two fields" with one relabelled.
+* **Budget.** This lane landed seven tables across two sessions' worth of the allotted time
+  (level store plus three expression handle-only kinds); `bvar`/`fvar`/`proj` are next in the
+  task's own order, genuinely small per the recommendation ("small"), and a reasonable next
+  increment, but starting a new proof idea with under the stated 45-minute budget per table
+  remaining risked a half-finished table or a `sorry`, which `PLAN.md` rules out. Left out
+  rather than rushed.
