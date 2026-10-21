@@ -233,7 +233,7 @@ induction hypothesis, and the expression lemmas are straight-line `kvcgen64` pro
   the post can stay one equation: `(f x).run (abs s₀.mem) = .ok (decode r, abs s'.mem)`, with an
   abstraction function `abs : Mem → AState`. Not tried yet.
 * **Named blocks.** `lblk (vars)` must repeat the enclosing function's variable list; nothing
-  checks that they agree.
+  checks that they agree. **Done** (lane `lext`): `⟪t⟫` checks it, see "L extensions".
 * **Boilerplate.** Each loop needs the `…_step_spec` corollary, and each model arm is a
   hand-written guarded lemma. A small generator for both might pay off once there are tens of
   functions.
@@ -290,7 +290,7 @@ proof.
 | `num_end` (`:733`) | 10 | 6 (+ call to `skip_digits`, no loop) | yes (since lane `lext`) |
 | `match_lit` (`:132`, lane `lext`) | 11 | 9 | yes |
 | `scan_bool` (`:716`, lane `lext`) | 11 | 7 (two calls of `match_lit`, three results) | yes |
-| `utf8_decode` (`:917`, lane `lext`) | 66 | 48 (`utf8_char` 33, loop 9, entry 6) | yes |
+| `utf8_decode` (`:917`, lane `lext`) | 66 | 48 (`utf8_char` 33, loop 9, entry 6) | yes; linked to `String.fromUTF8?` |
 
 Whole-file build (`ConAgua.Scan.Leaves`, `lake env lean`, cold): ~2.5 s for all six.
 `ConAgua.Scan.Link` + `ConAgua.Scan.Leaves` together add about 750 lines to the `ConAgua` lib;
@@ -800,4 +800,54 @@ Arena request 3, and `utf8_decode`'s `(code point, length)`.
   `LocEq` (it writes memory).
 * A `#guard` runs con-ron's test `utf8_decode_agrees_with_the_toolchain` (17 byte strings)
   against `String.fromUTF8?`; `Tests.lean` runs the compiled code on Kraken.
+* The model also stops when `OUT` is full (`cnt < len(OUT)`), where the L store fails; so the
+  model's memory is exactly L's.
+
+### `utf8_decode` against Lean's decoder (`ConAgua/Scan/Utf8Link.lean`)
+
+con-leche validates string bodies with `String.fromUTF8?`, i.e. `ByteArray.utf8Decode?`, a loop
+over `ByteArray.utf8DecodeChar?`, which classifies the lead byte by bit masks and checks overlong
+forms, surrogates and the range after assembling the value (`assemble₂…₄`). Rust's decoder
+(and so the L code) rejects `0xC0`, `0xC1` and `0xF5…` by the lead byte instead. The proof:
+
+* lead-byte and continuation classes by `decide +kernel` over the 256 byte values (`pfb`,
+  `cont_eq`; no `native_decide`);
+* the assembled values on both sides as natural numbers (`v2W`…`v4L`: `&&& (2^k - 1)` is
+  `% 2^k`, and `a <<< k ||| b` is `a * 2^k + b` for `b < 2^k`, `Nat.two_pow_add_eq_or_of_lt`);
+* six cases on the lead byte for one code point (`decA`…`decF`, `utf8CharN_eq`);
+* the loop by `fun_induction` on `utf8Decode?.go` (`loop_go`), with the writes to `OUT` as
+  `writeCps`;
+* `utf8Decode_run`: whenever `run utf8Prog fuel "utf8_decode" [j, e]` returns `r`, then if
+  `String.fromUTF8? (b.extract j (min e len)) = some s` (and `OUT` has room) `r = [1, |s|]` and
+  `OUT` starts with the code points of `s`; if it is `none`, `r = [0, 0]`. Axioms: the standard
+  three.
+
+677 lines, 9 s; written in an afternoon of the lane, with no `grind` (plain `simp`/`omega`/`rw`).
+The word-level model made the L proofs trivial and moved all the bit arithmetic here, where it
+is proved once against Lean's own decoder rather than against a Nat-level re-statement.
+
+### Named blocks are checked
+
+`lblk (j, c) { … }` now elaborates to `L.Notation.blk ["j", "c"] body` (`blk` is a reducible
+identity, so `step_while (w := …) rfl`, `vcgen` and the compiler see the body as before), and
+`⟪t⟫` in an `lfn`/`lblk` elaborates through `lsplice%`, which looks up the definition of `t`
+and fails unless the block's variables are a prefix of the enclosing ones (they are numbered
+by position). All 20 named blocks in the project (including the arena lane's) pass. The
+`…_step_spec` corollaries remain: `vcgen` needs a spec about `step p (exec p n) W` itself, and
+I found no way to pass `Triple.step_exec (loop_spec … (n + 1))` that it accepts (the loop spec
+has hypotheses before the triple).
+
+### Summary of lane `lext`
+
+* L: `mulhi`, `u64(a < b)`, `D.c8[i]` (constant data), several results (`return (a, b)`,
+  `(x, y) := call f(…)`), `LocEq` and `St.loc_of_eq_mk` in the proof support, checked named
+  blocks. Every extension is in the compiler and its proof.
+* Compiler: 281 → 369 lines. Proof (the eleven proof files): 3410 → 3794 lines (+384:
+  `SimExpr` +141, `SimCall` +138, `Rel` +52, `Step` +32, `SimFun` +13, `SimStore` +16, …).
+  `compile_correct` is still `sorry`-free with the standard axioms; its statement changed only
+  in `OutcomeRel` (the results in the result registers) and in `MemRel` (the table holds the
+  constant data).
+* Translations: `match_lit`, `scan_bool` (linked to con-leche's `matchLit`/`scanBool`,
+  `scanBool_run`), `utf8_decode` (linked to `String.fromUTF8?`, `utf8Decode_run`), and the
+  `num_end` `sorry` is gone. No `sorry` anywhere in `ConAgua`.
 

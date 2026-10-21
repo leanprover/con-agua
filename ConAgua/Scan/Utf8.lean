@@ -113,13 +113,11 @@ theorem utf8CharN_snd_le (b : Array UInt8) (k n : Word) : (utf8CharN b k n).2 �
 grind_pattern [lang_grind] utf8CharN_snd_le => utf8CharN b k n
 
 section utf8Char
-variable (p : Prog) (hp : p.lookup "utf8_char" = some utf8Char)
-    (b : Array UInt8) (hb : b.size < 2 ^ 64)
-include hb hp
+variable (p : Prog) (hp : p.lookup "utf8_char" = some utf8Char) (b : Array UInt8)
+include hp
 
 attribute [local lang_grind] utf8CharN in
-theorem utf8Char_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (k e : Word)
-    (hk : k < e) (he : e.toNat ≤ b.size) :
+theorem utf8Char_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (k e : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "utf8_char" [k, e]
     ⦃fun r s' => s' = s₀ ∧ r = [(utf8CharN b k e).1, (utf8CharN b k e).2]; ⊤⦄ := by
@@ -152,17 +150,19 @@ def utf8Decode : FunDecl := lfn (j, e) locals (n, k, cnt, cp, l) {
 }
 
 /-- Rust's loop from `k` (with `cnt` code points written so far, memory `m`): the count at the
-end, or `none` for invalid UTF-8, and the memory with the code points written to `OUT`. -/
+end, or `none` for invalid UTF-8 or a full `OUT` (L's store fails there), and the memory with
+the code points written to `OUT`. -/
 def utf8LoopN (b : Array UInt8) (k n cnt : Word) (m : Mem) : Option Word × Mem :=
   if k < n then
     if (utf8CharN b k n).2 = 0 then (none, m)
-    else if k < k + (utf8CharN b k n).2 then
+    else if cnt.toNat < (m.arr64 OUT).size ∧ k < k + (utf8CharN b k n).2 then
       utf8LoopN b (k + (utf8CharN b k n).2) n (cnt + 1) (m.set64 OUT cnt (utf8CharN b k n).1)
-    else (none, m) -- unreachable: `k + len` does not wrap below `n`
+    else (none, m) -- `OUT` is full, or `k + len` wraps (it does not, below `n`)
   else (some cnt, m)
 termination_by n.toNat - k.toNat
 decreasing_by
   rename_i h1 _ h2
+  have h2 := h2.2
   rw [UInt64.lt_iff_toNat_lt] at h1 h2
   omega
 
@@ -180,10 +180,11 @@ theorem utf8LoopN_bad (h : k < n) (h0 : (utf8CharN b k n).2 = 0) :
     utf8LoopN b k n cnt m = (none, m) := by
   rw [utf8LoopN]; simp [h, h0]
 theorem utf8LoopN_step (k' cnt' : Word) (m' : Mem) (h : k < n) (h0 : (utf8CharN b k n).2 ≠ 0)
-    (hw : k < k + (utf8CharN b k n).2) (hk' : k' = k + (utf8CharN b k n).2) (hc : cnt' = cnt + 1)
+    (hc0 : cnt.toNat < (m.arr64 OUT).size) (hw : k < k + (utf8CharN b k n).2)
+    (hk' : k' = k + (utf8CharN b k n).2) (hc : cnt' = cnt + 1)
     (hm' : m' = m.set64 OUT cnt (utf8CharN b k n).1) :
     utf8LoopN b k n cnt m = utf8LoopN b k' n cnt' m' := by
-  subst hk' hc hm'; rw [utf8LoopN]; simp [h, h0, hw]
+  subst hk' hc hm'; rw [utf8LoopN]; simp [h, h0, hw, hc0]
 
 grind_pattern [lang_grind] utf8LoopN_end => utf8LoopN b k n cnt m
 grind_pattern [lang_grind] utf8LoopN_bad => utf8LoopN b k n cnt m, utf8CharN b k n
@@ -210,7 +211,7 @@ theorem utf8DecodeLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
   | succ n ih =>
     rw [exec, step_while (w := utf8DecodeLoop) rfl]
     sym only [lang_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, st64, utf8Char_spec p hp1 b (by omega) n, ih] <;>
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, st64, utf8Char_spec p hp1 b n, ih] <;>
         finish
 
 theorem utf8DecodeLoop_step_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
