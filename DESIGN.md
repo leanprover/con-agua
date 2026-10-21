@@ -968,7 +968,10 @@ None this round.
 
 ## The store relation by `grind`, and a second store (2026-10-21, lane `store2`)
 
-Files: `ConAgua/Arena/LitRefine.lean` (reworked), `ConAgua/Arena/GrindAttr.lean` (`store_grind`).
+Files: `ConAgua/Arena/LitRefine.lean` (reworked), `ConAgua/Arena/StoreRel.lean` (what the two
+relations share), `ConAgua/Arena/AppStore.lean`, `ConAgua/Arena/AppRefine.lean` (the second store),
+`ConAgua/Arena/GrindAttr.lean` (`store_grind`). No `sorry`; axioms `propext`, `Classical.choice`,
+`Quot.sound`.
 
 ### Part 1: `LitR` in the house style
 
@@ -1022,6 +1025,7 @@ current position after rewriting `(a + i).toNat` stays by hand.
 |---|---:|---:|
 | `LitRefine.lean` before | 1183 | 2.1 s / 4.0 s |
 | `LitRefine.lean` after | 843 | 5.5 s / 14.4 s |
+| `LitRefine.lean` + `StoreRel.lean`, after part 2 | 753 + 151 | 5.4 s / 13.9 s, 0.8 s |
 
 By section (after ← before): reading the store, generic reads and the memory after `lit_push`,
 83 ← 223; the probe 77 ← 90 (the induction itself 25 ← 75, the rest are the new definitions
@@ -1031,3 +1035,90 @@ uniqueness 118 ← 123, the `natAddLit` instantiation 73. The proofs are shorter
 are `grind`, at three times the CPU time (`tier_push` 4.2 s, `tier_other` 2.0 s,
 `intern_correct` 1.8 s: `grind` on goals with a dozen `rdW` reads through `pushMem`, each an
 `if`).
+
+### Part 2: a second store, `app`
+
+`internE (.app f a)` (`Arena/Monad.lean:231`, `internNodeE`) for the record `AppNode { f a : EIdx }`:
+the simplest expression node with children. It differs from `lit` in three ways: the key is two
+handle words (equality is word equality, no pool), there is no stored hash (a two-word FNV is
+cheaper than a load), and the persistent probe is **skipped** when the scratch tier is open and
+a child is a scratch handle (`EStore.persFindMaybe`/`eViewHasScratchChild`, the Rust's `sk`).
+The L code does the same test (`((f | a) >> 27) & 1`), so no store invariant (`StoreWF`'s
+"persistent nodes have persistent children") is needed to justify it.
+
+* `AppStore.lean` (L, `module`): arrays `AREC` (4) and `ASLOT` (5), node `i` of tier `t` at
+  `AREC[4i + 2t ..]`, the count at `CTL[4 + t]`; `app_find` (the probe, the match inline: two
+  word comparisons under `&&`), `app_push`, `intern_app`; models `amatchW`, `aprobeW`,
+  `ainternW`, `askipW`; `#guard`s for sharing, both tiers and the skip. Every spec went through
+  at the first attempt with the house form.
+* `AppRefine.lean`: `AppR m a` (scratch flag, `ATierRel` per tier, same shape as `TierRel`, with
+  `ARecRel`: the two words are the children's handle words), the guarded arena paths (the
+  persistent probe after the skip is a named function `pfA`), `aintern_correct`,
+  `internApp_refines` (the triple, `intern_app` refines `internE (.app (decE f) (decE a))` for
+  `f, a < 2^32` under `AppR`).
+* `StoreRel.lean`: what turned out to be naturally shared, moved out of `LitRefine`: reads after a
+  write (`rdW_set64`), the probe run (`walkW`, `homeW_lt`), handle words with a tag parameter
+  (`hdW g t i`, `hix_hdW`, `mk_eq`, `word_decE`, the tier bit), `AM.of_run_ok`, `Tbl.push`'s
+  fields. 151 lines.
+
+Writing `AppRefine` was a rename of `LitRefine`'s store half (`REC`→`AREC`, stride 8→4,
+`cnt`→`acnt`, `matchW`→`amatchW`); it needed four fixes, none conceptual: the count clause
+needs `6 ≤ len CTL`; the home slot of an old node after the append (two reads through
+`apushMem`, each an `if`) had to be stated as a lemma before the `grind` that uses it (timeout
+otherwise); `AppR_push` needs `t ≤ 1`; the tier-bit lemma was first proved by `bv_decide`,
+which adds native axioms, and is now `testBit` arithmetic.
+
+| file | lines (non-blank) | `lean` wall / user |
+|---|---:|---:|
+| `AppStore.lean` | 301 (250) | 7.5 s / 8.9 s |
+| `AppRefine.lean` | 474 (417) | 6.1 s / 11.6 s |
+| `StoreRel.lean` (shared) | 151 (120) | 0.8 s / 1.0 s |
+
+### Assessment: what a store library would save
+
+Non-blank lines of each instance, by what they establish (headers and `#guard`s left out):
+
+| | `lit` L side | `lit` relation | `app` L side | `app` relation |
+|---|---:|---:|---:|---:|
+| algorithm-specific | 177 | 204 | 10 | 31 |
+| arena protocol (unfolding `internE`, four guarded paths, setters) | – | 74 | – | 73 |
+| representation (record layout, probe/insert, key → handle) | 222 | 289 | 197 | 295 |
+| instantiation (`natAddLit`) | – | 67 | – | – |
+
+* **Algorithm-specific**, `lit`: FNV over the limbs and `limbs_eq` (L, with their loops), the
+  uniqueness of normalised slices (`pv_len`, `pv_limbs`, 100 lines by hand), `NatRec`,
+  `matchW_iff`, and the pool frame (`LitR.grow`, the relation refers to the pool). `app`: the
+  hash expression, the two-word match, the skip (`skA`, `pfA`, `askipW_eq`), `ARecRel`,
+  `amatchW_iff`. This is what a new constructor has to say.
+* **Representation**: the probe model and its arm lemmas, the find/push specs, `pushMem` and its
+  read equations, `NoMatch`/`ProbeOK`/`probe_ok`, `SlotsOK`/`TierRel`, `tier_hit`, `tier_miss`,
+  `tier_push`, `tier_other`, the relation after the append, and `intern_correct`'s path
+  structure. `app`'s copy differs from `lit`'s only in array ids, record width and count slot,
+  the match function, the home slot of a node, and the skip in `intern_correct`. It is 81 % of
+  the `app` instance (492 of 606 lines) and 49 % of `lit`'s.
+* **Arena protocol**: per constructor, the same `simp` unfolding of `internNodeE` and four
+  guarded equations; mechanical, but it names the constructor's `Tbl` field.
+
+**A library parametric in a record schema** (array ids, width, count slot, a named match model
+with its `match_iff` obligation, the node's home slot, the key relation) would hold the
+representation half once. Estimate: about 600 lines once (one instance's 490 plus the
+parameters), then per instance the schema and its obligations, about 60 lines, plus the
+algorithm-specific part, plus the arena protocol (about 30 lines if it is made generic over a
+`Tbl` lens). Per instance that saves about 470 of the 565 representation and protocol lines,
+and most of the 20 s of CPU an instance costs (`app`: 8.9 s + 11.6 s). con-ron's arena has about 19 cons tables (10 expression constructors, 5 level, 3
+name, 1 level list); with two done, the library pays for itself at the second further table.
+
+Recommendation: build it before the third table, in two steps, the lower-risk half first.
+1. **The relation half** (`TierRel`, `SlotsOK`, `probe_ok`, the tier lemmas, the append): ~290
+   lines per instance, written twice now with only renamings. The match enters as a named
+   model function and a `match_iff` lemma, which both instances already have in that form.
+   Risk: `grind` over a schema whose fields are variables (array ids, strides) rather than
+   numerals; the address disequalities (`i * 8 + t * 4 + f ≠ c * 8 + t' * 4 + g`) were decided
+   from literal strides. A stride parameter with a hypothesis `f < w` should still be linear,
+   but this is the first thing to test.
+2. **The L half** (probe model, arm lemmas, find/push specs, ~200 lines per instance) is cheap
+   to write and went through at the first attempt both times; L has no function values, so the
+   code stays per instance (or is generated from the schema by a Lean function, which `vcgen`
+   then has to see through). Leave it per instance until the relation half is done.
+Not worth generalizing: the pool facts (only `lit` has them) and the skip (one line of L, one
+lemma).
