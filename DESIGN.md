@@ -4066,3 +4066,47 @@ tombstone antecedent and the existential value.
 ### `sorry`s
 
 None.
+
+## The core tier and the whnf family (2026-10-21, lane `whnf`)
+
+Phase 5 (ROADMAP §1), top-down. Files: `CoreCaches.lean` (L), `Tiers.lean` (`CoreR`),
+`CoreRefine.lean`; `Scratch.lean`/`ScratchRefine.lean` (`scratch_drop` now flushes).
+
+### `CoreR`: nine caches in L, five not
+
+`Caches` has fourteen tables. Nine are `MemoLib` memos (arrays 96‥104, stamps/counts `CTL`
+96‥113): the six **mode memos** `whnfCoreC`, `whnfCoreCheapC`, `whnfC`, `inferC`, `inferIOC`,
+`defeqC`, banked by generation (`MemoBank.lean`; bank words `CTL[114]` last, `CTL[115]` current,
+one pair shared by the six, `bank_enter`/`bank_leave` = `takeModeMemos`/`putModeMemos`), and the
+three constant caches `constTyC`, `constValC`, `ruleRhsC` (plain `MemoRG`). Keys: a handle and
+`genW 0 g = g << 32` (`eKeyG`); `defeqC` the two handles and `genW b g` (`dKeyG`); the constant
+caches `(n, us)` (`pairKey`) and `(rec, ctor ∣ us << 32)` (`rrKey`). **Not in L**: `lvlEqC`,
+`lvlsEqC` (pure verdicts; lane `levels`' `lvl_eq`/`lvls_eq` recompute, the twin's tables only have
+to hold what they claim, a hypothesis there) and `readLC`/`readNC`/`readLsC` (readbacks L never
+makes). Every table whose hit skips interning must be in L: a recomputation would intern into
+other caches the twin did not touch.
+
+* `CoreRM m c M G g` (explicit maps `M : ModeMaps` over `(key, generation)` and bank words) and
+  `CoreR m c := ∃ M G g, CoreRM m c M G g`. Each mode memo is a `ModeR` (memo relation, the twin
+  table is the bank of `g`, nothing above `G`). The knot will state the saved tables of an
+  enclosing eager comparison as other banks of the same `M` and needs every core function's post
+  to keep them: `Kept M M' G g` (generations `≤ G` other than `g` unchanged; `Kept.insert`).
+* `flush_caches()`: the nine `clear`s and both bank words `:= 0`; `CoreR.flush` (any `CoreR`,
+  no stamp about to wrap ⇒ `CoreR` of `Caches.empty`), `flushCaches_refinesC`. The generic part
+  (`clearsL`, `memoRG_clearsL`: a memo cleared in a run of clears is empty after it) is
+  schema-generic.
+* `scratch_drop()` = `flush_caches()`; `scratch_reset(0)`, as the twin's `dropScratch`
+  (`flushCaches` first); `scratchDrop_refinesC` now proves the caches part instead of relying on
+  the stub, `CheckR.of_bracket` takes the new `CoreR` and a `CTL` write set below 128.
+* Probes and inserts (`CoreRefine.lean`): `ModeR.findE`/`setE` (one-handle mode memos),
+  `findD`/`setD` (`defeqC`), `memoRG_findP`/`findR` (constant caches).
+* **Finding**: `MemoBank.lean`'s `lo_hi`, `genW_lo`, `genW_hi` were proved by `bv_decide`, which on
+  this toolchain adds an axiom `…._native.bv_decide.ax_…`; anything built on the banks (now
+  `scratchDrop_refinesC`) would have stopped counting as proven. Reproved by `toNat` arithmetic
+  (`Nat.shiftLeft_add_eq_or_of_lt`, `Nat.and_two_pow_sub_one_eq_mod`), same statements.
+* Finding: `decide +kernel` on membership in `coreSchs.flatMap (fun S => [S.cs, S.cs + 1])`
+  (twenty words) ran out of memory (18 GB, killed); an explicit literal list and `simp` is instant.
+
+### `sorry`s
+
+None so far.
