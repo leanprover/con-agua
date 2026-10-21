@@ -206,6 +206,26 @@ theorem bank_put (S : MemoSch) (hS : S.WF) (K : MemoKey κ)
     by rw [hcw c (.inl rfl)]; exact hB1, by rw [hcw (c + 1) (.inr rfl)]; exact hB2, hgG, hGl,
     by rw [hf.2.2.1]; exact hsz⟩
 
+/-- **A probe at the current generation is a lookup in the current bank**: a hit is the bank's
+entry, a miss its absence. -/
+theorem bank_find (S : MemoSch) (K : MemoKey κ) (h2 : ∀ k1 k2, K.ok k1 k2 → k2.toNat < 2 ^ 32)
+    (VR : Mem → Word → ν → Prop) (m : Mem) (M : Std.HashMap (κ × Word) ν)
+    (hR : MemoRV S (genKey K h2) VR m M) (g : Word) (hg : g.toNat < 2 ^ 32)
+    (mp : Std.HashMap κ ν) (hb : Bank M g mp) (k1 k2 : Word) (hk : K.ok k1 k2)
+    (hr : mfindG S m k1 (genW k2 g) ≠ []) :
+    ((mfindG S m k1 (genW k2 g)).headD 0 ≠ 0 →
+      MemoV VR m (mvG S m ((mfindG S m k1 (genW k2 g)).tail.headD 0)) mp[K.dk k1 k2]?) ∧
+    ((mfindG S m k1 (genW k2 g)).headD 0 = 0 → mp[K.dk k1 k2]? = none) := by
+  have hk2 := h2 k1 k2 hk
+  have hok : (genKey K h2).ok k1 (genW k2 g) := by
+    show K.ok k1 (genW k2 g &&& 0xFFFFFFFF); rw [genW_lo k2 g hk2]; exact hk
+  have hdk : (genKey K h2).dk k1 (genW k2 g) = (K.dk k1 k2, g) := by
+    show (K.dk k1 (genW k2 g &&& 0xFFFFFFFF), genW k2 g >>> 32) = _
+    rw [genW_lo k2 g hk2, genW_hi k2 g hk2 hg]
+  rw [hb (K.dk k1 k2), ← hdk]
+  exact ⟨fun hh => memoRV_hit S _ VR m M hR k1 _ hr hh hok,
+    fun hh => memoRV_miss S _ VR m M hR k1 _ hok hr hh⟩
+
 end put
 
 /-! ## A test instance and a run
