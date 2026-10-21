@@ -1,0 +1,178 @@
+import ConAgua.Arena.StoreLib
+import ConAgua.Arena.NAnonStore
+
+/-!
+# The name store's `anonymous` store refines the arena's `anonymous` tables
+
+The fieldless case on the name store: the record `AnonNode` (no fields,
+`ConAgua/Arena/NAnonStore.lean` has the L code). The schema `nanonSch` (`NAREC`, `NASLOT`, one
+dummy word per node, counts at `CTL[34 + t]`, tag `0`), the record relation `NaRecRel` (trivially
+`True`: there is only one possible `AnonNode`), the node hash `nahash` (the constant `nahashW`),
+the lens `nanonLens` on the name store's two `anonymous` tables
+(`a.store.lss.ls.ns.pers.anons`/`scr.anons`). `NAnonR m a` is the library's `StoreR` for them.
+`internNAnon_refines`: `intern_nanon()` refines `internNNode .anonymous` under `NAnonR`. Unlike
+the expression store, the name store's `NStore.find?` probes the persistent tier unconditionally
+(no scratch skip), as the level store's `LStore.find?` does.
+
+Not represented: the derived column and every other table.
+-/
+
+open ConRon.Arena
+open Std.WP
+open scoped Lean.Order
+
+set_option linter.unusedSimpArgs false
+
+namespace L.Arena
+
+/-- The arena's `anonymous` cons key: the only value of `AnonNode`. -/
+abbrev naKey : AnonNode := .mk
+
+theorem naNode_eq (a : AnonNode) : a = naKey := by cases a; rfl
+
+/-- `a` with the scratch / persistent `anonymous` table of the name store replaced. -/
+def withScrNAnons (a : AState) (t : Tbl AnonNode NIdx UInt64) : AState :=
+  { a with store := { a.store with lss := { a.store.lss with ls := { a.store.lss.ls with
+      ns := { a.store.lss.ls.ns with scr := { a.store.lss.ls.ns.scr with anons := t } } } } } }
+def withPersNAnons (a : AState) (t : Tbl AnonNode NIdx UInt64) : AState :=
+  { a with store := { a.store with lss := { a.store.lss with ls := { a.store.lss.ls with
+      ns := { a.store.lss.ls.ns with pers := { a.store.lss.ls.ns.pers with anons := t } } } } } }
+
+/-- The name store's two `anonymous` tables. -/
+def nanonLens : Lens AnonNode UInt64 .name where
+  on a := a.store.lss.ls.ns.scratchOn
+  getP a := a.store.lss.ls.ns.pers.anons
+  getS a := a.store.lss.ls.ns.scr.anons
+  setP := withPersNAnons
+  setS := withScrNAnons
+  on_setP _ _ := rfl
+  on_setS _ _ := rfl
+  getP_setP _ _ := rfl
+  getS_setP _ _ := rfl
+  getP_setS _ _ := rfl
+  getS_setS _ _ := rfl
+
+/-- `internNNode` at the `anonymous` node is the library's protocol, with no skip (as the level
+store's `internLNode`). -/
+theorem internNNode_anon_run (a : AState) :
+    (internNNode .anonymous).run a =
+      protoRun nanonLens naKey NTag.anonymous a.store.lss.ls.ns.pers.anons.cons[naKey]?
+        (a.store.lss.ls.ns.derOfView .anonymous) (.native "arena: name constructor array full") a := by
+  simp only [internNNode, NStore.find?, NTables.find?, Tbl.find?, NTables.sizeOf, EStore.ns,
+    EStore.internName, LsStore.internName, LStore.internName, NStore.intern, NTables.push]
+  cases hp : a.store.lss.ls.ns.pers.anons.cons[naKey]? <;> cases hs : a.store.lss.ls.ns.scratchOn <;>
+    cases hc : a.store.lss.ls.ns.scr.anons.cons[naKey]? <;>
+    simp only [StateT.run_bind, StateT.run_get, pure_bind, hp, hs, hc, Bool.false_eq_true,
+      ↓reduceIte, naKey, ite_self, protoRun, nanonLens] <;>
+    (try split) <;> simp_all [StateT.run_set, StateT.run_pure, withScrNAnons, withPersNAnons, fail,
+      throwThe, MonadExceptOf.throw, StateT.run, Functor.map, StateT.map, set, StateT.set,
+      StateT.lift, bind, Except.bind, Except.map, pure, Except.pure, StateT.bind, StateT.pure]
+
+/-! ## The relation between L memory and the arena's `anonymous` tables -/
+
+/-- The `anonymous` schema: `NAREC`, `NASLOT`, one dummy word per node, the counts at
+`CTL[34 + t]`. -/
+def nanonSch : Schema := ⟨NAREC, NASLOT, 1, 2, 34, NTag.anonymous⟩
+
+theorem nanonSch_wf : nanonSch.WF :=
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+
+/-- Node `i` of tier `t` holds the `anonymous` node: trivially (there is only one `AnonNode`). -/
+def NaRecRel (_m : Mem) (_t _i : Word) (_k : AnonNode) : Prop := True
+
+/-- The (constant) hash of node `i` of tier `t`. -/
+def nahash (_m : Mem) (_t _i : Word) : Word := nahashW
+
+/-- **The state relation** of the `anonymous` store: the library's relation for the name store's
+two `anonymous` tables. -/
+def NAnonR (m : Mem) (a : AState) : Prop :=
+  StoreR nanonSch NaRecRel nahash m a.store.lss.ls.ns.scratchOn a.store.lss.ls.ns.pers.anons
+    a.store.lss.ls.ns.scr.anons
+
+/-- A node's relation and hash depend on nothing. -/
+theorem naFrame : RFrame nanonSch NaRecRel nahash := by
+  intro m m' t i _ _
+  exact ⟨fun _ _ => trivial, rfl⟩
+
+/-! ## The query's obligations -/
+
+/-- The match of `nanon_find` on node `i` of tier `t`: always. -/
+def naMt (m : Mem) (t i : Word) : Bool := namatchW (m.arr64 NAREC) t i
+
+/-- **Matching is equality of `anonymous` nodes**: both sides are always true. -/
+theorem naMatchOK (m : Mem) : MatchOK NaRecRel (naMt m) m naKey := by
+  intro t i k _
+  simp only [naMt, namatchW, eq_iff_iff, iff_true, naNode_eq k]
+
+theorem naHomeOK (m : Mem) : HomeOK nahash (naMt m) m nahashW := by
+  intro t i _; rfl
+
+/-- The record `nanon_push` writes holds the node (trivially). -/
+theorem naNewOK (m : Mem) : NewOK nanonSch NaRecRel nahash m [0] naKey nahashW := by
+  intro t j _ _
+  exact ⟨trivial, rfl⟩
+
+/-! ## The bridges from the L models -/
+
+theorem naprobeW_arm (m : Mem) (t : Word) :
+    ∀ j d, naprobeW (m.arr64 NASLOT) (m.arr64 NAREC) t (nSlotsNA m) j d =
+      probeArm nanonSch m t (naMt m t) (naprobeW (m.arr64 NASLOT) (m.arr64 NAREC) t (nSlotsNA m)) j d := by
+  intro j d; rw [naprobeW]; rfl
+
+theorem napushOK_room (m : Mem) (t : Word) (h : napushOK m t = true) : PushRoom nanonSch m t := by
+  simp only [napushOK, Bool.and_eq_true, decide_eq_true_eq] at h
+  have := UInt64.toNat_shiftRight (m.len64 NAREC) 1
+  simp only [PushRoom, cntW, nacnt, nanonSch, len64_eq] at *
+  grind
+
+theorem napushMem_eq (m : Mem) (t j c : Word) :
+    napushMem m t j c = pushG nanonSch m t [0] j c := by
+  simp [napushMem, pushG, wrRec, Schema.ad, nanonSch]
+
+theorem nainternW_eq (m : Mem) :
+    nainternW m = internM nanonSch m 0 (napushOK m) [0]
+      (naprobeW (m.arr64 NASLOT) (m.arr64 NAREC) 0 (nSlotsNA m) (homeW nahashW (nSlotsNA m)) 0)
+      (naprobeW (m.arr64 NASLOT) (m.arr64 NAREC) 1 (nSlotsNA m) (homeW nahashW (nSlotsNA m)) 0) := by
+  have e0 : ∀ x, hdW nanonSch.tag.toUInt64 0 x = naP + x := fun x => by
+    simp [hdW, nanonSch, naP, NTag.anonymous]
+  have e1 : ∀ x, hdW nanonSch.tag.toUInt64 1 x = naS + x := fun x => by
+    simp [hdW, nanonSch, naS, NTag.anonymous]
+  simp only [nainternW, internM, napushMem_eq, e0, e1, true_and]
+  rfl
+
+/-! ## `intern_nanon` refines `internNNode .anonymous` -/
+
+section intern
+variable (m : Mem) (a : AState) (hR : NAnonR m a)
+
+include hR in
+/-- **`intern_nanon`'s model refines the arena's `internNNode` at the `anonymous` node.** -/
+theorem naintern_correct (w : Word) (m' : Mem) (hI : nainternW m = some (w, m')) :
+    AM.ok (internNNode .anonymous) a ∧
+    NAnonR m' (AM.st (internNNode .anonymous) a) ∧
+    AM.res (internNNode .anonymous) a = decI w := by
+  rw [nainternW_eq] at hI
+  exact intern_correctG nanonSch NaRecRel nahash nanonSch_wf naFrame nanonLens a m hR _ _ _ _ _
+    (internNNode_anon_run a) false rfl 0 (by simp) (by simp) _ _ (naMatchOK m)
+    (naHomeOK m) _ _ (probe_homeG nanonSch m 0 _ _ (naprobeW_arm m 0) _)
+    (probe_homeG nanonSch m 1 _ _ (naprobeW_arm m 1) _) _ (napushOK_room m) _ rfl
+    (naNewOK m) w m' hI
+
+end intern
+
+/-- `intern_nanon` refines `internNNode .anonymous` under `NAnonR`. -/
+theorem internNAnon_refines (p : Prog) (hpf : p.lookup "nanon_find" = some nanonFind)
+    (hpp : p.lookup "nanon_push" = some nanonPush) (hp : p.lookup "intern_nanon" = some internNAnon)
+    (a₀ : AState) (n : Nat) (s₀ : St) (hR : NAnonR s₀.mem a₀) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "intern_nanon" []
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internNNode .anonymous) a₀ ∧
+      NAnonR s'.mem (AM.st (internNNode .anonymous) a₀) ∧
+      AM.res (internNNode .anonymous) a₀ = decI (r.headD 0); ⊤⦄ := by
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun (internNAnon_spec p hpf hpp hp n s₀)
+  subst hs
+  exact ⟨hloc, naintern_correct s.mem a₀ hR _ _ hI⟩
+
+end L.Arena
