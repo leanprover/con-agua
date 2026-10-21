@@ -4480,3 +4480,134 @@ of its callees (before, a top-down skeleton over stub specs made 769 targets "so
 The skeleton's five theorems in `ConAgua/Arena/Checker.lean` are tagged `@[refines …]` again
 (they were `refines_part … "skeleton, from the stub specs"` to work around it), so the census now
 shows 13 targets proven with `sorry`.
+
+## Inductive types and recursors, top down (2026-10-21, lane `induct`)
+
+Phase 8 (ROADMAP §1, `arena/inductives/*.rs`, 7.2k Rust lines, 223 census targets): the whole
+inductive-declaration check in L — `checkDecl`'s `.indDecl` arm, the recogniser (`blockParts?`),
+the formers' stage, the constructors' stage, positivity (nested containers included), the
+generated recursors and their check, the install — written top down against stubs for the
+callees other lanes own, plus the frontend's inductive lines. Files: `ConAgua/Arena/Ind*.lean`,
+`Rec*.lean`, `ConAgua/Front/Ind*.lean`.
+
+### The interface first (`IndIface.lean`)
+
+The twin threads rich values (lists, records, lists of lists, sums). One file fixed, before any
+translation, how they live in L memory and how L functions call each other; eight sonnet workers
+then translated one twin module group each, in parallel worktrees, against it alone (calls are by
+name, so no module imports another), and a ninth (opus) did the frontend's inductive lines. The
+interface held: the merge found one name mismatch (`cons_block_recs_t_f`/`_tf`) and five call
+sites passing an `EREC` slice where the convention wants an `IW` copy (fixed by the lead).
+
+* **The work pool `IW`** (array 200, top `CTL[200]`): every value the stage builds, bump-allocated
+  (`iw_alloc`), immutable once built, reset at the stage's entry. Lists are `(off, len)` slices
+  (`take`/`drop` are free), a list of composite values holds pointers to records; a table of the
+  record layouts is in the file's doc, with an `Option`-valued decoder per record (`decBS`,
+  `decMS`, `decRS`, `decCtx`, `decNK`, `decNS`, `decTM`, `decCS`, `decCR`, `decCC`, `decCG`, …).
+* **Constants** stay `EREC` records (lane `pinsenv`'s `decCI` layout, the constant value inline at
+  `p + 1`); a new one is allocated there (`erec_alloc`, `CTL[129]`); every list a function takes is
+  an `IW` slice (`er_to_iw`, `cv_lps` copy a constant's level parameters).
+* **Environments are view words** (`fe` → `vis`, `fe.restrictTo k` → `k`); a function returning
+  an `IFEnv` returns the new view.
+* **Per-call memos** (`mentionsAnyGo`, `nestOccGo`, `depthGo`, `replaceFVarsGo`, `replaceAppsGo`,
+  `targetAbsGo`, `hasLooseBVarBGo`, `mentionsConstGo`): `MemoLib` schemas on arrays 201‥208
+  (`CTL` 202‥217), cleared where the twin starts from `∅`; `replaceFVars` nests inside itself
+  (through `nestHoleImg`), so it uses lane `libs`' banks (`CTL[218]`, `[219]`).
+* **Naming and calling rule**: the L name is the twin's in snake case; parameters in the twin's
+  order (`mode`, `checkFuel` dropped, lists two words, records one pointer); results flattened up
+  to six words. With the rule, every module could call every other one without coordination.
+* **Mode**: L implements `.verified` only. Fuels: `coreWalkFuel` and the positivity walk's fuel are
+  explicit words (ROADMAP §3 (b)); every twin `fail` is `abort` (§3 (c)).
+* **The stage relation and the refinement shape**: `StageR dn vis fe m a := CheckR dn m a vis fe ∧
+  IWOK m`; `RefAM p f args pre op post` (from `pre`, a returning run keeps the locals, the twin's
+  `op` succeeds, `post` relates the memories, the twin state after, the results and the twin's
+  result); `KeepPost`/`EnvPost` the usual posts; `IWGrow` (the pools only grew).
+* **Stubs** (`stubFns`, 36 callees of other lanes: `whnf`, `infer_type_core`, `is_def_eq_core`,
+  `ensure_sort_core`, `check_constant_val`, `strip_pis`, `open_pis_at_fvars_f`, `get_app_fn`/`args`,
+  `instantiate1_fast`, `abstract1_fast`, `inst_lp_fast`, `bvar_b`, `fvar_b`, … with their calling
+  conventions in the doc: **requests to the owning lanes**). Their specs are `IndStubs.lean`, one
+  `RefAM` statement each, for any program, proved by `sorry` (a caller's refinement through them
+  inherits the `sorry`, the honest census status).
+* `IndProg.lean`: the whole stage program (the modules, the library, the stubs, master's functions
+  as stubs) passes the compiler's `Prog.wf` (every call resolves with the right arity, ≤ 6 results,
+  distinct names) by `decide +kernel`. A results-count check (callers never read more results
+  than the callee returns, Unit-valued callees aside) was run by `#eval` at the merge.
+
+### Measurements (lines, `wc -l`; L lines inside `lfn` bodies)
+
+| file | lines | L lines | twin functions (`l_impl`) | worker |
+|---|---:|---:|---:|---|
+| `IndIface` (layouts, decoders, library, stubs) | 808 | 243 | 1 (`nameNodup`) | lead |
+| `IndParts` (BlockParts, FieldTele, BlockRec, `checkDecl`'s arm) | 868 | 541 | 29 | sonnet |
+| `IndInstall` (BlockInstall, BlockTail) | 767 | 472 | 22 | sonnet |
+| `IndSum` (SumInstall, StructInstall, StructParts) | 751 | 445 | 33 | sonnet |
+| `IndPos` (Positivity: walks, readback) | 765 | 493 | 29 | sonnet |
+| `IndPos2` (Positivity: `nestPos` block, root, seeds) | 921 | 602 | 23 | sonnet |
+| `RecClass` (ClassRead, GenRec generator) | 686 | 467 | 24 | sonnet |
+| `RecGen` (GenRec stage) | 907 | 595 | 25 | sonnet |
+| `RecCheck` | 923 | 607 | 25 | sonnet |
+| `Front/IndFields`, `Front/IndApply` (inductive lines) | 314 + 640 | 534 | 9 (+ scanners) | opus |
+
+The stage is 4.2k L lines for 7.2k Rust lines (**0.58 L per Rust line**, the scanner's rate) and
+~2.4k twin code lines; every module file builds in under 10 s (L definitions, `Prog.wf` by
+`decide +kernel`, `#guard` runs of the stub-free paths). Wall time: the eight translations ran in
+parallel, 20–32 min each (sonnet, 250–320k tokens each); the interface took the lead ~35 min.
+
+### Proofs so far (bottom up)
+
+* `IndLibSpec.lean` (518 lines): the slice library is recursive in the slice (lane `levels`'
+  `lv_mem` shape) and specified by word models; `SlR` (the slice as an inductive relation of its
+  words, no `Nat` offsets: no overflow side conditions) with `slR_of_decHL` from the `Option`
+  decoders; **`sl_nodup` refines `nameNodup`**; `iw_alloc`, `rec2` specs; `CheckR.frame_iw` (a pool
+  writer keeps every tier); growth lemmas; decoded-field read lemmas.
+* `IndView.lean` (240 lines): **`e_view` refines `view`** (`eViewW` the word model, `ViewR` the
+  view's words, `eViewW_ok` one case per tag over lane `exprops`' `View.lean` lemmas plus field
+  lemmas for `sort`/`const`). Every function matching on a view goes through it.
+* `IndPartsSpec.lean`: `block_shape_k` refines `BlockShape.k` (the exemplar for record
+  projections). Workers continue per module (`*Spec.lean`).
+* Census at this landing (master `dc2c9bd` + this lane): phase 8 **4 proven, 211 written, 8 todo**
+  (the `todo` are `where`-helpers and constants with no code of their own, and `PropWhen.isNever`);
+  before: 3 proven (covered `PropWhen` helpers), 0 written. Totals 286 proven / 13 sorry / 262
+  written of 1352. The stale flags of phase 8 after con-ron's bump (`12752ca7`, the eager tower's
+  memos inside `Core.lean`) were reviewed: the conventions of the core stubs did not change.
+
+### Findings
+
+* **Interfaces first scales to eight workers**: a written calling rule (names, parameter and
+  result flattening) plus record layouts let modules that call each other be written without
+  seeing each other; `Prog.wf` on the assembled program is the cheap integration test.
+* Conventions that a worker can get wrong silently: which array a slice lives in (five call sites
+  passed `EREC` slices to callees that read `IW`); `Prog.wf` cannot see it. A typed slice (array
+  in the type) would catch it at the decoder level; the refinement proofs will.
+* `u64(c)` takes a single comparison (no `&&`/`||`), and `len` is a keyword (no variable of that
+  name): both hit by several workers; worth a line in the L notation's doc.
+* Lean `do` lifts every `(← …)` of a statement before it (no short circuit in `(← a) && (← b)`):
+  the brief said so explicitly and the workers kept effects in order.
+* `rw [decX] at h; simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h`
+  destructures a record decoder (plain `simp [decX]` leaves the elaborated `match`).
+
+### Requests
+
+* Lanes owning the stubs (whnf/defeq/infer: `whnf`, `infer_type_core`, `ensure_sort_core`,
+  `is_def_eq_core`; expr ops: `strip_pis`, `strip_lams`, `open_pis_at_fvars_f`, `get_app_fn`,
+  `get_app_args`, `mk_app_n`, `fvar_type_d(s)`, `pi_result`, `inst_lp_fast`, `inst_pis_at_lift`,
+  `instantiate1(_lift)_fast`, `abstract1_fast`, `bvar_b`, `fvar_b`, `has_fvar_fast`,
+  `loose_bvars_bounded_fast`, `all_level_params_defined`; decls/pins: `check_constant_val`,
+  `consts_resolve_ffast`, `is_proj_fn_shape`, `reserved_rec_name`, `rec_rule_bits`, `proj_table_name`,
+  `basis_pin_hit`, `check_basis_decl`, `ind_params_ok`; stores: `intern_ls_iw`, `name_rec`,
+  `name_rec_i`; levels: `lv_zero_caps`): the conventions in `IndIface.lean`'s `stubFns` doc, the
+  specs in `IndStubs.lean`. A lane may change a convention; then grep the call sites.
+* Lane `pinsenv`: `EnvR` must survive appends to `EREC` above its top (`erec_alloc` + record
+  writes): every record `EnvR` decodes lies below `CTL[129]`. Today `EnvR.frame` forbids any
+  `EREC` write. The declaration fold's `.indDecl` arm calls `check_ind_decl(vis, boff, blen, nP)`
+  (`IndParts.lean`, the block an `EREC` slice of constant records).
+* Lane `front`: inductive lines are translated (`Front/IndFields`, `IndApply`) but not hooked in:
+  `DeclAt` needs the `.indDecl` case (`IndDeclAt`, `DIND` = array 69, `IFR`/`IFL` = 70, 71 scratch)
+  and `apply_dline`'s pl-25 branch `z := call apply_ind_line(j)`; `frontAllProg` gains the two
+  modules' functions (doc of `IndApply.lean`).
+* Memory map additions: arrays 69‥71 (front, inductive lines), 200‥208 (`IW`, the eight walk
+  memos), `CTL` 200‥219.
+
+### `sorry`s
+
+`IndStubs.lean`: the 34 stub specs (by design, above). No other.
