@@ -347,6 +347,18 @@ passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` 
 * **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
   none for the theorem (as `nat_shr`).
 
+### `land`/`lor`/`xor` are the `Nat` operations (`NatBitsNat.lean`)
+
+Lane `nat` proved `nat_land`/`nat_lor`/`nat_xor` against `bv f`, the limb-wise combine, and left
+"`bv` is `Nat.land`" open. `bitwise_split`: for an operation `op` given by its bits (`BitOp op g`:
+bit `i` of `op x y` is `g (bit i of x) (bit i of y)`, `g false false = false`) and `x, y < 2^64`,
+`op (x + 2^64 X) (y + 2^64 Y) = op x y + 2^64 · op X Y` (by `Nat.testBit`); by induction over the
+limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X Y`; with
+`pv a = xv a k + wt k · pv (a + k) (la - k)` the high parts vanish at the loop's length
+(`land_bv`, `lor_bv`, `xor_bv`). 129 lines, by hand, 0.6 s. The operation is a parameter with
+its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
+visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
+
 ### `sorry`s
 
 None.
@@ -1543,6 +1555,18 @@ passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` 
 * **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
   none for the theorem (as `nat_shr`).
 
+### `land`/`lor`/`xor` are the `Nat` operations (`NatBitsNat.lean`)
+
+Lane `nat` proved `nat_land`/`nat_lor`/`nat_xor` against `bv f`, the limb-wise combine, and left
+"`bv` is `Nat.land`" open. `bitwise_split`: for an operation `op` given by its bits (`BitOp op g`:
+bit `i` of `op x y` is `g (bit i of x) (bit i of y)`, `g false false = false`) and `x, y < 2^64`,
+`op (x + 2^64 X) (y + 2^64 Y) = op x y + 2^64 · op X Y` (by `Nat.testBit`); by induction over the
+limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X Y`; with
+`pv a = xv a k + wt k · pv (a + k) (la - k)` the high parts vanish at the loop's length
+(`land_bv`, `lor_bv`, `xor_bv`). 129 lines, by hand, 0.6 s. The operation is a parameter with
+its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
+visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
+
 ### `sorry`s
 
 None.
@@ -1810,6 +1834,18 @@ passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` 
 * **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
   none for the theorem (as `nat_shr`).
 
+### `land`/`lor`/`xor` are the `Nat` operations (`NatBitsNat.lean`)
+
+Lane `nat` proved `nat_land`/`nat_lor`/`nat_xor` against `bv f`, the limb-wise combine, and left
+"`bv` is `Nat.land`" open. `bitwise_split`: for an operation `op` given by its bits (`BitOp op g`:
+bit `i` of `op x y` is `g (bit i of x) (bit i of y)`, `g false false = false`) and `x, y < 2^64`,
+`op (x + 2^64 X) (y + 2^64 Y) = op x y + 2^64 · op X Y` (by `Nat.testBit`); by induction over the
+limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X Y`; with
+`pv a = xv a k + wt k · pv (a + k) (la - k)` the high parts vanish at the loop's length
+(`land_bv`, `lor_bv`, `xor_bv`). 129 lines, by hand, 0.6 s. The operation is a parameter with
+its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
+visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
+
 ### `sorry`s
 
 None.
@@ -1999,6 +2035,18 @@ passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` 
 * **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
   none for the theorem (as `nat_shr`).
 
+### `land`/`lor`/`xor` are the `Nat` operations (`NatBitsNat.lean`)
+
+Lane `nat` proved `nat_land`/`nat_lor`/`nat_xor` against `bv f`, the limb-wise combine, and left
+"`bv` is `Nat.land`" open. `bitwise_split`: for an operation `op` given by its bits (`BitOp op g`:
+bit `i` of `op x y` is `g (bit i of x) (bit i of y)`, `g false false = false`) and `x, y < 2^64`,
+`op (x + 2^64 X) (y + 2^64 Y) = op x y + 2^64 · op X Y` (by `Nat.testBit`); by induction over the
+limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X Y`; with
+`pv a = xv a k + wt k · pv (a + k) (la - k)` the high parts vanish at the loop's length
+(`land_bv`, `lor_bv`, `xor_bv`). 129 lines, by hand, 0.6 s. The operation is a parameter with
+its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
+visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
+
 ### `sorry`s
 
 None.
@@ -2161,6 +2209,18 @@ passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` 
 * **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
   none for the theorem (as `nat_shr`).
 
+### `land`/`lor`/`xor` are the `Nat` operations (`NatBitsNat.lean`)
+
+Lane `nat` proved `nat_land`/`nat_lor`/`nat_xor` against `bv f`, the limb-wise combine, and left
+"`bv` is `Nat.land`" open. `bitwise_split`: for an operation `op` given by its bits (`BitOp op g`:
+bit `i` of `op x y` is `g (bit i of x) (bit i of y)`, `g false false = false`) and `x, y < 2^64`,
+`op (x + 2^64 X) (y + 2^64 Y) = op x y + 2^64 · op X Y` (by `Nat.testBit`); by induction over the
+limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X Y`; with
+`pv a = xv a k + wt k · pv (a + k) (la - k)` the high parts vanish at the loop's length
+(`land_bv`, `lor_bv`, `xor_bv`). 129 lines, by hand, 0.6 s. The operation is a parameter with
+its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
+visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
+
 ### `sorry`s
 
 None.
@@ -2305,6 +2365,18 @@ passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` 
   `x / 2^j` terms and broke it.
 * **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
   none for the theorem (as `nat_shr`).
+
+### `land`/`lor`/`xor` are the `Nat` operations (`NatBitsNat.lean`)
+
+Lane `nat` proved `nat_land`/`nat_lor`/`nat_xor` against `bv f`, the limb-wise combine, and left
+"`bv` is `Nat.land`" open. `bitwise_split`: for an operation `op` given by its bits (`BitOp op g`:
+bit `i` of `op x y` is `g (bit i of x) (bit i of y)`, `g false false = false`) and `x, y < 2^64`,
+`op (x + 2^64 X) (y + 2^64 Y) = op x y + 2^64 · op X Y` (by `Nat.testBit`); by induction over the
+limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X Y`; with
+`pv a = xv a k + wt k · pv (a + k) (la - k)` the high parts vanish at the loop's length
+(`land_bv`, `lor_bv`, `xor_bv`). 129 lines, by hand, 0.6 s. The operation is a parameter with
+its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
+visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
 
 ### `sorry`s
 
@@ -2850,6 +2922,18 @@ passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` 
 * **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
   none for the theorem (as `nat_shr`).
 
+### `land`/`lor`/`xor` are the `Nat` operations (`NatBitsNat.lean`)
+
+Lane `nat` proved `nat_land`/`nat_lor`/`nat_xor` against `bv f`, the limb-wise combine, and left
+"`bv` is `Nat.land`" open. `bitwise_split`: for an operation `op` given by its bits (`BitOp op g`:
+bit `i` of `op x y` is `g (bit i of x) (bit i of y)`, `g false false = false`) and `x, y < 2^64`,
+`op (x + 2^64 X) (y + 2^64 Y) = op x y + 2^64 · op X Y` (by `Nat.testBit`); by induction over the
+limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X Y`; with
+`pv a = xv a k + wt k · pv (a + k) (la - k)` the high parts vanish at the loop's length
+(`land_bv`, `lor_bv`, `xor_bv`). 129 lines, by hand, 0.6 s. The operation is a parameter with
+its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
+visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
+
 ### `sorry`s
 
 None.
@@ -3101,6 +3185,18 @@ passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` 
   `x / 2^j` terms and broke it.
 * **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
   none for the theorem (as `nat_shr`).
+
+### `land`/`lor`/`xor` are the `Nat` operations (`NatBitsNat.lean`)
+
+Lane `nat` proved `nat_land`/`nat_lor`/`nat_xor` against `bv f`, the limb-wise combine, and left
+"`bv` is `Nat.land`" open. `bitwise_split`: for an operation `op` given by its bits (`BitOp op g`:
+bit `i` of `op x y` is `g (bit i of x) (bit i of y)`, `g false false = false`) and `x, y < 2^64`,
+`op (x + 2^64 X) (y + 2^64 Y) = op x y + 2^64 · op X Y` (by `Nat.testBit`); by induction over the
+limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X Y`; with
+`pv a = xv a k + wt k · pv (a + k) (la - k)` the high parts vanish at the loop's length
+(`land_bv`, `lor_bv`, `xor_bv`). 129 lines, by hand, 0.6 s. The operation is a parameter with
+its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
+visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
 
 ### `sorry`s
 
@@ -3513,6 +3609,18 @@ passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` 
 * **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
   none for the theorem (as `nat_shr`).
 
+### `land`/`lor`/`xor` are the `Nat` operations (`NatBitsNat.lean`)
+
+Lane `nat` proved `nat_land`/`nat_lor`/`nat_xor` against `bv f`, the limb-wise combine, and left
+"`bv` is `Nat.land`" open. `bitwise_split`: for an operation `op` given by its bits (`BitOp op g`:
+bit `i` of `op x y` is `g (bit i of x) (bit i of y)`, `g false false = false`) and `x, y < 2^64`,
+`op (x + 2^64 X) (y + 2^64 Y) = op x y + 2^64 · op X Y` (by `Nat.testBit`); by induction over the
+limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X Y`; with
+`pv a = xv a k + wt k · pv (a + k) (la - k)` the high parts vanish at the loop's length
+(`land_bv`, `lor_bv`, `xor_bv`). 129 lines, by hand, 0.6 s. The operation is a parameter with
+its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
+visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
+
 ### `sorry`s
 
 None.
@@ -3729,13 +3837,25 @@ passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` 
 * **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
   none for the theorem (as `nat_shr`).
 
+### `land`/`lor`/`xor` are the `Nat` operations (`NatBitsNat.lean`)
+
+Lane `nat` proved `nat_land`/`nat_lor`/`nat_xor` against `bv f`, the limb-wise combine, and left
+"`bv` is `Nat.land`" open. `bitwise_split`: for an operation `op` given by its bits (`BitOp op g`:
+bit `i` of `op x y` is `g (bit i of x) (bit i of y)`, `g false false = false`) and `x, y < 2^64`,
+`op (x + 2^64 X) (y + 2^64 Y) = op x y + 2^64 · op X Y` (by `Nat.testBit`); by induction over the
+limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X Y`; with
+`pv a = xv a k + wt k · pv (a + k) (la - k)` the high parts vanish at the loop's length
+(`land_bv`, `lor_bv`, `xor_bv`). 129 lines, by hand, 0.6 s. The operation is a parameter with
+its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
+visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
+
 ### `sorry`s
 
 None.
 
 ## Limb-pool `Nat` ops, round 2: compare, sub, shifts, pow, div/mod, the arms (2026-10-21, lane `nat2`)
 
-Files: `ConAgua/Arena/NatGrindAttr.lean`, `NatCmp.lean`, `NatSub.lean`, `NatShl.lean`, `NatShr.lean`, `NatPow.lean`, `NatDiv.lean`, … Per-op numbers are in the lane `nat`
+Files: `ConAgua/Arena/NatGrindAttr.lean`, `NatCmp.lean`, `NatSub.lean`, `NatShl.lean`, `NatShr.lean`, `NatPow.lean`, `NatDiv.lean`, `NatBitsNat.lean`, … Per-op numbers are in the lane `nat`
 table above (`lean` user time of the file, one run).
 
 ### `nat_cmp`: a non-recursive model
@@ -3874,6 +3994,18 @@ passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` 
   `x / 2^j` terms and broke it.
 * **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
   none for the theorem (as `nat_shr`).
+
+### `land`/`lor`/`xor` are the `Nat` operations (`NatBitsNat.lean`)
+
+Lane `nat` proved `nat_land`/`nat_lor`/`nat_xor` against `bv f`, the limb-wise combine, and left
+"`bv` is `Nat.land`" open. `bitwise_split`: for an operation `op` given by its bits (`BitOp op g`:
+bit `i` of `op x y` is `g (bit i of x) (bit i of y)`, `g false false = false`) and `x, y < 2^64`,
+`op (x + 2^64 X) (y + 2^64 Y) = op x y + 2^64 · op X Y` (by `Nat.testBit`); by induction over the
+limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X Y`; with
+`pv a = xv a k + wt k · pv (a + k) (la - k)` the high parts vanish at the loop's length
+(`land_bv`, `lor_bv`, `xor_bv`). 129 lines, by hand, 0.6 s. The operation is a parameter with
+its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
+visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
 
 ### `sorry`s
 
@@ -4031,6 +4163,18 @@ passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` 
   `x / 2^j` terms and broke it.
 * **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
   none for the theorem (as `nat_shr`).
+
+### `land`/`lor`/`xor` are the `Nat` operations (`NatBitsNat.lean`)
+
+Lane `nat` proved `nat_land`/`nat_lor`/`nat_xor` against `bv f`, the limb-wise combine, and left
+"`bv` is `Nat.land`" open. `bitwise_split`: for an operation `op` given by its bits (`BitOp op g`:
+bit `i` of `op x y` is `g (bit i of x) (bit i of y)`, `g false false = false`) and `x, y < 2^64`,
+`op (x + 2^64 X) (y + 2^64 Y) = op x y + 2^64 · op X Y` (by `Nat.testBit`); by induction over the
+limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X Y`; with
+`pv a = xv a k + wt k · pv (a + k) (la - k)` the high parts vanish at the loop's length
+(`land_bv`, `lor_bv`, `xor_bv`). 129 lines, by hand, 0.6 s. The operation is a parameter with
+its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
+visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
 
 ### `sorry`s
 
@@ -4304,6 +4448,18 @@ operation that is not a clear (above).
 **What to watch:** per-writer CPU of a bundle (split it above ~2 s); any twin change that iterates
 or sizes a map, or caches a value that is not a word; the eager depth bound `D` (unbounded nesting
 in `.verified` mode, abort beyond `D`); memo and table capacities against the twin's uncapped caches.
+
+### `land`/`lor`/`xor` are the `Nat` operations (`NatBitsNat.lean`)
+
+Lane `nat` proved `nat_land`/`nat_lor`/`nat_xor` against `bv f`, the limb-wise combine, and left
+"`bv` is `Nat.land`" open. `bitwise_split`: for an operation `op` given by its bits (`BitOp op g`:
+bit `i` of `op x y` is `g (bit i of x) (bit i of y)`, `g false false = false`) and `x, y < 2^64`,
+`op (x + 2^64 X) (y + 2^64 Y) = op x y + 2^64 · op X Y` (by `Nat.testBit`); by induction over the
+limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X Y`; with
+`pv a = xv a k + wt k · pv (a + k) (la - k)` the high parts vanish at the loop's length
+(`land_bv`, `lor_bv`, `xor_bv`). 129 lines, by hand, 0.6 s. The operation is a parameter with
+its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
+visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
 
 ### `sorry`s
 
