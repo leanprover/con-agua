@@ -239,21 +239,173 @@ decreasing_by
 def natListEntryN (b : Array UInt8) (i : Word) : Word × Word :=
   if i < UInt64.ofNat b.size ∧ byteW b i = 91 then natListN b (i + 1) 0 1 else (0, 0)
 
+/-! One guarded equation per arm (DESIGN.md, "Proof recipe"), mirroring `natListN`'s own
+nested-if chain, as `keyEndN`'s arms do. -/
+section
+variable (b : Array UInt8) (i cnt w : Word)
+
+theorem natListN_ws (k : Word) (hk : k = i + 1) (h : i < UInt64.ofNat b.size)
+    (hc : byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13) :
+    natListN b i cnt w = natListN b k cnt w := by
+  subst hk; rw [natListN]; simp [h, hc]
+
+theorem natListN_close_ok (h : i < UInt64.ofNat b.size)
+    (h1 : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13)) (hc : byteW b i = 93)
+    (hw : ¬ (w ≠ 0 ∧ cnt ≠ 0)) : natListN b i cnt w = (i + 1, cnt) := by
+  rw [natListN]; simp [h, h1, hc, hw]
+
+theorem natListN_close_fail (h : i < UInt64.ofNat b.size)
+    (h1 : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13)) (hc : byteW b i = 93)
+    (hw : w ≠ 0 ∧ cnt ≠ 0) : natListN b i cnt w = (0, 0) := by
+  rw [natListN]; simp [h, h1, hc, hw]
+
+theorem natListN_comma (k : Word) (hk : k = i + 1)
+    (h : i < UInt64.ofNat b.size) (h1 : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13))
+    (h2 : byteW b i ≠ 93) (hc : byteW b i = 44) (hw : w = 0) :
+    natListN b i cnt w = natListN b k cnt 1 := by
+  subst hk; rw [natListN]; simp [h, h1, h2, hc, hw]
+
+theorem natListN_comma_fail (h : i < UInt64.ofNat b.size)
+    (h1 : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13)) (h2 : byteW b i ≠ 93)
+    (hc : byteW b i = 44) (hw : w ≠ 0) : natListN b i cnt w = (0, 0) := by
+  rw [natListN]; simp [h, h1, h2, hc, hw]
+
+theorem natListN_digit_w0 (h : i < UInt64.ofNat b.size)
+    (h1 : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13)) (h2 : byteW b i ≠ 93)
+    (h3 : byteW b i ≠ 44) (hd : 48 ≤ byteW b i ∧ byteW b i ≤ 57) (hw : w = 0) :
+    natListN b i cnt w = (0, 0) := by
+  rw [natListN]; simp [h, h1, h2, h3, hd, hw]
+
+theorem natListN_digit_noprog (h : i < UInt64.ofNat b.size)
+    (h1 : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13)) (h2 : byteW b i ≠ 93)
+    (h3 : byteW b i ≠ 44) (hd : 48 ≤ byteW b i ∧ byteW b i ≤ 57) (hw : w ≠ 0)
+    (he : UInt64.ofNat (numEndN b i.toNat) = i) : natListN b i cnt w = (0, 0) := by
+  rw [natListN]; simp [h, h1, h2, h3, hd, hw, he]
+
+theorem natListN_digit (k : Word) (hk : k = UInt64.ofNat (numEndN b i.toNat))
+    (h : i < UInt64.ofNat b.size) (h1 : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13))
+    (h2 : byteW b i ≠ 93) (h3 : byteW b i ≠ 44) (hd : 48 ≤ byteW b i ∧ byteW b i ≤ 57) (hw : w ≠ 0)
+    (he : UInt64.ofNat (numEndN b i.toNat) ≠ i) (hlt : i < UInt64.ofNat (numEndN b i.toNat)) :
+    natListN b i cnt w = natListN b k (cnt + 1) 0 := by
+  subst hk; rw [natListN]; simp [h, h1, h2, h3, hd, hw, he, hlt]
+
+theorem natListN_other (h : i < UInt64.ofNat b.size)
+    (h1 : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13)) (h2 : byteW b i ≠ 93)
+    (h3 : byteW b i ≠ 44) (h4 : ¬ (48 ≤ byteW b i ∧ byteW b i ≤ 57)) :
+    natListN b i cnt w = (0, 0) := by
+  rw [natListN]; simp [h, h1, h2, h3, h4]
+
+theorem natListN_end (h : ¬ i < UInt64.ofNat b.size) : natListN b i cnt w = (0, 0) := by
+  rw [natListN]; simp [h]
+
+grind_pattern [lang_grind] natListN_ws => natListN b i cnt w, byteW b i, natListN b k cnt w
+grind_pattern [lang_grind] natListN_close_ok => natListN b i cnt w, byteW b i
+grind_pattern [lang_grind] natListN_close_fail => natListN b i cnt w, byteW b i
+grind_pattern [lang_grind] natListN_comma => natListN b i cnt w, byteW b i, natListN b k cnt 1
+grind_pattern [lang_grind] natListN_comma_fail => natListN b i cnt w, byteW b i
+grind_pattern [lang_grind] natListN_digit_w0 => natListN b i cnt w, byteW b i
+grind_pattern [lang_grind] natListN_digit_noprog => natListN b i cnt w, byteW b i, numEndN b i.toNat
+grind_pattern [lang_grind] natListN_digit =>
+  natListN b i cnt w, byteW b i, numEndN b i.toNat, natListN b k (cnt + 1) 0
+grind_pattern [lang_grind] natListN_other => natListN b i cnt w, byteW b i
+grind_pattern [lang_grind] natListN_end => natListN b i cnt w
+
+end
+
 /-! ## Facts about the leaf models -/
 
 theorem keyEndN_lt (b : Array UInt8) (j : Nat) (h : keyEndN b j ≠ 0) : keyEndN b j < b.size := by
-  sorry
+  fun_induction keyEndN b j with
+  | case1 j hj hq => exact hj
+  | case3 j hj hq hc ih => exact ih h
+  | _ => simp_all
+
+grind_pattern [lang_grind] keyEndN_lt => keyEndN b j
 
 theorem numEndN_le (b : Array UInt8) (i : Nat) (h : i ≤ b.size) : numEndN b i ≤ b.size := by
-  sorry
+  have hle := L.Scan.Leaves.skipDigitsN_le b i h
+  simp only [numEndN]
+  split
+  · omega
+  · split <;> omega
+
+grind_pattern [lang_grind] numEndN_le => numEndN b i
 
 theorem numEndN_ge (b : Array UInt8) (i : Nat) : i ≤ numEndN b i := by
-  sorry
+  have hge : i ≤ L.Scan.Leaves.skipDigitsN b i := by
+    by_cases heq : L.Scan.Leaves.skipDigitsN b i = i
+    · omega
+    · have := (L.Scan.Leaves.skipDigitsN_bounds b i heq).2; omega
+  simp only [numEndN]
+  split
+  · omega
+  · split <;> omega
+
+grind_pattern [lang_grind] numEndN_ge => numEndN b i
 
 /-- A successful `slot_nat` is past the key. -/
 theorem slotNatN_pos (b : Array UInt8) (ks v : Word) (h : slotNatN b ks v ≠ 0) :
     ks < slotNatN b ks v := by
-  sorry
+  unfold slotNatN at h ⊢
+  by_cases h1 : UInt64.ofNat (numEndN b v.toNat) = v
+  · simp [h1] at h
+  · by_cases h2 : ks < UInt64.ofNat (numEndN b v.toNat)
+    · simp [h1, h2]
+    · simp [h1, h2] at h
+
+grind_pattern [lang_grind] slotNatN_pos => slotNatN b ks v
+
+section natListLoop
+variable (p : Prog) (hpd : p.lookup "skip_digits" = some L.Scan.Leaves.skipDigits)
+    (hpn : p.lookup "num_end" = some L.Scan.Leaves.numEnd)
+    (b : Array UInt8) (hb : b.size < 2 ^ 64)
+include hb hpd hpn
+
+theorem natListLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
+    (hi : (s₀.loc 0).toNat ≤ b.size) :
+    ⦃fun s => s = s₀⦄
+    exec p n natListLoop
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
+      r.retOr [0, 0] = [(natListN b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)).1,
+        (natListN b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)).2]; ⊤⦄ := by
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+    rw [exec, step_while (w := natListLoop) rfl]
+    have hbw : ∀ (k : Word) (hk : k.toNat < b.size), byteW b k = b[k.toNat].toUInt64 := fun k hk =>
+      L.Scan.Utf8.byteW_lt b k hk
+    have hge2 : ∀ k : Word, k.toNat ≤ b.size → k ≤ UInt64.ofNat (numEndN b k.toNat) := by
+      intro k hk
+      have h1 := numEndN_ge b k.toNat
+      have h2 := numEndN_le b k.toNat hk
+      rw [UInt64.le_iff_toNat_le, UInt64.toNat_ofNat']
+      omega
+    have hgt2 : ∀ k : Word, k.toNat ≤ b.size → ¬ UInt64.ofNat (numEndN b k.toNat) = k →
+        k < UInt64.ofNat (numEndN b k.toNat) := by
+      intro k hk hne
+      have h1 := numEndN_ge b k.toNat
+      have h2 := numEndN_le b k.toNat hk
+      rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_ofNat']
+      have hne' : ¬ k.toNat = numEndN b k.toNat % 2 ^ 64 := by
+        intro heq
+        apply hne
+        rw [← UInt64.toNat_inj, UInt64.toNat_ofNat']
+        omega
+      omega
+    sym only [lang_grind] =>
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8,
+        L.Scan.Leaves.numEnd_spec p hpd hpn b hb n, ih] <;> finish
+
+theorem natListLoop_step_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
+    (hi : (s₀.loc 0).toNat ≤ b.size) :
+    ⦃fun s => s = s₀⦄
+    step p (exec p n) natListLoop
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
+      r.retOr [0, 0] = [(natListN b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)).1,
+        (natListN b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)).2]; ⊤⦄ :=
+  Triple.step_exec (natListLoop_spec p hpd hpn b hb (n + 1) s₀ hm hi)
+
+end natListLoop
 
 /-! ## Specs -/
 
@@ -263,6 +415,12 @@ variable (p : Prog) (b : Array UInt8) (hb : b.size < 2 ^ 63)
     (hpd : p.lookup "skip_digits" = some L.Scan.Leaves.skipDigits)
     (hpk : p.lookup "key_end" = some L.Scan.Leaves.keyEnd)
     (hpn : p.lookup "num_end" = some L.Scan.Leaves.numEnd)
+    (hpa1 : p.lookup "keyAtG1" = some L.Scan.Key.keyAtG1)
+    (hpa2 : p.lookup "keyAtG2" = some L.Scan.Key.keyAtG2)
+    (hpa3 : p.lookup "keyAtG3" = some L.Scan.Key.keyAtG3)
+    (hpa4 : p.lookup "keyAtG4" = some L.Scan.Key.keyAtG4)
+    (hpa5 : p.lookup "keyAtG5" = some L.Scan.Key.keyAtG5)
+    (hpa6 : p.lookup "keyAtG6" = some L.Scan.Key.keyAtG6)
     (hpa : p.lookup "key_at" = some L.Scan.Key.keyAt)
     (hpv : p.lookup "value_at" = some L.Scan.Key.valueAt)
     (hps : p.lookup "slot_nat" = some slotNat)
@@ -274,19 +432,62 @@ variable (p : Prog) (b : Array UInt8) (hb : b.size < 2 ^ 63)
 include hb
 
 include hpd hpn hps in
+attribute [local lang_grind] slotNatN in
 theorem slotNat_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (ks v : Word)
     (hv : v.toNat ≤ b.size) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "slot_nat" [ks, v]
     ⦃fun r s' => s' = s₀ ∧ r = [slotNatN b ks v]; ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hps]
+  simp only [callFn, slotNat]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have hb64 : b.size < 2 ^ 64 := by omega
+    sym only [lang_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+        L.Scan.Leaves.numEnd_spec p hpd hpn b hb64 n] <;> finish
 
 include hpd hpq in
+attribute [local lang_grind] quotedNatN in
 theorem scanQuotedNat_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_quoted_nat" [i]
     ⦃fun r s' => s' = s₀ ∧ r = [quotedNatN b i]; ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hpq]
+  simp only [callFn, scanQuotedNat]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have hb64 : b.size < 2 ^ 64 := by omega
+    sym only [lang_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld8,
+        L.Scan.Leaves.skipDigits_spec p hpd b hb64 n] <;> finish
+
+theorem matchWordLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
+    (hi : (s₀.loc 0).toNat + (s₀.loc 2).toNat < 2 ^ 64)
+    (ho : (s₀.loc 1).toNat + (s₀.loc 2).toNat ≤ WORDS.length) (hk : (s₀.loc 3).toNat ≤ (s₀.loc 2).toNat) :
+    ⦃fun s => s = s₀⦄
+    exec p n matchWordLoop
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
+      r.retOr [1] = [if matchLitN b (s₀.loc 0).toNat WORDS (s₀.loc 1).toNat (s₀.loc 2).toNat
+        (s₀.loc 3).toNat then 1 else 0]; ⊤⦄ := by
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+    rw [exec, step_while (w := matchWordLoop) rfl]
+    sym only [lang_grind, WORDS_length] =>
+      vcgen [step, evalE, evalC, evalArgs, setLoc, ld8, ldc, ih] <;> finish
+
+theorem matchWordLoop_step_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
+    (hi : (s₀.loc 0).toNat + (s₀.loc 2).toNat < 2 ^ 64)
+    (ho : (s₀.loc 1).toNat + (s₀.loc 2).toNat ≤ WORDS.length) (hk : (s₀.loc 3).toNat ≤ (s₀.loc 2).toNat) :
+    ⦃fun s => s = s₀⦄
+    step p (exec p n) matchWordLoop
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
+      r.retOr [1] = [if matchLitN b (s₀.loc 0).toNat WORDS (s₀.loc 1).toNat (s₀.loc 2).toNat
+        (s₀.loc 3).toNat then 1 else 0]; ⊤⦄ :=
+  Triple.step_exec (matchWordLoop_spec p b hb (n + 1) s₀ hm hi ho hk)
 
 include hpm in
 theorem matchWord_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i o l : Word)
@@ -295,29 +496,98 @@ theorem matchWord_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i o l 
     invoke p (exec p n) "match_word" [i, o, l]
     ⦃fun r s' => s' = s₀ ∧
       r = [if matchLitN b i.toNat WORDS o.toNat l.toNat 0 then 1 else 0]; ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hpm]
+  simp only [callFn, matchWord]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind] =>
+      vcgen [exec, step, evalE, evalArgs, matchWordLoop_step_spec p b hb n] <;> finish
 
 include hpm hpi in
+attribute [local lang_grind] binderInfoN in
 theorem scanBinderInfo_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_binder_info" [i]
     ⦃fun r s' => s' = s₀ ∧ r = [binderInfoN b i]; ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hpi]
+  simp only [callFn, scanBinderInfo]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, WORDS_length] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld8,
+        matchWord_spec p b hb hpm n] <;> finish
 
-include hpw hpd hpk hpn hpa hpv hpm hph in
+-- NOT PROVED (left `sorry`, see DESIGN.md / the stageb-s2 report for a gap writeup): the body
+-- below reaches `finish failed` (not a timeout — raising `gen`/`genLocal` to 20 and
+-- `maxHeartbeats` to 1000000 still exhausts the search in ~3-4 minutes) on 2 of the function's
+-- verification conditions, past the `scan_hints` object branch's full chain of six callees
+-- (skip_ws, key_end, key_at, value_at, num_end, skip_ws again). `hintsN`/`hintsN.hintsObjN`/
+-- `hintsN.hintsNumN` are registered, and `hstep`/`hofnat_le` (the two facts that fixed
+-- `valueAt_spec`) are provided, but something further down the six-deep call chain is still
+-- missing. Left for a future attempt (e.g. splitting the object branch into its own named
+-- block/function, as `key_at` was split, so each callee's verification condition is shallower).
+include hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hph in
+attribute [local lang_grind] hintsN hintsN.hintsObjN hintsN.hintsNumN in
 theorem scanHints_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_hints" [i]
     ⦃fun r s' => s' = s₀ ∧ r = [hintsN b i]; ⊤⦄ := by
   sorry
+  -- Attempted, closer but still unresolved: register hintsN/hintsObjN/hintsNumN (done above),
+  -- then (as in scanNatList_spec) provide `hstep`/`hofnat_le` and LOCAL copies of
+  -- keyEndN_lt/numEndN_le/numEndN_ge/valueAtN_le as `have`s (not just relying on their global
+  -- grind_pattern registration), then the six callee specs in the usual bracket list. This
+  -- turned the earlier "finish failed" (2 of ~30 verification conditions, genuinely exhausted
+  -- search, not a budget issue) into a single `isDefEq` timeout that does not clear even at
+  -- maxHeartbeats 3000000 (5 minutes wall-clock, still running). Whoever continues this should
+  -- likely split `scan_hints`'s object branch (the `{"regular":n}` case) into its own named
+  -- function, the same way `key_at` was split in Key.lean, so each verification condition is
+  -- shallower; the six-deep callee chain (skip_ws, key_end, key_at, value_at, num_end, skip_ws)
+  -- in one function body may simply be too much for one `vcgen`/`finish` call, independent of
+  -- which facts are in scope.
 
 include hpd hpn hpl in
+attribute [local lang_grind] natListEntryN in
 theorem scanNatList_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_nat_list" [i]
     ⦃fun r s' => s' = s₀ ∧ r = [(natListEntryN b i).1, (natListEntryN b i).2]; ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hpl]
+  simp only [callFn, scanNatList]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have hb64 : b.size < 2 ^ 64 := by omega
+    have hstep : ∀ j : Word, (j + 1).toNat ≤ j.toNat + 1 := fun j => by
+      simp [UInt64.toNat_add]; omega
+    sym only [lang_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld8,
+        natListLoop_step_spec p hpd hpn b hb64 n] <;> finish
 
 end specs
+
+/-- The program, as `#eval`-able code: every function `scan_hints` can reach. -/
+-- Only the quoted-literal branch (`match_word`, `scan_hints`: both in this module) is testable
+-- here with `#guard`/`run`: a cross-module program whose functions were never `#eval`'d/
+-- `#guard`'d in their own defining file hits "(interpreter) IR of declaration … not available"
+-- (tried with `skip_ws` from Leaves.lean and `value_at` from Key.lean, both of which have no
+-- `#guard` of their own; `lake build`, not just `lake env lean`, has the same failure, so this
+-- is not a staleness issue). The object branch (`{"regular":n}`, needing skip_ws/key_end/key_at/
+-- value_at/num_end) would need those files to gain their own `#guard`/`#eval`, which are outside
+-- Values.lean/Key.lean.
+def hintsProg : Prog := [("match_word", matchWord), ("scan_hints", scanHints)]
+
+-- `"abbrev"`: a quoted-literal hint (`scan_hints`' own two literals are `abbrev"`/`opaque"`,
+-- not `scan_binder_info`'s four).
+#guard (run hintsProg 100 "scan_hints" [0] { bytes := #["\"abbrev\"".toUTF8.data] }).toOption.map (·.1)
+  == some [8]
+-- `"opaque"`: the other quoted literal.
+#guard (run hintsProg 100 "scan_hints" [0] { bytes := #["\"opaque\"".toUTF8.data] }).toOption.map (·.1)
+  == some [8]
+-- Neither literal: fails.
+#guard (run hintsProg 100 "scan_hints" [0] { bytes := #["\"nope\"".toUTF8.data] }).toOption.map (·.1)
+  == some [0]
 
 end L.Scan.Values
