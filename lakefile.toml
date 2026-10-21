@@ -30,6 +30,8 @@ globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.A
   "ConAgua.Arena.BVarStore", "ConAgua.Arena.BVarRefine", "ConAgua.Arena.Memo",
   "ConAgua.Arena.LsStore", "ConAgua.Arena.LsRefine", "ConAgua.Arena.PoolSlice",
   "ConAgua.Arena.NStrStore", "ConAgua.Arena.NStrRefine",
+  "ConAgua.Arena.NAnonStore", "ConAgua.Arena.NAnonRefine",
+  "ConAgua.Arena.NNumStore", "ConAgua.Arena.NNumRefine",
   "ConAgua.Arena.Frame", "ConAgua.Arena.MemoRel", "ConAgua.Arena.ArenaRel",
   "ConAgua.Arena.Walk", "ConAgua.Arena.WalkRefine", "ConAgua.Arena.WalkBench", "ConAgua.Arena.WalkEmit",
   "ConAgua.Arena.WalkBenchLean",
