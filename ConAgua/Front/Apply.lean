@@ -40,6 +40,8 @@ namespace L.Front
 abbrev NID : ArrId := 64
 /-- Export level id ↦ level handle word `+ 1`. -/
 abbrev LID : ArrId := 65
+/-- Export expression id ↦ expression handle word `+ 1` (`ConAgua.Front.ApplyExpr`). -/
+abbrev EID : ArrId := 66
 /-- The input buffer (byte array 0). -/
 abbrev IN : ArrId := 0
 

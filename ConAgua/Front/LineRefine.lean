@@ -6,7 +6,7 @@ import ConAgua.Front.Line
 `frontLineW_refines`: if `front_line(i)`'s model returns `(1, next)`, con-leche's scanner reads a
 record `r` at `i` with `next` the position after it (`scanLineFwd`), and con-ron's `applyLine st r`
 succeeds from the arena state `a₀` with a parse state `st'` such that the memory after is related
-to its arena state by `ArenaR` and to `st'` by `StateDR`. `frontLine_refines` is the same for the
+to its arena state by `ArenaD` and to `st'` by `StateDR`. `frontLine_refines` is the same for the
 L run.
 -/
 
@@ -24,10 +24,10 @@ instance : Inhabited (StateD ⊕ RecordVerdict) := ⟨.inl default⟩
 
 /-- **One line, as con-ron applies it**: the scanner reads the record `r` at `i` and the next
 position `q` (the word `nx`), `applyLine st r` succeeds from `a₀` with the parse state `st'`, and
-the memory `m` is related to the arena state after by `ArenaR` and to `st'` by `StateDR`. -/
+the memory `m` is related to the arena state after by `ArenaD` and to `st'` by `StateDR`. -/
 def LineStep (b : ByteArray) (i : USize) (nx : Word) (st : StateD) (a₀ : AState) (m : Mem) : Prop :=
   ∃ r q st', scanLineFwd b i = .ok r q ∧ q.toUInt64 = nx ∧ AM.ok (applyLine st r) a₀ ∧
-    AM.res (applyLine st r) a₀ = .inl st' ∧ ArenaR m (AM.st (applyLine st r) a₀) ∧ StateDR m st'
+    AM.res (applyLine st r) a₀ = .inl st' ∧ ArenaD m (AM.st (applyLine st r) a₀) ∧ StateDR m st'
 
 theorem fromUTF8?_toByteArray (a : ByteArray) (s : String) (h : String.fromUTF8? a = some s) :
     s.toByteArray = a := by
@@ -84,10 +84,10 @@ include h64 hsize
 omit h64 hsize in
 /-- A name or level line: the fields `f` against the record `r`, applied. -/
 theorem lineRecW_refines (m m' : Mem) (hm : m.arr8 IN = b.data) (a₀ : AState) (st : StateD)
-    (hR : ArenaR m a₀) (hD : StateDR m st) (f : Fld) (r : LineRec)
+    (hR : ArenaD m a₀) (hD : StateDR m st) (f : Fld) (r : LineRec)
     (hRec : f.pl ≠ 0 → RecR b r f) (h : lineRecW b.data m f.pl f.idx f.a f.c f.d = some m') :
     ∃ st', AM.ok (applyLine st r) a₀ ∧ AM.res (applyLine st r) a₀ = .inl st' ∧
-      ArenaR m' (AM.st (applyLine st r) a₀) ∧ StateDR m' st' := by
+      ArenaD m' (AM.st (applyLine st r) a₀) ∧ StateDR m' st' := by
   unfold lineRecW at h
   split at h
   · cases h
@@ -125,7 +125,7 @@ theorem lineRecW_refines (m m' : Mem) (hm : m.arr8 IN = b.data) (a₀ : AState) 
         simp only [RecR, PlR, NameR] at hRR
       · obtain ⟨hI, -, hP, hS⟩ := hRR
         have hW := h
-        have hpool := hR.lit.1
+        have hpool := hR.1.lit.1
         obtain ⟨hg, hq, hk⟩ := strPutW_facts m f.c f.d hpool hok
         have hE : L.Scan.Leaves.hasEscapeN b.data f.c.toNat f.d.toNat = 0 := by
           rcases hasEscapeN_01' b.data f.c.toNat f.d.toNat with h0 | h1
@@ -136,7 +136,7 @@ theorem lineRecW_refines (m m' : Mem) (hm : m.arr8 IN = b.data) (a₀ : AState) 
             strWords S := by
           unfold strPutW; rw [hk, strWords, fromUTF8?_toByteArray _ _ hS', inWords, hm]; simp
         obtain ⟨hok', hR', hD'⟩ := applyNStrW_refines (strPutW m f.c f.d) m' a₀ st
-          (ArenaR.grow _ _ hg _ hR) (hD.frame (grows_frame _ _ hg) (by tapart) (by tapart))
+          (ArenaD.grow _ _ hg _ hR) (hD.frame (grows_frame _ _ hg) (by tapart) (by tapart))
           f.idx f.a m.top (f.d - f.c) hq S hkS hW
         rw [hI hidx, hP ha] at hok' hR' hD'
         obtain ⟨h1, h2, h3⟩ := applyLine_name st a₀ I (.str P S) hok'
@@ -196,9 +196,9 @@ theorem lineRecW_refines (m m' : Mem) (hm : m.arr8 IN = b.data) (a₀ : AState) 
     all_goals simp_all
 
 /-- **`front_line`'s model refines con-ron's per-line step**: a line it accepts (`(1, nx)`) is one
-con-leche's scanner reads and con-ron's `applyLine` applies, with `ArenaR` and `StateDR` after. -/
+con-leche's scanner reads and con-ron's `applyLine` applies, with `ArenaD` and `StateDR` after. -/
 theorem frontLineW_refines (m m' : Mem) (hm : m.arr8 IN = b.data) (i : USize) (a₀ : AState)
-    (st : StateD) (hR : ArenaR m a₀) (hD : StateDR m st) (nx : Word)
+    (st : StateD) (hR : ArenaD m a₀) (hD : StateDR m st) (nx : Word)
     (h : frontLineW b.data m i.toUInt64 = some ([1, nx], m')) : LineStep b i nx st a₀ m' := by
   have hL := lineFwd_link b h64 hsize i
   have hs := ConAgua.Scan.skipWs_toUInt64_eq b h64 (by omega) i
@@ -275,7 +275,7 @@ end refine
 
 /-- **`front_line(i)` refines con-ron's per-line step**: when it returns `(1, nx)`, con-leche's
 scanner reads a record at `i` whose next position is `nx`, and con-ron's `applyLine` applies it,
-with `ArenaR` and `StateDR` holding of the memory after. -/
+with `ArenaD` and `StateDR` holding of the memory after. -/
 theorem frontLine_refines (p : Prog) (hS : ScanLookups p) (hL : FrontLookups p)
     (hpf : p.lookup "front_line" = some frontLine) (hps : p.lookup "str_put" = some strPut)
     (hpn : p.lookup "apply_nstr" = some applyNStr) (hpu : p.lookup "apply_nnum" = some applyNNum)
@@ -283,7 +283,7 @@ theorem frontLine_refines (p : Prog) (hS : ScanLookups p) (hL : FrontLookups p)
     (hpt : p.lookup "apply_str" = some applyStr)
     (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
     (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b.data) (i : USize) (hi : i.toNat ≤ b.size)
-    (a₀ : AState) (st : StateD) (hR : ArenaR s₀.mem a₀) (hD : StateDR s₀.mem st) :
+    (a₀ : AState) (st : StateD) (hR : ArenaD s₀.mem a₀) (hD : StateDR s₀.mem st) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "front_line" [i.toUInt64]
     ⦃fun r s' => ∀ nx, r = [1, nx] → LineStep b i nx st a₀ s'.mem; ⊤⦄ := by
@@ -291,7 +291,7 @@ theorem frontLine_refines (p : Prog) (hS : ScanLookups p) (hL : FrontLookups p)
   intro s r s' hs hrun
   have hW := M.of_run (P := fun s => s = s₀) hs hrun
     (frontLine_spec p hS hL hpf hps hpn hpu hpl hpr hpt b.data hsize n s₀ hm i.toUInt64
-      (by rw [USize.toNat_toUInt64]; exact hi) hR.lit.1)
+      (by rw [USize.toNat_toUInt64]; exact hi) hR.1.lit.1.2.2.1)
   intro nx hr
   subst hr
   exact frontLineW_refines b h64 hsize s₀.mem s'.mem hm i a₀ st hR hD nx hW
