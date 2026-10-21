@@ -415,6 +415,142 @@ decreasing_by
     | omega
     | (have := USize.lt_iff_toNat_lt.mp ‹_›; omega)
 
+omit h64 hsize in
+/-- A line's members end past where they started. -/
+theorem lineLoop_pos (i : USize) (w : Bool) (k : UInt8) (idx : Nat) (pl : LinePayload)
+    (r : LineRec) (j : USize) (h : ConLeche.Frontend.scanLineLoop b i w k idx pl = .ok r j) :
+    i.toNat < j.toNat := by
+  fun_induction ConLeche.Frontend.scanLineLoop b i w k idx pl generalizing r j
+  all_goals first
+    | (simp at h; done)
+    | (rename_i ih; have := ih _ _ h; have := usizeStep b _ ‹_ < b.usize›; omega)
+    | (rename_i hj ih; have := ih _ _ h; have := USize.lt_iff_toNat_lt.mp hj; omega)
+    | (simp only [ScanRes.ok.injEq] at h; obtain ⟨-, rfl⟩ := h; have := usizeStep b _ ‹_ < b.usize›; omega)
+    | (rename_i ih; have := ih _ _ h; simp only [USize.lt_iff_toNat_lt] at *; omega)
+
+/-! ## `scanLineFwd` -/
+
+/-- A line's result as `lineFwdN`'s pair: `(1, next)` or `(0, 0)`. -/
+def encLine {α : Type} : ScanRes α → Word × Word
+  | .ok _ p => (1, p.toUInt64)
+  | .err _ => (0, 0)
+
+theorem usize_le_iff (p : USize) : b.usize ≤ p ↔ UInt64.ofNat b.data.size ≤ p.toUInt64 := by
+  rw [← Decidable.not_iff_not, USize.not_le, UInt64.not_le]
+  exact lt_usize_iff b h64 hsize p
+
+theorem nl_iff (p : USize) :
+    (byteAt b p == 10) = true ↔ (p.toUInt64 < UInt64.ofNat b.data.size ∧ byteW b.data p.toUInt64 = 10) := by
+  rw [byteW_eq b h64 hsize, u8_toUInt64_eq _ 10 (by decide), ← lt_usize_iff b h64 hsize]
+  rw [beq_iff_eq]
+  by_cases h : p < b.usize
+  · exact ⟨fun h1 => ⟨h, h1⟩, fun h1 => h1.2⟩
+  · have h0 : byteAt b p = 0 := by unfold byteAt; rw [dif_neg h]
+    exact ⟨fun h1 => absurd (h0.symm.trans h1) (by decide), fun h1 => absurd h1.1 h⟩
+
+/-- After the closing brace. -/
+theorem lineEnd_link {r : LineRec} {z : ScanErr} (p : USize) :
+    encLine (if (byteAt b p == 10) = true then .ok r (p + 1)
+      else if b.usize ≤ p then .ok r 0 else .err z) =
+    lineFwdN.lineEndN b.data p.toUInt64 := by
+  unfold lineFwdN.lineEndN
+  by_cases h1 : (byteAt b p == 10) = true
+  · rw [if_pos h1, if_pos ((nl_iff b h64 hsize p).mp h1), ← succ_toUInt64 b h64 hsize]; rfl
+  · rw [if_neg h1, if_neg (fun h => h1 ((nl_iff b h64 hsize p).mpr h))]
+    by_cases h2 : b.usize ≤ p
+    · rw [if_pos h2, if_pos ((usize_le_iff b h64 hsize p).mp h2)]; rfl
+    · rw [if_neg h2, if_neg (fun h => h2 ((usize_le_iff b h64 hsize p).mpr h))]; rfl
+
+/-- con-leche's `scanLineFwd` against `lineFwdN`: the line's verdict and where the next one
+starts. -/
+theorem lineFwd_link (i : USize) : encLine (scanLineFwd b i) = lineFwdN b.data i.toUInt64 := by
+  unfold scanLineFwd lineFwdN
+  rw [USize.toNat_toUInt64, ← skipWs_toUInt64_eq b h64 (by omega)]
+  generalize skipWs b i = s
+  unfold lineFwdN.lineFwd2N
+  simp only []
+  by_cases h1 : (byteAt b s == 10) = true
+  · rw [if_pos h1, if_pos ((nl_iff b h64 hsize s).mp h1), ← succ_toUInt64 b h64 hsize]; rfl
+  rw [if_neg h1, if_neg (fun h => h1 ((nl_iff b h64 hsize s).mpr h))]
+  by_cases h2 : b.usize ≤ s
+  · rw [if_pos h2, if_pos ((usize_le_iff b h64 hsize s).mp h2)]; rfl
+  rw [if_neg h2, if_neg (fun h => h2 ((usize_le_iff b h64 hsize s).mpr h))]
+  have hs : s < b.usize := by rw [← USize.not_le]; exact h2
+  have hc : (byteAt b s != 123) = true ↔ byteW b.data s.toUInt64 ≠ 123 := by
+    rw [byteW_eq b h64 hsize, ne_eq, u8_toUInt64_eq _ 123 (by decide)]; simp
+  by_cases h3 : (byteAt b s != 123) = true
+  · rw [if_pos h3, if_pos (hc.mp h3)]; rfl
+  rw [if_neg h3, if_neg (fun h => h3 (hc.mpr h))]
+  have hl := lineLoop_link b h64 hsize (s + 1) true 0 0 .absent
+  rw [succ_toUInt64 b h64 hsize] at hl
+  have hl' : lineLoopN b.data (s.toUInt64 + 1) = okW (scanLineLoop b (s + 1) true 0 0 .absent) := by
+    rw [hl]; rfl
+  rw [hl']
+  cases hr : scanLineLoop b (s + 1) true 0 0 .absent with
+  | err e => rfl
+  | ok r j =>
+    have hpos := lineLoop_pos b (s + 1) true 0 0 .absent r j hr
+    have hj : j.toUInt64 ≠ 0 := by
+      intro h0; rw [← USize.toNat_toUInt64 j, h0] at hpos; simp at hpos
+    simp only [okW, hj, if_false]
+    rw [USize.toNat_toUInt64, ← skipWs_toUInt64_eq b h64 (by omega)]
+    exact lineEnd_link b h64 hsize _
+
 end line
+
+/-! ## The driver -/
+
+/-- con-leche's driver over the whole buffer (`feedChunk` and then `applyFinalLine` on the tail,
+`ConLeche/Frontend/ExportC.lean`) with the semantic layer `applyLine` left out: from `i`, `ln`
+lines read, `0` if every line from `i` on scans, else the number of the first line that does
+not (a failed line, or one that makes no progress). A line the buffer ends inside (`scanLineFwd`'s
+`0`) is the last one, accepted: `applyFinalLine` scans it again and gets the same record. -/
+def scanDriver (b : ByteArray) (i : USize) (ln : Nat) : Nat :=
+  if _h : i < b.usize then
+    match scanLineFwd b i with
+    | .err _ => ln + 1
+    | .ok _ j =>
+      if j == 0 then 0
+      else if _hj : i < j then scanDriver b j (ln + 1)
+      else ln + 1
+  else 0
+termination_by b.size - i.toNat
+decreasing_by exact Nat.sub_lt_sub_left (usizeInBounds b i _h) (USize.lt_iff_toNat_lt.mp _hj)
+
+section driver
+variable (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
+include h64 hsize
+
+/-- The driver: `validN` is `scanDriver`, the line number as a word. -/
+theorem valid_link (i : USize) (ln : Nat) :
+    validN b.data i.toUInt64 (UInt64.ofNat ln) = UInt64.ofNat (scanDriver b i ln) := by
+  rw [scanDriver]
+  by_cases h : i < b.usize
+  · rw [dif_pos h, validN_step _ _ _ ((lt_usize_iff b h64 hsize i).mp h), ← lineFwd_link b h64 hsize]
+    cases hr : scanLineFwd b i with
+    | err e => simp [encLine, UInt64.ofNat_add]
+    | ok r j =>
+      simp only [encLine, show ¬ ((1 : Word) = 0) from by decide, if_false]
+      by_cases hj : j = 0
+      · subst hj; rfl
+      · have hj' : ¬ j.toUInt64 = 0 := fun h' => hj ((eq_toUInt64_iff _ _).mpr h')
+        have hj2 : (j == 0) = false := by simpa using hj
+        simp only [hj', hj2, if_false, Bool.false_eq_true]
+        by_cases hij : i < j
+        · simp only [(lt_toUInt64_iff _ _).mp hij, hij, if_true, dite_true]
+          rw [← valid_link j (ln + 1), UInt64.ofNat_add]; rfl
+        · simp only [show ¬ i.toUInt64 < j.toUInt64 from fun h' => hij ((lt_toUInt64_iff _ _).mpr h'),
+            hij, if_false, dite_false]
+          rw [UInt64.ofNat_add]; rfl
+  · rw [dif_neg h, validN_end _ _ _ (by rw [← lt_usize_iff b h64 hsize]; exact h)]; rfl
+termination_by b.size - i.toNat
+decreasing_by exact Nat.sub_lt_sub_left (usizeInBounds b i h) (USize.lt_iff_toNat_lt.mp hij)
+
+/-- The driver with the line count a word, as `validN` takes it. -/
+theorem valid_link' (i : USize) (ln : Word) :
+    validN b.data i.toUInt64 ln = UInt64.ofNat (scanDriver b i ln.toNat) := by
+  rw [← valid_link b h64 hsize, UInt64.ofNat_toNat]
+
+end driver
 
 end ConAgua.Scan.LineLink
