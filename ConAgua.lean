@@ -26,3 +26,4 @@ public import ConAgua.Scan.Leaves
 public import ConAgua.Scan.Lit
 public import ConAgua.Scan.LitLink
 public import ConAgua.Scan.Utf8
+public import ConAgua.Scan.Utf8Link

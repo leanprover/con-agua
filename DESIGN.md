@@ -290,7 +290,7 @@ proof.
 | `num_end` (`:733`) | 10 | 6 (+ call to `skip_digits`, no loop) | yes (since lane `lext`) |
 | `match_lit` (`:132`, lane `lext`) | 11 | 9 | yes |
 | `scan_bool` (`:716`, lane `lext`) | 11 | 7 (two calls of `match_lit`, three results) | yes |
-| `utf8_decode` (`:917`, lane `lext`) | 66 | 48 (`utf8_char` 33, loop 9, entry 6) | yes |
+| `utf8_decode` (`:917`, lane `lext`) | 66 | 48 (`utf8_char` 33, loop 9, entry 6) | yes; linked to `String.fromUTF8?` |
 
 Whole-file build (`ConAgua.Scan.Leaves`, `lake env lean`, cold): ~2.5 s for all six.
 `ConAgua.Scan.Link` + `ConAgua.Scan.Leaves` together add about 750 lines to the `ConAgua` lib;
@@ -668,4 +668,29 @@ Arena request 3, and `utf8_decode`'s `(code point, length)`.
   `LocEq` (it writes memory).
 * A `#guard` runs con-ron's test `utf8_decode_agrees_with_the_toolchain` (17 byte strings)
   against `String.fromUTF8?`; `Tests.lean` runs the compiled code on Kraken.
+* The model also stops when `OUT` is full (`cnt < len(OUT)`), where the L store fails; so the
+  model's memory is exactly L's.
+
+### `utf8_decode` against Lean's decoder (`ConAgua/Scan/Utf8Link.lean`)
+
+con-leche validates string bodies with `String.fromUTF8?`, i.e. `ByteArray.utf8Decode?`, a loop
+over `ByteArray.utf8DecodeChar?`, which classifies the lead byte by bit masks and checks overlong
+forms, surrogates and the range after assembling the value (`assemble₂…₄`). Rust's decoder
+(and so the L code) rejects `0xC0`, `0xC1` and `0xF5…` by the lead byte instead. The proof:
+
+* lead-byte and continuation classes by `decide +kernel` over the 256 byte values (`pfb`,
+  `cont_eq`; no `native_decide`);
+* the assembled values on both sides as natural numbers (`v2W`…`v4L`: `&&& (2^k - 1)` is
+  `% 2^k`, and `a <<< k ||| b` is `a * 2^k + b` for `b < 2^k`, `Nat.two_pow_add_eq_or_of_lt`);
+* six cases on the lead byte for one code point (`decA`…`decF`, `utf8CharN_eq`);
+* the loop by `fun_induction` on `utf8Decode?.go` (`loop_go`), with the writes to `OUT` as
+  `writeCps`;
+* `utf8Decode_run`: whenever `run utf8Prog fuel "utf8_decode" [j, e]` returns `r`, then if
+  `String.fromUTF8? (b.extract j (min e len)) = some s` (and `OUT` has room) `r = [1, |s|]` and
+  `OUT` starts with the code points of `s`; if it is `none`, `r = [0, 0]`. Axioms: the standard
+  three.
+
+677 lines, 9 s; written in an afternoon of the lane, with no `grind` (plain `simp`/`omega`/`rw`).
+The word-level model made the L proofs trivial and moved all the bit arithmetic here, where it
+is proved once against Lean's own decoder rather than against a Nat-level re-statement.
 
