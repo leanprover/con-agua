@@ -302,7 +302,7 @@ def classesNfsL : FunDecl := lfn (vis, p, ftOff, ftLen, tblOff, tblLen, msOff, m
 
 /-- `class_former_ty(vis, cvTas.off, cvTas.len, m)`: class `m`'s former type. -/
 @[l_impl ConRon.Arena.classFormerTy]
-def classFormerTyL : FunDecl := lfn (vis, cvTasOff, cvTasLen, m) locals (mem, t, cvp, f, q, e) {
+def classFormerTyL : FunDecl := lfn (vis, cvTasOff, cvTasLen, m) locals (mem, t, cvp, f, q, e, lo, ll) {
   mem := IW.u64[m + 8];
   if mem != 0 {
     t := mem - 1;
@@ -316,26 +316,28 @@ def classFormerTyL : FunDecl := lfn (vis, cvTasOff, cvTasLen, m) locals (mem, t,
   (f, q) := call env_find(IW.u64[m], vis);
   if f == 0 { abort };
   if EREC.u64[q] != 3 { abort };
-  e := call inst_lp_fast(⟪CWF⟫, EREC.u64[q + 2], EREC.u64[q + 3], IW.u64[m + 1], EREC.u64[q + 4]);
+  (lo, ll) := call er_to_iw(EREC.u64[q + 2], EREC.u64[q + 3]);
+  e := call inst_lp_fast(⟪CWF⟫, lo, ll, IW.u64[m + 1], EREC.u64[q + 4]);
   return e
 }
 
 /-- `class_const_ok(vis, cv)`: a generated constant, checked (`checkConstantValF`). -/
 @[l_impl ConRon.Arena.classConstOk]
-def classConstOkL : FunDecl := lfn (vis, cv) locals (f, qq, r, s, u) {
+def classConstOkL : FunDecl := lfn (vis, cv) locals (f, qq, r, s, u, lo, ll) {
   (f, qq) := call env_find(EREC.u64[cv], vis);
   if f != 0 { abort };
   r := call reserved_contains(EREC.u64[cv]);
   if r != 0 { abort };
   r := call is_proj_fn_shape(EREC.u64[cv]);
   if r != 0 { abort };
-  r := call sl_nodup(EREC.u64[cv + 1], EREC.u64[cv + 2]);
+  (lo, ll) := call cv_lps(cv);
+  r := call sl_nodup(lo, ll);
   if r == 0 { abort };
   r := call loose_bvars_bounded_fast(⟪CWF⟫, 0, EREC.u64[cv + 3]);
   if r == 0 { abort };
   r := call has_fvar_fast(⟪CWF⟫, EREC.u64[cv + 3]);
   if r != 0 { abort };
-  r := call all_level_params_defined(EREC.u64[cv + 1], EREC.u64[cv + 2], EREC.u64[cv + 3]);
+  r := call all_level_params_defined(lo, ll, EREC.u64[cv + 3]);
   if r == 0 { abort };
   r := call consts_resolve_ffast(vis, EREC.u64[cv + 3]);
   if r == 0 { abort };
@@ -403,12 +405,13 @@ def classRuleOkDomains : FunDecl := lfn (visT, off, cnt) locals (j, b, ok) {
 /-- `class_rule_ok(visT, visR, cvR, n, gen)`: one generated rule, installed as generated. -/
 @[l_impl ConRon.Arena.classRuleOk]
 def classRuleOkL : FunDecl := lfn (visT, visR, cvR, n, gen)
-    locals (b, s, f, ok, rbsOff, rbsLen, bodyD, closed) {
+    locals (b, s, f, ok, rbsOff, rbsLen, bodyD, closed, lo, ll) {
   b := call loose_bvars_bounded_fast(⟪CWF⟫, 0, gen);
   if b == 0 { abort };
   b := call has_fvar_fast(⟪CWF⟫, gen);
   if b != 0 { abort };
-  b := call all_level_params_defined(EREC.u64[cvR + 1], EREC.u64[cvR + 2], gen);
+  (lo, ll) := call cv_lps(cvR);
+  b := call all_level_params_defined(lo, ll, gen);
   if b == 0 { abort };
   b := call consts_resolve_ffast(visR, gen);
   if b == 0 { abort };
@@ -426,12 +429,13 @@ xs.len)`: a recursor's generated rules, one per constructor `xs`. -/
 @[l_impl ConRon.Arena.classRulesOk]
 def classRulesOkL : FunDecl := lfn (visT, visR, g, recClsOff, recClsLen, cvGsOff, cvGsLen, cvR, c,
     xsOff, xsLen)
-    locals (q, j, x, rlvls, ok, gen, r) {
+    locals (q, j, x, rlvls, ok, gen, r, lo, ll) {
   q := call iw_alloc(xsLen);
   j := 0;
   while j < xsLen {
     x := IW.u64[xsOff + j];
-    rlvls := call param_levels(EREC.u64[cvR + 1], EREC.u64[cvR + 2]);
+    (lo, ll) := call cv_lps(cvR);
+    rlvls := call param_levels(lo, ll);
     (ok, gen) := call class_gen_rule(g, recClsOff, recClsLen, cvGsOff, cvGsLen, rlvls, c, x);
     if ok == 0 { abort };
     r := call class_rule_ok(visT, visR, cvR, IW.u64[g] + IW.u64[g + 8] + IW.u64[x + 1], gen);
