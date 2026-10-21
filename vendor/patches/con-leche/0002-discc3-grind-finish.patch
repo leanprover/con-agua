@@ -1,0 +1,16 @@
+iotaRecC_spec: pass Expr.WScoped.of_not_hasFvar to finish; grind no longer finds it by forward
+chaining on nightly-2026-10-20 (vendor/README.md, "Toolchain switch" 2).
+
+diff --git a/vendor/con-leche/ConLeche/Verify/Cached/DiscC3.lean b/vendor/con-leche/ConLeche/Verify/Cached/DiscC3.lean
+index ea5c3e34a0a00046e41e0481e6e4d66140b01112..2be4f69c760e4bd4440a6713445a65c6652afd06 100644
+--- a/vendor/con-leche/ConLeche/Verify/Cached/DiscC3.lean
++++ b/vendor/con-leche/ConLeche/Verify/Cached/DiscC3.lean
+@@ -892,7 +892,7 @@ theorem iotaRecC_spec (hμ : mode.verifiedChecks = true) (ih : SSimC mode env f)
+       iotaCertGate_of hμ, → EnvWF.rules_ok henv] =>
+     vcgen [iotaRecI_eq, certAtI, mkAppNM, prepareMajorC_spec hμ ih,
+       iotaCertC_spec ih henv (mode := mode) (env := env),
+-      ruleRhsAtM_spec (mode := mode) (env := env)] <;> finish
++      ruleRhsAtM_spec (mode := mode) (env := env)] <;> finish [Expr.WScoped.of_not_hasFvar]
+ 
+ end Walks
+ 

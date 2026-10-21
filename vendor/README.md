@@ -7,6 +7,31 @@ switch" below; originally `nightly-2026-09-21`). Both upstreams pin
 `leanprover/lean4:v4.35.0`; we did not change their actual proof content
 except where noted below.
 
+## Layout: upstream revisions + a patch series
+
+`vendor/UPSTREAM` names the vendored revisions of con-ron and con-leche. The
+vendored file sets are fixed: con-ron's `proof/ConRon/**` and
+`proof/ConRon.lean` (into `vendor/con-ron/`), con-leche's `ConLeche/**`,
+`ConLeche.lean`, `pins/**` and `scripts/natop_prefix.json` (into
+`vendor/con-leche/`). On top of the pristine files sit the patches
+`vendor/patches/<repo>/NNNN-*.patch`, applied in order; each starts with a
+description of why. `scripts/bump-con-ron.sh --check` verifies that
+`vendor/` is exactly that; `--refresh-patches` rewrites the patches from
+`vendor/` after an edit (keeping descriptions); `scripts/bump-con-ron.sh
+<rev>` moves to a new con-ron revision (PLAN.md, "Bumping the twin").
+The sections below describe each patch in detail; the revisions they name
+are the ones of the first vendoring.
+
+Patches at the first vendoring:
+
+| patch | what |
+|---|---|
+| `con-leche/0001-withptreq-shim.patch` | `ConLeche.withPtrEq` shim and its three call sites, `withPtrEqDecEq`'s new signature |
+| `con-leche/0002-discc3-grind-finish.patch` | `iotaRecC_spec`: one lemma passed to `finish` |
+| `con-leche/0003-knotc-vcgen-conj-split.patch` | five `CSOK.*_hit_ws` companion lemmas (the `vcgen` ∧-split) |
+| `con-ron/0001-wfproofs-rfl.patch` | `Tbl.node?_push_eq`: a trailing `rfl` |
+| `con-ron/0002-bridge-toolchain.patch` | the 31 `ConRon.Bridge` files (three toolchain changes, see "ConRonBridge") |
+
 ## Toolchain switch: nightly-2026-09-21 → nightly-2026-10-20 (Kraken fork)
 
 Kraken's author recommended building against their fork
