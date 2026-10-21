@@ -1430,12 +1430,12 @@ None.
 
 ## More store-library tables (2026-10-21, lane `tables`)
 
-Files: `ConAgua/Arena/{Zero,Max,Imax,Param,Sort,Const}Store.lean`,
-`ConAgua/Arena/{Zero,Max,Imax,Param,Sort,Const}Refine.lean` (the level store's remaining four
-constructors, then two expression handle-only kinds). Order per the task: the level store first
-(`zero`, `max`, `imax`, `param`), then expression handle-only kinds (`sort`, `const`). One table
-per commit, each following the `succ`/`app` templates on `StoreLib.lean` exactly; `sort` needed
-one small library generalisation (`isPersistent_decI`, below), every other table none. No
+Files: `ConAgua/Arena/{Zero,Max,Imax,Param,Sort,Const,Let}Store.lean`,
+`ConAgua/Arena/{Zero,Max,Imax,Param,Sort,Const,Let}Refine.lean` (the level store's remaining four
+constructors, then three expression handle-only kinds). Order per the task: the level store first
+(`zero`, `max`, `imax`, `param`), then expression handle-only kinds (`sort`, `const`, `letE`). One
+table per commit, each following the `succ`/`app` templates on `StoreLib.lean` exactly; `sort`
+needed one small library generalisation (`isPersistent_decI`, below), every other table none. No
 `sorry`.
 
 ### The level store: `zero`, `max`, `imax`
@@ -1478,6 +1478,7 @@ one small library generalisation (`isPersistent_decI`, below), every other table
 | `param` | 38 | 87 | 166 | 4.4 + 1.2 = 5.6 s | yes, first attempt |
 | `sort` | 42 | 87 | 175 | 6.5 + 1.1 = 7.6 s | yes, needed one library generalisation (below) |
 | `const` | 46 | 87 | 194 | 9.0 + 1.2 = 10.2 s | yes, after fixing two scripted-rename mistakes |
+| `letE` | 48 | 87 | 218 | 11.6 + 1.3 = 12.9 s | yes, first attempt (written by hand, not scripted) |
 
 "L lines" is the probe loop, `*_find`, `*_push` and `intern_*` function bodies only; "spec lines"
 the three `vcgen` sections (`find`/`push`/`intern`) that prove them; "relation lines" the whole
@@ -1555,6 +1556,42 @@ level store, the expression store's `internE` has the scratch skip (`EStore.pers
 * Both tables' `vcgen` specs (the L side) went through at the first attempt, as every table has so
   far: the skip test is a Word-level computation with no handle-kind content, so it is identical
   code to `app`'s regardless of what the two fields denote at the arena level.
+
+### `sorry`s
+
+None.
+
+### `letE`: three same-kind handle fields, and L has no division
+
+`LetNode { ty val body : EIdx }` (`LetStore.lean`/`LetRefine.lean`, arrays `LEREC`/`LESLOT` =
+20/21, `CTL[20 + t]`, tag `7`): `app`'s shape at three fields instead of two, all three the same
+kind (`EIdx`), so (unlike `const`) `LetRefine.lean` decodes every field with the ordinary `decE`/
+`isPersistent_decE`, exactly as `app` does — no new kind-generality was needed here. Written by
+hand rather than as a scripted rename of `ConstStore`/`ConstRefine` (three fields do not track
+two renamed ones cleanly, and the const port's two rename mishaps argued for not repeating the
+scripted-rename approach at a third field count); went through at the first attempt on both
+files.
+
+* **The one genuine new thing: a non-power-of-two record width.** `LEREC`'s stride is `2 * 3 = 6`
+  words (three fields, two tiers). Every earlier table's width was a power of two (1, 2 or 4),
+  so its room check read `len(REC.u64) >> shift <= c` (dividing by the stride via a shift); `6`
+  is not a power of two, and **L has no division operator at all** (`PLAN.md`, "the language
+  L": "No division: Kraken has no div; divide by a power of two with `>>`."). The fix is not a
+  language or library change but a different, already-available arithmetic form of the same
+  check: `len(LEREC.u64) < (c + 1) * 6` (multiplication, which L has), which is in fact a more
+  direct match for `PushRoom`'s own definition (`S.st.toNat * (cnt + 1) ≤ size`) than the
+  power-of-two tables' shifted form was — `lepushOK_room`'s proof is a plain `grind` with no
+  `UInt64.toNat_shiftRight` conversion lemma, shorter than `app`'s/`const`'s equivalent.
+* **Three-way skip test from the library's two-way lemma.** `eViewHasScratchChild (.letE ty val
+  body)` is `if ty.isPersistent then (if val.isPersistent then !body.isPersistent else true) else
+  true`, i.e. "`ty`, `val` or `body` is a scratch handle". The L side computes this as one word,
+  `((ty | val | body) >>> 27) & 1`; relating the two needed `bit27_or` (`StoreRel.lean`) **twice**
+  — `bit27_or ty val` then `bit27_or (ty ||| val) body`, matching `|||`'s left-associativity
+  (`ty ||| val ||| body` parses as `(ty ||| val) ||| body`) — composed in the proof, not inside
+  the library: no new lemma, `bit27_or` is already general enough.
+* The record relation, `MatchOK`/`NewOK` and the frame obligation are `app`'s/`const`'s two-field
+  versions with one more conjunct/clause each (`fld_let0`/`fld_let` cover field 0 and the general
+  case exactly as `fld_app0`/`fld_app` did); nothing else differed in shape.
 
 ### `sorry`s
 

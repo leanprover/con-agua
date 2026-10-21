@@ -26,6 +26,7 @@ globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.A
   "ConAgua.Arena.ParamStore", "ConAgua.Arena.ParamRefine",
   "ConAgua.Arena.SortStore", "ConAgua.Arena.SortRefine",
   "ConAgua.Arena.ConstStore", "ConAgua.Arena.ConstRefine",
+  "ConAgua.Arena.LetStore", "ConAgua.Arena.LetRefine",
   "ConAgua.Capstone"]
 
 # Vendored from con-leche (rev 103562b) and con-ron (rev 4c9eaf7, proof/ dir).
