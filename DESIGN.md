@@ -1862,3 +1862,82 @@ script, not left reverted).
 
 None (no proof touched; `compile_correct` unaffected, `#print axioms` unchanged:
 `propext`, `Classical.choice`, `Quot.sound`).
+
+## Every term store in `ArenaR`, and the walk over every node (2026-10-21, lane `tables2`)
+
+Files: `ConAgua/Arena/{FVar,Proj,NAnon,NStr,NNum,Ls}{Store,Refine}.lean` (part 1; `lam`/`forallE`
+and the walk follow),
+`ConAgua/Arena/PoolSlice.lean` (new), `ConAgua/Arena/ArenaRel.lean` (regenerated, `arena_build`),
+`ConAgua/Arena/WalkRefine.lean`. `fvar`/`proj`, `lam`/`forallE` and the name store's
+`anonymous`/`num` were written by three subagents in parallel worktrees, one file pair per table;
+the variable-length keys and `ArenaR` in the lane's own worktree.
+
+### Layout
+
+The tables after `bvar`/the memo take (or reserve) arrays 25‥40 and count words `CTL[s + t]`, `s` the table's
+slot array (25‥40 are free in `CTL`, the memo uses 24/25): `fvar` 25/26, `lam` 27/28, `forallE`
+29/30, `proj` 31/32, name `anonymous` 33/34, name `str` 35/36, name `num` 37/38, level lists
+39/40. `ArenaRel.lean`'s header has the whole table. `arenaR_init` now takes 41 arrays and a `CTL`
+of at least 42 words.
+
+### Variable-length keys: one pool for limbs, bytes and handle lists
+
+The level-list key (`List LIdx`) and the name `str` key (`String`) live in `POOL`, the array the
+`lit` store already keeps its limbs in, below the same top `CTL[0]`: a level list as its handle
+words, a string as its UTF-8 bytes, one byte per word. The record holds the slice `(o, l)` and the
+hash; the L code reuses `lit_hash` and `limbs_eq` unchanged (`ls_match` and `nstr_match` call
+`limbs_eq`, `intern_ls`/`intern_nstr` call `lit_hash`). Because the pool is shared, the pool's
+invariant `PoolOK` and its frame `Grows` are `lit`'s: `ArenaR.grow` keeps `LsR` and `NStrR` by
+`LsR.grow`/`NStrR.grow` (slices below the old top do not move, `Agree.sliceL`), exactly as
+`LitR.grow`. The caller of `intern_ls`/`intern_nstr` puts the words below the top first (the
+refinement theorems take `SliceOK` and `sliceL pool o l = lsWords us` / `= strWords s`).
+
+**What is shared with `lit` (measured).** `PoolSlice.lean` (57 non-blank lines) states a key as
+a list of words: `sliceL p o l` (the slice as a `List Word`), `slice_key` ("the lengths agree and
+`limbs_eq` holds" iff the two word lists are equal, for slices that do not wrap), `slice_key_hash`,
+`Agree.sliceL`. A table adds its encoding and the encoding's injectivity: `lsWords_inj` (3 lines,
+`Idx.word` is the structure's only field), `strWords_inj` (3 lines, `String.toByteArray_inj` and
+`ByteArray.ext`). `lit` does not fit the statement: a `natVal` key is a *normalised* slice and its
+uniqueness is about the value (`pv_len`, `pv_limbs`), so `lit` shares the two lemmas underneath
+(`eqW_iff`, `hashN_congr`), not `slice_key`. Rewriting `lit` on `slice_key` would need the limbs of
+a number as a list and the uniqueness of normalised limb lists; not done (no gain: the 118 lines of
+`pv` facts stay either way).
+
+One byte per word costs 8× the memory of packed strings; it keeps the comparison and the hash
+`lit`'s and the key a word list. Packing (eight bytes per word, a length in bytes) is a later
+optimisation of `nstr_match`/`lit_hash` with its own injectivity lemma.
+
+### The tables
+
+| table | key | L lines | spec lines | relation file (non-blank) | `lean` user Store + Refine | first attempt? |
+|---|---|---:|---:|---:|---:|---|
+| `fvar` | `Nat` + expression handle, skip on `ty` | 46 | 87 | 198 | 9.1 + 1.2 s | yes |
+| `proj` | name handle + `Nat` + expression handle, width 3, skip on `n \| e` | 48 | 87 | 214 | 11.9 + 1.3 s | yes |
+| name `anonymous` | none (the `zero` shape) | 38 | 87 | 144 | 2.9 + 1.0 s | yes |
+| name `num` | name handle + `Nat` | 42 | 87 | 191 | 6.3 + 1.3 s | yes |
+| level lists | `List LIdx` in the pool | 55 | 130 | 252 | 6.6 + 1.4 s | L side yes; relation: three small fixes (below) |
+| name `str` | name handle + `String` in the pool | 60 | 133 | 274 | 8.0 + 1.5 s | L side yes; relation: two small fixes |
+
+"L lines" are the function bodies (`*_match` for the pool tables, `*_find`, `*_push`,
+`intern_*`); "spec lines" the `vcgen` sections. Every L spec, including the two pool tables'
+`*_match` that call `limbs_eq`, went through with the house form at the first attempt (twenty
+tables now). The fixes in the pool tables' relation files were all Lean API names or goal shapes,
+not proof ideas: `List.ofFn_inj` does not exist (`List.ext_getElem_iff`), `List.map_injective_iff`
+does not exist (`List.map_inj_right`), `String.bytes_inj` is deprecated (`String.toByteArray_inj`),
+the name store's `internNNode` reads `s.store.ns` (`EStore.ns` has to be in the unfolding's `simp`
+set, unlike the level store's `EStore.ls`), and `NewOK`'s goal after `simp` ends in `∧ True`.
+
+### `ArenaR` without quadratic text: `arena_build`
+
+With 19 tables the old per-table lift lemmas (every other table's frame, one `have` each: 19 lines
+per table, 360 for all) and the two memo writers (every table listed) grow quadratically. One
+tactic replaces them: `arena_build hR, hf with tac` builds an `ArenaR` field by field, each field
+by `first | tac | exact hR.<field>.frame _ _ _ _ hf _ (by apart)`. The written table's field is the
+one `tac` closes (`exact hX`); for the memo writers `tac` is `exact memoR_set …`, for the pool
+`first | exact LitR.grow … | exact LsR.grow … | exact NStrR.grow …`. A lift lemma is now five
+lines, `ArenaR.memo_set`/`memo_clear` and `ArenaR.grow` one line each; `ArenaR.frame` (all `Apart`s
+as hypotheses, unused) is gone. A failing `tac` on another field is a type mismatch, found before
+`apart` runs; `ArenaRel.lean` checks in 1.7 s wall for 19 tables (11.5 s user, the `apart`s in
+parallel). `ArenaRel.lean`'s table-dependent parts (imports, header, `RLocal`s, frames, fields,
+`arena_build`, `arenaR_init`, lifts) are generated by a script from a table list (not committed;
+the output is ordinary Lean); the `intern*_refinesA` theorems are written per table.
