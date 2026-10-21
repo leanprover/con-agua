@@ -3884,3 +3884,93 @@ loop, push); all 38 files built at the first attempt after the library was fixed
 ### `sorry`s
 
 None.
+
+## Library work before the core: memos with tree values, deletion and banks (2026-10-21, lane `libs`)
+
+Lane `scale`'s item 4, second half. Files: `MemoLib.lean` (L: `X_erase`, `X_bank_enter`,
+`X_bank_leave`), `MemoLibRel.lean` (the relation generalised), new `MemoBank.lean`,
+`MemoTree.lean`; one argument added at the four `memoRG_hit` call sites (`WalkRefine`,
+`LiftRefine`, `Inst1Refine`, `FVarRangeRefine`). No `sorry`; standard axioms.
+
+### Tree-valued entries: `MemoRV`
+
+`MemoRV S K VR m mp` replaces the word decoder `dv : Word → ν` by a **value relation that may read
+memory**, `VR : Mem → Word → ν → Prop` (a live slot's word `w` denotes `mp`'s value: `MemoV VR m
+w mp[k]?`). `MemoRG S K dv` is now `MemoRV` at `fun _ w v => v = dv w`, and its six lemmas are
+one-line corollaries with the old statements (`memoRG_hit` takes `K.ok k1 k2` as a last argument,
+see deletion). What an instance with a memory-reading relation proves once is `VStable S VR`
+(the relation survives the memo's own writes); `memoRV_frame` takes the relation's transport
+across any other writer (`HeapExt` for a growing heap).
+
+The client (`MemoTree.lean`): values are lane `levels`' level pointers, decoded by `LvR N m p l`.
+`lvNodeW_congr` (what `lvNodeW` reads: `LH`, the four level record arrays, `CTL` words below 16
+and 192) gives `lvR_stable` for any schema outside them (`TreeSafe`; through `LvR.of_view`, since `HeapExt` now also frames every other array), and `memoRV_heapExt` carries
+the memo across `lh_mk`. `lt_set`/`lt_hit` instantiate it for a test schema of `readLC`'s shape
+(`ltSch`: array 100, `CTL[100]`, inside `CoreR`'s reserved range, not claimed by `CoreR`). Since
+lane `levels`' pointers include store handles, `readLC` can store the handle itself; `readNC`
+and `readLsC` take the same route once names and level lists have pointer decoders.
+
+### Deletion: tombstones in `MemoLib`, no separate map library
+
+Decision: `X_erase(j)` overwrites the first key word of the live slot `j` a probe found with
+`TOMB = 2^64 − 1`; no valid key starts with it (`MemoKey.ok_tomb`), so the slot stays live for
+probing and never matches. The relation's live/uniqueness clauses skip tombstone slots, and every
+entry of `mp` is the decoding of its own encoding (a new clause, needed so that erasing one key
+cannot strand another key with the same encoding: `lfKey`'s `Nat` cutoff is not injective).
+`memoRV_erase`: find (a hit), then erase, is `mp.erase`. Tombstones are not reused (they go at
+the next epoch `clear`), so they count against the 3/4 load limit. A separate open-addressing
+map library was not worth it: the environment index, the one `erase` user ROADMAP named, is
+directly addressed by the name handle (lane `pinsenv`, `Tiers.lean`: no hashing, no tombstones),
+so erase has no client yet; it cost one L function (4 lines) and one lemma (~70 lines).
+
+### Banks: generation-tagged keys (`MemoBank.lean`)
+
+ROADMAP §2 item 3 proposed `D` banks selected by the eager depth, the new bank cleared by epoch on
+entry. Built instead: **one memo per table, the generation in the key** (`genKey K`: `K` with
+a generation `g < 2^32` in the high half of the second key word). The twin's table at
+generation `g` is `Bank M g mp` (`mp[k]? = M[(k, g)]?`) of the memo's whole map `M`.
+`X_bank_enter()` (`bankEnterG c`) allocates `G + 1` (`CTL[c]` the last generation, `CTL[c + 1]`
+the current), aborts at `2^32`, and returns the caller's generation, which the caller keeps in an
+L local and restores with `X_bank_leave(s)`. `bank_enter`: the new bank is empty
+(`takeModeMemos`'s fresh tables, by `Fresh M G`), the caller's bank still holds its table (what
+`putModeMemos` puts back), the memo relation is untouched (two `CTL` words written). `bank_put`:
+`find; put` at the current generation is an insert in its bank, leaving others (`bank_other`).
+Why not `D` banks: no static dispatch over `D` copies of the L code, no depth bound `D` (only the
+generation bound per memo clear), and the bank relation is pure `HashMap` reasoning (20 lines).
+The cost: entries of finished generations stay until `flushCaches` (capacity, not semantics).
+The test instance `tbSch`/`tbKey` (`whnfCoreC`'s shape, `EIdx → EIdx`) and a `#guard` run store
+under generation 0, enter, miss and store under 1, leave, and hit the generation-0 value.
+
+### Measurements (`lake env lean`, user CPU, one run)
+
+| file | lines before → after | user s before → after |
+|---|---:|---:|
+| `MemoLib.lean` | 292 → 379 | 6.1 → 6.8 |
+| `MemoLibRel.lean` | 545 → 732 | 2.6 → 3.0 |
+| `MemoBank.lean` (new) | 286 | 0.8 |
+| `MemoTree.lean` (new) | 109 | 0.6 |
+| walk users (`WalkRefine`, `LiftRefine`) | +0 | unchanged |
+
+All new L specs (`memoEraseG_spec`, `bankEnterG_spec`, `bankLeaveG_spec`) went through `vcgen`
+at the first attempt, generic in the schema; `memoRV_set`'s proof is `memoRG_set`'s with the
+tombstone antecedent and the existential value.
+
+### For the core lanes: how to use
+
+* **A cache with handle values** (`constTyC`, `lvlEqC`, …): `MemoRG` as before (schema, key codec
+  with `ok_tomb`, `dv`); nothing changed.
+* **A cache with tree values** (`readLC`, …): `MemoRV S K VR`; prove `VStable S VR` once (for
+  level pointers: `lvR_stable` with `TreeSafe S`), carry it across heap writers with
+  `memoRV_frame` (`memoRV_heapExt`).
+* **A mode memo** (`whnfCoreC`, `whnfCoreCheapC`, `whnfC`, `inferC`, `inferIOC`, `defeqC`): key codec
+  `genKey K` (second key word below `2^32`; pack two handles into the first word), one bank counter
+  pair `CTL[c]`, `CTL[c + 1]` shared by the six tables (one `X_bank_enter` per eager `defeqE`).
+  State it as `MemoRV S (genKey K) VR m M ∧ BankW c m G g ∧ Fresh M G ∧ Bank M g a.caches.whnfCoreC`,
+  and the saved tables as `Bank M gᵢ savedᵢ` on the knot's arguments; `bank_enter` on entry, the
+  `Bank` of the saved generation on exit, `bank_put` for inserts, `bank_find` for
+  lookups (key word `genW k2 g`).
+* **Deletion**: `X_erase` at the slot of a `find` hit; `memoRV_erase`.
+
+### `sorry`s
+
+None.

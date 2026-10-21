@@ -278,7 +278,7 @@ theorem probe_ok (armW : Option (Word × Mem)) (miss : AM EIdx) (m m' : Mem) (a 
   · rw [hhit hr hh0] at hb
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     rw [show a.memos.liftC[(decE h, c.toNat)]? = _ from
-      memoRG_hit lfSch lfKey decE m _ hA.1.memos.lift h c hr hh0]
+      memoRG_hit lfSch lfKey decE m _ hA.1.memos.lift h c hr hh0 hh]
     exact ⟨a, rfl, hA⟩
   · simp only [ne_eq, Decidable.not_not] at hh0
     rw [show a.memos.liftC[(decE h, c.toNat)]? = none from
