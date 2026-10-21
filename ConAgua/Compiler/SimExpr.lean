@@ -32,6 +32,13 @@ def evalP (σ : St) : Expr → Except Err Word
     if h : j.toNat < (σ.mem.arr64 a).size then .ok (σ.mem.arr64 a)[j.toNat] else .error .oob
   | .len8 a => .ok (σ.mem.len8 a)
   | .len64 a => .ok (σ.mem.len64 a)
+  | .cmpw c a b => do
+    let x ← evalP σ a
+    let y ← evalP σ b
+    return c.evalW x y
+  | .ldc d i => do
+    let j ← evalP σ i
+    if h : j.toNat < d.length then .ok d[j.toNat].toUInt64 else .error .oob
 
 theorem evalE_run (σ : St) (e : Expr) : (evalE e).run σ = (evalP σ e).map (·, σ) := by
   induction e with
@@ -62,7 +69,26 @@ theorem evalE_run (σ : St) (e : Expr) : (evalE e).run σ = (evalP σ e).map (·
       · simp [StateT.bind, StateT.run, get, getThe, MonadStateOf.get, StateT.get, hj]; rfl
   | len8 => rfl
   | len64 => rfl
+  | cmpw op a b iha ihb =>
+    simp only [evalE, evalP, StateT.run_bind] at *
+    rw [iha]
+    cases evalP σ a <;> simp [Except.map, bind, Except.bind, ihb]
+    · cases evalP σ b <;> rfl
+  | ldc d i ih =>
+    simp only [evalE, evalP, StateT.run_bind, ih]
+    cases evalP σ i with
+    | error => rfl
+    | ok j =>
+      simp only [Except.map, bind, Except.bind, L.ldc, pure]
+      by_cases hj : j.toNat < d.length
+      · simp [hj, StateT.pure]; rfl
+      · simp [hj]; rfl
 
+
+theorem romIdx_le (d rom : List UInt8) : romIdx d rom ≤ rom.length := by
+  induction rom with
+  | nil => simp [romIdx]
+  | cons b rom ih => simp only [romIdx]; split <;> simp; omega
 
 /-! ## Evaluating an expression on the machine -/
 
@@ -135,7 +161,7 @@ section
 variable [Host] {G : Layout} (hG : G.Ok)
 include hG
 
-theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) < maxOff)
+theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords < maxOff)
     (F : Nat) (hF : 8 * F + 8 < maxOff) :
     ∀ (e : Expr) (t k : Nat), Code (compileE ctx e t) k → Expr.wf ctx.nl G.tab e = true →
     ctx.nl + t + tempsE e ≤ F →
@@ -205,15 +231,130 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
           simp only [Reg64s.set64_rcx]
           rw [hE3.rsp, hE3.mem.rdW_eq (by omega) (by omega)]
           simp only [hE1.rsp, rdW_wrW_same, Reg64s.get64_rax, hrax1, UInt64.ofBitVec_toBitVec]
-        refine ev_bin hcR.tail.tail.head fun st => ?_
-        refine ev_congr (hok (op.eval va vb) _ ?_ (by simp [hrax3]) ?_) ?_
-        · simp [evalP, hva, hvb]; rfl
+        have hcB := hcR.tail.tail
+        have hev : evalP σ (.bin op a b) = .ok (op.eval va vb) := by simp [evalP, hva, hvb]; rfl
+        by_cases hop : op = .mulhi
+        · subst hop
+          simp only [binCode] at hcB hok
+          refine ev_mul hcB.head fun st => ?_
+          refine ev_movRR hcB.tail.head ?_
+          refine ev_congr (hok (BinOp.mulhi.eval va vb) _ hev (by simp [hrax3]) ?_) ?_
+          · exact (hE2.trans hE3 (by omega)).of_eq rfl (by simp) (by simp) (by simp) (by simp) (by simp)
+          · simp only [List.length_append, List.length_cons, List.length_nil]; omega
+        · have hb : binCode op = [binInstr op] := by cases op <;> simp_all [binCode]
+          rw [hb] at hcB hok
+          refine ev_bin hop hcB.head fun st => ?_
+          refine ev_congr (hok (op.eval va vb) _ hev (by simp [hrax3]) ?_) ?_
+          · exact (hE2.trans hE3 (by omega)).of_eq rfl (by simp) (by simp) (by simp) (by simp) (by simp)
+          · simp only [List.length_append, List.length_cons, List.length_nil]; omega
+      · intro s3 herrb hE3
+        refine herr s3 ?_ (hE2.trans hE3 (by omega))
+        obtain ⟨x, hx⟩ := herrb
+        exact ⟨x, by simp [evalP, hva, hx]; rfl⟩
+    · intro s1 herra hE1
+      refine herr s1 ?_ hE1
+      obtain ⟨x, hx⟩ := herra
+      exact ⟨x, by simp [evalP, hx]; rfl⟩
+  | cmpw op a b iha ihb =>
+    intro t k hc hwf htmp σ s Q hI hok herr
+    simp only [Expr.wf, Bool.and_eq_true] at hwf
+    simp only [tempsE] at htmp
+    simp only [compileE, List.append_assoc, List.singleton_append] at hc hok
+    have hc1 := hc.right
+    have hsp := hI.hi
+    have hhi := hG.hi_le
+    refine iha t k hc.left hwf.1 (by omega) σ s Q hI ?_ ?_
+    · intro va s1 hva hrax1 hE1
+      have hI1 : Inv G ctx.nl F σ s1 :=
+        hI.only hG (hE1.mem.mono (by omega) (Nat.le_refl _)) hE1.rsp hE1.r15
+      have hoff : SmallOff (8 * ((ctx.nl : Int) + (t : Int))) := ⟨by omega, by omega⟩
+      refine ev_movMR hc1.head hoff ?_ ?_
+      · rw [slot_addr _ (ctx.nl + t) _ (by omega)]; exact hI1.mapped (by omega)
+      rw [slot_addr _ (ctx.nl + t) _ (by omega)]
+      have hE2 := hE1.trans (EPost.store (v := s1.regs.get64 .rax) (j := ctx.nl + t) (s := s1)
+        (by omega) (by omega) (by rw [hE1.rsp]; omega)) (Nat.le_refl _)
+      have hI2 := hI.only hG (hE2.mem.mono (by omega) (Nat.le_refl _)) hE2.rsp hE2.r15
+      have hc2 := hc1.tail
+      refine ihb (t + 1) _ hc2.left hwf.2 (by omega) σ _ Q hI2 ?_ ?_
+      · intro vb s3 hvb hrax3 hE3
+        have h1rsp := congrArg UInt64.toNat hE1.rsp
+        have h2rsp := congrArg UInt64.toNat hE2.rsp
+        have h3rsp := congrArg UInt64.toNat hE3.rsp
+        have hcR := hc2.right
+        refine ev_movRR hcR.head ?_
+        refine ev_movRM hcR.tail.head hoff (v := va) ?_ ?_
+        · rw [slot_addr _ (ctx.nl + t) _ (by omega)]
+          simp only [Reg64s.set64_rcx]
+          rw [hE3.rsp, hE3.mem.rdW_eq (by omega) (by omega)]
+          simp only [hE1.rsp, rdW_wrW_same, Reg64s.get64_rax, hrax1, UInt64.ofBitVec_toBitVec]
+        refine ev_cmpRR hcR.tail.tail.head ?_
+        refine ev_movRI hcR.tail.tail.tail.head ?_
+        refine ev_movRI hcR.tail.tail.tail.tail.head ?_
+        refine ev_cmov hcR.tail.tail.tail.tail.tail.head ?_
+        have hev : evalP σ (.cmpw op a b) = .ok (op.evalW va vb) := by simp [evalP, hva, hvb]; rfl
+        refine ev_congr (hok (op.evalW va vb) _ hev ?_ ?_) ?_
+        · simp only [Reg64s.set64_rcx, Reg64s.set64_rax, Reg64s.set64_rdx, Reg64s.get64_rax, hrax3,
+            UInt64.toBitVec_ofBitVec, UInt64.ofBitVec_toBitVec, cmpCC_interp, Cmp.evalW]
         · exact (hE2.trans hE3 (by omega)).of_eq rfl (by simp) (by simp) (by simp) (by simp) (by simp)
         · simp only [List.length_append, List.length_cons, List.length_nil]; omega
       · intro s3 herrb hE3
         refine herr s3 ?_ (hE2.trans hE3 (by omega))
         obtain ⟨x, hx⟩ := herrb
         exact ⟨x, by simp [evalP, hva, hx]; rfl⟩
+    · intro s1 herra hE1
+      refine herr s1 ?_ hE1
+      obtain ⟨x, hx⟩ := herra
+      exact ⟨x, by simp [evalP, hx]; rfl⟩
+  | ldc d i ih =>
+    intro t k hc hwf htmp σ s Q hI hok herr
+    simp only [Expr.wf, Bool.and_eq_true] at hwf
+    simp only [tempsE] at htmp
+    simp only [compileE] at hc hok
+    have hcR := hc.right
+    have hpre := List.prefix_iff_eq_take.mp (List.isPrefixOf_iff_prefix.mp hwf.1)
+    have hdl : d.length ≤ G.tab.rom.length := by
+      have := congrArg List.length hpre; simp at this; omega
+    have hidx : romIdx d G.tab.rom + d.length ≤ G.tab.rom.length := by
+      have h1 := congrArg List.length hpre; have := romIdx_le d G.tab.rom; simp at h1; omega
+    have hw : G.tab.rom.length ≤ 8 * G.tab.romWords := by simp only [Tab.romWords]; omega
+    have htabEnd := hG.tab_end
+    simp only [Layout.tabEnd] at htabEnd
+    refine ih t k hc.left hwf.2 (by omega) σ s Q hI ?_ ?_
+    · intro j s1 hj hrax1 hE1
+      have hI1 : Inv G ctx.nl F σ s1 :=
+        hI.only hG (hE1.mem.mono (by omega) (Nat.le_refl _)) hE1.rsp hE1.r15
+      refine ev_cmpRI hcR.head ?_
+      have hdl' : (Int64.ofInt (d.length : Int)).toBitVec.toNat = d.length := by
+        simp [Int64.toBitVec_ofInt]; omega
+      refine ev_jcc hcR.tail.head (fun hcc => ?_) (fun hcc => ?_)
+      · refine herr _ ⟨.oob, ?_⟩ ((hE1.trans (EPost.flags _) (Nat.le_refl _)))
+        simp only [CondCode.interp, cmpFlags_cf, Bool.not_eq_true', decide_eq_false_iff_not,
+          UInt64.toNat_toBitVec, hdl', hrax1] at hcc
+        simp only [evalP, hj, bind, Except.bind]
+        rw [dite_eq_right (by exact hcc)]
+      · simp only [CondCode.interp, cmpFlags_cf, Bool.not_eq_false', decide_eq_true_eq,
+          UInt64.toNat_toBitVec, hdl', hrax1] at hcc
+        have hoff : SmallOff (G.tab.romBase + (romIdx d G.tab.rom : Int)) := by
+          simp only [Tab.romBase]; omega
+        rw [hT] at hcR
+        refine ev_lea hcR.tail.tail.head hoff ?_
+        have hb := hI1.mem.rom (romIdx d G.tab.rom + j.toNat) (by omega)
+        have hd : G.tab.rom[romIdx d G.tab.rom + j.toNat]'(by omega) = d[j.toNat] := by
+          rw [(List.isPrefixOf_iff_prefix.mp hwf.1).getElem hcc, List.getElem_drop]
+        rw [hd] at hb
+        refine ev_movzx hcR.tail.tail.tail.head (b := d[j.toNat]) ?_ ?_
+        · simp only [Reg64s.set64_rcx, Reg64s.get64_r15, UInt64.toNat_toBitVec, hI1.r15]
+          rw [show A (G.T + (G.tab.romBase + (romIdx d G.tab.rom : Int)).toNat) + s1.regs.rax.toBitVec =
+              A (G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + (romIdx d G.tab.rom + j.toNat)) from ?_]
+          · exact hb
+          apply BitVec.eq_of_toNat_eq
+          simp only [Tab.romBase, A, BitVec.toNat_add, BitVec.toNat_ofNat, UInt64.toNat_toBitVec, hrax1]
+          omega
+        refine ev_congr (hok d[j.toNat].toUInt64 _ ?_ (by simp) ?_) ?_
+        · simp only [evalP, hj, bind, Except.bind]
+          rw [dite_eq_left hcc]
+        · exact hE1.of_eq rfl (by simp) (by simp) (by simp) (by simp) (by simp)
+        · simp only [List.length_append, List.length_cons, List.length_nil]; omega
     · intro s1 herra hE1
       refine herr s1 ?_ hE1
       obtain ⟨x, hx⟩ := herra
@@ -348,7 +489,7 @@ section
 variable [Host] {G : Layout} (hG : G.Ok)
 include hG
 
-theorem sim_cond (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) < maxOff)
+theorem sim_cond (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords < maxOff)
     (F : Nat) (hF : 8 * F + 8 < maxOff) :
     ∀ (c : Cond) (path : String) (pol : Bool) (l : Label) (t k : Nat),
     Code (compileC ctx path c pol l t) k → Cond.wf ctx.nl G.tab c = true →

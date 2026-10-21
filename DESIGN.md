@@ -13,8 +13,10 @@ Files: `ConAgua/L/{Syntax,Semantics,Notation,GrindAttr,Logic,Examples}.lean`.
   is taken mod 64 (Lean's `UInt64` shifts and x64's `shl`/`shr` agree on this). No division:
   Kraken has no `div`; divide by a power of two with `>>`.
 * **Expressions** (`Expr`): constants, locals, binary operators, `A.u8[i]` (a byte, zero-extended),
-  `A.u64[i]`, `len(A.u8)`, `len(A.u64)`. No calls and no side effects, so evaluating one never
-  touches the frame layout. Only array reads can fail.
+  `A.u64[i]`, `len(A.u8)`, `len(A.u64)`; since lane `lext` also `mulhi(a, b)` (the high word of
+  the 128-bit product), `u64(a < b)` (a comparison as `1`/`0`) and `D.c8[i]` (a byte of a
+  constant byte string `D : List UInt8` that is part of the program). No calls and no side
+  effects, so evaluating one never touches the frame layout. Only array reads can fail.
 * **Conditions** (`Cond`) are a separate type with unsigned (`<`, `<=`, …) and signed (`<ₛ`, `≤ₛ`)
   comparisons and short-circuit `&& || !`. Short-circuit matters: Rust's
   `while i < b.len() && is_ws(b[i])` must not read `b[len]`.
@@ -549,4 +551,38 @@ compiler lane's merge (`43a0825`) dropped by accident.
   Reproducer, still failing without the lemma: `docs/gaps/grind-state-eq-projection.lean`.
 * **`&&`/`||` in `while`**: fixed upstream (see above); `skip_ws`/`skip_digits` now use the
   Rust condition.
+
+### New expressions: `mulhi`, comparisons as words, constant data
+
+Requests 1 and 2 of the arena lane, and constant data for `match_lit`.
+
+* **`mulhi(a, b)`** (`BinOp.mulhi`, `a.toNat * b.toNat / 2^64`). Code: the usual binary-operator
+  sequence ending in `mul rcx; mov rax, rdx` (`binCode`). Proof: `ev_mul` (Kraken's `mul` leaves
+  the flags undefined, which the continuation takes for all flags) and a case split in the
+  `bin` case of `sim_expr`.
+* **`u64(a < b)`** (`Expr.cmpw c a b`, value `Cmp.evalW c a b = if c.eval a b then 1 else 0`),
+  any of the six comparisons. Code: as a condition up to `cmp rax, rcx`, then
+  `mov rax, 0; mov rdx, 1; cmovcc rax, rdx` (no branch; `mov` keeps the flags, and `cmovcc`
+  needed only a register-register step lemma, `ev_cmov`). The condition code is the one jumps
+  use, so `cmpCC_interp` does the rest.
+* **`D.c8[i]`** (`Expr.ldc d i`, `oob` past the end). The byte string is part of the
+  expression, so a spec needs no hypothesis about memory: `vcgen` sees `d[i.toNat]` for the
+  concrete `d`. I considered (a) a second input array filled by the harness (no compiler work,
+  but every spec would need `s.mem.arr8 LIT = …` and the end-to-end statement would have to
+  trust the harness for the contents) and (b) a `.rodata` label in the code (Kraken's data
+  memory is separate from the code, so the code cannot read its own bytes). Instead the table
+  holds the program's constant data: `Tab.rom` (the concatenated byte strings, `Prog.rom p`,
+  each once) sits after the array descriptors, padded to words, and the entry arguments move
+  behind it (`Tab.args`). `ldc d i` compiles to `cmp rax, len d; jae ca_error;
+  lea rcx, [r15 + romBase + romIdx d rom]; movzx rax, byte [rcx + rax]`. `MemRel` gained one
+  field (the table holds `rom`), `Prog.wf` checks that each `d` occurs at `romIdx d rom` and that
+  the table with the constant data stays below `2^28` bytes. `asmText` emits `ca_rom`/`ca_rom_len`
+  in `.rodata`, and `harness/run.c` copies them into the table: the loader is trusted for these
+  bytes as it is for the code.
+
+Compiler proof: +150 lines in `SimExpr` (the `cmpw` case is the condition's `cmp` case plus three
+instructions; `ldc` is `ld8` with `lea`), +35 in `Step`, +35 for the new `MemRel` field in `Rel`
+and `SimStore`. `compile_correct` is unchanged in statement (the hypothesis `MemRel` now also
+says the table holds the constant data); still no `sorry`, axioms `propext`, `Classical.choice`,
+`Quot.sound`. Tests: `ext` in `Tests.lean` (all three, against `L.run` on Kraken's semantics).
 

@@ -18,10 +18,13 @@ public import Kraken.X64.PrintATT
 
 namespace L.Compiler
 
-/-- The assembler file for `compileProg tab p entry`. -/
+/-- The assembler file for `compileProg tab p entry`. The constant data `tab.rom` is emitted as
+`ca_rom` (`ca_rom_len` bytes) in `.rodata`; the driver copies it into the table. -/
 def asmText (tab : Tab) (p : Prog) (entry : FnName) : String :=
   ".text\n.globl " ++ enterL ++ "\n" ++ Kraken.X64.toATT (compileProg tab p entry) ++ "\n" ++
-    ".section .note.GNU-stack,\"\",@progbits\n"
+    ".section .rodata\n.globl ca_rom\n.globl ca_rom_len\nca_rom_len: .quad " ++ toString tab.rom.length ++
+    "\nca_rom:" ++ (if tab.rom.isEmpty then "" else " .byte " ++ ", ".intercalate (tab.rom.map toString)) ++
+    "\n.section .note.GNU-stack,\"\",@progbits\n"
 
 /-- The outcome of a run of compiled code, as `ca_enter` returns it. -/
 inductive Outcome where
@@ -53,7 +56,7 @@ def kWordBytes (v : Word) : List UInt8 :=
 stack at `0x8000`, returning to `0xdead0`. Returns `(rax, rdx)` at the return. -/
 def runKraken (p : Prog) (entry : FnName) (args : List Word) (m : Mem) (fuel : Word)
     (stackBytes : Nat := 4096) : Except String Outcome := do
-  let tab : Tab := { nb := m.bytes.size, nw := m.words.size }
+  let tab : Tab := Prog.tab p m.bytes.size m.words.size
   let T := 0x10000
   let stackTop := 0x400000
   let ra : Nat := 0xdead0
@@ -78,6 +81,7 @@ def runKraken (p : Prog) (entry : FnName) (args : List Word) (m : Mem) (fuel : W
     d := kStoreWord d (T + (tab.base64 a).toNat) (bases64[a]!).toUInt64
     d := kStoreWord d (T + (tab.len64 a).toNat) (m.arr64 a).size.toUInt64
     d := kStoreBytes d bases64[a]! ((m.arr64 a).toList.flatMap kWordBytes)
+  d := kStoreBytes d (T + tab.romBase.toNat) tab.rom
   for (v, i) in args.zipIdx do
     d := kStoreWord d (T + tab.args.toNat + 8 * i) v
   let exe := Program.fakeLayout (compileProg tab p entry)

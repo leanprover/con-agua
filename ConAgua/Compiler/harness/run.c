@@ -1,6 +1,6 @@
 /* Driver for code compiled from L (ConAgua/Compiler): loads a file into byte array 0, sets up
-   the descriptor table (L.Compiler.Tab with nb = 1, nw = 0) and an L stack, and calls
-   ca_enter(T, fuel).
+   the descriptor table (L.Compiler.Tab with nb = 1, nw = 0, and the program's constant data
+   ca_rom) and an L stack, and calls ca_enter(T, fuel).
 
    usage: run FILE ARG...        one call with the given word arguments; prints the outcome
           run --lines FILE       one call skip_braced(start + 1, 0) per line that starts with '{';
@@ -14,8 +14,11 @@
 
 typedef struct { uint64_t rax, rdx; } ca_res;
 extern ca_res ca_enter(uint64_t *T, uint64_t fuel);
+extern const uint8_t ca_rom[];
+extern const uint64_t ca_rom_len;
 
-static uint64_t T[16];
+static uint64_t T[4096];
+static uint64_t argw; /* the word index of the entry arguments in T */
 
 static uint8_t *load(const char *path, size_t *len) {
   FILE *f = fopen(path, "rb");
@@ -29,7 +32,7 @@ static uint8_t *load(const char *path, size_t *len) {
 }
 
 static ca_res call(uint64_t fuel, int nargs, const uint64_t *args) {
-  for (int i = 0; i < nargs; i++) T[4 + i] = args[i];
+  for (int i = 0; i < nargs; i++) T[argw + i] = args[i];
   return ca_enter(T, fuel);
 }
 
@@ -45,6 +48,9 @@ int main(int argc, char **argv) {
   uint8_t *buf = load(argv[1 + lines], &len);
   T[0] = (uint64_t)(st + stack); T[1] = (uint64_t)st;
   T[2] = (uint64_t)buf; T[3] = len;
+  argw = 4 + (ca_rom_len + 7) / 8;
+  if (argw + 8 > sizeof T / sizeof T[0]) { fprintf(stderr, "constant data too large\n"); return 2; }
+  memcpy(&T[4], ca_rom, ca_rom_len);
   if (!lines) {
     uint64_t args[8];
     int n = argc - 2;

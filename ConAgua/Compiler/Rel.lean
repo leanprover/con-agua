@@ -35,8 +35,9 @@ namespace Layout
 
 variable (G : Layout)
 
-/-- The bytes of the table that the code reads: the descriptors and the entry arguments. -/
-def tabEnd : Nat := G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.nargs
+/-- The bytes of the table that the code reads: the descriptors, the constant data and the entry
+arguments. -/
+def tabEnd : Nat := G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.nargs
 
 def InTab (x : Nat) : Prop := G.T ≤ x ∧ x < G.tabEnd
 def InStack (x : Nat) : Prop := G.lo ≤ x ∧ x < G.hi
@@ -74,6 +75,8 @@ structure MemRel (G : Layout) (m : Mem) (d : DataMem) : Prop where
   len8 : ∀ a < G.tab.nb, rdW d (A (G.T + (G.tab.len8 a).toNat)) = some (UInt64.ofNat (G.s8 a))
   base64 : ∀ a < G.tab.nw, rdW d (A (G.T + (G.tab.base64 a).toNat)) = some (UInt64.ofNat (G.b64 a))
   len64 : ∀ a < G.tab.nw, rdW d (A (G.T + (G.tab.len64 a).toNat)) = some (UInt64.ofNat (G.s64 a))
+  rom : ∀ (i : Nat) (h : i < G.tab.rom.length),
+    d.get? (A (G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + i)) = some G.tab.rom[i]
   stack : ∀ x, G.InStack x → (d.get? (A x)).isSome
 
 /-- The machine runs a body of a function with `nl` locals and an `F`-word frame, in L state `σ`. -/
@@ -183,6 +186,15 @@ theorem MemRel.only' {m : Mem} {d d' : DataMem} (hm : MemRel G m d) {a b : Nat} 
     rw [h.rdW_tab hG hab (by omega) (by simp [Layout.tabEnd, Tab.base64] <;> omega)]; exact hm.base64 c hc
   len64 := fun c hc => by
     rw [h.rdW_tab hG hab (by omega) (by simp [Layout.tabEnd, Tab.len64] <;> omega)]; exact hm.len64 c hc
+  rom := fun i hi => by
+    have hw : G.tab.rom.length ≤ 8 * G.tab.romWords := by simp only [Tab.romWords]; omega
+    have := hG.tab_end
+    simp only [Layout.tabEnd] at this
+    rw [h.same _ (by omega) ?_, hm.rom i hi]
+    refine Classical.byContradiction fun hc => ?_
+    simp only [not_or, Nat.not_lt] at hc
+    exact (hab (G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + i) (by omega) (by omega)).1
+      ⟨by omega, by simp only [Layout.tabEnd]; omega⟩
   stack := fun x hx => h.grows _ (hm.stack x hx)
 
 /-- A change inside the stack keeps the memory relation. -/
