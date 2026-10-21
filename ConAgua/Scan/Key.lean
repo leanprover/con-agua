@@ -825,4 +825,6 @@ theorem valueAtN_le (b : Array UInt8) (i ke : Word) (hi : i.toNat ≤ b.size) (h
     omega
   · next => exact hi
 
+grind_pattern [lang_grind] valueAtN_le => valueAtN b i ke
+
 end L.Scan.Key

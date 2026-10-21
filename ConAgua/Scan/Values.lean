@@ -247,12 +247,16 @@ theorem keyEndN_lt (b : Array UInt8) (j : Nat) (h : keyEndN b j ≠ 0) : keyEndN
   | case3 j hj hq hc ih => exact ih h
   | _ => simp_all
 
+grind_pattern [lang_grind] keyEndN_lt => keyEndN b j
+
 theorem numEndN_le (b : Array UInt8) (i : Nat) (h : i ≤ b.size) : numEndN b i ≤ b.size := by
   have hle := L.Scan.Leaves.skipDigitsN_le b i h
   simp only [numEndN]
   split
   · omega
   · split <;> omega
+
+grind_pattern [lang_grind] numEndN_le => numEndN b i
 
 theorem numEndN_ge (b : Array UInt8) (i : Nat) : i ≤ numEndN b i := by
   have hge : i ≤ L.Scan.Leaves.skipDigitsN b i := by
@@ -264,6 +268,8 @@ theorem numEndN_ge (b : Array UInt8) (i : Nat) : i ≤ numEndN b i := by
   · omega
   · split <;> omega
 
+grind_pattern [lang_grind] numEndN_ge => numEndN b i
+
 /-- A successful `slot_nat` is past the key. -/
 theorem slotNatN_pos (b : Array UInt8) (ks v : Word) (h : slotNatN b ks v ≠ 0) :
     ks < slotNatN b ks v := by
@@ -274,6 +280,8 @@ theorem slotNatN_pos (b : Array UInt8) (ks v : Word) (h : slotNatN b ks v ≠ 0)
     · simp [h1, h2]
     · simp [h1, h2] at h
 
+grind_pattern [lang_grind] slotNatN_pos => slotNatN b ks v
+
 /-! ## Specs -/
 
 section specs
@@ -282,6 +290,12 @@ variable (p : Prog) (b : Array UInt8) (hb : b.size < 2 ^ 63)
     (hpd : p.lookup "skip_digits" = some L.Scan.Leaves.skipDigits)
     (hpk : p.lookup "key_end" = some L.Scan.Leaves.keyEnd)
     (hpn : p.lookup "num_end" = some L.Scan.Leaves.numEnd)
+    (hpa1 : p.lookup "keyAtG1" = some L.Scan.Key.keyAtG1)
+    (hpa2 : p.lookup "keyAtG2" = some L.Scan.Key.keyAtG2)
+    (hpa3 : p.lookup "keyAtG3" = some L.Scan.Key.keyAtG3)
+    (hpa4 : p.lookup "keyAtG4" = some L.Scan.Key.keyAtG4)
+    (hpa5 : p.lookup "keyAtG5" = some L.Scan.Key.keyAtG5)
+    (hpa6 : p.lookup "keyAtG6" = some L.Scan.Key.keyAtG6)
     (hpa : p.lookup "key_at" = some L.Scan.Key.keyAt)
     (hpv : p.lookup "value_at" = some L.Scan.Key.valueAt)
     (hps : p.lookup "slot_nat" = some slotNat)
@@ -380,7 +394,17 @@ theorem scanBinderInfo_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld8,
         matchWord_spec p b hb hpm n] <;> finish
 
-include hpw hpd hpk hpn hpa hpv hpm hph in
+-- NOT PROVED (left `sorry`, see DESIGN.md / the stageb-s2 report for a gap writeup): the body
+-- below reaches `finish failed` (not a timeout — raising `gen`/`genLocal` to 20 and
+-- `maxHeartbeats` to 1000000 still exhausts the search in ~3-4 minutes) on 2 of the function's
+-- verification conditions, past the `scan_hints` object branch's full chain of six callees
+-- (skip_ws, key_end, key_at, value_at, num_end, skip_ws again). `hintsN`/`hintsN.hintsObjN`/
+-- `hintsN.hintsNumN` are registered, and `hstep`/`hofnat_le` (the two facts that fixed
+-- `valueAt_spec`) are provided, but something further down the six-deep call chain is still
+-- missing. Left for a future attempt (e.g. splitting the object branch into its own named
+-- block/function, as `key_at` was split, so each callee's verification condition is shallower).
+include hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hph in
+attribute [local lang_grind] hintsN hintsN.hintsObjN hintsN.hintsNumN in
 theorem scanHints_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_hints" [i]
