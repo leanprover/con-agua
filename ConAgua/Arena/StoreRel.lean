@@ -118,14 +118,21 @@ theorem bit27_or (f a : Word) :
     simp
   rw [h, h, h, UInt64.toNat_or, Nat.testBit_or]; simp
 
-/-- The tier bit of a handle word. -/
-theorem isPersistent_decE (w : Word) (hw : w.toNat < 2 ^ 32) :
-    (decE w).isPersistent = ((w >>> 27) &&& 1 == 0) := by
-  simp only [decE, Idx.isPersistent, Idx.tier]
+/-- The tier bit of a handle word, at any handle kind (a `sort`/`const`/`letE` child may be a
+level, name or level-list handle, not only an expression one). -/
+theorem isPersistent_decI {k : IdxKind} (w : Word) (hw : w.toNat < 2 ^ 32) :
+    (decI w : Idx k).isPersistent = ((w >>> 27) &&& 1 == 0) := by
+  simp only [decI, Idx.isPersistent, Idx.tier]
   have := bit27_toNat w
   have : (w.toUInt32 / 134217728 % 2).toNat = w.toNat / 2 ^ 27 % 2 := by
     simp [UInt32.toNat_mod, UInt32.toNat_div, UInt64.toNat_toUInt32]; omega
   grind
+
+/-- The tier bit of a handle word, at expression handles (`isPersistent_decI` specialised, as
+`app`'s skip test uses it). -/
+theorem isPersistent_decE (w : Word) (hw : w.toNat < 2 ^ 32) :
+    (decE w).isPersistent = ((w >>> 27) &&& 1 == 0) := by
+  rw [decE_eq]; exact isPersistent_decI w hw
 
 /-- A handle is the decoding of a word below `2^32` iff that word is the handle's. -/
 theorem word_decI {k : IdxKind} (x : Idx k) (w : Word) (hw : w.toNat < 2 ^ 32) :
