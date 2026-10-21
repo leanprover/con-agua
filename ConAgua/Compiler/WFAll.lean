@@ -2,6 +2,8 @@ import ConAgua.Compiler.WF
 import ConAgua.Arena.AppStore
 import ConAgua.Arena.BVarStore
 import ConAgua.Arena.ConstStore
+import ConAgua.Arena.CoreCaches
+import ConAgua.Arena.Env
 import ConAgua.Arena.FVarRange
 import ConAgua.Arena.FVarStore
 import ConAgua.Arena.ForallStore
@@ -69,6 +71,8 @@ open L.Compiler
 #guard Prog.wfAuto L.Arena.appProg
 #guard Prog.wfAuto L.Arena.bvarProg
 #guard Prog.wfAuto L.Arena.constProg
+#guard Prog.wfAuto L.Arena.cacheProg
+#guard Prog.wfAuto L.Arena.envProg
 #guard Prog.wfAuto L.Arena.fvarRangeProg
 #guard Prog.wfAuto L.Arena.fvarProg
 #guard Prog.wfAuto L.Arena.forallProg

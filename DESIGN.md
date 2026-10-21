@@ -4166,7 +4166,7 @@ array `p` names (`Prog.arrs`).
 
 ### Every program's static check (`WFAll.lean`, `WFAllBench.lean`)
 
-One `#guard Prog.wfAuto p` per program defined on master (58; the four benchmark programs in
+One `#guard Prog.wfAuto p` per program defined on master (60; the four benchmark programs in
 `WFAllBench.lean`, whose modules clash with `NatBits` on import; the compiler's own test programs
 in `Tests.lean`). All pass, `frontAllProg` included, except `L.Scan.Values.hintsProg`, a test
 fragment that calls `skip_ws`/`hints_obj` without containing them (guarded as failing).
