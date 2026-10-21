@@ -11,6 +11,7 @@ public import ConAgua.Arena.ForallStore
 public import ConAgua.Arena.ProjStore
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.Store
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -271,6 +272,7 @@ grind_pattern [arena_grind] frNodeW_proj => frNodeW (n + 1) m h
 grind_pattern [arena_grind] frNodeW_app => frNodeW (n + 1) m h
 grind_pattern [arena_grind] frNodeW_let => frNodeW (n + 1) m h
 
+@[l_impl ConRon.Arena.fvarRangeGo]
 def frGo : FunDecl := lfn (h) locals (fd, j, d, r, u) {
   (fd, j, d) := call fm_find(h, 0);
   if fd != 0 { return FRMEMO.u64[j * 4 + 3] };
@@ -280,6 +282,7 @@ def frGo : FunDecl := lfn (h) locals (fd, j, d, r, u) {
   return r
 }
 
+@[l_impl ConRon.Arena.fvarRangeGo]
 def frNode : FunDecl := lfn (h) locals (g, t, i, f, a, b, x, y, z) {
   g := h >> 28;
   t := (h >> 27) & 1;
@@ -408,6 +411,7 @@ theorem frClrK_some (r : Word) (m₁ : Mem) (h0 : rdW (m₁.arr64 CTL) 46 + 2 �
 grind_pattern [arena_grind] frMemoW_eq => frMemoW n m h
 grind_pattern [arena_grind] frClrK_some => frClrK (some (r, m₁))
 
+@[l_impl ConRon.Arena.fvarRangeMemo]
 def frMemo : FunDecl := lfn (h) locals (r, u) {
   u := call fm_clear();
   r := call fr_go(h);

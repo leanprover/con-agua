@@ -1,6 +1,7 @@
 import ConAgua.Arena.FVarRange
 import ConAgua.Arena.View
 import ConRon.Arena.ExprOps
+import ConAgua.Census.Attr
 
 /-!
 # `fr_go` refines the arena's `fvarRangeGo`
@@ -323,6 +324,7 @@ theorem frMemoW_correct (n F : Nat) (hF : n ≤ F) (m m' : Mem) (a : AState) (hR
 
 /-- **`fr_memo` refines the arena's `fvarRangeMemo` under `ArenaR`**: if the L walk returns, the
 arena walk at any fuel `F ≥ n` succeeds with the same range, in a related state. -/
+@[refines ConRon.Arena.fvarRangeMemo]
 theorem frMemo_refines (p : Prog) (hpf : p.lookup "fm_find" = some (memoFindG frSch))
     (hps : p.lookup "fm_put" = some (memoPutG frSch)) (hpc : p.lookup "fm_clear" = some (memoClearG frSch))
     (hp : p.lookup "fr_go" = some frGo) (hpn : p.lookup "fr_node" = some frNode)

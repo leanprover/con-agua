@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.Store
 meta import ConAgua.L.Semantics
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -235,6 +236,7 @@ def ainternW (m : Mem) (f a : Word) : Option (Word × Mem) :=
     some (appP + acnt m 0, apushMem m 0 f a (rs₀.tail.tail.headD 0) (acnt m 0))
   else none
 
+@[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internApp : FunDecl := lfn (f, a) locals (h, sk, fd, i, j, d) {
   h := ((⟪fnvBasis⟫ ^ f) * ⟪fnvPrime⟫ ^ a) * ⟪fnvPrime⟫;
   sk := 0;

@@ -1,4 +1,5 @@
 import ConAgua.Arena.ArenaRel
+import ConAgua.Census.Attr
 
 /-!
 # The parse state's id tables in L: `front_init`, `apply_nstr`, `apply_nnum`, `apply_level`
@@ -105,6 +106,7 @@ def levelFresh : FunDecl := lfn (i) {
 
 /-! ## `front_init()` -/
 
+@[l_impl ConRon.Arena.Frontend.StateD.init]
 def frontInit : FunDecl := lfn () locals (h) {
   h := call intern_nanon();
   if h >= 4294967296 { abort };
@@ -130,6 +132,7 @@ def frontInitW (m : Mem) : Option Mem := initK (putK NID 0 (nainternW m))
 
 /-! ## `apply_nstr(i, pre, o, l)`, `apply_nnum(i, pre, x)` -/
 
+@[l_impl ConRon.Arena.Frontend.parseNameEntryD]
 def applyNStr : FunDecl := lfn (i, pre, o, l) locals (q, z, h) {
   q := call name_get(pre);
   z := call name_fresh(i);
@@ -145,6 +148,7 @@ def applyNStrW (m : Mem) (i pre o l : Word) : Option Mem :=
     putK NID i (nsinternW m (tblW m NID pre) o l)
   else none
 
+@[l_impl ConRon.Arena.Frontend.parseNameEntryD]
 def applyNNum : FunDecl := lfn (i, pre, x) locals (q, z, h) {
   q := call name_get(pre);
   z := call name_fresh(i);
@@ -162,6 +166,7 @@ def applyNNumW (m : Mem) (i pre x : Word) : Option Mem :=
 
 /-! ## `apply_level(i, k, a, c)` -/
 
+@[l_impl ConRon.Arena.Frontend.parseLevelEntryD]
 def applyLevel : FunDecl := lfn (i, k, a, c) locals (u, v, h, z) {
   z := call level_fresh(i);
   if k == 1 {

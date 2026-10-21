@@ -3,6 +3,7 @@ module
 public import ConAgua.Arena.Store
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.Store
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -269,6 +270,7 @@ def lsinternW (m : Mem) (o l : Word) : Option (Word × Mem) :=
     some (lsP + lscnt m 0, lspushMem m 0 o l h (rs₀.tail.tail.headD 0) (lscnt m 0))
   else none
 
+@[l_impl ConRon.Arena.internLsNode]
 def internLs : FunDecl := lfn (o, l) locals (h, f, i, j, d, sc) {
   h := call lit_hash(o, l);
   (f, i, j, d) := call ls_find(0, o, l, h);

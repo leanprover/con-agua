@@ -5,6 +5,7 @@ public import ConAgua.Arena.NatShr
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.NatSub
 meta import ConAgua.Arena.NatAdd
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -514,6 +515,7 @@ def rzLoop : Stmt := lblk (oa, la, ob, lb, top, n, ro, i, x, q, j, c, pa, pq) {
   }
 }
 
+@[l_impl ConRon.Arena.natOpResult]
 def natDivmod : FunDecl := lfn (oa, la, ob, lb) locals (top, n, ro, i, x, q, j, c, pa, pq) {
   top := CTL.u64[0];
   if lb == 0 {

@@ -1,5 +1,6 @@
 import ConAgua.Arena.Inst1Spec
 import ConAgua.Arena.LiftRefine
+import ConAgua.Census.Attr
 
 /-!
 # `inst_go` refines the arena's `instantiate1Go`
@@ -446,6 +447,7 @@ theorem instEntryW_correct (n F : Nat) (hF : n ≤ F) (m m' : Mem) (a : AState) 
     exact ⟨_, by rw [instFast_run, ha₁]; rfl, ArenaD.imemo_clear m₁ a₁ hA₁ h1⟩
 
 /-- **`inst_entry` refines the arena's `instantiate1Fast` under `ArenaD`.** -/
+@[refines ConRon.Arena.instantiate1Fast]
 theorem instEntry_refines (p : Prog) (hp : InstProg p) (hpe : p.lookup "inst_entry" = some instEntry)
     (n F : Nat) (hF : n ≤ F) (s₀ : St) (a₀ : AState) (hA : ArenaD s₀.mem a₀) (e v d : Word)
     (he : e.toNat < 2 ^ 32) :

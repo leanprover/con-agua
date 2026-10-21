@@ -65,6 +65,26 @@ per-function separation logic.
   `Program.wp` is new. Record each gap you find as a minimal standalone reproducer in `docs/gaps/` (plain Lean,
   with an expected/observed header).
 
+## Progress census
+- **Links.** Tag L code and proofs with the twin function they stand for (`import ConAgua.Census.Attr`; names
+  fully qualified, e.g. `ConRon.Arena.bvarBoundMemo`, `ConLeche.Frontend.skipWs`):
+  `@[l_impl T]` on the L `FunDecl`; `@[refines T]` on the theorem that proves the L code refines the whole of
+  `T` (if the proof is a chain, L ⊑ model and model = `T`, tag every link); `@[refines_part T "label"]` when it
+  covers only part of `T` (one arm, the validity half of a scanner, or L code that aborts on cases the twin
+  handles, such as `frontRun` on declaration lines). Use `@[refines]` only when the L code aborts nowhere the
+  twin does not throw (capacities and the L fuel aside). Arms that together make up a dispatcher are listed in
+  `COMPLETE_BY_PARTS` in `scripts/census.py`. Tag in the same commit that lands the code.
+- **Census.** `scripts/census.py` builds what it needs (`--no-build` to skip) and prints, per roadmap phase,
+  how many targets are proven / proven with `sorry` / have L code / have nothing, by count and weighted by
+  Lean and Rust lines (~30 s). `--list [REGEX]` lists targets with their status and links. Targets: the
+  `ConRon`/`ConLeche` definitions `ConAgua.Final.TwinAccepts` reaches (no instances, auxiliaries, types,
+  predicates, ROM data). Proven means every `@[refines T]` theorem uses only `propext`, `Classical.choice`,
+  `Quot.sound`; a target reached only through proven targets counts as proven.
+- **Who runs it.** Lanes add links and may run the census to check their own numbers; only the coordinator
+  runs `scripts/census.py --write` (regenerates `docs/progress.md`, appends a line to `docs/progress.csv`),
+  on master after each batch of landings, so the time series has one line per master state and lanes never
+  conflict on these files.
+
 ## Process rules
 - Worktrees and large files go in `_tmp/` (tmpfs and a memory cap). Use `git -C <dir>` and stage by explicit
   path. Create a worktree with `scripts/new-worktree.sh <path-under-_tmp/wt> [<rev>]`: it symlinks `_tmp`

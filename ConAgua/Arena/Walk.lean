@@ -11,6 +11,7 @@ public import ConAgua.Arena.ForallStore
 public import ConAgua.Arena.ProjStore
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.Store
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -275,6 +276,7 @@ grind_pattern [arena_grind] bbNodeW_proj => bbNodeW (n + 1) m h
 grind_pattern [arena_grind] bbNodeW_app => bbNodeW (n + 1) m h
 grind_pattern [arena_grind] bbNodeW_let => bbNodeW (n + 1) m h
 
+@[l_impl ConRon.Arena.bvarBoundGo]
 def bbGo : FunDecl := lfn (h) locals (fd, j, d, r, u) {
   (fd, j, d) := call bm_find(h, 0);
   if fd != 0 { return BMEMO.u64[j * 4 + 3] };
@@ -284,6 +286,7 @@ def bbGo : FunDecl := lfn (h) locals (fd, j, d, r, u) {
   return r
 }
 
+@[l_impl ConRon.Arena.bvarBoundGo]
 def bbNode : FunDecl := lfn (h) locals (g, t, i, f, a, b, x, y, z) {
   g := h >> 28;
   t := (h >> 27) & 1;
@@ -416,6 +419,7 @@ theorem clrK_some (r : Word) (m₁ : Mem) (h0 : rdW (m₁.arr64 CTL) 24 + 2 ≠ 
 grind_pattern [arena_grind] bbMemoW_eq => bbMemoW n m h
 grind_pattern [arena_grind] clrK_some => clrK (some (r, m₁))
 
+@[l_impl ConRon.Arena.bvarBoundMemo]
 def bbMemo : FunDecl := lfn (h) locals (r, u) {
   u := call bm_clear();
   r := call bb_go(h);

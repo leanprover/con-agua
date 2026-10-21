@@ -7,6 +7,7 @@ meta import ConAgua.L.Examples
 meta import ConAgua.Scan.Leaves
 meta import ConAgua.Scan.Utf8
 meta import ConAgua.Scan.Str
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -185,6 +186,7 @@ def escLoop : Stmt := lblk (vs, ve, top, k, j, c, ok, cp, jn) {
   }
 }
 
+@[l_impl ConLeche.Frontend.unescape]
 def strPutEsc : FunDecl := lfn (vs, ve) locals (top, k, j, c, ok, cp, jn) {
   if ve < vs { abort };
   if len(IN.u8) < ve { abort };

@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.Store
 meta import ConAgua.L.Semantics
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -223,6 +224,7 @@ def zinternW (m : Mem) : Option (Word × Mem) :=
     some (zeroP + zcnt m 0, zpushMem m 0 (rs₀.tail.tail.headD 0) (zcnt m 0))
   else none
 
+@[l_impl ConRon.Arena.internLNode]
 def internZero : FunDecl := lfn () locals (h, fd, i, j, d) {
   h := ⟪zeroHashW⟫;
   (fd, i, j, d) := call zero_find(0, h);

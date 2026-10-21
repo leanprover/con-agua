@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.Store
 meta import ConAgua.L.Semantics
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -222,6 +223,7 @@ def nainternW (m : Mem) : Option (Word × Mem) :=
     some (naP + nacnt m 0, napushMem m 0 (rs₀.tail.tail.headD 0) (nacnt m 0))
   else none
 
+@[l_impl ConRon.Arena.internNNode]
 def internNAnon : FunDecl := lfn () locals (h, fd, i, j, d) {
   h := ⟪nahashW⟫;
   (fd, i, j, d) := call nanon_find(0, h);

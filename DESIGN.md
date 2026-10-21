@@ -4837,13 +4837,79 @@ compiled match/do-notation being syntactically identical, not just extensionally
 (`lean` wall/user not separately timed this landing; the full project build, 1810 jobs, restores
 from the shared Lake cache and rebuilds only the touched files in a few seconds.)
 
-### Not done
+### Compiled benchmarks of `lift_entry`/`inst_entry`
 
-* `instantiateListGo`/`Fast`, `abstract1Go`/`Fast` (now that `fvarRangeMemo` exists for its
-  cutoff): the same scaffolding as `Lift`/`Inst1`, one memo instance each (two more reserved
-  `exprops` slots).
-* Compiled benchmarks of `lift_entry`/`inst_entry` (the programs are `liftProg`/`instProg`, not
-  yet compiled through `WalkEmit.lean`'s pattern).
+`LiftBenchComp.lean`/`LiftEmit.lean`/`harness/lift.c` and `Inst1BenchComp.lean`/`Inst1Emit.lean`/
+`harness/inst1.c`: `WalkBench.lean`/`WalkEmit.lean`/`harness/walk.c`'s shape exactly (not proved,
+drivers), building the left-nested spine `app (… (app (bvar k) (bvar k)) …) (bvar k)` with `n`
+applications through `mk_app` (not `intern_app`: the walk needs the derived range) and calling
+`lift_entry`/`inst_entry` on it; `LiftBenchLean.lean`/`Inst1BenchLean.lean` are the "Lean-compiled
+arena" baseline (`lake exe liftbenchlean`/`instbenchlean`, con-ron's `liftLooseBVarsFast`/
+`instantiate1Fast`), `WalkBenchLean.lean`'s shape. The harnesses use one uniform array size (`8
+(n + 16)` words per content array) rather than per-table exact sizing — a driver, not proved, so
+generosity costs nothing but memory.
+
+**Measurements** (`perf stat -e instructions:u`, one run each; "build" is the same run without the
+walk: `k ≥ 2^63` for L, `… build` for Lean):
+
+| `n` | compiled L: build / build + walk / walk | con-ron's compiled Lean: build / total / walk |
+|---:|---|---|
+| `lift_entry`, 10^5 | 79.8 M / 282.7 M / 202.9 M | 196.9 M / 549.0 M / 352.0 M |
+| `lift_entry`, 10^6 | 800.1 M / 2833.2 M / 2033.0 M | 1870.9 M / 5276.3 M / 3405.4 M |
+| `inst_entry`, 10^5 | 79.8 M / 281.6 M / 201.9 M | 197.0 M / 550.4 M / 353.4 M |
+| `inst_entry`, 10^6 | 800.1 M / 2872.5 M / 2072.3 M | 1870.9 M / 5290.1 M / 3419.2 M |
+
+About 2030‥2070 instructions per `app` node for the compiled L walks (two memo probes per node,
+`mk_app`'s own tail write, the two-children recursion) against about 3400‥3420 for con-ron's arena
+compiled by Lean — L/Lean ≈ 0.60, the same order as the plain `bvarBoundMemo` walk's 0.56‥0.66
+(lane `walk`, `exprops`). Building the term through `mk_app` (the derived-range write on top of
+`intern_app`) costs the same as the plain walk's build (79.8 M / 800.1 M at 10^5/10^6): the write
+is folded into the count check already in the critical path, no measurable extra cost from `der_b`
+itself (one more memory read, branch-free).
+
+### Not done, and why: `instantiateListGo`/`Fast`, `abstract1Go`/`Fast`
+
+Both need a genuinely new idea, not just `Lift`/`Inst1`'s scaffolding reused; neither is a
+45-minute fix, so both are left for a session that can give them the design attention first.
+
+* **`abstract1Go`'s cutoff is `fvarB ≤ d`, not `fvarRangeMemo` directly**
+  (`ConRon.Arena.ExprOps.fvarB`): it reads the packed derived word's `fvarOfData` field in `O(1)`
+  and falls back to the exact memoized `fvarRangeMemo` walk only on the saturated branch
+  (`r == satRange`). `ExprMk.lean`/`DerRel.lean` chose, when the derived-range arrays were added
+  (lane `exprops`'s first landing), to store **only the bvar-range field** per compound node
+  (`XDER[2 i + t]`, one word), not the fvar-range field too — "L keeps only the range field (the
+  hash is opaque)" is the module doc's phrase for it. So L has no array to read `fvarOfData` off
+  of, and cannot replicate `fvarB`'s two-branch shape at all without a design extension: a second
+  word per compound node (an `FVDER`-family of arrays, `ExprMk.lean`'s `mk_*` writing it the way
+  `der_b`'s value is written now) plus a `DerR` field for it analogous to the bvar one. Only then
+  does `abstract1`'s cutoff become an `O(1)` read, matching the twin exactly; short of that
+  extension, any L cutoff would have to always recompute via `fr_memo`, which is a **different
+  function** from `fvarB` (it always clears/re-fills the memo; `fvarB`'s cheap branch does not
+  touch it at all), so the two do not obviously agree node-for-node on the resulting arena state
+  without extra, unproven invariants about when the twin's packed field is actually saturated.
+  Brief for the next session: add the fvar-range column (five more arrays or five wider ones,
+  `42`‥`46`'s pattern doubled), extend `DerR`/`mk_*`/`der_b`'s sibling (`der_f`?) the way this
+  landing did for the leaf internings, *then* `abstract1` is `Inst1.lean`'s shape with `fvarB`'s
+  cutoff and the `fvar` arm comparing the index to `d` (no memo on that arm; `abs1C`'s key is
+  `(h, k)`, the same shape as `inst1C`'s `(h, d)`).
+* **`instantiateListGo`/`instantiateList` is two twins, not one, and the pure one changes its own
+  argument between recursive calls.** Its cutoff (`bvarBRaw < satRange && bvarBRaw ≤ d`) is the
+  same field `Inst1.lean` already reads, so that part is free. The complication is the
+  substitution: con-ron represents it as an `Array EIdx` (push order; the innermost binder's
+  argument first is the array's *last* entry), and the memoized `instantiateListGo`'s own `bvar`
+  arm does not use its memo at all — it calls the **pure, unmemoized** `instantiateList` on a
+  *shorter* suffix of the same array (`lastEidx vs (j - d)`), which the twin's own comment says is
+  `O(1)` only because of the SAME cutoff tested again before the recursion (`instListCutoff vi d`,
+  hoisted over the prefix copy). Porting this needs an L representation of "a growable list of
+  handles" that a recursive function can pass a *shrinking suffix* of cheaply — the natural choice
+  is a pool slice (offset, length) exactly as `LsStore.lean`/`PoolSlice.lean` already represent
+  level-parameter lists, with `lastEidx`'s shrink becoming an O(1) offset/length adjustment (no
+  copy, since the array only ever loses entries from the front in push order) — but that is a new
+  piece of shared infrastructure (an `EIdx`-list-in-the-pool reader, with its own `DerR`-style
+  frame lemmas), not a one-file port. Brief for the next session: build the pool-slice reader
+  first (generic over the element width, the way `MemoLib.lean` generalised memos), then port
+  `instantiateList` (no memo, recursion into a shrinking slice) and `instantiateListGo` (the
+  memoized wrapper whose `bvar` arm calls the former) as two files following `Inst1.lean`'s split.
 
 ### `sorry`s
 
@@ -4889,3 +4955,56 @@ mask the tier: `CTL.u64[k + (t & 1)]`, or `closedW` rejects it. (c) To carry you
 across a run of `f`: `run_keeps (hp.closed …) (by decide) hX hrun hx` with `hX : Stable A C X`
 (for `StateDR`: `fun m m' hf h => StateDR.frame hf (by decide) (by decide) (by decide) h`). (d)
 `pushG_ctl` has a new hypothesis `t ≤ 1` (third explicit argument after `hS m t vs j c`).
+
+## Progress census (2026-10-21, lane `census`)
+
+Hard numbers for planning: `scripts/census.py` (PLAN.md, "Progress census"). Pieces:
+`ConAgua/Census/Attr.lean` (the three attributes, an environment extension of links),
+`ConAgua/Census/Main.lean` (`lake exe census`: targets and links as TSV), `scripts/census.py`
+(weights, coverage, report), `scripts/census-rust.tsv` (Rust lines per cited twin, regenerated with
+`--rust <con-ron checkout>` from the `Lean twin:`/`con-leche:` doc lines), `docs/progress.{md,csv}`.
+
+### Decisions
+* **Targets are computed, not listed.** Every `ConRon.*`/`ConLeche.*` definition reached from
+  `ConAgua.Final.TwinAccepts` through definition values (not types, not proofs), walking through but
+  not counting instances (and the functions `deriving` makes inside them), elaborator/compiler
+  auxiliaries, projections, and `ConAgua`'s own glue predicates (`SeqAccepts`); not walking into type
+  formers or `Prop`-valued definitions. Members of a well-founded mutual block are edges of each other
+  (they call each other through `_mutual`, which names no member: without this the walk missed every
+  `liftArm*`). Opaque (`partial`) definitions are followed through `@[implemented_by]`. ROM modules
+  (con-leche's basis/axiom/pin data, `Frontend.PreludeText`) are not targets. 1350 targets; con-ron's
+  own census counts 1632 arena definitions in all (some unreached, e.g. `Bench`, `Denote`).
+* **Instances need `loadExts := true`** on `importModules` (and so `enableInitializersExecution`):
+  without it the instance table is empty and every `instDecidableEq…` counts as a target.
+* **Links by attribute, target names unresolved.** Most L files are `module` files that cannot import
+  con-ron, so `@[l_impl T]` stores `T` as written; the tool reports a link whose `T` is not a target,
+  an `l_impl` not on a `FunDecl` and a `refines` not on a theorem as bad links.
+* **Proven = complete, sorry-free refinement; parts never count**, except where
+  `COMPLETE_BY_PARTS` lists the arms that make up a target (`internE` = ten `refines_part` arms,
+  `internLNode`, `internNNode`, `parseNameEntryD`). A target reached only through proven targets is
+  proven ("covered": the store helpers under `internLNode`, the arms under `liftLooseBVarsFast`).
+  Coverage does not apply to `written`: `frontRun` is linked to `parseBytes` but aborts on declaration
+  lines, so `validateIndD` is not written.
+* **Weights**: Lean code lines of the twin definition (no blanks, comments, doc comments, nested
+  targets), and Rust lines of the con-ron functions citing it.
+
+### Findings
+* `ConAgua.Arena.Walk` and `ConAgua.Arena.Lift` both declare `L.Arena.appK₁.appK₂` (and the emitters
+  each declare `main`): no module can import both walks. The census imports in greedy groups to
+  work around it; the first lane that needs both must rename one.
+* "Proven" is against the relation as it stands (`ArenaR` without derived columns, scratch flag,
+  memos beyond `bvarBC`) and in the accept direction only (an L function that always aborts refines
+  anything). The `refines`/`refines_part` choice is where completeness is recorded; it is a human
+  judgement, so reviewers should check it.
+* `internLit_refinesA` covers `.natVal` literals only, so `internE`/`internNodeE` are not complete;
+  `internLamE`, `internForallEE`, `internLNode`, `internNNode`, `internLsNode` are.
+* The Stage B scanner functions that return a record are refined in their validity and end position
+  only (`refines_part … "validity"`); the position-valued ones (`skipWs`, `keyAt`, `strClose`, …) and
+  `scanBool` are refined completely.
+
+### Numbers at landing (master `59d93f8` + census)
+1350 targets: 91 proven, 0 with `sorry`, 40 with L code only, 1219 nothing; by Lean lines 905 of
+11902 proven (7.6 %), 1388 with L; by Rust lines 1413 of 30758 (4.6 %). 89 `refines_part` theorems
+(among them all twelve `natOpResult` literal arms and 18 of the 19 store arms).
+Per phase in `docs/progress.md`. The census takes about 30 s (the link pass imports the modules in a few groups; axioms come
+from the oleans' precomputed tables).

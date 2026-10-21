@@ -3,6 +3,7 @@ module
 public import ConAgua.Arena.Lift
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.Store
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -365,6 +366,7 @@ grind_pattern [arena_grind] instProjW_miss => instProjW (n + 1) m h d v
 
 /-! ## The L code -/
 
+@[l_impl ConRon.Arena.instantiate1Go]
 def instGo : FunDecl := lfn (h, d, v) locals (x, g, t, i, r) {
   x := call der_b(h);
   if x < 32767 && x <= d { return h };
@@ -387,6 +389,7 @@ def instGo : FunDecl := lfn (h, d, v) locals (x, g, t, i, r) {
   return h
 }
 
+@[l_impl ConRon.Arena.instantiate1ArmApp]
 def instApp : FunDecl := lfn (h, d, v) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   (fd, j, e0) := call if_find(h, d);
   if fd != 0 { return IMEMO.u64[j * 4 + 3] };
@@ -404,6 +407,7 @@ def instApp : FunDecl := lfn (h, d, v) locals (fd, j, e0, t, i, f, a, x, y, r, u
   return r
 }
 
+@[l_impl ConRon.Arena.instantiate1ArmBind]
 def instLam : FunDecl := lfn (h, d, v) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   if d + 1 == 0 { abort };
   (fd, j, e0) := call if_find(h, d);
@@ -422,6 +426,7 @@ def instLam : FunDecl := lfn (h, d, v) locals (fd, j, e0, t, i, f, a, x, y, r, u
   return r
 }
 
+@[l_impl ConRon.Arena.instantiate1ArmBind]
 def instForall : FunDecl := lfn (h, d, v) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   if d + 1 == 0 { abort };
   (fd, j, e0) := call if_find(h, d);
@@ -440,6 +445,7 @@ def instForall : FunDecl := lfn (h, d, v) locals (fd, j, e0, t, i, f, a, x, y, r
   return r
 }
 
+@[l_impl ConRon.Arena.instantiate1ArmLet]
 def instLet : FunDecl := lfn (h, d, v) locals (fd, j, e0, t, i, f, a, b, x, y, z, r, u) {
   if d + 1 == 0 { abort };
   (fd, j, e0) := call if_find(h, d);
@@ -460,6 +466,7 @@ def instLet : FunDecl := lfn (h, d, v) locals (fd, j, e0, t, i, f, a, b, x, y, z
   return r
 }
 
+@[l_impl ConRon.Arena.instantiate1ArmProj]
 def instProj : FunDecl := lfn (h, d, v) locals (fd, j, e0, t, i, nm, ix, e, x, r, u) {
   (fd, j, e0) := call if_find(h, d);
   if fd != 0 { return IMEMO.u64[j * 4 + 3] };

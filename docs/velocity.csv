@@ -13,3 +13,5 @@ date,lane,model,work_min,overhead_min,note
 2026-10-21,exprops2,opus,20,3,"hasLooseBVar (der_b read, no twin), leaf DerR lemmas + natAddLit_refinesD, fvarRangeMemo (fmemo slot, abstract1's cutoff)"
 2026-10-21,nat2,opus,10,2,"NatBitsNat (bv is Nat.land/lor/xor), NatArms (11 natOpResult arms under ArenaR, one generic theorem)"
 2026-10-21,arch,opus,9,4,"item 1: L/WriteSet (text write sets, run_keeps/Stable), *_push count stores masked CTL[k + (t & 1)], closedA facts for lift_entry/inst_entry/bb_memo/nat_add_lit"
+2026-10-21,census,opus,24,10,"progress census: target set from TwinAccepts, @[l_impl]/@[refines]/@[refines_part] on all existing L code, lake exe census + scripts/census.py, docs/progress.{md,csv}"
+2026-10-21,exprops2,opus,25,3,"compiled benchmarks of lift_entry/inst_entry vs Lean-compiled arena (L/Lean ~0.60); scoped why instantiateList/abstract1 need new infra (pool-slice EIdx lists, fvar-range DerR column) before porting"
