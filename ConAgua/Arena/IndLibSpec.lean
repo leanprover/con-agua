@@ -417,3 +417,58 @@ theorem rec2Mem_frame (m : Mem) (a b : Word) : MemFrame [IW] [200] m (rec2Mem m 
   exact ((allocMem_frame m 2).trans (fI _ _ _)).trans (fI _ _ _)
 
 end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+/-! ## Growth -/
+
+theorem IWGrow.refl (m : Mem) : IWGrow m m := ⟨Nat.le_refl _, Nat.le_refl _, fun _ _ => rfl, fun _ _ => rfl⟩
+
+theorem IWGrow.trans {m₁ m₂ m₃ : Mem} (h₁ : IWGrow m₁ m₂) (h₂ : IWGrow m₂ m₃) : IWGrow m₁ m₃ :=
+  ⟨Nat.le_trans h₁.1 h₂.1, Nat.le_trans h₁.2.1 h₂.2.1,
+   fun i hi => (h₂.2.2.1 i (by have := h₁.1; omega)).trans (h₁.2.2.1 i hi),
+   fun i hi => (h₂.2.2.2 i (by have := h₁.2.1; omega)).trans (h₁.2.2.2 i hi)⟩
+
+/-- A write to `IW` at or above the top keeps the growth. -/
+theorem IWGrow.set_iw {m m' : Mem} (h : IWGrow m m') (k v : Word) (hk : iwTop m ≤ k.toNat) :
+    IWGrow m (m'.set64 IW k v) := by
+  refine ⟨?_, ?_, fun i hi => ?_, fun i hi => ?_⟩
+  · simp only [iwTop, rdW_set64]; simp [show (CTL : ArrId) ≠ IW by decide]; exact h.1
+  · simp only [erTop, rdW_set64]; simp [show (CTL : ArrId) ≠ IW by decide]; exact h.2.1
+  · rw [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+    have : ¬ (k.toNat = i) := by omega
+    simp only [this, false_and, if_false]; exact h.2.2.1 i hi
+  · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact h.2.2.2 i hi
+
+/-- Raising the top keeps the growth. -/
+theorem IWGrow.set_top {m m' : Mem} (h : IWGrow m m') (t : Word) (ht : iwTop m' ≤ t.toNat)
+    (hc : 200 < (m'.arr64 CTL).size) :
+    IWGrow m (m'.set64 CTL 200 t) := by
+  refine ⟨?_, ?_, fun i hi => ?_, fun i hi => ?_⟩
+  · simp only [iwTop, rdW_set64]; simp [hc]; have := h.1; simp only [iwTop] at this ht; omega
+  · simp only [erTop, rdW_set64]; simp; exact h.2.1
+  · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact h.2.2.1 i hi
+  · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact h.2.2.2 i hi
+
+end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+theorem allocMem_grow (m : Mem) (k : Word) (hk : iwTop m + k.toNat < 2 ^ 64)
+    (hc : 200 < (m.arr64 CTL).size) : IWGrow m (allocMem m k) := by
+  refine (IWGrow.refl m).set_top _ ?_ hc
+  simp only [iwTop] at hk ⊢
+  rw [UInt64.toNat_add]; simp; omega
+
+theorem rec2Mem_grow (m : Mem) (a b : Word) (hk : iwTop m + 2 < 2 ^ 64)
+    (hc : 200 < (m.arr64 CTL).size) : IWGrow m (rec2Mem m a b) := by
+  have h1 := allocMem_grow m 2 hk hc
+  refine (h1.set_iw _ _ (by simp [iwTop])).set_iw _ _ ?_
+  simp only [iwTop] at hk ⊢
+  rw [UInt64.toNat_add]; simp; omega
+
+end L.Ind
