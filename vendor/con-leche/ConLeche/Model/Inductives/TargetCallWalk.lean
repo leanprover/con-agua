@@ -1,0 +1,579 @@
+module
+
+public import ConLeche.Model.Inductives.TargetCallTie
+public import ConLeche.Model.Inductives.TargetNodeRead
+import ConLeche.Model.Inductives.BlockRuleGrading
+import ConLeche.Model.Inductives.NestPosOut
+import ConLeche.Verify.Denote.ErasedEq
+public import ConLeche.Model.Reading.SubstFvars
+import ConLeche.Verify.InstList
+import ConLeche.Verify.InferLemmas
+import ConLeche.Verify.Shift
+import ConLeche.Verify.SubstFvars
+import ConLeche.Semantics.SubstAV
+import ConLeche.Model.Inductives.BlockRecRule
+import ConLeche.Semantics.Tower.TowerKit
+import ConLeche.Verify.Denote.Lemmas
+import ConLeche.Model.Inductives.PosFieldLeaf
+import ConLeche.Model.Inductives.TargetCallRead
+public import ConLeche.Model.Inductives.NestPosMono
+public import ConLeche.Verify.Inductives.PosNodes
+public import ConLeche.Verify.Inductives.NestNfScope
+
+public section
+
+/-!
+# A call, walked
+
+K.53′ ties a call's callee major, under the call's telescope, to the
+walk's normal form of the called field (`callTie`).  At a node's
+constructor read at an admissible frame (the walk valuation `σW`, which
+agrees off the holes with the rule's valuation seen through the walk's
+substitution), this is the call's semantics on the WALK's side
+(`callWalkSyn`, `callWalkSem`): the call's telescope fits there exactly when the walk's
+field telescope does, so the call target — the field applied along the
+telescope — lies in the walk's leaf read at `σW`; the leaf is a member
+hole, a frame hole or a container instance whose head is the callee's
+major's (a leaf naming no member and no hole contradicts K.53′ with
+official's `is_nested`: the callee's major names a member); and the
+call's index readings are the leaf's.
+-/
+
+namespace ConLeche.Model
+open ConLeche.Semantics
+open ConLeche.SetModel
+open ConLeche.Term ConLeche.Verify SetTheory
+
+open ConLeche (Env Expr Name Level NestCtx NestHole nestHoleImg extendF CheckM
+  PosD NestFieldKind PosTree nestArity nestContainer closeTelescope targetPiDomsWith)
+
+universe w
+
+/-! ## Syntactic kit -/
+
+theorem substFvars_mkAppN {b D : Nat} {s : Nat → Expr} :
+    ∀ (as : List Expr) (f : Expr),
+      Expr.substFvars b D s (Expr.mkAppN f as)
+        = Expr.mkAppN (Expr.substFvars b D s f) (as.map (Expr.substFvars b D s))
+  | [], _ => rfl
+  | a :: as, f => by
+    show Expr.substFvars b D s (Expr.mkAppN (.app f a) as) = _
+    rw [substFvars_mkAppN as (.app f a)]
+    rfl
+
+theorem fvarsBelow_of_erasedEq {d : Nat} :
+    ∀ {a b : Expr}, Expr.ErasedEq a b → Expr.fvarsBelow d b → Expr.fvarsBelow d a := by
+  intro a
+  induction a with
+  | bvar i => intro b _ _; simp [Expr.fvarsBelow]
+  | fvar i ty _ =>
+    intro b h hb
+    cases b <;> simp only [Expr.ErasedEq] at h
+    subst h
+    simpa [Expr.fvarsBelow] using hb
+  | sort u => intro b _ _; simp [Expr.fvarsBelow]
+  | const n us => intro b _ _; simp [Expr.fvarsBelow]
+  | lit l => intro b _ _; simp [Expr.fvarsBelow]
+  | app f x ihf ihx =>
+    intro b h hb
+    cases b <;> simp only [Expr.ErasedEq] at h
+    simp only [Expr.fvarsBelow] at hb ⊢
+    exact ⟨ihf h.1 hb.1, ihx h.2 hb.2⟩
+  | lam t bd iht ihb =>
+    intro b h hb
+    cases b <;> simp only [Expr.ErasedEq] at h
+    simp only [Expr.fvarsBelow] at hb ⊢
+    exact ⟨iht h.1 hb.1, ihb h.2 hb.2⟩
+  | forallE t bd iht ihb =>
+    intro b h hb
+    cases b <;> simp only [Expr.ErasedEq] at h
+    simp only [Expr.fvarsBelow] at hb ⊢
+    exact ⟨iht h.1 hb.1, ihb h.2 hb.2⟩
+  | letE t v bd iht ihv ihb =>
+    intro b h hb
+    cases b <;> simp only [Expr.ErasedEq] at h
+    simp only [Expr.fvarsBelow] at hb ⊢
+    exact ⟨iht h.1 hb.1, ihv h.2.1 hb.2.1, ihb h.2.2 hb.2.2⟩
+  | proj s i e ih =>
+    intro b h hb
+    cases b <;> simp only [Expr.ErasedEq] at h
+    simp only [Expr.fvarsBelow] at hb ⊢
+    exact ih h.2.2 hb
+
+/-- **A read-back mentions no member constant** when the term mentions no
+member and no hole and the read-back maps every variable outside the
+hole range to a term mentioning no member constant. -/
+theorem nestOcc_replaceFVars_zero {names : List Name} {lo hi : Nat} {f : Nat → Option Expr}
+    (hf : ∀ v y, f v = some y → (lo ≤ v ∧ v < hi) ∨ y.nestOcc names 0 0 = false) :
+    ∀ (e : Expr), e.nestOcc names lo hi = false → (e.replaceFVars f).nestOcc names 0 0 = false := by
+  intro e
+  induction e with
+  | bvar i => intro _; rfl
+  | fvar i ty _ =>
+    intro h
+    simp only [Expr.nestOcc, decide_eq_false_iff_not] at h
+    simp only [Expr.replaceFVars]
+    cases hfi : f i with
+    | none => simp [Expr.nestOcc]
+    | some y =>
+      rcases hf i y hfi with h' | h'
+      · exact absurd h' h
+      · simpa using h'
+  | sort u => intro _; rfl
+  | const n us => intro h; simpa [Expr.replaceFVars, Expr.nestOcc] using h
+  | lit l => intro _; rfl
+  | app a b iha ihb =>
+    intro h
+    simp only [Expr.nestOcc, Bool.or_eq_false_iff] at h
+    simp only [Expr.replaceFVars, Expr.nestOcc, iha h.1, ihb h.2, Bool.or_false]
+  | lam t b iht ihb =>
+    intro h
+    simp only [Expr.nestOcc, Bool.or_eq_false_iff] at h
+    simp only [Expr.replaceFVars, Expr.nestOcc, iht h.1, ihb h.2, Bool.or_false]
+  | forallE t b iht ihb =>
+    intro h
+    simp only [Expr.nestOcc, Bool.or_eq_false_iff] at h
+    simp only [Expr.replaceFVars, Expr.nestOcc, iht h.1, ihb h.2, Bool.or_false]
+  | letE t v b iht ihv ihb =>
+    intro h
+    simp only [Expr.nestOcc, Bool.or_eq_false_iff] at h
+    simp only [Expr.replaceFVars, Expr.nestOcc, iht h.1.1, ihv h.1.2, ihb h.2, Bool.or_false]
+  | proj s i e ih =>
+    intro h
+    simp only [Expr.nestOcc] at h
+    simp only [Expr.replaceFVars, Expr.nestOcc, ih h]
+
+theorem nestOcc_mkPisOf {names : List Name} {lo hi : Nat} :
+    ∀ (tele : List Expr) (X : Expr),
+      (Expr.mkPisOf tele X).nestOcc names lo hi
+        = (tele.any (fun p => p.nestOcc names lo hi) || X.nestOcc names lo hi)
+  | [], X => by simp [Expr.mkPisOf]
+  | t :: r, X => by
+    simp only [Expr.mkPisOf, Expr.nestOcc, nestOcc_mkPisOf r X, List.any_cons, Bool.or_assoc]
+
+theorem nestOcc_mkAppN {names : List Name} {lo hi : Nat} :
+    ∀ (as : List Expr) (f : Expr),
+      (Expr.mkAppN f as).nestOcc names lo hi = (f.nestOcc names lo hi || as.any (·.nestOcc names lo hi))
+  | [], f => by simp [Expr.mkAppN]
+  | a :: as, f => by
+    show (Expr.mkAppN (.app f a) as).nestOcc names lo hi = _
+    rw [nestOcc_mkAppN as (.app f a)]
+    simp [Expr.nestOcc, Bool.or_assoc]
+
+/-- A spine headed by a variable or a constant is no `∀`. -/
+theorem notPi_mkAppN {f : Expr} (hf : NotPi f) : ∀ (as : List Expr), NotPi (Expr.mkAppN f as)
+  | [] => hf
+  | a :: as => notPi_mkAppN (f := .app f a) (fun _ _ h => nomatch h) as
+
+/-- A term whose opening is no `∀` is no `∀`. -/
+theorem notPi_of_instantiateList {os : List Expr} {k : Nat} {e : Expr}
+    (h : NotPi (e.instantiateList os k)) : NotPi e := by
+  intro a b he
+  subst he
+  exact h (a.instantiateList os k) (b.instantiateList os (k + 1))
+    (by simp [Expr.instantiateList])
+
+/-- A fvar list's members are variables. -/
+theorem fvars_of_locList {rP : Nat} {fvsF : List Expr}
+    (h : ∀ l, l < fvsF.length → ∃ ty, fvsF[l]? = some (.fvar (rP + l) ty)) :
+    ∀ x ∈ fvsF, ∃ j ty, x = .fvar j ty := by
+  intro x hx
+  obtain ⟨l, hl, rfl⟩ := List.getElem_of_mem hx
+  obtain ⟨ty, hty⟩ := h l hl
+  rw [List.getElem?_eq_getElem hl, Option.some.injEq] at hty
+  exact ⟨_, _, hty⟩
+
+theorem fvarsBelow_mkPisOf {d : Nat} :
+    ∀ (tele : List Expr) (X : Expr), Expr.fvarsBelow d (Expr.mkPisOf tele X) →
+      (∀ p ∈ tele, Expr.fvarsBelow d p) ∧ Expr.fvarsBelow d X
+  | [], X, h => ⟨fun _ hp => (nomatch hp), h⟩
+  | t :: r, X, h => by
+    simp only [Expr.mkPisOf, Expr.fvarsBelow] at h
+    obtain ⟨h1, h2⟩ := fvarsBelow_mkPisOf r X h.2
+    refine ⟨fun p hp => ?_, h2⟩
+    rcases List.mem_cons.mp hp with rfl | hp
+    · exact h.1
+    · exact h1 p hp
+
+theorem fvarsBelow_mkAppN_args {d : Nat} :
+    ∀ (as : List Expr) {f : Expr}, Expr.fvarsBelow d (Expr.mkAppN f as) → ∀ a ∈ as, Expr.fvarsBelow d a
+  | [], _, _, a, ha => nomatch ha
+  | x :: as, f, h, a, ha => by
+    have h' : Expr.fvarsBelow d (Expr.mkAppN (.app f x) as) := h
+    rcases List.mem_cons.mp ha with rfl | ha
+    · have := fvarsBelow_mkAppN_head as h'
+      simp only [Expr.fvarsBelow] at this
+      exact this.2
+    · exact fvarsBelow_mkAppN_args as h' a ha
+where
+  fvarsBelow_mkAppN_head : ∀ (as : List Expr) {f : Expr}, Expr.fvarsBelow d (Expr.mkAppN f as) →
+      Expr.fvarsBelow d f
+    | [], _, h => h
+    | y :: as, f, h => by
+      have := fvarsBelow_mkAppN_head as (f := .app f y) h
+      simp only [Expr.fvarsBelow] at this
+      exact this.1
+
+variable {V : Type w} [SetTheory V]
+
+set_option maxHeartbeats 16000000 in
+/-- **A call, walked — the syntax** (see the module docstring): K.53′ at
+the walk's normal form of the called field makes the call's telescope the
+walk's field telescope substituted, and the callee's major (opened at the
+telescope's variables) the walk's leaf substituted — the leaf's head
+substituted being the callee's head applied to `pre` (the block's
+parameters at a member hole, the frame's key parameters read back at a
+frame hole, nothing at a container instance), followed by the leaf's own
+arguments substituted. -/
+theorem callWalkSyn {ops : ConLeche.CheckerOps CheckM} {envW : Env}
+    (hwb : ∀ d e w, ops.whnf envW d e = .ok w → e.looseBVarsBounded 0 = true →
+      w.looseBVarsBounded 0 = true)
+    {ctx : NestCtx} {prog : List NestHole}
+    (hpar : ∀ x ∈ ctx.params, ConLeche.ScB ctx.nP x) (hsc : ConLeche.ProgScB ctx prog)
+    {nds : List Expr} {cur : Expr}
+    (hndC : ∀ (l : Nat) (p : Expr), nds[l]? = some p →
+      p.looseBVarsBounded 0 = true ∧ Expr.WScoped (ctx.hiAt prog.length + l) p)
+    (hcurC : cur.looseBVarsBounded 0 = true)
+    {rP : Nat} {fvsF : List Expr}
+    (hfvF : ∀ l, l < fvsF.length → ∃ ty, fvsF[l]? = some (.fvar (rP + l) ty))
+    (hlenF : fvsF.length = nds.length)
+    {i : Nat} (hi : i < nds.length) {nd : Expr} (hnd : nds[i]? = some nd)
+    {e : Expr} {k : NestFieldKind} {tsi : List PosTree}
+    (hfd : PosD ops envW ctx (.field prog (ctx.hiAt prog.length + i) 0 e k nd) tsi)
+    (he : e.looseBVarsBounded 0 = true)
+    {tele : List Expr} {majDom : Expr}
+    (hK : ((targetPiDomsWith fvsF ((closeTelescope nds (ctx.hiAt prog.length) cur).replaceFVars
+        (nestHoleImg ctx prog))).getD [])[i]?.map Expr.eraseFVarTys
+      = some (Expr.mkPisOf tele majDom).eraseFVarTys)
+    {I : Name} {us : List Level} {P idxR : List Expr}
+    (hmajO : majDom.instantiateList (locOpen (rP + fvsF.length) tele.length) 0
+      = Expr.mkAppN (.const I us) (P ++ idxR))
+    (hment : (Expr.mkAppN (.const I us) P).nestOcc ctx.names 0 0 = true) :
+    ∃ (teleW : List Expr) (leafC w : Expr) (pre : List Expr),
+      nd = Expr.mkPisOf teleW leafC ∧ tele.length = teleW.length ∧
+      (∀ (l : Nat) (p p' : Expr), tele[l]? = some p → teleW[l]? = some p' →
+        Expr.ErasedEq p (Expr.substFvars (ctx.hiAt prog.length + i)
+          (rP + fvsF.length) (callSubst ctx prog fvsF) p')) ∧
+      (∀ p ∈ teleW, p.nestOcc ctx.names ctx.nP (ctx.hiAt prog.length) = false ∧
+        Expr.fvarsBelow (ctx.hiAt prog.length + i) p) ∧
+      (∀ os, LocList (ctx.hiAt prog.length + i) teleW.length os →
+        Expr.ErasedEq (leafC.instantiateList os 0) w) ∧
+      Expr.fvarsBelow (ctx.hiAt prog.length + i + teleW.length) w ∧
+      pre.length + w.getAppArgs.length = P.length + idxR.length ∧
+      (∀ (q : Nat) (xM xP : Expr), (P ++ idxR)[q]? = some xM → pre[q]? = some xP →
+        Expr.ErasedEq xM xP) ∧
+      (∀ (q : Nat) (xM xW : Expr), (P ++ idxR)[pre.length + q]? = some xM →
+        w.getAppArgs[q]? = some xW →
+        Expr.ErasedEq xM (Expr.substFvars (ctx.hiAt prog.length + i) (rP + fvsF.length)
+          (callSubst ctx prog fvsF) xW)) ∧
+      ( (∃ t ty, t < ctx.names.length ∧ w.getAppFn = .fvar (ctx.nP + t) ty ∧
+          I = ctx.names.getD t .anonymous ∧ us = ctx.lps.map .param ∧
+          w.getAppArgs.length = ctx.nIdxs.getD t 0 ∧ pre = ctx.params ∧
+          (∀ y ∈ w.getAppArgs, y.nestOcc ctx.names ctx.nP (ctx.hiAt prog.length) = false)) ∨
+        (∃ v ty h, ctx.hiAt 0 ≤ v ∧ v < ctx.hiAt prog.length ∧ w.getAppFn = .fvar v ty ∧
+          prog.reverse[v - ctx.hiAt 0]? = some h ∧ I = h.key.cname ∧ us = h.key.lvls ∧
+          pre = h.key.ds.map (·.replaceFVars
+            (nestHoleImg ctx (prog.drop (prog.length - (v - ctx.hiAt 0))))) ∧
+          (∀ y ∈ w.getAppArgs, y.nestOcc ctx.names ctx.nP (ctx.hiAt prog.length) = false) ∧
+          w.getAppArgs.length + h.key.ds.length = nestArity ctx h.key.cname) ∨
+        (∃ u nPc L, pre = [] ∧ u ∈ tsi ∧ u.occ = prog ∧ w.getAppFn = .const I us ∧
+          nestContainer ctx I = some (nPc, L) ∧ nPc ≤ w.getAppArgs.length ∧
+          u.key = ⟨I, us, w.getAppArgs.take nPc⟩ ∧
+          (∀ y ∈ w.getAppArgs.drop nPc,
+            y.nestOcc ctx.names ctx.nP (ctx.hiAt prog.length) = false) ∧
+          ∃ nI cty, w.getAppArgs.length = nPc + nI ∧
+            ConLeche.nestInstType (m := CheckM) ctx (ctx.hiAt prog.length)
+              ⟨I, us, w.getAppArgs.take nPc⟩ = .ok (nI, cty)) ) := by
+  generalize hB : rP + fvsF.length = B at *
+  have himgB : ∀ v r, nestHoleImg ctx prog v = some r → r.looseBVarsBounded 0 = true :=
+    fun v r h => ((ConLeche.nestHoleImg_scb hpar prog hsc).1 v r h).2
+  have hsb : ∀ v, v < ctx.hiAt prog.length + i →
+      (callSubst ctx prog fvsF v).looseBVarsBounded 0 = true := by
+    intro v hv
+    unfold callSubst
+    split
+    · rfl
+    · split
+      · rename_i h1 h2
+        obtain ⟨r, hc⟩ := ConLeche.nestHoleImg_hole (prog := prog) (by omega) h2
+        rw [hc]; exact himgB _ _ hc
+      · rename_i h2
+        have hl : v - ctx.hiAt prog.length < fvsF.length := by omega
+        rw [List.getElem?_eq_getElem hl, Option.getD_some]
+        obtain ⟨ty, hty⟩ := hfvF _ hl
+        rw [List.getElem?_eq_getElem hl, Option.some.injEq] at hty
+        rw [hty]; rfl
+  have hfvs := fvars_of_locList hfvF
+  have hiF : i ≤ fvsF.length := by omega
+  -- the called field's normal form
+  obtain ⟨p, hp, hpnd⟩ : ∃ p, nds[i]? = some p ∧ p = nd := by
+    cases h : nds[i]? with
+    | none => rw [h] at hnd; exact nomatch hnd
+    | some p => rw [h] at hnd; exact ⟨p, rfl, Option.some.inj hnd⟩
+  obtain ⟨hndB, hndW⟩ := hndC i p hp
+  rw [hpnd] at hndB hndW
+  have hndF : nd.fvarsBelow (ctx.hiAt prog.length + i) := hndW.fvarsBelow
+  -- K.53′ (`k53_want`): the recorded field is `majDom` under the telescope
+  have hKE : Expr.ErasedEq
+      (nd.replaceFVars (extendF (nestHoleImg ctx prog) (ctx.hiAt prog.length) (fvsF.take i)))
+      (Expr.mkPisOf tele majDom) := by
+    cases hdoms : targetPiDomsWith fvsF ((closeTelescope nds (ctx.hiAt prog.length) cur).replaceFVars
+        (nestHoleImg ctx prog)) with
+    | none => rw [hdoms] at hK; simp at hK
+    | some doms =>
+      rw [hdoms, Option.getD_some] at hK
+      cases hd0 : doms[i]? with
+      | none => rw [hd0] at hK; exact nomatch hK
+      | some d0 =>
+        rw [hd0, Option.map_some, Option.some.injEq] at hK
+        obtain ⟨p', hp', hd0E⟩ := targetPiDomsWith_close nds (ctx.hiAt prog.length) cur
+          (nestHoleImg ctx prog) fvsF doms (fun v hv => ConLeche.nestHoleImg_ge hv) himgB
+          (fun y hy => by obtain ⟨j, ty, rfl⟩ := hfvs y hy; rfl)
+          (fun q hq => by
+            obtain ⟨l, hl, rfl⟩ := List.getElem_of_mem hq
+            exact (hndC l _ (List.getElem?_eq_getElem hl)).1)
+          hcurC (by omega) hdoms i d0 hd0
+        rw [hp] at hp'
+        obtain rfl := Option.some.inj hp'
+        rw [hd0E, hpnd] at hK
+        exact Expr.eraseFVarTys_eq_iff.mp hK
+  -- the walk's leaf
+  obtain ⟨-, teleW, leafC, w, hshape, hteleH, hopen, hleaf⟩ :=
+    posD_field_leaf hwb hfd (by omega) he
+  obtain ⟨hteleF, hleafF⟩ := fvarsBelow_mkPisOf teleW leafC (hshape ▸ hndF)
+  have hosW := locOpen_locList (ctx.hiAt prog.length + i) teleW.length
+  have hwE := hopen _ hosW
+  have hwF : Expr.fvarsBelow (ctx.hiAt prog.length + i + teleW.length) w :=
+    fvarsBelow_of_erasedEq hwE.symm (fvarsBelow_instantiateList _ (by simpa using hosW.fvarsBelow)
+      leafC 0 (Expr.fvarsBelow_mono (Nat.le_add_right _ _) hleafF))
+  -- the callee's major names a member
+  have hmajM : majDom.nestOcc ctx.names 0 0 = true := by
+    rw [← nestOcc_instantiateList_locList (Nat.zero_le _) tele.length _ (locOpen_locList B _) majDom 0,
+      hmajO]
+    rw [nestOcc_mkAppN] at hment ⊢
+    rw [List.any_append]
+    simp only [Bool.or_eq_true] at hment ⊢
+    rcases hment with h | h
+    · exact Or.inl h
+    · exact Or.inr (Or.inl h)
+  -- the common part: the telescope, the major's head and arguments, once the
+  -- leaf's head substituted is a constant applied to `pre`
+  have common : ∀ (c : Name) (us' : List Level) (pre : List Expr),
+      Expr.substFvars (ctx.hiAt prog.length + i) B (callSubst ctx prog fvsF) w.getAppFn
+        = Expr.mkAppN (.const c us') pre → NotPi w →
+      tele.length = teleW.length ∧
+      (∀ (l : Nat) (p p' : Expr), tele[l]? = some p → teleW[l]? = some p' →
+        Expr.ErasedEq p (Expr.substFvars (ctx.hiAt prog.length + i) B
+          (callSubst ctx prog fvsF) p')) ∧
+      I = c ∧ us = us' ∧
+      pre.length + w.getAppArgs.length = P.length + idxR.length ∧
+      (∀ (q : Nat) (xM xP : Expr), (P ++ idxR)[q]? = some xM → pre[q]? = some xP →
+        Expr.ErasedEq xM xP) ∧
+      (∀ (q : Nat) (xM xW : Expr), (P ++ idxR)[pre.length + q]? = some xM →
+        w.getAppArgs[q]? = some xW →
+        Expr.ErasedEq xM
+          (Expr.substFvars (ctx.hiAt prog.length + i) B (callSubst ctx prog fvsF) xW)) := by
+    intro c us' pre hfnS hwNP
+    have hleafNP : NotPi leafC := notPi_of_instantiateList (ErasedEq.notPi hwE hwNP)
+    have hmajNP : NotPi majDom := notPi_of_instantiateList (os := locOpen B tele.length) (k := 0)
+      (by rw [hmajO]; exact notPi_mkAppN (fun _ _ h => Expr.noConfusion h) _)
+    obtain ⟨htl, htel, hmajE⟩ := callTie (B := B) hfvs hiF hndF hKE hshape hmajNP hleafNP
+    have hosRn : LocList B teleW.length (locOpen B teleW.length) := locOpen_locList _ _
+    have hM : Expr.ErasedEq (majDom.instantiateList (locOpen B teleW.length) 0)
+        (Expr.substFvars (ctx.hiAt prog.length + i) B (callSubst ctx prog fvsF) w) :=
+      (erasedEq_instantiateList _ 0 hmajE).trans
+        ((Expr.substFvars_instantiateList hsb teleW.length _ _ hosW.1 hosRn.1
+          (fun j hj => by
+            obtain ⟨ty, h1⟩ := hosW.2 j hj
+            obtain ⟨ty', h2⟩ := hosRn.2 j hj
+            exact ⟨ty, ty', h1, h2⟩) leafC 0).trans
+          (Expr.ErasedEq.substFvars hwE))
+    rw [← htl, hmajO, ← Expr.mkAppN_getApp w, substFvars_mkAppN, hfnS] at hM
+    obtain ⟨hG1, hG2, hG3⟩ := erasedEq_getApp _ _ hM
+    simp only [Expr.getAppFn_mkAppN, Expr.getAppArgs_mkAppN, Expr.getAppFn, Expr.getAppArgs,
+      List.nil_append, List.length_map, List.length_append, Expr.ErasedEq] at hG1 hG2 hG3
+    obtain ⟨rfl, rfl⟩ := hG1
+    refine ⟨htl, htel, rfl, rfl, by omega, fun q xM xP hxM hxP => ?_, fun q xM xW hxM hxW => ?_⟩
+    · exact hG3 q xM xP hxM
+        (by rw [List.getElem?_append_left (List.getElem?_eq_some_iff.mp hxP).1]; exact hxP)
+    · exact hG3 _ xM _ hxM (by
+        rw [List.getElem?_append_right (by omega), Nat.add_sub_cancel_left, List.getElem?_map,
+          hxW]; rfl)
+  rcases hleaf with hH | hFr | hCn | hK0
+  rotate_left 3
+  -- the leaf is no hole-free term: K.53′ against the callee's major naming a member
+  · exfalso
+    have hlC : leafC.nestOcc ctx.names ctx.nP (ctx.hiAt prog.length) = false := by
+      rw [← nestOcc_instantiateList_locList (Nat.le_add_right _ i) teleW.length _ hosW leafC 0,
+        erasedEq_nestOcc _ _ hwE]
+      exact hK0
+    have hndO : nd.nestOcc ctx.names ctx.nP (ctx.hiAt prog.length) = false := by
+      rw [hshape, nestOcc_mkPisOf, hlC, Bool.or_false, List.any_eq_false]
+      intro q hq; simp [hteleH q hq]
+    have hrb := nestOcc_replaceFVars_zero (f := extendF (nestHoleImg ctx prog)
+      (ctx.hiAt prog.length) (fvsF.take i)) (fun v y hy => by
+        unfold extendF at hy
+        split at hy
+        · right
+          obtain ⟨l, hl, rfl⟩ := List.getElem_of_mem (List.mem_of_getElem? hy)
+          obtain ⟨j, ty, hj⟩ := hfvs _ (List.mem_of_mem_take (List.getElem_mem hl))
+          rw [hj]; simp [Expr.nestOcc]
+        · left
+          rcases Nat.lt_or_ge v ctx.nP with h1 | h1
+          · rw [ConLeche.nestHoleImg_lt_nP h1] at hy; exact nomatch hy
+          · refine ⟨h1, Nat.lt_of_not_le fun h2 => ?_⟩
+            rw [ConLeche.nestHoleImg_ge h2] at hy; exact nomatch hy) nd hndO
+    rw [erasedEq_nestOcc _ _ hKE, nestOcc_mkPisOf, hmajM, Bool.or_true] at hrb
+    exact Bool.noConfusion hrb
+  -- a member hole: its read-back is the member applied to the block's parameters
+  · obtain ⟨v, ty, hfn, hlo, hhi0, hlenA, hfree⟩ := hH
+    have hwNP : NotPi w := by
+      rw [← Expr.mkAppN_getApp w, hfn]; exact notPi_mkAppN (fun _ _ h => Expr.noConfusion h) _
+    have hh0 : ctx.hiAt 0 ≤ ctx.hiAt prog.length := by simp [ConLeche.NestCtx.hiAt]
+    have hvb : v < ctx.hiAt prog.length + i := by omega
+    have hS : Expr.substFvars (ctx.hiAt prog.length + i) B (callSubst ctx prog fvsF) w.getAppFn
+        = Expr.mkAppN (.const (ctx.names.getD (v - ctx.nP) .anonymous) (ctx.lps.map .param))
+          ctx.params := by
+      rw [hfn, Expr.substFvars_fvar_lt hvb]
+      unfold callSubst
+      rw [ite_eq_right (by omega), ite_eq_left (by omega)]
+      have hsuf := ConLeche.nestHoleImg_suffix (ctx := ctx) prog [] (v := v) (by simpa using hhi0)
+      rw [List.append_nil] at hsuf
+      rw [hsuf]
+      simp only [ConLeche.nestHoleImg]
+      rw [ite_eq_left ⟨hlo, hhi0⟩, Option.getD_some]
+    obtain ⟨htl, htel, hI, hus, hlen, hpre, hargs⟩ := common _ _ _ hS hwNP
+    exact ⟨teleW, leafC, w, ctx.params, hshape, htl, htel,
+      fun q hq => ⟨hteleH q hq, hteleF q hq⟩, hopen, hwF, hlen, hpre, hargs,
+      Or.inl ⟨v - ctx.nP, ty, by simp only [ConLeche.NestCtx.hiAt] at hhi0; omega,
+        by rw [hfn]; congr 1; omega, hI, hus, hlenA, rfl, hfree⟩⟩
+  -- a frame hole: its read-back is the frame's container applied to its key read back
+  · obtain ⟨v, ty, h, hfn, hlo, hhi', hk, hfree, har⟩ := hFr
+    have hwNP : NotPi w := by
+      rw [← Expr.mkAppN_getApp w, hfn]; exact notPi_mkAppN (fun _ _ h => Expr.noConfusion h) _
+    have hvb : v < ctx.hiAt prog.length + i := by omega
+    have hS : Expr.substFvars (ctx.hiAt prog.length + i) B (callSubst ctx prog fvsF) w.getAppFn
+        = Expr.mkAppN (.const h.key.cname h.key.lvls) (h.key.ds.map (·.replaceFVars
+            (nestHoleImg ctx (prog.drop (prog.length - (v - ctx.hiAt 0)))))) := by
+      rw [hfn, Expr.substFvars_fvar_lt hvb]
+      unfold callSubst
+      rw [ite_eq_right (by simp [ConLeche.NestCtx.hiAt] at hlo ⊢; omega), ite_eq_left hhi']
+      have hfr := nestHoleImg_frame (ctx := ctx) hk
+      rw [show ctx.hiAt (v - ctx.hiAt 0) = v by simp [ConLeche.NestCtx.hiAt] at hlo ⊢; omega]
+        at hfr
+      rw [hfr, Option.getD_some]
+    obtain ⟨htl, htel, hI, hus, hlen, hpre, hargs⟩ := common _ _ _ hS hwNP
+    exact ⟨teleW, leafC, w, _, hshape, htl, htel, fun q hq => ⟨hteleH q hq, hteleF q hq⟩,
+      hopen, hwF, hlen, hpre, hargs,
+      Or.inr (Or.inl ⟨v, ty, h, hlo, hhi', hfn, hk, hI, hus, rfl, hfree, har⟩)⟩
+  -- a container instance
+  · obtain ⟨n, us', nPc, L, u, hfn, hnm, hq, hle, hidxF, hds, hu, hocc, hkey, hnIx⟩ := hCn
+    have hwNP : NotPi w := by
+      rw [← Expr.mkAppN_getApp w, hfn]; exact notPi_mkAppN (fun _ _ h => Expr.noConfusion h) _
+    have hS : Expr.substFvars (ctx.hiAt prog.length + i) B (callSubst ctx prog fvsF) w.getAppFn
+        = Expr.mkAppN (.const n us') [] := by
+      rw [hfn]; rfl
+    obtain ⟨htl, htel, rfl, rfl, hlen, hpre, hargs⟩ := common _ _ _ hS hwNP
+    exact ⟨teleW, leafC, w, [], hshape, htl, htel, fun q hq => ⟨hteleH q hq, hteleF q hq⟩,
+      hopen, hwF, hlen, hpre, hargs,
+      Or.inr (Or.inr ⟨u, nPc, L, rfl, hu, hocc, hfn, hq, hle, hkey, hidxF, hnIx⟩)⟩
+
+set_option maxHeartbeats 16000000 in
+/-- **A call, walked — the semantics**: at the walk valuation `σW` of the
+called field (agreeing off the holes with the rule's valuation seen
+through the walk's substitution), the call's telescope fits exactly when
+the walk's does, the field applied along it lies in the walk's leaf, and
+the call's index readings are the leaf's (at hole-free arguments). -/
+theorem callWalkSem {env : Env} (m : EnvModel V env) (ψ : Name → Nat)
+    {ctx : NestCtx} {prog : List NestHole} {i rP : Nat} {fvsF : List Expr}
+    {teleW tele : List Expr} {leafC w : Expr}
+    (htl : tele.length = teleW.length)
+    (htel : ∀ (l : Nat) (p p' : Expr), tele[l]? = some p → teleW[l]? = some p' →
+      Expr.ErasedEq p (Expr.substFvars (ctx.hiAt prog.length + i)
+        (rP + fvsF.length) (callSubst ctx prog fvsF) p'))
+    (hteleHF : ∀ p ∈ teleW, p.nestOcc ctx.names ctx.nP (ctx.hiAt prog.length) = false ∧
+      Expr.fvarsBelow (ctx.hiAt prog.length + i) p)
+    (hopen : ∀ os, LocList (ctx.hiAt prog.length + i) teleW.length os →
+      Expr.ErasedEq (leafC.instantiateList os 0) w)
+    (hwF : Expr.fvarsBelow (ctx.hiAt prog.length + i + teleW.length) w)
+    {off : Nat} {idxR : List Expr}
+    (hargs : ∀ (l : Nat) (xR xW : Expr), idxR[l]? = some xR → w.getAppArgs[off + l]? = some xW →
+      Expr.ErasedEq xR (Expr.substFvars (ctx.hiAt prog.length + i) (rP + fvsF.length)
+        (callSubst ctx prog fvsF) xW))
+    {x : Nat → Term}
+    (hs : ∀ v, v < ctx.hiAt prog.length + i →
+      Expr.WScoped (rP + fvsF.length) (callSubst ctx prog fvsF v) ∧
+      (callSubst ctx prog fvsF v).looseBVarsBounded 0 = true ∧
+      denote m.acval env ψ (rP + fvsF.length) (callSubst ctx prog fvsF v) = some (x v))
+    {nda : Term}
+    (hnda : denote m.acval env ψ (ctx.hiAt prog.length + i) (Expr.mkPisOf teleW leafC)
+      = some nda)
+    {σR σW : Nat → V} {f : V} (hf : f ∈ˢ interp V σW nda)
+    (hag : AgreeOff (holeP (ctx.hiAt prog.length + i) ctx.nP (ctx.hiAt prog.length))
+      (substE V (substTau (ctx.hiAt prog.length + i) (rP + fvsF.length) x) 0 σR) σW)
+    {bs : List V}
+    (hbs : SpineFit σR ((teleDoms m.acval env ψ (rP + fvsF.length) [] tele).getD [])
+      bs) :
+    bs.length = tele.length ∧
+    ∃ (ha : Term) (argsA : List Term),
+      denote m.acval env ψ (ctx.hiAt prog.length + i + bs.length) w.getAppFn = some ha ∧
+      DenoteSpine m.acval env ψ (ctx.hiAt prog.length + i + bs.length) w.getAppArgs argsA ∧
+      bs.foldl app f ∈ˢ (argsA.map (interp V (consList bs σW))).foldl app
+        (interp V (consList bs σW) ha) ∧
+      (∀ (l : Nat) (xR xW : Expr) (xa : Term), idxR[l]? = some xR →
+        w.getAppArgs[off + l]? = some xW → argsA[off + l]? = some xa →
+        xW.nestOcc ctx.names ctx.nP (ctx.hiAt prog.length) = false →
+        interp V (consList bs σR) ((denote m.acval env ψ (rP + fvsF.length + bs.length)
+            xR).getD default)
+          = interp V (consList bs σW) xa) := by
+  generalize hB : rP + fvsF.length = B at *
+  -- the walk's reading of the field
+  obtain ⟨dsW, Xr, os', hndaE, hdomsW, hos', hXr⟩ :=
+    denote_mkPisOf (acval := m.acval) (env := env) (φ := ψ)
+      (D := ctx.hiAt prog.length + i) teleW leafC 0 [] nda (LocList.nil _)
+      (by rw [Expr.instantiateList_nil, Nat.add_zero]; exact hnda)
+  subst hndaE
+  rw [Nat.zero_add] at hos' hXr
+  have hlD : dsW.length = teleW.length := by
+    rw [teleDoms_length hdomsW]
+  have hwX : denote m.acval env ψ (ctx.hiAt prog.length + i + teleW.length) w = some Xr := by
+    rw [← denote_erasedEq (hopen os' hos')]; exact hXr
+  -- the rule's telescope is the walk's, substituted
+  have hT := teleDoms_substFvars m (φ := ψ) (x := x) hs tele teleW 0 [] []
+    (LocList.nil _) (LocList.nil _) (by simp [htl])
+    (fun l tR tW h1 h2 => htel l tR tW h1 h2)
+    (fun tW htW => (hteleHF tW htW).2)
+  rw [hdomsW, Option.map_some] at hT
+  rw [hT, Option.getD_some, spineFit_substAt] at hbs
+  have hbsW : SpineFit σW dsW bs :=
+    (spineFit_teleDoms_holeFree (m := m) (φ := ψ) (Nat.le_add_right _ i) teleW 0 []
+      dsW (LocList.nil _) hdomsW
+      (fun t ht => hteleHF t ht)
+      (by simpa using hag) bs).mp hbs
+  have hbl : bs.length = teleW.length := by
+    rw [hbsW.length_eq, hlD]
+  refine ⟨by rw [hbl, htl], ?_⟩
+  -- the value: the field applied along the telescope lands in the leaf
+  have hmem := foldl_app_mem_mkPisAV hbsW hf
+  rw [← hbl, ← Expr.mkAppN_getApp w] at hwX
+  obtain ⟨ha, argsA, hha, hsp, rfl⟩ := denote_mkAppN_inv hwX
+  rw [interp_mkAppN_foldl] at hmem
+  have hwF' : Expr.fvarsBelow (ctx.hiAt prog.length + i + bs.length)
+      (Expr.mkAppN w.getAppFn w.getAppArgs) := by
+    rw [Expr.mkAppN_getApp, hbl]; exact hwF
+  have hargsF := fvarsBelow_mkAppN_args _ hwF'
+  refine ⟨ha, argsA, hha, hsp, hmem, fun l xR xW xa hxR hxW hxa hfree => ?_⟩
+  have hE := hargs l xR xW hxR hxW
+  obtain ⟨xa', hxa', hread⟩ := denoteSpine_getElem?' hsp _ _ hxW
+  rw [hxa] at hxa'
+  obtain rfl := Option.some.inj hxa'
+  have hxWF := hargsF xW (List.mem_of_getElem? hxW)
+  have hRd : denote m.acval env ψ (B + bs.length) xR
+      = some (Term.substAV (substTau (ctx.hiAt prog.length + i) B x) xa bs.length) := by
+    rw [denote_erasedEq hE, denote_substFvars m hs xW bs.length hxWF, hread]
+    rfl
+  rw [hRd, Option.getD_some, interp_substAV, show bs.length = bs.length + 0 from rfl,
+    substE_consList]
+  exact interp_holeFree hxWF (by omega) hfree hread (agreeOff_holeP_consList bs hag)
+
+end ConLeche.Model

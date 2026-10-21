@@ -1,0 +1,281 @@
+module
+
+@[expose] public section
+
+/-!
+# Syntax of the term language (task #74; relocated at #209)
+
+`Term` is the semantics tier's *own* term datatype — deliberately not
+`ConLeche.Expr`.  It is what the denotation function from a real
+`Env`+`Expr` targets (`ConLeche/Verify/Denote.lean`) and what the
+interpretation reads (`interp`, `ConLeche/Semantics/Interp.lean`), and
+it is chosen for proof convenience, not for fidelity to the checker's
+representation.  It lives in a base tier of its own because three
+tiers read it: `Verify/Denote/*` (the denotation and its syntactic
+metatheory), `Semantics/*` (the interpretation) and `Model/*`.
+
+There is no declarative typing judgment over this datatype (task
+#209); the sentences below that motivate a design choice by a typing
+rule give the *reason the datatype has the shape it has*.
+
+Differences from `ConLeche.Expr`, each deliberate:
+
+* **de Bruijn indices only.**  No `fvar`: the local context is an
+  explicit `List Term`, so open terms need no type annotation at the
+  leaf.
+* **Universe levels are concrete `Nat`s.**  There is no `Level`
+  inductive, no level substitution and no level-equality judgment.
+  The denotation from a real `Env`+`Expr` unfolds everything, so every
+  constant is instantiated at its use site and every level expression
+  in the unfolded term evaluates to a ground natural.  `imax` is a
+  *computed function* on `Nat` (`ConLeche.Term.imax`), so impredicativity
+  of `Prop` is just its `v = 0` branch.  Universe polymorphism lives
+  entirely in the bridge: a polymorphic declaration is denoted once per
+  ground assignment, and "accepted" means the resulting statement holds
+  at every assignment.  The layer therefore cannot state a polymorphic
+  fact internally — and does not need to, because it has no definable
+  constants at all.
+* **`letE` carries no type.**  `letE v b` is `let x := v; b`, the
+  body under one binder.  Stored terms keep their `let`s as Lean
+  writes them, so the denotation needs the node; its type is not read
+  (the interpretation reads the value, then the body at the value), so
+  the former does not carry it, as `eqE` carries no type.
+* **`fst`/`snd` are formers, and their type arguments live in the
+  premise.**  A projection on a *modeled* structure never reaches this
+  layer: the checker accepts no `.proj` node without a native table
+  entry (task #175 wiring W5 — the rewrites of `.proj` into
+  eliminations are gone).  A projection on the **pinned pair** or on a
+  direct structure's tower entry does: `ProjEntry.native` nodes are
+  first-class by design and survive into stored terms — carrying the
+  structure's name and the field index, and *not* the pair's type
+  arguments, which the checker recovers at use time from the subject's
+  inferred type.
+
+  So the layer has **two unary formers**, `fst e` and `snd e`, taking
+  only the subject (task #225; they were one `proj i e` node with a
+  side condition `i < 2` until then).  The checker's node index is
+  decoded once, at the denotation (`Term.projPair?`, below), and every
+  reader downstream matches on a constructor instead of carrying the
+  bound.  The typing rules read `A` and `B` off the premise
+  `Γ ⊢ p : Σ A B` instead of off the term.  This is the same move
+  the `app` rule makes, and it pays the same way: the premise hands
+  soundness the `⟦p⟧ ∈ˢ sigmaSet …` package that the set model's
+  `WellDenoted` clause has to carry by hand.  Interpretation is then
+  literally `interp`'s clause, `sfst`/`ssnd`.
+
+  (Projections cannot denote to applications of basis constants: for
+  the pinned pair a denotation that is a function of the expression
+  alone cannot invent `A` and `B`.)
+* **No `lit`.**  Literal computation is *derived*, not built in: any
+  term satisfying an operation's certified recurrences computes it on
+  numerals (the pinned `Nat` operations, `ConLeche/Kernel/NatOpPins.lean`).
+* **No global environment / no named constants.**  There is no `Env`
+  and no delta rule: every constant the checker accepts either has a
+  value (definitions, theorems, `opaque`s, the trust family), or has a
+  checked model artifact that plays the role of a value (modeled
+  inductives, direct structures), or is one of finitely many pinned
+  standard axioms.  The first two unfold; the last are the built-in
+  constants `propext` / `choice` below.  Consequently the constant
+  alphabet `BConst` is *closed and finite*.
+* **`eqE`, a primitive equality former.**  All conversion is expressed
+  with the object-level equality, so `Eq`
+  must be syntax rather than a constant: the conversion rule mentions
+  it.  Making it a former (rather than a constant applied to three
+  arguments) is what keeps every equational rule *premise-free in the
+  type* — the interpretation of `eqE a b` reads only `a` and `b`, and
+  since **nothing** reads the type, the former does not carry it
+  (task #237; it did until then).
+* **`prf`, the canonical proof.**  Equality proofs are irrelevant
+  (`eqE _ _ _` is always a `Prop`), so the layer needs no proof terms
+  with structure: every rule that concludes an equation concludes it
+  for the single constant `prf`.
+
+## The basis
+
+The basis type formers are the ones the checker pins by hand
+(`ConLeche/Kernel/Basis/*.lean`): `Nat`, `Empty`, `Quot`, plus the
+dependent pair `.psigma` and the unit type `.punit` with its point
+`.punitUnit` (the pair towers' terminator).  `Eq` is absent from the list only
+because it has been promoted to a syntactic former.  Everything else the checker stores — every
+modeled inductive, every direct structure — unfolds into this alphabet,
+which is why the alphabet can be closed.
+
+Four constants are *derivable* here and
+therefore absent: `Eq.rec` (transport is the identity once equality is
+reflected, so `fun A a M m b h => m` types by conversion), the pair's
+recursor (`fun A B M f p => f p.1 p.2`, typed by conversion along
+structure eta), and the pair's projections themselves
+(`fun A B p => p.fst`/`p.snd`, once those are formers).  Dropping them
+removes the most index-heavy dependent types from `BConst.typeAV`, and
+in the projections' case it is evidence that the former is the right
+primitive rather than an addition on top of one.
+-/
+
+namespace ConLeche.Term
+
+/-- Lean's `imax`, as a function on concrete levels: `Prop` is
+impredicative, every other codomain takes the `max`. -/
+def imax (u v : Nat) : Nat := if v = 0 then 0 else Nat.max u v
+
+/-- The closed, finite alphabet of built-in constants: the pinned basis
+type formers with their constructors, recursors and projections, plus
+the two pinned standard axioms that are not equations. -/
+inductive BConst where
+  /-- `Nat : Type` -/
+  | nat
+  /-- `Nat.zero : Nat` -/
+  | natZero
+  /-- `Nat.succ : Nat → Nat` -/
+  | natSucc
+  /-- `Nat.rec.{u}` -/
+  | natRec
+  /-- `PUnit.{u} : Sort u` -/
+  | punit
+  /-- `PUnit.unit.{u} : PUnit.{u}` -/
+  | punitUnit
+  /-- the dependent pair `.{u,v} : (A : Sort u) → (A → Sort v) → Sort (max u v)` -/
+  | psigma
+  /-- the dependent pair's constructor `.{u,v}` -/
+  | psigmaMk
+  /-- `Empty.{u} : Sort u` (level-polymorphic, so it covers `False` too) -/
+  | empty
+  /-- `Empty.rec.{u,v}` -/
+  | emptyRec
+  /-- `Quot.{u}` -/
+  | quot
+  /-- `Quot.mk.{u}` -/
+  | quotMk
+  /-- `Quot.lift.{u,v}` -/
+  | quotLift
+  /-- `Quot.ind.{u}` -/
+  | quotInd
+  /-- `Quot.sound.{u}` -/
+  | quotSound
+  /-- `propext`, in primitive form: two implications give equality of
+  propositions (no `Iff`, which is a modeled inductive and unfolds). -/
+  | propext
+  /-- `Classical.choice.{u}`, in primitive form: double-negation
+  elimination into `Sort u` (no `Nonempty`, which is a modeled
+  inductive and unfolds). -/
+  | choice
+  /-- `lfpFam.{u,w} : Π (I : Sort u), ((I → Sort w) → (I → Sort w)) → I → Sort w`
+  — the least pre-fixed point of a functor on FAMILIES over `I` (task
+  #188; `lfpFamSet`, `ConLeche/SetTheory/Derive/LfpFam.lean`).
+  A model-side constant with no kernel counterpart: no stream declares
+  it.  Its value is total (the empty family when no closed family
+  exists), so it inhabits this type with no certificate; the
+  fixed-point laws hold under the semantic hypothesis that a closed
+  family exists. -/
+  | lfpFam
+  /-- `lfpTuple k .{u_0 … u_{k-1}, w}` — the least pre-fixed point of a
+  functor on **tuples** of `k` families, member `m`'s family living over
+  its own index set `I_m : Sort u_m` (`lfpTuple`,
+  `ConLeche/SetTheory/Derive/LfpTuple.lean`).  The carrier of a directly
+  installed inductive BLOCK of `k` members: the
+  argument is one tuple `Is = ⟨I_0, …, I_{k-1}⟩` of index sets and one
+  operator on the tuple of families, and the value is the tuple of the
+  members' carriers.  Like `lfpFam` it is a model-side constant with no
+  kernel counterpart — no stream declares it, only the block route's
+  leaves spell it — and its value is total (the empty tuple when no
+  closed tuple exists), so it inhabits its type with no certificate; the
+  fixed-point laws hold under the semantic hypothesis that a closed
+  tuple exists.  At `k = 1` the value is `lfpFam`'s. -/
+  | lfpTuple (k : Nat)
+  deriving Repr, DecidableEq, Inhabited
+
+/-- Terms.  See the module docstring for what is *not* here. -/
+inductive Term where
+  /-- de Bruijn index -/
+  | bvar (i : Nat)
+  /-- `Sort u` at a concrete level -/
+  | sort (u : Nat)
+  /-- a built-in constant at a concrete level instantiation -/
+  | const (c : BConst) (us : List Nat)
+  /-- application -/
+  | app (f a : Term)
+  /-- `fun (_ : ty) => body` -/
+  | lam (ty body : Term)
+  /-- `(_ : ty) → body` -/
+  | pi (ty body : Term)
+  /-- `let _ := val; body`, **without the type**: the body is under one
+  binder, read at the value -/
+  | letE (val body : Term)
+  /-- `@Eq _ lhs rhs`, **without the type**: the interpretation is
+  `⟦eqE a b⟧ = eqv ⟦a⟧ ⟦b⟧`, so soundness never constrains the type,
+  and no definition and no theorem in any tier reads the type, so
+  the constructor does not carry it; a producer that knows the type
+  simply drops it. -/
+  | eqE (lhs rhs : Term)
+  /-- First field of a pair.  Carries **only** the subject: the pair's
+  type arguments come from the typing premise `Γ ⊢ p : Σ A B`,
+  not from the term — see the module docstring.  Interpreted by
+  `sfst`, i.e. literally `interp`'s clause. -/
+  | fst (e : Term)
+  /-- Second field of a pair; the `fst` twin, interpreted by `ssnd`. -/
+  | snd (e : Term)
+  /-- the canonical (irrelevant) proof of a derivable equation -/
+  | prf
+  deriving Repr, Inhabited
+
+namespace Term
+
+/-- Iterated application. -/
+def mkAppN (f : Term) : List Term → Term
+  | [] => f
+  | a :: as => mkAppN (.app f a) as
+
+@[simp] theorem mkAppN_nil (f : Term) : mkAppN f [] = f := rfl
+@[simp] theorem mkAppN_cons (f a : Term) (as : List Term) :
+    mkAppN f (a :: as) = mkAppN (.app f a) as := rfl
+
+/-- Decode the checker's projection index for the **pinned pair**: the
+two fields are the two formers `fst`/`snd`, and no other index denotes.
+This is where the side condition `i < 2` of the old single `proj i e`
+former lives now (task #225).  The denotation stays total, and a
+`.proj T i` node with `2 ≤ i` and no projection-table entry still has
+no image, exactly as when the bound was a conjunct of `WellDenoted`. -/
+def projPair? : Nat → Term → Option Term
+  | 0, e => some (.fst e)
+  | 1, e => some (.snd e)
+  | _ + 2, _ => none
+
+/-- The decoder is defined exactly at the two field indices, so a
+decoded projection still witnesses the old side condition. -/
+theorem lt_of_projPair? {i : Nat} {e x : Term} (h : projPair? i e = some x) :
+    i < 2 := by
+  rcases i with _ | _ | i
+  · omega
+  · omega
+  · exact nomatch h
+
+/-- …and conversely: below the bound the decoder always fires, on any
+subject.  Definedness depends on the index alone. -/
+theorem projPair?_exists_of_lt {i : Nat} (h : i < 2) (e : Term) :
+    ∃ x, projPair? i e = some x := by
+  rcases i with _ | _ | i
+  · exact ⟨.fst e, rfl⟩
+  · exact ⟨.snd e, rfl⟩
+  · omega
+
+/-- A decoded projection is one of the two formers on the same
+subject — the case split consumers of the decoder want. -/
+theorem projPair?_cases {i : Nat} {e x : Term} (h : projPair? i e = some x) :
+    x = .fst e ∨ x = .snd e := by
+  rcases i with _ | _ | i
+  · exact Or.inl (Option.some.inj h).symm
+  · exact Or.inr (Option.some.inj h).symm
+  · exact nomatch h
+
+/-- The same split for two decodings **at one index**: a congruence
+site sees the same former on both sides. -/
+theorem projPair?_cases₂ {i : Nat} {e x e' x' : Term}
+    (h : projPair? i e = some x) (h' : projPair? i e' = some x') :
+    (x = .fst e ∧ x' = .fst e') ∨ (x = .snd e ∧ x' = .snd e') := by
+  rcases i with _ | _ | i
+  · exact Or.inl ⟨(Option.some.inj h).symm, (Option.some.inj h').symm⟩
+  · exact Or.inr ⟨(Option.some.inj h).symm, (Option.some.inj h').symm⟩
+  · exact nomatch h
+
+end Term
+
+end ConLeche.Term

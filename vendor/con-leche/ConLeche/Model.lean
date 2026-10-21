@@ -1,0 +1,165 @@
+module
+
+public import ConLeche.Model.Claims
+public import ConLeche.Model.Inductives.StructRecKit
+public import ConLeche.Verify.Inductives.PosNodes
+public import ConLeche.Model.Inductives.PosDerivTie
+public import ConLeche.Model.Inductives.PosDerivNodes
+public import ConLeche.Model.Inductives.BlockRep
+public import ConLeche.Model.Inductives.BlockHoleFold
+public import ConLeche.Model.Inductives.BlockLeafOk
+public import ConLeche.Model.Inductives.BlockCtorFuns
+public import ConLeche.Model.Inductives.BlockStageFormer
+public import ConLeche.Model.Inductives.BlockCtorsLoop
+public import ConLeche.Model.Inductives.BlockModel
+public import ConLeche.Model.Inductives.BlockModelRecords
+public import ConLeche.Model.Inductives.BlockHoleRead
+public import ConLeche.Model.Inductives.StoredShapes
+public import ConLeche.Model.Inductives.BlockAbsRead
+public import ConLeche.Model.Inductives.BlockCaps
+public import ConLeche.Model.Inductives.BlockStageCtors
+public import ConLeche.Model.Inductives.BlockStageTables
+public import ConLeche.Model.Inductives.BlockAssembly
+public import ConLeche.Model.Inductives.BlockDatum
+public import ConLeche.Model.Inductives.BlockRecRead
+public import ConLeche.Model.Inductives.BlockRecMem
+public import ConLeche.Model.Inductives.BlockRecRule
+public import ConLeche.Model.Inductives.TargetRecRead
+public import ConLeche.Model.Inductives.TargetNodeRead
+public import ConLeche.Model.Inductives.TargetRuleData
+public import ConLeche.Model.Inductives.TargetIhSlot
+public import ConLeche.Model.Inductives.TargetFrame
+public import ConLeche.Model.Inductives.TargetResidue
+public import ConLeche.Model.Inductives.TargetNestKit
+public import ConLeche.Model.Inductives.BlockRecOpenerRead
+public import ConLeche.Model.Inductives.BlockRecTyping
+public import ConLeche.Model.Inductives.BlockStageRec
+public import ConLeche.Model.Inductives.BlockRecLaw
+public import ConLeche.Model.Inductives.BlockRecData
+public import ConLeche.Model.Inductives.DeclBlock
+public import ConLeche.Model.Inductives.DeclBlockStep
+public import ConLeche.Model.Inductives.BlockRecPreRun
+public import ConLeche.Model.Inductives.BlockRecTyShapeRun
+public import ConLeche.Model.Inductives.BlockRuleFit
+public import ConLeche.Model.Inductives.BlockRuleRun
+public import ConLeche.Model.Inductives.BlockRuleParams
+public import ConLeche.Model.Inductives.BlockRecPreHpre
+public import ConLeche.Model.Inductives.BlockRecIdxConv
+public import ConLeche.Model.Inductives.BlockRuleGrading
+public import ConLeche.Model.Inductives.BlockGradeRowsRun
+public import ConLeche.Model.Inductives.BlockRecGraph
+public import ConLeche.Model.Inductives.BlockDeclRun
+public import ConLeche.Model.Inductives.BlockRecAssembly
+public import ConLeche.Model.ClaimsIO
+public import ConLeche.Model.WellDenotedTransport
+public import ConLeche.Model.CtxOkKit
+public import ConLeche.Model.Currency
+public import ConLeche.Model.Env.EnvModel
+public import ConLeche.Model.Env.Laws
+public import ConLeche.Model.Env.BlockLfp
+public import ConLeche.Model.Env.BlockLfpMono
+public import ConLeche.Model.Env.LfpAcc
+public import ConLeche.Model.Env.LfpFormer
+public import ConLeche.Model.Reading.SubstFvars
+public import ConLeche.Model.Inductives.ContSubst
+public import ConLeche.Model.Inductives.ContSem
+public import ConLeche.Model.Inductives.ContInst
+public import ConLeche.Model.Inductives.ContInstRule
+public import ConLeche.Model.Inductives.TargetClass
+public import ConLeche.Model.Inductives.TargetOutRow
+public import ConLeche.Model.Inductives.TargetOutSat
+public import ConLeche.Model.Inductives.TargetOutRows
+public import ConLeche.Model.Inductives.TargetOutChain
+public import ConLeche.Model.Inductives.TargetOutIdx
+public import ConLeche.Model.Inductives.TargetClasses
+public import ConLeche.Model.Inductives.TargetClassRows
+public import ConLeche.Model.Inductives.TargetNodePres
+public import ConLeche.Model.Inductives.TargetNodeRb
+public import ConLeche.Model.Inductives.TargetNodeTie
+public import ConLeche.Model.Inductives.TargetNodeList
+public import ConLeche.Model.Inductives.TargetNodeDyn
+public import ConLeche.Model.Inductives.TargetNodeCover
+public import ConLeche.Model.Inductives.TargetNodeSem
+public import ConLeche.Model.Inductives.TargetNodeAdm
+public import ConLeche.Model.Inductives.TargetNodeDynOf
+public import ConLeche.Model.Inductives.TargetNodeCalls
+public import ConLeche.Model.Inductives.LfpCover
+public import ConLeche.Model.Inductives.NestPosMono
+public import ConLeche.Model.Inductives.NestPosAcc
+public import ConLeche.Model.Inductives.NestPosAccKit
+public import ConLeche.Model.Inductives.ContAccRel
+public import ConLeche.Model.Inductives.ContAccFrame
+public import ConLeche.Model.Inductives.ContAcc
+public import ConLeche.Model.Inductives.BlockAccRun
+public import ConLeche.Model.Inductives.BlockAccRunCont
+public import ConLeche.Model.Inductives.ClassGenMinor
+public import ConLeche.Model.Inductives.ClassGenUniq
+public import ConLeche.Model.Inductives.GenRecStage
+public import ConLeche.Model.Inductives.GenRecClasses
+public import ConLeche.Model.Inductives.GenRecPins
+public import ConLeche.Model.Inductives.GenRecParams
+public import ConLeche.Model.Env.EnvModelM
+public import ConLeche.Model.BasisLfp
+public import ConLeche.Model.Rules.Recompose
+public import ConLeche.Model.Tiers
+public import ConLeche.Model.Install
+public import ConLeche.Model.NatEqs
+public import ConLeche.Model.NatSem
+public import ConLeche.Model.Caps
+public import ConLeche.Model.DivMod
+public import ConLeche.Model.NatWf
+public import ConLeche.Model.NatStep
+public import ConLeche.Model.DivModCert
+public import ConLeche.Model.Capstone
+public import ConLeche.Model.BasisCons
+public import ConLeche.Model.BasisTypeOk
+public import ConLeche.Model.EqTower
+public import ConLeche.Model.BasisStep
+public import ConLeche.Model.BasisEmpty
+public import ConLeche.Model.BasisFalse
+public import ConLeche.Model.Levels
+public import ConLeche.Model.BasisBlocks
+public import ConLeche.Model.BasisQuot
+public import ConLeche.Model.BasisEq
+public import ConLeche.Model.IndCons
+public import ConLeche.Model.IndTele
+public import ConLeche.Model.IndFrame
+public import ConLeche.Model.IndSubst
+public import ConLeche.Model.IndStageKit
+public import ConLeche.Model.IndDomGrade
+public import ConLeche.Model.IndPointKit
+public import ConLeche.Model.IndTowerRead
+public import ConLeche.Model.IndReduct
+public import ConLeche.Model.IndPinGrade
+public import ConLeche.Model.Swap
+public import ConLeche.Model.AxiomPin
+public import ConLeche.Model.Harvest
+public import ConLeche.Model.Fold
+public import ConLeche.Model.InstallRun
+public import ConLeche.Model.StreamConsts
+public import ConLeche.Semantics.Tower.TowerKit
+public import ConLeche.Verify.Denote
+public import ConLeche.Model.Reading.Levels
+public import ConLeche.Model.Reading.LpDefF
+-- Modules named here so `lake build ConLecheModel` roots the whole tree.
+public import ConLeche.Model.AxiomMem
+public import ConLeche.Model.AxiomReduce
+public import ConLeche.Model.RecRulesCons
+public import ConLeche.Model.ReduceOps
+
+@[expose] public section
+
+/-!
+# `ConLeche.Model` — the graded model
+
+The graded model: the stored-term reading's facts that read the
+environment invariant (`Reading/*`; the rest is `Verify/Denote/*`),
+`EnvModel`/`EnvModelM`, the per-rule soundness rows, the
+basis/inductive/projection install families, the fold (`Model/Fold.lean`)
+and the capstone.  It stands on `ConLeche/{Verify,Semantics,SetModel,
+SetTheory}/*`, which may not import it;
+`tests/layering.sh` enforces that by path.
+
+The shipped driver's theorem lives with the driver it is about
+(`no_proof_of_Empty_cached`, `ConLeche/Verify/Cached/MainC.lean`).
+-/
