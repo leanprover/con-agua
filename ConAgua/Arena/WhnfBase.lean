@@ -171,6 +171,66 @@ def CoreSpec {α : Type} [Inhabited α] (p : Prog) (n : Nat) (f : FnName) (args 
   invoke p (exec p n) f args
   ⦃fun r s' => LocEq s' s₀ ∧ CoreRef T a₀ dec dn s₀.mem vis fe M G g r s'.mem; ⊤⦄
 
+/-! ## Calls as functions of the memory
+
+A callee's run depends on the caller's memory alone (`callFn` starts a fresh frame), so it is a
+function `callW p n f vs m`. Every call meets its own run (`callW_spec`); a callee's refinement
+spec turns a run into the twin's (`CoreSpec.of_callW`). This lets a caller's word-level model
+call its callees through `callW`, proved by `vcgen` + `finish` with `callW_spec` as the callee
+spec, and its refinement use the callees' specs on those runs. -/
+
+/-- The result of calling `f` on `vs` from memory `m`. -/
+def callW (p : Prog) (n : Nat) (f : FnName) (vs : List Word) (m : Mem) :
+    Option (List Word × Mem) :=
+  match (invoke p (exec p n) f vs).run ⟨m, Locals.init []⟩ with
+  | .ok (r, s) => some (r, s.mem)
+  | .error _ => none
+
+theorem invoke_run_loc (p : Prog) (k : Stmt → M Sig) (f : FnName) (vs : List Word) (s : St) :
+    (invoke p k f vs).run s =
+      ((invoke p k f vs).run ⟨s.mem, Locals.init []⟩).map
+        (fun (r, s') => (r, ({ s' with loc := s.loc } : St))) := by
+  simp only [invoke, lookupFn]
+  cases p.lookup f with
+  | none => rfl
+  | some fd =>
+    simp only [callFn, StateT.run_bind, StateT.run_get, StateT.run_set, StateT.run_modify]
+    simp [Except.map]
+    cases (k fd.body).run { mem := s.mem, loc := Locals.init vs } <;> rfl
+
+/-- **Every call meets its own run.** -/
+theorem callW_spec (p : Prog) (n : Nat) (f : FnName) (vs : List Word) (s₀ : St) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) f vs
+    ⦃fun r s' => LocEq s' s₀ ∧ callW p n f vs s₀.mem = some (r, s'.mem); ⊤⦄ := by
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  subst hs
+  rw [invoke_run_loc] at hrun
+  simp only [callW]
+  cases h : (invoke p (exec p n) f vs).run { mem := s.mem, loc := Locals.init [] } with
+  | error e => simp [h, Except.map] at hrun
+  | ok q =>
+    simp [h, Except.map] at hrun
+    obtain ⟨rfl, rfl⟩ := hrun
+    exact ⟨rfl, rfl⟩
+
+/-- **A refinement spec applies to a run.** -/
+theorem CoreSpec.of_callW {α : Type} [Inhabited α] {p : Prog} {n : Nat} {f : FnName}
+    {args : List Word} {T : AM α} {dec : List Word → α} {s₀ : St} {a₀ : AState}
+    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {M : ModeMaps} {G g : Word}
+    (h : CoreSpec p n f args T dec s₀ a₀ dn vis fe M G g) {r : List Word} {m' : Mem}
+    (hc : callW p n f args s₀.mem = some (r, m')) :
+    CoreRef T a₀ dec dn s₀.mem vis fe M G g r m' := by
+  simp only [callW] at hc
+  cases hr : (invoke p (exec p n) f args).run { mem := s₀.mem, loc := Locals.init [] } with
+  | error e => simp [hr] at hc
+  | ok q =>
+    simp only [hr, Option.some.injEq] at hc
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj hc
+    have hrun : (invoke p (exec p n) f args).run s₀ = .ok (q.1, { q.2 with loc := s₀.loc }) := by
+      rw [invoke_run_loc, hr]; rfl
+    exact (L.M.of_run (P := fun s => s = s₀) rfl hrun h).2
+
 /-! ## The knot's slots
 
 `coreKnot mode fe id F` is the twin's record; the L slot at fuel `n` refines it at every
