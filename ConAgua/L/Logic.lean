@@ -34,6 +34,13 @@ attribute [lang_grind cases] Sig
 @[lang_grind =] theorem St.setLoc_mem (s : St) (x : Var) (v : Word) :
     (s.setLoc x v).mem = s.mem := rfl
 
+@[lang_grind =] theorem St.setLocs_nil (s : St) (vs : List Word) : s.setLocs [] vs = s := rfl
+
+@[lang_grind =] theorem St.setLocs_cons (s : St) (x : Var) (xs : List Var) (vs : List Word) :
+    s.setLocs (x :: xs) vs = (s.setLoc x (vs.headD 0)).setLocs xs vs.tail := rfl
+
+attribute [lang_grind =] List.headD_cons List.headD_nil List.tail_cons List.tail_nil List.cons.injEq
+
 @[lang_grind =] theorem Locals.init_nil (x : Var) : Locals.init [] x = 0 := by
   simp [Locals.init]
 

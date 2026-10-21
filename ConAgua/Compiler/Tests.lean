@@ -129,4 +129,34 @@ def oobC : FunDecl := lfn (i) { return LITS.c8[i] }
 #guard agrees [("c", oobC)] "c" [8] {}
 #guard (runKraken [("c", oobC)] "c" [9] {} 100000).toOption == some .error
 
+/-! Several results. -/
+
+/-- The 128-bit product, the carry of a sum, and a third value. -/
+def wide : FunDecl := lfn (x, y) {
+  return (x * y, mulhi(x, y), u64(x + y < x))
+}
+
+/-- Returns one value: a caller reading three gets `0` for the other two. -/
+def one : FunDecl := lfn (x) { return x + 1 }
+
+/-- Returns nothing (falls off the end). -/
+def none' : FunDecl := lfn (x) { skip }
+
+def useWide : FunDecl := lfn (x, y) locals (lo, hi, c, a, b, z) {
+  (lo, hi, c) := call wide(x, y);
+  (a, b, z) := call one(lo);
+  (b, z) := call none'(a);
+  (hi, hi) := call wide(hi, 3);
+  return lo ^ (hi << 1) ^ (c << 60) ^ a ^ b ^ z
+}
+
+def wideProg : Prog := [("use", useWide), ("wide", wide), ("one", one), ("none'", none')]
+
+#guard (Prog.tab wideProg 0 0).nres = 3
+#guard Prog.wf (Prog.tab wideProg 0 0) wideProg
+#guard agrees wideProg "use" [0xffffffffffffffff, 0xfffffffffffffff0] {}
+#guard agrees wideProg "use" [12345, 678910] {}
+#guard (run wideProg 100 "wide" [0xffffffffffffffff, 2] {}).toOption.map (·.1) ==
+  some [0xfffffffffffffffe, 1, 1]
+
 end L.Compiler.Tests

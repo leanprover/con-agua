@@ -133,7 +133,7 @@ theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd 
   have hap1' := hap1
   have hwf := hwfp f fd hlk
   simp only [FunDecl.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
-  obtain ⟨⟨hnp, hbody⟩, hFoff⟩ := hwf
+  obtain ⟨⟨⟨hnp, hbody⟩, hFoff⟩, hres⟩ := hwf
   simp only [maxOff] at hFoff
   have hhi2 := hG.hi_le
   simp only [compileFn, List.append_assoc, List.cons_append, List.nil_append] at hkf
@@ -209,18 +209,21 @@ theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd 
     have h614 : s6.regs.r14 = d.regs.r14 := by rw [h6r, h514, h414]
     have htop : top s6 (frameWords fd) = d.regs.rsp.toNat := by simp only [top]; omega
     -- the epilogue, from label `.R`
-    have hepi : ∀ (r : Word) (σ2 : St) (d2 : MachineData),
+    have cR := c3.tail.right
+    rw [loadRes_length] at cR
+    have hepi : ∀ (r : List Word) (σ2 : St) (d2 : MachineData),
         (invoke p (exec p n) f vs).run σ = .ok (r, { σ2 with loc := σ.loc }) →
-        MemRel G σ2.mem d2.dmem → SPost G (frameWords fd) s6 d2 → d2.regs.rax = r →
+        MemRel G σ2.mem d2.dmem → SPost G (frameWords fd) s6 d2 → ResRel G.tab.nres r d2.regs →
         Ev Q d2 (at_ (kf + 1 + 1 + 1 + 1 + 1 + 1 + (copyParams 0 fd.nparams).length +
           (zeroLocals fd.nparams (fd.nlocals - fd.nparams)).length +
-          (compileS { tab := G.tab, fn := f, nl := fd.nlocals, brk := lbl f "" "Z" } "" fd.body).length + 1 + 1)) := by
+          (compileS { tab := G.tab, fn := f, nl := fd.nlocals, brk := lbl f "" "Z" } "" fd.body).length + 1 +
+          G.tab.nres)) := by
       intro r σ2 d2 hrun hm2 hS2 hrax
       have hP2 : Pres G d.regs.rsp.toNat d.dmem d2.dmem := hP6.trans (htop ▸ hS2.mem)
       have h2sp : d2.regs.rsp.toNat = d.regs.rsp.toNat - 8 * frameWords fd := by
         rw [congrArg UInt64.toNat hS2.rsp]; exact hsp6
-      refine ev_label c3.tail.tail.head ?_
-      refine ev_addRI c3.tail.tail.tail.head fun st => ?_
+      refine ev_label cR.head ?_
+      refine ev_addRI cR.tail.head fun st => ?_
       have hadd' : d2.regs.rsp.toBitVec + (Int64.ofInt (8 * ↑(frameWords fd))).toBitVec = A d.regs.rsp.toNat := by
         rw [show (8 * (frameWords fd : Int)) = ((8 * frameWords fd : Nat) : Int) by push_cast; rfl,
           int64_ofInt_toBitVec]
@@ -230,7 +233,7 @@ theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd 
       have hadd : (UInt64.ofBitVec (d2.regs.rsp.toBitVec + (Int64.ofInt (8 * ↑(frameWords fd))).toBitVec)).toNat
           = d.regs.rsp.toNat := by
         rw [hadd']; simp [A]
-      refine ev_ret c3.tail.tail.tail.tail.head (ra := ra) ?_ ?_
+      refine ev_ret cR.tail.tail.head (ra := ra) ?_ ?_
       · simp only [Reg64s.set64_rsp, Reg64s.get64_rsp]
         rw [hadd', rdW_of_pres hG hP2 (by omega) (by omega) (by omega)]; exact hra
       · refine hKret r { σ2 with loc := σ.loc } _ hrun hm2 rfl ?_ ?_ ?_ ?_ ?_ hP2
@@ -240,30 +243,40 @@ theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd 
         · simp; exact hS2.rbp.trans h6bp
         · simp; exact hS2.r15.trans h615
         · simp; have := hS2.r14; rw [h614] at this; exact this
-        · simp; exact hrax
+        · exact (hrax.set64 (r := .rsp) (by simp) _).set64 (r := .rsp) (by simp) _
     have hrun : ∀ r σ2, (exec p n fd.body).run { σ with loc := Locals.init vs } = .ok (r, σ2) →
         (invoke p (exec p n) f vs).run σ = .ok (r.retVal, { σ2 with loc := σ.loc }) := by
       intro r σ2 h
       rw [invoke_eq vs hlk, callFn_run, h]
+    -- falling off the end, or `break` outside a loop: no results
+    have hZ : ∀ σ2 d2, (exec p n fd.body).run { σ with loc := Locals.init vs } = .ok (.normal, σ2) ∨
+        (exec p n fd.body).run { σ with loc := Locals.init vs } = .ok (.brk, σ2) →
+        Inv G fd.nlocals (frameWords fd) σ2 d2 → SPost G (frameWords fd) s6 d2 →
+        Ev Q d2 (at_ (kf + 1 + 1 + 1 + 1 + 1 + 1 + (copyParams 0 fd.nparams).length +
+          (zeroLocals fd.nparams (fd.nlocals - fd.nparams)).length +
+          (compileS { tab := G.tab, fn := f, nl := fd.nlocals, brk := lbl f "" "Z" } "" fd.body).length)) := by
+      intro σ2 d2 hr hI2 hS2
+      refine ev_label c3.head ?_
+      refine sim_loadRes _ [] Q G.tab.nres 0 _ d2 c3.tail.left (by omega)
+        (by simp only [maxRes, frameWords] at hres hFoff ⊢; omega)
+        (fun j hj => absurd hj (by simp)) (fun j hj => absurd hj (Nat.not_lt_zero _)) ?_
+      intro R h1 h2 h3 h4 hR
+      refine hepi [] σ2 { d2 with regs := R } ?_ hI2.mem (hS2.trans ⟨h1, h2, h4, by rw [h3]; exact Nat.le_refl _, Pres.refl _ _⟩)
+        fun j hj => hR j (by omega)
+      rcases hr with hr | hr <;> exact hrun _ _ hr
     refine ev_congr (j := kf + 1 + 1 + 1 + 1 + 1 + 1 + (copyParams 0 fd.nparams).length +
       (zeroLocals fd.nparams (fd.nlocals - fd.nparams)).length) ?_ (by rw [zeroLocals_length])
     refine hE fd.body { tab := G.tab, fn := f, nl := fd.nlocals, brk := lbl f "" "Z" } (frameWords fd) "" _ rfl
       (by simp only [maxOff]; omega) c2.right.right.left hbody (by simp [frameWords]) _ s6 Q hI6
       (by rw [h614]; exact hfuel) ⟨?_, ?_, ?_, ?_, ?_⟩
     · intro σ2 d2 hr hI2 hS2
-      refine ev_label c3.head ?_
-      refine ev_movRI c3.tail.head ?_
-      exact hepi 0 σ2 _ (hrun _ _ hr) hI2.mem (hS2.trans (SPost.regs (by simp) (by simp) (by simp) (by simp)))
-        (by simp)
+      exact hZ σ2 d2 (.inl hr) hI2 hS2
     · intro σ2 d2 hr hI2 hS2
       show Ev Q d2 (label (Ctx.endL { tab := G.tab, fn := f, nl := fd.nlocals, brk := lbl f "" "Z" }))
       rw [Code.label (i := 0) c3 rfl, Nat.add_zero]
-      refine ev_label c3.head ?_
-      refine ev_movRI c3.tail.head ?_
-      exact hepi 0 σ2 _ (hrun _ _ hr) hI2.mem (hS2.trans (SPost.regs (by simp) (by simp) (by simp) (by simp)))
-        (by simp)
+      exact hZ σ2 d2 (.inr hr) hI2 hS2
     · intro v σ2 d2 hr hI2 hS2 hv
-      rw [Code.label (i := 2) c3 rfl]
+      rw [Code.label (i := 0) cR rfl, Nat.add_zero]
       exact hepi v σ2 d2 (hrun _ _ hr) hI2.mem hS2 hv
     · intro d2 ⟨e, hr, hne⟩ hG2
       refine hKerr d2 ⟨e, ?_, hne⟩ ⟨hG2.rbp.trans h6bp, hP6.trans (htop ▸ hG2.mem)⟩

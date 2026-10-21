@@ -32,8 +32,9 @@ lfn (b_dummy, j) locals (c) {
   comparisons
   `== != < <= > >=` (unsigned) and `<ₛ ≤ₛ` (signed), and short-circuit `&& || !`.
 * Statements are separated by `;`: `x := e`, `x += e`, `x -= e`, `x := call f(e, …)`,
-  `if c { … } else { … }` (with `else if`), `while c { … }`, `break`, `return e`, `abort`, `skip`,
-  and `⟪t⟫` for a named block `t : L.Stmt` (see `lblk`).
+  `(x, y, …) := call f(e, …)` (several results), `if c { … } else { … }` (with `else if`),
+  `while c { … }`, `break`, `return e`, `return (e, e', …)`, `abort`, `skip`, and `⟪t⟫` for a
+  named block `t : L.Stmt` (see `lblk`).
 -/
 
 namespace L.Notation
@@ -77,6 +78,7 @@ syntax "(" lcond ")" : lcond
 syntax "{" sepBy(lstmt, "; ", "; ", allowTrailingSep) "}" : lblock
 
 syntax ident " := " "call " ident "(" lexpr,* ")" : lstmt
+syntax "(" ident ", " ident,+ ")" " := " "call " ident "(" lexpr,* ")" : lstmt
 syntax ident " := " lexpr : lstmt
 syntax ident " += " lexpr : lstmt
 syntax ident " -= " lexpr : lstmt
@@ -87,6 +89,7 @@ syntax "if " lcond lblock " else " lstmt : lstmt
 syntax "while " lcond lblock : lstmt
 syntax "break" : lstmt
 syntax "return " lexpr : lstmt
+syntax "return " "(" lexpr ", " lexpr,+ ")" : lstmt
 syntax "abort" : lstmt
 syntax "skip" : lstmt
 syntax "⟪" term "⟫" : lstmt
@@ -172,7 +175,12 @@ meta partial def transStmt (env : Array Name) : TSyntax `lstmt → MacroM Term
   | `(lstmt| $x:ident := call $f:ident($args,*)) => do
     let args ← args.getElems.mapM (transExpr env)
     let fname := Syntax.mkStrLit f.getId.toString
-    `(L.Stmt.call $(← lookupVar env x) $fname [$args,*])
+    `(L.Stmt.call [$(← lookupVar env x)] $fname [$args,*])
+  | `(lstmt| ($x:ident, $xs:ident,* ) := call $f:ident($args,*)) => do
+    let args ← args.getElems.mapM (transExpr env)
+    let xs ← (#[x] ++ xs.getElems).mapM (lookupVar env)
+    let fname := Syntax.mkStrLit f.getId.toString
+    `(L.Stmt.call [$xs,*] $fname [$args,*])
   | `(lstmt| $x:ident := $e:lexpr) => do `(L.Stmt.set $(← lookupVar env x) $(← transExpr env e))
   | `(lstmt| $x:ident += $e:lexpr) => do
     let v ← lookupVar env x
@@ -195,7 +203,10 @@ meta partial def transStmt (env : Array Name) : TSyntax `lstmt → MacroM Term
     `(L.Stmt.ite $(← transCond env c) $(← transBlock env s) $(← transStmt env t))
   | `(lstmt| while $c:lcond $s:lblock) => do `(L.Stmt.while $(← transCond env c) $(← transBlock env s))
   | `(lstmt| break) => `(L.Stmt.brk)
-  | `(lstmt| return $e:lexpr) => do `(L.Stmt.ret $(← transExpr env e))
+  | `(lstmt| return $e:lexpr) => do `(L.Stmt.ret [$(← transExpr env e)])
+  | `(lstmt| return ($e:lexpr, $es:lexpr,*)) => do
+    let es ← (#[e] ++ es.getElems).mapM (transExpr env)
+    `(L.Stmt.ret [$es,*])
   | `(lstmt| abort) => `(L.Stmt.abort)
   | `(lstmt| skip) => `(L.Stmt.skip)
   | `(lstmt| ⟪$t⟫) => `(($t : L.Stmt))

@@ -11,7 +11,8 @@ What the compiler needs of a program, as a decidable check (`Prog.wf tab p = tru
 in range, arrays exist in `tab`, call targets exist and get as many arguments as they have
 parameters, function names are distinct, and frames and table offsets are small enough to be
 immediates. (`L` itself gives a meaning to every program; these are the programs the compiler
-accepts.) Every constant byte string of an `ldc` occurs in the table's constant data.
+accepts.) Every constant byte string of an `ldc` occurs in the table's constant data, and no `return` gives
+and no call reads more than `tab.nres ≤ 6` results.
 -/
 
 namespace L.Compiler
@@ -44,14 +45,16 @@ def Stmt.wf (p : Prog) (nl : Nat) (tab : Tab) : Stmt → Bool
   | .seq s t => Stmt.wf p nl tab s && Stmt.wf p nl tab t
   | .ite c s t => Cond.wf nl tab c && Stmt.wf p nl tab s && Stmt.wf p nl tab t
   | .while c s => Cond.wf nl tab c && Stmt.wf p nl tab s
-  | .ret e => Expr.wf nl tab e
-  | .call x f args => x < nl && args.all (Expr.wf nl tab) &&
+  | .ret es => es.all (Expr.wf nl tab) && es.length ≤ tab.nres && tab.nres ≤ maxRes
+  | .call xs f args => xs.all (· < nl) && xs.length ≤ tab.nres && tab.nres ≤ maxRes &&
+      args.all (Expr.wf nl tab) &&
       match p.lookup f with
       | some fd => args.length == fd.nparams
       | none => false
 
 def FunDecl.wf (p : Prog) (tab : Tab) (fd : FunDecl) : Bool :=
-  fd.nparams ≤ fd.nlocals && Stmt.wf p fd.nlocals tab fd.body && 8 * frameWords fd + 8 < maxOff
+  fd.nparams ≤ fd.nlocals && Stmt.wf p fd.nlocals tab fd.body && 8 * frameWords fd + 8 < maxOff &&
+    tab.nres ≤ maxRes
 
 /-- The program is well formed for the table layout `tab`. -/
 def Prog.wf (tab : Tab) (p : Prog) : Bool :=

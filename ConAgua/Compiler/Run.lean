@@ -36,9 +36,9 @@ inductive Outcome where
 def Outcome.ofRegs (rax rdx : Word) : Outcome :=
   if rdx = 0 then .ok rax else if rdx = 1 then .exhausted else .error
 
-/-- What `L.run` says, in the same shape (an `outOfFuel` error is `exhausted`). -/
-def Outcome.ofL : Except Err (Word × Mem) → Outcome
-  | .ok (r, _) => .ok r
+/-- What `L.run` says, in the same shape (the first result; an `outOfFuel` error is `exhausted`). -/
+def Outcome.ofL : Except Err (List Word × Mem) → Outcome
+  | .ok (rs, _) => .ok (rs.headD 0)
   | .error .outOfFuel => .exhausted
   | .error _ => .error
 
