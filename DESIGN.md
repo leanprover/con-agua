@@ -290,6 +290,7 @@ proof.
 | `num_end` (`:733`) | 10 | 6 (+ call to `skip_digits`, no loop) | yes (since lane `lext`) |
 | `match_lit` (`:132`, lane `lext`) | 11 | 9 | yes |
 | `scan_bool` (`:716`, lane `lext`) | 11 | 7 (two calls of `match_lit`, three results) | yes |
+| `utf8_decode` (`:917`, lane `lext`) | 66 | 48 (`utf8_char` 33, loop 9, entry 6) | yes |
 
 Whole-file build (`ConAgua.Scan.Leaves`, `lake env lean`, cold): ~2.5 s for all six.
 `ConAgua.Scan.Link` + `ConAgua.Scan.Leaves` together add about 750 lines to the `ConAgua` lib;
@@ -649,4 +650,22 @@ Arena request 3, and `utf8_decode`'s `(code point, length)`.
   `scan_bool` model 9, spec 14; link 117 lines. Every L proof is `vcgen` + `finish`.
   `Lit.lean` builds in 2.9 s, `LitLink.lean` in 0.6 s. Differential tests on Kraken (all three
   results): `Tests.lean`.
+
+### Translation: `utf8_decode` (`ConAgua/Scan/Utf8.lean`)
+
+* The loop body (one code point) is a function `utf8_char(k, n) -> (code point, length)`, length
+  `0` for invalid bytes; the loop `(cp, l) := call utf8_char(k, n)` stores `cp` into the word
+  array `OUT` and the function returns `(1, count)` or `(0, 0)` (Rust: `Option<Vec<u32>>`; a
+  `Vec` that would outgrow `OUT` is an out-of-bounds error here).
+* The models compute with words exactly as the L code does: `utf8CharN` is Rust's branch
+  structure on `UInt64` (bit operations included), `utf8LoopN` the loop over `Word` positions
+  with the memory as an argument (`Mem.set64 OUT cnt cp`), so the post is
+  `r.retOr [1, s'.loc 4] = encDecode (utf8LoopN …).1 ∧ s'.mem = (utf8LoopN …).2`. With the model
+  in the same terms, `utf8_char`'s spec is one `vcgen` + `finish` that unfolds `utf8CharN`
+  (about 20 paths, 6 s); the loop needs three arm lemmas, `utf8CharN_snd_le` (the length is at
+  most 4, so `k + len` does not wrap) and two new `lang_grind` frame equations
+  (`Mem.arr8_set64_apply`, `Mem.arr64_set8_apply`). The callee frame of `utf8_decode` is
+  `LocEq` (it writes memory).
+* A `#guard` runs con-ron's test `utf8_decode_agrees_with_the_toolchain` (17 byte strings)
+  against `String.fromUTF8?`; `Tests.lean` runs the compiled code on Kraken.
 

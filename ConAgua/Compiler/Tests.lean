@@ -6,9 +6,11 @@ meta import ConAgua.Compiler.WF
 public import ConAgua.L.Notation
 public import ConAgua.L.Examples
 public import ConAgua.Scan.Lit
+public import ConAgua.Scan.Utf8
 meta import ConAgua.Compiler.Run
 meta import ConAgua.L.Examples
 meta import ConAgua.Scan.Lit
+meta import ConAgua.Scan.Utf8
 
 /-!
 # Differential tests: compiled code on Kraken's semantics against `L.run`
@@ -173,5 +175,20 @@ open L.Scan.Lit in
 open L.Scan.Lit in
 #guard [" true", "false", "fals", "", "falsetto", "tru"].all fun t =>
   [0, 1].all fun i => agrees litProg "scan_bool" [i] (inp t)
+
+/-! `utf8_decode` (`Scan/Utf8.lean`): two results, stores into a word array. -/
+
+open L.Scan.Utf8 in
+#guard Prog.wf (Prog.tab utf8Prog 1 1) utf8Prog
+open L.Scan.Utf8 in
+#guard [[], "plain ascii".toUTF8.toList, [0xC3, 0xA9], [0xE2, 0x86, 0x92], [0xF0, 0x9F, 0x98, 0x80],
+    [0x80], [0xC0, 0x80], [0xE0, 0x80, 0x80], [0xED, 0xA0, 0x80], [0xF4, 0x90, 0x80, 0x80],
+    [0xF5, 0x80, 0x80, 0x80], [0xE2, 0x86], [0x41, 0xC3, 0xA9, 0x42]].all fun (bs : List UInt8) =>
+  agrees utf8Prog "utf8_decode" [0, UInt64.ofNat bs.length]
+    { bytes := #[bs.toArray], words := #[Array.replicate 16 0] }
+-- `OUT` too small: an out-of-bounds store.
+open L.Scan.Utf8 in
+#guard (runKraken utf8Prog "utf8_decode" [0, 5] { bytes := #["hello".toUTF8.data], words := #[#[0, 0]] }
+  100000).toOption == some .error
 
 end L.Compiler.Tests
