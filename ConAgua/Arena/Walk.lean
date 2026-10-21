@@ -4,6 +4,10 @@ public import ConAgua.Arena.Memo
 public import ConAgua.Arena.AppStore
 public import ConAgua.Arena.LetStore
 public import ConAgua.Arena.BVarStore
+public import ConAgua.Arena.FVarStore
+public import ConAgua.Arena.LamStore
+public import ConAgua.Arena.ForallStore
+public import ConAgua.Arena.ProjStore
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.Store
 
@@ -24,11 +28,12 @@ scratch tier is closed and an index at or past the tier's count (the arena's `vi
 a dangling handle), and dispatch on the tag:
 
 * `bvar i` (tag 0): `i + 1` (an `abort` where `i + 1` wraps);
-* `sort`, `const`, `lit` (tags 2, 3, 8): `0`;
+* `fvar`, `sort`, `const`, `lit` (tags 1, 2, 3, 8): `0`;
 * `app f a` (tag 4): `max (bb_go f) (bb_go a)`;
-* `letE ty val body` (tag 7): `max (max (bb_go ty) (bb_go val)) (bb_go body - 1)`, truncating;
-* `fvar`, `lam`, `forallE`, `proj` (tags 1, 5, 6, 9): `abort`. Their tables are not represented
-  in L yet (`ArenaR`); an `abort` claims nothing, so the refinement holds for every handle.
+* `lam ty body`, `forallE ty body` (tags 5, 6): `max (bb_go ty) (bb_go body - 1)`, truncating;
+* `letE ty val body` (tag 7): `max (max (bb_go ty) (bb_go val)) (bb_go body - 1)`;
+* `proj n i e` (tag 9): `bb_go e`;
+* any other tag: `abort` (the arena's `view` fails there too).
 
 then record the result (`memo_set`). `bb_memo(h)` is `memo_clear(); r := bb_go(h); memo_clear()`.
 
@@ -95,6 +100,27 @@ def bbNodeW : Nat → Mem → Word → Option (Word × Mem)
           match bbW n m₁ (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2 + 1)) with
           | none => none
           | some (y, m₂) => some (maxW x y, m₂)
+    else if h >>> 28 = 5 then
+      if rdW (m.arr64 CTL) (28 + tierW h) ≤ idxW h then none
+      else
+        match bbW n m (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2)) with
+        | none => none
+        | some (x, m₁) =>
+          match bbW n m₁ (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1)) with
+          | none => none
+          | some (y, m₂) => some (maxW x (predW y), m₂)
+    else if h >>> 28 = 6 then
+      if rdW (m.arr64 CTL) (30 + tierW h) ≤ idxW h then none
+      else
+        match bbW n m (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2)) with
+        | none => none
+        | some (x, m₁) =>
+          match bbW n m₁ (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1)) with
+          | none => none
+          | some (y, m₂) => some (maxW x (predW y), m₂)
+    else if h >>> 28 = 9 then
+      if rdW (m.arr64 CTL) (32 + tierW h) ≤ idxW h then none
+      else bbW n m (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2))
     else if h >>> 28 = 7 then
       if rdW (m.arr64 CTL) (20 + tierW h) ≤ idxW h then none
       else
@@ -107,6 +133,8 @@ def bbNodeW : Nat → Mem → Word → Option (Word × Mem)
             match bbW n m₂ (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2)) with
             | none => none
             | some (z, m₃) => some (maxW (maxW x y) (predW z), m₃)
+    else if h >>> 28 = 1 then
+      if rdW (m.arr64 CTL) (26 + tierW h) ≤ idxW h then none else some (0, m)
     else if h >>> 28 = 2 then
       if rdW (m.arr64 CTL) (16 + tierW h) ≤ idxW h then none else some (0, m)
     else if h >>> 28 = 3 then
@@ -140,6 +168,14 @@ where appK₂ (x : Word) : Option (Word × Mem) → Option (Word × Mem)
   | none => none
   | some (y, m₂) => some (maxW x y, m₂)
 
+/-- The binder arm (`lam`, `forallE`) after the type, and after the body. -/
+def bindK₁ (n : Nat) (b : Word) : Option (Word × Mem) → Option (Word × Mem)
+  | none => none
+  | some (x, m₁) => bindK₂ x (bbW n m₁ b)
+where bindK₂ (x : Word) : Option (Word × Mem) → Option (Word × Mem)
+  | none => none
+  | some (y, m₂) => some (maxW x (predW y), m₂)
+
 /-- The `letE` arm after each child. -/
 def letK₁ (n : Nat) (a b : Word) : Option (Word × Mem) → Option (Word × Mem)
   | none => none
@@ -159,6 +195,8 @@ theorem bbK_some : bbK h (some (r, m₁)) = bbSet m₁ h r := rfl
 theorem setK_some : setK r (some m₁) = some (r, m₁) := rfl
 theorem appK₁_some : appK₁ n a (some (x, m₁)) = appK₁.appK₂ x (bbW n m₁ a) := rfl
 theorem appK₂_some : appK₁.appK₂ x (some (y, m₂)) = some (maxW x y, m₂) := rfl
+theorem bindK₁_some : bindK₁ n b (some (x, m₁)) = bindK₁.bindK₂ x (bbW n m₁ b) := rfl
+theorem bindK₂_some : bindK₁.bindK₂ x (some (y, m₂)) = some (maxW x (predW y), m₂) := rfl
 theorem letK₁_some : letK₁ n a b (some (x, m₁)) = letK₁.letK₂ n b x (bbW n m₁ a) := rfl
 theorem letK₂_some : letK₁.letK₂ n b x (some (y, m₂)) = letK₁.letK₃ x y (bbW n m₂ b) := rfl
 theorem letK₃_some :
@@ -189,6 +227,10 @@ theorem bbNodeW_const (hg : h >>> 28 = 3) (hv : viewOK m h 18) : bbNodeW (n + 1)
   obtain ⟨hv1, hv2⟩ := hv
   rw [bbNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2]
 
+theorem bbNodeW_fvar (hg : h >>> 28 = 1) (hv : viewOK m h 26) : bbNodeW (n + 1) m h = some (0, m) := by
+  obtain ⟨hv1, hv2⟩ := hv
+  rw [bbNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2]
+
 theorem bbNodeW_lit (hg : h >>> 28 = 8) (hv : viewOK m h 2) : bbNodeW (n + 1) m h = some (0, m) := by
   obtain ⟨hv1, hv2⟩ := hv
   rw [bbNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2]
@@ -199,6 +241,25 @@ theorem bbNodeW_app (hv : viewOK m h 4) (hg : h >>> 28 = 4) :
   obtain ⟨hv1, hv2⟩ := hv
   rw [bbNodeW]; simp only [hv1, hg, ↓reduceIte, UInt64.not_le.mpr hv2, appK₁, appK₁.appK₂]
   simp
+
+theorem bbNodeW_lam (hv : viewOK m h 28) (hg : h >>> 28 = 5) :
+    bbNodeW (n + 1) m h = bindK₁ n (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1))
+      (bbW n m (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2))) := by
+  obtain ⟨hv1, hv2⟩ := hv
+  rw [bbNodeW]; simp only [hv1, hg, ↓reduceIte, UInt64.not_le.mpr hv2, bindK₁, bindK₁.bindK₂]
+  simp
+
+theorem bbNodeW_forall (hv : viewOK m h 30) (hg : h >>> 28 = 6) :
+    bbNodeW (n + 1) m h = bindK₁ n (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1))
+      (bbW n m (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2))) := by
+  obtain ⟨hv1, hv2⟩ := hv
+  rw [bbNodeW]; simp only [hv1, hg, ↓reduceIte, UInt64.not_le.mpr hv2, bindK₁, bindK₁.bindK₂]
+  simp
+
+theorem bbNodeW_proj (hv : viewOK m h 32) (hg : h >>> 28 = 9) :
+    bbNodeW (n + 1) m h = bbW n m (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)) := by
+  obtain ⟨hv1, hv2⟩ := hv
+  rw [bbNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2]
 
 theorem bbNodeW_let (hv : viewOK m h 20) (hg : h >>> 28 = 7) :
     bbNodeW (n + 1) m h = letK₁ n (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1))
@@ -211,14 +272,18 @@ theorem bbNodeW_let (hv : viewOK m h 20) (hg : h >>> 28 = 7) :
 
 end arms
 
-attribute [arena_grind =] bbK_some setK_some appK₁_some appK₂_some letK₁_some letK₂_some
-  letK₃_some bbSet_eq
+attribute [arena_grind =] bbK_some setK_some appK₁_some appK₂_some bindK₁_some bindK₂_some
+  letK₁_some letK₂_some letK₃_some bbSet_eq
 grind_pattern [arena_grind] bbW_hit => bbW (n + 1) m h
 grind_pattern [arena_grind] bbW_miss => bbW (n + 1) m h
 grind_pattern [arena_grind] bbNodeW_bvar => bbNodeW (n + 1) m h
 grind_pattern [arena_grind] bbNodeW_sort => bbNodeW (n + 1) m h
 grind_pattern [arena_grind] bbNodeW_const => bbNodeW (n + 1) m h
 grind_pattern [arena_grind] bbNodeW_lit => bbNodeW (n + 1) m h
+grind_pattern [arena_grind] bbNodeW_fvar => bbNodeW (n + 1) m h
+grind_pattern [arena_grind] bbNodeW_lam => bbNodeW (n + 1) m h
+grind_pattern [arena_grind] bbNodeW_forall => bbNodeW (n + 1) m h
+grind_pattern [arena_grind] bbNodeW_proj => bbNodeW (n + 1) m h
 grind_pattern [arena_grind] bbNodeW_app => bbNodeW (n + 1) m h
 grind_pattern [arena_grind] bbNodeW_let => bbNodeW (n + 1) m h
 
@@ -249,6 +314,30 @@ def bbNode : FunDecl := lfn (h) locals (g, t, i, f, a, b, x, y, z) {
     y := call bb_go(a);
     return x + (y - x) * u64(x < y)
   };
+  if g == 5 {
+    if CTL.u64[28 + t] <= i { abort };
+    f := LAREC.u64[i * 4 + t * 2];
+    a := LAREC.u64[i * 4 + t * 2 + 1];
+    x := call bb_go(f);
+    y := call bb_go(a);
+    y := y - u64(0 < y);
+    return x + (y - x) * u64(x < y)
+  };
+  if g == 6 {
+    if CTL.u64[30 + t] <= i { abort };
+    f := FAREC.u64[i * 4 + t * 2];
+    a := FAREC.u64[i * 4 + t * 2 + 1];
+    x := call bb_go(f);
+    y := call bb_go(a);
+    y := y - u64(0 < y);
+    return x + (y - x) * u64(x < y)
+  };
+  if g == 9 {
+    if CTL.u64[32 + t] <= i { abort };
+    f := PJREC.u64[i * 6 + t * 3 + 2];
+    x := call bb_go(f);
+    return x
+  };
   if g == 7 {
     if CTL.u64[20 + t] <= i { abort };
     f := LEREC.u64[i * 6 + t * 3];
@@ -261,6 +350,7 @@ def bbNode : FunDecl := lfn (h) locals (g, t, i, f, a, b, x, y, z) {
     z := z - u64(0 < z);
     return x + (z - x) * u64(x < z)
   };
+  if g == 1 { if CTL.u64[26 + t] <= i { abort }; return 0 };
   if g == 2 { if CTL.u64[16 + t] <= i { abort }; return 0 };
   if g == 3 { if CTL.u64[18 + t] <= i { abort }; return 0 };
   if g == 8 { if CTL.u64[2 + t] <= i { abort }; return 0 };
@@ -295,6 +385,7 @@ theorem bbGo_step (n : Nat) (ih : BbNodeSpec p n) : BbGoSpec p (n + 1) := by
       memoFind_spec p hpf n, memoSet_spec p hpf hps n, ih] <;>
     finish
 
+set_option maxHeartbeats 1000000 in
 include hpn in
 theorem bbNode_step (n : Nat) (ih : BbGoSpec p n) : BbNodeSpec p (n + 1) := by
   unfold BbGoSpec at ih

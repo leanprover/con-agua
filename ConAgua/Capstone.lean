@@ -301,8 +301,8 @@ theorem natAddLit_x64 [Host] (G : L.Compiler.Layout) (hG : G.Ok)
 compiled `walkProg`, run from `ca_enter` with handle `h` on a state related (via the layout `G`
 and the whole arena relation `ArenaR`) to an arena state `a₀`, with machine fuel `N` at most the
 arena fuel `F`: the run returns to the caller, and reports exhausted (`rdx = 1`: fuel, or the
-stack, which the walk uses one frame pair per level), or an `abort` (`rdx = 2`: a node kind not
-represented in L, a dangling handle, a full memo), or `rdx = 0` with `rax` the bound the arena's
+stack, which the walk uses one frame pair per level), or an `abort` (`rdx = 2`: a dangling
+handle or an unknown tag, a `bvar` index of `2^64 - 1`, a full memo), or `rdx = 0` with `rax` the bound the arena's
 `bvarBoundMemo F (decE h)` returns on `a₀`, in a final state related to the final memory. -/
 theorem bbMemo_x64 [Host] (G : L.Compiler.Layout) (hG : G.Ok)
     (hwf : Prog.wf G.tab walkProg = true)

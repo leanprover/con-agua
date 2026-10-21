@@ -5,6 +5,11 @@ public import ConAgua.Arena.SortStore
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.Walk
 meta import ConAgua.Arena.SortStore
+meta import ConAgua.Arena.LetStore
+meta import ConAgua.Arena.FVarStore
+meta import ConAgua.Arena.LamStore
+meta import ConAgua.Arena.ForallStore
+meta import ConAgua.Arena.ProjStore
 
 @[expose] public section
 
@@ -35,15 +40,20 @@ def bbBench : FunDecl := lfn (n, k) locals (b, x, i, r) {
 
 /-- The walk, the stores it reads, and the driver. -/
 def benchProg : Prog :=
-  walkProg ++ appProg ++ bvarProg ++ sortProg ++ letProg ++ [("bb_bench", bbBench)]
+  walkProg ++ appProg ++ bvarProg ++ sortProg ++ letProg ++ fvarProg ++ lamProg ++ forallProg ++
+    projProg ++ [("bb_bench", bbBench)]
 
-/-- A memory with room for `c` nodes per table: 25 word arrays, all zero. -/
+/-- A memory with room for `c` nodes per table the walk reads: the 41 word arrays of the arena
+layout (`ArenaRel.lean`), all zero; the tables the walk does not read are empty. -/
 def walkMem (c : Nat) : Mem :=
-  { words := #[#[], Array.replicate 26 0, #[], #[], Array.replicate (4 * c) 0,
+  { words := #[#[], Array.replicate 42 0, #[], #[], Array.replicate (4 * c) 0,
       Array.replicate (4 * c) 0] ++ Array.replicate 10 #[] ++
       #[Array.replicate (2 * c) 0, Array.replicate (4 * c) 0] ++ Array.replicate 2 #[] ++
       #[Array.replicate (6 * c) 0, Array.replicate (4 * c) 0, Array.replicate (2 * c) 0,
-        Array.replicate (4 * c) 0, Array.replicate (8 * c) 0] }
+        Array.replicate (4 * c) 0, Array.replicate (8 * c) 0] ++
+      #[Array.replicate (4 * c) 0, Array.replicate (4 * c) 0, Array.replicate (4 * c) 0,
+        Array.replicate (4 * c) 0, Array.replicate (4 * c) 0, Array.replicate (4 * c) 0,
+        Array.replicate (6 * c) 0, Array.replicate (4 * c) 0] ++ Array.replicate 8 #[] }
 
 /-- Run `f` from the memory `m`; the first result. -/
 def walkRun (fuel : Nat) (f : FnName) (args : List Word) (m : Mem) : Option (Word × Mem) :=
@@ -62,6 +72,25 @@ def walkRun (fuel : Nat) (f : FnName) (args : List Word) (m : Mem) : Option (Wor
       | some (s, m) => match walkRun 100 "intern_app" [b2, b0] m with
         | some (ap, m) => match walkRun 100 "intern_letE" [b0, s, ap] m with
           | some (le, m) => (walkRun 100 "bb_memo" [le] m).map (·.1) == some 2
+          | none => false
+        | none => false
+      | none => false
+    | none => false
+  | none => false
+
+/- `lam (fvar 0 (sort u)) (forallE (bvar 1) (proj c 0 (bvar 3)))`: the `forallE`'s bound is
+`max 2 (4 - 1) = 3`, the `lam`'s `max 0 (3 - 1) = 2`. -/
+#guard
+  match walkRun 100 "intern_sort" [0x10000000] (walkMem 16) with
+  | some (s, m) => match walkRun 100 "intern_fvar" [0, s] m with
+    | some (fv, m) => match walkRun 100 "intern_bvar" [1] m with
+      | some (b1, m) => match walkRun 100 "intern_bvar" [3] m with
+        | some (b3, m) => match walkRun 100 "intern_proj" [0x10000000, 0, b3] m with
+          | some (pj, m) => match walkRun 100 "intern_forall" [b1, pj] m with
+            | some (fa, m) => match walkRun 100 "intern_lam" [fv, fa] m with
+              | some (la, m) => (walkRun 100 "bb_memo" [la] m).map (·.1) == some 2
+              | none => false
+            | none => false
           | none => false
         | none => false
       | none => false
