@@ -341,7 +341,7 @@ theorem unescN_end (h : ¬ (j < UInt64.ofNat b.size ∧ j < e)) :
 these two separate facts, not a negated conjunction, when the loop guard evaluates to `false`. -/
 theorem unescN_end1 (h : ¬ j < UInt64.ofNat b.size) : unescN b j e r = utf8ValidN b r e :=
   unescN_end b j e r (fun hc => h hc.1)
-theorem unescN_end2 (h1 : j < UInt64.ofNat b.size) (h2 : ¬ j < e) :
+theorem unescN_end2 (_h1 : j < UInt64.ofNat b.size) (h2 : ¬ j < e) :
     unescN b j e r = utf8ValidN b r e := unescN_end b j e r (fun hc => h2 hc.2)
 
 theorem unescN_plain (j' : Word) (hj' : j' = j + 1) (h1 : j < UInt64.ofNat b.size) (h2 : j < e)
@@ -370,22 +370,22 @@ theorem unescN_bad_escchar (h1 : j < UInt64.ofNat b.size) (h2 : j < e) (hc : byt
 
 theorem unescN_bad_hex4 (h1 : j < UInt64.ofNat b.size) (h2 : j < e) (hc : byteW b j = 92)
     (hok : utf8ValidN b r j ≠ 0)
-    (hd1 : ¬ (byteE b e (j + 1) = 34 ∨ byteE b e (j + 1) = 92 ∨ byteE b e (j + 1) = 47 ∨
+    (_hd1 : ¬ (byteE b e (j + 1) = 34 ∨ byteE b e (j + 1) = 92 ∨ byteE b e (j + 1) = 47 ∨
       byteE b e (j + 1) = 98 ∨ byteE b e (j + 1) = 102 ∨ byteE b e (j + 1) = 110 ∨
       byteE b e (j + 1) = 114 ∨ byteE b e (j + 1) = 116))
     (hd2 : byteE b e (j + 1) = 117) (hhex : (hex4N b e (j + 2)).1 = 0) :
     unescN b j e r = 0 := by
-  rw [unescN]; simp [h1, h2, hc, hok, hd1, hd2, hhex]
+  rw [unescN]; simp [h1, h2, hc, hok, hd2, hhex]
 
 theorem unescN_u_esc (j' : Word) (hj' : j' = uNextN b e j (hex4N b e (j + 2)).2)
     (h1 : j < UInt64.ofNat b.size) (h2 : j < e) (hc : byteW b j = 92)
     (hok : utf8ValidN b r j ≠ 0)
-    (hd1 : ¬ (byteE b e (j + 1) = 34 ∨ byteE b e (j + 1) = 92 ∨ byteE b e (j + 1) = 47 ∨
+    (_hd1 : ¬ (byteE b e (j + 1) = 34 ∨ byteE b e (j + 1) = 92 ∨ byteE b e (j + 1) = 47 ∨
       byteE b e (j + 1) = 98 ∨ byteE b e (j + 1) = 102 ∨ byteE b e (j + 1) = 110 ∨
       byteE b e (j + 1) = 114 ∨ byteE b e (j + 1) = 116))
     (hd2 : byteE b e (j + 1) = 117) (hhex : (hex4N b e (j + 2)).1 ≠ 0)
     (hw : j < uNextN b e j (hex4N b e (j + 2)).2) : unescN b j e r = unescN b j' e j' := by
-  subst hj'; rw [unescN]; simp [h1, h2, hc, hok, hd1, hd2, hhex, hw]
+  subst hj'; rw [unescN]; simp [h1, h2, hc, hok, hd2, hhex, hw]
 
 grind_pattern [lang_grind] unescN_end => unescN b j e r
 grind_pattern [lang_grind] unescN_end1 => unescN b j e r
