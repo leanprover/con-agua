@@ -29,6 +29,8 @@ globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.A
   "ConAgua.Arena.LetStore", "ConAgua.Arena.LetRefine",
   "ConAgua.Arena.BVarStore", "ConAgua.Arena.BVarRefine", "ConAgua.Arena.Memo",
   "ConAgua.Arena.Frame", "ConAgua.Arena.MemoRel", "ConAgua.Arena.ArenaRel",
+  "ConAgua.Arena.Walk", "ConAgua.Arena.WalkRefine", "ConAgua.Arena.WalkBench", "ConAgua.Arena.WalkEmit",
+  "ConAgua.Arena.WalkBenchLean",
   "ConAgua.Capstone"]
 
 # Vendored from con-leche (rev 103562b) and con-ron (rev 4c9eaf7, proof/ dir).
@@ -70,3 +72,9 @@ leanOptions = {autoImplicit = true, relaxedAutoImplicit = true}
 [[lean_exe]]
 name = "skipbench"
 root = "ConAgua.Compiler.Bench"
+
+# Baseline for the compiled walk (DESIGN.md, lane `walk`): con-ron's compiled arena
+# `bvarBoundMemo` on a deep term.
+[[lean_exe]]
+name = "walkbench"
+root = "ConAgua.Arena.WalkBenchLean"
