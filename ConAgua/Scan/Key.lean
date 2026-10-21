@@ -2,6 +2,7 @@ module
 
 public import ConAgua.L.Notation
 public import ConAgua.L.Logic
+public import ConAgua.Scan.Common
 public import ConAgua.Scan.Leaves
 public import ConAgua.Scan.Utf8
 meta import ConAgua.L.Semantics
@@ -618,6 +619,16 @@ def valueAt : FunDecl := lfn (i, ke) locals (p, v) {
   return i
 }
 
+/-- `skipWsN` never walks past the end of the array (mirrors `L.Scan.Leaves.skipDigitsN_le`,
+which we cannot add a lemma next to since we only own `Key.lean`/`Values.lean`). -/
+theorem skipWsN_le (b : Array UInt8) (i : Nat) (h : i ≤ b.size) : skipWsN b i ≤ b.size := by
+  induction i using L.Scan.Leaves.skipWsN.induct b with
+  | case1 i h' hc ih => rw [skipWsN]; simp [h', hc]; omega
+  | case2 i h' hc => rw [skipWsN]; simp [h', hc]; omega
+  | case3 i h' => rw [skipWsN]; simp [h']; omega
+
+grind_pattern [lang_grind] skipWsN_le => skipWsN b i
+
 /-! ## Specs -/
 
 section keyAtGroups
@@ -768,18 +779,50 @@ variable (p : Prog) (hp1 : p.lookup "skip_ws" = some L.Scan.Leaves.skipWs)
     (hp2 : p.lookup "value_at" = some valueAt) (b : Array UInt8) (hb : b.size < 2 ^ 63)
 include hp1 hp2 hb
 
+attribute [local lang_grind] valueAtN in
 theorem valueAt_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i ke : Word)
     (hke : ke.toNat < b.size) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "value_at" [i, ke]
     ⦃fun r s' => s' = s₀ ∧ r = [valueAtN b i ke]; ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hp2]
+  simp only [callFn, valueAt]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have hb64 : b.size < 2 ^ 64 := by omega
+    have hstep : ∀ j : Word, (j + 1).toNat ≤ j.toNat + 1 := fun j => by
+      simp [UInt64.toNat_add]; omega
+    have hofnat_le : ∀ j : Nat, (UInt64.ofNat j).toNat ≤ j := fun _ => UInt64.toNat_ofNat_le
+    sym only [lang_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld8,
+        L.Scan.Leaves.skipWs_spec p hp1 b hb64 n] <;> finish
 
 end valueAt
 
 /-- `value_at` returns `i` or a position inside the array or at its end. -/
 theorem valueAtN_le (b : Array UInt8) (i ke : Word) (hi : i.toNat ≤ b.size) (hke : ke.toNat < b.size)
     (hb : b.size < 2 ^ 63) : (valueAtN b i ke).toNat ≤ b.size := by
-  sorry
+  have hke' : ke < UInt64.ofNat b.size := by
+    rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_ofNat']; omega
+  have hke1 : (ke + 1).toNat = ke.toNat + 1 := L.Scan.toNat_add_one_of_lt_ofNat hke'
+  have h1 : (ke + 1).toNat ≤ b.size := by omega
+  have h2 : L.Scan.Leaves.skipWsN b (ke + 1).toNat ≤ b.size := skipWsN_le b _ h1
+  simp only [valueAtN]
+  split
+  · next hcond =>
+    have hplt := hcond.1
+    have hp_le : (UInt64.ofNat (L.Scan.Leaves.skipWsN b (ke + 1).toNat)).toNat ≤ b.size := by
+      have := @UInt64.toNat_ofNat_le (L.Scan.Leaves.skipWsN b (ke + 1).toNat); omega
+    have hplt' := L.Scan.lt_of_lt_ofNat hplt
+    have hp1 : (UInt64.ofNat (L.Scan.Leaves.skipWsN b (ke + 1).toNat) + 1).toNat
+        = (UInt64.ofNat (L.Scan.Leaves.skipWsN b (ke + 1).toNat)).toNat + 1 :=
+      L.Scan.toNat_add_one_of_lt_ofNat hplt
+    have h3 : (UInt64.ofNat (L.Scan.Leaves.skipWsN b (ke + 1).toNat) + 1).toNat ≤ b.size := by omega
+    have h4 := skipWsN_le b _ h3
+    have := @UInt64.toNat_ofNat_le
+      (L.Scan.Leaves.skipWsN b (UInt64.ofNat (L.Scan.Leaves.skipWsN b (ke + 1).toNat) + 1).toNat)
+    omega
+  · next => exact hi
 
 end L.Scan.Key
