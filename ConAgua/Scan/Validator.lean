@@ -36,6 +36,8 @@ def valProg : Prog := [
   ("slot_nat", slotNat),
   ("match_word", matchWord),
   ("scan_binder_info", scanBinderInfo),
+  ("hints_num", hintsNum),
+  ("hints_obj", hintsObj),
   ("scan_hints", scanHints),
   ("scan_nat_list", scanNatList),
   ("match_lit", L.Scan.Lit.matchLit),
@@ -111,7 +113,7 @@ theorem validate_run (b : Array UInt8) (hb : b.size < 2 ^ 63) (fuel : Nat) (r : 
     injection h with h
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj h
     have := M.of_run (P := fun s => s = { mem := { bytes := #[b] }, loc := Locals.init [] }) rfl hr
-      (validate_spec valProg b hb rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl fuel _ rfl)
+      (validate_spec valProg b hb rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl fuel _ rfl)
     grind
 
 /-- The compiler's static check passes (`compile_correct` applies). -/

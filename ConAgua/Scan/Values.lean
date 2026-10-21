@@ -125,7 +125,30 @@ def binderInfoN (b : Array UInt8) (i : Word) : Word :=
     else 0
   else 0
 
-def scanHints : FunDecl := lfn (i) locals (m, p, ke, k, v, e, q) {
+/-- The number of `{"regular":n}` at `v`, and the closing brace. -/
+def hintsNum : FunDecl := lfn (v) locals (e, q) {
+  e := call num_end(v);
+  if e == v { return 0 };
+  q := call skip_ws(e);
+  if q < len(IN.u8) && IN.u8[q] == 125 { return q + 1 };
+  return 0
+}
+
+/-- `{"regular":n}` from the key's opening quote at `p`. Rust's `scan_hints` has this inline; it is
+a function of its own here so that each verification condition stays short. -/
+def hintsObj : FunDecl := lfn (p) locals (ke, k, v, e) {
+  if !(p < len(IN.u8) && IN.u8[p] == 34) { return 0 };
+  ke := call key_end(p + 1);
+  if ke == 0 { return 0 };
+  k := call key_at(p, ke - (p + 1));
+  if k != 51 { return 0 };  -- `regular`
+  v := call value_at(p, ke);
+  if v == p { return 0 };
+  e := call hints_num(v);
+  return e
+}
+
+def scanHints : FunDecl := lfn (i) locals (m, p, e) {
   if i < len(IN.u8) && IN.u8[i] == 34 {
     m := call match_word(i + 1, 45, 7);
     if m != 0 { return i + 8 };
@@ -135,18 +158,8 @@ def scanHints : FunDecl := lfn (i) locals (m, p, ke, k, v, e, q) {
   };
   if i < len(IN.u8) && IN.u8[i] == 123 {
     p := call skip_ws(i + 1);
-    if !(p < len(IN.u8) && IN.u8[p] == 34) { return 0 };
-    ke := call key_end(p + 1);
-    if ke == 0 { return 0 };
-    k := call key_at(p, ke - (p + 1));
-    if k != 51 { return 0 };  -- `regular`
-    v := call value_at(p, ke);
-    if v == p { return 0 };
-    e := call num_end(v);
-    if e == v { return 0 };
-    q := call skip_ws(e);
-    if q < len(IN.u8) && IN.u8[q] == 125 { return q + 1 };
-    return 0
+    e := call hints_obj(p);
+    return e
   };
   return 0
 }
@@ -427,6 +440,8 @@ variable (p : Prog) (b : Array UInt8) (hb : b.size < 2 ^ 63)
     (hpq : p.lookup "scan_quoted_nat" = some scanQuotedNat)
     (hpm : p.lookup "match_word" = some matchWord)
     (hpi : p.lookup "scan_binder_info" = some scanBinderInfo)
+    (hphn : p.lookup "hints_num" = some hintsNum)
+    (hpho : p.lookup "hints_obj" = some hintsObj)
     (hph : p.lookup "scan_hints" = some scanHints)
     (hpl : p.lookup "scan_nat_list" = some scanNatList)
 include hb
@@ -528,25 +543,63 @@ theorem scanBinderInfo_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i
 -- `valueAt_spec`) are provided, but something further down the six-deep call chain is still
 -- missing. Left for a future attempt (e.g. splitting the object branch into its own named
 -- block/function, as `key_at` was split, so each callee's verification condition is shallower).
-include hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hph in
-attribute [local lang_grind] hintsN hintsN.hintsObjN hintsN.hintsNumN in
+include hpw hpd hpn hphn in
+attribute [local lang_grind] hintsN.hintsNumN in
+theorem hintsNum_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (v : Word)
+    (hv : v.toNat ≤ b.size) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "hints_num" [v]
+    ⦃fun r s' => s' = s₀ ∧ r = [hintsN.hintsNumN b v]; ⊤⦄ := by
+  rw [invoke_eq _ hphn]
+  simp only [callFn, hintsNum]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have hb64 : b.size < 2 ^ 64 := by omega
+    sym only [lang_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld8,
+        L.Scan.Leaves.numEnd_spec p hpd hpn b hb64 n, L.Scan.Leaves.skipWs_spec p hpw b hb64 n] <;>
+        finish
+
+include hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hphn hpho in
+attribute [local lang_grind] hintsN.hintsObjN in
+theorem hintsObj_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (q : Word)
+    (hq : q.toNat ≤ b.size) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "hints_obj" [q]
+    ⦃fun r s' => s' = s₀ ∧ r = [hintsN.hintsObjN b q]; ⊤⦄ := by
+  rw [invoke_eq _ hpho]
+  simp only [callFn, hintsObj]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have hb64 : b.size < 2 ^ 64 := by omega
+    have hval := L.Scan.Key.valueAtN_le b
+    sym (gen := 16) only [lang_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld8,
+        L.Scan.Leaves.keyEnd_spec p hpk b hb64 n,
+        L.Scan.Key.keyAt_spec p hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa b hb n,
+        L.Scan.Key.valueAt_spec p hpw hpv b hb n,
+        hintsNum_spec p b hb hpw hpd hpn hphn n] <;> finish
+
+include hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hphn hpho hph in
+attribute [local lang_grind] hintsN in
 theorem scanHints_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_hints" [i]
     ⦃fun r s' => s' = s₀ ∧ r = [hintsN b i]; ⊤⦄ := by
-  sorry
-  -- Attempted, closer but still unresolved: register hintsN/hintsObjN/hintsNumN (done above),
-  -- then (as in scanNatList_spec) provide `hstep`/`hofnat_le` and LOCAL copies of
-  -- keyEndN_lt/numEndN_le/numEndN_ge/valueAtN_le as `have`s (not just relying on their global
-  -- grind_pattern registration), then the six callee specs in the usual bracket list. This
-  -- turned the earlier "finish failed" (2 of ~30 verification conditions, genuinely exhausted
-  -- search, not a budget issue) into a single `isDefEq` timeout that does not clear even at
-  -- maxHeartbeats 3000000 (5 minutes wall-clock, still running). Whoever continues this should
-  -- likely split `scan_hints`'s object branch (the `{"regular":n}` case) into its own named
-  -- function, the same way `key_at` was split in Key.lean, so each verification condition is
-  -- shallower; the six-deep callee chain (skip_ws, key_end, key_at, value_at, num_end, skip_ws)
-  -- in one function body may simply be too much for one `vcgen`/`finish` call, independent of
-  -- which facts are in scope.
+  rw [invoke_eq _ hph]
+  simp only [callFn, scanHints]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have hb64 : b.size < 2 ^ 64 := by omega
+    sym only [lang_grind, WORDS_length] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld8,
+        L.Scan.Leaves.skipWs_spec p hpw b hb64 n,
+        matchWord_spec p b hb hpm n,
+        hintsObj_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hphn hpho n] <;>
+        finish
 
 include hpd hpn hpl in
 attribute [local lang_grind] natListEntryN in
