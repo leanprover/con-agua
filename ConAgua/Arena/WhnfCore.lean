@@ -11,7 +11,7 @@ slot, `:3546`), in L:
 |---|---|
 | `whnf_core(mode, cheap, vis, d, e)` | the knot's `whnfCore` slot: `whnfCoreStuckTag`, the memo (`whnfCoreCheapC` / `whnfCoreC`, at the mode's eager bit), `whnfCoreBody` |
 | `whnf_core_loop(mode, cheap, vis, d, e)` | `whnfCoreBody` = `whnfCoreLoop … whnfCoreLoopFuel` (an uncounted L loop) |
-| `whnf_core_step(mode, cheap, vis, d, e)` | `whnfCoreStep` (`(0, e)` done, `(1, e)` continue) |
+| `whnf_core_step(mode, cheap, vis, d, e)` | `whnfCoreStep` (`(0, e)` done, `(1, e)` continue); its `app` arm is `whnf_core_app` |
 | `whnf_app(mode, vis, d, v, hd, vo, vn, same, ao, an, i)` | `whnfApp`: the head's arguments `vargs` a stack slice `(vo, vn)` at the top, the spine's arguments and nodes the slices `(ao, an)`, `(ao + an, an)` |
 | `beta_peel(t, a, ao, an, i)` | `betaPeel t #[a] args i` (the accumulator a stack slice) |
 | `whnf_core_step_proj(mode, cheap, vis, d, e, sn, i, pe)` | `whnfCoreStepProj` |
@@ -80,22 +80,37 @@ def whnfCoreLoopL : FunDecl := lfn (mode, cheap, vis, d, e) locals (st, r) {
   abort
 }
 
+/-- The `app` arm of `whnf_core_step` (its own function: the arms' chains of calls are proved
+apart). -/
+@[l_impl ConRon.Arena.whnfCoreStep]
+def whnfCoreAppL : FunDecl :=
+    lfn (mode, cheap, vis, d, e) locals (top, h, so, sn, v, st, r) {
+  top := CTL.u64[136];
+  (h, so, sn) := call get_app_spine(e);
+  v := call whnf_core(mode, cheap, vis, d, h);
+  (st, r) := call whnf_core_app2(mode, vis, d, v, h, so, sn);
+  CTL.u64[136] := top;
+  return (st, r)
+}
+
+/-- The second half of the `app` arm: the reduct's spine, then the β/ι walk. -/
+@[l_impl ConRon.Arena.whnfCoreStep]
+def whnfCoreApp2L : FunDecl := lfn (mode, vis, d, v, h, so, sn) locals (hd, ho, hn, st, r) {
+  (hd, ho, hn) := call head_and_args(v);
+  (st, r) := call whnf_app(mode, vis, d, v, hd, ho, hn, u64(v == h), so, sn, 0);
+  return (st, r)
+}
+
 @[l_impl ConRon.Arena.whnfCoreStep]
 def whnfCoreStepL : FunDecl :=
-    lfn (mode, cheap, vis, d, e) locals (g, t, i, top, h, so, sn, v, same, hd, ho, hn, st, r) {
+    lfn (mode, cheap, vis, d, e) locals (g, t, i, st, r) {
   g := e >> 28;
   t := (e >> 27) & 1;
   i := e & 134217727;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if g == 4 {
     if CTL.u64[4 + t] <= i { abort };
-    top := CTL.u64[136];
-    (h, so, sn) := call get_app_spine(e);
-    v := call whnf_core(mode, cheap, vis, d, h);
-    same := u64(v == h);
-    (hd, ho, hn) := call head_and_args(v);
-    (st, r) := call whnf_app(mode, vis, d, v, hd, ho, hn, same, so, sn, 0);
-    CTL.u64[136] := top;
+    (st, r) := call whnf_core_app(mode, cheap, vis, d, e);
     return (st, r)
   };
   if g == 9 {
@@ -255,6 +270,7 @@ def projLitToCtorL : FunDecl := lfn (mode, vis, d, h) locals (t, x, s, c) {
 /-- The functions of this file. -/
 def whnfCoreFns : Prog :=
   [("whnf_core", whnfCoreL), ("whnf_core_loop", whnfCoreLoopL), ("whnf_core_step", whnfCoreStepL),
+   ("whnf_core_app", whnfCoreAppL), ("whnf_core_app2", whnfCoreApp2L),
    ("whnf_app", whnfAppL), ("beta_peel", betaPeelL), ("whnf_core_step_proj", whnfCoreStepProjL),
    ("reduce_proj_core", reduceProjCoreL), ("proj_cert", projCertL),
    ("proj_lit_to_ctor", projLitToCtorL)]
@@ -265,6 +281,8 @@ structure WhnfCoreProg (p : Prog) : Prop where
   core : p.lookup "whnf_core" = some whnfCoreL
   loop : p.lookup "whnf_core_loop" = some whnfCoreLoopL
   step : p.lookup "whnf_core_step" = some whnfCoreStepL
+  capp : p.lookup "whnf_core_app" = some whnfCoreAppL
+  capp2 : p.lookup "whnf_core_app2" = some whnfCoreApp2L
   app : p.lookup "whnf_app" = some whnfAppL
   peel : p.lookup "beta_peel" = some betaPeelL
   sproj : p.lookup "whnf_core_step_proj" = some whnfCoreStepProjL
