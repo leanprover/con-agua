@@ -4087,11 +4087,15 @@ claim about callees that may have no L code at all; a `sorry` target probably sh
   `check_pending_go`/`check_pending_next(j, cnt, vis)` → `check_pending(j, vis)` (the view of
   check `j` is its recorded `vis`, `EnvR.restrictTo`).
 * Stubs (`sorry`'d specs, each the shape the real function must prove, over any program, with
-  the view word as an argument so the caller's `vcgen` sees it): `flush_caches`, `enter_scratch`,
-  `drop_scratch` (`UnitSpec`: keep `LoopR`), `and_pin_ok(i)`, `install_step_go(i, vis)` (returns
+  the view word as an argument when the spec would otherwise leave it a metavariable):
+  `and_pin_ok(i)`, `install_step_go(i, vis)` (returns
   the new view and the value group as flag/record), `promote_vg(g, vis)`, `promote_new(k, vis,
   fresh)`, `check_value_group(vis, g)`. Lanes that translate these replace the stub and prove the
   spec; nothing in the skeleton changes unless the spec does.
+* The bracket is lane `whnf`'s real code (landed meanwhile): `flush_caches()`, `scratch_enter()`,
+  `scratch_drop()` refine `flushCaches`/`enterScratch`/`dropScratch` under `CheckR`, and write
+  `CTL` words below 128 only, so `flush_loop`/`enter_loop`/`drop_loop` lift them to `LoopR`
+  (`PendR.frameLo`, `LoopR.of_lo`); the skeleton's theorems take `BracketProg p` (their lookups).
 * The relation threaded: `LoopR dn m a vis fe pend ds` = `CheckR` + `PendR` (pending checks:
   `PEND` 137, three words each, `CTL[130]` of them; the value group a record in `EREC`) +
   the front's `DeclsR` (`DECL`/`DLP`: the declarations are the front's records, record `i` =
@@ -4132,12 +4136,12 @@ Proof findings (the house form, `vcgen` + `finish`, with these adjustments):
 | `Env.lean` | 791 | 2.4 s | rows, `find?`/`push`/`popTemp`/`erase`, `decide +kernel` write set |
 | `Checker.lean` | 1076 | 12 s user | skeleton + stub specs |
 
-L lines: `pin_at`/`pin_word` 9, `nat_op_result` 29, env 60, checker skeleton 75 (+ 8 stubs).
+L lines: `pin_at`/`pin_word` 9, `nat_op_result` 29, env 60, checker skeleton 75 (+ 5 stubs).
 
 ### `sorry`s (all in `Checker.lean`, the stub specs; each is the spec its lane must prove)
 
-`flushCaches_spec`, `enterScratch_spec`, `dropScratch_spec`, `andPinOk_spec`,
-`installStepGo_spec`, `promoteVG_spec`, `promoteNew_spec`, `checkValueGroup_spec`. Nothing tagged
+`andPinOk_spec`, `installStepGo_spec`, `promoteVG_spec`, `promoteNew_spec`,
+`checkValueGroup_spec`. Nothing tagged
 for the census uses them except through `refines_part`.
 
 ### Not done

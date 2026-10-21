@@ -1,4 +1,5 @@
 import ConAgua.Arena.Env
+import ConAgua.Arena.CoreRefine
 import ConAgua.Front.StateDR
 import ConRon.Arena.Checker
 
@@ -27,6 +28,8 @@ census target (`TwinAccepts` runs `installFold` and `checkPendingList` itself);
   nowhere"); a returning run is an accepting one.
 * The relation the loop keeps, `LoopR`: `CheckR` (arena, caches, pins, the environment at a view),
   `PendR` and `DeclsR`.
+* The bracket (`flush_caches`, `scratch_enter`, `scratch_drop`) is lane `whnf`'s real code,
+  lifted to `LoopR` here (`flush_loop`, `enter_loop`, `drop_loop`).
 -/
 
 open ConRon.Arena
@@ -109,12 +112,6 @@ variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → O
 
 Each stub is a not-yet-translated callee; the spec is what the real code will have to prove. -/
 
-/-- Stub: `flushCaches` (the 14 cache epochs). -/
-def flushCachesL : FunDecl := lfn (vis) locals () { abort }
-/-- Stub: `enterScratch` (open the scratch tier, clear the walk memos). -/
-def enterScratchL : FunDecl := lfn (vis) locals () { abort }
-/-- Stub: `dropScratch` (drop the scratch tier, flush). -/
-def dropScratchL : FunDecl := lfn (vis) locals () { abort }
 /-- Stub: `andPinOk` on declaration record `i` (returns `1`/`0`). -/
 def andPinOkL : FunDecl := lfn (i) locals () { abort }
 /-- Stub: `installStepGo` on record `i` at view `vis`: returns the new view and the value group
@@ -128,18 +125,6 @@ the memo `promote_vg` left). -/
 def promoteNewL : FunDecl := lfn (k, vis, fresh) locals () { abort }
 /-- Stub: `checkValueGroup` at view `vis` on the value group record `g`. -/
 def checkValueGroupL : FunDecl := lfn (vis, g) locals () { abort }
-
-/-- The shape of a spec of a stub with no result that keeps `LoopR` (the view word is an
-argument of every stub, so that a caller's `vcgen` sees it). -/
-abbrev UnitSpec (f : FnName) (op : AM Unit) : Prop :=
-  ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck),
-    LoopR dn s₀.mem a₀ vis fe pend ds →
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) f [vis]
-    ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok op a₀ ∧ LoopR dn s'.mem (AM.st op a₀) vis fe pend ds; ⊤⦄
-
-theorem flushCaches_spec : UnitSpec dn ds p "flush_caches" flushCaches := sorry
-theorem enterScratch_spec : UnitSpec dn ds p "enter_scratch" enterScratch := sorry
-theorem dropScratch_spec : UnitSpec dn ds p "drop_scratch" dropScratch := sorry
 
 theorem andPinOk_spec :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
@@ -190,6 +175,96 @@ theorem checkValueGroup_spec :
       LoopR dn s'.mem (AM.st (checkValueGroup mode fe vg) a₀) vis fe pend ds; ⊤⦄ := sorry
 
 end stubs
+
+/-! ## The bracket: lane `whnf`'s `flush_caches`, `scratch_enter`, `scratch_drop` under `LoopR`
+
+They refine `flushCaches`/`enterScratch`/`dropScratch` under `CheckR` (`CoreRefine.lean`,
+`ScratchRefine.lean`) and write `CTL` words below 128 only, so the pending checks and the
+declaration records ride along. -/
+
+/-- The bracket's functions in a program. -/
+structure BracketProg (p : Prog) : Prop where
+  fl : FlushProg p
+  se : p.lookup "scratch_enter" = some scratchEnter
+  sd : p.lookup "scratch_drop" = some scratchDrop
+  sr : p.lookup "scratch_reset" = some scratchReset
+  bm : p.lookup "bm_clear" = some (memoClearG bmSch)
+  lf : p.lookup "lf_clear" = some (memoClearG lfSch)
+  im : p.lookup "if_clear" = some (memoClearG imSch)
+  fm : p.lookup "fm_clear" = some (memoClearG frSch)
+
+theorem PendR.frameLo {m m' : Mem} {pend : Array PendingCheck} {C : List Word}
+    (hf : MemFrame [] C m m') (hC : ∀ x ∈ C, x.toNat < 128) (h : PendR m pend) : PendR m' pend := by
+  have hP : m'.arr64 PEND = m.arr64 PEND := hf.1 _ (by simp) (by decide)
+  have hE : m'.arr64 EREC = m.arr64 EREC := hf.1 _ (by simp) (by decide)
+  have hc : rdW (m'.arr64 CTL) 130 = rdW (m.arr64 CTL) 130 :=
+    hf.2.1 130 (fun h' => by have := hC _ h'; simp at this)
+  refine ⟨by simp only [pendCount, hc]; exact h.count, fun j hj => ?_⟩
+  rw [← h.recs j hj]; simp only [decPend, hP, hE]
+
+theorem LoopR.of_lo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
+    {fe : IFEnv} {pend : Array PendingCheck} {ds : Array IDeclaration} {C : List Word}
+    (h : LoopR dn m a vis fe pend ds) (hC' : CheckR dn m' a' vis fe) (hf : MemFrame [] C m m')
+    (hC : ∀ x ∈ C, x.toNat < 128) : LoopR dn m' a' vis fe pend ds := by
+  have h1 : m'.arr64 DECL = m.arr64 DECL := hf.1 _ (by simp) (by decide)
+  have h2 : m'.arr64 DLP = m.arr64 DLP := hf.1 _ (by simp) (by decide)
+  exact ⟨hC', h.pend.frameLo hf hC, by rw [h1, h2]; exact h.decls⟩
+
+section bracket
+variable (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration) (p : Prog)
+  (hb : BracketProg p)
+include hb
+
+theorem flush_loop (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv)
+    (pend : Array PendingCheck) (hR : LoopR dn s₀.mem a₀ vis fe pend ds) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "flush_caches" []
+    ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok flushCaches a₀ ∧
+      LoopR dn s'.mem (AM.st flushCaches a₀) vis fe pend ds; ⊤⦄ := by
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, hok, hC⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (flushCaches_refinesC p hb.fl a₀ n s₀ dn vis fe hR.check)
+  obtain ⟨-, -, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun (flushCaches_spec p hb.fl n s₀)
+  subst hs
+  exact ⟨hloc, hok, hR.of_lo hC (by rw [hm]; exact flushMem_frame _) flushCtl_lt⟩
+
+theorem enter_loop (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv)
+    (pend : Array PendingCheck) (hR : LoopR dn s₀.mem a₀ vis fe pend ds) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "scratch_enter" []
+    ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok enterScratch a₀ ∧
+      LoopR dn s'.mem (AM.st enterScratch a₀) vis fe pend ds; ⊤⦄ := by
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, hok, hC⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (scratchEnter_refinesC p hb.se hb.sr hb.bm hb.lf hb.im hb.fm a₀ n s₀ dn vis fe hR.check)
+  obtain ⟨-, -, -, -, -, -, -, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (scratchEnter_spec p hb.se hb.sr hb.bm hb.lf hb.im hb.fm n s₀)
+  subst hs
+  exact ⟨hloc, hok, hR.of_lo hC (by rw [hm]; exact enterMem_frame _)
+    (fun x h => Nat.lt_trans (resetCtl_lt x h) (by decide))⟩
+
+theorem drop_loop (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv)
+    (pend : Array PendingCheck) (hR : LoopR dn s₀.mem a₀ vis fe pend ds) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "scratch_drop" []
+    ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok dropScratch a₀ ∧
+      LoopR dn s'.mem (AM.st dropScratch a₀) vis fe pend ds; ⊤⦄ := by
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, hok, hC⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (scratchDrop_refinesC p hb.sd hb.sr hb.fl a₀ n s₀ dn vis fe hR.check)
+  obtain ⟨-, -, -, -, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (scratchDrop_spec p hb.sd hb.sr hb.fl n s₀)
+  subst hs
+  have hf : MemFrame [] (flushCtl ++ resetCtl) s.mem s'.mem := by
+    rw [hm]
+    exact ((flushMem_frame _).mono (by simp) (fun x h => List.mem_append_left _ h)).trans
+      ((resetMem_frame _ 0).mono (by simp) (fun x h => List.mem_append_right _ h))
+  refine ⟨hloc, hok, hR.of_lo hC hf fun x h => ?_⟩
+  rcases List.mem_append.mp h with h | h
+  · exact flushCtl_lt x h
+  · exact Nat.lt_trans (resetCtl_lt x (List.mem_append_left _ h)) (by decide)
+
+end bracket
 
 theorem LoopR.restrict {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {pend : Array PendingCheck} {ds : Array IDeclaration}
@@ -473,7 +548,7 @@ def isNoneL : FunDecl := lfn (vis, v2) locals (k, z) {
   k := 0;
   if vis <= v2 { k := v2 - vis };
   z := call promote_new(k, v2, 1);
-  z := call drop_scratch(v2);
+  z := call scratch_drop();
   return 0
 }
 
@@ -498,15 +573,15 @@ def isSomeL : FunDecl := lfn (i, vis, v2, g) locals (k, z, g2) {
   g2 := call promote_vg(g, v2);
   z := call pend_push(g2, i, vis);
   z := call promote_new(k, v2, 0);
-  z := call drop_scratch(v2);
+  z := call scratch_drop();
   return 0
 }
 
 /-- `install_step(i, vis)`: `installStep` (the bracket, `installStepGo`, then one of the arms). -/
 @[l_impl ConRon.Arena.installStep]
 def installStepL : FunDecl := lfn (i, vis) locals (v2, f, g, z) {
-  z := call flush_caches(vis);
-  z := call enter_scratch(vis);
+  z := call flush_caches();
+  z := call scratch_enter();
   (v2, f, g) := call install_step_go(i, vis);
   if f == 0 { z := call is_none(vis, v2) } else { z := call is_some(i, vis, v2, g) };
   return v2
@@ -543,11 +618,11 @@ recorded view. -/
 @[l_impl ConRon.Arena.checkPending]
 def checkPendingL : FunDecl := lfn (j, vis) locals (g, v, z) {
   if 4611686018427387904 <= j { abort };
-  z := call enter_scratch(vis);
+  z := call scratch_enter();
   g := PEND.u64[3 * j];
   v := PEND.u64[3 * j + 2];
   z := call check_value_group(v, g);
-  z := call drop_scratch(vis);
+  z := call scratch_drop();
   return 0
 }
 
@@ -582,7 +657,7 @@ section skel
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
   (ds : Array IDeclaration) (p : Prog)
 
-theorem isNone_refines (hp : p.lookup "is_none" = some isNoneL) (n : Nat) (s₀ : St) (a₀ : AState)
+theorem isNone_refines (hb : BracketProg p) (hp : p.lookup "is_none" = some isNoneL) (n : Nat) (s₀ : St) (a₀ : AState)
     (vis v2 : Word) (fe' : IFEnv) (pend : Array PendingCheck)
     (hR : LoopR dn s₀.mem a₀ v2 fe' pend ds) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "is_none" [vis, v2]
@@ -598,8 +673,8 @@ theorem isNone_refines (hp : p.lookup "is_none" = some isNoneL) (n : Nat) (s₀ 
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         (promoteNew_spec dn ds p n · a₀ · fe' pend · · PMemo.empty),
-        (dropScratch_spec dn ds p n · (AM.st (promoteNew PMemo.empty coreWalkFuel
-          (fe'.visibleBelow - vis.toNat) fe') a₀) ·
+        (drop_loop dn ds p hb n · (AM.st (promoteNew PMemo.empty coreWalkFuel
+          (fe'.visibleBelow - vis.toNat) fe') a₀) v2
           (AM.res (promoteNew PMemo.empty coreWalkFuel (fe'.visibleBelow - vis.toNat) fe') a₀).2
           pend)] <;>
       finish [isNoneT]
@@ -623,7 +698,7 @@ theorem pendPush_spec (hp : p.lookup "pend_push" = some pendPushL) (n : Nat) (s�
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64] <;>
       finish [pendPushMem]
 
-theorem isSome_refines (hpp : p.lookup "pend_push" = some pendPushL)
+theorem isSome_refines (hb : BracketProg p) (hpp : p.lookup "pend_push" = some pendPushL)
     (hp : p.lookup "is_some" = some isSomeL) (n : Nat) (s₀ : St) (a₀ : AState)
     (i vis v2 g : Word) (fe' : IFEnv) (pend : Array PendingCheck) (vg : ValueGroup)
     (hg : decVG (s₀.mem.arr64 EREC) g.toNat = some vg)
@@ -648,11 +723,11 @@ theorem isSome_refines (hpp : p.lookup "pend_push" = some pendPushL)
         (pendPush_spec dn ds p hpp n · (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀) v2 fe' pend ·
           · · (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2),
         (promoteNew_spec dn ds p n · (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀) · fe' (pend.push ⟨(AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2, i.toNat, vis.toNat⟩) · · (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1),
-        (dropScratch_spec dn ds p n · (AM.st (promoteNew (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1 coreWalkFuel (fe'.visibleBelow - vis.toNat) fe') (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀)) · (AM.res (promoteNew (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1 coreWalkFuel (fe'.visibleBelow - vis.toNat) fe') (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀)).2 (pend.push ⟨(AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2, i.toNat, vis.toNat⟩))] <;>
+        (drop_loop dn ds p hb n · (AM.st (promoteNew (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1 coreWalkFuel (fe'.visibleBelow - vis.toNat) fe') (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀)) v2 (AM.res (promoteNew (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1 coreWalkFuel (fe'.visibleBelow - vis.toNat) fe') (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀)).2 (pend.push ⟨(AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2, i.toNat, vis.toNat⟩))] <;>
       finish [isSomeT]
 
 /-- `install_step`, stated over the pieces of `installStep` (`installStep_ok` assembles them). -/
-theorem installStep_pieces (hpp : p.lookup "pend_push" = some pendPushL)
+theorem installStep_pieces (hb : BracketProg p) (hpp : p.lookup "pend_push" = some pendPushL)
     (hpn : p.lookup "is_none" = some isNoneL) (hps : p.lookup "is_some" = some isSomeL)
     (hp : p.lookup "install_step" = some installStepL) (n : Nat) (s₀ : St) (a₀ : AState)
     (i vis : Word) (fe : IFEnv) (pend : Array PendingCheck) (hi : i.toNat < ds.size)
@@ -679,17 +754,17 @@ theorem installStep_pieces (hpp : p.lookup "pend_push" = some pendPushL)
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        (flushCaches_spec dn ds p n · a₀ · fe pend),
-        (enterScratch_spec dn ds p n · (AM.st flushCaches a₀) · fe pend),
+        (flush_loop dn ds p hb n · a₀ vis fe pend),
+        (enter_loop dn ds p hb n · (AM.st flushCaches a₀) vis fe pend),
         (installStepGo_spec mode pins dn ds p n · (AM.st enterScratch (AM.st flushCaches a₀)) · fe pend · ·),
-        (isNone_refines dn ds p hpn n · (AM.st (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))) · · (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).1 pend),
-        (isSome_refines dn ds p hpp hps n · (AM.st (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))) · · · · (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).1 pend ((AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).2.getD default))] <;>
+        (isNone_refines dn ds p hb hpn n · (AM.st (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))) · · (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).1 pend),
+        (isSome_refines dn ds p hb hpp hps n · (AM.st (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))) · · · · (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).1 pend ((AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).2.getD default))] <;>
       -- the view `vis` is read after three calls: four `LocEq` hops (depth, not search)
       finish (gen := 20) [vgOut]
 
 /-- **`install_step` refines `installStep`** (from the stub specs). -/
 @[refines_part ConRon.Arena.installStep "skeleton, from the stub specs"]
-theorem installStep_refines (hpp : p.lookup "pend_push" = some pendPushL)
+theorem installStep_refines (hb : BracketProg p) (hpp : p.lookup "pend_push" = some pendPushL)
     (hpn : p.lookup "is_none" = some isNoneL) (hps : p.lookup "is_some" = some isSomeL)
     (hp : p.lookup "install_step" = some installStepL) (n : Nat) (s₀ : St) (a₀ : AState)
     (i vis : Word) (fe : IFEnv) (pend : Array PendingCheck) (hi : i.toNat < ds.size)
@@ -698,7 +773,7 @@ theorem installStep_refines (hpp : p.lookup "pend_push" = some pendPushL)
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (installStep mode pins i.toNat fe pend (dsAt ds i)) a₀ ∧
       LoopR dn s'.mem (AM.st (installStep mode pins i.toNat fe pend (dsAt ds i)) a₀) (r.headD 0) (AM.res (installStep mode pins i.toNat fe pend (dsAt ds i)) a₀).1 (AM.res (installStep mode pins i.toNat fe pend (dsAt ds i)) a₀).2 ds; ⊤⦄ := by
   have hv := hR.vis
-  refine triple_post (installStep_pieces mode pins dn ds p hpp hpn hps hp n s₀ a₀ i vis fe pend hi hR)
+  refine triple_post (installStep_pieces mode pins dn ds p hb hpp hpn hps hp n s₀ a₀ i vis fe pend hi hR)
     fun r s' ⟨hl, h1, h2, h3, h4, h5⟩ => ?_
   rw [← hv] at h4 h5
   obtain ⟨o, st, rs⟩ := installStep_ok mode pins i.toNat fe pend (dsAt ds i) a₀ h1 h2 h3 h4
@@ -707,7 +782,7 @@ theorem installStep_refines (hpp : p.lookup "pend_push" = some pendPushL)
 /-- **`install_decl_step` refines `installDeclStep`**: a returning run is the twin's `.ok` with
 the position advanced. -/
 @[refines_part ConRon.Arena.installDeclStep "skeleton, from the stub specs"]
-theorem installDeclStep_refines (hpp : p.lookup "pend_push" = some pendPushL)
+theorem installDeclStep_refines (hb : BracketProg p) (hpp : p.lookup "pend_push" = some pendPushL)
     (hpn : p.lookup "is_none" = some isNoneL) (hps : p.lookup "is_some" = some isSomeL)
     (hpi : p.lookup "install_step" = some installStepL)
     (hp : p.lookup "install_decl_step" = some installDeclStepL) (n : Nat) (s₀ : St) (a₀ : AState)
@@ -726,7 +801,7 @@ theorem installDeclStep_refines (hpp : p.lookup "pend_push" = some pendPushL)
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         (andPinOk_spec dn ds p n · a₀ vis fe pend · ·),
-        (installStep_refines mode pins dn ds p hpp hpn hps hpi n · (AM.st (andPinOk (dsAt ds i)) a₀) · · fe pend ·)] <;>
+        (installStep_refines mode pins dn ds p hb hpp hpn hps hpi n · (AM.st (andPinOk (dsAt ds i)) a₀) · · fe pend ·)] <;>
       finish
 
 theorem drop_cons_dsAt (ds : Array IDeclaration) (i : Word) (hi : i.toNat < ds.size)
@@ -765,7 +840,8 @@ variable (hpp : p.lookup "pend_push" = some pendPushL)
     (hpd : p.lookup "install_decl_step" = some installDeclStepL)
     (hpg : p.lookup "install_fold_go" = some installFoldGoL)
     (hpx : p.lookup "install_fold_next" = some installFoldNextL) (hsz : ds.size < 2 ^ 63)
-include hpp hpn hps hpi hpd hpg hpx hsz
+    (hb : BracketProg p)
+include hpp hpn hps hpi hpd hpg hpx hsz hb
 
 theorem foldGo_step (n : Nat) (ih : FoldNextSpec mode pins dn ds p n) :
     FoldGoSpec mode pins dn ds p (n + 1) := by
@@ -829,7 +905,7 @@ theorem foldNext_step (n : Nat) (ih : FoldGoSpec mode pins dn ds p n) :
     simp only [callFn, installFoldNextL]
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, Locals.init,
-        (installDeclStep_refines mode pins dn ds p hpp hpn hps hpi hpd n · a₀ · · fe pend ·),
+        (installDeclStep_refines mode pins dn ds p hb hpp hpn hps hpi hpd n · a₀ · · fe pend ·),
         (ih · (AM.st (installDeclStep mode pins (i.toNat, fe, pend) (dsAt ds i)) a₀) · · · (AM.res (installStep mode pins i.toNat fe pend (dsAt ds i)) (AM.st (andPinOk (dsAt ds i)) a₀)).1 (AM.res (installStep mode pins i.toNat fe pend (dsAt ds i)) (AM.st (andPinOk (dsAt ds i)) a₀)).2)] <;>
       finish
   exact triple_post inner fun r s' ⟨h0, h1, h2, h3⟩ => ⟨h0, hcons _ _ (i + 1) rfl h1 h2 h3⟩
@@ -847,8 +923,8 @@ theorem installFoldGo_refines (n : Nat) :
     · intro s₀ a₀ i cnt vis fe pend _ _ _; rw [invoke_eq _ hpx]; simp only [callFn]
       vcgen [exec] <;> grind
   | succ n ih =>
-    exact ⟨foldGo_step mode pins dn ds p hpp hpn hps hpi hpd hpg hpx hsz n ih.2,
-      foldNext_step mode pins dn ds p hpp hpn hps hpi hpd hpg hpx hsz n ih.1⟩
+    exact ⟨foldGo_step mode pins dn ds p hpp hpn hps hpi hpd hpg hpx hsz hb n ih.2,
+      foldNext_step mode pins dn ds p hpp hpn hps hpi hpd hpg hpx hsz hb n ih.1⟩
 
 end fold
 
@@ -876,7 +952,7 @@ theorem pend_words (m : Mem) (pend : Array PendingCheck) (hP : PendR m pend) (j 
 
 /-- **`check_pending` refines `checkPending`** (from the stub specs). -/
 @[refines_part ConRon.Arena.checkPending "skeleton, from the stub specs"]
-theorem checkPending_refines (hp : p.lookup "check_pending" = some checkPendingL) (n : Nat)
+theorem checkPending_refines (hb : BracketProg p) (hp : p.lookup "check_pending" = some checkPendingL) (n : Nat)
     (s₀ : St) (a₀ : AState) (j vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
     (hj : j.toNat < pend.size) (hR : LoopR dn s₀.mem a₀ vis fe pend ds) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_pending" [j, vis]
@@ -903,9 +979,9 @@ theorem checkPending_refines (hp : p.lookup "check_pending" = some checkPendingL
     | succ n =>
       sym only [lang_grind, arena_grind] =>
         vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-          (enterScratch_spec dn ds p n · a₀ · fe pend),
+          (enter_loop dn ds p hb n · a₀ vis fe pend),
           (checkValueGroup_spec mode dn ds p n · (AM.st enterScratch a₀) · (fe.restrictTo (pdAt pend j).vis) pend · (pdAt pend j).vg),
-          (dropScratch_spec dn ds p n · (AM.st (checkValueGroup mode (fe.restrictTo (pdAt pend j).vis) (pdAt pend j).vg) (AM.st enterScratch a₀)) · fe pend)] <;>
+          (drop_loop dn ds p hb n · (AM.st (checkValueGroup mode (fe.restrictTo (pdAt pend j).vis) (pdAt pend j).vg) (AM.st enterScratch a₀)) vis fe pend)] <;>
         finish
   exact triple_post inner fun r s' ⟨h0, h1, h2, h3, h4⟩ => by
     obtain ⟨o, st⟩ := checkPending_ok mode fe (pdAt pend j) a₀ h1 h2 h3
@@ -941,8 +1017,8 @@ theorem drop_cons_pdAt (j : Word) (hj : j.toNat < pend.size) (h1 : (j + 1).toNat
 section cp
 variable (hpc : p.lookup "check_pending" = some checkPendingL)
     (hpg : p.lookup "check_pending_go" = some checkPendingGoL)
-    (hpx : p.lookup "check_pending_next" = some checkPendingNextL)
-include hpc hpg hpx
+    (hpx : p.lookup "check_pending_next" = some checkPendingNextL) (hb : BracketProg p)
+include hpc hpg hpx hb
 
 theorem cpGo_step (n : Nat) (ih : CPNextSpec mode dn ds p fe pend n) :
     CPGoSpec mode dn ds p fe pend (n + 1) := by
@@ -994,7 +1070,7 @@ theorem cpNext_step (n : Nat) (ih : CPGoSpec mode dn ds p fe pend n) :
     simp only [callFn, checkPendingNextL]
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        (checkPending_refines mode dn ds p hpc n · a₀ · · fe pend ·),
+        (checkPending_refines mode dn ds p hb hpc n · a₀ · · fe pend ·),
         (ih · (AM.st (checkPending mode fe (pdAt pend j)) a₀) · · ·)] <;>
       finish
   exact triple_post inner fun r s' ⟨h0, h62, h2, h3⟩ => ⟨h0, hcons h62 _ (j + 1) rfl h2 h3⟩
@@ -1012,15 +1088,15 @@ theorem checkPendingGo_refines (n : Nat) :
     · intro s₀ a₀ j cnt vis _ _ _; rw [invoke_eq _ hpx]; simp only [callFn]
       vcgen [exec] <;> grind
   | succ n ih =>
-    exact ⟨cpGo_step mode dn ds p fe pend hpc hpg hpx n ih.2,
-      cpNext_step mode dn ds p fe pend hpc hpg hpx n ih.1⟩
+    exact ⟨cpGo_step mode dn ds p fe pend hpc hpg hpx hb n ih.2,
+      cpNext_step mode dn ds p fe pend hpc hpg hpx hb n ih.1⟩
 
 end cp
 end phaseB
 
 /-- **`install_then_check` refines `installThenCheck`** (from the stub specs): a returning run
 is the twin's accepting fold, its environment related at the returned view. -/
-theorem installThenCheck_refines (hpp : p.lookup "pend_push" = some pendPushL)
+theorem installThenCheck_refines (hb : BracketProg p) (hpp : p.lookup "pend_push" = some pendPushL)
     (hpn : p.lookup "is_none" = some isNoneL) (hps : p.lookup "is_some" = some isSomeL)
     (hpi : p.lookup "install_step" = some installStepL)
     (hpd : p.lookup "install_decl_step" = some installDeclStepL)
@@ -1061,9 +1137,9 @@ theorem installThenCheck_refines (hpp : p.lookup "pend_push" = some pendPushL)
     | succ n =>
       sym only [lang_grind, arena_grind] =>
         vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-          ((installFoldGo_refines mode pins dn ds p hpp hpn hps hpi hpd hpg hpx hsz n).1 · a₀ · · ·
+          ((installFoldGo_refines mode pins dn ds p hpp hpn hps hpi hpd hpg hpx hsz hb n).1 · a₀ · · ·
             (mkIFEnv IEnv.empty) #[]),
-          ((checkPendingGo_refines mode dn ds p (foldFe (AM.res (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀)) (foldPend (AM.res (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀)) hpc hpcg hpcx n).1 ·
+          ((checkPendingGo_refines mode dn ds p (foldFe (AM.res (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀)) (foldPend (AM.res (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀)) hpc hpcg hpcx hb n).1 ·
             (AM.st (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀) · · ·)] <;>
         finish
   exact triple_post inner fun r s' ⟨h0, h1, h2, h3⟩ => by

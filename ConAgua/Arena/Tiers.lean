@@ -443,13 +443,22 @@ theorem EnvR.congr {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word
   · rw [hP, hR]; exact h.vals n hn (by rwa [← hC])
   · rw [← h.consts]; simp only [envConsts, envLen, hc, hR, hN]
 
-theorem EnvR.frame {dn : NIdx → Option ConLeche.Name} {A : List ArrId} {C : List Word}
+/-- The frame over exactly what `EnvR` reads: arrays 132‥136 and `CTL[128]`. -/
+theorem EnvR.frameN {dn : NIdx → Option ConLeche.Name} {A : List ArrId} {C : List Word}
     {m m' : Mem} {vis : Word} {fe : IFEnv}
     (hA : AvoidA 132 137 A) (hC : AvoidC 128 129 C) (hf : MemFrame A C m m') (h : EnvR dn m vis fe) :
     EnvR dn m' vis fe :=
   h.congr (fun b h1 h2 => hf.1 b (fun hm => by have := hA _ hm; simp only [ArrId] at this; omega)
     (by simp only [CTL, ArrId]; omega))
     (hf.2.1 128 (fun hm => by have := hC _ hm; simp at this))
+
+theorem EnvR.frame {dn : NIdx → Option ConLeche.Name} {A : List ArrId} {C : List Word}
+    {m m' : Mem} {vis : Word} {fe : IFEnv}
+    (hA : AvoidA 132 144 A) (hC : AvoidC 128 136 C) (hf : MemFrame A C m m') (h : EnvR dn m vis fe) :
+    EnvR dn m' vis fe :=
+  h.frameN (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega)
+    (fun x hx => by have := hC x hx; omega) hf
+
 
 
 
@@ -488,7 +497,7 @@ theorem CheckR.frame_hi {dn : NIdx → Option ConLeche.Name} {A : List ArrId} {C
     have := hC x hx; omega)
   refine ⟨⟨?_, ?_⟩, h.core.frame (hA' _ _ (by decide)) (hC' _ _ (by decide)) hf,
     h.pins.frame (hA' _ _ (by decide)) hf,
-    h.env.frame (hA' _ _ (by decide)) (hC' _ _ (by decide)) hf⟩
+    h.env.frameN (hA' _ _ (by decide)) (hC' _ _ (by decide)) hf⟩
   · exact ArenaR.frame_ext A C (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega)
       (fun x hx => by have := hC x hx; omega) m m' hf a h.arena.1
   · exact DerR.frame m m' a h.arena.2 (fun B hB => hf.1 B (fun hm => by
