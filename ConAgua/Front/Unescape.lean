@@ -56,7 +56,7 @@ def escSur : FunDecl := lfn (j, e, v) locals (c, d, f, ok, w) {
     (ok, w) := call hex3(j + 9, e);
     if ok != 0 {
       if w < 3072 { return (65533, j + 6) };
-      return ((((v & 1023) << 10) | (w & 1023)) + 65536, j + 12)
+      return (((v & 1023) << 10) + (w & 1023) + 65536, j + 12)
     }
   };
   return (65533, j + 6)
@@ -80,7 +80,7 @@ def escOne : FunDecl := lfn (j, e) locals (d, ok, v, cp, jn) {
 }
 
 /-- The surrogate pair's code point. -/
-def pairCp (v w : Word) : Word := (((v &&& 1023) <<< 10) ||| (w &&& 1023)) + 65536
+def pairCp (v w : Word) : Word := ((v &&& 1023) <<< 10) + (w &&& 1023) + 65536
 
 /-- `esc_sur(j, e, v)`: after a high surrogate `v` at `j`, the code point and where the body
 continues. -/
@@ -118,33 +118,33 @@ def utf8Put : FunDecl := lfn (top, k, cp) locals (q) {
   };
   if cp < 2048 {
     if len(POOL.u64) <= q + 1 { abort };
-    POOL.u64[q] := 192 | (cp >> 6);
-    POOL.u64[q + 1] := 128 | (cp & 63);
+    POOL.u64[q] := 192 + (cp >> 6);
+    POOL.u64[q + 1] := 128 + (cp & 63);
     return k + 2
   };
   if cp < 65536 {
     if len(POOL.u64) <= q + 2 { abort };
-    POOL.u64[q] := 224 | (cp >> 12);
-    POOL.u64[q + 1] := 128 | ((cp >> 6) & 63);
-    POOL.u64[q + 2] := 128 | (cp & 63);
+    POOL.u64[q] := 224 + (cp >> 12);
+    POOL.u64[q + 1] := 128 + ((cp >> 6) & 63);
+    POOL.u64[q + 2] := 128 + (cp & 63);
     return k + 3
   };
   if len(POOL.u64) <= q + 3 { abort };
-  POOL.u64[q] := 240 | (cp >> 18);
-  POOL.u64[q + 1] := 128 | ((cp >> 12) & 63);
-  POOL.u64[q + 2] := 128 | ((cp >> 6) & 63);
-  POOL.u64[q + 3] := 128 | (cp & 63);
+  POOL.u64[q] := 240 + (cp >> 18);
+  POOL.u64[q + 1] := 128 + ((cp >> 12) & 63);
+  POOL.u64[q + 2] := 128 + ((cp >> 6) & 63);
+  POOL.u64[q + 3] := 128 + (cp & 63);
   return k + 4
 }
 
 /-- The UTF-8 bytes of the code point `cp`, as words (`utf8_put`'s). -/
 def encW (cp : Word) : List Word :=
   if cp < 128 then [cp]
-  else if cp < 2048 then [(192 : Word) ||| (cp >>> 6), (128 : Word) ||| (cp &&& 63)]
+  else if cp < 2048 then [(192 : Word) + (cp >>> 6), (128 : Word) + (cp &&& 63)]
   else if cp < 65536 then
-    [(224 : Word) ||| (cp >>> 12), (128 : Word) ||| ((cp >>> 6) &&& 63), (128 : Word) ||| (cp &&& 63)]
-  else [(240 : Word) ||| (cp >>> 18), (128 : Word) ||| ((cp >>> 12) &&& 63),
-    (128 : Word) ||| ((cp >>> 6) &&& 63), (128 : Word) ||| (cp &&& 63)]
+    [(224 : Word) + (cp >>> 12), (128 : Word) + ((cp >>> 6) &&& 63), (128 : Word) + (cp &&& 63)]
+  else [(240 : Word) + (cp >>> 18), (128 : Word) + ((cp >>> 12) &&& 63),
+    (128 : Word) + ((cp >>> 6) &&& 63), (128 : Word) + (cp &&& 63)]
 
 /-- The words `xs` written to the pool from `q` on. -/
 def wrs (m : Mem) (q : Word) : List Word → Mem
