@@ -1,0 +1,943 @@
+/-
+# `ConRon.Bridge.ExprOps.Leaves` — Theorem 1 for the `fvar` leaf list
+
+DESIGN §8.2's Theorem 1 at the four twins of `Arena/ExprOps.lean` that are
+about the `fvar` LEAVES of a term — `fvarLeaves` (`:730`), `fvarLeavesGo`
+(`:876`), `fvarLeavesFast` (`:906`) and `leafMem` (`:914`) — and the shared
+layer its companion `ExprOps/Guards.lean` (the two memoized guards
+`wscopedBGo`/`wscopedBFast` and `leavesSubGo`/`leafGuard`) is written
+against.  Both are companions of `ExprOps/Walks.lean` (the unmemoized
+`Bool`/`Nat` walks) and `ExprOps/Ranges.lean` (the packed range fields).
+
+## What this file adds that `Bridge/Rel.lean` does not have
+
+1. **A denotation for a leaf LIST.**  `fvarLeaves`'s answer is a
+   `List (Nat × EIdx)` and con-leche's is a `List (Nat × Expr)`, so the
+   answer relation is `RelFL` over `denoteLeaves` below — `RelEL`'s shape at
+   a list of *pairs*, and with no target store because nothing here interns.
+   **`denoteLeaves`, its equations, `denoteLeaves_append` and `RelFL` with
+   its ten step lemmas morally belong in `Bridge/Rel.lean`.**
+
+   The ten step lemmas are **not** decoration: `denoteLeaves_append` tagged
+   `@[grind →]` and left to the closer does not terminate in any usable
+   time — its three list variables let every pair of known
+   `denoteLeaves` facts breed another, and the appended facts breed again.
+   A list answer needs per-arm step lemmas, monomorphic at the walk's own
+   pure function, each registered with the pattern of its arm.
+
+2. **A memo invariant for a table that is an ARGUMENT.**  `fvarLeavesGo`'s
+   `seen` set and `Guards.lean`'s two memos are explicit arguments and not
+   `AState` fields (their signatures say so: `Std.HashMap EIdx Unit`,
+   `Std.HashMap (EIdx × Nat) Bool`, `Std.HashMap EIdx Bool`), so their
+   invariants are hypotheses about those arguments and **not** any of
+   `Bridge/StateOK.lean`'s thirteen.  They are stated in exactly StateOK's
+   shape (`∀ k v, tbl[k]? = some v → …`); `MemoVDOK` below is the one generic
+   shape `StateOK.lean` lacks (a cursor in the key, a representation-free
+   value) with StateOK's own four lemmas, and **it belongs there**.
+
+3. **The fvar-range cutoff's licence.**  Each memoized walk short-circuits
+   on `fvarOfData (← derivedE h) == 0`, which is con-leche's own
+   `e.fvarB == 0`.  `hasFvar_false_of_derived` is `EStore.derived_exact` plus
+   `Expr.fvarBRaw_exact` plus `Expr.hasFvar_eq_false_iff`; the field cannot
+   saturate at zero (`satRange` is 32767), so there is no saturated branch to
+   consider and the walks may cut unconditionally on the packed read.
+
+## Statements with no metavariable in them (template rule 4)
+
+Every relation below quantifies the DENOTATIONS inside itself and takes
+`isSome` as the precondition — `RelFL`'s own shape, and `LeavesEq` /
+`SeenOK` / `Guards.lean`'s `LSubAt` are written the same way.  This is not
+style: `fvarLeavesFast`'s answer list is the base of `leafGuard`'s membership
+test, so a spec that named the base list as a PARAMETER would leave the
+verification-condition generator a spec parameter the program does not
+determine (a side goal `denoteLeaves s.store bl = some ?bl'` with a
+metavariable in it, which the closer cannot take — DESIGN, task #97s
+template rule 4).
+
+## `fvarLeavesGo`'s `seen` set, and the rank
+
+`fvarLeavesGo`'s memo is a visited SET whose entries are `Unit`, and an entry
+means *"this node's leaves are already in `acc`"* — a statement about the
+ACCUMULATOR, not about the node.  con-leche says so at length
+(`Cached/ExprOpsC.lean:1093-1128`, "the one walk of the tree whose memo is
+not the `withExclusive` idiom, and why") and verifies it against a **gray**
+invariant (`SeenInv`, `Verify/Cached/GuardsC.lean`): every key of `seen`
+either has all its leaves in `acc` already or is being processed by an
+ancestor of the current call.  The twin inserts `h` into `seen` BEFORE
+walking its children, so the plain invariant is violated for exactly the
+descent path, and discharging the gray case needs the acyclicity of the
+store — `StoreWF`'s rank witness.
+
+This needs **no second induction**: the rank enters as a
+second *parameter of the invariant* (`SeenOK`, §6 — a key is gray when its
+rank is above the current subject's) and the fuel induction is unchanged.
+`EWFAt.childOK`'s rank clause is the only part of `StoreWF` used, and the rank
+is quantified INSIDE `SeenOK`, so no statement in the file takes it as an
+argument and `fvarLeavesFast_spec` — the one `ExprOps/Guards.lean` consumes —
+does not mention it.
+
+Because the answer is a SET and not a list — a shared subterm is walked once,
+where `Expr.fvarLeaves` re-concatenates its leaves per occurrence — that
+statement is membership equivalence and not list equality, and it is not a
+weakening: `leafGuard`, the one consumer, uses the list only as a membership
+base (`leafMem`), and `Guards.lean`'s `leavesSubSpec_congr` is what makes
+that formally so.
+-/
+import ConRon.Bridge.Specs
+import ConRon.Bridge.Grind
+
+namespace ConRon.Bridge.ExprOps
+
+set_option autoImplicit false
+set_option experimental.vcgen true
+set_option maxHeartbeats 2000000
+
+open ConLeche ConRon.Arena ConRon.Bridge Std.WP
+open scoped Lean.Order
+
+/-! ## 1. The leaf list's denotation -/
+
+/-- con-leche: none — a list of `fvar` leaves denotes, pointwise. -/
+def denoteLeaves (st : EStore) : List (Nat × EIdx) → Option (List (Nat × Expr))
+  | [] => some []
+  | (i, t) :: rest =>
+    match denoteE st t, denoteLeaves st rest with
+    | some t', some rest' => some ((i, t') :: rest')
+    | _, _ => none
+
+/-- con-leche: none — `denoteLeaves` at the empty list. -/
+theorem denoteLeaves_nil {st : EStore} : denoteLeaves st [] = some [] := rfl
+
+/-- con-leche: none — `denoteLeaves` at a cons, with the child's denotation as
+a hypothesis so nothing has to be guessed. -/
+theorem denoteLeaves_cons {st : EStore} {i : Nat} {t : EIdx}
+    {rest : List (Nat × EIdx)} {t' : Expr} {rest' : List (Nat × Expr)}
+    (ht : denoteE st t = some t') (hr : denoteLeaves st rest = some rest') :
+    denoteLeaves st ((i, t) :: rest) = some ((i, t') :: rest') := by
+  simp only [denoteLeaves, ht, hr]
+
+/-- con-leche: ConLeche/Verify/SimI.lean:250 RelE — the answer relation at a
+LEAF-LIST result: `Bridge/Rel.lean`'s `RelEL` with `denoteEList` replaced by
+`denoteLeaves` and the target store dropped. -/
+def RelFL (f : Expr → List (Nat × Expr)) (st : EStore) (c : EIdx)
+    (rs : List (Nat × EIdx)) : Prop :=
+  ∀ e, denoteE st c = some e → denoteLeaves st rs = some (f e)
+
+/-! ## 2. The generic memo invariant this tier needs and `StateOK.lean` lacks
+
+`MemoVOK` is `StateOK.lean`'s handle-keyed, value-valued invariant, and
+`Guards.lean`'s `leavesSubGo` memo is that shape.  `wscopedBGo`'s key carries
+the CURSOR (its `fvar` arm descends at the annotation's own index, so the
+answer is not a function of the node alone), which is `MemoOK`'s key with
+`MemoVOK`'s value — a fourth shape, here with `StateOK.lean`'s four
+lemmas. -/
+
+/-- con-leche: ConLeche/Kernel/ExprOps.lean:1497-1499 MemoBInv — the generic
+CURSOR-keyed, value-valued memo invariant. -/
+def MemoVDOK {α : Type} (f : Nat → Expr → α)
+    (tbl : Std.HashMap (EIdx × Nat) α) (st : EStore) : Prop :=
+  ∀ (k : EIdx × Nat) (v : α), tbl[k]? = some v →
+    ∃ e, denoteE st k.1 = some e ∧ v = f k.2 e
+
+/-- con-leche: none — a dropped table satisfies the invariant. -/
+theorem MemoVDOK.of_empty {α : Type} {f : Nat → Expr → α}
+    {tbl : Std.HashMap (EIdx × Nat) α} {st : EStore} (h : tbl = ∅) :
+    MemoVDOK f tbl st := by
+  intro k v hk; rw [h] at hk; simp at hk
+
+/-- con-leche: ConLeche/Kernel/ExprOps.lean:1497-1499 MemoBInv — **the memo
+hit**, delivered as the answer relation so the caller never unfolds the
+invariant. -/
+@[grind →] theorem MemoVDOK.get {α : Type} {f : Nat → Expr → α}
+    {tbl : Std.HashMap (EIdx × Nat) α} {st : EStore} {k : EIdx × Nat} {v : α}
+    (hm : MemoVDOK f tbl st) (hk : tbl[k]? = some v) :
+    RelV (f k.2) st k.1 v := by
+  intro e he
+  obtain ⟨e', h1, h2⟩ := hm k v hk
+  rw [he] at h1
+  obtain rfl := Option.some.inj h1
+  exact h2
+
+/-- con-leche: ConLeche/Kernel/ExprOps.lean:1503-1505 MemoBInv.insert — the
+invariant-carrying insert (template rule 6). -/
+theorem MemoVDOK.insert {α : Type} {f : Nat → Expr → α}
+    {tbl tbl' : Std.HashMap (EIdx × Nat) α} {st : EStore} {k : EIdx × Nat}
+    {v : α} (hm : MemoVDOK f tbl st) (hc : tbl' = tbl.insert k v)
+    (hk : (denoteE st k.1).isSome = true) (hr : RelV (f k.2) st k.1 v) :
+    MemoVDOK f tbl' st := by
+  obtain ⟨e, he⟩ := Option.isSome_iff_exists.mp hk
+  intro k' v' hk'
+  rw [hc, Std.HashMap.getElem?_insert] at hk'
+  split at hk'
+  · rename_i hbeq
+    cases hk'
+    obtain rfl := eq_of_beq hbeq
+    exact ⟨e, he, hr e he⟩
+  · exact hm k' v' hk'
+
+/-! `MemoVDOK` in `Bridge/Grind.lean` §5's shape: the hit at a probe the
+program matched, the insert at the update's table term, the dropped table,
+each guarded so that it fires there only. -/
+
+grind_pattern [bridge_grind] MemoVDOK.get => MemoVDOK f tbl st, tbl[k]?, some v where
+  guard tbl[k]? = some v
+
+grind_pattern [bridge_grind] MemoVDOK.insert => MemoVDOK f tbl' st, tbl.insert k v where
+  guard tbl' = tbl.insert k v
+
+grind_pattern [bridge_grind] MemoVDOK.of_empty => MemoVDOK f tbl st where
+  guard tbl = ∅
+
+/-! ## 3. The pure facts behind the fvar-range cutoff
+
+Two structural inductions on `Expr`, plus `Expr.hasFvar_eq_false_iff` and
+`Expr.fvarBRaw_exact` to connect them to the packed field. -/
+
+/-- con-leche: ConLeche/Kernel/ExprOps.lean:821-833 fvarLeaves — an
+`fvar`-free term has no reachable leaf.  (`hasFvar` answers `true` at an
+`fvar` node without descending its annotation, and `fvarLeaves` produces only
+at an `fvar` node, so the two agree on emptiness.) -/
+theorem fvarLeaves_nil_of_hasFvar :
+    ∀ e : Expr, e.hasFvar = false → Expr.fvarLeaves e = [] := by
+  intro e
+  induction e with
+  | bvar _ | sort _ | const _ _ | lit _ => intro _; simp [Expr.fvarLeaves]
+  | fvar k t _ => intro h; simp [Expr.hasFvar] at h
+  | app f a ihf iha =>
+    intro h
+    simp only [Expr.hasFvar, Bool.or_eq_false_iff] at h
+    simp [Expr.fvarLeaves, ihf h.1, iha h.2]
+  | lam ty b iht ihb =>
+    intro h
+    simp only [Expr.hasFvar, Bool.or_eq_false_iff] at h
+    simp [Expr.fvarLeaves, iht h.1, ihb h.2]
+  | forallE ty b iht ihb =>
+    intro h
+    simp only [Expr.hasFvar, Bool.or_eq_false_iff] at h
+    simp [Expr.fvarLeaves, iht h.1, ihb h.2]
+  | letE ty v b iht ihv ihb =>
+    intro h
+    simp only [Expr.hasFvar, Bool.or_eq_false_iff] at h
+    simp [Expr.fvarLeaves, iht h.1.1, ihv h.1.2, ihb h.2]
+  | proj n i s ih =>
+    intro h
+    simp only [Expr.hasFvar] at h
+    simp [Expr.fvarLeaves, ih h]
+
+/-- con-leche: ConLeche/Kernel/ExprOps.lean:835-861 wscopedB — an `fvar`-free
+term is in scope at every depth.  This is `wscopedBP_cut`'s content at the
+Kernel tier. -/
+theorem wscopedB_of_hasFvar :
+    ∀ (e : Expr) (d : Nat), e.hasFvar = false → Expr.wscopedB d e = true := by
+  intro e
+  induction e with
+  | bvar _ | sort _ | const _ _ | lit _ => intro _ _; simp [Expr.wscopedB]
+  | fvar k t _ => intro _ h; simp [Expr.hasFvar] at h
+  | app f a ihf iha =>
+    intro d h
+    simp only [Expr.hasFvar, Bool.or_eq_false_iff] at h
+    simp [Expr.wscopedB, ihf d h.1, iha d h.2]
+  | lam ty b iht ihb =>
+    intro d h
+    simp only [Expr.hasFvar, Bool.or_eq_false_iff] at h
+    simp [Expr.wscopedB, iht d h.1, ihb d h.2]
+  | forallE ty b iht ihb =>
+    intro d h
+    simp only [Expr.hasFvar, Bool.or_eq_false_iff] at h
+    simp [Expr.wscopedB, iht d h.1, ihb d h.2]
+  | letE ty v b iht ihv ihb =>
+    intro d h
+    simp only [Expr.hasFvar, Bool.or_eq_false_iff] at h
+    simp [Expr.wscopedB, iht d h.1.1, ihv d h.1.2, ihb d h.2]
+  | proj n i s ih =>
+    intro d h
+    simp only [Expr.hasFvar] at h
+    simp [Expr.wscopedB, ih d h]
+
+/-- con-leche: ConLeche/Kernel/ExprOps.lean:1590 fvarBRaw_exact — the CUTOFF
+as the arena tests it: a zero fvar-range field means an `fvar`-free term.  The
+field cannot be saturated at zero (`satRange` is 32767), so no saturated
+branch is possible here — which is why the three memoized walks may cut
+unconditionally on the packed read. -/
+theorem hasFvar_false_of_derived {st : EStore} (hwf : StoreWF st) {h : EIdx}
+    {e : Expr} (he : denoteE st h = some e)
+    (h0 : (fvarOfData (st.derived h)).toNat = 0) : e.hasFvar = false := by
+  have hd := EStore.derived_exact hwf he
+  rw [hd] at h0
+  have hraw : Expr.fvarBRaw e = 0 := h0
+  have hlt : Expr.fvarBRaw e < satRange := by
+    simp only [hraw, satRange]; omega
+  exact Expr.hasFvar_eq_false_iff.mpr
+    (by rw [← Expr.fvarBRaw_exact e hlt, hraw])
+
+/-! ## 4. `RelFL`'s ten step lemmas, at `Expr.fvarLeaves`
+
+`ExprOps/Inst1.lean`'s group-7 shape, monomorphic so that `@[grind →]` has a
+head symbol and the ten arms of `fvarLeaves` need no `next =>` block.  The
+`view` read is each rule's ematch pattern, which is what `vcgen` hands the
+arm. -/
+
+@[grind →] theorem RelFL.bvar_step {st : EStore} (hwf : StoreWF st) {h : EIdx}
+    {i : Nat} (hview : st.view h = some (.bvar i)) :
+    RelFL Expr.fvarLeaves st h [] := by
+  intro e he
+  rw [denote_bvar_inv hwf hview he]
+  simp [Expr.fvarLeaves, denoteLeaves]
+
+@[grind →] theorem RelFL.sort_step {st : EStore} (hwf : StoreWF st) {h : EIdx}
+    {u : LIdx} (hview : st.view h = some (.sort u)) :
+    RelFL Expr.fvarLeaves st h [] := by
+  intro e he
+  obtain ⟨l, rfl, _⟩ := denote_sort_inv hwf hview he
+  simp [Expr.fvarLeaves, denoteLeaves]
+
+@[grind →] theorem RelFL.const_step {st : EStore} (hwf : StoreWF st) {h : EIdx}
+    {n : NIdx} {us : LsIdx} (hview : st.view h = some (.const n us)) :
+    RelFL Expr.fvarLeaves st h [] := by
+  intro e he
+  obtain ⟨nm, ls, rfl, _, _⟩ := denote_const_inv hwf hview he
+  simp [Expr.fvarLeaves, denoteLeaves]
+
+@[grind →] theorem RelFL.lit_step {st : EStore} (hwf : StoreWF st) {h : EIdx}
+    {l : ConLeche.Literal} (hview : st.view h = some (.lit l)) :
+    RelFL Expr.fvarLeaves st h [] := by
+  intro e he
+  rw [denote_lit_inv hwf hview he]
+  simp [Expr.fvarLeaves, denoteLeaves]
+
+/-! ## 5. `leafMem` — `ExprOps.lean:914`
+
+**Not a monadic twin**: a pure `Bool` function on handles, and the one place
+this tier needs `denoteE`'s INJECTIVITY.  con-leche compares the annotation
+with `Expr.beq`; over handles it is handle equality, and the two tests agree
+because `denoteE` is injective (`Arena/WFProofs.lean`'s `denoteE_inj`, DESIGN
+§8.3's soundness obligation).  Stated against `List.contains`, which is what
+`Kernel/Core.lean:586`'s guard uses and what con-leche's `leafMem` is. -/
+
+/-- con-leche: ConLeche/Cached/ExprOpsC.lean:1157-1162 leafMem — **THEOREM 1
+for `leafMem`**: the handle test is the term test. -/
+theorem leafMem_spec {st : EStore} (hwf : StoreWF st) :
+    ∀ (bl : List (Nat × EIdx)) (bl' : List (Nat × Expr)),
+      denoteLeaves st bl = some bl' →
+      ∀ (idx : Nat) (ty : EIdx) (t : Expr), denoteE st ty = some t →
+        leafMem bl idx ty = bl'.contains (idx, t) := by
+  intro bl
+  induction bl with
+  | nil =>
+    intro bl' hb idx ty t _
+    simp only [denoteLeaves] at hb
+    obtain rfl := Option.some.inj hb
+    simp [leafMem]
+  | cons p ps ih =>
+    intro bl' hb idx ty t ht
+    obtain ⟨i, tt⟩ := p
+    simp only [denoteLeaves] at hb
+    split at hb
+    · rename_i t0 rest' ht0 hrest
+      obtain rfl := Option.some.inj hb
+      have hkey : (tt = ty) ↔ (t0 = t) := by
+        constructor
+        · intro hc; subst hc; rw [ht] at ht0; exact (Option.some.inj ht0).symm
+        · intro hc; subst hc; exact denoteE_inj hwf ht0 ht
+      have hih := ih rest' hrest idx ty t ht
+      simp only [leafMem, List.contains_cons, hih]
+      grind
+    · exact absurd hb (by simp)
+
+/-! ## 6. `fvarLeavesGo` and `fvarLeavesFast` — `ExprOps.lean:876`, `:906`
+
+The `seen`-set walk and its entry point.  Both statements are
+metavariable-free (`SeenOK` and `LeavesEq` quantify what they speak about
+inside themselves), which is what lets `ExprOps/Guards.lean`'s `leafGuard`
+consume them through `vcgen`.
+
+### The gray invariant, and where the rank comes in
+
+`fvarLeavesGo`'s memo is a visited SET whose entries are `Unit`, and an entry
+means *"this node's leaves are already in `acc`"* — a statement about the
+ACCUMULATOR, not about the node.  The twin inserts `h` into `seen` BEFORE it
+walks `h`'s children, so that plain reading is FALSE for every node on the
+descent path, and con-leche's `SeenInv` (`Verify/Cached/GuardsC.lean`) says
+instead: every key of `seen` either has all its leaves in `acc` already
+(BLACK) or is being processed by an ancestor of the current call (GRAY).
+
+**"an ancestor of the current call" is read off `StoreWF`'s rank** (DESIGN
+§8.3: "`StoreWF st` carries an existential rank `r : EIdx → Nat` with every
+child ranked below its parent") — a gray key is one whose rank is ABOVE the
+current subject's, and `EWFAt.childOK` is the only clause of the store
+invariant the argument uses.  The rank enters as a
+second *parameter of the invariant* and not as a second recursion — the fuel
+induction is unchanged.  The rank is quantified INSIDE `SeenOK` (over every
+rank the store admits, `∀ rk, EWFAt st rk → …`), which is template rule 6's
+shape and is what keeps it out of `fvarLeavesFast_spec`'s statement — the one
+`ExprOps/Guards.lean` consumes.
+
+The three moving parts, and the lemmas that make the descent go:
+
+* `SeenOK st acc seen c` is the invariant at subject `c`.  `SeenOK.of_grow`
+  re-establishes it at a CHILD of `c` once `c` has been inserted and some
+  prefix of its children walked, and that is the whole gray argument: the
+  child's rank is below `c`'s, `c` itself is therefore gray for the child,
+  and every key that was gray for `c` is a fortiori gray for the child;
+* `SeenGrow st acc' seen seen'` is what a completed call gives back: every
+  key of the returned set is either BLACK now, or was already a key of the
+  set the call was given.  Composed with the incoming `SeenOK` it rebuilds
+  the invariant for the next sibling, and at the end of an arm it is what
+  turns the node's own gray entry black — the node's leaves ARE in the
+  accumulator once its children have been walked;
+* `AccGrow st acc acc'` is the accumulator's monotonicity, which is what
+  carries a BLACK key past a sibling's walk.  It comes out of `LeavesEq`.
+
+Because the answer is a SET and not a list — a shared subterm is walked once,
+where `Expr.fvarLeaves` re-concatenates its leaves per occurrence — the
+answer relation is membership equivalence and not list equality, and it is
+not a weakening: `leafGuard`, the one consumer, uses the list only as a
+membership base (`leafMem`), and `Guards.lean`'s `leavesSubSpec_congr` is
+what makes that formally so. -/
+
+/-- con-leche: ConLeche/Cached/ExprOpsC.lean:1130-1152 fvarLeavesGoC — a node
+is BLACK at an accumulator when every leaf of the term it denotes is already
+in the accumulator's denotation.  This is con-leche's `SeenInv` at one key,
+minus the gray disjunct. -/
+def BlackA (st : EStore) (acc : List (Nat × EIdx)) (k : EIdx) : Prop :=
+  ∀ e ea, denoteE st k = some e → denoteLeaves st acc = some ea →
+    ∀ x ∈ Expr.fvarLeaves e, x ∈ ea
+
+/-- con-leche: none — the accumulator only ever GROWS, in the membership
+sense every statement here is up to.  The source's own `isSome` is a field
+rather than a hypothesis at the use sites, because the growth statement is
+vacuous without it. -/
+structure AccGrow (st : EStore) (acc acc' : List (Nat × EIdx)) : Prop where
+  src : (denoteLeaves st acc).isSome = true
+  sub : ∀ ea ea', denoteLeaves st acc = some ea →
+    denoteLeaves st acc' = some ea' → ∀ x ∈ ea, x ∈ ea'
+
+/-- con-leche: none — `AccGrow` is reflexive at an accumulator that denotes. -/
+theorem AccGrow.refl {st : EStore} {acc : List (Nat × EIdx)}
+    (h : (denoteLeaves st acc).isSome = true) : AccGrow st acc acc :=
+  ⟨h, fun ea ea' h1 h2 x hx => by rw [h1] at h2; exact (Option.some.inj h2) ▸ hx⟩
+
+/-- con-leche: none — and transitive. -/
+theorem AccGrow.trans {st : EStore} {a b c : List (Nat × EIdx)}
+    (h1 : AccGrow st a b) (h2 : AccGrow st b c) : AccGrow st a c := by
+  refine ⟨h1.src, fun ea ec hea hec x hx => ?_⟩
+  obtain ⟨eb, heb⟩ := Option.isSome_iff_exists.mp h2.src
+  exact h2.sub eb ec heb hec x (h1.sub ea eb hea heb x hx)
+
+/-- con-leche: ConLeche/Kernel/ExprOps.lean:821-833 fvarLeaves — the `fvar`
+arm's own growth: it PUSHES its leaf before descending into the
+annotation. -/
+theorem AccGrow.cons {st : EStore} {acc : List (Nat × EIdx)} {i : Nat}
+    {t : EIdx} (hacc : (denoteLeaves st acc).isSome = true)
+    (ht : (denoteE st t).isSome = true) : AccGrow st acc ((i, t) :: acc) := by
+  obtain ⟨t', ht'⟩ := Option.isSome_iff_exists.mp ht
+  obtain ⟨ea, hea⟩ := Option.isSome_iff_exists.mp hacc
+  refine ⟨hacc, fun e1 e2 h1 h2 x hx => ?_⟩
+  rw [hea] at h1
+  obtain rfl := Option.some.inj h1
+  rw [denoteLeaves_cons ht' hea] at h2
+  obtain rfl := Option.some.inj h2
+  exact List.mem_cons_of_mem _ hx
+
+/-- con-leche: ConLeche/Cached/ExprOpsC.lean:1130-1152 fvarLeavesGoC — a black
+key stays black as the accumulator grows. -/
+theorem BlackA.mono {st : EStore} {acc acc' : List (Nat × EIdx)} {k : EIdx}
+    (hb : BlackA st acc k) (hg : AccGrow st acc acc') : BlackA st acc' k := by
+  intro e ea' he hea' x hx
+  obtain ⟨ea, hea⟩ := Option.isSome_iff_exists.mp hg.src
+  exact hg.sub ea ea' hea hea' x (hb e ea he hea x hx)
+
+/-- con-leche: ConLeche/Cached/ExprOpsC.lean:1093-1128 fvarLeavesGoC — **the
+`seen` set's invariant, gray clause included**: at subject `c`, every key is
+either black at the accumulator or of strictly greater rank than `c`, i.e.
+an ancestor of the current call.  The rank is quantified inside (template
+rule 6), so this statement has no more parameters than the plain one had. -/
+def SeenOK (st : EStore) (acc : List (Nat × EIdx))
+    (seen : Std.HashMap EIdx Unit) (c : EIdx) : Prop :=
+  ∀ (rk : EIdx → Nat), EWFAt st rk → ∀ (k : EIdx), seen[k]?.isSome = true →
+    rk c < rk k ∨ BlackA st acc k
+
+/-- con-leche: none — the empty `seen` set satisfies the invariant at every
+accumulator and every subject. -/
+theorem SeenOK.of_empty {st : EStore} {acc : List (Nat × EIdx)}
+    {seen : Std.HashMap EIdx Unit} {c : EIdx} (h : seen = ∅) :
+    SeenOK st acc seen c := by
+  intro _ _ k hk; rw [h] at hk; simp at hk
+
+/-- con-leche: ConLeche/Cached/ExprOpsC.lean:1093-1128 fvarLeavesGoC — **what
+a completed call gives back**: every key of the returned set is black at the
+returned accumulator, or was already a key of the set the call was given. -/
+def SeenGrow (st : EStore) (acc' : List (Nat × EIdx))
+    (seen seen' : Std.HashMap EIdx Unit) : Prop :=
+  ∀ (k : EIdx), seen'[k]?.isSome = true →
+    BlackA st acc' k ∨ seen[k]?.isSome = true
+
+/-- con-leche: none — the branches that return the set untouched. -/
+theorem SeenGrow.refl {st : EStore} {acc : List (Nat × EIdx)}
+    {seen : Std.HashMap EIdx Unit} : SeenGrow st acc seen seen :=
+  fun _ hk => Or.inr hk
+
+/-- con-leche: none — a key of an insert is the inserted key or an old one. -/
+theorem seen_insert_cases {seen : Std.HashMap EIdx Unit} {j k : EIdx}
+    (h : (seen.insert k ())[j]?.isSome = true) :
+    j = k ∨ seen[j]?.isSome = true := by
+  rw [Std.HashMap.getElem?_insert] at h
+  split at h
+  · rename_i hbeq; exact Or.inl (eq_of_beq hbeq).symm
+  · exact Or.inr h
+
+/-- con-leche: none — `SeenGrow` composes along an arm's sequence of calls. -/
+theorem SeenGrow.trans {st : EStore} {a1 a2 : List (Nat × EIdx)}
+    {s0 s1 s2 : Std.HashMap EIdx Unit} (h1 : SeenGrow st a1 s0 s1)
+    (h2 : SeenGrow st a2 s1 s2) (hg : AccGrow st a1 a2) :
+    SeenGrow st a2 s0 s2 := by
+  intro k hk
+  rcases h2 k hk with hb | hin
+  · exact Or.inl hb
+  · rcases h1 k hin with hb | hin2
+    · exact Or.inl (hb.mono hg)
+    · exact Or.inr hin2
+
+/-- con-leche: none — the node's own gray entry goes black once its children
+are walked: `SeenGrow` from the INSERTED set, plus blackness of the node,
+gives `SeenGrow` from the set the arm was handed. -/
+theorem SeenGrow.drop_insert {st : EStore} {acc : List (Nat × EIdx)}
+    {seen seen' : Std.HashMap EIdx Unit} {k : EIdx}
+    (h : SeenGrow st acc (seen.insert k ()) seen') (hb : BlackA st acc k) :
+    SeenGrow st acc seen seen' := by
+  intro j hj
+  rcases h j hj with hbj | hin
+  · exact Or.inl hbj
+  · rcases seen_insert_cases hin with rfl | hin2
+    · exact Or.inl hb
+    · exact Or.inr hin2
+
+/-- con-leche: ConLeche/Cached/ExprOpsC.lean:1093-1128 fvarLeavesGoC — **the
+gray argument**, in one lemma: the node `h` has been inserted and some prefix
+of its children walked, and the invariant holds again at the next child `ch`.
+`EWFAt.childOK`'s rank clause is the only thing used, and it is used twice —
+once to make `h` itself gray for `ch`, once to carry `h`'s own gray keys
+down. -/
+theorem SeenOK.of_grow {st : EStore} {acc acc' : List (Nat × EIdx)}
+    {seen seen' : Std.HashMap EIdx Unit} {h ch : EIdx} {v : ENodeView}
+    (hview : st.view h = some v) (hch : ch ∈ v.echildren)
+    (hs : SeenOK st acc seen h)
+    (hg : SeenGrow st acc' (seen.insert h ()) seen')
+    (hga : AccGrow st acc acc') : SeenOK st acc' seen' ch := by
+  intro rk hrk k hk
+  rcases hg k hk with hb | hin
+  · exact Or.inr hb
+  · have hlt : rk ch < rk h := (hrk.childOK h v hview ch hch).2.1
+    rcases seen_insert_cases hin with rfl | hin2
+    · exact Or.inl hlt
+    · rcases hs rk hrk k hin2 with hgt | hb
+      · exact Or.inl (Nat.lt_trans hlt hgt)
+      · exact Or.inr (hb.mono hga)
+
+/-- con-leche: none — the invariant at the FIRST child, which is
+`SeenOK.of_grow` with nothing walked yet. -/
+theorem SeenOK.child {st : EStore} {acc : List (Nat × EIdx)}
+    {seen : Std.HashMap EIdx Unit} {h ch : EIdx} {v : ENodeView}
+    (hview : st.view h = some v) (hch : ch ∈ v.echildren)
+    (hs : SeenOK st acc seen h) (hacc : (denoteLeaves st acc).isSome = true) :
+    SeenOK st acc (seen.insert h ()) ch :=
+  SeenOK.of_grow hview hch hs SeenGrow.refl (AccGrow.refl hacc)
+
+/-- con-leche: ConLeche/Cached/ExprOpsC.lean:1130-1152 fvarLeavesGoC — the
+walk's ANSWER relation: the result list has exactly the members of the
+accumulator plus the subject's leaves.  Membership and not list equality,
+because the `seen` set collects a shared subterm's leaves once where
+`Expr.fvarLeaves` re-concatenates them per occurrence. -/
+def LeavesEq (st : EStore) (acc : List (Nat × EIdx)) (c : EIdx)
+    (res : List (Nat × EIdx)) : Prop :=
+  ∀ e ea r, denoteE st c = some e → denoteLeaves st acc = some ea →
+    denoteLeaves st res = some r →
+      ∀ x, x ∈ r ↔ (x ∈ ea ∨ x ∈ Expr.fvarLeaves e)
+
+/-- con-leche: none — the accumulator grew, which is what carries a black key
+past a sibling's walk. -/
+theorem LeavesEq.accGrow {st : EStore} {acc res : List (Nat × EIdx)}
+    {c : EIdx} (h : LeavesEq st acc c res)
+    (hc : (denoteE st c).isSome = true)
+    (hacc : (denoteLeaves st acc).isSome = true) : AccGrow st acc res := by
+  refine ⟨hacc, fun ea er hea her x hx => ?_⟩
+  obtain ⟨e, he⟩ := Option.isSome_iff_exists.mp hc
+  exact (h e ea er he hea her x).mpr (Or.inl hx)
+
+/-- con-leche: none — a finished call's subject is BLACK at its own answer,
+which is what turns the node's gray entry black. -/
+theorem LeavesEq.black {st : EStore} {acc res : List (Nat × EIdx)}
+    {c : EIdx} (h : LeavesEq st acc c res)
+    (hacc : (denoteLeaves st acc).isSome = true) : BlackA st res c := by
+  intro e er he her x hx
+  obtain ⟨ea, hea⟩ := Option.isSome_iff_exists.mp hacc
+  exact (h e ea er he hea her x).mpr (Or.inr hx)
+
+/-- con-leche: ConLeche/Cached/ExprOpsC.lean:1130-1152 fvarLeavesGoC — the
+SKIP branch: a black subject adds nothing. -/
+theorem LeavesEq.of_black {st : EStore} {acc : List (Nat × EIdx)} {c : EIdx}
+    (hb : BlackA st acc c) : LeavesEq st acc c acc := by
+  intro e ea r he hea hr x
+  rw [hea] at hr
+  obtain rfl := Option.some.inj hr
+  exact ⟨fun hx => Or.inl hx, fun hx => hx.elim id (hb e ea he hea x)⟩
+
+/-- con-leche: ConLeche/Kernel/ExprOps.lean:821-833 fvarLeaves — the CUTOFF
+branch and the four leaf views: a subject with no leaves adds nothing. -/
+theorem LeavesEq.of_nil {st : EStore} {acc : List (Nat × EIdx)} {c : EIdx}
+    (h : ∀ e, denoteE st c = some e → Expr.fvarLeaves e = []) :
+    LeavesEq st acc c acc := by
+  intro e ea r he hea hr x
+  rw [hea] at hr
+  obtain rfl := Option.some.inj hr
+  rw [h e he]
+  simp
+
+/-- con-leche: none — a subject whose leaf list is `[]` under `RelFL` has no
+leaves, which is the form the four `RelFL.*_step` rules deliver. -/
+theorem fvarLeaves_eq_nil_of_relFL {st : EStore} {c : EIdx} {e : Expr}
+    (h : RelFL Expr.fvarLeaves st c []) (he : denoteE st c = some e) :
+    Expr.fvarLeaves e = [] := by
+  have h2 := h e he
+  simp only [denoteLeaves] at h2
+  exact (Option.some.inj h2).symm
+
+/-! ### `LeavesEq`'s six step lemmas
+
+`RelFL`'s ten at the memoized walk's shape: the arm has walked its children
+in sequence, threading the accumulator, and what it owes is the statement at
+the node.  Each is one `denote_*_inv`, the pure clause of `Expr.fvarLeaves`
+and `List.mem_append`. -/
+
+/-- con-leche: ConLeche/Kernel/ExprOps.lean:821-833 fvarLeaves — the `fvar`
+arm, which PUSHES its own leaf before descending into the annotation. -/
+theorem LeavesEq.fvar_step {st : EStore} (hwf : StoreWF st)
+    {acc res : List (Nat × EIdx)} {h ty : EIdx} {idx : Nat}
+    (hview : st.view h = some (.fvar idx ty))
+    (h1 : LeavesEq st ((idx, ty) :: acc) ty res) : LeavesEq st acc h res := by
+  intro e ea r he hea hr x
+  obtain ⟨t, rfl, hdt⟩ := denote_fvar_inv hwf hview he
+  have hcons : denoteLeaves st ((idx, ty) :: acc) = some ((idx, t) :: ea) :=
+    denoteLeaves_cons hdt hea
+  have hp : Expr.fvarLeaves (.fvar idx t) = (idx, t) :: Expr.fvarLeaves t := by
+    simp [Expr.fvarLeaves]
+  rw [hp, h1 t ((idx, t) :: ea) r hdt hcons hr x]
+  simp only [List.mem_cons]
+  grind
+
+/-- con-leche: ConLeche/Kernel/ExprOps.lean:821-833 fvarLeaves — the `app`
+arm. -/
+theorem LeavesEq.app_step {st : EStore} (hwf : StoreWF st)
+    {acc mid res : List (Nat × EIdx)} {h f a : EIdx}
+    (hview : st.view h = some (.app f a))
+    (h1 : LeavesEq st acc f mid) (h2 : LeavesEq st mid a res)
+    (hmid : (denoteLeaves st mid).isSome = true) : LeavesEq st acc h res := by
+  intro e ea r he hea hr x
+  obtain ⟨ef, eb, rfl, hdf, hdb⟩ := denote_app_inv hwf hview he
+  obtain ⟨em, hem⟩ := Option.isSome_iff_exists.mp hmid
+  have hp : Expr.fvarLeaves (.app ef eb) =
+      Expr.fvarLeaves ef ++ Expr.fvarLeaves eb := by simp [Expr.fvarLeaves]
+  rw [hp, h2 eb em r hdb hem hr x, h1 ef ea em hdf hea hem x, List.mem_append]
+  grind
+
+/-- con-leche: ConLeche/Kernel/ExprOps.lean:821-833 fvarLeaves — the `lam`
+arm. -/
+theorem LeavesEq.lam_step {st : EStore} (hwf : StoreWF st)
+    {acc mid res : List (Nat × EIdx)} {h ty b : EIdx}
+    (hview : st.view h = some (.lam ty b))
+    (h1 : LeavesEq st acc ty mid) (h2 : LeavesEq st mid b res)
+    (hmid : (denoteLeaves st mid).isSome = true) : LeavesEq st acc h res := by
+  intro e ea r he hea hr x
+  obtain ⟨et, eb, rfl, hdt, hdb⟩ := denote_lam_inv hwf hview he
+  obtain ⟨em, hem⟩ := Option.isSome_iff_exists.mp hmid
+  have hp : Expr.fvarLeaves (.lam et eb) =
+      Expr.fvarLeaves et ++ Expr.fvarLeaves eb := by simp [Expr.fvarLeaves]
+  rw [hp, h2 eb em r hdb hem hr x, h1 et ea em hdt hea hem x, List.mem_append]
+  grind
+
+/-- con-leche: ConLeche/Kernel/ExprOps.lean:821-833 fvarLeaves — the
+`forallE` arm. -/
+theorem LeavesEq.forallE_step {st : EStore} (hwf : StoreWF st)
+    {acc mid res : List (Nat × EIdx)} {h ty b : EIdx}
+    (hview : st.view h = some (.forallE ty b))
+    (h1 : LeavesEq st acc ty mid) (h2 : LeavesEq st mid b res)
+    (hmid : (denoteLeaves st mid).isSome = true) : LeavesEq st acc h res := by
+  intro e ea r he hea hr x
+  obtain ⟨et, eb, rfl, hdt, hdb⟩ := denote_forallE_inv hwf hview he
+  obtain ⟨em, hem⟩ := Option.isSome_iff_exists.mp hmid
+  have hp : Expr.fvarLeaves (.forallE et eb) =
+      Expr.fvarLeaves et ++ Expr.fvarLeaves eb := by simp [Expr.fvarLeaves]
+  rw [hp, h2 eb em r hdb hem hr x, h1 et ea em hdt hea hem x, List.mem_append]
+  grind
+
+/-- con-leche: ConLeche/Kernel/ExprOps.lean:821-833 fvarLeaves — the `letE`
+arm, three calls deep. -/
+theorem LeavesEq.letE_step {st : EStore} (hwf : StoreWF st)
+    {acc m1 m2 res : List (Nat × EIdx)} {h ty w b : EIdx}
+    (hview : st.view h = some (.letE ty w b))
+    (h1 : LeavesEq st acc ty m1) (h2 : LeavesEq st m1 w m2)
+    (h3 : LeavesEq st m2 b res) (hm1 : (denoteLeaves st m1).isSome = true)
+    (hm2 : (denoteLeaves st m2).isSome = true) : LeavesEq st acc h res := by
+  intro e ea r he hea hr x
+  obtain ⟨et, ew, eb, rfl, hdt, hdw, hdb⟩ := denote_letE_inv hwf hview he
+  obtain ⟨e1, he1⟩ := Option.isSome_iff_exists.mp hm1
+  obtain ⟨e2, he2⟩ := Option.isSome_iff_exists.mp hm2
+  have hp : Expr.fvarLeaves (.letE et ew eb) =
+      Expr.fvarLeaves et ++ Expr.fvarLeaves ew ++ Expr.fvarLeaves eb := by
+    simp [Expr.fvarLeaves]
+  rw [hp, h3 eb e2 r hdb he2 hr x, h2 ew e1 e2 hdw he1 he2 x,
+    h1 et ea e1 hdt hea he1 x, List.mem_append, List.mem_append]
+  grind
+
+/-- con-leche: ConLeche/Kernel/ExprOps.lean:821-833 fvarLeaves — the `proj`
+arm: the struct name is not a leaf. -/
+theorem LeavesEq.proj_step {st : EStore} (hwf : StoreWF st)
+    {acc res : List (Nat × EIdx)} {h sub : EIdx} {n : NIdx} {i : Nat}
+    (hview : st.view h = some (.proj n i sub))
+    (h1 : LeavesEq st acc sub res) : LeavesEq st acc h res := by
+  intro e ea r he hea hr x
+  obtain ⟨nm, es, rfl, _, hds⟩ := denote_proj_inv hwf hview he
+  have hp : Expr.fvarLeaves (.proj nm i es) = Expr.fvarLeaves es := by
+    simp [Expr.fvarLeaves]
+  rw [hp]
+  exact h1 es ea r hds hea hr x
+
+/-! ### The arms' exits as lemmas
+
+The cutoff, the `seen` hit and the four leaf views, each in the shape of the
+postcondition's conjunct it closes (`grind` rules, registered in the next
+section). -/
+
+/-- con-leche: ConLeche/Kernel/ExprOps.lean:821-833 fvarLeaves — a leaf view
+adds nothing. -/
+theorem LeavesEq.of_relFL {st : EStore} {acc : List (Nat × EIdx)} {c : EIdx}
+    (hr : RelFL Expr.fvarLeaves st c []) : LeavesEq st acc c acc :=
+  LeavesEq.of_nil fun _ he => fvarLeaves_eq_nil_of_relFL hr he
+
+/-- con-leche: ConLeche/Cached/ExprOpsC.lean:1130-1152 fvarLeavesGoC — the
+CUTOFF: a zero fvar-range field means no leaves at all. -/
+theorem LeavesEq.of_cut {st : EStore} (hwf : StoreWF st) {acc : List (Nat × EIdx)}
+    {c : EIdx} (hcut : ((fvarOfData (st.derived c)).toNat == 0) = true) :
+    LeavesEq st acc c acc :=
+  LeavesEq.of_nil fun e he => fvarLeaves_nil_of_hasFvar e
+    (hasFvar_false_of_derived hwf he (by simpa using hcut))
+
+/-- con-leche: ConLeche/Cached/ExprOpsC.lean:1130-1152 fvarLeavesGoC — the
+`seen` HIT: the invariant's gray disjunct is `rk c < rk c`, which is what the
+rank is in the invariant for. -/
+theorem LeavesEq.of_hit {st : EStore} (hwf : StoreWF st) {acc : List (Nat × EIdx)}
+    {seen : Std.HashMap EIdx Unit} {c : EIdx} {u : Unit} (hs : SeenOK st acc seen c)
+    (hhit : seen[c]? = some u) : LeavesEq st acc c acc := by
+  obtain ⟨rk, hrk⟩ := hwf
+  refine LeavesEq.of_black ?_
+  rcases hs rk hrk c (by rw [hhit]; rfl) with hlt | hb
+  · exact absurd hlt (Nat.lt_irrefl _)
+  · exact hb
+
+/-- con-leche: none — the `fvar` arm's pushed pair keeps the accumulator
+denoting. -/
+theorem isSome_denoteLeaves_cons {st : EStore} {acc : List (Nat × EIdx)} {i : Nat}
+    {t : EIdx} (hacc : (denoteLeaves st acc).isSome = true)
+    (ht : (denoteE st t).isSome = true) :
+    (denoteLeaves st ((i, t) :: acc)).isSome = true :=
+  Option.isSome_iff_exists.mpr
+    ⟨_, denoteLeaves_cons (Option.isSome_iff_exists.mp ht).choose_spec
+      (Option.isSome_iff_exists.mp hacc).choose_spec⟩
+
+/-- con-leche: none — the annotation is the `fvar` node's child. -/
+theorem mem_ech_fvar {i : Nat} {ty : EIdx} : ty ∈ (ENodeView.fvar i ty).echildren := by
+  simp [ENodeView.echildren]
+
+/-! ## The arms as `grind` lemmas
+
+`fvarLeavesGo_spec`'s arms are closed by `grind` from the step lemmas above,
+each registered with a pattern that names exactly the terms its arm's
+verification condition has.  `grind` has no lemma ORDER, so each pattern
+carries the facts that pick it:
+
+* the node's `LeavesEq` step is keyed by its goal AND its children's answers
+  (`LeavesEq st acc h res, LeavesEq st acc f mid, LeavesEq st mid a res`), so
+  it fires only where those recursive calls were made; the view, which binds
+  nothing new, is a premise the E-graph already has (the binder steps take the
+  view constructor into the pattern, because `app`/`lam`/`forallE` share the
+  children shape);
+* the three exits (`of_cut`, `of_hit'`, `of_leafV`) are keyed by the
+  reflexive goal `LeavesEq st acc c acc` and decided by their premises;
+* `SeenGrow` composes forward (`trans` on two `SeenGrow` facts sharing a
+  set, `AccGrow` from each answer), and closes backward (`drop_insert` keyed by
+  the goal and the inserted set's fact; `insert_black` at a leaf);
+* each recursive call's `SeenOK` is keyed by its goal: the first child by
+  `child'`, the `fvar` annotation by `fvar_child`, a later child by
+  `of_grow'` with the previous call's `SeenGrow` — the membership premise is
+  `ch ∈ ochildren (st.view h)`, an equation-closed fact instead of an
+  existential view;
+* the children's denotations are `Bridge/Grind.lean`'s `DenoteView`
+  extractions. -/
+
+/-- con-leche: none — is an optional view one of the four leaf kinds. -/
+private def leafV : Option ENodeView → Bool
+  | some (.bvar _) | some (.sort _) | some (.const _ _) | some (.lit _) => true
+  | _ => false
+
+/-- con-leche: none — the children of an optional view (none at a dangling
+handle). -/
+private def ochildren : Option ENodeView → List EIdx
+  | some v => v.echildren
+  | none => []
+
+/-- con-leche: ConLeche/Kernel/ExprOps.lean:821-833 fvarLeaves — the four
+leaf views add nothing, as one rule keyed by the reflexive goal. -/
+private theorem LeavesEq.of_leafV {st : EStore} (hwf : StoreWF st) {acc : List (Nat × EIdx)}
+    {c : EIdx} (hl : leafV (st.view c) = true) : LeavesEq st acc c acc := by
+  cases hv : st.view c with
+  | none => rw [hv] at hl; cases hl
+  | some v =>
+    rw [hv] at hl
+    cases v <;> simp only [leafV] at hl <;> first
+      | exact LeavesEq.of_relFL (RelFL.bvar_step hwf hv)
+      | exact LeavesEq.of_relFL (RelFL.sort_step hwf hv)
+      | exact LeavesEq.of_relFL (RelFL.const_step hwf hv)
+      | exact LeavesEq.of_relFL (RelFL.lit_step hwf hv)
+      | cases hl
+local grind_pattern [bridge_grind] LeavesEq.of_leafV => LeavesEq st acc c acc
+
+local grind_pattern [bridge_grind] LeavesEq.of_cut => LeavesEq st acc c acc
+
+/-- con-leche: ConLeche/Cached/ExprOpsC.lean:1130-1152 fvarLeavesGoC — the
+`seen` hit with the probe as `isSome` (no answer variable). -/
+private theorem LeavesEq.of_hit' {st : EStore} (hwf : StoreWF st) {acc : List (Nat × EIdx)}
+    {seen : Std.HashMap EIdx Unit} {c : EIdx} (hs : SeenOK st acc seen c)
+    (hhit : seen[c]?.isSome = true) : LeavesEq st acc c acc := by
+  obtain ⟨u, hu⟩ := Option.isSome_iff_exists.mp hhit
+  exact LeavesEq.of_hit hwf hs hu
+local grind_pattern [bridge_grind] LeavesEq.of_hit' => LeavesEq st acc c acc, SeenOK st acc seen c
+
+local grind_pattern [bridge_grind] SeenGrow.refl => SeenGrow st acc seen seen
+
+/-- con-leche: none — a leaf's own insert keeps `SeenGrow` (it is black at
+once). -/
+private theorem SeenGrow.insert_black {st : EStore} {acc : List (Nat × EIdx)}
+    {seen : Std.HashMap EIdx Unit} {k : EIdx} (hb : BlackA st acc k) :
+    SeenGrow st acc seen (seen.insert k ()) :=
+  SeenGrow.drop_insert SeenGrow.refl hb
+local grind_pattern [bridge_grind] SeenGrow.insert_black => SeenGrow st acc seen (seen.insert k ())
+
+local grind_pattern [bridge_grind] SeenGrow.drop_insert =>
+  SeenGrow st acc seen seen', SeenGrow st acc (seen.insert k ()) seen'
+local grind_pattern [bridge_grind] SeenGrow.trans => SeenGrow st a1 s0 s1, SeenGrow st a2 s1 s2
+local grind_pattern [bridge_grind] LeavesEq.accGrow => LeavesEq st acc c res
+local grind_pattern [bridge_grind] LeavesEq.black => LeavesEq st acc c res
+local grind_pattern [bridge_grind] AccGrow.trans => AccGrow st a b, AccGrow st b c
+
+/-- con-leche: none — `SeenOK.child` with the view as a membership in its
+children. -/
+private theorem SeenOK.child' {st : EStore} {acc : List (Nat × EIdx)}
+    {seen : Std.HashMap EIdx Unit} {h ch : EIdx} (hch : ch ∈ ochildren (st.view h))
+    (hs : SeenOK st acc seen h) (hacc : (denoteLeaves st acc).isSome = true) :
+    SeenOK st acc (seen.insert h ()) ch := by
+  cases hv : st.view h with
+  | none => rw [hv] at hch; cases hch
+  | some v => rw [hv] at hch; exact SeenOK.child hv hch hs hacc
+local grind_pattern [bridge_grind] SeenOK.child' => SeenOK st acc (seen.insert h ()) ch
+
+/-- con-leche: none — `SeenOK.of_grow` with the view as a membership in its
+children. -/
+private theorem SeenOK.of_grow' {st : EStore} {acc acc' : List (Nat × EIdx)}
+    {seen seen' : Std.HashMap EIdx Unit} {h ch : EIdx} (hch : ch ∈ ochildren (st.view h))
+    (hs : SeenOK st acc seen h) (hg : SeenGrow st acc' (seen.insert h ()) seen')
+    (hga : AccGrow st acc acc') : SeenOK st acc' seen' ch := by
+  cases hv : st.view h with
+  | none => rw [hv] at hch; cases hch
+  | some v => rw [hv] at hch; exact SeenOK.of_grow hv hch hs hg hga
+local grind_pattern [bridge_grind] SeenOK.of_grow' =>
+  SeenOK st acc' seen' ch, SeenGrow st acc' (seen.insert h ()) seen', SeenOK st acc seen h
+
+/-- con-leche: ConLeche/Cached/ExprOpsC.lean:1093-1128 fvarLeavesGoC — the
+`fvar` arm's call: the pushed leaf and the inserted node. -/
+private theorem SeenOK.fvar_child {st : EStore} {acc : List (Nat × EIdx)}
+    {seen : Std.HashMap EIdx Unit} {h ty : EIdx} {idx : Nat}
+    (hv : st.view h = some (.fvar idx ty)) (hs : SeenOK st acc seen h)
+    (hacc : (denoteLeaves st acc).isSome = true) (hty : (denoteE st ty).isSome = true) :
+    SeenOK st ((idx, ty) :: acc) (seen.insert h ()) ty :=
+  SeenOK.of_grow hv mem_ech_fvar hs SeenGrow.refl (AccGrow.cons hacc hty)
+local grind_pattern [bridge_grind] SeenOK.fvar_child => SeenOK st ((idx, ty) :: acc) (seen.insert h ()) ty
+
+local grind_pattern [bridge_grind] isSome_denoteLeaves_cons => (denoteLeaves st ((i, t) :: acc)).isSome
+
+local grind_pattern [bridge_grind] LeavesEq.fvar_step =>
+  LeavesEq st acc h res, LeavesEq st ((idx, ty) :: acc) ty res
+local grind_pattern [bridge_grind] LeavesEq.app_step =>
+  LeavesEq st acc h res, LeavesEq st acc f mid, LeavesEq st mid a res
+local grind_pattern [bridge_grind] LeavesEq.lam_step =>
+  LeavesEq st acc h res, LeavesEq st acc ty mid, LeavesEq st mid b res, ENodeView.lam ty b
+local grind_pattern [bridge_grind] LeavesEq.forallE_step =>
+  LeavesEq st acc h res, LeavesEq st acc ty mid, LeavesEq st mid b res, ENodeView.forallE ty b
+local grind_pattern [bridge_grind] LeavesEq.letE_step =>
+  LeavesEq st acc h res, LeavesEq st acc ty m1, LeavesEq st m1 w m2, LeavesEq st m2 b res
+local grind_pattern [bridge_grind] LeavesEq.proj_step =>
+  LeavesEq st acc h res, LeavesEq st acc sub res, ENodeView.proj n i sub
+
+/-- con-leche: none — the empty `seen` set, keyed by the goal. -/
+private theorem SeenOK.empty {st : EStore} {acc : List (Nat × EIdx)} {c : EIdx} :
+    SeenOK st acc ∅ c := SeenOK.of_empty rfl
+local grind_pattern [bridge_grind] SeenOK.empty => SeenOK st acc ∅ c
+attribute [local bridge_grind =] denoteLeaves_nil
+
+/-- con-leche: ConLeche/Verify/SimI.lean:244 SimAt — Theorem 1's statement for
+one level of `fvarLeavesGo`'s recursion. -/
+structure FvarLeavesGoSpec (rec : List (Nat × EIdx) → Std.HashMap EIdx Unit →
+    EIdx → AM (List (Nat × EIdx) × Std.HashMap EIdx Unit)) : Prop where
+  run : ∀ (s₁ : AState) (acc : List (Nat × EIdx))
+      (seen : Std.HashMap EIdx Unit) (c : EIdx), StateOK s₁ →
+      (denoteLeaves s₁.store acc).isSome = true → SeenOK s₁.store acc seen c →
+      (denoteE s₁.store c).isSome = true →
+    ⦃fun s => s = s₁⦄ rec acc seen c
+    ⦃fun p s' => s' = s₁ ∧ (denoteLeaves s₁.store p.1).isSome = true ∧
+        SeenGrow s₁.store p.1 seen p.2 ∧ LeavesEq s₁.store acc c p.1; ⊤⦄
+
+/-- con-leche: ConLeche/Cached/ExprOpsC.lean:1130-1152 fvarLeavesGoC —
+**THEOREM 1 for the memoized `fvarLeaves`**, at one level of the recursion,
+by induction on the fuel.  The gray half of con-leche's `SeenInv` is
+`SeenOK`'s rank disjunct and `SeenOK.of_grow` is the whole of the argument;
+see the section header. -/
+theorem fvarLeavesGo_spec :
+    ∀ fuel, FvarLeavesGoSpec (fun acc seen => fvarLeavesGo acc seen fuel) := by
+  intro fuel
+  induction fuel with
+  | zero =>
+    constructor
+    intro s₀ acc seen c _ _ _ _
+    sym only [bridge_grind] => vcgen [fvarLeavesGo_zero] <;> finish
+  | succ fuel ih =>
+    constructor
+    intro s₀ acc seen c hok hacc hseen hden
+    obtain ⟨e, he⟩ := Option.isSome_iff_exists.mp hden
+    -- every arm is the step lemmas of §6 composed: `LeavesEq`
+    -- by the node's step, `SeenGrow` by `drop_insert` after the children's
+    -- `trans`, and each recursive call's `SeenOK` by the gray argument
+    sym only [bridge_grind, leafV, ochildren, ENodeView.echildren, List.mem_cons] =>
+      vcgen [fvarLeavesGo_succ, fvarLeavesGoArmApp, fvarLeavesGoArmBind,
+        fvarLeavesGoArmLet, ih.run] <;> finish
+
+/-- con-leche: ConLeche/Cached/ExprOpsC.lean:1154-1155 fvarLeavesC —
+**THEOREM 1 for `fvarLeavesFast`**: the reachable `fvar` leaves, up to
+membership (`LeavesEq` at the empty accumulator). -/
+theorem fvarLeavesFast_spec (fuel : Nat) (s₀ : AState) (h : EIdx)
+    (hok : StateOK s₀) (hden : (denoteE s₀.store h).isSome = true) :
+    ⦃fun s => s = s₀⦄ fvarLeavesFast fuel h
+    ⦃fun rs s' => s' = s₀ ∧ (denoteLeaves s₀.store rs).isSome = true ∧
+        LeavesEq s₀.store [] h rs; ⊤⦄ := by
+  sym only [bridge_grind] =>
+    vcgen [fvarLeavesFast, (fvarLeavesGo_spec fuel).run] <;> finish
+
+/-! ## The axiom check -/
+
+#print axioms fvarLeaves_nil_of_hasFvar
+#print axioms wscopedB_of_hasFvar
+#print axioms hasFvar_false_of_derived
+#print axioms leafMem_spec
+#print axioms SeenOK.of_grow
+#print axioms fvarLeavesGo_spec
+#print axioms fvarLeavesFast_spec
+
+end ConRon.Bridge.ExprOps
