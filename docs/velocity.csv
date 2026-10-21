@@ -19,3 +19,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-21,arch,opus,30,8,"items 2+3: MemosR nested in ArenaR + ownership lists/group frames (ArenaR.frame, with_memos), Tiers.lean (CoreR/PinsR/EnvR stubs, CheckR, of_walk), Keeps.lean (keeps_auto, 4 walk families), TierWalks (4 walks under CheckR), memory map; Walk names de-clashed"
 2026-10-21,levels,opus,22,5,"level scratch heap (LH 192, CTL 192): lv_node/lh_mk/lv_eq, LvR decoder, HeapExt/HeapFrame, lv_eq refines Level.beq"
 2026-10-21,levels,opus,14,3,"lv_comb/lv_simp/lv_nz refine Level.combining/simplify/isNeverZero"
+2026-10-21,levels,opus,45,8,"lv_subst (one key), lv_leq/lv_rest/lv_imax(_l,_r)/lv_cases(_at) refine leqCore/rest/imaxRules/byCases with the 10^4 fuel as an exact word; HeapExt keeps the other arrays"
