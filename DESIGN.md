@@ -4269,3 +4269,44 @@ final arena and parse states. Only `propext`, `Classical.choice`, `Quot.sound`.
 ### `sorry`s
 
 None.
+
+## Twin fingerprints and the bump machinery (2026-10-21, lane `sync`)
+
+Question: when con-ron moves, which of our L code and proofs must be looked at again? The census
+links (`@[l_impl T]`, `@[refines T]`, `@[refines_part T]`) say which twin target `T` each piece
+stands for; nothing noticed that `T` changed. Pieces: `ConAgua/Census/Main.lean` (fingerprints),
+`scripts/census.py` (stale flag, `--stale`, `--reviewed`), `docs/twin-fingerprints.tsv` (the
+lockfile), `vendor/UPSTREAM` + `vendor/patches/` (the vendored state as data),
+`scripts/bump-con-ron.sh` (the bump). Workflow: PLAN.md, "Bumping the twin".
+
+### Decisions
+* **Fingerprint = hash of the elaborated code, not of the source text.** For each target: its
+  name, type and value, and the name, type and value of every non-target the census walks through
+  from it (instances, matchers, `_unsafe_rec` bodies of `partial def`s, projections, other
+  auxiliaries), sorted by name and folded with `mixHash` over `Expr.hash`. Not the targets it calls:
+  they have their own fingerprint. Comments, doc comments (con-ron rewrites its `con-leche:` line
+  citations on every con-leche bump), line moves and binder names do not change it; a structure
+  gaining a field does (every anonymous constructor and `{ s with … }` in a value changes), and so
+  does a changed matcher or instance. Source text would miss both, and a `partial def`'s body lives
+  in its `_unsafe_rec`. Cost: it is per toolchain (`Expr.hash`, and the elaborator's output), so a
+  toolchain bump re-records everything (`--reviewed .`) and is never combined with a twin bump; and
+  a changed proof term inside a definition's value (a `decreasing_by`) makes it stale
+  spuriously. 32 bits of hash entropy: a missed change is a 2⁻³² event per changed target.
+* **Which targets get a row**: every target that is not `todo`, i.e. with L code, a proof, or
+  coverage (reached only through proven targets). A covered target has no link of its own, so its
+  stale entry names the linked targets above it whose proofs cover it. A row is written once
+  (`--write` adds rows for new links) and only replaced by `--reviewed REGEX`, run by the lane that
+  checked the code against the new twin. The row keeps the upstream revision it was recorded at,
+  so the stale list prints the exact `git diff` to read.
+* **Stale is a flag, not a status**: a stale proven target stays proven in the counts (the proof
+  still checks against the vendored twin, or the build is red); the flag says the L code may no
+  longer be what the twin computes on the other side of the relation, e.g. a cache the relation
+  does not mention.
+* **Patches as files, applied with `git apply --3way`.** Each patch carries the full blob ids of
+  the old pristine files (the bump first writes those blobs into our object store), so a hunk whose
+  context moved upstream becomes a real three-way merge, and a conflict is left with markers. The
+  patch descriptions live in the patch preamble and survive `--refresh-patches`. `--check` is the
+  gate that `vendor/` holds no unrecorded edit.
+* con-ron's own sync (`scripts/bump-con-leche.sh`, `provenance.py`, `twin-lines.py`) tracks a
+  `(pin, path, line range)` citation per item and diffs the cited text between pins; we have no
+  per-item citations of our own beyond the census links, and the elaborated fingerprint needs none.

@@ -33,4 +33,5 @@ date,lane,model,work_min,overhead_min,note
 2026-10-21,levels,opus,6,1,"lv_lookup/lv_substl refine subst/subst.go with lists, lv_spw/lv_substpw refine substPW (arrays chosen by the caller)"
 2026-10-21,whnf,opus,19,3,"CoreR tier: nine L caches (banked mode memos, constant caches), flush_caches refines flushCaches, scratch_drop flushes; lo_hi/genW reproved without bv_decide axioms"
 2026-10-21,cresults,opus,15,6,"compiler: any number of results (results 6.. in a table result area, code for <=6 unchanged), compile_correct re-proved; WFAll: wf #guard for every program (frontAllProg passes); capstone frontAll_x64"
+2026-10-21,sync,opus,9,2,"twin fingerprints in the census (stale flag, --stale, --reviewed, docs/twin-fingerprints.tsv), vendor/UPSTREAM + vendor/patches/ patch series, scripts/bump-con-ron.sh (round trip at 4c9eaf7 clean)"
 2026-10-21,strlit,opus,22,0,"lit store's strVal arm (Store/LitRefine: duplicated match/find/push, slice-as-key uniqueness moved into LitRefine.lean); internE's lit arm census-complete (ArenaRel label natVal->lit, proven); expr lines accept strVal (node_lit_str, ExprLookups, parseExprEntryD fully refines)"

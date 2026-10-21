@@ -1,0 +1,1378 @@
+Theorem 1 (ConRon.Bridge) on nightly-2026-10-20: the vcgen conjunction split, the new do
+elaborator (Prod states, no pure () >>=), simp/dsimp no longer rewriting instance arguments.
+Every site is marked `-- con-agua patch` (vendor/README.md, "ConRonBridge").
+
+diff --git a/vendor/con-ron/ConRon/Bridge/Checker/Arms.lean b/vendor/con-ron/ConRon/Bridge/Checker/Arms.lean
+index ce8e409a29b48fd6443a65d1b44577477b7aed1a..c819cbe83bbd1f53e0a53d4437bb3bfae5550a15 100644
+--- a/vendor/con-ron/ConRon/Bridge/Checker/Arms.lean
++++ b/vendor/con-ron/ConRon/Bridge/Checker/Arms.lean
+@@ -390,7 +390,7 @@ theorem checkDefnVal_pushed {μ : CheckMode} {fe fe2 : IFEnv}
+   obtain ⟨t, s2, -, r2⟩ := AM.bind_ok r1
+   obtain ⟨b, s3, -, r3⟩ := AM.bind_ok r2
+   obtain ⟨-, r4⟩ := AM.dunless_ok AM.Never.fail_any r3
+-  replace r4 := AM.pure_bind_ok r4
++  try replace r4 := AM.pure_bind_ok r4  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   obtain ⟨rfl, -⟩ := AM.pure_ok r4
+   exact ⟨value, rfl⟩
+ 
+@@ -404,7 +404,7 @@ theorem checkOpaqueVal_pushed {μ : CheckMode} {fe fe2 : IFEnv}
+   obtain ⟨t, s2, -, r2⟩ := AM.bind_ok r1
+   obtain ⟨b, s3, -, r3⟩ := AM.bind_ok r2
+   obtain ⟨-, r4⟩ := AM.dunless_ok AM.Never.fail_any r3
+-  replace r4 := AM.pure_bind_ok r4
++  try replace r4 := AM.pure_bind_ok r4  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   obtain ⟨rfl, -⟩ := AM.pure_ok r4
+   rfl
+ 
+@@ -614,7 +614,7 @@ theorem checkDecl_bridge_defn {μ : CheckMode}
+             replace hstepC := hstepC.congr_find (fun n => (hpre n).symm)
+             obtain ⟨hy10, r11⟩ :=
+               AM.dunless_ok AM.Never.fail_any r10
+-            replace r11 := AM.pure_bind_ok r11
++            try replace r11 := AM.pure_bind_ok r11  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+             obtain ⟨FC, hcert⟩ := hcertOf hy10
+             have hok9 : FoldOK μ env fe s9 := hok8.ofCore hstepC
+             have hext09 : Ext s.store s9.store :=
+@@ -655,7 +655,7 @@ theorem checkDecl_bridge_defn {μ : CheckMode}
+       cases hbb : ns.contains cv.name with
+       | false => rfl
+       | true => rw [hbb] at hn3; exact absurd rfl hn3
+-    replace hg3 := AM.pure_bind_ok hg3
++    try replace hg3 := AM.pure_bind_ok hg3  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+     have hle1 : F1 ≤ max F1 F2 := Nat.le_max_left _ _
+     have hle2 : F2 ≤ max F1 F2 := Nat.le_max_right _ _
+     refine tail s2 (max F1 F2) hok2 hext02 hpin02 hnm2 hst2
+@@ -777,7 +777,7 @@ theorem checkDecl_bridge_opaque {μ : CheckMode}
+             (checkOpaqueVal_mono hle2' hpure2) (hcont ▸ hyes)
+             (checkReducePin_mono hle4' hpure4)⟩ }
+   · -- the gate is skipped
+-    replace hgood := AM.pure_bind_ok hgood
++    try replace hgood := AM.pure_bind_ok hgood  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+     obtain ⟨rfl, rfl⟩ := AM.pure_ok hgood
+     have hnoP : ConLeche.reduceOpNames.contains c.name = false := by
+       rw [← hcont]
+diff --git a/vendor/con-ron/ConRon/Bridge/Checker/Base.lean b/vendor/con-ron/ConRon/Bridge/Checker/Base.lean
+index 73553be51f8374460e3ef4845fdcd278189196b7..40b3163b8eddf2ddd7bd504d13c1ea5ac83f7bea 100644
+--- a/vendor/con-ron/ConRon/Bridge/Checker/Base.lean
++++ b/vendor/con-ron/ConRon/Bridge/Checker/Base.lean
+@@ -286,7 +286,7 @@ theorem checkConstantVal_bridge {μ : CheckMode} {env : Env}
+   simp only [Arena.checkConstantVal] at hrun
+   -- 1. the duplicate-declaration guard
+   obtain ⟨hdup, r1⟩ := AM.dguard_ok AM.Never.fail_any hrun
+-  replace r1 := AM.pure_bind_ok r1
++  try replace r1 := AM.pure_bind_ok r1  -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
+   have hfind : fe.find? cv.name = none := by
+     cases hf : fe.find? cv.name with
+     | none => rfl
+@@ -302,7 +302,7 @@ theorem checkConstantVal_bridge {μ : CheckMode} {env : Env}
+       = some c.levelParams := denoteNList_ext hp2.ext.lss.ls.ns _ _ hlps
+   have hty2 : denoteE s2.store cv.type = some c.type := denote_ext hty hp2.ext
+   obtain ⟨hres, r3⟩ := AM.dguard_ok AM.Never.fail_any r2
+-  replace r3 := AM.pure_bind_ok r3
++  try replace r3 := AM.pure_bind_ok r3  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   have hresP : ConLeche.reservedBasisNames.contains c.name = false := by
+     have hc := denoteNList_contains hck2.state.wf rs reservedBasisNameValues
+       (denoteNL_toList rs reservedBasisNameValues hrs) cv.name c.name hnm2
+@@ -314,7 +314,7 @@ theorem checkConstantVal_bridge {μ : CheckMode} {env : Env}
+   obtain ⟨b3, s3, g3r, r4⟩ := AM.bind_ok r3
+   obtain ⟨hs3, hb3⟩ := isProjFnShape_run hck2.state rfl hnm2 g3r
+   obtain ⟨hproj, r5⟩ := AM.dguard_ok AM.Never.fail_any r4
+-  replace r5 := AM.pure_bind_ok r5
++  try replace r5 := AM.pure_bind_ok r5  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   have hprojP : c.name.isProjFnShape = false := by
+     rw [← hb3]
+     cases hb : b3 with
+@@ -322,7 +322,7 @@ theorem checkConstantVal_bridge {μ : CheckMode} {env : Env}
+     | true => rw [hb] at hproj; exact absurd rfl hproj
+   -- 4. the duplicate-universe-parameter guard
+   obtain ⟨hnod, r6⟩ := AM.dunless_ok AM.Never.fail_any r5
+-  replace r6 := AM.pure_bind_ok r6
++  try replace r6 := AM.pure_bind_ok r6  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   have hnodP : ConLeche.Name.nodup c.levelParams = true := by
+     rw [← nameNodup_spec hck2.state.wf cv.levelParams c.levelParams hlps2]
+     exact hnod
+@@ -335,7 +335,7 @@ theorem checkConstantVal_bridge {μ : CheckMode} {env : Env}
+     rfl g5r (ConRon.Bridge.ExprOps.looseBVarsBoundedFast_spec coreWalkFuel 0 s3 cv.type
+       hck2.state (by rw [hty2]; rfl))
+   obtain ⟨hlbb, r8⟩ := AM.dunless_ok AM.Never.fail_any r7
+-  replace r8 := AM.pure_bind_ok r8
++  try replace r8 := AM.pure_bind_ok r8  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   have hlbbP : c.type.looseBVarsBounded 0 = true := by
+     rw [← h5r c.type hty2]; exact hlbb
+   have hck5 : CheckOK μ env fe s5 :=
+@@ -353,7 +353,7 @@ theorem checkConstantVal_bridge {μ : CheckMode} {env : Env}
+     rfl g6r (ConRon.Bridge.ExprOps.hasFvarFast_spec coreWalkFuel s5 cv.type hck5.state
+       (by rw [hty5]; rfl))
+   obtain ⟨hfv, r10⟩ := AM.dguard_ok AM.Never.fail_any r9
+-  replace r10 := AM.pure_bind_ok r10
++  try replace r10 := AM.pure_bind_ok r10  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   have hfvP : c.type.hasFvar = false := by
+     rw [← h6r c.type hty5]
+     cases hb : b6 with
+@@ -372,7 +372,7 @@ theorem checkConstantVal_bridge {μ : CheckMode} {env : Env}
+   obtain ⟨h8st, h8c, h8p, h8r⟩ :=
+     allLevelParamsDefined_run hck6.state hlps6 hty6 g8r
+   obtain ⟨hlpd, r13⟩ := AM.dunless_ok AM.Never.fail_any r12
+-  replace r13 := AM.pure_bind_ok r13
++  try replace r13 := AM.pure_bind_ok r13  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   have hlpdP : c.type.allLevelParamsDefined c.levelParams = true := by
+     rw [← h8r]; exact hlpd
+   have hck8 : CheckOK μ env fe s8 :=
+@@ -385,7 +385,7 @@ theorem checkConstantVal_bridge {μ : CheckMode} {env : Env}
+     constsResolveFFast_run hck8 hty8 g9r
+   obtain ⟨hcr, r15⟩ := AM.dunless_ok
+     (AM.Never.bind fun _ => AM.Never.bind fun _ => AM.Never.fail_any) r14
+-  replace r15 := AM.pure_bind_ok r15
++  try replace r15 := AM.pure_bind_ok r15  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   have hcrP : c.type.constsResolve env = true := by rw [← h9r]; exact hcr
+   have hck9 : CheckOK μ env fe s9 :=
+     hck8.mono ⟨by rw [h9st]; exact hck8.state.wf⟩ (by rw [h9st]; exact Ext.refl _)
+diff --git a/vendor/con-ron/ConRon/Bridge/Checker/Basis.lean b/vendor/con-ron/ConRon/Bridge/Checker/Basis.lean
+index 9b7a3aaf6bfa4f0a30c858a90461d26612e5da91..0e3fd0d4cae7168ab8460b5ed6aaeae0150d413d 100644
+--- a/vendor/con-ron/ConRon/Bridge/Checker/Basis.lean
++++ b/vendor/con-ron/ConRon/Bridge/Checker/Basis.lean
+@@ -600,7 +600,7 @@ theorem installBasisDecls_bridge :
+     simp only [ConRon.Arena.installBasisDecl] at h1
+     obtain ⟨hdup, r1⟩ := AM.dunless_ok
+       AM.Never.fail_any h1
+-    replace r1 := AM.pure_bind_ok r1
++    try replace r1 := AM.pure_bind_ok r1  -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
+     obtain ⟨rfl, rfl⟩ := AM.pure_ok r1
+     have hne := ci_ne_proj_of_denote hx (hnpx x (by simp))
+     have hfind : fe.find? a.name = none := by
+@@ -666,7 +666,7 @@ theorem checkBasisDecl_bridge {μ : CheckMode} {env : Env}
+     obtain ⟨a, sB, g2, r2⟩ := AM.bind_ok r1
+     obtain ⟨hstepB, hdenA, -⟩ := internCI_fresh hok.check.state g2
+     obtain ⟨hfe, r3⟩ := AM.dunless_ok AM.Never.fail_any r2
+-    replace r3 := AM.pure_bind_ok r3
++    try replace r3 := AM.pure_bind_ok r3  -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
+     have hfindEq : env.find? ConLeche.eqName = some ConLeche.eqA := by
+       obtain ⟨nm, c0, hd1, hd2, he⟩ :=
+         (hok.check.ienv.mono hstepB.ext).hit en a (by simpa using hfe)
+@@ -682,7 +682,7 @@ theorem checkBasisDecl_bridge {μ : CheckMode} {env : Env}
+     exact h7
+   · -- every other block installs directly
+     have hqn : kind ≠ BasisKind.quotK := by simpa using hq
+-    replace hr1 := AM.pure_bind_ok hr1
++    try replace hr1 := AM.pure_bind_ok hr1  -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
+     obtain ⟨h1, h2, h3, h4, h5, env', h6, h7⟩ :=
+       tail s hok.check.state (Ext.refl _) rfl hr1
+     refine ⟨h1, h2, h3, h4, h5, env', h6, ?_⟩
+diff --git a/vendor/con-ron/ConRon/Bridge/Checker/DeclVal.lean b/vendor/con-ron/ConRon/Bridge/Checker/DeclVal.lean
+index 952b4f2a2933856cfa55c271eb4b72ef69b30278..71d49d7b111608db513df57544e533bad0f25d78 100644
+--- a/vendor/con-ron/ConRon/Bridge/Checker/DeclVal.lean
++++ b/vendor/con-ron/ConRon/Bridge/Checker/DeclVal.lean
+@@ -164,7 +164,7 @@ theorem installValueGuards_bridge {μ : CheckMode} {env : Env} {fe : IFEnv}
+     rfl g5r (ConRon.Bridge.ExprOps.looseBVarsBoundedFast_spec coreWalkFuel 0 s
+       value hck0.state (by rw [hv]; rfl))
+   obtain ⟨hlbb, r8⟩ := AM.dunless_ok AM.Never.fail_any r7
+-  replace r8 := AM.pure_bind_ok r8
++  try replace r8 := AM.pure_bind_ok r8  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   have hlbbP : x.looseBVarsBounded 0 = true := by
+     rw [← h5r x hv]; exact hlbb
+   have hck5 : CheckOK μ env fe s5 :=
+@@ -181,7 +181,7 @@ theorem installValueGuards_bridge {μ : CheckMode} {env : Env} {fe : IFEnv}
+     rfl g6r (ConRon.Bridge.ExprOps.hasFvarFast_spec coreWalkFuel s5 value
+       hck5.state (by rw [hv5]; rfl))
+   obtain ⟨hfv, r10⟩ := AM.dguard_ok AM.Never.fail_any r9
+-  replace r10 := AM.pure_bind_ok r10
++  try replace r10 := AM.pure_bind_ok r10  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   have hfvP : x.hasFvar = false := by
+     rw [← h6r x hv5]
+     cases hb : b6 with
+@@ -198,7 +198,7 @@ theorem installValueGuards_bridge {μ : CheckMode} {env : Env} {fe : IFEnv}
+   obtain ⟨h8st, h8c, h8p, h8r⟩ :=
+     allLevelParamsDefined_run hck6.state hlps6 hv6 g8r
+   obtain ⟨hlpd, r13⟩ := AM.dunless_ok AM.Never.fail_any r12
+-  replace r13 := AM.pure_bind_ok r13
++  try replace r13 := AM.pure_bind_ok r13  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   have hlpdP : x.allLevelParamsDefined c.levelParams = true := by
+     rw [← h8r]; exact hlpd
+   have hck8 : CheckOK μ env fe s8 :=
+@@ -388,7 +388,7 @@ theorem checkDefnVal_bridge {μ : CheckMode} {env : Env}
+       (ConLeche.Expr.WScoped.of_not_hasFvar htw.fvar))
+   obtain ⟨F3, hF3⟩ := hsim3
+   obtain ⟨hb, r4⟩ := AM.dunless_ok AM.Never.fail_any r3
+-  replace r4 := AM.pure_bind_ok r4
++  try replace r4 := AM.pure_bind_ok r4  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   obtain ⟨rfl, rfl⟩ := AM.pure_ok r4
+   subst hb
+   -- 4. the answer
+@@ -484,7 +484,7 @@ theorem checkThmVal_bridge {μ : CheckMode} {env : Env}
+     | some bb => exact ⟨bb, rfl⟩
+   obtain ⟨rfl, rfl⟩ := AM.pure_ok ge
+   obtain ⟨hprop, rf⟩ := AM.dunless_ok AM.Never.fail_any re
+-  replace rf := AM.pure_bind_ok rf
++  try replace rf := AM.pure_bind_ok rf  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   have heqv : ConLeche.Level.isEquiv uu .zero = some true := by
+     rw [← hod, hprop]
+   -- 6. the install half
+@@ -518,7 +518,7 @@ theorem checkThmVal_bridge {μ : CheckMode} {env : Env}
+     rfl gi (hknot.defeq s7 0 vtype cv.type vt c.type hck7 hvt7 hty7 hwsvt hwsty)
+   obtain ⟨F3, hF3⟩ := hsim8
+   obtain ⟨hb, rj⟩ := AM.dunless_ok AM.Never.fail_any ri
+-  replace rj := AM.pure_bind_ok rj
++  try replace rj := AM.pure_bind_ok rj  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   obtain ⟨rfl, rfl⟩ := AM.pure_ok rj
+   subst hb
+   -- 9. the answer
+@@ -591,7 +591,7 @@ theorem checkOpaqueVal_bridge {μ : CheckMode} {env : Env}
+       (ConLeche.Expr.WScoped.of_not_hasFvar htw.fvar))
+   obtain ⟨F3, hF3⟩ := hsim3
+   obtain ⟨hb, r4⟩ := AM.dunless_ok AM.Never.fail_any r3
+-  replace r4 := AM.pure_bind_ok r4
++  try replace r4 := AM.pure_bind_ok r4  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   obtain ⟨rfl, rfl⟩ := AM.pure_ok r4
+   subst hb
+   have hext : Ext s.store s'.store := hstep1.ext.trans (hx2.trans hx3)
+diff --git a/vendor/con-ron/ConRon/Bridge/Checker/Hyp.lean b/vendor/con-ron/ConRon/Bridge/Checker/Hyp.lean
+index 22123db40dcff4427745b18435198ed3d32d5ce0..5848e26b99b894385a8eb2e01781875950782d04 100644
+--- a/vendor/con-ron/ConRon/Bridge/Checker/Hyp.lean
++++ b/vendor/con-ron/ConRon/Bridge/Checker/Hyp.lean
+@@ -108,6 +108,7 @@ theorem IFEnv.find?_push_restrict (fe : IFEnv) (ci : IConstantInfo)
+     simp only [h, ite_true, Nat.lt_irrefl, ite_false]
+     rw [hfresh]
+   · simp only [h, Bool.false_eq_true, ite_false]
++    rfl  -- con-agua patch: `simp` leaves `X = X` differing only in an instance
+ 
+ /-- con-leche: none — `IFEnvOK` reads its index through `find?` only. -/
+ theorem IFEnvOK.congr_find {env : Env} {fe fe' : IFEnv} {s : AState}
+diff --git a/vendor/con-ron/ConRon/Bridge/Checker/Split.lean b/vendor/con-ron/ConRon/Bridge/Checker/Split.lean
+index 19d93fcc5b1d2f911520e21d5f24c2e491a938db..15621703f0f7afccba68248615ae58696b58ac45 100644
+--- a/vendor/con-ron/ConRon/Bridge/Checker/Split.lean
++++ b/vendor/con-ron/ConRon/Bridge/Checker/Split.lean
+@@ -102,7 +102,7 @@ theorem installHeader_bridge {μ : CheckMode} {env : Env}
+   simp only [Arena.installHeader] at hrun
+   -- 1. the duplicate-declaration guard
+   obtain ⟨hdup, r1⟩ := AM.dguard_ok AM.Never.fail_any hrun
+-  replace r1 := AM.pure_bind_ok r1
++  try replace r1 := AM.pure_bind_ok r1  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   have hfind : fe.find? cv.name = none := by
+     cases hf : fe.find? cv.name with
+     | none => rfl
+@@ -118,7 +118,7 @@ theorem installHeader_bridge {μ : CheckMode} {env : Env}
+       = some c.levelParams := denoteNList_ext hp2.ext.lss.ls.ns _ _ hlps
+   have hty2 : denoteE s2.store cv.type = some c.type := denote_ext hty hp2.ext
+   obtain ⟨hres, r3⟩ := AM.dguard_ok AM.Never.fail_any r2
+-  replace r3 := AM.pure_bind_ok r3
++  try replace r3 := AM.pure_bind_ok r3  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   have hresP : ConLeche.reservedBasisNames.contains c.name = false := by
+     have hc := denoteNList_contains hck2.state.wf rs reservedBasisNameValues
+       (denoteNL_toList rs reservedBasisNameValues hrs) cv.name c.name hnm2
+@@ -130,7 +130,7 @@ theorem installHeader_bridge {μ : CheckMode} {env : Env}
+   obtain ⟨b3, s3, g3r, r4⟩ := AM.bind_ok r3
+   obtain ⟨hs3, hb3⟩ := isProjFnShape_run hck2.state rfl hnm2 g3r
+   obtain ⟨hproj, r5⟩ := AM.dguard_ok AM.Never.fail_any r4
+-  replace r5 := AM.pure_bind_ok r5
++  try replace r5 := AM.pure_bind_ok r5  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   have hprojP : c.name.isProjFnShape = false := by
+     rw [← hb3]
+     cases hb : b3 with
+@@ -138,7 +138,7 @@ theorem installHeader_bridge {μ : CheckMode} {env : Env}
+     | true => rw [hb] at hproj; exact absurd rfl hproj
+   -- 4. the duplicate-universe-parameter guard
+   obtain ⟨hnod, r6⟩ := AM.dunless_ok AM.Never.fail_any r5
+-  replace r6 := AM.pure_bind_ok r6
++  try replace r6 := AM.pure_bind_ok r6  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   have hnodP : ConLeche.Name.nodup c.levelParams = true := by
+     rw [← nameNodup_spec hck2.state.wf cv.levelParams c.levelParams hlps2]
+     exact hnod
+@@ -151,7 +151,7 @@ theorem installHeader_bridge {μ : CheckMode} {env : Env}
+     rfl g5r (ConRon.Bridge.ExprOps.looseBVarsBoundedFast_spec coreWalkFuel 0 s3
+       cv.type hck2.state (by rw [hty2]; rfl))
+   obtain ⟨hlbb, r8⟩ := AM.dunless_ok AM.Never.fail_any r7
+-  replace r8 := AM.pure_bind_ok r8
++  try replace r8 := AM.pure_bind_ok r8  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   have hlbbP : c.type.looseBVarsBounded 0 = true := by
+     rw [← h5r c.type hty2]; exact hlbb
+   have hck5 : CheckOK μ env fe s5 :=
+@@ -169,7 +169,7 @@ theorem installHeader_bridge {μ : CheckMode} {env : Env}
+     rfl g6r (ConRon.Bridge.ExprOps.hasFvarFast_spec coreWalkFuel s5 cv.type
+       hck5.state (by rw [hty5]; rfl))
+   obtain ⟨hfv, r10⟩ := AM.dguard_ok AM.Never.fail_any r9
+-  replace r10 := AM.pure_bind_ok r10
++  try replace r10 := AM.pure_bind_ok r10  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   have hfvP : c.type.hasFvar = false := by
+     rw [← h6r c.type hty5]
+     cases hb : b6 with
+@@ -187,7 +187,7 @@ theorem installHeader_bridge {μ : CheckMode} {env : Env}
+   obtain ⟨h8st, h8c, h8p, h8r⟩ :=
+     allLevelParamsDefined_run hck6.state hlps6 hty6 g8r
+   obtain ⟨hlpd, r13⟩ := AM.dunless_ok AM.Never.fail_any r12
+-  replace r13 := AM.pure_bind_ok r13
++  try replace r13 := AM.pure_bind_ok r13  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   have hlpdP : c.type.allLevelParamsDefined c.levelParams = true := by
+     rw [← h8r]; exact hlpd
+   have hck8 : CheckOK μ env fe s8 :=
+@@ -381,7 +381,7 @@ theorem checkValueGroup_bridge {μ : CheckMode} {env : Env}
+       | some bb => exact ⟨bb, rfl⟩
+     obtain ⟨rfl, rfl⟩ := AM.pure_ok gg
+     obtain ⟨hprop, rg⟩ := AM.dunless_ok AM.Never.fail_any rf
+-    replace rg := AM.pure_bind_ok rg
++    try replace rg := AM.pure_bind_ok rg  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+     have heqv : ConLeche.Level.isEquiv uu .zero = some true := by
+       rw [← hod, hprop]
+     have hext5 : Ext s2.store s6.store := by rw [hstd]; exact Ext.refl _
+@@ -660,6 +660,7 @@ theorem IFEnvOK_restrictTo {μ : CheckMode} {env : Env} {fe : IFEnv}
+         (fun d => d.name == n) = some ci := by
+     intro n ci hf
+     simp only [IFEnv.find?, IFEnv.restrictTo, hok.coh.2 n] at hf
++    dsimp +instances only [IFEnv.restrictTo] at hf  -- con-agua patch: `simp` no longer rewrites the `ite`'s instance
+     cases hg : (mkIFEnvGo fe.env.consts).2[n]? with
+     | none => rw [hg] at hf; simp at hf
+     | some p =>
+@@ -678,6 +679,7 @@ theorem IFEnvOK_restrictTo {μ : CheckMode} {env : Env} {fe : IFEnv}
+     intro n ci hf
+     obtain ⟨c, hc, hck⟩ := mkIFEnvGo_below_of _ n k ci hk' hndH hf
+     simp only [IFEnv.find?, IFEnv.restrictTo, hok.coh.2 n, hc]
++    dsimp +instances only [IFEnv.restrictTo]  -- con-agua patch: `simp` no longer rewrites the `ite`'s instance
+     rw [ite_eq_left hck]
+   refine ⟨?_, ?_, ?_⟩
+   · intro n ci hf
+@@ -1019,6 +1021,7 @@ theorem IFEnvOK_prefix {μ : CheckMode} {env : Env} {fe : IFEnv} {s : AState}
+     have hfind : ∀ n, (fe.restrictTo k).find? n = fe.find? n := by
+       intro n
+       simp only [IFEnv.find?, IFEnv.restrictTo]
++      dsimp +instances only [IFEnv.restrictTo]  -- con-agua patch: `simp` no longer rewrites the `ite`'s instance
+       cases hg : fe.idx[n]? with
+       | none => rfl
+       | some p =>
+diff --git a/vendor/con-ron/ConRon/Bridge/Core/Arms/DefeqPeel.lean b/vendor/con-ron/ConRon/Bridge/Core/Arms/DefeqPeel.lean
+index c8703c1a50551bc61b8a278cc8f789a9cd4a825c..00b13d7a836e2610c987c7d76e5688a44693367d 100644
+--- a/vendor/con-ron/ConRon/Bridge/Core/Arms/DefeqPeel.lean
++++ b/vendor/con-ron/ConRon/Bridge/Core/Arms/DefeqPeel.lean
+@@ -278,8 +278,9 @@ theorem peel_eq_case (s₀ : AState) (a b : EIdx) (j : Nat) (ws : List Expr)
+   subst hab'
+   obtain rfl : ca = cb := Option.some.inj (ha.symm.trans hb)
+   vcgen
+-  subst_vars
+-  exact ⟨hok, Ext.refl _, rfl, 1, isDefEqCore_refl_one⟩
++  -- con-agua patch (lean4#15487): `vcgen` now splits the `∧` post itself
++  all_goals subst_vars
++  all_goals first | rfl | exact hok | exact Ext.refl _ | exact ⟨1, isDefEqCore_refl_one⟩
+ 
+ /-- con-leche: ConLeche/Kernel/Core.lean:1340-1366 quickDefEq — **THEOREM 1
+ for the batched descent**: at every budget, `defeqPeel` answers the chain's
+@@ -379,9 +380,13 @@ theorem defeqPeel_spec (hsim : KnotSpec mode env fe fuel) (d : Nat) :
+       intro t2 dq s4 hok4 hx04 hp04 ht2 ⟨F1, hF1⟩
+       cases dq with
+       | false =>
+-        vcgen +internalize; subst_vars
+-        exact ⟨hok4, hx04, hp04, peel_step_pure (F2 := 0) hF1
+-          (fun _ => rfl) (fun h => absurd h (by simp))⟩
++        vcgen +internalize
++        -- con-agua patch (lean4#15487): `vcgen` now splits the `∧` post itself
++        all_goals subst_vars
++        all_goals first
++                  | rfl | exact hok4 | exact hx04 | exact hp04
++                  | exact peel_step_pure (F2 := 0) hF1
++                      (fun _ => rfl) (fun h => absurd h (by simp))
+       | true =>
+         simp only [Bool.not_true, Bool.false_eq_true, ite_false]
+         -- stage 4: the fresh free variable at the second opened domain
+@@ -479,9 +484,13 @@ theorem defeqBinders_spec {fe : IFEnv} {fuel : Nat}
+     fun F hF => ConLeche.isDefEqCore_mono hF hF1
+   cases v with
+   | false =>
+-    vcgen +internalize; subst_vars
+-    exact ⟨hok1, hx1, hp1, quick_step_pure (F2 := 0) hne hdq
+-      (fun _ => rfl) (fun h => absurd h (by simp))⟩
++    vcgen +internalize
++    -- con-agua patch (lean4#15487): `vcgen` now splits the `∧` post itself
++    all_goals subst_vars
++    all_goals first
++              | rfl | exact hok1 | exact hx1 | exact hp1
++              | exact quick_step_pure (F2 := 0) hne hdq
++                  (fun _ => rfl) (fun h => absurd h (by simp))
+   | true =>
+     simp only [Bool.not_true, Bool.false_eq_true, ite_false]
+     -- stage 2: the first free variable, at the second domain
+diff --git a/vendor/con-ron/ConRon/Bridge/Core/Arms/WhnfCore.lean b/vendor/con-ron/ConRon/Bridge/Core/Arms/WhnfCore.lean
+index 7706b595c1b04d8330f6f56fb63d09a4a67d0c75..0dd9bc401d47aceb80e0049ff59561d35f062573 100644
+--- a/vendor/con-ron/ConRon/Bridge/Core/Arms/WhnfCore.lean
++++ b/vendor/con-ron/ConRon/Bridge/Core/Arms/WhnfCore.lean
+@@ -303,8 +303,10 @@ theorem whnfCoreLoop_spec {fe : IFEnv} {fuel : Nat}
+       simp only [denoteStep, Option.map_eq_some_iff] at hdR
+       obtain ⟨V, hdV, rfl⟩ := hdR
+       vcgen
+-      subst_vars
+-      refine ⟨hok1, hx1, hp1, V, hdV, hwR, F1, ?_⟩
++      -- con-agua patch (lean4#15487): `vcgen` now splits the `∧` post itself
++      all_goals subst_vars
++      all_goals try first | rfl | exact hok1 | exact hx1 | exact hp1
++      refine ⟨V, hdV, hwR, F1, ?_⟩
+       simp only [ConLeche.whnfCoreLoopM]
+       rw [show ConLeche.whnfCoreStepW mode (ConLeche.pureFns mode env F1) env c d e
+         = .ok (.done V) from hF1]
+diff --git a/vendor/con-ron/ConRon/Bridge/Core/Memo.lean b/vendor/con-ron/ConRon/Bridge/Core/Memo.lean
+index a4244e801efe97d6db2da4651216465d55f4196d..6668ab3ffe7f20365ce3cd737f8f92b526c62e7c 100644
+--- a/vendor/con-ron/ConRon/Bridge/Core/Memo.lean
++++ b/vendor/con-ron/ConRon/Bridge/Core/Memo.lean
+@@ -242,6 +242,7 @@ theorem takeModeMemos_spec (s₀ : AState) :
+           { s₀.caches with
+             whnfCoreC := ∅, whnfCoreCheapC := ∅, whnfC := ∅,
+             inferC := ∅, inferIOC := ∅, defeqC := ∅ } }; ⊤⦄ := by
++  dsimp only  -- con-agua patch: zeta the nested `with` (`let __src`) as `defeqSet_spec` does
+   vcgen [takeModeMemos] with finish
+ 
+ /-- con-leche: ConLeche/Cached/StateC.lean:344-348 CState.putModeMemos —
+@@ -253,6 +254,7 @@ theorem putModeMemos_spec (s₀ : AState) (mm : ModeMemos) :
+           whnfCoreC := mm.whnfCoreC, whnfCoreCheapC := mm.whnfCoreCheapC,
+           whnfC := mm.whnfC, inferC := mm.inferC,
+           inferIOC := mm.inferIOC, defeqC := mm.defeqC } }; ⊤⦄ := by
++  dsimp only  -- con-agua patch: zeta the nested `with` (`let __src`) as `defeqSet_spec` does
+   vcgen [putModeMemos] with finish
+ 
+ /-! ## 3. The cache invariant under an insert
+diff --git a/vendor/con-ron/ConRon/Bridge/Core/Walks/BetaSpine.lean b/vendor/con-ron/ConRon/Bridge/Core/Walks/BetaSpine.lean
+index 9c0528dff53ab5d074c6cd6f75412540345e8072..a6ed804b4a963b47a3de1f03b7e839ce3633fe46 100644
+--- a/vendor/con-ron/ConRon/Bridge/Core/Walks/BetaSpine.lean
++++ b/vendor/con-ron/ConRon/Bridge/Core/Walks/BetaSpine.lean
+@@ -101,8 +101,9 @@ theorem getAppSpineGo_spec : ∀ (fuel : Nat) (s₀ : AState) (h : EIdx)
+         rintro t s2 ⟨hs2, ht1, ht2, ht3, ht4⟩
+         subst s2
+         vcgen
++        -- con-agua patch (lean4#15487): `vcgen` now splits the `∧` post itself (`s' = s₀` closed)
+         subst_vars
+-        refine ⟨rfl, ?_, ?_, ?_, ?_⟩
++        refine ⟨?_, ?_, ?_, ?_⟩
+         · simpa [Expr.getAppFn] using ht1
+         · simp only [Array.toList_push, Expr.getAppArgs]
+           exact ExprOps.denoteEList_snoc ha _ _ ht2
+@@ -121,14 +122,15 @@ theorem getAppSpineGo_spec : ∀ (fuel : Nat) (s₀ : AState) (h : EIdx)
+               Expr.mkAppN_append_one, Expr.mkAppN_getApp]
+             exact hd
+     · rw [ite_eq_right htg]
+-      vcgen
+-      subst_vars
+       have hna : ∀ x y, E ≠ Expr.app x y := by
+         obtain ⟨w, hw⟩ := denoteE_view hd
+         refine denote_not_app hok.wf hw hd ?_
+         intro f a hfa; subst hfa
+         exact htg (by rw [EStore.tagOf_of_view hw]; rfl)
+-      refine ⟨rfl, ?_, ?_, rfl, ?_⟩
++      vcgen
++      -- con-agua patch (lean4#15487): `vcgen` now splits the `∧` post itself (`s' = s₀` closed)
++      subst_vars
++      refine ⟨?_, ?_, rfl, ?_⟩
+       · simpa [ExprOps.getAppFn_of_not_app hna] using hd
+       · simp [ExprOps.getAppArgs_of_not_app hna, Frontend.denoteEList]
+       · intro j hj; simp at hj
+@@ -160,18 +162,21 @@ theorem headAndArgs_spec (s₀ : AState) (v : EIdx) (V : Expr)
+     rintro va s2 ⟨hs2, hr2⟩
+     subst s2
+     vcgen
+-    subst_vars
+-    exact ⟨rfl, hr1 V hd, by simpa using hr2 V hd⟩
++    -- con-agua patch (lean4#15487): `vcgen` now splits the `∧` post itself
++    all_goals subst_vars
++    all_goals first | rfl | exact hr1 V hd | simpa using hr2 V hd
+   · rw [ite_eq_right htg]
+-    vcgen
+-    subst_vars
+     have hna : ∀ x y, V ≠ Expr.app x y := by
+       obtain ⟨w, hw⟩ := denoteE_view hd
+       refine denote_not_app hok.wf hw hd ?_
+       intro f a hfa; subst hfa
+       exact htg (by rw [EStore.tagOf_of_view hw]; rfl)
+-    exact ⟨rfl, by simpa [ExprOps.getAppFn_of_not_app hna] using hd,
+-      by simp [ExprOps.getAppArgs_of_not_app hna, Frontend.denoteEList]⟩
++    vcgen
++    -- con-agua patch (lean4#15487): `vcgen` now splits the `∧` post itself
++    all_goals subst_vars
++    all_goals first
++                | rfl | simpa [ExprOps.getAppFn_of_not_app hna] using hd
++                | simp [ExprOps.getAppArgs_of_not_app hna, Frontend.denoteEList]
+ 
+ /-- con-leche: none — **THEOREM 1 for `internAppRebuilt`**: the upward
+ cutoff hands back the spine's own node when the caller vouches for it
+@@ -188,8 +193,9 @@ theorem internAppRebuilt_spec (s₀ : AState) (node : EIdx) (same : Bool)
+   cases same with
+   | true =>
+     vcgen +internalize
+-    subst_vars
+-    exact ⟨hok, Ext.refl _, rfl, by simpa using hsame⟩
++    -- con-agua patch (lean4#15487): `vcgen` now splits the `∧` post itself
++    all_goals subst_vars
++    all_goals first | rfl | exact hok | exact Ext.refl _ | simpa using hsame
+   | false =>
+     simp only [Bool.false_eq_true, ite_false]
+     refine triple_mono (internE_ok_spec s₀ (.app f a) hok
+@@ -259,8 +265,6 @@ theorem whnfApp_iotaStep_spec {fuel : Nat} (henv : ConLeche.EnvWF env)
+     rw [happ] at h
+     exact h
+   · rw [ite_eq_right htc]
+-    vcgen
+-    subst_vars
+     have hnc : ∀ c us, (Expr.app V A).getAppFn ≠ .const c us := by
+       obtain ⟨w, hw'⟩ := denoteE_view hdh
+       have h1 := denote_not_const hok.state.wf hw' hdh (by
+@@ -268,10 +272,14 @@ theorem whnfApp_iotaStep_spec {fuel : Nat} (henv : ConLeche.EnvWF env)
+         exact htc (by rw [EStore.tagOf_of_view hw']; rfl))
+       intro c us hcu
+       exact h1 c us (by simpa [Expr.getAppFn] using hcu)
+-    refine ⟨hok, Ext.refl _, rfl, none, rfl,
+-      ⟨fun (x : Expr) (hx : (none : Option Expr) = some x) => by simp at hx,
+-        0, ?_⟩⟩
+-    exact iotaRecFueled_nohead hnc
++    vcgen
++    -- con-agua patch (lean4#15487): `vcgen` now splits the `∧` post itself
++    all_goals subst_vars
++    all_goals first
++                | rfl | exact hok | exact Ext.refl _
++                | exact ⟨none, rfl,
++                    ⟨fun (x : Expr) (hx : (none : Option Expr) = some x) => by simp at hx,
++                      0, iotaRecFueled_nohead hnc⟩⟩
+ 
+ /-! ## 3. The pure mirrors at the pure knot
+ 
+diff --git a/vendor/con-ron/ConRon/Bridge/Core/Walks/InferSpine.lean b/vendor/con-ron/ConRon/Bridge/Core/Walks/InferSpine.lean
+index 92940a47c1d4617240020bf2fb03b50eb9846c63..6f4ceb4e7233cf2d0ca346540cfbd2d30e0278ec 100644
+--- a/vendor/con-ron/ConRon/Bridge/Core/Walks/InferSpine.lean
++++ b/vendor/con-ron/ConRon/Bridge/Core/Walks/InferSpine.lean
+@@ -65,8 +65,9 @@ theorem headAndArgs_app_spec (s₀ : AState) (e : EIdx) (x : Expr)
+   rintro va s2 ⟨hs2, hrelA⟩
+   subst s2
+   vcgen
+-  subst_vars
+-  exact ⟨rfl, hrelF x hden, by simpa using hrelA x hden⟩
++  -- con-agua patch (lean4#15487): `vcgen` now splits the `∧` post itself
++  all_goals subst_vars
++  all_goals first | rfl | exact hrelF x hden | simpa using hrelA x hden
+ 
+ /-! ## 2. The argument check -/
+ 
+diff --git a/vendor/con-ron/ConRon/Bridge/Core/Walks/IotaMajor.lean b/vendor/con-ron/ConRon/Bridge/Core/Walks/IotaMajor.lean
+index bd9c967d177b2e327eafbd100d7913e9e5732e0f..471ea55d33fb5edf8a9382f78a8eaf8705e26434 100644
+--- a/vendor/con-ron/ConRon/Bridge/Core/Walks/IotaMajor.lean
++++ b/vendor/con-ron/ConRon/Bridge/Core/Walks/IotaMajor.lean
+@@ -1347,6 +1347,7 @@ theorem majorToCtorFueled_one {F d : Nat} {cn : ConLeche.Name} {rl : RecRule} {x
+     cases ci with
+     | ctorInfo cvj cnP cnF =>
+       simp only [cCtor?, cCtorVal, cCtorNP, Bool.true_and]
++      dsimp +instances only [cCtor?, cCtorVal, cCtorNP]  -- con-agua patch (instance args)
+       generalize hg : cvj.type.piResult.getAppFn = g
+       cases g with
+       | const T us =>
+diff --git a/vendor/con-ron/ConRon/Bridge/Core/Walks/PropRead.lean b/vendor/con-ron/ConRon/Bridge/Core/Walks/PropRead.lean
+index 86ee5c6595f72a2f2978a8c00806aed0a19ddfcc..dfcef92a936f87af480ebd31128a4b339a0b6ff5 100644
+--- a/vendor/con-ron/ConRon/Bridge/Core/Walks/PropRead.lean
++++ b/vendor/con-ron/ConRon/Bridge/Core/Walks/PropRead.lean
+@@ -323,6 +323,7 @@ theorem lamProj?_eq (k : Nat) (x : Expr) : ConLeche.lamProj? k x =
+     else none := by
+   cases x <;> simp [ConLeche.lamProj?, exprTag, exprBody, exprBVar, ETag.forallE, ETag.bvar,
+     ETag.fvar, ETag.sort, ETag.const, ETag.app, ETag.lam, ETag.letE, ETag.lit, ETag.proj]
++    <;> rfl  -- con-agua patch: `simp` leaves `X = X` differing in an `ite` instance
+ 
+ /-- con-leche: none — the arity of a `lamProj?` answer. -/
+ def lpK : Option (Nat × Nat) → Nat | some (k, _) => k | none => 0
+@@ -350,7 +351,7 @@ theorem unwrapIdDefs_succ_eq (f : ConLeche.Name → Option ConstantInfo) (n : Na
+   cases g <;> simp [exprTag, ETag.forallE, ETag.bvar, ETag.fvar, ETag.sort, ETag.const,
+     ETag.app, ETag.lam, ETag.letE, ETag.lit, ETag.proj]
+   rename_i c us
+-  simp only [exprConstName]
++  dsimp +instances only [exprConstName]  -- con-agua patch: was `simp only` (instance args)
+   cases hf : f c with
+   | none => simp [cDefn?]
+   | some ci =>
+@@ -403,6 +404,7 @@ theorem headTypePW_eq (f : ConLeche.Name → Option ConstantInfo) (r : Expr) (d
+   cases x with
+   | const I us =>
+     simp only [ConLeche.headTypePW, exprTag, exprConstName, exprConstLevels, ite_true]
++    dsimp +instances only [exprTag, exprConstName, exprConstLevels]  -- con-agua patch (instance args)
+     cases hf : f I with
+     | none => simp [cTower?, cValP]
+     | some ci =>
+@@ -481,6 +483,7 @@ theorem headProofPW_eq (x : Expr) : ConLeche.headProofPW env.find? x =
+   cases x with
+   | const I us =>
+     simp only [ConLeche.headProofPW, exprTag, exprConstName, exprConstLevels, ite_true]
++    dsimp +instances only [exprTag, exprConstName, exprConstLevels]  -- con-agua patch (instance args)
+     cases hf : env.find? I with
+     | none => simp [cTower?, cValP]
+     | some ci =>
+diff --git a/vendor/con-ron/ConRon/Bridge/Core/Walks/Spine.lean b/vendor/con-ron/ConRon/Bridge/Core/Walks/Spine.lean
+index 32cf6575e2ae3a479b9d1df453dba8b8416ccea1..364192f9621357071408eb10d3fa00869ec9a8ee 100644
+--- a/vendor/con-ron/ConRon/Bridge/Core/Walks/Spine.lean
++++ b/vendor/con-ron/ConRon/Bridge/Core/Walks/Spine.lean
+@@ -341,29 +341,32 @@ function as ONE equation: the unfolding exactly when the head is unfoldable
+         (cDefnVal (env.find? (exprConstName x.getAppFn))).levelParams (exprConstLevels x.getAppFn))
+         x.getAppArgs)
+     else none := by
+-  simp only [ConLeche.unfoldDefinition, ConLeche.unfoldableHead]
+-  split <;> rename_i hg
+-  · split
+-    · rename_i n us hfn
+-      simp only [hfn] at hg ⊢
+-      split at hg
+-      · rename_i cv value hint hf
+-        simp only [hf, exprConstName, exprConstLevels, cDefnValue, cDefnVal, beq_iff_eq] at hg ⊢
+-        simp only [hg, ite_true]
+-      · exact absurd hg (by simp)
+-    · rename_i hfn
+-      split at hg
+-      · rename_i n us h; exact absurd h (hfn n us)
+-      · exact absurd hg (by simp)
+-  · split
+-    · rename_i n us hfn
+-      simp only [hfn] at hg ⊢
+-      split
+-      · rename_i cv value hint hf
+-        simp only [hf, beq_iff_eq] at hg
+-        simp only [hg, ite_false]
+-      · rfl
+-    · rfl
++  -- con-agua patch: the original `simp only [..]; split`-based proof fails on
++  -- nightly-2026-10-20 (`simp only` leaves the `if`'s `Decidable` instance
++  -- on the folded `unfoldableHead`, so `split`/`generalize` see an ill-typed
++  -- motive); decide the `if` first, then `delta` and case on the head.
++  by_cases hc : ConLeche.unfoldableHead env x = true
++  · rw [ite_eq_left_of_eq_true _ _ (eq_true hc)]
++    revert hc
++    delta ConLeche.unfoldDefinition ConLeche.unfoldableHead
++    generalize x.getAppFn = g
++    cases g <;> try (intro h; cases h)
++    rename_i n us
++    dsimp only [exprConstName, exprConstLevels]
++    generalize env.find? n = o
++    rcases o with _ | ⟨_ | _ | _ | _ | _ | _ | _ | _⟩ <;> try (intro h; cases h)
++    simp_all [cDefnValue, cDefnVal]
++  · rw [ite_eq_right_of_eq_false _ _ (eq_false hc)]
++    simp only [Bool.not_eq_true] at hc
++    revert hc
++    delta ConLeche.unfoldDefinition ConLeche.unfoldableHead
++    generalize x.getAppFn = g
++    cases g <;> try (intro; rfl)
++    rename_i n us
++    dsimp only
++    generalize env.find? n = o
++    rcases o with _ | ⟨_ | _ | _ | _ | _ | _ | _ | _⟩ <;> try (intro; rfl)
++    simp_all
+ 
+ /-- con-leche: ConLeche/Kernel/CoreDefs.lean:145-151 headHint — the function
+ as ONE equation: the hint at the head constant's name, `opaque` elsewhere. -/
+diff --git a/vendor/con-ron/ConRon/Bridge/Core/Walks/Stuck.lean b/vendor/con-ron/ConRon/Bridge/Core/Walks/Stuck.lean
+index 36a03f5705b668a72a2c797ba642d97437c45c49..5099639b1eed29821502b79279427c462808b9e4 100644
+--- a/vendor/con-ron/ConRon/Bridge/Core/Walks/Stuck.lean
++++ b/vendor/con-ron/ConRon/Bridge/Core/Walks/Stuck.lean
+@@ -791,6 +791,7 @@ theorem structUnitCert_run {F d : Nat} {x y t w : Expr}
+   have e2 : (ConLeche.pureFns mode env F).whnf d t = .ok w := h2
+   simp only [ConLeche.structUnitCertFueled, ConLeche.structUnitCert, e1, e2, bind,
+     Except.bind, unitGuard]
++  dsimp +instances only [unitGuard]  -- con-agua patch: `simp` no longer rewrites instance args
+   cases w.getAppFn with
+   | const T us =>
+     simp only [exprTag, exprConstName, exprConstLevels, beq_self_eq_true, Bool.true_and]
+diff --git a/vendor/con-ron/ConRon/Bridge/ExprOps/Abs.lean b/vendor/con-ron/ConRon/Bridge/ExprOps/Abs.lean
+index ccb4163177da5650a9b50113d7c501cca62654e2..337250230df5079942c8dda91a276fcd3356e30a 100644
+--- a/vendor/con-ron/ConRon/Bridge/ExprOps/Abs.lean
++++ b/vendor/con-ron/ConRon/Bridge/ExprOps/Abs.lean
+@@ -267,8 +267,9 @@ theorem abs1Set_specA (f : Nat → Expr → Expr) (s₀ : AState) (h : EIdx) (c
+     ⦃fun _u s' => s'.store = s₀.store ∧ s'.caches = s₀.caches ∧
+         s'.pins = s₀.pins ∧ MemoOK f s'.memos.abs1C s'.store; ⊤⦄ := by
+   vcgen [abs1Set]
+-  subst_vars
+-  exact ⟨rfl, rfl, rfl, MemoOK.insert hm rfl hk hr⟩
++  -- con-agua patch (lean4#15487): `vcgen` now splits the `∧` post itself
++  all_goals subst_vars
++  all_goals first | rfl | exact MemoOK.insert hm rfl hk hr
+ 
+ /-! ## `fvarB`, as a hypothesis (see the module header)
+ 
+diff --git a/vendor/con-ron/ConRon/Bridge/ExprOps/Leaves.lean b/vendor/con-ron/ConRon/Bridge/ExprOps/Leaves.lean
+index ccd39c532b98c201fb5762c1efc447b33f63c933..18c0459e0ad55455ce4c98da84e56b83b6bc1f70 100644
+--- a/vendor/con-ron/ConRon/Bridge/ExprOps/Leaves.lean
++++ b/vendor/con-ron/ConRon/Bridge/ExprOps/Leaves.lean
+@@ -822,6 +822,30 @@ private theorem SeenGrow.insert_black {st : EStore} {acc : List (Nat × EIdx)}
+   SeenGrow.drop_insert SeenGrow.refl hb
+ local grind_pattern [bridge_grind] SeenGrow.insert_black => SeenGrow st acc seen (seen.insert k ())
+ 
++/-- con-agua patch (lean4#15487): `vcgen` now splits the post's `∧`, so the
++`SeenGrow` VC of a leaf arm no longer holds the `LeavesEq st acc c acc` term that
++made `LeavesEq.black` supply `BlackA`; this keys the same chain on the `SeenGrow`
++goal itself. -/
++private theorem SeenGrow.insert_of_leavesEq {st : EStore} {acc : List (Nat × EIdx)}
++    {seen : Std.HashMap EIdx Unit} {k : EIdx} (h : LeavesEq st acc k acc)
++    (hacc : (denoteLeaves st acc).isSome = true) :
++    SeenGrow st acc seen (seen.insert k ()) :=
++  SeenGrow.insert_black (LeavesEq.black h hacc)
++local grind_pattern [bridge_grind] SeenGrow.insert_of_leavesEq =>
++  SeenGrow st acc seen (seen.insert k ())
++
++/-- con-agua patch (lean4#15487): likewise for a node arm's
++`SeenGrow.drop_insert`, whose `BlackA` came from the node's `LeavesEq` step in
++the (now separate) `LeavesEq` VC; keyed on the caller's `SeenOK` instead. -/
++private theorem SeenGrow.drop_insert_of_leavesEq {st : EStore}
++    {acc res : List (Nat × EIdx)} {seen seen' : Std.HashMap EIdx Unit} {k : EIdx}
++    (_hs : SeenOK st acc seen k) (h : SeenGrow st res (seen.insert k ()) seen')
++    (hl : LeavesEq st acc k res) (hacc : (denoteLeaves st acc).isSome = true) :
++    SeenGrow st res seen seen' :=
++  SeenGrow.drop_insert h (LeavesEq.black hl hacc)
++local grind_pattern [bridge_grind] SeenGrow.drop_insert_of_leavesEq =>
++  SeenOK st acc seen k, SeenGrow st res (seen.insert k ()) seen', SeenGrow st res seen seen'
++
+ local grind_pattern [bridge_grind] SeenGrow.drop_insert =>
+   SeenGrow st acc seen seen', SeenGrow st acc (seen.insert k ()) seen'
+ local grind_pattern [bridge_grind] SeenGrow.trans => SeenGrow st a1 s0 s1, SeenGrow st a2 s1 s2
+diff --git a/vendor/con-ron/ConRon/Bridge/ExprOps/MemoSpecs.lean b/vendor/con-ron/ConRon/Bridge/ExprOps/MemoSpecs.lean
+index b5ff88efde79f68a4c7403bd93f31a5ae34c00c4..27fc616dde79c4595874318cf5a1145f48d50d03 100644
+--- a/vendor/con-ron/ConRon/Bridge/ExprOps/MemoSpecs.lean
++++ b/vendor/con-ron/ConRon/Bridge/ExprOps/MemoSpecs.lean
+@@ -66,9 +66,12 @@ open scoped Lean.Order
+             MemoLOK f s'.memos.instLPLC s'.store; ⊤⦄ := by
+   dsimp only
+   vcgen [instLPLSet]
+-  subst_vars
+-  refine ⟨rfl, rfl, rfl, rfl, fun f hm hr => ?_⟩
+-  exact MemoLOK.insert hm rfl hk hr
++  -- con-agua patch (lean4#15487): `vcgen` now splits the `∧` post itself and
++  -- closes the `rfl` conjuncts, leaving the memo equation and the `∀`-clause
++  all_goals subst_vars
++  · rfl
++  · rename_i f hm hr
++    exact MemoLOK.insert hm rfl hk hr
+ 
+ /-- con-leche: ConLeche/Kernel/Level.lean:28-40 Level.subst — the same for
+ `instLPLsSet`, the universe-argument-LIST memo, the one where the trap is a
+@@ -85,9 +88,12 @@ false goal (module note). -/
+             MemoLsOK f s'.memos.instLPLsC s'.store; ⊤⦄ := by
+   dsimp only
+   vcgen [instLPLsSet]
+-  subst_vars
+-  refine ⟨rfl, rfl, rfl, rfl, fun f hm hr => ?_⟩
+-  exact MemoLsOK.insert hm rfl hk hr
++  -- con-agua patch (lean4#15487): `vcgen` now splits the `∧` post itself and
++  -- closes the `rfl` conjuncts, leaving the memo equation and the `∀`-clause
++  all_goals subst_vars
++  · rfl
++  · rename_i f hm hr
++    exact MemoLsOK.insert hm rfl hk hr
+ 
+ /-! ## The readback memos, with the frame the walks need
+ 
+@@ -335,9 +341,11 @@ theorem internRebuiltBind_specV (s₀ : AState) (h : EIdx) (same : Bool)
+       simp [internRebuiltBind, hc]
+     rw [hprog]
+     vcgen
+-    subst s₀
+-    exact ⟨hwf, Ext.refl _, rfl, rfl, rfl, rfl, rfl, fun _ _ hj => hj, hsame hc,
+-      denoteE_view_eq hwf (hsame hc)⟩
++    -- con-agua patch (lean4#15487): `vcgen` now splits the `∧` post itself
++    all_goals subst s₀
++    all_goals first
++      | exact hwf | exact Ext.refl _ | exact hsame hc
++      | exact denoteE_view_eq hwf (hsame hc) | (rename_i hj; exact hj)
+   · have hprog : internRebuiltBind h same tag ty b = internBindE tag ty b := by
+       simp [internRebuiltBind, hc]
+     rw [hprog]
+diff --git a/vendor/con-ron/ConRon/Bridge/ExprOps/Owed.lean b/vendor/con-ron/ConRon/Bridge/ExprOps/Owed.lean
+index 915afcdad2b26e8f770335deccc9c0f2da5f7b90..6148e52c88fb24de0417d578ade29900145c0ddd 100644
+--- a/vendor/con-ron/ConRon/Bridge/ExprOps/Owed.lean
++++ b/vendor/con-ron/ConRon/Bridge/ExprOps/Owed.lean
+@@ -276,8 +276,9 @@ theorem instLPSet_specA (f : Nat → Expr → Expr) (s₀ : AState) (h : EIdx) (
+         s'.memos.instLPLsC = s₀.memos.instLPLsC ∧
+         MemoOK f s'.memos.instLPC s'.store; ⊤⦄ := by
+   vcgen [instLPSet]
+-  subst_vars
+-  exact ⟨rfl, rfl, rfl, rfl, rfl, MemoOK.insert hm rfl hk hr⟩
++  -- con-agua patch (lean4#15487): `vcgen` now splits the `∧` post itself
++  all_goals subst_vars
++  all_goals first | rfl | exact MemoOK.insert hm rfl hk hr
+ 
+ /-! ### Theorem 1 for `instLPGo` -/
+ 
+@@ -329,7 +330,8 @@ theorem instLPGo_specS (ks : List ConLeche.Name) (us : List Level) :
+     constructor
+     intro s₀ h hok hm hml hmls hcl hcls hden
+     dsimp only
+-    sym only [bridge_grind, denoteEView, opt2, opt3, instLPFn_cutoff, view_eq_viewAt] =>
++    sym only [bridge_grind, denoteEView, opt2, opt3, instLPFn_cutoff, view_eq_viewAt,
++        → Std.le_trans] =>  -- con-agua patch (lean4#15487): store-order chains the split VCs lost
+       vcgen [instLPGo_succ, instLPArmFVar, instLPArmApp, instLPArmLam,
+         instLPArmForallE, instLPArmLet, instLPArmProj, ih.run,
+         substLMemoAt_spec, substLsMemoAt_spec,
+@@ -384,7 +386,8 @@ sibling readback tables framed. -/
+         ReadNCacheOK s'.caches.readNC s'.store; ⊤⦄ := by
+   dsimp only
+   vcgen [readNameM]
+-  all_goals (subst_vars; refine ⟨rfl, rfl, rfl, rfl, ?_, ?_⟩ <;> grind [ReadNCacheOK])
++  -- con-agua patch (lean4#15487): `vcgen` now splits the `∧` post itself
++  all_goals (subst_vars; first | rfl | grind [ReadNCacheOK])
+ 
+ /-- con-leche: ConLeche/Kernel/Name.lean:34-37 Name — and `readNamesM`, whose
+ recursion is on the list as `readNames`' is. -/
+diff --git a/vendor/con-ron/ConRon/Bridge/Frontend/Chunks.lean b/vendor/con-ron/ConRon/Bridge/Frontend/Chunks.lean
+index e8db1b354b91227fbdeb56d38c7249e3c5d675e1..91af994ad1e12f566c6d0d9c0908d4c7d51dcf46 100644
+--- a/vendor/con-ron/ConRon/Bridge/Frontend/Chunks.lean
++++ b/vendor/con-ron/ConRon/Bridge/Frontend/Chunks.lean
+@@ -401,7 +401,7 @@ theorem chunkStep_run {s s' : AState} (hok : StateOK s)
+   · rw [ite_eq_left hsz] at hrun
+     exact absurd (AM.pure_ok hrun).1 (by simp)
+   · rw [ite_eq_right hsz] at hrun
+-    simp only [pure_bind] at hrun
++    try simp only [pure_bind] at hrun  -- con-agua patch: no `pure ... >>=` left on nightly-2026-10-20
+     obtain ⟨x, s₁, hfeed, hrest⟩ := AM.bind_ok hrun
+     cases x with
+     | error e =>
+@@ -442,7 +442,7 @@ theorem chunkFinish_run {s s' : AState} (hok : StateOK s)
+       by rw [ConLeche.Frontend.chunkFinish, ite_eq_left hce],
+       ParseResultRel.ofState hrel⟩
+   · rw [ite_eq_right hce] at hrun
+-    simp only [pure_bind] at hrun
++    try simp only [pure_bind] at hrun  -- con-agua patch (as above)
+     obtain ⟨x, s₁, hfin, hrest⟩ := AM.bind_ok hrun
+     cases x with
+     | error e =>
+@@ -480,7 +480,7 @@ theorem parseBytes_run {s s' : AState} (hok : StateOK s)
+   · rw [ite_eq_left hsz] at hrun
+     exact absurd (AM.pure_ok hrun).1 (by simp)
+   · rw [ite_eq_right hsz] at hrun
+-    simp only [pure_bind] at hrun
++    try simp only [pure_bind] at hrun  -- con-agua patch (as above)
+     obtain ⟨sd0, s0, hinit, hrest⟩ := AM.bind_ok hrun
+     obtain ⟨hstep0, hp0, hrel0⟩ := StateD_init_run hok hoff hinit
+     obtain ⟨x, s₁, hfeed, hrest2⟩ := AM.bind_ok hrest
+diff --git a/vendor/con-ron/ConRon/Bridge/Frontend/Lines.lean b/vendor/con-ron/ConRon/Bridge/Frontend/Lines.lean
+index 15161f6a2bbbfb52c8e9e70298b91f5b729eedca..3c35b46b19e29372f34e14fae78ac07ea2900bde 100644
+--- a/vendor/con-ron/ConRon/Bridge/Frontend/Lines.lean
++++ b/vendor/con-ron/ConRon/Bridge/Frontend/Lines.lean
+@@ -1138,6 +1138,11 @@ taking con-leche's same branch.  The legacy elaborator inlines the
+ `kExpected?` join point into three copies of the recursor loop; the step is
+ the same in all three, so it is written once as the tactic macros below. -/
+ 
++-- con-agua patch: on nightly-2026-10-20 the twin's loops elaborate with a
++-- `Prod` state too (`(none, ())`, `(none, arr, j)`), not `MProd`; the four
++-- `forIn_sim` relations below are retyped accordingly (and the inner loop's
++-- counter/array conjuncts re-paired so the destructuring names stay put).
++
+ /-- con-leche: none — `Except`'s bind at a success, as a rewrite. -/
+ theorem except_ok_bind {ε α β : Type} (a : α) (f : α → Except ε β) :
+     (Except.ok a >>= f) = f a := rfl
+@@ -1592,8 +1597,8 @@ macro "vind_rec_loop" : tactic => `(tactic| (
+   obtain ⟨r2, s₂, hloop2, hrun⟩ := AM.bind_ok hrun
+   refine except_bind_ex
+     (forIn_sim (P := fun (a b : ConLeche.Frontend.IndRecRec) => a = b)
+-      (R := fun (b : MProd (Option (RecordVerdict ⊕ List ConLeche.Frontend.IndCtorRec × Nat))
+-          PUnit)
++      (R := fun (b : (Option (RecordVerdict ⊕ List ConLeche.Frontend.IndCtorRec × Nat))
++          × Unit)
+         (c : Option (ConLeche.Frontend.RecordVerdict ⊕ List ConLeche.Frontend.IndCtorRec × Nat)
+           × Unit) =>
+           b.1.isNone = c.1.isNone ∧ VInv b.1 c.1)
+@@ -1677,8 +1682,8 @@ macro "vind_rec_tail" : tactic => `(tactic| (
+     refine except_bind_ex
+       (forIn_sim (P := fun (a : NIdx × EIdx) (b : ConLeche.Name × Expr) =>
+           denoteN s.store.ns a.1 = some b.1 ∧ denoteE s.store a.2 = some b.2)
+-        (R := fun (b : MProd (Option (RecordVerdict ⊕ List ConLeche.Frontend.IndCtorRec × Nat))
+-            PUnit)
++        (R := fun (b : (Option (RecordVerdict ⊕ List ConLeche.Frontend.IndCtorRec × Nat))
++            × Unit)
+           (c : Option (ConLeche.Frontend.RecordVerdict ⊕ List ConLeche.Frontend.IndCtorRec × Nat)
+             × Unit) =>
+             b.1.isNone = c.1.isNone ∧ VInv b.1 c.1)
+@@ -1845,8 +1850,8 @@ theorem validateIndD_run' {s s' : AState} (hok : StateOK s) {sd : StateD}
+     (forIn_sim (P := fun (p : NIdx × List NIdx) (q : ConLeche.Name × List ConLeche.Name) =>
+         denoteN s.store.ns p.1 = some q.1 ∧
+         ListRel (fun h n => denoteN s.store.ns h = some n) p.2 q.2)
+-      (R := fun (b : MProd (Option (RecordVerdict ⊕ List ConLeche.Frontend.IndCtorRec × Nat))
+-          (Array ConLeche.Frontend.IndCtorRec))
++      (R := fun (b : (Option (RecordVerdict ⊕ List ConLeche.Frontend.IndCtorRec × Nat))
++          × Array ConLeche.Frontend.IndCtorRec)
+         (c : Option (ConLeche.Frontend.RecordVerdict ⊕ List ConLeche.Frontend.IndCtorRec × Nat) ×
+           Array ConLeche.Frontend.IndCtorRec) =>
+           b.1.isNone = c.1.isNone ∧ VInv b.1 c.1 ∧ b.2 = c.2)
+@@ -1857,12 +1862,12 @@ theorem validateIndD_run' {s s' : AState} (hok : StateOK s) {sd : StateD}
+     obtain ⟨ri, s₁, hin, hstep⟩ := AM.bind_ok hstep
+     refine except_bind_ex
+       (forIn_sim (P := fun (a : NIdx) (b : ConLeche.Name) => denoteN s.store.ns a = some b)
+-        (R := fun (b : MProd (Option (RecordVerdict ⊕ List ConLeche.Frontend.IndCtorRec × Nat))
+-            (MProd Nat (Array ConLeche.Frontend.IndCtorRec)))
++        (R := fun (b : (Option (RecordVerdict ⊕ List ConLeche.Frontend.IndCtorRec × Nat))
++            × (Array ConLeche.Frontend.IndCtorRec × Nat))
+           (c : Option (ConLeche.Frontend.RecordVerdict ⊕ List ConLeche.Frontend.IndCtorRec × Nat)
+             × (Array ConLeche.Frontend.IndCtorRec × Nat)) =>
+             b.1.isNone = c.1.isNone ∧ VInv b.1 c.1 ∧
+-              b.2.1 = c.2.2 ∧ b.2.2 = c.2.1)
++              b.2.2 = c.2.2 ∧ b.2.1 = c.2.1)
+         ?_ hns (c := (none, c0.2, 0)) ⟨rfl, VInv.nil, rfl, h20⟩ hin) ?_
+     · intro n nm bi ci s0'' sti hdn hRi hsti
+       obtain ⟨hni, hli, hj, hord2⟩ := hRi
+diff --git a/vendor/con-ron/ConRon/Bridge/Frontend/Prepare.lean b/vendor/con-ron/ConRon/Bridge/Frontend/Prepare.lean
+index a8a2816108a18944e1b9d2c6e928daac211f7e95..70756f0f30cafb246674a6d2fec7c1fcd979c434 100644
+--- a/vendor/con-ron/ConRon/Bridge/Frontend/Prepare.lean
++++ b/vendor/con-ron/ConRon/Bridge/Frontend/Prepare.lean
+@@ -1726,6 +1726,7 @@ theorem clHoistTargets_eq (dsP : Array Declaration) :
+           intro u x
+           obtain ⟨tg, st⟩ := x
+           simp only [clB, clCloseStep, hoistDone]
++          dsimp +instances only [clB, clCloseStep, hoistDone]  -- con-agua patch: `simp` no longer rewrites instance args
+           by_cases hsz : st.size > 0
+           · rw [dite_eq_left hsz, dite_eq_left hsz]
+             cases hk : tg[st[st.size - 1]]? with
+diff --git a/vendor/con-ron/ConRon/Bridge/Inductives/BlockInstall.lean b/vendor/con-ron/ConRon/Bridge/Inductives/BlockInstall.lean
+index 11625c86c7b053e9ccc14e436e475b72c9054815..12fb20132f393c64f547f7e735dad91fc2263838 100644
+--- a/vendor/con-ron/ConRon/Bridge/Inductives/BlockInstall.lean
++++ b/vendor/con-ron/ConRon/Bridge/Inductives/BlockInstall.lean
+@@ -656,7 +656,7 @@ theorem checkBlockAgree_specF {μ : CheckMode} {env : Env} (fe : IFEnv)
+     dsimp only at z4
+     by_cases hlen : (fvs1.length == fvs0.length) = true
+     · rw [ite_eq_left hlen] at z4
+-      replace z4 := AM.pure_bind_ok z4
++      try replace z4 := AM.pure_bind_ok z4  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+       obtain ⟨doms, s₅, k5, z5⟩ := AM.bind_ok z4
+       obtain ⟨p5, hdoms⟩ := fvarTypeDs_run fvs0 xs0 p3.ok hxs0' k5
+       have c5 := (p1.trans (p3.trans p5)).toCore hok
+@@ -1022,7 +1022,7 @@ theorem checkAbsCtorSorts_specF {μ : CheckMode} {env : Env} (fe : IFEnv)
+     obtain ⟨h1s, h1c, h1p, hb⟩ := allLevelParamsDefined_run hok.state hl' htyN k1
+     have c1 := coreStep_of_store hok h1s h1c h1p
+     obtain ⟨hbt, z2⟩ := AM.dunless_ok AM.Never.fail_any z1
+-    replace z2 := AM.pure_bind_ok z2
++    try replace z2 := AM.pure_bind_ok z2  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+     obtain ⟨oq, s₂, k2, z3⟩ := AM.bind_ok z2
+     obtain ⟨p2, hoq⟩ := openPisAtFvarsF_run c1.ok.state
+       (denote_ext htyN c1.ext) k2
+diff --git a/vendor/con-ron/ConRon/Bridge/Inductives/BlockTail.lean b/vendor/con-ron/ConRon/Bridge/Inductives/BlockTail.lean
+index f01d5c01083110493a98ac60f078ecf909d40600..3a2335b674cee7a19a6557b125950ac68e99d4a1 100644
+--- a/vendor/con-ron/ConRon/Bridge/Inductives/BlockTail.lean
++++ b/vendor/con-ron/ConRon/Bridge/Inductives/BlockTail.lean
+@@ -135,10 +135,10 @@ theorem checkStructProjTable_shape {T C : NIdx} {lps : List NIdx} {nP nF : Nat}
+   obtain ⟨bodies, s₂, -, z2⟩ := AM.bind_ok z1
+   obtain ⟨sc, s₃, -, z3⟩ := AM.bind_ok z2
+   obtain ⟨-, z4⟩ := AM.dunless_ok hnever z3
+-  replace z4 := AM.pure_bind_ok z4
++  try replace z4 := AM.pure_bind_ok z4  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   obtain ⟨b5, s₅, -, z5⟩ := AM.bind_ok z4
+   obtain ⟨-, z6⟩ := AM.dunless_ok hnever z5
+-  replace z6 := AM.pure_bind_ok z6
++  try replace z6 := AM.pure_bind_ok z6  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   obtain ⟨rfl, rfl⟩ := AM.pure_ok z6
+   exact ⟨_, rfl⟩
+ 
+diff --git a/vendor/con-ron/ConRon/Bridge/Inductives/GenRec.lean b/vendor/con-ron/ConRon/Bridge/Inductives/GenRec.lean
+index 2a6f2d70fc6156191947d3c1d6db634c7d4ab6b0..429ffd7cbdf309d4e5ccf644e3b6129c20c6788b 100644
+--- a/vendor/con-ron/ConRon/Bridge/Inductives/GenRec.lean
++++ b/vendor/con-ron/ConRon/Bridge/Inductives/GenRec.lean
+@@ -2281,7 +2281,7 @@ theorem classConstOk_spec {μ : CheckMode} {env : Env} (fe : IFEnv)
+   simp only [Arena.classConstOk] at hrun
+   -- 1. the duplicate-declaration guard
+   obtain ⟨hdup, r1⟩ := AM.dguard_ok AM.Never.fail_any hrun
+-  replace r1 := AM.pure_bind_ok r1
++  try replace r1 := AM.pure_bind_ok r1  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   have hfind : fe.find? cv.name = none := by
+     cases hf : fe.find? cv.name with
+     | none => rfl
+@@ -2291,7 +2291,7 @@ theorem classConstOk_spec {μ : CheckMode} {env : Env} (fe : IFEnv)
+   obtain ⟨rs, s2, k2, r2⟩ := AM.bind_ok r1
+   obtain ⟨p2, hrs⟩ := reservedBasisNames_pstep hok.state hok.pins k2
+   obtain ⟨hres, r3⟩ := AM.dguard_ok AM.Never.fail_any r2
+-  replace r3 := AM.pure_bind_ok r3
++  try replace r3 := AM.pure_bind_ok r3  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   have hresP : ConLeche.reservedBasisNames.contains cP.name = false := by
+     rw [← contains_handle_eq p2.ok.wf (denoteN_ext hnm p2.ext) hrs]
+     cases hb : rs.contains cv.name with
+@@ -2301,7 +2301,7 @@ theorem classConstOk_spec {μ : CheckMode} {env : Env} (fe : IFEnv)
+   obtain ⟨b3, s3, k3, r4⟩ := AM.bind_ok r3
+   obtain ⟨rfl, hb3⟩ := isProjFnShape_run p2.ok rfl (denoteN_ext hnm p2.ext) k3
+   obtain ⟨hproj, r5⟩ := AM.dguard_ok AM.Never.fail_any r4
+-  replace r5 := AM.pure_bind_ok r5
++  try replace r5 := AM.pure_bind_ok r5  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   have hprojP : cP.name.isProjFnShape = false := by
+     rw [← hb3]
+     cases hb : b3 with
+@@ -2309,7 +2309,7 @@ theorem classConstOk_spec {μ : CheckMode} {env : Env} (fe : IFEnv)
+     | true => rw [hb] at hproj; exact absurd rfl hproj
+   -- 4. the duplicate-universe-parameter guard
+   obtain ⟨hnod, r6⟩ := AM.dunless_ok AM.Never.fail_any r5
+-  replace r6 := AM.pure_bind_ok r6
++  try replace r6 := AM.pure_bind_ok r6  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   have hnodP : ConLeche.Name.nodup cP.levelParams = true := by
+     rw [← nameNodup_spec p2.ok.wf cv.levelParams cP.levelParams
+       (denoteNList_ext p2.ext.lss.ls.ns _ _ hlps)]
+@@ -2318,13 +2318,13 @@ theorem classConstOk_spec {μ : CheckMode} {env : Env} (fe : IFEnv)
+   obtain ⟨b5, s5, k5, r7⟩ := AM.bind_ok r6
+   obtain ⟨p5, rfl⟩ := RC.looseBVarsBoundedFast_pstep p2.ok (denote_ext hty p2.ext) k5
+   obtain ⟨hlbb, r8⟩ := AM.dunless_ok AM.Never.fail_any r7
+-  replace r8 := AM.pure_bind_ok r8
++  try replace r8 := AM.pure_bind_ok r8  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   -- 6. the free-variable guard
+   have p25 := p2.trans p5
+   obtain ⟨b6, s6, k6, r9⟩ := AM.bind_ok r8
+   obtain ⟨p6, rfl⟩ := RC.hasFvarFast_pstep p5.ok (denote_ext hty p25.ext) k6
+   obtain ⟨hfv, r10⟩ := AM.dguard_ok AM.Never.fail_any r9
+-  replace r10 := AM.pure_bind_ok r10
++  try replace r10 := AM.pure_bind_ok r10  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   have hfvP : cP.type.hasFvar = false := by
+     cases hb : cP.type.hasFvar with
+     | false => rfl
+@@ -2336,7 +2336,7 @@ theorem classConstOk_spec {μ : CheckMode} {env : Env} (fe : IFEnv)
+   obtain ⟨h7st, h7c, h7p, rfl⟩ := allLevelParamsDefined_run p6.ok
+     (denoteNList_ext p26.ext.lss.ls.ns _ _ hlps) (denote_ext hty p26.ext) k7
+   obtain ⟨hlpd, r12⟩ := AM.dunless_ok AM.Never.fail_any r11
+-  replace r12 := AM.pure_bind_ok r12
++  try replace r12 := AM.pure_bind_ok r12  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   have p7 : PStep s6 s7 := PStep.of_caches ⟨by rw [h7st]; exact p6.ok.wf⟩
+     (by rw [h7st]; exact Ext.refl _) h7c h7p
+   have p27 := p26.trans p7
+@@ -2346,7 +2346,7 @@ theorem classConstOk_spec {μ : CheckMode} {env : Env} (fe : IFEnv)
+   obtain ⟨h8st, h8c, h8p, rfl⟩ := constsResolveFFast_runR c7.ok.toR
+     (denote_ext hty p27.ext) k8
+   obtain ⟨hcr, r14⟩ := AM.dunless_ok (AM.Never.bind fun _ => AM.Never.fail_any) r13
+-  replace r14 := AM.pure_bind_ok r14
++  try replace r14 := AM.pure_bind_ok r14  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   have p8 : PStep s7 s8 := PStep.of_caches ⟨by rw [h8st]; exact p7.ok.wf⟩
+     (by rw [h8st]; exact Ext.refl _) h8c h8p
+   have c8 := (p27.trans p8).toCore hok
+@@ -2394,9 +2394,9 @@ theorem classRecTyOk_spec {μ : CheckMode} {env : Env} (fe : IFEnv)
+   obtain ⟨p1, hci⟩ := targetMajorAt_spec g.cls gP.cls c s₀ s1 ci hok.state hok.pins hcls k1
+   obtain ⟨-, -, -, -, hnIdx, -, hmem, -, -⟩ := dMajor_inv hci
+   obtain ⟨h1, z2⟩ := AM.dunless_ok AM.Never.fail_any z1
+-  replace z2 := AM.pure_bind_ok z2
++  try replace z2 := AM.pure_bind_ok z2  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   obtain ⟨h2, z3⟩ := AM.dunless_ok AM.Never.fail_any z2
+-  replace z3 := AM.pure_bind_ok z3
++  try replace z3 := AM.pure_bind_ok z3  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   have h1P : (rcP.tgt == (gP.cls.getD c default).member.getD k) = true := by
+     rw [← htgt, ← hmem]; exact h1
+   have h2P : (rcP.rP == gP.nP + gP.slots.length &&
+@@ -2565,11 +2565,11 @@ theorem classRuleOk_spec {μ : CheckMode} {envR env₂ : Env} (feR : IFEnv) (vis
+   obtain ⟨b1, s1, k1, z1⟩ := AM.bind_ok hrun
+   obtain ⟨p1, rfl⟩ := RC.looseBVarsBoundedFast_pstep hok.state hgen k1
+   obtain ⟨hlb, z2⟩ := AM.dunless_ok AM.Never.fail_any z1
+-  replace z2 := AM.pure_bind_ok z2
++  try replace z2 := AM.pure_bind_ok z2  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   obtain ⟨b2, s2, k2, z3⟩ := AM.bind_ok z2
+   obtain ⟨p2, rfl⟩ := RC.hasFvarFast_pstep p1.ok (denote_ext hgen p1.ext) k2
+   obtain ⟨hfv, z4⟩ := AM.dguard_ok AM.Never.fail_any z3
+-  replace z4 := AM.pure_bind_ok z4
++  try replace z4 := AM.pure_bind_ok z4  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   have hfvP : genP.hasFvar = false := by
+     cases hb : genP.hasFvar with
+     | false => rfl
+@@ -2581,7 +2581,7 @@ theorem classRuleOk_spec {μ : CheckMode} {envR env₂ : Env} (feR : IFEnv) (vis
+   obtain ⟨h3st, h3c, h3p, rfl⟩ := allLevelParamsDefined_run p2.ok
+     (denoteNList_ext p12.ext.lss.ls.ns _ _ hlps) (denote_ext hgen p12.ext) k3
+   obtain ⟨hlp, z6⟩ := AM.dunless_ok AM.Never.fail_any z5
+-  replace z6 := AM.pure_bind_ok z6
++  try replace z6 := AM.pure_bind_ok z6  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   have p3 : PStep s2 s3 := PStep.of_caches ⟨by rw [h3st]; exact p2.ok.wf⟩
+     (by rw [h3st]; exact Ext.refl _) h3c h3p
+   have c13 := (p12.trans p3).toCore hok
+@@ -2589,7 +2589,7 @@ theorem classRuleOk_spec {μ : CheckMode} {envR env₂ : Env} (feR : IFEnv) (vis
+   obtain ⟨b4, s4, k4, z7⟩ := AM.bind_ok z6
+   obtain ⟨p4, rfl⟩ := constsResolveFFast_pstep c13.ok.toR (denote_ext hgen c13.ext) k4
+   obtain ⟨hcr, z8⟩ := AM.dunless_ok (AM.Never.bind fun _ => AM.Never.fail_any) z7
+-  replace z8 := AM.pure_bind_ok z8
++  try replace z8 := AM.pure_bind_ok z8  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   have c14 := c13.trans (p4.toCore c13.ok)
+   -- the inference at `feR`
+   obtain ⟨ty, s5, k5, z9⟩ := AM.bind_ok z8
+@@ -2614,7 +2614,7 @@ theorem classRuleOk_spec {μ : CheckMode} {envR env₂ : Env} (feR : IFEnv) (vis
+       ⟨hok6.state, hok6.pins, hie₂.mono c16.ext _ rfl⟩
+     obtain ⟨p8, rfl⟩ := allM_domains_resolve rbs rbsP s6 s8 _ hr6 hrbs k8
+     obtain ⟨hdom, z13⟩ := AM.dunless_ok (AM.Never.bind fun _ => AM.Never.fail_any) z12
+-    replace z13 := AM.pure_bind_ok z13
++    try replace z13 := AM.pure_bind_ok z13  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+     have c18 := c16.trans (p8.toCore hok6)
+     obtain ⟨rfl, rfl⟩ := AM.pure_ok z13
+     refine ⟨c18, genP, denote_ext hgen c18.ext, ?_⟩
+@@ -3033,7 +3033,7 @@ theorem genRecCheck_spec {μ : CheckMode} {env₂ : Env} (fe₂ : IFEnv)
+   have c12 := c1.trans c2
+   -- the elimination guard
+   obtain ⟨hk0, z3⟩ := AM.dguard_ok AM.Never.fail_any z2
+-  replace z3 := AM.pure_bind_ok z3
++  try replace z3 := AM.pure_bind_ok z3  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   have hkP : 0 < pP.k := by
+     rw [← hk']; simp only [beq_iff_eq] at hk0; omega
+   have hany := GR.any_member_isNone (dMajor_ext.list c12.ext _ _ hms)
+@@ -3044,7 +3044,7 @@ theorem genRecCheck_spec {μ : CheckMode} {env₂ : Env} (fe₂ : IFEnv)
+     obtain ⟨c3, rfl⟩ := blockLargeElimAllowed_cspec fe₂ p pP _ s2 s3 la c12.ok
+       (dShape_ext c12.ext _ _ hsh) k3
+     obtain ⟨hla, z4⟩ := AM.dunless_ok AM.Never.fail_any z4
+-    replace z4 := AM.pure_bind_ok z4
++    try replace z4 := AM.pure_bind_ok z4  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+     have hcond : (pP.large && !ConLeche.blockLargeElimAllowed pP
+         (nestedBit || MsP.any (·.member.isNone))) = false := by
+       rw [← hany]; simp [hla]
+@@ -3058,7 +3058,7 @@ theorem genRecCheck_spec {μ : CheckMode} {env₂ : Env} (fe₂ : IFEnv)
+     generalize hs3 : s2 = s3 at z3
+     have c13 : CoreStep μ env₂ fe₂ s₀ s3 := hs3 ▸ c12
+     have hcvRis3 : cvRis.mapM (Frontend.denoteCV s3.store) = some cvRisP := hs3 ▸ hcvRis
+-    have z4 := AM.pure_bind_ok z3
++    have z4 := z3  -- con-agua patch: was `AM.pure_bind_ok z3`; no `pure () >>=` left (new `do` elaborator)
+   all_goals
+     have hformer : ∀ t ∈ cvTasP.map (·.type), Expr.WScoped 0 t := by
+       intro t ht
+@@ -3081,7 +3081,7 @@ theorem genRecCheck_spec {μ : CheckMode} {env₂ : Env} (fe₂ : IFEnv)
+     have c15 := c14.trans c5
+     -- no minor premise beyond the constructors
+     obtain ⟨hminor, z7⟩ := AM.dunless_ok AM.Never.fail_any z6
+-    replace z7 := AM.pure_bind_ok z7
++    try replace z7 := AM.pure_bind_ok z7  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+     have hsl : rd.slots.mapM (dSlot s₀.store) = some rdP.slots := by
+       simp only [dClassRead, Option.map_eq_some_iff] at hrd
+       obtain ⟨q, hq, rfl⟩ := hrd
+@@ -3283,7 +3283,7 @@ theorem classKeyOf_spec {μ : CheckMode} {env : Env} (fe : IFEnv) (nP : Nat) (pa
+         exact ⟨q1.trans q2, by simp [hb]⟩)
+     k2.ds ds s1 s2 cl p1.ok trivial hds k2' 
+   obtain ⟨hcl, z3⟩ := AM.dunless_ok AM.Never.fail_any z2
+-  replace z3 := AM.pure_bind_ok z3
++  try replace z3 := AM.pure_bind_ok z3  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   have hkc' : ds = (ConLeche.classKeyCanon paramsP kP).ds := by rw [← hkc]
+   rw [hkc'] at hcl hds
+   have hw : ∀ x ∈ (ConLeche.classKeyCanon paramsP kP).ds, Expr.WScoped nP x := by
+diff --git a/vendor/con-ron/ConRon/Bridge/Inductives/PosWalks.lean b/vendor/con-ron/ConRon/Bridge/Inductives/PosWalks.lean
+index b153dc88195e828ee8922c392fe6ce60671ac296..81c1afb87b5e40efee11f27511f6392a1d1562b2 100644
+--- a/vendor/con-ron/ConRon/Bridge/Inductives/PosWalks.lean
++++ b/vendor/con-ron/ConRon/Bridge/Inductives/PosWalks.lean
+@@ -1355,7 +1355,7 @@ theorem nestHoleImg_spec (ctx : Arena.NestCtx) (prog : List Arena.NestHole) :
+       refine ⟨PStep.refl hok, ?_⟩
+       show ConLeche.nestHoleImg _ [] i = none
+       simp only [ConLeche.nestHoleImg, ConLeche.NestCtx.hiAt]
+-      rw [ite_eq_right (fun hh => hc (hiff.mpr hh))]
++      exact ite_eq_right (fun hh => hc (hiff.mpr hh))  -- con-agua patch: was `rw [..]`, motive not type-correct on nightly-2026-10-20
+   | succ n ih =>
+     intro i fnd ctxP progP s₀ s' r hok hpins hp hrun
+     obtain ⟨h1, h2, h3⟩ := hp
+diff --git a/vendor/con-ron/ConRon/Bridge/Inductives/RecCheck.lean b/vendor/con-ron/ConRon/Bridge/Inductives/RecCheck.lean
+index 14a8e06dcd76805959b1a437e6d6c3ef80b50bbe..a4a243ab3a432843bf2599ea5b37cb55664887c7 100644
+--- a/vendor/con-ron/ConRon/Bridge/Inductives/RecCheck.lean
++++ b/vendor/con-ron/ConRon/Bridge/Inductives/RecCheck.lean
+@@ -1582,6 +1582,7 @@ theorem restrictTo_push_find? {fe : IFEnv} {k : Nat} (hk : k ≤ fe.visibleBelow
+     simp only [this, ↓reduceIte]
+     exact hnone.symm
+   · rw [ite_eq_right hEq]
++    rfl  -- con-agua patch: `X = X` differing only in an instance
+ 
+ /-- con-leche: none — `IFEnvOK` reads the index only through `find?`. -/
+ theorem IFEnvOK.of_find? {env : Env} {fe fe' : IFEnv} {s : AState} (h : IFEnvOK env fe s)
+@@ -1998,18 +1999,14 @@ theorem targetRecPins_spec (p : Arena.BlockShape) (pP : ConLeche.BlockShape)
+   case neg => rw [ite_eq_right c1] at hrun; exact absurd hrun RC.failBindOk
+   rw [ite_eq_left c1] at hrun
+   have hL : ConLeche.blockRecLpsOk pP = true := by rw [← blockRecLpsOk_spec hok.wf hsh]; exact c1
+-  obtain ⟨_, s1, k1, z1⟩ := AM.bind_ok hrun
+-  obtain ⟨-, hs1⟩ := AM.pure_ok k1
+-  rw [hs1] at z1
++  have z1 := hrun  -- con-agua patch: no `pure () >>=` after the guard (new `do` elaborator)
+   obtain ⟨u, s2, k2, z2⟩ := AM.bind_ok z1
+   obtain ⟨p2, rfl⟩ := blockRecNamesUnreserved_spec pP p.recs _ _ u hok hp hrecs k2
+   by_cases c2 : ConLeche.blockRecNamesUnreserved pP = true
+   case neg => rw [ite_eq_right c2] at z2; exact absurd z2 RC.failBindOk
+   rw [ite_eq_left c2] at z2
+   have hU := c2
+-  obtain ⟨_, s3, k3, z3⟩ := AM.bind_ok z2
+-  obtain ⟨-, hs3⟩ := AM.pure_ok k3
+-  rw [hs3] at z3
++  have z3 := z2  -- con-agua patch: no `pure () >>=` after the guard (new `do` elaborator)
+   obtain ⟨u3, s4, k4, z4⟩ := AM.bind_ok z3
+   have hown := RC.filter_recs (fun t => decide (t < pP.k))
+     (mapM_option_ext (fun x y h => dRec_ext p2.ext x y h) _ _ hrecs)
+@@ -2024,9 +2021,7 @@ theorem targetRecPins_spec (p : Arena.BlockShape) (pP : ConLeche.BlockShape)
+   case neg => rw [ite_eq_right c3] at z4; exact absurd z4 RC.failBindOk
+   rw [ite_eq_left c3] at z4
+   have hS := c3
+-  obtain ⟨_, s5, k5, z5⟩ := AM.bind_ok z4
+-  obtain ⟨-, hs5⟩ := AM.pure_ok k5
+-  rw [hs5] at z5
++  have z5 := z4  -- con-agua patch: no `pure () >>=` after the guard (new `do` elaborator)
+   have p24 := p2.trans p4
+   clear hown
+   cases hm : p.members with
+@@ -2087,18 +2082,14 @@ theorem targetRecPins_spec (p : Arena.BlockShape) (pP : ConLeche.BlockShape)
+     case neg => rw [ite_eq_right cA] at zB; exact absurd zB RC.failBindOk
+     rw [ite_eq_left cA] at zB
+     rw [hA] at cA
+-    obtain ⟨_, sC, kC, zC⟩ := AM.bind_ok zB
+-    obtain ⟨-, hsC⟩ := AM.pure_ok kC
+-    rw [hsC] at zC
++    have zC := zB  -- con-agua patch: no `pure () >>=` after the guard (new `do` elaborator)
+     have hnames := recShapeNames_go hrecsB
+     have hnd := nameNodup_spec pB.ok.wf _ _ hnames
+     by_cases cN : nameNodup (List.map (fun x => x.cvR.name) p.recs) = true
+     case neg => rw [ite_eq_right cN] at zC; exact absurd zC RC.failBindOk
+     rw [ite_eq_left cN] at zC
+     rw [hnd] at cN
+-    obtain ⟨_, sD, kD, zD⟩ := AM.bind_ok zC
+-    obtain ⟨-, hsD⟩ := AM.pure_ok kD
+-    rw [hsD] at zD
++    have zD := zC  -- con-agua patch: no `pure () >>=` after the guard (new `do` elaborator)
+     have hsp := blockSplit_spec sB.store block blockP (denoteCIList_mono pAB.ext _ _ hblk)
+     cases hbs : Arena.blockSplit block with
+     | none => rw [hbs] at zD; exact absurd zD (fun hc => AM.fail_ok hc)
+@@ -2182,18 +2173,14 @@ theorem targetRecPins_spec (p : Arena.BlockShape) (pP : ConLeche.BlockShape)
+     case neg => rw [ite_eq_right cA] at zB; exact absurd zB RC.failBindOk
+     rw [ite_eq_left cA] at zB
+     rw [hA] at cA
+-    obtain ⟨_, sC, kC, zC⟩ := AM.bind_ok zB
+-    obtain ⟨-, hsC⟩ := AM.pure_ok kC
+-    rw [hsC] at zC
++    have zC := zB  -- con-agua patch: no `pure () >>=` after the guard (new `do` elaborator)
+     have hnames := recShapeNames_go hrecsB
+     have hnd := nameNodup_spec pB.ok.wf _ _ hnames
+     by_cases cN : nameNodup (List.map (fun x => x.cvR.name) p.recs) = true
+     case neg => rw [ite_eq_right cN] at zC; exact absurd zC RC.failBindOk
+     rw [ite_eq_left cN] at zC
+     rw [hnd] at cN
+-    obtain ⟨_, sD, kD, zD⟩ := AM.bind_ok zC
+-    obtain ⟨-, hsD⟩ := AM.pure_ok kD
+-    rw [hsD] at zD
++    have zD := zC  -- con-agua patch: no `pure () >>=` after the guard (new `do` elaborator)
+     have hsp := blockSplit_spec sB.store block blockP (denoteCIList_mono pAB.ext _ _ hblk)
+     cases hbs : Arena.blockSplit block with
+     | none => rw [hbs] at zD; exact absurd zD (fun hc => AM.fail_ok hc)
+@@ -2406,9 +2393,7 @@ theorem targetMajorOf_spec {μ : CheckMode} {env : Env} (fe : IFEnv)
+     rw [ite_eq_left ca] at z7
+     rw [han] at ca
+     rw [ite_eq_left ca]
+-    obtain ⟨_, s8, k8, z8⟩ := AM.bind_ok z7
+-    obtain ⟨-, hs8⟩ := AM.pure_ok k8
+-    rw [hs8] at z8
++    have z8 := z7  -- con-agua patch: no `pure () >>=` after the guard (new `do` elaborator)
+     obtain ⟨ni, s9, k9, z9⟩ := AM.bind_ok z8
+     obtain ⟨c9, ⟨niP, lP⟩, ⟨hni1, hni2⟩, hFo⟩ := targetOutsideInst_spec fe I IP us usP _ _
+       s7 s9 ni c7.ok ⟨denoteN_ext hI c7.ext, denoteLs_ext hus c7.ext,
+@@ -2425,9 +2410,7 @@ theorem targetMajorOf_spec {μ : CheckMode} {env : Env} (fe : IFEnv)
+     by_cases cb : b = true
+     case neg => rw [ite_eq_right cb] at z11; exact absurd z11 RC.failBindOk
+     rw [ite_eq_left cb] at z11
+-    obtain ⟨_, s12, k12, z12⟩ := AM.bind_ok z11
+-    obtain ⟨-, hs12⟩ := AM.pure_ok k12
+-    rw [hs12] at z12
++    have z12 := z11  -- con-agua patch: no `pure () >>=` after the guard (new `do` elaborator)
+     obtain ⟨rfl, rfl⟩ := AM.pure_ok z12
+     have c10' := c79.trans c10
+     refine ⟨c10', ConLeche.TargetMajor.mk IP usP (List.take nPc mtyP.getAppArgs) nPc niP ctorsP
+diff --git a/vendor/con-ron/ConRon/Bridge/Inductives/Rel.lean b/vendor/con-ron/ConRon/Bridge/Inductives/Rel.lean
+index 3ead176681809fa3f3474688f7171bdc866843f5..96c54f38ece3e9595888d2831f8e68f34ee1629a 100644
+--- a/vendor/con-ron/ConRon/Bridge/Inductives/Rel.lean
++++ b/vendor/con-ron/ConRon/Bridge/Inductives/Rel.lean
+@@ -584,7 +584,7 @@ theorem ProjOut.push {fe : IFEnv} (hcoh : IFEnvCoh fe) (st : EStore)
+       have hlt : cnt < fe.visibleBelow := by
+         rw [hvb]
+         exact mkIFEnvGo_counter_lt fe.env.consts n cnt cinfo (hcoh.2 n ▸ hg)
+-      simp only [ite_eq_left (Nat.lt_succ_of_lt hlt)] at hf
++      simp only [Nat.lt_add_one_of_lt hlt, ite_true] at hf  -- con-agua patch: was `simp only [ite_eq_left ..]`, which now misses the `ite` (instance arg)
+       simp only [IFEnv.find?, hg, ite_eq_left hlt]
+       exact hf
+ 
+@@ -620,7 +620,7 @@ theorem ProjOut.push_table {fe : IFEnv} (hcoh : IFEnvCoh fe) (st : EStore)
+       have hlt : cnt < fe.visibleBelow := by
+         rw [hvb]
+         exact mkIFEnvGo_counter_lt fe.env.consts n cnt cinfo (hcoh.2 n ▸ hg)
+-      simp only [ite_eq_left (Nat.lt_succ_of_lt hlt)] at hf
++      simp only [Nat.lt_add_one_of_lt hlt, ite_true] at hf  -- con-agua patch: was `simp only [ite_eq_left ..]`, which now misses the `ite` (instance arg)
+       simp only [IFEnv.find?, hg, ite_eq_left hlt]
+       exact hf
+ 
+diff --git a/vendor/con-ron/ConRon/Bridge/Inductives/StructInstall.lean b/vendor/con-ron/ConRon/Bridge/Inductives/StructInstall.lean
+index 9fdf4cf6a48adaad908dfb508e9b847a93954ab3..b776c16a363d1bc331ce8e9c0eb9550fbeaa2817 100644
+--- a/vendor/con-ron/ConRon/Bridge/Inductives/StructInstall.lean
++++ b/vendor/con-ron/ConRon/Bridge/Inductives/StructInstall.lean
+@@ -256,7 +256,7 @@ theorem checkStructProjTable_run (fe : IFEnv) (env : Env)
+     bodies.toList bodiesP.toList s₁ s₃ sc (hread.mono p1.ok p1.ext p1.pins)
+     (denoteNListE_ext p1.ext _ _ hlps) hbl k3
+   obtain ⟨hg1, z4⟩ := AM.dunless_ok hnever z3
+-  replace z4 := AM.pure_bind_ok z4
++  try replace z4 := AM.pure_bind_ok z4  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   have x13 := p3.ext
+   have hread₃ : ReadOK env fe s₃ := hread.mono p3.ok (p1.ext.trans p3.ext) (by rw [p3.pins, p1.pins])
+   -- the table's own name
+@@ -272,7 +272,7 @@ theorem checkStructProjTable_run (fe : IFEnv) (env : Env)
+   have hread₆ : ReadOK env fe s₆ :=
+     hread₃.mono p6.ok p6.ext p6.pins
+   obtain ⟨hg3, z8⟩ := AM.dunless_ok hnever z7
+-  replace z8 := AM.pure_bind_ok z8
++  try replace z8 := AM.pure_bind_ok z8  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   have hg3' : (env.find? (ConLeche.projTableName TP)).isNone = true := by
+     have e := hread₆.ienv.find_isSome p6.ok htn
+     revert e hg3
+diff --git a/vendor/con-ron/ConRon/Bridge/Inductives/SumInstall.lean b/vendor/con-ron/ConRon/Bridge/Inductives/SumInstall.lean
+index 0a03329577dd5bbdec6d352d18d2757121dde333..0edaef11503e8fee8956ee4847f5a060cdc5d035 100644
+--- a/vendor/con-ron/ConRon/Bridge/Inductives/SumInstall.lean
++++ b/vendor/con-ron/ConRon/Bridge/Inductives/SumInstall.lean
+@@ -560,8 +560,7 @@ theorem checkStructFieldSortsI_spec {μ : CheckMode} {env : Env} (fe : IFEnv)
+       | true =>
+       obtain ⟨rfl, rfl⟩ := AM.pure_ok k7
+       simp only [ite_true] at z7
+-      obtain ⟨_, s8, k8, z8⟩ := AM.bind_ok z7
+-      obtain ⟨-, rfl⟩ := AM.pure_ok k8
++      have z8 := z7  -- con-agua patch: no `pure () >>=` after the guard (new `do` elaborator)
+       obtain ⟨c, F3, restP, hF3, hr⟩ := tail _ (c5.trans c6) z8
+       refine ⟨c, max (max F1 F2) F3, restP ++ [lu], ?_, hr⟩
+       have e1 := hF1' (max (max F1 F2) F3)
+@@ -578,8 +577,7 @@ theorem checkStructFieldSortsI_spec {μ : CheckMode} {env : Env} (fe : IFEnv)
+     cases large with
+     | false =>
+       simp only [Bool.not_true, Bool.false_eq_true, ite_false] at z4
+-      obtain ⟨_, s5, k5, z5⟩ := AM.bind_ok z4
+-      obtain ⟨-, rfl⟩ := AM.pure_ok k5
++      have z5 := z4  -- con-agua patch: no `pure () >>=` after the guard (new `do` elaborator)
+       obtain ⟨c, F3, restP, hF3, hr⟩ := tail _ (CoreStep.refl hok4) z5
+       refine ⟨c, max (max F1 F2) F3, restP ++ [uP], ?_, hr⟩
+       have e1 := hF1' (max (max F1 F2) F3)
+@@ -612,8 +610,7 @@ theorem checkStructFieldSortsI_spec {μ : CheckMode} {env : Env} (fe : IFEnv)
+       case isFalse hn =>
+         obtain ⟨_, _, k, _⟩ := AM.bind_ok z6; exact absurd k (fun h => AM.fail_ok h)
+       case isTrue hy =>
+-      obtain ⟨_, s8, k8, z8⟩ := AM.bind_ok z6
+-      obtain ⟨-, rfl⟩ := AM.pure_ok k8
++      have z8 := z6  -- con-agua patch: no `pure () >>=` after the guard (new `do` elaborator)
+       obtain ⟨c, F3, restP, hF3, hr⟩ := tail _ c6 z8
+       refine ⟨c, max (max F1 F2) F3, restP ++ [lu], ?_, hr⟩
+       have e1 := hF1' (max (max F1 F2) F3)
+@@ -822,7 +819,7 @@ theorem checkSumCtor_spec {μ : CheckMode} {env : Env} (fe₀ fe : IFEnv)
+   obtain ⟨p5, hb5⟩ := structCtorResidOk_spec T TP lps lpsP nP nF nIdx cbody cbodyP s₂ s₅ b5
+     c12.ok.state ⟨denoteN_ext hT x02, denoteNListE_ext x02 _ _ hlps, hcb⟩ k5
+   obtain ⟨hr5, z6⟩ := AM.dunless_ok hnever z5
+-  replace z6 := AM.pure_bind_ok z6
++  try replace z6 := AM.pure_bind_ok z6  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   rw [hb5] at hr5
+   have c5 := c12.trans (p5.toCore c12.ok)
+   -- the constructor's parameters, opened
+@@ -906,7 +903,7 @@ theorem checkSumCtor_spec {μ : CheckMode} {env : Env} (fe₀ fe : IFEnv)
+     (p8.ext.trans p10.ext).trans (c11.ext.trans (p12.ext.trans x12_15))
+   have hg := AM.dunless_ok hnever z18
+   obtain ⟨hg1, z19⟩ := hg
+-  replace z19 := AM.pure_bind_ok z19
++  try replace z19 := AM.pure_bind_ok z19  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   rw [beq_of_denoteE hwf15 hxfn hhd,
+     beq_of_denoteEList hwf15 (denoteEList_take hxargs nP) (denoteEList_ext x7_15 _ _ hcfvs),
+     show xargs.length = xrestP.getAppArgs.length from
+@@ -918,14 +915,14 @@ theorem checkSumCtor_spec {μ : CheckMode} {env : Env} (fe₀ fe : IFEnv)
+   obtain ⟨p20, hb20⟩ := fieldDomsResolve_spec xq.1 xfvsP hread₀
+     (denoteEList_ext x12_15 _ _ hxfvs) k20
+   obtain ⟨hg2, z21⟩ := AM.dunless_ok hnever z20
+-  replace z21 := AM.pure_bind_ok z21
++  try replace z21 := AM.pure_bind_ok z21  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   rw [hb20] at hg2
+   obtain ⟨b22, s₂₂, k22, z22⟩ := AM.bind_ok z21
+   obtain ⟨p22, hb22⟩ := idxArgsResolve_spec (xargs.drop nP) (xrestP.getAppArgs.drop nP)
+     (hread₀.mono p20.ok p20.ext p20.pins)
+     (denoteEList_drop (denoteEList_ext p20.ext _ _ hxargs) nP) k22
+   obtain ⟨hg3, z23⟩ := AM.dunless_ok hnever z22
+-  replace z23 := AM.pure_bind_ok z23
++  try replace z23 := AM.pure_bind_ok z23  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
+   rw [hb22] at hg3
+   -- the field sorts
+   have c22 := c15.trans ((p20.trans p22).toCore c15.ok)
+diff --git a/vendor/con-ron/ConRon/Bridge/Specs.lean b/vendor/con-ron/ConRon/Bridge/Specs.lean
+index 98567c8d9a123f8acf591af3dbea60aefae0ee1f..51703330becbce90780a6cd033eafd31a82f1df7 100644
+--- a/vendor/con-ron/ConRon/Bridge/Specs.lean
++++ b/vendor/con-ron/ConRon/Bridge/Specs.lean
+@@ -431,7 +431,7 @@ theorem internLamE_spec_view (s₀ : AState) (ty b : EIdx)
+         s'.store.view h = some (.lam ty b) ∧
+         denoteE s'.store h = denoteEView s'.store (.lam ty b); ⊤⦄ := by
+   sym only [bridge_grind, → EStore.view_of_findBind (tag := ETag.lam) (htag := rfl),
+-      denoteE_view_eq, EStore.internBind_spec (tag := ETag.lam) (htag := rfl)] =>
++      denoteE_view_eq, → EStore.internBind_spec (tag := ETag.lam) (htag := rfl)] =>
+     vcgen [internLamE] <;> finish
+ 
+ theorem internForallEE_spec_view (s₀ : AState) (ty b : EIdx)
+@@ -444,7 +444,7 @@ theorem internForallEE_spec_view (s₀ : AState) (ty b : EIdx)
+         s'.store.view h = some (.forallE ty b) ∧
+         denoteE s'.store h = denoteEView s'.store (.forallE ty b); ⊤⦄ := by
+   sym only [bridge_grind, → EStore.view_of_findBind (tag := ETag.forallE) (htag := rfl),
+-      denoteE_view_eq, EStore.internBind_spec (tag := ETag.forallE) (htag := rfl)] =>
++      denoteE_view_eq, → EStore.internBind_spec (tag := ETag.forallE) (htag := rfl)] =>
+     vcgen [internForallEE] <;> finish
+ 
+ /-- con-leche: none — `internLamE_spec_view` at denoting children: the face

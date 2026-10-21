@@ -85,6 +85,29 @@ per-function separation logic.
   on master after each batch of landings, so the time series has one line per master state and lanes never
   conflict on these files.
 
+## Bumping the twin (con-ron, and the con-leche it pins)
+- **State.** `vendor/UPSTREAM` names the two vendored revisions; `vendor/` is exactly those upstream
+  files plus the patch series `vendor/patches/{con-leche,con-ron}/NNNN-*.patch`, applied in order
+  (`scripts/bump-con-ron.sh --check`). Never edit a vendored file without putting the edit in a
+  patch: edit, then `scripts/bump-con-ron.sh --refresh-patches` (an edit outside every patch lands in
+  `NNNN-new.patch`: rename it and give it a description), and commit both.
+- **Fingerprints.** `docs/twin-fingerprints.tsv` records, for every target with L code, a proof or
+  coverage, a hash of its twin definition as it was when that L code or proof was last checked
+  (DESIGN.md, "Twin fingerprints"). The census flags a target **stale** when the hash differs:
+  `scripts/census.py --stale` is the work queue, and `docs/progress.md` lists it. A lane that checked
+  (and if needed fixed) the L code and proofs of stale targets against the new twin runs
+  `scripts/census.py --reviewed REGEX` and commits the changed rows with the fix. New links get their
+  row from the coordinator's `--write`.
+- **The bump.** In a worktree on its own branch: `scripts/bump-con-ron.sh <rev>` (e.g. `origin/HEAD`)
+  re-vendors con-ron at `<rev>` and con-leche at the rev con-ron's `proof/lake-manifest.json` pins,
+  re-applies the patches with `git apply --3way` (conflicts are reported and left with markers),
+  regenerates `scripts/census-rust.tsv`, builds, and prints the stale list. Fix what the build
+  breaks (vendored files: in a patch; our files: small fixes now, otherwise `sorry` + DESIGN.md),
+  land it, and announce it in DESIGN.md: what changed upstream, the stale targets, which lane owns
+  them. Stale targets stay counted as before until their lane reviews them. Never bump the toolchain
+  and the twin in the same step (fingerprints are per toolchain; after a toolchain bump re-record
+  with `--reviewed .` once the build is green).
+
 ## Process rules
 - Worktrees and large files go in `_tmp/` (tmpfs and a memory cap). Use `git -C <dir>` and stage by explicit
   path. Create a worktree with `scripts/new-worktree.sh <path-under-_tmp/wt> [<rev>]`: it symlinks `_tmp`

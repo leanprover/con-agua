@@ -1,0 +1,166 @@
+Restore the old safe ConLeche.withPtrEq (deprecated and made unsafe upstream in Lean on 2026-09-21)
+as ConLeche/Util/PtrEq.lean, and use it at the three call sites; withPtrEqDecEq's new signature
+in Kernel/Expr.lean. Toolchain nightly-2026-10-20 (vendor/README.md, "Toolchain switch" 1).
+
+diff --git a/vendor/con-leche/ConLeche/Driver/OwnerParse.lean b/vendor/con-leche/ConLeche/Driver/OwnerParse.lean
+index 1bf9e49e48d2881de65428c56c39a82a28af9183..09ef42bdac80458a5d9f7f3edf24c1831247d56e 100644
+--- a/vendor/con-leche/ConLeche/Driver/OwnerParse.lean
++++ b/vendor/con-leche/ConLeche/Driver/OwnerParse.lean
+@@ -5,7 +5,7 @@ public import Std.Sync.Mutex
+ /- `withPtrEq` is `public` but not `@[expose]`; `sameB_eq` below needs
+ its body (it is *defined* as `k ()`).  `import all` makes it visible in
+ this module only. -/
+-import all Init.Util
++public import ConLeche.Util.PtrEq
+ 
+ /-!
+ # The rounds parse driver: owner threads (task #329)
+@@ -101,7 +101,7 @@ the type's own lawful comparison (for the finished tables, entry by
+ entry with the kernel's pointer-first equalities, `Prior`'s
+ `LawfulBEq`; for bytes, `memcmp`). -/
+ @[inline] def sameB {α : Type} [BEq α] [LawfulBEq α] (a b : α) : Bool :=
+-  withPtrEq a b (fun _ => a == b) (fun h => by simp [h])
++  ConLeche.withPtrEq a b (fun _ => a == b) (fun h => by simp [h])
+ 
+ theorem sameB_eq {α : Type} [BEq α] [LawfulBEq α] (a b : α) : sameB a b = (a == b) := by rfl
+ 
+diff --git a/vendor/con-leche/ConLeche/Kernel/Expr.lean b/vendor/con-leche/ConLeche/Kernel/Expr.lean
+index 8cd1cca9a8baae0f2e2952640dfea9e8ec89b691..a16f4b4a19a51f9567b1a1423811b08a609a8630 100644
+--- a/vendor/con-leche/ConLeche/Kernel/Expr.lean
++++ b/vendor/con-leche/ConLeche/Kernel/Expr.lean
+@@ -9,7 +9,7 @@ body visible **in this module only**; those theorems are the public
+ relays, so no importer needs it, and the executed `Level.beq` and
+ `Expr.beq` stay the plain `decide (· = ·)` that the kernel can still
+ reduce. -/
+-import all Init.Util
++public import ConLeche.Util.PtrEq
+ 
+ /-!
+ # Kernel expressions
+@@ -62,7 +62,7 @@ the cached **hash** and the **pointer** before the structural walk —
+ implementation of `Level.beq`; `Level.beqPtr_eq` proves both guards
+ redundant. -/
+ @[inline] def Level.beqPtr (a b : Level) : Bool :=
+-  withPtrEq a b (fun _ => a.hashData == b.hashData && decide (a = b))
++  ConLeche.withPtrEq a b (fun _ => a.hashData == b.hashData && decide (a = b))
+     (fun h => by subst h; simp)
+ 
+ /-- Both guards are redundant (see `Name.beqPtr_eq`). -/
+@@ -742,7 +742,7 @@ continuation's result does not depend on the address — is then
+ /-- Identity, decided: the pointer test at runtime, the derived
+ structural decision in the pure model. -/
+ @[inline] def ptrDec (a b : Expr) : Decidable (a = b) :=
+-  withPtrEqDecEq a b (fun _ => instDecidableEqExpr a b)
++  withPtrEqDecEq ConLeche.withPtrEq (fun _ _ _ _ => rfl) a b (fun _ => instDecidableEqExpr a b)
+ 
+ /-- Does the entry at `key` identify the pair `(a, b)`?  The stored
+ addresses are the filter; the stored objects, tested by identity, are
+@@ -948,7 +948,7 @@ def beqDec (a b : Expr) : Decidable (a = b) :=
+ memoised descent.  The implementation of `beq`; `beqMemo_eq` proves
+ it is `decide (a = b)`. -/
+ @[inline] def beqMemo (a b : Expr) : Bool :=
+-  withPtrEq a b (fun _ => if a.data == b.data then @decide (a = b) (beqDec a b) else false)
++  ConLeche.withPtrEq a b (fun _ => if a.data == b.data then @decide (a = b) (beqDec a b) else false)
+     (fun h => by subst h; simp)
+ 
+ /-- The executed equality is the specification: `withPtrEq a b k h`
+diff --git a/vendor/con-leche/ConLeche/Kernel/Name.lean b/vendor/con-leche/ConLeche/Kernel/Name.lean
+index d015be158c9d27d3651d858840b61460885bdaf4..afa9266f0f071be64ad31b025477dbba2482f238 100644
+--- a/vendor/con-leche/ConLeche/Kernel/Name.lean
++++ b/vendor/con-leche/ConLeche/Kernel/Name.lean
+@@ -7,7 +7,7 @@ is that it is *definitionally* `k ()` — which is what
+ this module only**; that theorem is the public relay, so no importer
+ needs it, and the executed `Name.beq` stays the plain
+ `decide (· = ·)` that the kernel can still reduce. -/
+-import all Init.Util
++public import ConLeche.Util.PtrEq
+ 
+ /-!
+ # Hierarchical names
+@@ -55,7 +55,7 @@ instance : Hashable Name := ⟨Name.hashData⟩
+ *implementation* of `Name.beq`; `Name.beqPtr_eq` proves the two guards
+ redundant. -/
+ @[inline] def Name.beqPtr (a b : Name) : Bool :=
+-  withPtrEq a b (fun _ => a.hashData == b.hashData && decide (a = b))
++  ConLeche.withPtrEq a b (fun _ => a.hashData == b.hashData && decide (a = b))
+     (fun h => by subst h; simp)
+ 
+ /-- Both guards are redundant: `withPtrEq a b k h` is *defined* as
+diff --git a/vendor/con-leche/ConLeche/Util/PtrEq.lean b/vendor/con-leche/ConLeche/Util/PtrEq.lean
+new file mode 100644
+index 0000000000000000000000000000000000000000..d4e0fd15c75748076e3ae69569ad61120735b342
+--- /dev/null
++++ b/vendor/con-leche/ConLeche/Util/PtrEq.lean
+@@ -0,0 +1,50 @@
++module
++
++public import Init.Util
++
++public section
++
++/-!
++# Vendored `withPtrEq` (the pre-2026-09-21 safe shape)
++
++con-agua's toolchain (`leanprover/lean4:nightly-2026-10-20`) carries a change,
++dated 2026-09-21 upstream, that deprecates the old `Init.Util.withPtrEq` and
++replaces it with an `unsafe def withPtrEq ... := withPtrEqUnsafe a b k h` — no
++longer definitionally `k ()`, so it can't be used in a kernel-checked
++declaration, and `ConLeche`'s proofs that relied on that definitional equality
++(`Name.beqPtr_eq`, `OwnerParse`'s `sameB_eq`, `ParInstall`'s slot check) stop
++elaborating. See `vendor/README.md` for the three call sites and what broke.
++
++This file restores the *old* shape under our own name, verbatim as it reads in
++`leanprover/lean4:v4.35.0`'s `src/lean/Init/Util.lean:126-130` (before the
++deprecation): a genuinely safe `def withPtrEq ... := k ()`, `@[implemented_by]`
++the still-public, still-unsafe `withPtrEqUnsafe` for the compiled/runtime
++version. `withPtrEqUnsafe` itself is unchanged upstream (still `public`, still
++takes the same `{α : Type u} (a b : α) (k) (h)` shape; nightly-2026-10-20's
++`Init/Util.lean:156-158` gates it the same way).
++
++Unlike `Init.Util`'s own (now-deprecated) version, ours is `@[expose]`: the
++three call sites need its body (`k ()`) visible to unfold through an ordinary
++`public import`, with no `import all` trick, because each call site is itself
++a `public` declaration and a public declaration may not depend on a privately
++imported name (Lean's module system rejects that with "Unknown identifier …
++is imported privately").
++
++Soundness is exactly as before: `withPtrEq` is unsound *in general* (the classic
++`Prop`/erased-data counterexample is in `withPtrEqUnsafe`'s own docstring), so
++every call site must independently justify that pointer-equality implies
++logical equality for its own type — which is exactly what con-leche's three
++call sites already do (`Name`, `OwnerParse`'s key type, `ParInstall`'s `CacheInfo`
++are all ordinary non-`Prop` inductives). We are not changing that trust
++boundary, only restoring the old upstream shape under our own name.
++-/
++
++/-- See the module docstring: the old (pre-2026-09-21) safe `withPtrEq`,
++`@[implemented_by]` `Init.Util.withPtrEqUnsafe` for the compiled version.
++
++Declared as `ConLeche.withPtrEq` (not bare `withPtrEq`) because the root name
++is already taken by `Init.Util`'s now-`unsafe` one; call sites use the
++qualified name `ConLeche.withPtrEq` to avoid any ambiguity with that root
++declaration. -/
++@[expose, implemented_by withPtrEqUnsafe]
++def ConLeche.withPtrEq {α : Type u} (a b : α) (k : Unit → Bool) (h : a = b → k () = true) : Bool := k ()
+diff --git a/vendor/con-leche/ConLeche/Verify/Cached/ParInstall.lean b/vendor/con-leche/ConLeche/Verify/Cached/ParInstall.lean
+index f16021693285e08a90baa7bdb15d751690df714d..5566a6a0b3a3655f4c1e1fb4ae631a794b55ec84 100644
+--- a/vendor/con-leche/ConLeche/Verify/Cached/ParInstall.lean
++++ b/vendor/con-leche/ConLeche/Verify/Cached/ParInstall.lean
+@@ -6,7 +6,7 @@ import ConLeche.Verify.Cached.KnotCongr
+ *defined* through it and `slotIs_spec` needs its body (`k ()`), which
+ `import all` makes visible in this module only (the `Init.Util`
+ exception CLAUDE.md lists). -/
+-import all Init.Util
++public import ConLeche.Util.PtrEq
+ 
+ /-!
+ # The parallel install's commit step (task #329)
+@@ -195,7 +195,7 @@ structural comparison, which is what it means logically
+ (`slotIs_spec`). -/
+ def slotIs (S : Slots) (k j : Nat) (ci : ConstantInfo) : Bool :=
+   match slotGet S k j with
+-  | some ci' => withPtrEq ci' ci (fun _ => decide (ci' = ci)) (fun h => by simp [h])
++  | some ci' => ConLeche.withPtrEq ci' ci (fun _ => decide (ci' = ci)) (fun h => by simp [h])
+   | none => false
+ 
+ theorem slotIs_spec {S : Slots} {k j : Nat} {ci : ConstantInfo}
