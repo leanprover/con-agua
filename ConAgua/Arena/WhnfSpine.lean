@@ -1,4 +1,5 @@
 import ConAgua.Arena.WhnfBase
+import ConAgua.Arena.WhnfSpineRefine
 
 /-!
 # Application spines and ∀-telescopes in L, on the spine stack
@@ -33,23 +34,10 @@ set_option experimental.vcgen true
 
 namespace L.Arena
 
-/-! ## The L code -/
+/-! ## The L code
 
-@[l_impl ConRon.Arena.getAppFn]
-def getAppFnL : FunDecl := lfn (e) locals (f, t, x) {
-  f := 4000000000;
-  while e >> 28 == 4 {
-    if f == 0 { abort };
-    f -= 1;
-    t := (e >> 27) & 1;
-    x := e & 134217727;
-    if t != 0 && CTL.u64[1] == 0 { abort };
-    if CTL.u64[4 + t] <= x { abort };
-    e := AREC.u64[x * 4 + t * 2]
-  };
-  if f == 0 { abort };
-  return e
-}
+`getAppFnL` (`get_app_fn`) is in `WhnfSpineRefine.lean`, with its loop `getAppFnLoop`, its word
+model `gafLoopW`/`gafW` and the proofs behind `getAppFn_refines` below. -/
 
 @[l_impl ConRon.Arena.getAppArgs]
 def getAppArgsL : FunDecl := lfn (e) locals (f, t, x, h, n, o, k) {
@@ -145,37 +133,9 @@ def mkAppNFromL : FunDecl := lfn (f, o, n, i) locals () {
   return f
 }
 
-@[l_impl ConRon.Arena.piResult]
-def piResultL : FunDecl := lfn (e) locals (f, t, x) {
-  f := 4000000000;
-  while e >> 28 == 6 {
-    if f == 0 { abort };
-    f -= 1;
-    t := (e >> 27) & 1;
-    x := e & 134217727;
-    if t != 0 && CTL.u64[1] == 0 { abort };
-    if CTL.u64[30 + t] <= x { abort };
-    e := FAREC.u64[x * 4 + t * 2 + 1]
-  };
-  if f == 0 { abort };
-  return e
-}
-
-@[l_impl ConRon.Arena.peelPis]
-def peelPisL : FunDecl := lfn (k, e) locals (t, x) {
-  while k != 0 {
-    if e >> 28 != 6 { return (0, 0) };
-    t := (e >> 27) & 1;
-    x := e & 134217727;
-    if t != 0 && CTL.u64[1] == 0 { abort };
-    if CTL.u64[30 + t] <= x { abort };
-    e := FAREC.u64[x * 4 + t * 2 + 1];
-    k -= 1
-  };
-  return (1, e)
-}
-
-/-- The spine functions. -/
+/-- The spine functions. `piResultL` (`pi_result`) and `peelPisL` (`peel_pis`) are in
+`WhnfSpineRefine.lean`, with their loops, word models and the proofs behind
+`piResult_refines`/`peelPis_refines` below. -/
 def spineProg : Prog :=
   [("get_app_fn", getAppFnL), ("get_app_args", getAppArgsL), ("get_app_spine", getAppSpineL),
    ("head_and_args", headAndArgsL), ("mk_app_n", mkAppNL), ("mk_app_n_from", mkAppNFromL),
@@ -202,6 +162,7 @@ structure SpineProg (p : Prog) : Prop where
 section specs
 variable (p : Prog) (hp : SpineProg p)
 
+include hp in
 /-- **`get_app_fn` refines `getAppFn coreWalkFuel`.** -/
 @[refines ConRon.Arena.getAppFn]
 theorem getAppFn_refines (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s₀.mem a₀) (e : Word)
@@ -209,7 +170,8 @@ theorem getAppFn_refines (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s₀
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "get_app_fn" [e]
     ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ HW (r.headD 0) ∧
-      (getAppFn coreWalkFuel (decE e)).run a₀ = .ok (decE (r.headD 0), a₀); ⊤⦄ := sorry
+      (getAppFn coreWalkFuel (decE e)).run a₀ = .ok (decE (r.headD 0), a₀); ⊤⦄ :=
+  getAppFn_refines' p hp.fn n s₀ a₀ hR e he
 
 /-- **`get_app_args` refines `getAppArgs coreWalkFuel`**: the arguments are a new slice at the
 old top. -/
@@ -271,6 +233,7 @@ theorem mkAppNFrom_refines (n : Nat) (s₀ : St) (a₀ : AState) (hD : ArenaD s�
       AM.res (mkAppNFrom (decE f) xs i.toNat) a₀ = decE (r.headD 0) ∧ HW (r.headD 0) ∧
       Grows s₀.mem s'.mem; ⊤⦄ := sorry
 
+include hp in
 /-- **`pi_result` refines `piResult coreWalkFuel`.** -/
 @[refines ConRon.Arena.piResult]
 theorem piResult_refines (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s₀.mem a₀) (e : Word)
@@ -278,8 +241,10 @@ theorem piResult_refines (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s₀
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "pi_result" [e]
     ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ HW (r.headD 0) ∧
-      (piResult coreWalkFuel (decE e)).run a₀ = .ok (decE (r.headD 0), a₀); ⊤⦄ := sorry
+      (piResult coreWalkFuel (decE e)).run a₀ = .ok (decE (r.headD 0), a₀); ⊤⦄ :=
+  piResult_refines' p hp.pires n s₀ a₀ hR e he
 
+include hp in
 /-- **`peel_pis` refines `peelPis`.** -/
 @[refines ConRon.Arena.peelPis]
 theorem peelPis_refines (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s₀.mem a₀) (k e : Word)
@@ -288,7 +253,7 @@ theorem peelPis_refines (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s₀.
     invoke p (exec p n) "peel_pis" [k, e]
     ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ HW (r.tail.headD 0) ∧
       (peelPis k.toNat (decE e)).run a₀ = .ok (decOpt (r.headD 0) (r.tail.headD 0), a₀); ⊤⦄ :=
-  sorry
+  peelPis_refines' p hp.peel n s₀ a₀ hR k e he
 
 end specs
 
