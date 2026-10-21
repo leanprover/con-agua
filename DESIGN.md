@@ -2323,3 +2323,128 @@ error matches (`Checker.lean:228–236, 247, 272–278, 286–291`, the frontend
 ### `sorry`s
 
 None. `PipelineRefines` is a hypothesis of the theorems.
+
+## The memo library, the view layer, derived ranges and `liftLooseBVars` (2026-10-21, lane `exprops`)
+
+Files: `ConAgua/Arena/{MemoLib,MemoLibRel}.lean` (replace `Memo`/`MemoRel`), `{View,ViewL}.lean`,
+`{ExprMk,DerRel}.lean`, `{Lift,LiftSpec,LiftRefine,LiftBench}.lean`; changed `ArenaRel`, `Frame`,
+`Walk`, `WalkRefine`. No `sorry`; axioms `propext`, `Classical.choice`, `Quot.sound`.
+`ArenaRel.lean` is maintained by hand from now on (no generator; see lane `tables2` above).
+
+### Layout and the extension point
+
+| arrays | `CTL` words | contents |
+|---|---|---|
+| 41 `LMEMO` | 42 (stamp − 1), 43 (count) | the `liftC` memo (`lfSch`), field `ArenaR.lmemo` |
+| 42‥46 `ADER`, `LADER`, `FADER`, `LEDER`, `PJDER` | – | derived bvar ranges of `app`, `lam`, `forallE`, `letE`, `proj` (`DerR`) |
+| 47‥63 | 44‥63 | reserved for this lane |
+| ≥ 64 | ≥ 64 | free for other lanes: `ArenaR.frame_ext` (stable), `arenaR_init` takes ≥ 64 arrays and a `CTL` of ≥ 64 words |
+
+`ArenaR.frame_above` (arrays ≥ 42, `CTL` ≥ 44) and `frame_ext` are proved once from `apart_hi`
+(`Apart` by bounds) with `arena_build … using …` (the frame tactic is now a parameter).
+
+### The memo library (`MemoLib.lean`, `MemoLibRel.lean`)
+
+A memo is a schema `MemoSch` (slot array, `CTL` index of the stamp); four words per slot: stamp,
+two key words, value. The L code is **generic in the schema**: `memoFindG S`, `memoPutG S`,
+`memoClearG S` are Lean functions producing L functions (`S.arr.u64[…]`, `CTL.u64[⟪S.cs⟫]`), and
+their `vcgen` specs are proved once for a variable `S` — at the first attempt (`vcgen` sees through
+a symbolic array id). `set` is `find; put` with the probe result passed in (L calls by name, so a
+generic `put` cannot call a generic `find`); a walk probes again after its recursion. The relation
+`MemoRG S K dv m mp` relates the memo to `Std.HashMap κ ν` through a key codec `K` (two words per
+key, `dk`/`ek` and one law `ek_dk`) and a value decoder; lemmas `memoRG_hit/miss/set/clear/frame/
+zero`, all generic. An instance is a schema line and a codec (`bmKey`, `lfKey`: 6 lines each).
+
+| file | lines (code) | `lean` wall / user |
+|---|---:|---|
+| `MemoLib.lean` (L 3 functions, 33 lines; models, specs) | 280 (189) | 4.6 s / 6.1 s |
+| `MemoLibRel.lean` | 543 (456) | 1.4 s / 2.6 s |
+| before: `Memo.lean` + `MemoRel.lean` (one table, by hand) | 267 + 428 | 1.4 s + 1.3 s |
+
+`bvarBC` was ported (`bm_find`/`bm_put`/`bm_clear` = the library at `⟨24, 24⟩`): the walk's specs
+went through unchanged in shape; `WalkRefine` changed in eight lines. The compiled walk
+(`harness/walk.c`, `perf stat -e instructions:u`): 82.3 M per 10^5 `app` nodes (72.3 M before),
+823.1 M per 10^6 (723.1 M): the second probe and the extra call cost 14 %. `check-asm.sh`: walk
+6439 instructions, all matching.
+
+### The view layer (`View.lean`, `ViewL.lean`)
+
+The arena side every walk shares: handle decoding, and **one view lemma per tag** (`view_app`: under
+`ArenaR`, `viewOK m h 4` and tag 4, `a.store.view (decE h) = some (.app (decE f) (decE a))` with
+`f`, `a` the record's words, both below `2^32`). `ViewL.lean` has the L side (`tierW`, `idxW`,
+`viewOK`, branch-free `maxW`, `predW`, `satSuccW`, `satPredW`). `WalkRefine.lean` now uses them:
+565 → 372 lines (refinement per walk L line 10 → 6.3).
+
+### Derived ranges: a finding, and `DerR` (`ExprMk.lean`, `DerRel.lean`)
+
+**`liftLooseBVarsGo` (and `instantiate1Go`, `instantiateListGo`, `abstract*`) read the derived word
+before anything else**: `bvarOfData (derived h) < satRange && … ≤ c` returns `h` unwalked. This is
+not denotation-level: the cut-off and the walked paths leave different memos and, on a scratch
+node with persistent children, may return different handles. So L must know the range field of
+`derived h` exactly; `ArenaR` had no derived columns (ROADMAP §1, phase 0 "missing"). Done here
+for the range field only (the hash is opaque, ROADMAP §2 item 10):
+
+* the five compound tables keep the range in L (`XDER[2 i + t]`); a leaf's range is a function of
+  its record (`satSucc i` for `bvar`, else `0`);
+* `der_b(h)` (15 L lines) returns it, including the arena's `0` for a handle that does not view;
+* `mk_app`, `mk_lam`, `mk_forall`, `mk_let`, `mk_proj` (59 L lines): children's ranges, `intern_*`,
+  and on a new node (the table's count sum changed) the range at the new index. **The compound
+  `intern_*` are internal from now on**; a node interned by them directly has no range;
+* `DerR m a` (one `DerT2` per expression table) and `ArenaD := ArenaR ∧ DerR`; `derBW_ok`
+  (`der_b` is `bvarOfData (a.store.derived (decE h))`), `mkX_ok` (each `mk_*` refines `internE`
+  under `ArenaD`; one generic lemma `derMk` does the tail for all five), `internBVar_D`,
+  `DerR.frameM`/`of_store`, `arenaD_init`.
+
+| file | lines (code) | `lean` wall / user |
+|---|---:|---|
+| `ExprMk.lean` (L 74 lines, models, specs) | 342 (254) | 7.1 s / 19.7 s |
+| `DerRel.lean` | 938 (793) | 1.1 s / 2.8 s |
+
+### `liftLooseBVars` (`Lift.lean`, `LiftSpec.lean`, `LiftRefine.lean`)
+
+`lift_go(h, c, k)` is the twin's dispatcher (cut-off by `der_b`, the view checks, `bvar` via
+`intern_bvar(i + k)`, leaves return `h`), the five arms `lift_app` … `lift_proj` its `liftArm*`
+(memo probe on `(h, c)`, children — bodies at `c + 1` —, `mk_*`, probe again, put),
+`lift_entry(h, k, c)` is `liftLooseBVarsFast`. The models are mutual on fuel; the guarded
+equations name first-order continuations. Theorems: `liftGo_spec`, `liftEntry_spec`
+(`vcgen` + `finish`), `liftOK` (by induction on fuel, `LGoOK n ∧ LArmOK n` for every arena fuel
+`F ≥ n`), `liftEntry_refines` (the triple with `AM.ok`/`AM.st`/`AM.res` under `ArenaD`) and
+`liftEntry_run`. `LiftBench.lean`: four `#guard`s in the interpreter (lift equals the expected
+term's handle, the cut-off returns the same handle).
+
+| | Rust lines | L lines | proof lines (code) | `lean` wall / user |
+|---|---:|---:|---|---|
+| `lift_loose_bvars_go` + `_fast` | 142 | 93 (`lift_go` 24, arms 65, entry 4) | `Lift.lean` 478, `LiftSpec.lean` 131 | 26.9 s / 27.3 s, 3.1 s / 10.7 s |
+| refinement | – | – | `LiftRefine.lean` **444**, i.e. **4.8 per L line** | 1.1 s / 1.9 s |
+
+L/Rust is 0.65. The refinement is at the target (≤ 5; the walk was 10): the dispatcher is one
+`by_cases` per tag with one view lemma each, an arm is `probe_ok` (hit/miss), the children (the
+induction hypothesis), and `tail_ok` (`mk_*_ok` and the memo set). Not counted: the derived-range
+infrastructure (`ExprMk`, `DerRel`), which every walk with a cut-off reuses.
+
+### Findings
+
+* **`vcgen` with a symbolic array id works**: the memo library's L code is a Lean function of the
+  schema and its specs are proved once. The same would make the per-table store L code generic
+  (lane `storelib` judged it untried).
+* **`finish` needs `(gen := 20)`** where three callee posts feed one model (`mk_let`, the lift arms);
+  the default failed with no hint. Separately, a missing `[tierW, idxW]` made `finish` fail
+  slowly (45 s per lemma); with it the lift arms take about 2 s each.
+* **Continuations given as `fun` defeat `grind`'s matching** (it equated two lambdas and stopped);
+  first-order continuations (`appK₁ n h c k aw`, …) as in lane `walk` work. A small example does
+  not reproduce it.
+* `omega` and `ArrId` (`abbrev … := Nat`): `docs/gaps/omega-nat-synonym-hyp.lean` again;
+  `Nat.lt_of_le_of_lt`/`decide` instead.
+
+### Not done
+
+* `instantiate1Go`, `instantiateListGo`, `abstract1Go`, `hasLooseBVar`: the same scaffolding
+  (`DerR`, the memo instances `inst1C` … as more `MemoSch` lines, `mk_*`); `instantiate1` also
+  needs `bvarBC` reads (`instantiate1Lift`'s cut-off).
+* `DerR` for the other leaf internings (`intern_fvar`, `intern_sort`, `intern_const`, `intern_lit`,
+  incl. `natAddLit_refinesA`): each is `internBVar_D`'s proof with `zP` (range `0`).
+* A compiled benchmark of `lift_entry` (the program is `liftProg`; not emitted).
+
+### `sorry`s
+
+None.
