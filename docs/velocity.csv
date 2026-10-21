@@ -32,4 +32,3 @@ date,lane,model,work_min,overhead_min,note
 2026-10-21,levels,opus,10,1,"lv_apd/lv_mem refine allParamsDefined (names in a caller-chosen array), lh_push/lv_zero refine zeronessOf (names pushed on the heap)"
 2026-10-21,levels,opus,6,1,"lv_lookup/lv_substl refine subst/subst.go with lists, lv_spw/lv_substpw refine substPW (arrays chosen by the caller)"
 2026-10-21,whnf,opus,19,3,"CoreR tier: nine L caches (banked mode memos, constant caches), flush_caches refines flushCaches, scratch_drop flushes; lo_hi/genW reproved without bv_decide axioms"
-2026-10-21,induct,opus,45,0,"IndPos: positivity walk occurrence/depth/readback functions in L (mentionsAnyConst, nestOcc, closeTelescope, depth/whnfWalkFuel, nestContainer/nestCtorEntry, NestCtx helpers, replaceFVars/fvMapAt/nestHoleImg banked walk, replaceApps/phApp?/appHole?/nestCanonSub, nestPhs/nestCanonCrest/nestCrest); 29 twin fns, 38 L FunDecls, builds clean, no foreign callees needed"
