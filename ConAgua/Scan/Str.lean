@@ -281,6 +281,121 @@ decreasing_by
     rw [UInt64.lt_iff_toNat_lt] at hj
     omega
 
+section
+variable (b : Array UInt8) (j e r : Word)
+
+/-! `j + 1`, `j + 2`, `j + 6`, `j + 6 + 6` do not wrap when `j` is inside `b` (`< 2 ^ 63`): the
+small-offset analogue of `utf8CharN_no_wrap` above, needed for the termination guards `j < j + …`
+inside `unescN` and `uNextN` (the loop reaches these only once it has read `b[j]`, so `j` is
+always in bounds there). -/
+
+theorem lt_add1_of_lt_size (hj : j.toNat < b.size) (hb : b.size < 2 ^ 63) : j < j + 1 := by
+  rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_add]
+  have : (1 : Word).toNat = 1 := by decide
+  omega
+theorem lt_add2_of_lt_size (hj : j.toNat < b.size) (hb : b.size < 2 ^ 63) : j < j + 2 := by
+  rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_add]
+  have : (2 : Word).toNat = 2 := by decide
+  omega
+theorem lt_add6_of_lt_size (hj : j.toNat < b.size) (hb : b.size < 2 ^ 63) : j < j + 6 := by
+  rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_add]
+  have : (6 : Word).toNat = 6 := by decide
+  omega
+theorem lt_add6add6_of_lt_size (hj : j.toNat < b.size) (hb : b.size < 2 ^ 63) :
+    j < j + 6 + 6 := by
+  rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_add, UInt64.toNat_add]
+  have : (6 : Word).toNat = 6 := by decide
+  omega
+
+grind_pattern [lang_grind] lt_add1_of_lt_size => j + (1 : Word), UInt64.ofNat b.size
+grind_pattern [lang_grind] lt_add2_of_lt_size => j + (2 : Word), UInt64.ofNat b.size
+grind_pattern [lang_grind] lt_add6_of_lt_size => j + (6 : Word), UInt64.ofNat b.size
+grind_pattern [lang_grind] lt_add6add6_of_lt_size => j + (6 : Word) + 6, UInt64.ofNat b.size
+
+/-- `uNextN`'s result is always `j + 6` or `j + 6 + 6`, so it is always `> j` when `j` is in
+bounds: discharges `unescN_u_esc`'s own `j < uNextN …` guard. -/
+theorem uNextN_lt (hj : j.toNat < b.size) (hb : b.size < 2 ^ 63) (v : Word) :
+    j < uNextN b e j v := by
+  simp only [uNextN]
+  repeat' split
+  all_goals first
+    | exact lt_add6_of_lt_size b j hj hb
+    | exact lt_add6add6_of_lt_size b j hj hb
+
+grind_pattern [lang_grind] uNextN_lt => uNextN b e j v
+
+/-! One guarded equation per reachable arm (DESIGN.md, "Proof recipe", item 5). The recursive
+arms take the next position as a variable `j'` with an equation, with the read `byteW b j` (or
+`b[j.toNat]` through `L.Scan.Utf8.byteW_lt`) in the pattern so `grind` does not unroll further
+than the program has read. -/
+
+theorem unescN_end (h : ¬ (j < UInt64.ofNat b.size ∧ j < e)) :
+    unescN b j e r = utf8ValidN b r e := by
+  rw [unescN]; simp [h]
+
+/-- Split in two, matching the program's short-circuit `j < len(IN.u8) && j < e` (as
+`hasEscapeN_past`/`hasEscapeN_end` do for the same shape in `Leaves.lean`): `grind` sees one of
+these two separate facts, not a negated conjunction, when the loop guard evaluates to `false`. -/
+theorem unescN_end1 (h : ¬ j < UInt64.ofNat b.size) : unescN b j e r = utf8ValidN b r e :=
+  unescN_end b j e r (fun hc => h hc.1)
+theorem unescN_end2 (h1 : j < UInt64.ofNat b.size) (h2 : ¬ j < e) :
+    unescN b j e r = utf8ValidN b r e := unescN_end b j e r (fun hc => h2 hc.2)
+
+theorem unescN_plain (j' : Word) (hj' : j' = j + 1) (h1 : j < UInt64.ofNat b.size) (h2 : j < e)
+    (hc : byteW b j ≠ 92) (hw : j < j + 1) : unescN b j e r = unescN b j' e r := by
+  subst hj'; rw [unescN]; simp [h1, h2, hc, hw]
+
+theorem unescN_bad_run (h1 : j < UInt64.ofNat b.size) (h2 : j < e) (hc : byteW b j = 92)
+    (hbad : utf8ValidN b r j = 0) : unescN b j e r = 0 := by
+  rw [unescN]; simp [h1, h2, hc, hbad]
+
+theorem unescN_simple_esc (j' : Word) (hj' : j' = j + 2) (h1 : j < UInt64.ofNat b.size)
+    (h2 : j < e) (hc : byteW b j = 92) (hok : utf8ValidN b r j ≠ 0)
+    (hd : byteE b e (j + 1) = 34 ∨ byteE b e (j + 1) = 92 ∨ byteE b e (j + 1) = 47 ∨
+      byteE b e (j + 1) = 98 ∨ byteE b e (j + 1) = 102 ∨ byteE b e (j + 1) = 110 ∨
+      byteE b e (j + 1) = 114 ∨ byteE b e (j + 1) = 116) (hw : j < j + 2) :
+    unescN b j e r = unescN b j' e j' := by
+  subst hj'; rw [unescN]; simp [h1, h2, hc, hok, hd, hw]
+
+theorem unescN_bad_escchar (h1 : j < UInt64.ofNat b.size) (h2 : j < e) (hc : byteW b j = 92)
+    (hok : utf8ValidN b r j ≠ 0)
+    (hd1 : ¬ (byteE b e (j + 1) = 34 ∨ byteE b e (j + 1) = 92 ∨ byteE b e (j + 1) = 47 ∨
+      byteE b e (j + 1) = 98 ∨ byteE b e (j + 1) = 102 ∨ byteE b e (j + 1) = 110 ∨
+      byteE b e (j + 1) = 114 ∨ byteE b e (j + 1) = 116))
+    (hd2 : byteE b e (j + 1) ≠ 117) : unescN b j e r = 0 := by
+  rw [unescN]; simp [h1, h2, hc, hok, hd1, hd2]
+
+theorem unescN_bad_hex4 (h1 : j < UInt64.ofNat b.size) (h2 : j < e) (hc : byteW b j = 92)
+    (hok : utf8ValidN b r j ≠ 0)
+    (hd1 : ¬ (byteE b e (j + 1) = 34 ∨ byteE b e (j + 1) = 92 ∨ byteE b e (j + 1) = 47 ∨
+      byteE b e (j + 1) = 98 ∨ byteE b e (j + 1) = 102 ∨ byteE b e (j + 1) = 110 ∨
+      byteE b e (j + 1) = 114 ∨ byteE b e (j + 1) = 116))
+    (hd2 : byteE b e (j + 1) = 117) (hhex : (hex4N b e (j + 2)).1 = 0) :
+    unescN b j e r = 0 := by
+  rw [unescN]; simp [h1, h2, hc, hok, hd1, hd2, hhex]
+
+theorem unescN_u_esc (j' : Word) (hj' : j' = uNextN b e j (hex4N b e (j + 2)).2)
+    (h1 : j < UInt64.ofNat b.size) (h2 : j < e) (hc : byteW b j = 92)
+    (hok : utf8ValidN b r j ≠ 0)
+    (hd1 : ¬ (byteE b e (j + 1) = 34 ∨ byteE b e (j + 1) = 92 ∨ byteE b e (j + 1) = 47 ∨
+      byteE b e (j + 1) = 98 ∨ byteE b e (j + 1) = 102 ∨ byteE b e (j + 1) = 110 ∨
+      byteE b e (j + 1) = 114 ∨ byteE b e (j + 1) = 116))
+    (hd2 : byteE b e (j + 1) = 117) (hhex : (hex4N b e (j + 2)).1 ≠ 0)
+    (hw : j < uNextN b e j (hex4N b e (j + 2)).2) : unescN b j e r = unescN b j' e j' := by
+  subst hj'; rw [unescN]; simp [h1, h2, hc, hok, hd1, hd2, hhex, hw]
+
+grind_pattern [lang_grind] unescN_end => unescN b j e r
+grind_pattern [lang_grind] unescN_end1 => unescN b j e r
+grind_pattern [lang_grind] unescN_end2 => unescN b j e r
+grind_pattern [lang_grind] unescN_plain => unescN b j e r, byteW b j, unescN b j' e r
+grind_pattern [lang_grind] unescN_bad_run => unescN b j e r, byteW b j
+grind_pattern [lang_grind] unescN_simple_esc => unescN b j e r, byteW b j, unescN b j' e j'
+grind_pattern [lang_grind] unescN_bad_escchar => unescN b j e r, byteW b j
+grind_pattern [lang_grind] unescN_bad_hex4 => unescN b j e r, byteW b j
+grind_pattern [lang_grind] unescN_u_esc => unescN b j e r, byteW b j, unescN b j' e j'
+
+end
+
 /-! ## `scan_string` -/
 
 def scanString : FunDecl := lfn (i) locals (e, h, ok) {
@@ -412,12 +527,47 @@ theorem hex3_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e : Word)
 
 end hex4Hex3
 
+/- `unescapeLoop_spec`: each iteration that hits the `\u` escape branch chains a `utf8_valid`
+call, a `byte_in` call, and (for the surrogate-pair continuation) a `hex4` call plus up to three
+more `byte_in` calls and a `hex3` call — a sequential-call chain at least as deep as `hex4_spec`'s
+own (see the `sorry` note there), and `finish`/`grind` does not converge on it either (confirmed
+directly, with `s.mem.arr8 IN = b` folded into the precondition instead of carried as a separate
+`ih`/callee hypothesis — a fix that *did* work for an analogous loop in another lane's
+`Records.lean`, `strNameLoop_spec` — and with `sym (gen := 16)`; neither changed the outcome
+here). Left as `sorry`; see the task report. -/
+
+include hpc hpv hpb hph hp4 hp3 in
+theorem unescapeLoop_spec (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
+    exec p n unescapeLoop
+    ⦃fun r s' => s'.mem = s₀.mem ∧ s'.loc 1 = s₀.loc 1 ∧ r ≠ .brk ∧
+      r.retOr [utf8ValidN b (s'.loc 2) (s₀.loc 1)] =
+        [unescN b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ := by
+  sorry
+
+include hpc hpv hpb hph hp4 hp3 in
+theorem unescapeLoop_step_spec (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
+    step p (exec p n) unescapeLoop
+    ⦃fun r s' => s'.mem = s₀.mem ∧ s'.loc 1 = s₀.loc 1 ∧ r ≠ .brk ∧
+      r.retOr [utf8ValidN b (s'.loc 2) (s₀.loc 1)] =
+        [unescN b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
+  Triple.step_exec (unescapeLoop_spec p b hb hpc hpv hpb hph hp4 hp3 (n + 1) s₀)
+
 include hpc hpv hpb hph hp4 hp3 hpu in
 theorem unescape_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "unescape" [j, e]
     ⦃fun r s' => s' = s₀ ∧ r = [unescN b j e j]; ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hpu]
+  simp only [callFn, unescape]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind] =>
+      vcgen [exec, step, evalE, evalArgs, setLoc, setLocs,
+        unescapeLoop_step_spec p b hb hpc hpv hpb hph hp4 hp3 n,
+        utf8Valid_spec p b hb hpc hpv n] <;> finish
 
 include hpc hpv hpb hph hp4 hp3 hpu hps hpe hpt in
 theorem scanString_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
