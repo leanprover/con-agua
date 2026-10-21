@@ -45,6 +45,17 @@ attribute [lang_grind cases] Sig
 
 attribute [lang_grind] Mem.len8 Mem.len64
 
+/-- A local of a state that is equal to a record literal. `grind` does not project `loc` out of
+an equation `t = { mem := m, loc := l }` by itself, because `t.loc x` is an over-applied
+projection (docs/gaps/grind-state-eq-projection.lean); a callee spec's frame condition `s' = s₀`
+then hides the caller's untouched locals. The multi-pattern fires for every read `t.loc x` and
+every record literal in the goal; the equation itself is left to congruence closure. -/
+theorem St.loc_of_eq_mk {t : St} {m : Mem} {l : Locals} (h : t = St.mk m l) (x : Var) :
+    t.loc x = l x := by
+  subst h; rfl
+
+grind_pattern [lang_grind] St.loc_of_eq_mk => t.loc x, St.mk m l
+
 /-- Restoring the caller's locals after a call that left the memory alone gives back the
 caller's state. -/
 @[lang_grind =] theorem St.restore_eq (s s' : St) (h : s'.mem = s.mem) :

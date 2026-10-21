@@ -33,20 +33,12 @@ abbrev IN : ArrId := 0
 
 /-! ## `is_ws` / `skip_ws` (`scan_fast.rs:96,107`) -/
 
-/-- Rust's `while i < b.len() && is_ws(b[i])` (the motivating example for `Cond`'s short-circuit,
-DESIGN.md "Expressions") is instead written with the array bound alone in the `while` and an early
-`return i` when the byte is not whitespace (the `findLoop`/`strCloseLoop` idiom): both shapes stop
-at the same position, and `vcgen`/`grind` handle a single-comparison `while` plus an explicit
-`return` with no difficulty, whereas the compound `&&`/`||` condition hit a `grind` gap — see
-`docs/gaps/grind-and-or-while-cond.lean`. -/
-def skipWsLoop : Stmt := lblk (i, c) {
-  while i < len(IN.u8) {
-    c := IN.u8[i];
-    if c == 32 || c == 9 || c == 13 { i += 1 } else { return i }
-  }
+/-- Rust's own loop, `while i < b.len() && is_ws(b[i]) { i += 1 }`, with `is_ws` inlined. -/
+def skipWsLoop : Stmt := lblk (i) {
+  while i < len(IN.u8) && (IN.u8[i] == 32 || IN.u8[i] == 9 || IN.u8[i] == 13) { i += 1 }
 }
 
-def skipWs : FunDecl := lfn (i) locals (c) { ⟪skipWsLoop⟫; return i }
+def skipWs : FunDecl := lfn (i) { ⟪skipWsLoop⟫; return i }
 
 /-- The model: the first position `≥ i` whose byte is not JSON whitespace, or `b.size`. -/
 def skipWsN (b : Array UInt8) (i : Nat) : Nat :=
@@ -77,9 +69,8 @@ theorem skipWsLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
     (hi : (s₀.loc 0).toNat ≤ b.size) :
     ⦃fun s => s = s₀⦄
     exec p n skipWsLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      s'.loc 0 = UInt64.ofNat (skipWsN b (s₀.loc 0).toNat) ∧
-      r.retOr (UInt64.ofNat b.size) = UInt64.ofNat (skipWsN b (s₀.loc 0).toNat); ⊤⦄ := by
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r = .normal ∧
+      s'.loc 0 = UInt64.ofNat (skipWsN b (s₀.loc 0).toNat); ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
@@ -90,9 +81,8 @@ theorem skipWsLoop_step_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
     (hi : (s₀.loc 0).toNat ≤ b.size) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) skipWsLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      s'.loc 0 = UInt64.ofNat (skipWsN b (s₀.loc 0).toNat) ∧
-      r.retOr (UInt64.ofNat b.size) = UInt64.ofNat (skipWsN b (s₀.loc 0).toNat); ⊤⦄ :=
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r = .normal ∧
+      s'.loc 0 = UInt64.ofNat (skipWsN b (s₀.loc 0).toNat); ⊤⦄ :=
   Triple.step_exec (skipWsLoop_spec p b hb (n + 1) s₀ hm hi)
 
 include hp in
@@ -112,14 +102,11 @@ end skipWs
 
 /-! ## `skip_digits` (`scan_fast.rs:118`) -/
 
-def skipDigitsLoop : Stmt := lblk (i, c) {
-  while i < len(IN.u8) {
-    c := IN.u8[i];
-    if c < 48 { return i } else if 57 < c { return i } else { i += 1 }
-  }
+def skipDigitsLoop : Stmt := lblk (i) {
+  while i < len(IN.u8) && 48 <= IN.u8[i] && IN.u8[i] <= 57 { i += 1 }
 }
 
-def skipDigits : FunDecl := lfn (i) locals (c) { ⟪skipDigitsLoop⟫; return i }
+def skipDigits : FunDecl := lfn (i) { ⟪skipDigitsLoop⟫; return i }
 
 /-- The model: the position after the decimal digit run at `i`. -/
 def skipDigitsN (b : Array UInt8) (i : Nat) : Nat :=
@@ -172,9 +159,8 @@ theorem skipDigitsLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
     (hi : (s₀.loc 0).toNat ≤ b.size) :
     ⦃fun s => s = s₀⦄
     exec p n skipDigitsLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      s'.loc 0 = UInt64.ofNat (skipDigitsN b (s₀.loc 0).toNat) ∧
-      r.retOr (UInt64.ofNat b.size) = UInt64.ofNat (skipDigitsN b (s₀.loc 0).toNat); ⊤⦄ := by
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r = .normal ∧
+      s'.loc 0 = UInt64.ofNat (skipDigitsN b (s₀.loc 0).toNat); ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
@@ -185,9 +171,8 @@ theorem skipDigitsLoop_step_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = 
     (hi : (s₀.loc 0).toNat ≤ b.size) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) skipDigitsLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      s'.loc 0 = UInt64.ofNat (skipDigitsN b (s₀.loc 0).toNat) ∧
-      r.retOr (UInt64.ofNat b.size) = UInt64.ofNat (skipDigitsN b (s₀.loc 0).toNat); ⊤⦄ :=
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r = .normal ∧
+      s'.loc 0 = UInt64.ofNat (skipDigitsN b (s₀.loc 0).toNat); ⊤⦄ :=
   Triple.step_exec (skipDigitsLoop_spec p b hb (n + 1) s₀ hm hi)
 
 include hp in
@@ -446,6 +431,8 @@ def numEndN (b : Array UInt8) (i : Nat) : Nat :=
   if e = i then i
   else if b.getD i 0 = 48 ∧ e ≠ i + 1 then i else e
 
+attribute [local lang_grind] numEndN
+
 section numEnd
 variable (p : Prog) (hp1 : p.lookup "skip_digits" = some skipDigits)
     (hp2 : p.lookup "num_end" = some numEnd)
@@ -465,23 +452,8 @@ theorem numEnd_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word)
   | succ n =>
     have hgetD : ∀ (k : Nat) (hk : k < b.size), b.getD k 0 = b[k]'hk := by
       intro k hk; simp [Array.getD, hk]
-    -- A `UInt64.ofNat k` with `k ≤ b.size < 2 ^ 64` round-trips through `.toNat` without the
-    -- wraparound `grind` otherwise has to rediscover (the same gap as `ConAgua.Scan.Link`'s
-    -- `usize_toNat_eq`, here for `UInt64` instead of `USize`): feed it as a fact instead.
-    have hofNat1 : (UInt64.ofNat (skipDigitsN b i.toNat)).toNat = skipDigitsN b i.toNat := by
-      rw [UInt64.toNat_ofNat']
-      have := skipDigitsN_le b i.toNat hi
-      omega
-    -- GAP (docs/gaps/grind-state-eq-projection.lean): `num_end` is the first function here that
-    -- compares a call's result (`e`) against a local the call left untouched (`i`), which needs
-    -- `grind` to read `s'.loc 0` off the callee postcondition `s' = s₀` — a projection through a
-    -- *hypothesis* `t = { mem := _, loc := _ }`, not through a literal record. `grind`'s
-    -- congruence closure never materialises `{ mem := _, loc := _ }.loc 0`, because nothing
-    -- else in the goal applies `.loc` to that side, so the two never merge; `subst` first (where
-    -- possible) closes it instantly, but `vcgen`'s per-VC `<;> finish` has no hook to `subst`
-    -- between generating a verification condition and discharging it. Left as `sorry`; see the
-    -- reproducer for the 15-line version of exactly this shape.
-    sorry
+    sym only [lang_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, skipDigits_spec p hp1 b hb n] <;> finish
 
 end numEnd
 

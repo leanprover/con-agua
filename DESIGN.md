@@ -236,6 +236,77 @@ induction hypothesis, and the expression lemmas are straight-line `kvcgen64` pro
 
 None.
 
+## Linking to con-leche, and more scan leaf functions (2026-10-21, lane `scan`)
+
+Files: `ConAgua/Scan/{Link,Leaves}.lean`.
+
+### Link: `strCloseN`/`skipBracedN` agree with con-leche's `strClose`/`skipBraced`
+
+`ConAgua/Scan/Link.lean` proves `ConAgua.Scan.strClose_toNat_eq`/`skipBraced_toNat_eq`:
+`(strClose b j).toNat = strCloseN b.data j.toNat` (and the `skipBraced` analogue), under
+`h64 : System.Platform.numBits = 64` and `hsize : b.size < 2 ^ 64`. This is the missing link from
+`L.Examples.skipBraced_run`'s `skipBracedN` to the real, vendored `ConLeche.Frontend.skipBraced`
+(`USize` positions over `ByteArray`), completing Stage A's proof chain end to end.
+
+* The proof is `fun_induction strClose b j`/`fun_induction skipBraced b i depth`, case for case
+  the same split as con-leche's own `strClose_eq`/`skipBraced_eq`
+  (`vendor/con-leche/ConLeche/Frontend/Scan/Equiv/{Scalars,Keys}.lean`) — unsurprising, since
+  `strCloseN`/`skipBracedN` were written to mirror `strClose`/`skipBraced` arm for arm in the
+  first place. Each case bridges `b.uget i h` to `b.data[i.toNat]` (`uget_eq`, `rfl`: `ByteArray`
+  is a bare `Array UInt8` wrapper and `uget`/`GetElem` unfold to it definitionally) and then
+  discharges with the already-proved `strCloseN_*`/`skipBracedN_*` arm lemmas from
+  `L.Examples`.
+* **Where `h64`/`hsize` are actually needed**: nowhere in the *positive* direction (`usizeInBounds`,
+  `usizeStep`, `usize_step_of_lt` — all from con-leche, all unconditional: a position that is
+  already inside the array never overflows, on any platform). They are needed in exactly one
+  place, `usizeGe`: showing `¬ i < b.usize → b.size ≤ i.toNat`. `ByteArray.size : Nat` has no
+  upper bound, so `b.usize.toNat` is `b.size % USize.size` in general — only `h64 + hsize` collapse
+  that to `b.size` outright. (`str_close`'s OOB case and `skip_braced`'s OOB and the `exfalso`
+  "`noProgress`" case all go through `usizeGe`.)
+* Measured (`lake env lean`, cold): 264 lines, ~0.6 s.
+
+### More `scan_fast.rs` leaf functions, `ConAgua/Scan/Leaves.lean`
+
+Order per the task: `is_ws`/`skip_ws`, `skip_digits`, `newline_from`, `key_end`, `has_escape`,
+`num_end` (`match_lit`/`scan_bool`/`utf8_decode`/`read_nat_at` not attempted this round — see
+"Not done" below). Each is an `L` function close to the Rust, a `Nat`-position model in the
+`findFrom`/`strCloseN` style (own model, not reusing con-leche directly — these have no vendored
+Lean twin at this granularity beyond what `Link.lean` already covers), and a `vcgen`+`grind` spec
+proof.
+
+| function | Rust lines | L lines | vcgen+grind clean? |
+|---|---:|---:|---|
+| `is_ws`/`skip_ws` (`:96,107`) | 3+7 | 4 | yes |
+| `skip_digits` (`:118`) | 7 | 4 | yes |
+| `newline_from` (`:4072`) | 10 | 7 | yes |
+| `key_end` (`:149`) | 14 | 9 | yes |
+| `has_escape` (`:818`) | 10 | 7 | yes |
+| `num_end` (`:733`) | 10 | 6 (+ call to `skip_digits`, no loop) | yes (since lane `lext`) |
+
+Whole-file build (`ConAgua.Scan.Leaves`, `lake env lean`, cold): ~2.5 s for all six.
+`ConAgua.Scan.Link` + `ConAgua.Scan.Leaves` together add about 750 lines to the `ConAgua` lib;
+the whole project (`lake build`, from a warm `.lake`) still finishes in well under a minute.
+
+* **`&&` in a `while` condition.** On nightly-2026-09-21, Rust's `while i < b.len() &&
+  is_ws(b[i])` did not go through `vcgen`+`grind` (the plain `i ≥ len` exit did not close), and
+  `skip_ws`/`skip_digits` were written with the bound alone and an early `return`. On
+  nightly-2026-10-20 the reproducer passes; lane `lext` rewrote both loops in Rust's shape
+  (and deleted the reproducer).
+* **`num_end`** compares the result of a call (`skip_digits`) with a local the call left alone
+  (`if e == i`). That needs `grind` to read `s'.loc 0` off the callee's frame condition
+  `s' = s₀`, where `s₀` is a record literal: `docs/gaps/grind-state-eq-projection.lean`. It was
+  a `sorry` until lane `lext` added `St.loc_of_eq_mk` to `lang_grind` (see "L extensions").
+* **Not done, this round**: `match_lit` (needs a second named array for the literal, or one `L`
+  function per literal — `L` has no array-valued parameters — not attempted for time), and with
+  it `scan_bool` (calls `match_lit` twice); `utf8_decode` (deeply nested multi-byte decode,
+  `Option (List …)`-shaped — a different result-cell question than anything tried so far);
+  `read_nat_at` (skipped per the task: `u64` accumulation is in scope for Theorem-2-style
+  refinement but not for this spike).
+
+### `sorry`s
+
+None (the `num_end` one is gone).
+
 ## The compiler (2026-10-21, lane `compiler`)
 
 Files: `ConAgua/Compiler/*.lean` (compiler `Compile`, check `WF`, Kraken runner `Run`, tests
@@ -459,3 +530,23 @@ Each request names the workaround used meanwhile.
    `s'.loc x` back through a function or structure equation unless the term `s₀.loc x`
    already exists (`docs/gaps/grind-state-eq-projection.lean`). With `LocEq` the
    `num_end` `sorry` of `ConAgua/Scan/Leaves.lean` may go away too.
+
+## L extensions (2026-10-21, lane `lext`)
+
+Restored the section "Linking to con-leche, and more scan leaf functions" above, which the
+compiler lane's merge (`43a0825`) dropped by accident.
+
+### Proof support
+
+* **Locals through a state equation.** `grind` does not project `loc` out of an equation
+  `t = { mem := m, loc := l }`: `t.loc x` is an over-applied projection, and `grind` neither
+  internalises `t.loc` nor accepts a pattern for `(St.mk m l).loc x` (it reduces it to `l x`).
+  `Logic.lean` now has `St.loc_of_eq_mk (h : t = St.mk m l) : t.loc x = l x` in `lang_grind`,
+  with the multi-pattern `t.loc x, St.mk m l`; the equation `h` is left to congruence closure.
+  With it, `num_end`'s proof is the standard one-liner and its `sorry` is gone. A callee spec
+  keeps the post `s' = s₀`. (The arena lane's suggestion, a named `LocEq s' s₀` with the pattern
+  `LocEq s t, s.loc x`, would work too, but needs every spec to change; the lemma does not.)
+  Reproducer, still failing without the lemma: `docs/gaps/grind-state-eq-projection.lean`.
+* **`&&`/`||` in `while`**: fixed upstream (see above); `skip_ws`/`skip_digits` now use the
+  Rust condition.
+
