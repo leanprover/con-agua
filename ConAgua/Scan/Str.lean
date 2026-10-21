@@ -357,19 +357,44 @@ theorem utf8Valid_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (k e : 
     sym only [lang_grind] =>
       vcgen [exec, step, evalE, evalArgs, utf8ValidLoop_step_spec p b hb hpc n] <;> finish
 
+section hex4Hex3
+attribute [local lang_grind] byteE hexValN hex4N hex3N
+
 include hpb in
 theorem byteIn_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (k e : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "byte_in" [k, e]
     ⦃fun r s' => s' = s₀ ∧ r = [byteE b e k]; ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hpb]
+  simp only [callFn, byteIn]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind] => vcgen [exec, step, evalE, evalC, evalArgs, ld8] <;> finish
 
 include hph in
 theorem hexVal_spec (n : Nat) (s₀ : St) (c : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "hex_val" [c]
     ⦃fun r s' => s' = s₀ ∧ r = [(hexValN c).1, (hexValN c).2]; ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hph]
+  simp only [callFn, hexVal]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind] => vcgen [exec, step, evalE, evalC, evalArgs] <;> finish
+
+/- `hex4_spec`/`hex3_spec`: `vcgen` alone (replacing `<;> finish` with `<;> sorry` below the
+`vcgen [...]` call) elaborates in ~1s, so the blow-up is entirely inside `finish`/`grind`'s own
+search on the resulting verification conditions, not in `vcgen`. Four (resp. three) sequential
+`byte_in`/`hex_val` calls, each a two-result destructuring call followed by an early-return
+check, leave the state as a deeply right-nested `setLocs`/`loc` term (no call "returns" to a
+freshly-named, re-collapsed state the way a loop's `ih` does), and `grind`'s matching search does
+not converge on the resulting VCs (minutes, not a quick failure). Confirmed with a minimal
+standalone reproducer (four chained two-result calls, no strings/UTF-8 involved at all) given in
+the task report, along with what was tried (splitting the `local lang_grind` unfolding of
+`byteE`/`hexValN` out of this proof did not help; `<;> grind` in place of `<;> finish` hit a
+separate parse issue in this combinator). Left as `sorry`. -/
 
 include hpb hph hp4 in
 theorem hex4_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e : Word) :
@@ -384,6 +409,8 @@ theorem hex3_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e : Word)
     invoke p (exec p n) "hex3" [j, e]
     ⦃fun r s' => s' = s₀ ∧ r = [(hex3N b e j).1, (hex3N b e j).2]; ⊤⦄ := by
   sorry
+
+end hex4Hex3
 
 include hpc hpv hpb hph hp4 hp3 hpu in
 theorem unescape_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e : Word) :
