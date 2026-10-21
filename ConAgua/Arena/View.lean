@@ -273,4 +273,87 @@ theorem view_proj (hv : viewOK m h 32) (hg : h >>> 28 = 9) :
 
 end viewTags
 
+/-! ## The projections (`viewApp`, `viewBind`, …), one lemma each
+
+The walks that test the tag before reading the store (`instantiate1Go`) read a node through the
+store's projections; under `ArenaR` and the L checks they are the record's words, as `view`. -/
+
+section projections
+variable (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
+include hR hh
+
+/-- A projection at the tier the handle names. -/
+theorem proj_tier {β : Type} (f : ETables → EIdx → Option β)
+    (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) :
+    (if (decE h).isPersistent then f a.store.pers (decE h)
+      else if a.store.scratchOn then f a.store.scr (decE h) else none) =
+      f (if tierW h = 0 then a.store.pers else a.store.scr) (decE h) := by
+  have hfl := hR.app.2.1
+  rw [decE_pers h hh]
+  by_cases ht : tierW h = 0
+  · simp [ht]
+  · have hon : a.store.scratchOn = true := by
+      rw [← hfl]; simp only [bne_iff_ne, ne_eq]; exact fun h1 => hs ⟨ht, h1⟩
+    simp [ht, hon]
+
+theorem viewBVar_ok (hv : viewOK m h 22) :
+    a.store.viewBVar (decE h) = some (rdW (m.arr64 BREC) (idxW h * 2 + tierW h)).toNat := by
+  obtain ⟨k, hk, hkr⟩ := node_of m a h bvarSch BRecRel bhash (·.bvars) _ hR.bvar hv.2
+  simp only [EStore.viewBVar, EStore.persGetBVar]
+  rw [proj_tier m a hR h hh (fun t i => t.getBVar i) hv.1]
+  simp only [ETables.getBVar, Tbl.node?, decE_idx]
+  rw [hk]; simp only [BRecRel] at hkr; simp [hkr]
+
+theorem viewApp_ok (hv : viewOK m h 4) :
+    a.store.viewApp (decE h) = some (decE (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2)),
+      decE (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2 + 1))) := by
+  obtain ⟨k, hk, hf, ha⟩ := node_of m a h appSch ARecRel ahash (·.apps) _ hR.app hv.2
+  simp only [EStore.viewApp, EStore.persGetApp]
+  rw [proj_tier m a hR h hh (fun t i => t.getApp i) hv.1]
+  simp only [ETables.getApp, Tbl.node?, decE_idx]
+  rw [hk, hf, ha, decE_word, decE_word]; rfl
+
+theorem viewBind_lam (hv : viewOK m h 28) (hg : h >>> 28 = 5) :
+    a.store.viewBind (decE h) = some (decE (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2)),
+      decE (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1))) := by
+  obtain ⟨k, hk, hf, ha⟩ := node_of m a h lamSch LaRecRel lahash (·.lams) _ hR.lam hv.2
+  simp only [EStore.viewBind, EStore.persGetBind]
+  rw [proj_tier m a hR h hh (fun t i => t.getBind i) hv.1]
+  simp only [ETables.getBind, Tbl.node?, decE_idx, decE_tag h hh, hg, ETag.lam]
+  simp only [show ((5 : Word).toUInt32 == 5) = true from rfl, ↓reduceIte]
+  rw [hk, hf, ha, decE_word, decE_word]; rfl
+
+theorem viewBind_forall (hv : viewOK m h 30) (hg : h >>> 28 = 6) :
+    a.store.viewBind (decE h) = some (decE (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2)),
+      decE (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1))) := by
+  obtain ⟨k, hk, hf, ha⟩ := node_of m a h forallSch FaRecRel fahash (·.foralls) _ hR.forallE hv.2
+  simp only [EStore.viewBind, EStore.persGetBind]
+  rw [proj_tier m a hR h hh (fun t i => t.getBind i) hv.1]
+  simp only [ETables.getBind, Tbl.node?, decE_idx, decE_tag h hh, hg, ETag.lam, ETag.forallE]
+  simp only [show ((6 : Word).toUInt32 == 5) = false from rfl,
+    show ((6 : Word).toUInt32 == 6) = true from rfl, ↓reduceIte, Bool.false_eq_true]
+  rw [hk, hf, ha, decE_word, decE_word]; rfl
+
+theorem viewLet_ok (hv : viewOK m h 20) :
+    a.store.viewLet (decE h) = some (decE (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)),
+      decE (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1)),
+      decE (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2))) := by
+  obtain ⟨k, hk, hf, ha, hb⟩ := node_of m a h letSch LeRecRel lehash (·.lets) _ hR.letE hv.2
+  simp only [EStore.viewLet, EStore.persGetLet]
+  rw [proj_tier m a hR h hh (fun t i => t.getLet i) hv.1]
+  simp only [ETables.getLet, Tbl.node?, decE_idx]
+  rw [hk, hf, ha, hb, decE_word, decE_word, decE_word]; rfl
+
+theorem viewProj_ok (hv : viewOK m h 32) :
+    a.store.viewProj (decE h) = some (decI (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3)),
+      (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 1)).toNat,
+      decE (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2))) := by
+  obtain ⟨k, hk, hn, hi, he⟩ := node_of m a h projSch PJRecRel pjhash (·.projs) _ hR.proj hv.2
+  simp only [EStore.viewProj, EStore.persGetProj]
+  rw [proj_tier m a hR h hh (fun t i => t.getProj i) hv.1]
+  simp only [ETables.getProj, Tbl.node?, decE_idx]
+  rw [hk, hn, hi, he, decE_word, decI_word]; rfl
+
+end projections
+
 end L.Arena
