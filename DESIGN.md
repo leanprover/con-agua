@@ -3687,7 +3687,10 @@ Request to lane `arch`: add `LH` (array 192) and `CTL[192]` (heap top) to the me
 | `lv_node` (view) | – (store `view` / tree match) | 23 | 50 | `HeapFrame.ext` 60 | | `vcgen` + `finish` |
 | `lh_mk` | – (`Rc::new`) | 9 | 25 | `lhMkW_ext` + `lhMem_*` 110 | | `vcgen` + `finish`; frames by hand |
 | `lv_eq` (`Level.beq`) | 19 (`beq`) | 11 | 70 | `lvEqW_ok` 115 | | `vcgen` + `finish (gen := 20)`; refinement by hand (cases per tag) |
-| total (files) | | 43 | `LevelHeap.lean` 243 | `LevelHeapRel.lean` 432 | 7.9 s + 1.1 s | |
+| `lv_comb` (`combining`) | 10 | 13 | 70 | `combW_ok` 50 (+ allocation lemmas 27) | | as `lv_eq` |
+| `lv_simp` (`simplify`) | 21 | 16 | 130 | `imaxW_ok` + `simpW_ok` 120 | | as `lv_eq` |
+| `lv_nz` (`isNeverZero`) | 9 | 12 | 70 | `nzW_ok` 40 | | as `lv_eq` |
+| total (files) | | 84 | `LevelHeap` 243, `LevelSimp` 291 | `LevelHeapRel` 432, `LevelSimpRel` 264 | 7.9 + 7.6 s, 1.1 + 1.1 s | |
 
 ### Findings
 
@@ -3697,6 +3700,13 @@ Request to lane `arch`: add `LH` (array 192) and `CTL[192]` (heap top) to the me
   on `(1 : Word) ≠ 192`: use `simp`.
 * `finish` failed on `lv_eq` (a wrong case split, no hint) until `(gen := 20)`, as lane `exprops`
   found for three callee posts.
+* The refinements are short because the decoder is a relation: each is one induction on the L
+  fuel and one `cases` on the argument's `LvR` derivation, whose constructor fixes the view's tag
+  (`lv_fields`), and the twin's `match` reduces by `simp [Level.f]`. Allocations are three lemmas
+  (`mk_succ`, `mk_max`, `mk_imax`). The first full drafts of `combW_ok`/`simpW_ok`/`nzW_ok` took
+  three rounds of small fixes; no `grind` in the refinements.
+* Two `match`es with the same arms but different auxiliary matchers (`simplify`'s `imax` arm and
+  a restatement) are not syntactically equal; `cases` on the discriminant and `rfl` closes it.
 * The model's view fields are named (`lvG`/`lvA`/`lvB` with `@[level_grind =]` equations to the
   `headD` projections the call's `setLocs` produces); a model that unfolded them in `finish`'s
   list confused `grind`.
