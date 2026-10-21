@@ -3678,6 +3678,8 @@ not need it. Their heap is per call and holds intermediate trees; the readback c
 serve are not represented for levels at all (above). If the tree heap lands with the same node
 shape, `lv_node` can view it as a third pointer kind.
 
+Hypotheses left for the callers (no `sorry`): see `lvl_eq` below.
+
 Request to lane `arch`: add `LH` (array 192) and `CTL[192]` (heap top) to the memory map, owner
 `levels` (per call, no relation: the heap is scratch, nothing in `AState` corresponds to it).
 
@@ -3701,7 +3703,8 @@ Request to lane `arch`: add `LH` (array 192) and `CTL[192]` (heap top) to the me
 | `lv_leq_top` (`leq`, `defaultFuel`) | 6 | 6 | 30 | `leqTopW_ok` 25 | | as `lv_eq` |
 | `lv_equiv` (`isEquiv`) | 16 | 12 | 70 | `equivW_ok` 70 | | as `lv_eq` |
 | `lv_equivs` (`isEquivList`, lists in `POOL`) | 20 | 7 | 50 | `equivsW_ok` + `LvsR` 75 | | as `lv_eq` |
-| total (files) | | 232 | `LevelHeap` 243, `LevelSimp` 291, `LevelSubst` 251, `LevelLeq` 474, `LevelLeqSpec` 151, `LevelEquiv` 239 | `LevelHeapRel` 440, `LevelSimpRel` 264, `LevelLeqRel` 740, `LevelEquivRel` 200 | | |
+| `lvl_eq` (`lvlEq?`: heap reset, then `lv_equiv`; the verdict cache not in L) | 33 (`lvl_eq_q`) | 5 | 25 | `lvlEq_refines` + `lvlEq?_run` + `lvlEq_run` 110; the view bridge (`lvNodeW_store`, `denoteL_lvR`) 190 | 1 s | `vcgen` + `finish`; bridge by hand |
+| total (files) | | 237 | `LevelHeap` 243, `LevelSimp` 291, `LevelSubst` 251, `LevelLeq` 474, `LevelLeqSpec` 151, `LevelEquiv` 285 | `LevelHeapRel` 460, `LevelSimpRel` 264, `LevelLeqRel` 740, `LevelEquivRel` 200, `LevelArena` 344 | | |
 
 ### The comparison (`LevelSubst`, `LevelLeq`, `LevelLeqSpec`, `LevelLeqRel`)
 
@@ -3724,6 +3727,19 @@ Request to lane `arch`: add `LH` (array 192) and `CTL[192]` (heap top) to the me
   simplifies again, to equal levels), `lv_equivs` (`isEquivList` over two `POOL` slices of level
   pointers, `LvsR`; a length mismatch answers `false` only after the common prefix compared
   `true`, as con-leche's). All three refinements went through at the first attempt.
+* **Under `ArenaR`** (`LevelArena.lean`, not a `module`: it reads con-ron's store): L's view of
+  a level handle is the arena's (`lvNodeW_store`, one case per tag over the five level tables'
+  `StoreR`), so `denoteL` of a handle is related to its word (`denoteL_lvR`, by induction on
+  `denoteLAux`'s fuel) with the name decoder `nameN` (the store's `denoteN` on handle words),
+  which is a `NameRel` under con-ron's `NStoreWF` (`denoteN_inj`).
+* **`lvl_eq(u, v)` refines `lvlEq?`** (`lvlEq_refines`, `lvlEq_run` from a run of `levelProg`).
+  Hypotheses, as lane `nat2` did for pins: `NStoreWF` of the name store, the two readbacks
+  defined, and the twin's caches holding what they claim (`ReadLCOK`: every `readLC` row is the
+  readback; `LvlEqCOK`: a `lvlEqC` row at `(u, v)` is the verdict). L keeps neither cache: it
+  recomputes, which the twin's cache returns unchanged; the twin's state after differs only in
+  `caches` (`ArenaR.with_caches`), L's only in the heap (`HeapExt.memFrame`, write set
+  `levelProg_closed`: `[LH]`, `CTL` `[192]`, by `decide +kernel`). When `CoreR` gets `lvlEqC`,
+  the L cache goes in front of `lv_equiv` and `LvlEqCOK` becomes a field of the relation.
 * **Inversion by tag** (`LvR.inv0` … `inv4`: from `lvG m p = t`, the level's constructor and the
   children's relations) replaced `cases` on the derivation, whose impossible branches made
   `simp_all` loop.

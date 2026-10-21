@@ -234,6 +234,52 @@ theorem lvEquivs_spec (hpe : p.lookup "lv_equiv" = some lvEquiv)
         lvEquiv_spec p hp hpe n, ih] <;>
       finish (gen := 20)
 
+/-! ## `lvl_eq(u, v)`: the twin's `lvlEq?`, without its cache -/
+
+/-- **The model of `lvl_eq`**: reset the heap, then `lv_equiv`. -/
+def lvlEqW : Nat → Mem → Word → Word → Option (Word × Mem)
+  | 0, _, _, _ => none
+  | n + 1, m, u, v => equivW n (m.set64 CTL 192 0) u v
+
+/-- con-ron's `lvlEq?` (`Arena/Core.lean:129`) on two level handles: the level algorithm on a
+fresh heap (the top reset to `0`). The verdict cache `lvlEqC` is not represented (`CoreR` has no
+fields yet): the answer is recomputed, which the twin's cache returns unchanged
+(`LevelArena.lean`, `lvlEq_refines`). -/
+@[l_impl ConRon.Arena.lvlEq?]
+def lvlEqL : FunDecl := lfn (u, v) locals (z) {
+  CTL.u64[192] := 0;
+  z := call lv_equiv(u, v);
+  return z
+}
+
+include hp in
+theorem lvlEq_spec (hpe : p.lookup "lv_equiv" = some lvEquiv) (hpl : p.lookup "lvl_eq" = some lvlEqL)
+    (n : Nat) (s₀ : St) (u v : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "lvl_eq" [u, v]
+    ⦃fun res s' => LocEq s' s₀ ∧ lvlEqW n s₀.mem u v = some (res.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hpl]
+  simp only [callFn, lvlEqL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, level_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, lvEquiv_spec p hp hpe n] <;>
+      finish (gen := 20) [lvlEqW]
+
 end specs
+
+/-! ## The program -/
+
+/-- The level functions, as one program. -/
+def levelProg : Prog :=
+  [("lv_node", lvNode), ("lh_mk", lhMk), ("lv_eq", lvEq), ("lv_comb", lvComb), ("lv_simp", lvSimp),
+    ("lv_nz", lvNz), ("lv_subst", lvSubst), ("lv_subsimp", lvSubsimp), ("lv_dist1", lvDist1),
+    ("lv_dist2", lvDist2), ("lv_leq", lvLeq), ("lv_rest", lvRest), ("lv_imax", lvImax),
+    ("lv_imax_l", lvImaxL), ("lv_imax_r", lvImaxR), ("lv_cases", lvCases),
+    ("lv_cases_at", lvCasesAt), ("lv_leq_top", lvLeqTop), ("lv_equiv", lvEquiv),
+    ("lv_equivs", lvEquivs), ("lvl_eq", lvlEqL)]
+
+theorem levelProg_ok : LevelProg levelProg :=
+  ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 end L.Arena
