@@ -325,6 +325,31 @@ theorem scanQuotedNat_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i 
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld8,
         L.Scan.Leaves.skipDigits_spec p hpd b hb64 n] <;> finish
 
+theorem matchWordLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
+    (hi : (s₀.loc 0).toNat + (s₀.loc 2).toNat < 2 ^ 64)
+    (ho : (s₀.loc 1).toNat + (s₀.loc 2).toNat ≤ WORDS.length) (hk : (s₀.loc 3).toNat ≤ (s₀.loc 2).toNat) :
+    ⦃fun s => s = s₀⦄
+    exec p n matchWordLoop
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
+      r.retOr [1] = [if matchLitN b (s₀.loc 0).toNat WORDS (s₀.loc 1).toNat (s₀.loc 2).toNat
+        (s₀.loc 3).toNat then 1 else 0]; ⊤⦄ := by
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+    rw [exec, step_while (w := matchWordLoop) rfl]
+    sym only [lang_grind, WORDS_length] =>
+      vcgen [step, evalE, evalC, evalArgs, setLoc, ld8, ldc, ih] <;> finish
+
+theorem matchWordLoop_step_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
+    (hi : (s₀.loc 0).toNat + (s₀.loc 2).toNat < 2 ^ 64)
+    (ho : (s₀.loc 1).toNat + (s₀.loc 2).toNat ≤ WORDS.length) (hk : (s₀.loc 3).toNat ≤ (s₀.loc 2).toNat) :
+    ⦃fun s => s = s₀⦄
+    step p (exec p n) matchWordLoop
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
+      r.retOr [1] = [if matchLitN b (s₀.loc 0).toNat WORDS (s₀.loc 1).toNat (s₀.loc 2).toNat
+        (s₀.loc 3).toNat then 1 else 0]; ⊤⦄ :=
+  Triple.step_exec (matchWordLoop_spec p b hb (n + 1) s₀ hm hi ho hk)
+
 include hpm in
 theorem matchWord_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i o l : Word)
     (hi : i.toNat + l.toNat < 2 ^ 64) (ho : o.toNat + l.toNat ≤ WORDS.length) :
@@ -332,7 +357,13 @@ theorem matchWord_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i o l 
     invoke p (exec p n) "match_word" [i, o, l]
     ⦃fun r s' => s' = s₀ ∧
       r = [if matchLitN b i.toNat WORDS o.toNat l.toNat 0 then 1 else 0]; ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hpm]
+  simp only [callFn, matchWord]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind] =>
+      vcgen [exec, step, evalE, evalArgs, matchWordLoop_step_spec p b hb n] <;> finish
 
 include hpm hpi in
 theorem scanBinderInfo_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
