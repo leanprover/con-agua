@@ -516,3 +516,87 @@ theorem decAt_some {α : Type} {g : Nat → Nat → Option (List α)} {i : Nat} 
 end reads
 
 end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+/-! ## `sl_find`: `findIdx? (· == x)` -/
+
+/-- The model of `sl_find`. -/
+def findW : Nat → Mem → Word → Word → Word → Option (List Word)
+  | 0, _, _, _, _ => none
+  | n + 1, m, o, l, x =>
+    if l = 0 then some [0, 0]
+    else if rdW (m.arr64 IW) o = x then some [1, 0]
+    else findK (findW n m (o + 1) (l - 1) x)
+where
+  /-- After the recursive call. -/
+  findK : Option (List Word) → Option (List Word)
+    | none => none
+    | some r => if r.headD 0 = 0 then some [0, 0] else some [1, r.tail.headD 0 + 1]
+
+section arms
+variable (n : Nat) (m : Mem) (o l x : Word) (r : List Word)
+theorem findW_nil (hl : l = 0) : findW (n + 1) m o l x = some [0, 0] := by simp [findW, hl]
+theorem findW_hit (hl : l ≠ 0) (hx : rdW (m.arr64 IW) o = x) : findW (n + 1) m o l x = some [1, 0] := by
+  simp [findW, hl, hx]
+theorem findW_next (hl : l ≠ 0) (hx : rdW (m.arr64 IW) o ≠ x) :
+    findW (n + 1) m o l x = findW.findK (findW n m (o + 1) (l - 1) x) := by simp [findW, hl, hx]
+theorem findK_miss (h : r.headD 0 = 0) : findW.findK (some r) = some [0, 0] := by
+  simp only [findW.findK]; rw [if_pos h]
+theorem findK_hit (h : r.headD 0 ≠ 0) : findW.findK (some r) = some [1, r.tail.headD 0 + 1] := by
+  simp only [findW.findK]; rw [if_neg h]
+end arms
+
+grind_pattern [ind_grind] findW_nil => findW (n + 1) m o l x
+grind_pattern [ind_grind] findW_hit => findW (n + 1) m o l x
+grind_pattern [ind_grind] findW_next => findW (n + 1) m o l x
+grind_pattern [ind_grind] findK_miss => findW.findK (some r)
+grind_pattern [ind_grind] findK_hit => findW.findK (some r)
+
+theorem slFind_spec (p : Prog) (hp : p.lookup "sl_find" = some slFind) (n : Nat) :
+    ∀ (s₀ : St) (o l x : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "sl_find" [o, l, x]
+    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ findW n s₀.mem o l x = some r; ⊤⦄ := by
+  induction n with
+  | zero => intro s₀ o l x; rw [invoke_eq _ hp]; simp only [callFn, slFind]; vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ o l x
+    rw [invoke_eq _ hp]
+    simp only [callFn, slFind]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
+      finish (gen := 20)
+
+/-- **`sl_find` is `findIdx? (· == x)`** on the slice's words: `(1, i)` for the first index,
+`(0, 0)` for none (index words below `2^64`: the slice is shorter). -/
+theorem findW_ok (n : Nat) : ∀ (m : Mem) (o l x : Word) (r : List Word) (ws : List Word),
+    SlR m o l ws → findW n m o l x = some r → ws.length < 2 ^ 64 →
+    r = match ws.findIdx? (· == x) with
+      | some i => [1, UInt64.ofNat i]
+      | none => [0, 0] := by
+  induction n with
+  | zero => intro m o l x r ws _ h; simp [findW] at h
+  | succ n ih =>
+    intro m o l x r ws hs h hlen
+    cases hs with
+    | nil => rw [findW_nil n m o 0 x rfl] at h; simp at h; simp [h]
+    | @cons _ _ ws hl hs =>
+      by_cases e : rdW (m.arr64 IW) o = x
+      · rw [findW_hit n m o _ x hl e] at h; simp at h; simp [← h, e, List.findIdx?_cons]
+      · rw [findW_next n m o _ x hl e] at h
+        cases hr : findW n m (o + 1) (_ - 1) x with
+        | none => rw [hr] at h; simp [findW.findK] at h
+        | some r' =>
+          rw [hr] at h
+          have := ih _ _ _ _ _ _ hs hr (by simp at hlen; omega)
+          simp only [List.findIdx?_cons, beq_iff_eq, e, if_false]
+          cases hf : ws.findIdx? (· == x) with
+          | none => rw [hf] at this; subst this; rw [findK_miss _ (by simp)] at h; simp at h; simp [h]
+          | some i =>
+            rw [hf] at this; subst this
+            rw [findK_hit _ (by simp)] at h; simp at h
+            simp [← h]
+
+end L.Ind
