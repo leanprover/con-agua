@@ -10,3 +10,7 @@ public section
 carry facts about `UInt64` addition. Proofs use it as
 `sym only [lang_grind, arena_grind] => vcgen [...] <;> finish`. -/
 register_grind_attr arena_grind
+
+/-- The `grind` vocabulary of the store relations (`ConAgua/Arena/LitRefine.lean`): reads of the
+memory after a write (`rdW_set64`), the probe run, the record and slot invariants. -/
+register_grind_attr store_grind

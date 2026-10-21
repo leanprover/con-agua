@@ -1,0 +1,227 @@
+import ConAgua.Arena.StoreLib
+import ConAgua.Arena.NNumStore
+
+/-!
+# The name store's `num` store refines the arena's `num` tables
+
+The record `NumNode { pre : NIdx, n : Nat }` (`ConAgua/Arena/NNumStore.lean` has the L code): the
+`max` shape (two fields, width 2, no scratch skip) at the record level, but the second field is a
+`Nat` (`bvar`'s shape, `BVarRefine.lean`), not a handle. The schema `nnumSch` (`NNREC`, `NNSLOT`,
+two words per node, counts at `CTL[38 + t]`, tag `2`), the record relation `NnRecRel` (the first
+word is the prefix's handle word, decoded at `.name` with `decI`; the second word's `toNat` is the
+number), the node hash `nnhash`, the lens `nnumLens` on the name store's two `num` tables
+(`a.store.lss.ls.ns.pers.nums`/`scr.nums`). `NNumR m a` is the library's `StoreR` for them.
+`internNNum_refines`: `intern_nnum(pre, u)` refines `internNNode (.num (decI pre) u.toNat)` under
+`NNumR`, for a **name**-handle word `pre` below `2 ^ 32` (`u`, the `Nat` field, needs no bound:
+`UInt64.toNat_inj` relates the stored word to `u.toNat` directly, as `BVarRefine.lean`'s index
+field does). As every table of the name/level stores, `NStore.find?` probes the persistent tier
+unconditionally, so `skB = false`.
+
+Not represented: the derived column and every other table.
+-/
+
+open ConRon.Arena
+open Std.WP
+open scoped Lean.Order
+
+set_option linter.unusedSimpArgs false
+
+namespace L.Arena
+
+/-- The arena's `num` cons key. -/
+abbrev nnKey (pre : NIdx) (n : Nat) : NumNode := ⟨pre, n⟩
+
+/-- `a` with the scratch / persistent `num` table of the name store replaced. -/
+def withScrNNums (a : AState) (t : Tbl NumNode NIdx UInt64) : AState :=
+  { a with store := { a.store with lss := { a.store.lss with ls := { a.store.lss.ls with
+      ns := { a.store.lss.ls.ns with scr := { a.store.lss.ls.ns.scr with nums := t } } } } } }
+def withPersNNums (a : AState) (t : Tbl NumNode NIdx UInt64) : AState :=
+  { a with store := { a.store with lss := { a.store.lss with ls := { a.store.lss.ls with
+      ns := { a.store.lss.ls.ns with pers := { a.store.lss.ls.ns.pers with nums := t } } } } } }
+
+/-- The name store's two `num` tables. -/
+def nnumLens : Lens NumNode UInt64 .name where
+  on a := a.store.lss.ls.ns.scratchOn
+  getP a := a.store.lss.ls.ns.pers.nums
+  getS a := a.store.lss.ls.ns.scr.nums
+  setP := withPersNNums
+  setS := withScrNNums
+  on_setP _ _ := rfl
+  on_setS _ _ := rfl
+  getP_setP _ _ := rfl
+  getS_setP _ _ := rfl
+  getP_setS _ _ := rfl
+  getS_setS _ _ := rfl
+
+/-- `internNNode` at a `num` node is the library's protocol, with no skip (as the level store's
+`internLNode`). -/
+theorem internNNode_num_run (pre : NIdx) (n : Nat) (a : AState) :
+    (internNNode (.num pre n)).run a =
+      protoRun nnumLens (nnKey pre n) NTag.num a.store.lss.ls.ns.pers.nums.cons[nnKey pre n]?
+        (a.store.lss.ls.ns.derOfView (.num pre n)) (.native "arena: name constructor array full")
+        a := by
+  simp only [internNNode, NStore.find?, NTables.find?, Tbl.find?, NTables.sizeOf, EStore.ns,
+    EStore.internName, LsStore.internName, LStore.internName, NStore.intern, NTables.push]
+  cases hp : a.store.lss.ls.ns.pers.nums.cons[nnKey pre n]? <;>
+    cases hs : a.store.lss.ls.ns.scratchOn <;>
+    cases hc : a.store.lss.ls.ns.scr.nums.cons[nnKey pre n]? <;>
+    simp only [StateT.run_bind, StateT.run_get, pure_bind, hp, hs, hc, Bool.false_eq_true,
+      ↓reduceIte, nnKey, ite_self, protoRun, nnumLens] <;>
+    (try split) <;> simp_all [StateT.run_set, StateT.run_pure, withScrNNums, withPersNNums, fail,
+      throwThe, MonadExceptOf.throw, StateT.run, Functor.map, StateT.map, set, StateT.set,
+      StateT.lift, bind, Except.bind, Except.map, pure, Except.pure, StateT.bind, StateT.pure]
+
+/-! ## The relation between L memory and the arena's `num` tables -/
+
+/-- The `num` schema: `NNREC`, `NNSLOT`, two words per node, the counts at `CTL[38 + t]`. -/
+def nnumSch : Schema := ⟨NNREC, NNSLOT, 2, 4, 38, NTag.num⟩
+
+theorem nnumSch_wf : nnumSch.WF :=
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+
+theorem fld_nn0 (m : Mem) (t i : Word) :
+    fld nnumSch m t i 0 = rdW (m.arr64 NNREC) (i * 4 + t * 2) := by
+  simp [fld, Schema.ad, nnumSch]
+theorem fld_nn (m : Mem) (t i f : Word) :
+    fld nnumSch m t i f = rdW (m.arr64 NNREC) (i * 4 + t * 2 + f) := rfl
+
+/-- Node `i` of tier `t` holds the `num` node `k`: its prefix's handle word, and its number as a
+word. -/
+def NnRecRel (m : Mem) (t i : Word) (k : NumNode) : Prop :=
+  rdW (m.arr64 NNREC) (i * 4 + t * 2) = k.pre.word.toUInt64 ∧
+  (rdW (m.arr64 NNREC) (i * 4 + t * 2 + 1)).toNat = k.n
+
+/-- The hash of node `i` of tier `t`. -/
+def nnhash (m : Mem) (t i : Word) : Word :=
+  nnumHashW (rdW (m.arr64 NNREC) (i * 4 + t * 2)) (rdW (m.arr64 NNREC) (i * 4 + t * 2 + 1))
+
+/-- **The state relation** of the `num` store: the library's relation for the name store's two
+`num` tables. -/
+def NNumR (m : Mem) (a : AState) : Prop :=
+  StoreR nnumSch NnRecRel nnhash m a.store.lss.ls.ns.scratchOn a.store.lss.ls.ns.pers.nums
+    a.store.lss.ls.ns.scr.nums
+
+/-- A node's relation and hash depend only on its two words. -/
+theorem nnFrame : RFrame nnumSch NnRecRel nnhash := by
+  intro m m' t i _ hf
+  have h0 := hf 0 (by decide)
+  have h1 := hf 1 (by decide)
+  rw [fld_nn0, fld_nn0] at h0
+  rw [fld_nn, fld_nn] at h1
+  exact ⟨fun a h => by simpa only [NnRecRel, h0, h1] using h, by simp only [nnhash, h0, h1]⟩
+
+/-! ## The query's obligations -/
+
+/-- The match of `nnum_find` on node `i` of tier `t`. -/
+def nnMt (m : Mem) (pre u t i : Word) : Bool := nnmatchW (m.arr64 NNREC) t i pre u
+
+section query
+variable (m : Mem) (pre u : Word) (hpre : pre.toNat < 2 ^ 32)
+
+include hpre in
+/-- **Matching is equality of `num` nodes.** -/
+theorem nnumMatchOK : MatchOK NnRecRel (nnMt m pre u) m (nnKey (decI pre) u.toNat) := by
+  intro t i k hr
+  have := word_decI k.pre pre hpre
+  obtain ⟨kp, kn⟩ := k
+  simp only [NnRecRel] at hr
+  simp only [nnMt, nnmatchW, Bool.and_eq_true, beq_iff_eq, nnKey, NumNode.mk.injEq]
+  grind [UInt64.toNat_inj]
+
+theorem nnumHomeOK : HomeOK nnhash (nnMt m pre u) m (nnumHashW pre u) := by
+  intro t i hm
+  simp only [nnMt, nnmatchW, Bool.and_eq_true, beq_iff_eq] at hm
+  simp only [nnhash, hm.1, hm.2]
+
+include hpre in
+/-- The record `nnum_push` writes holds the node. -/
+theorem nnumNewOK : NewOK nnumSch NnRecRel nnhash m [pre, u] (nnKey (decI pre) u.toNat)
+    (nnumHashW pre u) := by
+  intro t j ht hroom
+  have e : ∀ g, g < 2 → fld nnumSch (pushG nnumSch m t [pre, u] j (cntW nnumSch m t)) t
+      (cntW nnumSch m t) g = [pre, u].getD g.toNat 0 := by
+    intro g hg
+    have := hroom.1
+    have := hroom.2
+    rw [fld_pushG nnumSch nnumSch_wf] <;> simp only [nnumSch, Schema.ad] at * <;> grind
+  have e0 := e 0 (by decide)
+  have e1 := e 1 (by decide)
+  rw [fld_nn0] at e0
+  rw [fld_nn] at e1
+  simp only [List.getD_cons_zero, List.getD_cons_succ, show (1 : Word).toNat = 0 + 1 from rfl,
+    show (0 : Word).toNat = 0 from rfl] at e0 e1
+  have := word_decI (decI pre : NIdx) pre hpre
+  simp only [NnRecRel, nnhash, nnKey, e0, e1]
+  grind
+
+end query
+
+/-! ## The bridges from the L models -/
+
+theorem nnprobeW_arm (m : Mem) (pre u t : Word) :
+    ∀ j d, nnprobeW (m.arr64 NNSLOT) (m.arr64 NNREC) t pre u (nSlotsNN m) j d =
+      probeArm nnumSch m t (nnMt m pre u t)
+        (nnprobeW (m.arr64 NNSLOT) (m.arr64 NNREC) t pre u (nSlotsNN m)) j d := by
+  intro j d; rw [nnprobeW]; rfl
+
+theorem nnpushOK_room (m : Mem) (t : Word) (h : nnpushOK m t = true) : PushRoom nnumSch m t := by
+  simp only [nnpushOK, Bool.and_eq_true, decide_eq_true_eq] at h
+  have := UInt64.toNat_shiftRight (m.len64 NNREC) 2
+  simp only [PushRoom, cntW, nncnt, nnumSch, len64_eq] at *
+  grind
+
+theorem nnpushMem_eq (m : Mem) (t pre u j c : Word) :
+    nnpushMem m t pre u j c = pushG nnumSch m t [pre, u] j c := by
+  simp [nnpushMem, pushG, wrRec, Schema.ad, nnumSch]
+
+theorem nninternW_eq (m : Mem) (pre u : Word) :
+    nninternW m pre u = internM nnumSch m 0 (nnpushOK m) [pre, u]
+      (nnprobeW (m.arr64 NNSLOT) (m.arr64 NNREC) 0 pre u (nSlotsNN m)
+        (homeW (nnumHashW pre u) (nSlotsNN m)) 0)
+      (nnprobeW (m.arr64 NNSLOT) (m.arr64 NNREC) 1 pre u (nSlotsNN m)
+        (homeW (nnumHashW pre u) (nSlotsNN m)) 0) := by
+  have e0 : ∀ x, hdW nnumSch.tag.toUInt64 0 x = nnP + x := fun x => by
+    simp [hdW, nnumSch, nnP, NTag.num]
+  have e1 : ∀ x, hdW nnumSch.tag.toUInt64 1 x = nnS + x := fun x => by
+    simp [hdW, nnumSch, nnS, NTag.num]
+  simp only [nninternW, internM, nnpushMem_eq, e0, e1, true_and]
+  rfl
+
+/-! ## `intern_nnum` refines `internNNode (.num _ _)` -/
+
+section intern
+variable (m : Mem) (a : AState) (hR : NNumR m a) (pre u : Word) (hpre : pre.toNat < 2 ^ 32)
+
+include hR hpre in
+/-- **`intern_nnum`'s model refines the arena's `internNNode` at a `num` node.** -/
+theorem nnintern_correct (w : Word) (m' : Mem) (hI : nninternW m pre u = some (w, m')) :
+    AM.ok (internNNode (.num (decI pre) u.toNat)) a ∧
+    NNumR m' (AM.st (internNNode (.num (decI pre) u.toNat)) a) ∧
+    AM.res (internNNode (.num (decI pre) u.toNat)) a = decI w := by
+  rw [nninternW_eq] at hI
+  exact intern_correctG nnumSch NnRecRel nnhash nnumSch_wf nnFrame nnumLens a m hR _ _ _ _ _
+    (internNNode_num_run _ _ a) false rfl 0 (by simp) (by simp) _ _ (nnumMatchOK m pre u hpre)
+    (nnumHomeOK m pre u) _ _ (probe_homeG nnumSch m 0 _ _ (nnprobeW_arm m pre u 0) _)
+    (probe_homeG nnumSch m 1 _ _ (nnprobeW_arm m pre u 1) _) _ (nnpushOK_room m) _ rfl
+    (nnumNewOK m pre u hpre) w m' hI
+
+end intern
+
+/-- `intern_nnum` refines `internNNode (.num _ _)` under `NNumR`. -/
+theorem internNNum_refines (p : Prog) (hpf : p.lookup "nnum_find" = some nnumFind)
+    (hpp : p.lookup "nnum_push" = some nnumPush) (hp : p.lookup "intern_nnum" = some internNNum)
+    (a₀ : AState) (n : Nat) (s₀ : St) (pre u : Word) (hR : NNumR s₀.mem a₀)
+    (hpre : pre.toNat < 2 ^ 32) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "intern_nnum" [pre, u]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internNNode (.num (decI pre) u.toNat)) a₀ ∧
+      NNumR s'.mem (AM.st (internNNode (.num (decI pre) u.toNat)) a₀) ∧
+      AM.res (internNNode (.num (decI pre) u.toNat)) a₀ = decI (r.headD 0); ⊤⦄ := by
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (internNNum_spec p hpf hpp hp n s₀ pre u)
+  subst hs
+  exact ⟨hloc, nnintern_correct s.mem a₀ hR pre u hpre _ _ hI⟩
+
+end L.Arena

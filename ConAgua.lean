@@ -46,3 +46,4 @@ public import ConAgua.Scan.DriverLink
 public import ConAgua.Scan.ValidatorLink
 public import ConAgua.Arena.NatAdd
 public import ConAgua.Arena.NatMul
+public import ConAgua.Arena.Store

@@ -15,8 +15,29 @@ rev = "ba12834902fd19e837c97d0e5ea585d41348ee7e"
 name = "ConAgua"
 # `ConAgua.Arena.Refine` imports con-ron's arena (not `module` files), so the `module` root
 # `ConAgua` cannot import it; it is built through the glob (the root is listed too, see
-# vendor/README.md, "Lake quirk").
-globs = ["ConAgua", "ConAgua.Arena.Refine"]
+# vendor/README.md, "Lake quirk"). `ConAgua.Capstone` imports `ConAgua.Arena.LitRefine`, so it is
+# a plain (non-`module`) file too, and built the same way.
+globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.Arena.StoreLib", "ConAgua.Arena.LitRefine",
+  "ConAgua.Arena.AppStore", "ConAgua.Arena.AppRefine",
+  "ConAgua.Arena.LevelStore", "ConAgua.Arena.LevelRefine",
+  "ConAgua.Arena.ZeroStore", "ConAgua.Arena.ZeroRefine",
+  "ConAgua.Arena.MaxStore", "ConAgua.Arena.MaxRefine",
+  "ConAgua.Arena.ImaxStore", "ConAgua.Arena.ImaxRefine",
+  "ConAgua.Arena.ParamStore", "ConAgua.Arena.ParamRefine",
+  "ConAgua.Arena.SortStore", "ConAgua.Arena.SortRefine",
+  "ConAgua.Arena.ConstStore", "ConAgua.Arena.ConstRefine",
+  "ConAgua.Arena.LetStore", "ConAgua.Arena.LetRefine",
+  "ConAgua.Arena.BVarStore", "ConAgua.Arena.BVarRefine", "ConAgua.Arena.Memo",
+  "ConAgua.Arena.LsStore", "ConAgua.Arena.LsRefine", "ConAgua.Arena.PoolSlice",
+  "ConAgua.Arena.NStrStore", "ConAgua.Arena.NStrRefine",
+  "ConAgua.Arena.NAnonStore", "ConAgua.Arena.NAnonRefine",
+  "ConAgua.Arena.NNumStore", "ConAgua.Arena.NNumRefine",
+  "ConAgua.Arena.FVarStore", "ConAgua.Arena.FVarRefine",
+  "ConAgua.Arena.ProjStore", "ConAgua.Arena.ProjRefine",
+  "ConAgua.Arena.Frame", "ConAgua.Arena.MemoRel", "ConAgua.Arena.ArenaRel",
+  "ConAgua.Arena.Walk", "ConAgua.Arena.WalkRefine", "ConAgua.Arena.WalkBench", "ConAgua.Arena.WalkEmit",
+  "ConAgua.Arena.WalkBenchLean",
+  "ConAgua.Capstone"]
 
 # Vendored from con-leche (rev 103562b) and con-ron (rev 4c9eaf7, proof/ dir).
 # See vendor/README.md for provenance and every patch applied.
@@ -57,6 +78,12 @@ leanOptions = {autoImplicit = true, relaxedAutoImplicit = true}
 [[lean_exe]]
 name = "skipbench"
 root = "ConAgua.Compiler.Bench"
+
+# Baseline for the compiled walk (DESIGN.md, lane `walk`): con-ron's compiled arena
+# `bvarBoundMemo` on a deep term.
+[[lean_exe]]
+name = "walkbench"
+root = "ConAgua.Arena.WalkBenchLean"
 
 # Baseline for the Stage B validator (DESIGN.md, "Stage B"): con-leche's compiled `scanLineFwd`
 # over a lean4export file, with the validator's driver.

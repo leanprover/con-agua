@@ -18,10 +18,29 @@ public import Kraken.X64.PrintATT
 
 namespace L.Compiler
 
+/-- Kraken's AT&T printer always prints the two-destination-operand form of `imul`
+(`.imul (some d) a b`) in three-operand syntax, `imul{s} b, a, d`. Binutils accepts that only as
+the APX "new data destination" form (an EVEX-encoded instruction, illegal on a CPU without APX;
+see `docs/gaps/kraken-att-imul-three-operand.lean`). The compiler's one `.mul` (`Compile.lean`'s
+`binInstr`) always has `d = a`: `rax := rax * rcx`. For that case `.imul (some a) a b` and
+`.imul none a b` are the exact same instruction – `Semantics.lean`'s `.imul dst src1 src2` stores
+to `src1` whenever `dst = none` – and Kraken's printer already writes `.imul none a b` in the
+legacy two-operand form (`imul{s} b, a`) that every assembler accepts. So this rewrites
+`compileProg`'s output, before printing, to the `none`-destination spelling wherever the two are
+interchangeable; the fix is a `Directive`-level normalisation (not a textual patch of the printed
+assembly), and the proved `compileProg`/`compile_correct` are untouched. A `d ≠ a` three-operand
+`imul` (not emitted by this compiler) is left as Kraken prints it, since the rewrite would change
+which register receives the result. -/
+def fixImul : Directive → Directive
+  | .instr (.regular aw ow (.imul (some d) a b)) =>
+    if d = a then .instr (.regular aw ow (.imul none a b)) else .instr (.regular aw ow (.imul (some d) a b))
+  | d => d
+
 /-- The assembler file for `compileProg tab p entry`. The constant data `tab.rom` is emitted as
 `ca_rom` (`ca_rom_len` bytes) in `.rodata`; the driver copies it into the table. -/
 def asmText (tab : Tab) (p : Prog) (entry : FnName) : String :=
-  ".text\n.globl " ++ enterL ++ "\n" ++ Kraken.X64.toATT (compileProg tab p entry) ++ "\n" ++
+  ".text\n.globl " ++ enterL ++ "\n" ++
+    Kraken.X64.toATT ((compileProg tab p entry).map fixImul) ++ "\n" ++
     ".section .rodata\n.globl ca_rom\n.globl ca_rom_len\nca_rom_len: .quad " ++ toString tab.rom.length ++
     "\nca_rom:" ++ (if tab.rom.isEmpty then "" else " .byte " ++ ", ".intercalate (tab.rom.map toString)) ++
     "\n.section .note.GNU-stack,\"\",@progbits\n"

@@ -1,0 +1,230 @@
+import ConAgua.Arena.StoreLib
+import ConAgua.Arena.AppStore
+
+/-!
+# The `app` store refines the arena's `app` tables
+
+The second store relation, an instance of the store library (`StoreLib.lean`) for the record
+`AppNode { f a : EIdx }` (`ConAgua/Arena/AppStore.lean` has the L code). The schema `appSch`
+(`AREC`, `ASLOT`, two words per node, counts at `CTL[4 + t]`, tag `4`); the record relation
+`ARecRel` (the two words are the children's handle words); the node hash `ahash` (`appHashW` of
+the two words); the lens `appLens`; the scratch skip (`skA`, `askipW_eq`). `AppR m a` is the
+library's `StoreR` for the two `app` tables. `internApp_refines`: `intern_app(f, a)` refines
+`internE (.app (decE f) (decE a))` under `AppR`.
+
+Not represented: the derived column (`derOfApp`, through `mixHash`) and every other table.
+-/
+
+open ConRon.Arena
+open Std.WP
+open scoped Lean.Order
+
+set_option linter.unusedSimpArgs false
+
+namespace L.Arena
+
+/-- The arena's `app` cons key. -/
+abbrev appKey (f a : EIdx) : AppNode := ⟨f, a⟩
+
+/-- `a` with the scratch / persistent `app` table replaced. -/
+def withScrApps (a : AState) (t : Tbl AppNode EIdx UInt64) : AState :=
+  { a with store := { a.store with scr := { a.store.scr with apps := t } } }
+def withPersApps (a : AState) (t : Tbl AppNode EIdx UInt64) : AState :=
+  { a with store := { a.store with pers := { a.store.pers with apps := t } } }
+
+/-- The arena's two `app` tables. -/
+def appLens : Lens AppNode UInt64 .expr where
+  on a := a.store.scratchOn
+  getP a := a.store.pers.apps
+  getS a := a.store.scr.apps
+  setP := withPersApps
+  setS := withScrApps
+  on_setP _ _ := rfl
+  on_setS _ _ := rfl
+  getP_setP _ _ := rfl
+  getS_setP _ _ := rfl
+  getP_setS _ _ := rfl
+  getS_setS _ _ := rfl
+
+/-- The arena's scratch skip at an `app` view (`EStore.persFindMaybe`). -/
+def skA (a : AState) (f x : EIdx) : Bool :=
+  if a.store.scratchOn then (if f.isPersistent then !x.isPersistent else true) else false
+
+/-- The arena's persistent probe at an `app` view, after the skip. -/
+def pfA (a : AState) (f x : EIdx) : Option EIdx :=
+  if skA a f x then none else a.store.pers.apps.cons[appKey f x]?
+
+theorem persFindMaybe_app (a : AState) (f x : EIdx) :
+    a.store.persFindMaybe (.app f x) = pfA a f x := by
+  simp [EStore.persFindMaybe, pfA, skA, EStore.eViewHasScratchChild, ETables.find?, Tbl.find?]
+
+/-- `internE` at an `app` node is the library's protocol, the persistent probe after the skip. -/
+theorem internE_app_run (f x : EIdx) (a : AState) :
+    (internE (.app f x)).run a =
+      protoRun appLens (appKey f x) ETag.app (pfA a f x) (a.store.derOfView (.app f x))
+        (.native "arena: expression constructor array full") a := by
+  simp only [internE, internNodeE, EStore.find?, EStore.intern, ETables.find?, Tbl.find?,
+    ETables.sizeOf, ETables.push, StateT.run_bind, StateT.run_get, pure_bind, persFindMaybe_app]
+  cases hp : pfA a f x <;> cases hs : a.store.scratchOn <;>
+    cases hc : a.store.scr.apps.cons[appKey f x]? <;>
+    simp only [hp, hs, hc, Bool.false_eq_true, ↓reduceIte, appKey, ite_self, protoRun, appLens] <;>
+    (try split) <;> simp_all [StateT.run_set, StateT.run_pure, withScrApps, withPersApps, fail,
+      throwThe, MonadExceptOf.throw, StateT.run, Functor.map, StateT.map, set, StateT.set,
+      StateT.lift, bind, Except.bind, Except.map, pure, Except.pure, StateT.bind, StateT.pure]
+
+/-! ## The relation between L memory and the arena's `app` tables -/
+
+/-- The `app` schema: `AREC`, `ASLOT`, two words per node, the counts at `CTL[4 + t]`. -/
+def appSch : Schema := ⟨AREC, ASLOT, 2, 4, 4, ETag.app⟩
+
+theorem appSch_wf : appSch.WF :=
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+
+theorem fld_app0 (m : Mem) (t i : Word) : fld appSch m t i 0 = rdW (m.arr64 AREC) (i * 4 + t * 2) := by
+  simp [fld, Schema.ad, appSch]
+theorem fld_app (m : Mem) (t i f : Word) :
+    fld appSch m t i f = rdW (m.arr64 AREC) (i * 4 + t * 2 + f) := rfl
+
+/-- Node `i` of tier `t` holds the `app` node `k`: its two handle words. -/
+def ARecRel (m : Mem) (t i : Word) (k : AppNode) : Prop :=
+  rdW (m.arr64 AREC) (i * 4 + t * 2) = k.f.word.toUInt64 ∧
+  rdW (m.arr64 AREC) (i * 4 + t * 2 + 1) = k.a.word.toUInt64
+
+/-- The hash of node `i` of tier `t`. -/
+def ahash (m : Mem) (t i : Word) : Word :=
+  appHashW (rdW (m.arr64 AREC) (i * 4 + t * 2)) (rdW (m.arr64 AREC) (i * 4 + t * 2 + 1))
+
+/-- **The state relation** of the `app` store: the library's relation for the two `app` tables. -/
+def AppR (m : Mem) (a : AState) : Prop :=
+  StoreR appSch ARecRel ahash m a.store.scratchOn a.store.pers.apps a.store.scr.apps
+
+/-- A node's relation and hash depend only on its two words. -/
+theorem appFrame : RFrame appSch ARecRel ahash := by
+  intro m m' t i _ hf
+  have h0 := hf 0 (by decide)
+  have h1 := hf 1 (by decide)
+  rw [fld_app0, fld_app0] at h0
+  rw [fld_app, fld_app] at h1
+  exact ⟨fun a h => by simpa only [ARecRel, h0, h1] using h, by simp only [ahash, h0, h1]⟩
+
+/-! ## The query's obligations -/
+
+/-- The match of `app_find` on node `i` of tier `t`. -/
+def aMt (m : Mem) (f a t i : Word) : Bool := amatchW (m.arr64 AREC) t i f a
+
+section query
+variable (m : Mem) (f a : Word) (hf : f.toNat < 2 ^ 32) (ha : a.toNat < 2 ^ 32)
+
+include hf ha in
+/-- **Matching is equality of `app` nodes.** -/
+theorem appMatchOK : MatchOK ARecRel (aMt m f a) m (appKey (decE f) (decE a)) := by
+  intro t i k hr
+  have := word_decI k.f f hf
+  have := word_decI k.a a ha
+  obtain ⟨kf, ka⟩ := k
+  grind [aMt, amatchW, ARecRel, decE_eq]
+
+theorem appHomeOK : HomeOK ahash (aMt m f a) m (appHashW f a) := by
+  intro t i hm
+  simp only [aMt, amatchW, Bool.and_eq_true, beq_iff_eq] at hm
+  simp only [ahash, hm.1, hm.2]
+
+include hf ha in
+/-- The record `app_push` writes holds the node. -/
+theorem appNewOK : NewOK appSch ARecRel ahash m [f, a] (appKey (decE f) (decE a)) (appHashW f a) := by
+  intro t j ht hroom
+  have e : ∀ g, g < 2 → fld appSch (pushG appSch m t [f, a] j (cntW appSch m t)) t
+      (cntW appSch m t) g = [f, a].getD g.toNat 0 := by
+    intro g hg
+    have := hroom.1
+    have := hroom.2
+    rw [fld_pushG appSch appSch_wf] <;> simp only [appSch, Schema.ad] at * <;> grind
+  have e0 := e 0 (by decide)
+  have e1 := e 1 (by decide)
+  rw [fld_app0] at e0
+  rw [fld_app] at e1
+  simp only [List.getD_cons_zero, List.getD_cons_succ, show (1 : Word).toNat = 0 + 1 from rfl,
+    show (0 : Word).toNat = 0 from rfl] at e0 e1
+  have := word_decI (decE f) f hf
+  have := word_decI (decE a) a ha
+  simp only [ARecRel, ahash, appKey, e0, e1]
+  grind [decE_eq]
+
+end query
+
+/-! ## The bridges from the L models -/
+
+theorem aprobeW_arm (m : Mem) (f a t : Word) :
+    ∀ j d, aprobeW (m.arr64 ASLOT) (m.arr64 AREC) t f a (nSlotsA m) j d =
+      probeArm appSch m t (aMt m f a t) (aprobeW (m.arr64 ASLOT) (m.arr64 AREC) t f a (nSlotsA m)) j d := by
+  intro j d; rw [aprobeW]; rfl
+
+theorem apushOK_room (m : Mem) (t : Word) (h : apushOK m t = true) : PushRoom appSch m t := by
+  simp only [apushOK, Bool.and_eq_true, decide_eq_true_eq] at h
+  have := UInt64.toNat_shiftRight (m.len64 AREC) 2
+  simp only [PushRoom, cntW, acnt, appSch, len64_eq] at *
+  grind
+
+theorem apushMem_eq (m : Mem) (t f a j c : Word) :
+    apushMem m t f a j c = pushG appSch m t [f, a] j c := by
+  simp [apushMem, pushG, wrRec, Schema.ad, appSch]
+
+theorem ainternW_eq (m : Mem) (f a : Word) :
+    ainternW m f a = internM appSch m (askipW m f a) (apushOK m) [f, a]
+      (aprobeW (m.arr64 ASLOT) (m.arr64 AREC) 0 f a (nSlotsA m) (homeW (appHashW f a) (nSlotsA m)) 0)
+      (aprobeW (m.arr64 ASLOT) (m.arr64 AREC) 1 f a (nSlotsA m) (homeW (appHashW f a) (nSlotsA m)) 0) := by
+  have e0 : ∀ x, hdW appSch.tag.toUInt64 0 x = appP + x := fun x => by
+    simp [hdW, appSch, appP, ETag.app]
+  have e1 : ∀ x, hdW appSch.tag.toUInt64 1 x = appS + x := fun x => by
+    simp [hdW, appSch, appS, ETag.app]
+  simp only [ainternW, internM, apushMem_eq, e0, e1]
+  rfl
+
+/-- The L skip test is the arena's. -/
+theorem askipW_eq (m : Mem) (a : AState) (f x : Word) (hf : f.toNat < 2 ^ 32)
+    (hx : x.toNat < 2 ^ 32) (hfl : (rdW (m.arr64 CTL) 1 != 0) = a.store.scratchOn) :
+    (askipW m f x = 0) = (skA a (decE f) (decE x) = false) := by
+  have := bit27_or f x
+  simp only [askipW, skA, isPersistent_decE f hf, isPersistent_decE x hx, ← hfl]
+  grind
+
+/-! ## `intern_app` refines `internE (.app _ _)` -/
+
+section intern
+variable (m : Mem) (a : AState) (hR : AppR m a) (f x : Word) (hf : f.toNat < 2 ^ 32)
+  (hx : x.toNat < 2 ^ 32)
+
+include hR hf hx in
+/-- **`intern_app`'s model refines the arena's `internE` at an `app` node.** -/
+theorem aintern_correct (w : Word) (m' : Mem) (hI : ainternW m f x = some (w, m')) :
+    AM.ok (internE (.app (decE f) (decE x))) a ∧
+    AppR m' (AM.st (internE (.app (decE f) (decE x))) a) ∧
+    AM.res (internE (.app (decE f) (decE x))) a = decE w := by
+  rw [ainternW_eq] at hI
+  exact intern_correctG appSch ARecRel ahash appSch_wf appFrame appLens a m hR _ _ _ _ _
+    (internE_app_run _ _ a) (skA a (decE f) (decE x)) rfl _ (askipW_eq m a f x hf hx hR.2.1)
+    (fun h => by simp only [skA] at h; split at h <;> simp_all [appLens]) _ _
+    (appMatchOK m f x hf hx) (appHomeOK m f x) _ _
+    (probe_homeG appSch m 0 _ _ (aprobeW_arm m f x 0) _)
+    (probe_homeG appSch m 1 _ _ (aprobeW_arm m f x 1) _) _ (apushOK_room m) _ rfl
+    (appNewOK m f x hf hx) w m' hI
+
+end intern
+
+/-- `intern_app` refines `internE (.app _ _)` under `AppR`. -/
+theorem internApp_refines (p : Prog) (hpf : p.lookup "app_find" = some appFind)
+    (hpp : p.lookup "app_push" = some appPush) (hp : p.lookup "intern_app" = some internApp)
+    (a₀ : AState) (n : Nat) (s₀ : St) (f x : Word) (hR : AppR s₀.mem a₀) (hf : f.toNat < 2 ^ 32)
+    (hx : x.toNat < 2 ^ 32) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "intern_app" [f, x]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internE (.app (decE f) (decE x))) a₀ ∧
+      AppR s'.mem (AM.st (internE (.app (decE f) (decE x))) a₀) ∧
+      AM.res (internE (.app (decE f) (decE x))) a₀ = decE (r.headD 0); ⊤⦄ := by
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun (internApp_spec p hpf hpp hp n s₀ f x)
+  subst hs
+  exact ⟨hloc, aintern_correct s.mem a₀ hR f x hf hx _ _ hI⟩
+
+end L.Arena

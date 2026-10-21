@@ -858,6 +858,1096 @@ has hypotheses before the triple).
   `num_end` `sorry` is gone. No `sorry` anywhere in `ConAgua`.
 
 
+## The `lit` store, `intern_lit`, and the state relation (2026-10-21, lane `store`)
+
+Files: `ConAgua/Arena/Store.lean` (L code, word-level models, `vcgen` specs),
+`ConAgua/Arena/LitRefine.lean` (the relation `LitR`, the arena side, `natAddLit_refines_store`).
+Milestone 4: `natAddLit_refines`' three hypotheses (`hpool`, `hgrow`, `hI`) are discharged;
+`natAddLit_refines_store`/`natAddLit_run_store` have none. No `sorry`; axioms `propext`,
+`Classical.choice`, `Quot.sound`.
+
+### Representation
+
+The arena's `lit` constructor is one `Tbl LitNode EIdx UInt64` per tier (`Arena/Store.lean:64`):
+records, a derived column, a cons `Std.HashMap`. In L (word arrays, `Store.lean`):
+
+* `REC` (array 2): four words per node, kind (`0` `natVal`, `1` `strVal`), pool offset, length,
+  FNV-1a hash of the limbs (con-ron's `nat::hash64`). The two tiers are interleaved, node `i` of
+  tier `t` at `REC[8i + 4t ..]`; `CTL[2 + t]` is the tier's node count, `CTL[1]` the scratch flag.
+* `SLOT` (array 3): the cons table, open addressing with linear probing and wrap-around
+  (con-ron's `HashMap2`), slot `j` of tier `t` at `SLOT[2j + t]`, `0` free, `i + 1` node `i`.
+  Home slot: `home_index`'s multiply-xor finaliser, then `mulhi(x, n)` (Lemire's range
+  reduction) instead of the power-of-two mask, so `n = len(SLOT)/2` is arbitrary. No deletion,
+  so no tombstones and no epochs.
+* **Fixed capacity, defined exhaustion.** No resize: `lit_push` aborts past a load of 3/4 or
+  when `REC` is full (an L `abort`, never a result). At `2^27` nodes it aborts where the arena
+  throws `native` (`Idx.idxCap`). The probe aborts after `n` steps (unreachable under the load
+  limit).
+* One set of L functions for both tiers (the tier is an argument); the handle is the arena's
+  word, `0x80000000 + 0x8000000·t + i`.
+
+Functions (`Store.lean`): `lit_hash(o, l)`, `limbs_eq(a, b, l)`, `lit_match(t, i, o, l, h)`,
+`lit_find(t, o, l, h)` (returns `(found, node, slot, steps)`), `lit_push(t, o, l, h, j)`,
+`intern_lit(o, l)` (con-ron's `EStore::intern_lit`: persistent probe, scratch probe if open,
+append to the current tier). `#guard`s run them (sharing, both tiers, the load limit) and
+`nat_add_lit` end to end.
+
+### Specs: word-level models, then pure Lean
+
+Every L spec is about L memory only, against a model that computes with words *exactly as the
+L code does*: `eqW`, `matchW`, `probeW` index arrays with wrapping word arithmetic (`rdW a x =
+a[x.toNat]?.getD 0`), and `internW m o l : Option (Word × Mem)` is the whole of `intern_lit`
+(`none` where the L code aborts). Consequences:
+
+* **No bound hypotheses** in `limbs_eq`, `lit_match`, `lit_find`, `lit_push`: an out-of-bounds
+  read is an L error, and on success the model read the same word.
+* **One equation per post**: `internLit_spec`'s post is `LocEq s' s₀ ∧ internW s₀.mem o l =
+  some (r.headD 0, s'.mem)`.
+* A loop that falls through to `abort` posts `r.retOr M = M` (`M` the model at entry), plus
+  `r.retOr [0] ≠ []` so that the caller knows the result is not empty.
+* All the arithmetic (no wrap-around, positions mod `n`) and all the arena reasoning live in
+  pure lemmas in `LitRefine.lean`, proved by hand (`simp`/`omega`/`rw`, no `grind`).
+
+### The relation `LitR`
+
+`LitR m a` (`LitRefine.lean`): `PoolOK m`, sizes below `2^63`, `CTL[1] ≠ 0 ↔ a.store.scratchOn`,
+and `TierRel m t (tier t's lits table)` for both tiers:
+* the count is `tb.nodes.size` (≤ `idxCap`), node `i` of the L tier "is" `tb.nodes[i]`
+  (`RecRel`: a `natVal n` is a **normalised slice below the pool top** with `pv = n` and its
+  hash; a `strVal` is kind `1`, contents not represented);
+* `tb.cons[k]? = some (handle of i)` for every node `i` with `nodes[i] = k`, and `none` for
+  keys not among the nodes. This is "the same key → handle map": the layout of the arena's
+  `Std.HashMap` is never mentioned;
+* `SlotsOK`: slot values are `≤` the count, and node `i` sits in some slot reached from its home
+  slot through occupied slots (the linear-probing invariant, with an `∃ d` per node).
+
+The lemma chain: normalised slices are unique (`pv_len`, `pv_limbs`), so `lit_match` holds
+exactly for the node equal to the literal (`matchW_iff`); the probe aborts, hits, or stops at a
+free slot after non-matching nodes (`probe_cases`, induction on `n - d`); a hit is the
+arena's cons hit at the same handle (`tier_hit`), a miss means absence (`tier_miss`), and the
+append at the free slot is the arena's `Tbl.push` (`tier_push`; `tier_other` for the other
+tier). `internE_lit_run` unfolds the arena's `internE (.lit l)` (persistent probe, scratch probe,
+capacity test, append) into one equation, and `intern_correct` puts them together:
+`internW m o l = some (w, m') → AM.ok … ∧ LitR m' (AM.st …) ∧ AM.res … = decE w`.
+`LitR.grow` is `hgrow` (the pool agrees below the old top; records, slots and counts unchanged).
+
+### Measurements (nightly-2026-10-20)
+
+| | Rust lines | L lines | spec + proof lines | `lean` time | automation |
+|---|---:|---:|---:|---:|---|
+| `lit_hash`, `limbs_eq`, `lit_match`, `lit_find`, `lit_push`, `intern_lit` | 189 (`intern_lit` 40, `Tbl` 20, `HashMap2` probe/home/next/find_slot/insert_at 65 + resize 34, `hash64` 10, `literal_beq`/`hash`, `nat::beq` 20) | 55 | models 94 + arm lemmas 43, specs 143 | 4.3 s | every spec `vcgen` + `finish`, no hand step |
+| `LitR`, arena side, table lemmas, `intern_correct`, `hgrow`, instantiation | – | – | 910 (+ 39 defs) | 2.1 s | by hand, `simp`/`omega`/`rw` |
+
+L/Rust is 0.29 (0.37 without the resize the L table does not have). The L side went through at
+the first attempt for every function: once the models compute with words like the code, the
+verification conditions are equalities `grind` closes by the arm lemmas (`probeW_free`,
+`probeW_hit`, `probeW_next`: patterns on the model and the slot read). The cost moved into the
+pure part: about 90 lines for the probe (`probe_cases`), 170 for the append (`tier_push`,
+`tier_other`), 135 for reading the memory after `lit_push` through six `set64`s, 165 for
+`intern_correct` (four paths), 120 for unique normal forms.
+
+### Findings
+
+* **Models in words, specs without hypotheses.** The arena lane's specs carried bounds
+  (`o + l ≤ size < 2^64`) to relate `Word` indices to `Nat` models. Modelling with the code's own
+  word arithmetic needs none, and composes: `lit_find`'s spec is used by `intern_lit`'s
+  `vcgen` call with no side condition.
+* **A relation, not a function, and only the part that is used.** `LitR` says nothing about
+  the rest of `AState` (other tables, memos, pins) or about the `lit` derived column, so every
+  arena step that leaves the `lit` tables and the scratch flag alone preserves it for free.
+* **Kernel deep recursion** from `simp only [Nat.add_zero]` on `(x * 0x9e37…).toNat + 0`:
+  `docs/gaps/kernel-deep-recursion-simp-add-zero.lean`. `rw` works.
+* `if_pos`/`if_neg`/`ite_cond_eq_true` are deprecated on this nightly
+  (`ite_eq_left_of_eq_true`, …).
+
+### Not done
+
+* The scratch tier's lifecycle (`enableScratch`/`dropScratch` empty the tier: L would reset the
+  count and clear the tier's slots, or stamp them as con-ron's `HashMap2` does).
+* `strVal` contents (the string pool) and the derived column (`derOfLit` goes through Lean's
+  opaque `mixHash`; an L twin needs con-ron's `mix_hash` and a matching Lean model).
+* The other `natOpResult` arms (same shape: `nat_mul` is ready) and the pin reads before them.
+
+### L extension requests
+
+None this round.
+
+## The store relation by `grind`, and a second store (2026-10-21, lane `store2`)
+
+Files: `ConAgua/Arena/LitRefine.lean` (reworked), `ConAgua/Arena/StoreRel.lean` (what the two
+relations share), `ConAgua/Arena/AppStore.lean`, `ConAgua/Arena/AppRefine.lean` (the second store),
+`ConAgua/Arena/GrindAttr.lean` (`store_grind`). No `sorry`; axioms `propext`, `Classical.choice`,
+`Quot.sound`.
+
+### Part 1: `LitR` in the house style
+
+`LitR`'s statement (`natAddLit_run_store`) is unchanged; its definition and every proof were
+redone so that the steps are `grind [store_grind, …]`.
+
+What changed, and why each change was needed for `grind`:
+
+* **Words, not `Nat`, for node and slot indices.** The old relation read node fields as
+  `fld m t i f = REC[8i + 4t + f]` with `Nat` indices, and every use went through a conversion
+  lemma (`rdW_rec`, `rdW_slt`, `recW_toNat`, …) to meet the L models, which index with word
+  arithmetic. Now the relation reads exactly the terms the models read,
+  `rdW (m.arr64 REC) (i * 8 + t * 4 + 3)`, with `i t : Word`. `grind`'s `UInt64` arithmetic decides
+  `i * 8 + t * 4 + 2 = c * 8 + t' * 4` from `i, c < 2^27`, `t, t' ≤ 1` by itself, so the
+  conversion lemmas are gone.
+* **One read-after-write equation.** `rdW ((m.set64 a k v).arr64 b) x = if b = a ∧ k = x ∧ … then
+  v else rdW (m.arr64 b) x` (`rdW_set64`) gives one equation per array after `lit_push`
+  (`pm_rec`, `pm_slot`, `pm_ctl`, `pm_pool`, sizes): 35 lines, all `grind [pushMem, rdW_set64]`,
+  replacing 135 lines of `set!` reasoning.
+* **The probe run is a named function.** `walkW n x e` is `lit_find`'s step taken `e` times, so
+  the model's recursion and the invariant use the same term and no `mod` arithmetic appears
+  (the old proof related `(home + e) % n` to the code's wrap-around step). `SlotsOK` keeps an
+  `∃ d` per node: `grind` uses an `∃` under a `∀` in a hypothesis without help, and where the
+  goal needs a witness (after the append) the proof names it (`rs[3]` for the new node, the old
+  `d` for the others).
+* **The probe result is a named predicate**, `ProbeOK m t o l h x rs` (a hit: a matching node in
+  an occupied slot; a miss: a free slot of the run after non-matching nodes, `NoMatch`), in
+  place of the old three-way `∨` of `∃`s. `probe_ok` is an induction whose three arms are
+  `grind`.
+* **The cons table as two `∃`-free clauses.** Each node's key maps to its handle `hdW t i`; each
+  entry `x` points at a node with its key, at index `hix x`. The old "keys not among the nodes
+  are absent" clause had a `∀` in its antecedent, which `grind` cannot use; the new one makes
+  `tier_miss` a contradiction `grind` finds (entry → node with the key → it matches → it is on
+  the run before the free slot → the probe would have stopped there).
+* **Guarded equations for the arena's `match`.** `internE_lit_hitP`, `…_hitS`, `…_pushS`,
+  `…_pushP`: one run equation per path, with the handle already the L word
+  (`decE (hdW t (ofNat size))`). `intern_correct` splits `internW` along its four paths and
+  closes each with `grind`.
+* **Instantiate by hand what `grind` would instantiate everywhere.** The relation has five `∀`
+  clauses; with all of them in context `grind` instantiates them on every word in sight and
+  times out (`tier_hit` took 5.3 s before naming the two instances it needs, 0.2 s after). The
+  proofs `clear` the clauses a step does not use and `have` the instances it does.
+
+Not automated: the uniqueness of normalised slices (`pv_len`, `pv_limbs`, `pv_lt`, `pv_ge`, about
+75 lines): induction over `pv` with `2^64`-digit arithmetic, where `grind`'s nonlinear
+arithmetic does not reach (`wt` products and division by `wt k`). It is the `lit` key's own
+fact, not the store's. `eqW_iff` is half `grind`: the step that instantiates the `∀` at the
+current position after rewriting `(a + i).toNat` stays by hand.
+
+| | lines | `lean` wall / user |
+|---|---:|---:|
+| `LitRefine.lean` before | 1183 | 2.1 s / 4.0 s |
+| `LitRefine.lean` after | 843 | 5.5 s / 14.4 s |
+| `LitRefine.lean` + `StoreRel.lean`, after part 2 | 753 + 151 | 5.4 s / 13.9 s, 0.8 s |
+
+By section (after ← before): reading the store, generic reads and the memory after `lit_push`,
+83 ← 223; the probe 77 ← 90 (the induction itself 25 ← 75, the rest are the new definitions
+`walkW`, `NoMatch`, `ProbeOK`); match, hit, miss and append 145 ← 258; the arena paths and
+`intern_correct` 139 ← 218; grow 54 ← 67; the relation's definitions 68 ← 47. Unchanged: pool
+uniqueness 118 ← 123, the `natAddLit` instantiation 73. The proofs are shorter and their steps
+are `grind`, at three times the CPU time (`tier_push` 4.2 s, `tier_other` 2.0 s,
+`intern_correct` 1.8 s: `grind` on goals with a dozen `rdW` reads through `pushMem`, each an
+`if`).
+
+### Part 2: a second store, `app`
+
+`internE (.app f a)` (`Arena/Monad.lean:231`, `internNodeE`) for the record `AppNode { f a : EIdx }`:
+the simplest expression node with children. It differs from `lit` in three ways: the key is two
+handle words (equality is word equality, no pool), there is no stored hash (a two-word FNV is
+cheaper than a load), and the persistent probe is **skipped** when the scratch tier is open and
+a child is a scratch handle (`EStore.persFindMaybe`/`eViewHasScratchChild`, the Rust's `sk`).
+The L code does the same test (`((f | a) >> 27) & 1`), so no store invariant (`StoreWF`'s
+"persistent nodes have persistent children") is needed to justify it.
+
+* `AppStore.lean` (L, `module`): arrays `AREC` (4) and `ASLOT` (5), node `i` of tier `t` at
+  `AREC[4i + 2t ..]`, the count at `CTL[4 + t]`; `app_find` (the probe, the match inline: two
+  word comparisons under `&&`), `app_push`, `intern_app`; models `amatchW`, `aprobeW`,
+  `ainternW`, `askipW`; `#guard`s for sharing, both tiers and the skip. Every spec went through
+  at the first attempt with the house form.
+* `AppRefine.lean`: `AppR m a` (scratch flag, `ATierRel` per tier, same shape as `TierRel`, with
+  `ARecRel`: the two words are the children's handle words), the guarded arena paths (the
+  persistent probe after the skip is a named function `pfA`), `aintern_correct`,
+  `internApp_refines` (the triple, `intern_app` refines `internE (.app (decE f) (decE a))` for
+  `f, a < 2^32` under `AppR`).
+* `StoreRel.lean`: what turned out to be naturally shared, moved out of `LitRefine`: reads after a
+  write (`rdW_set64`), the probe run (`walkW`, `homeW_lt`), handle words with a tag parameter
+  (`hdW g t i`, `hix_hdW`, `mk_eq`, `word_decE`, the tier bit), `AM.of_run_ok`, `Tbl.push`'s
+  fields. 151 lines.
+
+Writing `AppRefine` was a rename of `LitRefine`'s store half (`REC`→`AREC`, stride 8→4,
+`cnt`→`acnt`, `matchW`→`amatchW`); it needed four fixes, none conceptual: the count clause
+needs `6 ≤ len CTL`; the home slot of an old node after the append (two reads through
+`apushMem`, each an `if`) had to be stated as a lemma before the `grind` that uses it (timeout
+otherwise); `AppR_push` needs `t ≤ 1`; the tier-bit lemma was first proved by `bv_decide`,
+which adds native axioms, and is now `testBit` arithmetic.
+
+| file | lines (non-blank) | `lean` wall / user |
+|---|---:|---:|
+| `AppStore.lean` | 301 (250) | 7.5 s / 8.9 s |
+| `AppRefine.lean` | 474 (417) | 6.1 s / 11.6 s |
+| `StoreRel.lean` (shared) | 151 (120) | 0.8 s / 1.0 s |
+
+### Assessment: what a store library would save
+
+Non-blank lines of each instance, by what they establish (headers and `#guard`s left out):
+
+| | `lit` L side | `lit` relation | `app` L side | `app` relation |
+|---|---:|---:|---:|---:|
+| algorithm-specific | 177 | 204 | 10 | 31 |
+| arena protocol (unfolding `internE`, four guarded paths, setters) | – | 74 | – | 73 |
+| representation (record layout, probe/insert, key → handle) | 222 | 289 | 197 | 295 |
+| instantiation (`natAddLit`) | – | 67 | – | – |
+
+* **Algorithm-specific**, `lit`: FNV over the limbs and `limbs_eq` (L, with their loops), the
+  uniqueness of normalised slices (`pv_len`, `pv_limbs`, 100 lines by hand), `NatRec`,
+  `matchW_iff`, and the pool frame (`LitR.grow`, the relation refers to the pool). `app`: the
+  hash expression, the two-word match, the skip (`skA`, `pfA`, `askipW_eq`), `ARecRel`,
+  `amatchW_iff`. This is what a new constructor has to say.
+* **Representation**: the probe model and its arm lemmas, the find/push specs, `pushMem` and its
+  read equations, `NoMatch`/`ProbeOK`/`probe_ok`, `SlotsOK`/`TierRel`, `tier_hit`, `tier_miss`,
+  `tier_push`, `tier_other`, the relation after the append, and `intern_correct`'s path
+  structure. `app`'s copy differs from `lit`'s only in array ids, record width and count slot,
+  the match function, the home slot of a node, and the skip in `intern_correct`. It is 81 % of
+  the `app` instance (492 of 606 lines) and 49 % of `lit`'s.
+* **Arena protocol**: per constructor, the same `simp` unfolding of `internNodeE` and four
+  guarded equations; mechanical, but it names the constructor's `Tbl` field.
+
+**A library parametric in a record schema** (array ids, width, count slot, a named match model
+with its `match_iff` obligation, the node's home slot, the key relation) would hold the
+representation half once. Estimate: about 600 lines once (one instance's 490 plus the
+parameters), then per instance the schema and its obligations, about 60 lines, plus the
+algorithm-specific part, plus the arena protocol (about 30 lines if it is made generic over a
+`Tbl` lens). Per instance that saves about 470 of the 565 representation and protocol lines,
+and most of the 20 s of CPU an instance costs (`app`: 8.9 s + 11.6 s). con-ron's arena has about 19 cons tables (10 expression constructors, 5 level, 3
+name, 1 level list); with two done, the library pays for itself at the second further table.
+
+Recommendation: build it before the third table, in two steps, the lower-risk half first.
+1. **The relation half** (`TierRel`, `SlotsOK`, `probe_ok`, the tier lemmas, the append): ~290
+   lines per instance, written twice now with only renamings. The match enters as a named
+   model function and a `match_iff` lemma, which both instances already have in that form.
+   Risk: `grind` over a schema whose fields are variables (array ids, strides) rather than
+   numerals; the address disequalities (`i * 8 + t * 4 + f ≠ c * 8 + t' * 4 + g`) were decided
+   from literal strides. A stride parameter with a hypothesis `f < w` should still be linear,
+   but this is the first thing to test.
+2. **The L half** (probe model, arm lemmas, find/push specs, ~200 lines per instance) is cheap
+   to write and went through at the first attempt both times; L has no function values, so the
+   code stays per instance (or is generated from the schema by a Lean function, which `vcgen`
+   then has to see through). Leave it per instance until the relation half is done.
+Not worth generalizing: the pool facts (only `lit` has them) and the skip (one line of L, one
+lemma).
+
+## The capstone: the first end-to-end theorems (2026-10-21, lane `capstone`)
+
+File: `ConAgua/Capstone.lean` (built through the lakefile's glob, like `Arena.Refine`/
+`Arena.LitRefine`: it imports `ConAgua.Arena.LitRefine`, a plain, non-`module` file, so it is one
+too). Composes `compile_correct` (`Compiler/Main.lean`) with the scanner's and the arena's L-level
+specs for the first time, for two functions.
+
+### `skipBraced_x64`
+
+```lean
+theorem skipBraced_x64 [Host] (G : Layout) (hG : G.Ok) (hwf : Prog.wf G.tab scanProg = true)
+    (hnres : 1 ≤ G.tab.nres) (k0 : Nat) (hcode : Code (compileProg G.tab scanProg "skip_braced") k0)
+    (b : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 64)
+    (i : USize) (depth : Nat) (hi : i.toNat ≤ b.size)
+    (hd : depth + (b.size - i.toNat) < 2 ^ 64) (hnargs : G.nargs = 2)
+    (N : Nat) (dm : MachineData) (ra : Word)
+    (hT : dm.regs.rdi.toNat = G.T) (hN : dm.regs.rsi.toNat = N)
+    (hmem : MemRel G { bytes := #[b.data] } dm.dmem) (hroom : G.lo + 8 ≤ G.hi)
+    (htop : rdW dm.dmem (A G.T) = some (UInt64.ofNat G.hi))
+    (hargv : ∀ j (h : j < 2), rdW dm.dmem (A (G.T + G.tab.args.toNat + 8 * j)) =
+      some ([i.toUInt64, UInt64.ofNat depth] : List Word)[j])
+    (hra : rdW dm.dmem (A dm.regs.rsp.toNat) = some ra)
+    (hcs : ∀ x, dm.regs.rsp.toNat - 24 ≤ x → x < dm.regs.rsp.toNat + 8 →
+      (dm.dmem.get? (A x)).isSome ∧ ¬ G.InStack x ∧ ¬ G.InArr x ∧ ¬ G.InTab x)
+    (hcs24 : 24 ≤ dm.regs.rsp.toNat) (hcs8 : dm.regs.rsp.toNat + 8 < 2 ^ 64) :
+    Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rsp.toNat = dm.regs.rsp.toNat + 8 ∧
+        st.data.regs.rbp = dm.regs.rbp ∧ st.data.regs.r14 = dm.regs.r14 ∧ st.data.regs.r15 = dm.regs.r15 ∧
+        (st.data.regs.rdx = 1 ∨
+          (st.data.regs.rdx = 0 ∧
+            st.data.regs.rax = (ConLeche.Frontend.skipBraced b i depth).toUInt64 ∧
+            MemRel G { bytes := #[b.data] } st.data.dmem)))
+      dm (label enterL)
+```
+
+From a Kraken host holding the compiled `scanProg` (`[Host]`, `Code … k0`), a machine state `dm`
+whose input region holds `b : ByteArray` (`MemRel`, the layout relation — `G` is the ghost
+layout, exactly `compile_correct`'s) called with position `i` and depth counter `depth`
+(`compile_correct`'s entry-argument cells, `hargv`) and `N` units of fuel: the run from
+`ca_enter` returns to the caller with the callee-saved registers restored, and either reports
+`exhausted` (`rdx = 1`, fuel or stack) or reports `rdx = 0` with `rax` the x64 word for
+con-leche's own `ConLeche.Frontend.skipBraced b i depth` — the real `USize`-over-`ByteArray`
+function (`vendor/con-leche/ConLeche/Frontend/Scan/Fast.lean:741`), not the `Nat`-position model
+`skipBracedN` that the L-level specs (`L.Examples.skipBraced_spec`) are stated against. No `L`
+notion appears in the conclusion except `MemRel`.
+
+### `natAddLit_x64`
+
+```lean
+theorem natAddLit_x64 [Host] (G : L.Compiler.Layout) (hG : G.Ok)
+    (hwf : Prog.wf G.tab storeProg = true)
+    (hnres : 1 ≤ G.tab.nres) (k0 : Nat) (hcode : Code (compileProg G.tab storeProg "nat_add_lit") k0)
+    (m : Mem) (a₀ : AState) (hR : LitR m a₀)
+    (oa la ob lb : Word) (ha : SliceOK m oa la) (hb : SliceOK m ob lb) (hnargs : G.nargs = 4)
+    (N : Nat) (dm : MachineData) (ra : Word)
+    (hT : dm.regs.rdi.toNat = G.T) (hN : dm.regs.rsi.toNat = N)
+    (hmem : MemRel G m dm.dmem) (hroom : G.lo + 8 ≤ G.hi)
+    (htop : rdW dm.dmem (A G.T) = some (UInt64.ofNat G.hi))
+    (hargv : ∀ j (h : j < 4), rdW dm.dmem (A (G.T + G.tab.args.toNat + 8 * j)) =
+      some ([oa, la, ob, lb] : List Word)[j])
+    (hra : rdW dm.dmem (A dm.regs.rsp.toNat) = some ra)
+    (hcs : ∀ x, dm.regs.rsp.toNat - 24 ≤ x → x < dm.regs.rsp.toNat + 8 →
+      (dm.dmem.get? (A x)).isSome ∧ ¬ G.InStack x ∧ ¬ G.InArr x ∧ ¬ G.InTab x)
+    (hcs24 : 24 ≤ dm.regs.rsp.toNat) (hcs8 : dm.regs.rsp.toNat + 8 < 2 ^ 64) :
+    Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rsp.toNat = dm.regs.rsp.toNat + 8 ∧
+        st.data.regs.rbp = dm.regs.rbp ∧ st.data.regs.r14 = dm.regs.r14 ∧ st.data.regs.r15 = dm.regs.r15 ∧
+        (st.data.regs.rdx = 1 ∨ st.data.regs.rdx = 2 ∨
+          (st.data.regs.rdx = 0 ∧ ∃ m' a',
+            (natAddArm (pv (m.arr64 POOL) oa.toNat la.toNat) (pv (m.arr64 POOL) ob.toNat lb.toNat)).run a₀
+              = .ok (some (decE st.data.regs.rax), a') ∧
+            MemRel G m' st.data.dmem ∧ LitR m' a')))
+      dm (label enterL)
+```
+
+From a Kraken host holding the compiled `storeProg`, a machine state `dm` related (via the
+layout `G` and the store relation `LitR`, `Arena/LitRefine.lean`) to an arena state `a₀`, called
+with pool slices `(oa, la)`/`(ob, lb)` denoting the two Nat summands (`pv`, the pool's decoding
+function, playing the same role here that `MemRel` plays for the byte buffer above — it is how
+"the two operands are these Nat values" is stated for an x64/pool state) and `N` units of fuel:
+the run returns to the caller, and either reports `exhausted` (`rdx = 1`), reports that the limb
+pool or the `lit` store had no room for the result (`rdx = 2`), or reports `rdx = 0` with the
+result register the handle that the arena's `Nat.add` arm of `natOpResult` (`natAddArm`,
+`Arena/Refine.lean`) returns when run on `a₀`, and the final memory related (`MemRel` + `LitR`
+again) to that arm's final arena state `a'`.
+
+### Trusted / assumed
+
+* **The layout relation** (`MemRel`, `Layout.Ok`): the array/table/stack regions are disjoint and
+  in bounds, and the machine's data memory holds L's memory at those addresses — exactly
+  `compile_correct`'s own trusted surface (Kraken's x64 semantics, the assembler/loader, the
+  calling harness; see `PLAN.md`, "Trusted base").
+* **`[Host]`**: an arbitrary host program containing the compiled code at `k0` (`Code`), i.e. the
+  loader placed it there; not checked here.
+* **`hwf`**: `Prog.wf G.tab p = true`, a decidable, concrete check once `G.tab` (the table shape)
+  is fixed by a real loader; carried as a hypothesis, as in `compile_correct`.
+* **`hnres : 1 ≤ G.tab.nres`**: both functions return one word; `Prog.wf` already forces this once
+  `G.tab` is concrete (every `return`/call-result arity check in `Stmt.wf` is `≤ tab.nres`), but
+  extracting it from `hwf` needs unfolding the whole compiled body, so it is a separate,
+  independently-obvious hypothesis rather than a derivation.
+* **`h64 : System.Platform.numBits = 64`** (`skipBraced_x64` only): the platform fact
+  `Scan/Link.lean` needs to equate `USize` positions with `Nat` ones (`ByteArray.usize`'s wrap at
+  `USize.size`); undischargeable in Lean, a hypothesis as everywhere else it is used.
+* **`LitR`** (`natAddLit_x64` only): the arena/pool state relation from lane `store`/`store2`,
+  itself not yet proved to hold of any concrete loader-produced state (milestone 4's remaining
+  work, `natOpResult`'s dispatch and the other arms).
+
+### Mismatches the composition found
+
+* **`⦃P⦄ x ⦃Q; ⊤⦄` says nothing about *which* error a run raises.** Composing with
+  `compile_correct`'s `rdx = 1 ∨ OutcomeRel …` needs, for the clean two-outcome shape the task
+  describes, that the only reachable `Err` is `outOfFuel` (so `OutcomeRel` of every other error
+  forces `rdx = 2`, which must not arise). Every existing spec in `ConAgua.L`/`ConAgua.Arena`
+  states its error postcondition as `⊤`, which is compatible with *any* error, including ones
+  that cannot actually happen — the fact is real but has to be proved separately. Fixed, for
+  `skip_braced`/`str_close`, with small additions: a generic `Triple.step_exec'`/`M.of_run_err`
+  (the `⊤`-free analogues of `Logic.lean`'s `Triple.step_exec`/`M.of_run`) and `…_noErr` restatements
+  of `strCloseLoop_spec`/`strClose_spec`/`skipBracedLoop_spec`/`skipBraced_spec` with the error
+  postcondition tightened to `(· = .outOfFuel)`, proved with the **exact same** `vcgen`/`finish`
+  scripts as the originals (unchanged): the loop invariants that already discharge the bound for
+  the success continuation discharge it for the `oob` continuation just as well (that branch's
+  hypotheses contradict themselves). No existing theorem was changed.
+* **This does not scale to `nat_add_lit`.** `nat_add`'s pool append and `intern_lit`'s node push
+  (`lit_push`, `Store.lean`) each have a genuine, intentional `abort` the source code reaches
+  when a capacity check fails (`len(POOL.u64) - top <= n`, `cnt ≥ 2^27`, the record array full,
+  the `3/4` load limit) — "growing past capacity is an explicit abort in the program" (`PLAN.md`).
+  Unlike `skip_braced`'s bound (implied by the loop invariant alone, so `vcgen` can reject the
+  `oob` branch as self-contradictory), ruling these out needs a *quantitative* room hypothesis
+  (e.g. `len(POOL.u64) - top > n`) for `nat_add`, and, for `intern_lit`'s probe (`lit_find`), a
+  load-factor/pigeonhole argument (linear probing with wraparound visits all `n` slots once in
+  `n` steps, so a free slot exists within budget whenever occupancy `< n`) that is not yet proved
+  anywhere in the codebase and is well beyond a "small lemma". So `natAddLit_x64`, honestly, has
+  **three** outcomes, not two: the task's shape ("exhausted, or the outcome matches …") does not
+  hold for this function without that extra work. The theorem above states the three-way split
+  explicitly (`rdx = 2` for the capacity-abort case) rather than assuming the gap away; closing
+  it to two outcomes is future work (room/load-factor hypotheses plus the pigeonhole lemma,
+  probably against `LitR`'s slot-occupancy fields directly).
+* **`pv`/`POOL` in the conclusion.** The task asks for "no intermediate L notions … except where
+  unavoidable (the layout relation)"; `natAddLit_x64`'s conclusion mentions `pv (m.arr64 POOL) …`
+  to say what Nat values the pool slices `(oa, la)`/`(ob, lb)` denote. This is the same kind of
+  "unavoidable" as `MemRel`: the arena's `natOpResult`/`natAddArm` take bare `Nat` operands, and
+  L has no representation of a `Nat` other than a pool slice, so decoding the slice is required to
+  state the operands at all (there is no `con-leche`-level value to substitute, unlike
+  `skipBraced`'s `b`/`i`, which are already `ByteArray`/`USize`).
+
+### `sorry`s
+
+None.
+
+## The store library (2026-10-21, lane `storelib`)
+
+Files: `ConAgua/Arena/StoreLib.lean` (the library), `ConAgua/Arena/LitRefine.lean` and
+`ConAgua/Arena/AppRefine.lean` (ported onto it), `ConAgua/Arena/StoreRel.lean` (handles made
+kind-generic: `decI`, `hix`, `mk_eq`, `word_decI`). The L code and its `vcgen` specs stay per
+table, as decided after lane `store2`. The statements of `natAddLit_run_store`,
+`internApp_refines` and `natAddLit_x64` are unchanged (`LitR`, `AppR` are redefined). No `sorry`;
+axioms `propext`, `Classical.choice`, `Quot.sound`.
+
+### The spike: parametric strides
+
+Lane `store2` flagged the risk: `grind` decided the record-address disequalities
+(`i * 8 + t * 4 + f ≠ c * 8 + t' * 4 + g`) from literal strides. With the stride a variable it
+does not: `i * (2 * w) + t * w + f = c * (2 * w) + t' * w + g → i = c ∧ …` fails (nonlinear).
+One hand-proved lemma fixes it: `Schema.ad_inj` (addresses are injective given `t ≤ 1`,
+`i < 2^27`, `f < w ≤ 256`; 15 lines of `Nat` division). Given it, `grind` closes the generic
+read-after-write goals as it closed the literal ones (`fld_pushG`, the frame of the other tier).
+
+### Shape
+
+* **`Schema`**: record array `ra`, slot array `sa`, width `w`, stride `st = 2w`, the `CTL` index
+  `ca` of tier 0's count, the tag. `Schema.WF` (the stride, `w ≤ 256`, `2 ≤ ca`, distinct
+  arrays, tag < 16) is `by decide` per instance. Named reads `fld`, `slotW`, `nSl`, `cntW`,
+  `homeS`; for a concrete schema they are the L models' terms by `rfl` (`fld litSch m t i 3` is
+  `rdW (m.arr64 REC) (i * 8 + t * 4 + 3)`), except field 0 (`+ 0`, one `simp` lemma).
+* **The append** `pushG S m t vs j c`: the record written from a list of words (`wrRec`), the
+  slot, the count. One read equation per array (`fld_pushG`, `pushG_slot`, `pushG_ctl`,
+  `pushG_arr`, sizes). An instance's `pushMem` is `pushG` by one `simp` (`pushMem_eq`).
+* **The probe**: `probeArm` is one step of every `*_find` model for a match function
+  `mt : Word → Bool`; an instance proves `∀ j d, probeW … j d = probeArm … (probeW …) j d` by
+  `rw [probeW]; rfl` and gets `ProbeOKG` (hit / miss with `NoMatchG`) from `probe_homeG`.
+* **The relation**: `TierR S R hs m t tb` (count, capacity, record room, `R` per node, the key →
+  handle map both ways, `SlotsOKG`) and `StoreR` (two tiers, the scratch flag), parametric in the
+  record relation `R : Mem → Word → Word → α → Prop` and the node hash `hs`. Generic lemmas:
+  `tierR_hit`, `tierR_miss`, `tierR_push`, `tierR_other`, `tierR_mono` (the pool frame of `lit`).
+* **The arena protocol**: a `Lens` (the two tables in `AState` and the scratch flag, with six
+  `rfl` laws), `protoRun` (the run of `internNodeE`/`internLNode`: persistent probe or skip,
+  scratch probe, capacity, append), `internM` (the L model of every `intern_*`), and
+  `intern_correctG`: `internM … = some (w, m')` and `op.run a = protoRun …` give
+  `AM.ok op a ∧ StoreR … m' (AM.st op a) ∧ AM.res op a = decI w`.
+
+An instance supplies: the schema; `R` and `hs`; `RFrame` (a node's relation and hash depend
+on its own words and memory outside the table); per query `MatchOK` (on a node of the table the
+match is key equality), `HomeOK` (a matching node has the query's hash) and `NewOK` (the record
+the push writes holds the key); the unfolding of the arena operation to `protoRun`; the bridges
+`probeW = probeArm …`, `pushOK → PushRoom`, `internW = internM …`.
+
+Everything is stated with named predicates, conclusions are equations or conjunctions of named
+predicates; the obligations are `∀` statements an instance proves once and the library
+instantiates by hand (`grind` never sees them as hypotheses). What `store2` found still holds:
+the five `∀` clauses of `TierR` are cleared before each `grind` that does not need them; one
+`grind` in `tierR_push` timed out until `hrun` was cleared in the new-node branch.
+
+### Port: before and after (nightly-2026-10-20, `lake env lean` per file, one run)
+
+| file | lines (non-blank) before | after | `lean` wall / user before | after |
+|---|---:|---:|---:|---:|
+| `StoreRel.lean` | 151 (120) | 156 (120) | 1.1 s / 1.3 s | 1.1 s / 1.2 s |
+| `StoreLib.lean` (new) | – | 698 (618) | – | 5.9 s / 9.9 s |
+| `LitRefine.lean` | 753 (668) | 514 (444) | 6.8 s / 17.3 s | 2.0 s / 3.0 s |
+| `AppRefine.lean` | 474 (417) | 230 (190) | 7.7 s / 14.4 s | 1.2 s / 1.4 s |
+| total | 1378 (1205) | 1598 (1372) | 15.6 s / 33.0 s | 10.2 s / 15.5 s |
+
+The library is 618 non-blank lines (schema and `ad_inj` 57 raw lines, reads 24, the append and
+its read equations 110, the probe 64, the relation's definitions 65, hit/miss 41, the append
+lemmas 101, the protocol and `intern_correctG` 197), close to `store2`'s estimate of 600. Two
+instances do not repay it in lines (+167 non-blank overall), they do in CPU (−53 %): an
+instance's relation file now checks in 1–2 s instead of 7–8 s, because the expensive `grind`
+calls (`tier_push`, `tier_other`, `intern_correct`: a dozen `rdW` reads through `pushMem`) run
+once, in the library. What is left in `LitRefine` is the `lit` key's own content: the uniqueness
+of normalised slices (118 lines, by hand, unchanged), the pool frame (`LitR.grow`, now through
+`tierR_mono`), `NatRec`, and the `natAddLit` instantiation (73, unchanged).
+
+Changes the port needed: `LitR` is now `PoolOK m ∧ StoreR litSch …` (the old bounds
+`len(REC), len(SLOT) < 2^63` were not needed); `ProbeOKG`'s miss case records that the free slot
+is below the slot count (the old proofs got `0 < n` from the load limit in `pushOK`, which the
+library's `PushRoom` does not have); `hix_hdW` lost two hypotheses it never used; handles are
+`decI` (any `Idx` kind, `decE_eq : decE w = decI w` by `rfl`), since the level store's handles
+are `LIdx`.
+
+### The third table: level `succ`, written fresh on the library
+
+`ConAgua/Arena/LevelStore.lean` (L, `module`): arrays `SREC` (6), `SSLOT` (7), one word per node
+(the child's handle word), counts at `CTL[6 + t]`, tag `LTag.succ`; `succ_find`, `succ_push`,
+`intern_succ`, their models and specs, `#guard`s (sharing, `succ (succ 0)`, the scratch tier).
+`ConAgua/Arena/LevelRefine.lean`: `SuccR m a` (`StoreR succSch SRecRel shash` over
+`a.store.lss.ls`'s two `succ` tables) and `internSucc_refines`: `intern_succ(u)` refines
+`internLNode (.succ (decI u))` under `SuccR`, for `u < 2^32`. The level store has no scratch
+skip (`LStore.find?` probes the persistent tier unconditionally), so `skB = false`, as for `lit`.
+
+| | lines (non-blank) | `lean` wall / user | by hand |
+|---|---:|---:|---|
+| L code (3 functions) | 42 | | |
+| models (`sprobeW`, `smatchW`, `spushMem`, `sinternW`, …) and probe arms | 53 | | |
+| `vcgen` specs | 88 | | none: `vcgen` + `finish` |
+| docs, `#guard`s | 48 | | |
+| `LevelStore.lean` | 281 (231) | 3.4 s / 4.5 s | |
+| lens, setters, `internLNode` unfolded to `protoRun` | 66 raw | | one `simp` case split, copied from `lit` |
+| schema, `SRecRel`, `shash`, `SuccR`, frame | 31 raw | | `decide`, `simp` |
+| `MatchOK`, `HomeOK`, `NewOK` | 36 raw | | one `grind` each, `NewOK` through `fld_pushG` |
+| bridges (`probeArm`, `PushRoom`, `pushG`, `internM`) | 28 raw | | `rfl`, `simp`, `grind` |
+| `sintern_correct`, `internSucc_refines` | 36 raw | | one application of `intern_correctG` |
+| `LevelRefine.lean` | 197 (161) | 1.0 s / 1.2 s | |
+
+Both files went through at the first attempt (no failed `grind`, no fix). Against the second
+table before the library (`app`: relation 417 non-blank lines, 7.7 s / 14.4 s), the third table's
+relation is 161 lines and 1.0 s; of those, about 100 are boilerplate a new table copies with
+renaming (the lens and its setters, the unfolding of the arena operation, the bridges), about 40
+say what the table is (schema, record relation, hash, the three obligations).
+
+### Findings
+
+* **Parametric strides need one lemma** (`docs/gaps/grind-parametric-stride-injectivity.lean`):
+  `grind` does not decide the injectivity of `(i * 2 + t) * w + f` for a variable `w`.
+  `Schema.ad_inj`, proved by hand and passed to `grind`, is enough for every generic proof.
+* **Obligations as `∀` statements, instantiated by the library.** `RFrame`, `MatchOK`,
+  `HomeOK`, `NewOK` are named predicates with a `∀` inside. The library's proofs `have` the
+  instance they need and never give a whole obligation to `grind`; an instance proves each one
+  by `intro` and one `grind`/`simp`.
+* **A `Lens` with `rfl` laws** is what makes the arena side generic: the tables of a
+  constructor sit at different depths (`a.store.pers.lits`, `a.store.lss.ls.pers.succs`), and
+  `intern_correctG` only needs `get (set a t) = t` and the frame of the other table and the flag.
+* **The run of the arena operation as one equation** (`… .run a = protoRun …`) replaced the four
+  guarded per-path equations of each instance; the library derives the paths.
+* **What stays per table:** the L code, models and specs (cheap, `vcgen` at the first attempt
+  three times now), the arena unfolding (`simp` with the store's own operations), the key's
+  meaning (`MatchOK`: trivial for handle keys, the pool uniqueness for `lit`).
+
+### Recommendation for the remaining tables
+
+The remaining 16 cons tables (8 expression constructors, 4 level, 3 name, 1 level list) sort
+into four kinds by their key:
+* **handle words only** (`sort`, `const`, `lam`/`forallE` records, `letE`, level `max`, `imax`,
+  `param`): as `app` and `succ`, each about 230 lines of L side and 160 of relation, under 5 s of
+  CPU, no new proof idea (`max`/`imax` are `app` with `LTag` and the level lens);
+* **a handle and a `Nat`** (`bvar`, `fvar`, `proj`, name `num`): a `Nat` stored in a word needs a
+  bound (`< 2^64`) in `MatchOK`/`NewOK` and in the refinement theorem's hypotheses, or a limb
+  slice as for `lit`; small;
+* **no fields** (`anonymous`, level `zero`): at most one node per tier; a schema with one dummy
+  word works (`w = 0` is excluded by `Schema.WF`), or the table is a flag;
+* **variable-length keys** (name `str`: string contents, as `lit`'s unrepresented `strVal` arm;
+  the level list: `List LIdx`): a pool and a uniqueness lemma for the key, as `lit`'s
+  `pv_len`/`pv_limbs`.
+`lam`/`forallE` do not go through `internNodeE` (`internLamE`, `internForallEE`); their protocol
+differs and needs its own unfolding to `protoRun`, or a second protocol in the library; check
+before writing them.
+
+The L side is now the larger half of a new table (231 of 392 lines). It went through at the first
+attempt three times; generating it from the schema would need `vcgen` to see through a Lean
+function producing L syntax, which nothing here has tried. Not worth it before the per-table L
+code shows a bug the generated form would avoid. The next step that pays is a combined relation
+over all tables of a store (`LitR ∧ AppR ∧ …` with the frame between them: each table's append
+is `OutEq` for the others' arrays, which `pushG_arr` already gives).
+
+### `sorry`s
+
+None.
+
+## More store-library tables (2026-10-21, lane `tables`)
+
+Files: `ConAgua/Arena/{Zero,Max,Imax,Param,Sort,Const,Let}Store.lean`,
+`ConAgua/Arena/{Zero,Max,Imax,Param,Sort,Const,Let}Refine.lean` (the level store's remaining four
+constructors, then three expression handle-only kinds). Order per the task: the level store first
+(`zero`, `max`, `imax`, `param`), then expression handle-only kinds (`sort`, `const`, `letE`). One
+table per commit, each following the `succ`/`app` templates on `StoreLib.lean` exactly; `sort`
+needed one small library generalisation (`isPersistent_decI`, below), every other table none. No
+`sorry`.
+
+### The level store: `zero`, `max`, `imax`
+
+* **`zero`** (`ZeroStore.lean`/`ZeroRefine.lean`, arrays `ZREC`/`ZSLOT` = 8/9, counts at
+  `CTL[8 + t]`, tag `0`): the fieldless case the recommendation flagged. `ZeroNode` has no
+  fields, so there is at most one node per tier and the match function is the constant `true`
+  (any node present *is* the `zero` node); the hash is the constant `zeroHashW`. Used a one-word
+  dummy record (`w = 1`, the field written but never read) rather than `w = 0`, as the
+  recommendation suggested — `Schema.WF` does not literally exclude `w = 0`, but a dummy field
+  sidesteps having to check that a zero-stride schema's address function is still injective
+  where it is used (it collapses to `S.ad t i f = f`, independent of `i`, which the generic
+  proofs never needed to know is harmless since `fld`/`pushG` are simply never invoked at a
+  field index there isn't one of). The record relation `ZRecRel`, `MatchOK` and `NewOK` are all
+  `True`/`trivial`/`rfl`: `ZeroNode`'s only inhabitant makes every obligation about it hold by
+  `cases` + `rfl` (`zeroNode_eq`). The L code keeps the full probe-loop shape (while loop,
+  `abort` on exhaustion) with the match test written as the tautology `0 == 0`, rather than
+  special-casing the loop away, so it needed no library change and no new proof idea — just an
+  always-true arm instead of a real comparison.
+* **`max`, `imax`** (`MaxStore.lean`/`ImaxStore.lean`, same file content up to systematic renaming
+  and the tag/`CTL` base): the `app` shape exactly (`BinLNode { u v : LIdx }`, two handle fields,
+  width 2), with no scratch skip (the level store's `LStore.find?` probes the persistent tier
+  unconditionally, as for `succ`). Arrays `MREC`/`MSLOT` = 10/11 (`CTL[10 + t]`, tag `2`),
+  `IREC`/`ISLOT` = 12/13 (`CTL[12 + t]`, tag `3`). Both went through at the first attempt once the
+  usual off-by-one of a fresh `#guard` test fixture's `CTL` array length (it must reach
+  `ca + 2`, not just the previous table's high-water mark) was caught by the evaluator, not a
+  proof failure — see "Findings" below.
+* **`param`** (`ParamStore.lean`/`ParamRefine.lean`, arrays `PREC`/`PSLOT` = 14/15,
+  `CTL[14 + t]`, tag `4`): `ParamNode { n : NIdx }`, the `succ` shape (one handle field, width 1),
+  but the handle is a **name** handle, not a level one. `word_decI`/`hix_hdW`/`isPersistent_decE`
+  (`StoreRel.lean`) are already stated `{k : IdxKind}`-generically, so nothing there needed
+  touching; the only change from `succ`'s template is the `Idx .name` instantiation of `Lens`
+  and `decI`/`word_decI` at that kind. No scratch skip, as for every level node.
+
+| table | L lines | spec lines | relation lines (non-blank) | `lean` user (Store + Refine) | clean? |
+|---|---:|---:|---:|---:|---|
+| `zero` | 38 | 87 | 140 | 2.8 + 0.9 = 3.7 s | yes, first attempt |
+| `max` | 42 | 87 | 178 | 6.3 + 1.2 = 7.6 s | yes, first attempt |
+| `imax` | 42 | 87 | 178 | 6.3 + 1.3 = 7.6 s | yes, except the `#guard` fixture fix below |
+| `param` | 38 | 87 | 166 | 4.4 + 1.2 = 5.6 s | yes, first attempt |
+| `sort` | 42 | 87 | 175 | 6.5 + 1.1 = 7.6 s | yes, needed one library generalisation (below) |
+| `const` | 46 | 87 | 194 | 9.0 + 1.2 = 10.2 s | yes, after fixing two scripted-rename mistakes |
+| `letE` | 48 | 87 | 218 | 11.6 + 1.3 = 12.9 s | yes, first attempt (written by hand, not scripted) |
+
+"L lines" is the probe loop, `*_find`, `*_push` and `intern_*` function bodies only; "spec lines"
+the three `vcgen` sections (`find`/`push`/`intern`) that prove them; "relation lines" the whole
+`*Refine.lean` file (schema, record relation, the three query obligations, the bridges,
+`*intern_correct`, the `*_refines` theorem). `max`/`imax` are heavier than `zero`/`param` only
+because width 2 means two `fld_push*`-shaped equations instead of one in `*NewOK`, exactly as
+`app` was heavier than `succ` before the library (`StoreLib.lean`'s own assessment).
+
+### Findings
+
+* **A fresh `#guard` fixture's `CTL` array must be sized for every table that exists in the
+  project, not just the one under test.** `ImaxStore.lean`'s differential `#guard`s initially
+  reused `MaxStore.lean`'s `imaxMem`-shaped literal (a `CTL` array long enough for `max`'s
+  `CTL[10], CTL[11]` but not `imax`'s `CTL[12], CTL[13]`). `Mem.set64` is `Array.set!`, which is a
+  silent no-op past the array's current length — so the write to `CTL[12 + t]` after a push
+  simply vanished instead of erroring, and the two `#guard`s failed on the computed handles
+  (0 and 1 where 0x30000000/0x30000001 were expected) rather than on a proof. Each table's own
+  `*Mem`/`#guard` fixture is independent (one file, one local test memory), so this is purely a
+  per-file bookkeeping hazard, not a library gap: fixed by widening the literal `CTL` array to
+  `ca + 2` words. Nothing in the `vcgen` proofs or the library was at fault.
+* Every other table in this round (`zero`, `max`, `param`) went through at the first attempt,
+  with the same `sym only [lang_grind, arena_grind] => vcgen […] <;> finish […]` house form as
+  `succ`/`app`, confirming the recommendation's estimate for "handle words only" tables: no new
+  proof idea, each about 230 L-side lines and 160–180 relation lines, a few seconds of CPU.
+
+### `sorry`s
+
+None.
+
+### The expression store: `sort`, `const`
+
+Order per the task, continuing into expression handle-only kinds. Both are new arrays (next free
+ids after the level store's `PREC`/`PSLOT` = 14/15): `sort` at `SOREC`/`SOSLOT` = 16/17
+(`CTL[16 + t]`, tag `2`), `const` at `CREC`/`CSLOT` = 18/19 (`CTL[18 + t]`, tag `3`). Unlike the
+level store, the expression store's `internE` has the scratch skip (`EStore.persFindMaybe`,
+`eViewHasScratchChild`), so both tables are `app`'s shape (`skSo`/`skCe`, `so`/`ceskipW_eq`), not
+`succ`'s.
+
+* **`sort`** (`SortStore.lean`/`SortRefine.lean`): `SortNode { u : LIdx }`, one field, the
+  `succ`/`param` L-side shape (a single-field probe and push) but with `app`'s single-field skip
+  test (`eViewHasScratchChild (.sort u) = !u.isPersistent`, i.e. skip iff `u` is a scratch
+  handle) grafted on, the way `app`'s two-field skip is. This needed one small library
+  generalisation: `StoreRel.lean`'s `isPersistent_decE` was stated only for expression handles
+  (`(decE w).isPersistent = …`), because it had only ever been used to decode an `app` child,
+  which is itself an expression handle. `sort`'s child is a **level** handle, so the proof needed
+  the same fact at `Idx .level`. Added `isPersistent_decI {k : IdxKind} (w) (hw) : (decI w :
+  Idx k).isPersistent = ((w >>> 27) &&& 1 == 0)` (the old proof, with `decE` replaced by `decI`
+  and the kind made a parameter) and restated `isPersistent_decE` as its one-line `.expr`
+  specialisation (`rw [decE_eq]; exact isPersistent_decI w hw`), so `AppRefine.lean` is unchanged
+  and still builds. `word_decI`/`hix_hdW`/`decI` were already `IdxKind`-generic from the
+  `storelib` port (needed for the level store's handles); `isPersistent_decE` was the one fact
+  that port missed generalising, because nothing before `sort` needed the skip test at a
+  non-expression child.
+* **`const`** (`ConstStore.lean`/`ConstRefine.lean`): `ConstNode { n : NIdx, us : LsIdx }`, the
+  `app` shape at two fields, but a **mixed-kind** key — the two words decode to a name handle and
+  a level-list handle, not two expression handles. The L code (the probe, the push, the skip
+  test `((n | us) >>> 27) & 1`) is `app`'s verbatim, since L has no notion of handle kind at all
+  (everything is a `Word`); only `ConstRefine.lean` differs from `AppRefine.lean`, decoding each
+  field at its own kind (`decI (k := .name)`, `decI (k := .levels)`) instead of both at `.expr`,
+  using the same `isPersistent_decI`/`word_decI` generalisations `sort` needed. No further
+  library change.
+* **Writing `ConstRefine.lean` as a scripted rename of `AppRefine.lean`+`ConstStore.lean` of
+  `AppStore.lean`** (as `max`/`imax`/`param` were) was riskier than for same-kind tables, and
+  caught two mechanical mistakes worth recording: (1) a blind `sed 's/decE f/…/'`-style text
+  substitution also matched inside `isPersistent_decE f hf` (a different identifier, not an
+  application of `decE` to `f`), mangling it into a nonsense token; (2) `sed 's/internApp\b/.../'`
+  silently failed to rename `internApp_spec` because `\b` does not match between two word
+  characters (`p` and `_` are both "word" characters to POSIX/GNU sed's `\b`), so the function
+  name survived the rename pass undetected until the build caught the unknown identifier. Both
+  are copy-renaming hazards, not proof problems; the fix in each case was a direct, targeted edit
+  once the compiler pointed at the exact line. Neither recurred in `zero`→`max`→`imax`→`param`
+  because those renames kept every field at the same handle kind (`LIdx`→`LIdx` or `LIdx`→`NIdx`
+  wholesale, never splitting a two-field record across two different target kinds) and used
+  `\b`-safe suffixes throughout.
+* Both tables' `vcgen` specs (the L side) went through at the first attempt, as every table has so
+  far: the skip test is a Word-level computation with no handle-kind content, so it is identical
+  code to `app`'s regardless of what the two fields denote at the arena level.
+
+### `sorry`s
+
+None.
+
+### `letE`: three same-kind handle fields, and L has no division
+
+`LetNode { ty val body : EIdx }` (`LetStore.lean`/`LetRefine.lean`, arrays `LEREC`/`LESLOT` =
+20/21, `CTL[20 + t]`, tag `7`): `app`'s shape at three fields instead of two, all three the same
+kind (`EIdx`), so (unlike `const`) `LetRefine.lean` decodes every field with the ordinary `decE`/
+`isPersistent_decE`, exactly as `app` does — no new kind-generality was needed here. Written by
+hand rather than as a scripted rename of `ConstStore`/`ConstRefine` (three fields do not track
+two renamed ones cleanly, and the const port's two rename mishaps argued for not repeating the
+scripted-rename approach at a third field count); went through at the first attempt on both
+files.
+
+* **The one genuine new thing: a non-power-of-two record width.** `LEREC`'s stride is `2 * 3 = 6`
+  words (three fields, two tiers). Every earlier table's width was a power of two (1, 2 or 4),
+  so its room check read `len(REC.u64) >> shift <= c` (dividing by the stride via a shift); `6`
+  is not a power of two, and **L has no division operator at all** (`PLAN.md`, "the language
+  L": "No division: Kraken has no div; divide by a power of two with `>>`."). The fix is not a
+  language or library change but a different, already-available arithmetic form of the same
+  check: `len(LEREC.u64) < (c + 1) * 6` (multiplication, which L has), which is in fact a more
+  direct match for `PushRoom`'s own definition (`S.st.toNat * (cnt + 1) ≤ size`) than the
+  power-of-two tables' shifted form was — `lepushOK_room`'s proof is a plain `grind` with no
+  `UInt64.toNat_shiftRight` conversion lemma, shorter than `app`'s/`const`'s equivalent.
+* **Three-way skip test from the library's two-way lemma.** `eViewHasScratchChild (.letE ty val
+  body)` is `if ty.isPersistent then (if val.isPersistent then !body.isPersistent else true) else
+  true`, i.e. "`ty`, `val` or `body` is a scratch handle". The L side computes this as one word,
+  `((ty | val | body) >>> 27) & 1`; relating the two needed `bit27_or` (`StoreRel.lean`) **twice**
+  — `bit27_or ty val` then `bit27_or (ty ||| val) body`, matching `|||`'s left-associativity
+  (`ty ||| val ||| body` parses as `(ty ||| val) ||| body`) — composed in the proof, not inside
+  the library: no new lemma, `bit27_or` is already general enough.
+* The record relation, `MatchOK`/`NewOK` and the frame obligation are `app`'s/`const`'s two-field
+  versions with one more conjunct/clause each (`fld_let0`/`fld_let` cover field 0 and the general
+  case exactly as `fld_app0`/`fld_app` did); nothing else differed in shape.
+
+### `sorry`s
+
+None.
+
+### Not done this round, and why
+
+Seven tables landed (`zero`, `max`, `imax`, `param`, `sort`, `const`, `letE`); `bvar`, `fvar`,
+`proj` (a handle plus a `Nat` field each) were not attempted. Not because any attempt got stuck:
+none was started. Reasons to flag before starting one, for whoever picks this up next:
+
+* **A `Nat` field is not a handle.** Every table so far decodes a stored word back into a handle
+  (`decI`/`decE`, with `word_decI`/`isPersistent_decI` for the bound `< 2^32`) and compares
+  handles for the match/key. `bvar`'s `i : Nat`, `fvar`'s `idx : Nat`, `proj`'s `i : Nat` are
+  plain de Bruijn/field indices with no such decoding — `MatchOK`/`NewOK` there compare a stored
+  `Word` against `UInt64.ofNat n` directly, under a bound hypothesis (`n < 2^64`, as the
+  recommendation says), which is a different (if probably easy) fact than anything the `MatchOK`/
+  `NewOK` obligations have needed up to `letE`: every one of those was proved by `word_decI`/
+  `decE_eq` plumbing, not by a `Nat`/`Word` roundtrip. `lit`'s `natLitToConstructor`/pool slice
+  comparison is the nearest precedent in this codebase, but it goes through the limb pool, which
+  `bvar`/`fvar`/`proj`'s single small `Nat` should not need.
+* **`fvar`/`proj` mix a `Nat` and a handle in one record** (`fvar { idx : Nat, ty : EIdx }`,
+  `proj { n : NIdx, i : Nat, e : EIdx }`), so their `MatchOK`/`NewOK` need *both* kinds of
+  obligation at once, and their scratch-skip test (`eViewHasScratchChild`) reads only the handle
+  field(s), not the `Nat` one — worth checking that `MatchOK`'s statement composes cleanly
+  (conjunction of a `Nat` equality and a handle equality) before assuming it is "just like
+  `const`'s two fields" with one relabelled.
+* **Budget.** This lane landed seven tables across two sessions' worth of the allotted time
+  (level store plus three expression handle-only kinds); `bvar`/`fvar`/`proj` are next in the
+  task's own order, genuinely small per the recommendation ("small"), and a reasonable next
+  increment, but starting a new proof idea with under the stated 45-minute budget per table
+  remaining risked a half-finished table or a `sorry`, which `PLAN.md` rules out. Left out
+  rather than rushed.
+
+## The arena relation and the first cached walk (2026-10-21, lane `walk`)
+
+Files: `ConAgua/Arena/{BVarStore,BVarRefine,Memo,MemoRel,Frame,ArenaRel}.lean` (part 1),
+`ConAgua/Arena/{Walk,WalkRefine}.lean` (part 2). No `sorry`; axioms `propext`,
+`Classical.choice`, `Quot.sound`.
+
+### Part 1: one relation `ArenaR` for the whole memory
+
+**Layout** (`ArenaRel.lean`'s header has the table): arrays 0–23 as before plus `bvar` at 22/23
+(`CTL[22 + t]`, new this lane, the first table with a `Nat` field) and the walk memo `BMEMO` at
+24 (`CTL[24]` = live stamp − 1, `CTL[25]` = live count). `ArenaR m a` is a `structure` of twelve
+named relations: the eleven tables (`LitR` with the pool, `AppR`, `SortR`, `ConstR`, `LetR`,
+`BVarR`, `ZeroR`, `SuccR`, `MaxR`, `ImaxR`, `ParamR`) and `MemoR m a.memos.bvarBC`.
+
+**Frames.** `MemFrame A C m m'`: only word arrays `A` and `CTL` words `C` changed, sizes kept
+(`Frame.lean`). One generic lemma, `storeR_frame`, moves a `StoreR` across a writer it is
+`Apart` from, given the instance's `RLocal` (the record relation and hash read only the record
+array, plus `[POOL]`/`[CTL 0]` for `lit`; one line per table). `internM_frame`: every
+`intern_*` model is a `MemFrame [ra, sa] [ca, ca + 1]`, proved once for the library's `internM`.
+On the arena side `protoRun_st`/`AM.st_proto`: an interning ends in `a`, `L.setP a t` or
+`L.setS a t`, so every other table relation holds of the new state by definitional unfolding
+(`exact` closes it, no lemma per pair of tables). `ArenaR.lift_X` (11, generated text, 12 lines
+each) and `internX_refinesA` (11, the old proof plus three lines) lift every table; `ArenaR.grow`
+and `natAddLit_refinesA` do the pool (`grows_frame`: `Grows` is `MemFrame [POOL] [0]`).
+
+**Initial state.** `arenaR_init`: `ArenaR (initMem sizes) (AState.init EStore.empty)` for any 25
+sizes with `CTL` ≥ 26 words and the pool below `2^63` words; `initMem` is all zeros (the memo's
+"stamp − 1" encoding is what makes zero memory an empty memo). This closes the gap the capstone
+noted (`LitR` was not shown for any state).
+
+**Grind-friendliness.** No `∀`-clause of the table relations is given to `grind`: the frame
+proofs go through `tierR_mono` with named equalities. `decide` on `Apart` for concrete schemas
+timed out (`UInt64` list memberships through the elaborator's `whnf`, also with `+kernel`); a
+`simp` with the array ids (macro `apart`) is immediate.
+
+**The `bvar` table** (`BVarStore`/`BVarRefine`): `succ`'s shape (one word, no scratch skip; a
+`bvar` has no child) in the expression store. The record relation is `(rdW …).toNat = k.i`, so a
+stored word *is* the index and `MatchOK` is `UInt64.toNat_inj`, no bound hypothesis; the L
+argument is a word `u` and the key `⟨u.toNat⟩` (indices ≥ `2^64` cannot be interned through L).
+The file was a scripted rename of `LevelStore`; a rename leftover (`sfindLoop_spec`) collided
+with `LevelStore` only when both were imported (`ArenaRel`), and so did `Memo`'s first `mprobeW`
+with `MaxStore`'s. All specs passed at the first attempt.
+
+**The memo** (`Memo.lean`, `MemoRel.lean`): con-ron's `HashMap2` with epoch stamps (`clear` is
+`CTL[24] += 1`), four words per slot (stamp, key, value, unused: L has no division, so the slot
+count is `len >> 2`), linear probing from `homeW key`, overwrite on a present key, abort past a
+3/4 load or where the stamp would wrap. `MemoR m mp`: stamps ≤ the live stamp, live slots hold
+distinct keys mapped by `mp` to their value, each entry of `mp` is in a live slot on its run
+after live slots. Lemmas `memoR_hit`, `memoR_miss`, `memoR_set` (= `insert`), `memoR_clear`
+(= `∅`), `memoR_frame`. The L specs (`memo_find`, `memo_set`, `memo_clear`) are `vcgen` +
+`finish` at the first attempt; the relation lemmas are by hand plus small `grind`s (the
+uniqueness clause was missing in the first draft: an overwrite needs it).
+
+| file | lines | `lean` wall / user | by hand |
+|---|---:|---:|---|
+| `BVarStore.lean` (L, specs) | 282 | 3.4 s / 4.5 s | none |
+| `BVarRefine.lean` | 194 | 0.9 s / 0.9 s | `MatchOK` by `toNat_inj` |
+| `Memo.lean` (L 33 lines, models, specs) | 267 | 1.4 s / 2.8 s | none |
+| `MemoRel.lean` | 428 | 1.3 s / 2.1 s | most (reads after the writes: 110 lines) |
+| `Frame.lean` | 171 | 0.8 s / 0.8 s | all, short |
+| `ArenaRel.lean` | 716 | 1.0 s / 3.3 s | generated per-table lifts (~400 lines) |
+
+### Part 2: the first recursive walk with a cache, `bvarBoundMemo`
+
+**Choice.** `bvarBoundGo`/`bvarBoundMemo` (`Arena/ExprOps.lean:1404`, Rust
+`arena/expr_ops.rs:1981`): the exact loose-bvar bound, memoized per node in `bvarBC`, read-only
+on the store, used by the checker on the saturated branch of `bvarB` (`looseBVarsBoundedFast`,
+`instantiate1Lift`'s cutoff). It is the simplest walk with a cache: no interning, a `Nat` result.
+`liftLooseBVars`/`instantiate1` intern their results and key the memo by `(EIdx, Nat)`; they are
+the natural next step on the same scaffolding.
+
+**L code** (`Walk.lean`, `module`), recursive as con-ron's Rust is: `bb_go(h)` (memo probe, then
+`bb_node`, then `memo_set`), `bb_node(h)` (decode tag/tier/index, the arena `view`'s checks:
+scratch handle with the scratch tier closed, index past the count, then dispatch: `bvar` `i + 1`,
+`sort`/`const`/`lit` `0`, `app` and `letE` recursive), `bb_memo(h)` (clear, walk, clear).
+`max` and the truncating `z - 1` are branch-free (`x + (y - x) * u64(x < y)`, `z - u64(0 < z)`),
+so a loop-free body has one path per tag. `fvar`, `lam`, `forallE`, `proj` `abort`: their tables
+are not in L yet, and an `abort` claims nothing, so the refinement covers every handle.
+
+**Proof shape.**
+* *L side* (`Walk.lean`): models `bbW`/`bbNodeW` (mutual on L fuel, with `match` on the callee
+  results), and one guarded equation per arm whose right side names the continuation
+  (`bbW (n+1) m h = bbK h (bbNodeW n m h)`, `bbNodeW (n+1) m h = appK₁ n a (bbW n m f)`, and
+  `appK₁ n a (some (x, m₁)) = appK₂ x (bbW n m₁ a)` …). The first attempt stated the arms as
+  `bbW n m f = some (x, m₁) → … → bbNodeW (n+1) m h = some …`; `grind_pattern` rejects those
+  (`x`, `m₁` occur in no pattern). With the continuation form every variable is in the pattern
+  `bbNodeW (n + 1) m h`, and the callee posts rewrite the continuation's argument. The two
+  specs are `BbGoSpec n`/`BbNodeSpec n` (named, `unfold`ed before `vcgen`: a spec hidden behind
+  a definition is not found), proved by one induction on fuel, each step one
+  `sym only … => vcgen … <;> finish`. The first version, one function with nested `if`s for
+  `max`, failed in eleven verification conditions; splitting `bb_node` out and the branch-free
+  arithmetic made it go through.
+* *Arena side* (`WalkRefine.lean`, by hand, no `grind`): handle words decode
+  (`decE_tag`/`decE_idx`/`decE_pers`), the view under `ArenaR` (`view_tier`, `get_*`, `node_of`:
+  the record relation gives the node and its children as words), `ArenaR.memo_set` (`memo_set` is
+  `bvarBSet`: `memoR_set` plus the frame of everything else) and `ArenaR.memo_clear`; then
+  `GoOK n`/`NodeOK n` by induction on the fuel (`goOK`): the model returning `r` from `m` related to
+  `a` implies `(bvarBoundGo F (decE h)).run a = .ok (r.toNat, a')` with `ArenaR m' a'` for every
+  arena fuel `F ≥ n`. The arena's inner `do` block is named (`bbNodeA`, `bbArm`) and shown equal
+  to `bvarBoundGo`'s by `congr`.
+* *End to end*: `bbMemo_refines` (the L triple with `AM.ok`/`AM.st`/`AM.res`), `bbMemo_run`, and
+  `bbMemo_x64` (`Capstone.lean`): from `ca_enter` on a state with `MemRel` and `ArenaR`, with
+  machine fuel `N ≤ F`: `rdx = 1` (fuel or stack), `rdx = 2` (an `abort`: unrepresented kind,
+  dangling handle, full memo), or `rdx = 0` and `bvarBoundMemo F (decE h)` returns `rax.toNat` in
+  a state related to the final memory. As for `natAddLit_x64`, three outcomes, not two.
+
+**Deep recursion.** `bb_bench(n, k)` (`WalkBench.lean`, not proved, a driver) interns the left
+spine `app (… (app b b) …) b` over `b = bvar k` with `n` applications and runs `bb_memo` on it;
+`WalkEmit.lean` compiles `benchProg` (no byte arrays, 25 word arrays) and `harness/walk.c` runs it
+on all-zero arrays sized for `n`. For `n = 10^6` (recursion 10^6 deep, through the `f` child):
+`ok 8` with a 1 GiB stack (also for `n = 3·10^6`), `exhausted` (`rdx = 1`) with a 16 MiB stack, and
+`exhausted` with fuel 1000. The smallest stack that suffices for `10^6` is 184,000,384 bytes:
+184 bytes per level (the frames of `bb_go` and `bb_node` with their return addresses).
+
+**Measurements** (`perf stat -e instructions:u`, one run each; "build" is the same run without
+the walk: `k ≥ 2^63` for L, `walkbench N K build` for Lean):
+
+| `n` | compiled L: build / build + walk / walk | con-ron's compiled Lean (`lake exe walkbench`): build / total / walk |
+|---:|---|---|
+| 10^5 | 40.8 M / 113.1 M / 72.3 M | 196.9 M / 306.8 M / 109.9 M |
+| 10^6 | 422.9 M / 1146.0 M / 723.1 M | 1870.9 M / 2915.0 M / 1044.1 M |
+
+About 720 instructions per node for the naive compiled L walk (three memo probes per `app`
+node: its own miss, the `bvar` child's hit, the insert's re-probe), against about 1040 for
+con-ron's arena compiled by Lean (`Std.HashMap`, boxed `Nat`s). Building the term through the L
+stores costs a quarter of Lean's. con-ron's Rust could not be measured (no `cargo` here).
+
+| | Rust lines | L lines | spec / relation lines | `lean` wall / user | automation |
+|---|---:|---:|---:|---:|---|
+| walk (`bb_go`, `bb_node`, `bb_memo`) | 87 (`bvar_bound_go`, `bvar_bound_memo`) | 49 | `Walk.lean` 366 (models 75, arms 90, specs 50) | 10.1 s / 11.0 s | specs: `vcgen` + `finish`; arm equations: `simp` |
+| memo (`memo_find/set/clear`) | ≈ 110 (`HashMap2` index, probe, get, insert, clear; no resize) + 18 (`bvar_b_*`) | 33 | `Memo.lean` 267, `MemoRel.lean` 428 | 1.4 s, 1.3 s | specs automatic; relation by hand |
+| arena refinement | – | – | `WalkRefine.lean` 481 | 0.9 s / 1.5 s | by hand, `simp`/`rw` |
+
+L/Rust is 0.56 for the walk and about 0.3 for the memo (no resize, no generic code).
+
+### Findings
+
+* **Kraken's AT&T printer and binutils 2.46 disagree on `imul`**: the compiler's two-operand
+  `imul rax, rcx` is printed `imulq %rcx, %rax, %rax`, which binutils 2.46 assembles as an APX
+  instruction (EVEX, SIGILL here). The scanner never multiplies, so the walk is the first compiled
+  program to hit it; every store (`homeW`, FNV) multiplies, so `natAddLit_x64`'s code would too.
+  The printer and the assembler are trusted, so this is a trusted-base mismatch:
+  `docs/gaps/kraken-att-imul-three-operand.lean` (not fixed upstream as of 2026-10-21, checked
+  against `AeneasVerif/kraken` `main` and the `vcgen` fork). Fixed properly in lane `imul`, below
+  (`asmText`'s `fixImul`, a `Directive`-level normalisation, not the textual patch this lane
+  first used).
+* `decide` on the frame side conditions (`Apart`, bounded `∀` over `List UInt64`) fails or times
+  out: `docs/gaps/decide-uint64-list-ball.lean`; a `simp` with the ids (`apart`) works.
+* `vcgen` does not see a spec behind a named predicate (`BbGoSpec p n`); `unfold` it first.
+* Guarded equations must have every variable in a pattern; continuation functions
+  (`appK₁ n a (some (x, m₁)) = …`) are the way to say "after the callee returned `some`".
+* The house rule "loop bodies must be straight-line" holds for recursive bodies too: `if r < y`
+  after two calls doubled the paths and failed; branch-free `u64(…)` arithmetic went through.
+
+### L / compiler features
+
+None added to `ConAgua/L` or `ConAgua/Compiler`. Needed and worked around: the `imul` printing
+(above). Useful later: a statement `call f(…)` without a result (the walk assigns to a dummy
+local).
+
+### `sorry`s
+
+None. (`vendor/con-leche/ConLeche/Challenge.lean`'s are vendored and pre-existing.)
+
+## The `imul` fix and the asm/disassembly audit (2026-10-21, lane `imul`)
+
+Files: `ConAgua/Compiler/Run.lean` (`fixImul`, `asmText`), `ConAgua/Arena/EmitStore.lean` (new,
+emits `storeProg`), `harness/check-asm.sh`, `harness/check_asm.py`,
+`docs/gaps/kraken-att-imul-three-operand.lean`.
+
+**The fix.** The walk lane's finding (above) is real: Kraken's `.imul (some d) a b` is always
+printed in three-operand AT&T syntax, which binutils 2.46 reads as the APX "new data destination"
+form (EVEX-encoded) whenever it can, rather than the plain two-operand `imul` the compiler means.
+The compiler's one `imul` (`Compile.lean`'s `binInstr .mul`) always has `d = a`
+(`rax := rax * rcx`), and for that case `.imul (some a) a b` and `.imul none a b` are *the same
+instruction* (`Kraken/X64/Semantics.lean`'s `.imul dst src1 src2` stores to `src1` when
+`dst = none`); Kraken's own printer already writes `.imul none a b` in the two-operand form every
+assembler accepts. So `asmText` now maps `fixImul` over `compileProg`'s `Directive`s before
+printing, rewriting `.imul (some d) a b` to `.imul none a b` whenever `d = a` (a `BEq`/`DecidableEq`
+check on `RegOrMem`, already derived) and leaving every other directive (including a `d ≠ a` three-
+operand `imul`, not emitted here) untouched. This is a normalisation of what gets printed, not a
+textual patch of the printed assembly; `compileProg` and `compile_correct` are unchanged.
+`WalkEmit.lean`'s textual `fixImul : String → String` (a `String.replace`) is gone.
+
+**The asm/disassembly audit, `harness/check-asm.sh`.** The printer and the assembler sit outside
+`compile_correct` (the theorem is about Kraken's own instruction semantics, which `as` must
+realise faithfully for the proof to say anything about the real machine), so the `imul` mismatch
+is one instance of a whole class of risk: nothing checks that the other ~25 instruction forms the
+compiler emits (`Step.lean`'s count) survive printing and assembling unchanged. `check-asm.sh`
+automates that check for every program the compiler proof covers (`scanProg`, `storeProg`, the
+walk's `benchProg`, via `EmitScan.lean`/the new `EmitStore.lean`/`WalkEmit.lean`): it assembles the
+printed `.s` with `as`, disassembles the object with `objdump -d`, and (`check_asm.py`) compares,
+instruction by instruction:
+* the raw opcode bytes' first byte against an APX prefix deny-list (EVEX `0x62`, REX2 `0xd5`):
+  Kraken's `Instr`/`Operation` syntax has no APX case at all, so any instruction encoded this way
+  is outside what the proof covers regardless of what text it disassembles to (an EVEX
+  `imul %rcx,%rax,%rax` and the intended legacy one can disassemble to identical-looking text,
+  which is why this check is on bytes, not text — it is what would have caught the `imul` bug
+  before it was found by hand, since a text-only diff does not);
+* mnemonic (normalising the conditional AT&T width suffix `objdump` elides when registers already
+  disambiguate it, and `mov`'s `movabs` widening for a 64-bit immediate that doesn't fit a
+  sign-extended 32-bit field — both benign, already-equivalent spellings, not printer bugs);
+* operand count and kind (register/immediate/memory/branch-target);
+* register names (exact), immediate and memory-displacement values (parsed and compared modulo
+  `2^64`, so hex-vs-decimal and sign-extension display differences don't cause false positives),
+  and a memory operand's base/index/scale registers (exact); a branch/call target is only checked
+  for being a target (not a register/immediate/memory operand — the family of bug `imul` is), since
+  resolving its address is the linker's job, not the printer's.
+
+Run: `harness/check-asm.sh` (rebuilds the three `Emit*` drivers, then checks each). Current
+result: scan 303, store 1275, walk 3476 instructions, all matching; reverting `fixImul` makes the
+walk check fail immediately with the APX-prefix diagnostic (checked by hand while developing the
+script, not left reverted).
+
+**Findings.**
+* The three-operand `imul` was reproduced standalone (a bare Kraken `Directive`, no compiler):
+  printed text, `as`/`objdump` showing the EVEX encoding (`62 f4 fc 18 af c1`), and a `SIGILL`
+  (exit 132) running it, against the two-operand form's correct `48 0f af c1` and exit value; see
+  `docs/gaps/kraken-att-imul-three-operand.lean`. Not fixed upstream: `AeneasVerif/kraken` `main`
+  (`72f3a7a3`) has the identical printer code as the `vcgen` fork (`ba12834`).
+  `fixImul`'s rewrite needs only `d = a`'s `DecidableEq`, already derived on `RegOrMem`.
+* `mov`'s width suffix is not the only place the printer's and `objdump`'s AT&T text can
+  legitimately differ while meaning the same instruction: a `mov`-immediate-to-register with a
+  64-bit immediate that doesn't fit a sign-extended 32-bit field disassembles as `movabs`, a GNU
+  assembler/objdump spelling for the same opcode choice (`B8+r`, not a `C7 /0` with a 32-bit
+  immediate), not a bug. There is no such alternate encoding for an immediate-to-*memory* `mov`
+  (the compiler's only one, `zeroLocals`, always writes `0`, so this never arises there).
+* `Prog.tab storeProg 0 25` (no byte arrays, 25 word arrays — the arena's layout) is enough for
+  `Prog.wf`; `EmitStore.lean` follows `WalkEmit.lean`'s shape. There is no C driver for
+  `storeProg`/`nat_add_lit` (unlike `scanProg`'s `run.c` and the walk's `walk.c`); this lane only
+  needed `asmText`'s output, not to execute it, so none was written.
+
+### `sorry`s
+
+None (no proof touched; `compile_correct` unaffected, `#print axioms` unchanged:
+`propext`, `Classical.choice`, `Quot.sound`).
+
+## Every term store in `ArenaR`, and the walk over every node (2026-10-21, lane `tables2`)
+
+Files: `ConAgua/Arena/{FVar,Proj,NAnon,NStr,NNum,Ls}{Store,Refine}.lean` (part 1; `lam`/`forallE`
+and the walk follow),
+`ConAgua/Arena/PoolSlice.lean` (new), `ConAgua/Arena/ArenaRel.lean` (regenerated, `arena_build`),
+`ConAgua/Arena/WalkRefine.lean`. `fvar`/`proj`, `lam`/`forallE` and the name store's
+`anonymous`/`num` were written by three subagents in parallel worktrees, one file pair per table;
+the variable-length keys and `ArenaR` in the lane's own worktree.
+
+### Layout
+
+The tables after `bvar`/the memo take (or reserve) arrays 25‥40 and count words `CTL[s + t]`, `s` the table's
+slot array (25‥40 are free in `CTL`, the memo uses 24/25): `fvar` 25/26, `lam` 27/28, `forallE`
+29/30, `proj` 31/32, name `anonymous` 33/34, name `str` 35/36, name `num` 37/38, level lists
+39/40. `ArenaRel.lean`'s header has the whole table. `arenaR_init` now takes 41 arrays and a `CTL`
+of at least 42 words.
+
+### Variable-length keys: one pool for limbs, bytes and handle lists
+
+The level-list key (`List LIdx`) and the name `str` key (`String`) live in `POOL`, the array the
+`lit` store already keeps its limbs in, below the same top `CTL[0]`: a level list as its handle
+words, a string as its UTF-8 bytes, one byte per word. The record holds the slice `(o, l)` and the
+hash; the L code reuses `lit_hash` and `limbs_eq` unchanged (`ls_match` and `nstr_match` call
+`limbs_eq`, `intern_ls`/`intern_nstr` call `lit_hash`). Because the pool is shared, the pool's
+invariant `PoolOK` and its frame `Grows` are `lit`'s: `ArenaR.grow` keeps `LsR` and `NStrR` by
+`LsR.grow`/`NStrR.grow` (slices below the old top do not move, `Agree.sliceL`), exactly as
+`LitR.grow`. The caller of `intern_ls`/`intern_nstr` puts the words below the top first (the
+refinement theorems take `SliceOK` and `sliceL pool o l = lsWords us` / `= strWords s`).
+
+**What is shared with `lit` (measured).** `PoolSlice.lean` (57 non-blank lines) states a key as
+a list of words: `sliceL p o l` (the slice as a `List Word`), `slice_key` ("the lengths agree and
+`limbs_eq` holds" iff the two word lists are equal, for slices that do not wrap), `slice_key_hash`,
+`Agree.sliceL`. A table adds its encoding and the encoding's injectivity: `lsWords_inj` (3 lines,
+`Idx.word` is the structure's only field), `strWords_inj` (3 lines, `String.toByteArray_inj` and
+`ByteArray.ext`). `lit` does not fit the statement: a `natVal` key is a *normalised* slice and its
+uniqueness is about the value (`pv_len`, `pv_limbs`), so `lit` shares the two lemmas underneath
+(`eqW_iff`, `hashN_congr`), not `slice_key`. Rewriting `lit` on `slice_key` would need the limbs of
+a number as a list and the uniqueness of normalised limb lists; not done (no gain: the 118 lines of
+`pv` facts stay either way).
+
+One byte per word costs 8× the memory of packed strings; it keeps the comparison and the hash
+`lit`'s and the key a word list. Packing (eight bytes per word, a length in bytes) is a later
+optimisation of `nstr_match`/`lit_hash` with its own injectivity lemma.
+
+### The tables
+
+| table | key | L lines | spec lines | relation file (non-blank) | `lean` user Store + Refine | first attempt? |
+|---|---|---:|---:|---:|---:|---|
+| `fvar` | `Nat` + expression handle, skip on `ty` | 46 | 87 | 198 | 9.1 + 1.2 s | yes |
+| `proj` | name handle + `Nat` + expression handle, width 3, skip on `n \| e` | 48 | 87 | 214 | 11.9 + 1.3 s | yes |
+| name `anonymous` | none (the `zero` shape) | 38 | 87 | 144 | 2.9 + 1.0 s | yes |
+| name `num` | name handle + `Nat` | 42 | 87 | 191 | 6.3 + 1.3 s | yes |
+| level lists | `List LIdx` in the pool | 55 | 130 | 252 | 6.6 + 1.4 s | L side yes; relation: three small fixes (below) |
+| name `str` | name handle + `String` in the pool | 60 | 133 | 274 | 8.0 + 1.5 s | L side yes; relation: two small fixes |
+
+"L lines" are the function bodies (`*_match` for the pool tables, `*_find`, `*_push`,
+`intern_*`); "spec lines" the `vcgen` sections. Every L spec, including the two pool tables'
+`*_match` that call `limbs_eq`, went through with the house form at the first attempt (twenty
+tables now). The fixes in the pool tables' relation files were all Lean API names or goal shapes,
+not proof ideas: `List.ofFn_inj` does not exist (`List.ext_getElem_iff`), `List.map_injective_iff`
+does not exist (`List.map_inj_right`), `String.bytes_inj` is deprecated (`String.toByteArray_inj`),
+the name store's `internNNode` reads `s.store.ns` (`EStore.ns` has to be in the unfolding's `simp`
+set, unlike the level store's `EStore.ls`), and `NewOK`'s goal after `simp` ends in `∧ True`.
+
+### `ArenaR` without quadratic text: `arena_build`
+
+With 19 tables the old per-table lift lemmas (every other table's frame, one `have` each: 19 lines
+per table, 360 for all) and the two memo writers (every table listed) grow quadratically. One
+tactic replaces them: `arena_build hR, hf with tac` builds an `ArenaR` field by field, each field
+by `first | tac | exact hR.<field>.frame _ _ _ _ hf _ (by apart)`. The written table's field is the
+one `tac` closes (`exact hX`); for the memo writers `tac` is `exact memoR_set …`, for the pool
+`first | exact LitR.grow … | exact LsR.grow … | exact NStrR.grow …`. A lift lemma is now five
+lines, `ArenaR.memo_set`/`memo_clear` and `ArenaR.grow` one line each; `ArenaR.frame` (all `Apart`s
+as hypotheses, unused) is gone. A failing `tac` on another field is a type mismatch, found before
+`apart` runs; `ArenaRel.lean` checks in 1.7 s wall for 19 tables (11.5 s user, the `apart`s in
+parallel). `ArenaRel.lean`'s table-dependent parts (imports, header, `RLocal`s, frames, fields,
+`arena_build`, `arenaR_init`, lifts) are generated by a script from a table list (not committed;
+the output is ordinary Lean); the `intern*_refinesA` theorems are written per table.
+
 ## Stage B: a line validator for lean4export (2026-10-21, lane `stageb`)
 
 Files: `ConAgua/Scan/{Common,Key,Str,Values,Member,Records,Line,Validator}.lean` (L code, models,
