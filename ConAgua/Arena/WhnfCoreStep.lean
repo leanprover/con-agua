@@ -351,4 +351,56 @@ theorem coreApp_refines (N : Nat) (hk : KnotUpTo p N) (F : Nat) (hF : N ≤ F) (
 
 end app
 
+
+/-! ## The dispatcher -/
+
+/-- The result of a stuck arm: `(0, e)` if the view check passes. -/
+def stuckW (m : Mem) (c e : Word) : Option (Word × Word × Mem) :=
+  if rdW (m.arr64 CTL) (c + tierW e) ≤ idxW e then none else some (0, e, m)
+
+/-- The model of `whnf_core_step`. -/
+def coreStepW (p : Prog) (n : Nat) (m : Mem) (mode cheap vis d e : Word) :
+    Option (Word × Word × Mem) :=
+  let t := tierW e
+  let i := idxW e
+  if t ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
+  else if e >>> 28 = 4 then
+    if rdW (m.arr64 CTL) (4 + t) ≤ i then none else
+    match callW p n "whnf_core_app" [mode, cheap, vis, d, e] m with
+    | none => none
+    | some (r, m') => some (r.headD 0, r.tail.headD 0, m')
+  else if e >>> 28 = 9 then
+    if rdW (m.arr64 CTL) (32 + t) ≤ i then none else
+    match callW p n "whnf_core_step_proj" [mode, cheap, vis, d, e,
+        rdW (m.arr64 PJREC) (i * 6 + t * 3), rdW (m.arr64 PJREC) (i * 6 + t * 3 + 1),
+        rdW (m.arr64 PJREC) (i * 6 + t * 3 + 2)] m with
+    | none => none
+    | some (r, m') => some (r.headD 0, r.tail.headD 0, m')
+  else if e >>> 28 = 7 then
+    if rdW (m.arr64 CTL) (20 + t) ≤ i then none else
+    match callW p n "inst1" [rdW (m.arr64 LEREC) (i * 6 + t * 3 + 2),
+        rdW (m.arr64 LEREC) (i * 6 + t * 3 + 1), 0] m with
+    | none => none
+    | some (r, m') => some (1, r.headD 0, m')
+  else if e >>> 28 = 0 then none
+  else if e >>> 28 = 1 then stuckW m 26 e
+  else if e >>> 28 = 2 then stuckW m 16 e
+  else if e >>> 28 = 3 then stuckW m 18 e
+  else if e >>> 28 = 5 then stuckW m 28 e
+  else if e >>> 28 = 6 then stuckW m 30 e
+  else if e >>> 28 = 8 then stuckW m 2 e
+  else none
+
+theorem coreStep_spec (p : Prog) (hp : p.lookup "whnf_core_step" = some whnfCoreStepL) (n : Nat)
+    (s₀ : St) (mode cheap vis d e : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "whnf_core_step" [mode, cheap, vis, d, e]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      coreStepW p n s₀.mem mode cheap vis d e = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, whnfCoreStepL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      callW_spec p n "whnf_core_app", callW_spec p n "whnf_core_step_proj", callW_spec p n "inst1"] <;>
+    finish [coreStepW, stuckW, tierW, idxW]
+
 end L.Arena
