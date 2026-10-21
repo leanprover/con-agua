@@ -20,7 +20,7 @@ namespace L.Compiler
 open L
 
 /-- What the harness sees after `ca_enter` returns, against L's result. -/
-def Outcome (G : Layout) : Except Err (Word × Mem) → MachineData → Prop
+def OutcomeRel (G : Layout) : Except Err (Word × Mem) → MachineData → Prop
   | .ok (r, m'), s => s.regs.rdx = 0 ∧ s.regs.rax = r ∧ MemRel G m' s.dmem
   | .error .outOfFuel, _ => False
   | .error _, s => s.regs.rdx = 2
@@ -71,7 +71,7 @@ theorem compile_correct [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.
     (hcs24 : 24 ≤ d.regs.rsp.toNat) (hcs8 : d.regs.rsp.toNat + 8 < 2 ^ 64) :
     Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rsp.toNat = d.regs.rsp.toNat + 8 ∧
         st.data.regs.rbp = d.regs.rbp ∧ st.data.regs.r14 = d.regs.r14 ∧ st.data.regs.r15 = d.regs.r15 ∧
-        (st.data.regs.rdx = 1 ∨ Outcome G (run p N entry args m) st.data))
+        (st.data.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) st.data))
       d (label enterL) := by
   simp only [Prog.wf, Bool.and_eq_true, List.all_eq_true, decide_eq_true_eq] at hwf
   obtain ⟨⟨hfds, _⟩, hTab⟩ := hwf
@@ -95,10 +95,10 @@ theorem compile_correct [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.
       rdW s.dmem (A (d.regs.rsp.toNat - 24 + 8)) = some d.regs.r14 →
       rdW s.dmem (A (d.regs.rsp.toNat - 24 + 8 + 8)) = some d.regs.rbp →
       rdW s.dmem (A (d.regs.rsp.toNat - 24 + 8 + 8 + 8)) = some ra →
-      (s.regs.rdx = 1 ∨ Outcome G (run p N entry args m) s) →
+      (s.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) s) →
       Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rsp.toNat = d.regs.rsp.toNat + 8 ∧
         st.data.regs.rbp = d.regs.rbp ∧ st.data.regs.r14 = d.regs.r14 ∧ st.data.regs.r15 = d.regs.r15 ∧
-        (st.data.regs.rdx = 1 ∨ Outcome G (run p N entry args m) st.data)) s (at_ (k0 + 19)) := by
+        (st.data.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) st.data)) s (at_ (k0 + 19)) := by
     intro s hbp h15 h14 hbp' hra' hout
     refine ev_label (Code.get (i := 19) ht rfl) ?_
     refine ev_movRR (Code.get (i := 20) ht rfl) ?_
@@ -121,8 +121,8 @@ theorem compile_correct [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.
         revert h
         generalize run p N entry args m = res
         rcases res with e | ⟨r, m'⟩
-        · cases e <;> simp [Outcome]
-        · simp [Outcome]
+        · cases e <;> simp [OutcomeRel]
+        · simp [OutcomeRel]
   have hsp0 := hcs24
   -- the three pushes
   have hmap : ∀ x, d.regs.rsp.toNat - 24 ≤ x → x < d.regs.rsp.toNat → (rdW d.dmem (A x)).isSome → True :=
@@ -135,7 +135,7 @@ theorem compile_correct [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.
       rdW s3.dmem (A (d.regs.rsp.toNat - 24 + 8 + 8)) = some d.regs.rbp →
       Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rsp.toNat = d.regs.rsp.toNat + 8 ∧
         st.data.regs.rbp = d.regs.rbp ∧ st.data.regs.r14 = d.regs.r14 ∧ st.data.regs.r15 = d.regs.r15 ∧
-        (st.data.regs.rdx = 1 ∨ Outcome G (run p N entry args m) st.data)) s3 (at_ (k0 + 0 + 1 + 1 + 1 + 1)) by
+        (st.data.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) st.data)) s3 (at_ (k0 + 0 + 1 + 1 + 1 + 1)) by
     have hm : ∀ x, d.regs.rsp.toNat - 24 ≤ x → x + 8 ≤ d.regs.rsp.toNat → (rdW d.dmem (A x)).isSome :=
       fun x h1 h2 => isSome_rdW fun j hj => by rw [A_add]; exact (hcs _ (by omega) (by omega)).1
     have e1 : d.regs.rsp.toBitVec - 8 = A (d.regs.rsp.toNat - 8) := by
@@ -188,7 +188,7 @@ theorem compile_correct [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.
       s8.dmem = s3.dmem →
       Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rsp.toNat = d.regs.rsp.toNat + 8 ∧
         st.data.regs.rbp = d.regs.rbp ∧ st.data.regs.r14 = d.regs.r14 ∧ st.data.regs.r15 = d.regs.r15 ∧
-        (st.data.regs.rdx = 1 ∨ Outcome G (run p N entry args m) st.data)) s8
+        (st.data.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) st.data)) s8
         (at_ (k0 + 0 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1)) by
     refine ev_movRR (Code.get (i := 4) ht rfl) ?_
     refine ev_movRR (Code.get (i := 5) ht rfl) ?_
@@ -225,10 +225,10 @@ theorem compile_correct [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.
     exact hra
   have hexit : ∀ s : MachineData, s.regs.rbp.toNat = d.regs.rsp.toNat - 24 →
       (∀ x, d.regs.rsp.toNat - 24 ≤ x → x < d.regs.rsp.toNat + 8 → s.dmem.get? (A x) = s3.dmem.get? (A x)) →
-      (s.regs.rdx = 1 ∨ Outcome G (run p N entry args m) s) →
+      (s.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) s) →
       Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rsp.toNat = d.regs.rsp.toNat + 8 ∧
         st.data.regs.rbp = d.regs.rbp ∧ st.data.regs.r14 = d.regs.r14 ∧ st.data.regs.r15 = d.regs.r15 ∧
-        (st.data.regs.rdx = 1 ∨ Outcome G (run p N entry args m) st.data)) s (label finishL) := by
+        (st.data.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) st.data)) s (label finishL) := by
     intro s hbp hdm hout
     obtain ⟨w1, w2, w3, w4⟩ := hcsw s.dmem hdm
     rw [hlFin]; exact hfin s hbp w1 w2 w3 w4 hout
@@ -237,7 +237,7 @@ theorem compile_correct [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.
       (∀ x, d.regs.rsp.toNat - 24 ≤ x → x < d.regs.rsp.toNat + 8 → s.dmem.get? (A x) = s3.dmem.get? (A x)) →
       Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rsp.toNat = d.regs.rsp.toNat + 8 ∧
         st.data.regs.rbp = d.regs.rbp ∧ st.data.regs.r14 = d.regs.r14 ∧ st.data.regs.r15 = d.regs.r15 ∧
-        (st.data.regs.rdx = 1 ∨ Outcome G (run p N entry args m) st.data)) s (label exhaustedL) := by
+        (st.data.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) st.data)) s (label exhaustedL) := by
     intro s hbp hdm
     rw [hlExh]
     refine ev_label (Code.get (i := 14) ht rfl) ?_
@@ -358,7 +358,7 @@ theorem compile_correct [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.
       refine hfin _ (by simp [hG'.rbp, h8bp]) w1 w2 w3 w4 (Or.inr ?_)
       have hrun : run p N entry args m = .error x := by simp [run, hx, Except.map]
       rw [hrun]
-      cases x <;> simp_all [Outcome]
+      cases x <;> simp_all [OutcomeRel]
     · -- out of fuel or stack
       intro d' hG'
       simp only [UInt64.toNat_mk', A_toNat] at hG'
