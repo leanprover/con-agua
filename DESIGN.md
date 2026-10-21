@@ -851,3 +851,117 @@ has hypotheses before the triple).
   `scanBool_run`), `utf8_decode` (linked to `String.fromUTF8?`, `utf8Decode_run`), and the
   `num_end` `sorry` is gone. No `sorry` anywhere in `ConAgua`.
 
+
+## The `lit` store, `intern_lit`, and the state relation (2026-10-21, lane `store`)
+
+Files: `ConAgua/Arena/Store.lean` (L code, word-level models, `vcgen` specs),
+`ConAgua/Arena/LitRefine.lean` (the relation `LitR`, the arena side, `natAddLit_refines_store`).
+Milestone 4: `natAddLit_refines`' three hypotheses (`hpool`, `hgrow`, `hI`) are discharged;
+`natAddLit_refines_store`/`natAddLit_run_store` have none. No `sorry`; axioms `propext`,
+`Classical.choice`, `Quot.sound`.
+
+### Representation
+
+The arena's `lit` constructor is one `Tbl LitNode EIdx UInt64` per tier (`Arena/Store.lean:64`):
+records, a derived column, a cons `Std.HashMap`. In L (word arrays, `Store.lean`):
+
+* `REC` (array 2): four words per node, kind (`0` `natVal`, `1` `strVal`), pool offset, length,
+  FNV-1a hash of the limbs (con-ron's `nat::hash64`). The two tiers are interleaved, node `i` of
+  tier `t` at `REC[8i + 4t ..]`; `CTL[2 + t]` is the tier's node count, `CTL[1]` the scratch flag.
+* `SLOT` (array 3): the cons table, open addressing with linear probing and wrap-around
+  (con-ron's `HashMap2`), slot `j` of tier `t` at `SLOT[2j + t]`, `0` free, `i + 1` node `i`.
+  Home slot: `home_index`'s multiply-xor finaliser, then `mulhi(x, n)` (Lemire's range
+  reduction) instead of the power-of-two mask, so `n = len(SLOT)/2` is arbitrary. No deletion,
+  so no tombstones and no epochs.
+* **Fixed capacity, defined exhaustion.** No resize: `lit_push` aborts past a load of 3/4 or
+  when `REC` is full (an L `abort`, never a result). At `2^27` nodes it aborts where the arena
+  throws `native` (`Idx.idxCap`). The probe aborts after `n` steps (unreachable under the load
+  limit).
+* One set of L functions for both tiers (the tier is an argument); the handle is the arena's
+  word, `0x80000000 + 0x8000000·t + i`.
+
+Functions (`Store.lean`): `lit_hash(o, l)`, `limbs_eq(a, b, l)`, `lit_match(t, i, o, l, h)`,
+`lit_find(t, o, l, h)` (returns `(found, node, slot, steps)`), `lit_push(t, o, l, h, j)`,
+`intern_lit(o, l)` (con-ron's `EStore::intern_lit`: persistent probe, scratch probe if open,
+append to the current tier). `#guard`s run them (sharing, both tiers, the load limit) and
+`nat_add_lit` end to end.
+
+### Specs: word-level models, then pure Lean
+
+Every L spec is about L memory only, against a model that computes with words *exactly as the
+L code does*: `eqW`, `matchW`, `probeW` index arrays with wrapping word arithmetic (`rdW a x =
+a[x.toNat]?.getD 0`), and `internW m o l : Option (Word × Mem)` is the whole of `intern_lit`
+(`none` where the L code aborts). Consequences:
+
+* **No bound hypotheses** in `limbs_eq`, `lit_match`, `lit_find`, `lit_push`: an out-of-bounds
+  read is an L error, and on success the model read the same word.
+* **One equation per post**: `internLit_spec`'s post is `LocEq s' s₀ ∧ internW s₀.mem o l =
+  some (r.headD 0, s'.mem)`.
+* A loop that falls through to `abort` posts `r.retOr M = M` (`M` the model at entry), plus
+  `r.retOr [0] ≠ []` so that the caller knows the result is not empty.
+* All the arithmetic (no wrap-around, positions mod `n`) and all the arena reasoning live in
+  pure lemmas in `LitRefine.lean`, proved by hand (`simp`/`omega`/`rw`, no `grind`).
+
+### The relation `LitR`
+
+`LitR m a` (`LitRefine.lean`): `PoolOK m`, sizes below `2^63`, `CTL[1] ≠ 0 ↔ a.store.scratchOn`,
+and `TierRel m t (tier t's lits table)` for both tiers:
+* the count is `tb.nodes.size` (≤ `idxCap`), node `i` of the L tier "is" `tb.nodes[i]`
+  (`RecRel`: a `natVal n` is a **normalised slice below the pool top** with `pv = n` and its
+  hash; a `strVal` is kind `1`, contents not represented);
+* `tb.cons[k]? = some (handle of i)` for every node `i` with `nodes[i] = k`, and `none` for
+  keys not among the nodes. This is "the same key → handle map": the layout of the arena's
+  `Std.HashMap` is never mentioned;
+* `SlotsOK`: slot values are `≤` the count, and node `i` sits in some slot reached from its home
+  slot through occupied slots (the linear-probing invariant, with an `∃ d` per node).
+
+The lemma chain: normalised slices are unique (`pv_len`, `pv_limbs`), so `lit_match` holds
+exactly for the node equal to the literal (`matchW_iff`); the probe aborts, hits, or stops at a
+free slot after non-matching nodes (`probe_cases`, induction on `n - d`); a hit is the
+arena's cons hit at the same handle (`tier_hit`), a miss means absence (`tier_miss`), and the
+append at the free slot is the arena's `Tbl.push` (`tier_push`; `tier_other` for the other
+tier). `internE_lit_run` unfolds the arena's `internE (.lit l)` (persistent probe, scratch probe,
+capacity test, append) into one equation, and `intern_correct` puts them together:
+`internW m o l = some (w, m') → AM.ok … ∧ LitR m' (AM.st …) ∧ AM.res … = decE w`.
+`LitR.grow` is `hgrow` (the pool agrees below the old top; records, slots and counts unchanged).
+
+### Measurements (nightly-2026-10-20)
+
+| | Rust lines | L lines | spec + proof lines | `lean` time | automation |
+|---|---:|---:|---:|---:|---|
+| `lit_hash`, `limbs_eq`, `lit_match`, `lit_find`, `lit_push`, `intern_lit` | 189 (`intern_lit` 40, `Tbl` 20, `HashMap2` probe/home/next/find_slot/insert_at 65 + resize 34, `hash64` 10, `literal_beq`/`hash`, `nat::beq` 20) | 55 | models 94 + arm lemmas 43, specs 143 | 4.3 s | every spec `vcgen` + `finish`, no hand step |
+| `LitR`, arena side, table lemmas, `intern_correct`, `hgrow`, instantiation | – | – | 910 (+ 39 defs) | 2.1 s | by hand, `simp`/`omega`/`rw` |
+
+L/Rust is 0.29 (0.37 without the resize the L table does not have). The L side went through at
+the first attempt for every function: once the models compute with words like the code, the
+verification conditions are equalities `grind` closes by the arm lemmas (`probeW_free`,
+`probeW_hit`, `probeW_next`: patterns on the model and the slot read). The cost moved into the
+pure part: about 90 lines for the probe (`probe_cases`), 170 for the append (`tier_push`,
+`tier_other`), 135 for reading the memory after `lit_push` through six `set64`s, 165 for
+`intern_correct` (four paths), 120 for unique normal forms.
+
+### Findings
+
+* **Models in words, specs without hypotheses.** The arena lane's specs carried bounds
+  (`o + l ≤ size < 2^64`) to relate `Word` indices to `Nat` models. Modelling with the code's own
+  word arithmetic needs none, and composes: `lit_find`'s spec is used by `intern_lit`'s
+  `vcgen` call with no side condition.
+* **A relation, not a function, and only the part that is used.** `LitR` says nothing about
+  the rest of `AState` (other tables, memos, pins) or about the `lit` derived column, so every
+  arena step that leaves the `lit` tables and the scratch flag alone preserves it for free.
+* **Kernel deep recursion** from `simp only [Nat.add_zero]` on `(x * 0x9e37…).toNat + 0`:
+  `docs/gaps/kernel-deep-recursion-simp-add-zero.lean`. `rw` works.
+* `if_pos`/`if_neg`/`ite_cond_eq_true` are deprecated on this nightly
+  (`ite_eq_left_of_eq_true`, …).
+
+### Not done
+
+* The scratch tier's lifecycle (`enableScratch`/`dropScratch` empty the tier: L would reset the
+  count and clear the tier's slots, or stamp them as con-ron's `HashMap2` does).
+* `strVal` contents (the string pool) and the derived column (`derOfLit` goes through Lean's
+  opaque `mixHash`; an L twin needs con-ron's `mix_hash` and a matching Lean model).
+* The other `natOpResult` arms (same shape: `nat_mul` is ready) and the pin reads before them.
+
+### L extension requests
+
+None this round.
