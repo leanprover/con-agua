@@ -146,16 +146,16 @@ theorem bvarBClear_run (a : AState) : bvarBClear.run a = .ok ((), withBC a ∅) 
 
 /-- **`memo_set` is `bvarBSet`.** -/
 theorem ArenaR.memo_set (m m' : Mem) (a : AState) (hR : ArenaR m a) (k v : Word)
-    (hk : k.toNat < 2 ^ 32) (hs : msetW m k v = some m') :
+    (hk : k.toNat < 2 ^ 32) (hs : msetG bmSch m k 0 v = some m') :
     ArenaR m' (withBC a (a.memos.bvarBC.insert (decE k) v.toNat)) := by
-  have hf := msetW_frame m m' k v hs
-  arena_build hR, hf with exact memoR_set m _ hR.memo k v hk m' hs
+  have hf := msetG_frame bmSch bmSch_wf m m' k 0 v hs
+  arena_build hR, hf with exact memoRG_set bmSch bmSch_wf bmKey _ m _ hR.memo k 0 v ⟨hk, rfl⟩ m' hs
 
 /-- **`memo_clear` is `bvarBClear`.** -/
 theorem ArenaR.memo_clear (m : Mem) (a : AState) (hR : ArenaR m a)
-    (h0 : rdW (m.arr64 CTL) 24 + 2 ≠ 0) : ArenaR (mclearMem m) (withBC a ∅) := by
-  have hf := mclearMem_frame m
-  arena_build hR, hf with exact memoR_clear m _ hR.memo h0
+    (h0 : rdW (m.arr64 CTL) 24 + 2 ≠ 0) : ArenaR (mclearG bmSch m) (withBC a ∅) := by
+  have hf := mclearG_frame bmSch m
+  arena_build hR, hf with exact memoRG_clear bmSch bmSch_wf bmKey _ m _ hR.memo h0
 
 /-! ## The arena walk, unfolded -/
 
@@ -246,23 +246,24 @@ theorem goOK_succ (n : Nat) (ih : NodeOK n) : GoOK (n + 1) := by
   intro F m m' a h r hF hR hh hb
   obtain ⟨F, rfl⟩ : ∃ G, F = G + 1 := ⟨F - 1, by omega⟩
   rw [bvarBoundGo_succ', StateT.run_bind, bvarBGet_run]
-  by_cases hr : mfindW m h = []
+  by_cases hr : mfindG bmSch m h 0 = []
   · rw [bbW] at hb; simp [hr] at hb
-  by_cases hh0 : (mfindW m h).headD 0 ≠ 0
+  by_cases hh0 : (mfindG bmSch m h 0).headD 0 ≠ 0
   · rw [bbW_hit n m h hr hh0] at hb
     simp only [Option.some.injEq, Prod.mk.injEq] at hb
     obtain ⟨rfl, rfl⟩ := hb
-    rw [memoR_hit m _ hR.memo h hr hh0]
+    rw [show a.memos.bvarBC[decE h]? = _ from memoRG_hit bmSch bmKey _ m _ hR.memo h 0 hr hh0]
     exact ⟨a, rfl, hR⟩
   · simp only [ne_eq, Decidable.not_not] at hh0
     rw [bbW_miss n m h hr hh0] at hb
-    rw [memoR_miss m _ hR.memo h hh hr hh0]
+    rw [show a.memos.bvarBC[decE h]? = none from
+      memoRG_miss bmSch bmKey _ m _ hR.memo h 0 ⟨hh, rfl⟩ hr hh0]
     cases hn : bbNodeW n m h with
     | none => simp [bbK, hn] at hb
     | some p =>
       obtain ⟨r₁, m₁⟩ := p
       simp only [hn, bbK, bbSet_eq] at hb
-      cases hs : msetW m₁ h r₁ with
+      cases hs : msetG bmSch m₁ h 0 r₁ with
       | none => simp [hs, setK] at hb
       | some m₂ =>
         simp only [hs, setK, Option.some.injEq, Prod.mk.injEq] at hb
@@ -505,7 +506,7 @@ theorem bbMemoW_correct (n F : Nat) (hF : n ≤ F) (m m' : Mem) (a : AState) (hR
   · simp [h0] at hb
   simp only [h0, ↓reduceIte] at hb
   have hR₀ := ArenaR.memo_clear m a hR h0
-  cases hw : bbW n (mclearMem m) h with
+  cases hw : bbW n (mclearG bmSch m) h with
   | none => simp [hw, clrK] at hb
   | some p =>
     obtain ⟨r₁, m₁⟩ := p
@@ -518,8 +519,8 @@ theorem bbMemoW_correct (n F : Nat) (hF : n ≤ F) (m m' : Mem) (a : AState) (hR
 
 /-- **`bb_memo` refines the arena's `bvarBoundMemo` under `ArenaR`**: if the L walk returns, the
 arena walk at any fuel `F ≥ n` succeeds with the same bound, in a related state. -/
-theorem bbMemo_refines (p : Prog) (hpf : p.lookup "memo_find" = some memoFind)
-    (hps : p.lookup "memo_set" = some memoSet) (hpc : p.lookup "memo_clear" = some memoClear)
+theorem bbMemo_refines (p : Prog) (hpf : p.lookup "bm_find" = some (memoFindG bmSch))
+    (hps : p.lookup "bm_put" = some (memoPutG bmSch)) (hpc : p.lookup "bm_clear" = some (memoClearG bmSch))
     (hp : p.lookup "bb_go" = some bbGo) (hpn : p.lookup "bb_node" = some bbNode)
     (hpm : p.lookup "bb_memo" = some bbMemo) (n F : Nat) (hF : n ≤ F) (s₀ : St) (a₀ : AState)
     (hR : ArenaR s₀.mem a₀) (h : Word) (hh : h.toNat < 2 ^ 32) :
