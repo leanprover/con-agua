@@ -565,6 +565,37 @@ decreasing_by
     | (have := USize.lt_iff_toNat_lt.mp ‹i < numEnd b _›; omega)
     | (have := USize.lt_iff_toNat_lt.mp ‹i < _›; omega)
 
+theorem obj_open (v : USize) (hc : (byteAt b v == 123) = true) :
+    v < b.usize ∧ (v + 1).toUInt64 = v.toUInt64 + 1 := by
+  have hv : v < b.usize := by
+    refine Classical.byContradiction fun hn => ?_
+    have h0 : byteAt b v = 0 := by unfold byteAt; rw [dif_neg hn]
+    rw [h0] at hc; exact absurd hc (by decide)
+  exact ⟨hv, succ_toUInt64 b h64 hsize v⟩
+
+theorem strEntry_link (v : USize) (r : NameRec) (e : USize) (h : scanStrName b v = .ok r e) :
+    (strRecEntryN b.data v.toUInt64).1 = e.toUInt64 ∧
+      NameR b r (strRecEntryN b.data v.toUInt64).2.1 (strRecEntryN b.data v.toUInt64).2.2.1
+        (strRecEntryN b.data v.toUInt64).2.2.2 := by
+  unfold scanStrName at h
+  split at h
+  · rename_i hc
+    unfold strRecEntryN
+    rw [← (obj_open b h64 hsize v hc).2]
+    exact strRec_link b h64 hsize (v + 1) true 0 0 "" r e 0 0 0 h itemR_zero (strOK_empty b)
+  · cases h
+
+theorem numEntry_link (v : USize) (r : NameRec) (e : USize) (h : scanNumName b v = .ok r e) :
+    (numRecEntryN b.data v.toUInt64).1 = e.toUInt64 ∧
+      NameR b r (numRecEntryN b.data v.toUInt64).2.1 (numRecEntryN b.data v.toUInt64).2.2 0 := by
+  unfold scanNumName at h
+  split at h
+  · rename_i hc
+    unfold numRecEntryN
+    rw [← (obj_open b h64 hsize v hc).2]
+    exact numRec_link b h64 hsize (v + 1) true 0 0 0 r e 0 0 h itemR_zero itemR_zero
+  · cases h
+
 end kit
 
 end ConAgua.Front.FieldsLink
