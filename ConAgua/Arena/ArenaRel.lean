@@ -17,7 +17,7 @@ import ConAgua.Arena.LsRefine
 import ConAgua.Arena.NAnonRefine
 import ConAgua.Arena.NStrRefine
 import ConAgua.Arena.NNumRefine
-import ConAgua.Arena.MemoRel
+import ConAgua.Arena.MemoLibRel
 
 /-!
 # The arena relation: one relation for the whole L memory
@@ -84,7 +84,7 @@ namespace L.Arena
 /-- Decide that a table is apart from a writer (`Apart`, `BMEMO ∉ A`, `24 ∉ C`) for concrete
 schemas: `decide` times out on the `UInt64` list memberships, `simp` with the array ids is
 immediate. -/
-macro "apart" : tactic => `(tactic| simp [Apart, POOL, CTL, BMEMO, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT])
+macro "apart" : tactic => `(tactic| simp [Apart, POOL, CTL, BMEMO, bmSch, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT])
 
 /-- The side condition of `apart_hi` for a concrete schema. -/
 macro "lo_apart" : tactic => `(tactic| simp [POOL, CTL, BMEMO, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT])
@@ -244,7 +244,7 @@ structure ArenaR (m : Mem) (a : AState) : Prop where
   nanon : NAnonR m a
   nstr : NStrR m a
   nnum : NNumR m a
-  memo : MemoR m a.memos.bvarBC
+  memo : MemoRG bmSch bmKey (·.toNat) m a.memos.bvarBC
 
 /-- **Build an `ArenaR m' a'` from `hR : ArenaR m a` and a writer `hf : MemFrame A C m m'`**: each
 field by the tactic `t` if it closes it (the written table, the memo, the pool's tables), else by
@@ -269,7 +269,7 @@ macro "arena_build " hR:term ", " hf:term " with " t:tacticSeq " using " ap:tact
     by first | $t | exact ($hR).nanon.frame _ _ _ _ $hf _ (by $ap),
     by first | $t | exact ($hR).nstr.frame _ _ _ _ $hf _ (by $ap),
     by first | $t | exact ($hR).nnum.frame _ _ _ _ $hf _ (by $ap),
-    by first | $t | exact memoR_frame _ _ (by $ap) (by $ap) _ _ $hf _ ($hR).memo⟩)
+    by first | $t | exact memoRG_frame bmSch bmSch_wf bmKey _ _ _ (by $ap) (by $ap) _ _ $hf _ ($hR).memo⟩)
 
 /-- `arena_build hR, hf with t` for a writer of concrete arrays and words (`Apart` by `apart`). -/
 macro "arena_build " hR:term ", " hf:term " with " t:tacticSeq : tactic =>
@@ -282,7 +282,7 @@ theorem ArenaR.frame_ext (A : List ArrId) (C : List Word) (hA : ∀ b ∈ A, 64 
     (hC : ∀ x ∈ C, 64 ≤ x.toNat) (m m' : Mem) (hf : MemFrame A C m m') (a : AState)
     (hR : ArenaR m a) : ArenaR m' a := by
   arena_build hR, hf with
-    exact memoR_frame _ _ (fun h => absurd (hA _ h) (by simp [BMEMO]))
+    exact memoRG_frame bmSch bmSch_wf bmKey _ _ _ (fun h => absurd (hA _ h) (by simp [BMEMO]))
       (fun h => absurd (hC _ h) (by simp)) _ _ hf _ hR.memo
   using exact apart_hi _ _ _ _ _ (by lo_apart) hA hC
 
@@ -343,9 +343,7 @@ theorem arenaR_init (sizes : List Nat) (hlen : 64 ≤ sizes.length) (hctl : 64 �
     storeR_init _ _ _ _ hz (by rw [hc]; simp [nnumSch]; omega), ?_⟩
   · refine ⟨hw, by rw [hc]; omega, by rw [hp]; exact hpool, ?_⟩
     simp only [top_rdW, hz, UInt64.toNat_zero]; exact Nat.zero_le _
-  · refine ⟨by rw [hc]; omega, by simp [epW, hz], fun j _ => by simp [mstamp, epW, hz],
-      fun j _ h => by simp [mstamp, epW, hz] at h, fun j _ _ _ h => by simp [mstamp, epW, hz] at h,
-      fun x v h => by simp [AState.init, Memos.empty] at h⟩
+  · exact memoRG_zero bmSch bmKey _ _ hz (by rw [hc]; simp; omega)
 
 /-! ## Interning lifts to `ArenaR`
 
