@@ -1,0 +1,464 @@
+<style>
+#dash-root .ca { display: flex; flex-direction: column; gap: var(--cds-gap-lg); font-family: var(--font-anthropic-sans); font-variant-numeric: tabular-nums; }
+#dash-root .ca-head h1 { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); margin: 0; text-wrap: balance; }
+#dash-root .ca-head p { margin: var(--cds-gap-xs) 0 0; color: var(--color-fg-muted); max-width: 70ch; }
+#dash-root .ca-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); gap: var(--cds-gap-md); }
+#dash-root .ca-tile { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-md) var(--cds-pad-lg); display: flex; flex-direction: column; gap: var(--cds-gap-xs); }
+#dash-root .ca-tile .lbl { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); letter-spacing: .02em; }
+#dash-root .ca-tile .big { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: 2.4rem; line-height: 1.1; }
+#dash-root .ca-tile .unit { font-family: var(--font-anthropic-sans); font-size: var(--cds-font-size-body); color: var(--color-fg-muted); }
+#dash-root .ca-more { margin-top: var(--cds-gap-lg); }
+#dash-root .ca-tile .sub { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+#dash-root .ca-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr)); gap: var(--cds-gap-md); }
+#dash-root .ca-card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); display: flex; flex-direction: column; gap: var(--cds-gap-sm); min-width: 0; }
+#dash-root .ca-card h2 { font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); margin: 0; }
+#dash-root .ca-card .note { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin: 0; }
+#dash-root .ca-chart { position: relative; min-height: 260px; }
+#dash-root .ca-phases { min-height: 380px; }
+#dash-root .ca-legend { display: flex; flex-wrap: wrap; gap: var(--cds-gap-md); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+#dash-root .ca-legend span::before { content: ""; display: inline-block; width: .7rem; height: .7rem; border-radius: 3px; margin-right: .35rem; vertical-align: -1px; background: var(--sw); }
+#dash-root .ca-tip { position: absolute; pointer-events: none; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); box-shadow: var(--cds-shadow-popover); padding: var(--cds-pad-xs) var(--cds-pad-sm); font-size: var(--cds-font-size-caption); white-space: nowrap; }
+#dash-root .ca-tip .t { color: var(--cds-text-secondary); }
+#dash-root .ca-tablewrap { max-height: 28rem; overflow: auto; }
+#dash-root table.ca-lanes { width: 100%; border-collapse: collapse; font-size: var(--cds-font-size-body); }
+#dash-root table.ca-lanes th { position: sticky; top: 0; background: var(--color-panel); text-align: left; font-weight: var(--cds-font-weight-medium); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); padding: var(--cds-pad-xs) var(--cds-pad-sm); border-bottom: 1px solid var(--color-border-line); }
+#dash-root table.ca-lanes td { padding: var(--cds-pad-xs) var(--cds-pad-sm); border-bottom: 1px solid var(--color-border-line); vertical-align: top; }
+#dash-root .chip { display: inline-block; padding: 0 .5rem; border-radius: 999px; font-size: var(--cds-font-size-caption); border: 1px solid var(--color-border-line); }
+#dash-root .chip.running { color: var(--color-ok); border-color: currentColor; }
+#dash-root .chip.running::before { content: "● "; }
+#dash-root .chip.done { color: var(--color-fg-muted); }
+#dash-root [data-dash-source-state=empty] { color: transparent; }
+#dash-root [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+@media (prefers-reduced-motion: no-preference) {
+  #dash-root .running::before { animation: ca-pulse 1.6s var(--cds-ease-out) infinite; }
+  @keyframes ca-pulse { 50% { opacity: .25; } }
+}
+</style>
+
+<div class="ca">
+  <header class="ca-head" id="top">
+    <h1>con-agua: Lean checker in verified x64</h1>
+    <p id="takeaway" class="dash-skeleton">—</p>
+  </header>
+
+  <section class="ca-tiles" aria-label="Headline figures">
+    <div class="ca-tile">
+      <span class="lbl">Targets proven</span>
+      <span class="big" data-source="totals" data-field="proven" data-row="0">—</span>
+      <span class="sub">of <b data-source="totals" data-field="targets" data-row="0">—</b> twin functions</span>
+    </div>
+    <div class="ca-tile">
+      <span class="lbl">Proven, by Lean lines</span>
+      <span class="big" data-source="totals" data-field="lean_share" data-row="0">—</span>
+      <span class="sub">with L written: <b data-source="totals" data-field="lean_l_share" data-row="0">—</b></span>
+    </div>
+    <div class="ca-tile">
+      <span class="lbl">Proven, by Rust lines</span>
+      <span class="big" data-source="totals" data-field="rust_share" data-row="0">—</span>
+      <span class="sub">with L written: <b data-source="totals" data-field="rust_l_share" data-row="0">—</b></span>
+    </div>
+    <div class="ca-tile" id="etaTile">
+      <span class="lbl">Projected completion</span>
+      <span class="big" data-source="eta" data-field="eta" data-row="0">—</span>
+      <span class="sub">at <b data-source="eta" data-field="per_day" data-row="0">—</b> Lean lines proven per day</span>
+    </div>
+    <div class="ca-tile">
+      <span class="lbl">Lanes running</span>
+      <span class="big" data-source="lanecount" data-field="running" data-row="0">—</span>
+      <span class="sub"><b data-source="lanecount" data-field="done" data-row="0">—</b> finished</span>
+    </div>
+    <div class="ca-tile">
+      <span class="lbl">Needs attention</span>
+      <span class="big"><span data-source="health" data-field="sorry" data-row="0">—</span> <span class="unit">sorry</span></span>
+      <span class="sub"><b data-source="health" data-field="stale" data-row="0">—</b> stale after a con-ron bump</span>
+    </div>
+    <div class="ca-tile">
+      <span class="lbl">Merge overhead</span>
+      <span class="big" data-source="velototal" data-field="share" data-row="0">—</span>
+      <span class="sub">of <b data-source="velototal" data-field="hours" data-row="0">—</b> logged lane hours</span>
+    </div>
+  </section>
+
+  <div class="ca-grid">
+    <section class="ca-card" id="trend">
+      <h2>Proven over time</h2>
+      <p class="note">Share of the twin proven, by Lean lines and by target count, one point per census run.</p>
+      <div class="ca-legend"><span style="--sw: var(--ca-c0)">By Lean lines</span><span style="--sw: var(--ca-c1)">By target count</span><span style="--sw: var(--ca-c2)">L written, by Lean lines</span></div>
+      <div class="ca-chart" id="trendChart" data-source="progress"></div>
+    </section>
+
+    <section class="ca-card" id="velocity">
+      <h2>Work vs merge overhead</h2>
+      <p class="note">Minutes per lane, as each lane logged them at landing. Early entries are estimates.</p>
+      <div class="ca-legend"><span style="--sw: var(--ca-c0)">Work</span><span style="--sw: var(--ca-c3)">Overhead</span></div>
+      <div class="ca-chart" id="veloChart" data-source="velolanes"></div>
+    </section>
+  </div>
+
+  <section class="ca-card" id="phases">
+    <h2>By phase</h2>
+    <p class="note">Each bar is a phase's Lean lines in con-ron's arena twin: proven, proven modulo sorry, L written but unproven, and not started. The figure at the end is the proven share.</p>
+    <div class="ca-legend"><span style="--sw: var(--ca-c0)">Proven</span><span style="--sw: var(--ca-c3)">Sorry</span><span style="--sw: var(--ca-c2)">L written</span><span style="--sw: var(--cds-chart-muted)">Not started</span></div>
+    <div class="ca-chart ca-phases" id="phaseChart" data-source="phases"></div>
+  </section>
+
+  <section class="ca-card" id="lanes">
+    <h2>Lanes</h2>
+    <p class="note">Each lane is one agent working in its own worktree. Running lanes first.</p>
+    <div class="ca-tablewrap">
+      <table class="ca-lanes" data-source="lanes" data-row-key="lane">
+        <thead><tr><th data-field="lane">Lane</th><th data-field="status">Status</th><th data-field="model">Model</th><th data-field="helpers">Helpers</th><th data-field="last_commit_min">Last commit</th><th data-field="focus">Focus</th></tr></thead>
+        <tbody id="laneBody"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<div class="ca-grid ca-more">
+  <section class="ca-card" id="recent">
+    <h2>Recent landings</h2>
+    <p class="note">The last landings on master, newest first, as each lane logged them.</p>
+    <div class="ca-tablewrap">
+      <table class="ca-lanes" data-source="recent" data-row-key="n">
+        <thead><tr><th data-field="lane">Lane</th><th data-field="minutes">Minutes</th><th data-field="note">What landed</th></tr></thead>
+        <tbody id="recentBody"></tbody>
+      </table>
+    </div>
+  </section>
+  <section class="ca-card" id="stale">
+    <h2>Stale after con-ron moved</h2>
+    <p class="note">Targets whose con-ron definition changed since their L code or proof was checked. Empty means in sync.</p>
+    <div class="ca-tablewrap">
+      <table class="ca-lanes" data-source="stale" data-row-key="target">
+        <thead><tr><th data-field="target">Target</th><th data-field="status">Status</th><th data-field="phase">Phase</th><th data-field="owner">Lane</th><th data-field="theorems">Theorems</th></tr></thead>
+        <tbody id="staleBody"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<script>
+const num = (x) => Number(x);
+dash.calc('totals', {
+  inputs: ['phases'],
+  title: 'Totals over all phases',
+  description: 'Sums of the per-phase census counts and line weights, and the proven shares.',
+  fn: (phases) => {
+    const s = (k) => phases.reduce((a, r) => a + Number(r[k]), 0);
+    return [{
+      targets: s('targets'), proven: s('proven'),
+      lean_share: s('lean_proven') / s('lean_all'), lean_l_share: s('lean_with_l') / s('lean_all'),
+      rust_share: s('rust_proven') / s('rust_all'), rust_l_share: s('rust_with_l') / s('rust_all'),
+    }];
+  },
+});
+dash.calc('eta', {
+  inputs: ['progress'],
+  title: 'Projected completion',
+  description: 'Least-squares rate of Lean lines proven per day over the census runs of the last 3 days, and the date the remaining lines would be done at that rate.',
+  fn: (progress) => {
+    const pts = progress.map((r) => ({ t: Date.parse(r.date.replace(' ', 'T') + 'Z') / 864e5, p: Number(r.lean_proven), all: Number(r.lean_all) }));
+    const last = pts[pts.length - 1];
+    const win = pts.filter((q) => q.t >= last.t - 3);
+    if (win.length < 2) return [{ eta: null, per_day: null, days_left: null }];
+    const mt = win.reduce((a, q) => a + q.t, 0) / win.length, mp = win.reduce((a, q) => a + q.p, 0) / win.length;
+    const sxx = win.reduce((a, q) => a + (q.t - mt) ** 2, 0), sxy = win.reduce((a, q) => a + (q.t - mt) * (q.p - mp), 0);
+    const per_day = sxx > 0 ? sxy / sxx : 0;
+    if (per_day <= 0) return [{ eta: null, per_day, days_left: null }];
+    const days_left = (last.all - last.p) / per_day;
+    return [{ eta: new Date((last.t + days_left) * 864e5).toISOString().slice(0, 10), per_day, days_left }];
+  },
+});
+dash.calc('health', {
+  inputs: ['progress', 'stale'],
+  title: 'Sorry and stale counts',
+  description: 'Targets proven only modulo sorry in the latest census run, and targets stale after a con-ron bump.',
+  fn: (progress, stale) => [{ sorry: Number(progress[progress.length - 1].sorry), stale: stale.length }],
+});
+dash.calc('recent', {
+  inputs: ['velocity'],
+  title: 'Recent landings',
+  description: 'The last 15 rows of the velocity log, newest first, with work and overhead minutes combined.',
+  fn: (velocity) => velocity.map((r, i) => ({ n: i + 1, lane: r.lane, minutes: `${r.work_min} + ${r.overhead_min}`, note: r.note })).reverse().slice(0, 15),
+});
+dash.calc('lanecount', {
+  inputs: ['lanes'],
+  title: 'Lanes by status',
+  description: 'How many lanes are running and how many have finished.',
+  fn: (lanes) => [{ running: lanes.filter((l) => l.status === 'running').length, done: lanes.filter((l) => l.status === 'done').length }],
+});
+dash.calc('velolanes', {
+  inputs: ['velocity'],
+  title: 'Minutes per lane',
+  description: 'Work and overhead minutes summed per lane from the velocity log.',
+  fn: (velocity) => {
+    const m = new Map();
+    for (const r of velocity) {
+      const e = m.get(r.lane) || { lane: r.lane, work: 0, overhead: 0 };
+      e.work += Number(r.work_min); e.overhead += Number(r.overhead_min); m.set(r.lane, e);
+    }
+    return [...m.values()];
+  },
+});
+dash.calc('velototal', {
+  inputs: ['velocity'],
+  title: 'Overhead share',
+  description: 'Overhead minutes as a share of all logged minutes, and total logged hours.',
+  fn: (velocity) => {
+    const w = velocity.reduce((a, r) => a + Number(r.work_min), 0);
+    const o = velocity.reduce((a, r) => a + Number(r.overhead_min), 0);
+    return [{ share: o / (w + o), hours: (w + o) / 60 }];
+  },
+});
+</script>
+
+<script>
+const num = (x) => Number(x);
+const root = document.getElementById('dash-root');
+const css = getComputedStyle(root);
+root.style.setProperty('--ca-c0', dash.colors[0]);
+root.style.setProperty('--ca-c1', dash.colors[1]);
+root.style.setProperty('--ca-c2', dash.colors[2]);
+root.style.setProperty('--ca-c3', dash.colors[3]);
+const pct = d3.format('.1%');
+const fmt = d3.format(',');
+const setText = (sel, v) => document.querySelectorAll(sel).forEach((el) => { el.textContent = v; });
+const failed = (el) => {
+  el.innerHTML = '';
+  const d = document.createElement('div');
+  d.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:.5rem;min-height:inherit;color:var(--color-fg-muted);font-size:var(--cds-font-size-caption)';
+  const dot = document.createElement('span');
+  dot.style.cssText = 'width:.375rem;height:.375rem;border-radius:50%;background:var(--color-bad)';
+  d.append(dot, document.createTextNode('Failed to load'));
+  el.append(d);
+};
+
+function tiles() {
+  const t = dash.data('totals'), l = dash.data('lanecount'), v = dash.data('velototal');
+  const tk = document.getElementById('takeaway');
+  if (t.status === 'ok' && t.data.length) {
+    const r = t.data[0];
+    setText('[data-source=totals][data-field=proven]', fmt(r.proven));
+    setText('[data-source=totals][data-field=targets]', fmt(r.targets));
+    setText('[data-source=totals][data-field=lean_share]', pct(r.lean_share));
+    setText('[data-source=totals][data-field=lean_l_share]', pct(r.lean_l_share));
+    setText('[data-source=totals][data-field=rust_share]', pct(r.rust_share));
+    setText('[data-source=totals][data-field=rust_l_share]', pct(r.rust_l_share));
+    tk.classList.remove('dash-skeleton');
+    tk.textContent = `${fmt(r.proven)} of ${fmt(r.targets)} functions of con-ron's checker have L code refined against con-ron's model, down to verified x64. That is ${pct(r.lean_share)} of the model by Lean lines.`;
+  } else {
+    setText('[data-source=totals]', '—');
+  }
+  const e = dash.data('eta');
+  if (e.status === 'ok' && e.data.length) {
+    const r = e.data[0];
+    setText('[data-source=eta][data-field=eta]', r.eta ? d3.utcFormat('%b %-d')(new Date(r.eta)) : '—');
+    setText('[data-source=eta][data-field=per_day]', r.per_day == null ? '—' : fmt(Math.round(r.per_day)));
+  }
+  if (l.status === 'ok' && l.data.length) {
+    setText('[data-source=lanecount][data-field=running]', fmt(l.data[0].running));
+    setText('[data-source=lanecount][data-field=done]', fmt(l.data[0].done));
+  }
+  if (v.status === 'ok' && v.data.length) {
+    setText('[data-source=velototal][data-field=share]', pct(v.data[0].share));
+    setText('[data-source=velototal][data-field=hours]', d3.format('.1f')(v.data[0].hours));
+  }
+}
+
+function tooltip(box) {
+  let tip = box.querySelector('.ca-tip');
+  if (!tip) { tip = document.createElement('div'); tip.className = 'ca-tip'; tip.hidden = true; box.append(tip); }
+  return tip;
+}
+
+function trend() {
+  const el = document.getElementById('trendChart');
+  const d = dash.data('progress');
+  if (d.status === 'error' || d.status === 'connect') return failed(el);
+  el.querySelector('svg')?.remove();
+  if (d.status !== 'ok') { el.classList.add('dash-skeleton'); return; }
+  el.classList.remove('dash-skeleton');
+  el.querySelector('div:not(.ca-tip)')?.remove();
+  const rows = d.data.map((r) => ({
+    t: new Date(r.date.replace(' ', 'T') + 'Z'),
+    lean: num(r.lean_proven) / num(r.lean_all),
+    count: num(r.proven) / num(r.targets),
+    written: (num(r.lean_proven) + num(r.lean_written)) / num(r.lean_all),
+    commit: r.commit,
+  }));
+  const W = el.clientWidth || 600, H = 260, m = { t: 12, r: 52, b: 28, l: 44 };
+  const ext = d3.extent(rows, (r) => r.t);
+  if (+ext[0] === +ext[1]) { ext[0] = d3.utcHour.offset(ext[0], -1); ext[1] = d3.utcHour.offset(ext[1], 1); }
+  const x = d3.scaleUtc(ext, [m.l, W - m.r]);
+  const ymax = Math.max(0.25, d3.max(rows, (r) => Math.max(r.lean, r.count, r.written)) * 1.15);
+  const y = d3.scaleLinear([0, Math.min(1, ymax)], [H - m.b, m.t]).nice();
+  const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
+  svg.append('g').selectAll('line').data(y.ticks(5)).join('line')
+    .attr('x1', m.l).attr('x2', W - m.r).attr('y1', y).attr('y2', y).attr('stroke', 'var(--cds-chart-grid)');
+  svg.append('g').attr('transform', `translate(0,${H - m.b})`)
+    .call(d3.axisBottom(x).ticks(Math.max(2, Math.floor(W / 120))).tickFormat(d3.utcFormat('%b %-d %H:%M')))
+    .attr('font-size', null).attr('font-family', null)
+    .call((g) => g.selectAll('text').attr('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)'))
+    .call((g) => g.selectAll('line,path').attr('stroke', 'var(--cds-chart-axis)'));
+  svg.append('g').attr('transform', `translate(${m.l},0)`)
+    .call(d3.axisLeft(y).ticks(5).tickFormat(d3.format('.0%')).tickSize(0))
+    .attr('font-size', null).attr('font-family', null)
+    .call((g) => g.select('path').remove())
+    .call((g) => g.selectAll('text').attr('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)'));
+  const series = [['written', dash.colors[2]], ['count', dash.colors[1]], ['lean', dash.colors[0]]];
+  for (const [k, c] of series) {
+    svg.append('path').datum(rows).attr('fill', 'none').attr('stroke', c).attr('stroke-width', 2)
+      .attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round')
+      .attr('d', d3.line((r) => x(r.t), (r) => y(r[k])));
+    svg.append('g').selectAll('circle').data(rows).join('circle')
+      .attr('cx', (r) => x(r.t)).attr('cy', (r) => y(r[k])).attr('r', 3).attr('fill', c);
+    const last = rows[rows.length - 1];
+    svg.append('text').attr('x', x(last.t) + 6).attr('y', y(last[k])).attr('dy', '0.35em')
+      .attr('fill', c).style('font-size', 'var(--cds-font-size-caption)').text(pct(last[k]));
+  }
+  const tip = tooltip(el);
+  svg.append('rect').attr('x', m.l).attr('y', m.t).attr('width', W - m.l - m.r).attr('height', H - m.t - m.b)
+    .attr('fill', 'transparent')
+    .on('mousemove', (ev) => {
+      const [px] = d3.pointer(ev);
+      const i = d3.leastIndex(rows, (r) => Math.abs(x(r.t) - px));
+      const r = rows[i];
+      tip.hidden = false;
+      tip.replaceChildren();
+      const h = document.createElement('div'); h.className = 't'; h.textContent = `${d3.utcFormat('%b %-d %H:%M')(r.t)} · ${r.commit}`;
+      tip.append(h);
+      for (const [lbl, k] of [['By Lean lines', 'lean'], ['By target count', 'count'], ['L written', 'written']]) {
+        const l = document.createElement('div'); l.textContent = `${lbl}: ${pct(r[k])}`; tip.append(l);
+      }
+      const bw = el.clientWidth, sx = bw / W;
+      tip.style.left = Math.min(bw - tip.offsetWidth - 4, x(r.t) * sx + 10) + 'px';
+      tip.style.top = '8px';
+    })
+    .on('mouseleave', () => { tip.hidden = true; });
+}
+
+function velocity() {
+  const el = document.getElementById('veloChart');
+  const d = dash.data('velolanes');
+  if (d.status === 'error') return failed(el);
+  el.querySelector('svg')?.remove();
+  if (d.status !== 'ok') { el.classList.add('dash-skeleton'); return; }
+  el.classList.remove('dash-skeleton');
+  el.querySelector('div:not(.ca-tip)')?.remove();
+  const rows = d.data.slice();
+  const W = el.clientWidth || 600, bar = 18, gap = 8, H = Math.max(120, rows.length * (bar + gap) + 30);
+  el.style.minHeight = H + 'px';
+  const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
+  const labels = svg.append('g').selectAll('text').data(rows).join('text').text((r) => r.lane)
+    .style('font-size', 'var(--cds-font-size-caption)').attr('fill', 'var(--color-fg)');
+  const lw = d3.max(labels.nodes(), (n) => n.getComputedTextLength()) + 10;
+  const g = svg.append('g');
+  const vals = g.selectAll('text.v').data(rows).join('text').attr('class', 'v')
+    .style('font-size', 'var(--cds-font-size-caption)').attr('fill', 'var(--color-fg-muted)')
+    .text((r) => `${fmt(r.work)} + ${fmt(r.overhead)} min`);
+  const vw = (d3.max(vals.nodes(), (n) => n.getComputedTextLength()) || 0) + 12;
+  const x = d3.scaleLinear([0, d3.max(rows, (r) => r.work + r.overhead) || 1], [lw, Math.max(lw + 20, W - vw)]);
+  const yy = (i) => 6 + i * (bar + gap);
+  labels.attr('x', 0).attr('y', (r, i) => yy(i) + bar / 2).attr('dy', '0.35em');
+  g.selectAll('rect.w').data(rows).join('rect').attr('class', 'w').attr('x', lw).attr('y', (r, i) => yy(i))
+    .attr('height', bar).attr('width', (r) => x(r.work) - lw).attr('rx', 4).attr('fill', dash.colors[0]);
+  g.selectAll('rect.o').data(rows).join('rect').attr('class', 'o').attr('x', (r) => x(r.work)).attr('y', (r, i) => yy(i))
+    .attr('height', bar).attr('width', (r) => Math.max(0, x(r.work + r.overhead) - x(r.work))).attr('rx', 4).attr('fill', dash.colors[3]);
+  vals.raise().attr('x', (r) => x(r.work + r.overhead) + 6).attr('y', (r, i) => yy(i) + bar / 2).attr('dy', '0.35em');
+}
+
+function phases() {
+  const el = document.getElementById('phaseChart');
+  const d = dash.data('phases');
+  if (d.status === 'error') return failed(el);
+  el.querySelector('svg')?.remove();
+  if (d.status !== 'ok') { el.classList.add('dash-skeleton'); return; }
+  el.classList.remove('dash-skeleton');
+  el.querySelector('div:not(.ca-tip)')?.remove();
+  const rows = d.data.map((r) => ({
+    label: `${r.phase} ${r.name}`, all: num(r.lean_all), proven: num(r.lean_proven),
+    written: Math.max(0, num(r.lean_with_l) - num(r.lean_proven)), targets: num(r.targets), np: num(r.proven), sorry: num(r.sorry),
+  }));
+  const W = el.clientWidth || 800, bar = 22, gap = 12, H = rows.length * (bar + gap) + 8;
+  el.style.minHeight = H + 'px';
+  const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
+  const narrow = W < 560;
+  const labels = svg.append('g').selectAll('text').data(rows).join('text')
+    .text((r) => narrow ? r.label.split(' ')[0] + ' ' + r.label.split(' ')[1].replace(',', '') : r.label)
+    .style('font-size', 'var(--cds-font-size-caption)').attr('fill', 'var(--color-fg)');
+  const lw = d3.max(labels.nodes(), (n) => n.getComputedTextLength()) + 12;
+  const x = d3.scaleLinear([0, d3.max(rows, (r) => r.all)], [lw, W - 110]);
+  const yy = (i) => 4 + i * (bar + gap);
+  labels.attr('x', 0).attr('y', (r, i) => yy(i) + bar / 2).attr('dy', '0.35em');
+  const tip = tooltip(el);
+  const segs = (r) => [
+    ['Proven', r.proven, dash.colors[0]], ['L written', r.written, dash.colors[2]],
+    ['Not started', r.all - r.proven - r.written, 'var(--cds-chart-muted)'],
+  ];
+  rows.forEach((r, i) => {
+    let at = lw;
+    const g = svg.append('g');
+    for (const [name, v, c] of segs(r)) {
+      if (v <= 0) continue;
+      const w = x(v) - lw;
+      g.append('rect').attr('x', at).attr('y', yy(i)).attr('width', Math.max(1, w)).attr('height', bar).attr('rx', 4).attr('fill', c);
+      at += w;
+    }
+    g.append('text').attr('x', x(r.all) + 8).attr('y', yy(i) + bar / 2).attr('dy', '0.35em')
+      .style('font-size', 'var(--cds-font-size-caption)').attr('fill', 'var(--color-fg-muted)')
+      .text(`${pct(r.proven / r.all)} · ${r.np}/${r.targets}`);
+    g.append('rect').attr('x', 0).attr('y', yy(i) - gap / 2).attr('width', W).attr('height', bar + gap).attr('fill', 'transparent')
+      .on('mousemove', (ev) => {
+        tip.hidden = false; tip.replaceChildren();
+        const h = document.createElement('div'); h.className = 't'; h.textContent = `Phase ${r.label}`; tip.append(h);
+        for (const t of [`Targets: ${r.np} proven, ${r.sorry} with sorry, of ${r.targets}`,
+                         `Lean lines: ${fmt(r.proven)} proven, ${fmt(r.written)} L only, ${fmt(r.all)} total`]) {
+          const l = document.createElement('div'); l.textContent = t; tip.append(l);
+        }
+        const [px, py] = d3.pointer(ev, el);
+        tip.style.left = Math.min(el.clientWidth - tip.offsetWidth - 4, px + 12) + 'px';
+        tip.style.top = (py + 12) + 'px';
+      })
+      .on('mouseleave', () => { tip.hidden = true; });
+  });
+}
+
+function lanes() {
+  const body = document.getElementById('laneBody');
+  const d = dash.data('lanes');
+  body.replaceChildren();
+  if (d.status !== 'ok') return;
+  const rows = d.data.slice().sort((a, b) => (a.status === 'running' ? 0 : 1) - (b.status === 'running' ? 0 : 1));
+  for (const r of rows) {
+    const tr = document.createElement('tr');
+    const td = (t) => { const c = document.createElement('td'); c.textContent = t; return c; };
+    const st = document.createElement('td');
+    const chip = document.createElement('span'); chip.className = `chip ${r.status}`; chip.textContent = r.status; st.append(chip);
+    const lc = r.last_commit_min == null ? '' : (r.last_commit_min < 90 ? `${r.last_commit_min} min ago` : `${Math.round(r.last_commit_min / 60)} h ago`);
+    tr.append(td(r.lane), st, td(r.model), td(r.helpers ? String(r.helpers) : ''), td(lc), td(r.focus));
+    body.append(tr);
+  }
+}
+
+function simpleTable(id, src, cols) {
+  const body = document.getElementById(id);
+  const d = dash.data(src);
+  body.replaceChildren();
+  if (d.status !== 'ok') return;
+  for (const r of d.data) {
+    const tr = document.createElement('tr');
+    for (const c of cols) { const td = document.createElement('td'); td.textContent = String(r[c] ?? ''); tr.append(td); }
+    body.append(tr);
+  }
+}
+function health() {
+  const h = dash.data('health');
+  if (h.status === 'ok' && h.data.length) {
+    setText('[data-source=health][data-field=sorry]', fmt(h.data[0].sorry));
+    setText('[data-source=health][data-field=stale]', fmt(h.data[0].stale));
+  }
+}
+dash.onData(() => { tiles(); health(); trend(); velocity(); phases(); lanes();
+  simpleTable('recentBody', 'recent', ['lane', 'minutes', 'note']);
+  simpleTable('staleBody', 'stale', ['target', 'status', 'phase', 'owner', 'theorems']); });
+</script>
