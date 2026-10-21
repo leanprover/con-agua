@@ -1,4 +1,5 @@
 import ConAgua.Front.Apply
+import ConAgua.Arena.DerRel
 import ConRon.Arena.Frontend.ExportC
 
 /-!
@@ -51,15 +52,15 @@ structure TblR {k : IdxKind} (arr : Array Word) (t : IdTable (Idx k)) : Prop whe
   bound : ∀ (i : Nat) (e : Word), arr[i]? = some e → e.toNat ≤ 2 ^ 32
   size : arr.size < 2 ^ 63
 
-/-- **The parse state relation**: `NID` represents the name table, `LID` the level table. -/
+/-- **The parse state relation**: `NID` represents the name table, `LID` the level table, `EID`
+the expression table. -/
 structure StateDR (m : Mem) (st : StateD) : Prop where
   names : TblR (m.arr64 NID) st.names
   levels : TblR (m.arr64 LID) st.levels
+  exprs : TblR (m.arr64 EID) st.exprs
 
 /-! ## Reads and writes of a table -/
 
-theorem toNat_ofNat_size (n : Nat) (h : n < 2 ^ 63) : (UInt64.ofNat n).toNat = n := by
-  rw [UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)]
 
 section tbl
 variable {k : IdxKind} (m : Mem) (b : ArrId) (t : IdTable (Idx k))
@@ -126,139 +127,208 @@ theorem IdTable.get?_empty {α : Type} (i : Nat) : (({} : IdTable α)).get? i = 
 /-- `NID`, `LID` are not among a store's arrays (concrete schemas, by their array ids). -/
 macro "tapart" : tactic => `(tactic| simp [nanonSch, NAREC, NASLOT, zeroSch, ZREC, ZSLOT, nstrSch,
   NSREC, NSSLOT, nnumSch, NNREC, NNSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC,
-  ISLOT, paramSch, PREC, PSLOT, POOL, NID, LID])
+  ISLOT, paramSch, PREC, PSLOT, POOL, NID, LID, EID, lsSch, LSREC, LSSLOT, sortSch, SOREC, SOSLOT,
+  constSch, CREC, CSLOT, bvarSch, BREC, BSLOT, litSch, REC, SLOT, appSch, AREC, ASLOT, lamSch, LAREC,
+  LASLOT, forallSch, FAREC, FASLOT, letSch, LEREC, LESLOT, projSch, PJREC, PJSLOT, ADER, LADER, FADER,
+  LEDER, PJDER])
 
-/-- `StateDR` reads only `NID` and `LID`. -/
+/-- `StateDR` reads only `NID`, `LID` and `EID`. -/
 theorem StateDR.frame {A : List ArrId} {C : List Word} {m m' : Mem} {st : StateD}
-    (hf : MemFrame A C m m') (hn : NID ∉ A) (hl : LID ∉ A) (h : StateDR m st) : StateDR m' st :=
-  ⟨by rw [hf.1 NID hn (by decide)]; exact h.names, by rw [hf.1 LID hl (by decide)]; exact h.levels⟩
+    (hf : MemFrame A C m m') (hn : NID ∉ A) (hl : LID ∉ A) (he : EID ∉ A := by tapart)
+    (h : StateDR m st) : StateDR m' st :=
+  ⟨by rw [hf.1 NID hn (by decide)]; exact h.names, by rw [hf.1 LID hl (by decide)]; exact h.levels,
+    by rw [hf.1 EID he (by decide)]; exact h.exprs⟩
 
-/-- `ArenaR` does not read `NID` and `LID`. -/
-theorem ArenaR.frameT (m m' : Mem) (a : AState) (hR : ArenaR m a) (hf : MemFrame [64, 65] [] m m') :
+/-- `ArenaR` does not read `NID`, `LID` and `EID`. -/
+theorem ArenaR.frameT (m m' : Mem) (a : AState) (hR : ArenaR m a) (hf : MemFrame [64, 65, 66] [] m m') :
     ArenaR m' a :=
-  ArenaR.frame_ext [64, 65] [] (by decide) (by simp) m m' hf a hR
+  ArenaR.frame_ext [64, 65, 66] [] (by decide) (by simp) m m' hf a hR
 
-/-- A write to `NID` or `LID` keeps `ArenaR`. -/
-theorem ArenaR.setT (m : Mem) (a : AState) (hR : ArenaR m a) (b : ArrId) (hb : b = NID ∨ b = LID)
-    (i v : Word) : ArenaR (m.set64 b i v) a :=
-  ArenaR.frameT _ _ _ hR ((MemFrame.set64 m b (by rcases hb with rfl | rfl <;> decide) i v).mono
-    (by rcases hb with rfl | rfl <;> simp) (by simp))
+/-- A write to `NID`, `LID` or `EID` keeps `ArenaR`. -/
+theorem ArenaR.setT (m : Mem) (a : AState) (hR : ArenaR m a) (b : ArrId)
+    (hb : b = NID ∨ b = LID ∨ b = EID) (i v : Word) : ArenaR (m.set64 b i v) a :=
+  ArenaR.frameT _ _ _ hR ((MemFrame.set64 m b (by rcases hb with rfl | rfl | rfl <;> decide) i v).mono
+    (by rcases hb with rfl | rfl | rfl <;> simp) (by simp))
+
+/-- `DerR` reads the arena state only through its two expression tiers. -/
+theorem DerR.congrSt {m : Mem} {a a' : AState} (hp : a'.store.pers = a.store.pers)
+    (hs : a'.store.scr = a.store.scr) (hD : DerR m a) : DerR m a' := by
+  obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9, h10⟩ := hD
+  constructor <;> simp only [DerT2, hp, hs] <;> assumption
+
+/-- A memory frame that leaves the five derived arrays alone keeps `DerR`. -/
+theorem DerR.frameT {A : List ArrId} {C : List Word} {m m' : Mem} {a : AState}
+    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b < 42 ∨ 46 < b) (hD : DerR m a) : DerR m' a :=
+  DerR.frameM A C m m' hf hA a hD
+
+/-- A write to `NID`, `LID` or `EID` keeps `ArenaD`. -/
+theorem ArenaD.setT (m : Mem) (a : AState) (hA : ArenaD m a) (b : ArrId)
+    (hb : b = NID ∨ b = LID ∨ b = EID) (i v : Word) : ArenaD (m.set64 b i v) a :=
+  ⟨ArenaR.setT m a hA.1 b hb i v,
+    DerR.frameT (MemFrame.set64 m b (by rcases hb with rfl | rfl | rfl <;> decide) i v)
+      (by rcases hb with rfl | rfl | rfl <;> simp <;> decide) hA.2⟩
+
+/-- Appending to the pool keeps `ArenaD`. -/
+theorem ArenaD.grow (m m' : Mem) (hg : Grows m m') (a : AState) (hA : ArenaD m a) : ArenaD m' a :=
+  ⟨ArenaR.grow m m' hg a hA.1, DerR.frameT (grows_frame m m' hg) (by simp [POOL]) hA.2⟩
 
 /-- Entry `i` of `NID` written: the name table with `i` bound to `w`. -/
 theorem StateDR.putName {A : List ArrId} {C : List Word} {m m₁ : Mem} {st : StateD}
     (h : StateDR m st) (hf : MemFrame A C m m₁) (hn : NID ∉ A) (hl : LID ∉ A) (i w : Word)
     (hi : i.toNat < (m₁.arr64 NID).size) (hw : w.toNat < 2 ^ 32) (st' : StateD)
     (hst : ∀ j, st'.names.get? j = if j = i.toNat then some (decI w) else st.names.get? j)
-    (hlv : st'.levels = st.levels) :
+    (hlv : st'.levels = st.levels) (hex : st'.exprs = st.exprs) (he : EID ∉ A := by tapart) :
     StateDR (m₁.set64 NID i (w + 1)) st' := by
-  have h₁ := h.frame hf hn hl
-  refine ⟨?_, ?_⟩
+  have h₁ := h.frame hf hn hl he
+  refine ⟨?_, ?_, ?_⟩
   · rw [Mem.arr64_set64_same]; exact TblR.put _ _ h₁.names i w hi hw _ hst
   · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hlv]; exact h₁.levels
+  · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hex]; exact h₁.exprs
 
 /-- Entry `i` of `LID` written: the level table with `i` bound to `w`. -/
 theorem StateDR.putLevel {A : List ArrId} {C : List Word} {m m₁ : Mem} {st : StateD}
     (h : StateDR m st) (hf : MemFrame A C m m₁) (hn : NID ∉ A) (hl : LID ∉ A) (i w : Word)
     (hi : i.toNat < (m₁.arr64 LID).size) (hw : w.toNat < 2 ^ 32) (st' : StateD)
     (hst : ∀ j, st'.levels.get? j = if j = i.toNat then some (decI w) else st.levels.get? j)
-    (hnm : st'.names = st.names) :
+    (hnm : st'.names = st.names) (hex : st'.exprs = st.exprs) (he : EID ∉ A := by tapart) :
     StateDR (m₁.set64 LID i (w + 1)) st' := by
-  have h₁ := h.frame hf hn hl
-  refine ⟨?_, ?_⟩
+  have h₁ := h.frame hf hn hl he
+  refine ⟨?_, ?_, ?_⟩
   · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hnm]; exact h₁.names
   · rw [Mem.arr64_set64_same]; exact TblR.put _ _ h₁.levels i w hi hw _ hst
+  · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hex]; exact h₁.exprs
 
-/-! ## Each interning under `ArenaR`, with its memory frame -/
+/-- Entry `i` of `EID` written: the expression table with `i` bound to `w`. -/
+theorem StateDR.putExpr {A : List ArrId} {C : List Word} {m m₁ : Mem} {st : StateD}
+    (h : StateDR m st) (hf : MemFrame A C m m₁) (hn : NID ∉ A) (hl : LID ∉ A) (he : EID ∉ A)
+    (i w : Word) (hi : i.toNat < (m₁.arr64 EID).size) (hw : w.toNat < 2 ^ 32) (st' : StateD)
+    (hst : ∀ j, st'.exprs.get? j = if j = i.toNat then some (decI w) else st.exprs.get? j)
+    (hnm : st'.names = st.names) (hlv : st'.levels = st.levels) :
+    StateDR (m₁.set64 EID i (w + 1)) st' := by
+  have h₁ := h.frame hf hn hl he
+  refine ⟨?_, ?_, ?_⟩
+  · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hnm]; exact h₁.names
+  · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hlv]; exact h₁.levels
+  · rw [Mem.arr64_set64_same]; exact TblR.put _ _ h₁.exprs i w hi hw _ hst
+
+/-! ## Each interning under `ArenaD`, with its memory frame -/
+
+/-- An interning into a table outside the two expression tiers keeps `DerR`'s arena side. -/
+theorem derR_lss {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] (L : Lens α δ k)
+    (hP : ∀ a t, (L.setP a t).store.pers = a.store.pers ∧ (L.setP a t).store.scr = a.store.scr)
+    (hS : ∀ a t, (L.setS a t).store.pers = a.store.pers ∧ (L.setS a t).store.scr = a.store.scr)
+    {a a' : AState} {m : Mem} (hst : a' = a ∨ (∃ t, a' = L.setP a t) ∨ ∃ t, a' = L.setS a t)
+    (hD : DerR m a) : DerR m a' := by
+  rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩
+  · exact hD
+  · exact DerR.congrSt (hP a t).1 (hP a t).2 hD
+  · exact DerR.congrSt (hS a t).1 (hS a t).2 hD
 
 section interns
-variable (m : Mem) (a : AState) (hR : ArenaR m a) (w : Word) (m' : Mem)
-include hR
+variable (m : Mem) (a : AState) (hA : ArenaD m a) (w : Word) (m' : Mem)
+include hA
 
 theorem nanon_A (hI : nainternW m = some (w, m')) :
-    AM.ok (internNNode .anonymous) a ∧ ArenaR m' (AM.st (internNNode .anonymous) a) ∧
+    AM.ok (internNNode .anonymous) a ∧ ArenaD m' (AM.st (internNNode .anonymous) a) ∧
     AM.res (internNNode .anonymous) a = decI w ∧
     MemFrame [nanonSch.ra, nanonSch.sa] [nanonSch.ca, nanonSch.ca + 1] m m' := by
+  have hR := hA.1
   obtain ⟨hok, hX, hres⟩ := naintern_correct m a hR.nanon _ _ hI
   rw [nainternW_eq] at hI
   have hf := internM_frame _ nanonSch_wf _ _ _ _ _ _ _ _ hI
-  exact ⟨hok, hR.lift_nanon _ _ _ _ hX hf
-    (AM.st_proto nanonLens _ _ _ _ _ _ a (internNNode_anon_run a) hok), hres, hf⟩
+  have hst := AM.st_proto nanonLens _ _ _ _ _ _ a (internNNode_anon_run a) hok
+  exact ⟨hok, ⟨hR.lift_nanon _ _ _ _ hX hf hst, derR_lss _ (fun _ _ => ⟨rfl, rfl⟩) (fun _ _ => ⟨rfl, rfl⟩) hst
+    (DerR.frameT hf (by tapart) hA.2)⟩, hres, hf⟩
 
 theorem zero_A (hI : zinternW m = some (w, m')) :
-    AM.ok (internLNode .zero) a ∧ ArenaR m' (AM.st (internLNode .zero) a) ∧
+    AM.ok (internLNode .zero) a ∧ ArenaD m' (AM.st (internLNode .zero) a) ∧
     AM.res (internLNode .zero) a = decI w ∧
     MemFrame [zeroSch.ra, zeroSch.sa] [zeroSch.ca, zeroSch.ca + 1] m m' := by
+  have hR := hA.1
   obtain ⟨hok, hX, hres⟩ := zintern_correct m a hR.zero _ _ hI
   rw [zinternW_eq] at hI
   have hf := internM_frame _ zeroSch_wf _ _ _ _ _ _ _ _ hI
-  exact ⟨hok, hR.lift_zero _ _ _ _ hX hf
-    (AM.st_proto zeroLens _ _ _ _ _ _ a (internLNode_zero_run a) hok), hres, hf⟩
+  have hst := AM.st_proto zeroLens _ _ _ _ _ _ a (internLNode_zero_run a) hok
+  exact ⟨hok, ⟨hR.lift_zero _ _ _ _ hX hf hst, derR_lss _ (fun _ _ => ⟨rfl, rfl⟩) (fun _ _ => ⟨rfl, rfl⟩) hst
+    (DerR.frameT hf (by tapart) hA.2)⟩, hres, hf⟩
 
 theorem nstr_A (q o l : Word) (hqw : q.toNat < 2 ^ 32) (hq : SliceOK m o l) (s : String)
     (hk : sliceL (m.arr64 POOL) o.toNat l.toNat = strWords s) (hI : nsinternW m q o l = some (w, m')) :
-    AM.ok (internNNode (.str (decI q) s)) a ∧ ArenaR m' (AM.st (internNNode (.str (decI q) s)) a) ∧
+    AM.ok (internNNode (.str (decI q) s)) a ∧ ArenaD m' (AM.st (internNNode (.str (decI q) s)) a) ∧
     AM.res (internNNode (.str (decI q) s)) a = decI w ∧
     MemFrame [nstrSch.ra, nstrSch.sa] [nstrSch.ca, nstrSch.ca + 1] m m' := by
+  have hR := hA.1
   obtain ⟨hok, hX, hres⟩ := nsintern_correct m a hR.lit.1 hR.nstr q o l hqw hq s hk _ _ hI
   rw [nsinternW_eq] at hI
   have hf := internM_frame _ nstrSch_wf _ _ _ _ _ _ _ _ hI
-  exact ⟨hok, hR.lift_nstr _ _ _ _ hX hf
-    (AM.st_proto nstrLens _ _ _ _ _ _ a (internNNode_str_run _ _ a) hok), hres, hf⟩
+  have hst := AM.st_proto nstrLens _ _ _ _ _ _ a (internNNode_str_run _ _ a) hok
+  exact ⟨hok, ⟨hR.lift_nstr _ _ _ _ hX hf hst, derR_lss _ (fun _ _ => ⟨rfl, rfl⟩) (fun _ _ => ⟨rfl, rfl⟩) hst
+    (DerR.frameT hf (by tapart) hA.2)⟩, hres, hf⟩
 
 theorem nnum_A (q u : Word) (hqw : q.toNat < 2 ^ 32) (hI : nninternW m q u = some (w, m')) :
     AM.ok (internNNode (.num (decI q) u.toNat)) a ∧
-    ArenaR m' (AM.st (internNNode (.num (decI q) u.toNat)) a) ∧
+    ArenaD m' (AM.st (internNNode (.num (decI q) u.toNat)) a) ∧
     AM.res (internNNode (.num (decI q) u.toNat)) a = decI w ∧
     MemFrame [nnumSch.ra, nnumSch.sa] [nnumSch.ca, nnumSch.ca + 1] m m' := by
+  have hR := hA.1
   obtain ⟨hok, hX, hres⟩ := nnintern_correct m a hR.nnum q u hqw _ _ hI
   rw [nninternW_eq] at hI
   have hf := internM_frame _ nnumSch_wf _ _ _ _ _ _ _ _ hI
-  exact ⟨hok, hR.lift_nnum _ _ _ _ hX hf
-    (AM.st_proto nnumLens _ _ _ _ _ _ a (internNNode_num_run _ _ a) hok), hres, hf⟩
+  have hst := AM.st_proto nnumLens _ _ _ _ _ _ a (internNNode_num_run _ _ a) hok
+  exact ⟨hok, ⟨hR.lift_nnum _ _ _ _ hX hf hst, derR_lss _ (fun _ _ => ⟨rfl, rfl⟩) (fun _ _ => ⟨rfl, rfl⟩) hst
+    (DerR.frameT hf (by tapart) hA.2)⟩, hres, hf⟩
 
 theorem succ_A (u : Word) (hu : u.toNat < 2 ^ 32) (hI : sinternW m u = some (w, m')) :
-    AM.ok (internLNode (.succ (decI u))) a ∧ ArenaR m' (AM.st (internLNode (.succ (decI u))) a) ∧
+    AM.ok (internLNode (.succ (decI u))) a ∧ ArenaD m' (AM.st (internLNode (.succ (decI u))) a) ∧
     AM.res (internLNode (.succ (decI u))) a = decI w ∧
     MemFrame [succSch.ra, succSch.sa] [succSch.ca, succSch.ca + 1] m m' := by
+  have hR := hA.1
   obtain ⟨hok, hX, hres⟩ := sintern_correct m a hR.succ u hu _ _ hI
   rw [sinternW_eq] at hI
   have hf := internM_frame _ succSch_wf _ _ _ _ _ _ _ _ hI
-  exact ⟨hok, hR.lift_succ _ _ _ _ hX hf
-    (AM.st_proto succLens _ _ _ _ _ _ a (internLNode_succ_run _ a) hok), hres, hf⟩
+  have hst := AM.st_proto succLens _ _ _ _ _ _ a (internLNode_succ_run _ a) hok
+  exact ⟨hok, ⟨hR.lift_succ _ _ _ _ hX hf hst, derR_lss _ (fun _ _ => ⟨rfl, rfl⟩) (fun _ _ => ⟨rfl, rfl⟩) hst
+    (DerR.frameT hf (by tapart) hA.2)⟩, hres, hf⟩
 
 theorem max_A (u v : Word) (hu : u.toNat < 2 ^ 32) (hv : v.toNat < 2 ^ 32)
     (hI : minternW m u v = some (w, m')) :
     AM.ok (internLNode (.max (decI u) (decI v))) a ∧
-    ArenaR m' (AM.st (internLNode (.max (decI u) (decI v))) a) ∧
+    ArenaD m' (AM.st (internLNode (.max (decI u) (decI v))) a) ∧
     AM.res (internLNode (.max (decI u) (decI v))) a = decI w ∧
     MemFrame [maxSch.ra, maxSch.sa] [maxSch.ca, maxSch.ca + 1] m m' := by
+  have hR := hA.1
   obtain ⟨hok, hX, hres⟩ := mintern_correct m a hR.max u v hu hv _ _ hI
   rw [minternW_eq] at hI
   have hf := internM_frame _ maxSch_wf _ _ _ _ _ _ _ _ hI
-  exact ⟨hok, hR.lift_max _ _ _ _ hX hf
-    (AM.st_proto maxLens _ _ _ _ _ _ a (internLNode_max_run _ _ a) hok), hres, hf⟩
+  have hst := AM.st_proto maxLens _ _ _ _ _ _ a (internLNode_max_run _ _ a) hok
+  exact ⟨hok, ⟨hR.lift_max _ _ _ _ hX hf hst, derR_lss _ (fun _ _ => ⟨rfl, rfl⟩) (fun _ _ => ⟨rfl, rfl⟩) hst
+    (DerR.frameT hf (by tapart) hA.2)⟩, hres, hf⟩
 
 theorem imax_A (u v : Word) (hu : u.toNat < 2 ^ 32) (hv : v.toNat < 2 ^ 32)
     (hI : iminternW m u v = some (w, m')) :
     AM.ok (internLNode (.imax (decI u) (decI v))) a ∧
-    ArenaR m' (AM.st (internLNode (.imax (decI u) (decI v))) a) ∧
+    ArenaD m' (AM.st (internLNode (.imax (decI u) (decI v))) a) ∧
     AM.res (internLNode (.imax (decI u) (decI v))) a = decI w ∧
     MemFrame [imaxSch.ra, imaxSch.sa] [imaxSch.ca, imaxSch.ca + 1] m m' := by
+  have hR := hA.1
   obtain ⟨hok, hX, hres⟩ := imintern_correct m a hR.imax u v hu hv _ _ hI
   rw [iiminternW_eq] at hI
   have hf := internM_frame _ iimaxSch_wf _ _ _ _ _ _ _ _ hI
-  exact ⟨hok, hR.lift_imax _ _ _ _ hX hf
-    (AM.st_proto imaxLens _ _ _ _ _ _ a (internLNode_imax_run _ _ a) hok), hres, hf⟩
+  have hst := AM.st_proto imaxLens _ _ _ _ _ _ a (internLNode_imax_run _ _ a) hok
+  exact ⟨hok, ⟨hR.lift_imax _ _ _ _ hX hf hst, derR_lss _ (fun _ _ => ⟨rfl, rfl⟩) (fun _ _ => ⟨rfl, rfl⟩) hst
+    (DerR.frameT hf (by tapart) hA.2)⟩, hres, hf⟩
 
 theorem param_A (u : Word) (hu : u.toNat < 2 ^ 32) (hI : pinternW m u = some (w, m')) :
-    AM.ok (internLNode (.param (decI u))) a ∧ ArenaR m' (AM.st (internLNode (.param (decI u))) a) ∧
+    AM.ok (internLNode (.param (decI u))) a ∧ ArenaD m' (AM.st (internLNode (.param (decI u))) a) ∧
     AM.res (internLNode (.param (decI u))) a = decI w ∧
     MemFrame [paramSch.ra, paramSch.sa] [paramSch.ca, paramSch.ca + 1] m m' := by
+  have hR := hA.1
   obtain ⟨hok, hX, hres⟩ := pintern_correct m a hR.param u hu _ _ hI
   rw [pinternW_eq] at hI
   have hf := internM_frame _ paramSch_wf _ _ _ _ _ _ _ _ hI
-  exact ⟨hok, hR.lift_param _ _ _ _ hX hf
-    (AM.st_proto paramLens _ _ _ _ _ _ a (internLNode_param_run _ a) hok), hres, hf⟩
+  have hst := AM.st_proto paramLens _ _ _ _ _ _ a (internLNode_param_run _ a) hok
+  exact ⟨hok, ⟨hR.lift_param _ _ _ _ hX hf hst, derR_lss _ (fun _ _ => ⟨rfl, rfl⟩) (fun _ _ => ⟨rfl, rfl⟩) hst
+    (DerR.frameT hf (by tapart) hA.2)⟩, hres, hf⟩
 
 end interns
 
@@ -289,14 +359,14 @@ theorem putK_eq {b : ArrId} {i : Word} {x : Option (Word × Mem)} {m' : Mem}
 /-! ## Name entries -/
 
 section names
-variable (m m' : Mem) (a : AState) (st : StateD) (hR : ArenaR m a) (hD : StateDR m st)
+variable (m m' : Mem) (a : AState) (st : StateD) (hR : ArenaD m a) (hD : StateDR m st)
 include hR hD
 
 theorem applyNStrW_refines (i pre o l : Word) (hq : SliceOK m o l) (s : String)
     (hk : sliceL (m.arr64 POOL) o.toNat l.toNat = strWords s)
     (h : applyNStrW m i pre o l = some m') :
     AM.ok (parseNameEntryD st i.toNat (.str pre.toNat s)) a ∧
-    ArenaR m' (AM.st (parseNameEntryD st i.toNat (.str pre.toNat s)) a) ∧
+    ArenaD m' (AM.st (parseNameEntryD st i.toNat (.str pre.toNat s)) a) ∧
     StateDR m' (AM.res (parseNameEntryD st i.toNat (.str pre.toNat s)) a) := by
   simp only [applyNStrW] at h
   split at h
@@ -313,15 +383,15 @@ theorem applyNStrW_refines (i pre o l : Word) (hq : SliceOK m o l) (s : String)
     obtain ⟨hok₂, hst₂, hres₂⟩ := AM.bind_pure _
       (fun h => { st with names := st.names.insert i.toNat h }) a hok'
     rw [hX]
-    refine ⟨hok₂, by rw [hst₂]; exact ArenaR.setT _ _ hR₁ _ (.inl rfl) _ _, ?_⟩
+    refine ⟨hok₂, by rw [hst₂]; exact ArenaD.setT _ _ hR₁ _ (.inl rfl) _ _, ?_⟩
     rw [hres₂, hres]
     exact hD.putName hf (by tapart) (by tapart) i w hi hw _
-      (fun j => IdTable.get?_insert _ _ _ _) rfl
+      (fun j => IdTable.get?_insert _ _ _ _) rfl rfl
   · simp at h
 
 theorem applyNNumW_refines (i pre x : Word) (h : applyNNumW m i pre x = some m') :
     AM.ok (parseNameEntryD st i.toNat (.num pre.toNat x.toNat)) a ∧
-    ArenaR m' (AM.st (parseNameEntryD st i.toNat (.num pre.toNat x.toNat)) a) ∧
+    ArenaD m' (AM.st (parseNameEntryD st i.toNat (.num pre.toNat x.toNat)) a) ∧
     StateDR m' (AM.res (parseNameEntryD st i.toNat (.num pre.toNat x.toNat)) a) := by
   simp only [applyNNumW] at h
   split at h
@@ -338,10 +408,10 @@ theorem applyNNumW_refines (i pre x : Word) (h : applyNNumW m i pre x = some m')
     obtain ⟨hok₂, hst₂, hres₂⟩ := AM.bind_pure _
       (fun h => { st with names := st.names.insert i.toNat h }) a hok'
     rw [hX]
-    refine ⟨hok₂, by rw [hst₂]; exact ArenaR.setT _ _ hR₁ _ (.inl rfl) _ _, ?_⟩
+    refine ⟨hok₂, by rw [hst₂]; exact ArenaD.setT _ _ hR₁ _ (.inl rfl) _ _, ?_⟩
     rw [hres₂, hres]
     exact hD.putName hf (by tapart) (by tapart) i w hi hw _
-      (fun j => IdTable.get?_insert _ _ _ _) rfl
+      (fun j => IdTable.get?_insert _ _ _ _) rfl rfl
   · simp at h
 
 end names
@@ -362,7 +432,7 @@ theorem levelRecW_imax (a c : Word) : levelRecW 3 a c = .imax a.toNat c.toNat :=
 theorem levelRecW_param (a c : Word) : levelRecW 4 a c = .param a.toNat := rfl
 
 section levels
-variable (m m' : Mem) (a : AState) (st : StateD) (hR : ArenaR m a) (hD : StateDR m st)
+variable (m m' : Mem) (a : AState) (st : StateD) (hR : ArenaD m a) (hD : StateDR m st)
 
 include hD in
 /-- The common end of a level entry: the interning `x` succeeded at `w` into `m₁`, `LID[i]` was
@@ -370,23 +440,24 @@ written. -/
 theorem levelFinish {A : List ArrId} {C : List Word} (i w : Word) (r : LevelRec) (x : AM LIdx)
     (m₁ : Mem) (hX : parseLevelEntryD st i.toNat r =
       (x >>= fun l => pure { st with levels := st.levels.insert i.toNat l }))
-    (hok : AM.ok x a) (hR₁ : ArenaR m₁ (AM.st x a)) (hres : AM.res x a = decI w)
-    (hf : MemFrame A C m m₁) (hn : NID ∉ A) (hl : LID ∉ A) (hi : i.toNat < (m₁.arr64 LID).size)
+    (hok : AM.ok x a) (hR₁ : ArenaD m₁ (AM.st x a)) (hres : AM.res x a = decI w)
+    (hf : MemFrame A C m m₁) (hn : NID ∉ A) (hl : LID ∉ A) (he : EID ∉ A)
+    (hi : i.toNat < (m₁.arr64 LID).size)
     (hw : w.toNat < 2 ^ 32) :
     AM.ok (parseLevelEntryD st i.toNat r) a ∧
-    ArenaR (m₁.set64 LID i (w + 1)) (AM.st (parseLevelEntryD st i.toNat r) a) ∧
+    ArenaD (m₁.set64 LID i (w + 1)) (AM.st (parseLevelEntryD st i.toNat r) a) ∧
     StateDR (m₁.set64 LID i (w + 1)) (AM.res (parseLevelEntryD st i.toNat r) a) := by
   obtain ⟨hok₂, hst₂, hres₂⟩ := AM.bind_pure _
     (fun l => { st with levels := st.levels.insert i.toNat l }) a hok
   rw [hX]
-  refine ⟨hok₂, by rw [hst₂]; exact ArenaR.setT _ _ hR₁ _ (.inr rfl) _ _, ?_⟩
+  refine ⟨hok₂, by rw [hst₂]; exact ArenaD.setT _ _ hR₁ _ (.inr (.inl rfl)) _ _, ?_⟩
   rw [hres₂, hres]
-  exact hD.putLevel hf hn hl i w hi hw _ (fun j => IdTable.get?_insert _ _ _ _) rfl
+  exact hD.putLevel hf hn hl i w hi hw _ (fun j => IdTable.get?_insert _ _ _ _) rfl rfl he
 
 include hR hD in
 theorem applyLevelW_refines (i k a' c : Word) (h : applyLevelW m i k a' c = some m') :
     AM.ok (parseLevelEntryD st i.toNat (levelRecW k a' c)) a ∧
-    ArenaR m' (AM.st (parseLevelEntryD st i.toNat (levelRecW k a' c)) a) ∧
+    ArenaD m' (AM.st (parseLevelEntryD st i.toNat (levelRecW k a' c)) a) ∧
     StateDR m' (AM.res (parseLevelEntryD st i.toNat (levelRecW k a' c)) a) := by
   simp only [applyLevelW] at h
   split at h
@@ -400,7 +471,7 @@ theorem applyLevelW_refines (i k a' c : Word) (h : applyLevelW m i k a' c = some
       · rename_i ha
         obtain ⟨hga, hPa⟩ := hD.levels.read _ _ _ _ ha
         obtain ⟨hok', hR₁, hres, hf⟩ := succ_A m a hR w m₁ _ hPa hI
-        refine levelFinish _ _ _ hD i w _ _ m₁ ?_ hok' hR₁ hres hf (by tapart) (by tapart) hi hw
+        refine levelFinish _ _ _ hD i w _ _ m₁ ?_ hok' hR₁ hres hf (by tapart) (by tapart) (by tapart) hi hw
         simp [parseLevelEntryD, levelRecW, k1, StateD.level, hga, StateD.freshLevel,
           IdTable.bound_eq, hnone]
       · simp at hI
@@ -411,7 +482,7 @@ theorem applyLevelW_refines (i k a' c : Word) (h : applyLevelW m i k a' c = some
         obtain ⟨hga, hPa⟩ := hD.levels.read _ _ _ _ ha.1
         obtain ⟨hgc, hPc⟩ := hD.levels.read _ _ _ _ ha.2
         obtain ⟨hok', hR₁, hres, hf⟩ := max_A m a hR w m₁ _ _ hPa hPc hI
-        refine levelFinish _ _ _ hD i w _ _ m₁ ?_ hok' hR₁ hres hf (by tapart) (by tapart) hi hw
+        refine levelFinish _ _ _ hD i w _ _ m₁ ?_ hok' hR₁ hres hf (by tapart) (by tapart) (by tapart) hi hw
         simp [parseLevelEntryD, levelRecW, k1, k2, StateD.level, hga, hgc, StateD.freshLevel,
           IdTable.bound_eq, hnone]
       · simp at hI
@@ -422,7 +493,7 @@ theorem applyLevelW_refines (i k a' c : Word) (h : applyLevelW m i k a' c = some
         obtain ⟨hga, hPa⟩ := hD.levels.read _ _ _ _ ha.1
         obtain ⟨hgc, hPc⟩ := hD.levels.read _ _ _ _ ha.2
         obtain ⟨hok', hR₁, hres, hf⟩ := imax_A m a hR w m₁ _ _ hPa hPc hI
-        refine levelFinish _ _ _ hD i w _ _ m₁ ?_ hok' hR₁ hres hf (by tapart) (by tapart) hi hw
+        refine levelFinish _ _ _ hD i w _ _ m₁ ?_ hok' hR₁ hres hf (by tapart) (by tapart) (by tapart) hi hw
         simp [parseLevelEntryD, levelRecW, k1, k2, k3, StateD.level, hga, hgc,
           StateD.freshLevel, IdTable.bound_eq, hnone]
       · simp at hI
@@ -432,7 +503,7 @@ theorem applyLevelW_refines (i k a' c : Word) (h : applyLevelW m i k a' c = some
       · rename_i ha
         obtain ⟨hga, hPa⟩ := hD.names.read _ _ _ _ ha
         obtain ⟨hok', hR₁, hres, hf⟩ := param_A m a hR w m₁ _ hPa hI
-        refine levelFinish _ _ _ hD i w _ _ m₁ ?_ hok' hR₁ hres hf (by tapart) (by tapart) hi hw
+        refine levelFinish _ _ _ hD i w _ _ m₁ ?_ hok' hR₁ hres hf (by tapart) (by tapart) (by tapart) hi hw
         simp [parseLevelEntryD, levelRecW, k1, k2, k3, StateD.name, hga, StateD.freshLevel,
           IdTable.bound_eq, hnone]
       · simp at hI
@@ -446,10 +517,10 @@ end levels
 
 section triples
 variable (p : Prog) (hL : FrontLookups p) (a₀ : AState) (st : StateD) (n : Nat) (s₀ : St)
-  (hR : ArenaR s₀.mem a₀) (hD : StateDR s₀.mem st)
+  (hR : ArenaD s₀.mem a₀) (hD : StateDR s₀.mem st)
 
 include hL hR hD in
-/-- **`apply_nstr(i, pre, o, l)` refines `parseNameEntryD st i (.str pre s)`** under `ArenaR` and
+/-- **`apply_nstr(i, pre, o, l)` refines `parseNameEntryD st i (.str pre s)`** under `ArenaD` and
 `StateDR`, for the string `s` whose bytes the pool slice `(o, l)` holds. -/
 theorem applyNStr_refines (hp : p.lookup "apply_nstr" = some applyNStr) (i pre o l : Word)
     (hq : SliceOK s₀.mem o l) (s : String)
@@ -457,9 +528,9 @@ theorem applyNStr_refines (hp : p.lookup "apply_nstr" = some applyNStr) (i pre o
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "apply_nstr" [i, pre, o, l]
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (parseNameEntryD st i.toNat (.str pre.toNat s)) a₀ ∧
-      ArenaR s'.mem (AM.st (parseNameEntryD st i.toNat (.str pre.toNat s)) a₀) ∧
+      ArenaD s'.mem (AM.st (parseNameEntryD st i.toNat (.str pre.toNat s)) a₀) ∧
       StateDR s'.mem (AM.res (parseNameEntryD st i.toNat (.str pre.toNat s)) a₀); ⊤⦄ := by
-  have ⟨_, _, hps, htop⟩ := hR.lit.1
+  have ⟨_, _, hps, htop⟩ := hR.1.lit.1
   have hspec := applyNStr_spec p hL hp n s₀ i pre o l (by omega)
     (by simp only [SliceOK] at hq; omega)
   apply M.triple_of_run
@@ -469,13 +540,13 @@ theorem applyNStr_refines (hp : p.lookup "apply_nstr" = some applyNStr) (i pre o
   exact ⟨hloc, applyNStrW_refines _ _ _ _ hR hD i pre o l hq s hk hW⟩
 
 include hL hR hD in
-/-- **`apply_nnum(i, pre, x)` refines `parseNameEntryD st i (.num pre x)`** under `ArenaR` and
+/-- **`apply_nnum(i, pre, x)` refines `parseNameEntryD st i (.num pre x)`** under `ArenaD` and
 `StateDR`. -/
 theorem applyNNum_refines (hp : p.lookup "apply_nnum" = some applyNNum) (i pre x : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "apply_nnum" [i, pre, x]
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (parseNameEntryD st i.toNat (.num pre.toNat x.toNat)) a₀ ∧
-      ArenaR s'.mem (AM.st (parseNameEntryD st i.toNat (.num pre.toNat x.toNat)) a₀) ∧
+      ArenaD s'.mem (AM.st (parseNameEntryD st i.toNat (.num pre.toNat x.toNat)) a₀) ∧
       StateDR s'.mem (AM.res (parseNameEntryD st i.toNat (.num pre.toNat x.toNat)) a₀); ⊤⦄ := by
   apply M.triple_of_run
   intro s' r s'' hs hrun
@@ -486,13 +557,13 @@ theorem applyNNum_refines (hp : p.lookup "apply_nnum" = some applyNNum) (i pre x
 
 include hL hR hD in
 /-- **`apply_level(i, k, a, c)` refines `parseLevelEntryD st i (levelRecW k a c)`** under
-`ArenaR` and `StateDR` (`levelRecW 1 a c = .succ a`, `2`: `.max a c`, `3`: `.imax a c`, `4`:
+`ArenaD` and `StateDR` (`levelRecW 1 a c = .succ a`, `2`: `.max a c`, `3`: `.imax a c`, `4`:
 `.param a`; on another `k` the L code aborts). -/
 theorem applyLevel_refines (hp : p.lookup "apply_level" = some applyLevel) (i k a c : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "apply_level" [i, k, a, c]
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (parseLevelEntryD st i.toNat (levelRecW k a c)) a₀ ∧
-      ArenaR s'.mem (AM.st (parseLevelEntryD st i.toNat (levelRecW k a c)) a₀) ∧
+      ArenaD s'.mem (AM.st (parseLevelEntryD st i.toNat (levelRecW k a c)) a₀) ∧
       StateDR s'.mem (AM.res (parseLevelEntryD st i.toNat (levelRecW k a c)) a₀); ⊤⦄ := by
   apply M.triple_of_run
   intro s' r s'' hs hrun
@@ -606,33 +677,33 @@ theorem strPutW_facts (m : Mem) (vs ve : Word) (hpool : PoolOK m) (hok : strPutO
 
 /-- **`str_put(vs, ve)`** copies the input bytes `[vs, ve)` to the pool top, one per word, and
 returns the slice `(o, l)` = (old top, `ve - vs`): the pool grows (`Grows`), the slice is in use
-(`SliceOK`) and holds the bytes; `ArenaR` and `StateDR` are carried. -/
+(`SliceOK`) and holds the bytes; `ArenaD` and `StateDR` are carried. -/
 theorem strPut_spec (p : Prog) (hp : p.lookup "str_put" = some strPut) (n : Nat) (s₀ : St)
-    (a₀ : AState) (st : StateD) (hR : ArenaR s₀.mem a₀) (hD : StateDR s₀.mem st) (vs ve : Word) :
+    (a₀ : AState) (st : StateD) (hR : ArenaD s₀.mem a₀) (hD : StateDR s₀.mem st) (vs ve : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "str_put" [vs, ve]
     ⦃fun r s' => LocEq s' s₀ ∧ r = [s₀.mem.top, ve - vs] ∧ Grows s₀.mem s'.mem ∧
       SliceOK s'.mem s₀.mem.top (ve - vs) ∧
       sliceL (s'.mem.arr64 POOL) s₀.mem.top.toNat (ve - vs).toNat =
         ((s₀.mem.arr8 IN).extract vs.toNat ve.toNat).toList.map UInt8.toUInt64 ∧
-      ArenaR s'.mem a₀ ∧ StateDR s'.mem st; ⊤⦄ := by
+      ArenaD s'.mem a₀ ∧ StateDR s'.mem st; ⊤⦄ := by
   apply M.triple_of_run
   intro s' r s'' hs hrun
   obtain ⟨hloc, hok, hr, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun (strPut_specW p hp n s₀ vs ve)
   subst hs
-  obtain ⟨hg, hsl, hk⟩ := strPutW_facts s'.mem vs ve hR.lit.1 hok
+  obtain ⟨hg, hsl, hk⟩ := strPutW_facts s'.mem vs ve hR.1.lit.1 hok
   rw [← hm] at hg hsl hk
-  exact ⟨hloc, hr, hg, hsl, hk, ArenaR.grow _ _ hg _ hR,
+  exact ⟨hloc, hr, hg, hsl, hk, ArenaD.grow _ _ hg _ hR,
     hD.frame (grows_frame _ _ hg) (by tapart) (by tapart)⟩
 
 /-! ## The initial state -/
 
 section init
-variable (m m' : Mem) (a : AState) (hR : ArenaR m a) (hD : StateDR m StateD.blank)
+variable (m m' : Mem) (a : AState) (hR : ArenaD m a) (hD : StateDR m StateD.blank)
 
 include hR hD in
 theorem frontInitW_refines (h : frontInitW m = some m') :
-    AM.ok StateD.init a ∧ ArenaR m' (AM.st StateD.init a) ∧ StateDR m' (AM.res StateD.init a) := by
+    AM.ok StateD.init a ∧ ArenaD m' (AM.st StateD.init a) ∧ StateDR m' (AM.res StateD.init a) := by
   simp only [frontInitW] at h
   cases h1 : putK NID 0 (nainternW m) with
   | none => rw [h1] at h; simp [initK] at h
@@ -641,7 +712,7 @@ theorem frontInitW_refines (h : frontInitW m = some m') :
     obtain ⟨w₁, m₁, hI1, hw1, hi1, rfl⟩ := putK_eq h1
     obtain ⟨w₂, m₃, hI2, hw2, hi2, rfl⟩ := putK_eq h
     obtain ⟨ok1, R1, res1, hf1⟩ := nanon_A m a hR w₁ m₁ hI1
-    have R2 := ArenaR.setT _ _ R1 NID (.inl rfl) 0 (w₁ + 1)
+    have R2 := ArenaD.setT _ _ R1 NID (.inl rfl) 0 (w₁ + 1)
     obtain ⟨ok2, R3, res2, hf2⟩ := zero_A _ _ R2 w₂ m₃ hI2
     have hX : StateD.init = (internNNode .anonymous >>= fun n0 => internLNode .zero >>= fun l0 =>
         pure ({ names := IdTable.singleton n0, levels := IdTable.singleton l0 } : StateD)) := rfl
@@ -653,27 +724,27 @@ theorem frontInitW_refines (h : frontInitW m = some m') :
     have D1 : StateDR (m₁.set64 NID 0 (w₁ + 1))
         { names := IdTable.singleton (decI w₁), levels := {} } :=
       hD.putName hf1 (by tapart) (by tapart) 0 w₁ hi1 hw1 _
-        (fun j => by simp [IdTable.get?_singleton, StateD.blank, IdTable.get?_empty]) rfl
+        (fun j => by simp [IdTable.get?_singleton, StateD.blank, IdTable.get?_empty]) rfl rfl
     refine ⟨okX, ?_, ?_⟩
     · rw [hX] at okX ⊢
       rw [AM.st_bind _ _ _ okX, stI]
-      exact ArenaR.setT _ _ R3 LID (.inr rfl) _ _
+      exact ArenaD.setT _ _ R3 LID (.inr (.inl rfl)) _ _
     · rw [hX, AM.res_bind _ _ _ ok1, resI, res2]
       simp only [n0, res1]
       exact D1.putLevel hf2 (by tapart) (by tapart) 0 w₂ hi2 hw2 _
-        (fun j => by simp [IdTable.get?_singleton, IdTable.get?_empty]) rfl
+        (fun j => by simp [IdTable.get?_singleton, IdTable.get?_empty]) rfl rfl
 
 end init
 
-/-- **`front_init()` refines `StateD.init`** under `ArenaR`, from a memory whose `NID`/`LID`
+/-- **`front_init()` refines `StateD.init`** under `ArenaD`, from a memory whose `NID`/`LID`
 represent the empty tables (`StateDR m StateD.blank`: all zero, e.g. `initMem`,
 `stateDR_initMem`). -/
 theorem frontInit_refines (p : Prog) (hL : FrontLookups p)
     (hp : p.lookup "front_init" = some frontInit) (n : Nat) (s₀ : St) (a₀ : AState)
-    (hR : ArenaR s₀.mem a₀) (hD : StateDR s₀.mem StateD.blank) :
+    (hR : ArenaD s₀.mem a₀) (hD : StateDR s₀.mem StateD.blank) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "front_init" []
-    ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok StateD.init a₀ ∧ ArenaR s'.mem (AM.st StateD.init a₀) ∧
+    ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok StateD.init a₀ ∧ ArenaD s'.mem (AM.st StateD.init a₀) ∧
       StateDR s'.mem (AM.res StateD.init a₀); ⊤⦄ := by
   apply M.triple_of_run
   intro s' r s'' hs hrun
@@ -681,9 +752,9 @@ theorem frontInit_refines (p : Prog) (hL : FrontLookups p)
   subst hs
   exact ⟨hloc, frontInitW_refines _ _ _ hR hD hW⟩
 
-/-- The all-zero `NID`/`LID` represent the empty tables. -/
+/-- The all-zero `NID`/`LID`/`EID` represent the empty tables. -/
 theorem stateDR_initMem (sizes : List Nat) (hn : sizes[64]?.getD 0 < 2 ^ 63)
-    (hl : sizes[65]?.getD 0 < 2 ^ 63) : StateDR (initMem sizes) StateD.blank := by
+    (hl : sizes[65]?.getD 0 < 2 ^ 63) (he : sizes[66]?.getD 0 < 2 ^ 63) : StateDR (initMem sizes) StateD.blank := by
   have hT : ∀ (b : ArrId) {k : IdxKind}, sizes[b]?.getD 0 < 2 ^ 63 →
       TblR ((initMem sizes).arr64 b) ({} : IdTable (Idx k)) := by
     intro b k hb
@@ -693,6 +764,6 @@ theorem stateDR_initMem (sizes : List Nat) (hn : sizes[64]?.getD 0 < 2 ^ 63)
       by_cases h : i < sizes[b]?.getD 0 <;> simp [h]
     · rw [Array.getElem?_replicate] at he
       split at he <;> simp at he; subst he; simp
-  exact ⟨hT NID hn, hT LID hl⟩
+  exact ⟨hT NID hn, hT LID hl, hT EID he⟩
 
 end L.Front

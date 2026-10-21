@@ -110,14 +110,25 @@ def frontLineW (b : Array UInt8) (m : Mem) (i : Word) : Option (List Word × Mem
 theorem map_okRes (nx : Word) (m : Mem) : Option.map (okRes nx) (some m) = some ([1, nx], m) := rfl
 
 /-- `str_put`'s memory has the pool's size, and the slice it wrote fits. -/
-theorem strPut_room (m : Mem) (vs ve : Word) (hp : PoolOK m) (h : strPutOK m vs ve) :
+theorem strPut_room (m : Mem) (vs ve : Word) (hps : (m.arr64 POOL).size < 2 ^ 63)
+    (h : strPutOK m vs ve) :
     (((putW m m.top vs (ve - vs) 0).set64 CTL 0 (m.top + (ve - vs))).arr64 POOL).size < 2 ^ 64 ∧
     m.top.toNat + (ve - vs).toNat ≤
       (((putW m m.top vs (ve - vs) 0).set64 CTL 0 (m.top + (ve - vs))).arr64 POOL).size := by
-  obtain ⟨hg, hsl, _⟩ := strPutW_facts m vs ve hp h
-  obtain ⟨_, _, _, h4, h5⟩ := hg
-  have := hp.2.2.1
-  simp only [SliceOK] at hsl
+  obtain ⟨h1, h2, h3, h4⟩ := h
+  have hle := UInt64.le_iff_toNat_le.mp h1
+  have hn : (ve - vs).toNat = ve.toNat - vs.toNat := UInt64.toNat_sub_of_le _ _ h1
+  have hlen : (m.len64 POOL).toNat = (m.arr64 POOL).size := by
+    simp only [Mem.len64]; exact toNat_ofNat_size _ hps
+  have hroom : (ve - vs).toNat ≤ (m.arr64 POOL).size - m.top.toNat := by
+    have := UInt64.le_iff_toNat_le.mp h4
+    rwa [UInt64.toNat_sub_of_le _ _ h3, hlen] at this
+  have ht := UInt64.le_iff_toNat_le.mp h3
+  rw [hlen] at ht
+  have hve := ve.toNat_lt
+  obtain ⟨-, hsz, -⟩ := putW_facts m.top vs (ve - vs) (by omega) _ m 0 rfl
+    (UInt64.le_iff_toNat_le.mpr (by simp)) (by omega) hps
+  rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hsz]
   omega
 
 /-! ## The spec -/
@@ -200,7 +211,7 @@ include hS hL hpf hps hpn hpu hpl hpr hpt hb
 
 attribute [local lang_grind =] map_okRes
 
-theorem applyStr_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (hpool : PoolOK s₀.mem)
+theorem applyStr_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (hpool : (s₀.mem.arr64 POOL).size < 2 ^ 63)
     (idx a c d : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "apply_str" [idx, a, c, d]
@@ -217,7 +228,7 @@ theorem applyStr_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (hpool :
         L.Scan.Leaves.hasEscape_spec p hS.has_escape b hb64 n,
         strPut_specW p hps n, applyNStr_spec p hL hpn n] <;> finish [applyStrW, strPutW]
 
-theorem applyRec_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (hpool : PoolOK s₀.mem)
+theorem applyRec_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (hpool : (s₀.mem.arr64 POOL).size < 2 ^ 63)
     (pl idx a c d : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "apply_rec" [pl, idx, a, c, d]
@@ -233,7 +244,7 @@ theorem applyRec_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (hpool :
         applyNNum_spec p hL hpu n, applyLevel_spec p hL hpl n] <;> finish [lineRecW, NONE]
 
 theorem frontLine_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word)
-    (hi : i.toNat ≤ b.size) (hpool : PoolOK s₀.mem) :
+    (hi : i.toNat ≤ b.size) (hpool : (s₀.mem.arr64 POOL).size < 2 ^ 63) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "front_line" [i]
     ⦃fun r s' => frontLineW b s₀.mem i = some (r, s'.mem); ⊤⦄ := by

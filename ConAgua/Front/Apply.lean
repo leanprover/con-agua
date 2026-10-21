@@ -40,10 +40,16 @@ namespace L.Front
 abbrev NID : ArrId := 64
 /-- Export level id ↦ level handle word `+ 1`. -/
 abbrev LID : ArrId := 65
+/-- Export expression id ↦ expression handle word `+ 1` (`ConAgua.Front.ApplyExpr`). -/
+abbrev EID : ArrId := 66
 /-- The input buffer (byte array 0). -/
 abbrev IN : ArrId := 0
 
 /-! ## Models of the table reads -/
+
+theorem toNat_ofNat_size (n : Nat) (h : n < 2 ^ 63) : (UInt64.ofNat n).toNat = n := by
+  rw [UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)]
+
 
 /-- Entry `i` of table `b` is bound: in range and nonzero. -/
 def tblOK (m : Mem) (b : ArrId) (i : Word) : Bool :=
