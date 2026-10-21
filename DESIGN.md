@@ -4368,13 +4368,79 @@ compiled match/do-notation being syntactically identical, not just extensionally
 (`lean` wall/user not separately timed this landing; the full project build, 1810 jobs, restores
 from the shared Lake cache and rebuilds only the touched files in a few seconds.)
 
-### Not done
+### Compiled benchmarks of `lift_entry`/`inst_entry`
 
-* `instantiateListGo`/`Fast`, `abstract1Go`/`Fast` (now that `fvarRangeMemo` exists for its
-  cutoff): the same scaffolding as `Lift`/`Inst1`, one memo instance each (two more reserved
-  `exprops` slots).
-* Compiled benchmarks of `lift_entry`/`inst_entry` (the programs are `liftProg`/`instProg`, not
-  yet compiled through `WalkEmit.lean`'s pattern).
+`LiftBenchComp.lean`/`LiftEmit.lean`/`harness/lift.c` and `Inst1BenchComp.lean`/`Inst1Emit.lean`/
+`harness/inst1.c`: `WalkBench.lean`/`WalkEmit.lean`/`harness/walk.c`'s shape exactly (not proved,
+drivers), building the left-nested spine `app (… (app (bvar k) (bvar k)) …) (bvar k)` with `n`
+applications through `mk_app` (not `intern_app`: the walk needs the derived range) and calling
+`lift_entry`/`inst_entry` on it; `LiftBenchLean.lean`/`Inst1BenchLean.lean` are the "Lean-compiled
+arena" baseline (`lake exe liftbenchlean`/`instbenchlean`, con-ron's `liftLooseBVarsFast`/
+`instantiate1Fast`), `WalkBenchLean.lean`'s shape. The harnesses use one uniform array size (`8
+(n + 16)` words per content array) rather than per-table exact sizing — a driver, not proved, so
+generosity costs nothing but memory.
+
+**Measurements** (`perf stat -e instructions:u`, one run each; "build" is the same run without the
+walk: `k ≥ 2^63` for L, `… build` for Lean):
+
+| `n` | compiled L: build / build + walk / walk | con-ron's compiled Lean: build / total / walk |
+|---:|---|---|
+| `lift_entry`, 10^5 | 79.8 M / 282.7 M / 202.9 M | 196.9 M / 549.0 M / 352.0 M |
+| `lift_entry`, 10^6 | 800.1 M / 2833.2 M / 2033.0 M | 1870.9 M / 5276.3 M / 3405.4 M |
+| `inst_entry`, 10^5 | 79.8 M / 281.6 M / 201.9 M | 197.0 M / 550.4 M / 353.4 M |
+| `inst_entry`, 10^6 | 800.1 M / 2872.5 M / 2072.3 M | 1870.9 M / 5290.1 M / 3419.2 M |
+
+About 2030‥2070 instructions per `app` node for the compiled L walks (two memo probes per node,
+`mk_app`'s own tail write, the two-children recursion) against about 3400‥3420 for con-ron's arena
+compiled by Lean — L/Lean ≈ 0.60, the same order as the plain `bvarBoundMemo` walk's 0.56‥0.66
+(lane `walk`, `exprops`). Building the term through `mk_app` (the derived-range write on top of
+`intern_app`) costs the same as the plain walk's build (79.8 M / 800.1 M at 10^5/10^6): the write
+is folded into the count check already in the critical path, no measurable extra cost from `der_b`
+itself (one more memory read, branch-free).
+
+### Not done, and why: `instantiateListGo`/`Fast`, `abstract1Go`/`Fast`
+
+Both need a genuinely new idea, not just `Lift`/`Inst1`'s scaffolding reused; neither is a
+45-minute fix, so both are left for a session that can give them the design attention first.
+
+* **`abstract1Go`'s cutoff is `fvarB ≤ d`, not `fvarRangeMemo` directly**
+  (`ConRon.Arena.ExprOps.fvarB`): it reads the packed derived word's `fvarOfData` field in `O(1)`
+  and falls back to the exact memoized `fvarRangeMemo` walk only on the saturated branch
+  (`r == satRange`). `ExprMk.lean`/`DerRel.lean` chose, when the derived-range arrays were added
+  (lane `exprops`'s first landing), to store **only the bvar-range field** per compound node
+  (`XDER[2 i + t]`, one word), not the fvar-range field too — "L keeps only the range field (the
+  hash is opaque)" is the module doc's phrase for it. So L has no array to read `fvarOfData` off
+  of, and cannot replicate `fvarB`'s two-branch shape at all without a design extension: a second
+  word per compound node (an `FVDER`-family of arrays, `ExprMk.lean`'s `mk_*` writing it the way
+  `der_b`'s value is written now) plus a `DerR` field for it analogous to the bvar one. Only then
+  does `abstract1`'s cutoff become an `O(1)` read, matching the twin exactly; short of that
+  extension, any L cutoff would have to always recompute via `fr_memo`, which is a **different
+  function** from `fvarB` (it always clears/re-fills the memo; `fvarB`'s cheap branch does not
+  touch it at all), so the two do not obviously agree node-for-node on the resulting arena state
+  without extra, unproven invariants about when the twin's packed field is actually saturated.
+  Brief for the next session: add the fvar-range column (five more arrays or five wider ones,
+  `42`‥`46`'s pattern doubled), extend `DerR`/`mk_*`/`der_b`'s sibling (`der_f`?) the way this
+  landing did for the leaf internings, *then* `abstract1` is `Inst1.lean`'s shape with `fvarB`'s
+  cutoff and the `fvar` arm comparing the index to `d` (no memo on that arm; `abs1C`'s key is
+  `(h, k)`, the same shape as `inst1C`'s `(h, d)`).
+* **`instantiateListGo`/`instantiateList` is two twins, not one, and the pure one changes its own
+  argument between recursive calls.** Its cutoff (`bvarBRaw < satRange && bvarBRaw ≤ d`) is the
+  same field `Inst1.lean` already reads, so that part is free. The complication is the
+  substitution: con-ron represents it as an `Array EIdx` (push order; the innermost binder's
+  argument first is the array's *last* entry), and the memoized `instantiateListGo`'s own `bvar`
+  arm does not use its memo at all — it calls the **pure, unmemoized** `instantiateList` on a
+  *shorter* suffix of the same array (`lastEidx vs (j - d)`), which the twin's own comment says is
+  `O(1)` only because of the SAME cutoff tested again before the recursion (`instListCutoff vi d`,
+  hoisted over the prefix copy). Porting this needs an L representation of "a growable list of
+  handles" that a recursive function can pass a *shrinking suffix* of cheaply — the natural choice
+  is a pool slice (offset, length) exactly as `LsStore.lean`/`PoolSlice.lean` already represent
+  level-parameter lists, with `lastEidx`'s shrink becoming an O(1) offset/length adjustment (no
+  copy, since the array only ever loses entries from the front in push order) — but that is a new
+  piece of shared infrastructure (an `EIdx`-list-in-the-pool reader, with its own `DerR`-style
+  frame lemmas), not a one-file port. Brief for the next session: build the pool-slice reader
+  first (generic over the element width, the way `MemoLib.lean` generalised memos), then port
+  `instantiateList` (no memo, recursion into a shrinking slice) and `instantiateListGo` (the
+  memoized wrapper whose `bvar` arm calls the former) as two files following `Inst1.lean`'s split.
 
 ### `sorry`s
 
