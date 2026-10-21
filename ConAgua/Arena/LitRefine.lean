@@ -1,32 +1,25 @@
-import ConAgua.Arena.StoreRel
+import ConAgua.Arena.StoreLib
 
 /-!
 # The `lit` store refines the arena's `lit` tables; `natAddLit_refines` without hypotheses
 
 `ConAgua/Arena/Store.lean` has the L code of the `lit` node store and its specs against
-word-level models (`probeW`, `matchW`, `internW`). This file relates them to con-ron's arena:
+word-level models (`probeW`, `matchW`, `internW`). This file relates them to con-ron's arena, as
+an instance of the store library (`StoreLib.lean`):
 
-* **`LitR m a`**, the state relation (`natAddLit_refines`'s `R`): the pool is well formed, the
-  scratch flag `CTL[1]` is `a.store.scratchOn`, and each tier `t` of the L store represents the
-  arena's `lit` table of that tier (`TierRel`): node `i` (a word) holds `tb.nodes[i]`
-  (`RecRel`: a `natVal` is a normalised slice below the pool top, with its hash), the cons
-  table maps each node's key to its handle `hdW 8 t i` and points only at nodes with its key, and
-  the L slots satisfy the linear-probing invariant (`SlotsOK`). Everything is stated over the
-  words the L code reads (`rdW (m.arr64 REC) (i * 8 + t * 4 + 3)`, `walkW`), so the L models and
-  the relation share their terms and no index conversion is needed.
-* **The memory after `lit_push`**: one equation per array (`pm_rec`, `pm_slot`, `pm_ctl`,
-  `pm_pool`), from the generic `rdW_set64`.
-* **The probe** (`probe_ok`): a named predicate `ProbeOK` on the result, no `∃`/`∨`.
-* **The table lemmas**: a hit is the arena's cons hit (`tier_hit`), a miss means absence
-  (`tier_miss`), the append represents `Tbl.push` (`tier_push`, `tier_other`).
-* **The arena side**: one guarded run equation per path of `internE (.lit l)`.
-* **`intern_correct`**: `internW` refines `internE (.lit (.natVal _))`, one `grind` per path.
+* **The instance**: the schema `litSch` (`REC`, `SLOT`, four words per node, counts at
+  `CTL[2 + t]`, tag `8`), the record relation `RecRel` (a `natVal` is a normalised slice below
+  the pool top, with its hash; a `strVal` is kind `1`), the node hash `litH` (word 3), the lens
+  `litLens` on the arena's two `lit` tables, and the obligations: `litFrame`, the match
+  (`litMatchOK`: matching is equality of literals, by the uniqueness of normalised slices), the
+  home slot (`litHomeOK`), the new record (`litNewOK`), and the bridges from the L models
+  (`internW_eq`, `probeW_arm`, `pushOK_room`).
+* **`LitR m a`**, the state relation (`natAddLit_refines`'s `R`): the pool is well formed and the
+  library's `StoreR` holds for the `lit` tables.
+* **`intern_correct`**: `internW` refines `internE (.lit (.natVal _))`, by `intern_correctG`.
 * **`LitR.grow`**, `natAddLit_refines_store`, `natAddLit_run_store`.
 
-Proofs are `grind [store_grind, …]` per clause, with the case splits of the data (which tier,
-which node) and the instantiations of the relation's `∀` clauses made by hand where `grind`
-would otherwise instantiate them on every term. The pool facts (normalised slices are unique)
-are by hand.
+The pool facts (normalised slices are unique) are by hand.
 
 Not represented: the arena's derived column for `lit` nodes (`derOfLit`, through Lean's opaque
 `mixHash`), the contents of `strVal` nodes (kind `1` only), and every other table of `AState`.
@@ -49,35 +42,32 @@ def withScrLits (a : AState) (t : Tbl LitNode EIdx UInt64) : AState :=
 def withPersLits (a : AState) (t : Tbl LitNode EIdx UInt64) : AState :=
   { a with store := { a.store with pers := { a.store.pers with lits := t } } }
 
-/-- `internE` at a literal, unfolded: the persistent probe, the scratch probe (when the scratch
-tier is open), the capacity test and the append. -/
+/-- The arena's two `lit` tables. -/
+def litLens : Lens LitNode UInt64 .expr where
+  on a := a.store.scratchOn
+  getP a := a.store.pers.lits
+  getS a := a.store.scr.lits
+  setP := withPersLits
+  setS := withScrLits
+  on_setP _ _ := rfl
+  on_setS _ _ := rfl
+  getP_setP _ _ := rfl
+  getS_setP _ _ := rfl
+  getP_setS _ _ := rfl
+  getS_setS _ _ := rfl
+
+/-- `internE` at a literal is the library's protocol, with no skip. -/
 theorem internE_lit_run (l : ConLeche.Literal) (a : AState) :
     (internE (.lit l)).run a =
-      match a.store.pers.lits.cons[litKey l]? with
-      | some h => .ok (h, a)
-      | none =>
-        if a.store.scratchOn then
-          match a.store.scr.lits.cons[litKey l]? with
-          | some h => .ok (h, a)
-          | none =>
-            if a.store.scr.lits.size < Idx.idxCap then
-              .ok (Idx.mk ETag.lit Idx.tierS (UInt32.ofNat a.store.scr.lits.size),
-                withScrLits a (a.store.scr.lits.push (litKey l) (a.store.derOfView (.lit l))
-                    (Idx.mk ETag.lit Idx.tierS (UInt32.ofNat a.store.scr.lits.size))))
-            else .error (.native "arena: expression constructor array full")
-        else
-          if a.store.pers.lits.size < Idx.idxCap then
-            .ok (Idx.mk ETag.lit Idx.tierP (UInt32.ofNat a.store.pers.lits.size),
-              withPersLits a (a.store.pers.lits.push (litKey l) (a.store.derOfView (.lit l))
-                  (Idx.mk ETag.lit Idx.tierP (UInt32.ofNat a.store.pers.lits.size))))
-          else .error (.native "arena: expression constructor array full") := by
+      protoRun litLens (litKey l) ETag.lit a.store.pers.lits.cons[litKey l]?
+        (a.store.derOfView (.lit l)) (.native "arena: expression constructor array full") a := by
   simp only [internE, internNodeE, EStore.find?, EStore.persFindMaybe,
     EStore.eViewHasScratchChild, EStore.intern, ETables.find?, Tbl.find?, ETables.sizeOf,
     ETables.push]
   cases hp : a.store.pers.lits.cons[litKey l]? <;> cases hs : a.store.scratchOn <;>
     cases hc : a.store.scr.lits.cons[litKey l]? <;>
     simp only [StateT.run_bind, StateT.run_get, pure_bind, hp, hs, hc, Bool.false_eq_true,
-      ↓reduceIte, litKey, ite_self] <;>
+      ↓reduceIte, litKey, ite_self, protoRun, litLens] <;>
     (try split) <;> simp_all [StateT.run_set, StateT.run_pure, withScrLits, withPersLits, fail,
       throwThe, MonadExceptOf.throw, StateT.run, Functor.map, StateT.map, set, StateT.set,
       StateT.lift, bind, Except.bind, Except.map, pure, Except.pure, StateT.bind, StateT.pure]
@@ -200,61 +190,6 @@ theorem eqW_iff (p : Array Word) (a b l i : Word) (ha : a.toNat + l.toNat < 2 ^ 
   | case3 i hi => grind
 
 
-attribute [store_grind] cnt nSlots
-
-/-! ## The probe run -/
-
-/-- The home slot of a hash among the slots of `m`. -/
-abbrev homeM (m : Mem) (h : Word) : Word := homeW h (nSlots m)
-
-/-- The first `d` slots of the run from `x` hold nodes that do not match. -/
-def NoMatch (m : Mem) (t o l h x : Word) (d : Nat) : Prop :=
-  ∀ e < d, rdW (m.arr64 SLOT) ((walkW (nSlots m) x e) * 2 + t) ≠ 0 ∧
-    matchW (m.arr64 REC) (m.arr64 POOL) t (rdW (m.arr64 SLOT) ((walkW (nSlots m) x e) * 2 + t) - 1) o l h = false
-
-/-- What a result `rs` of the probe of tier `t` from slot `x` says: a hit (`rs[0] ≠ 0`) is a
-matching node `rs[1]` in an occupied slot `rs[2]`; a miss is the free slot `rs[2]`, step `rs[3]` of
-the run, after nodes that do not match. -/
-def ProbeOK (m : Mem) (t o l h x : Word) (rs : List Word) : Prop :=
-  rs ≠ [] →
-    (rs.headD 0 ≠ 0 → matchW (m.arr64 REC) (m.arr64 POOL) t (rs.tail.headD 0) o l h = true ∧
-      rdW (m.arr64 SLOT) ((rs.tail.tail.headD 0) * 2 + t) = rs.tail.headD 0 + 1 ∧
-      rdW (m.arr64 SLOT) ((rs.tail.tail.headD 0) * 2 + t) ≠ 0 ∧ rs.tail.tail.headD 0 < nSlots m) ∧
-    (rs.headD 0 = 0 → rs.tail.tail.headD 0 = walkW (nSlots m) x (rs.tail.tail.tail.headD 0).toNat ∧
-      rdW (m.arr64 SLOT) ((rs.tail.tail.headD 0) * 2 + t) = 0 ∧
-      NoMatch m t o l h x (rs.tail.tail.tail.headD 0).toNat)
-
-theorem probe_ok (m : Mem) (t o l h x : Word) (hx : x < nSlots m) :
-    ∀ (k : Nat) (d : Word), (nSlots m).toNat - d.toNat = k → NoMatch m t o l h x d.toNat →
-      ProbeOK m t o l h x (probeW (m.arr64 SLOT) (m.arr64 REC) (m.arr64 POOL) t o l h (nSlots m)
-        (walkW (nSlots m) x d.toNat) d) := by
-  intro k
-  induction k with
-  | zero => intro d hk _; rw [probeW]; grind [ProbeOK]
-  | succ k ih =>
-    intro d hk hnm
-    have := ih (d + 1)
-    clear ih
-    have hd : d < nSlots m := by grind
-    have hd1 : (d + 1).toNat = d.toNat + 1 := by grind
-    specialize this (by grind)
-    rw [hd1, walkW_succ] at this
-    rw [probeW]
-    by_cases h0 : rdW (m.arr64 SLOT) ((walkW (nSlots m) x d.toNat) * 2 + t) = 0
-    · simp only [hd, h0, ↓reduceIte]; grind [ProbeOK]
-    by_cases hm : matchW (m.arr64 REC) (m.arr64 POOL) t (rdW (m.arr64 SLOT) ((walkW (nSlots m) x d.toNat) * 2 + t) - 1)
-        o l h
-    · simp only [hd, h0, hm, ↓reduceIte]; grind [store_grind, ProbeOK]
-    · simp only [hd, h0, hm, ↓reduceIte, Bool.false_eq_true]
-      exact this (by grind [NoMatch])
-
-/-- The probe `lit_find` makes, from the home slot. -/
-theorem probe_home (m : Mem) (t o l h : Word) :
-    ProbeOK m t o l h (homeM m h) (probeW (m.arr64 SLOT) (m.arr64 REC) (m.arr64 POOL) t o l h
-      (nSlots m) (homeM m h) 0) := by
-  by_cases hn : nSlots m = 0
-  · rw [probeW]; simp [hn, ProbeOK]
-  · exact probe_ok m t o l h _ (homeW_lt _ _ (by grind)) _ 0 rfl (by simp [NoMatch])
 
 /-! ## Normalised slices, in words -/
 
@@ -275,7 +210,19 @@ theorem pv_of_eqW (p : Array Word) (a b l : Word) (hab : a.toNat + l.toNat < 2 ^
     pv p a.toNat l.toNat = pv p b.toNat l.toNat :=
   pv_congr p p _ _ _ (fun k hk => (eqW_iff p a b l 0 hab hbb).mp h k (Nat.zero_le _) hk)
 
+
 /-! ## The relation between L memory and the arena's `lit` tables -/
+
+/-- The `lit` schema: `REC`, `SLOT`, four words per node, the counts at `CTL[2 + t]`. -/
+def litSch : Schema := ⟨REC, SLOT, 4, 8, 2, ETag.lit⟩
+
+theorem litS_wf : litSch.WF :=
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+
+theorem fld_lit0 (m : Mem) (t i : Word) : fld litSch m t i 0 = rdW (m.arr64 REC) (i * 8 + t * 4) := by
+  simp [fld, Schema.ad, litSch]
+theorem fld_lit (m : Mem) (t i f : Word) :
+    fld litSch m t i f = rdW (m.arr64 REC) (i * 8 + t * 4 + f) := rfl
 
 /-- Node `i` of tier `t` holds the `natVal` `N`: kind `0`, a normalised slice below the top with
 value `N`, and its hash. -/
@@ -301,259 +248,119 @@ def RecRel (m : Mem) (t i : Word) : LitNode → Prop
 @[store_grind =] theorem RecRel_strVal (m : Mem) (t i : Word) (s : String) :
     RecRel m t i ⟨.strVal s⟩ = (rdW (m.arr64 REC) (i * 8 + t * 4) = 1) := rfl
 
-/-- The slots of tier `t` index its `c` nodes, and node `i` lies on the run from its home slot,
-after occupied slots (the invariant of linear probing without deletion). -/
-def SlotsOK (m : Mem) (t : Word) (c : Nat) : Prop :=
-  (∀ j : Word, j < nSlots m → (rdW (m.arr64 SLOT) (j * 2 + t)).toNat ≤ c) ∧
-  ∀ i : Word, i.toNat < c → ∃ d : Nat,
-    rdW (m.arr64 SLOT) (walkW (nSlots m) (homeM m (rdW (m.arr64 REC) (i * 8 + t * 4 + 3))) d * 2 + t)
-      = i + 1 ∧
-    ∀ e < d, rdW (m.arr64 SLOT)
-      (walkW (nSlots m) (homeM m (rdW (m.arr64 REC) (i * 8 + t * 4 + 3))) e * 2 + t) ≠ 0
+/-- The hash of node `i` of tier `t`: its word 3. -/
+def litH (m : Mem) (t i : Word) : Word := rdW (m.arr64 REC) (i * 8 + t * 4 + 3)
 
-/-- Tier `t` of the L store represents the arena table `tb`: the same nodes in the same order (so
-the same handles), and a cons table with the same key → handle map (each node's key maps to its
-handle, each entry points to a node with its key). The layout of `tb.cons` is never mentioned. -/
-def TierRel (m : Mem) (t : Word) (tb : Tbl LitNode EIdx UInt64) : Prop :=
-  (cnt m t).toNat = tb.nodes.size ∧ tb.nodes.size ≤ 134217728 ∧
-  8 * tb.nodes.size ≤ (m.arr64 REC).size ∧
-  (∀ (i : Word) k, tb.nodes[i.toNat]? = some k → RecRel m t i k) ∧
-  (∀ (i : Word) k, tb.nodes[i.toNat]? = some k → tb.cons[k]? = some (decE (hdW 8 t i))) ∧
-  (∀ k x, tb.cons[k]? = some x → tb.nodes[(hix x).toNat]? = some k) ∧
-  SlotsOK m t tb.nodes.size
-
-/-- **The state relation.** The pool is well formed, the scratch flag is the arena's, and both
-tiers of the `lit` store represent the arena's `lit` tables. -/
+/-- **The state relation.** The pool is well formed, and the library's relation holds for the
+two `lit` tables. -/
 def LitR (m : Mem) (a : AState) : Prop :=
-  PoolOK m ∧ 4 ≤ (m.arr64 CTL).size ∧ (m.arr64 REC).size < 2 ^ 63 ∧
-  (m.arr64 SLOT).size < 2 ^ 63 ∧ (rdW (m.arr64 CTL) 1 != 0) = a.store.scratchOn ∧
-  TierRel m 0 a.store.pers.lits ∧ TierRel m 1 a.store.scr.lits
+  PoolOK m ∧ StoreR litSch RecRel litH m a.store.scratchOn a.store.pers.lits a.store.scr.lits
 
-/-! ## The memory after `lit_push` -/
+/-- A node's relation and hash depend on its four words, the pool and the top. -/
+theorem litFrame : RFrame litSch RecRel litH := by
+  intro m m' t i ⟨hb, htop⟩ hf
+  have h0 := hf 0 (by decide)
+  have h1 := hf 1 (by decide)
+  have h2 := hf 2 (by decide)
+  have h3 := hf 3 (by decide)
+  rw [fld_lit0, fld_lit0] at h0
+  rw [fld_lit, fld_lit] at h1 h2 h3
+  have hp : m'.arr64 POOL = m.arr64 POOL := hb POOL (by decide) (by decide) (by decide)
+  have ht : m'.top = m.top := htop
+  refine ⟨fun a h => ?_, by simp only [litH, h3]⟩
+  obtain ⟨⟨N⟩ | ⟨s⟩⟩ := a <;> simpa only [RecRel, NatRec, h0, h1, h2, h3, hp, ht] using h
 
-section push
-variable (m : Mem) (t o l h J c : Word)
+/-! ## The query's obligations -/
 
-@[store_grind =] theorem pm_pool : (pushMem m t o l h J c).arr64 POOL = m.arr64 POOL := by
-  grind [pushMem, Mem.arr64_set64_ne]
+/-- The match of `lit_match` on node `i` of tier `t`. -/
+def litMt (m : Mem) (o l h t i : Word) : Bool := matchW (m.arr64 REC) (m.arr64 POOL) t i o l h
 
-@[store_grind =] theorem pm_size (a : ArrId) :
-    ((pushMem m t o l h J c).arr64 a).size = (m.arr64 a).size := by
-  grind [pushMem, size_set64]
+section query
+variable (m : Mem) (hpool : PoolOK m) (o l : Word) (hq : SliceOK m o l)
+  (hn : Norm (m.arr64 POOL) o.toNat l.toNat)
 
-@[store_grind =] theorem pm_words :
-    (pushMem m t o l h J c).words.size = m.words.size := by
-  grind [pushMem, Mem.words_size_set64]
-
-@[store_grind =] theorem pm_ctl (x : Word) :
-    rdW ((pushMem m t o l h J c).arr64 CTL) x =
-      if x = 2 + t ∧ (2 + t).toNat < (m.arr64 CTL).size then c + 1 else rdW (m.arr64 CTL) x := by
-  grind [pushMem, rdW_set64, size_set64]
-
-@[store_grind =] theorem pm_slot (x : Word) :
-    rdW ((pushMem m t o l h J c).arr64 SLOT) x =
-      if x = J * 2 + t ∧ (J * 2 + t).toNat < (m.arr64 SLOT).size then c + 1
-      else rdW (m.arr64 SLOT) x := by
-  grind [pushMem, rdW_set64, size_set64]
-
-@[store_grind =] theorem pm_rec (x : Word) (hc : (c * 8 + t * 4 + 3).toNat < (m.arr64 REC).size)
-    (hw : (c * 8 + t * 4).toNat + 3 < 2 ^ 64) :
-    rdW ((pushMem m t o l h J c).arr64 REC) x =
-      if x = c * 8 + t * 4 then 0 else if x = c * 8 + t * 4 + 1 then o
-      else if x = c * 8 + t * 4 + 2 then l else if x = c * 8 + t * 4 + 3 then h
-      else rdW (m.arr64 REC) x := by
-  grind [pushMem, rdW_set64, size_set64]
-
-end push
-
-/-- A node's relation depends only on its four words, the pool and the top. -/
-theorem RecRel_frame (m m' : Mem) (t i : Word) (k : LitNode)
-    (h0 : rdW (m'.arr64 REC) (i * 8 + t * 4) = rdW (m.arr64 REC) (i * 8 + t * 4))
-    (h1 : rdW (m'.arr64 REC) (i * 8 + t * 4 + 1) = rdW (m.arr64 REC) (i * 8 + t * 4 + 1))
-    (h2 : rdW (m'.arr64 REC) (i * 8 + t * 4 + 2) = rdW (m.arr64 REC) (i * 8 + t * 4 + 2))
-    (h3 : rdW (m'.arr64 REC) (i * 8 + t * 4 + 3) = rdW (m.arr64 REC) (i * 8 + t * 4 + 3))
-    (hp : m'.arr64 POOL = m.arr64 POOL) (htop : m'.top = m.top) :
-    RecRel m' t i k = RecRel m t i k := by
-  obtain ⟨⟨N⟩ | ⟨s⟩⟩ := k <;> simp only [RecRel, NatRec, h0, h1, h2, h3, hp, htop]
-
-/-! ## Hit and miss -/
-
-section tier
-variable (m : Mem) (t : Word) (ht : t ≤ 1) (tb : Tbl LitNode EIdx UInt64) (hT : TierRel m t tb)
-  (hpool : PoolOK m) (o l : Word) (hq : SliceOK m o l) (hn : Norm (m.arr64 POOL) o.toNat l.toNat)
-
-include hT hpool hq hn in
+include hpool hq hn in
 /-- **Matching is equality of literals**, on a node of a represented tier. -/
-theorem matchW_iff (i : Word) (k : LitNode) (hk : tb.nodes[i.toNat]? = some k) :
-    matchW (m.arr64 REC) (m.arr64 POOL) t i o l (hashN (m.arr64 POOL) o.toNat l.toNat) = true ↔
-      k = litKey (.natVal (pv (m.arr64 POOL) o.toNat l.toNat)) := by
-  have hr := hT.2.2.2.1 i k hk
+theorem litMatchOK :
+    MatchOK RecRel (litMt m o l (hashN (m.arr64 POOL) o.toNat l.toNat)) m
+      (litKey (.natVal (pv (m.arr64 POOL) o.toNat l.toNat))) := by
+  intro t i k hr
   obtain ⟨⟨N⟩ | ⟨s⟩⟩ := k
   · have := slice_eq (m.arr64 POOL) (rdW (m.arr64 REC) (i * 8 + t * 4 + 1))
       (rdW (m.arr64 REC) (i * 8 + t * 4 + 2)) o l
     have := pv_of_eqW (m.arr64 POOL) (rdW (m.arr64 REC) (i * 8 + t * 4 + 1)) o l
-    grind [matchW, NatRec, RecRel_natVal, PoolOK, SliceOK]
-  · grind [matchW, RecRel_strVal]
+    grind [litMt, matchW, NatRec, RecRel_natVal, PoolOK, SliceOK]
+  · grind [litMt, matchW, RecRel_strVal]
 
-include hT hpool hq hn in
-/-- A probe hit is the arena's cons hit, at the same handle. -/
-theorem tier_hit (x : Word) (rs : List Word)
-    (hP : ProbeOK m t o l (hashN (m.arr64 POOL) o.toNat l.toNat) x rs) (hr : rs ≠ [])
-    (hf : rs.headD 0 ≠ 0) :
-    tb.cons[litKey (.natVal (pv (m.arr64 POOL) o.toNat l.toNat))]? =
-      some (decE (hdW 8 t (rs.tail.headD 0))) := by
-  have := matchW_iff m t tb hT hpool o l hq hn (rs.tail.headD 0)
-  obtain ⟨-, -, -, -, hsome, -, ⟨hsl, -⟩⟩ := hT
-  have := hsl (rs.tail.tail.headD 0)
-  have := hsome (rs.tail.headD 0)
-  clear hsl hsome
-  grind [ProbeOK]
+theorem litHomeOK (h : Word) : HomeOK litH (litMt m o l h) m h := by
+  intro t i hm
+  simp only [litMt, matchW, Bool.and_eq_true, beq_iff_eq] at hm
+  exact hm.1.1.2
 
-include hT hpool hq hn in
-/-- A probe miss from the home slot: the literal is not in the tier. -/
-theorem tier_miss (rs : List Word)
-    (hP : ProbeOK m t o l (hashN (m.arr64 POOL) o.toNat l.toNat)
-      (homeM m (hashN (m.arr64 POOL) o.toNat l.toNat)) rs) (hr : rs ≠ []) (hf : rs.headD 0 = 0) :
-    tb.cons[litKey (.natVal (pv (m.arr64 POOL) o.toNat l.toNat))]? = none := by
-  cases hc : tb.cons[litKey (.natVal (pv (m.arr64 POOL) o.toNat l.toNat))]? with
-  | none => rfl
-  | some x =>
-    exfalso
-    have := matchW_iff m t tb hT hpool o l hq hn (hix x)
-    grind [ProbeOK, TierRel, SlotsOK, NoMatch, matchW]
+include hq hn in
+/-- The record `lit_push` writes holds the literal. -/
+theorem litNewOK :
+    NewOK litSch RecRel litH m [0, o, l, hashN (m.arr64 POOL) o.toNat l.toNat]
+      (litKey (.natVal (pv (m.arr64 POOL) o.toNat l.toNat))) (hashN (m.arr64 POOL) o.toNat l.toNat) := by
+  intro t j ht hroom
+  have hp := pushG_arr litSch m t [0, o, l, hashN (m.arr64 POOL) o.toNat l.toNat] j (cntW litSch m t)
+    POOL (by decide) (by decide) (by decide)
+  have htop := (outEq_pushG litSch litS_wf m t ht [0, o, l, hashN (m.arr64 POOL) o.toNat l.toNat] j
+    (cntW litSch m t)).2
+  have e : ∀ f, f < 4 → fld litSch (pushG litSch m t [0, o, l, hashN (m.arr64 POOL) o.toNat l.toNat] j
+      (cntW litSch m t)) t (cntW litSch m t) f =
+      [0, o, l, hashN (m.arr64 POOL) o.toNat l.toNat].getD f.toNat 0 := by
+    intro f hf
+    have := hroom.1
+    have := hroom.2
+    rw [fld_pushG litSch litS_wf] <;> simp only [litSch, Schema.ad] at * <;> grind
+  have e0 := e 0 (by decide)
+  have e1 := e 1 (by decide)
+  have e2 := e 2 (by decide)
+  have e3 := e 3 (by decide)
+  rw [fld_lit0] at e0
+  rw [fld_lit] at e1 e2 e3
+  simp only [litKey, RecRel_natVal, NatRec, litH, e0, e1, e2, e3, hp, ← top_rdW] at htop ⊢
+  simp only [List.getD_cons_zero, List.getD_cons_succ, show (1 : Word).toNat = 0 + 1 from rfl,
+    show (2 : Word).toNat = 1 + 1 from rfl, show (3 : Word).toNat = 2 + 1 from rfl,
+    show (0 : Word).toNat = 0 from rfl, htop]
+  grind [PoolOK, SliceOK]
 
-include ht hT hpool hq hn in
-/-- `lit_push` at the free slot the probe from the home slot stopped at represents the arena's
-append of the queried literal. -/
-theorem tier_push (rs : List Word)
-    (hP : ProbeOK m t o l (hashN (m.arr64 POOL) o.toNat l.toNat)
-      (homeM m (hashN (m.arr64 POOL) o.toNat l.toNat)) rs) (hr : rs ≠ []) (hf : rs.headD 0 = 0)
-    (hok : pushOK m t = true) (hctl : 4 ≤ (m.arr64 CTL).size) (dd : UInt64) :
-    TierRel (pushMem m t o l (hashN (m.arr64 POOL) o.toNat l.toNat) (rs.tail.tail.headD 0) (cnt m t)) t
-      (tb.push (litKey (.natVal (pv (m.arr64 POOL) o.toNat l.toNat))) dd (decE (hdW 8 t (cnt m t)))) := by
-  have hmiss := tier_miss m t tb hT hpool o l hq hn rs hP hr hf
-  obtain ⟨hc, hcap, hrs, hrec, hsome, hback, hsl, hrun⟩ := hT
-  simp only [TierRel, SlotsOK, Tbl.push_nodes, Tbl.push_cons, Array.size_push]
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · clear hrec hsome hback hsl hrun; grind [store_grind, pushOK]
-  · clear hrec hsome hback hsl hrun; grind [store_grind, pushOK]
-  · clear hrec hsome hback hsl hrun; grind [store_grind, pushOK]
-  · intro i k hk
-    rw [Array.getElem?_push] at hk
-    split at hk
-    · cases hk
-      have : i = cnt m t := UInt64.toNat_inj.mp (by omega)
-      subst this
-      have hb : (cnt m t * 8 + t * 4 + 3).toNat < (m.arr64 REC).size ∧
-          (cnt m t * 8 + t * 4).toNat + 3 < 2 ^ 64 := by
-        clear hrec hsome hback hsl hrun; grind [store_grind, pushOK]
-      simp only [litKey, RecRel_natVal, NatRec, pm_rec _ _ _ _ _ _ _ _ hb.1 hb.2, pm_pool]
-      clear hrec hsome hback hsl hrun
-      grind [store_grind, pushOK, PoolOK, SliceOK]
-    · have := hrec i k hk
-      rw [RecRel_frame _ _ t i k]
-      · exact this
-      all_goals clear hrec hsome hback hsl hrun; grind [store_grind, pushOK, PoolOK, SliceOK]
-  · intro i k hk
-    clear hrec hback hsl hrun
-    grind [store_grind, pushOK]
-  · intro k x hk
-    clear hrec hsome hsl hrun
-    grind [store_grind, pushOK]
-  · intro j hj
-    clear hrec hsome hback hrun
-    grind [store_grind, pushOK, ProbeOK]
-  · intro i hi
-    clear hsome hback hsl
-    by_cases hic : i = cnt m t
-    · subst hic
-      refine ⟨(rs.tail.tail.tail.headD 0).toNat, ?_, ?_⟩
-      · grind [store_grind, pushOK, ProbeOK]
-      · grind [store_grind, pushOK, ProbeOK, NoMatch]
-    · obtain ⟨d, hd1, hd2⟩ := hrun i (by grind)
-      have := hrec i
-      refine ⟨d, ?_, ?_⟩
-      · grind [store_grind, pushOK, ProbeOK]
-      · grind [store_grind, pushOK, ProbeOK]
+end query
 
-end tier
+/-! ## The bridges from the L models -/
 
-/-- Appending to tier `t` leaves the other tier represented. -/
-theorem tier_other (m : Mem) (t t' o l h J : Word) (ht : t ≤ 1) (ht' : t' ≤ 1) (hne : t' ≠ t)
-    (tb : Tbl LitNode EIdx UInt64) (hT : TierRel m t' tb) (hok : pushOK m t = true) :
-    TierRel (pushMem m t o l h J (cnt m t)) t' tb := by
-  obtain ⟨hc, hcap, hrs, hrec, hsome, hback, hsl, hrun⟩ := hT
-  refine ⟨?_, hcap, ?_, ?_, hsome, hback, ?_, ?_⟩
-  · clear hrec hsome hback hsl hrun; grind [store_grind, pushOK]
-  · clear hrec hsome hback hsl hrun; grind [store_grind, pushOK]
-  · intro i k hk
-    have := hrec i k hk
-    rw [RecRel_frame _ _ t' i k]
-    · exact this
-    all_goals clear hrec hsome hback hsl hrun; grind [store_grind, pushOK]
-  · intro j hj
-    clear hrec hsome hback hrun
-    grind [store_grind, pushOK]
-  · intro i hi
-    obtain ⟨d, hd1, hd2⟩ := hrun i (by grind)
-    have := hrec i
-    clear hsome hback hsl hrun
-    refine ⟨d, ?_, ?_⟩
-    · grind [store_grind, pushOK]
-    · grind [store_grind, pushOK]
+theorem probeW_arm (m : Mem) (o l h t : Word) :
+    ∀ j d, probeW (m.arr64 SLOT) (m.arr64 REC) (m.arr64 POOL) t o l h (nSlots m) j d =
+      probeArm litSch m t (litMt m o l h t)
+        (probeW (m.arr64 SLOT) (m.arr64 REC) (m.arr64 POOL) t o l h (nSlots m)) j d := by
+  intro j d; rw [probeW]; rfl
 
-/-! ## The arena side, one equation per path -/
+theorem pushOK_room (m : Mem) (t : Word) (h : pushOK m t = true) : PushRoom litSch m t := by
+  simp only [pushOK, Bool.and_eq_true, decide_eq_true_eq] at h
+  have := UInt64.toNat_shiftRight (m.len64 REC) 3
+  simp only [PushRoom, cntW, cnt, litSch, len64_eq] at *
+  grind
 
-section arena
-variable (l : ConLeche.Literal) (a : AState) (x : EIdx)
+theorem pushMem_eq (m : Mem) (t o l h j c : Word) :
+    pushMem m t o l h j c = pushG litSch m t [0, o, l, h] j c := by
+  simp [pushMem, pushG, wrRec, Schema.ad, litSch]
 
-theorem internE_lit_hitP (h0 : a.store.pers.lits.cons[litKey l]? = some x) :
-    (internE (.lit l)).run a = .ok (x, a) := by
-  rw [internE_lit_run]; simp [h0]
-
-theorem internE_lit_hitS (h0 : a.store.pers.lits.cons[litKey l]? = none)
-    (hs : a.store.scratchOn = true) (h1 : a.store.scr.lits.cons[litKey l]? = some x) :
-    (internE (.lit l)).run a = .ok (x, a) := by
-  rw [internE_lit_run]; simp [h0, hs, h1]
-
-theorem internE_lit_pushS (h0 : a.store.pers.lits.cons[litKey l]? = none)
-    (hs : a.store.scratchOn = true) (h1 : a.store.scr.lits.cons[litKey l]? = none)
-    (hc : a.store.scr.lits.nodes.size < 134217728) :
-    (internE (.lit l)).run a = .ok (decE (hdW 8 1 (UInt64.ofNat a.store.scr.lits.nodes.size)),
-      withScrLits a (a.store.scr.lits.push (litKey l) (a.store.derOfView (.lit l))
-        (decE (hdW 8 1 (UInt64.ofNat a.store.scr.lits.nodes.size))))) := by
-  rw [internE_lit_run, show Idx.tierS = UInt32.ofNat 1 from rfl, mk_eq]
-  simp [h0, hs, h1, Tbl.size, Idx.idxCap, hc, ETag.lit]
-
-theorem internE_lit_pushP (h0 : a.store.pers.lits.cons[litKey l]? = none)
-    (hs : a.store.scratchOn = false) (hc : a.store.pers.lits.nodes.size < 134217728) :
-    (internE (.lit l)).run a = .ok (decE (hdW 8 0 (UInt64.ofNat a.store.pers.lits.nodes.size)),
-      withPersLits a (a.store.pers.lits.push (litKey l) (a.store.derOfView (.lit l))
-        (decE (hdW 8 0 (UInt64.ofNat a.store.pers.lits.nodes.size))))) := by
-  rw [internE_lit_run, show Idx.tierP = UInt32.ofNat 0 from rfl, mk_eq]
-  simp [h0, hs, Tbl.size, Idx.idxCap, hc, ETag.lit]
-
-end arena
-
-section with_
-variable (a : AState) (t : Tbl LitNode EIdx UInt64)
-@[store_grind =] theorem withScrLits_scr : (withScrLits a t).store.scr.lits = t := rfl
-@[store_grind =] theorem withScrLits_pers : (withScrLits a t).store.pers.lits = a.store.pers.lits := rfl
-@[store_grind =] theorem withScrLits_on : (withScrLits a t).store.scratchOn = a.store.scratchOn := rfl
-@[store_grind =] theorem withPersLits_pers : (withPersLits a t).store.pers.lits = t := rfl
-@[store_grind =] theorem withPersLits_scr : (withPersLits a t).store.scr.lits = a.store.scr.lits := rfl
-@[store_grind =] theorem withPersLits_on :
-    (withPersLits a t).store.scratchOn = a.store.scratchOn := rfl
-end with_
-
-/-- The memory after `lit_push` relates to the arena's state after its append. -/
-theorem LitR_push (m : Mem) (a a' : AState) (t o l h J : Word) (ht : t ≤ 1) (hR : LitR m a)
-    (hflag : a'.store.scratchOn = a.store.scratchOn)
-    (h0 : TierRel (pushMem m t o l h J (cnt m t)) 0 a'.store.pers.lits)
-    (h1 : TierRel (pushMem m t o l h J (cnt m t)) 1 a'.store.scr.lits) :
-    LitR (pushMem m t o l h J (cnt m t)) a' := by
-  obtain ⟨hpool, hctl, hrs, hss, hfl, -, -⟩ := hR
-  refine ⟨?_, ?_, ?_, ?_, ?_, h0, h1⟩ <;> grind [store_grind, PoolOK]
+theorem internW_eq (m : Mem) (o l : Word) :
+    internW m o l = internM litSch m 0 (pushOK m)
+      [0, o, l, hashN (m.arr64 POOL) o.toNat l.toNat]
+      (probeW (m.arr64 SLOT) (m.arr64 REC) (m.arr64 POOL) 0 o l
+        (hashN (m.arr64 POOL) o.toNat l.toNat) (nSlots m)
+        (homeW (hashN (m.arr64 POOL) o.toNat l.toNat) (nSlots m)) 0)
+      (probeW (m.arr64 SLOT) (m.arr64 REC) (m.arr64 POOL) 1 o l
+        (hashN (m.arr64 POOL) o.toNat l.toNat) (nSlots m)
+        (homeW (hashN (m.arr64 POOL) o.toNat l.toNat) (nSlots m)) 0) := by
+  have e0 : ∀ x, hdW litSch.tag.toUInt64 0 x = litP + x := fun x => by
+    simp [hdW, litSch, litP, ETag.lit]
+  have e1 : ∀ x, hdW litSch.tag.toUInt64 1 x = litS + x := fun x => by
+    simp [hdW, litSch, litS, ETag.lit]
+  simp only [internW, internM, pushMem_eq, e0, e1, true_and]
+  rfl
 
 /-! ## `intern_lit` refines `internE (.lit (.natVal _))` -/
 
@@ -569,61 +376,22 @@ theorem intern_correct (w : Word) (m' : Mem) (hI : internW m o l = some (w, m'))
     AM.ok (internE (.lit (.natVal (pv (m.arr64 POOL) o.toNat l.toNat)))) a ∧
     LitR m' (AM.st (internE (.lit (.natVal (pv (m.arr64 POOL) o.toNat l.toNat)))) a) ∧
     AM.res (internE (.lit (.natVal (pv (m.arr64 POOL) o.toNat l.toNat)))) a = decE w := by
-  obtain ⟨hpool, hctl, hrs, hss, hflag, hT0, hT1⟩ := id hR
-  have hP0 := probe_home m 0 o l (hashN (m.arr64 POOL) o.toNat l.toNat)
-  have hP1 := probe_home m 1 o l (hashN (m.arr64 POOL) o.toNat l.toNat)
-  have hit0 := tier_hit m 0 _ hT0 hpool o l hq hn _ _ hP0
-  have hit1 := tier_hit m 1 _ hT1 hpool o l hq hn _ _ hP1
-  have miss0 := tier_miss m 0 _ hT0 hpool o l hq hn _ hP0
-  have miss1 := tier_miss m 1 _ hT1 hpool o l hq hn _ hP1
-  simp only [internW] at hI
-  split at hI
-  · simp at hI
-  split at hI
-  · -- persistent hit
-    obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ (internE_lit_hitP _ a _ (hit0 ‹_› ‹_›))
-    grind [litP, hdW]
-  have hm0 := miss0 ‹_› (by grind)
-  split at hI
-  · split at hI
-    · simp at hI
-    split at hI
-    · -- scratch hit
-      obtain ⟨hok, hst, hres⟩ :=
-        AM.of_run_ok _ _ _ _ (internE_lit_hitS _ a _ hm0 (by grind) (hit1 ‹_› ‹_›))
-      grind [litS, hdW]
-    split at hI
-    · -- scratch append
-      have hsz : a.store.scr.lits.nodes.size < 134217728 := by grind [pushOK, TierRel]
-      obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _
-        (internE_lit_pushS _ a hm0 (by grind) (miss1 ‹_› (by grind)) hsz)
-      have e : UInt64.ofNat a.store.scr.lits.nodes.size = cnt m 1 := by grind [TierRel]
-      rw [e] at hst hres
-      have hp1 := tier_push m 1 (by decide) _ hT1 hpool o l hq hn _ hP1 ‹_› (by grind) ‹_› hctl
-        (a.store.derOfView (.lit (.natVal (pv (m.arr64 POOL) o.toNat l.toNat))))
-      simp only [Option.some.injEq, Prod.mk.injEq] at hI
-      obtain ⟨rfl, rfl⟩ := hI
-      rw [hst, hres]
-      refine ⟨hok, LitR_push m a _ 1 o l _ _ (by decide) hR rfl ?_ hp1, by grind [litS, hdW]⟩
-      exact tier_other m 1 0 o l _ _ (by decide) (by decide) (by decide) _ hT0 ‹_›
-    · simp at hI
-  split at hI
-  · -- persistent append
-    have hsz : a.store.pers.lits.nodes.size < 134217728 := by grind [pushOK, TierRel]
-    obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _
-      (internE_lit_pushP _ a hm0 (by grind) hsz)
-    have e : UInt64.ofNat a.store.pers.lits.nodes.size = cnt m 0 := by grind [TierRel]
-    rw [e] at hst hres
-    have hp0 := tier_push m 0 (by decide) _ hT0 hpool o l hq hn _ hP0 ‹_› (by grind) ‹_› hctl
-      (a.store.derOfView (.lit (.natVal (pv (m.arr64 POOL) o.toNat l.toNat))))
-    simp only [Option.some.injEq, Prod.mk.injEq] at hI
-    obtain ⟨rfl, rfl⟩ := hI
-    rw [hst, hres]
-    refine ⟨hok, LitR_push m a _ 0 o l _ _ (by decide) hR rfl hp0 ?_, by grind [litP, hdW]⟩
-    exact tier_other m 0 1 o l _ _ (by decide) (by decide) (by decide) _ hT1 ‹_›
-  · simp at hI
+  obtain ⟨hpool, hS⟩ := hR
+  rw [internW_eq] at hI
+  have hso := internM_sameOut litSch litS_wf m _ _ _ _ _ _ _ hI
+  obtain ⟨hok, hst, hres⟩ := intern_correctG litSch RecRel litH litS_wf litFrame litLens a m hS _ _ _ _ _
+    (internE_lit_run _ a) false rfl 0 (by simp) (by simp) _ _ (litMatchOK m hpool o l hq hn)
+    (litHomeOK m o l _) _ _ (probe_homeG litSch m 0 _ _ (probeW_arm m o l _ 0) _)
+    (probe_homeG litSch m 1 _ _ (probeW_arm m o l _ 1) _) _ (pushOK_room m) _ rfl
+    (litNewOK m o l hq hn) w m' hI
+  refine ⟨hok, ⟨?_, hst⟩, hres⟩
+  obtain ⟨⟨hb, htop⟩, hw, hsz⟩ := hso
+  have := hb POOL (by decide) (by decide) (by decide)
+  simp only [PoolOK, top_rdW] at hpool ⊢
+  grind
 
 end intern
+
 /-! ## Appending to the pool preserves the relation -/
 
 section grow
@@ -649,28 +417,21 @@ theorem RecRel_grow (t i : Word) (k : LitNode) (h : RecRel m t i k) : RecRel m' 
   · simpa only [RecRel, hr] using h
 
 include hg in
-theorem TierRel_grow (t : Word) (ht : t ≤ 1) (tb : Tbl LitNode EIdx UInt64) (hT : TierRel m t tb) :
-    TierRel m' t tb := by
+theorem TierRel_grow (t : Word) (ht : t ≤ 1) (tb : Tbl LitNode EIdx UInt64)
+    (hT : TierR litSch RecRel litH m t tb) : TierR litSch RecRel litH m' t tb := by
   have hr := grow_arr m m' hg REC (by decide) (by decide)
-  have hs := grow_arr m m' hg SLOT (by decide) (by decide)
-  have hc := grow_ctl m m' hg (2 + t) (by grind)
-  obtain ⟨hc', hcap, hrs, hrec, hsome, hback, hsl, hrun⟩ := hT
-  refine ⟨by grind [cnt], hcap, by grind, fun i k hk => RecRel_grow m m' hg t i k (hrec i k hk),
-    hsome, hback, ?_, ?_⟩
-  · intro j hj; grind [nSlots, len64_eq]
-  · intro i hi; obtain ⟨d, h1, h2⟩ := hrun i hi; exact ⟨d, by grind [nSlots, len64_eq],
-      by grind [nSlots, len64_eq]⟩
+  exact tierR_mono litSch RecRel litH m m' t tb hr (grow_arr m m' hg SLOT (by decide) (by decide))
+    (grow_ctl m m' hg (2 + t) (by grind)) (fun i k => RecRel_grow m m' hg t i k)
+    (fun i => by simp only [litH, hr]) hT
 
 include hg in
 /-- **Appending to the pool preserves the relation** (`natAddLit_refines`'s `hgrow`). -/
 theorem LitR.grow (a : AState) (hR : LitR m a) : LitR m' a := by
-  obtain ⟨hpool, hctl, hrs, hss, hfl, hT0, hT1⟩ := hR
-  have hr := grow_arr m m' hg REC (by decide) (by decide)
-  have hs := grow_arr m m' hg SLOT (by decide) (by decide)
+  obtain ⟨hpool, hctl, hfl, hT0, hT1⟩ := hR
   have hf := grow_ctl m m' hg 1 (by decide)
   have := Frame.size _ _ _ hg.1
   have := Frame.arr64 POOL CTL _ _ hg.1 (by decide)
-  refine ⟨?_, ?_, by grind, by grind, by grind, TierRel_grow m m' hg 0 (by decide) _ hT0,
+  refine ⟨?_, ?_, by grind, TierRel_grow m m' hg 0 (by decide) _ hT0,
     TierRel_grow m m' hg 1 (by decide) _ hT1⟩
   · obtain ⟨-, -, -, h1, h2⟩ := hg
     grind [PoolOK, store_grind]

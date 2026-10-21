@@ -1269,3 +1269,56 @@ again) to that arm's final arena state `a'`.
 ### `sorry`s
 
 None.
+
+## The store library (2026-10-21, lane `storelib`)
+
+Files: `ConAgua/Arena/StoreLib.lean` (the library), `ConAgua/Arena/LitRefine.lean` and
+`ConAgua/Arena/AppRefine.lean` (ported onto it), `ConAgua/Arena/StoreRel.lean` (handles made
+kind-generic: `decI`, `hix`, `mk_eq`, `word_decI`). The L code and its `vcgen` specs stay per
+table, as decided after lane `store2`. The statements of `natAddLit_run_store`,
+`internApp_refines` and `natAddLit_x64` are unchanged (`LitR`, `AppR` are redefined). No `sorry`;
+axioms `propext`, `Classical.choice`, `Quot.sound`.
+
+### The spike: parametric strides
+
+Lane `store2` flagged the risk: `grind` decided the record-address disequalities
+(`i * 8 + t * 4 + f ≠ c * 8 + t' * 4 + g`) from literal strides. With the stride a variable it
+does not: `i * (2 * w) + t * w + f = c * (2 * w) + t' * w + g → i = c ∧ …` fails (nonlinear).
+One hand-proved lemma fixes it: `Schema.ad_inj` (addresses are injective given `t ≤ 1`,
+`i < 2^27`, `f < w ≤ 256`; 15 lines of `Nat` division). Given it, `grind` closes the generic
+read-after-write goals as it closed the literal ones (`fld_pushG`, the frame of the other tier).
+
+### Shape
+
+* **`Schema`**: record array `ra`, slot array `sa`, width `w`, stride `st = 2w`, the `CTL` index
+  `ca` of tier 0's count, the tag. `Schema.WF` (the stride, `w ≤ 256`, `2 ≤ ca`, distinct
+  arrays, tag < 16) is `by decide` per instance. Named reads `fld`, `slotW`, `nSl`, `cntW`,
+  `homeS`; for a concrete schema they are the L models' terms by `rfl` (`fld litSch m t i 3` is
+  `rdW (m.arr64 REC) (i * 8 + t * 4 + 3)`), except field 0 (`+ 0`, one `simp` lemma).
+* **The append** `pushG S m t vs j c`: the record written from a list of words (`wrRec`), the
+  slot, the count. One read equation per array (`fld_pushG`, `pushG_slot`, `pushG_ctl`,
+  `pushG_arr`, sizes). An instance's `pushMem` is `pushG` by one `simp` (`pushMem_eq`).
+* **The probe**: `probeArm` is one step of every `*_find` model for a match function
+  `mt : Word → Bool`; an instance proves `∀ j d, probeW … j d = probeArm … (probeW …) j d` by
+  `rw [probeW]; rfl` and gets `ProbeOKG` (hit / miss with `NoMatchG`) from `probe_homeG`.
+* **The relation**: `TierR S R hs m t tb` (count, capacity, record room, `R` per node, the key →
+  handle map both ways, `SlotsOKG`) and `StoreR` (two tiers, the scratch flag), parametric in the
+  record relation `R : Mem → Word → Word → α → Prop` and the node hash `hs`. Generic lemmas:
+  `tierR_hit`, `tierR_miss`, `tierR_push`, `tierR_other`, `tierR_mono` (the pool frame of `lit`).
+* **The arena protocol**: a `Lens` (the two tables in `AState` and the scratch flag, with six
+  `rfl` laws), `protoRun` (the run of `internNodeE`/`internLNode`: persistent probe or skip,
+  scratch probe, capacity, append), `internM` (the L model of every `intern_*`), and
+  `intern_correctG`: `internM … = some (w, m')` and `op.run a = protoRun …` give
+  `AM.ok op a ∧ StoreR … m' (AM.st op a) ∧ AM.res op a = decI w`.
+
+An instance supplies: the schema; `R` and `hs`; `RFrame` (a node's relation and hash depend
+on its own words and memory outside the table); per query `MatchOK` (on a node of the table the
+match is key equality), `HomeOK` (a matching node has the query's hash) and `NewOK` (the record
+the push writes holds the key); the unfolding of the arena operation to `protoRun`; the bridges
+`probeW = probeArm …`, `pushOK → PushRoom`, `internW = internM …`.
+
+Everything is stated with named predicates, conclusions are equations or conjunctions of named
+predicates; the obligations are `∀` statements an instance proves once and the library
+instantiates by hand (`grind` never sees them as hypotheses). What `store2` found still holds:
+the five `∀` clauses of `TierR` are cleared before each `grind` that does not need them; one
+`grind` in `tierR_push` timed out until `hrun` was cleared in the new-node branch.

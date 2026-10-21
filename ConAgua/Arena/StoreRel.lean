@@ -74,23 +74,28 @@ grind_pattern [store_grind] homeW_lt => homeW h n
 /-- The handle word of node `i` of tier `t` of the constructor with tag `g`. -/
 def hdW (g t i : Word) : Word := g * 0x10000000 + t * 0x8000000 + i
 
-/-- The index of a handle, as a word. -/
-def hix (x : EIdx) : Word := UInt64.ofNat x.idxNat
+/-- The handle of any kind a word encodes (`decE` at expressions). -/
+def decI {k : IdxKind} (w : Word) : Idx k := Idx.ofWord w.toUInt32
 
-theorem hix_hdW (g t i : Word) (hg : g < 16) (ht : t ≤ 1) (hi : i.toNat < 2 ^ 27) :
-    hix (decE (hdW g t i)) = i := by
-  simp only [hix, decE, hdW, Idx.idxNat, Idx.index]
+theorem decE_eq (w : Word) : decE w = decI w := rfl
+
+/-- The index of a handle, as a word. -/
+def hix {k : IdxKind} (x : Idx k) : Word := UInt64.ofNat x.idxNat
+
+theorem hix_hdW {k : IdxKind} (g t i : Word) (hi : i.toNat < 2 ^ 27) :
+    hix (decI (hdW g t i) : Idx k) = i := by
+  simp only [hix, decI, hdW, Idx.idxNat, Idx.index]
   apply UInt64.toNat_inj.mp
   simp only [UInt64.toNat_ofNat', UInt32.toNat_mod, UInt64.toNat_toUInt32, UInt64.toNat_add,
     UInt64.toNat_mul]
   grind
-grind_pattern [store_grind] hix_hdW => hix (decE (hdW g t i))
+grind_pattern [store_grind] hix_hdW => hix (decI (hdW g t i) : Idx k)
 
 /-- The arena's handle of node `n` of tier `b` is the L handle word. -/
-theorem mk_eq (g : UInt32) (b n : Nat) :
-    Idx.mk g (UInt32.ofNat b) (UInt32.ofNat n) =
-      decE (hdW g.toUInt64 (UInt64.ofNat b) (UInt64.ofNat n)) := by
-  simp only [decE, hdW, Idx.mk]
+theorem mk_eq {k : IdxKind} (g : UInt32) (b n : Nat) :
+    (Idx.mk g (UInt32.ofNat b) (UInt32.ofNat n) : Idx k) =
+      decI (hdW g.toUInt64 (UInt64.ofNat b) (UInt64.ofNat n)) := by
+  simp only [decI, hdW, Idx.mk]
   congr 1
   apply UInt32.toNat_inj.mp
   simp only [UInt64.toNat_toUInt32, UInt64.toNat_add, UInt64.toNat_mul, UInt64.toNat_ofNat',
@@ -123,10 +128,10 @@ theorem isPersistent_decE (w : Word) (hw : w.toNat < 2 ^ 32) :
   grind
 
 /-- A handle is the decoding of a word below `2^32` iff that word is the handle's. -/
-theorem word_decE (x : EIdx) (w : Word) (hw : w.toNat < 2 ^ 32) :
-    (x.word.toUInt64 = w) = (x = decE w) := by
+theorem word_decI {k : IdxKind} (x : Idx k) (w : Word) (hw : w.toNat < 2 ^ 32) :
+    (x.word.toUInt64 = w) = (x = decI w) := by
   cases x with | ofWord u =>
-  simp only [decE, Idx.ofWord.injEq, eq_iff_iff]
+  simp only [decI, Idx.ofWord.injEq, eq_iff_iff]
   constructor
   · intro h; subst h; apply UInt32.toNat_inj.mp; simp
   · intro h; subst h; apply UInt64.toNat_inj.mp; simp; omega
