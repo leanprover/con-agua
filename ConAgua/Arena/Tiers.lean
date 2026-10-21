@@ -2,6 +2,8 @@ import ConAgua.Arena.DerRel
 import ConAgua.Arena.Keeps
 import ConRon.Arena.Env
 import ConAgua.Arena.EnvRec
+import ConAgua.Arena.MemoBank
+import ConAgua.Arena.CoreCaches
 
 /-!
 # The relation by tier, over projections of the state
@@ -17,16 +19,14 @@ each owning a disjoint range of arrays and `CTL` words, each with **one** group 
 | `MemosR` (walk memos, nested in `ArenaR`) | `a.memos` | 24, 41, 47, 48; 49‥55 reserved | 24, 25, 42‥47; 48‥61 reserved | 4 of 10 memos |
 | `DerR` (derived columns, `DerRel.lean`) | `a.store` | 42‥46 | – | 5 compound tables |
 | `StateDR` (front, `Front/StateDR.lean`) | the parse state | 64‥66; 67‥95 reserved | 64‥95 reserved | lane `front2` |
-| `CoreR` | `a.caches` | 96‥127 | 96‥127 | stub |
+| `CoreR` | `a.caches` | 96‥104; 105‥127 reserved | 96‥115; 116‥127 reserved | 9 of 14 tables (lane `whnf`) |
 | `PinsR` | `a.pins` | 128 (`PINS`); 129‥131 reserved | – | filled (lane `pinsenv`) |
 | `EnvR` | a view `vis` of `fe : IFEnv` (an argument) | 132‥136; 137‥143 reserved | 128, 129; 130‥135 reserved | filled (lane `pinsenv`) |
 | argument relations (`PMemo`, `pend`, saved `ModeMemos`, walk-local memos) | arguments | 144‥191 | 136‥191 | not yet |
 
 `ArenaD = ArenaR ∧ DerR` stays the walks' tier. `CheckR` is the whole relation. A walk changes
 only arrays below 64 (`WriteSets.lean`) and only `store`/`memos` (`Keeps cp`, `Keeps.lean`), so
-`CheckR.of_walk` carries the upper tiers across it with no lemma about the walk. `CoreR` is still a
-stub with no fields (it claims nothing); its frame lemma is already the one a real relation over
-the reserved range will have.
+`CheckR.of_walk` carries the upper tiers across it with no lemma about the walk.
 -/
 
 namespace L.Arena
@@ -47,15 +47,247 @@ theorem AvoidC.of_lt {k lo hi : Nat} {C : List Word} (hC : ∀ x ∈ C, x.toNat 
 
 set_option linter.unusedVariables false
 
-/-! ## The per-declaration caches: arrays 96‥127, `CTL` 96‥127 -/
+/-! ## The per-declaration caches: arrays 96‥127, `CTL` 96‥127
 
-/-- **The core tier** (tier D: `flushCaches` per declaration): the 14 caches of `Caches` as
-`MemoRG`s (and the eager-depth banks), over `a.caches`. Stub. -/
-structure CoreR (m : Mem) (c : Caches) : Prop
+Nine of con-ron's fourteen `Caches` tables are memos in L (`CoreCaches.lean`: arrays 96‥104,
+stamps and counts `CTL` 96‥113, the mode memos' bank words `CTL` 114, 115). The six **mode memos**
+are generation-tagged (`MemoBank.lean`): L keeps one map `M` per table over `(key, generation)`,
+the twin's table is the bank of the current generation `g`, and no entry is above the last
+allocated generation `G`. The saved tables of an enclosing eager comparison are other banks of
+the same maps (stated by the knot over `CoreRM`'s explicit maps). The three constant caches are
+plain `MemoRG`s. `lvlEqC`, `lvlsEqC`, `readLC`, `readNC`, `readLsC` are not represented (see
+`CoreCaches.lean`). -/
+
+/-- The key of a one-handle mode memo: the handle and its generation. -/
+def eKeyG : MemoKey (EIdx × Word) := genKey bmKey (fun _ _ h => by rw [h.2]; decide)
+
+/-- Two handle words, one per key word (both below `2^32`). -/
+def pairKey {k₁ k₂ : IdxKind} : MemoKey (Idx k₁ × Idx k₂) where
+  dk k1 k2 := (decI k1, decI k2)
+  ek x := (x.1.word.toUInt64, x.2.word.toUInt64)
+  ok k1 k2 := k1.toNat < 2 ^ 32 ∧ k2.toNat < 2 ^ 32
+  ek_dk k1 k2 h := by
+    simp only [Prod.mk.injEq]
+    exact ⟨(word_decI _ k1 h.1).mpr rfl, (word_decI _ k2 h.2).mpr rfl⟩
+  ok_tomb k1 k2 h e := by subst e; exact absurd h.1 (by decide)
+
+/-- `defeqC`'s key: the ordered pair and the generation. -/
+def dKeyG : MemoKey ((EIdx × EIdx) × Word) := genKey pairKey (fun _ _ h => h.2)
+
+/-- `ruleRhsC`'s key: the recursor in the first word, the constructor and the levels packed in
+the second (`ctor ∣ us << 32`). -/
+def rrKey : MemoKey (NIdx × NIdx × LsIdx) where
+  dk k1 k2 := (decI k1, decI (k2 &&& 0xFFFFFFFF), decI (k2 >>> 32))
+  ek x := (x.1.word.toUInt64, x.2.1.word.toUInt64 ||| (x.2.2.word.toUInt64 <<< 32))
+  ok k1 _ := k1.toNat < 2 ^ 32
+  ek_dk k1 k2 h := by
+    have h1 : (k2 &&& 0xFFFFFFFF).toNat < 2 ^ 32 := by
+      rw [UInt64.toNat_and]; exact Nat.lt_of_le_of_lt Nat.and_le_right (by decide)
+    have h2 : (k2 >>> 32).toNat < 2 ^ 32 := by
+      have := k2.toNat_lt
+      rw [UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]; simp; omega
+    simp only [Prod.mk.injEq, (word_decI _ k1 h).mpr rfl, (word_decI _ _ h1).mpr rfl,
+      (word_decI _ _ h2).mpr rfl, true_and]
+    exact lo_hi k2
+  ok_tomb k1 k2 h e := by subst e; exact absurd h (by decide)
+
+/-- A cache value word: a handle. -/
+def decEV (w : Word) : EIdx := decE w
+
+/-- A `defeqC` value word: the verdict. -/
+def decB (w : Word) : Bool := w != 0
+
+/-- The six mode memos' maps over `(key, generation)`. -/
+structure ModeMaps where
+  wc : Std.HashMap (EIdx × Word) EIdx
+  wk : Std.HashMap (EIdx × Word) EIdx
+  wh : Std.HashMap (EIdx × Word) EIdx
+  inf : Std.HashMap (EIdx × Word) EIdx
+  io : Std.HashMap (EIdx × Word) EIdx
+  de : Std.HashMap ((EIdx × EIdx) × Word) Bool
+
+/-- The maps with nothing in them. -/
+def ModeMaps.empty : ModeMaps := ⟨∅, ∅, ∅, ∅, ∅, ∅⟩
+
+/-- **One mode memo**: its map `M` over `(key, generation)` is in memory, the twin's table `t` is
+the bank of the current generation `g`, and nothing lies above the last generation `G`. -/
+structure ModeR {κ ν : Type} [BEq κ] [Hashable κ] (S : MemoSch) (K : MemoKey (κ × Word))
+    (dv : Word → ν) (m : Mem) (M : Std.HashMap (κ × Word) ν) (G g : Word)
+    (t : Std.HashMap κ ν) : Prop where
+  memo : MemoRG S K dv m M
+  bank : Bank M g t
+  fresh : Fresh M G
+
+theorem ModeR.frame {κ ν : Type} [BEq κ] [Hashable κ] {S : MemoSch} {K : MemoKey (κ × Word)}
+    {dv : Word → ν} {m m' : Mem} {M : Std.HashMap (κ × Word) ν} {G g : Word}
+    {t : Std.HashMap κ ν} {A : List ArrId} {C : List Word} (hS : S.WF) (hA : S.arr ∉ A)
+    (hC : S.cs ∉ C) (hf : MemFrame A C m m') (h : ModeR S K dv m M G g t) : ModeR S K dv m' M G g t :=
+  ⟨memoRG_frame S hS K dv A C hA hC m m' hf M h.memo, h.bank, h.fresh⟩
+
+/-- **The core tier at explicit maps and bank words.** -/
+structure CoreRM (m : Mem) (c : Caches) (M : ModeMaps) (G g : Word) : Prop where
+  wc : ModeR wcSch eKeyG decEV m M.wc G g c.whnfCoreC
+  wk : ModeR wkSch eKeyG decEV m M.wk G g c.whnfCoreCheapC
+  wh : ModeR whSch eKeyG decEV m M.wh G g c.whnfC
+  inf : ModeR inSch eKeyG decEV m M.inf G g c.inferC
+  io : ModeR ioSch eKeyG decEV m M.io G g c.inferIOC
+  de : ModeR deSch dKeyG decB m M.de G g c.defeqC
+  bank : BankW BANKC m G g
+  ct : MemoRG ctSch pairKey decEV m c.constTyC
+  cv : MemoRG cvSch pairKey decEV m c.constValC
+  rr : MemoRG rrSch rrKey decEV m c.ruleRhsC
+
+/-- **The core tier** (tier D: `flushCaches` per declaration), over `a.caches`. -/
+def CoreR (m : Mem) (c : Caches) : Prop := ∃ M G g, CoreRM m c M G g
+
+theorem coreSch_wf (a : ArrId) (c : Word) (h1 : a ≠ CTL) (h2 : c.toNat + 2 < 2 ^ 32) :
+    MemoSch.WF ⟨a, c⟩ := ⟨h1, h2⟩
+
+theorem BankW.frame {c : Word} {m m' : Mem} {G g : Word} {A : List ArrId} {C : List Word}
+    (h1 : c ∉ C) (h2 : c + 1 ∉ C) (hf : MemFrame A C m m') (h : BankW c m G g) : BankW c m' G g := by
+  obtain ⟨hB1, hB2, hgG, hGl, hsz⟩ := h
+  exact ⟨hf.2.1 _ h1 ▸ hB1, hf.2.1 _ h2 ▸ hB2, hgG, hGl, hf.2.2.1 CTL ▸ hsz⟩
+
+theorem CoreRM.frame {A : List ArrId} {C : List Word} {m m' : Mem} {c : Caches} {M : ModeMaps}
+    {G g : Word} (hA : AvoidA 96 128 A) (hC : AvoidC 96 128 C) (hf : MemFrame A C m m')
+    (h : CoreRM m c M G g) : CoreRM m' c M G g := by
+  have nA : ∀ b : ArrId, 96 ≤ b → b < 128 → b ∉ A := fun b h1 h2 hb => by
+    have := hA b hb; simp only [ArrId] at this h1 h2; omega
+  have nC : ∀ x : Word, 96 ≤ x.toNat → x.toNat < 128 → x ∉ C := fun x h1 h2 hx => by
+    have := hC x hx; omega
+  exact ⟨h.wc.frame (coreSch_wf _ _ (by decide) (by decide)) (nA _ (by decide) (by decide))
+      (nC _ (by decide) (by decide)) hf,
+    h.wk.frame (coreSch_wf _ _ (by decide) (by decide)) (nA _ (by decide) (by decide))
+      (nC _ (by decide) (by decide)) hf,
+    h.wh.frame (coreSch_wf _ _ (by decide) (by decide)) (nA _ (by decide) (by decide))
+      (nC _ (by decide) (by decide)) hf,
+    h.inf.frame (coreSch_wf _ _ (by decide) (by decide)) (nA _ (by decide) (by decide))
+      (nC _ (by decide) (by decide)) hf,
+    h.io.frame (coreSch_wf _ _ (by decide) (by decide)) (nA _ (by decide) (by decide))
+      (nC _ (by decide) (by decide)) hf,
+    h.de.frame (coreSch_wf _ _ (by decide) (by decide)) (nA _ (by decide) (by decide))
+      (nC _ (by decide) (by decide)) hf,
+    h.bank.frame (nC _ (by decide) (by decide)) (nC _ (by decide) (by decide)) hf,
+    memoRG_frame _ (coreSch_wf _ _ (by decide) (by decide)) _ _ A C (nA _ (by decide) (by decide))
+      (nC _ (by decide) (by decide)) m m' hf _ h.ct,
+    memoRG_frame _ (coreSch_wf _ _ (by decide) (by decide)) _ _ A C (nA _ (by decide) (by decide))
+      (nC _ (by decide) (by decide)) m m' hf _ h.cv,
+    memoRG_frame _ (coreSch_wf _ _ (by decide) (by decide)) _ _ A C (nA _ (by decide) (by decide))
+      (nC _ (by decide) (by decide)) m m' hf _ h.rr⟩
 
 theorem CoreR.frame {A : List ArrId} {C : List Word} {m m' : Mem} {c : Caches}
     (hA : AvoidA 96 128 A) (hC : AvoidC 96 128 C) (hf : MemFrame A C m m') (h : CoreR m c) :
-    CoreR m' c := ⟨⟩
+    CoreR m' c := by
+  obtain ⟨M, G, g, h⟩ := h
+  exact ⟨M, G, g, h.frame hA hC hf⟩
+
+/-! ### `flush_caches()` is `Caches.empty` -/
+
+/-- A run of memo clears, in order. -/
+def clearsL : List MemoSch → Mem → Mem
+  | [], m => m
+  | S :: l, m => clearsL l (mclearG S m)
+
+/-- No stamp of the run is about to wrap, at the moment it is cleared. -/
+def ClearsOK : List MemoSch → Mem → Prop
+  | [], _ => True
+  | S :: l, m => rdW (m.arr64 CTL) S.cs + 2 ≠ 0 ∧ ClearsOK l (mclearG S m)
+
+theorem clearsL_frame : ∀ (l : List MemoSch) (m : Mem),
+    MemFrame [] (l.flatMap fun S => [S.cs, S.cs + 1]) m (clearsL l m)
+  | [], m => MemFrame.refl _ _ _
+  | S :: l, m => ((mclearG_frame S m).mono (by simp)
+      (fun x h => by simp only [List.flatMap_cons, List.mem_append]; exact Or.inl h)).trans
+      ((clearsL_frame l _).mono (by simp) (fun x h => List.mem_append_right _ h))
+
+/-- A memo outside a run of clears keeps its relation across it. -/
+theorem memoRG_clearsL_other {κ ν : Type} [BEq κ] [Hashable κ] (S : MemoSch) (hS : S.WF)
+    (K : MemoKey κ) (dv : Word → ν) (l : List MemoSch) (hl : ∀ S' ∈ l, S.cs ≠ S'.cs ∧ S.cs ≠ S'.cs + 1)
+    (m : Mem) (mp : Std.HashMap κ ν) (h : MemoRG S K dv m mp) : MemoRG S K dv (clearsL l m) mp :=
+  memoRG_frame S hS K dv [] _ (by simp) (fun hm => by
+    simp only [List.mem_flatMap, List.mem_cons, List.not_mem_nil, or_false] at hm
+    obtain ⟨S', h1, h2⟩ := hm
+    rcases h2 with e | e
+    · exact (hl S' h1).1 e
+    · exact (hl S' h1).2 e) m _ (clearsL_frame l m) mp h
+
+/-- **A memo cleared in a run is empty after it**, if no other clear of the run touches its
+stamp. -/
+theorem memoRG_clearsL {κ ν : Type} [BEq κ] [Hashable κ] [LawfulBEq κ] [LawfulHashable κ]
+    (S : MemoSch) (hS : S.WF) (K : MemoKey κ) (dv : Word → ν) :
+    ∀ (pre post : List MemoSch) (m : Mem) (mp : Std.HashMap κ ν),
+    (∀ S' ∈ pre ++ post, S.cs ≠ S'.cs ∧ S.cs ≠ S'.cs + 1) → ClearsOK (pre ++ S :: post) m →
+    MemoRG S K dv m mp → MemoRG S K dv (clearsL (pre ++ S :: post) m) ∅
+  | [], post, m, mp, hl, hok, h => by
+    simp only [List.nil_append, clearsL] at hok ⊢
+    exact memoRG_clearsL_other S hS K dv post (fun S' h' => hl S' (by simpa using h')) _ _
+      (memoRG_clear S hS K dv m mp h hok.1)
+  | S₀ :: pre, post, m, mp, hl, hok, h => by
+    simp only [List.cons_append, clearsL] at hok ⊢
+    have h0 := hl S₀ (by simp)
+    refine memoRG_clearsL S hS K dv pre post _ mp (fun S' h' => hl S' (by simp [h'])) hok.2 ?_
+    exact memoRG_frame S hS K dv [] _ (by simp) (by simp [h0.1, h0.2]) m _ (mclearG_frame S₀ m) mp h
+
+/-- The nine core memos, in `flush_caches()`' order. -/
+def coreSchs : List MemoSch := [wcSch, wkSch, whSch, inSch, ioSch, deSch, ctSch, cvSch, rrSch]
+
+theorem flushClears_eq (m : Mem) : flushClears m = clearsL coreSchs m := rfl
+
+theorem flushOK_eq (m : Mem) : FlushOK m ↔ ClearsOK coreSchs m := by
+  simp only [FlushOK, ClearsOK, coreSchs, and_true]
+
+theorem bank_empty {κ ν : Type} [BEq κ] [Hashable κ] (g : Word) :
+    Bank (∅ : Std.HashMap (κ × Word) ν) g ∅ := fun _ => by simp
+
+/-- **The flush**: after `flush_caches()` the core tier relates the empty caches. -/
+theorem CoreR.flush {m : Mem} {c : Caches} (h : CoreR m c) (hok : FlushOK m) :
+    CoreR (flushMem m) Caches.empty := by
+  obtain ⟨M, G, g, h⟩ := h
+  rw [flushOK_eq] at hok
+  have fr : ∀ {m₁ : Mem}, MemFrame [] [114, 115] m₁ (bankReset m₁) := fun {m₁} =>
+    ((MemFrame.setCtl _ 114 0).mono (by simp) (by simp)).trans
+      ((MemFrame.setCtl _ 115 0).mono (by simp) (by simp))
+  have hc : ∀ {κ ν : Type} [BEq κ] [Hashable κ] [LawfulBEq κ] [LawfulHashable κ] (S : MemoSch)
+      (K : MemoKey κ) (dv : Word → ν) (mp : Std.HashMap κ ν) (pre post : List MemoSch),
+      S.WF → pre ++ S :: post = coreSchs → (∀ S' ∈ pre ++ post, S.cs ≠ S'.cs ∧ S.cs ≠ S'.cs + 1) →
+      S.cs ≠ 114 → S.cs ≠ 115 → MemoRG S K dv m mp → MemoRG S K dv (flushMem m) ∅ :=
+    fun S K dv mp pre post hS he hl h1 h2 hR => by
+      have := memoRG_clearsL S hS K dv pre post m mp hl (he ▸ hok) hR
+      rw [he] at this
+      exact memoRG_frame S hS K dv [] _ (by simp) (by simp [h1, h2]) _ _ fr _ this
+  obtain ⟨-, -, -, -, hsz⟩ := h.bank
+  have hsz' : (114 : Word).toNat + 1 < ((flushMem m).arr64 CTL).size := by
+    have e1 : ((bankReset (clearsL coreSchs m)).arr64 CTL).size = (m.arr64 CTL).size := by
+      rw [fr.2.2.1, (clearsL_frame coreSchs m).2.2.1]
+    rw [show flushMem m = bankReset (clearsL coreSchs m) from rfl, e1]; exact hsz
+  refine ⟨ModeMaps.empty, 0, 0, ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩⟩
+  · exact ⟨hc wcSch _ _ _ [] _ (coreSch_wf _ _ (by decide) (by decide)) rfl (by decide) (by decide)
+      (by decide) h.wc.memo, bank_empty 0, fresh_empty 0⟩
+  · exact ⟨hc wkSch _ _ _ [wcSch] _ (coreSch_wf _ _ (by decide) (by decide)) rfl (by decide)
+      (by decide) (by decide) h.wk.memo, bank_empty 0, fresh_empty 0⟩
+  · exact ⟨hc whSch _ _ _ [wcSch, wkSch] _ (coreSch_wf _ _ (by decide) (by decide)) rfl (by decide)
+      (by decide) (by decide) h.wh.memo, bank_empty 0, fresh_empty 0⟩
+  · exact ⟨hc inSch _ _ _ [wcSch, wkSch, whSch] _ (coreSch_wf _ _ (by decide) (by decide)) rfl
+      (by decide) (by decide) (by decide) h.inf.memo, bank_empty 0, fresh_empty 0⟩
+  · exact ⟨hc ioSch _ _ _ [wcSch, wkSch, whSch, inSch] _ (coreSch_wf _ _ (by decide) (by decide))
+      rfl (by decide) (by decide) (by decide) h.io.memo, bank_empty 0, fresh_empty 0⟩
+  · exact ⟨hc deSch _ _ _ [wcSch, wkSch, whSch, inSch, ioSch] _
+      (coreSch_wf _ _ (by decide) (by decide)) rfl (by decide) (by decide) (by decide) h.de.memo,
+      bank_empty 0, fresh_empty 0⟩
+  · have e0 : ((flushClears m).arr64 CTL).size = (m.arr64 CTL).size :=
+      (clearsL_frame coreSchs m).2.2.1 CTL
+    simp only [BANKC] at hsz hsz' ⊢
+    have h114 : (114 : Word).toNat = 114 := rfl
+    rw [h114] at hsz hsz'
+    refine ⟨?_, ?_, by decide, by decide, hsz'⟩
+    · simp only [flushMem, bankReset, rdW_set64, size_set64, e0]; simp; omega
+    · simp only [flushMem, bankReset, rdW_set64, size_set64, e0]; simp; omega
+  · exact hc ctSch _ _ _ [wcSch, wkSch, whSch, inSch, ioSch, deSch] _
+      (coreSch_wf _ _ (by decide) (by decide)) rfl (by decide) (by decide) (by decide) h.ct
+  · exact hc cvSch _ _ _ [wcSch, wkSch, whSch, inSch, ioSch, deSch, ctSch] _
+      (coreSch_wf _ _ (by decide) (by decide)) rfl (by decide) (by decide) (by decide) h.cv
+  · exact hc rrSch _ _ _ [wcSch, wkSch, whSch, inSch, ioSch, deSch, ctSch, cvSch] _
+      (coreSch_wf _ _ (by decide) (by decide)) rfl (by decide) (by decide) (by decide) h.rr
 
 /-! ## The pin table: array 128 (`PINS`)
 

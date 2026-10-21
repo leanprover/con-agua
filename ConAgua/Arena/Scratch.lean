@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.MemoLib
+public import ConAgua.Arena.CoreCaches
 meta import ConAgua.L.Semantics
 import ConAgua.Census.Attr
 
@@ -20,7 +21,8 @@ every table is O(1) per table:
   scratch flag `CTL[1] := f`, and the 19 tier-1 node counts `CTL[ca + 1] := 0`. Every old scratch
   slot holds at most `B + 2^27` and reads free against the new base; no slot is written.
 * `scratch_enter()`: `scratch_reset(1)` and the four walk memos' `clear` (epoch bumps).
-* `scratch_drop()`: `scratch_reset(0)` (the caches' `flushCaches` belongs to `CoreR`, a stub).
+* `scratch_drop()`: `flush_caches()` (`CoreCaches.lean`, the per-declaration caches), then
+  `scratch_reset(0)`.
 
 The refinement (`enterScratch`/`dropScratch` under `ArenaD`) is `ScratchRefine.lean`.
 -/
@@ -95,6 +97,7 @@ def scratchEnter : FunDecl := lfn () locals (r) {
 
 @[l_impl ConRon.Arena.dropScratch]
 def scratchDrop : FunDecl := lfn () locals (r) {
+  r := call flush_caches();
   r := call scratch_reset(0);
   return 0
 }
@@ -107,7 +110,7 @@ def enterMem (m : Mem) : Mem :=
 def scratchProg : Prog :=
   [("scratch_reset", scratchReset), ("scratch_enter", scratchEnter), ("scratch_drop", scratchDrop),
    ("bm_clear", memoClearG bmSch), ("lf_clear", memoClearG lfSch), ("if_clear", memoClearG imSch),
-   ("fm_clear", memoClearG frSch)]
+   ("fm_clear", memoClearG frSch)] ++ cacheProg
 
 section enter
 variable (p : Prog) (hp : p.lookup "scratch_enter" = some scratchEnter)
@@ -144,21 +147,23 @@ end enter
 
 section drop
 variable (p : Prog) (hp : p.lookup "scratch_drop" = some scratchDrop)
-  (hr : p.lookup "scratch_reset" = some scratchReset)
+  (hr : p.lookup "scratch_reset" = some scratchReset) (hfl : FlushProg p)
 
-include hp hr in
+include hp hr hfl in
 theorem scratchDrop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scratch_drop" []
-    ⦃fun _ s' => LocEq s' s₀ ∧ (rdW (s₀.mem.arr64 CTL) SCB).toNat < 2 ^ 62 ∧
-      SCB.toNat < (s₀.mem.arr64 CTL).size ∧ s'.mem = resetMem s₀.mem 0; ⊤⦄ := by
+    ⦃fun _ s' => LocEq s' s₀ ∧ FlushOK s₀.mem ∧
+      (rdW ((flushMem s₀.mem).arr64 CTL) SCB).toNat < 2 ^ 62 ∧
+      SCB.toNat < ((flushMem s₀.mem).arr64 CTL).size ∧ s'.mem = resetMem (flushMem s₀.mem) 0; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, scratchDrop]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, scratchReset_spec p hr n] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, flushCaches_spec p hfl n,
+        scratchReset_spec p hr n] <;> finish
 
 end drop
 

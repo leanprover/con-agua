@@ -34,8 +34,16 @@ namespace L.Arena
 /-! ## The codec -/
 
 theorem lo_hi (k : Word) : (k &&& (0xFFFFFFFF : Word)) ||| ((k >>> (32 : Word)) <<< (32 : Word)) = k := by
-  apply UInt64.toBitVec_inj.mp; simp only [UInt64.toBitVec_or, UInt64.toBitVec_and,
-    UInt64.toBitVec_shiftLeft, UInt64.toBitVec_shiftRight]; bv_decide
+  apply UInt64.toNat_inj.mp
+  have hk := k.toNat_lt
+  have e1 : (k &&& (0xFFFFFFFF : Word)).toNat = k.toNat % 2 ^ 32 := by
+    rw [UInt64.toNat_and]; exact Nat.and_two_pow_sub_one_eq_mod _ 32
+  have e2 : ((k >>> (32 : Word)) <<< (32 : Word)).toNat = (k.toNat / 2 ^ 32) <<< 32 := by
+    rw [UInt64.toNat_shiftLeft, UInt64.toNat_shiftRight]
+    simp [Nat.shiftRight_eq_div_pow, Nat.shiftLeft_eq]
+    omega
+  rw [UInt64.toNat_or, e1, e2, Nat.or_comm, ← Nat.shiftLeft_add_eq_or_of_lt (Nat.mod_lt _ (by decide))]
+  rw [Nat.shiftLeft_eq]; omega
 
 /-- The key codec `K` with a generation in the high half of the second word. -/
 def genKey {κ : Type} (K : MemoKey κ) (h2 : ∀ k1 k2, K.ok k1 k2 → k2.toNat < 2 ^ 32) :
@@ -154,23 +162,30 @@ end enter
 /-- The second key word at generation `g`. -/
 def genW (k2 g : Word) : Word := k2 ||| (g <<< 32)
 
-theorem genW_lo (k2 g : Word) (hk : k2.toNat < 2 ^ 32) : genW k2 g &&& 0xFFFFFFFF = k2 := by
-  have : k2 < 4294967296 := by rw [UInt64.lt_iff_toNat_lt]; simpa using hk
+theorem genW_toNat (k2 g : Word) (hk : k2.toNat < 2 ^ 32) (hg : g.toNat < 2 ^ 32) :
+    (genW k2 g).toNat = g.toNat * 2 ^ 32 + k2.toNat := by
+  have e : (g <<< (32 : Word)).toNat = g.toNat <<< 32 := by
+    rw [UInt64.toNat_shiftLeft]; simp [Nat.shiftLeft_eq]; omega
   unfold genW
-  apply UInt64.toBitVec_inj.mp
-  rw [UInt64.lt_iff_toBitVec_lt] at this
-  simp only [UInt64.toBitVec_or, UInt64.toBitVec_and, UInt64.toBitVec_shiftLeft] at this ⊢
-  bv_decide
+  rw [UInt64.toNat_or, e, Nat.or_comm, ← Nat.shiftLeft_add_eq_or_of_lt hk, Nat.shiftLeft_eq]
+
+theorem genW_lo (k2 g : Word) (hk : k2.toNat < 2 ^ 32) : genW k2 g &&& 0xFFFFFFFF = k2 := by
+  apply UInt64.toNat_inj.mp
+  rw [UInt64.toNat_and, show (0xFFFFFFFF : Word).toNat = 2 ^ 32 - 1 from rfl,
+    Nat.and_two_pow_sub_one_eq_mod]
+  have e : (g <<< (32 : Word)).toNat = g.toNat % 2 ^ 32 * 2 ^ 32 := by
+    rw [UInt64.toNat_shiftLeft]; simp [Nat.shiftLeft_eq]; have := g.toNat_lt; omega
+  unfold genW
+  rw [UInt64.toNat_or, e, Nat.or_comm, ← Nat.shiftLeft_eq, ← Nat.shiftLeft_add_eq_or_of_lt hk,
+    Nat.shiftLeft_eq]
+  omega
 
 theorem genW_hi (k2 g : Word) (hk : k2.toNat < 2 ^ 32) (hg : g.toNat < 2 ^ 32) :
     genW k2 g >>> 32 = g := by
-  have h1 : k2 < 4294967296 := by rw [UInt64.lt_iff_toNat_lt]; simpa using hk
-  have h2 : g < 4294967296 := by rw [UInt64.lt_iff_toNat_lt]; simpa using hg
-  unfold genW
-  apply UInt64.toBitVec_inj.mp
-  rw [UInt64.lt_iff_toBitVec_lt] at h1 h2
-  simp only [UInt64.toBitVec_or, UInt64.toBitVec_shiftRight, UInt64.toBitVec_shiftLeft] at h1 h2 ⊢
-  bv_decide
+  apply UInt64.toNat_inj.mp
+  rw [UInt64.toNat_shiftRight, genW_toNat k2 g hk hg]
+  simp [Nat.shiftRight_eq_div_pow]
+  omega
 
 section put
 variable {κ ν : Type} [BEq κ] [Hashable κ] [LawfulBEq κ] [LawfulHashable κ]
