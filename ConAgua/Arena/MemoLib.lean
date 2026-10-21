@@ -263,6 +263,93 @@ theorem msetG_eq (S : MemoSch) (m : Mem) (k1 k2 v : Word) (h : mfindG S m k1 k2 
 
 grind_pattern [arena_grind] msetG_eq => msetG S m k1 k2 v
 
+/-! ## `X_erase(j)`: a tombstone
+
+Deletion in an open-addressing table must not break the runs of the keys behind the deleted one.
+`X_erase(j)` overwrites the first key word of the live slot `j` (found by a probe) with `TOMB`: the
+slot stays live, so probes run past it, and no valid key has first word `TOMB` (`MemoKey.ok_tomb`),
+so it never matches. Tombstones are not reused; they go at the next `clear`. -/
+
+/-- The first key word of a deleted slot. -/
+def TOMB : Word := 0xFFFFFFFFFFFFFFFF
+
+/-- The memory after `X_erase(j)`. -/
+def meraseG (S : MemoSch) (m : Mem) (j : Word) : Mem := m.set64 S.arr (j * 4 + 1) TOMB
+
+def memoEraseG (S : MemoSch) : FunDecl := lfn (j) locals () {
+  S.arr.u64[j * 4 + 1] := ⟪TOMB⟫;
+  return 0
+}
+
+theorem memoEraseG_spec (S : MemoSch) (p : Prog) (f : FnName)
+    (hp : p.lookup f = some (memoEraseG S)) (n : Nat) (s₀ : St) (j : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) f [j]
+    ⦃fun _ s' => LocEq s' s₀ ∧ s'.mem = meraseG S s₀.mem j; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, memoEraseG]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, st64] <;> finish [meraseG]
+
+/-! ## Banks: generations in the key
+
+con-ron's `takeModeMemos`/`putModeMemos` run an eager comparison on emptied mode tables and put
+the caller's back afterwards. A memo with **generation-tagged keys** does this without copying:
+the key's second word carries a generation `g` in its high half (`genKey`), the current
+generation is `CTL[c + 1]`, the last allocated one `CTL[c]`. `X_bank_enter()` allocates a fresh
+generation (aborting at `2^32`), makes it current and returns the caller's; `X_bank_leave(s)`
+makes `s` current again. A fresh generation has no entries (the empty bank), and the caller's
+entries are untouched (its bank, put back). Entries of finished generations stay until the
+memo's `clear`. -/
+
+/-- The memory after `X_bank_enter()`: counter and current generation `CTL[c] + 1`. -/
+def benterG (c : Word) (m : Mem) : Mem :=
+  (m.set64 CTL c (rdW (m.arr64 CTL) c + 1)).set64 CTL (c + 1) (rdW (m.arr64 CTL) c + 1)
+
+def bankEnterG (c : Word) : FunDecl := lfn () locals (s, g) {
+  s := CTL.u64[⟪c + 1⟫];
+  g := CTL.u64[⟪c⟫] + 1;
+  if g >= 4294967296 { abort };
+  CTL.u64[⟪c⟫] := g;
+  CTL.u64[⟪c + 1⟫] := g;
+  return s
+}
+
+def bankLeaveG (c : Word) : FunDecl := lfn (s) locals () {
+  CTL.u64[⟪c + 1⟫] := s;
+  return 0
+}
+
+theorem bankEnterG_spec (c : Word) (p : Prog) (f : FnName) (hp : p.lookup f = some (bankEnterG c))
+    (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) f []
+    ⦃fun r s' => LocEq s' s₀ ∧ r = [rdW (s₀.mem.arr64 CTL) (c + 1)] ∧
+      (rdW (s₀.mem.arr64 CTL) c + 1).toNat < 2 ^ 32 ∧ s'.mem = benterG c s₀.mem; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, bankEnterG]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;> finish [benterG]
+
+theorem bankLeaveG_spec (c : Word) (p : Prog) (f : FnName) (hp : p.lookup f = some (bankLeaveG c))
+    (n : Nat) (s₀ : St) (s : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) f [s]
+    ⦃fun _ s' => LocEq s' s₀ ∧ s'.mem = s₀.mem.set64 CTL (c + 1) s; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, bankLeaveG]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, st64] <;> finish
+
 /-! ## The instances -/
 
 /-- The slots of `bvarBound`'s memo (`bvarBC`, one-word keys). -/

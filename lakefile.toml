@@ -40,7 +40,7 @@ globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.A
   "ConAgua.Arena.FVarStore", "ConAgua.Arena.FVarRefine",
   "ConAgua.Arena.ProjStore", "ConAgua.Arena.ProjRefine",
   "ConAgua.Arena.LevelGrindAttr", "ConAgua.Arena.LevelHeap", "ConAgua.Arena.LevelHeapRel", "ConAgua.Arena.LevelSimp", "ConAgua.Arena.LevelSimpRel", "ConAgua.Arena.LevelSubst", "ConAgua.Arena.LevelLeq", "ConAgua.Arena.LevelLeqSpec", "ConAgua.Arena.LevelLeqRel", "ConAgua.Arena.LevelEquiv", "ConAgua.Arena.LevelEquivRel",
-  "ConAgua.Arena.Frame", "ConAgua.Arena.ArenaRel", "ConAgua.Arena.Scratch", "ConAgua.Arena.ScratchRefine", "ConAgua.Arena.NatArms",
+  "ConAgua.Arena.Frame", "ConAgua.Arena.ArenaRel", "ConAgua.Arena.Scratch", "ConAgua.Arena.ScratchRefine", "ConAgua.Arena.MemoBank", "ConAgua.Arena.MemoTree", "ConAgua.Arena.NatArms",
   "ConAgua.Arena.WriteSets", "ConAgua.Arena.Keeps", "ConAgua.Arena.Tiers", "ConAgua.Arena.TierWalks",
   "ConAgua.Arena.EnvRec", "ConAgua.Arena.Pins", "ConAgua.Arena.PinsNatOp",
   "ConAgua.Arena.Walk", "ConAgua.Arena.WalkRefine", "ConAgua.Arena.WalkBench", "ConAgua.Arena.WalkEmit",

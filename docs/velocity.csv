@@ -26,3 +26,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-21,libs,opus,17,4,"item 4a: scratch slot base CTL[62] (epoch-stamped scratch slots) in StoreLib and all 19 tables, storeR_reset, scratch_reset/enter/drop refine enterScratch/dropScratch under ArenaD and CheckR"
 >>>>>>> master
 2026-10-21,levels,opus,3,1,"lv_leq_top/lv_equiv/lv_equivs refine Level.leq/isEquiv/isEquivList (+ defaultFuel)"
+2026-10-21,libs,opus,9,2,"item 4b: MemoRV (memory-reading value relation; MemoRG an instance), tombstone erase in MemoLib (decision: no separate map library, env index is direct), banks by generation-tagged keys (MemoBank: bank_enter/put/find, #guard run), tree-valued client MemoTree (LvR level pointers)"
