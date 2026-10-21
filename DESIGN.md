@@ -1322,3 +1322,108 @@ predicates; the obligations are `∀` statements an instance proves once and the
 instantiates by hand (`grind` never sees them as hypotheses). What `store2` found still holds:
 the five `∀` clauses of `TierR` are cleared before each `grind` that does not need them; one
 `grind` in `tierR_push` timed out until `hrun` was cleared in the new-node branch.
+
+### Port: before and after (nightly-2026-10-20, `lake env lean` per file, one run)
+
+| file | lines (non-blank) before | after | `lean` wall / user before | after |
+|---|---:|---:|---:|---:|
+| `StoreRel.lean` | 151 (120) | 156 (120) | 1.1 s / 1.3 s | 1.1 s / 1.2 s |
+| `StoreLib.lean` (new) | – | 698 (618) | – | 5.9 s / 9.9 s |
+| `LitRefine.lean` | 753 (668) | 514 (444) | 6.8 s / 17.3 s | 2.0 s / 3.0 s |
+| `AppRefine.lean` | 474 (417) | 230 (190) | 7.7 s / 14.4 s | 1.2 s / 1.4 s |
+| total | 1378 (1205) | 1598 (1372) | 15.6 s / 33.0 s | 10.2 s / 15.5 s |
+
+The library is 618 non-blank lines (schema and `ad_inj` 57 raw lines, reads 24, the append and
+its read equations 110, the probe 64, the relation's definitions 65, hit/miss 41, the append
+lemmas 101, the protocol and `intern_correctG` 197), close to `store2`'s estimate of 600. Two
+instances do not repay it in lines (+167 non-blank overall), they do in CPU (−53 %): an
+instance's relation file now checks in 1–2 s instead of 7–8 s, because the expensive `grind`
+calls (`tier_push`, `tier_other`, `intern_correct`: a dozen `rdW` reads through `pushMem`) run
+once, in the library. What is left in `LitRefine` is the `lit` key's own content: the uniqueness
+of normalised slices (118 lines, by hand, unchanged), the pool frame (`LitR.grow`, now through
+`tierR_mono`), `NatRec`, and the `natAddLit` instantiation (73, unchanged).
+
+Changes the port needed: `LitR` is now `PoolOK m ∧ StoreR litSch …` (the old bounds
+`len(REC), len(SLOT) < 2^63` were not needed); `ProbeOKG`'s miss case records that the free slot
+is below the slot count (the old proofs got `0 < n` from the load limit in `pushOK`, which the
+library's `PushRoom` does not have); `hix_hdW` lost two hypotheses it never used; handles are
+`decI` (any `Idx` kind, `decE_eq : decE w = decI w` by `rfl`), since the level store's handles
+are `LIdx`.
+
+### The third table: level `succ`, written fresh on the library
+
+`ConAgua/Arena/LevelStore.lean` (L, `module`): arrays `SREC` (6), `SSLOT` (7), one word per node
+(the child's handle word), counts at `CTL[6 + t]`, tag `LTag.succ`; `succ_find`, `succ_push`,
+`intern_succ`, their models and specs, `#guard`s (sharing, `succ (succ 0)`, the scratch tier).
+`ConAgua/Arena/LevelRefine.lean`: `SuccR m a` (`StoreR succSch SRecRel shash` over
+`a.store.lss.ls`'s two `succ` tables) and `internSucc_refines`: `intern_succ(u)` refines
+`internLNode (.succ (decI u))` under `SuccR`, for `u < 2^32`. The level store has no scratch
+skip (`LStore.find?` probes the persistent tier unconditionally), so `skB = false`, as for `lit`.
+
+| | lines (non-blank) | `lean` wall / user | by hand |
+|---|---:|---:|---|
+| L code (3 functions) | 42 | | |
+| models (`sprobeW`, `smatchW`, `spushMem`, `sinternW`, …) and probe arms | 53 | | |
+| `vcgen` specs | 88 | | none: `vcgen` + `finish` |
+| docs, `#guard`s | 48 | | |
+| `LevelStore.lean` | 281 (231) | 3.4 s / 4.5 s | |
+| lens, setters, `internLNode` unfolded to `protoRun` | 66 raw | | one `simp` case split, copied from `lit` |
+| schema, `SRecRel`, `shash`, `SuccR`, frame | 31 raw | | `decide`, `simp` |
+| `MatchOK`, `HomeOK`, `NewOK` | 36 raw | | one `grind` each, `NewOK` through `fld_pushG` |
+| bridges (`probeArm`, `PushRoom`, `pushG`, `internM`) | 28 raw | | `rfl`, `simp`, `grind` |
+| `sintern_correct`, `internSucc_refines` | 36 raw | | one application of `intern_correctG` |
+| `LevelRefine.lean` | 197 (161) | 1.0 s / 1.2 s | |
+
+Both files went through at the first attempt (no failed `grind`, no fix). Against the second
+table before the library (`app`: relation 417 non-blank lines, 7.7 s / 14.4 s), the third table's
+relation is 161 lines and 1.0 s; of those, about 100 are boilerplate a new table copies with
+renaming (the lens and its setters, the unfolding of the arena operation, the bridges), about 40
+say what the table is (schema, record relation, hash, the three obligations).
+
+### Findings
+
+* **Parametric strides need one lemma** (`docs/gaps/grind-parametric-stride-injectivity.lean`):
+  `grind` does not decide the injectivity of `(i * 2 + t) * w + f` for a variable `w`.
+  `Schema.ad_inj`, proved by hand and passed to `grind`, is enough for every generic proof.
+* **Obligations as `∀` statements, instantiated by the library.** `RFrame`, `MatchOK`,
+  `HomeOK`, `NewOK` are named predicates with a `∀` inside. The library's proofs `have` the
+  instance they need and never give a whole obligation to `grind`; an instance proves each one
+  by `intro` and one `grind`/`simp`.
+* **A `Lens` with `rfl` laws** is what makes the arena side generic: the tables of a
+  constructor sit at different depths (`a.store.pers.lits`, `a.store.lss.ls.pers.succs`), and
+  `intern_correctG` only needs `get (set a t) = t` and the frame of the other table and the flag.
+* **The run of the arena operation as one equation** (`… .run a = protoRun …`) replaced the four
+  guarded per-path equations of each instance; the library derives the paths.
+* **What stays per table:** the L code, models and specs (cheap, `vcgen` at the first attempt
+  three times now), the arena unfolding (`simp` with the store's own operations), the key's
+  meaning (`MatchOK`: trivial for handle keys, the pool uniqueness for `lit`).
+
+### Recommendation for the remaining tables
+
+The remaining 16 cons tables (8 expression constructors, 4 level, 3 name, 1 level list) sort
+into four kinds by their key:
+* **handle words only** (`sort`, `const`, `lam`/`forallE` records, `letE`, level `max`, `imax`,
+  `param`): as `app` and `succ`, each about 230 lines of L side and 160 of relation, under 5 s of
+  CPU, no new proof idea (`max`/`imax` are `app` with `LTag` and the level lens);
+* **a handle and a `Nat`** (`bvar`, `fvar`, `proj`, name `num`): a `Nat` stored in a word needs a
+  bound (`< 2^64`) in `MatchOK`/`NewOK` and in the refinement theorem's hypotheses, or a limb
+  slice as for `lit`; small;
+* **no fields** (`anonymous`, level `zero`): at most one node per tier; a schema with one dummy
+  word works (`w = 0` is excluded by `Schema.WF`), or the table is a flag;
+* **variable-length keys** (name `str`: string contents, as `lit`'s unrepresented `strVal` arm;
+  the level list: `List LIdx`): a pool and a uniqueness lemma for the key, as `lit`'s
+  `pv_len`/`pv_limbs`.
+`lam`/`forallE` do not go through `internNodeE` (`internLamE`, `internForallEE`); their protocol
+differs and needs its own unfolding to `protoRun`, or a second protocol in the library; check
+before writing them.
+
+The L side is now the larger half of a new table (231 of 392 lines). It went through at the first
+attempt three times; generating it from the schema would need `vcgen` to see through a Lean
+function producing L syntax, which nothing here has tried. Not worth it before the per-table L
+code shows a bug the generated form would avoid. The next step that pays is a combined relation
+over all tables of a store (`LitR ∧ AppR ∧ …` with the frame between them: each table's append
+is `OutEq` for the others' arrays, which `pushG_arr` already gives).
+
+### `sorry`s
+
+None.
