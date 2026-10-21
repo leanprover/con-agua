@@ -56,4 +56,5 @@ public import ConAgua.Arena.NatShr
 public import ConAgua.Arena.NatPow
 public import ConAgua.Arena.NatDiv
 public import ConAgua.Arena.NatBitsNat
+public import ConAgua.Arena.NatGcd
 public import ConAgua.Arena.Store
