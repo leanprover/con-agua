@@ -1430,11 +1430,13 @@ None.
 
 ## More store-library tables (2026-10-21, lane `tables`)
 
-Files: `ConAgua/Arena/{Zero,Max,Imax,Param}Store.lean`, `ConAgua/Arena/{Zero,Max,Imax,Param}Refine.lean`
-(the level store's remaining four constructors). Order per the task: the level store first
-(`zero`, `max`, `imax`, `param`), then expression handle-only kinds. One table per commit, each
-following the `succ`/`app` templates on `StoreLib.lean` exactly; no library change was needed for
-any table in this round. No `sorry`.
+Files: `ConAgua/Arena/{Zero,Max,Imax,Param,Sort,Const}Store.lean`,
+`ConAgua/Arena/{Zero,Max,Imax,Param,Sort,Const}Refine.lean` (the level store's remaining four
+constructors, then two expression handle-only kinds). Order per the task: the level store first
+(`zero`, `max`, `imax`, `param`), then expression handle-only kinds (`sort`, `const`). One table
+per commit, each following the `succ`/`app` templates on `StoreLib.lean` exactly; `sort` needed
+one small library generalisation (`isPersistent_decI`, below), every other table none. No
+`sorry`.
 
 ### The level store: `zero`, `max`, `imax`
 
@@ -1474,6 +1476,8 @@ any table in this round. No `sorry`.
 | `max` | 42 | 87 | 178 | 6.3 + 1.2 = 7.6 s | yes, first attempt |
 | `imax` | 42 | 87 | 178 | 6.3 + 1.3 = 7.6 s | yes, except the `#guard` fixture fix below |
 | `param` | 38 | 87 | 166 | 4.4 + 1.2 = 5.6 s | yes, first attempt |
+| `sort` | 42 | 87 | 175 | 6.5 + 1.1 = 7.6 s | yes, needed one library generalisation (below) |
+| `const` | 46 | 87 | 194 | 9.0 + 1.2 = 10.2 s | yes, after fixing two scripted-rename mistakes |
 
 "L lines" is the probe loop, `*_find`, `*_push` and `intern_*` function bodies only; "spec lines"
 the three `vcgen` sections (`find`/`push`/`intern`) that prove them; "relation lines" the whole
@@ -1498,6 +1502,59 @@ because width 2 means two `fld_push*`-shaped equations instead of one in `*NewOK
   with the same `sym only [lang_grind, arena_grind] => vcgen […] <;> finish […]` house form as
   `succ`/`app`, confirming the recommendation's estimate for "handle words only" tables: no new
   proof idea, each about 230 L-side lines and 160–180 relation lines, a few seconds of CPU.
+
+### `sorry`s
+
+None.
+
+### The expression store: `sort`, `const`
+
+Order per the task, continuing into expression handle-only kinds. Both are new arrays (next free
+ids after the level store's `PREC`/`PSLOT` = 14/15): `sort` at `SOREC`/`SOSLOT` = 16/17
+(`CTL[16 + t]`, tag `2`), `const` at `CREC`/`CSLOT` = 18/19 (`CTL[18 + t]`, tag `3`). Unlike the
+level store, the expression store's `internE` has the scratch skip (`EStore.persFindMaybe`,
+`eViewHasScratchChild`), so both tables are `app`'s shape (`skSo`/`skCe`, `so`/`ceskipW_eq`), not
+`succ`'s.
+
+* **`sort`** (`SortStore.lean`/`SortRefine.lean`): `SortNode { u : LIdx }`, one field, the
+  `succ`/`param` L-side shape (a single-field probe and push) but with `app`'s single-field skip
+  test (`eViewHasScratchChild (.sort u) = !u.isPersistent`, i.e. skip iff `u` is a scratch
+  handle) grafted on, the way `app`'s two-field skip is. This needed one small library
+  generalisation: `StoreRel.lean`'s `isPersistent_decE` was stated only for expression handles
+  (`(decE w).isPersistent = …`), because it had only ever been used to decode an `app` child,
+  which is itself an expression handle. `sort`'s child is a **level** handle, so the proof needed
+  the same fact at `Idx .level`. Added `isPersistent_decI {k : IdxKind} (w) (hw) : (decI w :
+  Idx k).isPersistent = ((w >>> 27) &&& 1 == 0)` (the old proof, with `decE` replaced by `decI`
+  and the kind made a parameter) and restated `isPersistent_decE` as its one-line `.expr`
+  specialisation (`rw [decE_eq]; exact isPersistent_decI w hw`), so `AppRefine.lean` is unchanged
+  and still builds. `word_decI`/`hix_hdW`/`decI` were already `IdxKind`-generic from the
+  `storelib` port (needed for the level store's handles); `isPersistent_decE` was the one fact
+  that port missed generalising, because nothing before `sort` needed the skip test at a
+  non-expression child.
+* **`const`** (`ConstStore.lean`/`ConstRefine.lean`): `ConstNode { n : NIdx, us : LsIdx }`, the
+  `app` shape at two fields, but a **mixed-kind** key — the two words decode to a name handle and
+  a level-list handle, not two expression handles. The L code (the probe, the push, the skip
+  test `((n | us) >>> 27) & 1`) is `app`'s verbatim, since L has no notion of handle kind at all
+  (everything is a `Word`); only `ConstRefine.lean` differs from `AppRefine.lean`, decoding each
+  field at its own kind (`decI (k := .name)`, `decI (k := .levels)`) instead of both at `.expr`,
+  using the same `isPersistent_decI`/`word_decI` generalisations `sort` needed. No further
+  library change.
+* **Writing `ConstRefine.lean` as a scripted rename of `AppRefine.lean`+`ConstStore.lean` of
+  `AppStore.lean`** (as `max`/`imax`/`param` were) was riskier than for same-kind tables, and
+  caught two mechanical mistakes worth recording: (1) a blind `sed 's/decE f/…/'`-style text
+  substitution also matched inside `isPersistent_decE f hf` (a different identifier, not an
+  application of `decE` to `f`), mangling it into a nonsense token; (2) `sed 's/internApp\b/.../'`
+  silently failed to rename `internApp_spec` because `\b` does not match between two word
+  characters (`p` and `_` are both "word" characters to POSIX/GNU sed's `\b`), so the function
+  name survived the rename pass undetected until the build caught the unknown identifier. Both
+  are copy-renaming hazards, not proof problems; the fix in each case was a direct, targeted edit
+  once the compiler pointed at the exact line. Neither recurred in `zero`→`max`→`imax`→`param`
+  because those renames kept every field at the same handle kind (`LIdx`→`LIdx` or `LIdx`→`NIdx`
+  wholesale, never splitting a two-field record across two different target kinds) and used
+  `\b`-safe suffixes throughout.
+* Both tables' `vcgen` specs (the L side) went through at the first attempt, as every table has so
+  far: the skip test is a Word-level computation with no handle-kind content, so it is identical
+  code to `app`'s regardless of what the two fields denote at the arena level.
 
 ### `sorry`s
 
