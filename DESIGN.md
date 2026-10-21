@@ -1031,3 +1031,150 @@ uniqueness 118 ← 123, the `natAddLit` instantiation 73. The proofs are shorter
 are `grind`, at three times the CPU time (`tier_push` 4.2 s, `tier_other` 2.0 s,
 `intern_correct` 1.8 s: `grind` on goals with a dozen `rdW` reads through `pushMem`, each an
 `if`).
+
+## The capstone: the first end-to-end theorems (2026-10-21, lane `capstone`)
+
+File: `ConAgua/Capstone.lean` (built through the lakefile's glob, like `Arena.Refine`/
+`Arena.LitRefine`: it imports `ConAgua.Arena.LitRefine`, a plain, non-`module` file, so it is one
+too). Composes `compile_correct` (`Compiler/Main.lean`) with the scanner's and the arena's L-level
+specs for the first time, for two functions.
+
+### `skipBraced_x64`
+
+```lean
+theorem skipBraced_x64 [Host] (G : Layout) (hG : G.Ok) (hwf : Prog.wf G.tab scanProg = true)
+    (hnres : 1 ≤ G.tab.nres) (k0 : Nat) (hcode : Code (compileProg G.tab scanProg "skip_braced") k0)
+    (b : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 64)
+    (i : USize) (depth : Nat) (hi : i.toNat ≤ b.size)
+    (hd : depth + (b.size - i.toNat) < 2 ^ 64) (hnargs : G.nargs = 2)
+    (N : Nat) (dm : MachineData) (ra : Word)
+    (hT : dm.regs.rdi.toNat = G.T) (hN : dm.regs.rsi.toNat = N)
+    (hmem : MemRel G { bytes := #[b.data] } dm.dmem) (hroom : G.lo + 8 ≤ G.hi)
+    (htop : rdW dm.dmem (A G.T) = some (UInt64.ofNat G.hi))
+    (hargv : ∀ j (h : j < 2), rdW dm.dmem (A (G.T + G.tab.args.toNat + 8 * j)) =
+      some ([i.toUInt64, UInt64.ofNat depth] : List Word)[j])
+    (hra : rdW dm.dmem (A dm.regs.rsp.toNat) = some ra)
+    (hcs : ∀ x, dm.regs.rsp.toNat - 24 ≤ x → x < dm.regs.rsp.toNat + 8 →
+      (dm.dmem.get? (A x)).isSome ∧ ¬ G.InStack x ∧ ¬ G.InArr x ∧ ¬ G.InTab x)
+    (hcs24 : 24 ≤ dm.regs.rsp.toNat) (hcs8 : dm.regs.rsp.toNat + 8 < 2 ^ 64) :
+    Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rsp.toNat = dm.regs.rsp.toNat + 8 ∧
+        st.data.regs.rbp = dm.regs.rbp ∧ st.data.regs.r14 = dm.regs.r14 ∧ st.data.regs.r15 = dm.regs.r15 ∧
+        (st.data.regs.rdx = 1 ∨
+          (st.data.regs.rdx = 0 ∧
+            st.data.regs.rax = (ConLeche.Frontend.skipBraced b i depth).toUInt64 ∧
+            MemRel G { bytes := #[b.data] } st.data.dmem)))
+      dm (label enterL)
+```
+
+From a Kraken host holding the compiled `scanProg` (`[Host]`, `Code … k0`), a machine state `dm`
+whose input region holds `b : ByteArray` (`MemRel`, the layout relation — `G` is the ghost
+layout, exactly `compile_correct`'s) called with position `i` and depth counter `depth`
+(`compile_correct`'s entry-argument cells, `hargv`) and `N` units of fuel: the run from
+`ca_enter` returns to the caller with the callee-saved registers restored, and either reports
+`exhausted` (`rdx = 1`, fuel or stack) or reports `rdx = 0` with `rax` the x64 word for
+con-leche's own `ConLeche.Frontend.skipBraced b i depth` — the real `USize`-over-`ByteArray`
+function (`vendor/con-leche/ConLeche/Frontend/Scan/Fast.lean:741`), not the `Nat`-position model
+`skipBracedN` that the L-level specs (`L.Examples.skipBraced_spec`) are stated against. No `L`
+notion appears in the conclusion except `MemRel`.
+
+### `natAddLit_x64`
+
+```lean
+theorem natAddLit_x64 [Host] (G : L.Compiler.Layout) (hG : G.Ok)
+    (hwf : Prog.wf G.tab storeProg = true)
+    (hnres : 1 ≤ G.tab.nres) (k0 : Nat) (hcode : Code (compileProg G.tab storeProg "nat_add_lit") k0)
+    (m : Mem) (a₀ : AState) (hR : LitR m a₀)
+    (oa la ob lb : Word) (ha : SliceOK m oa la) (hb : SliceOK m ob lb) (hnargs : G.nargs = 4)
+    (N : Nat) (dm : MachineData) (ra : Word)
+    (hT : dm.regs.rdi.toNat = G.T) (hN : dm.regs.rsi.toNat = N)
+    (hmem : MemRel G m dm.dmem) (hroom : G.lo + 8 ≤ G.hi)
+    (htop : rdW dm.dmem (A G.T) = some (UInt64.ofNat G.hi))
+    (hargv : ∀ j (h : j < 4), rdW dm.dmem (A (G.T + G.tab.args.toNat + 8 * j)) =
+      some ([oa, la, ob, lb] : List Word)[j])
+    (hra : rdW dm.dmem (A dm.regs.rsp.toNat) = some ra)
+    (hcs : ∀ x, dm.regs.rsp.toNat - 24 ≤ x → x < dm.regs.rsp.toNat + 8 →
+      (dm.dmem.get? (A x)).isSome ∧ ¬ G.InStack x ∧ ¬ G.InArr x ∧ ¬ G.InTab x)
+    (hcs24 : 24 ≤ dm.regs.rsp.toNat) (hcs8 : dm.regs.rsp.toNat + 8 < 2 ^ 64) :
+    Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rsp.toNat = dm.regs.rsp.toNat + 8 ∧
+        st.data.regs.rbp = dm.regs.rbp ∧ st.data.regs.r14 = dm.regs.r14 ∧ st.data.regs.r15 = dm.regs.r15 ∧
+        (st.data.regs.rdx = 1 ∨ st.data.regs.rdx = 2 ∨
+          (st.data.regs.rdx = 0 ∧ ∃ m' a',
+            (natAddArm (pv (m.arr64 POOL) oa.toNat la.toNat) (pv (m.arr64 POOL) ob.toNat lb.toNat)).run a₀
+              = .ok (some (decE st.data.regs.rax), a') ∧
+            MemRel G m' st.data.dmem ∧ LitR m' a')))
+      dm (label enterL)
+```
+
+From a Kraken host holding the compiled `storeProg`, a machine state `dm` related (via the
+layout `G` and the store relation `LitR`, `Arena/LitRefine.lean`) to an arena state `a₀`, called
+with pool slices `(oa, la)`/`(ob, lb)` denoting the two Nat summands (`pv`, the pool's decoding
+function, playing the same role here that `MemRel` plays for the byte buffer above — it is how
+"the two operands are these Nat values" is stated for an x64/pool state) and `N` units of fuel:
+the run returns to the caller, and either reports `exhausted` (`rdx = 1`), reports that the limb
+pool or the `lit` store had no room for the result (`rdx = 2`), or reports `rdx = 0` with the
+result register the handle that the arena's `Nat.add` arm of `natOpResult` (`natAddArm`,
+`Arena/Refine.lean`) returns when run on `a₀`, and the final memory related (`MemRel` + `LitR`
+again) to that arm's final arena state `a'`.
+
+### Trusted / assumed
+
+* **The layout relation** (`MemRel`, `Layout.Ok`): the array/table/stack regions are disjoint and
+  in bounds, and the machine's data memory holds L's memory at those addresses — exactly
+  `compile_correct`'s own trusted surface (Kraken's x64 semantics, the assembler/loader, the
+  calling harness; see `PLAN.md`, "Trusted base").
+* **`[Host]`**: an arbitrary host program containing the compiled code at `k0` (`Code`), i.e. the
+  loader placed it there; not checked here.
+* **`hwf`**: `Prog.wf G.tab p = true`, a decidable, concrete check once `G.tab` (the table shape)
+  is fixed by a real loader; carried as a hypothesis, as in `compile_correct`.
+* **`hnres : 1 ≤ G.tab.nres`**: both functions return one word; `Prog.wf` already forces this once
+  `G.tab` is concrete (every `return`/call-result arity check in `Stmt.wf` is `≤ tab.nres`), but
+  extracting it from `hwf` needs unfolding the whole compiled body, so it is a separate,
+  independently-obvious hypothesis rather than a derivation.
+* **`h64 : System.Platform.numBits = 64`** (`skipBraced_x64` only): the platform fact
+  `Scan/Link.lean` needs to equate `USize` positions with `Nat` ones (`ByteArray.usize`'s wrap at
+  `USize.size`); undischargeable in Lean, a hypothesis as everywhere else it is used.
+* **`LitR`** (`natAddLit_x64` only): the arena/pool state relation from lane `store`/`store2`,
+  itself not yet proved to hold of any concrete loader-produced state (milestone 4's remaining
+  work, `natOpResult`'s dispatch and the other arms).
+
+### Mismatches the composition found
+
+* **`⦃P⦄ x ⦃Q; ⊤⦄` says nothing about *which* error a run raises.** Composing with
+  `compile_correct`'s `rdx = 1 ∨ OutcomeRel …` needs, for the clean two-outcome shape the task
+  describes, that the only reachable `Err` is `outOfFuel` (so `OutcomeRel` of every other error
+  forces `rdx = 2`, which must not arise). Every existing spec in `ConAgua.L`/`ConAgua.Arena`
+  states its error postcondition as `⊤`, which is compatible with *any* error, including ones
+  that cannot actually happen — the fact is real but has to be proved separately. Fixed, for
+  `skip_braced`/`str_close`, with small additions: a generic `Triple.step_exec'`/`M.of_run_err`
+  (the `⊤`-free analogues of `Logic.lean`'s `Triple.step_exec`/`M.of_run`) and `…_noErr` restatements
+  of `strCloseLoop_spec`/`strClose_spec`/`skipBracedLoop_spec`/`skipBraced_spec` with the error
+  postcondition tightened to `(· = .outOfFuel)`, proved with the **exact same** `vcgen`/`finish`
+  scripts as the originals (unchanged): the loop invariants that already discharge the bound for
+  the success continuation discharge it for the `oob` continuation just as well (that branch's
+  hypotheses contradict themselves). No existing theorem was changed.
+* **This does not scale to `nat_add_lit`.** `nat_add`'s pool append and `intern_lit`'s node push
+  (`lit_push`, `Store.lean`) each have a genuine, intentional `abort` the source code reaches
+  when a capacity check fails (`len(POOL.u64) - top <= n`, `cnt ≥ 2^27`, the record array full,
+  the `3/4` load limit) — "growing past capacity is an explicit abort in the program" (`PLAN.md`).
+  Unlike `skip_braced`'s bound (implied by the loop invariant alone, so `vcgen` can reject the
+  `oob` branch as self-contradictory), ruling these out needs a *quantitative* room hypothesis
+  (e.g. `len(POOL.u64) - top > n`) for `nat_add`, and, for `intern_lit`'s probe (`lit_find`), a
+  load-factor/pigeonhole argument (linear probing with wraparound visits all `n` slots once in
+  `n` steps, so a free slot exists within budget whenever occupancy `< n`) that is not yet proved
+  anywhere in the codebase and is well beyond a "small lemma". So `natAddLit_x64`, honestly, has
+  **three** outcomes, not two: the task's shape ("exhausted, or the outcome matches …") does not
+  hold for this function without that extra work. The theorem above states the three-way split
+  explicitly (`rdx = 2` for the capacity-abort case) rather than assuming the gap away; closing
+  it to two outcomes is future work (room/load-factor hypotheses plus the pigeonhole lemma,
+  probably against `LitR`'s slot-occupancy fields directly).
+* **`pv`/`POOL` in the conclusion.** The task asks for "no intermediate L notions … except where
+  unavoidable (the layout relation)"; `natAddLit_x64`'s conclusion mentions `pv (m.arr64 POOL) …`
+  to say what Nat values the pool slices `(oa, la)`/`(ob, lb)` denote. This is the same kind of
+  "unavoidable" as `MemRel`: the arena's `natOpResult`/`natAddArm` take bare `Nat` operands, and
+  L has no representation of a `Nat` other than a pool slice, so decoding the slice is required to
+  state the operands at all (there is no `con-leche`-level value to substitute, unlike
+  `skipBraced`'s `b`/`i`, which are already `ByteArray`/`USize`).
+
+### `sorry`s
+
+None.
