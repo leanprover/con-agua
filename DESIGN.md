@@ -3733,7 +3733,9 @@ Request to lane `arch`: add `LH` (array 192) and `CTL[192]` (heap top) to the me
 | `lvls_eq`, `ls_node` (`lvlsEq?` on two level-list handles' `POOL` slices) | 33 | 15 | 60 | `lvlsEq_refines` + `lvsR_of_slice` + `lsNodeW_store` + runs 170 | 1 s | as `lvl_eq` |
 | `lv_mem`, `lv_apd` (`allParamsDefined`; the parameter names a slice of a word array `A` the caller picks) | 12 | 18 | 90 | `memW_ok`, `apdW_ok`, `NmsR` 75 | 2.9 s | as `lv_eq`; L code generic in `A` |
 | `lh_push`, `lv_zero` (`zeronessOf`: a flag and the names pushed on the heap) | 13 | 18 | 90 | `zeroW_ok` + `lhPushW_ext` + `NmsR` slices 150 | 1.8 s | as `lv_eq` |
-| total (files) | | 288 | `LevelHeap` 243, `LevelSimp` 291, `LevelSubst` 251, `LevelLeq` 474, `LevelLeqSpec` 151, `LevelEquiv` 358, `LevelApd` 120, `LevelZero` 120 | `LevelHeapRel` 470, `LevelSimpRel` 264, `LevelLeqRel` 740, `LevelEquivRel` 200, `LevelArena` 552, `LevelApd` 100, `LevelZero` 190 | | |
+| `lv_lookup`, `lv_substl` (`subst`, `subst.go` with lists: keys in `KA`, values in `VA`) | 24 | 25 | 110 | `lookupW_ok`, `substLW_ok`, `LvsAR` 110 | 5.9 s (file) | as `lv_eq`; generic in the arrays |
+| `lv_spw`, `lv_substpw` (`substPW`: `bindZ.go` of `zeronessOf ∘ subst.go`) | 3 + `bind_z` | 15 | 70 | `spwW_ok`, `substPWW_ok`, `ZR.inter`, `PWR` 120 | (same file) | as `lv_eq` |
+| total (files) | | 328 | `LevelHeap` 243, `LevelSimp` 291, `LevelSubst` 251, `LevelLeq` 474, `LevelLeqSpec` 151, `LevelEquiv` 358, `LevelApd` 120, `LevelZero` 120, `LevelSubstL` 230 | `LevelHeapRel` 470, `LevelSimpRel` 264, `LevelLeqRel` 740, `LevelEquivRel` 200, `LevelArena` 552, `LevelApd` 100, `LevelZero` 190, `LevelSubstL` 280 | | |
 
 ### The comparison (`LevelSubst`, `LevelLeq`, `LevelLeqSpec`, `LevelLeqRel`)
 
@@ -3743,9 +3745,12 @@ Request to lane `arch`: add `LH` (array 192) and `CTL[192]` (heap top) to the me
   which every caller sees. `diff : Int` is the biased word `d = diff + 2^32` (`DR`); the
   refinement keeps `|diff| + fuel ≤ 2^31`, true from the entry (`0`, `10^4`) since `diff` moves
   by one only where fuel is spent, so `d ± 1` never wraps.
-* **One key.** `byCases` substitutes one parameter; `lv_subst(l, k, v)` is `subst [k] [v]`
-  (`@[refines_part … "one key"]`). The list version (`instLPGo`'s callers, phases 4–5) reads its
-  keys from wherever the declaration's parameter names will live; not built here.
+* **One key, and lists.** `byCases` substitutes one parameter; `lv_subst(l, k, v)` is
+  `subst [k] [v]` (`@[refines_part … "one key"]`). The list version `lv_substl` (`instLPGo`'s
+  callers, phases 4–5) takes the keys as a slice of name words in an array `KA` and the values as
+  a slice of level pointers in `VA` (`LvsAR`), both chosen by the caller (`LevelSubstL.lean`);
+  `substPW` (`lv_substpw`) runs over a datum's name slice in `PA`. The arrays must not be the heap
+  or `CTL`.
 * **The model** is one mutual block (`leqW`, `restW`, `imaxRW`, `imaxLW`, `imaxRrW`, `casesW`,
   `caW` and 14 continuations), structural on the L fuel with the continuations ranked by a second
   component (`termination_by (n, k)`). The refinement is the same mutual induction: seven
