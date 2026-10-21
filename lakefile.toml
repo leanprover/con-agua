@@ -43,7 +43,8 @@ globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.A
   "ConAgua.Final.Twin", "ConAgua.Final.Statement",
   "ConAgua.Front.Fields", "ConAgua.Front.FieldsLink",
   "ConAgua.Front.Apply", "ConAgua.Front.StateDR", "ConAgua.Front.Line", "ConAgua.Front.LineRefine",
-  "ConAgua.Front.ExprIface"]
+  "ConAgua.Front.ExprIface",
+  "ConAgua.Front.Unescape", "ConAgua.Front.UnescapeLink"]
 
 # Vendored from con-leche (rev 103562b) and con-ron (rev 4c9eaf7, proof/ dir).
 # See vendor/README.md for provenance and every patch applied.
