@@ -164,7 +164,7 @@ def mpushOK (m : Mem) (t : Word) : Bool :=
 /-- The memory after `max_push(t, u, v, j)` appended node `c`. -/
 def mpushMem (m : Mem) (t u v j c : Word) : Mem :=
   ((((m.set64 MREC (c * 4 + t * 2) u).set64 MREC (c * 4 + t * 2 + 1) v).set64 MSLOT (j * 2 + t)
-    (c + 1)).set64 CTL (10 + t) (c + 1))
+    (c + 1)).set64 CTL (10 + (t &&& 1)) (c + 1))
 
 def maxPush : FunDecl := lfn (t, u, v, j) locals (c, k) {
   c := CTL.u64[10 + t];
@@ -175,7 +175,7 @@ def maxPush : FunDecl := lfn (t, u, v, j) locals (c, k) {
   MREC.u64[k] := u;
   MREC.u64[k + 1] := v;
   MSLOT.u64[j * 2 + t] := c + 1;
-  CTL.u64[10 + t] := c + 1;
+  CTL.u64[10 + (t & 1)] := c + 1;
   return c
 }
 

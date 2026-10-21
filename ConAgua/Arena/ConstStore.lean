@@ -170,7 +170,7 @@ def cepushOK (m : Mem) (t : Word) : Bool :=
 /-- The memory after `const_push(t, n, us, j)` appended node `c`. -/
 def cepushMem (m : Mem) (t f a j c : Word) : Mem :=
   ((((m.set64 CREC (c * 4 + t * 2) f).set64 CREC (c * 4 + t * 2 + 1) a).set64 CSLOT (j * 2 + t)
-    (c + 1)).set64 CTL (18 + t) (c + 1))
+    (c + 1)).set64 CTL (18 + (t &&& 1)) (c + 1))
 
 def constPush : FunDecl := lfn (t, f, a, j) locals (c, k) {
   c := CTL.u64[18 + t];
@@ -181,7 +181,7 @@ def constPush : FunDecl := lfn (t, f, a, j) locals (c, k) {
   CREC.u64[k] := f;
   CREC.u64[k + 1] := a;
   CSLOT.u64[j * 2 + t] := c + 1;
-  CTL.u64[18 + t] := c + 1;
+  CTL.u64[18 + (t & 1)] := c + 1;
   return c
 }
 

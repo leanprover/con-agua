@@ -168,7 +168,7 @@ def apushOK (m : Mem) (t : Word) : Bool :=
 /-- The memory after `app_push(t, f, a, j)` appended node `c`. -/
 def apushMem (m : Mem) (t f a j c : Word) : Mem :=
   ((((m.set64 AREC (c * 4 + t * 2) f).set64 AREC (c * 4 + t * 2 + 1) a).set64 ASLOT (j * 2 + t)
-    (c + 1)).set64 CTL (4 + t) (c + 1))
+    (c + 1)).set64 CTL (4 + (t &&& 1)) (c + 1))
 
 def appPush : FunDecl := lfn (t, f, a, j) locals (c, k) {
   c := CTL.u64[4 + t];
@@ -179,7 +179,7 @@ def appPush : FunDecl := lfn (t, f, a, j) locals (c, k) {
   AREC.u64[k] := f;
   AREC.u64[k + 1] := a;
   ASLOT.u64[j * 2 + t] := c + 1;
-  CTL.u64[4 + t] := c + 1;
+  CTL.u64[4 + (t & 1)] := c + 1;
   return c
 }
 

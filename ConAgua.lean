@@ -5,6 +5,7 @@ public import ConAgua.L.Syntax
 public import ConAgua.L.Semantics
 public import ConAgua.L.Notation
 public import ConAgua.L.Logic
+public import ConAgua.L.WriteSet
 public import ConAgua.L.Examples
 public import ConAgua.Compiler.Compile
 public import ConAgua.Compiler.Run
@@ -54,4 +55,5 @@ public import ConAgua.Arena.NatShl
 public import ConAgua.Arena.NatShr
 public import ConAgua.Arena.NatPow
 public import ConAgua.Arena.NatDiv
+public import ConAgua.Arena.NatBitsNat
 public import ConAgua.Arena.Store

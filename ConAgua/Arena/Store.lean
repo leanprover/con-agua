@@ -406,7 +406,7 @@ def pushOK (m : Mem) (t : Word) : Bool :=
 def pushMem (m : Mem) (t o l h j c : Word) : Mem :=
   ((((((m.set64 REC (c * 8 + t * 4) 0).set64 REC (c * 8 + t * 4 + 1) o).set64 REC
     (c * 8 + t * 4 + 2) l).set64 REC (c * 8 + t * 4 + 3) h).set64 SLOT (j * 2 + t) (c + 1)).set64
-    CTL (2 + t) (c + 1))
+    CTL (2 + (t &&& 1)) (c + 1))
 
 def litPush : FunDecl := lfn (t, o, l, h, j) locals (c, k) {
   c := CTL.u64[2 + t];
@@ -419,7 +419,7 @@ def litPush : FunDecl := lfn (t, o, l, h, j) locals (c, k) {
   REC.u64[k + 2] := l;
   REC.u64[k + 3] := h;
   SLOT.u64[j * 2 + t] := c + 1;
-  CTL.u64[2 + t] := c + 1;
+  CTL.u64[2 + (t & 1)] := c + 1;
   return c
 }
 
