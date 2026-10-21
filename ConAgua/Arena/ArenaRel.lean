@@ -50,8 +50,16 @@ pool and the walk memo:
 | 37, 38 `NNREC`, `NNSLOT` | name `num` | 38, 39 |
 | 39, 40 `LSREC`, `LSSLOT` | level lists (slices of the pool) | 40, 41 |
 
+| 41‥63 | reserved for lane `exprops` (memos, derived columns) | 42‥63 |
+| ≥ 64 | **free for other lanes** (`ArenaR.frame_ext`) | ≥ 64 |
+
 (Tables 2‥23: `CTL[r + t]` is tier `t`'s node count of the table with record array `r`; tables from
-25 on: `CTL[s + t]`, `s` the slot array.) Each table relation reads only its own arrays and counts,
+25 on: `CTL[s + t]`, `s` the slot array.) **Extension point:** a writer of arrays `≥ 64` and `CTL`
+words `≥ 64` only keeps `ArenaR` (`ArenaR.frame_ext`, stable); `arenaR_init` takes at least 64
+arrays and a `CTL` of at least 64 words, so a lane may add its own arrays above 63 without touching
+this file. A new relation over such arrays is a separate conjunct (`ArenaR m a ∧ MyR m a`), merged
+into `ArenaR` later. This file is maintained by hand (it was once generated; `arena_build` removed
+the text that grew quadratically). Each table relation reads only its own arrays and counts,
 the scratch flag, and (for `lit`, the level lists and the name `str` table) the pool and its top,
 so a writer of other arrays leaves it alone (`Frame.lean`, `storeR_frame`). Every `intern_*`
 refinement lifts to `ArenaR` (`intern*_refinesA`): the table's own relation from the table's
@@ -77,6 +85,9 @@ namespace L.Arena
 schemas: `decide` times out on the `UInt64` list memberships, `simp` with the array ids is
 immediate. -/
 macro "apart" : tactic => `(tactic| simp [Apart, POOL, CTL, BMEMO, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT])
+
+/-- The side condition of `apart_hi` for a concrete schema. -/
+macro "lo_apart" : tactic => `(tactic| simp [POOL, CTL, BMEMO, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT])
 
 /-! ## Locality of each table's records -/
 
@@ -238,27 +249,42 @@ structure ArenaR (m : Mem) (a : AState) : Prop where
 /-- **Build an `ArenaR m' a'` from `hR : ArenaR m a` and a writer `hf : MemFrame A C m m'`**: each
 field by the tactic `t` if it closes it (the written table, the memo, the pool's tables), else by
 the field's frame across `hf` (which needs the table apart from the writer). -/
-macro "arena_build " hR:term ", " hf:term " with " t:tacticSeq : tactic => `(tactic| exact ⟨
-    by first | $t | exact ($hR).lit.frame _ _ _ _ $hf _ (by apart),
-    by first | $t | exact ($hR).app.frame _ _ _ _ $hf _ (by apart),
-    by first | $t | exact ($hR).sort.frame _ _ _ _ $hf _ (by apart),
-    by first | $t | exact ($hR).const.frame _ _ _ _ $hf _ (by apart),
-    by first | $t | exact ($hR).letE.frame _ _ _ _ $hf _ (by apart),
-    by first | $t | exact ($hR).bvar.frame _ _ _ _ $hf _ (by apart),
-    by first | $t | exact ($hR).fvar.frame _ _ _ _ $hf _ (by apart),
-    by first | $t | exact ($hR).lam.frame _ _ _ _ $hf _ (by apart),
-    by first | $t | exact ($hR).forallE.frame _ _ _ _ $hf _ (by apart),
-    by first | $t | exact ($hR).proj.frame _ _ _ _ $hf _ (by apart),
-    by first | $t | exact ($hR).zero.frame _ _ _ _ $hf _ (by apart),
-    by first | $t | exact ($hR).succ.frame _ _ _ _ $hf _ (by apart),
-    by first | $t | exact ($hR).max.frame _ _ _ _ $hf _ (by apart),
-    by first | $t | exact ($hR).imax.frame _ _ _ _ $hf _ (by apart),
-    by first | $t | exact ($hR).param.frame _ _ _ _ $hf _ (by apart),
-    by first | $t | exact ($hR).ls.frame _ _ _ _ $hf _ (by apart),
-    by first | $t | exact ($hR).nanon.frame _ _ _ _ $hf _ (by apart),
-    by first | $t | exact ($hR).nstr.frame _ _ _ _ $hf _ (by apart),
-    by first | $t | exact ($hR).nnum.frame _ _ _ _ $hf _ (by apart),
-    by first | $t | exact memoR_frame _ _ (by apart) (by apart) _ _ $hf _ ($hR).memo⟩)
+macro "arena_build " hR:term ", " hf:term " with " t:tacticSeq " using " ap:tacticSeq : tactic => `(tactic| exact ⟨
+    by first | $t | exact ($hR).lit.frame _ _ _ _ $hf _ (by $ap),
+    by first | $t | exact ($hR).app.frame _ _ _ _ $hf _ (by $ap),
+    by first | $t | exact ($hR).sort.frame _ _ _ _ $hf _ (by $ap),
+    by first | $t | exact ($hR).const.frame _ _ _ _ $hf _ (by $ap),
+    by first | $t | exact ($hR).letE.frame _ _ _ _ $hf _ (by $ap),
+    by first | $t | exact ($hR).bvar.frame _ _ _ _ $hf _ (by $ap),
+    by first | $t | exact ($hR).fvar.frame _ _ _ _ $hf _ (by $ap),
+    by first | $t | exact ($hR).lam.frame _ _ _ _ $hf _ (by $ap),
+    by first | $t | exact ($hR).forallE.frame _ _ _ _ $hf _ (by $ap),
+    by first | $t | exact ($hR).proj.frame _ _ _ _ $hf _ (by $ap),
+    by first | $t | exact ($hR).zero.frame _ _ _ _ $hf _ (by $ap),
+    by first | $t | exact ($hR).succ.frame _ _ _ _ $hf _ (by $ap),
+    by first | $t | exact ($hR).max.frame _ _ _ _ $hf _ (by $ap),
+    by first | $t | exact ($hR).imax.frame _ _ _ _ $hf _ (by $ap),
+    by first | $t | exact ($hR).param.frame _ _ _ _ $hf _ (by $ap),
+    by first | $t | exact ($hR).ls.frame _ _ _ _ $hf _ (by $ap),
+    by first | $t | exact ($hR).nanon.frame _ _ _ _ $hf _ (by $ap),
+    by first | $t | exact ($hR).nstr.frame _ _ _ _ $hf _ (by $ap),
+    by first | $t | exact ($hR).nnum.frame _ _ _ _ $hf _ (by $ap),
+    by first | $t | exact memoR_frame _ _ (by $ap) (by $ap) _ _ $hf _ ($hR).memo⟩)
+
+/-- `arena_build hR, hf with t` for a writer of concrete arrays and words (`Apart` by `apart`). -/
+macro "arena_build " hR:term ", " hf:term " with " t:tacticSeq : tactic =>
+  `(tactic| arena_build $hR, $hf with $t using apart)
+
+/-- **The extension point for other lanes**: arrays `≥ 64` and `CTL` words `≥ 64` are outside
+every relation of `ArenaR` (lane `exprops` reserves arrays `41‥63` and `CTL` words `42‥63` for its
+memos and derived columns). A writer of only such arrays and words keeps `ArenaR`. -/
+theorem ArenaR.frame_ext (A : List ArrId) (C : List Word) (hA : ∀ b ∈ A, 64 ≤ b)
+    (hC : ∀ x ∈ C, 64 ≤ x.toNat) (m m' : Mem) (hf : MemFrame A C m m') (a : AState)
+    (hR : ArenaR m a) : ArenaR m' a := by
+  arena_build hR, hf with
+    exact memoR_frame _ _ (fun h => absurd (hA _ h) (by simp [BMEMO]))
+      (fun h => absurd (hC _ h) (by simp)) _ _ hf _ hR.memo
+  using exact apart_hi _ _ _ _ _ (by lo_apart) hA hC
 
 /-! ## The initial state -/
 
@@ -287,14 +313,15 @@ theorem storeR_init {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] (S : Sch
   exact ⟨hctl, by simp [hz], hT 0, hT 1⟩
 
 /-- **The relation holds initially**: the all-zero memory and the arena's initial state. -/
-theorem arenaR_init (sizes : List Nat) (hlen : sizes.length = 41) (hctl : 42 ≤ sizes[1]?.getD 0)
+theorem arenaR_init (sizes : List Nat) (hlen : 64 ≤ sizes.length) (hctl : 64 ≤ sizes[1]?.getD 0)
     (hpool : sizes[0]?.getD 0 < 2 ^ 63) : ArenaR (initMem sizes) (AState.init EStore.empty) := by
   have hz := initMem_rd sizes
   have hc : ((initMem sizes).arr64 CTL).size = sizes[1]?.getD 0 := by
     rw [initMem_arr]; simp [CTL]
   have hp : ((initMem sizes).arr64 POOL).size = sizes[0]?.getD 0 := by
     rw [initMem_arr]; simp [POOL]
-  have hw : CTL < (initMem sizes).words.size := by simp [initMem, CTL, hlen]
+  have hw : CTL < (initMem sizes).words.size := by
+    show 1 < (sizes.map _).toArray.size; simp only [List.size_toArray, List.length_map]; omega
   refine ⟨⟨?_, storeR_init _ _ _ _ hz (by rw [hc]; simp [litSch]; omega)⟩,
     storeR_init _ _ _ _ hz (by rw [hc]; simp [appSch]; omega),
     storeR_init _ _ _ _ hz (by rw [hc]; simp [sortSch]; omega),
