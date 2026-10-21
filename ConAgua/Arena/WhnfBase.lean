@@ -2,6 +2,7 @@ import ConAgua.Arena.CoreRefine
 import ConAgua.Arena.View
 import ConAgua.Arena.NatArms
 import ConAgua.Arena.Pins
+import ConAgua.Arena.LevelArena
 import ConRon.Arena.Core
 import ConAgua.Census.Attr
 
@@ -118,6 +119,36 @@ structure CoreS (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis
   core : CoreRM m a.caches M G g
   pins : PinsFull m a.pins
   env : EnvR dn m vis fe
+  /-- The twin's readback caches hold readbacks (L has no readback; the twin computes on them). -/
+  readL : ReadLCOK a
+  readLs : ReadLsCOK a
+  /-- The name store is well formed (`denoteN` injective: names compared by word). -/
+  nwf : NStoreWF a.store.lss.ls.ns
+
+/-- **The relation across a writer outside every tier and the stack**: arrays `≥ 145` (or the
+front's 64‥95), `CTL` words `≥ 137` (or 64‥95): the level heap (`LH`, `CTL[192]`), say. -/
+theorem CoreS.frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
+    {fe : IFEnv} {M : ModeMaps} {G g : Word} {A : List ArrId} {C : List Word}
+    (hS : CoreS dn m a vis fe M G g) (hf : MemFrame A C m m')
+    (hA : ∀ b ∈ A, 64 ≤ b ∧ (b < 96 ∨ 145 ≤ b)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 137 ≤ x.toNat)) :
+    CoreS dn m' a vis fe M G g ∧ StackKept m m' := by
+  have aA : ∀ lo hi : Nat, 96 ≤ lo → hi ≤ 145 → AvoidA lo hi A := fun lo hi h1 h2 b hb => by
+    have := hA b hb; simp only [ArrId] at this ⊢; omega
+  have aC : ∀ lo hi : Nat, 96 ≤ lo → hi ≤ 137 → AvoidC lo hi C := fun lo hi h1 h2 x hx => by
+    have := hC x hx; omega
+  have hspn : m'.arr64 SPN = m.arr64 SPN :=
+    hf.1 SPN (fun h => by have := hA _ h; simp only [SPN, ArrId] at this; omega) (by decide)
+  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 :=
+    hf.2.1 136 (fun h => by have := hC _ h; simp at this)
+  refine ⟨⟨⟨ArenaR.frame_ext A C (fun b hb => (hA b hb).1) (fun x hx => (hC x hx).1) m m' hf a hS.arena.1,
+      DerR.frameM A C m m' hf (fun b hb => .inr (by have := (hA b hb).1; simp only [ArrId] at this ⊢; omega))
+        a hS.arena.2⟩,
+    hS.core.frame (aA 96 128 (by decide) (by decide)) (aC 96 128 (by decide) (by decide)) hf,
+    hS.pins.congr (hf.1 PINS (fun h => by have := hA _ h; simp only [PINS, ArrId] at this; omega)
+      (by decide)),
+    hS.env.frame (aA 132 144 (by decide) (by decide)) (aC 128 136 (by decide) (by decide)) hf,
+    hS.readL, hS.readLs, hS.nwf⟩, ?_⟩
+  refine ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
 
 /-- **After a core run** from `m₀` at maps `M`, `G`, generation `g`: the relation holds at some
 maps that keep every other generation's bank, and the stack below the top is as it was. -/

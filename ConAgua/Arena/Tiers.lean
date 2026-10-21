@@ -19,7 +19,7 @@ each owning a disjoint range of arrays and `CTL` words, each with **one** group 
 | `MemosR` (walk memos, nested in `ArenaR`) | `a.memos` | 24, 41, 47, 48; 49‥55 reserved | 24, 25, 42‥47; 48‥61 reserved | 4 of 10 memos |
 | `DerR` (derived columns, `DerRel.lean`) | `a.store` | 42‥46 | – | 5 compound tables |
 | `StateDR` (front, `Front/StateDR.lean`) | the parse state | 64‥66; 67‥95 reserved | 64‥95 reserved | lane `front2` |
-| `CoreR` | `a.caches` | 96‥104; 105‥127 reserved | 96‥115; 116‥127 reserved | 9 of 14 tables (lane `whnf`) |
+| `CoreR` | `a.caches` | 96‥106; 107‥127 reserved | 96‥119; 120‥127 reserved | 11 of 14 tables (lane `whnf`) |
 | `PinsR` | `a.pins` | 128 (`PINS`); 129‥131 reserved | – | filled (lane `pinsenv`) |
 | `EnvR` | a view `vis` of `fe : IFEnv` (an argument) | 132‥136; 137‥143 reserved | 128, 129; 130‥135 reserved | filled (lane `pinsenv`) |
 | argument relations (`PMemo`, `pend`, saved `ModeMemos`, walk-local memos) | arguments | 144‥191 | 136‥191 | not yet |
@@ -49,14 +49,14 @@ set_option linter.unusedVariables false
 
 /-! ## The per-declaration caches: arrays 96‥127, `CTL` 96‥127
 
-Nine of con-ron's fourteen `Caches` tables are memos in L (`CoreCaches.lean`: arrays 96‥104,
-stamps and counts `CTL` 96‥113, the mode memos' bank words `CTL` 114, 115). The six **mode memos**
+Eleven of con-ron's fourteen `Caches` tables are memos in L (`CoreCaches.lean`: arrays 96‥106,
+stamps and counts `CTL` 96‥113 and 116‥119, the mode memos' bank words `CTL` 114, 115). The six **mode memos**
 are generation-tagged (`MemoBank.lean`): L keeps one map `M` per table over `(key, generation)`,
 the twin's table is the bank of the current generation `g`, and no entry is above the last
 allocated generation `G`. The saved tables of an enclosing eager comparison are other banks of
-the same maps (stated by the knot over `CoreRM`'s explicit maps). The three constant caches are
-plain `MemoRG`s. `lvlEqC`, `lvlsEqC`, `readLC`, `readNC`, `readLsC` are not represented (see
-`CoreCaches.lean`). -/
+the same maps (stated by the knot over `CoreRM`'s explicit maps). The three constant caches and the two
+level-verdict caches are plain `MemoRG`s. `readLC`, `readNC`, `readLsC` have no L table (L makes
+no readbacks; see `CoreCaches.lean`). -/
 
 /-- The key of a one-handle mode memo: the handle and its generation. -/
 def eKeyG : MemoKey (EIdx × Word) := genKey bmKey (fun _ _ h => by rw [h.2]; decide)
@@ -136,6 +136,8 @@ structure CoreRM (m : Mem) (c : Caches) (M : ModeMaps) (G g : Word) : Prop where
   ct : MemoRG ctSch pairKey decEV m c.constTyC
   cv : MemoRG cvSch pairKey decEV m c.constValC
   rr : MemoRG rrSch rrKey decEV m c.ruleRhsC
+  lq : MemoRG lqSch pairKey decB m c.lvlEqC
+  lsq : MemoRG lsqSch pairKey decB m c.lvlsEqC
 
 /-- **The core tier** (tier D: `flushCaches` per declaration), over `a.caches`. -/
 def CoreR (m : Mem) (c : Caches) : Prop := ∃ M G g, CoreRM m c M G g
@@ -173,7 +175,11 @@ theorem CoreRM.frame {A : List ArrId} {C : List Word} {m m' : Mem} {c : Caches} 
     memoRG_frame _ (coreSch_wf _ _ (by decide) (by decide)) _ _ A C (nA _ (by decide) (by decide))
       (nC _ (by decide) (by decide)) m m' hf _ h.cv,
     memoRG_frame _ (coreSch_wf _ _ (by decide) (by decide)) _ _ A C (nA _ (by decide) (by decide))
-      (nC _ (by decide) (by decide)) m m' hf _ h.rr⟩
+      (nC _ (by decide) (by decide)) m m' hf _ h.rr,
+    memoRG_frame _ (coreSch_wf _ _ (by decide) (by decide)) _ _ A C (nA _ (by decide) (by decide))
+      (nC _ (by decide) (by decide)) m m' hf _ h.lq,
+    memoRG_frame _ (coreSch_wf _ _ (by decide) (by decide)) _ _ A C (nA _ (by decide) (by decide))
+      (nC _ (by decide) (by decide)) m m' hf _ h.lsq⟩
 
 theorem CoreR.frame {A : List ArrId} {C : List Word} {m m' : Mem} {c : Caches}
     (hA : AvoidA 96 128 A) (hC : AvoidC 96 128 C) (hf : MemFrame A C m m') (h : CoreR m c) :
@@ -228,8 +234,9 @@ theorem memoRG_clearsL {κ ν : Type} [BEq κ] [Hashable κ] [LawfulBEq κ] [Law
     refine memoRG_clearsL S hS K dv pre post _ mp (fun S' h' => hl S' (by simp [h'])) hok.2 ?_
     exact memoRG_frame S hS K dv [] _ (by simp) (by simp [h0.1, h0.2]) m _ (mclearG_frame S₀ m) mp h
 
-/-- The nine core memos, in `flush_caches()`' order. -/
-def coreSchs : List MemoSch := [wcSch, wkSch, whSch, inSch, ioSch, deSch, ctSch, cvSch, rrSch]
+/-- The eleven core memos, in `flush_caches()`' order. -/
+def coreSchs : List MemoSch :=
+  [wcSch, wkSch, whSch, inSch, ioSch, deSch, ctSch, cvSch, rrSch, lqSch, lsqSch]
 
 theorem flushClears_eq (m : Mem) : flushClears m = clearsL coreSchs m := rfl
 
@@ -260,7 +267,7 @@ theorem CoreR.flush {m : Mem} {c : Caches} (h : CoreR m c) (hok : FlushOK m) :
     have e1 : ((bankReset (clearsL coreSchs m)).arr64 CTL).size = (m.arr64 CTL).size := by
       rw [fr.2.2.1, (clearsL_frame coreSchs m).2.2.1]
     rw [show flushMem m = bankReset (clearsL coreSchs m) from rfl, e1]; exact hsz
-  refine ⟨ModeMaps.empty, 0, 0, ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩⟩
+  refine ⟨ModeMaps.empty, 0, 0, ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩⟩
   · exact ⟨hc wcSch _ _ _ [] _ (coreSch_wf _ _ (by decide) (by decide)) rfl (by decide) (by decide)
       (by decide) h.wc.memo, bank_empty 0, fresh_empty 0⟩
   · exact ⟨hc wkSch _ _ _ [wcSch] _ (coreSch_wf _ _ (by decide) (by decide)) rfl (by decide)
@@ -288,6 +295,10 @@ theorem CoreR.flush {m : Mem} {c : Caches} (h : CoreR m c) (hok : FlushOK m) :
       (coreSch_wf _ _ (by decide) (by decide)) rfl (by decide) (by decide) (by decide) h.cv
   · exact hc rrSch _ _ _ [wcSch, wkSch, whSch, inSch, ioSch, deSch, ctSch, cvSch] _
       (coreSch_wf _ _ (by decide) (by decide)) rfl (by decide) (by decide) (by decide) h.rr
+  · exact hc lqSch _ _ _ [wcSch, wkSch, whSch, inSch, ioSch, deSch, ctSch, cvSch, rrSch] _
+      (coreSch_wf _ _ (by decide) (by decide)) rfl (by decide) (by decide) (by decide) h.lq
+  · exact hc lsqSch _ _ _ [wcSch, wkSch, whSch, inSch, ioSch, deSch, ctSch, cvSch, rrSch, lqSch] _
+      (coreSch_wf _ _ (by decide) (by decide)) rfl (by decide) (by decide) (by decide) h.lsq
 
 /-! ## The pin table: array 128 (`PINS`)
 
