@@ -37,13 +37,17 @@ theorem ArenaD.imemo_set (m m' : Mem) (a : AState) (hA : ArenaD m a) (h c v : Wo
     ArenaD m' (withIC a (a.memos.inst1C.insert (decE h, c.toNat) (decE v))) := by
   have hf := msetG_frame imSch imSch_wf m m' h c v hs
   refine ⟨?_, DerR.of_store m' a _ (DerR.frameM _ _ m m' hf (by simp [IMEMO]) _ hA.2) rfl⟩
-  arena_build hA.1, hf with exact memoRG_set imSch imSch_wf lfKey decE m _ hA.1.imemo h c v hh m' hs
+  exact hA.1.with_memos hf (by apart) (by apart) (by
+    memos_build hA.1.memos, hf with
+      exact memoRG_set imSch imSch_wf lfKey decE m _ hA.1.memos.inst1 h c v hh m' hs)
 
 theorem ArenaD.imemo_clear (m : Mem) (a : AState) (hA : ArenaD m a)
     (h0 : rdW (m.arr64 CTL) 44 + 2 ≠ 0) : ArenaD (mclearG imSch m) (withIC a ∅) := by
   have hf := mclearG_frame imSch m
   refine ⟨?_, DerR.of_store _ a _ (DerR.frameM _ _ m _ hf (by simp) _ hA.2) rfl⟩
-  arena_build hA.1, hf with exact memoRG_clear imSch imSch_wf lfKey decE m _ hA.1.imemo h0
+  exact hA.1.with_memos hf (by apart) (by apart) (by
+    memos_build hA.1.memos, hf with
+      exact memoRG_clear imSch imSch_wf lfKey decE m _ hA.1.memos.inst1 h0)
 
 theorem viewBVar_run (h : EIdx) (a : AState) :
     (viewBVar h).run a = .ok (a.store.viewBVar h, a) := rfl
@@ -99,11 +103,11 @@ theorem iprobe_ok (armW : Option (Word × Mem)) (miss : AM EIdx) (m m' : Mem) (a
   · rw [hhit hr hh0] at hb
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     rw [show a.memos.inst1C[(decE h, c.toNat)]? = _ from
-      memoRG_hit imSch lfKey decE m _ hA.1.imemo h c hr hh0]
+      memoRG_hit imSch lfKey decE m _ hA.1.memos.inst1 h c hr hh0]
     exact ⟨a, rfl, hA⟩
   · simp only [ne_eq, Decidable.not_not] at hh0
     rw [show a.memos.inst1C[(decE h, c.toNat)]? = none from
-      memoRG_miss imSch lfKey decE m _ hA.1.imemo h c hh hr hh0]
+      memoRG_miss imSch lfKey decE m _ hA.1.memos.inst1 h c hh hr hh0]
     exact hmiss hr hh0 hb
 
 /-! ## The statements, by fuel -/
