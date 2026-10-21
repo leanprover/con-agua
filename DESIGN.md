@@ -3705,7 +3705,9 @@ Request to lane `arch`: add `LH` (array 192) and `CTL[192]` (heap top) to the me
 | `lv_equivs` (`isEquivList`, lists in `POOL`) | 20 | 7 | 50 | `equivsW_ok` + `LvsR` 75 | | as `lv_eq` |
 | `lvl_eq` (`lvlEq?`: heap reset, then `lv_equiv`; the verdict cache not in L) | 33 (`lvl_eq_q`) | 5 | 25 | `lvlEq_refines` + `lvlEq?_run` + `lvlEq_run` 110; the view bridge (`lvNodeW_store`, `denoteL_lvR`) 190 | 1 s | `vcgen` + `finish`; bridge by hand |
 | `lvls_eq`, `ls_node` (`lvlsEq?` on two level-list handles' `POOL` slices) | 33 | 15 | 60 | `lvlsEq_refines` + `lvsR_of_slice` + `lsNodeW_store` + runs 170 | 1 s | as `lvl_eq` |
-| total (files) | | 252 | `LevelHeap` 243, `LevelSimp` 291, `LevelSubst` 251, `LevelLeq` 474, `LevelLeqSpec` 151, `LevelEquiv` 365 | `LevelHeapRel` 460, `LevelSimpRel` 264, `LevelLeqRel` 740, `LevelEquivRel` 200, `LevelArena` 530 | | |
+| `lv_mem`, `lv_apd` (`allParamsDefined`; the parameter names a slice of a word array `A` the caller picks) | 12 | 18 | 90 | `memW_ok`, `apdW_ok`, `NmsR` 75 | 2.9 s | as `lv_eq`; L code generic in `A` |
+| `lh_push`, `lv_zero` (`zeronessOf`: a flag and the names pushed on the heap) | 13 | 18 | 90 | `zeroW_ok` + `lhPushW_ext` + `NmsR` slices 150 | 1.8 s | as `lv_eq` |
+| total (files) | | 288 | `LevelHeap` 243, `LevelSimp` 291, `LevelSubst` 251, `LevelLeq` 474, `LevelLeqSpec` 151, `LevelEquiv` 358, `LevelApd` 120, `LevelZero` 120 | `LevelHeapRel` 470, `LevelSimpRel` 264, `LevelLeqRel` 740, `LevelEquivRel` 200, `LevelArena` 552, `LevelApd` 100, `LevelZero` 190 | | |
 
 ### The comparison (`LevelSubst`, `LevelLeq`, `LevelLeqSpec`, `LevelLeqRel`)
 
@@ -3744,6 +3746,12 @@ Request to lane `arch`: add `LH` (array 192) and `CTL[192]` (heap top) to the me
   `lvls_eq(us, vs)` (`lvlsEq?`) is the same over the two lists' `POOL` slices (`ls_node` reads a
   level-list record; `lvsR_of_slice` relates the slice to the readbacks), with `ReadLsCOK`,
   `LvlsEqCOK`.
+* **Name lists and the zero-ness datum.** `allParamsDefined`'s parameter list is a slice of name
+  words in an array the caller picks (`lvMemG A`, generic like the memo library's schemas;
+  `NmsR`). `zeronessOf` returns `never` or `ifAllZero ps`: in L a flag and the name words pushed
+  on the heap since the call (`lh_push`; `ZR`), which a caller copies into its record
+  (`EnvRec.lean`'s `decPW` layout). `HeapExt` now also says the heap below the old top stays
+  (`HeapExt.lh`, `top`), so a pushed slice survives later allocations (`NmsR.mono_lh`).
 * **Inversion by tag** (`LvR.inv0` … `inv4`: from `lvG m p = t`, the level's constructor and the
   children's relations) replaced `cases` on the derivation, whose impossible branches made
   `simp_all` loop.

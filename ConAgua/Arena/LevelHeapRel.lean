@@ -82,15 +82,20 @@ structure HeapExt (m m' : Mem) : Prop where
   /-- No array changes its size. -/
   size : ∀ b : ArrId, (m'.arr64 b).size = (m.arr64 b).size
   wsize : m'.words.size = m.words.size
+  /-- The heap top does not move down, and the heap below it stays. -/
+  top : (htop m).toNat ≤ (htop m').toNat
+  lh : ∀ k : Word, k.toNat < (htop m).toNat → rdW (m'.arr64 LH) k = rdW (m.arr64 LH) k
 
 theorem HeapExt.refl (m : Mem) : HeapExt m m :=
-  ⟨fun _ _ => rfl, fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, rfl⟩
+  ⟨fun _ _ => rfl, fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, rfl, Nat.le_refl _,
+    fun _ _ => rfl⟩
 
 theorem HeapExt.trans {m₁ m₂ m₃ : Mem} (h₁ : HeapExt m₁ m₂) (h₂ : HeapExt m₂ m₃) :
     HeapExt m₁ m₃ :=
   ⟨fun p hp => by rw [h₂.view p (by rw [h₁.view p hp]; exact hp), h₁.view p hp],
     fun A a b => by rw [h₂.arr A a b, h₁.arr A a b], fun k hk => by rw [h₂.ctl k hk, h₁.ctl k hk],
-    fun b => by rw [h₂.size b, h₁.size b], by rw [h₂.wsize, h₁.wsize]⟩
+    fun b => by rw [h₂.size b, h₁.size b], by rw [h₂.wsize, h₁.wsize], Nat.le_trans h₁.top h₂.top,
+    fun k hk => by rw [h₂.lh k (Nat.lt_of_lt_of_le hk h₁.top), h₁.lh k hk]⟩
 
 theorem LvR.mono (he : HeapExt m m') {p : Word} {l : Level} (h : LvR N m p l) : LvR N m' p l := by
   induction h with
@@ -204,7 +209,7 @@ theorem HeapFrame.heap (h : HeapFrame m m') (p : Word) (hb : ¬ p >>> 32 = 0)
     h.lh _ (by simp only [htop]; omega), h.lh _ (by simp only [htop]; omega)]
 
 theorem HeapFrame.ext (h : HeapFrame m m') : HeapExt m m' := by
-  refine ⟨fun p hp => ?_, fun A a b => h.arr A b a, h.ctl, h.size, h.wsize⟩
+  refine ⟨fun p hp => ?_, fun A a b => h.arr A b a, h.ctl, h.size, h.wsize, h.top, h.lh⟩
   by_cases hb : p >>> 32 = 0
   · simp only [lvNodeW, hb, ne_eq, not_true_eq_false, ↓reduceIte]
     have c1 : rdW (m'.arr64 CTL) 1 = rdW (m.arr64 CTL) 1 := h.ctl 1 (by simp)
