@@ -392,16 +392,22 @@ def whnfStepL : FunDecl := lfn (mode, vis, d, e) locals (e1, fl, e2, fl2, e3) {
   return (0, e1)
 }
 
-/-- `whnf_loop(mode, vis, d, e)`: the reduction loop, iterating `whnf_step` on its own (effectively
-unbounded, `2^62`) step budget — an uncounted L `while` (the convention: the twin's loop fuels are
-not counted in L, since an L `while` already costs L fuel per iteration). -/
-@[l_impl ConRon.Arena.whnfBody]
-def whnfLoopL : FunDecl := lfn (mode, vis, d, e) locals (fl, x) {
+/-- The loop of `whnf_loop`, named for its spec (`WhnfDeltaSlot.lean`). -/
+def whnfLoopB : Stmt := lblk (mode, vis, d, e, fl, x) {
   while 0 == 0 {
     (fl, x) := call whnf_step(mode, vis, d, e);
     if fl == 0 { return x };
     e := x
   }
+}
+
+/-- `whnf_loop(mode, vis, d, e)`: the reduction loop, iterating `whnf_step` on its own (effectively
+unbounded, `2^62`) step budget — an uncounted L `while` (the convention: the twin's loop fuels are
+not counted in L, since an L `while` already costs L fuel per iteration). -/
+@[l_impl ConRon.Arena.whnfBody]
+def whnfLoopL : FunDecl := lfn (mode, vis, d, e) locals (fl, x) {
+  ⟪whnfLoopB⟫;
+  abort
 }
 
 /-- `whnf(mode, vis, d, e)`: the knot's `whnf` slot. The six stuck tags (`sort`, `fvar`, `lam`,
@@ -721,16 +727,9 @@ def WhnfLoopSpec (p : Prog) (n : Nat) : Prop :=
     CoreSpec p n "whnf_loop" [mode, vis, d, e]
       (whnfLoop (coreKnot (decMode mode) fe id F) fe d.toNat K (decE e)) decH s₀ a₀ dn vis fe MM eb
 
-/-- **`whnf_loop` refines `whnfLoop`.** -/
-@[refines ConRon.Arena.whnfBody]
-theorem whnfLoop_refines (n : Nat) (hwd : WhnfDeltaProg p) (hws : WhnfStepSpec p n) :
-    WhnfLoopSpec p n := sorry
-
-/-- **`whnf` refines the knot's `whnf` slot**: `WhnfSlot p (n + 1)` (`WhnfBase.lean`), from
-`whnf_loop`'s spec at L-fuel `n` and `n ≤ 2 ^ 62` (so that `whnfBody`'s fixed loop fuel `whnfLoopFuel
-= 2 ^ 62` instantiates `WhnfLoopSpec`'s `K`). Priority: proved only if time permits. -/
-theorem whnf_refines (n : Nat) (hn : n ≤ 2 ^ 62) (hwd : WhnfDeltaProg p) (hk : KnotUpTo p n)
-    (hloop : WhnfLoopSpec p n) : WhnfSlot p (n + 1) := sorry
+/- `whnf_loop` refines `whnfLoop` and `whnf` refines the knot's `whnf` slot: proved in
+`WhnfDeltaSlot.lean` (imports this file and `WhnfCoreSlot.lean`), exactly as `WhnfCoreSlot.lean`
+proves `whnf_core`/`whnf_core_loop`. -/
 
 end specs
 
