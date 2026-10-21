@@ -231,23 +231,23 @@ def checkBlockTeles : FunDecl := lfn (vis, nP, msOff, msLen) locals (q, j, cvTa,
   return (q, msLen)
 }
 
-/-- `check_block_doms_at(vis, off, fvs.off, fvs.len, doms.off, doms.len, n)`: binder `j`'s
-domain against member 0's, defeq at depth `off + j`, from the last binder (`n - 1`) to the
-first. -/
+/-- `check_block_doms_at(vis, off, fvs.off, fvs.len, doms.off, doms.len, j)`: binder `j - 1`'s
+domain against member 0's, defeq at depth `off + j - 1`, then recurses down to `j - 1` — the
+last binder to the first, structurally on `j` (as the twin recurses on its `Nat` argument). -/
 @[l_impl ConRon.Arena.checkBlockDomsAt]
-def checkBlockDomsAt : FunDecl := lfn (vis, off, fvsO, fvsL, domsO, domsL, n) locals
-    (j, a, b, aT, eq) {
-  j := n;
-  while j != 0 {
-    j -= 1;
-    if fvsL <= j { abort };
-    a := IW.u64[fvsO + j];
-    if domsL <= j { abort };
-    b := IW.u64[domsO + j];
-    aT := call fvar_type_d(a);
-    eq := call is_def_eq_core(vis, off + j, aT, b);
-    if eq == 0 { abort }
-  }
+def checkBlockDomsAt : FunDecl := lfn (vis, off, fvsO, fvsL, domsO, domsL, j) locals
+    (j1, a, b, aT, eq, u) {
+  if j == 0 { return 0 };
+  j1 := j - 1;
+  if fvsL <= j1 { abort };
+  a := IW.u64[fvsO + j1];
+  if domsL <= j1 { abort };
+  b := IW.u64[domsO + j1];
+  aT := call fvar_type_d(a);
+  eq := call is_def_eq_core(vis, off + j1, aT, b);
+  if eq == 0 { abort };
+  u := call check_block_doms_at(vis, off, fvsO, fvsL, domsO, domsL, j1);
+  return u
 }
 
 /-- `check_block_agree_one(vis, nP, fvs0.off, fvs0.len, s0, cvTa, s)`: one member's two
@@ -736,11 +736,11 @@ theorem indInstall_wf :
       (indInstallFns ++ libFns ++ stubFns ++ masterFns ++ indInstallForeign) = true := by
   decide +kernel
 
--- `check_block_doms_at` at count `0`: no binders to compare, no callee touched.
+-- `check_block_doms_at` at `j = 0`: no binders to compare, no callee touched.
 #guard
   match run (indInstallFns ++ libFns ++ stubFns ++ masterFns ++ indInstallForeign) 100
       "check_block_doms_at" [0, 0, 0, 0, 0, 0, 0] testMem with
-  | .ok ([], _) => true
+  | .ok ([0], _) => true
   | _ => false
 
 -- `cons_block_ctors` at an empty member list: the view is unchanged, no callee touched.
