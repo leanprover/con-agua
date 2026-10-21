@@ -19,7 +19,12 @@ name = "ConAgua"
 # a plain (non-`module`) file too, and built the same way.
 globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.Arena.StoreLib", "ConAgua.Arena.LitRefine",
   "ConAgua.Arena.AppStore", "ConAgua.Arena.AppRefine",
-  "ConAgua.Arena.LevelStore", "ConAgua.Arena.LevelRefine", "ConAgua.Capstone"]
+  "ConAgua.Arena.LevelStore", "ConAgua.Arena.LevelRefine",
+  "ConAgua.Arena.ZeroStore", "ConAgua.Arena.ZeroRefine",
+  "ConAgua.Arena.MaxStore", "ConAgua.Arena.MaxRefine",
+  "ConAgua.Arena.ImaxStore", "ConAgua.Arena.ImaxRefine",
+  "ConAgua.Arena.ParamStore", "ConAgua.Arena.ParamRefine",
+  "ConAgua.Capstone"]
 
 # Vendored from con-leche (rev 103562b) and con-ron (rev 4c9eaf7, proof/ dir).
 # See vendor/README.md for provenance and every patch applied.

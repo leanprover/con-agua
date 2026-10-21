@@ -1427,3 +1427,78 @@ is `OutEq` for the others' arrays, which `pushG_arr` already gives).
 ### `sorry`s
 
 None.
+
+## More store-library tables (2026-10-21, lane `tables`)
+
+Files: `ConAgua/Arena/{Zero,Max,Imax,Param}Store.lean`, `ConAgua/Arena/{Zero,Max,Imax,Param}Refine.lean`
+(the level store's remaining four constructors). Order per the task: the level store first
+(`zero`, `max`, `imax`, `param`), then expression handle-only kinds. One table per commit, each
+following the `succ`/`app` templates on `StoreLib.lean` exactly; no library change was needed for
+any table in this round. No `sorry`.
+
+### The level store: `zero`, `max`, `imax`
+
+* **`zero`** (`ZeroStore.lean`/`ZeroRefine.lean`, arrays `ZREC`/`ZSLOT` = 8/9, counts at
+  `CTL[8 + t]`, tag `0`): the fieldless case the recommendation flagged. `ZeroNode` has no
+  fields, so there is at most one node per tier and the match function is the constant `true`
+  (any node present *is* the `zero` node); the hash is the constant `zeroHashW`. Used a one-word
+  dummy record (`w = 1`, the field written but never read) rather than `w = 0`, as the
+  recommendation suggested — `Schema.WF` does not literally exclude `w = 0`, but a dummy field
+  sidesteps having to check that a zero-stride schema's address function is still injective
+  where it is used (it collapses to `S.ad t i f = f`, independent of `i`, which the generic
+  proofs never needed to know is harmless since `fld`/`pushG` are simply never invoked at a
+  field index there isn't one of). The record relation `ZRecRel`, `MatchOK` and `NewOK` are all
+  `True`/`trivial`/`rfl`: `ZeroNode`'s only inhabitant makes every obligation about it hold by
+  `cases` + `rfl` (`zeroNode_eq`). The L code keeps the full probe-loop shape (while loop,
+  `abort` on exhaustion) with the match test written as the tautology `0 == 0`, rather than
+  special-casing the loop away, so it needed no library change and no new proof idea — just an
+  always-true arm instead of a real comparison.
+* **`max`, `imax`** (`MaxStore.lean`/`ImaxStore.lean`, same file content up to systematic renaming
+  and the tag/`CTL` base): the `app` shape exactly (`BinLNode { u v : LIdx }`, two handle fields,
+  width 2), with no scratch skip (the level store's `LStore.find?` probes the persistent tier
+  unconditionally, as for `succ`). Arrays `MREC`/`MSLOT` = 10/11 (`CTL[10 + t]`, tag `2`),
+  `IREC`/`ISLOT` = 12/13 (`CTL[12 + t]`, tag `3`). Both went through at the first attempt once the
+  usual off-by-one of a fresh `#guard` test fixture's `CTL` array length (it must reach
+  `ca + 2`, not just the previous table's high-water mark) was caught by the evaluator, not a
+  proof failure — see "Findings" below.
+* **`param`** (`ParamStore.lean`/`ParamRefine.lean`, arrays `PREC`/`PSLOT` = 14/15,
+  `CTL[14 + t]`, tag `4`): `ParamNode { n : NIdx }`, the `succ` shape (one handle field, width 1),
+  but the handle is a **name** handle, not a level one. `word_decI`/`hix_hdW`/`isPersistent_decE`
+  (`StoreRel.lean`) are already stated `{k : IdxKind}`-generically, so nothing there needed
+  touching; the only change from `succ`'s template is the `Idx .name` instantiation of `Lens`
+  and `decI`/`word_decI` at that kind. No scratch skip, as for every level node.
+
+| table | L lines | spec lines | relation lines (non-blank) | `lean` user (Store + Refine) | clean? |
+|---|---:|---:|---:|---:|---|
+| `zero` | 38 | 87 | 140 | 2.8 + 0.9 = 3.7 s | yes, first attempt |
+| `max` | 42 | 87 | 178 | 6.3 + 1.2 = 7.6 s | yes, first attempt |
+| `imax` | 42 | 87 | 178 | 6.3 + 1.3 = 7.6 s | yes, except the `#guard` fixture fix below |
+| `param` | 38 | 87 | 166 | 4.4 + 1.2 = 5.6 s | yes, first attempt |
+
+"L lines" is the probe loop, `*_find`, `*_push` and `intern_*` function bodies only; "spec lines"
+the three `vcgen` sections (`find`/`push`/`intern`) that prove them; "relation lines" the whole
+`*Refine.lean` file (schema, record relation, the three query obligations, the bridges,
+`*intern_correct`, the `*_refines` theorem). `max`/`imax` are heavier than `zero`/`param` only
+because width 2 means two `fld_push*`-shaped equations instead of one in `*NewOK`, exactly as
+`app` was heavier than `succ` before the library (`StoreLib.lean`'s own assessment).
+
+### Findings
+
+* **A fresh `#guard` fixture's `CTL` array must be sized for every table that exists in the
+  project, not just the one under test.** `ImaxStore.lean`'s differential `#guard`s initially
+  reused `MaxStore.lean`'s `imaxMem`-shaped literal (a `CTL` array long enough for `max`'s
+  `CTL[10], CTL[11]` but not `imax`'s `CTL[12], CTL[13]`). `Mem.set64` is `Array.set!`, which is a
+  silent no-op past the array's current length — so the write to `CTL[12 + t]` after a push
+  simply vanished instead of erroring, and the two `#guard`s failed on the computed handles
+  (0 and 1 where 0x30000000/0x30000001 were expected) rather than on a proof. Each table's own
+  `*Mem`/`#guard` fixture is independent (one file, one local test memory), so this is purely a
+  per-file bookkeeping hazard, not a library gap: fixed by widening the literal `CTL` array to
+  `ca + 2` words. Nothing in the `vcgen` proofs or the library was at fault.
+* Every other table in this round (`zero`, `max`, `param`) went through at the first attempt,
+  with the same `sym only [lang_grind, arena_grind] => vcgen […] <;> finish […]` house form as
+  `succ`/`app`, confirming the recommendation's estimate for "handle words only" tables: no new
+  proof idea, each about 230 L-side lines and 160–180 relation lines, a few seconds of CPU.
+
+### `sorry`s
+
+None.
