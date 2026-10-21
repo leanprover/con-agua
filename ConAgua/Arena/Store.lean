@@ -343,7 +343,7 @@ include hpe hpm in
 theorem findLoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     exec p n findLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
       r.retOr (probeW (s₀.mem.arr64 SLOT) (s₀.mem.arr64 REC) (s₀.mem.arr64 POOL) (s₀.loc 0)
         (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
       probeW (s₀.mem.arr64 SLOT) (s₀.mem.arr64 REC) (s₀.mem.arr64 POOL) (s₀.loc 0)
@@ -360,7 +360,7 @@ include hpe hpm in
 theorem findLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) findLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
       r.retOr (probeW (s₀.mem.arr64 SLOT) (s₀.mem.arr64 REC) (s₀.mem.arr64 POOL) (s₀.loc 0)
         (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
       probeW (s₀.mem.arr64 SLOT) (s₀.mem.arr64 REC) (s₀.mem.arr64 POOL) (s₀.loc 0)
@@ -374,7 +374,7 @@ include hpe hpm hp in
 theorem litFind_spec (n : Nat) (s₀ : St) (t o l h : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "lit_find" [t, o, l, h]
-    ⦃fun r s' => s' = s₀ ∧
+    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
       r = probeW (s₀.mem.arr64 SLOT) (s₀.mem.arr64 REC) (s₀.mem.arr64 POOL) t o l h
         (nSlots s₀.mem) (homeW h (nSlots s₀.mem)) 0; ⊤⦄ := by
   rw [invoke_eq _ hp]
@@ -455,16 +455,18 @@ def litP : Word := 0x80000000
 def litS : Word := 0x88000000
 
 /-- The model of `intern_lit`: the handle and the memory after, or `none` where the L code
-aborts. `rs₀`, `rs₁`: the two probes. -/
+aborts. `rs₀`, `rs₁`: the two probes (`[]`: the probe aborted). -/
 def internW (m : Mem) (o l : Word) : Option (Word × Mem) :=
   let h := hashN (m.arr64 POOL) o.toNat l.toNat
   let rs₀ := probeW (m.arr64 SLOT) (m.arr64 REC) (m.arr64 POOL) 0 o l h (nSlots m)
     (homeW h (nSlots m)) 0
   let rs₁ := probeW (m.arr64 SLOT) (m.arr64 REC) (m.arr64 POOL) 1 o l h (nSlots m)
     (homeW h (nSlots m)) 0
-  if rs₀.headD 0 ≠ 0 then some (litP + rs₀.tail.headD 0, m)
+  if rs₀ = [] then none
+  else if rs₀.headD 0 ≠ 0 then some (litP + rs₀.tail.headD 0, m)
   else if rdW (m.arr64 CTL) 1 ≠ 0 then
-    if rs₁.headD 0 ≠ 0 then some (litS + rs₁.tail.headD 0, m)
+    if rs₁ = [] then none
+    else if rs₁.headD 0 ≠ 0 then some (litS + rs₁.tail.headD 0, m)
     else if pushOK m 1 then
       some (litS + cnt m 1, pushMem m 1 o l h (rs₁.tail.tail.headD 0) (cnt m 1))
     else none
