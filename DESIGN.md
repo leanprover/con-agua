@@ -2871,6 +2871,131 @@ error matches (`Checker.lean:228–236, 247, 272–278, 286–291`, the frontend
 
 None. `PipelineRefines` is a hypothesis of the theorems.
 
+## The memo library, the view layer, derived ranges and `liftLooseBVars` (2026-10-21, lane `exprops`)
+
+Files: `ConAgua/Arena/{MemoLib,MemoLibRel}.lean` (replace `Memo`/`MemoRel`), `{View,ViewL}.lean`,
+`{ExprMk,DerRel}.lean`, `{Lift,LiftSpec,LiftRefine,LiftBench}.lean`; changed `ArenaRel`, `Frame`,
+`Walk`, `WalkRefine`. No `sorry`; axioms `propext`, `Classical.choice`, `Quot.sound`.
+`ArenaRel.lean` is maintained by hand from now on (no generator; see lane `tables2` above).
+
+### Layout and the extension point
+
+| arrays | `CTL` words | contents |
+|---|---|---|
+| 41 `LMEMO` | 42 (stamp − 1), 43 (count) | the `liftC` memo (`lfSch`), field `ArenaR.lmemo` |
+| 42‥46 `ADER`, `LADER`, `FADER`, `LEDER`, `PJDER` | – | derived bvar ranges of `app`, `lam`, `forallE`, `letE`, `proj` (`DerR`) |
+| 47‥63 | 44‥63 | reserved for this lane |
+| ≥ 64 | ≥ 64 | free for other lanes: `ArenaR.frame_ext` (stable), `arenaR_init` takes ≥ 64 arrays and a `CTL` of ≥ 64 words |
+
+`ArenaR.frame_above` (arrays ≥ 42, `CTL` ≥ 44) and `frame_ext` are proved once from `apart_hi`
+(`Apart` by bounds) with `arena_build … using …` (the frame tactic is now a parameter).
+
+### The memo library (`MemoLib.lean`, `MemoLibRel.lean`)
+
+A memo is a schema `MemoSch` (slot array, `CTL` index of the stamp); four words per slot: stamp,
+two key words, value. The L code is **generic in the schema**: `memoFindG S`, `memoPutG S`,
+`memoClearG S` are Lean functions producing L functions (`S.arr.u64[…]`, `CTL.u64[⟪S.cs⟫]`), and
+their `vcgen` specs are proved once for a variable `S` — at the first attempt (`vcgen` sees through
+a symbolic array id). `set` is `find; put` with the probe result passed in (L calls by name, so a
+generic `put` cannot call a generic `find`); a walk probes again after its recursion. The relation
+`MemoRG S K dv m mp` relates the memo to `Std.HashMap κ ν` through a key codec `K` (two words per
+key, `dk`/`ek` and one law `ek_dk`) and a value decoder; lemmas `memoRG_hit/miss/set/clear/frame/
+zero`, all generic. An instance is a schema line and a codec (`bmKey`, `lfKey`: 6 lines each).
+
+| file | lines (code) | `lean` wall / user |
+|---|---:|---|
+| `MemoLib.lean` (L 3 functions, 33 lines; models, specs) | 280 (189) | 4.6 s / 6.1 s |
+| `MemoLibRel.lean` | 543 (456) | 1.4 s / 2.6 s |
+| before: `Memo.lean` + `MemoRel.lean` (one table, by hand) | 267 + 428 | 1.4 s + 1.3 s |
+
+`bvarBC` was ported (`bm_find`/`bm_put`/`bm_clear` = the library at `⟨24, 24⟩`): the walk's specs
+went through unchanged in shape; `WalkRefine` changed in eight lines. The compiled walk
+(`harness/walk.c`, `perf stat -e instructions:u`): 82.3 M per 10^5 `app` nodes (72.3 M before),
+823.1 M per 10^6 (723.1 M): the second probe and the extra call cost 14 %. `check-asm.sh`: walk
+6439 instructions, all matching.
+
+### The view layer (`View.lean`, `ViewL.lean`)
+
+The arena side every walk shares: handle decoding, and **one view lemma per tag** (`view_app`: under
+`ArenaR`, `viewOK m h 4` and tag 4, `a.store.view (decE h) = some (.app (decE f) (decE a))` with
+`f`, `a` the record's words, both below `2^32`). `ViewL.lean` has the L side (`tierW`, `idxW`,
+`viewOK`, branch-free `maxW`, `predW`, `satSuccW`, `satPredW`). `WalkRefine.lean` now uses them:
+565 → 372 lines (refinement per walk L line 10 → 6.3).
+
+### Derived ranges: a finding, and `DerR` (`ExprMk.lean`, `DerRel.lean`)
+
+**`liftLooseBVarsGo` (and `instantiate1Go`, `instantiateListGo`, `abstract*`) read the derived word
+before anything else**: `bvarOfData (derived h) < satRange && … ≤ c` returns `h` unwalked. This is
+not denotation-level: the cut-off and the walked paths leave different memos and, on a scratch
+node with persistent children, may return different handles. So L must know the range field of
+`derived h` exactly; `ArenaR` had no derived columns (ROADMAP §1, phase 0 "missing"). Done here
+for the range field only (the hash is opaque, ROADMAP §2 item 10):
+
+* the five compound tables keep the range in L (`XDER[2 i + t]`); a leaf's range is a function of
+  its record (`satSucc i` for `bvar`, else `0`);
+* `der_b(h)` (15 L lines) returns it, including the arena's `0` for a handle that does not view;
+* `mk_app`, `mk_lam`, `mk_forall`, `mk_let`, `mk_proj` (59 L lines): children's ranges, `intern_*`,
+  and on a new node (the table's count sum changed) the range at the new index. **The compound
+  `intern_*` are internal from now on**; a node interned by them directly has no range;
+* `DerR m a` (one `DerT2` per expression table) and `ArenaD := ArenaR ∧ DerR`; `derBW_ok`
+  (`der_b` is `bvarOfData (a.store.derived (decE h))`), `mkX_ok` (each `mk_*` refines `internE`
+  under `ArenaD`; one generic lemma `derMk` does the tail for all five), `internBVar_D`,
+  `DerR.frameM`/`of_store`, `arenaD_init`.
+
+| file | lines (code) | `lean` wall / user |
+|---|---:|---|
+| `ExprMk.lean` (L 74 lines, models, specs) | 342 (254) | 7.1 s / 19.7 s |
+| `DerRel.lean` | 938 (793) | 1.1 s / 2.8 s |
+
+### `liftLooseBVars` (`Lift.lean`, `LiftSpec.lean`, `LiftRefine.lean`)
+
+`lift_go(h, c, k)` is the twin's dispatcher (cut-off by `der_b`, the view checks, `bvar` via
+`intern_bvar(i + k)`, leaves return `h`), the five arms `lift_app` … `lift_proj` its `liftArm*`
+(memo probe on `(h, c)`, children — bodies at `c + 1` —, `mk_*`, probe again, put),
+`lift_entry(h, k, c)` is `liftLooseBVarsFast`. The models are mutual on fuel; the guarded
+equations name first-order continuations. Theorems: `liftGo_spec`, `liftEntry_spec`
+(`vcgen` + `finish`), `liftOK` (by induction on fuel, `LGoOK n ∧ LArmOK n` for every arena fuel
+`F ≥ n`), `liftEntry_refines` (the triple with `AM.ok`/`AM.st`/`AM.res` under `ArenaD`) and
+`liftEntry_run`. `LiftBench.lean`: four `#guard`s in the interpreter (lift equals the expected
+term's handle, the cut-off returns the same handle).
+
+| | Rust lines | L lines | proof lines (code) | `lean` wall / user |
+|---|---:|---:|---|---|
+| `lift_loose_bvars_go` + `_fast` | 142 | 93 (`lift_go` 24, arms 65, entry 4) | `Lift.lean` 478, `LiftSpec.lean` 131 | 26.9 s / 27.3 s, 3.1 s / 10.7 s |
+| refinement | – | – | `LiftRefine.lean` **444**, i.e. **4.8 per L line** | 1.1 s / 1.9 s |
+
+L/Rust is 0.65. The refinement is at the target (≤ 5; the walk was 10): the dispatcher is one
+`by_cases` per tag with one view lemma each, an arm is `probe_ok` (hit/miss), the children (the
+induction hypothesis), and `tail_ok` (`mk_*_ok` and the memo set). Not counted: the derived-range
+infrastructure (`ExprMk`, `DerRel`), which every walk with a cut-off reuses.
+
+### Findings
+
+* **`vcgen` with a symbolic array id works**: the memo library's L code is a Lean function of the
+  schema and its specs are proved once. The same would make the per-table store L code generic
+  (lane `storelib` judged it untried).
+* **`finish` needs `(gen := 20)`** where three callee posts feed one model (`mk_let`, the lift arms);
+  the default failed with no hint. Separately, a missing `[tierW, idxW]` made `finish` fail
+  slowly (45 s per lemma); with it the lift arms take about 2 s each.
+* **Continuations given as `fun` defeat `grind`'s matching** (it equated two lambdas and stopped);
+  first-order continuations (`appK₁ n h c k aw`, …) as in lane `walk` work. A small example does
+  not reproduce it.
+* `omega` and `ArrId` (`abbrev … := Nat`): `docs/gaps/omega-nat-synonym-hyp.lean` again;
+  `Nat.lt_of_le_of_lt`/`decide` instead.
+
+### Not done
+
+* `instantiate1Go`, `instantiateListGo`, `abstract1Go`, `hasLooseBVar`: the same scaffolding
+  (`DerR`, the memo instances `inst1C` … as more `MemoSch` lines, `mk_*`); `instantiate1` also
+  needs `bvarBC` reads (`instantiate1Lift`'s cut-off).
+* `DerR` for the other leaf internings (`intern_fvar`, `intern_sort`, `intern_const`, `intern_lit`,
+  incl. `natAddLit_refinesA`): each is `internBVar_D`'s proof with `zP` (range `0`).
+* A compiled benchmark of `lift_entry` (the program is `liftProg`; not emitted).
+
+### `sorry`s
+
+None.
+
 ## The first records into the store: names and levels (2026-10-21, lane `front`)
 
 Files: `ConAgua/Front/{Fields,FieldsLink}.lean` (the scanner's fields), `ConAgua/Front/{Apply,
@@ -3119,3 +3244,104 @@ iteration as `x`.
 
 None.
 
+
+## Expression lines, literals, escapes, and bytes → stores in one theorem (2026-10-21, lane `front2`)
+
+Files (all `ConAgua/Front/`): `ExprIface` (the interface between the two passes), `FieldsExpr`/
+`FieldsExprLink` (fields of expression lines), `ApplyExpr`/`ApplyExprRefine` (the expression id
+table and `apply_expr`), `NatDec`/`NatDecLink` (decimal literals into the limb pool),
+`Unescape`/`UnescapeLink` (string bodies with escapes into the pool), `Preserve` (what every L run
+keeps), `Driver`/`DriverRefine` (the whole-buffer loop, generic), `FrontRun` (the instance and
+the whole program). Four pieces were written by forks in parallel worktrees against interface
+files written first (`ExprIface`, `DeclIface`); the interfaces held without change.
+
+### What is proved
+
+`frontAll_refines` (`FrontRun.lean`): for the program `frontAllProg` (the Stage B validator, the
+fields passes, all stores, the apply steps, `front_line`, `front_run`), under `numBits = 64` and
+`b.size < 2^63`, from a memory holding `b` in `IN` whose pool has fewer than `2^63` words and which
+is related to an arena state `a₀` by `ArenaD` and to the blank parse state by `StateDR`: if
+`front_run()` returns `0`, then `(parseBytes b).run a₀ = .ok (.ok (.ofState st'), a')` (con-ron's
+whole-buffer parse accepts) and the final memory is related to `a'` by `ArenaD` and to `st'` by
+`StateDR`. Only `propext`, `Classical.choice`, `Quot.sound`. No `sorry` in `ConAgua/Front`.
+
+* **Expression lines.** `front_line` reads a line's fields with `rec_line_loop` (names, levels);
+  if that finds no name/level payload, with `rec_expr_loop` (`apply_any`). All ten `ExprRec` kinds
+  are read (con-leche has no `fvar`/`mdata` records); one generic member loop `rec_obj` serves the
+  six sub-objects (`app`, `lam`, `forallE`, `letE`, `const`, `proj`), linked by one generic
+  theorem (`objRec_link` over a value-carrying `VLoop`) and six ~9-line instances. `apply_expr`
+  interns through `mk_app`/`mk_lam`/`mk_forall`/`mk_let`/`mk_proj` (the derived ranges) and
+  `intern_bvar`/`sort`/`const`/`ls`/`lit`, into `EID` (array 66); `applyExprW_refines` against
+  `parseExprEntryD`, one theorem over all kinds. The front invariant is now `ArenaD`
+  (`ArenaR ∧ DerR`); the leaf interns keep `DerR` (`internSort_D`, `internConst_D`,
+  `internLit_D`, `internLs_D` in `ApplyExprRefine.lean`: they belong next to `internBVar_D`).
+* **`natVal` of any size.** `nat_dec(c, d)` reads the digits 19 at a time and folds each chunk
+  in place (`limbs := limbs·10^k + chunk`, the local multiply-add `nat_mad`, a candidate for lane
+  `nat`'s files); `natDecW_val` + `natValR_decN`: the slice is normalised and denotes con-leche's
+  `readNatAt` (`readNat64` up to 18 digits, `readNat` beyond). `node_lit` = `nat_dec` +
+  `intern_lit`.
+* **Escapes.** `str_put_esc(vs, ve)` decodes `\" \\ \/ \b \f \n \r \t \uXXXX` (surrogate pairs
+  too) into UTF-8 bytes in the pool; `strPutEsc_link`: on con-leche's `scanString` result the
+  slice is `strWords s` (`\u` against `String.utf8EncodeChar`). Not yet wired into the name
+  `str` path (`apply_str` still refuses a body with a backslash).
+* **The driver.** `front_run()` = `front_init()`, then `front_line(i)` while `i < len(IN)`:
+  `0` when every line applied, else the number of the first line that does not scan. Its loop
+  spec is generic in the models of `front_init`/`front_line` (`runW`); `runI_refines` relates
+  the model to `feedChunk` + the final-line step of `parseBytes`, generic in the relation (`Inv`)
+  and the line step (`LineStepI`). A last line without a newline is applied by `front_line`
+  (next `0`) where `feedChunk` leaves it as the tail for `applyFinalLine`.
+
+### Decisions and findings
+
+* **What a driver can carry.** A callee's spec says nothing about the input bytes, so the loop
+  could not re-establish `s.mem.arr8 IN = b` for the next call. `Preserve.lean` proves once, for
+  any program without `st8` (`Prog.noSt8`, decided for `frontAllProg`), that every run keeps
+  the byte arrays and every array's size, and restores the caller's locals (`Triple.keep`). L
+  specs that the driver calls therefore take `(arr64 POOL).size < 2^63` instead of `PoolOK`
+  (the code's own room checks supply the rest); the instance's line model includes "bytes
+  unchanged" (`lineKW`), so the refinement can keep `m.arr8 IN = b` in its invariant.
+* **Interfaces first.** Writing `ExprIface.lean` (pl codes, `ExprR`, `itemsN`/`listN`,
+  `NatValR`, `StrR`) before forking the fields pass and the apply step let both be proved
+  against the same relation without seeing each other; the merge was a lakefile conflict only.
+* **Patterns cannot start at a variable function** (`lineW m i` with `lineW` a parameter):
+  the arms of a generic model go through an auxiliary function applied to the `Option`
+  (`runK … (lineW m i)`), whose arms match on `some (ok, nx, m')`.
+* Forks' findings: `bv_decide` adds native axioms (caught by `#guard_msgs` on `#print axioms`)
+  and needs a real import in `module` files; a generic loop over one tuple state does not unify
+  with con-leche's curried loop (per-arity helpers); `finish` needs `NONE` unfolded;
+  `parseExprEntryD` elaborates through a join point (`simp only [parseExprEntryD, exprOp,
+  bind_assoc]`, not `rfl`); arm lemmas whose right side is a callee result take it as a variable
+  with an equation hypothesis.
+* Two `Inhabited (StateD ⊕ RecordVerdict)` instances in different files clash on import; it
+  lives in `StateDR.lean` now.
+
+### Measurements (`lake env lean`, user, one run)
+
+| file | lines | L lines | user |
+|---|---:|---:|---:|
+| `FieldsExpr` | 484 | ~95 | 54 s |
+| `FieldsExprLink` | 938 | | 14 s |
+| `ApplyExpr` | 766 | ~55 | 9.8 s |
+| `ApplyExprRefine` | 541 | | 1.5 s |
+| `NatDec` / `NatDecLink` | 378 / 504 | ~45 | 6.9 / 2.5 s |
+| `Unescape` / `UnescapeLink` | 418 / 721 | ~83 | 11.3 / 4.2 s |
+| `Preserve` / `Driver` / `DriverRefine` | 184 / 178 / 186 | 18 | 1.3 / 1.2 / 0.8 s |
+| `Line` / `LineRefine` / `FrontRun` | 311 / 335 / 224 | 45 | 3.7 / 1.2 / 8.0 s |
+
+Rust counterparts: `nat_decimal.rs` ~50 lines of code, `unescape_bytes`+`utf8_of` ~110, the
+expression records of `scan_fast.rs`/`export_c.rs` ~400. `#guard`: the whole program accepts a
+sample with a header, a name, a level and six expression kinds (a 30-digit literal), reports a
+malformed line's number, aborts on an unbound id.
+
+### Not done / requests
+
+* **`strVal` lines abort**: the `lit` store's `RecRel` keeps a `strVal` as kind `1` without
+  contents (`LitRefine.lean`). Request to lane `exprops`: a contents-carrying `strVal` record (the
+  bytes as a pool slice, as `nstr`) and an `intern_lit` entry for it; `str_put_esc` already
+  produces the slice.
+* Declaration lines: next (below). Inductive blocks abort.
+* Ids at or past an id table's end abort (no sparse overflow).
+
+### `sorry`s
+
+None.

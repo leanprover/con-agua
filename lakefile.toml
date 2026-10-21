@@ -29,7 +29,7 @@ globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.A
   "ConAgua.Arena.LetStore", "ConAgua.Arena.LetRefine",
   "ConAgua.Arena.LamStore", "ConAgua.Arena.LamRefine",
   "ConAgua.Arena.ForallStore", "ConAgua.Arena.ForallRefine",
-  "ConAgua.Arena.BVarStore", "ConAgua.Arena.BVarRefine", "ConAgua.Arena.MemoLib", "ConAgua.Arena.ViewL", "ConAgua.Arena.ExprMk", "ConAgua.Arena.DerRel", "ConAgua.Arena.View", "ConAgua.Arena.MemoLibRel",
+  "ConAgua.Arena.BVarStore", "ConAgua.Arena.BVarRefine", "ConAgua.Arena.MemoLib", "ConAgua.Arena.ViewL", "ConAgua.Arena.ExprMk", "ConAgua.Arena.DerRel", "ConAgua.Arena.Lift", "ConAgua.Arena.LiftSpec", "ConAgua.Arena.LiftBench", "ConAgua.Arena.LiftRefine", "ConAgua.Arena.View", "ConAgua.Arena.MemoLibRel",
   "ConAgua.Arena.LsStore", "ConAgua.Arena.LsRefine", "ConAgua.Arena.PoolSlice",
   "ConAgua.Arena.NStrStore", "ConAgua.Arena.NStrRefine",
   "ConAgua.Arena.NAnonStore", "ConAgua.Arena.NAnonRefine",
@@ -42,7 +42,8 @@ globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.A
   "ConAgua.Capstone",
   "ConAgua.Final.Twin", "ConAgua.Final.Statement",
   "ConAgua.Front.Fields", "ConAgua.Front.FieldsLink",
-  "ConAgua.Front.Apply", "ConAgua.Front.StateDR", "ConAgua.Front.Line", "ConAgua.Front.LineRefine"]
+  "ConAgua.Front.Apply", "ConAgua.Front.StateDR", "ConAgua.Front.Line", "ConAgua.Front.LineRefine",
+  "ConAgua.Front.ExprIface", "ConAgua.Front.Preserve", "ConAgua.Front.Driver", "ConAgua.Front.DriverRefine", "ConAgua.Front.DeclIface", "ConAgua.Front.FrontRun", "ConAgua.Front.NatDec", "ConAgua.Front.NatDecLink", "ConAgua.Front.Unescape", "ConAgua.Front.UnescapeLink", "ConAgua.Front.ApplyExpr", "ConAgua.Front.ApplyExprRefine", "ConAgua.Front.FieldsExpr", "ConAgua.Front.FieldsExprLink"]
 
 # Vendored from con-leche (rev 103562b) and con-ron (rev 4c9eaf7, proof/ dir).
 # See vendor/README.md for provenance and every patch applied.

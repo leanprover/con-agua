@@ -907,6 +907,15 @@ theorem internBVar_D (m : Mem) (a : AState) (hA : ArenaD m a) (u r : Word) (m' :
   · exact ⟨⟨hD₁.bvar.1, derT_push hD₁.bvar.2 _ _ _ (bvar_derBVar _ _)⟩, hD₁.fvar, hD₁.sort,
       hD₁.const, hD₁.lit, hD₁.app, hD₁.lam, hD₁.forallE, hD₁.letE, hD₁.proj⟩
 
+/-- `DerR` reads only the store: a state with the same store (other memos, caches) has it too. -/
+theorem DerR.of_store (m : Mem) (a a' : AState) (hD : DerR m a) (hs : a'.store = a.store) :
+    DerR m a' := by
+  have e : ∀ {α : Type} [BEq α] [Hashable α] (g : ETables → Tbl α EIdx UInt64)
+      (P : Word → Nat → α → UInt64 → Prop), DerT2 a g P → DerT2 a' g P := by
+    intro α _ _ g P h; unfold DerT2 at *; rw [hs]; exact h
+  exact ⟨e _ _ hD.bvar, e _ _ hD.fvar, e _ _ hD.sort, e _ _ hD.const, e _ _ hD.lit, e _ _ hD.app,
+    e _ _ hD.lam, e _ _ hD.forallE, e _ _ hD.letE, e _ _ hD.proj⟩
+
 /-! ## The initial state -/
 
 theorem derT_empty {α : Type} [BEq α] [Hashable α] (P : Nat → α → UInt64 → Prop) :
