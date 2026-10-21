@@ -241,7 +241,7 @@ theorem projCert_refines (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) 
   simp only [hc2, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, hm⟩ := hW
   obtain ⟨t₂, ht₂, hm₂, -, -, hpeel⟩ := triple_of_callW
-    (peelPis_refines p n s a₀ hS.arena.1 an _ htw) hc2
+    (peelPis_refines p hp.spine n s a₀ hS.arena.1 an _ htw) hc2
   rw [ht₂] at hm₂
   have hlen : args.toList.length = an.toNat := by simp [har.size]
   rw [decE_eq, ← hty, ← hlen] at hpeel
