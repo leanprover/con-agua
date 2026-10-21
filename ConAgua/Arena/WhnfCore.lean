@@ -429,10 +429,6 @@ theorem projLitToCtor_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n �
       (projLitToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h)) decH s₀ a₀ dn vis fe
       MM G g := sorry
 
-/-- **The knot's `whnfCore` slot one level up**: from the knot at `n` and the loop, the slot at
-`n + 2` (the slot calls the loop, which calls the step). -/
-theorem whnfCoreSlot_step (n : Nat) (hk : KnotUpTo p n) : WhnfCoreSlot p (n + 2) := sorry
-
 end specs
 
 end L.Arena
