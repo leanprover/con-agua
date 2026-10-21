@@ -27,7 +27,7 @@ open L.Scan.Records (boolEndN)
 /-! ## Specs -/
 
 /-- Every function the declaration fields pass calls, at its name in `p`. -/
-structure DeclLookups (p : Prog) : Prop where
+structure DeclFieldLookups (p : Prog) : Prop where
   skip_ws : p.lookup "skip_ws" = some L.Scan.Leaves.skipWs
   skip_digits : p.lookup "skip_digits" = some L.Scan.Leaves.skipDigits
   key_end : p.lookup "key_end" = some L.Scan.Leaves.keyEnd
@@ -94,7 +94,7 @@ structure DeclLookups (p : Prog) : Prop where
   scan_ind_decl : p.lookup "scan_ind_decl" = some L.Scan.Records.scanIndD
 
 section specs
-variable (p : Prog) (hL : DeclLookups p) (b : Array UInt8) (hb : b.size < 2 ^ 63)
+variable (p : Prog) (hL : DeclFieldLookups p) (b : Array UInt8) (hb : b.size < 2 ^ 63)
 include hL hb
 
 omit hL in

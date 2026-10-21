@@ -2936,8 +2936,18 @@ whole-buffer parse accepts) and the final memory is related to `a'` by `ArenaD` 
   `intern_lit`.
 * **Escapes.** `str_put_esc(vs, ve)` decodes `\" \\ \/ \b \f \n \r \t \uXXXX` (surrogate pairs
   too) into UTF-8 bytes in the pool; `strPutEsc_link`: on con-leche's `scanString` result the
-  slice is `strWords s` (`\u` against `String.utf8EncodeChar`). Not yet wired into the name
-  `str` path (`apply_str` still refuses a body with a backslash).
+  slice is `strWords s` (`\u` against `String.utf8EncodeChar`). `apply_str` (name `str` lines)
+  goes through it; `NameR` now carries con-leche's `scanString` result (`StrR`) instead of
+  `StrOK`.
+* **Declaration lines** (axiom, def, thm, opaque, quot; second landing). Fields: `rec_decl_line`
+  with one generic object loop `rec_decl_obj` (one generic link `dobj_link` for con-leche's five
+  loops), eight words `DFld` (`DeclIface.lean`); `inductive` is recognised (`pl 25`, validated by
+  Stage B's `scan_ind_decl`) and aborts in the apply step. Apply: `apply_decl` pushes an 8-word
+  record to `DECL` (67, count in word 0) with the universe-parameter name handles in `DLP` (68);
+  `StateDR` gets `decls : DeclsR`; `applyDeclW_refinesAM` against `applyLine st (.decl d)`
+  (`processLineCoreD`, the arena state unchanged); unsafe axioms/opaques, a non-`safe` def and an
+  unknown quot kind abort where con-ron declines. `front_line`'s `apply_any` tries name/level,
+  expression, then declaration fields (`apply_dline`). `frontAll_refines` covers them.
 * **The driver.** `front_run()` = `front_init()`, then `front_line(i)` while `i < len(IN)`:
   `0` when every line applied, else the number of the first line that does not scan. Its loop
   spec is generic in the models of `front_init`/`front_line` (`runW`); `runI_refines` relates
@@ -2981,6 +2991,8 @@ whole-buffer parse accepts) and the final memory is related to `a'` by `ArenaD` 
 | `Unescape` / `UnescapeLink` | 418 / 721 | ~83 | 11.3 / 4.2 s |
 | `Preserve` / `Driver` / `DriverRefine` | 184 / 178 / 186 | 18 | 1.3 / 1.2 / 0.8 s |
 | `Line` / `LineRefine` / `FrontRun` | 311 / 335 / 224 | 45 | 3.7 / 1.2 / 8.0 s |
+| `FieldsDecl` / `FieldsDeclSpec` / `FieldsDeclLink` | 383 / 331 / 1103 | 132 | 0.6 / 89 / 14 s |
+| `ApplyDecl` / `ApplyDeclRefine` | 423 / 529 | 70 | 11.0 / 3.1 s |
 
 Rust counterparts: `nat_decimal.rs` ~50 lines of code, `unescape_bytes`+`utf8_of` ~110, the
 expression records of `scan_fast.rs`/`export_c.rs` ~400. `#guard`: the whole program accepts a
@@ -2993,8 +3005,22 @@ malformed line's number, aborts on an unbound id.
   contents (`LitRefine.lean`). Request to lane `exprops`: a contents-carrying `strVal` record (the
   bytes as a pool slice, as `nstr`) and an `intern_lit` entry for it; `str_put_esc` already
   produces the slice.
-* Declaration lines: next (below). Inductive blocks abort.
+* Inductive blocks abort (`validateIndD`/`installIndD` are not ported).
+* **`frontAllProg` no longer passes the compiler's static check**: the declaration fields pass
+  returns 8–9 words (`rec_decl_line`, `rec_decl_obj`, `d_member`, `decl_val`, `apply_dline`) and
+  the compiler allows 6 (`maxRes`, `Compile.lean`). Request to lane `compiler`: `maxRes ≥ 10`; else
+  the fields pass packs `pl`/`hk`/`flag` into one word. (The first landing's `frontAllProg_wf`,
+  without declarations, held; it is removed.)
+* A string compared as a literal (`safety`, quot `kind`) with an escape in it aborts (con-leche
+  decodes it first).
 * Ids at or past an id table's end abort (no sparse overflow).
+
+* The decl fields' heavy specs (8–9-word results) needed `sym (gen := 16..24) (instances := 5000)`
+  and up to 4M heartbeats; a failing attempt took 13–25 minutes, mostly printing goals. Writing
+  callee posts as explicit lists of per-field model functions instead of `.enc` of a structure
+  update, and inline conditions instead of a `Prop` wrapper with a `Decidable` instance, fixed it.
+* Census links: `l_impl`/`refines_part` on `apply_decl`/`processLineCoreD`, `applyExprW_refines`,
+  `natValR_decN`, `strPutEsc_link`, `rec_decl_line`.
 
 ### `sorry`s
 

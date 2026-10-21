@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Front.FieldsDecl
+public import ConAgua.Front.FieldsExprLink
 
 @[expose] public section
 
@@ -15,7 +16,7 @@ On con-leche's `ok` path, `rec_decl_line`'s words are the declaration record's f
 a con-leche record loop that has the common shape (`DObjLoop`: whitespace, closing brace, comma,
 key), given, at each key, one step (`dstepN`) that keeps a relation `R` between con-leche's loop
 state and the words; each of the five loops instantiates it. The values: a number by `rdNat_link`,
-a list by `itemsR_of_scanNatList_decl`, a flag by `scanBool_eq_N`, `hints` by `hkv_link`, a
+a list by ``list_link` (`FieldsExprLink`)`, a flag by `scanBool_eq_N`, `hints` by `hkv_link`, a
 string's raw body by `strCode_link`.
 -/
 
@@ -57,103 +58,6 @@ theorem matchLitN_getD (a : Array UInt8) (i : Nat) (Lt : List UInt8) (o n : Nat)
   simp [Array.getD, hb, he, List.getD_eq_getElem?_getD, show o + j < Lt.length by omega]
 
 
-section kitD
-variable (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
-include h64 hsize
-
-/-! ## A number list's items -/
-
-theorem items_link (i : USize) (acc : List Nat) (w : Bool) (us : List Nat) (e : USize)
-    (h : scanNatListLoop b i acc w = .ok us e) :
-    ∃ rest, us = acc.reverse ++ rest ∧ ItemsR (itemsN b.data i.toUInt64) rest := by
-  rw [scanNatListLoop] at h
-  by_cases hi : i < b.usize
-  · have hlt := (lt_usize_iff b h64 hsize i).mp hi
-    have hcw := byteW_eq b h64 hsize i
-    have hs := succ_toUInt64 b h64 hsize i
-    have hi1 : (i + 1).toNat = i.toNat + 1 := usizeStep b i hi
-    have hin := usizeInBounds b i hi
-    rw [dif_pos hi] at h
-    simp only [uget_byteAt _ i hi] at h
-    by_cases hws : isWs (byteAt b i) = true
-    · simp only [hws, if_true] at h
-      have hne : byteW b.data i.toUInt64 ≠ 93 := by
-        rw [hcw]; intro h'; have := (u8_toUInt64_eq _ 93 (by decide)).mp h'
-        rw [this] at hws; exact absurd hws (by decide)
-      have hnd : ¬ (48 ≤ byteW b.data i.toUInt64 ∧ byteW b.data i.toUInt64 ≤ 57) := by
-        rw [hcw, ← digit_iff]; intro h'; simp [isWs, isDigit] at hws h'; grind
-      rw [itemsN_other _ _ hlt hne hnd, ← hs]
-      exact items_link (i + 1) acc w us e h
-    simp only [hws, Bool.false_eq_true, if_false] at h
-    by_cases h93 : byteAt b i = 93
-    · simp only [h93, show ((93 : UInt8) == 93) = true from rfl, if_true] at h
-      split at h
-      · simp at h
-      · simp only [ScanRes.ok.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
-        rw [itemsN_close _ _ hlt (by rw [hcw, h93]; rfl)]
-        exact ⟨[], by simp, trivial⟩
-    have h93' : byteW b.data i.toUInt64 ≠ 93 := by
-      rw [hcw]; exact fun h' => h93 ((u8_toUInt64_eq _ 93 (by decide)).mp h')
-    simp only [show (byteAt b i == 93) = false by simpa using h93, Bool.false_eq_true, if_false] at h
-    by_cases h44 : byteAt b i = 44
-    · simp only [h44, show ((44 : UInt8) == 44) = true from rfl, if_true] at h
-      split at h
-      · simp at h
-      have hnd : ¬ (48 ≤ byteW b.data i.toUInt64 ∧ byteW b.data i.toUInt64 ≤ 57) := by
-        rw [hcw, h44]; decide
-      rw [itemsN_other _ _ hlt h93' hnd, ← hs]
-      exact items_link (i + 1) acc true us e h
-    simp only [show (byteAt b i == 44) = false by simpa using h44, Bool.false_eq_true, if_false] at h
-    by_cases hd : isDigit (byteAt b i) = true
-    · simp only [hd, if_true] at h
-      split at h
-      · simp at h
-      have hd' := (digit_iff _).mp hd
-      rw [← hcw] at hd'
-      split at h
-      · simp at h
-      split at h
-      · rename_i hie
-        have hne' := numEnd_toUInt64_eq b h64 (by omega) i
-        have hieW : i.toUInt64 < UInt64.ofNat (L.Scan.Leaves.numEndN b.data i.toUInt64.toNat) := by
-          rw [USize.toNat_toUInt64, ← hne']; exact (lt_toUInt64_iff _ _).mp hie
-        rw [itemsN_digit _ _ hlt h93' hd' hieW]
-        rw [USize.toNat_toUInt64, ← hne']
-        have hle : (numEnd b i).toNat ≤ b.size := by
-          have := numEnd_toNat_eq b h64 (by omega) i
-          rw [this]; exact L.Scan.Values.numEndN_le b.data i.toNat (by have := usizeInBounds b i hi; have hb : b.data.size = b.size := rfl; omega)
-        have hR := rdNat_link b h64 hsize i (numEnd b i) (USize.le_of_lt hie) hle
-        obtain ⟨rest, hus, hrest⟩ := items_link (numEnd b i) _ false us e h
-        refine ⟨readNatAt b i (numEnd b i) :: rest, ?_, hR, hrest⟩
-        rw [hus]; simp
-      · simp at h
-    · simp only [hd, Bool.false_eq_true, if_false] at h
-      simp at h
-  · rw [dif_neg hi] at h; simp at h
-termination_by b.size - i.toNat
-decreasing_by
-  all_goals first
-    | omega
-    | (have := USize.lt_iff_toNat_lt.mp ‹i < numEnd b i›; omega)
-
-/-- A number list's items, as `listN` reads them. -/
-theorem itemsR_of_scanNatList_decl (v : USize) (us : List Nat) (e : USize)
-    (h : scanNatList b v = .ok us e) : ItemsR (listN b.data v.toUInt64) us := by
-  unfold scanNatList at h
-  split at h
-  · rename_i hc
-    have hv : v < b.usize := by
-      refine Classical.byContradiction fun hn => ?_
-      have h0 : byteAt b v = 0 := by unfold byteAt; rw [dif_neg hn]
-      rw [h0] at hc; exact absurd hc (by decide)
-    obtain ⟨rest, rfl, hr⟩ := items_link b h64 hsize (v + 1) [] true us e h
-    unfold listN
-    rw [← succ_toUInt64 b h64 hsize]
-    simpa using hr
-  · cases h
-
-end kitD
 
 /-- `scan_bool`: its flag word and its end. -/
 theorem boolV_link (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
@@ -707,7 +611,7 @@ theorem axiom_loop : DObjLoop b (fun i w seen (st : Bool × List Nat × Nat × N
       rw [hx] at hend
       refine ⟨e', _, (st.1, x, st.2.2.1, st.2.2.2), by simp [dstepN, dendN, ← hend, okW], hie, hok, ?_⟩
       simp (config := {decide := true}) only [dstepN, dnumN, dlpsN, dflagN, ↓reduceIte]
-      exact ⟨hf, .inl (itemsR_of_scanNatList_decl b h64 hsize v x e' hx), hn, ht⟩
+      exact ⟨hf, .inl (list_link b h64 hsize v x e' hx), hn, ht⟩
     case kIsUnsafe =>
       rw [show UInt64.ofNat Key.kIsUnsafe.ctorIdx = (26 : Word) from rfl]
       dkey_res
@@ -755,7 +659,7 @@ theorem thm_loop : DObjLoop b (fun i w seen (st : List Nat × Nat × Nat × Nat)
       rw [hx] at hend
       refine ⟨e', _, (x, st.2.1, st.2.2.1, st.2.2.2), by simp [dstepN, dendN, ← hend, okW], hie, hok, ?_⟩
       simp (config := {decide := true}) only [dstepN, dnumN, dlpsN, dflagN, ↓reduceIte]
-      exact ⟨.inl (itemsR_of_scanNatList_decl b h64 hsize v x e' hx), hn, ht, hvl⟩
+      exact ⟨.inl (list_link b h64 hsize v x e' hx), hn, ht, hvl⟩
     case kAll =>
       rw [show UInt64.ofNat Key.kAll.ctorIdx = (1 : Word) from rfl]
       dkey_res
@@ -806,7 +710,7 @@ theorem opaque_loop : DObjLoop b (fun i w seen (st : Bool × List Nat × Nat × 
       refine ⟨e', _, (st.1, x, st.2.2.1, st.2.2.2.1, st.2.2.2.2), by simp [dstepN, dendN, ← hend, okW],
         hie, hok, ?_⟩
       simp (config := {decide := true}) only [dstepN, dnumN, dlpsN, dflagN, ↓reduceIte]
-      exact ⟨hf, .inl (itemsR_of_scanNatList_decl b h64 hsize v x e' hx), hn, ht, hvl⟩
+      exact ⟨hf, .inl (list_link b h64 hsize v x e' hx), hn, ht, hvl⟩
     case kAll =>
       rw [show UInt64.ofNat Key.kAll.ctorIdx = (1 : Word) from rfl]
       dkey_res
@@ -859,7 +763,7 @@ theorem quot_loop : DObjLoop b (fun i w seen (st : String × List Nat × Nat × 
       rw [hx] at hend
       refine ⟨e', _, (st.1, x, st.2.2.1, st.2.2.2), by simp [dstepN, dendN, ← hend, okW], hie, hok, ?_⟩
       simp (config := {decide := true}) only [dstepN, dnumN, dlpsN, dflagN, ↓reduceIte]
-      exact ⟨hf, .inl (itemsR_of_scanNatList_decl b h64 hsize v x e' hx), hn, ht⟩
+      exact ⟨hf, .inl (list_link b h64 hsize v x e' hx), hn, ht⟩
     case kKind =>
       rw [show UInt64.ofNat Key.kKind.ctorIdx = (28 : Word) from rfl]
       dkey_res
@@ -912,7 +816,7 @@ theorem def_loop : DObjLoop b (fun i w seen (st : HintsRec × List Nat × Nat ×
       refine ⟨e', _, (st.1, x, st.2.2.1, st.2.2.2.1, st.2.2.2.2.1, st.2.2.2.2.2),
         by simp [dstepN, dendN, ← hend, okW], hie, hok, ?_⟩
       simp (config := {decide := true}) only [dstepN, dnumN, dlpsN, dflagN, dhkN, dhnN, ↓reduceIte]
-      exact ⟨hh, .inl (itemsR_of_scanNatList_decl b h64 hsize v x e' hx), hn, hs, ht, hvl⟩
+      exact ⟨hh, .inl (list_link b h64 hsize v x e' hx), hn, hs, ht, hvl⟩
     case kAll =>
       rw [show UInt64.ofNat Key.kAll.ctorIdx = (1 : Word) from rfl]
       dkey_res

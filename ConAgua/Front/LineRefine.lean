@@ -2,6 +2,8 @@ import ConAgua.Front.Line
 import ConAgua.Front.ApplyExprRefine
 import ConAgua.Front.FieldsExprLink
 import ConAgua.Front.UnescapeLink
+import ConAgua.Front.FieldsDeclLink
+import ConAgua.Front.ApplyDeclRefine
 import ConAgua.Census.Attr
 
 /-!
@@ -226,7 +228,18 @@ theorem applyAnyW_refines (m m' : Mem) (hm : m.arr8 IN = b.data) (a₀ : AState)
     obtain ⟨hok, hA', hD'⟩ := applyExprW_refines b h64 hsize m m' a₀ st hR hD f i er hI hE h
     obtain ⟨h1, h2, h3⟩ := applyLine_expr st a₀ i er hok
     exact ⟨_, h1, h2, by rw [h3]; exact hA', hD'⟩
-  · cases h
+  · unfold applyDLineW at h
+    split at h
+    · cases h
+    rename_i _ _ hpl
+    have hX : (declLineN b.data j.toUInt64).pl ≠ 0 → DRecR b r (declLineN b.data j.toUInt64) :=
+      declLine_link b h64 hsize j true 0 0 .absent DFld.none r e hloop trivial
+    replace hX := hX hpl
+    generalize declLineN b.data j.toUInt64 = f at hX h
+    rcases r with _ | _ | _ | d | _ | _ <;> simp only [DRecR] at hX
+    obtain ⟨st', h1, h2, h3, hA', hD'⟩ := applyDeclW_refinesAM b m m' a₀ st hR hD f d hX h
+    refine ⟨st', h1, ?_, by rw [h3]; exact hA', hD'⟩
+    simp only [AM.res, h2]
 
 /-- **`front_line`'s model refines con-ron's per-line step**: a line it accepts (`(1, nx)`) is one
 con-leche's scanner reads and con-ron's `applyLine` applies, with `ArenaD` and `StateDR` after. -/
@@ -308,13 +321,14 @@ end refine
 /-- **`front_line(i)` refines con-ron's per-line step**: when it returns `(1, nx)`, con-leche's
 scanner reads a record at `i` whose next position is `nx`, and con-ron's `applyLine` applies it,
 with `ArenaD` and `StateDR` holding of the memory after. -/
-@[refines_part ConRon.Arena.Frontend.applyLine "name, level, expr lines (declarations abort)"]
+@[refines_part ConRon.Arena.Frontend.applyLine "name, level, expr, non-inductive declaration lines (strVal and inductive lines abort)"]
 theorem frontLine_refines (p : Prog) (hS : ScanLookups p) (hL : FrontLookups p)
     (hpf : p.lookup "front_line" = some frontLine) (hps : p.lookup "str_put" = some strPut)
     (hpn : p.lookup "apply_nstr" = some applyNStr) (hpu : p.lookup "apply_nnum" = some applyNNum)
     (hpl : p.lookup "apply_level" = some applyLevel) (hpr : p.lookup "apply_rec" = some applyRec)
     (hpt : p.lookup "apply_str" = some applyStr) (hE : ExprLookups p)
-    (hpy : p.lookup "apply_any" = some applyAny) (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
+    (hpy : p.lookup "apply_any" = some applyAny) (hF : DeclFieldLookups p) (hDL : DeclLookups p)
+    (hpz : p.lookup "apply_dline" = some applyDLine) (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
     (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b.data) (i : USize) (hi : i.toNat ≤ b.size)
     (a₀ : AState) (st : StateD) (hR : ArenaD s₀.mem a₀) (hD : StateDR s₀.mem st) :
     ⦃fun s => s = s₀⦄
@@ -323,7 +337,7 @@ theorem frontLine_refines (p : Prog) (hS : ScanLookups p) (hL : FrontLookups p)
   apply M.triple_of_run
   intro s r s' hs hrun
   have hW := M.of_run (P := fun s => s = s₀) hs hrun
-    (frontLine_spec p hS hL hpf hps hpn hpu hpl hpr hpt hE hpy b.data hsize n s₀ hm i.toUInt64
+    (frontLine_spec p hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz b.data hsize n s₀ hm i.toUInt64
       (by rw [USize.toNat_toUInt64]; exact hi) hR.1.lit.1.2.2.1)
   intro nx hr
   subst hr

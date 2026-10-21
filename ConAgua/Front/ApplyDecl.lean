@@ -1,5 +1,6 @@
 import ConAgua.Front.ApplyExpr
 import ConAgua.Front.DeclIface
+import ConAgua.Census.Attr
 
 /-!
 # Declaration lines into the parse state: `apply_decl`
@@ -209,6 +210,7 @@ def declCv : FunDecl := lfn (k, q, name, lps, type, value, hn) locals (n, t, o, 
   return 0
 }
 
+@[l_impl ConRon.Arena.Frontend.processLineCoreD]
 def applyDecl : FunDecl := lfn (pl, name, lps, type, value, hk, hn, flag) locals (k, q, z) {
   (k, q) := call decl_kind(pl, hk, hn, flag);
   z := call decl_cv(k, q, name, lps, type, value, hn);

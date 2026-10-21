@@ -1,5 +1,6 @@
 import ConAgua.Front.ApplyDecl
 import ConAgua.Front.ApplyExprRefine
+import ConAgua.Census.Attr
 
 /-!
 # `apply_decl` refines con-ron's `processLineCoreD`
@@ -516,6 +517,7 @@ theorem applyDeclW_refines (b : ByteArray) (m m' : Mem) (a₀ : AState) (st : St
 
 /-- The same in `AM` terms: `applyLine st (.decl d)` succeeds from `a₀`, leaves the arena state
 alone and gives the parse state `st'`. -/
+@[refines_part ConRon.Arena.Frontend.processLineCoreD "axiom, def, thm, opaque, quot (inductive aborts)"]
 theorem applyDeclW_refinesAM (b : ByteArray) (m m' : Mem) (a₀ : AState) (st : StateD)
     (hA : ArenaD m a₀) (hD : StateDR m st) (f : DFld) (d : DeclRec) (hE : DeclR b d f)
     (h : applyDeclW b.data m f.pl f.name f.lps f.type f.value f.hk f.hn f.flag = some m') :

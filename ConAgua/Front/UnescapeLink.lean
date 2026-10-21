@@ -3,6 +3,7 @@ import ConAgua.Front.ExprIface
 import ConAgua.Scan.StrLink
 import ConAgua.Arena.ArenaRel
 import ConAgua.Arena.DerRel
+import ConAgua.Census.Attr
 
 /-!
 # `str_put_esc` against con-leche's `scanString`
@@ -650,6 +651,7 @@ theorem strR_body (h64 : System.Platform.numBits = 64) (b : ByteArray) (hsize : 
 /-- **`str_put_esc` writes the string con-leche reads**: on a string body `[c, d)` con-leche's
 `scanString` reads as `str` (`StrR`), if `str_put_esc`'s model returns, the pool grew
 (`Grows`) by the slice `(m.top, l)`, which holds the string's UTF-8 bytes. -/
+@[refines_part ConLeche.Frontend.scanString "the body decoded into the pool"]
 theorem strPutEsc_link (h64 : System.Platform.numBits = 64) (b : ByteArray)
     (hsize : b.size < 2 ^ 63) (m m' : Mem) (hpool : PoolOK m) (c d : Word) (str : String)
     (hS : StrR b c d str) (l : Word) (h : strPutEscW b.data m c d = some (l, m')) :

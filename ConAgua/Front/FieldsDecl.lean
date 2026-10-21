@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Front.DeclIface
 public import ConAgua.Scan.Records
+public import ConAgua.Census.Attr
 meta import ConAgua.L.Semantics
 
 @[expose] public section
@@ -312,6 +313,7 @@ def dlineLoop : Stmt := lblk (i, w, pl, nm, lp, ty, vl, hk, hn, fl, tag, ks, k, 
   }
 }
 
+@[l_impl ConLeche.Frontend.scanLineLoop]
 def recDeclLine : FunDecl := lfn (i) locals (w, pl, nm, lp, ty, vl, hk, hn, fl, tag, ks, k, v, e) {
   w := 1;
   ⟪dlineLoop⟫;
