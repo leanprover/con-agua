@@ -306,12 +306,13 @@ def targetCtorsOf : FunDecl := lfn (vis, I) locals (ok, nPc, cso, csl) {
 result sort. -/
 @[l_impl ConRon.Arena.targetOutsideInst]
 def targetOutsideInst : FunDecl := lfn (vis, I, us, dso, dsl)
-    locals (f, q, kind, tl, ok, ty, bso, bsl, body, g, x, y, z) {
+    locals (f, q, kind, tl, ok, ty, bso, bsl, body, g, x, y, z, lo, ll) {
   (f, q) := call env_find(I, vis);
   if f == 0 { abort };
   kind := EREC.u64[q];
   if kind != 3 { abort };
-  tl := call inst_lp_fast(⟪CWF⟫, EREC.u64[q + 2], EREC.u64[q + 3], us, EREC.u64[q + 4]);
+  (lo, ll) := call er_to_iw(EREC.u64[q + 2], EREC.u64[q + 3]);
+  tl := call inst_lp_fast(⟪CWF⟫, lo, ll, us, EREC.u64[q + 4]);
   (ok, ty) := call inst_pis_with(dso, dsl, tl);
   if ok == 0 { abort };
   (bso, bsl, body) := call pi_binders(⟪CWF⟫, ty);
@@ -559,10 +560,11 @@ def targetRecPins : FunDecl := lfn (p, blocko, blockl)
 /-- **`target_ctor_at`**: a member's constructor type as stored, an outside inductive's
 instantiated at the major's levels. -/
 @[l_impl ConRon.Arena.targetCtorAt]
-def targetCtorAt : FunDecl := lfn (M, c) locals (mem, r) {
+def targetCtorAt : FunDecl := lfn (M, c) locals (mem, r, lo, ll) {
   mem := IW.u64[M + 8];
   if mem != 0 { return EREC.u64[c + 3] };
-  r := call inst_lp_fast(⟪CWF⟫, EREC.u64[c + 1], EREC.u64[c + 2], IW.u64[M + 1], EREC.u64[c + 3]);
+  (lo, ll) := call cv_lps(c);
+  r := call inst_lp_fast(⟪CWF⟫, lo, ll, IW.u64[M + 1], EREC.u64[c + 3]);
   return r
 }
 
