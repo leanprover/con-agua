@@ -45,7 +45,7 @@ globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.A
   "ConAgua.Arena.EnvRec", "ConAgua.Arena.Pins", "ConAgua.Arena.PinsNatOp",
   "ConAgua.Arena.Walk", "ConAgua.Arena.WalkRefine", "ConAgua.Arena.WalkBench", "ConAgua.Arena.WalkEmit",
   "ConAgua.Arena.WalkBenchLean",
-  "ConAgua.Capstone",
+  "ConAgua.Capstone", "ConAgua.Compiler.WFAll", "ConAgua.Compiler.WFAllBench",
   "ConAgua.Final.Twin", "ConAgua.Final.Statement",
   "ConAgua.Front.Fields", "ConAgua.Front.FieldsLink",
   "ConAgua.Front.Apply", "ConAgua.Front.StateDR", "ConAgua.Front.Line", "ConAgua.Front.LineRefine",

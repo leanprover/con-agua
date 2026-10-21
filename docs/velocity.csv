@@ -28,3 +28,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-21,levels,opus,9,2,"LevelArena: L view = arena view under ArenaR, denoteL ↦ LvR; lvl_eq refines lvlEq? (caches, NStoreWF as hypotheses), levelProg write set"
 2026-10-21,libs,opus,9,2,"item 4b: MemoRV (memory-reading value relation; MemoRG an instance), tombstone erase in MemoLib (decision: no separate map library, env index is direct), banks by generation-tagged keys (MemoBank: bank_enter/put/find, #guard run), tree-valued client MemoTree (LvR level pointers)"
 2026-10-21,levels,opus,6,1,"lvls_eq/ls_node refine lvlsEq? (list slices in POOL under ArenaR, caches as hypotheses)"
+2026-10-21,cresults,opus,15,6,"compiler: any number of results (results 6.. in a table result area, code for <=6 unchanged), compile_correct re-proved; WFAll: wf #guard for every program (frontAllProg passes); capstone frontAll_x64"

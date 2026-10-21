@@ -35,11 +35,20 @@ namespace Layout
 
 variable (G : Layout)
 
-/-- The bytes of the table that the code reads: the descriptors, the constant data and the entry
-arguments. -/
-def tabEnd : Nat := G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.nargs
+/-- The bytes of the table that the code reads or writes: the descriptors, the constant data, the
+result area and the entry arguments. -/
+def tabEnd : Nat := G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.nargs
+
+/-- Where result `i ≥ maxRes` goes. -/
+def resAddr (i : Nat) : Nat := G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * (i - maxRes)
 
 def InTab (x : Nat) : Prop := G.T ≤ x ∧ x < G.tabEnd
+/-- The descriptors and the constant data (the part of the table that `MemRel` describes). -/
+def InDesc (x : Nat) : Prop := G.T ≤ x ∧ x < G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords
+/-- The result area (inside the table). -/
+def InRes (x : Nat) : Prop :=
+  G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords ≤ x ∧
+    x < G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres
 def InStack (x : Nat) : Prop := G.lo ≤ x ∧ x < G.hi
 def In8 (a x : Nat) : Prop := G.b8 a ≤ x ∧ x < G.b8 a + G.s8 a
 def In64 (a x : Nat) : Prop := G.b64 a ≤ x ∧ x < G.b64 a + 8 * G.s64 a
@@ -58,6 +67,13 @@ structure Ok : Prop where
   arr8_disj : ∀ a < G.tab.nb, ∀ b < G.tab.nb, a ≠ b → ∀ x, G.In8 a x → ¬ G.In8 b x
   arr64_disj : ∀ a < G.tab.nw, ∀ b < G.tab.nw, a ≠ b → ∀ x, G.In64 a x → ¬ G.In64 b x
   arr8_64 : ∀ a < G.tab.nb, ∀ b < G.tab.nw, ∀ x, G.In8 a x → ¬ G.In64 b x
+
+theorem InRes.tab {G : Layout} {x : Nat} (h : G.InRes x) : G.InTab x :=
+  ⟨by have := h.1; omega, by have := h.2; simp only [Layout.tabEnd]; omega⟩
+
+theorem inRes_of {G : Layout} {x : Nat} (h1 : G.resAddr maxRes ≤ x) (h2 : x < G.resAddr G.tab.nres) :
+    G.InRes x := by
+  simp only [Layout.resAddr, Layout.InRes, Tab.nxres] at *; omega
 
 end Layout
 
@@ -78,6 +94,7 @@ structure MemRel (G : Layout) (m : Mem) (d : DataMem) : Prop where
   rom : ∀ (i : Nat) (h : i < G.tab.rom.length),
     d.get? (A (G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + i)) = some G.tab.rom[i]
   stack : ∀ x, G.InStack x → (d.get? (A x)).isSome
+  res : ∀ x, G.InRes x → (d.get? (A x)).isSome
 
 /-- The machine runs a body of a function with `nl` locals and an `F`-word frame, in L state `σ`. -/
 structure Inv (G : Layout) (nl F : Nat) (σ : St) (s : MachineData) : Prop where
@@ -93,8 +110,16 @@ structure Inv (G : Layout) (nl F : Nat) (σ : St) (s : MachineData) : Prop where
 def rres (R : Reg64s) : Nat → Word
   | 0 => R.rax | 1 => R.rdi | 2 => R.r8 | 3 => R.r9 | 4 => R.r10 | _ => R.r11
 
-/-- The first `n` result registers hold the values `vs` (`0` past the end of `vs`). -/
-def ResRel (n : Nat) (vs : List Word) (R : Reg64s) : Prop := ∀ i < n, rres R i = vs.getD i 0
+/-- Of the first `n` results, those in registers hold the values `vs` (`0` past the end of `vs`). -/
+def ResRel (n : Nat) (vs : List Word) (R : Reg64s) : Prop := ∀ i < n, i < maxRes → rres R i = vs.getD i 0
+
+/-- The results past the registers are in the result area. -/
+def ResMem (G : Layout) (vs : List Word) (d : DataMem) : Prop :=
+  ∀ i, maxRes ≤ i → i < G.tab.nres → rdW d (A (G.resAddr i)) = some (vs.getD i 0)
+
+/-- The results of a call, in the registers and the result area. -/
+def ResOut (G : Layout) (vs : List Word) (s : MachineData) : Prop :=
+  ResRel G.tab.nres vs s.regs ∧ ResMem G vs s.dmem
 
 theorem rres_set64_resReg (R : Reg64s) {i j : Nat} (hi : i < maxRes) (hj : j < maxRes)
     (v : BitVec 64) : rres (R.set64 (resReg i) v) j = if j = i then UInt64.ofBitVec v else rres R j := by
@@ -115,12 +140,12 @@ theorem rres_set64 (R : Reg64s) {r : Reg64}
 theorem ResRel.set64 {n : Nat} {vs : List Word} {R : Reg64s} (h : ResRel n vs R) {r : Reg64}
     (hr : r = .rcx ∨ r = .rdx ∨ r = .rsi ∨ r = .rsp ∨ r = .rbp ∨ r = .r14 ∨ r = .r15)
     (v : BitVec 64) : ResRel n vs (R.set64 r v) :=
-  fun i hi => by rw [rres_set64 R hr]; exact h i hi
+  fun i hi hm => by rw [rres_set64 R hr]; exact h i hi hm
 
 theorem ResRel.congr {n : Nat} {vs : List Word} {R R' : Reg64s} (h : ResRel n vs R)
     (h0 : R'.rax = R.rax) (h1 : R'.rdi = R.rdi) (h2 : R'.r8 = R.r8) (h3 : R'.r9 = R.r9)
-    (h4 : R'.r10 = R.r10) (h5 : R'.r11 = R.r11) : ResRel n vs R' := fun i hi => by
-  rw [← h i hi]
+    (h4 : R'.r10 = R.r10) (h5 : R'.r11 = R.r11) : ResRel n vs R' := fun i hi hm => by
+  rw [← h i hi hm]
   match i with
   | 0 => exact h0
   | 1 => exact h1
@@ -165,6 +190,24 @@ theorem Only.rdW_eq {a b x : Nat} {d d' : DataMem} (h : Only a b d d') (hx : x +
     rw [A_add]; exact h.same _ (by omega) (by omega)
 
 
+/-- Two 8-byte cells in disjoint sets of bytes do not overlap. -/
+theorem cell_disj {x y : Nat} {P Q : Nat → Prop} (hP : ∀ k < 8, P (x + k)) (hQ : ∀ k < 8, Q (y + k))
+    (h : ∀ t, P t → ¬ Q t) : y + 8 ≤ x ∨ x + 8 ≤ y := by
+  refine Classical.byContradiction fun hc => ?_
+  simp only [not_or, Nat.not_le] at hc
+  by_cases hxy : x ≤ y
+  · exact h y (by have := hP (y - x) (by omega); rwa [show x + (y - x) = y by omega] at this)
+      (by have := hQ 0 (by omega); simpa using this)
+  · exact h x (by have := hP 0 (by omega); simpa using this)
+      (by have := hQ (x - y) (by omega); rwa [show y + (x - y) = x by omega] at this)
+
+/-- A byte outside a set of bytes is not in an 8-byte cell inside it. -/
+theorem byte_cell_disj {x y : Nat} {P Q : Nat → Prop} (hP : ∀ k < 8, P (x + k)) (hQ : Q y)
+    (h : ∀ t, P t → ¬ Q t) : y < x ∨ x + 8 ≤ y := by
+  refine Classical.byContradiction fun hc => ?_
+  simp only [not_or, Nat.not_lt] at hc
+  exact h y (by have := hP (y - x) (by omega); rwa [show x + (y - x) = y by omega] at this) hQ
+
 /-! ## Changes inside the stack leave the memory relation alone -/
 
 section
@@ -182,19 +225,19 @@ theorem Layout.Ok.notStack_of_tab {x : Nat} (h : G.InTab x) : ¬ G.InStack x :=
 
 /-- A table word at offset `off` (within the table) survives a change in the stack. -/
 theorem Only.rdW_tab {a b : Nat} {d d' : DataMem} (h : Only a b d d')
-    (hab : ∀ x, a ≤ x → x < b → ¬ G.InTab x ∧ ¬ G.InArr x)
-    {off : Nat} (hoff : 8 ≤ off + 8) (hend : G.T + off + 8 ≤ G.tabEnd) :
+    (hab : ∀ x, a ≤ x → x < b → ¬ G.InDesc x ∧ ¬ G.InArr x)
+    {off : Nat} (hoff : 8 ≤ off + 8) (hend : G.T + off + 8 ≤ G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords) :
     rdW d' (A (G.T + off)) = rdW d (A (G.T + off)) :=
   rdW_congr fun j hj => by
     rw [A_add]
-    refine h.same _ (by have := hG.tab_end; omega) ?_
+    refine h.same _ (by have := hG.tab_end; simp only [Layout.tabEnd] at this; omega) ?_
     refine Classical.byContradiction fun hc => ?_
     simp only [not_or, Nat.not_lt] at hc
     exact (hab (G.T + off + j) (by omega) (by omega)).1 ⟨by omega, by omega⟩
 
-/-- A change outside the table and the arrays keeps the memory relation. -/
-theorem MemRel.only' {m : Mem} {d d' : DataMem} (hm : MemRel G m d) {a b : Nat} (h : Only a b d d')
-    (hab : ∀ x, a ≤ x → x < b → ¬ G.InTab x ∧ ¬ G.InArr x) : MemRel G m d' where
+/-- A change outside the descriptors, the constant data and the arrays keeps the memory relation. -/
+theorem MemRel.onlyD {m : Mem} {d d' : DataMem} (hm : MemRel G m d) {a b : Nat} (h : Only a b d d')
+    (hab : ∀ x, a ≤ x → x < b → ¬ G.InDesc x ∧ ¬ G.InArr x) : MemRel G m d' where
   nb := hm.nb
   nw := hm.nw
   size8 := hm.size8
@@ -217,15 +260,15 @@ theorem MemRel.only' {m : Mem} {d d' : DataMem} (hm : MemRel G m d) {a b : Nat} 
     simp only [not_or, Nat.not_lt] at hx
     exact (hab (G.b64 c + 8 * i + j) (by omega) (by omega)).2 (Or.inr ⟨c, hc, by omega, by omega⟩)
   limit := by
-    rw [h.rdW_tab hG hab (by omega) (by simp [Layout.tabEnd]; omega)]; exact hm.limit
+    rw [h.rdW_tab hG hab (by omega) (by omega)]; exact hm.limit
   base8 := fun c hc => by
-    rw [h.rdW_tab hG hab (by omega) (by simp [Layout.tabEnd, Tab.base8] <;> omega)]; exact hm.base8 c hc
+    rw [h.rdW_tab hG hab (by omega) (by simp only [Tab.base8]; omega)]; exact hm.base8 c hc
   len8 := fun c hc => by
-    rw [h.rdW_tab hG hab (by omega) (by simp [Layout.tabEnd, Tab.len8] <;> omega)]; exact hm.len8 c hc
+    rw [h.rdW_tab hG hab (by omega) (by simp only [Tab.len8]; omega)]; exact hm.len8 c hc
   base64 := fun c hc => by
-    rw [h.rdW_tab hG hab (by omega) (by simp [Layout.tabEnd, Tab.base64] <;> omega)]; exact hm.base64 c hc
+    rw [h.rdW_tab hG hab (by omega) (by simp only [Tab.base64]; omega)]; exact hm.base64 c hc
   len64 := fun c hc => by
-    rw [h.rdW_tab hG hab (by omega) (by simp [Layout.tabEnd, Tab.len64] <;> omega)]; exact hm.len64 c hc
+    rw [h.rdW_tab hG hab (by omega) (by simp only [Tab.len64]; omega)]; exact hm.len64 c hc
   rom := fun i hi => by
     have hw : G.tab.rom.length ≤ 8 * G.tab.romWords := by simp only [Tab.romWords]; omega
     have := hG.tab_end
@@ -234,8 +277,29 @@ theorem MemRel.only' {m : Mem} {d d' : DataMem} (hm : MemRel G m d) {a b : Nat} 
     refine Classical.byContradiction fun hc => ?_
     simp only [not_or, Nat.not_lt] at hc
     exact (hab (G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + i) (by omega) (by omega)).1
-      ⟨by omega, by simp only [Layout.tabEnd]; omega⟩
+      ⟨by omega, by omega⟩
   stack := fun x hx => h.grows _ (hm.stack x hx)
+  res := fun x hx => h.grows _ (hm.res x hx)
+
+/-- A change outside the table and the arrays keeps the memory relation. -/
+theorem MemRel.only' {m : Mem} {d d' : DataMem} (hm : MemRel G m d) {a b : Nat} (h : Only a b d d')
+    (hab : ∀ x, a ≤ x → x < b → ¬ G.InTab x ∧ ¬ G.InArr x) : MemRel G m d' :=
+  hm.onlyD hG h fun x h1 h2 => ⟨fun ⟨u, v⟩ => (hab x h1 h2).1 ⟨u, by simp only [Layout.tabEnd]; omega⟩,
+    (hab x h1 h2).2⟩
+
+theorem Layout.Ok.notStack_of_res {x : Nat} (h : G.InRes x) : ¬ G.InStack x := hG.tab_stack x h.tab
+theorem Layout.Ok.notArr_of_res {x : Nat} (h : G.InRes x) : ¬ G.InArr x := hG.tab_arr x h.tab
+
+/-- A result cell and a stack cell do not overlap. -/
+theorem Layout.Ok.res_stack_disj {x y : Nat} (hx : ∀ t < 8, G.InRes (x + t)) (hy : ∀ t < 8, G.InStack (y + t)) :
+    y + 8 ≤ x ∨ x + 8 ≤ y :=
+  cell_disj hx hy fun t h1 h2 => hG.notStack_of_res h1 h2
+
+/-- A change inside the result area keeps the memory relation. -/
+theorem MemRel.only_res {m : Mem} {d d' : DataMem} (hm : MemRel G m d) {a b : Nat} (h : Only a b d d')
+    (hab : ∀ x, a ≤ x → x < b → G.InRes x) : MemRel G m d' :=
+  hm.onlyD hG h fun x h1 h2 => ⟨fun ⟨_, v⟩ => by have := (hab x h1 h2).1; omega,
+    hG.notArr_of_res (hab x h1 h2)⟩
 
 /-- A change inside the stack keeps the memory relation. -/
 theorem MemRel.only {m : Mem} {d d' : DataMem} (hm : MemRel G m d) {a b : Nat} (h : Only a b d d')
@@ -255,6 +319,24 @@ theorem Inv.only {nl F : Nat} {σ : St} {s s' : MachineData} (hI : Inv G nl F σ
     have := hI.hi; have := hG.hi_le; have := hI.nlF
     rw [hsp, h.rdW_eq (by omega) (by omega)]; exact hI.frame x hx
   mem := hI.mem.only hG h fun x h1 h2 => ⟨by have := hI.lo; omega, by have := hI.hi; omega⟩
+
+/-- A change inside the result area keeps `Inv`. -/
+theorem Inv.only_res {nl F : Nat} {σ : St} {s s' : MachineData} (hI : Inv G nl F σ s) {a b : Nat}
+    (h : Only a b s.dmem s'.dmem) (hab : ∀ x, a ≤ x → x < b → G.InRes x)
+    (hsp : s'.regs.rsp = s.regs.rsp) (h15 : s'.regs.r15 = s.regs.r15) : Inv G nl F σ s' where
+  r15 := h15 ▸ hI.r15
+  lo8 := hsp ▸ hI.lo8
+  hi := hsp ▸ hI.hi
+  nlF := hI.nlF
+  frame := fun x hx => by
+    have := hI.hi; have := hG.hi_le; have := hI.nlF; have := hI.lo
+    rw [hsp, ← hI.frame x hx]
+    refine rdW_congr fun j hj => ?_
+    rw [A_add]
+    refine h.same _ (by omega) (Classical.byContradiction fun hc => ?_)
+    simp only [not_or, Nat.not_lt, Nat.not_le] at hc
+    exact hG.notStack_of_res (hab _ hc.1 hc.2) ⟨by omega, by omega⟩
+  mem := hI.mem.only_res hG h hab
 
 end
 end L.Compiler
