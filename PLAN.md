@@ -79,7 +79,8 @@ per-function separation logic.
   Lean and Rust lines (~30 s). `--list [REGEX]` lists targets with their status and links. Targets: the
   `ConRon`/`ConLeche` definitions `ConAgua.Final.TwinAccepts` reaches (no instances, auxiliaries, types,
   predicates, ROM data). Proven means every `@[refines T]` theorem uses only `propext`, `Classical.choice`,
-  `Quot.sound`; a target reached only through proven targets counts as proven.
+  `Quot.sound`; a target reached only through proven targets counts as proven (only sorry-free ones
+  cover: a refinement proved modulo `sorry` counts as `sorry` itself and covers none of its callees).
 - **Who runs it.** Lanes add links and may run the census to check their own numbers; only the coordinator
   runs `scripts/census.py --write` (regenerates `docs/progress.md`, appends a line to `docs/progress.csv`),
   on master after each batch of landings, so the time series has one line per master state and lanes never

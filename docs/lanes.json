@@ -194,7 +194,7 @@
 {
 "lane": "pinsenv",
 "model": "opus",
-"status": "running",
+"status": "done",
 "focus": "PinsR, EnvR, phase-2 declaration loop skeleton"
 },
 {
@@ -212,7 +212,7 @@
 {
 "lane": "strlit",
 "model": "sonnet",
-"status": "running",
+"status": "done",
 "focus": "String literals in the lit store"
 },
 {
@@ -232,5 +232,11 @@
 "model": "opus",
 "status": "running",
 "focus": "Track con-ron upstream: fingerprints, stale targets, bump script; bump to latest"
+},
+{
+"lane": "decls",
+"model": "opus",
+"status": "running",
+"focus": "Phase 2: ROM interner, declaration loop callees, declaration checks"
 }
 ]

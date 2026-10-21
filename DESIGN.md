@@ -4067,6 +4067,94 @@ tombstone antecedent and the existential value.
 
 None.
 
+### The declaration loop, top down (`Checker.lean`)
+
+Phase A and phase B of the binary's fold (`installThenCheck`) are L code now, with the callees
+that are not translated yet as **stubs** (L body `abort`, no census tag) whose refinement specs
+are stated and proved with `sorry`. The skeleton's refinements are real proofs from those specs.
+**Census tagging**: `refines_part T "skeleton, from the stub specs"`, so the skeleton counts as
+written. Tagged `refines` (proof modulo `sorry`), the census's coverage rule made every target
+below `installFold` "proven with `sorry`" — 769 of 1350, measured — which would read as progress
+that is not there. (Note for lane `census`: coverage through a `sorry` target is a coverage
+claim about callees that may have no L code at all; a `sorry` target probably should not cover.)
+Update (lane `sync`): coverage now flows only from sorry-free targets, and the skeleton is tagged
+`@[refines …]` again, so it counts as `sorry` and its callees keep their own status.
+
+* L functions (all in one generic program `p` with lookups): `install_then_check()` →
+  `install_fold_go`/`install_fold_next(i, cnt, vis)` (one record per call, recursion; a pair so
+  that each body is small) → `install_decl_step(i, vis)` (the `And` pin, then the step; `false` is
+  an `abort`) → `install_step(i, vis)` (`flushCaches; enterScratch; installStepGo`, then
+  `is_none(vis, v2)` or `is_some(i, vis, v2, g)`, the two arms of `installStep` named
+  `isNoneT`/`isSomeT` on the twin side) → `pend_push(g, i, v)`; phase B
+  `check_pending_go`/`check_pending_next(j, cnt, vis)` → `check_pending(j, vis)` (the view of
+  check `j` is its recorded `vis`, `EnvR.restrictTo`).
+* Stubs (`sorry`'d specs, each the shape the real function must prove, over any program, with
+  the view word as an argument when the spec would otherwise leave it a metavariable):
+  `and_pin_ok(i)`, `install_step_go(i, vis)` (returns
+  the new view and the value group as flag/record), `promote_vg(g, vis)`, `promote_new(k, vis,
+  fresh)`, `check_value_group(vis, g)`. Lanes that translate these replace the stub and prove the
+  spec; nothing in the skeleton changes unless the spec does.
+* The bracket is lane `whnf`'s real code (landed meanwhile): `flush_caches()`, `scratch_enter()`,
+  `scratch_drop()` refine `flushCaches`/`enterScratch`/`dropScratch` under `CheckR`, and write
+  `CTL` words below 128 only, so `flush_loop`/`enter_loop`/`drop_loop` lift them to `LoopR`
+  (`PendR.frameLo`, `LoopR.of_lo`); the skeleton's theorems take `BracketProg p` (their lookups).
+* The relation threaded: `LoopR dn m a vis fe pend ds` = `CheckR` + `PendR` (pending checks:
+  `PEND` 137, three words each, `CTL[130]` of them; the value group a record in `EREC`) +
+  the front's `DeclsR` (`DECL`/`DLP`: the declarations are the front's records, record `i` =
+  fold position `i`). `CheckR.frame_hi` (new, `Tiers.lean`): a writer of arrays ≥ 137 and `CTL`
+  words ≥ 130 keeps `CheckR` (`EnvR`'s frame narrowed to the arrays it reads, 132‥136, `CTL[128]`).
+  `PMemoR` (the promotion memo, arrays 144‥) is a field-less stub like `CoreR`.
+* Errors: every twin `.error` result is an L `abort`; the posts are the `.ok` branch
+  (`FoldOut`, `FoldPost`, `PendPost`).
+
+Proof findings (the house form, `vcgen` + `finish`, with these adjustments):
+* **Pin every precondition-only argument** of a callee spec (state, `fe`, `pend`, `pm`, `vg`,
+  the view word when it is not an argument): left as `·` they stay metavariables and `finish`
+  fails with an unreadable model. Twin states after a chain are static terms
+  (`AM.st enterScratch (AM.st flushCaches a₀)`), so pinning works when each L function is one
+  straight line; branches whose twin states differ go into separate L functions (`is_none`,
+  `is_some`), and the twin's arms are named (`installStepK`).
+* An index into the declarations is `dsAt ds i` (a plain function of the word), not `ds[i.toNat]`:
+  the dependent bound proof blocks congruence between `ds[(loc 0).toNat]` and `ds[i.toNat]`, and
+  `ds.getD` is unfolded by `sym` into a `dite`.
+* **State the inner triple over the twin's pieces, assemble by hand.** Letting `grind` combine
+  `AM.ok_bind`/`AM.st_bind` with a callee's post and a conditional rewrite failed repeatedly
+  (`installStep`, `installFold`); a post listing the pieces (`AM.ok flushCaches a₀ ∧ … ∧ LoopR …`)
+  goes through, and a 3-line `triple_post` with a run lemma (`installStep_ok`,
+  `installFold_cons_ok`, `checkPending_ok`, `installThenCheck_ok`, each by `AM.run_of_ok` +
+  `simp only [StateT.run_bind, exc_ok_bind, …]`) assembles the twin.
+* Local-variable facts across several calls sometimes need help: `finish (gen := 20)` for four
+  `LocEq` hops, or a stated `hloc`/`hmemL`/`hret` (the locals and memory after `setLocs`).
+* `install_step_go`'s spec needed "flag ≠ 0 → value group ≠ none": a decoder that may fail must
+  say so in the spec, or the L branch and the twin's `match` disagree.
+
+### Measurements (`lake env lean`, one run, machine shared)
+
+| file | lines | time | notes |
+|---|---:|---:|---|
+| `EnvRec.lean` | 145 | 0.7 s | decoders only |
+| `Pins.lean` | 342 | 0.9 s | 88 generated reader theorems |
+| `PinsNatOp.lean` | 158 | 17 s | the 16-arm `vcgen` (`maxHeartbeats 2000000`) |
+| `Env.lean` | 791 | 2.4 s | rows, `find?`/`push`/`popTemp`/`erase`, `decide +kernel` write set |
+| `Checker.lean` | 1076 | 12 s user | skeleton + stub specs |
+
+L lines: `pin_at`/`pin_word` 9, `nat_op_result` 29, env 60, checker skeleton 75 (+ 5 stubs).
+
+### `sorry`s (all in `Checker.lean`, the stub specs; each is the spec its lane must prove)
+
+`andPinOk_spec`, `installStepGo_spec`, `promoteVG_spec`, `promoteNew_spec`,
+`checkValueGroup_spec`. Nothing tagged
+for the census uses them except through `refines_part`.
+
+### Not done
+
+* `internReservedPins` / `internAllPins`: they intern con-leche `Name`s and basis/pin-set `Expr`s
+  (ROM data); they need the ROM interner (ROADMAP §2 item 11, phase 0) first. `PinsR` is the
+  relation they will establish (flag word 0 set last).
+* `eraseInstalled`/`indexPromoted`/`promoteNew` (they need `promoteCIList`); `env_erase` is the
+  step they will loop. `mkIFEnv` beyond the empty environment.
+* The record pool's writer (`CTL[129]` top): the installers will build constant records in `EREC`.
+
 ## The `lit` store's `strVal` arm, and expression lines accept strings (2026-10-21, lane `strlit`)
 
 Files: `ConAgua/Arena/Store.lean`, `ConAgua/Arena/LitRefine.lean`, `ConAgua/Arena/ArenaRel.lean`
@@ -4324,12 +4412,16 @@ lockfile), `vendor/UPSTREAM` + `vendor/patches/` (the vendored state as data),
   toolchain bump re-records everything (`--reviewed .`) and is never combined with a twin bump; and
   a changed proof term inside a definition's value (a `decreasing_by`) makes it stale
   spuriously. 32 bits of hash entropy: a missed change is a 2⁻³² event per changed target.
-* **Which targets get a row**: every target that is not `todo`, i.e. with L code, a proof, or
-  coverage (reached only through proven targets). A covered target has no link of its own, so its
-  stale entry names the linked targets above it whose proofs cover it. A row is written once
-  (`--write` adds rows for new links) and only replaced by `--reviewed REGEX`, run by the lane that
-  checked the code against the new twin. The row keeps the upstream revision it was recorded at,
-  so the stale list prints the exact `git diff` to read.
+* **Every target gets a row; stale also looks below.** A target with L code, a proof or coverage
+  is stale when its own fingerprint changed, or when a `todo` target below it changed (reached
+  through `todo` targets only: twin code its own L code stands for). The second rule was found by
+  this bump: `flushCaches` is unchanged, but `Caches.empty` below it gained a field. Linked or
+  covered callees are not looked through: they are flagged themselves. A stale covered target
+  names the linked targets above it whose proofs cover it. `--reviewed REGEX` (by the lane that
+  checked) re-records the matching targets and every changed `todo` target that no other stale
+  target still reaches; `--record` (run by the bump) and `--write` add missing rows and settle
+  changed `todo` targets that no linked target reaches. Each row keeps the upstream revision it
+  was recorded at, so the stale list prints the exact `git diff` to read.
 * **Stale is a flag, not a status**: a stale proven target stays proven in the counts (the proof
   still checks against the vendored twin, or the build is red); the flag says the L code may no
   longer be what the twin computes on the other side of the relation, e.g. a cache the relation
@@ -4342,3 +4434,49 @@ lockfile), `vendor/UPSTREAM` + `vendor/patches/` (the vendored state as data),
 * con-ron's own sync (`scripts/bump-con-leche.sh`, `provenance.py`, `twin-lines.py`) tracks a
   `(pin, path, line range)` citation per item and diffs the cited text between pins; we have no
   per-item citations of our own beyond the census links, and the elaborated fingerprint needs none.
+
+### con-ron bump to `12752ca7` (con-leche `ae1f3198`), 2026-10-21
+
+**What changed upstream** (con-ron task #127, con-leche tasks #359/#361): the eager tower keeps its
+memos. Before, every eager comparison (the knot's `defeqE` slot) ran on emptied mode memos
+(`takeModeMemos`) and threw away what it learned (`putModeMemos`). Now `Caches` has a fifteenth
+field `eagerMemos : ModeMemos`, the eager tower's own six mode memos, kept for the declaration;
+`enterEager mode.eager` swaps them into the six fields (from a plain mode; at an eager mode
+nothing moves) and returns the plain set, `leaveEager` stores the six back as the eager set and
+restores the plain ones. `defeqE` now also memoizes its verdict (`defeqC` probe/insert on the
+eager set). `takeModeMemos`/`putModeMemos` are gone; `Caches.empty`, `Caches.modeMemos`,
+`ModeMemos.empty` are new or changed. (con-leche: `CState.eagerMemos`, `withEagerMemos`;
+grind-ring-5 −30 % instructions.) Also task #359 (con-leche proofs only: cached loops unfold by
+`f.eq_def`). Theorem 1 followed upstream; Theorem 2 is not vendored as buildable.
+
+**Bump result.** All patches re-applied; one conflict, `Bridge/Core/Memo.lean`, where the new
+`enterEager_spec`/`leaveEager_spec` replace the specs our patch touched; they needed the same
+`dsimp only` before `vcgen` (nested `{ … with }`), now in `con-ron/0002`. The KnotC patch applied
+with an offset. Everything builds, our code included, with no change: no L proof mentions the
+new field, because `CoreR` relates the nine L caches to their twin fields and says nothing about
+the others.
+
+**Stale targets** (`scripts/census.py --stale`, 7):
+* `flushCaches` (proven, lane `whnf`): `Caches.empty` now also empties `eagerMemos`. The proof
+  still checks only because `CoreR` ignores the new field. **Lane `whnf` (and `libs`, owner of
+  `MemoBank.lean`)**: the banked design (`bank_enter`/`bank_leave` = a fresh empty bank per eager
+  comparison, dropped afterwards) no longer matches the twin. The twin now has exactly two
+  mode-memo sets, plain and eager, both kept for the declaration and cleared by `flushCaches`;
+  a nested eager comparison uses the same eager set. In L this is two fixed banks (generations
+  0 and 1, or two array groups), with no generation counter. `CoreR` needs a clause for
+  `eagerMemos`, `flush_caches` must clear the eager bank, and the `defeqE` slot (when it is
+  written) probes and inserts `defeqC` on the eager bank. `MemoBank.lean`'s and
+  `CoreCaches.lean`'s doc comments still describe take/put.
+* `lvlEq?`, `lvlsEq?` (proven, lane `levels`): their own code is unchanged, but `readLevelM`/
+  `readLevelsM` below them write `{ s.caches with readLC := … }`, and that changed because of the
+  added field. Most likely no L change: review, then `--reviewed 'lvlsEq\?|lvlEq\?'`.
+* `installStep`, `installDeclStep`, `checkPending`, `checkPendingList` (sorry, lane `pinsenv`):
+  the same field-add, through `Caches.empty` (the per-declaration bracket) and the readbacks under
+  the stubs. Check the bracket's `CoreR` use once lane `whnf` has extended `CoreR`.
+
+### Census: coverage only from sorry-free targets (2026-10-21, lane `sync`)
+At lane `pinsenv`'s request: a target proved only modulo `sorry` counts as `sorry` but covers none
+of its callees (before, a top-down skeleton over stub specs made 769 targets "sorry" by coverage).
+The skeleton's five theorems in `ConAgua/Arena/Checker.lean` are tagged `@[refines …]` again
+(they were `refines_part … "skeleton, from the stub specs"` to work around it), so the census now
+shows 13 targets proven with `sorry`.

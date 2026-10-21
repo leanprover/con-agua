@@ -207,23 +207,6 @@ theorem defeqArgC_spec (ih : SSimC mode env f) {s₀ : CState} {d : Nat} {a ta t
   sym only [conleche_grind, defeqArg] =>
     vcgen [defeqArgI, ih.defeq_spec hs, ih.defeqE_spec hs] <;> finish
 
-/-- `defEqListI`'s fall-through arms as unconditional equations
-(`vcgen` cannot use the conditional `defEqListI.eq_3`). -/
-theorem defEqListI_nil_cons (r : CoreFnsI) (fe : FEnv) (d : Nat) (b : Expr) (bs : List Expr) :
-    defEqListI r fe d [] (b :: bs) = pure false := rfl
-
-theorem defEqListI_cons_nil (r : CoreFnsI) (fe : FEnv) (d : Nat) (a : Expr) (as : List Expr) :
-    defEqListI r fe d (a :: as) [] = pure false := rfl
-
-/-- The pure side's fall-through arms likewise: `grind` does not
-discharge the premise `∀ a as b bs, True` that `defEqList.eq_3` reduces
-to. -/
-theorem defEqList_nil_cons (env : Env) (d : Nat) (b : Expr) (bs : List Expr) :
-    defEqList (fueledFns mode env) env d [] (b :: bs) = pure false := rfl
-
-theorem defEqList_cons_nil (env : Env) (d : Nat) (a : Expr) (as : List Expr) :
-    defEqList (fueledFns mode env) env d (a :: as) [] = pure false := rfl
-
 /-- The pairwise definitional-equality helper simulates its fueled
 original on well-scoped lists. -/
 theorem defEqListC_spec (ih : SSimC mode env f) {d : Nat} :
@@ -243,34 +226,19 @@ theorem defEqListC_spec (ih : SSimC mode env f) {d : Nat} :
         vcgen [defEqListI] <;> finish
     | cons _ _ =>
       intro _ _ _ _
-      sym only [conleche_grind, defEqList_nil_cons] =>
-        vcgen [defEqListI_nil_cons] <;> finish
+      sym only [conleche_grind, defEqList] =>
+        vcgen [defEqListI.eq_def] <;> finish
   | cons a as ihA =>
     intro brgs
     cases brgs with
     | nil =>
       intro _ _ _ _
-      sym only [conleche_grind, defEqList_cons_nil] =>
-        vcgen [defEqListI_cons_nil] <;> finish
+      sym only [conleche_grind, defEqList] =>
+        vcgen [defEqListI.eq_def] <;> finish
     | cons b bs =>
       intro _ _ _ _
       sym only [conleche_grind, defEqList.eq_2] =>
         vcgen [defEqListI, ih.defeq_spec, ihA] <;> finish
-
-/-- `iotaCertsFullIAux`'s step as one unconditional equation (the
-equation compiler's fall-through arm is conditional). -/
-theorem iotaCertsFullIAux_cons (r : CoreFnsI) (fe : FEnv) (d : Nat) (ty : Expr)
-    (acc : List Expr) (a : Expr) (rest : List Expr) :
-    iotaCertsFullIAux r fe d ty acc (a :: rest) =
-      match ty, acc with
-      | .forallE dom body, acc => instListM dom acc >>= fun dom' =>
-          r.infer d a >>= fun ta => r.defeq d ta dom' >>= fun c =>
-          if c then iotaCertsFullIAux r fe d body (a :: acc) rest else pure false
-      | .bvar _, [] => pure false
-      | .bvar k, acc@(_ :: _) => instListM (.bvar k) acc >>= fun ty' =>
-          iotaCertsFullIAux r fe d ty' [] (a :: rest)
-      | _, _ => pure false := by
-  cases ty <;> cases acc <;> rw [iotaCertsFullIAux] <;> (try rfl) <;> (intros; contradiction)
 
 /-- The pure certificate loop at a bulk-instantiated telescope, stepped
 in the cached loop's shape. -/
@@ -308,11 +276,11 @@ theorem iotaCertsFullCAux_spec (ih : SSimC mode env f) {d : Nat} :
       vcgen [iotaCertsFullIAux.eq_1] <;> finish
   | _ :: as, _, [], _, hs, _, _ => by
     sym only [conleche_grind, iotaCertsFull_instList_cons] =>
-      vcgen [iotaCertsFullIAux_cons, instListM_spec hs, ih.infer_spec, ih.defeq_spec,
+      vcgen [iotaCertsFullIAux.eq_def, instListM_spec hs, ih.infer_spec, ih.defeq_spec,
         iotaCertsFullCAux_spec ih (args := as)] <;> finish
   | a :: as, _, _ :: _, _, hs, _, _ => by
     sym only [conleche_grind, iotaCertsFull_instList_cons, Expr.instantiateList_nil] =>
-      vcgen [iotaCertsFullIAux_cons, instListM_spec hs, ih.infer_spec, ih.defeq_spec,
+      vcgen [iotaCertsFullIAux.eq_def, instListM_spec hs, ih.infer_spec, ih.defeq_spec,
         iotaCertsFullCAux_spec ih (args := as),
         iotaCertsFullCAux_spec ih (args := a :: as) (acc := [])] <;> finish
 termination_by args _ acc => (args.length, acc.length)

@@ -16,10 +16,10 @@ pure fueled comparands.  Every walk is a `Std.WP` triple proved by
 `vcgen` and `grind` (`ConLeche/Verify/Cached/Grind.lean`); the bodies
 are stated as `BodySpec`s, which the knot (`KnotC.lean`) consumes.
 
-The loops get one unconditional unfolding equation per cached step
-(`betaPeelI_cons`, `whnfAppI_cons`, `inferSpineI_cons`,
-`inferSpineIOI_cons`); the pure mirrors' own equation lemmas go into the
-`sym` list.  The bodies' `Expr` dispatch is one level deep, so the pure
+The loops are unfolded by their own `eq_def` in the `vcgen` list (the
+generated per-arm equations of their inner `match` are conditional, which
+`vcgen` skips); the pure mirrors' own equation lemmas go into the `sym`
+list.  The bodies' `Expr` dispatch is one level deep, so the pure
 bodies are unfolded as they are (one equation per constructor); where the
 cached body walks a loop the chained specification does not
 (`whnfCoreBody`'s head-normalization loop, `inferBody`'s spine), a
@@ -112,35 +112,15 @@ theorem reduceProjCoreC_spec (ih : SSimC mode env f) {d : Nat} {sn : Name} {ip :
 Each walk below is `sym only [conleche_grind, …] => vcgen […] <;> finish`
 (`ConLeche/Verify/Cached/Grind.lean`).  The cached loops match their
 head on `.lam`, and the equation compiler states their `a :: rest` step
-as one equation per arm, the fall-through one conditional; `vcgen` needs
-a single unconditional equation to unfold, so each loop gets one
-(`betaPeelI_cons`, `whnfAppI_cons`, the latter with the ι arity guard
-already discharged by `iotaArityOk_guard`).  `vcgen` splits the `match`
+as one equation per arm, the fall-through one conditional, which `vcgen`
+skips; the unconditional `eq_def` unfolds them instead (`whnfAppI`'s by
+`rw` before `sym`, so that `iotaArityOk_guard` can discharge the ι arity
+guard: `vcgen` splits an `ite` before it tries an equation about it).
+`vcgen` splits the `match`
 and hands each arm its fall-through hypothesis; the pure mirrors'
 own equation lemmas (`betaPeelW.eq_*`, `whnfAppW.eq_*`, the fall-through
 one included) go into the `sym` list, and `grind` discharges the
 fall-through premise from the arm's hypothesis. -/
-
-theorem betaPeelI_cons (r : CoreFnsI) (fe : FEnv) (d : Nat) (t : Expr) (acc : List Expr)
-    (a : Expr) (rest : List Expr) :
-    betaPeelI r fe d t acc (a :: rest) =
-      match t with
-      | .lam _ body => betaPeelI r fe d body (a :: acc) rest
-      | t => instListM t acc >>= fun e' => mkAppNM e' (a :: rest) >>= fun e'' =>
-          pure (WhnfStep.cont e'') := by
-  cases t <;> rw [betaPeelI] <;> (intro _ _ h; cases h)
-
-theorem whnfAppI_cons (r : CoreFnsI) (fe : FEnv) (d : Nat) (v a : Expr) (rest : List Expr) :
-    whnfAppI mode r fe d v (a :: rest) =
-      match v with
-      | .lam _ body => betaPeelI r fe d body [a] rest
-      | v => iotaRecI mode r fe d (.app v a) >>= fun o =>
-        match o with
-        | some e'' => mkAppNM e'' rest >>= fun e' => pure (WhnfStep.cont e')
-        | none => whnfAppI mode r fe d (.app v a) rest := by
-  cases v <;> (rw [whnfAppI] <;> first
-    | rfl | (intro _ _ h; cases h)
-    | (simp only [pure_bind, iotaArityOk_guard]; try congr 1))
 
 /-- The peel step's scope: a binder peeled off a well-scoped
 instantiated lambda, instantiated with one more well-scoped argument. -/
@@ -169,7 +149,7 @@ theorem betaPeelC_spec (r : CoreFnsI) {d : Nat} :
   | cons _ rest ihr =>
     intro _ _ _ hs _ _
     sym only [conleche_grind, betaPeelW.eq_2, betaPeelW.eq_3] =>
-      vcgen [betaPeelI_cons, mkAppNM, instListM_spec hs, ihr] <;> finish
+      vcgen [betaPeelI.eq_def, mkAppNM, instListM_spec hs, ihr] <;> finish
 
 /-- The bulk-beta argument loop simulates its pure mirror. -/
 theorem whnfAppC_spec (hμ : mode.verifiedChecks = true) (ih : SSimC mode env f)
@@ -187,8 +167,9 @@ theorem whnfAppC_spec (hμ : mode.verifiedChecks = true) (ih : SSimC mode env f)
       vcgen [whnfAppI] <;> finish
   | cons _ rest ihr =>
     intro _ _ _ _ _
+    rw [whnfAppI.eq_def]; simp only [iotaArityOk_guard]
     sym only [conleche_grind, whnfAppW.eq_2, whnfAppW.eq_3] =>
-      vcgen [whnfAppI_cons, mkAppNM, iotaRecC_spec hμ ih henv,
+      vcgen [mkAppNM, iotaRecC_spec hμ ih henv,
         betaPeelC_spec (coreKnotI mode (mkFEnv env) f), ihr] <;> finish
 
 /-- One head-normalization step simulates its pure mirror. -/
@@ -316,44 +297,8 @@ theorem CoreFns.ioView_infer {m : Type → Type} (r : CoreFns m) (d : Nat) (e : 
 
 /-! ### The inference spine loops
 
-As for the argument loop: one unconditional equation per cached loop
-step (`inferSpineI_cons`, `inferSpineIOI_cons`), the pure mirrors' own
-equation lemmas in the `sym` list. -/
-
-theorem inferSpineI_cons (r : CoreFnsI) (fe : FEnv) (d : Nat) (ty : Expr) (acc : Array Expr)
-    (a : Expr) (rest : List Expr) :
-    inferSpineI r fe d ty acc (a :: rest) =
-      (match ty with
-      | .forallE dom body => do
-        let dom' ← instListRevM dom acc
-        let ta ← r.infer d a
-        unless ← defeqArgI r d a ta dom' do
-          throw (.invalid "application type mismatch")
-        inferSpineI r fe d body (acc.push a) rest
-      | ty => do
-        let ty' ← instListRevM ty acc
-        let w ← r.whnf d ty'
-        match w with
-        | .forallE dom body => do
-          let ta ← r.infer d a
-          unless ← defeqArgI r d a ta dom do
-            throw (.invalid "application type mismatch")
-          inferSpineI r fe d body #[a] rest
-        | _ => throw (.invalid "function expected")) := by
-  cases ty <;> rw [inferSpineI] <;> first | rfl | (intro _ _ h; cases h)
-
-theorem inferSpineIOI_cons (r : CoreFnsI) (fe : FEnv) (d : Nat) (ty : Expr)
-    (acc : Array Expr) (a : Expr) (rest : List Expr) :
-    inferSpineIOI r fe d ty acc (a :: rest) =
-      (match ty with
-      | .forallE _ body => inferSpineIOI r fe d body (acc.push a) rest
-      | ty => do
-        let ty' ← instListRevM ty acc
-        let w ← r.whnf d ty'
-        match w with
-        | .forallE _ body => inferSpineIOI r fe d body #[a] rest
-        | _ => throw (.invalid "function expected")) := by
-  cases ty <;> rw [inferSpineIOI] <;> first | rfl | (intro _ _ h; cases h)
+As for the argument loop: the cached loops by their `eq_def`, the pure
+mirrors' own equation lemmas in the `sym` list. -/
 
 /-- The application-inference spine loop simulates its pure mirror. -/
 theorem inferSpineC_spec (ih : SSimC mode env f) {d : Nat} :
@@ -372,7 +317,7 @@ theorem inferSpineC_spec (ih : SSimC mode env f) {d : Nat} :
   | cons _ rest ihr =>
     intro _ _ _ _ _ _
     sym only [conleche_grind, inferSpine.eq_2, inferSpine.eq_3, toListRev_singleton] =>
-      vcgen [inferSpineI_cons, instListRevM_spec (mode := mode) (env := env), ih.infer_spec,
+      vcgen [inferSpineI.eq_def, instListRevM_spec (mode := mode) (env := env), ih.infer_spec,
         ih.whnf_spec, defeqArgC_spec ih, ihr] <;> finish
 
 /-- The io-grade spine loop simulates its pure mirror. -/
@@ -393,7 +338,7 @@ theorem inferSpineIOC_spec (ih : SSimC mode env f) {d : Nat} :
   | cons _ rest ihr =>
     intro _ _ _ _ _ _
     sym only [conleche_grind, inferSpineIO.eq_2, inferSpineIO.eq_3, toListRev_singleton] =>
-      vcgen [inferSpineIOI_cons, instListRevM_spec (mode := mode) (env := env),
+      vcgen [inferSpineIOI.eq_def, instListRevM_spec (mode := mode) (env := env),
         ih.ioWhnf_spec, ihr] <;> finish
 
 /-! ### The inference bodies -/
