@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Wrapper around `lake` that points it at the project-wide shared Lake artifact
+# cache (DESIGN.md, "The shared Lake artifact cache"). Use this instead of
+# plain `lake` in every worktree, including the main tree.
+#
+# Mechanism: Lake 5 (this toolchain, nightly-2026-10-20) keys its local
+# artifact cache by content (source bytes, import artifact hashes, toolchain,
+# options, module name -- no absolute path), so one cache serves every
+# worktree and branch. Reading from it is Lake's default whenever
+# LAKE_CACHE_DIR resolves to a real directory; writing needs
+# LAKE_ARTIFACT_CACHE=true (set that yourself before calling this wrapper when
+# seeding). There is no lakefile.toml option for the cache *directory* itself
+# -- only LAKE_ARTIFACT_CACHE / LAKE_RESTORE_ARTIFACTS have lakefile.toml
+# equivalents (`enableArtifactCache`, `restoreAllArtifacts`), and this
+# project's defaults (read-only) already match what we want, so this wrapper
+# only needs to set the directory.
+#
+# The cache directory MUST live under this checkout's own `_tmp/`, not
+# Lake's default ($ELAN_HOME/toolchains/<tc>/lake/cache): that default is a
+# separate bind mount in the agent sandbox, so Lake cannot hard-link out of
+# it and silently copies every restored olean instead (found in con-ron,
+# task #97-CACHE).
+#
+# `git rev-parse --show-toplevel` gives the WORKTREE's own root, not the main
+# tree's. That's fine as long as the worktree has `_tmp` set up as a symlink
+# to the main tree's `_tmp` (see scripts/new-worktree.sh) -- then this
+# resolves to the one shared cache either way.
+set -euo pipefail
+root="$(git rev-parse --show-toplevel)"
+export LAKE_CACHE_DIR="$root/_tmp/lake-cache"
+exec lake "$@"

@@ -3369,3 +3369,94 @@ malformed line's number, aborts on an unbound id.
 ### `sorry`s
 
 None.
+
+## The shared Lake artifact cache (2026-10-21, lane `cache`)
+
+Ported from con-ron (`_tmp/ref/con-ron/CLAUDE.md`, "The shared Lake artifact cache", task
+#97-CACHE), which hit the same problem first: ~1750 modules, full build ~2 min wall on 96 cores
+and growing, every agent worktree under `_tmp/wt/` otherwise rebuilding from scratch.
+
+### Mechanism
+
+Lake 5 (this toolchain, `nightly-2026-10-20`) keeps a content-addressed local artifact cache
+keyed by each module's *input hash* (source bytes, import artifact hashes, toolchain, options,
+module name) — no absolute path in the key, so one cache directory serves every worktree and
+branch and survives a worktree being deleted. Confirmed in the Lake source
+(`~/.elan/toolchains/*nightly-2026-10-20*/src/lean/lake/Lake/Config/{Env,PackageConfig,Monad}.lean`,
+`Lake/Build/Module.lean`):
+* `LAKE_CACHE_DIR` picks the cache directory; with no override Lake falls back to
+  `$ELAN_HOME/toolchains/<tc>/lake/cache`, a separate bind mount in the agent sandbox, so Lake
+  cannot hard-link out of it and silently *copies* every restored artifact instead (con-ron's
+  finding). **There is no lakefile.toml equivalent for the cache directory** — it's resolved
+  once in `Env.compute`, from the process environment, before any lakefile is read.
+* `Package.isArtifactCacheReadable` defaults to `true` and `Package.isArtifactCacheWritable`
+  defaults to `false` (`Lake/Config/Monad.lean`) — i.e. **reading is automatic, writing is
+  opt-in**, out of the box, with no lakefile.toml change needed. The env vars
+  `LAKE_ARTIFACT_CACHE` / `LAKE_RESTORE_ARTIFACTS` (or, if we ever wanted to flip the default,
+  the lakefile.toml options `enableArtifactCache` / `restoreAllArtifacts` on the root package)
+  only matter for *writing*; we leave them unset in `lakefile.toml` and set them only on the one
+  build that seeds the cache. `Module.lean`'s read path (`fetchCore`, the
+  `isArtifactCacheWritable = false` branch) calls `fetchFromCache? … (restoreAll := true)`
+  unconditionally, so a read-only build always restores full build-directory artifacts (not just
+  cache-internal ones) when it hits a cache entry — this is the "hard-linked into `.lake/build`,
+  0 bytes of disk" behaviour.
+
+Since `LAKE_CACHE_DIR` can only be set by environment variable, and an agent's shell does not
+keep env vars between tool calls (`PLAN.md` "Process rules"), the project does not rely on
+anyone sourcing anything: **`scripts/lake`** is a wrapper that computes `git rev-parse
+--show-toplevel`, exports `LAKE_CACHE_DIR="$root/_tmp/lake-cache"`, and `exec`s the real `lake`.
+Every build, in every worktree, is `scripts/lake build …` instead of plain `lake build …` — no
+sourcing, no persistence needed, just a different binary name. `git rev-parse --show-toplevel`
+returns the *worktree's own* root, which only resolves to the one shared cache because
+`scripts/new-worktree.sh` symlinks the worktree's `_tmp` to the main tree's `_tmp` (the same
+"shared through a symlink" convention con-ron uses).
+
+`scripts/new-worktree.sh <path-under-_tmp/wt> [<rev>]` wraps `git worktree add` and then:
+* symlinks `_tmp` (hence `_tmp/lake-cache`) in from the main tree;
+* symlinks `.lake/packages` in from the main tree too. Kraken (the one `[[require]]` in
+  `lakefile.toml`) is a git dependency pinned by `rev`; its checkout and its own small build
+  directory (`.lake/packages/Kraken/.lake/build`, ~25 MB, separate from the root workspace's
+  `.lake/build` because it is a dependency package, not vendored source) are identical across
+  every worktree on the same lakefile, so there is nothing a fresh worktree needs the network
+  for. **Never `lake update` against the symlinked copy from a worktree** — that's shared
+  mutable state; do it in the main tree.
+It refuses a path outside `_tmp/wt/`, matching the "worktrees go in `_tmp/`" rule.
+
+### Seeding and landing policy
+
+Seeding is one build: `LAKE_ARTIFACT_CACHE=true LAKE_RESTORE_ARTIFACTS=true scripts/lake build`
+from a tree that already has the artifacts. It re-elaborates nothing when the tree is up to
+date — it just hard-links what's already in `.lake/build` into the cache.
+
+**Policy: whoever merges a lane into master already has to build master in the main tree to
+confirm it's green (PLAN.md, "speed over ceremony"); that build is the seed.** Just run it with
+the two env vars set instead of plain `scripts/lake build` — same build, same cost when the tree
+is already current (measured: 0.55 s to hard-link 1800 modules' worth of artifacts already on
+disk into an existing cache), and it keeps the shared cache current with no separate step, no
+cron job, and no lane having to remember a second command. Do not turn `LAKE_ARTIFACT_CACHE` on
+for routine edit-loop builds — every agent writing to the same cache concurrently is unnecessary
+contention for no benefit (reading is already free), and the merge/landing point is the one place
+a "master is up to date and worth caching" check is naturally already happening.
+
+**GC**: the cache pins every artifact ever written to it, so it only grows (toolchain bumps,
+renamed modules, abandoned lanes all leave orphans behind). There is no automatic eviction.
+Check size with `du -sh _tmp/lake-cache`; clear it with `scripts/lake cache clean` (or
+`rm -rf _tmp/lake-cache`, same effect, both just lose the cache, never the build). Worth doing
+occasionally (say, after a toolchain bump) — not on every landing.
+
+### Measurements (2026-10-21, this machine, concurrent with five other agent worktrees building)
+
+| build | wall time | note |
+|---|---:|---|
+| main tree, plain `scripts/lake build`, stale `.lake/build` | 2m18s (1800 jobs) | brings master's own build dir current; this is the baseline "full build" |
+| seed: `LAKE_ARTIFACT_CACHE=true LAKE_RESTORE_ARTIFACTS=true scripts/lake build`, tree already current | 0.55s | pure hard-linking into `_tmp/lake-cache`, no re-elaboration |
+| cache size after seeding | 1.7G in `_tmp/lake-cache` (apparent; see dedup note below) | |
+| fresh worktree (`scripts/new-worktree.sh`, no `.lake/build`), `scripts/lake build` | 0.365s (1800 jobs) | all restored from cache, zero re-elaboration |
+
+**Disk**: `du -sh` on the fresh worktree's `.lake/build` alone reports 1.7G — `du` cannot know a
+directory's blocks are hard-linked elsewhere unless it's told to look. Passing all three
+locations to one `du` invocation (`du -sch .lake/build _tmp/lake-cache _tmp/wt/cachetest/.lake/build`,
+from the main tree) lets GNU `du` deduplicate by inode across them, same as the filesystem
+itself does: the combined total is **3.3G — identical to the main tree's `.lake/build` alone**.
+The cache and the fresh worktree's entire 1800-module build directory cost ~0 bytes of *marginal*
+disk; `stat -c %h` on a sample olean shows `links=3` (main tree, cache, worktree, same inode).
