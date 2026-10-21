@@ -43,5 +43,6 @@ public import ConAgua.Scan.ValuesLink
 public import ConAgua.Scan.RecordsLink
 public import ConAgua.Scan.LineLink
 public import ConAgua.Scan.DriverLink
+public import ConAgua.Scan.ValidatorLink
 public import ConAgua.Arena.NatAdd
 public import ConAgua.Arena.NatMul
