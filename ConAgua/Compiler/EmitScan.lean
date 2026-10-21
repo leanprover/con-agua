@@ -8,4 +8,4 @@ open L L.Compiler L.Examples
 
 def main (args : List String) : IO Unit := do
   let out := args.headD "scan.s"
-  IO.FS.writeFile out (asmText { nb := 1, nw := 0 } scanProg "skip_braced")
+  IO.FS.writeFile out (asmText (Prog.tab scanProg 1 0) scanProg "skip_braced")

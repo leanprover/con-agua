@@ -115,19 +115,6 @@ grind_pattern [arena_grind] Frame.bytes => Frame a m m', m'.bytes
 @[arena_grind =] theorem Mem.bytes_set64 (m : Mem) (a : ArrId) (i v : Word) :
     (m.set64 a i v).bytes = m.bytes := rfl
 
-/-- A callee left the caller's locals alone: `s.loc = t.loc`, as a named predicate. A callee
-spec posts `LocEq s' s₀`. With the bare function equation `s'.loc = s₀.loc` (or `s' = s₀`)
-`grind` cannot read `s'.loc x` back, because congruence closure only merges `s'.loc x` with
-`s₀.loc x` if the latter term already exists (docs/gaps/grind-state-eq-projection.lean); the
-pattern `LocEq s t, s.loc x` creates it. -/
-def LocEq (s t : St) : Prop := s.loc = t.loc
-
-theorem LocEq.loc (s t : St) (x : Var) (h : LocEq s t) : s.loc x = t.loc x := by rw [h]
-grind_pattern [arena_grind] LocEq.loc => LocEq s t, s.loc x
-
-theorem LocEq.intro (s t : St) (h : s.loc = t.loc) : LocEq s t := h
-grind_pattern [arena_grind] LocEq.intro => LocEq s t
-
 theorem Frame.set64_both (a b : ArrId) (m m' : Mem) (i v : Word) (h : Frame a m m') (hb : b ≠ a) :
     Frame a (m.set64 b i v) (m'.set64 b i v) := by
   obtain ⟨h1, h2, h3⟩ := h

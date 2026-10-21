@@ -13,15 +13,20 @@ Files: `ConAgua/L/{Syntax,Semantics,Notation,GrindAttr,Logic,Examples}.lean`.
   is taken mod 64 (Lean's `UInt64` shifts and x64's `shl`/`shr` agree on this). No division:
   Kraken has no `div`; divide by a power of two with `>>`.
 * **Expressions** (`Expr`): constants, locals, binary operators, `A.u8[i]` (a byte, zero-extended),
-  `A.u64[i]`, `len(A.u8)`, `len(A.u64)`. No calls and no side effects, so evaluating one never
-  touches the frame layout. Only array reads can fail.
+  `A.u64[i]`, `len(A.u8)`, `len(A.u64)`; since lane `lext` also `mulhi(a, b)` (the high word of
+  the 128-bit product), `u64(a < b)` (a comparison as `1`/`0`) and `D.c8[i]` (a byte of a
+  constant byte string `D : List UInt8` that is part of the program). No calls and no side
+  effects, so evaluating one never touches the frame layout. Only array reads can fail.
 * **Conditions** (`Cond`) are a separate type with unsigned (`<`, `<=`, …) and signed (`<ₛ`, `≤ₛ`)
   comparisons and short-circuit `&& || !`. Short-circuit matters: Rust's
   `while i < b.len() && is_ws(b[i])` must not read `b[len]`.
 * **Statements** (`Stmt`): `x := e`, stores `A.u8[i] := e` / `A.u64[i] := e`, `;`, `if`, `while`,
-  `break`, `return e`, `x := call f(args)`, `abort`, `skip`.
+  `break`, `return e`, `x := call f(args)`, `abort`, `skip`; since lane `lext` also
+  `return (e₁, e₂, …)` and `(x₁, x₂, …) := call f(args)` (several results).
 * **Functions** (`FunDecl`): `nparams`, `nlocals` (parameters first, other locals start at 0), a
-  body. Falling off the end returns 0. A program (`Prog`) is a list of named functions.
+  body. A function returns a list of words; falling off the end returns `[]`, and a caller reads
+  `0` for every result it asks for and does not get. A program (`Prog`) is a list of named
+  functions.
 * **Memory** (`Mem`): a fixed set of byte arrays and a fixed set of word arrays, each named by a
   static index (`ArrId`). Lengths are fixed for a run; a growable vector is a fixed-capacity array
   plus a length word, and growing past the capacity is an explicit `abort` in the program. A
@@ -100,7 +105,7 @@ preconditions as hypotheses about `s₀`, posts as equations about named model f
 
 1. **Name every loop** with `lblk` and splice it. Its spec is about `exec p n W`, so the recursive
    call `k W` in the unfolded loop is literally the induction hypothesis.
-2. **Loop spec**, post `s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr d = model …`, where `d` is what the
+2. **Loop spec**, post `s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [d] = [model …]`, where `d` is what the
    function returns when the loop exits normally (`Sig.retOr` folds "returned v" and "fell
    through, then `return d`" into one equation). Proof:
    ```lean
@@ -222,7 +227,8 @@ induction hypothesis, and the expression lemmas are straight-line `kvcgen64` pro
   **Done** (lane `scan`, see below): `ConAgua/Scan/Link.lean`.
 * **Several results.** A function returns one word. Rust functions returning enums or tuples
   (`ScanRes`, `Member`) must return them through a word array (or a packed word). A convention
-  for result cells is still to be chosen.
+  for result cells is still to be chosen. **Done** (lane `lext`): functions return lists of
+  words, see "L extensions".
 * **Monadic arena functions.** For a function modelled in `StateT AState (Except CheckError)`
   the post can stay one equation: `(f x).run (abs s₀.mem) = .ok (decode r, abs s'.mem)`, with an
   abstraction function `abs : Mem → AState`. Not tried yet.
@@ -235,6 +241,78 @@ induction hypothesis, and the expression lemmas are straight-line `kvcgen64` pro
 ### `sorry`s
 
 None.
+
+## Linking to con-leche, and more scan leaf functions (2026-10-21, lane `scan`)
+
+Files: `ConAgua/Scan/{Link,Leaves}.lean`.
+
+### Link: `strCloseN`/`skipBracedN` agree with con-leche's `strClose`/`skipBraced`
+
+`ConAgua/Scan/Link.lean` proves `ConAgua.Scan.strClose_toNat_eq`/`skipBraced_toNat_eq`:
+`(strClose b j).toNat = strCloseN b.data j.toNat` (and the `skipBraced` analogue), under
+`h64 : System.Platform.numBits = 64` and `hsize : b.size < 2 ^ 64`. This is the missing link from
+`L.Examples.skipBraced_run`'s `skipBracedN` to the real, vendored `ConLeche.Frontend.skipBraced`
+(`USize` positions over `ByteArray`), completing Stage A's proof chain end to end.
+
+* The proof is `fun_induction strClose b j`/`fun_induction skipBraced b i depth`, case for case
+  the same split as con-leche's own `strClose_eq`/`skipBraced_eq`
+  (`vendor/con-leche/ConLeche/Frontend/Scan/Equiv/{Scalars,Keys}.lean`) — unsurprising, since
+  `strCloseN`/`skipBracedN` were written to mirror `strClose`/`skipBraced` arm for arm in the
+  first place. Each case bridges `b.uget i h` to `b.data[i.toNat]` (`uget_eq`, `rfl`: `ByteArray`
+  is a bare `Array UInt8` wrapper and `uget`/`GetElem` unfold to it definitionally) and then
+  discharges with the already-proved `strCloseN_*`/`skipBracedN_*` arm lemmas from
+  `L.Examples`.
+* **Where `h64`/`hsize` are actually needed**: nowhere in the *positive* direction (`usizeInBounds`,
+  `usizeStep`, `usize_step_of_lt` — all from con-leche, all unconditional: a position that is
+  already inside the array never overflows, on any platform). They are needed in exactly one
+  place, `usizeGe`: showing `¬ i < b.usize → b.size ≤ i.toNat`. `ByteArray.size : Nat` has no
+  upper bound, so `b.usize.toNat` is `b.size % USize.size` in general — only `h64 + hsize` collapse
+  that to `b.size` outright. (`str_close`'s OOB case and `skip_braced`'s OOB and the `exfalso`
+  "`noProgress`" case all go through `usizeGe`.)
+* Measured (`lake env lean`, cold): 264 lines, ~0.6 s.
+
+### More `scan_fast.rs` leaf functions, `ConAgua/Scan/Leaves.lean`
+
+Order per the task: `is_ws`/`skip_ws`, `skip_digits`, `newline_from`, `key_end`, `has_escape`,
+`num_end` (`match_lit`/`scan_bool`/`utf8_decode`/`read_nat_at` not attempted this round — see
+"Not done" below). Each is an `L` function close to the Rust, a `Nat`-position model in the
+`findFrom`/`strCloseN` style (own model, not reusing con-leche directly — these have no vendored
+Lean twin at this granularity beyond what `Link.lean` already covers), and a `vcgen`+`grind` spec
+proof.
+
+| function | Rust lines | L lines | vcgen+grind clean? |
+|---|---:|---:|---|
+| `is_ws`/`skip_ws` (`:96,107`) | 3+7 | 4 | yes |
+| `skip_digits` (`:118`) | 7 | 4 | yes |
+| `newline_from` (`:4072`) | 10 | 7 | yes |
+| `key_end` (`:149`) | 14 | 9 | yes |
+| `has_escape` (`:818`) | 10 | 7 | yes |
+| `num_end` (`:733`) | 10 | 6 (+ call to `skip_digits`, no loop) | yes (since lane `lext`) |
+| `match_lit` (`:132`, lane `lext`) | 11 | 9 | yes |
+| `scan_bool` (`:716`, lane `lext`) | 11 | 7 (two calls of `match_lit`, three results) | yes |
+
+Whole-file build (`ConAgua.Scan.Leaves`, `lake env lean`, cold): ~2.5 s for all six.
+`ConAgua.Scan.Link` + `ConAgua.Scan.Leaves` together add about 750 lines to the `ConAgua` lib;
+the whole project (`lake build`, from a warm `.lake`) still finishes in well under a minute.
+
+* **`&&` in a `while` condition.** On nightly-2026-09-21, Rust's `while i < b.len() &&
+  is_ws(b[i])` did not go through `vcgen`+`grind` (the plain `i ≥ len` exit did not close), and
+  `skip_ws`/`skip_digits` were written with the bound alone and an early `return`. On
+  nightly-2026-10-20 the reproducer passes; lane `lext` rewrote both loops in Rust's shape
+  (and deleted the reproducer).
+* **`num_end`** compares the result of a call (`skip_digits`) with a local the call left alone
+  (`if e == i`). That needs `grind` to read `s'.loc 0` off the callee's frame condition
+  `s' = s₀`, where `s₀` is a record literal: `docs/gaps/grind-state-eq-projection.lean`. It was
+  a `sorry` until lane `lext` added `St.loc_of_eq_mk` to `lang_grind` (see "L extensions").
+* **Not done, this round**: `match_lit` and `scan_bool` (done in lane `lext`, see "L
+  extensions"); `utf8_decode` (deeply nested multi-byte decode,
+  `Option (List …)`-shaped — a different result-cell question than anything tried so far);
+  `read_nat_at` (skipped per the task: `u64` accumulation is in scope for Theorem-2-style
+  refinement but not for this spike).
+
+### `sorry`s
+
+None (the `num_end` one is gone).
 
 ## The compiler (2026-10-21, lane `compiler`)
 
@@ -429,33 +507,278 @@ None.
 
 ## The limb-pool bignum and the arena refinement (2026-10-21, lane `arena`)
 
-Files: `ConAgua/Arena/**`. (Work in progress; the full write-up follows when the proofs land.)
+Files: `ConAgua/Arena/{GrindAttr,Pool,Word,NatAdd,NatMul,Refine}.lean`. Milestone 3: `Nat.add`
+and `Nat.mul` on a limb pool in L, proved, and the first refinement of L code against con-ron's
+arena tier (`AM := StateT AState (Except CheckError)`). No `sorry`.
 
-### L extension requests
+### `Nat` in the arena tier
 
-Each request names the workaround used meanwhile.
+* **Representation.** `AState` has no `Nat` field of its own. A `Nat` literal is a Lean `Nat`
+  stored *inside* an interned expression node: `ENodeView.lit (.natVal n)`, table
+  `ETables.lits : Tbl LitNode EIdx UInt64` with `LitNode { l : ConLeche.Literal }`
+  (`Arena/Store.lean:300,352`); the node's cons-table key hashes the `Nat`. Other `Nat` fields
+  (bvar index, `proj` index, `Name.num`, memo keys) are small counters, not literals.
+* **Arithmetic.** All of it is in `Arena/Core.lean` and is Lean `Nat` arithmetic followed by
+  `internE (.lit (.natVal _))`: `natOpResult` (`:1001`: `a - 1`, `a + b`, `a - b`, `a * b`,
+  `a ^ b` below `2^24`, `/`, `%`, `gcd`, `land`, `lor`, `xor`, shifts, and `a = b`/`a ≤ b` to a
+  `Bool` constant), `reduceNat`'s `Nat.succ` arm (`n + 1`, `:1242`), `natLitToConstructor` and
+  `natPred?` (`n = k + 1`, intern `k`), `isNatZero` (`n == 0`), `strLitConsSpine` (`c.toNat`).
+  In compiled Lean these are GMP calls (`lean_nat_add` …); the kernel's GMP acceleration of
+  `Nat.add`/`Nat.mul`/`Nat.ble` … on literals applies only when a proof reduces such terms by
+  `decide`/`rfl`, which none of the specs do. The Rust (`arena/core.rs:3009`) calls `ron::nat`
+  instead; con-ron proves `ron::nat` against `Nat` at the Aeneas level
+  (`proof/ConRon/Refine/Nat.lean`). The L pool functions replace both.
+* **Simplest function with `Nat` arithmetic and the state:** an arm of `natOpResult`, one `Nat`
+  operation and one `internE` (`isNatZero` and `rawNatLit?` only read). The `Nat.add` arm is the
+  one refined below.
 
-1. **`mulhi`: the high word of the unsigned 64×64→128 product**, as a `BinOp`
-   (`mulhi a b = (a.toNat * b.toNat / 2^64)`, a `Word`). x64 `mul r/m64` leaves exactly this in
-   `rdx` (and the low word, L's existing wrapping `*`, in `rax`), so the compiler case is
-   `mov rcx, <b>; mul rcx; mov rax, rdx` (`rdx` is already scratch). con-ron's
-   `mul_u64_from` (`ron/nat.rs:497`) needs it once per limb product (`u128` there).
-   Workaround: an L function `mulhi(x, y)` over 32-bit halves (four products, nine L lines,
-   one hand-proved arithmetic lemma).
-2. **A comparison as a word (`setcc`)**: an `Expr` form `cmpw c a b` with value `1`/`0`
-   (x64 `cmp; setb al; movzx eax, al`). The carry of a word addition is then
-   `c' := (s <ᵤ x) | (s2 <ᵤ s)` with no branch. Each `if` doubles the paths `vcgen` explores
-   in a loop body, and a loop body with four ifs (two limb reads, two carry tests) already
-   exceeded `grind`'s budget. Workaround: the carry is an L function `add_carry(x, y, c)`
-   (and the limb read `nat_limb(o, l, i)`, as in the Rust), so the loop body is straight-line
-   code with calls.
-3. **Several results** (`return (a, b)` into named locals of the caller), for functions that
-   produce a slice `(offset, length)` or a `(low, high)` word pair. Workaround: a function
-   that appends to the pool returns the length; the offset is the old pool top, which the
-   caller reads before the call.
-4. *(Not a language feature, a note for the logic.)* A callee spec should post
-   `LocEq s' s₀` (a named predicate for `s'.loc = s₀.loc`, with the `grind` pattern
-   `LocEq s t, s.loc x`), not `s'.loc = s₀.loc` or `s' = s₀`: `grind` cannot read
-   `s'.loc x` back through a function or structure equation unless the term `s₀.loc x`
-   already exists (`docs/gaps/grind-state-eq-projection.lean`). With `LocEq` the
-   `num_end` `sorry` of `ConAgua/Scan/Leaves.lean` may go away too.
+### Data refinement: the limb pool
+
+* **Layout.** Word array `POOL` (0) holds all limbs; word `CTL[0]` (array 1) is the top `T`.
+  `[0, T)` is in use and never written again; a function appends its result at `T` and moves
+  `T` up. A number is a slice `(o, l)`: little-endian limbs, normalised (no trailing zero limb,
+  con-ron's `Nat.WF`), so equal numbers have equal limb sequences.
+* **Abstraction.** `pv p o l = Σ_{i<l} p[o+i] · wt i`, `wt i = 2^(64 i)` (`Pool.lean`). `wt` is
+  a named function on purpose: `grind`'s ring solver treats `2 ^ (64 * i)` as "a ring term with
+  unexpected instance", and `wt i` as an atom. Zero-extension past a short operand is
+  `xv p o l k = Σ_{i<k} lv p o l i · wt i` with `lv` = con-ron's `limb`.
+* **Invariant.** `PoolOK m`: both arrays exist, `T ≤ len POOL < 2^63` (so `la + lb` is a word).
+  `SliceOK m o l`: `o + l ≤ T`. `Norm p o l`: no trailing zero limb.
+* **Frames, all named predicates with `grind` patterns** (no `∀`, no `∃` in any post):
+  `Agree p q t` (the pools agree below `t`), `Frame a m m'` (only word array `a` changed),
+  `Grows m m'` (only the pool and the top changed, the pool below the old top did not, the top
+  moved up). Every pool function posts `Grows s₀.mem s'.mem`.
+* **Functions.** `nat_add(oa, la, ob, lb)` and `nat_mul(oa, la, ob, lb)` append the normalised
+  result at the old top and return its length (the caller reads the offset, the old top,
+  before the call). Posts: `pv P' T r = pv P oa la + pv P ob lb` (resp. `*`), `Norm P' T r`,
+  `Agree P' P T`, `Frame POOL (m.set64 CTL 0 (T + r)) m'`, `Grows m m'`, `LocEq s' s₀`.
+  Inputs need not be normalised. `nat_mul` is the in-place schoolbook product (zero `la` limbs,
+  one multiply-accumulate row per limb of `b`), not con-ron's shift-and-add (which uses only
+  `Vec::push` for its Aeneas proof). Helpers: `nat_limb` (con-ron's `limb`), `add_carry`
+  (the two `overflowing_add`s), `nat_trim` (`norm`/`sig_len`), `mac_hi(x, y, t, c)` (the high
+  word of `x * y + t + c`, con-ron's `u128` accumulator; uses `mulhi` and `u64(a < b)`).
+
+### The refinement against `AM` (`Refine.lean`)
+
+The refined function is `natOpResult`'s `Nat.add` arm verbatim,
+`natAddArm a b := do let x ← internE (.lit (.natVal (a + b))); pure (some x)`. Its L twin
+`nat_add_lit(oa, la, ob, lb)` is `o := CTL[0]; l := call nat_add(…); h := call intern_lit(o, l);
+return h`.
+
+```lean
+theorem natAddLit_refines … (R : Mem → AState → Prop)
+    (hpool : ∀ m a, R m a → PoolOK m) (hgrow : ∀ m m' a, R m a → Grows m m' → R m' a)
+    (hI : /- intern_lit's spec, same shape -/) (hR : R s₀.mem a₀) (ha : SliceOK …) (hb : …) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nat_add_lit" [oa, la, ob, lb]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (natAddArm A B) a₀ ∧ R s'.mem (AM.st (natAddArm A B) a₀) ∧
+      AM.res (natAddArm A B) a₀ = some (decE (r.headD 0)); ⊤⦄
+```
+
+with `A = pv P oa la`, `B = pv P ob lb`. `natAddLit_run` turns it into a statement about `run`:
+the L run returning `r` gives `(natAddArm A B).run a₀ = .ok (some (decE r), a')` with
+`R m' a'`. What worked, and is the proposed shape for every arena function:
+
+* **Run projections.** `AM.ok x a`, `AM.st x a`, `AM.res x a` (`match` on `x.run a` inside a
+  named function). The post is three conjuncts about them: no `∃ a'`, no `fun`. `AM.ok_bind`,
+  `AM.st_bind`, `AM.res_bind`, `AM.*_pure` are `grind` equations, so a `do` block is unfolded by
+  `grind`, not by hand (`natAddArm`'s `bind`/`pure` went through without a step in the proof).
+* **The arena state is a ghost.** `a₀` is a theorem parameter with `R s₀.mem a₀`; the L
+  precondition stays `s = s₀`. A callee spec that needs it (`hI`) is passed to `vcgen` with
+  `a₀` applied (`hI a₀ n`): a precondition-only argument would otherwise stay a metavariable.
+* **An abstraction *relation*, not a function.** `AState`'s cons tables are `Std.HashMap`s, whose
+  layout depends on the insertion history, so no function `Mem → AState` can produce the arena's
+  state; equality of arena states is too fine. `R` is a parameter; the theorem uses only that it
+  implies `PoolOK` and is stable under `Grows`. Milestone 4 defines `R` (lit nodes ↔ pool
+  slices, node tables ↔ L tables) and proves `hI` for an L `intern_lit` over an open-addressing
+  table. Until then `hI` is a hypothesis, not a `sorry`.
+* Proof: `sym only [lang_grind, arena_grind] => vcgen [… natAdd_spec …, hI a₀ n] <;> finish
+  [natAddArm, PoolOK, SliceOK]`, about 1.2 s, no hand-written step.
+
+Not done: `natOpResult` itself reads fifteen pins first (`natPredName` …, each a state read that
+may fail) and dispatches on `c`; refining it needs `R` to relate the pin table. The other arms
+are the same shape (`nat_mul` is ready for the `*` arm).
+
+### Measurements (nightly-2026-10-20)
+
+| function | Rust lines (`ron/nat.rs`) | L lines | spec + proof lines | `lean` time |
+|---|---:|---:|---:|---:|
+| `nat_add` (+ `nat_limb`, `add_carry`, `nat_trim`) | 66 (`add`, `add_from`, `limb`, `norm`, `sig_len`, `copy_from`) | 41 | 119 | 7.1 s |
+| `nat_mul` (+ `mac_hi`) | 77 (`mul`, `mul_from`, `mul_u64`, `mul_u64_from`, `shift_left`, `shl_onto`, `push_zeros`, `shl_bits_from`) | 41 | 153 | 15.8 s |
+| `nat_add_lit` refinement + run corollary + run projections | – | 6 | 59 | 1.4 s |
+
+L/Rust is 0.62 for add and 0.53 for mul (the Rust copies to trim and shift-adds, both for
+Aeneas). Shared lemmas: `Pool.lean` 173 lines of theorems (frames, `pv`/`xv`/`lv` arms, carries),
+`Word.lean` 20. Whole `ConAgua/Arena`: 1164 lines, about 25 s.
+
+The interim `mul_hi` over 32-bit halves (before `mulhi`) was 11 L lines, a 50-line hand proof
+(`omega` after naming the four partial products) and a `simp`-only spec proof: `grind` on its
+verification condition explores the bit operations (1.3M lines of diagnostics) and fails.
+
+### How automatic
+
+* **`nat_trim`, `nat_limb`, `add_carry`, `mac_hi`, `nat_add`, the zero loop, the refinement:**
+  the house form `sym only [lang_grind, arena_grind] => vcgen […] <;> finish`, with
+  `finish (splits := 20)` where an invariant predicate is unfolded into ten conjuncts and
+  `finish (gen := 20)` where the state is many `setLoc`s deep (commented).
+* **The multiply-accumulate column loop and the row loop:** the house form failed (case splits
+  exhausted even at 30, two minutes). What works: `vcgen`, `clear ih`, `simp only [St.setLoc,
+  BinOp.eval, …]` on all hypotheses (this evaluates the frame: every local becomes a word
+  expression in the loop's initial locals), `and_intros`, then `grind (splits := 40)` per
+  conjunct; `maxHeartbeats 1000000`; 13 s. The single hard verification condition is the
+  invariant step, a degree-3 polynomial identity modulo `pv_set_mid`, `mac_split`, `wt_succ`,
+  `pv_succ`; `grind` proves it in isolation only with 40 splits, because the multi-pattern
+  lemmas (`pv_succ`, `wt_succ`, `wt_add`) instantiate on every pair of `pv`/`wt` terms and each
+  instance's arithmetic side condition is a case split.
+
+### Findings
+
+* **Loop bodies must be straight-line.** Each `if` in a loop body doubles the paths; with four
+  (two limb reads, two carry tests) the add loop's `finish` timed out. Moving the reads and the
+  carry into callees (`nat_limb`, `add_carry`, as the Rust has them) made it go through. Trying
+  the branch-free carry `u64(x < y)` inline in the add loop (after `lext` landed it) timed out
+  again, so `add_carry` stays; in `mac_hi` (no loop) `u64(…)` and `mulhi` went through at once.
+* **Pure callees post `s' = s₀`** (an e-graph equality of states, fine for `grind`);
+  memory-writing callees post `LocEq s' s₀` (now `L.LocEq`). `s'.loc = s₀.loc` alone fails:
+  `grind` merges `s'.loc x` with `s₀.loc x` only if the latter term exists.
+* **Frame as an equation is fragile.** `s'.mem = s₀.mem.setArr64 POOL (s'.mem.arr64 POOL)`
+  needs `POOL < words.size` at every read-back, and `grind` lost it in the add loop. The named
+  `Frame POOL m m'` with `Frame.set64`/`Frame.trans`/`Frame.arr64` patterns works.
+* **Digit equations as named-function lemmas.** `adc_split`, `mac_split`, `mul_split`:
+  `low + hi · 2^64 = …` with pattern on the named high part (`adcHi x y c`). `grind` derives
+  the same equation in its linear-arithmetic module but does not pass it to the ring solver, so
+  the step `V + c·wt i = …` failed: `docs/gaps/grind-arith-eq-not-in-ring.lean`.
+* **`@[grind =]` versus explicit.** A `@[grind =]` (or `[lang_grind =]`) lemma failed where the
+  same lemma passed as `grind [l]` succeeded (two `setLoc` layers):
+  `docs/gaps/grind-attr-lemma-vs-explicit.lean`.
+* **Invariants as named predicates** (`AddInv`, `MulBase`, `ColInv`, `RowInv`, `ZeroInv`) keep
+  the induction hypothesis's patterns to one term; `finish [AddInv]` unfolds the goal instance.
+  A ghost value that is only in a precondition (the row's starting value) had to be avoided:
+  the column invariant states it as `a · b[0..j)` instead.
+* **Module system.** `Refine.lean` imports con-ron's arena, whose files are not `module`s, so it
+  is a plain file outside the `ConAgua` root; `lakefile.toml` builds it via `globs`.
+
+### L extension requests (all served by lane `lext`)
+
+1. `mulhi` (x64 `mul`, high word in `rdx`): used in `mac_hi`. The 32-bit-halves workaround is
+   gone.
+2. Comparisons as words (`u64(a < b)`): used in `mac_hi`; not in the add loop (see Findings).
+3. Several results: not needed in the end (results are appended at the known top).
+4. `LocEq` for callee frames: in `ConAgua/L/Logic.lean`; the arena lane's copy is gone.
+
+### `sorry`s
+
+None. `natAddLit_refines` assumes `intern_lit`'s spec (`hI`) and the two properties of the state
+relation (`hpool`, `hgrow`) as hypotheses, for milestone 4 to discharge.
+
+## L extensions (2026-10-21, lane `lext`)
+
+Restored the section "Linking to con-leche, and more scan leaf functions" above, which the
+compiler lane's merge (`43a0825`) dropped by accident.
+
+### Proof support
+
+* **Locals through a state equation.** `grind` does not project `loc` out of an equation
+  `t = { mem := m, loc := l }`: `t.loc x` is an over-applied projection, and `grind` neither
+  internalises `t.loc` nor accepts a pattern for `(St.mk m l).loc x` (it reduces it to `l x`).
+  `Logic.lean` now has `St.loc_of_eq_mk (h : t = St.mk m l) : t.loc x = l x` in `lang_grind`,
+  with the multi-pattern `t.loc x, St.mk m l`; the equation `h` is left to congruence closure.
+  With it, `num_end`'s proof is the standard one-liner and its `sorry` is gone. A callee spec
+  keeps the post `s' = s₀`. (The arena lane's suggestion, a named `LocEq s' s₀` with the pattern
+  `LocEq s t, s.loc x`, would work too, but needs every spec to change; the lemma does not.)
+  Reproducer, still failing without the lemma: `docs/gaps/grind-state-eq-projection.lean`.
+* **`&&`/`||` in `while`**: fixed upstream (see above); `skip_ws`/`skip_digits` now use the
+  Rust condition.
+* **Callees that write memory** (arena request 4): `LocEq s t` (`s.loc = t.loc`) with the
+  pattern `LocEq s t, s.loc x` (which creates `t.loc x`) and `LocEq.restore` (`callFn`
+  restores the caller's locals). A callee spec posts `LocEq s' s₀ ∧ …`; with a plain
+  `s'.loc = s₀.loc` the caller's read of its own local after the call does not close (checked on
+  `bump`/`bumpUser` in `Examples.lean`, which now use `LocEq`).
+
+### New expressions: `mulhi`, comparisons as words, constant data
+
+Requests 1 and 2 of the arena lane, and constant data for `match_lit`.
+
+* **`mulhi(a, b)`** (`BinOp.mulhi`, `a.toNat * b.toNat / 2^64`). Code: the usual binary-operator
+  sequence ending in `mul rcx; mov rax, rdx` (`binCode`). Proof: `ev_mul` (Kraken's `mul` leaves
+  the flags undefined, which the continuation takes for all flags) and a case split in the
+  `bin` case of `sim_expr`.
+* **`u64(a < b)`** (`Expr.cmpw c a b`, value `Cmp.evalW c a b = if c.eval a b then 1 else 0`),
+  any of the six comparisons. Code: as a condition up to `cmp rax, rcx`, then
+  `mov rax, 0; mov rdx, 1; cmovcc rax, rdx` (no branch; `mov` keeps the flags, and `cmovcc`
+  needed only a register-register step lemma, `ev_cmov`). The condition code is the one jumps
+  use, so `cmpCC_interp` does the rest.
+* **`D.c8[i]`** (`Expr.ldc d i`, `oob` past the end). The byte string is part of the
+  expression, so a spec needs no hypothesis about memory: `vcgen` sees `d[i.toNat]` for the
+  concrete `d`. I considered (a) a second input array filled by the harness (no compiler work,
+  but every spec would need `s.mem.arr8 LIT = …` and the end-to-end statement would have to
+  trust the harness for the contents) and (b) a `.rodata` label in the code (Kraken's data
+  memory is separate from the code, so the code cannot read its own bytes). Instead the table
+  holds the program's constant data: `Tab.rom` (the concatenated byte strings, `Prog.rom p`,
+  each once) sits after the array descriptors, padded to words, and the entry arguments move
+  behind it (`Tab.args`). `ldc d i` compiles to `cmp rax, len d; jae ca_error;
+  lea rcx, [r15 + romBase + romIdx d rom]; movzx rax, byte [rcx + rax]`. `MemRel` gained one
+  field (the table holds `rom`), `Prog.wf` checks that each `d` occurs at `romIdx d rom` and that
+  the table with the constant data stays below `2^28` bytes. `asmText` emits `ca_rom`/`ca_rom_len`
+  in `.rodata`, and `harness/run.c` copies them into the table: the loader is trusted for these
+  bytes as it is for the code.
+
+Compiler proof: +150 lines in `SimExpr` (the `cmpw` case is the condition's `cmp` case plus three
+instructions; `ldc` is `ld8` with `lea`), +35 in `Step`, +35 for the new `MemRel` field in `Rel`
+and `SimStore`. `compile_correct` is unchanged in statement (the hypothesis `MemRel` now also
+says the table holds the constant data); still no `sorry`, axioms `propext`, `Classical.choice`,
+`Quot.sound`. Tests: `ext` in `Tests.lean` (all three, against `L.run` on Kraken's semantics).
+
+### Several results
+
+Arena request 3, and `utf8_decode`'s `(code point, length)`.
+
+* **Semantics.** A function returns `List Word`: `Stmt.ret (es : List Expr)`, `Sig.ret (vs :
+  List Word)`, `invoke … : M (List Word)`, `run … : Except Err (List Word × Mem)`.
+  `Stmt.call (xs : List Var) f args` sets `xᵢ` to the `i`-th result, `0` past the end
+  (`St.setLocs`, by `headD`/`tail`, so `grind` reads it with two `lang_grind` equations). Falling
+  off the end returns `[]`. Notation: `return (a, b)`, `(x, y) := call f(…)`; `return e` and
+  `x := call f(…)` are the one-element cases.
+* **Specs.** A function spec's post is `r = [model]` (or `r = [m₁, m₂]`), a loop spec's
+  `r.retOr [d] = [model]`. `lang_grind` now has `List.cons.injEq`: without it, `grind` does not
+  get from `¬ [a] = [b]` to `¬ a = b`, and it lost the arithmetic behind `a = b` (four loop
+  proofs failed). Every proof in `Examples`/`Leaves` changed only in its statement and in
+  `evalArgs`/`setLocs` in the `vcgen` list.
+* **Compiler.** Result `i` is returned in register `resReg i` = `rax`, `rdi`, `r8`, `r9`, `r10`,
+  `r11` (at most six; none of them is used by L code otherwise, and the trampoline leaves them
+  alone). `Tab.nres` is the number in use (`Prog.tab` takes the most any `return` gives or any
+  call reads, at least 1), so single-result programs pay nothing extra on the fall-off path.
+  `return es` evaluates `es` into temporaries (`compileArgs`, as for call arguments) and loads
+  the result registers from them, zeroing those beyond `es.length` (`loadRes`). Falling off the
+  end zeroes all `nres` of them. After a call, `storeRes xs` stores `resReg i` into `xᵢ`.
+  `Prog.wf` checks `es.length ≤ nres`, `xs.length ≤ nres` and `nres ≤ 6`.
+* **Proof.** The relation is `ResRel n vs R : ∀ i < n, rres R i = vs.getD i 0`; it replaces
+  `rax = v` in the `return` exit of `Conts`, in `FunSim` and in `OutcomeRel`. New lemmas:
+  `sim_loadRes`, `sim_storeRes` (inductions over the register list), `sim_ret` (moved to
+  `SimCall`, since it now uses `sim_args`), register facts `rres_set64_resReg`/`rres_set64`/
+  `ResRel.congr` (36-case `rfl`s). About +200 lines in `SimCall`, `SimFun`, `Rel`, `Main`.
+  `compile_correct`'s statement changes only through `OutcomeRel` (results in the result
+  registers); no `sorry`, same axioms. Tests: `wideProg` in `Tests.lean` (three results, fewer
+  results than read, none, a register read twice).
+* A `return e` now costs two more instructions (store to a temporary, reload into `rax`).
+
+### Translations: `match_lit`, `scan_bool` (`ConAgua/Scan/Lit.lean`, `LitLink.lean`)
+
+* `match_lit(b, i, lit)` takes the literal as a slice `(o, n)` of the constant byte string
+  `LITS = "truefalse"` (`LITS.c8[o + k]`); `byte_at` is inlined. `scan_bool` returns
+  `ScanRes<bool>` as `(ok, value, position)`, the error `ExpectedBool` at `i` as `(0, 0, i)`.
+* Models: `matchLitN` (Rust's loop, `byte_at` as `Array.getD`), `scanBoolN : Option (Bool × Nat)`
+  and `encBool` (the three words). The arm lemmas take the positions `i + k`, `o + k` as
+  variables with an equation (patterns `b[j]`, `L[m]`), as in `strCloseN`; one more general
+  lemma went into `lang_grind`: `UInt8.toUInt64_eq_iff` (the L code compares words, the model
+  bytes).
+* Link (`LitLink.lean`): `matchLitN` is a prefix test when the literal has no `0` byte
+  (`matchLitN_eq_isPrefixOf`, `fun_induction`, 30 lines), which is con-leche's `matchLit_eq`;
+  `scanBool_eq_N` rewrites con-leche's `scanBool` through the model, and `scanBool_run` is the
+  end-to-end statement: whenever `run litProg fuel "scan_bool" [i]` returns `r`,
+  `r = encScan (ConLeche.Frontend.scanBool b i)` and the memory is unchanged (under
+  `numBits = 64`, `b.size < 2^64`, `i + 5 < 2^64`). Axioms: the standard three.
+* Sizes: `match_lit` model 6 + arms 27 lines, loop spec 15, corollary 9, function spec 15;
+  `scan_bool` model 9, spec 14; link 117 lines. Every L proof is `vcgen` + `finish`.
+  `Lit.lean` builds in 2.9 s, `LitLink.lean` in 0.6 s. Differential tests on Kraken (all three
+  results): `Tests.lean`.
+

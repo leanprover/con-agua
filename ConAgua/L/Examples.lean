@@ -77,19 +77,19 @@ theorem findLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (h1 : s�
     ⦃fun s => s = s₀⦄
     exec p n findLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      r.retOr (UInt64.ofNat b.size) = UInt64.ofNat (findFrom b c (s₀.loc 0).toNat); ⊤⦄ := by
+      r.retOr [(UInt64.ofNat b.size)] = [UInt64.ofNat (findFrom b c (s₀.loc 0).toNat)]; ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
     rw [exec, step_while (w := findLoop) rfl]
-    sym only [lang_grind] => vcgen [step, evalE, evalC, setLoc, ld8, ih] <;> finish
+    sym only [lang_grind] => vcgen [step, evalE, evalC, evalArgs, setLoc, ld8, ih] <;> finish
 
 theorem findLoop_step_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
     (h1 : s₀.loc 1 = c.toUInt64) (hi : (s₀.loc 0).toNat ≤ b.size) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) findLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      r.retOr (UInt64.ofNat b.size) = UInt64.ofNat (findFrom b c (s₀.loc 0).toNat); ⊤⦄ :=
+      r.retOr [(UInt64.ofNat b.size)] = [UInt64.ofNat (findFrom b c (s₀.loc 0).toNat)]; ⊤⦄ :=
   Triple.step_exec (findLoop_spec p b hb c (n + 1) s₀ hm h1 hi)
 
 include hp in
@@ -97,13 +97,13 @@ theorem findByte_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Wor
     (hi : i.toNat ≤ b.size) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "find_byte" [i, c.toUInt64]
-    ⦃fun r s' => s' = s₀ ∧ r = UInt64.ofNat (findFrom b c i.toNat); ⊤⦄ := by
+    ⦃fun r s' => s' = s₀ ∧ r = [UInt64.ofNat (findFrom b c i.toNat)]; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, findByte]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind] => vcgen [exec, step, evalE, findLoop_step_spec p b hb c n] <;> finish
+    sym only [lang_grind] => vcgen [exec, step, evalE, evalArgs, findLoop_step_spec p b hb c n] <;> finish
 
 end find
 
@@ -112,10 +112,10 @@ def findProg : Prog := [("find_byte", findByte)]
 
 /- `"hello"` has its first `l` at 2; from 4 on there is none, so the answer is the length. -/
 #guard (run findProg 100 "find_byte" [0, 'l'.toNat.toUInt64]
-  { bytes := #["hello".toUTF8.data] }).toOption.map (·.1) == some 2
+  { bytes := #["hello".toUTF8.data] }).toOption.map (·.1) == some [2]
 
 #guard (run findProg 100 "find_byte" [4, 'l'.toNat.toUInt64]
-  { bytes := #["hello".toUTF8.data] }).toOption.map (·.1) == some 5
+  { bytes := #["hello".toUTF8.data] }).toOption.map (·.1) == some [5]
 
 /-! ## `str_close` and `skip_braced`
 
@@ -177,7 +177,7 @@ def skipBraced : FunDecl := lfn (i, depth) locals (c, e) {
 def scanProg : Prog := [("str_close", strClose), ("skip_braced", skipBraced)]
 
 #guard (run scanProg 1000 "skip_braced" [1, 0]
-  { bytes := #["{\"a\":[1,{\"b\\\"\":2}]} x".toUTF8.data] }).toOption.map (·.1) == some 19
+  { bytes := #["{\"a\":[1,{\"b\\\"\":2}]} x".toUTF8.data] }).toOption.map (·.1) == some [19]
 
 /-! A word-array smoke test: `histogram` counts the bytes of `IN` into word array `HIST`. -/
 
@@ -195,7 +195,7 @@ def histogram : FunDecl := lfn () locals (i, c) {
 
 #guard (run [("histogram", histogram)] 100 "histogram" []
   { bytes := #["banana".toUTF8.data], words := #[Array.replicate 256 0] }).toOption.map (·.1)
-  == some 3
+  == some [3]
 
 /-- con-leche's `strClose` (`ConLeche/Frontend/Scan/Fast.lean`), with `Nat` positions. -/
 def strCloseN (b : Array UInt8) (j : Nat) : Nat :=
@@ -318,19 +318,19 @@ theorem strCloseLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
     ⦃fun s => s = s₀⦄
     exec p n strCloseLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      r.retOr 0 = UInt64.ofNat (strCloseN b (s₀.loc 0).toNat); ⊤⦄ := by
+      r.retOr [0] = [UInt64.ofNat (strCloseN b (s₀.loc 0).toNat)]; ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
     rw [exec, step_while (w := strCloseLoop) rfl]
-    sym only [lang_grind] => vcgen [step, evalE, evalC, setLoc, ld8, ih] <;> finish
+    sym only [lang_grind] => vcgen [step, evalE, evalC, evalArgs, setLoc, ld8, ih] <;> finish
 
 theorem strCloseLoop_step_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
     (hj : (s₀.loc 0).toNat ≤ b.size) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) strCloseLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      r.retOr 0 = UInt64.ofNat (strCloseN b (s₀.loc 0).toNat); ⊤⦄ :=
+      r.retOr [0] = [UInt64.ofNat (strCloseN b (s₀.loc 0).toNat)]; ⊤⦄ :=
   Triple.step_exec (strCloseLoop_spec p b hb (n + 1) s₀ hm hj)
 
 include hp1 in
@@ -338,14 +338,14 @@ theorem strClose_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j : Wor
     (hj : j.toNat ≤ b.size) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "str_close" [j]
-    ⦃fun r s' => s' = s₀ ∧ r = UInt64.ofNat (strCloseN b j.toNat); ⊤⦄ := by
+    ⦃fun r s' => s' = s₀ ∧ r = [UInt64.ofNat (strCloseN b j.toNat)]; ⊤⦄ := by
   rw [invoke_eq _ hp1]
   simp only [callFn, strClose]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind] =>
-      vcgen [exec, step, evalE, strCloseLoop_step_spec p b hb n] <;> finish
+      vcgen [exec, step, evalE, evalArgs, strCloseLoop_step_spec p b hb n] <;> finish
 
 include hp1 in
 theorem skipBracedLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
@@ -353,13 +353,13 @@ theorem skipBracedLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
     ⦃fun s => s = s₀⦄
     exec p n skipBracedLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      r.retOr 0 = UInt64.ofNat (skipBracedN b (s₀.loc 0).toNat (s₀.loc 1).toNat); ⊤⦄ := by
+      r.retOr [0] = [UInt64.ofNat (skipBracedN b (s₀.loc 0).toNat (s₀.loc 1).toNat)]; ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
     rw [exec, step_while (w := skipBracedLoop) rfl]
     sym only [lang_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, ld8, ih, strClose_spec p hp1 b hb n] <;> finish
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, ih, strClose_spec p hp1 b hb n] <;> finish
 
 include hp1 in
 theorem skipBracedLoop_step_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
@@ -367,7 +367,7 @@ theorem skipBracedLoop_step_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = 
     ⦃fun s => s = s₀⦄
     step p (exec p n) skipBracedLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      r.retOr 0 = UInt64.ofNat (skipBracedN b (s₀.loc 0).toNat (s₀.loc 1).toNat); ⊤⦄ :=
+      r.retOr [0] = [UInt64.ofNat (skipBracedN b (s₀.loc 0).toNat (s₀.loc 1).toNat)]; ⊤⦄ :=
   Triple.step_exec (skipBracedLoop_spec p hp1 b hb (n + 1) s₀ hm hi hd)
 
 include hp1 hp2 in
@@ -376,23 +376,23 @@ theorem skipBraced_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i d :
     (hi : i.toNat ≤ b.size) (hd : d.toNat + (b.size - i.toNat) < 2 ^ 64) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "skip_braced" [i, d]
-    ⦃fun r s' => s' = s₀ ∧ r = UInt64.ofNat (skipBracedN b i.toNat d.toNat); ⊤⦄ := by
+    ⦃fun r s' => s' = s₀ ∧ r = [UInt64.ofNat (skipBracedN b i.toNat d.toNat)]; ⊤⦄ := by
   rw [invoke_eq _ hp2]
   simp only [callFn, skipBraced]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind] =>
-      vcgen [exec, step, evalE, skipBracedLoop_step_spec p hp1 b hb n] <;> finish
+      vcgen [exec, step, evalE, evalArgs, skipBracedLoop_step_spec p hp1 b hb n] <;> finish
 
 end scan
 
 /-- Partial correctness of the whole program: whenever `run` returns, it returns con-leche's
 answer, and the memory is unchanged. -/
 theorem skipBraced_run (b : Array UInt8) (hb : b.size < 2 ^ 64) (fuel : Nat) (i d : Word)
-    (hi : i.toNat ≤ b.size) (hd : d.toNat + (b.size - i.toNat) < 2 ^ 64) (r : Word) (m' : Mem)
+    (hi : i.toNat ≤ b.size) (hd : d.toNat + (b.size - i.toNat) < 2 ^ 64) (r : List Word) (m' : Mem)
     (h : run scanProg fuel "skip_braced" [i, d] { bytes := #[b] } = .ok (r, m')) :
-    r = UInt64.ofNat (skipBracedN b i.toNat d.toNat) ∧ m' = { bytes := #[b] } := by
+    r = [UInt64.ofNat (skipBracedN b i.toNat d.toNat)] ∧ m' = { bytes := #[b] } := by
   simp only [run] at h
   cases hr : (invoke scanProg (exec scanProg fuel) "skip_braced" [i, d]).run
       { mem := { bytes := #[b] }, loc := Locals.init [] } with
@@ -404,5 +404,40 @@ theorem skipBraced_run (b : Array UInt8) (hb : b.size < 2 ^ 64) (fuel : Nat) (i 
     have := M.of_run (P := fun s => s = { mem := { bytes := #[b] }, loc := Locals.init [] }) rfl hr
       (skipBraced_spec scanProg rfl rfl b hb fuel _ rfl i d hi hd)
     grind
+
+/-! ## A callee that writes memory: the frame condition `LocEq`
+
+`bump` stores into a word array, so its spec cannot post `s' = s₀`; it posts `LocEq s' s₀` (the
+locals are the caller's), and the caller still reads its own `i` after the call. -/
+
+abbrev W : ArrId := 0
+
+def bump : FunDecl := lfn (i) { W.u64[0] := i; return 0 }
+def bumpUser : FunDecl := lfn (i) locals (z) { z := call bump(i + 1); return i + z }
+
+section bump
+variable (p : Prog) (hp : p.lookup "bump" = some bump)
+include hp
+
+theorem bump_spec (n : Nat) (s₀ : St) (i : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "bump" [i]
+    ⦃fun r s' => LocEq s' s₀ ∧ r = [0]; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, bump]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n => sym only [lang_grind] => vcgen [exec, step, evalE, evalArgs, st64] <;> finish
+
+theorem bumpUser_spec (hp2 : p.lookup "bump_user" = some bumpUser) (n : Nat) (s₀ : St) (i : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "bump_user" [i]
+    ⦃fun r s' => LocEq s' s₀ ∧ r = [i]; ⊤⦄ := by
+  rw [invoke_eq _ hp2]
+  simp only [callFn, bumpUser]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind] => vcgen [exec, step, evalE, evalArgs, setLocs, setLoc, bump_spec p hp n] <;> finish
+
+end bump
 
 end L.Examples

@@ -143,10 +143,12 @@ theorem ev_flags {z : RegZmms} {d : DataMem} {pc : Int64} {R R' : Reg64s}
     {S : StatusFlags} (h : ∀ st, Ev Q ⟨R, z, st, d⟩ pc) (hR : R = R') : Ev Q ⟨R', z, S, d⟩ pc :=
   hR ▸ h S
 
-theorem ev_bin {op : BinOp} (hk : Host.prog[k]? = some (binInstr op))
+theorem ev_bin {op : BinOp} (hop : op ≠ .mulhi) (hk : Host.prog[k]? = some (binInstr op))
     (h : ∀ st, Ev Q { s with regs := s.regs.set64 .rax (op.eval s.regs.rax s.regs.rcx).toBitVec, status := st } (at_ (k + 1))) :
     Ev Q s (at_ k) := by
-  cases op <;> simp only [binInstr] at hk <;> run_instr
+  cases op <;> simp only [binInstr] at hk
+  case mulhi => exact absurd rfl hop
+  all_goals run_instr
   case shl | shr =>
     simp only [ShiftCountExpr.interpMasked, ShiftCountExpr.interp, shift_count]
     split
@@ -161,6 +163,36 @@ theorem ev_bin {op : BinOp} (hk : Host.prog[k]? = some (binInstr op))
   all_goals intros <;>
     (refine ev_flags h ?_
      simp_all [BinOp.eval, BitVec.add_comm])
+
+/-- `mul rcx`: `rdx:rax := rax * rcx`, unsigned. -/
+theorem ev_mul (hk : Host.prog[k]? = some (binInstr .mulhi))
+    (h : ∀ st, Ev Q { s with
+      regs := ((s.regs.set64 .rax (s.regs.rax * s.regs.rcx).toBitVec).set64 .rdx
+        (BinOp.mulhi.eval s.regs.rax s.regs.rcx).toBitVec),
+      status := st } (at_ (k + 1))) :
+    Ev Q s (at_ k) := by
+  simp only [binInstr] at hk
+  run_instr
+  intro _ _ _ _
+  simp only [show (Width.W64 == Width.W8) = false from rfl, Bool.false_eq_true, if_false]
+  refine ev_flags h ?_
+  congr 1
+  simp only [BinOp.eval, Width.bits, Reg64s.get64_rax, Reg64s.get64_rcx, BitVec.unsigned,
+      UInt64.toNat_toBitVec]
+  rw [show ((s.regs.rax.toNat : Int) * (s.regs.rcx.toNat : Int)) =
+      ((s.regs.rax.toNat * s.regs.rcx.toNat : Nat) : Int) by push_cast; rfl, Int.shiftRight_eq_div_pow]
+  apply BitVec.eq_of_toNat_eq
+  simp
+  omega
+
+/-- `cmovcc rax, rdx`. -/
+theorem ev_cmov {cc : CondCode} (hk : Host.prog[k]? = some (i64 (.cmovcc cc (rr .rax) (.reg (rr .rdx)))))
+    (h : Ev Q { s with regs := s.regs.set64 .rax (if cc.interp s.status then s.regs.rdx else s.regs.rax).toBitVec }
+      (at_ (k + 1))) : Ev Q s (at_ k) := by
+  run_instr
+  refine ev_of_regs h ?_
+  congr 1
+  split <;> simp_all
 
 /-- The flags of `cmp a, b`. -/
 def cmpFlags (a b : BitVec 64) : StatusFlags :=

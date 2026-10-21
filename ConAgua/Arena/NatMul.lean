@@ -16,10 +16,9 @@ one multiply-accumulate pass of `a * y` into the result at offset `j`, then `nat
 Rust builds `a * b[j]` and shift-adds it (only `Vec::push`, for its Aeneas proof); in L the
 in-place form needs no second buffer.
 
-L has no `64×64→128` multiply (DESIGN.md, "L extension requests"); `mul_hi(x, y)` computes the
-high word from four `32×32` products, and `mac_hi(x, y, t, c)` the high word of
-`x * y + t + c` (con-ron's `u128` accumulator `t` in `mul_u64_from`). The low word is the
-wrapping `x * y + t + c`.
+The `u128` accumulator `t` of con-ron's `mul_u64_from` is a word pair: the low word is the
+wrapping `x * y + t + c`, the high word `mac_hi(x, y, t, c)`, which uses L's `mulhi` and
+comparisons as words (`u64(a < b)`).
 -/
 
 set_option experimental.vcgen true
@@ -29,64 +28,30 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-- `mul_hi(x, y)`: the high word of `x * y` (a `mulhi` operator would replace it). -/
-def mulHi : FunDecl := lfn (x, y) locals (xl, xh, yl, yh, ll, lh, hl, mid) {
-  xl := x & ⟪0xFFFFFFFF⟫;
-  xh := x >> 32;
-  yl := y & ⟪0xFFFFFFFF⟫;
-  yh := y >> 32;
-  ll := xl * yl;
-  lh := xl * yh;
-  hl := xh * yl;
-  mid := (ll >> 32) + (lh & ⟪0xFFFFFFFF⟫) + (hl & ⟪0xFFFFFFFF⟫);
-  return xh * yh + (lh >> 32) + (hl >> 32) + (mid >> 32)
-}
-
-/-- `mac_hi(x, y, t, c)`: the high word of `x * y + t + c`. -/
-def macHi : FunDecl := lfn (x, y, t, c) locals (lo, hi, d) {
-  lo := x * y;
-  hi := call mul_hi(x, y);
-  d := call add_carry(lo, t, 0);
-  hi := hi + d;
-  lo := lo + t;
-  d := call add_carry(lo, c, 0);
-  return hi + d
+/-- `mac_hi(x, y, t, c)`: the high word of `x * y + t + c` (con-ron's `u128` accumulator `t` in
+`mul_u64_from`). Straight-line: `mulhi` and two carries as `u64(…)` words. -/
+def macHi : FunDecl := lfn (x, y, t, c) locals (lo, hi) {
+  lo := x * y + t;
+  hi := mulhi(x, y) + u64(lo < t);
+  lo := lo + c;
+  return hi + u64(lo < c)
 }
 
 section mac
-variable (p : Prog) (hpm : p.lookup "mul_hi" = some mulHi)
-  (hpc : p.lookup "add_carry" = some addCarry) (hph : p.lookup "mac_hi" = some macHi)
+variable (p : Prog) (hph : p.lookup "mac_hi" = some macHi)
 
-include hpm in
-theorem mulHi_spec (n : Nat) (s₀ : St) (x y : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "mul_hi" [x, y]
-    ⦃fun r s' => s' = s₀ ∧ r = mulHiW x y; ⊤⦄ := by
-  rw [invoke_eq _ hpm]
-  simp only [callFn, mulHi]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    -- straight-line word arithmetic: `simp` evaluates the frame; `grind` on these verification
-    -- conditions explores the bit operations and does not finish (DESIGN.md, arena findings)
-    vcgen [exec, step, evalE, setLoc] <;>
-      simp [St.setLoc, Locals.init, BinOp.eval, mulHiW, Sig.retVal, Sig.retOr]
-
-include hpm hpc hph in
+include hph in
 theorem macHi_spec (n : Nat) (s₀ : St) (x y t c : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "mac_hi" [x, y, t, c]
-    ⦃fun r s' => s' = s₀ ∧ r.toNat = macHiN x y t c; ⊤⦄ := by
+    ⦃fun r s' => s' = s₀ ∧ (r.headD 0).toNat = macHiN x y t c; ⊤⦄ := by
   rw [invoke_eq _ hph]
   simp only [callFn, macHi]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    -- `simp` evaluates the frame (each local is a word expression in `x y t c` and the callee
-    -- results); one arithmetic verification condition is left for `grind`
-    vcgen [exec, step, evalE, evalArgs, setLoc, mulHi_spec p hpm n, addCarry_spec p hpc n] <;>
-      simp [St.setLoc, Locals.init, BinOp.eval, Sig.retVal, Sig.retOr] at * <;>
-      grind [arena_grind, macHiN]
+    sym only [lang_grind, arena_grind] => vcgen [exec, step, evalE, evalArgs, setLoc] <;>
+      finish [macHiN]
 
 end mac
 
@@ -134,23 +99,22 @@ def natMul : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, j, c, x, y, t) {
 }
 
 /-- The pool functions with `nat_mul`. -/
-def natMulProg : Prog := natProg ++ [("mul_hi", mulHi), ("mac_hi", macHi), ("nat_mul", natMul)]
+def natMulProg : Prog := natProg ++ [("mac_hi", macHi), ("nat_mul", natMul)]
 
 /- `(2^64 - 1)^2 = 2^128 - 2^65 + 1`: limbs `[1, 2^64 - 2]`. -/
 #guard (run natMulProg 1000 "nat_mul" [0, 1, 0, 1]
   { words := #[#[0xFFFFFFFFFFFFFFFF, 0, 0, 0], #[1]] }).toOption.map (fun (r, m) => (r, m.words)) ==
-  some (2, #[#[0xFFFFFFFFFFFFFFFF, 1, 0xFFFFFFFFFFFFFFFE, 0], #[3]])
+  some ([2], #[#[0xFFFFFFFFFFFFFFFF, 1, 0xFFFFFFFFFFFFFFFE, 0], #[3]])
 
 /- `(2^64 + 3) * 5 = 5 * 2^64 + 15`, and `0 * a = 0` (length 0). -/
 #guard (run natMulProg 1000 "nat_mul" [0, 2, 2, 1]
   { words := #[#[3, 1, 5, 0, 0, 0], #[3]] }).toOption.map (fun (r, m) => (r, m.words)) ==
-  some (2, #[#[3, 1, 5, 15, 5, 0], #[5]])
+  some ([2], #[#[3, 1, 5, 15, 5, 0], #[5]])
 #guard (run natMulProg 1000 "nat_mul" [0, 2, 2, 0]
-  { words := #[#[3, 1, 0, 0], #[2]] }).toOption.map (·.1) == some 0
+  { words := #[#[3, 1, 0, 0], #[2]] }).toOption.map (·.1) == some [0]
 
 section mul
-variable (p : Prog) (hpm : p.lookup "mul_hi" = some mulHi)
-  (hpc : p.lookup "add_carry" = some addCarry) (hph : p.lookup "mac_hi" = some macHi)
+variable (p : Prog) (hph : p.lookup "mac_hi" = some macHi)
   (Pg : Array Word)
 
 /-- What all three loops of `nat_mul` keep: the pool agrees with the entry pool `Pg` below
@@ -197,11 +161,11 @@ theorem zeroLoop_spec (n : Nat) (s₀ : St) (h : ZeroInv Pg s₀) :
     simp only [ZeroInv, MulBase] at h
     rw [exec, step_while (w := zeroLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, setLoc, st64, ih] <;> finish [ZeroInv, MulBase]
+      vcgen [step, evalE, evalC, setLoc, setLocs, st64, ih] <;> finish [ZeroInv, MulBase]
 
 -- the multiply-accumulate step (see the proof) needs more than the default budget
 set_option maxHeartbeats 1000000 in
-include hpm hpc hph in
+include hph in
 theorem colLoop_spec (n : Nat) (s₀ : St) (h : ColInv Pg s₀) :
     ⦃fun s => s = s₀⦄
     exec p n colLoop
@@ -223,15 +187,15 @@ theorem colLoop_spec (n : Nat) (s₀ : St) (h : ColInv Pg s₀) :
     -- the induction hypothesis (a `∀`-triple) and the unevaluated frame in its context. So:
     -- drop `ih` after `vcgen`, evaluate the frame with `simp`, split the invariant into its
     -- conjuncts, and give `grind` 40 case splits (DESIGN.md, arena findings).
-    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, st64, ih, macHi_spec p hpm hpc hph n]
+    vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih, macHi_spec p hph n]
     all_goals clear ih
     all_goals (try simp only [ColInv, MulBase] at *)
     all_goals (try subst_vars)
-    all_goals (try simp only [St.setLoc, BinOp.eval, Cmp.eval, reduceIte, Nat.reduceEqDiff] at *)
+    all_goals (try simp only [St.setLoc, St.setLocs, BinOp.eval, Cmp.eval, reduceIte, Nat.reduceEqDiff] at *)
     all_goals (try and_intros)
     all_goals grind (splits := 40) [arena_grind, lang_grind]
 
-include hpm hpc hph in
+include hph in
 theorem colLoop_step_spec (n : Nat) (s₀ : St) (h : ColInv Pg s₀) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) colLoop
@@ -243,10 +207,10 @@ theorem colLoop_step_spec (n : Nat) (s₀ : St) (h : ColInv Pg s₀) :
           (s'.loc 8).toNat * (wt (s₀.loc 1).toNat * wt (s₀.loc 7).toNat) =
         pv Pg (s₀.loc 0).toNat (s₀.loc 1).toNat * pv Pg (s₀.loc 2).toNat (s₀.loc 7).toNat +
           pv Pg (s₀.loc 0).toNat (s₀.loc 1).toNat * (s₀.loc 10).toNat * wt (s₀.loc 7).toNat; ⊤⦄ :=
-  Triple.step_exec (colLoop_spec p hpm hpc hph Pg (n + 1) s₀ h)
+  Triple.step_exec (colLoop_spec p hph Pg (n + 1) s₀ h)
 
 set_option maxHeartbeats 1000000 in
-include hpm hpc hph in
+include hph in
 theorem rowLoop_spec (n : Nat) (s₀ : St) (h : RowInv Pg s₀) :
     ⦃fun s => s = s₀⦄
     exec p n rowLoop
@@ -261,8 +225,8 @@ theorem rowLoop_spec (n : Nat) (s₀ : St) (h : RowInv Pg s₀) :
     simp only [RowInv, MulBase] at h
     rw [exec, step_while (w := rowLoop) rfl]
     -- the recipe of `colLoop_spec`
-    vcgen [step, evalE, evalC, evalArgs, setLoc, ld64, st64, ih,
-      colLoop_step_spec p hpm hpc hph Pg n]
+    vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih,
+      colLoop_step_spec p hph Pg n]
     all_goals clear ih
     all_goals (try simp only [ColInv, RowInv, MulBase] at *)
     all_goals (try subst_vars)
@@ -270,7 +234,7 @@ theorem rowLoop_spec (n : Nat) (s₀ : St) (h : RowInv Pg s₀) :
     all_goals (try and_intros)
     all_goals grind (splits := 40) [arena_grind, lang_grind]
 
-include hpm hpc hph in
+include hph in
 theorem rowLoop_step_spec (n : Nat) (s₀ : St) (h : RowInv Pg s₀) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) rowLoop
@@ -279,7 +243,7 @@ theorem rowLoop_step_spec (n : Nat) (s₀ : St) (h : RowInv Pg s₀) :
       s'.loc 4 = s₀.loc 4 ∧ s'.loc 5 = s₀.loc 5 ∧
       pv (s'.mem.arr64 POOL) (s₀.loc 4).toNat ((s₀.loc 1).toNat + (s₀.loc 3).toNat) =
         pv Pg (s₀.loc 0).toNat (s₀.loc 1).toNat * pv Pg (s₀.loc 2).toNat (s₀.loc 3).toNat; ⊤⦄ :=
-  Triple.step_exec (rowLoop_spec p hpm hpc hph Pg (n + 1) s₀ h)
+  Triple.step_exec (rowLoop_spec p hph Pg (n + 1) s₀ h)
 
 theorem zeroLoop_step_spec (n : Nat) (s₀ : St) (h : ZeroInv Pg s₀) :
     ⦃fun s => s = s₀⦄
@@ -294,37 +258,36 @@ theorem zeroLoop_step_spec (n : Nat) (s₀ : St) (h : ZeroInv Pg s₀) :
 end mul
 
 section mulFn
-variable (p : Prog) (hpm : p.lookup "mul_hi" = some mulHi)
-  (hpc : p.lookup "add_carry" = some addCarry) (hph : p.lookup "mac_hi" = some macHi)
+variable (p : Prog) (hph : p.lookup "mac_hi" = some macHi)
   (hpt : p.lookup "nat_trim" = some natTrim) (hpn : p.lookup "nat_mul" = some natMul)
 
 set_option maxHeartbeats 1000000 in
-include hpm hpc hph hpt hpn in
+include hph hpt hpn in
 /-- `nat_mul` appends `a * b`, normalised, at the old top and moves the top past it; nothing
 below the old top changes, and no other array but `CTL[0]`. -/
 theorem natMul_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s₀.mem)
     (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nat_mul" [oa, la, ob, lb]
-    ⦃fun r s' => LocEq s' s₀ ∧ Frame POOL (s₀.mem.set64 CTL 0 (s₀.mem.top + r)) s'.mem ∧
+    ⦃fun r s' => LocEq s' s₀ ∧ Frame POOL (s₀.mem.set64 CTL 0 (s₀.mem.top + r.headD 0)) s'.mem ∧
       (s'.mem.arr64 POOL).size = (s₀.mem.arr64 POOL).size ∧
-      s₀.mem.top.toNat + r.toNat ≤ (s'.mem.arr64 POOL).size ∧
+      s₀.mem.top.toNat + (r.headD 0).toNat ≤ (s'.mem.arr64 POOL).size ∧
       Agree (s'.mem.arr64 POOL) (s₀.mem.arr64 POOL) s₀.mem.top.toNat ∧
-      pv (s'.mem.arr64 POOL) s₀.mem.top.toNat r.toNat =
+      pv (s'.mem.arr64 POOL) s₀.mem.top.toNat (r.headD 0).toNat =
         pv (s₀.mem.arr64 POOL) oa.toNat la.toNat * pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat ∧
-      Norm (s'.mem.arr64 POOL) s₀.mem.top.toNat r.toNat ∧ Grows s₀.mem s'.mem; ⊤⦄ := by
+      Norm (s'.mem.arr64 POOL) s₀.mem.top.toNat (r.headD 0).toNat ∧ Grows s₀.mem s'.mem; ⊤⦄ := by
   simp only [PoolOK, SliceOK] at hok ha hb
   rw [invoke_eq _ hpn]
   simp only [callFn, natMul]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
       zeroLoop_step_spec p (s₀.mem.arr64 POOL) n,
-      rowLoop_step_spec p hpm hpc hph (s₀.mem.arr64 POOL) n, natTrim_spec p hpt n]
+      rowLoop_step_spec p hph (s₀.mem.arr64 POOL) n, natTrim_spec p hpt n]
     all_goals (try simp only [ZeroInv, RowInv, MulBase, Grows] at *)
     all_goals (try subst_vars)
-    all_goals (try simp only [St.setLoc, BinOp.eval, Cmp.eval, reduceIte, Nat.reduceEqDiff, Locals.init,
+    all_goals (try simp only [St.setLoc, St.setLocs, BinOp.eval, Cmp.eval, reduceIte, Nat.reduceEqDiff, Locals.init,
       List.getD_cons_zero, List.getD_cons_succ, UInt64.toNat_zero] at *)
     all_goals (try and_intros)
     all_goals grind (splits := 40) [arena_grind, lang_grind]

@@ -32,10 +32,18 @@ namespace L.Compiler
 * `[T]` the initial stack pointer (top of the stack region), `[T + 8]` its lower limit;
 * `[T + 16 + 16a]` / `[T + 24 + 16a]` base / length of byte array `a < nb`;
 * then the same for word arrays `a < nw`;
-* then the arguments of the entry function, one word each. -/
+* then the constant data `rom` (the byte strings of the program's `ldc` reads), padded to whole
+  words;
+* then the arguments of the entry function, one word each.
+
+(`nres` is not part of the table in memory: it says how many result registers the code uses.) -/
 structure Tab where
   nb : Nat
   nw : Nat
+  rom : List UInt8 := []
+  /-- The number of result registers in use (`resReg 0`, …): the most results any `return`
+  gives or any call reads. -/
+  nres : Nat := 1
   deriving Repr, DecidableEq
 
 def Tab.stackTop : Int := 0
@@ -44,7 +52,53 @@ def Tab.base8 (_ : Tab) (a : ArrId) : Int := 16 + 16 * a
 def Tab.len8 (_ : Tab) (a : ArrId) : Int := 24 + 16 * a
 def Tab.base64 (t : Tab) (a : ArrId) : Int := 16 + 16 * (t.nb + a)
 def Tab.len64 (t : Tab) (a : ArrId) : Int := 24 + 16 * (t.nb + a)
-def Tab.args (t : Tab) : Int := 16 + 16 * (t.nb + t.nw)
+/-- The words the constant data takes. -/
+def Tab.romWords (t : Tab) : Nat := (t.rom.length + 7) / 8
+def Tab.romBase (t : Tab) : Int := 16 + 16 * (t.nb + t.nw)
+def Tab.args (t : Tab) : Int := 16 + 16 * (t.nb + t.nw) + 8 * t.romWords
+
+/-- The first position of `d` in `rom` (`0` if there is none; `WF` checks that it is one). -/
+def romIdx (d : List UInt8) : List UInt8 → Nat
+  | [] => 0
+  | b :: rom => if d.isPrefixOf (b :: rom) then 0 else romIdx d rom + 1
+
+/-- The constant byte strings of an expression, a condition, a statement, a program. -/
+def Expr.roms : Expr → List (List UInt8)
+  | .bin _ a b | .cmpw _ a b => Expr.roms a ++ Expr.roms b
+  | .ld8 _ i | .ld64 _ i => Expr.roms i
+  | .ldc d i => d :: Expr.roms i
+  | _ => []
+
+def Cond.roms : Cond → List (List UInt8)
+  | .cmp _ a b => Expr.roms a ++ Expr.roms b
+  | .and p q | .or p q => Cond.roms p ++ Cond.roms q
+  | .not p => Cond.roms p
+
+def Stmt.roms : Stmt → List (List UInt8)
+  | .skip | .brk | .abort => []
+  | .set _ e => Expr.roms e
+  | .st8 _ i e | .st64 _ i e => Expr.roms i ++ Expr.roms e
+  | .seq s t => Stmt.roms s ++ Stmt.roms t
+  | .ite c s t => Cond.roms c ++ Stmt.roms s ++ Stmt.roms t
+  | .while c s => Cond.roms c ++ Stmt.roms s
+  | .ret es => es.flatMap Expr.roms
+  | .call _ _ args => args.flatMap Expr.roms
+
+/-- The constant data of a program: its byte strings, each once. -/
+def Prog.rom (p : Prog) : List UInt8 :=
+  ((p.flatMap fun (_, fd) => Stmt.roms fd.body).foldl (fun acc d => if acc.contains d then acc else acc ++ [d]) []).flatten
+
+/-- The most results a statement returns or reads from a call. -/
+def Stmt.nres : Stmt → Nat
+  | .seq s t | .ite _ s t => max (Stmt.nres s) (Stmt.nres t)
+  | .while _ s => Stmt.nres s
+  | .ret es => es.length
+  | .call xs _ _ => xs.length
+  | _ => 0
+
+/-- The table layout of a program with `nb` byte arrays and `nw` word arrays. -/
+def Prog.tab (p : Prog) (nb nw : Nat) : Tab :=
+  { nb, nw, rom := Prog.rom p, nres := (p.map fun (_, fd) => Stmt.nres fd.body).foldl max 1 }
 
 /-! ## Instruction helpers -/
 
@@ -83,8 +137,8 @@ def fnL (f : FnName) : Label := "ca_f_" ++ f
 `compileE e t` evaluates `e` into `rax` and may write the temporaries `t, t+1, …, t + tempsE e - 1`. -/
 
 def tempsE : Expr → Nat
-  | .bin _ a b => max (tempsE a) (1 + tempsE b)
-  | .ld8 _ i | .ld64 _ i => tempsE i
+  | .bin _ a b | .cmpw _ a b => max (tempsE a) (1 + tempsE b)
+  | .ld8 _ i | .ld64 _ i | .ldc _ i => tempsE i
   | _ => 0
 
 def tempsC : Cond → Nat
@@ -98,7 +152,8 @@ def tempsArgs : Nat → List Expr → Nat
 
 def tempsS : Stmt → Nat
   | .skip | .brk | .abort => 0
-  | .set _ e | .ret e => tempsE e
+  | .set _ e => tempsE e
+  | .ret es => tempsArgs 0 es
   | .st8 _ i e | .st64 _ i e => max (tempsE i) (1 + tempsE e)
   | .seq s t => max (tempsS s) (tempsS t)
   | .ite c s t => max (tempsC c) (max (tempsS s) (tempsS t))
@@ -145,6 +200,24 @@ def binInstr : BinOp → Directive
   | .xor => i64 (.xor (.reg (rr .rax)) (oR .rcx))
   | .shl => i64 (.shl (.reg (rr .rax)) .cl)
   | .shr => i64 (.shr (.reg (rr .rax)) .cl)
+  | .mulhi => i64 (.mul (.reg (rr .rcx)))
+
+/-- `rax := rax op rcx`: one instruction, and for `mulhi` a move from `rdx`. -/
+def binCode : BinOp → Program
+  | .mulhi => [binInstr .mulhi, movRR .rax .rdx]
+  | op => [binInstr op]
+
+/-- The condition code under which `cmp rax, rcx` (with `rax` = left, `rcx` = right) makes the
+comparison true. -/
+def cmpCC : Cmp → CondCode
+  | .eq => .z | .ne => .nz | .ult => .c | .ule => .be | .slt => .l | .sle => .le
+
+/-- Result `i` of a function is returned in `resReg i` (`i < 6`). -/
+def resReg : Nat → Reg64
+  | 0 => .rax | 1 => .rdi | 2 => .r8 | 3 => .r9 | 4 => .r10 | _ => .r11
+
+/-- The number of result registers. -/
+def maxRes : Nat := 6
 
 /-- `rax := e`. -/
 def compileE (ctx : Ctx) : Expr → Nat → Program
@@ -152,7 +225,7 @@ def compileE (ctx : Ctx) : Expr → Nat → Program
   | .var x, _ => [movRM .rax (mb .rsp (8 * x))]
   | .bin op a b, t =>
     compileE ctx a t ++ [movMR (ctx.tmp t) .rax] ++ compileE ctx b (t + 1) ++
-      [movRR .rcx .rax, movRM .rax (ctx.tmp t), binInstr op]
+      ([movRR .rcx .rax, movRM .rax (ctx.tmp t)] ++ binCode op)
   | .ld8 a i, t =>
     compileE ctx i t ++
       [i64 (.cmp (.reg (rr .rax)) (oM (mb .r15 (ctx.tab.len8 a)))), jccL .nc errorL,
@@ -165,11 +238,15 @@ def compileE (ctx : Ctx) : Expr → Nat → Program
        movRM .rax (mbi .rcx .rax .W64)]
   | .len8 a, _ => [movRM .rax (mb .r15 (ctx.tab.len8 a))]
   | .len64 a, _ => [movRM .rax (mb .r15 (ctx.tab.len64 a))]
-
-/-- The condition code under which `cmp rax, rcx` (with `rax` = left, `rcx` = right) makes the
-comparison true. -/
-def cmpCC : Cmp → CondCode
-  | .eq => .z | .ne => .nz | .ult => .c | .ule => .be | .slt => .l | .sle => .le
+  | .cmpw op a b, t =>
+    compileE ctx a t ++ [movMR (ctx.tmp t) .rax] ++ compileE ctx b (t + 1) ++
+      [movRR .rcx .rax, movRM .rax (ctx.tmp t), i64 (.cmp (.reg (rr .rax)) (oR .rcx)),
+       movRI .rax 0, movRI .rdx 1, i64 (.cmovcc (cmpCC op) (rr .rax) (.reg (rr .rdx)))]
+  | .ldc d i, t =>
+    compileE ctx i t ++
+      [i64 (.cmp (.reg (rr .rax)) (oI d.length)), jccL .nc errorL,
+       i64 (.lea (rr .rcx) (mb .r15 (ctx.tab.romBase + romIdx d ctx.tab.rom))),
+       i64 (.movzx (.reg (rr .rax)) (w' := .W8) (.mem (mbi .rcx .rax .W8)))]
 
 /-- The negation of a condition code. -/
 def CondCode.neg : CondCode → CondCode
@@ -201,6 +278,17 @@ def compileArgs (ctx : Ctx) : Nat → List Expr → Program
 def burnFuel : Program :=
   [i64 (.sub (.reg (rr .r14)) (oI 1)), jccL .c exhaustedL]
 
+/-- Set result registers `i, …, i + n - 1`: from the temporaries below `k`, `0` from `k` on. -/
+def loadRes (ctx : Ctx) (k : Nat) : Nat → Nat → Program
+  | _, 0 => []
+  | i, n + 1 =>
+    (if i < k then movRM (resReg i) (ctx.tmp i) else movRI (resReg i) 0) :: loadRes ctx k (i + 1) n
+
+/-- Store result registers `i, i + 1, …` into the locals `xs`. -/
+def storeRes : List Var → Nat → Program
+  | [], _ => []
+  | x :: xs, i => movMR (mb .rsp (8 * x)) (resReg i) :: storeRes xs (i + 1)
+
 def compileS (ctx : Ctx) (path : String) : Stmt → Program
   | .skip => []
   | .set x e => compileE ctx e 0 ++ [movMR (mb .rsp (8 * x)) .rax]
@@ -226,11 +314,11 @@ def compileS (ctx : Ctx) (path : String) : Stmt → Program
       compileS { ctx with brk := ctx.lbl path "X" } (path ++ "b") s ++ burnFuel ++
       [jmpL (ctx.lbl path "H"), .label (ctx.lbl path "X")]
   | .brk => [jmpL ctx.brk]
-  | .ret e => compileE ctx e 0 ++ [jmpL ctx.retL]
-  | .call x f args =>
+  | .ret es => compileArgs ctx 0 es ++ loadRes ctx es.length 0 ctx.tab.nres ++ [jmpL ctx.retL]
+  | .call xs f args =>
     compileArgs ctx 0 args ++ [i64 (.lea (rr .rsi) (ctx.tmp 0))] ++ burnFuel ++
       [i64 (.call (.rel (.sub (.label (fnL f)) .after_current_instruction))),
-       movMR (mb .rsp (8 * x)) .rax]
+       ] ++ storeRes xs 0
   | .abort => [jmpL errorL]
 
 /-- Copy `n` parameters from `[rsi + 8i]` to the frame slots `i, i+1, …`. -/
@@ -254,7 +342,7 @@ def compileFn (tab : Tab) (f : FnName) (fd : FunDecl) : Program :=
    i64 (.sub (.reg (rr .rsp)) (oI (8 * F)))] ++
   copyParams 0 fd.nparams ++ zeroLocals fd.nparams (fd.nlocals - fd.nparams) ++
   compileS ctx "" fd.body ++
-  [.label ctx.endL, movRI .rax 0, .label ctx.retL,
+  [.label ctx.endL] ++ loadRes ctx 0 0 tab.nres ++ [.label ctx.retL,
    i64 (.add (.reg (rr .rsp)) (oI (8 * F))), i64 .ret]
 
 /-- The trampoline `ca_enter(T, fuel)` (System V: `rdi`, `rsi`; returns `rax`, `rdx`). It saves

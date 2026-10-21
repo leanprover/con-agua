@@ -41,24 +41,24 @@ theorem trimLoop_spec (n : Nat) (s₀ : St) (hs : (s₀.mem.arr64 POOL).size < 2
     (hb : (s₀.loc 0).toNat + (s₀.loc 1).toNat ≤ (s₀.mem.arr64 POOL).size) :
     ⦃fun s => s = s₀⦄
     exec p n trimLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ (r.retOr 0).toNat ≤ (s₀.loc 1).toNat ∧
-      pv (s₀.mem.arr64 POOL) (s₀.loc 0).toNat (r.retOr 0).toNat =
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ ((r.retOr [0]).headD 0).toNat ≤ (s₀.loc 1).toNat ∧
+      pv (s₀.mem.arr64 POOL) (s₀.loc 0).toNat ((r.retOr [0]).headD 0).toNat =
         pv (s₀.mem.arr64 POOL) (s₀.loc 0).toNat (s₀.loc 1).toNat ∧
-      Norm (s₀.mem.arr64 POOL) (s₀.loc 0).toNat (r.retOr 0).toNat; ⊤⦄ := by
+      Norm (s₀.mem.arr64 POOL) (s₀.loc 0).toNat ((r.retOr [0]).headD 0).toNat; ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
     rw [exec, step_while (w := trimLoop) rfl]
-    sym only [lang_grind, arena_grind] => vcgen [step, evalE, evalC, setLoc, ld64, ih] <;> finish
+    sym only [lang_grind, arena_grind] => vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish
 
 theorem trimLoop_step_spec (n : Nat) (s₀ : St) (hs : (s₀.mem.arr64 POOL).size < 2 ^ 64)
     (hb : (s₀.loc 0).toNat + (s₀.loc 1).toNat ≤ (s₀.mem.arr64 POOL).size) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) trimLoop
-    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ (r.retOr 0).toNat ≤ (s₀.loc 1).toNat ∧
-      pv (s₀.mem.arr64 POOL) (s₀.loc 0).toNat (r.retOr 0).toNat =
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ ((r.retOr [0]).headD 0).toNat ≤ (s₀.loc 1).toNat ∧
+      pv (s₀.mem.arr64 POOL) (s₀.loc 0).toNat ((r.retOr [0]).headD 0).toNat =
         pv (s₀.mem.arr64 POOL) (s₀.loc 0).toNat (s₀.loc 1).toNat ∧
-      Norm (s₀.mem.arr64 POOL) (s₀.loc 0).toNat (r.retOr 0).toNat; ⊤⦄ :=
+      Norm (s₀.mem.arr64 POOL) (s₀.loc 0).toNat ((r.retOr [0]).headD 0).toNat; ⊤⦄ :=
   Triple.step_exec (trimLoop_spec p (n + 1) s₀ hs hb)
 
 include hp in
@@ -66,16 +66,16 @@ theorem natTrim_spec (n : Nat) (s₀ : St) (o l : Word) (hs : (s₀.mem.arr64 PO
     (hb : o.toNat + l.toNat ≤ (s₀.mem.arr64 POOL).size) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nat_trim" [o, l]
-    ⦃fun r s' => s' = s₀ ∧ r.toNat ≤ l.toNat ∧
-      pv (s₀.mem.arr64 POOL) o.toNat r.toNat = pv (s₀.mem.arr64 POOL) o.toNat l.toNat ∧
-      Norm (s₀.mem.arr64 POOL) o.toNat r.toNat; ⊤⦄ := by
+    ⦃fun r s' => s' = s₀ ∧ (r.headD 0).toNat ≤ l.toNat ∧
+      pv (s₀.mem.arr64 POOL) o.toNat (r.headD 0).toNat = pv (s₀.mem.arr64 POOL) o.toNat l.toNat ∧
+      Norm (s₀.mem.arr64 POOL) o.toNat (r.headD 0).toNat; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, natTrim]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, trimLoop_step_spec p n] <;> finish
+      vcgen [exec, step, evalE, evalArgs, trimLoop_step_spec p n] <;> finish
 
 end trim
 
@@ -132,11 +132,11 @@ def natProg : Prog :=
 #guard (run natProg 100 "nat_add" [0, 2, 2, 1]
   { words := #[#[0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 1, 0, 0, 0, 0, 0], #[3]] }).toOption.map
   (fun (r, m) => (r, m.words)) ==
-  some (3, #[#[0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 1, 0, 0, 1, 0, 0], #[6]])
+  some ([3], #[#[0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 1, 0, 0, 1, 0, 0], #[6]])
 
 /- Normalisation: `0 + 0` has length 0 (the carry limb `0` is trimmed); the top stays. -/
 #guard (run natProg 100 "nat_add" [0, 0, 0, 0] { words := #[#[0, 0], #[0]] }).toOption.map (·.1)
-  == some 0
+  == some [0]
 
 /- No room: `abort`. -/
 #guard (run natProg 100 "nat_add" [0, 1, 0, 1] { words := #[#[5, 0], #[1]] }).toOption.isNone
@@ -149,13 +149,13 @@ include hpc in
 theorem addCarry_spec (n : Nat) (s₀ : St) (x y c : Word) (hc : c.toNat ≤ 1) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "add_carry" [x, y, c]
-    ⦃fun r s' => s' = s₀ ∧ r.toNat = adcHi x y c; ⊤⦄ := by
+    ⦃fun r s' => s' = s₀ ∧ (r.headD 0).toNat = adcHi x y c; ⊤⦄ := by
   rw [invoke_eq _ hpc]
   simp only [callFn, addCarry]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind, arena_grind] => vcgen [exec, step, evalE, evalC, setLoc] <;> finish
+    sym only [lang_grind, arena_grind] => vcgen [exec, step, evalE, evalC, evalArgs, setLoc] <;> finish
 
 include hpl in
 theorem natLimb_spec (n : Nat) (s₀ : St) (o l i : Word)
@@ -163,13 +163,13 @@ theorem natLimb_spec (n : Nat) (s₀ : St) (o l i : Word)
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nat_limb" [o, l, i]
     ⦃fun r s' => s' = s₀ ∧
-      r.toNat = lv (s₀.mem.arr64 POOL) o.toNat l.toNat i.toNat; ⊤⦄ := by
+      (r.headD 0).toNat = lv (s₀.mem.arr64 POOL) o.toNat l.toNat i.toNat; ⊤⦄ := by
   rw [invoke_eq _ hpl]
   simp only [callFn, natLimb]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind, arena_grind] => vcgen [exec, step, evalE, evalC, ld64] <;> finish
+    sym only [lang_grind, arena_grind] => vcgen [exec, step, evalE, evalC, evalArgs, ld64] <;> finish
 
 /-- The invariant of the add loop. Ghost `Pg`: the pool at entry; the pool agrees with it below
 `top` (so the operands, which lie below `top`, read the same), and the first `i` limbs of the
@@ -204,7 +204,7 @@ theorem addLoop_spec (n : Nat) (s₀ : St) (h : AddInv Pg s₀) :
     -- `finish [AddInv]` unfolds the invariant of the next iteration into ten conjuncts, whose
     -- negation `grind` case-splits: more than the default nine splits
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, st64, ih, natLimb_spec p hpl n,
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, st64, ih, natLimb_spec p hpl n,
         addCarry_spec p hpc n] <;> finish (splits := 20) [AddInv]
 
 include hpl hpc in
@@ -233,13 +233,13 @@ theorem natAdd_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
     (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "nat_add" [oa, la, ob, lb]
-    ⦃fun r s' => LocEq s' s₀ ∧ Frame POOL (s₀.mem.set64 CTL 0 (s₀.mem.top + r)) s'.mem ∧
+    ⦃fun r s' => LocEq s' s₀ ∧ Frame POOL (s₀.mem.set64 CTL 0 (s₀.mem.top + r.headD 0)) s'.mem ∧
       (s'.mem.arr64 POOL).size = (s₀.mem.arr64 POOL).size ∧
-      s₀.mem.top.toNat + r.toNat ≤ (s'.mem.arr64 POOL).size ∧
+      s₀.mem.top.toNat + (r.headD 0).toNat ≤ (s'.mem.arr64 POOL).size ∧
       Agree (s'.mem.arr64 POOL) (s₀.mem.arr64 POOL) s₀.mem.top.toNat ∧
-      pv (s'.mem.arr64 POOL) s₀.mem.top.toNat r.toNat =
+      pv (s'.mem.arr64 POOL) s₀.mem.top.toNat (r.headD 0).toNat =
         pv (s₀.mem.arr64 POOL) oa.toNat la.toNat + pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat ∧
-      Norm (s'.mem.arr64 POOL) s₀.mem.top.toNat r.toNat ∧ Grows s₀.mem s'.mem; ⊤⦄ := by
+      Norm (s'.mem.arr64 POOL) s₀.mem.top.toNat (r.headD 0).toNat ∧ Grows s₀.mem s'.mem; ⊤⦄ := by
   simp only [PoolOK, SliceOK] at hok ha hb
   rw [invoke_eq _ hpa]
   simp only [callFn, natAdd]
@@ -247,7 +247,7 @@ theorem natAdd_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         addLoop_step_spec p hpl hpc (s₀.mem.arr64 POOL) n, natTrim_spec p hpt n] <;>
       -- depth, not search: the state after `top := …; n := …; if …` is many `setLoc`s deep
       finish (gen := 20) [AddInv, Grows]

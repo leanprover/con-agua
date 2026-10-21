@@ -11,8 +11,8 @@ The meaning of an L program is a Lean function into the monad `M := StateT St (E
 It is executable (`#eval`), and it is what `vcgen` steps through in a proof.
 
 * `St` is the memory (`Mem`: the byte arrays and the word arrays) plus the current frame's locals.
-* `Err` is every way a run can fail. None of them is a result: a result is a `Word` returned by
-  the function, so "ran out of fuel" or "read out of bounds" can never read as "accept".
+* `Err` is every way a run can fail. None of them is a result: a result is a list of words
+  returned by the function, so "ran out of fuel" or "read out of bounds" can never read as "accept".
 * Fuel. `exec p n` is the `n`-th Kleene iterate of the one-step interpreter `step p`:
   `exec p 0` throws `outOfFuel`, and `exec p (n+1) = step p (exec p n)`. `step p k` interprets a
   statement by structural recursion and hands the next loop iteration and every callee body to
@@ -58,18 +58,18 @@ abbrev M := StateT St (Except Err)
 inductive Sig where
   | normal
   | brk
-  | ret (v : Word)
+  | ret (vs : List Word)
   deriving Repr, DecidableEq, Inhabited
 
-/-- The value returned by a block that ends with this signal and is followed by `return d`.
-(Loop specs use it: their post is one equation `r.retOr d = …`, with no case split.) -/
-def Sig.retOr : Sig → Word → Word
+/-- The values returned by a block that ends with this signal and is followed by `return d`.
+(Loop specs use it: their post is one equation `r.retOr [d] = […]`, with no case split.) -/
+def Sig.retOr : Sig → List Word → List Word
   | .normal, d => d
   | .brk, d => d
-  | .ret v, _ => v
+  | .ret vs, _ => vs
 
-/-- The value a function returns when its body ends with this signal. -/
-def Sig.retVal (r : Sig) : Word := r.retOr 0
+/-- The values a function returns when its body ends with this signal. -/
+def Sig.retVal (r : Sig) : List Word := r.retOr []
 
 def BinOp.eval : BinOp → Word → Word → Word
   | .add, a, b => a + b
@@ -80,6 +80,7 @@ def BinOp.eval : BinOp → Word → Word → Word
   | .xor, a, b => a ^^^ b
   | .shl, a, b => a <<< b
   | .shr, a, b => a >>> b
+  | .mulhi, a, b => UInt64.ofNat (a.toNat * b.toNat / 2 ^ 64)
 
 def Cmp.eval : Cmp → Word → Word → Bool
   | .eq, a, b => a == b
@@ -88,6 +89,9 @@ def Cmp.eval : Cmp → Word → Word → Bool
   | .ule, a, b => decide (a ≤ b)
   | .slt, a, b => decide (a.toInt64 < b.toInt64)
   | .sle, a, b => decide (a.toInt64 ≤ b.toInt64)
+
+/-- A comparison as a word. -/
+def Cmp.evalW (c : Cmp) (a b : Word) : Word := if c.eval a b then 1 else 0
 
 /-! ## Memory access -/
 
@@ -123,6 +127,10 @@ def ld64 (a : ArrId) (i : Word) : M Word := do
   let m := (← get).mem
   if h : i.toNat < (m.arr64 a).size then return (m.arr64 a)[i.toNat] else throw .oob
 
+/-- Byte `i` of the constant byte string `d`, zero-extended; `oob` out of bounds. -/
+def ldc (d : List UInt8) (i : Word) : M Word :=
+  if h : i.toNat < d.length then return d[i.toNat].toUInt64 else throw .oob
+
 /-- Store the low byte of `v` at byte `i` of byte array `a`; `oob` out of bounds. -/
 def st8 (a : ArrId) (i v : Word) : M Unit := do
   let s ← get
@@ -144,6 +152,11 @@ def evalE : Expr → M Word
   | .ld64 a i => do ld64 a (← evalE i)
   | .len8 a => do return (← get).mem.len8 a
   | .len64 a => do return (← get).mem.len64 a
+  | .cmpw c a b => do
+    let x ← evalE a
+    let y ← evalE b
+    return c.evalW x y
+  | .ldc d i => do ldc d (← evalE i)
 
 def evalC : Cond → M Bool
   | .cmp c a b => do
@@ -167,6 +180,13 @@ def St.setLoc (s : St) (x : Var) (v : Word) : St :=
 
 def setLoc (x : Var) (v : Word) : M Unit := modify (·.setLoc x v)
 
+/-- `xᵢ := vs[i]` (`0` past the end of `vs`), in order. -/
+def St.setLocs (s : St) : List Var → List Word → St
+  | [], _ => s
+  | x :: xs, vs => (s.setLoc x (vs.headD 0)).setLocs xs vs.tail
+
+def setLocs (xs : List Var) (vs : List Word) : M Unit := modify (·.setLocs xs vs)
+
 def lookupFn (p : Prog) (f : FnName) : M FunDecl :=
   match p.lookup f with
   | some fd => pure fd
@@ -174,7 +194,7 @@ def lookupFn (p : Prog) (f : FnName) : M FunDecl :=
 
 /-- Call `fd` with arguments `vs`, running its body with `k`: a fresh frame, then the caller's
 locals back. -/
-def callFn (k : Stmt → M Sig) (fd : FunDecl) (vs : List Word) : M Word := do
+def callFn (k : Stmt → M Sig) (fd : FunDecl) (vs : List Word) : M (List Word) := do
   let s ← get
   set ({ s with loc := Locals.init vs } : St)
   let r ← k fd.body
@@ -183,7 +203,7 @@ def callFn (k : Stmt → M Sig) (fd : FunDecl) (vs : List Word) : M Word := do
 
 /-- Call function `f` of `p`, running its body with `k`. Callee specs are stated about
 `invoke p (exec p n) f vs`, for every `n`. -/
-def invoke (p : Prog) (k : Stmt → M Sig) (f : FnName) (vs : List Word) : M Word := do
+def invoke (p : Prog) (k : Stmt → M Sig) (f : FnName) (vs : List Word) : M (List Word) := do
   let fd ← lookupFn p f
   callFn k fd vs
 
@@ -219,11 +239,11 @@ def step (p : Prog) (k : Stmt → M Sig) : Stmt → M Sig
       | .ret v => return .ret v
     else return .normal
   | .brk => return .brk
-  | .ret e => do return .ret (← evalE e)
-  | .call x f args => do
+  | .ret es => do return .ret (← evalArgs es)
+  | .call xs f args => do
     let vs ← evalArgs args
-    let r ← invoke p k f vs
-    setLoc x r
+    let rs ← invoke p k f vs
+    setLocs xs rs
     return .normal
   | .abort => throw .abort
 
@@ -232,8 +252,8 @@ def exec (p : Prog) : Nat → Stmt → M Sig
   | 0, _ => throw .outOfFuel
   | n + 1, s => step p (exec p n) s
 
-/-- Run function `f` of `p` on memory `m`: its result and the final memory. -/
-def run (p : Prog) (fuel : Nat) (f : FnName) (vs : List Word) (m : Mem) : Except Err (Word × Mem) :=
+/-- Run function `f` of `p` on memory `m`: its results and the final memory. -/
+def run (p : Prog) (fuel : Nat) (f : FnName) (vs : List Word) (m : Mem) : Except Err (List Word × Mem) :=
   ((invoke p (exec p fuel) f vs).run { mem := m, loc := Locals.init [] }).map fun (r, s) => (r, s.mem)
 
 end L

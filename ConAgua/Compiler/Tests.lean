@@ -5,8 +5,10 @@ public import ConAgua.Compiler.WF
 meta import ConAgua.Compiler.WF
 public import ConAgua.L.Notation
 public import ConAgua.L.Examples
+public import ConAgua.Scan.Lit
 meta import ConAgua.Compiler.Run
 meta import ConAgua.L.Examples
+meta import ConAgua.Scan.Lit
 
 /-!
 # Differential tests: compiled code on Kraken's semantics against `L.run`
@@ -23,7 +25,8 @@ namespace L.Compiler.Tests
 
 def agrees (p : Prog) (f : FnName) (args : List Word) (m : Mem) (fuel : Nat := 100000)
     (stack : Nat := 4096) : Bool :=
-  (runKraken p f args m fuel.toUInt64 stack).toOption == some (Outcome.ofL (run p fuel f args m))
+  (runKraken p f args m fuel.toUInt64 stack).toOption ==
+    some (Outcome.ofL (Prog.tab p m.bytes.size m.words.size).nres (run p fuel f args m))
 
 def inp (s : String) : Mem := { bytes := #[s.toUTF8.data] }
 
@@ -45,7 +48,7 @@ def inp (s : String) : Mem := { bytes := #[s.toUTF8.data] }
 
 -- Fuel: both run out on a long input with fuel 3.
 #guard (runKraken scanProg "skip_braced" [1, 0] (inp "{aaaaaaaaaa}") 3).toOption == some .exhausted
-#guard Outcome.ofL (run scanProg 3 "skip_braced" [1, 0] (inp "{aaaaaaaaaa}")) == .exhausted
+#guard Outcome.ofL 1 (run scanProg 3 "skip_braced" [1, 0] (inp "{aaaaaaaaaa}")) == .exhausted
 
 /-! Word arrays, stores, arithmetic, signed comparisons, recursion, `break`, `abort`. -/
 
@@ -100,5 +103,75 @@ def recProg : Prog := [("sum_to", sumTo), ("boom", boom)]
 -- the stack check also reserves the next return address: 128 bytes hold three calls, not four.
 #guard agrees recProg "sum_to" [2] {} 100000 128
 #guard (runKraken recProg "sum_to" [3] {} 100000 128).toOption == some .exhausted
+
+/-! `mulhi`, comparisons as words, constant data. -/
+
+def LITS : List UInt8 := "truefalse".toUTF8.toList
+
+/-- `mulhi(x, y)`, the carry of `x + y`, and whether `IN[i..]` starts with `"false"`. -/
+def ext : FunDecl := lfn (x, y, i) locals (k, ok) {
+  ok := 1;
+  while k < 5 {
+    if i + k >= len(B.u8) { ok := 0; break };
+    if B.u8[i + k] != LITS.c8[k + 4] { ok := 0 };
+    k += 1
+  };
+  return mulhi(x, y) ^ (u64(x + y < x) << 32) ^ (ok << 40) ^ u64(x ≤ₛ y) << 41
+}
+
+def extProg : Prog := [("ext", ext)]
+
+#guard Prog.wf (Prog.tab extProg 1 0) extProg
+#guard Prog.rom extProg = LITS
+#guard agrees extProg "ext" [0xffffffffffffffff, 0xffffffffffffffff, 0] (inp "false")
+#guard agrees extProg "ext" [0x123456789abcdef0, 0x0fedcba987654321, 1] (inp " false")
+#guard agrees extProg "ext" [3, 5, 1] (inp " fals")
+#guard agrees extProg "ext" [0x8000000000000000, 5, 0] (inp "falsy")
+-- `LITS.c8[9]` is out of bounds.
+def oobC : FunDecl := lfn (i) { return LITS.c8[i] }
+#guard agrees [("c", oobC)] "c" [8] {}
+#guard (runKraken [("c", oobC)] "c" [9] {} 100000).toOption == some .error
+
+/-! Several results. -/
+
+/-- The 128-bit product, the carry of a sum, and a third value. -/
+def wide : FunDecl := lfn (x, y) {
+  return (x * y, mulhi(x, y), u64(x + y < x))
+}
+
+/-- Returns one value: a caller reading three gets `0` for the other two. -/
+def one : FunDecl := lfn (x) { return x + 1 }
+
+/-- Returns nothing (falls off the end). -/
+def none' : FunDecl := lfn (x) { skip }
+
+def useWide : FunDecl := lfn (x, y) locals (lo, hi, c, a, b, z) {
+  (lo, hi, c) := call wide(x, y);
+  (a, b, z) := call one(lo);
+  (b, z) := call none'(a);
+  (hi, hi) := call wide(hi, 3);
+  return lo ^ (hi << 1) ^ (c << 60) ^ a ^ b ^ z
+}
+
+def wideProg : Prog := [("use", useWide), ("wide", wide), ("one", one), ("none'", none')]
+
+#guard (Prog.tab wideProg 0 0).nres = 3
+#guard Prog.wf (Prog.tab wideProg 0 0) wideProg
+#guard agrees wideProg "use" [0xffffffffffffffff, 0xfffffffffffffff0] {}
+#guard agrees wideProg "use" [12345, 678910] {}
+#guard agrees wideProg "wide" [0xffffffffffffffff, 0xfffffffffffffff0] {}
+#guard agrees wideProg "one" [41] {}
+#guard agrees wideProg "none'" [41] {}
+#guard (runKraken wideProg "wide" [0xffffffffffffffff, 2] {} 1000).toOption == some (.ok [0xfffffffffffffffe, 1, 1])
+#guard (run wideProg 100 "wide" [0xffffffffffffffff, 2] {}).toOption.map (·.1) ==
+  some [0xfffffffffffffffe, 1, 1]
+
+/-! `match_lit`/`scan_bool` (`Scan/Lit.lean`): constant data and three results. -/
+
+open L.Scan.Lit in
+#guard Prog.wf (Prog.tab litProg 1 0) litProg
+open L.Scan.Lit in
+#guard [" true", "false", "fals", "", "falsetto", "tru"].all fun t =>
+  [0, 1].all fun i => agrees litProg "scan_bool" [i] (inp t)
 
 end L.Compiler.Tests

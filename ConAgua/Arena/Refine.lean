@@ -38,7 +38,7 @@ with `nat_add` and interns the result with an L function `intern_lit(o, l)`.
   is stated in the same shape; milestone 4 (the hash-consing tables) discharges it.
 
 Direction: the L run determines the arena run. If the L function returns `r`, then the arena
-function does not fail, its result is `some (decE r)`, and the final states are related. (A
+function does not fail, its result is `some (decE (r.headD 0))`, and the final states are related. (A
 `native` capacity failure of the arena, or an L `abort` on a full pool, claim nothing.)
 -/
 
@@ -143,7 +143,7 @@ variable (p : Prog) (hpl : p.lookup "nat_limb" = some natLimb)
     ⦃fun r s' => LocEq s' s₀ ∧
       AM.ok (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀ ∧
       R s'.mem (AM.st (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀) ∧
-      AM.res (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀ = decE r; ⊤⦄)
+      AM.res (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀ = decE (r.headD 0); ⊤⦄)
 
 include hpl hpc hpt hpa hpn hpool hgrow hI in
 /-- **`nat_add_lit` refines `natOpResult`'s `Nat.add` arm.** If the L function returns `r`, the
@@ -158,7 +158,7 @@ theorem natAddLit_refines (n : Nat) (s₀ : St) (a₀ : AState) (hR : R s₀.mem
       R s'.mem (AM.st (natAddArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
         (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀) ∧
       AM.res (natAddArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
-        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀ = some (decE r); ⊤⦄ := by
+        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀ = some (decE (r.headD 0)); ⊤⦄ := by
   have hok := hpool _ _ hR
   simp only [PoolOK, SliceOK] at hok ha hb
   rw [invoke_eq _ hpn]
@@ -167,7 +167,7 @@ theorem natAddLit_refines (n : Nat) (s₀ : St) (a₀ : AState) (hR : R s₀.mem
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc, ld64, natAdd_spec p hpl hpc hpt hpa n,
+      vcgen [exec, step, evalE, evalArgs, setLoc, setLocs, ld64, natAdd_spec p hpl hpc hpt hpa n,
         hI a₀ n] <;>
       finish [natAddArm, PoolOK, SliceOK]
 
@@ -175,10 +175,10 @@ include hpl hpc hpt hpa hpn hpool hgrow hI in
 /-- From an L run to the arena run: if `nat_add_lit` returns `r` with final memory `m'`, the
 arena arm on any related state returns the handle `r` and ends in a state related to `m'`. -/
 theorem natAddLit_run (fuel : Nat) (m : Mem) (a₀ : AState) (hR : R m a₀)
-    (oa la ob lb : Word) (ha : SliceOK m oa la) (hb : SliceOK m ob lb) (r : Word) (m' : Mem)
+    (oa la ob lb : Word) (ha : SliceOK m oa la) (hb : SliceOK m ob lb) (r : List Word) (m' : Mem)
     (h : run p fuel "nat_add_lit" [oa, la, ob, lb] m = .ok (r, m')) :
     ∃ a', (natAddArm (pv (m.arr64 POOL) oa.toNat la.toNat) (pv (m.arr64 POOL) ob.toNat lb.toNat)).run
-      a₀ = .ok (some (decE r), a') ∧ R m' a' := by
+      a₀ = .ok (some (decE (r.headD 0)), a') ∧ R m' a' := by
   simp only [run] at h
   cases hr : (invoke p (exec p fuel) "nat_add_lit" [oa, la, ob, lb]).run
       { mem := m, loc := Locals.init [] } with

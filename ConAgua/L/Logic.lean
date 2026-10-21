@@ -25,7 +25,7 @@ namespace L
 open Std.WP
 open scoped Lean.Order
 
-attribute [lang_grind] BinOp.eval Cmp.eval Sig.retOr Sig.retVal
+attribute [lang_grind] BinOp.eval Cmp.eval Cmp.evalW Sig.retOr Sig.retVal
 attribute [lang_grind cases] Sig
 
 @[lang_grind =] theorem St.setLoc_loc (s : St) (x y : Var) (v : Word) :
@@ -33,6 +33,13 @@ attribute [lang_grind cases] Sig
 
 @[lang_grind =] theorem St.setLoc_mem (s : St) (x : Var) (v : Word) :
     (s.setLoc x v).mem = s.mem := rfl
+
+@[lang_grind =] theorem St.setLocs_nil (s : St) (vs : List Word) : s.setLocs [] vs = s := rfl
+
+@[lang_grind =] theorem St.setLocs_cons (s : St) (x : Var) (xs : List Var) (vs : List Word) :
+    s.setLocs (x :: xs) vs = (s.setLoc x (vs.headD 0)).setLocs xs vs.tail := rfl
+
+attribute [lang_grind =] List.headD_cons List.headD_nil List.tail_cons List.tail_nil List.cons.injEq
 
 @[lang_grind =] theorem Locals.init_nil (x : Var) : Locals.init [] x = 0 := by
   simp [Locals.init]
@@ -44,6 +51,40 @@ attribute [lang_grind cases] Sig
     Locals.init (v :: vs) (x + 1) = Locals.init vs x := rfl
 
 attribute [lang_grind] Mem.len8 Mem.len64
+
+/-- Byte reads are compared as words (`c != LITS.c8[k]`); the model compares bytes. -/
+theorem UInt8.toUInt64_eq_iff (a b : UInt8) : (a.toUInt64 = b.toUInt64) = (a = b) := by
+  apply propext; constructor
+  · intro h; apply UInt8.toNat_inj.mp; have := congrArg UInt64.toNat h; simpa using this
+  · intro h; rw [h]
+
+attribute [lang_grind =] UInt8.toUInt64_eq_iff
+
+/-- A local of a state that is equal to a record literal. `grind` does not project `loc` out of
+an equation `t = { mem := m, loc := l }` by itself, because `t.loc x` is an over-applied
+projection (docs/gaps/grind-state-eq-projection.lean); a callee spec's frame condition `s' = s₀`
+then hides the caller's untouched locals. The multi-pattern fires for every read `t.loc x` and
+every record literal in the goal; the equation itself is left to congruence closure. -/
+theorem St.loc_of_eq_mk {t : St} {m : Mem} {l : Locals} (h : t = St.mk m l) (x : Var) :
+    t.loc x = l x := by
+  subst h; rfl
+
+grind_pattern [lang_grind] St.loc_of_eq_mk => t.loc x, St.mk m l
+
+/-- The locals of `s` are those of `t`: the frame condition of a callee that may change memory
+(post `LocEq s' s₀ ∧ …`). A plain `s'.loc = s₀.loc` does not reach the caller's reads
+`s'.loc x`: `grind` would have to apply the function equation, and the term `s₀.loc x` does not
+exist yet. The pattern `LocEq s t, s.loc x` creates it. -/
+def LocEq (s t : St) : Prop := s.loc = t.loc
+
+theorem LocEq.loc {s t : St} (h : LocEq s t) (x : Var) : s.loc x = t.loc x := by rw [h]
+
+grind_pattern [lang_grind] LocEq.loc => LocEq s t, s.loc x
+
+/-- `callFn` restores the caller's locals: the callee's post `LocEq s' s₀` holds. -/
+theorem LocEq.restore (s : St) (m : Mem) : LocEq (St.mk m s.loc) s := rfl
+
+grind_pattern [lang_grind] LocEq.restore => St.mk m s.loc
 
 /-- Restoring the caller's locals after a call that left the memory alone gives back the
 caller's state. -/
