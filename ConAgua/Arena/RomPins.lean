@@ -373,10 +373,6 @@ theorem internReservedPins_run (a : AState)
   refine (run_bind_ok _ _ _ ok6).trans ?_
   rfl
 
-theorem AM.of_run_ok {α : Type} [Inhabited α] {x : AM α} {a a' : AState} {r : α}
-    (h : x.run a = .ok (r, a')) : AM.ok x a ∧ AM.st x a = a' ∧ AM.res x a = r := by
-  simp only [AM.ok, AM.st, AM.res, h, and_self]
-
 theorem pinW_frame {C : List Word} {m m' : Mem} (h : MemFrame StoreA C m m') (i : Nat) :
     pinW m' i = pinW m i := by
   simp only [pinW, h.1 PINS (by simp [StoreA, PINS]) (by decide)]
@@ -497,7 +493,7 @@ theorem irpW_ok (off : Word) (rest : List UInt8)
   rw [← res4] at ok5 hR5 res5 ok6 hR6 res6
   rw [← res5] at ok6 hR6 res6
   have hrun := internReservedPins_run a ok1 ok2 ok3 _ rfl ok4 ok5 _ rfl ok6
-  obtain ⟨okX, stX, -⟩ := AM.of_run_ok hrun
+  obtain ⟨okX, stX, -⟩ := AM.of_run_ok _ _ _ _ hrun
   have hfS : MemFrame StoreA StoreC m₂ m₆ :=
     ((frame_store hf3 (by simp [lsSch, LSREC, LSSLOT]) (by simp [lsSch])).trans
       (frame_store hf4 (by simp [zeroSch, ZREC, ZSLOT]) (by simp [zeroSch]))).trans
