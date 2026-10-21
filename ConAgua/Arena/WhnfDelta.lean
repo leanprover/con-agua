@@ -3,6 +3,7 @@ import ConAgua.Arena.Env
 import ConAgua.Arena.LsStore
 import ConAgua.Arena.ConstStore
 import ConAgua.Arena.ExprMk
+import ConAgua.Arena.PinsNatOp
 
 /-!
 # The `whnf` half of the whnf family: `whnf`, its loop, the literal/delta step, and their helpers
@@ -211,26 +212,16 @@ def rawNatLitL : FunDecl := lfn (h) locals (tag, t, i, k, nz, el) {
 }
 
 /-- `nat_bin_op_name(c)`: is `c` one of the fourteen pinned binary `Nat` operations (the fifteenth,
-`pred`, is unary and not tested here)? -/
+`pred`, is unary and not tested here)? The pin table read inline (`PINS.u64[1 + k]`), as
+`nat_op_result`'s own dispatch does (`NatArms.lean`), rather than fourteen `pin_at` calls: the
+same values, one bound check instead of fourteen. -/
 @[l_impl ConRon.Arena.natBinOpName]
-def natBinOpNameL : FunDecl :=
-  lfn (c) locals (ad, su, mu, po, be, bl, di, mo, gc, la, lo, xo, sl, sr) {
-  ad := call pin_at(15);
-  su := call pin_at(16);
-  mu := call pin_at(17);
-  po := call pin_at(18);
-  be := call pin_at(19);
-  bl := call pin_at(20);
-  di := call pin_at(21);
-  mo := call pin_at(22);
-  gc := call pin_at(23);
-  la := call pin_at(24);
-  lo := call pin_at(25);
-  xo := call pin_at(26);
-  sl := call pin_at(27);
-  sr := call pin_at(28);
-  if c == ad || c == su || c == mu || c == po || c == be || c == bl || c == di ||
-    c == mo || c == gc || c == la || c == lo || c == xo || c == sl || c == sr { return 1 };
+def natBinOpNameL : FunDecl := lfn (c) locals () {
+  if PINS.u64[0] == 0 { abort };
+  if c == PINS.u64[16] || c == PINS.u64[17] || c == PINS.u64[18] || c == PINS.u64[19] ||
+    c == PINS.u64[20] || c == PINS.u64[21] || c == PINS.u64[22] || c == PINS.u64[23] ||
+    c == PINS.u64[24] || c == PINS.u64[25] || c == PINS.u64[26] || c == PINS.u64[27] ||
+    c == PINS.u64[28] || c == PINS.u64[29] { return 1 };
   return 0
 }
 
@@ -477,12 +468,36 @@ structure WhnfDeltaProg (p : Prog) : Prop where
   cvFind : p.lookup "cv_find" = some (memoFindG cvSch)
   cvPut : p.lookup "cv_put" = some (memoPutG cvSch)
 
+/-! ## Lifting a read-only, memory-unchanged triple into `CoreSpec`
+
+For a function whose twin action neither changes `AState` nor the L code's memory, `CoreAfter`'s
+existential is witnessed by the very same maps (`KeptAll.refl`, `StackKept.refl`): the recipe
+`flushCaches_refinesC` (`CoreRefine.lean`) uses for a state-changing function, specialised to one
+that does not change anything. -/
+theorem CoreSpec.of_pure {α : Type} [Inhabited α] (p : Prog) (n : Nat) (f : FnName)
+    (args : List Word) (T : AM α) (dec : List Word → α) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (G g : Word)
+    (hC : CoreS dn s₀.mem a₀ vis fe MM G g) (hok : AM.ok T a₀) (hst : AM.st T a₀ = a₀)
+    (htrip : ⦃fun s => s = s₀⦄
+      invoke p (exec p n) f args
+      ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ AM.res T a₀ = dec r; ⊤⦄) :
+    CoreSpec p n f args T dec s₀ a₀ dn vis fe MM G g := by
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, hmem, hres⟩ := M.of_run (P := fun s => s = s₀) hs hrun htrip
+  subst hs
+  refine ⟨hloc, hok, ⟨MM, G, ?_, KeptAll.refl _ _ _, ?_⟩, hres⟩
+  · rw [hst, hmem]; exact hC
+  · rw [hmem]; exact StackKept.refl _
+
 /-! ## The specs
 
 Plain `CoreSpec` for every function that neither calls the knot nor loops; a named, `F`-quantified
 (and, for `whnf_loop`, additionally loop-fuel-`K`-quantified) `Prop` for the three that call
 `whnf`/`whnf_core`, in `WhnfCoreSlot`/`WhnfSlot`'s own shape; `whnf` itself is `WhnfSlot` (already
-in `WhnfBase.lean`). All `sorry`, tagged. -/
+in `WhnfBase.lean`). All `sorry` except `nat_bin_op_name` (proved: `CoreSpec.of_pure` plus the
+`natOpResult_sel` recipe of `PinsNatOp.lean`, run on the fourteen binary-op pins instead of the
+fifteen `natOpResult` reads). -/
 
 section specs
 variable (p : Prog) (hp : WhnfDeltaProg p)
@@ -555,13 +570,89 @@ theorem rawNatLit_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → O
         else some (pv (s₀.mem.arr64 POOL) (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat))
       s₀ a₀ dn vis fe MM G g := sorry
 
-/-- **`nat_bin_op_name` refines `natBinOpName`.** -/
+/-- `natBinOpName` with its pins read: word `w k` is the absolute `PINS` word `k`, `natOpSel`'s own
+convention (`PinsNatOp.lean`): the fourteen binary ops, `pred` excluded. -/
+def natBinOpSel (w : Nat → Word) (c : Word) : Bool :=
+  decide (c = w 16) || decide (c = w 17) || decide (c = w 18) || decide (c = w 19) ||
+  decide (c = w 20) || decide (c = w 21) || decide (c = w 22) || decide (c = w 23) ||
+  decide (c = w 24) || decide (c = w 25) || decide (c = w 26) || decide (c = w 27) ||
+  decide (c = w 28) || decide (c = w 29)
+
+/-- **`natBinOpName`'s pins read**, as `natOpResult_sel` reads `natOpResult`'s. -/
+theorem natBinOpName_run {m : Mem} {a : AState} (h : PinsFull m a.pins) (c : Word)
+    (hc : c.toNat < 2 ^ 32) :
+    (natBinOpName (decI c)).run a = .ok (natBinOpSel (pinW m) c, a) := by
+  have hb : ∀ i, i < 51 →
+      ((decI c : NIdx) == decI (pinW m (1 + i))) = decide (c = pinW m (1 + i)) :=
+    fun i hi => decI_beq _ _ hc (h.names_lt i hi)
+  simp only [natBinOpName, natAddName, natSubName, natMulName, natPowName, natBeqName,
+    natBleName, natDivName, natModName, natGcdName, natLandName, natLorName, natXorName,
+    natShiftLeftName, natShiftRightName, pinNatAdd, pinNatSub, pinNatMul, pinNatPow, pinNatBeq,
+    pinNatBle, pinNatDiv, pinNatMod, pinNatGcd, pinNatLand, pinNatLor, pinNatXor,
+    pinNatShiftLeft, pinNatShiftRight, PIN_NAT_ADD, PIN_NAT_SUB, PIN_NAT_MUL, PIN_NAT_POW,
+    PIN_NAT_BEQ, PIN_NAT_BLE, PIN_NAT_DIV, PIN_NAT_MOD, PIN_NAT_GCD, PIN_NAT_LAND, PIN_NAT_LOR,
+    PIN_NAT_XOR, PIN_NAT_SHIFT_LEFT, PIN_NAT_SHIFT_RIGHT, pinAt_bind_run h, Nat.reduceAdd,
+    Nat.reduceLT]
+  have e16 : (decI c == (decI (pinW m 16) : NIdx)) = decide (c = pinW m 16) := hb 15 (by decide)
+  have e17 : (decI c == (decI (pinW m 17) : NIdx)) = decide (c = pinW m 17) := hb 16 (by decide)
+  have e18 : (decI c == (decI (pinW m 18) : NIdx)) = decide (c = pinW m 18) := hb 17 (by decide)
+  have e19 : (decI c == (decI (pinW m 19) : NIdx)) = decide (c = pinW m 19) := hb 18 (by decide)
+  have e20 : (decI c == (decI (pinW m 20) : NIdx)) = decide (c = pinW m 20) := hb 19 (by decide)
+  have e21 : (decI c == (decI (pinW m 21) : NIdx)) = decide (c = pinW m 21) := hb 20 (by decide)
+  have e22 : (decI c == (decI (pinW m 22) : NIdx)) = decide (c = pinW m 22) := hb 21 (by decide)
+  have e23 : (decI c == (decI (pinW m 23) : NIdx)) = decide (c = pinW m 23) := hb 22 (by decide)
+  have e24 : (decI c == (decI (pinW m 24) : NIdx)) = decide (c = pinW m 24) := hb 23 (by decide)
+  have e25 : (decI c == (decI (pinW m 25) : NIdx)) = decide (c = pinW m 25) := hb 24 (by decide)
+  have e26 : (decI c == (decI (pinW m 26) : NIdx)) = decide (c = pinW m 26) := hb 25 (by decide)
+  have e27 : (decI c == (decI (pinW m 27) : NIdx)) = decide (c = pinW m 27) := hb 26 (by decide)
+  have e28 : (decI c == (decI (pinW m 28) : NIdx)) = decide (c = pinW m 28) := hb 27 (by decide)
+  have e29 : (decI c == (decI (pinW m 29) : NIdx)) = decide (c = pinW m 29) := hb 28 (by decide)
+  simp only [e16, e17, e18, e19, e20, e21, e22, e23, e24, e25, e26, e27, e28, e29]
+  rfl
+
+/-- **`nat_bin_op_name`'s L-side triple**: memory unchanged, the result word decodes to
+`natBinOpSel`, read inline off `PINS` (no callee: `natBinOpNameL` has none), exactly as
+`natOpResultL_refines` reads its fifteen. `hflag` is the pin table's filled flag (`PinsR.full`'s
+own premise): a core function runs only once the driver has filled the pins, so it is available
+wherever `CoreS`/`PinsFull` is (`natBinOpName_refines` gets it from `hC.pins.size` and the array's
+own zeroth word, which the L code's own `abort` branch would otherwise have to witness). -/
+theorem natBinOpNameL_spec (p : Prog) (hp : p.lookup "nat_bin_op_name" = some natBinOpNameL)
+    (n : Nat) (s₀ : St) (hflag : pinW s₀.mem 0 ≠ 0) (c : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "nat_bin_op_name" [c]
+    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧
+      (r.headD 0 != 0) = natBinOpSel (pinW s₀.mem) c; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, natBinOpNameL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+      finish [natBinOpSel, pinW_eq]
+
+/-- **`nat_bin_op_name` refines `natBinOpName`.** `hflag` (the pin table's filled flag) is not
+literally one of `PinsFull`'s own fields (`Tiers.lean`'s `PinsR.full : pinW m 0 ≠ 0 → PinsFull m
+p` is the unlock, not a consequence), so it is taken here as a hypothesis; a core driver fills the
+pins once, before any core function runs, so every real call site has it (`pinsReady`). -/
 @[refines ConRon.Arena.natBinOpName]
-theorem natBinOpName_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (vis : Word) (fe : IFEnv) (MM : ModeMaps) (G g c : Word)
-    (hC : CoreS dn s₀.mem a₀ vis fe MM G g) (hc : HW c) :
-    CoreSpec p n "nat_bin_op_name" [c] (natBinOpName (decI c)) decBool s₀ a₀ dn vis fe MM G g :=
-  sorry
+theorem natBinOpName_refines (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (G g c : Word)
+    (hC : CoreS dn s₀.mem a₀ vis fe MM G g) (hc : HW c) (hflag : pinW s₀.mem 0 ≠ 0) :
+    CoreSpec p n "nat_bin_op_name" [c] (natBinOpName (decI c)) decBool s₀ a₀ dn vis fe MM G g := by
+  have hrun := natBinOpName_run hC.pins c hc
+  apply CoreSpec.of_pure p n "nat_bin_op_name" [c] (natBinOpName (decI c)) decBool s₀ a₀ dn vis fe
+    MM G g hC
+  · simp [AM.ok, hrun]
+  · simp [AM.st, hrun]
+  · apply M.triple_of_run
+    intro s r s' hs hrun'
+    obtain ⟨hmem, hloc, heq⟩ := M.of_run (P := fun s => s = s₀) hs hrun'
+      (natBinOpNameL_spec p hp.natBinOpName n s₀ hflag c)
+    subst hs
+    refine ⟨hloc, hmem, ?_⟩
+    simp only [AM.res, hrun, decBool]
+    rw [← heq]
 
 /-- **`nat_op_stored` refines `natOpStored`.** -/
 @[refines ConRon.Arena.natOpStored]
