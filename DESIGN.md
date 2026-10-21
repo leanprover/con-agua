@@ -3698,7 +3698,10 @@ Request to lane `arch`: add `LH` (array 192) and `CTL[192]` (heap top) to the me
 | `lv_imax`, `lv_imax_l`, `lv_imax_r` (`imaxRules`) | 88 (`imax_rules`, `by_cases_left/right`, `imax_rules_distrib*`) | 32 | | `imax_ok` + `imaxL_ok` + `imaxR_ok` 105 | | |
 | `lv_cases`, `lv_cases_at` (`byCases`) | 19 | 15 | | `cases_ok` + `ca_ok` 65 | | |
 | the comparison group (7 functions, one mutual model) | 159 | 83 | `LevelLeq` 474 (models, 49 arm lemmas), `LevelLeqSpec` 151 | `LevelLeqRel` 740 (incl. 30 equations of con-leche's arms, 60) | 3.7 + 35 s, 4.2 s | `vcgen` + `finish (gen := 20)`; refinement by hand |
-| total (files) | | 207 | `LevelHeap` 243, `LevelSimp` 291, `LevelSubst` 251, `LevelLeq` 474, `LevelLeqSpec` 151 | `LevelHeapRel` 440, `LevelSimpRel` 264, `LevelLeqRel` 740 | | |
+| `lv_leq_top` (`leq`, `defaultFuel`) | 6 | 6 | 30 | `leqTopW_ok` 25 | | as `lv_eq` |
+| `lv_equiv` (`isEquiv`) | 16 | 12 | 70 | `equivW_ok` 70 | | as `lv_eq` |
+| `lv_equivs` (`isEquivList`, lists in `POOL`) | 20 | 7 | 50 | `equivsW_ok` + `LvsR` 75 | | as `lv_eq` |
+| total (files) | | 232 | `LevelHeap` 243, `LevelSimp` 291, `LevelSubst` 251, `LevelLeq` 474, `LevelLeqSpec` 151, `LevelEquiv` 239 | `LevelHeapRel` 440, `LevelSimpRel` 264, `LevelLeqRel` 740, `LevelEquivRel` 200 | | |
 
 ### The comparison (`LevelSubst`, `LevelLeq`, `LevelLeqSpec`, `LevelLeqRel`)
 
@@ -3716,6 +3719,11 @@ Request to lane `arch`: add `LH` (array 192) and `CTL[192]` (heap top) to the me
   component (`termination_by (n, k)`). The refinement is the same mutual induction: seven
   predicates (`LeqOK` … `CaOK`), one lemma each, with con-leche's overlapping `match` arms restated
   as guarded equations over the tags (`LevelEq.rest_*`, `im_*`, by `unfold; split <;> simp_all`).
+* **The entries** (`LevelEquiv`, `LevelEquivRel`): `lv_leq_top` (`leq`: fuel word `10000`,
+  bias `2^32`), `lv_equiv` (`isEquiv`, simplifying each side once where con-leche's `leq`
+  simplifies again, to equal levels), `lv_equivs` (`isEquivList` over two `POOL` slices of level
+  pointers, `LvsR`; a length mismatch answers `false` only after the common prefix compared
+  `true`, as con-leche's). All three refinements went through at the first attempt.
 * **Inversion by tag** (`LvR.inv0` … `inv4`: from `lvG m p = t`, the level's constructor and the
   children's relations) replaced `cases` on the derivation, whose impossible branches made
   `simp_all` loop.
