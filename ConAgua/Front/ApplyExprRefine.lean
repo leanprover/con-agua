@@ -1,4 +1,5 @@
 import ConAgua.Front.ApplyExpr
+import ConAgua.Front.NatDecLink
 import ConAgua.Front.StateDR
 
 /-!
@@ -339,69 +340,33 @@ theorem node_proj (x y z : Word) (p q t : Nat) (hx : ItemR x p) (hy : ItemR y q)
     unfold NodeOK; rw [hop]; exact ⟨h1, h2, h3, hD.above (mkProjW_above hI)⟩
   · cases hI
 
-omit hA hD in
-/-- The limb write of `node_lit`: the pool grows by one word. -/
-theorem litPut_facts (x : Word) (hP : PoolOK m) (hlt : m.top < m.len64 POOL) :
-    Grows m (litPutM m x) ∧ Above64 m (litPutM m x) ∧ (litPutM m x).top = m.top + 1 ∧
-    (m.top + 1).toNat = m.top.toNat + 1 ∧
-    ((litPutM m x).arr64 POOL)[m.top.toNat]? = some x := by
-  obtain ⟨hW, hc, hps, htop⟩ := hP
-  have hlen : (m.len64 POOL).toNat = (m.arr64 POOL).size := by
-    simp only [Mem.len64]; exact toNat_ofNat_size _ hps
-  have hlt' := UInt64.lt_iff_toNat_lt.mp hlt
-  rw [hlen] at hlt'
-  have ht1 : (m.top + 1).toNat = m.top.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-  have hpool : (litPutM m x).arr64 POOL = (m.arr64 POOL).set! m.top.toNat x := by
-    simp only [litPutM]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_same]
-  have hc' : 0 < ((m.set64 POOL m.top x).arr64 CTL).size := by
-    rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact hc
-  have htop' : (litPutM m x).top = m.top + 1 := Mem.top_set64 _ _ hc'
-  have hsz : ((litPutM m x).arr64 POOL).size = (m.arr64 POOL).size := by rw [hpool]; simp
-  refine ⟨⟨?_, ?_, ?_, ?_, hsz⟩, fun B hB => ?_, htop', ht1, ?_⟩
-  · rw [htop']
-    exact Frame.set64_both _ _ _ _ _ _ (Frame.set64 _ _ _ _ _ (Frame.refl _ _)) (by decide)
-  · intro j hj
-    rw [hpool, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
-    simp [show m.top.toNat ≠ j by omega]
-  · rw [htop', ht1]; omega
-  · rw [htop', ht1, hsz]; omega
-  · simp only [litPutM]
-    rw [Mem.arr64_set64_ne _ _ _ _ _ (fun h => by subst h; exact absurd hB (by decide)),
-      Mem.arr64_set64_ne _ _ _ _ _ (fun h => by subst h; exact absurd hB (by decide))]
-  · rw [hpool, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]; simp; omega
-
-theorem node_lit (x y z : Word) (n : Nat) (hx : ItemR x n) (hI : nodeW b.data m 16 x y z = some (w, m₁)) :
+theorem node_lit (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63) (x y z : Word)
+    (n : Nat) (hv : NatValR b y z n) (hI : nodeW b.data m 16 x y z = some (w, m₁)) :
     NodeOK st (.natVal n) a m₁ w := by
   simp only [nodeW, show (16 : Word) ≠ 8 by decide, show (16 : Word) ≠ 9 by decide,
     show (16 : Word) ≠ 10 by decide, show (16 : Word) ≠ 11 by decide,
     show (16 : Word) ≠ 12 by decide, show (16 : Word) ≠ 13 by decide,
     show (16 : Word) ≠ 14 by decide, show (16 : Word) ≠ 15 by decide, false_or, or_false,
     ↓reduceIte, litW] at hI
-  split at hI
-  · cases hI
-  rename_i hn
-  rw [itemR_eq hx hn]
-  split at hI
-  · cases hI
-  rename_i hle
-  have hlt : m.top < m.len64 POOL := UInt64.not_le.mp hle
-  split at hI
-  · rename_i h0
-    subst h0
-    obtain ⟨h1, h2, h3, hf⟩ := internLit_D m a hA w m₁ m.top 0 (by simp [SliceOK])
-      (fun h => absurd h (by decide)) hI
-    exact ⟨h1, h2, h3, hD.above (MemFrame.above hf (by simp [litSch, REC, SLOT]))⟩
-  · rename_i h0
-    obtain ⟨hg, hab, htop, ht1, hx0⟩ := litPut_facts m x hA.1.lit.1 hlt
-    have hA' := ArenaD.grow m _ hg a hA
-    have hq : SliceOK (litPutM m x) m.top 1 := by simp only [SliceOK, htop, ht1]; simp
-    have hnm : Norm ((litPutM m x).arr64 POOL) m.top.toNat (1 : Word).toNat := by
-      intro _; simp [hx0, h0]
-    obtain ⟨h1, h2, h3, hf⟩ := internLit_D _ a hA' w m₁ m.top 1 hq hnm hI
-    have hpv : pv ((litPutM m x).arr64 POOL) m.top.toNat (1 : Word).toNat = x.toNat := by
-      simp [pv, wt, hx0]
-    rw [hpv] at h1 h2 h3
-    exact ⟨h1, h2, h3, (hD.above hab).above (MemFrame.above hf (by simp [litSch, REC, SLOT]))⟩
+  obtain ⟨hcd, -, hdig, hn⟩ := natValR_decN b h64 hsize y z n hv
+  cases hN : natDecW b.data m y z with
+  | none => rw [hN, litK_none] at hI; cases hI
+  | some q =>
+  obtain ⟨r, m₂⟩ := q
+  obtain ⟨l, rfl, hg, hsl, hnm, hpv⟩ :=
+    natDecW_val b.data m m₂ y z r hA.1.lit.1 (UInt64.le_of_lt hcd) hdig hN
+  rw [hN] at hI
+  simp only [litK, List.headD_cons, List.tail_cons] at hI
+  by_cases c1 : m₂.len64 POOL < m.top
+  · simp [c1] at hI
+  by_cases c2 : m₂.len64 POOL - m.top < l
+  · simp [c2] at hI
+  simp only [c1, c2, if_false] at hI
+  have hA' := ArenaD.grow m m₂ hg a hA
+  obtain ⟨h1, h2, h3, hf⟩ := internLit_D m₂ a hA' w m₁ m.top l hsl hnm hI
+  rw [hpv, ← hn] at h1 h2 h3
+  exact ⟨h1, h2, h3, (hD.frame (grows_frame _ _ hg) (by tapart) (by tapart)).above
+    (MemFrame.above hf (by simp [litSch, REC, SLOT]))⟩
 
 omit hA hD in
 /-- A universe list whose items are bound level ids: `mapM st.level` is pure. -/
@@ -501,7 +466,8 @@ theorem node_const (x c z : Word) (nm : Nat) (us : List Nat) (hx : ItemR x nm)
       (MemFrame.above cf (by simp [constSch, CREC, CSLOT]))
 
 /-- **Every expression kind**: the node the fields `f` describe is interned. -/
-theorem node_ok (f : Fld) (r : ExprRec) (hE : ExprR b r f)
+theorem node_ok (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63) (f : Fld)
+    (r : ExprRec) (hE : ExprR b r f)
     (hI : nodeW b.data m f.pl f.a f.c f.d = some (w, m₁)) : NodeOK st r a m₁ w := by
   cases r with
   | bvar k => obtain ⟨hp, hx⟩ := hE; rw [hp] at hI; exact node_bvar b m m₁ a st hA hD w k _ _ _ hx hI
@@ -525,8 +491,8 @@ theorem node_ok (f : Fld) (r : ExprRec) (hE : ExprR b r f)
     obtain ⟨hp, hx, hus⟩ := hE; rw [hp] at hI
     exact node_const b m m₁ a st hA hD w _ _ _ nm us hx hus hI
   | natVal n =>
-    obtain ⟨hp, hx, -⟩ := hE; rw [hp] at hI
-    exact node_lit b m m₁ a st hA hD w _ _ _ n hx hI
+    obtain ⟨hp, -, hv⟩ := hE; rw [hp] at hI
+    exact node_lit b m m₁ a st hA hD w h64 hsize _ _ _ n hv hI
   | strVal s =>
     obtain ⟨hp, -⟩ := hE; rw [hp] at hI
     simp [nodeW] at hI
@@ -547,7 +513,8 @@ theorem tbl_fresh_ne {k : IdxKind} {m : Mem} {b : ArrId} {t : IdTable (Idx k)}
 /-- **`apply_expr`'s model refines `parseExprEntryD`**: on fields `f` that con-leche's scanner
 relates to the expression record `r` (`ExprR`) and an index word read for `i`, a successful
 `apply_expr` is a successful `parseExprEntryD st i r`, with `ArenaD` and `StateDR` after. -/
-theorem applyExprW_refines (b : ByteArray) (m m' : Mem) (a₀ : AState)
+theorem applyExprW_refines (b : ByteArray) (h64 : System.Platform.numBits = 64)
+    (hsize : b.size < 2 ^ 63) (m m' : Mem) (a₀ : AState)
     (st : StateD) (hA : ArenaD m a₀) (hD : StateDR m st) (f : Fld) (i : Nat) (r : ExprRec)
     (hI : ItemR f.idx i) (hE : ExprR b r f)
     (h : applyExprW b.data m f.pl f.idx f.a f.c f.d = some m') :
@@ -560,7 +527,7 @@ theorem applyExprW_refines (b : ByteArray) (m m' : Mem) (a₀ : AState)
   have hnone := hD.exprs.fresh _ _ _ _ hfr
   rw [itemR_eq hI (tbl_fresh_ne hD.exprs _ hfr)]
   obtain ⟨w, m₁, hN, hw, hi, rfl⟩ := putK_eq h
-  obtain ⟨h1, h2, h3, h4⟩ := node_ok b m m₁ a₀ st hA hD w f r hE hN
+  obtain ⟨h1, h2, h3, h4⟩ := node_ok b m m₁ a₀ st hA hD w h64 hsize f r hE hN
   have hfresh : st.freshExpr f.idx.toNat = pure () := by
     simp [StateD.freshExpr, IdTable.bound_eq, hnone]
   rw [parseExprEntryD_eq, hfresh, pure_bind]

@@ -113,12 +113,7 @@ grind_pattern [lang_grind] runK_last => runK lineW sz i ln (some (ok, nx, m'))
 grind_pattern [lang_grind] runK_next => runK lineW sz i ln (some (ok, nx, m'))
 grind_pattern [lang_grind] runK_noprog => runK lineW sz i ln (some (ok, nx, m'))
 
-theorem Keep.arr8 {m m' : Mem} (h : Keep m m') (a : ArrId) : m'.arr8 a = m.arr8 a := by
-  simp only [Mem.arr8, h.1]
-theorem Keep.size {m m' : Mem} (h : Keep m m') (a : ArrId) : (m'.arr64 a).size = (m.arr64 a).size :=
-  h.2 a
-grind_pattern [lang_grind] Keep.arr8 => Keep m m', m'.arr8 a
-grind_pattern [lang_grind] Keep.size => Keep m m', m'.arr64 a
+
 
 section spec
 variable (p : Prog) (lineW : Mem → Word → Option (Word × Word × Mem)) (B : Array UInt8) (Z : Nat)

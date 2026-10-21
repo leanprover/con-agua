@@ -1,6 +1,8 @@
 import ConAgua.Front.Apply
 import ConAgua.Front.ExprIface
 import ConAgua.Arena.ExprMk
+import ConAgua.Front.NatDec
+import ConAgua.Front.Preserve
 
 /-!
 # Expression lines into the stores: `apply_expr`
@@ -378,29 +380,30 @@ def constK (n o l : Word) : Option Mem → Option (Word × Mem)
 def constW (b : Array UInt8) (m : Mem) (a c : Word) : Option (Word × Mem) :=
   if tblOK m NID a = true then constK (tblW m NID a) m.top (lsPutL b c) (lsPutW b m c) else none
 
-def nodeLit : FunDecl := lfn (a) locals (top, h) {
-  if a == 18446744073709551615 { abort };
-  top := CTL.u64[0];
-  if len(POOL.u64) <= top { abort };
-  if a == 0 {
-    h := call intern_lit(top, 0);
-    return h
-  };
-  POOL.u64[top] := a;
-  CTL.u64[0] := top + 1;
-  h := call intern_lit(top, 1);
+def nodeLit : FunDecl := lfn (c, d) locals (o, l, h) {
+  (o, l) := call nat_dec(c, d);
+  if len(POOL.u64) < o { abort };
+  if len(POOL.u64) - o < l { abort };
+  h := call intern_lit(o, l);
   return h
 }
 
-/-- The memory after `node_lit` wrote the limb `a` at the pool top. -/
-def litPutM (m : Mem) (a : Word) : Mem := (m.set64 POOL m.top a).set64 CTL 0 (m.top + 1)
+/-- After `nat_dec`: its result `(o, l)` and memory (`none`: it aborted), then `intern_lit(o, l)`. -/
+def litK : Option (List Word × Mem) → Option (Word × Mem)
+  | none => none
+  | some (r, m₁) =>
+    if m₁.len64 POOL < r.headD 0 then none
+    else if m₁.len64 POOL - r.headD 0 < r.tail.headD 0 then none
+    else internW m₁ (r.headD 0) (r.tail.headD 0)
 
-/-- The model of `node_lit(a)`. -/
-def litW (m : Mem) (a : Word) : Option (Word × Mem) :=
-  if a = NONE then none
-  else if m.len64 POOL ≤ m.top then none
-  else if a = 0 then internW m m.top 0
-  else internW (litPutM m a) m.top 1
+@[arena_grind =] theorem litK_none : litK none = none := rfl
+@[arena_grind =] theorem litK_some (r : List Word) (m₁ : Mem) : litK (some (r, m₁)) =
+    if m₁.len64 POOL < r.headD 0 then none
+    else if m₁.len64 POOL - r.headD 0 < r.tail.headD 0 then none
+    else internW m₁ (r.headD 0) (r.tail.headD 0) := rfl
+
+/-- The model of `node_lit(c, d)`: the decimal digits `[c, d)` into the pool, interned. -/
+def litW (b : Array UInt8) (m : Mem) (c d : Word) : Option (Word × Mem) := litK (natDecW b m c d)
 
 /-! ## `expr_node`, `apply_expr` -/
 
@@ -422,7 +425,7 @@ def exprNode : FunDecl := lfn (pl, a, c, d) locals (u, h) {
   if pl == 13 { h := call node_let(a, c, d); return h };
   if pl == 14 { h := call node_proj(a, c, d); return h };
   if pl == 15 { h := call node_const(a, c); return h };
-  if pl == 16 { h := call node_lit(a); return h };
+  if pl == 16 { h := call node_lit(c, d); return h };
   abort
 }
 
@@ -434,7 +437,7 @@ def nodeW (b : Array UInt8) (m : Mem) (pl a c d : Word) : Option (Word × Mem) :
   else if pl = 13 then letW m a c d
   else if pl = 14 then projW m a c d
   else if pl = 15 then constW b m a c
-  else if pl = 16 then litW m a
+  else if pl = 16 then litW b m c d
   else none
 
 def applyExpr : FunDecl := lfn (pl, idx, a, c, d) locals (z, h) {
@@ -469,11 +472,12 @@ def exprProg : Prog := frontProg ++
    ("lit_match", litMatch), ("lit_find", litFind), ("lit_push", litPush), ("intern_lit", internLit),
    ("expr_get", exprGet), ("expr_fresh", exprFresh), ("ls_put", lsPut), ("node_bin", nodeBin),
    ("node_let", nodeLet), ("node_proj", nodeProj), ("node_const", nodeConst),
-   ("node_lit", nodeLit), ("expr_node", exprNode), ("apply_expr", applyExpr)]
+   ("node_lit", nodeLit), ("expr_node", exprNode), ("apply_expr", applyExpr),
+   ("dec_chunk", decChunk), ("nat_mad", natMad), ("nat_dec", natDec)]
 
 /-- Every word array 64 words (all zero), the input `[0, 1]`. -/
 def exprMem : Mem :=
-  { bytes := #["[0, 1]".toUTF8.data], words := Array.replicate 67 (Array.replicate 64 0) }
+  { bytes := #["[0, 1]5".toUTF8.data], words := Array.replicate 67 (Array.replicate 64 0) }
 
 /-- Run the calls in turn; the results. -/
 def exprRuns (m : Mem) : List (FnName × List Word) → Option (List (List Word))
@@ -491,7 +495,7 @@ def exprRuns (m : Mem) : List (FnName × List Word) → Option (List (List Word)
    ("apply_expr", [10, 2, 1, 0, 0]), ("apply_expr", [11, 3, 0, 1, 0]),
    ("apply_expr", [12, 4, 0, 1, 0]), ("apply_expr", [13, 5, 0, 2, 1]),
    ("apply_expr", [14, 6, 0, 7, 1]), ("apply_expr", [15, 7, 0, 0, 0]),
-   ("apply_expr", [16, 8, 5, 0, 0]), ("apply_expr", [16, 9, 0, 0, 0]),
+   ("apply_expr", [16, 8, 0, 6, 7]), ("apply_expr", [16, 9, 0, 1, 2]),
    ("apply_expr", [10, 10, 1, 0, 0]),
    ("expr_get", [0]), ("expr_get", [1]), ("expr_get", [2]), ("expr_get", [3]),
    ("expr_get", [4]), ("expr_get", [5]), ("expr_get", [6]), ("expr_get", [7]),
@@ -500,12 +504,11 @@ def exprRuns (m : Mem) : List (FnName × List Word) → Option (List (List Word)
     [0x20000000], [0], [0x40000000], [0x50000000], [0x60000000], [0x70000000], [0x90000000],
     [0x30000000], [0x80000000], [0x80000001], [0x40000000]]
 
-/- A rebound id aborts; an unbound child aborts; a `strVal` aborts; a long `natVal` aborts. -/
+/- A rebound id aborts; an unbound child aborts; a `strVal` aborts. -/
 #guard (exprRuns exprMem [("front_init", []), ("apply_expr", [8, 0, 0, 0, 0]),
   ("apply_expr", [8, 0, 1, 0, 0])]).isNone
 #guard (exprRuns exprMem [("front_init", []), ("apply_expr", [10, 0, 1, 2, 0])]).isNone
 #guard (exprRuns exprMem [("front_init", []), ("apply_expr", [17, 0, 0, 0, 0])]).isNone
-#guard (exprRuns exprMem [("front_init", []), ("apply_expr", [16, 0, NONE, 0, 0])]).isNone
 
 /-! ## The specs -/
 
@@ -563,11 +566,15 @@ structure ExprLookups (p : Prog) : Prop where
   node_lit : p.lookup "node_lit" = some nodeLit
   expr_node : p.lookup "expr_node" = some exprNode
   apply_expr : p.lookup "apply_expr" = some applyExpr
+  dec_chunk : p.lookup "dec_chunk" = some decChunk
+  nat_mad : p.lookup "nat_mad" = some natMad
+  nat_dec : p.lookup "nat_dec" = some natDec
+  no_st8 : p.noSt8 = true
 
 theorem exprProg_lookups : ExprLookups exprProg := by
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
     ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
-    ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · constructor <;> rfl
   all_goals rfl
 
@@ -681,20 +688,26 @@ theorem nodeProj_spec (n : Nat) (s₀ : St) (a c d : Word) :
         mkProj_spec p hE.der_b hE.proj_find hE.proj_push hE.intern_proj hE.mk_proj n] <;>
       finish [projW, NONE]
 
-theorem nodeLit_spec (n : Nat) (s₀ : St) (hps : (s₀.mem.arr64 POOL).size < 2 ^ 63) (a : Word) :
+theorem nodeLit_spec (b : Array UInt8) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
+    (hps : (s₀.mem.arr64 POOL).size < 2 ^ 63) (c d : Word) :
     ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "node_lit" [a]
-    ⦃fun r s' => LocEq s' s₀ ∧ litW s₀.mem a = some (r.headD 0, s'.mem); ⊤⦄ := by
+    invoke p (exec p n) "node_lit" [c, d]
+    ⦃fun r s' => LocEq s' s₀ ∧ litW b s₀.mem c d = some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hE.node_lit]
   simp only [callFn, nodeLit]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
+    have hdec : ∀ (s₁ : St), s₁.mem.arr8 IN = b → ∀ c d : Word,
+        ⦃fun s => s = s₁⦄ invoke p (exec p n) "nat_dec" [c, d]
+        ⦃fun r s' => (LocEq s' s₁ ∧ natDecW b s₁.mem c d = some (r, s'.mem)) ∧
+          Keep s₁.mem s'.mem ∧ LocEq s' s₁; ⊤⦄ := fun s₁ hm₁ c d =>
+      Triple.keep hE.no_st8 (natDec_specW p b hE.dec_chunk hE.nat_mad hE.nat_dec n s₁ hm₁ c d)
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hdec,
         internLit_spec p hE.front.lit_hash hE.front.limbs_eq hE.lit_match hE.lit_find hE.lit_push
           hE.intern_lit n] <;>
-      finish [litW, litPutM, NONE, top_rdW, size_set64]
+      finish [litW, Keep.size]
 
 theorem nodeConst_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (n : Nat) (s₀ : St)
     (hm : s₀.mem.arr8 IN = b) (hps : (s₀.mem.arr64 POOL).size < 2 ^ 63) (a c : Word) :
@@ -730,7 +743,7 @@ theorem exprNode_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (n : Nat) (s₀ :
         internBVar_spec p hE.bvar_find hE.bvar_push hE.intern_bvar n,
         internSort_spec p hE.sort_find hE.sort_push hE.intern_sort n,
         nodeBin_spec p hE n, nodeLet_spec p hE n, nodeProj_spec p hE n,
-        nodeConst_spec p hE b hb n, nodeLit_spec p hE n] <;>
+        nodeConst_spec p hE b hb n, nodeLit_spec p hE b n] <;>
       finish [nodeW, NONE]
 
 theorem applyExpr_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (n : Nat) (s₀ : St)

@@ -45,6 +45,13 @@ theorem Keep.refl (m : Mem) : Keep m m := ⟨rfl, fun _ => rfl⟩
 theorem Keep.trans {m₁ m₂ m₃ : Mem} (h₁ : Keep m₁ m₂) (h₂ : Keep m₂ m₃) : Keep m₁ m₃ :=
   ⟨h₂.1.trans h₁.1, fun a => (h₂.2 a).trans (h₁.2 a)⟩
 
+theorem Keep.arr8 {m m' : Mem} (h : Keep m m') (a : ArrId) : m'.arr8 a = m.arr8 a := by
+  simp only [Mem.arr8, h.1]
+theorem Keep.size {m m' : Mem} (h : Keep m m') (a : ArrId) : (m'.arr64 a).size = (m.arr64 a).size :=
+  h.2 a
+grind_pattern [lang_grind] Keep.arr8 => Keep m m', m'.arr8 a
+grind_pattern [lang_grind] Keep.size => Keep m m', m'.arr64 a
+
 theorem Keep.set64 {m m' : Mem} (h : Keep m m') (a : ArrId) (i v : Word) : Keep m (m'.set64 a i v) := by
   refine ⟨h.1, fun b => ?_⟩
   rw [← h.2 b]
