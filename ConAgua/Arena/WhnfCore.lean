@@ -361,38 +361,6 @@ given the knot's slots at every fuel up to `n` (`KnotUpTo p n`). -/
 section specs
 variable (p : Prog) (hp : WhnfCoreProg p) (hw : WhnfCallees p) (hc : CoreCallees p)
 
-/-- **`whnf_core_step` refines `whnfCoreStep`.** -/
-@[refines ConRon.Arena.whnfCoreStep]
-theorem whnfCoreStep_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
-    (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb mode cheap d e : Word) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode)
-    (he : HW e) :
-    CoreSpec p (n + 1) "whnf_core_step" [mode, cheap, vis, d, e]
-      (whnfCoreStep (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat
-        (decE e)) decStep s₀ a₀ dn vis fe MM eb ResW := sorry
-
-/-- **`whnf_core_loop` refines `whnfCoreLoop` at every twin loop fuel `K ≥ n`.** -/
-@[refines ConRon.Arena.whnfCoreLoop]
-theorem whnfCoreLoop_refines (n : Nat) (hk : KnotUpTo p n) (F K : Nat) (hF : n ≤ F) (hK : n ≤ K)
-    (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (MM : ModeMaps) (eb mode cheap d e : Word)
-    (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e) :
-    CoreSpec p (n + 1) "whnf_core_loop" [mode, cheap, vis, d, e]
-      (whnfCoreLoop (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat K
-        (decE e)) decH s₀ a₀ dn vis fe MM eb := sorry
-
-/-- **`whnf_core_loop` refines `whnfCoreBody`** (the loop at `whnfCoreLoopFuel = 2^62`). -/
-@[refines ConRon.Arena.whnfCoreBody]
-theorem whnfCoreBody_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F)
-    (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (MM : ModeMaps) (eb mode cheap d e : Word)
-    (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e) :
-    CoreSpec p (n + 1) "whnf_core_loop" [mode, cheap, vis, d, e]
-      (whnfCoreBody (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat
-        (decE e)) decH s₀ a₀ dn vis fe MM eb :=
-  whnfCoreLoop_refines p n hk F whnfCoreLoopFuel hF (by simp only [whnfCoreLoopFuel]; omega) hn s₀
-    a₀ dn vis fe MM eb mode cheap d e hs he
-
 /-- **`whnf_app` refines `whnfApp`**: `vargs` the slice `(vo, vn)` at the top of the stack, the
 spine's arguments and nodes the slices `(ao, an)`, `(ao + an, an)` below it. -/
 @[refines ConRon.Arena.whnfApp]
