@@ -20,7 +20,14 @@ description of why. `scripts/bump-con-ron.sh --check` verifies that
 `vendor/` after an edit (keeping descriptions); `scripts/bump-con-ron.sh
 <rev>` moves to a new con-ron revision (PLAN.md, "Bumping the twin").
 The sections below describe each patch in detail; the revisions they name
-are the ones of the first vendoring.
+are the ones of the first vendoring (con-ron `4c9eaf7`, con-leche `103562b`).
+
+Bumps since (DESIGN.md has the details):
+* 2026-10-21: con-ron `4c9eaf7` → `12752ca7`, con-leche `103562b` → `ae1f3198`
+  (the eager tower keeps its memos). One conflict, `ConRon/Bridge/Core/Memo.lean`:
+  `con-ron/0002` now adds `dsimp only` before `vcgen` in the new
+  `enterEager_spec`/`leaveEager_spec` instead of in the removed
+  `takeModeMemos_spec`/`putModeMemos_spec`.
 
 Patches at the first vendoring:
 

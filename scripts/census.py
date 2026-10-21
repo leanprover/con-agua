@@ -26,7 +26,7 @@ STATUS of a target, best first:
               (or every part named in COMPLETE_BY_PARTS below is), or every path from the
               entry to T passes through a proven target ("covered": e.g. the store helpers
               under `internE`)
-  sorry       as proven, but some theorem depends on `sorryAx`
+  sorry       T's own `@[refines T]` theorems are proved, some modulo `sorryAx`; covers nothing
   written     an `@[l_impl T]` L function exists
   todo        nothing yet
 Partial refinements (`@[refines_part T "label"]`) are listed separately; they never make T
@@ -360,10 +360,12 @@ def analyse(out):
                 st = proof_status([l for lbl in need for l in got[lbl]])
         own[n] = st
 
-    # Coverage: a target counts as proven (sorry) if every path from the entry to it passes through
-    # a target that is proven (proven or sorry): reachability with those targets cut. A complete
-    # refinement of the caller accounts for every callee it reaches. Not for `written`: an L
-    # function may abort where its twin calls on (`frontRun` on declaration lines).
+    # Coverage: a target counts as proven if every path from the entry to it passes through a
+    # proven target: reachability with those targets cut. A complete refinement of the caller
+    # accounts for every callee it reaches. Only from sorry-free proofs: a refinement proved modulo
+    # `sorry` (a top-down skeleton over stub specs) counts as `sorry` itself but covers nothing,
+    # its callees keep their own status. Not for `written` either: an L function may abort where
+    # its twin calls on (`frontRun` on declaration lines).
     def reach_cut(cut):
         seen = set()
         st = [r for r in roots if r in targets]
@@ -387,7 +389,7 @@ def analyse(out):
                 continue
             if n in ok:
                 status[n] = lvl
-            elif lvl != "written" and n not in r:
+            elif lvl == "proven" and n not in r:
                 status[n] = lvl
                 covered.add(n)
     for n in targets:
