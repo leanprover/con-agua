@@ -7,6 +7,9 @@ public import ConAgua.Scan.Leaves
 public import ConAgua.Scan.Utf8
 public import ConAgua.Scan.Common
 meta import ConAgua.L.Semantics
+meta import ConAgua.L.Examples
+meta import ConAgua.Scan.Leaves
+meta import ConAgua.Scan.Utf8
 
 @[expose] public section
 
@@ -606,5 +609,13 @@ def runStr (s : String) : Option Word :=
   match run strProg 10000 "scan_string" [0] { bytes := #[s.toUTF8.data] } with
   | .ok ([e], _) => some e
   | _ => none
+
+-- con-leche's `scanString`, on inputs with escapes, surrogates, and invalid syntax: the position
+-- after the closing quote, or `0`.
+#guard runStr "\"abc\"" == some 5
+#guard runStr "\"a\\u0041\"" == some 9
+#guard runStr "\"\\ud83d\\ude00x\"" == some 15
+#guard runStr "\"\\u00\"" == some 0
+#guard runStr "\"\\x\"" == some 0
 
 end L.Scan.Str
