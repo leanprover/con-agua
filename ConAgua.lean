@@ -14,3 +14,9 @@ public import ConAgua.Compiler.Mem
 public import ConAgua.Compiler.Step
 public import ConAgua.Compiler.Rel
 public import ConAgua.Compiler.SimExpr
+public import ConAgua.Compiler.RunEq
+public import ConAgua.Compiler.SimStmt
+public import ConAgua.Compiler.SimCall
+public import ConAgua.Compiler.SimFun
+public import ConAgua.Compiler.Correct
+public import ConAgua.Compiler.Main

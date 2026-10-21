@@ -40,7 +40,7 @@ theorem sim_copy (vs : List Word) (sp ap : Nat) (Q : MachineState → Prop) :
     ∀ (m i k : Nat) (s : MachineData), Code (copyParams i m) k → i + m ≤ vs.length → 8 * (i + m) < 2 ^ 31 →
     s.regs.rsp.toNat = sp → s.regs.rsi.toNat = ap →
     (∀ j (h : j < vs.length), i ≤ j → rdW s.dmem (A (ap + 8 * j)) = some vs[j]) →
-    (sp + 8 * (i + m) ≤ ap ∨ ap + 8 * vs.length ≤ sp) → ap + 8 * vs.length ≤ 2 ^ 64 →
+    (vs.length = 0 ∨ sp + 8 * (i + m) ≤ ap ∨ ap + 8 * vs.length ≤ sp) → ap + 8 * vs.length ≤ 2 ^ 64 →
     sp + 8 * (i + m) ≤ 2 ^ 64 →
     (∀ j, i ≤ j → j < i + m → (rdW s.dmem (A (sp + 8 * j))).isSome) →
     (∀ s', s'.regs.rsp = s.regs.rsp → s'.regs.rsi = s.regs.rsi → s'.regs.r15 = s.regs.r15 →

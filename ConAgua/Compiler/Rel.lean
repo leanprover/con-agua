@@ -46,7 +46,7 @@ def InArr (x : Nat) : Prop := (∃ a < G.tab.nb, G.In8 a x) ∨ (∃ a < G.tab.n
 
 /-- The regions are inside the address space and pairwise disjoint. -/
 structure Ok : Prop where
-  tab_end : G.tabEnd ≤ 2 ^ 64
+  tab_end : G.tabEnd < 2 ^ 64
   hi_le : G.hi < 2 ^ 64
   lo_le : G.lo ≤ G.hi
   end8 : ∀ a < G.tab.nb, G.b8 a + G.s8 a < 2 ^ 64
@@ -138,7 +138,8 @@ theorem Layout.Ok.notStack_of_tab {x : Nat} (h : G.InTab x) : ¬ G.InStack x :=
   hG.tab_stack x h
 
 /-- A table word at offset `off` (within the table) survives a change in the stack. -/
-theorem Only.rdW_tab {a b : Nat} {d d' : DataMem} (h : Only a b d d') (hab : ∀ x, a ≤ x → x < b → G.InStack x)
+theorem Only.rdW_tab {a b : Nat} {d d' : DataMem} (h : Only a b d d')
+    (hab : ∀ x, a ≤ x → x < b → ¬ G.InTab x ∧ ¬ G.InArr x)
     {off : Nat} (hoff : 8 ≤ off + 8) (hend : G.T + off + 8 ≤ G.tabEnd) :
     rdW d' (A (G.T + off)) = rdW d (A (G.T + off)) :=
   rdW_congr fun j hj => by
@@ -146,10 +147,11 @@ theorem Only.rdW_tab {a b : Nat} {d d' : DataMem} (h : Only a b d d') (hab : ∀
     refine h.same _ (by have := hG.tab_end; omega) ?_
     refine Classical.byContradiction fun hc => ?_
     simp only [not_or, Nat.not_lt] at hc
-    exact hG.notStack_of_tab ⟨by omega, by omega⟩ (hab (G.T + off + j) (by omega) (by omega))
+    exact (hab (G.T + off + j) (by omega) (by omega)).1 ⟨by omega, by omega⟩
 
-theorem MemRel.only {m : Mem} {d d' : DataMem} (hm : MemRel G m d) {a b : Nat} (h : Only a b d d')
-    (hab : ∀ x, a ≤ x → x < b → G.InStack x) : MemRel G m d' where
+/-- A change outside the table and the arrays keeps the memory relation. -/
+theorem MemRel.only' {m : Mem} {d d' : DataMem} (hm : MemRel G m d) {a b : Nat} (h : Only a b d d')
+    (hab : ∀ x, a ≤ x → x < b → ¬ G.InTab x ∧ ¬ G.InArr x) : MemRel G m d' where
   nb := hm.nb
   nw := hm.nw
   size8 := hm.size8
@@ -160,7 +162,7 @@ theorem MemRel.only {m : Mem} {d d' : DataMem} (hm : MemRel G m d) {a b : Nat} (
     rw [h.same _ (by omega) ?_, hm.get8 c hc i hi]
     refine Classical.byContradiction fun hx => ?_
     simp only [not_or, Nat.not_lt] at hx
-    exact hG.notStack_of_arr (Or.inl ⟨c, hc, by omega, by omega⟩) (hab (G.b8 c + i) (by omega) (by omega))
+    exact (hab (G.b8 c + i) (by omega) (by omega)).2 (Or.inl ⟨c, hc, by omega, by omega⟩)
   get64 := fun c hc i hi => by
     have hs := hm.size64 c hc
     have he := hG.end64 c hc
@@ -170,7 +172,7 @@ theorem MemRel.only {m : Mem} {d d' : DataMem} (hm : MemRel G m d) {a b : Nat} (
     refine h.same _ (by omega) ?_
     refine Classical.byContradiction fun hx => ?_
     simp only [not_or, Nat.not_lt] at hx
-    exact hG.notStack_of_arr (Or.inr ⟨c, hc, by omega, by omega⟩) (hab (G.b64 c + 8 * i + j) (by omega) (by omega))
+    exact (hab (G.b64 c + 8 * i + j) (by omega) (by omega)).2 (Or.inr ⟨c, hc, by omega, by omega⟩)
   limit := by
     rw [h.rdW_tab hG hab (by omega) (by simp [Layout.tabEnd]; omega)]; exact hm.limit
   base8 := fun c hc => by
@@ -182,6 +184,12 @@ theorem MemRel.only {m : Mem} {d d' : DataMem} (hm : MemRel G m d) {a b : Nat} (
   len64 := fun c hc => by
     rw [h.rdW_tab hG hab (by omega) (by simp [Layout.tabEnd, Tab.len64] <;> omega)]; exact hm.len64 c hc
   stack := fun x hx => h.grows _ (hm.stack x hx)
+
+/-- A change inside the stack keeps the memory relation. -/
+theorem MemRel.only {m : Mem} {d d' : DataMem} (hm : MemRel G m d) {a b : Nat} (h : Only a b d d')
+    (hab : ∀ x, a ≤ x → x < b → G.InStack x) : MemRel G m d' :=
+  hm.only' hG h fun x h1 h2 => ⟨fun ht => hG.notStack_of_tab ht (hab x h1 h2),
+    fun ha => hG.notStack_of_arr ha (hab x h1 h2)⟩
 
 /-- A change among the temporaries keeps `Inv`. -/
 theorem Inv.only {nl F : Nat} {σ : St} {s s' : MachineData} (hI : Inv G nl F σ s)

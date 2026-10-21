@@ -57,7 +57,7 @@ def FunSim [Host] (p : Prog) (G : Layout) (n : Nat) : Prop :=
     vs.length = fd.nparams →
     rdW d.dmem (A d.regs.rsp.toNat) = some ra →
     (∀ i (h : i < vs.length), rdW d.dmem (A (d.regs.rsi.toNat + 8 * i)) = some vs[i]) →
-    (d.regs.rsp.toNat + 8 ≤ d.regs.rsi.toNat ∨ d.regs.rsi.toNat + 8 * vs.length ≤ G.lo) →
+    (vs.length = 0 ∨ d.regs.rsp.toNat + 8 ≤ d.regs.rsi.toNat ∨ d.regs.rsi.toNat + 8 * vs.length ≤ G.lo) →
     d.regs.rsi.toNat + 8 * vs.length < 2 ^ 64 →
     G.lo ≤ d.regs.rsp.toNat → d.regs.rsp.toNat + 8 ≤ G.hi →
     d.regs.r15.toNat = G.T → MemRel G σ.mem d.dmem → d.regs.r14.toNat < n →
@@ -222,7 +222,7 @@ theorem sim_call (n : Nat) (hFun : FunSim p G n)
         have hsl := hslots i hi
         rw [bv_sub8 _ hsp8, rdW_wrW_A (by omega) (by addr_omega) (by addr_omega), ← hsl]
         congr 2; addr_omega
-      · left; rw [bv_sub8 _ hsp8]; addr_omega
+      · right; left; rw [bv_sub8 _ hsp8]; addr_omega
       · addr_omega
       · rw [bv_sub8 _ hsp8]; addr_omega
       · rw [bv_sub8 _ hsp8]; addr_omega

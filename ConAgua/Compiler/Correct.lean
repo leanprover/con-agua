@@ -15,6 +15,25 @@ namespace L.Compiler
 
 open L
 
+theorem code_of_lookup [Host] {tab : Tab} {f : FnName} {fd : FunDecl} :
+    ∀ (p : Prog) (k : Nat), Code (p.flatMap fun (f, fd) => compileFn tab f fd) k → p.lookup f = some fd →
+    ∃ kf, Code (compileFn tab f fd) kf := by
+  intro p
+  induction p with
+  | nil => intro k _ h; simp at h
+  | cons q p ih =>
+    obtain ⟨f', fd'⟩ := q
+    intro k hc hl
+    simp only [List.flatMap_cons] at hc
+    simp only [List.lookup_cons] at hl
+    split at hl
+    · rename_i heq
+      cases hl
+      have : f = f' := by simpa using heq
+      subst this
+      exact ⟨k, hc.left⟩
+    · exact ih _ hc.right hl
+
 section
 variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) < maxOff) (p : Prog)
 include hG hTab
