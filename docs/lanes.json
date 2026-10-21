@@ -230,7 +230,7 @@
 {
 "lane": "sync",
 "model": "opus",
-"status": "running",
+"status": "done",
 "focus": "Track con-ron upstream: fingerprints, stale targets, bump script; bump to latest"
 },
 {
