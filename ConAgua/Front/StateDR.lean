@@ -134,9 +134,9 @@ theorem StateDR.frame {A : List ArrId} {C : List Word} {m m' : Mem} {st : StateD
   ⟨by rw [hf.1 NID hn (by decide)]; exact h.names, by rw [hf.1 LID hl (by decide)]; exact h.levels⟩
 
 /-- `ArenaR` does not read `NID` and `LID`. -/
-theorem ArenaR.frameT (m m' : Mem) (a : AState) (hR : ArenaR m a) (hf : MemFrame [41, 42] [] m m') :
-    ArenaR m' a := by
-  arena_build hR, hf with fail
+theorem ArenaR.frameT (m m' : Mem) (a : AState) (hR : ArenaR m a) (hf : MemFrame [64, 65] [] m m') :
+    ArenaR m' a :=
+  ArenaR.frame_ext [64, 65] [] (by decide) (by simp) m m' hf a hR
 
 /-- A write to `NID` or `LID` keeps `ArenaR`. -/
 theorem ArenaR.setT (m : Mem) (a : AState) (hR : ArenaR m a) (b : ArrId) (hb : b = NID ∨ b = LID)
@@ -682,8 +682,8 @@ theorem frontInit_refines (p : Prog) (hL : FrontLookups p)
   exact ⟨hloc, frontInitW_refines _ _ _ hR hD hW⟩
 
 /-- The all-zero `NID`/`LID` represent the empty tables. -/
-theorem stateDR_initMem (sizes : List Nat) (hn : sizes[41]?.getD 0 < 2 ^ 63)
-    (hl : sizes[42]?.getD 0 < 2 ^ 63) : StateDR (initMem sizes) StateD.blank := by
+theorem stateDR_initMem (sizes : List Nat) (hn : sizes[64]?.getD 0 < 2 ^ 63)
+    (hl : sizes[65]?.getD 0 < 2 ^ 63) : StateDR (initMem sizes) StateD.blank := by
   have hT : ∀ (b : ArrId) {k : IdxKind}, sizes[b]?.getD 0 < 2 ^ 63 →
       TblR ((initMem sizes).arr64 b) ({} : IdTable (Idx k)) := by
     intro b k hb
@@ -694,41 +694,5 @@ theorem stateDR_initMem (sizes : List Nat) (hn : sizes[41]?.getD 0 < 2 ^ 63)
     · rw [Array.getElem?_replicate] at he
       split at he <;> simp at he; subst he; simp
   exact ⟨hT NID hn, hT LID hl⟩
-
-/-- `arenaR_init` (`ArenaRel.lean`) for a memory with more than 41 arrays (here: 43, with `NID`
-and `LID`); the same proof. -/
-theorem arenaR_initMem (sizes : List Nat) (hlen : 41 ≤ sizes.length) (hctl : 42 ≤ sizes[1]?.getD 0)
-    (hpool : sizes[0]?.getD 0 < 2 ^ 63) : ArenaR (initMem sizes) (AState.init EStore.empty) := by
-  have hz := initMem_rd sizes
-  have hc : ((initMem sizes).arr64 CTL).size = sizes[1]?.getD 0 := by
-    rw [initMem_arr]; simp [CTL]
-  have hp : ((initMem sizes).arr64 POOL).size = sizes[0]?.getD 0 := by
-    rw [initMem_arr]; simp [POOL]
-  have hw : CTL < (initMem sizes).words.size := by
-    simpa [initMem, CTL] using Nat.lt_of_lt_of_le (by decide : 1 < 41) hlen
-  refine ⟨⟨?_, storeR_init _ _ _ _ hz (by rw [hc]; simp [litSch]; omega)⟩,
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [appSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [sortSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [constSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [letSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [bvarSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [fvarSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [lamSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [forallSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [projSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [zeroSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [succSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [maxSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [imaxSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [paramSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [lsSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [nanonSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [nstrSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [nnumSch]; omega), ?_⟩
-  · refine ⟨hw, by rw [hc]; omega, by rw [hp]; exact hpool, ?_⟩
-    simp only [top_rdW, hz, UInt64.toNat_zero]; exact Nat.zero_le _
-  · refine ⟨by rw [hc]; omega, by simp [epW, hz], fun j _ => by simp [mstamp, epW, hz],
-      fun j _ h => by simp [mstamp, epW, hz] at h, fun j _ _ _ h => by simp [mstamp, epW, hz] at h,
-      fun x v h => by simp [AState.init, Memos.empty] at h⟩
 
 end L.Front

@@ -2359,7 +2359,8 @@ is refused by the apply step, `has_escape`).
 
 ### The id tables and the apply step (`Apply.lean`, `StateDR.lean`)
 
-`StateD`'s `IdTable`s are two dense word arrays, `NID` (41) and `LID` (42): entry `i` is the
+`StateD`'s `IdTable`s are two dense word arrays, `NID` (64) and `LID` (65), above `ArenaR`'s
+extension point: entry `i` is the
 handle word `+ 1`, `0` unset. An id at or past the array's end aborts where the twin would use its
 sparse overflow. `front_init`, `apply_nstr(i, pre, o, l)`, `apply_nnum(i, pre, x)`,
 `apply_level(i, k, a, c)` intern through `intern_nanon`/`zero`/`nstr`/`nnum`/`succ`/`max`/
@@ -2367,8 +2368,8 @@ sparse overflow. `front_init`, `apply_nstr(i, pre, o, l)`, `apply_nnum(i, pre, x
 a lemma about the store's results); `str_put(vs, ve)` copies input bytes to the pool top (one byte
 per word, the name `str` table's key). `StateDR m st` (`TblR` per table: `get?` is the decoded
 entry, entries `≤ 2^32`, sizes `< 2^63`); `ArenaR` is kept across writes to `NID`/`LID` by the
-per-field frames (`ArenaR.frameT`). Each L function's spec is an equation about a named
-`Option Mem` model (`applyNStrW`, …), and the refinement is proved on the model
+extension point's frame (`ArenaR.frame_ext`, via `ArenaR.frameT`). Each L function's spec is an
+equation about a named `Option Mem` model (`applyNStrW`, …), and the refinement is proved on the model
 (`applyNStrW_refines`, `applyNNumW_refines`, `applyLevelW_refines`, `frontInitW_refines`).
 
 ### One line end to end (`Line.lean`, `LineRefine.lean`)
@@ -2423,8 +2424,6 @@ expression key, with `ok`-path links of the same shape.
 
 ### Requests
 
-* `ArenaRel.arenaR_init` takes exactly 41 sizes; `StateDR.lean` has a copy `arenaR_initMem` for
-  `41 ≤ sizes.length`. Generalising `arenaR_init` (lane `exprops`) removes the copy.
 * Strings with escapes abort; `unescape` into the pool (the `\u` arms need UTF-8 encoding
   against `String.utf8EncodeChar`) is the next piece for real files.
 

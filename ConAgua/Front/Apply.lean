@@ -7,8 +7,8 @@ con-ron's `StateD` (`vendor/con-ron/ConRon/Arena/Frontend/ExportC.lean:99`) maps
 file's name and level ids to the handles the store interned them at (`IdTable`, a dense array with
 a sparse overflow). Here the two tables are dense word arrays:
 
-* `NID` (41): export name id `i` ↦ the name handle word `+ 1`, `0` = unset.
-* `LID` (42): export level id `i` ↦ the level handle word `+ 1`, `0` = unset.
+* `NID` (64): export name id `i` ↦ the name handle word `+ 1`, `0` = unset.
+* `LID` (65): export level id `i` ↦ the level handle word `+ 1`, `0` = unset.
 
 Their sizes are fixed by the harness. An id at or past the array's end aborts where the twin would
 use its sparse overflow (an `abort` is a defined failure; partial correctness claims nothing).
@@ -37,9 +37,9 @@ open L.Arena
 namespace L.Front
 
 /-- Export name id ↦ name handle word `+ 1`. -/
-abbrev NID : ArrId := 41
+abbrev NID : ArrId := 64
 /-- Export level id ↦ level handle word `+ 1`. -/
-abbrev LID : ArrId := 42
+abbrev LID : ArrId := 65
 /-- The input buffer (byte array 0). -/
 abbrev IN : ArrId := 0
 
@@ -268,7 +268,7 @@ def frontProg : Prog :=
 
 /-- A memory with every word array 64 words (all zero) and the input `"abcab"`. -/
 def frontMem : Mem :=
-  { bytes := #["abcab".toUTF8.data], words := Array.replicate 43 (Array.replicate 64 0) }
+  { bytes := #["abcab".toUTF8.data], words := Array.replicate 66 (Array.replicate 64 0) }
 
 /-- Run the calls in turn; the results. -/
 def frontRuns (m : Mem) : List (FnName × List Word) → Option (List (List Word))
