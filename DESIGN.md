@@ -2142,8 +2142,8 @@ L proofs then see the same terms as the model; the arithmetic moves into the lin
   The models of the 18 records are instances (`appBit`, `appVal b`, `3`, …); the L code keeps
   Rust's shape, one function per record with `next_member` factored out (Rust's deviation 3),
   and each is proved against its instance. The record L code, the instances and the proofs were
-  generated from con-leche's loops by a script (`_tmp/stageb-gen/genrec.py`, not committed; the
-  file was edited after generation). `lam` and `forallE` share one L function and one instance,
+  generated from con-leche's loops by a script (`scripts/stageb/genrec.py`, see its `README`; the
+  file was edited after generation and is hand-maintained since). `lam` and `forallE` share one L function and one instance,
   as Rust's `scan_binder_expr_loop` does.
 * **`key_at`** follows con-leche's `keyAt` (first byte, length, unrolled compare): L has no
   slice type for Rust's `match_lit` against a `[u8; N]`. It is split into a dispatcher and six
@@ -2323,3 +2323,110 @@ error matches (`Checker.lean:228–236, 247, 272–278, 286–291`, the frontend
 ### `sorry`s
 
 None. `PipelineRefines` is a hypothesis of the theorems.
+
+## The first records into the store: names and levels (2026-10-21, lane `front`)
+
+Files: `ConAgua/Front/{Fields,FieldsLink}.lean` (the scanner's fields), `ConAgua/Front/{Apply,
+StateDR}.lean` (the id tables and `parseNameEntryD`/`parseLevelEntryD`, written by a subagent),
+`ConAgua/Front/{Line,LineRefine}.lean` (one line, end to end), `scripts/stageb/` (housekeeping
+below). No `sorry`; `frontLine_refines` and `frontInit_refines` use only `propext`,
+`Classical.choice`, `Quot.sound`. Stage B's files are unchanged.
+
+**Housekeeping.** Stage B's generators are committed as `scripts/stageb/{parserec,genrec,genkey}.py`
+(repo-relative paths; `scripts/stageb/README` says how to run them). `Records.lean`/`Key.lean` were
+edited after generation (the six `key_at` groups and the hypothesis lists that follow, headers,
+heartbeats), so they are hand-maintained; a rerun is a starting point to diff against.
+
+### The fields: a second pass over an accepted line
+
+The validator stays as it is (`scan_line`, all its theorems). A name or level line is read a second
+time by `rec_line_loop(i)` (`Fields.lean`), which returns five words `(pl, idx, a, c, d)`: the kind
+(`1` name `str`, `2` name `num`, `3`‥`6` `succ`/`max`/`imax`/`param`, `7` the header, `0` anything
+else), the index, and the fields (for a `str` name: `pre` and the string body's byte range
+`[c, d)`). The pass trusts the validator: no `seen` masks, no alternation, no key-set check, and it
+stops with `pl = 0` at any other payload key. Numbers are read by `read_nat` (con-leche's
+`readNat64` on words); one of more than 18 digits reads as `NONE = 2^64 - 1`, which the apply step
+refuses (`readNatAt` is `readNat64` for at most 18 digits, so the link is definitional).
+
+`FieldsLink.lean` relates each loop to con-leche's on its `ok` path only: `recLine_link`: if
+`scanLineLoop b i w ik idx pl = .ok r e` and the words so far are related to `idx`/`pl`
+(`ItemR`, `PlR`), then `rec_line_loop`'s result, if `pl ≠ 0`, is related to `r` (`RecR`). The error
+branches of con-leche's loops are discharged by the `ok` hypothesis, so the link is one induction
+per loop (`pair_link`, `strRec_link`, `numRec_link`, `recLine_link`), with no `objN`-style generic
+model. A word read for a number `n` satisfies `ItemR x n := x ≠ NONE → x.toNat = n`; a string body
+`StrOK b vs ve s := NoEsc b vs ve → String.fromUTF8? (b.extract vs ve) = some s` (an escaped string
+is refused by the apply step, `has_escape`).
+
+### The id tables and the apply step (`Apply.lean`, `StateDR.lean`)
+
+`StateD`'s `IdTable`s are two dense word arrays, `NID` (64) and `LID` (65), above `ArenaR`'s
+extension point: entry `i` is the
+handle word `+ 1`, `0` unset. An id at or past the array's end aborts where the twin would use its
+sparse overflow. `front_init`, `apply_nstr(i, pre, o, l)`, `apply_nnum(i, pre, x)`,
+`apply_level(i, k, a, c)` intern through `intern_nanon`/`zero`/`nstr`/`nnum`/`succ`/`max`/
+`imax`/`param` and guard the result `< 2^32` (so table entries can be passed on as handles without
+a lemma about the store's results); `str_put(vs, ve)` copies input bytes to the pool top (one byte
+per word, the name `str` table's key). `StateDR m st` (`TblR` per table: `get?` is the decoded
+entry, entries `≤ 2^32`, sizes `< 2^63`); `ArenaR` is kept across writes to `NID`/`LID` by the
+extension point's frame (`ArenaR.frame_ext`, via `ArenaR.frameT`). Each L function's spec is an
+equation about a named `Option Mem` model (`applyNStrW`, …), and the refinement is proved on the model
+(`applyNStrW_refines`, `applyNNumW_refines`, `applyLevelW_refines`, `frontInitW_refines`).
+
+### One line end to end (`Line.lean`, `LineRefine.lean`)
+
+`front_line(i)` = `scan_line(i)`; blank line → `(1, next)`; else `rec_line_loop` and `apply_rec`
+(which dispatches on `pl`; `apply_str` does `has_escape`, `str_put`, `apply_nstr`). Expression and
+declaration lines abort for now. `frontLine_refines`: under `ArenaR s₀.mem a₀`, `StateDR s₀.mem st`
+and the buffer `b` in `IN`, if `front_line(i)` returns `(1, nx)` then `LineStep b i nx st a₀ m'`:
+`scanLineFwd b i = .ok r q` with `q` the word `nx`, `applyLine st r` succeeds with `.inl st'`, and
+`ArenaR m' (AM.st …)`, `StateDR m' st'`. The record `r` is con-leche's, so Stage B's links to
+`scanLineFwd` apply unchanged.
+
+### Measurements (`lake env lean`, one run)
+
+| file | lines | L lines | user |
+|---|---:|---:|---:|
+| `Fields.lean` (L, models, `vcgen` specs) | 762 | 115 | 35.5 s |
+| `FieldsLink.lean` | 809 | | 8.8 s |
+| `Apply.lean` (L, models, specs, `#guard`s) | 503 | 77 | 4.8 s |
+| `StateDR.lean` | 734 | | 2.6 s |
+| `Line.lean` (L, model, specs) | 255 | 30 | 3.1 s |
+| `LineRefine.lean` | 299 | | 1.2 s |
+
+Every `vcgen` spec is `vcgen` + `finish`. Rust: `export_c.rs`'s name/level entries and the id
+tables (~150 lines) plus the record values of `scan_fast.rs`'s name/level paths (~200).
+
+### Findings
+
+* **A second pass instead of value-carrying validators.** Rewriting the validator's loops to carry
+  values would have meant new models and new links for all of them; the second pass needs links
+  only on con-leche's `ok` path, where every error branch closes by `cases h`. The cost is reading
+  name/level lines twice (they are short).
+* **A monolithic dispatcher did not get through `finish`** (the first `front_line`, ~20 branches
+  with seven calls): split into `front_line`/`apply_rec`/`apply_str`, each spec went through. Two
+  things the split exposed: a callee spec needs `LocEq s' s₀` in its post for the caller's later
+  reads of its own locals; and a callee whose return words are not fixed by its post (a list
+  from an `Option` model) cannot be assigned to locals that the caller returns: return a constant
+  and let the caller build the result.
+* **Pass a callee spec without its state argument** to `vcgen` (`applyRec_spec … n`, not
+  `… n s₀ hm`): an explicit `s₀` fixes the call state, which is never `s₀` itself.
+* `rw [f]` with a definition's equation lemma for an overlapping `match` (`scanLineLoop`) produces
+  side goals; `rw [f.eq_def]` does not.
+
+### What an expression record will need
+
+Binder data (`lam`/`forallE` names and binder info are dropped by con-leche, so nothing), the
+`lit` store's `strVal` contents (a second `intern_lit` entry over the pool bytes, as `nstr`), the
+derived columns (`derOfView`: the loose-bvar range and flags, and the opaque hash, ROADMAP §2
+item 10), level lists for `const` (`intern_ls` over handle words `str_put`-like into the pool),
+and natural-number literals (the limb-pool decimal parse). The fields pass extends by one arm per
+expression key, with `ok`-path links of the same shape.
+
+### Requests
+
+* Strings with escapes abort; `unescape` into the pool (the `\u` arms need UTF-8 encoding
+  against `String.utf8EncodeChar`) is the next piece for real files.
+
+### `sorry`s
+
+None.
