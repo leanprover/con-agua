@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.Store
 meta import ConAgua.L.Semantics
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -163,7 +164,7 @@ def zpushOK (m : Mem) (t : Word) : Bool :=
 
 /-- The memory after `zero_push(t, j)` appended node `c`. -/
 def zpushMem (m : Mem) (t j c : Word) : Mem :=
-  (((m.set64 ZREC (c * 2 + t) 0).set64 ZSLOT (j * 2 + t) (c + 1)).set64 CTL (8 + t) (c + 1))
+  (((m.set64 ZREC (c * 2 + t) 0).set64 ZSLOT (j * 2 + t) (c + 1)).set64 CTL (8 + (t &&& 1)) (c + 1))
 
 def zeroPush : FunDecl := lfn (t, j) locals (c) {
   c := CTL.u64[8 + t];
@@ -172,7 +173,7 @@ def zeroPush : FunDecl := lfn (t, j) locals (c) {
   if ((len(ZSLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   ZREC.u64[c * 2 + t] := 0;
   ZSLOT.u64[j * 2 + t] := c + 1;
-  CTL.u64[8 + t] := c + 1;
+  CTL.u64[8 + (t & 1)] := c + 1;
   return c
 }
 
@@ -223,6 +224,7 @@ def zinternW (m : Mem) : Option (Word × Mem) :=
     some (zeroP + zcnt m 0, zpushMem m 0 (rs₀.tail.tail.headD 0) (zcnt m 0))
   else none
 
+@[l_impl ConRon.Arena.internLNode]
 def internZero : FunDecl := lfn () locals (h, fd, i, j, d) {
   h := ⟪zeroHashW⟫;
   (fd, i, j, d) := call zero_find(0, h);

@@ -283,4 +283,10 @@ abbrev IMEMO : ArrId := 47
 /-- `inst1C`: array 47, stamp `CTL[44]`, count `CTL[45]`. -/
 abbrev imSch : MemoSch := ⟨IMEMO, 44⟩
 
+/-- The slots of `fvarRange`'s memo (`fvarBC`, one-word keys, `bvarBC`'s codec: `bmKey`). -/
+abbrev FRMEMO : ArrId := 48
+
+/-- `fvarBC`: array 48, stamp `CTL[46]`, count `CTL[47]`. -/
+abbrev frSch : MemoSch := ⟨FRMEMO, 46⟩
+
 end L.Arena

@@ -3,6 +3,7 @@ import ConAgua.Front.FieldsLink
 import ConAgua.Front.ApplyExpr
 import ConAgua.Front.FieldsExpr
 import ConAgua.Front.Unescape
+import ConAgua.Census.Attr
 
 /-!
 # One line of the export, applied: `front_line`
@@ -33,6 +34,7 @@ open L.Front.Unescape (strPutEscW strPutEsc_specW escSur escOne utf8Put strPutEs
 
 namespace L.Front
 
+@[l_impl ConRon.Arena.Frontend.applyLine]
 def frontLine : FunDecl := lfn (i) locals (ok, nx, s, pl, idx, a, c, d) {
   (ok, nx) := call scan_line(i);
   if ok == 0 { return (0, 0) };

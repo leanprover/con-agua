@@ -3,6 +3,7 @@ module
 public import ConAgua.Arena.Store
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.Store
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -209,7 +210,7 @@ def nspushOK (m : Mem) (t : Word) : Bool :=
 def nspushMem (m : Mem) (t q o l h j c : Word) : Mem :=
   (((((m.set64 NSREC (c * 8 + t * 4) q).set64 NSREC (c * 8 + t * 4 + 1) o).set64 NSREC
     (c * 8 + t * 4 + 2) l).set64 NSREC (c * 8 + t * 4 + 3) h).set64 NSSLOT (j * 2 + t)
-    (c + 1)).set64 CTL (36 + t) (c + 1)
+    (c + 1)).set64 CTL (36 + (t &&& 1)) (c + 1)
 
 def nsPush : FunDecl := lfn (t, q, o, l, h, j) locals (c, k) {
   c := CTL.u64[36 + t];
@@ -222,7 +223,7 @@ def nsPush : FunDecl := lfn (t, q, o, l, h, j) locals (c, k) {
   NSREC.u64[k + 2] := l;
   NSREC.u64[k + 3] := h;
   NSSLOT.u64[j * 2 + t] := c + 1;
-  CTL.u64[36 + t] := c + 1;
+  CTL.u64[36 + (t & 1)] := c + 1;
   return c
 }
 
@@ -278,6 +279,7 @@ def nsinternW (m : Mem) (q o l : Word) : Option (Word × Mem) :=
     some (nsP + nscnt m 0, nspushMem m 0 q o l h (rs₀.tail.tail.headD 0) (nscnt m 0))
   else none
 
+@[l_impl ConRon.Arena.internNNode]
 def internNStr : FunDecl := lfn (q, o, l) locals (h, f, i, j, d, sc) {
   h := call lit_hash(o, l);
   h := (h ^ q) * ⟪fnvPrime⟫;

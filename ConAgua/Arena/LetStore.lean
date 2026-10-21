@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.Store
 meta import ConAgua.L.Semantics
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -172,7 +173,7 @@ def lepushOK (m : Mem) (t : Word) : Bool :=
 /-- The memory after `letE_push(t, ty, val, body, j)` appended node `c`. -/
 def lepushMem (m : Mem) (t ty val body j c : Word) : Mem :=
   ((((m.set64 LEREC (c * 6 + t * 3) ty).set64 LEREC (c * 6 + t * 3 + 1) val).set64 LEREC
-    (c * 6 + t * 3 + 2) body).set64 LESLOT (j * 2 + t) (c + 1)).set64 CTL (20 + t) (c + 1)
+    (c * 6 + t * 3 + 2) body).set64 LESLOT (j * 2 + t) (c + 1)).set64 CTL (20 + (t &&& 1)) (c + 1)
 
 def letPush : FunDecl := lfn (t, ty, val, body, j) locals (c, k) {
   c := CTL.u64[20 + t];
@@ -184,7 +185,7 @@ def letPush : FunDecl := lfn (t, ty, val, body, j) locals (c, k) {
   LEREC.u64[k + 1] := val;
   LEREC.u64[k + 2] := body;
   LESLOT.u64[j * 2 + t] := c + 1;
-  CTL.u64[20 + t] := c + 1;
+  CTL.u64[20 + (t & 1)] := c + 1;
   return c
 }
 
@@ -240,6 +241,7 @@ def leinternW (m : Mem) (ty val body : Word) : Option (Word × Mem) :=
     some (letP + lecnt m 0, lepushMem m 0 ty val body (rs₀.tail.tail.headD 0) (lecnt m 0))
   else none
 
+@[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internLet : FunDecl := lfn (ty, val, body) locals (h, sk, fd, i, j, d) {
   h := (((⟪fnvBasis⟫ ^ ty) * ⟪fnvPrime⟫ ^ val) * ⟪fnvPrime⟫ ^ body) * ⟪fnvPrime⟫;
   sk := 0;

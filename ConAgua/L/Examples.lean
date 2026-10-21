@@ -3,6 +3,7 @@ module
 public import ConAgua.L.Notation
 public import ConAgua.L.Logic
 meta import ConAgua.L.Semantics
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -142,6 +143,7 @@ def strCloseLoop : Stmt := lblk (j, c) {
   }
 }
 
+@[l_impl ConLeche.Frontend.strClose]
 def strClose : FunDecl := lfn (j) locals (c) {
   ⟪strCloseLoop⟫;
   return 0
@@ -169,6 +171,7 @@ def skipBracedLoop : Stmt := lblk (i, depth, c, e) {
   }
 }
 
+@[l_impl ConLeche.Frontend.skipBraced]
 def skipBraced : FunDecl := lfn (i, depth) locals (c, e) {
   ⟪skipBracedLoop⟫;
   return 0
@@ -334,6 +337,7 @@ theorem strCloseLoop_step_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
   Triple.step_exec (strCloseLoop_spec p b hb (n + 1) s₀ hm hj)
 
 include hp1 in
+@[refines ConLeche.Frontend.strClose]
 theorem strClose_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j : Word)
     (hj : j.toNat ≤ b.size) :
     ⦃fun s => s = s₀⦄
@@ -372,6 +376,7 @@ theorem skipBracedLoop_step_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = 
 
 include hp1 hp2 in
 /-- The L `skip_braced` refines the model: if it returns, it returns `skipBracedN`. -/
+@[refines ConLeche.Frontend.skipBraced]
 theorem skipBraced_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i d : Word)
     (hi : i.toNat ≤ b.size) (hd : d.toNat + (b.size - i.toNat) < 2 ^ 64) :
     ⦃fun s => s = s₀⦄

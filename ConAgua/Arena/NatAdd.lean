@@ -3,6 +3,7 @@ module
 public import ConAgua.L.Notation
 public import ConAgua.Arena.Pool
 meta import ConAgua.L.Semantics
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -111,6 +112,7 @@ def addLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, c, x, y) {
   }
 }
 
+@[l_impl ConRon.Arena.natOpResult]
 def natAdd : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, c, x, y) {
   top := CTL.u64[0];
   n := la;

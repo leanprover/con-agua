@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.Store
 meta import ConAgua.L.Semantics
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -175,7 +176,7 @@ def lapushOK (m : Mem) (t : Word) : Bool :=
 /-- The memory after `lam_push(t, ty, body, j)` appended node `c`. -/
 def lapushMem (m : Mem) (t ty body j c : Word) : Mem :=
   ((((m.set64 LAREC (c * 4 + t * 2) ty).set64 LAREC (c * 4 + t * 2 + 1) body).set64 LASLOT
-    (j * 2 + t) (c + 1)).set64 CTL (28 + t) (c + 1))
+    (j * 2 + t) (c + 1)).set64 CTL (28 + (t &&& 1)) (c + 1))
 
 def lamPush : FunDecl := lfn (t, ty, body, j) locals (c, k) {
   c := CTL.u64[28 + t];
@@ -186,7 +187,7 @@ def lamPush : FunDecl := lfn (t, ty, body, j) locals (c, k) {
   LAREC.u64[k] := ty;
   LAREC.u64[k + 1] := body;
   LASLOT.u64[j * 2 + t] := c + 1;
-  CTL.u64[28 + t] := c + 1;
+  CTL.u64[28 + (t & 1)] := c + 1;
   return c
 }
 
@@ -246,6 +247,7 @@ def lainternW (m : Mem) (ty body : Word) : Option (Word × Mem) :=
 /-- The L FunDecl for `intern_lam`. Named `internLamL`, not `internLam`: con-ron's
 `EStore.internLam` (`ConRon/Arena/Store.lean`) is a sibling name in a different namespace, but the
 `L`-suffix keeps the two visually apart in this file, which `open`s `ConRon.Arena`. -/
+@[l_impl ConRon.Arena.internE ConRon.Arena.internLamE]
 def internLamL : FunDecl := lfn (ty, body) locals (h, sk, fd, i, j, d) {
   h := ((⟪fnvBasis⟫ ^ ty) * ⟪fnvPrime⟫ ^ body) * ⟪fnvPrime⟫;
   sk := 0;

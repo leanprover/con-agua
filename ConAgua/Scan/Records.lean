@@ -8,6 +8,7 @@ public import ConAgua.Scan.Member
 public import ConAgua.Scan.Lit
 public import ConAgua.Scan.Str
 meta import ConAgua.L.Semantics
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -76,6 +77,7 @@ def strNameLoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
   }
 }
 
+@[l_impl ConLeche.Frontend.scanStrName]
 def scanStrName : FunDecl := lfn (i) locals (w, seen, tag, ks, k, v, e, ok, x) {
   if i < len(IN.u8) && IN.u8[i] == 123 {
     i += 1;
@@ -124,6 +126,7 @@ def numNameLoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
   }
 }
 
+@[l_impl ConLeche.Frontend.scanNumName]
 def scanNumName : FunDecl := lfn (i) locals (w, seen, tag, ks, k, v, e, ok, x) {
   if i < len(IN.u8) && IN.u8[i] == 123 {
     i += 1;
@@ -172,6 +175,7 @@ def appLoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
   }
 }
 
+@[l_impl ConLeche.Frontend.scanAppExpr]
 def scanApp : FunDecl := lfn (i) locals (w, seen, tag, ks, k, v, e, ok, x) {
   if i < len(IN.u8) && IN.u8[i] == 123 {
     i += 1;
@@ -231,6 +235,7 @@ def binderLoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
   }
 }
 
+@[l_impl ConLeche.Frontend.scanLamExpr ConLeche.Frontend.scanForallExpr]
 def scanBinder : FunDecl := lfn (i) locals (w, seen, tag, ks, k, v, e, ok, x) {
   if i < len(IN.u8) && IN.u8[i] == 123 {
     i += 1;
@@ -295,6 +300,7 @@ def letELoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
   }
 }
 
+@[l_impl ConLeche.Frontend.scanLetExpr]
 def scanLetE : FunDecl := lfn (i) locals (w, seen, tag, ks, k, v, e, ok, x) {
   if i < len(IN.u8) && IN.u8[i] == 123 {
     i += 1;
@@ -344,6 +350,7 @@ def constELoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
   }
 }
 
+@[l_impl ConLeche.Frontend.scanConstExpr]
 def scanConstE : FunDecl := lfn (i) locals (w, seen, tag, ks, k, v, e, ok, x) {
   if i < len(IN.u8) && IN.u8[i] == 123 {
     i += 1;
@@ -397,6 +404,7 @@ def projLoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
   }
 }
 
+@[l_impl ConLeche.Frontend.scanProjExpr]
 def scanProj : FunDecl := lfn (i) locals (w, seen, tag, ks, k, v, e, ok, x) {
   if i < len(IN.u8) && IN.u8[i] == 123 {
     i += 1;
@@ -450,6 +458,7 @@ def ruleLoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
   }
 }
 
+@[l_impl ConLeche.Frontend.scanRule]
 def scanRule : FunDecl := lfn (i) locals (w, seen, tag, ks, k, v, e, ok, x) {
   if i < len(IN.u8) && IN.u8[i] == 123 {
     i += 1;
@@ -497,6 +506,7 @@ def rulesLoop : Stmt := lblk (i, cnt, w, c, e) {
   }
 }
 
+@[l_impl ConLeche.Frontend.scanRules]
 def scanRules : FunDecl := lfn (i) locals (cnt, w, c, e) {
   if i < len(IN.u8) && IN.u8[i] == 91 {
     i += 1;
@@ -589,6 +599,7 @@ def indRecLoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
   }
 }
 
+@[l_impl ConLeche.Frontend.scanIndRec]
 def scanIndRec : FunDecl := lfn (i) locals (w, seen, tag, ks, k, v, e, ok, x) {
   if i < len(IN.u8) && IN.u8[i] == 123 {
     i += 1;
@@ -636,6 +647,7 @@ def indRecsLoop : Stmt := lblk (i, cnt, w, c, e) {
   }
 }
 
+@[l_impl ConLeche.Frontend.scanIndRecs]
 def scanIndRecs : FunDecl := lfn (i) locals (cnt, w, c, e) {
   if i < len(IN.u8) && IN.u8[i] == 91 {
     i += 1;
@@ -729,6 +741,7 @@ def indTypeLoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
   }
 }
 
+@[l_impl ConLeche.Frontend.scanIndType]
 def scanIndType : FunDecl := lfn (i) locals (w, seen, tag, ks, k, v, e, ok, x) {
   if i < len(IN.u8) && IN.u8[i] == 123 {
     i += 1;
@@ -776,6 +789,7 @@ def indTypesLoop : Stmt := lblk (i, cnt, w, c, e) {
   }
 }
 
+@[l_impl ConLeche.Frontend.scanIndTypes]
 def scanIndTypes : FunDecl := lfn (i) locals (cnt, w, c, e) {
   if i < len(IN.u8) && IN.u8[i] == 91 {
     i += 1;
@@ -850,6 +864,7 @@ def indCtorLoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
   }
 }
 
+@[l_impl ConLeche.Frontend.scanIndCtor]
 def scanIndCtor : FunDecl := lfn (i) locals (w, seen, tag, ks, k, v, e, ok, x) {
   if i < len(IN.u8) && IN.u8[i] == 123 {
     i += 1;
@@ -897,6 +912,7 @@ def indCtorsLoop : Stmt := lblk (i, cnt, w, c, e) {
   }
 }
 
+@[l_impl ConLeche.Frontend.scanIndCtors]
 def scanIndCtors : FunDecl := lfn (i) locals (cnt, w, c, e) {
   if i < len(IN.u8) && IN.u8[i] == 91 {
     i += 1;
@@ -951,6 +967,7 @@ def axiomDLoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
   }
 }
 
+@[l_impl ConLeche.Frontend.scanAxiomDecl]
 def scanAxiomD : FunDecl := lfn (i) locals (w, seen, tag, ks, k, v, e, ok, x) {
   if i < len(IN.u8) && IN.u8[i] == 123 {
     i += 1;
@@ -1028,6 +1045,7 @@ def defDLoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
   }
 }
 
+@[l_impl ConLeche.Frontend.scanDefDecl]
 def scanDefD : FunDecl := lfn (i) locals (w, seen, tag, ks, k, v, e, ok, x) {
   if i < len(IN.u8) && IN.u8[i] == 123 {
     i += 1;
@@ -1093,6 +1111,7 @@ def thmDLoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
   }
 }
 
+@[l_impl ConLeche.Frontend.scanThmDecl]
 def scanThmD : FunDecl := lfn (i) locals (w, seen, tag, ks, k, v, e, ok, x) {
   if i < len(IN.u8) && IN.u8[i] == 123 {
     i += 1;
@@ -1164,6 +1183,7 @@ def opaqueDLoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
   }
 }
 
+@[l_impl ConLeche.Frontend.scanOpaqueDecl]
 def scanOpaqueD : FunDecl := lfn (i) locals (w, seen, tag, ks, k, v, e, ok, x) {
   if i < len(IN.u8) && IN.u8[i] == 123 {
     i += 1;
@@ -1224,6 +1244,7 @@ def quotDLoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
   }
 }
 
+@[l_impl ConLeche.Frontend.scanQuotDecl]
 def scanQuotD : FunDecl := lfn (i) locals (w, seen, tag, ks, k, v, e, ok, x) {
   if i < len(IN.u8) && IN.u8[i] == 123 {
     i += 1;
@@ -1292,6 +1313,7 @@ def indDLoop : Stmt := lblk (i, w, seen, tag, ks, k, v, e, ok, x) {
   }
 }
 
+@[l_impl ConLeche.Frontend.scanIndDecl]
 def scanIndD : FunDecl := lfn (i) locals (w, seen, tag, ks, k, v, e, ok, x) {
   if i < len(IN.u8) && IN.u8[i] == 123 {
     i += 1;
@@ -1396,6 +1418,7 @@ theorem strNameLoop_step_spec (n : Nat) (s₀ : St) :
       r.retOr [0] = [objN strNameBit (strNameVal b) 3 b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
   Triple.step_exec (strNameLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
+@[refines_part ConLeche.Frontend.scanStrName "validity"]
 theorem scanStrName_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_str_name" [i]
@@ -1434,6 +1457,7 @@ theorem numNameLoop_step_spec (n : Nat) (s₀ : St) :
       r.retOr [0] = [objN numNameBit (numNameVal b) 3 b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
   Triple.step_exec (numNameLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
+@[refines_part ConLeche.Frontend.scanNumName "validity"]
 theorem scanNumName_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_num_name" [i]
@@ -1472,6 +1496,7 @@ theorem appLoop_step_spec (n : Nat) (s₀ : St) :
       r.retOr [0] = [objN appBit (appVal b) 3 b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
   Triple.step_exec (appLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
+@[refines_part ConLeche.Frontend.scanAppExpr "validity"]
 theorem scanApp_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_app" [i]
@@ -1511,6 +1536,7 @@ theorem binderLoop_step_spec (n : Nat) (s₀ : St) :
       r.retOr [0] = [objN binderBit (binderVal b) 15 b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
   Triple.step_exec (binderLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
+@[refines_part ConLeche.Frontend.scanLamExpr "validity", refines_part ConLeche.Frontend.scanForallExpr "validity"]
 theorem scanBinder_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_binder" [i]
@@ -1551,6 +1577,7 @@ theorem letELoop_step_spec (n : Nat) (s₀ : St) :
       r.retOr [0] = [objN letEBit (letEVal b) 27 b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
   Triple.step_exec (letELoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
+@[refines_part ConLeche.Frontend.scanLetExpr "validity"]
 theorem scanLetE_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_let" [i]
@@ -1590,6 +1617,7 @@ theorem constELoop_step_spec (n : Nat) (s₀ : St) :
       r.retOr [0] = [objN constEBit (constEVal b) 3 b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
   Triple.step_exec (constELoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
+@[refines_part ConLeche.Frontend.scanConstExpr "validity"]
 theorem scanConstE_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_const" [i]
@@ -1628,6 +1656,7 @@ theorem projLoop_step_spec (n : Nat) (s₀ : St) :
       r.retOr [0] = [objN projBit (projVal b) 7 b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
   Triple.step_exec (projLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
+@[refines_part ConLeche.Frontend.scanProjExpr "validity"]
 theorem scanProj_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_proj" [i]
@@ -1666,6 +1695,7 @@ theorem ruleLoop_step_spec (n : Nat) (s₀ : St) :
       r.retOr [0] = [objN ruleBit (ruleVal b) 7 b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
   Triple.step_exec (ruleLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
+@[refines_part ConLeche.Frontend.scanRule "validity"]
 theorem scanRule_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_rule" [i]
@@ -1703,6 +1733,7 @@ theorem rulesLoop_step_spec (n : Nat) (s₀ : St) :
       r.retOr [0] = [objListN (ruleN b) b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
   Triple.step_exec (rulesLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
+@[refines_part ConLeche.Frontend.scanRules "validity"]
 theorem scanRules_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_rules" [i]
@@ -1747,6 +1778,7 @@ theorem indRecLoop_step_spec (n : Nat) (s₀ : St) :
       r.retOr [0] = [objN indRecBit (indRecVal b) 2046 b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
   Triple.step_exec (indRecLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
+@[refines_part ConLeche.Frontend.scanIndRec "validity"]
 theorem scanIndRec_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_ind_rec" [i]
@@ -1784,6 +1816,7 @@ theorem indRecsLoop_step_spec (n : Nat) (s₀ : St) :
       r.retOr [0] = [objListN (indRecN b) b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
   Triple.step_exec (indRecsLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
+@[refines_part ConLeche.Frontend.scanIndRecs "validity"]
 theorem scanIndRecs_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_ind_recs" [i]
@@ -1827,6 +1860,7 @@ theorem indTypeLoop_step_spec (n : Nat) (s₀ : St) :
       r.retOr [0] = [objN indTypeBit (indTypeVal b) 2046 b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
   Triple.step_exec (indTypeLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
+@[refines_part ConLeche.Frontend.scanIndType "validity"]
 theorem scanIndType_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_ind_type" [i]
@@ -1864,6 +1898,7 @@ theorem indTypesLoop_step_spec (n : Nat) (s₀ : St) :
       r.retOr [0] = [objListN (indTypeN b) b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
   Triple.step_exec (indTypesLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
+@[refines_part ConLeche.Frontend.scanIndTypes "validity"]
 theorem scanIndTypes_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_ind_types" [i]
@@ -1905,6 +1940,7 @@ theorem indCtorLoop_step_spec (n : Nat) (s₀ : St) :
       r.retOr [0] = [objN indCtorBit (indCtorVal b) 252 b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
   Triple.step_exec (indCtorLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
+@[refines_part ConLeche.Frontend.scanIndCtor "validity"]
 theorem scanIndCtor_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_ind_ctor" [i]
@@ -1942,6 +1978,7 @@ theorem indCtorsLoop_step_spec (n : Nat) (s₀ : St) :
       r.retOr [0] = [objListN (indCtorN b) b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
   Triple.step_exec (indCtorsLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
+@[refines_part ConLeche.Frontend.scanIndCtors "validity"]
 theorem scanIndCtors_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_ind_ctors" [i]
@@ -1983,6 +2020,7 @@ theorem axiomDLoop_step_spec (n : Nat) (s₀ : St) :
       r.retOr [0] = [objN axiomDBit (axiomDVal b) 15 b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
   Triple.step_exec (axiomDLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
+@[refines_part ConLeche.Frontend.scanAxiomDecl "validity"]
 theorem scanAxiomD_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_axiom" [i]
@@ -2024,6 +2062,7 @@ theorem defDLoop_step_spec (n : Nat) (s₀ : St) :
       r.retOr [0] = [objN defDBit (defDVal b) 124 b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
   Triple.step_exec (defDLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
+@[refines_part ConLeche.Frontend.scanDefDecl "validity"]
 theorem scanDefD_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_def" [i]
@@ -2063,6 +2102,7 @@ theorem thmDLoop_step_spec (n : Nat) (s₀ : St) :
       r.retOr [0] = [objN thmDBit (thmDVal b) 30 b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
   Triple.step_exec (thmDLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
+@[refines_part ConLeche.Frontend.scanThmDecl "validity"]
 theorem scanThmD_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_thm" [i]
@@ -2104,6 +2144,7 @@ theorem opaqueDLoop_step_spec (n : Nat) (s₀ : St) :
       r.retOr [0] = [objN opaqueDBit (opaqueDVal b) 62 b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
   Triple.step_exec (opaqueDLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
+@[refines_part ConLeche.Frontend.scanOpaqueDecl "validity"]
 theorem scanOpaqueD_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_opaque" [i]
@@ -2144,6 +2185,7 @@ theorem quotDLoop_step_spec (n : Nat) (s₀ : St) :
       r.retOr [0] = [objN quotDBit (quotDVal b) 15 b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
   Triple.step_exec (quotDLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
+@[refines_part ConLeche.Frontend.scanQuotDecl "validity"]
 theorem scanQuotD_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_quot" [i]
@@ -2187,6 +2229,7 @@ theorem indDLoop_step_spec (n : Nat) (s₀ : St) :
       r.retOr [0] = [objN indDBit (indDVal b) 26 b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
   Triple.step_exec (indDLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hphn hpho hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
+@[refines_part ConLeche.Frontend.scanIndDecl "validity"]
 theorem scanIndD_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_ind_decl" [i]

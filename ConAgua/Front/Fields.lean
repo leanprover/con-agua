@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Scan.Line
 meta import ConAgua.L.Semantics
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -65,6 +66,7 @@ def readNatLoop : Stmt := lblk (v, e, x) {
   }
 }
 
+@[l_impl ConLeche.Frontend.readNatAt]
 def readNat : FunDecl := lfn (v, e) locals (x) {
   if v + 18 < e { return 0xFFFFFFFFFFFFFFFF };
   ⟪readNatLoop⟫;
@@ -115,6 +117,7 @@ def pairLoop : Stmt := lblk (i, cnt, x0, x1, c, e, x) {
   }
 }
 
+@[l_impl ConLeche.Frontend.scanNatList]
 def recNatList : FunDecl := lfn (i) locals (cnt, x0, x1, c, e, x) {
   i += 1;
   ⟪pairLoop⟫;
@@ -194,6 +197,7 @@ def strRecLoop : Stmt := lblk (i, w, pre, vs, ve, tag, ks, k, v, e) {
   }
 }
 
+@[l_impl ConLeche.Frontend.scanStrName]
 def recStrName : FunDecl := lfn (i) locals (w, pre, vs, ve, tag, ks, k, v, e) {
   i += 1;
   w := 1;
@@ -218,6 +222,7 @@ def numRecLoop : Stmt := lblk (i, w, pre, n, tag, ks, k, v, e) {
   }
 }
 
+@[l_impl ConLeche.Frontend.scanNumName]
 def recNumName : FunDecl := lfn (i) locals (w, pre, n, tag, ks, k, v, e) {
   i += 1;
   w := 1;
@@ -367,6 +372,7 @@ def recLoop : Stmt := lblk (i, w, pl, idx, a, c, d, tag, ks, k, v, e, x) {
   }
 }
 
+@[l_impl ConLeche.Frontend.scanLineLoop]
 def recLineLoop : FunDecl := lfn (i) locals (w, pl, idx, a, c, d, tag, ks, k, v, e, x) {
   w := 1;
   ⟪recLoop⟫;

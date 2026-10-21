@@ -18,49 +18,23 @@ import ConAgua.Arena.NAnonRefine
 import ConAgua.Arena.NStrRefine
 import ConAgua.Arena.NNumRefine
 import ConAgua.Arena.MemoLibRel
+import ConAgua.Census.Attr
 
 /-!
 # The arena relation: one relation for the whole L memory
 
-`ArenaR m a` assembles every table relation of the arena tier on one memory layout, with the limb
-pool and the walk memo:
-
-| array | contents | `CTL` words |
-|---|---|---|
-| 0 `POOL` | limbs, level lists' handle words, names' bytes | 0: pool top |
-| 1 `CTL` | control words | 1: scratch flag |
-| 2, 3 `REC`, `SLOT` | expression `lit` | 2, 3 |
-| 4, 5 `AREC`, `ASLOT` | expression `app` | 4, 5 |
-| 6, 7 `SREC`, `SSLOT` | level `succ` | 6, 7 |
-| 8, 9 `ZREC`, `ZSLOT` | level `zero` | 8, 9 |
-| 10, 11 `MREC`, `MSLOT` | level `max` | 10, 11 |
-| 12, 13 `IREC`, `ISLOT` | level `imax` | 12, 13 |
-| 14, 15 `PREC`, `PSLOT` | level `param` | 14, 15 |
-| 16, 17 `SOREC`, `SOSLOT` | expression `sort` | 16, 17 |
-| 18, 19 `CREC`, `CSLOT` | expression `const` | 18, 19 |
-| 20, 21 `LEREC`, `LESLOT` | expression `letE` | 20, 21 |
-| 22, 23 `BREC`, `BSLOT` | expression `bvar` | 22, 23 |
-| 24 `BMEMO` | the `bvarBound` memo | 24: stamp − 1, 25: live count |
-| 25, 26 `FVREC`, `FVSLOT` | expression `fvar` | 26, 27 |
-| 27, 28 `LAREC`, `LASLOT` | expression `lam` | 28, 29 |
-| 29, 30 `FAREC`, `FASLOT` | expression `forallE` | 30, 31 |
-| 31, 32 `PJREC`, `PJSLOT` | expression `proj` | 32, 33 |
-| 33, 34 `NAREC`, `NASLOT` | name `anonymous` | 34, 35 |
-| 35, 36 `NSREC`, `NSSLOT` | name `str` (bytes in the pool) | 36, 37 |
-| 37, 38 `NNREC`, `NNSLOT` | name `num` | 38, 39 |
-| 39, 40 `LSREC`, `LSSLOT` | level lists (slices of the pool) | 40, 41 |
-
-| 41 `LMEMO`, 47 `IMEMO` | the `liftC`, `inst1C` memos | 42, 43; 44, 45 |
-| 42‥46 | derived bvar ranges (`DerR`, not in `ArenaR`) | – |
-| 48‥63 | reserved for lane `exprops` | 46‥63 |
-| ≥ 64 | **free for other lanes** (`ArenaR.frame_ext`) | ≥ 64 |
+`ArenaR m a` assembles every table relation of the store tier on one memory layout, with the limb
+pool, and the walk memos as one nested group (`MemosR m a.memos`). The array and `CTL` map of the
+whole L memory is one table in DESIGN.md ("The memory map"); `storeArrs`/`storeCtl`,
+`memoArrs`/`memoCtl` below are its rows for this file, and `Tiers.lean` reserves the ranges of
+the tiers still to come.
 
 (Tables 2‥23: `CTL[r + t]` is tier `t`'s node count of the table with record array `r`; tables from
-25 on: `CTL[s + t]`, `s` the slot array.) **Extension point:** a writer of arrays `≥ 64` and `CTL`
-words `≥ 64` only keeps `ArenaR` (`ArenaR.frame_ext`, stable); `arenaR_init` takes at least 64
+25 on: `CTL[s + t]`, `s` the slot array.) **Extension point:** a writer that avoids `arenaArrs` and `arenaCtl` keeps
+`ArenaR` (`ArenaR.frame`, the group frame; `frame_ext` for arrays and words `≥ 64`); `arenaR_init` takes at least 64
 arrays and a `CTL` of at least 64 words, so a lane may add its own arrays above 63 without touching
-this file. A new relation over such arrays is a separate conjunct (`ArenaR m a ∧ MyR m a`), merged
-into `ArenaR` later. This file is maintained by hand (it was once generated; `arena_build` removed
+this file. A new relation over such arrays is a separate group over the projection it reads,
+with its own group frame (`Tiers.lean`), not a new field here. This file is maintained by hand (it was once generated; `arena_build` removed
 the text that grew quadratically). Each table relation reads only its own arrays and counts,
 the scratch flag, and (for `lit`, the level lists and the name `str` table) the pool and its top,
 so a writer of other arrays leaves it alone (`Frame.lean`, `storeR_frame`). Every `intern_*`
@@ -70,8 +44,8 @@ the interning replaces one table behind its lens, `AM.st_proto`). The tactic `ar
 an `ArenaR` field by field: the given tactic where it applies, the frame elsewhere. `arenaR_init`:
 the all-zero memory is related to the arena's initial state `AState.init EStore.empty`.
 
-Not represented: the derived columns, the other memos, the per-declaration caches and the pins,
-and the contents of `lit`'s `strVal` nodes. They are not in `ArenaR`, so nothing is claimed about
+Not represented here: the derived columns (`DerR`), the other six memos, the per-declaration
+caches and the pins (`Tiers.lean`), and the contents of `lit`'s `strVal` nodes. They are not in `ArenaR`, so nothing is claimed about
 them.
 -/
 
@@ -83,13 +57,32 @@ set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
+/-! ## Ownership lists (see "Ownership" below) -/
+
+/-- The store tier's arrays: the pool and the 19 tables' record and slot arrays. -/
+def storeArrs : List ArrId :=
+  [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40]
+/-- The store tier's `CTL` words: the pool top, the scratch flag, the tables' counts. -/
+def storeCtl : List Word :=
+  [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41]
+/-- The memo tier's arrays: `BMEMO`, `LMEMO`, `IMEMO`, `FRMEMO`. -/
+def memoArrs : List ArrId := [24, 41, 47, 48]
+/-- The memo tier's `CTL` words: each memo's stamp and live count. -/
+def memoCtl : List Word := [24, 25, 42, 43, 44, 45, 46, 47]
+/-- What `ArenaR` reads. -/
+def arenaArrs : List ArrId := storeArrs ++ memoArrs
+def arenaCtl : List Word := storeCtl ++ memoCtl
+
 /-- Decide that a table is apart from a writer (`Apart`, `BMEMO ∉ A`, `24 ∉ C`) for concrete
 schemas: `decide` times out on the `UInt64` list memberships, `simp` with the array ids is
 immediate. -/
-macro "apart" : tactic => `(tactic| simp [Apart, POOL, CTL, BMEMO, bmSch, LMEMO, lfSch, IMEMO, imSch, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT])
+macro "apart" : tactic => `(tactic| simp [Apart, memoArrs, memoCtl, storeArrs, storeCtl, POOL, CTL, BMEMO, bmSch, LMEMO, lfSch, IMEMO, imSch, FRMEMO, frSch, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT])
 
 /-- The side condition of `apart_hi` for a concrete schema. -/
-macro "lo_apart" : tactic => `(tactic| simp [POOL, CTL, BMEMO, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT])
+macro "lo_apart" : tactic => `(tactic| simp [POOL, CTL, BMEMO, FRMEMO, frSch, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT])
+
+/-- The ownership side condition of `apart_own` for a concrete schema of the store tier. -/
+macro "own" : tactic => `(tactic| (simp [storeArrs, storeCtl, POOL, CTL, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT, List.mem_cons, List.not_mem_nil, List.forall_mem_cons]))
 
 /-! ## Locality of each table's records -/
 
@@ -222,10 +215,62 @@ theorem NNumR.frame (hap : Apart nnumSch [] [] A C) (h : NNumR m a) : NNumR m' a
 
 end frames
 
+/-! ## Ownership: the arrays and `CTL` words each group reads
+
+A group relation reads only the arrays and `CTL` words it owns, so a writer that avoids them
+keeps it (`MemosR.frame`, `ArenaR.frame`): one lemma per group, from the ownership lists, instead
+of one per writer. The lists are concrete, so a writer's side conditions are `by decide`. -/
+
+/-- A table is apart from a writer that avoids what the table's group owns. -/
+theorem apart_own (S : Schema) (A₀ : List ArrId)
+    (C₀ : List Word) (own : List ArrId) (ownC : List Word)
+    (hown : S.ra ∈ own ∧ S.sa ∈ own ∧ (∀ b ∈ A₀, b ∈ own ∧ b ≠ CTL) ∧ S.ca ∈ ownC ∧
+      S.ca + 1 ∈ ownC ∧ (1 : Word) ∈ ownC ∧ ∀ x ∈ C₀, x ∈ ownC)
+    (A : List ArrId) (C : List Word) (hA : ∀ b ∈ A, b ∉ own) (hC : ∀ x ∈ C, x ∉ ownC) :
+    Apart S A₀ C₀ A C := by
+  obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := hown
+  exact ⟨fun h => hA _ h h1, fun h => hA _ h h2,
+    fun b hb => ⟨fun h => hA _ h (h3 b hb).1, (h3 b hb).2⟩, fun h => hC _ h h4, fun h => hC _ h h5,
+    fun h => hC _ h h6, fun x hx h => hC _ h (h7 x hx)⟩
+
+/-! ## The memo tier -/
+
+/-- **The walk memos** (tier C: cleared at each top-level call), over the projection `a.memos`.
+A separate group, so that a table writer frames it with one lemma (`MemosR.frame`), a memo writer
+leaves the tables definitionally alone on the arena side, and a new memo changes this structure
+only. -/
+structure MemosR (m : Mem) (ms : Memos) : Prop where
+  bvar : MemoRG bmSch bmKey (·.toNat) m ms.bvarBC
+  lift : MemoRG lfSch lfKey decE m ms.liftC
+  inst1 : MemoRG imSch lfKey decE m ms.inst1C
+  fvar : MemoRG frSch bmKey (·.toNat) m ms.fvarBC
+
+/-- **The memo tier's group frame.** -/
+theorem MemosR.frame {A : List ArrId} {C : List Word} {m m' : Mem} {ms : Memos}
+    (hA : ∀ b ∈ A, b ∉ memoArrs) (hC : ∀ x ∈ C, x ∉ memoCtl) (hf : MemFrame A C m m')
+    (h : MemosR m ms) : MemosR m' ms :=
+  ⟨memoRG_frame bmSch bmSch_wf bmKey _ A C (fun h => hA _ h (by simp [memoArrs]))
+      (fun h => hC _ h (by simp [memoCtl])) m m' hf _ h.bvar,
+    memoRG_frame lfSch lfSch_wf lfKey _ A C (fun h => hA _ h (by simp [memoArrs]))
+      (fun h => hC _ h (by simp [memoCtl])) m m' hf _ h.lift,
+    memoRG_frame imSch imSch_wf lfKey _ A C (fun h => hA _ h (by simp [memoArrs]))
+      (fun h => hC _ h (by simp [memoCtl])) m m' hf _ h.inst1,
+    memoRG_frame frSch frSch_wf bmKey _ A C (fun h => hA _ h (by simp [memoArrs]))
+      (fun h => hC _ h (by simp [memoCtl])) m m' hf _ h.fvar⟩
+
+/-- **Build a `MemosR m' ms'`** across a memo writer `hf`: the written memo by `t`, the others
+by their frame. -/
+macro "memos_build " hM:term ", " hf:term " with " t:tacticSeq : tactic => `(tactic| exact ⟨
+    by first | $t | exact memoRG_frame bmSch bmSch_wf bmKey _ _ _ (by apart) (by apart) _ _ $hf _ ($hM).bvar,
+    by first | $t | exact memoRG_frame lfSch lfSch_wf lfKey _ _ _ (by apart) (by apart) _ _ $hf _ ($hM).lift,
+    by first | $t | exact memoRG_frame imSch imSch_wf lfKey _ _ _ (by apart) (by apart) _ _ $hf _ ($hM).inst1,
+    by first | $t | exact memoRG_frame frSch frSch_wf bmKey _ _ _ (by apart) (by apart) _ _ $hf _ ($hM).fvar⟩)
+
 /-! ## The relation -/
 
-/-- **The arena relation**: every represented table, the pool and the `bvarBound` memo, on the
-one layout above. -/
+/-- **The arena relation**: every represented table and the pool (the store tier, over
+`a.store`), and the memo tier as one nested group over `a.memos`, on the one layout above. Kept
+opaque to `grind` (DESIGN.md, "Does the relation scale?"): proofs name its fields. -/
 structure ArenaR (m : Mem) (a : AState) : Prop where
   lit : LitR m a
   app : AppR m a
@@ -246,9 +291,7 @@ structure ArenaR (m : Mem) (a : AState) : Prop where
   nanon : NAnonR m a
   nstr : NStrR m a
   nnum : NNumR m a
-  memo : MemoRG bmSch bmKey (·.toNat) m a.memos.bvarBC
-  lmemo : MemoRG lfSch lfKey decE m a.memos.liftC
-  imemo : MemoRG imSch lfKey decE m a.memos.inst1C
+  memos : MemosR m a.memos
 
 /-- **Build an `ArenaR m' a'` from `hR : ArenaR m a` and a writer `hf : MemFrame A C m m'`**: each
 field by the tactic `t` if it closes it (the written table, the memo, the pool's tables), else by
@@ -273,46 +316,60 @@ macro "arena_build " hR:term ", " hf:term " with " t:tacticSeq " using " ap:tact
     by first | $t | exact ($hR).nanon.frame _ _ _ _ $hf _ (by $ap),
     by first | $t | exact ($hR).nstr.frame _ _ _ _ $hf _ (by $ap),
     by first | $t | exact ($hR).nnum.frame _ _ _ _ $hf _ (by $ap),
-    by first | $t | exact memoRG_frame bmSch bmSch_wf bmKey _ _ _ (by $ap) (by $ap) _ _ $hf _ ($hR).memo,
-    by first | $t | exact memoRG_frame lfSch lfSch_wf lfKey _ _ _ (by $ap) (by $ap) _ _ $hf _ ($hR).lmemo,
-    by first | $t | exact memoRG_frame imSch imSch_wf lfKey _ _ _ (by $ap) (by $ap) _ _ $hf _ ($hR).imemo⟩)
+    by first | $t | exact ($hR).memos.frame (by $ap) (by $ap) $hf⟩)
 
 /-- `arena_build hR, hf with t` for a writer of concrete arrays and words (`Apart` by `apart`). -/
 macro "arena_build " hR:term ", " hf:term " with " t:tacticSeq : tactic =>
   `(tactic| arena_build $hR, $hf with $t using apart)
 
+/-- **A memo writer keeps `ArenaR`**: the tables by the frame (the writer avoids the store
+tier), the memo tier as given; the arena state changed only in `memos`, so the tables' relations
+read the same fields. -/
+theorem ArenaR.with_memos {A : List ArrId} {C : List Word} {m m' : Mem} {a : AState} {ms : Memos}
+    (hR : ArenaR m a) (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b ∉ storeArrs)
+    (hC : ∀ x ∈ C, x ∉ storeCtl) (hM : MemosR m' ms) : ArenaR m' { a with memos := ms } := by
+  arena_build hR, hf with exact hM using exact apart_own _ _ _ storeArrs storeCtl (by own) _ _ hA hC
+
+/-- **The store and memo tiers' group frame**: a writer that avoids `arenaArrs` and `arenaCtl`
+keeps `ArenaR`. -/
+theorem ArenaR.frame {A : List ArrId} {C : List Word} (hA : ∀ b ∈ A, b ∉ arenaArrs)
+    (hC : ∀ x ∈ C, x ∉ arenaCtl) {m m' : Mem} (hf : MemFrame A C m m') {a : AState}
+    (hR : ArenaR m a) : ArenaR m' a :=
+  hR.with_memos hf (fun b hb h => hA b hb (List.mem_append_left _ h))
+    (fun x hx h => hC x hx (List.mem_append_left _ h))
+    (hR.memos.frame (fun b hb h => hA b hb (List.mem_append_right _ h))
+      (fun x hx h => hC x hx (List.mem_append_right _ h)) hf)
+
+/-- `ArenaR` as a `Stable` predicate (`run_keeps`). -/
+theorem ArenaR.stable {A : List ArrId} {C : List Word} (hA : ∀ b ∈ A, b ∉ arenaArrs)
+    (hC : ∀ x ∈ C, x ∉ arenaCtl) (a : AState) : Stable A C (ArenaR · a) :=
+  fun _ _ hf hR => hR.frame hA hC hf
+
+theorem not_mem_arenaCtl (x : Word) (hx : 64 ≤ x.toNat) : x ∉ arenaCtl := by
+  intro h
+  simp only [arenaCtl, storeCtl, memoCtl, List.mem_append, List.mem_cons, List.not_mem_nil,
+    or_false] at h
+  have : ∀ y : Word, y.toNat < 64 → x ≠ y := fun y hy h => by subst h; omega
+  simp_all
+
 /-- **A writer of the derived-range arrays 42‥46 (and `CTL` words `≥ 64`) keeps `ArenaR`**: nothing
 in it reads them (they are `DerR`'s, `ExprMk.lean`). -/
 theorem ArenaR.frame_above (A : List ArrId) (C : List Word) (hA : ∀ b ∈ A, 42 ≤ b ∧ b < 47)
     (hC : ∀ x ∈ C, 64 ≤ x.toNat) (m m' : Mem) (hf : MemFrame A C m m') (a : AState)
-    (hR : ArenaR m a) : ArenaR m' a := by
-  arena_build hR, hf with
-    first
-    | exact memoRG_frame bmSch bmSch_wf bmKey _ _ _ (fun h => absurd (hA _ h).1 (by simp [BMEMO]))
-        (fun h => absurd (hC _ h) (by simp)) _ _ hf _ hR.memo
-    | exact memoRG_frame lfSch lfSch_wf lfKey _ _ _ (fun h => absurd (hA _ h).1 (by simp [LMEMO]))
-        (fun h => absurd (hC _ h) (by simp)) _ _ hf _ hR.lmemo
-    | exact memoRG_frame imSch imSch_wf lfKey _ _ _ (fun h => absurd (hA _ h).2 (by simp [IMEMO]))
-        (fun h => absurd (hC _ h) (by simp)) _ _ hf _ hR.imemo
-  using
-    refine apart_hi _ 42 64 _ _ _ _ ?_ (by decide) (by decide) (fun b hb => (hA b hb).1) hC
-    lo_apart
+    (hR : ArenaR m a) : ArenaR m' a :=
+  have hlt : ∀ y ∈ arenaArrs, y < 42 ∨ 47 ≤ y := by decide
+  hR.frame (fun b hb h => (hlt b h).elim (fun h1 => absurd (hA b hb).1 (Nat.not_le_of_lt h1))
+      (fun h1 => absurd (hA b hb).2 (Nat.not_lt_of_le h1)))
+    (fun x hx => not_mem_arenaCtl x (hC x hx)) hf
 
 /-- **The extension point for other lanes**: arrays `≥ 64` and `CTL` words `≥ 64` are outside
-every relation of `ArenaR` (lane `exprops` reserves arrays `41‥63` and `CTL` words `42‥63` for its
-memos and derived columns). A writer of only such arrays and words keeps `ArenaR`. -/
+every relation of `ArenaR`. A writer of only such arrays and words keeps `ArenaR`. -/
 theorem ArenaR.frame_ext (A : List ArrId) (C : List Word) (hA : ∀ b ∈ A, 64 ≤ b)
     (hC : ∀ x ∈ C, 64 ≤ x.toNat) (m m' : Mem) (hf : MemFrame A C m m') (a : AState)
-    (hR : ArenaR m a) : ArenaR m' a := by
-  arena_build hR, hf with
-    first
-    | exact memoRG_frame bmSch bmSch_wf bmKey _ _ _ (fun h => absurd (hA _ h) (by simp [BMEMO]))
-        (fun h => absurd (hC _ h) (by simp)) _ _ hf _ hR.memo
-    | exact memoRG_frame lfSch lfSch_wf lfKey _ _ _ (fun h => absurd (hA _ h) (by simp [LMEMO]))
-        (fun h => absurd (hC _ h) (by simp)) _ _ hf _ hR.lmemo
-    | exact memoRG_frame imSch imSch_wf lfKey _ _ _ (fun h => absurd (hA _ h) (by simp [IMEMO]))
-        (fun h => absurd (hC _ h) (by simp)) _ _ hf _ hR.imemo
-  using exact apart_hi _ 64 64 _ _ _ _ (by lo_apart) (by decide) (by decide) hA hC
+    (hR : ArenaR m a) : ArenaR m' a :=
+  have hlt : ∀ y ∈ arenaArrs, y < 64 := by decide
+  hR.frame (fun b hb h => absurd (hA b hb) (Nat.not_le_of_lt (hlt b h)))
+    (fun x hx => not_mem_arenaCtl x (hC x hx)) hf
 
 /-! ## The initial state -/
 
@@ -368,12 +425,13 @@ theorem arenaR_init (sizes : List Nat) (hlen : 64 ≤ sizes.length) (hctl : 64 �
     storeR_init _ _ _ _ hz (by rw [hc]; simp [lsSch]; omega),
     storeR_init _ _ _ _ hz (by rw [hc]; simp [nanonSch]; omega),
     storeR_init _ _ _ _ hz (by rw [hc]; simp [nstrSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [nnumSch]; omega), ?_, ?_, ?_⟩
+    storeR_init _ _ _ _ hz (by rw [hc]; simp [nnumSch]; omega), ?_⟩
   · refine ⟨hw, by rw [hc]; omega, by rw [hp]; exact hpool, ?_⟩
     simp only [top_rdW, hz, UInt64.toNat_zero]; exact Nat.zero_le _
-  · exact memoRG_zero bmSch bmKey _ _ hz (by rw [hc]; simp; omega)
-  · exact memoRG_zero lfSch lfKey _ _ hz (by rw [hc]; simp; omega)
-  · exact memoRG_zero imSch lfKey _ _ hz (by rw [hc]; simp; omega)
+  · exact ⟨memoRG_zero bmSch bmKey _ _ hz (by rw [hc]; simp; omega),
+      memoRG_zero lfSch lfKey _ _ hz (by rw [hc]; simp; omega),
+      memoRG_zero imSch lfKey _ _ hz (by rw [hc]; simp; omega),
+      memoRG_zero frSch bmKey _ _ hz (by rw [hc]; simp; omega)⟩
 
 /-! ## Interning lifts to `ArenaR`
 
@@ -523,6 +581,7 @@ end lift
 /-! ## The `intern_*` refinements under `ArenaR` -/
 
 /-- `intern_*` for `app` refines its arena interning under `ArenaR`. -/
+@[refines_part ConRon.Arena.internE "app"]
 theorem internApp_refinesA (p : Prog) (hpf : p.lookup "app_find" = some appFind)
     (hpp : p.lookup "app_push" = some appPush) (hp : p.lookup "intern_app" = some internApp)
     (a₀ : AState) (n : Nat) (s₀ : St) (f x : Word) (hR : ArenaR s₀.mem a₀) (hf : f.toNat < 2 ^ 32)
@@ -542,6 +601,7 @@ theorem internApp_refinesA (p : Prog) (hpf : p.lookup "app_find" = some appFind)
     (AM.st_proto appLens _ _ _ _ _ _ a₀ (internE_app_run _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for `sort` refines its arena interning under `ArenaR`. -/
+@[refines_part ConRon.Arena.internE "sort"]
 theorem internSort_refinesA (p : Prog) (hpf : p.lookup "sort_find" = some sortFind)
     (hpp : p.lookup "sort_push" = some sortPush) (hp : p.lookup "intern_sort" = some internSort)
     (a₀ : AState) (n : Nat) (s₀ : St) (u : Word) (hR : ArenaR s₀.mem a₀) (hu : u.toNat < 2 ^ 32) :
@@ -560,6 +620,7 @@ theorem internSort_refinesA (p : Prog) (hpf : p.lookup "sort_find" = some sortFi
     (AM.st_proto sortLens _ _ _ _ _ _ a₀ (internE_sort_run _ a₀) hok), hres⟩
 
 /-- `intern_*` for `const` refines its arena interning under `ArenaR`. -/
+@[refines_part ConRon.Arena.internE "const"]
 theorem internConst_refinesA (p : Prog) (hpf : p.lookup "const_find" = some constFind)
     (hpp : p.lookup "const_push" = some constPush) (hp : p.lookup "intern_const" = some internConst)
     (a₀ : AState) (n : Nat) (s₀ : St) (f x : Word) (hR : ArenaR s₀.mem a₀) (hf : f.toNat < 2 ^ 32)
@@ -579,6 +640,7 @@ theorem internConst_refinesA (p : Prog) (hpf : p.lookup "const_find" = some cons
     (AM.st_proto constLens _ _ _ _ _ _ a₀ (internE_const_run _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for `letE` refines its arena interning under `ArenaR`. -/
+@[refines_part ConRon.Arena.internE "letE"]
 theorem internLet_refinesA (p : Prog) (hpf : p.lookup "letE_find" = some letFind)
     (hpp : p.lookup "letE_push" = some letPush) (hp : p.lookup "intern_letE" = some internLet)
     (a₀ : AState) (n : Nat) (s₀ : St) (ty val body : Word) (hR : ArenaR s₀.mem a₀)
@@ -599,6 +661,7 @@ theorem internLet_refinesA (p : Prog) (hpf : p.lookup "letE_find" = some letFind
     (AM.st_proto letLens _ _ _ _ _ _ a₀ (internE_let_run _ _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for `bvar` refines its arena interning under `ArenaR`. -/
+@[refines_part ConRon.Arena.internE "bvar"]
 theorem internBVar_refinesA (p : Prog) (hpf : p.lookup "bvar_find" = some bvarFind)
     (hpp : p.lookup "bvar_push" = some bvarPush) (hp : p.lookup "intern_bvar" = some internBVar)
     (a₀ : AState) (n : Nat) (s₀ : St) (u : Word) (hR : ArenaR s₀.mem a₀) :
@@ -617,6 +680,7 @@ theorem internBVar_refinesA (p : Prog) (hpf : p.lookup "bvar_find" = some bvarFi
     (AM.st_proto bvarLens _ _ _ _ _ _ a₀ (internE_bvar_run _ a₀) hok), hres⟩
 
 /-- `intern_*` for `zero` refines its arena interning under `ArenaR`. -/
+@[refines_part ConRon.Arena.internLNode "zero"]
 theorem internZero_refinesA (p : Prog) (hpf : p.lookup "zero_find" = some zeroFind)
     (hpp : p.lookup "zero_push" = some zeroPush) (hp : p.lookup "intern_zero" = some internZero)
     (a₀ : AState) (n : Nat) (s₀ : St) (hR : ArenaR s₀.mem a₀) :
@@ -635,6 +699,7 @@ theorem internZero_refinesA (p : Prog) (hpf : p.lookup "zero_find" = some zeroFi
     (AM.st_proto zeroLens _ _ _ _ _ _ a₀ (internLNode_zero_run a₀) hok), hres⟩
 
 /-- `intern_*` for `succ` refines its arena interning under `ArenaR`. -/
+@[refines_part ConRon.Arena.internLNode "succ"]
 theorem internSucc_refinesA (p : Prog) (hpf : p.lookup "succ_find" = some succFind)
     (hpp : p.lookup "succ_push" = some succPush) (hp : p.lookup "intern_succ" = some internSucc)
     (a₀ : AState) (n : Nat) (s₀ : St) (u : Word) (hR : ArenaR s₀.mem a₀) (hu : u.toNat < 2 ^ 32) :
@@ -653,6 +718,7 @@ theorem internSucc_refinesA (p : Prog) (hpf : p.lookup "succ_find" = some succFi
     (AM.st_proto succLens _ _ _ _ _ _ a₀ (internLNode_succ_run _ a₀) hok), hres⟩
 
 /-- `intern_*` for `max` refines its arena interning under `ArenaR`. -/
+@[refines_part ConRon.Arena.internLNode "max"]
 theorem internMax_refinesA (p : Prog) (hpf : p.lookup "max_find" = some maxFind)
     (hpp : p.lookup "max_push" = some maxPush) (hp : p.lookup "intern_max" = some internMax)
     (a₀ : AState) (n : Nat) (s₀ : St) (u v : Word) (hR : ArenaR s₀.mem a₀) (hu : u.toNat < 2 ^ 32)
@@ -672,6 +738,7 @@ theorem internMax_refinesA (p : Prog) (hpf : p.lookup "max_find" = some maxFind)
     (AM.st_proto maxLens _ _ _ _ _ _ a₀ (internLNode_max_run _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for `imax` refines its arena interning under `ArenaR`. -/
+@[refines_part ConRon.Arena.internLNode "imax"]
 theorem internImax_refinesA (p : Prog) (hpf : p.lookup "imax_find" = some imaxFind)
     (hpp : p.lookup "imax_push" = some imaxPush) (hp : p.lookup "intern_imax" = some internImax)
     (a₀ : AState) (n : Nat) (s₀ : St) (u v : Word) (hR : ArenaR s₀.mem a₀) (hu : u.toNat < 2 ^ 32)
@@ -691,6 +758,7 @@ theorem internImax_refinesA (p : Prog) (hpf : p.lookup "imax_find" = some imaxFi
     (AM.st_proto imaxLens _ _ _ _ _ _ a₀ (internLNode_imax_run _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for `param` refines its arena interning under `ArenaR`. -/
+@[refines_part ConRon.Arena.internLNode "param"]
 theorem internParam_refinesA (p : Prog) (hpf : p.lookup "param_find" = some paramFind)
     (hpp : p.lookup "param_push" = some paramPush) (hp : p.lookup "intern_param" = some internParam)
     (a₀ : AState) (n : Nat) (s₀ : St) (u : Word) (hR : ArenaR s₀.mem a₀) (hu : u.toNat < 2 ^ 32) :
@@ -709,6 +777,7 @@ theorem internParam_refinesA (p : Prog) (hpf : p.lookup "param_find" = some para
     (AM.st_proto paramLens _ _ _ _ _ _ a₀ (internLNode_param_run _ a₀) hok), hres⟩
 
 /-- `intern_ls` refines `internLsNode` under `ArenaR`. -/
+@[refines ConRon.Arena.internLsNode]
 theorem internLs_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
     (hpe : p.lookup "limbs_eq" = some limbsEq) (hpm : p.lookup "ls_match" = some lsMatch)
     (hpf : p.lookup "ls_find" = some lsFind) (hpp : p.lookup "ls_push" = some lsPush)
@@ -734,6 +803,7 @@ theorem internLs_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
     (AM.st_proto lsLens _ _ _ _ _ _ a₀ (internLsNode_run _ a₀) hok), hres⟩
 
 /-- `intern_nstr` refines `internNNode (.str _ _)` under `ArenaR`. -/
+@[refines_part ConRon.Arena.internNNode "str"]
 theorem internNStr_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
     (hpe : p.lookup "limbs_eq" = some limbsEq) (hpm : p.lookup "nstr_match" = some nsMatch)
     (hpf : p.lookup "nstr_find" = some nsFind) (hpp : p.lookup "nstr_push" = some nsPush)
@@ -759,6 +829,7 @@ theorem internNStr_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHash
     (AM.st_proto nstrLens _ _ _ _ _ _ a₀ (internNNode_str_run _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for name `anonymous` refines its arena interning under `ArenaR`. -/
+@[refines_part ConRon.Arena.internNNode "anon"]
 theorem internNAnon_refinesA (p : Prog) (hpf : p.lookup "nanon_find" = some nanonFind)
     (hpp : p.lookup "nanon_push" = some nanonPush) (hp : p.lookup "intern_nanon" = some internNAnon)
     (a₀ : AState) (n : Nat) (s₀ : St) (hR : ArenaR s₀.mem a₀) :
@@ -777,6 +848,7 @@ theorem internNAnon_refinesA (p : Prog) (hpf : p.lookup "nanon_find" = some nano
     (AM.st_proto nanonLens _ _ _ _ _ _ a₀ (internNNode_anon_run a₀) hok), hres⟩
 
 /-- `intern_*` for name `num` refines its arena interning under `ArenaR`. -/
+@[refines_part ConRon.Arena.internNNode "num"]
 theorem internNNum_refinesA (p : Prog) (hpf : p.lookup "nnum_find" = some nnumFind)
     (hpp : p.lookup "nnum_push" = some nnumPush) (hp : p.lookup "intern_nnum" = some internNNum)
     (a₀ : AState) (n : Nat) (s₀ : St) (pre u : Word) (hR : ArenaR s₀.mem a₀)
@@ -797,6 +869,7 @@ theorem internNNum_refinesA (p : Prog) (hpf : p.lookup "nnum_find" = some nnumFi
     (AM.st_proto nnumLens _ _ _ _ _ _ a₀ (internNNode_num_run _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for `forallE` refines its arena interning under `ArenaR`. -/
+@[refines_part ConRon.Arena.internE "forallE"]
 theorem internForall_refinesA (p : Prog) (hpf : p.lookup "forall_find" = some forallFind)
     (hpp : p.lookup "forall_push" = some forallPush) (hp : p.lookup "intern_forall" = some internForallL)
     (a₀ : AState) (n : Nat) (s₀ : St) (ty body : Word) (hR : ArenaR s₀.mem a₀)
@@ -816,6 +889,7 @@ theorem internForall_refinesA (p : Prog) (hpf : p.lookup "forall_find" = some fo
     (AM.st_proto forallLens _ _ _ _ _ _ a₀ (internE_forall_run _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for `fvar` refines its arena interning under `ArenaR`. -/
+@[refines_part ConRon.Arena.internE "fvar"]
 theorem internFVar_refinesA (p : Prog) (hpf : p.lookup "fvar_find" = some fvarFind)
     (hpp : p.lookup "fvar_push" = some fvarPush) (hp : p.lookup "intern_fvar" = some internFVar)
     (a₀ : AState) (n : Nat) (s₀ : St) (u ty : Word) (hR : ArenaR s₀.mem a₀)
@@ -835,6 +909,7 @@ theorem internFVar_refinesA (p : Prog) (hpf : p.lookup "fvar_find" = some fvarFi
     (AM.st_proto fvarLens _ _ _ _ _ _ a₀ (internE_fvar_run _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for `lam` refines its arena interning under `ArenaR`. -/
+@[refines_part ConRon.Arena.internE "lam"]
 theorem internLam_refinesA (p : Prog) (hpf : p.lookup "lam_find" = some lamFind)
     (hpp : p.lookup "lam_push" = some lamPush) (hp : p.lookup "intern_lam" = some internLamL)
     (a₀ : AState) (n : Nat) (s₀ : St) (ty body : Word) (hR : ArenaR s₀.mem a₀)
@@ -854,6 +929,7 @@ theorem internLam_refinesA (p : Prog) (hpf : p.lookup "lam_find" = some lamFind)
     (AM.st_proto lamLens _ _ _ _ _ _ a₀ (internE_lam_run _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for `proj` refines its arena interning under `ArenaR`. -/
+@[refines_part ConRon.Arena.internE "proj"]
 theorem internProj_refinesA (p : Prog) (hpf : p.lookup "proj_find" = some projFind)
     (hpp : p.lookup "proj_push" = some projPush) (hp : p.lookup "intern_proj" = some internProj)
     (a₀ : AState) (nn : Nat) (s₀ : St) (n u e : Word) (hR : ArenaR s₀.mem a₀)
@@ -901,6 +977,7 @@ theorem ArenaR.grow (m m' : Mem) (hg : Grows m m') (a : AState) (hR : ArenaR m a
       exact NStrR.grow m m' hg a hR.nstr
 
 /-- `intern_lit` refines `internE (.lit (.natVal _))` under `ArenaR`. -/
+@[refines_part ConRon.Arena.internE "lit natVal"]
 theorem internLit_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
     (hpe : p.lookup "limbs_eq" = some limbsEq) (hpm : p.lookup "lit_match" = some litMatch)
     (hpf : p.lookup "lit_find" = some litFind) (hpp : p.lookup "lit_push" = some litPush)
@@ -928,6 +1005,7 @@ theorem internLit_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
 
 /-- **`nat_add_lit` refines `natOpResult`'s `Nat.add` arm under `ArenaR`**: the store's
 `natAddLit_refines_store` with the whole arena relation in place of `LitR`. -/
+@[refines_part ConRon.Arena.natOpResult "Nat.add"]
 theorem natAddLit_refinesA (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s₀.mem a₀)
     (oa la ob lb : Word) (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb) :
     ⦃fun s => s = s₀⦄

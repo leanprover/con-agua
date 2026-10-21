@@ -1,8 +1,10 @@
 module
 
 public import ConAgua.Arena.NatSub
+public import ConAgua.Arena.NatGrindAttr
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.NatAdd
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -104,7 +106,7 @@ grind_pattern [arena_grind] shamt => 2 ^ k.toNat
 /-- A one-limb slice is its limb. -/
 theorem pv_one (p : Array Word) (o : Nat) (h : o < p.size) : pv p o 1 = p[o].toNat := by
   simp [pv, h, wt]
-grind_pattern [arena_grind] pv_one => pv p o 1, p[o]
+grind_pattern [natop_grind] pv_one => pv p o 1, p[o]
 
 /-! ## `nat_shl(oa, la, ob, lb)` -/
 
@@ -124,6 +126,7 @@ def shlLoop : Stmt := lblk (oa, la, ob, lb, top, n, w, b, i, x, c) {
   }
 }
 
+@[l_impl ConRon.Arena.natOpResult]
 def natShl : FunDecl := lfn (oa, la, ob, lb) locals (top, n, w, b, i, x, c) {
   top := CTL.u64[0];
   if la != 0 {
@@ -270,7 +273,7 @@ theorem natShl_spec (n : Nat) (sâ‚€ : St) (oa la ob lb : Word) (hok : PoolOK sâ‚
       Nat.reduceEqDiff, Locals.init, List.getD_cons_zero, List.getD_cons_succ,
       UInt64.toNat_zero] at *)
     all_goals (try and_intros)
-    all_goals grind (splits := 40) [arena_grind, lang_grind]
+    all_goals grind (splits := 40) [arena_grind, lang_grind, natop_grind]
 
 end shlFn
 

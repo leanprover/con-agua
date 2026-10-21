@@ -238,60 +238,6 @@ induction hypothesis, and the expression lemmas are straight-line `kvcgen64` pro
   hand-written guarded lemma. A small generator for both might pay off once there are tens of
   functions.
 
-### `nat_sub`: the final borrow decides
-
-con-ron's `sub` compares first and runs the ripple borrow only when `a > b`. `nat_sub` runs the
-ripple borrow over `max la lb` limbs (`nat_add`'s loop, `nat_limb` for both operands,
-`sub_borrow` for the two `overflowing_sub`s) and lets the borrow out of the top limb decide: the
-loop's equation is `R + B = A + c · wt n`, so `c = 0` gives `R = A - B` and `c = 1` gives
-`A < B` (with `R < wt n`), and the result is `0`. It needs neither `nat_cmp` nor normalised
-inputs. Two details: `bit_mul_wt` (`c.toNat * wt k = wt k` for a nonzero bit `c`, pattern
-`c.toNat * wt k`), because the linear solver knows `c = 1` but the product stays an atom; and
-both exits end with the same `CTL[0] := top + n` (`if c != 0 { n := 0 } else { n := trim }`):
-a `return 0` that leaves `CTL[0]` alone fails `Frame POOL (m.set64 CTL 0 (top + 0)) m'`,
-because `grind` does not see that writing the top's own value back changes nothing.
-
-### `nat_shl`: a word amount, a branch-free bit shift
-
-The amount is a slice `b`. With `a ≠ 0`, an amount of two or more limbs cannot fit any pool
-(con-ron pushes `u64::MAX` zero limbs and runs out of memory), so it is an `abort`; otherwise
-`k = b[0]` (or `0`), `k >> 6` zero limbs (`shlZero`), then one pass over `a` with a carry
-(`shlLoop`), the carry limb, `nat_trim`. The bit shift needs no `s = 0` case:
-`c' = (x >> 1) >> (63 - s)` is `x >> (64 - s)` for `s ≥ 1` and `0` for `s = 0`.
-
-* **Digit equation over a named power.** `shl_split`:
-  `((x << s) | c) + c' · 2^64 = x · sh s + c` for `c < sh s`, with `sh s = 2^s` named (an atom to
-  the ring solver, as `wt`). Its proof is by hand (`Nat.shiftLeft_add_eq_or_of_lt`: the `|` is a
-  `+` because the low `s` bits of `x << s` are zero).
-* **The loop invariant uses `wt w * wt i`, not `wt (w + i)`** (`ShlInv`, `nat_mul`'s `ColInv`
-  shape): `wt_add`'s pattern `wt k, wt i * wt j` then joins it with the `wt (w + i)` that
-  `pv_set_succ` produces.
-* **The amount.** `shamt`: `2^k = sh (k & 63) · wt (k >> 6)`, pattern `2 ^ k.toNat`; and
-  `pv_one` (`pv p o 1 = p[o]`, pattern `pv p o 1, p[o]`): `pv_succ` alone needs a `pv p o 0`
-  term, which the goal does not have, and without it the final `grind` ran out of heartbeats.
-* The function proof is 35 of the file's 42 s (`maxHeartbeats 1000000`).
-
-### `nat_shr`: the loop runs over the shifted slice
-
-An amount of two or more limbs (`b` normalised) is at least `2^64`, so `a >>> b = 0` whenever
-`la < 2^57` (every pool); `la ≥ 2^57` is an `abort`. Otherwise `k = b[0]`; if `w = k >> 6 ≥ la`
-the result is `0`, else one pass over the slice `(oa + w, la - w)` (con-ron's `skip_index`
-becomes `oa := oa + w`), limb `i` being `(x >> s) | ((y << 1) << (63 - s))`, branch-free as in
-`nat_shl`, with `y` limb `i + 1` read by `nat_limb` (zero past the end) and carried into the next
-iteration as `x`.
-
-* **No division and no `w` in the loop.** `ShrInv`: `R_i · sh s + lowb x₀ s = xv i + lowb x_i s ·
-  wt i`, `lowb x s = x % 2^s` named. Its digit equation `shr_split`:
-  `out · sh s + lowb x s = x + lowb y s · 2^64`. The loop went through in the house form.
-* **The division and the skipped limbs are three lemmas with patterns on the quotient**
-  (`pv A / (S * wt w)` after `shamt` rewrites `2^k`): `shr_val` (pattern also `pv P o l, R * S`,
-  binding the loop's result; `pv_append` splits off the skipped limbs), `shr_big_w`
-  (`w ≥ la`), `shr_big_b` (two-limb amount, with `Norm`).
-* **Cost.** The function proof is 90 of the file's 94 s: `nat_mul`'s recipe, but one
-  `maxHeartbeats` for the whole theorem ran out (1M); with `set_option maxHeartbeats 200000 in
-  grind …` per goal (and none for the theorem) every goal passes. The house form
-  (`finish (gen := 25)`) fails on two goals (splits). Not tuned further.
-
 ### `sorry`s
 
 None.
@@ -1379,60 +1325,6 @@ below) — closing it is future work, not assumed away.
   compiled validator can actually reach — the theorem is honest about not knowing yet, rather
   than assuming either way.
 
-### `nat_sub`: the final borrow decides
-
-con-ron's `sub` compares first and runs the ripple borrow only when `a > b`. `nat_sub` runs the
-ripple borrow over `max la lb` limbs (`nat_add`'s loop, `nat_limb` for both operands,
-`sub_borrow` for the two `overflowing_sub`s) and lets the borrow out of the top limb decide: the
-loop's equation is `R + B = A + c · wt n`, so `c = 0` gives `R = A - B` and `c = 1` gives
-`A < B` (with `R < wt n`), and the result is `0`. It needs neither `nat_cmp` nor normalised
-inputs. Two details: `bit_mul_wt` (`c.toNat * wt k = wt k` for a nonzero bit `c`, pattern
-`c.toNat * wt k`), because the linear solver knows `c = 1` but the product stays an atom; and
-both exits end with the same `CTL[0] := top + n` (`if c != 0 { n := 0 } else { n := trim }`):
-a `return 0` that leaves `CTL[0]` alone fails `Frame POOL (m.set64 CTL 0 (top + 0)) m'`,
-because `grind` does not see that writing the top's own value back changes nothing.
-
-### `nat_shl`: a word amount, a branch-free bit shift
-
-The amount is a slice `b`. With `a ≠ 0`, an amount of two or more limbs cannot fit any pool
-(con-ron pushes `u64::MAX` zero limbs and runs out of memory), so it is an `abort`; otherwise
-`k = b[0]` (or `0`), `k >> 6` zero limbs (`shlZero`), then one pass over `a` with a carry
-(`shlLoop`), the carry limb, `nat_trim`. The bit shift needs no `s = 0` case:
-`c' = (x >> 1) >> (63 - s)` is `x >> (64 - s)` for `s ≥ 1` and `0` for `s = 0`.
-
-* **Digit equation over a named power.** `shl_split`:
-  `((x << s) | c) + c' · 2^64 = x · sh s + c` for `c < sh s`, with `sh s = 2^s` named (an atom to
-  the ring solver, as `wt`). Its proof is by hand (`Nat.shiftLeft_add_eq_or_of_lt`: the `|` is a
-  `+` because the low `s` bits of `x << s` are zero).
-* **The loop invariant uses `wt w * wt i`, not `wt (w + i)`** (`ShlInv`, `nat_mul`'s `ColInv`
-  shape): `wt_add`'s pattern `wt k, wt i * wt j` then joins it with the `wt (w + i)` that
-  `pv_set_succ` produces.
-* **The amount.** `shamt`: `2^k = sh (k & 63) · wt (k >> 6)`, pattern `2 ^ k.toNat`; and
-  `pv_one` (`pv p o 1 = p[o]`, pattern `pv p o 1, p[o]`): `pv_succ` alone needs a `pv p o 0`
-  term, which the goal does not have, and without it the final `grind` ran out of heartbeats.
-* The function proof is 35 of the file's 42 s (`maxHeartbeats 1000000`).
-
-### `nat_shr`: the loop runs over the shifted slice
-
-An amount of two or more limbs (`b` normalised) is at least `2^64`, so `a >>> b = 0` whenever
-`la < 2^57` (every pool); `la ≥ 2^57` is an `abort`. Otherwise `k = b[0]`; if `w = k >> 6 ≥ la`
-the result is `0`, else one pass over the slice `(oa + w, la - w)` (con-ron's `skip_index`
-becomes `oa := oa + w`), limb `i` being `(x >> s) | ((y << 1) << (63 - s))`, branch-free as in
-`nat_shl`, with `y` limb `i + 1` read by `nat_limb` (zero past the end) and carried into the next
-iteration as `x`.
-
-* **No division and no `w` in the loop.** `ShrInv`: `R_i · sh s + lowb x₀ s = xv i + lowb x_i s ·
-  wt i`, `lowb x s = x % 2^s` named. Its digit equation `shr_split`:
-  `out · sh s + lowb x s = x + lowb y s · 2^64`. The loop went through in the house form.
-* **The division and the skipped limbs are three lemmas with patterns on the quotient**
-  (`pv A / (S * wt w)` after `shamt` rewrites `2^k`): `shr_val` (pattern also `pv P o l, R * S`,
-  binding the loop's result; `pv_append` splits off the skipped limbs), `shr_big_w`
-  (`w ≥ la`), `shr_big_b` (two-limb amount, with `Norm`).
-* **Cost.** The function proof is 90 of the file's 94 s: `nat_mul`'s recipe, but one
-  `maxHeartbeats` for the whole theorem ran out (1M); with `set_option maxHeartbeats 200000 in
-  grind …` per goal (and none for the theorem) every goal passes. The house form
-  (`finish (gen := 25)`) fails on two goals (splits). Not tuned further.
-
 ### `sorry`s
 
 None.
@@ -1591,60 +1483,6 @@ code shows a bug the generated form would avoid. The next step that pays is a co
 over all tables of a store (`LitR ∧ AppR ∧ …` with the frame between them: each table's append
 is `OutEq` for the others' arrays, which `pushG_arr` already gives).
 
-### `nat_sub`: the final borrow decides
-
-con-ron's `sub` compares first and runs the ripple borrow only when `a > b`. `nat_sub` runs the
-ripple borrow over `max la lb` limbs (`nat_add`'s loop, `nat_limb` for both operands,
-`sub_borrow` for the two `overflowing_sub`s) and lets the borrow out of the top limb decide: the
-loop's equation is `R + B = A + c · wt n`, so `c = 0` gives `R = A - B` and `c = 1` gives
-`A < B` (with `R < wt n`), and the result is `0`. It needs neither `nat_cmp` nor normalised
-inputs. Two details: `bit_mul_wt` (`c.toNat * wt k = wt k` for a nonzero bit `c`, pattern
-`c.toNat * wt k`), because the linear solver knows `c = 1` but the product stays an atom; and
-both exits end with the same `CTL[0] := top + n` (`if c != 0 { n := 0 } else { n := trim }`):
-a `return 0` that leaves `CTL[0]` alone fails `Frame POOL (m.set64 CTL 0 (top + 0)) m'`,
-because `grind` does not see that writing the top's own value back changes nothing.
-
-### `nat_shl`: a word amount, a branch-free bit shift
-
-The amount is a slice `b`. With `a ≠ 0`, an amount of two or more limbs cannot fit any pool
-(con-ron pushes `u64::MAX` zero limbs and runs out of memory), so it is an `abort`; otherwise
-`k = b[0]` (or `0`), `k >> 6` zero limbs (`shlZero`), then one pass over `a` with a carry
-(`shlLoop`), the carry limb, `nat_trim`. The bit shift needs no `s = 0` case:
-`c' = (x >> 1) >> (63 - s)` is `x >> (64 - s)` for `s ≥ 1` and `0` for `s = 0`.
-
-* **Digit equation over a named power.** `shl_split`:
-  `((x << s) | c) + c' · 2^64 = x · sh s + c` for `c < sh s`, with `sh s = 2^s` named (an atom to
-  the ring solver, as `wt`). Its proof is by hand (`Nat.shiftLeft_add_eq_or_of_lt`: the `|` is a
-  `+` because the low `s` bits of `x << s` are zero).
-* **The loop invariant uses `wt w * wt i`, not `wt (w + i)`** (`ShlInv`, `nat_mul`'s `ColInv`
-  shape): `wt_add`'s pattern `wt k, wt i * wt j` then joins it with the `wt (w + i)` that
-  `pv_set_succ` produces.
-* **The amount.** `shamt`: `2^k = sh (k & 63) · wt (k >> 6)`, pattern `2 ^ k.toNat`; and
-  `pv_one` (`pv p o 1 = p[o]`, pattern `pv p o 1, p[o]`): `pv_succ` alone needs a `pv p o 0`
-  term, which the goal does not have, and without it the final `grind` ran out of heartbeats.
-* The function proof is 35 of the file's 42 s (`maxHeartbeats 1000000`).
-
-### `nat_shr`: the loop runs over the shifted slice
-
-An amount of two or more limbs (`b` normalised) is at least `2^64`, so `a >>> b = 0` whenever
-`la < 2^57` (every pool); `la ≥ 2^57` is an `abort`. Otherwise `k = b[0]`; if `w = k >> 6 ≥ la`
-the result is `0`, else one pass over the slice `(oa + w, la - w)` (con-ron's `skip_index`
-becomes `oa := oa + w`), limb `i` being `(x >> s) | ((y << 1) << (63 - s))`, branch-free as in
-`nat_shl`, with `y` limb `i + 1` read by `nat_limb` (zero past the end) and carried into the next
-iteration as `x`.
-
-* **No division and no `w` in the loop.** `ShrInv`: `R_i · sh s + lowb x₀ s = xv i + lowb x_i s ·
-  wt i`, `lowb x s = x % 2^s` named. Its digit equation `shr_split`:
-  `out · sh s + lowb x s = x + lowb y s · 2^64`. The loop went through in the house form.
-* **The division and the skipped limbs are three lemmas with patterns on the quotient**
-  (`pv A / (S * wt w)` after `shamt` rewrites `2^k`): `shr_val` (pattern also `pv P o l, R * S`,
-  binding the loop's result; `pv_append` splits off the skipped limbs), `shr_big_w`
-  (`w ≥ la`), `shr_big_b` (two-limb amount, with `Norm`).
-* **Cost.** The function proof is 90 of the file's 94 s: `nat_mul`'s recipe, but one
-  `maxHeartbeats` for the whole theorem ran out (1M); with `set_option maxHeartbeats 200000 in
-  grind …` per goal (and none for the theorem) every goal passes. The house form
-  (`finish (gen := 25)`) fails on two goals (splits). Not tuned further.
-
 ### `sorry`s
 
 None.
@@ -1725,60 +1563,6 @@ because width 2 means two `fld_push*`-shaped equations instead of one in `*NewOK
   `succ`/`app`, confirming the recommendation's estimate for "handle words only" tables: no new
   proof idea, each about 230 L-side lines and 160–180 relation lines, a few seconds of CPU.
 
-### `nat_sub`: the final borrow decides
-
-con-ron's `sub` compares first and runs the ripple borrow only when `a > b`. `nat_sub` runs the
-ripple borrow over `max la lb` limbs (`nat_add`'s loop, `nat_limb` for both operands,
-`sub_borrow` for the two `overflowing_sub`s) and lets the borrow out of the top limb decide: the
-loop's equation is `R + B = A + c · wt n`, so `c = 0` gives `R = A - B` and `c = 1` gives
-`A < B` (with `R < wt n`), and the result is `0`. It needs neither `nat_cmp` nor normalised
-inputs. Two details: `bit_mul_wt` (`c.toNat * wt k = wt k` for a nonzero bit `c`, pattern
-`c.toNat * wt k`), because the linear solver knows `c = 1` but the product stays an atom; and
-both exits end with the same `CTL[0] := top + n` (`if c != 0 { n := 0 } else { n := trim }`):
-a `return 0` that leaves `CTL[0]` alone fails `Frame POOL (m.set64 CTL 0 (top + 0)) m'`,
-because `grind` does not see that writing the top's own value back changes nothing.
-
-### `nat_shl`: a word amount, a branch-free bit shift
-
-The amount is a slice `b`. With `a ≠ 0`, an amount of two or more limbs cannot fit any pool
-(con-ron pushes `u64::MAX` zero limbs and runs out of memory), so it is an `abort`; otherwise
-`k = b[0]` (or `0`), `k >> 6` zero limbs (`shlZero`), then one pass over `a` with a carry
-(`shlLoop`), the carry limb, `nat_trim`. The bit shift needs no `s = 0` case:
-`c' = (x >> 1) >> (63 - s)` is `x >> (64 - s)` for `s ≥ 1` and `0` for `s = 0`.
-
-* **Digit equation over a named power.** `shl_split`:
-  `((x << s) | c) + c' · 2^64 = x · sh s + c` for `c < sh s`, with `sh s = 2^s` named (an atom to
-  the ring solver, as `wt`). Its proof is by hand (`Nat.shiftLeft_add_eq_or_of_lt`: the `|` is a
-  `+` because the low `s` bits of `x << s` are zero).
-* **The loop invariant uses `wt w * wt i`, not `wt (w + i)`** (`ShlInv`, `nat_mul`'s `ColInv`
-  shape): `wt_add`'s pattern `wt k, wt i * wt j` then joins it with the `wt (w + i)` that
-  `pv_set_succ` produces.
-* **The amount.** `shamt`: `2^k = sh (k & 63) · wt (k >> 6)`, pattern `2 ^ k.toNat`; and
-  `pv_one` (`pv p o 1 = p[o]`, pattern `pv p o 1, p[o]`): `pv_succ` alone needs a `pv p o 0`
-  term, which the goal does not have, and without it the final `grind` ran out of heartbeats.
-* The function proof is 35 of the file's 42 s (`maxHeartbeats 1000000`).
-
-### `nat_shr`: the loop runs over the shifted slice
-
-An amount of two or more limbs (`b` normalised) is at least `2^64`, so `a >>> b = 0` whenever
-`la < 2^57` (every pool); `la ≥ 2^57` is an `abort`. Otherwise `k = b[0]`; if `w = k >> 6 ≥ la`
-the result is `0`, else one pass over the slice `(oa + w, la - w)` (con-ron's `skip_index`
-becomes `oa := oa + w`), limb `i` being `(x >> s) | ((y << 1) << (63 - s))`, branch-free as in
-`nat_shl`, with `y` limb `i + 1` read by `nat_limb` (zero past the end) and carried into the next
-iteration as `x`.
-
-* **No division and no `w` in the loop.** `ShrInv`: `R_i · sh s + lowb x₀ s = xv i + lowb x_i s ·
-  wt i`, `lowb x s = x % 2^s` named. Its digit equation `shr_split`:
-  `out · sh s + lowb x s = x + lowb y s · 2^64`. The loop went through in the house form.
-* **The division and the skipped limbs are three lemmas with patterns on the quotient**
-  (`pv A / (S * wt w)` after `shamt` rewrites `2^k`): `shr_val` (pattern also `pv P o l, R * S`,
-  binding the loop's result; `pv_append` splits off the skipped limbs), `shr_big_w`
-  (`w ≥ la`), `shr_big_b` (two-limb amount, with `Norm`).
-* **Cost.** The function proof is 90 of the file's 94 s: `nat_mul`'s recipe, but one
-  `maxHeartbeats` for the whole theorem ran out (1M); with `set_option maxHeartbeats 200000 in
-  grind …` per goal (and none for the theorem) every goal passes. The house form
-  (`finish (gen := 25)`) fails on two goals (splits). Not tuned further.
-
 ### `sorry`s
 
 None.
@@ -1832,60 +1616,6 @@ level store, the expression store's `internE` has the scratch skip (`EStore.pers
   far: the skip test is a Word-level computation with no handle-kind content, so it is identical
   code to `app`'s regardless of what the two fields denote at the arena level.
 
-### `nat_sub`: the final borrow decides
-
-con-ron's `sub` compares first and runs the ripple borrow only when `a > b`. `nat_sub` runs the
-ripple borrow over `max la lb` limbs (`nat_add`'s loop, `nat_limb` for both operands,
-`sub_borrow` for the two `overflowing_sub`s) and lets the borrow out of the top limb decide: the
-loop's equation is `R + B = A + c · wt n`, so `c = 0` gives `R = A - B` and `c = 1` gives
-`A < B` (with `R < wt n`), and the result is `0`. It needs neither `nat_cmp` nor normalised
-inputs. Two details: `bit_mul_wt` (`c.toNat * wt k = wt k` for a nonzero bit `c`, pattern
-`c.toNat * wt k`), because the linear solver knows `c = 1` but the product stays an atom; and
-both exits end with the same `CTL[0] := top + n` (`if c != 0 { n := 0 } else { n := trim }`):
-a `return 0` that leaves `CTL[0]` alone fails `Frame POOL (m.set64 CTL 0 (top + 0)) m'`,
-because `grind` does not see that writing the top's own value back changes nothing.
-
-### `nat_shl`: a word amount, a branch-free bit shift
-
-The amount is a slice `b`. With `a ≠ 0`, an amount of two or more limbs cannot fit any pool
-(con-ron pushes `u64::MAX` zero limbs and runs out of memory), so it is an `abort`; otherwise
-`k = b[0]` (or `0`), `k >> 6` zero limbs (`shlZero`), then one pass over `a` with a carry
-(`shlLoop`), the carry limb, `nat_trim`. The bit shift needs no `s = 0` case:
-`c' = (x >> 1) >> (63 - s)` is `x >> (64 - s)` for `s ≥ 1` and `0` for `s = 0`.
-
-* **Digit equation over a named power.** `shl_split`:
-  `((x << s) | c) + c' · 2^64 = x · sh s + c` for `c < sh s`, with `sh s = 2^s` named (an atom to
-  the ring solver, as `wt`). Its proof is by hand (`Nat.shiftLeft_add_eq_or_of_lt`: the `|` is a
-  `+` because the low `s` bits of `x << s` are zero).
-* **The loop invariant uses `wt w * wt i`, not `wt (w + i)`** (`ShlInv`, `nat_mul`'s `ColInv`
-  shape): `wt_add`'s pattern `wt k, wt i * wt j` then joins it with the `wt (w + i)` that
-  `pv_set_succ` produces.
-* **The amount.** `shamt`: `2^k = sh (k & 63) · wt (k >> 6)`, pattern `2 ^ k.toNat`; and
-  `pv_one` (`pv p o 1 = p[o]`, pattern `pv p o 1, p[o]`): `pv_succ` alone needs a `pv p o 0`
-  term, which the goal does not have, and without it the final `grind` ran out of heartbeats.
-* The function proof is 35 of the file's 42 s (`maxHeartbeats 1000000`).
-
-### `nat_shr`: the loop runs over the shifted slice
-
-An amount of two or more limbs (`b` normalised) is at least `2^64`, so `a >>> b = 0` whenever
-`la < 2^57` (every pool); `la ≥ 2^57` is an `abort`. Otherwise `k = b[0]`; if `w = k >> 6 ≥ la`
-the result is `0`, else one pass over the slice `(oa + w, la - w)` (con-ron's `skip_index`
-becomes `oa := oa + w`), limb `i` being `(x >> s) | ((y << 1) << (63 - s))`, branch-free as in
-`nat_shl`, with `y` limb `i + 1` read by `nat_limb` (zero past the end) and carried into the next
-iteration as `x`.
-
-* **No division and no `w` in the loop.** `ShrInv`: `R_i · sh s + lowb x₀ s = xv i + lowb x_i s ·
-  wt i`, `lowb x s = x % 2^s` named. Its digit equation `shr_split`:
-  `out · sh s + lowb x s = x + lowb y s · 2^64`. The loop went through in the house form.
-* **The division and the skipped limbs are three lemmas with patterns on the quotient**
-  (`pv A / (S * wt w)` after `shamt` rewrites `2^k`): `shr_val` (pattern also `pv P o l, R * S`,
-  binding the loop's result; `pv_append` splits off the skipped limbs), `shr_big_w`
-  (`w ≥ la`), `shr_big_b` (two-limb amount, with `Norm`).
-* **Cost.** The function proof is 90 of the file's 94 s: `nat_mul`'s recipe, but one
-  `maxHeartbeats` for the whole theorem ran out (1M); with `set_option maxHeartbeats 200000 in
-  grind …` per goal (and none for the theorem) every goal passes. The house form
-  (`finish (gen := 25)`) fails on two goals (splits). Not tuned further.
-
 ### `sorry`s
 
 None.
@@ -1921,60 +1651,6 @@ files.
 * The record relation, `MatchOK`/`NewOK` and the frame obligation are `app`'s/`const`'s two-field
   versions with one more conjunct/clause each (`fld_let0`/`fld_let` cover field 0 and the general
   case exactly as `fld_app0`/`fld_app` did); nothing else differed in shape.
-
-### `nat_sub`: the final borrow decides
-
-con-ron's `sub` compares first and runs the ripple borrow only when `a > b`. `nat_sub` runs the
-ripple borrow over `max la lb` limbs (`nat_add`'s loop, `nat_limb` for both operands,
-`sub_borrow` for the two `overflowing_sub`s) and lets the borrow out of the top limb decide: the
-loop's equation is `R + B = A + c · wt n`, so `c = 0` gives `R = A - B` and `c = 1` gives
-`A < B` (with `R < wt n`), and the result is `0`. It needs neither `nat_cmp` nor normalised
-inputs. Two details: `bit_mul_wt` (`c.toNat * wt k = wt k` for a nonzero bit `c`, pattern
-`c.toNat * wt k`), because the linear solver knows `c = 1` but the product stays an atom; and
-both exits end with the same `CTL[0] := top + n` (`if c != 0 { n := 0 } else { n := trim }`):
-a `return 0` that leaves `CTL[0]` alone fails `Frame POOL (m.set64 CTL 0 (top + 0)) m'`,
-because `grind` does not see that writing the top's own value back changes nothing.
-
-### `nat_shl`: a word amount, a branch-free bit shift
-
-The amount is a slice `b`. With `a ≠ 0`, an amount of two or more limbs cannot fit any pool
-(con-ron pushes `u64::MAX` zero limbs and runs out of memory), so it is an `abort`; otherwise
-`k = b[0]` (or `0`), `k >> 6` zero limbs (`shlZero`), then one pass over `a` with a carry
-(`shlLoop`), the carry limb, `nat_trim`. The bit shift needs no `s = 0` case:
-`c' = (x >> 1) >> (63 - s)` is `x >> (64 - s)` for `s ≥ 1` and `0` for `s = 0`.
-
-* **Digit equation over a named power.** `shl_split`:
-  `((x << s) | c) + c' · 2^64 = x · sh s + c` for `c < sh s`, with `sh s = 2^s` named (an atom to
-  the ring solver, as `wt`). Its proof is by hand (`Nat.shiftLeft_add_eq_or_of_lt`: the `|` is a
-  `+` because the low `s` bits of `x << s` are zero).
-* **The loop invariant uses `wt w * wt i`, not `wt (w + i)`** (`ShlInv`, `nat_mul`'s `ColInv`
-  shape): `wt_add`'s pattern `wt k, wt i * wt j` then joins it with the `wt (w + i)` that
-  `pv_set_succ` produces.
-* **The amount.** `shamt`: `2^k = sh (k & 63) · wt (k >> 6)`, pattern `2 ^ k.toNat`; and
-  `pv_one` (`pv p o 1 = p[o]`, pattern `pv p o 1, p[o]`): `pv_succ` alone needs a `pv p o 0`
-  term, which the goal does not have, and without it the final `grind` ran out of heartbeats.
-* The function proof is 35 of the file's 42 s (`maxHeartbeats 1000000`).
-
-### `nat_shr`: the loop runs over the shifted slice
-
-An amount of two or more limbs (`b` normalised) is at least `2^64`, so `a >>> b = 0` whenever
-`la < 2^57` (every pool); `la ≥ 2^57` is an `abort`. Otherwise `k = b[0]`; if `w = k >> 6 ≥ la`
-the result is `0`, else one pass over the slice `(oa + w, la - w)` (con-ron's `skip_index`
-becomes `oa := oa + w`), limb `i` being `(x >> s) | ((y << 1) << (63 - s))`, branch-free as in
-`nat_shl`, with `y` limb `i + 1` read by `nat_limb` (zero past the end) and carried into the next
-iteration as `x`.
-
-* **No division and no `w` in the loop.** `ShrInv`: `R_i · sh s + lowb x₀ s = xv i + lowb x_i s ·
-  wt i`, `lowb x s = x % 2^s` named. Its digit equation `shr_split`:
-  `out · sh s + lowb x s = x + lowb y s · 2^64`. The loop went through in the house form.
-* **The division and the skipped limbs are three lemmas with patterns on the quotient**
-  (`pv A / (S * wt w)` after `shamt` rewrites `2^k`): `shr_val` (pattern also `pv P o l, R * S`,
-  binding the loop's result; `pv_append` splits off the skipped limbs), `shr_big_w`
-  (`w ≥ la`), `shr_big_b` (two-limb amount, with `Norm`).
-* **Cost.** The function proof is 90 of the file's 94 s: `nat_mul`'s recipe, but one
-  `maxHeartbeats` for the whole theorem ran out (1M); with `set_option maxHeartbeats 200000 in
-  grind …` per goal (and none for the theorem) every goal passes. The house form
-  (`finish (gen := 25)`) fails on two goals (splits). Not tuned further.
 
 ### `sorry`s
 
@@ -2411,60 +2087,6 @@ in the interpreter: `2`.
 * The derived columns (hashes and flags through `mixHash`) and the scratch tier's lifecycle
   (`enableScratch`/`dropScratch`), as before.
 
-### `nat_sub`: the final borrow decides
-
-con-ron's `sub` compares first and runs the ripple borrow only when `a > b`. `nat_sub` runs the
-ripple borrow over `max la lb` limbs (`nat_add`'s loop, `nat_limb` for both operands,
-`sub_borrow` for the two `overflowing_sub`s) and lets the borrow out of the top limb decide: the
-loop's equation is `R + B = A + c · wt n`, so `c = 0` gives `R = A - B` and `c = 1` gives
-`A < B` (with `R < wt n`), and the result is `0`. It needs neither `nat_cmp` nor normalised
-inputs. Two details: `bit_mul_wt` (`c.toNat * wt k = wt k` for a nonzero bit `c`, pattern
-`c.toNat * wt k`), because the linear solver knows `c = 1` but the product stays an atom; and
-both exits end with the same `CTL[0] := top + n` (`if c != 0 { n := 0 } else { n := trim }`):
-a `return 0` that leaves `CTL[0]` alone fails `Frame POOL (m.set64 CTL 0 (top + 0)) m'`,
-because `grind` does not see that writing the top's own value back changes nothing.
-
-### `nat_shl`: a word amount, a branch-free bit shift
-
-The amount is a slice `b`. With `a ≠ 0`, an amount of two or more limbs cannot fit any pool
-(con-ron pushes `u64::MAX` zero limbs and runs out of memory), so it is an `abort`; otherwise
-`k = b[0]` (or `0`), `k >> 6` zero limbs (`shlZero`), then one pass over `a` with a carry
-(`shlLoop`), the carry limb, `nat_trim`. The bit shift needs no `s = 0` case:
-`c' = (x >> 1) >> (63 - s)` is `x >> (64 - s)` for `s ≥ 1` and `0` for `s = 0`.
-
-* **Digit equation over a named power.** `shl_split`:
-  `((x << s) | c) + c' · 2^64 = x · sh s + c` for `c < sh s`, with `sh s = 2^s` named (an atom to
-  the ring solver, as `wt`). Its proof is by hand (`Nat.shiftLeft_add_eq_or_of_lt`: the `|` is a
-  `+` because the low `s` bits of `x << s` are zero).
-* **The loop invariant uses `wt w * wt i`, not `wt (w + i)`** (`ShlInv`, `nat_mul`'s `ColInv`
-  shape): `wt_add`'s pattern `wt k, wt i * wt j` then joins it with the `wt (w + i)` that
-  `pv_set_succ` produces.
-* **The amount.** `shamt`: `2^k = sh (k & 63) · wt (k >> 6)`, pattern `2 ^ k.toNat`; and
-  `pv_one` (`pv p o 1 = p[o]`, pattern `pv p o 1, p[o]`): `pv_succ` alone needs a `pv p o 0`
-  term, which the goal does not have, and without it the final `grind` ran out of heartbeats.
-* The function proof is 35 of the file's 42 s (`maxHeartbeats 1000000`).
-
-### `nat_shr`: the loop runs over the shifted slice
-
-An amount of two or more limbs (`b` normalised) is at least `2^64`, so `a >>> b = 0` whenever
-`la < 2^57` (every pool); `la ≥ 2^57` is an `abort`. Otherwise `k = b[0]`; if `w = k >> 6 ≥ la`
-the result is `0`, else one pass over the slice `(oa + w, la - w)` (con-ron's `skip_index`
-becomes `oa := oa + w`), limb `i` being `(x >> s) | ((y << 1) << (63 - s))`, branch-free as in
-`nat_shl`, with `y` limb `i + 1` read by `nat_limb` (zero past the end) and carried into the next
-iteration as `x`.
-
-* **No division and no `w` in the loop.** `ShrInv`: `R_i · sh s + lowb x₀ s = xv i + lowb x_i s ·
-  wt i`, `lowb x s = x % 2^s` named. Its digit equation `shr_split`:
-  `out · sh s + lowb x s = x + lowb y s · 2^64`. The loop went through in the house form.
-* **The division and the skipped limbs are three lemmas with patterns on the quotient**
-  (`pv A / (S * wt w)` after `shamt` rewrites `2^k`): `shr_val` (pattern also `pv P o l, R * S`,
-  binding the loop's result; `pv_append` splits off the skipped limbs), `shr_big_w`
-  (`w ≥ la`), `shr_big_b` (two-limb amount, with `Norm`).
-* **Cost.** The function proof is 90 of the file's 94 s: `nat_mul`'s recipe, but one
-  `maxHeartbeats` for the whole theorem ran out (1M); with `set_option maxHeartbeats 200000 in
-  grind …` per goal (and none for the theorem) every goal passes. The house form
-  (`finish (gen := 25)`) fails on two goals (splits). Not tuned further.
-
 ### `sorry`s
 
 None.
@@ -2608,60 +2230,6 @@ records one generic theorem (`objN_link`) and one tactic macro (`obj_loop`) prov
 * Cross-module `#eval`/`#guard` of an L program needs `meta import` of every module that defines
   one of its functions.
 
-### `nat_sub`: the final borrow decides
-
-con-ron's `sub` compares first and runs the ripple borrow only when `a > b`. `nat_sub` runs the
-ripple borrow over `max la lb` limbs (`nat_add`'s loop, `nat_limb` for both operands,
-`sub_borrow` for the two `overflowing_sub`s) and lets the borrow out of the top limb decide: the
-loop's equation is `R + B = A + c · wt n`, so `c = 0` gives `R = A - B` and `c = 1` gives
-`A < B` (with `R < wt n`), and the result is `0`. It needs neither `nat_cmp` nor normalised
-inputs. Two details: `bit_mul_wt` (`c.toNat * wt k = wt k` for a nonzero bit `c`, pattern
-`c.toNat * wt k`), because the linear solver knows `c = 1` but the product stays an atom; and
-both exits end with the same `CTL[0] := top + n` (`if c != 0 { n := 0 } else { n := trim }`):
-a `return 0` that leaves `CTL[0]` alone fails `Frame POOL (m.set64 CTL 0 (top + 0)) m'`,
-because `grind` does not see that writing the top's own value back changes nothing.
-
-### `nat_shl`: a word amount, a branch-free bit shift
-
-The amount is a slice `b`. With `a ≠ 0`, an amount of two or more limbs cannot fit any pool
-(con-ron pushes `u64::MAX` zero limbs and runs out of memory), so it is an `abort`; otherwise
-`k = b[0]` (or `0`), `k >> 6` zero limbs (`shlZero`), then one pass over `a` with a carry
-(`shlLoop`), the carry limb, `nat_trim`. The bit shift needs no `s = 0` case:
-`c' = (x >> 1) >> (63 - s)` is `x >> (64 - s)` for `s ≥ 1` and `0` for `s = 0`.
-
-* **Digit equation over a named power.** `shl_split`:
-  `((x << s) | c) + c' · 2^64 = x · sh s + c` for `c < sh s`, with `sh s = 2^s` named (an atom to
-  the ring solver, as `wt`). Its proof is by hand (`Nat.shiftLeft_add_eq_or_of_lt`: the `|` is a
-  `+` because the low `s` bits of `x << s` are zero).
-* **The loop invariant uses `wt w * wt i`, not `wt (w + i)`** (`ShlInv`, `nat_mul`'s `ColInv`
-  shape): `wt_add`'s pattern `wt k, wt i * wt j` then joins it with the `wt (w + i)` that
-  `pv_set_succ` produces.
-* **The amount.** `shamt`: `2^k = sh (k & 63) · wt (k >> 6)`, pattern `2 ^ k.toNat`; and
-  `pv_one` (`pv p o 1 = p[o]`, pattern `pv p o 1, p[o]`): `pv_succ` alone needs a `pv p o 0`
-  term, which the goal does not have, and without it the final `grind` ran out of heartbeats.
-* The function proof is 35 of the file's 42 s (`maxHeartbeats 1000000`).
-
-### `nat_shr`: the loop runs over the shifted slice
-
-An amount of two or more limbs (`b` normalised) is at least `2^64`, so `a >>> b = 0` whenever
-`la < 2^57` (every pool); `la ≥ 2^57` is an `abort`. Otherwise `k = b[0]`; if `w = k >> 6 ≥ la`
-the result is `0`, else one pass over the slice `(oa + w, la - w)` (con-ron's `skip_index`
-becomes `oa := oa + w`), limb `i` being `(x >> s) | ((y << 1) << (63 - s))`, branch-free as in
-`nat_shl`, with `y` limb `i + 1` read by `nat_limb` (zero past the end) and carried into the next
-iteration as `x`.
-
-* **No division and no `w` in the loop.** `ShrInv`: `R_i · sh s + lowb x₀ s = xv i + lowb x_i s ·
-  wt i`, `lowb x s = x % 2^s` named. Its digit equation `shr_split`:
-  `out · sh s + lowb x s = x + lowb y s · 2^64`. The loop went through in the house form.
-* **The division and the skipped limbs are three lemmas with patterns on the quotient**
-  (`pv A / (S * wt w)` after `shamt` rewrites `2^k`): `shr_val` (pattern also `pv P o l, R * S`,
-  binding the loop's result; `pv_append` splits off the skipped limbs), `shr_big_w`
-  (`w ≥ la`), `shr_big_b` (two-limb amount, with `Norm`).
-* **Cost.** The function proof is 90 of the file's 94 s: `nat_mul`'s recipe, but one
-  `maxHeartbeats` for the whole theorem ran out (1M); with `set_option maxHeartbeats 200000 in
-  grind …` per goal (and none for the theorem) every goal passes. The house form
-  (`finish (gen := 25)`) fails on two goals (splits). Not tuned further.
-
 ### `sorry`s
 
 None.
@@ -2702,6 +2270,10 @@ for the L-side spec itself.
 | `nat_sub` (+ `sub_borrow`; truncated; lane `nat2`) | 34 (`sub`, `sub_from`) | 25 | 117 | 7.7 s | house form, no hand step |
 | `nat_shl` (`a <<< b`, `b` a slice; lane `nat2`) | 80 (`shift_left_nat`, `shift_left`, `shl_onto`, `shl_bits_from`, `push_zeros`, `push_zeros_nat`, `low_limb`) | 33 | 192 | 42 s | zero loop house form; shift loop and function `nat_mul`'s recipe (`simp` the frame, `grind (splits := 40)` per conjunct); word lemmas by hand |
 | `nat_shr` (`a >>> b`, `b` a normalised slice; lane `nat2`) | 52 (`shift_right_nat`, `shift_right`, `shr_from`, `shr_bits_from`, `skip_index`) | 31 | 186 | 94 s | loop house form; function `nat_mul`'s recipe, 200k heartbeats per goal; word and division lemmas by hand |
+| `nat_pow` (word exponent `< 2^25`; lane `nat2`) | 20 (`pow`, `one`) | 23 | 146 | 5.8 s | house form; `Grows.trans`, the exponent-bit and frame lemmas by hand |
+| `nat_divmod` (`a / b`, `a % b`, `b` normalised; lane `nat2`) | 84 (`div_mod`, `div`, `modulo`, `dm_limbs`, `dm_bits`, `rev_copy_from`, `shl1_or`, `shl1_from`) | 94 | ~600 | 47 s (21 s wall) | four passes and three loops house form; function `nat_mul`'s recipe; the arithmetic lemmas by hand |
+| `nat_gcd` (+ `gcd_step`; lane `nat2`) | 10 (`gcd`) | 13 | 120 | 1.9 s | house form; `Norm.of_agree` by hand |
+| `natOpResult` arms `-` `pred` `*` `^` `/` `%` `gcd` `land` `lor` `xor` `shiftLeft` `shiftRight` `beq` `ble` under `ArenaR` (lane `nat2`) | – (`arena/core.rs` arms) | 50 (`topLit` 4, `nat_pred_lit` 9, `nat_pow_lit` 8, `nat_div_lit`/`nat_mod_lit`/`nat_gcd_lit` 15, `nat_beq_lit`/`nat_ble_lit` 14) | ~560 | 12.9 s (5.4 s wall) | house form throughout; `Grows.push1` by hand |
 
 Whole file 307 lines. `lake build ConAgua` (full project) still green, 403 ms incremental.
 
@@ -3123,67 +2695,13 @@ expression key, with `ok`-path links of the same shape.
 * Strings with escapes abort; `unescape` into the pool (the `\u` arms need UTF-8 encoding
   against `String.utf8EncodeChar`) is the next piece for real files.
 
-### `nat_sub`: the final borrow decides
-
-con-ron's `sub` compares first and runs the ripple borrow only when `a > b`. `nat_sub` runs the
-ripple borrow over `max la lb` limbs (`nat_add`'s loop, `nat_limb` for both operands,
-`sub_borrow` for the two `overflowing_sub`s) and lets the borrow out of the top limb decide: the
-loop's equation is `R + B = A + c · wt n`, so `c = 0` gives `R = A - B` and `c = 1` gives
-`A < B` (with `R < wt n`), and the result is `0`. It needs neither `nat_cmp` nor normalised
-inputs. Two details: `bit_mul_wt` (`c.toNat * wt k = wt k` for a nonzero bit `c`, pattern
-`c.toNat * wt k`), because the linear solver knows `c = 1` but the product stays an atom; and
-both exits end with the same `CTL[0] := top + n` (`if c != 0 { n := 0 } else { n := trim }`):
-a `return 0` that leaves `CTL[0]` alone fails `Frame POOL (m.set64 CTL 0 (top + 0)) m'`,
-because `grind` does not see that writing the top's own value back changes nothing.
-
-### `nat_shl`: a word amount, a branch-free bit shift
-
-The amount is a slice `b`. With `a ≠ 0`, an amount of two or more limbs cannot fit any pool
-(con-ron pushes `u64::MAX` zero limbs and runs out of memory), so it is an `abort`; otherwise
-`k = b[0]` (or `0`), `k >> 6` zero limbs (`shlZero`), then one pass over `a` with a carry
-(`shlLoop`), the carry limb, `nat_trim`. The bit shift needs no `s = 0` case:
-`c' = (x >> 1) >> (63 - s)` is `x >> (64 - s)` for `s ≥ 1` and `0` for `s = 0`.
-
-* **Digit equation over a named power.** `shl_split`:
-  `((x << s) | c) + c' · 2^64 = x · sh s + c` for `c < sh s`, with `sh s = 2^s` named (an atom to
-  the ring solver, as `wt`). Its proof is by hand (`Nat.shiftLeft_add_eq_or_of_lt`: the `|` is a
-  `+` because the low `s` bits of `x << s` are zero).
-* **The loop invariant uses `wt w * wt i`, not `wt (w + i)`** (`ShlInv`, `nat_mul`'s `ColInv`
-  shape): `wt_add`'s pattern `wt k, wt i * wt j` then joins it with the `wt (w + i)` that
-  `pv_set_succ` produces.
-* **The amount.** `shamt`: `2^k = sh (k & 63) · wt (k >> 6)`, pattern `2 ^ k.toNat`; and
-  `pv_one` (`pv p o 1 = p[o]`, pattern `pv p o 1, p[o]`): `pv_succ` alone needs a `pv p o 0`
-  term, which the goal does not have, and without it the final `grind` ran out of heartbeats.
-* The function proof is 35 of the file's 42 s (`maxHeartbeats 1000000`).
-
-### `nat_shr`: the loop runs over the shifted slice
-
-An amount of two or more limbs (`b` normalised) is at least `2^64`, so `a >>> b = 0` whenever
-`la < 2^57` (every pool); `la ≥ 2^57` is an `abort`. Otherwise `k = b[0]`; if `w = k >> 6 ≥ la`
-the result is `0`, else one pass over the slice `(oa + w, la - w)` (con-ron's `skip_index`
-becomes `oa := oa + w`), limb `i` being `(x >> s) | ((y << 1) << (63 - s))`, branch-free as in
-`nat_shl`, with `y` limb `i + 1` read by `nat_limb` (zero past the end) and carried into the next
-iteration as `x`.
-
-* **No division and no `w` in the loop.** `ShrInv`: `R_i · sh s + lowb x₀ s = xv i + lowb x_i s ·
-  wt i`, `lowb x s = x % 2^s` named. Its digit equation `shr_split`:
-  `out · sh s + lowb x s = x + lowb y s · 2^64`. The loop went through in the house form.
-* **The division and the skipped limbs are three lemmas with patterns on the quotient**
-  (`pv A / (S * wt w)` after `shamt` rewrites `2^k`): `shr_val` (pattern also `pv P o l, R * S`,
-  binding the loop's result; `pv_append` splits off the skipped limbs), `shr_big_w`
-  (`w ≥ la`), `shr_big_b` (two-limb amount, with `Norm`).
-* **Cost.** The function proof is 90 of the file's 94 s: `nat_mul`'s recipe, but one
-  `maxHeartbeats` for the whole theorem ran out (1M); with `set_option maxHeartbeats 200000 in
-  grind …` per goal (and none for the theorem) every goal passes. The house form
-  (`finish (gen := 25)`) fails on two goals (splits). Not tuned further.
-
 ### `sorry`s
 
 None.
 
 ## Limb-pool `Nat` ops, round 2: compare, sub, shifts, pow, div/mod, the arms (2026-10-21, lane `nat2`)
 
-Files: `ConAgua/Arena/NatGrindAttr.lean`, `NatCmp.lean`, `NatSub.lean`, `NatShl.lean`, `NatShr.lean`, … Per-op numbers are in the lane `nat`
+Files: `ConAgua/Arena/NatGrindAttr.lean`, `NatCmp.lean`, `NatSub.lean`, `NatShl.lean`, `NatShr.lean`, `NatPow.lean`, `NatDiv.lean`, `NatBitsNat.lean`, `NatGcd.lean`, `NatArms.lean`. Per-op numbers are in the lane `nat`
 table above (`lean` user time of the file, one run).
 
 ### `nat_cmp`: a non-recursive model
@@ -3206,6 +2724,10 @@ not functions.
   `pv p o k` and fires on every prefix value; with it in `arena_grind`, `nat_sub`'s loop (which
   never compares) timed out. It and `pv_succ_lt`, `cmpW_*` are in `natcmp_grind`
   (`NatGrindAttr.lean`), which a proof adds to its `sym only [...]` list when it needs them.
+  A second one, `natop_grind`, holds the broad lemmas of the shifts, `pow` and the division
+  (`pv_one`, `pv_set_one`, `shr_val`, `pv_cons`, the `sh` facts, …): lemmas registered in
+  `arena_grind` reach every later file, and in `nat_divmod`'s limb loop `shr_val` alone made 336
+  useless instances (`nat_shr`'s quotient lemma, matching any `x / (S * wt w)`).
 * `LitRefine.lean` has the same fact as `pv_lt` (and `pv_ge`, `pv_len`), but it is not a
   `module`, so module files cannot import it; `NatCmp.lean` proves its own `pv_lt_wt`,
   `pv_len_lt`.
@@ -3263,6 +2785,114 @@ iteration as `x`.
   `maxHeartbeats` for the whole theorem ran out (1M); with `set_option maxHeartbeats 200000 in
   grind …` per goal (and none for the theorem) every goal passes. The house form
   (`finish (gen := 25)`) fails on two goals (splits). Not tuned further.
+
+### `nat_pow`: an accumulator that moves
+
+Square-and-multiply from bit 24 down (25 iterations whatever `e`; squaring `1` is one limb),
+each product a call of `nat_mul`, which appends it at the top. The accumulator is the last
+product, so `nat_pow` returns `(o, l)` (two results) and the intermediate products stay below
+the top as garbage, like con-ron's dropped `Vec`s but never freed. The loop invariant `PowInv`
+names the entry memory `m₀` and keeps `Grows m₀ s.mem` (`Grows.trans`, pattern
+`Grows m m', Grows m' m''`), `a`'s value (below `m₀`'s top, so `Agree.pv` carries it across each
+call) and `pv o l = a ^ (e >> j)`. The step is `pow_step1`/`pow_step0`
+(`a ^ (e >> j') = a^(e >> j) · a^(e >> j) · a` or without the `a`, keyed on
+`(e >> j') & 1`); their patterns bind both powers, which are in the goal, so they do not chain.
+Three small `grind` facts were needed for the entry, each found from the failing conjunct under
+`nat_mul`'s recipe and then the house form went through: `pv_set_one`/`Norm.set_one` (a one-limb
+slice just written; `pv_set_succ` needs a `pv p o 0` term), stated with `l = 1` as a hypothesis
+because the length is `UInt64.toNat 1`, not the literal; `pow_shr25` (`a ^ (e >> 25) = 1`; the
+equation `(e >> 25).toNat = 0` alone does not reach the power); `shr_of_zero` for the exit.
+
+### `nat_divmod`: restoring shift-subtract, in place
+
+Knuth D needs a 128-by-64 division for its quotient estimate, which L does not have; con-ron
+itself does shift-subtract (`dm_limbs`/`dm_bits`), so `nat_divmod` does too, but in place:
+con-ron allocates a new remainder per bit (`shl1_or`, `sub`), which in an append-only pool would
+leave `64 · la` dead remainders behind. The quotient's `la` limbs and the remainder's `lb + 1`
+limbs are reserved above the top; per bit, `div_step(r, n, ob, lb, bit)` runs three in-place
+passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` with a borrow;
+`div_add`, only on a borrow: `R := R + b`, the restore) and returns the quotient bit. `a / 0 = 0`,
+`a % 0 = a` (the remainder is then `a`'s own slice, trimmed). Results: `(oq, lq, or, lr)`.
+
+* **The in-place frame is `Off p q o n`** (the pools agree off `[o, o + n)`), with `grind`
+  patterns for writing the next limb (`Off.set`), reading past the changed prefix (`Off.get`),
+  slices below the region (`Off.pv_below`), `Off.trans` and `Agree.of_off`. The three passes went
+  through in the house form at the first attempt, as did `div_step` (three calls, an `if`).
+* **The bit loop's body had to be one call.** With the three calls and the `if` inline, the
+  house form exhausted its splits and `nat_mul`'s recipe lost the frames (`and_intros` unfolds
+  `Frame` into components). With `div_step` it is straight-line (the arena lane's finding again).
+* **The bit loop's post is relative to its entry**: (`DBitPost`) `R₀ · 2^j₀ + x + q₀ · 2^j₀ · b = q · b + R +
+  (x / 2^j₀) · 2^j₀`, with no other limb of `a` or of the quotient in it. The first version
+  carried the whole dividend and quotient prefix through the bit loop (degree-3 terms
+  `QU · 2^(64 - j) · b`) and failed; the relative post went through in the house form.
+* **Pointer locals instead of index arithmetic.** The limb loop first read `a[oa + i - 1]` and
+  wrote `q[top + i - 1]`; its invariant's `pv a (oa + i) (la - i)` then meets the read
+  `a[(oa + i - 1).toNat]` only through linear arithmetic, which `grind` turns into case splits
+  (theory combination); `pv_cons` with a free read index had 1759 instances. With locals `pa`,
+  `pq` decremented before the read and the write, the read index and the slice offset are the same
+  term, `pv_cons` (`pv p o k', pv p o' k, p[o]`) binds directly, and the loop went through.
+  `pv_set_cons_off` prepends the written quotient limb to a slice read in the pool *before* the
+  bit loop's in-place passes (pattern includes the `Off` fact), because the slice in the current
+  pool is not a term yet. The exit (`i = la`, so `pa = oa`) is `pv_exit`, keyed on the loop
+  condition `i < la`.
+* **The quotient and the remainder** are `div_of_bounds`/`mod_of_bounds` (`Q · B ≤ A < Q · B + B`,
+  pattern `A / B, Q · B`), in `natcmp_grind`: in `arena_grind` they fired on the bit loop's
+  `x / 2^j` terms and broke it.
+* **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
+  none for the theorem (as `nat_shr`).
+
+### `land`/`lor`/`xor` are the `Nat` operations (`NatBitsNat.lean`)
+
+Lane `nat` proved `nat_land`/`nat_lor`/`nat_xor` against `bv f`, the limb-wise combine, and left
+"`bv` is `Nat.land`" open. `bitwise_split`: for an operation `op` given by its bits (`BitOp op g`:
+bit `i` of `op x y` is `g (bit i of x) (bit i of y)`, `g false false = false`) and `x, y < 2^64`,
+`op (x + 2^64 X) (y + 2^64 Y) = op x y + 2^64 · op X Y` (by `Nat.testBit`); by induction over the
+limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X Y`; with
+`pv a = xv a k + wt k · pv (a + k) (la - k)` the high parts vanish at the loop's length
+(`land_bv`, `lor_bv`, `xor_bv`). 129 lines, by hand, 0.6 s. The operation is a parameter with
+its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
+visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
+
+### `nat_gcd`: Euclid over `nat_divmod`
+
+`while la != 0 { (oa, la, ob, lb) := call gcd_step(oa, la, ob, lb) }`, `gcd_step` returning
+`(b % a, a)` (`nat_divmod`'s remainder slice and `a`'s). The invariant is `nat_pow`'s shape (two
+moving slices, `Grows` from the entry memory, `Nat.gcd a b = G`); the step is
+`Nat.gcd (b % a) a = Nat.gcd a b` (`gcd_step`, pattern on the left side), the exit
+`gcd_zero_len` (`la = 0`). With the divmod call and four `setLoc`s inline in the loop body, the
+house form hit `grind`'s term generation limit and `nat_mul`'s recipe lost the frames
+(`and_intros` unfolds `Grows`); with the step as its own function, both went through at once
+(again: loop bodies straight-line and shallow).
+
+### The `natOpResult` arms under `ArenaR` (`NatArms.lean`)
+
+Every arm whose result is a literal is `litArm F a b = do let x ← internE (.lit (.natVal
+(F a b))); pure (some x)`, and each verbatim arm (`natSubArm`, …) unfolds to it. One generic
+theorem covers the seven ops whose pool function appends at the top (`-`, `*`, `land`, `lor`,
+`xor`, `shiftLeft`, `shiftRight`): `topLit f` is `natAddLit` with `f` for `nat_add` (written as
+syntax, since the notation takes a literal function name), and `topLit_refines` is
+`natAddLit_refines` with `f`'s spec as a hypothesis in `natAdd_spec`'s shape (`TopSpec p f F`).
+Each instance is one line (`topLit_refinesA … natSub_top`); `TopSpec` for the bitwise ops and the
+shifts is the pool function's spec rewritten under the binder (`simpa only [← land_bv]`,
+`[← Nat.shiftLeft_eq]`, `[← Nat.shiftRight_eq_div_pow]`). The others are their own L functions:
+`pred` writes a one-limb `1` at the top and subtracts it (`Grows.push1`: pushing a limb is
+growing the pool, pattern on the two stores); `pow` returns `(0, 0)` for the arm's `none` (an
+exponent above `2^24`; two or more limbs of a normalised `b` are at least `2^64`) and `(1, h)`
+otherwise, decoded by `decOpt`; `/` and `%` take `nat_divmod`'s first or second slice. All under
+`ArenaR` in `natArmProg` (`storeProg` and the pool functions), each proof in the house form at
+the first or second attempt, 3.7 s for the file. The operands are normalised slices (as every
+`lit` record's), which `nat_shr` and `nat_divmod` need for `b`.
+
+`Nat.gcd` is `nat_gcd`'s slice interned. `Nat.beq`/`Nat.ble` intern a `const` node: the arm reads
+the pins `boolTrueName`/`boolFalseName` and, inside `constE`, `emptyLevels`, which `ArenaR` does
+not cover, so `nat_beq_lit(oa, la, ob, lb, t, f, us)` takes the three handles as arguments and
+the theorem takes what the pin reads return as hypotheses (`boolTrueName.run a₀ = .ok (decI t,
+a₀)`, …; they read the state and do not change it). The L side is `nat_cmp`'s code
+(`if c != 1 { t := f }`, `c == 2` for `ble`) and `intern_const` (`internConst_refinesA`); the
+house form went through with `constE` and the arm unfolded and `natcmp_grind` for `cmpW`.
+
+Not done: `natOpResult`'s dispatch itself (it reads fifteen pins first; the pins are not in
+`ArenaR`).
 
 ### `sorry`s
 
@@ -3460,3 +3090,552 @@ from the main tree) lets GNU `du` deduplicate by inode across them, same as the 
 itself does: the combined total is **3.3G — identical to the main tree's `.lake/build` alone**.
 The cache and the fresh worktree's entire 1800-module build directory cost ~0 bytes of *marginal*
 disk; `stat -c %h` on a sample olean shows `links=3` (main tree, cache, worktree, same inode).
+
+## Does the relation scale? (2026-10-21, lane `scale`)
+
+Question: does the L ⊑ twin relation (`ArenaR`, `ArenaD`, the `GoOK`-style specs) scale to all the
+state the checker will have? Files: `ConAgua/Spike/{ScaleBase,ScaleFlat,ScaleNested,ScaleGrind,
+WriteSet,WriteSetInst,TwinKeep}.lean` and `gen_scale.py` (the generator of the three `Scale*`
+relation files). The spikes are not imported by `ConAgua` and have no `sorry`; check one with
+`lake env lean ConAgua/Spike/<f>.lean` (`WriteSetInst` needs `lake build ConAgua.Spike.WriteSet`
+first). No other file was changed.
+
+**Verdict.** The relation scales if two things change now, before the core lands. (1) Specs must
+carry their frames. Today a walk spec (`GoOK`, `LGoOK`, `IGoOK`) ends in `ArenaD m' a'` and says
+nothing about the rest of the memory or the twin state, so every new state component would force
+each existing walk to be re-proved or framed by hand. Lane `front2` already hand-wrote
+`mkAppW_above`… for `Above64`. Both frames can be obtained cheaply and generically (experiments 2
+and 3). (2) The relation should be bundled per tier and over projections of `AState`, not as one flat
+structure over `AState`. The flat bundle's cost per writer grows faster than linearly (experiment 1),
+and a group over `AState` gets no twin-side frame by definitional unfolding. Store and memo tables
+fit the existing libraries. New ideas are needed for six components: the scratch-tier drop, the
+mode-memo bank stack, tree-valued caches, the environment index's deletion, nested declaration
+records, and `Readback`'s `Expr`-keyed memo. None of them threatens lockstep equality of the caches.
+
+### Inventory
+
+Lifetimes: **G** global (whole run), **D** per declaration (`flushCaches`/`enterScratch` …
+`dropScratch`), **C** per top-level call (cleared at entry), **A** an argument value (not in
+`AState`).
+
+| component | type | life | mutation | L representation | relation clause | verdict |
+|---|---|---|---|---|---|---|
+| `store` persistent tier, 21 cons tables | `Tbl` (nodes, der, cons) | G | append | `StoreLib` open addressing | `StoreR`/`TierR` | **fits** (done) |
+| `store` scratch tier | same | D | append; `enableScratch`/`dropScratch` empty it | same, tier 1 | `TierR … 1` | **needs X**: `SlotsOKG` requires every slot ≤ count, so a drop to count 0 must zero all scratch slots (O(capacity) × 21 tables per declaration). Use epoch-stamped slots for tier 1, as the memos have |
+| `store.scratchOn` | `Bool` | D | set/reset | `CTL[1]` | in `StoreR` | fits |
+| derived columns | `UInt64` per node | with node | append | range in `XDER`, leaf ranges from the record, hash opaque | `DerR` | fits (5 compound tables done) |
+| `memos` (10 tables) | `HashMap (EIdx×Nat) EIdx`, `EIdx → Nat`, `LIdx → LIdx`, `LsIdx → LsIdx` | C | insert, clear (`Memos.empty` at `enterScratch`) | `MemoLib` (2 key words, 1 value word, epoch clear) | `MemoRG` | **fits** (3 done) |
+| `caches`: `whnfCoreC`, `whnfCoreCheapC`, `whnfC`, `inferC`, `inferIOC`, `defeqC` | `EIdx → EIdx`, `(EIdx×EIdx) → Bool` | D | insert; `takeModeMemos`/`putModeMemos` around every eager `defeqE` | `MemoLib` in `D` banks; bank = eager depth | `MemoRG` for the live bank, plus "bank `i` relates the `i`-th saved `ModeMemos`" for the twin's saved values | **needs X**: bank-indexed dispatch (static code per bank from the generic schema; a depth word selects), and a depth-indexed frame in the knot specs ("banks below `d` unchanged"). The same code writes every bank, so this frame is semantic and the text frame (experiment 2) cannot give it |
+| `caches`: `lvlEqC`, `lvlsEqC`, `constTyC`, `constValC`, `ruleRhsC` | handle pairs/triples → `Bool`/handle | D | insert | `MemoLib` (a triple of 32-bit handles packs into two words) | `MemoRG` | fits |
+| `caches`: `readLC`, `readNC`, `readLsC` | `LIdx → Level`, `NIdx → Name`, `LsIdx → List Level` | D | insert | values are **trees**: a per-declaration tree heap, slot value = tree pointer | `MemoRG` with a value decoder that reads memory (`dv : Mem → Word → Option ν`; today `dv : Word → ν`) | **needs X**; the tree heap's lifetime is D, not the per-call scratch heap ROADMAP §2 item 5 plans for level algorithms |
+| `flushCaches` | – | D | `caches := Caches.empty` (the twin no longer drops selectively; ROADMAP §2 item 2 is stale) | 14 epoch bumps | `memoRG_clear` | fits |
+| `pins` | `Array NIdx` (51), `List NIdx`, 3 handles | G | filled once (`internAllPins`) | a fixed word array | `PinsR m a.pins` | fits |
+| `fe : IFEnv` | `IEnv` (list) + `HashMap NIdx (Nat × IConstantInfo)` + `visibleBelow` | **A**, G | `push`; `popTemp` (erase or re-insert); `restrictTo` views live **at the same time** as the full one (`CheckDecl.lean:113,124,135`); `eraseInstalled` (`Promote.lean:345`) | one destructive index (name → counter, record pointer) and a `vis` word per view | `EnvR m vis fe`, stated through `find?` and `visibleBelow` (a view whose counter is `≥ vis` misses in both), plus the order of `consts` | **needs X**: deletion in an open-addressing table (tombstones), and `find?`-level extensionality |
+| `IConstantInfo`, `IDeclaration` | nested: `List NIdx`, `List IRecRule` (each with `IRecRuleFire` lists), `IIndCaps` (lists, `PropWhen` = `List Name` **values**), `IProjTable` (`Array EIdx`, `List LIdx`) | G | built at install, immutable | record pool, bump-allocated, below a top | `decCI m p = some ci` (a recursive decoder); `PropWhen`'s names decoded through the store (`denoteN`) | **needs X**: nested decoders (`PoolSlice` covers flat slices only); the frame is `PoolSlice`'s `Agree` (the pool below the top never moves) |
+| `pend : Array PendingCheck` | `ValueGroup` (kind, `IConstantVal`, handle), two `Nat` | A, phase A → B | push | pool records | decoder | fits once the record pool exists |
+| pin sets `List INatOpPinSet` | 8 handles, `List EIdx`, a `String` (only in a decline message) | A, G | none | pool | decoder; the string is not represented (a decline claims nothing) | fits |
+| `PMemo` (promotion) | 4 maps handle → handle | A, D | insert | 4 `MemoLib` instances | `MemoRG` on an argument | fits |
+| walk-local memos: `wscopedBGo`, `fvarLeavesGo` (seen + an accumulator list in walk order), `leavesSubGo`, `constsResolveFGo`, `hasStrLitGo`, positivity's `mentionsAnyGo`/`nestOccGo`/`depthGo`/`replaceFVarsGo`, `RecCheck`, `StructParts`, `usedConstsGo` (a set + an array) | `HashMap`/`HashSet` of handles, lists/arrays | A, C | insert | `MemoLib` instances, scratch stacks | relation on the argument | fits |
+| `Readback`'s `EMemo` | `HashMap ConLeche.Expr EIdx` (structural key) | A, per block | insert | keyed by ROM offset | – | **needs X**: equal trees at different ROM offsets miss in L where the twin hits. The store is unaffected (interning is idempotent), but the maps differ. Make the ROM hash-consed (offset equality = tree equality), or state the interner's spec without the memo |
+| `NestState` (positivity) | `Array NestKey`, `List NestKey`, `Array NestCtorNf` | A, per run | push, linear search | scratch stacks | decoder | fits |
+| transient `Level` trees | `ConLeche.Level` | per call | built by pure level algorithms | scratch tree heap | decoder | needs X (ROADMAP §2 item 5) |
+| knot (`CoreFnsA`, mode, eager depth) | closures | – | – | one mutual group, mode word | `CoreOK n := ⋀ entry specs` for every `F ≥ n` | fits the `GoOK`/`ArmOK` pattern |
+| fuels | `Nat` | – | – | L fuel; counters for the counted ones | `F ≥ n` | fits (below) |
+| attempt snapshots (`orElseAttempt`) | `AState` copy | – | – | none: L aborts at the first throw | – | fits (ROADMAP §3 (c)) |
+| `AState.worker` | – | phase B | drop + `Memos.empty` + `Caches.empty` | the drop and epoch clears | – | fits |
+
+### The risks, with evidence
+
+**(a) Proof performance of one big bundle (experiment 1, `ScaleBase`/`ScaleFlat`/`ScaleNested`).**
+`gen_scale.py` writes `ArenaR`'s 22 fields plus `N` dummy `MemoRG` clauses (schemas at arrays
+100+, all over `a.memos.fvarBC`), the `arena_build` macro for them, and the same eight writer lemmas
+(five intern lifts, `memo_set`, `memo_clear`, `grow`). `lake env lean`, one run each (imports alone
+0.6 s user):
+
+| bundle | fields | user (8 writers) | per writer |
+|---|---:|---:|---:|
+| `ArenaR` (today) | 22 | 4.9 s | 0.55 s |
+| flat | 44 | 10.5 s | 1.25 s |
+| flat (`ScaleFlat`) | 66 | 18.5–25.7 s (two runs) | 2.3–3.1 s |
+| flat | 110 | 44.4 s | 5.5 s |
+| nested: `ArenaR` + two groups of 22 (`ScaleNested`) | 66 | 1.55 s | the core's 0.55 s (paid once in `ArenaRel`) + ~0.05 s |
+
+The flat cost grows faster than linearly: each writer frames every field, and the `apart` simp set
+grows with the number of array ids. Writers grow too (every intern, every memo/cache set and clear,
+every bank operation, the environment push), so the flat total grows roughly with the square of
+the component count. In the nested version a group's frame lemma is proved once, from array bounds
+(`Grp.frame`: `∀ b ∈ A, b < lo ∨ hi ≤ b`), and every writer outside the group pays one application.
+**Finding:** the first nested version did not compile. A group stated over `AState`
+(`Grp m a`) is a structure, so `Grp m (appLens.setP a t)` is not definitionally `Grp m a`, although
+nothing the group reads changed. A group must take the **projection** it reads (`Grp m a.memos.fvarBC`,
+later `CoreR m a.caches`, `PinsR m a.pins`). Then the twin side of the frame is definitional unfolding,
+as `AM.st_proto` already gives for tables.
+
+**`grind` and the relation (`ScaleGrind`).** On a trivial goal (`y ≤ 5` and a read): no relation in
+the context 3 ms; `hA : ArenaR m a` 3 ms; its 22 fields as opaque hypotheses 6 ms; two tables'
+`StoreR`/`TierR` unfolded 48 ms; all 19 tables and 3 memos unfolded **532 ms**. Lane `store2`'s
+finding generalises: kept opaque, the size of the relation costs `grind` nothing; unfolded, it costs
+linearly in the `∀`-clauses, before any instance matches. Today no refinement proof gives `ArenaR`
+to `grind` (`WalkRefine`, `LiftRefine`, `Inst1Refine` have no `grind`). The L-side specs are about
+models, the refinements are by hand with named lemmas. Keep it that way.
+
+**(b) Frames per function: the main risk.** The walk specs (`GoOK n`, `LGoOK n`, `IGoOK n`) say
+`ArenaD m a → … → ∃ a', run = .ok (r, a') ∧ ArenaD m' a'`. A caller that holds another relation
+(the front's `StateDR`, a future `CoreR m a.caches`, `EnvR`, a saved bank) learns nothing about it
+from this. Without frames, every walk proof would be redone each time a component is added. Two
+generic remedies, one per side:
+
+* **L side: frames from the program text (experiment 2, `WriteSet.lean`, 165 lines, 1.2 s).**
+  `Preserve.lean`'s induction, generalised: `closedW p A C fs` (a `Bool`) says every function of
+  the call-closed set `fs` stores only into arrays of `A` and into `CTL` words of `C`. A `CTL` index
+  must be a literal `k`, or `k + (e &&& 1)`, which can only be `k` or `k + 1`. `run_frame`: every
+  run of `f ∈ fs` is a `MemFrame A C` (and keeps the byte arrays). Applied to `instProg`
+  (`WriteSetInst.lean`; instantiate1, lift, the `mk_*`, six stores, 52 functions): the only stores
+  the check rejects are the six `*_push` count stores `CTL[k + t]`, whose tier `t` is not bounded
+  by the text. With those masked (`k + (t &&& 1)`, the spike's `maskS`), `closedW` holds by
+  `decide +kernel` in 0.36 s. `instEntry_frame` gives `MemFrame` for every `inst_entry` run.
+  `stateDR_instEntry` then carries the front's `StateDR` across it with no lemma about
+  `inst_entry`. Lane `front2` proved `mkAppW_above`… by hand for the same purpose.
+* **Twin side: frames by composition (experiment 3, `TwinKeep.lean`, 147 lines, 1.5 s).**
+  `Keeps π op`: every successful run keeps `π a`. It is closed under `bind`, `ite` and `pure`.
+  The store primitives (`internNodeE`, `internLamE`, `internForallEE`) are one macro each, and the
+  reads (`derivedE`, `view*`, `inst1Get`) are one line. `keeps_inst1Go`: `instantiate1Go` keeps
+  `cp a = (a.caches, a.pins)` at every fuel, by one induction with one term per arm (about 45
+  lines per walk family, no `grind`). With the L frame and this, any `X m' (cp a')` follows from
+  `X m (cp a)` when `X` reads only arrays outside the write set. con-ron's Theorem 1 uses the same
+  architecture (`Bridge/Specs.lean`'s specs end in `s'.caches = s₀.caches ∧ s'.pins = s₀.pins`,
+  and `CheckOK.mono` transports the whole invariant across an `ExprOps` call). The alternative is
+  to add `cp a' = cp a` to each `GoOK` post (cheap if done from the start: the proofs build `a'`
+  from `with`-updates).
+
+**(c) Caches: lockstep equality is enough.** L caches as con-ron does (same keys, same
+insert/clear points), and `MemoRG` relates the L table to the map extensionally (`mp[k]?`), so
+layout is free. What would break equality, checked in the twin (`vendor/con-ron/ConRon/Arena/**`):
+* **No eviction and no capacity behaviour other than abort.** The caches are uncapped (task #115
+  removed `cacheCap`, `CoreState.lean:28–31`). The only capacity rule is `idxCap` → `.native`, an
+  L abort. `clear_fit` (`Core.lean:3552`) is Rust layout only. L memos abort at 3/4 load. That is
+  sound, but completeness needs capacities sized for the largest declaration (or a resize, which
+  is layout only and keeps `MemoRG`).
+* **No `HashMap` iteration, `size`, `fold` or `toList` on any memo, cache, index or argument map**
+  (grep over the twin; `NestState.keys` is an `Array`, `ctorIx` is a `List.foldl`). No key or value
+  carries `mixHash` (handles hash by their word; lane `final`'s audit). Handle values are
+  allocation indices, the same in lockstep.
+* **Deterministic skips L must copy:** `whnfCoreStuckTag`/`whnfStuckTag` read neither the memo nor
+  the store; a `none` level verdict is never cached; `defeqE` runs on emptied mode tables (`takeModeMemos`)
+  and puts the caller's back (`putModeMemos`), dropping what the eager run added.
+* **The exceptions** (table above): `readLC`/`readNC`/`readLsC` hold trees, `Readback`'s `EMemo`
+  is keyed by trees, and the environment index needs `erase`. None is a layout dependence. Each
+  needs a representation choice that keeps equality.
+
+**(d) Fuel across the knot.** Fits. L fuel decreases on every call and loop iteration. The twin's
+knot fuel decreases only per knot level, and its loop and walk fuels are fresh constants (`2^62`,
+or counted in L, lane `final`'s audit). So `n ≤ F` is preserved at every knot call, and "for every
+`F ≥ n`" closes the induction. The knot needs one conjunction `CoreOK n` over the six entry points
+at both modes (the eager slot runs `mode.toEager`). The bodies take it as their hypothesis, as
+`IArmOK n` takes `IGoOK n`; each body is its own lemma.
+
+**(e) Scratch tier and stale handles.** Handle-valued data (caches, environment, pending) is
+related as words, so a dangling scratch handle breaks no clause. Only the view lemmas interpret a
+handle, and after a drop both sides fail the view (L's count check against `CTL`). The gap is the
+drop itself (`SlotsOKG`, table above).
+
+**(f) Environment and declaration records.** Not in `AState`: `fe` is an argument everywhere, and
+several views of one index are live at once. The relation must be per view (`EnvR m vis fe`) and
+extensional through `find?`, and the core's specs must take it as a precondition with the
+environment arrays outside their write set. Experiment 2 gives that for free once those arrays exist.
+
+**(g) Per-declaration drop and epochs.** Fits: `flushCaches` is now a wholesale clear (14 epoch
+bumps), `enterScratch` clears the 10 memos, `AState.worker` is both. The bank stack is the one
+operation that is not a clear (above).
+
+### Recommended changes now
+
+1. **Specs carry frames.** Adopt `WriteSet.lean` into `ConAgua/L` (it generalises `Preserve`)
+   and state every program predicate (`LiftProg`, `InstProg`, …) with its `closedW` fact (by
+   `decide +kernel`). Write the tier of the 21 `*_push` count stores as `CTL[k + (t &&& 1)]` (or
+   move the counts into table-owned arrays). On the twin side, prove `Keeps cp` per walk family, or
+   add `cp a' = cp a` to the `GoOK` posts of the walks still to come.
+2. **Bundle per tier, over projections.** `ArenaD` (store + memos + derived) stays the walk tier.
+   Add `CoreR m a.caches` (with the banks), `PinsR m a.pins`, `EnvR m vis fe`, and argument
+   relations (saved `ModeMemos`, `PMemo`, `pend`) as separate structures. Each takes the projection
+   it reads, owns a disjoint array range, and has one group frame lemma from array bounds. Keep a flat
+   bundle at about 25 fields or fewer (≈ 0.5 s per writer).
+3. **Never unfold the relation for `grind`**; fields stay opaque named predicates.
+4. **Library work before the core:** epoch-stamped scratch slots in `StoreLib`; `MemoLib` with a
+   memory-reading value decoder (tree values), deletion (environment index), and a bank-indexed
+   instance family; a nested record decoder over the pool.
+
+**What to watch:** per-writer CPU of a bundle (split it above ~2 s); any twin change that iterates
+or sizes a map, or caches a value that is not a word; the eager depth bound `D` (unbounded nesting
+in `.verified` mode, abort beyond `D`); memo and table capacities against the twin's uncapped caches.
+
+### `sorry`s
+
+None.
+
+## `hasLooseBVar`, `fvarRangeGo`/`Memo` (2026-10-21, lane `exprops2`)
+
+Files: `ConAgua/Arena/HasLooseBVar.lean`, `{FVarRange,FVarRangeRefine}.lean`; `DerRel.lean`
+(the missing leaf-interning `DerR` lemmas, `natAddLit_refinesD`); `View.lean` (`view_fvar_idx`);
+`MemoLib.lean`/`MemoLibRel.lean` (`frSch`/`frSch_wf`); `ArenaRel.lean` (one new `ArenaR` field,
+`fmemo`, reusing `bmKey`'s codec). Continues lane `exprops`'s remaining phase-4 expression walks
+(ROADMAP §1, `arena/expr_ops.rs`). No `sorry`; axioms `propext`, `Classical.choice`, `Quot.sound`.
+
+### The missing `DerR` leaf lemmas, and `natAddLit_refinesD`
+
+`internBVar_D`'s proof (`DerRel.lean`) ported to the other four leaf kinds, with `zP` (range `0`)
+in place of `bvP`: `internFVar_D`, `internSort_D`, `internConst_D`, `internLit_D`, plus four
+`bvar_derX` helpers (`bvarOfData` of each leaf's packed derived word is `0`, by `bvarOfData_pack`
+with the hash/fvar/level-param fields and `(by decide)`/`satSucc_lt` bounds). Also `DerR.grow`/
+`ArenaD.grow` (a pool append's `Grows` only touches `POOL` and `CTL[0]`, disjoint from the derived
+arrays `42‥46`, so `DerR.frameM` applies directly) and `natAddLit_refinesD`, `natAddLit_refinesA`'s
+counterpart under `ArenaD` (`internLit_refinesD` first, the same shape as `internLit_refinesA`).
+
+### `hasLooseBVar(h, i)`
+
+con-leche's (and Lean4's) `Expr.hasLooseBVar e i := i < e.looseBVarRange`: a direct read of the
+cached range field, no recursion. Unlike every other walk in this group, it has **no twin arena
+function** in `ConRon.Arena.ExprOps` to refine against (con-ron's memoized `has_loose_bvar_b_go`
+lives on the inductive-types side, `arena/inductives/struct_parts.rs`, threaded through an extra
+context `T` not relevant to plain expressions), so it is refined directly against the range field
+of `a.store.derived`, which `der_b` (`ExprMk.lean`) already computes exactly (`derBW_ok`).
+
+### `fvarRangeGo`/`fvarRangeMemo`
+
+con-ron's `fvar_range_go`/`_memo` (`arena/expr_ops.rs:2075,2146`, twin `Arena/ExprOps.lean:1483-
+1563`): `1 +` the largest free-variable index under a handle, memoized in a new per-call memo
+`fvarBC` (`frSch`, array 48 `FRMEMO`, `CTL[46]`/`[47]`, the next free slot after `inst1C`; `bmKey`'s
+one-word-key codec reused unchanged). `Walk.lean`'s `bvarBoundGo`/`Memo` shape exactly (`fr_go`
+probes the memo, `fr_node` decodes the handle and dispatches on the tag), with three differences
+from `bvarBound`: the `bvar` arm returns `0` (not `i + 1`), the `fvar` arm returns `idx + 1` (not
+`0`; needs `view_fvar_idx`, a `view_fvar` that pins the record's index word, since `view_fvar`
+itself is only existential), and the binder/`letE` arms do **not** truncate the last child (`max`
+throughout, no `satPredW`: a binder's own annotations are not descended into, ROADMAP's `ExprOps.lean`
+note on `fvarRangeGo`). This is `abstract1`'s cutoff (`fvarB ≤ d`), the walk lane `exprops2` turns
+to next.
+
+**A finding: match-arm grouping must be textual, not just semantic.** The arena-side dispatcher
+`frArm` (`FVarRangeRefine.lean`) must group and order its `match` arms exactly as the twin's own
+`fvarRangeGo_succ` does (`.fvar` first, then `.bvar | .sort | .const | .lit` together) for
+`fvarRangeGo_succ'`'s `congr` to close by `rfl`; a semantically equivalent but differently grouped
+`match` (`.bvar` split out on its own) leaves a stray match-equality goal. Same lesson as lane
+`exprops`'s "continuations given as `fun` defeat `grind`'s matching": these proofs lean on the
+compiled match/do-notation being syntactically identical, not just extensionally so.
+
+### Tables
+
+| | Rust lines | L lines | spec lines | refinement lines | refinement / L | `lean` wall / user |
+|---|---:|---:|---:|---:|---:|---|
+| `has_loose_bvar` | – (no twin) | 5 (`der_b` call, compare) | `HasLooseBVar.lean` ≈ 20 | ≈ 20 (same file) | ≈ 4.0 | – |
+| `fvar_range_go` + `_memo` | ≈ 115 | 76 (`fr_go` 6, `fr_node` 59, entry 4, `fr_set`/probe plumbing 7) | `FVarRange.lean` 439 | `FVarRangeRefine.lean` **366**, **4.8 per L line** | 4.8 | – |
+
+(`lean` wall/user not separately timed this landing; the full project build, 1810 jobs, restores
+from the shared Lake cache and rebuilds only the touched files in a few seconds.)
+
+### Compiled benchmarks of `lift_entry`/`inst_entry`
+
+`LiftBenchComp.lean`/`LiftEmit.lean`/`harness/lift.c` and `Inst1BenchComp.lean`/`Inst1Emit.lean`/
+`harness/inst1.c`: `WalkBench.lean`/`WalkEmit.lean`/`harness/walk.c`'s shape exactly (not proved,
+drivers), building the left-nested spine `app (… (app (bvar k) (bvar k)) …) (bvar k)` with `n`
+applications through `mk_app` (not `intern_app`: the walk needs the derived range) and calling
+`lift_entry`/`inst_entry` on it; `LiftBenchLean.lean`/`Inst1BenchLean.lean` are the "Lean-compiled
+arena" baseline (`lake exe liftbenchlean`/`instbenchlean`, con-ron's `liftLooseBVarsFast`/
+`instantiate1Fast`), `WalkBenchLean.lean`'s shape. The harnesses use one uniform array size (`8
+(n + 16)` words per content array) rather than per-table exact sizing — a driver, not proved, so
+generosity costs nothing but memory.
+
+**Measurements** (`perf stat -e instructions:u`, one run each; "build" is the same run without the
+walk: `k ≥ 2^63` for L, `… build` for Lean):
+
+| `n` | compiled L: build / build + walk / walk | con-ron's compiled Lean: build / total / walk |
+|---:|---|---|
+| `lift_entry`, 10^5 | 79.8 M / 282.7 M / 202.9 M | 196.9 M / 549.0 M / 352.0 M |
+| `lift_entry`, 10^6 | 800.1 M / 2833.2 M / 2033.0 M | 1870.9 M / 5276.3 M / 3405.4 M |
+| `inst_entry`, 10^5 | 79.8 M / 281.6 M / 201.9 M | 197.0 M / 550.4 M / 353.4 M |
+| `inst_entry`, 10^6 | 800.1 M / 2872.5 M / 2072.3 M | 1870.9 M / 5290.1 M / 3419.2 M |
+
+About 2030‥2070 instructions per `app` node for the compiled L walks (two memo probes per node,
+`mk_app`'s own tail write, the two-children recursion) against about 3400‥3420 for con-ron's arena
+compiled by Lean — L/Lean ≈ 0.60, the same order as the plain `bvarBoundMemo` walk's 0.56‥0.66
+(lane `walk`, `exprops`). Building the term through `mk_app` (the derived-range write on top of
+`intern_app`) costs the same as the plain walk's build (79.8 M / 800.1 M at 10^5/10^6): the write
+is folded into the count check already in the critical path, no measurable extra cost from `der_b`
+itself (one more memory read, branch-free).
+
+### Not done, and why: `instantiateListGo`/`Fast`, `abstract1Go`/`Fast`
+
+Both need a genuinely new idea, not just `Lift`/`Inst1`'s scaffolding reused; neither is a
+45-minute fix, so both are left for a session that can give them the design attention first.
+
+* **`abstract1Go`'s cutoff is `fvarB ≤ d`, not `fvarRangeMemo` directly**
+  (`ConRon.Arena.ExprOps.fvarB`): it reads the packed derived word's `fvarOfData` field in `O(1)`
+  and falls back to the exact memoized `fvarRangeMemo` walk only on the saturated branch
+  (`r == satRange`). `ExprMk.lean`/`DerRel.lean` chose, when the derived-range arrays were added
+  (lane `exprops`'s first landing), to store **only the bvar-range field** per compound node
+  (`XDER[2 i + t]`, one word), not the fvar-range field too — "L keeps only the range field (the
+  hash is opaque)" is the module doc's phrase for it. So L has no array to read `fvarOfData` off
+  of, and cannot replicate `fvarB`'s two-branch shape at all without a design extension: a second
+  word per compound node (an `FVDER`-family of arrays, `ExprMk.lean`'s `mk_*` writing it the way
+  `der_b`'s value is written now) plus a `DerR` field for it analogous to the bvar one. Only then
+  does `abstract1`'s cutoff become an `O(1)` read, matching the twin exactly; short of that
+  extension, any L cutoff would have to always recompute via `fr_memo`, which is a **different
+  function** from `fvarB` (it always clears/re-fills the memo; `fvarB`'s cheap branch does not
+  touch it at all), so the two do not obviously agree node-for-node on the resulting arena state
+  without extra, unproven invariants about when the twin's packed field is actually saturated.
+  Brief for the next session: add the fvar-range column (five more arrays or five wider ones,
+  `42`‥`46`'s pattern doubled), extend `DerR`/`mk_*`/`der_b`'s sibling (`der_f`?) the way this
+  landing did for the leaf internings, *then* `abstract1` is `Inst1.lean`'s shape with `fvarB`'s
+  cutoff and the `fvar` arm comparing the index to `d` (no memo on that arm; `abs1C`'s key is
+  `(h, k)`, the same shape as `inst1C`'s `(h, d)`).
+* **`instantiateListGo`/`instantiateList` is two twins, not one, and the pure one changes its own
+  argument between recursive calls.** Its cutoff (`bvarBRaw < satRange && bvarBRaw ≤ d`) is the
+  same field `Inst1.lean` already reads, so that part is free. The complication is the
+  substitution: con-ron represents it as an `Array EIdx` (push order; the innermost binder's
+  argument first is the array's *last* entry), and the memoized `instantiateListGo`'s own `bvar`
+  arm does not use its memo at all — it calls the **pure, unmemoized** `instantiateList` on a
+  *shorter* suffix of the same array (`lastEidx vs (j - d)`), which the twin's own comment says is
+  `O(1)` only because of the SAME cutoff tested again before the recursion (`instListCutoff vi d`,
+  hoisted over the prefix copy). Porting this needs an L representation of "a growable list of
+  handles" that a recursive function can pass a *shrinking suffix* of cheaply — the natural choice
+  is a pool slice (offset, length) exactly as `LsStore.lean`/`PoolSlice.lean` already represent
+  level-parameter lists, with `lastEidx`'s shrink becoming an O(1) offset/length adjustment (no
+  copy, since the array only ever loses entries from the front in push order) — but that is a new
+  piece of shared infrastructure (an `EIdx`-list-in-the-pool reader, with its own `DerR`-style
+  frame lemmas), not a one-file port. Brief for the next session: build the pool-slice reader
+  first (generic over the element width, the way `MemoLib.lean` generalised memos), then port
+  `instantiateList` (no memo, recursion into a shrinking slice) and `instantiateListGo` (the
+  memoized wrapper whose `bvar` arm calls the former) as two files following `Inst1.lean`'s split.
+
+### `sorry`s
+
+None.
+
+## The relation's architecture: frames from the text, tiers over projections (2026-10-21, lane `arch`)
+
+Lane `scale`'s "Recommended changes now", items 1–3, applied before the core builds on the shape.
+
+### 1. Write sets from the program text (`L/WriteSet.lean`, `Arena/Frame.lean`, `Arena/WriteSets.lean`)
+
+* `L/WriteSet.lean` (namespace `L`, a `module`): `closedW ctl p A C fs` (a `Bool`): every function
+  of the call-closed set `fs` stores only into word arrays of `A` and into words of `C` of the
+  control array `ctl` (index a literal `k` or `k + (e & 1)`), no byte stores. `run_frame` /
+  `invoke_frame`: every run / call of `f ∈ fs` ends in `Fr m m'`, for any frame relation `Fr` that
+  is reflexive and closed under the allowed stores (`WFrame`). `closedW_of_agree`: `closedW` reads
+  only the lookups of `fs`, so a program predicate (`LiftProg p`) inherits the concrete program's
+  write set. The spike's `Spike/WriteSet{,Inst}.lean` are removed (superseded).
+* `Frame.lean`: the arena instance. `closedA p A C fs := closedW CTL p A C fs`;
+  `run_memFrame` (→ `MemFrame A C m m'` and the same byte arrays), `invoke_memFrame` (the same as a
+  triple, for a caller's `vcgen`); `Stable A C X` (a memory predicate every frame of `(A, C)`
+  keeps) and **`run_keeps`**: a `Stable` predicate survives every run, with no lemma about the
+  program.
+* **The six (in fact 21) `*_push` count stores** now write `CTL[k + (t & 1)]`; the models
+  (`apushMem`, …, `pushG`) write `CTL (k + (t &&& 1))`. `pushG_ctl` takes `t ≤ 1` (via
+  `and_one_of_le`) and keeps its old right-hand side, so nothing downstream changed: every
+  `*Store`/`*Refine` proof and the `#guard`s passed unchanged.
+* Write sets, each `by decide +kernel` (≤ 0.5 s), in `WriteSets.lean`: `liftEntry_frame` (`LiftProg p` + `lift_entry`:
+  `liftA` = arrays 41‥46 and the six expression tables of `mk_*`, `liftC` = `CTL` 42, 43 and their
+  counts), `instEntry_frame` (`instA = 47 :: liftA`, `instC = 44 :: 45 :: liftC`), `bbMemo_frame`
+  (`[24]`, `CTL` 24, 25), `frMemo_frame` (`[48]`, `CTL` 46, 47), `storeProg_frame` (`nat_add_lit`/`intern_lit`: pool, `lit`, `CTL` 0, 2, 3).
+* Not replaced: front2's `mkAppW_above` … (`ApplyExprRefine.lean`) are frames of the **models**
+  (`mkAppW m f x = some (r, m')`), not of runs. A text frame is about runs, and a model's `some`
+  does not give a run (no termination argument), so these stay hand-written. A run-level user (any
+  refinement theorem stated over `run`, e.g. `liftEntry_run`, `instEntry_run`, `bbMemo_run`) gets
+  the frame for free.
+
+**Migration notes (item 1).** (a) A new L program: give it a concrete `*Prog`, a function list
+and its `(A, C)`, prove `closedA prog A C fns = true := by decide +kernel`, and for its program
+predicate `closedW_of_agree prog_closed (by simp only [fns, List.forall_mem_cons, …]; exact
+⟨hp.f₁.trans rfl, …⟩)` (pattern: `WriteSets.lean`). (b) A tier-indexed `CTL` store must
+mask the tier: `CTL.u64[k + (t & 1)]`, or `closedW` rejects it. (c) To carry your relation `X`
+across a run of `f`: `run_keeps (hp.closed …) (by decide) hX hrun hx` with `hX : Stable A C X`
+(for `StateDR`: `fun m m' hf h => StateDR.frame hf (by decide) (by decide) (by decide) h`). (d)
+`pushG_ctl` has a new hypothesis `t ≤ 1` (third explicit argument after `hS m t vs j c`).
+
+### 3. The relation by tier, over projections (`ArenaRel.lean`, `Tiers.lean`)
+
+* **`MemosR m a.memos`** (the four walk memos, 10 when complete) is now one nested field
+  `ArenaR.memos` instead of four flat fields: `ArenaR` has 20 fields (19 tables and the memo
+  group) and stays that size when the remaining six memos land (they go into `MemosR`, 10 fields).
+  `DerR` (10 fields) is unchanged; `ArenaD = ArenaR ∧ DerR` stays the walks' tier.
+* **Ownership lists and one group frame each**: `storeArrs`/`storeCtl` (the store tier),
+  `memoArrs`/`memoCtl` (the memo tier), `arenaArrs`/`arenaCtl` (both). `MemosR.frame`,
+  `ArenaR.frame` (a writer that avoids `arenaArrs`/`arenaCtl` keeps `ArenaR`; `frame_above` and
+  `frame_ext` are now two-line corollaries), `ArenaR.stable` (for `run_keeps`), and
+  `ArenaR.with_memos`: a memo writer keeps `ArenaR` given the new `MemosR` (built with
+  `memos_build`, the memo tier's `arena_build`). The four memo set/clear lemmas
+  (`ArenaR.memo_set`, `ArenaD.lmemo_set`, …) use it; `arena_build` frames the memo group with one
+  `MemosR.frame` instead of four `memoRG_frame`s. `apart_own` turns an ownership list into the
+  per-table `Apart`.
+* **`Tiers.lean`**: `CoreR m a.caches` (arrays 96‥127, `CTL` 96‥127), `PinsR m a.pins` (128‥131),
+  `EnvR m vis fe` (132‥143, `CTL` 128‥135) as stubs (no fields: they claim nothing), each with
+  its group frame from the reserved range (`AvoidA`/`AvoidC`), and `CheckR m a vis fe` (the four
+  tiers). **`CheckR.of_walk`**: a run with L write set below 64 whose twin side keeps `cp` keeps
+  `CoreR`, `PinsR`, `EnvR`. `TierWalks.lean` lifts all four walk entries to `CheckR`
+  (`liftEntry_runC`, `instEntry_runC`, `bbMemo_runC`, `frMemo_runC`) with no lemma about the
+  walks: the L frame from `WriteSets.lean`, the twin frame from `Keeps.lean`. The memo-only walks
+  keep the store too (`Keeps sp`), so `bbMemo_runC`/`frMemo_runC` also get `DerR`, which
+  `bbMemo_run`/`frMemo_run` (`ArenaR` only) did not give.
+* `ArenaR` and every group stay opaque to `grind` (structures, fields named in proofs).
+* Lane `exprops` asked: `Walk.lean`'s `appK₁`/`bindK₁`/`letK₁` and `WalkRefine.lean`'s
+  `appArm_ok`/`bindArm_ok`/`letArm_ok` are renamed `bbAppK₁`, …, `bbAppArm_ok`, …; every walk file
+  can now be imported together.
+* Finding: `omega` does not see through `abbrev ArrId := Nat` (`docs/gaps/omega-abbrev-nat.lean`).
+
+### 2. Twin-side frames by composition (`Keeps.lean`)
+
+`Keeps π op` (irreducible): every successful run keeps `π a`. Closed under `bind`/`pure`/`fail`
+and, by `split`, under `if`/`match`. Primitives: the reads and `view` keep anything, the memo
+writes keep any `MemoBlind` projection, the interns keep `cp a = (a.caches, a.pins)`. The tactic
+`keeps_auto [arms] using ih, blind` does a walk's `succ` case: so each walk family is one
+induction of 4 lines (`keeps_inst1Go`, `keeps_liftGo`; `keeps_bvarBoundGo`, `keeps_fvarRangeGo`
+keep `sp = (store, caches, pins)`), and each entry 3 lines. This replaces adding `cp a' = cp a`
+to the `GoOK` posts: the posts stay as they are, and a new walk proves its `Keeps` by the same
+four lines. The spikes `Spike/TwinKeep.lean`, `Spike/WriteSet{,Inst}.lean` are removed.
+
+### The memory map (every array and `CTL` word)
+
+Word arrays (byte arrays are a separate id space: `IN` = byte array 0 is the input buffer).
+
+| array | name | owner (relation) | meaning |
+|---:|---|---|---|
+| 0 | `POOL` | `ArenaR` (`lit`, `ls`, `nstr` read it) | limb pool: limbs, level lists' handles, names' bytes |
+| 1 | `CTL` | – | control words (below) |
+| 2, 3 | `REC`, `SLOT` | `ArenaR.lit` | expression `lit` records / cons slots |
+| 4, 5 | `AREC`, `ASLOT` | `ArenaR.app` | expression `app` |
+| 6, 7 | `SREC`, `SSLOT` | `ArenaR.succ` | level `succ` |
+| 8, 9 | `ZREC`, `ZSLOT` | `ArenaR.zero` | level `zero` |
+| 10, 11 | `MREC`, `MSLOT` | `ArenaR.max` | level `max` |
+| 12, 13 | `IREC`, `ISLOT` | `ArenaR.imax` | level `imax` |
+| 14, 15 | `PREC`, `PSLOT` | `ArenaR.param` | level `param` |
+| 16, 17 | `SOREC`, `SOSLOT` | `ArenaR.sort` | expression `sort` |
+| 18, 19 | `CREC`, `CSLOT` | `ArenaR.const` | expression `const` |
+| 20, 21 | `LEREC`, `LESLOT` | `ArenaR.letE` | expression `letE` |
+| 22, 23 | `BREC`, `BSLOT` | `ArenaR.bvar` | expression `bvar` |
+| 24 | `BMEMO` | `MemosR.bvar` | `bvarBound` memo (`bvarBC`) |
+| 25, 26 | `FVREC`, `FVSLOT` | `ArenaR.fvar` | expression `fvar` |
+| 27, 28 | `LAREC`, `LASLOT` | `ArenaR.lam` | expression `lam` |
+| 29, 30 | `FAREC`, `FASLOT` | `ArenaR.forallE` | expression `forallE` |
+| 31, 32 | `PJREC`, `PJSLOT` | `ArenaR.proj` | expression `proj` |
+| 33, 34 | `NAREC`, `NASLOT` | `ArenaR.nanon` | name `anonymous` |
+| 35, 36 | `NSREC`, `NSSLOT` | `ArenaR.nstr` | name `str` |
+| 37, 38 | `NNREC`, `NNSLOT` | `ArenaR.nnum` | name `num` |
+| 39, 40 | `LSREC`, `LSSLOT` | `ArenaR.ls` | level lists |
+| 41 | `LMEMO` | `MemosR.lift` | `liftLooseBVars` memo (`liftC`) |
+| 42‥46 | `ADER`, `LADER`, `FADER`, `LEDER`, `PJDER` | `DerR` | derived bvar ranges of `app`, `lam`, `forallE`, `letE`, `proj` |
+| 47 | `IMEMO` | `MemosR.inst1` | `instantiate1` memo (`inst1C`) |
+| 48 | `FRMEMO` | `MemosR.fvar` | `fvarRange` memo (`fvarBC`) |
+| 49‥55 | – | `MemosR` (reserved) | the other six walk memos |
+| 56‥63 | – | reserved (store tier) | scratch epochs, the per-declaration tree heap |
+| 64, 65, 66 | `NID`, `LID`, `EID` | `StateDR` (front) | the export's name/level/expression id tables |
+| 67‥95 | – | reserved (front) | declaration records, `pend` |
+| 96‥127 | – | `CoreR` (stub) | the 14 caches and the eager-depth banks |
+| 128‥131 | – | `PinsR` (stub) | the pin table |
+| 132‥143 | – | `EnvR` (stub) | the environment index |
+| 144‥191 | – | argument relations (reserved) | `PMemo`, walk-local memos, `NestState` |
+
+`CTL` words:
+
+| word | owner | meaning |
+|---:|---|---|
+| 0 | `ArenaR` (`PoolOK`) | pool top |
+| 1 | `ArenaR` (every table) | scratch flag (`≠ 0`: scratch tier open) |
+| `r`, `r + 1` for `r` = 2, 4, …, 22 | `ArenaR` | node counts of tiers 0, 1 of the table with record array `r` (2‥23) |
+| 24, 25 | `MemosR.bvar` | `bvarBound` memo: stamp − 1, live count |
+| `s`, `s + 1` for `s` = 26, 28, …, 40 | `ArenaR` | node counts of the table with slot array `s` (`fvar` … `ls`) |
+| 42, 43 | `MemosR.lift` | lift memo: stamp − 1, live count |
+| 44, 45 | `MemosR.inst1` | `instantiate1` memo |
+| 46, 47 | `MemosR.fvar` | `fvarRange` memo |
+| 48‥61 | `MemosR` (reserved) | the other six memos |
+| 62, 63 | reserved | |
+| 64‥95 | reserved (front) | |
+| 96‥127 | `CoreR` (stub) | cache stamps/counts, eager depth |
+| 128‥135 | `EnvR` (stub) | environment counters |
+| 136‥191 | argument relations (reserved) | |
+
+A count store writes `CTL[k + (t & 1)]` (item 1). `arenaR_init` needs `CTL` ≥ 64 words; the
+reserved tiers will raise that when they get fields.
+
+### Measurements (`lake env lean`, user CPU, one run, this machine under load)
+
+* The 21 `*Store.lean` and 19 `*Refine.lean` files: unchanged (±0.2 s each, +2 lines per store
+  for the masked count), total 56 affected files 261 s before, 262 s after (noise).
+* `ArenaRel.lean`: 975 → 1024 lines (the ownership lists, `MemosR`, `apart_own`, the group
+  frames), 23.0 s → 22.9 s. A first version that proved the ownership side conditions twice per
+  table cost 25.9 s; `ArenaR.frame` now goes through `with_memos`.
+* Memo users (`WalkRefine`, `LiftRefine`, `Inst1Refine`, `FVarRangeRefine`): +3‥4 lines each,
+  1.58/1.92/1.91/1.23 s → 1.23/1.57/1.65/1.2 s.
+* New: `L/WriteSet.lean` 200 lines 1.0 s; `WriteSets.lean` 168 lines 2.2 s (five `decide +kernel`
+  write sets); `Keeps.lean` 201 lines 16.8 s (`keeps_auto` on four walk families; the slowest is
+  `instantiate1Go`, ≈ 6 s); `Tiers.lean` 100 lines 0.5 s; `TierWalks.lean` 70 lines 0.7 s.
+  Removed: the spikes `WriteSet{,Inst}.lean`, `TwinKeep.lean` (373 lines).
+* Lifting a walk to `CheckR`: about 8 lines (`TierWalks.lean`), none of which looks at the walk.
+
+**Migration notes (items 2, 3).** (a) `hR.memo`/`.lmemo`/`.imemo`/`.fmemo` are now
+`hR.memos.bvar`/`.lift`/`.inst1`/`.fvar`. A new memo: a field of `MemosR` (and its row in
+`memoArrs`/`memoCtl` and the map above), not of `ArenaR`; `memos_build` and `MemosR.frame` get one
+line each. A memo writer: `exact hR.with_memos hf (by apart) (by apart) (by memos_build hR.memos,
+hf with exact memoRG_set …)` (pattern: `ArenaR.memo_set`, `WalkRefine.lean`). (b) A writer outside
+the arena: `ArenaR.frame` with `∀ b ∈ A, b ∉ arenaArrs` (`by decide` for concrete `A`; for `CTL`
+words above 63 `not_mem_arenaCtl`). (c) A new walk: prove `Keeps cp` (or `Keeps sp` if it interns
+nothing) by `induction F` + `keeps_auto [arms] using ih, cp_blind` (`Keeps.lean`), its write set in
+`WriteSets.lean`, and its `*_runC` in `TierWalks.lean` is three lines. (d) A new tier relation:
+a structure over the projection it reads, arrays from its reserved range above, one `frame`
+lemma from `AvoidA`/`AvoidC`, a field of `CheckR`. (e) `Walk.lean`'s continuations and
+`WalkRefine.lean`'s arm lemmas are renamed with a `bb` prefix.
+
+### `sorry`s
+
+None. The stubs `CoreR`, `PinsR`, `EnvR` have no fields (they claim nothing yet).
+
+## Progress census (2026-10-21, lane `census`)
+
+Hard numbers for planning: `scripts/census.py` (PLAN.md, "Progress census"). Pieces:
+`ConAgua/Census/Attr.lean` (the three attributes, an environment extension of links),
+`ConAgua/Census/Main.lean` (`lake exe census`: targets and links as TSV), `scripts/census.py`
+(weights, coverage, report), `scripts/census-rust.tsv` (Rust lines per cited twin, regenerated with
+`--rust <con-ron checkout>` from the `Lean twin:`/`con-leche:` doc lines), `docs/progress.{md,csv}`.
+
+### Decisions
+* **Targets are computed, not listed.** Every `ConRon.*`/`ConLeche.*` definition reached from
+  `ConAgua.Final.TwinAccepts` through definition values (not types, not proofs), walking through but
+  not counting instances (and the functions `deriving` makes inside them), elaborator/compiler
+  auxiliaries, projections, and `ConAgua`'s own glue predicates (`SeqAccepts`); not walking into type
+  formers or `Prop`-valued definitions. Members of a well-founded mutual block are edges of each other
+  (they call each other through `_mutual`, which names no member: without this the walk missed every
+  `liftArm*`). Opaque (`partial`) definitions are followed through `@[implemented_by]`. ROM modules
+  (con-leche's basis/axiom/pin data, `Frontend.PreludeText`) are not targets. 1350 targets; con-ron's
+  own census counts 1632 arena definitions in all (some unreached, e.g. `Bench`, `Denote`).
+* **Instances need `loadExts := true`** on `importModules` (and so `enableInitializersExecution`):
+  without it the instance table is empty and every `instDecidableEq…` counts as a target.
+* **Links by attribute, target names unresolved.** Most L files are `module` files that cannot import
+  con-ron, so `@[l_impl T]` stores `T` as written; the tool reports a link whose `T` is not a target,
+  an `l_impl` not on a `FunDecl` and a `refines` not on a theorem as bad links.
+* **Proven = complete, sorry-free refinement; parts never count**, except where
+  `COMPLETE_BY_PARTS` lists the arms that make up a target (`internE` = ten `refines_part` arms,
+  `internLNode`, `internNNode`, `parseNameEntryD`). A target reached only through proven targets is
+  proven ("covered": the store helpers under `internLNode`, the arms under `liftLooseBVarsFast`).
+  Coverage does not apply to `written`: `frontRun` is linked to `parseBytes` but aborts on declaration
+  lines, so `validateIndD` is not written.
+* **Weights**: Lean code lines of the twin definition (no blanks, comments, doc comments, nested
+  targets), and Rust lines of the con-ron functions citing it.
+
+### Findings
+* `ConAgua.Arena.Walk` and `ConAgua.Arena.Lift` both declare `L.Arena.appK₁.appK₂` (and the emitters
+  each declare `main`): no module can import both walks. The census imports in greedy groups to
+  work around it; the first lane that needs both must rename one.
+* "Proven" is against the relation as it stands (`ArenaR` without derived columns, scratch flag,
+  memos beyond `bvarBC`) and in the accept direction only (an L function that always aborts refines
+  anything). The `refines`/`refines_part` choice is where completeness is recorded; it is a human
+  judgement, so reviewers should check it.
+* `internLit_refinesA` covers `.natVal` literals only, so `internE`/`internNodeE` are not complete;
+  `internLamE`, `internForallEE`, `internLNode`, `internNNode`, `internLsNode` are.
+* The Stage B scanner functions that return a record are refined in their validity and end position
+  only (`refines_part … "validity"`); the position-valued ones (`skipWs`, `keyAt`, `strClose`, …) and
+  `scanBool` are refined completely.
+
+### Numbers at landing (master `59d93f8` + census)
+1350 targets: 91 proven, 0 with `sorry`, 40 with L code only, 1219 nothing; by Lean lines 905 of
+11902 proven (7.6 %), 1388 with L; by Rust lines 1413 of 30758 (4.6 %). 89 `refines_part` theorems
+(among them all twelve `natOpResult` literal arms and 18 of the 19 store arms).
+Per phase in `docs/progress.md`. The census takes about 30 s (the link pass imports the modules in a few groups; axioms come
+from the oleans' precomputed tables).

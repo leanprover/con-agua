@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.Store
 meta import ConAgua.L.Semantics
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -160,7 +161,7 @@ def sopushOK (m : Mem) (t : Word) : Bool :=
 
 /-- The memory after `sort_push(t, u, j)` appended node `c`. -/
 def sopushMem (m : Mem) (t u j c : Word) : Mem :=
-  (((m.set64 SOREC (c * 2 + t) u).set64 SOSLOT (j * 2 + t) (c + 1)).set64 CTL (16 + t) (c + 1))
+  (((m.set64 SOREC (c * 2 + t) u).set64 SOSLOT (j * 2 + t) (c + 1)).set64 CTL (16 + (t &&& 1)) (c + 1))
 
 def sortPush : FunDecl := lfn (t, u, j) locals (c) {
   c := CTL.u64[16 + t];
@@ -169,7 +170,7 @@ def sortPush : FunDecl := lfn (t, u, j) locals (c) {
   if ((len(SOSLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   SOREC.u64[c * 2 + t] := u;
   SOSLOT.u64[j * 2 + t] := c + 1;
-  CTL.u64[16 + t] := c + 1;
+  CTL.u64[16 + (t & 1)] := c + 1;
   return c
 }
 
@@ -225,6 +226,7 @@ def sointernW (m : Mem) (u : Word) : Option (Word × Mem) :=
     some (sortP + socnt m 0, sopushMem m 0 u (rs₀.tail.tail.headD 0) (socnt m 0))
   else none
 
+@[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internSort : FunDecl := lfn (u) locals (h, sk, fd, i, j, d) {
   h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫;
   sk := 0;

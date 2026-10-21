@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.Store
 meta import ConAgua.L.Semantics
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -164,7 +165,7 @@ def mpushOK (m : Mem) (t : Word) : Bool :=
 /-- The memory after `max_push(t, u, v, j)` appended node `c`. -/
 def mpushMem (m : Mem) (t u v j c : Word) : Mem :=
   ((((m.set64 MREC (c * 4 + t * 2) u).set64 MREC (c * 4 + t * 2 + 1) v).set64 MSLOT (j * 2 + t)
-    (c + 1)).set64 CTL (10 + t) (c + 1))
+    (c + 1)).set64 CTL (10 + (t &&& 1)) (c + 1))
 
 def maxPush : FunDecl := lfn (t, u, v, j) locals (c, k) {
   c := CTL.u64[10 + t];
@@ -175,7 +176,7 @@ def maxPush : FunDecl := lfn (t, u, v, j) locals (c, k) {
   MREC.u64[k] := u;
   MREC.u64[k + 1] := v;
   MSLOT.u64[j * 2 + t] := c + 1;
-  CTL.u64[10 + t] := c + 1;
+  CTL.u64[10 + (t & 1)] := c + 1;
   return c
 }
 
@@ -226,6 +227,7 @@ def minternW (m : Mem) (u v : Word) : Option (Word × Mem) :=
     some (maxP + mcnt m 0, mpushMem m 0 u v (rs₀.tail.tail.headD 0) (mcnt m 0))
   else none
 
+@[l_impl ConRon.Arena.internLNode]
 def internMax : FunDecl := lfn (u, v) locals (h, fd, i, j, d) {
   h := ((⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ ^ v) * ⟪fnvPrime⟫;
   (fd, i, j, d) := call max_find(0, u, v, h);

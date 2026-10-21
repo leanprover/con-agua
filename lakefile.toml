@@ -30,13 +30,17 @@ globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.A
   "ConAgua.Arena.LamStore", "ConAgua.Arena.LamRefine",
   "ConAgua.Arena.ForallStore", "ConAgua.Arena.ForallRefine",
   "ConAgua.Arena.BVarStore", "ConAgua.Arena.BVarRefine", "ConAgua.Arena.MemoLib", "ConAgua.Arena.ViewL", "ConAgua.Arena.ExprMk", "ConAgua.Arena.DerRel", "ConAgua.Arena.Lift", "ConAgua.Arena.LiftSpec", "ConAgua.Arena.LiftBench", "ConAgua.Arena.Inst1", "ConAgua.Arena.Inst1Spec", "ConAgua.Arena.Inst1Refine", "ConAgua.Arena.Inst1Bench", "ConAgua.Arena.LiftRefine", "ConAgua.Arena.View", "ConAgua.Arena.MemoLibRel",
+  "ConAgua.Arena.HasLooseBVar", "ConAgua.Arena.FVarRange", "ConAgua.Arena.FVarRangeRefine",
+  "ConAgua.Arena.LiftBenchComp", "ConAgua.Arena.LiftEmit",
+  "ConAgua.Arena.Inst1BenchComp", "ConAgua.Arena.Inst1Emit",
   "ConAgua.Arena.LsStore", "ConAgua.Arena.LsRefine", "ConAgua.Arena.PoolSlice",
   "ConAgua.Arena.NStrStore", "ConAgua.Arena.NStrRefine",
   "ConAgua.Arena.NAnonStore", "ConAgua.Arena.NAnonRefine",
   "ConAgua.Arena.NNumStore", "ConAgua.Arena.NNumRefine",
   "ConAgua.Arena.FVarStore", "ConAgua.Arena.FVarRefine",
   "ConAgua.Arena.ProjStore", "ConAgua.Arena.ProjRefine",
-  "ConAgua.Arena.Frame", "ConAgua.Arena.ArenaRel",
+  "ConAgua.Arena.Frame", "ConAgua.Arena.ArenaRel", "ConAgua.Arena.NatArms",
+  "ConAgua.Arena.WriteSets", "ConAgua.Arena.Keeps", "ConAgua.Arena.Tiers", "ConAgua.Arena.TierWalks",
   "ConAgua.Arena.Walk", "ConAgua.Arena.WalkRefine", "ConAgua.Arena.WalkBench", "ConAgua.Arena.WalkEmit",
   "ConAgua.Arena.WalkBenchLean",
   "ConAgua.Capstone",
@@ -91,8 +95,27 @@ root = "ConAgua.Compiler.Bench"
 name = "walkbench"
 root = "ConAgua.Arena.WalkBenchLean"
 
+# Baseline for the compiled lift benchmark (DESIGN.md, lane `exprops2`): con-ron's compiled arena
+# `liftLooseBVarsFast` on a deep term.
+[[lean_exe]]
+name = "liftbenchlean"
+root = "ConAgua.Arena.LiftBenchLean"
+
+# Baseline for the compiled instantiate1 benchmark (DESIGN.md, lane `exprops2`): con-ron's
+# compiled arena `instantiate1Fast` on a deep term.
+[[lean_exe]]
+name = "instbenchlean"
+root = "ConAgua.Arena.Inst1BenchLean"
+
 # Baseline for the Stage B validator (DESIGN.md, "Stage B"): con-leche's compiled `scanLineFwd`
 # over a lean4export file, with the validator's driver.
 [[lean_exe]]
 name = "valbench"
 root = "ConAgua.Scan.Bench"
+
+# The progress census (scripts/census.py, PLAN.md "Progress census"): dumps the twin targets
+# reached from `TwinAccepts` and the `@[l_impl]`/`@[refines]` links with their axioms.
+[[lean_exe]]
+name = "census"
+root = "ConAgua.Census.Main"
+supportInterpreter = true

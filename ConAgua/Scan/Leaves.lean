@@ -3,6 +3,7 @@ module
 public import ConAgua.L.Notation
 public import ConAgua.L.Logic
 meta import ConAgua.L.Semantics
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -38,6 +39,7 @@ def skipWsLoop : Stmt := lblk (i) {
   while i < len(IN.u8) && (IN.u8[i] == 32 || IN.u8[i] == 9 || IN.u8[i] == 13) { i += 1 }
 }
 
+@[l_impl ConLeche.Frontend.skipWs]
 def skipWs : FunDecl := lfn (i) { ⟪skipWsLoop⟫; return i }
 
 /-- The model: the first position `≥ i` whose byte is not JSON whitespace, or `b.size`. -/
@@ -86,6 +88,7 @@ theorem skipWsLoop_step_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
   Triple.step_exec (skipWsLoop_spec p b hb (n + 1) s₀ hm hi)
 
 include hp in
+@[refines ConLeche.Frontend.skipWs]
 theorem skipWs_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word)
     (hi : i.toNat ≤ b.size) :
     ⦃fun s => s = s₀⦄
@@ -106,6 +109,7 @@ def skipDigitsLoop : Stmt := lblk (i) {
   while i < len(IN.u8) && 48 <= IN.u8[i] && IN.u8[i] <= 57 { i += 1 }
 }
 
+@[l_impl ConLeche.Frontend.skipDigits]
 def skipDigits : FunDecl := lfn (i) { ⟪skipDigitsLoop⟫; return i }
 
 /-- The model: the position after the decimal digit run at `i`. -/
@@ -176,6 +180,7 @@ theorem skipDigitsLoop_step_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = 
   Triple.step_exec (skipDigitsLoop_spec p b hb (n + 1) s₀ hm hi)
 
 include hp in
+@[refines ConLeche.Frontend.skipDigits]
 theorem skipDigits_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word)
     (hi : i.toNat ≤ b.size) :
     ⦃fun s => s = s₀⦄
@@ -200,6 +205,7 @@ def newlineFromLoop : Stmt := lblk (k) {
   }
 }
 
+@[l_impl ConLeche.Frontend.newlineFrom]
 def newlineFrom : FunDecl := lfn (k) { ⟪newlineFromLoop⟫; return 0 }
 
 /-- The model: `1` if there is a newline at or after `i`, else `0`. -/
@@ -246,6 +252,7 @@ theorem newlineFromLoop_step_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN =
   Triple.step_exec (newlineFromLoop_spec p b hb (n + 1) s₀ hm hi)
 
 include hp in
+@[refines ConLeche.Frontend.newlineFrom]
 theorem newlineFrom_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word)
     (hi : i.toNat ≤ b.size) :
     ⦃fun s => s = s₀⦄
@@ -272,6 +279,7 @@ def keyEndLoop : Stmt := lblk (j, c) {
   }
 }
 
+@[l_impl ConLeche.Frontend.keyEnd]
 def keyEnd : FunDecl := lfn (j) locals (c) { ⟪keyEndLoop⟫; return 0 }
 
 /-- The model: the closing quote of the key whose contents start at `j`, or `0`. -/
@@ -325,6 +333,7 @@ theorem keyEndLoop_step_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
   Triple.step_exec (keyEndLoop_spec p b hb (n + 1) s₀ hm hj)
 
 include hp in
+@[refines ConLeche.Frontend.keyEnd]
 theorem keyEnd_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j : Word)
     (hj : j.toNat ≤ b.size) :
     ⦃fun s => s = s₀⦄
@@ -348,6 +357,7 @@ def hasEscapeLoop : Stmt := lblk (j, e) {
   }
 }
 
+@[l_impl ConLeche.Frontend.hasEscape]
 def hasEscape : FunDecl := lfn (j, e) { ⟪hasEscapeLoop⟫; return 0 }
 
 /-- The model: `1` if the string body `[j, e)` contains a backslash, else `0`. -/
@@ -398,6 +408,7 @@ theorem hasEscapeLoop_step_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b
   Triple.step_exec (hasEscapeLoop_spec p b hb (n + 1) s₀ hm hj)
 
 include hp in
+@[refines ConLeche.Frontend.hasEscape]
 theorem hasEscape_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e : Word)
     (hj : j.toNat ≤ b.size) :
     ⦃fun s => s = s₀⦄
@@ -416,6 +427,7 @@ end hasEscape
 
 No loop: a call to `skip_digits` and two comparisons. -/
 
+@[l_impl ConLeche.Frontend.numEnd]
 def numEnd : FunDecl := lfn (i) locals (e) {
   e := call skip_digits(i);
   if e == i { return i }
@@ -440,6 +452,7 @@ variable (p : Prog) (hp1 : p.lookup "skip_digits" = some skipDigits)
 include hb
 
 include hp1 hp2 in
+@[refines ConLeche.Frontend.numEnd]
 theorem numEnd_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word)
     (hi : i.toNat ≤ b.size) :
     ⦃fun s => s = s₀⦄

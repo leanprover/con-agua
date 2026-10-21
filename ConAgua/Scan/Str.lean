@@ -10,6 +10,7 @@ meta import ConAgua.L.Semantics
 meta import ConAgua.L.Examples
 meta import ConAgua.Scan.Leaves
 meta import ConAgua.Scan.Utf8
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -148,6 +149,7 @@ def hexValN (c : Word) : Word × Word :=
   else if 65 ≤ c ∧ c ≤ 70 then (1, c - 55)
   else (0, 0)
 
+@[l_impl ConLeche.Frontend.hexVal]
 def hexVal : FunDecl := lfn (c) {
   if 48 <= c && c <= 57 { return (1, c - 48) };
   if 97 <= c && c <= 102 { return (1, c - 87) };
@@ -164,6 +166,7 @@ def hex4N (b : Array UInt8) (e j : Word) : Word × Word :=
   if a.1 = 0 ∨ x.1 = 0 ∨ y.1 = 0 ∨ z.1 = 0 then (0, 0)
   else (1, (a.2 <<< 12) ||| (x.2 <<< 8) ||| (y.2 <<< 4) ||| z.2)
 
+@[l_impl ConLeche.Frontend.hex4]
 def hex4 : FunDecl := lfn (j, e) locals (c, ok, a, x, y, z) {
   c := call byte_in(j, e);
   (ok, a) := call hex_val(c);
@@ -188,6 +191,7 @@ def hex3N (b : Array UInt8) (e j : Word) : Word × Word :=
   if a.1 = 0 ∨ x.1 = 0 ∨ y.1 = 0 then (0, 0)
   else (1, (a.2 <<< 8) ||| (x.2 <<< 4) ||| y.2)
 
+@[l_impl ConLeche.Frontend.hex3]
 def hex3 : FunDecl := lfn (j, e) locals (c, ok, a, x, y) {
   c := call byte_in(j, e);
   (ok, a) := call hex_val(c);
@@ -242,6 +246,7 @@ def uNext : FunDecl := lfn (j, e, v) locals (c, d, f, ok, w) {
   return j + 6
 }
 
+@[l_impl ConLeche.Frontend.unescape]
 def unescape : FunDecl := lfn (j, e) locals (r, c, d, ok, v) {
   r := j;
   ⟪unescapeLoop⟫;
@@ -402,6 +407,7 @@ end
 
 /-! ## `scan_string` -/
 
+@[l_impl ConLeche.Frontend.scanString]
 def scanString : FunDecl := lfn (i) locals (e, h, ok) {
   if i < len(IN.u8) && IN.u8[i] == 34 {
     e := call str_close(i + 1);
@@ -494,6 +500,7 @@ theorem byteIn_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (k e : Wor
 
 include hph in
 attribute [local lang_grind] hexValN in
+@[refines ConLeche.Frontend.hexVal]
 theorem hexVal_spec (n : Nat) (s₀ : St) (c : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "hex_val" [c]
@@ -603,6 +610,7 @@ theorem unescape_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e : W
 attribute [local lang_grind] scanStringN
 
 include hpc hpv hpb hph hp4 hp3 hpx hpu hps hpe hpt in
+@[refines_part ConLeche.Frontend.scanString "validity"]
 theorem scanString_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_string" [i]

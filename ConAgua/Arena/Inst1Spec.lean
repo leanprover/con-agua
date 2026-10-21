@@ -4,6 +4,7 @@ public import ConAgua.Arena.Inst1
 public import ConAgua.Arena.LiftSpec
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.Store
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -131,6 +132,7 @@ theorem iclrK_some (r : Word) (m₁ : Mem) (h0 : rdW (m₁.arr64 CTL) 44 + 2 ≠
 grind_pattern [arena_grind] instEntryW_eq => instEntryW n m e v d
 grind_pattern [arena_grind] iclrK_some => iclrK (some (r, m₁))
 
+@[l_impl ConRon.Arena.instantiate1Fast]
 def instEntry : FunDecl := lfn (e, v, d) locals (r, u) {
   u := call if_clear();
   r := call inst_go(e, d, v);

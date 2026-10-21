@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Front.Fields
 meta import ConAgua.L.Semantics
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -259,6 +260,7 @@ def exprLoop : Stmt := lblk (i, w, pl, idx, a, c, d, tag, ks, k, v, e, q, x, y, 
   }
 }
 
+@[l_impl ConLeche.Frontend.scanLineLoop]
 def recExprLoop : FunDecl := lfn (i) locals (w, pl, idx, a, c, d, tag, ks, k, v, e, q, x, y, z) {
   w := 1;
   ⟪exprLoop⟫;

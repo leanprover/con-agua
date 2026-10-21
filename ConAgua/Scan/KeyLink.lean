@@ -3,6 +3,7 @@ module
 public import ConAgua.Scan.WordLink
 public import ConAgua.Scan.LeafLink
 public import ConAgua.Scan.Key
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -69,6 +70,7 @@ theorem byteAt_pos_iff (hsize : b.size < 2 ^ 64) (pos : USize) (wpos : Word) (li
 /-! ## `key_at` -/
 
 include h64 in
+@[refines ConLeche.Frontend.keyAt]
 theorem keyAt_eq_keyAtN (hsize : b.size < 2 ^ 63) (i kl : USize)
     (hi : i.toNat + 1 + kl.toNat < b.size) :
     UInt64.ofNat (keyAt b i kl).ctorIdx = keyAtN b.data i.toUInt64 kl.toUInt64 := by
@@ -541,6 +543,7 @@ include h64 in
 (`skip_ws`'s `LeafLink.skipWs_toUInt64_eq`); `i` when the colon is missing. The model's extra
 `p < len(IN.u8)` guard is implied either way (`byteW_eq_zero_of_ge`'s contrapositive: a colon
 isn't `0`), so the two conditions agree without it mattering which side needs it. -/
+@[refines ConLeche.Frontend.valueAt]
 theorem valueAt_eq_valueAtN (hsize : b.size < 2 ^ 63) (i ke : USize) :
     (valueAt b i ke).toUInt64 = valueAtN b.data i.toUInt64 ke.toUInt64 := by
   have hsize64 : b.size < 2 ^ 64 := by omega
