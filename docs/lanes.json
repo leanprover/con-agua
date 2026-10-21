@@ -1,38 +1,230 @@
 [
- {"lane":"survey","model":"opus","status":"done","focus":"Survey of con-ron, Kraken, toolchains; chose the first spike target"},
- {"lane":"vendor","model":"sonnet","status":"done","focus":"Vendored con-leche + con-ron onto nightly-2026-10-20"},
- {"lane":"lang","model":"opus","status":"done","focus":"The language L: syntax, semantics, vcgen proof support"},
- {"lane":"compiler","model":"opus","status":"done","focus":"Verified compiler L → x64 (compile_correct)"},
- {"lane":"scan","model":"sonnet","status":"done","focus":"Scanner leaf functions, link to con-leche"},
- {"lane":"bridge","model":"opus","status":"done","focus":"Theorem 1 builds on nightly; vcgen ∧-split regression bisected"},
- {"lane":"arena","model":"opus","status":"done","focus":"Limb-pool Nat add/mul, first arena refinement"},
- {"lane":"lext","model":"opus","status":"done","focus":"L extensions: multi-return, mulhi, constant data"},
- {"lane":"store","model":"opus","status":"done","focus":"lit intern table, LitR"},
- {"lane":"stageb","model":"opus","status":"done","focus":"Full NDJSON line validator = scanLineFwd"},
- {"lane":"capstone","model":"sonnet","status":"done","focus":"First x64 end-to-end theorems"},
- {"lane":"store2","model":"opus","status":"done","focus":"Grind-automated relation; app table; generalization numbers"},
- {"lane":"storelib","model":"opus","status":"done","focus":"Generic store library; level succ table"},
- {"lane":"tables","model":"sonnet","status":"done","focus":"7 more store tables"},
- {"lane":"walk","model":"opus","status":"done","focus":"ArenaR over all tables; first cached walk (bbMemo)"},
- {"lane":"imul","model":"sonnet","status":"done","focus":"Kraken imul printer bug; asm checker"},
- {"lane":"tables2","model":"opus","status":"done","focus":"Remaining 8 tables; walk over every node kind"},
- {"lane":"capB","model":"sonnet","status":"done","focus":"validate_x64; imul emitted directly"},
- {"lane":"roadmap","model":"opus","status":"done","focus":"docs/ROADMAP.md: inventory and estimates"},
- {"lane":"final","model":"opus","status":"done","focus":"Final theorem checker_x64_accepts + audit"},
- {"lane":"exprops","model":"opus","status":"done","focus":"Memo library, view layer, liftLooseBVars, instantiate1"},
- {"lane":"nat","model":"sonnet","status":"done","focus":"Bitwise Nat ops (cmp stuck)"},
- {"lane":"front","model":"opus","status":"done","focus":"Name/level lines into the stores"},
- {"lane":"cache","model":"sonnet","status":"done","focus":"Shared Lake artifact cache"},
- {"lane":"census","model":"opus","status":"done","focus":"Progress census"},
- {"lane":"scale","model":"opus","status":"done","focus":"Does the relation scale? assessment"},
- {"lane":"exprops2","model":"sonnet","status":"done","focus":"hasLooseBVar, fvarRange, benchmarks"},
- {"lane":"nat2","model":"opus","status":"done","focus":"cmp, sub, shifts, pow, divmod, gcd; all 15 natOpResult arms"},
- {"lane":"arch","model":"opus","status":"done","focus":"Text-derived frames; relation split by tier"},
- {"lane":"front2","model":"opus","status":"done","focus":"Expression and declaration lines; bytes → stores theorem"},
- {"lane":"libs","model":"opus","status":"done","focus":"Scratch-tier epochs; memo tree values, tombstones, generations"},
- {"lane":"levels","model":"opus","status":"running","focus":"Phase 3: level ops, scratch heap, leq"},
- {"lane":"pinsenv","model":"opus","status":"running","focus":"PinsR, EnvR, phase-2 declaration loop skeleton"},
- {"lane":"whnf","model":"opus","status":"running","focus":"Phase 5: CoreR caches, whnf family"},
- {"lane":"cresults","model":"opus","status":"running","focus":"Compiler: any number of return values; frontAll_x64"},
- {"lane":"strlit","model":"sonnet","status":"running","focus":"String literals in the lit store"}
+{
+"lane": "survey",
+"model": "opus",
+"status": "done",
+"focus": "Survey of con-ron, Kraken, toolchains; chose the first spike target"
+},
+{
+"lane": "vendor",
+"model": "sonnet",
+"status": "done",
+"focus": "Vendored con-leche + con-ron onto nightly-2026-10-20"
+},
+{
+"lane": "lang",
+"model": "opus",
+"status": "done",
+"focus": "The language L: syntax, semantics, vcgen proof support"
+},
+{
+"lane": "compiler",
+"model": "opus",
+"status": "done",
+"focus": "Verified compiler L \u2192 x64 (compile_correct)"
+},
+{
+"lane": "scan",
+"model": "sonnet",
+"status": "done",
+"focus": "Scanner leaf functions, link to con-leche"
+},
+{
+"lane": "bridge",
+"model": "opus",
+"status": "done",
+"focus": "Theorem 1 builds on nightly; vcgen \u2227-split regression bisected"
+},
+{
+"lane": "arena",
+"model": "opus",
+"status": "done",
+"focus": "Limb-pool Nat add/mul, first arena refinement"
+},
+{
+"lane": "lext",
+"model": "opus",
+"status": "done",
+"focus": "L extensions: multi-return, mulhi, constant data"
+},
+{
+"lane": "store",
+"model": "opus",
+"status": "done",
+"focus": "lit intern table, LitR"
+},
+{
+"lane": "stageb",
+"model": "opus",
+"status": "done",
+"focus": "Full NDJSON line validator = scanLineFwd"
+},
+{
+"lane": "capstone",
+"model": "sonnet",
+"status": "done",
+"focus": "First x64 end-to-end theorems"
+},
+{
+"lane": "store2",
+"model": "opus",
+"status": "done",
+"focus": "Grind-automated relation; app table; generalization numbers"
+},
+{
+"lane": "storelib",
+"model": "opus",
+"status": "done",
+"focus": "Generic store library; level succ table"
+},
+{
+"lane": "tables",
+"model": "sonnet",
+"status": "done",
+"focus": "7 more store tables"
+},
+{
+"lane": "walk",
+"model": "opus",
+"status": "done",
+"focus": "ArenaR over all tables; first cached walk (bbMemo)"
+},
+{
+"lane": "imul",
+"model": "sonnet",
+"status": "done",
+"focus": "Kraken imul printer bug; asm checker"
+},
+{
+"lane": "tables2",
+"model": "opus",
+"status": "done",
+"focus": "Remaining 8 tables; walk over every node kind"
+},
+{
+"lane": "capB",
+"model": "sonnet",
+"status": "done",
+"focus": "validate_x64; imul emitted directly"
+},
+{
+"lane": "roadmap",
+"model": "opus",
+"status": "done",
+"focus": "docs/ROADMAP.md: inventory and estimates"
+},
+{
+"lane": "final",
+"model": "opus",
+"status": "done",
+"focus": "Final theorem checker_x64_accepts + audit"
+},
+{
+"lane": "exprops",
+"model": "opus",
+"status": "done",
+"focus": "Memo library, view layer, liftLooseBVars, instantiate1"
+},
+{
+"lane": "nat",
+"model": "sonnet",
+"status": "done",
+"focus": "Bitwise Nat ops (cmp stuck)"
+},
+{
+"lane": "front",
+"model": "opus",
+"status": "done",
+"focus": "Name/level lines into the stores"
+},
+{
+"lane": "cache",
+"model": "sonnet",
+"status": "done",
+"focus": "Shared Lake artifact cache"
+},
+{
+"lane": "census",
+"model": "opus",
+"status": "done",
+"focus": "Progress census"
+},
+{
+"lane": "scale",
+"model": "opus",
+"status": "done",
+"focus": "Does the relation scale? assessment"
+},
+{
+"lane": "exprops2",
+"model": "sonnet",
+"status": "done",
+"focus": "hasLooseBVar, fvarRange, benchmarks"
+},
+{
+"lane": "nat2",
+"model": "opus",
+"status": "done",
+"focus": "cmp, sub, shifts, pow, divmod, gcd; all 15 natOpResult arms"
+},
+{
+"lane": "arch",
+"model": "opus",
+"status": "done",
+"focus": "Text-derived frames; relation split by tier"
+},
+{
+"lane": "front2",
+"model": "opus",
+"status": "done",
+"focus": "Expression and declaration lines; bytes \u2192 stores theorem"
+},
+{
+"lane": "libs",
+"model": "opus",
+"status": "done",
+"focus": "Scratch-tier epochs; memo tree values, tombstones, generations"
+},
+{
+"lane": "levels",
+"model": "opus",
+"status": "done",
+"focus": "Phase 3: level ops, scratch heap, leq"
+},
+{
+"lane": "pinsenv",
+"model": "opus",
+"status": "running",
+"focus": "PinsR, EnvR, phase-2 declaration loop skeleton"
+},
+{
+"lane": "whnf",
+"model": "opus",
+"status": "running",
+"focus": "Phase 5: CoreR caches, whnf family"
+},
+{
+"lane": "cresults",
+"model": "opus",
+"status": "running",
+"focus": "Compiler: any number of return values; frontAll_x64"
+},
+{
+"lane": "strlit",
+"model": "sonnet",
+"status": "running",
+"focus": "String literals in the lit store"
+},
+{
+"lane": "induct",
+"model": "opus",
+"status": "running",
+"focus": "Phase 8: inductive declarations (top-down)"
+},
+{
+"lane": "exprops3",
+"model": "sonnet",
+"status": "running",
+"focus": "abstract1, instantiateList (pool-slice lists, fvar-range column)"
+}
 ]
