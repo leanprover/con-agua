@@ -6,3 +6,5 @@ public import ConAgua.L.Semantics
 public import ConAgua.L.Notation
 public import ConAgua.L.Logic
 public import ConAgua.L.Examples
+public import ConAgua.Scan.Link
+public import ConAgua.Scan.Leaves
