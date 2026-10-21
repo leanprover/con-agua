@@ -72,7 +72,7 @@ started; **n/a** = not ported (types, data, threads, or replaced by a design cho
 
 | Rust | lines | twin | status |
 |---|---:|---|---|
-| `ron/nat.rs` | 1080 | Lean `Nat` inside `natOpResult` (`+ - * ^ / % gcd land lor xor shiftLeft shiftRight beq ble`), `natLitToConstructor`, `natPred?`, `isNatZero`, `strLitConsSpine` | `add`, `mul` done (`NatAdd`, `NatMul`, `natAddLit_refinesA`); sub, compare, bit ops, shifts, pow, div/mod, gcd, decimal – |
+| `ron/nat.rs` | 1080 | Lean `Nat` inside `natOpResult` (`+ - * ^ / % gcd land lor xor shiftLeft shiftRight beq ble`), `natLitToConstructor`, `natPred?`, `isNatZero`, `strLitConsSpine` | `add`, `mul`, `land`/`lor`/`xor` done (`NatAdd`, `NatMul`, `NatBits`, `natAddLit_refinesA`); sub, compare, shifts, pow, div/mod, gcd, decimal – (DESIGN.md, lane `nat`: `nat_cmp` attempted, not landed) |
 
 ### Phase 10: driver (not started)
 
