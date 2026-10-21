@@ -12,8 +12,12 @@ groups to check; phase B checks each against the prefix view it was installed at
 (`checkPendingList` → `checkPending`). This file has that structure in L, with the callees that
 are not translated yet as **stubs** (L bodies `abort`, no census tags) whose refinement specs are
 stated here and proved with `sorry` (each listed in DESIGN.md). The skeleton functions are real L
-code; their refinements are proved from the stub specs, so the census counts them as proven with
-`sorry` until the stubs are filled.
+code; their refinements are proved from the stub specs. They are tagged `refines_part …
+"skeleton, from the stub specs"`, so the census counts the skeleton as written (L code), not as
+proven with `sorry`: a `refines` resting on `sorry` here would make every target below
+`installFold` "covered" (769 of 1350, measured), which is not progress. `installThenCheck` is not a
+census target (`TwinAccepts` runs `installFold` and `checkPendingList` itself);
+`install_then_check` is the loop's top for the driver.
 
 * The declarations are the front's records (`DECL`/`DLP`, `DeclsR`, `Front/StateDR.lean`); record
   `i` is the fold position `i`.
@@ -566,7 +570,6 @@ def checkPendingNextL : FunDecl := lfn (j, cnt, vis) locals (z) {
 
 /-- `install_then_check()`: phase A over the front's declaration records, then phase B; returns
 the final view. **The declaration loop.** -/
-@[l_impl ConRon.Arena.installThenCheck]
 def installThenCheckL : FunDecl := lfn () locals (cnt, v, c, z) {
   cnt := DECL.u64[0];
   v := call install_fold_go(0, cnt, 0);
@@ -685,7 +688,7 @@ theorem installStep_pieces (hpp : p.lookup "pend_push" = some pendPushL)
       finish (gen := 20) [vgOut]
 
 /-- **`install_step` refines `installStep`** (from the stub specs). -/
-@[refines ConRon.Arena.installStep]
+@[refines_part ConRon.Arena.installStep "skeleton, from the stub specs"]
 theorem installStep_refines (hpp : p.lookup "pend_push" = some pendPushL)
     (hpn : p.lookup "is_none" = some isNoneL) (hps : p.lookup "is_some" = some isSomeL)
     (hp : p.lookup "install_step" = some installStepL) (n : Nat) (s₀ : St) (a₀ : AState)
@@ -703,7 +706,7 @@ theorem installStep_refines (hpp : p.lookup "pend_push" = some pendPushL)
 
 /-- **`install_decl_step` refines `installDeclStep`**: a returning run is the twin's `.ok` with
 the position advanced. -/
-@[refines ConRon.Arena.installDeclStep]
+@[refines_part ConRon.Arena.installDeclStep "skeleton, from the stub specs"]
 theorem installDeclStep_refines (hpp : p.lookup "pend_push" = some pendPushL)
     (hpn : p.lookup "is_none" = some isNoneL) (hps : p.lookup "is_some" = some isSomeL)
     (hpi : p.lookup "install_step" = some installStepL)
@@ -833,7 +836,7 @@ theorem foldNext_step (n : Nat) (ih : FoldGoSpec mode pins dn ds p n) :
 
 /-- **`install_fold_go` refines `installFold`** from record `i` on (and `install_fold_next`
 for one step and the rest). -/
-@[refines ConRon.Arena.installFold]
+@[refines_part ConRon.Arena.installFold "skeleton, from the stub specs"]
 theorem installFoldGo_refines (n : Nat) :
     FoldGoSpec mode pins dn ds p n ∧ FoldNextSpec mode pins dn ds p n := by
   induction n with
@@ -872,7 +875,7 @@ theorem pend_words (m : Mem) (pend : Array PendingCheck) (hP : PendR m pend) (j 
     rw [this]
 
 /-- **`check_pending` refines `checkPending`** (from the stub specs). -/
-@[refines ConRon.Arena.checkPending]
+@[refines_part ConRon.Arena.checkPending "skeleton, from the stub specs"]
 theorem checkPending_refines (hp : p.lookup "check_pending" = some checkPendingL) (n : Nat)
     (s₀ : St) (a₀ : AState) (j vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
     (hj : j.toNat < pend.size) (hR : LoopR dn s₀.mem a₀ vis fe pend ds) :
@@ -998,7 +1001,7 @@ theorem cpNext_step (n : Nat) (ih : CPGoSpec mode dn ds p fe pend n) :
 
 /-- **`check_pending_go` refines `checkPendingList`** from check `j` on (and
 `check_pending_next` for one check and the rest). -/
-@[refines ConRon.Arena.checkPendingList]
+@[refines_part ConRon.Arena.checkPendingList "skeleton, from the stub specs"]
 theorem checkPendingGo_refines (n : Nat) :
     CPGoSpec mode dn ds p fe pend n ∧ CPNextSpec mode dn ds p fe pend n := by
   induction n with
@@ -1017,7 +1020,6 @@ end phaseB
 
 /-- **`install_then_check` refines `installThenCheck`** (from the stub specs): a returning run
 is the twin's accepting fold, its environment related at the returned view. -/
-@[refines ConRon.Arena.installThenCheck]
 theorem installThenCheck_refines (hpp : p.lookup "pend_push" = some pendPushL)
     (hpn : p.lookup "is_none" = some isNoneL) (hps : p.lookup "is_some" = some isSomeL)
     (hpi : p.lookup "install_step" = some installStepL)
