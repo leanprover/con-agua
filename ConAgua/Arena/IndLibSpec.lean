@@ -276,3 +276,60 @@ theorem slR_of_decHL {k : IdxKind} (m : Mem) : ∀ (n off : Nat) (ns : List (Idx
           · simp [hwl] at hx
 
 end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+/-! ## The decoders' list lemmas -/
+
+theorem mapM_opt_length {α β : Type} (g : α → Option β) :
+    ∀ (xs : List α) (ys : List β), xs.mapM g = some ys → ys.length = xs.length
+  | [], ys, h => by simp at h; simp [← h]
+  | x :: xs, ys, h => by
+    simp only [List.mapM_cons] at h
+    cases hx : g x with
+    | none => simp [hx] at h
+    | some y =>
+      cases hxs : xs.mapM g with
+      | none => simp [hx, hxs] at h
+      | some zs =>
+        simp [hx, hxs] at h
+        subst h
+        simp [mapM_opt_length g xs zs hxs]
+
+theorem mapM_opt_get {α β : Type} (g : α → Option β) :
+    ∀ (xs : List α) (ys : List β) (h : xs.mapM g = some ys) (j : Nat) (hj : j < xs.length),
+      g xs[j] = some (ys[j]'(by rw [mapM_opt_length g xs ys h]; exact hj))
+  | [], _, _, j, hj => by simp at hj
+  | x :: xs, ys, h, j, hj => by
+    simp only [List.mapM_cons] at h
+    cases hx : g x with
+    | none => simp [hx] at h
+    | some y =>
+      cases hxs : xs.mapM g with
+      | none => simp [hx, hxs] at h
+      | some zs =>
+        simp [hx, hxs] at h
+        subst h
+        cases j with
+        | zero => simpa using hx
+        | succ j => simpa using mapM_opt_get g xs zs hxs j (by simpa using hj)
+
+section declemmas
+variable (m : Mem)
+
+theorem decHL_length {k : IdxKind} {o l : Nat} {xs : List (Idx k)} (h : decHL m o l = some xs) :
+    xs.length = l := by
+  simpa using mapM_opt_length _ _ _ h
+
+theorem decNL_length {o l : Nat} {xs : List Nat} (h : decNL m o l = some xs) : xs.length = l := by
+  simpa using mapM_opt_length _ _ _ h
+
+theorem decPL_length {α : Type} {f : Nat → Option α} {o l : Nat} {xs : List α}
+    (h : decPL m f o l = some xs) : xs.length = l := by
+  simpa using mapM_opt_length _ _ _ h
+
+end declemmas
+
+end L.Ind
