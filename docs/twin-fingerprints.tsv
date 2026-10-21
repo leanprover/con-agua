@@ -2,6 +2,8 @@
 # of that code (scripts/census.py, "STALE"; DESIGN.md, "Twin fingerprints"). Columns: target,
 # fingerprint, upstream rev (con-ron or con-leche) it was recorded at. Update rows with
 # `scripts/census.py --reviewed REGEX` after checking the L code against the new twin.
+ConLeche.Frontend.IdTable.bound	104d76b439bf6b01	103562ba
+ConLeche.Frontend.IdTable.insert	8671ca3817402f8b	103562ba
 ConLeche.Frontend.IdTable.singleton	0289ff4da8ea682d	103562ba
 ConLeche.Frontend.hasEscape	37d1686103056994	103562ba
 ConLeche.Frontend.hex3	5cba0dfa4e7bff0a	103562ba
@@ -83,8 +85,11 @@ ConLeche.PropWhen.bindZ.go	46bf1794c7cd651a	103562ba
 ConLeche.PropWhen.inter	2d19b6715b3feb84	103562ba
 ConRon.Arena.EStore.bindHasScratchChild	d3b880f29747d413	4c9eaf78
 ConRon.Arena.EStore.dropScratch	99785aff3d346da1	4c9eaf78
+ConRon.Arena.EStore.eViewHasScratchChild	af32b59a20e1b580	4c9eaf78
 ConRon.Arena.EStore.enableScratch	7159c0d865c742ad	4c9eaf78
+ConRon.Arena.EStore.find?	9a2faf69b3043a18	4c9eaf78
 ConRon.Arena.EStore.findBind	f996288afa1d012f	4c9eaf78
+ConRon.Arena.EStore.intern	8eb66e51c08237af	4c9eaf78
 ConRon.Arena.EStore.internBind	bc3af1870353e3e1	4c9eaf78
 ConRon.Arena.EStore.internForallE	92f66258b0c45766	4c9eaf78
 ConRon.Arena.EStore.internLam	9cc502aa034d97ef	4c9eaf78
@@ -92,22 +97,27 @@ ConRon.Arena.EStore.internLevel	7527f4304dca1464	4c9eaf78
 ConRon.Arena.EStore.internLevels	679d27bf3e891ccd	4c9eaf78
 ConRon.Arena.EStore.internName	8c9efd3691009159	4c9eaf78
 ConRon.Arena.EStore.persFindBindMaybe	4edff89c63acb6a2	4c9eaf78
+ConRon.Arena.EStore.persFindMaybe	7eac339bd4f0aa5b	4c9eaf78
 ConRon.Arena.ETables.bindSizeOf	a8c5dbded69da07d	4c9eaf78
 ConRon.Arena.ETables.findBind	e2bca0358000e487	4c9eaf78
 ConRon.Arena.ETables.pushBind	392405157611ee8a	4c9eaf78
+ConRon.Arena.Frontend.StateD.freshExpr	f68411c01996c7f0	4c9eaf78
 ConRon.Arena.Frontend.StateD.freshLevel	d0e43a12e9cde973	4c9eaf78
 ConRon.Arena.Frontend.StateD.freshName	c1762ad89e003b87	4c9eaf78
 ConRon.Arena.Frontend.StateD.init	6437bc273d2581a2	4c9eaf78
+ConRon.Arena.Frontend.StateD.level	16db7299d7a3131d	4c9eaf78
 ConRon.Arena.Frontend.applyLine	0741ecaec6478dfa	4c9eaf78
 ConRon.Arena.Frontend.parseBytes	633fd63ff4c05946	4c9eaf78
 ConRon.Arena.Frontend.parseExprEntryD	46eb4126c4d44c71	4c9eaf78
 ConRon.Arena.Frontend.parseLevelEntryD	7e2714bfccd5bd5c	4c9eaf78
 ConRon.Arena.Frontend.parseNameEntryD	9d89b0251fb4b2cd	4c9eaf78
 ConRon.Arena.Frontend.processLineCoreD	0cff85430ccb024f	4c9eaf78
+ConRon.Arena.Frontend.reboundError	ccb137fbc0c93fae	4c9eaf78
 ConRon.Arena.IFEnv.find?	2d5fd07a58108af3	4c9eaf78
 ConRon.Arena.IFEnv.popTemp	43c6988b8917da8b	4c9eaf78
 ConRon.Arena.IFEnv.push	c94eff4ce2bd2a7c	4c9eaf78
 ConRon.Arena.IFEnv.restrictTo	6242932bdfb77433	4c9eaf78
+ConRon.Arena.Idx.tierS	737aaf1ff644912b	4c9eaf78
 ConRon.Arena.LStore.enableScratch	50333c37cfb61b73	4c9eaf78
 ConRon.Arena.LStore.find?	98d8f75bf1042b43	4c9eaf78
 ConRon.Arena.LStore.intern	98c0c96ff9490a6a	4c9eaf78
@@ -196,6 +206,11 @@ ConRon.Arena.fvarRangeArmBind	c6184384fa8fa714	4c9eaf78
 ConRon.Arena.fvarRangeArmLet	37393082661e721f	4c9eaf78
 ConRon.Arena.fvarRangeGo	c6735178172a593f	4c9eaf78
 ConRon.Arena.fvarRangeMemo	d406f9cfeedc8f85	4c9eaf78
+ConRon.Arena.getAppArgs	6c10fe77b6659241	4c9eaf78
+ConRon.Arena.getAppFn	e8756d30130491fa	4c9eaf78
+ConRon.Arena.getAppSpine	2429d403fd78ea13	4c9eaf78
+ConRon.Arena.getAppSpineGo	aa6c209c89648c10	4c9eaf78
+ConRon.Arena.headAndArgs	bbe8016888a5794d	4c9eaf78
 ConRon.Arena.iffIntroName	cc579700a1e99cd1	4c9eaf78
 ConRon.Arena.iffName	22efe7bf2f0a3ca8	4c9eaf78
 ConRon.Arena.iffRecName	7b1c1c9470d39d82	4c9eaf78
@@ -228,6 +243,8 @@ ConRon.Arena.liftLooseBVarsGo	173949280ab49770	4c9eaf78
 ConRon.Arena.liftSet	ff7e0a50296d9024	4c9eaf78
 ConRon.Arena.lvlEq?	f14a9e1b0ee97a73	4c9eaf78
 ConRon.Arena.lvlsEq?	d900530686cc7dd9	4c9eaf78
+ConRon.Arena.mkAppN	3fc035d3e5b524aa	4c9eaf78
+ConRon.Arena.mkAppNFrom	f4c05515fcc5e859	4c9eaf78
 ConRon.Arena.natAddName	faf28463150634d0	4c9eaf78
 ConRon.Arena.natBeqName	eab4f32f066e39a5	4c9eaf78
 ConRon.Arena.natBleName	c5ee9da776dc5291	4c9eaf78
@@ -249,6 +266,8 @@ ConRon.Arena.nonemptyName	314a7c9fe8c9cabd	4c9eaf78
 ConRon.Arena.nonemptyRecName	84436081445ca035	4c9eaf78
 ConRon.Arena.ofReduceBoolName	333a46be5adaa4b1	4c9eaf78
 ConRon.Arena.ofReduceNatName	140e5fcebf6ac88d	4c9eaf78
+ConRon.Arena.peelPis	38b8dca5741473ad	4c9eaf78
+ConRon.Arena.piResult	89640dbd8572d107	4c9eaf78
 ConRon.Arena.pinAnd	df78f1f0ec8b40b3	4c9eaf78
 ConRon.Arena.pinAndIntro	4a252c807d890a6f	4c9eaf78
 ConRon.Arena.pinAndRec	7b7b4f62a7b7b4da	4c9eaf78
