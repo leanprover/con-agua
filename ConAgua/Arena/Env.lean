@@ -605,4 +605,71 @@ theorem envErase_spec (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, envRowSet_spec p hx hs n] <;>
       finish
 
+/-- The memory after `env_pop_temp`'s count update: `CTL[128] - 1` (none at `0`). -/
+def popLenMem (m : Mem) : Mem :=
+  if rdW (m.arr64 CTL) 128 = 0 then m else m.set64 CTL 128 (rdW (m.arr64 CTL) 128 - 1)
+
+/-- The view after a pop: `vis - 1`, `0` at `0`. -/
+def popVis (vis : Word) : Word := if vis = 0 then 0 else vis - 1
+
+/-- **The newest constant dropped and the view lowered** (the rest of `popTemp`). -/
+theorem EnvR.popLen {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word}
+    {env : IEnv} {idx : Std.HashMap NIdx (Nat × IConstantInfo)} {vb : Nat}
+    (h : EnvR dn m vis ⟨env, idx, vb⟩) (hc : 128 < (m.arr64 CTL).size) :
+    EnvR dn (popLenMem m) (popVis vis) ⟨⟨env.consts.tail⟩, idx, vb - 1⟩ := by
+  have hframe : ∀ b, b ≠ CTL → (popLenMem m).arr64 b = m.arr64 b := by
+    intro b hb; simp only [popLenMem]; split
+    · rfl
+    · exact Mem.arr64_set64_ne _ _ _ _ _ hb
+  have hv := h.vis
+  simp only at hv
+  have hC : ∀ w, rowC (popLenMem m) w = rowC m w := fun w => by
+    unfold rowC; split
+    · rw [hframe _ (by simp only [CTL, ArrId]; omega)]
+    · rfl
+  have hP : ∀ w, rowP (popLenMem m) w = rowP m w := fun w => by
+    unfold rowP; split
+    · rw [hframe _ (by simp only [CTL, ArrId]; omega)]
+    · rfl
+  have hW : ∀ w, rowW (popLenMem m) w = rowW m w := fun w => by simp only [rowW, hC, hP]
+  have hR : (popLenMem m).arr64 EREC = m.arr64 EREC := hframe _ (by decide)
+  have hN : (popLenMem m).arr64 ECON = m.arr64 ECON := hframe _ (by decide)
+  refine ⟨?_, fun n hn => (hW _).symm ▸ h.keys n hn, fun n hn h0 => ?_, ?_⟩
+  · simp only [popVis, hv]; split
+    · simp_all
+    · rename_i h0; rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr ?_)]
+      · simp
+      · have : vis.toNat ≠ 0 := fun h' => h0 (UInt64.toNat_inj.mp (by simpa using h'))
+        simp; omega
+  · rw [hP, hR]; exact h.vals n hn (by rwa [← hC])
+  · have hcs := h.consts
+    simp only [envConsts] at hcs ⊢
+    rw [hR, hN]
+    by_cases hk : rdW (m.arr64 CTL) 128 = 0
+    · have hl : envLen m = 0 := by simp [envLen, hk]
+      have hl' : envLen (popLenMem m) = 0 := by simp [popLenMem, hk, envLen]
+      rw [hl] at hcs; rw [hl']
+      simp at hcs ⊢; simp [hcs]
+    · have hl' : envLen (popLenMem m) = envLen m - 1 := by
+        have e : popLenMem m = m.set64 CTL 128 (rdW (m.arr64 CTL) 128 - 1) := by
+          simp [popLenMem, hk]
+        unfold envLen
+        rw [e, Mem.arr64_set64_same, rdW_set!]
+        simp only [show (128 : Word).toNat = 128 from rfl, hc, and_self, ite_true]
+        rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr ?_)]
+        · simp
+        · have : (rdW (m.arr64 CTL) 128).toNat ≠ 0 :=
+            fun h' => hk (UInt64.toNat_inj.mp (by simpa using h'))
+          simp; omega
+      have hpos : envLen m ≠ 0 := fun h' => hk (UInt64.toNat_inj.mp (by simpa [envLen] using h'))
+      rw [hl']
+      obtain ⟨j, hj⟩ : ∃ j, envLen m = j + 1 := ⟨envLen m - 1, by omega⟩
+      rw [hj] at hcs; rw [hj, Nat.add_sub_cancel]
+      rw [List.range_succ, List.reverse_append, List.reverse_singleton, List.singleton_append,
+        List.mapM_cons] at hcs
+      simp only [Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hcs
+      obtain ⟨x, -, rest, hrest, hx⟩ := hcs
+      simp only [Option.some.injEq] at hx
+      rw [← hx]; simpa using hrest
+
 end L.Arena
