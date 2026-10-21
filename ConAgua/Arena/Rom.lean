@@ -1,0 +1,756 @@
+import ConAgua.Front.ApplyExprRefine
+import ConAgua.Front.Preserve
+import ConAgua.Census.Attr
+
+/-!
+# The ROM: constant con-leche data as bytes, and the L readers
+
+con-ron interns con-leche *values* (the pinned names, the basis blocks, the axiom shapes, the
+`Nat`-operation pin sets: `internName`, `internExprGo`, `internCI`, …) into the store, at startup
+(`internReservedPins`, `internAllPins`) and again inside some checks (`basisPinHit`, `andPinOk`,
+the axiom pins). L has no such values: they are **bytes of the program's constant data** (`ldc`,
+`rom.c8[i]`), one byte string `rom` for the whole program, and one generic interner per value
+type reads them (ROADMAP §2 item 11).
+
+**The encoding** (`encName`, …) is a prefix serialisation in the twin's intern order: a node's
+tag byte, then its children in the order the twin interns them, then its own payload. Numbers
+are 8 bytes, little endian (`u64B`); a string is its UTF-8 length (8 bytes) and its bytes.
+
+**No decoder.** A spec says: if `rom.drop pos = enc x ++ rest`, the L reader at `pos` interns
+`x` the way the twin does and returns the position past `enc x`. The proof is by induction on
+`x`; the ROM's contents enter only through that equation, which for concrete data is
+`List.drop_append` on the definition of `rom` (`Prelude.lean`).
+
+This file: the encoding, `rom_u64(i)` (a number), `rom_put(i, l)` (copy `l` bytes to the pool
+top, as `str_put` does from the input), `rom_name(pos)` (refines `internName`).
+-/
+
+open ConRon.Arena
+open Std.WP
+open scoped Lean.Order
+
+set_option experimental.vcgen true
+set_option linter.unusedSimpArgs false
+
+namespace L.Rom
+
+open L.Arena
+
+/-! ## The encoding -/
+
+/-- A number below `2^64` as 8 bytes, little endian. -/
+def u64B (n : Nat) : List UInt8 :=
+  [UInt8.ofNat n, UInt8.ofNat (n / 2 ^ 8), UInt8.ofNat (n / 2 ^ 16), UInt8.ofNat (n / 2 ^ 24),
+   UInt8.ofNat (n / 2 ^ 32), UInt8.ofNat (n / 2 ^ 40), UInt8.ofNat (n / 2 ^ 48),
+   UInt8.ofNat (n / 2 ^ 56)]
+
+/-- A string: its UTF-8 length, then its bytes. -/
+def strB (s : String) : List UInt8 := u64B s.toByteArray.size ++ s.toByteArray.data.toList
+
+/-- A name, prefix first (`internName` interns the prefix first). -/
+def encName : ConLeche.Name → List UInt8
+  | .anonymous => [0]
+  | .str p s => 1 :: (encName p ++ strB s)
+  | .num p n => 2 :: (encName p ++ u64B n)
+
+/-- A list of names, one after the other (the count is the reader's). -/
+def encNames : List ConLeche.Name → List UInt8
+  | [] => []
+  | n :: ns => encName n ++ encNames ns
+
+/-- Every number a name carries fits a word (the encoding is exact). -/
+def nameFits : ConLeche.Name → Bool
+  | .anonymous => true
+  | .str p s => nameFits p && decide (s.toByteArray.size < 2 ^ 63)
+  | .num p n => nameFits p && decide (n < 2 ^ 64)
+
+/-! ## Reading a byte, a number -/
+
+section rd
+variable (rom : List UInt8)
+
+/-- Byte `k` of the ROM, as a word (`0` past the end). -/
+def romB (k : Word) : Word := (rom[k.toNat]?.getD 0).toUInt64
+
+theorem romB_eq (k : Word) (j : Nat) (hj : j = k.toNat) (h : j < rom.length) :
+    romB rom k = rom[j].toUInt64 := by subst hj; simp [romB, h]
+grind_pattern [arena_grind] romB_eq => romB rom k, rom[j]
+
+/-- **The model of `rom_u64`**: the 8 bytes from `i` as a little-endian number. -/
+def u64W (i : Word) : Word :=
+  romB rom i + romB rom (i + 1) * 256 + romB rom (i + 2) * 65536 + romB rom (i + 3) * 16777216 +
+    romB rom (i + 4) * 4294967296 + romB rom (i + 5) * 1099511627776 +
+    romB rom (i + 6) * 281474976710656 + romB rom (i + 7) * 72057594037927936
+
+def romU64 : FunDecl := lfn (i) locals (x) {
+  if len(rom.c8) < i + 8 { abort };
+  x := rom.c8[i] + rom.c8[i + 1] * 256 + rom.c8[i + 2] * 65536 + rom.c8[i + 3] * 16777216 +
+    rom.c8[i + 4] * 4294967296 + rom.c8[i + 5] * 1099511627776 +
+    rom.c8[i + 6] * 281474976710656 + rom.c8[i + 7] * 72057594037927936;
+  return x
+}
+
+end rd
+
+/-- The ROM is shorter than `2^63` bytes: every position and length is a word, and a sum of two
+never wraps. -/
+def RomOK (rom : List UInt8) : Prop := rom.length < 2 ^ 63
+
+section u64Val
+variable (rom : List UInt8)
+
+theorem drop_get (pos : Nat) (bs rest : List UInt8) (h : rom.drop pos = bs ++ rest) (k : Nat)
+    (hk : k < bs.length) : rom[pos + k]? = bs[k]? := by
+  have : (rom.drop pos)[k]? = (bs ++ rest)[k]? := by rw [h]
+  rw [List.getElem?_drop, List.getElem?_append_left hk] at this
+  exact this
+
+theorem drop_len (pos : Nat) (bs rest : List UInt8) (h : rom.drop pos = bs ++ rest)
+    (hb : 0 < bs.length) : pos + bs.length ≤ rom.length := by
+  have := congrArg List.length h
+  simp only [List.length_drop, List.length_append] at this
+  have : bs.length ≤ rom.length - pos := by omega
+  by_cases hp : pos ≤ rom.length
+  · omega
+  · have : rom.length - pos = 0 := by omega
+    have hb : bs.length = 0 := by omega
+    have hd : rom.drop pos = [] := List.drop_of_length_le (by omega)
+    rw [hd] at h
+    simp at h
+    omega
+
+theorem romB_of_drop (pos : Word) (bs rest : List UInt8) (h : rom.drop pos.toNat = bs ++ rest)
+    (k : Nat) (hk : k < bs.length) (q : Word) (hq : q.toNat = pos.toNat + k) :
+    romB rom q = (bs[k]'hk).toUInt64 := by
+  have := drop_get rom _ _ _ h k hk
+  simp only [romB, hq, this, List.getElem?_eq_getElem hk, Option.getD_some]
+
+theorem u64W_of_drop (pos : Word) (n : Nat) (rest : List UInt8)
+    (h : rom.drop pos.toNat = u64B n ++ rest) (hn : n < 2 ^ 64) (hr : RomOK rom) :
+    u64W rom pos = UInt64.ofNat n := by
+  have hl := drop_len rom _ _ _ h (by simp [u64B])
+  simp only [u64B, List.length_cons, List.length_nil, RomOK] at hl hr
+  have hq : ∀ k : Nat, k < 8 → (pos + UInt64.ofNat k).toNat = pos.toNat + k := fun k hk => by
+    rw [UInt64.toNat_add, UInt64.toNat_ofNat']; simp; omega
+  have b := fun k hk q hq => romB_of_drop rom pos (u64B n) rest h k hk q hq
+  have b0 := b 0 (by simp [u64B]) pos (by simp)
+  have b1 := b 1 (by simp [u64B]) (pos + 1) (hq 1 (by omega))
+  have b2 := b 2 (by simp [u64B]) (pos + 2) (hq 2 (by omega))
+  have b3 := b 3 (by simp [u64B]) (pos + 3) (hq 3 (by omega))
+  have b4 := b 4 (by simp [u64B]) (pos + 4) (hq 4 (by omega))
+  have b5 := b 5 (by simp [u64B]) (pos + 5) (hq 5 (by omega))
+  have b6 := b 6 (by simp [u64B]) (pos + 6) (hq 6 (by omega))
+  have b7 := b 7 (by simp [u64B]) (pos + 7) (hq 7 (by omega))
+  simp only [u64W, b0, b1, b2, b3, b4, b5, b6, b7]
+  apply UInt64.toNat_inj.mp
+  simp only [u64B, List.getElem_cons_zero, List.getElem_cons_succ, UInt8.toUInt64, UInt64.toNat_add,
+    UInt64.toNat_mul, UInt8.toNat_ofNat, UInt64.toNat_ofNat', UInt64.toNat_ofNatLT]
+  simp
+  omega
+
+end u64Val
+
+section u64Spec
+variable (rom : List UInt8) (p : Prog) (hp : p.lookup "rom_u64" = some (romU64 rom))
+
+include hp in
+theorem romU64_spec (n : Nat) (s₀ : St) (i : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "rom_u64" [i]
+    ⦃fun r s' => s' = s₀ ∧ r = [u64W rom i]; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, romU64]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ldc] <;>
+      finish [u64W]
+
+end u64Spec
+
+/-! ## `rom_put(i, l)`: ROM bytes to the pool top -/
+
+section put
+variable (rom : List UInt8)
+
+/-- The model of the copy loop: ROM bytes `i + j ‥ i + l` to `POOL[top + j ‥ top + l]`. -/
+def rputW (m : Mem) (top i l j : Word) : Mem :=
+  if j < l then rputW (m.set64 POOL (top + j) (romB rom (i + j))) top i l (j + 1) else m
+termination_by l.toNat - j.toNat
+decreasing_by
+  have : j.toNat < l.toNat := by simpa [UInt64.lt_iff_toNat_lt] using ‹j < l›
+  have := l.toNat_lt
+  have : (j + 1).toNat = j.toNat + 1 := by
+    rw [UInt64.toNat_add]; simp; omega
+  omega
+
+theorem rputW_end (m : Mem) (top i l j : Word) (hj : ¬ j < l) : rputW rom m top i l j = m := by
+  rw [rputW]; simp only [hj, ↓reduceIte]
+
+theorem rputW_step (m m' : Mem) (top i l j j' : Word) (hj : j < l) (hj' : j' = j + 1)
+    (hm' : m' = m.set64 POOL (top + j) (romB rom (i + j))) :
+    rputW rom m top i l j = rputW rom m' top i l j' := by
+  subst hj' hm'
+  rw [rputW]; simp only [hj, ↓reduceIte]
+
+end put
+
+grind_pattern [arena_grind] rputW_end => rputW rom m top i l j
+grind_pattern [arena_grind] rputW_step => rputW rom m top i l j, rputW rom m' top i l j'
+
+section putProg
+variable (rom : List UInt8)
+
+def rputLoop : Stmt := lblk (i, l, top, j) {
+  while j < l {
+    POOL.u64[top + j] := rom.c8[i + j];
+    j += 1
+  }
+}
+
+def romPut : FunDecl := lfn (i, l) locals (top, j) {
+  if len(rom.c8) < i + l || i + l < i { abort };
+  top := CTL.u64[0];
+  if len(POOL.u64) < top { abort };
+  if len(POOL.u64) - top < l { abort };
+  ⟪rputLoop rom⟫;
+  CTL.u64[0] := top + l;
+  return top
+}
+
+variable (p : Prog)
+
+theorem rputLoop_spec (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    exec p n (rputLoop rom)
+    ⦃fun r s' => r = .normal ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧
+      s'.mem = rputW rom s₀.mem (s₀.loc 2) (s₀.loc 0) (s₀.loc 1) (s₀.loc 3); ⊤⦄ := by
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+    rw [exec, step_while (w := rputLoop rom) rfl]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [step, evalE, evalC, evalArgs, setLoc, ldc, st64, ih] <;> finish [romB]
+
+theorem rputLoop_step_spec (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    step p (exec p n) (rputLoop rom)
+    ⦃fun r s' => r = .normal ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧
+      s'.mem = rputW rom s₀.mem (s₀.loc 2) (s₀.loc 0) (s₀.loc 1) (s₀.loc 3); ⊤⦄ :=
+  Triple.step_exec (rputLoop_spec rom p (n + 1) s₀)
+
+/-- `rom_put`'s checks: a range of the ROM that fits above the pool top. -/
+def romPutOK (m : Mem) (i l : Word) : Prop :=
+  i + l ≤ UInt64.ofNat rom.length ∧ i ≤ i + l ∧ m.top ≤ m.len64 POOL ∧ l ≤ m.len64 POOL - m.top
+
+instance (m : Mem) (i l : Word) : Decidable (romPutOK rom m i l) := by
+  unfold romPutOK; infer_instance
+
+theorem rputW_size (top i l : Word) (b : ArrId) :
+    ∀ (d : Nat) (m : Mem) (j : Word), l.toNat - j.toNat = d →
+      ((rputW rom m top i l j).arr64 b).size = (m.arr64 b).size := by
+  intro d
+  induction d with
+  | zero =>
+    intro m j hd
+    have hjn : ¬ j < l := by rw [UInt64.lt_iff_toNat_lt]; omega
+    rw [rputW_end _ _ _ _ _ _ hjn]
+  | succ d ih =>
+    intro m j hd
+    have hjn : j < l := by rw [UInt64.lt_iff_toNat_lt]; omega
+    have hjn' := UInt64.lt_iff_toNat_lt.mp hjn
+    have := l.toNat_lt
+    have hj1 : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+    rw [rputW]; simp only [hjn, ↓reduceIte]
+    rw [ih _ _ (by omega), size_set64]
+
+theorem romPutOK_room (m : Mem) (i l : Word) (h : romPutOK rom m i l) (hs : (m.arr64 POOL).size < 2 ^ 63) :
+    m.top.toNat + l.toNat ≤ (m.arr64 POOL).size := by
+  obtain ⟨-, -, h3, h4⟩ := h
+  have hlen : (m.len64 POOL).toNat = (m.arr64 POOL).size := by
+    simp only [Mem.len64]; exact L.Front.toNat_ofNat_size _ hs
+  have := UInt64.le_iff_toNat_le.mp h4
+  have := UInt64.le_iff_toNat_le.mp h3
+  rw [UInt64.toNat_sub_of_le _ _ h3, hlen] at *
+  omega
+
+theorem romPut_specW (hp : p.lookup "rom_put" = some (romPut rom)) (n : Nat) (s₀ : St) (i l : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "rom_put" [i, l]
+    ⦃fun r s' => LocEq s' s₀ ∧ romPutOK rom s₀.mem i l ∧ r = [s₀.mem.top] ∧
+      s'.mem = (rputW rom s₀.mem s₀.mem.top i l 0).set64 CTL 0 (s₀.mem.top + l) ∧
+      (s'.mem.arr64 POOL).size = (s₀.mem.arr64 POOL).size; ⊤⦄ := by
+  have hsz := fun m top => rputW_size rom top i l POOL _ m 0 rfl
+  rw [invoke_eq _ hp]
+  simp only [callFn, romPut]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, rputLoop_step_spec rom p n] <;>
+      finish [romPutOK]
+
+end putProg
+
+/-! ## `rom_put`'s memory -/
+
+section putFacts
+variable (rom : List UInt8)
+
+/-- ROM byte `k`, as a word (`0` past the end), by a natural-number position. -/
+def romN (k : Nat) : Word := (rom[k]?.getD 0).toUInt64
+
+theorem rputW_facts (top i n : Word) (hv : i.toNat + n.toNat < 2 ^ 64) :
+    ∀ (d : Nat) (m : Mem) (j : Word), n.toNat - j.toNat = d → j ≤ n →
+      top.toNat + n.toNat ≤ (m.arr64 POOL).size → (m.arr64 POOL).size < 2 ^ 63 →
+      Frame POOL m (rputW rom m top i n j) ∧
+      ((rputW rom m top i n j).arr64 POOL).size = (m.arr64 POOL).size ∧
+      ∀ x, ((rputW rom m top i n j).arr64 POOL)[x]? =
+        if top.toNat + j.toNat ≤ x ∧ x < top.toNat + n.toNat then some (romN rom (i.toNat + (x - top.toNat)))
+        else (m.arr64 POOL)[x]? := by
+  intro d
+  induction d with
+  | zero =>
+    intro m j hd hj _ _
+    have hjn : ¬ j < n := by rw [UInt64.lt_iff_toNat_lt]; omega
+    rw [rputW_end _ _ _ _ _ _ hjn]
+    refine ⟨Frame.refl _ _, rfl, fun x => ?_⟩
+    have : ¬ (top.toNat + j.toNat ≤ x ∧ x < top.toNat + n.toNat) := by
+      have := UInt64.le_iff_toNat_le.mp hj; omega
+    simp [this]
+  | succ d ih =>
+    intro m j hd hj hp hs
+    have hjn : j < n := by rw [UInt64.lt_iff_toNat_lt]; omega
+    have hjn' := UInt64.lt_iff_toNat_lt.mp hjn
+    have hj1 : (j + 1).toNat = j.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+    have htj : (top + j).toNat = top.toNat + j.toNat := by rw [UInt64.toNat_add]; simp; omega
+    have hvj : (i + j).toNat = i.toNat + j.toNat := by rw [UInt64.toNat_add]; simp; omega
+    rw [rputW]; simp only [hjn, ↓reduceIte]
+    have hsz : ((m.set64 POOL (top + j) (romB rom (i + j))).arr64 POOL).size = (m.arr64 POOL).size :=
+      size_set64 _ _ _ _ _
+    obtain ⟨hf, hsz', hx⟩ := ih (m.set64 POOL (top + j) (romB rom (i + j))) (j + 1) (by omega)
+      (UInt64.le_iff_toNat_le.mpr (by omega)) (by omega) (by omega)
+    refine ⟨Frame.trans _ _ _ _ (Frame.set64 _ _ _ _ _ (Frame.refl _ _)) hf, by omega, fun x => ?_⟩
+    rw [hx, Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+    simp only [htj, hj1]
+    by_cases h1 : top.toNat + (j.toNat + 1) ≤ x ∧ x < top.toNat + n.toNat
+    · have h2 : top.toNat + j.toNat ≠ x := by omega
+      simp [h1, h2, show top.toNat + j.toNat ≤ x by omega]
+    · by_cases h2 : top.toNat + j.toNat = x
+      · subst h2
+        simp [show top.toNat + j.toNat < (m.arr64 POOL).size by omega, romB, romN, hvj]
+        intro h; omega
+      · simp only [h1, ↓reduceIte, h2, false_and, ↓reduceIte]
+        have : ¬ (top.toNat + j.toNat ≤ x ∧ x < top.toNat + n.toNat) := by omega
+        simp [this]
+
+/-- **`rom_put`'s memory**: the pool grew by the ROM bytes `[i, i + l)`, at the old top. -/
+theorem romPutW_facts (m : Mem) (i l : Word) (hpool : PoolOK m) (hok : romPutOK rom m i l)
+    (hr : RomOK rom) :
+    Grows m ((rputW rom m m.top i l 0).set64 CTL 0 (m.top + l)) ∧
+    SliceOK ((rputW rom m m.top i l 0).set64 CTL 0 (m.top + l)) m.top l ∧
+    sliceL (((rputW rom m m.top i l 0).set64 CTL 0 (m.top + l)).arr64 POOL) m.top.toNat l.toNat =
+      ((rom.drop i.toNat).take l.toNat).map UInt8.toUInt64 ∧
+    i.toNat + l.toNat ≤ rom.length := by
+  obtain ⟨hw, hc, hps, htop⟩ := hpool
+  obtain ⟨h1, h1', h3, h4⟩ := hok
+  simp only [RomOK] at hr
+  have hil : (i + l).toNat = i.toNat + l.toNat := by
+    have := UInt64.le_iff_toNat_le.mp h1'
+    have := i.toNat_lt; have := l.toNat_lt
+    have e := UInt64.toNat_add i l
+    rw [show (2:Nat)^64 = 18446744073709551616 from rfl] at *
+    omega
+  have hin : i.toNat + l.toNat ≤ rom.length := by
+    have := UInt64.le_iff_toNat_le.mp h1
+    rw [hil, UInt64.toNat_ofNat'] at this
+    rwa [Nat.mod_eq_of_lt (by omega)] at this
+  have hlen : (m.len64 POOL).toNat = (m.arr64 POOL).size := by
+    simp only [Mem.len64]; exact L.Front.toNat_ofNat_size _ hps
+  have hroom : l.toNat ≤ (m.arr64 POOL).size - m.top.toNat := by
+    have := UInt64.le_iff_toNat_le.mp h4
+    rwa [UInt64.toNat_sub_of_le _ _ h3, hlen] at this
+  obtain ⟨hf, hsz, hx⟩ := rputW_facts rom m.top i l (by omega) _ m 0 rfl
+    (UInt64.le_iff_toNat_le.mpr (by simp)) (by omega) hps
+  simp only [UInt64.toNat_zero, Nat.add_zero] at hx
+  have hT : (m.top + l).toNat = m.top.toNat + l.toNat := by
+    rw [UInt64.toNat_add]; simp; omega
+  have hctl : 0 < ((rputW rom m m.top i l 0).arr64 CTL).size := by
+    rw [hf.2.2 CTL (by decide)]; exact hc
+  have hpool' : ((rputW rom m m.top i l 0).set64 CTL 0 (m.top + l)).arr64 POOL =
+      (rputW rom m m.top i l 0).arr64 POOL := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  have htop' := Mem.top_set64 _ (m.top + l) hctl
+  refine ⟨⟨?_, ?_, ?_, ?_, ?_⟩, ?_, ?_, hin⟩
+  · rw [htop']; exact Frame.set64_both _ _ _ _ _ _ hf (by decide)
+  · intro x hxt; rw [hpool', hx]; simp; omega
+  · rw [htop', hT]; omega
+  · rw [htop', hT, hpool', hsz]; omega
+  · rw [hpool', hsz]
+  · simp only [SliceOK, htop', hT]; omega
+  · rw [hpool', sliceL, List.ext_getElem_iff]
+    refine ⟨by simp; omega, fun k hk₁ hk₂ => ?_⟩
+    simp only [List.length_ofFn] at hk₁
+    simp only [List.getElem_ofFn, hx, List.getElem_map, List.getElem_take, List.getElem_drop]
+    simp [show m.top.toNat + k < m.top.toNat + l.toNat by omega, romN,
+      show i.toNat + k < rom.length by omega]
+
+end putFacts
+
+/-! ## `rom_name(pos)`: intern the name encoded at `pos` -/
+
+section nameProg
+variable (rom : List UInt8)
+
+/-- `rom_put`'s model: the slice's offset and the memory after. -/
+def romPutW (m : Mem) (i l : Word) : Option (Word × Mem) :=
+  if romPutOK rom m i l then some (m.top, (rputW rom m m.top i l 0).set64 CTL 0 (m.top + l))
+  else none
+
+/-- After the `anonymous` node. -/
+def nmAnonK (pos : Word) : Option (Word × Mem) → Option (Word × Word × Mem)
+  | none => none
+  | some (h, m') => if 4294967296 ≤ h then none else some (h, pos + 1, m')
+
+/-- After a `str` node's string was interned. -/
+def nmStr2K (q l : Word) : Option (Word × Mem) → Option (Word × Word × Mem)
+  | none => none
+  | some (h', m₃) => if 4294967296 ≤ h' then none else some (h', q + 8 + l, m₃)
+
+/-- After a `str` node's string went to the pool: intern it. -/
+def nmStrK (h q l : Word) : Option (Word × Mem) → Option (Word × Word × Mem)
+  | none => none
+  | some (o, m₂) => nmStr2K q l (nsinternW m₂ h o l)
+
+/-- After a `num` node's number. -/
+def nmNumK (q : Word) : Option (Word × Mem) → Option (Word × Word × Mem)
+  | none => none
+  | some (h', m₂) => if 4294967296 ≤ h' then none else some (h', q + 8, m₂)
+
+/-- After the prefix. -/
+def nmRecK (t : Word) : Option (Word × Word × Mem) → Option (Word × Word × Mem)
+  | none => none
+  | some (h, q, m₁) =>
+    if t = 1 then nmStrK h q (u64W rom q) (romPutW rom m₁ (q + 8) (u64W rom q))
+    else if t = 2 then nmNumK q (nninternW m₁ h (u64W rom q))
+    else none
+
+/-- **The model of `rom_name`** at L fuel `n`: the handle, the position after, the memory after. -/
+def romNameW : Nat → Mem → Word → Option (Word × Word × Mem)
+  | 0, _, _ => none
+  | n + 1, m, pos =>
+    if romB rom pos = 0 then nmAnonK pos (nainternW m)
+    else nmRecK rom (romB rom pos) (romNameW n m (pos + 1))
+
+theorem romNameW_anon (n : Nat) (m : Mem) (pos : Word) (h0 : romB rom pos = 0) :
+    romNameW rom (n + 1) m pos = nmAnonK pos (nainternW m) := by simp [romNameW, h0]
+theorem romNameW_rec (n : Nat) (m : Mem) (pos : Word) (h0 : romB rom pos ≠ 0) :
+    romNameW rom (n + 1) m pos = nmRecK rom (romB rom pos) (romNameW rom n m (pos + 1)) := by
+  simp [romNameW, h0]
+
+def romName : FunDecl := lfn (pos) locals (t, h, q, l, o) {
+  t := rom.c8[pos];
+  if t == 0 {
+    h := call intern_nanon();
+    if h >= 4294967296 { abort };
+    return (h, pos + 1)
+  };
+  (h, q) := call rom_name(pos + 1);
+  l := call rom_u64(q);
+  if t == 1 {
+    o := call rom_put(q + 8, l);
+    h := call intern_nstr(h, o, l);
+    if h >= 4294967296 { abort };
+    return (h, q + 8 + l)
+  };
+  if t != 2 { abort };
+  h := call intern_nnum(h, l);
+  if h >= 4294967296 { abort };
+  return (h, q + 8)
+}
+
+end nameProg
+
+section nameArms
+variable (rom : List UInt8) (h q l t pos o h' : Word) (m m₁ m₂ m₃ : Mem)
+theorem nmAnonK_some (hh : ¬ 4294967296 ≤ h) : nmAnonK pos (some (h, m)) = some (h, pos + 1, m) := by
+  simp [nmAnonK, hh]
+theorem nmStrK_some : nmStrK h q l (some (o, m₂)) = nmStr2K q l (nsinternW m₂ h o l) := rfl
+theorem nmStr2K_some (hh : ¬ 4294967296 ≤ h') : nmStr2K q l (some (h', m₃)) = some (h', q + 8 + l, m₃) := by
+  simp [nmStr2K, hh]
+theorem nmNumK_some (hh : ¬ 4294967296 ≤ h') : nmNumK q (some (h', m₂)) = some (h', q + 8, m₂) := by
+  simp [nmNumK, hh]
+theorem nmRecK_str (ht : t = 1) :
+    nmRecK rom t (some (h, q, m₁)) = nmStrK h q (u64W rom q) (romPutW rom m₁ (q + 8) (u64W rom q)) := by
+  simp [nmRecK, ht]
+theorem nmRecK_num (ht : t = 2) :
+    nmRecK rom t (some (h, q, m₁)) = nmNumK q (nninternW m₁ h (u64W rom q)) := by simp [nmRecK, ht]
+theorem romPutW_ok (hok : romPutOK rom m (q + 8) l) :
+    romPutW rom m (q + 8) l = some (m.top, (rputW rom m m.top (q + 8) l 0).set64 CTL 0 (m.top + l)) := by
+  simp only [romPutW]; rw [if_pos hok]
+end nameArms
+
+attribute [arena_grind =] nmAnonK_some nmNumK_some nmRecK_str nmRecK_num romPutW_ok nmStrK_some
+  nmStr2K_some
+grind_pattern [arena_grind] romPutOK_room => romPutOK rom m i l, (m.arr64 POOL).size
+grind_pattern [arena_grind] romNameW_anon => romNameW rom (n + 1) m pos
+grind_pattern [arena_grind] romNameW_rec => romNameW rom (n + 1) m pos
+
+/-- The functions `rom_name` calls. -/
+structure NameProg (rom : List UInt8) (p : Prog) : Prop where
+  rom_name : p.lookup "rom_name" = some (romName rom)
+  rom_u64 : p.lookup "rom_u64" = some (romU64 rom)
+  rom_put : p.lookup "rom_put" = some (romPut rom)
+  nanon_find : p.lookup "nanon_find" = some nanonFind
+  nanon_push : p.lookup "nanon_push" = some nanonPush
+  intern_nanon : p.lookup "intern_nanon" = some internNAnon
+  lit_hash : p.lookup "lit_hash" = some litHash
+  limbs_eq : p.lookup "limbs_eq" = some limbsEq
+  nstr_match : p.lookup "nstr_match" = some nsMatch
+  nstr_find : p.lookup "nstr_find" = some nsFind
+  nstr_push : p.lookup "nstr_push" = some nsPush
+  intern_nstr : p.lookup "intern_nstr" = some internNStr
+  nnum_find : p.lookup "nnum_find" = some nnumFind
+  nnum_push : p.lookup "nnum_push" = some nnumPush
+  intern_nnum : p.lookup "intern_nnum" = some internNNum
+  no_st8 : p.noSt8 = true
+
+section nameSpec
+variable (rom : List UInt8) (p : Prog) (hL : NameProg rom p)
+include hL
+
+/-- **`rom_name` computes its model** (any memory; the model says where it aborts). -/
+theorem romName_specW (n : Nat) : ∀ (s₀ : St) (pos : Word), (s₀.mem.arr64 POOL).size < 2 ^ 63 →
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "rom_name" [pos]
+    ⦃fun r s' => LocEq s' s₀ ∧ romNameW rom n s₀.mem pos = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
+  induction n with
+  | zero =>
+    intro s₀ pos _
+    rw [invoke_eq _ hL.rom_name]; simp only [callFn, romName]; vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ pos hs
+    have ih' := fun s₁ pos₁ h₁ => Triple.keep hL.no_st8 (ih s₁ pos₁ h₁)
+    rw [invoke_eq _ hL.rom_name]
+    simp only [callFn, romName]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ldc,
+        internNAnon_spec p hL.nanon_find hL.nanon_push hL.intern_nanon n,
+        internNStr_spec p hL.lit_hash hL.limbs_eq hL.nstr_match hL.nstr_find hL.nstr_push
+          hL.intern_nstr n,
+        internNNum_spec p hL.nnum_find hL.nnum_push hL.intern_nnum n,
+        romU64_spec rom p hL.rom_u64 n, romPut_specW rom p hL.rom_put n, ih'] <;>
+      finish [Keep.size]
+
+end nameSpec
+
+/-! ## `rom_name` refines `internName` -/
+
+/-- The store tier's arrays and `CTL` words (below 64): every intern writes only there. -/
+def StoreA : List ArrId := List.range 64
+def StoreC : List Word := (List.range 64).map UInt64.ofNat
+
+theorem frame_store {A : List ArrId} {C : List Word} {m m' : Mem} (h : MemFrame A C m m')
+    (hA : ∀ b ∈ A, b < 64) (hC : ∀ x ∈ C, x.toNat < 64) : MemFrame StoreA StoreC m m' :=
+  h.mono (fun b hb => by simp [StoreA, hA b hb]) (fun x hx => by
+    simp only [StoreC, List.mem_map, List.mem_range]
+    exact ⟨x.toNat, hC x hx, by simp⟩)
+
+theorem frame_grows {m m' : Mem} (h : Grows m m') : MemFrame StoreA StoreC m m' :=
+  frame_store (grows_frame m m' h) (by simp [POOL]) (by simp)
+
+section nameRef
+variable (rom : List UInt8) (hr : RomOK rom)
+include hr
+
+theorem romB_head (pos : Word) (b : UInt8) (bs rest : List UInt8) (h : rom.drop pos.toNat = (b :: bs) ++ rest) :
+    romB rom pos = b.toUInt64 :=
+  romB_of_drop rom pos (b :: bs) rest h 0 (by simp) pos (by simp)
+
+theorem drop_pos (pos : Word) (bs rest : List UInt8) (h : rom.drop pos.toNat = bs ++ rest) (k : Nat)
+    (hk : k ≤ bs.length) : (pos + UInt64.ofNat k).toNat = pos.toNat + k := by
+  by_cases hb : bs.length = 0
+  · have : k = 0 := by omega
+    subst this; simp
+  have := drop_len rom _ _ _ h (by omega)
+  simp only [RomOK] at hr
+  rw [UInt64.toNat_add, UInt64.toNat_ofNat']; simp; omega
+
+theorem drop_shift (pos : Word) (bs cs rest : List UInt8) (h : rom.drop pos.toNat = bs ++ cs ++ rest)
+    (q : Word) (hq : q.toNat = pos.toNat + bs.length) : rom.drop q.toNat = cs ++ rest := by
+  rw [hq, ← List.drop_drop, h, List.append_assoc, List.drop_left]
+
+/-- **The model of `rom_name` refines `internName`**: from `ArenaD`, at the encoding of `x`. -/
+theorem romNameW_ok (x : ConLeche.Name) (hx : nameFits x = true) :
+    ∀ (n : Nat) (m : Mem) (a : AState) (pos : Word) (rest : List UInt8) (h q : Word) (m' : Mem),
+    ArenaD m a → rom.drop pos.toNat = encName x ++ rest → romNameW rom n m pos = some (h, q, m') →
+    AM.ok (internName x) a ∧ ArenaD m' (AM.st (internName x) a) ∧ AM.res (internName x) a = decI h ∧
+    h.toNat < 2 ^ 32 ∧ q.toNat = pos.toNat + (encName x).length ∧ MemFrame StoreA StoreC m m' := by
+  induction x with
+  | anonymous =>
+    intro n m a pos rest h q m' hA hd hW
+    have h0 : romB rom pos = 0 := romB_head rom hr pos 0 [] rest hd
+    cases n with
+    | zero => simp [romNameW] at hW
+    | succ n =>
+    rw [romNameW_anon rom n m pos h0] at hW
+    cases hI : nainternW m with
+    | none => rw [hI] at hW; simp [nmAnonK] at hW
+    | some r =>
+    obtain ⟨w, m₁⟩ := r
+    rw [hI] at hW
+    simp only [nmAnonK] at hW
+    split at hW
+    · simp at hW
+    rename_i hlt
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, rfl, rfl⟩ := hW
+    obtain ⟨hok, hR, hres, hf⟩ := L.Front.nanon_A m a hA w m₁ hI
+    refine ⟨hok, hR, hres, by simp at hlt; exact UInt64.lt_iff_toNat_lt.mp hlt, ?_,
+      frame_store hf (by simp [nanonSch, NAREC, NASLOT]) (by simp [nanonSch])⟩
+    exact drop_pos rom hr pos (encName .anonymous) rest hd 1 (by simp [encName])
+  | str pre str ih =>
+    intro n m a pos rest h q m' hA hd hW
+    simp only [nameFits, Bool.and_eq_true, decide_eq_true_eq] at hx
+    have h0 : romB rom pos = 1 := romB_head rom hr pos 1 _ rest hd
+    cases n with
+    | zero => simp [romNameW] at hW
+    | succ n =>
+    rw [romNameW_rec rom n m pos (by simp [h0])] at hW
+    have hd1 : rom.drop (pos + 1).toNat = encName pre ++ (strB str ++ rest) := by
+      have := drop_shift rom hr pos [1] (encName pre ++ strB str) rest (by simpa [encName] using hd)
+        (pos + 1) (drop_pos rom hr pos _ rest hd 1 (by simp [encName]))
+      simpa using this
+    cases hP : romNameW rom n m (pos + 1) with
+    | none => rw [hP] at hW; simp [nmRecK] at hW
+    | some r =>
+    obtain ⟨h₁, q₁, m₁⟩ := r
+    rw [hP, h0, nmRecK_str rom _ _ _ _ rfl] at hW
+    obtain ⟨ok1, hR1, res1, hlt1, hq1, hf1⟩ := ih hx.1 n m a (pos + 1) _ h₁ q₁ m₁ hA hd1 hP
+    have hp1 := drop_pos rom hr pos _ rest hd 1 (by simp [encName])
+    simp only [UInt64.ofNat_one] at hp1
+    have hdq : rom.drop q₁.toNat = u64B str.toByteArray.size ++ (str.toByteArray.data.toList ++ rest) := by
+      have := drop_shift rom hr (pos + 1) (encName pre) (strB str) rest (by rw [hd1, List.append_assoc])
+        q₁ hq1
+      rw [this, strB, List.append_assoc]
+    have hl := u64W_of_drop rom q₁ _ _ hdq (by omega) hr
+    have hlen := drop_len rom _ _ _ hd (by simp [encName])
+    simp only [encName, strB, List.length_cons, List.length_append] at hlen
+    simp only [RomOK] at hr
+    have hsz : str.toByteArray.data.toList.length = str.toByteArray.size := by simp
+    have hq8 : (q₁ + 8).toNat = q₁.toNat + 8 := by
+      rw [UInt64.toNat_add]; simp [u64B] at hlen ⊢; omega
+    have hlN : (UInt64.ofNat str.toByteArray.size).toNat = str.toByteArray.size := by
+      rw [UInt64.toNat_ofNat']; exact Nat.mod_eq_of_lt (by omega)
+    rw [hl] at hW
+    simp only [romPutW] at hW
+    by_cases hok : romPutOK rom m₁ (q₁ + 8) (UInt64.ofNat str.toByteArray.size)
+    case neg => rw [if_neg hok] at hW; simp [nmStrK] at hW
+    rw [if_pos hok] at hW
+    simp only [nmStrK] at hW
+    cases hI : nsinternW ((rputW rom m₁ m₁.top (q₁ + 8) (UInt64.ofNat str.toByteArray.size) 0).set64 CTL 0
+        (m₁.top + UInt64.ofNat str.toByteArray.size)) h₁ m₁.top (UInt64.ofNat str.toByteArray.size) with
+    | none => rw [hI] at hW; simp [nmStr2K] at hW
+    | some r =>
+    obtain ⟨w, m₃⟩ := r
+    rw [hI] at hW
+    simp only [nmStr2K] at hW
+    split at hW
+    · simp at hW
+    rename_i hlt
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, rfl, rfl⟩ := hW
+    obtain ⟨hg, hsl, hk, -⟩ := romPutW_facts rom m₁ (q₁ + 8) _ hR1.1.lit.1 hok (by simp [RomOK]; omega)
+    have hR2 := ArenaD.grow _ _ hg _ hR1
+    have hk' : sliceL (((rputW rom m₁ m₁.top (q₁ + 8) (UInt64.ofNat str.toByteArray.size) 0).set64 CTL 0
+        (m₁.top + UInt64.ofNat str.toByteArray.size)).arr64 POOL) m₁.top.toNat
+        (UInt64.ofNat str.toByteArray.size).toNat = strWords str := by
+      rw [hk, hq8, hlN, ← List.drop_drop, hdq]
+      simp [u64B, strWords, List.take_left' hsz]
+    obtain ⟨ok2, hR3, res2, hf2⟩ := L.Front.nstr_A _ _ hR2 w m₃ h₁ _ _ hlt1 hsl str hk' hI
+    have hX : internName (.str pre str) = internName pre >>= fun hp => internNNode (.str hp str) := rfl
+    have okX : AM.ok (internName (.str pre str)) a := by
+      rw [hX, AM.ok_bind, res1]; exact ⟨ok1, ok2⟩
+    refine ⟨okX, ?_, ?_, by simp at hlt; exact UInt64.lt_iff_toNat_lt.mp hlt, ?_, ?_⟩
+    · rw [hX, AM.st_bind _ _ _ (hX ▸ okX), res1]; exact hR3
+    · rw [hX, AM.res_bind _ _ _ ok1, res1]; exact res2
+    · simp only [encName, strB, List.length_cons, List.length_append, hsz]
+      rw [UInt64.toNat_add, hq8, hlN]; simp [u64B] at hlen ⊢; omega
+    · exact (hf1.trans (frame_grows hg)).trans
+        (frame_store hf2 (by simp [nstrSch, NSREC, NSSLOT]) (by simp [nstrSch]))
+  | num pre k ih =>
+    intro n m a pos rest h q m' hA hd hW
+    simp only [nameFits, Bool.and_eq_true, decide_eq_true_eq] at hx
+    have h0 : romB rom pos = 2 := romB_head rom hr pos 2 _ rest hd
+    cases n with
+    | zero => simp [romNameW] at hW
+    | succ n =>
+    rw [romNameW_rec rom n m pos (by simp [h0])] at hW
+    have hd1 : rom.drop (pos + 1).toNat = encName pre ++ (u64B k ++ rest) := by
+      have := drop_shift rom hr pos [2] (encName pre ++ u64B k) rest (by simpa [encName] using hd)
+        (pos + 1) (drop_pos rom hr pos _ rest hd 1 (by simp [encName]))
+      simpa using this
+    cases hP : romNameW rom n m (pos + 1) with
+    | none => rw [hP] at hW; simp [nmRecK] at hW
+    | some r =>
+    obtain ⟨h₁, q₁, m₁⟩ := r
+    rw [hP, h0, nmRecK_num rom _ _ _ _ rfl] at hW
+    obtain ⟨ok1, hR1, res1, hlt1, hq1, hf1⟩ := ih hx.1 n m a (pos + 1) _ h₁ q₁ m₁ hA hd1 hP
+    have hdq : rom.drop q₁.toNat = u64B k ++ rest :=
+      drop_shift rom hr (pos + 1) (encName pre) (u64B k) rest (by rw [hd1, List.append_assoc]) q₁ hq1
+    have hl := u64W_of_drop rom q₁ _ _ hdq hx.2 hr
+    have hlen := drop_len rom _ _ _ hd (by simp [encName])
+    have hp1 := drop_pos rom hr pos _ rest hd 1 (by simp [encName])
+    simp only [UInt64.ofNat_one] at hp1
+    simp only [encName, List.length_cons, List.length_append] at hlen
+    simp only [RomOK] at hr
+    rw [hl] at hW
+    simp only [nmNumK] at hW
+    cases hI : nninternW m₁ h₁ (UInt64.ofNat k) with
+    | none => rw [hI] at hW; simp at hW
+    | some r =>
+    obtain ⟨w, m₃⟩ := r
+    rw [hI] at hW
+    simp only at hW
+    split at hW
+    · simp at hW
+    rename_i hlt
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, rfl, rfl⟩ := hW
+    obtain ⟨ok2, hR3, res2, hf2⟩ := L.Front.nnum_A _ _ hR1 w m₃ h₁ _ hlt1 hI
+    have hkN : (UInt64.ofNat k).toNat = k := by
+      rw [UInt64.toNat_ofNat']; exact Nat.mod_eq_of_lt hx.2
+    rw [hkN] at ok2 hR3 res2
+    have hX : internName (.num pre k) = internName pre >>= fun hp => internNNode (.num hp k) := rfl
+    have okX : AM.ok (internName (.num pre k)) a := by
+      rw [hX, AM.ok_bind, res1]; exact ⟨ok1, ok2⟩
+    refine ⟨okX, ?_, ?_, by simp at hlt; exact UInt64.lt_iff_toNat_lt.mp hlt, ?_, ?_⟩
+    · rw [hX, AM.st_bind _ _ _ (hX ▸ okX), res1]; exact hR3
+    · rw [hX, AM.res_bind _ _ _ ok1, res1]; exact res2
+    · simp only [encName, List.length_cons, List.length_append]
+      rw [UInt64.toNat_add]; simp [u64B] at hlen ⊢; omega
+    · exact hf1.trans (frame_store hf2 (by simp [nnumSch, NNREC, NNSLOT]) (by simp [nnumSch]))
+
+end nameRef
+
+/-- **`rom_name` refines `internName`**: at a position where the ROM holds the encoding of `x`,
+under `ArenaD`; it returns the handle and the position after the encoding, and writes only the
+store tier. -/
+@[refines ConRon.Arena.internName]
+theorem romName_refines (rom : List UInt8) (p : Prog) (hL : NameProg rom p) (hr : RomOK rom)
+    (x : ConLeche.Name) (hx : nameFits x = true) (n : Nat) (s₀ : St) (a₀ : AState) (pos : Word)
+    (rest : List UInt8) (hA : ArenaD s₀.mem a₀) (hd : rom.drop pos.toNat = encName x ++ rest) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "rom_name" [pos]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internName x) a₀ ∧ ArenaD s'.mem (AM.st (internName x) a₀) ∧
+      AM.res (internName x) a₀ = decI (r.headD 0) ∧ (r.headD 0).toNat < 2 ^ 32 ∧
+      (r.tail.headD 0).toNat = pos.toNat + (encName x).length ∧
+      MemFrame StoreA StoreC s₀.mem s'.mem; ⊤⦄ := by
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (romName_specW rom p hL n s₀ pos hA.1.lit.1.2.2.1)
+  subst hs
+  exact ⟨hloc, romNameW_ok rom hr x hx n _ a₀ pos rest _ _ _ hA hd hW⟩
+
+end L.Rom
