@@ -1767,9 +1767,11 @@ L/Rust is 0.56 for the walk and about 0.3 for the memo (no resize, no generic co
   `imul rax, rcx` is printed `imulq %rcx, %rax, %rax`, which binutils 2.46 assembles as an APX
   instruction (EVEX, SIGILL here). The scanner never multiplies, so the walk is the first compiled
   program to hit it; every store (`homeW`, FNV) multiplies, so `natAddLit_x64`'s code would too.
-  `WalkEmit.lean` rewrites the text (`fixImul`). The printer and the assembler are trusted, so
-  this is a trusted-base mismatch: `docs/gaps/kraken-att-imul-three-operand.lean`. The fix
-  belongs in Kraken's printer (or `asmText`).
+  The printer and the assembler are trusted, so this is a trusted-base mismatch:
+  `docs/gaps/kraken-att-imul-three-operand.lean` (not fixed upstream as of 2026-10-21, checked
+  against `AeneasVerif/kraken` `main` and the `vcgen` fork). Fixed properly in lane `imul`, below
+  (`asmText`'s `fixImul`, a `Directive`-level normalisation, not the textual patch this lane
+  first used).
 * `decide` on the frame side conditions (`Apart`, bounded `∀` over `List UInt64`) fails or times
   out: `docs/gaps/decide-uint64-list-ball.lean`; a `simp` with the ids (`apart`) works.
 * `vcgen` does not see a spec behind a named predicate (`BbGoSpec p n`); `unfold` it first.
@@ -1787,3 +1789,76 @@ local).
 ### `sorry`s
 
 None. (`vendor/con-leche/ConLeche/Challenge.lean`'s are vendored and pre-existing.)
+
+## The `imul` fix and the asm/disassembly audit (2026-10-21, lane `imul`)
+
+Files: `ConAgua/Compiler/Run.lean` (`fixImul`, `asmText`), `ConAgua/Arena/EmitStore.lean` (new,
+emits `storeProg`), `harness/check-asm.sh`, `harness/check_asm.py`,
+`docs/gaps/kraken-att-imul-three-operand.lean`.
+
+**The fix.** The walk lane's finding (above) is real: Kraken's `.imul (some d) a b` is always
+printed in three-operand AT&T syntax, which binutils 2.46 reads as the APX "new data destination"
+form (EVEX-encoded) whenever it can, rather than the plain two-operand `imul` the compiler means.
+The compiler's one `imul` (`Compile.lean`'s `binInstr .mul`) always has `d = a`
+(`rax := rax * rcx`), and for that case `.imul (some a) a b` and `.imul none a b` are *the same
+instruction* (`Kraken/X64/Semantics.lean`'s `.imul dst src1 src2` stores to `src1` when
+`dst = none`); Kraken's own printer already writes `.imul none a b` in the two-operand form every
+assembler accepts. So `asmText` now maps `fixImul` over `compileProg`'s `Directive`s before
+printing, rewriting `.imul (some d) a b` to `.imul none a b` whenever `d = a` (a `BEq`/`DecidableEq`
+check on `RegOrMem`, already derived) and leaving every other directive (including a `d ≠ a` three-
+operand `imul`, not emitted here) untouched. This is a normalisation of what gets printed, not a
+textual patch of the printed assembly; `compileProg` and `compile_correct` are unchanged.
+`WalkEmit.lean`'s textual `fixImul : String → String` (a `String.replace`) is gone.
+
+**The asm/disassembly audit, `harness/check-asm.sh`.** The printer and the assembler sit outside
+`compile_correct` (the theorem is about Kraken's own instruction semantics, which `as` must
+realise faithfully for the proof to say anything about the real machine), so the `imul` mismatch
+is one instance of a whole class of risk: nothing checks that the other ~25 instruction forms the
+compiler emits (`Step.lean`'s count) survive printing and assembling unchanged. `check-asm.sh`
+automates that check for every program the compiler proof covers (`scanProg`, `storeProg`, the
+walk's `benchProg`, via `EmitScan.lean`/the new `EmitStore.lean`/`WalkEmit.lean`): it assembles the
+printed `.s` with `as`, disassembles the object with `objdump -d`, and (`check_asm.py`) compares,
+instruction by instruction:
+* the raw opcode bytes' first byte against an APX prefix deny-list (EVEX `0x62`, REX2 `0xd5`):
+  Kraken's `Instr`/`Operation` syntax has no APX case at all, so any instruction encoded this way
+  is outside what the proof covers regardless of what text it disassembles to (an EVEX
+  `imul %rcx,%rax,%rax` and the intended legacy one can disassemble to identical-looking text,
+  which is why this check is on bytes, not text — it is what would have caught the `imul` bug
+  before it was found by hand, since a text-only diff does not);
+* mnemonic (normalising the conditional AT&T width suffix `objdump` elides when registers already
+  disambiguate it, and `mov`'s `movabs` widening for a 64-bit immediate that doesn't fit a
+  sign-extended 32-bit field — both benign, already-equivalent spellings, not printer bugs);
+* operand count and kind (register/immediate/memory/branch-target);
+* register names (exact), immediate and memory-displacement values (parsed and compared modulo
+  `2^64`, so hex-vs-decimal and sign-extension display differences don't cause false positives),
+  and a memory operand's base/index/scale registers (exact); a branch/call target is only checked
+  for being a target (not a register/immediate/memory operand — the family of bug `imul` is), since
+  resolving its address is the linker's job, not the printer's.
+
+Run: `harness/check-asm.sh` (rebuilds the three `Emit*` drivers, then checks each). Current
+result: scan 303, store 1275, walk 3476 instructions, all matching; reverting `fixImul` makes the
+walk check fail immediately with the APX-prefix diagnostic (checked by hand while developing the
+script, not left reverted).
+
+**Findings.**
+* The three-operand `imul` was reproduced standalone (a bare Kraken `Directive`, no compiler):
+  printed text, `as`/`objdump` showing the EVEX encoding (`62 f4 fc 18 af c1`), and a `SIGILL`
+  (exit 132) running it, against the two-operand form's correct `48 0f af c1` and exit value; see
+  `docs/gaps/kraken-att-imul-three-operand.lean`. Not fixed upstream: `AeneasVerif/kraken` `main`
+  (`72f3a7a3`) has the identical printer code as the `vcgen` fork (`ba12834`).
+  `fixImul`'s rewrite needs only `d = a`'s `DecidableEq`, already derived on `RegOrMem`.
+* `mov`'s width suffix is not the only place the printer's and `objdump`'s AT&T text can
+  legitimately differ while meaning the same instruction: a `mov`-immediate-to-register with a
+  64-bit immediate that doesn't fit a sign-extended 32-bit field disassembles as `movabs`, a GNU
+  assembler/objdump spelling for the same opcode choice (`B8+r`, not a `C7 /0` with a 32-bit
+  immediate), not a bug. There is no such alternate encoding for an immediate-to-*memory* `mov`
+  (the compiler's only one, `zeroLocals`, always writes `0`, so this never arises there).
+* `Prog.tab storeProg 0 25` (no byte arrays, 25 word arrays — the arena's layout) is enough for
+  `Prog.wf`; `EmitStore.lean` follows `WalkEmit.lean`'s shape. There is no C driver for
+  `storeProg`/`nat_add_lit` (unlike `scanProg`'s `run.c` and the walk's `walk.c`); this lane only
+  needed `asmText`'s output, not to execute it, so none was written.
+
+### `sorry`s
+
+None (no proof touched; `compile_correct` unaffected, `#print axioms` unchanged:
+`propext`, `Classical.choice`, `Quot.sound`).
