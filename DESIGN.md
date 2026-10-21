@@ -3834,6 +3834,48 @@ ConRon.Arena.natOpResult]`) is one `vcgen` over the sixteen arms with the arm sp
 `natOpSel` when the flag is set) are given as implications, so the flag-zero abort path needs no
 case split.
 
+### The environment (`Tiers.lean` `EnvR`, `EnvRec.lean`, `Env.lean`)
+
+**Decision: the name → constant index is directly addressed by the name handle, not hashed.** A
+name handle is `tag · 2^28 + tier · 2^27 + i` with `tag` ∈ {0, 1, 2} (`anonymous`, `str`, `num`),
+so its row is words `4 i + 2 tier` and `+ 1` of `EIXA`/`EIXS`/`EIXN` (132 + `tag`): the counter
+plus one (`0`: no row) and the record pointer. Lookup is two reads, `erase` writes `0`, there
+are no tombstones, no probe sequences, no load factor, and the relation needs no hashing argument
+(the one fact about a write is `rowC_rowSet`: rows of other names stay, from `rowIx_inj`). Cost:
+two words per name *slot* in each tier (the arrays are sized like the name tables; an index past
+the end is a capacity abort), against ≈ 3 words per *entry* at 3/4 load for open addressing; on
+`Init` (~10^6 names, ~4·10^5 constants) both are tens of MB. So the env index needs no deletion
+from lane `libs`' map library (note for `libs`: the env is not a client of deletion; tree-valued
+caches and the bank stack still are).
+
+* `ECON` (135): the record pointer of every constant by position, oldest first, `CTL[128]`
+  entries; the twin's `env.consts` (newest first) is its reverse. `EREC` (136) is the record pool,
+  `CTL[129]` its top (no writer yet: the installers build records there).
+* **Records** (`EnvRec.lean`): `IConstantInfo`, `IDeclaration`, `ValueGroup` as word runs in a
+  pool, lists as `(off, len)` slices of the same pool, rule lists as slices of 11-word records, an
+  inductive block as a slice of record pointers; decoders `decCI`, `decDecl`, `decVG` (value
+  relations, `Option`-valued; a handle word must be below `2^32`). Word `p + 1` of a constant
+  record is always its index key (`ci.name`, `decCI_name`). `PropWhen`'s names are name handles
+  in L, read back by a parameter `dn` (the consumers relate it to the store's `denoteN`); so
+  `EnvR` and `CheckR` take `dn`.
+* `EnvR dn m vis fe`: `fe.visibleBelow = vis`, every row's presence and counter is the twin's
+  (`idx[n]?.map fst`), every present row's record decodes to the twin's constant, and the
+  constants decode in order. Extensional through `idx[n]?`, so layout and history are free and
+  `find?` (`EnvR.find?_eq`) and the raw row (`GenRec`'s `prev`) both follow.
+* Refined (`@[refines]`): `IFEnv.find?` (`env_find`), `IFEnv.push` (`env_push`, the name read from
+  the record), `IFEnv.popTemp` (`env_pop_temp`, the previous row passed as two words that decode,
+  `prevD`), `IFEnv.restrictTo` (no code: `EnvR.restrictTo`). Also `env_erase` (`HashMap.erase` on
+  the index, a step of `eraseInstalled`), `EnvR.init` (`mkIFEnv IEnv.empty` on zero memory), the
+  generic `EnvR.setRow` and `EnvR.popLen`, and the write set `envProg_closed` (rows, `ECON`,
+  `CTL[128]`: by `decide +kernel`, so every other tier survives an env write by its frame).
+* Proof shape: L side `vcgen` + `finish` with the twin facts given as implications in the context
+  (`key := fun ht hb … => EnvR.push …`); the twin side by hand (≈ 60 lines for `push`, the
+  constants list by `List.range_succ` and `mapM_congr'`). Findings: `omega` hung (> 100 s, not a
+  heartbeat timeout) on the 2^27/2^28 decomposition with `UInt64.toNat` atoms in context; stated
+  over plain `Nat` (`nat_rowIx_inj`) it is instant. `split_ifs` is Mathlib (not here). The row
+  index computed inline in each function made `finish` chase bit-vector normal forms; moving it
+  into `env_ix(w)` with a spec `(tagW w, ixW w)` (two opaque words with `toNat` facts) fixed it.
+
 ## Library work before the core: the scratch lifecycle (2026-10-21, lane `libs`)
 
 Lane `scale`'s recommended item 4, first half. Files: `StoreLib.lean`, `Store.lean` and the 18
