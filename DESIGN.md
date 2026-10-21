@@ -2152,3 +2152,93 @@ records one generic theorem (`objN_link`) and one tactic macro (`obj_loop`) prov
 ### `sorry`s
 
 None.
+
+## The final theorem, and the audits behind it (2026-10-21, lane `final`)
+
+Files: `ConAgua/Final/Twin.lean` (160 lines), `ConAgua/Final/Statement.lean` (200 lines). Both are
+plain (non-`module`) files, since `Twin` imports `ConRonBridge`; they are in the lakefile's glob list.
+
+### What landed
+
+* `Twin.lean` restates the twin side of con-ron's `ConRon/Capstone.lean` without Aeneas:
+  `SeqAccepts` (phase A, then one `checkPendingList` over all pending records from `s'.worker`,
+  the x64 checker's single worker), `pooledAccepts_of_seq`, `TwinAccepts chunks` (the six stages
+  from `AState.init EStore.empty`, at some pin list), `stages_frame` (con-ron's, with the stream
+  named: `denoteDecls sE.store ds.toList = some (preparePrelude preC rc.decls).toList` and
+  `ConLeche.Frontend.parseChunks chunks = .ok rc`), `twinAccepts_pure`, `twinAccepts_model`,
+  `twinAccepts_no_False`. The proofs are con-ron's, unchanged except for the named stream; the
+  two tier specs are discharged in place (`CoreSpec.of_core rfl`, `indSpec_of_bridge rfl hk`).
+* `Statement.lean`: `ACCEPT`, `loadMem`, `PipelineRefines`, `HarnessCall`, `checker_x64_accepts`,
+  `x64_model_exists`, `x64_no_False`, and `pipelineRefines_reject` (an always-rejecting `check`
+  has `PipelineRefines`: the hypothesis is satisfiable). `#guard_msgs` checks both corollaries
+  depend on `propext`, `Classical.choice`, `Quot.sound` only. Statements and the trusted base:
+  `docs/ROADMAP.md` §3.
+* The final theorem is parametric in the program `p`: the ROM (pins, prelude bytes) is part of
+  `p`, and nothing about it is assumed. The proof of `checker_x64_accepts` is 20 lines: the shape
+  of `natAddLit_x64`, with `PipelineRefines` in place of the run lemma.
+
+### Decisions
+
+* **Capacities are untrusted.** `PipelineRefines` quantifies over all array sizes, so `check` must
+  check them at entry (`len8`/`len64`) and abort; the alternative, a size predicate the harness
+  must satisfy, would put the sizes in the trusted base.
+* **`N < 2^62`** is a premise of the theorem (the machine fuel in `rsi`), so the twin's `2^62`
+  fuels can be matched by induction.
+* **`ACCEPT = 0x414343455054`**, not a small number: a status word or a stale register never reads
+  as accept.
+* The corollaries are stated in con-leche's vocabulary (`parseChunks`, `preparePrelude`,
+  `checkDeclsPure`, `Model`), with the pin list and the prelude existential.
+
+### Audit: fuels (twin `vendor/con-ron/ConRon/Arena`, con-leche `vendor/con-leche`)
+
+| fuel | where (value) | decrements | at zero | decision |
+|---|---|---|---|---|
+| `checkFuel` | `Core.lean:3616` (2^62) | one per knot level (`coreKnot` 3536–3608, `CoreIO.lean:33`) | `.internal` throw | not counted; `F ≥ n` |
+| `whnfCoreLoopFuel`, `whnfLoopFuel`, `defeqLoopFuel` | `Core.lean:2185`, `2402`, `3263` (2^62) | per loop step | `.internal` throw | not counted |
+| `lamsFuel` | `Core.lean:3034` (2^62) | per λ pair (`defeqLams` 3051) | falls back to `defeqLamsInner` | not counted (unreachable) |
+| `peelFuel` | `Core.lean:2478` (2^24) | per binder (`inferLams` 2507, `inferPis` 2555, `defeqPeel` 2992) | hands the rest to the knot | **L counter** |
+| `coreWalkFuel` | `Core.lean:87` (4·10^9) | per recursive call of every store walk (ExprOps, Canon, Promote, PropRead, Positivity, …) | `.internal` throw | **L counter** (no rank argument needed) |
+| `storeFuel` | `Frontend/ExportC.lean:84` (`nodeCount + 1`) | per Π node | throw | **L counter** |
+| `hoistClosure` | `NatOpGround.lean:308` (`ds.size`) | per record marked | throw | **L counter** |
+| `whnfWalkFuel` | `Inductives/Positivity.lean:306` (`depth e + 1024`) | per `nestPos` call (1048) | `.notImplemented` decline, reachable | **L counter**, same value |
+| `Level.defaultFuel` | con-leche `Kernel/Level.lean:142` (10^4) | per `leqCore` call, fresh per `leq` | **`none`** | **L counter**, three-way result |
+| `unwrapIdDefs` | `PropRead.lean:155,163` (4) | per wrapper | **returns the term** | **L counter** |
+| `idxCap` | `Handle.lean:98` (2^27 per constructor and tier) | store size | `.native` throw | L abort at the same size |
+
+`none` from a level comparison is an answer at `Core.lean:1651,1656,2720,2724,2906`,
+`BlockInstall.lean:300`, `BlockParts.lean:144,362`, `SumInstall.lean:109`, `RecCheck.lean:218`,
+`ExportC.lean:345`; elsewhere it goes through `liftFueled` (`Core.lean:312`) to a decline.
+
+### Audit: recovery points
+
+One: `orElseAttempt` (`CheckerBase.lean:102`), called only from `checkDivModPinLoop`
+(`DeclCheck.lean:613–631`). A throw other than `.native` inside `checkDivModPinAt` (a defeq at
+`checkFuel` and the certificates' infer/defeq) resumes from the pre-attempt state with the next
+variant; `.ok false` continues from the post-attempt state; the guards (619) and `divModEnvGuard`
+run outside the attempt. No variant matching throws `.notImplemented` (decline, exit 2). All other
+error matches (`Checker.lean:228–236, 247, 272–278, 286–291`, the frontend's `atLine` paths,
+`Main.lean:262–297`) pass the error to a non-accept verdict. No thrown error is turned into
+`false`/`none` anywhere else. Decision: L recovers nowhere (ROADMAP §3 (c)).
+
+### Audit: hash bits and eager nesting
+
+* Hash reads: `Store.lean:459–463` (names), `620–631` (levels), `736–741` (level lists),
+  `1021–1031`, `1215–1255` (expressions): each feeds only a parent's hash. `bvarOfData`,
+  `fvarOfData`, `lpOfData` read `w % 2^32` (`packData`, con-leche `Kernel/Expr.lean:162–178`).
+  Handles hash by their word (`Handle.lean:88`). No `Std.HashMap` is iterated. `Bridge/` never
+  names `mixHash`. Decision: no patch; relate `w % 2^32`.
+* Eager nesting: the only entry is `defeqArg` (`Core.lean:2620`) from full-grade `inferApp`; the
+  eager knot re-enters through `defeqLamsInner` (3040), `etaCert` (1617), `iotaCertsFullAux`
+  (1303), all gated by `verifiedChecks`, which `.verifiedEager` keeps. Depth is unbounded in
+  verified mode, 1 in trusted modes. `putModeMemos` restores the six tables wholesale (eager
+  entries dropped); the other eight caches keep what the eager run added. Decision: a bank stack
+  (ROADMAP §2 item 3).
+
+### Measurements
+
+`lake build ConAgua.Final.Statement` with everything else built: `Twin` and `Statement` under
+1 s each (the proofs are compositions of existing lemmas).
+
+### `sorry`s
+
+None. `PipelineRefines` is a hypothesis of the theorems.
