@@ -4,7 +4,6 @@ public import ConAgua.Compiler.Compile
 public import ConAgua.Compiler.Mem
 public import Kraken.X64.WP.Basic
 public import Kraken.X64.Registers
-public import Std.Tactic.BVDecide
 
 @[expose] public section
 
@@ -408,7 +407,15 @@ theorem cf_cmp (a b : BitVec 64) :
 
 omit [Host] in
 theorem zf_cmp (a b : BitVec 64) : (a - b == BitVec.zero 64) = (a == b) := by
-  simp only [BitVec.zero_eq]; bv_decide
+  have h : a - b = 0#64 ↔ a = b := by
+    constructor
+    · intro h
+      have := congrArg BitVec.toNat h
+      simp [BitVec.toNat_sub] at this
+      apply BitVec.eq_of_toNat_eq; omega
+    · intro h; subst h; simp
+  simp only [BitVec.zero_eq]
+  rw [Bool.eq_iff_iff, beq_iff_eq, beq_iff_eq]; exact h
 
 omit [Host] in
 theorem of_cmp (a b : BitVec 64) :
@@ -426,11 +433,22 @@ theorem of_cmp (a b : BitVec 64) :
 omit [Host] in
 theorem lt_cmp (a b : BitVec 64) :
     ((a - b).msb != (BitVec.signed (a - b) != a.signed - b.signed)) = decide (a.toInt < b.toInt) := by
-  rw [of_cmp, BitVec.ssubOverflow_eq]
-  have : decide (a.toInt < b.toInt) = a.slt b := by
-    rw [Bool.eq_iff_iff, decide_eq_true_iff, BitVec.slt_iff_toInt_lt]
-  rw [this]
-  bv_decide
+  rw [of_cmp]
+  have h1 := BitVec.toInt_lt (x := a)
+  have h2 := BitVec.le_toInt (x := a)
+  have h3 := BitVec.toInt_lt (x := b)
+  have h4 := BitVec.le_toInt (x := b)
+  rw [BitVec.msb_eq_toInt, BitVec.toInt_sub, Int.bmod_def]
+  simp only [BitVec.ssubOverflow]
+  simp at h1 h2 h3 h4 ⊢
+  by_cases hp : 9223372036854775808 ≤ a.toInt - b.toInt
+  · have hn : ¬ a.toInt - b.toInt < -9223372036854775808 := by omega
+    have hl : ¬ a.toInt < b.toInt := by omega
+    split <;> simp [hp, hn, hl] <;> omega
+  · by_cases hn : a.toInt - b.toInt < -9223372036854775808
+    · have hl : a.toInt < b.toInt := by omega
+      split <;> simp [hp, hn, hl] <;> omega
+    · split <;> simp [hp, hn] <;> omega
 
 omit [Host] in
 theorem cmpFlags_cf (a b : BitVec 64) : (cmpFlags a b).cf = decide (a.toNat < b.toNat) := by

@@ -48,6 +48,52 @@ theorem step_set_run (x : Var) (e : Expr) :
   simp only [step, StateT.run_bind, evalE_run]
   cases evalP σ e <;> rfl
 
+theorem step_st64_run (a : ArrId) (i e : Expr) :
+    stepRun p K (.st64 a i e) σ =
+      match evalP σ i with
+      | .error x => .error x
+      | .ok j =>
+        match evalP σ e with
+        | .error x => .error x
+        | .ok v => if j.toNat < (σ.mem.arr64 a).size then .ok (.normal, { σ with mem := σ.mem.set64 a j v })
+          else .error .oob := by
+  unfold stepRun
+  simp only [step, StateT.run_bind, evalE_run]
+  rcases evalP σ i with x | j
+  · rfl
+  · simp only [Except.map, bind, Except.bind]
+    rcases evalP σ e with x | v
+    · rfl
+    · simp only [L.st64, StateT.run_bind, StateT.run_get]
+      by_cases h : j.toNat < (σ.mem.arr64 a).size
+      · simp [h, StateT.bind, StateT.run, get, getThe, MonadStateOf.get, StateT.get, set, MonadStateOf.set,
+          StateT.set, pure, StateT.pure, bind, Except.bind, Except.pure]
+      · simp [h, StateT.bind, StateT.run, get, getThe, MonadStateOf.get, StateT.get, bind, Except.bind, Except.pure,
+          pure, throw, throwThe, MonadExceptOf.throw, StateT.lift, Except.map]
+
+theorem step_st8_run (a : ArrId) (i e : Expr) :
+    stepRun p K (.st8 a i e) σ =
+      match evalP σ i with
+      | .error x => .error x
+      | .ok j =>
+        match evalP σ e with
+        | .error x => .error x
+        | .ok v => if j.toNat < (σ.mem.arr8 a).size then .ok (.normal, { σ with mem := σ.mem.set8 a j v })
+          else .error .oob := by
+  unfold stepRun
+  simp only [step, StateT.run_bind, evalE_run]
+  rcases evalP σ i with x | j
+  · rfl
+  · simp only [Except.map, bind, Except.bind]
+    rcases evalP σ e with x | v
+    · rfl
+    · simp only [L.st8, StateT.run_bind, StateT.run_get]
+      by_cases h : j.toNat < (σ.mem.arr8 a).size
+      · simp [h, StateT.bind, StateT.run, get, getThe, MonadStateOf.get, StateT.get, set, MonadStateOf.set,
+          StateT.set, pure, StateT.pure, bind, Except.bind, Except.pure]
+      · simp [h, StateT.bind, StateT.run, get, getThe, MonadStateOf.get, StateT.get, bind, Except.bind, Except.pure,
+          pure, throw, throwThe, MonadExceptOf.throw, StateT.lift, Except.map]
+
 theorem step_seq_run (s t : Stmt) :
     stepRun p K (.seq s t) σ =
       match stepRun p K s σ with

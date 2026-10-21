@@ -18,6 +18,7 @@ public import ConAgua.Compiler.RunEq
 public import ConAgua.Compiler.SimStmt
 public import ConAgua.Compiler.SimCall
 public import ConAgua.Compiler.SimFun
+public import ConAgua.Compiler.SimStore
 public import ConAgua.Compiler.Correct
 public import ConAgua.Compiler.Main
 public import ConAgua.Scan.Link
