@@ -5,6 +5,8 @@ import ConAgua.Arena.ConstRefine
 import ConAgua.Arena.LetRefine
 import ConAgua.Arena.BVarRefine
 import ConAgua.Arena.FVarRefine
+import ConAgua.Arena.LamRefine
+import ConAgua.Arena.ForallRefine
 import ConAgua.Arena.ProjRefine
 import ConAgua.Arena.ZeroRefine
 import ConAgua.Arena.LevelRefine
@@ -40,6 +42,8 @@ pool and the walk memo:
 | 22, 23 `BREC`, `BSLOT` | expression `bvar` | 22, 23 |
 | 24 `BMEMO` | the `bvarBound` memo | 24: stamp − 1, 25: live count |
 | 25, 26 `FVREC`, `FVSLOT` | expression `fvar` | 26, 27 |
+| 27, 28 `LAREC`, `LASLOT` | expression `lam` | 28, 29 |
+| 29, 30 `FAREC`, `FASLOT` | expression `forallE` | 30, 31 |
 | 31, 32 `PJREC`, `PJSLOT` | expression `proj` | 32, 33 |
 | 33, 34 `NAREC`, `NASLOT` | name `anonymous` | 34, 35 |
 | 35, 36 `NSREC`, `NSSLOT` | name `str` (bytes in the pool) | 36, 37 |
@@ -72,7 +76,7 @@ namespace L.Arena
 /-- Decide that a table is apart from a writer (`Apart`, `BMEMO ∉ A`, `24 ∉ C`) for concrete
 schemas: `decide` times out on the `UInt64` list memberships, `simp` with the array ids is
 immediate. -/
-macro "apart" : tactic => `(tactic| simp [Apart, POOL, CTL, BMEMO, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT])
+macro "apart" : tactic => `(tactic| simp [Apart, POOL, CTL, BMEMO, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT])
 
 /-! ## Locality of each table's records -/
 
@@ -104,6 +108,12 @@ theorem bvarLocal : RLocal bvarSch BRecRel bhash [] [] := by
 theorem fvarLocal : RLocal fvarSch FVRecRel fvhash [] [] := by
   intro m m' hra _ _; simp only [fvarSch] at hra
   exact ⟨fun t i k h => by simpa only [FVRecRel, hra] using h, fun t i => by simp only [fvhash, hra]⟩
+theorem lamLocal : RLocal lamSch LaRecRel lahash [] [] := by
+  intro m m' hra _ _; simp only [lamSch] at hra
+  exact ⟨fun t i k h => by simpa only [LaRecRel, hra] using h, fun t i => by simp only [lahash, hra]⟩
+theorem forallELocal : RLocal forallSch FaRecRel fahash [] [] := by
+  intro m m' hra _ _; simp only [forallSch] at hra
+  exact ⟨fun t i k h => by simpa only [FaRecRel, hra] using h, fun t i => by simp only [fahash, hra]⟩
 theorem projLocal : RLocal projSch PJRecRel pjhash [] [] := by
   intro m m' hra _ _; simp only [projSch] at hra
   exact ⟨fun t i k h => by simpa only [PJRecRel, hra] using h, fun t i => by simp only [pjhash, hra]⟩
@@ -172,6 +182,10 @@ theorem BVarR.frame (hap : Apart bvarSch [] [] A C) (h : BVarR m a) : BVarR m' a
   storeR_frame bvarSch BRecRel bhash bvarSch_wf [] [] bvarLocal A C hap m m' hf _ _ _ h
 theorem FVarR.frame (hap : Apart fvarSch [] [] A C) (h : FVarR m a) : FVarR m' a :=
   storeR_frame fvarSch FVRecRel fvhash fvarSch_wf [] [] fvarLocal A C hap m m' hf _ _ _ h
+theorem LamR.frame (hap : Apart lamSch [] [] A C) (h : LamR m a) : LamR m' a :=
+  storeR_frame lamSch LaRecRel lahash lamSch_wf [] [] lamLocal A C hap m m' hf _ _ _ h
+theorem ForallR.frame (hap : Apart forallSch [] [] A C) (h : ForallR m a) : ForallR m' a :=
+  storeR_frame forallSch FaRecRel fahash forallSch_wf [] [] forallELocal A C hap m m' hf _ _ _ h
 theorem ProjR.frame (hap : Apart projSch [] [] A C) (h : ProjR m a) : ProjR m' a :=
   storeR_frame projSch PJRecRel pjhash projSch_wf [] [] projLocal A C hap m m' hf _ _ _ h
 theorem ZeroR.frame (hap : Apart zeroSch [] [] A C) (h : ZeroR m a) : ZeroR m' a :=
@@ -207,6 +221,8 @@ structure ArenaR (m : Mem) (a : AState) : Prop where
   letE : LetR m a
   bvar : BVarR m a
   fvar : FVarR m a
+  lam : LamR m a
+  forallE : ForallR m a
   proj : ProjR m a
   zero : ZeroR m a
   succ : SuccR m a
@@ -230,6 +246,8 @@ macro "arena_build " hR:term ", " hf:term " with " t:tacticSeq : tactic => `(tac
     by first | $t | exact ($hR).letE.frame _ _ _ _ $hf _ (by apart),
     by first | $t | exact ($hR).bvar.frame _ _ _ _ $hf _ (by apart),
     by first | $t | exact ($hR).fvar.frame _ _ _ _ $hf _ (by apart),
+    by first | $t | exact ($hR).lam.frame _ _ _ _ $hf _ (by apart),
+    by first | $t | exact ($hR).forallE.frame _ _ _ _ $hf _ (by apart),
     by first | $t | exact ($hR).proj.frame _ _ _ _ $hf _ (by apart),
     by first | $t | exact ($hR).zero.frame _ _ _ _ $hf _ (by apart),
     by first | $t | exact ($hR).succ.frame _ _ _ _ $hf _ (by apart),
@@ -284,6 +302,8 @@ theorem arenaR_init (sizes : List Nat) (hlen : sizes.length = 41) (hctl : 42 ≤
     storeR_init _ _ _ _ hz (by rw [hc]; simp [letSch]; omega),
     storeR_init _ _ _ _ hz (by rw [hc]; simp [bvarSch]; omega),
     storeR_init _ _ _ _ hz (by rw [hc]; simp [fvarSch]; omega),
+    storeR_init _ _ _ _ hz (by rw [hc]; simp [lamSch]; omega),
+    storeR_init _ _ _ _ hz (by rw [hc]; simp [forallSch]; omega),
     storeR_init _ _ _ _ hz (by rw [hc]; simp [projSch]; omega),
     storeR_init _ _ _ _ hz (by rw [hc]; simp [zeroSch]; omega),
     storeR_init _ _ _ _ hz (by rw [hc]; simp [succSch]; omega),
@@ -356,6 +376,20 @@ theorem ArenaR.lift_bvar (hX : BVarR m' a')
 theorem ArenaR.lift_fvar (hX : FVarR m' a')
     (hf : MemFrame [fvarSch.ra, fvarSch.sa] [fvarSch.ca, fvarSch.ca + 1] m m')
     (hst : a' = a ∨ (∃ t, a' = fvarLens.setP a t) ∨ (∃ t, a' = fvarLens.setS a t)) :
+    ArenaR m' a' := by
+  rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with exact hX
+
+/-- Interning into `lam` keeps `ArenaR`. -/
+theorem ArenaR.lift_lam (hX : LamR m' a')
+    (hf : MemFrame [lamSch.ra, lamSch.sa] [lamSch.ca, lamSch.ca + 1] m m')
+    (hst : a' = a ∨ (∃ t, a' = lamLens.setP a t) ∨ (∃ t, a' = lamLens.setS a t)) :
+    ArenaR m' a' := by
+  rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with exact hX
+
+/-- Interning into `forallE` keeps `ArenaR`. -/
+theorem ArenaR.lift_forallE (hX : ForallR m' a')
+    (hf : MemFrame [forallSch.ra, forallSch.sa] [forallSch.ca, forallSch.ca + 1] m m')
+    (hst : a' = a ∨ (∃ t, a' = forallLens.setP a t) ∨ (∃ t, a' = forallLens.setS a t)) :
     ArenaR m' a' := by
   rcases hst with rfl | ⟨t, rfl⟩ | ⟨t, rfl⟩ <;> arena_build hR, hf with exact hX
 
@@ -707,6 +741,25 @@ theorem internNNum_refinesA (p : Prog) (hpf : p.lookup "nnum_find" = some nnumFi
   exact ⟨hloc, hok, hR.lift_nnum _ _ _ _ hX (internM_frame _ nnumSch_wf _ _ _ _ _ _ _ _ hI)
     (AM.st_proto nnumLens _ _ _ _ _ _ a₀ (internNNode_num_run _ _ a₀) hok), hres⟩
 
+/-- `intern_*` for `forallE` refines its arena interning under `ArenaR`. -/
+theorem internForall_refinesA (p : Prog) (hpf : p.lookup "forall_find" = some forallFind)
+    (hpp : p.lookup "forall_push" = some forallPush) (hp : p.lookup "intern_forall" = some internForallL)
+    (a₀ : AState) (n : Nat) (s₀ : St) (ty body : Word) (hR : ArenaR s₀.mem a₀)
+    (hty : ty.toNat < 2 ^ 32) (hbody : body.toNat < 2 ^ 32) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "intern_forall" [ty, body]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internE (.forallE (decE ty) (decE body))) a₀ ∧
+      ArenaR s'.mem (AM.st (internE (.forallE (decE ty) (decE body))) a₀) ∧
+      AM.res (internE (.forallE (decE ty) (decE body))) a₀ = decE (r.headD 0); ⊤⦄ := by
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun (internForallL_spec p hpf hpp hp n s₀ ty body)
+  subst hs
+  obtain ⟨hok, hX, hres⟩ := faintern_correct s.mem a₀ hR.forallE ty body hty hbody _ _ hI
+  rw [fainternW_eq] at hI
+  exact ⟨hloc, hok, hR.lift_forallE _ _ _ _ hX (internM_frame _ forallSch_wf _ _ _ _ _ _ _ _ hI)
+    (AM.st_proto forallLens _ _ _ _ _ _ a₀ (internE_forall_run _ _ a₀) hok), hres⟩
+
 /-- `intern_*` for `fvar` refines its arena interning under `ArenaR`. -/
 theorem internFVar_refinesA (p : Prog) (hpf : p.lookup "fvar_find" = some fvarFind)
     (hpp : p.lookup "fvar_push" = some fvarPush) (hp : p.lookup "intern_fvar" = some internFVar)
@@ -725,6 +778,25 @@ theorem internFVar_refinesA (p : Prog) (hpf : p.lookup "fvar_find" = some fvarFi
   rw [fvinternW_eq] at hI
   exact ⟨hloc, hok, hR.lift_fvar _ _ _ _ hX (internM_frame _ fvarSch_wf _ _ _ _ _ _ _ _ hI)
     (AM.st_proto fvarLens _ _ _ _ _ _ a₀ (internE_fvar_run _ _ a₀) hok), hres⟩
+
+/-- `intern_*` for `lam` refines its arena interning under `ArenaR`. -/
+theorem internLam_refinesA (p : Prog) (hpf : p.lookup "lam_find" = some lamFind)
+    (hpp : p.lookup "lam_push" = some lamPush) (hp : p.lookup "intern_lam" = some internLamL)
+    (a₀ : AState) (n : Nat) (s₀ : St) (ty body : Word) (hR : ArenaR s₀.mem a₀)
+    (hty : ty.toNat < 2 ^ 32) (hbody : body.toNat < 2 ^ 32) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "intern_lam" [ty, body]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internE (.lam (decE ty) (decE body))) a₀ ∧
+      ArenaR s'.mem (AM.st (internE (.lam (decE ty) (decE body))) a₀) ∧
+      AM.res (internE (.lam (decE ty) (decE body))) a₀ = decE (r.headD 0); ⊤⦄ := by
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun (internLamL_spec p hpf hpp hp n s₀ ty body)
+  subst hs
+  obtain ⟨hok, hX, hres⟩ := laintern_correct s.mem a₀ hR.lam ty body hty hbody _ _ hI
+  rw [lainternW_eq] at hI
+  exact ⟨hloc, hok, hR.lift_lam _ _ _ _ hX (internM_frame _ lamSch_wf _ _ _ _ _ _ _ _ hI)
+    (AM.st_proto lamLens _ _ _ _ _ _ a₀ (internE_lam_run _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for `proj` refines its arena interning under `ArenaR`. -/
 theorem internProj_refinesA (p : Prog) (hpf : p.lookup "proj_find" = some projFind)

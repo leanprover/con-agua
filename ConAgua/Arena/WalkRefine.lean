@@ -97,6 +97,9 @@ end view
 theorem get_bvar (tb : ETables) (h : Word) (hh : h.toNat < 2 ^ 32) (hg : h >>> 28 = 0) :
     tb.get (decE h) = (tb.bvars.node? (idxW h).toNat).map fun r => .bvar r.i := by
   simp [ETables.get, decE_tag h hh, hg, decE_idx h, ETag.bvar]
+theorem get_fvar (tb : ETables) (h : Word) (hh : h.toNat < 2 ^ 32) (hg : h >>> 28 = 1) :
+    tb.get (decE h) = (tb.fvars.node? (idxW h).toNat).map fun r => .fvar r.idx r.ty := by
+  simp [ETables.get, decE_tag h hh, hg, decE_idx h, ETag.bvar, ETag.fvar]
 theorem get_sort (tb : ETables) (h : Word) (hh : h.toNat < 2 ^ 32) (hg : h >>> 28 = 2) :
     tb.get (decE h) = (tb.sorts.node? (idxW h).toNat).map fun r => .sort r.u := by
   simp [ETables.get, decE_tag h hh, hg, decE_idx h, ETag.bvar, ETag.fvar, ETag.sort]
@@ -107,6 +110,18 @@ theorem get_app (tb : ETables) (h : Word) (hh : h.toNat < 2 ^ 32) (hg : h >>> 28
     tb.get (decE h) = (tb.apps.node? (idxW h).toNat).map fun r => .app r.f r.a := by
   simp [ETables.get, decE_tag h hh, hg, decE_idx h, ETag.bvar, ETag.fvar, ETag.sort, ETag.const,
     ETag.app]
+theorem get_lam (tb : ETables) (h : Word) (hh : h.toNat < 2 ^ 32) (hg : h >>> 28 = 5) :
+    tb.get (decE h) = (tb.lams.node? (idxW h).toNat).map fun r => .lam r.ty r.body := by
+  simp [ETables.get, decE_tag h hh, hg, decE_idx h, ETag.bvar, ETag.fvar, ETag.sort, ETag.const,
+    ETag.app, ETag.lam]
+theorem get_forall (tb : ETables) (h : Word) (hh : h.toNat < 2 ^ 32) (hg : h >>> 28 = 6) :
+    tb.get (decE h) = (tb.foralls.node? (idxW h).toNat).map fun r => .forallE r.ty r.body := by
+  simp [ETables.get, decE_tag h hh, hg, decE_idx h, ETag.bvar, ETag.fvar, ETag.sort, ETag.const,
+    ETag.app, ETag.lam, ETag.forallE]
+theorem get_proj (tb : ETables) (h : Word) (hh : h.toNat < 2 ^ 32) (hg : h >>> 28 = 9) :
+    tb.get (decE h) = (tb.projs.node? (idxW h).toNat).map fun r => .proj r.n r.i r.e := by
+  simp [ETables.get, decE_tag h hh, hg, decE_idx h, ETag.bvar, ETag.fvar, ETag.sort, ETag.const,
+    ETag.app, ETag.lam, ETag.forallE, ETag.letE, ETag.lit, ETag.proj]
 theorem get_let (tb : ETables) (h : Word) (hh : h.toNat < 2 ^ 32) (hg : h >>> 28 = 7) :
     tb.get (decE h) = (tb.lets.node? (idxW h).toNat).map fun r => .letE r.ty r.val r.body := by
   simp [ETables.get, decE_tag h hh, hg, decE_idx h, ETag.bvar, ETag.fvar, ETag.sort, ETag.const,
@@ -263,6 +278,31 @@ theorem except_ok_bind {ε α β : Type} (x : α) (f : α → Except ε β) :
 
 theorem pure_run (v : Nat) (a : AState) : (pure v : AM Nat).run a = .ok (v, a) := rfl
 
+/-- The binder arm (`lam`, `forallE`): two children, `max x (y - 1)`. -/
+theorem bindArm_ok (n F : Nat) (ih : GoOK n) (hF : n ≤ F) (m m' : Mem) (a : AState)
+    (hR : ArenaR m a) (ty body : EIdx) (r : Word)
+    (hb : bindK₁ n body.word.toUInt64 (bbW n m ty.word.toUInt64) = some (r, m')) :
+    ∃ a', (bvarBoundArmBind F ty body).run a = .ok (r.toNat, a') ∧ ArenaR m' a' := by
+  cases h1 : bbW n m ty.word.toUInt64 with
+  | none => simp only [h1, bindK₁, reduceCtorEq] at hb
+  | some p =>
+    obtain ⟨x, m₁⟩ := p
+    cases h2 : bbW n m₁ body.word.toUInt64 with
+    | none => simp only [h1, h2, bindK₁, bindK₁.bindK₂, reduceCtorEq] at hb
+    | some q =>
+      obtain ⟨y, m₂⟩ := q
+      simp only [h1, h2, bindK₁, bindK₁.bindK₂, Option.some.injEq, Prod.mk.injEq] at hb
+      obtain ⟨rfl, rfl⟩ := hb
+      obtain ⟨a₁, ha₁, hR₁⟩ := ih F m m₁ a _ x hF hR (word_lt _) h1
+      rw [decE_word] at ha₁
+      obtain ⟨a₂, ha₂, hR₂⟩ := ih F m₁ m₂ a₁ _ y hF hR₁ (word_lt _) h2
+      rw [decE_word] at ha₂
+      refine ⟨a₂, ?_, hR₂⟩
+      rw [maxW_toNat, predW_toNat]
+      simp only [bvarBoundArmBind, StateT.run_bind, ha₁, except_ok_bind, ha₂]
+      rfl
+
+
 theorem nodeOK_succ (n : Nat) (ih : GoOK n) : NodeOK (n + 1) := by
   intro F m m' a h r hF hR hh hb
   have hF' : n ≤ F := by omega
@@ -316,6 +356,47 @@ theorem nodeOK_succ (n : Nat) (ih : GoOK n) : NodeOK (n + 1) := by
         simp only [bbArm, bvarBoundArmApp, StateT.run_bind, ha₁, except_ok_bind, ha₂]
         rfl
   simp only [g4, ↓reduceIte] at hb
+  by_cases g5 : h >>> 28 = 5
+  · simp only [g5, ↓reduceIte] at hb
+    by_cases hc : rdW (m.arr64 CTL) (28 + tierW h) ≤ idxW h
+    · simp only [hc, ↓reduceIte, reduceCtorEq] at hb
+    obtain ⟨k, hk, hf, ha⟩ := node_of m a h lamSch LaRecRel lahash (·.lams) _ hR.lam
+      (UInt64.not_le.mp hc)
+    have hv : a.store.view (decE h) = some (.lam k.ty k.body) := by
+      rw [hview, get_lam _ h hh g5, Tbl.node?, hk]; rfl
+    have hb' : bindK₁ n k.body.word.toUInt64 (bbW n m k.ty.word.toUInt64) = some (r, m') := by
+      rw [← hf, ← ha]
+      simpa only [hc, ↓reduceIte, bindK₁, bindK₁.bindK₂] using hb
+    obtain ⟨a', ha', hR'⟩ := bindArm_ok n F ih hF' m m' a hR k.ty k.body r hb'
+    exact ⟨a', by rw [bbNodeA_run F _ a _ hv]; exact ha', hR'⟩
+  simp only [g5, ↓reduceIte] at hb
+  by_cases g6 : h >>> 28 = 6
+  · simp only [g6, ↓reduceIte] at hb
+    by_cases hc : rdW (m.arr64 CTL) (30 + tierW h) ≤ idxW h
+    · simp only [hc, ↓reduceIte, reduceCtorEq] at hb
+    obtain ⟨k, hk, hf, ha⟩ := node_of m a h forallSch FaRecRel fahash (·.foralls) _ hR.forallE
+      (UInt64.not_le.mp hc)
+    have hv : a.store.view (decE h) = some (.forallE k.ty k.body) := by
+      rw [hview, get_forall _ h hh g6, Tbl.node?, hk]; rfl
+    have hb' : bindK₁ n k.body.word.toUInt64 (bbW n m k.ty.word.toUInt64) = some (r, m') := by
+      rw [← hf, ← ha]
+      simpa only [hc, ↓reduceIte, bindK₁, bindK₁.bindK₂] using hb
+    obtain ⟨a', ha', hR'⟩ := bindArm_ok n F ih hF' m m' a hR k.ty k.body r hb'
+    exact ⟨a', by rw [bbNodeA_run F _ a _ hv]; exact ha', hR'⟩
+  simp only [g6, ↓reduceIte] at hb
+  by_cases g9 : h >>> 28 = 9
+  · simp only [g9, ↓reduceIte] at hb
+    by_cases hc : rdW (m.arr64 CTL) (32 + tierW h) ≤ idxW h
+    · simp only [hc, ↓reduceIte, reduceCtorEq] at hb
+    obtain ⟨k, hk, -, -, he⟩ := node_of m a h projSch PJRecRel pjhash (·.projs) _ hR.proj
+      (UInt64.not_le.mp hc)
+    have hv : a.store.view (decE h) = some (.proj k.n k.i k.e) := by
+      rw [hview, get_proj _ h hh g9, Tbl.node?, hk]; rfl
+    simp only [hc, ↓reduceIte, he] at hb
+    obtain ⟨a', ha', hR'⟩ := ih F m m' a _ r hF' hR (word_lt _) hb
+    rw [decE_word] at ha'
+    exact ⟨a', by rw [bbNodeA_run F _ a _ hv]; exact ha', hR'⟩
+  simp only [g9, ↓reduceIte] at hb
   by_cases g7 : h >>> 28 = 7
   · simp only [g7, ↓reduceIte] at hb
     by_cases hc : rdW (m.arr64 CTL) (20 + tierW h) ≤ idxW h
@@ -350,6 +431,18 @@ theorem nodeOK_succ (n : Nat) (ih : GoOK n) : NodeOK (n + 1) := by
           simp only [bbArm, bvarBoundArmLet, StateT.run_bind, ha₁, except_ok_bind, ha₂, ha₃]
           rfl
   simp only [g7, ↓reduceIte] at hb
+  by_cases g1 : h >>> 28 = 1
+  · simp only [g1, ↓reduceIte] at hb
+    by_cases hc : rdW (m.arr64 CTL) (26 + tierW h) ≤ idxW h
+    · simp only [hc, ↓reduceIte, reduceCtorEq] at hb
+    simp only [hc, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hb
+    obtain ⟨rfl, rfl⟩ := hb
+    obtain ⟨k, hk, -⟩ := node_of m a h fvarSch FVRecRel fvhash (·.fvars) _ hR.fvar
+      (UInt64.not_le.mp hc)
+    have hv : a.store.view (decE h) = some (.fvar k.idx k.ty) := by
+      rw [hview, get_fvar _ h hh g1, Tbl.node?, hk]; rfl
+    exact ⟨a, by rw [bbNodeA_run F _ a _ hv]; rfl, hR⟩
+  simp only [g1, ↓reduceIte] at hb
   by_cases g2 : h >>> 28 = 2
   · simp only [g2, ↓reduceIte] at hb
     by_cases hc : rdW (m.arr64 CTL) (16 + tierW h) ≤ idxW h
