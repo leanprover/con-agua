@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Scan.Validator
 public import ConAgua.Scan.DriverLink
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -31,6 +32,7 @@ variable (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 
 include h64 hsize
 
 /-- One line: the L `scan_line` decides what con-leche's `scanLineFwd` decides. -/
+@[refines_part ConLeche.Frontend.scanLineFwd "validity"]
 theorem scanLine_run (fuel : Nat) (i : USize) (hi : i.toNat ≤ b.size) (r : List Word) (m' : Mem)
     (h : run valProg fuel "scan_line" [i.toUInt64] { bytes := #[b.data] } = .ok (r, m')) :
     r = [(encLine (ConLeche.Frontend.scanLineFwd b i)).1, (encLine (ConLeche.Frontend.scanLineFwd b i)).2] := by

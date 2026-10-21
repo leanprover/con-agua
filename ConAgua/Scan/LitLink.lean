@@ -4,6 +4,7 @@ public import ConAgua.Scan.Lit
 public import ConAgua.Scan.Link
 public import ConLeche.Frontend.Scan.Fast
 public import ConLeche.Frontend.Scan.Equiv.Scalars
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -58,6 +59,7 @@ theorem LITS_ne_zero : ∀ j (h : j < LITS.length), LITS[j] ≠ 0 := by decide
 theorem lit_true : (LITS.drop 0).take 4 = lit "true" := by rw [lit_eq_toByteArray]; rfl
 theorem lit_false : (LITS.drop 4).take 5 = lit "false" := by rw [lit_eq_toByteArray]; rfl
 
+@[refines ConLeche.Frontend.matchLit]
 theorem matchLit_eq_N (b : ByteArray) (i : USize) (hsize : b.size < USize.size) (s : String)
     (o n : Nat) (hs : (LITS.drop o).take n = lit s) (hL : o + n ≤ LITS.length)
     (hlen : s.toUTF8.size < USize.size) :
@@ -83,6 +85,7 @@ def encScan : ScanRes Bool → List Word
 
 /-- Partial correctness of the whole program: whenever `run` returns, it returns con-leche's
 `scanBool b i`, and the memory is unchanged. -/
+@[refines ConLeche.Frontend.scanBool]
 theorem scanBool_run (b : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 64)
     (fuel : Nat) (i : USize) (hi : i.toNat + 5 < 2 ^ 64) (r : List Word) (m' : Mem)
     (h : run litProg fuel "scan_bool" [i.toUInt64] { bytes := #[b.data] } = .ok (r, m')) :

@@ -4,6 +4,7 @@ public import ConAgua.Arena.MemoLib
 public import ConAgua.Arena.ExprMk
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.Store
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -390,6 +391,7 @@ grind_pattern [arena_grind] liftProjW_miss => liftProjW (n + 1) m h c k
 
 /-! ## The L code -/
 
+@[l_impl ConRon.Arena.liftLooseBVarsGo]
 def liftGo : FunDecl := lfn (h, c, k) locals (x, g, t, i, r) {
   x := call der_b(h);
   if x < 32767 && x <= c { return h };
@@ -417,6 +419,7 @@ def liftGo : FunDecl := lfn (h, c, k) locals (x, g, t, i, r) {
   abort
 }
 
+@[l_impl ConRon.Arena.liftArmApp]
 def liftApp : FunDecl := lfn (h, c, k) locals (fd, j, d, t, i, f, a, x, y, r, u) {
   (fd, j, d) := call lf_find(h, c);
   if fd != 0 { return LMEMO.u64[j * 4 + 3] };
@@ -432,6 +435,7 @@ def liftApp : FunDecl := lfn (h, c, k) locals (fd, j, d, t, i, f, a, x, y, r, u)
   return r
 }
 
+@[l_impl ConRon.Arena.liftArmLam]
 def liftLam : FunDecl := lfn (h, c, k) locals (fd, j, d, t, i, f, a, x, y, r, u) {
   if c + 1 == 0 { abort };
   (fd, j, d) := call lf_find(h, c);
@@ -448,6 +452,7 @@ def liftLam : FunDecl := lfn (h, c, k) locals (fd, j, d, t, i, f, a, x, y, r, u)
   return r
 }
 
+@[l_impl ConRon.Arena.liftArmForallE]
 def liftForall : FunDecl := lfn (h, c, k) locals (fd, j, d, t, i, f, a, x, y, r, u) {
   if c + 1 == 0 { abort };
   (fd, j, d) := call lf_find(h, c);
@@ -464,6 +469,7 @@ def liftForall : FunDecl := lfn (h, c, k) locals (fd, j, d, t, i, f, a, x, y, r,
   return r
 }
 
+@[l_impl ConRon.Arena.liftArmLet]
 def liftLet : FunDecl := lfn (h, c, k) locals (fd, j, d, t, i, f, a, b, x, y, z, r, u) {
   if c + 1 == 0 { abort };
   (fd, j, d) := call lf_find(h, c);
@@ -482,6 +488,7 @@ def liftLet : FunDecl := lfn (h, c, k) locals (fd, j, d, t, i, f, a, b, x, y, z,
   return r
 }
 
+@[l_impl ConRon.Arena.liftArmProj]
 def liftProj : FunDecl := lfn (h, c, k) locals (fd, j, d, t, i, nm, ix, e, x, r, u) {
   (fd, j, d) := call lf_find(h, c);
   if fd != 0 { return LMEMO.u64[j * 4 + 3] };

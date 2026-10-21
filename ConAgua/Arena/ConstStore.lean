@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.Store
 meta import ConAgua.L.Semantics
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -237,6 +238,7 @@ def ceinternW (m : Mem) (f a : Word) : Option (Word × Mem) :=
     some (constP + cecnt m 0, cepushMem m 0 f a (rs₀.tail.tail.headD 0) (cecnt m 0))
   else none
 
+@[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internConst : FunDecl := lfn (f, a) locals (h, sk, fd, i, j, d) {
   h := ((⟪fnvBasis⟫ ^ f) * ⟪fnvPrime⟫ ^ a) * ⟪fnvPrime⟫;
   sk := 0;

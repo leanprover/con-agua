@@ -3,6 +3,7 @@ module
 public import ConAgua.Arena.Store
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.Store
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -278,6 +279,7 @@ def nsinternW (m : Mem) (q o l : Word) : Option (Word × Mem) :=
     some (nsP + nscnt m 0, nspushMem m 0 q o l h (rs₀.tail.tail.headD 0) (nscnt m 0))
   else none
 
+@[l_impl ConRon.Arena.internNNode]
 def internNStr : FunDecl := lfn (q, o, l) locals (h, f, i, j, d, sc) {
   h := call lit_hash(o, l);
   h := (h ^ q) * ⟪fnvPrime⟫;

@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.Store
 meta import ConAgua.L.Semantics
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -221,6 +222,7 @@ def binternW (m : Mem) (u : Word) : Option (Word × Mem) :=
     some (bvarP + bcnt m 0, bpushMem m 0 u (rs₀.tail.tail.headD 0) (bcnt m 0))
   else none
 
+@[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internBVar : FunDecl := lfn (u) locals (h, fd, i, j, d) {
   h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫;
   (fd, i, j, d) := call bvar_find(0, u, h);

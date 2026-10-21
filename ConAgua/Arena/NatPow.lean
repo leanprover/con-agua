@@ -4,6 +4,7 @@ public import ConAgua.Arena.NatMul
 public import ConAgua.Arena.NatGrindAttr
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.NatMul
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -119,6 +120,7 @@ def powLoop : Stmt := lblk (oa, la, e, o, l, j, t) {
   }
 }
 
+@[l_impl ConRon.Arena.natOpResult]
 def natPow : FunDecl := lfn (oa, la, e) locals (o, l, j, t) {
   o := CTL.u64[0];
   if len(POOL.u64) <= o { abort };

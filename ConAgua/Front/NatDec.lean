@@ -1,5 +1,6 @@
 import ConAgua.Arena.ArenaRel
 import ConAgua.Front.ExprIface
+import ConAgua.Census.Attr
 
 /-!
 # Decimal `Nat` literals into the limb pool: `nat_dec(c, d)`
@@ -159,6 +160,7 @@ def decLoop : Stmt := lblk (c, d, top, n, i, k, ch, pw, cy) {
   }
 }
 
+@[l_impl ConLeche.Frontend.readNat64]
 def natDec : FunDecl := lfn (c, d) locals (top, n, i, k, ch, pw, cy) {
   top := CTL.u64[0];
   if len(POOL.u64) < top { abort };

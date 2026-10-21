@@ -3,6 +3,7 @@ import ConAgua.Front.ExprIface
 import ConAgua.Arena.ExprMk
 import ConAgua.Front.NatDec
 import ConAgua.Front.Preserve
+import ConAgua.Census.Attr
 
 /-!
 # Expression lines into the stores: `apply_expr`
@@ -440,6 +441,7 @@ def nodeW (b : Array UInt8) (m : Mem) (pl a c d : Word) : Option (Word × Mem) :
   else if pl = 16 then litW b m c d
   else none
 
+@[l_impl ConRon.Arena.Frontend.parseExprEntryD]
 def applyExpr : FunDecl := lfn (pl, idx, a, c, d) locals (z, h) {
   z := call expr_fresh(idx);
   h := call expr_node(pl, a, c, d);
