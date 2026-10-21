@@ -827,4 +827,16 @@ theorem valueAtN_le (b : Array UInt8) (i ke : Word) (hi : i.toNat ≤ b.size) (h
 
 grind_pattern [lang_grind] valueAtN_le => valueAtN b i ke
 
+/-- The program, as `#eval`-able code. -/
+def keyProg : Prog :=
+  [("keyAtG1", keyAtG1), ("keyAtG2", keyAtG2), ("keyAtG3", keyAtG3),
+   ("keyAtG4", keyAtG4), ("keyAtG5", keyAtG5), ("keyAtG6", keyAtG6), ("key_at", keyAt)]
+
+#guard (run keyProg 100 "key_at" [0, 3] { bytes := #["\"app\"".toUTF8.data] }).toOption.map (·.1)
+  == some [2]
+#guard (run keyProg 100 "key_at" [0, 10] { bytes := #["\"binderInfo\"".toUTF8.data] }).toOption.map (·.1)
+  == some [5]
+#guard (run keyProg 100 "key_at" [0, 3] { bytes := #["\"xyz\"".toUTF8.data] }).toOption.map (·.1)
+  == some [0]
+
 end L.Scan.Key

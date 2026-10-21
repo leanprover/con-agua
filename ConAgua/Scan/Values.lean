@@ -568,4 +568,26 @@ theorem scanNatList_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : 
 
 end specs
 
+/-- The program, as `#eval`-able code: every function `scan_hints` can reach. -/
+-- Only the quoted-literal branch (`match_word`, `scan_hints`: both in this module) is testable
+-- here with `#guard`/`run`: a cross-module program whose functions were never `#eval`'d/
+-- `#guard`'d in their own defining file hits "(interpreter) IR of declaration … not available"
+-- (tried with `skip_ws` from Leaves.lean and `value_at` from Key.lean, both of which have no
+-- `#guard` of their own; `lake build`, not just `lake env lean`, has the same failure, so this
+-- is not a staleness issue). The object branch (`{"regular":n}`, needing skip_ws/key_end/key_at/
+-- value_at/num_end) would need those files to gain their own `#guard`/`#eval`, which are outside
+-- Values.lean/Key.lean.
+def hintsProg : Prog := [("match_word", matchWord), ("scan_hints", scanHints)]
+
+-- `"abbrev"`: a quoted-literal hint (`scan_hints`' own two literals are `abbrev"`/`opaque"`,
+-- not `scan_binder_info`'s four).
+#guard (run hintsProg 100 "scan_hints" [0] { bytes := #["\"abbrev\"".toUTF8.data] }).toOption.map (·.1)
+  == some [8]
+-- `"opaque"`: the other quoted literal.
+#guard (run hintsProg 100 "scan_hints" [0] { bytes := #["\"opaque\"".toUTF8.data] }).toOption.map (·.1)
+  == some [8]
+-- Neither literal: fails.
+#guard (run hintsProg 100 "scan_hints" [0] { bytes := #["\"nope\"".toUTF8.data] }).toOption.map (·.1)
+  == some [0]
+
 end L.Scan.Values
