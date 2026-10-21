@@ -417,19 +417,111 @@ theorem scanBinderInfo_link (v : USize) :
 theorem scanHints_link (v : USize) : okW (scanHints b v) = L.Scan.Values.hintsN b.data v.toUInt64 :=
   scanHints_eq_hintsN b h64 hsize v
 
-/-- `scan_nat_list` (TEMPORARY: `ValuesLink.scanNatList_eq_natListEntryN`). -/
-theorem scanNatList_eq_natListEntryN' (i : USize) :
-    match scanNatList b i with
-    | .ok us p => L.Scan.Values.natListEntryN b.data i.toUInt64 = (p.toUInt64, UInt64.ofNat us.length)
-    | .err _ => (L.Scan.Values.natListEntryN b.data i.toUInt64).1 = 0 := by
-  sorry
+/-- `ScanRes (List Nat)` as the model's `(end, count)`. -/
+def encNL : ScanRes (List Nat) → Word × Word
+  | .ok us p => (p.toUInt64, UInt64.ofNat us.length)
+  | .err _ => (0, 0)
+
+omit h64 hsize in
+theorem digit_iff (c : UInt8) : isDigit c = true ↔ (48 ≤ c.toUInt64 ∧ c.toUInt64 ≤ 57) := by
+  simp only [isDigit, Bool.and_eq_true, decide_eq_true_eq, UInt8.le_iff_toNat_le,
+    UInt64.le_iff_toNat_le, UInt8.toNat_toUInt64]
+  rfl
+
+/-- `scanNatListLoop` against `natListN`: the end and the number of items. -/
+theorem natListLoop_link (i : USize) (acc : List Nat) (w : Bool) (hacc : acc.length ≤ i.toNat) :
+    encNL (scanNatListLoop b i acc w) =
+      L.Scan.Values.natListN b.data i.toUInt64 (UInt64.ofNat acc.length) (bw w) := by
+  rw [scanNatListLoop, L.Scan.Values.natListN]
+  by_cases h : i < b.usize
+  · have hlt := (lt_usize_iff b h64 hsize i).mp h
+    have hcw := byteW_eq b h64 hsize i
+    have hs := succ_toUInt64 b h64 hsize i
+    have hi1 : (i + 1).toNat = i.toNat + 1 := usizeStep b i h
+    have hin := usizeInBounds b i h
+    rw [dif_pos h, dif_pos hlt]
+    simp only [uget_byteAt _ i h, hcw]
+    by_cases hws : isWs (byteAt b i) = true
+    · simp only [hws, (ws_iff _).mp hws, if_true]
+      rw [natListLoop_link (i + 1) acc w (by omega), hs]
+    have hws' : ¬ ((byteAt b i).toUInt64 = 32 ∨ (byteAt b i).toUInt64 = 9 ∨
+        (byteAt b i).toUInt64 = 13) := by rw [← ws_iff]; exact hws
+    simp only [hws, hws', if_false, Bool.false_eq_true]
+    by_cases h93 : byteAt b i = 93
+    · have hU : UInt64.size = 2 ^ 64 := rfl
+      have hz : UInt64.ofNat acc.length = 0 ↔ acc = [] := by
+        rw [← List.length_eq_zero_iff, ← UInt64.toNat_inj, UInt64.toNat_ofNat_of_lt' (by rw [hU]; omega)]; rfl
+      simp only [h93, show ((93 : UInt8) == 93) = true from rfl, show (93 : UInt8).toUInt64 = 93 from rfl,
+        if_true, bw_ne_zero, ne_eq, hz]
+      by_cases hw : w = true ∧ ¬ acc = []
+      · have he : acc.isEmpty = false := by cases acc <;> simp_all
+        simp only [hw, he]; rfl
+      · rw [if_neg hw, if_neg (by simp only [Bool.and_eq_true, Bool.not_eq_true',
+          List.isEmpty_eq_false_iff]; exact hw)]
+        simp [encNL, hs]
+    have h93' : ¬ (byteAt b i).toUInt64 = 93 := fun h' => h93 ((u8_toUInt64_eq _ 93 (by decide)).mp h')
+    simp only [h93', show ¬ (byteAt b i == 93) = true by simpa using h93, if_false]
+    by_cases h44 : byteAt b i = 44
+    · simp only [h44, show ((44 : UInt8) == 44) = true from rfl, show (44 : UInt8).toUInt64 = 44 from rfl,
+        if_true, bw_ne_zero, ne_eq]
+      by_cases hw : w = true
+      · simp only [hw, if_true]; rfl
+      · simp only [hw, if_false, Bool.false_eq_true]
+        rw [natListLoop_link (i + 1) acc true (by omega), hs]; rfl
+    have h44' : ¬ (byteAt b i).toUInt64 = 44 := fun h' => h44 ((u8_toUInt64_eq _ 44 (by decide)).mp h')
+    simp only [h44', show ¬ (byteAt b i == 44) = true by simpa using h44, if_false]
+    by_cases hd : isDigit (byteAt b i) = true
+    · simp only [hd, (digit_iff _).mp hd, and_self, if_true]
+      by_cases hw : w = true
+      · subst hw
+        simp only [bw, if_true, Bool.not_true, Bool.false_eq_true, if_false,
+          show ¬ ((1 : Word) = 0) from by decide]
+        have hne := numEnd_toUInt64_eq b h64 (by omega) i
+        simp only [USize.toNat_toUInt64]
+        rw [← hne]
+        by_cases he : numEnd b i = i
+        · simp only [he, beq_self_eq_true, if_true]; rfl
+        have he' : ¬ (numEnd b i).toUInt64 = i.toUInt64 := fun h' => he ((eq_toUInt64_iff _ _).mpr h')
+        simp only [he', show (numEnd b i == i) = false by simpa using he, Bool.false_eq_true, if_false]
+        by_cases hie : i < numEnd b i
+        · rw [dif_pos hie, if_pos ((lt_toUInt64_iff _ _).mp hie)]
+          have hie' := USize.lt_iff_toNat_lt.mp hie
+          rw [natListLoop_link (numEnd b i) (readNatAt b i (numEnd b i) :: acc) false (by simp only [List.length_cons]; omega)]
+          congr 1
+          simp [UInt64.ofNat_add]
+        · rw [dif_neg hie, if_neg (fun h' => hie ((lt_toUInt64_iff _ _).mpr h'))]; rfl
+      · have hw' : w = false := by simpa using hw
+        subst hw'
+        simp [bw, encNL]
+    · have hd' : ¬ (48 ≤ (byteAt b i).toUInt64 ∧ (byteAt b i).toUInt64 ≤ 57) := by
+        rw [← digit_iff]; exact hd
+      simp only [hd, hd', if_false, Bool.false_eq_true]; rfl
+  · rw [dif_neg h, dif_neg (by rw [← lt_usize_iff b h64 hsize]; exact h)]; rfl
+termination_by b.size - i.toNat
+decreasing_by
+  all_goals first
+    | omega
+    | (have := USize.lt_iff_toNat_lt.mp hie; omega)
+
+/-- `scanNatList` against `natListEntryN` (the content of `ValuesLink.scanNatList_eq_natListEntryN`). -/
+theorem natList_link (i : USize) :
+    encNL (scanNatList b i) = L.Scan.Values.natListEntryN b.data i.toUInt64 := by
+  unfold scanNatList L.Scan.Values.natListEntryN
+  by_cases h : i < b.usize
+  · have hlt := (lt_usize_iff b h64 hsize i).mp h
+    by_cases hc : byteAt b i = 91
+    · rw [if_pos (by simp [hc]), if_pos ⟨hlt, by rw [byteW_eq b h64 hsize, hc]; rfl⟩,
+        natListLoop_link b h64 hsize (i + 1) [] true (by simp), succ_toUInt64 b h64 hsize]; rfl
+    · rw [if_neg (by simp [hc]), if_neg (fun h' => hc ((u8_toUInt64_eq _ 91 (by decide)).mp
+        (by rw [← byteW_eq b h64 hsize]; exact h'.2)))]; rfl
+  · have h0 : byteAt b i = 0 := by unfold byteAt; rw [dif_neg h]
+    rw [if_neg (by simp [h0]), if_neg (fun h' => h ((lt_usize_iff b h64 hsize i).mpr h'.1))]; rfl
 
 /-- `scan_nat_list`, its end. -/
 theorem scanNatList_link (v : USize) :
     okW (scanNatList b v) = (L.Scan.Values.natListEntryN b.data v.toUInt64).1 := by
-  have := scanNatList_eq_natListEntryN' b h64 hsize v
-  revert this
-  cases scanNatList b v <;> intro h <;> simp only [okW] at h ⊢ <;> rw [h]
+  rw [← natList_link b h64 hsize v]
+  cases scanNatList b v <;> rfl
 
 end values
 
