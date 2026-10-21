@@ -445,8 +445,8 @@ theorem cmpFlags_sf_of (a b : BitVec 64) :
     ((cmpFlags a b).sf != (cmpFlags a b).of) = decide (a.toInt < b.toInt) := by
   simp only [cmpFlags, StatusFlags.from_result, lt_cmp]
 
-/-- After `cmp a, b`, the condition code of a comparison is the comparison. -/
 omit [Host] in
+/-- After `cmp a, b`, the condition code of a comparison is the comparison. -/
 theorem cmpCC_interp (op : Cmp) (a b : UInt64) :
     (cmpCC op).interp (cmpFlags a.toBitVec b.toBitVec) = op.eval a b := by
   have hz := cmpFlags_zf a.toBitVec b.toBitVec
