@@ -308,11 +308,11 @@ theorem natMul_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
     invoke p (exec p n) "nat_mul" [oa, la, ob, lb]
     ⦃fun r s' => LocEq s' s₀ ∧ Frame POOL (s₀.mem.set64 CTL 0 (s₀.mem.top + r)) s'.mem ∧
       (s'.mem.arr64 POOL).size = (s₀.mem.arr64 POOL).size ∧
-      (s₀.mem.top + r).toNat ≤ (s'.mem.arr64 POOL).size ∧
+      s₀.mem.top.toNat + r.toNat ≤ (s'.mem.arr64 POOL).size ∧
       Agree (s'.mem.arr64 POOL) (s₀.mem.arr64 POOL) s₀.mem.top.toNat ∧
       pv (s'.mem.arr64 POOL) s₀.mem.top.toNat r.toNat =
         pv (s₀.mem.arr64 POOL) oa.toNat la.toNat * pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat ∧
-      Norm (s'.mem.arr64 POOL) s₀.mem.top.toNat r.toNat; ⊤⦄ := by
+      Norm (s'.mem.arr64 POOL) s₀.mem.top.toNat r.toNat ∧ Grows s₀.mem s'.mem; ⊤⦄ := by
   simp only [PoolOK, SliceOK] at hok ha hb
   rw [invoke_eq _ hpn]
   simp only [callFn, natMul]
@@ -322,7 +322,7 @@ theorem natMul_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
       zeroLoop_step_spec p (s₀.mem.arr64 POOL) n,
       rowLoop_step_spec p hpm hpc hph (s₀.mem.arr64 POOL) n, natTrim_spec p hpt n]
-    all_goals (try simp only [ZeroInv, RowInv, MulBase] at *)
+    all_goals (try simp only [ZeroInv, RowInv, MulBase, Grows] at *)
     all_goals (try subst_vars)
     all_goals (try simp only [St.setLoc, BinOp.eval, Cmp.eval, reduceIte, Nat.reduceEqDiff, Locals.init,
       List.getD_cons_zero, List.getD_cons_succ, UInt64.toNat_zero] at *)

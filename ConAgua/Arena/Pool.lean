@@ -146,11 +146,34 @@ theorem Mem.top_eq (m : Mem) (h : 0 < (m.arr64 CTL).size) : m.top = (m.arr64 CTL
   simp [Mem.top, h]
 grind_pattern [arena_grind] Mem.top_eq => m.top, (m.arr64 CTL)[0]
 
+theorem Mem.top_set64 (m : Mem) (v : Word) (h : 0 < (m.arr64 CTL).size) :
+    (m.set64 CTL 0 v).top = v := by
+  simp [Mem.top, Mem.arr64_set64_same, h]
+grind_pattern [arena_grind] Mem.top_set64 => (m.set64 CTL 0 v).top
+
+theorem Frame.top (m m' : Mem) (h : Frame POOL m m') : m'.top = m.top := by
+  simp only [Mem.top, h.2.2 CTL (by decide)]
+grind_pattern [arena_grind] Frame.top => Frame POOL m m', m'.top
+
+theorem Frame.size_ctl (m m' : Mem) (h : Frame POOL m m') :
+    (m'.arr64 CTL).size = (m.arr64 CTL).size := by
+  rw [h.2.2 CTL (by decide)]
+grind_pattern [arena_grind] Frame.size_ctl => Frame POOL m m', (m'.arr64 CTL).size
+
 /-- The pool invariant: both arrays exist and the top is inside the pool. The pool has fewer
 than `2^63` words, so that the sum of two slice lengths (`nat_mul`'s `la + lb`) is a word. -/
 def PoolOK (m : Mem) : Prop :=
   CTL < m.words.size ∧ 0 < (m.arr64 CTL).size ∧ (m.arr64 POOL).size < 2 ^ 63 ∧
   m.top.toNat ≤ (m.arr64 POOL).size
+
+/-- `m'` is `m` with limbs appended to the pool: only the pool and the top changed, the pool
+below the old top did not, and the top only moved up, staying inside the pool. Every pool
+function posts it; a state relation that refers only to slices below the top is preserved by
+it (`L.Arena.Refine`, `hgrow`). -/
+def Grows (m m' : Mem) : Prop :=
+  Frame POOL (m.set64 CTL 0 m'.top) m' ∧ Agree (m'.arr64 POOL) (m.arr64 POOL) m.top.toNat ∧
+  m.top.toNat ≤ m'.top.toNat ∧ m'.top.toNat ≤ (m'.arr64 POOL).size ∧
+  (m'.arr64 POOL).size = (m.arr64 POOL).size
 
 /-- A slice of the pool in use: below the top. -/
 def SliceOK (m : Mem) (o l : Word) : Prop := o.toNat + l.toNat ≤ m.top.toNat
@@ -247,7 +270,7 @@ theorem pv_set_mid (n k₁ k₂ j : Nat) (v : Word) (hj : j = o + k₁ + k₂) (
       rw [Array.set!_eq_setIfInBounds] at ha
       rw [ha]
       have h' : o + (k₁ + k₂) < p.size := by omega
-      simp only [show o + k₁ + k₂ = o + (k₁ + k₂) by omega, h', if_true, Option.getD_some,
+      simp only [show o + k₁ + k₂ = o + (k₁ + k₂) by omega, h', ite_true, Option.getD_some,
         getElem?_pos]
       grind
     · have := ih (by omega)

@@ -201,6 +201,8 @@ theorem addLoop_spec (n : Nat) (s₀ : St) (h : AddInv Pg s₀) :
   | succ n ih =>
     simp only [AddInv] at h
     rw [exec, step_while (w := addLoop) rfl]
+    -- `finish [AddInv]` unfolds the invariant of the next iteration into ten conjuncts, whose
+    -- negation `grind` case-splits: more than the default nine splits
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, st64, ih, natLimb_spec p hpl n,
         addCarry_spec p hpc n] <;> finish (splits := 20) [AddInv]
@@ -233,11 +235,11 @@ theorem natAdd_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
     invoke p (exec p n) "nat_add" [oa, la, ob, lb]
     ⦃fun r s' => LocEq s' s₀ ∧ Frame POOL (s₀.mem.set64 CTL 0 (s₀.mem.top + r)) s'.mem ∧
       (s'.mem.arr64 POOL).size = (s₀.mem.arr64 POOL).size ∧
-      (s₀.mem.top + r).toNat ≤ (s'.mem.arr64 POOL).size ∧
+      s₀.mem.top.toNat + r.toNat ≤ (s'.mem.arr64 POOL).size ∧
       Agree (s'.mem.arr64 POOL) (s₀.mem.arr64 POOL) s₀.mem.top.toNat ∧
       pv (s'.mem.arr64 POOL) s₀.mem.top.toNat r.toNat =
         pv (s₀.mem.arr64 POOL) oa.toNat la.toNat + pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat ∧
-      Norm (s'.mem.arr64 POOL) s₀.mem.top.toNat r.toNat; ⊤⦄ := by
+      Norm (s'.mem.arr64 POOL) s₀.mem.top.toNat r.toNat ∧ Grows s₀.mem s'.mem; ⊤⦄ := by
   simp only [PoolOK, SliceOK] at hok ha hb
   rw [invoke_eq _ hpa]
   simp only [callFn, natAdd]
@@ -247,7 +249,8 @@ theorem natAdd_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64,
         addLoop_step_spec p hpl hpc (s₀.mem.arr64 POOL) n, natTrim_spec p hpt n] <;>
-      finish (gen := 20) [AddInv]
+      -- depth, not search: the state after `top := …; n := …; if …` is many `setLoc`s deep
+      finish (gen := 20) [AddInv, Grows]
 
 end addFn
 
