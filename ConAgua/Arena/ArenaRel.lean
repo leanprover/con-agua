@@ -53,7 +53,8 @@ pool and the walk memo:
 
 | 41 `LMEMO`, 47 `IMEMO` | the `liftC`, `inst1C` memos | 42, 43; 44, 45 |
 | 42‥46 | derived bvar ranges (`DerR`, not in `ArenaR`) | – |
-| 48‥63 | reserved for lane `exprops` | 46‥63 |
+| 48 `FRMEMO` | the `fvarRange` memo (`fvarBC`, `bmKey`'s codec) | 46: stamp − 1, 47: live count |
+| 49‥63 | reserved for lane `exprops` | – |
 | ≥ 64 | **free for other lanes** (`ArenaR.frame_ext`) | ≥ 64 |
 
 (Tables 2‥23: `CTL[r + t]` is tier `t`'s node count of the table with record array `r`; tables from
@@ -87,10 +88,10 @@ namespace L.Arena
 /-- Decide that a table is apart from a writer (`Apart`, `BMEMO ∉ A`, `24 ∉ C`) for concrete
 schemas: `decide` times out on the `UInt64` list memberships, `simp` with the array ids is
 immediate. -/
-macro "apart" : tactic => `(tactic| simp [Apart, POOL, CTL, BMEMO, bmSch, LMEMO, lfSch, IMEMO, imSch, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT])
+macro "apart" : tactic => `(tactic| simp [Apart, POOL, CTL, BMEMO, bmSch, LMEMO, lfSch, IMEMO, imSch, FRMEMO, frSch, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT])
 
 /-- The side condition of `apart_hi` for a concrete schema. -/
-macro "lo_apart" : tactic => `(tactic| simp [POOL, CTL, BMEMO, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT])
+macro "lo_apart" : tactic => `(tactic| simp [POOL, CTL, BMEMO, FRMEMO, frSch, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT])
 
 /-! ## Locality of each table's records -/
 
@@ -250,6 +251,7 @@ structure ArenaR (m : Mem) (a : AState) : Prop where
   memo : MemoRG bmSch bmKey (·.toNat) m a.memos.bvarBC
   lmemo : MemoRG lfSch lfKey decE m a.memos.liftC
   imemo : MemoRG imSch lfKey decE m a.memos.inst1C
+  fmemo : MemoRG frSch bmKey (·.toNat) m a.memos.fvarBC
 
 /-- **Build an `ArenaR m' a'` from `hR : ArenaR m a` and a writer `hf : MemFrame A C m m'`**: each
 field by the tactic `t` if it closes it (the written table, the memo, the pool's tables), else by
@@ -276,7 +278,8 @@ macro "arena_build " hR:term ", " hf:term " with " t:tacticSeq " using " ap:tact
     by first | $t | exact ($hR).nnum.frame _ _ _ _ $hf _ (by $ap),
     by first | $t | exact memoRG_frame bmSch bmSch_wf bmKey _ _ _ (by $ap) (by $ap) _ _ $hf _ ($hR).memo,
     by first | $t | exact memoRG_frame lfSch lfSch_wf lfKey _ _ _ (by $ap) (by $ap) _ _ $hf _ ($hR).lmemo,
-    by first | $t | exact memoRG_frame imSch imSch_wf lfKey _ _ _ (by $ap) (by $ap) _ _ $hf _ ($hR).imemo⟩)
+    by first | $t | exact memoRG_frame imSch imSch_wf lfKey _ _ _ (by $ap) (by $ap) _ _ $hf _ ($hR).imemo,
+    by first | $t | exact memoRG_frame frSch frSch_wf bmKey _ _ _ (by $ap) (by $ap) _ _ $hf _ ($hR).fmemo⟩)
 
 /-- `arena_build hR, hf with t` for a writer of concrete arrays and words (`Apart` by `apart`). -/
 macro "arena_build " hR:term ", " hf:term " with " t:tacticSeq : tactic =>
@@ -295,6 +298,8 @@ theorem ArenaR.frame_above (A : List ArrId) (C : List Word) (hA : ∀ b ∈ A, 4
         (fun h => absurd (hC _ h) (by simp)) _ _ hf _ hR.lmemo
     | exact memoRG_frame imSch imSch_wf lfKey _ _ _ (fun h => absurd (hA _ h).2 (by simp [IMEMO]))
         (fun h => absurd (hC _ h) (by simp)) _ _ hf _ hR.imemo
+    | exact memoRG_frame frSch frSch_wf bmKey _ _ _ (fun h => absurd (hA _ h).2 (by simp [FRMEMO]))
+        (fun h => absurd (hC _ h) (by simp)) _ _ hf _ hR.fmemo
   using
     refine apart_hi _ 42 64 _ _ _ _ ?_ (by decide) (by decide) (fun b hb => (hA b hb).1) hC
     lo_apart
@@ -313,6 +318,8 @@ theorem ArenaR.frame_ext (A : List ArrId) (C : List Word) (hA : ∀ b ∈ A, 64 
         (fun h => absurd (hC _ h) (by simp)) _ _ hf _ hR.lmemo
     | exact memoRG_frame imSch imSch_wf lfKey _ _ _ (fun h => absurd (hA _ h) (by simp [IMEMO]))
         (fun h => absurd (hC _ h) (by simp)) _ _ hf _ hR.imemo
+    | exact memoRG_frame frSch frSch_wf bmKey _ _ _ (fun h => absurd (hA _ h) (by simp [FRMEMO]))
+        (fun h => absurd (hC _ h) (by simp)) _ _ hf _ hR.fmemo
   using exact apart_hi _ 64 64 _ _ _ _ (by lo_apart) (by decide) (by decide) hA hC
 
 /-! ## The initial state -/
@@ -369,12 +376,13 @@ theorem arenaR_init (sizes : List Nat) (hlen : 64 ≤ sizes.length) (hctl : 64 �
     storeR_init _ _ _ _ hz (by rw [hc]; simp [lsSch]; omega),
     storeR_init _ _ _ _ hz (by rw [hc]; simp [nanonSch]; omega),
     storeR_init _ _ _ _ hz (by rw [hc]; simp [nstrSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [nnumSch]; omega), ?_, ?_, ?_⟩
+    storeR_init _ _ _ _ hz (by rw [hc]; simp [nnumSch]; omega), ?_, ?_, ?_, ?_⟩
   · refine ⟨hw, by rw [hc]; omega, by rw [hp]; exact hpool, ?_⟩
     simp only [top_rdW, hz, UInt64.toNat_zero]; exact Nat.zero_le _
   · exact memoRG_zero bmSch bmKey _ _ hz (by rw [hc]; simp; omega)
   · exact memoRG_zero lfSch lfKey _ _ hz (by rw [hc]; simp; omega)
   · exact memoRG_zero imSch lfKey _ _ hz (by rw [hc]; simp; omega)
+  · exact memoRG_zero frSch bmKey _ _ hz (by rw [hc]; simp; omega)
 
 /-! ## Interning lifts to `ArenaR`
 
