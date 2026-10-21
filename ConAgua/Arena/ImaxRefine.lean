@@ -1,0 +1,214 @@
+import ConAgua.Arena.StoreLib
+import ConAgua.Arena.ImaxStore
+
+/-!
+# The level `imax` store refines the arena's `imax` tables
+
+The sixth table on the store library, the `app` shape (two handle fields, no scratch skip) for
+the record `BinLNode { u v : LIdx }` of the level store's `imax` constructor
+(`ConAgua/Arena/ImaxStore.lean` has the L code). The schema `imaxSch` (`IREC`, `ISLOT`, two words
+per node, counts at `CTL[12 + t]`, tag `3`), the record relation `IRecRel` (the two words are the
+children's handle words), the node hash `imhash`, the lens `imaxLens` on the level store's two
+`imax` tables (`a.store.lss.ls.pers.imaxs`/`scr.imaxs`). `ImaxR m a` is the library's `StoreR` for
+them. `internImax_refines`: `intern_imax(u, v)` refines `internLNode (.imax u v)` under `ImaxR`.
+The level store has no scratch skip (`LStore.find?` probes the persistent tier unconditionally),
+so `skB = false`, as for `succ`/`zero`/`max`.
+
+Not represented: the derived column and every other table.
+-/
+
+open ConRon.Arena
+open Std.WP
+open scoped Lean.Order
+
+set_option linter.unusedSimpArgs false
+
+namespace L.Arena
+
+/-- The arena's `imax` cons key. -/
+abbrev imaxKey (u v : LIdx) : BinLNode := ⟨u, v⟩
+
+/-- `a` with the scratch / persistent `imax` table of the level store replaced. -/
+def withScrImaxs (a : AState) (t : Tbl BinLNode LIdx LDer) : AState :=
+  { a with store := { a.store with lss := { a.store.lss with ls := { a.store.lss.ls with
+      scr := { a.store.lss.ls.scr with imaxs := t } } } } }
+def withPersImaxs (a : AState) (t : Tbl BinLNode LIdx LDer) : AState :=
+  { a with store := { a.store with lss := { a.store.lss with ls := { a.store.lss.ls with
+      pers := { a.store.lss.ls.pers with imaxs := t } } } } }
+
+/-- The level store's two `imax` tables. -/
+def imaxLens : Lens BinLNode LDer .level where
+  on a := a.store.lss.ls.scratchOn
+  getP a := a.store.lss.ls.pers.imaxs
+  getS a := a.store.lss.ls.scr.imaxs
+  setP := withPersImaxs
+  setS := withScrImaxs
+  on_setP _ _ := rfl
+  on_setS _ _ := rfl
+  getP_setP _ _ := rfl
+  getS_setP _ _ := rfl
+  getP_setS _ _ := rfl
+  getS_setS _ _ := rfl
+
+/-- `internLNode` at an `imax` node is the library's protocol, with no skip. -/
+theorem internLNode_imax_run (u v : LIdx) (a : AState) :
+    (internLNode (.imax u v)).run a =
+      protoRun imaxLens (imaxKey u v) LTag.imax a.store.lss.ls.pers.imaxs.cons[imaxKey u v]?
+        (a.store.lss.ls.derOfView (.imax u v)) (.native "arena: level constructor array full") a := by
+  simp only [internLNode, LStore.find?, LTables.find?, Tbl.find?, LTables.sizeOf, EStore.ls,
+    EStore.internLevel, LsStore.internLevel, LStore.intern, LTables.push]
+  cases hp : a.store.lss.ls.pers.imaxs.cons[imaxKey u v]? <;> cases hs : a.store.lss.ls.scratchOn <;>
+    cases hc : a.store.lss.ls.scr.imaxs.cons[imaxKey u v]? <;>
+    simp only [StateT.run_bind, StateT.run_get, pure_bind, hp, hs, hc, Bool.false_eq_true,
+      ↓reduceIte, imaxKey, ite_self, protoRun, imaxLens] <;>
+    (try split) <;> simp_all [StateT.run_set, StateT.run_pure, withScrImaxs, withPersImaxs, fail,
+      throwThe, MonadExceptOf.throw, StateT.run, Functor.map, StateT.map, set, StateT.set,
+      StateT.lift, bind, Except.bind, Except.map, pure, Except.pure, StateT.bind, StateT.pure]
+
+/-! ## The relation between L memory and the arena's `imax` tables -/
+
+/-- The `imax` schema: `IREC`, `ISLOT`, two words per node, the counts at `CTL[12 + t]`. -/
+def imaxSch : Schema := ⟨IREC, ISLOT, 2, 4, 12, LTag.imax⟩
+
+theorem iimaxSch_wf : imaxSch.WF :=
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+
+theorem fld_imax0 (m : Mem) (t i : Word) : fld imaxSch m t i 0 = rdW (m.arr64 IREC) (i * 4 + t * 2) := by
+  simp [fld, Schema.ad, imaxSch]
+theorem fld_imax (m : Mem) (t i f : Word) :
+    fld imaxSch m t i f = rdW (m.arr64 IREC) (i * 4 + t * 2 + f) := rfl
+
+/-- Node `i` of tier `t` holds the `imax` node `k`: its two handle words. -/
+def IRecRel (m : Mem) (t i : Word) (k : BinLNode) : Prop :=
+  rdW (m.arr64 IREC) (i * 4 + t * 2) = k.u.word.toUInt64 ∧
+  rdW (m.arr64 IREC) (i * 4 + t * 2 + 1) = k.v.word.toUInt64
+
+/-- The hash of node `i` of tier `t`. -/
+def imhash (m : Mem) (t i : Word) : Word :=
+  imaxHashW (rdW (m.arr64 IREC) (i * 4 + t * 2)) (rdW (m.arr64 IREC) (i * 4 + t * 2 + 1))
+
+/-- **The state relation** of the `imax` store: the library's relation for the two `imax` tables. -/
+def ImaxR (m : Mem) (a : AState) : Prop :=
+  StoreR imaxSch IRecRel imhash m a.store.lss.ls.scratchOn a.store.lss.ls.pers.imaxs
+    a.store.lss.ls.scr.imaxs
+
+/-- A node's relation and hash depend only on its two words. -/
+theorem imaxFrame : RFrame imaxSch IRecRel imhash := by
+  intro m m' t i _ hf
+  have h0 := hf 0 (by decide)
+  have h1 := hf 1 (by decide)
+  rw [fld_imax0, fld_imax0] at h0
+  rw [fld_imax, fld_imax] at h1
+  exact ⟨fun a h => by simpa only [IRecRel, h0, h1] using h, by simp only [imhash, h0, h1]⟩
+
+/-! ## The query's obligations -/
+
+/-- The match of `imax_find` on node `i` of tier `t`. -/
+def imMt (m : Mem) (u v t i : Word) : Bool := immatchW (m.arr64 IREC) t i u v
+
+section query
+variable (m : Mem) (u v : Word) (hu : u.toNat < 2 ^ 32) (hv : v.toNat < 2 ^ 32)
+
+include hu hv in
+/-- **Matching is equality of `imax` nodes.** -/
+theorem imaxMatchOK : MatchOK IRecRel (imMt m u v) m (imaxKey (decI u) (decI v)) := by
+  intro t i k hr
+  have := word_decI k.u u hu
+  have := word_decI k.v v hv
+  obtain ⟨ku, kv⟩ := k
+  grind [imMt, immatchW, IRecRel, decE_eq]
+
+theorem imaxHomeOK : HomeOK imhash (imMt m u v) m (imaxHashW u v) := by
+  intro t i hm
+  simp only [imMt, immatchW, Bool.and_eq_true, beq_iff_eq] at hm
+  simp only [imhash, hm.1, hm.2]
+
+include hu hv in
+/-- The record `imax_push` writes holds the node. -/
+theorem imaxNewOK : NewOK imaxSch IRecRel imhash m [u, v] (imaxKey (decI u) (decI v)) (imaxHashW u v) := by
+  intro t j ht hroom
+  have e : ∀ g, g < 2 → fld imaxSch (pushG imaxSch m t [u, v] j (cntW imaxSch m t)) t
+      (cntW imaxSch m t) g = [u, v].getD g.toNat 0 := by
+    intro g hg
+    have := hroom.1
+    have := hroom.2
+    rw [fld_pushG imaxSch iimaxSch_wf] <;> simp only [imaxSch, Schema.ad] at * <;> grind
+  have e0 := e 0 (by decide)
+  have e1 := e 1 (by decide)
+  rw [fld_imax0] at e0
+  rw [fld_imax] at e1
+  simp only [List.getD_cons_zero, List.getD_cons_succ, show (1 : Word).toNat = 0 + 1 from rfl,
+    show (0 : Word).toNat = 0 from rfl] at e0 e1
+  have := word_decI (decI u : LIdx) u hu
+  have := word_decI (decI v : LIdx) v hv
+  simp only [IRecRel, imhash, imaxKey, e0, e1]
+  grind [decE_eq]
+
+end query
+
+/-! ## The bridges from the L models -/
+
+theorem iimprobeW_arm (m : Mem) (u v t : Word) :
+    ∀ j d, improbeW (m.arr64 ISLOT) (m.arr64 IREC) t u v (nSlotsI m) j d =
+      probeArm imaxSch m t (imMt m u v t) (improbeW (m.arr64 ISLOT) (m.arr64 IREC) t u v (nSlotsI m)) j d := by
+  intro j d; rw [improbeW]; rfl
+
+theorem iimpushOK_room (m : Mem) (t : Word) (h : impushOK m t = true) : PushRoom imaxSch m t := by
+  simp only [impushOK, Bool.and_eq_true, decide_eq_true_eq] at h
+  have := UInt64.toNat_shiftRight (m.len64 IREC) 2
+  simp only [PushRoom, cntW, imcnt, imaxSch, len64_eq] at *
+  grind
+
+theorem iimpushMem_eq (m : Mem) (t u v j c : Word) :
+    impushMem m t u v j c = pushG imaxSch m t [u, v] j c := by
+  simp [impushMem, pushG, wrRec, Schema.ad, imaxSch]
+
+theorem iiminternW_eq (m : Mem) (u v : Word) :
+    iminternW m u v = internM imaxSch m 0 (impushOK m) [u, v]
+      (improbeW (m.arr64 ISLOT) (m.arr64 IREC) 0 u v (nSlotsI m) (homeW (imaxHashW u v) (nSlotsI m)) 0)
+      (improbeW (m.arr64 ISLOT) (m.arr64 IREC) 1 u v (nSlotsI m) (homeW (imaxHashW u v) (nSlotsI m)) 0) := by
+  have e0 : ∀ x, hdW imaxSch.tag.toUInt64 0 x = imaxP + x := fun x => by
+    simp [hdW, imaxSch, imaxP, LTag.imax]
+  have e1 : ∀ x, hdW imaxSch.tag.toUInt64 1 x = imaxS + x := fun x => by
+    simp [hdW, imaxSch, imaxS, LTag.imax]
+  simp only [iminternW, internM, iimpushMem_eq, e0, e1, true_and]
+  rfl
+
+/-! ## `intern_imax` refines `internLNode (.imax _ _)` -/
+
+section intern
+variable (m : Mem) (a : AState) (hR : ImaxR m a) (u v : Word) (hu : u.toNat < 2 ^ 32)
+  (hv : v.toNat < 2 ^ 32)
+
+include hR hu hv in
+/-- **`intern_imax`'s model refines the arena's `internLNode` at an `imax` node.** -/
+theorem imintern_correct (w : Word) (m' : Mem) (hI : iminternW m u v = some (w, m')) :
+    AM.ok (internLNode (.imax (decI u) (decI v))) a ∧
+    ImaxR m' (AM.st (internLNode (.imax (decI u) (decI v))) a) ∧
+    AM.res (internLNode (.imax (decI u) (decI v))) a = decI w := by
+  rw [iiminternW_eq] at hI
+  exact intern_correctG imaxSch IRecRel imhash iimaxSch_wf imaxFrame imaxLens a m hR _ _ _ _ _
+    (internLNode_imax_run _ _ a) false rfl 0 (by simp) (by simp) _ _ (imaxMatchOK m u v hu hv)
+    (imaxHomeOK m u v) _ _ (probe_homeG imaxSch m 0 _ _ (iimprobeW_arm m u v 0) _)
+    (probe_homeG imaxSch m 1 _ _ (iimprobeW_arm m u v 1) _) _ (iimpushOK_room m) _ rfl
+    (imaxNewOK m u v hu hv) w m' hI
+
+end intern
+
+/-- `intern_max` refines `internLNode (.imax _ _)` under `ImaxR`. -/
+theorem internImax_refines (p : Prog) (hpf : p.lookup "imax_find" = some imaxFind)
+    (hpp : p.lookup "imax_push" = some imaxPush) (hp : p.lookup "intern_imax" = some internImax)
+    (a₀ : AState) (n : Nat) (s₀ : St) (u v : Word) (hR : ImaxR s₀.mem a₀) (hu : u.toNat < 2 ^ 32)
+    (hv : v.toNat < 2 ^ 32) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "intern_imax" [u, v]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internLNode (.imax (decI u) (decI v))) a₀ ∧
+      ImaxR s'.mem (AM.st (internLNode (.imax (decI u) (decI v))) a₀) ∧
+      AM.res (internLNode (.imax (decI u) (decI v))) a₀ = decI (r.headD 0); ⊤⦄ := by
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun (internImax_spec p hpf hpp hp n s₀ u v)
+  subst hs
+  exact ⟨hloc, imintern_correct s.mem a₀ hR u v hu hv _ _ hI⟩
+
+end L.Arena
