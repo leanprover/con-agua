@@ -23,7 +23,8 @@ if len(sec) == 2:
         m = re.match(r"\* `([^`]+)` \((\w+), phase (\d+)\): (.*)", line)
         if m:
             thms = re.findall(r"`(L\.[^`]+|ConAgua\.[^`]+)`", m.group(4))
-            stale.append({"target": m.group(1), "status": m.group(2), "phase": int(m.group(3)), "theorems": ", ".join(thms)})
+            owner = {2: "decls", 3: "whnf", 4: "exprops3", 5: "whnf", 6: "whnf", 7: "whnf", 8: "induct"}.get(int(m.group(3)), "")
+            stale.append({"target": m.group(1), "status": m.group(2), "phase": int(m.group(3)), "owner": owner, "theorems": ", ".join(thms)})
 (out / "stale.json").write_text(json.dumps(stale, indent=1))
 # lanes with helper worktrees and last-commit age
 lanes = json.loads((root / "docs/lanes.json").read_text())
