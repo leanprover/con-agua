@@ -3704,7 +3704,8 @@ Request to lane `arch`: add `LH` (array 192) and `CTL[192]` (heap top) to the me
 | `lv_equiv` (`isEquiv`) | 16 | 12 | 70 | `equivW_ok` 70 | | as `lv_eq` |
 | `lv_equivs` (`isEquivList`, lists in `POOL`) | 20 | 7 | 50 | `equivsW_ok` + `LvsR` 75 | | as `lv_eq` |
 | `lvl_eq` (`lvlEq?`: heap reset, then `lv_equiv`; the verdict cache not in L) | 33 (`lvl_eq_q`) | 5 | 25 | `lvlEq_refines` + `lvlEq?_run` + `lvlEq_run` 110; the view bridge (`lvNodeW_store`, `denoteL_lvR`) 190 | 1 s | `vcgen` + `finish`; bridge by hand |
-| total (files) | | 237 | `LevelHeap` 243, `LevelSimp` 291, `LevelSubst` 251, `LevelLeq` 474, `LevelLeqSpec` 151, `LevelEquiv` 285 | `LevelHeapRel` 460, `LevelSimpRel` 264, `LevelLeqRel` 740, `LevelEquivRel` 200, `LevelArena` 344 | | |
+| `lvls_eq`, `ls_node` (`lvlsEq?` on two level-list handles' `POOL` slices) | 33 | 15 | 60 | `lvlsEq_refines` + `lvsR_of_slice` + `lsNodeW_store` + runs 170 | 1 s | as `lvl_eq` |
+| total (files) | | 252 | `LevelHeap` 243, `LevelSimp` 291, `LevelSubst` 251, `LevelLeq` 474, `LevelLeqSpec` 151, `LevelEquiv` 365 | `LevelHeapRel` 460, `LevelSimpRel` 264, `LevelLeqRel` 740, `LevelEquivRel` 200, `LevelArena` 530 | | |
 
 ### The comparison (`LevelSubst`, `LevelLeq`, `LevelLeqSpec`, `LevelLeqRel`)
 
@@ -3740,6 +3741,9 @@ Request to lane `arch`: add `LH` (array 192) and `CTL[192]` (heap top) to the me
   `caches` (`ArenaR.with_caches`), L's only in the heap (`HeapExt.memFrame`, write set
   `levelProg_closed`: `[LH]`, `CTL` `[192]`, by `decide +kernel`). When `CoreR` gets `lvlEqC`,
   the L cache goes in front of `lv_equiv` and `LvlEqCOK` becomes a field of the relation.
+  `lvls_eq(us, vs)` (`lvlsEq?`) is the same over the two lists' `POOL` slices (`ls_node` reads a
+  level-list record; `lvsR_of_slice` relates the slice to the readbacks), with `ReadLsCOK`,
+  `LvlsEqCOK`.
 * **Inversion by tag** (`LvR.inv0` … `inv4`: from `lvG m p = t`, the level's constructor and the
   children's relations) replaced `cases` on the derivation, whose impossible branches made
   `simp_all` loop.
