@@ -242,18 +242,37 @@ def natListEntryN (b : Array UInt8) (i : Word) : Word × Word :=
 /-! ## Facts about the leaf models -/
 
 theorem keyEndN_lt (b : Array UInt8) (j : Nat) (h : keyEndN b j ≠ 0) : keyEndN b j < b.size := by
-  sorry
+  fun_induction keyEndN b j with
+  | case1 j hj hq => exact hj
+  | case3 j hj hq hc ih => exact ih h
+  | _ => simp_all
 
 theorem numEndN_le (b : Array UInt8) (i : Nat) (h : i ≤ b.size) : numEndN b i ≤ b.size := by
-  sorry
+  have hle := L.Scan.Leaves.skipDigitsN_le b i h
+  simp only [numEndN]
+  split
+  · omega
+  · split <;> omega
 
 theorem numEndN_ge (b : Array UInt8) (i : Nat) : i ≤ numEndN b i := by
-  sorry
+  have hge : i ≤ L.Scan.Leaves.skipDigitsN b i := by
+    by_cases heq : L.Scan.Leaves.skipDigitsN b i = i
+    · omega
+    · have := (L.Scan.Leaves.skipDigitsN_bounds b i heq).2; omega
+  simp only [numEndN]
+  split
+  · omega
+  · split <;> omega
 
 /-- A successful `slot_nat` is past the key. -/
 theorem slotNatN_pos (b : Array UInt8) (ks v : Word) (h : slotNatN b ks v ≠ 0) :
     ks < slotNatN b ks v := by
-  sorry
+  unfold slotNatN at h ⊢
+  by_cases h1 : UInt64.ofNat (numEndN b v.toNat) = v
+  · simp [h1] at h
+  · by_cases h2 : ks < UInt64.ofNat (numEndN b v.toNat)
+    · simp [h1, h2]
+    · simp [h1, h2] at h
 
 /-! ## Specs -/
 
