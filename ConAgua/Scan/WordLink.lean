@@ -37,6 +37,14 @@ open L.Scan.Utf8 (byteW)
 
 /-! ## Transport along `.toUInt64` -/
 
+/-- `.toUInt64` is a widening (`USize.size ≤ UInt64.size` on every platform): a `USize` value is
+its own `.toNat` as a word, with no `h64` needed. The leaf links use this to turn a `.toNat`
+equality against a model into a `.toUInt64` one. -/
+theorem toUInt64_eq_ofNat (x : USize) : x.toUInt64 = UInt64.ofNat x.toNat := by
+  apply UInt64.toNat_inj.mp
+  rw [USize.toNat_toUInt64,
+    UInt64.toNat_ofNat_of_lt' (Nat.lt_of_lt_of_le x.toNat_lt_size USize.size_le_uint64Size)]
+
 theorem add_toUInt64 (h64 : System.Platform.numBits = 64) (a b : USize) :
     (a + b).toUInt64 = a.toUInt64 + b.toUInt64 := by
   apply UInt64.toNat_inj.mp
