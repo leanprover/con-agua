@@ -29,3 +29,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-21,levels,opus,9,2,"LevelArena: L view = arena view under ArenaR, denoteL ↦ LvR; lvl_eq refines lvlEq? (caches, NStoreWF as hypotheses), levelProg write set"
 2026-10-21,libs,opus,9,2,"item 4b: MemoRV (memory-reading value relation; MemoRG an instance), tombstone erase in MemoLib (decision: no separate map library, env index is direct), banks by generation-tagged keys (MemoBank: bank_enter/put/find, #guard run), tree-valued client MemoTree (LvR level pointers)"
 2026-10-21,levels,opus,6,1,"lvls_eq/ls_node refine lvlsEq? (list slices in POOL under ArenaR, caches as hypotheses)"
+2026-10-21,pinsenv,opus,40,6,"declaration loop top down: install_then_check/install_fold_go/install_decl_step/install_step/is_none/is_some/pend_push, check_pending(_go/_next) refine installStep/installDeclStep/installFold/checkPending/checkPendingList from 8 sorry'd stub specs (refines_part, census honest); LoopR/PendR, CheckR.frame_hi"
