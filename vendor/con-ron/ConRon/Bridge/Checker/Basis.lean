@@ -600,7 +600,7 @@ theorem installBasisDecls_bridge :
     simp only [ConRon.Arena.installBasisDecl] at h1
     obtain ⟨hdup, r1⟩ := AM.dunless_ok
       AM.Never.fail_any h1
-    replace r1 := AM.pure_bind_ok r1
+    try replace r1 := AM.pure_bind_ok r1  -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
     obtain ⟨rfl, rfl⟩ := AM.pure_ok r1
     have hne := ci_ne_proj_of_denote hx (hnpx x (by simp))
     have hfind : fe.find? a.name = none := by
@@ -666,7 +666,7 @@ theorem checkBasisDecl_bridge {μ : CheckMode} {env : Env}
     obtain ⟨a, sB, g2, r2⟩ := AM.bind_ok r1
     obtain ⟨hstepB, hdenA, -⟩ := internCI_fresh hok.check.state g2
     obtain ⟨hfe, r3⟩ := AM.dunless_ok AM.Never.fail_any r2
-    replace r3 := AM.pure_bind_ok r3
+    try replace r3 := AM.pure_bind_ok r3  -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
     have hfindEq : env.find? ConLeche.eqName = some ConLeche.eqA := by
       obtain ⟨nm, c0, hd1, hd2, he⟩ :=
         (hok.check.ienv.mono hstepB.ext).hit en a (by simpa using hfe)
@@ -682,7 +682,7 @@ theorem checkBasisDecl_bridge {μ : CheckMode} {env : Env}
     exact h7
   · -- every other block installs directly
     have hqn : kind ≠ BasisKind.quotK := by simpa using hq
-    replace hr1 := AM.pure_bind_ok hr1
+    try replace hr1 := AM.pure_bind_ok hr1  -- con-agua patch: no `pure () >>=` left by the new `do` elaborator
     obtain ⟨h1, h2, h3, h4, h5, env', h6, h7⟩ :=
       tail s hok.check.state (Ext.refl _) rfl hr1
     refine ⟨h1, h2, h3, h4, h5, env', h6, ?_⟩

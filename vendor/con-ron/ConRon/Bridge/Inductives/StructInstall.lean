@@ -256,7 +256,7 @@ theorem checkStructProjTable_run (fe : IFEnv) (env : Env)
     bodies.toList bodiesP.toList s₁ s₃ sc (hread.mono p1.ok p1.ext p1.pins)
     (denoteNListE_ext p1.ext _ _ hlps) hbl k3
   obtain ⟨hg1, z4⟩ := AM.dunless_ok hnever z3
-  replace z4 := AM.pure_bind_ok z4
+  try replace z4 := AM.pure_bind_ok z4  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   have x13 := p3.ext
   have hread₃ : ReadOK env fe s₃ := hread.mono p3.ok (p1.ext.trans p3.ext) (by rw [p3.pins, p1.pins])
   -- the table's own name
@@ -272,7 +272,7 @@ theorem checkStructProjTable_run (fe : IFEnv) (env : Env)
   have hread₆ : ReadOK env fe s₆ :=
     hread₃.mono p6.ok p6.ext p6.pins
   obtain ⟨hg3, z8⟩ := AM.dunless_ok hnever z7
-  replace z8 := AM.pure_bind_ok z8
+  try replace z8 := AM.pure_bind_ok z8  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   have hg3' : (env.find? (ConLeche.projTableName TP)).isNone = true := by
     have e := hread₆.ienv.find_isSome p6.ok htn
     revert e hg3

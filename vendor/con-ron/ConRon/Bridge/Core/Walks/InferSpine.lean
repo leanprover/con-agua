@@ -65,8 +65,9 @@ theorem headAndArgs_app_spec (s₀ : AState) (e : EIdx) (x : Expr)
   rintro va s2 ⟨hs2, hrelA⟩
   subst s2
   vcgen
-  subst_vars
-  exact ⟨rfl, hrelF x hden, by simpa using hrelA x hden⟩
+  -- con-agua patch (lean4#15487): `vcgen` now splits the `∧` post itself
+  all_goals subst_vars
+  all_goals first | rfl | exact hrelF x hden | simpa using hrelA x hden
 
 /-! ## 2. The argument check -/
 

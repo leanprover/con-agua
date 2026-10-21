@@ -276,8 +276,9 @@ theorem instLPSet_specA (f : Nat → Expr → Expr) (s₀ : AState) (h : EIdx) (
         s'.memos.instLPLsC = s₀.memos.instLPLsC ∧
         MemoOK f s'.memos.instLPC s'.store; ⊤⦄ := by
   vcgen [instLPSet]
-  subst_vars
-  exact ⟨rfl, rfl, rfl, rfl, rfl, MemoOK.insert hm rfl hk hr⟩
+  -- con-agua patch (lean4#15487): `vcgen` now splits the `∧` post itself
+  all_goals subst_vars
+  all_goals first | rfl | exact MemoOK.insert hm rfl hk hr
 
 /-! ### Theorem 1 for `instLPGo` -/
 
@@ -329,7 +330,8 @@ theorem instLPGo_specS (ks : List ConLeche.Name) (us : List Level) :
     constructor
     intro s₀ h hok hm hml hmls hcl hcls hden
     dsimp only
-    sym only [bridge_grind, denoteEView, opt2, opt3, instLPFn_cutoff, view_eq_viewAt] =>
+    sym only [bridge_grind, denoteEView, opt2, opt3, instLPFn_cutoff, view_eq_viewAt,
+        → Std.le_trans] =>  -- con-agua patch (lean4#15487): store-order chains the split VCs lost
       vcgen [instLPGo_succ, instLPArmFVar, instLPArmApp, instLPArmLam,
         instLPArmForallE, instLPArmLet, instLPArmProj, ih.run,
         substLMemoAt_spec, substLsMemoAt_spec,
@@ -384,7 +386,8 @@ sibling readback tables framed. -/
         ReadNCacheOK s'.caches.readNC s'.store; ⊤⦄ := by
   dsimp only
   vcgen [readNameM]
-  all_goals (subst_vars; refine ⟨rfl, rfl, rfl, rfl, ?_, ?_⟩ <;> grind [ReadNCacheOK])
+  -- con-agua patch (lean4#15487): `vcgen` now splits the `∧` post itself
+  all_goals (subst_vars; first | rfl | grind [ReadNCacheOK])
 
 /-- con-leche: ConLeche/Kernel/Name.lean:34-37 Name — and `readNamesM`, whose
 recursion is on the list as `readNames`' is. -/

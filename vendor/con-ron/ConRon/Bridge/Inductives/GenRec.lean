@@ -2281,7 +2281,7 @@ theorem classConstOk_spec {μ : CheckMode} {env : Env} (fe : IFEnv)
   simp only [Arena.classConstOk] at hrun
   -- 1. the duplicate-declaration guard
   obtain ⟨hdup, r1⟩ := AM.dguard_ok AM.Never.fail_any hrun
-  replace r1 := AM.pure_bind_ok r1
+  try replace r1 := AM.pure_bind_ok r1  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   have hfind : fe.find? cv.name = none := by
     cases hf : fe.find? cv.name with
     | none => rfl
@@ -2291,7 +2291,7 @@ theorem classConstOk_spec {μ : CheckMode} {env : Env} (fe : IFEnv)
   obtain ⟨rs, s2, k2, r2⟩ := AM.bind_ok r1
   obtain ⟨p2, hrs⟩ := reservedBasisNames_pstep hok.state hok.pins k2
   obtain ⟨hres, r3⟩ := AM.dguard_ok AM.Never.fail_any r2
-  replace r3 := AM.pure_bind_ok r3
+  try replace r3 := AM.pure_bind_ok r3  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   have hresP : ConLeche.reservedBasisNames.contains cP.name = false := by
     rw [← contains_handle_eq p2.ok.wf (denoteN_ext hnm p2.ext) hrs]
     cases hb : rs.contains cv.name with
@@ -2301,7 +2301,7 @@ theorem classConstOk_spec {μ : CheckMode} {env : Env} (fe : IFEnv)
   obtain ⟨b3, s3, k3, r4⟩ := AM.bind_ok r3
   obtain ⟨rfl, hb3⟩ := isProjFnShape_run p2.ok rfl (denoteN_ext hnm p2.ext) k3
   obtain ⟨hproj, r5⟩ := AM.dguard_ok AM.Never.fail_any r4
-  replace r5 := AM.pure_bind_ok r5
+  try replace r5 := AM.pure_bind_ok r5  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   have hprojP : cP.name.isProjFnShape = false := by
     rw [← hb3]
     cases hb : b3 with
@@ -2309,7 +2309,7 @@ theorem classConstOk_spec {μ : CheckMode} {env : Env} (fe : IFEnv)
     | true => rw [hb] at hproj; exact absurd rfl hproj
   -- 4. the duplicate-universe-parameter guard
   obtain ⟨hnod, r6⟩ := AM.dunless_ok AM.Never.fail_any r5
-  replace r6 := AM.pure_bind_ok r6
+  try replace r6 := AM.pure_bind_ok r6  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   have hnodP : ConLeche.Name.nodup cP.levelParams = true := by
     rw [← nameNodup_spec p2.ok.wf cv.levelParams cP.levelParams
       (denoteNList_ext p2.ext.lss.ls.ns _ _ hlps)]
@@ -2318,13 +2318,13 @@ theorem classConstOk_spec {μ : CheckMode} {env : Env} (fe : IFEnv)
   obtain ⟨b5, s5, k5, r7⟩ := AM.bind_ok r6
   obtain ⟨p5, rfl⟩ := RC.looseBVarsBoundedFast_pstep p2.ok (denote_ext hty p2.ext) k5
   obtain ⟨hlbb, r8⟩ := AM.dunless_ok AM.Never.fail_any r7
-  replace r8 := AM.pure_bind_ok r8
+  try replace r8 := AM.pure_bind_ok r8  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   -- 6. the free-variable guard
   have p25 := p2.trans p5
   obtain ⟨b6, s6, k6, r9⟩ := AM.bind_ok r8
   obtain ⟨p6, rfl⟩ := RC.hasFvarFast_pstep p5.ok (denote_ext hty p25.ext) k6
   obtain ⟨hfv, r10⟩ := AM.dguard_ok AM.Never.fail_any r9
-  replace r10 := AM.pure_bind_ok r10
+  try replace r10 := AM.pure_bind_ok r10  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   have hfvP : cP.type.hasFvar = false := by
     cases hb : cP.type.hasFvar with
     | false => rfl
@@ -2336,7 +2336,7 @@ theorem classConstOk_spec {μ : CheckMode} {env : Env} (fe : IFEnv)
   obtain ⟨h7st, h7c, h7p, rfl⟩ := allLevelParamsDefined_run p6.ok
     (denoteNList_ext p26.ext.lss.ls.ns _ _ hlps) (denote_ext hty p26.ext) k7
   obtain ⟨hlpd, r12⟩ := AM.dunless_ok AM.Never.fail_any r11
-  replace r12 := AM.pure_bind_ok r12
+  try replace r12 := AM.pure_bind_ok r12  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   have p7 : PStep s6 s7 := PStep.of_caches ⟨by rw [h7st]; exact p6.ok.wf⟩
     (by rw [h7st]; exact Ext.refl _) h7c h7p
   have p27 := p26.trans p7
@@ -2346,7 +2346,7 @@ theorem classConstOk_spec {μ : CheckMode} {env : Env} (fe : IFEnv)
   obtain ⟨h8st, h8c, h8p, rfl⟩ := constsResolveFFast_runR c7.ok.toR
     (denote_ext hty p27.ext) k8
   obtain ⟨hcr, r14⟩ := AM.dunless_ok (AM.Never.bind fun _ => AM.Never.fail_any) r13
-  replace r14 := AM.pure_bind_ok r14
+  try replace r14 := AM.pure_bind_ok r14  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   have p8 : PStep s7 s8 := PStep.of_caches ⟨by rw [h8st]; exact p7.ok.wf⟩
     (by rw [h8st]; exact Ext.refl _) h8c h8p
   have c8 := (p27.trans p8).toCore hok
@@ -2394,9 +2394,9 @@ theorem classRecTyOk_spec {μ : CheckMode} {env : Env} (fe : IFEnv)
   obtain ⟨p1, hci⟩ := targetMajorAt_spec g.cls gP.cls c s₀ s1 ci hok.state hok.pins hcls k1
   obtain ⟨-, -, -, -, hnIdx, -, hmem, -, -⟩ := dMajor_inv hci
   obtain ⟨h1, z2⟩ := AM.dunless_ok AM.Never.fail_any z1
-  replace z2 := AM.pure_bind_ok z2
+  try replace z2 := AM.pure_bind_ok z2  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   obtain ⟨h2, z3⟩ := AM.dunless_ok AM.Never.fail_any z2
-  replace z3 := AM.pure_bind_ok z3
+  try replace z3 := AM.pure_bind_ok z3  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   have h1P : (rcP.tgt == (gP.cls.getD c default).member.getD k) = true := by
     rw [← htgt, ← hmem]; exact h1
   have h2P : (rcP.rP == gP.nP + gP.slots.length &&
@@ -2565,11 +2565,11 @@ theorem classRuleOk_spec {μ : CheckMode} {envR env₂ : Env} (feR : IFEnv) (vis
   obtain ⟨b1, s1, k1, z1⟩ := AM.bind_ok hrun
   obtain ⟨p1, rfl⟩ := RC.looseBVarsBoundedFast_pstep hok.state hgen k1
   obtain ⟨hlb, z2⟩ := AM.dunless_ok AM.Never.fail_any z1
-  replace z2 := AM.pure_bind_ok z2
+  try replace z2 := AM.pure_bind_ok z2  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   obtain ⟨b2, s2, k2, z3⟩ := AM.bind_ok z2
   obtain ⟨p2, rfl⟩ := RC.hasFvarFast_pstep p1.ok (denote_ext hgen p1.ext) k2
   obtain ⟨hfv, z4⟩ := AM.dguard_ok AM.Never.fail_any z3
-  replace z4 := AM.pure_bind_ok z4
+  try replace z4 := AM.pure_bind_ok z4  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   have hfvP : genP.hasFvar = false := by
     cases hb : genP.hasFvar with
     | false => rfl
@@ -2581,7 +2581,7 @@ theorem classRuleOk_spec {μ : CheckMode} {envR env₂ : Env} (feR : IFEnv) (vis
   obtain ⟨h3st, h3c, h3p, rfl⟩ := allLevelParamsDefined_run p2.ok
     (denoteNList_ext p12.ext.lss.ls.ns _ _ hlps) (denote_ext hgen p12.ext) k3
   obtain ⟨hlp, z6⟩ := AM.dunless_ok AM.Never.fail_any z5
-  replace z6 := AM.pure_bind_ok z6
+  try replace z6 := AM.pure_bind_ok z6  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   have p3 : PStep s2 s3 := PStep.of_caches ⟨by rw [h3st]; exact p2.ok.wf⟩
     (by rw [h3st]; exact Ext.refl _) h3c h3p
   have c13 := (p12.trans p3).toCore hok
@@ -2589,7 +2589,7 @@ theorem classRuleOk_spec {μ : CheckMode} {envR env₂ : Env} (feR : IFEnv) (vis
   obtain ⟨b4, s4, k4, z7⟩ := AM.bind_ok z6
   obtain ⟨p4, rfl⟩ := constsResolveFFast_pstep c13.ok.toR (denote_ext hgen c13.ext) k4
   obtain ⟨hcr, z8⟩ := AM.dunless_ok (AM.Never.bind fun _ => AM.Never.fail_any) z7
-  replace z8 := AM.pure_bind_ok z8
+  try replace z8 := AM.pure_bind_ok z8  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   have c14 := c13.trans (p4.toCore c13.ok)
   -- the inference at `feR`
   obtain ⟨ty, s5, k5, z9⟩ := AM.bind_ok z8
@@ -2614,7 +2614,7 @@ theorem classRuleOk_spec {μ : CheckMode} {envR env₂ : Env} (feR : IFEnv) (vis
       ⟨hok6.state, hok6.pins, hie₂.mono c16.ext _ rfl⟩
     obtain ⟨p8, rfl⟩ := allM_domains_resolve rbs rbsP s6 s8 _ hr6 hrbs k8
     obtain ⟨hdom, z13⟩ := AM.dunless_ok (AM.Never.bind fun _ => AM.Never.fail_any) z12
-    replace z13 := AM.pure_bind_ok z13
+    try replace z13 := AM.pure_bind_ok z13  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
     have c18 := c16.trans (p8.toCore hok6)
     obtain ⟨rfl, rfl⟩ := AM.pure_ok z13
     refine ⟨c18, genP, denote_ext hgen c18.ext, ?_⟩
@@ -3033,7 +3033,7 @@ theorem genRecCheck_spec {μ : CheckMode} {env₂ : Env} (fe₂ : IFEnv)
   have c12 := c1.trans c2
   -- the elimination guard
   obtain ⟨hk0, z3⟩ := AM.dguard_ok AM.Never.fail_any z2
-  replace z3 := AM.pure_bind_ok z3
+  try replace z3 := AM.pure_bind_ok z3  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   have hkP : 0 < pP.k := by
     rw [← hk']; simp only [beq_iff_eq] at hk0; omega
   have hany := GR.any_member_isNone (dMajor_ext.list c12.ext _ _ hms)
@@ -3044,7 +3044,7 @@ theorem genRecCheck_spec {μ : CheckMode} {env₂ : Env} (fe₂ : IFEnv)
     obtain ⟨c3, rfl⟩ := blockLargeElimAllowed_cspec fe₂ p pP _ s2 s3 la c12.ok
       (dShape_ext c12.ext _ _ hsh) k3
     obtain ⟨hla, z4⟩ := AM.dunless_ok AM.Never.fail_any z4
-    replace z4 := AM.pure_bind_ok z4
+    try replace z4 := AM.pure_bind_ok z4  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
     have hcond : (pP.large && !ConLeche.blockLargeElimAllowed pP
         (nestedBit || MsP.any (·.member.isNone))) = false := by
       rw [← hany]; simp [hla]
@@ -3058,7 +3058,7 @@ theorem genRecCheck_spec {μ : CheckMode} {env₂ : Env} (fe₂ : IFEnv)
     generalize hs3 : s2 = s3 at z3
     have c13 : CoreStep μ env₂ fe₂ s₀ s3 := hs3 ▸ c12
     have hcvRis3 : cvRis.mapM (Frontend.denoteCV s3.store) = some cvRisP := hs3 ▸ hcvRis
-    have z4 := AM.pure_bind_ok z3
+    have z4 := z3  -- con-agua patch: was `AM.pure_bind_ok z3`; no `pure () >>=` left (new `do` elaborator)
   all_goals
     have hformer : ∀ t ∈ cvTasP.map (·.type), Expr.WScoped 0 t := by
       intro t ht
@@ -3081,7 +3081,7 @@ theorem genRecCheck_spec {μ : CheckMode} {env₂ : Env} (fe₂ : IFEnv)
     have c15 := c14.trans c5
     -- no minor premise beyond the constructors
     obtain ⟨hminor, z7⟩ := AM.dunless_ok AM.Never.fail_any z6
-    replace z7 := AM.pure_bind_ok z7
+    try replace z7 := AM.pure_bind_ok z7  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
     have hsl : rd.slots.mapM (dSlot s₀.store) = some rdP.slots := by
       simp only [dClassRead, Option.map_eq_some_iff] at hrd
       obtain ⟨q, hq, rfl⟩ := hrd
@@ -3283,7 +3283,7 @@ theorem classKeyOf_spec {μ : CheckMode} {env : Env} (fe : IFEnv) (nP : Nat) (pa
         exact ⟨q1.trans q2, by simp [hb]⟩)
     k2.ds ds s1 s2 cl p1.ok trivial hds k2' 
   obtain ⟨hcl, z3⟩ := AM.dunless_ok AM.Never.fail_any z2
-  replace z3 := AM.pure_bind_ok z3
+  try replace z3 := AM.pure_bind_ok z3  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   have hkc' : ds = (ConLeche.classKeyCanon paramsP kP).ds := by rw [← hkc]
   rw [hkc'] at hcl hds
   have hw : ∀ x ∈ (ConLeche.classKeyCanon paramsP kP).ds, Expr.WScoped nP x := by

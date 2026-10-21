@@ -390,7 +390,7 @@ theorem checkDefnVal_pushed {μ : CheckMode} {fe fe2 : IFEnv}
   obtain ⟨t, s2, -, r2⟩ := AM.bind_ok r1
   obtain ⟨b, s3, -, r3⟩ := AM.bind_ok r2
   obtain ⟨-, r4⟩ := AM.dunless_ok AM.Never.fail_any r3
-  replace r4 := AM.pure_bind_ok r4
+  try replace r4 := AM.pure_bind_ok r4  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   obtain ⟨rfl, -⟩ := AM.pure_ok r4
   exact ⟨value, rfl⟩
 
@@ -404,7 +404,7 @@ theorem checkOpaqueVal_pushed {μ : CheckMode} {fe fe2 : IFEnv}
   obtain ⟨t, s2, -, r2⟩ := AM.bind_ok r1
   obtain ⟨b, s3, -, r3⟩ := AM.bind_ok r2
   obtain ⟨-, r4⟩ := AM.dunless_ok AM.Never.fail_any r3
-  replace r4 := AM.pure_bind_ok r4
+  try replace r4 := AM.pure_bind_ok r4  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   obtain ⟨rfl, -⟩ := AM.pure_ok r4
   rfl
 
@@ -614,7 +614,7 @@ theorem checkDecl_bridge_defn {μ : CheckMode}
             replace hstepC := hstepC.congr_find (fun n => (hpre n).symm)
             obtain ⟨hy10, r11⟩ :=
               AM.dunless_ok AM.Never.fail_any r10
-            replace r11 := AM.pure_bind_ok r11
+            try replace r11 := AM.pure_bind_ok r11  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
             obtain ⟨FC, hcert⟩ := hcertOf hy10
             have hok9 : FoldOK μ env fe s9 := hok8.ofCore hstepC
             have hext09 : Ext s.store s9.store :=
@@ -655,7 +655,7 @@ theorem checkDecl_bridge_defn {μ : CheckMode}
       cases hbb : ns.contains cv.name with
       | false => rfl
       | true => rw [hbb] at hn3; exact absurd rfl hn3
-    replace hg3 := AM.pure_bind_ok hg3
+    try replace hg3 := AM.pure_bind_ok hg3  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
     have hle1 : F1 ≤ max F1 F2 := Nat.le_max_left _ _
     have hle2 : F2 ≤ max F1 F2 := Nat.le_max_right _ _
     refine tail s2 (max F1 F2) hok2 hext02 hpin02 hnm2 hst2
@@ -777,7 +777,7 @@ theorem checkDecl_bridge_opaque {μ : CheckMode}
             (checkOpaqueVal_mono hle2' hpure2) (hcont ▸ hyes)
             (checkReducePin_mono hle4' hpure4)⟩ }
   · -- the gate is skipped
-    replace hgood := AM.pure_bind_ok hgood
+    try replace hgood := AM.pure_bind_ok hgood  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
     obtain ⟨rfl, rfl⟩ := AM.pure_ok hgood
     have hnoP : ConLeche.reduceOpNames.contains c.name = false := by
       rw [← hcont]

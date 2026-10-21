@@ -791,6 +791,7 @@ theorem structUnitCert_run {F d : Nat} {x y t w : Expr}
   have e2 : (ConLeche.pureFns mode env F).whnf d t = .ok w := h2
   simp only [ConLeche.structUnitCertFueled, ConLeche.structUnitCert, e1, e2, bind,
     Except.bind, unitGuard]
+  dsimp +instances only [unitGuard]  -- con-agua patch: `simp` no longer rewrites instance args
   cases w.getAppFn with
   | const T us =>
     simp only [exprTag, exprConstName, exprConstLevels, beq_self_eq_true, Bool.true_and]

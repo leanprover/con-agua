@@ -822,6 +822,30 @@ private theorem SeenGrow.insert_black {st : EStore} {acc : List (Nat × EIdx)}
   SeenGrow.drop_insert SeenGrow.refl hb
 local grind_pattern [bridge_grind] SeenGrow.insert_black => SeenGrow st acc seen (seen.insert k ())
 
+/-- con-agua patch (lean4#15487): `vcgen` now splits the post's `∧`, so the
+`SeenGrow` VC of a leaf arm no longer holds the `LeavesEq st acc c acc` term that
+made `LeavesEq.black` supply `BlackA`; this keys the same chain on the `SeenGrow`
+goal itself. -/
+private theorem SeenGrow.insert_of_leavesEq {st : EStore} {acc : List (Nat × EIdx)}
+    {seen : Std.HashMap EIdx Unit} {k : EIdx} (h : LeavesEq st acc k acc)
+    (hacc : (denoteLeaves st acc).isSome = true) :
+    SeenGrow st acc seen (seen.insert k ()) :=
+  SeenGrow.insert_black (LeavesEq.black h hacc)
+local grind_pattern [bridge_grind] SeenGrow.insert_of_leavesEq =>
+  SeenGrow st acc seen (seen.insert k ())
+
+/-- con-agua patch (lean4#15487): likewise for a node arm's
+`SeenGrow.drop_insert`, whose `BlackA` came from the node's `LeavesEq` step in
+the (now separate) `LeavesEq` VC; keyed on the caller's `SeenOK` instead. -/
+private theorem SeenGrow.drop_insert_of_leavesEq {st : EStore}
+    {acc res : List (Nat × EIdx)} {seen seen' : Std.HashMap EIdx Unit} {k : EIdx}
+    (_hs : SeenOK st acc seen k) (h : SeenGrow st res (seen.insert k ()) seen')
+    (hl : LeavesEq st acc k res) (hacc : (denoteLeaves st acc).isSome = true) :
+    SeenGrow st res seen seen' :=
+  SeenGrow.drop_insert h (LeavesEq.black hl hacc)
+local grind_pattern [bridge_grind] SeenGrow.drop_insert_of_leavesEq =>
+  SeenOK st acc seen k, SeenGrow st res (seen.insert k ()) seen', SeenGrow st res seen seen'
+
 local grind_pattern [bridge_grind] SeenGrow.drop_insert =>
   SeenGrow st acc seen seen', SeenGrow st acc (seen.insert k ()) seen'
 local grind_pattern [bridge_grind] SeenGrow.trans => SeenGrow st a1 s0 s1, SeenGrow st a2 s1 s2

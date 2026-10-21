@@ -656,7 +656,7 @@ theorem checkBlockAgree_specF {μ : CheckMode} {env : Env} (fe : IFEnv)
     dsimp only at z4
     by_cases hlen : (fvs1.length == fvs0.length) = true
     · rw [ite_eq_left hlen] at z4
-      replace z4 := AM.pure_bind_ok z4
+      try replace z4 := AM.pure_bind_ok z4  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
       obtain ⟨doms, s₅, k5, z5⟩ := AM.bind_ok z4
       obtain ⟨p5, hdoms⟩ := fvarTypeDs_run fvs0 xs0 p3.ok hxs0' k5
       have c5 := (p1.trans (p3.trans p5)).toCore hok
@@ -1022,7 +1022,7 @@ theorem checkAbsCtorSorts_specF {μ : CheckMode} {env : Env} (fe : IFEnv)
     obtain ⟨h1s, h1c, h1p, hb⟩ := allLevelParamsDefined_run hok.state hl' htyN k1
     have c1 := coreStep_of_store hok h1s h1c h1p
     obtain ⟨hbt, z2⟩ := AM.dunless_ok AM.Never.fail_any z1
-    replace z2 := AM.pure_bind_ok z2
+    try replace z2 := AM.pure_bind_ok z2  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
     obtain ⟨oq, s₂, k2, z3⟩ := AM.bind_ok z2
     obtain ⟨p2, hoq⟩ := openPisAtFvarsF_run c1.ok.state
       (denote_ext htyN c1.ext) k2
