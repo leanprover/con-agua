@@ -51,18 +51,19 @@ def classSlotIsMinor : FunDecl := lfn (s) locals () {
 }
 
 /-- `classMinorSlot` helper, a small recursive helper (not a `while` loop, so that its proof is
-plain induction on the fuel, as `bbGo`): scans slots `off + j, …, off + len - 1`, counting the
-`.minor c cc _` hits and remembering the last one's `ihs`. -/
+plain induction on the fuel, as `bbGo`): scans slots `off + j, …, off + j + rem - 1` (`off` the
+slots' fixed base, `j` the current index), counting the `.minor c cc _` hits and remembering the
+last one's `ihs`. -/
 @[l_impl ConRon.Arena.classMinorSlot]
 def classMinorSlotGo : FunDecl := lfn (off, rem, j, c, cc, cnt, rS, rOff, rLen)
     locals (p, cnt2, rS2, rOff2, rLen2) {
   if rem == 0 { return (cnt, rS, rOff, rLen) };
   p := IW.u64[off + j];
   if IW.u64[p] == 1 && IW.u64[p + 1] == c && IW.u64[p + 2] == cc {
-    (cnt2, rS2, rOff2, rLen2) := call class_minor_slot_go(off + 1, rem - 1, j + 1, c, cc, cnt + 1,
+    (cnt2, rS2, rOff2, rLen2) := call class_minor_slot_go(off, rem - 1, j + 1, c, cc, cnt + 1,
       j, IW.u64[p + 3], IW.u64[p + 4])
   } else {
-    (cnt2, rS2, rOff2, rLen2) := call class_minor_slot_go(off + 1, rem - 1, j + 1, c, cc, cnt, rS,
+    (cnt2, rS2, rOff2, rLen2) := call class_minor_slot_go(off, rem - 1, j + 1, c, cc, cnt, rS,
       rOff, rLen)
   };
   return (cnt2, rS2, rOff2, rLen2)
