@@ -175,7 +175,7 @@ def fapushOK (m : Mem) (t : Word) : Bool :=
 /-- The memory after `forall_push(t, ty, body, j)` appended node `c`. -/
 def fapushMem (m : Mem) (t ty body j c : Word) : Mem :=
   ((((m.set64 FAREC (c * 4 + t * 2) ty).set64 FAREC (c * 4 + t * 2 + 1) body).set64 FASLOT
-    (j * 2 + t) (c + 1)).set64 CTL (30 + t) (c + 1))
+    (j * 2 + t) (c + 1)).set64 CTL (30 + (t &&& 1)) (c + 1))
 
 def forallPush : FunDecl := lfn (t, ty, body, j) locals (c, k) {
   c := CTL.u64[30 + t];
@@ -186,7 +186,7 @@ def forallPush : FunDecl := lfn (t, ty, body, j) locals (c, k) {
   FAREC.u64[k] := ty;
   FAREC.u64[k + 1] := body;
   FASLOT.u64[j * 2 + t] := c + 1;
-  CTL.u64[30 + t] := c + 1;
+  CTL.u64[30 + (t & 1)] := c + 1;
   return c
 }
 

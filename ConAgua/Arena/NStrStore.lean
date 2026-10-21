@@ -209,7 +209,7 @@ def nspushOK (m : Mem) (t : Word) : Bool :=
 def nspushMem (m : Mem) (t q o l h j c : Word) : Mem :=
   (((((m.set64 NSREC (c * 8 + t * 4) q).set64 NSREC (c * 8 + t * 4 + 1) o).set64 NSREC
     (c * 8 + t * 4 + 2) l).set64 NSREC (c * 8 + t * 4 + 3) h).set64 NSSLOT (j * 2 + t)
-    (c + 1)).set64 CTL (36 + t) (c + 1)
+    (c + 1)).set64 CTL (36 + (t &&& 1)) (c + 1)
 
 def nsPush : FunDecl := lfn (t, q, o, l, h, j) locals (c, k) {
   c := CTL.u64[36 + t];
@@ -222,7 +222,7 @@ def nsPush : FunDecl := lfn (t, q, o, l, h, j) locals (c, k) {
   NSREC.u64[k + 2] := l;
   NSREC.u64[k + 3] := h;
   NSSLOT.u64[j * 2 + t] := c + 1;
-  CTL.u64[36 + t] := c + 1;
+  CTL.u64[36 + (t & 1)] := c + 1;
   return c
 }
 
