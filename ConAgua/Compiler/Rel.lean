@@ -77,11 +77,15 @@ structure MemRel (G : Layout) (m : Mem) (d : DataMem) : Prop where
 /-- The machine runs a body of a function with `nl` locals and an `F`-word frame, in L state `σ`. -/
 structure Inv (G : Layout) (nl F : Nat) (σ : St) (s : MachineData) : Prop where
   r15 : s.regs.r15.toNat = G.T
-  lo : G.lo ≤ s.regs.rsp.toNat
+  /-- The next call's return address fits below the frame. -/
+  lo8 : G.lo + 8 ≤ s.regs.rsp.toNat
   hi : s.regs.rsp.toNat + 8 * F + 8 ≤ G.hi
   nlF : nl ≤ F
   frame : ∀ x < nl, rdW s.dmem (A (s.regs.rsp.toNat + 8 * x)) = some (σ.loc x)
   mem : MemRel G σ.mem s.dmem
+
+theorem Inv.lo {G : Layout} {nl F : Nat} {σ : St} {s : MachineData} (hI : Inv G nl F σ s) :
+    G.lo ≤ s.regs.rsp.toNat := by have := hI.lo8; omega
 
 /-- `d'` differs from `d` at most in the bytes `[a, b)`, and has every byte `d` has. -/
 structure Only (a b : Nat) (d d' : DataMem) : Prop where
@@ -118,6 +122,9 @@ include hG
 
 theorem Layout.Ok.notStack_of_arr {x : Nat} (h : G.InArr x) : ¬ G.InStack x :=
   fun hs => hG.stack_arr x hs h
+
+theorem Layout.Ok.notStack_of_arr' {x : Nat} (h : G.InStack x) : ¬ G.InArr x :=
+  fun ha => hG.stack_arr x h ha
 
 theorem Layout.Ok.notStack_of_tab {x : Nat} (h : G.InTab x) : ¬ G.InStack x :=
   hG.tab_stack x h
@@ -173,7 +180,7 @@ theorem Inv.only {nl F : Nat} {σ : St} {s s' : MachineData} (hI : Inv G nl F σ
     (h : Only (s.regs.rsp.toNat + 8 * nl) (s.regs.rsp.toNat + 8 * F) s.dmem s'.dmem)
     (hsp : s'.regs.rsp = s.regs.rsp) (h15 : s'.regs.r15 = s.regs.r15) : Inv G nl F σ s' where
   r15 := h15 ▸ hI.r15
-  lo := hsp ▸ hI.lo
+  lo8 := hsp ▸ hI.lo8
   hi := hsp ▸ hI.hi
   nlF := hI.nlF
   frame := fun x hx => by

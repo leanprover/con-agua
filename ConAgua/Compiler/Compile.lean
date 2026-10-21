@@ -233,6 +233,16 @@ def compileS (ctx : Ctx) (path : String) : Stmt → Program
        movMR (mb .rsp (8 * x)) .rax]
   | .abort => [jmpL errorL]
 
+/-- Copy `n` parameters from `[rsi + 8i]` to the frame slots `i, i+1, …`. -/
+def copyParams : Nat → Nat → Program
+  | _, 0 => []
+  | i, n + 1 => [movRM .rax (mb .rsi (8 * i)), movMR (mb .rsp (8 * i)) .rax] ++ copyParams (i + 1) n
+
+/-- Zero `n` frame slots from `j` on. -/
+def zeroLocals : Nat → Nat → Program
+  | _, 0 => []
+  | j, n + 1 => i64 (.mov (.mem (mb .rsp (8 * j))) (oI 0)) :: zeroLocals (j + 1) n
+
 /-- A function: stack check, frame, parameters, body, epilogue. On entry `rsp` points at the
 return address and `rsi` at the arguments. -/
 def compileFn (tab : Tab) (f : FnName) (fd : FunDecl) : Program :=
@@ -242,9 +252,7 @@ def compileFn (tab : Tab) (f : FnName) (fd : FunDecl) : Program :=
    movRR .rax .rsp, i64 (.sub (.reg (rr .rax)) (oM (mb .r15 Tab.stackLimit))),
    i64 (.cmp (.reg (rr .rax)) (oI (8 * F + 8))), jccL .c exhaustedL,
    i64 (.sub (.reg (rr .rsp)) (oI (8 * F)))] ++
-  (List.range fd.nparams).flatMap (fun (i : Nat) => [movRM .rax (mb .rsi (8 * i)), movMR (mb .rsp (8 * i)) .rax]) ++
-  ((List.range (fd.nlocals - fd.nparams)).map fun (j : Nat) =>
-    i64 (.mov (.mem (mb .rsp (8 * (fd.nparams + j)))) (oI 0))) ++
+  copyParams 0 fd.nparams ++ zeroLocals fd.nparams (fd.nlocals - fd.nparams) ++
   compileS ctx "" fd.body ++
   [.label ctx.endL, movRI .rax 0, .label ctx.retL,
    i64 (.add (.reg (rr .rsp)) (oI (8 * F))), i64 .ret]
