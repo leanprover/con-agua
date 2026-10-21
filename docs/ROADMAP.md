@@ -72,7 +72,7 @@ started; **n/a** = not ported (types, data, threads, or replaced by a design cho
 
 | Rust | lines | twin | status |
 |---|---:|---|---|
-| `ron/nat.rs` | 1080 | Lean `Nat` inside `natOpResult` (`+ - * ^ / % gcd land lor xor shiftLeft shiftRight beq ble`), `natLitToConstructor`, `natPred?`, `isNatZero`, `strLitConsSpine` | `add`, `mul` done (`NatAdd`, `NatMul`, `natAddLit_refinesA`); sub, compare, bit ops, shifts, pow, div/mod, gcd, decimal – |
+| `ron/nat.rs` | 1080 | Lean `Nat` inside `natOpResult` (`+ - * ^ / % gcd land lor xor shiftLeft shiftRight beq ble`), `natLitToConstructor`, `natPred?`, `isNatZero`, `strLitConsSpine` | `add`, `mul`, `land`/`lor`/`xor` done (`NatAdd`, `NatMul`, `NatBits`, `natAddLit_refinesA`); sub, compare, shifts, pow, div/mod, gcd, decimal – (DESIGN.md, lane `nat`: `nat_cmp` attempted, not landed) |
 
 ### Phase 10: driver (not started)
 
@@ -331,6 +331,10 @@ checker's `run.c` must compare `rax` with `ACCEPT` itself, not print `rax` (toda
   holding the remaining variants (a different `p`, so `PipelineRefines` must be proved
   parametric in the pin ROM, which it is anyway). The error kinds (reject/decline/error) are not
   distinguished; only `ACCEPT` is interpreted.
+  *Maintainer note (2026-10-21):* "never recover" is a starting point, not the goal. The
+  preferred long-term fix is upstream: change con-leche (and so con-ron's twin) so that the
+  pin-variant check distinguishes "error" from "not defeq" in its result, instead of throwing and
+  catching. Then L needs no recovery at all and no completeness is lost.
 * **(d) Pool.** The x64 checker runs phase A (`installFold`) and then phase B on one worker
   (`checkPendingList` from `s'.worker`, as the Rust's sequential `check_decls_phased`), which is
   `PooledAccepts` with `parts = [pend.toList]` (`Arena/Pooled.lean`; the vendored twin has no

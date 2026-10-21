@@ -238,6 +238,19 @@ induction hypothesis, and the expression lemmas are straight-line `kvcgen64` pro
   hand-written guarded lemma. A small generator for both might pay off once there are tens of
   functions.
 
+### `nat_sub`: the final borrow decides
+
+con-ron's `sub` compares first and runs the ripple borrow only when `a > b`. `nat_sub` runs the
+ripple borrow over `max la lb` limbs (`nat_add`'s loop, `nat_limb` for both operands,
+`sub_borrow` for the two `overflowing_sub`s) and lets the borrow out of the top limb decide: the
+loop's equation is `R + B = A + c · wt n`, so `c = 0` gives `R = A - B` and `c = 1` gives
+`A < B` (with `R < wt n`), and the result is `0`. It needs neither `nat_cmp` nor normalised
+inputs. Two details: `bit_mul_wt` (`c.toNat * wt k = wt k` for a nonzero bit `c`, pattern
+`c.toNat * wt k`), because the linear solver knows `c = 1` but the product stays an atom; and
+both exits end with the same `CTL[0] := top + n` (`if c != 0 { n := 0 } else { n := trim }`):
+a `return 0` that leaves `CTL[0]` alone fails `Frame POOL (m.set64 CTL 0 (top + 0)) m'`,
+because `grind` does not see that writing the top's own value back changes nothing.
+
 ### `sorry`s
 
 None.
@@ -1325,6 +1338,19 @@ below) — closing it is future work, not assumed away.
   compiled validator can actually reach — the theorem is honest about not knowing yet, rather
   than assuming either way.
 
+### `nat_sub`: the final borrow decides
+
+con-ron's `sub` compares first and runs the ripple borrow only when `a > b`. `nat_sub` runs the
+ripple borrow over `max la lb` limbs (`nat_add`'s loop, `nat_limb` for both operands,
+`sub_borrow` for the two `overflowing_sub`s) and lets the borrow out of the top limb decide: the
+loop's equation is `R + B = A + c · wt n`, so `c = 0` gives `R = A - B` and `c = 1` gives
+`A < B` (with `R < wt n`), and the result is `0`. It needs neither `nat_cmp` nor normalised
+inputs. Two details: `bit_mul_wt` (`c.toNat * wt k = wt k` for a nonzero bit `c`, pattern
+`c.toNat * wt k`), because the linear solver knows `c = 1` but the product stays an atom; and
+both exits end with the same `CTL[0] := top + n` (`if c != 0 { n := 0 } else { n := trim }`):
+a `return 0` that leaves `CTL[0]` alone fails `Frame POOL (m.set64 CTL 0 (top + 0)) m'`,
+because `grind` does not see that writing the top's own value back changes nothing.
+
 ### `sorry`s
 
 None.
@@ -1483,6 +1509,19 @@ code shows a bug the generated form would avoid. The next step that pays is a co
 over all tables of a store (`LitR ∧ AppR ∧ …` with the frame between them: each table's append
 is `OutEq` for the others' arrays, which `pushG_arr` already gives).
 
+### `nat_sub`: the final borrow decides
+
+con-ron's `sub` compares first and runs the ripple borrow only when `a > b`. `nat_sub` runs the
+ripple borrow over `max la lb` limbs (`nat_add`'s loop, `nat_limb` for both operands,
+`sub_borrow` for the two `overflowing_sub`s) and lets the borrow out of the top limb decide: the
+loop's equation is `R + B = A + c · wt n`, so `c = 0` gives `R = A - B` and `c = 1` gives
+`A < B` (with `R < wt n`), and the result is `0`. It needs neither `nat_cmp` nor normalised
+inputs. Two details: `bit_mul_wt` (`c.toNat * wt k = wt k` for a nonzero bit `c`, pattern
+`c.toNat * wt k`), because the linear solver knows `c = 1` but the product stays an atom; and
+both exits end with the same `CTL[0] := top + n` (`if c != 0 { n := 0 } else { n := trim }`):
+a `return 0` that leaves `CTL[0]` alone fails `Frame POOL (m.set64 CTL 0 (top + 0)) m'`,
+because `grind` does not see that writing the top's own value back changes nothing.
+
 ### `sorry`s
 
 None.
@@ -1563,6 +1602,19 @@ because width 2 means two `fld_push*`-shaped equations instead of one in `*NewOK
   `succ`/`app`, confirming the recommendation's estimate for "handle words only" tables: no new
   proof idea, each about 230 L-side lines and 160–180 relation lines, a few seconds of CPU.
 
+### `nat_sub`: the final borrow decides
+
+con-ron's `sub` compares first and runs the ripple borrow only when `a > b`. `nat_sub` runs the
+ripple borrow over `max la lb` limbs (`nat_add`'s loop, `nat_limb` for both operands,
+`sub_borrow` for the two `overflowing_sub`s) and lets the borrow out of the top limb decide: the
+loop's equation is `R + B = A + c · wt n`, so `c = 0` gives `R = A - B` and `c = 1` gives
+`A < B` (with `R < wt n`), and the result is `0`. It needs neither `nat_cmp` nor normalised
+inputs. Two details: `bit_mul_wt` (`c.toNat * wt k = wt k` for a nonzero bit `c`, pattern
+`c.toNat * wt k`), because the linear solver knows `c = 1` but the product stays an atom; and
+both exits end with the same `CTL[0] := top + n` (`if c != 0 { n := 0 } else { n := trim }`):
+a `return 0` that leaves `CTL[0]` alone fails `Frame POOL (m.set64 CTL 0 (top + 0)) m'`,
+because `grind` does not see that writing the top's own value back changes nothing.
+
 ### `sorry`s
 
 None.
@@ -1616,6 +1668,19 @@ level store, the expression store's `internE` has the scratch skip (`EStore.pers
   far: the skip test is a Word-level computation with no handle-kind content, so it is identical
   code to `app`'s regardless of what the two fields denote at the arena level.
 
+### `nat_sub`: the final borrow decides
+
+con-ron's `sub` compares first and runs the ripple borrow only when `a > b`. `nat_sub` runs the
+ripple borrow over `max la lb` limbs (`nat_add`'s loop, `nat_limb` for both operands,
+`sub_borrow` for the two `overflowing_sub`s) and lets the borrow out of the top limb decide: the
+loop's equation is `R + B = A + c · wt n`, so `c = 0` gives `R = A - B` and `c = 1` gives
+`A < B` (with `R < wt n`), and the result is `0`. It needs neither `nat_cmp` nor normalised
+inputs. Two details: `bit_mul_wt` (`c.toNat * wt k = wt k` for a nonzero bit `c`, pattern
+`c.toNat * wt k`), because the linear solver knows `c = 1` but the product stays an atom; and
+both exits end with the same `CTL[0] := top + n` (`if c != 0 { n := 0 } else { n := trim }`):
+a `return 0` that leaves `CTL[0]` alone fails `Frame POOL (m.set64 CTL 0 (top + 0)) m'`,
+because `grind` does not see that writing the top's own value back changes nothing.
+
 ### `sorry`s
 
 None.
@@ -1651,6 +1716,19 @@ files.
 * The record relation, `MatchOK`/`NewOK` and the frame obligation are `app`'s/`const`'s two-field
   versions with one more conjunct/clause each (`fld_let0`/`fld_let` cover field 0 and the general
   case exactly as `fld_app0`/`fld_app` did); nothing else differed in shape.
+
+### `nat_sub`: the final borrow decides
+
+con-ron's `sub` compares first and runs the ripple borrow only when `a > b`. `nat_sub` runs the
+ripple borrow over `max la lb` limbs (`nat_add`'s loop, `nat_limb` for both operands,
+`sub_borrow` for the two `overflowing_sub`s) and lets the borrow out of the top limb decide: the
+loop's equation is `R + B = A + c · wt n`, so `c = 0` gives `R = A - B` and `c = 1` gives
+`A < B` (with `R < wt n`), and the result is `0`. It needs neither `nat_cmp` nor normalised
+inputs. Two details: `bit_mul_wt` (`c.toNat * wt k = wt k` for a nonzero bit `c`, pattern
+`c.toNat * wt k`), because the linear solver knows `c = 1` but the product stays an atom; and
+both exits end with the same `CTL[0] := top + n` (`if c != 0 { n := 0 } else { n := trim }`):
+a `return 0` that leaves `CTL[0]` alone fails `Frame POOL (m.set64 CTL 0 (top + 0)) m'`,
+because `grind` does not see that writing the top's own value back changes nothing.
 
 ### `sorry`s
 
@@ -2087,6 +2165,19 @@ in the interpreter: `2`.
 * The derived columns (hashes and flags through `mixHash`) and the scratch tier's lifecycle
   (`enableScratch`/`dropScratch`), as before.
 
+### `nat_sub`: the final borrow decides
+
+con-ron's `sub` compares first and runs the ripple borrow only when `a > b`. `nat_sub` runs the
+ripple borrow over `max la lb` limbs (`nat_add`'s loop, `nat_limb` for both operands,
+`sub_borrow` for the two `overflowing_sub`s) and lets the borrow out of the top limb decide: the
+loop's equation is `R + B = A + c · wt n`, so `c = 0` gives `R = A - B` and `c = 1` gives
+`A < B` (with `R < wt n`), and the result is `0`. It needs neither `nat_cmp` nor normalised
+inputs. Two details: `bit_mul_wt` (`c.toNat * wt k = wt k` for a nonzero bit `c`, pattern
+`c.toNat * wt k`), because the linear solver knows `c = 1` but the product stays an atom; and
+both exits end with the same `CTL[0] := top + n` (`if c != 0 { n := 0 } else { n := trim }`):
+a `return 0` that leaves `CTL[0]` alone fails `Frame POOL (m.set64 CTL 0 (top + 0)) m'`,
+because `grind` does not see that writing the top's own value back changes nothing.
+
 ### `sorry`s
 
 None.
@@ -2142,8 +2233,8 @@ L proofs then see the same terms as the model; the arithmetic moves into the lin
   The models of the 18 records are instances (`appBit`, `appVal b`, `3`, …); the L code keeps
   Rust's shape, one function per record with `next_member` factored out (Rust's deviation 3),
   and each is proved against its instance. The record L code, the instances and the proofs were
-  generated from con-leche's loops by a script (`_tmp/stageb-gen/genrec.py`, not committed; the
-  file was edited after generation). `lam` and `forallE` share one L function and one instance,
+  generated from con-leche's loops by a script (`scripts/stageb/genrec.py`, see its `README`; the
+  file was edited after generation and is hand-maintained since). `lam` and `forallE` share one L function and one instance,
   as Rust's `scan_binder_expr_loop` does.
 * **`key_at`** follows con-leche's `keyAt` (first byte, length, unrolled compare): L has no
   slice type for Rust's `match_lit` against a `[u8; N]`. It is split into a dispatcher and six
@@ -2230,9 +2321,135 @@ records one generic theorem (`objN_link`) and one tactic macro (`obj_loop`) prov
 * Cross-module `#eval`/`#guard` of an L program needs `meta import` of every module that defines
   one of its functions.
 
+### `nat_sub`: the final borrow decides
+
+con-ron's `sub` compares first and runs the ripple borrow only when `a > b`. `nat_sub` runs the
+ripple borrow over `max la lb` limbs (`nat_add`'s loop, `nat_limb` for both operands,
+`sub_borrow` for the two `overflowing_sub`s) and lets the borrow out of the top limb decide: the
+loop's equation is `R + B = A + c · wt n`, so `c = 0` gives `R = A - B` and `c = 1` gives
+`A < B` (with `R < wt n`), and the result is `0`. It needs neither `nat_cmp` nor normalised
+inputs. Two details: `bit_mul_wt` (`c.toNat * wt k = wt k` for a nonzero bit `c`, pattern
+`c.toNat * wt k`), because the linear solver knows `c = 1` but the product stays an atom; and
+both exits end with the same `CTL[0] := top + n` (`if c != 0 { n := 0 } else { n := trim }`):
+a `return 0` that leaves `CTL[0]` alone fails `Frame POOL (m.set64 CTL 0 (top + 0)) m'`,
+because `grind` does not see that writing the top's own value back changes nothing.
+
 ### `sorry`s
 
 None.
+
+## Limb-pool `Nat` ops: bitwise `land`/`lor`/`xor` (2026-10-21, lane `nat`)
+
+Files: `ConAgua/Arena/NatBits.lean`. Milestone 3 continuation: `Nat.land`/`Nat.lor`/`Nat.xor` on
+the limb pool, in the `nat_add`/`nat_mul` style (`ConAgua/Arena/NatAdd.lean`, `NatMul.lean`). No
+`sorry`.
+
+### The functions
+
+`nat_land`/`nat_lor`/`nat_xor(oa, la, ob, lb)` (con-ron's `land`/`lor`/`xor` and their `*_from`
+loops, `ron/nat.rs:658-703`): one pass combining limb `i` of each operand with `&`/`|`/`^`, the
+shorter operand zero-extended (`nat_limb`, reused from `nat_add`), then `nat_trim`. `land`'s
+result has `min la lb` limbs (so its loop never actually reads past either operand, but shares
+`nat_limb` with the others for one loop shape); `lor`/`xor` have `max la lb`. Each needs its own
+capacity check before the loop (`if len(POOL.u64) - top < n { abort }`, con-ron's own "no room"
+style, con-ron's own `nat_mul`'s `<`, not `nat_add`'s `<=`: no carry limb here, the result is
+exactly `n` limbs).
+
+**Model.** `bv f p oa la ob lb k` is `xv` with a second zero-extended slice and a combinator `f`
+instead of one read (`bv f p oa la ob lb (k+1) = bv f p oa la ob lb k + (f (lvW …) (lvW …)) * wt
+k`, `lvW` being `lv` read back as a `Word` instead of a `Nat`, since `f` is a word operator). The
+loop invariant (`BitInv`) is `AddInv`'s shape without a carry: the pool agrees with the entry
+pool below `top`, the operands lie below it, and `pv` of the first `i` result limbs equals `bv`
+of the first `i` operand limbs. Whether this limb-wise combine equals `Nat.land`/`Nat.lor`/
+`Nat.xor` of the full values is left to `NatOpRefine.lean` (not written this round): a genuine
+bitvector fact (splitting a number into base-`2^64` digits commutes with bitwise ops), not needed
+for the L-side spec itself.
+
+### Measurements (nightly-2026-10-20)
+
+| function | Rust lines (`ron/nat.rs`) | L lines | spec + proof lines | `lean` time | automation |
+|---|---:|---:|---:|---:|---|
+| `nat_land`/`nat_lor`/`nat_xor` (+ loops, reusing `nat_limb`/`nat_trim`) | ~45 (`land`/`and_from`, `lor`/`or_from`, `xor`/`xor_from`) | ~45 | ~215 | 4.6 s | house form |
+| `nat_cmp` (lane `nat2`; `beq`/`ble`/`blt` are tests of its code) | 52 (`cmp`, `cmp_from`, `beq`, `ble`, `blt`) | 16 | 137 | 6.8 s | house form; `finish (splits := 20)` in the loop; three pool lemmas by hand (`omega`) |
+| `nat_sub` (+ `sub_borrow`; truncated; lane `nat2`) | 34 (`sub`, `sub_from`) | 25 | 117 | 7.7 s | house form, no hand step |
+
+Whole file 307 lines. `lake build ConAgua` (full project) still green, 403 ms incremental.
+
+### Findings
+
+* **A combinator parameter must be a named constant, not `(· &&& ·)`.** The section notation
+  elaborates sometimes to a lambda, sometimes to the point-free `HAnd.hAnd` (eta-equal, not
+  syntactically equal); `grind`'s pattern matching saw both forms across the invariant and the
+  code's own `BinOp.eval` unfolding and failed to connect them, even though the two are
+  definitionally equal. Fix: `def andF : Word → Word → Word := fun a b => a &&& b` (ditto `orF`,
+  `xorF`), used everywhere instead of the section, plus one `@[arena_grind =]` equation
+  `andF a b = a &&& b` for the one place the code's own value needs to meet it.
+* **The capacity bound is `≤`, not `<`, when there is no carry limb.** Copied `AddInv`'s
+  `(s.loc 4).toNat + (s.loc 5).toNat < Pg.size` (strict, reserving the carry limb's slot) instead
+  of `MulBase`'s `≤` (exact fit is fine): a loop entered at EXACTLY `top + n = size` could not
+  establish the invariant even though the write is in bounds. One `finish` failure with a
+  `size ≤ top + n` hypothesis alongside a `BitInv` goal needing `top + n ≤ size` was the tell.
+* **An embedded `ite` in a postcondition's own subterm is fine; at the postcondition's own top
+  level it is not** (the known gap, DESIGN.md "Known vcgen gaps"). `min`/`max` of the two
+  operand lengths, written as `min`/`max`, made a loop-exit `finish` time out; the same value
+  written as `if lb.toNat < la.toNat then lb.toNat else la.toNat` (matching the code's own `if`,
+  as an ARGUMENT to `bv`, not the postcondition's own shape) went through at once. Suspect cause:
+  `min`/`max` have no registered `grind` equation here (unlike `BinOp`/`Cmp`), so grind had
+  nothing to unfold them with; the `ite` version is covered by the general `ite` handling that
+  already works for arguments (only the top-level postcondition position is the known gap).
+* **Forgetting the capacity check is a soundness bug, not a proof inconvenience.** The first
+  draft of the three functions had no `if len(POOL.u64) - top < n { abort }` at all (unlike
+  `nat_add`/`nat_mul`); nothing in the L type system catches a missing bounds check, only the
+  `finish` failure trying to prove `PoolOK`'s consequences downstream caught it.
+
+### `nat_cmp`/`nat_sub`: not landed, and why
+
+`nat_cmp` (con-ron's `cmp`/`cmp_from`, comparing by length then by limb from the most significant
+one down) was attempted and dropped after exceeding the lane's 45-minute budget by a wide margin.
+The blocker: a hand-written recursive Lean model of `cmp_from` (`cmpFromN`), registered for
+`grind` with a pattern keyed on an ABSTRACT loop counter `k` (`cmpFromN p oa ob k`, `0 < k` plus a
+limb-comparison side condition), fires on EVERY `cmpFromN` term in sight — including the
+unrelated "full-length" occurrence sitting next to the loop's "current position" occurrence in
+the same invariant — and, because its own conclusion mentions a fresh `cmpFromN … (k - 1)` term,
+re-fires on that, and the one after, with no concrete `k` to stop it: `finish` produced case
+splits numbering in the hundreds of thousands before timing out. Scoping the pattern to `mergeW`
+(a wrapper that also appears, narrower) cut it from unbounded to bounded but still wrong by a
+wide margin once a genuine case split (which limb comparison holds) was needed; untangling it
+needed a hand-written, non-`grind`-pattern step lemma that I did not finish deriving in budget.
+
+**What it needs, for whoever picks it up:** state the loop invariant as the pool value comparison
+directly (`cmpCode (pv Pg oa k) (pv Pg ob k)`, `cmpCode` a plain `Nat → Nat → Word`, no
+recursion), using `pv_lt`/`wt_mono` (`ConAgua/Arena/LitRefine.lean`, general pool facts that
+arguably belong in `Pool.lean` — a hook request for lane `exprops`, since `nat_cmp`'s loop needs
+them and `Pool.lean` is theirs) for the "most significant limb decides" step; prove the per-step
+transition as a HAND tactic (`rcases lt_trichotomy`, explicit `rw`s), not a registered `grind`
+pattern, since the whole difficulty above is `grind`'s blind pattern search over a
+decide-from-the-top recursion. `nat_sub` (con-ron's `sub`, truncated at `0`) needs `nat_cmp`'s
+result (`Lt`/`Eq` ⇒ `0`, `Gt` ⇒ the ripple-borrow loop, the same shape as `nat_add`'s ripple
+carry) first.
+
+### `nat_pow`/`nat_shiftLeft`/`nat_shiftRight`: not attempted
+
+Not started this round (time spent on bitwise ops and the `nat_cmp` attempt above). Notes for
+whoever picks them up: `shift_left`/`shift_right` (`ron/nat.rs:351,427`) take a machine-word
+amount (whole limbs pushed as zeros, then a sub-word shift `shl_bits_from`/`shr_bits_from` with
+the `bits = 0` case special-cased, since shifting a 64-bit word by 64 is not `x >> 0`); the
+`_nat`-amount wrappers (`shift_left_nat`/`shift_right_nat`) decode the shift amount from ANOTHER
+pool slice first (con-ron's `to_u64`, failing over to "push `u64::MAX` zeros and recurse" for an
+amount that does not fit a word, which an L pool simply runs out of room for — the existing
+"fixed capacity, defined exhaustion" pattern handles it, no new idea needed). `nat_pow`
+(`ron/nat.rs:547`, square-and-multiply, `e` from a word bounded by `2^24` the same way
+`natOpResult` already enforces, `ron/nat.rs:541`) needs a bounded loop over the bits of `e`
+(at most 24 iterations) calling `nat_mul` repeatedly, each call growing the pool; the per-call
+`Grows` composes (`Grows` is transitive), but the invariant across iterations needs the loop's
+own accumulator slice to be tracked by `(offset, length)` that moves each iteration, unlike every
+other function here which is called once. Likely a full lane-day on its own.
+
+### `sorry`s
+
+None. The three bitwise functions are proved end to end against their word-level model; the
+model's correctness against `Nat.land`/`Nat.lor`/`Nat.xor` is deferred (not a `sorry`, simply not
+yet stated).
 
 ## The final theorem, and the audits behind it (2026-10-21, lane `final`)
 
@@ -2448,3 +2665,170 @@ infrastructure (`ExprMk`, `DerRel`), which every walk with a cut-off reuses.
 ### `sorry`s
 
 None.
+
+## The first records into the store: names and levels (2026-10-21, lane `front`)
+
+Files: `ConAgua/Front/{Fields,FieldsLink}.lean` (the scanner's fields), `ConAgua/Front/{Apply,
+StateDR}.lean` (the id tables and `parseNameEntryD`/`parseLevelEntryD`, written by a subagent),
+`ConAgua/Front/{Line,LineRefine}.lean` (one line, end to end), `scripts/stageb/` (housekeeping
+below). No `sorry`; `frontLine_refines` and `frontInit_refines` use only `propext`,
+`Classical.choice`, `Quot.sound`. Stage B's files are unchanged.
+
+**Housekeeping.** Stage B's generators are committed as `scripts/stageb/{parserec,genrec,genkey}.py`
+(repo-relative paths; `scripts/stageb/README` says how to run them). `Records.lean`/`Key.lean` were
+edited after generation (the six `key_at` groups and the hypothesis lists that follow, headers,
+heartbeats), so they are hand-maintained; a rerun is a starting point to diff against.
+
+### The fields: a second pass over an accepted line
+
+The validator stays as it is (`scan_line`, all its theorems). A name or level line is read a second
+time by `rec_line_loop(i)` (`Fields.lean`), which returns five words `(pl, idx, a, c, d)`: the kind
+(`1` name `str`, `2` name `num`, `3`‥`6` `succ`/`max`/`imax`/`param`, `7` the header, `0` anything
+else), the index, and the fields (for a `str` name: `pre` and the string body's byte range
+`[c, d)`). The pass trusts the validator: no `seen` masks, no alternation, no key-set check, and it
+stops with `pl = 0` at any other payload key. Numbers are read by `read_nat` (con-leche's
+`readNat64` on words); one of more than 18 digits reads as `NONE = 2^64 - 1`, which the apply step
+refuses (`readNatAt` is `readNat64` for at most 18 digits, so the link is definitional).
+
+`FieldsLink.lean` relates each loop to con-leche's on its `ok` path only: `recLine_link`: if
+`scanLineLoop b i w ik idx pl = .ok r e` and the words so far are related to `idx`/`pl`
+(`ItemR`, `PlR`), then `rec_line_loop`'s result, if `pl ≠ 0`, is related to `r` (`RecR`). The error
+branches of con-leche's loops are discharged by the `ok` hypothesis, so the link is one induction
+per loop (`pair_link`, `strRec_link`, `numRec_link`, `recLine_link`), with no `objN`-style generic
+model. A word read for a number `n` satisfies `ItemR x n := x ≠ NONE → x.toNat = n`; a string body
+`StrOK b vs ve s := NoEsc b vs ve → String.fromUTF8? (b.extract vs ve) = some s` (an escaped string
+is refused by the apply step, `has_escape`).
+
+### The id tables and the apply step (`Apply.lean`, `StateDR.lean`)
+
+`StateD`'s `IdTable`s are two dense word arrays, `NID` (64) and `LID` (65), above `ArenaR`'s
+extension point: entry `i` is the
+handle word `+ 1`, `0` unset. An id at or past the array's end aborts where the twin would use its
+sparse overflow. `front_init`, `apply_nstr(i, pre, o, l)`, `apply_nnum(i, pre, x)`,
+`apply_level(i, k, a, c)` intern through `intern_nanon`/`zero`/`nstr`/`nnum`/`succ`/`max`/
+`imax`/`param` and guard the result `< 2^32` (so table entries can be passed on as handles without
+a lemma about the store's results); `str_put(vs, ve)` copies input bytes to the pool top (one byte
+per word, the name `str` table's key). `StateDR m st` (`TblR` per table: `get?` is the decoded
+entry, entries `≤ 2^32`, sizes `< 2^63`); `ArenaR` is kept across writes to `NID`/`LID` by the
+extension point's frame (`ArenaR.frame_ext`, via `ArenaR.frameT`). Each L function's spec is an
+equation about a named `Option Mem` model (`applyNStrW`, …), and the refinement is proved on the model
+(`applyNStrW_refines`, `applyNNumW_refines`, `applyLevelW_refines`, `frontInitW_refines`).
+
+### One line end to end (`Line.lean`, `LineRefine.lean`)
+
+`front_line(i)` = `scan_line(i)`; blank line → `(1, next)`; else `rec_line_loop` and `apply_rec`
+(which dispatches on `pl`; `apply_str` does `has_escape`, `str_put`, `apply_nstr`). Expression and
+declaration lines abort for now. `frontLine_refines`: under `ArenaR s₀.mem a₀`, `StateDR s₀.mem st`
+and the buffer `b` in `IN`, if `front_line(i)` returns `(1, nx)` then `LineStep b i nx st a₀ m'`:
+`scanLineFwd b i = .ok r q` with `q` the word `nx`, `applyLine st r` succeeds with `.inl st'`, and
+`ArenaR m' (AM.st …)`, `StateDR m' st'`. The record `r` is con-leche's, so Stage B's links to
+`scanLineFwd` apply unchanged.
+
+### Measurements (`lake env lean`, one run)
+
+| file | lines | L lines | user |
+|---|---:|---:|---:|
+| `Fields.lean` (L, models, `vcgen` specs) | 762 | 115 | 35.5 s |
+| `FieldsLink.lean` | 809 | | 8.8 s |
+| `Apply.lean` (L, models, specs, `#guard`s) | 503 | 77 | 4.8 s |
+| `StateDR.lean` | 734 | | 2.6 s |
+| `Line.lean` (L, model, specs) | 255 | 30 | 3.1 s |
+| `LineRefine.lean` | 299 | | 1.2 s |
+
+Every `vcgen` spec is `vcgen` + `finish`. Rust: `export_c.rs`'s name/level entries and the id
+tables (~150 lines) plus the record values of `scan_fast.rs`'s name/level paths (~200).
+
+### Findings
+
+* **A second pass instead of value-carrying validators.** Rewriting the validator's loops to carry
+  values would have meant new models and new links for all of them; the second pass needs links
+  only on con-leche's `ok` path, where every error branch closes by `cases h`. The cost is reading
+  name/level lines twice (they are short).
+* **A monolithic dispatcher did not get through `finish`** (the first `front_line`, ~20 branches
+  with seven calls): split into `front_line`/`apply_rec`/`apply_str`, each spec went through. Two
+  things the split exposed: a callee spec needs `LocEq s' s₀` in its post for the caller's later
+  reads of its own locals; and a callee whose return words are not fixed by its post (a list
+  from an `Option` model) cannot be assigned to locals that the caller returns: return a constant
+  and let the caller build the result.
+* **Pass a callee spec without its state argument** to `vcgen` (`applyRec_spec … n`, not
+  `… n s₀ hm`): an explicit `s₀` fixes the call state, which is never `s₀` itself.
+* `rw [f]` with a definition's equation lemma for an overlapping `match` (`scanLineLoop`) produces
+  side goals; `rw [f.eq_def]` does not.
+
+### What an expression record will need
+
+Binder data (`lam`/`forallE` names and binder info are dropped by con-leche, so nothing), the
+`lit` store's `strVal` contents (a second `intern_lit` entry over the pool bytes, as `nstr`), the
+derived columns (`derOfView`: the loose-bvar range and flags, and the opaque hash, ROADMAP §2
+item 10), level lists for `const` (`intern_ls` over handle words `str_put`-like into the pool),
+and natural-number literals (the limb-pool decimal parse). The fields pass extends by one arm per
+expression key, with `ok`-path links of the same shape.
+
+### Requests
+
+* Strings with escapes abort; `unescape` into the pool (the `\u` arms need UTF-8 encoding
+  against `String.utf8EncodeChar`) is the next piece for real files.
+
+### `nat_sub`: the final borrow decides
+
+con-ron's `sub` compares first and runs the ripple borrow only when `a > b`. `nat_sub` runs the
+ripple borrow over `max la lb` limbs (`nat_add`'s loop, `nat_limb` for both operands,
+`sub_borrow` for the two `overflowing_sub`s) and lets the borrow out of the top limb decide: the
+loop's equation is `R + B = A + c · wt n`, so `c = 0` gives `R = A - B` and `c = 1` gives
+`A < B` (with `R < wt n`), and the result is `0`. It needs neither `nat_cmp` nor normalised
+inputs. Two details: `bit_mul_wt` (`c.toNat * wt k = wt k` for a nonzero bit `c`, pattern
+`c.toNat * wt k`), because the linear solver knows `c = 1` but the product stays an atom; and
+both exits end with the same `CTL[0] := top + n` (`if c != 0 { n := 0 } else { n := trim }`):
+a `return 0` that leaves `CTL[0]` alone fails `Frame POOL (m.set64 CTL 0 (top + 0)) m'`,
+because `grind` does not see that writing the top's own value back changes nothing.
+
+### `sorry`s
+
+None.
+
+## Limb-pool `Nat` ops, round 2: compare, sub, shifts, pow, div/mod, the arms (2026-10-21, lane `nat2`)
+
+Files: `ConAgua/Arena/NatGrindAttr.lean`, `NatCmp.lean`, `NatSub.lean`, … Per-op numbers are in the lane `nat`
+table above (`lean` user time of the file, one run).
+
+### `nat_cmp`: a non-recursive model
+
+`nat_cmp(oa, la, ob, lb)` returns con-ron's `Cmp` as a word (`0` `Lt`, `1` `Eq`, `2` `Gt`): the
+lengths first (normalised operands), then the limbs from the top down. The spec is
+`r = cmpW A B` with `cmpW a b = if a < b then 0 else if a = b then 1 else 2`, a plain function of
+the two values, and the loop invariant is one linear equation: the limbs at `k` and above agree,
+`pv a la + pv b k = pv b la + pv a k`. No model of `cmp_from` exists, so nothing recursive
+reaches `grind`. The step "the top limb decides" is `pv_succ_lt`: from the program's own
+comparison `p[ia] < p[ib]` (with `ia + 1 = oa + k`) to `pv p oa k < pv p ob k`, with the
+multi-pattern `p[ia] < p[ib], pv p oa k, pv p ob k`. Its conclusion relates two terms that are
+already there, so instantiation stops (28 instances in the loop's worst goal; lane `nat`'s
+recursive model produced hundreds of thousands of case splits). The loop needs
+`finish (splits := 20)`: each `pv_succ`/`pv_succ_lt` instance's index condition is a split.
+`beq`/`ble`/`blt` are tests of the code (`cmpW_eq_one`, `cmpW_eq_two`, … as `grind` equations),
+not functions.
+
+* **A separate attribute for comparison facts.** `pv_lt_wt` (`pv p o k < wt k`) has the pattern
+  `pv p o k` and fires on every prefix value; with it in `arena_grind`, `nat_sub`'s loop (which
+  never compares) timed out. It and `pv_succ_lt`, `cmpW_*` are in `natcmp_grind`
+  (`NatGrindAttr.lean`), which a proof adds to its `sym only [...]` list when it needs them.
+* `LitRefine.lean` has the same fact as `pv_lt` (and `pv_ge`, `pv_len`), but it is not a
+  `module`, so module files cannot import it; `NatCmp.lean` proves its own `pv_lt_wt`,
+  `pv_len_lt`.
+
+### `nat_sub`: the final borrow decides
+
+con-ron's `sub` compares first and runs the ripple borrow only when `a > b`. `nat_sub` runs the
+ripple borrow over `max la lb` limbs (`nat_add`'s loop, `nat_limb` for both operands,
+`sub_borrow` for the two `overflowing_sub`s) and lets the borrow out of the top limb decide: the
+loop's equation is `R + B = A + c · wt n`, so `c = 0` gives `R = A - B` and `c = 1` gives
+`A < B` (with `R < wt n`), and the result is `0`. It needs neither `nat_cmp` nor normalised
+inputs. Two details: `bit_mul_wt` (`c.toNat * wt k = wt k` for a nonzero bit `c`, pattern
+`c.toNat * wt k`), because the linear solver knows `c = 1` but the product stays an atom; and
+both exits end with the same `CTL[0] := top + n` (`if c != 0 { n := 0 } else { n := trim }`):
+a `return 0` that leaves `CTL[0]` alone fails `Frame POOL (m.set64 CTL 0 (top + 0)) m'`,
+because `grind` does not see that writing the top's own value back changes nothing.
+
+### `sorry`s
+
+None.
+
