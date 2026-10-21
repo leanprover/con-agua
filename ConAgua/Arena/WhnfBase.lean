@@ -26,10 +26,10 @@ A function that needs room pushes above the top and puts the top back before it 
 xs`: the slice denotes `xs` (handle words, each below `2^32`). Overflow is an `abort` (a
 capacity, as every table's).
 
-**The relation.** `CoreS dn m a vis fe M G g`: `ArenaD`, the core tier at explicit maps
-(`CoreRM`, so that the eager slot can state the saved banks), the filled pin table, the
-environment. After a core run: `CoreAfter` (some maps that keep every other bank, `KeptAll`, and
-the stack below the top).
+**The relation.** `CoreS dn m a vis fe M eb`: `ArenaD`, the core tier at explicit maps
+(`CoreRM`, so that an eager run can state that it keeps the plain banks), the filled pin table, the
+environment. After a core run: `CoreAfter` (some maps that, inside the eager tower, keep the plain
+banks, `KeptAll`, and the stack below the top).
 
 **Stubs.** Callees whose L code does not exist yet are named L functions with an abstract
 spec (`WhnfCallees`); the refinements are proved from it, and the census-tagged theorems
@@ -103,20 +103,31 @@ theorem StackKept.trans {m₁ m₂ m₃ : Mem} (h₁ : StackKept m₁ m₂) (h�
 
 /-! ## The relation the core runs under -/
 
-/-- All six mode memos keep the banks of every other generation `≤ G`. -/
-def KeptAll (M M' : ModeMaps) (G g : Word) : Prop :=
-  Kept M.wc M'.wc G g ∧ Kept M.wk M'.wk G g ∧ Kept M.wh M'.wh G g ∧ Kept M.inf M'.inf G g ∧
-    Kept M.io M'.io G g ∧ Kept M.de M'.de G g
+/-- A map keeps its plain bank (eager bit `0`). -/
+def Kept0 {κ ν : Type} [BEq κ] [Hashable κ] (M M' : Std.HashMap (κ × Word) ν) : Prop :=
+  ∀ k : κ, M'[(k, (0 : Word))]? = M[(k, (0 : Word))]?
 
-theorem KeptAll.refl (M : ModeMaps) (G g : Word) : KeptAll M M G g :=
-  ⟨Kept.refl _ _ _, Kept.refl _ _ _, Kept.refl _ _ _, Kept.refl _ _ _, Kept.refl _ _ _,
-    Kept.refl _ _ _⟩
+/-- **Inside the eager tower** (`eb ≠ 0`) a run keeps the six plain banks (the eager slot's saved
+set); outside it nothing is promised (the twin tracks both sets in its state). -/
+def KeptAll (M M' : ModeMaps) (eb : Word) : Prop :=
+  eb ≠ 0 → Kept0 M.wc M'.wc ∧ Kept0 M.wk M'.wk ∧ Kept0 M.wh M'.wh ∧ Kept0 M.inf M'.inf ∧
+    Kept0 M.io M'.io ∧ Kept0 M.de M'.de
+
+theorem KeptAll.refl (M : ModeMaps) (eb : Word) : KeptAll M M eb :=
+  fun _ => ⟨fun _ => rfl, fun _ => rfl, fun _ => rfl, fun _ => rfl, fun _ => rfl, fun _ => rfl⟩
+
+theorem KeptAll.trans {M₁ M₂ M₃ : ModeMaps} {eb : Word} (h₁ : KeptAll M₁ M₂ eb)
+    (h₂ : KeptAll M₂ M₃ eb) : KeptAll M₁ M₃ eb := fun h => by
+  obtain ⟨a1, b1, c1, d1, e1, f1⟩ := h₁ h
+  obtain ⟨a2, b2, c2, d2, e2, f2⟩ := h₂ h
+  exact ⟨fun k => (a2 k).trans (a1 k), fun k => (b2 k).trans (b1 k), fun k => (c2 k).trans (c1 k),
+    fun k => (d2 k).trans (d1 k), fun k => (e2 k).trans (e1 k), fun k => (f2 k).trans (f1 k)⟩
 
 /-- **The core's relation** at explicit cache maps. -/
 structure CoreS (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis : Word) (fe : IFEnv)
-    (M : ModeMaps) (G g : Word) : Prop where
+    (M : ModeMaps) (eb : Word) : Prop where
   arena : ArenaD m a
-  core : CoreRM m a.caches M G g
+  core : CoreRM m a.caches M eb
   pins : PinsFull m a.pins
   env : EnvR dn m vis fe
   /-- The twin's readback caches hold readbacks (L has no readback; the twin computes on them). -/
@@ -128,10 +139,10 @@ structure CoreS (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis
 /-- **The relation across a writer outside every tier and the stack**: arrays `≥ 145` (or the
 front's 64‥95), `CTL` words `≥ 137` (or 64‥95): the level heap (`LH`, `CTL[192]`), say. -/
 theorem CoreS.frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
-    {fe : IFEnv} {M : ModeMaps} {G g : Word} {A : List ArrId} {C : List Word}
-    (hS : CoreS dn m a vis fe M G g) (hf : MemFrame A C m m')
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List ArrId} {C : List Word}
+    (hS : CoreS dn m a vis fe M eb) (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, 64 ≤ b ∧ (b < 96 ∨ 145 ≤ b)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 137 ≤ x.toNat)) :
-    CoreS dn m' a vis fe M G g ∧ StackKept m m' := by
+    CoreS dn m' a vis fe M eb ∧ StackKept m m' := by
   have aA : ∀ lo hi : Nat, 96 ≤ lo → hi ≤ 145 → AvoidA lo hi A := fun lo hi h1 h2 b hb => by
     have := hA b hb; simp only [ArrId] at this ⊢; omega
   have aC : ∀ lo hi : Nat, 96 ≤ lo → hi ≤ 137 → AvoidC lo hi C := fun lo hi h1 h2 x hx => by
@@ -153,23 +164,111 @@ theorem CoreS.frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AStat
 /-- **After a core run** from `m₀` at maps `M`, `G`, generation `g`: the relation holds at some
 maps that keep every other generation's bank, and the stack below the top is as it was. -/
 def CoreAfter (dn : NIdx → Option ConLeche.Name) (m₀ m : Mem) (a : AState) (vis : Word)
-    (fe : IFEnv) (M : ModeMaps) (G g : Word) : Prop :=
-  ∃ M' G', CoreS dn m a vis fe M' G' g ∧ KeptAll M M' G g ∧ StackKept m₀ m
+    (fe : IFEnv) (M : ModeMaps) (eb : Word) : Prop :=
+  ∃ M', CoreS dn m a vis fe M' eb ∧ KeptAll M M' eb ∧ StackKept m₀ m
+
+/-- Two core runs in a row. -/
+theorem CoreAfter.trans {dn : NIdx → Option ConLeche.Name} {m₀ m₁ m₂ : Mem} {a₁ a₂ : AState}
+    {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word}
+    (h₁ : CoreAfter dn m₀ m₁ a₁ vis fe M eb)
+    (h₂ : ∀ M', CoreS dn m₁ a₁ vis fe M' eb → CoreAfter dn m₁ m₂ a₂ vis fe M' eb) :
+    CoreAfter dn m₀ m₂ a₂ vis fe M eb := by
+  obtain ⟨M', hS, hK, hSt⟩ := h₁
+  obtain ⟨M'', hS', hK', hSt'⟩ := h₂ M' hS
+  exact ⟨M'', hS', hK.trans hK', hSt.trans hSt'⟩
+
+/-- A core run after a core run, at the first run's maps. -/
+theorem CoreAfter.comp {dn : NIdx → Option ConLeche.Name} {m₀ m₁ m₂ : Mem} {a₂ : AState}
+    {vis : Word} {fe : IFEnv} {M M' : ModeMaps} {eb : Word}
+    (hK : KeptAll M M' eb) (hSt : StackKept m₀ m₁)
+    (h₂ : CoreAfter dn m₁ m₂ a₂ vis fe M' eb) : CoreAfter dn m₀ m₂ a₂ vis fe M eb := by
+  obtain ⟨M'', hS', hK', hSt'⟩ := h₂
+  exact ⟨M'', hS', hK.trans hK', hSt.trans hSt'⟩
+
+/-- The result word is below `2^32` (a handle, a `Bool`, a level answer): what `decE` needs to
+be faithful when the caller computes with the word itself. The default validity of a result. -/
+def ResH (r : List Word) : Prop := HW (r.headD 0)
+
+/-- The first two result words are below `2^32` (an `Option EIdx`, a `WhnfStep`). -/
+def ResW (r : List Word) : Prop := HW (r.headD 0) ∧ HW (r.tail.headD 0)
 
 /-- **The refinement post of a core function**: the twin run `T` from `a₀` succeeds, the relation
 holds after it, and the result words decode (`dec`) to its result. -/
 def CoreRef {α : Type} [Inhabited α] (T : AM α) (a₀ : AState) (dec : List Word → α)
     (dn : NIdx → Option ConLeche.Name) (m₀ : Mem) (vis : Word) (fe : IFEnv) (M : ModeMaps)
-    (G g : Word) (r : List Word) (m : Mem) : Prop :=
-  AM.ok T a₀ ∧ CoreAfter dn m₀ m (AM.st T a₀) vis fe M G g ∧ AM.res T a₀ = dec r
+    (eb : Word) (r : List Word) (m : Mem) (ok : List Word → Prop := ResH) : Prop :=
+  AM.ok T a₀ ∧ CoreAfter dn m₀ m (AM.st T a₀) vis fe M eb ∧ AM.res T a₀ = dec r ∧ ok r
+
+
 
 /-- The spec shape: from `s₀` under `CoreS`, the call refines `T`. -/
 def CoreSpec {α : Type} [Inhabited α] (p : Prog) (n : Nat) (f : FnName) (args : List Word)
     (T : AM α) (dec : List Word → α) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (vis : Word) (fe : IFEnv) (M : ModeMaps) (G g : Word) : Prop :=
+    (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb : Word) (ok : List Word → Prop := ResH) : Prop :=
   ⦃fun s => s = s₀⦄
   invoke p (exec p n) f args
-  ⦃fun r s' => LocEq s' s₀ ∧ CoreRef T a₀ dec dn s₀.mem vis fe M G g r s'.mem; ⊤⦄
+  ⦃fun r s' => LocEq s' s₀ ∧ CoreRef T a₀ dec dn s₀.mem vis fe M eb r s'.mem ok; ⊤⦄
+
+/-! ## Calls as functions of the memory
+
+A callee's run depends on the caller's memory alone (`callFn` starts a fresh frame), so it is a
+function `callW p n f vs m`. Every call meets its own run (`callW_spec`); a callee's refinement
+spec turns a run into the twin's (`CoreSpec.of_callW`). This lets a caller's word-level model
+call its callees through `callW`, proved by `vcgen` + `finish` with `callW_spec` as the callee
+spec, and its refinement use the callees' specs on those runs. -/
+
+/-- The result of calling `f` on `vs` from memory `m`. -/
+def callW (p : Prog) (n : Nat) (f : FnName) (vs : List Word) (m : Mem) :
+    Option (List Word × Mem) :=
+  match (invoke p (exec p n) f vs).run ⟨m, Locals.init []⟩ with
+  | .ok (r, s) => some (r, s.mem)
+  | .error _ => none
+
+theorem invoke_run_loc (p : Prog) (k : Stmt → M Sig) (f : FnName) (vs : List Word) (s : St) :
+    (invoke p k f vs).run s =
+      ((invoke p k f vs).run ⟨s.mem, Locals.init []⟩).map
+        (fun (r, s') => (r, ({ s' with loc := s.loc } : St))) := by
+  simp only [invoke, lookupFn]
+  cases p.lookup f with
+  | none => rfl
+  | some fd =>
+    simp only [callFn, StateT.run_bind, StateT.run_get, StateT.run_set, StateT.run_modify]
+    simp [Except.map]
+    cases (k fd.body).run { mem := s.mem, loc := Locals.init vs } <;> rfl
+
+/-- **Every call meets its own run.** -/
+theorem callW_spec (p : Prog) (n : Nat) (f : FnName) (vs : List Word) (s₀ : St) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) f vs
+    ⦃fun r s' => LocEq s' s₀ ∧ callW p n f vs s₀.mem = some (r, s'.mem); ⊤⦄ := by
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  subst hs
+  rw [invoke_run_loc] at hrun
+  simp only [callW]
+  cases h : (invoke p (exec p n) f vs).run { mem := s.mem, loc := Locals.init [] } with
+  | error e => simp [h, Except.map] at hrun
+  | ok q =>
+    simp [h, Except.map] at hrun
+    obtain ⟨rfl, rfl⟩ := hrun
+    exact ⟨rfl, rfl⟩
+
+/-- **A refinement spec applies to a run.** -/
+theorem CoreSpec.of_callW {α : Type} [Inhabited α] {p : Prog} {n : Nat} {f : FnName}
+    {args : List Word} {T : AM α} {dec : List Word → α} {s₀ : St} {a₀ : AState}
+    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word}
+    {ok : List Word → Prop}
+    (h : CoreSpec p n f args T dec s₀ a₀ dn vis fe M eb ok) {r : List Word} {m' : Mem}
+    (hc : callW p n f args s₀.mem = some (r, m')) :
+    CoreRef T a₀ dec dn s₀.mem vis fe M eb r m' ok := by
+  simp only [callW] at hc
+  cases hr : (invoke p (exec p n) f args).run { mem := s₀.mem, loc := Locals.init [] } with
+  | error e => simp [hr] at hc
+  | ok q =>
+    simp only [hr, Option.some.injEq] at hc
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj hc
+    have hrun : (invoke p (exec p n) f args).run s₀ = .ok (q.1, { q.2 with loc := s₀.loc }) := by
+      rw [invoke_run_loc, hr]; rfl
+    exact (L.M.of_run (P := fun s => s = s₀) rfl hrun h).2
 
 /-! ## The knot's slots
 
@@ -179,48 +278,50 @@ def CoreSpec {α : Type} [Inhabited α] (p : Prog) (n : Nat) (f : FnName) (args 
 
 /-- The common hypotheses of a slot call. -/
 structure SlotPre (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (M : ModeMaps) (G g : Word) (mode : Word) : Prop where
-  rel : CoreS dn s₀.mem a₀ vis fe M G g
-  mode : mode < 4
+    (fe : IFEnv) (M : ModeMaps) (eb : Word) (mode : Word) : Prop where
+  rel : CoreS dn s₀.mem a₀ vis fe M eb
+  mode4 : mode < 4
+  /-- The memos' eager bit is the mode's. -/
+  eb_mode : eb = (mode >>> 1) &&& 1
 
 /-- `whnf_core(mode, cheap, vis, d, e)` refines the knot's `whnfCore` slot. -/
 def WhnfCoreSlot (p : Prog) (n : Nat) : Prop :=
   ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (M : ModeMaps) (G g mode cheap d e : Word), n ≤ F → SlotPre s₀ a₀ dn vis fe M G g mode →
+    (M : ModeMaps) (eb mode cheap d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode →
     HW e →
     CoreSpec p n "whnf_core" [mode, cheap, vis, d, e]
       ((coreKnot (decMode mode) fe id F).whnfCore (cheap != 0) d.toNat (decE e)) decH s₀ a₀ dn vis
-      fe M G g
+      fe M eb
 
 /-- `whnf(mode, vis, d, e)` refines the knot's `whnf` slot. -/
 def WhnfSlot (p : Prog) (n : Nat) : Prop :=
   ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (M : ModeMaps) (G g mode d e : Word), n ≤ F → SlotPre s₀ a₀ dn vis fe M G g mode → HW e →
+    (M : ModeMaps) (eb mode d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode → HW e →
     CoreSpec p n "whnf" [mode, vis, d, e]
-      ((coreKnot (decMode mode) fe id F).whnf d.toNat (decE e)) decH s₀ a₀ dn vis fe M G g
+      ((coreKnot (decMode mode) fe id F).whnf d.toNat (decE e)) decH s₀ a₀ dn vis fe M eb
 
 /-- `infer(mode, vis, d, e)` refines the knot's full-grade `infer` slot (phase 7). -/
 def InferSlot (p : Prog) (n : Nat) : Prop :=
   ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (M : ModeMaps) (G g mode d e : Word), n ≤ F → SlotPre s₀ a₀ dn vis fe M G g mode → HW e →
+    (M : ModeMaps) (eb mode d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode → HW e →
     CoreSpec p n "infer" [mode, vis, d, e]
-      ((coreKnot (decMode mode) fe id F).infer d.toNat (decE e)) decH s₀ a₀ dn vis fe M G g
+      ((coreKnot (decMode mode) fe id F).infer d.toNat (decE e)) decH s₀ a₀ dn vis fe M eb
 
 /-- `infer_io(mode, vis, d, e)` refines the knot's io-grade `inferIO` slot (phase 7). -/
 def InferIOSlot (p : Prog) (n : Nat) : Prop :=
   ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (M : ModeMaps) (G g mode d e : Word), n ≤ F → SlotPre s₀ a₀ dn vis fe M G g mode → HW e →
+    (M : ModeMaps) (eb mode d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode → HW e →
     CoreSpec p n "infer_io" [mode, vis, d, e]
-      ((coreKnot (decMode mode) fe id F).inferIO d.toNat (decE e)) decH s₀ a₀ dn vis fe M G g
+      ((coreKnot (decMode mode) fe id F).inferIO d.toNat (decE e)) decH s₀ a₀ dn vis fe M eb
 
 /-- `defeq(mode, vis, d, a, b)` refines the knot's `defeq` slot (phase 6). -/
 def DefeqSlot (p : Prog) (n : Nat) : Prop :=
   ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (M : ModeMaps) (G g mode d x y : Word), n ≤ F → SlotPre s₀ a₀ dn vis fe M G g mode → HW x →
+    (M : ModeMaps) (eb mode d x y : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode → HW x →
     HW y →
     CoreSpec p n "defeq" [mode, vis, d, x, y]
       ((coreKnot (decMode mode) fe id F).defeq d.toNat (decE x) (decE y)) decBool s₀ a₀ dn vis fe
-      M G g
+      M eb
 
 /-- **The knot at L fuel `n`**: every slot. -/
 structure KnotOK (p : Prog) (n : Nat) : Prop where
@@ -229,6 +330,14 @@ structure KnotOK (p : Prog) (n : Nat) : Prop where
   infer : InferSlot p n
   inferIO : InferIOSlot p n
   defeq : DefeqSlot p n
+
+/-- **The knot at every L fuel up to `n`**: what a body at fuel `n + 1` assumes of the slots it
+calls (a call inside a loop runs at less fuel than the body, and L has no fuel monotonicity
+lemma, so the hypothesis covers every smaller fuel). -/
+def KnotUpTo (p : Prog) (n : Nat) : Prop := ∀ k, k ≤ n → KnotOK p k
+
+theorem KnotUpTo.mono {p : Prog} {n m : Nat} (h : KnotUpTo p n) (hm : m ≤ n) : KnotUpTo p m :=
+  fun k hk => h k (Nat.le_trans hk hm)
 
 /-! ## Stubs: callees whose L code is not written yet
 
@@ -240,33 +349,33 @@ whnf family's refinements take it as a hypothesis, the census-tagged ones get it
 the accumulator a stack slice. -/
 def InstListOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (M : ModeMaps) (G g e off cnt d : Word) (xs : Array EIdx), CoreS dn s₀.mem a₀ vis fe M G g →
+    (M : ModeMaps) (eb e off cnt d : Word) (xs : Array EIdx), CoreS dn s₀.mem a₀ vis fe M eb →
     HW e → SpineR s₀.mem off cnt xs → off.toNat + cnt.toNat ≤ (spTop s₀.mem).toNat →
     CoreSpec p n "inst_list" [e, off, cnt, d]
-      (instantiateListFast coreWalkFuel (decE e) xs d.toNat) decH s₀ a₀ dn vis fe M G g
+      (instantiateListFast coreWalkFuel (decE e) xs d.toNat) decH s₀ a₀ dn vis fe M eb
 
 /-- `inst_lp(po, pl, us, e)` refines `instLPFast coreWalkFuel lps us e` (phase 4), the level
 parameters a slice of the environment's record pool (`EREC`). -/
 def InstLPOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (M : ModeMaps) (G g po pl us e : Word) (lps : List NIdx), CoreS dn s₀.mem a₀ vis fe M G g →
+    (M : ModeMaps) (eb po pl us e : Word) (lps : List NIdx), CoreS dn s₀.mem a₀ vis fe M eb →
     HW e → HW us → hslice? (s₀.mem.arr64 EREC) po.toNat pl.toNat = some lps →
     CoreSpec p n "inst_lp" [po, pl, us, e]
-      (instLPFast coreWalkFuel lps (decI us) (decE e)) decH s₀ a₀ dn vis fe M G g
+      (instLPFast coreWalkFuel lps (decI us) (decE e)) decH s₀ a₀ dn vis fe M eb
 
 /-- `str_lit_ctor(h)` refines `strLitToConstructor s` at a string literal `h` (the `lit` store
 does not keep a string's characters yet: see DESIGN.md). -/
 def StrLitCtorOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (M : ModeMaps) (G g h : Word) (s : String), CoreS dn s₀.mem a₀ vis fe M G g → HW h →
+    (M : ModeMaps) (eb h : Word) (s : String), CoreS dn s₀.mem a₀ vis fe M eb → HW h →
     a₀.store.view (decE h) = some (.lit (.strVal s)) →
-    CoreSpec p n "str_lit_ctor" [h] (strLitToConstructor s) decH s₀ a₀ dn vis fe M G g
+    CoreSpec p n "str_lit_ctor" [h] (strLitToConstructor s) decH s₀ a₀ dn vis fe M eb
 
 /-- `str_lit_supported(vis)` refines `strLitSupported fe`. -/
 def StrLitSupportedOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (M : ModeMaps) (G g : Word), CoreS dn s₀.mem a₀ vis fe M G g →
-    CoreSpec p n "str_lit_supported" [vis] (strLitSupported fe) decBool s₀ a₀ dn vis fe M G g
+    (M : ModeMaps) (eb : Word), CoreS dn s₀.mem a₀ vis fe M eb →
+    CoreSpec p n "str_lit_supported" [vis] (strLitSupported fe) decBool s₀ a₀ dn vis fe M eb
 
 /-- **The stub callees.** -/
 structure WhnfCallees (p : Prog) : Prop where
@@ -276,9 +385,9 @@ structure WhnfCallees (p : Prog) : Prop where
   strLitSupported : StrLitSupportedOK p
   /-- The knot's `infer`, `infer_io`, `defeq` slots one level up from the whnf slots: their
   induction step is phases 6–7. -/
-  inferStep : ∀ n, KnotOK p n → InferSlot p (n + 1)
-  inferIOStep : ∀ n, KnotOK p n → InferIOSlot p (n + 1)
-  defeqStep : ∀ n, KnotOK p n → DefeqSlot p (n + 1)
+  inferStep : ∀ n, KnotUpTo p n → InferSlot p (n + 1)
+  inferIOStep : ∀ n, KnotUpTo p n → InferIOSlot p (n + 1)
+  defeqStep : ∀ n, KnotUpTo p n → DefeqSlot p (n + 1)
 
 /-- **The stubs' specs, assumed** until their L code lands (phases 4, 6, 7; string literals). -/
 theorem whnfCallees_stub (p : Prog) : WhnfCallees p := sorry
