@@ -439,3 +439,21 @@ After this week, in order: derived columns and the scratch lifecycle (sonnet, te
 env record pool (opus), `instantiate*`/`abstract*` (sonnet once B's pattern exists), whnf (opus),
 then the declaration fold end to end on a prelude-only file, which closes `PipelineRefines` for
 the smallest input and makes `checker_x64_accepts` unconditional for it.
+
+## Known costs relative to con-ron (coordinator, 2026-10-21)
+
+L does the same work as con-ron: same algorithm, same cache and memo decisions. The overheads are constant
+factors (the naive compiler, bounds checks, fuel counters, double memo probes), except for these space costs:
+
+1. **The append-only limb and string pool.** Transient values, such as intermediate `Nat`s in literal reductions,
+   are never freed, where Rust drops them. Fix: a per-declaration scratch region for transient values, reset at
+   the declaration boundary, like the level heap.
+2. **Strings take one byte per word** (8× the memory). Fix: packed strings, if it matters.
+3. **Memo generations and tombstones** stay in their table until the per-declaration flush, which raises load and
+   probe length. A full table aborts, where con-ron's maps grow.
+4. **Fixed capacities:** a full table aborts and the harness reruns with doubled sizes, which costs at most about
+   2× in total.
+
+**Rule: every con-ron cache must be mirrored in L.** Skipping one can be asymptotically worse; for example, the
+levels lane recomputes level-equality verdicts that con-ron caches. That cache goes in front of `lv_equiv` once
+`CoreR` has fields. The lanes that fill `CoreR` list every con-ron cache and say where L mirrors it.

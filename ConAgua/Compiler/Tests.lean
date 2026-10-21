@@ -168,6 +168,36 @@ def wideProg : Prog := [("use", useWide), ("wide", wide), ("one", one), ("none'"
 #guard (run wideProg 100 "wide" [0xffffffffffffffff, 2] {}).toOption.map (·.1) ==
   some [0xfffffffffffffffe, 1, 1]
 
+/-! More results than registers (lane `cresults`): results 6, 7, 8 go through the table's result
+area. -/
+
+def nine : FunDecl := lfn (x) {
+  return (x, x + 1, x + 2, x + 3, x + 4, x + 5, x + 6, x + 7, x + 8)
+}
+
+/-- Returns seven of nine: the caller reads `0` for results 7 and 8. -/
+def seven : FunDecl := lfn (x) {
+  return (x, x * 2, x * 3, x * 4, x * 5, x * 6, x * 7)
+}
+
+def useNine : FunDecl := lfn (x) locals (a, b, c, d, e, f, g, h, i, z) {
+  (a, b, c, d, e, f, g, h, i) := call nine(x);
+  z := a ^ (b << 4) ^ (c << 8) ^ (d << 12) ^ (e << 16) ^ (f << 20) ^ (g << 24) ^ (h << 28) ^ (i << 32);
+  (a, b, c, d, e, f, g, h, i) := call seven(i);
+  (b, i) := call nine(z);
+  return (z, a, b, c, d, e, f, g, h, i)
+}
+
+def nineProg : Prog := [("use", useNine), ("nine", nine), ("seven", seven)]
+
+#guard (Prog.tab nineProg 0 0).nres = 10
+#guard Prog.wf (Prog.tab nineProg 0 0) nineProg
+#guard agrees nineProg "use" [5] {}
+#guard agrees nineProg "use" [0xfffffffffffffff0] {}
+#guard agrees nineProg "nine" [7] {}
+#guard agrees nineProg "seven" [7] {}
+#guard (runKraken nineProg "nine" [7] {} 1000).toOption == some (.ok [7, 8, 9, 10, 11, 12, 13, 14, 15, 0])
+
 /-! `match_lit`/`scan_bool` (`Scan/Lit.lean`): constant data and three results. -/
 
 open L.Scan.Lit in

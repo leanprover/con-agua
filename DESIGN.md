@@ -4151,6 +4151,120 @@ store's `str` table, `NStrStore.lean`/`NStrRefine.lean`), and the hash. Previous
 * `grind [litMt, matchW, RecRel_strVal]`, the one-liner that dismissed the old (trivial) `strVal`
   case of `litMatchOK`, still works verbatim once `StrRec` is added to its argument list — the
   dismissal is still "kind `0` ≠ kind `1`", just through a richer hypothesis now.
+## The core tier and the whnf family (2026-10-21, lane `whnf`)
+
+Phase 5 (ROADMAP §1), top-down. Files: `CoreCaches.lean` (L), `Tiers.lean` (`CoreR`),
+`CoreRefine.lean`; `Scratch.lean`/`ScratchRefine.lean` (`scratch_drop` now flushes).
+
+### `CoreR`: nine caches in L, five not
+
+`Caches` has fourteen tables. Nine are `MemoLib` memos (arrays 96‥104, stamps/counts `CTL`
+96‥113): the six **mode memos** `whnfCoreC`, `whnfCoreCheapC`, `whnfC`, `inferC`, `inferIOC`,
+`defeqC`, banked by generation (`MemoBank.lean`; bank words `CTL[114]` last, `CTL[115]` current,
+one pair shared by the six, `bank_enter`/`bank_leave` = `takeModeMemos`/`putModeMemos`), and the
+three constant caches `constTyC`, `constValC`, `ruleRhsC` (plain `MemoRG`). Keys: a handle and
+`genW 0 g = g << 32` (`eKeyG`); `defeqC` the two handles and `genW b g` (`dKeyG`); the constant
+caches `(n, us)` (`pairKey`) and `(rec, ctor ∣ us << 32)` (`rrKey`). **Not in L**: `lvlEqC`,
+`lvlsEqC` (pure verdicts; lane `levels`' `lvl_eq`/`lvls_eq` recompute, the twin's tables only have
+to hold what they claim, a hypothesis there) and `readLC`/`readNC`/`readLsC` (readbacks L never
+makes). Every table whose hit skips interning must be in L: a recomputation would intern into
+other caches the twin did not touch.
+
+* `CoreRM m c M G g` (explicit maps `M : ModeMaps` over `(key, generation)` and bank words) and
+  `CoreR m c := ∃ M G g, CoreRM m c M G g`. Each mode memo is a `ModeR` (memo relation, the twin
+  table is the bank of `g`, nothing above `G`). The knot will state the saved tables of an
+  enclosing eager comparison as other banks of the same `M` and needs every core function's post
+  to keep them: `Kept M M' G g` (generations `≤ G` other than `g` unchanged; `Kept.insert`).
+* `flush_caches()`: the nine `clear`s and both bank words `:= 0`; `CoreR.flush` (any `CoreR`,
+  no stamp about to wrap ⇒ `CoreR` of `Caches.empty`), `flushCaches_refinesC`. The generic part
+  (`clearsL`, `memoRG_clearsL`: a memo cleared in a run of clears is empty after it) is
+  schema-generic.
+* `scratch_drop()` = `flush_caches()`; `scratch_reset(0)`, as the twin's `dropScratch`
+  (`flushCaches` first); `scratchDrop_refinesC` now proves the caches part instead of relying on
+  the stub, `CheckR.of_bracket` takes the new `CoreR` and a `CTL` write set below 128.
+* Probes and inserts (`CoreRefine.lean`): `ModeR.findE`/`setE` (one-handle mode memos),
+  `findD`/`setD` (`defeqC`), `memoRG_findP`/`findR` (constant caches).
+* **Finding**: `MemoBank.lean`'s `lo_hi`, `genW_lo`, `genW_hi` were proved by `bv_decide`, which on
+  this toolchain adds an axiom `…._native.bv_decide.ax_…`; anything built on the banks (now
+  `scratchDrop_refinesC`) would have stopped counting as proven. Reproved by `toNat` arithmetic
+  (`Nat.shiftLeft_add_eq_or_of_lt`, `Nat.and_two_pow_sub_one_eq_mod`), same statements.
+* Finding: `decide +kernel` on membership in `coreSchs.flatMap (fun S => [S.cs, S.cs + 1])`
+  (twenty words) ran out of memory (18 GB, killed); an explicit literal list and `simp` is instant.
+
+### `sorry`s
+
+None so far.
+## Any number of results (2026-10-21, lane `cresults`)
+
+Files: `ConAgua/Compiler/{Compile,WF,Rel,SimStmt,SimStore,SimCall,SimFun,Main,Run,Tests}.lean`,
+new `ConAgua/Compiler/WFAll.lean`, `WFAllBench.lean`; `ConAgua/Capstone.lean`
+(`frontAllProg_wf`, `frontAll_run`, `frontAll_x64`); one line each in `ConAgua/Final/Statement.lean`
+and `lakefile.toml`.
+
+### The design: a result area in the table
+
+Results `0 … 5` stay in `rax, rdi, r8 … r11`. Result `i ≥ 6` goes to the word at
+`T + Tab.resOff i`, a **result area** in the table between the constant data and the entry
+arguments (`Tab.nxres = nres - 6` words; `Tab.args` moves past it). `return` writes it through
+`rcx` (`mov rcx, [rsp + tmp]; mov [r15 + off], rcx`, or `mov qword [r15 + off], 0` past the
+returned values); a call reads it right after `call` (`mov rcx, [r15 + off]; mov [rsp + 8x], rcx`).
+Between the callee's write and the caller's read only the epilogue (`add rsp; ret`) runs, so one
+area serves every call. For `nres ≤ 6` the area is empty and the code is unchanged: every
+`Emit*` driver on master (scan, store, walk, lift, inst1, validator) prints byte-identical
+assembly before and after.
+
+**Alternatives rejected.** Slots at the top of the callee's frame (at a fixed distance below the
+return address, so the caller finds them below its `rsp`) need the frame size in the code that
+compiles `return`, and the statement simulation (`SimS`) has a frame size `F` that the code does
+not know (`ctx` has no `F`, and a statement's temporaries only bound `F` from below). Passing a
+result pointer (like the argument pointer `rsi`) needs a saved register per frame. The table area
+needs neither: its address is `r15` plus a constant.
+
+**Proof.** `InTab` now covers the area (so `compile_correct`'s hypotheses read as before; `G.Ok`
+makes it disjoint from the stack and the arrays). `MemRel` gains `res` (the area is mapped);
+`Pres` also allows changes in the area (`InRes`); `MemRel.onlyD` keeps the relation under changes
+outside the descriptors and constant data (`MemRel.only'` is its `InTab` instance, `only_res` the
+area's). `ResRel` now speaks of the register results only (`i < maxRes`), `ResMem G vs d` of the
+area, `ResOut = ResRel ∧ ResMem` replaces `ResRel` in `Conts.ret`, `FunSim` and `OutcomeRel`.
+`sim_loadRes`/`sim_storeRes` handle both kinds per element (the post of `sim_loadRes` is an
+`Only` over the area). `compile_correct`'s statement is unchanged except through `OutcomeRel`
+(results 6… in the area at `Layout.resAddr i`); the capstone users changed by one token each
+(`hres.1 0 … (by simp [maxRes])`). No `sorry`; `#print axioms compile_correct`: `propext`,
+`Classical.choice`, `Quot.sound`. About +230 lines of proof (mostly `SimCall`), +25 of compiler.
+
+`Prog.wf` no longer bounds `nres`; it requires the result area's offsets below `maxOff`
+(`hTab` grew a `+ 8 * nxres`). `Prog.wfAuto p` is `Prog.wf` for the smallest table with every
+array `p` names (`Prog.arrs`).
+
+### Testing
+
+* `Tests.lean`: `nineProg` (nine results, seven of nine read as nine, two of nine, the area
+  used by three calls in a row; 10 results in use), against `L.run`; `runKraken` maps the area
+  and `Outcome.ofState` reads it.
+* `harness/check-asm.sh`: scan 303, store 1313, walk 6743 instructions, OK. The compiled
+  `frontAllProg` (`Prog.tab frontAllProg 1 69`, 47915 instructions, with result-area moves)
+  passes `check_asm.py` too.
+* `run --lines` (skip_braced) on `complete_c04a_restart_70`: 126481 lines, 0 mismatches; the
+  compiled validator accepts it (`ok 0`), and gives the same verdicts as master on the 492 e2e
+  fixtures (the assembly is identical).
+
+### Every program's static check (`WFAll.lean`, `WFAllBench.lean`)
+
+One `#guard Prog.wfAuto p` per program defined on master (60; the four benchmark programs in
+`WFAllBench.lean`, whose modules clash with `NatBits` on import; the compiler's own test programs
+in `Tests.lean`). All pass, `frontAllProg` included, except `L.Scan.Values.hintsProg`, a test
+fragment that calls `skip_ws`/`hints_obj` without containing them (guarded as failing).
+**New programs should get a line there.**
+
+### The capstone: `frontAll_x64`
+
+`frontAllProg_wf` (one byte array, 69 word arrays, `decide +kernel`) and `frontAll_x64`:
+`compile_correct` composed with `frontAll_refines` (via `frontAll_run`, `M.of_run`). From a
+Kraken host holding the compiled `frontAllProg`, run from `ca_enter` on a memory that holds `b`
+in `IN` and is related to `a₀` by `ArenaD` and to the blank parse state by `StateDR`: the machine
+reports exhausted, an error, or `rdx = 0`, and then `rax = 0` implies that con-ron's
+`parseBytes b` accepts from `a₀` and the final machine memory holds an L memory related to its
+final arena and parse states. Only `propext`, `Classical.choice`, `Quot.sound`.
 
 ### `sorry`s
 

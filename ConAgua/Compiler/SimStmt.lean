@@ -20,28 +20,33 @@ open L
 attribute [local simp] Reg64s.set64_rax Reg64s.set64_rcx Reg64s.set64_rdx Reg64s.set64_rsi
   Reg64s.set64_rsp Reg64s.set64_r14
 
-/-- `d'` has every byte of `d`, and the same bytes outside the stack below `top` and outside the
-arrays. -/
+/-- `d'` has every byte of `d`, and the same bytes outside the stack below `top`, outside the
+arrays and outside the result area. -/
 structure Pres (G : Layout) (top : Nat) (d d' : DataMem) : Prop where
   grows : ∀ y, (d.get? y).isSome → (d'.get? y).isSome
-  same : ∀ x < 2 ^ 64, ¬ (G.lo ≤ x ∧ x < top) → ¬ G.InArr x → d'.get? (A x) = d.get? (A x)
+  same : ∀ x < 2 ^ 64, ¬ (G.lo ≤ x ∧ x < top) → ¬ G.InArr x → ¬ G.InRes x → d'.get? (A x) = d.get? (A x)
 
 namespace Pres
 variable {G : Layout}
 
-theorem refl (top : Nat) (d : DataMem) : Pres G top d d := ⟨fun _ h => h, fun _ _ _ _ => rfl⟩
+theorem refl (top : Nat) (d : DataMem) : Pres G top d d := ⟨fun _ h => h, fun _ _ _ _ _ => rfl⟩
 
 theorem trans {top : Nat} {d d' d'' : DataMem} (h : Pres G top d d') (h' : Pres G top d' d'') :
     Pres G top d d'' :=
-  ⟨fun y hy => h'.grows y (h.grows y hy), fun x hx h1 h2 => by rw [h'.same x hx h1 h2, h.same x hx h1 h2]⟩
+  ⟨fun y hy => h'.grows y (h.grows y hy), fun x hx h1 h2 h3 => by rw [h'.same x hx h1 h2 h3, h.same x hx h1 h2 h3]⟩
 
 theorem mono {top top' : Nat} {d d' : DataMem} (h : Pres G top d d') (ht : top ≤ top') :
     Pres G top' d d' :=
-  ⟨h.grows, fun x hx h1 h2 => h.same x hx (fun ⟨a, b⟩ => h1 ⟨a, by omega⟩) h2⟩
+  ⟨h.grows, fun x hx h1 h2 h3 => h.same x hx (fun ⟨a, b⟩ => h1 ⟨a, by omega⟩) h2 h3⟩
 
 theorem of_only {a b top : Nat} {d d' : DataMem} (h : Only a b d d') (ha : G.lo ≤ a) (hb : b ≤ top) :
     Pres G top d d' :=
-  ⟨h.grows, fun x hx h1 _ => h.same x hx (by omega)⟩
+  ⟨h.grows, fun x hx h1 _ _ => h.same x hx (by omega)⟩
+
+/-- A change inside the result area. -/
+theorem of_res {a b top : Nat} {d d' : DataMem} (h : Only a b d d') (hab : ∀ x, a ≤ x → x < b → G.InRes x) :
+    Pres G top d d' :=
+  ⟨h.grows, fun x hx _ _ h3 => h.same x hx (Classical.byContradiction fun hc => h3 (hab x (by omega) (by omega)))⟩
 
 end Pres
 
@@ -93,7 +98,7 @@ structure Conts [Host] (G : Layout) (ctx : Ctx) (F : Nat) (d : MachineData) (R :
   normal : ∀ σ' d', R = .ok (.normal, σ') → Inv G ctx.nl F σ' d' → SPost G F d d' → Ev Q d' (at_ kend)
   brk : ∀ σ' d', R = .ok (.brk, σ') → Inv G ctx.nl F σ' d' → SPost G F d d' → Ev Q d' (label ctx.brk)
   ret : ∀ vs σ' d', R = .ok (.ret vs, σ') → Inv G ctx.nl F σ' d' → SPost G F d d' →
-    ResRel G.tab.nres vs d'.regs → Ev Q d' (label ctx.retL)
+    ResOut G vs d' → Ev Q d' (label ctx.retL)
   err : ∀ d', (∃ e, R = .error e ∧ e ≠ .outOfFuel) → GPost G (top d F) d d' → Ev Q d' (label errorL)
   exh : ∀ d', GPost G (top d F) d d' → Ev Q d' (label exhaustedL)
 
@@ -159,7 +164,7 @@ theorem Inv.setLoc {nl F : Nat} {σ : St} {d : MachineData} (hI : Inv G nl F σ 
 end
 
 section
-variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords < maxOff)
+variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres < maxOff)
   (p : Prog) (K : Stmt → M Sig) (P : Nat → Prop)
 include hG hTab
 

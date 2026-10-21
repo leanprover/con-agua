@@ -206,7 +206,7 @@
 {
 "lane": "cresults",
 "model": "opus",
-"status": "running",
+"status": "done",
 "focus": "Compiler: any number of return values; frontAll_x64"
 },
 {
@@ -226,5 +226,11 @@
 "model": "sonnet",
 "status": "running",
 "focus": "abstract1, instantiateList (pool-slice lists, fvar-range column)"
+},
+{
+"lane": "sync",
+"model": "opus",
+"status": "running",
+"focus": "Track con-ron upstream: fingerprints, stale targets, bump script; bump to latest"
 }
 ]

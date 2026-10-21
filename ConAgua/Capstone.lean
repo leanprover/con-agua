@@ -3,6 +3,7 @@ import ConAgua.Scan.Link
 import ConAgua.Scan.ValidatorLink
 import ConAgua.Arena.LitRefine
 import ConAgua.Arena.WalkRefine
+import ConAgua.Front.FrontRun
 
 /-!
 # The capstone: the first end-to-end theorems
@@ -227,7 +228,7 @@ theorem skipBraced_x64 [Host] (G : Layout) (hG : G.Ok) (hwf : Prog.wf G.tab scan
     · rw [hok] at h6
       obtain ⟨hrdx, hres, hm'⟩ := h6
       have hrax : st.data.regs.rax = UInt64.ofNat (skipBracedN b.data i.toUInt64.toNat (UInt64.ofNat depth).toNat) :=
-        hres 0 (by omega)
+        hres.1 0 (by omega) (by simp [maxRes])
       refine ⟨hrdx, ?_, hm'⟩
       rw [hrax, UInt64.toNat_ofNat_of_lt' (by simpa [UInt64.size] using hdepth)]
       simp only [USize.toNat_toUInt64]
@@ -280,7 +281,7 @@ theorem validate_x64_core [Host] (G : Layout) (hG : G.Ok)
     · rw [hrun] at h6
       obtain ⟨hrdx, hres, hm'⟩ := h6
       have hrax : st.data.regs.rax = r.headD 0 := by
-        have := hres 0 (by omega); simp only [rres] at this; rwa [show r.getD 0 0 = r.headD 0 by
+        have := hres.1 0 (by omega) (by simp [maxRes]); simp only [rres] at this; rwa [show r.getD 0 0 = r.headD 0 by
           cases r <;> rfl] at this
       refine Or.inr (Or.inr ⟨hrdx, r, m', ?_, ?_, ?_⟩)
       · rfl
@@ -437,7 +438,7 @@ theorem natAddLit_x64 [Host] (G : L.Compiler.Layout) (hG : G.Ok)
     · rw [hrun] at h6
       obtain ⟨hrdx, hres, hm'⟩ := h6
       have hrax : st.data.regs.rax = r.headD 0 := by
-        have := hres 0 (by omega); simp only [rres] at this; rwa [show r.getD 0 0 = r.headD 0 by
+        have := hres.1 0 (by omega) (by simp [maxRes]); simp only [rres] at this; rwa [show r.getD 0 0 = r.headD 0 by
           cases r <;> rfl] at this
       obtain ⟨a', ha', hLitR⟩ := natAddLit_run_store N m a₀ hR oa la ob lb ha hb r m' hrun
       refine Or.inr (Or.inr ⟨hrdx, m', a', ?_, hm', hLitR⟩)
@@ -487,10 +488,91 @@ theorem bbMemo_x64 [Host] (G : L.Compiler.Layout) (hG : G.Ok)
     · rw [hrun] at h6
       obtain ⟨hrdx, hres, hm'⟩ := h6
       have hrax : st.data.regs.rax = r.headD 0 := by
-        have := hres 0 (by omega); simp only [rres] at this; rwa [show r.getD 0 0 = r.headD 0 by
+        have := hres.1 0 (by omega) (by simp [maxRes]); simp only [rres] at this; rwa [show r.getD 0 0 = r.headD 0 by
           cases r <;> rfl] at this
       obtain ⟨a', ha', hA⟩ := bbMemo_run N F hF m a₀ hR h hh r m' hrun
       refine Or.inr (Or.inr ⟨hrdx, m', a', ?_, hm', hA⟩)
       rw [hrax]; exact ha'
 
 end L.Arena
+
+namespace L.Front
+
+open L ConRon.Arena L.Arena
+open L.Compiler hiding rdW
+
+/-- The compiler's static check passes for the whole frontend (one byte array, 69 word arrays), so
+`compile_correct` applies to it. (`frontAllProg` returns up to 9 words; see DESIGN.md, lane
+`cresults`.) -/
+theorem frontAllProg_wf : Prog.wf (Prog.tab frontAllProg 1 69) frontAllProg = true := by
+  decide +kernel
+
+/-- `frontAll_refines` for a run of `L.run`. -/
+theorem frontAll_run (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
+    (N : Nat) (m : Mem) (hm : m.arr8 IN = b.data) (hpool : (m.arr64 POOL).size < 2 ^ 63) (a₀ : AState)
+    (hA : ArenaD m a₀) (hD : StateDR m L.Front.StateD.blank) (r : List Word) (m' : Mem)
+    (hrun : run frontAllProg N "front_run" [] m = .ok (r, m')) :
+    r.headD 0 = 0 → ∃ st' a', (ConRon.Arena.Frontend.parseBytes b).run a₀ = .ok (.ok (.ofState st'), a') ∧
+      ArenaD m' a' ∧ StateDR m' st' := by
+  simp only [run] at hrun
+  cases hr : (invoke frontAllProg (exec frontAllProg N) "front_run" []).run
+      { mem := m, loc := Locals.init [] } with
+  | error e => simp [hr, Except.map] at hrun
+  | ok rs =>
+    simp only [hr, Except.map] at hrun
+    injection hrun with hrun
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj hrun
+    exact M.of_run (P := fun s => s = { mem := m, loc := Locals.init [] }) rfl hr
+      (frontAll_refines b h64 hsize N _ hm hpool a₀ hA hD)
+
+/-- **Bytes → stores, on the machine.** For a Kraken host holding the compiled `frontAllProg`, run
+from `ca_enter` (`front_run()`, no arguments) on a state whose memory `m` holds the buffer `b` in
+`IN` and is related to an arena state `a₀` (`ArenaD`) and to the blank parse state (`StateDR`): the
+run returns to the caller with the callee-saved registers restored, and either reports exhausted
+(`rdx = 1`), an `L` error (`rdx = 2`: an `abort`, e.g. a full store or an unsupported line), or
+`rdx = 0`; then if `rax = 0`, con-ron's whole-buffer `parseBytes b` accepts from `a₀`, and the
+final machine memory holds an L memory related to its final arena and parse states. -/
+theorem frontAll_x64 [Host] (G : L.Compiler.Layout) (hG : G.Ok) (hwf : Prog.wf G.tab frontAllProg = true)
+    (hnres : 1 ≤ G.tab.nres) (k0 : Nat) (hcode : Code (compileProg G.tab frontAllProg "front_run") k0)
+    (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
+    (m : Mem) (hm : m.arr8 IN = b.data) (hpool : (m.arr64 POOL).size < 2 ^ 63) (a₀ : AState)
+    (hA : ArenaD m a₀) (hD : StateDR m L.Front.StateD.blank) (hnargs : G.nargs = 0)
+    (N : Nat) (dm : MachineData) (ra : Word)
+    (hT : dm.regs.rdi.toNat = G.T) (hN : dm.regs.rsi.toNat = N)
+    (hmem : MemRel G m dm.dmem) (hroom : G.lo + 8 ≤ G.hi)
+    (htop : L.Compiler.rdW dm.dmem (A G.T) = some (UInt64.ofNat G.hi))
+    (hra : L.Compiler.rdW dm.dmem (A dm.regs.rsp.toNat) = some ra)
+    (hcs : ∀ x, dm.regs.rsp.toNat - 24 ≤ x → x < dm.regs.rsp.toNat + 8 →
+      (dm.dmem.get? (A x)).isSome ∧ ¬ G.InStack x ∧ ¬ G.InArr x ∧ ¬ G.InTab x)
+    (hcs24 : 24 ≤ dm.regs.rsp.toNat) (hcs8 : dm.regs.rsp.toNat + 8 < 2 ^ 64) :
+    Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rsp.toNat = dm.regs.rsp.toNat + 8 ∧
+        st.data.regs.rbp = dm.regs.rbp ∧ st.data.regs.r14 = dm.regs.r14 ∧ st.data.regs.r15 = dm.regs.r15 ∧
+        (st.data.regs.rdx = 1 ∨ st.data.regs.rdx = 2 ∨
+          (st.data.regs.rdx = 0 ∧ (st.data.regs.rax = 0 → ∃ m' st' a',
+            (ConRon.Arena.Frontend.parseBytes b).run a₀ = .ok (.ok (.ofState st'), a') ∧
+            MemRel G m' st.data.dmem ∧ ArenaD m' a' ∧ StateDR m' st'))))
+      dm (label enterL) := by
+  have hargs : ([] : List Word).length = frontRun.nparams := rfl
+  have hentry : frontAllProg.lookup "front_run" = some frontRun := rfl
+  refine eventually_weaken _ _ _ _ ?_
+    (compile_correct frontAllProg "front_run" G hG hwf k0 hcode frontRun hentry
+      [] hargs hnargs m N dm ra hT hN hmem hroom htop (fun j h => absurd h (Nat.not_lt_zero _)) hra hcs
+      hcs24 hcs8)
+  intro st hst
+  obtain ⟨h1, h2, h3, h4, h5, h6⟩ := hst
+  refine ⟨h1, h2, h3, h4, h5, ?_⟩
+  rcases h6 with h6 | h6
+  · exact Or.inl h6
+  · rcases hrun : run frontAllProg N "front_run" [] m with e | ⟨r, m'⟩
+    · rw [hrun] at h6
+      rcases e with _ | _ | _ | _ <;> simp_all [OutcomeRel]
+    · rw [hrun] at h6
+      obtain ⟨hrdx, hres, hm'⟩ := h6
+      have hrax : st.data.regs.rax = r.headD 0 := by
+        have := hres.1 0 (by omega) (by simp [maxRes]); simp only [rres] at this
+        rwa [show r.getD 0 0 = r.headD 0 by cases r <;> rfl] at this
+      refine Or.inr (Or.inr ⟨hrdx, fun h0 => ?_⟩)
+      obtain ⟨st', a', hp, hA', hD'⟩ := frontAll_run b h64 hsize N m hm hpool a₀ hA hD r m' hrun (hrax ▸ h0)
+      exact ⟨m', st', a', hp, hm', hA', hD'⟩
+
+end L.Front
