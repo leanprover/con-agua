@@ -112,3 +112,10 @@ root = "ConAgua.Arena.Inst1BenchLean"
 [[lean_exe]]
 name = "valbench"
 root = "ConAgua.Scan.Bench"
+
+# The progress census (scripts/census.py, PLAN.md "Progress census"): dumps the twin targets
+# reached from `TwinAccepts` and the `@[l_impl]`/`@[refines]` links with their axioms.
+[[lean_exe]]
+name = "census"
+root = "ConAgua.Census.Main"
+supportInterpreter = true

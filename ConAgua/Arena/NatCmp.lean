@@ -4,6 +4,7 @@ public import ConAgua.Arena.NatAdd
 public import ConAgua.Arena.NatGrindAttr
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.NatAdd
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -113,6 +114,7 @@ def cmpLoop : Stmt := lblk (oa, la, ob, lb, k, x, y) {
   }
 }
 
+@[l_impl ConRon.Arena.natOpResult]
 def natCmp : FunDecl := lfn (oa, la, ob, lb) locals (k, x, y) {
   if la < lb { return 0 };
   if lb < la { return 2 };

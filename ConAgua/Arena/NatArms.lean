@@ -2,6 +2,7 @@ import ConAgua.Arena.ArenaRel
 import ConAgua.Arena.NatDiv
 import ConAgua.Arena.NatCmp
 import ConAgua.Arena.NatBitsNat
+import ConAgua.Census.Attr
 
 /-!
 # The `Nat` arms of `natOpResult`, refined under `ArenaR`
@@ -113,6 +114,7 @@ end generic
 /-! ## The arms with a slice result: `/`, `%` -/
 
 /-- `nat_div_lit(oa, la, ob, lb)`: the quotient slice of `nat_divmod`, interned. -/
+@[l_impl ConRon.Arena.natOpResult]
 def natDivLit : FunDecl := lfn (oa, la, ob, lb) locals (o, l, h) {
   (o, l) := call nat_divmod(oa, la, ob, lb);
   h := call intern_lit(o, l);
@@ -120,6 +122,7 @@ def natDivLit : FunDecl := lfn (oa, la, ob, lb) locals (o, l, h) {
 }
 
 /-- `nat_mod_lit(oa, la, ob, lb)`: the remainder slice of `nat_divmod`, interned. -/
+@[l_impl ConRon.Arena.natOpResult]
 def natModLit : FunDecl := lfn (oa, la, ob, lb) locals (q, ql, o, l, h) {
   (q, ql, o, l) := call nat_divmod(oa, la, ob, lb);
   h := call intern_lit(o, l);
@@ -189,6 +192,7 @@ end divmod
 /-! ## `pred`: `-` with a one-limb `1` -/
 
 /-- `nat_pred_lit(oa, la)`: write the limb `1` at the top, subtract it, intern the result. -/
+@[l_impl ConRon.Arena.natOpResult]
 def natPredLit : FunDecl := lfn (oa, la) locals (o, l, h) {
   o := CTL.u64[0];
   if len(POOL.u64) <= o { abort };
@@ -260,6 +264,7 @@ end pred
 /-- `nat_pow_lit(oa, la, ob, lb)`: `(0, 0)` (the arm's `none`) for an exponent above `2^24`,
 else `(1, h)` with `h` the interned power. An exponent of two or more limbs is at least `2^64`
 (`b` normalised). -/
+@[l_impl ConRon.Arena.natOpResult]
 def natPowLit : FunDecl := lfn (oa, la, ob, lb) locals (e, o, l, h) {
   if 1 < lb { return (0, 0) };
   if lb == 1 { e := POOL.u64[ob] };
@@ -444,28 +449,36 @@ theorem topLit_refinesA (g f : FnName) (F : Nat → Nat → Nat)
       oa la ob lb ha hb hna hnb
 
 /-- **`nat_sub_lit` refines `natOpResult`'s `Nat.sub` arm under `ArenaR`.** -/
+@[refines_part ConRon.Arena.natOpResult "Nat.sub"]
 theorem natSubLit_refinesA : ArmRefinesA "nat_sub_lit" natSubArm :=
   topLit_refinesA "nat_sub_lit" "nat_sub" _ rfl natSub_top
 /-- **`nat_mul_lit` refines the `Nat.mul` arm.** -/
+@[refines_part ConRon.Arena.natOpResult "Nat.mul"]
 theorem natMulLit_refinesA : ArmRefinesA "nat_mul_lit" natMulArm :=
   topLit_refinesA "nat_mul_lit" "nat_mul" _ rfl natMul_top
 /-- **`nat_land_lit` refines the `Nat.land` arm.** -/
+@[refines_part ConRon.Arena.natOpResult "Nat.land"]
 theorem natLandLit_refinesA : ArmRefinesA "nat_land_lit" natLandArm :=
   topLit_refinesA "nat_land_lit" "nat_land" _ rfl natLand_top
 /-- **`nat_lor_lit` refines the `Nat.lor` arm.** -/
+@[refines_part ConRon.Arena.natOpResult "Nat.lor"]
 theorem natLorLit_refinesA : ArmRefinesA "nat_lor_lit" natLorArm :=
   topLit_refinesA "nat_lor_lit" "nat_lor" _ rfl natLor_top
 /-- **`nat_xor_lit` refines the `Nat.xor` arm.** -/
+@[refines_part ConRon.Arena.natOpResult "Nat.xor"]
 theorem natXorLit_refinesA : ArmRefinesA "nat_xor_lit" natXorArm :=
   topLit_refinesA "nat_xor_lit" "nat_xor" _ rfl natXor_top
 /-- **`nat_shl_lit` refines the `Nat.shiftLeft` arm.** -/
+@[refines_part ConRon.Arena.natOpResult "Nat.shiftLeft"]
 theorem natShlLit_refinesA : ArmRefinesA "nat_shl_lit" natShlArm :=
   topLit_refinesA "nat_shl_lit" "nat_shl" _ rfl natShl_top
 /-- **`nat_shr_lit` refines the `Nat.shiftRight` arm.** -/
+@[refines_part ConRon.Arena.natOpResult "Nat.shiftRight"]
 theorem natShrLit_refinesA : ArmRefinesA "nat_shr_lit" natShrArm :=
   topLit_refinesA "nat_shr_lit" "nat_shr" _ rfl natShr_top
 
 /-- **`nat_div_lit` refines the `Nat.div` arm.** -/
+@[refines_part ConRon.Arena.natOpResult "Nat.div"]
 theorem natDivLit_refinesA : ArmRefinesA "nat_div_lit" natDivArm :=
   fun n s₀ a₀ hR oa la ob lb ha hb _ hnb =>
     natDivLit_refines natArmProg ArenaR (fun _ _ h => h.lit.1)
@@ -473,6 +486,7 @@ theorem natDivLit_refinesA : ArmRefinesA "nat_div_lit" natDivArm :=
       rfl rfl rfl n s₀ a₀ hR oa la ob lb ha hb hnb
 
 /-- **`nat_mod_lit` refines the `Nat.mod` arm.** -/
+@[refines_part ConRon.Arena.natOpResult "Nat.mod"]
 theorem natModLit_refinesA : ArmRefinesA "nat_mod_lit" natModArm :=
   fun n s₀ a₀ hR oa la ob lb ha hb _ hnb =>
     natModLit_refines natArmProg ArenaR (fun _ _ h => h.lit.1)
@@ -480,6 +494,7 @@ theorem natModLit_refinesA : ArmRefinesA "nat_mod_lit" natModArm :=
       rfl rfl rfl n s₀ a₀ hR oa la ob lb ha hb hnb
 
 /-- **`nat_pred_lit` refines the `Nat.pred` arm.** -/
+@[refines_part ConRon.Arena.natOpResult "Nat.pred"]
 theorem natPredLit_refinesA (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s₀.mem a₀)
     (oa la : Word) (ha : SliceOK s₀.mem oa la) :
     ⦃fun s => s = s₀⦄
@@ -494,6 +509,7 @@ theorem natPredLit_refinesA (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s
     oa la ha
 
 /-- **`nat_pow_lit` refines the `Nat.pow` arm**, including its `none` above `2^24`. -/
+@[refines_part ConRon.Arena.natOpResult "Nat.pow"]
 theorem natPowLit_refinesA (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s₀.mem a₀)
     (oa la ob lb : Word) (ha : SliceOK s₀.mem oa la)
     (hnb : Norm (s₀.mem.arr64 POOL) ob.toNat lb.toNat) :

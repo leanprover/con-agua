@@ -1,5 +1,6 @@
 import ConRon.Arena.Monad
 import ConAgua.Arena.NatAdd
+import ConAgua.Census.Attr
 
 /-!
 # Refinement of an arena-tier function: L code against `AM := StateT AState (Except CheckError)`
@@ -120,6 +121,7 @@ def natAddArm (a b : Nat) : AM (Option EIdx) := do
   pure (some x)
 
 /-- `nat_add_lit(oa, la, ob, lb)`: add two literal slices and intern the sum. -/
+@[l_impl ConRon.Arena.natOpResult]
 def natAddLit : FunDecl := lfn (oa, la, ob, lb) locals (o, l, h) {
   o := CTL.u64[0];
   l := call nat_add(oa, la, ob, lb);

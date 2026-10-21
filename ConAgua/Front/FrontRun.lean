@@ -1,6 +1,7 @@
 import ConAgua.Front.LineRefine
 import ConAgua.Front.DriverRefine
 import ConAgua.Scan.Validator
+import ConAgua.Census.Attr
 
 /-!
 # Bytes → stores: `front_run()` refines con-ron's `parseBytes`
@@ -148,6 +149,7 @@ include hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hpi hpd in
 input `b` and related to the arena state `a₀` (by `ArenaD`) and to the blank parse state, con-ron's
 `parseBytes b` accepts from `a₀`, and the memory after is related to its final arena state by
 `ArenaD` and to its final parse state by `StateDR`. -/
+@[refines_part ConRon.Arena.Frontend.parseBytes "name, level, expr lines (declarations abort)"]
 theorem frontRun_refines (b : ByteArray) (h64 : System.Platform.numBits = 64)
     (hsize : b.size < 2 ^ 63) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b.data)
     (hpool : (s₀.mem.arr64 POOL).size < 2 ^ 63) (a₀ : AState) (hA : ArenaD s₀.mem a₀)

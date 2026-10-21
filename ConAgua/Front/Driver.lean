@@ -5,6 +5,7 @@ public import ConAgua.L.Notation
 public import ConAgua.Arena.Pool
 public import ConAgua.Scan.Common
 meta import ConAgua.L.Semantics
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -47,6 +48,7 @@ def runLoop : Stmt := lblk (i, ok, nx, ln) {
   }
 }
 
+@[l_impl ConRon.Arena.Frontend.parseBytes]
 def frontRun : FunDecl := lfn () locals (i, ok, nx, ln) {
   ok := call front_init();
   ⟪runLoop⟫;

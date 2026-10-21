@@ -3,6 +3,7 @@ module
 public import ConAgua.L.Examples
 public import ConLeche.Frontend.Scan.Fast
 public import ConLeche.Frontend.Scan.Equiv.Scalars
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -67,6 +68,7 @@ section strClose
 variable (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 64)
 
 include h64 hsize in
+@[refines ConLeche.Frontend.strClose]
 theorem strClose_toNat_eq (j : USize) :
     (strClose b j).toNat = strCloseN b.data j.toNat := by
   fun_induction strClose b j with
@@ -143,6 +145,7 @@ variable (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 
 
 
 include h64 hsize in
+@[refines ConLeche.Frontend.skipBraced]
 theorem skipBraced_toNat_eq (i : USize) (depth : Nat) :
     (skipBraced b i depth).toNat = skipBracedN b.data i.toNat depth := by
   fun_induction skipBraced b i depth with
