@@ -174,7 +174,7 @@ theorem ev_mul (hk : Host.prog[k]? = some (binInstr .mulhi))
   simp only [binInstr] at hk
   run_instr
   intro _ _ _ _
-  simp only [show (Width.W64 == Width.W8) = false from rfl, Bool.false_eq_true, if_false]
+  simp only [show (Width.W64 == Width.W8) = false from rfl, Bool.false_eq_true, ite_false]
   refine ev_flags h ?_
   congr 1
   simp only [BinOp.eval, Width.bits, Reg64s.get64_rax, Reg64s.get64_rcx, BitVec.unsigned,
