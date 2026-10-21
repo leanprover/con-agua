@@ -28,4 +28,12 @@ theorem toNat_add_one_of_lt_ofNat {j : Word} {n : Nat} (h : j < UInt64.ofNat n) 
   have := (UInt64.ofNat n).toNat_lt
   rw [UInt64.toNat_add]; simp; omega
 
+/-- Setting locals leaves the memory alone (one equation instead of a chain through
+`St.setLocs_cons`, which for a call with five results runs into `grind`'s generation limit). -/
+@[lang_grind =] theorem St.setLocs_mem (s : St) (xs : List Var) (vs : List Word) :
+    (s.setLocs xs vs).mem = s.mem := by
+  induction xs generalizing s vs with
+  | nil => rfl
+  | cons x xs ih => rw [St.setLocs_cons, ih]; rfl
+
 end L.Scan

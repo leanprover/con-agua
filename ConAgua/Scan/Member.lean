@@ -134,6 +134,130 @@ theorem nextMemberN_key (b : Array UInt8) (i w : Word) (h : (nextMemberN b i w).
   | case8 => exact ⟨UInt64.le_refl _, by assumption⟩
   | _ => simp_all [Mbr.err]
 
+/-! ### Arms of `nextMemberN` (one guarded equation per arm, DESIGN.md "Proof recipe") -/
+
+section
+variable (b : Array UInt8) (i w : Word)
+
+attribute [local lang_grind] Mbr.enc Mbr.err
+
+theorem nextMemberN_ws (h : i < UInt64.ofNat b.size)
+    (hc : byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13) :
+    nextMemberN b i w = nextMemberN b (i + 1) w := by
+  rw [nextMemberN, dif_pos h, if_pos hc]
+theorem nextMemberN_close (h : i < UInt64.ofNat b.size)
+    (hc : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13)) (h1 : byteW b i = 125) :
+    nextMemberN b i w = ⟨1, i, w, 0, 0⟩ := by
+  rw [nextMemberN, dif_pos h, if_neg hc, if_pos h1]
+theorem nextMemberN_comma (h : i < UInt64.ofNat b.size)
+    (hc : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13)) (h1 : byteW b i ≠ 125)
+    (h2 : byteW b i = 44) :
+    nextMemberN b i w = if w ≠ 0 then .err else nextMemberN b (i + 1) 1 := by
+  rw [nextMemberN, dif_pos h, if_neg hc, if_neg h1, if_pos h2]
+theorem nextMemberN_quote (h : i < UInt64.ofNat b.size)
+    (hc : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13)) (h1 : byteW b i ≠ 125)
+    (h2 : byteW b i ≠ 44) (h3 : byteW b i = 34) :
+    nextMemberN b i w =
+      if w = 0 then .err
+      else if UInt64.ofNat (keyEndN b (i + 1).toNat) = 0 then .err
+      else if valueAtN b i (UInt64.ofNat (keyEndN b (i + 1).toNat)) = i then .err
+      else ⟨2, i, w, keyAtN b i (UInt64.ofNat (keyEndN b (i + 1).toNat) - (i + 1)),
+        valueAtN b i (UInt64.ofNat (keyEndN b (i + 1).toNat))⟩ := by
+  rw [nextMemberN, dif_pos h, if_neg hc, if_neg h1, if_neg h2, if_pos h3]
+theorem nextMemberN_other (h : i < UInt64.ofNat b.size)
+    (hc : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13)) (h1 : byteW b i ≠ 125)
+    (h2 : byteW b i ≠ 44) (h3 : byteW b i ≠ 34) :
+    nextMemberN b i w = .err := by
+  rw [nextMemberN, dif_pos h, if_neg hc, if_neg h1, if_neg h2, if_neg h3]
+theorem nextMemberN_end (h : ¬ i < UInt64.ofNat b.size) : nextMemberN b i w = .err := by
+  rw [nextMemberN, dif_neg h]
+
+grind_pattern [lang_grind] nextMemberN_ws => nextMemberN b i w, b[i.toNat]
+grind_pattern [lang_grind] nextMemberN_close => nextMemberN b i w, b[i.toNat]
+grind_pattern [lang_grind] nextMemberN_comma => nextMemberN b i w, b[i.toNat]
+grind_pattern [lang_grind] nextMemberN_quote => nextMemberN b i w, b[i.toNat]
+grind_pattern [lang_grind] nextMemberN_other => nextMemberN b i w, b[i.toNat]
+grind_pattern [lang_grind] nextMemberN_end => nextMemberN b i w
+
+end
+
+/-! ### The spec -/
+
+grind_pattern [lang_grind] L.Scan.Values.keyEndN_lt => keyEndN b j
+
+section nextMember
+variable (p : Prog) (b : Array UInt8) (hb : b.size < 2 ^ 63)
+    (hpw : p.lookup "skip_ws" = some L.Scan.Leaves.skipWs)
+    (hpk : p.lookup "key_end" = some L.Scan.Leaves.keyEnd)
+    (hpa : p.lookup "key_at" = some L.Scan.Key.keyAt)
+    (hpv : p.lookup "value_at" = some L.Scan.Key.valueAt)
+    (hpm : p.lookup "next_member" = some nextMember)
+include hb hpw hpk hpa hpv
+
+attribute [local lang_grind] Mbr.enc Mbr.err
+
+theorem nextMemberLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) :
+    ⦃fun s => s = s₀⦄
+    exec p n nextMemberLoop
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
+      r.retOr Mbr.err.enc = (nextMemberN b (s₀.loc 0) (s₀.loc 1)).enc; ⊤⦄ := by
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+    rw [exec, step_while (w := nextMemberLoop) rfl]
+    have hb' : b.size < 2 ^ 64 := by omega
+    sym only [lang_grind] =>
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, ih,
+        L.Scan.Leaves.keyEnd_spec p hpk b hb' n, L.Scan.Key.valueAt_spec p hpw hpv b hb n,
+        L.Scan.Key.keyAt_spec p hpa b hb n] <;> finish
+
+theorem nextMemberLoop_step_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) :
+    ⦃fun s => s = s₀⦄
+    step p (exec p n) nextMemberLoop
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
+      r.retOr Mbr.err.enc = (nextMemberN b (s₀.loc 0) (s₀.loc 1)).enc; ⊤⦄ :=
+  Triple.step_exec (nextMemberLoop_spec p b hb hpw hpk hpa hpv (n + 1) s₀ hm)
+
+include hpm in
+theorem nextMember_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i w : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "next_member" [i, w]
+    ⦃fun r s' => s' = s₀ ∧ r = [(nextMemberN b i w).tag, (nextMemberN b i w).pos,
+      (nextMemberN b i w).w, (nextMemberN b i w).key, (nextMemberN b i w).val]; ⊤⦄ := by
+  rw [invoke_eq _ hpm]
+  simp only [callFn, nextMember]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind] =>
+      vcgen [exec, step, evalE, evalArgs, nextMemberLoop_step_spec p b hb hpw hpk hpa hpv n] <;> finish
+
+end nextMember
+
+/-- The tag is `0`, `1` or `2`. -/
+theorem nextMemberN_tag (b : Array UInt8) (i w : Word) (h0 : (nextMemberN b i w).tag ≠ 0)
+    (h1 : (nextMemberN b i w).tag ≠ 1) : (nextMemberN b i w).tag = 2 := by
+  fun_induction nextMemberN b i w <;> simp_all [Mbr.err]
+
+grind_pattern [lang_grind] nextMemberN_tag => (nextMemberN b i w).tag
+
+/-- A key's value starts inside the array or at its end (the precondition of the value
+scanners). -/
+theorem nextMemberN_val_le (b : Array UInt8) (i w : Word) (hb : b.size < 2 ^ 63)
+    (h : (nextMemberN b i w).tag = 2) : (nextMemberN b i w).val.toNat ≤ b.size := by
+  fun_induction nextMemberN b i w with
+  | case1 i w hi _ ih => exact ih h
+  | case4 i w hi _ _ _ _ ih => exact ih h
+  | case8 i w hi _ _ _ _ _ hke _ =>
+    have := L.Scan.lt_of_lt_ofNat hi
+    have hk := L.Scan.Values.keyEndN_lt b (i + 1).toNat (by intro h0; rw [h0] at hke; exact hke rfl)
+    apply L.Scan.Key.valueAtN_le b _ _ (by omega) _ hb
+    have h64 : keyEndN b (i + 1).toNat < 2 ^ 64 := by omega
+    rw [UInt64.toNat_ofNat_of_lt' h64]; exact hk
+  | _ => simp_all [Mbr.err]
+
+grind_pattern [lang_grind] nextMemberN_val_le => (nextMemberN b i w).val
+
 /-! ## The generic object loop -/
 
 /-- con-leche's record loop for the key set `(bit, val, mask)`, from `i` with `wantMember = w`
@@ -145,7 +269,6 @@ def objN (bit : Word → Word) (val : Word → Word → Word → Word) (mask : W
     if (nextMemberN b i w).w ≠ 0 ∧ seen ≠ 0 then 0
     else if seen &&& mask ≠ mask then 0
     else (nextMemberN b i w).pos + 1
-  else if (nextMemberN b i w).tag ≠ 2 then 0
   else if bit (nextMemberN b i w).key = 0 then 0
   else if seen &&& bit (nextMemberN b i w).key ≠ 0 then 0
   else if _h : (nextMemberN b i w).pos <
@@ -156,11 +279,57 @@ def objN (bit : Word → Word) (val : Word → Word → Word → Word) (mask : W
   else 0
 termination_by b.size - i.toNat
 decreasing_by
-  have hk := nextMemberN_key b i w (by simp_all)
+  have hk := nextMemberN_key b i w (nextMemberN_tag b i w (by assumption) (by assumption))
   have := L.Scan.lt_of_lt_ofNat hk.2
   rw [UInt64.le_iff_toNat_le] at hk
   rw [UInt64.lt_iff_toNat_lt] at _h
   omega
+
+/-! ### Arms of `objN` -/
+
+section
+variable (bit : Word → Word) (val : Word → Word → Word → Word) (mask : Word) (b : Array UInt8)
+  (i w seen : Word)
+
+theorem objN_err (h : (nextMemberN b i w).tag = 0) : objN bit val mask b i w seen = 0 := by
+  rw [objN, if_pos h]
+theorem objN_close (h : (nextMemberN b i w).tag = 1) :
+    objN bit val mask b i w seen =
+      if (nextMemberN b i w).w ≠ 0 ∧ seen ≠ 0 then 0
+      else if seen &&& mask ≠ mask then 0
+      else (nextMemberN b i w).pos + 1 := by
+  rw [objN, if_neg (by simp [h]), if_pos h]
+theorem objN_unknown (h0 : (nextMemberN b i w).tag ≠ 0) (h1 : (nextMemberN b i w).tag ≠ 1) (hb : bit (nextMemberN b i w).key = 0) :
+    objN bit val mask b i w seen = 0 := by
+  rw [objN, if_neg h0, if_neg h1, if_pos hb]
+theorem objN_dup (h0 : (nextMemberN b i w).tag ≠ 0) (h1 : (nextMemberN b i w).tag ≠ 1) (hb : bit (nextMemberN b i w).key ≠ 0)
+    (hd : seen &&& bit (nextMemberN b i w).key ≠ 0) : objN bit val mask b i w seen = 0 := by
+  rw [objN, if_neg h0, if_neg h1, if_neg hb, if_pos hd]
+theorem objN_noprog (h0 : (nextMemberN b i w).tag ≠ 0) (h1 : (nextMemberN b i w).tag ≠ 1) (hb : bit (nextMemberN b i w).key ≠ 0)
+    (hd : seen &&& bit (nextMemberN b i w).key = 0)
+    (hp : ¬ (nextMemberN b i w).pos <
+      val (nextMemberN b i w).key (nextMemberN b i w).pos (nextMemberN b i w).val) :
+    objN bit val mask b i w seen = 0 := by
+  rw [objN, if_neg h0, if_neg h1, if_neg hb,
+    if_neg (by simp [hd]), dif_neg hp]
+theorem objN_step (e seen' : Word) (h0 : (nextMemberN b i w).tag ≠ 0) (h1 : (nextMemberN b i w).tag ≠ 1)
+    (hb : bit (nextMemberN b i w).key ≠ 0) (hd : seen &&& bit (nextMemberN b i w).key = 0)
+    (he : val (nextMemberN b i w).key (nextMemberN b i w).pos (nextMemberN b i w).val = e)
+    (hp : (nextMemberN b i w).pos < e) (hs : seen' = seen ||| bit (nextMemberN b i w).key) :
+    objN bit val mask b i w seen = objN bit val mask b e 0 seen' := by
+  subst he hs
+  rw [objN, if_neg h0, if_neg h1, if_neg hb,
+    if_neg (by simp [hd]), dif_pos hp]
+
+grind_pattern [lang_grind] objN_err => objN bit val mask b i w seen, nextMemberN b i w
+grind_pattern [lang_grind] objN_close => objN bit val mask b i w seen, nextMemberN b i w
+grind_pattern [lang_grind] objN_unknown => objN bit val mask b i w seen, nextMemberN b i w
+grind_pattern [lang_grind] objN_dup => objN bit val mask b i w seen, nextMemberN b i w
+grind_pattern [lang_grind] objN_noprog => objN bit val mask b i w seen, nextMemberN b i w
+grind_pattern [lang_grind] objN_step =>
+  objN bit val mask b i w seen, nextMemberN b i w, objN bit val mask b e 0 seen'
+
+end
 
 /-- Entering an object at its opening brace. -/
 def objEntryN (bit : Word → Word) (val : Word → Word → Word → Word) (mask : Word)

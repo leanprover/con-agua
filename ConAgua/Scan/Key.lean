@@ -551,8 +551,7 @@ section keyAt
 variable (p : Prog) (hp : p.lookup "key_at" = some keyAt) (b : Array UInt8) (hb : b.size < 2 ^ 63)
 include hp hb
 
-theorem keyAt_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl : Word)
-    (hi : i.toNat + 1 + kl.toNat < b.size) :
+theorem keyAt_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "key_at" [i, kl]
     ⦃fun r s' => s' = s₀ ∧ r = [keyAtN b i kl]; ⊤⦄ := by
