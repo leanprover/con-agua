@@ -94,7 +94,7 @@ theorem tempsArgs_ge (i : Nat) (args : List Expr) : i + args.length ≤ max i (t
   | cons e es ih => simp only [tempsArgs, List.length_cons]; have := ih (i + 1); omega
 
 section
-variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) < maxOff)
+variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) < maxOff) (p : Prog)
 include hG hTab
 
 theorem sim_args (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8 < maxOff) :

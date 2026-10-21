@@ -45,7 +45,7 @@ def InArr (x : Nat) : Prop := (∃ a < G.tab.nb, G.In8 a x) ∨ (∃ a < G.tab.n
 /-- The regions are inside the address space and pairwise disjoint. -/
 structure Ok : Prop where
   tab_end : G.tabEnd ≤ 2 ^ 64
-  hi_le : G.hi ≤ 2 ^ 64
+  hi_le : G.hi < 2 ^ 64
   lo_le : G.lo ≤ G.hi
   end8 : ∀ a < G.tab.nb, G.b8 a + G.s8 a < 2 ^ 64
   end64 : ∀ a < G.tab.nw, G.b64 a + 8 * G.s64 a < 2 ^ 64
@@ -98,6 +98,12 @@ theorem Only.trans {a b a' b' : Nat} {d d' d'' : DataMem} (h : Only a b d d') (h
     (ha : a ≤ a') (hb : b' ≤ b) : Only a b d d'' :=
   ⟨fun y hy => h'.grows y (h.grows y hy), fun x hx hab => by
     rw [h'.same x hx (by omega), h.same x hx hab]⟩
+
+/-- Two changes, inside `[a, b)` together. -/
+theorem Only.union {a b a₁ b₁ a₂ b₂ : Nat} {d d' d'' : DataMem} (h : Only a₁ b₁ d d') (h' : Only a₂ b₂ d' d'')
+    (h1 : a ≤ a₁) (h2 : a ≤ a₂) (h3 : b₁ ≤ b) (h4 : b₂ ≤ b) : Only a b d d'' :=
+  ⟨fun y hy => h'.grows y (h.grows y hy), fun x hx hab => by
+    rw [h'.same x hx (by omega), h.same x hx (by omega)]⟩
 
 theorem Only.mono {a b a' b' : Nat} {d d' : DataMem} (h : Only a b d d') (ha : a' ≤ a) (hb : b ≤ b') :
     Only a' b' d d' :=
