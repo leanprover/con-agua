@@ -405,23 +405,23 @@ index 7706b595c1b04d8330f6f56fb63d09a4a67d0c75..0dd9bc401d47aceb80e0049ff59561d3
        rw [show ConLeche.whnfCoreStepW mode (ConLeche.pureFns mode env F1) env c d e
          = .ok (.done V) from hF1]
 diff --git a/vendor/con-ron/ConRon/Bridge/Core/Memo.lean b/vendor/con-ron/ConRon/Bridge/Core/Memo.lean
-index a4244e801efe97d6db2da4651216465d55f4196d..6668ab3ffe7f20365ce3cd737f8f92b526c62e7c 100644
+index b4d370691d800620912a3e826ae615a2861fe4d5..2002f9517313d4abc5ec308fab647e5b09917fcf 100644
 --- a/vendor/con-ron/ConRon/Bridge/Core/Memo.lean
 +++ b/vendor/con-ron/ConRon/Bridge/Core/Memo.lean
-@@ -242,6 +242,7 @@ theorem takeModeMemos_spec (s₀ : AState) :
-           { s₀.caches with
-             whnfCoreC := ∅, whnfCoreCheapC := ∅, whnfC := ∅,
-             inferC := ∅, inferIOC := ∅, defeqC := ∅ } }; ⊤⦄ := by
+@@ -253,6 +253,7 @@ theorem enterEager_spec (eager : Bool) (s₀ : AState) :
+               inferIOC := s₀.caches.eagerMemos.inferIOC,
+               defeqC := s₀.caches.eagerMemos.defeqC,
+               eagerMemos := ModeMemos.empty } }); ⊤⦄ := by
 +  dsimp only  -- con-agua patch: zeta the nested `with` (`let __src`) as `defeqSet_spec` does
-   vcgen [takeModeMemos] with finish
+   vcgen [enterEager] with finish
  
- /-- con-leche: ConLeche/Cached/StateC.lean:344-348 CState.putModeMemos —
-@@ -253,6 +254,7 @@ theorem putModeMemos_spec (s₀ : AState) (mm : ModeMemos) :
-           whnfCoreC := mm.whnfCoreC, whnfCoreCheapC := mm.whnfCoreCheapC,
-           whnfC := mm.whnfC, inferC := mm.inferC,
-           inferIOC := mm.inferIOC, defeqC := mm.defeqC } }; ⊤⦄ := by
+ /-- con-leche: ConLeche/Cached/StateC.lean:365-375 CState.leaveEager —
+@@ -268,6 +269,7 @@ theorem leaveEager_spec (sv : Option ModeMemos) (s₀ : AState) :
+               whnfCoreC := mm.whnfCoreC, whnfCoreCheapC := mm.whnfCoreCheapC,
+               whnfC := mm.whnfC, inferC := mm.inferC,
+               inferIOC := mm.inferIOC, defeqC := mm.defeqC } }); ⊤⦄ := by
 +  dsimp only  -- con-agua patch: zeta the nested `with` (`let __src`) as `defeqSet_spec` does
-   vcgen [putModeMemos] with finish
+   vcgen [leaveEager] with finish
  
  /-! ## 3. The cache invariant under an insert
 diff --git a/vendor/con-ron/ConRon/Bridge/Core/Walks/BetaSpine.lean b/vendor/con-ron/ConRon/Bridge/Core/Walks/BetaSpine.lean
@@ -1355,7 +1355,7 @@ index 0a03329577dd5bbdec6d352d18d2757121dde333..0edaef11503e8fee8956ee4847f5a060
    -- the field sorts
    have c22 := c15.trans ((p20.trans p22).toCore c15.ok)
 diff --git a/vendor/con-ron/ConRon/Bridge/Specs.lean b/vendor/con-ron/ConRon/Bridge/Specs.lean
-index 98567c8d9a123f8acf591af3dbea60aefae0ee1f..51703330becbce90780a6cd033eafd31a82f1df7 100644
+index f09a4bd2034355b3a8f8ffa5a77670a264147527..907747815161d4b1f3ea43c0f5648b5deb203e57 100644
 --- a/vendor/con-ron/ConRon/Bridge/Specs.lean
 +++ b/vendor/con-ron/ConRon/Bridge/Specs.lean
 @@ -431,7 +431,7 @@ theorem internLamE_spec_view (s₀ : AState) (ty b : EIdx)

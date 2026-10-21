@@ -4077,6 +4077,8 @@ written. Tagged `refines` (proof modulo `sorry`), the census's coverage rule mad
 below `installFold` "proven with `sorry`" — 769 of 1350, measured — which would read as progress
 that is not there. (Note for lane `census`: coverage through a `sorry` target is a coverage
 claim about callees that may have no L code at all; a `sorry` target probably should not cover.)
+Update (lane `sync`): coverage now flows only from sorry-free targets, and the skeleton is tagged
+`@[refines …]` again, so it counts as `sorry` and its callees keep their own status.
 
 * L functions (all in one generic program `p` with lookups): `install_then_check()` →
   `install_fold_go`/`install_fold_next(i, cnt, vis)` (one record per call, recursion; a pair so
@@ -4410,12 +4412,16 @@ lockfile), `vendor/UPSTREAM` + `vendor/patches/` (the vendored state as data),
   toolchain bump re-records everything (`--reviewed .`) and is never combined with a twin bump; and
   a changed proof term inside a definition's value (a `decreasing_by`) makes it stale
   spuriously. 32 bits of hash entropy: a missed change is a 2⁻³² event per changed target.
-* **Which targets get a row**: every target that is not `todo`, i.e. with L code, a proof, or
-  coverage (reached only through proven targets). A covered target has no link of its own, so its
-  stale entry names the linked targets above it whose proofs cover it. A row is written once
-  (`--write` adds rows for new links) and only replaced by `--reviewed REGEX`, run by the lane that
-  checked the code against the new twin. The row keeps the upstream revision it was recorded at,
-  so the stale list prints the exact `git diff` to read.
+* **Every target gets a row; stale also looks below.** A target with L code, a proof or coverage
+  is stale when its own fingerprint changed, or when a `todo` target below it changed (reached
+  through `todo` targets only: twin code its own L code stands for). The second rule was found by
+  this bump: `flushCaches` is unchanged, but `Caches.empty` below it gained a field. Linked or
+  covered callees are not looked through: they are flagged themselves. A stale covered target
+  names the linked targets above it whose proofs cover it. `--reviewed REGEX` (by the lane that
+  checked) re-records the matching targets and every changed `todo` target that no other stale
+  target still reaches; `--record` (run by the bump) and `--write` add missing rows and settle
+  changed `todo` targets that no linked target reaches. Each row keeps the upstream revision it
+  was recorded at, so the stale list prints the exact `git diff` to read.
 * **Stale is a flag, not a status**: a stale proven target stays proven in the counts (the proof
   still checks against the vendored twin, or the build is red); the flag says the L code may no
   longer be what the twin computes on the other side of the relation, e.g. a cache the relation
@@ -4428,3 +4434,49 @@ lockfile), `vendor/UPSTREAM` + `vendor/patches/` (the vendored state as data),
 * con-ron's own sync (`scripts/bump-con-leche.sh`, `provenance.py`, `twin-lines.py`) tracks a
   `(pin, path, line range)` citation per item and diffs the cited text between pins; we have no
   per-item citations of our own beyond the census links, and the elaborated fingerprint needs none.
+
+### con-ron bump to `12752ca7` (con-leche `ae1f3198`), 2026-10-21
+
+**What changed upstream** (con-ron task #127, con-leche tasks #359/#361): the eager tower keeps its
+memos. Before, every eager comparison (the knot's `defeqE` slot) ran on emptied mode memos
+(`takeModeMemos`) and threw away what it learned (`putModeMemos`). Now `Caches` has a fifteenth
+field `eagerMemos : ModeMemos`, the eager tower's own six mode memos, kept for the declaration;
+`enterEager mode.eager` swaps them into the six fields (from a plain mode; at an eager mode
+nothing moves) and returns the plain set, `leaveEager` stores the six back as the eager set and
+restores the plain ones. `defeqE` now also memoizes its verdict (`defeqC` probe/insert on the
+eager set). `takeModeMemos`/`putModeMemos` are gone; `Caches.empty`, `Caches.modeMemos`,
+`ModeMemos.empty` are new or changed. (con-leche: `CState.eagerMemos`, `withEagerMemos`;
+grind-ring-5 −30 % instructions.) Also task #359 (con-leche proofs only: cached loops unfold by
+`f.eq_def`). Theorem 1 followed upstream; Theorem 2 is not vendored as buildable.
+
+**Bump result.** All patches re-applied; one conflict, `Bridge/Core/Memo.lean`, where the new
+`enterEager_spec`/`leaveEager_spec` replace the specs our patch touched; they needed the same
+`dsimp only` before `vcgen` (nested `{ … with }`), now in `con-ron/0002`. The KnotC patch applied
+with an offset. Everything builds, our code included, with no change: no L proof mentions the
+new field, because `CoreR` relates the nine L caches to their twin fields and says nothing about
+the others.
+
+**Stale targets** (`scripts/census.py --stale`, 7):
+* `flushCaches` (proven, lane `whnf`): `Caches.empty` now also empties `eagerMemos`. The proof
+  still checks only because `CoreR` ignores the new field. **Lane `whnf` (and `libs`, owner of
+  `MemoBank.lean`)**: the banked design (`bank_enter`/`bank_leave` = a fresh empty bank per eager
+  comparison, dropped afterwards) no longer matches the twin. The twin now has exactly two
+  mode-memo sets, plain and eager, both kept for the declaration and cleared by `flushCaches`;
+  a nested eager comparison uses the same eager set. In L this is two fixed banks (generations
+  0 and 1, or two array groups), with no generation counter. `CoreR` needs a clause for
+  `eagerMemos`, `flush_caches` must clear the eager bank, and the `defeqE` slot (when it is
+  written) probes and inserts `defeqC` on the eager bank. `MemoBank.lean`'s and
+  `CoreCaches.lean`'s doc comments still describe take/put.
+* `lvlEq?`, `lvlsEq?` (proven, lane `levels`): their own code is unchanged, but `readLevelM`/
+  `readLevelsM` below them write `{ s.caches with readLC := … }`, and that changed because of the
+  added field. Most likely no L change: review, then `--reviewed 'lvlsEq\?|lvlEq\?'`.
+* `installStep`, `installDeclStep`, `checkPending`, `checkPendingList` (sorry, lane `pinsenv`):
+  the same field-add, through `Caches.empty` (the per-declaration bracket) and the readbacks under
+  the stubs. Check the bracket's `CoreR` use once lane `whnf` has extended `CoreR`.
+
+### Census: coverage only from sorry-free targets (2026-10-21, lane `sync`)
+At lane `pinsenv`'s request: a target proved only modulo `sorry` counts as `sorry` but covers none
+of its callees (before, a top-down skeleton over stub specs made 769 targets "sorry" by coverage).
+The skeleton's five theorems in `ConAgua/Arena/Checker.lean` are tagged `@[refines …]` again
+(they were `refines_part … "skeleton, from the stub specs"` to work around it), so the census now
+shows 13 targets proven with `sorry`.

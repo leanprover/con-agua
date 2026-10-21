@@ -23,7 +23,8 @@
 #   4. writes vendor/UPSTREAM, regenerates scripts/census-rust.tsv from the new Rust;
 #   5. builds (`scripts/lake build` and the census), log in _tmp/bump-<short>/build.log, and
 #      prints the files with errors;
-#   6. runs the census and prints the stale targets: the work queue.
+#   6. runs the census: records the new targets' fingerprints and those of changed targets no
+#      linked target reaches (`--record`), and prints the stale targets: the work queue.
 # Nothing is committed. Afterwards: fix the build (an edit to a vendored file goes into a patch:
 # --refresh-patches), commit, and announce the stale list (DESIGN.md).
 set -euo pipefail
@@ -209,7 +210,7 @@ bump() {
   if [[ -n "$conflicts" ]]; then
     echo "== conflicts in:$conflicts"
     git diff --name-only --diff-filter=U | sed 's/^/   /'
-    echo "   resolve, then --refresh-patches, then build and run scripts/census.py --stale" >&2
+    echo "   resolve (git add), then --refresh-patches, build, scripts/census.py --record, --stale" >&2
     exit 1
   fi
   log="$work/build.log"
@@ -219,12 +220,13 @@ bump() {
   if [[ $bok == 1 ]]; then
     echo "   build FAILED; files with errors:"
     grep -o '^error: [^:]*\.lean' "$log" | sort | uniq -c | sed 's/^/   /' || true
-    echo "   (the census needs a build; fix, then run scripts/census.py --stale)"
+    echo "   (the census needs a build; fix, then run scripts/census.py --record and --stale)"
     exit 1
   fi
   echo "   build ok"
   echo "== the work queue (scripts/census.py --stale)"
-  timeout 1800 python3 scripts/census.py --stale
+  timeout 1800 python3 scripts/census.py --record >/dev/null
+  timeout 1800 python3 scripts/census.py --no-build --stale
 }
 
 case "${1:-}" in

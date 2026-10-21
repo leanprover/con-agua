@@ -244,12 +244,6 @@ theorem isEquivList_cons (l r : Level) (ls rs : List Level) :
   | none => rfl
   | some b => cases b <;> rfl
 
-theorem isEquivListLM_nil_cons (r : Level) (rs : List Level) :
-    isEquivListLM [] (r :: rs) = pure (some false) := rfl
-
-theorem isEquivListLM_cons_nil (l : Level) (ls : List Level) :
-    isEquivListLM (l :: ls) [] = pure (some false) := rfl
-
 /-- Pointwise `isEquivLM`. -/
 theorem isEquivListLM_spec :
     ∀ {ls rs : List Level} {s₀ : CState}, CSOK mode env s₀ →
@@ -265,13 +259,13 @@ theorem isEquivListLM_spec :
       sym only [conleche_grind, Level.isEquivList] => vcgen [isEquivListLM] <;> finish
     | cons _ _ =>
       intro _ _
-      sym only [conleche_grind, Level.isEquivList] => vcgen [isEquivListLM_nil_cons] <;> finish
+      sym only [conleche_grind, Level.isEquivList] => vcgen [isEquivListLM.eq_def] <;> finish
   | cons l ls ihL =>
     intro rs
     cases rs with
     | nil =>
       intro _ _
-      sym only [conleche_grind, Level.isEquivList] => vcgen [isEquivListLM_cons_nil] <;> finish
+      sym only [conleche_grind, Level.isEquivList] => vcgen [isEquivListLM.eq_def] <;> finish
     | cons r rs =>
       intro _ hs
       sym only [conleche_grind, isEquivList_cons] =>

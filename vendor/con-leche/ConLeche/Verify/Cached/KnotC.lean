@@ -406,18 +406,18 @@ private theorem ssimC_all (env : Env) (henv : EnvWF env) :
           (fun hs hwa hwb => defeqBodyC_spec (ssimC_all env henv f mode hμ) henv hs hwa hwb)
           hs hwa hwb)
       -- the eager slot (task #353): the eager tower's memoized `defeq`
-      -- under fresh memos; its fueled side has the eager tower's runs
-      -- (`defeqE_def`)
+      -- on the eager tower's memos (task #361); its fueled side has the
+      -- eager tower's runs (`defeqE_def`)
       defeqE := fun {s₀ d i j a b} hs hdena hdenb hwa hwb => by
         have hE : mode.toEager.verifiedChecks = true := by
           rw [CheckMode.verifiedChecks_toEager]; exact hμ
         refine SimC.congr_fueled (p := (fueledFns mode.toEager env).defeq d a b)
           (fun F => defeqE_def env F d a b) ?_
         show SimC mode env s₀ RelVC
-          (withFreshMemos ((coreKnotI mode.toEager (mkFEnv env) (f + 1)).defeq d i j)) _
+          (withEagerMemos mode ((coreKnotI mode.toEager (mkFEnv env) (f + 1)).defeq d i j)) _
         obtain rfl := hdena
         obtain rfl := hdenb
-        exact SimC.freshMemos hs (fun hs₁ => SimC.of_tripleVC (memoBI_defeq_spec henv
+        exact SimC.eagerMemos hs (fun hs₁ => SimC.of_tripleVC (memoBI_defeq_spec henv
           (fun hs hwa hwb =>
             defeqBodyC_spec (ssimC_all env henv f mode.toEager hE) henv hs hwa hwb)
           hs₁ hwa hwb))

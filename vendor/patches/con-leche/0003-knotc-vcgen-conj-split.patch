@@ -3,7 +3,7 @@ each _hit lemma: vcgen splits a conjunction post into one VC per conjunct since 
 (vendor/README.md, "Toolchain switch" 3).
 
 diff --git a/vendor/con-leche/ConLeche/Verify/Cached/KnotC.lean b/vendor/con-leche/ConLeche/Verify/Cached/KnotC.lean
-index d4cedf5561289dc31b383acd25a95193af885458..26cf22c994f4674fe04322b276f5edc430b061dd 100644
+index 279feef1c16294c90e6c517d623615f31d05553b..8af960cde8a9d1bad09741ad5b20168503c8adc3 100644
 --- a/vendor/con-leche/ConLeche/Verify/Cached/KnotC.lean
 +++ b/vendor/con-leche/ConLeche/Verify/Cached/KnotC.lean
 @@ -64,6 +64,14 @@ theorem CSOK.whnfCore_hit (henv : EnvWF env) {s : CState} {d : Nat} {i r : Expr}

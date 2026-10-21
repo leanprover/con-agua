@@ -426,7 +426,7 @@ ConRon/Arena/CheckerBase	nameNodup	3
 ConRon/Arena/CheckerBase	openPisAtFvars	30
 ConRon/Arena/CheckerBase	openPisAtFvarsF	13
 ConRon/Arena/CheckerBase	openPisAtFvarsFGo	40
-ConRon/Arena/CheckerBase	orElseAttempt	87
+ConRon/Arena/CheckerBase	orElseAttempt	98
 ConRon/Arena/CheckerBase	unresolvedConstsError	19
 ConRon/Arena/CheckerBase	unresolvedConstsErrorL	33
 ConRon/Arena/CheckerBase	unwrapOr	6
@@ -452,7 +452,7 @@ ConRon/Arena/Core	constE	6
 ConRon/Arena/Core	constTyAt	27
 ConRon/Arena/Core	constValAt	29
 ConRon/Arena/Core	constsResolve	111
-ConRon/Arena/Core	coreKnot	216
+ConRon/Arena/Core	coreKnot	226
 ConRon/Arena/Core	defEqList	31
 ConRon/Arena/Core	defeqArg	19
 ConRon/Arena/Core	defeqBinders	27
@@ -473,6 +473,7 @@ ConRon/Arena/Core	eagerReduceName	3
 ConRon/Arena/Core	emptyLevels	3
 ConRon/Arena/Core	ensureSort	23
 ConRon/Arena/Core	ensureSortCore	12
+ConRon/Arena/Core	enterEager	18
 ConRon/Arena/Core	enterScratch	8
 ConRon/Arena/Core	etaCert	85
 ConRon/Arena/Core	etaCtorShape	29
@@ -521,6 +522,7 @@ ConRon/Arena/Core	lazyDeltaProjReduction	57
 ConRon/Arena/Core	lazyDeltaReduction	82
 ConRon/Arena/Core	lazyDeltaStep	165
 ConRon/Arena/Core	lazyFoldOk	13
+ConRon/Arena/Core	leaveEager	19
 ConRon/Arena/Core	liftFueled	6
 ConRon/Arena/Core	listConsTyOk	121
 ConRon/Arena/Core	listNilTyOk	95
@@ -577,7 +579,6 @@ ConRon/Arena/Core	projMissError	17
 ConRon/Arena/Core	projNodesGo	20
 ConRon/Arena/Core	proofIrrel	98
 ConRon/Arena/Core	propIrrel	49
-ConRon/Arena/Core	putModeMemos	8
 ConRon/Arena/Core	quickDefEq	62
 ConRon/Arena/Core	rawNatLit?	20
 ConRon/Arena/Core	recFireArgs	17
@@ -606,7 +607,6 @@ ConRon/Arena/Core	substConst0	34
 ConRon/Arena/Core	substConstAll	64
 ConRon/Arena/Core	substLevelsAt	28
 ConRon/Arena/Core	substParamLevels	28
-ConRon/Arena/Core	takeModeMemos	10
 ConRon/Arena/Core	teleArityOk	6
 ConRon/Arena/Core	towerSlotsAll	10
 ConRon/Arena/Core	towerSlotsAllGo	19
@@ -630,10 +630,11 @@ ConRon/Arena/Core	whnfStep	24
 ConRon/Arena/Core	zeroLevel	3
 ConRon/Arena/CoreState	Caches.constTyC	3
 ConRon/Arena/CoreState	Caches.defeqC	3
-ConRon/Arena/CoreState	Caches.empty	34
+ConRon/Arena/CoreState	Caches.empty	36
 ConRon/Arena/CoreState	Caches.lvlEqC	3
 ConRon/Arena/CoreState	Caches.lvlsEqC	3
 ConRon/Arena/CoreState	Caches.ruleRhsC	7
+ConRon/Arena/CoreState	ModeMemos.empty	18
 ConRon/Arena/DeclCheck	certifyNatEqs	24
 ConRon/Arena/DeclCheck	checkDefnVal	35
 ConRon/Arena/DeclCheck	checkDivModCerts	84

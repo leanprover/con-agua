@@ -1546,9 +1546,10 @@ def coreKnotI (mode : CheckMode) (fe : FEnv) : Nat → CoreFnsI
       defeq := memoBI
         (fun d a b => defeqBodyI mode (prev ()) fe d a b)
       -- **The eager slot** (task #353): the eager tower — the knot at
-      -- `mode.toEager` one level down — under its own memos
-      -- (`withFreshMemos`: an eager entry never serves a plain query)
-      defeqE := fun d a b => withFreshMemos
+      -- `mode.toEager` one level down — on its own memos, kept in the
+      -- state between eager comparisons (`withEagerMemos`, task #361:
+      -- an eager entry never serves a plain query)
+      defeqE := fun d a b => withEagerMemos mode
         (memoBI (fun d a b =>
           defeqBodyI mode.toEager (coreKnotI mode.toEager fe fuel) fe d a b) d a b)
       -- **The io slot** (task #170 / #172 B4, task #346): the io body

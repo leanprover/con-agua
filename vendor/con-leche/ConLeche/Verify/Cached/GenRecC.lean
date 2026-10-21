@@ -647,25 +647,6 @@ theorem classRuleOkS_spec (hμ : mode.verifiedChecks = true) {envR : Env} (henvR
   sym only [conleche_grind, classRuleOk.eq_1, unwrapOr.eq_1, → wscoped_of_closed] =>
     vcgen [classRuleOk, unwrapOr, ruleR_infer_spec hμ henvR] <;> finish
 
-/-- `classRulesOk`'s step (the equation lemma is realized in
-`BlockOverlay.lean`, which this file's public interface must not name). -/
-theorem classRulesOk_cons {m : Type → Type} [Monad m] [MonadExceptOf CheckError m]
-    (ops : CheckerOps m) (w : StructWalkers) (feT feR : FEnv) (g : ClassGen)
-    (recOf : Nat → Option Name) (cvR : ConstantVal) (c : Nat) (x : ClassCtor)
-    (xs : List ClassCtor) :
-    classRulesOk ops w feT feR g recOf cvR c (x :: xs) = (do
-      let gen ← unwrapOr (classGenRule g recOf (cvR.levelParams.map .param) c x)
-        (.invalid s!"generated recursor: the rule of {x.cv.name} calls a class whose recursor the \
-          stream omits (official: unknown constant)")
-      let r ← classRuleOk ops w feT feR cvR (g.nP + g.slots.length + x.nF) gen
-      let rs ← classRulesOk ops w feT feR g recOf cvR c xs
-      pure (r :: rs)) := rfl
-
-theorem classRulesOk_nil {m : Type → Type} [Monad m] [MonadExceptOf CheckError m]
-    (ops : CheckerOps m) (w : StructWalkers) (feT feR : FEnv) (g : ClassGen)
-    (recOf : Nat → Option Name) (cvR : ConstantVal) (c : Nat) :
-    classRulesOk ops w feT feR g recOf cvR c [] = pure [] := rfl
-
 theorem classRulesOkS_spec (hμ : mode.verifiedChecks = true) {envR envT : Env}
     (henvR : EnvWF envR) {g : ClassGen} {recOf : Nat → Option Name} {cvR : ConstantVal}
     {c : Nat} :
@@ -680,32 +661,12 @@ theorem classRulesOkS_spec (hμ : mode.verifiedChecks = true) {envR envT : Env}
   induction xs with
   | nil =>
     intro _ hs
-    sym only [conleche_grind, classRulesOk_nil] =>
-      vcgen [classRulesOk_nil] <;> finish
+    sym only [conleche_grind, classRulesOk] =>
+      vcgen [classRulesOk.eq_def] <;> finish
   | cons x xs ih =>
     intro _ hs
-    sym only [conleche_grind, classRulesOk_cons, unwrapOr.eq_1] =>
-      vcgen [classRulesOk_cons, unwrapOr, classRuleOkS_spec hμ henvR envT, ih] <;> finish
-
-theorem classRecsRulesOk_cons {m : Type → Type} [Monad m] [MonadExceptOf CheckError m]
-    (ops : CheckerOps m) (w : StructWalkers) (feT feR : FEnv) (g : ClassGen)
-    (recOf : Nat → Option Name) (cvG : ConstantVal) (cvs : List ConstantVal) (c : Nat)
-    (cs : List Nat) :
-    classRecsRulesOk ops w feT feR g recOf (cvG :: cvs) (c :: cs) = (do
-      let rhss ← classRulesOk ops w feT feR g recOf cvG c (g.ctors.getD c [])
-      let xs ← classRecsRulesOk ops w feT feR g recOf cvs cs
-      pure ((cvG, g.cls.getD c default, rhss) :: xs)) := rfl
-
-theorem classRecsRulesOk_nil {m : Type → Type} [Monad m] [MonadExceptOf CheckError m]
-    (ops : CheckerOps m) (w : StructWalkers) (feT feR : FEnv) (g : ClassGen)
-    (recOf : Nat → Option Name) (cs : List Nat) :
-    classRecsRulesOk ops w feT feR g recOf [] cs = pure [] := rfl
-
-theorem classRecsRulesOk_nil_right {m : Type → Type} [Monad m] [MonadExceptOf CheckError m]
-    (ops : CheckerOps m) (w : StructWalkers) (feT feR : FEnv) (g : ClassGen)
-    (recOf : Nat → Option Name) (cvs : List ConstantVal) :
-    classRecsRulesOk ops w feT feR g recOf cvs [] = pure [] := by
-  cases cvs <;> rfl
+    sym only [conleche_grind, classRulesOk, unwrapOr.eq_1] =>
+      vcgen [classRulesOk.eq_def, unwrapOr, classRuleOkS_spec hμ henvR envT, ih] <;> finish
 
 theorem classRecsRulesOkS_spec (hμ : mode.verifiedChecks = true) {envR envT : Env}
     {g : ClassGen} {recOf : Nat → Option Name} :
@@ -720,19 +681,19 @@ theorem classRecsRulesOkS_spec (hμ : mode.verifiedChecks = true) {envR envT : E
   induction cvs with
   | nil =>
     intro cs _ henvR hs
-    sym only [conleche_grind, classRecsRulesOk_nil] =>
-      vcgen [classRecsRulesOk_nil] <;> finish
+    sym only [conleche_grind, classRecsRulesOk] =>
+      vcgen [classRecsRulesOk.eq_def] <;> finish
   | cons cvG cvs ih =>
     intro cs
     cases cs with
     | nil =>
       intro _ henvR hs
-      sym only [conleche_grind, classRecsRulesOk_nil_right] =>
-        vcgen [classRecsRulesOk_nil_right] <;> finish
+      sym only [conleche_grind, classRecsRulesOk] =>
+        vcgen [classRecsRulesOk.eq_def] <;> finish
     | cons c cs =>
       intro _ henvR hs
-      sym only [conleche_grind, classRecsRulesOk_cons] =>
-        vcgen [classRecsRulesOk_cons, classRulesOkS_spec (envT := envT) hμ henvR,
+      sym only [conleche_grind, classRecsRulesOk] =>
+        vcgen [classRecsRulesOk.eq_def, classRulesOkS_spec (envT := envT) hμ henvR,
           ih cs] <;> finish
 
 /-! ## 3. The assembly -/

@@ -12,8 +12,8 @@ Simulation walks relating the cached binder-telescope loops
 (`inferLamsI`/`inferPisI`, `ConLeche/Cached/CoreC.lean`) to the pure
 mirrors (`ConLeche/Verify/BinderLoop.lean`) at the fueled record, plus
 the two *tail compositions* against `inferBody`'s own λ/∀ tails.  The
-loops are `Std.WP` triples proved by `vcgen` and `grind`, one unconditional
-step equation per loop (`inferLamsI_succ`, `inferPisI_succ`); the tail
+loops are `Std.WP` triples proved by `vcgen` and `grind`, each loop
+unfolded by its `eq_def`; the tail
 compositions are run-level `SimC`s (`SimC.wp`/`SimC.wr` over the pure
 loops' soundness, `inferLams_sound`), read as triples in `DiscC4.lean`.
 
@@ -39,25 +39,9 @@ variable {env : Env} {f : Nat}
 
 The cached loops match their term on `.lam`/`.forallE`; the equation
 compiler states their successor step as one equation per arm, the
-fall-through one conditional, so each loop gets one unconditional
-equation for `vcgen` (`inferLamsI_succ`, `inferPisI_succ`), and the pure
-mirrors' own equation lemmas go into the `sym` list. -/
-
-theorem inferLamsI_succ (r : CoreFnsI) (d fuel : Nat) (t : Expr) (k : Nat)
-    (fvs : Array Expr) (stk : List Expr) :
-    inferLamsI r d (fuel + 1) t k fvs stk =
-      match t with
-      | .lam ty body => do
-        let tyo ← instListRevM ty fvs
-        let tty ← r.infer (d + k) tyo
-        let wtty ← r.whnf (d + k) tty
-        match wtty with
-        | .sort _ => do
-          let fv ← pure (Expr.fvar (d + k) tyo)
-          inferLamsI r d fuel body (k + 1) (fvs.push fv) (tyo :: stk)
-        | _ => throw (.invalid "expected a sort")
-      | t => inferLamsLeafI r d t k fvs stk := by
-  cases t <;> (simp only [inferLamsI]; try rfl)
+fall-through one conditional, which `vcgen` skips, so each loop is
+unfolded by its unconditional `eq_def`, and the pure mirrors' own
+equation lemmas go into the `sym` list. -/
 
 theorem inferLamsOutC_spec {d : Nat} :
     ∀ {stk : List Expr} {j : Nat} {cur : Expr} {s₀ : CState}, CSOK mode env s₀ →
@@ -99,27 +83,11 @@ theorem inferLamsC_spec (ih : SSimC mode env f) {d : Nat} :
   | succ fuel ihFuel =>
     intro _ _ _ _ _ hs hw
     sym only [conleche_grind, inferLams.eq_1, inferLams.eq_2] =>
-      vcgen [inferLamsI_succ, instListRevM_spec hs, ih.infer_spec, ih.whnf_spec,
+      vcgen [inferLamsI.eq_def, instListRevM_spec hs, ih.infer_spec, ih.whnf_spec,
         ihFuel, inferLamsLeafC_spec ih] <;> finish
 
 /-! ## The infer-∀ loop walks (task #100 stage 6: the ∀-rule infers
 its codomain sort, so the cached side runs a telescope loop) -/
-
-theorem inferPisI_succ (r : CoreFnsI) (d fuel : Nat) (t : Expr) (k : Nat)
-    (fvs : Array Expr) (stk : List Level) :
-    inferPisI r d (fuel + 1) t k fvs stk =
-      match t with
-      | .forallE ty body => do
-        let tyo ← instListRevM ty fvs
-        let tty ← r.infer (d + k) tyo
-        let wtty ← r.whnf (d + k) tty
-        match wtty with
-        | .sort u => do
-          let fv ← pure (Expr.fvar (d + k) tyo)
-          inferPisI r d fuel body (k + 1) (fvs.push fv) (u :: stk)
-        | _ => throw (.invalid "expected a sort")
-      | t => inferPisLeafI r d t k fvs stk := by
-  cases t <;> (simp only [inferPisI]; try rfl)
 
 theorem inferPisOutC_spec :
     ∀ {stk : List Level} {v : Level} {s₀ : CState}, CSOK mode env s₀ →
@@ -160,7 +128,7 @@ theorem inferPisC_spec (ih : SSimC mode env f) {d : Nat} :
   | succ fuel ihFuel =>
     intro _ _ _ _ _ hs hw
     sym only [conleche_grind, inferPis.eq_1, inferPis.eq_2] =>
-      vcgen [inferPisI_succ, instListRevM_spec hs, ih.infer_spec, ih.whnf_spec,
+      vcgen [inferPisI.eq_def, instListRevM_spec hs, ih.infer_spec, ih.whnf_spec,
         ihFuel, inferPisLeafC_spec ih] <;> finish
 
 /-! ## Tail compositions: the infer loops against the chained bodies'
