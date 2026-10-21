@@ -63,6 +63,21 @@ theorem St.loc_of_eq_mk {t : St} {m : Mem} {l : Locals} (h : t = St.mk m l) (x :
 
 grind_pattern [lang_grind] St.loc_of_eq_mk => t.loc x, St.mk m l
 
+/-- The locals of `s` are those of `t`: the frame condition of a callee that may change memory
+(post `LocEq s' s₀ ∧ …`). A plain `s'.loc = s₀.loc` does not reach the caller's reads
+`s'.loc x`: `grind` would have to apply the function equation, and the term `s₀.loc x` does not
+exist yet. The pattern `LocEq s t, s.loc x` creates it. -/
+def LocEq (s t : St) : Prop := s.loc = t.loc
+
+theorem LocEq.loc {s t : St} (h : LocEq s t) (x : Var) : s.loc x = t.loc x := by rw [h]
+
+grind_pattern [lang_grind] LocEq.loc => LocEq s t, s.loc x
+
+/-- `callFn` restores the caller's locals: the callee's post `LocEq s' s₀` holds. -/
+theorem LocEq.restore (s : St) (m : Mem) : LocEq (St.mk m s.loc) s := rfl
+
+grind_pattern [lang_grind] LocEq.restore => St.mk m s.loc
+
 /-- Restoring the caller's locals after a call that left the memory alone gives back the
 caller's state. -/
 @[lang_grind =] theorem St.restore_eq (s s' : St) (h : s'.mem = s.mem) :

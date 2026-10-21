@@ -555,6 +555,11 @@ compiler lane's merge (`43a0825`) dropped by accident.
   Reproducer, still failing without the lemma: `docs/gaps/grind-state-eq-projection.lean`.
 * **`&&`/`||` in `while`**: fixed upstream (see above); `skip_ws`/`skip_digits` now use the
   Rust condition.
+* **Callees that write memory** (arena request 4): `LocEq s t` (`s.loc = t.loc`) with the
+  pattern `LocEq s t, s.loc x` (which creates `t.loc x`) and `LocEq.restore` (`callFn`
+  restores the caller's locals). A callee spec posts `LocEq s' s₀ ∧ …`; with a plain
+  `s'.loc = s₀.loc` the caller's read of its own local after the call does not close (checked on
+  `bump`/`bumpUser` in `Examples.lean`, which now use `LocEq`).
 
 ### New expressions: `mulhi`, comparisons as words, constant data
 
