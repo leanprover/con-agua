@@ -359,6 +359,17 @@ limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X 
 its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
 visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
 
+### `nat_gcd`: Euclid over `nat_divmod`
+
+`while la != 0 { (oa, la, ob, lb) := call gcd_step(oa, la, ob, lb) }`, `gcd_step` returning
+`(b % a, a)` (`nat_divmod`'s remainder slice and `a`'s). The invariant is `nat_pow`'s shape (two
+moving slices, `Grows` from the entry memory, `Nat.gcd a b = G`); the step is
+`Nat.gcd (b % a) a = Nat.gcd a b` (`gcd_step`, pattern on the left side), the exit
+`gcd_zero_len` (`la = 0`). With the divmod call and four `setLoc`s inline in the loop body, the
+house form hit `grind`'s term generation limit and `nat_mul`'s recipe lost the frames
+(`and_intros` unfolds `Grows`); with the step as its own function, both went through at once
+(again: loop bodies straight-line and shallow).
+
 ### The `natOpResult` arms under `ArenaR` (`NatArms.lean`)
 
 Every arm whose result is a literal is `litArm F a b = do let x ← internE (.lit (.natVal
@@ -1591,6 +1602,17 @@ limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X 
 its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
 visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
 
+### `nat_gcd`: Euclid over `nat_divmod`
+
+`while la != 0 { (oa, la, ob, lb) := call gcd_step(oa, la, ob, lb) }`, `gcd_step` returning
+`(b % a, a)` (`nat_divmod`'s remainder slice and `a`'s). The invariant is `nat_pow`'s shape (two
+moving slices, `Grows` from the entry memory, `Nat.gcd a b = G`); the step is
+`Nat.gcd (b % a) a = Nat.gcd a b` (`gcd_step`, pattern on the left side), the exit
+`gcd_zero_len` (`la = 0`). With the divmod call and four `setLoc`s inline in the loop body, the
+house form hit `grind`'s term generation limit and `nat_mul`'s recipe lost the frames
+(`and_intros` unfolds `Grows`); with the step as its own function, both went through at once
+(again: loop bodies straight-line and shallow).
+
 ### The `natOpResult` arms under `ArenaR` (`NatArms.lean`)
 
 Every arm whose result is a literal is `litArm F a b = do let x ← internE (.lit (.natVal
@@ -1894,6 +1916,17 @@ limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X 
 its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
 visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
 
+### `nat_gcd`: Euclid over `nat_divmod`
+
+`while la != 0 { (oa, la, ob, lb) := call gcd_step(oa, la, ob, lb) }`, `gcd_step` returning
+`(b % a, a)` (`nat_divmod`'s remainder slice and `a`'s). The invariant is `nat_pow`'s shape (two
+moving slices, `Grows` from the entry memory, `Nat.gcd a b = G`); the step is
+`Nat.gcd (b % a) a = Nat.gcd a b` (`gcd_step`, pattern on the left side), the exit
+`gcd_zero_len` (`la = 0`). With the divmod call and four `setLoc`s inline in the loop body, the
+house form hit `grind`'s term generation limit and `nat_mul`'s recipe lost the frames
+(`and_intros` unfolds `Grows`); with the step as its own function, both went through at once
+(again: loop bodies straight-line and shallow).
+
 ### The `natOpResult` arms under `ArenaR` (`NatArms.lean`)
 
 Every arm whose result is a literal is `litArm F a b = do let x ← internE (.lit (.natVal
@@ -2119,6 +2152,17 @@ limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X 
 its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
 visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
 
+### `nat_gcd`: Euclid over `nat_divmod`
+
+`while la != 0 { (oa, la, ob, lb) := call gcd_step(oa, la, ob, lb) }`, `gcd_step` returning
+`(b % a, a)` (`nat_divmod`'s remainder slice and `a`'s). The invariant is `nat_pow`'s shape (two
+moving slices, `Grows` from the entry memory, `Nat.gcd a b = G`); the step is
+`Nat.gcd (b % a) a = Nat.gcd a b` (`gcd_step`, pattern on the left side), the exit
+`gcd_zero_len` (`la = 0`). With the divmod call and four `setLoc`s inline in the loop body, the
+house form hit `grind`'s term generation limit and `nat_mul`'s recipe lost the frames
+(`and_intros` unfolds `Grows`); with the step as its own function, both went through at once
+(again: loop bodies straight-line and shallow).
+
 ### The `natOpResult` arms under `ArenaR` (`NatArms.lean`)
 
 Every arm whose result is a literal is `litArm F a b = do let x ← internE (.lit (.natVal
@@ -2317,6 +2361,17 @@ limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X 
 its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
 visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
 
+### `nat_gcd`: Euclid over `nat_divmod`
+
+`while la != 0 { (oa, la, ob, lb) := call gcd_step(oa, la, ob, lb) }`, `gcd_step` returning
+`(b % a, a)` (`nat_divmod`'s remainder slice and `a`'s). The invariant is `nat_pow`'s shape (two
+moving slices, `Grows` from the entry memory, `Nat.gcd a b = G`); the step is
+`Nat.gcd (b % a) a = Nat.gcd a b` (`gcd_step`, pattern on the left side), the exit
+`gcd_zero_len` (`la = 0`). With the divmod call and four `setLoc`s inline in the loop body, the
+house form hit `grind`'s term generation limit and `nat_mul`'s recipe lost the frames
+(`and_intros` unfolds `Grows`); with the step as its own function, both went through at once
+(again: loop bodies straight-line and shallow).
+
 ### The `natOpResult` arms under `ArenaR` (`NatArms.lean`)
 
 Every arm whose result is a literal is `litArm F a b = do let x ← internE (.lit (.natVal
@@ -2497,6 +2552,17 @@ limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X 
 (`land_bv`, `lor_bv`, `xor_bv`). 129 lines, by hand, 0.6 s. The operation is a parameter with
 its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
 visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
+
+### `nat_gcd`: Euclid over `nat_divmod`
+
+`while la != 0 { (oa, la, ob, lb) := call gcd_step(oa, la, ob, lb) }`, `gcd_step` returning
+`(b % a, a)` (`nat_divmod`'s remainder slice and `a`'s). The invariant is `nat_pow`'s shape (two
+moving slices, `Grows` from the entry memory, `Nat.gcd a b = G`); the step is
+`Nat.gcd (b % a) a = Nat.gcd a b` (`gcd_step`, pattern on the left side), the exit
+`gcd_zero_len` (`la = 0`). With the divmod call and four `setLoc`s inline in the loop body, the
+house form hit `grind`'s term generation limit and `nat_mul`'s recipe lost the frames
+(`and_intros` unfolds `Grows`); with the step as its own function, both went through at once
+(again: loop bodies straight-line and shallow).
 
 ### The `natOpResult` arms under `ArenaR` (`NatArms.lean`)
 
@@ -3078,6 +3144,17 @@ limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X 
 its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
 visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
 
+### `nat_gcd`: Euclid over `nat_divmod`
+
+`while la != 0 { (oa, la, ob, lb) := call gcd_step(oa, la, ob, lb) }`, `gcd_step` returning
+`(b % a, a)` (`nat_divmod`'s remainder slice and `a`'s). The invariant is `nat_pow`'s shape (two
+moving slices, `Grows` from the entry memory, `Nat.gcd a b = G`); the step is
+`Nat.gcd (b % a) a = Nat.gcd a b` (`gcd_step`, pattern on the left side), the exit
+`gcd_zero_len` (`la = 0`). With the divmod call and four `setLoc`s inline in the loop body, the
+house form hit `grind`'s term generation limit and `nat_mul`'s recipe lost the frames
+(`and_intros` unfolds `Grows`); with the step as its own function, both went through at once
+(again: loop bodies straight-line and shallow).
+
 ### The `natOpResult` arms under `ArenaR` (`NatArms.lean`)
 
 Every arm whose result is a literal is `litArm F a b = do let x ← internE (.lit (.natVal
@@ -3366,6 +3443,17 @@ limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X 
 its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
 visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
 
+### `nat_gcd`: Euclid over `nat_divmod`
+
+`while la != 0 { (oa, la, ob, lb) := call gcd_step(oa, la, ob, lb) }`, `gcd_step` returning
+`(b % a, a)` (`nat_divmod`'s remainder slice and `a`'s). The invariant is `nat_pow`'s shape (two
+moving slices, `Grows` from the entry memory, `Nat.gcd a b = G`); the step is
+`Nat.gcd (b % a) a = Nat.gcd a b` (`gcd_step`, pattern on the left side), the exit
+`gcd_zero_len` (`la = 0`). With the divmod call and four `setLoc`s inline in the loop body, the
+house form hit `grind`'s term generation limit and `nat_mul`'s recipe lost the frames
+(`and_intros` unfolds `Grows`); with the step as its own function, both went through at once
+(again: loop bodies straight-line and shallow).
+
 ### The `natOpResult` arms under `ArenaR` (`NatArms.lean`)
 
 Every arm whose result is a literal is `litArm F a b = do let x ← internE (.lit (.natVal
@@ -3432,6 +3520,7 @@ for the L-side spec itself.
 | `nat_shr` (`a >>> b`, `b` a normalised slice; lane `nat2`) | 52 (`shift_right_nat`, `shift_right`, `shr_from`, `shr_bits_from`, `skip_index`) | 31 | 186 | 94 s | loop house form; function `nat_mul`'s recipe, 200k heartbeats per goal; word and division lemmas by hand |
 | `nat_pow` (word exponent `< 2^25`; lane `nat2`) | 20 (`pow`, `one`) | 23 | 146 | 5.8 s | house form; `Grows.trans`, the exponent-bit and frame lemmas by hand |
 | `nat_divmod` (`a / b`, `a % b`, `b` normalised; lane `nat2`) | 84 (`div_mod`, `div`, `modulo`, `dm_limbs`, `dm_bits`, `rev_copy_from`, `shl1_or`, `shl1_from`) | 94 | ~600 | 47 s (21 s wall) | four passes and three loops house form; function `nat_mul`'s recipe; the arithmetic lemmas by hand |
+| `nat_gcd` (+ `gcd_step`; lane `nat2`) | 10 (`gcd`) | 13 | 120 | 1.9 s | house form; `Norm.of_agree` by hand |
 | `natOpResult` arms `-` `pred` `*` `^` `/` `%` `land` `lor` `xor` `shiftLeft` `shiftRight` under `ArenaR` (lane `nat2`) | – (`arena/core.rs` arms) | 31 (`topLit` 4, `nat_pred_lit` 9, `nat_pow_lit` 8, `nat_div_lit` 5, `nat_mod_lit` 5) | ~420 | 7.7 s (3.7 s wall) | house form throughout; `Grows.push1` by hand |
 
 Whole file 307 lines. `lake build ConAgua` (full project) still green, 403 ms incremental.
@@ -3814,6 +3903,17 @@ limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X 
 its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
 visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
 
+### `nat_gcd`: Euclid over `nat_divmod`
+
+`while la != 0 { (oa, la, ob, lb) := call gcd_step(oa, la, ob, lb) }`, `gcd_step` returning
+`(b % a, a)` (`nat_divmod`'s remainder slice and `a`'s). The invariant is `nat_pow`'s shape (two
+moving slices, `Grows` from the entry memory, `Nat.gcd a b = G`); the step is
+`Nat.gcd (b % a) a = Nat.gcd a b` (`gcd_step`, pattern on the left side), the exit
+`gcd_zero_len` (`la = 0`). With the divmod call and four `setLoc`s inline in the loop body, the
+house form hit `grind`'s term generation limit and `nat_mul`'s recipe lost the frames
+(`and_intros` unfolds `Grows`); with the step as its own function, both went through at once
+(again: loop bodies straight-line and shallow).
+
 ### The `natOpResult` arms under `ArenaR` (`NatArms.lean`)
 
 Every arm whose result is a literal is `litArm F a b = do let x ← internE (.lit (.natVal
@@ -4066,6 +4166,17 @@ limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X 
 its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
 visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
 
+### `nat_gcd`: Euclid over `nat_divmod`
+
+`while la != 0 { (oa, la, ob, lb) := call gcd_step(oa, la, ob, lb) }`, `gcd_step` returning
+`(b % a, a)` (`nat_divmod`'s remainder slice and `a`'s). The invariant is `nat_pow`'s shape (two
+moving slices, `Grows` from the entry memory, `Nat.gcd a b = G`); the step is
+`Nat.gcd (b % a) a = Nat.gcd a b` (`gcd_step`, pattern on the left side), the exit
+`gcd_zero_len` (`la = 0`). With the divmod call and four `setLoc`s inline in the loop body, the
+house form hit `grind`'s term generation limit and `nat_mul`'s recipe lost the frames
+(`and_intros` unfolds `Grows`); with the step as its own function, both went through at once
+(again: loop bodies straight-line and shallow).
+
 ### The `natOpResult` arms under `ArenaR` (`NatArms.lean`)
 
 Every arm whose result is a literal is `litArm F a b = do let x ← internE (.lit (.natVal
@@ -4096,7 +4207,7 @@ None.
 
 ## Limb-pool `Nat` ops, round 2: compare, sub, shifts, pow, div/mod, the arms (2026-10-21, lane `nat2`)
 
-Files: `ConAgua/Arena/NatGrindAttr.lean`, `NatCmp.lean`, `NatSub.lean`, `NatShl.lean`, `NatShr.lean`, `NatPow.lean`, `NatDiv.lean`, `NatBitsNat.lean`, `NatArms.lean`. Per-op numbers are in the lane `nat`
+Files: `ConAgua/Arena/NatGrindAttr.lean`, `NatCmp.lean`, `NatSub.lean`, `NatShl.lean`, `NatShr.lean`, `NatPow.lean`, `NatDiv.lean`, `NatBitsNat.lean`, `NatGcd.lean`, `NatArms.lean`. Per-op numbers are in the lane `nat`
 table above (`lean` user time of the file, one run).
 
 ### `nat_cmp`: a non-recursive model
@@ -4247,6 +4358,17 @@ limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X 
 (`land_bv`, `lor_bv`, `xor_bv`). 129 lines, by hand, 0.6 s. The operation is a parameter with
 its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
 visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
+
+### `nat_gcd`: Euclid over `nat_divmod`
+
+`while la != 0 { (oa, la, ob, lb) := call gcd_step(oa, la, ob, lb) }`, `gcd_step` returning
+`(b % a, a)` (`nat_divmod`'s remainder slice and `a`'s). The invariant is `nat_pow`'s shape (two
+moving slices, `Grows` from the entry memory, `Nat.gcd a b = G`); the step is
+`Nat.gcd (b % a) a = Nat.gcd a b` (`gcd_step`, pattern on the left side), the exit
+`gcd_zero_len` (`la = 0`). With the divmod call and four `setLoc`s inline in the loop body, the
+house form hit `grind`'s term generation limit and `nat_mul`'s recipe lost the frames
+(`and_intros` unfolds `Grows`); with the step as its own function, both went through at once
+(again: loop bodies straight-line and shallow).
 
 ### The `natOpResult` arms under `ArenaR` (`NatArms.lean`)
 
@@ -4440,6 +4562,17 @@ limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X 
 (`land_bv`, `lor_bv`, `xor_bv`). 129 lines, by hand, 0.6 s. The operation is a parameter with
 its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
 visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
+
+### `nat_gcd`: Euclid over `nat_divmod`
+
+`while la != 0 { (oa, la, ob, lb) := call gcd_step(oa, la, ob, lb) }`, `gcd_step` returning
+`(b % a, a)` (`nat_divmod`'s remainder slice and `a`'s). The invariant is `nat_pow`'s shape (two
+moving slices, `Grows` from the entry memory, `Nat.gcd a b = G`); the step is
+`Nat.gcd (b % a) a = Nat.gcd a b` (`gcd_step`, pattern on the left side), the exit
+`gcd_zero_len` (`la = 0`). With the divmod call and four `setLoc`s inline in the loop body, the
+house form hit `grind`'s term generation limit and `nat_mul`'s recipe lost the frames
+(`and_intros` unfolds `Grows`); with the step as its own function, both went through at once
+(again: loop bodies straight-line and shallow).
 
 ### The `natOpResult` arms under `ArenaR` (`NatArms.lean`)
 
@@ -4749,6 +4882,17 @@ limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X 
 (`land_bv`, `lor_bv`, `xor_bv`). 129 lines, by hand, 0.6 s. The operation is a parameter with
 its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
 visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
+
+### `nat_gcd`: Euclid over `nat_divmod`
+
+`while la != 0 { (oa, la, ob, lb) := call gcd_step(oa, la, ob, lb) }`, `gcd_step` returning
+`(b % a, a)` (`nat_divmod`'s remainder slice and `a`'s). The invariant is `nat_pow`'s shape (two
+moving slices, `Grows` from the entry memory, `Nat.gcd a b = G`); the step is
+`Nat.gcd (b % a) a = Nat.gcd a b` (`gcd_step`, pattern on the left side), the exit
+`gcd_zero_len` (`la = 0`). With the divmod call and four `setLoc`s inline in the loop body, the
+house form hit `grind`'s term generation limit and `nat_mul`'s recipe lost the frames
+(`and_intros` unfolds `Grows`); with the step as its own function, both went through at once
+(again: loop bodies straight-line and shallow).
 
 ### The `natOpResult` arms under `ArenaR` (`NatArms.lean`)
 
