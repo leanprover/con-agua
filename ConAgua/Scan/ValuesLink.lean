@@ -21,9 +21,7 @@ carries, `pos < len(IN.u8)`, which `byteAt`'s "`0` past the end" makes automatic
 `KeyLink.keyAt_eq_keyAtN`/`valueAt_eq_valueAtN`, and the two `keyEnd_ne_zero_*` facts that supply
 `keyAt_eq_keyAtN`'s in-bounds hypothesis.
 
-`scan_nat_list`'s link (`natListEntryN`/`natListN`) is left for later: the loop needs its own
-`fun_induction` with `acc` generalized and `cnt.toNat = acc.length` as the invariant, per the task
-note; `scanNatList_eq_natListEntryN` below records the intended statement.
+`scan_nat_list`'s link (end and item count) is `ConAgua.Scan.natList_link` in `RecordsLink.lean`.
 -/
 
 namespace ConAgua.Scan
@@ -417,19 +415,5 @@ theorem scanHints_eq_hintsN (i : USize) :
         rw [if_pos h5', if_pos h5'']
     · have h4' : ¬ (byteAt b i == 123) = true := by simpa using h4
       rw [if_neg h4', if_neg (fun hx => h4 (hcond123.mpr hx))]
-
-/-! ## `scan_nat_list`
-
-Left open: the loop needs its own `fun_induction` on `scanNatListLoop` with `acc` generalized and
-`cnt.toNat = acc.length` as the invariant (the task's own suggestion), composing `numEnd`'s link
-for the digit-run step; the statement below records the intended shape
-(`ConAgua.Scan.KeyLink`/`LeafLink`'s style: both the end position and the count, or both `0`). -/
-
-include h64 hsize in
-theorem scanNatList_eq_natListEntryN (i : USize) :
-    match scanNatList b i with
-    | .ok us p => natListEntryN b.data i.toUInt64 = (p.toUInt64, UInt64.ofNat us.length)
-    | .err _ => (natListEntryN b.data i.toUInt64).1 = 0 := by
-  sorry
 
 end ConAgua.Scan

@@ -534,15 +534,6 @@ theorem scanBinderInfo_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld8,
         matchWord_spec p b hb hpm n] <;> finish
 
--- NOT PROVED (left `sorry`, see DESIGN.md / the stageb-s2 report for a gap writeup): the body
--- below reaches `finish failed` (not a timeout — raising `gen`/`genLocal` to 20 and
--- `maxHeartbeats` to 1000000 still exhausts the search in ~3-4 minutes) on 2 of the function's
--- verification conditions, past the `scan_hints` object branch's full chain of six callees
--- (skip_ws, key_end, key_at, value_at, num_end, skip_ws again). `hintsN`/`hintsN.hintsObjN`/
--- `hintsN.hintsNumN` are registered, and `hstep`/`hofnat_le` (the two facts that fixed
--- `valueAt_spec`) are provided, but something further down the six-deep call chain is still
--- missing. Left for a future attempt (e.g. splitting the object branch into its own named
--- block/function, as `key_at` was split, so each callee's verification condition is shallower).
 include hpw hpd hpn hphn in
 attribute [local lang_grind] hintsN.hintsNumN in
 theorem hintsNum_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (v : Word)
