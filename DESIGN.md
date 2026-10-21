@@ -4244,36 +4244,39 @@ store's `str` table, `NStrStore.lean`/`NStrRefine.lean`), and the hash. Previous
 Phase 5 (ROADMAP §1), top-down. Files: `CoreCaches.lean` (L), `Tiers.lean` (`CoreR`),
 `CoreRefine.lean`; `Scratch.lean`/`ScratchRefine.lean` (`scratch_drop` now flushes).
 
-### `CoreR`: nine caches in L, five not
+### `CoreR`: eleven caches in L, three readback caches need none
 
-`Caches` has fourteen tables. Nine are `MemoLib` memos (arrays 96‥104, stamps/counts `CTL`
-96‥113): the six **mode memos** `whnfCoreC`, `whnfCoreCheapC`, `whnfC`, `inferC`, `inferIOC`,
-`defeqC`, banked by generation (`MemoBank.lean`; bank words `CTL[114]` last, `CTL[115]` current,
-one pair shared by the six, `bank_enter`/`bank_leave` = `takeModeMemos`/`putModeMemos`), and the
-three constant caches `constTyC`, `constValC`, `ruleRhsC` (plain `MemoRG`). Keys: a handle and
-`genW 0 g = g << 32` (`eKeyG`); `defeqC` the two handles and `genW b g` (`dKeyG`); the constant
-caches `(n, us)` (`pairKey`) and `(rec, ctor ∣ us << 32)` (`rrKey`). **Not in L**: `lvlEqC`,
-`lvlsEqC` (pure verdicts; lane `levels`' `lvl_eq`/`lvls_eq` recompute, the twin's tables only have
-to hold what they claim, a hypothesis there) and `readLC`/`readNC`/`readLsC` (readbacks L never
-makes). Every table whose hit skips interning must be in L: a recomputation would intern into
-other caches the twin did not touch.
+`Caches` has fourteen tables and (since con-ron #127, vendored at 12752ca7) a second set of the six
+mode memos for the eager tower, `eagerMemos`. Eleven tables are `MemoLib` memos (arrays 96‥106,
+stamps/counts `CTL` 96‥113, 116‥119): the six **mode memos** `whnfCoreC`, `whnfCoreCheapC`,
+`whnfC`, `inferC`, `inferIOC`, `defeqC`, each holding **both** sets, keyed by the knot mode's
+**eager bit** in the high half of the second key word (`genW k2 eb`, `MemoBank.lean`'s codec);
+the three constant caches `constTyC`, `constValC`, `ruleRhsC`; the two level-verdict caches
+`lvlEqC`, `lvlsEqC`. Keys: a handle and `genW 0 eb` (`eKeyG`); `defeqC` the two handles and
+`genW b eb` (`dKeyG`); the constant caches `(n, us)` (`pairKey`) and `(rec, ctor ∣ us << 32)`
+(`rrKey`); the verdicts `(u, v)`. `readLC`/`readNC`/`readLsC` have no table: L makes no
+readbacks; the twin's entries must be readbacks (`CoreS.readL`, `readLs`).
 
-* `CoreRM m c M G g` (explicit maps `M : ModeMaps` over `(key, generation)` and bank words) and
-  `CoreR m c := ∃ M G g, CoreRM m c M G g`. Each mode memo is a `ModeR` (memo relation, the twin
-  table is the bank of `g`, nothing above `G`). The knot will state the saved tables of an
-  enclosing eager comparison as other banks of the same `M` and needs every core function's post
-  to keep them: `Kept M M' G g` (generations `≤ G` other than `g` unchanged; `Kept.insert`).
-* `flush_caches()`: the nine `clear`s and both bank words `:= 0`; `CoreR.flush` (any `CoreR`,
-  no stamp about to wrap ⇒ `CoreR` of `Caches.empty`), `flushCaches_refinesC`. The generic part
-  (`clearsL`, `memoRG_clearsL`: a memo cleared in a run of clears is empty after it) is
-  schema-generic.
+* `CoreRM m c M eb`: per mode memo a `ModeR` (memo relation over the map `M` of `(key, eb)`, the
+  twin's field is bank `eb`, its `eagerMemos` table bank `1` outside the eager tower (`eb = 0`)
+  and empty inside it); `CoreR m c := ∃ M, CoreRM m c M 0`. Inside the eager tower the plain set
+  is the eager slot's local (`enterEager`'s `saved`): an eager run keeps bank `0` (`KeptAll`). An
+  eager comparison moves nothing in L: the slot's key bit is the mode's
+  (`((mode >> 1) & 1) << 32`). The first version (before the bump) mirrored
+  `takeModeMemos`/`putModeMemos` with generation counters (`bank_enter`/`bank_leave`, `CTL[114]`,
+  `CTL[115]`); con-ron's change made that unnecessary and it went.
+* Handle-valued tables relate their words by `VH` (the entry is `decE w` and `w < 2^32`), so a hit
+  returns a word the caller may compute with; `Bool` tables by `VB`.
+* `flush_caches()`: the eleven `clear`s; `CoreR.flush` (any `CoreR`, no stamp about to wrap ⇒
+  `CoreR` of `Caches.empty`, both sets), `flushCaches_refinesC`. The generic part (`clearsL`,
+  `memoRV_clearsL`: a memo cleared in a run of clears is empty after it) is schema-generic.
 * `scratch_drop()` = `flush_caches()`; `scratch_reset(0)`, as the twin's `dropScratch`
-  (`flushCaches` first); `scratchDrop_refinesC` now proves the caches part instead of relying on
-  the stub, `CheckR.of_bracket` takes the new `CoreR` and a `CTL` write set below 128.
-* Probes and inserts (`CoreRefine.lean`): `ModeR.findE`/`setE` (one-handle mode memos),
-  `findD`/`setD` (`defeqC`), `memoRG_findP`/`findR` (constant caches).
+  (`flushCaches` first); `scratchDrop_refinesC` proves the caches part, `CheckR.of_bracket` takes
+  the new `CoreR` and a `CTL` write set below 128.
+* Probes and inserts (`CoreRefine.lean`): `ModeR.findE`/`setE` (one-handle mode memos), `findD`
+  (`defeqC`), `memoRV_findP`/`findR` (constant caches).
 * **Finding**: `MemoBank.lean`'s `lo_hi`, `genW_lo`, `genW_hi` were proved by `bv_decide`, which on
-  this toolchain adds an axiom `…._native.bv_decide.ax_…`; anything built on the banks (now
+  this toolchain adds an axiom `…._native.bv_decide.ax_…`; anything built on the banks (then
   `scratchDrop_refinesC`) would have stopped counting as proven. Reproved by `toNat` arithmetic
   (`Nat.shiftLeft_add_eq_or_of_lt`, `Nat.and_two_pow_sub_one_eq_mod`), same statements.
 * Finding: `decide +kernel` on membership in `coreSchs.flatMap (fun S => [S.cs, S.cs + 1])`
@@ -4288,7 +4291,7 @@ be asymptotically slower. con-ron at `_tmp/ref/con-ron` origin/HEAD (`proof/ConR
 |---|---|---|---|---|
 | `Caches.whnfCoreC`, `whnfCoreCheapC`, `whnfC`, `inferC`, `inferIOC` | declaration | `EIdx → EIdx` | `wc`/`wk`/`wh`/`in`/`io` (arrays 96‥100) | relation `CoreRM` (lane `whnf`); the knot's probes: `whnf_core`/`whnf` this lane, `infer*` phase 7 |
 | `Caches.defeqC` | declaration | `(EIdx × EIdx) → Bool` | `de` (101) | relation `CoreRM`; probe phase 6 |
-| `Caches.eagerMemos` (the eager tower's six, new in con-ron #127) | declaration | as the six | the same six memos, generation = the eager bit | **to do** on the con-ron bump (below) |
+| `Caches.eagerMemos` (the eager tower's six, con-ron #127) | declaration | as the six | the same six memos, key bit = the eager bit | relation done (`ModeR.stored`/`empty`) |
 | `Caches.lvlEqC`, `lvlsEqC` | declaration | `(LIdx × LIdx) → Bool`, `(LsIdx × LsIdx) → Bool` | `lq`, `lsq` (105, 106) | done: `lvl_eq_c`/`lvls_eq_c` in front of lane `levels`' `lvl_eq`/`lvls_eq` (`CoreLevels.lean`) |
 | `Caches.constTyC`, `constValC`, `ruleRhsC` | declaration | `(NIdx × LsIdx) → EIdx`, `(NIdx × NIdx × LsIdx) → EIdx` | `ct`, `cv`, `rr` (102‥104) | relation done; probes in `const_ty_at`/`const_val_at`/`rule_rhs_at` (this lane) |
 | `Caches.readLC`, `readNC`, `readLsC` | declaration | handle → `Level`/`Name`/`List Level` | none needed: L makes no readbacks (the level algorithms run on handles, `LevelHeap.lean`) | the twin's entries are readbacks: `CoreS.readL`/`readLs` (an invariant, not a table) |
@@ -4297,22 +4300,61 @@ be asymptotically slower. con-ron at `_tmp/ref/con-ron` origin/HEAD (`proof/ConR
 | walk-local `memo`/`seen` arguments: `wscopedBGo`, `fvarLeavesGo`, `leavesSubGo` (ExprOps); `constsResolveFGo`, `hasStrLitGo` (CheckerBase); `mentionsAnyGo`, `nestOccGo`, `depthGo`, `replaceFVarsGo` (Positivity); `hasLooseBVarBGo`, `structUsedLaterGo`, `mentionsConstGo` (StructParts); `usedConstsGo` (NatOpGround, a `HashSet`) | one call | various | argument relations, arrays 144‥191 | to do with each walk: each needs an epoch-cleared memo of the library (`MemoLib`), not a recomputation |
 | store cons tables (21), `IFEnv.idx` | run / declaration | node → handle, name → constant | `*SLOT` arrays, `EIXA/S/N` | done (`ArenaR`, `EnvR`) |
 
-**The con-ron bump (lane `sync`).** con-ron #127 replaced "take the mode memos, run the eager
-comparison on empty tables, put them back" by a second, persistent set of the six tables for the
-eager tower (`Caches.eagerMemos`; `enterEager` swaps it into the six fields, `leaveEager` swaps
-back, nothing moves when already eager). In L this is simpler than the generation counter built
-for the old semantics: the generation of a key is the mode word's eager bit, fixed per slot call,
-so `bank_enter`/`bank_leave` and the bank words `CTL[114]`, `CTL[115]` go away, and `CoreRM`
-relates `c.X` to bank `e` and `c.eagerMemos.X` to bank `1` when `e = 0` (empty when `e = 1`, the
-plain set then being the eager slot's local `saved`, bank `0`, which an eager run must keep).
-Done when the vendored twin is bumped; `CoreS`/`CoreAfter` keep their shape (`M G g` becomes
-`M e`).
+### The whnf family in L, top-down (`WhnfBase`, `WhnfSpine`, `WhnfCore`, `WhnfCoreSlot`, `WhnfIota`)
+
+* **Arguments.** The twin's `mode`, `fe`, `depth` and the knot record `r` become a mode word
+  (`decMode`), the environment view word `vis` (`EnvR`), a depth word; the record is the program:
+  the knot's slots are L functions (`whnf_core`, `whnf`, `infer`, `infer_io`, `defeq`), refined
+  against `coreKnot mode fe id F` for every `F ≥` the L fuel (`WhnfCoreSlot` …, `KnotOK`). A body
+  at L fuel `n + 1` assumes the slots at every fuel up to `n` (`KnotUpTo`: a call inside a loop
+  runs on less fuel than the body, and L has no fuel monotonicity lemma).
+* **The spine stack.** `Array EIdx`/`List EIdx` values are slices of word array 144 (`SPN`), top
+  `CTL[136]`; a callee puts the top back (`StackKept`), a slice-returning one leaves its slice
+  (`StackGrew`); `SpineR` relates a slice to its array.
+* **The relation and the post.** `CoreS dn m a vis fe M eb` (`ArenaD`, `CoreRM` at explicit maps,
+  `PinsFull`, `EnvR`, the readback-cache invariants, `NStoreWF`); `CoreRef`/`CoreSpec`: the twin
+  run succeeds, `CoreAfter` (the relation at some maps, the plain banks kept inside the eager
+  tower, the stack kept), the result decodes, and the result words are valid handle words (`ResH`,
+  `ResW`: `decE` truncates, and the caller computes with the word).
+* **Stubs**: named L functions with abstract specs (`WhnfCallees`, `CoreCallees`, `IotaCallees`),
+  the refinements take them as hypotheses, the stubs' own theorems are `sorry`.
+* **The proof pattern** (`WhnfCoreSlot.lean`, also `CoreLevels.lean`): a callee's run depends on
+  the caller's memory alone, so it is a function `callW p n f vs m` (`callW_spec`: every call
+  meets its run). A caller's word-level model calls its callees through `callW`; the L spec is
+  `vcgen` + `finish` with `callW_spec` as the callee spec (no callee proof needed); the
+  refinement then applies each callee's own spec to its run (`CoreSpec.of_callW`) and threads
+  `CoreAfter` (`CoreAfter.comp`). Loops get a named block and a model by fuel
+  (`whnfCoreLoopB_spec`, `coreLoopW`), refined by induction (`coreLoopW_ok`).
+* **Proved so far** (no `sorry` of their own): the knot's `whnfCore` slot one level up
+  (`whnfCoreSlot_step`: stuck tags, both memos, hit and miss, from the body spec), the loop
+  (`whnfCore_loop`'s spec and `coreLoopW_ok`, from the step spec), `lvl_eq_c`/`lvls_eq_c`
+  completely, the flush.
+* **L code written** (sorry'd specs): `whnf_core_step`, `whnf_app`, `beta_peel`,
+  `whnf_core_step_proj`, `reduce_proj_core`, `proj_cert`, `proj_lit_to_ctor` (`WhnfCore.lean`,
+  177 L lines); the spine walks (`WhnfSpine.lean`, 124, exact `coreWalkFuel` counters); ι
+  (`WhnfIota.lean`, 504 L lines: `iota_rec_at`, `prepare_major`, `major_to_ctor` with its K, η and
+  `And` rescues, `lit_major_to_ctor`, `iota_certs_full`, `iota_index_ok`, `defeq_list`,
+  `pi_residual`, `proof_irrel`, `rule_rhs_at`/`const_ty_at` with their caches, `find_rule`,
+  `tower_slots_all`, `eta_projs`, `and_rescue_slots`, …; a sonnet sub-lane).
+* **Findings.** (1) The lane `exprops` walks (`inst_entry`, `lift_entry`) refine their twins at
+  every fuel `F ≥ n` but have no `coreWalkFuel` counter, while the core calls them at exactly
+  `coreWalkFuel`: they need the counter (ROADMAP §3 (b)) before the core can call them; stubbed
+  (`Inst1OK`). (2) `IFEnv.findProj?` interns the table name (`projTableName`: a `str` name with
+  the bytes `projTable`): L needs those bytes as constant data; stubbed (`find_proj`). (3)
+  `recFireLevels` substitutes levels and **interns** the results (`internLevel`): lane `levels`'
+  heap results must be interned back into the level store, a walk that does not exist yet;
+  stubbed. (4) `decE` truncates a word to 32 bits, so a spec whose result the caller computes
+  with must state that the word is below `2^32`; the handle-valued caches carry it (`VH`).
 
 ### `sorry`s
 
 * `WhnfBase.lean` `whnfCallees_stub`: the specs of the callees not written yet (`inst_list`,
   `inst_lp`, `str_lit_ctor`, `str_lit_supported`, the knot's `infer`/`infer_io`/`defeq` steps).
 * `WhnfSpine.lean`: the eight spine-walk specs (`getAppFn_refines`, …; a proof lane is on them).
+* `WhnfCore.lean`: `coreCallees_stub` and the specs of `whnf_core_step`, `whnf_core_loop`
+  (through `whnfCoreLoop_refines`), `whnf_app`, `beta_peel`, `whnf_core_step_proj`,
+  `reduce_proj_core`, `proj_cert`, `proj_lit_to_ctor`.
+* `WhnfIota.lean`: `iotaCallees_stub` and every spec (28).
 
 ## Any number of results (2026-10-21, lane `cresults`)
 
