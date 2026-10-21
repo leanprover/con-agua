@@ -236,3 +236,66 @@ induction hypothesis, and the expression lemmas are straight-line `kvcgen64` pro
 ### `sorry`s
 
 None.
+
+## The compiler (2026-10-21, lane `compiler`)
+
+Files: `ConAgua/Compiler/{Compile,Run,Tests,EmitScan}.lean`, `ConAgua/Compiler/harness/run.c`.
+Toolchain: nightly-2026-10-20 with sgraf812/kraken `ba12834` (the `vcgen` branch).
+
+### Shape
+
+`compileProg tab p entry : Program` (Kraken's `List Directive`) is the trampoline followed by
+`compileFn` of every function. One pass, no register allocation, no optimisation. `asmText` prints
+it with Kraken's AT&T printer (`Kraken.X64.toATT`) for `as`/`clang`.
+
+* **Expressions** go to `rax`. `bin op a b` evaluates `a`, stores it in a temporary slot,
+  evaluates `b`, moves it to `rcx`, reloads `a` and applies `op` (`imul` for `*`, `shl`/`shr` by
+  `cl`). `compileE e t` may write temporaries `t, t+1, …`; `tempsE e` bounds how many. A load
+  `A.u8[i]` is `cmp rax, [r15 + len]; jae ca_error; mov rcx, [r15 + base]; movzx rax, byte
+  [rcx + rax]`.
+* **Conditions** compile to jumps: `compileC c pol l` jumps to `l` if `c` evaluates to `pol` and
+  falls through otherwise, so `&&`/`||` short-circuit and `!` only flips `pol`.
+* **Statements**: `if` and `while` as usual, with labels `.Lca_<fn>_<path><M>` where `path` is the
+  node's position (lowercase letters) and `M` an uppercase marker. Labels are therefore distinct
+  without a counter, and `compileS` is a plain structural function. A loop back-edge is
+  `sub r14, 1; jb ca_exhausted; jmp head`. `break` jumps to the loop exit (at function level: to
+  the epilogue, which returns 0, as `L` does). `abort` jumps to `ca_error`.
+* **Calls**: arguments are evaluated into temporaries `0 … n-1`, `rsi` points at them,
+  `sub r14, 1; jb ca_exhausted; call ca_f_<f>`, then the result is stored from `rax`.
+* **Functions**: `rax := rsp - [r15 + 8]` (the distance to the stack limit; no wrap-around as long
+  as `rsp` stays above the limit); `cmp rax, 8F + 8; jb ca_exhausted` (the frame and the next
+  call's return address); `sub rsp, 8F`; copy the parameters from `[rsi + 8i]`; zero the other
+  locals; body; `.Z: rax := 0; .R: add rsp, 8F; ret`. `F = nlocals + tempsS body`.
+* **Trampoline** `ca_enter(T, fuel)` (System V: `rdi`, `rsi`; result in `rax`, outcome in
+  `rdx`): push `rbp`, `r14`, `r15`; `rbp := rsp`; `r15 := T`; `r14 := fuel`; `rsp := [T]`;
+  `rsi := T + args`; burn one unit of fuel; call the entry function; `rdx := 0`. The exits
+  `ca_exhausted` (`rdx := 1`) and `ca_error` (`rdx := 2`) and the normal return meet at
+  `ca_finish`: `rsp := rbp`, pop, `ret`.
+
+**Changes to the plan in "Intended compiler" above.** The saved stack pointer lives in `rbp`
+(pinned, never written by L code) instead of a table cell; temporaries are fixed frame slots
+instead of `rbx` plus pushes (so `rsp` is constant while a body runs and a local's address is
+always `rsp + 8x`); arguments are passed by pointer (`rsi`) into the caller's temporaries; the
+stack check compares `rsp - limit` with the frame size, which cannot wrap. The table is
+`[T]` stack top, `[T+8]` stack limit, then base/length pairs of the byte arrays and of the word
+arrays, then the entry arguments (`Tab`).
+
+**Fuel.** `r14` counts every back-edge and call (including the trampoline's call), while `L`'s
+fuel bounds only their nesting. The proof invariant is `r14 < n` while `exec p n` runs, so `L`
+never runs out while the machine has fuel left; the machine may run out first.
+
+### Testing
+
+* `Tests.lean`: `#guard` differential tests, compiled code on Kraken's executable semantics
+  (`Executable.eval` with Kraken's fake layout, `runKraken`) against `L.run`: `skip_braced` and
+  `str_close` on small inputs, word arrays and stores, all operators, signed comparisons, short
+  circuit, `break`, `abort`, out-of-bounds, recursion, fuel and stack exhaustion. They found a
+  real bug (the temporaries of an `if` condition were not counted in the frame size, so the
+  condition overwrote the return address).
+* Native: `lake env lean --run ConAgua/Compiler/EmitScan.lean scan.s && cc -O2 -o run
+  ConAgua/Compiler/harness/run.c scan.s`. `run FILE ARG…` calls `skip_braced` once;
+  `run --lines FILE` calls `skip_braced(start + 1, 0)` for every line of a lean4export file and
+  checks that it returns the end of the line. On con-leche's
+  `tests/e2e/complete_c04a_restart_70.ndjson.gz` (9.1 MB, 126481 lines) every line agrees.
+* Kraken's interpreter recurses once per executed straight-line block, so an infinite loop shows
+  up as "deep recursion detected at interpreter" in `withAddresses`, not as a timeout.
