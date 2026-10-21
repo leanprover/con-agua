@@ -3888,7 +3888,7 @@ across any other writer (`HeapExt` for a growing heap).
 
 The client (`MemoTree.lean`): values are lane `levels`' level pointers, decoded by `LvR N m p l`.
 `lvNodeW_congr` (what `lvNodeW` reads: `LH`, the four level record arrays, `CTL` words below 16
-and 192) gives `lvR_stable` for any schema outside them (`TreeSafe`), and `memoRV_heapExt` carries
+and 192) gives `lvR_stable` for any schema outside them (`TreeSafe`; through `LvR.of_view`, since `HeapExt` now also frames every other array), and `memoRV_heapExt` carries
 the memo across `lh_mk`. `lt_set`/`lt_hit` instantiate it for a test schema of `readLC`'s shape
 (`ltSch`: array 100, `CTL[100]`, inside `CoreR`'s reserved range, not claimed by `CoreR`). Since
 lane `levels`' pointers include store handles, `readLC` can store the handle itself; `readNC`

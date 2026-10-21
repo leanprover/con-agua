@@ -11,7 +11,7 @@ node), decoded by `LvR N m p l`. The memo library's `MemoRV` takes such a value 
 instance proves is that the relation is **stable**:
 
 * under the memo's own writes (`VStable`, for `memoRV_set`/`memoRV_erase`): `lvNodeW` reads none
-  of the memo's array or words (`lvNodeW_congr`), so `HeapExt` holds and `LvR.mono` applies;
+  of the memo's array or words (`lvNodeW_congr`), so every view stays and `LvR.of_view` applies;
 * under the heap's growth (`lh_mk`, `HeapExt` from `lhMkW_ext`), for `memoRV_frame`.
 
 The instance here is a test schema (`ltSch`, array 100, `CTL[100]`, inside the `CoreR` range but
@@ -40,6 +40,18 @@ theorem lvNodeW_congr (m m' : Mem)
     ha PREC (by simp), hc 192 (.inr rfl), hc 1 (.inl (by decide)), c 6 (by decide),
     c 8 (by decide), c 10 (by decide), c 12 (by decide), c 14 (by decide)]
 
+/-- `LvR` needs only the views (`HeapExt.view`, without `HeapExt`'s frame of the other arrays,
+which a memo write breaks). -/
+theorem LvR.of_view {N : Word → Name → Prop} {m m' : Mem}
+    (hv : ∀ p, lvNodeW m p ≠ [] → lvNodeW m' p = lvNodeW m p) {p : Word} {l : Level}
+    (h : LvR N m p l) : LvR N m' p l := by
+  induction h with
+  | zero h0 => exact .zero (by rw [hv _ (by simp [h0])]; exact h0)
+  | succ h0 _ ih => exact .succ (by rw [hv _ (by simp [h0])]; exact h0) ih
+  | max h0 _ _ ih1 ih2 => exact .max (by rw [hv _ (by simp [h0])]; exact h0) ih1 ih2
+  | imax h0 _ _ ih1 ih2 => exact .imax (by rw [hv _ (by simp [h0])]; exact h0) ih1 ih2
+  | param h0 hn => exact .param (by rw [hv _ (by simp [h0])]; exact h0) hn
+
 /-- A memo schema `lvNodeW` does not read: its array is not a level array or the heap, its words
 are at or above 16 and not the heap top. -/
 structure TreeSafe (S : MemoSch) : Prop where
@@ -50,7 +62,7 @@ structure TreeSafe (S : MemoSch) : Prop where
 theorem lvR_stable (N : Word → Name → Prop) (S : MemoSch) (hS : S.WF) (hT : TreeSafe S) :
     VStable S (fun m p l => LvR N m p l) := by
   intro m m' hf w l h
-  refine LvR.mono (fun p _ => lvNodeW_congr m m' (fun A hA => hf.1 A ?_ ?_) (fun k hk => hf.2.1 k ?_) p) h
+  refine LvR.of_view (fun p _ => lvNodeW_congr m m' (fun A hA => hf.1 A ?_ ?_) (fun k hk => hf.2.1 k ?_) p) h
   · obtain ⟨h1, h2, h3, h4, h5⟩ := hT.arr
     simp only [List.mem_singleton]
     rcases hA with rfl | rfl | rfl | rfl | rfl <;> grind
