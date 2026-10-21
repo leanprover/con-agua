@@ -61,8 +61,6 @@ structure StateDR (m : Mem) (st : StateD) : Prop where
 
 /-! ## Reads and writes of a table -/
 
-theorem toNat_ofNat_size (n : Nat) (h : n < 2 ^ 63) : (UInt64.ofNat n).toNat = n := by
-  rw [UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)]
 
 section tbl
 variable {k : IdxKind} (m : Mem) (b : ArrId) (t : IdTable (Idx k))

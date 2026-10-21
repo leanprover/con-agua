@@ -47,6 +47,10 @@ abbrev IN : ArrId := 0
 
 /-! ## Models of the table reads -/
 
+theorem toNat_ofNat_size (n : Nat) (h : n < 2 ^ 63) : (UInt64.ofNat n).toNat = n := by
+  rw [UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)]
+
+
 /-- Entry `i` of table `b` is bound: in range and nonzero. -/
 def tblOK (m : Mem) (b : ArrId) (i : Word) : Bool :=
   decide (i < m.len64 b) && rdW (m.arr64 b) i != 0
