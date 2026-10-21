@@ -389,3 +389,31 @@ theorem rec2_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
       finish [rec2Mem, allocMem]
 
 end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+/-! ## Frames: the pool's writers keep the checker state -/
+
+/-- **A writer of `IW` and `CTL[200]` keeps `CheckR`.** -/
+theorem CheckR.frame_iw {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
+    {fe : IFEnv} (hf : MemFrame [IW] [200] m m') (h : CheckR dn m a vis fe) : CheckR dn m' a vis fe :=
+  ⟨⟨ArenaR.frame (fun b hb => by simp at hb; subst hb; simp [arenaArrs, storeArrs, memoArrs, IW])
+      (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hf h.arena.1,
+    DerR.frameM _ _ m m' hf (by decide) a h.arena.2⟩,
+   h.core.frame (fun b hb => by simp at hb; subst hb; decide)
+     (fun x hx => by simp at hx; subst hx; decide) hf,
+   h.pins.frame (fun b hb => by simp at hb; subst hb; decide) hf,
+   h.env.frame (fun b hb => by simp at hb; subst hb; decide)
+     (fun x hx => by simp at hx; subst hx; decide) hf⟩
+
+theorem allocMem_frame (m : Mem) (k : Word) : MemFrame [IW] [200] m (allocMem m k) :=
+  MemFrame.mono (MemFrame.setCtl m 200 _) (by simp) (by simp)
+
+theorem rec2Mem_frame (m : Mem) (a b : Word) : MemFrame [IW] [200] m (rec2Mem m a b) := by
+  have fI : ∀ (m₁ : Mem) (k x : Word), MemFrame [IW] [200] m₁ (m₁.set64 IW k x) :=
+    fun m₁ k x => MemFrame.mono (MemFrame.set64 m₁ IW (by decide) k x) (by simp) (by simp)
+  exact ((allocMem_frame m 2).trans (fI _ _ _)).trans (fI _ _ _)
+
+end L.Ind
