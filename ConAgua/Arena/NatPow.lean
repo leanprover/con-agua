@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.NatMul
+public import ConAgua.Arena.NatGrindAttr
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.NatMul
 
@@ -54,12 +55,12 @@ grind_pattern [arena_grind] Grows.trans => Grows m m', Grows m' m''
 theorem pv_set_one (p : Array Word) (o j l : Nat) (v : Word) (hl : l = 1) (hj : j = o)
     (h : j < p.size) : pv (p.set! j v) o l = v.toNat := by
   subst hj hl; simp [pv, wt, h]
-grind_pattern [arena_grind] pv_set_one => pv (p.set! j v) o l
+grind_pattern [natop_grind] pv_set_one => pv (p.set! j v) o l
 
 theorem Norm.set_one (p : Array Word) (o j l : Nat) (v : Word) (hl : l = 1) (hj : j = o)
     (h : j < p.size) (hv : v ≠ 0) : Norm (p.set! j v) o l := by
   subst hj hl; simp [Norm, h, hv]
-grind_pattern [arena_grind] Norm.set_one => Norm (p.set! j v) o l
+grind_pattern [natop_grind] Norm.set_one => Norm (p.set! j v) o l
 
 /-- The exponent's bits from the top: `e >> j' = 2 (e >> j) + bit`, for `j = j' + 1`. -/
 theorem shr_succ (e j j' : Word) (hj : j'.toNat + 1 = j.toNat) (h64 : j.toNat < 64) :
@@ -207,7 +208,7 @@ theorem natPow_spec (n : Nat) (s₀ : St) (oa la e : Word) (hok : PoolOK s₀.me
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind, arena_grind] =>
+    sym only [lang_grind, arena_grind, natop_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         powLoop_step_spec p hph hpt hpm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat) s₀.mem n] <;>
       -- depth, not search: the initial state is several `setLoc`s and two stores deep

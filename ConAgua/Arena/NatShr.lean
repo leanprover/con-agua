@@ -108,7 +108,7 @@ theorem shr_val (P : Array Word) (oa la w o l S R : Nat) (ho : o = oa + w) (hl :
   have m2 : wt w * pv P (oa + w) (la - w) + wt w ≤ wt w * (R * S + S) := by
     rw [← Nat.mul_succ]; exact Nat.mul_le_mul_left _ h2
   apply Nat.div_eq_of_lt_le <;> grind
-grind_pattern [arena_grind] shr_val => pv P oa la / (S * wt w), pv P o l, R * S
+grind_pattern [natop_grind] shr_val => pv P oa la / (S * wt w), pv P o l, R * S
 
 /-- Skipping all of `a`: the quotient is `0`. -/
 theorem shr_big_w (P : Array Word) (oa la w S : Nat) (hw : la ≤ w) (hS : 0 < S) :
@@ -118,7 +118,7 @@ theorem shr_big_w (P : Array Word) (oa la w S : Nat) (hw : la ≤ w) (hS : 0 < S
   have : wt la ≤ wt w := Nat.pow_le_pow_right (by decide) (Nat.mul_le_mul_left _ hw)
   have : wt w ≤ S * wt w := Nat.le_mul_of_pos_left _ hS
   omega
-grind_pattern [arena_grind] shr_big_w => pv P oa la / (S * wt w)
+grind_pattern [natop_grind] shr_big_w => pv P oa la / (S * wt w)
 
 /-- An amount of two or more limbs: the quotient is `0`. -/
 theorem shr_big_b (P Q : Array Word) (oa la ob lb : Nat) (hn : Norm Q ob lb) (hl : 2 ≤ lb)
@@ -131,7 +131,7 @@ theorem shr_big_b (P Q : Array Word) (oa la ob lb : Nat) (hn : Norm Q ob lb) (hl
     have : wt 1 = 2 ^ 64 := rfl
     omega
   exact Nat.lt_of_lt_of_le h1 (Nat.pow_le_pow_right (by decide) (Nat.le_of_lt h4))
-grind_pattern [arena_grind] shr_big_b => pv P oa la / 2 ^ pv Q ob lb, Norm Q ob lb
+grind_pattern [natop_grind] shr_big_b => pv P oa la / 2 ^ pv Q ob lb, Norm Q ob lb
 
 /-! ## `nat_shr(oa, la, ob, lb)` -/
 
@@ -263,7 +263,7 @@ theorem natShr_spec (n : Nat) (s₀ : St) (oa la ob lb : Word) (hok : PoolOK s�
       Nat.reduceEqDiff, Locals.init, List.getD_cons_zero, List.getD_cons_succ,
       UInt64.toNat_zero] at *)
     all_goals (try and_intros)
-    all_goals (try (set_option maxHeartbeats 200000 in grind (splits := 40) [arena_grind, lang_grind]))
+    all_goals (try (set_option maxHeartbeats 200000 in grind (splits := 40) [arena_grind, lang_grind, natop_grind]))
 
 end shrFn
 

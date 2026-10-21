@@ -3353,6 +3353,10 @@ not functions.
   `pv p o k` and fires on every prefix value; with it in `arena_grind`, `nat_sub`'s loop (which
   never compares) timed out. It and `pv_succ_lt`, `cmpW_*` are in `natcmp_grind`
   (`NatGrindAttr.lean`), which a proof adds to its `sym only [...]` list when it needs them.
+  A second one, `natop_grind`, holds the broad lemmas of the shifts, `pow` and the division
+  (`pv_one`, `pv_set_one`, `shr_val`, `pv_cons`, the `sh` facts, …): lemmas registered in
+  `arena_grind` reach every later file, and in `nat_divmod`'s limb loop `shr_val` alone made 336
+  useless instances (`nat_shr`'s quotient lemma, matching any `x / (S * wt w)`).
 * `LitRefine.lean` has the same fact as `pv_lt` (and `pv_ge`, `pv_len`), but it is not a
   `module`, so module files cannot import it; `NatCmp.lean` proves its own `pv_lt_wt`,
   `pv_len_lt`.
