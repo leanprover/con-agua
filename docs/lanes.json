@@ -226,5 +226,11 @@
 "model": "sonnet",
 "status": "running",
 "focus": "abstract1, instantiateList (pool-slice lists, fvar-range column)"
+},
+{
+"lane": "sync",
+"model": "opus",
+"status": "running",
+"focus": "Track con-ron upstream: fingerprints, stale targets, bump script; bump to latest"
 }
 ]
