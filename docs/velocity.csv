@@ -31,3 +31,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-21,levels,opus,6,1,"lvls_eq/ls_node refine lvlsEq? (list slices in POOL under ArenaR, caches as hypotheses)"
 2026-10-21,levels,opus,10,1,"lv_apd/lv_mem refine allParamsDefined (names in a caller-chosen array), lh_push/lv_zero refine zeronessOf (names pushed on the heap)"
 2026-10-21,levels,opus,6,1,"lv_lookup/lv_substl refine subst/subst.go with lists, lv_spw/lv_substpw refine substPW (arrays chosen by the caller)"
+2026-10-21,strlit,opus,22,0,"lit store's strVal arm (Store/LitRefine: duplicated match/find/push, slice-as-key uniqueness moved into LitRefine.lean); internE's lit arm census-complete (ArenaRel label natVal->lit, proven); expr lines accept strVal (node_lit_str, ExprLookups, parseExprEntryD fully refines)"

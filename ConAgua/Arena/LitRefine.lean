@@ -9,20 +9,28 @@ an instance of the store library (`StoreLib.lean`):
 
 * **The instance**: the schema `litSch` (`REC`, `SLOT`, four words per node, counts at
   `CTL[2 + t]`, tag `8`), the record relation `RecRel` (a `natVal` is a normalised slice below
-  the pool top, with its hash; a `strVal` is kind `1`), the node hash `litH` (word 3), the lens
-  `litLens` on the arena's two `lit` tables, and the obligations: `litFrame`, the match
-  (`litMatchOK`: matching is equality of literals, by the uniqueness of normalised slices), the
-  home slot (`litHomeOK`), the new record (`litNewOK`), and the bridges from the L models
-  (`internW_eq`, `probeW_arm`, `pushOK_room`).
+  the pool top, with its hash; a `strVal` is kind `1`, a slice below the pool top holding its
+  UTF-8 bytes one byte per word, with its hash — the same shape as the name store's `str` table,
+  `NStrRefine.lean`, minus the prefix), the node hash `litH` (word 3), the lens `litLens` on the
+  arena's two `lit` tables, and the obligations: `litFrame`, the match (`litMatchOK`/
+  `litMatchStrOK`: matching is equality of literals, by the uniqueness of normalised slices for
+  `natVal`, by `slice_key`'s word-list equality for `strVal`), the home slot (`litHomeOK`/
+  `litHomeOKStr`), the new record (`litNewOK`/`litNewOKStr`), and the bridges from the L models
+  (`internW_eq`/`internWStr_eq`, `probeW_arm`/`probeWStr_arm`, `pushOK_room`).
 * **`LitR m a`**, the state relation (`natAddLit_refines`'s `R`): the pool is well formed and the
   library's `StoreR` holds for the `lit` tables.
-* **`intern_correct`**: `internW` refines `internE (.lit (.natVal _))`, by `intern_correctG`.
+* **`intern_correct`/`internStr_correct`**: `internW`/`internWStr` refine `internE (.lit (.natVal
+  _))`/`internE (.lit (.strVal _))`, by `intern_correctG`.
 * **`LitR.grow`**, `natAddLit_refines_store`, `natAddLit_run_store`.
 
-The pool facts (normalised slices are unique) are by hand.
+The pool facts (normalised slices are unique) are by hand; the `strVal` arm's slices-as-keys
+facts (`sliceL`, `slice_key`, `strWords`) live here too (below `eqW_iff`/`hashN_congr`, which they
+share with the normalised-slice argument), since the name `str` table (`NStrRefine.lean`, via
+`PoolSlice.lean`) and the level-list store (`LsRefine.lean`, via `PoolSlice.lean`) both import
+this file already and reuse them from here.
 
 Not represented: the arena's derived column for `lit` nodes (`derOfLit`, through Lean's opaque
-`mixHash`), the contents of `strVal` nodes (kind `1` only), and every other table of `AState`.
+`mixHash`), and every other table of `AState`.
 -/
 
 open ConRon.Arena
@@ -210,6 +218,68 @@ theorem pv_of_eqW (p : Array Word) (a b l : Word) (hab : a.toNat + l.toNat < 2 ^
     pv p a.toNat l.toNat = pv p b.toNat l.toNat :=
   pv_congr p p _ _ _ (fun k hk => (eqW_iff p a b l 0 hab hbb).mp h k (Nat.zero_le _) hk)
 
+/-! ## Slices of the pool as keys
+
+The level-list store (`LsRefine.lean`) and the name store's `str` table (`NStrRefine.lean`) key a
+record by a list of words held as a slice `(o, l)` below the pool top, compared by `limbs_eq`
+(`eqW`) after the lengths, hashed by `lit_hash` (`hashN`) — exactly the machinery above. The
+`lit` store's own `strVal` arm is the same: a slice holding the string's UTF-8 bytes, one byte
+per word. So the "slice as a list of words" layer (`sliceL`, `slice_key`, `slice_key_hash`) and
+the `strVal` encoding (`strWords`, `strWords_inj`) live here, once, next to `eqW_iff`/
+`hashN_congr`; `PoolSlice.lean` and `NStrRefine.lean` import this file and reuse them from here.
+`lit`'s own `natVal` key is not a list (a natural number is a *normalised* slice, unique by
+`pv_len`/`pv_limbs` above, not by `sliceL`), so it shares `eqW_iff`/`hashN_congr` with this layer,
+not the statement. -/
+
+/-- The words of the slice `(o, l)` of `p`. -/
+def sliceL (p : Array Word) (o l : Nat) : List Word := List.ofFn fun k : Fin l => p[o + k]?.getD 0
+
+theorem sliceL_length (p : Array Word) (o l : Nat) : (sliceL p o l).length = l := by
+  simp [sliceL]
+
+theorem sliceL_eq_iff (p q : Array Word) (a b l : Nat) :
+    sliceL p a l = sliceL q b l ↔ ∀ k < l, p[a + k]?.getD 0 = q[b + k]?.getD 0 := by
+  rw [sliceL, sliceL, List.ext_getElem_iff]
+  simp
+
+/-- The pool growing above `t` leaves the slices below `t` alone. -/
+theorem Agree.sliceL (p q : Array Word) (t o l : Nat) (h : Agree p q t) (hk : o + l ≤ t) :
+    L.Arena.sliceL p o l = L.Arena.sliceL q o l :=
+  (sliceL_eq_iff p q o o l).mpr fun i hi => by rw [h (o + i) (by omega)]
+
+/-- **A slice key matches iff the word lists are equal**: for a record slice `(a, la)` and a
+query slice `(b, lb)` that do not wrap, the L match (lengths, then `limbs_eq`) holds iff the two
+slices hold the same words. -/
+theorem slice_key (p : Array Word) (a la b lb : Word) (ha : a.toNat + la.toNat < 2 ^ 64)
+    (hb : b.toNat + lb.toNat < 2 ^ 64) :
+    ((la == lb) && eqW p a b lb 0) = true ↔
+      L.Arena.sliceL p a.toNat la.toNat = L.Arena.sliceL p b.toNat lb.toNat := by
+  constructor
+  · intro h
+    simp only [Bool.and_eq_true, beq_iff_eq] at h
+    obtain ⟨rfl, he⟩ := h
+    exact (sliceL_eq_iff p p _ _ _).mpr fun k hk =>
+      (eqW_iff p a b la 0 ha hb).mp he k (Nat.zero_le _) hk
+  · intro h
+    have hl : la = lb := UInt64.toNat_inj.mp (by
+      have := congrArg List.length h; simpa only [sliceL_length] using this)
+    subst hl
+    simp only [beq_self_eq_true, Bool.true_and]
+    exact (eqW_iff p a b la 0 ha hb).mpr fun k _ hk => (sliceL_eq_iff p p _ _ _).mp h k hk
+
+/-- Equal slices have equal hashes. -/
+theorem slice_key_hash (p q : Array Word) (a la b lb : Nat)
+    (h : L.Arena.sliceL p a la = L.Arena.sliceL q b lb) : hashN p a la = hashN q b lb := by
+  have hl : la = lb := by have := congrArg List.length h; simpa only [sliceL_length] using this
+  subst hl
+  exact hashN_congr p q a b la ((sliceL_eq_iff p q a b la).mp h)
+
+/-- The words of a string: its UTF-8 bytes, one per word. -/
+def strWords (s : String) : List Word := s.toByteArray.data.toList.map UInt8.toUInt64
+
+theorem strWords_inj (s s' : String) (h : strWords s = strWords s') : s = s' :=
+  String.toByteArray_inj.mp (ByteArray.ext (Array.toList_inj.mp
+    ((List.map_inj_right fun _ _ h => UInt8.toUInt64_inj.mp h).mp h)))
 
 /-! ## The relation between L memory and the arena's `lit` tables -/
 
@@ -237,16 +307,27 @@ def NatRec (m : Mem) (t i : Word) (N : Nat) : Prop :=
   rdW (m.arr64 REC) (i * 8 + t * 4 + 3) = hashN (m.arr64 POOL)
     (rdW (m.arr64 REC) (i * 8 + t * 4 + 1)).toNat (rdW (m.arr64 REC) (i * 8 + t * 4 + 2)).toNat
 
-/-- Node `i` of tier `t` holds the literal `k`; a `strVal` is kind `1`, its contents are not
-represented yet. -/
+/-- Node `i` of tier `t` holds the string `s`: kind `1`, a slice below the pool top holding its
+UTF-8 bytes (one byte per word, as the name store's `str` table), and the hash. -/
+def StrRec (m : Mem) (t i : Word) (s : String) : Prop :=
+  rdW (m.arr64 REC) (i * 8 + t * 4) = 1 ∧
+  (rdW (m.arr64 REC) (i * 8 + t * 4 + 1)).toNat + (rdW (m.arr64 REC) (i * 8 + t * 4 + 2)).toNat ≤
+    m.top.toNat ∧
+  sliceL (m.arr64 POOL) (rdW (m.arr64 REC) (i * 8 + t * 4 + 1)).toNat
+    (rdW (m.arr64 REC) (i * 8 + t * 4 + 2)).toNat = strWords s ∧
+  rdW (m.arr64 REC) (i * 8 + t * 4 + 3) = hashN (m.arr64 POOL)
+    (rdW (m.arr64 REC) (i * 8 + t * 4 + 1)).toNat (rdW (m.arr64 REC) (i * 8 + t * 4 + 2)).toNat
+
+/-- Node `i` of tier `t` holds the literal `k`: a `natVal n` is `NatRec`, a `strVal s` is
+`StrRec`. -/
 def RecRel (m : Mem) (t i : Word) : LitNode → Prop
   | ⟨.natVal N⟩ => NatRec m t i N
-  | ⟨.strVal _⟩ => rdW (m.arr64 REC) (i * 8 + t * 4) = 1
+  | ⟨.strVal s⟩ => StrRec m t i s
 
 @[store_grind =] theorem RecRel_natVal (m : Mem) (t i : Word) (N : Nat) :
     RecRel m t i ⟨.natVal N⟩ = NatRec m t i N := rfl
 @[store_grind =] theorem RecRel_strVal (m : Mem) (t i : Word) (s : String) :
-    RecRel m t i ⟨.strVal s⟩ = (rdW (m.arr64 REC) (i * 8 + t * 4) = 1) := rfl
+    RecRel m t i ⟨.strVal s⟩ = StrRec m t i s := rfl
 
 /-- The hash of node `i` of tier `t`: its word 3. -/
 def litH (m : Mem) (t i : Word) : Word := rdW (m.arr64 REC) (i * 8 + t * 4 + 3)
@@ -268,7 +349,7 @@ theorem litFrame : RFrame litSch RecRel litH := by
   have hp : m'.arr64 POOL = m.arr64 POOL := hb POOL (by decide) (by decide) (by decide)
   have ht : m'.top = m.top := htop
   refine ⟨fun a h => ?_, by simp only [litH, h3]⟩
-  obtain ⟨⟨N⟩ | ⟨s⟩⟩ := a <;> simpa only [RecRel, NatRec, h0, h1, h2, h3, hp, ht] using h
+  obtain ⟨⟨N⟩ | ⟨s⟩⟩ := a <;> simpa only [RecRel, NatRec, StrRec, h0, h1, h2, h3, hp, ht] using h
 
 /-! ## The query's obligations -/
 
@@ -290,7 +371,7 @@ theorem litMatchOK :
       (rdW (m.arr64 REC) (i * 8 + t * 4 + 2)) o l
     have := pv_of_eqW (m.arr64 POOL) (rdW (m.arr64 REC) (i * 8 + t * 4 + 1)) o l
     grind [litMt, matchW, NatRec, RecRel_natVal, PoolOK, SliceOK]
-  · grind [litMt, matchW, RecRel_strVal]
+  · grind [litMt, matchW, RecRel_strVal, StrRec]
 
 theorem litHomeOK (h : Word) : HomeOK litH (litMt m o l h) m h := by
   intro t i hm
@@ -327,6 +408,88 @@ theorem litNewOK :
   grind [PoolOK, SliceOK]
 
 end query
+
+/-! ## The `strVal` arm's query obligations -/
+
+/-- The match of `lit_match_str` on node `i` of tier `t`. -/
+def litMtStr (m : Mem) (o l h t i : Word) : Bool := matchWStr (m.arr64 REC) (m.arr64 POOL) t i o l h
+
+section queryStr
+variable (m : Mem) (hpool : PoolOK m) (o l : Word) (hq : SliceOK m o l) (s : String)
+  (hk : sliceL (m.arr64 POOL) o.toNat l.toNat = strWords s)
+
+include hpool hq hk in
+/-- **Matching is equality of literals**, on a node of a represented tier: a `strVal` query
+never matches a `natVal` node (kind `0 ≠ 1`), and matches a `strVal` node iff the two slices hold
+the same bytes (`slice_key`, `strWords_inj`), as the name store's `str` table. -/
+theorem litMatchStrOK :
+    MatchOK RecRel (litMtStr m o l (hashN (m.arr64 POOL) o.toNat l.toNat)) m
+      (litKey (.strVal s)) := by
+  intro t i k hr
+  obtain ⟨⟨N⟩ | ⟨s'⟩⟩ := k
+  · grind [litMtStr, matchWStr, RecRel_natVal, NatRec]
+  · obtain ⟨h0, hsl, hw, hh⟩ : StrRec m t i s' := RecRel_strVal m t i s' ▸ hr
+    obtain ⟨-, -, hps, htop⟩ := hpool
+    simp only [SliceOK] at hq
+    have key := slice_key (m.arr64 POOL) (rdW (m.arr64 REC) (i * 8 + t * 4 + 1))
+      (rdW (m.arr64 REC) (i * 8 + t * 4 + 2)) o l (by omega) (by omega)
+    simp only [litMtStr, matchWStr, litKey]
+    constructor
+    · intro h
+      simp only [Bool.and_eq_true, beq_iff_eq] at h
+      obtain ⟨⟨⟨-, -⟩, h2⟩, h3⟩ := h
+      have := key.mp (by simp only [Bool.and_eq_true, beq_iff_eq]; exact ⟨h2, h3⟩)
+      rw [hw, hk] at this
+      simp only [LitNode.mk.injEq, ConLeche.Literal.strVal.injEq]
+      exact strWords_inj _ _ this
+    · intro h
+      simp only [LitNode.mk.injEq, ConLeche.Literal.strVal.injEq] at h
+      subst h
+      have e : sliceL (m.arr64 POOL) (rdW (m.arr64 REC) (i * 8 + t * 4 + 1)).toNat
+          (rdW (m.arr64 REC) (i * 8 + t * 4 + 2)).toNat = sliceL (m.arr64 POOL) o.toNat l.toNat := by
+        rw [hw, hk]
+      have := key.mpr e
+      simp only [Bool.and_eq_true] at this
+      simp only [Bool.and_eq_true, beq_iff_eq, this, and_true, h0]
+      refine ⟨trivial, ?_⟩
+      rw [hh]
+      exact slice_key_hash _ _ _ _ _ _ e
+
+theorem litHomeOKStr (h : Word) : HomeOK litH (litMtStr m o l h) m h := by
+  intro t i hm
+  simp only [litMtStr, matchWStr, Bool.and_eq_true, beq_iff_eq] at hm
+  exact hm.1.1.2
+
+include hq hk in
+/-- The record `lit_push_str` writes holds the string. -/
+theorem litNewOKStr :
+    NewOK litSch RecRel litH m [1, o, l, hashN (m.arr64 POOL) o.toNat l.toNat]
+      (litKey (.strVal s)) (hashN (m.arr64 POOL) o.toNat l.toNat) := by
+  intro t j ht hroom
+  have hp := pushG_arr litSch m t [1, o, l, hashN (m.arr64 POOL) o.toNat l.toNat] j (cntW litSch m t)
+    POOL (by decide) (by decide) (by decide)
+  have htop := (outEq_pushG litSch litS_wf m t ht [1, o, l, hashN (m.arr64 POOL) o.toNat l.toNat] j
+    (cntW litSch m t)).2
+  have e : ∀ f, f < 4 → fld litSch (pushG litSch m t [1, o, l, hashN (m.arr64 POOL) o.toNat l.toNat] j
+      (cntW litSch m t)) t (cntW litSch m t) f =
+      [1, o, l, hashN (m.arr64 POOL) o.toNat l.toNat].getD f.toNat 0 := by
+    intro f hf
+    have := hroom.1
+    have := hroom.2
+    rw [fld_pushG litSch litS_wf] <;> simp only [litSch, Schema.ad] at * <;> grind
+  have e0 := e 0 (by decide)
+  have e1 := e 1 (by decide)
+  have e2 := e 2 (by decide)
+  have e3 := e 3 (by decide)
+  rw [fld_lit0] at e0
+  rw [fld_lit] at e1 e2 e3
+  simp only [litKey, RecRel_strVal, StrRec, litH, e0, e1, e2, e3, hp, ← top_rdW] at htop ⊢
+  simp only [List.getD_cons_zero, List.getD_cons_succ, show (1 : Word).toNat = 0 + 1 from rfl,
+    show (2 : Word).toNat = 1 + 1 from rfl, show (3 : Word).toNat = 2 + 1 from rfl,
+    show (0 : Word).toNat = 0 from rfl, htop]
+  grind [SliceOK]
+
+end queryStr
 
 /-! ## The bridges from the L models -/
 
@@ -392,6 +555,60 @@ theorem intern_correct (w : Word) (m' : Mem) (hI : internW m o l = some (w, m'))
 
 end intern
 
+/-! ## The `strVal` arm's bridges, and `intern_lit_str` refines `internE (.lit (.strVal _))` -/
+
+theorem probeWStr_arm (m : Mem) (o l h t : Word) :
+    ∀ j d, probeWStr (m.arr64 SLOT) (m.arr64 REC) (m.arr64 POOL) t o l h (baseW m t) (nSlots m) j d =
+      probeArm litSch m t (litMtStr m o l h t)
+        (probeWStr (m.arr64 SLOT) (m.arr64 REC) (m.arr64 POOL) t o l h (baseW m t) (nSlots m)) j d := by
+  intro j d; rw [probeWStr]; rfl
+
+theorem pushMemStr_eq (m : Mem) (t o l h j c : Word) :
+    pushMemStr m t o l h j c = pushG litSch m t [1, o, l, h] j c := by
+  simp [pushMemStr, pushG, wrRec, Schema.ad, litSch]
+
+theorem internWStr_eq (m : Mem) (o l : Word) :
+    internWStr m o l = internM litSch m 0 (pushOK m)
+      [1, o, l, hashN (m.arr64 POOL) o.toNat l.toNat]
+      (probeWStr (m.arr64 SLOT) (m.arr64 REC) (m.arr64 POOL) 0 o l
+        (hashN (m.arr64 POOL) o.toNat l.toNat) (baseW m 0) (nSlots m)
+        (homeW (hashN (m.arr64 POOL) o.toNat l.toNat) (nSlots m)) 0)
+      (probeWStr (m.arr64 SLOT) (m.arr64 REC) (m.arr64 POOL) 1 o l
+        (hashN (m.arr64 POOL) o.toNat l.toNat) (baseW m 1) (nSlots m)
+        (homeW (hashN (m.arr64 POOL) o.toNat l.toNat) (nSlots m)) 0) := by
+  have e0 : ∀ x, hdW litSch.tag.toUInt64 0 x = litP + x := fun x => by
+    simp [hdW, litSch, litP, ETag.lit]
+  have e1 : ∀ x, hdW litSch.tag.toUInt64 1 x = litS + x := fun x => by
+    simp [hdW, litSch, litS, ETag.lit]
+  simp only [internWStr, internM, pushMemStr_eq, e0, e1, true_and]
+  rfl
+
+section internStr
+variable (m : Mem) (a : AState) (hR : LitR m a) (o l : Word) (hq : SliceOK m o l) (s : String)
+  (hk : sliceL (m.arr64 POOL) o.toNat l.toNat = strWords s)
+
+include hR hq hk in
+/-- **`intern_lit_str`'s model refines the arena's `internE` at a `strVal` literal.** -/
+theorem internStr_correct (w : Word) (m' : Mem) (hI : internWStr m o l = some (w, m')) :
+    AM.ok (internE (.lit (.strVal s))) a ∧
+    LitR m' (AM.st (internE (.lit (.strVal s))) a) ∧
+    AM.res (internE (.lit (.strVal s))) a = decE w := by
+  obtain ⟨hpool, hS⟩ := hR
+  rw [internWStr_eq] at hI
+  have hso := internM_sameOut litSch litS_wf m _ _ _ _ _ _ _ hI
+  obtain ⟨hok, hst, hres⟩ := intern_correctG litSch RecRel litH litS_wf litFrame litLens a m hS _ _ _ _ _
+    (internE_lit_run _ a) false rfl 0 (by simp) (by simp) _ _ (litMatchStrOK m hpool o l hq s hk)
+    (litHomeOKStr m o l _) _ _ (probe_homeG litSch m 0 _ _ (probeWStr_arm m o l _ 0) _)
+    (probe_homeG litSch m 1 _ _ (probeWStr_arm m o l _ 1) _) _ (pushOK_room m) _ rfl
+    (litNewOKStr m o l hq s hk) w m' hI
+  refine ⟨hok, ⟨?_, hst⟩, hres⟩
+  obtain ⟨⟨hb, htop⟩, hw, hsz⟩ := hso
+  have := hb POOL (by decide) (by decide) (by decide)
+  simp only [PoolOK, top_rdW] at hpool ⊢
+  grind
+
+end internStr
+
 /-! ## Appending to the pool preserves the relation -/
 
 section grow
@@ -414,7 +631,10 @@ theorem RecRel_grow (t i : Word) (k : LitNode) (h : RecRel m t i k) : RecRel m' 
     obtain ⟨h0, hsl, hnm, hpv, hh⟩ := h
     exact ⟨h0, by omega, Agree.norm _ _ _ _ _ hag hsl hnm, by rw [Agree.pv _ _ _ _ _ hag hsl, hpv],
       by rw [Agree.hashN _ _ _ _ _ hag hsl, hh]⟩
-  · simpa only [RecRel, hr] using h
+  · simp only [RecRel, StrRec, hr] at h ⊢
+    obtain ⟨h0, hsl, hw, hh⟩ := h
+    exact ⟨h0, by omega, by rw [Agree.sliceL _ _ _ _ _ hag hsl, hw],
+      by rw [Agree.hashN _ _ _ _ _ hag hsl, hh]⟩
 
 include hg in
 theorem TierRel_grow (t : Word) (ht : t ≤ 1) (tb : Tbl LitNode EIdx UInt64)
@@ -465,6 +685,28 @@ theorem internLit_refines (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
   obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun hspec
   subst hs
   exact ⟨hloc, intern_correct s.mem a₀ hR o l hq hn _ _ hI⟩
+
+/-- `intern_lit_str` refines `internE (.lit (.strVal _))` under `LitR`. -/
+theorem internLitStr_refines (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
+    (hpe : p.lookup "limbs_eq" = some limbsEq) (hpm : p.lookup "lit_match_str" = some litMatchStr)
+    (hpf : p.lookup "lit_find_str" = some litFindStr) (hpp : p.lookup "lit_push_str" = some litPushStr)
+    (hp : p.lookup "intern_lit_str" = some internLitStr)
+    (a₀ : AState) (n : Nat) (s₀ : St) (o l : Word) (hR : LitR s₀.mem a₀) (hq : SliceOK s₀.mem o l)
+    (s : String) (hk : sliceL (s₀.mem.arr64 POOL) o.toNat l.toNat = strWords s) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "intern_lit_str" [o, l]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (internE (.lit (.strVal s))) a₀ ∧
+      LitR s'.mem (AM.st (internE (.lit (.strVal s))) a₀) ∧
+      AM.res (internE (.lit (.strVal s))) a₀ = decE (r.headD 0); ⊤⦄ := by
+  have ⟨_, _, hps, htop⟩ := hR.1
+  have hspec := internLitStr_spec p hph hpe hpm hpf hpp hp n s₀ o l (by omega)
+    (by simp only [SliceOK] at hq; omega)
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun hspec
+  subst hs
+  exact ⟨hloc, internStr_correct s.mem a₀ hR o l hq _ hk _ _ hI⟩
 
 /-- The arena functions and the store functions, as one program. -/
 def storeProg : Prog := natProg ++ [("nat_add_lit", natAddLit)] ++ litProg
