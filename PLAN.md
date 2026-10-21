@@ -125,6 +125,10 @@ per-function separation logic.
   proved equal to new.
 - **Speed over ceremony.** Green field: an occasionally broken master is acceptable if it is noticed and fixed
   quickly. Before merging, build the targets you touched and their direct dependents, not everything.
+- **Fan-out.** A lane may hand sub-tasks to helper agents when the split is clean, for example proving theorems
+  whose statements are already fixed. Keep it shallow: at most about 3 helpers at a time. Larger independent
+  work should become a top-level lane, so the coordinator and the dashboard can see it. Name helper worktrees
+  `<lane>-<suffix>`.
 - **Velocity log.** Every lane, at every landing, appends one line to `docs/velocity.csv`:
   `date,lane,model,work_min,overhead_min,note`. `work_min` is time spent on the actual task (design, code,
   proofs). `overhead_min` is the merge red tape: merging master, waiting on builds, re-running tests, fixing
