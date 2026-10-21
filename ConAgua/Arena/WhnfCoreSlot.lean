@@ -469,4 +469,94 @@ theorem whnfCoreLoopB_spec (p : Prog) (n : Nat) (s₀ : St) :
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih, callW_spec p n "whnf_core_step"] <;>
       finish [coreLoopW_done, coreLoopW_cont]
 
+
+theorem whnfCoreLoop_spec (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St)
+    (mode cheap vis d e : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "whnf_core_loop" [mode, cheap, vis, d, e]
+    ⦃fun r s' => LocEq s' s₀ ∧ coreLoopW p (n + 1) s₀.mem mode cheap vis d e =
+      some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp.loop]
+  simp only [callFn, whnfCoreLoopL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      fun s => Triple.step_exec (whnfCoreLoopB_spec p (n + 1) s)] <;>
+    finish
+
+/-! ## The loop refines `whnfCoreLoop` -/
+
+theorem whnfCoreLoop_done (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (c : Bool)
+    (d K : Nat) (e v : EIdx) (a a₁ : AState)
+    (hs : (whnfCoreStep mode r fe c d e).run a = .ok (.done v, a₁)) :
+    (whnfCoreLoop mode r fe c d (K + 1) e).run a = .ok (v, a₁) := by
+  simp only [whnfCoreLoop, StateT.run_bind, hs, except_ok_bind]; rfl
+
+theorem whnfCoreLoop_cont (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (c : Bool)
+    (d K : Nat) (e e' : EIdx) (a a₁ : AState)
+    (hs : (whnfCoreStep mode r fe c d e).run a = .ok (.cont e', a₁)) :
+    (whnfCoreLoop mode r fe c d (K + 1) e).run a = (whnfCoreLoop mode r fe c d K e').run a₁ := by
+  simp only [whnfCoreLoop, StateT.run_bind, hs, except_ok_bind]
+
+/-- A core run after a core run, at the first run's maps. -/
+theorem CoreAfter.comp {dn : NIdx → Option ConLeche.Name} {m₀ m₁ m₂ : Mem} {a₂ : AState}
+    {vis : Word} {fe : IFEnv} {M M' : ModeMaps} {G G' g : Word}
+    (hK : KeptAll M M' G g) (hSt : StackKept m₀ m₁) (hG : G ≤ G')
+    (h₂ : CoreAfter dn m₁ m₂ a₂ vis fe M' G' g) : CoreAfter dn m₀ m₂ a₂ vis fe M G g := by
+  obtain ⟨M'', G'', hS', hK', hSt', hG'⟩ := h₂
+  exact ⟨M'', G'', hS', hK.trans hK' hG, hSt.trans hSt', UInt64.le_trans hG hG'⟩
+
+section loopRef
+variable (p : Prog) (hp : WhnfCoreProg p)
+
+/-- **The model of the loop refines `whnfCoreLoop`** at every twin loop fuel `K ≥ k`. -/
+theorem coreLoopW_ok (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (mode cheap d : Word)
+    (hmode : mode < 4) :
+    ∀ k, k ≤ n + 1 → ∀ K, k ≤ K → ∀ (m m' : Mem) (a : AState) (MM : ModeMaps) (G g e v : Word),
+      CoreS dn m a vis fe MM G g → HW e →
+      coreLoopW p k m mode cheap vis d e = some (v, m') →
+      CoreRef (whnfCoreLoop (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0)
+        d.toNat K (decE e)) a decH dn m vis fe MM G g [v] m' := by
+  intro k
+  induction k with
+  | zero => intro _ _ _ _ _ _ _ _ _ _ _ _ _ h; simp [coreLoopW] at h
+  | succ k ih =>
+    intro hkn K hK m m' a MM G g e v hS he h
+    obtain ⟨K', rfl⟩ : ∃ K', K = K' + 1 := ⟨K - 1, by omega⟩
+    simp only [coreLoopW] at h
+    cases hc : callW p k "whnf_core_step" [mode, cheap, vis, d, e] m with
+    | none => simp [hc] at h
+    | some q =>
+    obtain ⟨r, m₁⟩ := q
+    simp only [hc] at h
+    cases k with
+    | zero => simp [callW_zero] at hc
+    | succ j =>
+    have hstep := whnfCoreStep_refines p j (hk.mono (by omega)) F (by omega) (by omega)
+      ⟨m, Locals.init []⟩ a dn vis fe MM G g mode cheap d e ⟨hS, hmode⟩ he
+    obtain ⟨hok, hA, hres, hrw⟩ := CoreSpec.of_callW hstep hc
+    have hsr := AM.run_of_ok _ _ hok
+    rw [hres] at hsr
+    by_cases h0 : r.headD 0 = 0
+    · rw [if_pos h0] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      simp only [decStep, h0, ↓reduceIte] at hsr
+      have hrun := whnfCoreLoop_done (decMode mode) (coreKnot (decMode mode) fe id F) fe
+        (cheap != 0) d.toNat K' (decE e) _ a _ hsr
+      obtain ⟨hok', hst', hres'⟩ := AM.of_run_ok _ _ _ _ hrun
+      exact ⟨hok', hst' ▸ hA, hres', hrw.2⟩
+    · rw [if_neg h0] at h
+      simp only [decStep, h0, ↓reduceIte] at hsr
+      have hrun := whnfCoreLoop_cont (decMode mode) (coreKnot (decMode mode) fe id F) fe
+        (cheap != 0) d.toNat K' (decE e) _ a _ hsr
+      obtain ⟨M', G', hS₁, hK₁, hSt₁, hG₁⟩ := hA
+      obtain ⟨hok₂, hA₂, hres₂, hrw₂⟩ := ih (by omega) K' (by omega) m₁ m' _ M' G' g _ v hS₁ hrw.2 h
+      rw [AM.run_of_ok _ _ hok₂] at hrun
+      obtain ⟨hok', hst', hres'⟩ := AM.of_run_ok _ _ _ _ hrun
+      refine ⟨hok', ?_, hres'.trans hres₂, hrw₂⟩
+      rw [hst']
+      exact CoreAfter.comp hK₁ hSt₁ hG₁ hA₂
+
+end loopRef
+
 end L.Arena
