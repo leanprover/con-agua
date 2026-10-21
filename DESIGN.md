@@ -1687,3 +1687,103 @@ uniqueness clause was missing in the first draft: an overwrite needs it).
 | `MemoRel.lean` | 428 | 1.3 s / 2.1 s | most (reads after the writes: 110 lines) |
 | `Frame.lean` | 171 | 0.8 s / 0.8 s | all, short |
 | `ArenaRel.lean` | 716 | 1.0 s / 3.3 s | generated per-table lifts (~400 lines) |
+
+### Part 2: the first recursive walk with a cache, `bvarBoundMemo`
+
+**Choice.** `bvarBoundGo`/`bvarBoundMemo` (`Arena/ExprOps.lean:1404`, Rust
+`arena/expr_ops.rs:1981`): the exact loose-bvar bound, memoized per node in `bvarBC`, read-only
+on the store, used by the checker on the saturated branch of `bvarB` (`looseBVarsBoundedFast`,
+`instantiate1Lift`'s cutoff). It is the simplest walk with a cache: no interning, a `Nat` result.
+`liftLooseBVars`/`instantiate1` intern their results and key the memo by `(EIdx, Nat)`; they are
+the natural next step on the same scaffolding.
+
+**L code** (`Walk.lean`, `module`), recursive as con-ron's Rust is: `bb_go(h)` (memo probe, then
+`bb_node`, then `memo_set`), `bb_node(h)` (decode tag/tier/index, the arena `view`'s checks:
+scratch handle with the scratch tier closed, index past the count, then dispatch: `bvar` `i + 1`,
+`sort`/`const`/`lit` `0`, `app` and `letE` recursive), `bb_memo(h)` (clear, walk, clear).
+`max` and the truncating `z - 1` are branch-free (`x + (y - x) * u64(x < y)`, `z - u64(0 < z)`),
+so a loop-free body has one path per tag. `fvar`, `lam`, `forallE`, `proj` `abort`: their tables
+are not in L yet, and an `abort` claims nothing, so the refinement covers every handle.
+
+**Proof shape.**
+* *L side* (`Walk.lean`): models `bbW`/`bbNodeW` (mutual on L fuel, with `match` on the callee
+  results), and one guarded equation per arm whose right side names the continuation
+  (`bbW (n+1) m h = bbK h (bbNodeW n m h)`, `bbNodeW (n+1) m h = appK₁ n a (bbW n m f)`, and
+  `appK₁ n a (some (x, m₁)) = appK₂ x (bbW n m₁ a)` …). The first attempt stated the arms as
+  `bbW n m f = some (x, m₁) → … → bbNodeW (n+1) m h = some …`; `grind_pattern` rejects those
+  (`x`, `m₁` occur in no pattern). With the continuation form every variable is in the pattern
+  `bbNodeW (n + 1) m h`, and the callee posts rewrite the continuation's argument. The two
+  specs are `BbGoSpec n`/`BbNodeSpec n` (named, `unfold`ed before `vcgen`: a spec hidden behind
+  a definition is not found), proved by one induction on fuel, each step one
+  `sym only … => vcgen … <;> finish`. The first version, one function with nested `if`s for
+  `max`, failed in eleven verification conditions; splitting `bb_node` out and the branch-free
+  arithmetic made it go through.
+* *Arena side* (`WalkRefine.lean`, by hand, no `grind`): handle words decode
+  (`decE_tag`/`decE_idx`/`decE_pers`), the view under `ArenaR` (`view_tier`, `get_*`, `node_of`:
+  the record relation gives the node and its children as words), `ArenaR.memo_set` (`memo_set` is
+  `bvarBSet`: `memoR_set` plus the frame of everything else) and `ArenaR.memo_clear`; then
+  `GoOK n`/`NodeOK n` by induction on the fuel (`goOK`): the model returning `r` from `m` related to
+  `a` implies `(bvarBoundGo F (decE h)).run a = .ok (r.toNat, a')` with `ArenaR m' a'` for every
+  arena fuel `F ≥ n`. The arena's inner `do` block is named (`bbNodeA`, `bbArm`) and shown equal
+  to `bvarBoundGo`'s by `congr`.
+* *End to end*: `bbMemo_refines` (the L triple with `AM.ok`/`AM.st`/`AM.res`), `bbMemo_run`, and
+  `bbMemo_x64` (`Capstone.lean`): from `ca_enter` on a state with `MemRel` and `ArenaR`, with
+  machine fuel `N ≤ F`: `rdx = 1` (fuel or stack), `rdx = 2` (an `abort`: unrepresented kind,
+  dangling handle, full memo), or `rdx = 0` and `bvarBoundMemo F (decE h)` returns `rax.toNat` in
+  a state related to the final memory. As for `natAddLit_x64`, three outcomes, not two.
+
+**Deep recursion.** `bb_bench(n, k)` (`WalkBench.lean`, not proved, a driver) interns the left
+spine `app (… (app b b) …) b` over `b = bvar k` with `n` applications and runs `bb_memo` on it;
+`WalkEmit.lean` compiles `benchProg` (no byte arrays, 25 word arrays) and `harness/walk.c` runs it
+on all-zero arrays sized for `n`. For `n = 10^6` (recursion 10^6 deep, through the `f` child):
+`ok 8` with a 1 GiB stack (also for `n = 3·10^6`), `exhausted` (`rdx = 1`) with a 16 MiB stack, and
+`exhausted` with fuel 1000. The smallest stack that suffices for `10^6` is 184,000,384 bytes:
+184 bytes per level (the frames of `bb_go` and `bb_node` with their return addresses).
+
+**Measurements** (`perf stat -e instructions:u`, one run each; "build" is the same run without
+the walk: `k ≥ 2^63` for L, `walkbench N K build` for Lean):
+
+| `n` | compiled L: build / build + walk / walk | con-ron's compiled Lean (`lake exe walkbench`): build / total / walk |
+|---:|---|---|
+| 10^5 | 40.8 M / 113.1 M / 72.3 M | 196.9 M / 306.8 M / 109.9 M |
+| 10^6 | 422.9 M / 1146.0 M / 723.1 M | 1870.9 M / 2915.0 M / 1044.1 M |
+
+About 720 instructions per node for the naive compiled L walk (three memo probes per `app`
+node: its own miss, the `bvar` child's hit, the insert's re-probe), against about 1040 for
+con-ron's arena compiled by Lean (`Std.HashMap`, boxed `Nat`s). Building the term through the L
+stores costs a quarter of Lean's. con-ron's Rust could not be measured (no `cargo` here).
+
+| | Rust lines | L lines | spec / relation lines | `lean` wall / user | automation |
+|---|---:|---:|---:|---:|---|
+| walk (`bb_go`, `bb_node`, `bb_memo`) | 87 (`bvar_bound_go`, `bvar_bound_memo`) | 49 | `Walk.lean` 366 (models 75, arms 90, specs 50) | 10.1 s / 11.0 s | specs: `vcgen` + `finish`; arm equations: `simp` |
+| memo (`memo_find/set/clear`) | ≈ 110 (`HashMap2` index, probe, get, insert, clear; no resize) + 18 (`bvar_b_*`) | 33 | `Memo.lean` 267, `MemoRel.lean` 428 | 1.4 s, 1.3 s | specs automatic; relation by hand |
+| arena refinement | – | – | `WalkRefine.lean` 481 | 0.9 s / 1.5 s | by hand, `simp`/`rw` |
+
+L/Rust is 0.56 for the walk and about 0.3 for the memo (no resize, no generic code).
+
+### Findings
+
+* **Kraken's AT&T printer and binutils 2.46 disagree on `imul`**: the compiler's two-operand
+  `imul rax, rcx` is printed `imulq %rcx, %rax, %rax`, which binutils 2.46 assembles as an APX
+  instruction (EVEX, SIGILL here). The scanner never multiplies, so the walk is the first compiled
+  program to hit it; every store (`homeW`, FNV) multiplies, so `natAddLit_x64`'s code would too.
+  `WalkEmit.lean` rewrites the text (`fixImul`). The printer and the assembler are trusted, so
+  this is a trusted-base mismatch: `docs/gaps/kraken-att-imul-three-operand.lean`. The fix
+  belongs in Kraken's printer (or `asmText`).
+* `decide` on the frame side conditions (`Apart`, bounded `∀` over `List UInt64`) fails or times
+  out: `docs/gaps/decide-uint64-list-ball.lean`; a `simp` with the ids (`apart`) works.
+* `vcgen` does not see a spec behind a named predicate (`BbGoSpec p n`); `unfold` it first.
+* Guarded equations must have every variable in a pattern; continuation functions
+  (`appK₁ n a (some (x, m₁)) = …`) are the way to say "after the callee returned `some`".
+* The house rule "loop bodies must be straight-line" holds for recursive bodies too: `if r < y`
+  after two calls doubled the paths and failed; branch-free `u64(…)` arithmetic went through.
+
+### L / compiler features
+
+None added to `ConAgua/L` or `ConAgua/Compiler`. Needed and worked around: the `imul` printing
+(above). Useful later: a statement `call f(…)` without a result (the walk assigns to a dummy
+local).
+
+### `sorry`s
+
+None. (`vendor/con-leche/ConLeche/Challenge.lean`'s are vendored and pre-existing.)
