@@ -405,4 +405,39 @@ theorem skipBraced_run (b : Array UInt8) (hb : b.size < 2 ^ 64) (fuel : Nat) (i 
       (skipBraced_spec scanProg rfl rfl b hb fuel _ rfl i d hi hd)
     grind
 
+/-! ## A callee that writes memory: the frame condition `LocEq`
+
+`bump` stores into a word array, so its spec cannot post `s' = s₀`; it posts `LocEq s' s₀` (the
+locals are the caller's), and the caller still reads its own `i` after the call. -/
+
+abbrev W : ArrId := 0
+
+def bump : FunDecl := lfn (i) { W.u64[0] := i; return 0 }
+def bumpUser : FunDecl := lfn (i) locals (z) { z := call bump(i + 1); return i + z }
+
+section bump
+variable (p : Prog) (hp : p.lookup "bump" = some bump)
+include hp
+
+theorem bump_spec (n : Nat) (s₀ : St) (i : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "bump" [i]
+    ⦃fun r s' => LocEq s' s₀ ∧ r = [0]; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, bump]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n => sym only [lang_grind] => vcgen [exec, step, evalE, evalArgs, st64] <;> finish
+
+theorem bumpUser_spec (hp2 : p.lookup "bump_user" = some bumpUser) (n : Nat) (s₀ : St) (i : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "bump_user" [i]
+    ⦃fun r s' => LocEq s' s₀ ∧ r = [i]; ⊤⦄ := by
+  rw [invoke_eq _ hp2]
+  simp only [callFn, bumpUser]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind] => vcgen [exec, step, evalE, evalArgs, setLocs, setLoc, bump_spec p hp n] <;> finish
+
+end bump
+
 end L.Examples
