@@ -50,24 +50,30 @@ def classSlotIsMinor : FunDecl := lfn (s) locals () {
   return u64(IW.u64[s] == 1)
 }
 
+/-- `classMinorSlot` helper, a small recursive helper (not a `while` loop, so that its proof is
+plain induction on the fuel, as `bbGo`): scans slots `off + j, …, off + len - 1`, counting the
+`.minor c cc _` hits and remembering the last one's `ihs`. -/
+@[l_impl ConRon.Arena.classMinorSlot]
+def classMinorSlotGo : FunDecl := lfn (off, rem, j, c, cc, cnt, rS, rOff, rLen)
+    locals (p, cnt2, rS2, rOff2, rLen2) {
+  if rem == 0 { return (cnt, rS, rOff, rLen) };
+  p := IW.u64[off + j];
+  if IW.u64[p] == 1 && IW.u64[p + 1] == c && IW.u64[p + 2] == cc {
+    (cnt2, rS2, rOff2, rLen2) := call class_minor_slot_go(off + 1, rem - 1, j + 1, c, cc, cnt + 1,
+      j, IW.u64[p + 3], IW.u64[p + 4])
+  } else {
+    (cnt2, rS2, rOff2, rLen2) := call class_minor_slot_go(off + 1, rem - 1, j + 1, c, cc, cnt, rS,
+      rOff, rLen)
+  };
+  return (cnt2, rS2, rOff2, rLen2)
+}
+
 /-- `class_minor_slot(rd, c, cc)`: the single slot of `rd.slots` that is `.minor c cc _`, as
 `(s, ihs.off, ihs.len)`; aborts if there is not exactly one. -/
 @[l_impl ConRon.Arena.classMinorSlot]
-def classMinorSlotL : FunDecl := lfn (rd, c, cc) locals (off, n, j, p, cnt, rS, rOff, rLen) {
-  off := IW.u64[rd];
-  n := IW.u64[rd + 1];
-  cnt := 0;
-  j := 0;
-  while j < n {
-    p := IW.u64[off + j];
-    if IW.u64[p] == 1 && IW.u64[p + 1] == c && IW.u64[p + 2] == cc {
-      cnt += 1;
-      rS := j;
-      rOff := IW.u64[p + 3];
-      rLen := IW.u64[p + 4]
-    };
-    j += 1
-  };
+def classMinorSlotL : FunDecl := lfn (rd, c, cc) locals (cnt, rS, rOff, rLen) {
+  (cnt, rS, rOff, rLen) := call class_minor_slot_go(IW.u64[rd], IW.u64[rd + 1], 0, c, cc, 0, 0, 0,
+    0);
   if cnt != 1 { abort };
   return (rS, rOff, rLen)
 }
@@ -798,7 +804,8 @@ def genRecCheckL : FunDecl := lfn
 
 /-- This module's functions. -/
 def recGenFns : Prog :=
-  [("class_slot_is_minor", classSlotIsMinor), ("class_minor_slot", classMinorSlotL),
+  [("class_slot_is_minor", classSlotIsMinor), ("class_minor_slot_go", classMinorSlotGo),
+   ("class_minor_slot", classMinorSlotL),
    ("class_fields_of_hits", classFieldsOfHits), ("class_fields_of", classFieldsOfL),
    ("class_nodes_agree", classNodesAgreeL), ("class_leaf_at", classLeafAtL),
    ("class_fields_agree", classFieldsAgreeL), ("class_ctor_of_nfs", classCtorOfNfs),
