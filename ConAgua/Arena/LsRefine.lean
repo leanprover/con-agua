@@ -265,10 +265,11 @@ theorem LsR.grow (a : AState) (hR : LsR m a) : LsR m' a := by
   have hT : ∀ t, t ≤ 1 → ∀ tb : Tbl ListNode LsIdx LDer, TierR lsSch LsRecRel lshash m t tb →
       TierR lsSch LsRecRel lshash m' t tb := fun t ht tb hT =>
     tierR_mono lsSch LsRecRel lshash m m' t tb hr (grow_arr m m' hg LSSLOT (by decide) (by decide))
-      (grow_ctl m m' hg (40 + t) (by grind)) (fun i k => LsRecRel_grow m m' hg t i k)
+      (grow_ctl m m' hg (40 + t) (by grind))
+      (by simp only [baseW, grow_ctl m m' hg SCB (by decide)]) (fun i k => LsRecRel_grow m m' hg t i k)
       (fun i => by simp only [lshash, hr]) hT
   refine ⟨?_, by grind, hT 0 (by decide) _ hT0, hT 1 (by decide) _ hT1⟩
-  grind [store_grind]
+  exact ⟨by grind [store_grind], by rw [grow_ctl m m' hg SCB (by decide)]; exact hctl.2⟩
 
 end grow
 

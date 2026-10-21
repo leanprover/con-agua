@@ -288,10 +288,11 @@ theorem NStrR.grow (a : AState) (hR : NStrR m a) : NStrR m' a := by
       TierR nstrSch NsRecRel nshash m' t tb := fun t ht tb hT =>
     tierR_mono nstrSch NsRecRel nshash m m' t tb hr
       (grow_arr m m' hg NSSLOT (by decide) (by decide))
-      (grow_ctl m m' hg (36 + t) (by grind)) (fun i k => NsRecRel_grow m m' hg t i k)
+      (grow_ctl m m' hg (36 + t) (by grind))
+      (by simp only [baseW, grow_ctl m m' hg SCB (by decide)]) (fun i k => NsRecRel_grow m m' hg t i k)
       (fun i => by simp only [nshash, hr]) hT
   refine ⟨?_, by grind, hT 0 (by decide) _ hT0, hT 1 (by decide) _ hT1⟩
-  grind [store_grind]
+  exact ⟨by grind [store_grind], by rw [grow_ctl m m' hg SCB (by decide)]; exact hctl.2⟩
 
 end grow
 
