@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.MemoLib
+public import ConAgua.Arena.ViewL
 public import ConAgua.Arena.AppStore
 public import ConAgua.Arena.LetStore
 public import ConAgua.Arena.BVarStore
@@ -49,26 +50,11 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-/-- The larger of two words (branch-free in L: `x + (y - x) * u64(x < y)`). -/
-def maxW (x y : Word) : Word := x + (y - x) * (if x < y then 1 else 0)
-
-/-- Truncating `z - 1` (branch-free in L: `z - u64(0 < z)`). -/
-def predW (z : Word) : Word := z - (if 0 < z then 1 else 0)
-
-/-- The tier bit and the index of a handle word. -/
-def tierW (h : Word) : Word := (h >>> 27) &&& 1
-def idxW (h : Word) : Word := h &&& 134217727
-
 /-- Record the result `r` at `h` and return it. -/
 def bbSet (m : Mem) (h r : Word) : Option (Word × Mem) :=
   match msetG bmSch m h 0 r with
   | none => none
   | some m' => some (r, m')
-
-/-- The view checks of `bb_node`: a scratch handle needs the scratch tier open, and the index
-must be below the tier's count `CTL[c + t]`. -/
-def viewOK (m : Mem) (h c : Word) : Prop :=
-  ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) ∧ idxW h < rdW (m.arr64 CTL) (c + tierW h)
 
 mutual
 /-- **The model of `bb_go`** at L fuel `n`: the result and the memory after, `none` where the L
