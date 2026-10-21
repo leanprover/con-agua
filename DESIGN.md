@@ -4067,6 +4067,90 @@ tombstone antecedent and the existential value.
 
 None.
 
+## The `lit` store's `strVal` arm, and expression lines accept strings (2026-10-21, lane `strlit`)
+
+Files: `ConAgua/Arena/Store.lean`, `ConAgua/Arena/LitRefine.lean`, `ConAgua/Arena/ArenaRel.lean`
+(the `lit` parts), `ConAgua/Arena/PoolSlice.lean`, `ConAgua/Arena/NStrRefine.lean` (dedup only),
+`ConAgua/Front/ApplyExpr.lean`, `ConAgua/Front/ApplyExprRefine.lean`, `ConAgua/Front/Line.lean`,
+`ConAgua/Front/FrontRun.lean` (threading only).
+
+### What changed
+
+The `lit` store's single combined node table (one `Tbl LitNode EIdx UInt64` per tier, shared by
+`natVal` and `strVal`, con-ron's `Arena/Store.lean:302`) now represents `strVal` nodes fully: kind
+`1`, a slice below the pool top holding the string's UTF-8 bytes (one byte per word, as the name
+store's `str` table, `NStrStore.lean`/`NStrRefine.lean`), and the hash. Previously `RecRel`'s
+`strVal` arm was just `kind = 1`, contents unrepresented (`DESIGN.md`'s "Not done", lane `store`).
+
+* **`Store.lean`**: a full `strVal` arm (`matchWStr`, `litMatchStr`, `probeWStr`, `litFindStr`,
+  `pushMemStr`, `litPushStr`, `internWStr`, `internLitStr`), duplicating the `natVal` arm's L
+  functions rather than parametrising them by kind (as `NStrStore.lean` duplicates `lit`'s probe
+  machinery for its own prefix check): simpler, and the two arms already shared nothing but
+  `REC`/`SLOT`/`CTL[2+t]`/`lit_hash`/`limbs_eq`/`cnt`/`pushOK`/`nSlots`/`homeW`/`baseW`, which stay
+  common. The hash is the plain slice hash (`lit_hash`, unmixed): a `natVal`/`strVal` collision in
+  the same bucket costs one extra probe step, not correctness, since `litMatchStr` checks kind
+  `1` where `litMatch` checks kind `0` (hardcoded, as before) — a `strVal` query never matches a
+  `natVal` node and vice versa.
+* **`LitRefine.lean`**: `StrRec` (the `strVal` record relation), `litMatchStrOK`/`litHomeOKStr`/
+  `litNewOKStr` (the query's obligations), the bridges, `internStr_correct`, `internLitStr_refines`.
+  The uniqueness argument for a `strVal` key is `slice_key`/`strWords_inj` (word-list equality),
+  not the `natVal` arm's normalised-slice argument (`pv_len`/`pv_limbs`) — exactly the "name `str`
+  table's pool-slice approach" the task pointed at. Since `PoolSlice.lean` (which has `slice_key`)
+  already `import`s `LitRefine.lean` (for `eqW_iff`/`hashN_congr`, which `slice_key`'s proof needs),
+  and `LitRefine.lean`'s own `strVal` arm now needs `slice_key` too, the slice-as-key layer
+  (`sliceL`, `slice_key`, `slice_key_hash`, `strWords`, `strWords_inj`) moved **into**
+  `LitRefine.lean` itself (next to `eqW_iff`); `PoolSlice.lean` is now a one-paragraph re-export
+  (`import ConAgua.Arena.LitRefine`, no new content), and `NStrRefine.lean` dropped its own copy of
+  `strWords`/`strWords_inj` in favour of the one now visible transitively. No other file needed to
+  change: both downstream users (`LsRefine.lean`, `NStrRefine.lean`) already imported
+  `PoolSlice.lean`, never `LitRefine.lean` directly.
+* **`ArenaRel.lean`**: `internLitStr_refinesA`, and the existing `internLit_refinesA`'s census tag
+  changed from `@[refines_part ConRon.Arena.internE "lit natVal"]` to `"lit"` (the label
+  `COMPLETE_BY_PARTS` actually requires); both theorems carry that label now, so `internE`'s `lit`
+  arm — and so all of `ConRon.Arena.internE`/`internNodeE` — is **proven** (`scripts/census.py
+  --list internE`), not just `written`. `litLocal`'s `strVal` branch (a separate, pre-existing
+  locality lemma, not part of my task's obligations but broken by the richer `RecRel`) needed the
+  same pool/top rewrite the `natVal` branch already had.
+* **Frontend** (`ApplyExpr.lean`): `node_lit_str` (`str_put_esc` then `intern_lit_str`, aborting
+  where the body position is `0`, as `apply_str`'s name-line analogue does), wired into
+  `expr_node`'s dispatch at kind `17` (previously the final catch-all `abort`). `ExprLookups`
+  gained the five new store-function fields; the byte-level unescape chain
+  (`byte_in`/`hex_val`/`hex4`/`hex3`/`esc_sur`/`esc_one`/`utf8_put`/`str_put_esc`) is threaded as
+  **explicit hypotheses** through `nodeLitStr_spec`/`exprNode_spec`/`applyExpr_spec` instead, since
+  `ScanLookups` (`Line.lean`) already carries them for the name-`str` line and the one call site
+  (`applyAny`'s proof) already has that record in scope — no new structure needed there.
+* **`ApplyExprRefine.lean`**: `internLitStr_D`, `node_lit_str` (mirrors `node_lit`'s shape exactly,
+  using the already-proved, already-generic `ConAgua.Front.UnescapeLink.strPutEsc_link` in place of
+  `natDecW_val`). `applyExprW_refines`'s tag changed from `@[refines_part … "every kind but
+  strVal"]` to a plain `@[refines ConRon.Arena.Frontend.parseExprEntryD]`: **every** `ExprRec` kind
+  is now covered, and the census agrees (`parseExprEntryD` is `proven`).
+* **`frontAll_refines`'s coverage**: unchanged in substance (`applyLine`/`parseBytes` still abort
+  on inductive declaration lines, out of scope here), but the label text's parenthetical dropped
+  "strVal" — that part of "expr lines" is no longer a caveat. `exprProg`/`frontAllProg` needed the
+  unescape chain added/deduplicated (`frontAllProg`'s `exprProg.filter` now also drops
+  `byte_in`/`hex_val`/`hex4`/`hex3` — already supplied by `L.Scan.Validator.valProg` earlier in the
+  list — and the four explicit `esc_*`/`utf8_put`/`str_put_esc` entries were dropped in favour of
+  `exprProg`'s copy).
+
+### Findings
+
+* The two literal kinds share one cons table by design (con-ron's single `Tbl LitNode …`), so the
+  `strVal` arm's L code could not just be `NStrStore.lean`'s pattern verbatim (a fresh pair of
+  arrays): it had to reuse `REC`/`SLOT`/`CTL[2+t]`, differing from the `natVal` arm only in the
+  record's kind word. Duplicating the match/probe/push functions (rather than adding a `kind`
+  parameter to the existing ones) kept every already-proved `natVal` theorem untouched.
+  `litPush`/`litPushStr` do share the room checks (`pushOK`, unparametrised by kind: capacity does
+  not depend on content) and the node counter.
+  `str_put_esc` already existed end to end (lane `store`'s "Not done" note named it directly, and a
+  prior lane had already built `ConAgua.Front.UnescapeLink.strPutEsc_link`/`strPutEsc_spec`,
+  apparently in anticipation) — the frontend half was mostly wiring, not new proof.
+* Moving `sliceL`/`strWords` into `LitRefine.lean` was forced by the import DAG, not a style
+  choice: `PoolSlice.lean` already imported `LitRefine.lean` (for `eqW_iff`/`hashN_congr`), so
+  `LitRefine.lean` could not import `PoolSlice.lean` back for the same declarations its own
+  `strVal` arm now needs.
+* `grind [litMt, matchW, RecRel_strVal]`, the one-liner that dismissed the old (trivial) `strVal`
+  case of `litMatchOK`, still works verbatim once `StrRec` is added to its argument list — the
+  dismissal is still "kind `0` ≠ kind `1`", just through a richer hypothesis now.
 ## The core tier and the whnf family (2026-10-21, lane `whnf`)
 
 Phase 5 (ROADMAP §1), top-down. Files: `CoreCaches.lean` (L), `Tiers.lean` (`CoreR`),
