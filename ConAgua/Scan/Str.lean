@@ -75,6 +75,59 @@ decreasing_by
   rw [UInt64.lt_iff_toNat_lt] at h1 h2
   omega
 
+section
+variable (b : Array UInt8) (k n : Word)
+
+/-! One guarded equation per arm (DESIGN.md, "Proof recipe"), as for `utf8LoopN`. -/
+
+theorem utf8ValidN_end (h : ¬ k < n) : utf8ValidN b k n = 1 := by rw [utf8ValidN]; simp [h]
+theorem utf8ValidN_bad (h : k < n) (h0 : (utf8CharN b k n).2 = 0) : utf8ValidN b k n = 0 := by
+  rw [utf8ValidN]; simp [h, h0]
+theorem utf8ValidN_step (k' : Word) (h : k < n) (h0 : (utf8CharN b k n).2 ≠ 0)
+    (hw : k < k + (utf8CharN b k n).2) (hk' : k' = k + (utf8CharN b k n).2) :
+    utf8ValidN b k n = utf8ValidN b k' n := by
+  subst hk'; rw [utf8ValidN]; simp [h, h0, hw]
+theorem utf8ValidN_wrap (h : k < n) (h0 : (utf8CharN b k n).2 ≠ 0)
+    (hw : ¬ k < k + (utf8CharN b k n).2) : utf8ValidN b k n = 0 := by
+  rw [utf8ValidN]; simp [h, h0, hw]
+
+grind_pattern [lang_grind] utf8ValidN_end => utf8ValidN b k n
+grind_pattern [lang_grind] utf8ValidN_bad => utf8ValidN b k n, utf8CharN b k n
+grind_pattern [lang_grind] utf8ValidN_step => utf8ValidN b k n, utf8CharN b k n, utf8ValidN b k' n
+grind_pattern [lang_grind] utf8ValidN_wrap => utf8ValidN b k n, utf8CharN b k n
+
+end
+
+/-- `k + (utf8CharN b k n).2` never wraps when `k < n` and `b.size < 2 ^ 63`: either `k` is
+inside `b` (`< 2 ^ 63`, and the length is at most `4`, `utf8CharN_snd_le`), or `k` is past the
+end (`byteW` reads `0`, forcing the one-byte ASCII branch, length `1`), and then `k < n` (`n` a
+`Word`, so `n.toNat < 2 ^ 64`) keeps `k` below the maximum. Discharges `utf8ValidN_step`'s `hw`
+unconditionally, since `utf8Valid_spec` takes no bound on `k`, `n`. -/
+theorem utf8CharN_no_wrap (b : Array UInt8) (hb : b.size < 2 ^ 63) (k n : Word) (h : k < n)
+    (hl : (utf8CharN b k n).2 ≠ 0) : k < k + (utf8CharN b k n).2 := by
+  rw [UInt64.lt_iff_toNat_lt] at h
+  have hn : n.toNat < 2 ^ 64 := n.toNat_lt
+  rcases Nat.lt_or_ge k.toNat b.size with hk | hk
+  · have h4 := L.Scan.Utf8.utf8CharN_snd_le b k n
+    rw [UInt64.le_iff_toNat_le] at h4
+    have h4' : (4 : Word).toNat = 4 := by decide
+    rw [h4'] at h4
+    have hl' : (utf8CharN b k n).2.toNat ≠ 0 := by
+      intro hc; apply hl
+      have : (utf8CharN b k n).2.toNat = (0 : Word).toNat := by simpa using hc
+      exact UInt64.toNat_inj.mp this
+    rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_add]
+    omega
+  · have hc0 : byteW b k = 0 := by simp [byteW, Array.getD, Nat.not_lt.mpr hk]
+    have heq : utf8CharN b k n = (0, 1) := by simp [utf8CharN, hc0]
+    rw [heq] at hl ⊢
+    simp only
+    have h1' : (1 : Word).toNat = 1 := by decide
+    rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_add, h1']
+    omega
+
+grind_pattern [lang_grind] utf8CharN_no_wrap => utf8CharN b k n
+
 /-! ## Bytes of the body, hexadecimal digits -/
 
 /-- Rust's `byte_at` on the string body `[_, e)`: the byte at `k`, `0` from `e` on. -/
@@ -269,12 +322,40 @@ variable (p : Prog) (b : Array UInt8) (hb : b.size < 2 ^ 63)
     (hpt : p.lookup "scan_string" = some scanString)
 include hb
 
+include hpc in
+theorem utf8ValidLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) :
+    ⦃fun s => s = s₀⦄
+    exec p n utf8ValidLoop
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
+      r.retOr [1] = [utf8ValidN b (s₀.loc 0) (s₀.loc 1)]; ⊤⦄ := by
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+    rw [exec, step_while (w := utf8ValidLoop) rfl]
+    sym only [lang_grind] =>
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, L.Scan.Utf8.utf8Char_spec p hpc b n,
+        ih] <;> finish
+
+include hpc in
+theorem utf8ValidLoop_step_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) :
+    ⦃fun s => s = s₀⦄
+    step p (exec p n) utf8ValidLoop
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
+      r.retOr [1] = [utf8ValidN b (s₀.loc 0) (s₀.loc 1)]; ⊤⦄ :=
+  Triple.step_exec (utf8ValidLoop_spec p b hb hpc (n + 1) s₀ hm)
+
 include hpc hpv in
 theorem utf8Valid_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (k e : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "utf8_valid" [k, e]
     ⦃fun r s' => s' = s₀ ∧ r = [utf8ValidN b k e]; ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hpv]
+  simp only [callFn, utf8Valid]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind] =>
+      vcgen [exec, step, evalE, evalArgs, utf8ValidLoop_step_spec p b hb hpc n] <;> finish
 
 include hpb in
 theorem byteIn_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (k e : Word) :
