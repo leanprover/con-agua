@@ -1,6 +1,4 @@
-import ConRon.Arena.Monad
-import ConAgua.Arena.Refine
-import ConAgua.Arena.Store
+import ConAgua.Arena.StoreRel
 
 /-!
 # The `lit` store refines the arena's `lit` tables; `natAddLit_refines` without hypotheses
@@ -12,7 +10,7 @@ word-level models (`probeW`, `matchW`, `internW`). This file relates them to con
   scratch flag `CTL[1]` is `a.store.scratchOn`, and each tier `t` of the L store represents the
   arena's `lit` table of that tier (`TierRel`): node `i` (a word) holds `tb.nodes[i]`
   (`RecRel`: a `natVal` is a normalised slice below the pool top, with its hash), the cons
-  table maps each node's key to its handle `hdW t i` and points only at nodes with its key, and
+  table maps each node's key to its handle `hdW 8 t i` and points only at nodes with its key, and
   the L slots satisfy the linear-probing invariant (`SlotsOK`). Everything is stated over the
   words the L code reads (`rdW (m.arr64 REC) (i * 8 + t * 4 + 3)`, `walkW`), so the L models and
   the relation share their terms and no index conversion is needed.
@@ -202,63 +200,12 @@ theorem eqW_iff (p : Array Word) (a b l i : Word) (ha : a.toNat + l.toNat < 2 ^ 
   | case3 i hi => grind
 
 
-/-! ## Store reads: one equation per write
-
-Every fact about the memory after `lit_push` follows from these: a read of a word array after
-`set64` is the written word or the old read. -/
-
-theorem rdW_set! (a : Array Word) (k : Nat) (v x : Word) :
-    rdW (a.set! k v) x = if k = x.toNat ∧ k < a.size then v else rdW a x := by
-  simp only [rdW, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
-  grind
-
-theorem rdW_set64 (m : Mem) (a b : ArrId) (k v x : Word) :
-    rdW ((m.set64 a k v).arr64 b) x =
-      if b = a ∧ k = x ∧ k.toNat < (m.arr64 a).size then v else rdW (m.arr64 b) x := by
-  by_cases h : b = a
-  · subst h; rw [Mem.arr64_set64_same, rdW_set!]; grind
-  · rw [Mem.arr64_set64_ne _ _ _ _ _ h]; simp [h]
-
-theorem size_set64 (m : Mem) (a b : ArrId) (k v : Word) :
-    ((m.set64 a k v).arr64 b).size = (m.arr64 b).size := by
-  by_cases h : b = a
-  · subst h; rw [Mem.arr64_set64_same]; simp
-  · rw [Mem.arr64_set64_ne _ _ _ _ _ h]
-
-theorem top_rdW (m : Mem) : m.top = rdW (m.arr64 CTL) 0 := rfl
-
-theorem len64_eq (m : Mem) (a : ArrId) : m.len64 a = UInt64.ofNat (m.arr64 a).size := rfl
-
-attribute [store_grind =] rdW_set64 size_set64 top_rdW Mem.words_size_set64 len64_eq
 attribute [store_grind] cnt nSlots
 
 /-! ## The probe run -/
 
-/-- Slot `e` of the probe run from slot `x` among `n` slots (`lit_find`'s step, `e` times). -/
-def walkW (n x : Word) : Nat → Word
-  | 0 => x
-  | e + 1 => (walkW n x e + 1) * (if walkW n x e + 1 < n then 1 else 0)
-
-theorem walkW_succ (n x : Word) (e : Nat) :
-    walkW n x (e + 1) = (walkW n x e + 1) * (if walkW n x e + 1 < n then 1 else 0) := rfl
-
-theorem walkW_lt (n x : Word) (e : Nat) (hx : x < n) : walkW n x e < n := by
-  induction e with
-  | zero => exact hx
-  | succ e ih => rw [walkW_succ]; grind
-grind_pattern [store_grind] walkW_lt => walkW n x e
-
 /-- The home slot of a hash among the slots of `m`. -/
 abbrev homeM (m : Mem) (h : Word) : Word := homeW h (nSlots m)
-
-theorem homeW_lt (h n : Word) (hn : 0 < n) : homeW h n < n := by
-  simp only [homeW]
-  have hx := ((h * golden) ^^^ ((h * golden) >>> 32)).toNat_lt
-  have hn' := n.toNat_lt
-  have : ((h * golden) ^^^ ((h * golden) >>> 32)).toNat * n.toNat / 2 ^ 64 < n.toNat :=
-    Nat.div_lt_of_lt_mul (Nat.mul_lt_mul_of_pos_right hx (by grind))
-  rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_ofNat', Nat.mod_eq_of_lt (by omega)]; exact this
-grind_pattern [store_grind] homeW_lt => homeW h n
 
 /-- The first `d` slots of the run from `x` hold nodes that do not match. -/
 def NoMatch (m : Mem) (t o l h x : Word) (d : Nat) : Prop :=
@@ -354,20 +301,6 @@ def RecRel (m : Mem) (t i : Word) : LitNode → Prop
 @[store_grind =] theorem RecRel_strVal (m : Mem) (t i : Word) (s : String) :
     RecRel m t i ⟨.strVal s⟩ = (rdW (m.arr64 REC) (i * 8 + t * 4) = 1) := rfl
 
-/-- The handle word of node `i` of tier `t`: tag `8` (`ETag.lit`), the tier bit, the index. -/
-def hdW (t i : Word) : Word := 0x80000000 + t * 0x8000000 + i
-
-/-- The index of a handle, as a word. -/
-def hix (x : EIdx) : Word := UInt64.ofNat x.idxNat
-
-theorem hix_hdW (t i : Word) (ht : t ≤ 1) (hi : i.toNat < 2 ^ 27) : hix (decE (hdW t i)) = i := by
-  simp only [hix, decE, hdW, Idx.idxNat, Idx.index]
-  apply UInt64.toNat_inj.mp
-  simp only [UInt64.toNat_ofNat', UInt32.toNat_mod, UInt64.toNat_toUInt32, UInt64.toNat_add,
-    UInt64.toNat_mul]
-  grind
-grind_pattern [store_grind] hix_hdW => hix (decE (hdW t i))
-
 /-- The slots of tier `t` index its `c` nodes, and node `i` lies on the run from its home slot,
 after occupied slots (the invariant of linear probing without deletion). -/
 def SlotsOK (m : Mem) (t : Word) (c : Nat) : Prop :=
@@ -385,7 +318,7 @@ def TierRel (m : Mem) (t : Word) (tb : Tbl LitNode EIdx UInt64) : Prop :=
   (cnt m t).toNat = tb.nodes.size ∧ tb.nodes.size ≤ 134217728 ∧
   8 * tb.nodes.size ≤ (m.arr64 REC).size ∧
   (∀ (i : Word) k, tb.nodes[i.toNat]? = some k → RecRel m t i k) ∧
-  (∀ (i : Word) k, tb.nodes[i.toNat]? = some k → tb.cons[k]? = some (decE (hdW t i))) ∧
+  (∀ (i : Word) k, tb.nodes[i.toNat]? = some k → tb.cons[k]? = some (decE (hdW 8 t i))) ∧
   (∀ k x, tb.cons[k]? = some x → tb.nodes[(hix x).toNat]? = some k) ∧
   SlotsOK m t tb.nodes.size
 
@@ -433,12 +366,6 @@ variable (m : Mem) (t o l h J c : Word)
 
 end push
 
-theorem Tbl.push_nodes (tb : Tbl LitNode EIdx UInt64) (a : LitNode) (d : UInt64) (i : EIdx) :
-    (tb.push a d i).nodes = tb.nodes.push a := by cases tb; rfl
-
-theorem Tbl.push_cons (tb : Tbl LitNode EIdx UInt64) (a : LitNode) (d : UInt64) (i : EIdx) :
-    (tb.push a d i).cons = tb.cons.insert a i := by cases tb; rfl
-
 /-- A node's relation depends only on its four words, the pool and the top. -/
 theorem RecRel_frame (m m' : Mem) (t i : Word) (k : LitNode)
     (h0 : rdW (m'.arr64 REC) (i * 8 + t * 4) = rdW (m.arr64 REC) (i * 8 + t * 4))
@@ -474,7 +401,7 @@ theorem tier_hit (x : Word) (rs : List Word)
     (hP : ProbeOK m t o l (hashN (m.arr64 POOL) o.toNat l.toNat) x rs) (hr : rs ≠ [])
     (hf : rs.headD 0 ≠ 0) :
     tb.cons[litKey (.natVal (pv (m.arr64 POOL) o.toNat l.toNat))]? =
-      some (decE (hdW t (rs.tail.headD 0))) := by
+      some (decE (hdW 8 t (rs.tail.headD 0))) := by
   have := matchW_iff m t tb hT hpool o l hq hn (rs.tail.headD 0)
   obtain ⟨-, -, -, -, hsome, -, ⟨hsl, -⟩⟩ := hT
   have := hsl (rs.tail.tail.headD 0)
@@ -503,7 +430,7 @@ theorem tier_push (rs : List Word)
       (homeM m (hashN (m.arr64 POOL) o.toNat l.toNat)) rs) (hr : rs ≠ []) (hf : rs.headD 0 = 0)
     (hok : pushOK m t = true) (hctl : 4 ≤ (m.arr64 CTL).size) (dd : UInt64) :
     TierRel (pushMem m t o l (hashN (m.arr64 POOL) o.toNat l.toNat) (rs.tail.tail.headD 0) (cnt m t)) t
-      (tb.push (litKey (.natVal (pv (m.arr64 POOL) o.toNat l.toNat))) dd (decE (hdW t (cnt m t)))) := by
+      (tb.push (litKey (.natVal (pv (m.arr64 POOL) o.toNat l.toNat))) dd (decE (hdW 8 t (cnt m t)))) := by
   have hmiss := tier_miss m t tb hT hpool o l hq hn rs hP hr hf
   obtain ⟨hc, hcap, hrs, hrec, hsome, hback, hsl, hrun⟩ := hT
   simp only [TierRel, SlotsOK, Tbl.push_nodes, Tbl.push_cons, Array.size_push]
@@ -577,19 +504,6 @@ theorem tier_other (m : Mem) (t t' o l h J : Word) (ht : t ≤ 1) (ht' : t' ≤ 
 
 /-! ## The arena side, one equation per path -/
 
-/-- The arena's handle of node `n` of tier `b` is the L handle word. -/
-theorem mk_lit (b : Nat) (n : Nat) :
-    Idx.mk ETag.lit (UInt32.ofNat b) (UInt32.ofNat n) = decE (hdW (UInt64.ofNat b) (UInt64.ofNat n)) := by
-  simp only [decE, hdW, Idx.mk, ETag.lit]
-  congr 1
-  apply UInt32.toNat_inj.mp
-  simp only [UInt64.toNat_toUInt32, UInt64.toNat_add, UInt64.toNat_mul, UInt64.toNat_ofNat',
-    UInt32.toNat_add, UInt32.toNat_mul, UInt32.toNat_ofNat']
-  simp only [show (8 : UInt32).toNat = 8 from rfl, show (268435456 : UInt32).toNat = 268435456 from rfl,
-    show (134217728 : UInt32).toNat = 134217728 from rfl,
-    show (0x80000000 : UInt64).toNat = 2147483648 from rfl, show (0x8000000 : UInt64).toNat = 134217728 from rfl]
-  omega
-
 section arena
 variable (l : ConLeche.Literal) (a : AState) (x : EIdx)
 
@@ -605,25 +519,21 @@ theorem internE_lit_hitS (h0 : a.store.pers.lits.cons[litKey l]? = none)
 theorem internE_lit_pushS (h0 : a.store.pers.lits.cons[litKey l]? = none)
     (hs : a.store.scratchOn = true) (h1 : a.store.scr.lits.cons[litKey l]? = none)
     (hc : a.store.scr.lits.nodes.size < 134217728) :
-    (internE (.lit l)).run a = .ok (decE (hdW 1 (UInt64.ofNat a.store.scr.lits.nodes.size)),
+    (internE (.lit l)).run a = .ok (decE (hdW 8 1 (UInt64.ofNat a.store.scr.lits.nodes.size)),
       withScrLits a (a.store.scr.lits.push (litKey l) (a.store.derOfView (.lit l))
-        (decE (hdW 1 (UInt64.ofNat a.store.scr.lits.nodes.size))))) := by
-  rw [internE_lit_run, show Idx.tierS = UInt32.ofNat 1 from rfl, mk_lit]
-  simp [h0, hs, h1, Tbl.size, Idx.idxCap, hc]
+        (decE (hdW 8 1 (UInt64.ofNat a.store.scr.lits.nodes.size))))) := by
+  rw [internE_lit_run, show Idx.tierS = UInt32.ofNat 1 from rfl, mk_eq]
+  simp [h0, hs, h1, Tbl.size, Idx.idxCap, hc, ETag.lit]
 
 theorem internE_lit_pushP (h0 : a.store.pers.lits.cons[litKey l]? = none)
     (hs : a.store.scratchOn = false) (hc : a.store.pers.lits.nodes.size < 134217728) :
-    (internE (.lit l)).run a = .ok (decE (hdW 0 (UInt64.ofNat a.store.pers.lits.nodes.size)),
+    (internE (.lit l)).run a = .ok (decE (hdW 8 0 (UInt64.ofNat a.store.pers.lits.nodes.size)),
       withPersLits a (a.store.pers.lits.push (litKey l) (a.store.derOfView (.lit l))
-        (decE (hdW 0 (UInt64.ofNat a.store.pers.lits.nodes.size))))) := by
-  rw [internE_lit_run, show Idx.tierP = UInt32.ofNat 0 from rfl, mk_lit]
-  simp [h0, hs, Tbl.size, Idx.idxCap, hc]
+        (decE (hdW 8 0 (UInt64.ofNat a.store.pers.lits.nodes.size))))) := by
+  rw [internE_lit_run, show Idx.tierP = UInt32.ofNat 0 from rfl, mk_eq]
+  simp [h0, hs, Tbl.size, Idx.idxCap, hc, ETag.lit]
 
 end arena
-
-theorem AM.of_run_ok {α : Type} [Inhabited α] (x : AM α) (a a' : AState) (v : α)
-    (h : x.run a = .ok (v, a')) : AM.ok x a ∧ AM.st x a = a' ∧ AM.res x a = v := by
-  simp [AM.ok, AM.st, AM.res, h]
 
 section with_
 variable (a : AState) (t : Tbl LitNode EIdx UInt64)

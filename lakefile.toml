@@ -17,7 +17,8 @@ name = "ConAgua"
 # `ConAgua` cannot import it; it is built through the glob (the root is listed too, see
 # vendor/README.md, "Lake quirk"). `ConAgua.Capstone` imports `ConAgua.Arena.LitRefine`, so it is
 # a plain (non-`module`) file too, and built the same way.
-globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.LitRefine", "ConAgua.Capstone"]
+globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.Arena.LitRefine",
+  "ConAgua.Arena.AppStore", "ConAgua.Arena.AppRefine", "ConAgua.Capstone"]
 
 # Vendored from con-leche (rev 103562b) and con-ron (rev 4c9eaf7, proof/ dir).
 # See vendor/README.md for provenance and every patch applied.
