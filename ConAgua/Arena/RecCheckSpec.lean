@@ -10,7 +10,7 @@ import ConAgua.Arena.IndPartsSpec
 branch, so `AM.ok`/`AM.st`/`AM.res` collapse via `AM.ok_pure`/`AM.st_pure`/`AM.res_pure`
 (`ConAgua/Arena/Refine.lean`) and no bind algebra is needed.
 
-`decPL_get`: a decoded `decPL` slice read back at one index (the general form of `decBS_k`'s
+`decPL_getH`: a decoded `decPL` slice read back at one index (the general form of `decBS_k`'s
 single-field read, `IndPartsSpec.lean`), needed here to read `ms[c]` off `target_major_at`'s `(mo,
 ml)` slice of `TargetMajor` pointers. `decCV_some`/`erH_rdW`: the `IConstantVal` analogues of
 `decBS_some`/`iwH_rdW`, over `EREC` rather than `IW`, needed to read `c.type` for
@@ -36,7 +36,7 @@ open L.Arena
 
 /-- **A decoded `decPL` slice, read back at index `j`**: the pointer word at `o + j` decodes
 (by `f`) to the twin's `xs[j]`. -/
-theorem decPL_get {α : Type} (m : Mem) {f : Nat → Option α} {o l : Nat} {xs : List α}
+theorem decPL_getH {α : Type} (m : Mem) {f : Nat → Option α} {o l : Nat} {xs : List α}
     (h : decPL m f o l = some xs) (j : Nat) (hj : j < l) :
     ∃ v, iwN m (o + j) = some v ∧
       f v = some (xs[j]'(by rw [decPL_length m h]; exact hj)) := by
@@ -70,7 +70,7 @@ theorem targetMajorAt_refines_hit (p : Prog) (hp : p.lookup "target_major_at" = 
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.targetMajorAt ms c.toNat) a₀ ∧
       KeepPost dn vis fe (fun m' r (x : TargetMajor) => decTM m' (r.headD 0).toNat = some x)
         s₀.mem s'.mem a₀ r (AM.res (ConRon.Arena.targetMajorAt ms c.toNat) a₀); ⊤⦄ := by
-  obtain ⟨v, hv, hdec⟩ := decPL_get s₀.mem hms c.toNat hc
+  obtain ⟨v, hv, hdec⟩ := decPL_getH s₀.mem hms c.toNat hc
   have hv' := iwN_rdW hv (by omega)
   have hget : ms[c.toNat]'(by rw [decPL_length s₀.mem hms]; exact hc) = bigM := by
     have heq := List.getElem?_eq_getElem (l := ms) (i := c.toNat)
