@@ -277,4 +277,10 @@ abbrev LMEMO : ArrId := 41
 /-- `liftC`: array 41, stamp `CTL[42]`, count `CTL[43]`. -/
 abbrev lfSch : MemoSch := ⟨LMEMO, 42⟩
 
+/-- The slots of `instantiate1`'s memo (`inst1C`, keys `(handle, depth)`). -/
+abbrev IMEMO : ArrId := 47
+
+/-- `inst1C`: array 47, stamp `CTL[44]`, count `CTL[45]`. -/
+abbrev imSch : MemoSch := ⟨IMEMO, 44⟩
+
 end L.Arena

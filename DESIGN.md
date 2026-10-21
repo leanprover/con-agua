@@ -2541,10 +2541,11 @@ error matches (`Checker.lean:228–236, 247, 272–278, 286–291`, the frontend
 
 None. `PipelineRefines` is a hypothesis of the theorems.
 
-## The memo library, the view layer, derived ranges and `liftLooseBVars` (2026-10-21, lane `exprops`)
+## The memo library, the view layer, derived ranges, `liftLooseBVars` and `instantiate1` (2026-10-21, lane `exprops`)
 
 Files: `ConAgua/Arena/{MemoLib,MemoLibRel}.lean` (replace `Memo`/`MemoRel`), `{View,ViewL}.lean`,
-`{ExprMk,DerRel}.lean`, `{Lift,LiftSpec,LiftRefine,LiftBench}.lean`; changed `ArenaRel`, `Frame`,
+`{ExprMk,DerRel}.lean`, `{Lift,LiftSpec,LiftRefine,LiftBench}.lean`,
+`{Inst1,Inst1Spec,Inst1Refine,Inst1Bench}.lean`, `scripts/inst1_from_lift.py`; changed `ArenaRel`, `Frame`,
 `Walk`, `WalkRefine`. No `sorry`; axioms `propext`, `Classical.choice`, `Quot.sound`.
 `ArenaRel.lean` is maintained by hand from now on (no generator; see lane `tables2` above).
 
@@ -2554,10 +2555,11 @@ Files: `ConAgua/Arena/{MemoLib,MemoLibRel}.lean` (replace `Memo`/`MemoRel`), `{V
 |---|---|---|
 | 41 `LMEMO` | 42 (stamp − 1), 43 (count) | the `liftC` memo (`lfSch`), field `ArenaR.lmemo` |
 | 42‥46 `ADER`, `LADER`, `FADER`, `LEDER`, `PJDER` | – | derived bvar ranges of `app`, `lam`, `forallE`, `letE`, `proj` (`DerR`) |
-| 47‥63 | 44‥63 | reserved for this lane |
+| 47 `IMEMO` | 44, 45 | the `inst1C` memo (`imSch`), field `ArenaR.imemo` |
+| 48‥63 | 46‥63 | reserved for this lane |
 | ≥ 64 | ≥ 64 | free for other lanes: `ArenaR.frame_ext` (stable), `arenaR_init` takes ≥ 64 arrays and a `CTL` of ≥ 64 words |
 
-`ArenaR.frame_above` (arrays ≥ 42, `CTL` ≥ 44) and `frame_ext` are proved once from `apart_hi`
+`ArenaR.frame_above` (arrays 42‥46, `CTL` ≥ 64) and `frame_ext` are proved once from `apart_hi`
 (`Apart` by bounds) with `arena_build … using …` (the frame tactic is now a parameter).
 
 ### The memo library (`MemoLib.lean`, `MemoLibRel.lean`)
@@ -2639,6 +2641,28 @@ L/Rust is 0.65. The refinement is at the target (≤ 5; the walk was 10): the di
 induction hypothesis), and `tail_ok` (`mk_*_ok` and the memo set). Not counted: the derived-range
 infrastructure (`ExprMk`, `DerRel`), which every walk with a cut-off reuses.
 
+### `instantiate1` on the same scaffolding (`Inst1.lean`, `Inst1Spec.lean`, `Inst1Refine.lean`)
+
+`instantiate1Go`/`instantiate1Fast`: the derived-range cut-off, then the **tag** (leaves and
+unknown tags return `h` unread), the `bvar` arm inline (`i = d`: `v`, `i > d`: `intern_bvar(i - 1)`),
+five memoized arms on `inst1C` (`imSch`, a new `MemoSch` line and an `ArenaR` field) that probe
+**before** viewing (the twin's order; the view checks follow the probe), the binders sharing the
+twin's `instantiate1ArmBind`. New library pieces: the store's projections per tag
+(`viewApp_ok`, `viewBind_lam`, … in `View.lean`, 85 lines). `Inst1.lean` and `Inst1Spec.lean`
+were derived from `Lift.lean`/`LiftSpec.lean` by `scripts/inst1_from_lift.py` (renames, the view
+checks after the probe, hand-written dispatcher and program in `scripts/inst1_templates.py`;
+`--check` reproduces the committed files); they are maintained by hand from now on.
+
+| | Rust lines | L lines | proof lines (code) | `lean` wall / user |
+|---|---:|---:|---|---|
+| `instantiate1_go` + `_fast` | ≈ 155 | 98 (`inst_go` 19, arms 75, entry 4) | `Inst1.lean` 446, `Inst1Spec.lean` 131 | 7.1 s / 7.5 s, 5.9 s / 20.9 s |
+| refinement | – | – | `Inst1Refine.lean` **429**, **4.4 per L line** | 1.0 s / 2.0 s |
+
+All specs went through at the first attempt with `finish (gen := 20) [viewOK, tierW, idxW]`; the
+refinement needed only `simp` set fixes. The probe/tail helpers (`iprobe_ok`, `itail_ok`) are
+copies of lift's for the other memo (60 lines); a version generic in the memo accessor would
+remove them for the next four walks.
+
 ### Findings
 
 * **`vcgen` with a symbolic array id works**: the memo library's L code is a Lean function of the
@@ -2655,12 +2679,12 @@ infrastructure (`ExprMk`, `DerRel`), which every walk with a cut-off reuses.
 
 ### Not done
 
-* `instantiate1Go`, `instantiateListGo`, `abstract1Go`, `hasLooseBVar`: the same scaffolding
-  (`DerR`, the memo instances `inst1C` … as more `MemoSch` lines, `mk_*`); `instantiate1` also
-  needs `bvarBC` reads (`instantiate1Lift`'s cut-off).
+* `instantiateListGo`, `abstract1Go`, `instantiate1LiftGo`, `hasLooseBVar`: the same scaffolding
+  (`DerR`, more `MemoSch` lines, `mk_*`); `instantiate1Lift` also needs `bvarBC` reads.
 * `DerR` for the other leaf internings (`intern_fvar`, `intern_sort`, `intern_const`, `intern_lit`,
   incl. `natAddLit_refinesA`): each is `internBVar_D`'s proof with `zP` (range `0`).
-* A compiled benchmark of `lift_entry` (the program is `liftProg`; not emitted).
+* Compiled benchmarks of `lift_entry`/`inst_entry` (the programs are `liftProg`, `instProg`; not
+  emitted).
 
 ### `sorry`s
 
