@@ -91,16 +91,19 @@ $ ld imul_fixed.o -o imul_fixed && ./imul_fixed; echo $?
 for a register `b`. Kraken's printer does not distinguish that case either, but it does not arise
 here: see below.)
 
-Found in con-agua: the compiler (`ConAgua/Compiler/Compile.lean`'s `binInstr .mul`) emits exactly
-`.imul (some rax) rax rcx`, always `d = a = rax`. The scanner (`scanProg`) never multiplies, so it
-was the first compiled program (the arena walk's `homeW`, then the `lit` store's hashing,
-`ConAgua/Arena/{WalkEmit,EmitStore}.lean`) to hit it. Fixed on the con-agua side (not here, since
-this is Kraken's printer) by rewriting `.imul (some d) a b` to the semantically identical
-`.imul none a b` whenever `d = a`, before printing: a `Directive`-level normalisation
-(`ConAgua/Compiler/Run.lean`'s `fixImul`), not a textual patch of the printed assembly. See
-`DESIGN.md` (lanes `compiler`, `walk`) and `harness/check-asm.sh`, which assembles and disassembles
-every compiled program and diffs every instruction against what the compiler intended, to catch
-any other such printer/assembler mismatch.
+Found in con-agua: the compiler (`ConAgua/Compiler/Compile.lean`'s `binInstr .mul`) used to emit
+exactly `.imul (some rax) rax rcx` (`imulDir` below, `d = a = rax` always), which Kraken's printer
+renders in this bad three-operand form. The scanner (`scanProg`) never multiplies, so it was the
+first compiled program (the arena walk's `homeW`, then the `lit` store's hashing,
+`ConAgua/Arena/{WalkEmit,EmitStore}.lean`) to hit it. First fixed on the con-agua side (not here,
+since this is Kraken's printer) by rewriting `.imul (some d) a b` to the semantically identical
+`.imul none a b` whenever `d = a`, before printing (a `Directive`-level normalisation, not a
+textual patch of the printed assembly); later (lane `capB`) closed properly by making the compiler
+emit `.imul none rax rcx` directly, so there is no longer a gap between what `compile_correct` is a
+theorem about and what gets printed (`ConAgua/Compiler/Compile.lean`/`Run.lean`, no more
+`fixImul`). See `DESIGN.md` (lanes `compiler`, `walk`, `imul`) and `harness/check-asm.sh`, which
+assembles and disassembles every compiled program and diffs every instruction against what the
+compiler intended, to catch any other such printer/assembler mismatch.
 -/
 import Kraken.X64.PrintATT
 
