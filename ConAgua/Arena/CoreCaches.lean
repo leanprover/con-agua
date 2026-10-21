@@ -8,7 +8,7 @@ import ConAgua.Census.Attr
 @[expose] public section
 
 /-!
-# The per-declaration caches in L (arrays 96‥104, `CTL` 96‥115)
+# The per-declaration caches in L (arrays 96‥106, `CTL` 96‥113, 116‥119)
 
 con-ron's `Caches` (`Arena/CoreState.lean`) has fourteen tables. Eleven are in L, each a memo of the
 library (`MemoLib.lean`, four words per slot, epoch stamps):
@@ -27,17 +27,18 @@ library (`MemoLib.lean`, four words per slot, epoch stamps):
 | 105 | `lqSch` (116, 117) | `lvlEqC` | `u`, `v` | `Bool` (`≠ 0`) |
 | 106 | `lsqSch` (118, 119) | `lvlsEqC` | `us`, `vs` | `Bool` (`≠ 0`) |
 
-The first six are con-ron's **mode memos** (`ModeMemos`), which an eager comparison takes out and
-puts back (`takeModeMemos`/`putModeMemos`): they are **banked** (`MemoBank.lean`): the current
-generation `g = CTL[115]` sits in the high half of the second key word, the last allocated one is
-`CTL[114]`, and `bank_enter()` / `bank_leave(s)` (`bankEnterG 114`) are the take and the put.
+The first six are con-ron's **mode memos** (`ModeMemos`), of which the twin keeps two sets: the
+plain tower's in the six fields of `Caches` and the eager tower's in `Caches.eagerMemos`
+(con-ron #127; `enterEager`/`leaveEager` swap them around an eager comparison). In L each table is
+one memo holding both sets: the second key word carries the **eager bit** of the knot's mode
+(`genW k2 ((mode >> 1) & 1)`, `MemoBank.lean`'s codec), so a slot reads and writes its own set and
+an eager comparison moves nothing.
 
 The other three tables, `readLC`/`readNC`/`readLsC`, cache readbacks L never makes (L runs the
 level algorithms on the handles, `LevelHeap.lean`), so L does no work they would save; the twin's
 entries must still be readbacks (`CoreS.reads`, `WhnfBase.lean`), since the twin computes on them.
 
-`flush_caches()` is con-ron's `flushCaches` (`Caches.empty`): the eleven `clear`s (epoch bumps)
-and the bank words reset to `0`.
+`flush_caches()` is con-ron's `flushCaches` (`Caches.empty`): the eleven `clear`s (epoch bumps).
 -/
 
 set_option experimental.vcgen true
@@ -61,9 +62,6 @@ abbrev rrSch : MemoSch := ⟨104, 112⟩
 abbrev lqSch : MemoSch := ⟨105, 116⟩
 abbrev lsqSch : MemoSch := ⟨106, 118⟩
 
-/-- The bank counter of the six mode memos: `CTL[114]` the last generation, `CTL[115]` the
-current one. -/
-abbrev BANKC : Word := 114
 
 /-! ## `flush_caches()` -/
 
@@ -72,11 +70,8 @@ def flushClears (m : Mem) : Mem :=
   mclearG lsqSch (mclearG lqSch (mclearG rrSch (mclearG cvSch (mclearG ctSch (mclearG deSch
     (mclearG ioSch (mclearG inSch (mclearG whSch (mclearG wkSch (mclearG wcSch m))))))))))
 
-/-- The bank words reset to `0`. -/
-def bankReset (m : Mem) : Mem := (m.set64 CTL 114 0).set64 CTL 115 0
-
 /-- The memory after `flush_caches()`. -/
-def flushMem (m : Mem) : Mem := bankReset (flushClears m)
+def flushMem (m : Mem) : Mem := flushClears m
 
 @[l_impl ConRon.Arena.flushCaches]
 def flushCachesL : FunDecl := lfn () locals (r) {
@@ -91,12 +86,10 @@ def flushCachesL : FunDecl := lfn () locals (r) {
   r := call rr_clear();
   r := call lq_clear();
   r := call lsq_clear();
-  CTL.u64[114] := 0;
-  CTL.u64[115] := 0;
   return 0
 }
 
-/-- The cache functions: the eleven memos' `find`/`put`/`clear`, the bank, the flush. -/
+/-- The cache functions: the eleven memos' `find`/`put`/`clear`, the flush. -/
 def cacheProg : Prog :=
   [("wc_find", memoFindG wcSch), ("wc_put", memoPutG wcSch), ("wc_clear", memoClearG wcSch),
    ("wk_find", memoFindG wkSch), ("wk_put", memoPutG wkSch), ("wk_clear", memoClearG wkSch),
@@ -109,7 +102,6 @@ def cacheProg : Prog :=
    ("rr_find", memoFindG rrSch), ("rr_put", memoPutG rrSch), ("rr_clear", memoClearG rrSch),
    ("lq_find", memoFindG lqSch), ("lq_put", memoPutG lqSch), ("lq_clear", memoClearG lqSch),
    ("lsq_find", memoFindG lsqSch), ("lsq_put", memoPutG lsqSch), ("lsq_clear", memoClearG lsqSch),
-   ("bank_enter", bankEnterG BANKC), ("bank_leave", bankLeaveG BANKC),
    ("flush_caches", flushCachesL)]
 
 /-- What the flush's spec needs of a program. -/
@@ -169,6 +161,6 @@ theorem flushCaches_spec (p : Prog) (hp : FlushProg p) (n : Nat) (s₀ : St) :
         memoClearG_spec ctSch p _ hp.ct n, memoClearG_spec cvSch p _ hp.cv n,
         memoClearG_spec rrSch p _ hp.rr n, memoClearG_spec lqSch p _ hp.lq n,
         memoClearG_spec lsqSch p _ hp.lsq n] <;>
-      finish [flushMem, bankReset, flushClears, FlushOK]
+      finish [flushMem, flushClears, FlushOK]
 
 end L.Arena
