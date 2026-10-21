@@ -1213,6 +1213,52 @@ result register the handle that the arena's `Nat.add` arm of `natOpResult` (`nat
 `Arena/Refine.lean`) returns when run on `a₀`, and the final memory related (`MemRel` + `LitR`
 again) to that arm's final arena state `a'`.
 
+### `validate_x64` (added 2026-10-21, lane `capB`)
+
+`ConAgua/Capstone.lean` also composes `compile_correct` with Stage B's validator
+(`ConAgua/Scan/ValidatorLink.lean`), in three theorems: a shared step `validate_x64_core`, and two
+public ones that read its raw `L` run off differently.
+
+```lean
+theorem validate_x64 [Host] (G : Layout) (hG : G.Ok) (hwf : Prog.wf G.tab L.Scan.Validator.valProg = true)
+    (hnres : 1 ≤ G.tab.nres) (k0 : Nat) (hcode : Code (compileProg G.tab L.Scan.Validator.valProg "validate") k0)
+    (b : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63) (hnargs : G.nargs = 0)
+    (N : Nat) (dm : MachineData) (ra : Word) /- … the same `compile_correct`-shaped hypotheses as
+    `skipBraced_x64`/`natAddLit_x64` (`hT`, `hN`, `hmem`, `hroom`, `htop`, `hargv`, `hra`, `hcs`,
+    `hcs24`, `hcs8`), with `hmem : MemRel G { bytes := #[b.data] } dm.dmem` -/ :
+    Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rsp.toNat = dm.regs.rsp.toNat + 8 ∧
+        st.data.regs.rbp = dm.regs.rbp ∧ st.data.regs.r14 = dm.regs.r14 ∧ st.data.regs.r15 = dm.regs.r15 ∧
+        (st.data.regs.rdx = 1 ∨ st.data.regs.rdx = 2 ∨
+          (st.data.regs.rdx = 0 ∧
+            st.data.regs.rax = UInt64.ofNat (ConAgua.Scan.LineLink.scanDriver b 0 0) ∧
+            MemRel G { bytes := #[b.data] } st.data.dmem)))
+      dm (label enterL)
+```
+
+From a Kraken host holding the compiled validator, run from `ca_enter` on a state whose input
+region holds a buffer `b` with `N` units of fuel: the run returns to the caller with the
+callee-saved registers restored, and either reports `exhausted` (`rdx = 1`), reports an `L` error
+other than fuel (`rdx = 2` — unlike `skipBraced_x64`, Stage B has no `_noErr` theorem for
+`validate`, so this is a real, open third outcome, not yet ruled out, not merely "the task's
+shape assumed away"), or reports `rdx = 0` with `rax` exactly `scanLineFwd`'s own driver
+(`ConAgua.Scan.LineLink.scanDriver`, built directly from con-leche's real
+`ConLeche.Frontend.scanLineFwd` over `b`'s `ByteArray`/`USize` positions, with no intervening
+`Nat`-model layer): `0` if every line of `b` scans, `n > 0` if line `n` is the first one that does
+not; the input region is unchanged (the validator stores nothing). A second theorem,
+`validate_x64_parseBytes`, states the same three-way split but with the `rdx = 0` case pushed
+down one level further, to con-leche's own parser `ConLeche.Frontend.parseBytes`: if it parses
+`b`, a normally-returning run finds `rax = 0`; if it instead finds `rax ≠ 0`, the parser fails at
+that line or before — composing `validate_x64_core`'s raw `L` run equation with
+`ConAgua.Scan.ValidatorLink.validate_accepts`/`validate_rejects`.
+
+**Assumptions**, beyond `skipBraced_x64`'s (the layout relation, `[Host]`, `hwf`, `hnres`, `h64` —
+all the same role here): none specific to the validator. Unlike `natAddLit_x64`'s `LitR`, no
+arena-side state relation is needed (the validator only reads the byte buffer, `MemRel` alone).
+The genuinely open item is the third outcome itself (`rdx = 2`): Stage B's 59 functions have no
+proof, yet, that every array read they make is in bounds under the preconditions `scanLineFwd`'s
+own correctness needs (the `…_noErr` treatment `skip_braced`/`str_close` got in "Mismatches"
+below) — closing it is future work, not assumed away.
+
 ### Trusted / assumed
 
 * **The layout relation** (`MemRel`, `Layout.Ok`): the array/table/stack regions are disjoint and
@@ -1271,6 +1317,13 @@ again) to that arm's final arena state `a'`.
   L has no representation of a `Nat` other than a pool slice, so decoding the slice is required to
   state the operands at all (there is no `con-leche`-level value to substitute, unlike
   `skipBraced`'s `b`/`i`, which are already `ByteArray`/`USize`).
+* **`validate_x64`'s open `rdx = 2`.** Of the four capstone theorems, only `skipBraced_x64` gets
+  the two-outcome treatment: its `…_noErr` lemmas (above) prove the only reachable `Err` is
+  `outOfFuel`. `natAddLit_x64`'s third outcome is a *proved* fact (a genuine, intentional `abort`
+  on a capacity check). `validate_x64`'s third outcome is neither: nobody has shown Stage B's 59
+  functions only ever raise `outOfFuel`, nor has anyone found a genuine `abort`/`oob` the
+  compiled validator can actually reach — the theorem is honest about not knowing yet, rather
+  than assuming either way.
 
 ### `sorry`s
 
@@ -1863,6 +1916,32 @@ script, not left reverted).
   `Prog.wf`; `EmitStore.lean` follows `WalkEmit.lean`'s shape. There is no C driver for
   `storeProg`/`nat_add_lit` (unlike `scanProg`'s `run.c` and the walk's `walk.c`); this lane only
   needed `asmText`'s output, not to execute it, so none was written.
+
+**Addendum: closing the gap instead of normalising around it (2026-10-21, lane `capB`).** The fix
+above left a small residual gap: `compile_correct` is a theorem about `compileProg`'s own
+`.imul (some d) a b` (with `d = a`), while the *printed* assembly is `fixImul`'s rewritten
+`.imul none a b` — the same instruction by Kraken's own semantics (`Semantics.lean`'s `.imul dst
+src1 src2` stores to `src1` when `dst = none`; here `src1` already *is* `d`), but connected only
+by the doc comment's argument, not a theorem, so `compile_correct` was not, strictly, a theorem
+about the bytes `as`/`objdump` actually see. Closed by making the compiler emit the one-destination
+form directly: `Compile.lean`'s `binInstr .mul` is now `i64 (.imul none (.reg (rr .rax)) (oR .rcx))`
+(previously `.imul (some (.reg (rr .rax))) …`); `fixImul` and its use in `asmText` are gone
+(`asmText` now prints `compileProg`'s own output verbatim). The compiler proof needed **no
+change**: `Step.lean`'s `ev_bin` (the one lemma per `BinOp` that steps over `binInstr op`, `.mul`
+included) already discharged its `.imul`-shaped verification condition by simp-unfolding
+`Operation.interp`'s `.imul` case, and that unfolding is exactly as direct for `dst = none` (no
+match to resolve: the `none` branch *is* `src1`) as it was for `dst = some src1` (a match that
+happened to resolve to `src1` too) — so `L.Compiler.compile_correct` rebuilds unchanged, and
+`#print axioms compile_correct` is still exactly `propext`, `Classical.choice`, `Quot.sound`.
+`harness/check-asm.sh` still passes, byte-for-byte identical to before (scan 303, store 1275, walk
+3476 instructions, all matching — the printed text was already `fixImul`'s output, so making the
+compiler itself emit it changes nothing printed, only what the proof is *about*); `run --lines` on
+con-leche's `complete_c04a_restart_70.ndjson` (126481 lines) still reports 0 mismatches, and
+`harness/walk.c` (whose `imul`-heavy memo hash was the original trigger) still runs correctly
+(no `SIGILL`). `ConAgua/Arena/WalkEmit.lean`'s doc comment, the `fixImul` mentions in
+`harness/check-asm.sh`'s comment, and `docs/gaps/kraken-att-imul-three-operand.lean`'s cross-
+reference were updated to match; the gap writeup itself is left as the historical record of the
+bug.
 
 ### `sorry`s
 

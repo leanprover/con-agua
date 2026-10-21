@@ -5,9 +5,10 @@ import ConAgua.Arena.WalkBench
 /-! `lake env lean --run ConAgua/Arena/WalkEmit.lean OUT.s` writes the compiled `benchProg`
 (entry `bb_bench`, no byte arrays, the 41 word arrays of the arena layout) for `harness/walk.c`.
 
-`asmText` (`ConAgua/Compiler/Run.lean`) already normalises the compiler's one `imul` to the
-two-operand form every assembler accepts (`fixImul`, applied at the `Directive` level, not as a
-textual patch); see `DESIGN.md`, lane `walk`, and `docs/gaps/kraken-att-imul-three-operand.lean`.
+The compiler (`ConAgua/Compiler/Compile.lean`) emits the one-destination form of `imul` directly,
+so `asmText` (`ConAgua/Compiler/Run.lean`) prints it in the two-operand form every assembler
+accepts with no separate normalisation step; see `DESIGN.md`, lane `walk`/`imul`, and
+`docs/gaps/kraken-att-imul-three-operand.lean`.
 -/
 
 open L L.Compiler L.Arena
