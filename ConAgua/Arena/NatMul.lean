@@ -4,6 +4,7 @@ public import ConAgua.Arena.NatAdd
 public import ConAgua.Arena.Word
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.NatAdd
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -87,6 +88,7 @@ def rowLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, j, c, x, y, t) {
   }
 }
 
+@[l_impl ConRon.Arena.natOpResult]
 def natMul : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, j, c, x, y, t) {
   top := CTL.u64[0];
   n := la + lb;

@@ -3,6 +3,7 @@ module
 public import ConAgua.L.Notation
 public import ConAgua.L.Logic
 meta import ConAgua.L.Semantics
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -43,6 +44,7 @@ def matchLitLoop : Stmt := lblk (i, o, n, k, c) {
   }
 }
 
+@[l_impl ConLeche.Frontend.matchLit]
 def matchLit : FunDecl := lfn (i, o, n) locals (k, c) { ⟪matchLitLoop⟫; return 1 }
 
 /-- Rust's `byte_at`: the byte at `i`, `0` past the end. -/
@@ -125,6 +127,7 @@ theorem matchLitLoop_step_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
   Triple.step_exec (matchLitLoop_spec p b hb (n + 1) s₀ hm hi ho hk)
 
 include hp in
+@[refines ConLeche.Frontend.matchLit]
 theorem matchLit_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i o l : Word)
     (hi : i.toNat + l.toNat < 2 ^ 64) (ho : o.toNat + l.toNat ≤ LITS.length) :
     ⦃fun s => s = s₀⦄
@@ -143,6 +146,7 @@ end matchLit
 
 /-! ## `scan_bool` -/
 
+@[l_impl ConLeche.Frontend.scanBool]
 def scanBool : FunDecl := lfn (i) locals (m) {
   m := call match_lit(i, 0, 4);
   if m != 0 { return (1, 1, i + 4) };

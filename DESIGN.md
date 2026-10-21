@@ -3343,3 +3343,97 @@ from the shared Lake cache and rebuilds only the touched files in a few seconds.
 ### `sorry`s
 
 None.
+
+## The relation's architecture: frames from the text, tiers over projections (2026-10-21, lane `arch`)
+
+Lane `scale`'s "Recommended changes now", items 1–3, applied before the core builds on the shape.
+
+### 1. Write sets from the program text (`L/WriteSet.lean`, `Arena/Frame.lean`, `Arena/WriteSet{Lift,Walk}.lean`)
+
+* `L/WriteSet.lean` (namespace `L`, a `module`): `closedW ctl p A C fs` (a `Bool`): every function
+  of the call-closed set `fs` stores only into word arrays of `A` and into words of `C` of the
+  control array `ctl` (index a literal `k` or `k + (e & 1)`), no byte stores. `run_frame` /
+  `invoke_frame`: every run / call of `f ∈ fs` ends in `Fr m m'`, for any frame relation `Fr` that
+  is reflexive and closed under the allowed stores (`WFrame`). `closedW_of_agree`: `closedW` reads
+  only the lookups of `fs`, so a program predicate (`LiftProg p`) inherits the concrete program's
+  write set. The spike's `Spike/WriteSet{,Inst}.lean` are removed (superseded).
+* `Frame.lean`: the arena instance. `closedA p A C fs := closedW CTL p A C fs`;
+  `run_memFrame` (→ `MemFrame A C m m'` and the same byte arrays), `invoke_memFrame` (the same as a
+  triple, for a caller's `vcgen`); `Stable A C X` (a memory predicate every frame of `(A, C)`
+  keeps) and **`run_keeps`**: a `Stable` predicate survives every run, with no lemma about the
+  program.
+* **The six (in fact 21) `*_push` count stores** now write `CTL[k + (t & 1)]`; the models
+  (`apushMem`, …, `pushG`) write `CTL (k + (t &&& 1))`. `pushG_ctl` takes `t ≤ 1` (via
+  `and_one_of_le`) and keeps its old right-hand side, so nothing downstream changed: every
+  `*Store`/`*Refine` proof and the `#guard`s passed unchanged.
+* Write sets, each `by decide +kernel` (≤ 0.5 s): `liftEntry_frame` (`LiftProg p` + `lift_entry`:
+  `liftA` = arrays 41‥46 and the six expression tables of `mk_*`, `liftC` = `CTL` 42, 43 and their
+  counts), `instEntry_frame` (`instA = 47 :: liftA`, `instC = 44 :: 45 :: liftC`), `bbMemo_frame`
+  (`[24]`, `CTL` 24, 25), `storeProg_frame` (`nat_add_lit`/`intern_lit`: pool, `lit`, `CTL` 0, 2, 3).
+* Not replaced: front2's `mkAppW_above` … (`ApplyExprRefine.lean`) are frames of the **models**
+  (`mkAppW m f x = some (r, m')`), not of runs. A text frame is about runs, and a model's `some`
+  does not give a run (no termination argument), so these stay hand-written. A run-level user (any
+  refinement theorem stated over `run`, e.g. `liftEntry_run`, `instEntry_run`, `bbMemo_run`) gets
+  the frame for free.
+
+**Migration notes (item 1).** (a) A new L program: give it a concrete `*Prog`, a function list
+and its `(A, C)`, prove `closedA prog A C fns = true := by decide +kernel`, and for its program
+predicate `closedW_of_agree prog_closed (by simp only [fns, List.forall_mem_cons, …]; exact
+⟨hp.f₁.trans rfl, …⟩)` (pattern: `WriteSetLift.lean`). (b) A tier-indexed `CTL` store must
+mask the tier: `CTL.u64[k + (t & 1)]`, or `closedW` rejects it. (c) To carry your relation `X`
+across a run of `f`: `run_keeps (hp.closed …) (by decide) hX hrun hx` with `hX : Stable A C X`
+(for `StateDR`: `fun m m' hf h => StateDR.frame hf (by decide) (by decide) (by decide) h`). (d)
+`pushG_ctl` has a new hypothesis `t ≤ 1` (third explicit argument after `hS m t vs j c`).
+
+## Progress census (2026-10-21, lane `census`)
+
+Hard numbers for planning: `scripts/census.py` (PLAN.md, "Progress census"). Pieces:
+`ConAgua/Census/Attr.lean` (the three attributes, an environment extension of links),
+`ConAgua/Census/Main.lean` (`lake exe census`: targets and links as TSV), `scripts/census.py`
+(weights, coverage, report), `scripts/census-rust.tsv` (Rust lines per cited twin, regenerated with
+`--rust <con-ron checkout>` from the `Lean twin:`/`con-leche:` doc lines), `docs/progress.{md,csv}`.
+
+### Decisions
+* **Targets are computed, not listed.** Every `ConRon.*`/`ConLeche.*` definition reached from
+  `ConAgua.Final.TwinAccepts` through definition values (not types, not proofs), walking through but
+  not counting instances (and the functions `deriving` makes inside them), elaborator/compiler
+  auxiliaries, projections, and `ConAgua`'s own glue predicates (`SeqAccepts`); not walking into type
+  formers or `Prop`-valued definitions. Members of a well-founded mutual block are edges of each other
+  (they call each other through `_mutual`, which names no member: without this the walk missed every
+  `liftArm*`). Opaque (`partial`) definitions are followed through `@[implemented_by]`. ROM modules
+  (con-leche's basis/axiom/pin data, `Frontend.PreludeText`) are not targets. 1350 targets; con-ron's
+  own census counts 1632 arena definitions in all (some unreached, e.g. `Bench`, `Denote`).
+* **Instances need `loadExts := true`** on `importModules` (and so `enableInitializersExecution`):
+  without it the instance table is empty and every `instDecidableEq…` counts as a target.
+* **Links by attribute, target names unresolved.** Most L files are `module` files that cannot import
+  con-ron, so `@[l_impl T]` stores `T` as written; the tool reports a link whose `T` is not a target,
+  an `l_impl` not on a `FunDecl` and a `refines` not on a theorem as bad links.
+* **Proven = complete, sorry-free refinement; parts never count**, except where
+  `COMPLETE_BY_PARTS` lists the arms that make up a target (`internE` = ten `refines_part` arms,
+  `internLNode`, `internNNode`, `parseNameEntryD`). A target reached only through proven targets is
+  proven ("covered": the store helpers under `internLNode`, the arms under `liftLooseBVarsFast`).
+  Coverage does not apply to `written`: `frontRun` is linked to `parseBytes` but aborts on declaration
+  lines, so `validateIndD` is not written.
+* **Weights**: Lean code lines of the twin definition (no blanks, comments, doc comments, nested
+  targets), and Rust lines of the con-ron functions citing it.
+
+### Findings
+* `ConAgua.Arena.Walk` and `ConAgua.Arena.Lift` both declare `L.Arena.appK₁.appK₂` (and the emitters
+  each declare `main`): no module can import both walks. The census imports in greedy groups to
+  work around it; the first lane that needs both must rename one.
+* "Proven" is against the relation as it stands (`ArenaR` without derived columns, scratch flag,
+  memos beyond `bvarBC`) and in the accept direction only (an L function that always aborts refines
+  anything). The `refines`/`refines_part` choice is where completeness is recorded; it is a human
+  judgement, so reviewers should check it.
+* `internLit_refinesA` covers `.natVal` literals only, so `internE`/`internNodeE` are not complete;
+  `internLamE`, `internForallEE`, `internLNode`, `internNNode`, `internLsNode` are.
+* The Stage B scanner functions that return a record are refined in their validity and end position
+  only (`refines_part … "validity"`); the position-valued ones (`skipWs`, `keyAt`, `strClose`, …) and
+  `scanBool` are refined completely.
+
+### Numbers at landing (master `59d93f8` + census)
+1350 targets: 91 proven, 0 with `sorry`, 40 with L code only, 1219 nothing; by Lean lines 905 of
+11902 proven (7.6 %), 1388 with L; by Rust lines 1413 of 30758 (4.6 %). 89 `refines_part` theorems
+(among them all twelve `natOpResult` literal arms and 18 of the 19 store arms).
+Per phase in `docs/progress.md`. The census takes about 30 s (the link pass imports the modules in a few groups; axioms come
+from the oleans' precomputed tables).

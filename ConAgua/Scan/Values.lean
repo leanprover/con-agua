@@ -8,6 +8,7 @@ public import ConAgua.Scan.Lit
 public import ConAgua.Scan.Utf8
 public import ConAgua.Scan.Key
 meta import ConAgua.L.Semantics
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -58,6 +59,7 @@ def slotNatN (b : Array UInt8) (ks v : Word) : Word :=
 
 /-! ## `scan_quoted_nat` -/
 
+@[l_impl ConLeche.Frontend.scanQuotedNat]
 def scanQuotedNat : FunDecl := lfn (i) locals (e) {
   if i < len(IN.u8) && IN.u8[i] == 34 {
     e := call skip_digits(i + 1);
@@ -100,6 +102,7 @@ def matchWordLoop : Stmt := lblk (i, o, n, k, c) {
 /-- `match_lit` against a slice `(o, n)` of `WORDS`. -/
 def matchWord : FunDecl := lfn (i, o, n) locals (k, c) { ⟪matchWordLoop⟫; return 1 }
 
+@[l_impl ConLeche.Frontend.scanBinderInfo]
 def scanBinderInfo : FunDecl := lfn (i) locals (m) {
   if i < len(IN.u8) && IN.u8[i] == 34 {
     m := call match_word(i + 1, 0, 8);
@@ -148,6 +151,7 @@ def hintsObj : FunDecl := lfn (p) locals (ke, k, v, e) {
   return e
 }
 
+@[l_impl ConLeche.Frontend.scanHints]
 def scanHints : FunDecl := lfn (i) locals (m, p, e) {
   if i < len(IN.u8) && IN.u8[i] == 34 {
     m := call match_word(i + 1, 45, 7);
@@ -216,6 +220,7 @@ def natListLoop : Stmt := lblk (i, cnt, w, c, e) {
   }
 }
 
+@[l_impl ConLeche.Frontend.scanNatList]
 def scanNatList : FunDecl := lfn (i) locals (cnt, w, c, e) {
   if i < len(IN.u8) && IN.u8[i] == 91 {
     i += 1;
@@ -465,6 +470,7 @@ theorem slotNat_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (ks v : W
 
 include hpd hpq in
 attribute [local lang_grind] quotedNatN in
+@[refines_part ConLeche.Frontend.scanQuotedNat "validity"]
 theorem scanQuotedNat_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_quoted_nat" [i]
@@ -521,6 +527,7 @@ theorem matchWord_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i o l 
 
 include hpm hpi in
 attribute [local lang_grind] binderInfoN in
+@[refines_part ConLeche.Frontend.scanBinderInfo "validity"]
 theorem scanBinderInfo_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_binder_info" [i]
@@ -575,6 +582,7 @@ theorem hintsObj_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (q : Wor
 
 include hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hphn hpho hph in
 attribute [local lang_grind] hintsN in
+@[refines_part ConLeche.Frontend.scanHints "validity"]
 theorem scanHints_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_hints" [i]
@@ -594,6 +602,7 @@ theorem scanHints_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Wo
 
 include hpd hpn hpl in
 attribute [local lang_grind] natListEntryN in
+@[refines_part ConLeche.Frontend.scanNatList "validity"]
 theorem scanNatList_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_nat_list" [i]

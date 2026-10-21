@@ -38,6 +38,7 @@ globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.A
   "ConAgua.Arena.FVarStore", "ConAgua.Arena.FVarRefine",
   "ConAgua.Arena.ProjStore", "ConAgua.Arena.ProjRefine",
   "ConAgua.Arena.Frame", "ConAgua.Arena.ArenaRel", "ConAgua.Arena.NatArms",
+  "ConAgua.Arena.WriteSetLift", "ConAgua.Arena.WriteSetWalk",
   "ConAgua.Arena.Walk", "ConAgua.Arena.WalkRefine", "ConAgua.Arena.WalkBench", "ConAgua.Arena.WalkEmit",
   "ConAgua.Arena.WalkBenchLean",
   "ConAgua.Capstone",
@@ -97,3 +98,10 @@ root = "ConAgua.Arena.WalkBenchLean"
 [[lean_exe]]
 name = "valbench"
 root = "ConAgua.Scan.Bench"
+
+# The progress census (scripts/census.py, PLAN.md "Progress census"): dumps the twin targets
+# reached from `TwinAccepts` and the `@[l_impl]`/`@[refines]` links with their axioms.
+[[lean_exe]]
+name = "census"
+root = "ConAgua.Census.Main"
+supportInterpreter = true

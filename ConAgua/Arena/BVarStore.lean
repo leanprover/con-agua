@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.Store
 meta import ConAgua.L.Semantics
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -161,7 +162,7 @@ def bpushOK (m : Mem) (t : Word) : Bool :=
 
 /-- The memory after `bvar_push(t, u, j)` appended node `c`. -/
 def bpushMem (m : Mem) (t u j c : Word) : Mem :=
-  (((m.set64 BREC (c * 2 + t) u).set64 BSLOT (j * 2 + t) (c + 1)).set64 CTL (22 + t) (c + 1))
+  (((m.set64 BREC (c * 2 + t) u).set64 BSLOT (j * 2 + t) (c + 1)).set64 CTL (22 + (t &&& 1)) (c + 1))
 
 def bvarPush : FunDecl := lfn (t, u, j) locals (c) {
   c := CTL.u64[22 + t];
@@ -170,7 +171,7 @@ def bvarPush : FunDecl := lfn (t, u, j) locals (c) {
   if ((len(BSLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   BREC.u64[c * 2 + t] := u;
   BSLOT.u64[j * 2 + t] := c + 1;
-  CTL.u64[22 + t] := c + 1;
+  CTL.u64[22 + (t & 1)] := c + 1;
   return c
 }
 
@@ -221,6 +222,7 @@ def binternW (m : Mem) (u : Word) : Option (Word × Mem) :=
     some (bvarP + bcnt m 0, bpushMem m 0 u (rs₀.tail.tail.headD 0) (bcnt m 0))
   else none
 
+@[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internBVar : FunDecl := lfn (u) locals (h, fd, i, j, d) {
   h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫;
   (fd, i, j, d) := call bvar_find(0, u, h);

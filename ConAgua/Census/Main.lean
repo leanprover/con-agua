@@ -1,0 +1,236 @@
+import Lean
+import ConAgua.Census.Attr
+
+/-!
+# The census dump (`lake exe census`)
+
+Usage: `lake exe census ROOT MODULE...` (normally through `scripts/census.py`).
+
+Imports `ROOT` (the module holding the entry point `ConAgua.Final.TwinAccepts`) and computes the
+**targets**: every definition of con-ron's arena (`ConRon.*`) and of con-leche (`ConLeche.*`) that
+the entry point reaches through definition bodies. Then imports the `MODULE`s (the built L and proof
+modules) and reads the census links (`ConAgua/Census/Attr.lean`), with the axioms of every linked
+theorem. Prints tab-separated lines for the Python report:
+
+    T   name  module  startLine  endLine  kind      a target (kind: def | partial)
+    E   from  to                                    target `from` calls target `to`
+    X   name  module  why                           a reached def that is not a target (verbose)
+    L   kind  decl  target  label  module  status   a link (status: ok | sorry | axioms:a,b | n/a)
+
+What is reached: the VALUE of a definition (not its type), through definitions only (theorems,
+types and proofs are not walked into), plus `@[implemented_by]` of an opaque (`partial def`).
+What is not a target, but walked through: instances, compiler/elaborator auxiliaries (`match_`,
+`proof_`, `_unary`, `_mutual`, `eq_`, recursors, `noConConfusion`, projections, names with
+macro scopes). What is neither: type formers (the value is a type), `Prop`-valued definitions
+(predicates: spec only), and everything outside `ConRon.*`/`ConLeche.*` (Lean's library).
+
+Module groups: some ConAgua modules declare the same names (`L.Arena.appK₁.appK₂` in `Walk` and in
+`Lift`; `main` in the emitters), so one environment cannot import them all. The link pass imports
+the modules greedily in groups: on a clash it moves the failing module and everything that imports
+it into the next group.
+-/
+
+open Lean
+
+namespace ConAgua.Census
+
+def modOf (env : Environment) (n : Name) : Name :=
+  match env.getModuleIdxFor? n with
+  | none => .anonymous
+  | some i => env.header.moduleNames[i.toNat]!
+
+def isOurTier (m : Name) : Bool :=
+  (`ConRon).isPrefixOf m || (`ConLeche).isPrefixOf m
+
+/-- The codomain of a type, after all `∀`s, is a sort (type former / predicate). -/
+partial def codomain : Expr → Expr
+  | .forallE _ _ b _ => codomain b
+  | .mdata _ e => codomain e
+  | e => e
+
+/-- `n` and its proper prefixes. -/
+partial def prefixes : Name → List Name
+  | .anonymous => []
+  | n => n :: prefixes n.getPrefix
+
+/-- Why `n` is walked through but not counted, or `none` for a target. -/
+def notTargetWhy (env : Environment) (n : Name) (ci : ConstantInfo) : Option String :=
+  let base := (privateToUserName? n).getD n
+  if n.hasMacroScopes then some "macro-scoped"
+  else if base.isInternalDetail then some "aux"
+  else if isAuxRecursor env n || isNoConfusion env n then some "aux"
+  else if Meta.isMatcherCore env n then some "matcher"
+  else if base.components.any (fun c => c == `brecOn || c == `below || c == `binductionOn) then
+    some "aux"
+  -- an instance, or a function the instance's elaboration or `deriving` made inside it
+  -- (`instDecidableEqIdx.decEq`, `instHashableAppNode.hash`)
+  else if (prefixes n).any (Meta.isInstanceCore env) then some "instance"
+  else if env.isProjectionFn n then some "projection"
+  else match base with
+    | .str _ s =>
+      if s == "ctorIdx" || s == "toCtorIdx" || s == "ofNat" && (env.find? base.getPrefix matches
+          some (.inductInfo _)) || s == "noConfusionType" || s == "sizeOf_spec" then some "aux"
+      else if s.endsWith "_def" || s == "eq_def" then some "aux"
+      else match ci with
+        | .opaqueInfo _ => none
+        | .defnInfo _ => none
+        | _ => some "not a definition"
+    | _ => some "aux"
+
+/-- Type formers and predicates: neither walked nor counted. -/
+def isTypeOrProp (ci : ConstantInfo) : Bool :=
+  match codomain ci.type with
+  | .sort _ => true
+  | _ => false
+
+def depsOf (env : Environment) (n : Name) (ci : ConstantInfo) : Array Name :=
+  match ci with
+  -- `v.all`: the members of a well-founded mutual block call each other through the block's
+  -- `_mutual` auxiliary, which names no member
+  | .defnInfo v => v.value.getUsedConstants ++ v.all.toArray.filter (· != n)
+  | .opaqueInfo v =>
+    match Compiler.getImplementedBy? env n with
+    | some i => #[i]
+    | none => v.value.getUsedConstants
+  | _ => #[]
+
+def rangeOf (env : Environment) (n : Name) : Option DeclarationRanges :=
+  declRangeExt.find? (level := .exported) env n <|> declRangeExt.find? (level := .server) env n
+
+/-- The targets reached from `root`, and the target-level call graph. -/
+def targets (env : Environment) (root : Name) (verbose : Bool) : IO Unit := do
+  -- A node is "target" (counted), "through" (walked, not counted) or skipped.
+  let classify (n : Name) : Option (Option String) := do
+    let ci ← env.find? n
+    let isDef := ci matches .defnInfo _ | .opaqueInfo _
+    -- the entry's own glue (`TwinAccepts`, `SeqAccepts`: predicates naming the stages)
+    if (`ConAgua).isPrefixOf (modOf env n) then
+      if isDef then return some "entry" else none
+    unless isOurTier (modOf env n) do none
+    if isTypeOrProp ci then none
+    if isDef then some (notTargetWhy env n ci) else none
+  -- For each target (and the root), the targets it reaches through non-targets.
+  let mut done : NameSet := {}
+  let mut work : Array Name := #[root]
+  let mut tgts : Array Name := #[]
+  let mut edges : Array (Name × Name) := #[]
+  let mut skipped : NameMap String := {}
+  while h : work.size > 0 do
+    let t := work.back
+    work := work.pop
+    if done.contains t then continue
+    done := done.insert t
+    if t != root then tgts := tgts.push t
+    -- walk through non-targets from `t`
+    let mut seen : NameSet := NameSet.empty.insert t
+    let mut st : Array Name := match env.find? t with
+      | some ci => depsOf env t ci
+      | none => #[]
+    let mut out : NameSet := {}
+    while h2 : st.size > 0 do
+      let n := st.back
+      st := st.pop
+      if seen.contains n then continue
+      seen := seen.insert n
+      match classify n with
+      | none => pure ()
+      | some none => out := out.insert n
+      | some (some why) =>
+        skipped := skipped.insert n why
+        if let some ci := env.find? n then st := st ++ depsOf env n ci
+    for o in out do
+      if t != root then edges := edges.push (t, o)
+      else IO.println s!"R\t{o}"
+      unless done.contains o do work := work.push o
+  for t in tgts do
+    let (s, e) := match rangeOf env t with
+      | some r => (r.range.pos.line, r.range.endPos.line)
+      | none => (0, 0)
+    let kind := match env.find? t with
+      | some (.opaqueInfo _) => "partial"
+      | _ => "def"
+    IO.println s!"T\t{t}\t{modOf env t}\t{s}\t{e}\t{kind}"
+  for (a, b) in edges do IO.println s!"E\t{a}\t{b}"
+  if verbose then
+    for (n, why) in skipped do
+      if isOurTier (modOf env n) then IO.println s!"X\t{n}\t{modOf env n}\t{why}"
+
+/-- Every module of the `ConAgua` closure of `m` (cached). -/
+partial def closure (memo : IO.Ref (NameMap NameSet)) (m : Name) : IO NameSet := do
+  if let some s := (← memo.get).find? m then return s
+  let (md, _) ← readModuleData (← findOLean m)
+  let mut s : NameSet := NameSet.empty.insert m
+  for i in md.imports do
+    if (`ConAgua).isPrefixOf i.module then
+      for x in (← closure memo i.module) do s := s.insert x
+  memo.modify (·.insert m s)
+  return s
+
+def kindStr : LinkKind → String
+  | .impl => "impl" | .refines => "refines" | .part => "part"
+
+instance : MonadEnv (StateM Environment) := ⟨get, modify⟩
+
+/-- The links of every module in `env`, with the axioms of linked theorems. -/
+def links (env : Environment) (printed : IO.Ref NameSet) : IO Unit := do
+  for i in [:env.header.moduleNames.size] do
+    let m := env.header.moduleNames[i]!
+    if (← printed.get).contains m then continue
+    let ents := linkExt.getModuleEntries env i
+    if ents.isEmpty then continue
+    printed.modify (·.insert m)
+    for l in ents do
+      let ci? := env.find? l.decl
+      let status ← match l.kind with
+        | .impl =>
+          pure <| if ci?.any (·.type.isConstOf `L.FunDecl) then "n/a" else "error: not an L FunDecl"
+        | _ =>
+          unless ci? matches some (.thmInfo _) do
+            IO.println s!"L\t{kindStr l.kind}\t{l.decl}\t{l.target}\t{l.label}\t{m}\terror: not a theorem"
+            continue
+          let axs := ((collectAxioms l.decl : StateM Environment (Array Name)).run' env)
+          let bad := axs.filter fun a => !(a == ``propext || a == ``Classical.choice || a == ``Quot.sound)
+          pure <| if bad.contains ``sorryAx then "sorry"
+            else if bad.isEmpty then "ok"
+            else "axioms:" ++ ",".intercalate (bad.toList.map toString)
+      IO.println s!"L\t{kindStr l.kind}\t{l.decl}\t{l.target}\t{l.label}\t{m}\t{status}"
+
+def main (args : List String) : IO UInt32 := do
+  let verbose := args.contains "-v"
+  let args := args.filter (· != "-v")
+  let root :: mods := args | do
+    IO.eprintln "usage: census [-v] ROOT_MODULE MODULE..."; return 2
+  initSearchPath (← findSysroot)
+  -- `loadExts`: the instance and matcher tables are built by extension initializers; without them
+  -- `isInstanceCore` answers `false` for everything.
+  unsafe enableInitializersExecution
+  let env ← importModules #[{ module := root.toName }] {} (loadExts := true)
+  targets env `ConAgua.Final.TwinAccepts verbose
+  let memo ← IO.mkRef {}
+  let printed ← IO.mkRef {}
+  let mut pending := mods.toArray.map String.toName
+  while pending.size > 0 do
+    let mut grp := pending
+    let mut rest : Array Name := #[]
+    let mut envO : Option Environment := none
+    while envO.isNone do
+      try
+        envO := some (← importModules (grp.map fun m => ({ module := m } : Import)) {})
+      catch e =>
+        let msg := toString e
+        let bad := (((msg.drop 7).takeWhile (· != ' ')).toString).toName
+        unless msg.startsWith "import " && grp.any (fun m => m == bad) || true do throw e
+        IO.eprintln s!"census: module clash, next group: {msg}"
+        let mut keep := #[]
+        for m in grp do
+          if (← closure memo m).contains bad then rest := rest.push m else keep := keep.push m
+        if keep.size == grp.size then throw e
+        grp := keep
+    pending := rest
+    let some env := envO | unreachable!
+    links env printed
+  return 0
+
+end ConAgua.Census
+
+def main (args : List String) : IO UInt32 := ConAgua.Census.main args

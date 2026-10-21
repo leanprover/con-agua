@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.Store
 meta import ConAgua.L.Semantics
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -175,7 +176,7 @@ def fapushOK (m : Mem) (t : Word) : Bool :=
 /-- The memory after `forall_push(t, ty, body, j)` appended node `c`. -/
 def fapushMem (m : Mem) (t ty body j c : Word) : Mem :=
   ((((m.set64 FAREC (c * 4 + t * 2) ty).set64 FAREC (c * 4 + t * 2 + 1) body).set64 FASLOT
-    (j * 2 + t) (c + 1)).set64 CTL (30 + t) (c + 1))
+    (j * 2 + t) (c + 1)).set64 CTL (30 + (t &&& 1)) (c + 1))
 
 def forallPush : FunDecl := lfn (t, ty, body, j) locals (c, k) {
   c := CTL.u64[30 + t];
@@ -186,7 +187,7 @@ def forallPush : FunDecl := lfn (t, ty, body, j) locals (c, k) {
   FAREC.u64[k] := ty;
   FAREC.u64[k + 1] := body;
   FASLOT.u64[j * 2 + t] := c + 1;
-  CTL.u64[30 + t] := c + 1;
+  CTL.u64[30 + (t & 1)] := c + 1;
   return c
 }
 
@@ -248,6 +249,7 @@ def fainternW (m : Mem) (ty body : Word) : Option (Word × Mem) :=
 /-- The L FunDecl for `intern_forall`. Named `internForallL`, not `internForallE`: con-ron's
 `ConRon.Arena.internForallEE`/`EStore.internForallE` are sibling names in a different namespace,
 but the `L`-suffix keeps the two visually apart in this file, which `open`s `ConRon.Arena`. -/
+@[l_impl ConRon.Arena.internE ConRon.Arena.internForallEE]
 def internForallL : FunDecl := lfn (ty, body) locals (h, sk, fd, i, j, d) {
   h := ((⟪fnvBasis⟫ ^ ty) * ⟪fnvPrime⟫ ^ body) * ⟪fnvPrime⟫;
   sk := 0;

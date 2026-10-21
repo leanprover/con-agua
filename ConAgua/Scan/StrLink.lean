@@ -3,6 +3,7 @@ module
 public import ConAgua.Scan.Str
 public import ConAgua.Scan.Utf8Link
 public import ConAgua.Scan.Link
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -184,6 +185,7 @@ def optW : Option UInt32 → Word × Word
   | some v => (1, v.toUInt64)
   | none => (0, 0)
 
+@[refines ConLeche.Frontend.hexVal]
 theorem hexVal_eq (c : UInt8) : hexValN c.toUInt64 = optW (ConLeche.Frontend.hexVal c) :=
   u8_all (P := fun c => hexValN c.toUInt64 = optW (ConLeche.Frontend.hexVal c)) (by decide +kernel) c
 

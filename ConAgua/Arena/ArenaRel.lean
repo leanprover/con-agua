@@ -18,6 +18,7 @@ import ConAgua.Arena.NAnonRefine
 import ConAgua.Arena.NStrRefine
 import ConAgua.Arena.NNumRefine
 import ConAgua.Arena.MemoLibRel
+import ConAgua.Census.Attr
 
 /-!
 # The arena relation: one relation for the whole L memory
@@ -531,6 +532,7 @@ end lift
 /-! ## The `intern_*` refinements under `ArenaR` -/
 
 /-- `intern_*` for `app` refines its arena interning under `ArenaR`. -/
+@[refines_part ConRon.Arena.internE "app"]
 theorem internApp_refinesA (p : Prog) (hpf : p.lookup "app_find" = some appFind)
     (hpp : p.lookup "app_push" = some appPush) (hp : p.lookup "intern_app" = some internApp)
     (a₀ : AState) (n : Nat) (s₀ : St) (f x : Word) (hR : ArenaR s₀.mem a₀) (hf : f.toNat < 2 ^ 32)
@@ -550,6 +552,7 @@ theorem internApp_refinesA (p : Prog) (hpf : p.lookup "app_find" = some appFind)
     (AM.st_proto appLens _ _ _ _ _ _ a₀ (internE_app_run _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for `sort` refines its arena interning under `ArenaR`. -/
+@[refines_part ConRon.Arena.internE "sort"]
 theorem internSort_refinesA (p : Prog) (hpf : p.lookup "sort_find" = some sortFind)
     (hpp : p.lookup "sort_push" = some sortPush) (hp : p.lookup "intern_sort" = some internSort)
     (a₀ : AState) (n : Nat) (s₀ : St) (u : Word) (hR : ArenaR s₀.mem a₀) (hu : u.toNat < 2 ^ 32) :
@@ -568,6 +571,7 @@ theorem internSort_refinesA (p : Prog) (hpf : p.lookup "sort_find" = some sortFi
     (AM.st_proto sortLens _ _ _ _ _ _ a₀ (internE_sort_run _ a₀) hok), hres⟩
 
 /-- `intern_*` for `const` refines its arena interning under `ArenaR`. -/
+@[refines_part ConRon.Arena.internE "const"]
 theorem internConst_refinesA (p : Prog) (hpf : p.lookup "const_find" = some constFind)
     (hpp : p.lookup "const_push" = some constPush) (hp : p.lookup "intern_const" = some internConst)
     (a₀ : AState) (n : Nat) (s₀ : St) (f x : Word) (hR : ArenaR s₀.mem a₀) (hf : f.toNat < 2 ^ 32)
@@ -587,6 +591,7 @@ theorem internConst_refinesA (p : Prog) (hpf : p.lookup "const_find" = some cons
     (AM.st_proto constLens _ _ _ _ _ _ a₀ (internE_const_run _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for `letE` refines its arena interning under `ArenaR`. -/
+@[refines_part ConRon.Arena.internE "letE"]
 theorem internLet_refinesA (p : Prog) (hpf : p.lookup "letE_find" = some letFind)
     (hpp : p.lookup "letE_push" = some letPush) (hp : p.lookup "intern_letE" = some internLet)
     (a₀ : AState) (n : Nat) (s₀ : St) (ty val body : Word) (hR : ArenaR s₀.mem a₀)
@@ -607,6 +612,7 @@ theorem internLet_refinesA (p : Prog) (hpf : p.lookup "letE_find" = some letFind
     (AM.st_proto letLens _ _ _ _ _ _ a₀ (internE_let_run _ _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for `bvar` refines its arena interning under `ArenaR`. -/
+@[refines_part ConRon.Arena.internE "bvar"]
 theorem internBVar_refinesA (p : Prog) (hpf : p.lookup "bvar_find" = some bvarFind)
     (hpp : p.lookup "bvar_push" = some bvarPush) (hp : p.lookup "intern_bvar" = some internBVar)
     (a₀ : AState) (n : Nat) (s₀ : St) (u : Word) (hR : ArenaR s₀.mem a₀) :
@@ -625,6 +631,7 @@ theorem internBVar_refinesA (p : Prog) (hpf : p.lookup "bvar_find" = some bvarFi
     (AM.st_proto bvarLens _ _ _ _ _ _ a₀ (internE_bvar_run _ a₀) hok), hres⟩
 
 /-- `intern_*` for `zero` refines its arena interning under `ArenaR`. -/
+@[refines_part ConRon.Arena.internLNode "zero"]
 theorem internZero_refinesA (p : Prog) (hpf : p.lookup "zero_find" = some zeroFind)
     (hpp : p.lookup "zero_push" = some zeroPush) (hp : p.lookup "intern_zero" = some internZero)
     (a₀ : AState) (n : Nat) (s₀ : St) (hR : ArenaR s₀.mem a₀) :
@@ -643,6 +650,7 @@ theorem internZero_refinesA (p : Prog) (hpf : p.lookup "zero_find" = some zeroFi
     (AM.st_proto zeroLens _ _ _ _ _ _ a₀ (internLNode_zero_run a₀) hok), hres⟩
 
 /-- `intern_*` for `succ` refines its arena interning under `ArenaR`. -/
+@[refines_part ConRon.Arena.internLNode "succ"]
 theorem internSucc_refinesA (p : Prog) (hpf : p.lookup "succ_find" = some succFind)
     (hpp : p.lookup "succ_push" = some succPush) (hp : p.lookup "intern_succ" = some internSucc)
     (a₀ : AState) (n : Nat) (s₀ : St) (u : Word) (hR : ArenaR s₀.mem a₀) (hu : u.toNat < 2 ^ 32) :
@@ -661,6 +669,7 @@ theorem internSucc_refinesA (p : Prog) (hpf : p.lookup "succ_find" = some succFi
     (AM.st_proto succLens _ _ _ _ _ _ a₀ (internLNode_succ_run _ a₀) hok), hres⟩
 
 /-- `intern_*` for `max` refines its arena interning under `ArenaR`. -/
+@[refines_part ConRon.Arena.internLNode "max"]
 theorem internMax_refinesA (p : Prog) (hpf : p.lookup "max_find" = some maxFind)
     (hpp : p.lookup "max_push" = some maxPush) (hp : p.lookup "intern_max" = some internMax)
     (a₀ : AState) (n : Nat) (s₀ : St) (u v : Word) (hR : ArenaR s₀.mem a₀) (hu : u.toNat < 2 ^ 32)
@@ -680,6 +689,7 @@ theorem internMax_refinesA (p : Prog) (hpf : p.lookup "max_find" = some maxFind)
     (AM.st_proto maxLens _ _ _ _ _ _ a₀ (internLNode_max_run _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for `imax` refines its arena interning under `ArenaR`. -/
+@[refines_part ConRon.Arena.internLNode "imax"]
 theorem internImax_refinesA (p : Prog) (hpf : p.lookup "imax_find" = some imaxFind)
     (hpp : p.lookup "imax_push" = some imaxPush) (hp : p.lookup "intern_imax" = some internImax)
     (a₀ : AState) (n : Nat) (s₀ : St) (u v : Word) (hR : ArenaR s₀.mem a₀) (hu : u.toNat < 2 ^ 32)
@@ -699,6 +709,7 @@ theorem internImax_refinesA (p : Prog) (hpf : p.lookup "imax_find" = some imaxFi
     (AM.st_proto imaxLens _ _ _ _ _ _ a₀ (internLNode_imax_run _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for `param` refines its arena interning under `ArenaR`. -/
+@[refines_part ConRon.Arena.internLNode "param"]
 theorem internParam_refinesA (p : Prog) (hpf : p.lookup "param_find" = some paramFind)
     (hpp : p.lookup "param_push" = some paramPush) (hp : p.lookup "intern_param" = some internParam)
     (a₀ : AState) (n : Nat) (s₀ : St) (u : Word) (hR : ArenaR s₀.mem a₀) (hu : u.toNat < 2 ^ 32) :
@@ -717,6 +728,7 @@ theorem internParam_refinesA (p : Prog) (hpf : p.lookup "param_find" = some para
     (AM.st_proto paramLens _ _ _ _ _ _ a₀ (internLNode_param_run _ a₀) hok), hres⟩
 
 /-- `intern_ls` refines `internLsNode` under `ArenaR`. -/
+@[refines ConRon.Arena.internLsNode]
 theorem internLs_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
     (hpe : p.lookup "limbs_eq" = some limbsEq) (hpm : p.lookup "ls_match" = some lsMatch)
     (hpf : p.lookup "ls_find" = some lsFind) (hpp : p.lookup "ls_push" = some lsPush)
@@ -742,6 +754,7 @@ theorem internLs_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
     (AM.st_proto lsLens _ _ _ _ _ _ a₀ (internLsNode_run _ a₀) hok), hres⟩
 
 /-- `intern_nstr` refines `internNNode (.str _ _)` under `ArenaR`. -/
+@[refines_part ConRon.Arena.internNNode "str"]
 theorem internNStr_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
     (hpe : p.lookup "limbs_eq" = some limbsEq) (hpm : p.lookup "nstr_match" = some nsMatch)
     (hpf : p.lookup "nstr_find" = some nsFind) (hpp : p.lookup "nstr_push" = some nsPush)
@@ -767,6 +780,7 @@ theorem internNStr_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHash
     (AM.st_proto nstrLens _ _ _ _ _ _ a₀ (internNNode_str_run _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for name `anonymous` refines its arena interning under `ArenaR`. -/
+@[refines_part ConRon.Arena.internNNode "anon"]
 theorem internNAnon_refinesA (p : Prog) (hpf : p.lookup "nanon_find" = some nanonFind)
     (hpp : p.lookup "nanon_push" = some nanonPush) (hp : p.lookup "intern_nanon" = some internNAnon)
     (a₀ : AState) (n : Nat) (s₀ : St) (hR : ArenaR s₀.mem a₀) :
@@ -785,6 +799,7 @@ theorem internNAnon_refinesA (p : Prog) (hpf : p.lookup "nanon_find" = some nano
     (AM.st_proto nanonLens _ _ _ _ _ _ a₀ (internNNode_anon_run a₀) hok), hres⟩
 
 /-- `intern_*` for name `num` refines its arena interning under `ArenaR`. -/
+@[refines_part ConRon.Arena.internNNode "num"]
 theorem internNNum_refinesA (p : Prog) (hpf : p.lookup "nnum_find" = some nnumFind)
     (hpp : p.lookup "nnum_push" = some nnumPush) (hp : p.lookup "intern_nnum" = some internNNum)
     (a₀ : AState) (n : Nat) (s₀ : St) (pre u : Word) (hR : ArenaR s₀.mem a₀)
@@ -805,6 +820,7 @@ theorem internNNum_refinesA (p : Prog) (hpf : p.lookup "nnum_find" = some nnumFi
     (AM.st_proto nnumLens _ _ _ _ _ _ a₀ (internNNode_num_run _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for `forallE` refines its arena interning under `ArenaR`. -/
+@[refines_part ConRon.Arena.internE "forallE"]
 theorem internForall_refinesA (p : Prog) (hpf : p.lookup "forall_find" = some forallFind)
     (hpp : p.lookup "forall_push" = some forallPush) (hp : p.lookup "intern_forall" = some internForallL)
     (a₀ : AState) (n : Nat) (s₀ : St) (ty body : Word) (hR : ArenaR s₀.mem a₀)
@@ -824,6 +840,7 @@ theorem internForall_refinesA (p : Prog) (hpf : p.lookup "forall_find" = some fo
     (AM.st_proto forallLens _ _ _ _ _ _ a₀ (internE_forall_run _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for `fvar` refines its arena interning under `ArenaR`. -/
+@[refines_part ConRon.Arena.internE "fvar"]
 theorem internFVar_refinesA (p : Prog) (hpf : p.lookup "fvar_find" = some fvarFind)
     (hpp : p.lookup "fvar_push" = some fvarPush) (hp : p.lookup "intern_fvar" = some internFVar)
     (a₀ : AState) (n : Nat) (s₀ : St) (u ty : Word) (hR : ArenaR s₀.mem a₀)
@@ -843,6 +860,7 @@ theorem internFVar_refinesA (p : Prog) (hpf : p.lookup "fvar_find" = some fvarFi
     (AM.st_proto fvarLens _ _ _ _ _ _ a₀ (internE_fvar_run _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for `lam` refines its arena interning under `ArenaR`. -/
+@[refines_part ConRon.Arena.internE "lam"]
 theorem internLam_refinesA (p : Prog) (hpf : p.lookup "lam_find" = some lamFind)
     (hpp : p.lookup "lam_push" = some lamPush) (hp : p.lookup "intern_lam" = some internLamL)
     (a₀ : AState) (n : Nat) (s₀ : St) (ty body : Word) (hR : ArenaR s₀.mem a₀)
@@ -862,6 +880,7 @@ theorem internLam_refinesA (p : Prog) (hpf : p.lookup "lam_find" = some lamFind)
     (AM.st_proto lamLens _ _ _ _ _ _ a₀ (internE_lam_run _ _ a₀) hok), hres⟩
 
 /-- `intern_*` for `proj` refines its arena interning under `ArenaR`. -/
+@[refines_part ConRon.Arena.internE "proj"]
 theorem internProj_refinesA (p : Prog) (hpf : p.lookup "proj_find" = some projFind)
     (hpp : p.lookup "proj_push" = some projPush) (hp : p.lookup "intern_proj" = some internProj)
     (a₀ : AState) (nn : Nat) (s₀ : St) (n u e : Word) (hR : ArenaR s₀.mem a₀)
@@ -909,6 +928,7 @@ theorem ArenaR.grow (m m' : Mem) (hg : Grows m m') (a : AState) (hR : ArenaR m a
       exact NStrR.grow m m' hg a hR.nstr
 
 /-- `intern_lit` refines `internE (.lit (.natVal _))` under `ArenaR`. -/
+@[refines_part ConRon.Arena.internE "lit natVal"]
 theorem internLit_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
     (hpe : p.lookup "limbs_eq" = some limbsEq) (hpm : p.lookup "lit_match" = some litMatch)
     (hpf : p.lookup "lit_find" = some litFind) (hpp : p.lookup "lit_push" = some litPush)
@@ -936,6 +956,7 @@ theorem internLit_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
 
 /-- **`nat_add_lit` refines `natOpResult`'s `Nat.add` arm under `ArenaR`**: the store's
 `natAddLit_refines_store` with the whole arena relation in place of `LitR`. -/
+@[refines_part ConRon.Arena.natOpResult "Nat.add"]
 theorem natAddLit_refinesA (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s₀.mem a₀)
     (oa la ob lb : Word) (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb) :
     ⦃fun s => s = s₀⦄

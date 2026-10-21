@@ -3,6 +3,7 @@ module
 public import ConAgua.Arena.NatAdd
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.NatAdd
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -95,6 +96,7 @@ def xorLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, x, y) {
   }
 }
 
+@[l_impl ConRon.Arena.natOpResult]
 def natLand : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y) {
   top := CTL.u64[0];
   n := la;
@@ -106,6 +108,7 @@ def natLand : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y) {
   return n
 }
 
+@[l_impl ConRon.Arena.natOpResult]
 def natLor : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y) {
   top := CTL.u64[0];
   n := la;
@@ -117,6 +120,7 @@ def natLor : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y) {
   return n
 }
 
+@[l_impl ConRon.Arena.natOpResult]
 def natXor : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, x, y) {
   top := CTL.u64[0];
   n := la;

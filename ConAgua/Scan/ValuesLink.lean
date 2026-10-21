@@ -5,6 +5,7 @@ public import ConAgua.Scan.LeafLink
 public import ConAgua.Scan.LitLink
 public import ConAgua.Scan.KeyLink
 public import ConAgua.Scan.Values
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -130,6 +131,7 @@ theorem slotNat_eq_slotNatN (ks v : USize) :
 
 include h64 hsize in
 /-- `scan_quoted_nat(i)`, through the model: `"digits"`. -/
+@[refines_part ConLeche.Frontend.scanQuotedNat "validity"]
 theorem scanQuotedNat_eq_quotedNatN (i : USize) :
     okW (scanQuotedNat b i) = quotedNatN b.data i.toUInt64 := by
   have hsize64 : b.size < 2 ^ 64 := by omega

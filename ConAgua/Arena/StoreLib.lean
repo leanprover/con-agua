@@ -127,7 +127,7 @@ def wrRec (S : Schema) (t c : Word) : Mem → Word → List Word → Mem
 
 /-- The memory after appending node `c` (record `vs`) to tier `t`, registered at slot `j`. -/
 def pushG (S : Schema) (m : Mem) (t : Word) (vs : List Word) (j c : Word) : Mem :=
-  ((wrRec S t c m 0 vs).set64 S.sa (j * 2 + t) (c + 1)).set64 CTL (S.ca + t) (c + 1)
+  ((wrRec S t c m 0 vs).set64 S.sa (j * 2 + t) (c + 1)).set64 CTL (S.ca + (t &&& 1)) (c + 1)
 
 theorem wrRec_arr_ne (S : Schema) (t c : Word) (b : ArrId) (hb : b ≠ S.ra) :
     ∀ (vs : List Word) (m : Mem) (f : Word), (wrRec S t c m f vs).arr64 b = m.arr64 b := by
@@ -195,11 +195,12 @@ theorem wrRec_words (S : Schema) (t c : Word) :
   rw [pushG, Mem.words_size_set64, Mem.words_size_set64, wrRec_words]
 
 include hS in
-@[store_grind =] theorem pushG_ctl (x : Word) :
+@[store_grind =] theorem pushG_ctl (ht : t ≤ 1) (x : Word) :
     rdW ((pushG S m t vs j c).arr64 CTL) x =
       if x = S.ca + t ∧ (S.ca + t).toNat < (m.arr64 CTL).size then c + 1
       else rdW (m.arr64 CTL) x := by
-  rw [pushG, rdW_set64, rdW_set64, size_set64, wrRec_size, wrRec_arr_ne _ _ _ _ hS.ra_ctl.symm]
+  rw [pushG, rdW_set64, rdW_set64, size_set64, wrRec_size, wrRec_arr_ne _ _ _ _ hS.ra_ctl.symm,
+    and_one_of_le t ht]
   have := hS.sa_ctl
   grind
 
@@ -354,7 +355,7 @@ theorem outEq_pushG (hS : S.WF) (m : Mem) (t : Word) (ht : t ≤ 1) (vs : List W
     OutEq S m (pushG S m t vs j c) := by
   have := hS.ca
   refine ⟨fun b h1 h2 h3 => pushG_arr S m t vs j c b h1 h2 h3, ?_⟩
-  rw [pushG_ctl S hS]
+  rw [pushG_ctl S hS _ _ _ _ _ ht]
   grind
 
 /-! ### Hit and miss -/

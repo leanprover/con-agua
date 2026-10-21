@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.Store
 meta import ConAgua.L.Semantics
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -162,7 +163,7 @@ def napushOK (m : Mem) (t : Word) : Bool :=
 
 /-- The memory after `nanon_push(t, j)` appended node `c`. -/
 def napushMem (m : Mem) (t j c : Word) : Mem :=
-  (((m.set64 NAREC (c * 2 + t) 0).set64 NASLOT (j * 2 + t) (c + 1)).set64 CTL (34 + t) (c + 1))
+  (((m.set64 NAREC (c * 2 + t) 0).set64 NASLOT (j * 2 + t) (c + 1)).set64 CTL (34 + (t &&& 1)) (c + 1))
 
 def nanonPush : FunDecl := lfn (t, j) locals (c) {
   c := CTL.u64[34 + t];
@@ -171,7 +172,7 @@ def nanonPush : FunDecl := lfn (t, j) locals (c) {
   if ((len(NASLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   NAREC.u64[c * 2 + t] := 0;
   NASLOT.u64[j * 2 + t] := c + 1;
-  CTL.u64[34 + t] := c + 1;
+  CTL.u64[34 + (t & 1)] := c + 1;
   return c
 }
 
@@ -222,6 +223,7 @@ def nainternW (m : Mem) : Option (Word × Mem) :=
     some (naP + nacnt m 0, napushMem m 0 (rs₀.tail.tail.headD 0) (nacnt m 0))
   else none
 
+@[l_impl ConRon.Arena.internNNode]
 def internNAnon : FunDecl := lfn () locals (h, fd, i, j, d) {
   h := ⟪nahashW⟫;
   (fd, i, j, d) := call nanon_find(0, h);
