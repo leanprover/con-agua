@@ -134,23 +134,13 @@ theorem ArenaR.memo_set (m m' : Mem) (a : AState) (hR : ArenaR m a) (k v : Word)
     (hk : k.toNat < 2 ^ 32) (hs : msetW m k v = some m') :
     ArenaR m' (withBC a (a.memos.bvarBC.insert (decE k) v.toNat)) := by
   have hf := msetW_frame m m' k v hs
-  exact ⟨hR.lit.frame _ _ m m' hf a (by apart), hR.app.frame _ _ m m' hf a (by apart),
-    hR.sort.frame _ _ m m' hf a (by apart), hR.const.frame _ _ m m' hf a (by apart),
-    hR.letE.frame _ _ m m' hf a (by apart), hR.bvar.frame _ _ m m' hf a (by apart),
-    hR.zero.frame _ _ m m' hf a (by apart), hR.succ.frame _ _ m m' hf a (by apart),
-    hR.max.frame _ _ m m' hf a (by apart), hR.imax.frame _ _ m m' hf a (by apart),
-    hR.param.frame _ _ m m' hf a (by apart), memoR_set m _ hR.memo k v hk m' hs⟩
+  arena_build hR, hf with exact memoR_set m _ hR.memo k v hk m' hs
 
 /-- **`memo_clear` is `bvarBClear`.** -/
 theorem ArenaR.memo_clear (m : Mem) (a : AState) (hR : ArenaR m a)
     (h0 : rdW (m.arr64 CTL) 24 + 2 ≠ 0) : ArenaR (mclearMem m) (withBC a ∅) := by
   have hf := mclearMem_frame m
-  exact ⟨hR.lit.frame _ _ m _ hf a (by apart), hR.app.frame _ _ m _ hf a (by apart),
-    hR.sort.frame _ _ m _ hf a (by apart), hR.const.frame _ _ m _ hf a (by apart),
-    hR.letE.frame _ _ m _ hf a (by apart), hR.bvar.frame _ _ m _ hf a (by apart),
-    hR.zero.frame _ _ m _ hf a (by apart), hR.succ.frame _ _ m _ hf a (by apart),
-    hR.max.frame _ _ m _ hf a (by apart), hR.imax.frame _ _ m _ hf a (by apart),
-    hR.param.frame _ _ m _ hf a (by apart), memoR_clear m _ hR.memo h0⟩
+  arena_build hR, hf with exact memoR_clear m _ hR.memo h0
 
 /-! ## The arena walk, unfolded -/
 
