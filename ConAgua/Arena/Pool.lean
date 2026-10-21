@@ -146,10 +146,10 @@ theorem Mem.top_eq (m : Mem) (h : 0 < (m.arr64 CTL).size) : m.top = (m.arr64 CTL
   simp [Mem.top, h]
 grind_pattern [arena_grind] Mem.top_eq => m.top, (m.arr64 CTL)[0]
 
-/-- The pool invariant: both arrays exist, the top is inside the pool, and the pool is
-addressable by words. -/
+/-- The pool invariant: both arrays exist and the top is inside the pool. The pool has fewer
+than `2^63` words, so that the sum of two slice lengths (`nat_mul`'s `la + lb`) is a word. -/
 def PoolOK (m : Mem) : Prop :=
-  CTL < m.words.size ∧ 0 < (m.arr64 CTL).size ∧ (m.arr64 POOL).size < 2 ^ 64 ∧
+  CTL < m.words.size ∧ 0 < (m.arr64 CTL).size ∧ (m.arr64 POOL).size < 2 ^ 63 ∧
   m.top.toNat ≤ (m.arr64 POOL).size
 
 /-- A slice of the pool in use: below the top. -/
@@ -160,6 +160,10 @@ def SliceOK (m : Mem) (o l : Word) : Prop := o.toNat + l.toNat ≤ m.top.toNat
 theorem wt_succ (i k : Nat) (h : k = i + 1) : wt k = wt i * 2 ^ 64 := by
   subst h; simp only [wt, Nat.mul_add, Nat.pow_add, Nat.mul_one]
 grind_pattern [arena_grind] wt_succ => wt i, wt k
+
+theorem wt_add (i j k : Nat) (h : k = i + j) : wt k = wt i * wt j := by
+  subst h; simp only [wt, ← Nat.pow_add, Nat.mul_add]
+grind_pattern [arena_grind] wt_add => wt k, wt i * wt j
 
 @[arena_grind =] theorem wt_zero : wt 0 = 1 := rfl
 
@@ -225,6 +229,32 @@ theorem pv_set_succ (k k' j : Nat) (v : Word) (hk : k' = k + 1) (hj : j = o + k)
   rw [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]; simp [h]
 grind_pattern [arena_grind] pv_set_succ => pv (p.set! j v) o k', pv p o k
 
+/-- Overwriting limb `k₁ + k₂` inside a slice, with the weight split as `wt k₁ * wt k₂` (the
+form `nat_mul`'s inner loop uses: limb `i + j` of the product). -/
+theorem pv_set_mid (n k₁ k₂ j : Nat) (v : Word) (hj : j = o + k₁ + k₂) (hn : k₁ + k₂ < n)
+    (h : j < p.size) :
+    pv (p.set! j v) o n + p[j].toNat * (wt k₁ * wt k₂) = pv p o n + v.toNat * (wt k₁ * wt k₂) := by
+  have hw : wt k₁ * wt k₂ = wt (k₁ + k₂) := by simp only [wt, ← Nat.pow_add, Nat.mul_add]
+  rw [hw]
+  induction n with
+  | zero => omega
+  | succ n ih =>
+    simp only [pv]
+    rw [Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+    by_cases hk : k₁ + k₂ = n
+    · subst hj; subst hk
+      have ha := pv_set_above p o (k₁ + k₂) (o + k₁ + k₂) v (by omega)
+      rw [Array.set!_eq_setIfInBounds] at ha
+      rw [ha]
+      have h' : o + (k₁ + k₂) < p.size := by omega
+      simp only [show o + k₁ + k₂ = o + (k₁ + k₂) by omega, h', if_true, Option.getD_some,
+        getElem?_pos]
+      grind
+    · have := ih (by omega)
+      rw [Array.set!_eq_setIfInBounds] at this
+      simp [show j ≠ o + n by omega]; omega
+grind_pattern [arena_grind] pv_set_mid => pv (p.set! j v) o n, p[j], wt k₁ * wt k₂
+
 theorem xv_succ (l k k' : Nat) (hk : k' = k + 1) : xv p o l k' = xv p o l k + lv p o l k * wt k := by
   subst hk; rfl
 grind_pattern [arena_grind] xv_succ => xv p o l k', xv p o l k
@@ -286,6 +316,11 @@ theorem Agree.pv (p q : Array Word) (t o k : Nat) (h : Agree p q t) (hk : o + k 
   | zero => rfl
   | succ k ih => simp only [L.Arena.pv, ih (by omega), h (o + k) (by omega)]
 grind_pattern [arena_grind] Agree.pv => Agree p q t, pv p o k
+
+theorem Agree.get (p q : Array Word) (t j : Nat) (h : Agree p q t) (hj : j < t)
+    (hp : j < p.size) (hq : j < q.size) : p[j] = q[j] := by
+  have := h j hj; simp [hp, hq] at this; exact this
+grind_pattern [arena_grind] Agree.get => Agree p q t, p[j]
 
 theorem Agree.lv (p q : Array Word) (t o l i : Nat) (h : Agree p q t) (hk : o + l ≤ t) :
     lv p o l i = lv q o l i := by

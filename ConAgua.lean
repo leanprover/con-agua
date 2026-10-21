@@ -24,3 +24,4 @@ public import ConAgua.Compiler.Main
 public import ConAgua.Scan.Link
 public import ConAgua.Scan.Leaves
 public import ConAgua.Arena.NatAdd
+public import ConAgua.Arena.NatMul
