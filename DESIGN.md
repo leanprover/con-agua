@@ -965,3 +965,69 @@ pure part: about 90 lines for the probe (`probe_cases`), 170 for the append (`ti
 ### L extension requests
 
 None this round.
+
+## The store relation by `grind`, and a second store (2026-10-21, lane `store2`)
+
+Files: `ConAgua/Arena/LitRefine.lean` (reworked), `ConAgua/Arena/GrindAttr.lean` (`store_grind`).
+
+### Part 1: `LitR` in the house style
+
+`LitR`'s statement (`natAddLit_run_store`) is unchanged; its definition and every proof were
+redone so that the steps are `grind [store_grind, …]`.
+
+What changed, and why each change was needed for `grind`:
+
+* **Words, not `Nat`, for node and slot indices.** The old relation read node fields as
+  `fld m t i f = REC[8i + 4t + f]` with `Nat` indices, and every use went through a conversion
+  lemma (`rdW_rec`, `rdW_slt`, `recW_toNat`, …) to meet the L models, which index with word
+  arithmetic. Now the relation reads exactly the terms the models read,
+  `rdW (m.arr64 REC) (i * 8 + t * 4 + 3)`, with `i t : Word`. `grind`'s `UInt64` arithmetic decides
+  `i * 8 + t * 4 + 2 = c * 8 + t' * 4` from `i, c < 2^27`, `t, t' ≤ 1` by itself, so the
+  conversion lemmas are gone.
+* **One read-after-write equation.** `rdW ((m.set64 a k v).arr64 b) x = if b = a ∧ k = x ∧ … then
+  v else rdW (m.arr64 b) x` (`rdW_set64`) gives one equation per array after `lit_push`
+  (`pm_rec`, `pm_slot`, `pm_ctl`, `pm_pool`, sizes): 35 lines, all `grind [pushMem, rdW_set64]`,
+  replacing 135 lines of `set!` reasoning.
+* **The probe run is a named function.** `walkW n x e` is `lit_find`'s step taken `e` times, so
+  the model's recursion and the invariant use the same term and no `mod` arithmetic appears
+  (the old proof related `(home + e) % n` to the code's wrap-around step). `SlotsOK` keeps an
+  `∃ d` per node: `grind` uses an `∃` under a `∀` in a hypothesis without help, and where the
+  goal needs a witness (after the append) the proof names it (`rs[3]` for the new node, the old
+  `d` for the others).
+* **The probe result is a named predicate**, `ProbeOK m t o l h x rs` (a hit: a matching node in
+  an occupied slot; a miss: a free slot of the run after non-matching nodes, `NoMatch`), in
+  place of the old three-way `∨` of `∃`s. `probe_ok` is an induction whose three arms are
+  `grind`.
+* **The cons table as two `∃`-free clauses.** Each node's key maps to its handle `hdW t i`; each
+  entry `x` points at a node with its key, at index `hix x`. The old "keys not among the nodes
+  are absent" clause had a `∀` in its antecedent, which `grind` cannot use; the new one makes
+  `tier_miss` a contradiction `grind` finds (entry → node with the key → it matches → it is on
+  the run before the free slot → the probe would have stopped there).
+* **Guarded equations for the arena's `match`.** `internE_lit_hitP`, `…_hitS`, `…_pushS`,
+  `…_pushP`: one run equation per path, with the handle already the L word
+  (`decE (hdW t (ofNat size))`). `intern_correct` splits `internW` along its four paths and
+  closes each with `grind`.
+* **Instantiate by hand what `grind` would instantiate everywhere.** The relation has five `∀`
+  clauses; with all of them in context `grind` instantiates them on every word in sight and
+  times out (`tier_hit` took 5.3 s before naming the two instances it needs, 0.2 s after). The
+  proofs `clear` the clauses a step does not use and `have` the instances it does.
+
+Not automated: the uniqueness of normalised slices (`pv_len`, `pv_limbs`, `pv_lt`, `pv_ge`, about
+75 lines): induction over `pv` with `2^64`-digit arithmetic, where `grind`'s nonlinear
+arithmetic does not reach (`wt` products and division by `wt k`). It is the `lit` key's own
+fact, not the store's. `eqW_iff` is half `grind`: the step that instantiates the `∀` at the
+current position after rewriting `(a + i).toNat` stays by hand.
+
+| | lines | `lean` wall / user |
+|---|---:|---:|
+| `LitRefine.lean` before | 1183 | 2.1 s / 4.0 s |
+| `LitRefine.lean` after | 843 | 5.5 s / 14.4 s |
+
+By section (after ← before): reading the store, generic reads and the memory after `lit_push`,
+83 ← 223; the probe 77 ← 90 (the induction itself 25 ← 75, the rest are the new definitions
+`walkW`, `NoMatch`, `ProbeOK`); match, hit, miss and append 145 ← 258; the arena paths and
+`intern_correct` 139 ← 218; grow 54 ← 67; the relation's definitions 68 ← 47. Unchanged: pool
+uniqueness 118 ← 123, the `natAddLit` instantiation 73. The proofs are shorter and their steps
+are `grind`, at three times the CPU time (`tier_push` 4.2 s, `tier_other` 2.0 s,
+`intern_correct` 1.8 s: `grind` on goals with a dozen `rdW` reads through `pushMem`, each an
+`if`).
