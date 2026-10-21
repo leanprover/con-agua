@@ -37,13 +37,16 @@ theorem ArenaR.fmemo_set (m m' : Mem) (a : AState) (hR : ArenaR m a) (k v : Word
     (hk : k.toNat < 2 ^ 32) (hs : msetG frSch m k 0 v = some m') :
     ArenaR m' (withFC a (a.memos.fvarBC.insert (decE k) v.toNat)) := by
   have hf := msetG_frame frSch frSch_wf m m' k 0 v hs
-  arena_build hR, hf with exact memoRG_set frSch frSch_wf bmKey _ m _ hR.fmemo k 0 v ⟨hk, rfl⟩ m' hs
+  exact hR.with_memos hf (by apart) (by apart) (by
+    memos_build hR.memos, hf with
+      exact memoRG_set frSch frSch_wf bmKey _ m _ hR.memos.fvar k 0 v ⟨hk, rfl⟩ m' hs)
 
 /-- **`fm_clear` is `fvarBClear`.** -/
 theorem ArenaR.fmemo_clear (m : Mem) (a : AState) (hR : ArenaR m a)
     (h0 : rdW (m.arr64 CTL) 46 + 2 ≠ 0) : ArenaR (mclearG frSch m) (withFC a ∅) := by
   have hf := mclearG_frame frSch m
-  arena_build hR, hf with exact memoRG_clear frSch frSch_wf bmKey _ m _ hR.fmemo h0
+  exact hR.with_memos hf (by apart) (by apart) (by
+    memos_build hR.memos, hf with exact memoRG_clear frSch frSch_wf bmKey _ m _ hR.memos.fvar h0)
 
 /-! ## The arena walk, unfolded -/
 
@@ -101,12 +104,12 @@ theorem frGoOK_succ (n : Nat) (ih : FrNodeOK n) : FrGoOK (n + 1) := by
   · rw [frW_hit n m h hr hh0] at hb
     simp only [Option.some.injEq, Prod.mk.injEq] at hb
     obtain ⟨rfl, rfl⟩ := hb
-    rw [show a.memos.fvarBC[decE h]? = _ from memoRG_hit frSch bmKey _ m _ hR.fmemo h 0 hr hh0]
+    rw [show a.memos.fvarBC[decE h]? = _ from memoRG_hit frSch bmKey _ m _ hR.memos.fvar h 0 hr hh0]
     exact ⟨a, rfl, hR⟩
   · simp only [ne_eq, Decidable.not_not] at hh0
     rw [frW_miss n m h hr hh0] at hb
     rw [show a.memos.fvarBC[decE h]? = none from
-      memoRG_miss frSch bmKey _ m _ hR.fmemo h 0 ⟨hh, rfl⟩ hr hh0]
+      memoRG_miss frSch bmKey _ m _ hR.memos.fvar h 0 ⟨hh, rfl⟩ hr hh0]
     cases hn : frNodeW n m h with
     | none => simp [frK, hn] at hb
     | some p =>
