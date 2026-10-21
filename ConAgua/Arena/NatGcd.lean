@@ -3,6 +3,7 @@ module
 public import ConAgua.Arena.NatDiv
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.NatDiv
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -54,6 +55,7 @@ def gcdLoop : Stmt := lblk (oa, la, ob, lb) {
   }
 }
 
+@[l_impl ConRon.Arena.natOpResult]
 def natGcd : FunDecl := lfn (oa, la, ob, lb) {
   ⟪gcdLoop⟫;
   return (ob, lb)

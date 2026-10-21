@@ -337,6 +337,7 @@ end pow
 /-- `nat_beq_lit(oa, la, ob, lb, t, f, us)`: intern the constant `t` (`Bool.true`'s name) if the
 two values are equal, else `f`, at the level list `us` (the empty one). The three handles are
 the pins `boolTrueName`, `boolFalseName`, `emptyLevels`, which the caller reads. -/
+@[l_impl ConRon.Arena.natOpResult]
 def natBeqLit : FunDecl := lfn (oa, la, ob, lb, t, f, us) locals (c, h) {
   c := call nat_cmp(oa, la, ob, lb);
   if c != 1 { t := f };
@@ -345,6 +346,7 @@ def natBeqLit : FunDecl := lfn (oa, la, ob, lb, t, f, us) locals (c, h) {
 }
 
 /-- `nat_ble_lit`: as `nat_beq_lit`, `t` unless `a > b`. -/
+@[l_impl ConRon.Arena.natOpResult]
 def natBleLit : FunDecl := lfn (oa, la, ob, lb, t, f, us) locals (c, h) {
   c := call nat_cmp(oa, la, ob, lb);
   if c == 2 { t := f };
@@ -367,6 +369,7 @@ def natBleArm (a b : Nat) : AM (Option EIdx) := do
 /-! ## `gcd` -/
 
 /-- `nat_gcd_lit(oa, la, ob, lb)`: `nat_gcd`'s slice, interned. -/
+@[l_impl ConRon.Arena.natOpResult]
 def natGcdLit : FunDecl := lfn (oa, la, ob, lb) locals (o, l, h) {
   (o, l) := call nat_gcd(oa, la, ob, lb);
   h := call intern_lit(o, l);
@@ -616,6 +619,7 @@ theorem natPowLit_refinesA (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s�
 
 /-- **`nat_beq_lit` refines the `Nat.beq` arm under `ArenaR`**, given what the three pin reads
 return in the arena state (they read it and do not change it). -/
+@[refines_part ConRon.Arena.natOpResult "Nat.beq"]
 theorem natBeqLit_refinesA (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s₀.mem a₀)
     (oa la ob lb t f us : Word) (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb)
     (hna : Norm (s₀.mem.arr64 POOL) oa.toNat la.toNat)
@@ -648,6 +652,7 @@ theorem natBeqLit_refinesA (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s�
       finish [natBeqArm, constE, decE_eq]
 
 /-- **`nat_ble_lit` refines the `Nat.ble` arm under `ArenaR`**, given the three pin reads. -/
+@[refines_part ConRon.Arena.natOpResult "Nat.ble"]
 theorem natBleLit_refinesA (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s₀.mem a₀)
     (oa la ob lb t f us : Word) (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb)
     (hna : Norm (s₀.mem.arr64 POOL) oa.toNat la.toNat)
@@ -680,6 +685,7 @@ theorem natBleLit_refinesA (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s�
       finish [natBleArm, constE, decE_eq]
 
 /-- **`nat_gcd_lit` refines the `Nat.gcd` arm.** -/
+@[refines_part ConRon.Arena.natOpResult "Nat.gcd"]
 theorem natGcdLit_refinesA : ArmRefinesA "nat_gcd_lit" natGcdArm :=
   fun n s₀ a₀ hR oa la ob lb ha hb hna hnb =>
     natGcdLit_refines natArmProg ArenaR (fun _ _ h => h.lit.1)
