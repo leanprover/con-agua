@@ -3555,9 +3555,20 @@ Word arrays (byte arrays are a separate id space: `IN` = byte array 0 is the inp
 A count store writes `CTL[k + (t & 1)]` (item 1). `arenaR_init` needs `CTL` ≥ 64 words; the
 reserved tiers will raise that when they get fields.
 
-### Measurements (`lake env lean`, user CPU, one run, 56 affected files)
+### Measurements (`lake env lean`, user CPU, one run, this machine under load)
 
-Before/after numbers are in the landing's velocity note.
+* The 21 `*Store.lean` and 19 `*Refine.lean` files: unchanged (±0.2 s each, +2 lines per store
+  for the masked count), total 56 affected files 261 s before, 262 s after (noise).
+* `ArenaRel.lean`: 975 → 1024 lines (the ownership lists, `MemosR`, `apart_own`, the group
+  frames), 23.0 s → 22.9 s. A first version that proved the ownership side conditions twice per
+  table cost 25.9 s; `ArenaR.frame` now goes through `with_memos`.
+* Memo users (`WalkRefine`, `LiftRefine`, `Inst1Refine`, `FVarRangeRefine`): +3‥4 lines each,
+  1.58/1.92/1.91/1.23 s → 1.23/1.57/1.65/1.2 s.
+* New: `L/WriteSet.lean` 200 lines 1.0 s; `WriteSets.lean` 168 lines 2.2 s (five `decide +kernel`
+  write sets); `Keeps.lean` 201 lines 16.8 s (`keeps_auto` on four walk families; the slowest is
+  `instantiate1Go`, ≈ 6 s); `Tiers.lean` 100 lines 0.5 s; `TierWalks.lean` 70 lines 0.7 s.
+  Removed: the spikes `WriteSet{,Inst}.lean`, `TwinKeep.lean` (373 lines).
+* Lifting a walk to `CheckR`: about 8 lines (`TierWalks.lean`), none of which looks at the walk.
 
 **Migration notes (items 2, 3).** (a) `hR.memo`/`.lmemo`/`.imemo`/`.fmemo` are now
 `hR.memos.bvar`/`.lift`/`.inst1`/`.fvar`. A new memo: a field of `MemosR` (and its row in
