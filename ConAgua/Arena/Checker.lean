@@ -69,6 +69,9 @@ structure LoopR (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis
   pend : PendR m pend
   decls : DeclsR (m.arr64 DECL) (m.arr64 DLP) ds
 
+/-- Declaration record `i` (a plain function, so that congruence sees through it). -/
+def dsAt (ds : Array IDeclaration) (i : Word) : IDeclaration := ds.getD i.toNat default
+
 /-- A value group out of `install_step_go`: flag `f` (`0`: none) and record `g`. -/
 def vgOut (m : Mem) (f g : Word) : Option ValueGroup :=
   if f = 0 then none else decVG (m.arr64 EREC) g.toNat
@@ -117,19 +120,21 @@ theorem andPinOk_spec :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
       (i : Word) (hi : i.toNat < ds.size), LoopR dn s₀.mem a₀ vis fe pend ds →
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "and_pin_ok" [i]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (andPinOk ds[i.toNat]) a₀ ∧
-      LoopR dn s'.mem (AM.st (andPinOk ds[i.toNat]) a₀) vis fe pend ds ∧
-      AM.res (andPinOk ds[i.toNat]) a₀ = (r.headD 0 != 0); ⊤⦄ := sorry
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (andPinOk (dsAt ds i)) a₀ ∧
+      LoopR dn s'.mem (AM.st (andPinOk (dsAt ds i)) a₀) vis fe pend ds ∧
+      AM.res (andPinOk (dsAt ds i)) a₀ = (r.headD 0 != 0); ⊤⦄ := sorry
 
 theorem installStepGo_spec :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
       (i : Word) (hi : i.toNat < ds.size), LoopR dn s₀.mem a₀ vis fe pend ds →
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_step_go" [i, vis]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (installStepGo mode pins fe ds[i.toNat]) a₀ ∧
-      LoopR dn s'.mem (AM.st (installStepGo mode pins fe ds[i.toNat]) a₀) (r.headD 0)
-        (AM.res (installStepGo mode pins fe ds[i.toNat]) a₀).1 pend ds ∧
-      (AM.res (installStepGo mode pins fe ds[i.toNat]) a₀).2 =
-        vgOut s'.mem (r.tail.headD 0) (r.tail.tail.headD 0); ⊤⦄ := sorry
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (installStepGo mode pins fe (dsAt ds i)) a₀ ∧
+      LoopR dn s'.mem (AM.st (installStepGo mode pins fe (dsAt ds i)) a₀) (r.headD 0)
+        (AM.res (installStepGo mode pins fe (dsAt ds i)) a₀).1 pend ds ∧
+      (AM.res (installStepGo mode pins fe (dsAt ds i)) a₀).2 =
+        vgOut s'.mem (r.tail.headD 0) (r.tail.tail.headD 0) ∧
+      (r.tail.headD 0 ≠ 0 → (AM.res (installStepGo mode pins fe (dsAt ds i)) a₀).2 ≠ none); ⊤⦄ :=
+  sorry
 
 theorem promoteVG_spec :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
@@ -296,6 +301,27 @@ theorem installStep_eq (i : Nat) (fe : IFEnv) (pend : Array PendingCheck) (pd : 
       installStepK i fe.visibleBelow pend r) := by
   simp only [installStep, installStepK, isNoneT, isSomeT]; rfl
 
+theorem installStepK_none (i v : Nat) (pend : Array PendingCheck) (r : IFEnv × Option ValueGroup)
+    (h : r.2 = none) : installStepK i v pend r = isNoneT v r.1 pend := by
+  simp [installStepK, h]
+
+theorem installStepK_some (i v : Nat) (pend : Array PendingCheck) (r : IFEnv × Option ValueGroup)
+    (vg : ValueGroup) (h : r.2 = some vg) : installStepK i v pend r = isSomeT i v r.1 pend vg := by
+  simp [installStepK, h]
+
+/-- `installStep` from its pieces, in `AM.ok`/`AM.st`/`AM.res` terms. -/
+theorem installStep_ok (i : Nat) (fe : IFEnv) (pend : Array PendingCheck) (pd : IDeclaration)
+    (a0 : AState) (h1 : AM.ok flushCaches a0) (h2 : AM.ok enterScratch (AM.st flushCaches a0))
+    (h3 : AM.ok (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0))) (h4 : AM.ok (installStepK i fe.visibleBelow pend (AM.res (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0)))) (AM.st (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0)))) :
+    AM.ok (installStep mode pins i fe pend pd) a0 ∧ AM.st (installStep mode pins i fe pend pd) a0 = AM.st (installStepK i fe.visibleBelow pend (AM.res (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0)))) (AM.st (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0))) ∧ AM.res (installStep mode pins i fe pend pd) a0 = AM.res (installStepK i fe.visibleBelow pend (AM.res (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0)))) (AM.st (installStepGo mode pins fe pd) (AM.st enterScratch (AM.st flushCaches a0))) := by
+  have r1 := AM.run_of_ok _ _ h1
+  have r2 := AM.run_of_ok _ _ h2
+  have r3 := AM.run_of_ok _ _ h3
+  have r4 := AM.run_of_ok _ _ h4
+  apply AM.of_run_ok
+  rw [installStep_eq]
+  simp only [StateT.run_bind, exc_ok_bind, r1, r2, r3, r4]
+
 end twin
 
 /-! ## Phase A's step: `install_step` -/
@@ -334,6 +360,16 @@ def isSomeL : FunDecl := lfn (i, vis, v2, g) locals (k, z, g2) {
   z := call promote_new(k, v2, 0);
   z := call drop_scratch(v2);
   return 0
+}
+
+/-- `install_step(i, vis)`: `installStep` (the bracket, `installStepGo`, then one of the arms). -/
+@[l_impl ConRon.Arena.installStep]
+def installStepL : FunDecl := lfn (i, vis) locals (v2, f, g, z) {
+  z := call flush_caches(vis);
+  z := call enter_scratch(vis);
+  (v2, f, g) := call install_step_go(i, vis);
+  if f == 0 { z := call is_none(vis, v2) } else { z := call is_some(i, vis, v2, g) };
+  return v2
 }
 
 section skel
@@ -408,6 +444,59 @@ theorem isSome_refines (hpp : p.lookup "pend_push" = some pendPushL)
         (promoteNew_spec dn ds p n · (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀) · fe' (pend.push ⟨(AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2, i.toNat, vis.toNat⟩) · · (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1),
         (dropScratch_spec dn ds p n · (AM.st (promoteNew (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1 coreWalkFuel (fe'.visibleBelow - vis.toNat) fe') (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀)) · (AM.res (promoteNew (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1 coreWalkFuel (fe'.visibleBelow - vis.toNat) fe') (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀)).2 (pend.push ⟨(AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2, i.toNat, vis.toNat⟩))] <;>
       finish [isSomeT]
+
+/-- `install_step`, stated over the pieces of `installStep` (`installStep_ok` assembles them). -/
+theorem installStep_pieces (hpp : p.lookup "pend_push" = some pendPushL)
+    (hpn : p.lookup "is_none" = some isNoneL) (hps : p.lookup "is_some" = some isSomeL)
+    (hp : p.lookup "install_step" = some installStepL) (n : Nat) (s₀ : St) (a₀ : AState)
+    (i vis : Word) (fe : IFEnv) (pend : Array PendingCheck) (hi : i.toNat < ds.size)
+    (hR : LoopR dn s₀.mem a₀ vis fe pend ds) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_step" [i, vis]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok flushCaches a₀ ∧ AM.ok enterScratch (AM.st flushCaches a₀) ∧ AM.ok (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀)) ∧
+      AM.ok (installStepK i.toNat vis.toNat pend (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀)))) (AM.st (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))) ∧ LoopR dn s'.mem (AM.st (installStepK i.toNat vis.toNat pend (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀)))) (AM.st (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀)))) (r.headD 0) (AM.res (installStepK i.toNat vis.toNat pend (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀)))) (AM.st (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀)))).1
+        (AM.res (installStepK i.toNat vis.toNat pend (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀)))) (AM.st (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀)))).2 ds; ⊤⦄ := by
+  have hK0 : (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).2 = none → (installStepK i.toNat vis.toNat pend (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀)))) = isNoneT vis.toNat (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).1 pend :=
+    fun h => installStepK_none _ _ _ _ h
+  have hK1 : (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).2 ≠ none → (installStepK i.toNat vis.toNat pend (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀)))) = isSomeT i.toNat vis.toNat (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).1 pend ((AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).2.getD default) := by
+    intro h
+    obtain ⟨x, hx⟩ := Option.ne_none_iff_exists'.mp h
+    rw [installStepK_some _ _ _ _ x hx, hx]; rfl
+  have hsome : (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).2 ≠ none →
+      (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).2 =
+        some ((AM.res (installStepGo mode pins fe (dsAt ds i))
+          (AM.st enterScratch (AM.st flushCaches a₀))).2.getD default) := by
+    intro h; obtain ⟨x, hx⟩ := Option.ne_none_iff_exists'.mp h; rw [hx]; rfl
+  rw [invoke_eq _ hp]
+  simp only [callFn, installStepL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+        (flushCaches_spec dn ds p n · a₀ · fe pend),
+        (enterScratch_spec dn ds p n · (AM.st flushCaches a₀) · fe pend),
+        (installStepGo_spec mode pins dn ds p n · (AM.st enterScratch (AM.st flushCaches a₀)) · fe pend · ·),
+        (isNone_refines dn ds p hpn n · (AM.st (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))) · · (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).1 pend),
+        (isSome_refines dn ds p hpp hps n · (AM.st (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))) · · · · (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).1 pend ((AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).2.getD default))] <;>
+      -- the view `vis` is read after three calls: four `LocEq` hops (depth, not search)
+      finish (gen := 20) [vgOut]
+
+/-- **`install_step` refines `installStep`** (from the stub specs). -/
+@[refines ConRon.Arena.installStep]
+theorem installStep_refines (hpp : p.lookup "pend_push" = some pendPushL)
+    (hpn : p.lookup "is_none" = some isNoneL) (hps : p.lookup "is_some" = some isSomeL)
+    (hp : p.lookup "install_step" = some installStepL) (n : Nat) (s₀ : St) (a₀ : AState)
+    (i vis : Word) (fe : IFEnv) (pend : Array PendingCheck) (hi : i.toNat < ds.size)
+    (hR : LoopR dn s₀.mem a₀ vis fe pend ds) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_step" [i, vis]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (installStep mode pins i.toNat fe pend (dsAt ds i)) a₀ ∧
+      LoopR dn s'.mem (AM.st (installStep mode pins i.toNat fe pend (dsAt ds i)) a₀) (r.headD 0) (AM.res (installStep mode pins i.toNat fe pend (dsAt ds i)) a₀).1 (AM.res (installStep mode pins i.toNat fe pend (dsAt ds i)) a₀).2 ds; ⊤⦄ := by
+  have hv := hR.vis
+  refine triple_post (installStep_pieces mode pins dn ds p hpp hpn hps hp n s₀ a₀ i vis fe pend hi hR)
+    fun r s' ⟨hl, h1, h2, h3, h4, h5⟩ => ?_
+  rw [← hv] at h4 h5
+  obtain ⟨o, st, rs⟩ := installStep_ok mode pins i.toNat fe pend (dsAt ds i) a₀ h1 h2 h3 h4
+  exact ⟨hl, o, by rw [st, rs]; exact h5⟩
 
 end skel
 
