@@ -4300,11 +4300,61 @@ be asymptotically slower. con-ron at `_tmp/ref/con-ron` origin/HEAD (`proof/ConR
 | walk-local `memo`/`seen` arguments: `wscopedBGo`, `fvarLeavesGo`, `leavesSubGo` (ExprOps); `constsResolveFGo`, `hasStrLitGo` (CheckerBase); `mentionsAnyGo`, `nestOccGo`, `depthGo`, `replaceFVarsGo` (Positivity); `hasLooseBVarBGo`, `structUsedLaterGo`, `mentionsConstGo` (StructParts); `usedConstsGo` (NatOpGround, a `HashSet`) | one call | various | argument relations, arrays 144‥191 | to do with each walk: each needs an epoch-cleared memo of the library (`MemoLib`), not a recomputation |
 | store cons tables (21), `IFEnv.idx` | run / declaration | node → handle, name → constant | `*SLOT` arrays, `EIXA/S/N` | done (`ArenaR`, `EnvR`) |
 
+### The whnf family in L, top-down (`WhnfBase`, `WhnfSpine`, `WhnfCore`, `WhnfCoreSlot`, `WhnfIota`)
+
+* **Arguments.** The twin's `mode`, `fe`, `depth` and the knot record `r` become a mode word
+  (`decMode`), the environment view word `vis` (`EnvR`), a depth word; the record is the program:
+  the knot's slots are L functions (`whnf_core`, `whnf`, `infer`, `infer_io`, `defeq`), refined
+  against `coreKnot mode fe id F` for every `F ≥` the L fuel (`WhnfCoreSlot` …, `KnotOK`). A body
+  at L fuel `n + 1` assumes the slots at every fuel up to `n` (`KnotUpTo`: a call inside a loop
+  runs on less fuel than the body, and L has no fuel monotonicity lemma).
+* **The spine stack.** `Array EIdx`/`List EIdx` values are slices of word array 144 (`SPN`), top
+  `CTL[136]`; a callee puts the top back (`StackKept`), a slice-returning one leaves its slice
+  (`StackGrew`); `SpineR` relates a slice to its array.
+* **The relation and the post.** `CoreS dn m a vis fe M eb` (`ArenaD`, `CoreRM` at explicit maps,
+  `PinsFull`, `EnvR`, the readback-cache invariants, `NStoreWF`); `CoreRef`/`CoreSpec`: the twin
+  run succeeds, `CoreAfter` (the relation at some maps, the plain banks kept inside the eager
+  tower, the stack kept), the result decodes, and the result words are valid handle words (`ResH`,
+  `ResW`: `decE` truncates, and the caller computes with the word).
+* **Stubs**: named L functions with abstract specs (`WhnfCallees`, `CoreCallees`, `IotaCallees`),
+  the refinements take them as hypotheses, the stubs' own theorems are `sorry`.
+* **The proof pattern** (`WhnfCoreSlot.lean`, also `CoreLevels.lean`): a callee's run depends on
+  the caller's memory alone, so it is a function `callW p n f vs m` (`callW_spec`: every call
+  meets its run). A caller's word-level model calls its callees through `callW`; the L spec is
+  `vcgen` + `finish` with `callW_spec` as the callee spec (no callee proof needed); the
+  refinement then applies each callee's own spec to its run (`CoreSpec.of_callW`) and threads
+  `CoreAfter` (`CoreAfter.comp`). Loops get a named block and a model by fuel
+  (`whnfCoreLoopB_spec`, `coreLoopW`), refined by induction (`coreLoopW_ok`).
+* **Proved so far** (no `sorry` of their own): the knot's `whnfCore` slot one level up
+  (`whnfCoreSlot_step`: stuck tags, both memos, hit and miss, from the body spec), the loop
+  (`whnfCore_loop`'s spec and `coreLoopW_ok`, from the step spec), `lvl_eq_c`/`lvls_eq_c`
+  completely, the flush.
+* **L code written** (sorry'd specs): `whnf_core_step`, `whnf_app`, `beta_peel`,
+  `whnf_core_step_proj`, `reduce_proj_core`, `proj_cert`, `proj_lit_to_ctor` (`WhnfCore.lean`,
+  177 L lines); the spine walks (`WhnfSpine.lean`, 124, exact `coreWalkFuel` counters); ι
+  (`WhnfIota.lean`, 504 L lines: `iota_rec_at`, `prepare_major`, `major_to_ctor` with its K, η and
+  `And` rescues, `lit_major_to_ctor`, `iota_certs_full`, `iota_index_ok`, `defeq_list`,
+  `pi_residual`, `proof_irrel`, `rule_rhs_at`/`const_ty_at` with their caches, `find_rule`,
+  `tower_slots_all`, `eta_projs`, `and_rescue_slots`, …; a sonnet sub-lane).
+* **Findings.** (1) The lane `exprops` walks (`inst_entry`, `lift_entry`) refine their twins at
+  every fuel `F ≥ n` but have no `coreWalkFuel` counter, while the core calls them at exactly
+  `coreWalkFuel`: they need the counter (ROADMAP §3 (b)) before the core can call them; stubbed
+  (`Inst1OK`). (2) `IFEnv.findProj?` interns the table name (`projTableName`: a `str` name with
+  the bytes `projTable`): L needs those bytes as constant data; stubbed (`find_proj`). (3)
+  `recFireLevels` substitutes levels and **interns** the results (`internLevel`): lane `levels`'
+  heap results must be interned back into the level store, a walk that does not exist yet;
+  stubbed. (4) `decE` truncates a word to 32 bits, so a spec whose result the caller computes
+  with must state that the word is below `2^32`; the handle-valued caches carry it (`VH`).
+
 ### `sorry`s
 
 * `WhnfBase.lean` `whnfCallees_stub`: the specs of the callees not written yet (`inst_list`,
   `inst_lp`, `str_lit_ctor`, `str_lit_supported`, the knot's `infer`/`infer_io`/`defeq` steps).
 * `WhnfSpine.lean`: the eight spine-walk specs (`getAppFn_refines`, …; a proof lane is on them).
+* `WhnfCore.lean`: `coreCallees_stub` and the specs of `whnf_core_step`, `whnf_core_loop`
+  (through `whnfCoreLoop_refines`), `whnf_app`, `beta_peel`, `whnf_core_step_proj`,
+  `reduce_proj_core`, `proj_cert`, `proj_lit_to_ctor`.
+* `WhnfIota.lean`: `iotaCallees_stub` and every spec (28).
 
 ## Any number of results (2026-10-21, lane `cresults`)
 
