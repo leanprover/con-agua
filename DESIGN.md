@@ -4895,8 +4895,9 @@ Hard numbers for planning: `scripts/census.py` (PLAN.md, "Progress census"). Pie
   only (`refines_part … "validity"`); the position-valued ones (`skipWs`, `keyAt`, `strClose`, …) and
   `scanBool` are refined completely.
 
-### Numbers at landing (master `57ef9c2` + census)
+### Numbers at landing (master `9ff3b99` + census)
 1350 targets: 91 proven, 0 with `sorry`, 40 with L code only, 1219 nothing; by Lean lines 905 of
-11902 proven (7.6 %), 1388 with L; by Rust lines 1413 of 30758 (4.6 %). 78 partial refinements.
+11902 proven (7.6 %), 1388 with L; by Rust lines 1413 of 30758 (4.6 %). 89 `refines_part` theorems
+(among them all twelve `natOpResult` literal arms and 18 of the 19 store arms).
 Per phase in `docs/progress.md`. The census takes about 30 s (the link pass imports the modules in a few groups; axioms come
 from the oleans' precomputed tables).
