@@ -79,13 +79,13 @@ theorem installStepGo_spec :
 
 theorem promoteVG_spec :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
-      (g : Word) (vg : ValueGroup), decVG (s₀.mem.arr64 EREC) g.toNat = some vg →
+      (g : Word) (vg : ValueGroup), decVG (erecP s₀.mem) g.toNat = some vg →
       LoopR dn s₀.mem a₀ vis fe pend ds →
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "promote_vg" [g, vis]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (promoteVG PMemo.empty coreWalkFuel vg) a₀ ∧
       LoopR dn s'.mem (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀) vis fe pend ds ∧
       PMemoR s'.mem (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1 ∧
-      decVG (s'.mem.arr64 EREC) (r.headD 0).toNat =
+      decVG (erecP s'.mem) (r.headD 0).toNat =
         some (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2; ⊤⦄ := sorry
 
 theorem promoteNew_spec :
@@ -99,7 +99,7 @@ theorem promoteNew_spec :
 
 theorem checkValueGroup_spec :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
-      (g : Word) (vg : ValueGroup), decVG (s₀.mem.arr64 EREC) g.toNat = some vg →
+      (g : Word) (vg : ValueGroup), decVG (erecP s₀.mem) g.toNat = some vg →
       LoopR dn s₀.mem a₀ vis fe pend ds →
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_value_group" [vis, g]
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (checkValueGroup mode fe vg) a₀ ∧
@@ -127,7 +127,8 @@ structure BracketProg (p : Prog) : Prop where
 theorem PendR.frameLo {m m' : Mem} {pend : Array PendingCheck} {C : List Word}
     (hf : MemFrame [] C m m') (hC : ∀ x ∈ C, x.toNat < 128) (h : PendR m pend) : PendR m' pend := by
   have hP : m'.arr64 PEND = m.arr64 PEND := hf.1 _ (by simp) (by decide)
-  have hE : m'.arr64 EREC = m.arr64 EREC := hf.1 _ (by simp) (by decide)
+  have hE : erecP m' = erecP m := erecP_congr (hf.1 _ (by simp) (by decide))
+    (hf.2.1 129 (fun h' => by have := hC _ h'; simp at this))
   have hc : rdW (m'.arr64 CTL) 130 = rdW (m.arr64 CTL) 130 :=
     hf.2.1 130 (fun h' => by have := hC _ h'; simp at this)
   refine ⟨by simp only [pendCount, hc]; exact h.count, fun j hj => ?_⟩
@@ -228,7 +229,7 @@ theorem LoopR.vis {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {v
 theorem LoopR.pendPush {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {pend : Array PendingCheck} {ds : Array IDeclaration}
     (h : LoopR dn m a vis fe pend ds) (g i v : Word) (vg : ValueGroup)
-    (hg : decVG (m.arr64 EREC) g.toNat = some vg)
+    (hg : decVG (erecP m) g.toNat = some vg)
     (hb : 3 * (rdW (m.arr64 CTL) 130).toNat + 2 < (m.arr64 PEND).size)
     (hc : 130 < (m.arr64 CTL).size) (h1 : (rdW (m.arr64 CTL) 130).toNat < 2 ^ 62) :
     LoopR dn (pendPushMem m g i v) a vis fe (pend.push ⟨vg, i.toNat, v.toNat⟩) ds := by
@@ -242,7 +243,8 @@ theorem LoopR.pendPush {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AStat
     have fC : ∀ (m₁ : Mem) (x : Word), MemFrame [PEND] [130] m₁ (m₁.set64 CTL 130 x) :=
       fun m₁ x => MemFrame.mono (MemFrame.setCtl m₁ 130 x) (by simp) (by simp)
     exact (((fP _ _ _).trans (fP _ _ _)).trans (fP _ _ _)).trans (fC _ _)
-  have hE : (pendPushMem m g i v).arr64 EREC = m.arr64 EREC := hf.1 _ (by decide) (by decide)
+  have hE : erecP (pendPushMem m g i v) = erecP m := erecP_congr (hf.1 _ (by decide) (by decide))
+    (hf.2.1 129 (by decide))
   have hD1 : (pendPushMem m g i v).arr64 DECL = m.arr64 DECL := hf.1 _ (by decide) (by decide)
   have hD2 : (pendPushMem m g i v).arr64 DLP = m.arr64 DLP := hf.1 _ (by decide) (by decide)
   have hc1 : (c + 1).toNat = c.toNat + 1 := by
@@ -612,7 +614,7 @@ theorem isNone_refines (hb : BracketProg p) (hp : p.lookup "is_none" = some isNo
 
 theorem pendPush_spec (hp : p.lookup "pend_push" = some pendPushL) (n : Nat) (s₀ : St)
     (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck) (g i v : Word)
-    (vg : ValueGroup) (hg : decVG (s₀.mem.arr64 EREC) g.toNat = some vg)
+    (vg : ValueGroup) (hg : decVG (erecP s₀.mem) g.toNat = some vg)
     (hR : LoopR dn s₀.mem a₀ vis fe pend ds) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "pend_push" [g, i, v]
     ⦃fun _ s' => LocEq s' s₀ ∧
@@ -632,7 +634,7 @@ theorem pendPush_spec (hp : p.lookup "pend_push" = some pendPushL) (n : Nat) (s�
 theorem isSome_refines (hb : BracketProg p) (hpp : p.lookup "pend_push" = some pendPushL)
     (hp : p.lookup "is_some" = some isSomeL) (n : Nat) (s₀ : St) (a₀ : AState)
     (i vis v2 g : Word) (fe' : IFEnv) (pend : Array PendingCheck) (vg : ValueGroup)
-    (hg : decVG (s₀.mem.arr64 EREC) g.toNat = some vg)
+    (hg : decVG (erecP s₀.mem) g.toNat = some vg)
     (hR : LoopR dn s₀.mem a₀ v2 fe' pend ds) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "is_some" [i, vis, v2, g]
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (isSomeT i.toNat vis.toNat fe' pend vg) a₀ ∧
@@ -863,7 +865,7 @@ end fold
 theorem pend_words (m : Mem) (pend : Array PendingCheck) (hP : PendR m pend) (j : Word)
     (hj : j.toNat < pend.size) (hj62 : j.toNat < 2 ^ 62) :
     (∀ (h : (3 * j).toNat < (m.arr64 PEND).size),
-      decVG (m.arr64 EREC) ((m.arr64 PEND)[(3 * j).toNat]).toNat = some (pdAt pend j).vg) ∧
+      decVG (erecP m) ((m.arr64 PEND)[(3 * j).toNat]).toNat = some (pdAt pend j).vg) ∧
     (∀ (h : (3 * j + 2).toNat < (m.arr64 PEND).size),
       ((m.arr64 PEND)[(3 * j + 2).toNat]).toNat = (pdAt pend j).vis) := by
   have hr := hP.recs j.toNat hj
@@ -897,7 +899,7 @@ theorem checkPending_refines (hb : BracketProg p) (hp : p.lookup "check_pending"
       LoopR dn m a vis fe pend ds := fun m a v h => h.unrestrict hvB
   have hw : ∀ (m : Mem) (a : AState), LoopR dn m a vis fe pend ds → j.toNat < 2 ^ 62 →
       (∀ (h : (3 * j).toNat < (m.arr64 PEND).size),
-        decVG (m.arr64 EREC) ((m.arr64 PEND)[(3 * j).toNat]).toNat = some (pdAt pend j).vg) ∧
+        decVG (erecP m) ((m.arr64 PEND)[(3 * j).toNat]).toNat = some (pdAt pend j).vg) ∧
       (∀ (h : (3 * j + 2).toNat < (m.arr64 PEND).size),
         ((m.arr64 PEND)[(3 * j + 2).toNat]).toNat = (pdAt pend j).vis) :=
     fun m a h h62 => pend_words m pend h.pend j hj h62

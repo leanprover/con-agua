@@ -35,7 +35,7 @@ def pendCount (m : Mem) : Nat := (rdW (m.arr64 CTL) 130).toNat
 /-- Pending check `j`: three words of `PEND`, the value group a record of `EREC`. -/
 def decPend (m : Mem) (j : Nat) : Option PendingCheck := do
   let a := m.arr64 PEND
-  pure ⟨← decVG (m.arr64 EREC) (← nat? a (3 * j)), ← nat? a (3 * j + 1), ← nat? a (3 * j + 2)⟩
+  pure ⟨← decVG (erecP m) (← nat? a (3 * j)), ← nat? a (3 * j + 1), ← nat? a (3 * j + 2)⟩
 
 /-- **The pending checks.** -/
 structure PendR (m : Mem) (pend : Array PendingCheck) : Prop where
@@ -81,7 +81,7 @@ theorem FoldOut.eq {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {
 
 /-- A value group out of `install_step_go`: flag `f` (`0`: none) and record `g`. -/
 def vgOut (m : Mem) (f g : Word) : Option ValueGroup :=
-  if f = 0 then none else decVG (m.arr64 EREC) g.toNat
+  if f = 0 then none else decVG (erecP m) g.toNat
 
 
 end L.Arena
