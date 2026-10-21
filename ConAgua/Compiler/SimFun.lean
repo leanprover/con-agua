@@ -40,7 +40,8 @@ theorem sim_copy (vs : List Word) (sp ap : Nat) (Q : MachineState → Prop) :
     ∀ (m i k : Nat) (s : MachineData), Code (copyParams i m) k → i + m ≤ vs.length → 8 * (i + m) < 2 ^ 31 →
     s.regs.rsp.toNat = sp → s.regs.rsi.toNat = ap →
     (∀ j (h : j < vs.length), i ≤ j → rdW s.dmem (A (ap + 8 * j)) = some vs[j]) →
-    sp + 8 * (i + m) ≤ ap → ap + 8 * vs.length ≤ 2 ^ 64 →
+    (sp + 8 * (i + m) ≤ ap ∨ ap + 8 * vs.length ≤ sp) → ap + 8 * vs.length ≤ 2 ^ 64 →
+    sp + 8 * (i + m) ≤ 2 ^ 64 →
     (∀ j, i ≤ j → j < i + m → (rdW s.dmem (A (sp + 8 * j))).isSome) →
     (∀ s', s'.regs.rsp = s.regs.rsp → s'.regs.rsi = s.regs.rsi → s'.regs.r15 = s.regs.r15 →
       s'.regs.rbp = s.regs.rbp → s'.regs.r14 = s.regs.r14 →
@@ -51,10 +52,10 @@ theorem sim_copy (vs : List Word) (sp ap : Nat) (Q : MachineState → Prop) :
   intro m
   induction m with
   | zero =>
-    intro i k s _ _ _ _ _ _ _ _ _ hK
+    intro i k s _ _ _ _ _ _ _ _ _ _ hK
     exact hK s rfl rfl rfl rfl rfl (Only.refl _ _ _) (fun j _ h1 h2 => absurd h2 (by omega))
   | succ m ih =>
-    intro i k s hc hlen hoff hsp hsi hargs hsa hap hmap hK
+    intro i k s hc hlen hoff hsp hsi hargs hsa hap hspov hmap hK
     simp only [copyParams, List.cons_append, List.nil_append] at hc
     have hi : i < vs.length := by omega
     refine ev_movRM hc.head ⟨by omega, by omega⟩ (v := vs[i]) ?_ ?_
@@ -64,7 +65,8 @@ theorem sim_copy (vs : List Word) (sp ap : Nat) (Q : MachineState → Prop) :
       rw [hsp]; exact hmap i (Nat.le_refl _) (by omega)
     simp only [Reg64s.set64_rax, Reg64s.get64_rsp, Reg64s.get64_rax, UInt64.toNat_toBitVec, toNat_eight_mul]
     rw [hsp]
-    refine ih (i + 1) _ _ hc.tail.tail (by omega) (by omega) (by simp [hsp]) (by simp [hsi]) ?_ (by omega) hap ?_ ?_
+    refine ih (i + 1) _ _ hc.tail.tail (by omega) (by omega) (by simp [hsp]) (by simp [hsi]) ?_ (by omega) hap
+      (by omega) ?_ ?_
     · intro j hj hij
       simp only
       rw [rdW_wrW_A (by omega) (by omega) (by omega)]
@@ -128,6 +130,7 @@ include hG hTab
 theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd = true) (n : Nat)
     (hE : ExecSim p G n) : FunSim p G n := by
   intro f fd kf hlk hkf vs σ d ra Q hvl hra hargs hap1 hap2 hlo hhi h15 hmem hfuel hKret hKerr hKexh
+  have hap1' := hap1
   have hwf := hwfp f fd hlk
   simp only [FunDecl.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
   obtain ⟨⟨hnp, hbody⟩, hFoff⟩ := hwf
@@ -170,6 +173,7 @@ theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd 
     have hlenF : vs.length ≤ frameWords fd := by omega
     refine sim_copy vs (d.regs.rsp.toNat - 8 * frameWords fd) d.regs.rsi.toNat Q fd.nparams 0 _ s4 c2.left
       (by omega) (by omega) h4sp (by rw [h4si]) (fun j hj _ => by rw [h4m]; exact hargs j hj) (by omega) (by omega)
+      (by omega)
       (fun j _ hj => isSome_rdW fun i hi => by
         rw [h4m, A_add]; exact hmem.stack _ ⟨by omega, by omega⟩) ?_
     intro s5 h5sp h5si h515 h5bp h514 h5O h5sl

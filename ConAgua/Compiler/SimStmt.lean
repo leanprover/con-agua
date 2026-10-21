@@ -143,7 +143,7 @@ theorem Inv.setLoc {nl F : Nat} {σ : St} {d : MachineData} (hI : Inv G nl F σ 
     (v : Word) :
     Inv G nl F (σ.setLoc x v) { d with dmem := wrW d.dmem (A (d.regs.rsp.toNat + 8 * x)) v.toBitVec } where
   r15 := hI.r15
-  lo := hI.lo
+  lo8 := hI.lo8
   hi := hI.hi
   nlF := hI.nlF
   frame := fun y hy => by
@@ -312,7 +312,7 @@ omit [Host] hG hTab in
 theorem Inv.of_regs {nl F : Nat} {σ : St} {d d' : MachineData} (hI : Inv G nl F σ d)
     (hd : d'.dmem = d.dmem) (hsp : d'.regs.rsp = d.regs.rsp) (h15 : d'.regs.r15 = d.regs.r15) :
     Inv G nl F σ d' :=
-  ⟨h15 ▸ hI.r15, hsp ▸ hI.lo, hsp ▸ hI.hi, hI.nlF, fun x hx => hsp ▸ hd ▸ hI.frame x hx, hd ▸ hI.mem⟩
+  ⟨h15 ▸ hI.r15, hsp ▸ hI.lo8, hsp ▸ hI.hi, hI.nlF, fun x hx => hsp ▸ hd ▸ hI.frame x hx, hd ▸ hI.mem⟩
 
 theorem sim_while (n : Nat) (hE : ExecSim p G n) (c : Cond) (s : Stmt)
     (hs : SimS p G (stepRun p (exec p n)) (· ≤ n) s) :

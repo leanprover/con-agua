@@ -28,13 +28,15 @@ structure Layout where
   /-- The L stack is `[lo, hi)`. -/
   lo : Nat
   hi : Nat
+  /-- The number of entry arguments (stored at the end of the table). -/
+  nargs : Nat
 
 namespace Layout
 
 variable (G : Layout)
 
-/-- The bytes of the table that the code reads. -/
-def tabEnd : Nat := G.T + 16 + 16 * (G.tab.nb + G.tab.nw)
+/-- The bytes of the table that the code reads: the descriptors and the entry arguments. -/
+def tabEnd : Nat := G.T + 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.nargs
 
 def InTab (x : Nat) : Prop := G.T ≤ x ∧ x < G.tabEnd
 def InStack (x : Nat) : Prop := G.lo ≤ x ∧ x < G.hi
@@ -170,7 +172,7 @@ theorem MemRel.only {m : Mem} {d d' : DataMem} (hm : MemRel G m d) {a b : Nat} (
     simp only [not_or, Nat.not_lt] at hx
     exact hG.notStack_of_arr (Or.inr ⟨c, hc, by omega, by omega⟩) (hab (G.b64 c + 8 * i + j) (by omega) (by omega))
   limit := by
-    rw [h.rdW_tab hG hab (by omega) (by simp [Layout.tabEnd])]; exact hm.limit
+    rw [h.rdW_tab hG hab (by omega) (by simp [Layout.tabEnd]; omega)]; exact hm.limit
   base8 := fun c hc => by
     rw [h.rdW_tab hG hab (by omega) (by simp [Layout.tabEnd, Tab.base8] <;> omega)]; exact hm.base8 c hc
   len8 := fun c hc => by
