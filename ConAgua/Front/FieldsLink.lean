@@ -69,6 +69,37 @@ theorem numRecN_congr (b : Array UInt8) (i w j w' pre n : Word)
   conv => rhs; rw [numRecN]
   simp only [h]
 
+theorem recN_congr (b : Array UInt8) (i w j w' : Word) (f : Fld)
+    (h : nextMemberN b i w = nextMemberN b j w') : recN b i w f = recN b j w' f := by
+  conv => lhs; rw [recN]
+  conv => rhs; rw [recN]
+  simp only [h]
+
+/-- What a name record's words say: the kind `k` (`1`: `str`, `2`: `num`), `pre`, and the
+string's body or the number. -/
+def NameR (b : ByteArray) : NameRec → Word → Word → Word → Word → Prop
+  | .str p s, k, a, c, d => k = 1 ∧ ItemR a p ∧ StrOK b c d s
+  | .num p n, k, a, c, _ => k = 2 ∧ ItemR a p ∧ ItemR c n
+
+/-- What the line loop's words say about con-leche's payload so far. -/
+def PlR (b : ByteArray) : LinePayload → Fld → Prop
+  | .absent, _ => True
+  | .name r, f => NameR b r f.pl f.a f.c f.d
+  | .level (.succ u), f => f.pl = 3 ∧ ItemR f.a u
+  | .level (.max u v), f => f.pl = 4 ∧ ItemR f.a u ∧ ItemR f.c v
+  | .level (.imax u v), f => f.pl = 5 ∧ ItemR f.a u ∧ ItemR f.c v
+  | .level (.param n), f => f.pl = 6 ∧ ItemR f.a n
+  | .header, f => f.pl = 7
+  | .expr _, _ => False
+  | .decl _, _ => False
+
+/-- What `rec_line_loop`'s words say about the line's record. -/
+def RecR (b : ByteArray) : LineRec → Fld → Prop
+  | .name i r, f => ItemR f.idx i ∧ PlR b (.name r) f
+  | .level i r, f => ItemR f.idx i ∧ PlR b (.level r) f
+  | .header, f => f.pl = 7
+  | _, _ => False
+
 section kit
 variable (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
 include h64 hsize
@@ -331,16 +362,12 @@ theorem numEnd_le (v : USize) (hv : v.toNat ≤ b.size) : (numEnd b v).toNat ≤
 
 /-! ## `rec_str_name`, `rec_num_name` -/
 
-/-- What a name record's fields say: `pre` and the string's body, or `pre` and the number. -/
-def NameR (b : ByteArray) : NameRec → Word → Word → Word → Prop
-  | .str p s, a, c, d => ItemR a p ∧ StrOK b c d s
-  | .num p n, a, c, _ => ItemR a p ∧ ItemR c n
 
 theorem strRec_link (i : USize) (w : Bool) (seen : UInt32) (pre : Nat) (s : String) (r : NameRec)
     (e : USize) (pw vs ve : Word) (h : scanStrNameLoop b i w seen pre s = .ok r e)
     (hp : ItemR pw pre) (hs : StrOK b vs ve s) :
     (strRecN b.data i.toUInt64 (bw w) pw vs ve).1 = e.toUInt64 ∧
-      NameR b r (strRecN b.data i.toUInt64 (bw w) pw vs ve).2.1
+      NameR b r 1 (strRecN b.data i.toUInt64 (bw w) pw vs ve).2.1
         (strRecN b.data i.toUInt64 (bw w) pw vs ve).2.2.1
         (strRecN b.data i.toUInt64 (bw w) pw vs ve).2.2.2 := by
   rw [scanStrNameLoop] at h
@@ -364,7 +391,7 @@ theorem strRec_link (i : USize) (w : Bool) (seen : UInt32) (pre : Nat) (s : Stri
       obtain ⟨rfl, rfl⟩ := h
       rw [strRecN_close _ _ _ _ _ _ (by rw [nm_close b h64 hsize i _ hi hws h125]),
         nm_close b h64 hsize i _ hi hws h125, succ_toUInt64 b h64 hsize]
-      exact ⟨rfl, hp, hs⟩
+      exact ⟨rfl, rfl, hp, hs⟩
     simp only [show (byteAt b i == 125) = false by simpa using h125, Bool.false_eq_true,
       if_false] at h
     by_cases h44 : byteAt b i = 44
@@ -455,7 +482,7 @@ theorem numRec_link (i : USize) (w : Bool) (seen : UInt32) (n pre : Nat) (r : Na
     (e : USize) (pw nw : Word) (h : scanNumNameLoop b i w seen n pre = .ok r e)
     (hp : ItemR pw pre) (hn : ItemR nw n) :
     (numRecN b.data i.toUInt64 (bw w) pw nw).1 = e.toUInt64 ∧
-      NameR b r (numRecN b.data i.toUInt64 (bw w) pw nw).2.1
+      NameR b r 2 (numRecN b.data i.toUInt64 (bw w) pw nw).2.1
         (numRecN b.data i.toUInt64 (bw w) pw nw).2.2 0 := by
   rw [scanNumNameLoop] at h
   by_cases hi : i < b.usize
@@ -478,7 +505,7 @@ theorem numRec_link (i : USize) (w : Bool) (seen : UInt32) (n pre : Nat) (r : Na
       obtain ⟨rfl, rfl⟩ := h
       rw [numRecN_close _ _ _ _ _ (by rw [nm_close b h64 hsize i _ hi hws h125]),
         nm_close b h64 hsize i _ hi hws h125, succ_toUInt64 b h64 hsize]
-      exact ⟨rfl, hp, hn⟩
+      exact ⟨rfl, rfl, hp, hn⟩
     simp only [show (byteAt b i == 125) = false by simpa using h125, Bool.false_eq_true,
       if_false] at h
     by_cases h44 : byteAt b i = 44
@@ -575,7 +602,7 @@ theorem obj_open (v : USize) (hc : (byteAt b v == 123) = true) :
 
 theorem strEntry_link (v : USize) (r : NameRec) (e : USize) (h : scanStrName b v = .ok r e) :
     (strRecEntryN b.data v.toUInt64).1 = e.toUInt64 ∧
-      NameR b r (strRecEntryN b.data v.toUInt64).2.1 (strRecEntryN b.data v.toUInt64).2.2.1
+      NameR b r 1 (strRecEntryN b.data v.toUInt64).2.1 (strRecEntryN b.data v.toUInt64).2.2.1
         (strRecEntryN b.data v.toUInt64).2.2.2 := by
   unfold scanStrName at h
   split at h
@@ -587,7 +614,7 @@ theorem strEntry_link (v : USize) (r : NameRec) (e : USize) (h : scanStrName b v
 
 theorem numEntry_link (v : USize) (r : NameRec) (e : USize) (h : scanNumName b v = .ok r e) :
     (numRecEntryN b.data v.toUInt64).1 = e.toUInt64 ∧
-      NameR b r (numRecEntryN b.data v.toUInt64).2.1 (numRecEntryN b.data v.toUInt64).2.2 0 := by
+      NameR b r 2 (numRecEntryN b.data v.toUInt64).2.1 (numRecEntryN b.data v.toUInt64).2.2 0 := by
   unfold scanNumName at h
   split at h
   · rename_i hc
@@ -595,6 +622,187 @@ theorem numEntry_link (v : USize) (r : NameRec) (e : USize) (h : scanNumName b v
     rw [← (obj_open b h64 hsize v hc).2]
     exact numRec_link b h64 hsize (v + 1) true 0 0 0 r e 0 0 h itemR_zero itemR_zero
   · cases h
+
+/-! ## `rec_line_loop` -/
+
+omit h64 hsize in
+theorem plR_idx (pl : LinePayload) (f : Fld) (x : Word) (h : PlR b pl f) :
+    PlR b pl ⟨f.pl, x, f.a, f.c, f.d⟩ := by
+  rcases pl with _ | (_ | _) | (_ | _ | _ | _) | _ | _ | _ <;> exact h
+
+omit h64 hsize in
+theorem nameR_d (r : NameRec) (a c d d' : Word) (h : NameR b r 2 a c d) :
+    NameR b r 2 a c d' := by
+  cases r
+  · exact absurd h.1 (by decide)
+  · exact h
+
+theorem recLine_link (i : USize) (w : Bool) (ik : UInt8) (idx : Nat) (pl : LinePayload) (f : Fld)
+    (r : LineRec) (e : USize) (h : scanLineLoop b i w ik idx pl = .ok r e)
+    (hI : ItemR f.idx idx) (hP : PlR b pl f) :
+    (recN b.data i.toUInt64 (bw w) f).pl ≠ 0 → RecR b r (recN b.data i.toUInt64 (bw w) f) := by
+  rw [scanLineLoop.eq_def] at h
+  by_cases hi : i < b.usize
+  · have hin := usizeInBounds b i hi
+    have hi1 : (i + 1).toNat = i.toNat + 1 := usizeStep b i hi
+    rw [dif_pos hi] at h
+    simp only [uget_byteAt _ i hi] at h
+    by_cases hws : isWs (byteAt b i) = true
+    · simp only [hws, if_true] at h
+      rw [recN_congr _ _ _ _ _ _ (nm_ws b h64 hsize i _ hi hws)]
+      exact recLine_link (i + 1) w ik idx pl f r e h hI hP
+    simp only [hws, Bool.false_eq_true, if_false] at h
+    by_cases h125 : byteAt b i = 125
+    · simp only [h125, show ((125 : UInt8) == 125) = true from rfl, if_true] at h
+      rw [recN_close _ _ _ _ (by rw [nm_close b h64 hsize i _ hi hws h125])]
+      split at h
+      · cases h
+      cases pl
+      · simp at h
+      · by_cases hk : ik = 1
+        · subst hk; simp only [ScanRes.ok.injEq] at h; obtain ⟨rfl, rfl⟩ := h
+          exact fun _ => ⟨hI, hP⟩
+        · simp [hk] at h
+      · by_cases hk : ik = 2
+        · subst hk; simp only [ScanRes.ok.injEq] at h; obtain ⟨rfl, rfl⟩ := h
+          exact fun _ => ⟨hI, hP⟩
+        · simp [hk] at h
+      · exact hP.elim
+      · exact hP.elim
+      · by_cases hk : ik = 0
+        · subst hk; simp only [ScanRes.ok.injEq] at h; obtain ⟨rfl, rfl⟩ := h
+          exact fun _ => hP
+        · simp [hk] at h
+    simp only [show (byteAt b i == 125) = false by simpa using h125, Bool.false_eq_true,
+      if_false] at h
+    by_cases h44 : byteAt b i = 44
+    · simp only [h44, show ((44 : UInt8) == 44) = true from rfl, if_true] at h
+      split at h
+      · cases h
+      rename_i hw
+      have hw' : w = false := by simpa using hw
+      subst hw'
+      simp only [bw, Bool.false_eq_true, if_false]
+      rw [recN_congr _ _ _ _ _ _ (nm_comma b h64 hsize i hi hws h44)]
+      exact recLine_link (i + 1) true ik idx pl f r e h hI hP
+    simp only [show (byteAt b i == 44) = false by simpa using h44, Bool.false_eq_true,
+      if_false] at h
+    by_cases h34 : byteAt b i = 34
+    · simp only [h34, show ((34 : UInt8) == 34) = true from rfl, if_true] at h
+      split at h
+      · cases h
+      rename_i hw
+      have hw' : w = true := by simpa using hw
+      subst hw'
+      split at h
+      · cases h
+      rename_i hk
+      split at h
+      · cases h
+      rename_i hv
+      have hk' : keyEnd b (i + 1) ≠ 0 := by simpa using hk
+      have hv' : valueAt b i (keyEnd b (i + 1)) ≠ i := by simpa using hv
+      have hm := nm_key b h64 hsize i hi h34 hk' hv'
+      simp only [bw, if_true]
+      rw [recN_key _ _ _ _ (by rw [hm]; exact (by decide : (2 : Word) ≠ 0))
+        (by rw [hm]; exact (by decide : (2 : Word) ≠ 1))]
+      have hvle : (valueAt b i (keyEnd b (i + 1))).toNat ≤ b.size := by
+        have := L.Scan.Member.nextMemberN_val_le b.data i.toUInt64 1
+          (by have : b.data.size = b.size := rfl; omega) (by rw [hm])
+        rw [hm] at this; simpa using this
+      simp only [hm]
+      generalize valueAt b i (keyEnd b (i + 1)) = v at h hvle
+      generalize keyAt b i (keyEnd b (i + 1) - (i + 1)) = K at h
+      have hve : v ≤ numEnd b v := by
+        have := numEnd_toNat_eq b h64 (by omega) v
+        rw [USize.le_iff_toNat_le, this]; exact L.Scan.Values.numEndN_ge _ _
+      have hR := rdNat_link b h64 hsize v (numEnd b v) hve (numEnd_le b h64 hsize v hvle)
+      cases K
+      all_goals (try dsimp only at h)
+      all_goals (try (cases h; done))
+      all_goals simp (config := {decide := true}) only [↓reduceIte]
+      all_goals (try exact False.elim)
+      case kIn | kIl | kIe | kSucc | kParam =>
+        split at h
+        · cases h
+        split at h
+        · cases h
+        rename_i hne
+        split at h
+        · rename_i hie
+          have hsl : L.Scan.Values.slotNatN b.data i.toUInt64 v.toUInt64 =
+              (numEnd b v).toUInt64 := by
+            rw [slotNatN_link b h64 hsize, if_neg (by simpa using hne), if_pos hie]
+          rw [hsl, if_pos ((lt_toUInt64_iff _ _).mp hie)]
+          first
+            | exact recLine_link (numEnd b v) false _ _ _ _ r e h hR (plR_idx b _ _ _ hP)
+            | exact recLine_link (numEnd b v) false _ _ _ _ r e h hI ⟨rfl, hR⟩
+        · cases h
+      case kMax | kImax =>
+        split at h
+        · cases h
+        split at h
+        · cases h
+        rename_i us e' hus
+        split at h
+        · rename_i x y
+          split at h
+          · rename_i hie
+            have hp := pairEntry_link b h64 hsize v x y e' hus
+            rw [hp.1, if_pos ((lt_toUInt64_iff _ _).mp hie)]
+            exact recLine_link e' false _ _ _ _ r e h hI ⟨rfl, hp.2.1, hp.2.2⟩
+          · cases h
+        · cases h
+      case kStr =>
+        split at h
+        · cases h
+        split at h
+        · cases h
+        rename_i r' e' hr
+        split at h
+        · rename_i hie
+          have hp := strEntry_link b h64 hsize v r' e' hr
+          rw [hp.1, if_pos ((lt_toUInt64_iff _ _).mp hie)]
+          exact recLine_link e' false _ _ _ _ r e h hI hp.2
+        · cases h
+      case kNum =>
+        split at h
+        · cases h
+        split at h
+        · cases h
+        rename_i r' e' hr
+        split at h
+        · rename_i hie
+          have hp := numEntry_link b h64 hsize v r' e' hr
+          rw [hp.1, if_pos ((lt_toUInt64_iff _ _).mp hie)]
+          exact recLine_link e' false _ _ _ _ r e h hI (nameR_d b r' _ _ _ _ hp.2)
+        · cases h
+      case kMeta =>
+        split at h
+        · cases h
+        split at h
+        · cases h
+        rename_i hc
+        split at h
+        · cases h
+        split at h
+        · rename_i hie
+          have hmeta : metaN b.data v.toUInt64 = (skipBraced b (v + 1) 0).toUInt64 := by
+            unfold metaN
+            rw [ConAgua.Scan.LineLink.skip_link b h64 hsize v, if_pos (by simpa using hc)]
+          rw [hmeta, if_pos ((lt_toUInt64_iff _ _).mp hie)]
+          exact recLine_link _ false _ _ _ _ r e h hI rfl
+        · cases h
+    · simp only [show (byteAt b i == 34) = false by simpa using h34, Bool.false_eq_true,
+        if_false] at h
+      cases h
+  · rw [dif_neg hi] at h; cases h
+termination_by b.size - i.toNat
+decreasing_by
+  all_goals first
+    | omega
+    | (have := USize.lt_iff_toNat_lt.mp ‹i < numEnd b _›; omega)
+    | (have := USize.lt_iff_toNat_lt.mp ‹i < _›; omega)
 
 end kit
 
