@@ -52,4 +52,5 @@ public import ConAgua.Arena.NatCmp
 public import ConAgua.Arena.NatSub
 public import ConAgua.Arena.NatShl
 public import ConAgua.Arena.NatShr
+public import ConAgua.Arena.NatPow
 public import ConAgua.Arena.Store

@@ -292,6 +292,23 @@ iteration as `x`.
   grind …` per goal (and none for the theorem) every goal passes. The house form
   (`finish (gen := 25)`) fails on two goals (splits). Not tuned further.
 
+### `nat_pow`: an accumulator that moves
+
+Square-and-multiply from bit 24 down (25 iterations whatever `e`; squaring `1` is one limb),
+each product a call of `nat_mul`, which appends it at the top. The accumulator is the last
+product, so `nat_pow` returns `(o, l)` (two results) and the intermediate products stay below
+the top as garbage, like con-ron's dropped `Vec`s but never freed. The loop invariant `PowInv`
+names the entry memory `m₀` and keeps `Grows m₀ s.mem` (`Grows.trans`, pattern
+`Grows m m', Grows m' m''`), `a`'s value (below `m₀`'s top, so `Agree.pv` carries it across each
+call) and `pv o l = a ^ (e >> j)`. The step is `pow_step1`/`pow_step0`
+(`a ^ (e >> j') = a^(e >> j) · a^(e >> j) · a` or without the `a`, keyed on
+`(e >> j') & 1`); their patterns bind both powers, which are in the goal, so they do not chain.
+Three small `grind` facts were needed for the entry, each found from the failing conjunct under
+`nat_mul`'s recipe and then the house form went through: `pv_set_one`/`Norm.set_one` (a one-limb
+slice just written; `pv_set_succ` needs a `pv p o 0` term), stated with `l = 1` as a hypothesis
+because the length is `UInt64.toNat 1`, not the literal; `pow_shr25` (`a ^ (e >> 25) = 1`; the
+equation `(e >> 25).toNat = 0` alone does not reach the power); `shr_of_zero` for the exit.
+
 ### `sorry`s
 
 None.
@@ -1433,6 +1450,23 @@ iteration as `x`.
   grind …` per goal (and none for the theorem) every goal passes. The house form
   (`finish (gen := 25)`) fails on two goals (splits). Not tuned further.
 
+### `nat_pow`: an accumulator that moves
+
+Square-and-multiply from bit 24 down (25 iterations whatever `e`; squaring `1` is one limb),
+each product a call of `nat_mul`, which appends it at the top. The accumulator is the last
+product, so `nat_pow` returns `(o, l)` (two results) and the intermediate products stay below
+the top as garbage, like con-ron's dropped `Vec`s but never freed. The loop invariant `PowInv`
+names the entry memory `m₀` and keeps `Grows m₀ s.mem` (`Grows.trans`, pattern
+`Grows m m', Grows m' m''`), `a`'s value (below `m₀`'s top, so `Agree.pv` carries it across each
+call) and `pv o l = a ^ (e >> j)`. The step is `pow_step1`/`pow_step0`
+(`a ^ (e >> j') = a^(e >> j) · a^(e >> j) · a` or without the `a`, keyed on
+`(e >> j') & 1`); their patterns bind both powers, which are in the goal, so they do not chain.
+Three small `grind` facts were needed for the entry, each found from the failing conjunct under
+`nat_mul`'s recipe and then the house form went through: `pv_set_one`/`Norm.set_one` (a one-limb
+slice just written; `pv_set_succ` needs a `pv p o 0` term), stated with `l = 1` as a hypothesis
+because the length is `UInt64.toNat 1`, not the literal; `pow_shr25` (`a ^ (e >> 25) = 1`; the
+equation `(e >> 25).toNat = 0` alone does not reach the power); `shr_of_zero` for the exit.
+
 ### `sorry`s
 
 None.
@@ -1645,6 +1679,23 @@ iteration as `x`.
   grind …` per goal (and none for the theorem) every goal passes. The house form
   (`finish (gen := 25)`) fails on two goals (splits). Not tuned further.
 
+### `nat_pow`: an accumulator that moves
+
+Square-and-multiply from bit 24 down (25 iterations whatever `e`; squaring `1` is one limb),
+each product a call of `nat_mul`, which appends it at the top. The accumulator is the last
+product, so `nat_pow` returns `(o, l)` (two results) and the intermediate products stay below
+the top as garbage, like con-ron's dropped `Vec`s but never freed. The loop invariant `PowInv`
+names the entry memory `m₀` and keeps `Grows m₀ s.mem` (`Grows.trans`, pattern
+`Grows m m', Grows m' m''`), `a`'s value (below `m₀`'s top, so `Agree.pv` carries it across each
+call) and `pv o l = a ^ (e >> j)`. The step is `pow_step1`/`pow_step0`
+(`a ^ (e >> j') = a^(e >> j) · a^(e >> j) · a` or without the `a`, keyed on
+`(e >> j') & 1`); their patterns bind both powers, which are in the goal, so they do not chain.
+Three small `grind` facts were needed for the entry, each found from the failing conjunct under
+`nat_mul`'s recipe and then the house form went through: `pv_set_one`/`Norm.set_one` (a one-limb
+slice just written; `pv_set_succ` needs a `pv p o 0` term), stated with `l = 1` as a hypothesis
+because the length is `UInt64.toNat 1`, not the literal; `pow_shr25` (`a ^ (e >> 25) = 1`; the
+equation `(e >> 25).toNat = 0` alone does not reach the power); `shr_of_zero` for the exit.
+
 ### `sorry`s
 
 None.
@@ -1779,6 +1830,23 @@ iteration as `x`.
   grind …` per goal (and none for the theorem) every goal passes. The house form
   (`finish (gen := 25)`) fails on two goals (splits). Not tuned further.
 
+### `nat_pow`: an accumulator that moves
+
+Square-and-multiply from bit 24 down (25 iterations whatever `e`; squaring `1` is one limb),
+each product a call of `nat_mul`, which appends it at the top. The accumulator is the last
+product, so `nat_pow` returns `(o, l)` (two results) and the intermediate products stay below
+the top as garbage, like con-ron's dropped `Vec`s but never freed. The loop invariant `PowInv`
+names the entry memory `m₀` and keeps `Grows m₀ s.mem` (`Grows.trans`, pattern
+`Grows m m', Grows m' m''`), `a`'s value (below `m₀`'s top, so `Agree.pv` carries it across each
+call) and `pv o l = a ^ (e >> j)`. The step is `pow_step1`/`pow_step0`
+(`a ^ (e >> j') = a^(e >> j) · a^(e >> j) · a` or without the `a`, keyed on
+`(e >> j') & 1`); their patterns bind both powers, which are in the goal, so they do not chain.
+Three small `grind` facts were needed for the entry, each found from the failing conjunct under
+`nat_mul`'s recipe and then the house form went through: `pv_set_one`/`Norm.set_one` (a one-limb
+slice just written; `pv_set_succ` needs a `pv p o 0` term), stated with `l = 1` as a hypothesis
+because the length is `UInt64.toNat 1`, not the literal; `pow_shr25` (`a ^ (e >> 25) = 1`; the
+equation `(e >> 25).toNat = 0` alone does not reach the power); `shr_of_zero` for the exit.
+
 ### `sorry`s
 
 None.
@@ -1886,6 +1954,23 @@ iteration as `x`.
   grind …` per goal (and none for the theorem) every goal passes. The house form
   (`finish (gen := 25)`) fails on two goals (splits). Not tuned further.
 
+### `nat_pow`: an accumulator that moves
+
+Square-and-multiply from bit 24 down (25 iterations whatever `e`; squaring `1` is one limb),
+each product a call of `nat_mul`, which appends it at the top. The accumulator is the last
+product, so `nat_pow` returns `(o, l)` (two results) and the intermediate products stay below
+the top as garbage, like con-ron's dropped `Vec`s but never freed. The loop invariant `PowInv`
+names the entry memory `m₀` and keeps `Grows m₀ s.mem` (`Grows.trans`, pattern
+`Grows m m', Grows m' m''`), `a`'s value (below `m₀`'s top, so `Agree.pv` carries it across each
+call) and `pv o l = a ^ (e >> j)`. The step is `pow_step1`/`pow_step0`
+(`a ^ (e >> j') = a^(e >> j) · a^(e >> j) · a` or without the `a`, keyed on
+`(e >> j') & 1`); their patterns bind both powers, which are in the goal, so they do not chain.
+Three small `grind` facts were needed for the entry, each found from the failing conjunct under
+`nat_mul`'s recipe and then the house form went through: `pv_set_one`/`Norm.set_one` (a one-limb
+slice just written; `pv_set_succ` needs a `pv p o 0` term), stated with `l = 1` as a hypothesis
+because the length is `UInt64.toNat 1`, not the literal; `pow_shr25` (`a ^ (e >> 25) = 1`; the
+equation `(e >> 25).toNat = 0` alone does not reach the power); `shr_of_zero` for the exit.
+
 ### `sorry`s
 
 None.
@@ -1975,6 +2060,23 @@ iteration as `x`.
   `maxHeartbeats` for the whole theorem ran out (1M); with `set_option maxHeartbeats 200000 in
   grind …` per goal (and none for the theorem) every goal passes. The house form
   (`finish (gen := 25)`) fails on two goals (splits). Not tuned further.
+
+### `nat_pow`: an accumulator that moves
+
+Square-and-multiply from bit 24 down (25 iterations whatever `e`; squaring `1` is one limb),
+each product a call of `nat_mul`, which appends it at the top. The accumulator is the last
+product, so `nat_pow` returns `(o, l)` (two results) and the intermediate products stay below
+the top as garbage, like con-ron's dropped `Vec`s but never freed. The loop invariant `PowInv`
+names the entry memory `m₀` and keeps `Grows m₀ s.mem` (`Grows.trans`, pattern
+`Grows m m', Grows m' m''`), `a`'s value (below `m₀`'s top, so `Agree.pv` carries it across each
+call) and `pv o l = a ^ (e >> j)`. The step is `pow_step1`/`pow_step0`
+(`a ^ (e >> j') = a^(e >> j) · a^(e >> j) · a` or without the `a`, keyed on
+`(e >> j') & 1`); their patterns bind both powers, which are in the goal, so they do not chain.
+Three small `grind` facts were needed for the entry, each found from the failing conjunct under
+`nat_mul`'s recipe and then the house form went through: `pv_set_one`/`Norm.set_one` (a one-limb
+slice just written; `pv_set_succ` needs a `pv p o 0` term), stated with `l = 1` as a hypothesis
+because the length is `UInt64.toNat 1`, not the literal; `pow_shr25` (`a ^ (e >> 25) = 1`; the
+equation `(e >> 25).toNat = 0` alone does not reach the power); `shr_of_zero` for the exit.
 
 ### `sorry`s
 
@@ -2465,6 +2567,23 @@ iteration as `x`.
   grind …` per goal (and none for the theorem) every goal passes. The house form
   (`finish (gen := 25)`) fails on two goals (splits). Not tuned further.
 
+### `nat_pow`: an accumulator that moves
+
+Square-and-multiply from bit 24 down (25 iterations whatever `e`; squaring `1` is one limb),
+each product a call of `nat_mul`, which appends it at the top. The accumulator is the last
+product, so `nat_pow` returns `(o, l)` (two results) and the intermediate products stay below
+the top as garbage, like con-ron's dropped `Vec`s but never freed. The loop invariant `PowInv`
+names the entry memory `m₀` and keeps `Grows m₀ s.mem` (`Grows.trans`, pattern
+`Grows m m', Grows m' m''`), `a`'s value (below `m₀`'s top, so `Agree.pv` carries it across each
+call) and `pv o l = a ^ (e >> j)`. The step is `pow_step1`/`pow_step0`
+(`a ^ (e >> j') = a^(e >> j) · a^(e >> j) · a` or without the `a`, keyed on
+`(e >> j') & 1`); their patterns bind both powers, which are in the goal, so they do not chain.
+Three small `grind` facts were needed for the entry, each found from the failing conjunct under
+`nat_mul`'s recipe and then the house form went through: `pv_set_one`/`Norm.set_one` (a one-limb
+slice just written; `pv_set_succ` needs a `pv p o 0` term), stated with `l = 1` as a hypothesis
+because the length is `UInt64.toNat 1`, not the literal; `pow_shr25` (`a ^ (e >> 25) = 1`; the
+equation `(e >> 25).toNat = 0` alone does not reach the power); `shr_of_zero` for the exit.
+
 ### `sorry`s
 
 None.
@@ -2662,6 +2781,23 @@ iteration as `x`.
   grind …` per goal (and none for the theorem) every goal passes. The house form
   (`finish (gen := 25)`) fails on two goals (splits). Not tuned further.
 
+### `nat_pow`: an accumulator that moves
+
+Square-and-multiply from bit 24 down (25 iterations whatever `e`; squaring `1` is one limb),
+each product a call of `nat_mul`, which appends it at the top. The accumulator is the last
+product, so `nat_pow` returns `(o, l)` (two results) and the intermediate products stay below
+the top as garbage, like con-ron's dropped `Vec`s but never freed. The loop invariant `PowInv`
+names the entry memory `m₀` and keeps `Grows m₀ s.mem` (`Grows.trans`, pattern
+`Grows m m', Grows m' m''`), `a`'s value (below `m₀`'s top, so `Agree.pv` carries it across each
+call) and `pv o l = a ^ (e >> j)`. The step is `pow_step1`/`pow_step0`
+(`a ^ (e >> j') = a^(e >> j) · a^(e >> j) · a` or without the `a`, keyed on
+`(e >> j') & 1`); their patterns bind both powers, which are in the goal, so they do not chain.
+Three small `grind` facts were needed for the entry, each found from the failing conjunct under
+`nat_mul`'s recipe and then the house form went through: `pv_set_one`/`Norm.set_one` (a one-limb
+slice just written; `pv_set_succ` needs a `pv p o 0` term), stated with `l = 1` as a hypothesis
+because the length is `UInt64.toNat 1`, not the literal; `pow_shr25` (`a ^ (e >> 25) = 1`; the
+equation `(e >> 25).toNat = 0` alone does not reach the power); `shr_of_zero` for the exit.
+
 ### `sorry`s
 
 None.
@@ -2702,6 +2838,7 @@ for the L-side spec itself.
 | `nat_sub` (+ `sub_borrow`; truncated; lane `nat2`) | 34 (`sub`, `sub_from`) | 25 | 117 | 7.7 s | house form, no hand step |
 | `nat_shl` (`a <<< b`, `b` a slice; lane `nat2`) | 80 (`shift_left_nat`, `shift_left`, `shl_onto`, `shl_bits_from`, `push_zeros`, `push_zeros_nat`, `low_limb`) | 33 | 192 | 42 s | zero loop house form; shift loop and function `nat_mul`'s recipe (`simp` the frame, `grind (splits := 40)` per conjunct); word lemmas by hand |
 | `nat_shr` (`a >>> b`, `b` a normalised slice; lane `nat2`) | 52 (`shift_right_nat`, `shift_right`, `shr_from`, `shr_bits_from`, `skip_index`) | 31 | 186 | 94 s | loop house form; function `nat_mul`'s recipe, 200k heartbeats per goal; word and division lemmas by hand |
+| `nat_pow` (word exponent `< 2^25`; lane `nat2`) | 20 (`pow`, `one`) | 23 | 146 | 5.8 s | house form; `Grows.trans`, the exponent-bit and frame lemmas by hand |
 
 Whole file 307 lines. `lake build ConAgua` (full project) still green, 403 ms incremental.
 
@@ -2992,6 +3129,23 @@ infrastructure (`ExprMk`, `DerRel`), which every walk with a cut-off reuses.
   incl. `natAddLit_refinesA`): each is `internBVar_D`'s proof with `zP` (range `0`).
 * A compiled benchmark of `lift_entry` (the program is `liftProg`; not emitted).
 
+### `nat_pow`: an accumulator that moves
+
+Square-and-multiply from bit 24 down (25 iterations whatever `e`; squaring `1` is one limb),
+each product a call of `nat_mul`, which appends it at the top. The accumulator is the last
+product, so `nat_pow` returns `(o, l)` (two results) and the intermediate products stay below
+the top as garbage, like con-ron's dropped `Vec`s but never freed. The loop invariant `PowInv`
+names the entry memory `m₀` and keeps `Grows m₀ s.mem` (`Grows.trans`, pattern
+`Grows m m', Grows m' m''`), `a`'s value (below `m₀`'s top, so `Agree.pv` carries it across each
+call) and `pv o l = a ^ (e >> j)`. The step is `pow_step1`/`pow_step0`
+(`a ^ (e >> j') = a^(e >> j) · a^(e >> j) · a` or without the `a`, keyed on
+`(e >> j') & 1`); their patterns bind both powers, which are in the goal, so they do not chain.
+Three small `grind` facts were needed for the entry, each found from the failing conjunct under
+`nat_mul`'s recipe and then the house form went through: `pv_set_one`/`Norm.set_one` (a one-limb
+slice just written; `pv_set_succ` needs a `pv p o 0` term), stated with `l = 1` as a hypothesis
+because the length is `UInt64.toNat 1`, not the literal; `pow_shr25` (`a ^ (e >> 25) = 1`; the
+equation `(e >> 25).toNat = 0` alone does not reach the power); `shr_of_zero` for the exit.
+
 ### `sorry`s
 
 None.
@@ -3153,13 +3307,30 @@ iteration as `x`.
   grind …` per goal (and none for the theorem) every goal passes. The house form
   (`finish (gen := 25)`) fails on two goals (splits). Not tuned further.
 
+### `nat_pow`: an accumulator that moves
+
+Square-and-multiply from bit 24 down (25 iterations whatever `e`; squaring `1` is one limb),
+each product a call of `nat_mul`, which appends it at the top. The accumulator is the last
+product, so `nat_pow` returns `(o, l)` (two results) and the intermediate products stay below
+the top as garbage, like con-ron's dropped `Vec`s but never freed. The loop invariant `PowInv`
+names the entry memory `m₀` and keeps `Grows m₀ s.mem` (`Grows.trans`, pattern
+`Grows m m', Grows m' m''`), `a`'s value (below `m₀`'s top, so `Agree.pv` carries it across each
+call) and `pv o l = a ^ (e >> j)`. The step is `pow_step1`/`pow_step0`
+(`a ^ (e >> j') = a^(e >> j) · a^(e >> j) · a` or without the `a`, keyed on
+`(e >> j') & 1`); their patterns bind both powers, which are in the goal, so they do not chain.
+Three small `grind` facts were needed for the entry, each found from the failing conjunct under
+`nat_mul`'s recipe and then the house form went through: `pv_set_one`/`Norm.set_one` (a one-limb
+slice just written; `pv_set_succ` needs a `pv p o 0` term), stated with `l = 1` as a hypothesis
+because the length is `UInt64.toNat 1`, not the literal; `pow_shr25` (`a ^ (e >> 25) = 1`; the
+equation `(e >> 25).toNat = 0` alone does not reach the power); `shr_of_zero` for the exit.
+
 ### `sorry`s
 
 None.
 
 ## Limb-pool `Nat` ops, round 2: compare, sub, shifts, pow, div/mod, the arms (2026-10-21, lane `nat2`)
 
-Files: `ConAgua/Arena/NatGrindAttr.lean`, `NatCmp.lean`, `NatSub.lean`, `NatShl.lean`, `NatShr.lean`, … Per-op numbers are in the lane `nat`
+Files: `ConAgua/Arena/NatGrindAttr.lean`, `NatCmp.lean`, `NatSub.lean`, `NatShl.lean`, `NatShr.lean`, `NatPow.lean`, … Per-op numbers are in the lane `nat`
 table above (`lean` user time of the file, one run).
 
 ### `nat_cmp`: a non-recursive model
@@ -3239,6 +3410,23 @@ iteration as `x`.
   `maxHeartbeats` for the whole theorem ran out (1M); with `set_option maxHeartbeats 200000 in
   grind …` per goal (and none for the theorem) every goal passes. The house form
   (`finish (gen := 25)`) fails on two goals (splits). Not tuned further.
+
+### `nat_pow`: an accumulator that moves
+
+Square-and-multiply from bit 24 down (25 iterations whatever `e`; squaring `1` is one limb),
+each product a call of `nat_mul`, which appends it at the top. The accumulator is the last
+product, so `nat_pow` returns `(o, l)` (two results) and the intermediate products stay below
+the top as garbage, like con-ron's dropped `Vec`s but never freed. The loop invariant `PowInv`
+names the entry memory `m₀` and keeps `Grows m₀ s.mem` (`Grows.trans`, pattern
+`Grows m m', Grows m' m''`), `a`'s value (below `m₀`'s top, so `Agree.pv` carries it across each
+call) and `pv o l = a ^ (e >> j)`. The step is `pow_step1`/`pow_step0`
+(`a ^ (e >> j') = a^(e >> j) · a^(e >> j) · a` or without the `a`, keyed on
+`(e >> j') & 1`); their patterns bind both powers, which are in the goal, so they do not chain.
+Three small `grind` facts were needed for the entry, each found from the failing conjunct under
+`nat_mul`'s recipe and then the house form went through: `pv_set_one`/`Norm.set_one` (a one-limb
+slice just written; `pv_set_succ` needs a `pv p o 0` term), stated with `l = 1` as a hypothesis
+because the length is `UInt64.toNat 1`, not the literal; `pow_shr25` (`a ^ (e >> 25) = 1`; the
+equation `(e >> 25).toNat = 0` alone does not reach the power); `shr_of_zero` for the exit.
 
 ### `sorry`s
 
@@ -3341,6 +3529,23 @@ malformed line's number, aborts on an unbound id.
   produces the slice.
 * Declaration lines: next (below). Inductive blocks abort.
 * Ids at or past an id table's end abort (no sparse overflow).
+
+### `nat_pow`: an accumulator that moves
+
+Square-and-multiply from bit 24 down (25 iterations whatever `e`; squaring `1` is one limb),
+each product a call of `nat_mul`, which appends it at the top. The accumulator is the last
+product, so `nat_pow` returns `(o, l)` (two results) and the intermediate products stay below
+the top as garbage, like con-ron's dropped `Vec`s but never freed. The loop invariant `PowInv`
+names the entry memory `m₀` and keeps `Grows m₀ s.mem` (`Grows.trans`, pattern
+`Grows m m', Grows m' m''`), `a`'s value (below `m₀`'s top, so `Agree.pv` carries it across each
+call) and `pv o l = a ^ (e >> j)`. The step is `pow_step1`/`pow_step0`
+(`a ^ (e >> j') = a^(e >> j) · a^(e >> j) · a` or without the `a`, keyed on
+`(e >> j') & 1`); their patterns bind both powers, which are in the goal, so they do not chain.
+Three small `grind` facts were needed for the entry, each found from the failing conjunct under
+`nat_mul`'s recipe and then the house form went through: `pv_set_one`/`Norm.set_one` (a one-limb
+slice just written; `pv_set_succ` needs a `pv p o 0` term), stated with `l = 1` as a hypothesis
+because the length is `UInt64.toNat 1`, not the literal; `pow_shr25` (`a ^ (e >> 25) = 1`; the
+equation `(e >> 25).toNat = 0` alone does not reach the power); `shr_of_zero` for the exit.
 
 ### `sorry`s
 
