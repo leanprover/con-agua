@@ -57,3 +57,9 @@ leanOptions = {autoImplicit = true, relaxedAutoImplicit = true}
 [[lean_exe]]
 name = "skipbench"
 root = "ConAgua.Compiler.Bench"
+
+# Baseline for the Stage B validator (DESIGN.md, "Stage B"): con-leche's compiled `scanLineFwd`
+# over a lean4export file, with the validator's driver.
+[[lean_exe]]
+name = "valbench"
+root = "ConAgua.Scan.Bench"

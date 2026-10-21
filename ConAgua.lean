@@ -32,5 +32,9 @@ public import ConAgua.Scan.Key
 public import ConAgua.Scan.Str
 public import ConAgua.Scan.Values
 public import ConAgua.Scan.Member
+public import ConAgua.Scan.Records
+public import ConAgua.Scan.Line
+public import ConAgua.Scan.Validator
+public import ConAgua.Scan.StrLink
 public import ConAgua.Arena.NatAdd
 public import ConAgua.Arena.NatMul
