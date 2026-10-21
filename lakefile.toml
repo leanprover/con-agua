@@ -86,3 +86,9 @@ root = "ConAgua.Compiler.Bench"
 [[lean_exe]]
 name = "walkbench"
 root = "ConAgua.Arena.WalkBenchLean"
+
+# Baseline for the Stage B validator (DESIGN.md, "Stage B"): con-leche's compiled `scanLineFwd`
+# over a lean4export file, with the validator's driver.
+[[lean_exe]]
+name = "valbench"
+root = "ConAgua.Scan.Bench"
