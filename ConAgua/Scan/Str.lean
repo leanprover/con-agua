@@ -569,12 +569,25 @@ theorem unescape_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e : W
         unescapeLoop_step_spec p b hb hpc hpv hpb hph hp4 hp3 n,
         utf8Valid_spec p b hb hpc hpv n] <;> finish
 
+attribute [local lang_grind] scanStringN
+
 include hpc hpv hpb hph hp4 hp3 hpu hps hpe hpt in
 theorem scanString_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_string" [i]
     ⦃fun r s' => s' = s₀ ∧ r = [scanStringN b i]; ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hpt]
+  simp only [callFn, scanString]
+  have hb64 : b.size < 2 ^ 64 := by omega
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, L.Scan.lt_of_lt_ofNat, L.Scan.toNat_add_one_of_lt_ofNat] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld8,
+        L.Examples.strClose_spec p hps b hb64 n,
+        L.Scan.Leaves.hasEscape_spec p hpe b hb64 n,
+        unescape_spec p b hb hpc hpv hpb hph hp4 hp3 hpu n,
+        utf8Valid_spec p b hb hpc hpv n] <;> finish
 
 end specs
 
