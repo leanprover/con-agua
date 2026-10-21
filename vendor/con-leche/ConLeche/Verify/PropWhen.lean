@@ -1,0 +1,173 @@
+module
+
+public import ConLeche.Verify.Level
+
+public section
+
+/-!
+# The zero-ness datum against `Level` (task #161)
+
+`ConLeche/Kernel/PropWhen.lean` owns the datum and the laws about the
+datum alone (the readout algebra and the `inter`/`bindZ` algebra).
+This file proves how it relates to `Level`:
+
+* **Soundness of the readout** — `zeronessOf_sound`:
+  `(zeronessOf l).holds φ = (eval φ l == 0)`.
+* **The substitution pushforward** — `zeronessOf_subst`:
+  `zeronessOf (subst ks vs l) = substPW ks vs (zeronessOf l)`, an
+  *equality* of data (`bindZ` distributes over `inter`).
+* **The composition law** — `substPW_comp`, under the same
+  parameter-definedness hypothesis the level side has
+  (`PropWhen.paramsDefined`), with `zeronessOf_paramsDefined`, and
+  the semantic reading `holds_substPW`.
+-/
+
+namespace ConLeche.PropWhen
+
+/-! ## Soundness of the readout -/
+
+private theorem beq_zero_and (x y : Nat) :
+    ((x == 0) && (y == 0)) = (Max.max x y == 0) := by
+  cases hx : x == 0 <;> cases hy : y == 0 <;> simp_all <;> omega
+
+theorem zeronessOf_sound (φ : Name → Nat) :
+    ∀ l : Level, (Level.zeronessOf l).holds φ = (Level.eval φ l == 0)
+  | .zero => by simp [Level.zeronessOf, Level.eval]
+  | .succ l => by simp [Level.zeronessOf, Level.eval]
+  | .param n => by simp [Level.zeronessOf, Level.eval]
+  | .max a b => by
+    rw [Level.zeronessOf, holds_inter, zeronessOf_sound φ a,
+      zeronessOf_sound φ b, beq_zero_and]
+    rfl
+  | .imax a b => by
+    rw [Level.zeronessOf, zeronessOf_sound φ b]
+    show _ = ((if Level.eval φ b = 0 then 0
+      else Max.max (Level.eval φ a) (Level.eval φ b)) == 0)
+    by_cases hb : Level.eval φ b = 0
+    · simp [hb]
+    · have hm : ¬ Max.max (Level.eval φ a) (Level.eval φ b) = 0 := by
+        omega
+      have h1 : (Level.eval φ b == 0) = false := by simpa using hb
+      have h2 : (Max.max (Level.eval φ a) (Level.eval φ b) == 0) = false :=
+        by simpa using hm
+      rw [h1, ite_eq_right hb, h2]
+
+end ConLeche.PropWhen
+
+namespace ConLeche.Level
+
+open ConLeche.PropWhen
+
+/-- The substitution pushforward, as a syntactic equation: reading
+zero-ness commutes with level-parameter substitution. -/
+theorem zeronessOf_subst (ks : List Name) (vs : List Level) :
+    ∀ l : Level,
+      zeronessOf (subst ks vs l) = substPW ks vs (zeronessOf l)
+  | .zero => rfl
+  | .succ l => rfl
+  | .param n => (inter_nil _).symm
+  | .max a b => by
+    show (zeronessOf (subst ks vs a)).inter (zeronessOf (subst ks vs b))
+      = substPW ks vs ((zeronessOf a).inter (zeronessOf b))
+    rw [zeronessOf_subst ks vs a, zeronessOf_subst ks vs b]
+    exact (bindZ_inter _ _ _).symm
+  | .imax a b => by
+    show zeronessOf (subst ks vs b) = _
+    exact zeronessOf_subst ks vs b
+
+/-- `subst.go` under a mapped replacement list: a parameter resolved
+within the pairing factors through the outer substitution. -/
+theorem subst_go_map (σ : Level → Level) :
+    ∀ (ps : List Name) (vs : List Level) (n : Name),
+      n ∈ ps → vs.length = ps.length →
+      subst.go ps (vs.map σ) n = σ (subst.go ps vs n)
+  | [], _, n, hn, _ => by simp at hn
+  | p :: ps, [], n, _, hl => by simp at hl
+  | p :: ps, v :: vs, n, hn, hl => by
+    show (if p = n then σ v else subst.go ps (vs.map σ) n) = _
+    by_cases h : p = n
+    · simp [h, subst.go]
+    · have hn' : n ∈ ps := by
+        cases hn with
+        | head => exact absurd rfl h
+        | tail _ h' => exact h'
+      have hl' : vs.length = ps.length := by simpa using hl
+      simp only [h, ite_false]
+      rw [subst_go_map σ ps vs n hn' hl']
+      show _ = σ (if p = n then v else subst.go ps vs n)
+      simp [h]
+
+/-- Composition of datum instantiations, under the same
+parameter-definedness the level side's `substFn_map_subst` has: parameters
+of the datum are covered by the inner substitution. -/
+theorem substPW_comp {ks : List Name} {us : List Level}
+    {ps : List Name} {vs : List Level} {pw : PropWhen}
+    (hl : vs.length = ps.length)
+    (hdef : pw.paramsDefined ps = true) :
+    substPW ks us (substPW ps vs pw) =
+      substPW ps (vs.map (Level.subst ks us)) pw := by
+  cases pw with
+  | never => rfl
+  | ifAllZero pws =>
+    rw [show substPW ps vs (PropWhen.ifAllZero pws)
+          = bindZ.go (fun n => zeronessOf (subst.go ps vs n)) pws from
+        bindZ_ifAllZero _ _,
+      show substPW ps (vs.map (Level.subst ks us)) (PropWhen.ifAllZero pws)
+          = bindZ.go
+              (fun n => zeronessOf (subst.go ps (vs.map (Level.subst ks us)) n))
+              pws from bindZ_ifAllZero _ _]
+    show (bindZ.go (fun n => zeronessOf (subst.go ps vs n)) pws).bindZ _
+      = bindZ.go (fun n => zeronessOf (subst.go ps (vs.map _) n)) pws
+    simp only [PropWhen.paramsDefined_ifAllZero, List.all_eq_true] at hdef
+    induction pws with
+    | nil => rfl
+    | cons n rest ih =>
+      show (PropWhen.inter _ _).bindZ _ = PropWhen.inter _ _
+      rw [bindZ_inter]
+      rw [ih fun m hm => hdef m (by simp [hm])]
+      congr 1
+      show substPW ks us (zeronessOf (subst.go ps vs n))
+        = zeronessOf (subst.go ps (vs.map (subst ks us)) n)
+      rw [← zeronessOf_subst ks us (subst.go ps vs n),
+        subst_go_map (Level.subst ks us) ps vs n
+          (by simpa [List.contains_iff_mem] using hdef n (by simp)) hl]
+
+/-- The parameter footprint of a readout is the level's. -/
+theorem zeronessOf_paramsDefined {ps' : List Name} :
+    ∀ {l : Level}, l.allParamsDefined ps' = true →
+      (zeronessOf l).paramsDefined ps' = true
+  | .zero, _ => rfl
+  | .succ _, _ => rfl
+  | .param n, h => by
+    simpa [zeronessOf, allParamsDefined] using h
+  | .max a b, h => by
+    rw [allParamsDefined, Bool.and_eq_true] at h
+    exact PropWhen.paramsDefined_inter_of
+      (zeronessOf_paramsDefined h.1) (zeronessOf_paramsDefined h.2)
+  | .imax a b, h => by
+    rw [allParamsDefined, Bool.and_eq_true] at h
+    show (zeronessOf b).paramsDefined ps' = true
+    exact zeronessOf_paramsDefined h.2
+
+/-- **The pushforward's semantic reading** (task #161 P3): the
+instantiated datum's bit at `φ` is the datum's bit at the composed
+valuation `Level.substFn φ ks vs` — the same composed valuation
+`denote`'s constant clause uses; its level crossing rides this. -/
+theorem holds_substPW (φ : Name → Nat) (ks : List Name)
+    (vs : List Level) : ∀ pw : PropWhen,
+    (substPW ks vs pw).holds φ = pw.holds (substFn φ ks vs) := by
+  intro pw
+  cases pw with
+  | never => rfl
+  | ifAllZero ps =>
+    rw [show substPW ks vs (PropWhen.ifAllZero ps)
+          = PropWhen.bindZ.go (fun n => zeronessOf (subst.go ks vs n)) ps from
+        bindZ_ifAllZero _ _,
+      holds_bindZ_go, PropWhen.holds_ifAllZero]
+    induction ps with
+    | nil => rfl
+    | cons n rest ih =>
+      simp only [List.all_cons, ih]
+      rw [zeronessOf_sound, eval_subst_go]
+
+end ConLeche.Level

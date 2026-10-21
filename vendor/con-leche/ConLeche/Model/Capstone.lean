@@ -1,0 +1,160 @@
+module
+
+import ConLeche.Model.Install
+public import ConLeche.Model.Tiers
+import ConLeche.Model.NatStep
+
+public section
+
+/-!
+# The P capstone's shape (task #161, P4 — frozen early, per the ruling)
+
+Two deliverables, both statement-sensitive and frozen here before the
+harvest layer builds toward them:
+
+* **the business end, proved now**: `no_constant_of_Empty` — an
+  environment carrying the P invariant stores no constant of type
+  `Empty`.  The membership is `mem_type` (the `denote` reading),
+  the reading of `.const emptyName []` is the leaf by the
+  `denote` constant clause, and the leaf's `interp` value is the
+  empty set by the carrier's `Empty` pin.
+* **the final statement, frozen** (checked against the goal's letter —
+  consistency of the checker, hypothesis minimal, the #16 precedent):
+
+  `no_proof_of_Empty_pure : ∀ (V) [SetTheory V] {μ}, μ.isVerified = true →
+   ∀ {F ds env'}, checkDeclsPure μ (fueledOps μ F) pins ds = .ok env' →
+   ∀ c ∈ env'.consts, c.toConstantVal.type = .const emptyName [] →
+   False`
+
+  Input-level hypotheses ONLY: the accepted run, the stored constant,
+  its type — plus the validating mode, which is part of the goal's
+  letter (the checker the model covers IS the verified mode;
+  `--trusted` omits the certification-only work by design).  No
+  residue hypotheses: the intermediate, install-tier-conditional form is a *milestone shape*,
+  never the close (the conditional-forms ruling).
+
+**The semantic bill is empty** (task #161): no environment-tier
+hypothesis remains.  `acceptedReads_of` (`Model/Tiers.lean`) is a
+syntactic totality walk over `inferBody`'s clauses, where every
+`denote` failure mode is one of the front door's own acceptance
+guards, and the harvest layer proves: accepted stream ⇒
+`Nonempty (EnvModelM …)` at the final environment; this file's
+`no_constant_of_Empty` then closes the capstone.
+-/
+
+namespace ConLeche.Model
+open ConLeche.Semantics
+open ConLeche.SetModel
+
+open ConLeche.Term ConLeche.Verify SetTheory
+
+open ConLeche (CheckMode Env Expr Name Level ConstantInfo)
+
+universe w
+
+variable {V : Type w} [SetTheory V]
+variable {μ : CheckMode} {env : Env}
+
+/-! ## The Empty pin, at the core carrier -/
+
+/-- The `Empty` leaf is the pinned constant.  The pin is a
+premise (`∀ ψ, ∃ u, acval n ψ = emptyT u`), discharged by projection
+from the carrier. -/
+theorem acval_empty_pinnedC (m : EnvModel V env) {n : Name}
+    (hpin : ∀ ψ : Name → Nat, ∃ u, m.acval n ψ = emptyT u)
+    (ψ : Name → Nat) :
+    ∃ u, m.acval n ψ = .const .empty [u] := by
+  obtain ⟨u, hu⟩ := hpin ψ
+  exact ⟨u, hu⟩
+
+/-- …so its `interp` reading is the empty set, at every
+assignment.  Stated at any name whose leaf is an `emptyT` pin (task
+#181): `Empty`'s is `emptyT 1`, `False`'s is `emptyT 0`. -/
+theorem interp_acval_emptyC (m : EnvModel V env) {n : Name}
+    (hpin : ∀ ψ : Name → Nat, ∃ u, m.acval n ψ = emptyT u)
+    (ψ : Name → Nat) (ρ : Nat → V) :
+    interp V ρ (m.acval n ψ) = SetTheory.empty := by
+  obtain ⟨u, hu⟩ := acval_empty_pinnedC m hpin ψ
+  rw [hu, interp_const]
+  rfl
+
+/-- **The empty-pin argument, at any pinned name** (task #181): an
+environment carrying the P invariant stores no constant whose type is
+a reserved constant whose direct pin is `emptyT u` — the membership is
+`mem_type` at the `denote` reading, the reading of `.const n []` is
+the leaf by the constant clause, and the leaf's `interp` value is the
+empty set by `basis_pinned`.  The `Empty` and
+`False` capstones are its two instances. -/
+theorem no_constant_of_emptyPin (mp : EnvModelM V μ env) {n : Name} {u : Nat}
+    (hres : ConLeche.reservedBasisNames.contains n = true)
+    (hpin : ∀ ψ : Name → Nat,
+      ConLeche.Verify.pinnedStructT n ψ = some (emptyT u))
+    (c : ConstantInfo) (hc : c ∈ env.consts)
+    (hty : c.toConstantVal.type = .const n []) : False := by
+  obtain ⟨ta, hta0⟩ := mp.type_reads c hc (fun _ => 0)
+  have hta := hta0
+  rw [hty] at hta
+  cases hf : env.find? n with
+  | none => rw [denote, hf] at hta; exact nomatch hta
+  | some ci =>
+    by_cases hlen :
+        ([] : List Level).length = ci.toConstantVal.levelParams.length
+    · rw [denote_const hf hlen] at hta
+      obtain rfl : ta = mp.base2.acval n
+          (Level.substFn (fun _ => 0)
+            ci.toConstantVal.levelParams []) :=
+        (Option.some.inj hta).symm
+      have hmem := mp.mem_type c hc (fun _ => 0) _ hta0
+        (fun _ => (SetTheory.empty : V))
+      rw [interp_acval_emptyC mp.base2 (fun ψ =>
+        ⟨u, EnvModel.acval_pinned mp.base2 hf hres (hpin ψ)⟩)] at hmem
+      exact not_mem_empty _ hmem
+    · rw [denote, hf] at hta
+      dsimp only at hta
+      rw [ite_eq_right hlen] at hta
+      exact nomatch hta
+
+/-- **The capstone's business end**: an environment carrying the P
+invariant stores no constant of type `Empty` — the membership read
+entirely at the stored-term reading (`mem_type` over
+`denote`/`interp`). -/
+theorem no_constant_of_Empty (mp : EnvModelM V μ env)
+    (c : ConstantInfo) (hc : c ∈ env.consts)
+    (hty : c.toConstantVal.type = .const emptyName []) : False :=
+  -- **the pin, discharged by the carrier itself** (task #161 S7):
+  -- `Empty` is stored, so `basis_pinned` — the core's own field since
+  -- S3 — gives the leaf its direct pin.  This is the S3 seal's
+  -- prediction cashed: the premise dies with `EnvModelM.base`, it is
+  -- not replaced.
+  no_constant_of_emptyPin mp (u := 1) (by decide)
+    (fun ψ => by simp +decide [ConLeche.Verify.pinnedStructT, ConLeche.Term.emptyT])
+    c hc hty
+
+/-- **The capstone's business end, about `False`** (task #181): an
+environment carrying the P invariant stores no constant of type
+`False` — the pinned `False` block's leaf is `emptyT 0`, the empty set
+at `Prop`. -/
+theorem no_constant_of_False (mp : EnvModelM V μ env)
+    (c : ConstantInfo) (hc : c ∈ env.consts)
+    (hty : c.toConstantVal.type = .const falseName []) : False :=
+  no_constant_of_emptyPin mp (u := 0) (by decide)
+    (fun ψ => by simp +decide [ConLeche.Verify.pinnedStructT, ConLeche.Term.emptyT])
+    c hc hty
+
+/-! ## The rules tier's inputs
+
+What the soundness reads about the environment is `Rules.RulesInputs`
+(`Model/Rules/Inputs.lean`), built from the fold's invariant alone. -/
+
+/-- **The rules tier's environment inputs, from the fold's
+invariant**: the other fields are `EnvModelM` projections
+(`RulesInputs.ofEnvModelM`, `Model/Rules/Inputs.lean`) and the three
+literal rows are this file's own imports — `natSuccRow_of`/
+`natOpRow_of`/`natOpHead_of` (`Model/NatStep.lean`), which stand on the
+numeral transports and so cannot be projections down there. -/
+theorem Rules.RulesInputs.ofSem (mp : EnvModelM V μ env) (φ : Name → Nat) :
+    Rules.RulesInputs V mp.base2 φ :=
+  Rules.RulesInputs.ofEnvModelM mp (natSuccRow_of mp φ) (natOpRow_of mp φ)
+    (natOpHead_of mp φ)
+
+end ConLeche.Model

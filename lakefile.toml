@@ -19,8 +19,8 @@ name = "ConAgua"
 [[lean_lib]]
 name = "ConLeche"
 srcDir = "vendor/con-leche"
-roots = ["ConLeche.Frontend.Scan.Equiv"]
-globs = ["ConLeche.Frontend.Scan.+"]
+roots = ["ConLeche"]
+globs = ["ConLeche.+"]
 # con-leche's own lakefile sets no leanOptions (so autoImplicit/relaxedAutoImplicit
 # are Lean's defaults, both true); override our package-level false so vendored
 # files need no edits for this.

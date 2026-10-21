@@ -14,52 +14,89 @@ own pin of con-leche is the same `103562b` revision.
 
 ## vendor/con-leche — `ConLeche` lib
 
-Source: `_tmp/ref/con-leche/ConLeche/Frontend/Scan/` (rev `103562b`), copied
-byte-for-byte to `vendor/con-leche/ConLeche/Frontend/Scan/`:
+Source: `_tmp/ref/con-leche` (rev `103562b`), copied to `vendor/con-leche/`:
 
-* `Types.lean`, `Fast.lean`, `Naive.lean`
-* `Equiv.lean`, `Equiv/{Kit,Scalars,Keys,Objects}.lean`
+* `ConLeche.lean` (the repo-root aggregator module) and the whole `ConLeche/`
+  tree (567 `.lean` files, ~236k lines): `Kernel`, `Verify`, `SetTheory`,
+  `Term`, `SetModel`, `Semantics`, `Model`, `Cached`, `Driver`, `Frontend`
+  (incl. `Frontend.Scan.*`, landed first — see history below), `PinGen`,
+  `Complete`, `Challenge`.
+* `pins/` (the committed pin-certificate dumps and the built-in-prelude
+  `.ndjson`, ~2 MB) — needed verbatim by `ConLeche/Kernel/NatOpPins.lean`
+  and `ConLeche/Frontend/Prelude.lean` (`include_str`, see below).
+* `scripts/natop_prefix.json` only (256 KB data file, `include_str`'d by
+  `ConLeche/PinGen.lean`) — the rest of `scripts/` (shell/python tooling)
+  was not copied.
 
-No content changes were made to any of these files. This is con-leche's
-byte scanner (`ConLeche.Frontend.Scan.*`): the recogniser for the
-lean4export NDJSON dialect, its naive `List UInt8` spec, and the proof that
-they agree. It imports nothing outside `Std` (`Std.Data.HashMap.{Basic,Lemmas}`),
-so it builds standalone. This is the subset con-agua's Stage A spike needs
-first (`docs/survey.md` §1.4), hence it landed before the rest of ConLeche.
+**Not copied** (per the task's "skip tests/fixtures/large data, skip
+Rust/C/binaries", and because con-agua's proof chain does not need them):
+`tests/` (28 MB, fixtures/test driver), `whitepaper/` (2.4 MB, its own
+`WhitepaperFragment` lib, self-contained, not on our chain), `pinners/`,
+`perf-data/`, the rest of `scripts/`, `bridge/lean4lean-model/` (a separate
+nested Lake package bridging to `lean4lean`, unrelated to our chain), and
+the top-level `Main.lean` / `PinDump.lean` (con-leche's CLI binary and the
+pin-dump generator executable — entry points we don't need; nothing in
+`ConLeche.*` imports them).
 
-**Lakefile patch**: our package-level `[leanOptions]` sets
-`autoImplicit = false, relaxedAutoImplicit = false` (con-agua's own style).
-con-leche's lakefile sets neither, so its files rely on Lean's defaults
-(`autoImplicit = true, relaxedAutoImplicit = true`) — e.g. `ConLeche/Frontend/Scan/Types.lean`'s
-`IdTable (α : Type)` API functions mention `α` without rebinding it.
-Rather than edit the vendored files, the `[[lean_lib]] name = "ConLeche"`
-entry in the top-level `lakefile.toml` carries its own
-`leanOptions = {autoImplicit = true, relaxedAutoImplicit = true}`, overriding
-the package default for this lib only. No vendored `.lean` file was edited.
+**Content changes to vendored `.lean` files: none.** Every `.lean` file
+under `vendor/con-leche/` is byte-identical to the reference clone.
 
-**`withPtrEq`**: not needed. It is used elsewhere in ConLeche
-(`Cached/ExprNodes.lean`, `Cached/ExprOpsC.lean`, `Kernel/Name.lean`,
-`Driver/OwnerParse.lean`, `Verify/Cached/ParInstall.lean`) but nowhere under
-`Frontend/Scan/`, so this subset needed no `withPtrEq` shim.
+**`withPtrEq`**: not needed as a shim. It's used in several places in
+`ConLeche.*` (`Cached/ExprNodes.lean`, `Cached/ExprOpsC.lean`,
+`Kernel/Name.lean`, `Driver/OwnerParse.lean`, `Verify/Cached/ParInstall.lean`)
+and all of them build unmodified on nightly-2026-09-21 — it was not in fact
+removed upstream of this toolchain, so no vendored replacement was needed.
 
-**Build time**: `lake build ConLeche` (cold, including materializing and
-building the `Kraken` dependency): **~40s** on this machine. The `ConLeche`
-lib alone (18 jobs) took well under that once `Kraken` was already built.
+**Patches, all in our own `lakefile.toml`, none in vendored files:**
 
-**Compatibility check beyond the vendored subset** (not vendored, for
-the record): a full standalone copy of all of `ConLeche/` (566 files,
-~236k lines), built directly against nightly-2026-09-21 with con-leche's
-own lakefile (no `autoImplicit` override), got to 1105/1109 jobs with
-*zero* source incompatibilities — the only failures were
-`ConLeche.Frontend.Prelude` and `ConLeche.Kernel.NatOpPins`, both of which
-read a runtime pin-data file named after the toolchain
-(`pins/leanprover-lean4-v4.35.0.prelude.ndjson`) that does not exist for
-our nightly (see con-leche's `pins/README.md`). So: `withPtrEq` was *not*
-in fact a problem anywhere we tried, and the rest of ConLeche is expected
-to vendor cleanly later; the pins mechanism is the one real gap, to be
-solved when we vendor more of ConLeche (either by generating a pin file for
-our nightly, or by excluding `Frontend.Prelude`/`Kernel.NatOpPins` from the
-globs, same as we exclude con-ron modules below).
+1. Per-lib `leanOptions = {autoImplicit = true, relaxedAutoImplicit = true}`
+   on the `ConLeche` `[[lean_lib]]`. con-leche's own lakefile sets neither
+   option (so its files rely on Lean's defaults, both `true`); con-agua's
+   package-level `[leanOptions]` sets both `false`. Without the per-lib
+   override, files such as `ConLeche/Frontend/Scan/Types.lean`'s
+   `IdTable (α : Type)` API (`α` mentioned, never rebound) fail to elaborate.
+2. `srcDir = "vendor/con-leche"`, `roots = ["ConLeche"]`,
+   `globs = ["ConLeche.+"]` — the glob (not just `roots`) is needed so that
+   orphan-looking modules (nothing in `ConLeche.*` imports `ConLeche.PinGen`
+   or `ConLeche.Challenge`, same as upstream's own comments note for their
+   own libs) still get built, matching "`lake build` builds everything".
+
+**Pin files, vendored verbatim, no generation attempted**: con-leche's pin
+mechanism (`pins/README.md`) tries several committed pin variants at
+runtime and "accepts dumps from any Lean version" — it is data, not
+toolchain-specific source, so the existing `pins/*.json` /
+`pins/*.ndjson` files needed no regeneration for the new toolchain.
+
+**`sorry`s**: `ConLeche/Challenge.lean` (upstream's own "challenge" half of
+a comparator pair, deliberately not sorry-free, not in anyone's import
+closure) has 2 pre-existing `sorry`s. These are upstream's, present
+unchanged at rev `103562b`; con-agua adds none.
+
+**Build**: `lake build ConLeche` builds clean, **zero errors**, on
+`leanprover/lean4:nightly-2026-09-21`; only pre-existing upstream `sorry`
+warnings.
+
+**Build time**: `lake build ConLeche` from completely clean (`lake clean`,
+`rm -rf .lake/build`; `Kraken` already materialized): **1134 jobs, ~1m57s
+wall** (`user` ~13 min — this machine has 96 cores, so the parallel build
+makes good use of them). The priority subset (`ConLeche.Frontend.Scan.*`
+alone, 18 jobs) is ~16s of that once the rest is cached, or ~40s fully cold
+(including fetching/building the `Kraken` dependency) — this is the subset
+that landed and merged to `master` first, per the task's priority.
+
+### History (two merges to `master` on this branch)
+
+1. First landed only `ConLeche.Frontend.Scan.{Types,Fast,Naive,Equiv,Equiv/*}`
+   (the byte scanner con-agua's Stage A needs first, `docs/survey.md` §1.4),
+   with the same per-lib `leanOptions` patch. At that point a full
+   standalone trial build of all of `ConLeche/` (con-leche's own lakefile,
+   no `autoImplicit` override) got to 1105/1109 jobs, with the *only*
+   failures being `ConLeche.Frontend.Prelude` / `ConLeche.Kernel.NatOpPins`
+   — both from a missing `pins/` directory, not a source incompatibility.
+2. Then the rest of `ConLeche` landed (this README's current state), adding
+   `pins/` and `scripts/natop_prefix.json` so those two modules (and
+   `ConLeche.PinGen`, which needs the latter) build too. No further source
+   issues turned up.
 
 ## vendor/con-ron — `ConRon` lib
 
