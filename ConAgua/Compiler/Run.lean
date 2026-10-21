@@ -26,19 +26,25 @@ def asmText (tab : Tab) (p : Prog) (entry : FnName) : String :=
     "\nca_rom:" ++ (if tab.rom.isEmpty then "" else " .byte " ++ ", ".intercalate (tab.rom.map toString)) ++
     "\n.section .note.GNU-stack,\"\",@progbits\n"
 
-/-- The outcome of a run of compiled code, as `ca_enter` returns it. -/
+/-- The outcome of a run of compiled code, as `ca_enter` returns it: on success, the `nres`
+result registers. -/
 inductive Outcome where
-  | ok (r : Word)
+  | ok (rs : List Word)
   | exhausted
   | error
   deriving Repr, DecidableEq
 
-def Outcome.ofRegs (rax rdx : Word) : Outcome :=
-  if rdx = 0 then .ok rax else if rdx = 1 then .exhausted else .error
+/-- The first `n` result registers. -/
+def resRegs (R : Reg64s) (n : Nat) : List Word :=
+  (List.range n).map fun i => UInt64.ofBitVec (R.get64 (resReg i))
 
-/-- What `L.run` says, in the same shape (the first result; an `outOfFuel` error is `exhausted`). -/
-def Outcome.ofL : Except Err (List Word × Mem) → Outcome
-  | .ok (rs, _) => .ok (rs.headD 0)
+def Outcome.ofRegs (R : Reg64s) (n : Nat) : Outcome :=
+  if R.rdx = 0 then .ok (resRegs R n) else if R.rdx = 1 then .exhausted else .error
+
+/-- What `L.run` says, in the same shape (the first `n` results, `0` past the end; an
+`outOfFuel` error is `exhausted`). -/
+def Outcome.ofL (n : Nat) : Except Err (List Word × Mem) → Outcome
+  | .ok (rs, _) => .ok ((List.range n).map fun i => rs.getD i 0)
   | .error .outOfFuel => .exhausted
   | .error _ => .error
 
@@ -88,6 +94,6 @@ def runKraken (p : Prog) (entry : FnName) (args : List Word) (m : Mem) (fuel : W
   let start := exe.labels.label enterL
   let s : MachineData := { dmem := d, regs := { rsp := csp.toUInt64, rdi := T.toUInt64, rsi := fuel } }
   let s' ← Executable.eval exe { data := s, pc := start } (fun st => st.pc = Int64.ofNat ra)
-  return Outcome.ofRegs s'.data.regs.rax s'.data.regs.rdx
+  return Outcome.ofRegs s'.data.regs tab.nres
 
 end L.Compiler

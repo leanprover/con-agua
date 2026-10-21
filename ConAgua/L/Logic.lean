@@ -52,6 +52,14 @@ attribute [lang_grind =] List.headD_cons List.headD_nil List.tail_cons List.tail
 
 attribute [lang_grind] Mem.len8 Mem.len64
 
+/-- Byte reads are compared as words (`c != LITS.c8[k]`); the model compares bytes. -/
+theorem UInt8.toUInt64_eq_iff (a b : UInt8) : (a.toUInt64 = b.toUInt64) = (a = b) := by
+  apply propext; constructor
+  · intro h; apply UInt8.toNat_inj.mp; have := congrArg UInt64.toNat h; simpa using this
+  · intro h; rw [h]
+
+attribute [lang_grind =] UInt8.toUInt64_eq_iff
+
 /-- A local of a state that is equal to a record literal. `grind` does not project `loc` out of
 an equation `t = { mem := m, loc := l }` by itself, because `t.loc x` is an over-applied
 projection (docs/gaps/grind-state-eq-projection.lean); a callee spec's frame condition `s' = s₀`
