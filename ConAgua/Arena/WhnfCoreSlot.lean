@@ -313,7 +313,7 @@ theorem whnfCoreSlot_step (n : Nat) (hk : KnotUpTo p n) : WhnfCoreSlot p (n + 1)
     have ht : whnfCoreStuckTag (decE e) = true := by rw [stuck_iff e he]; simpa using hst
     obtain ⟨hok, hst', hres⟩ := AM.of_run_ok _ _ _ _ (knot_whnfCore_stuck _ fe F' (cheap != 0) d.toNat _ a₀ ht)
     refine ⟨hok, ?_, by rw [hres, decH, ← hr]⟩
-    rw [hst', ← hm]; exact ⟨MM, G, hS, KeptAll.refl _ _ _, StackKept.refl _⟩
+    rw [hst', ← hm]; exact ⟨MM, G, hS, KeptAll.refl _ _ _, StackKept.refl _, UInt64.le_refl _⟩
   have ht : whnfCoreStuckTag (decE e) = false := by rw [stuck_iff e he]; simpa using hst
   by_cases hc : cheap ≠ 0
   · rw [whnfCoreW_cheap _ _ _ _ _ _ _ _ hst hc] at hW
@@ -332,7 +332,7 @@ theorem whnfCoreSlot_step (n : Nat) (hk : KnotUpTo p n) : WhnfCoreSlot p (n + 1)
       obtain ⟨hok, hst', hres⟩ := AM.of_run_ok _ _ _ _
         (knot_whnfCore_hitK _ fe F' d.toNat _ a₀ ht _ (hf.1 h1))
       refine ⟨hok, ?_, by rw [hres, decH, ← hr]⟩
-      rw [hst', ← hm]; exact ⟨MM, G, hS, KeptAll.refl _ _ _, StackKept.refl _⟩
+      rw [hst', ← hm]; exact ⟨MM, G, hS, KeptAll.refl _ _ _, StackKept.refl _, UInt64.le_refl _⟩
     rw [if_neg h1] at hW
     have hmiss := hf.2 (by simpa using h1)
     cases hcall : callW p n "whnf_core_loop" [mode, 1, vis, d, e] s.mem with
@@ -345,7 +345,7 @@ theorem whnfCoreSlot_step (n : Nat) (hk : KnotUpTo p n) : WhnfCoreSlot p (n + 1)
     | succ n' =>
     have hbody := whnfCoreBody_refines p n' (hk.mono (by omega)) F' (by omega) (by omega) s a₀ dn vis
       fe MM G g mode 1 d e hs he
-    obtain ⟨hok, ⟨M', G', hS₁, hK₁, hSt₁⟩, hres⟩ := CoreSpec.of_callW hbody hcall
+    obtain ⟨hok, ⟨M', G', hS₁, hK₁, hSt₁, hG₁⟩, hres⟩ := CoreSpec.of_callW hbody hcall
     rw [bank_gen hS₁.core.bank, ← genW_zero'] at hW
     cases hset : msetG wkSch m₁ e (genW 0 g) (r₁.headD 0) with
     | none => rw [hset] at hW; cases hW
@@ -360,7 +360,7 @@ theorem whnfCoreSlot_step (n : Nat) (hk : KnotUpTo p n) : WhnfCoreSlot p (n + 1)
     obtain ⟨hok', hst', hres'⟩ := AM.of_run_ok _ _ _ _ hrun
     refine ⟨hok', ?_, by rw [hres', hres]; simp only [decH, hr]⟩
     rw [hst', ← hm, hres]
-    exact ⟨_, G', hS₂, hK₁.wk _ _, hSt₁.trans hSt₂⟩
+    exact ⟨_, G', hS₂, hK₁.wk _ _, hSt₁.trans hSt₂, hG₁⟩
   · have hc0 : cheap = 0 := by simpa using hc
     rw [whnfCoreW_full _ _ _ _ _ _ _ _ hst hc0] at hW
     have hcb : (cheap != 0) = false := by simp [hc0]
@@ -378,7 +378,7 @@ theorem whnfCoreSlot_step (n : Nat) (hk : KnotUpTo p n) : WhnfCoreSlot p (n + 1)
       obtain ⟨hok, hst', hres⟩ := AM.of_run_ok _ _ _ _
         (knot_whnfCore_hitF _ fe F' d.toNat _ a₀ ht _ (hf.1 h1))
       refine ⟨hok, ?_, by rw [hres, decH, ← hr]⟩
-      rw [hst', ← hm]; exact ⟨MM, G, hS, KeptAll.refl _ _ _, StackKept.refl _⟩
+      rw [hst', ← hm]; exact ⟨MM, G, hS, KeptAll.refl _ _ _, StackKept.refl _, UInt64.le_refl _⟩
     rw [if_neg h1] at hW
     have hmiss := hf.2 (by simpa using h1)
     cases hcall : callW p n "whnf_core_loop" [mode, 0, vis, d, e] s.mem with
@@ -391,7 +391,7 @@ theorem whnfCoreSlot_step (n : Nat) (hk : KnotUpTo p n) : WhnfCoreSlot p (n + 1)
     | succ n' =>
     have hbody := whnfCoreBody_refines p n' (hk.mono (by omega)) F' (by omega) (by omega) s a₀ dn vis
       fe MM G g mode 0 d e hs he
-    obtain ⟨hok, ⟨M', G', hS₁, hK₁, hSt₁⟩, hres⟩ := CoreSpec.of_callW hbody hcall
+    obtain ⟨hok, ⟨M', G', hS₁, hK₁, hSt₁, hG₁⟩, hres⟩ := CoreSpec.of_callW hbody hcall
     rw [bank_gen hS₁.core.bank, ← genW_zero'] at hW
     cases hset : msetG wcSch m₁ e (genW 0 g) (r₁.headD 0) with
     | none => rw [hset] at hW; cases hW
@@ -406,7 +406,7 @@ theorem whnfCoreSlot_step (n : Nat) (hk : KnotUpTo p n) : WhnfCoreSlot p (n + 1)
     obtain ⟨hok', hst', hres'⟩ := AM.of_run_ok _ _ _ _ hrun
     refine ⟨hok', ?_, by rw [hres', hres]; simp only [decH, hr]⟩
     rw [hst', ← hm, hres]
-    exact ⟨_, G', hS₂, hK₁.wc _ _, hSt₁.trans hSt₂⟩
+    exact ⟨_, G', hS₂, hK₁.wc _ _, hSt₁.trans hSt₂, hG₁⟩
 
 end slot
 

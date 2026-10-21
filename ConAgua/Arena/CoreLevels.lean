@@ -347,7 +347,7 @@ theorem lvlEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState
     obtain ⟨rfl, rfl⟩ := h
     have hit := memoRG_hit lqSch pairKey decB m _ hS.core.lq u v h0 h1 ⟨hu, hv⟩
     exact ⟨a, by rw [lvlEq?_hit a _ _ _ hit, decO_hit], M, G, hS, KeptAll.refl _ _ _,
-      StackKept.refl _⟩
+      StackKept.refl _, UInt64.le_refl _⟩
   rw [if_neg h1] at h
   have miss := memoRG_miss lqSch pairKey decB m _ hS.core.lq u v ⟨hu, hv⟩ h0
     (by simpa using h1)
@@ -383,7 +383,7 @@ theorem lvlEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState
     obtain ⟨rfl, rfl⟩ := h
     have ho := encO_zero (hz ▸ hz0)
     rw [ho] at hrun
-    refine ⟨_, hrun, M, G, ?_, KeptAll.refl _ _ _, hK₁⟩
+    refine ⟨_, hrun, M, G, ?_, KeptAll.refl _ _ _, hK₁, UInt64.le_refl _⟩
     simp only [ho, lvlEqIns]
     exact hS₂
   · cases hs : msetG lqSch m₁ u v (z₁ - 1) with
@@ -398,7 +398,8 @@ theorem lvlEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState
     | some r =>
     rw [eo] at hz hrun
     subst hz
-    refine ⟨_, by rw [hrun, decO_encO], M, G, ?_, KeptAll.refl _ _ _, hK₁.trans hK₃⟩
+    refine ⟨_, by rw [hrun, decO_encO], M, G, ?_, KeptAll.refl _ _ _, hK₁.trans hK₃,
+      UInt64.le_refl _⟩
     rw [encO_pred] at hS₃
     simpa [lvlEqIns] using hS₃
 
@@ -534,7 +535,7 @@ theorem lvlsEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AStat
     obtain ⟨rfl, rfl⟩ := h
     have hit := memoRG_hit lsqSch pairKey decB m _ hS.core.lsq us vs h0 h1 ⟨hu, hv⟩
     exact ⟨a, by rw [lvlsEq?_hit a _ _ _ hit, decO_hit], M, G, hS, KeptAll.refl _ _ _,
-      StackKept.refl _⟩
+      StackKept.refl _, UInt64.le_refl _⟩
   rw [if_neg h1] at h
   have miss := memoRG_miss lsqSch pairKey decB m _ hS.core.lsq us vs ⟨hu, hv⟩ h0
     (by simpa using h1)
@@ -576,7 +577,7 @@ theorem lvlsEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AStat
     obtain ⟨rfl, rfl⟩ := h
     have ho := encO_zero (hz ▸ hz0)
     rw [ho] at hrun
-    refine ⟨_, hrun, M, G, ?_, KeptAll.refl _ _ _, hK₁⟩
+    refine ⟨_, hrun, M, G, ?_, KeptAll.refl _ _ _, hK₁, UInt64.le_refl _⟩
     simp only [ho, lvlsEqIns]
     exact hS₂
   · cases hs : msetG lsqSch m₁ us vs (z₁ - 1) with
@@ -591,7 +592,8 @@ theorem lvlsEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AStat
     | some r =>
     rw [eo] at hz hrun
     subst hz
-    refine ⟨_, by rw [hrun, decO_encO], M, G, ?_, KeptAll.refl _ _ _, hK₁.trans hK₃⟩
+    refine ⟨_, by rw [hrun, decO_encO], M, G, ?_, KeptAll.refl _ _ _, hK₁.trans hK₃,
+      UInt64.le_refl _⟩
     rw [encO_pred] at hS₃
     simpa [lvlsEqIns] using hS₃
 

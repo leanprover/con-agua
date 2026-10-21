@@ -112,6 +112,18 @@ theorem KeptAll.refl (M : ModeMaps) (G g : Word) : KeptAll M M G g :=
   ⟨Kept.refl _ _ _, Kept.refl _ _ _, Kept.refl _ _ _, Kept.refl _ _ _, Kept.refl _ _ _,
     Kept.refl _ _ _⟩
 
+theorem Kept.trans' {κ ν : Type} [BEq κ] [Hashable κ] {M₁ M₂ M₃ : Std.HashMap (κ × Word) ν}
+    {G G' g : Word} (h₁ : Kept M₁ M₂ G g) (h₂ : Kept M₂ M₃ G' g) (hG : G ≤ G') : Kept M₁ M₃ G g :=
+  fun k g' h1 h2 => (h₂ k g' (UInt64.le_trans h1 hG) h2).trans (h₁ k g' h1 h2)
+
+theorem KeptAll.trans {M₁ M₂ M₃ : ModeMaps} {G G' g : Word} (h₁ : KeptAll M₁ M₂ G g)
+    (h₂ : KeptAll M₂ M₃ G' g) (hG : G ≤ G') : KeptAll M₁ M₃ G g :=
+  ⟨h₁.1.trans' h₂.1 hG, h₁.2.1.trans' h₂.2.1 hG, h₁.2.2.1.trans' h₂.2.2.1 hG,
+    h₁.2.2.2.1.trans' h₂.2.2.2.1 hG, h₁.2.2.2.2.1.trans' h₂.2.2.2.2.1 hG,
+    h₁.2.2.2.2.2.trans' h₂.2.2.2.2.2 hG⟩
+
+
+
 /-- **The core's relation** at explicit cache maps. -/
 structure CoreS (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (G g : Word) : Prop where
@@ -154,7 +166,17 @@ theorem CoreS.frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AStat
 maps that keep every other generation's bank, and the stack below the top is as it was. -/
 def CoreAfter (dn : NIdx → Option ConLeche.Name) (m₀ m : Mem) (a : AState) (vis : Word)
     (fe : IFEnv) (M : ModeMaps) (G g : Word) : Prop :=
-  ∃ M' G', CoreS dn m a vis fe M' G' g ∧ KeptAll M M' G g ∧ StackKept m₀ m
+  ∃ M' G', CoreS dn m a vis fe M' G' g ∧ KeptAll M M' G g ∧ StackKept m₀ m ∧ G ≤ G'
+
+/-- Two core runs in a row. -/
+theorem CoreAfter.trans {dn : NIdx → Option ConLeche.Name} {m₀ m₁ m₂ : Mem} {a₁ a₂ : AState}
+    {vis : Word} {fe : IFEnv} {M : ModeMaps} {G g : Word}
+    (h₁ : CoreAfter dn m₀ m₁ a₁ vis fe M G g)
+    (h₂ : ∀ M' G', CoreS dn m₁ a₁ vis fe M' G' g → CoreAfter dn m₁ m₂ a₂ vis fe M' G' g) :
+    CoreAfter dn m₀ m₂ a₂ vis fe M G g := by
+  obtain ⟨M', G', hS, hK, hSt, hG⟩ := h₁
+  obtain ⟨M'', G'', hS', hK', hSt', hG'⟩ := h₂ M' G' hS
+  exact ⟨M'', G'', hS', hK.trans hK' hG, hSt.trans hSt', UInt64.le_trans hG hG'⟩
 
 /-- **The refinement post of a core function**: the twin run `T` from `a₀` succeeds, the relation
 holds after it, and the result words decode (`dec`) to its result. -/
