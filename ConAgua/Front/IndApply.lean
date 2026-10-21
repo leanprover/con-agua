@@ -561,6 +561,11 @@ theorem indApply_wf :
 
 /-! ## The relation: `IndDeclAt` -/
 
+/-- The constants of a slice of record pointers (lane `pinsenv`'s former `decCIs`). -/
+def decCIs (a : Array Word) (dn : ConRon.Arena.NIdx → Option ConLeche.Name) (off cnt : Nat) :
+    Option (List ConRon.Arena.IConstantInfo) :=
+  (List.range cnt).mapM fun j => do L.Arena.decCI a dn (← L.Arena.nat? a (off + j))
+
 /-- **`DECL` record `i` is the inductive block `block` with `nP` parameters**: kind `6`, its
 block a slice of `I` (= `DIND`) words pointing to `decCI` constant records in `I`. A block's
 constants carry no `PropWhen` names (`sortZ := ifAllZero []`), so the name decoder of `decCIs` is
