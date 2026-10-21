@@ -472,3 +472,47 @@ theorem rec2Mem_grow (m : Mem) (a b : Word) (hk : iwTop m + 2 < 2 ^ 64)
   rw [UInt64.toNat_add]; simp; omega
 
 end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+/-! ## Reading decoded words -/
+
+section reads
+variable {m : Mem}
+
+theorem iwN_rdW {i v : Nat} (h : iwN m i = some v) (hi : i < 2 ^ 64) :
+    rdW (m.arr64 IW) (UInt64.ofNat i) = UInt64.ofNat v ∧ v < 2 ^ 64 := by
+  simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at h
+  obtain ⟨w, hw, rfl⟩ := h
+  have : (UInt64.ofNat i).toNat = i := by simp; omega
+  simp only [rdW, this, hw, Option.getD_some]
+  exact ⟨by simp, w.toNat_lt⟩
+
+theorem iwH_rdW {k : IdxKind} {i : Nat} {x : Idx k} (h : iwH m i = some x) (hi : i < 2 ^ 64) :
+    ∃ w, rdW (m.arr64 IW) (UInt64.ofNat i) = w ∧ w.toNat < 2 ^ 32 ∧ decI w = x := by
+  simp only [iwH, hd?, iwA] at h
+  cases hw : (m.arr64 IW)[i]? with
+  | none => simp [hw] at h
+  | some w =>
+    simp only [hw, Option.bind_some] at h
+    by_cases hl : w.toNat < 2 ^ 32
+    · simp [hl] at h
+      have : (UInt64.ofNat i).toNat = i := by simp; omega
+      exact ⟨w, by simp [rdW, this, hw], hl, h⟩
+    · simp [hl] at h
+
+theorem decAt_some {α : Type} {g : Nat → Nat → Option (List α)} {i : Nat} {xs : List α}
+    (h : decAt m g i = some xs) : ∃ o l, iwN m i = some o ∧ iwN m (i + 1) = some l ∧ g o l = some xs := by
+  simp only [decAt] at h
+  cases ho : iwN m i with
+  | none => simp [ho] at h
+  | some o =>
+    cases hl : iwN m (i + 1) with
+    | none => simp [ho, hl] at h
+    | some l => simp [ho, hl] at h; exact ⟨o, l, rfl, rfl, h⟩
+
+end reads
+
+end L.Ind
