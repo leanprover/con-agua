@@ -1,0 +1,15 @@
+name = "ConAgua"
+version = "0.1.0"
+defaultTargets = ["ConAgua"]
+
+[leanOptions]
+autoImplicit = false
+relaxedAutoImplicit = false
+
+[[require]]
+name = "Kraken"
+git = "https://github.com/AeneasVerif/kraken"
+rev = "72f3a7a3a2d94ac51040815d692cd31a1d240a1d"
+
+[[lean_lib]]
+name = "ConAgua"
