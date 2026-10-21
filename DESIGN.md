@@ -4138,4 +4138,6 @@ Done when the vendored twin is bumped; `CoreS`/`CoreAfter` keep their shape (`M 
 
 ### `sorry`s
 
-None so far.
+* `WhnfBase.lean` `whnfCallees_stub`: the specs of the callees not written yet (`inst_list`,
+  `inst_lp`, `str_lit_ctor`, `str_lit_supported`, the knot's `infer`/`infer_io`/`defeq` steps).
+* `WhnfSpine.lean`: the eight spine-walk specs (`getAppFn_refines`, …; a proof lane is on them).
