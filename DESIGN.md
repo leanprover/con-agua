@@ -2061,8 +2061,8 @@ L proofs then see the same terms as the model; the arithmetic moves into the lin
   The models of the 18 records are instances (`appBit`, `appVal b`, `3`, …); the L code keeps
   Rust's shape, one function per record with `next_member` factored out (Rust's deviation 3),
   and each is proved against its instance. The record L code, the instances and the proofs were
-  generated from con-leche's loops by a script (`_tmp/stageb-gen/genrec.py`, not committed; the
-  file was edited after generation). `lam` and `forallE` share one L function and one instance,
+  generated from con-leche's loops by a script (`scripts/stageb/genrec.py`, see its `README`; the
+  file was edited after generation and is hand-maintained since). `lam` and `forallE` share one L function and one instance,
   as Rust's `scan_binder_expr_loop` does.
 * **`key_at`** follows con-leche's `keyAt` (first byte, length, unrolled compare): L has no
   slice type for Rust's `match_lit` against a `[u8; N]`. It is split into a dispatcher and six
