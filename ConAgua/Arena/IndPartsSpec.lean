@@ -1,0 +1,395 @@
+import ConAgua.Arena.IndParts
+import ConAgua.Arena.IndLibSpec
+
+/-!
+# Refinements of `IndParts` (lane `induct`): the record projections
+
+A pure twin function of a decoded record is refined by an L function that reads the record:
+the post says the memory is unchanged and the result word is the twin's value. The decoders are
+`IndIface.lean`'s; `decAt_some`, `iwN_rdW` read a decoded field.
+-/
+
+set_option experimental.vcgen true
+
+open ConRon.Arena
+open Std.WP
+open scoped Lean.Order
+
+namespace L.Ind
+
+open L.Arena
+
+/-- A decoded shape's fields. -/
+theorem decBS_some {m : Mem} {p : Nat} {bs : BlockShape} (h : decBS m p = some bs) :
+    decAt m (decPL m (decMS m)) p = some bs.members ∧ decAt m (decPL m (decRS m)) (p + 2) = some bs.recs ∧
+    iwN m (p + 4) = some bs.nP ∧ iwH m (p + 5) = some bs.elim ∧ iwH m (p + 6) = some bs.resSort ∧
+    iwB m (p + 7) = some bs.large ∧ iwB m (p + 8) = some bs.isProp := by
+  rw [decBS] at h
+  simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  obtain ⟨a, ha, b, hb, c, hc, d, hd, e, he, f, hf, g, hg, rfl⟩ := h
+  exact ⟨ha, hb, hc, hd, he, hf, hg⟩
+
+/-- The members' count of a decoded shape is word `p + 1`. -/
+theorem decBS_k {m : Mem} {p : Nat} {bs : BlockShape} (h : decBS m p = some bs)
+    (hp : p + 1 < 2 ^ 64) :
+    rdW (m.arr64 IW) (UInt64.ofNat (p + 1)) = UInt64.ofNat bs.k := by
+  obtain ⟨o, l, -, hl, hg⟩ := decAt_some (decBS_some h).1
+  rw [(iwN_rdW hl hp).1, BlockShape.k, decPL_length m hg]
+
+
+/-- **`block_shape_k` is `BlockShape.k`.** -/
+@[refines ConRon.Arena.BlockShape.k]
+theorem blockShapeK_refines (p : Prog) (hp : p.lookup "block_shape_k" = some blockShapeK)
+    (n : Nat) (s₀ : St) (q : Word) (bs : BlockShape) (hq : decBS s₀.mem q.toNat = some bs)
+    (hq1 : q.toNat + 1 < 2 ^ 64) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_shape_k" [q]
+    ⦃fun r s' => s' = s₀ ∧ r.headD 0 = UInt64.ofNat bs.k; ⊤⦄ := by
+  have key := decBS_k hq hq1
+  have e : UInt64.ofNat (q.toNat + 1) = q + 1 := by
+    apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
+  rw [e] at key
+  rw [invoke_eq _ hp]
+  simp only [callFn, blockShapeK]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+      finish
+
+/-! ## Small Word arithmetic helpers, reused throughout this file -/
+
+/-- `UInt64.ofNat` is additive (both sides are mod `2 ^ 64`, so no overflow side condition). -/
+theorem ofNat_add_word (a b : Nat) : UInt64.ofNat (a + b) = UInt64.ofNat a + UInt64.ofNat b := by
+  apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
+
+/-- A word plus a small Nat literal, read back as a shifted index: `w + UInt64.ofNat k =
+UInt64.ofNat (w.toNat + k)`. -/
+theorem word_add_ofNat (w : Word) (k : Nat) : w + UInt64.ofNat k = UInt64.ofNat (w.toNat + k) := by
+  apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
+
+/-- `UInt64.ofNat` roundtrips a word. -/
+theorem ofNat_toNat_word (w : Word) : UInt64.ofNat w.toNat = w := by
+  apply UInt64.toNat_inj.mp; simp
+
+/-! ## From `decPL`'s `mapM` to a head/tail unfolding (as `hslice?_succ` does for `decHL`) -/
+
+theorem mapM_shift_succ {α : Type} (g : Nat → Option α) (off n : Nat) :
+    (List.range (n + 1)).mapM (fun j => g (off + j)) = (do
+      let x ← g off
+      let xs ← (List.range n).mapM (fun j => g (off + 1 + j))
+      pure (x :: xs)) := by
+  simp only [List.range_succ_eq_map, List.mapM_cons, List.mapM_map, Nat.add_zero]
+  congr 1; funext x; congr 1
+  apply congrArg (fun f => List.mapM f (List.range n))
+  funext j; simp only [Function.comp]; congr 1; omega
+
+/-- **`decPL` unfolds head first**, as `hslice?_succ` does for `decHL`. -/
+theorem decPL_succ {m : Mem} {α : Type} (f : Nat → Option α) (off n : Nat) :
+    decPL m f off (n + 1) = (do
+      let v ← iwN m off
+      let x ← f v
+      let xs ← decPL m f (off + 1) n
+      pure (x :: xs)) := by
+  have e1 : decPL m f off (n + 1) = (List.range (n + 1)).mapM (fun j => (iwN m (off + j)).bind f) :=
+    rfl
+  have e2 : decPL m f (off + 1) n = (List.range n).mapM (fun j => (iwN m (off + 1 + j)).bind f) :=
+    rfl
+  rw [e1, e2, mapM_shift_succ (fun i => (iwN m i).bind f) off n]
+  cases iwN m off <;> rfl
+
+/-- **Indexing a `decPL` result**: element `j` decodes the pointer word at `o + j`, to some value
+`y` at that index of the decoded list (`xs[j]?`). -/
+theorem decPL_get {m : Mem} {α : Type} {f : Nat → Option α} :
+    ∀ (l o : Nat) (xs : List α), decPL m f o l = some xs → ∀ (j : Nat), j < l →
+    ∃ v y, iwN m (o + j) = some v ∧ f v = some y ∧ xs[j]? = some y
+  | 0, _, _, _, _, hj => absurd hj (by omega)
+  | k + 1, o, xs, h, j, hj => by
+    rw [decPL_succ] at h
+    simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨v0, hv0, x0, hx0, xs', hxs', rfl⟩ := h
+    cases j with
+    | zero => exact ⟨v0, x0, by simpa using hv0, hx0, by simp⟩
+    | succ j' =>
+      obtain ⟨v, y, hv, hf, hget⟩ := decPL_get k (o + 1) xs' hxs' j' (by omega)
+      refine ⟨v, y, ?_, hf, ?_⟩
+      · have e : o + (j' + 1) = o + 1 + j' := by omega
+        rw [e]; exact hv
+      · simpa using hget
+
+/-- `RecShape`'s fields: `cvR` is read through an indirection (`decRS` first reads the pointer
+word at `p`, then decodes the constant there). -/
+theorem decRS_some {m : Mem} {p : Nat} {rs : RecShape} (h : decRS m p = some rs) :
+    (∃ a, iwN m p = some a ∧ decCVp m a = some rs.cvR) ∧ iwN m (p + 1) = some rs.rP ∧
+    iwN m (p + 2) = some rs.mI ∧ iwN m (p + 3) = some rs.tgt ∧
+    decAt m (decHL m) (p + 4) = some rs.rhss := by
+  rw [decRS] at h
+  simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  obtain ⟨a, ha, b, hb, c, hc, d, hd, e, he, f, hf, rfl⟩ := h
+  exact ⟨⟨a, ha, hb⟩, hc, hd, he, hf⟩
+
+/-- `MemberShape`'s fields: `cvT` is read through the same indirection. -/
+theorem decMS_some {m : Mem} {p : Nat} {ms : MemberShape} (h : decMS m p = some ms) :
+    (∃ a, iwN m p = some a ∧ decCVp m a = some ms.cvT) ∧ iwN m (p + 1) = some ms.nIdx ∧
+    decAt m (decPL m (decCN m)) (p + 2) = some ms.ctors := by
+  rw [decMS] at h
+  simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  obtain ⟨a, ha, b, hb, c, hc, d, hd, rfl⟩ := h
+  exact ⟨⟨a, ha, hb⟩, hc, hd⟩
+
+/-! ## `BlockShape.rulePrefixAt`, `BlockShape.majorIdxAt` -/
+
+/-- **`block_shape_rule_prefix_at` is `BlockShape.rulePrefixAt`.** -/
+@[refines ConRon.Arena.BlockShape.rulePrefixAt]
+theorem blockShapeRulePrefixAt_refines (p : Prog)
+    (hp : p.lookup "block_shape_rule_prefix_at" = some blockShapeRulePrefixAt) (n : Nat) (s₀ : St)
+    (q r : Word) (bs : BlockShape) (hq : decBS s₀.mem q.toNat = some bs)
+    (hb : q.toNat + 9 < 2 ^ 64) (hrw : r.toNat < 2 ^ 64)
+    (hol : ∀ o l, iwN s₀.mem (q.toNat + 2) = some o → iwN s₀.mem (q.toNat + 3) = some l →
+      o + l < 2 ^ 64)
+    (hov : ∀ o l v, iwN s₀.mem (q.toNat + 2) = some o → iwN s₀.mem (q.toNat + 3) = some l →
+      iwN s₀.mem (o + r.toNat) = some v → v + 1 < 2 ^ 64) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_shape_rule_prefix_at" [q, r]
+    ⦃fun res s' => s' = s₀ ∧ res.headD 0 = UInt64.ofNat (bs.rulePrefixAt r.toNat); ⊤⦄ := by
+  obtain ⟨o, l, ho, hl, hg⟩ := decAt_some (decBS_some hq).2.1
+  have holl := hol o l ho hl
+  obtain ⟨ho', -⟩ := iwN_rdW ho (by omega)
+  obtain ⟨hl', hlb⟩ := iwN_rdW hl (by omega)
+  have e2 : UInt64.ofNat (q.toNat + 2) = q + 2 := by
+    apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
+  have e3 : UInt64.ofNat (q.toNat + 3) = q + 3 := by
+    apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
+  rw [e2] at ho'; rw [e3] at hl'
+  have hlo : (UInt64.ofNat l).toNat = l := by simp [hlb]
+  rw [BlockShape.rulePrefixAt]
+  by_cases hlen : l < r.toNat + 1
+  · have hNone : bs.recs[r.toNat]? = none := by
+      rw [List.getElem?_eq_none_iff, decPL_length s₀.mem hg]; omega
+    rw [hNone]
+    have hc : UInt64.ofNat l ≤ r := by
+      apply UInt64.le_iff_toNat_le.mpr; rw [hlo]; omega
+    rw [invoke_eq _ hp]
+    simp only [callFn, blockShapeRulePrefixAt]
+    cases n with
+    | zero => vcgen [exec] <;> grind
+    | succ n =>
+      sym only [lang_grind, arena_grind] =>
+        vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+        finish
+  · obtain ⟨v, y, hv, hf, hget⟩ := decPL_get l o bs.recs hg r.toNat (by omega)
+    obtain ⟨-, hrP, -, -, -⟩ := decRS_some hf
+    rw [hget]
+    have hovv := hov o l v ho hl hv
+    obtain ⟨hv', -⟩ := iwN_rdW hv (by omega)
+    have ev : UInt64.ofNat (o + r.toNat) = UInt64.ofNat o + r := by
+      rw [ofNat_add_word, ofNat_toNat_word]
+    rw [ev] at hv'
+    obtain ⟨hw1, -⟩ := iwN_rdW hrP (by omega)
+    have ew : UInt64.ofNat (v + 1) = UInt64.ofNat v + 1 := by
+      apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
+    rw [ew] at hw1
+    have hc : ¬ UInt64.ofNat l ≤ r := by
+      intro hcontra
+      have := UInt64.le_iff_toNat_le.mp hcontra
+      rw [hlo] at this; omega
+    rw [invoke_eq _ hp]
+    simp only [callFn, blockShapeRulePrefixAt]
+    cases n with
+    | zero => vcgen [exec] <;> grind
+    | succ n =>
+      sym only [lang_grind, arena_grind] =>
+        vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+        finish
+
+/-- **`block_shape_major_idx_at` is `BlockShape.majorIdxAt`.** -/
+@[refines ConRon.Arena.BlockShape.majorIdxAt]
+theorem blockShapeMajorIdxAt_refines (p : Prog)
+    (hp : p.lookup "block_shape_major_idx_at" = some blockShapeMajorIdxAt) (n : Nat) (s₀ : St)
+    (q r : Word) (bs : BlockShape) (hq : decBS s₀.mem q.toNat = some bs)
+    (hb : q.toNat + 9 < 2 ^ 64) (hrw : r.toNat < 2 ^ 64)
+    (hol : ∀ o l, iwN s₀.mem (q.toNat + 2) = some o → iwN s₀.mem (q.toNat + 3) = some l →
+      o + l < 2 ^ 64)
+    (hov : ∀ o l v, iwN s₀.mem (q.toNat + 2) = some o → iwN s₀.mem (q.toNat + 3) = some l →
+      iwN s₀.mem (o + r.toNat) = some v → v + 2 < 2 ^ 64) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_shape_major_idx_at" [q, r]
+    ⦃fun res s' => s' = s₀ ∧ res.headD 0 = UInt64.ofNat (bs.majorIdxAt r.toNat); ⊤⦄ := by
+  obtain ⟨o, l, ho, hl, hg⟩ := decAt_some (decBS_some hq).2.1
+  have holl := hol o l ho hl
+  obtain ⟨ho', -⟩ := iwN_rdW ho (by omega)
+  obtain ⟨hl', hlb⟩ := iwN_rdW hl (by omega)
+  have e2 : UInt64.ofNat (q.toNat + 2) = q + 2 := by
+    apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
+  have e3 : UInt64.ofNat (q.toNat + 3) = q + 3 := by
+    apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
+  rw [e2] at ho'; rw [e3] at hl'
+  have hlo : (UInt64.ofNat l).toNat = l := by simp [hlb]
+  rw [BlockShape.majorIdxAt]
+  by_cases hlen : l < r.toNat + 1
+  · have hNone : bs.recs[r.toNat]? = none := by
+      rw [List.getElem?_eq_none_iff, decPL_length s₀.mem hg]; omega
+    rw [hNone]
+    have hc : UInt64.ofNat l ≤ r := by
+      apply UInt64.le_iff_toNat_le.mpr; rw [hlo]; omega
+    rw [invoke_eq _ hp]
+    simp only [callFn, blockShapeMajorIdxAt]
+    cases n with
+    | zero => vcgen [exec] <;> grind
+    | succ n =>
+      sym only [lang_grind, arena_grind] =>
+        vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+        finish
+  · obtain ⟨v, y, hv, hf, hget⟩ := decPL_get l o bs.recs hg r.toNat (by omega)
+    obtain ⟨-, -, hmI, -, -⟩ := decRS_some hf
+    rw [hget]
+    have hovv := hov o l v ho hl hv
+    obtain ⟨hv', -⟩ := iwN_rdW hv (by omega)
+    have ev : UInt64.ofNat (o + r.toNat) = UInt64.ofNat o + r := by
+      rw [ofNat_add_word, ofNat_toNat_word]
+    rw [ev] at hv'
+    obtain ⟨hw1, -⟩ := iwN_rdW hmI (by omega)
+    have ew : UInt64.ofNat (v + 2) = UInt64.ofNat v + 2 := by
+      apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
+    rw [ew] at hw1
+    have hc : ¬ UInt64.ofNat l ≤ r := by
+      intro hcontra
+      have := UInt64.le_iff_toNat_le.mp hcontra
+      rw [hlo] at this; omega
+    rw [invoke_eq _ hp]
+    simp only [callFn, blockShapeMajorIdxAt]
+    cases n with
+    | zero => vcgen [exec] <;> grind
+    | succ n =>
+      sym only [lang_grind, arena_grind] =>
+        vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+        finish
+
+/-! ## `numCtorsOf`, `BlockShape.numCtors` -/
+
+/-- The model of `num_ctors_of`. -/
+def numCtorsOfW : Nat → Mem → Word → Word → Option Word
+  | 0, _, _, _ => none
+  | n + 1, m, off, l =>
+    if l = 0 then some 0
+    else numCtorsOfW.cons m off (numCtorsOfW n m (off + 1) (l - 1))
+where
+  /-- After the recursive call: add this member's own `ctors.len`. -/
+  cons (m : Mem) (off : Word) : Option Word → Option Word
+    | none => none
+    | some r => some (rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 3) + r)
+
+section arms
+variable (n : Nat) (m : Mem) (off l r : Word)
+theorem numCtorsOfW_nil (hl : l = 0) : numCtorsOfW (n + 1) m off l = some 0 := by
+  simp [numCtorsOfW, hl]
+theorem numCtorsOfW_cons (hl : l ≠ 0) :
+    numCtorsOfW (n + 1) m off l = numCtorsOfW.cons m off (numCtorsOfW n m (off + 1) (l - 1)) := by
+  simp [numCtorsOfW, hl]
+theorem numCtorsOfW_cons_some :
+    numCtorsOfW.cons m off (some r) =
+      some (rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 3) + r) := rfl
+end arms
+
+grind_pattern [ind_grind] numCtorsOfW_nil => numCtorsOfW (n + 1) m off l
+grind_pattern [ind_grind] numCtorsOfW_cons => numCtorsOfW (n + 1) m off l
+grind_pattern [ind_grind] numCtorsOfW_cons_some => numCtorsOfW.cons m off (some r)
+
+section specs
+variable (p : Prog)
+
+theorem numCtorsOf_spec (hp : p.lookup "num_ctors_of" = some numCtorsOf) (n : Nat) :
+    ∀ (s₀ : St) (off l : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "num_ctors_of" [off, l]
+    ⦃fun r s' => s' = s₀ ∧ numCtorsOfW n s₀.mem off l = some (r.headD 0); ⊤⦄ := by
+  induction n with
+  | zero => intro s₀ off l; rw [invoke_eq _ hp]; simp only [callFn, numCtorsOf]; vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ off l
+    rw [invoke_eq _ hp]
+    simp only [callFn, numCtorsOf]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
+      finish (gen := 20)
+
+end specs
+
+theorem numCtorsOfW_ok (n : Nat) : ∀ (m : Mem) (off l r : Word) (ms : List MemberShape),
+    (∀ i v, iwN m i = some v → v + 3 < 2 ^ 64) →
+    off.toNat + l.toNat < 2 ^ 64 → decPL m (decMS m) off.toNat l.toNat = some ms →
+    numCtorsOfW n m off l = some r → r = UInt64.ofNat (ConRon.Arena.numCtorsOf ms) := by
+  induction n with
+  | zero => intro m off l r ms _ _ _ h; simp [numCtorsOfW] at h
+  | succ n ih =>
+    intro m off l r ms hsmall hbnd hd h
+    by_cases hl : l = 0
+    · rw [numCtorsOfW_nil n m off l hl] at h
+      have hl0 : l.toNat = 0 := by
+        have := congrArg UInt64.toNat hl; simpa using this
+      rw [hl0] at hd
+      simp only [decPL, List.range_zero, List.mapM_nil, pure, Option.some.injEq] at hd
+      simp only [Option.some.injEq] at h
+      simp [← hd, ConRon.Arena.numCtorsOf, ← h]
+    · obtain ⟨k, hk⟩ : ∃ k, l.toNat = k + 1 := by
+        have : l.toNat ≠ 0 := fun h0 => hl (by
+          apply UInt64.toNat_inj.mp; simpa using h0)
+        exact ⟨l.toNat - 1, by omega⟩
+      rw [hk] at hd
+      rw [decPL_succ] at hd
+      simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hd
+      obtain ⟨v, hv, ms0, hms0, mrest, hmrest, rfl⟩ := hd
+      have hoff1 : (off + 1).toNat = off.toNat + 1 := by
+        rw [UInt64.toNat_add]; simp; omega
+      have hl1 : (l - 1).toNat = k := by
+        rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp [hk]
+      have hd1 : decPL m (decMS m) (off + 1).toNat (l - 1).toNat = some mrest := by
+        rw [hoff1, hl1]; exact hmrest
+      have hbnd1 : (off + 1).toNat + (l - 1).toNat < 2 ^ 64 := by rw [hoff1, hl1]; omega
+      cases hcons : numCtorsOfW n m (off + 1) (l - 1) with
+      | none =>
+        exfalso
+        have hcontra : numCtorsOfW (n + 1) m off l = none := by
+          simp [numCtorsOfW, numCtorsOfW.cons, hl, hcons]
+        rw [hcontra] at h; simp at h
+      | some r' =>
+        rw [numCtorsOfW_cons n m off l hl, hcons, numCtorsOfW_cons_some] at h
+        have hr' : r' = UInt64.ofNat (ConRon.Arena.numCtorsOf mrest) :=
+          ih m (off + 1) (l - 1) r' mrest hsmall hbnd1 hd1 hcons
+        have hv3 := hsmall off.toNat v hv
+        have hv' := (iwN_rdW hv (by omega)).1
+        rw [ofNat_toNat_word] at hv'
+        have hdm := decMS_some hms0
+        obtain ⟨o2, l2, ho2, hl2, hg2⟩ := decAt_some hdm.2.2
+        have heq1 : v + 2 + 1 = v + 3 := by omega
+        rw [heq1] at hl2
+        have hl2rd := (iwN_rdW hl2 (by omega)).1
+        have e3 : UInt64.ofNat (v + 3) = UInt64.ofNat v + 3 := by
+          apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
+        rw [e3, ← hv'] at hl2rd
+        simp only [Option.some.injEq] at h
+        rw [hl2rd, hr'] at h
+        rw [← ofNat_add_word] at h
+        rw [← decPL_length m hg2] at h
+        simp only [ConRon.Arena.numCtorsOf]
+        exact h.symm
+
+/-- **`num_ctors_of` is `numCtorsOf`.** -/
+@[refines ConRon.Arena.numCtorsOf]
+theorem numCtorsOf_refines (p : Prog) (hp : p.lookup "num_ctors_of" = some numCtorsOf) (n : Nat)
+    (s₀ : St) (off l : Word) (ms : List MemberShape)
+    (hsmall : ∀ i v, iwN s₀.mem i = some v → v + 3 < 2 ^ 64)
+    (hd : decPL s₀.mem (decMS s₀.mem) off.toNat l.toNat = some ms)
+    (hbnd : off.toNat + l.toNat < 2 ^ 64) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "num_ctors_of" [off, l]
+    ⦃fun r s' => s' = s₀ ∧ r.headD 0 = UInt64.ofNat (ConRon.Arena.numCtorsOf ms); ⊤⦄ := by
+  have h := numCtorsOf_spec p hp n s₀ off l
+  refine triple_post h ?_
+  intro r s' ⟨h1, h2⟩
+  exact ⟨h1, (numCtorsOfW_ok n s₀.mem off l (r.headD 0) ms hsmall hbnd hd h2)⟩
+
+/- `block_shape_num_ctors` refining `BlockShape.numCtors`: attempted and NOT finished this round.
+`numCtorsOf_refines` above is solid on its own (and used, unapplied, as a callee spec here), but
+`vcgen`'s callee-spec search for this two-argument sub-call (`num_ctors_of(o, l)`, `o`/`l` freshly
+read locals, not pass-through parameters) does not resolve `numCtorsOf_refines`'s `ms` against
+`bs.members` even with `hd2`/`hbnd2`/`ho'`/`hl'` in context (`finish` leaves a `?ms` metavariable
+and derives at least one spurious equation downstream). Left for the next round; see the report. -/
+
+end L.Ind
