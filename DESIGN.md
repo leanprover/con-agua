@@ -3639,3 +3639,78 @@ Hard numbers for planning: `scripts/census.py` (PLAN.md, "Progress census"). Pie
 (among them all twelve `natOpResult` literal arms and 18 of the 19 store arms).
 Per phase in `docs/progress.md`. The census takes about 30 s (the link pass imports the modules in a few groups; axioms come
 from the oleans' precomputed tables).
+
+## Levels: the scratch heap and the level algorithms (2026-10-21, lane `levels`)
+
+Phase 3 (ROADMAP §1, `kernel/level.rs`): con-leche's pure `Level` algorithms that the twin runs on
+read-back trees (`Level.isEquiv`, `leq`, `simplify`, `subst`, …), translated into L over a scratch
+heap. Files: `ConAgua/Arena/Level*.lean` (other than the store files `LevelStore`/`LevelRefine`).
+
+### The heap, and why the readback is free (`LevelHeap.lean`, `LevelHeapRel.lean`)
+
+* **Pointers.** A level pointer is a word: below `2^32` a store handle (the level store's tags
+  0‥4 in bits 31…28, tier bit 27, index), at or above `2^32` heap node `p - 2^32`. The heap is the
+  word array `LH` (array **192**) of three-word nodes `[tag, a, b]` with the store's tags (`a` a
+  name handle word for `param`; unused fields `0`), bump-allocated below the top `CTL[192]`.
+  `lv_node(p)` views either kind (`abort` on a dangling pointer), `lh_mk(g, a, b)` allocates.
+* **No readback, no tree cache.** The twin reads a handle back into a `Level` (`readLevelM`, cached
+  in `readLC`) and runs the algorithm on the tree. L runs the algorithm on the handle itself and
+  allocates heap nodes only for what the algorithm builds, so a store DAG is never copied, and
+  `readLC`/`readNC`/`readLsC` need no L table: their rows equal `denoteL`/`denoteN` of the
+  handle, which is all a refinement needs to know about them (lane `scale`'s "tree-valued caches"
+  item is moot for levels). The heap is reset by the entry of each comparison (per call, ROADMAP
+  §2 item 5), not per declaration.
+* **The decoder is an inductive relation** `LvR N m p l` (a constructor per tag, children
+  related recursively, `param` names through `N : Word → Name → Prop`, functional and injective:
+  `NameRel`). It needs no fuel and holds only along finite views; `LvR.fn` (a pointer denotes one
+  level) is an induction. Under `ArenaR`, `N` is the store's name readback; store handles are
+  related through the store's tables, heap nodes through `LH`.
+* **Growth.** `HeapExt m m'` ("every view of `m` is a view of `m'`") carries `LvR` (`LvR.mono`);
+  `HeapFrame` (store arrays, `CTL` words other than 192, the heap below the top) implies it, and
+  `lhMkW_ext` gives it for an allocation. The new node's view is the written one.
+* `lv_eq(p, q)` is `Level.beq` (`decide (l = r)`): pointer equality first, then tags, `param`
+  names by word (injectivity of `N`), children recursively. `lvEqW_ok` (`@[refines
+  ConLeche.Level.beq]`).
+
+Note for lane `libs` (MemoLib tree values, a per-declaration tree heap): the level algorithms do
+not need it. Their heap is per call and holds intermediate trees; the readback caches it would
+serve are not represented for levels at all (above). If the tree heap lands with the same node
+shape, `lv_node` can view it as a third pointer kind.
+
+Request to lane `arch`: add `LH` (array 192) and `CTL[192]` (heap top) to the memory map, owner
+`levels` (per call, no relation: the heap is scratch, nothing in `AState` corresponds to it).
+
+### Per function
+
+| function | Rust lines | L lines | spec lines (model + arms + spec) | refinement lines | `lean` user | automation |
+|---|---:|---:|---:|---:|---|---|
+| `lv_node` (view) | – (store `view` / tree match) | 23 | 50 | `HeapFrame.ext` 60 | | `vcgen` + `finish` |
+| `lh_mk` | – (`Rc::new`) | 9 | 25 | `lhMkW_ext` + `lhMem_*` 110 | | `vcgen` + `finish`; frames by hand |
+| `lv_eq` (`Level.beq`) | 19 (`beq`) | 11 | 70 | `lvEqW_ok` 115 | | `vcgen` + `finish (gen := 20)`; refinement by hand (cases per tag) |
+| `lv_comb` (`combining`) | 10 | 13 | 70 | `combW_ok` 50 (+ allocation lemmas 27) | | as `lv_eq` |
+| `lv_simp` (`simplify`) | 21 | 16 | 130 | `imaxW_ok` + `simpW_ok` 120 | | as `lv_eq` |
+| `lv_nz` (`isNeverZero`) | 9 | 12 | 70 | `nzW_ok` 40 | | as `lv_eq` |
+| total (files) | | 84 | `LevelHeap` 243, `LevelSimp` 291 | `LevelHeapRel` 432, `LevelSimpRel` 264 | 7.9 + 7.6 s, 1.1 + 1.1 s | |
+
+### Findings
+
+* `simp` on goals with `UInt64` literals such as `p - 4294967296 + 3` produced proofs on which the
+  **kernel** hit "deep recursion" (elaboration was fine); stating the arithmetic once as lemmas
+  (`heap_sub`, `heap_off`, `heap_below`) and using `rw` + `omega` avoids it. Likewise `decide`
+  on `(1 : Word) ≠ 192`: use `simp`.
+* `finish` failed on `lv_eq` (a wrong case split, no hint) until `(gen := 20)`, as lane `exprops`
+  found for three callee posts.
+* The refinements are short because the decoder is a relation: each is one induction on the L
+  fuel and one `cases` on the argument's `LvR` derivation, whose constructor fixes the view's tag
+  (`lv_fields`), and the twin's `match` reduces by `simp [Level.f]`. Allocations are three lemmas
+  (`mk_succ`, `mk_max`, `mk_imax`). The first full drafts of `combW_ok`/`simpW_ok`/`nzW_ok` took
+  three rounds of small fixes; no `grind` in the refinements.
+* Two `match`es with the same arms but different auxiliary matchers (`simplify`'s `imax` arm and
+  a restatement) are not syntactically equal; `cases` on the discriminant and `rfl` closes it.
+* The model's view fields are named (`lvG`/`lvA`/`lvB` with `@[level_grind =]` equations to the
+  `headD` projections the call's `setLocs` produces); a model that unfolded them in `finish`'s
+  list confused `grind`.
+
+### `sorry`s
+
+None.
