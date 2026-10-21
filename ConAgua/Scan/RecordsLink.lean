@@ -11,6 +11,25 @@ public import ConAgua.Scan.Records
 set_option linter.unusedSectionVars false
 set_option linter.deprecated false
 
+/-!
+# The record loops, linked to con-leche
+
+Each of con-leche's 18 record loops (`scan*Loop`, `ConLeche/Frontend/Scan/Fast.lean`) against the
+generic model `objN` with its record's `bit`/`val`/`mask` (`ConAgua.Scan.Records`), the 4 lists
+of records against `objListN`, and each entry (`scan*`) against its model (`appN`, `rulesN`, …),
+in ok-ness and position (`okW`).
+
+One generic theorem does the work for every loop: `objN_link` from `ObjLoop`, the shape every
+con-leche record loop has (its six byte arms and, at a key, `KeyStep`: the key's bit, the
+duplicate check, the value scanned and the step to the next member). A loop's `ObjLoop` is proved
+by one tactic, `obj_loop`, the same for all 18: it unfolds the loop once and, at a key, does
+cases on the key (`Key`, 66 constructors) and closes every arm with `keyStep_unknown`, or
+`keyStep_guard` and the value's kind (`key_value`: a `numEnd` slot, `scanBinderInfo`'s
+end-or-zero, or a `ScanRes` scanner, whose link `link_val` finds). The lists likewise
+(`objListN_link`, `ListLoop`, `list_loop`). The record state con-leche carries (the fields it
+reads) is a tuple `st` the model ignores.
+-/
+
 namespace ConAgua.Scan.RecordsLink
 open ConLeche.Frontend ConAgua.Scan
 open L (Word)
