@@ -58,16 +58,13 @@ def piBinders : FunDecl := lfn (fuel, h) locals (g, ty, b, z, bo, bl, be, o, l) 
 /-! ## `BlockParts`: the record's pure projections -/
 
 /-- `num_ctors_of(off, l)`: `numCtorsOf` of the `IW` slice of `MemberShape` pointers (sum of each
-member's `ctors.len`, at offset `+3`). -/
+member's `ctors.len`, at offset `+3`), recursively on the slice (as the twin's recursion is). -/
 @[l_impl ConRon.Arena.numCtorsOf]
-def numCtorsOf : FunDecl := lfn (off, l) locals (j, s, m) {
-  j := 0;
-  s := 0;
-  while j < l {
-    m := IW.u64[off + j];
-    s += IW.u64[m + 3];
-    j += 1
-  };
+def numCtorsOf : FunDecl := lfn (off, l) locals (r, m, s) {
+  if l == 0 { return 0 };
+  r := call num_ctors_of(off + 1, l - 1);
+  m := IW.u64[off];
+  s := IW.u64[m + 3] + r;
   return s
 }
 
@@ -79,8 +76,10 @@ def blockShapeK : FunDecl := lfn (p) locals () {
 
 /-- `block_shape_num_ctors(p)`: `BlockShape.numCtors`. -/
 @[l_impl ConRon.Arena.BlockShape.numCtors]
-def blockShapeNumCtors : FunDecl := lfn (p) locals (r) {
-  r := call num_ctors_of(IW.u64[p], IW.u64[p + 1]);
+def blockShapeNumCtors : FunDecl := lfn (p) locals (o, l, r) {
+  o := IW.u64[p];
+  l := IW.u64[p + 1];
+  r := call num_ctors_of(o, l);
   return r
 }
 
