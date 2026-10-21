@@ -481,4 +481,59 @@ theorem EnvR.push {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {f
       simp only [nat?, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
       simp [show (rdW (m.arr64 CTL) 128).toNat ≠ c by omega]
 
+/-- `env_push(vis, q)`: install the record at `q` (its name is word `q + 1`) at counter `vis`:
+its row, its slot in `ECON`; returns the new view `vis + 1`. -/
+@[l_impl ConRon.Arena.IFEnv.push]
+def envPushL : FunDecl := lfn (vis, q) locals (w, k, z) {
+  if vis + 1 == 0 { abort };
+  if 4294967295 < q { abort };
+  w := EREC.u64[q + 1];
+  z := call env_row_set(w, vis + 1, q);
+  k := CTL.u64[128];
+  if k + 1 == 0 { abort };
+  ECON.u64[k] := q;
+  CTL.u64[128] := k + 1;
+  return vis + 1
+}
+
+/-- **`env_push` refines `IFEnv.push`**: on a return the new view `vis + 1` relates the pushed
+environment. `q` must hold a record that decodes (the caller built it). -/
+@[refines ConRon.Arena.IFEnv.push]
+theorem envPush_refines (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
+    (hs : p.lookup "env_row_set" = some envRowSetL) (hp : p.lookup "env_push" = some envPushL)
+    (n : Nat) (s₀ : St) {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} (vis q : Word)
+    (ci : IConstantInfo) (hE : EnvR dn s₀.mem vis fe)
+    (hci : decCI (s₀.mem.arr64 EREC) dn q.toNat = some ci) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "env_push" [vis, q]
+    ⦃fun r s' => LocEq s' s₀ ∧ EnvR dn s'.mem (r.headD 0) (fe.push ci); ⊤⦄ := by
+  obtain ⟨w, hw1, hw2, -⟩ := decCI_name hci
+  have hw : rdN (s₀.mem.arr64 EREC) (q.toNat + 1) = w := by simp [rdN, hw1]
+  have key := fun (hv : vis + 1 ≠ 0) ht hb hk hk1 hc =>
+    EnvR.push hE q ci hci hv ht hb hk hk1 hc
+  simp only [hw] at key
+  have hrc : ∀ (h : q.toNat + 1 < (s₀.mem.arr64 EREC).size), (s₀.mem.arr64 EREC)[q.toNat + 1] = w := by
+    intro h; simpa [h] using hw1
+  have hra : rowArr w ≠ CTL := by simp only [rowArr, CTL, ArrId]; omega
+  have hctl : ∀ c p', (rowSet s₀.mem w c p').arr64 CTL = s₀.mem.arr64 CTL :=
+    fun c p' => rowSet_arr _ _ _ _ _ (Ne.symm hra)
+  have hcon : rowTag w ≤ 2 → ∀ c p', (rowSet s₀.mem w c p').arr64 ECON = s₀.mem.arr64 ECON :=
+    fun ht c p' => rowSet_arr _ _ _ _ _ (by simp only [rowArr, ECON, ArrId]; omega)
+  have hrd : ∀ (h : 128 < (s₀.mem.arr64 CTL).size), rdW (s₀.mem.arr64 CTL) 128 = (s₀.mem.arr64 CTL)[128] :=
+    fun h => rdW_eq _ _ 128 rfl h
+  simp only [envPushMem, hw, hctl] at key
+  have hq1 : ¬ (4294967295 : Word) < q → (q + 1).toNat = q.toNat + 1 := by
+    intro h; have : q.toNat ≤ 4294967295 := by
+      have := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp h); simpa using this
+    rw [UInt64.toNat_add]; simp; omega
+  rw [invoke_eq _ hp]
+  simp only [callFn, envPushL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        envRowSet_spec p hx hs n] <;>
+      finish
+
 end L.Arena
