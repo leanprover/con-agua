@@ -94,8 +94,15 @@ def rrKey : MemoKey (NIdx × NIdx × LsIdx) where
 /-- A cache value word: a handle. -/
 def decEV (w : Word) : EIdx := decE w
 
+/-- A handle-valued memo's value relation: the word is a handle word (below `2^32`, so the L
+code may compute with it) and denotes the entry. Independent of the memory. -/
+def VH (_ : Mem) (w : Word) (v : EIdx) : Prop := v = decE w ∧ w.toNat < 2 ^ 32
+
 /-- A `defeqC` value word: the verdict. -/
 def decB (w : Word) : Bool := w != 0
+
+/-- A `Bool`-valued memo's value relation. -/
+def VB (_ : Mem) (w : Word) (v : Bool) : Prop := v = decB w
 
 /-- The six mode memos' maps over `(key, generation)`. -/
 structure ModeMaps where
@@ -112,30 +119,37 @@ def ModeMaps.empty : ModeMaps := ⟨∅, ∅, ∅, ∅, ∅, ∅⟩
 /-- **One mode memo**: its map `M` over `(key, generation)` is in memory, the twin's table `t` is
 the bank of the current generation `g`, and nothing lies above the last generation `G`. -/
 structure ModeR {κ ν : Type} [BEq κ] [Hashable κ] (S : MemoSch) (K : MemoKey (κ × Word))
-    (dv : Word → ν) (m : Mem) (M : Std.HashMap (κ × Word) ν) (G g : Word)
+    (VR : Mem → Word → ν → Prop) (m : Mem) (M : Std.HashMap (κ × Word) ν) (G g : Word)
     (t : Std.HashMap κ ν) : Prop where
-  memo : MemoRG S K dv m M
+  memo : MemoRV S K VR m M
   bank : Bank M g t
   fresh : Fresh M G
 
+/-- A value relation that does not read the memory. -/
+def VConst {ν : Type} (VR : Mem → Word → ν → Prop) : Prop := ∀ m m' w v, VR m w v → VR m' w v
+
+theorem vh_const : VConst VH := fun _ _ _ _ h => h
+theorem vb_const : VConst VB := fun _ _ _ _ h => h
+
 theorem ModeR.frame {κ ν : Type} [BEq κ] [Hashable κ] {S : MemoSch} {K : MemoKey (κ × Word)}
-    {dv : Word → ν} {m m' : Mem} {M : Std.HashMap (κ × Word) ν} {G g : Word}
-    {t : Std.HashMap κ ν} {A : List ArrId} {C : List Word} (hS : S.WF) (hA : S.arr ∉ A)
-    (hC : S.cs ∉ C) (hf : MemFrame A C m m') (h : ModeR S K dv m M G g t) : ModeR S K dv m' M G g t :=
-  ⟨memoRG_frame S hS K dv A C hA hC m m' hf M h.memo, h.bank, h.fresh⟩
+    {VR : Mem → Word → ν → Prop} {m m' : Mem} {M : Std.HashMap (κ × Word) ν} {G g : Word}
+    {t : Std.HashMap κ ν} {A : List ArrId} {C : List Word} (hS : S.WF) (hV : VConst VR)
+    (hA : S.arr ∉ A) (hC : S.cs ∉ C) (hf : MemFrame A C m m') (h : ModeR S K VR m M G g t) :
+    ModeR S K VR m' M G g t :=
+  ⟨memoRV_frame S hS K VR A C hA hC m m' hf (hV m m') M h.memo, h.bank, h.fresh⟩
 
 /-- **The core tier at explicit maps and bank words.** -/
 structure CoreRM (m : Mem) (c : Caches) (M : ModeMaps) (G g : Word) : Prop where
-  wc : ModeR wcSch eKeyG decEV m M.wc G g c.whnfCoreC
-  wk : ModeR wkSch eKeyG decEV m M.wk G g c.whnfCoreCheapC
-  wh : ModeR whSch eKeyG decEV m M.wh G g c.whnfC
-  inf : ModeR inSch eKeyG decEV m M.inf G g c.inferC
-  io : ModeR ioSch eKeyG decEV m M.io G g c.inferIOC
-  de : ModeR deSch dKeyG decB m M.de G g c.defeqC
+  wc : ModeR wcSch eKeyG VH m M.wc G g c.whnfCoreC
+  wk : ModeR wkSch eKeyG VH m M.wk G g c.whnfCoreCheapC
+  wh : ModeR whSch eKeyG VH m M.wh G g c.whnfC
+  inf : ModeR inSch eKeyG VH m M.inf G g c.inferC
+  io : ModeR ioSch eKeyG VH m M.io G g c.inferIOC
+  de : ModeR deSch dKeyG VB m M.de G g c.defeqC
   bank : BankW BANKC m G g
-  ct : MemoRG ctSch pairKey decEV m c.constTyC
-  cv : MemoRG cvSch pairKey decEV m c.constValC
-  rr : MemoRG rrSch rrKey decEV m c.ruleRhsC
+  ct : MemoRV ctSch pairKey VH m c.constTyC
+  cv : MemoRV cvSch pairKey VH m c.constValC
+  rr : MemoRV rrSch rrKey VH m c.ruleRhsC
   lq : MemoRG lqSch pairKey decB m c.lvlEqC
   lsq : MemoRG lsqSch pairKey decB m c.lvlsEqC
 
@@ -157,28 +171,29 @@ theorem CoreRM.frame {A : List ArrId} {C : List Word} {m m' : Mem} {c : Caches} 
     have := hA b hb; simp only [ArrId] at this h1 h2; omega
   have nC : ∀ x : Word, 96 ≤ x.toNat → x.toNat < 128 → x ∉ C := fun x h1 h2 hx => by
     have := hC x hx; omega
-  exact ⟨h.wc.frame (coreSch_wf _ _ (by decide) (by decide)) (nA _ (by decide) (by decide))
+  have wf := coreSch_wf
+  exact ⟨h.wc.frame (wf _ _ (by decide) (by decide)) vh_const (nA _ (by decide) (by decide))
       (nC _ (by decide) (by decide)) hf,
-    h.wk.frame (coreSch_wf _ _ (by decide) (by decide)) (nA _ (by decide) (by decide))
+    h.wk.frame (wf _ _ (by decide) (by decide)) vh_const (nA _ (by decide) (by decide))
       (nC _ (by decide) (by decide)) hf,
-    h.wh.frame (coreSch_wf _ _ (by decide) (by decide)) (nA _ (by decide) (by decide))
+    h.wh.frame (wf _ _ (by decide) (by decide)) vh_const (nA _ (by decide) (by decide))
       (nC _ (by decide) (by decide)) hf,
-    h.inf.frame (coreSch_wf _ _ (by decide) (by decide)) (nA _ (by decide) (by decide))
+    h.inf.frame (wf _ _ (by decide) (by decide)) vh_const (nA _ (by decide) (by decide))
       (nC _ (by decide) (by decide)) hf,
-    h.io.frame (coreSch_wf _ _ (by decide) (by decide)) (nA _ (by decide) (by decide))
+    h.io.frame (wf _ _ (by decide) (by decide)) vh_const (nA _ (by decide) (by decide))
       (nC _ (by decide) (by decide)) hf,
-    h.de.frame (coreSch_wf _ _ (by decide) (by decide)) (nA _ (by decide) (by decide))
+    h.de.frame (wf _ _ (by decide) (by decide)) vb_const (nA _ (by decide) (by decide))
       (nC _ (by decide) (by decide)) hf,
     h.bank.frame (nC _ (by decide) (by decide)) (nC _ (by decide) (by decide)) hf,
-    memoRG_frame _ (coreSch_wf _ _ (by decide) (by decide)) _ _ A C (nA _ (by decide) (by decide))
-      (nC _ (by decide) (by decide)) m m' hf _ h.ct,
-    memoRG_frame _ (coreSch_wf _ _ (by decide) (by decide)) _ _ A C (nA _ (by decide) (by decide))
-      (nC _ (by decide) (by decide)) m m' hf _ h.cv,
-    memoRG_frame _ (coreSch_wf _ _ (by decide) (by decide)) _ _ A C (nA _ (by decide) (by decide))
-      (nC _ (by decide) (by decide)) m m' hf _ h.rr,
-    memoRG_frame _ (coreSch_wf _ _ (by decide) (by decide)) _ _ A C (nA _ (by decide) (by decide))
+    memoRV_frame _ (wf _ _ (by decide) (by decide)) _ _ A C (nA _ (by decide) (by decide))
+      (nC _ (by decide) (by decide)) m m' hf (vh_const m m') _ h.ct,
+    memoRV_frame _ (wf _ _ (by decide) (by decide)) _ _ A C (nA _ (by decide) (by decide))
+      (nC _ (by decide) (by decide)) m m' hf (vh_const m m') _ h.cv,
+    memoRV_frame _ (wf _ _ (by decide) (by decide)) _ _ A C (nA _ (by decide) (by decide))
+      (nC _ (by decide) (by decide)) m m' hf (vh_const m m') _ h.rr,
+    memoRG_frame _ (wf _ _ (by decide) (by decide)) _ _ A C (nA _ (by decide) (by decide))
       (nC _ (by decide) (by decide)) m m' hf _ h.lq,
-    memoRG_frame _ (coreSch_wf _ _ (by decide) (by decide)) _ _ A C (nA _ (by decide) (by decide))
+    memoRG_frame _ (wf _ _ (by decide) (by decide)) _ _ A C (nA _ (by decide) (by decide))
       (nC _ (by decide) (by decide)) m m' hf _ h.lsq⟩
 
 theorem CoreR.frame {A : List ArrId} {C : List Word} {m m' : Mem} {c : Caches}
@@ -207,32 +222,34 @@ theorem clearsL_frame : ∀ (l : List MemoSch) (m : Mem),
       ((clearsL_frame l _).mono (by simp) (fun x h => List.mem_append_right _ h))
 
 /-- A memo outside a run of clears keeps its relation across it. -/
-theorem memoRG_clearsL_other {κ ν : Type} [BEq κ] [Hashable κ] (S : MemoSch) (hS : S.WF)
-    (K : MemoKey κ) (dv : Word → ν) (l : List MemoSch) (hl : ∀ S' ∈ l, S.cs ≠ S'.cs ∧ S.cs ≠ S'.cs + 1)
-    (m : Mem) (mp : Std.HashMap κ ν) (h : MemoRG S K dv m mp) : MemoRG S K dv (clearsL l m) mp :=
-  memoRG_frame S hS K dv [] _ (by simp) (fun hm => by
+theorem memoRV_clearsL_other {κ ν : Type} [BEq κ] [Hashable κ] (S : MemoSch) (hS : S.WF)
+    (K : MemoKey κ) (VR : Mem → Word → ν → Prop) (hV : VConst VR) (l : List MemoSch)
+    (hl : ∀ S' ∈ l, S.cs ≠ S'.cs ∧ S.cs ≠ S'.cs + 1)
+    (m : Mem) (mp : Std.HashMap κ ν) (h : MemoRV S K VR m mp) : MemoRV S K VR (clearsL l m) mp :=
+  memoRV_frame S hS K VR [] _ (by simp) (fun hm => by
     simp only [List.mem_flatMap, List.mem_cons, List.not_mem_nil, or_false] at hm
     obtain ⟨S', h1, h2⟩ := hm
     rcases h2 with e | e
     · exact (hl S' h1).1 e
-    · exact (hl S' h1).2 e) m _ (clearsL_frame l m) mp h
+    · exact (hl S' h1).2 e) m _ (clearsL_frame l m) (hV m _) mp h
 
 /-- **A memo cleared in a run is empty after it**, if no other clear of the run touches its
 stamp. -/
-theorem memoRG_clearsL {κ ν : Type} [BEq κ] [Hashable κ] [LawfulBEq κ] [LawfulHashable κ]
-    (S : MemoSch) (hS : S.WF) (K : MemoKey κ) (dv : Word → ν) :
+theorem memoRV_clearsL {κ ν : Type} [BEq κ] [Hashable κ] [LawfulBEq κ] [LawfulHashable κ]
+    (S : MemoSch) (hS : S.WF) (K : MemoKey κ) (VR : Mem → Word → ν → Prop) (hV : VConst VR) :
     ∀ (pre post : List MemoSch) (m : Mem) (mp : Std.HashMap κ ν),
     (∀ S' ∈ pre ++ post, S.cs ≠ S'.cs ∧ S.cs ≠ S'.cs + 1) → ClearsOK (pre ++ S :: post) m →
-    MemoRG S K dv m mp → MemoRG S K dv (clearsL (pre ++ S :: post) m) ∅
+    MemoRV S K VR m mp → MemoRV S K VR (clearsL (pre ++ S :: post) m) ∅
   | [], post, m, mp, hl, hok, h => by
     simp only [List.nil_append, clearsL] at hok ⊢
-    exact memoRG_clearsL_other S hS K dv post (fun S' h' => hl S' (by simpa using h')) _ _
-      (memoRG_clear S hS K dv m mp h hok.1)
+    exact memoRV_clearsL_other S hS K VR hV post (fun S' h' => hl S' (by simpa using h')) _ _
+      (memoRV_clear S hS K VR m mp h hok.1)
   | S₀ :: pre, post, m, mp, hl, hok, h => by
     simp only [List.cons_append, clearsL] at hok ⊢
     have h0 := hl S₀ (by simp)
-    refine memoRG_clearsL S hS K dv pre post _ mp (fun S' h' => hl S' (by simp [h'])) hok.2 ?_
-    exact memoRG_frame S hS K dv [] _ (by simp) (by simp [h0.1, h0.2]) m _ (mclearG_frame S₀ m) mp h
+    refine memoRV_clearsL S hS K VR hV pre post _ mp (fun S' h' => hl S' (by simp [h'])) hok.2 ?_
+    exact memoRV_frame S hS K VR [] _ (by simp) (by simp [h0.1, h0.2]) m _ (mclearG_frame S₀ m)
+      (hV m _) mp h
 
 /-- The eleven core memos, in `flush_caches()`' order. -/
 def coreSchs : List MemoSch :=
@@ -255,30 +272,31 @@ theorem CoreR.flush {m : Mem} {c : Caches} (h : CoreR m c) (hok : FlushOK m) :
     ((MemFrame.setCtl _ 114 0).mono (by simp) (by simp)).trans
       ((MemFrame.setCtl _ 115 0).mono (by simp) (by simp))
   have hc : ∀ {κ ν : Type} [BEq κ] [Hashable κ] [LawfulBEq κ] [LawfulHashable κ] (S : MemoSch)
-      (K : MemoKey κ) (dv : Word → ν) (mp : Std.HashMap κ ν) (pre post : List MemoSch),
-      S.WF → pre ++ S :: post = coreSchs → (∀ S' ∈ pre ++ post, S.cs ≠ S'.cs ∧ S.cs ≠ S'.cs + 1) →
-      S.cs ≠ 114 → S.cs ≠ 115 → MemoRG S K dv m mp → MemoRG S K dv (flushMem m) ∅ :=
-    fun S K dv mp pre post hS he hl h1 h2 hR => by
-      have := memoRG_clearsL S hS K dv pre post m mp hl (he ▸ hok) hR
+      (K : MemoKey κ) (VR : Mem → Word → ν → Prop) (mp : Std.HashMap κ ν) (pre post : List MemoSch),
+      VConst VR → S.WF → pre ++ S :: post = coreSchs →
+      (∀ S' ∈ pre ++ post, S.cs ≠ S'.cs ∧ S.cs ≠ S'.cs + 1) →
+      S.cs ≠ 114 → S.cs ≠ 115 → MemoRV S K VR m mp → MemoRV S K VR (flushMem m) ∅ :=
+    fun S K VR mp pre post hV hS he hl h1 h2 hR => by
+      have := memoRV_clearsL S hS K VR hV pre post m mp hl (he ▸ hok) hR
       rw [he] at this
-      exact memoRG_frame S hS K dv [] _ (by simp) (by simp [h1, h2]) _ _ fr _ this
+      exact memoRV_frame S hS K VR [] _ (by simp) (by simp [h1, h2]) _ _ fr (hV _ _) _ this
   obtain ⟨-, -, -, -, hsz⟩ := h.bank
   have hsz' : (114 : Word).toNat + 1 < ((flushMem m).arr64 CTL).size := by
     have e1 : ((bankReset (clearsL coreSchs m)).arr64 CTL).size = (m.arr64 CTL).size := by
       rw [fr.2.2.1, (clearsL_frame coreSchs m).2.2.1]
     rw [show flushMem m = bankReset (clearsL coreSchs m) from rfl, e1]; exact hsz
   refine ⟨ModeMaps.empty, 0, 0, ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩⟩
-  · exact ⟨hc wcSch _ _ _ [] _ (coreSch_wf _ _ (by decide) (by decide)) rfl (by decide) (by decide)
+  · exact ⟨hc wcSch _ _ _ [] _ vh_const (coreSch_wf _ _ (by decide) (by decide)) rfl (by decide) (by decide)
       (by decide) h.wc.memo, bank_empty 0, fresh_empty 0⟩
-  · exact ⟨hc wkSch _ _ _ [wcSch] _ (coreSch_wf _ _ (by decide) (by decide)) rfl (by decide)
+  · exact ⟨hc wkSch _ _ _ [wcSch] _ vh_const (coreSch_wf _ _ (by decide) (by decide)) rfl (by decide)
       (by decide) (by decide) h.wk.memo, bank_empty 0, fresh_empty 0⟩
-  · exact ⟨hc whSch _ _ _ [wcSch, wkSch] _ (coreSch_wf _ _ (by decide) (by decide)) rfl (by decide)
+  · exact ⟨hc whSch _ _ _ [wcSch, wkSch] _ vh_const (coreSch_wf _ _ (by decide) (by decide)) rfl (by decide)
       (by decide) (by decide) h.wh.memo, bank_empty 0, fresh_empty 0⟩
-  · exact ⟨hc inSch _ _ _ [wcSch, wkSch, whSch] _ (coreSch_wf _ _ (by decide) (by decide)) rfl
+  · exact ⟨hc inSch _ _ _ [wcSch, wkSch, whSch] _ vh_const (coreSch_wf _ _ (by decide) (by decide)) rfl
       (by decide) (by decide) (by decide) h.inf.memo, bank_empty 0, fresh_empty 0⟩
-  · exact ⟨hc ioSch _ _ _ [wcSch, wkSch, whSch, inSch] _ (coreSch_wf _ _ (by decide) (by decide))
+  · exact ⟨hc ioSch _ _ _ [wcSch, wkSch, whSch, inSch] _ vh_const (coreSch_wf _ _ (by decide) (by decide))
       rfl (by decide) (by decide) (by decide) h.io.memo, bank_empty 0, fresh_empty 0⟩
-  · exact ⟨hc deSch _ _ _ [wcSch, wkSch, whSch, inSch, ioSch] _
+  · exact ⟨hc deSch _ _ _ [wcSch, wkSch, whSch, inSch, ioSch] _ vb_const
       (coreSch_wf _ _ (by decide) (by decide)) rfl (by decide) (by decide) (by decide) h.de.memo,
       bank_empty 0, fresh_empty 0⟩
   · have e0 : ((flushClears m).arr64 CTL).size = (m.arr64 CTL).size :=
@@ -289,15 +307,15 @@ theorem CoreR.flush {m : Mem} {c : Caches} (h : CoreR m c) (hok : FlushOK m) :
     refine ⟨?_, ?_, by decide, by decide, hsz'⟩
     · simp only [flushMem, bankReset, rdW_set64, size_set64, e0]; simp; omega
     · simp only [flushMem, bankReset, rdW_set64, size_set64, e0]; simp; omega
-  · exact hc ctSch _ _ _ [wcSch, wkSch, whSch, inSch, ioSch, deSch] _
+  · exact hc ctSch _ _ _ [wcSch, wkSch, whSch, inSch, ioSch, deSch] _ vh_const
       (coreSch_wf _ _ (by decide) (by decide)) rfl (by decide) (by decide) (by decide) h.ct
-  · exact hc cvSch _ _ _ [wcSch, wkSch, whSch, inSch, ioSch, deSch, ctSch] _
+  · exact hc cvSch _ _ _ [wcSch, wkSch, whSch, inSch, ioSch, deSch, ctSch] _ vh_const
       (coreSch_wf _ _ (by decide) (by decide)) rfl (by decide) (by decide) (by decide) h.cv
-  · exact hc rrSch _ _ _ [wcSch, wkSch, whSch, inSch, ioSch, deSch, ctSch, cvSch] _
+  · exact hc rrSch _ _ _ [wcSch, wkSch, whSch, inSch, ioSch, deSch, ctSch, cvSch] _ vh_const
       (coreSch_wf _ _ (by decide) (by decide)) rfl (by decide) (by decide) (by decide) h.rr
-  · exact hc lqSch _ _ _ [wcSch, wkSch, whSch, inSch, ioSch, deSch, ctSch, cvSch, rrSch] _
+  · exact hc lqSch _ _ _ [wcSch, wkSch, whSch, inSch, ioSch, deSch, ctSch, cvSch, rrSch] _ (fun _ _ _ _ h => h)
       (coreSch_wf _ _ (by decide) (by decide)) rfl (by decide) (by decide) (by decide) h.lq
-  · exact hc lsqSch _ _ _ [wcSch, wkSch, whSch, inSch, ioSch, deSch, ctSch, cvSch, rrSch, lqSch] _
+  · exact hc lsqSch _ _ _ [wcSch, wkSch, whSch, inSch, ioSch, deSch, ctSch, cvSch, rrSch, lqSch] _ (fun _ _ _ _ h => h)
       (coreSch_wf _ _ (by decide) (by decide)) rfl (by decide) (by decide) (by decide) h.lsq
 
 /-! ## The pin table: array 128 (`PINS`)

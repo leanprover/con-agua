@@ -13,7 +13,7 @@ import ConAgua.Census.Attr
 * a probe of a mode memo at the current generation is the twin's lookup (`ModeR.findE`,
   `ModeR.findD`), a `find; put` is its insert and keeps the other generations' banks
   (`ModeR.setE`, `ModeR.setD`, `Kept`);
-* the same for the three constant caches (`MemoRG` directly: `ct`, `cv`, `rr`);
+* the same for the three constant caches (`MemoRV … VH` directly: `memoRV_findP`, `findR`);
 * the whole tier across one memo's `find; put` (`CoreRM.set_wc`, …): the other eight memos and the
   bank words by their frames.
 
@@ -94,27 +94,29 @@ variable {S : MemoSch} {m : Mem} {M : Std.HashMap (EIdx × Word) EIdx} {G g : Wo
 
 /-- **A probe of a one-handle mode memo** at the current generation: a hit is the twin table's
 entry, a miss its absence. -/
-theorem ModeR.findE (h : ModeR S eKeyG decEV m M G g t) (hB : BankW BANKC m G g) (e : Word)
+theorem ModeR.findE (h : ModeR S eKeyG VH m M G g t) (hB : BankW BANKC m G g) (e : Word)
     (he : e.toNat < 2 ^ 32) (hr : mfindG S m e (genW 0 g) ≠ []) :
     ((mfindG S m e (genW 0 g)).headD 0 ≠ 0 →
-      t[decE e]? = some (decE (mvG S m ((mfindG S m e (genW 0 g)).tail.headD 0)))) ∧
+      t[decE e]? = some (decE (mvG S m ((mfindG S m e (genW 0 g)).tail.headD 0))) ∧
+      (mvG S m ((mfindG S m e (genW 0 g)).tail.headD 0)).toNat < 2 ^ 32) ∧
     ((mfindG S m e (genW 0 g)).headD 0 = 0 → t[decE e]? = none) := by
   have hg : g.toNat < 2 ^ 32 := by
     obtain ⟨-, -, hgG, hGl, -⟩ := hB; rw [UInt64.le_iff_toNat_le] at hgG; omega
-  have := bank_find S bmKey _ (fun _ w v => v = decEV w) m M h.memo g hg t h.bank e 0 ⟨he, rfl⟩ hr
+  have := bank_find S bmKey _ VH m M h.memo g hg t h.bank e 0 ⟨he, rfl⟩ hr
   refine ⟨fun hh => ?_, this.2⟩
-  obtain ⟨v, h1, h2⟩ := this.1 hh
-  exact h1.trans (congrArg some h2)
+  obtain ⟨v, h1, h2, h3⟩ := this.1 hh
+  exact ⟨h1.trans (congrArg some h2), h3⟩
 
 /-- **A `find; put` of a one-handle mode memo** at the current generation is the twin table's
 insert; the map grows by one entry at `g`. -/
 theorem ModeR.setE (hS : S.WF) (hc : S.cs + 1 ≠ BANKC ∧ S.cs + 1 ≠ BANKC + 1)
-    (h : ModeR S eKeyG decEV m M G g t) (hB : BankW BANKC m G g) (e r : Word)
-    (he : e.toNat < 2 ^ 32) (m' : Mem) (hs : msetG S m e (genW 0 g) r = some m') :
-    ModeR S eKeyG decEV m' (M.insert (decE e, g) (decE r)) G g (t.insert (decE e) (decE r)) ∧
+    (h : ModeR S eKeyG VH m M G g t) (hB : BankW BANKC m G g) (e r : Word)
+    (he : e.toNat < 2 ^ 32) (hr : r.toNat < 2 ^ 32) (m' : Mem)
+    (hs : msetG S m e (genW 0 g) r = some m') :
+    ModeR S eKeyG VH m' (M.insert (decE e, g) (decE r)) G g (t.insert (decE e) (decE r)) ∧
       BankW BANKC m' G g := by
-  have := bank_put S hS bmKey _ (fun _ w v => v = decEV w) (vstable_eq S decEV) BANKC hc m M
-    h.memo G g hB h.fresh t h.bank e 0 r ⟨he, rfl⟩ (decE r) rfl m' hs
+  have := bank_put S hS bmKey _ VH (fun _ _ _ _ _ h => h) BANKC hc m M
+    h.memo G g hB h.fresh t h.bank e 0 r ⟨he, rfl⟩ (decE r) ⟨rfl, hr⟩ m' hs
   exact ⟨⟨this.1, this.2.1, this.2.2.1⟩, this.2.2.2⟩
 
 end modeE
@@ -124,26 +126,26 @@ variable {S : MemoSch} {m : Mem} {M : Std.HashMap ((EIdx × EIdx) × Word) Bool}
   {t : Std.HashMap (EIdx × EIdx) Bool}
 
 /-- A probe of `defeqC` at the current generation. -/
-theorem ModeR.findD (h : ModeR S dKeyG decB m M G g t) (hB : BankW BANKC m G g) (a b : Word)
+theorem ModeR.findD (h : ModeR S dKeyG VB m M G g t) (hB : BankW BANKC m G g) (a b : Word)
     (ha : a.toNat < 2 ^ 32) (hb : b.toNat < 2 ^ 32) (hr : mfindG S m a (genW b g) ≠ []) :
     ((mfindG S m a (genW b g)).headD 0 ≠ 0 →
       t[(decE a, decE b)]? = some (decB (mvG S m ((mfindG S m a (genW b g)).tail.headD 0)))) ∧
     ((mfindG S m a (genW b g)).headD 0 = 0 → t[(decE a, decE b)]? = none) := by
   have hg : g.toNat < 2 ^ 32 := by
     obtain ⟨-, -, hgG, hGl, -⟩ := hB; rw [UInt64.le_iff_toNat_le] at hgG; omega
-  have := bank_find S pairKey _ (fun _ w v => v = decB w) m M h.memo g hg t h.bank a b ⟨ha, hb⟩ hr
+  have := bank_find S pairKey _ VB m M h.memo g hg t h.bank a b ⟨ha, hb⟩ hr
   refine ⟨fun hh => ?_, this.2⟩
   obtain ⟨v, h1, h2⟩ := this.1 hh
   exact h1.trans (congrArg some h2)
 
 /-- A `find; put` of `defeqC` at the current generation. -/
 theorem ModeR.setD (hS : S.WF) (hc : S.cs + 1 ≠ BANKC ∧ S.cs + 1 ≠ BANKC + 1)
-    (h : ModeR S dKeyG decB m M G g t) (hB : BankW BANKC m G g) (a b r : Word)
+    (h : ModeR S dKeyG VB m M G g t) (hB : BankW BANKC m G g) (a b r : Word)
     (ha : a.toNat < 2 ^ 32) (hb : b.toNat < 2 ^ 32) (m' : Mem)
     (hs : msetG S m a (genW b g) r = some m') :
-    ModeR S dKeyG decB m' (M.insert ((decE a, decE b), g) (decB r)) G g
+    ModeR S dKeyG VB m' (M.insert ((decE a, decE b), g) (decB r)) G g
         (t.insert (decE a, decE b) (decB r)) ∧ BankW BANKC m' G g := by
-  have := bank_put S hS pairKey _ (fun _ w v => v = decB w) (vstable_eq S decB) BANKC hc m M
+  have := bank_put S hS pairKey _ VB (fun _ _ _ _ _ h => h) BANKC hc m M
     h.memo G g hB h.fresh t h.bank a b r ⟨ha, hb⟩ (decB r) rfl m' hs
   exact ⟨⟨this.1, this.2.1, this.2.2.1⟩, this.2.2.2⟩
 
@@ -152,24 +154,28 @@ end modeD
 /-! ## The constant caches -/
 
 /-- A probe of a pair-keyed constant cache (`constTyC`, `constValC`). -/
-theorem memoRG_findP {k₁ k₂ : IdxKind} {S : MemoSch} {m : Mem}
-    {t : Std.HashMap (Idx k₁ × Idx k₂) EIdx} (h : MemoRG S pairKey decEV m t) (x y : Word)
+theorem memoRV_findP {k₁ k₂ : IdxKind} {S : MemoSch} {m : Mem}
+    {t : Std.HashMap (Idx k₁ × Idx k₂) EIdx} (h : MemoRV S pairKey VH m t) (x y : Word)
     (hx : x.toNat < 2 ^ 32) (hy : y.toNat < 2 ^ 32) (hr : mfindG S m x y ≠ []) :
     ((mfindG S m x y).headD 0 ≠ 0 →
-      t[((decI x : Idx k₁), (decI y : Idx k₂))]? = some (decE (mvG S m ((mfindG S m x y).tail.headD 0)))) ∧
-    ((mfindG S m x y).headD 0 = 0 → t[((decI x : Idx k₁), (decI y : Idx k₂))]? = none) :=
-  ⟨fun hh => memoRG_hit S pairKey decEV m t h x y hr hh ⟨hx, hy⟩,
-    fun hh => memoRG_miss S pairKey decEV m t h x y ⟨hx, hy⟩ hr hh⟩
+      t[((decI x : Idx k₁), (decI y : Idx k₂))]? = some (decE (mvG S m ((mfindG S m x y).tail.headD 0))) ∧
+      (mvG S m ((mfindG S m x y).tail.headD 0)).toNat < 2 ^ 32) ∧
+    ((mfindG S m x y).headD 0 = 0 → t[((decI x : Idx k₁), (decI y : Idx k₂))]? = none) := by
+  refine ⟨fun hh => ?_, fun hh => memoRV_miss S pairKey VH m t h x y ⟨hx, hy⟩ hr hh⟩
+  obtain ⟨v, h1, h2, h3⟩ := memoRV_hit S pairKey VH m t h x y hr hh ⟨hx, hy⟩
+  exact ⟨h1.trans (congrArg some h2), h3⟩
 
 /-- A probe of `ruleRhsC`. -/
-theorem memoRG_findR {S : MemoSch} {m : Mem} {t : Std.HashMap (NIdx × NIdx × LsIdx) EIdx}
-    (h : MemoRG S rrKey decEV m t) (x y : Word) (hx : x.toNat < 2 ^ 32)
+theorem memoRV_findR {S : MemoSch} {m : Mem} {t : Std.HashMap (NIdx × NIdx × LsIdx) EIdx}
+    (h : MemoRV S rrKey VH m t) (x y : Word) (hx : x.toNat < 2 ^ 32)
     (hr : mfindG S m x y ≠ []) :
     ((mfindG S m x y).headD 0 ≠ 0 →
-      t[rrKey.dk x y]? = some (decE (mvG S m ((mfindG S m x y).tail.headD 0)))) ∧
-    ((mfindG S m x y).headD 0 = 0 → t[rrKey.dk x y]? = none) :=
-  ⟨fun hh => memoRG_hit S rrKey decEV m t h x y hr hh hx,
-    fun hh => memoRG_miss S rrKey decEV m t h x y hx hr hh⟩
+      t[rrKey.dk x y]? = some (decE (mvG S m ((mfindG S m x y).tail.headD 0))) ∧
+      (mvG S m ((mfindG S m x y).tail.headD 0)).toNat < 2 ^ 32) ∧
+    ((mfindG S m x y).headD 0 = 0 → t[rrKey.dk x y]? = none) := by
+  refine ⟨fun hh => ?_, fun hh => memoRV_miss S rrKey VH m t h x y hx hr hh⟩
+  obtain ⟨v, h1, h2, h3⟩ := memoRV_hit S rrKey VH m t h x y hr hh hx
+  exact ⟨h1.trans (congrArg some h2), h3⟩
 
 /-- `rrKey`'s second word for a constructor and a level list. -/
 theorem rrKey_dk (r c u : Word) (hc : c.toNat < 2 ^ 32) (hu : u.toNat < 2 ^ 32) :

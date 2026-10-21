@@ -65,13 +65,18 @@ def whnfCoreL : FunDecl := lfn (mode, cheap, vis, d, e) locals (g, fd, j, dd, x,
   return x
 }
 
-@[l_impl ConRon.Arena.whnfCoreBody ConRon.Arena.whnfCoreLoop]
-def whnfCoreLoopL : FunDecl := lfn (mode, cheap, vis, d, e) locals (st, r) {
+/-- The loop of `whnf_core_loop`, named for its spec. -/
+def whnfCoreLoopB : Stmt := lblk (mode, cheap, vis, d, e, st, r) {
   while 0 == 0 {
     (st, r) := call whnf_core_step(mode, cheap, vis, d, e);
     if st == 0 { return r };
     e := r
-  };
+  }
+}
+
+@[l_impl ConRon.Arena.whnfCoreBody ConRon.Arena.whnfCoreLoop]
+def whnfCoreLoopL : FunDecl := lfn (mode, cheap, vis, d, e) locals (st, r) {
+  ⟪whnfCoreLoopB⟫;
   abort
 }
 
@@ -314,7 +319,7 @@ def IotaRecAtOK (p : Prog) (n : Nat) : Prop :=
     so.toNat + sn.toNat ≤ (spTop s₀.mem).toNat →
     CoreSpec p n "iota_rec_at" [mode, vis, d, hd, so, sn]
       (iotaRecAt (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE hd) xs xs.size)
-      decOptR s₀ a₀ dn vis fe M G g
+      decOptR s₀ a₀ dn vis fe M G g ResW
 
 /-- **The callees of this file not written here.** -/
 structure CoreCallees (p : Prog) : Prop where
@@ -344,7 +349,7 @@ theorem whnfCoreStep_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤
     (he : HW e) :
     CoreSpec p (n + 1) "whnf_core_step" [mode, cheap, vis, d, e]
       (whnfCoreStep (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat
-        (decE e)) decStep s₀ a₀ dn vis fe MM G g := sorry
+        (decE e)) decStep s₀ a₀ dn vis fe MM G g ResW := sorry
 
 /-- **`whnf_core_loop` refines `whnfCoreLoop` at every twin loop fuel `K ≥ n`.** -/
 @[refines ConRon.Arena.whnfCoreLoop]
@@ -380,7 +385,7 @@ theorem whnfApp_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (
     (hlo : ao.toNat + an.toNat + an.toNat ≤ vo.toNat) :
     CoreSpec p (n + 1) "whnf_app" [mode, vis, d, v, hd, vo, vn, same, ao, an, i]
       (whnfApp (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE v) (decE hd) vargs
-        (same != 0) args nodes i.toNat) decStep s₀ a₀ dn vis fe MM G g := sorry
+        (same != 0) args nodes i.toNat) decStep s₀ a₀ dn vis fe MM G g ResW := sorry
 
 /-- **`beta_peel` refines `betaPeel t #[a] args i`.** -/
 @[refines ConRon.Arena.betaPeel]
@@ -389,7 +394,7 @@ theorem betaPeel_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Op
     (hS : CoreS dn s₀.mem a₀ vis fe MM G g) (ht : HW t) (ha : HW a) (har : SpineR s₀.mem ao an args)
     (hlo : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat) :
     CoreSpec p (n + 1) "beta_peel" [t, a, ao, an, i]
-      (betaPeel (decE t) #[decE a] args i.toNat) decStep s₀ a₀ dn vis fe MM G g := sorry
+      (betaPeel (decE t) #[decE a] args i.toNat) decStep s₀ a₀ dn vis fe MM G g ResW := sorry
 
 /-- **`whnf_core_step_proj` refines `whnfCoreStepProj`.** -/
 @[refines ConRon.Arena.whnfCoreStepProj]
@@ -399,7 +404,7 @@ theorem whnfCoreStepProj_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n
     (hs : SlotPre s₀ a₀ dn vis fe MM G g mode) (he : HW e) (hsn : HW sn) (hpe : HW pe) :
     CoreSpec p (n + 1) "whnf_core_step_proj" [mode, cheap, vis, d, e, sn, i, pe]
       (whnfCoreStepProj (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat
-        (decE e) (decI sn) i.toNat (decE pe)) decStep s₀ a₀ dn vis fe MM G g := sorry
+        (decE e) (decI sn) i.toNat (decE pe)) decStep s₀ a₀ dn vis fe MM G g ResW := sorry
 
 /-- **`reduce_proj_core` refines `reduceProjCore`.** -/
 @[refines ConRon.Arena.reduceProjCore]
@@ -409,7 +414,7 @@ theorem reduceProjCore_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n �
     (hs : SlotPre s₀ a₀ dn vis fe MM G g mode) (hsn : HW sn) (hc' : HW c) :
     CoreSpec p (n + 1) "reduce_proj_core" [mode, vis, d, sn, i, c]
       (reduceProjCore (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat
-        (decE c)) decOptR s₀ a₀ dn vis fe MM G g := sorry
+        (decE c)) decOptR s₀ a₀ dn vis fe MM G g ResW := sorry
 
 /-- **`proj_cert` refines `projCertAt fe true`** (`projCert`). -/
 @[refines ConRon.Arena.projCert]

@@ -178,20 +178,29 @@ theorem CoreAfter.trans {dn : NIdx → Option ConLeche.Name} {m₀ m₁ m₂ : M
   obtain ⟨M'', G'', hS', hK', hSt', hG'⟩ := h₂ M' G' hS
   exact ⟨M'', G'', hS', hK.trans hK' hG, hSt.trans hSt', UInt64.le_trans hG hG'⟩
 
+/-- The result word is below `2^32` (a handle, a `Bool`, a level answer): what `decE` needs to
+be faithful when the caller computes with the word itself. The default validity of a result. -/
+def ResH (r : List Word) : Prop := HW (r.headD 0)
+
+/-- The first two result words are below `2^32` (an `Option EIdx`, a `WhnfStep`). -/
+def ResW (r : List Word) : Prop := HW (r.headD 0) ∧ HW (r.tail.headD 0)
+
 /-- **The refinement post of a core function**: the twin run `T` from `a₀` succeeds, the relation
 holds after it, and the result words decode (`dec`) to its result. -/
 def CoreRef {α : Type} [Inhabited α] (T : AM α) (a₀ : AState) (dec : List Word → α)
     (dn : NIdx → Option ConLeche.Name) (m₀ : Mem) (vis : Word) (fe : IFEnv) (M : ModeMaps)
-    (G g : Word) (r : List Word) (m : Mem) : Prop :=
-  AM.ok T a₀ ∧ CoreAfter dn m₀ m (AM.st T a₀) vis fe M G g ∧ AM.res T a₀ = dec r
+    (G g : Word) (r : List Word) (m : Mem) (ok : List Word → Prop := ResH) : Prop :=
+  AM.ok T a₀ ∧ CoreAfter dn m₀ m (AM.st T a₀) vis fe M G g ∧ AM.res T a₀ = dec r ∧ ok r
+
+
 
 /-- The spec shape: from `s₀` under `CoreS`, the call refines `T`. -/
 def CoreSpec {α : Type} [Inhabited α] (p : Prog) (n : Nat) (f : FnName) (args : List Word)
     (T : AM α) (dec : List Word → α) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (vis : Word) (fe : IFEnv) (M : ModeMaps) (G g : Word) : Prop :=
+    (vis : Word) (fe : IFEnv) (M : ModeMaps) (G g : Word) (ok : List Word → Prop := ResH) : Prop :=
   ⦃fun s => s = s₀⦄
   invoke p (exec p n) f args
-  ⦃fun r s' => LocEq s' s₀ ∧ CoreRef T a₀ dec dn s₀.mem vis fe M G g r s'.mem; ⊤⦄
+  ⦃fun r s' => LocEq s' s₀ ∧ CoreRef T a₀ dec dn s₀.mem vis fe M G g r s'.mem ok; ⊤⦄
 
 /-! ## Calls as functions of the memory
 
@@ -240,9 +249,10 @@ theorem callW_spec (p : Prog) (n : Nat) (f : FnName) (vs : List Word) (s₀ : St
 theorem CoreSpec.of_callW {α : Type} [Inhabited α] {p : Prog} {n : Nat} {f : FnName}
     {args : List Word} {T : AM α} {dec : List Word → α} {s₀ : St} {a₀ : AState}
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {M : ModeMaps} {G g : Word}
-    (h : CoreSpec p n f args T dec s₀ a₀ dn vis fe M G g) {r : List Word} {m' : Mem}
+    {ok : List Word → Prop}
+    (h : CoreSpec p n f args T dec s₀ a₀ dn vis fe M G g ok) {r : List Word} {m' : Mem}
     (hc : callW p n f args s₀.mem = some (r, m')) :
-    CoreRef T a₀ dec dn s₀.mem vis fe M G g r m' := by
+    CoreRef T a₀ dec dn s₀.mem vis fe M G g r m' ok := by
   simp only [callW] at hc
   cases hr : (invoke p (exec p n) f args).run { mem := s₀.mem, loc := Locals.init [] } with
   | error e => simp [hr] at hc

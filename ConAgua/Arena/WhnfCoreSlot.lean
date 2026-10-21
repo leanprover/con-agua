@@ -149,13 +149,13 @@ theorem Kept.insert' {κ ν : Type} [BEq κ] [Hashable κ] [LawfulBEq κ] {M M' 
 /-- `whnfCoreC` gains an entry. -/
 theorem CoreS.set_wc {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {G g : Word} (hS : CoreS dn m a vis fe M G g) (e x : Word)
-    (he : HW e) (hs : msetG wcSch m e (genW 0 g) x = some m') :
+    (he : HW e) (hx : HW x) (hs : msetG wcSch m e (genW 0 g) x = some m') :
     CoreS dn m' { a with caches := { a.caches with
         whnfCoreC := a.caches.whnfCoreC.insert (decE e) (decE x) } } vis fe
       { M with wc := M.wc.insert (decE e, g) (decE x) } G g ∧ StackKept m m' := by
   have hf : MemFrame [96] [97] m m' := msetG_frame wcSch (coreSch_wf _ _ (by decide) (by decide)) m m' _ _ x hs
   obtain ⟨hq, hB⟩ := hS.core.wc.setE (coreSch_wf _ _ (by decide) (by decide)) ⟨by decide, by decide⟩
-    hS.core.bank e x he m' hs
+    hS.core.bank e x he hx m' hs
   have fr : ∀ {κ ν : Type} [BEq κ] [Hashable κ] (S : MemoSch) (K : MemoKey κ) (dv : Word → ν)
       (mp : Std.HashMap κ ν), S.WF → S.arr ≠ 96 → S.cs ≠ 97 → MemoRG S K dv m mp →
       MemoRG S K dv m' mp :=
@@ -163,23 +163,30 @@ theorem CoreS.set_wc {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
       memoRV_frame S hS' K _ [96] [97] (by simpa using h1) (by simpa using h2) m m' hf
         (fun _ _ h => h) mp hR
   have mr : ∀ {κ ν : Type} [BEq κ] [Hashable κ] {S : MemoSch} {K : MemoKey (κ × Word)}
-      {dv : Word → ν} {M₀ : Std.HashMap (κ × Word) ν} {t : Std.HashMap κ ν}, S.WF → S.arr ≠ 96 →
-      S.cs ≠ 97 → ModeR S K dv m M₀ G g t → ModeR S K dv m' M₀ G g t :=
-    fun hS' h1 h2 h => h.frame hS' (by simpa using h1) (by simpa using h2) hf
+      {VR : Mem → Word → ν → Prop} {M₀ : Std.HashMap (κ × Word) ν} {t : Std.HashMap κ ν}, S.WF →
+      VConst VR → S.arr ≠ 96 → S.cs ≠ 97 → ModeR S K VR m M₀ G g t →
+      ModeR S K VR m' M₀ G g t :=
+    fun hS' hV h1 h2 h => h.frame hS' hV (by simpa using h1) (by simpa using h2) hf
+  have frv : ∀ {κ : Type} [BEq κ] [Hashable κ] (S : MemoSch) (K : MemoKey κ)
+      (mp : Std.HashMap κ EIdx), S.WF → S.arr ≠ 96 → S.cs ≠ 97 → MemoRV S K VH m mp →
+      MemoRV S K VH m' mp :=
+    fun S K mp hS' h1 h2 hR =>
+      memoRV_frame S hS' K _ [96] [97] (by simpa using h1) (by simpa using h2) m m' hf
+        (vh_const m m') mp hR
   have hspn : m'.arr64 SPN = m.arr64 SPN := hf.1 SPN (by simp [SPN]) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp)
   refine ⟨⟨⟨ArenaR.caches_irrel _ (ArenaR.frame_ext [96] [97] (by simp) (by simp) m m' hf a
         hS.arena.1), DerR.of_store _ _ _ (DerR.frameM [96] [97] m m' hf (by simp) a hS.arena.2) rfl⟩,
       ⟨hq,
-        mr (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.wk,
-        mr (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.wh,
-        mr (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.inf,
-        mr (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.io,
-        mr (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.de,
+        mr (coreSch_wf _ _ (by decide) (by decide)) vh_const (by decide) (by decide) hS.core.wk,
+        mr (coreSch_wf _ _ (by decide) (by decide)) vh_const (by decide) (by decide) hS.core.wh,
+        mr (coreSch_wf _ _ (by decide) (by decide)) vh_const (by decide) (by decide) hS.core.inf,
+        mr (coreSch_wf _ _ (by decide) (by decide)) vh_const (by decide) (by decide) hS.core.io,
+        mr (coreSch_wf _ _ (by decide) (by decide)) vb_const (by decide) (by decide) hS.core.de,
         hB,
-        fr _ _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.ct,
-        fr _ _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.cv,
-        fr _ _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.rr,
+        frv _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.ct,
+        frv _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.cv,
+        frv _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.rr,
         fr _ _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.lq,
         fr _ _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.lsq⟩,
       hS.pins.congr (hf.1 PINS (by simp [PINS]) (by decide)),
@@ -191,13 +198,13 @@ theorem CoreS.set_wc {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
 /-- `whnfCoreCheapC` gains an entry. -/
 theorem CoreS.set_wk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {G g : Word} (hS : CoreS dn m a vis fe M G g) (e x : Word)
-    (he : HW e) (hs : msetG wkSch m e (genW 0 g) x = some m') :
+    (he : HW e) (hx : HW x) (hs : msetG wkSch m e (genW 0 g) x = some m') :
     CoreS dn m' { a with caches := { a.caches with
         whnfCoreCheapC := a.caches.whnfCoreCheapC.insert (decE e) (decE x) } } vis fe
       { M with wk := M.wk.insert (decE e, g) (decE x) } G g ∧ StackKept m m' := by
   have hf : MemFrame [97] [99] m m' := msetG_frame wkSch (coreSch_wf _ _ (by decide) (by decide)) m m' _ _ x hs
   obtain ⟨hq, hB⟩ := hS.core.wk.setE (coreSch_wf _ _ (by decide) (by decide)) ⟨by decide, by decide⟩
-    hS.core.bank e x he m' hs
+    hS.core.bank e x he hx m' hs
   have fr : ∀ {κ ν : Type} [BEq κ] [Hashable κ] (S : MemoSch) (K : MemoKey κ) (dv : Word → ν)
       (mp : Std.HashMap κ ν), S.WF → S.arr ≠ 97 → S.cs ≠ 99 → MemoRG S K dv m mp →
       MemoRG S K dv m' mp :=
@@ -205,23 +212,30 @@ theorem CoreS.set_wk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
       memoRV_frame S hS' K _ [97] [99] (by simpa using h1) (by simpa using h2) m m' hf
         (fun _ _ h => h) mp hR
   have mr : ∀ {κ ν : Type} [BEq κ] [Hashable κ] {S : MemoSch} {K : MemoKey (κ × Word)}
-      {dv : Word → ν} {M₀ : Std.HashMap (κ × Word) ν} {t : Std.HashMap κ ν}, S.WF → S.arr ≠ 97 →
-      S.cs ≠ 99 → ModeR S K dv m M₀ G g t → ModeR S K dv m' M₀ G g t :=
-    fun hS' h1 h2 h => h.frame hS' (by simpa using h1) (by simpa using h2) hf
+      {VR : Mem → Word → ν → Prop} {M₀ : Std.HashMap (κ × Word) ν} {t : Std.HashMap κ ν}, S.WF →
+      VConst VR → S.arr ≠ 97 → S.cs ≠ 99 → ModeR S K VR m M₀ G g t →
+      ModeR S K VR m' M₀ G g t :=
+    fun hS' hV h1 h2 h => h.frame hS' hV (by simpa using h1) (by simpa using h2) hf
+  have frv : ∀ {κ : Type} [BEq κ] [Hashable κ] (S : MemoSch) (K : MemoKey κ)
+      (mp : Std.HashMap κ EIdx), S.WF → S.arr ≠ 97 → S.cs ≠ 99 → MemoRV S K VH m mp →
+      MemoRV S K VH m' mp :=
+    fun S K mp hS' h1 h2 hR =>
+      memoRV_frame S hS' K _ [97] [99] (by simpa using h1) (by simpa using h2) m m' hf
+        (vh_const m m') mp hR
   have hspn : m'.arr64 SPN = m.arr64 SPN := hf.1 SPN (by simp [SPN]) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp)
   refine ⟨⟨⟨ArenaR.caches_irrel _ (ArenaR.frame_ext [97] [99] (by simp) (by simp) m m' hf a
         hS.arena.1), DerR.of_store _ _ _ (DerR.frameM [97] [99] m m' hf (by simp) a hS.arena.2) rfl⟩,
-      ⟨mr (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.wc,
+      ⟨mr (coreSch_wf _ _ (by decide) (by decide)) vh_const (by decide) (by decide) hS.core.wc,
         hq,
-        mr (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.wh,
-        mr (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.inf,
-        mr (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.io,
-        mr (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.de,
+        mr (coreSch_wf _ _ (by decide) (by decide)) vh_const (by decide) (by decide) hS.core.wh,
+        mr (coreSch_wf _ _ (by decide) (by decide)) vh_const (by decide) (by decide) hS.core.inf,
+        mr (coreSch_wf _ _ (by decide) (by decide)) vh_const (by decide) (by decide) hS.core.io,
+        mr (coreSch_wf _ _ (by decide) (by decide)) vb_const (by decide) (by decide) hS.core.de,
         hB,
-        fr _ _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.ct,
-        fr _ _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.cv,
-        fr _ _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.rr,
+        frv _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.ct,
+        frv _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.cv,
+        frv _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.rr,
         fr _ _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.lq,
         fr _ _ _ _ (coreSch_wf _ _ (by decide) (by decide)) (by decide) (by decide) hS.core.lsq⟩,
       hS.pins.congr (hf.1 PINS (by simp [PINS]) (by decide)),
@@ -312,7 +326,7 @@ theorem whnfCoreSlot_step (n : Nat) (hk : KnotUpTo p n) : WhnfCoreSlot p (n + 1)
     obtain ⟨hr, hm⟩ := hW
     have ht : whnfCoreStuckTag (decE e) = true := by rw [stuck_iff e he]; simpa using hst
     obtain ⟨hok, hst', hres⟩ := AM.of_run_ok _ _ _ _ (knot_whnfCore_stuck _ fe F' (cheap != 0) d.toNat _ a₀ ht)
-    refine ⟨hok, ?_, by rw [hres, decH, ← hr]⟩
+    refine ⟨hok, ?_, by rw [hres, decH, ← hr], by unfold ResH; rw [← hr]; exact he⟩
     rw [hst', ← hm]; exact ⟨MM, G, hS, KeptAll.refl _ _ _, StackKept.refl _, UInt64.le_refl _⟩
   have ht : whnfCoreStuckTag (decE e) = false := by rw [stuck_iff e he]; simpa using hst
   by_cases hc : cheap ≠ 0
@@ -330,8 +344,8 @@ theorem whnfCoreSlot_step (n : Nat) (hk : KnotUpTo p n) : WhnfCoreSlot p (n + 1)
       simp only [Option.some.injEq, Prod.mk.injEq] at hW
       obtain ⟨hr, hm⟩ := hW
       obtain ⟨hok, hst', hres⟩ := AM.of_run_ok _ _ _ _
-        (knot_whnfCore_hitK _ fe F' d.toNat _ a₀ ht _ (hf.1 h1))
-      refine ⟨hok, ?_, by rw [hres, decH, ← hr]⟩
+        (knot_whnfCore_hitK _ fe F' d.toNat _ a₀ ht _ (hf.1 h1).1)
+      refine ⟨hok, ?_, by rw [hres, decH, ← hr], by unfold ResH; rw [← hr]; exact (hf.1 h1).2⟩
       rw [hst', ← hm]; exact ⟨MM, G, hS, KeptAll.refl _ _ _, StackKept.refl _, UInt64.le_refl _⟩
     rw [if_neg h1] at hW
     have hmiss := hf.2 (by simpa using h1)
@@ -345,7 +359,7 @@ theorem whnfCoreSlot_step (n : Nat) (hk : KnotUpTo p n) : WhnfCoreSlot p (n + 1)
     | succ n' =>
     have hbody := whnfCoreBody_refines p n' (hk.mono (by omega)) F' (by omega) (by omega) s a₀ dn vis
       fe MM G g mode 1 d e hs he
-    obtain ⟨hok, ⟨M', G', hS₁, hK₁, hSt₁, hG₁⟩, hres⟩ := CoreSpec.of_callW hbody hcall
+    obtain ⟨hok, ⟨M', G', hS₁, hK₁, hSt₁, hG₁⟩, hres, hrw⟩ := CoreSpec.of_callW hbody hcall
     rw [bank_gen hS₁.core.bank, ← genW_zero'] at hW
     cases hset : msetG wkSch m₁ e (genW 0 g) (r₁.headD 0) with
     | none => rw [hset] at hW; cases hW
@@ -353,12 +367,13 @@ theorem whnfCoreSlot_step (n : Nat) (hk : KnotUpTo p n) : WhnfCoreSlot p (n + 1)
     rw [hset] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
-    obtain ⟨hS₂, hSt₂⟩ := hS₁.set_wk e (r₁.headD 0) he hset
+    obtain ⟨hS₂, hSt₂⟩ := hS₁.set_wk e (r₁.headD 0) he hrw hset
     have hb1 : ((1 : Word) != 0) = true := rfl
     rw [hb1] at hok hres
     have hrun := knot_whnfCore_missK _ fe F' d.toNat _ a₀ ht hmiss _ _ (AM.run_of_ok _ _ hok)
     obtain ⟨hok', hst', hres'⟩ := AM.of_run_ok _ _ _ _ hrun
-    refine ⟨hok', ?_, by rw [hres', hres]; simp only [decH, hr]⟩
+    refine ⟨hok', ?_, by rw [hres', hres]; simp only [decH, hr],
+      by unfold ResH; rw [← hr]; exact hrw⟩
     rw [hst', ← hm, hres]
     exact ⟨_, G', hS₂, hK₁.wk _ _, hSt₁.trans hSt₂, hG₁⟩
   · have hc0 : cheap = 0 := by simpa using hc
@@ -376,8 +391,8 @@ theorem whnfCoreSlot_step (n : Nat) (hk : KnotUpTo p n) : WhnfCoreSlot p (n + 1)
       simp only [Option.some.injEq, Prod.mk.injEq] at hW
       obtain ⟨hr, hm⟩ := hW
       obtain ⟨hok, hst', hres⟩ := AM.of_run_ok _ _ _ _
-        (knot_whnfCore_hitF _ fe F' d.toNat _ a₀ ht _ (hf.1 h1))
-      refine ⟨hok, ?_, by rw [hres, decH, ← hr]⟩
+        (knot_whnfCore_hitF _ fe F' d.toNat _ a₀ ht _ (hf.1 h1).1)
+      refine ⟨hok, ?_, by rw [hres, decH, ← hr], by unfold ResH; rw [← hr]; exact (hf.1 h1).2⟩
       rw [hst', ← hm]; exact ⟨MM, G, hS, KeptAll.refl _ _ _, StackKept.refl _, UInt64.le_refl _⟩
     rw [if_neg h1] at hW
     have hmiss := hf.2 (by simpa using h1)
@@ -391,7 +406,7 @@ theorem whnfCoreSlot_step (n : Nat) (hk : KnotUpTo p n) : WhnfCoreSlot p (n + 1)
     | succ n' =>
     have hbody := whnfCoreBody_refines p n' (hk.mono (by omega)) F' (by omega) (by omega) s a₀ dn vis
       fe MM G g mode 0 d e hs he
-    obtain ⟨hok, ⟨M', G', hS₁, hK₁, hSt₁, hG₁⟩, hres⟩ := CoreSpec.of_callW hbody hcall
+    obtain ⟨hok, ⟨M', G', hS₁, hK₁, hSt₁, hG₁⟩, hres, hrw⟩ := CoreSpec.of_callW hbody hcall
     rw [bank_gen hS₁.core.bank, ← genW_zero'] at hW
     cases hset : msetG wcSch m₁ e (genW 0 g) (r₁.headD 0) with
     | none => rw [hset] at hW; cases hW
@@ -399,15 +414,59 @@ theorem whnfCoreSlot_step (n : Nat) (hk : KnotUpTo p n) : WhnfCoreSlot p (n + 1)
     rw [hset] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
-    obtain ⟨hS₂, hSt₂⟩ := hS₁.set_wc e (r₁.headD 0) he hset
+    obtain ⟨hS₂, hSt₂⟩ := hS₁.set_wc e (r₁.headD 0) he hrw hset
     have hb0 : ((0 : Word) != 0) = false := rfl
     rw [hb0] at hok hres
     have hrun := knot_whnfCore_missF _ fe F' d.toNat _ a₀ ht hmiss _ _ (AM.run_of_ok _ _ hok)
     obtain ⟨hok', hst', hres'⟩ := AM.of_run_ok _ _ _ _ hrun
-    refine ⟨hok', ?_, by rw [hres', hres]; simp only [decH, hr]⟩
+    refine ⟨hok', ?_, by rw [hres', hres]; simp only [decH, hr],
+      by unfold ResH; rw [← hr]; exact hrw⟩
     rw [hst', ← hm, hres]
     exact ⟨_, G', hS₂, hK₁.wc _ _, hSt₁.trans hSt₂, hG₁⟩
 
 end slot
+
+
+/-! ## The loop -/
+
+/-- **The model of `whnf_core_loop`'s loop** at L fuel `n`: each iteration is a run of
+`whnf_core_step` (`callW`), done on `(0, v)`, continuing on `(1, e')`. -/
+def coreLoopW (p : Prog) : Nat → Mem → Word → Word → Word → Word → Word → Option (Word × Mem)
+  | 0, _, _, _, _, _, _ => none
+  | n + 1, m, mode, cheap, vis, d, e =>
+    match callW p n "whnf_core_step" [mode, cheap, vis, d, e] m with
+    | none => none
+    | some (r, m₁) =>
+      if r.headD 0 = 0 then some (r.tail.headD 0, m₁)
+      else coreLoopW p n m₁ mode cheap vis d (r.tail.headD 0)
+
+section loop
+variable (p : Prog) (n : Nat) (m m₁ : Mem) (mode cheap vis d e : Word) (r : List Word)
+
+theorem coreLoopW_done (h : callW p n "whnf_core_step" [mode, cheap, vis, d, e] m = some (r, m₁))
+    (h0 : r.headD 0 = 0) :
+    coreLoopW p (n + 1) m mode cheap vis d e = some (r.tail.headD 0, m₁) := by
+  simp only [coreLoopW, h, h0, ↓reduceIte]
+
+theorem coreLoopW_cont (h : callW p n "whnf_core_step" [mode, cheap, vis, d, e] m = some (r, m₁))
+    (h0 : ¬ r.headD 0 = 0) :
+    coreLoopW p (n + 1) m mode cheap vis d e = coreLoopW p n m₁ mode cheap vis d (r.tail.headD 0) := by
+  simp only [coreLoopW, h, h0, ↓reduceIte]
+
+end loop
+
+theorem whnfCoreLoopB_spec (p : Prog) (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    exec p n whnfCoreLoopB
+    ⦃fun r s' => r ≠ .brk ∧
+      coreLoopW p n s₀.mem (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) =
+        some ((r.retOr [0]).headD 0, s'.mem) ∧ r ≠ .normal; ⊤⦄ := by
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+    rw [exec, step_while (w := whnfCoreLoopB) rfl]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih, callW_spec p n "whnf_core_step"] <;>
+      finish [coreLoopW_done, coreLoopW_cont]
 
 end L.Arena
