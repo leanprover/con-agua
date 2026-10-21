@@ -1,0 +1,339 @@
+module
+
+public import ConAgua.L.Notation
+public import ConAgua.L.Logic
+public import ConAgua.L.Examples
+public import ConAgua.Scan.Leaves
+public import ConAgua.Scan.Utf8
+public import ConAgua.Scan.Common
+meta import ConAgua.L.Semantics
+
+@[expose] public section
+
+/-!
+# `scan_string` (`scan_fast.rs:1087`), validating only
+
+Rust's `scan_string(b, i)` returns the string's code points; the validator returns only the
+position after the closing quote, or `0`. The parts:
+
+* `utf8_valid(k, n)`: `1` if `[k, n)` is valid UTF-8, else `0`. It is Rust's `utf8_decode`
+  without the output vector: the same loop over `utf8_char` (`ConAgua.Scan.Utf8`).
+* `byte_in(k, e)`, `hex_val(c)`, `hex4(j, e)`, `hex3(j, e)`: Rust's `byte_at` (on the string
+  body, which ends at `e`: con-leche hands `unescape` the body sliced out), `hex_val`, `hex4`,
+  `hex3`; an `Option<u32>` is the two words `(ok, value)`.
+* `unescape(j, e)`: `1` if the body `[j, e)` with escapes is a valid string, else `0`. Rust
+  (and con-leche) collect the unescaped bytes and validate them with `utf8_decode`
+  (`String.fromUTF8?`) at the end. The validator stores nothing: it checks each escape as Rust
+  does, and validates each maximal run of raw bytes between escapes on its own
+  (`utf8_valid(r, j)`, `r` the start of the run). An escape contributes the UTF-8 of one code
+  point, which begins with a lead byte, so the collected bytes are valid exactly when every raw
+  run is (`ConAgua.Scan.StrLink`).
+* `scan_string(i)`.
+
+The models compute with words, as the L code does.
+-/
+
+set_option experimental.vcgen true
+
+open Std.WP
+open scoped Lean.Order
+
+namespace L.Scan.Str
+
+open L.Scan.Utf8 (byteW utf8CharN)
+open L.Scan.Leaves (hasEscapeN)
+open L.Examples (strCloseN)
+
+/-- The input buffer. -/
+abbrev IN : ArrId := 0
+
+/-! ## `utf8_valid` -/
+
+def utf8ValidLoop : Stmt := lblk (k, n, cp, l) {
+  while k < n {
+    (cp, l) := call utf8_char(k, n);
+    if l == 0 { return 0 };
+    k += l
+  }
+}
+
+def utf8Valid : FunDecl := lfn (k, n) locals (cp, l) {
+  ⟪utf8ValidLoop⟫;
+  return 1
+}
+
+/-- `1` if the bytes `[k, n)` are valid UTF-8, else `0`: `utf8LoopN` without the output. -/
+def utf8ValidN (b : Array UInt8) (k n : Word) : Word :=
+  if k < n then
+    if (utf8CharN b k n).2 = 0 then 0
+    else if k < k + (utf8CharN b k n).2 then utf8ValidN b (k + (utf8CharN b k n).2) n
+    else 0
+  else 1
+termination_by n.toNat - k.toNat
+decreasing_by
+  rename_i h1 _ h2
+  rw [UInt64.lt_iff_toNat_lt] at h1 h2
+  omega
+
+/-! ## Bytes of the body, hexadecimal digits -/
+
+/-- Rust's `byte_at` on the string body `[_, e)`: the byte at `k`, `0` from `e` on. -/
+def byteE (b : Array UInt8) (e k : Word) : Word := if k < e then byteW b k else 0
+
+def byteIn : FunDecl := lfn (k, e) {
+  if k < e { return IN.u8[k] };
+  return 0
+}
+
+/-- Rust's `hex_val`: `(1, value)` for a hexadecimal digit, `(0, 0)` otherwise. -/
+def hexValN (c : Word) : Word × Word :=
+  if 48 ≤ c ∧ c ≤ 57 then (1, c - 48)
+  else if 97 ≤ c ∧ c ≤ 102 then (1, c - 87)
+  else if 65 ≤ c ∧ c ≤ 70 then (1, c - 55)
+  else (0, 0)
+
+def hexVal : FunDecl := lfn (c) {
+  if 48 <= c && c <= 57 { return (1, c - 48) };
+  if 97 <= c && c <= 102 { return (1, c - 87) };
+  if 65 <= c && c <= 70 { return (1, c - 55) };
+  return (0, 0)
+}
+
+/-- Rust's `hex4`: the value of the four hexadecimal digits at `j` (in the body `[_, e)`). -/
+def hex4N (b : Array UInt8) (e j : Word) : Word × Word :=
+  let a := hexValN (byteE b e j)
+  let x := hexValN (byteE b e (j + 1))
+  let y := hexValN (byteE b e (j + 2))
+  let z := hexValN (byteE b e (j + 3))
+  if a.1 = 0 ∨ x.1 = 0 ∨ y.1 = 0 ∨ z.1 = 0 then (0, 0)
+  else (1, (a.2 <<< 12) ||| (x.2 <<< 8) ||| (y.2 <<< 4) ||| z.2)
+
+def hex4 : FunDecl := lfn (j, e) locals (c, ok, a, x, y, z) {
+  c := call byte_in(j, e);
+  (ok, a) := call hex_val(c);
+  if ok == 0 { return (0, 0) };
+  c := call byte_in(j + 1, e);
+  (ok, x) := call hex_val(c);
+  if ok == 0 { return (0, 0) };
+  c := call byte_in(j + 2, e);
+  (ok, y) := call hex_val(c);
+  if ok == 0 { return (0, 0) };
+  c := call byte_in(j + 3, e);
+  (ok, z) := call hex_val(c);
+  if ok == 0 { return (0, 0) };
+  return (1, (a << 12) | (x << 8) | (y << 4) | z)
+}
+
+/-- Rust's `hex3`: the value of the three hexadecimal digits at `j`. -/
+def hex3N (b : Array UInt8) (e j : Word) : Word × Word :=
+  let a := hexValN (byteE b e j)
+  let x := hexValN (byteE b e (j + 1))
+  let y := hexValN (byteE b e (j + 2))
+  if a.1 = 0 ∨ x.1 = 0 ∨ y.1 = 0 then (0, 0)
+  else (1, (a.2 <<< 8) ||| (x.2 <<< 4) ||| y.2)
+
+def hex3 : FunDecl := lfn (j, e) locals (c, ok, a, x, y) {
+  c := call byte_in(j, e);
+  (ok, a) := call hex_val(c);
+  if ok == 0 { return (0, 0) };
+  c := call byte_in(j + 1, e);
+  (ok, x) := call hex_val(c);
+  if ok == 0 { return (0, 0) };
+  c := call byte_in(j + 2, e);
+  (ok, y) := call hex_val(c);
+  if ok == 0 { return (0, 0) };
+  return (1, (a << 8) | (x << 4) | y)
+}
+
+/-! ## `unescape` -/
+
+def unescapeLoop : Stmt := lblk (j, e, r, c, d, ok, v, j6) {
+  while j < len(IN.u8) && j < e {
+    c := IN.u8[j];
+    if c != 92 {
+      j += 1
+    } else {
+      ok := call utf8_valid(r, j);
+      if ok == 0 { return 0 };
+      d := call byte_in(j + 1, e);
+      if d == 34 || d == 92 || d == 47 || d == 98 || d == 102 || d == 110 || d == 114 || d == 116 {
+        j += 2
+      } else {
+        if d != 117 { return 0 };
+        (ok, v) := call hex4(j + 2, e);
+        if ok == 0 { return 0 };
+        j6 := j + 6;
+        if v < 0xD800 || 0xE000 <= v {
+          j := j6
+        } else if 0xDC00 <= v {
+          j := j6
+        } else {
+          -- a high surrogate: look for a `\uDxxx` continuation, else U+FFFD
+          c := call byte_in(j6, e);
+          d := call byte_in(j6 + 1, e);
+          ok := call byte_in(j6 + 2, e);
+          if c == 92 && d == 117 && (ok == 100 || ok == 68) {
+            (ok, v) := call hex3(j6 + 3, e);
+            if ok != 0 && 0xC00 <= v { j := j6 + 6 } else { j := j6 }
+          } else {
+            j := j6
+          }
+        }
+      };
+      r := j
+    }
+  }
+}
+
+def unescape : FunDecl := lfn (j, e) locals (r, c, d, ok, v, j6) {
+  r := j;
+  ⟪unescapeLoop⟫;
+  ok := call utf8_valid(r, e);
+  return ok
+}
+
+/-- Where an escape at `j` that is a `\u` escape with value `v` (`hex4N`) continues: after the
+six bytes, or after twelve for a high surrogate followed by a `\uDxxx` low one. -/
+def uNextN (b : Array UInt8) (e j v : Word) : Word :=
+  if v < 0xD800 ∨ 0xE000 ≤ v then j + 6
+  else if 0xDC00 ≤ v then j + 6
+  else if byteE b e (j + 6) = 92 ∧ byteE b e (j + 6 + 1) = 117 ∧
+      (byteE b e (j + 6 + 2) = 100 ∨ byteE b e (j + 6 + 2) = 68) ∧
+      (hex3N b e (j + 6 + 3)).1 ≠ 0 ∧ 0xC00 ≤ (hex3N b e (j + 6 + 3)).2 then j + 6 + 6
+  else j + 6
+
+/-- `1` if the body `[j, e)` (the current raw run starting at `r`) is a valid string, else `0`:
+every escape is one of JSON's, and every raw run between escapes is valid UTF-8. The guards
+`j < j'` are con-leche's (`unescape`), there for termination. -/
+def unescN (b : Array UInt8) (j e r : Word) : Word :=
+  if h : j < UInt64.ofNat b.size ∧ j < e then
+    if byteW b j ≠ 92 then
+      if j < j + 1 then unescN b (j + 1) e r else 0
+    else if utf8ValidN b r j = 0 then 0
+    else
+      let d := byteE b e (j + 1)
+      if d = 34 ∨ d = 92 ∨ d = 47 ∨ d = 98 ∨ d = 102 ∨ d = 110 ∨ d = 114 ∨ d = 116 then
+        if j < j + 2 then unescN b (j + 2) e (j + 2) else 0
+      else if d ≠ 117 then 0
+      else if (hex4N b e (j + 2)).1 = 0 then 0
+      else if j < uNextN b e j (hex4N b e (j + 2)).2 then
+        unescN b (uNextN b e j (hex4N b e (j + 2)).2) e (uNextN b e j (hex4N b e (j + 2)).2)
+      else 0
+  else utf8ValidN b r e
+termination_by b.size - j.toNat
+decreasing_by
+  all_goals
+    have := lt_of_lt_ofNat h.1
+    rename_i hj
+    rw [UInt64.lt_iff_toNat_lt] at hj
+    omega
+
+/-! ## `scan_string` -/
+
+def scanString : FunDecl := lfn (i) locals (e, h, ok) {
+  if i < len(IN.u8) && IN.u8[i] == 34 {
+    e := call str_close(i + 1);
+    if e == 0 { return 0 };
+    h := call has_escape(i + 1, e);
+    if h != 0 { ok := call unescape(i + 1, e) } else { ok := call utf8_valid(i + 1, e) };
+    if ok == 0 { return 0 };
+    return e + 1
+  };
+  return 0
+}
+
+/-- con-leche's `scanString`, validating only: the position after the closing quote, or `0`. -/
+def scanStringN (b : Array UInt8) (i : Word) : Word :=
+  if i < UInt64.ofNat b.size ∧ byteW b i = 34 then
+    if UInt64.ofNat (strCloseN b (i + 1).toNat) = 0 then 0
+    else if UInt64.ofNat (hasEscapeN b (i + 1).toNat (UInt64.ofNat (strCloseN b (i + 1).toNat)).toNat) ≠ 0 then
+      if unescN b (i + 1) (UInt64.ofNat (strCloseN b (i + 1).toNat)) (i + 1) = 0 then 0
+      else UInt64.ofNat (strCloseN b (i + 1).toNat) + 1
+    else if utf8ValidN b (i + 1) (UInt64.ofNat (strCloseN b (i + 1).toNat)) = 0 then 0
+    else UInt64.ofNat (strCloseN b (i + 1).toNat) + 1
+  else 0
+
+/-! ## Specs -/
+
+section specs
+variable (p : Prog) (b : Array UInt8) (hb : b.size < 2 ^ 63)
+    (hpc : p.lookup "utf8_char" = some L.Scan.Utf8.utf8Char)
+    (hpv : p.lookup "utf8_valid" = some utf8Valid)
+    (hpb : p.lookup "byte_in" = some byteIn)
+    (hph : p.lookup "hex_val" = some hexVal)
+    (hp4 : p.lookup "hex4" = some hex4)
+    (hp3 : p.lookup "hex3" = some hex3)
+    (hpu : p.lookup "unescape" = some unescape)
+    (hps : p.lookup "str_close" = some L.Examples.strClose)
+    (hpe : p.lookup "has_escape" = some L.Scan.Leaves.hasEscape)
+    (hpt : p.lookup "scan_string" = some scanString)
+include hb
+
+include hpc hpv in
+theorem utf8Valid_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (k e : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "utf8_valid" [k, e]
+    ⦃fun r s' => s' = s₀ ∧ r = [utf8ValidN b k e]; ⊤⦄ := by
+  sorry
+
+include hpb in
+theorem byteIn_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (k e : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "byte_in" [k, e]
+    ⦃fun r s' => s' = s₀ ∧ r = [byteE b e k]; ⊤⦄ := by
+  sorry
+
+include hph in
+theorem hexVal_spec (n : Nat) (s₀ : St) (c : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "hex_val" [c]
+    ⦃fun r s' => s' = s₀ ∧ r = [(hexValN c).1, (hexValN c).2]; ⊤⦄ := by
+  sorry
+
+include hpb hph hp4 in
+theorem hex4_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "hex4" [j, e]
+    ⦃fun r s' => s' = s₀ ∧ r = [(hex4N b e j).1, (hex4N b e j).2]; ⊤⦄ := by
+  sorry
+
+include hpb hph hp3 in
+theorem hex3_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "hex3" [j, e]
+    ⦃fun r s' => s' = s₀ ∧ r = [(hex3N b e j).1, (hex3N b e j).2]; ⊤⦄ := by
+  sorry
+
+include hpc hpv hpb hph hp4 hp3 hpu in
+theorem unescape_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "unescape" [j, e]
+    ⦃fun r s' => s' = s₀ ∧ r = [unescN b j e j]; ⊤⦄ := by
+  sorry
+
+include hpc hpv hpb hph hp4 hp3 hpu hps hpe hpt in
+theorem scanString_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "scan_string" [i]
+    ⦃fun r s' => s' = s₀ ∧ r = [scanStringN b i]; ⊤⦄ := by
+  sorry
+
+end specs
+
+end L.Scan.Str
+
+namespace L.Scan.Str
+
+/-- The program, as `#eval`-able code. -/
+def strProg : Prog := [("str_close", L.Examples.strClose), ("has_escape", L.Scan.Leaves.hasEscape),
+  ("utf8_char", L.Scan.Utf8.utf8Char), ("utf8_valid", utf8Valid), ("byte_in", byteIn),
+  ("hex_val", hexVal), ("hex4", hex4), ("hex3", hex3), ("unescape", unescape),
+  ("scan_string", scanString)]
+
+/-- `scan_string(0)` on `s` with the L program. -/
+def runStr (s : String) : Option Word :=
+  match run strProg 10000 "scan_string" [0] { bytes := #[s.toUTF8.data] } with
+  | .ok ([e], _) => some e
+  | _ => none
+
+end L.Scan.Str

@@ -27,5 +27,10 @@ public import ConAgua.Scan.Lit
 public import ConAgua.Scan.LitLink
 public import ConAgua.Scan.Utf8
 public import ConAgua.Scan.Utf8Link
+public import ConAgua.Scan.Common
+public import ConAgua.Scan.Key
+public import ConAgua.Scan.Str
+public import ConAgua.Scan.Values
+public import ConAgua.Scan.Member
 public import ConAgua.Arena.NatAdd
 public import ConAgua.Arena.NatMul
