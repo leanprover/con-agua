@@ -526,6 +526,7 @@ theorem word_decE (k : Word) (hk : k.toNat < 2 ^ 32) : (decE k).word.toUInt64 = 
 theorem bmSch_wf : bmSch.WF := ⟨by decide, by decide⟩
 theorem lfSch_wf : lfSch.WF := ⟨by decide, by decide⟩
 theorem imSch_wf : imSch.WF := ⟨by decide, by decide⟩
+theorem frSch_wf : frSch.WF := ⟨by decide, by decide⟩
 
 /-- `bvarBC`'s keys: a handle word, second word `0`. -/
 def bmKey : MemoKey EIdx where

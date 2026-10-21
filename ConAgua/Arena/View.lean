@@ -203,6 +203,16 @@ theorem view_fvar (hv : viewOK m h 26) (hg : h >>> 28 = 1) :
   obtain ⟨k, hk, -⟩ := node_of m a h fvarSch FVRecRel fvhash (·.fvars) _ hR.fvar hv.2
   exact ⟨_, _, by rw [view_tier m a hR h hh hv.1, get_fvar _ h hh hg, Tbl.node?, hk]; rfl⟩
 
+/-- `view_fvar`, with the index and the child's handle word pinned to the record's two
+words (`fvarRangeGo`'s `fvar` arm needs the index, unlike `bvarBoundGo`'s). -/
+theorem view_fvar_idx (hv : viewOK m h 26) (hg : h >>> 28 = 1) :
+    a.store.view (decE h) = some (.fvar (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2)).toNat
+      (decE (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2 + 1)))) ∧
+    (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2 + 1)).toNat < 2 ^ 32 := by
+  obtain ⟨k, hk, hi, hty⟩ := node_of m a h fvarSch FVRecRel fvhash (·.fvars) _ hR.fvar hv.2
+  rw [hty, decE_word]
+  exact ⟨by rw [view_tier m a hR h hh hv.1, get_fvar _ h hh hg, Tbl.node?, hk, hi]; rfl, word_lt _⟩
+
 theorem view_sort (hv : viewOK m h 16) (hg : h >>> 28 = 2) :
     ∃ u, a.store.view (decE h) = some (.sort u) := by
   obtain ⟨k, hk, -⟩ := node_of m a h sortSch SoRecRel sohash (·.sorts) _ hR.sort hv.2

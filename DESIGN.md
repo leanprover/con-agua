@@ -4777,3 +4777,74 @@ the pins are not in `ArenaR`).
 ### `sorry`s
 
 None.
+
+## `hasLooseBVar`, `fvarRangeGo`/`Memo` (2026-10-21, lane `exprops2`)
+
+Files: `ConAgua/Arena/HasLooseBVar.lean`, `{FVarRange,FVarRangeRefine}.lean`; `DerRel.lean`
+(the missing leaf-interning `DerR` lemmas, `natAddLit_refinesD`); `View.lean` (`view_fvar_idx`);
+`MemoLib.lean`/`MemoLibRel.lean` (`frSch`/`frSch_wf`); `ArenaRel.lean` (one new `ArenaR` field,
+`fmemo`, reusing `bmKey`'s codec). Continues lane `exprops`'s remaining phase-4 expression walks
+(ROADMAP §1, `arena/expr_ops.rs`). No `sorry`; axioms `propext`, `Classical.choice`, `Quot.sound`.
+
+### The missing `DerR` leaf lemmas, and `natAddLit_refinesD`
+
+`internBVar_D`'s proof (`DerRel.lean`) ported to the other four leaf kinds, with `zP` (range `0`)
+in place of `bvP`: `internFVar_D`, `internSort_D`, `internConst_D`, `internLit_D`, plus four
+`bvar_derX` helpers (`bvarOfData` of each leaf's packed derived word is `0`, by `bvarOfData_pack`
+with the hash/fvar/level-param fields and `(by decide)`/`satSucc_lt` bounds). Also `DerR.grow`/
+`ArenaD.grow` (a pool append's `Grows` only touches `POOL` and `CTL[0]`, disjoint from the derived
+arrays `42‥46`, so `DerR.frameM` applies directly) and `natAddLit_refinesD`, `natAddLit_refinesA`'s
+counterpart under `ArenaD` (`internLit_refinesD` first, the same shape as `internLit_refinesA`).
+
+### `hasLooseBVar(h, i)`
+
+con-leche's (and Lean4's) `Expr.hasLooseBVar e i := i < e.looseBVarRange`: a direct read of the
+cached range field, no recursion. Unlike every other walk in this group, it has **no twin arena
+function** in `ConRon.Arena.ExprOps` to refine against (con-ron's memoized `has_loose_bvar_b_go`
+lives on the inductive-types side, `arena/inductives/struct_parts.rs`, threaded through an extra
+context `T` not relevant to plain expressions), so it is refined directly against the range field
+of `a.store.derived`, which `der_b` (`ExprMk.lean`) already computes exactly (`derBW_ok`).
+
+### `fvarRangeGo`/`fvarRangeMemo`
+
+con-ron's `fvar_range_go`/`_memo` (`arena/expr_ops.rs:2075,2146`, twin `Arena/ExprOps.lean:1483-
+1563`): `1 +` the largest free-variable index under a handle, memoized in a new per-call memo
+`fvarBC` (`frSch`, array 48 `FRMEMO`, `CTL[46]`/`[47]`, the next free slot after `inst1C`; `bmKey`'s
+one-word-key codec reused unchanged). `Walk.lean`'s `bvarBoundGo`/`Memo` shape exactly (`fr_go`
+probes the memo, `fr_node` decodes the handle and dispatches on the tag), with three differences
+from `bvarBound`: the `bvar` arm returns `0` (not `i + 1`), the `fvar` arm returns `idx + 1` (not
+`0`; needs `view_fvar_idx`, a `view_fvar` that pins the record's index word, since `view_fvar`
+itself is only existential), and the binder/`letE` arms do **not** truncate the last child (`max`
+throughout, no `satPredW`: a binder's own annotations are not descended into, ROADMAP's `ExprOps.lean`
+note on `fvarRangeGo`). This is `abstract1`'s cutoff (`fvarB ≤ d`), the walk lane `exprops2` turns
+to next.
+
+**A finding: match-arm grouping must be textual, not just semantic.** The arena-side dispatcher
+`frArm` (`FVarRangeRefine.lean`) must group and order its `match` arms exactly as the twin's own
+`fvarRangeGo_succ` does (`.fvar` first, then `.bvar | .sort | .const | .lit` together) for
+`fvarRangeGo_succ'`'s `congr` to close by `rfl`; a semantically equivalent but differently grouped
+`match` (`.bvar` split out on its own) leaves a stray match-equality goal. Same lesson as lane
+`exprops`'s "continuations given as `fun` defeat `grind`'s matching": these proofs lean on the
+compiled match/do-notation being syntactically identical, not just extensionally so.
+
+### Tables
+
+| | Rust lines | L lines | spec lines | refinement lines | refinement / L | `lean` wall / user |
+|---|---:|---:|---:|---:|---:|---|
+| `has_loose_bvar` | – (no twin) | 5 (`der_b` call, compare) | `HasLooseBVar.lean` ≈ 20 | ≈ 20 (same file) | ≈ 4.0 | – |
+| `fvar_range_go` + `_memo` | ≈ 115 | 76 (`fr_go` 6, `fr_node` 59, entry 4, `fr_set`/probe plumbing 7) | `FVarRange.lean` 439 | `FVarRangeRefine.lean` **366**, **4.8 per L line** | 4.8 | – |
+
+(`lean` wall/user not separately timed this landing; the full project build, 1810 jobs, restores
+from the shared Lake cache and rebuilds only the touched files in a few seconds.)
+
+### Not done
+
+* `instantiateListGo`/`Fast`, `abstract1Go`/`Fast` (now that `fvarRangeMemo` exists for its
+  cutoff): the same scaffolding as `Lift`/`Inst1`, one memo instance each (two more reserved
+  `exprops` slots).
+* Compiled benchmarks of `lift_entry`/`inst_entry` (the programs are `liftProg`/`instProg`, not
+  yet compiled through `WalkEmit.lean`'s pattern).
+
+### `sorry`s
+
+None.
