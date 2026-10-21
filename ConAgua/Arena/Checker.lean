@@ -78,6 +78,21 @@ def FoldOut (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (v : Wor
   | .ok (k, fe, pend) => k = ds.size ∧ LoopR dn m a v fe pend ds
   | .error _ => False
 
+/-- Phase A's environment and pending checks out of its result. -/
+def foldFe : Except (CheckError × Nat) (Nat × IFEnv × Array PendingCheck) → IFEnv
+  | .ok (_, fe, _) => fe
+  | .error _ => default
+def foldPend : Except (CheckError × Nat) (Nat × IFEnv × Array PendingCheck) → Array PendingCheck
+  | .ok (_, _, pend) => pend
+  | .error _ => #[]
+
+theorem FoldOut.eq {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {v : Word}
+    {ds : Array IDeclaration} {x : Except (CheckError × Nat) (Nat × IFEnv × Array PendingCheck)}
+    (h : FoldOut dn m a v ds x) :
+    x = .ok (ds.size, foldFe x, foldPend x) ∧ LoopR dn m a v (foldFe x) (foldPend x) ds := by
+  match x, h with
+  | .ok (k, fe, pend), ⟨hk, hR⟩ => exact ⟨by rw [hk]; rfl, hR⟩
+
 /-- A value group out of `install_step_go`: flag `f` (`0`: none) and record `g`. -/
 def vgOut (m : Mem) (f g : Word) : Option ValueGroup :=
   if f = 0 then none else decVG (m.arr64 EREC) g.toNat
@@ -424,6 +439,25 @@ theorem checkPendingList_nil_ok (fe : IFEnv) (a0 : AState) :
     AM.res (checkPendingList mode fe []) a0 = .ok () :=
   AM.of_run_ok _ _ _ _ rfl
 
+theorem installThenCheck_ok (ds : Array IDeclaration) (a0 : AState) (k : Nat) (fe : IFEnv)
+    (pend : Array PendingCheck)
+    (h1 : AM.ok (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a0)
+    (h2 : AM.res (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a0 = .ok (k, fe, pend))
+    (h3 : AM.ok (checkPendingList mode fe pend.toList)
+      (AM.st (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a0))
+    (h4 : AM.res (checkPendingList mode fe pend.toList)
+      (AM.st (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a0) = .ok ()) :
+    AM.ok (installThenCheck mode pins ds) a0 ∧
+    AM.st (installThenCheck mode pins ds) a0 = AM.st (checkPendingList mode fe pend.toList)
+      (AM.st (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a0) ∧
+    AM.res (installThenCheck mode pins ds) a0 = .ok fe := by
+  have r1 := AM.run_of_ok _ _ h1
+  have r3 := AM.run_of_ok _ _ h3
+  rw [h2] at r1; rw [h4] at r3
+  apply AM.of_run_ok
+  simp only [installThenCheck, StateT.run_bind, r1, exc_ok_bind, r3]
+  rfl
+
 end twin
 
 /-! ## Phase A's step: `install_step` -/
@@ -528,6 +562,17 @@ def checkPendingNextL : FunDecl := lfn (j, cnt, vis) locals (z) {
   z := call check_pending(j, vis);
   z := call check_pending_go(j + 1, cnt, vis);
   return 0
+}
+
+/-- `install_then_check()`: phase A over the front's declaration records, then phase B; returns
+the final view. **The declaration loop.** -/
+@[l_impl ConRon.Arena.installThenCheck]
+def installThenCheckL : FunDecl := lfn () locals (cnt, v, c, z) {
+  cnt := DECL.u64[0];
+  v := call install_fold_go(0, cnt, 0);
+  c := CTL.u64[130];
+  z := call check_pending_go(0, c, v);
+  return v
 }
 
 section skel
@@ -969,6 +1014,59 @@ theorem checkPendingGo_refines (n : Nat) :
 
 end cp
 end phaseB
+
+/-- **`install_then_check` refines `installThenCheck`** (from the stub specs): a returning run
+is the twin's accepting fold, its environment related at the returned view. -/
+@[refines ConRon.Arena.installThenCheck]
+theorem installThenCheck_refines (hpp : p.lookup "pend_push" = some pendPushL)
+    (hpn : p.lookup "is_none" = some isNoneL) (hps : p.lookup "is_some" = some isSomeL)
+    (hpi : p.lookup "install_step" = some installStepL)
+    (hpd : p.lookup "install_decl_step" = some installDeclStepL)
+    (hpg : p.lookup "install_fold_go" = some installFoldGoL)
+    (hpx : p.lookup "install_fold_next" = some installFoldNextL)
+    (hpc : p.lookup "check_pending" = some checkPendingL)
+    (hpcg : p.lookup "check_pending_go" = some checkPendingGoL)
+    (hpcx : p.lookup "check_pending_next" = some checkPendingNextL)
+    (hp : p.lookup "install_then_check" = some installThenCheckL) (n : Nat) (s₀ : St) (a₀ : AState)
+    (hR : LoopR dn s₀.mem a₀ 0 (mkIFEnv IEnv.empty) #[] ds) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_then_check" []
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (installThenCheck mode pins ds) a₀ ∧ AM.res (installThenCheck mode pins ds) a₀ = .ok (foldFe (AM.res (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀)) ∧
+      LoopR dn s'.mem (AM.st (installThenCheck mode pins ds) a₀) (r.headD 0) (foldFe (AM.res (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀)) (foldPend (AM.res (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀)) ds; ⊤⦄ := by
+  have hsz : ds.size < 2 ^ 63 := by have := hR.decls.dsize; have := hR.decls.room; omega
+  have hcnt : ∀ (h : 0 < (s₀.mem.arr64 DECL).size), ((s₀.mem.arr64 DECL)[0]).toNat = ds.size := by
+    intro h; have := hR.decls.count; simpa [h] using this
+  have hc : ∀ (m : Mem) (a : AState) (v : Word) (fe : IFEnv) (pend : Array PendingCheck),
+      LoopR dn m a v fe pend ds → ∀ (h : 130 < (m.arr64 CTL).size),
+      ((m.arr64 CTL)[130]).toNat = pend.size := by
+    intro m a v fe pend h h1
+    have := h.pend.count; simp only [pendCount] at this; rwa [rdW_eq _ _ 130 rfl h1] at this
+  have hcB : ∀ (m : Mem) (a : AState) (v : Word), FoldOut dn m a v ds (AM.res (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀) →
+      ∀ (h : 130 < (m.arr64 CTL).size), ((m.arr64 CTL)[130]).toNat = (foldPend (AM.res (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀)).size :=
+    fun m a v h h1 => hc m a v _ _ (FoldOut.eq h).2 h1
+  have hLB : ∀ (m : Mem) (a : AState) (v : Word), FoldOut dn m a v ds (AM.res (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀) →
+      (AM.res (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀) = .ok (ds.size, foldFe (AM.res (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀), foldPend (AM.res (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀)) ∧ LoopR dn m a v (foldFe (AM.res (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀)) (foldPend (AM.res (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀)) ds :=
+    fun m a v h => FoldOut.eq h
+  have hFP : ∀ (m : Mem) (v : Word), FoldPost mode pins dn ds m a₀ v (UInt64.toNat 0)
+      (mkIFEnv IEnv.empty) #[] → AM.ok (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀ ∧ FoldOut dn m (AM.st (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀) v ds (AM.res (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀) := by
+    intro m v h; simpa [FoldPost] using h
+  have inner : ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_then_check" []
+      ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀ ∧ (AM.res (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀) = .ok (ds.size, foldFe (AM.res (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀), foldPend (AM.res (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀)) ∧
+        PendPost mode dn ds (foldFe (AM.res (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀)) (foldPend (AM.res (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀)) s'.mem (AM.st (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀) (r.headD 0) 0; ⊤⦄ := by
+    rw [invoke_eq _ hp]
+    simp only [callFn, installThenCheckL]
+    cases n with
+    | zero => vcgen [exec] <;> grind
+    | succ n =>
+      sym only [lang_grind, arena_grind] =>
+        vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+          ((installFoldGo_refines mode pins dn ds p hpp hpn hps hpi hpd hpg hpx hsz n).1 · a₀ · · ·
+            (mkIFEnv IEnv.empty) #[]),
+          ((checkPendingGo_refines mode dn ds p (foldFe (AM.res (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀)) (foldPend (AM.res (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀)) hpc hpcg hpcx n).1 ·
+            (AM.st (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀) · · ·)] <;>
+        finish
+  exact triple_post inner fun r s' ⟨h0, h1, h2, h3⟩ => by
+    obtain ⟨o, st, rs⟩ := installThenCheck_ok mode pins ds a₀ _ _ _ h1 h2 h3.1 h3.2.1
+    exact ⟨h0, o, rs, by rw [st]; exact h3.2.2⟩
 
 end skel
 
