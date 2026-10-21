@@ -239,6 +239,79 @@ decreasing_by
 def natListEntryN (b : Array UInt8) (i : Word) : Word × Word :=
   if i < UInt64.ofNat b.size ∧ byteW b i = 91 then natListN b (i + 1) 0 1 else (0, 0)
 
+/-! One guarded equation per arm (DESIGN.md, "Proof recipe"), mirroring `natListN`'s own
+nested-if chain, as `keyEndN`'s arms do. -/
+section
+variable (b : Array UInt8) (i cnt w : Word)
+
+theorem natListN_ws (k : Word) (hk : k = i + 1) (h : i < UInt64.ofNat b.size)
+    (hc : byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13) :
+    natListN b i cnt w = natListN b k cnt w := by
+  subst hk; rw [natListN]; simp [h, hc]
+
+theorem natListN_close_ok (h : i < UInt64.ofNat b.size)
+    (h1 : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13)) (hc : byteW b i = 93)
+    (hw : ¬ (w ≠ 0 ∧ cnt ≠ 0)) : natListN b i cnt w = (i + 1, cnt) := by
+  rw [natListN]; simp [h, h1, hc, hw]
+
+theorem natListN_close_fail (h : i < UInt64.ofNat b.size)
+    (h1 : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13)) (hc : byteW b i = 93)
+    (hw : w ≠ 0 ∧ cnt ≠ 0) : natListN b i cnt w = (0, 0) := by
+  rw [natListN]; simp [h, h1, hc, hw]
+
+theorem natListN_comma (k : Word) (hk : k = i + 1)
+    (h : i < UInt64.ofNat b.size) (h1 : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13))
+    (h2 : byteW b i ≠ 93) (hc : byteW b i = 44) (hw : w = 0) :
+    natListN b i cnt w = natListN b k cnt 1 := by
+  subst hk; rw [natListN]; simp [h, h1, h2, hc, hw]
+
+theorem natListN_comma_fail (h : i < UInt64.ofNat b.size)
+    (h1 : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13)) (h2 : byteW b i ≠ 93)
+    (hc : byteW b i = 44) (hw : w ≠ 0) : natListN b i cnt w = (0, 0) := by
+  rw [natListN]; simp [h, h1, h2, hc, hw]
+
+theorem natListN_digit_w0 (h : i < UInt64.ofNat b.size)
+    (h1 : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13)) (h2 : byteW b i ≠ 93)
+    (h3 : byteW b i ≠ 44) (hd : 48 ≤ byteW b i ∧ byteW b i ≤ 57) (hw : w = 0) :
+    natListN b i cnt w = (0, 0) := by
+  rw [natListN]; simp [h, h1, h2, h3, hd, hw]
+
+theorem natListN_digit_noprog (h : i < UInt64.ofNat b.size)
+    (h1 : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13)) (h2 : byteW b i ≠ 93)
+    (h3 : byteW b i ≠ 44) (hd : 48 ≤ byteW b i ∧ byteW b i ≤ 57) (hw : w ≠ 0)
+    (he : UInt64.ofNat (numEndN b i.toNat) = i) : natListN b i cnt w = (0, 0) := by
+  rw [natListN]; simp [h, h1, h2, h3, hd, hw, he]
+
+theorem natListN_digit (k : Word) (hk : k = UInt64.ofNat (numEndN b i.toNat))
+    (h : i < UInt64.ofNat b.size) (h1 : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13))
+    (h2 : byteW b i ≠ 93) (h3 : byteW b i ≠ 44) (hd : 48 ≤ byteW b i ∧ byteW b i ≤ 57) (hw : w ≠ 0)
+    (he : UInt64.ofNat (numEndN b i.toNat) ≠ i) (hlt : i < UInt64.ofNat (numEndN b i.toNat)) :
+    natListN b i cnt w = natListN b k (cnt + 1) 0 := by
+  subst hk; rw [natListN]; simp [h, h1, h2, h3, hd, hw, he, hlt]
+
+theorem natListN_other (h : i < UInt64.ofNat b.size)
+    (h1 : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13)) (h2 : byteW b i ≠ 93)
+    (h3 : byteW b i ≠ 44) (h4 : ¬ (48 ≤ byteW b i ∧ byteW b i ≤ 57)) :
+    natListN b i cnt w = (0, 0) := by
+  rw [natListN]; simp [h, h1, h2, h3, h4]
+
+theorem natListN_end (h : ¬ i < UInt64.ofNat b.size) : natListN b i cnt w = (0, 0) := by
+  rw [natListN]; simp [h]
+
+grind_pattern [lang_grind] natListN_ws => natListN b i cnt w, byteW b i, natListN b k cnt w
+grind_pattern [lang_grind] natListN_close_ok => natListN b i cnt w, byteW b i
+grind_pattern [lang_grind] natListN_close_fail => natListN b i cnt w, byteW b i
+grind_pattern [lang_grind] natListN_comma => natListN b i cnt w, byteW b i, natListN b k cnt 1
+grind_pattern [lang_grind] natListN_comma_fail => natListN b i cnt w, byteW b i
+grind_pattern [lang_grind] natListN_digit_w0 => natListN b i cnt w, byteW b i
+grind_pattern [lang_grind] natListN_digit_noprog => natListN b i cnt w, byteW b i, numEndN b i.toNat
+grind_pattern [lang_grind] natListN_digit =>
+  natListN b i cnt w, byteW b i, numEndN b i.toNat, natListN b k (cnt + 1) 0
+grind_pattern [lang_grind] natListN_other => natListN b i cnt w, byteW b i
+grind_pattern [lang_grind] natListN_end => natListN b i cnt w
+
+end
+
 /-! ## Facts about the leaf models -/
 
 theorem keyEndN_lt (b : Array UInt8) (j : Nat) (h : keyEndN b j ≠ 0) : keyEndN b j < b.size := by
@@ -281,6 +354,58 @@ theorem slotNatN_pos (b : Array UInt8) (ks v : Word) (h : slotNatN b ks v ≠ 0)
     · simp [h1, h2] at h
 
 grind_pattern [lang_grind] slotNatN_pos => slotNatN b ks v
+
+section natListLoop
+variable (p : Prog) (hpd : p.lookup "skip_digits" = some L.Scan.Leaves.skipDigits)
+    (hpn : p.lookup "num_end" = some L.Scan.Leaves.numEnd)
+    (b : Array UInt8) (hb : b.size < 2 ^ 64)
+include hb hpd hpn
+
+theorem natListLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
+    (hi : (s₀.loc 0).toNat ≤ b.size) :
+    ⦃fun s => s = s₀⦄
+    exec p n natListLoop
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
+      r.retOr [0, 0] = [(natListN b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)).1,
+        (natListN b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)).2]; ⊤⦄ := by
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+    rw [exec, step_while (w := natListLoop) rfl]
+    have hbw : ∀ (k : Word) (hk : k.toNat < b.size), byteW b k = b[k.toNat].toUInt64 := fun k hk =>
+      L.Scan.Utf8.byteW_lt b k hk
+    have hge2 : ∀ k : Word, k.toNat ≤ b.size → k ≤ UInt64.ofNat (numEndN b k.toNat) := by
+      intro k hk
+      have h1 := numEndN_ge b k.toNat
+      have h2 := numEndN_le b k.toNat hk
+      rw [UInt64.le_iff_toNat_le, UInt64.toNat_ofNat']
+      omega
+    have hgt2 : ∀ k : Word, k.toNat ≤ b.size → ¬ UInt64.ofNat (numEndN b k.toNat) = k →
+        k < UInt64.ofNat (numEndN b k.toNat) := by
+      intro k hk hne
+      have h1 := numEndN_ge b k.toNat
+      have h2 := numEndN_le b k.toNat hk
+      rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_ofNat']
+      have hne' : ¬ k.toNat = numEndN b k.toNat % 2 ^ 64 := by
+        intro heq
+        apply hne
+        rw [← UInt64.toNat_inj, UInt64.toNat_ofNat']
+        omega
+      omega
+    sym only [lang_grind] =>
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8,
+        L.Scan.Leaves.numEnd_spec p hpd hpn b hb n, ih] <;> finish
+
+theorem natListLoop_step_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
+    (hi : (s₀.loc 0).toNat ≤ b.size) :
+    ⦃fun s => s = s₀⦄
+    step p (exec p n) natListLoop
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
+      r.retOr [0, 0] = [(natListN b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)).1,
+        (natListN b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)).2]; ⊤⦄ :=
+  Triple.step_exec (natListLoop_spec p hpd hpn b hb (n + 1) s₀ hm hi)
+
+end natListLoop
 
 /-! ## Specs -/
 
@@ -412,11 +537,22 @@ theorem scanHints_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Wo
   sorry
 
 include hpd hpn hpl in
+attribute [local lang_grind] natListEntryN in
 theorem scanNatList_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_nat_list" [i]
     ⦃fun r s' => s' = s₀ ∧ r = [(natListEntryN b i).1, (natListEntryN b i).2]; ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hpl]
+  simp only [callFn, scanNatList]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have hb64 : b.size < 2 ^ 64 := by omega
+    have hstep : ∀ j : Word, (j + 1).toNat ≤ j.toNat + 1 := fun j => by
+      simp [UInt64.toNat_add]; omega
+    sym only [lang_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld8,
+        natListLoop_step_spec p hpd hpn b hb64 n] <;> finish
 
 end specs
 
