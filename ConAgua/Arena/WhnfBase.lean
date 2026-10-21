@@ -135,6 +135,8 @@ structure CoreS (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis
   readLs : ReadLsCOK a
   /-- The name store is well formed (`denoteN` injective: names compared by word). -/
   nwf : NStoreWF a.store.lss.ls.ns
+  /-- The record pool's size (a capacity checked at entry): record offsets do not wrap. -/
+  erec : (m.arr64 EREC).size < 2 ^ 63
 
 /-- **The relation across a writer outside every tier and the stack**: arrays `≥ 145` (or the
 front's 64‥95), `CTL` words `≥ 137` (or 64‥95): the level heap (`LH`, `CTL[192]`), say. -/
@@ -158,7 +160,7 @@ theorem CoreS.frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AStat
     hS.pins.congr (hf.1 PINS (fun h => by have := hA _ h; simp only [PINS, ArrId] at this; omega)
       (by decide)),
     hS.env.frame (aA 132 144 (by decide) (by decide)) (aC 128 136 (by decide) (by decide)) hf,
-    hS.readL, hS.readLs, hS.nwf⟩, ?_⟩
+    hS.readL, hS.readLs, hS.nwf, hf.2.2.1 EREC ▸ hS.erec⟩, ?_⟩
   refine ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
 
 /-- **After a core run** from `m₀` at maps `M`, `G`, generation `g`: the relation holds at some

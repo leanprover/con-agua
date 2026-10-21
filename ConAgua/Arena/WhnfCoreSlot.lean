@@ -190,7 +190,8 @@ theorem CoreS.set_wc {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
       hS.pins.congr (hf.1 PINS (by simp [PINS]) (by decide)),
       hS.env.frame (fun b hb => by simp at hb; subst hb; decide)
         (fun x hx => by simp at hx; subst hx; decide) hf,
-      fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf⟩,
+      fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf,
+      hf.2.2.1 EREC ▸ hS.erec⟩,
     by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
 
 /-- `whnfCoreCheapC` gains an entry. -/
@@ -238,7 +239,8 @@ theorem CoreS.set_wk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
       hS.pins.congr (hf.1 PINS (by simp [PINS]) (by decide)),
       hS.env.frame (fun b hb => by simp at hb; subst hb; decide)
         (fun x hx => by simp at hx; subst hx; decide) hf,
-      fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf⟩,
+      fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf,
+      hf.2.2.1 EREC ▸ hS.erec⟩,
     by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
 
 

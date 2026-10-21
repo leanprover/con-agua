@@ -314,7 +314,8 @@ theorem CoreS.set_lq {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
       hS.pins.congr (hf.1 PINS (by simp [PINS]) (by decide)),
       hS.env.frame (fun b hb => by simp at hb; subst hb; decide)
         (fun x hx => by simp at hx; subst hx; decide) hf,
-      fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf⟩,
+      fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf,
+      hf.2.2.1 EREC ▸ hS.erec⟩,
     by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
 
 end L.Arena
@@ -389,7 +390,7 @@ theorem lvlEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState
   have hS₂ : CoreS dn m₁ { a with caches := { a.caches with readLC := X } } vis fe M eb :=
     ⟨⟨ArenaR.caches_irrel _ hS₁.arena.1, DerR.of_store _ _ _ hS₁.arena.2 rfl⟩, hS₁.core.readLC X,
       hS₁.pins,
-      hS₁.env, hrl, fun h l e => hS₁.readLs h l e, hS₁.nwf⟩
+      hS₁.env, hrl, fun h l e => hS₁.readLs h l e, hS₁.nwf, hS₁.erec⟩
   by_cases hz0 : z₁ = 0
   · rw [rcdK_zero _ _ _ _ _ hz0] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
@@ -533,7 +534,8 @@ theorem CoreS.set_lsq {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
       hS.pins.congr (hf.1 PINS (by simp [PINS]) (by decide)),
       hS.env.frame (fun b hb => by simp at hb; subst hb; decide)
         (fun x hx => by simp at hx; subst hx; decide) hf,
-      fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf⟩,
+      fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf,
+      hf.2.2.1 EREC ▸ hS.erec⟩,
     by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
 
 /-- **The model of `lvls_eq_c` refines `lvlsEq?`** under `CoreS`. -/
@@ -589,7 +591,8 @@ theorem lvlsEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AStat
   obtain ⟨X, hrun, hrl⟩ := lvlsEq?_miss a (decI us) (decI vs) lu lv hdu hdv hS.readLs miss
   have hS₂ : CoreS dn m₁ { a with caches := { a.caches with readLsC := X } } vis fe M eb :=
     ⟨⟨ArenaR.caches_irrel _ hS₁.arena.1, DerR.of_store _ _ _ hS₁.arena.2 rfl⟩,
-      hS₁.core.readLsC X, hS₁.pins, hS₁.env, fun h l e => hS₁.readL h l e, hrl, hS₁.nwf⟩
+      hS₁.core.readLsC X, hS₁.pins, hS₁.env, fun h l e => hS₁.readL h l e, hrl, hS₁.nwf,
+      hS₁.erec⟩
   by_cases hz0 : z₁ = 0
   · rw [rcdK_zero _ _ _ _ _ hz0] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
