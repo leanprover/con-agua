@@ -84,7 +84,7 @@ namespace L.Arena
 /-- Decide that a table is apart from a writer (`Apart`, `BMEMO ∉ A`, `24 ∉ C`) for concrete
 schemas: `decide` times out on the `UInt64` list memberships, `simp` with the array ids is
 immediate. -/
-macro "apart" : tactic => `(tactic| simp [Apart, POOL, CTL, BMEMO, bmSch, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT])
+macro "apart" : tactic => `(tactic| simp [Apart, POOL, CTL, BMEMO, bmSch, LMEMO, lfSch, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT])
 
 /-- The side condition of `apart_hi` for a concrete schema. -/
 macro "lo_apart" : tactic => `(tactic| simp [POOL, CTL, BMEMO, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT])
@@ -245,6 +245,7 @@ structure ArenaR (m : Mem) (a : AState) : Prop where
   nstr : NStrR m a
   nnum : NNumR m a
   memo : MemoRG bmSch bmKey (·.toNat) m a.memos.bvarBC
+  lmemo : MemoRG lfSch lfKey decE m a.memos.liftC
 
 /-- **Build an `ArenaR m' a'` from `hR : ArenaR m a` and a writer `hf : MemFrame A C m m'`**: each
 field by the tactic `t` if it closes it (the written table, the memo, the pool's tables), else by
@@ -269,22 +270,34 @@ macro "arena_build " hR:term ", " hf:term " with " t:tacticSeq " using " ap:tact
     by first | $t | exact ($hR).nanon.frame _ _ _ _ $hf _ (by $ap),
     by first | $t | exact ($hR).nstr.frame _ _ _ _ $hf _ (by $ap),
     by first | $t | exact ($hR).nnum.frame _ _ _ _ $hf _ (by $ap),
-    by first | $t | exact memoRG_frame bmSch bmSch_wf bmKey _ _ _ (by $ap) (by $ap) _ _ $hf _ ($hR).memo⟩)
+    by first | $t | exact memoRG_frame bmSch bmSch_wf bmKey _ _ _ (by $ap) (by $ap) _ _ $hf _ ($hR).memo,
+    by first | $t | exact memoRG_frame lfSch lfSch_wf lfKey _ _ _ (by $ap) (by $ap) _ _ $hf _ ($hR).lmemo⟩)
 
 /-- `arena_build hR, hf with t` for a writer of concrete arrays and words (`Apart` by `apart`). -/
 macro "arena_build " hR:term ", " hf:term " with " t:tacticSeq : tactic =>
   `(tactic| arena_build $hR, $hf with $t using apart)
+
+/-- **A writer of arrays `≥ 42` and `CTL` words `≥ 44` keeps `ArenaR`**: nothing in it reads them
+(the derived columns of `ExprMk.lean`, arrays 42‥46, are in `DerR`, not here). -/
+theorem ArenaR.frame_above (A : List ArrId) (C : List Word) (hA : ∀ b ∈ A, 42 ≤ b)
+    (hC : ∀ x ∈ C, 44 ≤ x.toNat) (m m' : Mem) (hf : MemFrame A C m m') (a : AState)
+    (hR : ArenaR m a) : ArenaR m' a := by
+  arena_build hR, hf with
+    first
+    | exact memoRG_frame bmSch bmSch_wf bmKey _ _ _ (fun h => absurd (hA _ h) (by simp [BMEMO]))
+        (fun h => absurd (hC _ h) (by simp)) _ _ hf _ hR.memo
+    | exact memoRG_frame lfSch lfSch_wf lfKey _ _ _ (fun h => absurd (hA _ h) (by simp [LMEMO]))
+        (fun h => absurd (hC _ h) (by simp)) _ _ hf _ hR.lmemo
+  using exact apart_hi _ 42 44 _ _ _ _ (by lo_apart) (by decide) (by decide) hA hC
 
 /-- **The extension point for other lanes**: arrays `≥ 64` and `CTL` words `≥ 64` are outside
 every relation of `ArenaR` (lane `exprops` reserves arrays `41‥63` and `CTL` words `42‥63` for its
 memos and derived columns). A writer of only such arrays and words keeps `ArenaR`. -/
 theorem ArenaR.frame_ext (A : List ArrId) (C : List Word) (hA : ∀ b ∈ A, 64 ≤ b)
     (hC : ∀ x ∈ C, 64 ≤ x.toNat) (m m' : Mem) (hf : MemFrame A C m m') (a : AState)
-    (hR : ArenaR m a) : ArenaR m' a := by
-  arena_build hR, hf with
-    exact memoRG_frame bmSch bmSch_wf bmKey _ _ _ (fun h => absurd (hA _ h) (by simp [BMEMO]))
-      (fun h => absurd (hC _ h) (by simp)) _ _ hf _ hR.memo
-  using exact apart_hi _ _ _ _ _ (by lo_apart) hA hC
+    (hR : ArenaR m a) : ArenaR m' a :=
+  ArenaR.frame_above A C (fun b hb => Nat.le_trans (by decide) (hA b hb))
+    (fun x hx => by have := hC x hx; omega) m m' hf a hR
 
 /-! ## The initial state -/
 
@@ -340,10 +353,11 @@ theorem arenaR_init (sizes : List Nat) (hlen : 64 ≤ sizes.length) (hctl : 64 �
     storeR_init _ _ _ _ hz (by rw [hc]; simp [lsSch]; omega),
     storeR_init _ _ _ _ hz (by rw [hc]; simp [nanonSch]; omega),
     storeR_init _ _ _ _ hz (by rw [hc]; simp [nstrSch]; omega),
-    storeR_init _ _ _ _ hz (by rw [hc]; simp [nnumSch]; omega), ?_⟩
+    storeR_init _ _ _ _ hz (by rw [hc]; simp [nnumSch]; omega), ?_, ?_⟩
   · refine ⟨hw, by rw [hc]; omega, by rw [hp]; exact hpool, ?_⟩
     simp only [top_rdW, hz, UInt64.toNat_zero]; exact Nat.zero_le _
   · exact memoRG_zero bmSch bmKey _ _ hz (by rw [hc]; simp; omega)
+  · exact memoRG_zero lfSch lfKey _ _ hz (by rw [hc]; simp; omega)
 
 /-! ## Interning lifts to `ArenaR`
 
