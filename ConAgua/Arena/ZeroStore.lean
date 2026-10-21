@@ -164,7 +164,7 @@ def zpushOK (m : Mem) (t : Word) : Bool :=
 
 /-- The memory after `zero_push(t, j)` appended node `c`. -/
 def zpushMem (m : Mem) (t j c : Word) : Mem :=
-  (((m.set64 ZREC (c * 2 + t) 0).set64 ZSLOT (j * 2 + t) (c + 1)).set64 CTL (8 + t) (c + 1))
+  (((m.set64 ZREC (c * 2 + t) 0).set64 ZSLOT (j * 2 + t) (c + 1)).set64 CTL (8 + (t &&& 1)) (c + 1))
 
 def zeroPush : FunDecl := lfn (t, j) locals (c) {
   c := CTL.u64[8 + t];
@@ -173,7 +173,7 @@ def zeroPush : FunDecl := lfn (t, j) locals (c) {
   if ((len(ZSLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   ZREC.u64[c * 2 + t] := 0;
   ZSLOT.u64[j * 2 + t] := c + 1;
-  CTL.u64[8 + t] := c + 1;
+  CTL.u64[8 + (t & 1)] := c + 1;
   return c
 }
 

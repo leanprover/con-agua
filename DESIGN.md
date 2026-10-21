@@ -4849,6 +4849,47 @@ from the shared Lake cache and rebuilds only the touched files in a few seconds.
 
 None.
 
+## The relation's architecture: frames from the text, tiers over projections (2026-10-21, lane `arch`)
+
+Lane `scale`'s "Recommended changes now", items 1–3, applied before the core builds on the shape.
+
+### 1. Write sets from the program text (`L/WriteSet.lean`, `Arena/Frame.lean`, `Arena/WriteSet{Lift,Walk}.lean`)
+
+* `L/WriteSet.lean` (namespace `L`, a `module`): `closedW ctl p A C fs` (a `Bool`): every function
+  of the call-closed set `fs` stores only into word arrays of `A` and into words of `C` of the
+  control array `ctl` (index a literal `k` or `k + (e & 1)`), no byte stores. `run_frame` /
+  `invoke_frame`: every run / call of `f ∈ fs` ends in `Fr m m'`, for any frame relation `Fr` that
+  is reflexive and closed under the allowed stores (`WFrame`). `closedW_of_agree`: `closedW` reads
+  only the lookups of `fs`, so a program predicate (`LiftProg p`) inherits the concrete program's
+  write set. The spike's `Spike/WriteSet{,Inst}.lean` are removed (superseded).
+* `Frame.lean`: the arena instance. `closedA p A C fs := closedW CTL p A C fs`;
+  `run_memFrame` (→ `MemFrame A C m m'` and the same byte arrays), `invoke_memFrame` (the same as a
+  triple, for a caller's `vcgen`); `Stable A C X` (a memory predicate every frame of `(A, C)`
+  keeps) and **`run_keeps`**: a `Stable` predicate survives every run, with no lemma about the
+  program.
+* **The six (in fact 21) `*_push` count stores** now write `CTL[k + (t & 1)]`; the models
+  (`apushMem`, …, `pushG`) write `CTL (k + (t &&& 1))`. `pushG_ctl` takes `t ≤ 1` (via
+  `and_one_of_le`) and keeps its old right-hand side, so nothing downstream changed: every
+  `*Store`/`*Refine` proof and the `#guard`s passed unchanged.
+* Write sets, each `by decide +kernel` (≤ 0.5 s): `liftEntry_frame` (`LiftProg p` + `lift_entry`:
+  `liftA` = arrays 41‥46 and the six expression tables of `mk_*`, `liftC` = `CTL` 42, 43 and their
+  counts), `instEntry_frame` (`instA = 47 :: liftA`, `instC = 44 :: 45 :: liftC`), `bbMemo_frame`
+  (`[24]`, `CTL` 24, 25), `storeProg_frame` (`nat_add_lit`/`intern_lit`: pool, `lit`, `CTL` 0, 2, 3).
+* Not replaced: front2's `mkAppW_above` … (`ApplyExprRefine.lean`) are frames of the **models**
+  (`mkAppW m f x = some (r, m')`), not of runs. A text frame is about runs, and a model's `some`
+  does not give a run (no termination argument), so these stay hand-written. A run-level user (any
+  refinement theorem stated over `run`, e.g. `liftEntry_run`, `instEntry_run`, `bbMemo_run`) gets
+  the frame for free.
+
+**Migration notes (item 1).** (a) A new L program: give it a concrete `*Prog`, a function list
+and its `(A, C)`, prove `closedA prog A C fns = true := by decide +kernel`, and for its program
+predicate `closedW_of_agree prog_closed (by simp only [fns, List.forall_mem_cons, …]; exact
+⟨hp.f₁.trans rfl, …⟩)` (pattern: `WriteSetLift.lean`). (b) A tier-indexed `CTL` store must
+mask the tier: `CTL.u64[k + (t & 1)]`, or `closedW` rejects it. (c) To carry your relation `X`
+across a run of `f`: `run_keeps (hp.closed …) (by decide) hX hrun hx` with `hX : Stable A C X`
+(for `StateDR`: `fun m m' hf h => StateDR.frame hf (by decide) (by decide) (by decide) h`). (d)
+`pushG_ctl` has a new hypothesis `t ≤ 1` (third explicit argument after `hS m t vs j c`).
+
 ## Progress census (2026-10-21, lane `census`)
 
 Hard numbers for planning: `scripts/census.py` (PLAN.md, "Progress census"). Pieces:

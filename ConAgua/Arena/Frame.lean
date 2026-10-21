@@ -1,4 +1,5 @@
 import ConAgua.Arena.StoreLib
+import ConAgua.L.WriteSet
 
 /-!
 # Frames between tables
@@ -13,6 +14,8 @@ changes at most one of the two tables behind its lens.
 -/
 
 open ConRon.Arena
+open Std.WP
+open scoped Lean.Order
 
 namespace L.Arena
 
@@ -57,6 +60,66 @@ theorem word_le_one (t : Word) (h : t ≤ 1) : t = 0 ∨ t = 1 := by
   rcases (show t.toNat = 0 ∨ t.toNat = 1 by omega) with h | h
   · exact .inl (UInt64.toNat_inj.mp h)
   · exact .inr (UInt64.toNat_inj.mp h)
+
+/-! ## Frames from the program text (`L/WriteSet.lean`)
+
+A program whose functions `fs` pass `closedA p A C fs` (by `decide +kernel` on the concrete
+program) changes only the arrays `A` and the `CTL` words `C`, on every run: `run_memFrame`,
+`invoke_memFrame`. A relation that is `Stable` under such frames (`StoreR` by `storeR_frame`,
+`StateDR.frame`, a tier group's `frame`) then survives every run with no lemma about the program:
+`run_keeps`. -/
+
+/-- The write set of `fs` in `p` at the arena's control array `CTL`. -/
+abbrev closedA (p : Prog) (A : List ArrId) (C : List Word) (fs : List FnName) : Bool :=
+  closedW CTL p A C fs
+
+/-- The arena's frame relation for the text check: `MemFrame` and the same byte arrays. -/
+def WFr (A : List ArrId) (C : List Word) (m₀ m : Mem) : Prop :=
+  MemFrame A C m₀ m ∧ m.bytes = m₀.bytes
+
+theorem wFr_wframe (A : List ArrId) (C : List Word) : WFrame CTL A C (WFr A C) where
+  refl m := ⟨MemFrame.refl _ _ _, rfl⟩
+  st64 m₀ m a i v h ha := by
+    refine ⟨?_, h.2⟩
+    rcases ha with ⟨hc, ha⟩ | ⟨rfl, hi⟩
+    · exact MemFrame.trans h.1 (MemFrame.mono (MemFrame.set64 m a hc i v) (by simpa using ha) (by simp))
+    · exact MemFrame.trans h.1 (MemFrame.mono (MemFrame.setCtl m i v) (by simp) (by simpa using hi))
+
+/-- **Every run of a function of a closed set is a frame of its write set** (and keeps the byte
+arrays). -/
+theorem run_memFrame {p : Prog} {A : List ArrId} {C : List Word} {fs : List FnName}
+    (hp : closedA p A C fs = true) {f : FnName} (hf : f ∈ fs) {n : Nat} {vs : List Word} {m : Mem}
+    {rs : List Word} {m' : Mem} (h : run p n f vs m = .ok (rs, m')) :
+    MemFrame A C m m' ∧ m'.bytes = m.bytes :=
+  run_frame p hp (wFr_wframe A C) f hf n vs m rs m' h
+
+/-- The same as a triple about a call, for use inside a caller's `vcgen`. -/
+theorem invoke_memFrame {p : Prog} {A : List ArrId} {C : List Word} {fs : List FnName}
+    (hp : closedA p A C fs = true) (n : Nat) {f : FnName} (hf : f ∈ fs) (vs : List Word) (s₀ : St) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) f vs
+    ⦃fun _ s => MemFrame A C s₀.mem s.mem ∧ s.mem.bytes = s₀.mem.bytes; ⊤⦄ :=
+  invoke_frame p hp (wFr_wframe A C) n f hf vs s₀
+
+/-- A memory predicate that every frame of `(A, C)` keeps: it reads nothing in the write set. -/
+def Stable (A : List ArrId) (C : List Word) (X : Mem → Prop) : Prop :=
+  ∀ m m', MemFrame A C m m' → X m → X m'
+
+/-- **Frames for free**: a predicate stable under `(A, C)` survives every run of a function of a
+set closed in `(A, C)`. -/
+theorem run_keeps {p : Prog} {A : List ArrId} {C : List Word} {fs : List FnName}
+    (hp : closedA p A C fs = true) {f : FnName} (hf : f ∈ fs) {X : Mem → Prop} (hX : Stable A C X)
+    {n : Nat} {vs : List Word} {m : Mem} {rs : List Word} {m' : Mem}
+    (h : run p n f vs m = .ok (rs, m')) (hx : X m) : X m' :=
+  hX m m' (run_memFrame hp hf h).1 hx
+
+/-- `Stable` by array bounds: a predicate that a frame of arrays and words outside `[lo, hi)`
+keeps is stable under every write set that avoids `[lo, hi)`. -/
+theorem Stable.of_range {lo hi clo chi : Nat} {X : Mem → Prop}
+    (hX : ∀ A C m m', (∀ b ∈ A, b < lo ∨ hi ≤ b) → (∀ x ∈ C, x.toNat < clo ∨ chi ≤ x.toNat) →
+      MemFrame A C m m' → X m → X m')
+    {A : List ArrId} {C : List Word} (hA : ∀ b ∈ A, b < lo ∨ hi ≤ b)
+    (hC : ∀ x ∈ C, x.toNat < clo ∨ chi ≤ x.toNat) : Stable A C X :=
+  fun m m' hf hx => hX A C m m' hA hC hf hx
 
 /-! ## Table relations across a frame -/
 
@@ -131,7 +194,7 @@ theorem pushG_frame (S : Schema) (hS : S.WF) (m : Mem) (t : Word) (ht : t ≤ 1)
     pushG_words S m t vs j c⟩
   · simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at hb
     exact pushG_arr S m t vs j c b hb.1 hb.2 hc
-  · rw [pushG_ctl S hS]
+  · rw [pushG_ctl S hS _ _ _ _ _ ht]
     simp only [List.mem_cons, List.not_mem_nil, or_false, not_or] at hx
     have : x ≠ S.ca + t := by
       rcases word_le_one t ht with rfl | rfl

@@ -165,7 +165,7 @@ def impushOK (m : Mem) (t : Word) : Bool :=
 /-- The memory after `imax_push(t, u, v, j)` appended node `c`. -/
 def impushMem (m : Mem) (t u v j c : Word) : Mem :=
   ((((m.set64 IREC (c * 4 + t * 2) u).set64 IREC (c * 4 + t * 2 + 1) v).set64 ISLOT (j * 2 + t)
-    (c + 1)).set64 CTL (12 + t) (c + 1))
+    (c + 1)).set64 CTL (12 + (t &&& 1)) (c + 1))
 
 def imaxPush : FunDecl := lfn (t, u, v, j) locals (c, k) {
   c := CTL.u64[12 + t];
@@ -176,7 +176,7 @@ def imaxPush : FunDecl := lfn (t, u, v, j) locals (c, k) {
   IREC.u64[k] := u;
   IREC.u64[k + 1] := v;
   ISLOT.u64[j * 2 + t] := c + 1;
-  CTL.u64[12 + t] := c + 1;
+  CTL.u64[12 + (t & 1)] := c + 1;
   return c
 }
 

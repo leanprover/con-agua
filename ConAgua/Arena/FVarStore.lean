@@ -171,7 +171,7 @@ def fvpushOK (m : Mem) (t : Word) : Bool :=
 /-- The memory after `fvar_push(t, u, ty, j)` appended node `c`. -/
 def fvpushMem (m : Mem) (t u ty j c : Word) : Mem :=
   ((((m.set64 FVREC (c * 4 + t * 2) u).set64 FVREC (c * 4 + t * 2 + 1) ty).set64 FVSLOT
-    (j * 2 + t) (c + 1)).set64 CTL (26 + t) (c + 1))
+    (j * 2 + t) (c + 1)).set64 CTL (26 + (t &&& 1)) (c + 1))
 
 def fvarPush : FunDecl := lfn (t, u, ty, j) locals (c, k) {
   c := CTL.u64[26 + t];
@@ -182,7 +182,7 @@ def fvarPush : FunDecl := lfn (t, u, ty, j) locals (c, k) {
   FVREC.u64[k] := u;
   FVREC.u64[k + 1] := ty;
   FVSLOT.u64[j * 2 + t] := c + 1;
-  CTL.u64[26 + t] := c + 1;
+  CTL.u64[26 + (t & 1)] := c + 1;
   return c
 }
 

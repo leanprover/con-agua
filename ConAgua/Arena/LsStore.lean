@@ -205,7 +205,7 @@ def lspushOK (m : Mem) (t : Word) : Bool :=
 /-- The memory after `ls_push(t, o, l, h, j)` appended node `c`. -/
 def lspushMem (m : Mem) (t o l h j c : Word) : Mem :=
   ((((m.set64 LSREC (c * 6 + t * 3) o).set64 LSREC (c * 6 + t * 3 + 1) l).set64 LSREC
-    (c * 6 + t * 3 + 2) h).set64 LSSLOT (j * 2 + t) (c + 1)).set64 CTL (40 + t) (c + 1)
+    (c * 6 + t * 3 + 2) h).set64 LSSLOT (j * 2 + t) (c + 1)).set64 CTL (40 + (t &&& 1)) (c + 1)
 
 def lsPush : FunDecl := lfn (t, o, l, h, j) locals (c, k) {
   c := CTL.u64[40 + t];
@@ -217,7 +217,7 @@ def lsPush : FunDecl := lfn (t, o, l, h, j) locals (c, k) {
   LSREC.u64[k + 1] := l;
   LSREC.u64[k + 2] := h;
   LSSLOT.u64[j * 2 + t] := c + 1;
-  CTL.u64[40 + t] := c + 1;
+  CTL.u64[40 + (t & 1)] := c + 1;
   return c
 }
 

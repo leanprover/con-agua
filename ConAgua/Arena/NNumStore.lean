@@ -168,7 +168,7 @@ def nnpushOK (m : Mem) (t : Word) : Bool :=
 /-- The memory after `nnum_push(t, pre, u, j)` appended node `c`. -/
 def nnpushMem (m : Mem) (t pre u j c : Word) : Mem :=
   ((((m.set64 NNREC (c * 4 + t * 2) pre).set64 NNREC (c * 4 + t * 2 + 1) u).set64 NNSLOT
-    (j * 2 + t) (c + 1)).set64 CTL (38 + t) (c + 1))
+    (j * 2 + t) (c + 1)).set64 CTL (38 + (t &&& 1)) (c + 1))
 
 def nnumPush : FunDecl := lfn (t, pre, u, j) locals (c, k) {
   c := CTL.u64[38 + t];
@@ -179,7 +179,7 @@ def nnumPush : FunDecl := lfn (t, pre, u, j) locals (c, k) {
   NNREC.u64[k] := pre;
   NNREC.u64[k + 1] := u;
   NNSLOT.u64[j * 2 + t] := c + 1;
-  CTL.u64[38 + t] := c + 1;
+  CTL.u64[38 + (t & 1)] := c + 1;
   return c
 }
 

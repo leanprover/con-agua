@@ -161,7 +161,7 @@ def ppushOK (m : Mem) (t : Word) : Bool :=
 
 /-- The memory after `param_push(t, u, j)` appended node `c`. -/
 def ppushMem (m : Mem) (t u j c : Word) : Mem :=
-  (((m.set64 PREC (c * 2 + t) u).set64 PSLOT (j * 2 + t) (c + 1)).set64 CTL (14 + t) (c + 1))
+  (((m.set64 PREC (c * 2 + t) u).set64 PSLOT (j * 2 + t) (c + 1)).set64 CTL (14 + (t &&& 1)) (c + 1))
 
 def paramPush : FunDecl := lfn (t, u, j) locals (c) {
   c := CTL.u64[14 + t];
@@ -170,7 +170,7 @@ def paramPush : FunDecl := lfn (t, u, j) locals (c) {
   if ((len(PSLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   PREC.u64[c * 2 + t] := u;
   PSLOT.u64[j * 2 + t] := c + 1;
-  CTL.u64[14 + t] := c + 1;
+  CTL.u64[14 + (t & 1)] := c + 1;
   return c
 }
 

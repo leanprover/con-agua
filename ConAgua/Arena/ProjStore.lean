@@ -177,7 +177,7 @@ def pjpushOK (m : Mem) (t : Word) : Bool :=
 /-- The memory after `proj_push(t, n, u, e, j)` appended node `c`. -/
 def pjpushMem (m : Mem) (t n u e j c : Word) : Mem :=
   ((((m.set64 PJREC (c * 6 + t * 3) n).set64 PJREC (c * 6 + t * 3 + 1) u).set64 PJREC
-    (c * 6 + t * 3 + 2) e).set64 PJSLOT (j * 2 + t) (c + 1)).set64 CTL (32 + t) (c + 1)
+    (c * 6 + t * 3 + 2) e).set64 PJSLOT (j * 2 + t) (c + 1)).set64 CTL (32 + (t &&& 1)) (c + 1)
 
 def projPush : FunDecl := lfn (t, n, u, e, j) locals (c, k) {
   c := CTL.u64[32 + t];
@@ -189,7 +189,7 @@ def projPush : FunDecl := lfn (t, n, u, e, j) locals (c, k) {
   PJREC.u64[k + 1] := u;
   PJREC.u64[k + 2] := e;
   PJSLOT.u64[j * 2 + t] := c + 1;
-  CTL.u64[32 + t] := c + 1;
+  CTL.u64[32 + (t & 1)] := c + 1;
   return c
 }
 
