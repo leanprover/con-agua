@@ -1,6 +1,8 @@
 module
 
 public import ConAgua.Compiler.Run
+public import ConAgua.Compiler.WF
+meta import ConAgua.Compiler.WF
 public import ConAgua.L.Notation
 public import ConAgua.L.Examples
 meta import ConAgua.Compiler.Run
@@ -26,6 +28,9 @@ def agrees (p : Prog) (f : FnName) (args : List Word) (m : Mem) (fuel : Nat := 1
 def inp (s : String) : Mem := { bytes := #[s.toUTF8.data] }
 
 /-! `skip_braced` and `str_close` (`L/Examples.lean`). -/
+
+-- The compiler theorem applies: the program is well formed for one byte array.
+#guard Prog.wf { nb := 1, nw := 0 } scanProg
 
 #guard agrees scanProg "skip_braced" [1, 0] (inp "{\"a\":[1,{\"b\\\"\":2}]} x")
 #guard agrees scanProg "skip_braced" [1, 0] (inp "{\"a\":1")
@@ -84,6 +89,9 @@ def boom : FunDecl := lfn (n) {
 }
 
 def recProg : Prog := [("sum_to", sumTo), ("boom", boom)]
+
+#guard Prog.wf { nb := 0, nw := 0 } recProg
+#guard Prog.wf { nb := 1, nw := 1 } [("mix", mix)]
 
 #guard agrees recProg "sum_to" [100] {}
 #guard agrees recProg "boom" [7] {}
