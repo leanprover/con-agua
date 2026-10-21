@@ -1,0 +1,9 @@
+date,lane,model,work_min,overhead_min,note
+2026-10-21,exprops,opus,20,10,"estimate: ArenaR extension point (frame_ext, arenaR_init >= 64 arrays)"
+2026-10-21,exprops,opus,45,15,"estimate: memo library (MemoLib/MemoLibRel, schema-generic L + relation), bvarBC ported"
+2026-10-21,exprops,opus,30,10,"estimate: view layer (View/ViewL), WalkRefine 565 -> 372 lines"
+2026-10-21,exprops,opus,120,20,"estimate: derived bvar ranges (ExprMk der_b/mk_*, DerRel DerR/ArenaD)"
+2026-10-21,exprops,opus,120,25,"estimate: liftLooseBVars (Lift/LiftSpec/LiftRefine/LiftBench), 4.8 refinement lines per L line"
+2026-10-21,exprops,opus,75,15,"estimate: instantiate1 (Inst1*, scripts/inst1_from_lift.py), 4.4 refinement lines per L line"
+2026-10-21,cache,claude-sonnet-5,25,0,"shared Lake artifact cache: scripts/lake wrapper + scripts/new-worktree.sh, seeded _tmp/lake-cache (1.7G), fresh worktree builds 1800 modules in 0.37s at ~0 marginal disk"
+2026-10-21,scale,opus,17,3,"relation scaling assessment: DESIGN.md section, spikes (bundle size 22-110 fields, grind exposure, WriteSet text frames, TwinKeep twin frames)"

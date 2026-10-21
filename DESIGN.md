@@ -3313,10 +3313,11 @@ error matches (`Checker.lean:228–236, 247, 272–278, 286–291`, the frontend
 
 None. `PipelineRefines` is a hypothesis of the theorems.
 
-## The memo library, the view layer, derived ranges and `liftLooseBVars` (2026-10-21, lane `exprops`)
+## The memo library, the view layer, derived ranges, `liftLooseBVars` and `instantiate1` (2026-10-21, lane `exprops`)
 
 Files: `ConAgua/Arena/{MemoLib,MemoLibRel}.lean` (replace `Memo`/`MemoRel`), `{View,ViewL}.lean`,
-`{ExprMk,DerRel}.lean`, `{Lift,LiftSpec,LiftRefine,LiftBench}.lean`; changed `ArenaRel`, `Frame`,
+`{ExprMk,DerRel}.lean`, `{Lift,LiftSpec,LiftRefine,LiftBench}.lean`,
+`{Inst1,Inst1Spec,Inst1Refine,Inst1Bench}.lean`, `scripts/inst1_from_lift.py`; changed `ArenaRel`, `Frame`,
 `Walk`, `WalkRefine`. No `sorry`; axioms `propext`, `Classical.choice`, `Quot.sound`.
 `ArenaRel.lean` is maintained by hand from now on (no generator; see lane `tables2` above).
 
@@ -3326,10 +3327,11 @@ Files: `ConAgua/Arena/{MemoLib,MemoLibRel}.lean` (replace `Memo`/`MemoRel`), `{V
 |---|---|---|
 | 41 `LMEMO` | 42 (stamp − 1), 43 (count) | the `liftC` memo (`lfSch`), field `ArenaR.lmemo` |
 | 42‥46 `ADER`, `LADER`, `FADER`, `LEDER`, `PJDER` | – | derived bvar ranges of `app`, `lam`, `forallE`, `letE`, `proj` (`DerR`) |
-| 47‥63 | 44‥63 | reserved for this lane |
+| 47 `IMEMO` | 44, 45 | the `inst1C` memo (`imSch`), field `ArenaR.imemo` |
+| 48‥63 | 46‥63 | reserved for this lane |
 | ≥ 64 | ≥ 64 | free for other lanes: `ArenaR.frame_ext` (stable), `arenaR_init` takes ≥ 64 arrays and a `CTL` of ≥ 64 words |
 
-`ArenaR.frame_above` (arrays ≥ 42, `CTL` ≥ 44) and `frame_ext` are proved once from `apart_hi`
+`ArenaR.frame_above` (arrays 42‥46, `CTL` ≥ 64) and `frame_ext` are proved once from `apart_hi`
 (`Apart` by bounds) with `arena_build … using …` (the frame tactic is now a parameter).
 
 ### The memo library (`MemoLib.lean`, `MemoLibRel.lean`)
@@ -3411,6 +3413,28 @@ L/Rust is 0.65. The refinement is at the target (≤ 5; the walk was 10): the di
 induction hypothesis), and `tail_ok` (`mk_*_ok` and the memo set). Not counted: the derived-range
 infrastructure (`ExprMk`, `DerRel`), which every walk with a cut-off reuses.
 
+### `instantiate1` on the same scaffolding (`Inst1.lean`, `Inst1Spec.lean`, `Inst1Refine.lean`)
+
+`instantiate1Go`/`instantiate1Fast`: the derived-range cut-off, then the **tag** (leaves and
+unknown tags return `h` unread), the `bvar` arm inline (`i = d`: `v`, `i > d`: `intern_bvar(i - 1)`),
+five memoized arms on `inst1C` (`imSch`, a new `MemoSch` line and an `ArenaR` field) that probe
+**before** viewing (the twin's order; the view checks follow the probe), the binders sharing the
+twin's `instantiate1ArmBind`. New library pieces: the store's projections per tag
+(`viewApp_ok`, `viewBind_lam`, … in `View.lean`, 85 lines). `Inst1.lean` and `Inst1Spec.lean`
+were derived from `Lift.lean`/`LiftSpec.lean` by `scripts/inst1_from_lift.py` (renames, the view
+checks after the probe, hand-written dispatcher and program in `scripts/inst1_templates.py`;
+`--check` reproduces the committed files); they are maintained by hand from now on.
+
+| | Rust lines | L lines | proof lines (code) | `lean` wall / user |
+|---|---:|---:|---|---|
+| `instantiate1_go` + `_fast` | ≈ 155 | 98 (`inst_go` 19, arms 75, entry 4) | `Inst1.lean` 446, `Inst1Spec.lean` 131 | 7.1 s / 7.5 s, 5.9 s / 20.9 s |
+| refinement | – | – | `Inst1Refine.lean` **429**, **4.4 per L line** | 1.0 s / 2.0 s |
+
+All specs went through at the first attempt with `finish (gen := 20) [viewOK, tierW, idxW]`; the
+refinement needed only `simp` set fixes. The probe/tail helpers (`iprobe_ok`, `itail_ok`) are
+copies of lift's for the other memo (60 lines); a version generic in the memo accessor would
+remove them for the next four walks.
+
 ### Findings
 
 * **`vcgen` with a symbolic array id works**: the memo library's L code is a Lean function of the
@@ -3427,12 +3451,12 @@ infrastructure (`ExprMk`, `DerRel`), which every walk with a cut-off reuses.
 
 ### Not done
 
-* `instantiate1Go`, `instantiateListGo`, `abstract1Go`, `hasLooseBVar`: the same scaffolding
-  (`DerR`, the memo instances `inst1C` … as more `MemoSch` lines, `mk_*`); `instantiate1` also
-  needs `bvarBC` reads (`instantiate1Lift`'s cut-off).
+* `instantiateListGo`, `abstract1Go`, `instantiate1LiftGo`, `hasLooseBVar`: the same scaffolding
+  (`DerR`, more `MemoSch` lines, `mk_*`); `instantiate1Lift` also needs `bvarBC` reads.
 * `DerR` for the other leaf internings (`intern_fvar`, `intern_sort`, `intern_const`, `intern_lit`,
   incl. `natAddLit_refinesA`): each is `internBVar_D`'s proof with `zP` (range `0`).
-* A compiled benchmark of `lift_entry` (the program is `liftProg`; not emitted).
+* Compiled benchmarks of `lift_entry`/`inst_entry` (the programs are `liftProg`, `instProg`; not
+  emitted).
 
 ### `nat_pow`: an accumulator that moves
 
@@ -4007,6 +4031,279 @@ passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` 
   `x / 2^j` terms and broke it.
 * **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
   none for the theorem (as `nat_shr`).
+
+### `sorry`s
+
+None.
+
+## The shared Lake artifact cache (2026-10-21, lane `cache`)
+
+Ported from con-ron (`_tmp/ref/con-ron/CLAUDE.md`, "The shared Lake artifact cache", task
+#97-CACHE), which hit the same problem first: ~1750 modules, full build ~2 min wall on 96 cores
+and growing, every agent worktree under `_tmp/wt/` otherwise rebuilding from scratch.
+
+### Mechanism
+
+Lake 5 (this toolchain, `nightly-2026-10-20`) keeps a content-addressed local artifact cache
+keyed by each module's *input hash* (source bytes, import artifact hashes, toolchain, options,
+module name) — no absolute path in the key, so one cache directory serves every worktree and
+branch and survives a worktree being deleted. Confirmed in the Lake source
+(`~/.elan/toolchains/*nightly-2026-10-20*/src/lean/lake/Lake/Config/{Env,PackageConfig,Monad}.lean`,
+`Lake/Build/Module.lean`):
+* `LAKE_CACHE_DIR` picks the cache directory; with no override Lake falls back to
+  `$ELAN_HOME/toolchains/<tc>/lake/cache`, a separate bind mount in the agent sandbox, so Lake
+  cannot hard-link out of it and silently *copies* every restored artifact instead (con-ron's
+  finding). **There is no lakefile.toml equivalent for the cache directory** — it's resolved
+  once in `Env.compute`, from the process environment, before any lakefile is read.
+* `Package.isArtifactCacheReadable` defaults to `true` and `Package.isArtifactCacheWritable`
+  defaults to `false` (`Lake/Config/Monad.lean`) — i.e. **reading is automatic, writing is
+  opt-in**, out of the box, with no lakefile.toml change needed. The env vars
+  `LAKE_ARTIFACT_CACHE` / `LAKE_RESTORE_ARTIFACTS` (or, if we ever wanted to flip the default,
+  the lakefile.toml options `enableArtifactCache` / `restoreAllArtifacts` on the root package)
+  only matter for *writing*; we leave them unset in `lakefile.toml` and set them only on the one
+  build that seeds the cache. `Module.lean`'s read path (`fetchCore`, the
+  `isArtifactCacheWritable = false` branch) calls `fetchFromCache? … (restoreAll := true)`
+  unconditionally, so a read-only build always restores full build-directory artifacts (not just
+  cache-internal ones) when it hits a cache entry — this is the "hard-linked into `.lake/build`,
+  0 bytes of disk" behaviour.
+
+Since `LAKE_CACHE_DIR` can only be set by environment variable, and an agent's shell does not
+keep env vars between tool calls (`PLAN.md` "Process rules"), the project does not rely on
+anyone sourcing anything: **`scripts/lake`** is a wrapper that computes `git rev-parse
+--show-toplevel`, exports `LAKE_CACHE_DIR="$root/_tmp/lake-cache"`, and `exec`s the real `lake`.
+Every build, in every worktree, is `scripts/lake build …` instead of plain `lake build …` — no
+sourcing, no persistence needed, just a different binary name. `git rev-parse --show-toplevel`
+returns the *worktree's own* root, which only resolves to the one shared cache because
+`scripts/new-worktree.sh` symlinks the worktree's `_tmp` to the main tree's `_tmp` (the same
+"shared through a symlink" convention con-ron uses).
+
+`scripts/new-worktree.sh <path-under-_tmp/wt> [<rev>]` wraps `git worktree add` and then:
+* symlinks `_tmp` (hence `_tmp/lake-cache`) in from the main tree;
+* symlinks `.lake/packages` in from the main tree too. Kraken (the one `[[require]]` in
+  `lakefile.toml`) is a git dependency pinned by `rev`; its checkout and its own small build
+  directory (`.lake/packages/Kraken/.lake/build`, ~25 MB, separate from the root workspace's
+  `.lake/build` because it is a dependency package, not vendored source) are identical across
+  every worktree on the same lakefile, so there is nothing a fresh worktree needs the network
+  for. **Never `lake update` against the symlinked copy from a worktree** — that's shared
+  mutable state; do it in the main tree.
+It refuses a path outside `_tmp/wt/`, matching the "worktrees go in `_tmp/`" rule.
+
+### Seeding and landing policy
+
+Seeding is one build: `LAKE_ARTIFACT_CACHE=true LAKE_RESTORE_ARTIFACTS=true scripts/lake build`
+from a tree that already has the artifacts. It re-elaborates nothing when the tree is up to
+date — it just hard-links what's already in `.lake/build` into the cache.
+
+**Policy: whoever merges a lane into master already has to build master in the main tree to
+confirm it's green (PLAN.md, "speed over ceremony"); that build is the seed.** Just run it with
+the two env vars set instead of plain `scripts/lake build` — same build, same cost when the tree
+is already current (measured: 0.55 s to hard-link 1800 modules' worth of artifacts already on
+disk into an existing cache), and it keeps the shared cache current with no separate step, no
+cron job, and no lane having to remember a second command. Do not turn `LAKE_ARTIFACT_CACHE` on
+for routine edit-loop builds — every agent writing to the same cache concurrently is unnecessary
+contention for no benefit (reading is already free), and the merge/landing point is the one place
+a "master is up to date and worth caching" check is naturally already happening.
+
+**GC**: the cache pins every artifact ever written to it, so it only grows (toolchain bumps,
+renamed modules, abandoned lanes all leave orphans behind). There is no automatic eviction.
+Check size with `du -sh _tmp/lake-cache`; clear it with `scripts/lake cache clean` (or
+`rm -rf _tmp/lake-cache`, same effect, both just lose the cache, never the build). Worth doing
+occasionally (say, after a toolchain bump) — not on every landing.
+
+### Measurements (2026-10-21, this machine, concurrent with five other agent worktrees building)
+
+| build | wall time | note |
+|---|---:|---|
+| main tree, plain `scripts/lake build`, stale `.lake/build` | 2m18s (1800 jobs) | brings master's own build dir current; this is the baseline "full build" |
+| seed: `LAKE_ARTIFACT_CACHE=true LAKE_RESTORE_ARTIFACTS=true scripts/lake build`, tree already current | 0.55s | pure hard-linking into `_tmp/lake-cache`, no re-elaboration |
+| cache size after seeding | 1.7G in `_tmp/lake-cache` (apparent; see dedup note below) | |
+| fresh worktree (`scripts/new-worktree.sh`, no `.lake/build`), `scripts/lake build` | 0.365s (1800 jobs) | all restored from cache, zero re-elaboration |
+
+**Disk**: `du -sh` on the fresh worktree's `.lake/build` alone reports 1.7G — `du` cannot know a
+directory's blocks are hard-linked elsewhere unless it's told to look. Passing all three
+locations to one `du` invocation (`du -sch .lake/build _tmp/lake-cache _tmp/wt/cachetest/.lake/build`,
+from the main tree) lets GNU `du` deduplicate by inode across them, same as the filesystem
+itself does: the combined total is **3.3G — identical to the main tree's `.lake/build` alone**.
+The cache and the fresh worktree's entire 1800-module build directory cost ~0 bytes of *marginal*
+disk; `stat -c %h` on a sample olean shows `links=3` (main tree, cache, worktree, same inode).
+
+## Does the relation scale? (2026-10-21, lane `scale`)
+
+Question: does the L ⊑ twin relation (`ArenaR`, `ArenaD`, the `GoOK`-style specs) scale to all the
+state the checker will have? Files: `ConAgua/Spike/{ScaleBase,ScaleFlat,ScaleNested,ScaleGrind,
+WriteSet,WriteSetInst,TwinKeep}.lean` and `gen_scale.py` (the generator of the three `Scale*`
+relation files). The spikes are not imported by `ConAgua` and have no `sorry`; check one with
+`lake env lean ConAgua/Spike/<f>.lean` (`WriteSetInst` needs `lake build ConAgua.Spike.WriteSet`
+first). No other file was changed.
+
+**Verdict.** The relation scales if two things change now, before the core lands. (1) Specs must
+carry their frames. Today a walk spec (`GoOK`, `LGoOK`, `IGoOK`) ends in `ArenaD m' a'` and says
+nothing about the rest of the memory or the twin state, so every new state component would force
+each existing walk to be re-proved or framed by hand. Lane `front2` already hand-wrote
+`mkAppW_above`… for `Above64`. Both frames can be obtained cheaply and generically (experiments 2
+and 3). (2) The relation should be bundled per tier and over projections of `AState`, not as one flat
+structure over `AState`. The flat bundle's cost per writer grows faster than linearly (experiment 1),
+and a group over `AState` gets no twin-side frame by definitional unfolding. Store and memo tables
+fit the existing libraries. New ideas are needed for six components: the scratch-tier drop, the
+mode-memo bank stack, tree-valued caches, the environment index's deletion, nested declaration
+records, and `Readback`'s `Expr`-keyed memo. None of them threatens lockstep equality of the caches.
+
+### Inventory
+
+Lifetimes: **G** global (whole run), **D** per declaration (`flushCaches`/`enterScratch` …
+`dropScratch`), **C** per top-level call (cleared at entry), **A** an argument value (not in
+`AState`).
+
+| component | type | life | mutation | L representation | relation clause | verdict |
+|---|---|---|---|---|---|---|
+| `store` persistent tier, 21 cons tables | `Tbl` (nodes, der, cons) | G | append | `StoreLib` open addressing | `StoreR`/`TierR` | **fits** (done) |
+| `store` scratch tier | same | D | append; `enableScratch`/`dropScratch` empty it | same, tier 1 | `TierR … 1` | **needs X**: `SlotsOKG` requires every slot ≤ count, so a drop to count 0 must zero all scratch slots (O(capacity) × 21 tables per declaration). Use epoch-stamped slots for tier 1, as the memos have |
+| `store.scratchOn` | `Bool` | D | set/reset | `CTL[1]` | in `StoreR` | fits |
+| derived columns | `UInt64` per node | with node | append | range in `XDER`, leaf ranges from the record, hash opaque | `DerR` | fits (5 compound tables done) |
+| `memos` (10 tables) | `HashMap (EIdx×Nat) EIdx`, `EIdx → Nat`, `LIdx → LIdx`, `LsIdx → LsIdx` | C | insert, clear (`Memos.empty` at `enterScratch`) | `MemoLib` (2 key words, 1 value word, epoch clear) | `MemoRG` | **fits** (3 done) |
+| `caches`: `whnfCoreC`, `whnfCoreCheapC`, `whnfC`, `inferC`, `inferIOC`, `defeqC` | `EIdx → EIdx`, `(EIdx×EIdx) → Bool` | D | insert; `takeModeMemos`/`putModeMemos` around every eager `defeqE` | `MemoLib` in `D` banks; bank = eager depth | `MemoRG` for the live bank, plus "bank `i` relates the `i`-th saved `ModeMemos`" for the twin's saved values | **needs X**: bank-indexed dispatch (static code per bank from the generic schema; a depth word selects), and a depth-indexed frame in the knot specs ("banks below `d` unchanged"). The same code writes every bank, so this frame is semantic and the text frame (experiment 2) cannot give it |
+| `caches`: `lvlEqC`, `lvlsEqC`, `constTyC`, `constValC`, `ruleRhsC` | handle pairs/triples → `Bool`/handle | D | insert | `MemoLib` (a triple of 32-bit handles packs into two words) | `MemoRG` | fits |
+| `caches`: `readLC`, `readNC`, `readLsC` | `LIdx → Level`, `NIdx → Name`, `LsIdx → List Level` | D | insert | values are **trees**: a per-declaration tree heap, slot value = tree pointer | `MemoRG` with a value decoder that reads memory (`dv : Mem → Word → Option ν`; today `dv : Word → ν`) | **needs X**; the tree heap's lifetime is D, not the per-call scratch heap ROADMAP §2 item 5 plans for level algorithms |
+| `flushCaches` | – | D | `caches := Caches.empty` (the twin no longer drops selectively; ROADMAP §2 item 2 is stale) | 14 epoch bumps | `memoRG_clear` | fits |
+| `pins` | `Array NIdx` (51), `List NIdx`, 3 handles | G | filled once (`internAllPins`) | a fixed word array | `PinsR m a.pins` | fits |
+| `fe : IFEnv` | `IEnv` (list) + `HashMap NIdx (Nat × IConstantInfo)` + `visibleBelow` | **A**, G | `push`; `popTemp` (erase or re-insert); `restrictTo` views live **at the same time** as the full one (`CheckDecl.lean:113,124,135`); `eraseInstalled` (`Promote.lean:345`) | one destructive index (name → counter, record pointer) and a `vis` word per view | `EnvR m vis fe`, stated through `find?` and `visibleBelow` (a view whose counter is `≥ vis` misses in both), plus the order of `consts` | **needs X**: deletion in an open-addressing table (tombstones), and `find?`-level extensionality |
+| `IConstantInfo`, `IDeclaration` | nested: `List NIdx`, `List IRecRule` (each with `IRecRuleFire` lists), `IIndCaps` (lists, `PropWhen` = `List Name` **values**), `IProjTable` (`Array EIdx`, `List LIdx`) | G | built at install, immutable | record pool, bump-allocated, below a top | `decCI m p = some ci` (a recursive decoder); `PropWhen`'s names decoded through the store (`denoteN`) | **needs X**: nested decoders (`PoolSlice` covers flat slices only); the frame is `PoolSlice`'s `Agree` (the pool below the top never moves) |
+| `pend : Array PendingCheck` | `ValueGroup` (kind, `IConstantVal`, handle), two `Nat` | A, phase A → B | push | pool records | decoder | fits once the record pool exists |
+| pin sets `List INatOpPinSet` | 8 handles, `List EIdx`, a `String` (only in a decline message) | A, G | none | pool | decoder; the string is not represented (a decline claims nothing) | fits |
+| `PMemo` (promotion) | 4 maps handle → handle | A, D | insert | 4 `MemoLib` instances | `MemoRG` on an argument | fits |
+| walk-local memos: `wscopedBGo`, `fvarLeavesGo` (seen + an accumulator list in walk order), `leavesSubGo`, `constsResolveFGo`, `hasStrLitGo`, positivity's `mentionsAnyGo`/`nestOccGo`/`depthGo`/`replaceFVarsGo`, `RecCheck`, `StructParts`, `usedConstsGo` (a set + an array) | `HashMap`/`HashSet` of handles, lists/arrays | A, C | insert | `MemoLib` instances, scratch stacks | relation on the argument | fits |
+| `Readback`'s `EMemo` | `HashMap ConLeche.Expr EIdx` (structural key) | A, per block | insert | keyed by ROM offset | – | **needs X**: equal trees at different ROM offsets miss in L where the twin hits. The store is unaffected (interning is idempotent), but the maps differ. Make the ROM hash-consed (offset equality = tree equality), or state the interner's spec without the memo |
+| `NestState` (positivity) | `Array NestKey`, `List NestKey`, `Array NestCtorNf` | A, per run | push, linear search | scratch stacks | decoder | fits |
+| transient `Level` trees | `ConLeche.Level` | per call | built by pure level algorithms | scratch tree heap | decoder | needs X (ROADMAP §2 item 5) |
+| knot (`CoreFnsA`, mode, eager depth) | closures | – | – | one mutual group, mode word | `CoreOK n := ⋀ entry specs` for every `F ≥ n` | fits the `GoOK`/`ArmOK` pattern |
+| fuels | `Nat` | – | – | L fuel; counters for the counted ones | `F ≥ n` | fits (below) |
+| attempt snapshots (`orElseAttempt`) | `AState` copy | – | – | none: L aborts at the first throw | – | fits (ROADMAP §3 (c)) |
+| `AState.worker` | – | phase B | drop + `Memos.empty` + `Caches.empty` | the drop and epoch clears | – | fits |
+
+### The risks, with evidence
+
+**(a) Proof performance of one big bundle (experiment 1, `ScaleBase`/`ScaleFlat`/`ScaleNested`).**
+`gen_scale.py` writes `ArenaR`'s 22 fields plus `N` dummy `MemoRG` clauses (schemas at arrays
+100+, all over `a.memos.fvarBC`), the `arena_build` macro for them, and the same eight writer lemmas
+(five intern lifts, `memo_set`, `memo_clear`, `grow`). `lake env lean`, one run each (imports alone
+0.6 s user):
+
+| bundle | fields | user (8 writers) | per writer |
+|---|---:|---:|---:|
+| `ArenaR` (today) | 22 | 4.9 s | 0.55 s |
+| flat | 44 | 10.5 s | 1.25 s |
+| flat (`ScaleFlat`) | 66 | 18.5–25.7 s (two runs) | 2.3–3.1 s |
+| flat | 110 | 44.4 s | 5.5 s |
+| nested: `ArenaR` + two groups of 22 (`ScaleNested`) | 66 | 1.55 s | the core's 0.55 s (paid once in `ArenaRel`) + ~0.05 s |
+
+The flat cost grows faster than linearly: each writer frames every field, and the `apart` simp set
+grows with the number of array ids. Writers grow too (every intern, every memo/cache set and clear,
+every bank operation, the environment push), so the flat total grows roughly with the square of
+the component count. In the nested version a group's frame lemma is proved once, from array bounds
+(`Grp.frame`: `∀ b ∈ A, b < lo ∨ hi ≤ b`), and every writer outside the group pays one application.
+**Finding:** the first nested version did not compile. A group stated over `AState`
+(`Grp m a`) is a structure, so `Grp m (appLens.setP a t)` is not definitionally `Grp m a`, although
+nothing the group reads changed. A group must take the **projection** it reads (`Grp m a.memos.fvarBC`,
+later `CoreR m a.caches`, `PinsR m a.pins`). Then the twin side of the frame is definitional unfolding,
+as `AM.st_proto` already gives for tables.
+
+**`grind` and the relation (`ScaleGrind`).** On a trivial goal (`y ≤ 5` and a read): no relation in
+the context 3 ms; `hA : ArenaR m a` 3 ms; its 22 fields as opaque hypotheses 6 ms; two tables'
+`StoreR`/`TierR` unfolded 48 ms; all 19 tables and 3 memos unfolded **532 ms**. Lane `store2`'s
+finding generalises: kept opaque, the size of the relation costs `grind` nothing; unfolded, it costs
+linearly in the `∀`-clauses, before any instance matches. Today no refinement proof gives `ArenaR`
+to `grind` (`WalkRefine`, `LiftRefine`, `Inst1Refine` have no `grind`). The L-side specs are about
+models, the refinements are by hand with named lemmas. Keep it that way.
+
+**(b) Frames per function: the main risk.** The walk specs (`GoOK n`, `LGoOK n`, `IGoOK n`) say
+`ArenaD m a → … → ∃ a', run = .ok (r, a') ∧ ArenaD m' a'`. A caller that holds another relation
+(the front's `StateDR`, a future `CoreR m a.caches`, `EnvR`, a saved bank) learns nothing about it
+from this. Without frames, every walk proof would be redone each time a component is added. Two
+generic remedies, one per side:
+
+* **L side: frames from the program text (experiment 2, `WriteSet.lean`, 165 lines, 1.2 s).**
+  `Preserve.lean`'s induction, generalised: `closedW p A C fs` (a `Bool`) says every function of
+  the call-closed set `fs` stores only into arrays of `A` and into `CTL` words of `C`. A `CTL` index
+  must be a literal `k`, or `k + (e &&& 1)`, which can only be `k` or `k + 1`. `run_frame`: every
+  run of `f ∈ fs` is a `MemFrame A C` (and keeps the byte arrays). Applied to `instProg`
+  (`WriteSetInst.lean`; instantiate1, lift, the `mk_*`, six stores, 52 functions): the only stores
+  the check rejects are the six `*_push` count stores `CTL[k + t]`, whose tier `t` is not bounded
+  by the text. With those masked (`k + (t &&& 1)`, the spike's `maskS`), `closedW` holds by
+  `decide +kernel` in 0.36 s. `instEntry_frame` gives `MemFrame` for every `inst_entry` run.
+  `stateDR_instEntry` then carries the front's `StateDR` across it with no lemma about
+  `inst_entry`. Lane `front2` proved `mkAppW_above`… by hand for the same purpose.
+* **Twin side: frames by composition (experiment 3, `TwinKeep.lean`, 147 lines, 1.5 s).**
+  `Keeps π op`: every successful run keeps `π a`. It is closed under `bind`, `ite` and `pure`.
+  The store primitives (`internNodeE`, `internLamE`, `internForallEE`) are one macro each, and the
+  reads (`derivedE`, `view*`, `inst1Get`) are one line. `keeps_inst1Go`: `instantiate1Go` keeps
+  `cp a = (a.caches, a.pins)` at every fuel, by one induction with one term per arm (about 45
+  lines per walk family, no `grind`). With the L frame and this, any `X m' (cp a')` follows from
+  `X m (cp a)` when `X` reads only arrays outside the write set. con-ron's Theorem 1 uses the same
+  architecture (`Bridge/Specs.lean`'s specs end in `s'.caches = s₀.caches ∧ s'.pins = s₀.pins`,
+  and `CheckOK.mono` transports the whole invariant across an `ExprOps` call). The alternative is
+  to add `cp a' = cp a` to each `GoOK` post (cheap if done from the start: the proofs build `a'`
+  from `with`-updates).
+
+**(c) Caches: lockstep equality is enough.** L caches as con-ron does (same keys, same
+insert/clear points), and `MemoRG` relates the L table to the map extensionally (`mp[k]?`), so
+layout is free. What would break equality, checked in the twin (`vendor/con-ron/ConRon/Arena/**`):
+* **No eviction and no capacity behaviour other than abort.** The caches are uncapped (task #115
+  removed `cacheCap`, `CoreState.lean:28–31`). The only capacity rule is `idxCap` → `.native`, an
+  L abort. `clear_fit` (`Core.lean:3552`) is Rust layout only. L memos abort at 3/4 load. That is
+  sound, but completeness needs capacities sized for the largest declaration (or a resize, which
+  is layout only and keeps `MemoRG`).
+* **No `HashMap` iteration, `size`, `fold` or `toList` on any memo, cache, index or argument map**
+  (grep over the twin; `NestState.keys` is an `Array`, `ctorIx` is a `List.foldl`). No key or value
+  carries `mixHash` (handles hash by their word; lane `final`'s audit). Handle values are
+  allocation indices, the same in lockstep.
+* **Deterministic skips L must copy:** `whnfCoreStuckTag`/`whnfStuckTag` read neither the memo nor
+  the store; a `none` level verdict is never cached; `defeqE` runs on emptied mode tables (`takeModeMemos`)
+  and puts the caller's back (`putModeMemos`), dropping what the eager run added.
+* **The exceptions** (table above): `readLC`/`readNC`/`readLsC` hold trees, `Readback`'s `EMemo`
+  is keyed by trees, and the environment index needs `erase`. None is a layout dependence. Each
+  needs a representation choice that keeps equality.
+
+**(d) Fuel across the knot.** Fits. L fuel decreases on every call and loop iteration. The twin's
+knot fuel decreases only per knot level, and its loop and walk fuels are fresh constants (`2^62`,
+or counted in L, lane `final`'s audit). So `n ≤ F` is preserved at every knot call, and "for every
+`F ≥ n`" closes the induction. The knot needs one conjunction `CoreOK n` over the six entry points
+at both modes (the eager slot runs `mode.toEager`). The bodies take it as their hypothesis, as
+`IArmOK n` takes `IGoOK n`; each body is its own lemma.
+
+**(e) Scratch tier and stale handles.** Handle-valued data (caches, environment, pending) is
+related as words, so a dangling scratch handle breaks no clause. Only the view lemmas interpret a
+handle, and after a drop both sides fail the view (L's count check against `CTL`). The gap is the
+drop itself (`SlotsOKG`, table above).
+
+**(f) Environment and declaration records.** Not in `AState`: `fe` is an argument everywhere, and
+several views of one index are live at once. The relation must be per view (`EnvR m vis fe`) and
+extensional through `find?`, and the core's specs must take it as a precondition with the
+environment arrays outside their write set. Experiment 2 gives that for free once those arrays exist.
+
+**(g) Per-declaration drop and epochs.** Fits: `flushCaches` is now a wholesale clear (14 epoch
+bumps), `enterScratch` clears the 10 memos, `AState.worker` is both. The bank stack is the one
+operation that is not a clear (above).
+
+### Recommended changes now
+
+1. **Specs carry frames.** Adopt `WriteSet.lean` into `ConAgua/L` (it generalises `Preserve`)
+   and state every program predicate (`LiftProg`, `InstProg`, …) with its `closedW` fact (by
+   `decide +kernel`). Write the tier of the 21 `*_push` count stores as `CTL[k + (t &&& 1)]` (or
+   move the counts into table-owned arrays). On the twin side, prove `Keeps cp` per walk family, or
+   add `cp a' = cp a` to the `GoOK` posts of the walks still to come.
+2. **Bundle per tier, over projections.** `ArenaD` (store + memos + derived) stays the walk tier.
+   Add `CoreR m a.caches` (with the banks), `PinsR m a.pins`, `EnvR m vis fe`, and argument
+   relations (saved `ModeMemos`, `PMemo`, `pend`) as separate structures. Each takes the projection
+   it reads, owns a disjoint array range, and has one group frame lemma from array bounds. Keep a flat
+   bundle at about 25 fields or fewer (≈ 0.5 s per writer).
+3. **Never unfold the relation for `grind`**; fields stay opaque named predicates.
+4. **Library work before the core:** epoch-stamped scratch slots in `StoreLib`; `MemoLib` with a
+   memory-reading value decoder (tree values), deletion (environment index), and a bank-indexed
+   instance family; a nested record decoder over the pool.
+
+**What to watch:** per-writer CPU of a bundle (split it above ~2 s); any twin change that iterates
+or sizes a map, or caches a value that is not a word; the eager depth bound `D` (unbounded nesting
+in `.verified` mode, abort beyond `D`); memo and table capacities against the twin's uncapped caches.
 
 ### `sorry`s
 
