@@ -5,8 +5,10 @@ public import ConAgua.Compiler.WF
 meta import ConAgua.Compiler.WF
 public import ConAgua.L.Notation
 public import ConAgua.L.Examples
+public import ConAgua.Scan.Lit
 meta import ConAgua.Compiler.Run
 meta import ConAgua.L.Examples
+meta import ConAgua.Scan.Lit
 
 /-!
 # Differential tests: compiled code on Kraken's semantics against `L.run`
@@ -23,7 +25,8 @@ namespace L.Compiler.Tests
 
 def agrees (p : Prog) (f : FnName) (args : List Word) (m : Mem) (fuel : Nat := 100000)
     (stack : Nat := 4096) : Bool :=
-  (runKraken p f args m fuel.toUInt64 stack).toOption == some (Outcome.ofL (run p fuel f args m))
+  (runKraken p f args m fuel.toUInt64 stack).toOption ==
+    some (Outcome.ofL (Prog.tab p m.bytes.size m.words.size).nres (run p fuel f args m))
 
 def inp (s : String) : Mem := { bytes := #[s.toUTF8.data] }
 
@@ -45,7 +48,7 @@ def inp (s : String) : Mem := { bytes := #[s.toUTF8.data] }
 
 -- Fuel: both run out on a long input with fuel 3.
 #guard (runKraken scanProg "skip_braced" [1, 0] (inp "{aaaaaaaaaa}") 3).toOption == some .exhausted
-#guard Outcome.ofL (run scanProg 3 "skip_braced" [1, 0] (inp "{aaaaaaaaaa}")) == .exhausted
+#guard Outcome.ofL 1 (run scanProg 3 "skip_braced" [1, 0] (inp "{aaaaaaaaaa}")) == .exhausted
 
 /-! Word arrays, stores, arithmetic, signed comparisons, recursion, `break`, `abort`. -/
 
@@ -156,7 +159,19 @@ def wideProg : Prog := [("use", useWide), ("wide", wide), ("one", one), ("none'"
 #guard Prog.wf (Prog.tab wideProg 0 0) wideProg
 #guard agrees wideProg "use" [0xffffffffffffffff, 0xfffffffffffffff0] {}
 #guard agrees wideProg "use" [12345, 678910] {}
+#guard agrees wideProg "wide" [0xffffffffffffffff, 0xfffffffffffffff0] {}
+#guard agrees wideProg "one" [41] {}
+#guard agrees wideProg "none'" [41] {}
+#guard (runKraken wideProg "wide" [0xffffffffffffffff, 2] {} 1000).toOption == some (.ok [0xfffffffffffffffe, 1, 1])
 #guard (run wideProg 100 "wide" [0xffffffffffffffff, 2] {}).toOption.map (·.1) ==
   some [0xfffffffffffffffe, 1, 1]
+
+/-! `match_lit`/`scan_bool` (`Scan/Lit.lean`): constant data and three results. -/
+
+open L.Scan.Lit in
+#guard Prog.wf (Prog.tab litProg 1 0) litProg
+open L.Scan.Lit in
+#guard [" true", "false", "fals", "", "falsetto", "tru"].all fun t =>
+  [0, 1].all fun i => agrees litProg "scan_bool" [i] (inp t)
 
 end L.Compiler.Tests

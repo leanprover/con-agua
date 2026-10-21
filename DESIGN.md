@@ -288,6 +288,8 @@ proof.
 | `key_end` (`:149`) | 14 | 9 | yes |
 | `has_escape` (`:818`) | 10 | 7 | yes |
 | `num_end` (`:733`) | 10 | 6 (+ call to `skip_digits`, no loop) | yes (since lane `lext`) |
+| `match_lit` (`:132`, lane `lext`) | 11 | 9 | yes |
+| `scan_bool` (`:716`, lane `lext`) | 11 | 7 (two calls of `match_lit`, three results) | yes |
 
 Whole-file build (`ConAgua.Scan.Leaves`, `lake env lean`, cold): ~2.5 s for all six.
 `ConAgua.Scan.Link` + `ConAgua.Scan.Leaves` together add about 750 lines to the `ConAgua` lib;
@@ -302,9 +304,8 @@ the whole project (`lake build`, from a warm `.lake`) still finishes in well und
   (`if e == i`). That needs `grind` to read `s'.loc 0` off the callee's frame condition
   `s' = s₀`, where `s₀` is a record literal: `docs/gaps/grind-state-eq-projection.lean`. It was
   a `sorry` until lane `lext` added `St.loc_of_eq_mk` to `lang_grind` (see "L extensions").
-* **Not done, this round**: `match_lit` (needs a second named array for the literal, or one `L`
-  function per literal — `L` has no array-valued parameters — not attempted for time), and with
-  it `scan_bool` (calls `match_lit` twice); `utf8_decode` (deeply nested multi-byte decode,
+* **Not done, this round**: `match_lit` and `scan_bool` (done in lane `lext`, see "L
+  extensions"); `utf8_decode` (deeply nested multi-byte decode,
   `Option (List …)`-shaped — a different result-cell question than anything tried so far);
   `read_nat_at` (skipped per the task: `u64` accumulation is in scope for Theorem-2-style
   refinement but not for this spike).
@@ -627,4 +628,25 @@ Arena request 3, and `utf8_decode`'s `(code point, length)`.
   registers); no `sorry`, same axioms. Tests: `wideProg` in `Tests.lean` (three results, fewer
   results than read, none, a register read twice).
 * A `return e` now costs two more instructions (store to a temporary, reload into `rax`).
+
+### Translations: `match_lit`, `scan_bool` (`ConAgua/Scan/Lit.lean`, `LitLink.lean`)
+
+* `match_lit(b, i, lit)` takes the literal as a slice `(o, n)` of the constant byte string
+  `LITS = "truefalse"` (`LITS.c8[o + k]`); `byte_at` is inlined. `scan_bool` returns
+  `ScanRes<bool>` as `(ok, value, position)`, the error `ExpectedBool` at `i` as `(0, 0, i)`.
+* Models: `matchLitN` (Rust's loop, `byte_at` as `Array.getD`), `scanBoolN : Option (Bool × Nat)`
+  and `encBool` (the three words). The arm lemmas take the positions `i + k`, `o + k` as
+  variables with an equation (patterns `b[j]`, `L[m]`), as in `strCloseN`; one more general
+  lemma went into `lang_grind`: `UInt8.toUInt64_eq_iff` (the L code compares words, the model
+  bytes).
+* Link (`LitLink.lean`): `matchLitN` is a prefix test when the literal has no `0` byte
+  (`matchLitN_eq_isPrefixOf`, `fun_induction`, 30 lines), which is con-leche's `matchLit_eq`;
+  `scanBool_eq_N` rewrites con-leche's `scanBool` through the model, and `scanBool_run` is the
+  end-to-end statement: whenever `run litProg fuel "scan_bool" [i]` returns `r`,
+  `r = encScan (ConLeche.Frontend.scanBool b i)` and the memory is unchanged (under
+  `numBits = 64`, `b.size < 2^64`, `i + 5 < 2^64`). Axioms: the standard three.
+* Sizes: `match_lit` model 6 + arms 27 lines, loop spec 15, corollary 9, function spec 15;
+  `scan_bool` model 9, spec 14; link 117 lines. Every L proof is `vcgen` + `finish`.
+  `Lit.lean` builds in 2.9 s, `LitLink.lean` in 0.6 s. Differential tests on Kraken (all three
+  results): `Tests.lean`.
 
