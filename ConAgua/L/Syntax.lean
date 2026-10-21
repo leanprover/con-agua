@@ -80,16 +80,18 @@ inductive Stmt where
   | while (c : Cond) (s : Stmt)
   /-- Leave the innermost loop. -/
   | brk
-  /-- Return from the function. -/
-  | ret (e : Expr)
-  /-- `x := f(args)`. A call costs one unit of fuel. -/
-  | call (x : Var) (f : FnName) (args : List Expr)
+  /-- Return from the function with the values `es` (usually one). -/
+  | ret (es : List Expr)
+  /-- `(x₀, x₁, …) := f(args)`: `xᵢ` gets the callee's `i`-th result, `0` if it returned fewer.
+  A call costs one unit of fuel. -/
+  | call (xs : List Var) (f : FnName) (args : List Expr)
   /-- Stop the whole program with an error (Rust's `panic!`, an overflow check, …). -/
   | abort
   deriving Repr, Inhabited
 
 /-- A function: `nparams` parameters, `nlocals ≥ nparams` locals (params first, the rest start
-at `0`), and a body. Falling off the end of the body (or a `break` outside a loop) returns `0`. -/
+at `0`), and a body. Falling off the end of the body (or a `break` outside a loop) returns no
+values (so every result the caller reads is `0`). -/
 structure FunDecl where
   nparams : Nat
   nlocals : Nat

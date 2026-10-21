@@ -142,21 +142,22 @@ theorem step_while_run (c : Cond) (s : Stmt) :
 
 theorem step_brk_run : stepRun p K .brk σ = .ok (.brk, σ) := rfl
 
-theorem step_ret_run (e : Expr) : stepRun p K (.ret e) σ = (evalP σ e).map fun v => (.ret v, σ) := by
+theorem step_ret_run (es : List Expr) :
+    stepRun p K (.ret es) σ = (evalArgsP σ es).map fun vs => (.ret vs, σ) := by
   unfold stepRun
-  simp only [step, StateT.run_bind, evalE_run]
-  cases evalP σ e <;> rfl
+  simp only [step, StateT.run_bind, evalArgs_run]
+  cases evalArgsP σ es <;> rfl
 
 theorem step_abort_run : stepRun p K .abort σ = .error .abort := rfl
 
-theorem step_call_run (x : Var) (f : FnName) (args : List Expr) :
-    stepRun p K (.call x f args) σ =
+theorem step_call_run (xs : List Var) (f : FnName) (args : List Expr) :
+    stepRun p K (.call xs f args) σ =
       match evalArgsP σ args with
       | .error e => .error e
       | .ok vs =>
         match (invoke p K f vs).run σ with
         | .error e => .error e
-        | .ok (r, σ') => .ok (.normal, σ'.setLoc x r) := by
+        | .ok (rs, σ') => .ok (.normal, σ'.setLocs xs rs) := by
   unfold stepRun
   simp only [step, StateT.run_bind, evalArgs_run]
   rcases evalArgsP σ args with e | vs

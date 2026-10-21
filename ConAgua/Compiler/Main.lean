@@ -11,7 +11,8 @@ public import ConAgua.Compiler.Correct
 layout `G`, the entry arguments in the table and `N` units of fuel in `rsi`, every run of the
 compiled program returns to the caller with the callee-saved registers restored, and either
 reports `exhausted` (`rdx = 1`) or reports exactly what `L.run p N entry args m` says:
-`rdx = 0`, the result in `rax` and the final memory in the layout, or `rdx = 2` for an error
+`rdx = 0`, the results in the result registers (`rax`, `rdi`, `r8`, …; see `resReg`) and the
+final memory in the layout, or `rdx = 2` for an error
 (never for running out of fuel, which only `rdx = 1` reports).
 -/
 
@@ -20,8 +21,8 @@ namespace L.Compiler
 open L
 
 /-- What the harness sees after `ca_enter` returns, against L's result. -/
-def OutcomeRel (G : Layout) : Except Err (Word × Mem) → MachineData → Prop
-  | .ok (r, m'), s => s.regs.rdx = 0 ∧ s.regs.rax = r ∧ MemRel G m' s.dmem
+def OutcomeRel (G : Layout) : Except Err (List Word × Mem) → MachineData → Prop
+  | .ok (rs, m'), s => s.regs.rdx = 0 ∧ ResRel G.tab.nres rs s.regs ∧ MemRel G m' s.dmem
   | .error .outOfFuel, _ => False
   | .error _, s => s.regs.rdx = 2
 
@@ -122,7 +123,10 @@ theorem compile_correct [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.
         generalize run p N entry args m = res
         rcases res with e | ⟨r, m'⟩
         · cases e <;> simp [OutcomeRel]
-        · simp [OutcomeRel]
+        · simp only [OutcomeRel, Reg64s.set64_rsp, Reg64s.set64_r15, Reg64s.set64_r14, Reg64s.set64_rbp]
+          rintro ⟨h1, h2, h3⟩
+          refine ⟨h1, ?_, h3⟩
+          exact h2.congr rfl rfl rfl rfl rfl rfl
   have hsp0 := hcs24
   -- the three pushes
   have hmap : ∀ x, d.regs.rsp.toNat - 24 ≤ x → x < d.regs.rsp.toNat → (rdW d.dmem (A x)).isSome → True :=
@@ -345,7 +349,7 @@ theorem compile_correct [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.
       refine hexit _ (by simp [hrbp', h8bp]) (fun x h1 h2 => hcsS _ hpres' x h1 h2) (Or.inr ?_)
       have hrun : run p N entry args m = .ok (r, σ'.mem) := by simp [run, hinv, Except.map]
       rw [hrun]
-      exact ⟨by simp, by simp [hrax'], hm'⟩
+      exact ⟨by simp, hrax'.congr rfl rfl rfl rfl rfl rfl, hm'⟩
     · -- an error
       intro d' ⟨x, hx, hne⟩ hG'
       simp only [UInt64.toNat_mk', A_toNat] at hG'

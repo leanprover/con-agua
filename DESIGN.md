@@ -21,9 +21,12 @@ Files: `ConAgua/L/{Syntax,Semantics,Notation,GrindAttr,Logic,Examples}.lean`.
   comparisons and short-circuit `&& || !`. Short-circuit matters: Rust's
   `while i < b.len() && is_ws(b[i])` must not read `b[len]`.
 * **Statements** (`Stmt`): `x := e`, stores `A.u8[i] := e` / `A.u64[i] := e`, `;`, `if`, `while`,
-  `break`, `return e`, `x := call f(args)`, `abort`, `skip`.
+  `break`, `return e`, `x := call f(args)`, `abort`, `skip`; since lane `lext` also
+  `return (e₁, e₂, …)` and `(x₁, x₂, …) := call f(args)` (several results).
 * **Functions** (`FunDecl`): `nparams`, `nlocals` (parameters first, other locals start at 0), a
-  body. Falling off the end returns 0. A program (`Prog`) is a list of named functions.
+  body. A function returns a list of words; falling off the end returns `[]`, and a caller reads
+  `0` for every result it asks for and does not get. A program (`Prog`) is a list of named
+  functions.
 * **Memory** (`Mem`): a fixed set of byte arrays and a fixed set of word arrays, each named by a
   static index (`ArrId`). Lengths are fixed for a run; a growable vector is a fixed-capacity array
   plus a length word, and growing past the capacity is an explicit `abort` in the program. A
@@ -102,7 +105,7 @@ preconditions as hypotheses about `s₀`, posts as equations about named model f
 
 1. **Name every loop** with `lblk` and splice it. Its spec is about `exec p n W`, so the recursive
    call `k W` in the unfolded loop is literally the induction hypothesis.
-2. **Loop spec**, post `s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr d = model …`, where `d` is what the
+2. **Loop spec**, post `s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [d] = [model …]`, where `d` is what the
    function returns when the loop exits normally (`Sig.retOr` folds "returned v" and "fell
    through, then `return d`" into one equation). Proof:
    ```lean
@@ -224,7 +227,8 @@ induction hypothesis, and the expression lemmas are straight-line `kvcgen64` pro
   **Done** (lane `scan`, see below): `ConAgua/Scan/Link.lean`.
 * **Several results.** A function returns one word. Rust functions returning enums or tuples
   (`ScanRes`, `Member`) must return them through a word array (or a packed word). A convention
-  for result cells is still to be chosen.
+  for result cells is still to be chosen. **Done** (lane `lext`): functions return lists of
+  words, see "L extensions".
 * **Monadic arena functions.** For a function modelled in `StateT AState (Except CheckError)`
   the post can stay one equation: `(f x).run (abs s₀.mem) = .ok (decode r, abs s'.mem)`, with an
   abstraction function `abs : Mem → AState`. Not tried yet.
@@ -585,4 +589,37 @@ instructions; `ldc` is `ld8` with `lea`), +35 in `Step`, +35 for the new `MemRel
 and `SimStore`. `compile_correct` is unchanged in statement (the hypothesis `MemRel` now also
 says the table holds the constant data); still no `sorry`, axioms `propext`, `Classical.choice`,
 `Quot.sound`. Tests: `ext` in `Tests.lean` (all three, against `L.run` on Kraken's semantics).
+
+### Several results
+
+Arena request 3, and `utf8_decode`'s `(code point, length)`.
+
+* **Semantics.** A function returns `List Word`: `Stmt.ret (es : List Expr)`, `Sig.ret (vs :
+  List Word)`, `invoke … : M (List Word)`, `run … : Except Err (List Word × Mem)`.
+  `Stmt.call (xs : List Var) f args` sets `xᵢ` to the `i`-th result, `0` past the end
+  (`St.setLocs`, by `headD`/`tail`, so `grind` reads it with two `lang_grind` equations). Falling
+  off the end returns `[]`. Notation: `return (a, b)`, `(x, y) := call f(…)`; `return e` and
+  `x := call f(…)` are the one-element cases.
+* **Specs.** A function spec's post is `r = [model]` (or `r = [m₁, m₂]`), a loop spec's
+  `r.retOr [d] = [model]`. `lang_grind` now has `List.cons.injEq`: without it, `grind` does not
+  get from `¬ [a] = [b]` to `¬ a = b`, and it lost the arithmetic behind `a = b` (four loop
+  proofs failed). Every proof in `Examples`/`Leaves` changed only in its statement and in
+  `evalArgs`/`setLocs` in the `vcgen` list.
+* **Compiler.** Result `i` is returned in register `resReg i` = `rax`, `rdi`, `r8`, `r9`, `r10`,
+  `r11` (at most six; none of them is used by L code otherwise, and the trampoline leaves them
+  alone). `Tab.nres` is the number in use (`Prog.tab` takes the most any `return` gives or any
+  call reads, at least 1), so single-result programs pay nothing extra on the fall-off path.
+  `return es` evaluates `es` into temporaries (`compileArgs`, as for call arguments) and loads
+  the result registers from them, zeroing those beyond `es.length` (`loadRes`). Falling off the
+  end zeroes all `nres` of them. After a call, `storeRes xs` stores `resReg i` into `xᵢ`.
+  `Prog.wf` checks `es.length ≤ nres`, `xs.length ≤ nres` and `nres ≤ 6`.
+* **Proof.** The relation is `ResRel n vs R : ∀ i < n, rres R i = vs.getD i 0`; it replaces
+  `rax = v` in the `return` exit of `Conts`, in `FunSim` and in `OutcomeRel`. New lemmas:
+  `sim_loadRes`, `sim_storeRes` (inductions over the register list), `sim_ret` (moved to
+  `SimCall`, since it now uses `sim_args`), register facts `rres_set64_resReg`/`rres_set64`/
+  `ResRel.congr` (36-case `rfl`s). About +200 lines in `SimCall`, `SimFun`, `Rel`, `Main`.
+  `compile_correct`'s statement changes only through `OutcomeRel` (results in the result
+  registers); no `sorry`, same axioms. Tests: `wideProg` in `Tests.lean` (three results, fewer
+  results than read, none, a register read twice).
+* A `return e` now costs two more instructions (store to a temporary, reload into `rax`).
 

@@ -9,7 +9,7 @@ public import ConAgua.Compiler.RunEq
 
 `SimS p G run P s`: from any state related to `σ` (with the fuel counter satisfying `P`), the
 code of `s` reaches the exit that `run s σ` names: the end of the code (normal), the `break`
-target, the return label (with the value in `rax`), `ca_error` (an error other than running out
+target, the return label (with the results in the result registers), `ca_error` (an error other than running out
 of fuel), or `ca_exhausted` (always allowed). The exits are continuations (`Conts`).
 -/
 
@@ -92,8 +92,8 @@ structure Conts [Host] (G : Layout) (ctx : Ctx) (F : Nat) (d : MachineData) (R :
     (kend : Nat) (Q : MachineState → Prop) : Prop where
   normal : ∀ σ' d', R = .ok (.normal, σ') → Inv G ctx.nl F σ' d' → SPost G F d d' → Ev Q d' (at_ kend)
   brk : ∀ σ' d', R = .ok (.brk, σ') → Inv G ctx.nl F σ' d' → SPost G F d d' → Ev Q d' (label ctx.brk)
-  ret : ∀ v σ' d', R = .ok (.ret v, σ') → Inv G ctx.nl F σ' d' → SPost G F d d' → d'.regs.rax = v →
-    Ev Q d' (label ctx.retL)
+  ret : ∀ vs σ' d', R = .ok (.ret vs, σ') → Inv G ctx.nl F σ' d' → SPost G F d d' →
+    ResRel G.tab.nres vs d'.regs → Ev Q d' (label ctx.retL)
   err : ∀ d', (∃ e, R = .error e ∧ e ≠ .outOfFuel) → GPost G (top d F) d d' → Ev Q d' (label errorL)
   exh : ∀ d', GPost G (top d F) d d' → Ev Q d' (label exhaustedL)
 
@@ -206,19 +206,6 @@ theorem sim_set (x : Var) (e : Expr) : SimS p G (stepRun p K) P (.set x e) := by
   · intro s1 herr hE1
     obtain ⟨y, hy⟩ := herr
     refine hK.err s1 ⟨y, by simp [step_set_run, hy]; rfl, by rw [evalP_error hy]; simp⟩ (hE1.spost hI.lo).gpost
-
-theorem sim_ret (e : Expr) : SimS p G (stepRun p K) P (.ret e) := by
-  intro ctx F path k hT hF hc hwf htmp σ d Q hI hP hK
-  simp only [Stmt.wf] at hwf
-  simp only [compileS] at hc hK
-  simp only [tempsS] at htmp
-  refine sim_expr hG ctx hT hTab F hF e 0 k hc.left hwf (by omega) σ d Q hI ?_ ?_
-  · intro v s1 hv hrax hE1
-    have hI1 := hI.only hG (hE1.mem.mono (by omega) (Nat.le_refl _)) hE1.rsp hE1.r15
-    exact ev_jmp hc.right.head (hK.ret v σ s1 (by simp [step_ret_run, hv]; rfl) hI1 (hE1.spost hI.lo) hrax)
-  · intro s1 herr hE1
-    obtain ⟨y, hy⟩ := herr
-    refine hK.err s1 ⟨y, by simp [step_ret_run, hy]; rfl, by rw [evalP_error hy]; simp⟩ (hE1.spost hI.lo).gpost
 
 omit hG hTab in
 theorem sim_seq (hPm : ∀ a b, a ≤ b → P b → P a) (s t : Stmt)

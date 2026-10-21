@@ -89,6 +89,46 @@ structure Inv (G : Layout) (nl F : Nat) (σ : St) (s : MachineData) : Prop where
   frame : ∀ x < nl, rdW s.dmem (A (s.regs.rsp.toNat + 8 * x)) = some (σ.loc x)
   mem : MemRel G σ.mem s.dmem
 
+/-- Result register `i`. -/
+def rres (R : Reg64s) : Nat → Word
+  | 0 => R.rax | 1 => R.rdi | 2 => R.r8 | 3 => R.r9 | 4 => R.r10 | _ => R.r11
+
+/-- The first `n` result registers hold the values `vs` (`0` past the end of `vs`). -/
+def ResRel (n : Nat) (vs : List Word) (R : Reg64s) : Prop := ∀ i < n, rres R i = vs.getD i 0
+
+theorem rres_set64_resReg (R : Reg64s) {i j : Nat} (hi : i < maxRes) (hj : j < maxRes)
+    (v : BitVec 64) : rres (R.set64 (resReg i) v) j = if j = i then UInt64.ofBitVec v else rres R j := by
+  simp only [maxRes] at hi hj
+  have hi' : i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 ∨ i = 4 ∨ i = 5 := by omega
+  have hj' : j = 0 ∨ j = 1 ∨ j = 2 ∨ j = 3 ∨ j = 4 ∨ j = 5 := by omega
+  rcases hi' with rfl | rfl | rfl | rfl | rfl | rfl <;>
+    rcases hj' with rfl | rfl | rfl | rfl | rfl | rfl <;> rfl
+
+/-- The registers that are not result registers. -/
+theorem rres_set64 (R : Reg64s) {r : Reg64}
+    (hr : r = .rcx ∨ r = .rdx ∨ r = .rsi ∨ r = .rsp ∨ r = .rbp ∨ r = .r14 ∨ r = .r15)
+    (v : BitVec 64) (j : Nat) : rres (R.set64 r v) j = rres R j := by
+  rcases hr with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+    (match j with
+     | 0 | 1 | 2 | 3 | 4 | _ + 5 => rfl)
+
+theorem ResRel.set64 {n : Nat} {vs : List Word} {R : Reg64s} (h : ResRel n vs R) {r : Reg64}
+    (hr : r = .rcx ∨ r = .rdx ∨ r = .rsi ∨ r = .rsp ∨ r = .rbp ∨ r = .r14 ∨ r = .r15)
+    (v : BitVec 64) : ResRel n vs (R.set64 r v) :=
+  fun i hi => by rw [rres_set64 R hr]; exact h i hi
+
+theorem ResRel.congr {n : Nat} {vs : List Word} {R R' : Reg64s} (h : ResRel n vs R)
+    (h0 : R'.rax = R.rax) (h1 : R'.rdi = R.rdi) (h2 : R'.r8 = R.r8) (h3 : R'.r9 = R.r9)
+    (h4 : R'.r10 = R.r10) (h5 : R'.r11 = R.r11) : ResRel n vs R' := fun i hi => by
+  rw [← h i hi]
+  match i with
+  | 0 => exact h0
+  | 1 => exact h1
+  | 2 => exact h2
+  | 3 => exact h3
+  | 4 => exact h4
+  | _ + 5 => exact h5
+
 theorem Inv.lo {G : Layout} {nl F : Nat} {σ : St} {s : MachineData} (hI : Inv G nl F σ s) :
     G.lo ≤ s.regs.rsp.toNat := by have := hI.lo8; omega
 
