@@ -347,6 +347,42 @@ passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` 
 * **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
   none for the theorem (as `nat_shr`).
 
+### `land`/`lor`/`xor` are the `Nat` operations (`NatBitsNat.lean`)
+
+Lane `nat` proved `nat_land`/`nat_lor`/`nat_xor` against `bv f`, the limb-wise combine, and left
+"`bv` is `Nat.land`" open. `bitwise_split`: for an operation `op` given by its bits (`BitOp op g`:
+bit `i` of `op x y` is `g (bit i of x) (bit i of y)`, `g false false = false`) and `x, y < 2^64`,
+`op (x + 2^64 X) (y + 2^64 Y) = op x y + 2^64 · op X Y` (by `Nat.testBit`); by induction over the
+limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X Y`; with
+`pv a = xv a k + wt k · pv (a + k) (la - k)` the high parts vanish at the loop's length
+(`land_bv`, `lor_bv`, `xor_bv`). 129 lines, by hand, 0.6 s. The operation is a parameter with
+its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
+visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
+
+### The `natOpResult` arms under `ArenaR` (`NatArms.lean`)
+
+Every arm whose result is a literal is `litArm F a b = do let x ← internE (.lit (.natVal
+(F a b))); pure (some x)`, and each verbatim arm (`natSubArm`, …) unfolds to it. One generic
+theorem covers the seven ops whose pool function appends at the top (`-`, `*`, `land`, `lor`,
+`xor`, `shiftLeft`, `shiftRight`): `topLit f` is `natAddLit` with `f` for `nat_add` (written as
+syntax, since the notation takes a literal function name), and `topLit_refines` is
+`natAddLit_refines` with `f`'s spec as a hypothesis in `natAdd_spec`'s shape (`TopSpec p f F`).
+Each instance is one line (`topLit_refinesA … natSub_top`); `TopSpec` for the bitwise ops and the
+shifts is the pool function's spec rewritten under the binder (`simpa only [← land_bv]`,
+`[← Nat.shiftLeft_eq]`, `[← Nat.shiftRight_eq_div_pow]`). The others are their own L functions:
+`pred` writes a one-limb `1` at the top and subtracts it (`Grows.push1`: pushing a limb is
+growing the pool, pattern on the two stores); `pow` returns `(0, 0)` for the arm's `none` (an
+exponent above `2^24`; two or more limbs of a normalised `b` are at least `2^64`) and `(1, h)`
+otherwise, decoded by `decOpt`; `/` and `%` take `nat_divmod`'s first or second slice. All under
+`ArenaR` in `natArmProg` (`storeProg` and the pool functions), each proof in the house form at
+the first or second attempt, 3.7 s for the file. The operands are normalised slices (as every
+`lit` record's), which `nat_shr` and `nat_divmod` need for `b`.
+
+Not done: `Nat.beq`/`Nat.ble` (their arms intern a `const` node of a `Bool` pin through
+`constE`, i.e. `emptyLevels` and `intern_const`; the L side is `nat_cmp`'s code), `Nat.gcd`
+(Euclid over `nat_divmod`), and `natOpResult`'s dispatch itself (it reads fifteen pins first;
+the pins are not in `ArenaR`).
+
 ### `sorry`s
 
 None.
@@ -1543,6 +1579,42 @@ passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` 
 * **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
   none for the theorem (as `nat_shr`).
 
+### `land`/`lor`/`xor` are the `Nat` operations (`NatBitsNat.lean`)
+
+Lane `nat` proved `nat_land`/`nat_lor`/`nat_xor` against `bv f`, the limb-wise combine, and left
+"`bv` is `Nat.land`" open. `bitwise_split`: for an operation `op` given by its bits (`BitOp op g`:
+bit `i` of `op x y` is `g (bit i of x) (bit i of y)`, `g false false = false`) and `x, y < 2^64`,
+`op (x + 2^64 X) (y + 2^64 Y) = op x y + 2^64 · op X Y` (by `Nat.testBit`); by induction over the
+limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X Y`; with
+`pv a = xv a k + wt k · pv (a + k) (la - k)` the high parts vanish at the loop's length
+(`land_bv`, `lor_bv`, `xor_bv`). 129 lines, by hand, 0.6 s. The operation is a parameter with
+its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
+visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
+
+### The `natOpResult` arms under `ArenaR` (`NatArms.lean`)
+
+Every arm whose result is a literal is `litArm F a b = do let x ← internE (.lit (.natVal
+(F a b))); pure (some x)`, and each verbatim arm (`natSubArm`, …) unfolds to it. One generic
+theorem covers the seven ops whose pool function appends at the top (`-`, `*`, `land`, `lor`,
+`xor`, `shiftLeft`, `shiftRight`): `topLit f` is `natAddLit` with `f` for `nat_add` (written as
+syntax, since the notation takes a literal function name), and `topLit_refines` is
+`natAddLit_refines` with `f`'s spec as a hypothesis in `natAdd_spec`'s shape (`TopSpec p f F`).
+Each instance is one line (`topLit_refinesA … natSub_top`); `TopSpec` for the bitwise ops and the
+shifts is the pool function's spec rewritten under the binder (`simpa only [← land_bv]`,
+`[← Nat.shiftLeft_eq]`, `[← Nat.shiftRight_eq_div_pow]`). The others are their own L functions:
+`pred` writes a one-limb `1` at the top and subtracts it (`Grows.push1`: pushing a limb is
+growing the pool, pattern on the two stores); `pow` returns `(0, 0)` for the arm's `none` (an
+exponent above `2^24`; two or more limbs of a normalised `b` are at least `2^64`) and `(1, h)`
+otherwise, decoded by `decOpt`; `/` and `%` take `nat_divmod`'s first or second slice. All under
+`ArenaR` in `natArmProg` (`storeProg` and the pool functions), each proof in the house form at
+the first or second attempt, 3.7 s for the file. The operands are normalised slices (as every
+`lit` record's), which `nat_shr` and `nat_divmod` need for `b`.
+
+Not done: `Nat.beq`/`Nat.ble` (their arms intern a `const` node of a `Bool` pin through
+`constE`, i.e. `emptyLevels` and `intern_const`; the L side is `nat_cmp`'s code), `Nat.gcd`
+(Euclid over `nat_divmod`), and `natOpResult`'s dispatch itself (it reads fifteen pins first;
+the pins are not in `ArenaR`).
+
 ### `sorry`s
 
 None.
@@ -1810,6 +1882,42 @@ passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` 
 * **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
   none for the theorem (as `nat_shr`).
 
+### `land`/`lor`/`xor` are the `Nat` operations (`NatBitsNat.lean`)
+
+Lane `nat` proved `nat_land`/`nat_lor`/`nat_xor` against `bv f`, the limb-wise combine, and left
+"`bv` is `Nat.land`" open. `bitwise_split`: for an operation `op` given by its bits (`BitOp op g`:
+bit `i` of `op x y` is `g (bit i of x) (bit i of y)`, `g false false = false`) and `x, y < 2^64`,
+`op (x + 2^64 X) (y + 2^64 Y) = op x y + 2^64 · op X Y` (by `Nat.testBit`); by induction over the
+limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X Y`; with
+`pv a = xv a k + wt k · pv (a + k) (la - k)` the high parts vanish at the loop's length
+(`land_bv`, `lor_bv`, `xor_bv`). 129 lines, by hand, 0.6 s. The operation is a parameter with
+its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
+visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
+
+### The `natOpResult` arms under `ArenaR` (`NatArms.lean`)
+
+Every arm whose result is a literal is `litArm F a b = do let x ← internE (.lit (.natVal
+(F a b))); pure (some x)`, and each verbatim arm (`natSubArm`, …) unfolds to it. One generic
+theorem covers the seven ops whose pool function appends at the top (`-`, `*`, `land`, `lor`,
+`xor`, `shiftLeft`, `shiftRight`): `topLit f` is `natAddLit` with `f` for `nat_add` (written as
+syntax, since the notation takes a literal function name), and `topLit_refines` is
+`natAddLit_refines` with `f`'s spec as a hypothesis in `natAdd_spec`'s shape (`TopSpec p f F`).
+Each instance is one line (`topLit_refinesA … natSub_top`); `TopSpec` for the bitwise ops and the
+shifts is the pool function's spec rewritten under the binder (`simpa only [← land_bv]`,
+`[← Nat.shiftLeft_eq]`, `[← Nat.shiftRight_eq_div_pow]`). The others are their own L functions:
+`pred` writes a one-limb `1` at the top and subtracts it (`Grows.push1`: pushing a limb is
+growing the pool, pattern on the two stores); `pow` returns `(0, 0)` for the arm's `none` (an
+exponent above `2^24`; two or more limbs of a normalised `b` are at least `2^64`) and `(1, h)`
+otherwise, decoded by `decOpt`; `/` and `%` take `nat_divmod`'s first or second slice. All under
+`ArenaR` in `natArmProg` (`storeProg` and the pool functions), each proof in the house form at
+the first or second attempt, 3.7 s for the file. The operands are normalised slices (as every
+`lit` record's), which `nat_shr` and `nat_divmod` need for `b`.
+
+Not done: `Nat.beq`/`Nat.ble` (their arms intern a `const` node of a `Bool` pin through
+`constE`, i.e. `emptyLevels` and `intern_const`; the L side is `nat_cmp`'s code), `Nat.gcd`
+(Euclid over `nat_divmod`), and `natOpResult`'s dispatch itself (it reads fifteen pins first;
+the pins are not in `ArenaR`).
+
 ### `sorry`s
 
 None.
@@ -1999,6 +2107,42 @@ passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` 
 * **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
   none for the theorem (as `nat_shr`).
 
+### `land`/`lor`/`xor` are the `Nat` operations (`NatBitsNat.lean`)
+
+Lane `nat` proved `nat_land`/`nat_lor`/`nat_xor` against `bv f`, the limb-wise combine, and left
+"`bv` is `Nat.land`" open. `bitwise_split`: for an operation `op` given by its bits (`BitOp op g`:
+bit `i` of `op x y` is `g (bit i of x) (bit i of y)`, `g false false = false`) and `x, y < 2^64`,
+`op (x + 2^64 X) (y + 2^64 Y) = op x y + 2^64 · op X Y` (by `Nat.testBit`); by induction over the
+limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X Y`; with
+`pv a = xv a k + wt k · pv (a + k) (la - k)` the high parts vanish at the loop's length
+(`land_bv`, `lor_bv`, `xor_bv`). 129 lines, by hand, 0.6 s. The operation is a parameter with
+its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
+visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
+
+### The `natOpResult` arms under `ArenaR` (`NatArms.lean`)
+
+Every arm whose result is a literal is `litArm F a b = do let x ← internE (.lit (.natVal
+(F a b))); pure (some x)`, and each verbatim arm (`natSubArm`, …) unfolds to it. One generic
+theorem covers the seven ops whose pool function appends at the top (`-`, `*`, `land`, `lor`,
+`xor`, `shiftLeft`, `shiftRight`): `topLit f` is `natAddLit` with `f` for `nat_add` (written as
+syntax, since the notation takes a literal function name), and `topLit_refines` is
+`natAddLit_refines` with `f`'s spec as a hypothesis in `natAdd_spec`'s shape (`TopSpec p f F`).
+Each instance is one line (`topLit_refinesA … natSub_top`); `TopSpec` for the bitwise ops and the
+shifts is the pool function's spec rewritten under the binder (`simpa only [← land_bv]`,
+`[← Nat.shiftLeft_eq]`, `[← Nat.shiftRight_eq_div_pow]`). The others are their own L functions:
+`pred` writes a one-limb `1` at the top and subtracts it (`Grows.push1`: pushing a limb is
+growing the pool, pattern on the two stores); `pow` returns `(0, 0)` for the arm's `none` (an
+exponent above `2^24`; two or more limbs of a normalised `b` are at least `2^64`) and `(1, h)`
+otherwise, decoded by `decOpt`; `/` and `%` take `nat_divmod`'s first or second slice. All under
+`ArenaR` in `natArmProg` (`storeProg` and the pool functions), each proof in the house form at
+the first or second attempt, 3.7 s for the file. The operands are normalised slices (as every
+`lit` record's), which `nat_shr` and `nat_divmod` need for `b`.
+
+Not done: `Nat.beq`/`Nat.ble` (their arms intern a `const` node of a `Bool` pin through
+`constE`, i.e. `emptyLevels` and `intern_const`; the L side is `nat_cmp`'s code), `Nat.gcd`
+(Euclid over `nat_divmod`), and `natOpResult`'s dispatch itself (it reads fifteen pins first;
+the pins are not in `ArenaR`).
+
 ### `sorry`s
 
 None.
@@ -2161,6 +2305,42 @@ passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` 
 * **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
   none for the theorem (as `nat_shr`).
 
+### `land`/`lor`/`xor` are the `Nat` operations (`NatBitsNat.lean`)
+
+Lane `nat` proved `nat_land`/`nat_lor`/`nat_xor` against `bv f`, the limb-wise combine, and left
+"`bv` is `Nat.land`" open. `bitwise_split`: for an operation `op` given by its bits (`BitOp op g`:
+bit `i` of `op x y` is `g (bit i of x) (bit i of y)`, `g false false = false`) and `x, y < 2^64`,
+`op (x + 2^64 X) (y + 2^64 Y) = op x y + 2^64 · op X Y` (by `Nat.testBit`); by induction over the
+limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X Y`; with
+`pv a = xv a k + wt k · pv (a + k) (la - k)` the high parts vanish at the loop's length
+(`land_bv`, `lor_bv`, `xor_bv`). 129 lines, by hand, 0.6 s. The operation is a parameter with
+its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
+visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
+
+### The `natOpResult` arms under `ArenaR` (`NatArms.lean`)
+
+Every arm whose result is a literal is `litArm F a b = do let x ← internE (.lit (.natVal
+(F a b))); pure (some x)`, and each verbatim arm (`natSubArm`, …) unfolds to it. One generic
+theorem covers the seven ops whose pool function appends at the top (`-`, `*`, `land`, `lor`,
+`xor`, `shiftLeft`, `shiftRight`): `topLit f` is `natAddLit` with `f` for `nat_add` (written as
+syntax, since the notation takes a literal function name), and `topLit_refines` is
+`natAddLit_refines` with `f`'s spec as a hypothesis in `natAdd_spec`'s shape (`TopSpec p f F`).
+Each instance is one line (`topLit_refinesA … natSub_top`); `TopSpec` for the bitwise ops and the
+shifts is the pool function's spec rewritten under the binder (`simpa only [← land_bv]`,
+`[← Nat.shiftLeft_eq]`, `[← Nat.shiftRight_eq_div_pow]`). The others are their own L functions:
+`pred` writes a one-limb `1` at the top and subtracts it (`Grows.push1`: pushing a limb is
+growing the pool, pattern on the two stores); `pow` returns `(0, 0)` for the arm's `none` (an
+exponent above `2^24`; two or more limbs of a normalised `b` are at least `2^64`) and `(1, h)`
+otherwise, decoded by `decOpt`; `/` and `%` take `nat_divmod`'s first or second slice. All under
+`ArenaR` in `natArmProg` (`storeProg` and the pool functions), each proof in the house form at
+the first or second attempt, 3.7 s for the file. The operands are normalised slices (as every
+`lit` record's), which `nat_shr` and `nat_divmod` need for `b`.
+
+Not done: `Nat.beq`/`Nat.ble` (their arms intern a `const` node of a `Bool` pin through
+`constE`, i.e. `emptyLevels` and `intern_const`; the L side is `nat_cmp`'s code), `Nat.gcd`
+(Euclid over `nat_divmod`), and `natOpResult`'s dispatch itself (it reads fifteen pins first;
+the pins are not in `ArenaR`).
+
 ### `sorry`s
 
 None.
@@ -2305,6 +2485,42 @@ passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` 
   `x / 2^j` terms and broke it.
 * **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
   none for the theorem (as `nat_shr`).
+
+### `land`/`lor`/`xor` are the `Nat` operations (`NatBitsNat.lean`)
+
+Lane `nat` proved `nat_land`/`nat_lor`/`nat_xor` against `bv f`, the limb-wise combine, and left
+"`bv` is `Nat.land`" open. `bitwise_split`: for an operation `op` given by its bits (`BitOp op g`:
+bit `i` of `op x y` is `g (bit i of x) (bit i of y)`, `g false false = false`) and `x, y < 2^64`,
+`op (x + 2^64 X) (y + 2^64 Y) = op x y + 2^64 · op X Y` (by `Nat.testBit`); by induction over the
+limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X Y`; with
+`pv a = xv a k + wt k · pv (a + k) (la - k)` the high parts vanish at the loop's length
+(`land_bv`, `lor_bv`, `xor_bv`). 129 lines, by hand, 0.6 s. The operation is a parameter with
+its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
+visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
+
+### The `natOpResult` arms under `ArenaR` (`NatArms.lean`)
+
+Every arm whose result is a literal is `litArm F a b = do let x ← internE (.lit (.natVal
+(F a b))); pure (some x)`, and each verbatim arm (`natSubArm`, …) unfolds to it. One generic
+theorem covers the seven ops whose pool function appends at the top (`-`, `*`, `land`, `lor`,
+`xor`, `shiftLeft`, `shiftRight`): `topLit f` is `natAddLit` with `f` for `nat_add` (written as
+syntax, since the notation takes a literal function name), and `topLit_refines` is
+`natAddLit_refines` with `f`'s spec as a hypothesis in `natAdd_spec`'s shape (`TopSpec p f F`).
+Each instance is one line (`topLit_refinesA … natSub_top`); `TopSpec` for the bitwise ops and the
+shifts is the pool function's spec rewritten under the binder (`simpa only [← land_bv]`,
+`[← Nat.shiftLeft_eq]`, `[← Nat.shiftRight_eq_div_pow]`). The others are their own L functions:
+`pred` writes a one-limb `1` at the top and subtracts it (`Grows.push1`: pushing a limb is
+growing the pool, pattern on the two stores); `pow` returns `(0, 0)` for the arm's `none` (an
+exponent above `2^24`; two or more limbs of a normalised `b` are at least `2^64`) and `(1, h)`
+otherwise, decoded by `decOpt`; `/` and `%` take `nat_divmod`'s first or second slice. All under
+`ArenaR` in `natArmProg` (`storeProg` and the pool functions), each proof in the house form at
+the first or second attempt, 3.7 s for the file. The operands are normalised slices (as every
+`lit` record's), which `nat_shr` and `nat_divmod` need for `b`.
+
+Not done: `Nat.beq`/`Nat.ble` (their arms intern a `const` node of a `Bool` pin through
+`constE`, i.e. `emptyLevels` and `intern_const`; the L side is `nat_cmp`'s code), `Nat.gcd`
+(Euclid over `nat_divmod`), and `natOpResult`'s dispatch itself (it reads fifteen pins first;
+the pins are not in `ArenaR`).
 
 ### `sorry`s
 
@@ -2850,6 +3066,42 @@ passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` 
 * **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
   none for the theorem (as `nat_shr`).
 
+### `land`/`lor`/`xor` are the `Nat` operations (`NatBitsNat.lean`)
+
+Lane `nat` proved `nat_land`/`nat_lor`/`nat_xor` against `bv f`, the limb-wise combine, and left
+"`bv` is `Nat.land`" open. `bitwise_split`: for an operation `op` given by its bits (`BitOp op g`:
+bit `i` of `op x y` is `g (bit i of x) (bit i of y)`, `g false false = false`) and `x, y < 2^64`,
+`op (x + 2^64 X) (y + 2^64 Y) = op x y + 2^64 · op X Y` (by `Nat.testBit`); by induction over the
+limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X Y`; with
+`pv a = xv a k + wt k · pv (a + k) (la - k)` the high parts vanish at the loop's length
+(`land_bv`, `lor_bv`, `xor_bv`). 129 lines, by hand, 0.6 s. The operation is a parameter with
+its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
+visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
+
+### The `natOpResult` arms under `ArenaR` (`NatArms.lean`)
+
+Every arm whose result is a literal is `litArm F a b = do let x ← internE (.lit (.natVal
+(F a b))); pure (some x)`, and each verbatim arm (`natSubArm`, …) unfolds to it. One generic
+theorem covers the seven ops whose pool function appends at the top (`-`, `*`, `land`, `lor`,
+`xor`, `shiftLeft`, `shiftRight`): `topLit f` is `natAddLit` with `f` for `nat_add` (written as
+syntax, since the notation takes a literal function name), and `topLit_refines` is
+`natAddLit_refines` with `f`'s spec as a hypothesis in `natAdd_spec`'s shape (`TopSpec p f F`).
+Each instance is one line (`topLit_refinesA … natSub_top`); `TopSpec` for the bitwise ops and the
+shifts is the pool function's spec rewritten under the binder (`simpa only [← land_bv]`,
+`[← Nat.shiftLeft_eq]`, `[← Nat.shiftRight_eq_div_pow]`). The others are their own L functions:
+`pred` writes a one-limb `1` at the top and subtracts it (`Grows.push1`: pushing a limb is
+growing the pool, pattern on the two stores); `pow` returns `(0, 0)` for the arm's `none` (an
+exponent above `2^24`; two or more limbs of a normalised `b` are at least `2^64`) and `(1, h)`
+otherwise, decoded by `decOpt`; `/` and `%` take `nat_divmod`'s first or second slice. All under
+`ArenaR` in `natArmProg` (`storeProg` and the pool functions), each proof in the house form at
+the first or second attempt, 3.7 s for the file. The operands are normalised slices (as every
+`lit` record's), which `nat_shr` and `nat_divmod` need for `b`.
+
+Not done: `Nat.beq`/`Nat.ble` (their arms intern a `const` node of a `Bool` pin through
+`constE`, i.e. `emptyLevels` and `intern_const`; the L side is `nat_cmp`'s code), `Nat.gcd`
+(Euclid over `nat_divmod`), and `natOpResult`'s dispatch itself (it reads fifteen pins first;
+the pins are not in `ArenaR`).
+
 ### `sorry`s
 
 None.
@@ -3102,6 +3354,42 @@ passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` 
 * **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
   none for the theorem (as `nat_shr`).
 
+### `land`/`lor`/`xor` are the `Nat` operations (`NatBitsNat.lean`)
+
+Lane `nat` proved `nat_land`/`nat_lor`/`nat_xor` against `bv f`, the limb-wise combine, and left
+"`bv` is `Nat.land`" open. `bitwise_split`: for an operation `op` given by its bits (`BitOp op g`:
+bit `i` of `op x y` is `g (bit i of x) (bit i of y)`, `g false false = false`) and `x, y < 2^64`,
+`op (x + 2^64 X) (y + 2^64 Y) = op x y + 2^64 · op X Y` (by `Nat.testBit`); by induction over the
+limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X Y`; with
+`pv a = xv a k + wt k · pv (a + k) (la - k)` the high parts vanish at the loop's length
+(`land_bv`, `lor_bv`, `xor_bv`). 129 lines, by hand, 0.6 s. The operation is a parameter with
+its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
+visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
+
+### The `natOpResult` arms under `ArenaR` (`NatArms.lean`)
+
+Every arm whose result is a literal is `litArm F a b = do let x ← internE (.lit (.natVal
+(F a b))); pure (some x)`, and each verbatim arm (`natSubArm`, …) unfolds to it. One generic
+theorem covers the seven ops whose pool function appends at the top (`-`, `*`, `land`, `lor`,
+`xor`, `shiftLeft`, `shiftRight`): `topLit f` is `natAddLit` with `f` for `nat_add` (written as
+syntax, since the notation takes a literal function name), and `topLit_refines` is
+`natAddLit_refines` with `f`'s spec as a hypothesis in `natAdd_spec`'s shape (`TopSpec p f F`).
+Each instance is one line (`topLit_refinesA … natSub_top`); `TopSpec` for the bitwise ops and the
+shifts is the pool function's spec rewritten under the binder (`simpa only [← land_bv]`,
+`[← Nat.shiftLeft_eq]`, `[← Nat.shiftRight_eq_div_pow]`). The others are their own L functions:
+`pred` writes a one-limb `1` at the top and subtracts it (`Grows.push1`: pushing a limb is
+growing the pool, pattern on the two stores); `pow` returns `(0, 0)` for the arm's `none` (an
+exponent above `2^24`; two or more limbs of a normalised `b` are at least `2^64`) and `(1, h)`
+otherwise, decoded by `decOpt`; `/` and `%` take `nat_divmod`'s first or second slice. All under
+`ArenaR` in `natArmProg` (`storeProg` and the pool functions), each proof in the house form at
+the first or second attempt, 3.7 s for the file. The operands are normalised slices (as every
+`lit` record's), which `nat_shr` and `nat_divmod` need for `b`.
+
+Not done: `Nat.beq`/`Nat.ble` (their arms intern a `const` node of a `Bool` pin through
+`constE`, i.e. `emptyLevels` and `intern_const`; the L side is `nat_cmp`'s code), `Nat.gcd`
+(Euclid over `nat_divmod`), and `natOpResult`'s dispatch itself (it reads fifteen pins first;
+the pins are not in `ArenaR`).
+
 ### `sorry`s
 
 None.
@@ -3144,6 +3432,7 @@ for the L-side spec itself.
 | `nat_shr` (`a >>> b`, `b` a normalised slice; lane `nat2`) | 52 (`shift_right_nat`, `shift_right`, `shr_from`, `shr_bits_from`, `skip_index`) | 31 | 186 | 94 s | loop house form; function `nat_mul`'s recipe, 200k heartbeats per goal; word and division lemmas by hand |
 | `nat_pow` (word exponent `< 2^25`; lane `nat2`) | 20 (`pow`, `one`) | 23 | 146 | 5.8 s | house form; `Grows.trans`, the exponent-bit and frame lemmas by hand |
 | `nat_divmod` (`a / b`, `a % b`, `b` normalised; lane `nat2`) | 84 (`div_mod`, `div`, `modulo`, `dm_limbs`, `dm_bits`, `rev_copy_from`, `shl1_or`, `shl1_from`) | 94 | ~600 | 47 s (21 s wall) | four passes and three loops house form; function `nat_mul`'s recipe; the arithmetic lemmas by hand |
+| `natOpResult` arms `-` `pred` `*` `^` `/` `%` `land` `lor` `xor` `shiftLeft` `shiftRight` under `ArenaR` (lane `nat2`) | – (`arena/core.rs` arms) | 31 (`topLit` 4, `nat_pred_lit` 9, `nat_pow_lit` 8, `nat_div_lit` 5, `nat_mod_lit` 5) | ~420 | 7.7 s (3.7 s wall) | house form throughout; `Grows.push1` by hand |
 
 Whole file 307 lines. `lake build ConAgua` (full project) still green, 403 ms incremental.
 
@@ -3513,6 +3802,42 @@ passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` 
 * **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
   none for the theorem (as `nat_shr`).
 
+### `land`/`lor`/`xor` are the `Nat` operations (`NatBitsNat.lean`)
+
+Lane `nat` proved `nat_land`/`nat_lor`/`nat_xor` against `bv f`, the limb-wise combine, and left
+"`bv` is `Nat.land`" open. `bitwise_split`: for an operation `op` given by its bits (`BitOp op g`:
+bit `i` of `op x y` is `g (bit i of x) (bit i of y)`, `g false false = false`) and `x, y < 2^64`,
+`op (x + 2^64 X) (y + 2^64 Y) = op x y + 2^64 · op X Y` (by `Nat.testBit`); by induction over the
+limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X Y`; with
+`pv a = xv a k + wt k · pv (a + k) (la - k)` the high parts vanish at the loop's length
+(`land_bv`, `lor_bv`, `xor_bv`). 129 lines, by hand, 0.6 s. The operation is a parameter with
+its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
+visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
+
+### The `natOpResult` arms under `ArenaR` (`NatArms.lean`)
+
+Every arm whose result is a literal is `litArm F a b = do let x ← internE (.lit (.natVal
+(F a b))); pure (some x)`, and each verbatim arm (`natSubArm`, …) unfolds to it. One generic
+theorem covers the seven ops whose pool function appends at the top (`-`, `*`, `land`, `lor`,
+`xor`, `shiftLeft`, `shiftRight`): `topLit f` is `natAddLit` with `f` for `nat_add` (written as
+syntax, since the notation takes a literal function name), and `topLit_refines` is
+`natAddLit_refines` with `f`'s spec as a hypothesis in `natAdd_spec`'s shape (`TopSpec p f F`).
+Each instance is one line (`topLit_refinesA … natSub_top`); `TopSpec` for the bitwise ops and the
+shifts is the pool function's spec rewritten under the binder (`simpa only [← land_bv]`,
+`[← Nat.shiftLeft_eq]`, `[← Nat.shiftRight_eq_div_pow]`). The others are their own L functions:
+`pred` writes a one-limb `1` at the top and subtracts it (`Grows.push1`: pushing a limb is
+growing the pool, pattern on the two stores); `pow` returns `(0, 0)` for the arm's `none` (an
+exponent above `2^24`; two or more limbs of a normalised `b` are at least `2^64`) and `(1, h)`
+otherwise, decoded by `decOpt`; `/` and `%` take `nat_divmod`'s first or second slice. All under
+`ArenaR` in `natArmProg` (`storeProg` and the pool functions), each proof in the house form at
+the first or second attempt, 3.7 s for the file. The operands are normalised slices (as every
+`lit` record's), which `nat_shr` and `nat_divmod` need for `b`.
+
+Not done: `Nat.beq`/`Nat.ble` (their arms intern a `const` node of a `Bool` pin through
+`constE`, i.e. `emptyLevels` and `intern_const`; the L side is `nat_cmp`'s code), `Nat.gcd`
+(Euclid over `nat_divmod`), and `natOpResult`'s dispatch itself (it reads fifteen pins first;
+the pins are not in `ArenaR`).
+
 ### `sorry`s
 
 None.
@@ -3729,13 +4054,49 @@ passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` 
 * **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
   none for the theorem (as `nat_shr`).
 
+### `land`/`lor`/`xor` are the `Nat` operations (`NatBitsNat.lean`)
+
+Lane `nat` proved `nat_land`/`nat_lor`/`nat_xor` against `bv f`, the limb-wise combine, and left
+"`bv` is `Nat.land`" open. `bitwise_split`: for an operation `op` given by its bits (`BitOp op g`:
+bit `i` of `op x y` is `g (bit i of x) (bit i of y)`, `g false false = false`) and `x, y < 2^64`,
+`op (x + 2^64 X) (y + 2^64 Y) = op x y + 2^64 · op X Y` (by `Nat.testBit`); by induction over the
+limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X Y`; with
+`pv a = xv a k + wt k · pv (a + k) (la - k)` the high parts vanish at the loop's length
+(`land_bv`, `lor_bv`, `xor_bv`). 129 lines, by hand, 0.6 s. The operation is a parameter with
+its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
+visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
+
+### The `natOpResult` arms under `ArenaR` (`NatArms.lean`)
+
+Every arm whose result is a literal is `litArm F a b = do let x ← internE (.lit (.natVal
+(F a b))); pure (some x)`, and each verbatim arm (`natSubArm`, …) unfolds to it. One generic
+theorem covers the seven ops whose pool function appends at the top (`-`, `*`, `land`, `lor`,
+`xor`, `shiftLeft`, `shiftRight`): `topLit f` is `natAddLit` with `f` for `nat_add` (written as
+syntax, since the notation takes a literal function name), and `topLit_refines` is
+`natAddLit_refines` with `f`'s spec as a hypothesis in `natAdd_spec`'s shape (`TopSpec p f F`).
+Each instance is one line (`topLit_refinesA … natSub_top`); `TopSpec` for the bitwise ops and the
+shifts is the pool function's spec rewritten under the binder (`simpa only [← land_bv]`,
+`[← Nat.shiftLeft_eq]`, `[← Nat.shiftRight_eq_div_pow]`). The others are their own L functions:
+`pred` writes a one-limb `1` at the top and subtracts it (`Grows.push1`: pushing a limb is
+growing the pool, pattern on the two stores); `pow` returns `(0, 0)` for the arm's `none` (an
+exponent above `2^24`; two or more limbs of a normalised `b` are at least `2^64`) and `(1, h)`
+otherwise, decoded by `decOpt`; `/` and `%` take `nat_divmod`'s first or second slice. All under
+`ArenaR` in `natArmProg` (`storeProg` and the pool functions), each proof in the house form at
+the first or second attempt, 3.7 s for the file. The operands are normalised slices (as every
+`lit` record's), which `nat_shr` and `nat_divmod` need for `b`.
+
+Not done: `Nat.beq`/`Nat.ble` (their arms intern a `const` node of a `Bool` pin through
+`constE`, i.e. `emptyLevels` and `intern_const`; the L side is `nat_cmp`'s code), `Nat.gcd`
+(Euclid over `nat_divmod`), and `natOpResult`'s dispatch itself (it reads fifteen pins first;
+the pins are not in `ArenaR`).
+
 ### `sorry`s
 
 None.
 
 ## Limb-pool `Nat` ops, round 2: compare, sub, shifts, pow, div/mod, the arms (2026-10-21, lane `nat2`)
 
-Files: `ConAgua/Arena/NatGrindAttr.lean`, `NatCmp.lean`, `NatSub.lean`, `NatShl.lean`, `NatShr.lean`, `NatPow.lean`, `NatDiv.lean`, … Per-op numbers are in the lane `nat`
+Files: `ConAgua/Arena/NatGrindAttr.lean`, `NatCmp.lean`, `NatSub.lean`, `NatShl.lean`, `NatShr.lean`, `NatPow.lean`, `NatDiv.lean`, `NatBitsNat.lean`, `NatArms.lean`. Per-op numbers are in the lane `nat`
 table above (`lean` user time of the file, one run).
 
 ### `nat_cmp`: a non-recursive model
@@ -3874,6 +4235,42 @@ passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` 
   `x / 2^j` terms and broke it.
 * **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
   none for the theorem (as `nat_shr`).
+
+### `land`/`lor`/`xor` are the `Nat` operations (`NatBitsNat.lean`)
+
+Lane `nat` proved `nat_land`/`nat_lor`/`nat_xor` against `bv f`, the limb-wise combine, and left
+"`bv` is `Nat.land`" open. `bitwise_split`: for an operation `op` given by its bits (`BitOp op g`:
+bit `i` of `op x y` is `g (bit i of x) (bit i of y)`, `g false false = false`) and `x, y < 2^64`,
+`op (x + 2^64 X) (y + 2^64 Y) = op x y + 2^64 · op X Y` (by `Nat.testBit`); by induction over the
+limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X Y`; with
+`pv a = xv a k + wt k · pv (a + k) (la - k)` the high parts vanish at the loop's length
+(`land_bv`, `lor_bv`, `xor_bv`). 129 lines, by hand, 0.6 s. The operation is a parameter with
+its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
+visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
+
+### The `natOpResult` arms under `ArenaR` (`NatArms.lean`)
+
+Every arm whose result is a literal is `litArm F a b = do let x ← internE (.lit (.natVal
+(F a b))); pure (some x)`, and each verbatim arm (`natSubArm`, …) unfolds to it. One generic
+theorem covers the seven ops whose pool function appends at the top (`-`, `*`, `land`, `lor`,
+`xor`, `shiftLeft`, `shiftRight`): `topLit f` is `natAddLit` with `f` for `nat_add` (written as
+syntax, since the notation takes a literal function name), and `topLit_refines` is
+`natAddLit_refines` with `f`'s spec as a hypothesis in `natAdd_spec`'s shape (`TopSpec p f F`).
+Each instance is one line (`topLit_refinesA … natSub_top`); `TopSpec` for the bitwise ops and the
+shifts is the pool function's spec rewritten under the binder (`simpa only [← land_bv]`,
+`[← Nat.shiftLeft_eq]`, `[← Nat.shiftRight_eq_div_pow]`). The others are their own L functions:
+`pred` writes a one-limb `1` at the top and subtracts it (`Grows.push1`: pushing a limb is
+growing the pool, pattern on the two stores); `pow` returns `(0, 0)` for the arm's `none` (an
+exponent above `2^24`; two or more limbs of a normalised `b` are at least `2^64`) and `(1, h)`
+otherwise, decoded by `decOpt`; `/` and `%` take `nat_divmod`'s first or second slice. All under
+`ArenaR` in `natArmProg` (`storeProg` and the pool functions), each proof in the house form at
+the first or second attempt, 3.7 s for the file. The operands are normalised slices (as every
+`lit` record's), which `nat_shr` and `nat_divmod` need for `b`.
+
+Not done: `Nat.beq`/`Nat.ble` (their arms intern a `const` node of a `Bool` pin through
+`constE`, i.e. `emptyLevels` and `intern_const`; the L side is `nat_cmp`'s code), `Nat.gcd`
+(Euclid over `nat_divmod`), and `natOpResult`'s dispatch itself (it reads fifteen pins first;
+the pins are not in `ArenaR`).
 
 ### `sorry`s
 
@@ -4031,6 +4428,42 @@ passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` 
   `x / 2^j` terms and broke it.
 * **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
   none for the theorem (as `nat_shr`).
+
+### `land`/`lor`/`xor` are the `Nat` operations (`NatBitsNat.lean`)
+
+Lane `nat` proved `nat_land`/`nat_lor`/`nat_xor` against `bv f`, the limb-wise combine, and left
+"`bv` is `Nat.land`" open. `bitwise_split`: for an operation `op` given by its bits (`BitOp op g`:
+bit `i` of `op x y` is `g (bit i of x) (bit i of y)`, `g false false = false`) and `x, y < 2^64`,
+`op (x + 2^64 X) (y + 2^64 Y) = op x y + 2^64 · op X Y` (by `Nat.testBit`); by induction over the
+limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X Y`; with
+`pv a = xv a k + wt k · pv (a + k) (la - k)` the high parts vanish at the loop's length
+(`land_bv`, `lor_bv`, `xor_bv`). 129 lines, by hand, 0.6 s. The operation is a parameter with
+its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
+visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
+
+### The `natOpResult` arms under `ArenaR` (`NatArms.lean`)
+
+Every arm whose result is a literal is `litArm F a b = do let x ← internE (.lit (.natVal
+(F a b))); pure (some x)`, and each verbatim arm (`natSubArm`, …) unfolds to it. One generic
+theorem covers the seven ops whose pool function appends at the top (`-`, `*`, `land`, `lor`,
+`xor`, `shiftLeft`, `shiftRight`): `topLit f` is `natAddLit` with `f` for `nat_add` (written as
+syntax, since the notation takes a literal function name), and `topLit_refines` is
+`natAddLit_refines` with `f`'s spec as a hypothesis in `natAdd_spec`'s shape (`TopSpec p f F`).
+Each instance is one line (`topLit_refinesA … natSub_top`); `TopSpec` for the bitwise ops and the
+shifts is the pool function's spec rewritten under the binder (`simpa only [← land_bv]`,
+`[← Nat.shiftLeft_eq]`, `[← Nat.shiftRight_eq_div_pow]`). The others are their own L functions:
+`pred` writes a one-limb `1` at the top and subtracts it (`Grows.push1`: pushing a limb is
+growing the pool, pattern on the two stores); `pow` returns `(0, 0)` for the arm's `none` (an
+exponent above `2^24`; two or more limbs of a normalised `b` are at least `2^64`) and `(1, h)`
+otherwise, decoded by `decOpt`; `/` and `%` take `nat_divmod`'s first or second slice. All under
+`ArenaR` in `natArmProg` (`storeProg` and the pool functions), each proof in the house form at
+the first or second attempt, 3.7 s for the file. The operands are normalised slices (as every
+`lit` record's), which `nat_shr` and `nat_divmod` need for `b`.
+
+Not done: `Nat.beq`/`Nat.ble` (their arms intern a `const` node of a `Bool` pin through
+`constE`, i.e. `emptyLevels` and `intern_const`; the L side is `nat_cmp`'s code), `Nat.gcd`
+(Euclid over `nat_divmod`), and `natOpResult`'s dispatch itself (it reads fifteen pins first;
+the pins are not in `ArenaR`).
 
 ### `sorry`s
 
@@ -4304,6 +4737,42 @@ operation that is not a clear (above).
 **What to watch:** per-writer CPU of a bundle (split it above ~2 s); any twin change that iterates
 or sizes a map, or caches a value that is not a word; the eager depth bound `D` (unbounded nesting
 in `.verified` mode, abort beyond `D`); memo and table capacities against the twin's uncapped caches.
+
+### `land`/`lor`/`xor` are the `Nat` operations (`NatBitsNat.lean`)
+
+Lane `nat` proved `nat_land`/`nat_lor`/`nat_xor` against `bv f`, the limb-wise combine, and left
+"`bv` is `Nat.land`" open. `bitwise_split`: for an operation `op` given by its bits (`BitOp op g`:
+bit `i` of `op x y` is `g (bit i of x) (bit i of y)`, `g false false = false`) and `x, y < 2^64`,
+`op (x + 2^64 X) (y + 2^64 Y) = op x y + 2^64 · op X Y` (by `Nat.testBit`); by induction over the
+limbs `op (xv a k + wt k · X) (xv b k + wt k · Y) = bv f … k + wt k · op X Y`; with
+`pv a = xv a k + wt k · pv (a + k) (la - k)` the high parts vanish at the loop's length
+(`land_bv`, `lor_bv`, `xor_bv`). 129 lines, by hand, 0.6 s. The operation is a parameter with
+its bit lemma, not `Nat.bitwise g`: in a `module`, `Nat.land`'s body (`bitwise and`) is not
+visible, only the public `Nat.testBit_and`/`_or`/`_xor`.
+
+### The `natOpResult` arms under `ArenaR` (`NatArms.lean`)
+
+Every arm whose result is a literal is `litArm F a b = do let x ← internE (.lit (.natVal
+(F a b))); pure (some x)`, and each verbatim arm (`natSubArm`, …) unfolds to it. One generic
+theorem covers the seven ops whose pool function appends at the top (`-`, `*`, `land`, `lor`,
+`xor`, `shiftLeft`, `shiftRight`): `topLit f` is `natAddLit` with `f` for `nat_add` (written as
+syntax, since the notation takes a literal function name), and `topLit_refines` is
+`natAddLit_refines` with `f`'s spec as a hypothesis in `natAdd_spec`'s shape (`TopSpec p f F`).
+Each instance is one line (`topLit_refinesA … natSub_top`); `TopSpec` for the bitwise ops and the
+shifts is the pool function's spec rewritten under the binder (`simpa only [← land_bv]`,
+`[← Nat.shiftLeft_eq]`, `[← Nat.shiftRight_eq_div_pow]`). The others are their own L functions:
+`pred` writes a one-limb `1` at the top and subtracts it (`Grows.push1`: pushing a limb is
+growing the pool, pattern on the two stores); `pow` returns `(0, 0)` for the arm's `none` (an
+exponent above `2^24`; two or more limbs of a normalised `b` are at least `2^64`) and `(1, h)`
+otherwise, decoded by `decOpt`; `/` and `%` take `nat_divmod`'s first or second slice. All under
+`ArenaR` in `natArmProg` (`storeProg` and the pool functions), each proof in the house form at
+the first or second attempt, 3.7 s for the file. The operands are normalised slices (as every
+`lit` record's), which `nat_shr` and `nat_divmod` need for `b`.
+
+Not done: `Nat.beq`/`Nat.ble` (their arms intern a `const` node of a `Bool` pin through
+`constE`, i.e. `emptyLevels` and `intern_const`; the L side is `nat_cmp`'s code), `Nat.gcd`
+(Euclid over `nat_divmod`), and `natOpResult`'s dispatch itself (it reads fifteen pins first;
+the pins are not in `ArenaR`).
 
 ### `sorry`s
 
