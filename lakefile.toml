@@ -40,7 +40,7 @@ globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.A
   "ConAgua.Arena.FVarStore", "ConAgua.Arena.FVarRefine",
   "ConAgua.Arena.ProjStore", "ConAgua.Arena.ProjRefine",
   "ConAgua.Arena.LevelGrindAttr", "ConAgua.Arena.LevelHeap", "ConAgua.Arena.LevelHeapRel",
-  "ConAgua.Arena.Frame", "ConAgua.Arena.ArenaRel", "ConAgua.Arena.NatArms",
+  "ConAgua.Arena.Frame", "ConAgua.Arena.ArenaRel", "ConAgua.Arena.Scratch", "ConAgua.Arena.ScratchRefine", "ConAgua.Arena.NatArms",
   "ConAgua.Arena.WriteSets", "ConAgua.Arena.Keeps", "ConAgua.Arena.Tiers", "ConAgua.Arena.TierWalks",
   "ConAgua.Arena.Walk", "ConAgua.Arena.WalkRefine", "ConAgua.Arena.WalkBench", "ConAgua.Arena.WalkEmit",
   "ConAgua.Arena.WalkBenchLean",
