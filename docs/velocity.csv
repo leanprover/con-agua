@@ -25,3 +25,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-21,levels,opus,3,1,"lv_leq_top/lv_equiv/lv_equivs refine Level.leq/isEquiv/isEquivList (+ defaultFuel)"
 2026-10-21,levels,opus,9,2,"LevelArena: L view = arena view under ArenaR, denoteL ↦ LvR; lvl_eq refines lvlEq? (caches, NStoreWF as hypotheses), levelProg write set"
 2026-10-21,libs,opus,9,2,"item 4b: MemoRV (memory-reading value relation; MemoRG an instance), tombstone erase in MemoLib (decision: no separate map library, env index is direct), banks by generation-tagged keys (MemoBank: bank_enter/put/find, #guard run), tree-valued client MemoTree (LvR level pointers)"
+2026-10-21,levels,opus,6,1,"lvls_eq/ls_node refine lvlsEq? (list slices in POOL under ArenaR, caches as hypotheses)"

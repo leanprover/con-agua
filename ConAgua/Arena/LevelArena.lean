@@ -341,4 +341,212 @@ theorem lvlEq_run {m m' : Mem} {a : AState} (hR : ArenaR m a) (hwf : NStoreWF a.
       (lvlEq_spec levelProg levelProg_ok rfl rfl fuel _ _ _)
     exact lvlEq_refines hR hwf u v lu lv hu hv hc he fuel _ this.2
 
+/-! ## Level lists -/
+
+theorem sliceL_succ (p : Array Word) (o l : Nat) :
+    sliceL p o (l + 1) = (p[o]?.getD 0) :: sliceL p (o + 1) l := by
+  simp only [sliceL, List.ofFn_succ, Fin.val_zero, Nat.add_zero, Fin.val_succ]
+  congr 1; congr; funext k; congr 2; omega
+
+/-- **A slice of handle words is related to the readbacks** (`LvsR`), element by element. -/
+theorem lvsR_of_slice {m : Mem} {a : AState} (hR : ArenaR m a) :
+    ∀ (ids : List LIdx) (Ls : List Level) (o n : Word),
+      sliceL (m.arr64 POOL) o.toNat n.toNat = lsWords ids → o.toNat + n.toNat < 2 ^ 64 →
+      denoteLList a.store.ls ids = some Ls → LvsR (nameN a.store.lss.ls.ns) m o n Ls := by
+  intro ids
+  induction ids with
+  | nil =>
+    intro Ls o n hs _ hd
+    have hn : n.toNat = 0 := by have := sliceL_length (m.arr64 POOL) o.toNat n.toNat; rw [hs] at this; simpa [lsWords] using this.symm
+    have : n = 0 := UInt64.toNat_inj.mp (by simpa using hn)
+    subst this
+    simp [denoteLList] at hd; subst hd; exact .nil
+  | cons u us ih =>
+    intro Ls o n hs hon hd
+    have hlen := sliceL_length (m.arr64 POOL) o.toNat n.toNat
+    rw [hs] at hlen
+    simp only [lsWords, List.length_map, List.length_cons] at hlen
+    obtain ⟨k, hk⟩ : ∃ k, n.toNat = k + 1 := ⟨us.length, hlen.symm⟩
+    rw [hk, sliceL_succ] at hs
+    simp only [lsWords, List.map_cons, List.cons.injEq] at hs
+    obtain ⟨h1, h2⟩ := hs
+    simp only [denoteLList, opt2_eq_some_iff] at hd
+    obtain ⟨l, ls, hl, hls, rfl⟩ := hd
+    have hn0 : n ≠ 0 := fun e => by subst e; simp at hk
+    have ho1 : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+    have hn1 : (n - 1).toNat = k := by
+      rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
+    refine .cons hn0 ?_ (ih ls (o + 1) (n - 1) (by rw [ho1, hn1]; exact h2) (by omega) hls)
+    have hw : rdW (m.arr64 POOL) o = u.word.toUInt64 := by simpa [rdW] using h1
+    rw [hw]; exact denoteL_lvR hR u l hl
+
+theorem decLs_tag0 (h : Word) (hh : h.toNat < 2 ^ 32) :
+    ((decI h : LsIdx).tag == LsTag.list) = (h >>> 28 == 0) := by
+  have this : ((decI h : LsIdx).tag = 0 ↔ h >>> 28 = 0) := decL_tag_eq h hh 0 (by decide)
+  rw [Bool.eq_iff_iff]; simp only [beq_iff_eq, LsTag.list]; exact this
+where
+  decL_tag_eq {k : IdxKind} (h : Word) (hh : h.toNat < 2 ^ 32) (g : Nat) (hg : g < 16) :
+      ((decI h : Idx k).tag = UInt32.ofNat g) ↔ (h >>> 28 = UInt64.ofNat g) := by
+    have e : (decI h : Idx k).tag = (h >>> 28).toUInt32 := by
+      simp only [decI, Idx.tag]
+      apply UInt32.toNat_inj.mp
+      simp [UInt32.toNat_div, UInt64.toNat_toUInt32, UInt64.toNat_shiftRight,
+        Nat.shiftRight_eq_div_pow]
+      omega
+    rw [e]
+    have hgt : (h >>> 28).toNat < 16 := by
+      simp [UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]; omega
+    constructor
+    · intro e; apply UInt64.toNat_inj.mp
+      have := congrArg UInt32.toNat e
+      simp [UInt64.toNat_toUInt32] at this ⊢; omega
+    · intro e; rw [e]; apply UInt32.toNat_inj.mp; simp
+
+theorem decLs_idx (h : Word) : (decI h : LsIdx).idxNat = (idxW h).toNat := by
+  simp only [decI, Idx.idxNat, Idx.index, idxW]
+  simp [UInt32.toNat_mod, UInt64.toNat_toUInt32, UInt64.toNat_and]
+  have : (134217727 : Nat) = 2 ^ 27 - 1 := rfl
+  rw [this, Nat.and_two_pow_sub_one_eq_mod]
+
+/-- **Under `ArenaR`, L's view of a level-list handle is the arena's**: the record's slice holds
+the list's handle words, below the pool top. -/
+theorem lsNodeW_store {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h.toNat < 2 ^ 32)
+    {ids : List LIdx} (hv : a.store.lss.view (decI h) = some ids) :
+    lsNodeW m h = [lsO m (tierW h) (idxW h), lsL m (tierW h) (idxW h)] ∧
+      (lsO m (tierW h) (idxW h)).toNat + (lsL m (tierW h) (idxW h)).toNat ≤ m.top.toNat ∧
+      sliceL (m.arr64 POOL) (lsO m (tierW h) (idxW h)).toNat (lsL m (tierW h) (idxW h)).toNat =
+        lsWords ids := by
+  have hfl := hR.ls.2.1
+  have ht1 := tierW_le h
+  have hpers : (decI h : LsIdx).isPersistent = (tierW h == 0) := by rw [isPersistent_decI h hh]; rfl
+  unfold LsStore.view at hv
+  rw [hpers] at hv
+  have hsc : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) ∧
+      (if tierW h = 0 then a.store.lss.pers else a.store.lss.scr).get (decI h) = some ids := by
+    by_cases ht : tierW h = 0
+    · simp only [ht, beq_self_eq_true, ↓reduceIte] at hv
+      exact ⟨fun e => e.1 ht, by simpa [ht] using hv⟩
+    · simp only [ht, beq_iff_eq, ↓reduceIte] at hv
+      split at hv
+      · rename_i hon
+        refine ⟨fun e => ?_, by simpa [ht] using hv⟩
+        rw [← hfl] at hon; simp [e.2] at hon
+      · simp at hv
+  obtain ⟨hsc, hg⟩ := hsc
+  simp only [LsTables.get, decLs_tag0 h hh] at hg
+  by_cases g0 : h >>> 28 = 0
+  · simp only [g0, beq_self_eq_true, ↓reduceIte, Option.map_eq_some_iff] at hg
+    obtain ⟨z, hz, rfl⟩ := hg
+    rw [Tbl.node?, decLs_idx h, apply_ite LsTables.lists] at hz
+    obtain ⟨hc, hr⟩ := tier_node lsSch LsRecRel lshash m _ _ _ hR.ls (tierW h) ht1 _ _ hz
+    simp only [cntW, lsSch] at hc
+    simp only [LsRecRel] at hr
+    refine ⟨?_, hr.1, hr.2.1⟩
+    simp [lsNodeW, g0, hsc, hc]
+  · simp [g0] at hg
+
+/-- The readback cache of lists holds readbacks. -/
+def ReadLsCOK (a : AState) : Prop :=
+  ∀ (h : LsIdx) (ls : List Level), a.caches.readLsC[h]? = some ls → denoteLs a.store.lss h = some ls
+
+/-- The verdict cache of lists holds verdicts (at the pair asked). -/
+def LvlsEqCOK (a : AState) (us vs : LsIdx) (lu lv : List Level) : Prop :=
+  ∀ r, a.caches.lvlsEqC[(us, vs)]? = some r → Level.isEquivList lu lv = some r
+
+theorem readLevelsM_run (a : AState) (h : LsIdx) (ls : List Level)
+    (hd : denoteLs a.store.lss h = some ls) (hc : ReadLsCOK a) :
+    ∃ c, (readLevelsM h).run a = .ok (ls, { a with caches := c }) ∧
+      ReadLsCOK { a with caches := c } := by
+  simp only [readLevelsM]
+  cases e : a.caches.readLsC[h]? with
+  | some l' =>
+    have := hc _ _ e; rw [hd] at this; cases this
+    exact ⟨a.caches, by simp [e]; rfl, hc⟩
+  | none =>
+    refine ⟨{ a.caches with readLsC := a.caches.readLsC.insert h ls }, ?_, ?_⟩
+    · simp [e, hd]; rfl
+    · intro h' l' e'
+      simp only [Std.HashMap.getElem?_insert] at e'
+      split at e'
+      · rename_i hb; cases e'; rw [← eq_of_beq hb]; exact hd
+      · exact hc _ _ e'
+
+theorem lvlsEq?_run (a : AState) (us vs : LsIdx) (lu lv : List Level)
+    (hu : denoteLs a.store.lss us = some lu) (hv : denoteLs a.store.lss vs = some lv)
+    (hc : ReadLsCOK a) (he : LvlsEqCOK a us vs lu lv) :
+    ∃ c, (lvlsEq? us vs).run a = .ok (Level.isEquivList lu lv, { a with caches := c }) := by
+  simp only [lvlsEq?]
+  cases e : a.caches.lvlsEqC[(us, vs)]? with
+  | some r =>
+    rw [he r e]; exact ⟨a.caches, by simp [e]; rfl⟩
+  | none =>
+    obtain ⟨c₁, h₁, hc₁⟩ := readLevelsM_run a us lu hu hc
+    obtain ⟨c₂, h₂, -⟩ := readLevelsM_run { a with caches := c₁ } vs lv hv hc₁
+    cases eq : Level.isEquivList lu lv with
+    | none =>
+      exact ⟨c₂, by simp [e, StateT.run_bind, h₁, except_ok_bind, h₂, eq]; rfl⟩
+    | some r =>
+      exact ⟨{ c₂ with lvlsEqC := c₂.lvlsEqC.insert (us, vs) r },
+        by simp [e, StateT.run_bind, h₁, except_ok_bind, h₂, eq]; rfl⟩
+
+/-- The list readback, from the list's view and the elements' readbacks. -/
+theorem denoteLs_view (a : AState) (h : LsIdx) (ls : List Level)
+    (hd : denoteLs a.store.lss h = some ls) :
+    ∃ ids, a.store.lss.view h = some ids ∧ denoteLList a.store.ls ids = some ls := by
+  simp only [denoteLs] at hd
+  split at hd
+  · simp at hd
+  · rename_i ids hv; exact ⟨ids, hv, hd⟩
+
+/-- **`lvls_eq` refines con-ron's `lvlsEq?`**, under the hypotheses of `lvlEq_refines` for lists. -/
+@[refines ConRon.Arena.lvlsEq?]
+theorem lvlsEq_refines {m m' : Mem} {a : AState} (hR : ArenaR m a)
+    (hwf : NStoreWF a.store.lss.ls.ns) (us vs : LsIdx) (lu lv : List Level)
+    (hu : denoteLs a.store.lss us = some lu) (hv : denoteLs a.store.lss vs = some lv)
+    (hc : ReadLsCOK a) (he : LvlsEqCOK a us vs lu lv) (n : Nat) (z : Word)
+    (h : lvlsEqW n m us.word.toUInt64 vs.word.toUInt64 = some (z, m')) :
+    ∃ o a', (lvlsEq? us vs).run a = .ok (o, a') ∧ z = encO o ∧ ArenaR m' a' := by
+  cases n with
+  | zero => simp [lvlsEqW] at h
+  | succ n =>
+    simp only [lvlsEqW] at h
+    obtain ⟨ids₁, hv₁, hd₁⟩ := denoteLs_view a us lu hu
+    obtain ⟨ids₂, hv₂, hd₂⟩ := denoteLs_view a vs lv hv
+    have hw₁ : (us.word.toUInt64 : Word).toNat < 2 ^ 32 := word_lt us
+    have hw₂ : (vs.word.toUInt64 : Word).toNat < 2 ^ 32 := word_lt vs
+    obtain ⟨e₁, t₁, s₁⟩ := lsNodeW_store hR hw₁ (by rw [decI_word]; exact hv₁)
+    obtain ⟨e₂, t₂, s₂⟩ := lsNodeW_store hR hw₂ (by rw [decI_word]; exact hv₂)
+    rw [e₁, e₂] at h
+    simp only [List.headD_cons, List.tail_cons] at h
+    have hR₀ : ArenaR (m.set64 CTL 192 0) a :=
+      ArenaR.frame (by decide) c192_not_arena (reset_frame m) hR
+    have hpool : (m.set64 CTL 192 0).arr64 POOL = m.arr64 POOL :=
+      Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+    have htop := m.top.toNat_lt
+    have hl₁ := lvsR_of_slice hR₀ ids₁ lu _ _ (by rw [hpool]; exact s₁) (by omega) hd₁
+    have hl₂ := lvsR_of_slice hR₀ ids₂ lv _ _ (by rw [hpool]; exact s₂) (by omega) hd₂
+    obtain ⟨hx, hz⟩ := equivsW_ok (nameN_rel _ hwf) n _ _ _ _ _ _ _ _ _ hl₁ hl₂ h
+    have hR' : ArenaR m' a := ArenaR.frame lh_not_arena c192_not_arena hx.memFrame hR₀
+    obtain ⟨c, hrun⟩ := lvlsEq?_run a us vs lu lv hu hv hc he
+    exact ⟨_, _, hrun, hz, hR'.with_caches c⟩
+
+/-- **A run of `lvls_eq` refines `lvlsEq?`.** -/
+theorem lvlsEq_run {m m' : Mem} {a : AState} (hR : ArenaR m a) (hwf : NStoreWF a.store.lss.ls.ns)
+    (us vs : LsIdx) (lu lv : List Level) (hu : denoteLs a.store.lss us = some lu)
+    (hv : denoteLs a.store.lss vs = some lv) (hc : ReadLsCOK a) (he : LvlsEqCOK a us vs lu lv)
+    (fuel : Nat) (r : List Word)
+    (hrun : run levelProg fuel "lvls_eq" [us.word.toUInt64, vs.word.toUInt64] m = .ok (r, m')) :
+    ∃ o a', (lvlsEq? us vs).run a = .ok (o, a') ∧ r.headD 0 = encO o ∧ ArenaR m' a' := by
+  simp only [run] at hrun
+  cases hr : (invoke levelProg (exec levelProg fuel) "lvls_eq"
+      [us.word.toUInt64, vs.word.toUInt64]).run { mem := m, loc := Locals.init [] } with
+  | error e => simp [hr, Except.map] at hrun
+  | ok rs =>
+    simp only [hr, Except.map] at hrun
+    injection hrun with hrun
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj hrun
+    have := M.of_run (P := fun s => s = { mem := m, loc := Locals.init [] }) rfl hr
+      (lvlsEq_spec levelProg levelProg_ok rfl rfl rfl rfl fuel _ _ _)
+    exact lvlsEq_refines hR hwf us vs lu lv hu hv hc he fuel _ this.2
+
 end L.Arena
