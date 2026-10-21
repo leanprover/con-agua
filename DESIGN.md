@@ -2263,9 +2263,10 @@ for the L-side spec itself.
 
 ### Measurements (nightly-2026-10-20)
 
-| function | Rust lines (`ron/nat.rs`) | L lines | spec + proof lines | `lean` time |
-|---|---:|---:|---:|---:|
-| `nat_land`/`nat_lor`/`nat_xor` (+ loops, reusing `nat_limb`/`nat_trim`) | ~45 (`land`/`and_from`, `lor`/`or_from`, `xor`/`xor_from`) | ~45 | ~215 | 4.6 s |
+| function | Rust lines (`ron/nat.rs`) | L lines | spec + proof lines | `lean` time | automation |
+|---|---:|---:|---:|---:|---|
+| `nat_land`/`nat_lor`/`nat_xor` (+ loops, reusing `nat_limb`/`nat_trim`) | ~45 (`land`/`and_from`, `lor`/`or_from`, `xor`/`xor_from`) | ~45 | ~215 | 4.6 s | house form |
+| `nat_cmp` (lane `nat2`; `beq`/`ble`/`blt` are tests of its code) | 52 (`cmp`, `cmp_from`, `beq`, `ble`, `blt`) | 16 | 137 | 6.8 s | house form; `finish (splits := 20)` in the loop; three pool lemmas by hand (`omega`) |
 
 Whole file 307 lines. `lake build ConAgua` (full project) still green, 403 ms incremental.
 
@@ -2541,3 +2542,37 @@ expression key, with `ok`-path links of the same shape.
 ### `sorry`s
 
 None.
+
+## Limb-pool `Nat` ops, round 2: compare, sub, shifts, pow, div/mod, the arms (2026-10-21, lane `nat2`)
+
+Files: `ConAgua/Arena/NatGrindAttr.lean`, `NatCmp.lean`, … Per-op numbers are in the lane `nat`
+table above (`lean` user time of the file, one run).
+
+### `nat_cmp`: a non-recursive model
+
+`nat_cmp(oa, la, ob, lb)` returns con-ron's `Cmp` as a word (`0` `Lt`, `1` `Eq`, `2` `Gt`): the
+lengths first (normalised operands), then the limbs from the top down. The spec is
+`r = cmpW A B` with `cmpW a b = if a < b then 0 else if a = b then 1 else 2`, a plain function of
+the two values, and the loop invariant is one linear equation: the limbs at `k` and above agree,
+`pv a la + pv b k = pv b la + pv a k`. No model of `cmp_from` exists, so nothing recursive
+reaches `grind`. The step "the top limb decides" is `pv_succ_lt`: from the program's own
+comparison `p[ia] < p[ib]` (with `ia + 1 = oa + k`) to `pv p oa k < pv p ob k`, with the
+multi-pattern `p[ia] < p[ib], pv p oa k, pv p ob k`. Its conclusion relates two terms that are
+already there, so instantiation stops (28 instances in the loop's worst goal; lane `nat`'s
+recursive model produced hundreds of thousands of case splits). The loop needs
+`finish (splits := 20)`: each `pv_succ`/`pv_succ_lt` instance's index condition is a split.
+`beq`/`ble`/`blt` are tests of the code (`cmpW_eq_one`, `cmpW_eq_two`, … as `grind` equations),
+not functions.
+
+* **A separate attribute for comparison facts.** `pv_lt_wt` (`pv p o k < wt k`) has the pattern
+  `pv p o k` and fires on every prefix value; with it in `arena_grind`, `nat_sub`'s loop (which
+  never compares) timed out. It and `pv_succ_lt`, `cmpW_*` are in `natcmp_grind`
+  (`NatGrindAttr.lean`), which a proof adds to its `sym only [...]` list when it needs them.
+* `LitRefine.lean` has the same fact as `pv_lt` (and `pv_ge`, `pv_len`), but it is not a
+  `module`, so module files cannot import it; `NatCmp.lean` proves its own `pv_lt_wt`,
+  `pv_len_lt`.
+
+### `sorry`s
+
+None.
+
