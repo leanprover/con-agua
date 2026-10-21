@@ -12,3 +12,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-21,nat2,opus,27,4,"nat_pow (square-and-multiply over nat_mul), natop_grind, nat_divmod (in-place shift-subtract)"
 2026-10-21,exprops2,opus,20,3,"hasLooseBVar (der_b read, no twin), leaf DerR lemmas + natAddLit_refinesD, fvarRangeMemo (fmemo slot, abstract1's cutoff)"
 2026-10-21,nat2,opus,10,2,"NatBitsNat (bv is Nat.land/lor/xor), NatArms (11 natOpResult arms under ArenaR, one generic theorem)"
+2026-10-21,arch,opus,9,4,"item 1: L/WriteSet (text write sets, run_keeps/Stable), *_push count stores masked CTL[k + (t & 1)], closedA facts for lift_entry/inst_entry/bb_memo/nat_add_lit"
