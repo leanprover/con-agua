@@ -152,7 +152,8 @@ theorem MemFrame.above {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFr
 theorem StateDR.above {m m' : Mem} {st : StateD} (h : StateDR m st) (hf : Above64 m m') :
     StateDR m' st :=
   ⟨by rw [hf NID (by decide)]; exact h.names, by rw [hf LID (by decide)]; exact h.levels,
-    by rw [hf EID (by decide)]; exact h.exprs⟩
+    by rw [hf EID (by decide)]; exact h.exprs,
+    by rw [hf DECL (by decide), hf DLP (by decide)]; exact h.decls⟩
 
 theorem mkK_above (A : ArrId) (hA : A < 64) (hC : A ≠ CTL) (c s d r : Word) (m m' : Mem)
     (x : Option (Word × Mem)) (hx : ∀ r₁ m₁, x = some (r₁, m₁) → Above64 m m₁)
