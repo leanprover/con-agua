@@ -8,8 +8,8 @@ relaxedAutoImplicit = false
 
 [[require]]
 name = "Kraken"
-git = "https://github.com/AeneasVerif/kraken"
-rev = "72f3a7a3a2d94ac51040815d692cd31a1d240a1d"
+git = "https://github.com/sgraf812/kraken"
+rev = "ba12834902fd19e837c97d0e5ea585d41348ee7e"
 
 [[lean_lib]]
 name = "ConAgua"
