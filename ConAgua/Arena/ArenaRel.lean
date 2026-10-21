@@ -44,9 +44,8 @@ the interning replaces one table behind its lens, `AM.st_proto`). The tactic `ar
 an `ArenaR` field by field: the given tactic where it applies, the frame elsewhere. `arenaR_init`:
 the all-zero memory is related to the arena's initial state `AState.init EStore.empty`.
 
-Not represented here: the derived columns (`DerR`), the other six memos, the per-declaration
-caches and the pins (`Tiers.lean`), and the contents of `lit`'s `strVal` nodes. They are not in `ArenaR`, so nothing is claimed about
-them.
+Not represented here: the derived columns (`DerR`), the other six memos, and the per-declaration
+caches and the pins (`Tiers.lean`). They are not in `ArenaR`, so nothing is claimed about them.
 -/
 
 open ConRon.Arena
@@ -94,7 +93,7 @@ theorem litLocal : RLocal litSch RecRel litH [POOL] [0] := by
   refine ⟨fun t i k h => ?_, fun t i => by simp only [litH, hra]⟩
   obtain ⟨⟨N⟩ | ⟨s⟩⟩ := k
   · simp only [RecRel, NatRec, hra, hp, top_rdW, h0] at h ⊢; exact h
-  · simpa only [RecRel, hra] using h
+  · simp only [RecRel, StrRec, hra, hp, top_rdW, h0] at h ⊢; exact h
 
 theorem appLocal : RLocal appSch ARecRel ahash [] [] := by
   intro m m' hra _ _; simp only [appSch] at hra
@@ -977,7 +976,7 @@ theorem ArenaR.grow (m m' : Mem) (hg : Grows m m') (a : AState) (hR : ArenaR m a
       exact NStrR.grow m m' hg a hR.nstr
 
 /-- `intern_lit` refines `internE (.lit (.natVal _))` under `ArenaR`. -/
-@[refines_part ConRon.Arena.internE "lit natVal"]
+@[refines_part ConRon.Arena.internE "lit"]
 theorem internLit_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
     (hpe : p.lookup "limbs_eq" = some limbsEq) (hpm : p.lookup "lit_match" = some litMatch)
     (hpf : p.lookup "lit_find" = some litFind) (hpp : p.lookup "lit_push" = some litPush)
@@ -1000,6 +999,32 @@ theorem internLit_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
   subst hs
   obtain ⟨hok, hX, hres⟩ := intern_correct s.mem a₀ hR.lit o l hq hn _ _ hI
   rw [internW_eq] at hI
+  exact ⟨hloc, hok, hR.lift_lit _ _ _ _ hX (internM_frame _ litS_wf _ _ _ _ _ _ _ _ hI)
+    (AM.st_proto litLens _ _ _ _ _ _ a₀ (internE_lit_run _ a₀) hok), hres⟩
+
+/-- `intern_lit_str` refines `internE (.lit (.strVal _))` under `ArenaR`. -/
+@[refines_part ConRon.Arena.internE "lit"]
+theorem internLitStr_refinesA (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
+    (hpe : p.lookup "limbs_eq" = some limbsEq) (hpm : p.lookup "lit_match_str" = some litMatchStr)
+    (hpf : p.lookup "lit_find_str" = some litFindStr) (hpp : p.lookup "lit_push_str" = some litPushStr)
+    (hp : p.lookup "intern_lit_str" = some internLitStr)
+    (a₀ : AState) (n : Nat) (s₀ : St) (o l : Word) (hR : ArenaR s₀.mem a₀) (hq : SliceOK s₀.mem o l)
+    (s : String) (hk : sliceL (s₀.mem.arr64 POOL) o.toNat l.toNat = strWords s) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "intern_lit_str" [o, l]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (internE (.lit (.strVal s))) a₀ ∧
+      ArenaR s'.mem (AM.st (internE (.lit (.strVal s))) a₀) ∧
+      AM.res (internE (.lit (.strVal s))) a₀ = decE (r.headD 0); ⊤⦄ := by
+  have ⟨_, _, hps, htop⟩ := hR.lit.1
+  have hspec := internLitStr_spec p hph hpe hpm hpf hpp hp n s₀ o l (by omega)
+    (by simp only [SliceOK] at hq; omega)
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun hspec
+  subst hs
+  obtain ⟨hok, hX, hres⟩ := internStr_correct s.mem a₀ hR.lit o l hq _ hk _ _ hI
+  rw [internWStr_eq] at hI
   exact ⟨hloc, hok, hR.lift_lit _ _ _ _ hX (internM_frame _ litS_wf _ _ _ _ _ _ _ _ hI)
     (AM.st_proto litLens _ _ _ _ _ _ a₀ (internE_lit_run _ a₀) hok), hres⟩
 

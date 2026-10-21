@@ -313,7 +313,8 @@ theorem applyAny_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
         L.Front.Fields.recLineLoop_spec p b hb hS.skip_ws hS.skip_digits hS.key_end hS.num_end hS.key_at_g1 hS.key_at_g2 hS.key_at_g3 hS.key_at_g4 hS.key_at_g5 hS.key_at_g6 hS.key_at hS.value_at hS.next_member hS.slot_nat hS.utf8_char hS.utf8_valid hS.byte_in hS.hex_val hS.hex4 hS.hex3 hS.u_next hS.unescape hS.str_close hS.has_escape hS.scan_string hS.skip_braced hS.read_nat hS.rec_nat_list hS.rec_str_name hS.rec_num_name hS.rec_line_loop n,
         L.Front.Fields.recExprLoop_spec p b hb hS.skip_ws hS.skip_digits hS.key_end hS.num_end hS.key_at_g1 hS.key_at_g2 hS.key_at_g3 hS.key_at_g4 hS.key_at_g5 hS.key_at_g6 hS.key_at hS.value_at hS.next_member hS.slot_nat hS.scan_quoted_nat hS.match_word hS.scan_binder_info hS.scan_nat_list hS.match_lit hS.scan_bool hS.utf8_char hS.utf8_valid hS.byte_in hS.hex_val hS.hex4 hS.hex3 hS.u_next hS.unescape hS.str_close hS.has_escape hS.scan_string hS.read_nat hS.obj_val hS.rec_obj hS.expr_val hS.rec_expr_loop n,
         applyRec_spec p hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz b hb n,
-        applyExpr_spec p hE b hb n,
+        applyExpr_spec p hE b hb hS.byte_in hS.hex_val hS.hex4 hS.hex3 hS.esc_sur hS.esc_one
+          hS.utf8_put hS.str_put_esc n,
         applyDLine_spec p hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz b hb n] <;>
         finish [applyAnyW, Fld.enc]
 

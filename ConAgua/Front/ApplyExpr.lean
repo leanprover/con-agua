@@ -3,6 +3,7 @@ import ConAgua.Front.ExprIface
 import ConAgua.Arena.ExprMk
 import ConAgua.Front.NatDec
 import ConAgua.Front.Preserve
+import ConAgua.Front.Unescape
 import ConAgua.Census.Attr
 
 /-!
@@ -39,6 +40,7 @@ open L.Scan.Utf8 (byteW)
 open L.Scan.Leaves (numEndN)
 open L.Front.Fields (rdNatN NONE itemsN itemsN_end itemsN_close itemsN_digit itemsN_noprog
   itemsN_other)
+open L.Front.Unescape (strPutEsc strPutEscW strPutEsc_specW)
 
 namespace L.Front
 
@@ -406,6 +408,41 @@ def litK : Option (List Word × Mem) → Option (Word × Mem)
 /-- The model of `node_lit(c, d)`: the decimal digits `[c, d)` into the pool, interned. -/
 def litW (b : Array UInt8) (m : Mem) (c d : Word) : Option (Word × Mem) := litK (natDecW b m c d)
 
+/-! ## `node_lit_str`: a string literal's body, unescaped into the pool and interned
+
+Shares the pattern of a `str` name line (`apply_str`, `Line.lean`): `str_put_esc` decodes the
+body `[c, d)` into the pool at the old top, then `intern_lit_str` hash-conses the slice. A `c`
+of `0` aborts (as `apply_str`'s), the sentinel for "no body". -/
+
+def nodeLitStr : FunDecl := lfn (c, d) locals (o, l, h) {
+  if c == 0 { abort };
+  (o, l) := call str_put_esc(c, d);
+  if len(POOL.u64) < o { abort };
+  if len(POOL.u64) - o < l { abort };
+  h := call intern_lit_str(o, l);
+  return h
+}
+
+/-- After `str_put_esc`: its length result `l` and memory (`none`: it aborted, at the slice
+`(o, l)`), then `intern_lit_str(o, l)`. -/
+def litStrK (o : Word) : Option (Word × Mem) → Option (Word × Mem)
+  | none => none
+  | some (l, m₁) =>
+    if m₁.len64 POOL < o then none
+    else if m₁.len64 POOL - o < l then none
+    else internWStr m₁ o l
+
+@[arena_grind =] theorem litStrK_none (o : Word) : litStrK o none = none := rfl
+@[arena_grind =] theorem litStrK_some (o l : Word) (m₁ : Mem) : litStrK o (some (l, m₁)) =
+    if m₁.len64 POOL < o then none
+    else if m₁.len64 POOL - o < l then none
+    else internWStr m₁ o l := rfl
+
+/-- The model of `node_lit_str(c, d)`: the string body `[c, d)`, unescaped into the pool and
+interned. -/
+def litStrW (b : Array UInt8) (m : Mem) (c d : Word) : Option (Word × Mem) :=
+  if c = 0 then none else litStrK m.top (strPutEscW b m c d)
+
 /-! ## `expr_node`, `apply_expr` -/
 
 def exprNode : FunDecl := lfn (pl, a, c, d) locals (u, h) {
@@ -427,6 +464,7 @@ def exprNode : FunDecl := lfn (pl, a, c, d) locals (u, h) {
   if pl == 14 { h := call node_proj(a, c, d); return h };
   if pl == 15 { h := call node_const(a, c); return h };
   if pl == 16 { h := call node_lit(c, d); return h };
+  if pl == 17 { h := call node_lit_str(c, d); return h };
   abort
 }
 
@@ -439,6 +477,7 @@ def nodeW (b : Array UInt8) (m : Mem) (pl a c d : Word) : Option (Word × Mem) :
   else if pl = 14 then projW m a c d
   else if pl = 15 then constW b m a c
   else if pl = 16 then litW b m c d
+  else if pl = 17 then litStrW b m c d
   else none
 
 @[l_impl ConRon.Arena.Frontend.parseExprEntryD]
@@ -472,10 +511,16 @@ def exprProg : Prog := frontProg ++
    ("const_find", constFind), ("const_push", constPush), ("intern_const", internConst),
    ("ls_match", lsMatch), ("ls_find", lsFind), ("ls_push", lsPush), ("intern_ls", internLs),
    ("lit_match", litMatch), ("lit_find", litFind), ("lit_push", litPush), ("intern_lit", internLit),
+   ("lit_match_str", litMatchStr), ("lit_find_str", litFindStr), ("lit_push_str", litPushStr),
+   ("intern_lit_str", internLitStr),
    ("expr_get", exprGet), ("expr_fresh", exprFresh), ("ls_put", lsPut), ("node_bin", nodeBin),
    ("node_let", nodeLet), ("node_proj", nodeProj), ("node_const", nodeConst),
-   ("node_lit", nodeLit), ("expr_node", exprNode), ("apply_expr", applyExpr),
-   ("dec_chunk", decChunk), ("nat_mad", natMad), ("nat_dec", natDec)]
+   ("node_lit", nodeLit), ("node_lit_str", nodeLitStr), ("expr_node", exprNode),
+   ("apply_expr", applyExpr), ("dec_chunk", decChunk), ("nat_mad", natMad), ("nat_dec", natDec),
+   ("byte_in", L.Scan.Str.byteIn), ("hex_val", L.Scan.Str.hexVal), ("hex4", L.Scan.Str.hex4),
+   ("hex3", L.Scan.Str.hex3), ("esc_sur", L.Front.Unescape.escSur),
+   ("esc_one", L.Front.Unescape.escOne), ("utf8_put", L.Front.Unescape.utf8Put),
+   ("str_put_esc", L.Front.Unescape.strPutEsc)]
 
 /-- Every word array 64 words (all zero), the input `[0, 1]`. -/
 def exprMem : Mem :=
@@ -511,6 +556,17 @@ def exprRuns (m : Mem) : List (FnName × List Word) → Option (List (List Word)
   ("apply_expr", [8, 0, 1, 0, 0])]).isNone
 #guard (exprRuns exprMem [("front_init", []), ("apply_expr", [10, 0, 1, 2, 0])]).isNone
 #guard (exprRuns exprMem [("front_init", []), ("apply_expr", [17, 0, 0, 0, 0])]).isNone
+
+/-- Input `"ab""cd"`: two quoted strings, no escapes. -/
+def exprStrMem : Mem :=
+  { bytes := #["\"ab\"\"cd\"".toUTF8.data], words := Array.replicate 67 (Array.replicate 64 0) }
+
+/- `"ab"` interned twice (the same handle, `0x80000000`), `"cd"` a different one (`0x80000001`). -/
+#guard exprRuns exprStrMem
+  [("front_init", []), ("apply_expr", [17, 0, 0, 1, 3]), ("apply_expr", [17, 1, 0, 1, 3]),
+   ("apply_expr", [17, 2, 0, 5, 7]),
+   ("expr_get", [0]), ("expr_get", [1]), ("expr_get", [2])] ==
+  some [[0], [0], [0], [0], [0x80000000], [0x80000000], [0x80000001]]
 
 /-! ## The specs -/
 
@@ -558,6 +614,10 @@ structure ExprLookups (p : Prog) : Prop where
   lit_find : p.lookup "lit_find" = some litFind
   lit_push : p.lookup "lit_push" = some litPush
   intern_lit : p.lookup "intern_lit" = some internLit
+  lit_match_str : p.lookup "lit_match_str" = some litMatchStr
+  lit_find_str : p.lookup "lit_find_str" = some litFindStr
+  lit_push_str : p.lookup "lit_push_str" = some litPushStr
+  intern_lit_str : p.lookup "intern_lit_str" = some internLitStr
   expr_get : p.lookup "expr_get" = some exprGet
   expr_fresh : p.lookup "expr_fresh" = some exprFresh
   ls_put : p.lookup "ls_put" = some lsPut
@@ -566,6 +626,7 @@ structure ExprLookups (p : Prog) : Prop where
   node_proj : p.lookup "node_proj" = some nodeProj
   node_const : p.lookup "node_const" = some nodeConst
   node_lit : p.lookup "node_lit" = some nodeLit
+  node_lit_str : p.lookup "node_lit_str" = some nodeLitStr
   expr_node : p.lookup "expr_node" = some exprNode
   apply_expr : p.lookup "apply_expr" = some applyExpr
   dec_chunk : p.lookup "dec_chunk" = some decChunk
@@ -576,7 +637,7 @@ structure ExprLookups (p : Prog) : Prop where
 theorem exprProg_lookups : ExprLookups exprProg := by
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
     ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
-    ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · constructor <;> rfl
   all_goals rfl
 
@@ -711,6 +772,35 @@ theorem nodeLit_spec (b : Array UInt8) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8
           hE.intern_lit n] <;>
       finish [litW, Keep.size]
 
+theorem nodeLitStr_spec (b : Array UInt8) (hb : b.size < 2 ^ 63)
+    (hpb : p.lookup "byte_in" = some L.Scan.Str.byteIn)
+    (hph : p.lookup "hex_val" = some L.Scan.Str.hexVal)
+    (hp4 : p.lookup "hex4" = some L.Scan.Str.hex4) (hp3 : p.lookup "hex3" = some L.Scan.Str.hex3)
+    (hpsu : p.lookup "esc_sur" = some L.Front.Unescape.escSur)
+    (hpo : p.lookup "esc_one" = some L.Front.Unescape.escOne)
+    (hpu : p.lookup "utf8_put" = some L.Front.Unescape.utf8Put)
+    (hpe : p.lookup "str_put_esc" = some strPutEsc) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
+    (hps : (s₀.mem.arr64 POOL).size < 2 ^ 63) (c d : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "node_lit_str" [c, d]
+    ⦃fun r s' => LocEq s' s₀ ∧ litStrW b s₀.mem c d = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hE.node_lit_str]
+  simp only [callFn, nodeLitStr]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have hesc : ∀ (s₁ : St), s₁.mem.arr8 IN = b → ∀ c d : Word,
+        ⦃fun s => s = s₁⦄ invoke p (exec p n) "str_put_esc" [c, d]
+        ⦃fun r s' => (LocEq s' s₁ ∧ r.headD 0 = s₁.mem.top ∧
+          strPutEscW b s₁.mem c d = some (r.tail.headD 0, s'.mem)) ∧
+          Keep s₁.mem s'.mem ∧ LocEq s' s₁; ⊤⦄ := fun s₁ hm₁ c d =>
+      Triple.keep hE.no_st8 (strPutEsc_specW p b hb hpb hph hp4 hp3 hpsu hpo hpu hpe n s₁ hm₁ c d)
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hesc,
+        internLitStr_spec p hE.front.lit_hash hE.front.limbs_eq hE.lit_match_str hE.lit_find_str
+          hE.lit_push_str hE.intern_lit_str n] <;>
+      finish [litStrW, Keep.size]
+
 theorem nodeConst_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (n : Nat) (s₀ : St)
     (hm : s₀.mem.arr8 IN = b) (hps : (s₀.mem.arr64 POOL).size < 2 ^ 63) (a c : Word) :
     ⦃fun s => s = s₀⦄
@@ -730,7 +820,14 @@ theorem nodeConst_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (n : Nat) (s₀ 
         internConst_spec p hE.const_find hE.const_push hE.intern_const n] <;>
       finish [constW]
 
-theorem exprNode_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (n : Nat) (s₀ : St)
+theorem exprNode_spec (b : Array UInt8) (hb : b.size < 2 ^ 63)
+    (hpb : p.lookup "byte_in" = some L.Scan.Str.byteIn)
+    (hph : p.lookup "hex_val" = some L.Scan.Str.hexVal)
+    (hp4 : p.lookup "hex4" = some L.Scan.Str.hex4) (hp3 : p.lookup "hex3" = some L.Scan.Str.hex3)
+    (hpsu : p.lookup "esc_sur" = some L.Front.Unescape.escSur)
+    (hpo : p.lookup "esc_one" = some L.Front.Unescape.escOne)
+    (hpu : p.lookup "utf8_put" = some L.Front.Unescape.utf8Put)
+    (hpe : p.lookup "str_put_esc" = some strPutEsc) (n : Nat) (s₀ : St)
     (hm : s₀.mem.arr8 IN = b) (hps : (s₀.mem.arr64 POOL).size < 2 ^ 63) (pl a c d : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "expr_node" [pl, a, c, d]
@@ -745,10 +842,18 @@ theorem exprNode_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (n : Nat) (s₀ :
         internBVar_spec p hE.bvar_find hE.bvar_push hE.intern_bvar n,
         internSort_spec p hE.sort_find hE.sort_push hE.intern_sort n,
         nodeBin_spec p hE n, nodeLet_spec p hE n, nodeProj_spec p hE n,
-        nodeConst_spec p hE b hb n, nodeLit_spec p hE b n] <;>
+        nodeConst_spec p hE b hb n, nodeLit_spec p hE b n,
+        nodeLitStr_spec p hE b hb hpb hph hp4 hp3 hpsu hpo hpu hpe n] <;>
       finish [nodeW, NONE]
 
-theorem applyExpr_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (n : Nat) (s₀ : St)
+theorem applyExpr_spec (b : Array UInt8) (hb : b.size < 2 ^ 63)
+    (hpb : p.lookup "byte_in" = some L.Scan.Str.byteIn)
+    (hph : p.lookup "hex_val" = some L.Scan.Str.hexVal)
+    (hp4 : p.lookup "hex4" = some L.Scan.Str.hex4) (hp3 : p.lookup "hex3" = some L.Scan.Str.hex3)
+    (hpsu : p.lookup "esc_sur" = some L.Front.Unescape.escSur)
+    (hpo : p.lookup "esc_one" = some L.Front.Unescape.escOne)
+    (hpu : p.lookup "utf8_put" = some L.Front.Unescape.utf8Put)
+    (hpe : p.lookup "str_put_esc" = some strPutEsc) (n : Nat) (s₀ : St)
     (hm : s₀.mem.arr8 IN = b) (hps : (s₀.mem.arr64 POOL).size < 2 ^ 63) (pl idx a c d : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "apply_expr" [pl, idx, a, c, d]
@@ -760,7 +865,7 @@ theorem applyExpr_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (n : Nat) (s₀ 
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64,
-        exprFresh_spec p hE n, exprNode_spec p hE b hb n] <;>
+        exprFresh_spec p hE n, exprNode_spec p hE b hb hpb hph hp4 hp3 hpsu hpo hpu hpe n] <;>
       finish [applyExprW]
 
 end specs
