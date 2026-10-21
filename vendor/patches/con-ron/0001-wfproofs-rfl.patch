@@ -1,0 +1,16 @@
+Tbl.node?_push_eq: simp only leaves X = X differing in an instance on nightly-2026-10-20; rfl
+closes it (vendor/README.md, "ConRonArena").
+
+diff --git a/vendor/con-ron/ConRon/Arena/WFProofs.lean b/vendor/con-ron/ConRon/Arena/WFProofs.lean
+index 4907831650d90b7c8c4feea4a21f49ff2e8df098..b98d9e258fd56ea76ada86e6482f2e4120c34985 100644
+--- a/vendor/con-ron/ConRon/Arena/WFProofs.lean
++++ b/vendor/con-ron/ConRon/Arena/WFProofs.lean
+@@ -1268,7 +1268,7 @@ theorem Tbl.size_push (t : Tbl α ι δ) (a : α) (d : δ) (i : ι) :
+ 
+ theorem Tbl.node?_push_eq {t : Tbl α ι δ} {a : α} {d : δ} {i : ι} {n : Nat} :
+     (t.push a d i).node? n = if n = t.size then some a else t.node? n := by
+-  cases t; simp only [Tbl.push, Tbl.node?, Tbl.size, Array.getElem?_push]
++  cases t; simp only [Tbl.push, Tbl.node?, Tbl.size, Array.getElem?_push]; rfl
+ 
+ theorem Tbl.node?_size (t : Tbl α ι δ) : t.node? t.size = none := by
+   cases t; simp [Tbl.node?, Tbl.size]

@@ -3731,7 +3731,11 @@ Request to lane `arch`: add `LH` (array 192) and `CTL[192]` (heap top) to the me
 | `lv_equivs` (`isEquivList`, lists in `POOL`) | 20 | 7 | 50 | `equivsW_ok` + `LvsR` 75 | | as `lv_eq` |
 | `lvl_eq` (`lvlEq?`: heap reset, then `lv_equiv`; the verdict cache not in L) | 33 (`lvl_eq_q`) | 5 | 25 | `lvlEq_refines` + `lvlEq?_run` + `lvlEq_run` 110; the view bridge (`lvNodeW_store`, `denoteL_lvR`) 190 | 1 s | `vcgen` + `finish`; bridge by hand |
 | `lvls_eq`, `ls_node` (`lvlsEq?` on two level-list handles' `POOL` slices) | 33 | 15 | 60 | `lvlsEq_refines` + `lvsR_of_slice` + `lsNodeW_store` + runs 170 | 1 s | as `lvl_eq` |
-| total (files) | | 252 | `LevelHeap` 243, `LevelSimp` 291, `LevelSubst` 251, `LevelLeq` 474, `LevelLeqSpec` 151, `LevelEquiv` 365 | `LevelHeapRel` 460, `LevelSimpRel` 264, `LevelLeqRel` 740, `LevelEquivRel` 200, `LevelArena` 530 | | |
+| `lv_mem`, `lv_apd` (`allParamsDefined`; the parameter names a slice of a word array `A` the caller picks) | 12 | 18 | 90 | `memW_ok`, `apdW_ok`, `NmsR` 75 | 2.9 s | as `lv_eq`; L code generic in `A` |
+| `lh_push`, `lv_zero` (`zeronessOf`: a flag and the names pushed on the heap) | 13 | 18 | 90 | `zeroW_ok` + `lhPushW_ext` + `NmsR` slices 150 | 1.8 s | as `lv_eq` |
+| `lv_lookup`, `lv_substl` (`subst`, `subst.go` with lists: keys in `KA`, values in `VA`) | 24 | 25 | 110 | `lookupW_ok`, `substLW_ok`, `LvsAR` 110 | 5.9 s (file) | as `lv_eq`; generic in the arrays |
+| `lv_spw`, `lv_substpw` (`substPW`: `bindZ.go` of `zeronessOf ∘ subst.go`) | 3 + `bind_z` | 15 | 70 | `spwW_ok`, `substPWW_ok`, `ZR.inter`, `PWR` 120 | (same file) | as `lv_eq` |
+| total (files) | | 328 | `LevelHeap` 243, `LevelSimp` 291, `LevelSubst` 251, `LevelLeq` 474, `LevelLeqSpec` 151, `LevelEquiv` 358, `LevelApd` 120, `LevelZero` 120, `LevelSubstL` 230 | `LevelHeapRel` 470, `LevelSimpRel` 264, `LevelLeqRel` 740, `LevelEquivRel` 200, `LevelArena` 552, `LevelApd` 100, `LevelZero` 190, `LevelSubstL` 280 | | |
 
 ### The comparison (`LevelSubst`, `LevelLeq`, `LevelLeqSpec`, `LevelLeqRel`)
 
@@ -3741,9 +3745,12 @@ Request to lane `arch`: add `LH` (array 192) and `CTL[192]` (heap top) to the me
   which every caller sees. `diff : Int` is the biased word `d = diff + 2^32` (`DR`); the
   refinement keeps `|diff| + fuel ≤ 2^31`, true from the entry (`0`, `10^4`) since `diff` moves
   by one only where fuel is spent, so `d ± 1` never wraps.
-* **One key.** `byCases` substitutes one parameter; `lv_subst(l, k, v)` is `subst [k] [v]`
-  (`@[refines_part … "one key"]`). The list version (`instLPGo`'s callers, phases 4–5) reads its
-  keys from wherever the declaration's parameter names will live; not built here.
+* **One key, and lists.** `byCases` substitutes one parameter; `lv_subst(l, k, v)` is
+  `subst [k] [v]` (`@[refines_part … "one key"]`). The list version `lv_substl` (`instLPGo`'s
+  callers, phases 4–5) takes the keys as a slice of name words in an array `KA` and the values as
+  a slice of level pointers in `VA` (`LvsAR`), both chosen by the caller (`LevelSubstL.lean`);
+  `substPW` (`lv_substpw`) runs over a datum's name slice in `PA`. The arrays must not be the heap
+  or `CTL`.
 * **The model** is one mutual block (`leqW`, `restW`, `imaxRW`, `imaxLW`, `imaxRrW`, `casesW`,
   `caW` and 14 continuations), structural on the L fuel with the continuations ranked by a second
   component (`termination_by (n, k)`). The refinement is the same mutual induction: seven
@@ -3770,6 +3777,12 @@ Request to lane `arch`: add `LH` (array 192) and `CTL[192]` (heap top) to the me
   `lvls_eq(us, vs)` (`lvlsEq?`) is the same over the two lists' `POOL` slices (`ls_node` reads a
   level-list record; `lvsR_of_slice` relates the slice to the readbacks), with `ReadLsCOK`,
   `LvlsEqCOK`.
+* **Name lists and the zero-ness datum.** `allParamsDefined`'s parameter list is a slice of name
+  words in an array the caller picks (`lvMemG A`, generic like the memo library's schemas;
+  `NmsR`). `zeronessOf` returns `never` or `ifAllZero ps`: in L a flag and the name words pushed
+  on the heap since the call (`lh_push`; `ZR`), which a caller copies into its record
+  (`EnvRec.lean`'s `decPW` layout). `HeapExt` now also says the heap below the old top stays
+  (`HeapExt.lh`, `top`), so a pushed slice survives later allocations (`NmsR.mono_lh`).
 * **Inversion by tag** (`LvR.inv0` … `inv4`: from `lvG m p = t`, the level's constructor and the
   children's relations) replaced `cases` on the derivation, whose impossible branches made
   `simp_all` loop.
@@ -3797,6 +3810,13 @@ Request to lane `arch`: add `LH` (array 192) and `CTL[192]` (heap top) to the me
 * The model's view fields are named (`lvG`/`lvA`/`lvB` with `@[level_grind =]` equations to the
   `headD` projections the call's `setLocs` produces); a model that unfolded them in `finish`'s
   list confused `grind`.
+
+### Census at the end of the lane
+
+Phase 3: **16 of 16 targets proven** (0 before; 102 Lean / 291 Rust lines). Also `Level.beq`
+(phase 0) and `lvlEq?`, `lvlsEq?` (phase 5, under the cache hypotheses above). Totals on master at
+the last landing (all lanes): 267 of 1350 proven, 10.7 % of Lean lines, 7.3 % of Rust lines (91,
+7.6 %, 4.6 % when the lane started).
 
 ### `sorry`s
 
@@ -4128,3 +4148,279 @@ for the census uses them except through `refines_part`.
 * `eraseInstalled`/`indexPromoted`/`promoteNew` (they need `promoteCIList`); `env_erase` is the
   step they will loop. `mkIFEnv` beyond the empty environment.
 * The record pool's writer (`CTL[129]` top): the installers will build constant records in `EREC`.
+
+## The `lit` store's `strVal` arm, and expression lines accept strings (2026-10-21, lane `strlit`)
+
+Files: `ConAgua/Arena/Store.lean`, `ConAgua/Arena/LitRefine.lean`, `ConAgua/Arena/ArenaRel.lean`
+(the `lit` parts), `ConAgua/Arena/PoolSlice.lean`, `ConAgua/Arena/NStrRefine.lean` (dedup only),
+`ConAgua/Front/ApplyExpr.lean`, `ConAgua/Front/ApplyExprRefine.lean`, `ConAgua/Front/Line.lean`,
+`ConAgua/Front/FrontRun.lean` (threading only).
+
+### What changed
+
+The `lit` store's single combined node table (one `Tbl LitNode EIdx UInt64` per tier, shared by
+`natVal` and `strVal`, con-ron's `Arena/Store.lean:302`) now represents `strVal` nodes fully: kind
+`1`, a slice below the pool top holding the string's UTF-8 bytes (one byte per word, as the name
+store's `str` table, `NStrStore.lean`/`NStrRefine.lean`), and the hash. Previously `RecRel`'s
+`strVal` arm was just `kind = 1`, contents unrepresented (`DESIGN.md`'s "Not done", lane `store`).
+
+* **`Store.lean`**: a full `strVal` arm (`matchWStr`, `litMatchStr`, `probeWStr`, `litFindStr`,
+  `pushMemStr`, `litPushStr`, `internWStr`, `internLitStr`), duplicating the `natVal` arm's L
+  functions rather than parametrising them by kind (as `NStrStore.lean` duplicates `lit`'s probe
+  machinery for its own prefix check): simpler, and the two arms already shared nothing but
+  `REC`/`SLOT`/`CTL[2+t]`/`lit_hash`/`limbs_eq`/`cnt`/`pushOK`/`nSlots`/`homeW`/`baseW`, which stay
+  common. The hash is the plain slice hash (`lit_hash`, unmixed): a `natVal`/`strVal` collision in
+  the same bucket costs one extra probe step, not correctness, since `litMatchStr` checks kind
+  `1` where `litMatch` checks kind `0` (hardcoded, as before) — a `strVal` query never matches a
+  `natVal` node and vice versa.
+* **`LitRefine.lean`**: `StrRec` (the `strVal` record relation), `litMatchStrOK`/`litHomeOKStr`/
+  `litNewOKStr` (the query's obligations), the bridges, `internStr_correct`, `internLitStr_refines`.
+  The uniqueness argument for a `strVal` key is `slice_key`/`strWords_inj` (word-list equality),
+  not the `natVal` arm's normalised-slice argument (`pv_len`/`pv_limbs`) — exactly the "name `str`
+  table's pool-slice approach" the task pointed at. Since `PoolSlice.lean` (which has `slice_key`)
+  already `import`s `LitRefine.lean` (for `eqW_iff`/`hashN_congr`, which `slice_key`'s proof needs),
+  and `LitRefine.lean`'s own `strVal` arm now needs `slice_key` too, the slice-as-key layer
+  (`sliceL`, `slice_key`, `slice_key_hash`, `strWords`, `strWords_inj`) moved **into**
+  `LitRefine.lean` itself (next to `eqW_iff`); `PoolSlice.lean` is now a one-paragraph re-export
+  (`import ConAgua.Arena.LitRefine`, no new content), and `NStrRefine.lean` dropped its own copy of
+  `strWords`/`strWords_inj` in favour of the one now visible transitively. No other file needed to
+  change: both downstream users (`LsRefine.lean`, `NStrRefine.lean`) already imported
+  `PoolSlice.lean`, never `LitRefine.lean` directly.
+* **`ArenaRel.lean`**: `internLitStr_refinesA`, and the existing `internLit_refinesA`'s census tag
+  changed from `@[refines_part ConRon.Arena.internE "lit natVal"]` to `"lit"` (the label
+  `COMPLETE_BY_PARTS` actually requires); both theorems carry that label now, so `internE`'s `lit`
+  arm — and so all of `ConRon.Arena.internE`/`internNodeE` — is **proven** (`scripts/census.py
+  --list internE`), not just `written`. `litLocal`'s `strVal` branch (a separate, pre-existing
+  locality lemma, not part of my task's obligations but broken by the richer `RecRel`) needed the
+  same pool/top rewrite the `natVal` branch already had.
+* **Frontend** (`ApplyExpr.lean`): `node_lit_str` (`str_put_esc` then `intern_lit_str`, aborting
+  where the body position is `0`, as `apply_str`'s name-line analogue does), wired into
+  `expr_node`'s dispatch at kind `17` (previously the final catch-all `abort`). `ExprLookups`
+  gained the five new store-function fields; the byte-level unescape chain
+  (`byte_in`/`hex_val`/`hex4`/`hex3`/`esc_sur`/`esc_one`/`utf8_put`/`str_put_esc`) is threaded as
+  **explicit hypotheses** through `nodeLitStr_spec`/`exprNode_spec`/`applyExpr_spec` instead, since
+  `ScanLookups` (`Line.lean`) already carries them for the name-`str` line and the one call site
+  (`applyAny`'s proof) already has that record in scope — no new structure needed there.
+* **`ApplyExprRefine.lean`**: `internLitStr_D`, `node_lit_str` (mirrors `node_lit`'s shape exactly,
+  using the already-proved, already-generic `ConAgua.Front.UnescapeLink.strPutEsc_link` in place of
+  `natDecW_val`). `applyExprW_refines`'s tag changed from `@[refines_part … "every kind but
+  strVal"]` to a plain `@[refines ConRon.Arena.Frontend.parseExprEntryD]`: **every** `ExprRec` kind
+  is now covered, and the census agrees (`parseExprEntryD` is `proven`).
+* **`frontAll_refines`'s coverage**: unchanged in substance (`applyLine`/`parseBytes` still abort
+  on inductive declaration lines, out of scope here), but the label text's parenthetical dropped
+  "strVal" — that part of "expr lines" is no longer a caveat. `exprProg`/`frontAllProg` needed the
+  unescape chain added/deduplicated (`frontAllProg`'s `exprProg.filter` now also drops
+  `byte_in`/`hex_val`/`hex4`/`hex3` — already supplied by `L.Scan.Validator.valProg` earlier in the
+  list — and the four explicit `esc_*`/`utf8_put`/`str_put_esc` entries were dropped in favour of
+  `exprProg`'s copy).
+
+### Findings
+
+* The two literal kinds share one cons table by design (con-ron's single `Tbl LitNode …`), so the
+  `strVal` arm's L code could not just be `NStrStore.lean`'s pattern verbatim (a fresh pair of
+  arrays): it had to reuse `REC`/`SLOT`/`CTL[2+t]`, differing from the `natVal` arm only in the
+  record's kind word. Duplicating the match/probe/push functions (rather than adding a `kind`
+  parameter to the existing ones) kept every already-proved `natVal` theorem untouched.
+  `litPush`/`litPushStr` do share the room checks (`pushOK`, unparametrised by kind: capacity does
+  not depend on content) and the node counter.
+  `str_put_esc` already existed end to end (lane `store`'s "Not done" note named it directly, and a
+  prior lane had already built `ConAgua.Front.UnescapeLink.strPutEsc_link`/`strPutEsc_spec`,
+  apparently in anticipation) — the frontend half was mostly wiring, not new proof.
+* Moving `sliceL`/`strWords` into `LitRefine.lean` was forced by the import DAG, not a style
+  choice: `PoolSlice.lean` already imported `LitRefine.lean` (for `eqW_iff`/`hashN_congr`), so
+  `LitRefine.lean` could not import `PoolSlice.lean` back for the same declarations its own
+  `strVal` arm now needs.
+* `grind [litMt, matchW, RecRel_strVal]`, the one-liner that dismissed the old (trivial) `strVal`
+  case of `litMatchOK`, still works verbatim once `StrRec` is added to its argument list — the
+  dismissal is still "kind `0` ≠ kind `1`", just through a richer hypothesis now.
+## The core tier and the whnf family (2026-10-21, lane `whnf`)
+
+Phase 5 (ROADMAP §1), top-down. Files: `CoreCaches.lean` (L), `Tiers.lean` (`CoreR`),
+`CoreRefine.lean`; `Scratch.lean`/`ScratchRefine.lean` (`scratch_drop` now flushes).
+
+### `CoreR`: nine caches in L, five not
+
+`Caches` has fourteen tables. Nine are `MemoLib` memos (arrays 96‥104, stamps/counts `CTL`
+96‥113): the six **mode memos** `whnfCoreC`, `whnfCoreCheapC`, `whnfC`, `inferC`, `inferIOC`,
+`defeqC`, banked by generation (`MemoBank.lean`; bank words `CTL[114]` last, `CTL[115]` current,
+one pair shared by the six, `bank_enter`/`bank_leave` = `takeModeMemos`/`putModeMemos`), and the
+three constant caches `constTyC`, `constValC`, `ruleRhsC` (plain `MemoRG`). Keys: a handle and
+`genW 0 g = g << 32` (`eKeyG`); `defeqC` the two handles and `genW b g` (`dKeyG`); the constant
+caches `(n, us)` (`pairKey`) and `(rec, ctor ∣ us << 32)` (`rrKey`). **Not in L**: `lvlEqC`,
+`lvlsEqC` (pure verdicts; lane `levels`' `lvl_eq`/`lvls_eq` recompute, the twin's tables only have
+to hold what they claim, a hypothesis there) and `readLC`/`readNC`/`readLsC` (readbacks L never
+makes). Every table whose hit skips interning must be in L: a recomputation would intern into
+other caches the twin did not touch.
+
+* `CoreRM m c M G g` (explicit maps `M : ModeMaps` over `(key, generation)` and bank words) and
+  `CoreR m c := ∃ M G g, CoreRM m c M G g`. Each mode memo is a `ModeR` (memo relation, the twin
+  table is the bank of `g`, nothing above `G`). The knot will state the saved tables of an
+  enclosing eager comparison as other banks of the same `M` and needs every core function's post
+  to keep them: `Kept M M' G g` (generations `≤ G` other than `g` unchanged; `Kept.insert`).
+* `flush_caches()`: the nine `clear`s and both bank words `:= 0`; `CoreR.flush` (any `CoreR`,
+  no stamp about to wrap ⇒ `CoreR` of `Caches.empty`), `flushCaches_refinesC`. The generic part
+  (`clearsL`, `memoRG_clearsL`: a memo cleared in a run of clears is empty after it) is
+  schema-generic.
+* `scratch_drop()` = `flush_caches()`; `scratch_reset(0)`, as the twin's `dropScratch`
+  (`flushCaches` first); `scratchDrop_refinesC` now proves the caches part instead of relying on
+  the stub, `CheckR.of_bracket` takes the new `CoreR` and a `CTL` write set below 128.
+* Probes and inserts (`CoreRefine.lean`): `ModeR.findE`/`setE` (one-handle mode memos),
+  `findD`/`setD` (`defeqC`), `memoRG_findP`/`findR` (constant caches).
+* **Finding**: `MemoBank.lean`'s `lo_hi`, `genW_lo`, `genW_hi` were proved by `bv_decide`, which on
+  this toolchain adds an axiom `…._native.bv_decide.ax_…`; anything built on the banks (now
+  `scratchDrop_refinesC`) would have stopped counting as proven. Reproved by `toNat` arithmetic
+  (`Nat.shiftLeft_add_eq_or_of_lt`, `Nat.and_two_pow_sub_one_eq_mod`), same statements.
+* Finding: `decide +kernel` on membership in `coreSchs.flatMap (fun S => [S.cs, S.cs + 1])`
+  (twenty words) ran out of memory (18 GB, killed); an explicit literal list and `simp` is instant.
+
+### Every con-ron cache, and where L mirrors it
+
+The rule (ROADMAP, "Known costs relative to con-ron"): a cache con-ron has must be in L, or L can
+be asymptotically slower. con-ron at `_tmp/ref/con-ron` origin/HEAD (`proof/ConRon/Arena`):
+
+| con-ron | lifetime | key → value | L | status |
+|---|---|---|---|---|
+| `Caches.whnfCoreC`, `whnfCoreCheapC`, `whnfC`, `inferC`, `inferIOC` | declaration | `EIdx → EIdx` | `wc`/`wk`/`wh`/`in`/`io` (arrays 96‥100) | relation `CoreRM` (lane `whnf`); the knot's probes: `whnf_core`/`whnf` this lane, `infer*` phase 7 |
+| `Caches.defeqC` | declaration | `(EIdx × EIdx) → Bool` | `de` (101) | relation `CoreRM`; probe phase 6 |
+| `Caches.eagerMemos` (the eager tower's six, new in con-ron #127) | declaration | as the six | the same six memos, generation = the eager bit | **to do** on the con-ron bump (below) |
+| `Caches.lvlEqC`, `lvlsEqC` | declaration | `(LIdx × LIdx) → Bool`, `(LsIdx × LsIdx) → Bool` | `lq`, `lsq` (105, 106) | done: `lvl_eq_c`/`lvls_eq_c` in front of lane `levels`' `lvl_eq`/`lvls_eq` (`CoreLevels.lean`) |
+| `Caches.constTyC`, `constValC`, `ruleRhsC` | declaration | `(NIdx × LsIdx) → EIdx`, `(NIdx × NIdx × LsIdx) → EIdx` | `ct`, `cv`, `rr` (102‥104) | relation done; probes in `const_ty_at`/`const_val_at`/`rule_rhs_at` (this lane) |
+| `Caches.readLC`, `readNC`, `readLsC` | declaration | handle → `Level`/`Name`/`List Level` | none needed: L makes no readbacks (the level algorithms run on handles, `LevelHeap.lean`) | the twin's entries are readbacks: `CoreS.readL`/`readLs` (an invariant, not a table) |
+| `Memos.bvarBC`, `fvarBC`, `inst1C`, `liftC` | one top-level walk | `EIdx(×Nat) → …` | `bm`, `fm`, `if`, `lf` (24, 48, 47, 41) | done (lanes `walk`, `exprops`, `exprops2`) |
+| `Memos.instLC`, `abs1C`, `inst1LC`, `instLPC`, `instLPLC`, `instLPLsC` | one top-level walk | `(EIdx × Nat) → EIdx`, level tables | arrays 49‥55 reserved in `MemosR` | to do with their walks (phase 4: `instantiateListGo`, `abstract1Go`, `instantiate1LiftGo`, `instLPGo`) |
+| walk-local `memo`/`seen` arguments: `wscopedBGo`, `fvarLeavesGo`, `leavesSubGo` (ExprOps); `constsResolveFGo`, `hasStrLitGo` (CheckerBase); `mentionsAnyGo`, `nestOccGo`, `depthGo`, `replaceFVarsGo` (Positivity); `hasLooseBVarBGo`, `structUsedLaterGo`, `mentionsConstGo` (StructParts); `usedConstsGo` (NatOpGround, a `HashSet`) | one call | various | argument relations, arrays 144‥191 | to do with each walk: each needs an epoch-cleared memo of the library (`MemoLib`), not a recomputation |
+| store cons tables (21), `IFEnv.idx` | run / declaration | node → handle, name → constant | `*SLOT` arrays, `EIXA/S/N` | done (`ArenaR`, `EnvR`) |
+
+**The con-ron bump (lane `sync`).** con-ron #127 replaced "take the mode memos, run the eager
+comparison on empty tables, put them back" by a second, persistent set of the six tables for the
+eager tower (`Caches.eagerMemos`; `enterEager` swaps it into the six fields, `leaveEager` swaps
+back, nothing moves when already eager). In L this is simpler than the generation counter built
+for the old semantics: the generation of a key is the mode word's eager bit, fixed per slot call,
+so `bank_enter`/`bank_leave` and the bank words `CTL[114]`, `CTL[115]` go away, and `CoreRM`
+relates `c.X` to bank `e` and `c.eagerMemos.X` to bank `1` when `e = 0` (empty when `e = 1`, the
+plain set then being the eager slot's local `saved`, bank `0`, which an eager run must keep).
+Done when the vendored twin is bumped; `CoreS`/`CoreAfter` keep their shape (`M G g` becomes
+`M e`).
+
+### `sorry`s
+
+* `WhnfBase.lean` `whnfCallees_stub`: the specs of the callees not written yet (`inst_list`,
+  `inst_lp`, `str_lit_ctor`, `str_lit_supported`, the knot's `infer`/`infer_io`/`defeq` steps).
+* `WhnfSpine.lean`: the eight spine-walk specs (`getAppFn_refines`, …; a proof lane is on them).
+
+## Any number of results (2026-10-21, lane `cresults`)
+
+Files: `ConAgua/Compiler/{Compile,WF,Rel,SimStmt,SimStore,SimCall,SimFun,Main,Run,Tests}.lean`,
+new `ConAgua/Compiler/WFAll.lean`, `WFAllBench.lean`; `ConAgua/Capstone.lean`
+(`frontAllProg_wf`, `frontAll_run`, `frontAll_x64`); one line each in `ConAgua/Final/Statement.lean`
+and `lakefile.toml`.
+
+### The design: a result area in the table
+
+Results `0 … 5` stay in `rax, rdi, r8 … r11`. Result `i ≥ 6` goes to the word at
+`T + Tab.resOff i`, a **result area** in the table between the constant data and the entry
+arguments (`Tab.nxres = nres - 6` words; `Tab.args` moves past it). `return` writes it through
+`rcx` (`mov rcx, [rsp + tmp]; mov [r15 + off], rcx`, or `mov qword [r15 + off], 0` past the
+returned values); a call reads it right after `call` (`mov rcx, [r15 + off]; mov [rsp + 8x], rcx`).
+Between the callee's write and the caller's read only the epilogue (`add rsp; ret`) runs, so one
+area serves every call. For `nres ≤ 6` the area is empty and the code is unchanged: every
+`Emit*` driver on master (scan, store, walk, lift, inst1, validator) prints byte-identical
+assembly before and after.
+
+**Alternatives rejected.** Slots at the top of the callee's frame (at a fixed distance below the
+return address, so the caller finds them below its `rsp`) need the frame size in the code that
+compiles `return`, and the statement simulation (`SimS`) has a frame size `F` that the code does
+not know (`ctx` has no `F`, and a statement's temporaries only bound `F` from below). Passing a
+result pointer (like the argument pointer `rsi`) needs a saved register per frame. The table area
+needs neither: its address is `r15` plus a constant.
+
+**Proof.** `InTab` now covers the area (so `compile_correct`'s hypotheses read as before; `G.Ok`
+makes it disjoint from the stack and the arrays). `MemRel` gains `res` (the area is mapped);
+`Pres` also allows changes in the area (`InRes`); `MemRel.onlyD` keeps the relation under changes
+outside the descriptors and constant data (`MemRel.only'` is its `InTab` instance, `only_res` the
+area's). `ResRel` now speaks of the register results only (`i < maxRes`), `ResMem G vs d` of the
+area, `ResOut = ResRel ∧ ResMem` replaces `ResRel` in `Conts.ret`, `FunSim` and `OutcomeRel`.
+`sim_loadRes`/`sim_storeRes` handle both kinds per element (the post of `sim_loadRes` is an
+`Only` over the area). `compile_correct`'s statement is unchanged except through `OutcomeRel`
+(results 6… in the area at `Layout.resAddr i`); the capstone users changed by one token each
+(`hres.1 0 … (by simp [maxRes])`). No `sorry`; `#print axioms compile_correct`: `propext`,
+`Classical.choice`, `Quot.sound`. About +230 lines of proof (mostly `SimCall`), +25 of compiler.
+
+`Prog.wf` no longer bounds `nres`; it requires the result area's offsets below `maxOff`
+(`hTab` grew a `+ 8 * nxres`). `Prog.wfAuto p` is `Prog.wf` for the smallest table with every
+array `p` names (`Prog.arrs`).
+
+### Testing
+
+* `Tests.lean`: `nineProg` (nine results, seven of nine read as nine, two of nine, the area
+  used by three calls in a row; 10 results in use), against `L.run`; `runKraken` maps the area
+  and `Outcome.ofState` reads it.
+* `harness/check-asm.sh`: scan 303, store 1313, walk 6743 instructions, OK. The compiled
+  `frontAllProg` (`Prog.tab frontAllProg 1 69`, 47915 instructions, with result-area moves)
+  passes `check_asm.py` too.
+* `run --lines` (skip_braced) on `complete_c04a_restart_70`: 126481 lines, 0 mismatches; the
+  compiled validator accepts it (`ok 0`), and gives the same verdicts as master on the 492 e2e
+  fixtures (the assembly is identical).
+
+### Every program's static check (`WFAll.lean`, `WFAllBench.lean`)
+
+One `#guard Prog.wfAuto p` per program defined on master (60; the four benchmark programs in
+`WFAllBench.lean`, whose modules clash with `NatBits` on import; the compiler's own test programs
+in `Tests.lean`). All pass, `frontAllProg` included, except `L.Scan.Values.hintsProg`, a test
+fragment that calls `skip_ws`/`hints_obj` without containing them (guarded as failing).
+**New programs should get a line there.**
+
+### The capstone: `frontAll_x64`
+
+`frontAllProg_wf` (one byte array, 69 word arrays, `decide +kernel`) and `frontAll_x64`:
+`compile_correct` composed with `frontAll_refines` (via `frontAll_run`, `M.of_run`). From a
+Kraken host holding the compiled `frontAllProg`, run from `ca_enter` on a memory that holds `b`
+in `IN` and is related to `a₀` by `ArenaD` and to the blank parse state by `StateDR`: the machine
+reports exhausted, an error, or `rdx = 0`, and then `rax = 0` implies that con-ron's
+`parseBytes b` accepts from `a₀` and the final machine memory holds an L memory related to its
+final arena and parse states. Only `propext`, `Classical.choice`, `Quot.sound`.
+
+### `sorry`s
+
+None.
+
+## Twin fingerprints and the bump machinery (2026-10-21, lane `sync`)
+
+Question: when con-ron moves, which of our L code and proofs must be looked at again? The census
+links (`@[l_impl T]`, `@[refines T]`, `@[refines_part T]`) say which twin target `T` each piece
+stands for; nothing noticed that `T` changed. Pieces: `ConAgua/Census/Main.lean` (fingerprints),
+`scripts/census.py` (stale flag, `--stale`, `--reviewed`), `docs/twin-fingerprints.tsv` (the
+lockfile), `vendor/UPSTREAM` + `vendor/patches/` (the vendored state as data),
+`scripts/bump-con-ron.sh` (the bump). Workflow: PLAN.md, "Bumping the twin".
+
+### Decisions
+* **Fingerprint = hash of the elaborated code, not of the source text.** For each target: its
+  name, type and value, and the name, type and value of every non-target the census walks through
+  from it (instances, matchers, `_unsafe_rec` bodies of `partial def`s, projections, other
+  auxiliaries), sorted by name and folded with `mixHash` over `Expr.hash`. Not the targets it calls:
+  they have their own fingerprint. Comments, doc comments (con-ron rewrites its `con-leche:` line
+  citations on every con-leche bump), line moves and binder names do not change it; a structure
+  gaining a field does (every anonymous constructor and `{ s with … }` in a value changes), and so
+  does a changed matcher or instance. Source text would miss both, and a `partial def`'s body lives
+  in its `_unsafe_rec`. Cost: it is per toolchain (`Expr.hash`, and the elaborator's output), so a
+  toolchain bump re-records everything (`--reviewed .`) and is never combined with a twin bump; and
+  a changed proof term inside a definition's value (a `decreasing_by`) makes it stale
+  spuriously. 32 bits of hash entropy: a missed change is a 2⁻³² event per changed target.
+* **Which targets get a row**: every target that is not `todo`, i.e. with L code, a proof, or
+  coverage (reached only through proven targets). A covered target has no link of its own, so its
+  stale entry names the linked targets above it whose proofs cover it. A row is written once
+  (`--write` adds rows for new links) and only replaced by `--reviewed REGEX`, run by the lane that
+  checked the code against the new twin. The row keeps the upstream revision it was recorded at,
+  so the stale list prints the exact `git diff` to read.
+* **Stale is a flag, not a status**: a stale proven target stays proven in the counts (the proof
+  still checks against the vendored twin, or the build is red); the flag says the L code may no
+  longer be what the twin computes on the other side of the relation, e.g. a cache the relation
+  does not mention.
+* **Patches as files, applied with `git apply --3way`.** Each patch carries the full blob ids of
+  the old pristine files (the bump first writes those blobs into our object store), so a hunk whose
+  context moved upstream becomes a real three-way merge, and a conflict is left with markers. The
+  patch descriptions live in the patch preamble and survive `--refresh-patches`. `--check` is the
+  gate that `vendor/` holds no unrecorded edit.
+* con-ron's own sync (`scripts/bump-con-leche.sh`, `provenance.py`, `twin-lines.py`) tracks a
+  `(pin, path, line range)` citation per item and diffs the cited text between pins; we have no
+  per-item citations of our own beyond the census links, and the elaborated fingerprint needs none.

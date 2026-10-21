@@ -112,7 +112,7 @@ theorem checker_x64_accepts [Host] (p : Prog) (hP : PipelineRefines p)
   · rw [hrun] at hout
     obtain ⟨-, hres, -⟩ := hout
     have hrax : st.data.regs.rax = rs.headD 0 := by
-      have := hres 0 (by omega)
+      have := hres.1 0 (by omega) (by simp [maxRes])
       simp only [rres] at this
       rwa [show rs.getD 0 0 = rs.headD 0 by cases rs <;> rfl] at this
     exact hP b s8 s64 N rs m' h64 hb hN62 hrun (hrax ▸ hacc)

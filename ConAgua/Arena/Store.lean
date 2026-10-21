@@ -576,4 +576,273 @@ theorem internLit_spec (n : Nat) (s₀ : St) (o l : Word) (hs : (s₀.mem.arr64 
 
 end intern
 
+/-! ## The `strVal` arm: `lit_match_str`, `lit_find_str`, `lit_push_str`, `intern_lit_str`
+
+con-ron's `Tbl LitNode EIdx UInt64` is one combined table per tier for *both* literal kinds
+(`Arena/Store.lean:302`): a `natVal` and a `strVal` share the same node array, cons table and
+counts. So this arm reuses `REC`, `SLOT`, `CTL[2 + t]` as the `natVal` arm does, and reuses
+`lit_hash`/`limbs_eq`/`cnt`/`pushOK`/`nSlots`/`homeW`/`baseW` unchanged: the hash is the plain
+slice hash, with the kind mixed in nowhere, since a mismatched kind is rejected by the match
+check (like `nstr`'s mismatched prefix), not by a separate bucket. What differs from the
+`natVal` arm is just the record's kind word, checked and written as `1` instead of `0`. -/
+
+/-- The model of `lit_match_str`: node `i` of tier `t` has kind `1`, hash `h`, length `l` and the
+words of the slice `(o, l)`. -/
+def matchWStr (r p : Array Word) (t i o l h : Word) : Bool :=
+  rdW r (i * 8 + t * 4) == 1 && rdW r (i * 8 + t * 4 + 3) == h &&
+    rdW r (i * 8 + t * 4 + 2) == l && eqW p (rdW r (i * 8 + t * 4 + 1)) o l 0
+
+def litMatchStr : FunDecl := lfn (t, i, o, l, h) locals (k, e) {
+  k := i * 8 + t * 4;
+  if REC.u64[k] != 1 { return 0 };
+  if REC.u64[k + 3] != h { return 0 };
+  if REC.u64[k + 2] != l { return 0 };
+  e := call limbs_eq(REC.u64[k + 1], o, l);
+  return e
+}
+
+section matchStr
+variable (p : Prog) (hpe : p.lookup "limbs_eq" = some limbsEq)
+  (hp : p.lookup "lit_match_str" = some litMatchStr)
+
+include hpe hp in
+theorem litMatchStr_spec (n : Nat) (s₀ : St) (t i o l h : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "lit_match_str" [t, i, o, l, h]
+    ⦃fun r s' => s' = s₀ ∧
+      r = [if matchWStr (s₀.mem.arr64 REC) (s₀.mem.arr64 POOL) t i o l h then 1 else 0]; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, litMatchStr]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, limbsEq_spec p hpe n] <;>
+      finish [matchWStr]
+
+end matchStr
+
+/-- The model of the `strVal` probe loop, from slot `j` after `d` steps. -/
+def probeWStr (sl r p : Array Word) (t o l h b n j d : Word) : List Word :=
+  if d < n then
+    if slotV sl b (j * 2 + t) = 0 then [0, 0, j, d]
+    else if matchWStr r p t (slotV sl b (j * 2 + t) - 1) o l h then
+      [1, slotV sl b (j * 2 + t) - 1, j, d]
+    else probeWStr sl r p t o l h b n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
+  else []
+termination_by n.toNat - d.toNat
+decreasing_by
+  have : d.toNat < n.toNat := by simpa [UInt64.lt_iff_toNat_lt] using ‹d < n›
+  have := n.toNat_lt
+  have : (d + 1).toNat = d.toNat + 1 := by
+    rw [UInt64.toNat_add]; simp; omega
+  omega
+
+section probeArmsStr
+variable (sl r p : Array Word) (t o l h b n j d : Word)
+
+theorem probeWStr_free (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
+    (hv : sl[k] ≤ b) : probeWStr sl r p t o l h b n j d = [0, 0, j, d] := by
+  rw [probeWStr]; simp only [hd, ↓reduceIte, slotV_free sl b _ k hk hks hv]
+
+theorem probeWStr_hit (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
+    (hv : ¬ sl[k] ≤ b) (hm : matchWStr r p t (sl[k] - b - 1) o l h = true) :
+    probeWStr sl r p t o l h b n j d = [1, sl[k] - b - 1, j, d] := by
+  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
+  rw [probeWStr]; simp only [hd, ↓reduceIte, e, ne, hm]
+
+theorem probeWStr_next (k : Nat) (j' d' : Word) (hd : d < n) (hk : k = (j * 2 + t).toNat)
+    (hks : k < sl.size) (hv : ¬ sl[k] ≤ b) (hm : matchWStr r p t (sl[k] - b - 1) o l h = false)
+    (hj' : j' = (j + 1) * (if j + 1 < n then 1 else 0)) (hd' : d' = d + 1) :
+    probeWStr sl r p t o l h b n j d = probeWStr sl r p t o l h b n j' d' := by
+  subst hj' hd'
+  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
+  rw [probeWStr]; simp only [hd, ↓reduceIte, e, ne, hm]; simp
+
+end probeArmsStr
+
+grind_pattern [arena_grind] probeWStr_free => probeWStr sl r p t o l h b n j d, sl[k]
+grind_pattern [arena_grind] probeWStr_hit => probeWStr sl r p t o l h b n j d, sl[k]
+grind_pattern [arena_grind] probeWStr_next =>
+  probeWStr sl r p t o l h b n j d, sl[k], probeWStr sl r p t o l h b n j' d'
+
+def findLoopStr : Stmt := lblk (t, o, l, h, n, j, d, v, m, b) {
+  while d < n {
+    v := SLOT.u64[j * 2 + t];
+    if v <= b { return (0, 0, j, d) };
+    v := v - b;
+    m := call lit_match_str(t, v - 1, o, l, h);
+    if m != 0 { return (1, v - 1, j, d) };
+    j := (j + 1) * u64(j + 1 < n);
+    d += 1
+  }
+}
+
+def litFindStr : FunDecl := lfn (t, o, l, h) locals (n, j, d, v, m, b) {
+  n := len(SLOT.u64) >> 1;
+  b := CTL.u64[62] * t;
+  j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
+  ⟪findLoopStr⟫;
+  abort
+}
+
+section findStr
+variable (p : Prog) (hpe : p.lookup "limbs_eq" = some limbsEq)
+  (hpm : p.lookup "lit_match_str" = some litMatchStr) (hp : p.lookup "lit_find_str" = some litFindStr)
+
+include hpe hpm in
+theorem findLoopStr_spec (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    exec p n findLoopStr
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
+      r.retOr (probeWStr (s₀.mem.arr64 SLOT) (s₀.mem.arr64 REC) (s₀.mem.arr64 POOL) (s₀.loc 0)
+        (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 9) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
+      probeWStr (s₀.mem.arr64 SLOT) (s₀.mem.arr64 REC) (s₀.mem.arr64 POOL) (s₀.loc 0)
+        (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 9) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ := by
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+    rw [exec, step_while (w := findLoopStr) rfl]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih,
+        litMatchStr_spec p hpe hpm n] <;> finish
+
+include hpe hpm in
+theorem findLoopStr_step_spec (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    step p (exec p n) findLoopStr
+    ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
+      r.retOr (probeWStr (s₀.mem.arr64 SLOT) (s₀.mem.arr64 REC) (s₀.mem.arr64 POOL) (s₀.loc 0)
+        (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 9) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
+      probeWStr (s₀.mem.arr64 SLOT) (s₀.mem.arr64 REC) (s₀.mem.arr64 POOL) (s₀.loc 0)
+        (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 9) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ :=
+  Triple.step_exec (findLoopStr_spec p hpe hpm (n + 1) s₀)
+
+include hpe hpm hp in
+theorem litFindStr_spec (n : Nat) (s₀ : St) (t o l h : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "lit_find_str" [t, o, l, h]
+    ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
+      r = probeWStr (s₀.mem.arr64 SLOT) (s₀.mem.arr64 REC) (s₀.mem.arr64 POOL) t o l h
+        (baseW s₀.mem t) (nSlots s₀.mem) (homeW h (nSlots s₀.mem)) 0; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, litFindStr]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalArgs, setLoc, ld64, findLoopStr_step_spec p hpe hpm n] <;>
+      finish [nSlots, homeW, baseW]
+
+end findStr
+
+/-- The memory after `lit_push_str(t, o, l, h, j)` appended node `c`: the same writes as
+`lit_push`'s, kind `1` instead of `0`. -/
+def pushMemStr (m : Mem) (t o l h j c : Word) : Mem :=
+  ((((((m.set64 REC (c * 8 + t * 4) 1).set64 REC (c * 8 + t * 4 + 1) o).set64 REC
+    (c * 8 + t * 4 + 2) l).set64 REC (c * 8 + t * 4 + 3) h).set64 SLOT (j * 2 + t)
+    (baseW m t + c + 1)).set64
+    CTL (2 + (t &&& 1)) (c + 1))
+
+def litPushStr : FunDecl := lfn (t, o, l, h, j) locals (c, k) {
+  c := CTL.u64[2 + t];
+  if c >= 134217728 { abort };
+  if len(REC.u64) >> 3 <= c { abort };
+  if ((len(SLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
+  k := c * 8 + t * 4;
+  REC.u64[k] := 1;
+  REC.u64[k + 1] := o;
+  REC.u64[k + 2] := l;
+  REC.u64[k + 3] := h;
+  SLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
+  CTL.u64[2 + (t & 1)] := c + 1;
+  return c
+}
+
+section pushStr
+variable (p : Prog) (hp : p.lookup "lit_push_str" = some litPushStr)
+
+include hp in
+theorem litPushStr_spec (n : Nat) (s₀ : St) (t o l h j : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "lit_push_str" [t, o, l, h, j]
+    ⦃fun r s' => LocEq s' s₀ ∧ pushOK s₀.mem t = true ∧ r = [cnt s₀.mem t] ∧
+      s'.mem = pushMemStr s₀.mem t o l h j (cnt s₀.mem t); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, litPushStr]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
+      finish [cnt, pushOK, pushMemStr, nSlots, baseW]
+
+end pushStr
+
+/-- The model of `intern_lit_str`: the handle and the memory after, or `none` where the L code
+aborts. Shares the `natVal` arm's handle words (`litP`, `litS`): the two literal kinds cons into
+the same table. -/
+def internWStr (m : Mem) (o l : Word) : Option (Word × Mem) :=
+  let h := hashN (m.arr64 POOL) o.toNat l.toNat
+  let rs₀ := probeWStr (m.arr64 SLOT) (m.arr64 REC) (m.arr64 POOL) 0 o l h (baseW m 0) (nSlots m)
+    (homeW h (nSlots m)) 0
+  let rs₁ := probeWStr (m.arr64 SLOT) (m.arr64 REC) (m.arr64 POOL) 1 o l h (baseW m 1) (nSlots m)
+    (homeW h (nSlots m)) 0
+  if rs₀ = [] then none
+  else if rs₀.headD 0 ≠ 0 then some (litP + rs₀.tail.headD 0, m)
+  else if rdW (m.arr64 CTL) 1 ≠ 0 then
+    if rs₁ = [] then none
+    else if rs₁.headD 0 ≠ 0 then some (litS + rs₁.tail.headD 0, m)
+    else if pushOK m 1 then
+      some (litS + cnt m 1, pushMemStr m 1 o l h (rs₁.tail.tail.headD 0) (cnt m 1))
+    else none
+  else if pushOK m 0 then
+    some (litP + cnt m 0, pushMemStr m 0 o l h (rs₀.tail.tail.headD 0) (cnt m 0))
+  else none
+
+@[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
+def internLitStr : FunDecl := lfn (o, l) locals (h, f, i, j, d, sc) {
+  h := call lit_hash(o, l);
+  (f, i, j, d) := call lit_find_str(0, o, l, h);
+  if f != 0 { return ⟪litP⟫ + i };
+  sc := CTL.u64[1];
+  if sc != 0 {
+    (f, i, j, d) := call lit_find_str(1, o, l, h);
+    if f != 0 { return ⟪litS⟫ + i };
+    i := call lit_push_str(1, o, l, h, j);
+    return ⟪litS⟫ + i
+  };
+  i := call lit_push_str(0, o, l, h, j);
+  return ⟪litP⟫ + i
+}
+
+/-- The `strVal` store functions, as one `#eval`-able program. -/
+def litProgStr : Prog :=
+  [("lit_hash", litHash), ("limbs_eq", limbsEq), ("lit_match_str", litMatchStr),
+   ("lit_find_str", litFindStr), ("lit_push_str", litPushStr), ("intern_lit_str", internLitStr)]
+
+section internStr
+variable (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
+  (hpe : p.lookup "limbs_eq" = some limbsEq) (hpm : p.lookup "lit_match_str" = some litMatchStr)
+  (hpf : p.lookup "lit_find_str" = some litFindStr) (hpp : p.lookup "lit_push_str" = some litPushStr)
+  (hp : p.lookup "intern_lit_str" = some internLitStr)
+
+include hph hpe hpm hpf hpp hp in
+theorem internLitStr_spec (n : Nat) (s₀ : St) (o l : Word) (hs : (s₀.mem.arr64 POOL).size < 2 ^ 64)
+    (hb : o.toNat + l.toNat ≤ (s₀.mem.arr64 POOL).size) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "intern_lit_str" [o, l]
+    ⦃fun r s' => LocEq s' s₀ ∧ internWStr s₀.mem o l = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, internLitStr]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, litHash_spec p hph n,
+        litFindStr_spec p hpe hpm hpf n, litPushStr_spec p hpp n] <;>
+      finish [internWStr]
+
+end internStr
+
 end L.Arena

@@ -10,8 +10,8 @@ import ConAgua.Census.Attr
 `CTL[1]` and the 19 tier-1 counts. Each table's relation moves across it by the store library's
 `storeR_reset` (tier 0 unchanged, tier 1 empty, no slot read), the memos by their frame, the
 derived ranges trivially (the scratch tables are empty, the persistent ones did not move). With
-the four memo clears this is `enterScratch`; alone it is `dropScratch` (whose `flushCaches` only
-touches `a.caches`, which `CoreR`, a stub, does not relate yet).
+the four memo clears this is `enterScratch`; after `flush_caches()` (`CoreR.flush`) it is
+`dropScratch`.
 
 * `ArenaD.reset`: `ArenaD m a → ArenaD (resetMem m f) a'` for `a'` with every scratch table
   emptied and every flag `f ≠ 0`.
@@ -172,6 +172,25 @@ theorem dropScratch_run (a : AState) :
       .ok ((), { a with caches := Caches.empty, store := EStore.reset a.store false }) :=
   rfl
 
+/-- The `CTL` words `flush_caches()` writes. -/
+def flushCtl : List Word :=
+  [96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115,
+   116, 117, 118, 119]
+
+theorem flushMem_frame (m : Mem) : MemFrame [] flushCtl m (flushMem m) :=
+  ((clearsL_frame coreSchs m).mono (by simp) (fun x h => by
+    simp only [coreSchs, List.flatMap_cons, List.flatMap_nil, List.mem_append, List.mem_cons,
+      List.not_mem_nil, or_false] at h
+    simp only [flushCtl, List.mem_cons, List.not_mem_nil, or_false]
+    rcases h with ((rfl | rfl) | (rfl | rfl) | (rfl | rfl) | (rfl | rfl) | (rfl | rfl) |
+      (rfl | rfl) | (rfl | rfl) | (rfl | rfl) | (rfl | rfl) | (rfl | rfl) | rfl | rfl) <;> decide)).trans
+    ((((MemFrame.setCtl _ 114 0).mono (by simp) (by simp [flushCtl])).trans
+      ((MemFrame.setCtl _ 115 0).mono (by simp) (by simp [flushCtl]))))
+
+theorem flushCtl_ge : ∀ x ∈ flushCtl, 64 ≤ x.toNat := by simp [flushCtl]
+
+theorem flushCtl_lt : ∀ x ∈ flushCtl, x.toNat < 128 := by simp [flushCtl]
+
 /-- The four memo clears of `scratch_enter`, as one frame of the memo tier's `CTL` words. -/
 theorem clears_frame (m : Mem) :
     MemFrame [] memoCtl m (mclearG frSch (mclearG imSch (mclearG lfSch (mclearG bmSch m)))) := by
@@ -249,20 +268,23 @@ theorem scratchEnter_refines (p : Prog) (hp : p.lookup "scratch_enter" = some sc
 
 /-- **`scratch_drop()` refines `dropScratch`** under `ArenaD`. -/
 theorem scratchDrop_refines (p : Prog) (hp : p.lookup "scratch_drop" = some scratchDrop)
-    (hr : p.lookup "scratch_reset" = some scratchReset)
+    (hr : p.lookup "scratch_reset" = some scratchReset) (hfl : FlushProg p)
     (a₀ : AState) (n : Nat) (s₀ : St) (hD : ArenaD s₀.mem a₀) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scratch_drop" []
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok dropScratch a₀ ∧ ArenaD s'.mem (AM.st dropScratch a₀); ⊤⦄ := by
   apply M.triple_of_run
   intro s r s' hs hrun
-  obtain ⟨hloc, hlo, h62, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (scratchDrop_spec p hp hr n s₀)
+  obtain ⟨hloc, -, hlo, h62, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (scratchDrop_spec p hp hr hfl n s₀)
   subst hs
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ (dropScratch_run a₀)
   refine ⟨hloc, hok, ?_⟩
   rw [hst, hm]
-  obtain ⟨hR, hDer⟩ := ArenaD.reset _ _ hD 0 hlo h62
+  have hD' : ArenaD (flushMem s.mem) a₀ :=
+    ⟨ArenaR.frame_ext [] _ (by simp) flushCtl_ge _ _ (flushMem_frame _) _ hD.1,
+      DerR.frameM [] _ _ _ (flushMem_frame _) (by simp) _ hD.2⟩
+  obtain ⟨hR, hDer⟩ := ArenaD.reset _ _ hD' 0 hlo h62
   simp only [show ((0 : Word) != 0) = false from rfl] at hR hDer
   exact ⟨by cases hR; constructor <;> assumption, DerR.of_store _ _ _ hDer rfl⟩
 
@@ -275,13 +297,13 @@ theorem enterMem_frame (m : Mem) : MemFrame [] (resetCtl ++ memoCtl) m (enterMem
 theorem resetCtl_lt : ∀ x ∈ resetCtl ++ memoCtl, x.toNat < 64 := by
   simp [resetCtl, scratchCnts, memoCtl, SCB]
 
-/-- The bracket keeps the upper tiers: it writes `CTL` words below 64 only, and `CoreR` (a stub)
-claims nothing about the caches `dropScratch` flushes. -/
+/-- The bracket keeps the pins and the environment: it writes `CTL` words below 128 only. -/
 theorem CheckR.of_bracket {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
-    {vis : Word} {fe : IFEnv} (hR : CheckR dn m a vis fe) (hD : ArenaD m' a') (hf : MemFrame [] (resetCtl ++ memoCtl) m m')
+    {vis : Word} {fe : IFEnv} {C : List Word} (hR : CheckR dn m a vis fe) (hD : ArenaD m' a')
+    (hc : CoreR m' a'.caches) (hf : MemFrame [] C m m') (hC : ∀ x ∈ C, x.toNat < 128)
     (hp : a'.pins = a.pins) : CheckR dn m' a' vis fe :=
-  ⟨hD, ⟨⟩, by rw [hp]; exact hR.pins.frame (.of_lt (k := 0) (by simp) (by decide)) hf,
-    hR.env.frame (.of_lt (k := 0) (by simp) (by decide)) (.of_lt resetCtl_lt (by decide)) hf⟩
+  ⟨hD, hc, by rw [hp]; exact hR.pins.frame (.of_lt (k := 0) (by simp) (by decide)) hf,
+    hR.env.frame (.of_lt (k := 0) (by simp) (by decide)) (.of_lt hC (by decide)) hf⟩
 
 /-- `scratch_enter()` refines `enterScratch` under `CheckR`. -/
 @[refines ConRon.Arena.enterScratch]
@@ -305,12 +327,15 @@ theorem scratchEnter_refinesC (p : Prog) (hp : p.lookup "scratch_enter" = some s
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ (enterScratch_run a₀)
   refine ⟨hloc, hok, ?_⟩
   rw [hst, hm]
-  exact hC.of_bracket (ArenaD.enter _ _ hC.arena hlo h62 c1 c2 c3 c4) (enterMem_frame _) rfl
+  exact hC.of_bracket (C := resetCtl ++ memoCtl) (ArenaD.enter _ _ hC.arena hlo h62 c1 c2 c3 c4)
+    (hC.core.frame (.of_lt (k := 0) (by simp) (by decide))
+      (.of_lt (fun x h => resetCtl_lt x h) (by decide)) (enterMem_frame _))
+    (enterMem_frame _) (fun x h => Nat.lt_trans (resetCtl_lt x h) (by decide)) rfl
 
 /-- `scratch_drop()` refines `dropScratch` under `CheckR`. -/
 @[refines ConRon.Arena.dropScratch]
 theorem scratchDrop_refinesC (p : Prog) (hp : p.lookup "scratch_drop" = some scratchDrop)
-    (hr : p.lookup "scratch_reset" = some scratchReset)
+    (hr : p.lookup "scratch_reset" = some scratchReset) (hfl : FlushProg p)
     (a₀ : AState) (n : Nat) (s₀ : St) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (hC : CheckR dn s₀.mem a₀ vis fe) :
     ⦃fun s => s = s₀⦄
@@ -320,23 +345,37 @@ theorem scratchDrop_refinesC (p : Prog) (hp : p.lookup "scratch_drop" = some scr
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, -, hD⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (scratchDrop_refines p hp hr a₀ n s₀ hC.arena)
-  obtain ⟨-, -, -, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun (scratchDrop_spec p hp hr n s₀)
+    (scratchDrop_refines p hp hr hfl a₀ n s₀ hC.arena)
+  obtain ⟨-, hfok, -, -, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (scratchDrop_spec p hp hr hfl n s₀)
   subst hs
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ (dropScratch_run a₀)
-  refine ⟨hloc, hok, hC.of_bracket hD ?_ (by rw [hst])⟩
-  rw [hm]; exact (resetMem_frame _ 0).mono (by simp) (fun x h => List.mem_append_left _ h)
+  have hrf : MemFrame [] resetCtl (flushMem s.mem) (resetMem (flushMem s.mem) 0) :=
+    resetMem_frame _ 0
+  have hcore : CoreR (resetMem (flushMem s.mem) 0) Caches.empty :=
+    (hC.core.flush hfok).frame (.of_lt (k := 0) (by simp) (by decide))
+      (.of_lt (fun x h => resetCtl_lt x (List.mem_append_left _ h)) (by decide)) hrf
+  refine ⟨hloc, hok, hC.of_bracket (C := flushCtl ++ resetCtl) hD (by rw [hst, hm]; exact hcore)
+    ?_ ?_ (by rw [hst])⟩
+  · rw [hm]
+    exact ((flushMem_frame _).mono (by simp) (fun x h => List.mem_append_left _ h)).trans
+      (hrf.mono (by simp) (fun x h => List.mem_append_right _ h))
+  · intro x h
+    rcases List.mem_append.mp h with h | h
+    · exact flushCtl_lt x h
+    · exact Nat.lt_trans (resetCtl_lt x (List.mem_append_left _ h)) (by decide)
 
 /-- The write set of the bracket, from the program text: `CTL` words only. -/
 theorem scratchProg_closed :
-    closedA scratchProg [] (resetCtl ++ memoCtl)
+    closedA scratchProg [] (resetCtl ++ memoCtl ++ flushCtl)
       ["scratch_enter", "scratch_drop", "scratch_reset", "bm_clear", "lf_clear", "if_clear",
-       "fm_clear"] = true := by
+       "fm_clear", "flush_caches", "wc_clear", "wk_clear", "wh_clear", "in_clear", "io_clear",
+       "de_clear", "ct_clear", "cv_clear", "rr_clear", "lq_clear", "lsq_clear"] = true := by
   decide +kernel
 
 /- Two scratch rounds: the base rises by `2^32` each time, the flag follows. -/
 #guard
-  let m : Mem := { words := #[#[], Array.replicate 64 0] ++ Array.replicate 47 #[] }
+  let m : Mem := { words := #[#[], Array.replicate 120 0] ++ Array.replicate 47 #[] }
   match run scratchProg 100 "scratch_enter" [] m with
   | .ok (_, m1) => match run scratchProg 100 "scratch_drop" [] m1 with
     | .ok (_, m2) => (m1.arr64 1)[62]! == 4294967296 && (m1.arr64 1)[1]! == 1 &&

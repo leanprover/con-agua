@@ -1,5 +1,6 @@
 import ConAgua.Front.ApplyExpr
 import ConAgua.Front.NatDecLink
+import ConAgua.Front.UnescapeLink
 import ConAgua.Front.StateDR
 import ConAgua.Census.Attr
 
@@ -25,6 +26,7 @@ open ConRon.Arena.Frontend
 open ConLeche.Frontend
 open L.Front.Fields (rdNatN NONE itemsN listN Fld)
 open ConAgua.Front.FieldsLink
+open L.Front.Unescape (strPutEscW)
 
 set_option linter.unusedSimpArgs false
 
@@ -109,6 +111,31 @@ theorem internLit_D (o l : Word) (hq : SliceOK m o l) (hn : Norm (m.arr64 POOL) 
   obtain ⟨hR, hD⟩ := hA
   obtain ⟨hok, hX, hres⟩ := intern_correct m a hR.lit o l hq hn _ _ hI
   have hI₂ := hI; rw [internW_eq] at hI₂
+  have hfr := internM_frame _ litS_wf _ _ _ _ _ _ _ _ hI₂
+  have hcs := AM.proto_cases litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok
+  have hR₁ := hR.lift_lit _ _ _ _ hX hfr
+    (AM.st_proto litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok)
+  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [litSch, REC, SLOT]) a hD
+  refine ⟨hok, ⟨hR₁, ?_⟩, hres, hfr⟩
+  rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
+  · exact hD₁
+  · exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, hD₁.const,
+      ⟨derT_push hD₁.lit.1 _ _ _ (bvar_derLit _ _), hD₁.lit.2⟩, hD₁.app, hD₁.lam, hD₁.forallE,
+      hD₁.letE, hD₁.proj⟩
+  · exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, hD₁.const,
+      ⟨hD₁.lit.1, derT_push hD₁.lit.2 _ _ _ (bvar_derLit _ _)⟩, hD₁.app, hD₁.lam, hD₁.forallE,
+      hD₁.letE, hD₁.proj⟩
+
+theorem internLitStr_D (o l : Word) (hq : SliceOK m o l) (s : String)
+    (hk : sliceL (m.arr64 POOL) o.toNat l.toNat = strWords s)
+    (hI : internWStr m o l = some (r, m')) :
+    AM.ok (internE (.lit (.strVal s))) a ∧
+    ArenaD m' (AM.st (internE (.lit (.strVal s))) a) ∧
+    AM.res (internE (.lit (.strVal s))) a = decE r ∧
+    MemFrame [litSch.ra, litSch.sa] [litSch.ca, litSch.ca + 1] m m' := by
+  obtain ⟨hR, hD⟩ := hA
+  obtain ⟨hok, hX, hres⟩ := internStr_correct m a hR.lit o l hq s hk _ _ hI
+  have hI₂ := hI; rw [internWStr_eq] at hI₂
   have hfr := internM_frame _ litS_wf _ _ _ _ _ _ _ _ hI₂
   have hcs := AM.proto_cases litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok
   have hR₁ := hR.lift_lit _ _ _ _ hX hfr
@@ -370,6 +397,35 @@ theorem node_lit (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63) 
   exact ⟨h1, h2, h3, (hD.frame (grows_frame _ _ hg) (by tapart) (by tapart)).above
     (MemFrame.above hf (by simp [litSch, REC, SLOT]))⟩
 
+theorem node_lit_str (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63) (x y z : Word)
+    (s : String) (hv : StrR b y z s) (hI : nodeW b.data m 17 x y z = some (w, m₁)) :
+    NodeOK st (.strVal s) a m₁ w := by
+  simp only [nodeW, show (17 : Word) ≠ 8 by decide, show (17 : Word) ≠ 9 by decide,
+    show (17 : Word) ≠ 10 by decide, show (17 : Word) ≠ 11 by decide,
+    show (17 : Word) ≠ 12 by decide, show (17 : Word) ≠ 13 by decide,
+    show (17 : Word) ≠ 14 by decide, show (17 : Word) ≠ 15 by decide,
+    show (17 : Word) ≠ 16 by decide, false_or, or_false,
+    ↓reduceIte, litStrW] at hI
+  split at hI
+  · cases hI
+  rename_i hc0
+  cases hP : strPutEscW b.data m y z with
+  | none => rw [hP, litStrK_none] at hI; cases hI
+  | some q =>
+  obtain ⟨l, m₂⟩ := q
+  obtain ⟨hg, hsl, hk⟩ :=
+    ConAgua.Front.UnescapeLink.strPutEsc_link h64 b hsize m m₂ hA.1.lit.1 y z s hv l hP
+  rw [hP, litStrK_some] at hI
+  by_cases c1 : m₂.len64 POOL < m.top
+  · simp [c1] at hI
+  by_cases c2 : m₂.len64 POOL - m.top < l
+  · simp [c2] at hI
+  simp only [c1, c2, if_false] at hI
+  have hA' := ArenaD.grow m m₂ hg a hA
+  obtain ⟨h1, h2, h3, hf⟩ := internLitStr_D m₂ a hA' w m₁ m.top l hsl s hk hI
+  exact ⟨h1, h2, h3, (hD.frame (grows_frame _ _ hg) (by tapart) (by tapart)).above
+    (MemFrame.above hf (by simp [litSch, REC, SLOT]))⟩
+
 omit hA hD in
 /-- A universe list whose items are bound level ids: `mapM st.level` is pure. -/
 theorem mapM_level (hL : TblR (m.arr64 LID) st.levels) :
@@ -496,8 +552,8 @@ theorem node_ok (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63) (
     obtain ⟨hp, -, hv⟩ := hE; rw [hp] at hI
     exact node_lit b m m₁ a st hA hD w h64 hsize _ _ _ n hv hI
   | strVal s =>
-    obtain ⟨hp, -⟩ := hE; rw [hp] at hI
-    simp [nodeW] at hI
+    obtain ⟨hp, hv⟩ := hE; rw [hp] at hI
+    exact node_lit_str b m m₁ a st hA hD w h64 hsize _ _ _ s hv hI
 
 end node
 
@@ -515,7 +571,7 @@ theorem tbl_fresh_ne {k : IdxKind} {m : Mem} {b : ArrId} {t : IdTable (Idx k)}
 /-- **`apply_expr`'s model refines `parseExprEntryD`**: on fields `f` that con-leche's scanner
 relates to the expression record `r` (`ExprR`) and an index word read for `i`, a successful
 `apply_expr` is a successful `parseExprEntryD st i r`, with `ArenaD` and `StateDR` after. -/
-@[refines_part ConRon.Arena.Frontend.parseExprEntryD "every kind but strVal"]
+@[refines ConRon.Arena.Frontend.parseExprEntryD]
 theorem applyExprW_refines (b : ByteArray) (h64 : System.Platform.numBits = 64)
     (hsize : b.size < 2 ^ 63) (m m' : Mem) (a₀ : AState)
     (st : StateD) (hA : ArenaD m a₀) (hD : StateDR m st) (f : Fld) (i : Nat) (r : ExprRec)

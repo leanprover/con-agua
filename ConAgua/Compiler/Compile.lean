@@ -28,21 +28,26 @@ namespace L.Compiler
 
 /-! ## The descriptor table -/
 
+/-- The number of result registers. -/
+def maxRes : Nat := 6
+
 /-- The layout of the descriptor table at `T`:
 * `[T]` the initial stack pointer (top of the stack region), `[T + 8]` its lower limit;
 * `[T + 16 + 16a]` / `[T + 24 + 16a]` base / length of byte array `a < nb`;
 * then the same for word arrays `a < nw`;
 * then the constant data `rom` (the byte strings of the program's `ldc` reads), padded to whole
   words;
+* then the result area: results `maxRes, maxRes + 1, …, nres - 1` of a call, one word each (empty
+  if `nres ≤ maxRes`);
 * then the arguments of the entry function, one word each.
 
-(`nres` is not part of the table in memory: it says how many result registers the code uses.) -/
+(`nres` is not part of the table in memory: it says how many results the code passes.) -/
 structure Tab where
   nb : Nat
   nw : Nat
   rom : List UInt8 := []
-  /-- The number of result registers in use (`resReg 0`, …): the most results any `return`
-  gives or any call reads. -/
+  /-- The number of results in use: the most results any `return` gives or any call reads. The
+  first `maxRes` go in registers (`resReg 0`, …), the rest in the table's result area. -/
   nres : Nat := 1
   deriving Repr, DecidableEq
 
@@ -55,7 +60,12 @@ def Tab.len64 (t : Tab) (a : ArrId) : Int := 24 + 16 * (t.nb + a)
 /-- The words the constant data takes. -/
 def Tab.romWords (t : Tab) : Nat := (t.rom.length + 7) / 8
 def Tab.romBase (t : Tab) : Int := 16 + 16 * (t.nb + t.nw)
-def Tab.args (t : Tab) : Int := 16 + 16 * (t.nb + t.nw) + 8 * t.romWords
+/-- The results past the registers. -/
+def Tab.nxres (t : Tab) : Nat := t.nres - maxRes
+/-- The result area: result `i ≥ maxRes` is the word at `resOff i`. -/
+def Tab.resBase (t : Tab) : Int := 16 + 16 * (t.nb + t.nw) + 8 * t.romWords
+def Tab.resOff (t : Tab) (i : Nat) : Int := t.resBase + 8 * ((i - maxRes : Nat) : Int)
+def Tab.args (t : Tab) : Int := 16 + 16 * (t.nb + t.nw) + 8 * t.romWords + 8 * t.nxres
 
 /-- The first position of `d` in `rom` (`0` if there is none; `WF` checks that it is one). -/
 def romIdx (d : List UInt8) : List UInt8 → Nat
@@ -212,12 +222,10 @@ comparison true. -/
 def cmpCC : Cmp → CondCode
   | .eq => .z | .ne => .nz | .ult => .c | .ule => .be | .slt => .l | .sle => .le
 
-/-- Result `i` of a function is returned in `resReg i` (`i < 6`). -/
+/-- Result `i` of a function is returned in `resReg i` (`i < maxRes`), the others in the table's
+result area (`Tab.resOff`). -/
 def resReg : Nat → Reg64
   | 0 => .rax | 1 => .rdi | 2 => .r8 | 3 => .r9 | 4 => .r10 | _ => .r11
-
-/-- The number of result registers. -/
-def maxRes : Nat := 6
 
 /-- `rax := e`. -/
 def compileE (ctx : Ctx) : Expr → Nat → Program
@@ -278,16 +286,22 @@ def compileArgs (ctx : Ctx) : Nat → List Expr → Program
 def burnFuel : Program :=
   [i64 (.sub (.reg (rr .r14)) (oI 1)), jccL .c exhaustedL]
 
-/-- Set result registers `i, …, i + n - 1`: from the temporaries below `k`, `0` from `k` on. -/
+/-- Set results `i, …, i + n - 1`: from the temporaries below `k`, `0` from `k` on. A result
+`i ≥ maxRes` goes through `rcx` to the result area. -/
 def loadRes (ctx : Ctx) (k : Nat) : Nat → Nat → Program
   | _, 0 => []
   | i, n + 1 =>
-    (if i < k then movRM (resReg i) (ctx.tmp i) else movRI (resReg i) 0) :: loadRes ctx k (i + 1) n
+    (if i < maxRes then [if i < k then movRM (resReg i) (ctx.tmp i) else movRI (resReg i) 0]
+     else if i < k then [movRM .rcx (ctx.tmp i), movMR (mb .r15 (ctx.tab.resOff i)) .rcx]
+     else [i64 (.mov (.mem (mb .r15 (ctx.tab.resOff i))) (oI 0))]) ++ loadRes ctx k (i + 1) n
 
-/-- Store result registers `i, i + 1, …` into the locals `xs`. -/
-def storeRes : List Var → Nat → Program
+/-- Store results `i, i + 1, …` into the locals `xs` (a result `i ≥ maxRes` from the result area,
+through `rcx`). -/
+def storeRes (tab : Tab) : List Var → Nat → Program
   | [], _ => []
-  | x :: xs, i => movMR (mb .rsp (8 * x)) (resReg i) :: storeRes xs (i + 1)
+  | x :: xs, i =>
+    (if i < maxRes then [movMR (mb .rsp (8 * x)) (resReg i)]
+     else [movRM .rcx (mb .r15 (tab.resOff i)), movMR (mb .rsp (8 * x)) .rcx]) ++ storeRes tab xs (i + 1)
 
 def compileS (ctx : Ctx) (path : String) : Stmt → Program
   | .skip => []
@@ -318,7 +332,7 @@ def compileS (ctx : Ctx) (path : String) : Stmt → Program
   | .call xs f args =>
     compileArgs ctx 0 args ++ [i64 (.lea (rr .rsi) (ctx.tmp 0))] ++ burnFuel ++
       [i64 (.call (.rel (.sub (.label (fnL f)) .after_current_instruction))),
-       ] ++ storeRes xs 0
+       ] ++ storeRes ctx.tab xs 0
   | .abort => [jmpL errorL]
 
 /-- Copy `n` parameters from `[rsi + 8i]` to the frame slots `i, i+1, …`. -/

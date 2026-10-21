@@ -29,13 +29,6 @@ set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
-/-- The words of a string: its UTF-8 bytes, one per word. -/
-def strWords (s : String) : List Word := s.toByteArray.data.toList.map UInt8.toUInt64
-
-theorem strWords_inj (s s' : String) (h : strWords s = strWords s') : s = s' :=
-  String.toByteArray_inj.mp (ByteArray.ext (Array.toList_inj.mp
-    ((List.map_inj_right fun _ _ h => UInt8.toUInt64_inj.mp h).mp h)))
-
 /-- The arena's name `str` cons key. -/
 abbrev nstrKey (pre : NIdx) (s : String) : StrNode := ⟨pre, s⟩
 

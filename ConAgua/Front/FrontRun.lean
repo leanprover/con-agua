@@ -151,7 +151,7 @@ input `b` and related to the arena state `a₀` (by `ArenaD`) and to the blank p
 `parseBytes b` accepts from `a₀`, and the memory after is related to its final arena state by
 `ArenaD` and to its final parse state by `StateDR`. -/
 
-@[refines_part ConRon.Arena.Frontend.parseBytes "name, level, expr, non-inductive declaration lines (strVal and inductive lines abort)"]
+@[refines_part ConRon.Arena.Frontend.parseBytes "name, level, expr, non-inductive declaration lines (inductive lines abort)"]
 theorem frontRun_refines (b : ByteArray) (h64 : System.Platform.numBits = 64)
     (hsize : b.size < 2 ^ 63) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b.data)
     (hpool : (s₀.mem.arr64 POOL).size < 2 ^ 63) (a₀ : AState) (hA : ArenaD s₀.mem a₀)
@@ -181,11 +181,10 @@ def frontAllProg : Prog := L.Scan.Validator.valProg ++
   [("rec_nat_list", recNatList), ("rec_str_name", recStrName),
    ("rec_num_name", recNumName), ("rec_line_loop", recLineLoop), ("obj_val", objVal),
    ("rec_obj", recObj), ("expr_val", exprVal), ("rec_expr_loop", recExprLoop)] ++
-  exprProg.filter (fun f => f.1 != "skip_digits" && f.1 != "num_end") ++
+  exprProg.filter (fun f => f.1 != "skip_digits" && f.1 != "num_end" && f.1 != "byte_in" &&
+    f.1 != "hex_val" && f.1 != "hex4" && f.1 != "hex3") ++
   [("front_line", frontLine), ("apply_rec", applyRec), ("apply_str", applyStr),
    ("apply_any", applyAny), ("front_run", frontRun),
-   ("esc_sur", L.Front.Unescape.escSur), ("esc_one", L.Front.Unescape.escOne),
-   ("utf8_put", L.Front.Unescape.utf8Put), ("str_put_esc", L.Front.Unescape.strPutEsc),
    ("match_dlit", matchDlit), ("str_code", strCode), ("hints_val", hintsVal),
    ("d_member", dMember), ("decl_val", declVal), ("decl_code", declCodeF),
    ("rec_decl_obj", recDeclObj), ("rec_decl_line", recDeclLine),
@@ -201,7 +200,7 @@ theorem frontAllProg_front : FrontLookups frontAllProg := by constructor <;> rfl
 theorem frontAllProg_expr : ExprLookups frontAllProg := by
   refine ⟨frontAllProg_front, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
     ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
-    ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, frontAllProg_noSt8⟩ <;> rfl
+    ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, frontAllProg_noSt8⟩ <;> rfl
 
 theorem frontAllProg_dfields : DeclFieldLookups frontAllProg := by constructor <;> rfl
 
