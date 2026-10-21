@@ -672,6 +672,10 @@ theorem constValAt_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → 
     CoreSpec p n "const_val_at" [nm, po, pl, value, us]
       (constValAt (decI nm) lps (decE value) (decI us)) decH s₀ a₀ dn vis fe MM G g := sorry
 
+-- TODO(merge with the `whnf` branch): the lead's `CoreSpec`/`CoreRef` gained a trailing
+-- `(ok : List Word → Prop := ResH)` argument (result words must be valid handles); this
+-- `decOptR`-returning statement should pass `ResW` (`ResW r := HW (r.headD 0) ∧ HW (r.tail.headD
+-- 0)`) explicitly once this file is rebased onto that `WhnfBase.lean`.
 /-- **`unfold_definition` refines `unfoldDefinition`**, given the stub `inst_lp`'s spec. -/
 @[refines ConRon.Arena.unfoldDefinition]
 theorem unfoldDefinition_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
@@ -680,6 +684,7 @@ theorem unfoldDefinition_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NId
     CoreSpec p n "unfold_definition" [vis, e] (unfoldDefinition fe (decE e)) decOptR s₀ a₀ dn vis fe
       MM G g := sorry
 
+-- TODO(merge with the `whnf` branch): pass `ResW` explicitly here too (`decOptR`), once rebased.
 /-- `reduce_nat(mode, vis, d, e)` refines `reduceNat` at every knot fuel `F ≥ n`, given the knot's
 `whnf` slot at L-fuel `n` (`KnotOK`). -/
 def ReduceNatSpec (p : Prog) (n : Nat) : Prop :=
@@ -694,6 +699,7 @@ def ReduceNatSpec (p : Prog) (n : Nat) : Prop :=
 @[refines ConRon.Arena.reduceNat]
 theorem reduceNat_refines (n : Nat) (hwd : WhnfDeltaProg p) : ReduceNatSpec p n := sorry
 
+-- TODO(merge with the `whnf` branch): pass `ResW` explicitly here too (`decStep`), once rebased.
 /-- `whnf_step(mode, vis, d, e)` refines `whnfStep` at every knot fuel `F ≥ n`, given `KnotOK p n`
 (its `r.whnfCore false depth e` is `call whnf_core(mode, 0, vis, d, e)`, its `r.whnf` calls are
 `reduce_nat`'s). -/
