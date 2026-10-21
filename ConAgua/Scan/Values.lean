@@ -366,11 +366,19 @@ theorem matchWord_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i o l 
       vcgen [exec, step, evalE, evalArgs, matchWordLoop_step_spec p b hb n] <;> finish
 
 include hpm hpi in
+attribute [local lang_grind] binderInfoN in
 theorem scanBinderInfo_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_binder_info" [i]
     ⦃fun r s' => s' = s₀ ∧ r = [binderInfoN b i]; ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hpi]
+  simp only [callFn, scanBinderInfo]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, WORDS_length] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld8,
+        matchWord_spec p b hb hpm n] <;> finish
 
 include hpw hpd hpk hpn hpa hpv hpm hph in
 theorem scanHints_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
