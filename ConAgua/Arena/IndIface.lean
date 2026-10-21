@@ -572,6 +572,75 @@ def lvlEqFueled : FunDecl := lfn (u, v) locals (r) {
   return u64(r == 2)
 }
 
+/-- **`e_view(h)`: the twin's `view h`**, as `(tag, x, y, z)`: `bvar i` `(0, i)`, `fvar i ty`
+`(1, i, ty)`, `sort u` `(2, u)`, `const n us` `(3, n, us)`, `app f a` `(4, f, a)`, `lam ty b`
+`(5, ty, b)`, `forallE ty b` `(6, ty, b)`, `letE t v b` `(7, t, v, b)`, `lit` `(8)`, `proj s i e`
+`(9, s, i, e)`; unused fields `0`. A dangling handle (a closed scratch tier, an index past the
+count, an unknown tag) aborts, as the twin's `view` fails. The projections `viewBind`,
+`viewApp`, … are reads of this (the twin tests the tag first). -/
+def eView : FunDecl := lfn (h) locals (g, t, i, k) {
+  g := h >> 28;
+  t := (h >> 27) & 1;
+  i := h & 134217727;
+  if 4294967295 < h { abort };
+  if t != 0 && CTL.u64[1] == 0 { abort };
+  if g == 0 { if CTL.u64[22 + t] <= i { abort }; return (0, BREC.u64[i * 2 + t], 0, 0) };
+  if g == 1 {
+    if CTL.u64[26 + t] <= i { abort };
+    k := i * 4 + t * 2;
+    return (1, FVREC.u64[k], FVREC.u64[k + 1], 0)
+  };
+  if g == 2 { if CTL.u64[16 + t] <= i { abort }; return (2, SOREC.u64[i * 2 + t], 0, 0) };
+  if g == 3 {
+    if CTL.u64[18 + t] <= i { abort };
+    k := i * 4 + t * 2;
+    return (3, CREC.u64[k], CREC.u64[k + 1], 0)
+  };
+  if g == 4 {
+    if CTL.u64[4 + t] <= i { abort };
+    k := i * 4 + t * 2;
+    return (4, AREC.u64[k], AREC.u64[k + 1], 0)
+  };
+  if g == 5 {
+    if CTL.u64[28 + t] <= i { abort };
+    k := i * 4 + t * 2;
+    return (5, LAREC.u64[k], LAREC.u64[k + 1], 0)
+  };
+  if g == 6 {
+    if CTL.u64[30 + t] <= i { abort };
+    k := i * 4 + t * 2;
+    return (6, FAREC.u64[k], FAREC.u64[k + 1], 0)
+  };
+  if g == 7 {
+    if CTL.u64[20 + t] <= i { abort };
+    k := i * 6 + t * 3;
+    return (7, LEREC.u64[k], LEREC.u64[k + 1], LEREC.u64[k + 2])
+  };
+  if g == 8 { if CTL.u64[2 + t] <= i { abort }; return (8, 0, 0, 0) };
+  if g == 9 {
+    if CTL.u64[32 + t] <= i { abort };
+    k := i * 6 + t * 3;
+    return (9, PJREC.u64[k], PJREC.u64[k + 1], PJREC.u64[k + 2])
+  };
+  abort
+}
+
+/-- `view_ls(us)`: the level handles of a level list (`viewLs`), copied from `POOL` into `IW`. -/
+def viewLsL : FunDecl := lfn (us) locals (o, l, q, j) {
+  (o, l) := call ls_node(us);
+  q := call iw_alloc(l);
+  j := 0;
+  while j < l { IW.u64[q + j] := POOL.u64[o + j]; j += 1 };
+  return (q, l)
+}
+
+/-- `view_ls_len(us)`: `viewLsLen us` as `(1, n)` (a dangling list aborts in `ls_node`, where the
+twin answers `none` and its callers fail). -/
+def viewLsLenL : FunDecl := lfn (us) locals (o, l) {
+  (o, l) := call ls_node(us);
+  return (1, l)
+}
+
 /-- The library's functions. -/
 def libFns : Prog :=
   [("iw_alloc", iwAlloc), ("iw_reset", iwReset), ("erec_alloc", erecAlloc), ("er_to_iw", erToIw),
@@ -580,7 +649,8 @@ def libFns : Prog :=
    ("sl_get", slGet), ("sl_getd", slGetD), ("sl_set_eq", slSetEq),
    ("rec2", rec2), ("rec3", rec3), ("rec4", rec4), ("rec5", rec5), ("rec6", rec6),
    ("cv_new", cvNew), ("cv_lps", cvLps), ("reserved_contains", reservedContains),
-   ("lvl_eq_true", lvlEqTrue), ("lvl_eq_fueled", lvlEqFueled)]
+   ("lvl_eq_true", lvlEqTrue), ("lvl_eq_fueled", lvlEqFueled), ("e_view", eView),
+   ("view_ls", viewLsL), ("view_ls_len", viewLsLenL)]
 
 /-! ## The stubs: callees owned by other lanes
 
@@ -610,7 +680,6 @@ def stub (k : Nat) : FunDecl := ⟨k, k, .abort⟩
 * `bvar_b(fuel, e)`, `fvar_b(fuel, e)` → a number; `has_fvar_fast(fuel, e)` → `0`/`1`;
   `loose_bvars_bounded_fast(fuel, k, e)` → `0`/`1`.
 * `all_level_params_defined(lps.off, lps.len, e)` → `0`/`1`.
-* `view_ls_len(us)` → `(ok, n)`; `view_ls(us)` → `(off, len)` (the level handles).
 * `intern_ls_iw(off, len)` → `us` (`internLsNode` of the `IW` slice of level handles).
 * `name_rec(n)` → `internNNode (.str n "rec")`; `name_rec_i(n, i)` → `internNNode (.str n
   s!"rec_{i}")`; `proj_table_name(T)` → `projTableName T`.
@@ -629,7 +698,7 @@ def stubFns : Prog :=
    ("inst_lp_fast", stub 5), ("inst_pis_at_lift", stub 4), ("instantiate1_fast", stub 4),
    ("instantiate1_lift_fast", stub 4), ("abstract1_fast", stub 4), ("bvar_b", stub 2),
    ("fvar_b", stub 2), ("has_fvar_fast", stub 2), ("loose_bvars_bounded_fast", stub 3),
-   ("all_level_params_defined", stub 3), ("view_ls_len", stub 1), ("view_ls", stub 1),
+   ("all_level_params_defined", stub 3),
    ("intern_ls_iw", stub 2), ("name_rec", stub 1), ("name_rec_i", stub 2),
    ("proj_table_name", stub 1), ("is_proj_fn_shape", stub 1), ("reserved_rec_name", stub 1),
    ("rec_rule_bits", stub 2), ("basis_pin_hit", stub 2), ("check_basis_decl", stub 2),
@@ -652,7 +721,7 @@ def masterFns : Prog :=
    ("intern_sort", stub 1), ("intern_const", stub 2), ("intern_fvar", stub 2), ("mk_app", stub 2),
    ("mk_lam", stub 2), ("mk_forall", stub 2), ("mk_let", stub 3), ("mk_proj", stub 3),
    ("intern_param", stub 1), ("intern_zero", stub 0), ("intern_max", stub 2),
-   ("intern_nanon", stub 0), ("lv_node", stub 1),
+   ("intern_nanon", stub 0), ("lv_node", stub 1), ("ls_node", stub 1),
    ("ma_find", memoFindG maSch), ("ma_put", memoPutG maSch), ("ma_clear", memoClearG maSch),
    ("no_find", memoFindG noSch), ("no_put", memoPutG noSch), ("no_clear", memoClearG noSch),
    ("dp_find", memoFindG dpSch), ("dp_put", memoPutG dpSch), ("dp_clear", memoClearG dpSch),
