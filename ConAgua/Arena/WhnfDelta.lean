@@ -406,17 +406,17 @@ def whnfLoopL : FunDecl := lfn (mode, vis, d, e) locals (fl, x) {
 
 /-- `whnf(mode, vis, d, e)`: the knot's `whnf` slot. The six stuck tags (`sort`, `fvar`, `lam`,
 `forallE`, `lit`; `whnfStuckTag`) return `e` untouched; else the `whnfC` memo at the current
-generation (`CTL.u64[115]`, array 98): a hit returns the stored handle, a miss runs `whnf_loop`,
+eager bit (the mode's, `((mode >> 1) & 1) << 32`, array 98): a hit returns the stored handle, a miss runs `whnf_loop`,
 probes again (the loop may have changed the table) and inserts. -/
-@[l_impl ConRon.Arena.coreKnot]
+@[l_impl ConRon.Arena.whnfStuckTag]
 def whnfL : FunDecl := lfn (mode, vis, d, e) locals (t, fd, j, dd, x, z) {
   t := e >> 28;
   if t == 2 || t == 1 || t == 5 || t == 6 || t == 8 { return e };
-  (fd, j, dd) := call wh_find(e, CTL.u64[115] << 32);
+  (fd, j, dd) := call wh_find(e, ((mode >> 1) & 1) << 32);
   if fd != 0 { return WH.u64[j * 4 + 3] };
   x := call whnf_loop(mode, vis, d, e);
-  (fd, j, dd) := call wh_find(e, CTL.u64[115] << 32);
-  z := call wh_put(e, CTL.u64[115] << 32, x, fd, j);
+  (fd, j, dd) := call wh_find(e, ((mode >> 1) & 1) << 32);
+  z := call wh_put(e, ((mode >> 1) & 1) << 32, x, fd, j);
   return x
 }
 
@@ -729,7 +729,6 @@ theorem whnfLoop_refines (n : Nat) (hwd : WhnfDeltaProg p) (hws : WhnfStepSpec p
 /-- **`whnf` refines the knot's `whnf` slot**: `WhnfSlot p (n + 1)` (`WhnfBase.lean`), from
 `whnf_loop`'s spec at L-fuel `n` and `n ≤ 2 ^ 62` (so that `whnfBody`'s fixed loop fuel `whnfLoopFuel
 = 2 ^ 62` instantiates `WhnfLoopSpec`'s `K`). Priority: proved only if time permits. -/
-@[refines ConRon.Arena.coreKnot]
 theorem whnf_refines (n : Nat) (hn : n ≤ 2 ^ 62) (hwd : WhnfDeltaProg p) (hk : KnotUpTo p n)
     (hloop : WhnfLoopSpec p n) : WhnfSlot p (n + 1) := sorry
 
