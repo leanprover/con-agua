@@ -86,33 +86,44 @@ def blockShapeNumCtors : FunDecl := lfn (p) locals (o, l, r) {
 /-- `block_shape_member_names(p)`: `BlockShape.memberNames`, each member's `cvT.name` (`EREC` word
 `0` of the member's `cvT` pointer). -/
 @[l_impl ConRon.Arena.BlockShape.memberNames]
-def blockShapeMemberNames : FunDecl := lfn (p) locals (off, l, q, j, m, cv) {
+def blockShapeMemberNames : FunDecl := lfn (p) locals (off, l, q, u) {
   off := IW.u64[p];
   l := IW.u64[p + 1];
   q := call iw_alloc(l);
-  j := 0;
-  while j < l {
-    m := IW.u64[off + j];
-    cv := IW.u64[m];
-    IW.u64[q + j] := EREC.u64[cv];
-    j += 1
-  };
+  u := call member_names_copy(q, off, l);
   return (q, l)
+}
+
+/-- `member_names_copy(d, s, l)`: `IW[d+j] := EREC[IW[s+j]]` for `j < l` (each member pointer's
+`cvT.name`), recursively. -/
+@[l_impl ConRon.Arena.BlockShape.memberNames]
+def memberNamesCopy : FunDecl := lfn (d, s, l) locals (m, u) {
+  if l == 0 { return 0 };
+  m := IW.u64[s];
+  IW.u64[d] := EREC.u64[m];
+  u := call member_names_copy(d + 1, s + 1, l - 1);
+  return 0
 }
 
 /-- `block_shape_n_idxs(p)`: `BlockShape.nIdxs`, each member's `nIdx` (word `+1`). -/
 @[l_impl ConRon.Arena.BlockShape.nIdxs]
-def blockShapeNIdxs : FunDecl := lfn (p) locals (off, l, q, j, m) {
+def blockShapeNIdxs : FunDecl := lfn (p) locals (off, l, q, u) {
   off := IW.u64[p];
   l := IW.u64[p + 1];
   q := call iw_alloc(l);
-  j := 0;
-  while j < l {
-    m := IW.u64[off + j];
-    IW.u64[q + j] := IW.u64[m + 1];
-    j += 1
-  };
+  u := call n_idxs_copy(q, off, l);
   return (q, l)
+}
+
+/-- `n_idxs_copy(d, s, l)`: `IW[d+j] := IW[IW[s+j] + 1]` for `j < l` (each member pointer's
+`nIdx`), recursively. -/
+@[l_impl ConRon.Arena.BlockShape.nIdxs]
+def nIdxsCopy : FunDecl := lfn (d, s, l) locals (m, u) {
+  if l == 0 { return 0 };
+  m := IW.u64[s];
+  IW.u64[d] := IW.u64[m + 1];
+  u := call n_idxs_copy(d + 1, s + 1, l - 1);
+  return 0
 }
 
 /-- `block_shape_lps(p)`: `BlockShape.lps`, member `0`'s `cvT.levelParams` copied from `EREC` into
@@ -777,7 +788,8 @@ def checkIndDecl : FunDecl := lfn (vis, boff, blen, nP) locals (hitOk, kind, vis
 def indPartsFns : Prog :=
   [("pi_binders", piBinders), ("num_ctors_of", numCtorsOf), ("block_shape_k", blockShapeK),
    ("block_shape_num_ctors", blockShapeNumCtors), ("block_shape_member_names", blockShapeMemberNames),
-   ("block_shape_n_idxs", blockShapeNIdxs), ("block_shape_lps", blockShapeLps),
+   ("member_names_copy", memberNamesCopy),
+   ("block_shape_n_idxs", blockShapeNIdxs), ("n_idxs_copy", nIdxsCopy), ("block_shape_lps", blockShapeLps),
    ("block_shape_all_ctors", blockShapeAllCtors), ("block_shape_rule_prefix_at", blockShapeRulePrefixAt),
    ("block_shape_major_idx_at", blockShapeMajorIdxAt), ("block_shape_with_sort", blockShapeWithSort),
    ("block_parts_complete", blockPartsComplete), ("block_split_recs", blockSplitRecs),

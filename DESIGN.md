@@ -4643,6 +4643,39 @@ parallel, 20–32 min each (sonnet, 250–320k tokens each); the interface took 
   written of 1352. The stale flags of phase 8 after con-ron's bump (`12752ca7`, the eager tower's
   memos inside `Core.lean`) were reviewed: the conventions of the core stubs did not change.
 
+### Round 2–3: the proof template (second landing)
+
+* **Model first, twin after** (`IndSumSpec.lean`, `structPsAtGo_refines`, `@[refines
+  structPsAt.go]`, a recursion that interns, recurses and allocates): (1) a word model of the L
+  function calling its callees' word models (`binternW`, `consW`, `allocW`) and itself at the L
+  fuel, every match on a callee result a continuation def with `rfl` arm lemmas, the model
+  returning exactly the L result list; (2) its `vcgen` spec with callee **model** specs only;
+  (3) a relational lemma by fuel induction (`… = some (r, m') → ArenaR m a → ∃ xs a', twin.run a =
+  .ok (xs, a') ∧ ArenaR m' a' ∧ IWGrow m m' ∧ decoding`); (4) the census theorem by `triple_post`.
+  Workers who put twin values into `vcgen` (`RefAM`-shaped callee specs) hit unmatched callee
+  specs and a grind arithmetic cap on every recursive function; the split made both go away.
+* **Stubs as one opaque model** (`IndStubs.lean`): `opaque stubM (f : FnName) : Mem → List Word →
+  Option (List Word × Mem)`; one `stubM_spec` (a call of any stub is its model) and one `RelAM`
+  per stub (a model run from the stage relation is a twin run), all `sorry`. A stub enters a
+  proof exactly as a translated callee.
+* Library models: `IndCopy.lean` (`allocW`, `copyW`/`copyW_get` — what a copy leaves, Nat offsets —,
+  `consW`/`consW_dec` — `x :: xs` decodes, the pool grew, `MemFrame [IW] [200]`), `IndView.lean`.
+* Proved at this landing (phase 8, `@[refines]`, no `sorry`): `BlockShape.k`, `.numCtors`,
+  `.rulePrefixAt`, `.majorIdxAt`, `numCtorsOf`, `ClassSlot.isMinor`, `NestFieldKind.flat`,
+  `NestCtx.hiAt`, `nestKeyMap`, `structPsAt.go`, `structElimLevel`; partial (`refines_part`):
+  `targetMajorAt` "hit", `targetCtorAt` "member"; outside phase 8: `view`, `nameNodup`. Census:
+  phase 8 **14 proven** (incl. the three covered `PropWhen` helpers), 201 written, 8 todo; totals
+  301 proven / 46 sorry / 260 written of 1352 (master `e983ae3` + this lane).
+* Round-1 bugs the proofs found: `nestFrameMates.go` read `IndCaps.all` from `IW` (it is an `EREC`
+  slice); five call sites passed `EREC` level-parameter slices to callees that read `IW`.
+* Worker findings: callee specs must be cited up to their fuel argument (`spec p hx n`) — fixing
+  later arguments makes `vcgen` find no spec; a wrapper at fuel `n + 1` calls its callee at `n`;
+  `finish` needs `rdW_eq` to bridge `rdW` and `ld64`'s `a[i]`; a post `r.getD 1 0 = …` confuses
+  grind (state `r = [a, b]`); intern results need an L guard `if 4294967296 <= b { abort }` (the
+  store specs do not bound the word; the front does the same); no Mathlib tactics (`by_contra`,
+  `set`).
+* Helpers: from this landing on at most three at a time (PLAN.md "Fan-out").
+
 ### Findings
 
 * **Interfaces first scales to eight workers**: a written calling rule (names, parameter and
