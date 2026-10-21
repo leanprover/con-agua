@@ -174,16 +174,22 @@ end run
 /-- Every function of the frontend: the validator, the fields passes, the stores, the apply
 steps, the line and the driver. -/
 def frontAllProg : Prog := L.Scan.Validator.valProg ++
-  [("read_nat", L.Front.Fields.readNat), ("rec_nat_list", recNatList), ("rec_str_name", recStrName),
+  [("rec_nat_list", recNatList), ("rec_str_name", recStrName),
    ("rec_num_name", recNumName), ("rec_line_loop", recLineLoop), ("obj_val", objVal),
    ("rec_obj", recObj), ("expr_val", exprVal), ("rec_expr_loop", recExprLoop)] ++
-  exprProg ++
+  exprProg.filter (fun f => f.1 != "skip_digits" && f.1 != "num_end") ++
   [("front_line", frontLine), ("apply_rec", applyRec), ("apply_str", applyStr),
    ("apply_any", applyAny), ("front_run", frontRun),
    ("esc_sur", L.Front.Unescape.escSur), ("esc_one", L.Front.Unescape.escOne),
    ("utf8_put", L.Front.Unescape.utf8Put), ("str_put_esc", L.Front.Unescape.strPutEsc)]
 
 theorem frontAllProg_noSt8 : frontAllProg.noSt8 = true := by decide
+
+/-- The compiler's static check passes (`compile_correct` applies): one byte array, 67 word
+arrays. -/
+theorem frontAllProg_wf :
+    L.Compiler.Prog.wf (L.Compiler.Prog.tab frontAllProg 1 67) frontAllProg = true := by
+  decide +kernel
 
 theorem frontAllProg_scan : ScanLookups frontAllProg := by constructor <;> rfl
 
