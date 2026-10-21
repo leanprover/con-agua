@@ -1,0 +1,254 @@
+import ConAgua.Arena.StoreLib
+import ConAgua.Arena.ProjStore
+
+/-!
+# The `proj` store refines the arena's `proj` tables
+
+The record `ProjNode { n : NIdx, i : Nat, e : EIdx }` (`ConAgua/Arena/ProjStore.lean` has the L
+code), `letE`'s shape at three fields, but the middle one is a plain `Nat` (as `bvar`'s field is)
+and the two others are handles of *different* kinds (a name, an expression), as for `const`'s two
+fields. The schema `projSch` (`PJREC`, `PJSLOT`, three words per node, counts at `CTL[32 + t]`,
+tag `9`); the record relation `PJRecRel` (the first and third words are the children's handle
+words, decoded at their own kinds `.name`/`.expr`; the middle word is the index, as for `bvar`);
+the node hash `pjhash`; the lens `projLens`; the scratch skip (`skPj`, `pjskipW_eq`) tests only
+`n` and `e` (`eViewHasScratchChild (.proj n _ e) = if n.isPersistent then !e.isPersistent else
+true`), one application of `bit27_or` as `app`'s two-field skip does (the index `i` is not a
+handle and is not tested). `ProjR m a` is the library's `StoreR` for the two `proj` tables.
+`internProj_refines`: `intern_proj(n, u, e)` refines
+`internE (.proj (decI (k := .name) n) u.toNat (decE e))` under `ProjR`.
+
+Not represented: the derived column and every other table.
+-/
+
+open ConRon.Arena
+open Std.WP
+open scoped Lean.Order
+
+set_option linter.unusedSimpArgs false
+
+namespace L.Arena
+
+/-- The arena's `proj` cons key. -/
+abbrev pjKey (n : NIdx) (i : Nat) (e : EIdx) : ProjNode := ⟨n, i, e⟩
+
+/-- `a` with the scratch / persistent `proj` table replaced. -/
+def withScrProjs (a : AState) (t : Tbl ProjNode EIdx UInt64) : AState :=
+  { a with store := { a.store with scr := { a.store.scr with projs := t } } }
+def withPersProjs (a : AState) (t : Tbl ProjNode EIdx UInt64) : AState :=
+  { a with store := { a.store with pers := { a.store.pers with projs := t } } }
+
+/-- The arena's two `proj` tables. -/
+def projLens : Lens ProjNode UInt64 .expr where
+  on a := a.store.scratchOn
+  getP a := a.store.pers.projs
+  getS a := a.store.scr.projs
+  setP := withPersProjs
+  setS := withScrProjs
+  on_setP _ _ := rfl
+  on_setS _ _ := rfl
+  getP_setP _ _ := rfl
+  getS_setP _ _ := rfl
+  getP_setS _ _ := rfl
+  getS_setS _ _ := rfl
+
+/-- The arena's scratch skip at a `proj` view (`EStore.persFindMaybe`): only `n` and `e` are
+tested. -/
+def skPj (a : AState) (n : NIdx) (e : EIdx) : Bool :=
+  if a.store.scratchOn then (if n.isPersistent then !e.isPersistent else true) else false
+
+/-- The arena's persistent probe at a `proj` view, after the skip. -/
+def pfPj (a : AState) (n : NIdx) (i : Nat) (e : EIdx) : Option EIdx :=
+  if skPj a n e then none else a.store.pers.projs.cons[pjKey n i e]?
+
+theorem persFindMaybe_proj (a : AState) (n : NIdx) (i : Nat) (e : EIdx) :
+    a.store.persFindMaybe (.proj n i e) = pfPj a n i e := by
+  simp [EStore.persFindMaybe, pfPj, skPj, EStore.eViewHasScratchChild, ETables.find?, Tbl.find?]
+
+/-- `internE` at a `proj` node is the library's protocol, the persistent probe after the skip. -/
+theorem internE_proj_run (n : NIdx) (i : Nat) (e : EIdx) (a : AState) :
+    (internE (.proj n i e)).run a =
+      protoRun projLens (pjKey n i e) ETag.proj (pfPj a n i e) (a.store.derOfView (.proj n i e))
+        (.native "arena: expression constructor array full") a := by
+  simp only [internE, internNodeE, EStore.find?, EStore.intern, ETables.find?, Tbl.find?,
+    ETables.sizeOf, ETables.push, StateT.run_bind, StateT.run_get, pure_bind, persFindMaybe_proj]
+  cases hp : pfPj a n i e <;> cases hs : a.store.scratchOn <;>
+    cases hc : a.store.scr.projs.cons[pjKey n i e]? <;>
+    simp only [hp, hs, hc, Bool.false_eq_true, ↓reduceIte, pjKey, ite_self, protoRun, projLens] <;>
+    (try split) <;> simp_all [StateT.run_set, StateT.run_pure, withScrProjs, withPersProjs, fail,
+      throwThe, MonadExceptOf.throw, StateT.run, Functor.map, StateT.map, set, StateT.set,
+      StateT.lift, bind, Except.bind, Except.map, pure, Except.pure, StateT.bind, StateT.pure]
+
+/-! ## The relation between L memory and the arena's `proj` tables -/
+
+/-- The `proj` schema: `PJREC`, `PJSLOT`, three words per node, the counts at `CTL[32 + t]`. -/
+def projSch : Schema := ⟨PJREC, PJSLOT, 3, 6, 32, ETag.proj⟩
+
+theorem projSch_wf : projSch.WF :=
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+
+theorem fld_pj0 (m : Mem) (t i : Word) :
+    fld projSch m t i 0 = rdW (m.arr64 PJREC) (i * 6 + t * 3) := by
+  simp [fld, Schema.ad, projSch]
+theorem fld_pj (m : Mem) (t i f : Word) :
+    fld projSch m t i f = rdW (m.arr64 PJREC) (i * 6 + t * 3 + f) := rfl
+
+/-- Node `i` of tier `t` holds `proj k.n k.i k.e`: the two handle words and the index word. -/
+def PJRecRel (m : Mem) (t i : Word) (k : ProjNode) : Prop :=
+  rdW (m.arr64 PJREC) (i * 6 + t * 3) = k.n.word.toUInt64 ∧
+  (rdW (m.arr64 PJREC) (i * 6 + t * 3 + 1)).toNat = k.i ∧
+  rdW (m.arr64 PJREC) (i * 6 + t * 3 + 2) = k.e.word.toUInt64
+
+/-- The hash of node `i` of tier `t`. -/
+def pjhash (m : Mem) (t i : Word) : Word :=
+  projHashW (rdW (m.arr64 PJREC) (i * 6 + t * 3)) (rdW (m.arr64 PJREC) (i * 6 + t * 3 + 1))
+    (rdW (m.arr64 PJREC) (i * 6 + t * 3 + 2))
+
+/-- **The state relation** of the `proj` store: the library's relation for the two `proj`
+tables. -/
+def ProjR (m : Mem) (a : AState) : Prop :=
+  StoreR projSch PJRecRel pjhash m a.store.scratchOn a.store.pers.projs a.store.scr.projs
+
+/-- A node's relation and hash depend only on its three words. -/
+theorem projFrame : RFrame projSch PJRecRel pjhash := by
+  intro m m' t i _ hf
+  have h0 := hf 0 (by decide)
+  have h1 := hf 1 (by decide)
+  have h2 := hf 2 (by decide)
+  rw [fld_pj0, fld_pj0] at h0
+  rw [fld_pj, fld_pj] at h1
+  rw [fld_pj, fld_pj] at h2
+  exact ⟨fun a h => by simpa only [PJRecRel, h0, h1, h2] using h,
+    by simp only [pjhash, h0, h1, h2]⟩
+
+/-! ## The query's obligations -/
+
+/-- The match of `proj_find` on node `i` of tier `t`. -/
+def pjMt (m : Mem) (n u e t i : Word) : Bool := pjmatchW (m.arr64 PJREC) t i n u e
+
+section query
+variable (m : Mem) (n u e : Word) (hn : n.toNat < 2 ^ 32) (he : e.toNat < 2 ^ 32)
+
+include hn he in
+/-- **Matching is equality of `proj` nodes.** -/
+theorem pjMatchOK :
+    MatchOK PJRecRel (pjMt m n u e) m (pjKey (decI (k := .name) n) u.toNat (decE e)) := by
+  intro t i k hr
+  have := word_decI k.n n hn
+  have := word_decI k.e e he
+  obtain ⟨kn, ki, ke⟩ := k
+  simp only [PJRecRel] at hr
+  simp only [pjMt, pjmatchW, Bool.and_eq_true, beq_iff_eq, pjKey, ProjNode.mk.injEq, decE_eq]
+  grind [UInt64.toNat_inj]
+
+theorem pjHomeOK : HomeOK pjhash (pjMt m n u e) m (projHashW n u e) := by
+  intro t i hm
+  simp only [pjMt, pjmatchW, Bool.and_eq_true, beq_iff_eq] at hm
+  simp only [pjhash, hm.1.1, hm.1.2, hm.2]
+
+include hn he in
+/-- The record `proj_push` writes holds the node. -/
+theorem pjNewOK :
+    NewOK projSch PJRecRel pjhash m [n, u, e]
+      (pjKey (decI (k := .name) n) u.toNat (decE e)) (projHashW n u e) := by
+  intro t j ht hroom
+  have e3 : ∀ g, g < 3 → fld projSch (pushG projSch m t [n, u, e] j (cntW projSch m t)) t
+      (cntW projSch m t) g = [n, u, e].getD g.toNat 0 := by
+    intro g hg
+    have := hroom.1
+    have := hroom.2
+    rw [fld_pushG projSch projSch_wf] <;> simp only [projSch, Schema.ad] at * <;> grind
+  have e0 := e3 0 (by decide)
+  have e1 := e3 1 (by decide)
+  have e2 := e3 2 (by decide)
+  rw [fld_pj0] at e0
+  rw [fld_pj] at e1
+  rw [fld_pj] at e2
+  simp only [List.getD_cons_zero, List.getD_cons_succ, show (1 : Word).toNat = 0 + 1 from rfl,
+    show (2 : Word).toNat = 0 + 1 + 1 from rfl, show (0 : Word).toNat = 0 from rfl] at e0 e1 e2
+  have := word_decI (decI (k := .name) n) n hn
+  have := word_decI (decE e) e he
+  simp only [PJRecRel, pjhash, pjKey, e0, e1, e2]
+  grind [decE_eq]
+
+end query
+
+/-! ## The bridges from the L models -/
+
+theorem pjprobeW_arm (m : Mem) (n u e t : Word) :
+    ∀ j d, pjprobeW (m.arr64 PJSLOT) (m.arr64 PJREC) t n u e (nSlotsPj m) j d =
+      probeArm projSch m t (pjMt m n u e t)
+        (pjprobeW (m.arr64 PJSLOT) (m.arr64 PJREC) t n u e (nSlotsPj m)) j d := by
+  intro j d; rw [pjprobeW]; rfl
+
+theorem pjpushOK_room (m : Mem) (t : Word) (h : pjpushOK m t = true) : PushRoom projSch m t := by
+  simp only [pjpushOK, Bool.and_eq_true, decide_eq_true_eq] at h
+  simp only [PushRoom, cntW, pjcnt, projSch, len64_eq] at *
+  grind
+
+theorem pjpushMem_eq (m : Mem) (t n u e j c : Word) :
+    pjpushMem m t n u e j c = pushG projSch m t [n, u, e] j c := by
+  simp [pjpushMem, pushG, wrRec, Schema.ad, projSch]
+
+theorem pjinternW_eq (m : Mem) (n u e : Word) :
+    pjinternW m n u e = internM projSch m (pjskipW m n e) (pjpushOK m) [n, u, e]
+      (pjprobeW (m.arr64 PJSLOT) (m.arr64 PJREC) 0 n u e (nSlotsPj m)
+        (homeW (projHashW n u e) (nSlotsPj m)) 0)
+      (pjprobeW (m.arr64 PJSLOT) (m.arr64 PJREC) 1 n u e (nSlotsPj m)
+        (homeW (projHashW n u e) (nSlotsPj m)) 0) := by
+  have e0 : ∀ x, hdW projSch.tag.toUInt64 0 x = projP + x := fun x => by
+    simp [hdW, projSch, projP, ETag.proj]
+  have e1 : ∀ x, hdW projSch.tag.toUInt64 1 x = projS + x := fun x => by
+    simp [hdW, projSch, projS, ETag.proj]
+  simp only [pjinternW, internM, pjpushMem_eq, e0, e1]
+  rfl
+
+/-- The L skip test is the arena's (one application of `bit27_or`, the index `i` not tested). -/
+theorem pjskipW_eq (m : Mem) (a : AState) (n e : Word) (hn : n.toNat < 2 ^ 32)
+    (he : e.toNat < 2 ^ 32) (hfl : (rdW (m.arr64 CTL) 1 != 0) = a.store.scratchOn) :
+    (pjskipW m n e = 0) = (skPj a (decI (k := .name) n) (decE e) = false) := by
+  have := bit27_or n e
+  simp only [pjskipW, skPj, isPersistent_decI (k := .name) n hn, isPersistent_decE e he, ← hfl]
+  grind
+
+/-! ## `intern_proj` refines `internE (.proj _ _ _)` -/
+
+section intern
+variable (m : Mem) (a : AState) (hR : ProjR m a) (n u e : Word) (hn : n.toNat < 2 ^ 32)
+  (he : e.toNat < 2 ^ 32)
+
+include hR hn he in
+/-- **`intern_proj`'s model refines the arena's `internE` at a `proj` node.** -/
+theorem pjintern_correct (w : Word) (m' : Mem) (hI : pjinternW m n u e = some (w, m')) :
+    AM.ok (internE (.proj (decI (k := .name) n) u.toNat (decE e))) a ∧
+    ProjR m' (AM.st (internE (.proj (decI (k := .name) n) u.toNat (decE e))) a) ∧
+    AM.res (internE (.proj (decI (k := .name) n) u.toNat (decE e))) a = decE w := by
+  rw [pjinternW_eq] at hI
+  exact intern_correctG projSch PJRecRel pjhash projSch_wf projFrame projLens a m hR _ _ _ _ _
+    (internE_proj_run _ _ _ a) (skPj a (decI (k := .name) n) (decE e)) rfl _
+    (pjskipW_eq m a n e hn he hR.2.1)
+    (fun h => by simp only [skPj] at h; split at h <;> simp_all [projLens]) _ _
+    (pjMatchOK m n u e hn he) (pjHomeOK m n u e) _ _
+    (probe_homeG projSch m 0 _ _ (pjprobeW_arm m n u e 0) _)
+    (probe_homeG projSch m 1 _ _ (pjprobeW_arm m n u e 1) _) _ (pjpushOK_room m) _ rfl
+    (pjNewOK m n u e hn he) w m' hI
+
+end intern
+
+/-- `intern_proj` refines `internE (.proj _ _ _)` under `ProjR`. -/
+theorem internProj_refines (p : Prog) (hpf : p.lookup "proj_find" = some projFind)
+    (hpp : p.lookup "proj_push" = some projPush) (hp : p.lookup "intern_proj" = some internProj)
+    (a₀ : AState) (nn : Nat) (s₀ : St) (n u e : Word) (hR : ProjR s₀.mem a₀)
+    (hn : n.toNat < 2 ^ 32) (he : e.toNat < 2 ^ 32) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p nn) "intern_proj" [n, u, e]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internE (.proj (decI (k := .name) n) u.toNat (decE e))) a₀ ∧
+      ProjR s'.mem (AM.st (internE (.proj (decI (k := .name) n) u.toNat (decE e))) a₀) ∧
+      AM.res (internE (.proj (decI (k := .name) n) u.toNat (decE e))) a₀ = decE (r.headD 0); ⊤⦄ := by
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (internProj_spec p hpf hpp hp nn s₀ n u e)
+  subst hs
+  exact ⟨hloc, pjintern_correct s.mem a₀ hR n u e hn he _ _ hI⟩
+
+end L.Arena
