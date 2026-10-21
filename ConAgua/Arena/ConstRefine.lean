@@ -82,7 +82,7 @@ theorem internE_const_run (f : NIdx) (x : LsIdx) (a : AState) :
 def constSch : Schema := ⟨CREC, CSLOT, 2, 4, 18, ETag.const⟩
 
 theorem constSch_wf : constSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_const0 (m : Mem) (t i : Word) : fld constSch m t i 0 = rdW (m.arr64 CREC) (i * 4 + t * 2) := by
   simp [fld, Schema.ad, constSch]
@@ -159,8 +159,8 @@ end query
 /-! ## The bridges from the L models -/
 
 theorem ceprobeW_arm (m : Mem) (f a t : Word) :
-    ∀ j d, ceprobeW (m.arr64 CSLOT) (m.arr64 CREC) t f a (nSlotsCe m) j d =
-      probeArm constSch m t (ceMt m f a t) (ceprobeW (m.arr64 CSLOT) (m.arr64 CREC) t f a (nSlotsCe m)) j d := by
+    ∀ j d, ceprobeW (m.arr64 CSLOT) (m.arr64 CREC) t f a (baseW m t) (nSlotsCe m) j d =
+      probeArm constSch m t (ceMt m f a t) (ceprobeW (m.arr64 CSLOT) (m.arr64 CREC) t f a (baseW m t) (nSlotsCe m)) j d := by
   intro j d; rw [ceprobeW]; rfl
 
 theorem cepushOK_room (m : Mem) (t : Word) (h : cepushOK m t = true) : PushRoom constSch m t := by
@@ -175,8 +175,8 @@ theorem cepushMem_eq (m : Mem) (t f a j c : Word) :
 
 theorem ceinternW_eq (m : Mem) (f a : Word) :
     ceinternW m f a = internM constSch m (ceskipW m f a) (cepushOK m) [f, a]
-      (ceprobeW (m.arr64 CSLOT) (m.arr64 CREC) 0 f a (nSlotsCe m) (homeW (constHashW f a) (nSlotsCe m)) 0)
-      (ceprobeW (m.arr64 CSLOT) (m.arr64 CREC) 1 f a (nSlotsCe m) (homeW (constHashW f a) (nSlotsCe m)) 0) := by
+      (ceprobeW (m.arr64 CSLOT) (m.arr64 CREC) 0 f a (baseW m 0) (nSlotsCe m) (homeW (constHashW f a) (nSlotsCe m)) 0)
+      (ceprobeW (m.arr64 CSLOT) (m.arr64 CREC) 1 f a (baseW m 1) (nSlotsCe m) (homeW (constHashW f a) (nSlotsCe m)) 0) := by
   have e0 : ∀ x, hdW constSch.tag.toUInt64 0 x = constP + x := fun x => by
     simp [hdW, constSch, constP, ETag.const]
   have e1 : ∀ x, hdW constSch.tag.toUInt64 1 x = constS + x := fun x => by

@@ -277,12 +277,37 @@ of the product with `n` (Lemire's range reduction) in place of the power-of-two 
 def homeW (h n : Word) : Word :=
   UInt64.ofNat (((h * golden) ^^^ ((h * golden) >>> 32)).toNat * n.toNat / 2 ^ 64)
 
+/-- The `CTL` word of the scratch tier's **slot base** `B` (`scratch_reset` adds `2^32`). A slot of
+tier `t` holds `B t + i + 1` for node `i`, with `B 0 = 0` and `B 1 = CTL[62]`; a slot word at or
+below the base is free. So the scratch tier is emptied by raising its base: every old slot falls
+at or below the new base, and no slot is zeroed. -/
+abbrev SCB : Word := 62
+
+/-- The slot base of tier `t` (`t ≤ 1`): `CTL[62] * t`. -/
+def baseW (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) SCB * t
+
+/-- A slot word `v` against the base `b`: `0` (free) at or below `b`, else `i + 1`. -/
+def slotRd (v b : Word) : Word := if v ≤ b then 0 else v - b
+
+/-- Slot word `k` of `sl` against the base `b`. -/
+def slotV (sl : Array Word) (b k : Word) : Word := slotRd (rdW sl k) b
+
+theorem slotV_free (sl : Array Word) (b x : Word) (k : Nat) (hk : k = x.toNat) (h : k < sl.size)
+    (hv : sl[k] ≤ b) : slotV sl b x = 0 := by
+  simp only [slotV, slotRd, rdW_eq sl x k hk h, hv, ↓reduceIte]
+
+theorem slotV_used (sl : Array Word) (b x : Word) (k : Nat) (hk : k = x.toNat) (h : k < sl.size)
+    (hv : ¬ sl[k] ≤ b) : slotV sl b x = sl[k] - b ∧ sl[k] - b ≠ 0 := by
+  simp only [slotV, slotRd, rdW_eq sl x k hk h, hv, ↓reduceIte, true_and]
+  intro h0
+  exact hv (by grind)
+
 /-- The model of the probe loop, from slot `j` after `d` steps. -/
-def probeW (sl r p : Array Word) (t o l h n j d : Word) : List Word :=
+def probeW (sl r p : Array Word) (t o l h b n j d : Word) : List Word :=
   if d < n then
-    if rdW sl (j * 2 + t) = 0 then [0, 0, j, d]
-    else if matchW r p t (rdW sl (j * 2 + t) - 1) o l h then [1, rdW sl (j * 2 + t) - 1, j, d]
-    else probeW sl r p t o l h n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
+    if slotV sl b (j * 2 + t) = 0 then [0, 0, j, d]
+    else if matchW r p t (slotV sl b (j * 2 + t) - 1) o l h then [1, slotV sl b (j * 2 + t) - 1, j, d]
+    else probeW sl r p t o l h b n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
   else []
 termination_by n.toNat - d.toNat
 decreasing_by
@@ -293,35 +318,38 @@ decreasing_by
   omega
 
 section probeArms
-variable (sl r p : Array Word) (t o l h n j d : Word)
+variable (sl r p : Array Word) (t o l h b n j d : Word)
 
 theorem probeW_free (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] = 0) : probeW sl r p t o l h n j d = [0, 0, j, d] := by
-  rw [probeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv]
+    (hv : sl[k] ≤ b) : probeW sl r p t o l h b n j d = [0, 0, j, d] := by
+  rw [probeW]; simp only [hd, ↓reduceIte, slotV_free sl b _ k hk hks hv]
 
 theorem probeW_hit (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] ≠ 0) (hm : matchW r p t (sl[k] - 1) o l h = true) :
-    probeW sl r p t o l h n j d = [1, sl[k] - 1, j, d] := by
-  rw [probeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv, hm]
+    (hv : ¬ sl[k] ≤ b) (hm : matchW r p t (sl[k] - b - 1) o l h = true) :
+    probeW sl r p t o l h b n j d = [1, sl[k] - b - 1, j, d] := by
+  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
+  rw [probeW]; simp only [hd, ↓reduceIte, e, ne, hm]
 
 theorem probeW_next (k : Nat) (j' d' : Word) (hd : d < n) (hk : k = (j * 2 + t).toNat)
-    (hks : k < sl.size) (hv : sl[k] ≠ 0) (hm : matchW r p t (sl[k] - 1) o l h = false)
+    (hks : k < sl.size) (hv : ¬ sl[k] ≤ b) (hm : matchW r p t (sl[k] - b - 1) o l h = false)
     (hj' : j' = (j + 1) * (if j + 1 < n then 1 else 0)) (hd' : d' = d + 1) :
-    probeW sl r p t o l h n j d = probeW sl r p t o l h n j' d' := by
+    probeW sl r p t o l h b n j d = probeW sl r p t o l h b n j' d' := by
   subst hj' hd'
-  rw [probeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv, hm]; simp
+  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
+  rw [probeW]; simp only [hd, ↓reduceIte, e, ne, hm]; simp
 
 end probeArms
 
-grind_pattern [arena_grind] probeW_free => probeW sl r p t o l h n j d, sl[k]
-grind_pattern [arena_grind] probeW_hit => probeW sl r p t o l h n j d, sl[k]
+grind_pattern [arena_grind] probeW_free => probeW sl r p t o l h b n j d, sl[k]
+grind_pattern [arena_grind] probeW_hit => probeW sl r p t o l h b n j d, sl[k]
 grind_pattern [arena_grind] probeW_next =>
-  probeW sl r p t o l h n j d, sl[k], probeW sl r p t o l h n j' d'
+  probeW sl r p t o l h b n j d, sl[k], probeW sl r p t o l h b n j' d'
 
-def findLoop : Stmt := lblk (t, o, l, h, n, j, d, v, m) {
+def findLoop : Stmt := lblk (t, o, l, h, n, j, d, v, m, b) {
   while d < n {
     v := SLOT.u64[j * 2 + t];
-    if v == 0 { return (0, 0, j, d) };
+    if v <= b { return (0, 0, j, d) };
+    v := v - b;
     m := call lit_match(t, v - 1, o, l, h);
     if m != 0 { return (1, v - 1, j, d) };
     j := (j + 1) * u64(j + 1 < n);
@@ -329,8 +357,9 @@ def findLoop : Stmt := lblk (t, o, l, h, n, j, d, v, m) {
   }
 }
 
-def litFind : FunDecl := lfn (t, o, l, h) locals (n, j, d, v, m) {
+def litFind : FunDecl := lfn (t, o, l, h) locals (n, j, d, v, m, b) {
   n := len(SLOT.u64) >> 1;
+  b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪findLoop⟫;
   abort
@@ -346,9 +375,9 @@ theorem findLoop_spec (n : Nat) (s₀ : St) :
     exec p n findLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
       r.retOr (probeW (s₀.mem.arr64 SLOT) (s₀.mem.arr64 REC) (s₀.mem.arr64 POOL) (s₀.loc 0)
-        (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
+        (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 9) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
       probeW (s₀.mem.arr64 SLOT) (s₀.mem.arr64 REC) (s₀.mem.arr64 POOL) (s₀.loc 0)
-        (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ := by
+        (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 9) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
@@ -363,9 +392,9 @@ theorem findLoop_step_spec (n : Nat) (s₀ : St) :
     step p (exec p n) findLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
       r.retOr (probeW (s₀.mem.arr64 SLOT) (s₀.mem.arr64 REC) (s₀.mem.arr64 POOL) (s₀.loc 0)
-        (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
+        (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 9) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
       probeW (s₀.mem.arr64 SLOT) (s₀.mem.arr64 REC) (s₀.mem.arr64 POOL) (s₀.loc 0)
-        (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ :=
+        (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 9) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ :=
   Triple.step_exec (findLoop_spec p hpe hpm (n + 1) s₀)
 
 /-- The slot count of a tier. -/
@@ -377,15 +406,15 @@ theorem litFind_spec (n : Nat) (s₀ : St) (t o l h : Word) :
     invoke p (exec p n) "lit_find" [t, o, l, h]
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
       r = probeW (s₀.mem.arr64 SLOT) (s₀.mem.arr64 REC) (s₀.mem.arr64 POOL) t o l h
-        (nSlots s₀.mem) (homeW h (nSlots s₀.mem)) 0; ⊤⦄ := by
+        (baseW s₀.mem t) (nSlots s₀.mem) (homeW h (nSlots s₀.mem)) 0; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, litFind]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc, findLoop_step_spec p hpe hpm n] <;>
-      finish [nSlots, homeW]
+      vcgen [exec, step, evalE, evalArgs, setLoc, ld64, findLoop_step_spec p hpe hpm n] <;>
+      finish [nSlots, homeW, baseW]
 
 end find
 
@@ -406,7 +435,8 @@ def pushOK (m : Mem) (t : Word) : Bool :=
 /-- The memory after `lit_push(t, o, l, h, j)` appended node `c`. -/
 def pushMem (m : Mem) (t o l h j c : Word) : Mem :=
   ((((((m.set64 REC (c * 8 + t * 4) 0).set64 REC (c * 8 + t * 4 + 1) o).set64 REC
-    (c * 8 + t * 4 + 2) l).set64 REC (c * 8 + t * 4 + 3) h).set64 SLOT (j * 2 + t) (c + 1)).set64
+    (c * 8 + t * 4 + 2) l).set64 REC (c * 8 + t * 4 + 3) h).set64 SLOT (j * 2 + t)
+    (baseW m t + c + 1)).set64
     CTL (2 + (t &&& 1)) (c + 1))
 
 def litPush : FunDecl := lfn (t, o, l, h, j) locals (c, k) {
@@ -419,7 +449,7 @@ def litPush : FunDecl := lfn (t, o, l, h, j) locals (c, k) {
   REC.u64[k + 1] := o;
   REC.u64[k + 2] := l;
   REC.u64[k + 3] := h;
-  SLOT.u64[j * 2 + t] := c + 1;
+  SLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[2 + (t & 1)] := c + 1;
   return c
 }
@@ -440,7 +470,7 @@ theorem litPush_spec (n : Nat) (s₀ : St) (t o l h j : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
-      finish [cnt, pushOK, pushMem, nSlots]
+      finish [cnt, pushOK, pushMem, nSlots, baseW]
 
 end push
 
@@ -459,9 +489,9 @@ def litS : Word := 0x88000000
 aborts. `rs₀`, `rs₁`: the two probes (`[]`: the probe aborted). -/
 def internW (m : Mem) (o l : Word) : Option (Word × Mem) :=
   let h := hashN (m.arr64 POOL) o.toNat l.toNat
-  let rs₀ := probeW (m.arr64 SLOT) (m.arr64 REC) (m.arr64 POOL) 0 o l h (nSlots m)
+  let rs₀ := probeW (m.arr64 SLOT) (m.arr64 REC) (m.arr64 POOL) 0 o l h (baseW m 0) (nSlots m)
     (homeW h (nSlots m)) 0
-  let rs₁ := probeW (m.arr64 SLOT) (m.arr64 REC) (m.arr64 POOL) 1 o l h (nSlots m)
+  let rs₁ := probeW (m.arr64 SLOT) (m.arr64 REC) (m.arr64 POOL) 1 o l h (baseW m 1) (nSlots m)
     (homeW h (nSlots m)) 0
   if rs₀ = [] then none
   else if rs₀.headD 0 ≠ 0 then some (litP + rs₀.tail.headD 0, m)
@@ -499,7 +529,7 @@ def litProg : Prog :=
 /-- A memory with the limbs `5`, `7`, `5`, `1 2` in the pool (top 5), 8 nodes and 16 slots per
 tier, the scratch tier closed or open. -/
 def litMem (scratch : Word) : Mem :=
-  { words := #[#[5, 7, 5, 1, 2, 0, 0, 0], #[5, scratch, 0, 0], Array.replicate 64 0,
+  { words := #[#[5, 7, 5, 1, 2, 0, 0, 0], #[5, scratch] ++ Array.replicate 62 0, Array.replicate 64 0,
       Array.replicate 32 0] }
 
 /-- Intern each slice in turn; the handles. -/
@@ -517,9 +547,9 @@ def internAll (m : Mem) : List (Word × Word) → Option (List Word)
 #guard internAll (litMem 1) [(0, 1), (1, 1), (2, 1)] == some [0x88000000, 0x88000001, 0x88000000]
 
 /- The load limit: 16 slots, at most 12 nodes; the thirteenth distinct literal aborts. -/
-#guard (internAll { words := #[(Array.range 13).map (UInt64.ofNat · + 1), #[13, 0, 0, 0],
+#guard (internAll { words := #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
     Array.replicate 256 0, Array.replicate 32 0] } ((List.range 13).map fun i => (UInt64.ofNat i, 1))).isNone
-#guard (internAll { words := #[(Array.range 13).map (UInt64.ofNat · + 1), #[13, 0, 0, 0],
+#guard (internAll { words := #[(Array.range 13).map (UInt64.ofNat · + 1), #[13] ++ Array.replicate 63 0,
     Array.replicate 256 0, Array.replicate 32 0] } ((List.range 12).map fun i => (UInt64.ofNat i, 1))).isSome
 
 section intern

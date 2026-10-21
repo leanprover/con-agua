@@ -47,11 +47,11 @@ def nnmatchW (r : Array Word) (t i pre u : Word) : Bool :=
 /-! ## `nnum_find(t, pre, u, h)`: the probe -/
 
 /-- The model of the probe loop, from slot `j` after `d` steps (`probeW` with `nnmatchW`). -/
-def nnprobeW (sl r : Array Word) (t pre u n j d : Word) : List Word :=
+def nnprobeW (sl r : Array Word) (t pre u b n j d : Word) : List Word :=
   if d < n then
-    if rdW sl (j * 2 + t) = 0 then [0, 0, j, d]
-    else if nnmatchW r t (rdW sl (j * 2 + t) - 1) pre u then [1, rdW sl (j * 2 + t) - 1, j, d]
-    else nnprobeW sl r t pre u n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
+    if slotV sl b (j * 2 + t) = 0 then [0, 0, j, d]
+    else if nnmatchW r t (slotV sl b (j * 2 + t) - 1) pre u then [1, slotV sl b (j * 2 + t) - 1, j, d]
+    else nnprobeW sl r t pre u b n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
   else []
 termination_by n.toNat - d.toNat
 decreasing_by
@@ -62,35 +62,38 @@ decreasing_by
   omega
 
 section probeArms
-variable (sl r : Array Word) (t pre u n j d : Word)
+variable (sl r : Array Word) (t pre u b n j d : Word)
 
 theorem nnprobeW_free (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] = 0) : nnprobeW sl r t pre u n j d = [0, 0, j, d] := by
-  rw [nnprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv]
+    (hv : sl[k] ≤ b) : nnprobeW sl r t pre u b n j d = [0, 0, j, d] := by
+  rw [nnprobeW]; simp only [hd, ↓reduceIte, slotV_free sl b _ k hk hks hv]
 
 theorem nnprobeW_hit (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] ≠ 0) (hm : nnmatchW r t (sl[k] - 1) pre u = true) :
-    nnprobeW sl r t pre u n j d = [1, sl[k] - 1, j, d] := by
-  rw [nnprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv, hm]
+    (hv : ¬ sl[k] ≤ b) (hm : nnmatchW r t (sl[k] - b - 1) pre u = true) :
+    nnprobeW sl r t pre u b n j d = [1, sl[k] - b - 1, j, d] := by
+  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
+  rw [nnprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]
 
 theorem nnprobeW_next (k : Nat) (j' d' : Word) (hd : d < n) (hk : k = (j * 2 + t).toNat)
-    (hks : k < sl.size) (hv : sl[k] ≠ 0) (hm : nnmatchW r t (sl[k] - 1) pre u = false)
+    (hks : k < sl.size) (hv : ¬ sl[k] ≤ b) (hm : nnmatchW r t (sl[k] - b - 1) pre u = false)
     (hj' : j' = (j + 1) * (if j + 1 < n then 1 else 0)) (hd' : d' = d + 1) :
-    nnprobeW sl r t pre u n j d = nnprobeW sl r t pre u n j' d' := by
+    nnprobeW sl r t pre u b n j d = nnprobeW sl r t pre u b n j' d' := by
   subst hj' hd'
-  rw [nnprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv, hm]; simp
+  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
+  rw [nnprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]; simp
 
 end probeArms
 
-grind_pattern [arena_grind] nnprobeW_free => nnprobeW sl r t pre u n j d, sl[k]
-grind_pattern [arena_grind] nnprobeW_hit => nnprobeW sl r t pre u n j d, sl[k]
+grind_pattern [arena_grind] nnprobeW_free => nnprobeW sl r t pre u b n j d, sl[k]
+grind_pattern [arena_grind] nnprobeW_hit => nnprobeW sl r t pre u b n j d, sl[k]
 grind_pattern [arena_grind] nnprobeW_next =>
-  nnprobeW sl r t pre u n j d, sl[k], nnprobeW sl r t pre u n j' d'
+  nnprobeW sl r t pre u b n j d, sl[k], nnprobeW sl r t pre u b n j' d'
 
-def nnfindLoop : Stmt := lblk (t, pre, u, h, n, j, d, w) {
+def nnfindLoop : Stmt := lblk (t, pre, u, h, n, j, d, w, b) {
   while d < n {
     w := NNSLOT.u64[j * 2 + t];
-    if w == 0 { return (0, 0, j, d) };
+    if w <= b { return (0, 0, j, d) };
+    w := w - b;
     if NNREC.u64[(w - 1) * 4 + t * 2] == pre && NNREC.u64[(w - 1) * 4 + t * 2 + 1] == u {
       return (1, w - 1, j, d)
     };
@@ -99,8 +102,9 @@ def nnfindLoop : Stmt := lblk (t, pre, u, h, n, j, d, w) {
   }
 }
 
-def nnumFind : FunDecl := lfn (t, pre, u, h) locals (n, j, d, w) {
+def nnumFind : FunDecl := lfn (t, pre, u, h) locals (n, j, d, w, b) {
   n := len(NNSLOT.u64) >> 1;
+  b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪nnfindLoop⟫;
   abort
@@ -114,24 +118,24 @@ theorem nnfindLoop_spec (n : Nat) (s₀ : St) :
     exec p n nnfindLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
       r.retOr (nnprobeW (s₀.mem.arr64 NNSLOT) (s₀.mem.arr64 NNREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
+        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
       nnprobeW (s₀.mem.arr64 NNSLOT) (s₀.mem.arr64 NNREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ := by
+        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
     rw [exec, step_while (w := nnfindLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [nnmatchW]
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [nnmatchW, baseW]
 
 theorem nnfindLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) nnfindLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
       r.retOr (nnprobeW (s₀.mem.arr64 NNSLOT) (s₀.mem.arr64 NNREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
+        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
       nnprobeW (s₀.mem.arr64 NNSLOT) (s₀.mem.arr64 NNREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ :=
+        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ :=
   Triple.step_exec (nnfindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `num` table. -/
@@ -143,15 +147,15 @@ theorem nnumFind_spec (n : Nat) (s₀ : St) (t pre u h : Word) :
     invoke p (exec p n) "nnum_find" [t, pre, u, h]
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
       r = nnprobeW (s₀.mem.arr64 NNSLOT) (s₀.mem.arr64 NNREC) t pre u
-        (nSlotsNN s₀.mem) (homeW h (nSlotsNN s₀.mem)) 0; ⊤⦄ := by
+        (baseW s₀.mem t) (nSlotsNN s₀.mem) (homeW h (nSlotsNN s₀.mem)) 0; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, nnumFind]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc, nnfindLoop_step_spec p n] <;>
-      finish [nSlotsNN, homeW]
+      vcgen [exec, step, evalE, evalArgs, setLoc, nnfindLoop_step_spec p n, ld64] <;>
+      finish [nSlotsNN, homeW, baseW]
 
 end find
 
@@ -168,7 +172,7 @@ def nnpushOK (m : Mem) (t : Word) : Bool :=
 /-- The memory after `nnum_push(t, pre, u, j)` appended node `c`. -/
 def nnpushMem (m : Mem) (t pre u j c : Word) : Mem :=
   ((((m.set64 NNREC (c * 4 + t * 2) pre).set64 NNREC (c * 4 + t * 2 + 1) u).set64 NNSLOT
-    (j * 2 + t) (c + 1)).set64 CTL (38 + (t &&& 1)) (c + 1))
+    (j * 2 + t) (baseW m t + c + 1)).set64 CTL (38 + (t &&& 1)) (c + 1))
 
 def nnumPush : FunDecl := lfn (t, pre, u, j) locals (c, k) {
   c := CTL.u64[38 + t];
@@ -178,7 +182,7 @@ def nnumPush : FunDecl := lfn (t, pre, u, j) locals (c, k) {
   k := c * 4 + t * 2;
   NNREC.u64[k] := pre;
   NNREC.u64[k + 1] := u;
-  NNSLOT.u64[j * 2 + t] := c + 1;
+  NNSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[38 + (t & 1)] := c + 1;
   return c
 }
@@ -199,7 +203,7 @@ theorem nnumPush_spec (n : Nat) (s₀ : St) (t pre u j : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
-      finish [nncnt, nnpushOK, nnpushMem, nSlotsNN]
+      finish [nncnt, nnpushOK, nnpushMem, nSlotsNN, baseW]
 
 end push
 
@@ -216,8 +220,8 @@ def nnS : Word := 0x28000000
 aborts. -/
 def nninternW (m : Mem) (pre u : Word) : Option (Word × Mem) :=
   let h := nnumHashW pre u
-  let rs₀ := nnprobeW (m.arr64 NNSLOT) (m.arr64 NNREC) 0 pre u (nSlotsNN m) (homeW h (nSlotsNN m)) 0
-  let rs₁ := nnprobeW (m.arr64 NNSLOT) (m.arr64 NNREC) 1 pre u (nSlotsNN m) (homeW h (nSlotsNN m)) 0
+  let rs₀ := nnprobeW (m.arr64 NNSLOT) (m.arr64 NNREC) 0 pre u (baseW m 0) (nSlotsNN m) (homeW h (nSlotsNN m)) 0
+  let rs₁ := nnprobeW (m.arr64 NNSLOT) (m.arr64 NNREC) 1 pre u (baseW m 1) (nSlotsNN m) (homeW h (nSlotsNN m)) 0
   if rs₀ = [] then none
   else if rs₀.headD 0 ≠ 0 then some (nnP + rs₀.tail.headD 0, m)
   else if rdW (m.arr64 CTL) 1 ≠ 0 then
@@ -252,7 +256,7 @@ def nnumProg : Prog :=
 /-- A memory with 8 `num` nodes and 16 slots per tier, the scratch tier closed or open. Arrays
 0‥36 (the other tables') are unused here and left empty. -/
 def nnumMem (scratch : Word) : Mem :=
-  { words := ((Array.replicate 37 #[]).set! 1 ((Array.replicate 40 0).set! 1 scratch)) ++
+  { words := ((Array.replicate 37 #[]).set! 1 ((Array.replicate 64 0).set! 1 scratch)) ++
       #[Array.replicate 32 0, Array.replicate 32 0] }
 
 /-- Intern each `(pre, u)` pair in turn; the handles. -/
@@ -285,7 +289,7 @@ theorem internNNum_spec (n : Nat) (s₀ : St) (pre u : Word) :
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         nnumFind_spec p hpf n, nnumPush_spec p hpp n] <;>
-      finish [nninternW, nnumHashW]
+      finish [nninternW, nnumHashW, baseW]
 
 end intern
 

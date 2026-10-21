@@ -84,7 +84,7 @@ theorem internNNode_str_run (pre : NIdx) (s : String) (a : AState) :
 def nstrSch : Schema := ⟨NSREC, NSSLOT, 4, 8, 36, NTag.str⟩
 
 theorem nstrSch_wf : nstrSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_nstr0 (m : Mem) (t i : Word) :
     fld nstrSch m t i 0 = rdW (m.arr64 NSREC) (i * 8 + t * 4) := by
@@ -210,9 +210,9 @@ end query
 /-! ## The bridges from the L models -/
 
 theorem nsprobeW_arm (m : Mem) (q o l h t : Word) :
-    ∀ j d, nsprobeW (m.arr64 NSSLOT) (m.arr64 NSREC) (m.arr64 POOL) t q o l h (nSlotsNs m) j d =
+    ∀ j d, nsprobeW (m.arr64 NSSLOT) (m.arr64 NSREC) (m.arr64 POOL) t q o l h (baseW m t) (nSlotsNs m) j d =
       probeArm nstrSch m t (nsMt m q o l h t)
-        (nsprobeW (m.arr64 NSSLOT) (m.arr64 NSREC) (m.arr64 POOL) t q o l h (nSlotsNs m)) j d := by
+        (nsprobeW (m.arr64 NSSLOT) (m.arr64 NSREC) (m.arr64 POOL) t q o l h (baseW m t) (nSlotsNs m)) j d := by
   intro j d; rw [nsprobeW]; rfl
 
 theorem nspushOK_room (m : Mem) (t : Word) (h : nspushOK m t = true) : PushRoom nstrSch m t := by
@@ -228,10 +228,10 @@ theorem nsinternW_eq (m : Mem) (q o l : Word) :
     nsinternW m q o l = internM nstrSch m 0 (nspushOK m)
       [q, o, l, nstrHashW q (hashN (m.arr64 POOL) o.toNat l.toNat)]
       (nsprobeW (m.arr64 NSSLOT) (m.arr64 NSREC) (m.arr64 POOL) 0 q o l
-        (nstrHashW q (hashN (m.arr64 POOL) o.toNat l.toNat)) (nSlotsNs m)
+        (nstrHashW q (hashN (m.arr64 POOL) o.toNat l.toNat)) (baseW m 0) (nSlotsNs m)
         (homeW (nstrHashW q (hashN (m.arr64 POOL) o.toNat l.toNat)) (nSlotsNs m)) 0)
       (nsprobeW (m.arr64 NSSLOT) (m.arr64 NSREC) (m.arr64 POOL) 1 q o l
-        (nstrHashW q (hashN (m.arr64 POOL) o.toNat l.toNat)) (nSlotsNs m)
+        (nstrHashW q (hashN (m.arr64 POOL) o.toNat l.toNat)) (baseW m 1) (nSlotsNs m)
         (homeW (nstrHashW q (hashN (m.arr64 POOL) o.toNat l.toNat)) (nSlotsNs m)) 0) := by
   have e0 : ∀ x, hdW nstrSch.tag.toUInt64 0 x = nsP + x := fun x => by
     simp [hdW, nstrSch, nsP, NTag.str]
@@ -288,10 +288,11 @@ theorem NStrR.grow (a : AState) (hR : NStrR m a) : NStrR m' a := by
       TierR nstrSch NsRecRel nshash m' t tb := fun t ht tb hT =>
     tierR_mono nstrSch NsRecRel nshash m m' t tb hr
       (grow_arr m m' hg NSSLOT (by decide) (by decide))
-      (grow_ctl m m' hg (36 + t) (by grind)) (fun i k => NsRecRel_grow m m' hg t i k)
+      (grow_ctl m m' hg (36 + t) (by grind))
+      (by simp only [baseW, grow_ctl m m' hg SCB (by decide)]) (fun i k => NsRecRel_grow m m' hg t i k)
       (fun i => by simp only [nshash, hr]) hT
   refine ⟨?_, by grind, hT 0 (by decide) _ hT0, hT 1 (by decide) _ hT1⟩
-  grind [store_grind]
+  exact ⟨by grind [store_grind], by rw [grow_ctl m m' hg SCB (by decide)]; exact hctl.2⟩
 
 end grow
 

@@ -50,11 +50,11 @@ def fvmatchW (r : Array Word) (t i u ty : Word) : Bool :=
 /-! ## `fvar_find(t, u, ty, h)`: the probe -/
 
 /-- The model of the probe loop, from slot `j` after `d` steps (`probeW` with `fvmatchW`). -/
-def fvprobeW (sl r : Array Word) (t u ty n j d : Word) : List Word :=
+def fvprobeW (sl r : Array Word) (t u ty b n j d : Word) : List Word :=
   if d < n then
-    if rdW sl (j * 2 + t) = 0 then [0, 0, j, d]
-    else if fvmatchW r t (rdW sl (j * 2 + t) - 1) u ty then [1, rdW sl (j * 2 + t) - 1, j, d]
-    else fvprobeW sl r t u ty n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
+    if slotV sl b (j * 2 + t) = 0 then [0, 0, j, d]
+    else if fvmatchW r t (slotV sl b (j * 2 + t) - 1) u ty then [1, slotV sl b (j * 2 + t) - 1, j, d]
+    else fvprobeW sl r t u ty b n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
   else []
 termination_by n.toNat - d.toNat
 decreasing_by
@@ -65,35 +65,38 @@ decreasing_by
   omega
 
 section probeArms
-variable (sl r : Array Word) (t u ty n j d : Word)
+variable (sl r : Array Word) (t u ty b n j d : Word)
 
 theorem fvprobeW_free (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] = 0) : fvprobeW sl r t u ty n j d = [0, 0, j, d] := by
-  rw [fvprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv]
+    (hv : sl[k] ≤ b) : fvprobeW sl r t u ty b n j d = [0, 0, j, d] := by
+  rw [fvprobeW]; simp only [hd, ↓reduceIte, slotV_free sl b _ k hk hks hv]
 
 theorem fvprobeW_hit (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] ≠ 0) (hm : fvmatchW r t (sl[k] - 1) u ty = true) :
-    fvprobeW sl r t u ty n j d = [1, sl[k] - 1, j, d] := by
-  rw [fvprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv, hm]
+    (hv : ¬ sl[k] ≤ b) (hm : fvmatchW r t (sl[k] - b - 1) u ty = true) :
+    fvprobeW sl r t u ty b n j d = [1, sl[k] - b - 1, j, d] := by
+  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
+  rw [fvprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]
 
 theorem fvprobeW_next (k : Nat) (j' d' : Word) (hd : d < n) (hk : k = (j * 2 + t).toNat)
-    (hks : k < sl.size) (hv : sl[k] ≠ 0) (hm : fvmatchW r t (sl[k] - 1) u ty = false)
+    (hks : k < sl.size) (hv : ¬ sl[k] ≤ b) (hm : fvmatchW r t (sl[k] - b - 1) u ty = false)
     (hj' : j' = (j + 1) * (if j + 1 < n then 1 else 0)) (hd' : d' = d + 1) :
-    fvprobeW sl r t u ty n j d = fvprobeW sl r t u ty n j' d' := by
+    fvprobeW sl r t u ty b n j d = fvprobeW sl r t u ty b n j' d' := by
   subst hj' hd'
-  rw [fvprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv, hm]; simp
+  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
+  rw [fvprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]; simp
 
 end probeArms
 
-grind_pattern [arena_grind] fvprobeW_free => fvprobeW sl r t u ty n j d, sl[k]
-grind_pattern [arena_grind] fvprobeW_hit => fvprobeW sl r t u ty n j d, sl[k]
+grind_pattern [arena_grind] fvprobeW_free => fvprobeW sl r t u ty b n j d, sl[k]
+grind_pattern [arena_grind] fvprobeW_hit => fvprobeW sl r t u ty b n j d, sl[k]
 grind_pattern [arena_grind] fvprobeW_next =>
-  fvprobeW sl r t u ty n j d, sl[k], fvprobeW sl r t u ty n j' d'
+  fvprobeW sl r t u ty b n j d, sl[k], fvprobeW sl r t u ty b n j' d'
 
-def fvfindLoop : Stmt := lblk (t, u, ty, h, n, j, d, v) {
+def fvfindLoop : Stmt := lblk (t, u, ty, h, n, j, d, v, b) {
   while d < n {
     v := FVSLOT.u64[j * 2 + t];
-    if v == 0 { return (0, 0, j, d) };
+    if v <= b { return (0, 0, j, d) };
+    v := v - b;
     if FVREC.u64[(v - 1) * 4 + t * 2] == u && FVREC.u64[(v - 1) * 4 + t * 2 + 1] == ty {
       return (1, v - 1, j, d)
     };
@@ -102,8 +105,9 @@ def fvfindLoop : Stmt := lblk (t, u, ty, h, n, j, d, v) {
   }
 }
 
-def fvarFind : FunDecl := lfn (t, u, ty, h) locals (n, j, d, v) {
+def fvarFind : FunDecl := lfn (t, u, ty, h) locals (n, j, d, v, b) {
   n := len(FVSLOT.u64) >> 1;
+  b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪fvfindLoop⟫;
   abort
@@ -117,24 +121,24 @@ theorem fvfindLoop_spec (n : Nat) (s₀ : St) :
     exec p n fvfindLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
       r.retOr (fvprobeW (s₀.mem.arr64 FVSLOT) (s₀.mem.arr64 FVREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
+        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
       fvprobeW (s₀.mem.arr64 FVSLOT) (s₀.mem.arr64 FVREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ := by
+        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
     rw [exec, step_while (w := fvfindLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [fvmatchW]
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [fvmatchW, baseW]
 
 theorem fvfindLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) fvfindLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
       r.retOr (fvprobeW (s₀.mem.arr64 FVSLOT) (s₀.mem.arr64 FVREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
+        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
       fvprobeW (s₀.mem.arr64 FVSLOT) (s₀.mem.arr64 FVREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ :=
+        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ :=
   Triple.step_exec (fvfindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `fvar` table. -/
@@ -146,15 +150,15 @@ theorem fvarFind_spec (n : Nat) (s₀ : St) (t u ty h : Word) :
     invoke p (exec p n) "fvar_find" [t, u, ty, h]
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
       r = fvprobeW (s₀.mem.arr64 FVSLOT) (s₀.mem.arr64 FVREC) t u ty
-        (nSlotsFv s₀.mem) (homeW h (nSlotsFv s₀.mem)) 0; ⊤⦄ := by
+        (baseW s₀.mem t) (nSlotsFv s₀.mem) (homeW h (nSlotsFv s₀.mem)) 0; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, fvarFind]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc, fvfindLoop_step_spec p n] <;>
-      finish [nSlotsFv, homeW]
+      vcgen [exec, step, evalE, evalArgs, setLoc, fvfindLoop_step_spec p n, ld64] <;>
+      finish [nSlotsFv, homeW, baseW]
 
 end find
 
@@ -171,7 +175,7 @@ def fvpushOK (m : Mem) (t : Word) : Bool :=
 /-- The memory after `fvar_push(t, u, ty, j)` appended node `c`. -/
 def fvpushMem (m : Mem) (t u ty j c : Word) : Mem :=
   ((((m.set64 FVREC (c * 4 + t * 2) u).set64 FVREC (c * 4 + t * 2 + 1) ty).set64 FVSLOT
-    (j * 2 + t) (c + 1)).set64 CTL (26 + (t &&& 1)) (c + 1))
+    (j * 2 + t) (baseW m t + c + 1)).set64 CTL (26 + (t &&& 1)) (c + 1))
 
 def fvarPush : FunDecl := lfn (t, u, ty, j) locals (c, k) {
   c := CTL.u64[26 + t];
@@ -181,7 +185,7 @@ def fvarPush : FunDecl := lfn (t, u, ty, j) locals (c, k) {
   k := c * 4 + t * 2;
   FVREC.u64[k] := u;
   FVREC.u64[k + 1] := ty;
-  FVSLOT.u64[j * 2 + t] := c + 1;
+  FVSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[26 + (t & 1)] := c + 1;
   return c
 }
@@ -202,7 +206,7 @@ theorem fvarPush_spec (n : Nat) (s₀ : St) (t u ty j : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
-      finish [fvcnt, fvpushOK, fvpushMem, nSlotsFv]
+      finish [fvcnt, fvpushOK, fvpushMem, nSlotsFv, baseW]
 
 end push
 
@@ -225,8 +229,8 @@ def fvskipW (m : Mem) (ty : Word) : Word :=
 aborts. -/
 def fvinternW (m : Mem) (u ty : Word) : Option (Word × Mem) :=
   let h := fvarHashW u ty
-  let rs₀ := fvprobeW (m.arr64 FVSLOT) (m.arr64 FVREC) 0 u ty (nSlotsFv m) (homeW h (nSlotsFv m)) 0
-  let rs₁ := fvprobeW (m.arr64 FVSLOT) (m.arr64 FVREC) 1 u ty (nSlotsFv m) (homeW h (nSlotsFv m)) 0
+  let rs₀ := fvprobeW (m.arr64 FVSLOT) (m.arr64 FVREC) 0 u ty (baseW m 0) (nSlotsFv m) (homeW h (nSlotsFv m)) 0
+  let rs₁ := fvprobeW (m.arr64 FVSLOT) (m.arr64 FVREC) 1 u ty (baseW m 1) (nSlotsFv m) (homeW h (nSlotsFv m)) 0
   if fvskipW m ty = 0 ∧ rs₀ = [] then none
   else if fvskipW m ty = 0 ∧ rs₀.headD 0 ≠ 0 then some (fvarP + rs₀.tail.headD 0, m)
   else if rdW (m.arr64 CTL) 1 ≠ 0 then
@@ -265,7 +269,7 @@ def fvarProg : Prog :=
 /-- A memory with 8 `fvar` nodes and 16 slots per tier, the scratch tier closed or open. Arrays
 0‥24 (the other tables') are unused here and left empty. -/
 def fvarMem (scratch : Word) : Mem :=
-  { words := (Array.replicate 25 #[]).set! 1 ((Array.replicate 28 0).set! 1 scratch) ++
+  { words := (Array.replicate 25 #[]).set! 1 ((Array.replicate 64 0).set! 1 scratch) ++
       #[Array.replicate 32 0, Array.replicate 32 0] }
 
 /-- Intern each `(index, ty)` pair in turn; the handles. -/
@@ -302,7 +306,7 @@ theorem internFVar_spec (n : Nat) (s₀ : St) (u ty : Word) :
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         fvarFind_spec p hpf n, fvarPush_spec p hpp n] <;>
-      finish [fvinternW, fvskipW, fvarHashW]
+      finish [fvinternW, fvskipW, fvarHashW, baseW]
 
 end intern
 

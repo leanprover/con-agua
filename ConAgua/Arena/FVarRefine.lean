@@ -81,7 +81,7 @@ theorem internE_fvar_run (idx : Nat) (ty : EIdx) (a : AState) :
 def fvarSch : Schema := ⟨FVREC, FVSLOT, 2, 4, 26, ETag.fvar⟩
 
 theorem fvarSch_wf : fvarSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_fvar0 (m : Mem) (t i : Word) :
     fld fvarSch m t i 0 = rdW (m.arr64 FVREC) (i * 4 + t * 2) := by
@@ -162,9 +162,9 @@ end query
 /-! ## The bridges from the L models -/
 
 theorem fvprobeW_arm (m : Mem) (u ty t : Word) :
-    ∀ j d, fvprobeW (m.arr64 FVSLOT) (m.arr64 FVREC) t u ty (nSlotsFv m) j d =
+    ∀ j d, fvprobeW (m.arr64 FVSLOT) (m.arr64 FVREC) t u ty (baseW m t) (nSlotsFv m) j d =
       probeArm fvarSch m t (fvMt m u ty t)
-        (fvprobeW (m.arr64 FVSLOT) (m.arr64 FVREC) t u ty (nSlotsFv m)) j d := by
+        (fvprobeW (m.arr64 FVSLOT) (m.arr64 FVREC) t u ty (baseW m t) (nSlotsFv m)) j d := by
   intro j d; rw [fvprobeW]; rfl
 
 theorem fvpushOK_room (m : Mem) (t : Word) (h : fvpushOK m t = true) : PushRoom fvarSch m t := by
@@ -179,9 +179,9 @@ theorem fvpushMem_eq (m : Mem) (t u ty j c : Word) :
 
 theorem fvinternW_eq (m : Mem) (u ty : Word) :
     fvinternW m u ty = internM fvarSch m (fvskipW m ty) (fvpushOK m) [u, ty]
-      (fvprobeW (m.arr64 FVSLOT) (m.arr64 FVREC) 0 u ty (nSlotsFv m)
+      (fvprobeW (m.arr64 FVSLOT) (m.arr64 FVREC) 0 u ty (baseW m 0) (nSlotsFv m)
         (homeW (fvarHashW u ty) (nSlotsFv m)) 0)
-      (fvprobeW (m.arr64 FVSLOT) (m.arr64 FVREC) 1 u ty (nSlotsFv m)
+      (fvprobeW (m.arr64 FVSLOT) (m.arr64 FVREC) 1 u ty (baseW m 1) (nSlotsFv m)
         (homeW (fvarHashW u ty) (nSlotsFv m)) 0) := by
   have e0 : ∀ x, hdW fvarSch.tag.toUInt64 0 x = fvarP + x := fun x => by
     simp [hdW, fvarSch, fvarP, ETag.fvar]

@@ -55,11 +55,11 @@ def famatchW (r : Array Word) (t i ty body : Word) : Bool :=
 /-! ## `forall_find(t, ty, body, h)`: the probe -/
 
 /-- The model of the probe loop, from slot `j` after `d` steps (`probeW` with `famatchW`). -/
-def faprobeW (sl r : Array Word) (t ty body n j d : Word) : List Word :=
+def faprobeW (sl r : Array Word) (t ty body b n j d : Word) : List Word :=
   if d < n then
-    if rdW sl (j * 2 + t) = 0 then [0, 0, j, d]
-    else if famatchW r t (rdW sl (j * 2 + t) - 1) ty body then [1, rdW sl (j * 2 + t) - 1, j, d]
-    else faprobeW sl r t ty body n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
+    if slotV sl b (j * 2 + t) = 0 then [0, 0, j, d]
+    else if famatchW r t (slotV sl b (j * 2 + t) - 1) ty body then [1, slotV sl b (j * 2 + t) - 1, j, d]
+    else faprobeW sl r t ty body b n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
   else []
 termination_by n.toNat - d.toNat
 decreasing_by
@@ -70,35 +70,38 @@ decreasing_by
   omega
 
 section probeArms
-variable (sl r : Array Word) (t ty body n j d : Word)
+variable (sl r : Array Word) (t ty body b n j d : Word)
 
 theorem faprobeW_free (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] = 0) : faprobeW sl r t ty body n j d = [0, 0, j, d] := by
-  rw [faprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv]
+    (hv : sl[k] ≤ b) : faprobeW sl r t ty body b n j d = [0, 0, j, d] := by
+  rw [faprobeW]; simp only [hd, ↓reduceIte, slotV_free sl b _ k hk hks hv]
 
 theorem faprobeW_hit (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] ≠ 0) (hm : famatchW r t (sl[k] - 1) ty body = true) :
-    faprobeW sl r t ty body n j d = [1, sl[k] - 1, j, d] := by
-  rw [faprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv, hm]
+    (hv : ¬ sl[k] ≤ b) (hm : famatchW r t (sl[k] - b - 1) ty body = true) :
+    faprobeW sl r t ty body b n j d = [1, sl[k] - b - 1, j, d] := by
+  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
+  rw [faprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]
 
 theorem faprobeW_next (k : Nat) (j' d' : Word) (hd : d < n) (hk : k = (j * 2 + t).toNat)
-    (hks : k < sl.size) (hv : sl[k] ≠ 0) (hm : famatchW r t (sl[k] - 1) ty body = false)
+    (hks : k < sl.size) (hv : ¬ sl[k] ≤ b) (hm : famatchW r t (sl[k] - b - 1) ty body = false)
     (hj' : j' = (j + 1) * (if j + 1 < n then 1 else 0)) (hd' : d' = d + 1) :
-    faprobeW sl r t ty body n j d = faprobeW sl r t ty body n j' d' := by
+    faprobeW sl r t ty body b n j d = faprobeW sl r t ty body b n j' d' := by
   subst hj' hd'
-  rw [faprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv, hm]; simp
+  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
+  rw [faprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]; simp
 
 end probeArms
 
-grind_pattern [arena_grind] faprobeW_free => faprobeW sl r t ty body n j d, sl[k]
-grind_pattern [arena_grind] faprobeW_hit => faprobeW sl r t ty body n j d, sl[k]
+grind_pattern [arena_grind] faprobeW_free => faprobeW sl r t ty body b n j d, sl[k]
+grind_pattern [arena_grind] faprobeW_hit => faprobeW sl r t ty body b n j d, sl[k]
 grind_pattern [arena_grind] faprobeW_next =>
-  faprobeW sl r t ty body n j d, sl[k], faprobeW sl r t ty body n j' d'
+  faprobeW sl r t ty body b n j d, sl[k], faprobeW sl r t ty body b n j' d'
 
-def fafindLoop : Stmt := lblk (t, ty, body, h, n, j, d, v) {
+def fafindLoop : Stmt := lblk (t, ty, body, h, n, j, d, v, b) {
   while d < n {
     v := FASLOT.u64[j * 2 + t];
-    if v == 0 { return (0, 0, j, d) };
+    if v <= b { return (0, 0, j, d) };
+    v := v - b;
     if FAREC.u64[(v - 1) * 4 + t * 2] == ty && FAREC.u64[(v - 1) * 4 + t * 2 + 1] == body {
       return (1, v - 1, j, d)
     };
@@ -107,8 +110,9 @@ def fafindLoop : Stmt := lblk (t, ty, body, h, n, j, d, v) {
   }
 }
 
-def forallFind : FunDecl := lfn (t, ty, body, h) locals (n, j, d, v) {
+def forallFind : FunDecl := lfn (t, ty, body, h) locals (n, j, d, v, b) {
   n := len(FASLOT.u64) >> 1;
+  b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪fafindLoop⟫;
   abort
@@ -122,24 +126,24 @@ theorem fafindLoop_spec (n : Nat) (s₀ : St) :
     exec p n fafindLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
       r.retOr (faprobeW (s₀.mem.arr64 FASLOT) (s₀.mem.arr64 FAREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
+        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
       faprobeW (s₀.mem.arr64 FASLOT) (s₀.mem.arr64 FAREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ := by
+        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
     rw [exec, step_while (w := fafindLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [famatchW]
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [famatchW, baseW]
 
 theorem fafindLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) fafindLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
       r.retOr (faprobeW (s₀.mem.arr64 FASLOT) (s₀.mem.arr64 FAREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
+        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
       faprobeW (s₀.mem.arr64 FASLOT) (s₀.mem.arr64 FAREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ :=
+        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ :=
   Triple.step_exec (fafindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `forallE` table. -/
@@ -151,15 +155,15 @@ theorem forallFind_spec (n : Nat) (s₀ : St) (t ty body h : Word) :
     invoke p (exec p n) "forall_find" [t, ty, body, h]
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
       r = faprobeW (s₀.mem.arr64 FASLOT) (s₀.mem.arr64 FAREC) t ty body
-        (nSlotsFa s₀.mem) (homeW h (nSlotsFa s₀.mem)) 0; ⊤⦄ := by
+        (baseW s₀.mem t) (nSlotsFa s₀.mem) (homeW h (nSlotsFa s₀.mem)) 0; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, forallFind]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc, fafindLoop_step_spec p n] <;>
-      finish [nSlotsFa, homeW]
+      vcgen [exec, step, evalE, evalArgs, setLoc, fafindLoop_step_spec p n, ld64] <;>
+      finish [nSlotsFa, homeW, baseW]
 
 end find
 
@@ -176,7 +180,7 @@ def fapushOK (m : Mem) (t : Word) : Bool :=
 /-- The memory after `forall_push(t, ty, body, j)` appended node `c`. -/
 def fapushMem (m : Mem) (t ty body j c : Word) : Mem :=
   ((((m.set64 FAREC (c * 4 + t * 2) ty).set64 FAREC (c * 4 + t * 2 + 1) body).set64 FASLOT
-    (j * 2 + t) (c + 1)).set64 CTL (30 + (t &&& 1)) (c + 1))
+    (j * 2 + t) (baseW m t + c + 1)).set64 CTL (30 + (t &&& 1)) (c + 1))
 
 def forallPush : FunDecl := lfn (t, ty, body, j) locals (c, k) {
   c := CTL.u64[30 + t];
@@ -186,7 +190,7 @@ def forallPush : FunDecl := lfn (t, ty, body, j) locals (c, k) {
   k := c * 4 + t * 2;
   FAREC.u64[k] := ty;
   FAREC.u64[k + 1] := body;
-  FASLOT.u64[j * 2 + t] := c + 1;
+  FASLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[30 + (t & 1)] := c + 1;
   return c
 }
@@ -207,7 +211,7 @@ theorem forallPush_spec (n : Nat) (s₀ : St) (t ty body j : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
-      finish [facnt, fapushOK, fapushMem, nSlotsFa]
+      finish [facnt, fapushOK, fapushMem, nSlotsFa, baseW]
 
 end push
 
@@ -232,8 +236,8 @@ def faskipW (m : Mem) (ty body : Word) : Word :=
 aborts. -/
 def fainternW (m : Mem) (ty body : Word) : Option (Word × Mem) :=
   let h := forallHashW ty body
-  let rs₀ := faprobeW (m.arr64 FASLOT) (m.arr64 FAREC) 0 ty body (nSlotsFa m) (homeW h (nSlotsFa m)) 0
-  let rs₁ := faprobeW (m.arr64 FASLOT) (m.arr64 FAREC) 1 ty body (nSlotsFa m) (homeW h (nSlotsFa m)) 0
+  let rs₀ := faprobeW (m.arr64 FASLOT) (m.arr64 FAREC) 0 ty body (baseW m 0) (nSlotsFa m) (homeW h (nSlotsFa m)) 0
+  let rs₁ := faprobeW (m.arr64 FASLOT) (m.arr64 FAREC) 1 ty body (baseW m 1) (nSlotsFa m) (homeW h (nSlotsFa m)) 0
   if faskipW m ty body = 0 ∧ rs₀ = [] then none
   else if faskipW m ty body = 0 ∧ rs₀.headD 0 ≠ 0 then some (forallP + rs₀.tail.headD 0, m)
   else if rdW (m.arr64 CTL) 1 ≠ 0 then
@@ -277,8 +281,7 @@ Arrays other than `CTL`/`FAREC`/`FASLOT` are unused here and left empty; `CTL` r
 `30 + 2 = 32` words. -/
 def forallMem (scratch : Word) : Mem :=
   { words := #[#[],
-      #[0, scratch, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0],
+      (#[0, scratch] ++ Array.replicate 62 0),
       #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[],
       #[], #[], #[], #[], #[], #[], #[], #[], #[],
       Array.replicate 32 0, Array.replicate 32 0] }
@@ -317,7 +320,7 @@ theorem internForallL_spec (n : Nat) (s₀ : St) (ty body : Word) :
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         forallFind_spec p hpf n, forallPush_spec p hpp n] <;>
-      finish [fainternW, faskipW, forallHashW]
+      finish [fainternW, faskipW, forallHashW, baseW]
 
 end intern
 

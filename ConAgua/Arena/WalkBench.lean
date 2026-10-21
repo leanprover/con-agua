@@ -46,7 +46,7 @@ def benchProg : Prog :=
 /-- A memory with room for `c` nodes per table the walk reads: the 41 word arrays of the arena
 layout (`ArenaRel.lean`), all zero; the tables the walk does not read are empty. -/
 def walkMem (c : Nat) : Mem :=
-  { words := #[#[], Array.replicate 42 0, #[], #[], Array.replicate (4 * c) 0,
+  { words := #[#[], Array.replicate 64 0, #[], #[], Array.replicate (4 * c) 0,
       Array.replicate (4 * c) 0] ++ Array.replicate 10 #[] ++
       #[Array.replicate (2 * c) 0, Array.replicate (4 * c) 0] ++ Array.replicate 2 #[] ++
       #[Array.replicate (6 * c) 0, Array.replicate (4 * c) 0, Array.replicate (2 * c) 0,
