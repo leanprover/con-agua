@@ -111,7 +111,7 @@ theorem size_set64L (m : Mem) (a b : ArrId) (k v : Word) :
 heap top, and the heap below the top, which does not move down. -/
 structure HeapFrame (m m' : Mem) : Prop where
   arr : ∀ A : ArrId, A ≠ CTL → A ≠ LH → m'.arr64 A = m.arr64 A
-  ctl : ∀ k : Word, k ≠ 80 → rdW (m'.arr64 CTL) k = rdW (m.arr64 CTL) k
+  ctl : ∀ k : Word, k ≠ 192 → rdW (m'.arr64 CTL) k = rdW (m.arr64 CTL) k
   top : (htop m).toNat ≤ (htop m').toNat
   lh : ∀ k : Word, k.toNat < (htop m).toNat → rdW (m'.arr64 LH) k = rdW (m.arr64 LH) k
 
@@ -119,7 +119,7 @@ theorem tierW_lt (p : Word) : (tierW p).toNat ≤ 1 := by
   have h : tierW p ≤ 1 := UInt64.and_le_right
   rw [UInt64.le_iff_toNat_le] at h; simpa using h
 
-theorem ctl_ne (c : Word) (hc : c.toNat ≤ 14) (p : Word) : c + tierW p ≠ 80 := by
+theorem ctl_ne (c : Word) (hc : c.toNat ≤ 14) (p : Word) : c + tierW p ≠ 192 := by
   intro h
   have := congrArg UInt64.toNat h
   have ht := tierW_lt p
@@ -146,7 +146,7 @@ theorem heap_off (p k : Word) (hb : ¬ p >>> 32 = 0) (hk : k.toNat ≤ 3) :
   rw [UInt64.toNat_add, hq]; simp; omega
 
 theorem lvNodeW_heap (m : Mem) (p : Word) (hb : ¬ p >>> 32 = 0) :
-    lvNodeW m p = if rdW (m.arr64 CTL) 80 < p - 4294967296 + 3 then []
+    lvNodeW m p = if rdW (m.arr64 CTL) 192 < p - 4294967296 + 3 then []
       else [rdW (m.arr64 LH) (p - 4294967296), rdW (m.arr64 LH) (p - 4294967296 + 1),
         rdW (m.arr64 LH) (p - 4294967296 + 2)] := by
   simp only [lvNodeW, hb, ne_eq, not_false_eq_true, ↓reduceIte]
@@ -170,11 +170,11 @@ theorem HeapFrame.heap (h : HeapFrame m m') (p : Word) (hb : ¬ p >>> 32 = 0)
     (hp : lvNodeW m p ≠ []) : lvNodeW m' p = lvNodeW m p := by
   rw [lvNodeW_heap m p hb] at hp ⊢
   rw [lvNodeW_heap m' p hb]
-  have hlt0 : ¬ rdW (m.arr64 CTL) 80 < p - 4294967296 + 3 := fun e => hp (by rw [if_pos e])
+  have hlt0 : ¬ rdW (m.arr64 CTL) 192 < p - 4294967296 + 3 := fun e => hp (by rw [if_pos e])
   have hlt := heap_below _ p hb hlt0
   have ht := h.top
   simp only [htop] at ht
-  have h3 : ¬ rdW (m'.arr64 CTL) 80 < p - 4294967296 + 3 := by
+  have h3 : ¬ rdW (m'.arr64 CTL) 192 < p - 4294967296 + 3 := by
     have hk := heap_off p 3 hb (by simp)
     have e3 : UInt64.toNat 3 = 3 := rfl
     rw [UInt64.lt_iff_toNat_lt, hk, e3, ← heap_sub p hb]
@@ -210,7 +210,7 @@ theorem HeapFrame.ext (h : HeapFrame m m') : HeapExt m m' := by
 
 section lhMem
 variable (m : Mem) (o g a b : Word) (hl : o.toNat + 2 < (m.arr64 LH).size)
-  (hc : 80 < (m.arr64 CTL).size) (ho : o.toNat < 2 ^ 40)
+  (hc : 192 < (m.arr64 CTL).size) (ho : o.toNat < 2 ^ 40)
 
 theorem lhMem_arr (A : ArrId) (h1 : A ≠ CTL) (h2 : A ≠ LH) : (lhMem m o g a b).arr64 A = m.arr64 A := by
   simp only [lhMem]
@@ -219,10 +219,10 @@ theorem lhMem_arr (A : ArrId) (h1 : A ≠ CTL) (h2 : A ≠ LH) : (lhMem m o g a 
 
 include hc in
 theorem lhMem_ctl (k : Word) :
-    rdW ((lhMem m o g a b).arr64 CTL) k = if k = 80 then o + 3 else rdW (m.arr64 CTL) k := by
+    rdW ((lhMem m o g a b).arr64 CTL) k = if k = 192 then o + 3 else rdW (m.arr64 CTL) k := by
   simp only [lhMem, rdW_set64L, size_set64L]
   have h1 : (CTL : ArrId) ≠ LH := by decide
-  by_cases hk : k = 80
+  by_cases hk : k = 192
   · subst hk; simp [hc]
   · simp [hk, Ne.symm hk, h1]
 
@@ -290,7 +290,7 @@ theorem lhMkW_ext {g a b r : Word} (h : lhMkW m g a b = some (r, m')) :
         simp at this; omega
       have hs : htop m + 4294967296 - 4294967296 = htop m := by simp
       simp only [lvNodeW, hb, ne_eq, not_false_eq_true, ↓reduceIte, hs]
-      rw [show rdW ((lhMem m (htop m) g a b).arr64 CTL) 80 = htop m + 3 from htop']
+      rw [show rdW ((lhMem m (htop m) g a b).arr64 CTL) 192 = htop m + 3 from htop']
       simp only [UInt64.lt_irrefl, ↓reduceIte]
       rw [lhMem_lh _ _ _ _ _ hl ht, lhMem_lh _ _ _ _ _ hl ht, lhMem_lh _ _ _ _ _ hl ht]
       have n21 : htop m + 1 ≠ htop m + 2 := by simp

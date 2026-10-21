@@ -17,9 +17,9 @@ import ConAgua.Census.Attr
 
 con-ron runs the level algorithms (`Level.simplify`, `leqCore`, `isEquiv`, `subst`, …) on
 transient `ConLeche.Level` trees read back out of the store (`readLevelM`). L has no trees, so it
-has a **scratch heap**: a word array `LH` (array 80) of three-word nodes `[tag, a, b]` (the
+has a **scratch heap**: a word array `LH` (array 192) of three-word nodes `[tag, a, b]` (the
 level store's tags: `0` zero, `1` succ `a`, `2` max `a b`, `3` imax `a b`, `4` param `a`, `a` a
-name handle word), bump-allocated below the top `CTL[80]`.
+name handle word), bump-allocated below the top `CTL[192]`.
 
 A **level pointer** is a word: below `2^32` it is a store handle (tag in bits 31…28, tier bit 27,
 index below), at or above `2^32` it is heap node `p - 2^32`. The readback is free: an algorithm
@@ -45,7 +45,7 @@ open scoped Lean.Order
 namespace L.Arena
 
 /-- The level scratch heap: three words per node. -/
-abbrev LH : ArrId := 80
+abbrev LH : ArrId := 192
 
 /-- The first heap pointer, `2^32`. -/
 def heapB : Word := 4294967296
@@ -55,7 +55,7 @@ def heapB : Word := 4294967296
 /-- **The model of `lv_node`**: `[tag, a, b]`, or `[]` where the L code aborts. -/
 def lvNodeW (m : Mem) (p : Word) : List Word :=
   if p >>> 32 ≠ 0 then
-    if rdW (m.arr64 CTL) 80 < p - 4294967296 + 3 then []
+    if rdW (m.arr64 CTL) 192 < p - 4294967296 + 3 then []
     else [rdW (m.arr64 LH) (p - 4294967296), rdW (m.arr64 LH) (p - 4294967296 + 1),
       rdW (m.arr64 LH) (p - 4294967296 + 2)]
   else if tierW p ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then []
@@ -80,7 +80,7 @@ def lvNodeW (m : Mem) (p : Word) : List Word :=
 def lvNode : FunDecl := lfn (p) locals (o, g, t, i) {
   if p >> 32 != 0 {
     o := p - 4294967296;
-    if CTL.u64[80] < o + 3 { abort };
+    if CTL.u64[192] < o + 3 { abort };
     return (LH.u64[o], LH.u64[o + 1], LH.u64[o + 2])
   };
   g := p >> 28;
@@ -117,25 +117,25 @@ theorem lvNode_spec (p : Prog) (hp : p.lookup "lv_node" = some lvNode) (n : Nat)
 
 /-! ## `lh_mk(g, a, b)`: allocate a heap node -/
 
-/-- The heap top, `CTL[80]`. -/
-def htop (m : Mem) : Word := rdW (m.arr64 CTL) 80
+/-- The heap top, `CTL[192]`. -/
+def htop (m : Mem) : Word := rdW (m.arr64 CTL) 192
 
 /-- The memory after writing node `[g, a, b]` at the top `o`. -/
 def lhMem (m : Mem) (o g a b : Word) : Mem :=
-  (((m.set64 LH o g).set64 LH (o + 1) a).set64 LH (o + 2) b).set64 CTL 80 (o + 3)
+  (((m.set64 LH o g).set64 LH (o + 1) a).set64 LH (o + 2) b).set64 CTL 192 (o + 3)
 
 /-- **The model of `lh_mk`**: the new pointer and the memory after. -/
 def lhMkW (m : Mem) (g a b : Word) : Option (Word × Mem) :=
-  if htop m >>> 40 ≠ 0 ∨ m.len64 LH ≤ htop m + 2 ∨ (m.arr64 CTL).size ≤ 80 then none
+  if htop m >>> 40 ≠ 0 ∨ m.len64 LH ≤ htop m + 2 ∨ (m.arr64 CTL).size ≤ 192 then none
   else some (htop m + 4294967296, lhMem m (htop m) g a b)
 
 def lhMk : FunDecl := lfn (g, a, b) locals (o) {
-  o := CTL.u64[80];
+  o := CTL.u64[192];
   if o >> 40 != 0 || len(LH.u64) <= o + 2 { abort };
   LH.u64[o] := g;
   LH.u64[o + 1] := a;
   LH.u64[o + 2] := b;
-  CTL.u64[80] := o + 3;
+  CTL.u64[192] := o + 3;
   return o + 4294967296
 }
 
