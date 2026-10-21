@@ -535,6 +535,18 @@ theorem scanHints_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Wo
     invoke p (exec p n) "scan_hints" [i]
     ⦃fun r s' => s' = s₀ ∧ r = [hintsN b i]; ⊤⦄ := by
   sorry
+  -- Attempted, closer but still unresolved: register hintsN/hintsObjN/hintsNumN (done above),
+  -- then (as in scanNatList_spec) provide `hstep`/`hofnat_le` and LOCAL copies of
+  -- keyEndN_lt/numEndN_le/numEndN_ge/valueAtN_le as `have`s (not just relying on their global
+  -- grind_pattern registration), then the six callee specs in the usual bracket list. This
+  -- turned the earlier "finish failed" (2 of ~30 verification conditions, genuinely exhausted
+  -- search, not a budget issue) into a single `isDefEq` timeout that does not clear even at
+  -- maxHeartbeats 3000000 (5 minutes wall-clock, still running). Whoever continues this should
+  -- likely split `scan_hints`'s object branch (the `{"regular":n}` case) into its own named
+  -- function, the same way `key_at` was split in Key.lean, so each verification condition is
+  -- shallower; the six-deep callee chain (skip_ws, key_end, key_at, value_at, num_end, skip_ws)
+  -- in one function body may simply be too much for one `vcgen`/`finish` call, independent of
+  -- which facts are in scope.
 
 include hpd hpn hpl in
 attribute [local lang_grind] natListEntryN in
