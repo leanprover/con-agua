@@ -1,4 +1,4 @@
-import ConAgua.Front.Apply
+import ConAgua.Front.ApplyDecl
 import ConAgua.Arena.DerRel
 import ConRon.Arena.Frontend.ExportC
 
@@ -54,12 +54,51 @@ structure TblR {k : IdxKind} (arr : Array Word) (t : IdTable (Idx k)) : Prop whe
   bound : ∀ (i : Nat) (e : Word), arr[i]? = some e → e.toNat ≤ 2 ^ 32
   size : arr.size < 2 ^ 63
 
+/-! ### The declarations (`DECL`, `DLP`, `ApplyDecl.lean`) -/
+
+/-- Word `k` of declaration record `i`. -/
+def dw (D : Array Word) (i k : Nat) : Word := D[1 + 8 * i + k]?.getD 0
+
+/-- The hint of a definition record: kind `q` (`1` abbrev, `2` opaque, else regular), height `h`. -/
+def hintW (q h : Word) : ConLeche.ReducibilityHint :=
+  if q = 1 then .abbrev else if q = 2 then .opaque else .regular h.toNat
+
+/-- The kind of a quotient record. -/
+def quotW (q : Word) : ConLeche.QuotKind :=
+  if q = 1 then .type else if q = 2 then .ctor else if q = 3 then .lift else .ind
+
+/-- Record `i`'s common data: name, type, the universe parameters' slice of `P` (below its top). -/
+def CVAt (D P : Array Word) (i : Nat) (cv : IConstantVal) : Prop :=
+  decI (dw D i 1) = cv.name ∧ decI (dw D i 4) = cv.type ∧
+    (dw D i 2).toNat + (dw D i 3).toNat ≤ (P[0]?.getD 0).toNat ∧
+    (sliceL P (1 + (dw D i 2).toNat) (dw D i 3).toNat).map decI = cv.levelParams
+
+/-- Record `i` represents the declaration. -/
+def DeclAt (D P : Array Word) (i : Nat) : IDeclaration → Prop
+  | .axiomDecl cv => dw D i 0 = 1 ∧ CVAt D P i cv
+  | .defnDecl cv v h => dw D i 0 = 2 ∧ CVAt D P i cv ∧ decI (dw D i 5) = v ∧ hintW (dw D i 6) (dw D i 7) = h
+  | .thmDecl cv v => dw D i 0 = 3 ∧ CVAt D P i cv ∧ decI (dw D i 5) = v
+  | .opaqueDecl cv v => dw D i 0 = 4 ∧ CVAt D P i cv ∧ decI (dw D i 5) = v
+  | .quotDecl k cv => dw D i 0 = 5 ∧ CVAt D P i cv ∧ quotW (dw D i 6) = k
+  | _ => False
+
+/-- **The declarations** `ds` are the records of `D` (word `0` their number), their universe
+parameters slices of `P` (word `0` its top). -/
+structure DeclsR (D P : Array Word) (ds : Array IDeclaration) : Prop where
+  dsize : D.size < 2 ^ 63
+  psize : P.size < 2 ^ 63
+  count : (D[0]?.getD 0).toNat = ds.size
+  room : 1 + 8 * ds.size ≤ D.size
+  ptop : (P[0]?.getD 0).toNat + 1 ≤ P.size
+  recs : ∀ i (h : i < ds.size), DeclAt D P i ds[i]
+
 /-- **The parse state relation**: `NID` represents the name table, `LID` the level table, `EID`
-the expression table. -/
+the expression table, `DECL`/`DLP` the declarations. -/
 structure StateDR (m : Mem) (st : StateD) : Prop where
   names : TblR (m.arr64 NID) st.names
   levels : TblR (m.arr64 LID) st.levels
   exprs : TblR (m.arr64 EID) st.exprs
+  decls : DeclsR (m.arr64 DECL) (m.arr64 DLP) st.decls
 
 /-! ## Reads and writes of a table -/
 
@@ -132,14 +171,16 @@ macro "tapart" : tactic => `(tactic| simp [nanonSch, NAREC, NASLOT, zeroSch, ZRE
   ISLOT, paramSch, PREC, PSLOT, POOL, NID, LID, EID, lsSch, LSREC, LSSLOT, sortSch, SOREC, SOSLOT,
   constSch, CREC, CSLOT, bvarSch, BREC, BSLOT, litSch, REC, SLOT, appSch, AREC, ASLOT, lamSch, LAREC,
   LASLOT, forallSch, FAREC, FASLOT, letSch, LEREC, LESLOT, projSch, PJREC, PJSLOT, ADER, LADER, FADER,
-  LEDER, PJDER])
+  LEDER, PJDER, DECL, DLP])
 
 /-- `StateDR` reads only `NID`, `LID` and `EID`. -/
 theorem StateDR.frame {A : List ArrId} {C : List Word} {m m' : Mem} {st : StateD}
     (hf : MemFrame A C m m') (hn : NID ∉ A) (hl : LID ∉ A) (he : EID ∉ A := by tapart)
+    (hd : DECL ∉ A := by tapart) (hq : DLP ∉ A := by tapart)
     (h : StateDR m st) : StateDR m' st :=
   ⟨by rw [hf.1 NID hn (by decide)]; exact h.names, by rw [hf.1 LID hl (by decide)]; exact h.levels,
-    by rw [hf.1 EID he (by decide)]; exact h.exprs⟩
+    by rw [hf.1 EID he (by decide)]; exact h.exprs,
+    by rw [hf.1 DECL hd (by decide), hf.1 DLP hq (by decide)]; exact h.decls⟩
 
 /-- `ArenaR` does not read `NID`, `LID` and `EID`. -/
 theorem ArenaR.frameT (m m' : Mem) (a : AState) (hR : ArenaR m a) (hf : MemFrame [64, 65, 66] [] m m') :
@@ -179,39 +220,48 @@ theorem StateDR.putName {A : List ArrId} {C : List Word} {m m₁ : Mem} {st : St
     (h : StateDR m st) (hf : MemFrame A C m m₁) (hn : NID ∉ A) (hl : LID ∉ A) (i w : Word)
     (hi : i.toNat < (m₁.arr64 NID).size) (hw : w.toNat < 2 ^ 32) (st' : StateD)
     (hst : ∀ j, st'.names.get? j = if j = i.toNat then some (decI w) else st.names.get? j)
-    (hlv : st'.levels = st.levels) (hex : st'.exprs = st.exprs) (he : EID ∉ A := by tapart) :
+    (hlv : st'.levels = st.levels) (hex : st'.exprs = st.exprs) (he : EID ∉ A := by tapart)
+    (hdc : st'.decls = st.decls := by rfl) (hd : DECL ∉ A := by tapart) (hq : DLP ∉ A := by tapart) :
     StateDR (m₁.set64 NID i (w + 1)) st' := by
-  have h₁ := h.frame hf hn hl he
-  refine ⟨?_, ?_, ?_⟩
+  have h₁ := h.frame hf hn hl he hd hq
+  refine ⟨?_, ?_, ?_, ?_⟩
   · rw [Mem.arr64_set64_same]; exact TblR.put _ _ h₁.names i w hi hw _ hst
   · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hlv]; exact h₁.levels
   · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hex]; exact h₁.exprs
+  · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide), hdc]
+    exact h₁.decls
 
 /-- Entry `i` of `LID` written: the level table with `i` bound to `w`. -/
 theorem StateDR.putLevel {A : List ArrId} {C : List Word} {m m₁ : Mem} {st : StateD}
     (h : StateDR m st) (hf : MemFrame A C m m₁) (hn : NID ∉ A) (hl : LID ∉ A) (i w : Word)
     (hi : i.toNat < (m₁.arr64 LID).size) (hw : w.toNat < 2 ^ 32) (st' : StateD)
     (hst : ∀ j, st'.levels.get? j = if j = i.toNat then some (decI w) else st.levels.get? j)
-    (hnm : st'.names = st.names) (hex : st'.exprs = st.exprs) (he : EID ∉ A := by tapart) :
+    (hnm : st'.names = st.names) (hex : st'.exprs = st.exprs) (he : EID ∉ A := by tapart)
+    (hdc : st'.decls = st.decls := by rfl) (hd : DECL ∉ A := by tapart) (hq : DLP ∉ A := by tapart) :
     StateDR (m₁.set64 LID i (w + 1)) st' := by
-  have h₁ := h.frame hf hn hl he
-  refine ⟨?_, ?_, ?_⟩
+  have h₁ := h.frame hf hn hl he hd hq
+  refine ⟨?_, ?_, ?_, ?_⟩
   · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hnm]; exact h₁.names
   · rw [Mem.arr64_set64_same]; exact TblR.put _ _ h₁.levels i w hi hw _ hst
   · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hex]; exact h₁.exprs
+  · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide), hdc]
+    exact h₁.decls
 
 /-- Entry `i` of `EID` written: the expression table with `i` bound to `w`. -/
 theorem StateDR.putExpr {A : List ArrId} {C : List Word} {m m₁ : Mem} {st : StateD}
     (h : StateDR m st) (hf : MemFrame A C m m₁) (hn : NID ∉ A) (hl : LID ∉ A) (he : EID ∉ A)
     (i w : Word) (hi : i.toNat < (m₁.arr64 EID).size) (hw : w.toNat < 2 ^ 32) (st' : StateD)
     (hst : ∀ j, st'.exprs.get? j = if j = i.toNat then some (decI w) else st.exprs.get? j)
-    (hnm : st'.names = st.names) (hlv : st'.levels = st.levels) :
+    (hnm : st'.names = st.names) (hlv : st'.levels = st.levels)
+    (hdc : st'.decls = st.decls := by rfl) (hd : DECL ∉ A := by tapart) (hq : DLP ∉ A := by tapart) :
     StateDR (m₁.set64 EID i (w + 1)) st' := by
-  have h₁ := h.frame hf hn hl he
-  refine ⟨?_, ?_, ?_⟩
+  have h₁ := h.frame hf hn hl he hd hq
+  refine ⟨?_, ?_, ?_, ?_⟩
   · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hnm]; exact h₁.names
   · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hlv]; exact h₁.levels
   · rw [Mem.arr64_set64_same]; exact TblR.put _ _ h₁.exprs i w hi hw _ hst
+  · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide), hdc]
+    exact h₁.decls
 
 /-! ## Each interning under `ArenaD`, with its memory frame -/
 
@@ -445,7 +495,7 @@ theorem levelFinish {A : List ArrId} {C : List Word} (i w : Word) (r : LevelRec)
     (hok : AM.ok x a) (hR₁ : ArenaD m₁ (AM.st x a)) (hres : AM.res x a = decI w)
     (hf : MemFrame A C m m₁) (hn : NID ∉ A) (hl : LID ∉ A) (he : EID ∉ A)
     (hi : i.toNat < (m₁.arr64 LID).size)
-    (hw : w.toNat < 2 ^ 32) :
+    (hw : w.toNat < 2 ^ 32) (hd : DECL ∉ A := by tapart) (hq : DLP ∉ A := by tapart) :
     AM.ok (parseLevelEntryD st i.toNat r) a ∧
     ArenaD (m₁.set64 LID i (w + 1)) (AM.st (parseLevelEntryD st i.toNat r) a) ∧
     StateDR (m₁.set64 LID i (w + 1)) (AM.res (parseLevelEntryD st i.toNat r) a) := by
@@ -454,7 +504,7 @@ theorem levelFinish {A : List ArrId} {C : List Word} (i w : Word) (r : LevelRec)
   rw [hX]
   refine ⟨hok₂, by rw [hst₂]; exact ArenaD.setT _ _ hR₁ _ (.inr (.inl rfl)) _ _, ?_⟩
   rw [hres₂, hres]
-  exact hD.putLevel hf hn hl i w hi hw _ (fun j => IdTable.get?_insert _ _ _ _) rfl rfl he
+  exact hD.putLevel hf hn hl i w hi hw _ (fun j => IdTable.get?_insert _ _ _ _) rfl rfl he rfl hd hq
 
 include hR hD in
 theorem applyLevelW_refines (i k a' c : Word) (h : applyLevelW m i k a' c = some m') :
@@ -754,9 +804,12 @@ theorem frontInit_refines (p : Prog) (hL : FrontLookups p)
   subst hs
   exact ⟨hloc, frontInitW_refines _ _ _ hR hD hW⟩
 
-/-- The all-zero `NID`/`LID`/`EID` represent the empty tables. -/
+/-- The all-zero `NID`/`LID`/`EID`/`DECL`/`DLP` represent the empty tables and no declaration. -/
 theorem stateDR_initMem (sizes : List Nat) (hn : sizes[64]?.getD 0 < 2 ^ 63)
-    (hl : sizes[65]?.getD 0 < 2 ^ 63) (he : sizes[66]?.getD 0 < 2 ^ 63) : StateDR (initMem sizes) StateD.blank := by
+    (hl : sizes[65]?.getD 0 < 2 ^ 63) (he : sizes[66]?.getD 0 < 2 ^ 63)
+    (hd : 1 ≤ sizes[67]?.getD 0 ∧ sizes[67]?.getD 0 < 2 ^ 63)
+    (hq : 1 ≤ sizes[68]?.getD 0 ∧ sizes[68]?.getD 0 < 2 ^ 63) :
+    StateDR (initMem sizes) StateD.blank := by
   have hT : ∀ (b : ArrId) {k : IdxKind}, sizes[b]?.getD 0 < 2 ^ 63 →
       TblR ((initMem sizes).arr64 b) ({} : IdTable (Idx k)) := by
     intro b k hb
@@ -766,6 +819,12 @@ theorem stateDR_initMem (sizes : List Nat) (hn : sizes[64]?.getD 0 < 2 ^ 63)
       by_cases h : i < sizes[b]?.getD 0 <;> simp [h]
     · rw [Array.getElem?_replicate] at he
       split at he <;> simp at he; subst he; simp
-  exact ⟨hT NID hn, hT LID hl, hT EID he⟩
+  refine ⟨hT NID hn, hT LID hl, hT EID he, ?_⟩
+  rw [initMem_arr, initMem_arr]
+  refine ⟨by simpa using hd.2, by simpa using hq.2, ?_, ?_, ?_, fun i h => by
+    simp [StateD.blank] at h⟩
+  · rw [Array.getElem?_replicate]; split <;> simp [StateD.blank]
+  · simpa [StateD.blank] using hd.1
+  · have := hq.1; rw [Array.getElem?_replicate]; split <;> simp <;> omega
 
 end L.Front
