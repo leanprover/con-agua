@@ -77,7 +77,7 @@ theorem internNNode_num_run (pre : NIdx) (n : Nat) (a : AState) :
 def nnumSch : Schema := ⟨NNREC, NNSLOT, 2, 4, 38, NTag.num⟩
 
 theorem nnumSch_wf : nnumSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_nn0 (m : Mem) (t i : Word) :
     fld nnumSch m t i 0 = rdW (m.arr64 NNREC) (i * 4 + t * 2) := by
@@ -159,9 +159,9 @@ end query
 /-! ## The bridges from the L models -/
 
 theorem nnprobeW_arm (m : Mem) (pre u t : Word) :
-    ∀ j d, nnprobeW (m.arr64 NNSLOT) (m.arr64 NNREC) t pre u (nSlotsNN m) j d =
+    ∀ j d, nnprobeW (m.arr64 NNSLOT) (m.arr64 NNREC) t pre u (baseW m t) (nSlotsNN m) j d =
       probeArm nnumSch m t (nnMt m pre u t)
-        (nnprobeW (m.arr64 NNSLOT) (m.arr64 NNREC) t pre u (nSlotsNN m)) j d := by
+        (nnprobeW (m.arr64 NNSLOT) (m.arr64 NNREC) t pre u (baseW m t) (nSlotsNN m)) j d := by
   intro j d; rw [nnprobeW]; rfl
 
 theorem nnpushOK_room (m : Mem) (t : Word) (h : nnpushOK m t = true) : PushRoom nnumSch m t := by
@@ -176,9 +176,9 @@ theorem nnpushMem_eq (m : Mem) (t pre u j c : Word) :
 
 theorem nninternW_eq (m : Mem) (pre u : Word) :
     nninternW m pre u = internM nnumSch m 0 (nnpushOK m) [pre, u]
-      (nnprobeW (m.arr64 NNSLOT) (m.arr64 NNREC) 0 pre u (nSlotsNN m)
+      (nnprobeW (m.arr64 NNSLOT) (m.arr64 NNREC) 0 pre u (baseW m 0) (nSlotsNN m)
         (homeW (nnumHashW pre u) (nSlotsNN m)) 0)
-      (nnprobeW (m.arr64 NNSLOT) (m.arr64 NNREC) 1 pre u (nSlotsNN m)
+      (nnprobeW (m.arr64 NNSLOT) (m.arr64 NNREC) 1 pre u (baseW m 1) (nSlotsNN m)
         (homeW (nnumHashW pre u) (nSlotsNN m)) 0) := by
   have e0 : ∀ x, hdW nnumSch.tag.toUInt64 0 x = nnP + x := fun x => by
     simp [hdW, nnumSch, nnP, NTag.num]

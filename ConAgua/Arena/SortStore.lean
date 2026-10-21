@@ -43,11 +43,11 @@ def somatchW (r : Array Word) (t i u : Word) : Bool := rdW r (i * 2 + t) == u
 /-! ## `sort_find(t, u, h)`: the probe -/
 
 /-- The model of the probe loop, from slot `j` after `d` steps. -/
-def soprobeW (sl r : Array Word) (t u n j d : Word) : List Word :=
+def soprobeW (sl r : Array Word) (t u b n j d : Word) : List Word :=
   if d < n then
-    if rdW sl (j * 2 + t) = 0 then [0, 0, j, d]
-    else if somatchW r t (rdW sl (j * 2 + t) - 1) u then [1, rdW sl (j * 2 + t) - 1, j, d]
-    else soprobeW sl r t u n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
+    if slotV sl b (j * 2 + t) = 0 then [0, 0, j, d]
+    else if somatchW r t (slotV sl b (j * 2 + t) - 1) u then [1, slotV sl b (j * 2 + t) - 1, j, d]
+    else soprobeW sl r t u b n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
   else []
 termination_by n.toNat - d.toNat
 decreasing_by
@@ -58,43 +58,47 @@ decreasing_by
   omega
 
 section probeArms
-variable (sl r : Array Word) (t u n j d : Word)
+variable (sl r : Array Word) (t u b n j d : Word)
 
 theorem soprobeW_free (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] = 0) : soprobeW sl r t u n j d = [0, 0, j, d] := by
-  rw [soprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv]
+    (hv : sl[k] ≤ b) : soprobeW sl r t u b n j d = [0, 0, j, d] := by
+  rw [soprobeW]; simp only [hd, ↓reduceIte, slotV_free sl b _ k hk hks hv]
 
 theorem soprobeW_hit (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] ≠ 0) (hm : somatchW r t (sl[k] - 1) u = true) :
-    soprobeW sl r t u n j d = [1, sl[k] - 1, j, d] := by
-  rw [soprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv, hm]
+    (hv : ¬ sl[k] ≤ b) (hm : somatchW r t (sl[k] - b - 1) u = true) :
+    soprobeW sl r t u b n j d = [1, sl[k] - b - 1, j, d] := by
+  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
+  rw [soprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]
 
 theorem soprobeW_next (k : Nat) (j' d' : Word) (hd : d < n) (hk : k = (j * 2 + t).toNat)
-    (hks : k < sl.size) (hv : sl[k] ≠ 0) (hm : somatchW r t (sl[k] - 1) u = false)
+    (hks : k < sl.size) (hv : ¬ sl[k] ≤ b) (hm : somatchW r t (sl[k] - b - 1) u = false)
     (hj' : j' = (j + 1) * (if j + 1 < n then 1 else 0)) (hd' : d' = d + 1) :
-    soprobeW sl r t u n j d = soprobeW sl r t u n j' d' := by
+    soprobeW sl r t u b n j d = soprobeW sl r t u b n j' d' := by
   subst hj' hd'
-  rw [soprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv, hm]; simp
+  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
+  rw [soprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]; simp
 
 end probeArms
 
-grind_pattern [arena_grind] soprobeW_free => soprobeW sl r t u n j d, sl[k]
-grind_pattern [arena_grind] soprobeW_hit => soprobeW sl r t u n j d, sl[k]
+grind_pattern [arena_grind] soprobeW_free => soprobeW sl r t u b n j d, sl[k]
+grind_pattern [arena_grind] soprobeW_hit => soprobeW sl r t u b n j d, sl[k]
 grind_pattern [arena_grind] soprobeW_next =>
-  soprobeW sl r t u n j d, sl[k], soprobeW sl r t u n j' d'
+  soprobeW sl r t u b n j d, sl[k], soprobeW sl r t u b n j' d'
 
-def sofindLoop : Stmt := lblk (t, u, h, n, j, d, v) {
+def sofindLoop : Stmt := lblk (t, u, h, n, j, d, v, b) {
   while d < n {
     v := SOSLOT.u64[j * 2 + t];
-    if v == 0 { return (0, 0, j, d) };
+    if v <= b { return (0, 0, j, d) };
+    v := v - b;
     if SOREC.u64[(v - 1) * 2 + t] == u { return (1, v - 1, j, d) };
     j := (j + 1) * u64(j + 1 < n);
     d += 1
   }
 }
 
-def sortFind : FunDecl := lfn (t, u, h) locals (n, j, d, v) {
+def sortFind : FunDecl := lfn (t, u, h) locals (n, j, d, v, b) {
   n := len(SOSLOT.u64) >> 1;
+  b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪sofindLoop⟫;
   abort
@@ -108,24 +112,24 @@ theorem sofindLoop_spec (n : Nat) (s₀ : St) :
     exec p n sofindLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
       r.retOr (soprobeW (s₀.mem.arr64 SOSLOT) (s₀.mem.arr64 SOREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 3) (s₀.loc 4) (s₀.loc 5)) =
+        (s₀.loc 7) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5)) =
       soprobeW (s₀.mem.arr64 SOSLOT) (s₀.mem.arr64 SOREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 3) (s₀.loc 4) (s₀.loc 5); ⊤⦄ := by
+        (s₀.loc 7) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5); ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
     rw [exec, step_while (w := sofindLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [somatchW]
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [somatchW, baseW]
 
 theorem sofindLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) sofindLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
       r.retOr (soprobeW (s₀.mem.arr64 SOSLOT) (s₀.mem.arr64 SOREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 3) (s₀.loc 4) (s₀.loc 5)) =
+        (s₀.loc 7) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5)) =
       soprobeW (s₀.mem.arr64 SOSLOT) (s₀.mem.arr64 SOREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 3) (s₀.loc 4) (s₀.loc 5); ⊤⦄ :=
+        (s₀.loc 7) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5); ⊤⦄ :=
   Triple.step_exec (sofindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `sort` table. -/
@@ -137,15 +141,15 @@ theorem sortFind_spec (n : Nat) (s₀ : St) (t u h : Word) :
     invoke p (exec p n) "sort_find" [t, u, h]
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
       r = soprobeW (s₀.mem.arr64 SOSLOT) (s₀.mem.arr64 SOREC) t u
-        (nSlotsSo s₀.mem) (homeW h (nSlotsSo s₀.mem)) 0; ⊤⦄ := by
+        (baseW s₀.mem t) (nSlotsSo s₀.mem) (homeW h (nSlotsSo s₀.mem)) 0; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, sortFind]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc, sofindLoop_step_spec p n] <;>
-      finish [nSlotsSo, homeW]
+      vcgen [exec, step, evalE, evalArgs, setLoc, sofindLoop_step_spec p n, ld64] <;>
+      finish [nSlotsSo, homeW, baseW]
 
 end find
 
@@ -161,7 +165,7 @@ def sopushOK (m : Mem) (t : Word) : Bool :=
 
 /-- The memory after `sort_push(t, u, j)` appended node `c`. -/
 def sopushMem (m : Mem) (t u j c : Word) : Mem :=
-  (((m.set64 SOREC (c * 2 + t) u).set64 SOSLOT (j * 2 + t) (c + 1)).set64 CTL (16 + (t &&& 1)) (c + 1))
+  (((m.set64 SOREC (c * 2 + t) u).set64 SOSLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (16 + (t &&& 1)) (c + 1))
 
 def sortPush : FunDecl := lfn (t, u, j) locals (c) {
   c := CTL.u64[16 + t];
@@ -169,7 +173,7 @@ def sortPush : FunDecl := lfn (t, u, j) locals (c) {
   if len(SOREC.u64) >> 1 <= c { abort };
   if ((len(SOSLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   SOREC.u64[c * 2 + t] := u;
-  SOSLOT.u64[j * 2 + t] := c + 1;
+  SOSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[16 + (t & 1)] := c + 1;
   return c
 }
@@ -190,7 +194,7 @@ theorem sortPush_spec (n : Nat) (s₀ : St) (t u j : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
-      finish [socnt, sopushOK, sopushMem, nSlotsSo]
+      finish [socnt, sopushOK, sopushMem, nSlotsSo, baseW]
 
 end push
 
@@ -212,8 +216,8 @@ def soskipW (m : Mem) (u : Word) : Word :=
 aborts. -/
 def sointernW (m : Mem) (u : Word) : Option (Word × Mem) :=
   let h := sortHashW u
-  let rs₀ := soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) 0 u (nSlotsSo m) (homeW h (nSlotsSo m)) 0
-  let rs₁ := soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) 1 u (nSlotsSo m) (homeW h (nSlotsSo m)) 0
+  let rs₀ := soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) 0 u (baseW m 0) (nSlotsSo m) (homeW h (nSlotsSo m)) 0
+  let rs₁ := soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) 1 u (baseW m 1) (nSlotsSo m) (homeW h (nSlotsSo m)) 0
   if soskipW m u = 0 ∧ rs₀ = [] then none
   else if soskipW m u = 0 ∧ rs₀.headD 0 ≠ 0 then some (sortP + rs₀.tail.headD 0, m)
   else if rdW (m.arr64 CTL) 1 ≠ 0 then
@@ -252,7 +256,7 @@ def sortProg : Prog :=
 /-- A memory with 8 `sort` nodes and 16 slots per tier, the scratch tier closed or open. Arrays
 0‥15 (the other tables') are unused here and left empty. -/
 def sortMem (scratch : Word) : Mem :=
-  { words := #[#[], #[0, scratch, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], #[], #[], #[],
+  { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[],
       #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], Array.replicate 16 0,
       Array.replicate 32 0] }
 
@@ -288,7 +292,7 @@ theorem internSort_spec (n : Nat) (s₀ : St) (u : Word) :
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         sortFind_spec p hpf n, sortPush_spec p hpp n] <;>
-      finish [sointernW, soskipW, sortHashW]
+      finish [sointernW, soskipW, sortHashW, baseW]
 
 end intern
 

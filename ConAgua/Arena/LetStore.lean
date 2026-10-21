@@ -48,11 +48,11 @@ def lematchW (r : Array Word) (t i ty val body : Word) : Bool :=
 /-! ## `letE_find(t, ty, val, body, h)`: the probe -/
 
 /-- The model of the probe loop, from slot `j` after `d` steps (`probeW` with `lematchW`). -/
-def leprobeW (sl r : Array Word) (t ty val body n j d : Word) : List Word :=
+def leprobeW (sl r : Array Word) (t ty val body b n j d : Word) : List Word :=
   if d < n then
-    if rdW sl (j * 2 + t) = 0 then [0, 0, j, d]
-    else if lematchW r t (rdW sl (j * 2 + t) - 1) ty val body then [1, rdW sl (j * 2 + t) - 1, j, d]
-    else leprobeW sl r t ty val body n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
+    if slotV sl b (j * 2 + t) = 0 then [0, 0, j, d]
+    else if lematchW r t (slotV sl b (j * 2 + t) - 1) ty val body then [1, slotV sl b (j * 2 + t) - 1, j, d]
+    else leprobeW sl r t ty val body b n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
   else []
 termination_by n.toNat - d.toNat
 decreasing_by
@@ -63,35 +63,38 @@ decreasing_by
   omega
 
 section probeArms
-variable (sl r : Array Word) (t ty val body n j d : Word)
+variable (sl r : Array Word) (t ty val body b n j d : Word)
 
 theorem leprobeW_free (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] = 0) : leprobeW sl r t ty val body n j d = [0, 0, j, d] := by
-  rw [leprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv]
+    (hv : sl[k] ≤ b) : leprobeW sl r t ty val body b n j d = [0, 0, j, d] := by
+  rw [leprobeW]; simp only [hd, ↓reduceIte, slotV_free sl b _ k hk hks hv]
 
 theorem leprobeW_hit (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] ≠ 0) (hm : lematchW r t (sl[k] - 1) ty val body = true) :
-    leprobeW sl r t ty val body n j d = [1, sl[k] - 1, j, d] := by
-  rw [leprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv, hm]
+    (hv : ¬ sl[k] ≤ b) (hm : lematchW r t (sl[k] - b - 1) ty val body = true) :
+    leprobeW sl r t ty val body b n j d = [1, sl[k] - b - 1, j, d] := by
+  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
+  rw [leprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]
 
 theorem leprobeW_next (k : Nat) (j' d' : Word) (hd : d < n) (hk : k = (j * 2 + t).toNat)
-    (hks : k < sl.size) (hv : sl[k] ≠ 0) (hm : lematchW r t (sl[k] - 1) ty val body = false)
+    (hks : k < sl.size) (hv : ¬ sl[k] ≤ b) (hm : lematchW r t (sl[k] - b - 1) ty val body = false)
     (hj' : j' = (j + 1) * (if j + 1 < n then 1 else 0)) (hd' : d' = d + 1) :
-    leprobeW sl r t ty val body n j d = leprobeW sl r t ty val body n j' d' := by
+    leprobeW sl r t ty val body b n j d = leprobeW sl r t ty val body b n j' d' := by
   subst hj' hd'
-  rw [leprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv, hm]; simp
+  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
+  rw [leprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]; simp
 
 end probeArms
 
-grind_pattern [arena_grind] leprobeW_free => leprobeW sl r t ty val body n j d, sl[k]
-grind_pattern [arena_grind] leprobeW_hit => leprobeW sl r t ty val body n j d, sl[k]
+grind_pattern [arena_grind] leprobeW_free => leprobeW sl r t ty val body b n j d, sl[k]
+grind_pattern [arena_grind] leprobeW_hit => leprobeW sl r t ty val body b n j d, sl[k]
 grind_pattern [arena_grind] leprobeW_next =>
-  leprobeW sl r t ty val body n j d, sl[k], leprobeW sl r t ty val body n j' d'
+  leprobeW sl r t ty val body b n j d, sl[k], leprobeW sl r t ty val body b n j' d'
 
-def lefindLoop : Stmt := lblk (t, ty, val, body, h, n, j, d, w) {
+def lefindLoop : Stmt := lblk (t, ty, val, body, h, n, j, d, w, b) {
   while d < n {
     w := LESLOT.u64[j * 2 + t];
-    if w == 0 { return (0, 0, j, d) };
+    if w <= b { return (0, 0, j, d) };
+    w := w - b;
     if LEREC.u64[(w - 1) * 6 + t * 3] == ty && LEREC.u64[(w - 1) * 6 + t * 3 + 1] == val
         && LEREC.u64[(w - 1) * 6 + t * 3 + 2] == body {
       return (1, w - 1, j, d)
@@ -101,8 +104,9 @@ def lefindLoop : Stmt := lblk (t, ty, val, body, h, n, j, d, w) {
   }
 }
 
-def letFind : FunDecl := lfn (t, ty, val, body, h) locals (n, j, d, w) {
+def letFind : FunDecl := lfn (t, ty, val, body, h) locals (n, j, d, w, b) {
   n := len(LESLOT.u64) >> 1;
+  b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪lefindLoop⟫;
   abort
@@ -116,24 +120,24 @@ theorem lefindLoop_spec (n : Nat) (s₀ : St) :
     exec p n lefindLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
       r.retOr (leprobeW (s₀.mem.arr64 LESLOT) (s₀.mem.arr64 LEREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 3) (s₀.loc 5) (s₀.loc 6) (s₀.loc 7)) =
+        (s₀.loc 2) (s₀.loc 3) (s₀.loc 9) (s₀.loc 5) (s₀.loc 6) (s₀.loc 7)) =
       leprobeW (s₀.mem.arr64 LESLOT) (s₀.mem.arr64 LEREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 3) (s₀.loc 5) (s₀.loc 6) (s₀.loc 7); ⊤⦄ := by
+        (s₀.loc 2) (s₀.loc 3) (s₀.loc 9) (s₀.loc 5) (s₀.loc 6) (s₀.loc 7); ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
     rw [exec, step_while (w := lefindLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [lematchW]
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [lematchW, baseW]
 
 theorem lefindLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) lefindLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
       r.retOr (leprobeW (s₀.mem.arr64 LESLOT) (s₀.mem.arr64 LEREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 3) (s₀.loc 5) (s₀.loc 6) (s₀.loc 7)) =
+        (s₀.loc 2) (s₀.loc 3) (s₀.loc 9) (s₀.loc 5) (s₀.loc 6) (s₀.loc 7)) =
       leprobeW (s₀.mem.arr64 LESLOT) (s₀.mem.arr64 LEREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 3) (s₀.loc 5) (s₀.loc 6) (s₀.loc 7); ⊤⦄ :=
+        (s₀.loc 2) (s₀.loc 3) (s₀.loc 9) (s₀.loc 5) (s₀.loc 6) (s₀.loc 7); ⊤⦄ :=
   Triple.step_exec (lefindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `letE` table. -/
@@ -145,15 +149,15 @@ theorem letFind_spec (n : Nat) (s₀ : St) (t ty val body h : Word) :
     invoke p (exec p n) "letE_find" [t, ty, val, body, h]
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
       r = leprobeW (s₀.mem.arr64 LESLOT) (s₀.mem.arr64 LEREC) t ty val body
-        (nSlotsLe s₀.mem) (homeW h (nSlotsLe s₀.mem)) 0; ⊤⦄ := by
+        (baseW s₀.mem t) (nSlotsLe s₀.mem) (homeW h (nSlotsLe s₀.mem)) 0; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, letFind]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc, lefindLoop_step_spec p n] <;>
-      finish [nSlotsLe, homeW]
+      vcgen [exec, step, evalE, evalArgs, setLoc, lefindLoop_step_spec p n, ld64] <;>
+      finish [nSlotsLe, homeW, baseW]
 
 end find
 
@@ -173,7 +177,7 @@ def lepushOK (m : Mem) (t : Word) : Bool :=
 /-- The memory after `letE_push(t, ty, val, body, j)` appended node `c`. -/
 def lepushMem (m : Mem) (t ty val body j c : Word) : Mem :=
   ((((m.set64 LEREC (c * 6 + t * 3) ty).set64 LEREC (c * 6 + t * 3 + 1) val).set64 LEREC
-    (c * 6 + t * 3 + 2) body).set64 LESLOT (j * 2 + t) (c + 1)).set64 CTL (20 + (t &&& 1)) (c + 1)
+    (c * 6 + t * 3 + 2) body).set64 LESLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (20 + (t &&& 1)) (c + 1)
 
 def letPush : FunDecl := lfn (t, ty, val, body, j) locals (c, k) {
   c := CTL.u64[20 + t];
@@ -184,7 +188,7 @@ def letPush : FunDecl := lfn (t, ty, val, body, j) locals (c, k) {
   LEREC.u64[k] := ty;
   LEREC.u64[k + 1] := val;
   LEREC.u64[k + 2] := body;
-  LESLOT.u64[j * 2 + t] := c + 1;
+  LESLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[20 + (t & 1)] := c + 1;
   return c
 }
@@ -205,7 +209,7 @@ theorem letPush_spec (n : Nat) (s₀ : St) (t ty val body j : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
-      finish [lecnt, lepushOK, lepushMem, nSlotsLe]
+      finish [lecnt, lepushOK, lepushMem, nSlotsLe, baseW]
 
 end push
 
@@ -227,8 +231,8 @@ def leskipW (m : Mem) (ty val body : Word) : Word :=
 aborts. -/
 def leinternW (m : Mem) (ty val body : Word) : Option (Word × Mem) :=
   let h := letHashW ty val body
-  let rs₀ := leprobeW (m.arr64 LESLOT) (m.arr64 LEREC) 0 ty val body (nSlotsLe m) (homeW h (nSlotsLe m)) 0
-  let rs₁ := leprobeW (m.arr64 LESLOT) (m.arr64 LEREC) 1 ty val body (nSlotsLe m) (homeW h (nSlotsLe m)) 0
+  let rs₀ := leprobeW (m.arr64 LESLOT) (m.arr64 LEREC) 0 ty val body (baseW m 0) (nSlotsLe m) (homeW h (nSlotsLe m)) 0
+  let rs₁ := leprobeW (m.arr64 LESLOT) (m.arr64 LEREC) 1 ty val body (baseW m 1) (nSlotsLe m) (homeW h (nSlotsLe m)) 0
   if leskipW m ty val body = 0 ∧ rs₀ = [] then none
   else if leskipW m ty val body = 0 ∧ rs₀.headD 0 ≠ 0 then some (letP + rs₀.tail.headD 0, m)
   else if rdW (m.arr64 CTL) 1 ≠ 0 then
@@ -267,7 +271,7 @@ def letProg : Prog :=
 /-- A memory with 8 `letE` nodes and 16 slots per tier, the scratch tier closed or open. Arrays
 0‥19 (the other tables') are unused here and left empty. -/
 def letMem (scratch : Word) : Mem :=
-  { words := #[#[], #[0, scratch, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0),
       #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[],
       Array.replicate 48 0, Array.replicate 32 0] }
 
@@ -303,7 +307,7 @@ theorem internLet_spec (n : Nat) (s₀ : St) (ty val body : Word) :
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         letFind_spec p hpf n, letPush_spec p hpp n] <;>
-      finish [leinternW, leskipW, letHashW]
+      finish [leinternW, leskipW, letHashW, baseW]
 
 end intern
 

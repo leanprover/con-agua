@@ -139,23 +139,24 @@ def RLocal (A₀ : List ArrId) (C₀ : List Word) : Prop :=
 `A` and `C`. -/
 def Apart (A₀ : List ArrId) (C₀ : List Word) (A : List ArrId) (C : List Word) : Prop :=
   S.ra ∉ A ∧ S.sa ∉ A ∧ (∀ b ∈ A₀, b ∉ A ∧ b ≠ CTL) ∧ S.ca ∉ C ∧ S.ca + 1 ∉ C ∧
-    (1 : Word) ∉ C ∧ ∀ x ∈ C₀, x ∉ C
+    (1 : Word) ∉ C ∧ SCB ∉ C ∧ ∀ x ∈ C₀, x ∉ C
 
 instance (A₀ : List ArrId) (C₀ : List Word) (A : List ArrId) (C : List Word) :
     Decidable (Apart S A₀ C₀ A C) := by
-  unfold Apart; infer_instance
+  unfold Apart; exact instDecidableAnd (dp := inferInstance) (dq := instDecidableAnd)
 
 /-- **`Apart` by bounds**: a table below array `ka` and below `CTL` word `kc` is apart from any
 writer of arrays `≥ ka` and `CTL` words `≥ kc` (`ArenaR.frame_above`, `ArenaR.frame_ext`). -/
 theorem apart_hi (ka kc : Nat) (A₀ : List ArrId) (C₀ : List Word) (A : List ArrId) (C : List Word)
     (hlo : S.ra < ka ∧ S.sa < ka ∧ S.ca.toNat + 1 < kc ∧ (∀ b ∈ A₀, b < ka ∧ b ≠ CTL) ∧
-      ∀ x ∈ C₀, x.toNat < kc) (hk : 1 < kc) (hkc : kc < 2 ^ 64)
+      ∀ x ∈ C₀, x.toNat < kc) (hk : 62 < kc) (hkc : kc < 2 ^ 64)
     (hA : ∀ b ∈ A, ka ≤ b) (hC : ∀ x ∈ C, kc ≤ x.toNat) : Apart S A₀ C₀ A C := by
   obtain ⟨h1, h2, h3, h4, h5⟩ := hlo
   refine ⟨fun h => Nat.not_le_of_lt h1 (hA _ h), fun h => Nat.not_le_of_lt h2 (hA _ h),
     fun b hb => ⟨fun h => Nat.not_le_of_lt (h4 b hb).1 (hA _ h), (h4 b hb).2⟩,
     fun h => by have := hC _ h; omega, fun h => ?_,
     fun h => by have := hC _ h; simp at this; omega,
+    fun h => by have := hC _ h; simp [SCB] at this; omega,
     fun x hx h => by have := hC _ h; have := h5 x hx; omega⟩
   have := hC _ h
   have : (S.ca + 1).toNat = S.ca.toNat + 1 := by
@@ -167,9 +168,10 @@ theorem storeR_frame (hS : S.WF) (A₀ : List ArrId) (C₀ : List Word) (hl : RL
     (A : List ArrId) (C : List Word) (hap : Apart S A₀ C₀ A C) (m m' : Mem) (hf : MemFrame A C m m') (on : Bool)
     (tbP tbS : Tbl α (Idx k) δ) (hR : StoreR S R hs m on tbP tbS) :
     StoreR S R hs m' on tbP tbS := by
-  obtain ⟨hra, hsa, hA₀, hc0, hc1, h1, h0⟩ := hap
+  obtain ⟨hra, hsa, hA₀, hc0, hc1, h1, hscb, h0⟩ := hap
   obtain ⟨hfa, hfc, hfs, -⟩ := hf
-  obtain ⟨hctl, hfl, hT0, hT1⟩ := hR
+  obtain ⟨⟨hctl, hb⟩, hfl, hT0, hT1⟩ := hR
+  have eb : ∀ t, baseW m' t = baseW m t := fun t => by simp only [baseW, hfc SCB hscb]
   have era := hfa S.ra hra hS.ra_ctl
   have esa := hfa S.sa hsa hS.sa_ctl
   have hloc := hl m m' era (fun b hb => hfa b (hA₀ b hb).1 (hA₀ b hb).2) (fun x hx => hfc x (h0 x hx))
@@ -180,9 +182,9 @@ theorem storeR_frame (hS : S.WF) (A₀ : List ArrId) (C₀ : List Word) (hl : RL
     rcases word_le_one t ht with rfl | rfl
     · simpa using hc0
     · exact hc1
-  refine ⟨by rw [hfs]; exact hctl, by rw [hfc 1 h1]; exact hfl, ?_, ?_⟩
-  · exact tierR_mono S R hs m m' 0 tbP era esa (ec 0 (by decide)) (hloc.1 0) (hloc.2 0) hT0
-  · exact tierR_mono S R hs m m' 1 tbS era esa (ec 1 (by decide)) (hloc.1 1) (hloc.2 1) hT1
+  refine ⟨⟨by rw [hfs]; exact hctl, by rw [hfc SCB hscb]; exact hb⟩, by rw [hfc 1 h1]; exact hfl, ?_, ?_⟩
+  · exact tierR_mono S R hs m m' 0 tbP era esa (ec 0 (by decide)) (eb 0) (hloc.1 0) (hloc.2 0) hT0
+  · exact tierR_mono S R hs m m' 1 tbS era esa (ec 1 (by decide)) (eb 1) (hloc.1 1) (hloc.2 1) hT1
 
 end frame
 

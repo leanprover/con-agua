@@ -43,11 +43,11 @@ def smatchW (r : Array Word) (t i u : Word) : Bool := rdW r (i * 2 + t) == u
 /-! ## `succ_find(t, u, h)`: the probe -/
 
 /-- The model of the probe loop, from slot `j` after `d` steps. -/
-def sprobeW (sl r : Array Word) (t u n j d : Word) : List Word :=
+def sprobeW (sl r : Array Word) (t u b n j d : Word) : List Word :=
   if d < n then
-    if rdW sl (j * 2 + t) = 0 then [0, 0, j, d]
-    else if smatchW r t (rdW sl (j * 2 + t) - 1) u then [1, rdW sl (j * 2 + t) - 1, j, d]
-    else sprobeW sl r t u n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
+    if slotV sl b (j * 2 + t) = 0 then [0, 0, j, d]
+    else if smatchW r t (slotV sl b (j * 2 + t) - 1) u then [1, slotV sl b (j * 2 + t) - 1, j, d]
+    else sprobeW sl r t u b n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
   else []
 termination_by n.toNat - d.toNat
 decreasing_by
@@ -58,43 +58,47 @@ decreasing_by
   omega
 
 section probeArms
-variable (sl r : Array Word) (t u n j d : Word)
+variable (sl r : Array Word) (t u b n j d : Word)
 
 theorem sprobeW_free (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] = 0) : sprobeW sl r t u n j d = [0, 0, j, d] := by
-  rw [sprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv]
+    (hv : sl[k] ≤ b) : sprobeW sl r t u b n j d = [0, 0, j, d] := by
+  rw [sprobeW]; simp only [hd, ↓reduceIte, slotV_free sl b _ k hk hks hv]
 
 theorem sprobeW_hit (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] ≠ 0) (hm : smatchW r t (sl[k] - 1) u = true) :
-    sprobeW sl r t u n j d = [1, sl[k] - 1, j, d] := by
-  rw [sprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv, hm]
+    (hv : ¬ sl[k] ≤ b) (hm : smatchW r t (sl[k] - b - 1) u = true) :
+    sprobeW sl r t u b n j d = [1, sl[k] - b - 1, j, d] := by
+  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
+  rw [sprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]
 
 theorem sprobeW_next (k : Nat) (j' d' : Word) (hd : d < n) (hk : k = (j * 2 + t).toNat)
-    (hks : k < sl.size) (hv : sl[k] ≠ 0) (hm : smatchW r t (sl[k] - 1) u = false)
+    (hks : k < sl.size) (hv : ¬ sl[k] ≤ b) (hm : smatchW r t (sl[k] - b - 1) u = false)
     (hj' : j' = (j + 1) * (if j + 1 < n then 1 else 0)) (hd' : d' = d + 1) :
-    sprobeW sl r t u n j d = sprobeW sl r t u n j' d' := by
+    sprobeW sl r t u b n j d = sprobeW sl r t u b n j' d' := by
   subst hj' hd'
-  rw [sprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv, hm]; simp
+  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
+  rw [sprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]; simp
 
 end probeArms
 
-grind_pattern [arena_grind] sprobeW_free => sprobeW sl r t u n j d, sl[k]
-grind_pattern [arena_grind] sprobeW_hit => sprobeW sl r t u n j d, sl[k]
+grind_pattern [arena_grind] sprobeW_free => sprobeW sl r t u b n j d, sl[k]
+grind_pattern [arena_grind] sprobeW_hit => sprobeW sl r t u b n j d, sl[k]
 grind_pattern [arena_grind] sprobeW_next =>
-  sprobeW sl r t u n j d, sl[k], sprobeW sl r t u n j' d'
+  sprobeW sl r t u b n j d, sl[k], sprobeW sl r t u b n j' d'
 
-def sfindLoop : Stmt := lblk (t, u, h, n, j, d, v) {
+def sfindLoop : Stmt := lblk (t, u, h, n, j, d, v, b) {
   while d < n {
     v := SSLOT.u64[j * 2 + t];
-    if v == 0 { return (0, 0, j, d) };
+    if v <= b { return (0, 0, j, d) };
+    v := v - b;
     if SREC.u64[(v - 1) * 2 + t] == u { return (1, v - 1, j, d) };
     j := (j + 1) * u64(j + 1 < n);
     d += 1
   }
 }
 
-def succFind : FunDecl := lfn (t, u, h) locals (n, j, d, v) {
+def succFind : FunDecl := lfn (t, u, h) locals (n, j, d, v, b) {
   n := len(SSLOT.u64) >> 1;
+  b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪sfindLoop⟫;
   abort
@@ -108,24 +112,24 @@ theorem sfindLoop_spec (n : Nat) (s₀ : St) :
     exec p n sfindLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
       r.retOr (sprobeW (s₀.mem.arr64 SSLOT) (s₀.mem.arr64 SREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 3) (s₀.loc 4) (s₀.loc 5)) =
+        (s₀.loc 7) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5)) =
       sprobeW (s₀.mem.arr64 SSLOT) (s₀.mem.arr64 SREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 3) (s₀.loc 4) (s₀.loc 5); ⊤⦄ := by
+        (s₀.loc 7) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5); ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
     rw [exec, step_while (w := sfindLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [smatchW]
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [smatchW, baseW]
 
 theorem sfindLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) sfindLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
       r.retOr (sprobeW (s₀.mem.arr64 SSLOT) (s₀.mem.arr64 SREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 3) (s₀.loc 4) (s₀.loc 5)) =
+        (s₀.loc 7) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5)) =
       sprobeW (s₀.mem.arr64 SSLOT) (s₀.mem.arr64 SREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 3) (s₀.loc 4) (s₀.loc 5); ⊤⦄ :=
+        (s₀.loc 7) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5); ⊤⦄ :=
   Triple.step_exec (sfindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `succ` table. -/
@@ -137,15 +141,15 @@ theorem succFind_spec (n : Nat) (s₀ : St) (t u h : Word) :
     invoke p (exec p n) "succ_find" [t, u, h]
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
       r = sprobeW (s₀.mem.arr64 SSLOT) (s₀.mem.arr64 SREC) t u
-        (nSlotsS s₀.mem) (homeW h (nSlotsS s₀.mem)) 0; ⊤⦄ := by
+        (baseW s₀.mem t) (nSlotsS s₀.mem) (homeW h (nSlotsS s₀.mem)) 0; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, succFind]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc, sfindLoop_step_spec p n] <;>
-      finish [nSlotsS, homeW]
+      vcgen [exec, step, evalE, evalArgs, setLoc, sfindLoop_step_spec p n, ld64] <;>
+      finish [nSlotsS, homeW, baseW]
 
 end find
 
@@ -161,7 +165,7 @@ def spushOK (m : Mem) (t : Word) : Bool :=
 
 /-- The memory after `succ_push(t, u, j)` appended node `c`. -/
 def spushMem (m : Mem) (t u j c : Word) : Mem :=
-  (((m.set64 SREC (c * 2 + t) u).set64 SSLOT (j * 2 + t) (c + 1)).set64 CTL (6 + (t &&& 1)) (c + 1))
+  (((m.set64 SREC (c * 2 + t) u).set64 SSLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (6 + (t &&& 1)) (c + 1))
 
 def succPush : FunDecl := lfn (t, u, j) locals (c) {
   c := CTL.u64[6 + t];
@@ -169,7 +173,7 @@ def succPush : FunDecl := lfn (t, u, j) locals (c) {
   if len(SREC.u64) >> 1 <= c { abort };
   if ((len(SSLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   SREC.u64[c * 2 + t] := u;
-  SSLOT.u64[j * 2 + t] := c + 1;
+  SSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[6 + (t & 1)] := c + 1;
   return c
 }
@@ -190,7 +194,7 @@ theorem succPush_spec (n : Nat) (s₀ : St) (t u j : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
-      finish [scnt, spushOK, spushMem, nSlotsS]
+      finish [scnt, spushOK, spushMem, nSlotsS, baseW]
 
 end push
 
@@ -207,8 +211,8 @@ def succS : Word := 0x18000000
 aborts. -/
 def sinternW (m : Mem) (u : Word) : Option (Word × Mem) :=
   let h := succHashW u
-  let rs₀ := sprobeW (m.arr64 SSLOT) (m.arr64 SREC) 0 u (nSlotsS m) (homeW h (nSlotsS m)) 0
-  let rs₁ := sprobeW (m.arr64 SSLOT) (m.arr64 SREC) 1 u (nSlotsS m) (homeW h (nSlotsS m)) 0
+  let rs₀ := sprobeW (m.arr64 SSLOT) (m.arr64 SREC) 0 u (baseW m 0) (nSlotsS m) (homeW h (nSlotsS m)) 0
+  let rs₁ := sprobeW (m.arr64 SSLOT) (m.arr64 SREC) 1 u (baseW m 1) (nSlotsS m) (homeW h (nSlotsS m)) 0
   if rs₀ = [] then none
   else if rs₀.headD 0 ≠ 0 then some (succP + rs₀.tail.headD 0, m)
   else if rdW (m.arr64 CTL) 1 ≠ 0 then
@@ -242,7 +246,7 @@ def succProg : Prog :=
 
 /-- A memory with 8 `succ` nodes and 16 slots per tier, the scratch tier closed or open. -/
 def succMem (scratch : Word) : Mem :=
-  { words := #[#[], #[0, scratch, 0, 0, 0, 0, 0, 0], #[], #[], #[], #[], Array.replicate 16 0,
+  { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[], #[], Array.replicate 16 0,
       Array.replicate 32 0] }
 
 /-- Intern each word in turn; the handles. -/
@@ -276,7 +280,7 @@ theorem internSucc_spec (n : Nat) (s₀ : St) (u : Word) :
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         succFind_spec p hpf n, succPush_spec p hpp n] <;>
-      finish [sinternW, succHashW]
+      finish [sinternW, succHashW, baseW]
 
 end intern
 

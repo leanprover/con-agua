@@ -80,7 +80,7 @@ theorem internLsNode_run (us : List LIdx) (a : AState) :
 def lsSch : Schema := ⟨LSREC, LSSLOT, 3, 6, 40, LsTag.list⟩
 
 theorem lsSch_wf : lsSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_ls0 (m : Mem) (t i : Word) : fld lsSch m t i 0 = rdW (m.arr64 LSREC) (i * 6 + t * 3) := by
   simp [fld, Schema.ad, lsSch]
@@ -189,9 +189,9 @@ end query
 /-! ## The bridges from the L models -/
 
 theorem lsprobeW_arm (m : Mem) (o l h t : Word) :
-    ∀ j d, lsprobeW (m.arr64 LSSLOT) (m.arr64 LSREC) (m.arr64 POOL) t o l h (nSlotsLs m) j d =
+    ∀ j d, lsprobeW (m.arr64 LSSLOT) (m.arr64 LSREC) (m.arr64 POOL) t o l h (baseW m t) (nSlotsLs m) j d =
       probeArm lsSch m t (lsMt m o l h t)
-        (lsprobeW (m.arr64 LSSLOT) (m.arr64 LSREC) (m.arr64 POOL) t o l h (nSlotsLs m)) j d := by
+        (lsprobeW (m.arr64 LSSLOT) (m.arr64 LSREC) (m.arr64 POOL) t o l h (baseW m t) (nSlotsLs m)) j d := by
   intro j d; rw [lsprobeW]; rfl
 
 theorem lspushOK_room (m : Mem) (t : Word) (h : lspushOK m t = true) : PushRoom lsSch m t := by
@@ -207,10 +207,10 @@ theorem lsinternW_eq (m : Mem) (o l : Word) :
     lsinternW m o l = internM lsSch m 0 (lspushOK m)
       [o, l, hashN (m.arr64 POOL) o.toNat l.toNat]
       (lsprobeW (m.arr64 LSSLOT) (m.arr64 LSREC) (m.arr64 POOL) 0 o l
-        (hashN (m.arr64 POOL) o.toNat l.toNat) (nSlotsLs m)
+        (hashN (m.arr64 POOL) o.toNat l.toNat) (baseW m 0) (nSlotsLs m)
         (homeW (hashN (m.arr64 POOL) o.toNat l.toNat) (nSlotsLs m)) 0)
       (lsprobeW (m.arr64 LSSLOT) (m.arr64 LSREC) (m.arr64 POOL) 1 o l
-        (hashN (m.arr64 POOL) o.toNat l.toNat) (nSlotsLs m)
+        (hashN (m.arr64 POOL) o.toNat l.toNat) (baseW m 1) (nSlotsLs m)
         (homeW (hashN (m.arr64 POOL) o.toNat l.toNat) (nSlotsLs m)) 0) := by
   have e0 : ∀ x, hdW lsSch.tag.toUInt64 0 x = lsP + x := fun x => by
     simp [hdW, lsSch, lsP, LsTag.list]

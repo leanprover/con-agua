@@ -84,7 +84,7 @@ theorem internE_proj_run (n : NIdx) (i : Nat) (e : EIdx) (a : AState) :
 def projSch : Schema := ⟨PJREC, PJSLOT, 3, 6, 32, ETag.proj⟩
 
 theorem projSch_wf : projSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_pj0 (m : Mem) (t i : Word) :
     fld projSch m t i 0 = rdW (m.arr64 PJREC) (i * 6 + t * 3) := by
@@ -175,9 +175,9 @@ end query
 /-! ## The bridges from the L models -/
 
 theorem pjprobeW_arm (m : Mem) (n u e t : Word) :
-    ∀ j d, pjprobeW (m.arr64 PJSLOT) (m.arr64 PJREC) t n u e (nSlotsPj m) j d =
+    ∀ j d, pjprobeW (m.arr64 PJSLOT) (m.arr64 PJREC) t n u e (baseW m t) (nSlotsPj m) j d =
       probeArm projSch m t (pjMt m n u e t)
-        (pjprobeW (m.arr64 PJSLOT) (m.arr64 PJREC) t n u e (nSlotsPj m)) j d := by
+        (pjprobeW (m.arr64 PJSLOT) (m.arr64 PJREC) t n u e (baseW m t) (nSlotsPj m)) j d := by
   intro j d; rw [pjprobeW]; rfl
 
 theorem pjpushOK_room (m : Mem) (t : Word) (h : pjpushOK m t = true) : PushRoom projSch m t := by
@@ -191,9 +191,9 @@ theorem pjpushMem_eq (m : Mem) (t n u e j c : Word) :
 
 theorem pjinternW_eq (m : Mem) (n u e : Word) :
     pjinternW m n u e = internM projSch m (pjskipW m n e) (pjpushOK m) [n, u, e]
-      (pjprobeW (m.arr64 PJSLOT) (m.arr64 PJREC) 0 n u e (nSlotsPj m)
+      (pjprobeW (m.arr64 PJSLOT) (m.arr64 PJREC) 0 n u e (baseW m 0) (nSlotsPj m)
         (homeW (projHashW n u e) (nSlotsPj m)) 0)
-      (pjprobeW (m.arr64 PJSLOT) (m.arr64 PJREC) 1 n u e (nSlotsPj m)
+      (pjprobeW (m.arr64 PJSLOT) (m.arr64 PJREC) 1 n u e (baseW m 1) (nSlotsPj m)
         (homeW (projHashW n u e) (nSlotsPj m)) 0) := by
   have e0 : ∀ x, hdW projSch.tag.toUInt64 0 x = projP + x := fun x => by
     simp [hdW, projSch, projP, ETag.proj]

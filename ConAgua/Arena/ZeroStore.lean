@@ -46,11 +46,11 @@ def zmatchW (_r : Array Word) (_t _i : Word) : Bool := true
 /-! ## `zero_find(t, h)`: the probe -/
 
 /-- The model of the probe loop, from slot `j` after `d` steps (`probeW` with `zmatchW`). -/
-def zprobeW (sl r : Array Word) (t n j d : Word) : List Word :=
+def zprobeW (sl r : Array Word) (t b n j d : Word) : List Word :=
   if d < n then
-    if rdW sl (j * 2 + t) = 0 then [0, 0, j, d]
-    else if zmatchW r t (rdW sl (j * 2 + t) - 1) then [1, rdW sl (j * 2 + t) - 1, j, d]
-    else zprobeW sl r t n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
+    if slotV sl b (j * 2 + t) = 0 then [0, 0, j, d]
+    else if zmatchW r t (slotV sl b (j * 2 + t) - 1) then [1, slotV sl b (j * 2 + t) - 1, j, d]
+    else zprobeW sl r t b n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
   else []
 termination_by n.toNat - d.toNat
 decreasing_by
@@ -61,43 +61,47 @@ decreasing_by
   omega
 
 section probeArms
-variable (sl r : Array Word) (t n j d : Word)
+variable (sl r : Array Word) (t b n j d : Word)
 
 theorem zprobeW_free (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] = 0) : zprobeW sl r t n j d = [0, 0, j, d] := by
-  rw [zprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv]
+    (hv : sl[k] ≤ b) : zprobeW sl r t b n j d = [0, 0, j, d] := by
+  rw [zprobeW]; simp only [hd, ↓reduceIte, slotV_free sl b _ k hk hks hv]
 
 theorem zprobeW_hit (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] ≠ 0) (hm : zmatchW r t (sl[k] - 1) = true) :
-    zprobeW sl r t n j d = [1, sl[k] - 1, j, d] := by
-  rw [zprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv, hm]
+    (hv : ¬ sl[k] ≤ b) (hm : zmatchW r t (sl[k] - b - 1) = true) :
+    zprobeW sl r t b n j d = [1, sl[k] - b - 1, j, d] := by
+  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
+  rw [zprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]
 
 theorem zprobeW_next (k : Nat) (j' d' : Word) (hd : d < n) (hk : k = (j * 2 + t).toNat)
-    (hks : k < sl.size) (hv : sl[k] ≠ 0) (hm : zmatchW r t (sl[k] - 1) = false)
+    (hks : k < sl.size) (hv : ¬ sl[k] ≤ b) (hm : zmatchW r t (sl[k] - b - 1) = false)
     (hj' : j' = (j + 1) * (if j + 1 < n then 1 else 0)) (hd' : d' = d + 1) :
-    zprobeW sl r t n j d = zprobeW sl r t n j' d' := by
+    zprobeW sl r t b n j d = zprobeW sl r t b n j' d' := by
   subst hj' hd'
-  rw [zprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv, hm]; simp
+  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
+  rw [zprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]; simp
 
 end probeArms
 
-grind_pattern [arena_grind] zprobeW_free => zprobeW sl r t n j d, sl[k]
-grind_pattern [arena_grind] zprobeW_hit => zprobeW sl r t n j d, sl[k]
+grind_pattern [arena_grind] zprobeW_free => zprobeW sl r t b n j d, sl[k]
+grind_pattern [arena_grind] zprobeW_hit => zprobeW sl r t b n j d, sl[k]
 grind_pattern [arena_grind] zprobeW_next =>
-  zprobeW sl r t n j d, sl[k], zprobeW sl r t n j' d'
+  zprobeW sl r t b n j d, sl[k], zprobeW sl r t b n j' d'
 
-def zfindLoop : Stmt := lblk (t, h, n, j, d, v) {
+def zfindLoop : Stmt := lblk (t, h, n, j, d, v, b) {
   while d < n {
     v := ZSLOT.u64[j * 2 + t];
-    if v == 0 { return (0, 0, j, d) };
+    if v <= b { return (0, 0, j, d) };
+    v := v - b;
     if 0 == 0 { return (1, v - 1, j, d) };
     j := (j + 1) * u64(j + 1 < n);
     d += 1
   }
 }
 
-def zeroFind : FunDecl := lfn (t, h) locals (n, j, d, v) {
+def zeroFind : FunDecl := lfn (t, h) locals (n, j, d, v, b) {
   n := len(ZSLOT.u64) >> 1;
+  b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪zfindLoop⟫;
   abort
@@ -111,24 +115,24 @@ theorem zfindLoop_spec (n : Nat) (s₀ : St) :
     exec p n zfindLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
       r.retOr (zprobeW (s₀.mem.arr64 ZSLOT) (s₀.mem.arr64 ZREC) (s₀.loc 0)
-        (s₀.loc 2) (s₀.loc 3) (s₀.loc 4)) =
+        (s₀.loc 6) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4)) =
       zprobeW (s₀.mem.arr64 ZSLOT) (s₀.mem.arr64 ZREC) (s₀.loc 0)
-        (s₀.loc 2) (s₀.loc 3) (s₀.loc 4); ⊤⦄ := by
+        (s₀.loc 6) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4); ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
     rw [exec, step_while (w := zfindLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [zmatchW]
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [zmatchW, baseW]
 
 theorem zfindLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) zfindLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
       r.retOr (zprobeW (s₀.mem.arr64 ZSLOT) (s₀.mem.arr64 ZREC) (s₀.loc 0)
-        (s₀.loc 2) (s₀.loc 3) (s₀.loc 4)) =
+        (s₀.loc 6) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4)) =
       zprobeW (s₀.mem.arr64 ZSLOT) (s₀.mem.arr64 ZREC) (s₀.loc 0)
-        (s₀.loc 2) (s₀.loc 3) (s₀.loc 4); ⊤⦄ :=
+        (s₀.loc 6) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4); ⊤⦄ :=
   Triple.step_exec (zfindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `zero` table. -/
@@ -140,15 +144,15 @@ theorem zeroFind_spec (n : Nat) (s₀ : St) (t h : Word) :
     invoke p (exec p n) "zero_find" [t, h]
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
       r = zprobeW (s₀.mem.arr64 ZSLOT) (s₀.mem.arr64 ZREC) t
-        (nSlotsZ s₀.mem) (homeW h (nSlotsZ s₀.mem)) 0; ⊤⦄ := by
+        (baseW s₀.mem t) (nSlotsZ s₀.mem) (homeW h (nSlotsZ s₀.mem)) 0; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, zeroFind]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc, zfindLoop_step_spec p n] <;>
-      finish [nSlotsZ, homeW]
+      vcgen [exec, step, evalE, evalArgs, setLoc, zfindLoop_step_spec p n, ld64] <;>
+      finish [nSlotsZ, homeW, baseW]
 
 end find
 
@@ -164,7 +168,7 @@ def zpushOK (m : Mem) (t : Word) : Bool :=
 
 /-- The memory after `zero_push(t, j)` appended node `c`. -/
 def zpushMem (m : Mem) (t j c : Word) : Mem :=
-  (((m.set64 ZREC (c * 2 + t) 0).set64 ZSLOT (j * 2 + t) (c + 1)).set64 CTL (8 + (t &&& 1)) (c + 1))
+  (((m.set64 ZREC (c * 2 + t) 0).set64 ZSLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (8 + (t &&& 1)) (c + 1))
 
 def zeroPush : FunDecl := lfn (t, j) locals (c) {
   c := CTL.u64[8 + t];
@@ -172,7 +176,7 @@ def zeroPush : FunDecl := lfn (t, j) locals (c) {
   if len(ZREC.u64) >> 1 <= c { abort };
   if ((len(ZSLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   ZREC.u64[c * 2 + t] := 0;
-  ZSLOT.u64[j * 2 + t] := c + 1;
+  ZSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[8 + (t & 1)] := c + 1;
   return c
 }
@@ -193,7 +197,7 @@ theorem zeroPush_spec (n : Nat) (s₀ : St) (t j : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
-      finish [zcnt, zpushOK, zpushMem, nSlotsZ]
+      finish [zcnt, zpushOK, zpushMem, nSlotsZ, baseW]
 
 end push
 
@@ -210,8 +214,8 @@ def zeroS : Word := 0x08000000
 aborts. -/
 def zinternW (m : Mem) : Option (Word × Mem) :=
   let h := zeroHashW
-  let rs₀ := zprobeW (m.arr64 ZSLOT) (m.arr64 ZREC) 0 (nSlotsZ m) (homeW h (nSlotsZ m)) 0
-  let rs₁ := zprobeW (m.arr64 ZSLOT) (m.arr64 ZREC) 1 (nSlotsZ m) (homeW h (nSlotsZ m)) 0
+  let rs₀ := zprobeW (m.arr64 ZSLOT) (m.arr64 ZREC) 0 (baseW m 0) (nSlotsZ m) (homeW h (nSlotsZ m)) 0
+  let rs₁ := zprobeW (m.arr64 ZSLOT) (m.arr64 ZREC) 1 (baseW m 1) (nSlotsZ m) (homeW h (nSlotsZ m)) 0
   if rs₀ = [] then none
   else if rs₀.headD 0 ≠ 0 then some (zeroP + rs₀.tail.headD 0, m)
   else if rdW (m.arr64 CTL) 1 ≠ 0 then
@@ -245,7 +249,7 @@ def zeroProg : Prog :=
 
 /-- A memory with 8 `zero` slots per tier, the scratch tier closed or open. -/
 def zeroMem (scratch : Word) : Mem :=
-  { words := #[#[], #[0, scratch, 0, 0, 0, 0, 0, 0, 0, 0], #[], #[], #[], #[], #[], #[],
+  { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[], #[], #[], #[],
       Array.replicate 16 0, Array.replicate 32 0] }
 
 /-- Intern `zero` `k` times in a row: the handle, every time, is the first persistent node. -/
@@ -278,7 +282,7 @@ theorem internZero_spec (n : Nat) (s₀ : St) :
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         zeroFind_spec p hpf n, zeroPush_spec p hpp n] <;>
-      finish [zinternW, zeroHashW]
+      finish [zinternW, zeroHashW, baseW]
 
 end intern
 
