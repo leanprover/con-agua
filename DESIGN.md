@@ -4067,6 +4067,92 @@ tombstone antecedent and the existential value.
 
 None.
 
+### The declaration loop, top down (`Checker.lean`)
+
+Phase A and phase B of the binary's fold (`installThenCheck`) are L code now, with the callees
+that are not translated yet as **stubs** (L body `abort`, no census tag) whose refinement specs
+are stated and proved with `sorry`. The skeleton's refinements are real proofs from those specs.
+**Census tagging**: `refines_part T "skeleton, from the stub specs"`, so the skeleton counts as
+written. Tagged `refines` (proof modulo `sorry`), the census's coverage rule made every target
+below `installFold` "proven with `sorry`" — 769 of 1350, measured — which would read as progress
+that is not there. (Note for lane `census`: coverage through a `sorry` target is a coverage
+claim about callees that may have no L code at all; a `sorry` target probably should not cover.)
+
+* L functions (all in one generic program `p` with lookups): `install_then_check()` →
+  `install_fold_go`/`install_fold_next(i, cnt, vis)` (one record per call, recursion; a pair so
+  that each body is small) → `install_decl_step(i, vis)` (the `And` pin, then the step; `false` is
+  an `abort`) → `install_step(i, vis)` (`flushCaches; enterScratch; installStepGo`, then
+  `is_none(vis, v2)` or `is_some(i, vis, v2, g)`, the two arms of `installStep` named
+  `isNoneT`/`isSomeT` on the twin side) → `pend_push(g, i, v)`; phase B
+  `check_pending_go`/`check_pending_next(j, cnt, vis)` → `check_pending(j, vis)` (the view of
+  check `j` is its recorded `vis`, `EnvR.restrictTo`).
+* Stubs (`sorry`'d specs, each the shape the real function must prove, over any program, with
+  the view word as an argument when the spec would otherwise leave it a metavariable):
+  `and_pin_ok(i)`, `install_step_go(i, vis)` (returns
+  the new view and the value group as flag/record), `promote_vg(g, vis)`, `promote_new(k, vis,
+  fresh)`, `check_value_group(vis, g)`. Lanes that translate these replace the stub and prove the
+  spec; nothing in the skeleton changes unless the spec does.
+* The bracket is lane `whnf`'s real code (landed meanwhile): `flush_caches()`, `scratch_enter()`,
+  `scratch_drop()` refine `flushCaches`/`enterScratch`/`dropScratch` under `CheckR`, and write
+  `CTL` words below 128 only, so `flush_loop`/`enter_loop`/`drop_loop` lift them to `LoopR`
+  (`PendR.frameLo`, `LoopR.of_lo`); the skeleton's theorems take `BracketProg p` (their lookups).
+* The relation threaded: `LoopR dn m a vis fe pend ds` = `CheckR` + `PendR` (pending checks:
+  `PEND` 137, three words each, `CTL[130]` of them; the value group a record in `EREC`) +
+  the front's `DeclsR` (`DECL`/`DLP`: the declarations are the front's records, record `i` =
+  fold position `i`). `CheckR.frame_hi` (new, `Tiers.lean`): a writer of arrays ≥ 137 and `CTL`
+  words ≥ 130 keeps `CheckR` (`EnvR`'s frame narrowed to the arrays it reads, 132‥136, `CTL[128]`).
+  `PMemoR` (the promotion memo, arrays 144‥) is a field-less stub like `CoreR`.
+* Errors: every twin `.error` result is an L `abort`; the posts are the `.ok` branch
+  (`FoldOut`, `FoldPost`, `PendPost`).
+
+Proof findings (the house form, `vcgen` + `finish`, with these adjustments):
+* **Pin every precondition-only argument** of a callee spec (state, `fe`, `pend`, `pm`, `vg`,
+  the view word when it is not an argument): left as `·` they stay metavariables and `finish`
+  fails with an unreadable model. Twin states after a chain are static terms
+  (`AM.st enterScratch (AM.st flushCaches a₀)`), so pinning works when each L function is one
+  straight line; branches whose twin states differ go into separate L functions (`is_none`,
+  `is_some`), and the twin's arms are named (`installStepK`).
+* An index into the declarations is `dsAt ds i` (a plain function of the word), not `ds[i.toNat]`:
+  the dependent bound proof blocks congruence between `ds[(loc 0).toNat]` and `ds[i.toNat]`, and
+  `ds.getD` is unfolded by `sym` into a `dite`.
+* **State the inner triple over the twin's pieces, assemble by hand.** Letting `grind` combine
+  `AM.ok_bind`/`AM.st_bind` with a callee's post and a conditional rewrite failed repeatedly
+  (`installStep`, `installFold`); a post listing the pieces (`AM.ok flushCaches a₀ ∧ … ∧ LoopR …`)
+  goes through, and a 3-line `triple_post` with a run lemma (`installStep_ok`,
+  `installFold_cons_ok`, `checkPending_ok`, `installThenCheck_ok`, each by `AM.run_of_ok` +
+  `simp only [StateT.run_bind, exc_ok_bind, …]`) assembles the twin.
+* Local-variable facts across several calls sometimes need help: `finish (gen := 20)` for four
+  `LocEq` hops, or a stated `hloc`/`hmemL`/`hret` (the locals and memory after `setLocs`).
+* `install_step_go`'s spec needed "flag ≠ 0 → value group ≠ none": a decoder that may fail must
+  say so in the spec, or the L branch and the twin's `match` disagree.
+
+### Measurements (`lake env lean`, one run, machine shared)
+
+| file | lines | time | notes |
+|---|---:|---:|---|
+| `EnvRec.lean` | 145 | 0.7 s | decoders only |
+| `Pins.lean` | 342 | 0.9 s | 88 generated reader theorems |
+| `PinsNatOp.lean` | 158 | 17 s | the 16-arm `vcgen` (`maxHeartbeats 2000000`) |
+| `Env.lean` | 791 | 2.4 s | rows, `find?`/`push`/`popTemp`/`erase`, `decide +kernel` write set |
+| `Checker.lean` | 1076 | 12 s user | skeleton + stub specs |
+
+L lines: `pin_at`/`pin_word` 9, `nat_op_result` 29, env 60, checker skeleton 75 (+ 5 stubs).
+
+### `sorry`s (all in `Checker.lean`, the stub specs; each is the spec its lane must prove)
+
+`andPinOk_spec`, `installStepGo_spec`, `promoteVG_spec`, `promoteNew_spec`,
+`checkValueGroup_spec`. Nothing tagged
+for the census uses them except through `refines_part`.
+
+### Not done
+
+* `internReservedPins` / `internAllPins`: they intern con-leche `Name`s and basis/pin-set `Expr`s
+  (ROM data); they need the ROM interner (ROADMAP §2 item 11, phase 0) first. `PinsR` is the
+  relation they will establish (flag word 0 set last).
+* `eraseInstalled`/`indexPromoted`/`promoteNew` (they need `promoteCIList`); `env_erase` is the
+  step they will loop. `mkIFEnv` beyond the empty environment.
+* The record pool's writer (`CTL[129]` top): the installers will build constant records in `EREC`.
+
 ## The `lit` store's `strVal` arm, and expression lines accept strings (2026-10-21, lane `strlit`)
 
 Files: `ConAgua/Arena/Store.lean`, `ConAgua/Arena/LitRefine.lean`, `ConAgua/Arena/ArenaRel.lean`

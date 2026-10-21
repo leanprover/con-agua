@@ -2,14 +2,13 @@ import ConAgua.Arena.StoreRel
 import ConRon.Arena.CheckerSplit
 
 /-!
-# Declaration records in a word pool, and their decoders
+# Environment records in a word pool, and their decoders
 
-The twin's environment values (`IConstantVal`, `IConstantInfo`, `IDeclaration`, `ValueGroup`,
-`PendingCheck`) are nested: lists of handles, lists of recursor rules (each with two lists of its
-own), an `IIndCaps` with four lists, an `IProjTable` with an `Array`. In L they are **records in
-a word pool**: a record is a run of words at a pointer `p`, every list is a slice `(off, cnt)` of
-the same pool (two words of the record), and a list of records is a slice of fixed-size records
-(recursor rules, 11 words) or a slice of record pointers (an inductive block's constants). The
+The twin's environment values (`IConstantVal`, `IConstantInfo`, `ValueGroup`) are nested: lists
+of handles, lists of recursor rules (each with two lists of its own), an `IIndCaps` with four
+lists, an `IProjTable` with an `Array`. In L they are **records in a word pool**: a record is a
+run of words at a pointer `p`, every list is a slice `(off, cnt)` of the same pool (two words of
+the record), and a list of records is a slice of fixed-size records (recursor rules, 11 words). The
 decoders below are the value relations (`decE`'s analogue): `decCI dn a p = some ci` says that
 the record at `p` in the pool `a` denotes `ci`. They read only the pool, so a pool that only grows
 above a top keeps every decoding below it (`PoolSlice`'s `Agree`).
@@ -35,14 +34,11 @@ parameter here: the consumers relate it to the store).
 | 5 | `recInfo cv major pre rules` | cv at `p+1`; `p+5`, `p+6`; rules slice `p+7`, `p+8` (11-word records) |
 | 6 | `projInfo tbl` | `tableName` `p+1`, `structName` `p+2`, lps `p+3`,`p+4`, `numParams` `p+5`, `ctor` `p+6`, `numFields` `p+7`, `structSort` `p+8`, bodies `p+9`,`p+10`, guards `p+11`,`p+12`, `off` `p+13` |
 
-`IDeclaration` (word `p` the kind): 0 `axiomDecl` (cv at `p+1`), 1 `defnDecl` (cv, `value` `p+5`,
-hint `p+6`, `p+7`), 2 `thmDecl` (cv, `value` `p+5`), 3 `opaqueDecl` (cv, `value` `p+5`),
-4 `basisDecl` (kind `p+1`: 0‥4 = `eqK` … `quotK`), 5 `indDecl` (block: a slice of `IConstantInfo`
-record pointers `p+1`, `p+2`; `numParams` `p+3`), 6 `quotDecl` (cv at `p+1`, kind `p+5`: 0‥4 =
-`type` … `sound`).
+The declarations themselves are the front's records (`DECL`/`DLP`, `Front/StateDR.lean`'s
+`DeclsR`); an inductive block will need a slice of constant records (not yet).
 
-`PendingCheck` (6 words): `vg.kind` (0 defn, 1 thm, 2 opaque), cv (4 words), `vg.jv`; then
-`pos`, `vis` (8 words in all).
+`ValueGroup` (6 words): `kind` (0 defn, 1 thm, 2 opaque), cv (4 words), `jv`. A `PendingCheck`
+is three words of `PEND` (`Checker.lean`): the value group's record pointer, `pos`, `vis`.
 -/
 
 namespace L.Arena
@@ -133,32 +129,6 @@ def decCI (p : Nat) : Option IConstantInfo := do
   | 5 => pure (.recInfo (← decCV a (p + 1)) (← nat? a (p + 5)) (← nat? a (p + 6))
       (← decRules a (← nat? a (p + 7)) (← nat? a (p + 8))))
   | 6 => pure (.projInfo (← decTbl a p))
-  | _ => none
-
-/-- The constants of a slice of record pointers. -/
-def decCIs (off cnt : Nat) : Option (List IConstantInfo) :=
-  (List.range cnt).mapM fun j => do decCI a dn (← nat? a (off + j))
-
-/-- A basis kind (0‥4). -/
-def decBasis : Nat → Option ConLeche.BasisKind
-  | 0 => some .eqK | 1 => some .natK | 2 => some .emptyK | 3 => some .falseK | 4 => some .quotK
-  | _ => none
-
-/-- A quotient kind (0‥4). -/
-def decQuot : Nat → Option ConLeche.QuotKind
-  | 0 => some .type | 1 => some .ctor | 2 => some .lift | 3 => some .ind | 4 => some .sound
-  | _ => none
-
-/-- **The declaration record at `p`.** -/
-def decDecl (p : Nat) : Option IDeclaration := do
-  match ← nat? a p with
-  | 0 => pure (.axiomDecl (← decCV a (p + 1)))
-  | 1 => pure (.defnDecl (← decCV a (p + 1)) (← hd? a (p + 5)) (← decHint a (p + 6)))
-  | 2 => pure (.thmDecl (← decCV a (p + 1)) (← hd? a (p + 5)))
-  | 3 => pure (.opaqueDecl (← decCV a (p + 1)) (← hd? a (p + 5)))
-  | 4 => pure (.basisDecl (← decBasis (← nat? a (p + 1))))
-  | 5 => pure (.indDecl (← decCIs a dn (← nat? a (p + 1)) (← nat? a (p + 2))) (← nat? a (p + 3)))
-  | 6 => pure (.quotDecl (← decQuot (← nat? a (p + 5))) (← decCV a (p + 1)))
   | _ => none
 
 /-- A value kind (0 defn, 1 thm, 2 opaque). -/
