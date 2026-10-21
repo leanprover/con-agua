@@ -70,8 +70,15 @@ per-function separation logic.
   path. Copying a built `.lake` into a fresh worktree avoids a rebuild. Remove your worktree when done.
 - Every checker run gets a `timeout`. Never use `ulimit -v`. Never wait on or kill processes by name pattern.
 - Never push. Commits end with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
-- While we pilot, `sorry` is allowed but must be listed in DESIGN.md. No new axioms, no dead code, and no
-  reference copies of old code proved equal to new.
+- This is the full project now, built top-down: `sorry` on master is fine (e.g. stubs for callees not yet
+  proved), but list each one in DESIGN.md. No new axioms, no dead code, and no reference copies of old code
+  proved equal to new.
+- **Speed over ceremony.** Green field: an occasionally broken master is acceptable if it is noticed and fixed
+  quickly. Before merging, build the targets you touched and their direct dependents, not everything.
+- **Velocity log.** Every lane, at every landing, appends one line to `docs/velocity.csv`:
+  `date,lane,model,work_min,overhead_min,note`. `work_min` is time spent on the actual task (design, code,
+  proofs). `overhead_min` is the merge red tape: merging master, waiting on builds, re-running tests, fixing
+  merge fallout, cleanup. Measure with `date` timestamps, not guesses. The note says what landed.
 - Parallel lanes each own explicit files. Before adding a lemma, grep for an existing one. A lane that started
   before others landed merges `master` into itself before landing.
 - Write in DESIGN.md (a journal: decisions, measurements, findings). Never use "load-bearing" or "licenses" in
