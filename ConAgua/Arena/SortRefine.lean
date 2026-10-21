@@ -78,7 +78,7 @@ theorem internE_sort_run (u : LIdx) (a : AState) :
 def sortSch : Schema := ⟨SOREC, SOSLOT, 1, 2, 16, ETag.sort⟩
 
 theorem sortSch_wf : sortSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_sort0 (m : Mem) (t i : Word) :
     fld sortSch m t i 0 = rdW (m.arr64 SOREC) (i * 2 + t) := by
@@ -143,8 +143,8 @@ end query
 /-! ## The bridges from the L models -/
 
 theorem soprobeW_arm (m : Mem) (u t : Word) :
-    ∀ j d, soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) t u (nSlotsSo m) j d =
-      probeArm sortSch m t (soMt m u t) (soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) t u (nSlotsSo m)) j d := by
+    ∀ j d, soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) t u (baseW m t) (nSlotsSo m) j d =
+      probeArm sortSch m t (soMt m u t) (soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) t u (baseW m t) (nSlotsSo m)) j d := by
   intro j d; rw [soprobeW]; rfl
 
 theorem sopushOK_room (m : Mem) (t : Word) (h : sopushOK m t = true) : PushRoom sortSch m t := by
@@ -159,8 +159,8 @@ theorem sopushMem_eq (m : Mem) (t u j c : Word) :
 
 theorem sointernW_eq (m : Mem) (u : Word) :
     sointernW m u = internM sortSch m (soskipW m u) (sopushOK m) [u]
-      (soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) 0 u (nSlotsSo m) (homeW (sortHashW u) (nSlotsSo m)) 0)
-      (soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) 1 u (nSlotsSo m) (homeW (sortHashW u) (nSlotsSo m)) 0) := by
+      (soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) 0 u (baseW m 0) (nSlotsSo m) (homeW (sortHashW u) (nSlotsSo m)) 0)
+      (soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) 1 u (baseW m 1) (nSlotsSo m) (homeW (sortHashW u) (nSlotsSo m)) 0) := by
   have e0 : ∀ x, hdW sortSch.tag.toUInt64 0 x = sortP + x := fun x => by
     simp [hdW, sortSch, sortP, ETag.sort]
   have e1 : ∀ x, hdW sortSch.tag.toUInt64 1 x = sortS + x := fun x => by

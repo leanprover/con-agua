@@ -3525,7 +3525,7 @@ Word arrays (byte arrays are a separate id space: `IN` = byte array 0 is the inp
 | 47 | `IMEMO` | `MemosR.inst1` | `instantiate1` memo (`inst1C`) |
 | 48 | `FRMEMO` | `MemosR.fvar` | `fvarRange` memo (`fvarBC`) |
 | 49‥55 | – | `MemosR` (reserved) | the other six walk memos |
-| 56‥63 | – | reserved (store tier) | scratch epochs, the per-declaration tree heap |
+| 56‥63 | – | reserved (store tier) | (the scratch epoch is `CTL[62]`, no array; lane `libs`) |
 | 64, 65, 66 | `NID`, `LID`, `EID` | `StateDR` (front) | the export's name/level/expression id tables |
 | 67‥95 | – | reserved (front) | declaration records, `pend` |
 | 96‥127 | – | `CoreR` (stub) | the 14 caches and the eager-depth banks |
@@ -3546,7 +3546,8 @@ Word arrays (byte arrays are a separate id space: `IN` = byte array 0 is the inp
 | 44, 45 | `MemosR.inst1` | `instantiate1` memo |
 | 46, 47 | `MemosR.fvar` | `fvarRange` memo |
 | 48‥61 | `MemosR` (reserved) | the other six memos |
-| 62, 63 | reserved | |
+| 62 | `ArenaR` (every table, `StoreR`) | scratch slot base `B` (lane `libs`): tier-1 slots hold `B + i + 1`; `scratch_reset` adds `2^32` |
+| 63 | reserved | |
 | 64‥95 | reserved (front) | |
 | 96‥127 | `CoreR` (stub) | cache stamps/counts, eager depth |
 | 128‥135 | `EnvR` (stub) | environment counters |
@@ -3742,6 +3743,119 @@ Request to lane `arch`: add `LH` (array 192) and `CTL[192]` (heap top) to the me
 * The model's view fields are named (`lvG`/`lvA`/`lvB` with `@[level_grind =]` equations to the
   `headD` projections the call's `setLocs` produces); a model that unfolded them in `finish`'s
   list confused `grind`.
+
+### `sorry`s
+
+None.
+
+## Pins, the environment, the declaration loop (2026-10-21, lane `pinsenv`)
+
+### The pin table (`Tiers.lean` `PinsR`, `Pins.lean`)
+
+`PINS` (array 128) holds the twin's `Pins`: word 0 a ready flag, words `1‥51` the 51 name slots
+(`PIN_*` at `1 + PIN_*`), 52‥54 `emptyLevels`/`zeroLevel`/`sortOne`, 55‥70 the 16 reserved names.
+`PinsR m p := flag ≠ 0 → PinsFull m p` (sizes, words below `2^32`, every field `decI` of its
+word). Every reader checks the flag and aborts on `0`, where the twin's empty table raises
+`.internal`, so the relation claims nothing before the driver fills it, and all-zero memory is
+related to `Pins.empty` (`PinsR.of_flag`). Frame: `PinsR.congr` (array 128 unchanged).
+
+* `pin_at(i)` (flag, `i < 51`, word `1 + i`) refines `pinAt` (`pinAt_refines`, post: memory
+  unchanged, `(pinAt i).run a = .ok (decI r, a)`); `pin_word(k)` the three interned values. The
+  88 named readers (`pinNat`, …, Core's `natAddName`, `boolTrueName`, `emptyLevels`, …) are one
+  line each (`PinSlotSpec`/`PinWordSpec`), generated.
+* Twin side: `pinAt_run`, `pinEmptyLevels_run`, … (`simp` with the `StateT`/`Except` unfoldings;
+  `rfl` alone does not see through the `do`).
+
+### `natOpResult`, the whole dispatch (`NatArms.lean` `natOpResultL`, `PinsNatOp.lean`)
+
+`nat_op_result(c, oa, la, ob, lb)` is in `natArmProg` (so lane `nat2`'s arm theorems apply
+verbatim): the flag, then fifteen `c == PINS[k]` tests in the twin's order, each calling its arm;
+`beq`/`ble` get `PINS[31]`, `PINS[32]`, `PINS[52]` (the pins nat2 took as arguments, whose
+hypotheses `hT`/`hF`/`hE` are now discharged from `PinsFull`). Returns `(1, h)` / `(0, 0)`
+(`decOpt`). `natOpResult_sel`: under `PinsFull` the twin runs as `natOpSel`, the same chain on
+word equality (`decI_beq`: handle words below `2^32`). `natOpResultL_refines` (`@[refines
+ConRon.Arena.natOpResult]`) is one `vcgen` over the sixteen arms with the arm specs as terms and
+`finish`; it needs `maxHeartbeats 2000000` (≈ 17 s; the default runs out in `whnf` inside
+`finish`, not a failing search). The conditional facts (`hok`/`hst`/`hres`: `natOpResult` =
+`natOpSel` when the flag is set) are given as implications, so the flag-zero abort path needs no
+case split.
+
+## Library work before the core: the scratch lifecycle (2026-10-21, lane `libs`)
+
+Lane `scale`'s recommended item 4, first half. Files: `StoreLib.lean`, `Store.lean` and the 18
+other `*Store.lean`/`*Refine.lean` (the probe and the append, mechanically), `Frame.lean`
+(`Apart`), `ArenaRel.lean` (`storeCtl` gets 62), new `Scratch.lean` (L) and `ScratchRefine.lean`.
+No `sorry`; axioms `propext`, `Classical.choice`, `Quot.sound`.
+
+### Epoch-stamped scratch slots: a slot base
+
+`SlotsOKG` required every slot of a tier to be at most its count, so emptying the scratch tier
+meant zeroing every scratch slot of 19 tables per declaration. Now a slot of tier `t` holds
+`B t + i + 1` for node `i`, with `B 0 = 0` and `B 1 = CTL[62]` (`SCB`, `baseW m t =
+CTL[62] * t`), and a slot word at or below the base reads free (`slotV`/`slotRd`). Raising `B` by
+`2^32` empties the scratch tier of every table at once: old scratch slots hold at most `B + 2^27`.
+For tier 0 nothing changes (`B 0 = 0`: `slotV … 0 x` is the raw word).
+
+* **L, per table** (19 × 5 lines, by script): `*_find` loads `b := CTL.u64[62] * t`, tests
+  `v <= b` instead of `v == 0` and continues with `v - b`; `*_push` stores `CTL.u64[62] * t + c +
+  1`. Models take the base (`aprobeW … t f a b n j d`); the probe-arm lemmas state `sl[k] ≤ b` /
+  `¬ sl[k] ≤ b` and `sl[k] - b - 1`. Every `vcgen` spec went through unchanged except for adding
+  `ld64`/`baseW` to its lists. `#guard` memories need a `CTL` of 63+ words (and `harness/walk.c`
+  now allocates 64).
+* **The library**: `slotW` reads through the base; `pushG` writes `baseW m t + c + 1`; new
+  `slotV_pushG`/`slotV_new`/`baseW_pushG` (`store_grind`) replace `pushG_slot` in the generic
+  proofs (one lesson: state the slot read after an append over the **address** `j * 2 + t`, as
+  `slotV … x`, so congruence closes the run arguments; a lemma over `slotW S m t j` with a
+  condition `j' * 2 + t' = j * 2 + t` left `grind` without the injectivity it needs). `StoreR`'s
+  first conjunct is now `count room ∧ CTL[62] < 2^63`; `Schema.WF` gets `scb` (`ca`, `ca + 1`
+  avoid 1 and 62); `Apart` gets `SCB ∉ C`; `tierR_mono` takes `baseW m' t = baseW m t`.
+* **`storeR_reset`** (library): a memory whose arrays, pool top and tier-0 count are unchanged,
+  whose base rose by `2^32` from below `2^62`, tier-1 count `0` and flag `on'`, relates the same
+  persistent table and `Tbl.empty`. No slot is read: the old `SlotsOKG` bound gives the
+  freedom of every old slot against the new base.
+
+### The bracket (`Scratch.lean`, `ScratchRefine.lean`)
+
+* `scratch_reset(f)`: `B += 2^32` (abort at `B ≥ 2^62`: 2^30 declarations), `CTL[1] := f`, the
+  19 tier-1 counts `:= 0`. `scratch_enter()` = reset(1) + the four walk memos' clears;
+  `scratch_drop()` = reset(0). `@[l_impl]`: `enterScratch`, `dropScratch`,
+  `EStore.enableScratch`/`dropScratch`.
+* `ArenaD.reset`: under `ArenaD`, `resetMem m f` relates `{a with store := EStore.reset a.store (f
+  != 0)}` (enable or drop: all four stores' scratch tables emptied and flags set): 19
+  applications of `storeR_resetMem` (one line each, generated), the pool, the memo frame, the
+  derived ranges (persistent unchanged, scratch empty). `ArenaD.enter` adds the four clears.
+* `scratchEnter_refines`/`scratchDrop_refines` (`ArenaD`) and `…_refinesC` (`CheckR`: `CoreR` is a
+  stub, so `flushCaches` is free for now; pins and environment by their frames).
+  `scratchProg_closed`: write set `CTL` words only, `decide +kernel`.
+
+### Measurements (`lake env lean`, user CPU, one run, machine under load)
+
+| file | lines before → after | user s before → after |
+|---|---:|---:|
+| `StoreLib.lean` | 699 → 786 | 9.1 → 9.7 |
+| `Store.lean` (`lit`) | 549 → 579 | 9.4 → 10.2 |
+| `AppStore.lean` (typical table) | 303 → 307 | 8.9 → 11.3 |
+| `AppRefine.lean` (typical relation) | 230 → 230 | 1.2 → 1.2 |
+| `ArenaRel.lean` | 1024 → 1024 | 23.6 → 24.4 |
+| `Scratch.lean` (new) | 165 | 4.9 |
+| `ScratchRefine.lean` (new) | 347 | 1.4 |
+
+Every table's L code grew by 3 lines (a base load, a free test, a subtraction), each relation file
+by 0–4. The 19 tables were converted by a script (`*probeW` argument insertion, arm lemmas, L
+loop, push); all 38 files built at the first attempt after the library was fixed.
+
+### For the core lanes: how to use
+
+* A **new table**: write `*_find` with `b := CTL.u64[62] * t` and the `v <= b` / `v := v - b`
+  test, `*_push` with `CTL.u64[62] * t + c + 1`, the model with a base argument; pass
+  `(baseW m t)` in the `probeArm` bridge and `(baseW m 0)`/`(baseW m 1)` in `internW`; add the
+  table to `scratchCnts`/`scratch_reset` (its `ca + 1`) and one line to `ArenaD.reset`.
+* The **declaration bracket**: call `scratch_enter` / `scratch_drop`; use `scratchEnter_refinesC`
+  / `scratchDrop_refinesC`. When `CoreR` gets fields, `flushCaches` becomes the 14 caches' clears in
+  `scratch_drop` (and `CheckR.of_bracket` needs the `CoreR` of the empty caches).
+* **Tree heap (note for lane `levels`)**: lane `levels` built its own level heap (`LH`, array
+  192, `CTL[192]`) with pointers that may be store handles, so `readLC` needs no L table. The library
+  side for tree-valued memo entries is a memory-reading value relation (next section).
 
 ### `sorry`s
 

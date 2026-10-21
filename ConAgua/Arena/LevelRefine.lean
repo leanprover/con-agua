@@ -70,7 +70,7 @@ theorem internLNode_succ_run (u : LIdx) (a : AState) :
 def succSch : Schema := ⟨SREC, SSLOT, 1, 2, 6, LTag.succ⟩
 
 theorem succSch_wf : succSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_succ0 (m : Mem) (t i : Word) : fld succSch m t i 0 = rdW (m.arr64 SREC) (i * 2 + t) := by
   simp [fld, Schema.ad, succSch]
@@ -134,8 +134,8 @@ end query
 /-! ## The bridges from the L models -/
 
 theorem sprobeW_arm (m : Mem) (u t : Word) :
-    ∀ j d, sprobeW (m.arr64 SSLOT) (m.arr64 SREC) t u (nSlotsS m) j d =
-      probeArm succSch m t (sMt m u t) (sprobeW (m.arr64 SSLOT) (m.arr64 SREC) t u (nSlotsS m)) j d := by
+    ∀ j d, sprobeW (m.arr64 SSLOT) (m.arr64 SREC) t u (baseW m t) (nSlotsS m) j d =
+      probeArm succSch m t (sMt m u t) (sprobeW (m.arr64 SSLOT) (m.arr64 SREC) t u (baseW m t) (nSlotsS m)) j d := by
   intro j d; rw [sprobeW]; rfl
 
 theorem spushOK_room (m : Mem) (t : Word) (h : spushOK m t = true) : PushRoom succSch m t := by
@@ -150,8 +150,8 @@ theorem spushMem_eq (m : Mem) (t u j c : Word) :
 
 theorem sinternW_eq (m : Mem) (u : Word) :
     sinternW m u = internM succSch m 0 (spushOK m) [u]
-      (sprobeW (m.arr64 SSLOT) (m.arr64 SREC) 0 u (nSlotsS m) (homeW (succHashW u) (nSlotsS m)) 0)
-      (sprobeW (m.arr64 SSLOT) (m.arr64 SREC) 1 u (nSlotsS m) (homeW (succHashW u) (nSlotsS m)) 0) := by
+      (sprobeW (m.arr64 SSLOT) (m.arr64 SREC) 0 u (baseW m 0) (nSlotsS m) (homeW (succHashW u) (nSlotsS m)) 0)
+      (sprobeW (m.arr64 SSLOT) (m.arr64 SREC) 1 u (baseW m 1) (nSlotsS m) (homeW (succHashW u) (nSlotsS m)) 0) := by
   have e0 : ∀ x, hdW succSch.tag.toUInt64 0 x = succP + x := fun x => by
     simp [hdW, succSch, succP, LTag.succ]
   have e1 : ∀ x, hdW succSch.tag.toUInt64 1 x = succS + x := fun x => by

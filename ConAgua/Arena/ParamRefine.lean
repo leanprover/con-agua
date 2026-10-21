@@ -73,7 +73,7 @@ theorem internLNode_param_run (n : NIdx) (a : AState) :
 def paramSch : Schema := ⟨PREC, PSLOT, 1, 2, 14, LTag.param⟩
 
 theorem paramSch_wf : paramSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_param0 (m : Mem) (t i : Word) :
     fld paramSch m t i 0 = rdW (m.arr64 PREC) (i * 2 + t) := by
@@ -139,8 +139,8 @@ end query
 /-! ## The bridges from the L models -/
 
 theorem pprobeW_arm (m : Mem) (u t : Word) :
-    ∀ j d, pprobeW (m.arr64 PSLOT) (m.arr64 PREC) t u (nSlotsP m) j d =
-      probeArm paramSch m t (pMt m u t) (pprobeW (m.arr64 PSLOT) (m.arr64 PREC) t u (nSlotsP m)) j d := by
+    ∀ j d, pprobeW (m.arr64 PSLOT) (m.arr64 PREC) t u (baseW m t) (nSlotsP m) j d =
+      probeArm paramSch m t (pMt m u t) (pprobeW (m.arr64 PSLOT) (m.arr64 PREC) t u (baseW m t) (nSlotsP m)) j d := by
   intro j d; rw [pprobeW]; rfl
 
 theorem ppushOK_room (m : Mem) (t : Word) (h : ppushOK m t = true) : PushRoom paramSch m t := by
@@ -155,8 +155,8 @@ theorem ppushMem_eq (m : Mem) (t u j c : Word) :
 
 theorem pinternW_eq (m : Mem) (u : Word) :
     pinternW m u = internM paramSch m 0 (ppushOK m) [u]
-      (pprobeW (m.arr64 PSLOT) (m.arr64 PREC) 0 u (nSlotsP m) (homeW (paramHashW u) (nSlotsP m)) 0)
-      (pprobeW (m.arr64 PSLOT) (m.arr64 PREC) 1 u (nSlotsP m) (homeW (paramHashW u) (nSlotsP m)) 0) := by
+      (pprobeW (m.arr64 PSLOT) (m.arr64 PREC) 0 u (baseW m 0) (nSlotsP m) (homeW (paramHashW u) (nSlotsP m)) 0)
+      (pprobeW (m.arr64 PSLOT) (m.arr64 PREC) 1 u (baseW m 1) (nSlotsP m) (homeW (paramHashW u) (nSlotsP m)) 0) := by
   have e0 : ∀ x, hdW paramSch.tag.toUInt64 0 x = paramP + x := fun x => by
     simp [hdW, paramSch, paramP, LTag.param]
   have e1 : ∀ x, hdW paramSch.tag.toUInt64 1 x = paramS + x := fun x => by
