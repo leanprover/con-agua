@@ -333,3 +333,29 @@ theorem decPL_length {α : Type} {f : Nat → Option α} {o l : Nat} {xs : List 
 end declemmas
 
 end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+/-! ## The pool: `iw_alloc` -/
+
+/-- The memory after `iw_alloc(k)`. -/
+def allocMem (m : Mem) (k : Word) : Mem := m.set64 CTL 200 (rdW (m.arr64 CTL) 200 + k)
+
+theorem iwAlloc_spec (p : Prog) (hp : p.lookup "iw_alloc" = some iwAlloc) (n : Nat) (s₀ : St)
+    (k : Word) (hsz : (s₀.mem.arr64 IW).size < 2 ^ 64) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "iw_alloc" [k]
+    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = allocMem s₀.mem k ∧
+      r.headD 0 = rdW (s₀.mem.arr64 CTL) 200 ∧
+      (rdW (s₀.mem.arr64 CTL) 200).toNat + k.toNat ≤ (s₀.mem.arr64 IW).size; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, iwAlloc]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64] <;>
+      finish [allocMem, Mem.len64]
+
+end L.Ind
