@@ -99,11 +99,6 @@ def NatValR (b : ByteArray) (c d : Word) (n : Nat) : Prop :=
   ∃ v e : USize, v.toUInt64 = c ∧ e.toUInt64 = d ∧ v < e ∧ skipDigits b v = e ∧
     readNatAt b v e = n
 
-/-- A string's body `[c, d)`: con-leche's `scanString` at the opening quote `v` reads `s` and
-ends at `e`, after the closing quote. -/
-def StrR (b : ByteArray) (c d : Word) (s : String) : Prop :=
-  ∃ v e : USize, v.toUInt64 + 1 = c ∧ e.toUInt64 - 1 = d ∧ ConLeche.Frontend.scanString b v = .ok s e
-
 /-- What an expression line's words say about con-leche's expression record. -/
 def ExprR (b : ByteArray) : ExprRec → Fld → Prop
   | .bvar k, f => f.pl = 8 ∧ ItemR f.a k

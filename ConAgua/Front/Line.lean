@@ -2,6 +2,7 @@ import ConAgua.Front.StateDR
 import ConAgua.Front.FieldsLink
 import ConAgua.Front.ApplyExpr
 import ConAgua.Front.FieldsExpr
+import ConAgua.Front.Unescape
 
 /-!
 # One line of the export, applied: `front_line`
@@ -28,6 +29,7 @@ open L.Arena
 open L.Scan.Member L.Scan.Values L.Scan.Records L.Scan.Line L.Front.Fields
 open L.Scan.Utf8 (byteW)
 open L.Scan.Leaves (skipWsN hasEscapeN)
+open L.Front.Unescape (strPutEscW strPutEsc_specW escSur escOne utf8Put strPutEsc)
 
 namespace L.Front
 
@@ -74,34 +76,38 @@ def applyRec : FunDecl := lfn (pl, idx, a, c, d) locals (z) {
   return 0
 }
 
-/-- A `str` name line: the body `[c, d)` without escapes, copied to the pool and applied. -/
+/-- A `str` name line: the body `[c, d)`, unescaped into the pool and applied. -/
 def applyStr : FunDecl := lfn (idx, a, c, d) locals (z, o, l) {
-  if len(IN.u8) < c { abort };
-  z := call has_escape(c, d);
-  if z != 0 { abort };
-  (o, l) := call str_put(c, d);
+  if c == 0 { abort };
+  (o, l) := call str_put_esc(c, d);
+  if len(POOL.u64) < o { abort };
+  if len(POOL.u64) - o < l { abort };
   z := call apply_nstr(idx, a, o, l);
   return 0
 }
 
 /-! ## The model -/
 
-/-- `str_put`'s memory. -/
-def strPutW (m : Mem) (vs ve : Word) : Mem :=
-  (putW m m.top vs (ve - vs) 0).set64 CTL 0 (m.top + (ve - vs))
-
-instance (m : Mem) (vs ve : Word) : Decidable (strPutOK m vs ve) := by
-  unfold strPutOK; infer_instance
-
 /-- A line applied: `(1, next)` and the memory. -/
 def okRes (nx : Word) (m : Mem) : List Word × Mem := ([1, nx], m)
 
+/-- After `str_put_esc`: its result `(l, memory)` (`none`: it aborted), the slice at `o`. -/
+def strK (idx a o : Word) : Option (Word × Mem) → Option Mem
+  | none => none
+  | some (l, m₁) =>
+    if m₁.len64 POOL < o then none
+    else if m₁.len64 POOL - o < l then none
+    else applyNStrW m₁ idx a o l
+
+@[arena_grind =] theorem strK_none (idx a o : Word) : strK idx a o none = none := rfl
+@[arena_grind =] theorem strK_some (idx a o l : Word) (m₁ : Mem) : strK idx a o (some (l, m₁)) =
+    if m₁.len64 POOL < o then none
+    else if m₁.len64 POOL - o < l then none
+    else applyNStrW m₁ idx a o l := rfl
+
 /-- The model of `apply_str`. -/
 def applyStrW (b : Array UInt8) (m : Mem) (idx a c d : Word) : Option Mem :=
-  if UInt64.ofNat b.size < c then none
-  else if UInt64.ofNat (hasEscapeN b c.toNat d.toNat) ≠ 0 then none
-  else if strPutOK m c d then applyNStrW (strPutW m c d) idx a m.top (d - c)
-  else none
+  if c = 0 then none else strK idx a m.top (strPutEscW b m c d)
 
 /-- A name or level line with fields `f`, applied. -/
 def lineRecW (b : Array UInt8) (m : Mem) (pl idx a c d : Word) : Option Mem :=
@@ -132,28 +138,6 @@ def frontLineW (b : Array UInt8) (m : Mem) (i : Word) : Option (List Word × Mem
   else some ([1, (lineFwdN b i).2], m)
 
 theorem map_okRes (nx : Word) (m : Mem) : Option.map (okRes nx) (some m) = some ([1, nx], m) := rfl
-
-/-- `str_put`'s memory has the pool's size, and the slice it wrote fits. -/
-theorem strPut_room (m : Mem) (vs ve : Word) (hps : (m.arr64 POOL).size < 2 ^ 63)
-    (h : strPutOK m vs ve) :
-    (((putW m m.top vs (ve - vs) 0).set64 CTL 0 (m.top + (ve - vs))).arr64 POOL).size < 2 ^ 64 ∧
-    m.top.toNat + (ve - vs).toNat ≤
-      (((putW m m.top vs (ve - vs) 0).set64 CTL 0 (m.top + (ve - vs))).arr64 POOL).size := by
-  obtain ⟨h1, h2, h3, h4⟩ := h
-  have hle := UInt64.le_iff_toNat_le.mp h1
-  have hn : (ve - vs).toNat = ve.toNat - vs.toNat := UInt64.toNat_sub_of_le _ _ h1
-  have hlen : (m.len64 POOL).toNat = (m.arr64 POOL).size := by
-    simp only [Mem.len64]; exact toNat_ofNat_size _ hps
-  have hroom : (ve - vs).toNat ≤ (m.arr64 POOL).size - m.top.toNat := by
-    have := UInt64.le_iff_toNat_le.mp h4
-    rwa [UInt64.toNat_sub_of_le _ _ h3, hlen] at this
-  have ht := UInt64.le_iff_toNat_le.mp h3
-  rw [hlen] at ht
-  have hve := ve.toNat_lt
-  obtain ⟨-, hsz, -⟩ := putW_facts m.top vs (ve - vs) (by omega) _ m 0 rfl
-    (UInt64.le_iff_toNat_le.mpr (by simp)) (by omega) hps
-  rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hsz]
-  omega
 
 /-! ## The spec -/
 
@@ -227,6 +211,10 @@ structure ScanLookups (p : Prog) : Prop where
   rec_obj : p.lookup "rec_obj" = some L.Front.Fields.recObj
   expr_val : p.lookup "expr_val" = some L.Front.Fields.exprVal
   rec_expr_loop : p.lookup "rec_expr_loop" = some L.Front.Fields.recExprLoop
+  esc_sur : p.lookup "esc_sur" = some escSur
+  esc_one : p.lookup "esc_one" = some escOne
+  utf8_put : p.lookup "utf8_put" = some utf8Put
+  str_put_esc : p.lookup "str_put_esc" = some strPutEsc
 
 section spec
 variable (p : Prog) (hS : ScanLookups p) (hL : FrontLookups p)
@@ -250,12 +238,16 @@ theorem applyStr_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (hpool :
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    have hb64 : b.size < 2 ^ 64 := by omega
-    have hroom := strPut_room s₀.mem c d hpool
+    have hesc : ∀ (s₁ : St), s₁.mem.arr8 IN = b → ∀ c d : Word,
+        ⦃fun s => s = s₁⦄ invoke p (exec p n) "str_put_esc" [c, d]
+        ⦃fun r s' => (LocEq s' s₁ ∧ r.headD 0 = s₁.mem.top ∧
+          strPutEscW b s₁.mem c d = some (r.tail.headD 0, s'.mem)) ∧
+          Keep s₁.mem s'.mem ∧ LocEq s' s₁; ⊤⦄ := fun s₁ hm₁ c d =>
+      Triple.keep hE.no_st8 (strPutEsc_specW p b hb hS.byte_in hS.hex_val hS.hex4 hS.hex3
+        hS.esc_sur hS.esc_one hS.utf8_put hS.str_put_esc n s₁ hm₁ c d)
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        L.Scan.Leaves.hasEscape_spec p hS.has_escape b hb64 n,
-        strPut_specW p hps n, applyNStr_spec p hL hpn n] <;> finish [applyStrW, strPutW]
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hesc,
+        applyNStr_spec p hL hpn n] <;> finish [applyStrW, Keep.size]
 
 theorem applyRec_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (hpool : (s₀.mem.arr64 POOL).size < 2 ^ 63)
     (pl idx a c d : Word) :

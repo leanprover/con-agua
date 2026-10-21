@@ -179,7 +179,9 @@ def frontAllProg : Prog := L.Scan.Validator.valProg ++
    ("rec_obj", recObj), ("expr_val", exprVal), ("rec_expr_loop", recExprLoop)] ++
   exprProg ++
   [("front_line", frontLine), ("apply_rec", applyRec), ("apply_str", applyStr),
-   ("apply_any", applyAny), ("front_run", frontRun)]
+   ("apply_any", applyAny), ("front_run", frontRun),
+   ("esc_sur", L.Front.Unescape.escSur), ("esc_one", L.Front.Unescape.escOne),
+   ("utf8_put", L.Front.Unescape.utf8Put), ("str_put_esc", L.Front.Unescape.strPutEsc)]
 
 theorem frontAllProg_noSt8 : frontAllProg.noSt8 = true := by decide
 
@@ -210,7 +212,7 @@ def frontMemOf (s : String) : Mem := { initMem (List.replicate 67 4096) with byt
 /- A header, a name, a level, and expression lines of six kinds (a 30-digit literal among them):
 accepted. -/
 #guard (run frontAllProg 100000 "front_run" [] (frontMemOf
-  "{\"meta\":{\"x\":1}}\n{\"in\":1,\"str\":{\"pre\":0,\"str\":\"Nat\"}}\n{\"il\":1,\"succ\":0}\n\
+  "{\"meta\":{\"x\":1}}\n{\"in\":1,\"str\":{\"pre\":0,\"str\":\"N\\u00e4t\\n\"}}\n{\"il\":1,\"succ\":0}\n\
   {\"ie\":0,\"sort\":1}\n{\"ie\":1,\"const\":{\"name\":1,\"us\":[0,1]}}\n\
   {\"ie\":2,\"app\":{\"fn\":1,\"arg\":0}}\n{\"ie\":3,\"natVal\":\"123456789012345678901234567890\"}\n\
   {\"ie\":4,\"lam\":{\"binderInfo\":\"default\",\"body\":0,\"name\":1,\"type\":2}}")).toOption.map

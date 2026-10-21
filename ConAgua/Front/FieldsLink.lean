@@ -18,7 +18,7 @@ so the error branches of con-leche's loops are discharged by their result, and t
 needs none of the checks.
 
 A number is related by `ItemR x n` ("`x` is `n` unless it is `NONE`"), a string body `[vs, ve)`
-by `StrOK` ("if the body holds no backslash, it is the string's UTF-8").
+by `StrR` (con-leche's `scanString` reads the string there).
 -/
 
 namespace ConAgua.Front.FieldsLink
@@ -41,6 +41,11 @@ def NoEsc (b : ByteArray) (lo hi : Nat) : Prop := ∀ j, lo ≤ j → j < hi →
 /-- The string body `[vs, ve)` is `s`, if it has no escape. -/
 def StrOK (b : ByteArray) (vs ve : Word) (s : String) : Prop :=
   NoEsc b vs.toNat ve.toNat → String.fromUTF8? (b.extract vs.toNat ve.toNat) = some s
+
+/-- A string's body `[c, d)`: con-leche's `scanString` at the opening quote `v` reads `s` and
+ends at `e`, after the closing quote. -/
+def StrR (b : ByteArray) (c d : Word) (s : String) : Prop :=
+  ∃ v e : USize, v.toUInt64 + 1 = c ∧ e.toUInt64 - 1 = d ∧ ConLeche.Frontend.scanString b v = .ok s e
 
 theorem strOK_empty (b : ByteArray) : StrOK b 0 0 "" := by
   intro _
@@ -78,7 +83,7 @@ theorem recN_congr (b : Array UInt8) (i w j w' : Word) (f : Fld)
 /-- What a name record's words say: the kind `k` (`1`: `str`, `2`: `num`), `pre`, and the
 string's body or the number. -/
 def NameR (b : ByteArray) : NameRec → Word → Word → Word → Word → Prop
-  | .str p s, k, a, c, d => k = 1 ∧ ItemR a p ∧ StrOK b c d s
+  | .str p s, k, a, c, d => k = 1 ∧ ItemR a p ∧ (c ≠ 0 → StrR b c d s)
   | .num p n, k, a, c, _ => k = 2 ∧ ItemR a p ∧ ItemR c n
 
 /-- What the line loop's words say about con-leche's payload so far. -/
@@ -365,7 +370,7 @@ theorem numEnd_le (v : USize) (hv : v.toNat ≤ b.size) : (numEnd b v).toNat ≤
 
 theorem strRec_link (i : USize) (w : Bool) (seen : UInt32) (pre : Nat) (s : String) (r : NameRec)
     (e : USize) (pw vs ve : Word) (h : scanStrNameLoop b i w seen pre s = .ok r e)
-    (hp : ItemR pw pre) (hs : StrOK b vs ve s) :
+    (hp : ItemR pw pre) (hs : vs ≠ 0 → StrR b vs ve s) :
     (strRecN b.data i.toUInt64 (bw w) pw vs ve).1 = e.toUInt64 ∧
       NameR b r 1 (strRecN b.data i.toUInt64 (bw w) pw vs ve).2.1
         (strRecN b.data i.toUInt64 (bw w) pw vs ve).2.2.1
@@ -464,7 +469,7 @@ theorem strRec_link (i : USize) (w : Bool) (seen : UInt32) (pre : Nat) (s : Stri
           have hse : L.Scan.Str.scanStringN b.data v.toUInt64 = e'.toUInt64 := by
             rw [← ConAgua.Scan.StrLink.scanString_eq h64 b hsize v, hx]; rfl
           rw [hse, if_pos ((lt_toUInt64_iff _ _).mp hie)]
-          exact strRec_link e' false _ pre x r e _ _ _ h hp (scanString_strOK b h64 hsize v x e' hx)
+          exact strRec_link e' false _ pre x r e _ _ _ h hp (fun _ => ⟨v, e', rfl, rfl, hx⟩)
         · cases h
       · cases h
     · simp only [show (byteAt b i == 34) = false by simpa using h34, Bool.false_eq_true,
@@ -609,7 +614,7 @@ theorem strEntry_link (v : USize) (r : NameRec) (e : USize) (h : scanStrName b v
   · rename_i hc
     unfold strRecEntryN
     rw [← (obj_open b h64 hsize v hc).2]
-    exact strRec_link b h64 hsize (v + 1) true 0 0 "" r e 0 0 0 h itemR_zero (strOK_empty b)
+    exact strRec_link b h64 hsize (v + 1) true 0 0 "" r e 0 0 0 h itemR_zero (fun h => absurd rfl h)
   · cases h
 
 theorem numEntry_link (v : USize) (r : NameRec) (e : USize) (h : scanNumName b v = .ok r e) :

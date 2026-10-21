@@ -1,6 +1,7 @@
 import ConAgua.Front.Line
 import ConAgua.Front.ApplyExprRefine
 import ConAgua.Front.FieldsExprLink
+import ConAgua.Front.UnescapeLink
 
 /-!
 # `front_line` refines con-ron's per-line step
@@ -82,7 +83,6 @@ section refine
 variable (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
 include h64 hsize
 
-omit h64 hsize in
 /-- A name or level line: the fields `f` against the record `r`, applied. -/
 theorem lineRecW_refines (m m' : Mem) (hm : m.arr8 IN = b.data) (a₀ : AState) (st : StateD)
     (hR : ArenaD m a₀) (hD : StateDR m st) (f : Fld) (r : LineRec)
@@ -116,34 +116,29 @@ theorem lineRecW_refines (m m' : Mem) (hm : m.arr8 IN = b.data) (a₀ : AState) 
     unfold applyStrW at h
     split at h
     · cases h
-    rename_i hcle
-    split at h
-    · cases h
-    rename_i hesc
-    split at h
-    · rename_i hok
-      rcases r with ⟨I, (⟨P, S⟩ | ⟨P, N⟩)⟩ | ⟨_, (_ | ⟨_, _⟩ | ⟨_, _⟩ | _)⟩ | _ | _ | _ | _ <;>
-        simp only [RecR, PlR, NameR] at hRR
-      · obtain ⟨hI, -, hP, hS⟩ := hRR
-        have hW := h
-        have hpool := hR.1.lit.1
-        obtain ⟨hg, hq, hk⟩ := strPutW_facts m f.c f.d hpool hok
-        have hE : L.Scan.Leaves.hasEscapeN b.data f.c.toNat f.d.toNat = 0 := by
-          rcases hasEscapeN_01' b.data f.c.toNat f.d.toNat with h0 | h1
-          · exact h0
-          · simp [h1] at hesc
-        have hS' := hS (noEsc_of_hasEscapeN b _ _ hE)
-        have hkS : sliceL ((strPutW m f.c f.d).arr64 POOL) m.top.toNat (f.d - f.c).toNat =
-            strWords S := by
-          unfold strPutW; rw [hk, strWords, fromUTF8?_toByteArray _ _ hS', inWords, hm]; simp
-        obtain ⟨hok', hR', hD'⟩ := applyNStrW_refines (strPutW m f.c f.d) m' a₀ st
-          (ArenaD.grow _ _ hg _ hR) (hD.frame (grows_frame _ _ hg) (by tapart) (by tapart))
-          f.idx f.a m.top (f.d - f.c) hq S hkS hW
-        rw [hI hidx, hP ha] at hok' hR' hD'
-        obtain ⟨h1, h2, h3⟩ := applyLine_name st a₀ I (.str P S) hok'
-        exact ⟨_, h1, h2, by rw [h3]; exact hR', hD'⟩
-      all_goals simp_all
-    · cases h
+    rename_i hc0
+    cases hP : L.Front.Unescape.strPutEscW b.data m f.c f.d with
+    | none => rw [hP, strK_none] at h; cases h
+    | some q =>
+    obtain ⟨l, m₁⟩ := q
+    rw [hP, strK_some] at h
+    by_cases c1 : m₁.len64 POOL < m.top
+    · simp [c1] at h
+    by_cases c2 : m₁.len64 POOL - m.top < l
+    · simp [c2] at h
+    simp only [c1, c2, if_false] at h
+    rcases r with ⟨I, (⟨P, S⟩ | ⟨P, N⟩)⟩ | ⟨_, (_ | ⟨_, _⟩ | ⟨_, _⟩ | _)⟩ | _ | _ | _ | _ <;>
+      simp only [RecR, PlR, NameR] at hRR
+    · obtain ⟨hI, -, hP', hS⟩ := hRR
+      obtain ⟨hg, hq, hk⟩ := ConAgua.Front.UnescapeLink.strPutEsc_link h64 b hsize m m₁ hR.1.lit.1 f.c f.d S
+        (hS hc0) l hP
+      obtain ⟨hok', hR', hD'⟩ := applyNStrW_refines m₁ m' a₀ st
+        (ArenaD.grow _ _ hg _ hR) (hD.frame (grows_frame _ _ hg) (by tapart) (by tapart))
+        f.idx f.a m.top l hq S hk h
+      rw [hI hidx, hP' ha] at hok' hR' hD'
+      obtain ⟨h1, h2, h3⟩ := applyLine_name st a₀ I (.str P S) hok'
+      exact ⟨_, h1, h2, by rw [h3]; exact hR', hD'⟩
+    all_goals simp_all
   rename_i hpl1
   split at h
   · cases h
@@ -220,7 +215,7 @@ theorem applyAnyW_refines (m m' : Mem) (hm : m.arr8 IN = b.data) (a₀ : AState)
   split at h
   · rename_i hpl
     have hRec := recLine_link b h64 hsize j true 0 0 .absent Fld.none r e hloop itemR_zero trivial
-    exact lineRecW_refines b m m' hm a₀ st hR hD _ r hRec h
+    exact lineRecW_refines b h64 hsize m m' hm a₀ st hR hD _ r hRec h
   split at h
   · rename_i _ hpl
     have hX := exprLineN_link b h64 hsize j r e hloop hpl
