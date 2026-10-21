@@ -2006,6 +2006,10 @@ in the interpreter: `2`.
 * The derived columns (hashes and flags through `mixHash`) and the scratch tier's lifecycle
   (`enableScratch`/`dropScratch`), as before.
 
+### `sorry`s
+
+None.
+
 ## Stage B: a line validator for lean4export (2026-10-21, lane `stageb`)
 
 Files: `ConAgua/Scan/{Common,Key,Str,Values,Member,Records,Line,Validator}.lean` (L code, models,
