@@ -95,9 +95,11 @@ def whnfCoreAppL : FunDecl :=
 
 /-- The second half of the `app` arm: the reduct's spine, then the β/ι walk. -/
 @[l_impl ConRon.Arena.whnfCoreStep]
-def whnfCoreApp2L : FunDecl := lfn (mode, vis, d, v, h, so, sn) locals (hd, ho, hn, st, r) {
+def whnfCoreApp2L : FunDecl := lfn (mode, vis, d, v, h, so, sn) locals (top, hd, ho, hn, st, r) {
+  top := CTL.u64[136];
   (hd, ho, hn) := call head_and_args(v);
   (st, r) := call whnf_app(mode, vis, d, v, hd, ho, hn, u64(v == h), so, sn, 0);
+  CTL.u64[136] := top;
   return (st, r)
 }
 
