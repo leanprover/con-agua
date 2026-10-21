@@ -1625,3 +1625,65 @@ none was started. Reasons to flag before starting one, for whoever picks this up
   increment, but starting a new proof idea with under the stated 45-minute budget per table
   remaining risked a half-finished table or a `sorry`, which `PLAN.md` rules out. Left out
   rather than rushed.
+
+## The arena relation and the first cached walk (2026-10-21, lane `walk`)
+
+Files: `ConAgua/Arena/{BVarStore,BVarRefine,Memo,MemoRel,Frame,ArenaRel}.lean` (part 1),
+`ConAgua/Arena/{Walk,WalkRefine}.lean` (part 2). No `sorry`; axioms `propext`,
+`Classical.choice`, `Quot.sound`.
+
+### Part 1: one relation `ArenaR` for the whole memory
+
+**Layout** (`ArenaRel.lean`'s header has the table): arrays 0–23 as before plus `bvar` at 22/23
+(`CTL[22 + t]`, new this lane, the first table with a `Nat` field) and the walk memo `BMEMO` at
+24 (`CTL[24]` = live stamp − 1, `CTL[25]` = live count). `ArenaR m a` is a `structure` of twelve
+named relations: the eleven tables (`LitR` with the pool, `AppR`, `SortR`, `ConstR`, `LetR`,
+`BVarR`, `ZeroR`, `SuccR`, `MaxR`, `ImaxR`, `ParamR`) and `MemoR m a.memos.bvarBC`.
+
+**Frames.** `MemFrame A C m m'`: only word arrays `A` and `CTL` words `C` changed, sizes kept
+(`Frame.lean`). One generic lemma, `storeR_frame`, moves a `StoreR` across a writer it is
+`Apart` from, given the instance's `RLocal` (the record relation and hash read only the record
+array, plus `[POOL]`/`[CTL 0]` for `lit`; one line per table). `internM_frame`: every
+`intern_*` model is a `MemFrame [ra, sa] [ca, ca + 1]`, proved once for the library's `internM`.
+On the arena side `protoRun_st`/`AM.st_proto`: an interning ends in `a`, `L.setP a t` or
+`L.setS a t`, so every other table relation holds of the new state by definitional unfolding
+(`exact` closes it, no lemma per pair of tables). `ArenaR.lift_X` (11, generated text, 12 lines
+each) and `internX_refinesA` (11, the old proof plus three lines) lift every table; `ArenaR.grow`
+and `natAddLit_refinesA` do the pool (`grows_frame`: `Grows` is `MemFrame [POOL] [0]`).
+
+**Initial state.** `arenaR_init`: `ArenaR (initMem sizes) (AState.init EStore.empty)` for any 25
+sizes with `CTL` ≥ 26 words and the pool below `2^63` words; `initMem` is all zeros (the memo's
+"stamp − 1" encoding is what makes zero memory an empty memo). This closes the gap the capstone
+noted (`LitR` was not shown for any state).
+
+**Grind-friendliness.** No `∀`-clause of the table relations is given to `grind`: the frame
+proofs go through `tierR_mono` with named equalities. `decide` on `Apart` for concrete schemas
+timed out (`UInt64` list memberships through the elaborator's `whnf`, also with `+kernel`); a
+`simp` with the array ids (macro `apart`) is immediate.
+
+**The `bvar` table** (`BVarStore`/`BVarRefine`): `succ`'s shape (one word, no scratch skip; a
+`bvar` has no child) in the expression store. The record relation is `(rdW …).toNat = k.i`, so a
+stored word *is* the index and `MatchOK` is `UInt64.toNat_inj`, no bound hypothesis; the L
+argument is a word `u` and the key `⟨u.toNat⟩` (indices ≥ `2^64` cannot be interned through L).
+The file was a scripted rename of `LevelStore`; a rename leftover (`sfindLoop_spec`) collided
+with `LevelStore` only when both were imported (`ArenaRel`), and so did `Memo`'s first `mprobeW`
+with `MaxStore`'s. All specs passed at the first attempt.
+
+**The memo** (`Memo.lean`, `MemoRel.lean`): con-ron's `HashMap2` with epoch stamps (`clear` is
+`CTL[24] += 1`), four words per slot (stamp, key, value, unused: L has no division, so the slot
+count is `len >> 2`), linear probing from `homeW key`, overwrite on a present key, abort past a
+3/4 load or where the stamp would wrap. `MemoR m mp`: stamps ≤ the live stamp, live slots hold
+distinct keys mapped by `mp` to their value, each entry of `mp` is in a live slot on its run
+after live slots. Lemmas `memoR_hit`, `memoR_miss`, `memoR_set` (= `insert`), `memoR_clear`
+(= `∅`), `memoR_frame`. The L specs (`memo_find`, `memo_set`, `memo_clear`) are `vcgen` +
+`finish` at the first attempt; the relation lemmas are by hand plus small `grind`s (the
+uniqueness clause was missing in the first draft: an overwrite needs it).
+
+| file | lines | `lean` wall / user | by hand |
+|---|---:|---:|---|
+| `BVarStore.lean` (L, specs) | 282 | 3.4 s / 4.5 s | none |
+| `BVarRefine.lean` | 194 | 0.9 s / 0.9 s | `MatchOK` by `toNat_inj` |
+| `Memo.lean` (L 33 lines, models, specs) | 267 | 1.4 s / 2.8 s | none |
+| `MemoRel.lean` | 428 | 1.3 s / 2.1 s | most (reads after the writes: 110 lines) |
+| `Frame.lean` | 171 | 0.8 s / 0.8 s | all, short |
+| `ArenaRel.lean` | 716 | 1.0 s / 3.3 s | generated per-table lifts (~400 lines) |
