@@ -174,7 +174,8 @@ theorem dropScratch_run (a : AState) :
 
 /-- The `CTL` words `flush_caches()` writes. -/
 def flushCtl : List Word :=
-  [96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115]
+  [96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115,
+   116, 117, 118, 119]
 
 theorem flushMem_frame (m : Mem) : MemFrame [] flushCtl m (flushMem m) :=
   ((clearsL_frame coreSchs m).mono (by simp) (fun x h => by
@@ -182,7 +183,7 @@ theorem flushMem_frame (m : Mem) : MemFrame [] flushCtl m (flushMem m) :=
       List.not_mem_nil, or_false] at h
     simp only [flushCtl, List.mem_cons, List.not_mem_nil, or_false]
     rcases h with ((rfl | rfl) | (rfl | rfl) | (rfl | rfl) | (rfl | rfl) | (rfl | rfl) |
-      (rfl | rfl) | (rfl | rfl) | (rfl | rfl) | rfl | rfl) <;> decide)).trans
+      (rfl | rfl) | (rfl | rfl) | (rfl | rfl) | (rfl | rfl) | (rfl | rfl) | rfl | rfl) <;> decide)).trans
     ((((MemFrame.setCtl _ 114 0).mono (by simp) (by simp [flushCtl])).trans
       ((MemFrame.setCtl _ 115 0).mono (by simp) (by simp [flushCtl]))))
 
@@ -369,12 +370,12 @@ theorem scratchProg_closed :
     closedA scratchProg [] (resetCtl ++ memoCtl ++ flushCtl)
       ["scratch_enter", "scratch_drop", "scratch_reset", "bm_clear", "lf_clear", "if_clear",
        "fm_clear", "flush_caches", "wc_clear", "wk_clear", "wh_clear", "in_clear", "io_clear",
-       "de_clear", "ct_clear", "cv_clear", "rr_clear"] = true := by
+       "de_clear", "ct_clear", "cv_clear", "rr_clear", "lq_clear", "lsq_clear"] = true := by
   decide +kernel
 
 /- Two scratch rounds: the base rises by `2^32` each time, the flag follows. -/
 #guard
-  let m : Mem := { words := #[#[], Array.replicate 116 0] ++ Array.replicate 47 #[] }
+  let m : Mem := { words := #[#[], Array.replicate 120 0] ++ Array.replicate 47 #[] }
   match run scratchProg 100 "scratch_enter" [] m with
   | .ok (_, m1) => match run scratchProg 100 "scratch_drop" [] m1 with
     | .ok (_, m2) => (m1.arr64 1)[62]! == 4294967296 && (m1.arr64 1)[1]! == 1 &&

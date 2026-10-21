@@ -4191,9 +4191,41 @@ other caches the twin did not touch.
 * Finding: `decide +kernel` on membership in `coreSchs.flatMap (fun S => [S.cs, S.cs + 1])`
   (twenty words) ran out of memory (18 GB, killed); an explicit literal list and `simp` is instant.
 
+### Every con-ron cache, and where L mirrors it
+
+The rule (ROADMAP, "Known costs relative to con-ron"): a cache con-ron has must be in L, or L can
+be asymptotically slower. con-ron at `_tmp/ref/con-ron` origin/HEAD (`proof/ConRon/Arena`):
+
+| con-ron | lifetime | key → value | L | status |
+|---|---|---|---|---|
+| `Caches.whnfCoreC`, `whnfCoreCheapC`, `whnfC`, `inferC`, `inferIOC` | declaration | `EIdx → EIdx` | `wc`/`wk`/`wh`/`in`/`io` (arrays 96‥100) | relation `CoreRM` (lane `whnf`); the knot's probes: `whnf_core`/`whnf` this lane, `infer*` phase 7 |
+| `Caches.defeqC` | declaration | `(EIdx × EIdx) → Bool` | `de` (101) | relation `CoreRM`; probe phase 6 |
+| `Caches.eagerMemos` (the eager tower's six, new in con-ron #127) | declaration | as the six | the same six memos, generation = the eager bit | **to do** on the con-ron bump (below) |
+| `Caches.lvlEqC`, `lvlsEqC` | declaration | `(LIdx × LIdx) → Bool`, `(LsIdx × LsIdx) → Bool` | `lq`, `lsq` (105, 106) | done: `lvl_eq_c`/`lvls_eq_c` in front of lane `levels`' `lvl_eq`/`lvls_eq` (`CoreLevels.lean`) |
+| `Caches.constTyC`, `constValC`, `ruleRhsC` | declaration | `(NIdx × LsIdx) → EIdx`, `(NIdx × NIdx × LsIdx) → EIdx` | `ct`, `cv`, `rr` (102‥104) | relation done; probes in `const_ty_at`/`const_val_at`/`rule_rhs_at` (this lane) |
+| `Caches.readLC`, `readNC`, `readLsC` | declaration | handle → `Level`/`Name`/`List Level` | none needed: L makes no readbacks (the level algorithms run on handles, `LevelHeap.lean`) | the twin's entries are readbacks: `CoreS.readL`/`readLs` (an invariant, not a table) |
+| `Memos.bvarBC`, `fvarBC`, `inst1C`, `liftC` | one top-level walk | `EIdx(×Nat) → …` | `bm`, `fm`, `if`, `lf` (24, 48, 47, 41) | done (lanes `walk`, `exprops`, `exprops2`) |
+| `Memos.instLC`, `abs1C`, `inst1LC`, `instLPC`, `instLPLC`, `instLPLsC` | one top-level walk | `(EIdx × Nat) → EIdx`, level tables | arrays 49‥55 reserved in `MemosR` | to do with their walks (phase 4: `instantiateListGo`, `abstract1Go`, `instantiate1LiftGo`, `instLPGo`) |
+| walk-local `memo`/`seen` arguments: `wscopedBGo`, `fvarLeavesGo`, `leavesSubGo` (ExprOps); `constsResolveFGo`, `hasStrLitGo` (CheckerBase); `mentionsAnyGo`, `nestOccGo`, `depthGo`, `replaceFVarsGo` (Positivity); `hasLooseBVarBGo`, `structUsedLaterGo`, `mentionsConstGo` (StructParts); `usedConstsGo` (NatOpGround, a `HashSet`) | one call | various | argument relations, arrays 144‥191 | to do with each walk: each needs an epoch-cleared memo of the library (`MemoLib`), not a recomputation |
+| store cons tables (21), `IFEnv.idx` | run / declaration | node → handle, name → constant | `*SLOT` arrays, `EIXA/S/N` | done (`ArenaR`, `EnvR`) |
+
+**The con-ron bump (lane `sync`).** con-ron #127 replaced "take the mode memos, run the eager
+comparison on empty tables, put them back" by a second, persistent set of the six tables for the
+eager tower (`Caches.eagerMemos`; `enterEager` swaps it into the six fields, `leaveEager` swaps
+back, nothing moves when already eager). In L this is simpler than the generation counter built
+for the old semantics: the generation of a key is the mode word's eager bit, fixed per slot call,
+so `bank_enter`/`bank_leave` and the bank words `CTL[114]`, `CTL[115]` go away, and `CoreRM`
+relates `c.X` to bank `e` and `c.eagerMemos.X` to bank `1` when `e = 0` (empty when `e = 1`, the
+plain set then being the eager slot's local `saved`, bank `0`, which an eager run must keep).
+Done when the vendored twin is bumped; `CoreS`/`CoreAfter` keep their shape (`M G g` becomes
+`M e`).
+
 ### `sorry`s
 
-None so far.
+* `WhnfBase.lean` `whnfCallees_stub`: the specs of the callees not written yet (`inst_list`,
+  `inst_lp`, `str_lit_ctor`, `str_lit_supported`, the knot's `infer`/`infer_io`/`defeq` steps).
+* `WhnfSpine.lean`: the eight spine-walk specs (`getAppFn_refines`, …; a proof lane is on them).
+
 ## Any number of results (2026-10-21, lane `cresults`)
 
 Files: `ConAgua/Compiler/{Compile,WF,Rel,SimStmt,SimStore,SimCall,SimFun,Main,Run,Tests}.lean`,
