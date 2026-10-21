@@ -1,5 +1,7 @@
 import ConAgua.Arena.ArenaRel
+import ConRon.Arena.Core
 import ConAgua.Arena.NatDiv
+import ConAgua.Arena.NatGcd
 import ConAgua.Arena.NatCmp
 import ConAgua.Arena.NatBitsNat
 
@@ -325,6 +327,89 @@ theorem natPowLit_refines (hg : p.lookup "nat_pow_lit" = some natPowLit) (n : Na
 
 end pow
 
+/-! ## `beq`, `ble`: a `Bool` constant -/
+
+/-- `nat_beq_lit(oa, la, ob, lb, t, f, us)`: intern the constant `t` (`Bool.true`'s name) if the
+two values are equal, else `f`, at the level list `us` (the empty one). The three handles are
+the pins `boolTrueName`, `boolFalseName`, `emptyLevels`, which the caller reads. -/
+def natBeqLit : FunDecl := lfn (oa, la, ob, lb, t, f, us) locals (c, h) {
+  c := call nat_cmp(oa, la, ob, lb);
+  if c != 1 { t := f };
+  h := call intern_const(t, us);
+  return h
+}
+
+/-- `nat_ble_lit`: as `nat_beq_lit`, `t` unless `a > b`. -/
+def natBleLit : FunDecl := lfn (oa, la, ob, lb, t, f, us) locals (c, h) {
+  c := call nat_cmp(oa, la, ob, lb);
+  if c == 2 { t := f };
+  h := call intern_const(t, us);
+  return h
+}
+
+/-- The `Nat.beq` arm (`Arena/Core.lean:1027-1030`), verbatim. -/
+def natBeqArm (a b : Nat) : AM (Option EIdx) := do
+  let n ← if a = b then boolTrueName else boolFalseName
+  let x ← constE n
+  pure (some x)
+
+/-- The `Nat.ble` arm (`Arena/Core.lean:1031-1034`), verbatim. -/
+def natBleArm (a b : Nat) : AM (Option EIdx) := do
+  let n ← if a <= b then boolTrueName else boolFalseName
+  let x ← constE n
+  pure (some x)
+
+/-! ## `gcd` -/
+
+/-- `nat_gcd_lit(oa, la, ob, lb)`: `nat_gcd`'s slice, interned. -/
+def natGcdLit : FunDecl := lfn (oa, la, ob, lb) locals (o, l, h) {
+  (o, l) := call nat_gcd(oa, la, ob, lb);
+  h := call intern_lit(o, l);
+  return h
+}
+
+/-- The `Nat.gcd` arm (`Arena/Core.lean:1015-1016`), verbatim. -/
+def natGcdArm (a b : Nat) : AM (Option EIdx) := do
+  let x ← internE (.lit (.natVal (Nat.gcd a b))); pure (some x)
+
+section gcd
+variable (p : Prog) (R : Mem → AState → Prop)
+  (hpool : ∀ m a, R m a → PoolOK m) (hgrow : ∀ m m' a, R m a → Grows m m' → R m' a)
+  (hI : InternSpec p R)
+  (hpl : p.lookup "nat_limb" = some natLimb)
+  (hps : p.lookup "sub_borrow" = some subBorrow) (hpc : p.lookup "add_carry" = some addCarry)
+  (hp1 : p.lookup "div_shl1" = some divShl1) (hp2 : p.lookup "div_sub" = some divSub)
+  (hp3 : p.lookup "div_add" = some divAdd) (hp4 : p.lookup "div_step" = some divStep)
+  (hpt : p.lookup "nat_trim" = some natTrim) (hpd : p.lookup "nat_divmod" = some natDivmod)
+  (hps' : p.lookup "gcd_step" = some gcdStep) (hpg : p.lookup "nat_gcd" = some natGcd)
+
+include hpool hgrow hI hpl hps hpc hp1 hp2 hp3 hp4 hpt hpd hps' hpg in
+theorem natGcdLit_refines (hg : p.lookup "nat_gcd_lit" = some natGcdLit) (n : Nat) (s₀ : St)
+    (a₀ : AState) (hR : R s₀.mem a₀) (oa la ob lb : Word) (ha : SliceOK s₀.mem oa la)
+    (hb : SliceOK s₀.mem ob lb) (hna : Norm (s₀.mem.arr64 POOL) oa.toNat la.toNat)
+    (hnb : Norm (s₀.mem.arr64 POOL) ob.toNat lb.toNat) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "nat_gcd_lit" [oa, la, ob, lb]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (natGcdArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
+        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀ ∧
+      R s'.mem (AM.st (natGcdArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
+        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀) ∧
+      AM.res (natGcdArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
+        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀ = some (decE (r.headD 0)); ⊤⦄ := by
+  have hok := hpool _ _ hR
+  rw [invoke_eq _ hg]
+  simp only [callFn, natGcdLit]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalArgs, setLoc, setLocs,
+        natGcd_spec p hpl hps hpc hp1 hp2 hp3 hp4 hpt hpd hps' hpg n, hI a₀ n] <;>
+      finish [natGcdArm]
+
+end gcd
+
 /-! ## The arms, verbatim (`Arena/Core.lean:1004-1026`) -/
 
 def natSubArm (a b : Nat) : AM (Option EIdx) := do
@@ -360,7 +445,10 @@ def natArmProg : Prog := storeProg ++
    ("nat_pow", natPow), ("div_shl1", divShl1), ("div_sub", divSub), ("div_add", divAdd),
    ("div_step", divStep), ("nat_divmod", natDivmod),
    ("nat_pred_lit", natPredLit), ("nat_pow_lit", natPowLit), ("nat_div_lit", natDivLit),
-   ("nat_mod_lit", natModLit)]
+   ("nat_mod_lit", natModLit),
+   ("nat_cmp", natCmp), ("const_find", constFind), ("const_push", constPush),
+   ("intern_const", internConst), ("nat_beq_lit", natBeqLit), ("nat_ble_lit", natBleLit),
+   ("gcd_step", gcdStep), ("nat_gcd", natGcd), ("nat_gcd_lit", natGcdLit)]
 
 /- `6 - 1 = 5`, `7 % 8 = 7`, `7 * 5 = 35` (at pool offset 9) and `35 / 5 = 7`: three nodes, and
 the quotient finds `7`'s node again. -/
@@ -509,5 +597,77 @@ theorem natPowLit_refinesA (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s�
   natPowLit_refines natArmProg ArenaR (fun _ _ h => h.lit.1)
     (fun m m' a hR hg => ArenaR.grow m m' hg a hR) internLit_arms rfl rfl rfl rfl rfl n s₀ a₀ hR
     oa la ob lb ha hnb
+
+/-- **`nat_beq_lit` refines the `Nat.beq` arm under `ArenaR`**, given what the three pin reads
+return in the arena state (they read it and do not change it). -/
+theorem natBeqLit_refinesA (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s₀.mem a₀)
+    (oa la ob lb t f us : Word) (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb)
+    (hna : Norm (s₀.mem.arr64 POOL) oa.toNat la.toNat)
+    (hnb : Norm (s₀.mem.arr64 POOL) ob.toNat lb.toNat)
+    (ht : t.toNat < 2 ^ 32) (hf : f.toNat < 2 ^ 32) (hu : us.toNat < 2 ^ 32)
+    (hT : boolTrueName.run a₀ = .ok (decI t, a₀)) (hF : boolFalseName.run a₀ = .ok (decI f, a₀))
+    (hE : emptyLevels.run a₀ = .ok (decI us, a₀)) :
+    ⦃fun s => s = s₀⦄
+    invoke natArmProg (exec natArmProg n) "nat_beq_lit" [oa, la, ob, lb, t, f, us]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (natBeqArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
+        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀ ∧
+      ArenaR s'.mem (AM.st (natBeqArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
+        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀) ∧
+      AM.res (natBeqArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
+        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀ = some (decE (r.headD 0)); ⊤⦄ := by
+  have hok := hR.lit.1
+  have hT' := AM.of_run_ok _ _ _ _ hT
+  have hF' := AM.of_run_ok _ _ _ _ hF
+  have hE' := AM.of_run_ok _ _ _ _ hE
+  simp only [PoolOK, SliceOK] at hok ha hb
+  rw [invoke_eq _ (show natArmProg.lookup "nat_beq_lit" = some natBeqLit from rfl)]
+  simp only [callFn, natBeqLit]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, natcmp_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+        natCmp_spec natArmProg rfl n, internConst_refinesA natArmProg rfl rfl rfl a₀ n] <;>
+      finish [natBeqArm, constE, decE_eq]
+
+/-- **`nat_ble_lit` refines the `Nat.ble` arm under `ArenaR`**, given the three pin reads. -/
+theorem natBleLit_refinesA (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s₀.mem a₀)
+    (oa la ob lb t f us : Word) (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb)
+    (hna : Norm (s₀.mem.arr64 POOL) oa.toNat la.toNat)
+    (hnb : Norm (s₀.mem.arr64 POOL) ob.toNat lb.toNat)
+    (ht : t.toNat < 2 ^ 32) (hf : f.toNat < 2 ^ 32) (hu : us.toNat < 2 ^ 32)
+    (hT : boolTrueName.run a₀ = .ok (decI t, a₀)) (hF : boolFalseName.run a₀ = .ok (decI f, a₀))
+    (hE : emptyLevels.run a₀ = .ok (decI us, a₀)) :
+    ⦃fun s => s = s₀⦄
+    invoke natArmProg (exec natArmProg n) "nat_ble_lit" [oa, la, ob, lb, t, f, us]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (natBleArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
+        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀ ∧
+      ArenaR s'.mem (AM.st (natBleArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
+        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀) ∧
+      AM.res (natBleArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
+        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀ = some (decE (r.headD 0)); ⊤⦄ := by
+  have hok := hR.lit.1
+  have hT' := AM.of_run_ok _ _ _ _ hT
+  have hF' := AM.of_run_ok _ _ _ _ hF
+  have hE' := AM.of_run_ok _ _ _ _ hE
+  simp only [PoolOK, SliceOK] at hok ha hb
+  rw [invoke_eq _ (show natArmProg.lookup "nat_ble_lit" = some natBleLit from rfl)]
+  simp only [callFn, natBleLit]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, natcmp_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+        natCmp_spec natArmProg rfl n, internConst_refinesA natArmProg rfl rfl rfl a₀ n] <;>
+      finish [natBleArm, constE, decE_eq]
+
+/-- **`nat_gcd_lit` refines the `Nat.gcd` arm.** -/
+theorem natGcdLit_refinesA : ArmRefinesA "nat_gcd_lit" natGcdArm :=
+  fun n s₀ a₀ hR oa la ob lb ha hb hna hnb =>
+    natGcdLit_refines natArmProg ArenaR (fun _ _ h => h.lit.1)
+      (fun m m' a hR hg => ArenaR.grow m m' hg a hR) internLit_arms rfl rfl rfl rfl rfl rfl rfl
+      rfl rfl rfl rfl rfl n s₀ a₀ hR oa la ob lb ha hb hna hnb
 
 end L.Arena

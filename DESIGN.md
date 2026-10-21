@@ -389,10 +389,16 @@ otherwise, decoded by `decOpt`; `/` and `%` take `nat_divmod`'s first or second 
 the first or second attempt, 3.7 s for the file. The operands are normalised slices (as every
 `lit` record's), which `nat_shr` and `nat_divmod` need for `b`.
 
-Not done: `Nat.beq`/`Nat.ble` (their arms intern a `const` node of a `Bool` pin through
-`constE`, i.e. `emptyLevels` and `intern_const`; the L side is `nat_cmp`'s code), `Nat.gcd`
-(Euclid over `nat_divmod`), and `natOpResult`'s dispatch itself (it reads fifteen pins first;
-the pins are not in `ArenaR`).
+`Nat.gcd` is `nat_gcd`'s slice interned. `Nat.beq`/`Nat.ble` intern a `const` node: the arm reads
+the pins `boolTrueName`/`boolFalseName` and, inside `constE`, `emptyLevels`, which `ArenaR` does
+not cover, so `nat_beq_lit(oa, la, ob, lb, t, f, us)` takes the three handles as arguments and
+the theorem takes what the pin reads return as hypotheses (`boolTrueName.run a₀ = .ok (decI t,
+a₀)`, …; they read the state and do not change it). The L side is `nat_cmp`'s code
+(`if c != 1 { t := f }`, `c == 2` for `ble`) and `intern_const` (`internConst_refinesA`); the
+house form went through with `constE` and the arm unfolded and `natcmp_grind` for `cmpW`.
+
+Not done: `natOpResult`'s dispatch itself (it reads fifteen pins first; the pins are not in
+`ArenaR`).
 
 ### `sorry`s
 
@@ -1632,10 +1638,16 @@ otherwise, decoded by `decOpt`; `/` and `%` take `nat_divmod`'s first or second 
 the first or second attempt, 3.7 s for the file. The operands are normalised slices (as every
 `lit` record's), which `nat_shr` and `nat_divmod` need for `b`.
 
-Not done: `Nat.beq`/`Nat.ble` (their arms intern a `const` node of a `Bool` pin through
-`constE`, i.e. `emptyLevels` and `intern_const`; the L side is `nat_cmp`'s code), `Nat.gcd`
-(Euclid over `nat_divmod`), and `natOpResult`'s dispatch itself (it reads fifteen pins first;
-the pins are not in `ArenaR`).
+`Nat.gcd` is `nat_gcd`'s slice interned. `Nat.beq`/`Nat.ble` intern a `const` node: the arm reads
+the pins `boolTrueName`/`boolFalseName` and, inside `constE`, `emptyLevels`, which `ArenaR` does
+not cover, so `nat_beq_lit(oa, la, ob, lb, t, f, us)` takes the three handles as arguments and
+the theorem takes what the pin reads return as hypotheses (`boolTrueName.run a₀ = .ok (decI t,
+a₀)`, …; they read the state and do not change it). The L side is `nat_cmp`'s code
+(`if c != 1 { t := f }`, `c == 2` for `ble`) and `intern_const` (`internConst_refinesA`); the
+house form went through with `constE` and the arm unfolded and `natcmp_grind` for `cmpW`.
+
+Not done: `natOpResult`'s dispatch itself (it reads fifteen pins first; the pins are not in
+`ArenaR`).
 
 ### `sorry`s
 
@@ -1946,10 +1958,16 @@ otherwise, decoded by `decOpt`; `/` and `%` take `nat_divmod`'s first or second 
 the first or second attempt, 3.7 s for the file. The operands are normalised slices (as every
 `lit` record's), which `nat_shr` and `nat_divmod` need for `b`.
 
-Not done: `Nat.beq`/`Nat.ble` (their arms intern a `const` node of a `Bool` pin through
-`constE`, i.e. `emptyLevels` and `intern_const`; the L side is `nat_cmp`'s code), `Nat.gcd`
-(Euclid over `nat_divmod`), and `natOpResult`'s dispatch itself (it reads fifteen pins first;
-the pins are not in `ArenaR`).
+`Nat.gcd` is `nat_gcd`'s slice interned. `Nat.beq`/`Nat.ble` intern a `const` node: the arm reads
+the pins `boolTrueName`/`boolFalseName` and, inside `constE`, `emptyLevels`, which `ArenaR` does
+not cover, so `nat_beq_lit(oa, la, ob, lb, t, f, us)` takes the three handles as arguments and
+the theorem takes what the pin reads return as hypotheses (`boolTrueName.run a₀ = .ok (decI t,
+a₀)`, …; they read the state and do not change it). The L side is `nat_cmp`'s code
+(`if c != 1 { t := f }`, `c == 2` for `ble`) and `intern_const` (`internConst_refinesA`); the
+house form went through with `constE` and the arm unfolded and `natcmp_grind` for `cmpW`.
+
+Not done: `natOpResult`'s dispatch itself (it reads fifteen pins first; the pins are not in
+`ArenaR`).
 
 ### `sorry`s
 
@@ -2182,10 +2200,16 @@ otherwise, decoded by `decOpt`; `/` and `%` take `nat_divmod`'s first or second 
 the first or second attempt, 3.7 s for the file. The operands are normalised slices (as every
 `lit` record's), which `nat_shr` and `nat_divmod` need for `b`.
 
-Not done: `Nat.beq`/`Nat.ble` (their arms intern a `const` node of a `Bool` pin through
-`constE`, i.e. `emptyLevels` and `intern_const`; the L side is `nat_cmp`'s code), `Nat.gcd`
-(Euclid over `nat_divmod`), and `natOpResult`'s dispatch itself (it reads fifteen pins first;
-the pins are not in `ArenaR`).
+`Nat.gcd` is `nat_gcd`'s slice interned. `Nat.beq`/`Nat.ble` intern a `const` node: the arm reads
+the pins `boolTrueName`/`boolFalseName` and, inside `constE`, `emptyLevels`, which `ArenaR` does
+not cover, so `nat_beq_lit(oa, la, ob, lb, t, f, us)` takes the three handles as arguments and
+the theorem takes what the pin reads return as hypotheses (`boolTrueName.run a₀ = .ok (decI t,
+a₀)`, …; they read the state and do not change it). The L side is `nat_cmp`'s code
+(`if c != 1 { t := f }`, `c == 2` for `ble`) and `intern_const` (`internConst_refinesA`); the
+house form went through with `constE` and the arm unfolded and `natcmp_grind` for `cmpW`.
+
+Not done: `natOpResult`'s dispatch itself (it reads fifteen pins first; the pins are not in
+`ArenaR`).
 
 ### `sorry`s
 
@@ -2391,10 +2415,16 @@ otherwise, decoded by `decOpt`; `/` and `%` take `nat_divmod`'s first or second 
 the first or second attempt, 3.7 s for the file. The operands are normalised slices (as every
 `lit` record's), which `nat_shr` and `nat_divmod` need for `b`.
 
-Not done: `Nat.beq`/`Nat.ble` (their arms intern a `const` node of a `Bool` pin through
-`constE`, i.e. `emptyLevels` and `intern_const`; the L side is `nat_cmp`'s code), `Nat.gcd`
-(Euclid over `nat_divmod`), and `natOpResult`'s dispatch itself (it reads fifteen pins first;
-the pins are not in `ArenaR`).
+`Nat.gcd` is `nat_gcd`'s slice interned. `Nat.beq`/`Nat.ble` intern a `const` node: the arm reads
+the pins `boolTrueName`/`boolFalseName` and, inside `constE`, `emptyLevels`, which `ArenaR` does
+not cover, so `nat_beq_lit(oa, la, ob, lb, t, f, us)` takes the three handles as arguments and
+the theorem takes what the pin reads return as hypotheses (`boolTrueName.run a₀ = .ok (decI t,
+a₀)`, …; they read the state and do not change it). The L side is `nat_cmp`'s code
+(`if c != 1 { t := f }`, `c == 2` for `ble`) and `intern_const` (`internConst_refinesA`); the
+house form went through with `constE` and the arm unfolded and `natcmp_grind` for `cmpW`.
+
+Not done: `natOpResult`'s dispatch itself (it reads fifteen pins first; the pins are not in
+`ArenaR`).
 
 ### `sorry`s
 
@@ -2583,10 +2613,16 @@ otherwise, decoded by `decOpt`; `/` and `%` take `nat_divmod`'s first or second 
 the first or second attempt, 3.7 s for the file. The operands are normalised slices (as every
 `lit` record's), which `nat_shr` and `nat_divmod` need for `b`.
 
-Not done: `Nat.beq`/`Nat.ble` (their arms intern a `const` node of a `Bool` pin through
-`constE`, i.e. `emptyLevels` and `intern_const`; the L side is `nat_cmp`'s code), `Nat.gcd`
-(Euclid over `nat_divmod`), and `natOpResult`'s dispatch itself (it reads fifteen pins first;
-the pins are not in `ArenaR`).
+`Nat.gcd` is `nat_gcd`'s slice interned. `Nat.beq`/`Nat.ble` intern a `const` node: the arm reads
+the pins `boolTrueName`/`boolFalseName` and, inside `constE`, `emptyLevels`, which `ArenaR` does
+not cover, so `nat_beq_lit(oa, la, ob, lb, t, f, us)` takes the three handles as arguments and
+the theorem takes what the pin reads return as hypotheses (`boolTrueName.run a₀ = .ok (decI t,
+a₀)`, …; they read the state and do not change it). The L side is `nat_cmp`'s code
+(`if c != 1 { t := f }`, `c == 2` for `ble`) and `intern_const` (`internConst_refinesA`); the
+house form went through with `constE` and the arm unfolded and `natcmp_grind` for `cmpW`.
+
+Not done: `natOpResult`'s dispatch itself (it reads fifteen pins first; the pins are not in
+`ArenaR`).
 
 ### `sorry`s
 
@@ -3174,10 +3210,16 @@ otherwise, decoded by `decOpt`; `/` and `%` take `nat_divmod`'s first or second 
 the first or second attempt, 3.7 s for the file. The operands are normalised slices (as every
 `lit` record's), which `nat_shr` and `nat_divmod` need for `b`.
 
-Not done: `Nat.beq`/`Nat.ble` (their arms intern a `const` node of a `Bool` pin through
-`constE`, i.e. `emptyLevels` and `intern_const`; the L side is `nat_cmp`'s code), `Nat.gcd`
-(Euclid over `nat_divmod`), and `natOpResult`'s dispatch itself (it reads fifteen pins first;
-the pins are not in `ArenaR`).
+`Nat.gcd` is `nat_gcd`'s slice interned. `Nat.beq`/`Nat.ble` intern a `const` node: the arm reads
+the pins `boolTrueName`/`boolFalseName` and, inside `constE`, `emptyLevels`, which `ArenaR` does
+not cover, so `nat_beq_lit(oa, la, ob, lb, t, f, us)` takes the three handles as arguments and
+the theorem takes what the pin reads return as hypotheses (`boolTrueName.run a₀ = .ok (decI t,
+a₀)`, …; they read the state and do not change it). The L side is `nat_cmp`'s code
+(`if c != 1 { t := f }`, `c == 2` for `ble`) and `intern_const` (`internConst_refinesA`); the
+house form went through with `constE` and the arm unfolded and `natcmp_grind` for `cmpW`.
+
+Not done: `natOpResult`'s dispatch itself (it reads fifteen pins first; the pins are not in
+`ArenaR`).
 
 ### `sorry`s
 
@@ -3473,10 +3515,16 @@ otherwise, decoded by `decOpt`; `/` and `%` take `nat_divmod`'s first or second 
 the first or second attempt, 3.7 s for the file. The operands are normalised slices (as every
 `lit` record's), which `nat_shr` and `nat_divmod` need for `b`.
 
-Not done: `Nat.beq`/`Nat.ble` (their arms intern a `const` node of a `Bool` pin through
-`constE`, i.e. `emptyLevels` and `intern_const`; the L side is `nat_cmp`'s code), `Nat.gcd`
-(Euclid over `nat_divmod`), and `natOpResult`'s dispatch itself (it reads fifteen pins first;
-the pins are not in `ArenaR`).
+`Nat.gcd` is `nat_gcd`'s slice interned. `Nat.beq`/`Nat.ble` intern a `const` node: the arm reads
+the pins `boolTrueName`/`boolFalseName` and, inside `constE`, `emptyLevels`, which `ArenaR` does
+not cover, so `nat_beq_lit(oa, la, ob, lb, t, f, us)` takes the three handles as arguments and
+the theorem takes what the pin reads return as hypotheses (`boolTrueName.run a₀ = .ok (decI t,
+a₀)`, …; they read the state and do not change it). The L side is `nat_cmp`'s code
+(`if c != 1 { t := f }`, `c == 2` for `ble`) and `intern_const` (`internConst_refinesA`); the
+house form went through with `constE` and the arm unfolded and `natcmp_grind` for `cmpW`.
+
+Not done: `natOpResult`'s dispatch itself (it reads fifteen pins first; the pins are not in
+`ArenaR`).
 
 ### `sorry`s
 
@@ -3521,7 +3569,7 @@ for the L-side spec itself.
 | `nat_pow` (word exponent `< 2^25`; lane `nat2`) | 20 (`pow`, `one`) | 23 | 146 | 5.8 s | house form; `Grows.trans`, the exponent-bit and frame lemmas by hand |
 | `nat_divmod` (`a / b`, `a % b`, `b` normalised; lane `nat2`) | 84 (`div_mod`, `div`, `modulo`, `dm_limbs`, `dm_bits`, `rev_copy_from`, `shl1_or`, `shl1_from`) | 94 | ~600 | 47 s (21 s wall) | four passes and three loops house form; function `nat_mul`'s recipe; the arithmetic lemmas by hand |
 | `nat_gcd` (+ `gcd_step`; lane `nat2`) | 10 (`gcd`) | 13 | 120 | 1.9 s | house form; `Norm.of_agree` by hand |
-| `natOpResult` arms `-` `pred` `*` `^` `/` `%` `land` `lor` `xor` `shiftLeft` `shiftRight` under `ArenaR` (lane `nat2`) | – (`arena/core.rs` arms) | 31 (`topLit` 4, `nat_pred_lit` 9, `nat_pow_lit` 8, `nat_div_lit` 5, `nat_mod_lit` 5) | ~420 | 7.7 s (3.7 s wall) | house form throughout; `Grows.push1` by hand |
+| `natOpResult` arms `-` `pred` `*` `^` `/` `%` `gcd` `land` `lor` `xor` `shiftLeft` `shiftRight` `beq` `ble` under `ArenaR` (lane `nat2`) | – (`arena/core.rs` arms) | 50 (`topLit` 4, `nat_pred_lit` 9, `nat_pow_lit` 8, `nat_div_lit`/`nat_mod_lit`/`nat_gcd_lit` 15, `nat_beq_lit`/`nat_ble_lit` 14) | ~560 | 12.9 s (5.4 s wall) | house form throughout; `Grows.push1` by hand |
 
 Whole file 307 lines. `lake build ConAgua` (full project) still green, 403 ms incremental.
 
@@ -3933,10 +3981,16 @@ otherwise, decoded by `decOpt`; `/` and `%` take `nat_divmod`'s first or second 
 the first or second attempt, 3.7 s for the file. The operands are normalised slices (as every
 `lit` record's), which `nat_shr` and `nat_divmod` need for `b`.
 
-Not done: `Nat.beq`/`Nat.ble` (their arms intern a `const` node of a `Bool` pin through
-`constE`, i.e. `emptyLevels` and `intern_const`; the L side is `nat_cmp`'s code), `Nat.gcd`
-(Euclid over `nat_divmod`), and `natOpResult`'s dispatch itself (it reads fifteen pins first;
-the pins are not in `ArenaR`).
+`Nat.gcd` is `nat_gcd`'s slice interned. `Nat.beq`/`Nat.ble` intern a `const` node: the arm reads
+the pins `boolTrueName`/`boolFalseName` and, inside `constE`, `emptyLevels`, which `ArenaR` does
+not cover, so `nat_beq_lit(oa, la, ob, lb, t, f, us)` takes the three handles as arguments and
+the theorem takes what the pin reads return as hypotheses (`boolTrueName.run a₀ = .ok (decI t,
+a₀)`, …; they read the state and do not change it). The L side is `nat_cmp`'s code
+(`if c != 1 { t := f }`, `c == 2` for `ble`) and `intern_const` (`internConst_refinesA`); the
+house form went through with `constE` and the arm unfolded and `natcmp_grind` for `cmpW`.
+
+Not done: `natOpResult`'s dispatch itself (it reads fifteen pins first; the pins are not in
+`ArenaR`).
 
 ### `sorry`s
 
@@ -4196,10 +4250,16 @@ otherwise, decoded by `decOpt`; `/` and `%` take `nat_divmod`'s first or second 
 the first or second attempt, 3.7 s for the file. The operands are normalised slices (as every
 `lit` record's), which `nat_shr` and `nat_divmod` need for `b`.
 
-Not done: `Nat.beq`/`Nat.ble` (their arms intern a `const` node of a `Bool` pin through
-`constE`, i.e. `emptyLevels` and `intern_const`; the L side is `nat_cmp`'s code), `Nat.gcd`
-(Euclid over `nat_divmod`), and `natOpResult`'s dispatch itself (it reads fifteen pins first;
-the pins are not in `ArenaR`).
+`Nat.gcd` is `nat_gcd`'s slice interned. `Nat.beq`/`Nat.ble` intern a `const` node: the arm reads
+the pins `boolTrueName`/`boolFalseName` and, inside `constE`, `emptyLevels`, which `ArenaR` does
+not cover, so `nat_beq_lit(oa, la, ob, lb, t, f, us)` takes the three handles as arguments and
+the theorem takes what the pin reads return as hypotheses (`boolTrueName.run a₀ = .ok (decI t,
+a₀)`, …; they read the state and do not change it). The L side is `nat_cmp`'s code
+(`if c != 1 { t := f }`, `c == 2` for `ble`) and `intern_const` (`internConst_refinesA`); the
+house form went through with `constE` and the arm unfolded and `natcmp_grind` for `cmpW`.
+
+Not done: `natOpResult`'s dispatch itself (it reads fifteen pins first; the pins are not in
+`ArenaR`).
 
 ### `sorry`s
 
@@ -4389,10 +4449,16 @@ otherwise, decoded by `decOpt`; `/` and `%` take `nat_divmod`'s first or second 
 the first or second attempt, 3.7 s for the file. The operands are normalised slices (as every
 `lit` record's), which `nat_shr` and `nat_divmod` need for `b`.
 
-Not done: `Nat.beq`/`Nat.ble` (their arms intern a `const` node of a `Bool` pin through
-`constE`, i.e. `emptyLevels` and `intern_const`; the L side is `nat_cmp`'s code), `Nat.gcd`
-(Euclid over `nat_divmod`), and `natOpResult`'s dispatch itself (it reads fifteen pins first;
-the pins are not in `ArenaR`).
+`Nat.gcd` is `nat_gcd`'s slice interned. `Nat.beq`/`Nat.ble` intern a `const` node: the arm reads
+the pins `boolTrueName`/`boolFalseName` and, inside `constE`, `emptyLevels`, which `ArenaR` does
+not cover, so `nat_beq_lit(oa, la, ob, lb, t, f, us)` takes the three handles as arguments and
+the theorem takes what the pin reads return as hypotheses (`boolTrueName.run a₀ = .ok (decI t,
+a₀)`, …; they read the state and do not change it). The L side is `nat_cmp`'s code
+(`if c != 1 { t := f }`, `c == 2` for `ble`) and `intern_const` (`internConst_refinesA`); the
+house form went through with `constE` and the arm unfolded and `natcmp_grind` for `cmpW`.
+
+Not done: `natOpResult`'s dispatch itself (it reads fifteen pins first; the pins are not in
+`ArenaR`).
 
 ### `sorry`s
 
@@ -4593,10 +4659,16 @@ otherwise, decoded by `decOpt`; `/` and `%` take `nat_divmod`'s first or second 
 the first or second attempt, 3.7 s for the file. The operands are normalised slices (as every
 `lit` record's), which `nat_shr` and `nat_divmod` need for `b`.
 
-Not done: `Nat.beq`/`Nat.ble` (their arms intern a `const` node of a `Bool` pin through
-`constE`, i.e. `emptyLevels` and `intern_const`; the L side is `nat_cmp`'s code), `Nat.gcd`
-(Euclid over `nat_divmod`), and `natOpResult`'s dispatch itself (it reads fifteen pins first;
-the pins are not in `ArenaR`).
+`Nat.gcd` is `nat_gcd`'s slice interned. `Nat.beq`/`Nat.ble` intern a `const` node: the arm reads
+the pins `boolTrueName`/`boolFalseName` and, inside `constE`, `emptyLevels`, which `ArenaR` does
+not cover, so `nat_beq_lit(oa, la, ob, lb, t, f, us)` takes the three handles as arguments and
+the theorem takes what the pin reads return as hypotheses (`boolTrueName.run a₀ = .ok (decI t,
+a₀)`, …; they read the state and do not change it). The L side is `nat_cmp`'s code
+(`if c != 1 { t := f }`, `c == 2` for `ble`) and `intern_const` (`internConst_refinesA`); the
+house form went through with `constE` and the arm unfolded and `natcmp_grind` for `cmpW`.
+
+Not done: `natOpResult`'s dispatch itself (it reads fifteen pins first; the pins are not in
+`ArenaR`).
 
 ### `sorry`s
 
@@ -4913,10 +4985,16 @@ otherwise, decoded by `decOpt`; `/` and `%` take `nat_divmod`'s first or second 
 the first or second attempt, 3.7 s for the file. The operands are normalised slices (as every
 `lit` record's), which `nat_shr` and `nat_divmod` need for `b`.
 
-Not done: `Nat.beq`/`Nat.ble` (their arms intern a `const` node of a `Bool` pin through
-`constE`, i.e. `emptyLevels` and `intern_const`; the L side is `nat_cmp`'s code), `Nat.gcd`
-(Euclid over `nat_divmod`), and `natOpResult`'s dispatch itself (it reads fifteen pins first;
-the pins are not in `ArenaR`).
+`Nat.gcd` is `nat_gcd`'s slice interned. `Nat.beq`/`Nat.ble` intern a `const` node: the arm reads
+the pins `boolTrueName`/`boolFalseName` and, inside `constE`, `emptyLevels`, which `ArenaR` does
+not cover, so `nat_beq_lit(oa, la, ob, lb, t, f, us)` takes the three handles as arguments and
+the theorem takes what the pin reads return as hypotheses (`boolTrueName.run a₀ = .ok (decI t,
+a₀)`, …; they read the state and do not change it). The L side is `nat_cmp`'s code
+(`if c != 1 { t := f }`, `c == 2` for `ble`) and `intern_const` (`internConst_refinesA`); the
+house form went through with `constE` and the arm unfolded and `natcmp_grind` for `cmpW`.
+
+Not done: `natOpResult`'s dispatch itself (it reads fifteen pins first; the pins are not in
+`ArenaR`).
 
 ### `sorry`s
 
