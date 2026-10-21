@@ -44,13 +44,16 @@ theorem ArenaR.memo_set (m m' : Mem) (a : AState) (hR : ArenaR m a) (k v : Word)
     (hk : k.toNat < 2 ^ 32) (hs : msetG bmSch m k 0 v = some m') :
     ArenaR m' (withBC a (a.memos.bvarBC.insert (decE k) v.toNat)) := by
   have hf := msetG_frame bmSch bmSch_wf m m' k 0 v hs
-  arena_build hR, hf with exact memoRG_set bmSch bmSch_wf bmKey _ m _ hR.memo k 0 v ⟨hk, rfl⟩ m' hs
+  exact hR.with_memos hf (by apart) (by apart) (by
+    memos_build hR.memos, hf with
+      exact memoRG_set bmSch bmSch_wf bmKey _ m _ hR.memos.bvar k 0 v ⟨hk, rfl⟩ m' hs)
 
 /-- **`memo_clear` is `bvarBClear`.** -/
 theorem ArenaR.memo_clear (m : Mem) (a : AState) (hR : ArenaR m a)
     (h0 : rdW (m.arr64 CTL) 24 + 2 ≠ 0) : ArenaR (mclearG bmSch m) (withBC a ∅) := by
   have hf := mclearG_frame bmSch m
-  arena_build hR, hf with exact memoRG_clear bmSch bmSch_wf bmKey _ m _ hR.memo h0
+  exact hR.with_memos hf (by apart) (by apart) (by
+    memos_build hR.memos, hf with exact memoRG_clear bmSch bmSch_wf bmKey _ m _ hR.memos.bvar h0)
 
 /-! ## The arena walk, unfolded -/
 
@@ -108,12 +111,12 @@ theorem goOK_succ (n : Nat) (ih : NodeOK n) : GoOK (n + 1) := by
   · rw [bbW_hit n m h hr hh0] at hb
     simp only [Option.some.injEq, Prod.mk.injEq] at hb
     obtain ⟨rfl, rfl⟩ := hb
-    rw [show a.memos.bvarBC[decE h]? = _ from memoRG_hit bmSch bmKey _ m _ hR.memo h 0 hr hh0]
+    rw [show a.memos.bvarBC[decE h]? = _ from memoRG_hit bmSch bmKey _ m _ hR.memos.bvar h 0 hr hh0]
     exact ⟨a, rfl, hR⟩
   · simp only [ne_eq, Decidable.not_not] at hh0
     rw [bbW_miss n m h hr hh0] at hb
     rw [show a.memos.bvarBC[decE h]? = none from
-      memoRG_miss bmSch bmKey _ m _ hR.memo h 0 ⟨hh, rfl⟩ hr hh0]
+      memoRG_miss bmSch bmKey _ m _ hR.memos.bvar h 0 ⟨hh, rfl⟩ hr hh0]
     cases hn : bbNodeW n m h with
     | none => simp [bbK, hn] at hb
     | some p =>
@@ -131,19 +134,19 @@ theorem goOK_succ (n : Nat) (ih : NodeOK n) : GoOK (n + 1) := by
         rfl
 
 /-- The `app` arm: two children, `max x y`. -/
-theorem appArm_ok (n F : Nat) (ih : GoOK n) (hF : n ≤ F) (m m' : Mem) (a : AState)
+theorem bbAppArm_ok (n F : Nat) (ih : GoOK n) (hF : n ≤ F) (m m' : Mem) (a : AState)
     (hR : ArenaR m a) (fw aw r : Word) (hf : fw.toNat < 2 ^ 32) (ha : aw.toNat < 2 ^ 32)
-    (hb : appK₁ n aw (bbW n m fw) = some (r, m')) :
+    (hb : bbAppK₁ n aw (bbW n m fw) = some (r, m')) :
     ∃ a', (bvarBoundArmApp F (decE fw) (decE aw)).run a = .ok (r.toNat, a') ∧ ArenaR m' a' := by
   cases h1 : bbW n m fw with
-  | none => simp only [h1, appK₁, reduceCtorEq] at hb
+  | none => simp only [h1, bbAppK₁, reduceCtorEq] at hb
   | some p =>
     obtain ⟨x, m₁⟩ := p
     cases h2 : bbW n m₁ aw with
-    | none => simp only [h1, h2, appK₁, appK₁.appK₂, reduceCtorEq] at hb
+    | none => simp only [h1, h2, bbAppK₁, bbAppK₁.bbAppK₂, reduceCtorEq] at hb
     | some q =>
       obtain ⟨y, m₂⟩ := q
-      simp only [h1, h2, appK₁, appK₁.appK₂, Option.some.injEq, Prod.mk.injEq] at hb
+      simp only [h1, h2, bbAppK₁, bbAppK₁.bbAppK₂, Option.some.injEq, Prod.mk.injEq] at hb
       obtain ⟨rfl, rfl⟩ := hb
       obtain ⟨a₁, ha₁, hR₁⟩ := ih F m m₁ a _ x hF hR hf h1
       obtain ⟨a₂, ha₂, hR₂⟩ := ih F m₁ m₂ a₁ _ y hF hR₁ ha h2
@@ -153,19 +156,19 @@ theorem appArm_ok (n F : Nat) (ih : GoOK n) (hF : n ≤ F) (m m' : Mem) (a : ASt
       rfl
 
 /-- The binder arm (`lam`, `forallE`): two children, `max x (y - 1)`. -/
-theorem bindArm_ok (n F : Nat) (ih : GoOK n) (hF : n ≤ F) (m m' : Mem) (a : AState)
+theorem bbBindArm_ok (n F : Nat) (ih : GoOK n) (hF : n ≤ F) (m m' : Mem) (a : AState)
     (hR : ArenaR m a) (tw bw r : Word) (ht : tw.toNat < 2 ^ 32) (hb' : bw.toNat < 2 ^ 32)
-    (hb : bindK₁ n bw (bbW n m tw) = some (r, m')) :
+    (hb : bbBindK₁ n bw (bbW n m tw) = some (r, m')) :
     ∃ a', (bvarBoundArmBind F (decE tw) (decE bw)).run a = .ok (r.toNat, a') ∧ ArenaR m' a' := by
   cases h1 : bbW n m tw with
-  | none => simp only [h1, bindK₁, reduceCtorEq] at hb
+  | none => simp only [h1, bbBindK₁, reduceCtorEq] at hb
   | some p =>
     obtain ⟨x, m₁⟩ := p
     cases h2 : bbW n m₁ bw with
-    | none => simp only [h1, h2, bindK₁, bindK₁.bindK₂, reduceCtorEq] at hb
+    | none => simp only [h1, h2, bbBindK₁, bbBindK₁.bbBindK₂, reduceCtorEq] at hb
     | some q =>
       obtain ⟨y, m₂⟩ := q
-      simp only [h1, h2, bindK₁, bindK₁.bindK₂, Option.some.injEq, Prod.mk.injEq] at hb
+      simp only [h1, h2, bbBindK₁, bbBindK₁.bbBindK₂, Option.some.injEq, Prod.mk.injEq] at hb
       obtain ⟨rfl, rfl⟩ := hb
       obtain ⟨a₁, ha₁, hR₁⟩ := ih F m m₁ a _ x hF hR ht h1
       obtain ⟨a₂, ha₂, hR₂⟩ := ih F m₁ m₂ a₁ _ y hF hR₁ hb' h2
@@ -175,24 +178,24 @@ theorem bindArm_ok (n F : Nat) (ih : GoOK n) (hF : n ≤ F) (m m' : Mem) (a : AS
       rfl
 
 /-- The `letE` arm: three children, `max (max x y) (z - 1)`. -/
-theorem letArm_ok (n F : Nat) (ih : GoOK n) (hF : n ≤ F) (m m' : Mem) (a : AState)
+theorem bbLetArm_ok (n F : Nat) (ih : GoOK n) (hF : n ≤ F) (m m' : Mem) (a : AState)
     (hR : ArenaR m a) (tw vw bw r : Word) (ht : tw.toNat < 2 ^ 32) (hv : vw.toNat < 2 ^ 32)
-    (hb' : bw.toNat < 2 ^ 32) (hb : letK₁ n vw bw (bbW n m tw) = some (r, m')) :
+    (hb' : bw.toNat < 2 ^ 32) (hb : bbLetK₁ n vw bw (bbW n m tw) = some (r, m')) :
     ∃ a', (bvarBoundArmLet F (decE tw) (decE vw) (decE bw)).run a = .ok (r.toNat, a') ∧
       ArenaR m' a' := by
   cases h1 : bbW n m tw with
-  | none => simp only [h1, letK₁, reduceCtorEq] at hb
+  | none => simp only [h1, bbLetK₁, reduceCtorEq] at hb
   | some p =>
     obtain ⟨x, m₁⟩ := p
     cases h2 : bbW n m₁ vw with
-    | none => simp only [h1, h2, letK₁, letK₁.letK₂, reduceCtorEq] at hb
+    | none => simp only [h1, h2, bbLetK₁, bbLetK₁.bbLetK₂, reduceCtorEq] at hb
     | some q =>
       obtain ⟨y, m₂⟩ := q
       cases h3 : bbW n m₂ bw with
-      | none => simp only [h1, h2, h3, letK₁, letK₁.letK₂, letK₁.letK₃, reduceCtorEq] at hb
+      | none => simp only [h1, h2, h3, bbLetK₁, bbLetK₁.bbLetK₂, bbLetK₁.bbLetK₃, reduceCtorEq] at hb
       | some o =>
         obtain ⟨z, m₃⟩ := o
-        simp only [h1, h2, h3, letK₁, letK₁.letK₂, letK₁.letK₃, Option.some.injEq,
+        simp only [h1, h2, h3, bbLetK₁, bbLetK₁.bbLetK₂, bbLetK₁.bbLetK₃, Option.some.injEq,
           Prod.mk.injEq] at hb
         obtain ⟨rfl, rfl⟩ := hb
         obtain ⟨a₁, ha₁, hR₁⟩ := ih F m m₁ a _ x hF hR ht h1
@@ -228,28 +231,28 @@ theorem nodeOK_succ (n : Nat) (ih : GoOK n) : NodeOK (n + 1) := by
     · rw [bbNodeW] at hb; simp [hs, g4, hc] at hb
     obtain ⟨hv, hf, ha⟩ := view_app m a hR h hh (vok 4 hc) g4
     rw [bbNodeW_app n m h (vok 4 hc) g4] at hb
-    obtain ⟨a', h1, h2⟩ := appArm_ok n F ih hF' m m' a hR _ _ r hf ha hb
+    obtain ⟨a', h1, h2⟩ := bbAppArm_ok n F ih hF' m m' a hR _ _ r hf ha hb
     exact ⟨a', (bbNodeA_run F _ a _ hv).trans h1, h2⟩
   by_cases g5 : h >>> 28 = 5
   · by_cases hc : rdW (m.arr64 CTL) (28 + tierW h) ≤ idxW h
     · rw [bbNodeW] at hb; simp [hs, g5, hc] at hb
     obtain ⟨hv, hf, ha⟩ := view_lam m a hR h hh (vok 28 hc) g5
     rw [bbNodeW_lam n m h (vok 28 hc) g5] at hb
-    obtain ⟨a', h1, h2⟩ := bindArm_ok n F ih hF' m m' a hR _ _ r hf ha hb
+    obtain ⟨a', h1, h2⟩ := bbBindArm_ok n F ih hF' m m' a hR _ _ r hf ha hb
     exact ⟨a', (bbNodeA_run F _ a _ hv).trans h1, h2⟩
   by_cases g6 : h >>> 28 = 6
   · by_cases hc : rdW (m.arr64 CTL) (30 + tierW h) ≤ idxW h
     · rw [bbNodeW] at hb; simp [hs, g6, hc] at hb
     obtain ⟨hv, hf, ha⟩ := view_forall m a hR h hh (vok 30 hc) g6
     rw [bbNodeW_forall n m h (vok 30 hc) g6] at hb
-    obtain ⟨a', h1, h2⟩ := bindArm_ok n F ih hF' m m' a hR _ _ r hf ha hb
+    obtain ⟨a', h1, h2⟩ := bbBindArm_ok n F ih hF' m m' a hR _ _ r hf ha hb
     exact ⟨a', (bbNodeA_run F _ a _ hv).trans h1, h2⟩
   by_cases g7 : h >>> 28 = 7
   · by_cases hc : rdW (m.arr64 CTL) (20 + tierW h) ≤ idxW h
     · rw [bbNodeW] at hb; simp [hs, g7, hc] at hb
     obtain ⟨hv, ht, hv', hb'⟩ := view_let m a hR h hh (vok 20 hc) g7
     rw [bbNodeW_let n m h (vok 20 hc) g7] at hb
-    obtain ⟨a', h1, h2⟩ := letArm_ok n F ih hF' m m' a hR _ _ _ r ht hv' hb' hb
+    obtain ⟨a', h1, h2⟩ := bbLetArm_ok n F ih hF' m m' a hR _ _ _ r ht hv' hb' hb
     exact ⟨a', (bbNodeA_run F _ a _ hv).trans h1, h2⟩
   by_cases g9 : h >>> 28 = 9
   · by_cases hc : rdW (m.arr64 CTL) (32 + tierW h) ≤ idxW h

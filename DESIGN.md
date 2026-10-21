@@ -4853,7 +4853,7 @@ None.
 
 Lane `scale`'s "Recommended changes now", items 1–3, applied before the core builds on the shape.
 
-### 1. Write sets from the program text (`L/WriteSet.lean`, `Arena/Frame.lean`, `Arena/WriteSet{Lift,Walk}.lean`)
+### 1. Write sets from the program text (`L/WriteSet.lean`, `Arena/Frame.lean`, `Arena/WriteSets.lean`)
 
 * `L/WriteSet.lean` (namespace `L`, a `module`): `closedW ctl p A C fs` (a `Bool`): every function
   of the call-closed set `fs` stores only into word arrays of `A` and into words of `C` of the
@@ -4884,7 +4884,7 @@ Lane `scale`'s "Recommended changes now", items 1–3, applied before the core b
 **Migration notes (item 1).** (a) A new L program: give it a concrete `*Prog`, a function list
 and its `(A, C)`, prove `closedA prog A C fns = true := by decide +kernel`, and for its program
 predicate `closedW_of_agree prog_closed (by simp only [fns, List.forall_mem_cons, …]; exact
-⟨hp.f₁.trans rfl, …⟩)` (pattern: `WriteSetLift.lean`). (b) A tier-indexed `CTL` store must
+⟨hp.f₁.trans rfl, …⟩)` (pattern: `WriteSets.lean`). (b) A tier-indexed `CTL` store must
 mask the tier: `CTL.u64[k + (t & 1)]`, or `closedW` rejects it. (c) To carry your relation `X`
 across a run of `f`: `run_keeps (hp.closed …) (by decide) hX hrun hx` with `hX : Stable A C X`
 (for `StateDR`: `fun m m' hf h => StateDR.frame hf (by decide) (by decide) (by decide) h`). (d)

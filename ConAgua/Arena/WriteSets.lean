@@ -1,11 +1,14 @@
 import ConAgua.Arena.Inst1Spec
+import ConAgua.Arena.Walk
+import ConAgua.Arena.FVarRange
+import ConAgua.Arena.LitRefine
 import ConAgua.Arena.Frame
 
 /-!
-# The write sets of `lift_entry` and `inst_entry`, from the text
+# The write sets of the walks and the store programs, from the text
 
-`closedA` (`Frame.lean`, `L/WriteSet.lean`) checked on the concrete programs `liftProg` and
-`instProg` by `decide +kernel`, then carried to every program that satisfies the walk's program
+`closedA` (`Frame.lean`, `L/WriteSet.lean`) checked on the concrete programs (`liftProg`,
+`instProg`, `walkProg`, `fvarRangeProg`, `storeProg`) by `decide +kernel`, then carried to every program that satisfies the walk's program
 predicate (`LiftProg p`, `InstProg p`), since `closedW` reads only the lookups of the functions
 it checks. With `run_keeps`, any memory predicate that is `Stable` under the write set survives
 every run of the entries, with no lemma about the walk.
@@ -93,5 +96,73 @@ theorem instEntry_frame {p : Prog} (hp : InstProg p) (he : p.lookup "inst_entry"
     {n : Nat} {vs : List Word} {m : Mem} {rs : List Word} {m' : Mem}
     (h : run p n "inst_entry" vs m = .ok (rs, m')) : MemFrame instA instC m m' :=
   (run_memFrame (hp.closed he hle) (by decide) h).1
+
+/-! ## `bb_memo` -/
+
+def walkFns : List FnName := ["bm_find", "bm_put", "bm_clear", "bb_go", "bb_node", "bb_memo"]
+
+/-- The walk writes only its memo `BMEMO` (24) and the memo's stamp and count (`CTL` 24, 25). -/
+def walkA : List ArrId := [24]
+def walkC : List Word := [24, 25]
+
+theorem walkProg_closed : closedA walkProg walkA walkC walkFns = true := by decide +kernel
+
+theorem walk_closed {p : Prog} (hpf : p.lookup "bm_find" = some (memoFindG bmSch))
+    (hps : p.lookup "bm_put" = some (memoPutG bmSch)) (hpc : p.lookup "bm_clear" = some (memoClearG bmSch))
+    (hp : p.lookup "bb_go" = some bbGo) (hpn : p.lookup "bb_node" = some bbNode)
+    (hpm : p.lookup "bb_memo" = some bbMemo) : closedA p walkA walkC walkFns = true :=
+  closedW_of_agree walkProg_closed (by
+    simp only [walkFns, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
+    exact ⟨hpf.trans rfl, hps.trans rfl, hpc.trans rfl, hp.trans rfl, hpn.trans rfl, hpm.trans rfl⟩)
+
+/-- **Every run of `bb_memo` changes only the `bvarBound` memo.** -/
+theorem bbMemo_frame {p : Prog} (hpf : p.lookup "bm_find" = some (memoFindG bmSch))
+    (hps : p.lookup "bm_put" = some (memoPutG bmSch)) (hpc : p.lookup "bm_clear" = some (memoClearG bmSch))
+    (hp : p.lookup "bb_go" = some bbGo) (hpn : p.lookup "bb_node" = some bbNode)
+    (hpm : p.lookup "bb_memo" = some bbMemo) {n : Nat} {vs : List Word} {m : Mem} {rs : List Word}
+    {m' : Mem} (h : run p n "bb_memo" vs m = .ok (rs, m')) : MemFrame walkA walkC m m' :=
+  (run_memFrame (walk_closed hpf hps hpc hp hpn hpm) (by decide) h).1
+
+/-! ## `fr_memo` -/
+
+def frFns : List FnName := ["fm_find", "fm_put", "fm_clear", "fr_go", "fr_node", "fr_memo"]
+
+/-- The `fvarRange` walk writes only its memo `FRMEMO` (48) and its stamp and count (`CTL` 46, 47). -/
+def frA : List ArrId := [48]
+def frC : List Word := [46, 47]
+
+theorem fvarRangeProg_closed : closedA fvarRangeProg frA frC frFns = true := by decide +kernel
+
+theorem fr_closed {p : Prog} (hpf : p.lookup "fm_find" = some (memoFindG frSch))
+    (hps : p.lookup "fm_put" = some (memoPutG frSch)) (hpc : p.lookup "fm_clear" = some (memoClearG frSch))
+    (hp : p.lookup "fr_go" = some frGo) (hpn : p.lookup "fr_node" = some frNode)
+    (hpm : p.lookup "fr_memo" = some frMemo) : closedA p frA frC frFns = true :=
+  closedW_of_agree fvarRangeProg_closed (by
+    simp only [frFns, List.forall_mem_cons, List.not_mem_nil, false_imp_iff, implies_true, and_true]
+    exact ⟨hpf.trans rfl, hps.trans rfl, hpc.trans rfl, hp.trans rfl, hpn.trans rfl, hpm.trans rfl⟩)
+
+/-- **Every run of `fr_memo` changes only the `fvarRange` memo.** -/
+theorem frMemo_frame {p : Prog} (hpf : p.lookup "fm_find" = some (memoFindG frSch))
+    (hps : p.lookup "fm_put" = some (memoPutG frSch)) (hpc : p.lookup "fm_clear" = some (memoClearG frSch))
+    (hp : p.lookup "fr_go" = some frGo) (hpn : p.lookup "fr_node" = some frNode)
+    (hpm : p.lookup "fr_memo" = some frMemo) {n : Nat} {vs : List Word} {m : Mem} {rs : List Word}
+    {m' : Mem} (h : run p n "fr_memo" vs m = .ok (rs, m')) : MemFrame frA frC m m' :=
+  (run_memFrame (fr_closed hpf hps hpc hp hpn hpm) (by decide) h).1
+
+/-! ## `nat_add_lit` -/
+
+def storeFns : List FnName := storeProg.map (·.1)
+
+/-- `nat_add_lit` writes the pool (0) and the `lit` table (2, 3), the pool top and the counts. -/
+def storeA : List ArrId := [0, 2, 3]
+def storeC : List Word := [0, 2, 3]
+
+theorem storeProg_closed : closedA storeProg storeA storeC storeFns = true := by decide +kernel
+
+/-- **Every run of `nat_add_lit` (or `intern_lit`) changes only the pool and the `lit` table.** -/
+theorem storeProg_frame {f : FnName} (hf : f ∈ storeFns) {n : Nat} {vs : List Word} {m : Mem}
+    {rs : List Word} {m' : Mem} (h : run storeProg n f vs m = .ok (rs, m')) :
+    MemFrame storeA storeC m m' :=
+  (run_memFrame storeProg_closed hf h).1
 
 end L.Arena

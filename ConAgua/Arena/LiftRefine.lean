@@ -44,14 +44,18 @@ theorem ArenaD.lmemo_set (m m' : Mem) (a : AState) (hA : ArenaD m a) (h c v : Wo
     ArenaD m' (withLC a (a.memos.liftC.insert (decE h, c.toNat) (decE v))) := by
   have hf := msetG_frame lfSch lfSch_wf m m' h c v hs
   refine ⟨?_, DerR.of_store m' a _ (DerR.frameM _ _ m m' hf (by simp [LMEMO]) _ hA.2) rfl⟩
-  arena_build hA.1, hf with exact memoRG_set lfSch lfSch_wf lfKey decE m _ hA.1.lmemo h c v hh m' hs
+  exact hA.1.with_memos hf (by apart) (by apart) (by
+    memos_build hA.1.memos, hf with
+      exact memoRG_set lfSch lfSch_wf lfKey decE m _ hA.1.memos.lift h c v hh m' hs)
 
 /-- **`lf_clear` is `liftClear`.** -/
 theorem ArenaD.lmemo_clear (m : Mem) (a : AState) (hA : ArenaD m a)
     (h0 : rdW (m.arr64 CTL) 42 + 2 ≠ 0) : ArenaD (mclearG lfSch m) (withLC a ∅) := by
   have hf := mclearG_frame lfSch m
   refine ⟨?_, DerR.of_store _ a _ (DerR.frameM _ _ m _ hf (by simp) _ hA.2) rfl⟩
-  arena_build hA.1, hf with exact memoRG_clear lfSch lfSch_wf lfKey decE m _ hA.1.lmemo h0
+  exact hA.1.with_memos hf (by apart) (by apart) (by
+    memos_build hA.1.memos, hf with
+      exact memoRG_clear lfSch lfSch_wf lfKey decE m _ hA.1.memos.lift h0)
 
 /-! ## The statements, by fuel -/
 
@@ -273,11 +277,11 @@ theorem probe_ok (armW : Option (Word × Mem)) (miss : AM EIdx) (m m' : Mem) (a 
   · rw [hhit hr hh0] at hb
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     rw [show a.memos.liftC[(decE h, c.toNat)]? = _ from
-      memoRG_hit lfSch lfKey decE m _ hA.1.lmemo h c hr hh0]
+      memoRG_hit lfSch lfKey decE m _ hA.1.memos.lift h c hr hh0]
     exact ⟨a, rfl, hA⟩
   · simp only [ne_eq, Decidable.not_not] at hh0
     rw [show a.memos.liftC[(decE h, c.toNat)]? = none from
-      memoRG_miss lfSch lfKey decE m _ hA.1.lmemo h c hh hr hh0]
+      memoRG_miss lfSch lfKey decE m _ hA.1.memos.lift h c hh hr hh0]
     exact hmiss hr hh0 hb
 
 section arms

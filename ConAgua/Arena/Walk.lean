@@ -134,7 +134,7 @@ end
 
 /-! ### The guarded equations, one per reachable arm
 
-Each arm is an equation whose right side names the continuation (`bbK`, `appK₁`, …): an equation
+Each arm is an equation whose right side names the continuation (`bbK`, `bbAppK₁`, …): an equation
 `bbW n m f = some (x, m₁)` from a callee spec then rewrites the continuation's argument, and the
 continuation's own equation fires on `some`. -/
 
@@ -149,30 +149,30 @@ def setK (r : Word) : Option Mem → Option (Word × Mem)
   | some m' => some (r, m')
 
 /-- The `app` arm after the first child, and after the second. -/
-def appK₁ (n : Nat) (a : Word) : Option (Word × Mem) → Option (Word × Mem)
+def bbAppK₁ (n : Nat) (a : Word) : Option (Word × Mem) → Option (Word × Mem)
   | none => none
-  | some (x, m₁) => appK₂ x (bbW n m₁ a)
-where appK₂ (x : Word) : Option (Word × Mem) → Option (Word × Mem)
+  | some (x, m₁) => bbAppK₂ x (bbW n m₁ a)
+where bbAppK₂ (x : Word) : Option (Word × Mem) → Option (Word × Mem)
   | none => none
   | some (y, m₂) => some (maxW x y, m₂)
 
 /-- The binder arm (`lam`, `forallE`) after the type, and after the body. -/
-def bindK₁ (n : Nat) (b : Word) : Option (Word × Mem) → Option (Word × Mem)
+def bbBindK₁ (n : Nat) (b : Word) : Option (Word × Mem) → Option (Word × Mem)
   | none => none
-  | some (x, m₁) => bindK₂ x (bbW n m₁ b)
-where bindK₂ (x : Word) : Option (Word × Mem) → Option (Word × Mem)
+  | some (x, m₁) => bbBindK₂ x (bbW n m₁ b)
+where bbBindK₂ (x : Word) : Option (Word × Mem) → Option (Word × Mem)
   | none => none
   | some (y, m₂) => some (maxW x (predW y), m₂)
 
 /-- The `letE` arm after each child. -/
-def letK₁ (n : Nat) (a b : Word) : Option (Word × Mem) → Option (Word × Mem)
+def bbLetK₁ (n : Nat) (a b : Word) : Option (Word × Mem) → Option (Word × Mem)
   | none => none
-  | some (x, m₁) => letK₂ x (bbW n m₁ a)
+  | some (x, m₁) => bbLetK₂ x (bbW n m₁ a)
 where
-  letK₂ (x : Word) : Option (Word × Mem) → Option (Word × Mem)
+  bbLetK₂ (x : Word) : Option (Word × Mem) → Option (Word × Mem)
     | none => none
-    | some (y, m₂) => letK₃ x y (bbW n m₂ b)
-  letK₃ (x y : Word) : Option (Word × Mem) → Option (Word × Mem)
+    | some (y, m₂) => bbLetK₃ x y (bbW n m₂ b)
+  bbLetK₃ (x y : Word) : Option (Word × Mem) → Option (Word × Mem)
     | none => none
     | some (z, m₃) => some (maxW (maxW x y) (predW z), m₃)
 
@@ -181,14 +181,14 @@ variable (n : Nat) (m m₁ m₂ m₃ : Mem) (h r x y z f a b : Word)
 
 theorem bbK_some : bbK h (some (r, m₁)) = bbSet m₁ h r := rfl
 theorem setK_some : setK r (some m₁) = some (r, m₁) := rfl
-theorem appK₁_some : appK₁ n a (some (x, m₁)) = appK₁.appK₂ x (bbW n m₁ a) := rfl
-theorem appK₂_some : appK₁.appK₂ x (some (y, m₂)) = some (maxW x y, m₂) := rfl
-theorem bindK₁_some : bindK₁ n b (some (x, m₁)) = bindK₁.bindK₂ x (bbW n m₁ b) := rfl
-theorem bindK₂_some : bindK₁.bindK₂ x (some (y, m₂)) = some (maxW x (predW y), m₂) := rfl
-theorem letK₁_some : letK₁ n a b (some (x, m₁)) = letK₁.letK₂ n b x (bbW n m₁ a) := rfl
-theorem letK₂_some : letK₁.letK₂ n b x (some (y, m₂)) = letK₁.letK₃ x y (bbW n m₂ b) := rfl
-theorem letK₃_some :
-    letK₁.letK₃ x y (some (z, m₃)) = some (maxW (maxW x y) (predW z), m₃) := rfl
+theorem bbAppK₁_some : bbAppK₁ n a (some (x, m₁)) = bbAppK₁.bbAppK₂ x (bbW n m₁ a) := rfl
+theorem bbAppK₂_some : bbAppK₁.bbAppK₂ x (some (y, m₂)) = some (maxW x y, m₂) := rfl
+theorem bbBindK₁_some : bbBindK₁ n b (some (x, m₁)) = bbBindK₁.bbBindK₂ x (bbW n m₁ b) := rfl
+theorem bbBindK₂_some : bbBindK₁.bbBindK₂ x (some (y, m₂)) = some (maxW x (predW y), m₂) := rfl
+theorem bbLetK₁_some : bbLetK₁ n a b (some (x, m₁)) = bbLetK₁.bbLetK₂ n b x (bbW n m₁ a) := rfl
+theorem bbLetK₂_some : bbLetK₁.bbLetK₂ n b x (some (y, m₂)) = bbLetK₁.bbLetK₃ x y (bbW n m₂ b) := rfl
+theorem bbLetK₃_some :
+    bbLetK₁.bbLetK₃ x y (some (z, m₃)) = some (maxW (maxW x y) (predW z), m₃) := rfl
 
 theorem bbSet_eq : bbSet m h r = setK r (msetG bmSch m h 0 r) := by
   simp only [bbSet, setK]
@@ -224,24 +224,24 @@ theorem bbNodeW_lit (hg : h >>> 28 = 8) (hv : viewOK m h 2) : bbNodeW (n + 1) m 
   rw [bbNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2]
 
 theorem bbNodeW_app (hv : viewOK m h 4) (hg : h >>> 28 = 4) :
-    bbNodeW (n + 1) m h = appK₁ n (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2 + 1))
+    bbNodeW (n + 1) m h = bbAppK₁ n (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2 + 1))
       (bbW n m (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2))) := by
   obtain ⟨hv1, hv2⟩ := hv
-  rw [bbNodeW]; simp only [hv1, hg, ↓reduceIte, UInt64.not_le.mpr hv2, appK₁, appK₁.appK₂]
+  rw [bbNodeW]; simp only [hv1, hg, ↓reduceIte, UInt64.not_le.mpr hv2, bbAppK₁, bbAppK₁.bbAppK₂]
   simp
 
 theorem bbNodeW_lam (hv : viewOK m h 28) (hg : h >>> 28 = 5) :
-    bbNodeW (n + 1) m h = bindK₁ n (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1))
+    bbNodeW (n + 1) m h = bbBindK₁ n (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1))
       (bbW n m (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2))) := by
   obtain ⟨hv1, hv2⟩ := hv
-  rw [bbNodeW]; simp only [hv1, hg, ↓reduceIte, UInt64.not_le.mpr hv2, bindK₁, bindK₁.bindK₂]
+  rw [bbNodeW]; simp only [hv1, hg, ↓reduceIte, UInt64.not_le.mpr hv2, bbBindK₁, bbBindK₁.bbBindK₂]
   simp
 
 theorem bbNodeW_forall (hv : viewOK m h 30) (hg : h >>> 28 = 6) :
-    bbNodeW (n + 1) m h = bindK₁ n (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1))
+    bbNodeW (n + 1) m h = bbBindK₁ n (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1))
       (bbW n m (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2))) := by
   obtain ⟨hv1, hv2⟩ := hv
-  rw [bbNodeW]; simp only [hv1, hg, ↓reduceIte, UInt64.not_le.mpr hv2, bindK₁, bindK₁.bindK₂]
+  rw [bbNodeW]; simp only [hv1, hg, ↓reduceIte, UInt64.not_le.mpr hv2, bbBindK₁, bbBindK₁.bbBindK₂]
   simp
 
 theorem bbNodeW_proj (hv : viewOK m h 32) (hg : h >>> 28 = 9) :
@@ -250,18 +250,18 @@ theorem bbNodeW_proj (hv : viewOK m h 32) (hg : h >>> 28 = 9) :
   rw [bbNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2]
 
 theorem bbNodeW_let (hv : viewOK m h 20) (hg : h >>> 28 = 7) :
-    bbNodeW (n + 1) m h = letK₁ n (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1))
+    bbNodeW (n + 1) m h = bbLetK₁ n (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1))
       (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2))
       (bbW n m (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3))) := by
   obtain ⟨hv1, hv2⟩ := hv
-  rw [bbNodeW]; simp only [hv1, hg, ↓reduceIte, UInt64.not_le.mpr hv2, letK₁, letK₁.letK₂,
-    letK₁.letK₃]
+  rw [bbNodeW]; simp only [hv1, hg, ↓reduceIte, UInt64.not_le.mpr hv2, bbLetK₁, bbLetK₁.bbLetK₂,
+    bbLetK₁.bbLetK₃]
   simp
 
 end arms
 
-attribute [arena_grind =] bbK_some setK_some appK₁_some appK₂_some bindK₁_some bindK₂_some
-  letK₁_some letK₂_some letK₃_some bbSet_eq
+attribute [arena_grind =] bbK_some setK_some bbAppK₁_some bbAppK₂_some bbBindK₁_some bbBindK₂_some
+  bbLetK₁_some bbLetK₂_some bbLetK₃_some bbSet_eq
 grind_pattern [arena_grind] bbW_hit => bbW (n + 1) m h
 grind_pattern [arena_grind] bbW_miss => bbW (n + 1) m h
 grind_pattern [arena_grind] bbNodeW_bvar => bbNodeW (n + 1) m h
