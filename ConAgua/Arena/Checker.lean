@@ -513,6 +513,23 @@ def checkPendingL : FunDecl := lfn (j, vis) locals (g, v, z) {
   return 0
 }
 
+/-- `check_pending_go(j, cnt, vis)`: `checkPendingList` over pending checks `j`‥`cnt - 1`. -/
+@[l_impl ConRon.Arena.checkPendingList]
+def checkPendingGoL : FunDecl := lfn (j, cnt, vis) locals (z) {
+  if j == cnt { return 0 };
+  z := call check_pending_next(j, cnt, vis);
+  return 0
+}
+
+/-- `check_pending_next(j, cnt, vis)`: one pending check (`j < cnt`), then the rest. -/
+@[l_impl ConRon.Arena.checkPendingList]
+def checkPendingNextL : FunDecl := lfn (j, cnt, vis) locals (z) {
+  if 4611686018427387904 <= j { abort };
+  z := call check_pending(j, vis);
+  z := call check_pending_go(j + 1, cnt, vis);
+  return 0
+}
+
 section skel
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
   (ds : Array IDeclaration) (p : Prog)
@@ -845,6 +862,113 @@ theorem checkPending_refines (hp : p.lookup "check_pending" = some checkPendingL
   exact triple_post inner fun r s' ⟨h0, h1, h2, h3, h4⟩ => by
     obtain ⟨o, st⟩ := checkPending_ok mode fe (pdAt pend j) a₀ h1 h2 h3
     exact ⟨h0, o, by rw [st]; exact h4⟩
+
+section phaseB
+variable (fe : IFEnv) (pend : Array PendingCheck)
+
+/-- What `check_pending_go` from check `k` ends with: phase B over the checks from `k` accepts,
+related to the memory `m` at view `v`. -/
+def PendPost (m : Mem) (a : AState) (v : Word) (k : Nat) : Prop :=
+  AM.ok (checkPendingList mode fe (pend.toList.drop k)) a ∧
+    AM.res (checkPendingList mode fe (pend.toList.drop k)) a = .ok () ∧
+    LoopR dn m (AM.st (checkPendingList mode fe (pend.toList.drop k)) a) v fe pend ds
+
+def CPGoSpec (n : Nat) : Prop :=
+  ∀ (s₀ : St) (a₀ : AState) (j cnt vis : Word), j.toNat ≤ pend.size → cnt.toNat = pend.size →
+    LoopR dn s₀.mem a₀ vis fe pend ds →
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_pending_go" [j, cnt, vis]
+    ⦃fun _ s' => LocEq s' s₀ ∧ PendPost mode dn ds fe pend s'.mem a₀ vis j.toNat; ⊤⦄
+
+def CPNextSpec (n : Nat) : Prop :=
+  ∀ (s₀ : St) (a₀ : AState) (j cnt vis : Word), j.toNat < pend.size → cnt.toNat = pend.size →
+    LoopR dn s₀.mem a₀ vis fe pend ds →
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_pending_next" [j, cnt, vis]
+    ⦃fun _ s' => LocEq s' s₀ ∧ PendPost mode dn ds fe pend s'.mem a₀ vis j.toNat; ⊤⦄
+
+theorem drop_cons_pdAt (j : Word) (hj : j.toNat < pend.size) (h1 : (j + 1).toNat = j.toNat + 1) :
+    pend.toList.drop j.toNat = pdAt pend j :: pend.toList.drop (j + 1).toNat := by
+  rw [h1, List.drop_eq_getElem_cons (by simpa using hj)]
+  simp [pdAt, hj]
+
+section cp
+variable (hpc : p.lookup "check_pending" = some checkPendingL)
+    (hpg : p.lookup "check_pending_go" = some checkPendingGoL)
+    (hpx : p.lookup "check_pending_next" = some checkPendingNextL)
+include hpc hpg hpx
+
+theorem cpGo_step (n : Nat) (ih : CPNextSpec mode dn ds p fe pend n) :
+    CPGoSpec mode dn ds p fe pend (n + 1) := by
+  unfold CPNextSpec at ih
+  intro s₀ a₀ j cnt vis hj hc hR
+  have hlt : j ≠ cnt → j.toNat < pend.size := fun h => by
+    have : j.toNat ≠ cnt.toNat := fun e => h (UInt64.toNat_inj.mp e)
+    omega
+  have hnil : j = cnt → PendPost mode dn ds fe pend s₀.mem a₀ vis j.toNat := fun h => by
+    have e : pend.toList.drop j.toNat = [] := by simp [h, hc]
+    have := checkPendingList_nil_ok mode fe a₀
+    simp only [PendPost, e]
+    exact ⟨this.1, this.2.2, by rw [this.2.1]; exact hR⟩
+  rw [invoke_eq _ hpg]
+  simp only [callFn, checkPendingGoL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, (ih · a₀ · · ·)] <;>
+    finish
+
+theorem cpNext_step (n : Nat) (ih : CPGoSpec mode dn ds p fe pend n) :
+    CPNextSpec mode dn ds p fe pend (n + 1) := by
+  unfold CPGoSpec at ih
+  intro s₀ a₀ j cnt vis hj hc hR
+  have h1 : j.toNat < 2 ^ 62 → (j + 1).toNat = j.toNat + 1 := by
+    intro h; rw [UInt64.toNat_add]; simp; omega
+  have hcons : j.toNat < 2 ^ 62 → ∀ (m : Mem) (k : Word), k = j + 1 → AM.ok (checkPending mode fe (pdAt pend j)) a₀ →
+      PendPost mode dn ds fe pend m (AM.st (checkPending mode fe (pdAt pend j)) a₀) vis k.toNat →
+      PendPost mode dn ds fe pend m a₀ vis j.toNat := by
+    intro h62 m k hk hok hp
+    rw [hk] at hp
+    obtain ⟨hp1, hp2, hp3⟩ := hp
+    have e := drop_cons_pdAt pend j hj (h1 h62)
+    have := checkPendingList_cons_ok mode fe (pdAt pend j) (pend.toList.drop (j + 1).toNat) a₀ hok hp1
+    refine ⟨?_, ?_, ?_⟩
+    · rw [e]; exact this.1
+    · rw [e, this.2.2]; exact hp2
+    · rw [e, this.2.1]; exact hp3
+  have inner : ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "check_pending_next" [j, cnt, vis]
+      ⦃fun _ s' => LocEq s' s₀ ∧ j.toNat < 2 ^ 62 ∧ AM.ok (checkPending mode fe (pdAt pend j)) a₀ ∧
+        PendPost mode dn ds fe pend s'.mem (AM.st (checkPending mode fe (pdAt pend j)) a₀) vis (j + 1).toNat; ⊤⦄ := by
+    have hloc : ∀ (s : St) (m : Mem) (rs : List Word),
+        LocEq s { mem := m, loc := Locals.init [j, cnt, vis] } →
+        (s.setLocs [3] rs).loc 0 = j ∧ (s.setLocs [3] rs).loc 1 = cnt ∧
+          (s.setLocs [3] rs).loc 2 = vis := by
+      intro s m rs h; grind [lang_grind]
+    have hmemL : ∀ (s : St) (rs : List Word), (s.setLocs [3] rs).mem = s.mem := by
+      intro s rs; simp [St.setLocs, St.setLoc]
+    rw [invoke_eq _ hpx]
+    simp only [callFn, checkPendingNextL]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+        (checkPending_refines mode dn ds p hpc n · a₀ · · fe pend ·),
+        (ih · (AM.st (checkPending mode fe (pdAt pend j)) a₀) · · ·)] <;>
+      finish
+  exact triple_post inner fun r s' ⟨h0, h62, h2, h3⟩ => ⟨h0, hcons h62 _ (j + 1) rfl h2 h3⟩
+
+/-- **`check_pending_go` refines `checkPendingList`** from check `j` on (and
+`check_pending_next` for one check and the rest). -/
+@[refines ConRon.Arena.checkPendingList]
+theorem checkPendingGo_refines (n : Nat) :
+    CPGoSpec mode dn ds p fe pend n ∧ CPNextSpec mode dn ds p fe pend n := by
+  induction n with
+  | zero =>
+    constructor
+    · intro s₀ a₀ j cnt vis _ _ _; rw [invoke_eq _ hpg]; simp only [callFn]
+      vcgen [exec] <;> grind
+    · intro s₀ a₀ j cnt vis _ _ _; rw [invoke_eq _ hpx]; simp only [callFn]
+      vcgen [exec] <;> grind
+  | succ n ih =>
+    exact ⟨cpGo_step mode dn ds p fe pend hpc hpg hpx n ih.2,
+      cpNext_step mode dn ds p fe pend hpc hpg hpx n ih.1⟩
+
+end cp
+end phaseB
 
 end skel
 
