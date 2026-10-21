@@ -24,18 +24,21 @@ need the "untouched" local back (`skip_braced`'s `i := e + 1` only reads the cal
 or needs it anyway through a loop induction hypothesis (which is stated, not derived through a
 record literal), so this is the first function to hit it.
 
-Workaround used in `numEndN_spec`'s proof (left as `sorry`, this is the reproducer instead):
-none found that keeps the established `sym only [lang_grind] => vcgen [...] <;> finish` shape —
-`subst` is not a hook `vcgen`'s per-VC `<;> finish` offers. A generic `St.loc_of_eq` congruence
-lemma does not help either: `grind_pattern` refuses it, since its pattern (`s.loc x`) does not
-mention the other two explicit parameters (`t`, `h`), so they "cannot be instantiated".
+Still fails on nightly-2026-10-20. A generic `St.loc_of_eq` congruence lemma does not help:
+`grind_pattern` refuses it, since its pattern (`s.loc x`) does not mention `t` and `h`. Nor does
+a lemma `(St.mk m l).loc x = l x`: `grind` reduces the pattern to `l x` and rejects it.
+
+Workaround (`ConAgua/L/Logic.lean`, `St.loc_of_eq_mk`): the lemma
+`t = St.mk m l → t.loc x = l x` with the multi-pattern `t.loc x, St.mk m l`. The first example
+below erases it from `lang_grind` to show the failure.
 -/
 
 import ConAgua.L.Logic
 
 open L
 
--- Fails: the direct shape from `numEndN_spec`.
+attribute [-lang_grind] St.loc_of_eq_mk in
+-- Fails (without the workaround lemma): the direct shape from `numEnd_spec`.
 example (f B : Nat) (i r : UInt64) (s t : St)
     (ha : t = { mem := s.mem, loc := Locals.init [i] })
     (hb : B < 2 ^ 64) (hf : f ≤ B) (hf2 : r = UInt64.ofNat f)
