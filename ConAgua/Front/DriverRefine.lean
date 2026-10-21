@@ -1,6 +1,7 @@
 import ConAgua.Front.Driver
 import ConAgua.Scan.RecordsLink
 import ConAgua.Arena.Refine
+import ConAgua.Front.StateDR
 import ConRon.Arena.Frontend.ExportC
 
 /-!
@@ -24,7 +25,6 @@ open L.Arena (AM.ok AM.res AM.st AM.run_of_ok)
 
 namespace L.Front
 
-instance : Inhabited (StateD ⊕ RecordVerdict) := ⟨.inl { names := {}, levels := {} }⟩
 
 /-- One line, as con-ron applies it, with the relation `Inv` after: the scanner reads the record
 `r` at `i` and the next position `q` (the word `nx`), `applyLine st r` succeeds from `a₀` with the

@@ -22,7 +22,6 @@ open ConRon.Arena ConRon.Arena.Frontend
 
 namespace L.Front
 
-instance : Inhabited (StateD ⊕ RecordVerdict) := ⟨.inl default⟩
 
 /-- **One line, as con-ron applies it**: the scanner reads the record `r` at `i` and the next
 position `q` (the word `nx`), `applyLine st r` succeeds from `a₀` with the parse state `st'`, and

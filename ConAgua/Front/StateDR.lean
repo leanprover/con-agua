@@ -34,6 +34,8 @@ namespace L.Front
 
 instance : Inhabited StateD := ⟨{ names := {}, levels := {} }⟩
 
+instance : Inhabited (StateD ⊕ RecordVerdict) := ⟨.inl default⟩
+
 /-- The parse state before `StateD.init`: both tables empty. -/
 def StateD.blank : StateD := { names := {}, levels := {} }
 
