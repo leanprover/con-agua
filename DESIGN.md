@@ -251,6 +251,47 @@ both exits end with the same `CTL[0] := top + n` (`if c != 0 { n := 0 } else { n
 a `return 0` that leaves `CTL[0]` alone fails `Frame POOL (m.set64 CTL 0 (top + 0)) m'`,
 because `grind` does not see that writing the top's own value back changes nothing.
 
+### `nat_shl`: a word amount, a branch-free bit shift
+
+The amount is a slice `b`. With `a ≠ 0`, an amount of two or more limbs cannot fit any pool
+(con-ron pushes `u64::MAX` zero limbs and runs out of memory), so it is an `abort`; otherwise
+`k = b[0]` (or `0`), `k >> 6` zero limbs (`shlZero`), then one pass over `a` with a carry
+(`shlLoop`), the carry limb, `nat_trim`. The bit shift needs no `s = 0` case:
+`c' = (x >> 1) >> (63 - s)` is `x >> (64 - s)` for `s ≥ 1` and `0` for `s = 0`.
+
+* **Digit equation over a named power.** `shl_split`:
+  `((x << s) | c) + c' · 2^64 = x · sh s + c` for `c < sh s`, with `sh s = 2^s` named (an atom to
+  the ring solver, as `wt`). Its proof is by hand (`Nat.shiftLeft_add_eq_or_of_lt`: the `|` is a
+  `+` because the low `s` bits of `x << s` are zero).
+* **The loop invariant uses `wt w * wt i`, not `wt (w + i)`** (`ShlInv`, `nat_mul`'s `ColInv`
+  shape): `wt_add`'s pattern `wt k, wt i * wt j` then joins it with the `wt (w + i)` that
+  `pv_set_succ` produces.
+* **The amount.** `shamt`: `2^k = sh (k & 63) · wt (k >> 6)`, pattern `2 ^ k.toNat`; and
+  `pv_one` (`pv p o 1 = p[o]`, pattern `pv p o 1, p[o]`): `pv_succ` alone needs a `pv p o 0`
+  term, which the goal does not have, and without it the final `grind` ran out of heartbeats.
+* The function proof is 35 of the file's 42 s (`maxHeartbeats 1000000`).
+
+### `nat_shr`: the loop runs over the shifted slice
+
+An amount of two or more limbs (`b` normalised) is at least `2^64`, so `a >>> b = 0` whenever
+`la < 2^57` (every pool); `la ≥ 2^57` is an `abort`. Otherwise `k = b[0]`; if `w = k >> 6 ≥ la`
+the result is `0`, else one pass over the slice `(oa + w, la - w)` (con-ron's `skip_index`
+becomes `oa := oa + w`), limb `i` being `(x >> s) | ((y << 1) << (63 - s))`, branch-free as in
+`nat_shl`, with `y` limb `i + 1` read by `nat_limb` (zero past the end) and carried into the next
+iteration as `x`.
+
+* **No division and no `w` in the loop.** `ShrInv`: `R_i · sh s + lowb x₀ s = xv i + lowb x_i s ·
+  wt i`, `lowb x s = x % 2^s` named. Its digit equation `shr_split`:
+  `out · sh s + lowb x s = x + lowb y s · 2^64`. The loop went through in the house form.
+* **The division and the skipped limbs are three lemmas with patterns on the quotient**
+  (`pv A / (S * wt w)` after `shamt` rewrites `2^k`): `shr_val` (pattern also `pv P o l, R * S`,
+  binding the loop's result; `pv_append` splits off the skipped limbs), `shr_big_w`
+  (`w ≥ la`), `shr_big_b` (two-limb amount, with `Norm`).
+* **Cost.** The function proof is 90 of the file's 94 s: `nat_mul`'s recipe, but one
+  `maxHeartbeats` for the whole theorem ran out (1M); with `set_option maxHeartbeats 200000 in
+  grind …` per goal (and none for the theorem) every goal passes. The house form
+  (`finish (gen := 25)`) fails on two goals (splits). Not tuned further.
+
 ### `sorry`s
 
 None.
@@ -1351,6 +1392,47 @@ both exits end with the same `CTL[0] := top + n` (`if c != 0 { n := 0 } else { n
 a `return 0` that leaves `CTL[0]` alone fails `Frame POOL (m.set64 CTL 0 (top + 0)) m'`,
 because `grind` does not see that writing the top's own value back changes nothing.
 
+### `nat_shl`: a word amount, a branch-free bit shift
+
+The amount is a slice `b`. With `a ≠ 0`, an amount of two or more limbs cannot fit any pool
+(con-ron pushes `u64::MAX` zero limbs and runs out of memory), so it is an `abort`; otherwise
+`k = b[0]` (or `0`), `k >> 6` zero limbs (`shlZero`), then one pass over `a` with a carry
+(`shlLoop`), the carry limb, `nat_trim`. The bit shift needs no `s = 0` case:
+`c' = (x >> 1) >> (63 - s)` is `x >> (64 - s)` for `s ≥ 1` and `0` for `s = 0`.
+
+* **Digit equation over a named power.** `shl_split`:
+  `((x << s) | c) + c' · 2^64 = x · sh s + c` for `c < sh s`, with `sh s = 2^s` named (an atom to
+  the ring solver, as `wt`). Its proof is by hand (`Nat.shiftLeft_add_eq_or_of_lt`: the `|` is a
+  `+` because the low `s` bits of `x << s` are zero).
+* **The loop invariant uses `wt w * wt i`, not `wt (w + i)`** (`ShlInv`, `nat_mul`'s `ColInv`
+  shape): `wt_add`'s pattern `wt k, wt i * wt j` then joins it with the `wt (w + i)` that
+  `pv_set_succ` produces.
+* **The amount.** `shamt`: `2^k = sh (k & 63) · wt (k >> 6)`, pattern `2 ^ k.toNat`; and
+  `pv_one` (`pv p o 1 = p[o]`, pattern `pv p o 1, p[o]`): `pv_succ` alone needs a `pv p o 0`
+  term, which the goal does not have, and without it the final `grind` ran out of heartbeats.
+* The function proof is 35 of the file's 42 s (`maxHeartbeats 1000000`).
+
+### `nat_shr`: the loop runs over the shifted slice
+
+An amount of two or more limbs (`b` normalised) is at least `2^64`, so `a >>> b = 0` whenever
+`la < 2^57` (every pool); `la ≥ 2^57` is an `abort`. Otherwise `k = b[0]`; if `w = k >> 6 ≥ la`
+the result is `0`, else one pass over the slice `(oa + w, la - w)` (con-ron's `skip_index`
+becomes `oa := oa + w`), limb `i` being `(x >> s) | ((y << 1) << (63 - s))`, branch-free as in
+`nat_shl`, with `y` limb `i + 1` read by `nat_limb` (zero past the end) and carried into the next
+iteration as `x`.
+
+* **No division and no `w` in the loop.** `ShrInv`: `R_i · sh s + lowb x₀ s = xv i + lowb x_i s ·
+  wt i`, `lowb x s = x % 2^s` named. Its digit equation `shr_split`:
+  `out · sh s + lowb x s = x + lowb y s · 2^64`. The loop went through in the house form.
+* **The division and the skipped limbs are three lemmas with patterns on the quotient**
+  (`pv A / (S * wt w)` after `shamt` rewrites `2^k`): `shr_val` (pattern also `pv P o l, R * S`,
+  binding the loop's result; `pv_append` splits off the skipped limbs), `shr_big_w`
+  (`w ≥ la`), `shr_big_b` (two-limb amount, with `Norm`).
+* **Cost.** The function proof is 90 of the file's 94 s: `nat_mul`'s recipe, but one
+  `maxHeartbeats` for the whole theorem ran out (1M); with `set_option maxHeartbeats 200000 in
+  grind …` per goal (and none for the theorem) every goal passes. The house form
+  (`finish (gen := 25)`) fails on two goals (splits). Not tuned further.
+
 ### `sorry`s
 
 None.
@@ -1522,6 +1604,47 @@ both exits end with the same `CTL[0] := top + n` (`if c != 0 { n := 0 } else { n
 a `return 0` that leaves `CTL[0]` alone fails `Frame POOL (m.set64 CTL 0 (top + 0)) m'`,
 because `grind` does not see that writing the top's own value back changes nothing.
 
+### `nat_shl`: a word amount, a branch-free bit shift
+
+The amount is a slice `b`. With `a ≠ 0`, an amount of two or more limbs cannot fit any pool
+(con-ron pushes `u64::MAX` zero limbs and runs out of memory), so it is an `abort`; otherwise
+`k = b[0]` (or `0`), `k >> 6` zero limbs (`shlZero`), then one pass over `a` with a carry
+(`shlLoop`), the carry limb, `nat_trim`. The bit shift needs no `s = 0` case:
+`c' = (x >> 1) >> (63 - s)` is `x >> (64 - s)` for `s ≥ 1` and `0` for `s = 0`.
+
+* **Digit equation over a named power.** `shl_split`:
+  `((x << s) | c) + c' · 2^64 = x · sh s + c` for `c < sh s`, with `sh s = 2^s` named (an atom to
+  the ring solver, as `wt`). Its proof is by hand (`Nat.shiftLeft_add_eq_or_of_lt`: the `|` is a
+  `+` because the low `s` bits of `x << s` are zero).
+* **The loop invariant uses `wt w * wt i`, not `wt (w + i)`** (`ShlInv`, `nat_mul`'s `ColInv`
+  shape): `wt_add`'s pattern `wt k, wt i * wt j` then joins it with the `wt (w + i)` that
+  `pv_set_succ` produces.
+* **The amount.** `shamt`: `2^k = sh (k & 63) · wt (k >> 6)`, pattern `2 ^ k.toNat`; and
+  `pv_one` (`pv p o 1 = p[o]`, pattern `pv p o 1, p[o]`): `pv_succ` alone needs a `pv p o 0`
+  term, which the goal does not have, and without it the final `grind` ran out of heartbeats.
+* The function proof is 35 of the file's 42 s (`maxHeartbeats 1000000`).
+
+### `nat_shr`: the loop runs over the shifted slice
+
+An amount of two or more limbs (`b` normalised) is at least `2^64`, so `a >>> b = 0` whenever
+`la < 2^57` (every pool); `la ≥ 2^57` is an `abort`. Otherwise `k = b[0]`; if `w = k >> 6 ≥ la`
+the result is `0`, else one pass over the slice `(oa + w, la - w)` (con-ron's `skip_index`
+becomes `oa := oa + w`), limb `i` being `(x >> s) | ((y << 1) << (63 - s))`, branch-free as in
+`nat_shl`, with `y` limb `i + 1` read by `nat_limb` (zero past the end) and carried into the next
+iteration as `x`.
+
+* **No division and no `w` in the loop.** `ShrInv`: `R_i · sh s + lowb x₀ s = xv i + lowb x_i s ·
+  wt i`, `lowb x s = x % 2^s` named. Its digit equation `shr_split`:
+  `out · sh s + lowb x s = x + lowb y s · 2^64`. The loop went through in the house form.
+* **The division and the skipped limbs are three lemmas with patterns on the quotient**
+  (`pv A / (S * wt w)` after `shamt` rewrites `2^k`): `shr_val` (pattern also `pv P o l, R * S`,
+  binding the loop's result; `pv_append` splits off the skipped limbs), `shr_big_w`
+  (`w ≥ la`), `shr_big_b` (two-limb amount, with `Norm`).
+* **Cost.** The function proof is 90 of the file's 94 s: `nat_mul`'s recipe, but one
+  `maxHeartbeats` for the whole theorem ran out (1M); with `set_option maxHeartbeats 200000 in
+  grind …` per goal (and none for the theorem) every goal passes. The house form
+  (`finish (gen := 25)`) fails on two goals (splits). Not tuned further.
+
 ### `sorry`s
 
 None.
@@ -1615,6 +1738,47 @@ both exits end with the same `CTL[0] := top + n` (`if c != 0 { n := 0 } else { n
 a `return 0` that leaves `CTL[0]` alone fails `Frame POOL (m.set64 CTL 0 (top + 0)) m'`,
 because `grind` does not see that writing the top's own value back changes nothing.
 
+### `nat_shl`: a word amount, a branch-free bit shift
+
+The amount is a slice `b`. With `a ≠ 0`, an amount of two or more limbs cannot fit any pool
+(con-ron pushes `u64::MAX` zero limbs and runs out of memory), so it is an `abort`; otherwise
+`k = b[0]` (or `0`), `k >> 6` zero limbs (`shlZero`), then one pass over `a` with a carry
+(`shlLoop`), the carry limb, `nat_trim`. The bit shift needs no `s = 0` case:
+`c' = (x >> 1) >> (63 - s)` is `x >> (64 - s)` for `s ≥ 1` and `0` for `s = 0`.
+
+* **Digit equation over a named power.** `shl_split`:
+  `((x << s) | c) + c' · 2^64 = x · sh s + c` for `c < sh s`, with `sh s = 2^s` named (an atom to
+  the ring solver, as `wt`). Its proof is by hand (`Nat.shiftLeft_add_eq_or_of_lt`: the `|` is a
+  `+` because the low `s` bits of `x << s` are zero).
+* **The loop invariant uses `wt w * wt i`, not `wt (w + i)`** (`ShlInv`, `nat_mul`'s `ColInv`
+  shape): `wt_add`'s pattern `wt k, wt i * wt j` then joins it with the `wt (w + i)` that
+  `pv_set_succ` produces.
+* **The amount.** `shamt`: `2^k = sh (k & 63) · wt (k >> 6)`, pattern `2 ^ k.toNat`; and
+  `pv_one` (`pv p o 1 = p[o]`, pattern `pv p o 1, p[o]`): `pv_succ` alone needs a `pv p o 0`
+  term, which the goal does not have, and without it the final `grind` ran out of heartbeats.
+* The function proof is 35 of the file's 42 s (`maxHeartbeats 1000000`).
+
+### `nat_shr`: the loop runs over the shifted slice
+
+An amount of two or more limbs (`b` normalised) is at least `2^64`, so `a >>> b = 0` whenever
+`la < 2^57` (every pool); `la ≥ 2^57` is an `abort`. Otherwise `k = b[0]`; if `w = k >> 6 ≥ la`
+the result is `0`, else one pass over the slice `(oa + w, la - w)` (con-ron's `skip_index`
+becomes `oa := oa + w`), limb `i` being `(x >> s) | ((y << 1) << (63 - s))`, branch-free as in
+`nat_shl`, with `y` limb `i + 1` read by `nat_limb` (zero past the end) and carried into the next
+iteration as `x`.
+
+* **No division and no `w` in the loop.** `ShrInv`: `R_i · sh s + lowb x₀ s = xv i + lowb x_i s ·
+  wt i`, `lowb x s = x % 2^s` named. Its digit equation `shr_split`:
+  `out · sh s + lowb x s = x + lowb y s · 2^64`. The loop went through in the house form.
+* **The division and the skipped limbs are three lemmas with patterns on the quotient**
+  (`pv A / (S * wt w)` after `shamt` rewrites `2^k`): `shr_val` (pattern also `pv P o l, R * S`,
+  binding the loop's result; `pv_append` splits off the skipped limbs), `shr_big_w`
+  (`w ≥ la`), `shr_big_b` (two-limb amount, with `Norm`).
+* **Cost.** The function proof is 90 of the file's 94 s: `nat_mul`'s recipe, but one
+  `maxHeartbeats` for the whole theorem ran out (1M); with `set_option maxHeartbeats 200000 in
+  grind …` per goal (and none for the theorem) every goal passes. The house form
+  (`finish (gen := 25)`) fails on two goals (splits). Not tuned further.
+
 ### `sorry`s
 
 None.
@@ -1681,6 +1845,47 @@ both exits end with the same `CTL[0] := top + n` (`if c != 0 { n := 0 } else { n
 a `return 0` that leaves `CTL[0]` alone fails `Frame POOL (m.set64 CTL 0 (top + 0)) m'`,
 because `grind` does not see that writing the top's own value back changes nothing.
 
+### `nat_shl`: a word amount, a branch-free bit shift
+
+The amount is a slice `b`. With `a ≠ 0`, an amount of two or more limbs cannot fit any pool
+(con-ron pushes `u64::MAX` zero limbs and runs out of memory), so it is an `abort`; otherwise
+`k = b[0]` (or `0`), `k >> 6` zero limbs (`shlZero`), then one pass over `a` with a carry
+(`shlLoop`), the carry limb, `nat_trim`. The bit shift needs no `s = 0` case:
+`c' = (x >> 1) >> (63 - s)` is `x >> (64 - s)` for `s ≥ 1` and `0` for `s = 0`.
+
+* **Digit equation over a named power.** `shl_split`:
+  `((x << s) | c) + c' · 2^64 = x · sh s + c` for `c < sh s`, with `sh s = 2^s` named (an atom to
+  the ring solver, as `wt`). Its proof is by hand (`Nat.shiftLeft_add_eq_or_of_lt`: the `|` is a
+  `+` because the low `s` bits of `x << s` are zero).
+* **The loop invariant uses `wt w * wt i`, not `wt (w + i)`** (`ShlInv`, `nat_mul`'s `ColInv`
+  shape): `wt_add`'s pattern `wt k, wt i * wt j` then joins it with the `wt (w + i)` that
+  `pv_set_succ` produces.
+* **The amount.** `shamt`: `2^k = sh (k & 63) · wt (k >> 6)`, pattern `2 ^ k.toNat`; and
+  `pv_one` (`pv p o 1 = p[o]`, pattern `pv p o 1, p[o]`): `pv_succ` alone needs a `pv p o 0`
+  term, which the goal does not have, and without it the final `grind` ran out of heartbeats.
+* The function proof is 35 of the file's 42 s (`maxHeartbeats 1000000`).
+
+### `nat_shr`: the loop runs over the shifted slice
+
+An amount of two or more limbs (`b` normalised) is at least `2^64`, so `a >>> b = 0` whenever
+`la < 2^57` (every pool); `la ≥ 2^57` is an `abort`. Otherwise `k = b[0]`; if `w = k >> 6 ≥ la`
+the result is `0`, else one pass over the slice `(oa + w, la - w)` (con-ron's `skip_index`
+becomes `oa := oa + w`), limb `i` being `(x >> s) | ((y << 1) << (63 - s))`, branch-free as in
+`nat_shl`, with `y` limb `i + 1` read by `nat_limb` (zero past the end) and carried into the next
+iteration as `x`.
+
+* **No division and no `w` in the loop.** `ShrInv`: `R_i · sh s + lowb x₀ s = xv i + lowb x_i s ·
+  wt i`, `lowb x s = x % 2^s` named. Its digit equation `shr_split`:
+  `out · sh s + lowb x s = x + lowb y s · 2^64`. The loop went through in the house form.
+* **The division and the skipped limbs are three lemmas with patterns on the quotient**
+  (`pv A / (S * wt w)` after `shamt` rewrites `2^k`): `shr_val` (pattern also `pv P o l, R * S`,
+  binding the loop's result; `pv_append` splits off the skipped limbs), `shr_big_w`
+  (`w ≥ la`), `shr_big_b` (two-limb amount, with `Norm`).
+* **Cost.** The function proof is 90 of the file's 94 s: `nat_mul`'s recipe, but one
+  `maxHeartbeats` for the whole theorem ran out (1M); with `set_option maxHeartbeats 200000 in
+  grind …` per goal (and none for the theorem) every goal passes. The house form
+  (`finish (gen := 25)`) fails on two goals (splits). Not tuned further.
+
 ### `sorry`s
 
 None.
@@ -1729,6 +1934,47 @@ inputs. Two details: `bit_mul_wt` (`c.toNat * wt k = wt k` for a nonzero bit `c`
 both exits end with the same `CTL[0] := top + n` (`if c != 0 { n := 0 } else { n := trim }`):
 a `return 0` that leaves `CTL[0]` alone fails `Frame POOL (m.set64 CTL 0 (top + 0)) m'`,
 because `grind` does not see that writing the top's own value back changes nothing.
+
+### `nat_shl`: a word amount, a branch-free bit shift
+
+The amount is a slice `b`. With `a ≠ 0`, an amount of two or more limbs cannot fit any pool
+(con-ron pushes `u64::MAX` zero limbs and runs out of memory), so it is an `abort`; otherwise
+`k = b[0]` (or `0`), `k >> 6` zero limbs (`shlZero`), then one pass over `a` with a carry
+(`shlLoop`), the carry limb, `nat_trim`. The bit shift needs no `s = 0` case:
+`c' = (x >> 1) >> (63 - s)` is `x >> (64 - s)` for `s ≥ 1` and `0` for `s = 0`.
+
+* **Digit equation over a named power.** `shl_split`:
+  `((x << s) | c) + c' · 2^64 = x · sh s + c` for `c < sh s`, with `sh s = 2^s` named (an atom to
+  the ring solver, as `wt`). Its proof is by hand (`Nat.shiftLeft_add_eq_or_of_lt`: the `|` is a
+  `+` because the low `s` bits of `x << s` are zero).
+* **The loop invariant uses `wt w * wt i`, not `wt (w + i)`** (`ShlInv`, `nat_mul`'s `ColInv`
+  shape): `wt_add`'s pattern `wt k, wt i * wt j` then joins it with the `wt (w + i)` that
+  `pv_set_succ` produces.
+* **The amount.** `shamt`: `2^k = sh (k & 63) · wt (k >> 6)`, pattern `2 ^ k.toNat`; and
+  `pv_one` (`pv p o 1 = p[o]`, pattern `pv p o 1, p[o]`): `pv_succ` alone needs a `pv p o 0`
+  term, which the goal does not have, and without it the final `grind` ran out of heartbeats.
+* The function proof is 35 of the file's 42 s (`maxHeartbeats 1000000`).
+
+### `nat_shr`: the loop runs over the shifted slice
+
+An amount of two or more limbs (`b` normalised) is at least `2^64`, so `a >>> b = 0` whenever
+`la < 2^57` (every pool); `la ≥ 2^57` is an `abort`. Otherwise `k = b[0]`; if `w = k >> 6 ≥ la`
+the result is `0`, else one pass over the slice `(oa + w, la - w)` (con-ron's `skip_index`
+becomes `oa := oa + w`), limb `i` being `(x >> s) | ((y << 1) << (63 - s))`, branch-free as in
+`nat_shl`, with `y` limb `i + 1` read by `nat_limb` (zero past the end) and carried into the next
+iteration as `x`.
+
+* **No division and no `w` in the loop.** `ShrInv`: `R_i · sh s + lowb x₀ s = xv i + lowb x_i s ·
+  wt i`, `lowb x s = x % 2^s` named. Its digit equation `shr_split`:
+  `out · sh s + lowb x s = x + lowb y s · 2^64`. The loop went through in the house form.
+* **The division and the skipped limbs are three lemmas with patterns on the quotient**
+  (`pv A / (S * wt w)` after `shamt` rewrites `2^k`): `shr_val` (pattern also `pv P o l, R * S`,
+  binding the loop's result; `pv_append` splits off the skipped limbs), `shr_big_w`
+  (`w ≥ la`), `shr_big_b` (two-limb amount, with `Norm`).
+* **Cost.** The function proof is 90 of the file's 94 s: `nat_mul`'s recipe, but one
+  `maxHeartbeats` for the whole theorem ran out (1M); with `set_option maxHeartbeats 200000 in
+  grind …` per goal (and none for the theorem) every goal passes. The house form
+  (`finish (gen := 25)`) fails on two goals (splits). Not tuned further.
 
 ### `sorry`s
 
@@ -2178,6 +2424,47 @@ both exits end with the same `CTL[0] := top + n` (`if c != 0 { n := 0 } else { n
 a `return 0` that leaves `CTL[0]` alone fails `Frame POOL (m.set64 CTL 0 (top + 0)) m'`,
 because `grind` does not see that writing the top's own value back changes nothing.
 
+### `nat_shl`: a word amount, a branch-free bit shift
+
+The amount is a slice `b`. With `a ≠ 0`, an amount of two or more limbs cannot fit any pool
+(con-ron pushes `u64::MAX` zero limbs and runs out of memory), so it is an `abort`; otherwise
+`k = b[0]` (or `0`), `k >> 6` zero limbs (`shlZero`), then one pass over `a` with a carry
+(`shlLoop`), the carry limb, `nat_trim`. The bit shift needs no `s = 0` case:
+`c' = (x >> 1) >> (63 - s)` is `x >> (64 - s)` for `s ≥ 1` and `0` for `s = 0`.
+
+* **Digit equation over a named power.** `shl_split`:
+  `((x << s) | c) + c' · 2^64 = x · sh s + c` for `c < sh s`, with `sh s = 2^s` named (an atom to
+  the ring solver, as `wt`). Its proof is by hand (`Nat.shiftLeft_add_eq_or_of_lt`: the `|` is a
+  `+` because the low `s` bits of `x << s` are zero).
+* **The loop invariant uses `wt w * wt i`, not `wt (w + i)`** (`ShlInv`, `nat_mul`'s `ColInv`
+  shape): `wt_add`'s pattern `wt k, wt i * wt j` then joins it with the `wt (w + i)` that
+  `pv_set_succ` produces.
+* **The amount.** `shamt`: `2^k = sh (k & 63) · wt (k >> 6)`, pattern `2 ^ k.toNat`; and
+  `pv_one` (`pv p o 1 = p[o]`, pattern `pv p o 1, p[o]`): `pv_succ` alone needs a `pv p o 0`
+  term, which the goal does not have, and without it the final `grind` ran out of heartbeats.
+* The function proof is 35 of the file's 42 s (`maxHeartbeats 1000000`).
+
+### `nat_shr`: the loop runs over the shifted slice
+
+An amount of two or more limbs (`b` normalised) is at least `2^64`, so `a >>> b = 0` whenever
+`la < 2^57` (every pool); `la ≥ 2^57` is an `abort`. Otherwise `k = b[0]`; if `w = k >> 6 ≥ la`
+the result is `0`, else one pass over the slice `(oa + w, la - w)` (con-ron's `skip_index`
+becomes `oa := oa + w`), limb `i` being `(x >> s) | ((y << 1) << (63 - s))`, branch-free as in
+`nat_shl`, with `y` limb `i + 1` read by `nat_limb` (zero past the end) and carried into the next
+iteration as `x`.
+
+* **No division and no `w` in the loop.** `ShrInv`: `R_i · sh s + lowb x₀ s = xv i + lowb x_i s ·
+  wt i`, `lowb x s = x % 2^s` named. Its digit equation `shr_split`:
+  `out · sh s + lowb x s = x + lowb y s · 2^64`. The loop went through in the house form.
+* **The division and the skipped limbs are three lemmas with patterns on the quotient**
+  (`pv A / (S * wt w)` after `shamt` rewrites `2^k`): `shr_val` (pattern also `pv P o l, R * S`,
+  binding the loop's result; `pv_append` splits off the skipped limbs), `shr_big_w`
+  (`w ≥ la`), `shr_big_b` (two-limb amount, with `Norm`).
+* **Cost.** The function proof is 90 of the file's 94 s: `nat_mul`'s recipe, but one
+  `maxHeartbeats` for the whole theorem ran out (1M); with `set_option maxHeartbeats 200000 in
+  grind …` per goal (and none for the theorem) every goal passes. The house form
+  (`finish (gen := 25)`) fails on two goals (splits). Not tuned further.
+
 ### `sorry`s
 
 None.
@@ -2334,6 +2621,47 @@ both exits end with the same `CTL[0] := top + n` (`if c != 0 { n := 0 } else { n
 a `return 0` that leaves `CTL[0]` alone fails `Frame POOL (m.set64 CTL 0 (top + 0)) m'`,
 because `grind` does not see that writing the top's own value back changes nothing.
 
+### `nat_shl`: a word amount, a branch-free bit shift
+
+The amount is a slice `b`. With `a ≠ 0`, an amount of two or more limbs cannot fit any pool
+(con-ron pushes `u64::MAX` zero limbs and runs out of memory), so it is an `abort`; otherwise
+`k = b[0]` (or `0`), `k >> 6` zero limbs (`shlZero`), then one pass over `a` with a carry
+(`shlLoop`), the carry limb, `nat_trim`. The bit shift needs no `s = 0` case:
+`c' = (x >> 1) >> (63 - s)` is `x >> (64 - s)` for `s ≥ 1` and `0` for `s = 0`.
+
+* **Digit equation over a named power.** `shl_split`:
+  `((x << s) | c) + c' · 2^64 = x · sh s + c` for `c < sh s`, with `sh s = 2^s` named (an atom to
+  the ring solver, as `wt`). Its proof is by hand (`Nat.shiftLeft_add_eq_or_of_lt`: the `|` is a
+  `+` because the low `s` bits of `x << s` are zero).
+* **The loop invariant uses `wt w * wt i`, not `wt (w + i)`** (`ShlInv`, `nat_mul`'s `ColInv`
+  shape): `wt_add`'s pattern `wt k, wt i * wt j` then joins it with the `wt (w + i)` that
+  `pv_set_succ` produces.
+* **The amount.** `shamt`: `2^k = sh (k & 63) · wt (k >> 6)`, pattern `2 ^ k.toNat`; and
+  `pv_one` (`pv p o 1 = p[o]`, pattern `pv p o 1, p[o]`): `pv_succ` alone needs a `pv p o 0`
+  term, which the goal does not have, and without it the final `grind` ran out of heartbeats.
+* The function proof is 35 of the file's 42 s (`maxHeartbeats 1000000`).
+
+### `nat_shr`: the loop runs over the shifted slice
+
+An amount of two or more limbs (`b` normalised) is at least `2^64`, so `a >>> b = 0` whenever
+`la < 2^57` (every pool); `la ≥ 2^57` is an `abort`. Otherwise `k = b[0]`; if `w = k >> 6 ≥ la`
+the result is `0`, else one pass over the slice `(oa + w, la - w)` (con-ron's `skip_index`
+becomes `oa := oa + w`), limb `i` being `(x >> s) | ((y << 1) << (63 - s))`, branch-free as in
+`nat_shl`, with `y` limb `i + 1` read by `nat_limb` (zero past the end) and carried into the next
+iteration as `x`.
+
+* **No division and no `w` in the loop.** `ShrInv`: `R_i · sh s + lowb x₀ s = xv i + lowb x_i s ·
+  wt i`, `lowb x s = x % 2^s` named. Its digit equation `shr_split`:
+  `out · sh s + lowb x s = x + lowb y s · 2^64`. The loop went through in the house form.
+* **The division and the skipped limbs are three lemmas with patterns on the quotient**
+  (`pv A / (S * wt w)` after `shamt` rewrites `2^k`): `shr_val` (pattern also `pv P o l, R * S`,
+  binding the loop's result; `pv_append` splits off the skipped limbs), `shr_big_w`
+  (`w ≥ la`), `shr_big_b` (two-limb amount, with `Norm`).
+* **Cost.** The function proof is 90 of the file's 94 s: `nat_mul`'s recipe, but one
+  `maxHeartbeats` for the whole theorem ran out (1M); with `set_option maxHeartbeats 200000 in
+  grind …` per goal (and none for the theorem) every goal passes. The house form
+  (`finish (gen := 25)`) fails on two goals (splits). Not tuned further.
+
 ### `sorry`s
 
 None.
@@ -2372,6 +2700,8 @@ for the L-side spec itself.
 | `nat_land`/`nat_lor`/`nat_xor` (+ loops, reusing `nat_limb`/`nat_trim`) | ~45 (`land`/`and_from`, `lor`/`or_from`, `xor`/`xor_from`) | ~45 | ~215 | 4.6 s | house form |
 | `nat_cmp` (lane `nat2`; `beq`/`ble`/`blt` are tests of its code) | 52 (`cmp`, `cmp_from`, `beq`, `ble`, `blt`) | 16 | 137 | 6.8 s | house form; `finish (splits := 20)` in the loop; three pool lemmas by hand (`omega`) |
 | `nat_sub` (+ `sub_borrow`; truncated; lane `nat2`) | 34 (`sub`, `sub_from`) | 25 | 117 | 7.7 s | house form, no hand step |
+| `nat_shl` (`a <<< b`, `b` a slice; lane `nat2`) | 80 (`shift_left_nat`, `shift_left`, `shl_onto`, `shl_bits_from`, `push_zeros`, `push_zeros_nat`, `low_limb`) | 33 | 192 | 42 s | zero loop house form; shift loop and function `nat_mul`'s recipe (`simp` the frame, `grind (splits := 40)` per conjunct); word lemmas by hand |
+| `nat_shr` (`a >>> b`, `b` a normalised slice; lane `nat2`) | 52 (`shift_right_nat`, `shift_right`, `shr_from`, `shr_bits_from`, `skip_index`) | 31 | 186 | 94 s | loop house form; function `nat_mul`'s recipe, 200k heartbeats per goal; word and division lemmas by hand |
 
 Whole file 307 lines. `lake build ConAgua` (full project) still green, 403 ms incremental.
 
@@ -2782,13 +3112,54 @@ both exits end with the same `CTL[0] := top + n` (`if c != 0 { n := 0 } else { n
 a `return 0` that leaves `CTL[0]` alone fails `Frame POOL (m.set64 CTL 0 (top + 0)) m'`,
 because `grind` does not see that writing the top's own value back changes nothing.
 
+### `nat_shl`: a word amount, a branch-free bit shift
+
+The amount is a slice `b`. With `a ≠ 0`, an amount of two or more limbs cannot fit any pool
+(con-ron pushes `u64::MAX` zero limbs and runs out of memory), so it is an `abort`; otherwise
+`k = b[0]` (or `0`), `k >> 6` zero limbs (`shlZero`), then one pass over `a` with a carry
+(`shlLoop`), the carry limb, `nat_trim`. The bit shift needs no `s = 0` case:
+`c' = (x >> 1) >> (63 - s)` is `x >> (64 - s)` for `s ≥ 1` and `0` for `s = 0`.
+
+* **Digit equation over a named power.** `shl_split`:
+  `((x << s) | c) + c' · 2^64 = x · sh s + c` for `c < sh s`, with `sh s = 2^s` named (an atom to
+  the ring solver, as `wt`). Its proof is by hand (`Nat.shiftLeft_add_eq_or_of_lt`: the `|` is a
+  `+` because the low `s` bits of `x << s` are zero).
+* **The loop invariant uses `wt w * wt i`, not `wt (w + i)`** (`ShlInv`, `nat_mul`'s `ColInv`
+  shape): `wt_add`'s pattern `wt k, wt i * wt j` then joins it with the `wt (w + i)` that
+  `pv_set_succ` produces.
+* **The amount.** `shamt`: `2^k = sh (k & 63) · wt (k >> 6)`, pattern `2 ^ k.toNat`; and
+  `pv_one` (`pv p o 1 = p[o]`, pattern `pv p o 1, p[o]`): `pv_succ` alone needs a `pv p o 0`
+  term, which the goal does not have, and without it the final `grind` ran out of heartbeats.
+* The function proof is 35 of the file's 42 s (`maxHeartbeats 1000000`).
+
+### `nat_shr`: the loop runs over the shifted slice
+
+An amount of two or more limbs (`b` normalised) is at least `2^64`, so `a >>> b = 0` whenever
+`la < 2^57` (every pool); `la ≥ 2^57` is an `abort`. Otherwise `k = b[0]`; if `w = k >> 6 ≥ la`
+the result is `0`, else one pass over the slice `(oa + w, la - w)` (con-ron's `skip_index`
+becomes `oa := oa + w`), limb `i` being `(x >> s) | ((y << 1) << (63 - s))`, branch-free as in
+`nat_shl`, with `y` limb `i + 1` read by `nat_limb` (zero past the end) and carried into the next
+iteration as `x`.
+
+* **No division and no `w` in the loop.** `ShrInv`: `R_i · sh s + lowb x₀ s = xv i + lowb x_i s ·
+  wt i`, `lowb x s = x % 2^s` named. Its digit equation `shr_split`:
+  `out · sh s + lowb x s = x + lowb y s · 2^64`. The loop went through in the house form.
+* **The division and the skipped limbs are three lemmas with patterns on the quotient**
+  (`pv A / (S * wt w)` after `shamt` rewrites `2^k`): `shr_val` (pattern also `pv P o l, R * S`,
+  binding the loop's result; `pv_append` splits off the skipped limbs), `shr_big_w`
+  (`w ≥ la`), `shr_big_b` (two-limb amount, with `Norm`).
+* **Cost.** The function proof is 90 of the file's 94 s: `nat_mul`'s recipe, but one
+  `maxHeartbeats` for the whole theorem ran out (1M); with `set_option maxHeartbeats 200000 in
+  grind …` per goal (and none for the theorem) every goal passes. The house form
+  (`finish (gen := 25)`) fails on two goals (splits). Not tuned further.
+
 ### `sorry`s
 
 None.
 
 ## Limb-pool `Nat` ops, round 2: compare, sub, shifts, pow, div/mod, the arms (2026-10-21, lane `nat2`)
 
-Files: `ConAgua/Arena/NatGrindAttr.lean`, `NatCmp.lean`, `NatSub.lean`, … Per-op numbers are in the lane `nat`
+Files: `ConAgua/Arena/NatGrindAttr.lean`, `NatCmp.lean`, `NatSub.lean`, `NatShl.lean`, `NatShr.lean`, … Per-op numbers are in the lane `nat`
 table above (`lean` user time of the file, one run).
 
 ### `nat_cmp`: a non-recursive model
@@ -2827,6 +3198,47 @@ inputs. Two details: `bit_mul_wt` (`c.toNat * wt k = wt k` for a nonzero bit `c`
 both exits end with the same `CTL[0] := top + n` (`if c != 0 { n := 0 } else { n := trim }`):
 a `return 0` that leaves `CTL[0]` alone fails `Frame POOL (m.set64 CTL 0 (top + 0)) m'`,
 because `grind` does not see that writing the top's own value back changes nothing.
+
+### `nat_shl`: a word amount, a branch-free bit shift
+
+The amount is a slice `b`. With `a ≠ 0`, an amount of two or more limbs cannot fit any pool
+(con-ron pushes `u64::MAX` zero limbs and runs out of memory), so it is an `abort`; otherwise
+`k = b[0]` (or `0`), `k >> 6` zero limbs (`shlZero`), then one pass over `a` with a carry
+(`shlLoop`), the carry limb, `nat_trim`. The bit shift needs no `s = 0` case:
+`c' = (x >> 1) >> (63 - s)` is `x >> (64 - s)` for `s ≥ 1` and `0` for `s = 0`.
+
+* **Digit equation over a named power.** `shl_split`:
+  `((x << s) | c) + c' · 2^64 = x · sh s + c` for `c < sh s`, with `sh s = 2^s` named (an atom to
+  the ring solver, as `wt`). Its proof is by hand (`Nat.shiftLeft_add_eq_or_of_lt`: the `|` is a
+  `+` because the low `s` bits of `x << s` are zero).
+* **The loop invariant uses `wt w * wt i`, not `wt (w + i)`** (`ShlInv`, `nat_mul`'s `ColInv`
+  shape): `wt_add`'s pattern `wt k, wt i * wt j` then joins it with the `wt (w + i)` that
+  `pv_set_succ` produces.
+* **The amount.** `shamt`: `2^k = sh (k & 63) · wt (k >> 6)`, pattern `2 ^ k.toNat`; and
+  `pv_one` (`pv p o 1 = p[o]`, pattern `pv p o 1, p[o]`): `pv_succ` alone needs a `pv p o 0`
+  term, which the goal does not have, and without it the final `grind` ran out of heartbeats.
+* The function proof is 35 of the file's 42 s (`maxHeartbeats 1000000`).
+
+### `nat_shr`: the loop runs over the shifted slice
+
+An amount of two or more limbs (`b` normalised) is at least `2^64`, so `a >>> b = 0` whenever
+`la < 2^57` (every pool); `la ≥ 2^57` is an `abort`. Otherwise `k = b[0]`; if `w = k >> 6 ≥ la`
+the result is `0`, else one pass over the slice `(oa + w, la - w)` (con-ron's `skip_index`
+becomes `oa := oa + w`), limb `i` being `(x >> s) | ((y << 1) << (63 - s))`, branch-free as in
+`nat_shl`, with `y` limb `i + 1` read by `nat_limb` (zero past the end) and carried into the next
+iteration as `x`.
+
+* **No division and no `w` in the loop.** `ShrInv`: `R_i · sh s + lowb x₀ s = xv i + lowb x_i s ·
+  wt i`, `lowb x s = x % 2^s` named. Its digit equation `shr_split`:
+  `out · sh s + lowb x s = x + lowb y s · 2^64`. The loop went through in the house form.
+* **The division and the skipped limbs are three lemmas with patterns on the quotient**
+  (`pv A / (S * wt w)` after `shamt` rewrites `2^k`): `shr_val` (pattern also `pv P o l, R * S`,
+  binding the loop's result; `pv_append` splits off the skipped limbs), `shr_big_w`
+  (`w ≥ la`), `shr_big_b` (two-limb amount, with `Norm`).
+* **Cost.** The function proof is 90 of the file's 94 s: `nat_mul`'s recipe, but one
+  `maxHeartbeats` for the whole theorem ran out (1M); with `set_option maxHeartbeats 200000 in
+  grind …` per goal (and none for the theorem) every goal passes. The house form
+  (`finish (gen := 25)`) fails on two goals (splits). Not tuned further.
 
 ### `sorry`s
 
