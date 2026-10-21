@@ -322,18 +322,6 @@ macro "arena_build " hR:term ", " hf:term " with " t:tacticSeq " using " ap:tact
 macro "arena_build " hR:term ", " hf:term " with " t:tacticSeq : tactic =>
   `(tactic| arena_build $hR, $hf with $t using apart)
 
-/-- **The store and memo tiers' group frame**: a writer that avoids `arenaArrs` and `arenaCtl`
-keeps `ArenaR`. -/
-theorem ArenaR.frame {A : List ArrId} {C : List Word} (hA : ∀ b ∈ A, b ∉ arenaArrs)
-    (hC : ∀ x ∈ C, x ∉ arenaCtl) {m m' : Mem} (hf : MemFrame A C m m') {a : AState}
-    (hR : ArenaR m a) : ArenaR m' a := by
-  have hAs : ∀ b ∈ A, b ∉ storeArrs := fun b hb h => hA b hb (List.mem_append_left _ h)
-  have hCs : ∀ x ∈ C, x ∉ storeCtl := fun x hx h => hC x hx (List.mem_append_left _ h)
-  arena_build hR, hf with
-    exact hR.memos.frame (fun b hb h => hA b hb (List.mem_append_right _ h))
-      (fun x hx h => hC x hx (List.mem_append_right _ h)) hf
-  using exact apart_own _ _ _ storeArrs storeCtl (by own) _ _ hAs hCs
-
 /-- **A memo writer keeps `ArenaR`**: the tables by the frame (the writer avoids the store
 tier), the memo tier as given; the arena state changed only in `memos`, so the tables' relations
 read the same fields. -/
@@ -341,6 +329,16 @@ theorem ArenaR.with_memos {A : List ArrId} {C : List Word} {m m' : Mem} {a : ASt
     (hR : ArenaR m a) (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b ∉ storeArrs)
     (hC : ∀ x ∈ C, x ∉ storeCtl) (hM : MemosR m' ms) : ArenaR m' { a with memos := ms } := by
   arena_build hR, hf with exact hM using exact apart_own _ _ _ storeArrs storeCtl (by own) _ _ hA hC
+
+/-- **The store and memo tiers' group frame**: a writer that avoids `arenaArrs` and `arenaCtl`
+keeps `ArenaR`. -/
+theorem ArenaR.frame {A : List ArrId} {C : List Word} (hA : ∀ b ∈ A, b ∉ arenaArrs)
+    (hC : ∀ x ∈ C, x ∉ arenaCtl) {m m' : Mem} (hf : MemFrame A C m m') {a : AState}
+    (hR : ArenaR m a) : ArenaR m' a :=
+  hR.with_memos hf (fun b hb h => hA b hb (List.mem_append_left _ h))
+    (fun x hx h => hC x hx (List.mem_append_left _ h))
+    (hR.memos.frame (fun b hb h => hA b hb (List.mem_append_right _ h))
+      (fun x hx h => hC x hx (List.mem_append_right _ h)) hf)
 
 /-- `ArenaR` as a `Stable` predicate (`run_keeps`). -/
 theorem ArenaR.stable {A : List ArrId} {C : List Word} (hA : ∀ b ∈ A, b ∉ arenaArrs)
