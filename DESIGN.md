@@ -3731,7 +3731,11 @@ Request to lane `arch`: add `LH` (array 192) and `CTL[192]` (heap top) to the me
 | `lv_equivs` (`isEquivList`, lists in `POOL`) | 20 | 7 | 50 | `equivsW_ok` + `LvsR` 75 | | as `lv_eq` |
 | `lvl_eq` (`lvlEq?`: heap reset, then `lv_equiv`; the verdict cache not in L) | 33 (`lvl_eq_q`) | 5 | 25 | `lvlEq_refines` + `lvlEq?_run` + `lvlEq_run` 110; the view bridge (`lvNodeW_store`, `denoteL_lvR`) 190 | 1 s | `vcgen` + `finish`; bridge by hand |
 | `lvls_eq`, `ls_node` (`lvlsEq?` on two level-list handles' `POOL` slices) | 33 | 15 | 60 | `lvlsEq_refines` + `lvsR_of_slice` + `lsNodeW_store` + runs 170 | 1 s | as `lvl_eq` |
-| total (files) | | 252 | `LevelHeap` 243, `LevelSimp` 291, `LevelSubst` 251, `LevelLeq` 474, `LevelLeqSpec` 151, `LevelEquiv` 365 | `LevelHeapRel` 460, `LevelSimpRel` 264, `LevelLeqRel` 740, `LevelEquivRel` 200, `LevelArena` 530 | | |
+| `lv_mem`, `lv_apd` (`allParamsDefined`; the parameter names a slice of a word array `A` the caller picks) | 12 | 18 | 90 | `memW_ok`, `apdW_ok`, `NmsR` 75 | 2.9 s | as `lv_eq`; L code generic in `A` |
+| `lh_push`, `lv_zero` (`zeronessOf`: a flag and the names pushed on the heap) | 13 | 18 | 90 | `zeroW_ok` + `lhPushW_ext` + `NmsR` slices 150 | 1.8 s | as `lv_eq` |
+| `lv_lookup`, `lv_substl` (`subst`, `subst.go` with lists: keys in `KA`, values in `VA`) | 24 | 25 | 110 | `lookupW_ok`, `substLW_ok`, `LvsAR` 110 | 5.9 s (file) | as `lv_eq`; generic in the arrays |
+| `lv_spw`, `lv_substpw` (`substPW`: `bindZ.go` of `zeronessOf ∘ subst.go`) | 3 + `bind_z` | 15 | 70 | `spwW_ok`, `substPWW_ok`, `ZR.inter`, `PWR` 120 | (same file) | as `lv_eq` |
+| total (files) | | 328 | `LevelHeap` 243, `LevelSimp` 291, `LevelSubst` 251, `LevelLeq` 474, `LevelLeqSpec` 151, `LevelEquiv` 358, `LevelApd` 120, `LevelZero` 120, `LevelSubstL` 230 | `LevelHeapRel` 470, `LevelSimpRel` 264, `LevelLeqRel` 740, `LevelEquivRel` 200, `LevelArena` 552, `LevelApd` 100, `LevelZero` 190, `LevelSubstL` 280 | | |
 
 ### The comparison (`LevelSubst`, `LevelLeq`, `LevelLeqSpec`, `LevelLeqRel`)
 
@@ -3741,9 +3745,12 @@ Request to lane `arch`: add `LH` (array 192) and `CTL[192]` (heap top) to the me
   which every caller sees. `diff : Int` is the biased word `d = diff + 2^32` (`DR`); the
   refinement keeps `|diff| + fuel ≤ 2^31`, true from the entry (`0`, `10^4`) since `diff` moves
   by one only where fuel is spent, so `d ± 1` never wraps.
-* **One key.** `byCases` substitutes one parameter; `lv_subst(l, k, v)` is `subst [k] [v]`
-  (`@[refines_part … "one key"]`). The list version (`instLPGo`'s callers, phases 4–5) reads its
-  keys from wherever the declaration's parameter names will live; not built here.
+* **One key, and lists.** `byCases` substitutes one parameter; `lv_subst(l, k, v)` is
+  `subst [k] [v]` (`@[refines_part … "one key"]`). The list version `lv_substl` (`instLPGo`'s
+  callers, phases 4–5) takes the keys as a slice of name words in an array `KA` and the values as
+  a slice of level pointers in `VA` (`LvsAR`), both chosen by the caller (`LevelSubstL.lean`);
+  `substPW` (`lv_substpw`) runs over a datum's name slice in `PA`. The arrays must not be the heap
+  or `CTL`.
 * **The model** is one mutual block (`leqW`, `restW`, `imaxRW`, `imaxLW`, `imaxRrW`, `casesW`,
   `caW` and 14 continuations), structural on the L fuel with the continuations ranked by a second
   component (`termination_by (n, k)`). The refinement is the same mutual induction: seven
@@ -3770,6 +3777,12 @@ Request to lane `arch`: add `LH` (array 192) and `CTL[192]` (heap top) to the me
   `lvls_eq(us, vs)` (`lvlsEq?`) is the same over the two lists' `POOL` slices (`ls_node` reads a
   level-list record; `lvsR_of_slice` relates the slice to the readbacks), with `ReadLsCOK`,
   `LvlsEqCOK`.
+* **Name lists and the zero-ness datum.** `allParamsDefined`'s parameter list is a slice of name
+  words in an array the caller picks (`lvMemG A`, generic like the memo library's schemas;
+  `NmsR`). `zeronessOf` returns `never` or `ifAllZero ps`: in L a flag and the name words pushed
+  on the heap since the call (`lh_push`; `ZR`), which a caller copies into its record
+  (`EnvRec.lean`'s `decPW` layout). `HeapExt` now also says the heap below the old top stays
+  (`HeapExt.lh`, `top`), so a pushed slice survives later allocations (`NmsR.mono_lh`).
 * **Inversion by tag** (`LvR.inv0` … `inv4`: from `lvG m p = t`, the level's constructor and the
   children's relations) replaced `cases` on the derivation, whose impossible branches made
   `simp_all` loop.
@@ -3797,6 +3810,13 @@ Request to lane `arch`: add `LH` (array 192) and `CTL[192]` (heap top) to the me
 * The model's view fields are named (`lvG`/`lvA`/`lvB` with `@[level_grind =]` equations to the
   `headD` projections the call's `setLocs` produces); a model that unfolded them in `finish`'s
   list confused `grind`.
+
+### Census at the end of the lane
+
+Phase 3: **16 of 16 targets proven** (0 before; 102 Lean / 291 Rust lines). Also `Level.beq`
+(phase 0) and `lvlEq?`, `lvlsEq?` (phase 5, under the cache hypotheses above). Totals on master at
+the last landing (all lanes): 267 of 1350 proven, 10.7 % of Lean lines, 7.3 % of Rust lines (91,
+7.6 %, 4.6 % when the lane started).
 
 ### `sorry`s
 
@@ -3833,6 +3853,48 @@ ConRon.Arena.natOpResult]`) is one `vcgen` over the sixteen arms with the arm sp
 `finish`, not a failing search). The conditional facts (`hok`/`hst`/`hres`: `natOpResult` =
 `natOpSel` when the flag is set) are given as implications, so the flag-zero abort path needs no
 case split.
+
+### The environment (`Tiers.lean` `EnvR`, `EnvRec.lean`, `Env.lean`)
+
+**Decision: the name → constant index is directly addressed by the name handle, not hashed.** A
+name handle is `tag · 2^28 + tier · 2^27 + i` with `tag` ∈ {0, 1, 2} (`anonymous`, `str`, `num`),
+so its row is words `4 i + 2 tier` and `+ 1` of `EIXA`/`EIXS`/`EIXN` (132 + `tag`): the counter
+plus one (`0`: no row) and the record pointer. Lookup is two reads, `erase` writes `0`, there
+are no tombstones, no probe sequences, no load factor, and the relation needs no hashing argument
+(the one fact about a write is `rowC_rowSet`: rows of other names stay, from `rowIx_inj`). Cost:
+two words per name *slot* in each tier (the arrays are sized like the name tables; an index past
+the end is a capacity abort), against ≈ 3 words per *entry* at 3/4 load for open addressing; on
+`Init` (~10^6 names, ~4·10^5 constants) both are tens of MB. So the env index needs no deletion
+from lane `libs`' map library (note for `libs`: the env is not a client of deletion; tree-valued
+caches and the bank stack still are).
+
+* `ECON` (135): the record pointer of every constant by position, oldest first, `CTL[128]`
+  entries; the twin's `env.consts` (newest first) is its reverse. `EREC` (136) is the record pool,
+  `CTL[129]` its top (no writer yet: the installers build records there).
+* **Records** (`EnvRec.lean`): `IConstantInfo`, `IDeclaration`, `ValueGroup` as word runs in a
+  pool, lists as `(off, len)` slices of the same pool, rule lists as slices of 11-word records, an
+  inductive block as a slice of record pointers; decoders `decCI`, `decDecl`, `decVG` (value
+  relations, `Option`-valued; a handle word must be below `2^32`). Word `p + 1` of a constant
+  record is always its index key (`ci.name`, `decCI_name`). `PropWhen`'s names are name handles
+  in L, read back by a parameter `dn` (the consumers relate it to the store's `denoteN`); so
+  `EnvR` and `CheckR` take `dn`.
+* `EnvR dn m vis fe`: `fe.visibleBelow = vis`, every row's presence and counter is the twin's
+  (`idx[n]?.map fst`), every present row's record decodes to the twin's constant, and the
+  constants decode in order. Extensional through `idx[n]?`, so layout and history are free and
+  `find?` (`EnvR.find?_eq`) and the raw row (`GenRec`'s `prev`) both follow.
+* Refined (`@[refines]`): `IFEnv.find?` (`env_find`), `IFEnv.push` (`env_push`, the name read from
+  the record), `IFEnv.popTemp` (`env_pop_temp`, the previous row passed as two words that decode,
+  `prevD`), `IFEnv.restrictTo` (no code: `EnvR.restrictTo`). Also `env_erase` (`HashMap.erase` on
+  the index, a step of `eraseInstalled`), `EnvR.init` (`mkIFEnv IEnv.empty` on zero memory), the
+  generic `EnvR.setRow` and `EnvR.popLen`, and the write set `envProg_closed` (rows, `ECON`,
+  `CTL[128]`: by `decide +kernel`, so every other tier survives an env write by its frame).
+* Proof shape: L side `vcgen` + `finish` with the twin facts given as implications in the context
+  (`key := fun ht hb … => EnvR.push …`); the twin side by hand (≈ 60 lines for `push`, the
+  constants list by `List.range_succ` and `mapM_congr'`). Findings: `omega` hung (> 100 s, not a
+  heartbeat timeout) on the 2^27/2^28 decomposition with `UInt64.toNat` atoms in context; stated
+  over plain `Nat` (`nat_rowIx_inj`) it is instant. `split_ifs` is Mathlib (not here). The row
+  index computed inline in each function made `finish` chase bit-vector normal forms; moving it
+  into `env_ix(w)` with a spec `(tagW w, ixW w)` (two opaque words with `toNat` facts) fixed it.
 
 ## Library work before the core: the scratch lifecycle (2026-10-21, lane `libs`)
 
