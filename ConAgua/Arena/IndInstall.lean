@@ -40,7 +40,7 @@ is the identity on that pointer), so every `p : BlockParts` argument below is ju
   block.off, block.len, cvTas.off, cvTas.len) → (fe', out.off, out.len)` (`checkBlockRec`'s own
   parameter order has `block` before `cvTas`; `genRecCheck`'s has `ms`, `cvTas`, `block` — the
   wrapper reorders).
-* `RecCheck`: `block_nested_bit(p, kinds.off, kinds.len) → nested`; `cons_block_recs_t_f(vis2, p,
+* `RecCheck`: `block_nested_bit(p, kinds.off, kinds.len) → nested`; `cons_block_recs_tf(vis2, p,
   m, out.off, out.len, vis) → vis'`.
 
 `block_large_elim_allowed` (also IndParts) is not called by anything in this module.
@@ -667,7 +667,7 @@ def checkBlockTail : FunDecl := lfn (blockO, blockL, q) locals
   mO := IW.u64[q + 15]; mL := IW.u64[q + 16];
   cvO := IW.u64[q + 1]; cvL := IW.u64[q + 2];
   (fe2b, outO, outL) := call check_block_rec(fe2, p, nested, pO, pL, tO, tL, rd, mO, mL, blockO, blockL, cvO, cvL);
-  fe3 := call cons_block_recs_t_f(vis2, p, 0, outO, outL, fe2b);
+  fe3 := call cons_block_recs_tf(vis2, p, 0, outO, outL, fe2b);
   ssO := IW.u64[q + 6]; ssL := IW.u64[q + 7];
   fe4 := call check_block_tables(p, IW.u64[p], IW.u64[p + 1], caO, caL, ssO, ssL, fe3);
   return fe4
@@ -729,7 +729,7 @@ def indInstallForeign : Prog :=
    ("block_shape_lps", stub 1), ("block_shape_n_idxs", stub 1),
    ("block_shape_all_ctors", stub 1), ("check_block_classes", stub 6),
    ("class_seeds", stub 5), ("gen_rec_check", stub 14), ("block_nested_bit", stub 3),
-   ("cons_block_recs_t_f", stub 6)]
+   ("cons_block_recs_tf", stub 6)]
 
 theorem indInstall_wf :
     L.Compiler.Prog.wf indTab
