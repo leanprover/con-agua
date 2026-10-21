@@ -1,6 +1,6 @@
 name = "ConAgua"
 version = "0.1.0"
-defaultTargets = ["ConAgua"]
+defaultTargets = ["ConAgua", "ConLeche"]
 
 [leanOptions]
 autoImplicit = false
@@ -13,3 +13,15 @@ rev = "72f3a7a3a2d94ac51040815d692cd31a1d240a1d"
 
 [[lean_lib]]
 name = "ConAgua"
+
+# Vendored from con-leche (rev 103562b) and con-ron (rev 4c9eaf7, proof/ dir).
+# See vendor/README.md for provenance and every patch applied.
+[[lean_lib]]
+name = "ConLeche"
+srcDir = "vendor/con-leche"
+roots = ["ConLeche"]
+globs = ["ConLeche.+"]
+# con-leche's own lakefile sets no leanOptions (so autoImplicit/relaxedAutoImplicit
+# are Lean's defaults, both true); override our package-level false so vendored
+# files need no edits for this.
+leanOptions = {autoImplicit = true, relaxedAutoImplicit = true}
