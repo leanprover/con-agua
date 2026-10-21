@@ -232,42 +232,34 @@ def nestFieldKindFlat : FunDecl := lfn (k) locals () {
 
 /-- `nest_kinds_flat_inner(off, cnt)`: a field telescope's kinds, all flat. -/
 @[l_impl ConRon.Arena.nestKindsFlat]
-def nestKindsFlatInner : FunDecl := lfn (off, cnt) locals (j, ok) {
-  j := 0;
-  while j < cnt {
-    ok := call nest_field_kind_flat(IW.u64[off + j]);
-    if ok == 0 { return 0 };
-    j += 1
-  };
-  return 1
+def nestKindsFlatInner : FunDecl := lfn (off, cnt) locals (ok, r) {
+  if cnt == 0 { return 1 };
+  ok := call nest_field_kind_flat(IW.u64[off]);
+  if ok == 0 { return 0 };
+  r := call nest_kinds_flat_inner(off + 1, cnt - 1);
+  return r
 }
 
 /-- `nest_kinds_flat_mid(off, cnt)`: a constructor's fields (pointers to field-kind headers), all
 flat. -/
 @[l_impl ConRon.Arena.nestKindsFlat]
-def nestKindsFlatMid : FunDecl := lfn (off, cnt) locals (j, p, ok) {
-  j := 0;
-  while j < cnt {
-    p := IW.u64[off + j];
-    ok := call nest_kinds_flat_inner(IW.u64[p], IW.u64[p + 1]);
-    if ok == 0 { return 0 };
-    j += 1
-  };
-  return 1
+def nestKindsFlatMid : FunDecl := lfn (off, cnt) locals (ok, r) {
+  if cnt == 0 { return 1 };
+  ok := call nest_kinds_flat_inner(IW.u64[IW.u64[off]], IW.u64[IW.u64[off] + 1]);
+  if ok == 0 { return 0 };
+  r := call nest_kinds_flat_mid(off + 1, cnt - 1);
+  return r
 }
 
 /-- `nest_kinds_flat(off, cnt)`: `nestKindsFlat`, every field of every constructor of every
 member flat. -/
 @[l_impl ConRon.Arena.nestKindsFlat]
-def nestKindsFlat : FunDecl := lfn (off, cnt) locals (j, p, ok) {
-  j := 0;
-  while j < cnt {
-    p := IW.u64[off + j];
-    ok := call nest_kinds_flat_mid(IW.u64[p], IW.u64[p + 1]);
-    if ok == 0 { return 0 };
-    j += 1
-  };
-  return 1
+def nestKindsFlat : FunDecl := lfn (off, cnt) locals (ok, r) {
+  if cnt == 0 { return 1 };
+  ok := call nest_kinds_flat_mid(IW.u64[IW.u64[off]], IW.u64[IW.u64[off] + 1]);
+  if ok == 0 { return 0 };
+  r := call nest_kinds_flat(off + 1, cnt - 1);
+  return r
 }
 
 /-! ## Containers -/
