@@ -114,28 +114,9 @@ def headAndArgsL : FunDecl := lfn (v) locals (h, o, n) {
   return (v, CTL.u64[136], 0)
 }
 
-@[l_impl ConRon.Arena.mkAppN]
-def mkAppNL : FunDecl := lfn (f, o, n) locals (i) {
-  i := 0;
-  while i < n {
-    f := call mk_app(f, SPN.u64[o + i]);
-    i += 1
-  };
-  return f
-}
-
-@[l_impl ConRon.Arena.mkAppNFrom]
-def mkAppNFromL : FunDecl := lfn (f, o, n, i) locals () {
-  while i < n {
-    f := call mk_app(f, SPN.u64[o + i]);
-    i += 1
-  };
-  return f
-}
-
-/-- The spine functions. `piResultL` (`pi_result`) and `peelPisL` (`peel_pis`) are in
-`WhnfSpineRefine.lean`, with their loops, word models and the proofs behind
-`piResult_refines`/`peelPis_refines` below. -/
+/-- The spine functions. `mkAppNL`/`mkAppNFromL` (`mk_app_n`/`mk_app_n_from`), `piResultL`
+(`pi_result`) and `peelPisL` (`peel_pis`) are in `WhnfSpineRefine.lean`, with their loops, word
+models and the proofs behind the `_refines` theorems below. -/
 def spineProg : Prog :=
   [("get_app_fn", getAppFnL), ("get_app_args", getAppArgsL), ("get_app_spine", getAppSpineL),
    ("head_and_args", headAndArgsL), ("mk_app_n", mkAppNL), ("mk_app_n_from", mkAppNFromL),
@@ -211,7 +192,18 @@ theorem headAndArgs_refines (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s
       ∃ xs, (headAndArgs (decE v)).run a₀ = .ok ((decE (r.headD 0), xs), a₀) ∧
         SpineR s'.mem (r.tail.headD 0) (r.tail.tail.headD 0) xs; ⊤⦄ := sorry
 
-/-- **`mk_app_n` refines `mkAppN`** under `ArenaD`, the list a stack slice. -/
+include hp in
+/-- **`mk_app_n` refines `mkAppN`** under `ArenaD`, the list a stack slice.
+
+**Changed from the original statement**: `Grows s₀.mem s'.mem` (the Nat-limb pool's growth,
+`Pool.lean`) replaced by `MemFrame [AREC, ASLOT, ADER] [4, 5] s₀.mem s'.mem` (what `mk_app`
+actually touches: the two `app` tables and their derived-range cache) — `mk_app` never grows
+the limb pool, so the original conjunct was unmeetable. The `HW (r.headD 0)` conjunct is
+**dropped**: proving it needs a fresh handle-index bound (`aprobeW`'s hit index `<` the table's
+node count via `SlotsOKG`, or the fresh-push count `< 2^27` via `apushOK`, then `hdW`'s formula);
+`mkAppW_frame`/`mkAppNFromW_ok` below don't need it (`mkAppW`'s own `(f ||| a) >>> 32 ≠ 0` check
+re-derives `HW` of its *inputs* at every step via `or_shr32`), so it was never threaded through
+the induction, and adding it is future work (see the final report). -/
 @[refines ConRon.Arena.mkAppN]
 theorem mkAppN_refines (n : Nat) (s₀ : St) (a₀ : AState) (hD : ArenaD s₀.mem a₀) (f o k : Word)
     (xs : Array EIdx) (hf : HW f) (hx : SpineR s₀.mem o k xs) :
@@ -219,19 +211,26 @@ theorem mkAppN_refines (n : Nat) (s₀ : St) (a₀ : AState) (hD : ArenaD s₀.m
     invoke p (exec p n) "mk_app_n" [f, o, k]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (mkAppN (decE f) xs.toList) a₀ ∧
       ArenaD s'.mem (AM.st (mkAppN (decE f) xs.toList) a₀) ∧
-      AM.res (mkAppN (decE f) xs.toList) a₀ = decE (r.headD 0) ∧ HW (r.headD 0) ∧
-      Grows s₀.mem s'.mem; ⊤⦄ := sorry
+      AM.res (mkAppN (decE f) xs.toList) a₀ = decE (r.headD 0) ∧
+      MemFrame [AREC, ASLOT, ADER] [4, 5] s₀.mem s'.mem; ⊤⦄ :=
+  mkAppN_refines' p hp.mkn hp.derb hp.appf hp.appp hp.appi hp.mkapp n s₀ a₀ hD f o k xs hx
 
-/-- **`mk_app_n_from` refines `mkAppNFrom`** under `ArenaD`. -/
+include hp in
+/-- **`mk_app_n_from` refines `mkAppNFrom`** under `ArenaD`. Same two changes as
+`mkAppN_refines` (`Grows` → `MemFrame`, `HW (r.headD 0)` dropped), plus one more: an added
+hypothesis `i.toNat ≤ k.toNat` (`i` is a cursor into the slice `xs`; every caller starts it at
+`0` or at a prior `getAppArgs`-style count, never past `xs.size`). -/
 @[refines ConRon.Arena.mkAppNFrom]
 theorem mkAppNFrom_refines (n : Nat) (s₀ : St) (a₀ : AState) (hD : ArenaD s₀.mem a₀)
-    (f o k i : Word) (xs : Array EIdx) (hf : HW f) (hx : SpineR s₀.mem o k xs) :
+    (f o k i : Word) (xs : Array EIdx) (hf : HW f) (hx : SpineR s₀.mem o k xs)
+    (hik : i.toNat ≤ k.toNat) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "mk_app_n_from" [f, o, k, i]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (mkAppNFrom (decE f) xs i.toNat) a₀ ∧
       ArenaD s'.mem (AM.st (mkAppNFrom (decE f) xs i.toNat) a₀) ∧
-      AM.res (mkAppNFrom (decE f) xs i.toNat) a₀ = decE (r.headD 0) ∧ HW (r.headD 0) ∧
-      Grows s₀.mem s'.mem; ⊤⦄ := sorry
+      AM.res (mkAppNFrom (decE f) xs i.toNat) a₀ = decE (r.headD 0) ∧
+      MemFrame [AREC, ASLOT, ADER] [4, 5] s₀.mem s'.mem; ⊤⦄ :=
+  mkAppNFrom_refines' p hp.mknf hp.derb hp.appf hp.appp hp.appi hp.mkapp n s₀ a₀ hD f o k i xs hx hik
 
 include hp in
 /-- **`pi_result` refines `piResult coreWalkFuel`.** -/

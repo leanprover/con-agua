@@ -620,4 +620,337 @@ theorem peelPis_refines' (p : Prog) (hp : p.lookup "peel_pis" = some peelPisL) (
     rw [hz hflag]; simp [HW]
   · exact ⟨by rw [hs'], by rw [LocEq, hs'], hbd hflag, hrun'⟩
 
+/-! ## `mk_app_n(f, o, n)` / `mk_app_n_from(f, o, n, i)`: fold `mk_app` over a stack slice
+
+Both are the same loop (`mk_app_n` just starts it at `i = 0`); `mkAppNFromW` is the Mem-level
+fold (a callee, `mk_app`, chained through the slice `SPN[o .. o + n)`), and `mkAppNFromW_ok`
+connects it to the twin's `mkAppNFrom` under `ArenaD`, by induction on (a bound on) `n - i`. No
+twin fuel: `mkAppW`'s own success already gives the handle bounds `mk_app_ok` needs
+(`or_shr32`), so the induction carries no separate `HW` bookkeeping. -/
+
+def mkAppNFromLoop : Stmt := lblk (f, o, n, i) {
+  while i < n {
+    f := call mk_app(f, SPN.u64[o + i]);
+    i += 1
+  }
+}
+
+@[l_impl ConRon.Arena.mkAppN]
+def mkAppNL : FunDecl := lfn (f, o, n) locals (i) {
+  i := 0;
+  ⟪mkAppNFromLoop⟫;
+  return f
+}
+
+@[l_impl ConRon.Arena.mkAppNFrom]
+def mkAppNFromL : FunDecl := lfn (f, o, n, i) locals () {
+  ⟪mkAppNFromLoop⟫;
+  return f
+}
+
+/-- **The model of the `mk_app_n_from` loop**, structural on a step bound (the caller always
+supplies `n.toNat - i.toNat`, enough): the final accumulator and memory, `none` where the L
+code aborts (`mk_app` fails). -/
+def mkAppNFromW : Nat → Mem → Word → Word → Word → Word → Option (Word × Mem)
+  | 0, m, f, _, _, _ => some (f, m)
+  | K + 1, m, f, o, n, i =>
+    if i < n then
+      match mkAppW m f (spW m (o + i)) with
+      | none => none
+      | some (f', m') => mkAppNFromW K m' f' o n (i + 1)
+    else some (f, m)
+
+theorem mkAppNFromW_done (m : Mem) (f o n i : Word) (h : ¬ i < n) :
+    mkAppNFromW (n.toNat - i.toNat) m f o n i = some (f, m) := by
+  cases hK : n.toNat - i.toNat with
+  | zero => rw [mkAppNFromW]
+  | succ k => rw [mkAppNFromW]; simp [h]
+
+theorem mkAppNFromW_step (m m' : Mem) (f o n i f' : Word) (h : i < n)
+    (hmk : mkAppW m f (spW m (o + i)) = some (f', m')) :
+    mkAppNFromW (n.toNat - i.toNat) m f o n i =
+      mkAppNFromW (n.toNat - (i + 1).toNat) m' f' o n (i + 1) := by
+  have h1 : (i + 1).toNat = i.toNat + 1 := by
+    rw [UInt64.toNat_add]; simp
+    have := n.toNat_lt
+    have : i.toNat < n.toNat := h
+    omega
+  have hK : n.toNat - i.toNat = (n.toNat - (i + 1).toNat) + 1 := by
+    have : i.toNat < n.toNat := h
+    omega
+  rw [hK, mkAppNFromW]
+  simp [h, hmk]
+
+grind_pattern [arena_grind] mkAppNFromW_done => mkAppNFromW (n.toNat - i.toNat) m f o n i
+grind_pattern [arena_grind] mkAppNFromW_step =>
+  mkAppNFromW (n.toNat - i.toNat) m f o n i, mkAppNFromW (n.toNat - (i + 1).toNat) m' f' o n (i + 1)
+
+section mkAppLoop
+variable (p : Prog) (hpd : p.lookup "der_b" = some derB) (hpf : p.lookup "app_find" = some appFind)
+  (hpp : p.lookup "app_push" = some appPush) (hpi : p.lookup "intern_app" = some internApp)
+  (hp : p.lookup "mk_app" = some mkApp)
+include hpd hpf hpp hpi hp
+
+theorem mkAppNFromLoop_spec (n' : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    exec p n' mkAppNFromLoop
+    ⦃fun r s' => r = .normal ∧
+      mkAppNFromW ((s₀.loc 2).toNat - (s₀.loc 3).toNat) s₀.mem (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)
+        (s₀.loc 3) = some (s'.loc 0, s'.mem); ⊤⦄ := by
+  induction n' generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n' ih =>
+    rw [exec, step_while (w := mkAppNFromLoop) rfl]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        mkApp_spec p hpd hpf hpp hpi hp n', ih] <;> finish [mkAppNFromW, spW]
+
+theorem mkAppNFromLoop_step_spec (n' : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    step p (exec p n') mkAppNFromLoop
+    ⦃fun r s' => r = .normal ∧
+      mkAppNFromW ((s₀.loc 2).toNat - (s₀.loc 3).toNat) s₀.mem (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)
+        (s₀.loc 3) = some (s'.loc 0, s'.mem); ⊤⦄ :=
+  Triple.step_exec (mkAppNFromLoop_spec p hpd hpf hpp hpi hp (n' + 1) s₀)
+
+end mkAppLoop
+
+theorem mkAppNFromL_spec (p : Prog) (hpd : p.lookup "der_b" = some derB)
+    (hpf : p.lookup "app_find" = some appFind) (hpp : p.lookup "app_push" = some appPush)
+    (hpi : p.lookup "intern_app" = some internApp) (hp : p.lookup "mk_app" = some mkApp)
+    (hpn : p.lookup "mk_app_n_from" = some mkAppNFromL) (n' : Nat) (s₀ : St) (f o n i : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n') "mk_app_n_from" [f, o, n, i]
+    ⦃fun r s' => LocEq s' s₀ ∧ mkAppNFromW (n.toNat - i.toNat) s₀.mem f o n i = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hpn]
+  simp only [callFn, mkAppNFromL]
+  cases n' with
+  | zero => vcgen [exec] <;> grind
+  | succ n' =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalArgs,
+        mkAppNFromLoop_step_spec p hpd hpf hpp hpi hp n'] <;> finish
+
+theorem mkAppNL_spec (p : Prog) (hpd : p.lookup "der_b" = some derB)
+    (hpf : p.lookup "app_find" = some appFind) (hpp : p.lookup "app_push" = some appPush)
+    (hpi : p.lookup "intern_app" = some internApp) (hp : p.lookup "mk_app" = some mkApp)
+    (hpn : p.lookup "mk_app_n" = some mkAppNL) (n' : Nat) (s₀ : St) (f o n : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n') "mk_app_n" [f, o, n]
+    ⦃fun r s' => LocEq s' s₀ ∧ mkAppNFromW n.toNat s₀.mem f o n 0 = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hpn]
+  simp only [callFn, mkAppNL]
+  cases n' with
+  | zero => vcgen [exec] <;> grind
+  | succ n' =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalArgs, setLoc,
+        mkAppNFromLoop_step_spec p hpd hpf hpp hpi hp n'] <;> finish
+
+/-- **What `mk_app` changes** (the app tables and their derived-range cache): the `Grows`
+conjunct a `mk_*` constructor usually posts is the Nat-limb pool's (`Pool.lean`), which `mk_app`
+never touches; this is what is available instead (`mkAppN_refines`/`mkAppNFrom_refines` post it
+in `Grows`'s place). -/
+theorem mkAppW_frame (m m' : Mem) (f a r : Word) (hI : mkAppW m f a = some (r, m')) :
+    MemFrame [AREC, ASLOT, ADER] [4, 5] m m' := by
+  unfold mkAppW at hI
+  split at hI
+  · cases hI
+  cases hI₁ : ainternW m f a with
+  | none => simp [hI₁, mkK] at hI
+  | some p =>
+    obtain ⟨r₁, m₁⟩ := p
+    simp only [hI₁, mkK_some] at hI
+    cases hP : derPutW ADER 4 m₁ (cnt2 m 4) r₁ (maxW (derBW m f) (derBW m a)) with
+    | none => simp [hP] at hI
+    | some m₂ =>
+      simp only [hP, Option.some.injEq, Prod.mk.injEq] at hI
+      obtain ⟨rfl, rfl⟩ := hI
+      have hI₂ := hI₁
+      rw [ainternW_eq] at hI₂
+      have hf1 := internM_frame appSch appSch_wf _ _ _ _ _ _ _ _ hI₂
+      have hf2 := derPutW_frame ADER (by decide) _ _ _ _ _ _ hP
+      exact (hf1.mono (by simp [appSch, AREC, ASLOT]) (by simp [appSch])).trans
+        (hf2.mono (by simp) (by simp))
+
+/-- A slice of the stack survives a writer that leaves `SPN` alone. -/
+theorem SpineR.frame {m m' : Mem} {o n : Word} {xs : Array EIdx} (hx : SpineR m o n xs)
+    {A : List ArrId} {C : List Word} (hf : MemFrame A C m m') (hA : SPN ∉ A) : SpineR m' o n xs where
+  size := hx.size
+  bound := by rw [hf.2.2.1 SPN]; exact hx.bound
+  lt := fun i hi => by rw [spW, hf.1 SPN hA (by decide)]; exact hx.lt i hi
+  get := fun i hi => by rw [hx.get i hi, spW, spW, hf.1 SPN hA (by decide)]
+
+/-- **`mkAppNFrom` from `0` is `mkAppN`** over the whole array (con-leche's standing
+`List`-as-cursor deviation, §3.4): by induction on a bound on `xs.size - i`. -/
+theorem mkAppNFrom_eq_mkAppN' : ∀ (N : Nat) (f : EIdx) (xs : Array EIdx) (i : Nat),
+    xs.size - i ≤ N → i ≤ xs.size → mkAppNFrom f xs i = mkAppN f (xs.toList.drop i) := by
+  intro N
+  induction N with
+  | zero =>
+    intro f xs i hN hi
+    have hi' : i = xs.size := by omega
+    subst hi'
+    rw [mkAppNFrom.eq_def]
+    simp only [Nat.lt_irrefl, dite_false]
+    rw [show List.drop xs.size xs.toList = [] from
+      by rw [← Array.length_toList]; exact List.drop_length]; rfl
+  | succ N ih =>
+    intro f xs i hN hi
+    by_cases hc : i < xs.size
+    · rw [mkAppNFrom.eq_def]
+      simp only [hc, dite_true]
+      have hget : xs.toList.drop i = xs[i] :: xs.toList.drop (i + 1) := by
+        rw [List.drop_eq_getElem_cons (by simpa using hc)]
+        simp
+      rw [hget, mkAppN]
+      congr 1
+      funext g
+      exact ih g xs (i + 1) (by omega) (by omega)
+    · have hi' : i = xs.size := by omega
+      subst hi'
+      rw [mkAppNFrom.eq_def]
+      simp only [Nat.lt_irrefl, dite_false]
+      rw [show List.drop xs.size xs.toList = [] from
+        by rw [← Array.length_toList]; exact List.drop_length]; rfl
+
+theorem mkAppNFrom_eq_mkAppN (f : EIdx) (xs : Array EIdx) :
+    mkAppNFrom f xs 0 = mkAppN f xs.toList :=
+  mkAppNFrom_eq_mkAppN' xs.size f xs 0 (by omega) (by omega)
+
+/-- **The model of the `mk_app_n_from` loop refines `mkAppNFrom`** under `ArenaD`: by induction
+on the step bound `K`, `mkApp_ok` and `mkAppW_frame` at every step (no twin fuel: `mkApp_ok`'s
+own success already gives the handle bounds it needs). -/
+theorem mkAppNFromW_ok : ∀ (K : Nat) (m : Mem) (a : AState) (f o n i : Word) (xs : Array EIdx),
+    K = n.toNat - i.toNat → i.toNat ≤ n.toNat → ArenaD m a → SpineR m o n xs →
+    ∀ r m', mkAppNFromW K m f o n i = some (r, m') →
+      AM.ok (mkAppNFrom (decE f) xs i.toNat) a ∧
+      ArenaD m' (AM.st (mkAppNFrom (decE f) xs i.toNat) a) ∧
+      AM.res (mkAppNFrom (decE f) xs i.toNat) a = decE r := by
+  intro K
+  induction K with
+  | zero =>
+    intro m a f o n i xs hK hin0 hD hx r m' hL
+    have hin : i.toNat = n.toNat := by omega
+    have hxs : i.toNat = xs.size := by rw [hin, ← hx.size]
+    have hne : ¬ i.toNat < xs.size := by omega
+    rw [mkAppNFromW] at hL
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
+    rw [mkAppNFrom.eq_def]
+    simp [hne, AM.ok_pure, AM.st_pure, AM.res_pure]
+    exact hD
+  | succ K ih =>
+    intro m a f o n i xs hK hin0 hD hx r m' hL
+    have hin : i.toNat < n.toNat := by omega
+    have hiw : i < n := hin
+    rw [mkAppNFromW] at hL
+    simp only [hiw, ↓reduceIte] at hL
+    cases hmk : mkAppW m f (spW m (o + i)) with
+    | none => simp [hmk] at hL
+    | some p =>
+      obtain ⟨f₁, m₁⟩ := p
+      simp only [hmk] at hL
+      have hxsize : xs.size = n.toNat := hx.size
+      have hilt : i.toNat < xs.size := by omega
+      have hxi : xs[i.toNat] = decE (spW m (o + i)) := by
+        have h := hx.get i.toNat hilt
+        rwa [show (i.toNat).toUInt64 = UInt64.ofNat i.toNat from rfl, UInt64.ofNat_toNat] at h
+      obtain ⟨hok, hArenaD, hres⟩ := mkApp_ok m a hD f (spW m (o + i)) f₁ m₁ hmk
+      have hfr := mkAppW_frame m m₁ f (spW m (o + i)) f₁ hmk
+      have hx' : SpineR m₁ o n xs := hx.frame hfr (by decide)
+      have hi1 : (i + 1).toNat = i.toNat + 1 := by
+        rw [UInt64.toNat_add]; simp
+        have := n.toNat_lt
+        omega
+      have hK' : K = n.toNat - (i + 1).toNat := by omega
+      have hin0' : (i + 1).toNat ≤ n.toNat := by omega
+      have hunfold : mkAppNFrom (decE f) xs i.toNat =
+          internAppE (decE f) xs[i.toNat] >>= fun g => mkAppNFrom g xs (i.toNat + 1) := by
+        rw [mkAppNFrom.eq_def]; simp [hilt]
+      have hintern : internAppE (decE f) xs[i.toNat] =
+          internE (.app (decE f) (decE (spW m (o + i)))) := by rw [hxi]; rfl
+      rw [hunfold, hintern]
+      obtain ⟨ihok, ihD, ihres⟩ :=
+        ih m₁ (AM.st (internE (.app (decE f) (decE (spW m (o + i))))) a) f₁ o n (i + 1) xs hK'
+          hin0' hArenaD hx' r m' hL
+      rw [hi1] at ihok ihD ihres
+      refine ⟨?_, ?_, ?_⟩
+      · rw [AM.ok_bind, hres]; exact ⟨hok, ihok⟩
+      · have hok' : AM.ok (internE (.app (decE f) (decE (spW m (o + i)))) >>=
+            fun g => mkAppNFrom g xs (i.toNat + 1)) a := by
+          rw [AM.ok_bind, hres]; exact ⟨hok, ihok⟩
+        rw [AM.st_bind _ _ _ hok', hres]; exact ihD
+      · rw [AM.res_bind _ _ _ hok, hres]; exact ihres
+
+/-- **The `mk_app_n_from` loop only touches the `app` tables and their derived-range cache**:
+by induction on `K`, chaining `mkAppW_frame` at each step. -/
+theorem mkAppNFromW_frame : ∀ (K : Nat) (m m' : Mem) (f o n i r : Word),
+    mkAppNFromW K m f o n i = some (r, m') → MemFrame [AREC, ASLOT, ADER] [4, 5] m m' := by
+  intro K
+  induction K with
+  | zero =>
+    intro m m' f o n i r hL
+    rw [mkAppNFromW] at hL
+    obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
+    exact MemFrame.refl _ _ _
+  | succ K ih =>
+    intro m m' f o n i r hL
+    rw [mkAppNFromW] at hL
+    by_cases hc : i < n
+    · simp only [hc, ↓reduceIte] at hL
+      cases hmk : mkAppW m f (spW m (o + i)) with
+      | none => simp [hmk] at hL
+      | some p =>
+        obtain ⟨f₁, m₁⟩ := p
+        simp only [hmk] at hL
+        exact (mkAppW_frame m m₁ f (spW m (o + i)) f₁ hmk).trans (ih m₁ m' f₁ o n (i + 1) r hL)
+    · simp only [hc, ↓reduceIte] at hL
+      obtain ⟨-, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
+      exact MemFrame.refl _ _ _
+
+/-- **`mk_app_n_from` refines `mkAppNFrom`.** The helper behind `WhnfSpine.lean`'s
+`mkAppNFrom_refines` (see its docstring for the two statement changes). -/
+theorem mkAppNFrom_refines' (p : Prog) (hpn : p.lookup "mk_app_n_from" = some mkAppNFromL)
+    (hpd : p.lookup "der_b" = some derB) (hpf : p.lookup "app_find" = some appFind)
+    (hpp : p.lookup "app_push" = some appPush) (hpi : p.lookup "intern_app" = some internApp)
+    (hp : p.lookup "mk_app" = some mkApp) (n : Nat) (s₀ : St) (a₀ : AState)
+    (hD : ArenaD s₀.mem a₀) (f o k i : Word) (xs : Array EIdx) (hx : SpineR s₀.mem o k xs)
+    (hik : i.toNat ≤ k.toNat) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "mk_app_n_from" [f, o, k, i]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (mkAppNFrom (decE f) xs i.toNat) a₀ ∧
+      ArenaD s'.mem (AM.st (mkAppNFrom (decE f) xs i.toNat) a₀) ∧
+      AM.res (mkAppNFrom (decE f) xs i.toNat) a₀ = decE (r.headD 0) ∧
+      MemFrame [AREC, ASLOT, ADER] [4, 5] s₀.mem s'.mem; ⊤⦄ := by
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, hL⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (mkAppNFromL_spec p hpd hpf hpp hpi hp hpn n s₀ f o k i)
+  obtain ⟨hok, hArenaD, hres⟩ := mkAppNFromW_ok (k.toNat - i.toNat) s₀.mem a₀ f o k i xs rfl hik
+    hD hx (r.headD 0) s'.mem hL
+  exact ⟨hloc, hok, hArenaD, hres, mkAppNFromW_frame (k.toNat - i.toNat) s₀.mem s'.mem f o k i
+    (r.headD 0) hL⟩
+
+/-- **`mk_app_n` refines `mkAppN`.** The helper behind `WhnfSpine.lean`'s `mkAppN_refines`. -/
+theorem mkAppN_refines' (p : Prog) (hpn : p.lookup "mk_app_n" = some mkAppNL)
+    (hpd : p.lookup "der_b" = some derB) (hpf : p.lookup "app_find" = some appFind)
+    (hpp : p.lookup "app_push" = some appPush) (hpi : p.lookup "intern_app" = some internApp)
+    (hp : p.lookup "mk_app" = some mkApp) (n : Nat) (s₀ : St) (a₀ : AState)
+    (hD : ArenaD s₀.mem a₀) (f o k : Word) (xs : Array EIdx) (hx : SpineR s₀.mem o k xs) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "mk_app_n" [f, o, k]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (mkAppN (decE f) xs.toList) a₀ ∧
+      ArenaD s'.mem (AM.st (mkAppN (decE f) xs.toList) a₀) ∧
+      AM.res (mkAppN (decE f) xs.toList) a₀ = decE (r.headD 0) ∧
+      MemFrame [AREC, ASLOT, ADER] [4, 5] s₀.mem s'.mem; ⊤⦄ := by
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, hL⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (mkAppNL_spec p hpd hpf hpp hpi hp hpn n s₀ f o k)
+  have h0 : (0 : Word).toNat = 0 := rfl
+  obtain ⟨hok, hArenaD, hres⟩ := mkAppNFromW_ok k.toNat s₀.mem a₀ f o k 0 xs (by rw [h0]; omega)
+    (by rw [h0]; omega) hD hx (r.headD 0) s'.mem hL
+  rw [h0, mkAppNFrom_eq_mkAppN] at hok hArenaD hres
+  exact ⟨hloc, hok, hArenaD, hres, mkAppNFromW_frame k.toNat s₀.mem s'.mem f o k 0 (r.headD 0) hL⟩
+
 end L.Arena
