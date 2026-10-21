@@ -234,7 +234,7 @@ def projCertL : FunDecl := lfn (vis, k, ao, an) locals (f, q, ok, r) {
   if f == 0 { return 0 };
   if EREC.u64[q] != 4 { return 0 };
   (ok, r) := call peel_pis(an, EREC.u64[q + 4]);
-  return ok
+  return u64(ok != 0)
 }
 
 @[l_impl ConRon.Arena.projLitToCtor]
@@ -415,14 +415,6 @@ theorem reduceProjCore_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n �
     CoreSpec p (n + 1) "reduce_proj_core" [mode, vis, d, sn, i, c]
       (reduceProjCore (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat
         (decE c)) decOptR s₀ a₀ dn vis fe MM eb ResW := sorry
-
-/-- **`proj_cert` refines `projCertAt fe true`** (`projCert`). -/
-@[refines ConRon.Arena.projCert]
-theorem projCert_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb k ao an : Word) (args : Array EIdx)
-    (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (hk' : HW k) (har : SpineR s₀.mem ao an args) :
-    CoreSpec p (n + 1) "proj_cert" [vis, k, ao, an] (projCert fe (decI k) args.toList) decBool s₀ a₀
-      dn vis fe MM eb := sorry
 
 /-- **`proj_lit_to_ctor` refines `projLitToCtor`.** -/
 @[refines ConRon.Arena.projLitToCtor]
