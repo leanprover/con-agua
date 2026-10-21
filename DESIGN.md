@@ -426,3 +426,36 @@ table. con-ron's Rust could not be measured: there is no `cargo`/`rustc` on this
 ### `sorry`s (compiler lane)
 
 None.
+
+## The limb-pool bignum and the arena refinement (2026-10-21, lane `arena`)
+
+Files: `ConAgua/Arena/**`. (Work in progress; the full write-up follows when the proofs land.)
+
+### L extension requests
+
+Each request names the workaround used meanwhile.
+
+1. **`mulhi`: the high word of the unsigned 64×64→128 product**, as a `BinOp`
+   (`mulhi a b = (a.toNat * b.toNat / 2^64)`, a `Word`). x64 `mul r/m64` leaves exactly this in
+   `rdx` (and the low word, L's existing wrapping `*`, in `rax`), so the compiler case is
+   `mov rcx, <b>; mul rcx; mov rax, rdx` (`rdx` is already scratch). con-ron's
+   `mul_u64_from` (`ron/nat.rs:497`) needs it once per limb product (`u128` there).
+   Workaround: an L function `mulhi(x, y)` over 32-bit halves (four products, nine L lines,
+   one hand-proved arithmetic lemma).
+2. **A comparison as a word (`setcc`)**: an `Expr` form `cmpw c a b` with value `1`/`0`
+   (x64 `cmp; setb al; movzx eax, al`). The carry of a word addition is then
+   `c' := (s <ᵤ x) | (s2 <ᵤ s)` with no branch. Each `if` doubles the paths `vcgen` explores
+   in a loop body, and a loop body with four ifs (two limb reads, two carry tests) already
+   exceeded `grind`'s budget. Workaround: the carry is an L function `add_carry(x, y, c)`
+   (and the limb read `nat_limb(o, l, i)`, as in the Rust), so the loop body is straight-line
+   code with calls.
+3. **Several results** (`return (a, b)` into named locals of the caller), for functions that
+   produce a slice `(offset, length)` or a `(low, high)` word pair. Workaround: a function
+   that appends to the pool returns the length; the offset is the old pool top, which the
+   caller reads before the call.
+4. *(Not a language feature, a note for the logic.)* A callee spec should post
+   `LocEq s' s₀` (a named predicate for `s'.loc = s₀.loc`, with the `grind` pattern
+   `LocEq s t, s.loc x`), not `s'.loc = s₀.loc` or `s' = s₀`: `grind` cannot read
+   `s'.loc x` back through a function or structure equation unless the term `s₀.loc x`
+   already exists (`docs/gaps/grind-state-eq-projection.lean`). With `LocEq` the
+   `num_end` `sorry` of `ConAgua/Scan/Leaves.lean` may go away too.
