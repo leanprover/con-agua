@@ -47,8 +47,8 @@ structure Ok : Prop where
   tab_end : G.tabEnd ≤ 2 ^ 64
   hi_le : G.hi ≤ 2 ^ 64
   lo_le : G.lo ≤ G.hi
-  end8 : ∀ a < G.tab.nb, G.b8 a + G.s8 a ≤ 2 ^ 64
-  end64 : ∀ a < G.tab.nw, G.b64 a + 8 * G.s64 a ≤ 2 ^ 64
+  end8 : ∀ a < G.tab.nb, G.b8 a + G.s8 a < 2 ^ 64
+  end64 : ∀ a < G.tab.nw, G.b64 a + 8 * G.s64 a < 2 ^ 64
   tab_stack : ∀ x, G.InTab x → ¬ G.InStack x
   tab_arr : ∀ x, G.InTab x → ¬ G.InArr x
   stack_arr : ∀ x, G.InStack x → ¬ G.InArr x
