@@ -194,7 +194,7 @@ def Ctx.tmp (ctx : Ctx) (t : Nat) : AddrExpr := mb .rsp (8 * (ctx.nl + t))
 def binInstr : BinOp → Directive
   | .add => i64 (.add (.reg (rr .rax)) (oR .rcx))
   | .sub => i64 (.sub (.reg (rr .rax)) (oR .rcx))
-  | .mul => i64 (.imul (some (.reg (rr .rax))) (.reg (rr .rax)) (oR .rcx))
+  | .mul => i64 (.imul none (.reg (rr .rax)) (oR .rcx))
   | .and => i64 (.and (.reg (rr .rax)) (oR .rcx))
   | .or => i64 (.or (.reg (rr .rax)) (oR .rcx))
   | .xor => i64 (.xor (.reg (rr .rax)) (oR .rcx))

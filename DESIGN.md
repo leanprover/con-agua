@@ -1213,6 +1213,52 @@ result register the handle that the arena's `Nat.add` arm of `natOpResult` (`nat
 `Arena/Refine.lean`) returns when run on `a₀`, and the final memory related (`MemRel` + `LitR`
 again) to that arm's final arena state `a'`.
 
+### `validate_x64` (added 2026-10-21, lane `capB`)
+
+`ConAgua/Capstone.lean` also composes `compile_correct` with Stage B's validator
+(`ConAgua/Scan/ValidatorLink.lean`), in three theorems: a shared step `validate_x64_core`, and two
+public ones that read its raw `L` run off differently.
+
+```lean
+theorem validate_x64 [Host] (G : Layout) (hG : G.Ok) (hwf : Prog.wf G.tab L.Scan.Validator.valProg = true)
+    (hnres : 1 ≤ G.tab.nres) (k0 : Nat) (hcode : Code (compileProg G.tab L.Scan.Validator.valProg "validate") k0)
+    (b : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63) (hnargs : G.nargs = 0)
+    (N : Nat) (dm : MachineData) (ra : Word) /- … the same `compile_correct`-shaped hypotheses as
+    `skipBraced_x64`/`natAddLit_x64` (`hT`, `hN`, `hmem`, `hroom`, `htop`, `hargv`, `hra`, `hcs`,
+    `hcs24`, `hcs8`), with `hmem : MemRel G { bytes := #[b.data] } dm.dmem` -/ :
+    Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rsp.toNat = dm.regs.rsp.toNat + 8 ∧
+        st.data.regs.rbp = dm.regs.rbp ∧ st.data.regs.r14 = dm.regs.r14 ∧ st.data.regs.r15 = dm.regs.r15 ∧
+        (st.data.regs.rdx = 1 ∨ st.data.regs.rdx = 2 ∨
+          (st.data.regs.rdx = 0 ∧
+            st.data.regs.rax = UInt64.ofNat (ConAgua.Scan.LineLink.scanDriver b 0 0) ∧
+            MemRel G { bytes := #[b.data] } st.data.dmem)))
+      dm (label enterL)
+```
+
+From a Kraken host holding the compiled validator, run from `ca_enter` on a state whose input
+region holds a buffer `b` with `N` units of fuel: the run returns to the caller with the
+callee-saved registers restored, and either reports `exhausted` (`rdx = 1`), reports an `L` error
+other than fuel (`rdx = 2` — unlike `skipBraced_x64`, Stage B has no `_noErr` theorem for
+`validate`, so this is a real, open third outcome, not yet ruled out, not merely "the task's
+shape assumed away"), or reports `rdx = 0` with `rax` exactly `scanLineFwd`'s own driver
+(`ConAgua.Scan.LineLink.scanDriver`, built directly from con-leche's real
+`ConLeche.Frontend.scanLineFwd` over `b`'s `ByteArray`/`USize` positions, with no intervening
+`Nat`-model layer): `0` if every line of `b` scans, `n > 0` if line `n` is the first one that does
+not; the input region is unchanged (the validator stores nothing). A second theorem,
+`validate_x64_parseBytes`, states the same three-way split but with the `rdx = 0` case pushed
+down one level further, to con-leche's own parser `ConLeche.Frontend.parseBytes`: if it parses
+`b`, a normally-returning run finds `rax = 0`; if it instead finds `rax ≠ 0`, the parser fails at
+that line or before — composing `validate_x64_core`'s raw `L` run equation with
+`ConAgua.Scan.ValidatorLink.validate_accepts`/`validate_rejects`.
+
+**Assumptions**, beyond `skipBraced_x64`'s (the layout relation, `[Host]`, `hwf`, `hnres`, `h64` —
+all the same role here): none specific to the validator. Unlike `natAddLit_x64`'s `LitR`, no
+arena-side state relation is needed (the validator only reads the byte buffer, `MemRel` alone).
+The genuinely open item is the third outcome itself (`rdx = 2`): Stage B's 59 functions have no
+proof, yet, that every array read they make is in bounds under the preconditions `scanLineFwd`'s
+own correctness needs (the `…_noErr` treatment `skip_braced`/`str_close` got in "Mismatches"
+below) — closing it is future work, not assumed away.
+
 ### Trusted / assumed
 
 * **The layout relation** (`MemRel`, `Layout.Ok`): the array/table/stack regions are disjoint and
@@ -1271,6 +1317,13 @@ again) to that arm's final arena state `a'`.
   L has no representation of a `Nat` other than a pool slice, so decoding the slice is required to
   state the operands at all (there is no `con-leche`-level value to substitute, unlike
   `skipBraced`'s `b`/`i`, which are already `ByteArray`/`USize`).
+* **`validate_x64`'s open `rdx = 2`.** Of the four capstone theorems, only `skipBraced_x64` gets
+  the two-outcome treatment: its `…_noErr` lemmas (above) prove the only reachable `Err` is
+  `outOfFuel`. `natAddLit_x64`'s third outcome is a *proved* fact (a genuine, intentional `abort`
+  on a capacity check). `validate_x64`'s third outcome is neither: nobody has shown Stage B's 59
+  functions only ever raise `outOfFuel`, nor has anyone found a genuine `abort`/`oob` the
+  compiled validator can actually reach — the theorem is honest about not knowing yet, rather
+  than assuming either way.
 
 ### `sorry`s
 
@@ -1864,6 +1917,32 @@ script, not left reverted).
   `storeProg`/`nat_add_lit` (unlike `scanProg`'s `run.c` and the walk's `walk.c`); this lane only
   needed `asmText`'s output, not to execute it, so none was written.
 
+**Addendum: closing the gap instead of normalising around it (2026-10-21, lane `capB`).** The fix
+above left a small residual gap: `compile_correct` is a theorem about `compileProg`'s own
+`.imul (some d) a b` (with `d = a`), while the *printed* assembly is `fixImul`'s rewritten
+`.imul none a b` — the same instruction by Kraken's own semantics (`Semantics.lean`'s `.imul dst
+src1 src2` stores to `src1` when `dst = none`; here `src1` already *is* `d`), but connected only
+by the doc comment's argument, not a theorem, so `compile_correct` was not, strictly, a theorem
+about the bytes `as`/`objdump` actually see. Closed by making the compiler emit the one-destination
+form directly: `Compile.lean`'s `binInstr .mul` is now `i64 (.imul none (.reg (rr .rax)) (oR .rcx))`
+(previously `.imul (some (.reg (rr .rax))) …`); `fixImul` and its use in `asmText` are gone
+(`asmText` now prints `compileProg`'s own output verbatim). The compiler proof needed **no
+change**: `Step.lean`'s `ev_bin` (the one lemma per `BinOp` that steps over `binInstr op`, `.mul`
+included) already discharged its `.imul`-shaped verification condition by simp-unfolding
+`Operation.interp`'s `.imul` case, and that unfolding is exactly as direct for `dst = none` (no
+match to resolve: the `none` branch *is* `src1`) as it was for `dst = some src1` (a match that
+happened to resolve to `src1` too) — so `L.Compiler.compile_correct` rebuilds unchanged, and
+`#print axioms compile_correct` is still exactly `propext`, `Classical.choice`, `Quot.sound`.
+`harness/check-asm.sh` still passes, byte-for-byte identical to before (scan 303, store 1275, walk
+3476 instructions, all matching — the printed text was already `fixImul`'s output, so making the
+compiler itself emit it changes nothing printed, only what the proof is *about*); `run --lines` on
+con-leche's `complete_c04a_restart_70.ndjson` (126481 lines) still reports 0 mismatches, and
+`harness/walk.c` (whose `imul`-heavy memo hash was the original trigger) still runs correctly
+(no `SIGILL`). `ConAgua/Arena/WalkEmit.lean`'s doc comment, the `fixImul` mentions in
+`harness/check-asm.sh`'s comment, and `docs/gaps/kraken-att-imul-three-operand.lean`'s cross-
+reference were updated to match; the gap writeup itself is left as the historical record of the
+bug.
+
 ### `sorry`s
 
 None (no proof touched; `compile_correct` unaffected, `#print axioms` unchanged:
@@ -1956,8 +2035,10 @@ lines, `ArenaR.memo_set`/`memo_clear` and `ArenaR.grow` one line each; `ArenaR.f
 as hypotheses, unused) is gone. A failing `tac` on another field is a type mismatch, found before
 `apart` runs; `ArenaRel.lean` checks in 1.7 s wall for 19 tables (11.5 s user, the `apart`s in
 parallel; with all 19 tables 2.2 s wall, 18.8 s user). `ArenaRel.lean`'s table-dependent parts (imports, header, `RLocal`s, frames, fields,
-`arena_build`, `arenaR_init`, lifts) are generated by a script from a table list (not committed;
-the output is ordinary Lean); the `intern*_refinesA` theorems are written per table.
+`arena_build`, `arenaR_init`, lifts) were generated by a script from a table list (never
+committed); since lane `exprops` the file is **maintained by hand** (no generator; a new table is
+the five short pieces listed under Findings below); the `intern*_refinesA` theorems are written per
+table.
 
 ### The walk over every node kind
 
@@ -2061,8 +2142,8 @@ L proofs then see the same terms as the model; the arithmetic moves into the lin
   The models of the 18 records are instances (`appBit`, `appVal b`, `3`, …); the L code keeps
   Rust's shape, one function per record with `next_member` factored out (Rust's deviation 3),
   and each is proved against its instance. The record L code, the instances and the proofs were
-  generated from con-leche's loops by a script (`_tmp/stageb-gen/genrec.py`, not committed; the
-  file was edited after generation). `lam` and `forallE` share one L function and one instance,
+  generated from con-leche's loops by a script (`scripts/stageb/genrec.py`, see its `README`; the
+  file was edited after generation and is hand-maintained since). `lam` and `forallE` share one L function and one instance,
   as Rust's `scan_binder_expr_loop` does.
 * **`key_at`** follows con-leche's `keyAt` (first byte, length, unrolled compare): L has no
   slice type for Rust's `match_lit` against a `[u8; N]`. It is split into a dispatcher and six
@@ -2263,3 +2344,200 @@ other function here which is called once. Likely a full lane-day on its own.
 None. The three bitwise functions are proved end to end against their word-level model; the
 model's correctness against `Nat.land`/`Nat.lor`/`Nat.xor` is deferred (not a `sorry`, simply not
 yet stated).
+
+## The final theorem, and the audits behind it (2026-10-21, lane `final`)
+
+Files: `ConAgua/Final/Twin.lean` (160 lines), `ConAgua/Final/Statement.lean` (200 lines). Both are
+plain (non-`module`) files, since `Twin` imports `ConRonBridge`; they are in the lakefile's glob list.
+
+### What landed
+
+* `Twin.lean` restates the twin side of con-ron's `ConRon/Capstone.lean` without Aeneas:
+  `SeqAccepts` (phase A, then one `checkPendingList` over all pending records from `s'.worker`,
+  the x64 checker's single worker), `pooledAccepts_of_seq`, `TwinAccepts chunks` (the six stages
+  from `AState.init EStore.empty`, at some pin list), `stages_frame` (con-ron's, with the stream
+  named: `denoteDecls sE.store ds.toList = some (preparePrelude preC rc.decls).toList` and
+  `ConLeche.Frontend.parseChunks chunks = .ok rc`), `twinAccepts_pure`, `twinAccepts_model`,
+  `twinAccepts_no_False`. The proofs are con-ron's, unchanged except for the named stream; the
+  two tier specs are discharged in place (`CoreSpec.of_core rfl`, `indSpec_of_bridge rfl hk`).
+* `Statement.lean`: `ACCEPT`, `loadMem`, `PipelineRefines`, `HarnessCall`, `checker_x64_accepts`,
+  `x64_model_exists`, `x64_no_False`, and `pipelineRefines_reject` (an always-rejecting `check`
+  has `PipelineRefines`: the hypothesis is satisfiable). `#guard_msgs` checks both corollaries
+  depend on `propext`, `Classical.choice`, `Quot.sound` only. Statements and the trusted base:
+  `docs/ROADMAP.md` §3.
+* The final theorem is parametric in the program `p`: the ROM (pins, prelude bytes) is part of
+  `p`, and nothing about it is assumed. The proof of `checker_x64_accepts` is 20 lines: the shape
+  of `natAddLit_x64`, with `PipelineRefines` in place of the run lemma.
+
+### Decisions
+
+* **Capacities are untrusted.** `PipelineRefines` quantifies over all array sizes, so `check` must
+  check them at entry (`len8`/`len64`) and abort; the alternative, a size predicate the harness
+  must satisfy, would put the sizes in the trusted base.
+* **`N < 2^62`** is a premise of the theorem (the machine fuel in `rsi`), so the twin's `2^62`
+  fuels can be matched by induction.
+* **`ACCEPT = 0x414343455054`**, not a small number: a status word or a stale register never reads
+  as accept.
+* The corollaries are stated in con-leche's vocabulary (`parseChunks`, `preparePrelude`,
+  `checkDeclsPure`, `Model`), with the pin list and the prelude existential.
+
+### Audit: fuels (twin `vendor/con-ron/ConRon/Arena`, con-leche `vendor/con-leche`)
+
+| fuel | where (value) | decrements | at zero | decision |
+|---|---|---|---|---|
+| `checkFuel` | `Core.lean:3616` (2^62) | one per knot level (`coreKnot` 3536–3608, `CoreIO.lean:33`) | `.internal` throw | not counted; `F ≥ n` |
+| `whnfCoreLoopFuel`, `whnfLoopFuel`, `defeqLoopFuel` | `Core.lean:2185`, `2402`, `3263` (2^62) | per loop step | `.internal` throw | not counted |
+| `lamsFuel` | `Core.lean:3034` (2^62) | per λ pair (`defeqLams` 3051) | falls back to `defeqLamsInner` | not counted (unreachable) |
+| `peelFuel` | `Core.lean:2478` (2^24) | per binder (`inferLams` 2507, `inferPis` 2555, `defeqPeel` 2992) | hands the rest to the knot | **L counter** |
+| `coreWalkFuel` | `Core.lean:87` (4·10^9) | per recursive call of every store walk (ExprOps, Canon, Promote, PropRead, Positivity, …) | `.internal` throw | **L counter** (no rank argument needed) |
+| `storeFuel` | `Frontend/ExportC.lean:84` (`nodeCount + 1`) | per Π node | throw | **L counter** |
+| `hoistClosure` | `NatOpGround.lean:308` (`ds.size`) | per record marked | throw | **L counter** |
+| `whnfWalkFuel` | `Inductives/Positivity.lean:306` (`depth e + 1024`) | per `nestPos` call (1048) | `.notImplemented` decline, reachable | **L counter**, same value |
+| `Level.defaultFuel` | con-leche `Kernel/Level.lean:142` (10^4) | per `leqCore` call, fresh per `leq` | **`none`** | **L counter**, three-way result |
+| `unwrapIdDefs` | `PropRead.lean:155,163` (4) | per wrapper | **returns the term** | **L counter** |
+| `idxCap` | `Handle.lean:98` (2^27 per constructor and tier) | store size | `.native` throw | L abort at the same size |
+
+`none` from a level comparison is an answer at `Core.lean:1651,1656,2720,2724,2906`,
+`BlockInstall.lean:300`, `BlockParts.lean:144,362`, `SumInstall.lean:109`, `RecCheck.lean:218`,
+`ExportC.lean:345`; elsewhere it goes through `liftFueled` (`Core.lean:312`) to a decline.
+
+### Audit: recovery points
+
+One: `orElseAttempt` (`CheckerBase.lean:102`), called only from `checkDivModPinLoop`
+(`DeclCheck.lean:613–631`). A throw other than `.native` inside `checkDivModPinAt` (a defeq at
+`checkFuel` and the certificates' infer/defeq) resumes from the pre-attempt state with the next
+variant; `.ok false` continues from the post-attempt state; the guards (619) and `divModEnvGuard`
+run outside the attempt. No variant matching throws `.notImplemented` (decline, exit 2). All other
+error matches (`Checker.lean:228–236, 247, 272–278, 286–291`, the frontend's `atLine` paths,
+`Main.lean:262–297`) pass the error to a non-accept verdict. No thrown error is turned into
+`false`/`none` anywhere else. Decision: L recovers nowhere (ROADMAP §3 (c)).
+
+### Audit: hash bits and eager nesting
+
+* Hash reads: `Store.lean:459–463` (names), `620–631` (levels), `736–741` (level lists),
+  `1021–1031`, `1215–1255` (expressions): each feeds only a parent's hash. `bvarOfData`,
+  `fvarOfData`, `lpOfData` read `w % 2^32` (`packData`, con-leche `Kernel/Expr.lean:162–178`).
+  Handles hash by their word (`Handle.lean:88`). No `Std.HashMap` is iterated. `Bridge/` never
+  names `mixHash`. Decision: no patch; relate `w % 2^32`.
+* Eager nesting: the only entry is `defeqArg` (`Core.lean:2620`) from full-grade `inferApp`; the
+  eager knot re-enters through `defeqLamsInner` (3040), `etaCert` (1617), `iotaCertsFullAux`
+  (1303), all gated by `verifiedChecks`, which `.verifiedEager` keeps. Depth is unbounded in
+  verified mode, 1 in trusted modes. `putModeMemos` restores the six tables wholesale (eager
+  entries dropped); the other eight caches keep what the eager run added. Decision: a bank stack
+  (ROADMAP §2 item 3).
+
+### Measurements
+
+`lake build ConAgua.Final.Statement` with everything else built: `Twin` and `Statement` under
+1 s each (the proofs are compositions of existing lemmas).
+
+### `sorry`s
+
+None. `PipelineRefines` is a hypothesis of the theorems.
+
+## The first records into the store: names and levels (2026-10-21, lane `front`)
+
+Files: `ConAgua/Front/{Fields,FieldsLink}.lean` (the scanner's fields), `ConAgua/Front/{Apply,
+StateDR}.lean` (the id tables and `parseNameEntryD`/`parseLevelEntryD`, written by a subagent),
+`ConAgua/Front/{Line,LineRefine}.lean` (one line, end to end), `scripts/stageb/` (housekeeping
+below). No `sorry`; `frontLine_refines` and `frontInit_refines` use only `propext`,
+`Classical.choice`, `Quot.sound`. Stage B's files are unchanged.
+
+**Housekeeping.** Stage B's generators are committed as `scripts/stageb/{parserec,genrec,genkey}.py`
+(repo-relative paths; `scripts/stageb/README` says how to run them). `Records.lean`/`Key.lean` were
+edited after generation (the six `key_at` groups and the hypothesis lists that follow, headers,
+heartbeats), so they are hand-maintained; a rerun is a starting point to diff against.
+
+### The fields: a second pass over an accepted line
+
+The validator stays as it is (`scan_line`, all its theorems). A name or level line is read a second
+time by `rec_line_loop(i)` (`Fields.lean`), which returns five words `(pl, idx, a, c, d)`: the kind
+(`1` name `str`, `2` name `num`, `3`‥`6` `succ`/`max`/`imax`/`param`, `7` the header, `0` anything
+else), the index, and the fields (for a `str` name: `pre` and the string body's byte range
+`[c, d)`). The pass trusts the validator: no `seen` masks, no alternation, no key-set check, and it
+stops with `pl = 0` at any other payload key. Numbers are read by `read_nat` (con-leche's
+`readNat64` on words); one of more than 18 digits reads as `NONE = 2^64 - 1`, which the apply step
+refuses (`readNatAt` is `readNat64` for at most 18 digits, so the link is definitional).
+
+`FieldsLink.lean` relates each loop to con-leche's on its `ok` path only: `recLine_link`: if
+`scanLineLoop b i w ik idx pl = .ok r e` and the words so far are related to `idx`/`pl`
+(`ItemR`, `PlR`), then `rec_line_loop`'s result, if `pl ≠ 0`, is related to `r` (`RecR`). The error
+branches of con-leche's loops are discharged by the `ok` hypothesis, so the link is one induction
+per loop (`pair_link`, `strRec_link`, `numRec_link`, `recLine_link`), with no `objN`-style generic
+model. A word read for a number `n` satisfies `ItemR x n := x ≠ NONE → x.toNat = n`; a string body
+`StrOK b vs ve s := NoEsc b vs ve → String.fromUTF8? (b.extract vs ve) = some s` (an escaped string
+is refused by the apply step, `has_escape`).
+
+### The id tables and the apply step (`Apply.lean`, `StateDR.lean`)
+
+`StateD`'s `IdTable`s are two dense word arrays, `NID` (64) and `LID` (65), above `ArenaR`'s
+extension point: entry `i` is the
+handle word `+ 1`, `0` unset. An id at or past the array's end aborts where the twin would use its
+sparse overflow. `front_init`, `apply_nstr(i, pre, o, l)`, `apply_nnum(i, pre, x)`,
+`apply_level(i, k, a, c)` intern through `intern_nanon`/`zero`/`nstr`/`nnum`/`succ`/`max`/
+`imax`/`param` and guard the result `< 2^32` (so table entries can be passed on as handles without
+a lemma about the store's results); `str_put(vs, ve)` copies input bytes to the pool top (one byte
+per word, the name `str` table's key). `StateDR m st` (`TblR` per table: `get?` is the decoded
+entry, entries `≤ 2^32`, sizes `< 2^63`); `ArenaR` is kept across writes to `NID`/`LID` by the
+extension point's frame (`ArenaR.frame_ext`, via `ArenaR.frameT`). Each L function's spec is an
+equation about a named `Option Mem` model (`applyNStrW`, …), and the refinement is proved on the model
+(`applyNStrW_refines`, `applyNNumW_refines`, `applyLevelW_refines`, `frontInitW_refines`).
+
+### One line end to end (`Line.lean`, `LineRefine.lean`)
+
+`front_line(i)` = `scan_line(i)`; blank line → `(1, next)`; else `rec_line_loop` and `apply_rec`
+(which dispatches on `pl`; `apply_str` does `has_escape`, `str_put`, `apply_nstr`). Expression and
+declaration lines abort for now. `frontLine_refines`: under `ArenaR s₀.mem a₀`, `StateDR s₀.mem st`
+and the buffer `b` in `IN`, if `front_line(i)` returns `(1, nx)` then `LineStep b i nx st a₀ m'`:
+`scanLineFwd b i = .ok r q` with `q` the word `nx`, `applyLine st r` succeeds with `.inl st'`, and
+`ArenaR m' (AM.st …)`, `StateDR m' st'`. The record `r` is con-leche's, so Stage B's links to
+`scanLineFwd` apply unchanged.
+
+### Measurements (`lake env lean`, one run)
+
+| file | lines | L lines | user |
+|---|---:|---:|---:|
+| `Fields.lean` (L, models, `vcgen` specs) | 762 | 115 | 35.5 s |
+| `FieldsLink.lean` | 809 | | 8.8 s |
+| `Apply.lean` (L, models, specs, `#guard`s) | 503 | 77 | 4.8 s |
+| `StateDR.lean` | 734 | | 2.6 s |
+| `Line.lean` (L, model, specs) | 255 | 30 | 3.1 s |
+| `LineRefine.lean` | 299 | | 1.2 s |
+
+Every `vcgen` spec is `vcgen` + `finish`. Rust: `export_c.rs`'s name/level entries and the id
+tables (~150 lines) plus the record values of `scan_fast.rs`'s name/level paths (~200).
+
+### Findings
+
+* **A second pass instead of value-carrying validators.** Rewriting the validator's loops to carry
+  values would have meant new models and new links for all of them; the second pass needs links
+  only on con-leche's `ok` path, where every error branch closes by `cases h`. The cost is reading
+  name/level lines twice (they are short).
+* **A monolithic dispatcher did not get through `finish`** (the first `front_line`, ~20 branches
+  with seven calls): split into `front_line`/`apply_rec`/`apply_str`, each spec went through. Two
+  things the split exposed: a callee spec needs `LocEq s' s₀` in its post for the caller's later
+  reads of its own locals; and a callee whose return words are not fixed by its post (a list
+  from an `Option` model) cannot be assigned to locals that the caller returns: return a constant
+  and let the caller build the result.
+* **Pass a callee spec without its state argument** to `vcgen` (`applyRec_spec … n`, not
+  `… n s₀ hm`): an explicit `s₀` fixes the call state, which is never `s₀` itself.
+* `rw [f]` with a definition's equation lemma for an overlapping `match` (`scanLineLoop`) produces
+  side goals; `rw [f.eq_def]` does not.
+
+### What an expression record will need
+
+Binder data (`lam`/`forallE` names and binder info are dropped by con-leche, so nothing), the
+`lit` store's `strVal` contents (a second `intern_lit` entry over the pool bytes, as `nstr`), the
+derived columns (`derOfView`: the loose-bvar range and flags, and the opaque hash, ROADMAP §2
+item 10), level lists for `const` (`intern_ls` over handle words `str_put`-like into the pool),
+and natural-number literals (the limb-pool decimal parse). The fields pass extends by one arm per
+expression key, with `ok`-path links of the same shape.
+
+### Requests
+
+* Strings with escapes abort; `unescape` into the pool (the `\u` arms need UTF-8 encoding
+  against `String.utf8EncodeChar`) is the next piece for real files.
+
+### `sorry`s
+
+None.

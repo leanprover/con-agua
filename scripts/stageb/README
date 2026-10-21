@@ -1,0 +1,9 @@
+Generators of Stage B's L text (DESIGN.md, "Stage B", "Structure"; lane `front`, "Housekeeping").
+
+  python3 parserec.py   # con-leche's 18 record loops -> key sets, bits, value kinds (JSON, stdout)
+  python3 genrec.py     # -> records_gen.lean: the record L code, instances and specs
+  python3 genkey.py     # -> stdout: the `keyAtN` model and the `key_at` L code
+
+ConAgua/Scan/Records.lean and Key.lean were generated once and then edited by hand (header,
+`key_at` split into six group functions and the longer hypothesis lists that follow, heartbeat
+options). They are hand-maintained: a rerun gives a starting point to diff against, not the file.
