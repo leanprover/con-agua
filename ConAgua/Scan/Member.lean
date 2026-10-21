@@ -189,10 +189,16 @@ section nextMember
 variable (p : Prog) (b : Array UInt8) (hb : b.size < 2 ^ 63)
     (hpw : p.lookup "skip_ws" = some L.Scan.Leaves.skipWs)
     (hpk : p.lookup "key_end" = some L.Scan.Leaves.keyEnd)
+    (hpa1 : p.lookup "key_at_g1" = some L.Scan.Key.keyAtG1)
+    (hpa2 : p.lookup "key_at_g2" = some L.Scan.Key.keyAtG2)
+    (hpa3 : p.lookup "key_at_g3" = some L.Scan.Key.keyAtG3)
+    (hpa4 : p.lookup "key_at_g4" = some L.Scan.Key.keyAtG4)
+    (hpa5 : p.lookup "key_at_g5" = some L.Scan.Key.keyAtG5)
+    (hpa6 : p.lookup "key_at_g6" = some L.Scan.Key.keyAtG6)
     (hpa : p.lookup "key_at" = some L.Scan.Key.keyAt)
     (hpv : p.lookup "value_at" = some L.Scan.Key.valueAt)
     (hpm : p.lookup "next_member" = some nextMember)
-include hb hpw hpk hpa hpv
+include hb hpw hpk hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv
 
 attribute [local lang_grind] Mbr.enc Mbr.err
 
@@ -209,14 +215,14 @@ theorem nextMemberLoop_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) :
     sym only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, ih,
         L.Scan.Leaves.keyEnd_spec p hpk b hb' n, L.Scan.Key.valueAt_spec p hpw hpv b hb n,
-        L.Scan.Key.keyAt_spec p hpa b hb n] <;> finish
+        L.Scan.Key.keyAt_spec p hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa b hb n] <;> finish
 
 theorem nextMemberLoop_step_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) nextMemberLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
       r.retOr Mbr.err.enc = (nextMemberN b (s₀.loc 0) (s₀.loc 1)).enc; ⊤⦄ :=
-  Triple.step_exec (nextMemberLoop_spec p b hb hpw hpk hpa hpv (n + 1) s₀ hm)
+  Triple.step_exec (nextMemberLoop_spec p b hb hpw hpk hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv (n + 1) s₀ hm)
 
 include hpm in
 theorem nextMember_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i w : Word) :
@@ -230,7 +236,7 @@ theorem nextMember_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i w :
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind] =>
-      vcgen [exec, step, evalE, evalArgs, nextMemberLoop_step_spec p b hb hpw hpk hpa hpv n] <;> finish
+      vcgen [exec, step, evalE, evalArgs, nextMemberLoop_step_spec p b hb hpw hpk hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv n] <;> finish
 
 end nextMember
 

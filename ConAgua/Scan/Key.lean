@@ -593,12 +593,12 @@ def keyAtG6 : FunDecl := lfn (i, kl, c) {
 /-- `key_at(i, kl)`, split into the six groups above (same reason as `keyAtN`). -/
 def keyAt : FunDecl := lfn (i, kl) locals (c, g) {
   c := IN.u8[i + 1];
-  if c == 105 || c == 100 { g := call keyAtG1(i, kl, c); return g };
-  if c == 110 || c == 104 || c == 111 { g := call keyAtG2(i, kl, c); return g };
-  if c == 115 || c == 116 || c == 113 { g := call keyAtG3(i, kl, c); return g };
-  if c == 114 || c == 118 || c == 107 || c == 117 { g := call keyAtG4(i, kl, c); return g };
-  if c == 112 || c == 108 || c == 99 { g := call keyAtG5(i, kl, c); return g };
-  if c == 97 || c == 98 || c == 109 || c == 102 { g := call keyAtG6(i, kl, c); return g };
+  if c == 105 || c == 100 { g := call key_at_g1(i, kl, c); return g };
+  if c == 110 || c == 104 || c == 111 { g := call key_at_g2(i, kl, c); return g };
+  if c == 115 || c == 116 || c == 113 { g := call key_at_g3(i, kl, c); return g };
+  if c == 114 || c == 118 || c == 107 || c == 117 { g := call key_at_g4(i, kl, c); return g };
+  if c == 112 || c == 108 || c == 99 { g := call key_at_g5(i, kl, c); return g };
+  if c == 97 || c == 98 || c == 109 || c == 102 { g := call key_at_g6(i, kl, c); return g };
   return 0
 }
 
@@ -635,13 +635,13 @@ section keyAtGroups
 variable (p : Prog) (b : Array UInt8)
 
 section keyAtG1
-variable (hp : p.lookup "keyAtG1" = some keyAtG1)
+variable (hp : p.lookup "key_at_g1" = some keyAtG1)
 include hp
 
 attribute [local lang_grind] keyAtG1N in
 theorem keyAtG1_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl c : Word) :
     ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "keyAtG1" [i, kl, c]
+    invoke p (exec p n) "key_at_g1" [i, kl, c]
     ⦃fun r s' => s' = s₀ ∧ r = [keyAtG1N b i kl c]; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, keyAtG1]
@@ -653,14 +653,14 @@ theorem keyAtG1_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl c :
 end keyAtG1
 
 section keyAtG2
-variable (hp : p.lookup "keyAtG2" = some keyAtG2)
+variable (hp : p.lookup "key_at_g2" = some keyAtG2)
 include hp
 
 attribute [local lang_grind] keyAtG2N in
 set_option maxHeartbeats 4000000 in
 theorem keyAtG2_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl c : Word) :
     ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "keyAtG2" [i, kl, c]
+    invoke p (exec p n) "key_at_g2" [i, kl, c]
     ⦃fun r s' => s' = s₀ ∧ r = [keyAtG2N b i kl c]; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, keyAtG2]
@@ -672,13 +672,13 @@ theorem keyAtG2_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl c :
 end keyAtG2
 
 section keyAtG3
-variable (hp : p.lookup "keyAtG3" = some keyAtG3)
+variable (hp : p.lookup "key_at_g3" = some keyAtG3)
 include hp
 
 attribute [local lang_grind] keyAtG3N in
 theorem keyAtG3_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl c : Word) :
     ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "keyAtG3" [i, kl, c]
+    invoke p (exec p n) "key_at_g3" [i, kl, c]
     ⦃fun r s' => s' = s₀ ∧ r = [keyAtG3N b i kl c]; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, keyAtG3]
@@ -690,13 +690,13 @@ theorem keyAtG3_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl c :
 end keyAtG3
 
 section keyAtG4
-variable (hp : p.lookup "keyAtG4" = some keyAtG4)
+variable (hp : p.lookup "key_at_g4" = some keyAtG4)
 include hp
 
 attribute [local lang_grind] keyAtG4N in
 theorem keyAtG4_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl c : Word) :
     ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "keyAtG4" [i, kl, c]
+    invoke p (exec p n) "key_at_g4" [i, kl, c]
     ⦃fun r s' => s' = s₀ ∧ r = [keyAtG4N b i kl c]; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, keyAtG4]
@@ -708,13 +708,13 @@ theorem keyAtG4_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl c :
 end keyAtG4
 
 section keyAtG5
-variable (hp : p.lookup "keyAtG5" = some keyAtG5)
+variable (hp : p.lookup "key_at_g5" = some keyAtG5)
 include hp
 
 attribute [local lang_grind] keyAtG5N in
 theorem keyAtG5_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl c : Word) :
     ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "keyAtG5" [i, kl, c]
+    invoke p (exec p n) "key_at_g5" [i, kl, c]
     ⦃fun r s' => s' = s₀ ∧ r = [keyAtG5N b i kl c]; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, keyAtG5]
@@ -726,13 +726,13 @@ theorem keyAtG5_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl c :
 end keyAtG5
 
 section keyAtG6
-variable (hp : p.lookup "keyAtG6" = some keyAtG6)
+variable (hp : p.lookup "key_at_g6" = some keyAtG6)
 include hp
 
 attribute [local lang_grind] keyAtG6N in
 theorem keyAtG6_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl c : Word) :
     ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "keyAtG6" [i, kl, c]
+    invoke p (exec p n) "key_at_g6" [i, kl, c]
     ⦃fun r s' => s' = s₀ ∧ r = [keyAtG6N b i kl c]; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, keyAtG6]
@@ -747,9 +747,9 @@ end keyAtGroups
 
 section keyAt
 variable (p : Prog)
-    (hp1 : p.lookup "keyAtG1" = some keyAtG1) (hp2 : p.lookup "keyAtG2" = some keyAtG2)
-    (hp3 : p.lookup "keyAtG3" = some keyAtG3) (hp4 : p.lookup "keyAtG4" = some keyAtG4)
-    (hp5 : p.lookup "keyAtG5" = some keyAtG5) (hp6 : p.lookup "keyAtG6" = some keyAtG6)
+    (hp1 : p.lookup "key_at_g1" = some keyAtG1) (hp2 : p.lookup "key_at_g2" = some keyAtG2)
+    (hp3 : p.lookup "key_at_g3" = some keyAtG3) (hp4 : p.lookup "key_at_g4" = some keyAtG4)
+    (hp5 : p.lookup "key_at_g5" = some keyAtG5) (hp6 : p.lookup "key_at_g6" = some keyAtG6)
     (hp : p.lookup "key_at" = some keyAt) (b : Array UInt8) (hb : b.size < 2 ^ 63)
 include hp hp1 hp2 hp3 hp4 hp5 hp6 hb
 
@@ -829,8 +829,8 @@ grind_pattern [lang_grind] valueAtN_le => valueAtN b i ke
 
 /-- The program, as `#eval`-able code. -/
 def keyProg : Prog :=
-  [("keyAtG1", keyAtG1), ("keyAtG2", keyAtG2), ("keyAtG3", keyAtG3),
-   ("keyAtG4", keyAtG4), ("keyAtG5", keyAtG5), ("keyAtG6", keyAtG6), ("key_at", keyAt)]
+  [("key_at_g1", keyAtG1), ("key_at_g2", keyAtG2), ("key_at_g3", keyAtG3),
+   ("key_at_g4", keyAtG4), ("key_at_g5", keyAtG5), ("key_at_g6", keyAtG6), ("key_at", keyAt)]
 
 #guard (run keyProg 100 "key_at" [0, 3] { bytes := #["\"app\"".toUTF8.data] }).toOption.map (·.1)
   == some [2]

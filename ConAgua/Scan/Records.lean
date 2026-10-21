@@ -1319,6 +1319,12 @@ variable (p : Prog) (b : Array UInt8) (hb : b.size < 2 ^ 63)
     (hpd : p.lookup "skip_digits" = some L.Scan.Leaves.skipDigits)
     (hpk : p.lookup "key_end" = some L.Scan.Leaves.keyEnd)
     (hpn : p.lookup "num_end" = some L.Scan.Leaves.numEnd)
+    (hpa1 : p.lookup "key_at_g1" = some L.Scan.Key.keyAtG1)
+    (hpa2 : p.lookup "key_at_g2" = some L.Scan.Key.keyAtG2)
+    (hpa3 : p.lookup "key_at_g3" = some L.Scan.Key.keyAtG3)
+    (hpa4 : p.lookup "key_at_g4" = some L.Scan.Key.keyAtG4)
+    (hpa5 : p.lookup "key_at_g5" = some L.Scan.Key.keyAtG5)
+    (hpa6 : p.lookup "key_at_g6" = some L.Scan.Key.keyAtG6)
     (hpa : p.lookup "key_at" = some L.Scan.Key.keyAt)
     (hpv : p.lookup "value_at" = some L.Scan.Key.valueAt)
     (hpm : p.lookup "next_member" = some nextMember)
@@ -1335,6 +1341,7 @@ variable (p : Prog) (b : Array UInt8) (hb : b.size < 2 ^ 63)
     (hphv : p.lookup "hex_val" = some L.Scan.Str.hexVal)
     (hp4 : p.lookup "hex4" = some L.Scan.Str.hex4)
     (hp3 : p.lookup "hex3" = some L.Scan.Str.hex3)
+    (hpux : p.lookup "u_next" = some L.Scan.Str.uNext)
     (hpue : p.lookup "unescape" = some L.Scan.Str.unescape)
     (hpsc : p.lookup "str_close" = some L.Examples.strClose)
     (hpe : p.lookup "has_escape" = some L.Scan.Leaves.hasEscape)
@@ -1360,7 +1367,7 @@ variable (p : Prog) (b : Array UInt8) (hb : b.size < 2 ^ 63)
     (hp_opaqueD : p.lookup "scan_opaque" = some scanOpaqueD)
     (hp_quotD : p.lookup "scan_quot" = some scanQuotD)
     (hp_indD : p.lookup "scan_ind_decl" = some scanIndD)
-include hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD
+include hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD
 
 
 attribute [local lang_grind] strNameBit strNameVal Mbr.err
@@ -1376,8 +1383,8 @@ theorem strNameLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := strNameLoop) rfl]
     sym (gen := 16) only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
-        nextMember_spec p b hb hpw hpk hpa hpv hpm n,
-        L.Scan.Str.scanString_spec p b hb ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› n,
+        nextMember_spec p b hb hpw hpk hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm n,
+        L.Scan.Str.scanString_spec p b hb ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› n,
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 theorem strNameLoop_step_spec (n : Nat) (s₀ : St) :
@@ -1385,7 +1392,7 @@ theorem strNameLoop_step_spec (n : Nat) (s₀ : St) :
     step p (exec p n) strNameLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
       r.retOr [0] = [objN strNameBit (strNameVal b) 3 b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
-  Triple.step_exec (strNameLoop_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
+  Triple.step_exec (strNameLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
 theorem scanStrName_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -1397,7 +1404,7 @@ theorem scanStrName_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : 
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, strNameN, objEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, strNameLoop_step_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, strNameLoop_step_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
 
 
 
@@ -1415,7 +1422,7 @@ theorem numNameLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := numNameLoop) rfl]
     sym (gen := 16) only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
-        nextMember_spec p b hb hpw hpk hpa hpv hpm n,
+        nextMember_spec p b hb hpw hpk hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm n,
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 theorem numNameLoop_step_spec (n : Nat) (s₀ : St) :
@@ -1423,7 +1430,7 @@ theorem numNameLoop_step_spec (n : Nat) (s₀ : St) :
     step p (exec p n) numNameLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
       r.retOr [0] = [objN numNameBit (numNameVal b) 3 b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
-  Triple.step_exec (numNameLoop_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
+  Triple.step_exec (numNameLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
 theorem scanNumName_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -1435,7 +1442,7 @@ theorem scanNumName_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : 
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, numNameN, objEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, numNameLoop_step_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, numNameLoop_step_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
 
 
 
@@ -1453,7 +1460,7 @@ theorem appLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := appLoop) rfl]
     sym (gen := 16) only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
-        nextMember_spec p b hb hpw hpk hpa hpv hpm n,
+        nextMember_spec p b hb hpw hpk hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm n,
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 theorem appLoop_step_spec (n : Nat) (s₀ : St) :
@@ -1461,7 +1468,7 @@ theorem appLoop_step_spec (n : Nat) (s₀ : St) :
     step p (exec p n) appLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
       r.retOr [0] = [objN appBit (appVal b) 3 b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
-  Triple.step_exec (appLoop_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
+  Triple.step_exec (appLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
 theorem scanApp_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -1473,7 +1480,7 @@ theorem scanApp_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, appN, objEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, appLoop_step_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, appLoop_step_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
 
 
 
@@ -1491,7 +1498,7 @@ theorem binderLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := binderLoop) rfl]
     sym (gen := 16) only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
-        nextMember_spec p b hb hpw hpk hpa hpv hpm n,
+        nextMember_spec p b hb hpw hpk hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm n,
         scanBinderInfo_spec p b hb ‹_› ‹_› n,
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
@@ -1500,7 +1507,7 @@ theorem binderLoop_step_spec (n : Nat) (s₀ : St) :
     step p (exec p n) binderLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
       r.retOr [0] = [objN binderBit (binderVal b) 15 b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
-  Triple.step_exec (binderLoop_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
+  Triple.step_exec (binderLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
 theorem scanBinder_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -1512,7 +1519,7 @@ theorem scanBinder_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : W
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, binderN, objEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, binderLoop_step_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, binderLoop_step_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
 
 
 
@@ -1531,7 +1538,7 @@ theorem letELoop_spec (n : Nat) (s₀ : St) :
     have hb64 : b.size < 2 ^ 64 := by omega
     sym (gen := 16) only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
-        nextMember_spec p b hb hpw hpk hpa hpv hpm n,
+        nextMember_spec p b hb hpw hpk hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm n,
         L.Scan.Lit.scanBool_spec p ‹_› ‹_› b hb64 n,
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
@@ -1540,7 +1547,7 @@ theorem letELoop_step_spec (n : Nat) (s₀ : St) :
     step p (exec p n) letELoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
       r.retOr [0] = [objN letEBit (letEVal b) 27 b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
-  Triple.step_exec (letELoop_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
+  Triple.step_exec (letELoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
 theorem scanLetE_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -1552,7 +1559,7 @@ theorem scanLetE_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Wor
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, letEN, objEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, letELoop_step_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, letELoop_step_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
 
 
 
@@ -1570,7 +1577,7 @@ theorem constELoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := constELoop) rfl]
     sym (gen := 16) only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
-        nextMember_spec p b hb hpw hpk hpa hpv hpm n,
+        nextMember_spec p b hb hpw hpk hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm n,
         scanNatList_spec p b hb ‹_› ‹_› ‹_› n,
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
@@ -1579,7 +1586,7 @@ theorem constELoop_step_spec (n : Nat) (s₀ : St) :
     step p (exec p n) constELoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
       r.retOr [0] = [objN constEBit (constEVal b) 3 b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
-  Triple.step_exec (constELoop_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
+  Triple.step_exec (constELoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
 theorem scanConstE_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -1591,7 +1598,7 @@ theorem scanConstE_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : W
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, constEN, objEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, constELoop_step_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, constELoop_step_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
 
 
 
@@ -1609,7 +1616,7 @@ theorem projLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := projLoop) rfl]
     sym (gen := 16) only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
-        nextMember_spec p b hb hpw hpk hpa hpv hpm n,
+        nextMember_spec p b hb hpw hpk hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm n,
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 theorem projLoop_step_spec (n : Nat) (s₀ : St) :
@@ -1617,7 +1624,7 @@ theorem projLoop_step_spec (n : Nat) (s₀ : St) :
     step p (exec p n) projLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
       r.retOr [0] = [objN projBit (projVal b) 7 b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
-  Triple.step_exec (projLoop_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
+  Triple.step_exec (projLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
 theorem scanProj_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -1629,7 +1636,7 @@ theorem scanProj_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Wor
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, projN, objEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, projLoop_step_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, projLoop_step_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
 
 
 
@@ -1647,7 +1654,7 @@ theorem ruleLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := ruleLoop) rfl]
     sym (gen := 16) only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
-        nextMember_spec p b hb hpw hpk hpa hpv hpm n,
+        nextMember_spec p b hb hpw hpk hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm n,
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 theorem ruleLoop_step_spec (n : Nat) (s₀ : St) :
@@ -1655,7 +1662,7 @@ theorem ruleLoop_step_spec (n : Nat) (s₀ : St) :
     step p (exec p n) ruleLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
       r.retOr [0] = [objN ruleBit (ruleVal b) 7 b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
-  Triple.step_exec (ruleLoop_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
+  Triple.step_exec (ruleLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
 theorem scanRule_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -1667,7 +1674,7 @@ theorem scanRule_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Wor
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, ruleN, objEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, ruleLoop_step_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, ruleLoop_step_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
 
 
 
@@ -1685,14 +1692,14 @@ theorem rulesLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := rulesLoop) rfl]
     sym (gen := 16) only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, ih,
-        scanRule_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
+        scanRule_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
 
 theorem rulesLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
     step p (exec p n) rulesLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
       r.retOr [0] = [objListN (ruleN b) b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
-  Triple.step_exec (rulesLoop_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
+  Triple.step_exec (rulesLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
 theorem scanRules_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -1704,7 +1711,7 @@ theorem scanRules_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Wo
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, rulesN, objListEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, rulesLoop_step_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, rulesLoop_step_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
 
 
 
@@ -1725,10 +1732,10 @@ theorem indRecLoop_spec (n : Nat) (s₀ : St) :
     have hb64 : b.size < 2 ^ 64 := by omega
     sym (gen := 16) only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
-        nextMember_spec p b hb hpw hpk hpa hpv hpm n,
+        nextMember_spec p b hb hpw hpk hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm n,
         L.Scan.Lit.scanBool_spec p ‹_› ‹_› b hb64 n,
         scanNatList_spec p b hb ‹_› ‹_› ‹_› n,
-        scanRules_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
+        scanRules_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 theorem indRecLoop_step_spec (n : Nat) (s₀ : St) :
@@ -1736,7 +1743,7 @@ theorem indRecLoop_step_spec (n : Nat) (s₀ : St) :
     step p (exec p n) indRecLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
       r.retOr [0] = [objN indRecBit (indRecVal b) 2046 b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
-  Triple.step_exec (indRecLoop_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
+  Triple.step_exec (indRecLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
 theorem scanIndRec_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -1748,7 +1755,7 @@ theorem scanIndRec_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : W
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, indRecN, objEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, indRecLoop_step_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, indRecLoop_step_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
 
 
 
@@ -1766,14 +1773,14 @@ theorem indRecsLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := indRecsLoop) rfl]
     sym (gen := 16) only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, ih,
-        scanIndRec_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
+        scanIndRec_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
 
 theorem indRecsLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
     step p (exec p n) indRecsLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
       r.retOr [0] = [objListN (indRecN b) b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
-  Triple.step_exec (indRecsLoop_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
+  Triple.step_exec (indRecsLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
 theorem scanIndRecs_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -1785,7 +1792,7 @@ theorem scanIndRecs_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : 
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, indRecsN, objListEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, indRecsLoop_step_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, indRecsLoop_step_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
 
 
 
@@ -1806,7 +1813,7 @@ theorem indTypeLoop_spec (n : Nat) (s₀ : St) :
     have hb64 : b.size < 2 ^ 64 := by omega
     sym (gen := 16) only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
-        nextMember_spec p b hb hpw hpk hpa hpv hpm n,
+        nextMember_spec p b hb hpw hpk hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm n,
         L.Scan.Lit.scanBool_spec p ‹_› ‹_› b hb64 n,
         scanNatList_spec p b hb ‹_› ‹_› ‹_› n,
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
@@ -1816,7 +1823,7 @@ theorem indTypeLoop_step_spec (n : Nat) (s₀ : St) :
     step p (exec p n) indTypeLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
       r.retOr [0] = [objN indTypeBit (indTypeVal b) 2046 b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
-  Triple.step_exec (indTypeLoop_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
+  Triple.step_exec (indTypeLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
 theorem scanIndType_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -1828,7 +1835,7 @@ theorem scanIndType_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : 
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, indTypeN, objEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, indTypeLoop_step_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, indTypeLoop_step_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
 
 
 
@@ -1846,14 +1853,14 @@ theorem indTypesLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := indTypesLoop) rfl]
     sym (gen := 16) only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, ih,
-        scanIndType_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
+        scanIndType_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
 
 theorem indTypesLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
     step p (exec p n) indTypesLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
       r.retOr [0] = [objListN (indTypeN b) b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
-  Triple.step_exec (indTypesLoop_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
+  Triple.step_exec (indTypesLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
 theorem scanIndTypes_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -1865,7 +1872,7 @@ theorem scanIndTypes_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i :
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, indTypesN, objListEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, indTypesLoop_step_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, indTypesLoop_step_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
 
 
 
@@ -1884,7 +1891,7 @@ theorem indCtorLoop_spec (n : Nat) (s₀ : St) :
     have hb64 : b.size < 2 ^ 64 := by omega
     sym (gen := 16) only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
-        nextMember_spec p b hb hpw hpk hpa hpv hpm n,
+        nextMember_spec p b hb hpw hpk hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm n,
         L.Scan.Lit.scanBool_spec p ‹_› ‹_› b hb64 n,
         scanNatList_spec p b hb ‹_› ‹_› ‹_› n,
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
@@ -1894,7 +1901,7 @@ theorem indCtorLoop_step_spec (n : Nat) (s₀ : St) :
     step p (exec p n) indCtorLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
       r.retOr [0] = [objN indCtorBit (indCtorVal b) 252 b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
-  Triple.step_exec (indCtorLoop_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
+  Triple.step_exec (indCtorLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
 theorem scanIndCtor_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -1906,7 +1913,7 @@ theorem scanIndCtor_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : 
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, indCtorN, objEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, indCtorLoop_step_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, indCtorLoop_step_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
 
 
 
@@ -1924,14 +1931,14 @@ theorem indCtorsLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := indCtorsLoop) rfl]
     sym (gen := 16) only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, ih,
-        scanIndCtor_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
+        scanIndCtor_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
 
 theorem indCtorsLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
     step p (exec p n) indCtorsLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
       r.retOr [0] = [objListN (indCtorN b) b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
-  Triple.step_exec (indCtorsLoop_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
+  Triple.step_exec (indCtorsLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
 theorem scanIndCtors_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -1943,7 +1950,7 @@ theorem scanIndCtors_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i :
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, indCtorsN, objListEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, indCtorsLoop_step_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, indCtorsLoop_step_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
 
 
 
@@ -1962,7 +1969,7 @@ theorem axiomDLoop_spec (n : Nat) (s₀ : St) :
     have hb64 : b.size < 2 ^ 64 := by omega
     sym (gen := 16) only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
-        nextMember_spec p b hb hpw hpk hpa hpv hpm n,
+        nextMember_spec p b hb hpw hpk hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm n,
         L.Scan.Lit.scanBool_spec p ‹_› ‹_› b hb64 n,
         scanNatList_spec p b hb ‹_› ‹_› ‹_› n,
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
@@ -1972,7 +1979,7 @@ theorem axiomDLoop_step_spec (n : Nat) (s₀ : St) :
     step p (exec p n) axiomDLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
       r.retOr [0] = [objN axiomDBit (axiomDVal b) 15 b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
-  Triple.step_exec (axiomDLoop_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
+  Triple.step_exec (axiomDLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
 theorem scanAxiomD_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -1984,7 +1991,7 @@ theorem scanAxiomD_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : W
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, axiomDN, objEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, axiomDLoop_step_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, axiomDLoop_step_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
 
 
 
@@ -2002,9 +2009,9 @@ theorem defDLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := defDLoop) rfl]
     sym (gen := 16) only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
-        nextMember_spec p b hb hpw hpk hpa hpv hpm n,
-        L.Scan.Str.scanString_spec p b hb ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› n,
-        scanHints_spec p b hb ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› n,
+        nextMember_spec p b hb hpw hpk hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm n,
+        L.Scan.Str.scanString_spec p b hb ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› n,
+        scanHints_spec p b hb ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› n,
         scanNatList_spec p b hb ‹_› ‹_› ‹_› n,
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
@@ -2013,7 +2020,7 @@ theorem defDLoop_step_spec (n : Nat) (s₀ : St) :
     step p (exec p n) defDLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
       r.retOr [0] = [objN defDBit (defDVal b) 124 b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
-  Triple.step_exec (defDLoop_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
+  Triple.step_exec (defDLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
 theorem scanDefD_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -2025,7 +2032,7 @@ theorem scanDefD_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Wor
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, defDN, objEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, defDLoop_step_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, defDLoop_step_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
 
 
 
@@ -2043,7 +2050,7 @@ theorem thmDLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := thmDLoop) rfl]
     sym (gen := 16) only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
-        nextMember_spec p b hb hpw hpk hpa hpv hpm n,
+        nextMember_spec p b hb hpw hpk hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm n,
         scanNatList_spec p b hb ‹_› ‹_› ‹_› n,
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
@@ -2052,7 +2059,7 @@ theorem thmDLoop_step_spec (n : Nat) (s₀ : St) :
     step p (exec p n) thmDLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
       r.retOr [0] = [objN thmDBit (thmDVal b) 30 b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
-  Triple.step_exec (thmDLoop_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
+  Triple.step_exec (thmDLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
 theorem scanThmD_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -2064,7 +2071,7 @@ theorem scanThmD_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Wor
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, thmDN, objEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, thmDLoop_step_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, thmDLoop_step_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
 
 
 
@@ -2083,7 +2090,7 @@ theorem opaqueDLoop_spec (n : Nat) (s₀ : St) :
     have hb64 : b.size < 2 ^ 64 := by omega
     sym (gen := 16) only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
-        nextMember_spec p b hb hpw hpk hpa hpv hpm n,
+        nextMember_spec p b hb hpw hpk hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm n,
         L.Scan.Lit.scanBool_spec p ‹_› ‹_› b hb64 n,
         scanNatList_spec p b hb ‹_› ‹_› ‹_› n,
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
@@ -2093,7 +2100,7 @@ theorem opaqueDLoop_step_spec (n : Nat) (s₀ : St) :
     step p (exec p n) opaqueDLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
       r.retOr [0] = [objN opaqueDBit (opaqueDVal b) 62 b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
-  Triple.step_exec (opaqueDLoop_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
+  Triple.step_exec (opaqueDLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
 theorem scanOpaqueD_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -2105,7 +2112,7 @@ theorem scanOpaqueD_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : 
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, opaqueDN, objEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, opaqueDLoop_step_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, opaqueDLoop_step_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
 
 
 
@@ -2123,8 +2130,8 @@ theorem quotDLoop_spec (n : Nat) (s₀ : St) :
     rw [exec, step_while (w := quotDLoop) rfl]
     sym (gen := 16) only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
-        nextMember_spec p b hb hpw hpk hpa hpv hpm n,
-        L.Scan.Str.scanString_spec p b hb ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› n,
+        nextMember_spec p b hb hpw hpk hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm n,
+        L.Scan.Str.scanString_spec p b hb ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› ‹_› n,
         scanNatList_spec p b hb ‹_› ‹_› ‹_› n,
         slotNat_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
@@ -2133,7 +2140,7 @@ theorem quotDLoop_step_spec (n : Nat) (s₀ : St) :
     step p (exec p n) quotDLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
       r.retOr [0] = [objN quotDBit (quotDVal b) 15 b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
-  Triple.step_exec (quotDLoop_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
+  Triple.step_exec (quotDLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
 theorem scanQuotD_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -2145,7 +2152,7 @@ theorem scanQuotD_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Wo
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, quotDN, objEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, quotDLoop_step_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, quotDLoop_step_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
 
 
 
@@ -2164,11 +2171,11 @@ theorem indDLoop_spec (n : Nat) (s₀ : St) :
     have hb64 : b.size < 2 ^ 64 := by omega
     sym (gen := 16) only [lang_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih,
-        nextMember_spec p b hb hpw hpk hpa hpv hpm n,
+        nextMember_spec p b hb hpw hpk hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm n,
         L.Scan.Lit.scanBool_spec p ‹_› ‹_› b hb64 n,
-        scanIndCtors_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
-        scanIndRecs_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
-        scanIndTypes_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
+        scanIndCtors_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
+        scanIndRecs_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
+        scanIndTypes_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n,
         scanNatList_spec p b hb ‹_› ‹_› ‹_› n] <;> finish
 
 theorem indDLoop_step_spec (n : Nat) (s₀ : St) :
@@ -2176,7 +2183,7 @@ theorem indDLoop_step_spec (n : Nat) (s₀ : St) :
     step p (exec p n) indDLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
       r.retOr [0] = [objN indDBit (indDVal b) 26 b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
-  Triple.step_exec (indDLoop_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
+  Triple.step_exec (indDLoop_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD (n + 1) s₀)
 
 theorem scanIndD_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
@@ -2188,7 +2195,7 @@ theorem scanIndD_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Wor
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, indDN, objEntryN] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, indDLoop_step_spec p b hb hpw hpd hpk hpn hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8, indDLoop_step_spec p b hb hpw hpd hpk hpn hpa1 hpa2 hpa3 hpa4 hpa5 hpa6 hpa hpv hpm hps hpmw hpi hph hpl hpml hpb hpc hpu8 hpbi hphv hp4 hp3 hpux hpue hpsc hpe hpt hp_strName hp_numName hp_app hp_binder hp_letE hp_constE hp_proj hp_rule hp_rules hp_indRec hp_indRecs hp_indType hp_indTypes hp_indCtor hp_indCtors hp_axiomD hp_defD hp_thmD hp_opaqueD hp_quotD hp_indD n] <;> finish
 
 
 end specs
