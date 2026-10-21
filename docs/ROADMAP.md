@@ -141,8 +141,13 @@ under ~2 minutes (`Line.lean`, 136 s, is the current worst).
    "mentions scratch" (decided from the tier bit at insert), the second cleared by epoch at the
    drop; the relation is "the arena map is the union".
 3. **Mode-memo banks.** `takeModeMemos`/`putModeMemos` move six tables out for an eager
-   comparison and back. In L: a bank word selects one of two table sets and the eager bank is
-   cleared by epoch. Check whether eager comparisons nest (then a bank stack, bounded).
+   comparison and back. **Audited (lane `final`): eager comparisons nest without a structural
+   bound in `.verified` mode** (re-entry through full-grade `r.infer` in `defeqLamsInner`,
+   `etaCert`, `iotaCertsFullAux`; at most depth 1 in the trusted modes). Decision: a **bank stack**:
+   the six mode tables exist in `D` banks, an eager-depth word selects the bank, entering `defeqE`
+   increments it and clears the new bank by epoch, leaving decrements it (the outer bank is
+   untouched, which is exactly `putModeMemos saved`). `D` is a capacity (checked at entry, abort
+   beyond it). The other eight caches and the store are shared across depths.
 4. **Values that are not handles.** `IFEnv`, `IConstantInfo` (lists of names, `IRecRule`s,
    projection tables, `IIndCaps`), `PendingCheck`, `Array EIdx` spines (`getAppSpine`,
    `instSpine`), `List NIdx`: a record pool (bump-allocated words, slices as in `PoolSlice`)
@@ -159,13 +164,16 @@ under ~2 minutes (`Line.lean`, 136 s, is the current worst).
    stack. whnf/defeq/infer frames are larger and interleave; measure on con-leche's
    `stack_fuel_offset` before deciding on explicit work stacks for the worst walks (positivity,
    `instantiate*` on long spines). Stack exhaustion is already a defined outcome (`rdx = 1`).
-8. **Counted twin fuels.** See §3 (b): every twin fuel below `2^62` needs an L counter.
-9. **Errors.** See §3 (c): one recovery point (`orElseAttempt`); everything else may collapse.
-10. **Derived columns.** `derOfView` packs a hash (`mixHash`, `String.hash`: `@[extern]`, opaque),
-    the loose-bvar range and flags. L can compute range and flags exactly; it cannot compute the
-    opaque hash. Either show no verdict reads the hash bits (the relation then ignores them), or
-    patch the vendored twin to a transparent hash and rebuild `ConRonBridge` (no proof there should
-    depend on the hash's values).
+8. **Counted twin fuels.** Audited, decisions in §3 (b).
+9. **Errors.** Audited, decisions in §3 (c): no recovery in L at all.
+10. **Derived columns.** `derOfView` packs `hash32 … * 2^32 + bvar * 65536 + fvar * 2 + lp`
+    (con-leche's `packData`). **Audited (lane `final`): no verdict reads the hash bits.** Every read
+    of a hash feeds only a parent's hash; every other consumer (`bvarOfData`, `fvarOfData`,
+    `lpOfData`, ExprOps) reads `w % 2^32`; no `Hashable` instance uses derived data (handles hash by
+    their word); no `Std.HashMap` iteration order reaches a result; Theorem 1 uses
+    `derived_exact` only through those three accessors. con-leche's hash-based `beqMemo` is a
+    `@[csimp]` of `decide (a = b)`. Decision: **no twin patch**; L computes any transparent hash
+    (or none) in the high word, and the derived-column relation relates `w % 2^32` only.
 11. **Constant terms.** The basis blocks, std/trust axiom shapes and the pin sets are con-leche
     terms the twin interns (`internExpr`). In L: ROM trees and one generic interner, proved once
     against `internExpr`; the ROM's denotation is fixed by `decide` for the basis, and is free for
@@ -173,45 +181,89 @@ under ~2 minutes (`Line.lean`, 136 s, is the current worst).
 
 ## 3. The final theorem
 
-### Shape
+### Shape (landed, lane `final`: `ConAgua/Final/{Twin,Statement}.lean`)
 
 ```lean
-theorem checker_x64_accepts [Host] (G : Layout) (hG : G.Ok) (hwf : Prog.wf G.tab checkerProg = true)
-    (k0 : Nat) (hcode : Code (compileProg G.tab checkerProg "check") k0)
+theorem checker_x64_accepts [Host] (p : Prog) (hP : PipelineRefines p)
+    (G : L.Compiler.Layout) (hG : G.Ok) (hwf : Prog.wf G.tab p = true) (hnres : 1 ≤ G.tab.nres)
+    (k0 : Nat) (hcode : Code (compileProg G.tab p "check") k0)
+    (fd : FunDecl) (hentry : p.lookup "check" = some fd) (hnp : fd.nparams = 0) (hnargs : G.nargs = 0)
     (b : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63)
-    (rom : Rom)                                   -- pins and prelude: any contents
-    (N : Nat) (hN : N < 2 ^ 62) (dm : MachineData) (ra : Word)
-    (hmem : MemRel G (initMem b rom G.sizes) dm.dmem)   -- input buffer, ROM, zeroed arrays
-    ⋯ /- the call of ca_enter(T, N), exactly compile_correct's hT hN hroom htop hargv hra hcs -/ :
+    (s8 s64 : List Nat) (N : Nat) (hN62 : N < 2 ^ 62) (dm : MachineData) (ra : Word)
+    (hmem : MemRel G (loadMem b s8 s64) dm.dmem) (hc : HarnessCall G N dm ra) :
     Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧
         (st.data.regs.rdx = 0 → st.data.regs.rax = ACCEPT → TwinAccepts [b]))
       dm (label enterL)
 
-def TwinAccepts (chunks : List ByteArray) : Prop :=   -- the twin's single-worker pipeline
+def PipelineRefines (p : Prog) : Prop :=        -- the one named hypothesis
+  ∀ (b : ByteArray) (s8 s64 : List Nat) (N : Nat) (rs : List Word) (m' : Mem),
+    System.Platform.numBits = 64 → b.size < 2 ^ 63 → N < 2 ^ 62 →
+    L.run p N "check" [] (loadMem b s8 s64) = .ok (rs, m') →
+    rs.headD 0 = ACCEPT → TwinAccepts [b]
+
+def TwinAccepts (chunks : List ByteArray) : Prop :=   -- the twin's pipeline, one worker
   ∃ pins sA sB sC sD sE sF pre r ds ipins fe,
     internReservedPins (AState.init EStore.empty) = .ok ((), sA) ∧
     builtinPreludeE sA = .ok (.ok pre, sB) ∧ parseChunks chunks sB = .ok (.ok r, sC) ∧
     preparePrelude pre r.decls sC = .ok (ds, sD) ∧ internAllPins pins sD = .ok (ipins, sE) ∧
-    Arena.PooledAccepts .verified ipins ds sE fe sF
+    SeqAccepts .verified ipins ds sE fe sF    -- installFold, then one checkPendingList from sF.worker
 ```
 
-Corollaries, by the twin-side stage lemmas: `x64_model_exists` (an accepted run gives `env` with
-`checkDeclsPure .verified (fueledOps .verified F) pinsP dsP = .ok env`, `dsP` the denotation of the
-parsed stream, and `Nonempty (Model V env)` for every `[SetTheory V]`), and `x64_no_False`
-(`jsonWithTheoremFalse [b] →` the machine does not return `rdx = 0, rax = ACCEPT`).
+`loadMem b s8 s64`: byte array 0 is `b`, the other byte arrays (sizes `s8`) and the word arrays
+(sizes `s64`) are zero. `ACCEPT = 0x414343455054` (not 0/1/2, so no status word reads as accept).
+`HarnessCall` bundles `compile_correct`'s premises on the call (`rdi`, `rsi`, stack room, stack top,
+return address, the 32 bytes of machine stack).
 
-**Assumed (trusted base):** Kraken's x64 semantics; the assembler, printer and loader
-(`harness/check-asm.sh` audits the printing); the loader puts the code at `k0` (`Code`), the
-buffer, the ROM and zeroed arrays at the layout `G` (`MemRel`, `G.Ok`); the harness calls
-`ca_enter` as `compile_correct` states and reads `rdx`/`rax`; the buffer holds the file's bytes
-(the input seam, the analogue of con-ron's `hreads`); `numBits = 64`. Not assumed: the ROM's
-pins (any pin list is sound), the prelude bytes (`builtinPreludeE_run` is parametric in them).
+Corollaries, both with con-leche's three axioms only (`#guard_msgs` in `Statement.lean`):
+
+* `x64_model_exists V`: on accept, `∃ pins preC rc F env, ConLeche.Frontend.parseChunks [b] = .ok rc ∧
+  checkDeclsPure .verified (fueledOps .verified F) pins (preparePrelude preC rc.decls).toList = .ok env
+  ∧ Nonempty (Model V env)`: con-leche's own parser on the bytes, con-leche's pure fold, at some pin
+  list and some prelude (both free, see below).
+* `x64_no_False V (hfalse : jsonWithTheoremFalse [b])`: the machine returns and does not report
+  `rdx = 0 ∧ rax = ACCEPT`.
+
+`pipelineRefines_reject` proves `PipelineRefines` for a `check` that always rejects: the hypothesis is
+satisfiable, so the theorems are not vacuous in `p`.
+
+**`PipelineRefines`, the contract for the per-function lanes.** Its proof, for the real
+`checkerProg`, is the composition of: `ArenaR (loadMem b s8 s64) (AState.init EStore.empty)` (today
+`arenaR_init` over `initMem`; it must grow to every twin field, and to the input buffer at byte
+array 0); then one refinement per stage of `check`, in the `natAddLit_refinesA` shape
+`⦃s = s₀⦄ invoke … ⦃r s' ↦ AM.ok f a₀ ∧ R s'.mem (AM.st f a₀) ∧ AM.res f a₀ = dec r; ⊤⦄`, for
+`internReservedPins`, `builtinPreludeE` (prelude bytes in ROM), `parseChunks [b]`, `preparePrelude`,
+`internAllPins` (pins in ROM), `installFold`, `AState.worker`, `checkPendingList`; each knot fuel
+taken as any `F ≥ n` (`GoOK` shape), each counted fuel as an L counter (§3 (b)); the final
+`ACCEPT` returned only after `checkPendingList` answered `.ok ()`. Decisions it fixes:
+
+* **Capacities are not trusted.** `PipelineRefines` holds at every `s8`, `s64`, so `check` must
+  read `len8`/`len64` of every array at entry and `abort` unless each meets its minimum (`CTL ≥ 42`,
+  `POOL < 2^63`, …: `arenaR_init`'s premises); a full table aborts. The harness may pick any sizes.
+* **L fuel `N < 2^62`.** The twin's `2^62` fuels are covered by induction against every `F ≥ n`.
+* **The ROM is not trusted.** The pin list is existential in `TwinAccepts` and con-leche's theorems
+  hold at every list; the prelude bytes give some `preC` (`builtinPreludeE_run`) whose records are
+  checked as part of the stream.
+* **One worker.** Phase B is one `checkPendingList` over `pend.toList` from `s'.worker`
+  (`SeqAccepts`, `pooledAccepts_of_seq`).
+* **The entry.** `check` has no parameters; the input length is `len8(IN)`.
+
+### Trusted base
+
+Kraken's x64 semantics (`Ev`, fuzzed against hardware); the assembler, the printer and the loader
+(the printed `compileProg G.tab p "check"` is at `k0`: `hcode`; `harness/check-asm.sh` audits the
+printing); the layout (`hG`, `hmem`: the loader put the file's bytes at byte array 0 and zeroed the
+other arrays, the table and descriptors as `G` says); the harness (`HarnessCall`: how `ca_enter` is
+called; and it prints "accept" exactly on `rdx = 0 ∧ rax = ACCEPT`, `rdx = 1` as "resources
+exhausted", anything else as "reject"); buffer to stream (the buffer holds the whole file, read
+once: con-ron's `hreads`); `numBits = 64`. Requirement on the harness (not yet written): the
+checker's `run.c` must compare `rax` with `ACCEPT` itself, not print `rax` (today's generic
+`ConAgua/Compiler/harness/run.c` prints `ok <rax>`).
 
 ### How it composes
 
 1. `compile_correct` (`Compiler/Main.lean`): `rdx = 0 ∧ rax = r` ⇒
    `L.run checkerProg N "check" [] m₀ = .ok (r :: _, m')`.
-2. **Pipeline refinement** (to be built): from `ArenaR m₀ (AState.init EStore.empty)`
+2. **Pipeline refinement** (`PipelineRefines`, a hypothesis until built): from `ArenaR m₀ (AState.init EStore.empty)`
    (`arenaR_init`, extended with every new field) and an L run returning `ACCEPT`, the twin's
    stage runs `hA … hF` exist. It is the sequence of the per-stage refinements, each the
    composition of per-function refinements of the `natAddLit_refinesA`/`bbMemo_refines` shape:
@@ -226,33 +278,59 @@ pins (any pin list is sound), the prelude bytes (`builtinPreludeE_run` is parame
    `preparePrelude_run`, `internAllPins_run`.
 4. **con-leche.** `Model.checkDeclsPure_sound_of` gives the model;
    `no_False_theorem_accepted_pure` (`Bridge/Frontend/Capstone.lean`) refutes a `False` theorem.
-   The stream's `False` record comes from `stages_false_mem` (con-leche's
-   `parseChunks_jsonWithTheoremFalse`, `mem_preparePrelude`).
+   The stream's `False` record comes from con-leche's `parseChunks_jsonWithTheoremFalse` and
+   `mem_preparePrelude`. Steps 3–4 are `ConAgua/Final/Twin.lean` (`stages_frame`,
+   `twinAccepts_pure`, `twinAccepts_model`, `twinAccepts_no_False`), steps 1, 2 and the assembly
+   `ConAgua/Final/Statement.lean`.
 
 ### Mismatches to resolve
 
-* **(a) Theorem 1's glue is in the wrong file for us.** `stages_frame`, `stages_model`,
-  `stages_false_mem`, `stages_no_False` are in `ConRon/Capstone.lean`, which imports `Refine2`
-  (Aeneas) and is not built here. They use only `Bridge` lemmas: restate them in
-  `ConAgua/Final/Twin.lean` (~200 lines).
-* **(b) Fuel.** `compile_correct` runs L with the machine's `N`, and `r14` counts every back-edge
-  and call, so `N` must be large (~10^11 for a big file). L's fuel bounds nesting only. The twin's
-  knot and loop fuels of `2^62` (`checkFuel`, `whnfCoreLoopFuel`, `whnfLoopFuel`, `lamsFuel`,
-  `defeqLoopFuel`) are covered by `N < 2^62` and refinements stated for every twin fuel `F ≥ n`
-  (as `goOK`). The **counted** fuels below that, which turn into a twin *error*, are not:
-  `peelFuel = 2^24`, `coreWalkFuel = 4·10^9`, con-leche's `Level.defaultFuel = 10^4`,
-  `fuelSlack`, `whnfWalkFuel`, `storeFuel`. L must carry an explicit counter for each, decremented
-  where the twin decrements it; otherwise L could accept where the twin ran out.
-* **(c) Errors.** L has one failure channel (`abort`, `oob`, `outOfFuel` ↦ `rdx = 2`/`1`), and
-  partial correctness ignores it; the twin's throws can all become L `abort`, *except* where the
-  twin recovers: `orElseAttempt` (`CheckerBase.lean:80`, the `Nat.div`/`Nat.mod` pin variants,
-  resuming at the pre-attempt state). A capacity `abort` must never be caught. Options: (i) all
-  twin errors are L `abort`; the harness runs the checker once per pin set (one variant per run;
-  sound because the theorem holds at every pin list), so the attempt never needs to recover;
-  (ii) status words for the attempt's call tree and a rollback of the tables (append-only stores:
-  restore counts and clear the appended slots; memos: epoch). (i) is far cheaper; check first
-  what the twin does when no variant matches (decline vs reject). Also audit every
-  `match ← … with | .error` on `Except`-valued results for recoveries.
+* **(a) Theorem 1's glue** (resolved, lane `final`). con-ron's `stages_*` (in `ConRon/Capstone.lean`,
+  which imports Aeneas) are restated in `ConAgua/Final/Twin.lean` on `ConRonBridge` alone, 160
+  lines. `stages_frame` now names the stream (`preparePrelude preC rc.decls` with
+  `ConLeche.Frontend.parseChunks chunks = .ok rc`) instead of `∃ dsP`, which lets the corollaries
+  be stated in con-leche's terms; `stages_false_mem`/`stages_no_False`/`stages_model` collapse
+  into `twinAccepts_pure` plus one con-leche lemma each.
+* **(b) Fuel** (audited, lane `final`; file:line in DESIGN.md, "The final theorem"). `compile_correct`
+  runs L with the machine's `N` (`r14` counts every back-edge and call, so `N` is large, ~10^11),
+  and L's fuel bounds nesting only. Decisions:
+  * **The `2^62` fuels are not counted in L**: `checkFuel` (one per knot level), `whnfCoreLoopFuel`,
+    `whnfLoopFuel`, `defeqLoopFuel` (one per loop step), `lamsFuel` (one per λ pair; exhaustion
+    falls back to `defeqLamsInner`, not an error, but each step costs L a loop iteration or call,
+    so it is out of reach). Every twin knot level or loop step costs L at least one unit of
+    nesting, so with `N < 2^62` the refinements are stated for every twin fuel `F ≥ n`.
+  * **Every counted fuel below `2^62` is an explicit L counter**, decremented exactly where the
+    twin decrements it, and at zero L does what the twin does: `coreWalkFuel = 4·10^9` (per
+    recursive walk call, reset per walk; throws), `storeFuel = nodeCount + 1` (per Π node;
+    throws), `hoistClosure`'s `ds.size` (throws), `whnfWalkFuel e = depth e + fuelSlack (1024)`
+    in nested positivity (throws a decline; reachable), con-leche's `Level.defaultFuel = 10^4` per
+    `leq` (answers **`none`**, read as "no" at nine sites, see below), `peelFuel = 2^24` (per binder;
+    at zero **hands the rest to the knot**, same answer but a different path), `unwrapIdDefs`' `4`
+    (at zero **returns the term unwrapped so far**; feeds proof irrelevance), and the store
+    capacity `idxCap = 2^27` per constructor per tier (`.native` throw). One word each; this
+    avoids the rank argument the unreachable ones would otherwise need.
+  * **Exhaustion that is an answer, not an error** (L must reproduce the value): `Level.isEquiv`'s
+    `none` (`fireOk`, projection typing, `BlockInstall`/`BlockParts`/`SumInstall`'s `isProp`, the
+    K-target test: all against `zero`; `defeqSpine`'s same-head shortcut and `targetClassMatch`
+    against arbitrary levels), `unwrapIdDefs`, `peelFuel`. Lane E (`levels`) must return the
+    three-way `Option Bool`.
+* **(c) Errors** (audited, lane `final`). The twin recovers from a thrown error in exactly one
+  place: `orElseAttempt` (`CheckerBase.lean:102`), used only by `checkDivModPinLoop`
+  (`DeclCheck.lean:613`), the `Nat.div`/`Nat.mod` pin variants. A throw inside one variant's
+  attempt (anything but `.native`, so **fuel exhaustion included**) resumes from the pre-attempt
+  state with the next variant; `.ok false` continues from the post-attempt state; when no variant
+  matches the declaration is **declined** (`.notImplemented`, exit 2: the fold ends, never
+  accepts). Every other `.error` match (`installDeclStep`, `checkPendingList`, the frontend's
+  `atLine`, `runPipelineTail`) only carries the error to a non-accept verdict. `feedChunk`'s
+  "scanner `.err` without a later newline is an incomplete tail" is an ordinary branch on a pure
+  result. Decision: **option (i), L recovers nowhere.** Every twin throw, including one inside a
+  pin attempt, is an L `abort`; `.ok false` continues from the post-attempt state as in the twin.
+  Sound for the accept direction: an accepting L run had no throw inside any attempt, so the twin
+  (whose fuels are at least L's) took the same path at the same pin list. Cost: completeness only,
+  when a variant the twin would skip by recovery throws in L; the harness then reruns with a ROM
+  holding the remaining variants (a different `p`, so `PipelineRefines` must be proved
+  parametric in the pin ROM, which it is anyway). The error kinds (reject/decline/error) are not
+  distinguished; only `ACCEPT` is interpreted.
 * **(d) Pool.** The x64 checker runs phase A (`installFold`) and then phase B on one worker
   (`checkPendingList` from `s'.worker`, as the Rust's sequential `check_decls_phased`), which is
   `PooledAccepts` with `parts = [pend.toList]` (`Arena/Pooled.lean`; the vendored twin has no
@@ -300,6 +378,22 @@ hypothesis `PipelineRefines checkerProg` (a `Prop`: an accepting L run from `ini
 decrements (§3 b), every recovery point (§3 c; what happens when no pin variant matches), every
 read of the derived hash bits (§2 item 10), whether eager comparisons nest (item 3). Done when
 the corollaries check with the standard axioms plus the named hypothesis.
+
+*Status (lane `final` landed):* done as briefed; the statement and decisions are in §3. Requirements
+it puts on the other lanes:
+
+* **every lane:** each counted twin fuel below `2^62` in a function you port becomes an L counter
+  (§3 (b)); every twin throw is an `abort`, including inside a pin attempt (§3 (c));
+* **B `exprops` / derived columns:** the derived-word relation relates `w % 2^32` only (§2 item 10);
+  the walk counter for `coreWalkFuel`;
+* **E `levels`:** the three-way `Option Bool` of `Level.isEquiv` with the `10^4` counter per `leq`;
+* **the knot / whnf lanes:** the mode-memo bank stack (§2 item 3), `peelFuel` and `unwrapIdDefs`'
+  `4` reproduced exactly;
+* **the driver lane:** `check` reads `len8`/`len64` of every array at entry and aborts unless the
+  capacities meet `ArenaR`'s minimums; phase B is one `checkPendingList` from `AState.worker`
+  (`SeqAccepts`); the input is byte array 0, read whole; `ArenaR` is established from `loadMem`
+  (generalise `arenaR_init` from `initMem` to `loadMem`'s word arrays);
+* **the harness:** prints "accept" exactly on `rdx = 0 ∧ rax = ACCEPT`.
 
 **B `exprops`: memo library, then `liftLooseBVars`.** Generalise `Memo.lean`/`MemoRel.lean` to a
 schema (key words 1–2, value word, epoch word, `CTL` slots) as `StoreLib` did for the cons
