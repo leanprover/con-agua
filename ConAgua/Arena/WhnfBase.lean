@@ -186,7 +186,7 @@ structure SlotPre (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Nam
 /-- `whnf_core(mode, cheap, vis, d, e)` refines the knot's `whnfCore` slot. -/
 def WhnfCoreSlot (p : Prog) (n : Nat) : Prop :=
   ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (M : ModeMaps) (G g mode cheap d e : Word), n ≤ F → SlotPre s₀ a₀ dn vis fe M G g mode →
+    (M : ModeMaps) (G g mode cheap d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M G g mode →
     HW e →
     CoreSpec p n "whnf_core" [mode, cheap, vis, d, e]
       ((coreKnot (decMode mode) fe id F).whnfCore (cheap != 0) d.toNat (decE e)) decH s₀ a₀ dn vis
@@ -195,28 +195,28 @@ def WhnfCoreSlot (p : Prog) (n : Nat) : Prop :=
 /-- `whnf(mode, vis, d, e)` refines the knot's `whnf` slot. -/
 def WhnfSlot (p : Prog) (n : Nat) : Prop :=
   ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (M : ModeMaps) (G g mode d e : Word), n ≤ F → SlotPre s₀ a₀ dn vis fe M G g mode → HW e →
+    (M : ModeMaps) (G g mode d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M G g mode → HW e →
     CoreSpec p n "whnf" [mode, vis, d, e]
       ((coreKnot (decMode mode) fe id F).whnf d.toNat (decE e)) decH s₀ a₀ dn vis fe M G g
 
 /-- `infer(mode, vis, d, e)` refines the knot's full-grade `infer` slot (phase 7). -/
 def InferSlot (p : Prog) (n : Nat) : Prop :=
   ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (M : ModeMaps) (G g mode d e : Word), n ≤ F → SlotPre s₀ a₀ dn vis fe M G g mode → HW e →
+    (M : ModeMaps) (G g mode d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M G g mode → HW e →
     CoreSpec p n "infer" [mode, vis, d, e]
       ((coreKnot (decMode mode) fe id F).infer d.toNat (decE e)) decH s₀ a₀ dn vis fe M G g
 
 /-- `infer_io(mode, vis, d, e)` refines the knot's io-grade `inferIO` slot (phase 7). -/
 def InferIOSlot (p : Prog) (n : Nat) : Prop :=
   ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (M : ModeMaps) (G g mode d e : Word), n ≤ F → SlotPre s₀ a₀ dn vis fe M G g mode → HW e →
+    (M : ModeMaps) (G g mode d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M G g mode → HW e →
     CoreSpec p n "infer_io" [mode, vis, d, e]
       ((coreKnot (decMode mode) fe id F).inferIO d.toNat (decE e)) decH s₀ a₀ dn vis fe M G g
 
 /-- `defeq(mode, vis, d, a, b)` refines the knot's `defeq` slot (phase 6). -/
 def DefeqSlot (p : Prog) (n : Nat) : Prop :=
   ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (M : ModeMaps) (G g mode d x y : Word), n ≤ F → SlotPre s₀ a₀ dn vis fe M G g mode → HW x →
+    (M : ModeMaps) (G g mode d x y : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M G g mode → HW x →
     HW y →
     CoreSpec p n "defeq" [mode, vis, d, x, y]
       ((coreKnot (decMode mode) fe id F).defeq d.toNat (decE x) (decE y)) decBool s₀ a₀ dn vis fe
@@ -229,6 +229,14 @@ structure KnotOK (p : Prog) (n : Nat) : Prop where
   infer : InferSlot p n
   inferIO : InferIOSlot p n
   defeq : DefeqSlot p n
+
+/-- **The knot at every L fuel up to `n`**: what a body at fuel `n + 1` assumes of the slots it
+calls (a call inside a loop runs at less fuel than the body, and L has no fuel monotonicity
+lemma, so the hypothesis covers every smaller fuel). -/
+def KnotUpTo (p : Prog) (n : Nat) : Prop := ∀ k, k ≤ n → KnotOK p k
+
+theorem KnotUpTo.mono {p : Prog} {n m : Nat} (h : KnotUpTo p n) (hm : m ≤ n) : KnotUpTo p m :=
+  fun k hk => h k (Nat.le_trans hk hm)
 
 /-! ## Stubs: callees whose L code is not written yet
 
@@ -276,9 +284,9 @@ structure WhnfCallees (p : Prog) : Prop where
   strLitSupported : StrLitSupportedOK p
   /-- The knot's `infer`, `infer_io`, `defeq` slots one level up from the whnf slots: their
   induction step is phases 6–7. -/
-  inferStep : ∀ n, KnotOK p n → InferSlot p (n + 1)
-  inferIOStep : ∀ n, KnotOK p n → InferIOSlot p (n + 1)
-  defeqStep : ∀ n, KnotOK p n → DefeqSlot p (n + 1)
+  inferStep : ∀ n, KnotUpTo p n → InferSlot p (n + 1)
+  inferIOStep : ∀ n, KnotUpTo p n → InferIOSlot p (n + 1)
+  defeqStep : ∀ n, KnotUpTo p n → DefeqSlot p (n + 1)
 
 /-- **The stubs' specs, assumed** until their L code lands (phases 4, 6, 7; string literals). -/
 theorem whnfCallees_stub (p : Prog) : WhnfCallees p := sorry
