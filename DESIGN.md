@@ -936,9 +936,9 @@ L/Rust is 0.29 (0.37 without the resize the L table does not have). The L side w
 the first attempt for every function: once the models compute with words like the code, the
 verification conditions are equalities `grind` closes by the arm lemmas (`probeW_free`,
 `probeW_hit`, `probeW_next`: patterns on the model and the slot read). The cost moved into the
-pure part: about 120 lines each for the probe (`probe_cases`) and the append (`tier_push`), 165
-for `intern_correct` (four paths), 110 for reading the memory after `lit_push` through six
-`set64`s, 120 for unique normal forms.
+pure part: about 90 lines for the probe (`probe_cases`), 170 for the append (`tier_push`,
+`tier_other`), 135 for reading the memory after `lit_push` through six `set64`s, 165 for
+`intern_correct` (four paths), 120 for unique normal forms.
 
 ### Findings
 
