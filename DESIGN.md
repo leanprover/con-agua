@@ -291,6 +291,12 @@ proof.
 | `match_lit` (`:132`, lane `lext`) | 11 | 9 | yes |
 | `scan_bool` (`:716`, lane `lext`) | 11 | 7 (two calls of `match_lit`, three results) | yes |
 | `utf8_decode` (`:917`, lane `lext`) | 66 | 48 (`utf8_char` 33, loop 9, entry 6) | yes; linked to `String.fromUTF8?` |
+| `key_at`, `value_at` (`:183,704`, lane `stageb`) | 496 + 8 | 306 (dispatcher + six groups) + 8 | yes |
+| `scan_string` + `unescape`, `hex4`/`hex3` (`:1087,991,845`, lane `stageb`) | 223 | 99 (validating only) | yes; linked to `String.fromUTF8?` |
+| value scanners (`:1116-1282`, lane `stageb`) | 135 | 103 | yes |
+| `next_member`, `slot_nat` (`:1339,1419`, lane `stageb`) | 81 | 28 + 6 | yes |
+| record loops, object lists (`:1434-3730`, lane `stageb`) | 2149 | 995 | yes, generated; one generic model |
+| `scan_line_loop`, `scan_line_fwd`, driver (`:3767,4044`, lane `stageb`) | 298 | 110 | yes |
 
 Whole-file build (`ConAgua.Scan.Leaves`, `lake env lean`, cold): ~2.5 s for all six.
 `ConAgua.Scan.Link` + `ConAgua.Scan.Leaves` together add about 750 lines to the `ConAgua` lib;
