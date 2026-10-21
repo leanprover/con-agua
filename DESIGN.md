@@ -2234,6 +2234,117 @@ records one generic theorem (`objN_link`) and one tactic macro (`obj_loop`) prov
 
 None.
 
+## Limb-pool `Nat` ops: bitwise `land`/`lor`/`xor` (2026-10-21, lane `nat`)
+
+Files: `ConAgua/Arena/NatBits.lean`. Milestone 3 continuation: `Nat.land`/`Nat.lor`/`Nat.xor` on
+the limb pool, in the `nat_add`/`nat_mul` style (`ConAgua/Arena/NatAdd.lean`, `NatMul.lean`). No
+`sorry`.
+
+### The functions
+
+`nat_land`/`nat_lor`/`nat_xor(oa, la, ob, lb)` (con-ron's `land`/`lor`/`xor` and their `*_from`
+loops, `ron/nat.rs:658-703`): one pass combining limb `i` of each operand with `&`/`|`/`^`, the
+shorter operand zero-extended (`nat_limb`, reused from `nat_add`), then `nat_trim`. `land`'s
+result has `min la lb` limbs (so its loop never actually reads past either operand, but shares
+`nat_limb` with the others for one loop shape); `lor`/`xor` have `max la lb`. Each needs its own
+capacity check before the loop (`if len(POOL.u64) - top < n { abort }`, con-ron's own "no room"
+style, con-ron's own `nat_mul`'s `<`, not `nat_add`'s `<=`: no carry limb here, the result is
+exactly `n` limbs).
+
+**Model.** `bv f p oa la ob lb k` is `xv` with a second zero-extended slice and a combinator `f`
+instead of one read (`bv f p oa la ob lb (k+1) = bv f p oa la ob lb k + (f (lvW …) (lvW …)) * wt
+k`, `lvW` being `lv` read back as a `Word` instead of a `Nat`, since `f` is a word operator). The
+loop invariant (`BitInv`) is `AddInv`'s shape without a carry: the pool agrees with the entry
+pool below `top`, the operands lie below it, and `pv` of the first `i` result limbs equals `bv`
+of the first `i` operand limbs. Whether this limb-wise combine equals `Nat.land`/`Nat.lor`/
+`Nat.xor` of the full values is left to `NatOpRefine.lean` (not written this round): a genuine
+bitvector fact (splitting a number into base-`2^64` digits commutes with bitwise ops), not needed
+for the L-side spec itself.
+
+### Measurements (nightly-2026-10-20)
+
+| function | Rust lines (`ron/nat.rs`) | L lines | spec + proof lines | `lean` time |
+|---|---:|---:|---:|---:|
+| `nat_land`/`nat_lor`/`nat_xor` (+ loops, reusing `nat_limb`/`nat_trim`) | ~45 (`land`/`and_from`, `lor`/`or_from`, `xor`/`xor_from`) | ~45 | ~215 | 4.6 s |
+
+Whole file 307 lines. `lake build ConAgua` (full project) still green, 403 ms incremental.
+
+### Findings
+
+* **A combinator parameter must be a named constant, not `(· &&& ·)`.** The section notation
+  elaborates sometimes to a lambda, sometimes to the point-free `HAnd.hAnd` (eta-equal, not
+  syntactically equal); `grind`'s pattern matching saw both forms across the invariant and the
+  code's own `BinOp.eval` unfolding and failed to connect them, even though the two are
+  definitionally equal. Fix: `def andF : Word → Word → Word := fun a b => a &&& b` (ditto `orF`,
+  `xorF`), used everywhere instead of the section, plus one `@[arena_grind =]` equation
+  `andF a b = a &&& b` for the one place the code's own value needs to meet it.
+* **The capacity bound is `≤`, not `<`, when there is no carry limb.** Copied `AddInv`'s
+  `(s.loc 4).toNat + (s.loc 5).toNat < Pg.size` (strict, reserving the carry limb's slot) instead
+  of `MulBase`'s `≤` (exact fit is fine): a loop entered at EXACTLY `top + n = size` could not
+  establish the invariant even though the write is in bounds. One `finish` failure with a
+  `size ≤ top + n` hypothesis alongside a `BitInv` goal needing `top + n ≤ size` was the tell.
+* **An embedded `ite` in a postcondition's own subterm is fine; at the postcondition's own top
+  level it is not** (the known gap, DESIGN.md "Known vcgen gaps"). `min`/`max` of the two
+  operand lengths, written as `min`/`max`, made a loop-exit `finish` time out; the same value
+  written as `if lb.toNat < la.toNat then lb.toNat else la.toNat` (matching the code's own `if`,
+  as an ARGUMENT to `bv`, not the postcondition's own shape) went through at once. Suspect cause:
+  `min`/`max` have no registered `grind` equation here (unlike `BinOp`/`Cmp`), so grind had
+  nothing to unfold them with; the `ite` version is covered by the general `ite` handling that
+  already works for arguments (only the top-level postcondition position is the known gap).
+* **Forgetting the capacity check is a soundness bug, not a proof inconvenience.** The first
+  draft of the three functions had no `if len(POOL.u64) - top < n { abort }` at all (unlike
+  `nat_add`/`nat_mul`); nothing in the L type system catches a missing bounds check, only the
+  `finish` failure trying to prove `PoolOK`'s consequences downstream caught it.
+
+### `nat_cmp`/`nat_sub`: not landed, and why
+
+`nat_cmp` (con-ron's `cmp`/`cmp_from`, comparing by length then by limb from the most significant
+one down) was attempted and dropped after exceeding the lane's 45-minute budget by a wide margin.
+The blocker: a hand-written recursive Lean model of `cmp_from` (`cmpFromN`), registered for
+`grind` with a pattern keyed on an ABSTRACT loop counter `k` (`cmpFromN p oa ob k`, `0 < k` plus a
+limb-comparison side condition), fires on EVERY `cmpFromN` term in sight — including the
+unrelated "full-length" occurrence sitting next to the loop's "current position" occurrence in
+the same invariant — and, because its own conclusion mentions a fresh `cmpFromN … (k - 1)` term,
+re-fires on that, and the one after, with no concrete `k` to stop it: `finish` produced case
+splits numbering in the hundreds of thousands before timing out. Scoping the pattern to `mergeW`
+(a wrapper that also appears, narrower) cut it from unbounded to bounded but still wrong by a
+wide margin once a genuine case split (which limb comparison holds) was needed; untangling it
+needed a hand-written, non-`grind`-pattern step lemma that I did not finish deriving in budget.
+
+**What it needs, for whoever picks it up:** state the loop invariant as the pool value comparison
+directly (`cmpCode (pv Pg oa k) (pv Pg ob k)`, `cmpCode` a plain `Nat → Nat → Word`, no
+recursion), using `pv_lt`/`wt_mono` (`ConAgua/Arena/LitRefine.lean`, general pool facts that
+arguably belong in `Pool.lean` — a hook request for lane `exprops`, since `nat_cmp`'s loop needs
+them and `Pool.lean` is theirs) for the "most significant limb decides" step; prove the per-step
+transition as a HAND tactic (`rcases lt_trichotomy`, explicit `rw`s), not a registered `grind`
+pattern, since the whole difficulty above is `grind`'s blind pattern search over a
+decide-from-the-top recursion. `nat_sub` (con-ron's `sub`, truncated at `0`) needs `nat_cmp`'s
+result (`Lt`/`Eq` ⇒ `0`, `Gt` ⇒ the ripple-borrow loop, the same shape as `nat_add`'s ripple
+carry) first.
+
+### `nat_pow`/`nat_shiftLeft`/`nat_shiftRight`: not attempted
+
+Not started this round (time spent on bitwise ops and the `nat_cmp` attempt above). Notes for
+whoever picks them up: `shift_left`/`shift_right` (`ron/nat.rs:351,427`) take a machine-word
+amount (whole limbs pushed as zeros, then a sub-word shift `shl_bits_from`/`shr_bits_from` with
+the `bits = 0` case special-cased, since shifting a 64-bit word by 64 is not `x >> 0`); the
+`_nat`-amount wrappers (`shift_left_nat`/`shift_right_nat`) decode the shift amount from ANOTHER
+pool slice first (con-ron's `to_u64`, failing over to "push `u64::MAX` zeros and recurse" for an
+amount that does not fit a word, which an L pool simply runs out of room for — the existing
+"fixed capacity, defined exhaustion" pattern handles it, no new idea needed). `nat_pow`
+(`ron/nat.rs:547`, square-and-multiply, `e` from a word bounded by `2^24` the same way
+`natOpResult` already enforces, `ron/nat.rs:541`) needs a bounded loop over the bits of `e`
+(at most 24 iterations) calling `nat_mul` repeatedly, each call growing the pool; the per-call
+`Grows` composes (`Grows` is transitive), but the invariant across iterations needs the loop's
+own accumulator slice to be tracked by `(offset, length)` that moves each iteration, unlike every
+other function here which is called once. Likely a full lane-day on its own.
+
+### `sorry`s
+
+None. The three bitwise functions are proved end to end against their word-level model; the
+model's correctness against `Nat.land`/`Nat.lor`/`Nat.xor` is deferred (not a `sorry`, simply not
+yet stated).
+
 ## The final theorem, and the audits behind it (2026-10-21, lane `final`)
 
 Files: `ConAgua/Final/Twin.lean` (160 lines), `ConAgua/Final/Statement.lean` (200 lines). Both are
