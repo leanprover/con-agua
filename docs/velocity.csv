@@ -17,7 +17,11 @@ date,lane,model,work_min,overhead_min,note
 2026-10-21,exprops2,opus,25,3,"compiled benchmarks of lift_entry/inst_entry vs Lean-compiled arena (L/Lean ~0.60); scoped why instantiateList/abstract1 need new infra (pool-slice EIdx lists, fvar-range DerR column) before porting"
 2026-10-21,nat2,opus,12,6,"nat_gcd, gcd/beq/ble arms, census tags; overhead includes removing duplicated DESIGN subsections (a replace-all bug of mine on earlier landings)"
 2026-10-21,arch,opus,30,8,"items 2+3: MemosR nested in ArenaR + ownership lists/group frames (ArenaR.frame, with_memos), Tiers.lean (CoreR/PinsR/EnvR stubs, CheckR, of_walk), Keeps.lean (keeps_auto, 4 walk families), TierWalks (4 walks under CheckR), memory map; Walk names de-clashed"
-2026-10-21,levels,opus,22,5,"level scratch heap (LH 192, CTL 192): lv_node/lh_mk/lv_eq, LvR decoder, HeapExt/HeapFrame, lv_eq refines Level.beq"
-2026-10-21,levels,opus,14,3,"lv_comb/lv_simp/lv_nz refine Level.combining/simplify/isNeverZero"
+2026-10-21,levels,opus,14,4,"level scratch heap (LH 192, CTL 192): lv_node/lh_mk/lv_eq, LvR decoder, HeapExt/HeapFrame, lv_eq refines Level.beq"
+2026-10-21,levels,opus,3,1,"lv_comb/lv_simp/lv_nz refine Level.combining/simplify/isNeverZero"
+<<<<<<< HEAD
+2026-10-21,levels,opus,21,3,"lv_subst (one key), lv_leq/lv_rest/lv_imax(_l,_r)/lv_cases(_at) refine leqCore/rest/imaxRules/byCases with the 10^4 fuel as an exact word; HeapExt keeps the other arrays"
+=======
 2026-10-21,pinsenv,opus,20,3,"PinsR (PINS 128) and EnvR (direct name-indexed rows) filled, record decoders (EnvRec), pin_at/pin_word + 88 pin readers refined, nat_op_result refines natOpResult (whole dispatch)"
 2026-10-21,libs,opus,17,4,"item 4a: scratch slot base CTL[62] (epoch-stamped scratch slots) in StoreLib and all 19 tables, storeR_reset, scratch_reset/enter/drop refine enterScratch/dropScratch under ArenaD and CheckR"
+>>>>>>> master

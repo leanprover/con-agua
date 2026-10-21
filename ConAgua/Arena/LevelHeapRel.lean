@@ -73,20 +73,25 @@ theorem LvR.view {p : Word} {l : Level} (h : LvR N m p l) : lvNodeW m p ≠ [] :
 /-! ## Heap growth -/
 
 /-- Every view of `m` is a view of `m'`. -/
-def HeapExt (m m' : Mem) : Prop := ∀ p, lvNodeW m p ≠ [] → lvNodeW m' p = lvNodeW m p
+structure HeapExt (m m' : Mem) : Prop where
+  view : ∀ p, lvNodeW m p ≠ [] → lvNodeW m' p = lvNodeW m p
+  /-- The word arrays other than the heap and `CTL` are untouched. -/
+  arr : ∀ A : ArrId, A ≠ LH → A ≠ CTL → m'.arr64 A = m.arr64 A
 
-theorem HeapExt.refl (m : Mem) : HeapExt m m := fun _ _ => rfl
+theorem HeapExt.refl (m : Mem) : HeapExt m m := ⟨fun _ _ => rfl, fun _ _ _ => rfl⟩
 
 theorem HeapExt.trans {m₁ m₂ m₃ : Mem} (h₁ : HeapExt m₁ m₂) (h₂ : HeapExt m₂ m₃) :
-    HeapExt m₁ m₃ := fun p hp => by rw [h₂ p (by rw [h₁ p hp]; exact hp), h₁ p hp]
+    HeapExt m₁ m₃ :=
+  ⟨fun p hp => by rw [h₂.view p (by rw [h₁.view p hp]; exact hp), h₁.view p hp],
+    fun A a b => by rw [h₂.arr A a b, h₁.arr A a b]⟩
 
 theorem LvR.mono (he : HeapExt m m') {p : Word} {l : Level} (h : LvR N m p l) : LvR N m' p l := by
   induction h with
-  | zero hv => exact .zero (by rw [he _ (by simp [hv])]; exact hv)
-  | succ hv _ ih => exact .succ (by rw [he _ (by simp [hv])]; exact hv) ih
-  | max hv _ _ ih1 ih2 => exact .max (by rw [he _ (by simp [hv])]; exact hv) ih1 ih2
-  | imax hv _ _ ih1 ih2 => exact .imax (by rw [he _ (by simp [hv])]; exact hv) ih1 ih2
-  | param hv hn => exact .param (by rw [he _ (by simp [hv])]; exact hv) hn
+  | zero hv => exact .zero (by rw [he.view _ (by simp [hv])]; exact hv)
+  | succ hv _ ih => exact .succ (by rw [he.view _ (by simp [hv])]; exact hv) ih
+  | max hv _ _ ih1 ih2 => exact .max (by rw [he.view _ (by simp [hv])]; exact hv) ih1 ih2
+  | imax hv _ _ ih1 ih2 => exact .imax (by rw [he.view _ (by simp [hv])]; exact hv) ih1 ih2
+  | param hv hn => exact .param (by rw [he.view _ (by simp [hv])]; exact hv) hn
 
 theorem rdW_set64L (m : Mem) (a b : ArrId) (k v x : Word) :
     rdW ((m.set64 a k v).arr64 b) x =
@@ -190,7 +195,7 @@ theorem HeapFrame.heap (h : HeapFrame m m') (p : Word) (hb : ¬ p >>> 32 = 0)
     h.lh _ (by simp only [htop]; omega), h.lh _ (by simp only [htop]; omega)]
 
 theorem HeapFrame.ext (h : HeapFrame m m') : HeapExt m m' := by
-  intro p hp
+  refine ⟨fun p hp => ?_, fun A a b => h.arr A b a⟩
   by_cases hb : p >>> 32 = 0
   · simp only [lvNodeW, hb, ne_eq, not_true_eq_false, ↓reduceIte]
     have c1 : rdW (m'.arr64 CTL) 1 = rdW (m.arr64 CTL) 1 := h.ctl 1 (by simp)
