@@ -11,8 +11,8 @@ public import ConAgua.Compiler.Correct
 layout `G`, the entry arguments in the table and `N` units of fuel in `rsi`, every run of the
 compiled program returns to the caller with the callee-saved registers restored, and either
 reports `exhausted` (`rdx = 1`) or reports exactly what `L.run p N entry args m` says:
-`rdx = 0`, the results in the result registers (`rax`, `rdi`, `r8`, …; see `resReg`) and the
-final memory in the layout, or `rdx = 2` for an error
+`rdx = 0`, the results in the result registers (`rax`, `rdi`, `r8`, …; see `resReg`) and, past
+the sixth, in the table's result area (`Layout.resAddr`), and the final memory in the layout, or `rdx = 2` for an error
 (never for running out of fuel, which only `rdx = 1` reports).
 -/
 
@@ -22,7 +22,7 @@ open L
 
 /-- What the harness sees after `ca_enter` returns, against L's result. -/
 def OutcomeRel (G : Layout) : Except Err (List Word × Mem) → MachineData → Prop
-  | .ok (rs, m'), s => s.regs.rdx = 0 ∧ ResRel G.tab.nres rs s.regs ∧ MemRel G m' s.dmem
+  | .ok (rs, m'), s => s.regs.rdx = 0 ∧ ResOut G rs s ∧ MemRel G m' s.dmem
   | .error .outOfFuel, _ => False
   | .error _, s => s.regs.rdx = 2
 
@@ -124,9 +124,8 @@ theorem compile_correct [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.
         rcases res with e | ⟨r, m'⟩
         · cases e <;> simp [OutcomeRel]
         · simp only [OutcomeRel, Reg64s.set64_rsp, Reg64s.set64_r15, Reg64s.set64_r14, Reg64s.set64_rbp]
-          rintro ⟨h1, h2, h3⟩
-          refine ⟨h1, ?_, h3⟩
-          exact h2.congr rfl rfl rfl rfl rfl rfl
+          rintro ⟨h1, ⟨h2, h4⟩, h3⟩
+          exact ⟨h1, ⟨h2.congr rfl rfl rfl rfl rfl rfl, h4⟩, h3⟩
   have hsp0 := hcs24
   -- the three pushes
   have hmap : ∀ x, d.regs.rsp.toNat - 24 ≤ x → x < d.regs.rsp.toNat → (rdW d.dmem (A x)).isSome → True :=
@@ -337,7 +336,7 @@ theorem compile_correct [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.
           by_cases h : G.lo ≤ x
           · exact Or.inr (hx.2.1 h)
           · exact Or.inl (by omega)
-        rw [hP.same x (by omega) (by omega) hx.2.2.1, get?_wrW_A (by omega) (by omega) (by omega), h8m]
+        rw [hP.same x (by omega) (by omega) hx.2.2.1 (fun hr => hx.2.2.2 hr.tab), get?_wrW_A (by omega) (by omega) (by omega), h8m]
     · -- the entry function returned
       intro r σ' d' hinv hm' hloc hrsp' hrbp' hr15' hr14' hrax' hpres'
       simp only [UInt64.toBitVec_ofBitVec, Int64.ofBitVec_toBitVec]
@@ -349,7 +348,7 @@ theorem compile_correct [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.
       refine hexit _ (by simp [hrbp', h8bp]) (fun x h1 h2 => hcsS _ hpres' x h1 h2) (Or.inr ?_)
       have hrun : run p N entry args m = .ok (r, σ'.mem) := by simp [run, hinv, Except.map]
       rw [hrun]
-      exact ⟨by simp, hrax'.congr rfl rfl rfl rfl rfl rfl, hm'⟩
+      exact ⟨by simp, ⟨hrax'.1.congr rfl rfl rfl rfl rfl rfl, hrax'.2⟩, hm'⟩
     · -- an error
       intro d' ⟨x, hx, hne⟩ hG'
       simp only [UInt64.toNat_mk', A_toNat] at hG'

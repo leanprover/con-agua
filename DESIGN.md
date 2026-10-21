@@ -4141,3 +4141,79 @@ Done when the vendored twin is bumped; `CoreS`/`CoreAfter` keep their shape (`M 
 * `WhnfBase.lean` `whnfCallees_stub`: the specs of the callees not written yet (`inst_list`,
   `inst_lp`, `str_lit_ctor`, `str_lit_supported`, the knot's `infer`/`infer_io`/`defeq` steps).
 * `WhnfSpine.lean`: the eight spine-walk specs (`getAppFn_refines`, …; a proof lane is on them).
+
+## Any number of results (2026-10-21, lane `cresults`)
+
+Files: `ConAgua/Compiler/{Compile,WF,Rel,SimStmt,SimStore,SimCall,SimFun,Main,Run,Tests}.lean`,
+new `ConAgua/Compiler/WFAll.lean`, `WFAllBench.lean`; `ConAgua/Capstone.lean`
+(`frontAllProg_wf`, `frontAll_run`, `frontAll_x64`); one line each in `ConAgua/Final/Statement.lean`
+and `lakefile.toml`.
+
+### The design: a result area in the table
+
+Results `0 … 5` stay in `rax, rdi, r8 … r11`. Result `i ≥ 6` goes to the word at
+`T + Tab.resOff i`, a **result area** in the table between the constant data and the entry
+arguments (`Tab.nxres = nres - 6` words; `Tab.args` moves past it). `return` writes it through
+`rcx` (`mov rcx, [rsp + tmp]; mov [r15 + off], rcx`, or `mov qword [r15 + off], 0` past the
+returned values); a call reads it right after `call` (`mov rcx, [r15 + off]; mov [rsp + 8x], rcx`).
+Between the callee's write and the caller's read only the epilogue (`add rsp; ret`) runs, so one
+area serves every call. For `nres ≤ 6` the area is empty and the code is unchanged: every
+`Emit*` driver on master (scan, store, walk, lift, inst1, validator) prints byte-identical
+assembly before and after.
+
+**Alternatives rejected.** Slots at the top of the callee's frame (at a fixed distance below the
+return address, so the caller finds them below its `rsp`) need the frame size in the code that
+compiles `return`, and the statement simulation (`SimS`) has a frame size `F` that the code does
+not know (`ctx` has no `F`, and a statement's temporaries only bound `F` from below). Passing a
+result pointer (like the argument pointer `rsi`) needs a saved register per frame. The table area
+needs neither: its address is `r15` plus a constant.
+
+**Proof.** `InTab` now covers the area (so `compile_correct`'s hypotheses read as before; `G.Ok`
+makes it disjoint from the stack and the arrays). `MemRel` gains `res` (the area is mapped);
+`Pres` also allows changes in the area (`InRes`); `MemRel.onlyD` keeps the relation under changes
+outside the descriptors and constant data (`MemRel.only'` is its `InTab` instance, `only_res` the
+area's). `ResRel` now speaks of the register results only (`i < maxRes`), `ResMem G vs d` of the
+area, `ResOut = ResRel ∧ ResMem` replaces `ResRel` in `Conts.ret`, `FunSim` and `OutcomeRel`.
+`sim_loadRes`/`sim_storeRes` handle both kinds per element (the post of `sim_loadRes` is an
+`Only` over the area). `compile_correct`'s statement is unchanged except through `OutcomeRel`
+(results 6… in the area at `Layout.resAddr i`); the capstone users changed by one token each
+(`hres.1 0 … (by simp [maxRes])`). No `sorry`; `#print axioms compile_correct`: `propext`,
+`Classical.choice`, `Quot.sound`. About +230 lines of proof (mostly `SimCall`), +25 of compiler.
+
+`Prog.wf` no longer bounds `nres`; it requires the result area's offsets below `maxOff`
+(`hTab` grew a `+ 8 * nxres`). `Prog.wfAuto p` is `Prog.wf` for the smallest table with every
+array `p` names (`Prog.arrs`).
+
+### Testing
+
+* `Tests.lean`: `nineProg` (nine results, seven of nine read as nine, two of nine, the area
+  used by three calls in a row; 10 results in use), against `L.run`; `runKraken` maps the area
+  and `Outcome.ofState` reads it.
+* `harness/check-asm.sh`: scan 303, store 1313, walk 6743 instructions, OK. The compiled
+  `frontAllProg` (`Prog.tab frontAllProg 1 69`, 47915 instructions, with result-area moves)
+  passes `check_asm.py` too.
+* `run --lines` (skip_braced) on `complete_c04a_restart_70`: 126481 lines, 0 mismatches; the
+  compiled validator accepts it (`ok 0`), and gives the same verdicts as master on the 492 e2e
+  fixtures (the assembly is identical).
+
+### Every program's static check (`WFAll.lean`, `WFAllBench.lean`)
+
+One `#guard Prog.wfAuto p` per program defined on master (60; the four benchmark programs in
+`WFAllBench.lean`, whose modules clash with `NatBits` on import; the compiler's own test programs
+in `Tests.lean`). All pass, `frontAllProg` included, except `L.Scan.Values.hintsProg`, a test
+fragment that calls `skip_ws`/`hints_obj` without containing them (guarded as failing).
+**New programs should get a line there.**
+
+### The capstone: `frontAll_x64`
+
+`frontAllProg_wf` (one byte array, 69 word arrays, `decide +kernel`) and `frontAll_x64`:
+`compile_correct` composed with `frontAll_refines` (via `frontAll_run`, `M.of_run`). From a
+Kraken host holding the compiled `frontAllProg`, run from `ca_enter` on a memory that holds `b`
+in `IN` and is related to `a₀` by `ArenaD` and to the blank parse state by `StateDR`: the machine
+reports exhausted, an error, or `rdx = 0`, and then `rax = 0` implies that con-ron's
+`parseBytes b` accepts from `a₀` and the final machine memory holds an L memory related to its
+final arena and parse states. Only `propext`, `Classical.choice`, `Quot.sound`.
+
+### `sorry`s
+
+None.

@@ -38,19 +38,24 @@ def asmText (tab : Tab) (p : Prog) (entry : FnName) : String :=
     "\n.section .note.GNU-stack,\"\",@progbits\n"
 
 /-- The outcome of a run of compiled code, as `ca_enter` returns it: on success, the `nres`
-result registers. -/
+results (registers, then the table's result area). -/
 inductive Outcome where
   | ok (rs : List Word)
   | exhausted
   | error
   deriving Repr, DecidableEq
 
-/-- The first `n` result registers. -/
-def resRegs (R : Reg64s) (n : Nat) : List Word :=
-  (List.range n).map fun i => UInt64.ofBitVec (R.get64 (resReg i))
+/-- The little-endian word at `a`. -/
+def kLoadWord (m : DataMem) (a : Nat) : Word :=
+  (List.range 8).foldr (fun i acc => (acc <<< 8) ||| ((m.get? (BitVec.ofNat 64 (a + i))).getD 0).toUInt64) 0
 
-def Outcome.ofRegs (R : Reg64s) (n : Nat) : Outcome :=
-  if R.rdx = 0 then .ok (resRegs R n) else if R.rdx = 1 then .exhausted else .error
+/-- The `tab.nres` results: registers below `maxRes`, then the result area of the table at `T`. -/
+def results (s : MachineData) (tab : Tab) (T : Nat) : List Word :=
+  (List.range tab.nres).map fun i =>
+    if i < maxRes then UInt64.ofBitVec (s.regs.get64 (resReg i)) else kLoadWord s.dmem (T + (tab.resOff i).toNat)
+
+def Outcome.ofState (s : MachineData) (tab : Tab) (T : Nat) : Outcome :=
+  if s.regs.rdx = 0 then .ok (results s tab T) else if s.regs.rdx = 1 then .exhausted else .error
 
 /-- What `L.run` says, in the same shape (the first `n` results, `0` past the end; an
 `outOfFuel` error is `exhausted`). -/
@@ -99,12 +104,13 @@ def runKraken (p : Prog) (entry : FnName) (args : List Word) (m : Mem) (fuel : W
     d := kStoreWord d (T + (tab.len64 a).toNat) (m.arr64 a).size.toUInt64
     d := kStoreBytes d bases64[a]! ((m.arr64 a).toList.flatMap kWordBytes)
   d := kStoreBytes d (T + tab.romBase.toNat) tab.rom
+  d := kStoreBytes d (T + tab.resBase.toNat) (List.replicate (8 * tab.nxres) 0)
   for (v, i) in args.zipIdx do
     d := kStoreWord d (T + tab.args.toNat + 8 * i) v
   let exe := Program.fakeLayout (compileProg tab p entry)
   let start := exe.labels.label enterL
   let s : MachineData := { dmem := d, regs := { rsp := csp.toUInt64, rdi := T.toUInt64, rsi := fuel } }
   let s' ← Executable.eval exe { data := s, pc := start } (fun st => st.pc = Int64.ofNat ra)
-  return Outcome.ofRegs s'.data.regs tab.nres
+  return Outcome.ofState s'.data tab T
 
 end L.Compiler
