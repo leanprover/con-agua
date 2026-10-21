@@ -1,6 +1,7 @@
 import ConAgua.Front.ApplyExpr
 import ConAgua.Front.NatDecLink
 import ConAgua.Front.StateDR
+import ConAgua.Census.Attr
 
 /-!
 # `apply_expr` refines con-ron's `parseExprEntryD`
@@ -153,7 +154,8 @@ theorem MemFrame.above {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFr
 theorem StateDR.above {m m' : Mem} {st : StateD} (h : StateDR m st) (hf : Above64 m m') :
     StateDR m' st :=
   ⟨by rw [hf NID (by decide)]; exact h.names, by rw [hf LID (by decide)]; exact h.levels,
-    by rw [hf EID (by decide)]; exact h.exprs⟩
+    by rw [hf EID (by decide)]; exact h.exprs,
+    by rw [hf DECL (by decide), hf DLP (by decide)]; exact h.decls⟩
 
 theorem mkK_above (A : ArrId) (hA : A < 64) (hC : A ≠ CTL) (c s d r : Word) (m m' : Mem)
     (x : Option (Word × Mem)) (hx : ∀ r₁ m₁, x = some (r₁, m₁) → Above64 m m₁)
@@ -513,6 +515,7 @@ theorem tbl_fresh_ne {k : IdxKind} {m : Mem} {b : ArrId} {t : IdTable (Idx k)}
 /-- **`apply_expr`'s model refines `parseExprEntryD`**: on fields `f` that con-leche's scanner
 relates to the expression record `r` (`ExprR`) and an index word read for `i`, a successful
 `apply_expr` is a successful `parseExprEntryD st i r`, with `ArenaD` and `StateDR` after. -/
+@[refines_part ConRon.Arena.Frontend.parseExprEntryD "every kind but strVal"]
 theorem applyExprW_refines (b : ByteArray) (h64 : System.Platform.numBits = 64)
     (hsize : b.size < 2 ^ 63) (m m' : Mem) (a₀ : AState)
     (st : StateD) (hA : ArenaD m a₀) (hD : StateDR m st) (f : Fld) (i : Nat) (r : ExprRec)
