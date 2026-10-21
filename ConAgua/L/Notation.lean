@@ -34,10 +34,19 @@ lfn (b_dummy, j) locals (c) {
 * Statements are separated by `;`: `x := e`, `x += e`, `x -= e`, `x := call f(e, …)`,
   `(x, y, …) := call f(e, …)` (several results), `if c { … } else { … }` (with `else if`),
   `while c { … }`, `break`, `return e`, `return (e, e', …)`, `abort`, `skip`, and `⟪t⟫` for a
-  named block `t : L.Stmt` (see `lblk`).
+  named block `t : L.Stmt` (see `lblk`; a block written with other variables than a prefix of
+  the enclosing ones is an error).
 -/
 
 namespace L.Notation
+
+/-- A named block (`lblk`): the statement `s`, with the names of the variables it was written
+with, so that splicing it with `⟪t⟫` can check them against the enclosing variables. -/
+@[expose, reducible] def blk (_vars : List String) (s : Stmt) : Stmt := s
+
+/-- `⟪t⟫` in a block with variables `vars`: `t`, after checking that a named block `t` was
+written with a prefix of `vars` (its variables are numbered by position). -/
+syntax (name := lsplice) "lsplice% " "[" str,* "]" term:max : term
 
 declare_syntax_cat lexpr
 declare_syntax_cat lcond
@@ -209,7 +218,9 @@ meta partial def transStmt (env : Array Name) : TSyntax `lstmt → MacroM Term
     `(L.Stmt.ret [$es,*])
   | `(lstmt| abort) => `(L.Stmt.abort)
   | `(lstmt| skip) => `(L.Stmt.skip)
-  | `(lstmt| ⟪$t⟫) => `(($t : L.Stmt))
+  | `(lstmt| ⟪$t⟫) => do
+    let names := env.map fun n => Syntax.mkStrLit n.toString
+    `(lsplice% [$names,*] $t)
   | s => Macro.throwErrorAt s "unsupported L statement"
 
 /-- A block is a right-nested `seq`; the empty block is `skip`. -/
@@ -245,6 +256,33 @@ syntax "lblk " "(" ident,* ")" lblock : term
 macro_rules
   | `(lblk ($vs,*) $b:lblock) => do
     let body ← transBlock (vs.getElems.map (·.getId)) b
-    `(($body : L.Stmt))
+    let names := vs.getElems.map fun v => Syntax.mkStrLit v.getId.toString
+    `(L.Notation.blk [$names,*] ($body : L.Stmt))
+
+open Elab Term Meta in
+/-- The string literals of a list literal. -/
+meta partial def strList? (e : Lean.Expr) : Option (List String) :=
+  match e.consumeMData.getAppFnArgs with
+  | (``List.nil, _) => some []
+  | (``List.cons, #[_, h, t]) =>
+    match h.consumeMData with
+    | Lean.Expr.lit (.strVal s) => (strList? t).map (s :: ·)
+    | _ => none
+  | _ => none
+
+open Elab Term Meta in
+@[term_elab lsplice] meta def elabLsplice : TermElab := fun stx _ => do
+  let `(lsplice% [$names,*] $t) := stx | throwUnsupportedSyntax
+  let e ← elabTerm t (some (mkConst ``L.Stmt))
+  let vars := names.getElems.toList.map (·.getString)
+  if let some c := e.constName? then
+    if let some v := ((← getEnv).find? c).bind (·.value?) then
+      let v := v.consumeMData
+      if v.isAppOfArity ``L.Notation.blk 2 then
+        if let some bvars := strList? (v.getArg! 0) then
+          unless bvars.isPrefixOf vars do
+            throwErrorAt t m!"the named block `{c}` was written with the variables {bvars}, \
+              which are not a prefix of the variables here, {vars}"
+  return e
 
 end L.Notation

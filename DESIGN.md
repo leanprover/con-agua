@@ -233,7 +233,7 @@ induction hypothesis, and the expression lemmas are straight-line `kvcgen64` pro
   the post can stay one equation: `(f x).run (abs s₀.mem) = .ok (decode r, abs s'.mem)`, with an
   abstraction function `abs : Mem → AState`. Not tried yet.
 * **Named blocks.** `lblk (vars)` must repeat the enclosing function's variable list; nothing
-  checks that they agree.
+  checks that they agree. **Done** (lane `lext`): `⟪t⟫` checks it, see "L extensions".
 * **Boilerplate.** Each loop needs the `…_step_spec` corollary, and each model arm is a
   hand-written guarded lemma. A small generator for both might pay off once there are tens of
   functions.
@@ -825,4 +825,29 @@ forms, surrogates and the range after assembling the value (`assemble₂…₄`)
 677 lines, 9 s; written in an afternoon of the lane, with no `grind` (plain `simp`/`omega`/`rw`).
 The word-level model made the L proofs trivial and moved all the bit arithmetic here, where it
 is proved once against Lean's own decoder rather than against a Nat-level re-statement.
+
+### Named blocks are checked
+
+`lblk (j, c) { … }` now elaborates to `L.Notation.blk ["j", "c"] body` (`blk` is a reducible
+identity, so `step_while (w := …) rfl`, `vcgen` and the compiler see the body as before), and
+`⟪t⟫` in an `lfn`/`lblk` elaborates through `lsplice%`, which looks up the definition of `t`
+and fails unless the block's variables are a prefix of the enclosing ones (they are numbered
+by position). All 20 named blocks in the project (including the arena lane's) pass. The
+`…_step_spec` corollaries remain: `vcgen` needs a spec about `step p (exec p n) W` itself, and
+I found no way to pass `Triple.step_exec (loop_spec … (n + 1))` that it accepts (the loop spec
+has hypotheses before the triple).
+
+### Summary of lane `lext`
+
+* L: `mulhi`, `u64(a < b)`, `D.c8[i]` (constant data), several results (`return (a, b)`,
+  `(x, y) := call f(…)`), `LocEq` and `St.loc_of_eq_mk` in the proof support, checked named
+  blocks. Every extension is in the compiler and its proof.
+* Compiler: 281 → 369 lines. Proof (the eleven proof files): 3410 → 3794 lines (+384:
+  `SimExpr` +141, `SimCall` +138, `Rel` +52, `Step` +32, `SimFun` +13, `SimStore` +16, …).
+  `compile_correct` is still `sorry`-free with the standard axioms; its statement changed only
+  in `OutcomeRel` (the results in the result registers) and in `MemRel` (the table holds the
+  constant data).
+* Translations: `match_lit`, `scan_bool` (linked to con-leche's `matchLit`/`scanBool`,
+  `scanBool_run`), `utf8_decode` (linked to `String.fromUTF8?`, `utf8Decode_run`), and the
+  `num_end` `sorry` is gone. No `sorry` anywhere in `ConAgua`.
 
