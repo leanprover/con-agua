@@ -3687,7 +3687,10 @@ Request to lane `arch`: add `LH` (array 192) and `CTL[192]` (heap top) to the me
 | `lv_node` (view) | – (store `view` / tree match) | 23 | 50 | `HeapFrame.ext` 60 | | `vcgen` + `finish` |
 | `lh_mk` | – (`Rc::new`) | 9 | 25 | `lhMkW_ext` + `lhMem_*` 110 | | `vcgen` + `finish`; frames by hand |
 | `lv_eq` (`Level.beq`) | 19 (`beq`) | 11 | 70 | `lvEqW_ok` 115 | | `vcgen` + `finish (gen := 20)`; refinement by hand (cases per tag) |
-| total (files) | | 43 | `LevelHeap.lean` 243 | `LevelHeapRel.lean` 432 | 7.9 s + 1.1 s | |
+| `lv_comb` (`combining`) | 10 | 13 | 70 | `combW_ok` 50 (+ allocation lemmas 27) | | as `lv_eq` |
+| `lv_simp` (`simplify`) | 21 | 16 | 130 | `imaxW_ok` + `simpW_ok` 120 | | as `lv_eq` |
+| `lv_nz` (`isNeverZero`) | 9 | 12 | 70 | `nzW_ok` 40 | | as `lv_eq` |
+| total (files) | | 84 | `LevelHeap` 243, `LevelSimp` 291 | `LevelHeapRel` 432, `LevelSimpRel` 264 | 7.9 + 7.6 s, 1.1 + 1.1 s | |
 
 ### Findings
 
@@ -3697,6 +3700,13 @@ Request to lane `arch`: add `LH` (array 192) and `CTL[192]` (heap top) to the me
   on `(1 : Word) ≠ 192`: use `simp`.
 * `finish` failed on `lv_eq` (a wrong case split, no hint) until `(gen := 20)`, as lane `exprops`
   found for three callee posts.
+* The refinements are short because the decoder is a relation: each is one induction on the L
+  fuel and one `cases` on the argument's `LvR` derivation, whose constructor fixes the view's tag
+  (`lv_fields`), and the twin's `match` reduces by `simp [Level.f]`. Allocations are three lemmas
+  (`mk_succ`, `mk_max`, `mk_imax`). The first full drafts of `combW_ok`/`simpW_ok`/`nzW_ok` took
+  three rounds of small fixes; no `grind` in the refinements.
+* Two `match`es with the same arms but different auxiliary matchers (`simplify`'s `imax` arm and
+  a restatement) are not syntactically equal; `cases` on the discriminant and `rfl` closes it.
 * The model's view fields are named (`lvG`/`lvA`/`lvB` with `@[level_grind =]` equations to the
   `headD` projections the call's `setLocs` produces); a model that unfolded them in `finish`'s
   list confused `grind`.
@@ -3704,3 +3714,35 @@ Request to lane `arch`: add `LH` (array 192) and `CTL[192]` (heap top) to the me
 ### `sorry`s
 
 None.
+
+## Pins, the environment, the declaration loop (2026-10-21, lane `pinsenv`)
+
+### The pin table (`Tiers.lean` `PinsR`, `Pins.lean`)
+
+`PINS` (array 128) holds the twin's `Pins`: word 0 a ready flag, words `1‥51` the 51 name slots
+(`PIN_*` at `1 + PIN_*`), 52‥54 `emptyLevels`/`zeroLevel`/`sortOne`, 55‥70 the 16 reserved names.
+`PinsR m p := flag ≠ 0 → PinsFull m p` (sizes, words below `2^32`, every field `decI` of its
+word). Every reader checks the flag and aborts on `0`, where the twin's empty table raises
+`.internal`, so the relation claims nothing before the driver fills it, and all-zero memory is
+related to `Pins.empty` (`PinsR.of_flag`). Frame: `PinsR.congr` (array 128 unchanged).
+
+* `pin_at(i)` (flag, `i < 51`, word `1 + i`) refines `pinAt` (`pinAt_refines`, post: memory
+  unchanged, `(pinAt i).run a = .ok (decI r, a)`); `pin_word(k)` the three interned values. The
+  88 named readers (`pinNat`, …, Core's `natAddName`, `boolTrueName`, `emptyLevels`, …) are one
+  line each (`PinSlotSpec`/`PinWordSpec`), generated.
+* Twin side: `pinAt_run`, `pinEmptyLevels_run`, … (`simp` with the `StateT`/`Except` unfoldings;
+  `rfl` alone does not see through the `do`).
+
+### `natOpResult`, the whole dispatch (`NatArms.lean` `natOpResultL`, `PinsNatOp.lean`)
+
+`nat_op_result(c, oa, la, ob, lb)` is in `natArmProg` (so lane `nat2`'s arm theorems apply
+verbatim): the flag, then fifteen `c == PINS[k]` tests in the twin's order, each calling its arm;
+`beq`/`ble` get `PINS[31]`, `PINS[32]`, `PINS[52]` (the pins nat2 took as arguments, whose
+hypotheses `hT`/`hF`/`hE` are now discharged from `PinsFull`). Returns `(1, h)` / `(0, 0)`
+(`decOpt`). `natOpResult_sel`: under `PinsFull` the twin runs as `natOpSel`, the same chain on
+word equality (`decI_beq`: handle words below `2^32`). `natOpResultL_refines` (`@[refines
+ConRon.Arena.natOpResult]`) is one `vcgen` over the sixteen arms with the arm specs as terms and
+`finish`; it needs `maxHeartbeats 2000000` (≈ 17 s; the default runs out in `whnf` inside
+`finish`, not a failing search). The conditional facts (`hok`/`hst`/`hres`: `natOpResult` =
+`natOpSel` when the flag is set) are given as implications, so the flag-zero abort path needs no
+case split.

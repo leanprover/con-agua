@@ -1,4 +1,5 @@
 import ConAgua.Arena.ArenaRel
+import ConAgua.Arena.Tiers
 import ConRon.Arena.Core
 import ConAgua.Arena.NatDiv
 import ConAgua.Arena.NatGcd
@@ -439,6 +440,38 @@ def natDivArm (a b : Nat) : AM (Option EIdx) := do
 def natModArm (a b : Nat) : AM (Option EIdx) := do
   let x ← internE (.lit (.natVal (a % b))); pure (some x)
 
+/-! ## The dispatch (lane `pinsenv`)
+
+`nat_op_result(c, oa, la, ob, lb)`: `natOpResult` (`Arena/Core.lean:998`) with the fifteen pin
+reads as reads of `PINS` (word `1 + PIN_*`, after the flag) and the arms in the twin's order.
+Returns `(1, h)` for `some h`, `(0, 0)` for `none` (`decOpt`). Refined in `PinsNatOp.lean`. -/
+@[l_impl ConRon.Arena.natOpResult]
+def natOpResultL : FunDecl := lfn (c, oa, la, ob, lb) locals (f, h) {
+  if PINS.u64[0] == 0 { abort };
+  if c == PINS.u64[15] { h := call nat_pred_lit(oa, la); return (1, h) };
+  if c == PINS.u64[16] { h := call nat_add_lit(oa, la, ob, lb); return (1, h) };
+  if c == PINS.u64[17] { h := call nat_sub_lit(oa, la, ob, lb); return (1, h) };
+  if c == PINS.u64[18] { h := call nat_mul_lit(oa, la, ob, lb); return (1, h) };
+  if c == PINS.u64[19] { (f, h) := call nat_pow_lit(oa, la, ob, lb); return (f, h) };
+  if c == PINS.u64[22] { h := call nat_div_lit(oa, la, ob, lb); return (1, h) };
+  if c == PINS.u64[23] { h := call nat_mod_lit(oa, la, ob, lb); return (1, h) };
+  if c == PINS.u64[24] { h := call nat_gcd_lit(oa, la, ob, lb); return (1, h) };
+  if c == PINS.u64[25] { h := call nat_land_lit(oa, la, ob, lb); return (1, h) };
+  if c == PINS.u64[26] { h := call nat_lor_lit(oa, la, ob, lb); return (1, h) };
+  if c == PINS.u64[27] { h := call nat_xor_lit(oa, la, ob, lb); return (1, h) };
+  if c == PINS.u64[28] { h := call nat_shl_lit(oa, la, ob, lb); return (1, h) };
+  if c == PINS.u64[29] { h := call nat_shr_lit(oa, la, ob, lb); return (1, h) };
+  if c == PINS.u64[20] {
+    h := call nat_beq_lit(oa, la, ob, lb, PINS.u64[31], PINS.u64[32], PINS.u64[52]);
+    return (1, h)
+  };
+  if c == PINS.u64[21] {
+    h := call nat_ble_lit(oa, la, ob, lb, PINS.u64[31], PINS.u64[32], PINS.u64[52]);
+    return (1, h)
+  };
+  return (0, 0)
+}
+
 /-! ## The program -/
 
 /-- The pool functions, the `lit` store, and one L arm per operation. -/
@@ -456,7 +489,8 @@ def natArmProg : Prog := storeProg ++
    ("nat_mod_lit", natModLit),
    ("nat_cmp", natCmp), ("const_find", constFind), ("const_push", constPush),
    ("intern_const", internConst), ("nat_beq_lit", natBeqLit), ("nat_ble_lit", natBleLit),
-   ("gcd_step", gcdStep), ("nat_gcd", natGcd), ("nat_gcd_lit", natGcdLit)]
+   ("gcd_step", gcdStep), ("nat_gcd", natGcd), ("nat_gcd_lit", natGcdLit),
+   ("nat_op_result", natOpResultL)]
 
 /- `6 - 1 = 5`, `7 % 8 = 7`, `7 * 5 = 35` (at pool offset 9) and `35 / 5 = 7`: three nodes, and
 the quotient finds `7`'s node again. -/
