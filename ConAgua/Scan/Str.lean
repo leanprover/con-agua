@@ -203,7 +203,7 @@ def hex3 : FunDecl := lfn (j, e) locals (c, ok, a, x, y) {
 
 /-! ## `unescape` -/
 
-def unescapeLoop : Stmt := lblk (j, e, r, c, d, ok, v, j6) {
+def unescapeLoop : Stmt := lblk (j, e, r, c, d, ok, v) {
   while j < len(IN.u8) && j < e {
     c := IN.u8[j];
     if c != 92 {
@@ -218,30 +218,31 @@ def unescapeLoop : Stmt := lblk (j, e, r, c, d, ok, v, j6) {
         if d != 117 { return 0 };
         (ok, v) := call hex4(j + 2, e);
         if ok == 0 { return 0 };
-        j6 := j + 6;
-        if v < 0xD800 || 0xE000 <= v {
-          j := j6
-        } else if 0xDC00 <= v {
-          j := j6
-        } else {
-          -- a high surrogate: look for a `\uDxxx` continuation, else U+FFFD
-          c := call byte_in(j6, e);
-          d := call byte_in(j6 + 1, e);
-          ok := call byte_in(j6 + 2, e);
-          if c == 92 && d == 117 && (ok == 100 || ok == 68) {
-            (ok, v) := call hex3(j6 + 3, e);
-            if ok != 0 && 0xC00 <= v { j := j6 + 6 } else { j := j6 }
-          } else {
-            j := j6
-          }
-        }
+        j := call u_next(j, e, v)
       };
       r := j
     }
   }
 }
 
-def unescape : FunDecl := lfn (j, e) locals (r, c, d, ok, v, j6) {
+/-- Where a `\u` escape at `j` with value `v` continues (Rust's surrogate handling, as its own
+function to keep the loop body short): `j + 6`, or `j + 12` for a high surrogate followed by a
+`\uDxxx` low one. -/
+def uNext : FunDecl := lfn (j, e, v) locals (c, d, f, ok, w) {
+  if v < 0xD800 || 0xE000 <= v { return j + 6 };
+  if 0xDC00 <= v { return j + 6 };
+  -- a high surrogate: look for a `\uDxxx` continuation, else U+FFFD
+  c := call byte_in(j + 6, e);
+  d := call byte_in(j + 6 + 1, e);
+  f := call byte_in(j + 6 + 2, e);
+  if c == 92 && d == 117 && (f == 100 || f == 68) {
+    (ok, w) := call hex3(j + 6 + 3, e);
+    if ok != 0 && 0xC00 <= w { return j + 6 + 6 }
+  };
+  return j + 6
+}
+
+def unescape : FunDecl := lfn (j, e) locals (r, c, d, ok, v) {
   r := j;
   ⟪unescapeLoop⟫;
   ok := call utf8_valid(r, e);
@@ -390,12 +391,12 @@ theorem unescN_u_esc (j' : Word) (hj' : j' = uNextN b e j (hex4N b e (j + 2)).2)
 grind_pattern [lang_grind] unescN_end => unescN b j e r
 grind_pattern [lang_grind] unescN_end1 => unescN b j e r
 grind_pattern [lang_grind] unescN_end2 => unescN b j e r
-grind_pattern [lang_grind] unescN_plain => unescN b j e r, byteW b j, unescN b j' e r
-grind_pattern [lang_grind] unescN_bad_run => unescN b j e r, byteW b j
-grind_pattern [lang_grind] unescN_simple_esc => unescN b j e r, byteW b j, unescN b j' e j'
-grind_pattern [lang_grind] unescN_bad_escchar => unescN b j e r, byteW b j
-grind_pattern [lang_grind] unescN_bad_hex4 => unescN b j e r, byteW b j
-grind_pattern [lang_grind] unescN_u_esc => unescN b j e r, byteW b j, unescN b j' e j'
+grind_pattern [lang_grind] unescN_plain => unescN b j e r, b[j.toNat], unescN b j' e r
+grind_pattern [lang_grind] unescN_bad_run => unescN b j e r, b[j.toNat]
+grind_pattern [lang_grind] unescN_simple_esc => unescN b j e r, b[j.toNat], unescN b j' e j'
+grind_pattern [lang_grind] unescN_bad_escchar => unescN b j e r, b[j.toNat]
+grind_pattern [lang_grind] unescN_bad_hex4 => unescN b j e r, b[j.toNat]
+grind_pattern [lang_grind] unescN_u_esc => unescN b j e r, b[j.toNat], unescN b j' e j'
 
 end
 
@@ -434,6 +435,7 @@ variable (p : Prog) (b : Array UInt8) (hb : b.size < 2 ^ 63)
     (hph : p.lookup "hex_val" = some hexVal)
     (hp4 : p.lookup "hex4" = some hex4)
     (hp3 : p.lookup "hex3" = some hex3)
+    (hpx : p.lookup "u_next" = some uNext)
     (hpu : p.lookup "unescape" = some unescape)
     (hps : p.lookup "str_close" = some L.Examples.strClose)
     (hpe : p.lookup "has_escape" = some L.Scan.Leaves.hasEscape)
@@ -476,9 +478,9 @@ theorem utf8Valid_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (k e : 
       vcgen [exec, step, evalE, evalArgs, utf8ValidLoop_step_spec p b hb hpc n] <;> finish
 
 section hex4Hex3
-attribute [local lang_grind] byteE hexValN hex4N hex3N
 
 include hpb in
+attribute [local lang_grind] byteE in
 theorem byteIn_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (k e : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "byte_in" [k, e]
@@ -491,6 +493,7 @@ theorem byteIn_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (k e : Wor
     sym only [lang_grind] => vcgen [exec, step, evalE, evalC, evalArgs, ld8] <;> finish
 
 include hph in
+attribute [local lang_grind] hexValN in
 theorem hexVal_spec (n : Nat) (s₀ : St) (c : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "hex_val" [c]
@@ -502,62 +505,87 @@ theorem hexVal_spec (n : Nat) (s₀ : St) (c : Word) :
   | succ n =>
     sym only [lang_grind] => vcgen [exec, step, evalE, evalC, evalArgs] <;> finish
 
-/- `hex4_spec`/`hex3_spec`: `vcgen` alone (replacing `<;> finish` with `<;> sorry` below the
-`vcgen [...]` call) elaborates in ~1s, so the blow-up is entirely inside `finish`/`grind`'s own
-search on the resulting verification conditions, not in `vcgen`. Four (resp. three) sequential
-`byte_in`/`hex_val` calls, each a two-result destructuring call followed by an early-return
-check, leave the state as a deeply right-nested `setLocs`/`loc` term (no call "returns" to a
-freshly-named, re-collapsed state the way a loop's `ih` does), and `grind`'s matching search does
-not converge on the resulting VCs (minutes, not a quick failure). Confirmed with a minimal
-standalone reproducer (four chained two-result calls, no strings/UTF-8 involved at all) given in
-the task report, along with what was tried (splitting the `local lang_grind` unfolding of
-`byteE`/`hexValN` out of this proof did not help; `<;> grind` in place of `<;> finish` hit a
-separate parse issue in this combinator). Left as `sorry`. -/
+/- `hex4_spec`/`hex3_spec`: four (three) chained calls nest the state terms deeper than
+`grind`'s default generation limit (`gen := 8`); with `sym (gen := 24)` they go through. The
+callees' models (`byteE`, `hexValN`) stay folded. -/
+
+attribute [local lang_grind] hex4N hex3N
 
 include hpb hph hp4 in
 theorem hex4_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "hex4" [j, e]
     ⦃fun r s' => s' = s₀ ∧ r = [(hex4N b e j).1, (hex4N b e j).2]; ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hp4]
+  simp only [callFn, hex4]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym (gen := 24) only [lang_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+        byteIn_spec p b hb hpb n, hexVal_spec p b hb hph n] <;> finish
 
 include hpb hph hp3 in
 theorem hex3_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "hex3" [j, e]
     ⦃fun r s' => s' = s₀ ∧ r = [(hex3N b e j).1, (hex3N b e j).2]; ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hp3]
+  simp only [callFn, hex3]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym (gen := 24) only [lang_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+        byteIn_spec p b hb hpb n, hexVal_spec p b hb hph n] <;> finish
 
 end hex4Hex3
 
-/- `unescapeLoop_spec`: each iteration that hits the `\u` escape branch chains a `utf8_valid`
-call, a `byte_in` call, and (for the surrogate-pair continuation) a `hex4` call plus up to three
-more `byte_in` calls and a `hex3` call — a sequential-call chain at least as deep as `hex4_spec`'s
-own (see the `sorry` note there), and `finish`/`grind` does not converge on it either (confirmed
-directly, with `s.mem.arr8 IN = b` folded into the precondition instead of carried as a separate
-`ih`/callee hypothesis — a fix that *did* work for an analogous loop in another lane's
-`Records.lean`, `strNameLoop_spec` — and with `sym (gen := 16)`; neither changed the outcome
-here). Left as `sorry`; see the task report. -/
+include hpb hph hp3 hpx in
+attribute [local lang_grind] uNextN in
+theorem uNext_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e v : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "u_next" [j, e, v]
+    ⦃fun r s' => s' = s₀ ∧ r = [uNextN b e j v]; ⊤⦄ := by
+  rw [invoke_eq _ hpx]
+  simp only [callFn, uNext]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym (gen := 24) only [lang_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+        byteIn_spec p b hb hpb n, hex3_spec p b hb hpb hph hp3 n] <;> finish
 
-include hpc hpv hpb hph hp4 hp3 in
+/- `unescapeLoop_spec`: as for `hex4`, the calls of one `\u` iteration need a generation
+limit above `grind`'s default. -/
+
+include hpc hpv hpb hph hp4 hp3 hpx in
+set_option maxHeartbeats 1000000 in
 theorem unescapeLoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
     exec p n unescapeLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ s'.loc 1 = s₀.loc 1 ∧ r ≠ .brk ∧
       r.retOr [utf8ValidN b (s'.loc 2) (s₀.loc 1)] =
         [unescN b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ := by
-  sorry
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+    rw [exec, step_while (w := unescapeLoop) rfl]
+    sym (gen := 16) only [lang_grind] =>
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, ih,
+        utf8Valid_spec p b hb hpc hpv n, byteIn_spec p b hb hpb n,
+        hex4_spec p b hb hpb hph hp4 n, uNext_spec p b hb hpb hph hp3 hpx n] <;> finish
 
-include hpc hpv hpb hph hp4 hp3 in
+include hpc hpv hpb hph hp4 hp3 hpx in
 theorem unescapeLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
     step p (exec p n) unescapeLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ s'.loc 1 = s₀.loc 1 ∧ r ≠ .brk ∧
       r.retOr [utf8ValidN b (s'.loc 2) (s₀.loc 1)] =
         [unescN b (s₀.loc 0) (s₀.loc 1) (s₀.loc 2)]; ⊤⦄ :=
-  Triple.step_exec (unescapeLoop_spec p b hb hpc hpv hpb hph hp4 hp3 (n + 1) s₀)
+  Triple.step_exec (unescapeLoop_spec p b hb hpc hpv hpb hph hp4 hp3 hpx (n + 1) s₀)
 
-include hpc hpv hpb hph hp4 hp3 hpu in
+include hpc hpv hpb hph hp4 hp3 hpx hpu in
 theorem unescape_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "unescape" [j, e]
@@ -569,12 +597,12 @@ theorem unescape_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j e : W
   | succ n =>
     sym only [lang_grind] =>
       vcgen [exec, step, evalE, evalArgs, setLoc, setLocs,
-        unescapeLoop_step_spec p b hb hpc hpv hpb hph hp4 hp3 n,
+        unescapeLoop_step_spec p b hb hpc hpv hpb hph hp4 hp3 hpx n,
         utf8Valid_spec p b hb hpc hpv n] <;> finish
 
 attribute [local lang_grind] scanStringN
 
-include hpc hpv hpb hph hp4 hp3 hpu hps hpe hpt in
+include hpc hpv hpb hph hp4 hp3 hpx hpu hps hpe hpt in
 theorem scanString_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_string" [i]
@@ -589,7 +617,7 @@ theorem scanString_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : W
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld8,
         L.Examples.strClose_spec p hps b hb64 n,
         L.Scan.Leaves.hasEscape_spec p hpe b hb64 n,
-        unescape_spec p b hb hpc hpv hpb hph hp4 hp3 hpu n,
+        unescape_spec p b hb hpc hpv hpb hph hp4 hp3 hpx hpu n,
         utf8Valid_spec p b hb hpc hpv n] <;> finish
 
 end specs
@@ -601,7 +629,7 @@ namespace L.Scan.Str
 /-- The program, as `#eval`-able code. -/
 def strProg : Prog := [("str_close", L.Examples.strClose), ("has_escape", L.Scan.Leaves.hasEscape),
   ("utf8_char", L.Scan.Utf8.utf8Char), ("utf8_valid", utf8Valid), ("byte_in", byteIn),
-  ("hex_val", hexVal), ("hex4", hex4), ("hex3", hex3), ("unescape", unescape),
+  ("hex_val", hexVal), ("hex4", hex4), ("hex3", hex3), ("u_next", uNext), ("unescape", unescape),
   ("scan_string", scanString)]
 
 /-- `scan_string(0)` on `s` with the L program. -/
