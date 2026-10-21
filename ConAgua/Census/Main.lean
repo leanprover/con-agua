@@ -16,6 +16,17 @@ theorem. Prints tab-separated lines for the Python report:
     E   from  to                                    target `from` calls target `to`
     X   name  module  why                           a reached def that is not a target (verbose)
     L   kind  decl  target  label  module  status   a link (status: ok | sorry | axioms:a,b | n/a)
+    F   name  fingerprint                           a target's fingerprint (16 hex digits)
+
+The FINGERPRINT of a target (`docs/twin-fingerprints.tsv`, DESIGN.md "Twin fingerprints") is a
+hash of the elaborated declarations that make up its code: its own type and value, and the type
+and value of every non-target it walks through (instances, matchers, auxiliaries such as a
+`partial def`'s `_unsafe_rec` body, projections), each with its name; not the targets it calls
+(they have their own). So it is insensitive to comments, doc comments, line moves and binder
+names, and sensitive to everything the compiled twin does, including a structure gaining a field
+(the anonymous constructors and projections in the value change). It is the toolchain's
+`Expr.hash`, so it is stable for one toolchain only: re-record after a toolchain bump, never in
+the same step as a twin bump.
 
 What is reached: the VALUE of a definition (not its type), through definitions only (theorems,
 types and proofs are not walked into), plus `@[implemented_by]` of an opaque (`partial def`).
@@ -83,6 +94,18 @@ def isTypeOrProp (ci : ConstantInfo) : Bool :=
   | .sort _ => true
   | _ => false
 
+/-- The hash of one declaration: name, type and value (for a definition or an opaque). -/
+def declHash (n : Name) (ci : ConstantInfo) : UInt64 :=
+  let v : UInt64 := match ci with
+    | .defnInfo d => hash d.value
+    | .opaqueInfo d => hash d.value
+    | _ => 0
+  mixHash (hash n) (mixHash (hash ci.type) v)
+
+def hex16 (x : UInt64) : String :=
+  let s := String.ofList (Nat.toDigits 16 x.toNat)
+  "".pushn '0' (16 - s.length) ++ s
+
 def depsOf (env : Environment) (n : Name) (ci : ConstantInfo) : Array Name :=
   match ci with
   -- `v.all`: the members of a well-founded mutual block call each other through the block's
@@ -127,6 +150,10 @@ def targets (env : Environment) (root : Name) (verbose : Bool) : IO Unit := do
       | some ci => depsOf env t ci
       | none => #[]
     let mut out : NameSet := {}
+    -- the declarations the fingerprint hashes: `t` and the non-targets walked through from it
+    let mut parts : Array (Name × UInt64) := match env.find? t with
+      | some ci => #[(t, declHash t ci)]
+      | none => #[]
     while h2 : st.size > 0 do
       let n := st.back
       st := st.pop
@@ -137,7 +164,13 @@ def targets (env : Environment) (root : Name) (verbose : Bool) : IO Unit := do
       | some none => out := out.insert n
       | some (some why) =>
         skipped := skipped.insert n why
-        if let some ci := env.find? n then st := st ++ depsOf env n ci
+        if let some ci := env.find? n then
+          st := st ++ depsOf env n ci
+          parts := parts.push (n, declHash n ci)
+    if t != root then
+      let fp := (parts.qsort (fun a b => a.1.toString < b.1.toString)).foldl
+        (fun h (_, x) => mixHash h x) 7
+      IO.println s!"F\t{t}\t{hex16 fp}"
     for o in out do
       if t != root then edges := edges.push (t, o)
       else IO.println s!"R\t{o}"

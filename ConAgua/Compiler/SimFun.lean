@@ -124,7 +124,7 @@ theorem sim_zero (sp : Nat) (Q : MachineState → Prop) :
 end
 
 section
-variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords < maxOff) (p : Prog)
+variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres < maxOff) (p : Prog)
 include hG hTab
 
 theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd = true) (n : Nat)
@@ -133,7 +133,7 @@ theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd 
   have hap1' := hap1
   have hwf := hwfp f fd hlk
   simp only [FunDecl.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
-  obtain ⟨⟨⟨hnp, hbody⟩, hFoff⟩, hres⟩ := hwf
+  obtain ⟨⟨hnp, hbody⟩, hFoff⟩ := hwf
   simp only [maxOff] at hFoff
   have hhi2 := hG.hi_le
   simp only [compileFn, List.append_assoc, List.cons_append, List.nil_append] at hkf
@@ -210,14 +210,13 @@ theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd 
     have htop : top s6 (frameWords fd) = d.regs.rsp.toNat := by simp only [top]; omega
     -- the epilogue, from label `.R`
     have cR := c3.tail.right
-    rw [loadRes_length] at cR
     have hepi : ∀ (r : List Word) (σ2 : St) (d2 : MachineData),
         (invoke p (exec p n) f vs).run σ = .ok (r, { σ2 with loc := σ.loc }) →
-        MemRel G σ2.mem d2.dmem → SPost G (frameWords fd) s6 d2 → ResRel G.tab.nres r d2.regs →
+        MemRel G σ2.mem d2.dmem → SPost G (frameWords fd) s6 d2 → ResOut G r d2 →
         Ev Q d2 (at_ (kf + 1 + 1 + 1 + 1 + 1 + 1 + (copyParams 0 fd.nparams).length +
           (zeroLocals fd.nparams (fd.nlocals - fd.nparams)).length +
           (compileS { tab := G.tab, fn := f, nl := fd.nlocals, brk := lbl f "" "Z" } "" fd.body).length + 1 +
-          G.tab.nres)) := by
+          (loadRes { tab := G.tab, fn := f, nl := fd.nlocals, brk := lbl f "" "Z" } 0 0 G.tab.nres).length)) := by
       intro r σ2 d2 hrun hm2 hS2 hrax
       have hP2 : Pres G d.regs.rsp.toNat d.dmem d2.dmem := hP6.trans (htop ▸ hS2.mem)
       have h2sp : d2.regs.rsp.toNat = d.regs.rsp.toNat - 8 * frameWords fd := by
@@ -243,7 +242,7 @@ theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd 
         · simp; exact hS2.rbp.trans h6bp
         · simp; exact hS2.r15.trans h615
         · simp; have := hS2.r14; rw [h614] at this; exact this
-        · exact (hrax.set64 (r := .rsp) (by simp) _).set64 (r := .rsp) (by simp) _
+        · exact ⟨(hrax.1.set64 (r := .rsp) (by simp) _).set64 (r := .rsp) (by simp) _, hrax.2⟩
     have hrun : ∀ r σ2, (exec p n fd.body).run { σ with loc := Locals.init vs } = .ok (r, σ2) →
         (invoke p (exec p n) f vs).run σ = .ok (r.retVal, { σ2 with loc := σ.loc }) := by
       intro r σ2 h
@@ -257,12 +256,17 @@ theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd 
           (compileS { tab := G.tab, fn := f, nl := fd.nlocals, brk := lbl f "" "Z" } "" fd.body).length)) := by
       intro σ2 d2 hr hI2 hS2
       refine ev_label c3.head ?_
-      refine sim_loadRes _ [] Q G.tab.nres 0 _ d2 c3.tail.left (by omega)
-        (by simp only [maxRes, frameWords] at hres hFoff ⊢; omega)
-        (fun j hj => absurd hj (by simp)) (fun j hj => absurd hj (Nat.not_lt_zero _)) ?_
-      intro R h1 h2 h3 h4 hR
-      refine hepi [] σ2 { d2 with regs := R } ?_ hI2.mem (hS2.trans ⟨h1, h2, h4, by rw [h3]; exact Nat.le_refl _, Pres.refl _ _⟩)
-        fun j hj => hR j (by omega)
+      have hTab' := hTab; simp only [maxOff] at hTab'
+      have hI2hi := hI2.hi
+      simp only [frameWords] at hFoff hI2hi
+      refine sim_loadRes hG _ rfl [] Q (by omega) G.tab.nres 0 _ d2 c3.tail.left (by omega)
+        (by simp; omega) hI2.r15 hI2.lo (by simp; omega)
+        (fun x hx => hI2.mem.res x hx) (fun j hj => absurd hj (by simp)) (fun j hj => absurd hj (Nat.not_lt_zero _))
+        (fun j _ hj => absurd hj (Nat.not_lt_zero _)) ?_
+      intro s3 h1 h2 h3 h4 hO hR hM
+      refine hepi [] σ2 s3 ?_ (hI2.mem.only_res hG hO (fun x a b => Layout.inRes_of a b))
+        (hS2.trans ⟨h1, h2, h4, by rw [h3]; exact Nat.le_refl _, Pres.of_res hO fun x a b => Layout.inRes_of a b⟩)
+        ⟨fun j hj => hR j (by omega), fun j h1 h2 => hM j h1 (by omega)⟩
       rcases hr with hr | hr <;> exact hrun _ _ hr
     refine ev_congr (j := kf + 1 + 1 + 1 + 1 + 1 + 1 + (copyParams 0 fd.nparams).length +
       (zeroLocals fd.nparams (fd.nlocals - fd.nparams)).length) ?_ (by rw [zeroLocals_length])
