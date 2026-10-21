@@ -241,6 +241,11 @@ theorem nextMemberN_tag (b : Array UInt8) (i w : Word) (h0 : (nextMemberN b i w)
 
 grind_pattern [lang_grind] nextMemberN_tag => (nextMemberN b i w).tag
 
+/-- What `next_member` stops at is inside the array. -/
+theorem nextMemberN_pos_lt (b : Array UInt8) (i w : Word) (h : (nextMemberN b i w).tag ≠ 0) :
+    (nextMemberN b i w).pos < UInt64.ofNat b.size := by
+  fun_induction nextMemberN b i w <;> simp_all [Mbr.err]
+
 /-- A key's value starts inside the array or at its end (the precondition of the value
 scanners). -/
 theorem nextMemberN_val_le (b : Array UInt8) (i w : Word) (hb : b.size < 2 ^ 63)
