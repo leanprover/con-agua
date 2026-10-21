@@ -40,7 +40,7 @@ globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.A
   "ConAgua.Arena.Walk", "ConAgua.Arena.WalkRefine", "ConAgua.Arena.WalkBench", "ConAgua.Arena.WalkEmit",
   "ConAgua.Arena.WalkBenchLean",
   "ConAgua.Capstone",
-  "ConAgua.Front.Apply"]
+  "ConAgua.Front.Apply", "ConAgua.Front.StateDR"]
 
 # Vendored from con-leche (rev 103562b) and con-ron (rev 4c9eaf7, proof/ dir).
 # See vendor/README.md for provenance and every patch applied.
