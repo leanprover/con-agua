@@ -1,6 +1,7 @@
 import ConAgua.Arena.Walk
 import ConAgua.Arena.View
 import ConRon.Arena.ExprOps
+import ConAgua.Census.Attr
 
 /-!
 # `bb_go` refines the arena's `bvarBoundGo`
@@ -326,6 +327,7 @@ theorem bbMemoW_correct (n F : Nat) (hF : n ≤ F) (m m' : Mem) (a : AState) (hR
 
 /-- **`bb_memo` refines the arena's `bvarBoundMemo` under `ArenaR`**: if the L walk returns, the
 arena walk at any fuel `F ≥ n` succeeds with the same bound, in a related state. -/
+@[refines ConRon.Arena.bvarBoundMemo]
 theorem bbMemo_refines (p : Prog) (hpf : p.lookup "bm_find" = some (memoFindG bmSch))
     (hps : p.lookup "bm_put" = some (memoPutG bmSch)) (hpc : p.lookup "bm_clear" = some (memoClearG bmSch))
     (hp : p.lookup "bb_go" = some bbGo) (hpn : p.lookup "bb_node" = some bbNode)

@@ -1,6 +1,7 @@
 import ConAgua.Front.Apply
 import ConAgua.Arena.DerRel
 import ConRon.Arena.Frontend.ExportC
+import ConAgua.Census.Attr
 
 /-!
 # The parse state relation `StateDR`, and the refinement of the front functions
@@ -524,6 +525,7 @@ variable (p : Prog) (hL : FrontLookups p) (a₀ : AState) (st : StateD) (n : Nat
 include hL hR hD in
 /-- **`apply_nstr(i, pre, o, l)` refines `parseNameEntryD st i (.str pre s)`** under `ArenaD` and
 `StateDR`, for the string `s` whose bytes the pool slice `(o, l)` holds. -/
+@[refines_part ConRon.Arena.Frontend.parseNameEntryD "str"]
 theorem applyNStr_refines (hp : p.lookup "apply_nstr" = some applyNStr) (i pre o l : Word)
     (hq : SliceOK s₀.mem o l) (s : String)
     (hk : sliceL (s₀.mem.arr64 POOL) o.toNat l.toNat = strWords s) :
@@ -544,6 +546,7 @@ theorem applyNStr_refines (hp : p.lookup "apply_nstr" = some applyNStr) (i pre o
 include hL hR hD in
 /-- **`apply_nnum(i, pre, x)` refines `parseNameEntryD st i (.num pre x)`** under `ArenaD` and
 `StateDR`. -/
+@[refines_part ConRon.Arena.Frontend.parseNameEntryD "num"]
 theorem applyNNum_refines (hp : p.lookup "apply_nnum" = some applyNNum) (i pre x : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "apply_nnum" [i, pre, x]
@@ -561,6 +564,7 @@ include hL hR hD in
 /-- **`apply_level(i, k, a, c)` refines `parseLevelEntryD st i (levelRecW k a c)`** under
 `ArenaD` and `StateDR` (`levelRecW 1 a c = .succ a`, `2`: `.max a c`, `3`: `.imax a c`, `4`:
 `.param a`; on another `k` the L code aborts). -/
+@[refines ConRon.Arena.Frontend.parseLevelEntryD]
 theorem applyLevel_refines (hp : p.lookup "apply_level" = some applyLevel) (i k a c : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "apply_level" [i, k, a, c]
@@ -741,6 +745,7 @@ end init
 /-- **`front_init()` refines `StateD.init`** under `ArenaD`, from a memory whose `NID`/`LID`
 represent the empty tables (`StateDR m StateD.blank`: all zero, e.g. `initMem`,
 `stateDR_initMem`). -/
+@[refines ConRon.Arena.Frontend.StateD.init]
 theorem frontInit_refines (p : Prog) (hL : FrontLookups p)
     (hp : p.lookup "front_init" = some frontInit) (n : Nat) (s₀ : St) (a₀ : AState)
     (hR : ArenaD s₀.mem a₀) (hD : StateDR s₀.mem StateD.blank) :

@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.Store
 meta import ConAgua.L.Semantics
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -220,6 +221,7 @@ def pinternW (m : Mem) (u : Word) : Option (Word × Mem) :=
     some (paramP + pcnt m 0, ppushMem m 0 u (rs₀.tail.tail.headD 0) (pcnt m 0))
   else none
 
+@[l_impl ConRon.Arena.internLNode]
 def internParam : FunDecl := lfn (u) locals (h, fd, i, j, d) {
   h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫;
   (fd, i, j, d) := call param_find(0, u, h);

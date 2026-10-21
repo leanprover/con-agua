@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.Store
 meta import ConAgua.L.Semantics
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -229,6 +230,7 @@ def nninternW (m : Mem) (pre u : Word) : Option (Word × Mem) :=
     some (nnP + nncnt m 0, nnpushMem m 0 pre u (rs₀.tail.tail.headD 0) (nncnt m 0))
   else none
 
+@[l_impl ConRon.Arena.internNNode]
 def internNNum : FunDecl := lfn (pre, u) locals (h, fd, i, j, d) {
   h := ((⟪fnvBasis⟫ ^ pre) * ⟪fnvPrime⟫ ^ u) * ⟪fnvPrime⟫;
   (fd, i, j, d) := call nnum_find(0, pre, u, h);

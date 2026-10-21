@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.Store
 meta import ConAgua.L.Semantics
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -248,6 +249,7 @@ def fainternW (m : Mem) (ty body : Word) : Option (Word × Mem) :=
 /-- The L FunDecl for `intern_forall`. Named `internForallL`, not `internForallE`: con-ron's
 `ConRon.Arena.internForallEE`/`EStore.internForallE` are sibling names in a different namespace,
 but the `L`-suffix keeps the two visually apart in this file, which `open`s `ConRon.Arena`. -/
+@[l_impl ConRon.Arena.internE ConRon.Arena.internForallEE]
 def internForallL : FunDecl := lfn (ty, body) locals (h, sk, fd, i, j, d) {
   h := ((⟪fnvBasis⟫ ^ ty) * ⟪fnvPrime⟫ ^ body) * ⟪fnvPrime⟫;
   sk := 0;

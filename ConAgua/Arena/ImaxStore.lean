@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.Store
 meta import ConAgua.L.Semantics
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -226,6 +227,7 @@ def iminternW (m : Mem) (u v : Word) : Option (Word × Mem) :=
     some (imaxP + imcnt m 0, impushMem m 0 u v (rs₀.tail.tail.headD 0) (imcnt m 0))
   else none
 
+@[l_impl ConRon.Arena.internLNode]
 def internImax : FunDecl := lfn (u, v) locals (h, fd, i, j, d) {
   h := ((⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ ^ v) * ⟪fnvPrime⟫;
   (fd, i, j, d) := call imax_find(0, u, v, h);

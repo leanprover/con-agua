@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.Store
 meta import ConAgua.L.Semantics
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -238,6 +239,7 @@ def fvinternW (m : Mem) (u ty : Word) : Option (Word × Mem) :=
     some (fvarP + fvcnt m 0, fvpushMem m 0 u ty (rs₀.tail.tail.headD 0) (fvcnt m 0))
   else none
 
+@[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internFVar : FunDecl := lfn (u, ty) locals (h, sk, fd, i, j, d) {
   h := ((⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ ^ ty) * ⟪fnvPrime⟫;
   sk := 0;

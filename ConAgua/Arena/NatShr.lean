@@ -3,6 +3,7 @@ module
 public import ConAgua.Arena.NatShl
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.NatAdd
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -145,6 +146,7 @@ def shrLoop : Stmt := lblk (oa, la, ob, lb, top, n, w, b, i, x, y) {
   }
 }
 
+@[l_impl ConRon.Arena.natOpResult]
 def natShr : FunDecl := lfn (oa, la, ob, lb) locals (top, n, w, b, i, x, y) {
   top := CTL.u64[0];
   if lb < 2 {

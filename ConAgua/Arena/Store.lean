@@ -3,6 +3,7 @@ module
 public import ConAgua.L.Notation
 public import ConAgua.Arena.Pool
 meta import ConAgua.L.Semantics
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -474,6 +475,7 @@ def internW (m : Mem) (o l : Word) : Option (Word × Mem) :=
     some (litP + cnt m 0, pushMem m 0 o l h (rs₀.tail.tail.headD 0) (cnt m 0))
   else none
 
+@[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internLit : FunDecl := lfn (o, l) locals (h, f, i, j, d, sc) {
   h := call lit_hash(o, l);
   (f, i, j, d) := call lit_find(0, o, l, h);

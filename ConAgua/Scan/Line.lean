@@ -7,6 +7,7 @@ public import ConAgua.Scan.Values
 public import ConAgua.Scan.Member
 public import ConAgua.Scan.Records
 meta import ConAgua.L.Semantics
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -127,6 +128,7 @@ def lineLoop : Stmt := lblk (i, w, idx, pl, tag, ks, k, v, e, ok, x) {
   }
 }
 
+@[l_impl ConLeche.Frontend.scanLineLoop]
 def scanLineLoop : FunDecl := lfn (i) locals (w, idx, pl, tag, ks, k, v, e, ok, x) {
   w := 1;
   ⟪lineLoop⟫;
@@ -258,6 +260,7 @@ def lineLoopN (b : Array UInt8) (i : Word) : Word := lineN b i 1 0 0
 
 /-! ## `scan_line` -/
 
+@[l_impl ConLeche.Frontend.scanLineFwd]
 def scanLine : FunDecl := lfn (i) locals (s, j, q) {
   s := call skip_ws(i);
   if s < len(IN.u8) && IN.u8[s] == 10 { return (1, s + 1) };

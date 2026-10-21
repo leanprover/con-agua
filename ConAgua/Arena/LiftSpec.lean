@@ -3,6 +3,7 @@ module
 public import ConAgua.Arena.Lift
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.Store
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -131,6 +132,7 @@ theorem lclrK_some (r : Word) (m₁ : Mem) (h0 : rdW (m₁.arr64 CTL) 42 + 2 ≠
 grind_pattern [arena_grind] liftEntryW_eq => liftEntryW n m h k c
 grind_pattern [arena_grind] lclrK_some => lclrK (some (r, m₁))
 
+@[l_impl ConRon.Arena.liftLooseBVarsFast]
 def liftEntry : FunDecl := lfn (h, k, c) locals (r, u) {
   u := call lf_clear();
   r := call lift_go(h, c, k);

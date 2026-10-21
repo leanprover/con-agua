@@ -6,6 +6,7 @@ public import ConAgua.Scan.Common
 public import ConAgua.Scan.Leaves
 public import ConAgua.Scan.Utf8
 meta import ConAgua.L.Semantics
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -296,6 +297,7 @@ def keyAtN (b : Array UInt8) (i kl : Word) : Word :=
   else if c = 97 ∨ c = 98 ∨ c = 109 ∨ c = 102 then keyAtG6N b i kl c
   else 0
 
+@[l_impl ConLeche.Frontend.keyAt]
 def keyAtG1 : FunDecl := lfn (i, kl, c) {
   if c == 105 {  -- 'i'
       if kl == 2 {
@@ -347,6 +349,7 @@ def keyAtG1 : FunDecl := lfn (i, kl, c) {
   return 0
 }
 
+@[l_impl ConLeche.Frontend.keyAt]
 def keyAtG2 : FunDecl := lfn (i, kl, c) {
   if c == 110 {  -- 'n'
       if kl == 4 {
@@ -397,6 +400,7 @@ def keyAtG2 : FunDecl := lfn (i, kl, c) {
   return 0
 }
 
+@[l_impl ConLeche.Frontend.keyAt]
 def keyAtG3 : FunDecl := lfn (i, kl, c) {
   if c == 115 {  -- 's'
       if kl == 3 {
@@ -445,6 +449,7 @@ def keyAtG3 : FunDecl := lfn (i, kl, c) {
   return 0
 }
 
+@[l_impl ConLeche.Frontend.keyAt]
 def keyAtG4 : FunDecl := lfn (i, kl, c) {
   if c == 114 {  -- 'r'
       if kl == 4 {
@@ -492,6 +497,7 @@ def keyAtG4 : FunDecl := lfn (i, kl, c) {
   return 0
 }
 
+@[l_impl ConLeche.Frontend.keyAt]
 def keyAtG5 : FunDecl := lfn (i, kl, c) {
   if c == 112 {  -- 'p'
       if kl == 3 {
@@ -539,6 +545,7 @@ def keyAtG5 : FunDecl := lfn (i, kl, c) {
   return 0
 }
 
+@[l_impl ConLeche.Frontend.keyAt]
 def keyAtG6 : FunDecl := lfn (i, kl, c) {
   if c == 97 {  -- 'a'
       if kl == 3 {
@@ -591,6 +598,7 @@ def keyAtG6 : FunDecl := lfn (i, kl, c) {
 }
 
 /-- `key_at(i, kl)`, split into the six groups above (same reason as `keyAtN`). -/
+@[l_impl ConLeche.Frontend.keyAt]
 def keyAt : FunDecl := lfn (i, kl) locals (c, g) {
   c := IN.u8[i + 1];
   if c == 105 || c == 100 { g := call key_at_g1(i, kl, c); return g };
@@ -610,6 +618,7 @@ def valueAtN (b : Array UInt8) (i ke : Word) : Word :=
   let p := UInt64.ofNat (skipWsN b (ke + 1).toNat)
   if p < UInt64.ofNat b.size ∧ byteW b p = 58 then UInt64.ofNat (skipWsN b (p + 1).toNat) else i
 
+@[l_impl ConLeche.Frontend.valueAt]
 def valueAt : FunDecl := lfn (i, ke) locals (p, v) {
   p := call skip_ws(ke + 1);
   if p < len(IN.u8) && IN.u8[p] == 58 {
@@ -758,6 +767,7 @@ include hp hp1 hp2 hp3 hp4 hp5 hp6 hb
 -- `scan_bool` composes from two `match_lit` calls (`ConAgua.Scan.Lit`). No bounds precondition: an
 -- out-of-bounds read throws, and the exception post is `⊤`.
 attribute [local lang_grind] keyAtN in
+@[refines ConLeche.Frontend.keyAt]
 theorem keyAt_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "key_at" [i, kl]
@@ -780,6 +790,7 @@ variable (p : Prog) (hp1 : p.lookup "skip_ws" = some L.Scan.Leaves.skipWs)
 include hp1 hp2 hb
 
 attribute [local lang_grind] valueAtN in
+@[refines ConLeche.Frontend.valueAt]
 theorem valueAt_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i ke : Word)
     (hke : ke.toNat < b.size) :
     ⦃fun s => s = s₀⦄

@@ -1,6 +1,7 @@
 import ConAgua.Arena.LiftSpec
 import ConAgua.Arena.DerRel
 import ConRon.Arena.ExprOps
+import ConAgua.Census.Attr
 
 /-!
 # `lift_go` refines the arena's `liftLooseBVarsGo`
@@ -471,6 +472,7 @@ theorem liftEntryW_correct (n F : Nat) (hF : n ≤ F) (m m' : Mem) (a : AState) 
 
 /-- **`lift_entry` refines the arena's `liftLooseBVarsFast` under `ArenaD`**: if the L walk
 returns, the arena walk at any fuel `F ≥ n` succeeds with the same handle, in a related state. -/
+@[refines ConRon.Arena.liftLooseBVarsFast]
 theorem liftEntry_refines (p : Prog) (hp : LiftProg p) (he : p.lookup "lift_entry" = some liftEntry)
     (n F : Nat) (hF : n ≤ F) (s₀ : St) (a₀ : AState) (hA : ArenaD s₀.mem a₀) (h k c : Word)
     (hh : h.toNat < 2 ^ 32) :

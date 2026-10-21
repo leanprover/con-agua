@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Scan.WordLink
 public import ConAgua.Scan.Leaves
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -57,6 +58,7 @@ theorem byteAt_eq_getD (i : USize) : byteAt b i = b.data.getD i.toNat 0 := by
 /-! ## `skip_ws` -/
 
 include h64 hsize in
+@[refines ConLeche.Frontend.skipWs]
 theorem skipWs_toNat_eq (i : USize) : (skipWs b i).toNat = skipWsN b.data i.toNat := by
   fun_induction skipWs b i with
   | case1 i h hws ih =>
@@ -83,6 +85,7 @@ theorem skipWs_toUInt64_eq (i : USize) :
 /-! ## `skip_digits` -/
 
 include h64 hsize in
+@[refines ConLeche.Frontend.skipDigits]
 theorem skipDigits_toNat_eq (i : USize) :
     (skipDigits b i).toNat = skipDigitsN b.data i.toNat := by
   fun_induction skipDigits b i with
@@ -110,6 +113,7 @@ theorem skipDigits_toUInt64_eq (i : USize) :
 /-! ## `key_end` -/
 
 include h64 hsize in
+@[refines ConLeche.Frontend.keyEnd]
 theorem keyEnd_toNat_eq (j : USize) : (keyEnd b j).toNat = keyEndN b.data j.toNat := by
   fun_induction keyEnd b j with
   | case1 j h c hc =>
@@ -152,6 +156,7 @@ No loop: a call to `skip_digits` and two comparisons (`L.Scan.Leaves.numEnd_spec
 same way). -/
 
 include h64 hsize in
+@[refines ConLeche.Frontend.numEnd]
 theorem numEnd_toNat_eq (i : USize) :
     (ConLeche.Frontend.numEnd b i).toNat = numEndN b.data i.toNat := by
   unfold ConLeche.Frontend.numEnd numEndN
@@ -195,6 +200,7 @@ Returns `Bool`; linked by `↔` against the model's `= 1`, since every caller te
 rather than comparing it to `1`. -/
 
 include h64 hsize in
+@[refines ConLeche.Frontend.hasEscape]
 theorem hasEscape_iff (j e : USize) :
     hasEscape b j e = true ↔ hasEscapeN b.data j.toNat e.toNat = 1 := by
   fun_induction hasEscape b j e with
@@ -221,6 +227,7 @@ theorem hasEscape_iff (j e : USize) :
 Returns `Bool`; linked the same way as `has_escape`. -/
 
 include h64 hsize in
+@[refines ConLeche.Frontend.newlineFrom]
 theorem newlineFrom_iff (i : USize) :
     newlineFrom b i = true ↔ newlineFromN b.data i.toNat = 1 := by
   fun_induction newlineFrom b i with

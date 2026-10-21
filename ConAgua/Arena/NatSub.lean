@@ -3,6 +3,7 @@ module
 public import ConAgua.Arena.NatCmp
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.NatAdd
+import ConAgua.Census.Attr
 
 @[expose] public section
 
@@ -64,6 +65,7 @@ def subLoop : Stmt := lblk (oa, la, ob, lb, top, n, i, c, x, y) {
   }
 }
 
+@[l_impl ConRon.Arena.natOpResult]
 def natSub : FunDecl := lfn (oa, la, ob, lb) locals (top, n, i, c, x, y) {
   top := CTL.u64[0];
   n := la;
