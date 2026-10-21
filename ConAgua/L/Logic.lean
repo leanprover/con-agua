@@ -52,6 +52,14 @@ attribute [lang_grind =] List.headD_cons List.headD_nil List.tail_cons List.tail
 
 attribute [lang_grind] Mem.len8 Mem.len64
 
+/-- A word store leaves the byte arrays alone. -/
+@[lang_grind =] theorem Mem.arr8_set64_apply (m : Mem) (a : ArrId) (i v : Word) (x : ArrId) :
+    (m.set64 a i v).arr8 x = m.arr8 x := rfl
+
+/-- A byte store leaves the word arrays alone. -/
+@[lang_grind =] theorem Mem.arr64_set8_apply (m : Mem) (a : ArrId) (i v : Word) (x : ArrId) :
+    (m.set8 a i v).arr64 x = m.arr64 x := rfl
+
 /-- Byte reads are compared as words (`c != LITS.c8[k]`); the model compares bytes. -/
 theorem UInt8.toUInt64_eq_iff (a b : UInt8) : (a.toUInt64 = b.toUInt64) = (a = b) := by
   apply propext; constructor
