@@ -309,6 +309,44 @@ slice just written; `pv_set_succ` needs a `pv p o 0` term), stated with `l = 1` 
 because the length is `UInt64.toNat 1`, not the literal; `pow_shr25` (`a ^ (e >> 25) = 1`; the
 equation `(e >> 25).toNat = 0` alone does not reach the power); `shr_of_zero` for the exit.
 
+### `nat_divmod`: restoring shift-subtract, in place
+
+Knuth D needs a 128-by-64 division for its quotient estimate, which L does not have; con-ron
+itself does shift-subtract (`dm_limbs`/`dm_bits`), so `nat_divmod` does too, but in place:
+con-ron allocates a new remainder per bit (`shl1_or`, `sub`), which in an append-only pool would
+leave `64 · la` dead remainders behind. The quotient's `la` limbs and the remainder's `lb + 1`
+limbs are reserved above the top; per bit, `div_step(r, n, ob, lb, bit)` runs three in-place
+passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` with a borrow;
+`div_add`, only on a borrow: `R := R + b`, the restore) and returns the quotient bit. `a / 0 = 0`,
+`a % 0 = a` (the remainder is then `a`'s own slice, trimmed). Results: `(oq, lq, or, lr)`.
+
+* **The in-place frame is `Off p q o n`** (the pools agree off `[o, o + n)`), with `grind`
+  patterns for writing the next limb (`Off.set`), reading past the changed prefix (`Off.get`),
+  slices below the region (`Off.pv_below`), `Off.trans` and `Agree.of_off`. The three passes went
+  through in the house form at the first attempt, as did `div_step` (three calls, an `if`).
+* **The bit loop's body had to be one call.** With the three calls and the `if` inline, the
+  house form exhausted its splits and `nat_mul`'s recipe lost the frames (`and_intros` unfolds
+  `Frame` into components). With `div_step` it is straight-line (the arena lane's finding again).
+* **The bit loop's post is relative to its entry**: (`DBitPost`) `R₀ · 2^j₀ + x + q₀ · 2^j₀ · b = q · b + R +
+  (x / 2^j₀) · 2^j₀`, with no other limb of `a` or of the quotient in it. The first version
+  carried the whole dividend and quotient prefix through the bit loop (degree-3 terms
+  `QU · 2^(64 - j) · b`) and failed; the relative post went through in the house form.
+* **Pointer locals instead of index arithmetic.** The limb loop first read `a[oa + i - 1]` and
+  wrote `q[top + i - 1]`; its invariant's `pv a (oa + i) (la - i)` then meets the read
+  `a[(oa + i - 1).toNat]` only through linear arithmetic, which `grind` turns into case splits
+  (theory combination); `pv_cons` with a free read index had 1759 instances. With locals `pa`,
+  `pq` decremented before the read and the write, the read index and the slice offset are the same
+  term, `pv_cons` (`pv p o k', pv p o' k, p[o]`) binds directly, and the loop went through.
+  `pv_set_cons_off` prepends the written quotient limb to a slice read in the pool *before* the
+  bit loop's in-place passes (pattern includes the `Off` fact), because the slice in the current
+  pool is not a term yet. The exit (`i = la`, so `pa = oa`) is `pv_exit`, keyed on the loop
+  condition `i < la`.
+* **The quotient and the remainder** are `div_of_bounds`/`mod_of_bounds` (`Q · B ≤ A < Q · B + B`,
+  pattern `A / B, Q · B`), in `natcmp_grind`: in `arena_grind` they fired on the bit loop's
+  `x / 2^j` terms and broke it.
+* **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
+  none for the theorem (as `nat_shr`).
+
 ### `sorry`s
 
 None.
@@ -1467,6 +1505,44 @@ slice just written; `pv_set_succ` needs a `pv p o 0` term), stated with `l = 1` 
 because the length is `UInt64.toNat 1`, not the literal; `pow_shr25` (`a ^ (e >> 25) = 1`; the
 equation `(e >> 25).toNat = 0` alone does not reach the power); `shr_of_zero` for the exit.
 
+### `nat_divmod`: restoring shift-subtract, in place
+
+Knuth D needs a 128-by-64 division for its quotient estimate, which L does not have; con-ron
+itself does shift-subtract (`dm_limbs`/`dm_bits`), so `nat_divmod` does too, but in place:
+con-ron allocates a new remainder per bit (`shl1_or`, `sub`), which in an append-only pool would
+leave `64 · la` dead remainders behind. The quotient's `la` limbs and the remainder's `lb + 1`
+limbs are reserved above the top; per bit, `div_step(r, n, ob, lb, bit)` runs three in-place
+passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` with a borrow;
+`div_add`, only on a borrow: `R := R + b`, the restore) and returns the quotient bit. `a / 0 = 0`,
+`a % 0 = a` (the remainder is then `a`'s own slice, trimmed). Results: `(oq, lq, or, lr)`.
+
+* **The in-place frame is `Off p q o n`** (the pools agree off `[o, o + n)`), with `grind`
+  patterns for writing the next limb (`Off.set`), reading past the changed prefix (`Off.get`),
+  slices below the region (`Off.pv_below`), `Off.trans` and `Agree.of_off`. The three passes went
+  through in the house form at the first attempt, as did `div_step` (three calls, an `if`).
+* **The bit loop's body had to be one call.** With the three calls and the `if` inline, the
+  house form exhausted its splits and `nat_mul`'s recipe lost the frames (`and_intros` unfolds
+  `Frame` into components). With `div_step` it is straight-line (the arena lane's finding again).
+* **The bit loop's post is relative to its entry**: (`DBitPost`) `R₀ · 2^j₀ + x + q₀ · 2^j₀ · b = q · b + R +
+  (x / 2^j₀) · 2^j₀`, with no other limb of `a` or of the quotient in it. The first version
+  carried the whole dividend and quotient prefix through the bit loop (degree-3 terms
+  `QU · 2^(64 - j) · b`) and failed; the relative post went through in the house form.
+* **Pointer locals instead of index arithmetic.** The limb loop first read `a[oa + i - 1]` and
+  wrote `q[top + i - 1]`; its invariant's `pv a (oa + i) (la - i)` then meets the read
+  `a[(oa + i - 1).toNat]` only through linear arithmetic, which `grind` turns into case splits
+  (theory combination); `pv_cons` with a free read index had 1759 instances. With locals `pa`,
+  `pq` decremented before the read and the write, the read index and the slice offset are the same
+  term, `pv_cons` (`pv p o k', pv p o' k, p[o]`) binds directly, and the loop went through.
+  `pv_set_cons_off` prepends the written quotient limb to a slice read in the pool *before* the
+  bit loop's in-place passes (pattern includes the `Off` fact), because the slice in the current
+  pool is not a term yet. The exit (`i = la`, so `pa = oa`) is `pv_exit`, keyed on the loop
+  condition `i < la`.
+* **The quotient and the remainder** are `div_of_bounds`/`mod_of_bounds` (`Q · B ≤ A < Q · B + B`,
+  pattern `A / B, Q · B`), in `natcmp_grind`: in `arena_grind` they fired on the bit loop's
+  `x / 2^j` terms and broke it.
+* **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
+  none for the theorem (as `nat_shr`).
+
 ### `sorry`s
 
 None.
@@ -1696,6 +1772,44 @@ slice just written; `pv_set_succ` needs a `pv p o 0` term), stated with `l = 1` 
 because the length is `UInt64.toNat 1`, not the literal; `pow_shr25` (`a ^ (e >> 25) = 1`; the
 equation `(e >> 25).toNat = 0` alone does not reach the power); `shr_of_zero` for the exit.
 
+### `nat_divmod`: restoring shift-subtract, in place
+
+Knuth D needs a 128-by-64 division for its quotient estimate, which L does not have; con-ron
+itself does shift-subtract (`dm_limbs`/`dm_bits`), so `nat_divmod` does too, but in place:
+con-ron allocates a new remainder per bit (`shl1_or`, `sub`), which in an append-only pool would
+leave `64 · la` dead remainders behind. The quotient's `la` limbs and the remainder's `lb + 1`
+limbs are reserved above the top; per bit, `div_step(r, n, ob, lb, bit)` runs three in-place
+passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` with a borrow;
+`div_add`, only on a borrow: `R := R + b`, the restore) and returns the quotient bit. `a / 0 = 0`,
+`a % 0 = a` (the remainder is then `a`'s own slice, trimmed). Results: `(oq, lq, or, lr)`.
+
+* **The in-place frame is `Off p q o n`** (the pools agree off `[o, o + n)`), with `grind`
+  patterns for writing the next limb (`Off.set`), reading past the changed prefix (`Off.get`),
+  slices below the region (`Off.pv_below`), `Off.trans` and `Agree.of_off`. The three passes went
+  through in the house form at the first attempt, as did `div_step` (three calls, an `if`).
+* **The bit loop's body had to be one call.** With the three calls and the `if` inline, the
+  house form exhausted its splits and `nat_mul`'s recipe lost the frames (`and_intros` unfolds
+  `Frame` into components). With `div_step` it is straight-line (the arena lane's finding again).
+* **The bit loop's post is relative to its entry**: (`DBitPost`) `R₀ · 2^j₀ + x + q₀ · 2^j₀ · b = q · b + R +
+  (x / 2^j₀) · 2^j₀`, with no other limb of `a` or of the quotient in it. The first version
+  carried the whole dividend and quotient prefix through the bit loop (degree-3 terms
+  `QU · 2^(64 - j) · b`) and failed; the relative post went through in the house form.
+* **Pointer locals instead of index arithmetic.** The limb loop first read `a[oa + i - 1]` and
+  wrote `q[top + i - 1]`; its invariant's `pv a (oa + i) (la - i)` then meets the read
+  `a[(oa + i - 1).toNat]` only through linear arithmetic, which `grind` turns into case splits
+  (theory combination); `pv_cons` with a free read index had 1759 instances. With locals `pa`,
+  `pq` decremented before the read and the write, the read index and the slice offset are the same
+  term, `pv_cons` (`pv p o k', pv p o' k, p[o]`) binds directly, and the loop went through.
+  `pv_set_cons_off` prepends the written quotient limb to a slice read in the pool *before* the
+  bit loop's in-place passes (pattern includes the `Off` fact), because the slice in the current
+  pool is not a term yet. The exit (`i = la`, so `pa = oa`) is `pv_exit`, keyed on the loop
+  condition `i < la`.
+* **The quotient and the remainder** are `div_of_bounds`/`mod_of_bounds` (`Q · B ≤ A < Q · B + B`,
+  pattern `A / B, Q · B`), in `natcmp_grind`: in `arena_grind` they fired on the bit loop's
+  `x / 2^j` terms and broke it.
+* **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
+  none for the theorem (as `nat_shr`).
+
 ### `sorry`s
 
 None.
@@ -1847,6 +1961,44 @@ slice just written; `pv_set_succ` needs a `pv p o 0` term), stated with `l = 1` 
 because the length is `UInt64.toNat 1`, not the literal; `pow_shr25` (`a ^ (e >> 25) = 1`; the
 equation `(e >> 25).toNat = 0` alone does not reach the power); `shr_of_zero` for the exit.
 
+### `nat_divmod`: restoring shift-subtract, in place
+
+Knuth D needs a 128-by-64 division for its quotient estimate, which L does not have; con-ron
+itself does shift-subtract (`dm_limbs`/`dm_bits`), so `nat_divmod` does too, but in place:
+con-ron allocates a new remainder per bit (`shl1_or`, `sub`), which in an append-only pool would
+leave `64 · la` dead remainders behind. The quotient's `la` limbs and the remainder's `lb + 1`
+limbs are reserved above the top; per bit, `div_step(r, n, ob, lb, bit)` runs three in-place
+passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` with a borrow;
+`div_add`, only on a borrow: `R := R + b`, the restore) and returns the quotient bit. `a / 0 = 0`,
+`a % 0 = a` (the remainder is then `a`'s own slice, trimmed). Results: `(oq, lq, or, lr)`.
+
+* **The in-place frame is `Off p q o n`** (the pools agree off `[o, o + n)`), with `grind`
+  patterns for writing the next limb (`Off.set`), reading past the changed prefix (`Off.get`),
+  slices below the region (`Off.pv_below`), `Off.trans` and `Agree.of_off`. The three passes went
+  through in the house form at the first attempt, as did `div_step` (three calls, an `if`).
+* **The bit loop's body had to be one call.** With the three calls and the `if` inline, the
+  house form exhausted its splits and `nat_mul`'s recipe lost the frames (`and_intros` unfolds
+  `Frame` into components). With `div_step` it is straight-line (the arena lane's finding again).
+* **The bit loop's post is relative to its entry**: (`DBitPost`) `R₀ · 2^j₀ + x + q₀ · 2^j₀ · b = q · b + R +
+  (x / 2^j₀) · 2^j₀`, with no other limb of `a` or of the quotient in it. The first version
+  carried the whole dividend and quotient prefix through the bit loop (degree-3 terms
+  `QU · 2^(64 - j) · b`) and failed; the relative post went through in the house form.
+* **Pointer locals instead of index arithmetic.** The limb loop first read `a[oa + i - 1]` and
+  wrote `q[top + i - 1]`; its invariant's `pv a (oa + i) (la - i)` then meets the read
+  `a[(oa + i - 1).toNat]` only through linear arithmetic, which `grind` turns into case splits
+  (theory combination); `pv_cons` with a free read index had 1759 instances. With locals `pa`,
+  `pq` decremented before the read and the write, the read index and the slice offset are the same
+  term, `pv_cons` (`pv p o k', pv p o' k, p[o]`) binds directly, and the loop went through.
+  `pv_set_cons_off` prepends the written quotient limb to a slice read in the pool *before* the
+  bit loop's in-place passes (pattern includes the `Off` fact), because the slice in the current
+  pool is not a term yet. The exit (`i = la`, so `pa = oa`) is `pv_exit`, keyed on the loop
+  condition `i < la`.
+* **The quotient and the remainder** are `div_of_bounds`/`mod_of_bounds` (`Q · B ≤ A < Q · B + B`,
+  pattern `A / B, Q · B`), in `natcmp_grind`: in `arena_grind` they fired on the bit loop's
+  `x / 2^j` terms and broke it.
+* **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
+  none for the theorem (as `nat_shr`).
+
 ### `sorry`s
 
 None.
@@ -1971,6 +2123,44 @@ slice just written; `pv_set_succ` needs a `pv p o 0` term), stated with `l = 1` 
 because the length is `UInt64.toNat 1`, not the literal; `pow_shr25` (`a ^ (e >> 25) = 1`; the
 equation `(e >> 25).toNat = 0` alone does not reach the power); `shr_of_zero` for the exit.
 
+### `nat_divmod`: restoring shift-subtract, in place
+
+Knuth D needs a 128-by-64 division for its quotient estimate, which L does not have; con-ron
+itself does shift-subtract (`dm_limbs`/`dm_bits`), so `nat_divmod` does too, but in place:
+con-ron allocates a new remainder per bit (`shl1_or`, `sub`), which in an append-only pool would
+leave `64 · la` dead remainders behind. The quotient's `la` limbs and the remainder's `lb + 1`
+limbs are reserved above the top; per bit, `div_step(r, n, ob, lb, bit)` runs three in-place
+passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` with a borrow;
+`div_add`, only on a borrow: `R := R + b`, the restore) and returns the quotient bit. `a / 0 = 0`,
+`a % 0 = a` (the remainder is then `a`'s own slice, trimmed). Results: `(oq, lq, or, lr)`.
+
+* **The in-place frame is `Off p q o n`** (the pools agree off `[o, o + n)`), with `grind`
+  patterns for writing the next limb (`Off.set`), reading past the changed prefix (`Off.get`),
+  slices below the region (`Off.pv_below`), `Off.trans` and `Agree.of_off`. The three passes went
+  through in the house form at the first attempt, as did `div_step` (three calls, an `if`).
+* **The bit loop's body had to be one call.** With the three calls and the `if` inline, the
+  house form exhausted its splits and `nat_mul`'s recipe lost the frames (`and_intros` unfolds
+  `Frame` into components). With `div_step` it is straight-line (the arena lane's finding again).
+* **The bit loop's post is relative to its entry**: (`DBitPost`) `R₀ · 2^j₀ + x + q₀ · 2^j₀ · b = q · b + R +
+  (x / 2^j₀) · 2^j₀`, with no other limb of `a` or of the quotient in it. The first version
+  carried the whole dividend and quotient prefix through the bit loop (degree-3 terms
+  `QU · 2^(64 - j) · b`) and failed; the relative post went through in the house form.
+* **Pointer locals instead of index arithmetic.** The limb loop first read `a[oa + i - 1]` and
+  wrote `q[top + i - 1]`; its invariant's `pv a (oa + i) (la - i)` then meets the read
+  `a[(oa + i - 1).toNat]` only through linear arithmetic, which `grind` turns into case splits
+  (theory combination); `pv_cons` with a free read index had 1759 instances. With locals `pa`,
+  `pq` decremented before the read and the write, the read index and the slice offset are the same
+  term, `pv_cons` (`pv p o k', pv p o' k, p[o]`) binds directly, and the loop went through.
+  `pv_set_cons_off` prepends the written quotient limb to a slice read in the pool *before* the
+  bit loop's in-place passes (pattern includes the `Off` fact), because the slice in the current
+  pool is not a term yet. The exit (`i = la`, so `pa = oa`) is `pv_exit`, keyed on the loop
+  condition `i < la`.
+* **The quotient and the remainder** are `div_of_bounds`/`mod_of_bounds` (`Q · B ≤ A < Q · B + B`,
+  pattern `A / B, Q · B`), in `natcmp_grind`: in `arena_grind` they fired on the bit loop's
+  `x / 2^j` terms and broke it.
+* **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
+  none for the theorem (as `nat_shr`).
+
 ### `sorry`s
 
 None.
@@ -2077,6 +2267,44 @@ Three small `grind` facts were needed for the entry, each found from the failing
 slice just written; `pv_set_succ` needs a `pv p o 0` term), stated with `l = 1` as a hypothesis
 because the length is `UInt64.toNat 1`, not the literal; `pow_shr25` (`a ^ (e >> 25) = 1`; the
 equation `(e >> 25).toNat = 0` alone does not reach the power); `shr_of_zero` for the exit.
+
+### `nat_divmod`: restoring shift-subtract, in place
+
+Knuth D needs a 128-by-64 division for its quotient estimate, which L does not have; con-ron
+itself does shift-subtract (`dm_limbs`/`dm_bits`), so `nat_divmod` does too, but in place:
+con-ron allocates a new remainder per bit (`shl1_or`, `sub`), which in an append-only pool would
+leave `64 · la` dead remainders behind. The quotient's `la` limbs and the remainder's `lb + 1`
+limbs are reserved above the top; per bit, `div_step(r, n, ob, lb, bit)` runs three in-place
+passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` with a borrow;
+`div_add`, only on a borrow: `R := R + b`, the restore) and returns the quotient bit. `a / 0 = 0`,
+`a % 0 = a` (the remainder is then `a`'s own slice, trimmed). Results: `(oq, lq, or, lr)`.
+
+* **The in-place frame is `Off p q o n`** (the pools agree off `[o, o + n)`), with `grind`
+  patterns for writing the next limb (`Off.set`), reading past the changed prefix (`Off.get`),
+  slices below the region (`Off.pv_below`), `Off.trans` and `Agree.of_off`. The three passes went
+  through in the house form at the first attempt, as did `div_step` (three calls, an `if`).
+* **The bit loop's body had to be one call.** With the three calls and the `if` inline, the
+  house form exhausted its splits and `nat_mul`'s recipe lost the frames (`and_intros` unfolds
+  `Frame` into components). With `div_step` it is straight-line (the arena lane's finding again).
+* **The bit loop's post is relative to its entry**: (`DBitPost`) `R₀ · 2^j₀ + x + q₀ · 2^j₀ · b = q · b + R +
+  (x / 2^j₀) · 2^j₀`, with no other limb of `a` or of the quotient in it. The first version
+  carried the whole dividend and quotient prefix through the bit loop (degree-3 terms
+  `QU · 2^(64 - j) · b`) and failed; the relative post went through in the house form.
+* **Pointer locals instead of index arithmetic.** The limb loop first read `a[oa + i - 1]` and
+  wrote `q[top + i - 1]`; its invariant's `pv a (oa + i) (la - i)` then meets the read
+  `a[(oa + i - 1).toNat]` only through linear arithmetic, which `grind` turns into case splits
+  (theory combination); `pv_cons` with a free read index had 1759 instances. With locals `pa`,
+  `pq` decremented before the read and the write, the read index and the slice offset are the same
+  term, `pv_cons` (`pv p o k', pv p o' k, p[o]`) binds directly, and the loop went through.
+  `pv_set_cons_off` prepends the written quotient limb to a slice read in the pool *before* the
+  bit loop's in-place passes (pattern includes the `Off` fact), because the slice in the current
+  pool is not a term yet. The exit (`i = la`, so `pa = oa`) is `pv_exit`, keyed on the loop
+  condition `i < la`.
+* **The quotient and the remainder** are `div_of_bounds`/`mod_of_bounds` (`Q · B ≤ A < Q · B + B`,
+  pattern `A / B, Q · B`), in `natcmp_grind`: in `arena_grind` they fired on the bit loop's
+  `x / 2^j` terms and broke it.
+* **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
+  none for the theorem (as `nat_shr`).
 
 ### `sorry`s
 
@@ -2584,6 +2812,44 @@ slice just written; `pv_set_succ` needs a `pv p o 0` term), stated with `l = 1` 
 because the length is `UInt64.toNat 1`, not the literal; `pow_shr25` (`a ^ (e >> 25) = 1`; the
 equation `(e >> 25).toNat = 0` alone does not reach the power); `shr_of_zero` for the exit.
 
+### `nat_divmod`: restoring shift-subtract, in place
+
+Knuth D needs a 128-by-64 division for its quotient estimate, which L does not have; con-ron
+itself does shift-subtract (`dm_limbs`/`dm_bits`), so `nat_divmod` does too, but in place:
+con-ron allocates a new remainder per bit (`shl1_or`, `sub`), which in an append-only pool would
+leave `64 · la` dead remainders behind. The quotient's `la` limbs and the remainder's `lb + 1`
+limbs are reserved above the top; per bit, `div_step(r, n, ob, lb, bit)` runs three in-place
+passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` with a borrow;
+`div_add`, only on a borrow: `R := R + b`, the restore) and returns the quotient bit. `a / 0 = 0`,
+`a % 0 = a` (the remainder is then `a`'s own slice, trimmed). Results: `(oq, lq, or, lr)`.
+
+* **The in-place frame is `Off p q o n`** (the pools agree off `[o, o + n)`), with `grind`
+  patterns for writing the next limb (`Off.set`), reading past the changed prefix (`Off.get`),
+  slices below the region (`Off.pv_below`), `Off.trans` and `Agree.of_off`. The three passes went
+  through in the house form at the first attempt, as did `div_step` (three calls, an `if`).
+* **The bit loop's body had to be one call.** With the three calls and the `if` inline, the
+  house form exhausted its splits and `nat_mul`'s recipe lost the frames (`and_intros` unfolds
+  `Frame` into components). With `div_step` it is straight-line (the arena lane's finding again).
+* **The bit loop's post is relative to its entry**: (`DBitPost`) `R₀ · 2^j₀ + x + q₀ · 2^j₀ · b = q · b + R +
+  (x / 2^j₀) · 2^j₀`, with no other limb of `a` or of the quotient in it. The first version
+  carried the whole dividend and quotient prefix through the bit loop (degree-3 terms
+  `QU · 2^(64 - j) · b`) and failed; the relative post went through in the house form.
+* **Pointer locals instead of index arithmetic.** The limb loop first read `a[oa + i - 1]` and
+  wrote `q[top + i - 1]`; its invariant's `pv a (oa + i) (la - i)` then meets the read
+  `a[(oa + i - 1).toNat]` only through linear arithmetic, which `grind` turns into case splits
+  (theory combination); `pv_cons` with a free read index had 1759 instances. With locals `pa`,
+  `pq` decremented before the read and the write, the read index and the slice offset are the same
+  term, `pv_cons` (`pv p o k', pv p o' k, p[o]`) binds directly, and the loop went through.
+  `pv_set_cons_off` prepends the written quotient limb to a slice read in the pool *before* the
+  bit loop's in-place passes (pattern includes the `Off` fact), because the slice in the current
+  pool is not a term yet. The exit (`i = la`, so `pa = oa`) is `pv_exit`, keyed on the loop
+  condition `i < la`.
+* **The quotient and the remainder** are `div_of_bounds`/`mod_of_bounds` (`Q · B ≤ A < Q · B + B`,
+  pattern `A / B, Q · B`), in `natcmp_grind`: in `arena_grind` they fired on the bit loop's
+  `x / 2^j` terms and broke it.
+* **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
+  none for the theorem (as `nat_shr`).
+
 ### `sorry`s
 
 None.
@@ -2798,6 +3064,44 @@ slice just written; `pv_set_succ` needs a `pv p o 0` term), stated with `l = 1` 
 because the length is `UInt64.toNat 1`, not the literal; `pow_shr25` (`a ^ (e >> 25) = 1`; the
 equation `(e >> 25).toNat = 0` alone does not reach the power); `shr_of_zero` for the exit.
 
+### `nat_divmod`: restoring shift-subtract, in place
+
+Knuth D needs a 128-by-64 division for its quotient estimate, which L does not have; con-ron
+itself does shift-subtract (`dm_limbs`/`dm_bits`), so `nat_divmod` does too, but in place:
+con-ron allocates a new remainder per bit (`shl1_or`, `sub`), which in an append-only pool would
+leave `64 · la` dead remainders behind. The quotient's `la` limbs and the remainder's `lb + 1`
+limbs are reserved above the top; per bit, `div_step(r, n, ob, lb, bit)` runs three in-place
+passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` with a borrow;
+`div_add`, only on a borrow: `R := R + b`, the restore) and returns the quotient bit. `a / 0 = 0`,
+`a % 0 = a` (the remainder is then `a`'s own slice, trimmed). Results: `(oq, lq, or, lr)`.
+
+* **The in-place frame is `Off p q o n`** (the pools agree off `[o, o + n)`), with `grind`
+  patterns for writing the next limb (`Off.set`), reading past the changed prefix (`Off.get`),
+  slices below the region (`Off.pv_below`), `Off.trans` and `Agree.of_off`. The three passes went
+  through in the house form at the first attempt, as did `div_step` (three calls, an `if`).
+* **The bit loop's body had to be one call.** With the three calls and the `if` inline, the
+  house form exhausted its splits and `nat_mul`'s recipe lost the frames (`and_intros` unfolds
+  `Frame` into components). With `div_step` it is straight-line (the arena lane's finding again).
+* **The bit loop's post is relative to its entry**: (`DBitPost`) `R₀ · 2^j₀ + x + q₀ · 2^j₀ · b = q · b + R +
+  (x / 2^j₀) · 2^j₀`, with no other limb of `a` or of the quotient in it. The first version
+  carried the whole dividend and quotient prefix through the bit loop (degree-3 terms
+  `QU · 2^(64 - j) · b`) and failed; the relative post went through in the house form.
+* **Pointer locals instead of index arithmetic.** The limb loop first read `a[oa + i - 1]` and
+  wrote `q[top + i - 1]`; its invariant's `pv a (oa + i) (la - i)` then meets the read
+  `a[(oa + i - 1).toNat]` only through linear arithmetic, which `grind` turns into case splits
+  (theory combination); `pv_cons` with a free read index had 1759 instances. With locals `pa`,
+  `pq` decremented before the read and the write, the read index and the slice offset are the same
+  term, `pv_cons` (`pv p o k', pv p o' k, p[o]`) binds directly, and the loop went through.
+  `pv_set_cons_off` prepends the written quotient limb to a slice read in the pool *before* the
+  bit loop's in-place passes (pattern includes the `Off` fact), because the slice in the current
+  pool is not a term yet. The exit (`i = la`, so `pa = oa`) is `pv_exit`, keyed on the loop
+  condition `i < la`.
+* **The quotient and the remainder** are `div_of_bounds`/`mod_of_bounds` (`Q · B ≤ A < Q · B + B`,
+  pattern `A / B, Q · B`), in `natcmp_grind`: in `arena_grind` they fired on the bit loop's
+  `x / 2^j` terms and broke it.
+* **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
+  none for the theorem (as `nat_shr`).
+
 ### `sorry`s
 
 None.
@@ -2839,6 +3143,7 @@ for the L-side spec itself.
 | `nat_shl` (`a <<< b`, `b` a slice; lane `nat2`) | 80 (`shift_left_nat`, `shift_left`, `shl_onto`, `shl_bits_from`, `push_zeros`, `push_zeros_nat`, `low_limb`) | 33 | 192 | 42 s | zero loop house form; shift loop and function `nat_mul`'s recipe (`simp` the frame, `grind (splits := 40)` per conjunct); word lemmas by hand |
 | `nat_shr` (`a >>> b`, `b` a normalised slice; lane `nat2`) | 52 (`shift_right_nat`, `shift_right`, `shr_from`, `shr_bits_from`, `skip_index`) | 31 | 186 | 94 s | loop house form; function `nat_mul`'s recipe, 200k heartbeats per goal; word and division lemmas by hand |
 | `nat_pow` (word exponent `< 2^25`; lane `nat2`) | 20 (`pow`, `one`) | 23 | 146 | 5.8 s | house form; `Grows.trans`, the exponent-bit and frame lemmas by hand |
+| `nat_divmod` (`a / b`, `a % b`, `b` normalised; lane `nat2`) | 84 (`div_mod`, `div`, `modulo`, `dm_limbs`, `dm_bits`, `rev_copy_from`, `shl1_or`, `shl1_from`) | 94 | ~600 | 47 s (21 s wall) | four passes and three loops house form; function `nat_mul`'s recipe; the arithmetic lemmas by hand |
 
 Whole file 307 lines. `lake build ConAgua` (full project) still green, 403 ms incremental.
 
@@ -3146,6 +3451,44 @@ slice just written; `pv_set_succ` needs a `pv p o 0` term), stated with `l = 1` 
 because the length is `UInt64.toNat 1`, not the literal; `pow_shr25` (`a ^ (e >> 25) = 1`; the
 equation `(e >> 25).toNat = 0` alone does not reach the power); `shr_of_zero` for the exit.
 
+### `nat_divmod`: restoring shift-subtract, in place
+
+Knuth D needs a 128-by-64 division for its quotient estimate, which L does not have; con-ron
+itself does shift-subtract (`dm_limbs`/`dm_bits`), so `nat_divmod` does too, but in place:
+con-ron allocates a new remainder per bit (`shl1_or`, `sub`), which in an append-only pool would
+leave `64 · la` dead remainders behind. The quotient's `la` limbs and the remainder's `lb + 1`
+limbs are reserved above the top; per bit, `div_step(r, n, ob, lb, bit)` runs three in-place
+passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` with a borrow;
+`div_add`, only on a borrow: `R := R + b`, the restore) and returns the quotient bit. `a / 0 = 0`,
+`a % 0 = a` (the remainder is then `a`'s own slice, trimmed). Results: `(oq, lq, or, lr)`.
+
+* **The in-place frame is `Off p q o n`** (the pools agree off `[o, o + n)`), with `grind`
+  patterns for writing the next limb (`Off.set`), reading past the changed prefix (`Off.get`),
+  slices below the region (`Off.pv_below`), `Off.trans` and `Agree.of_off`. The three passes went
+  through in the house form at the first attempt, as did `div_step` (three calls, an `if`).
+* **The bit loop's body had to be one call.** With the three calls and the `if` inline, the
+  house form exhausted its splits and `nat_mul`'s recipe lost the frames (`and_intros` unfolds
+  `Frame` into components). With `div_step` it is straight-line (the arena lane's finding again).
+* **The bit loop's post is relative to its entry**: (`DBitPost`) `R₀ · 2^j₀ + x + q₀ · 2^j₀ · b = q · b + R +
+  (x / 2^j₀) · 2^j₀`, with no other limb of `a` or of the quotient in it. The first version
+  carried the whole dividend and quotient prefix through the bit loop (degree-3 terms
+  `QU · 2^(64 - j) · b`) and failed; the relative post went through in the house form.
+* **Pointer locals instead of index arithmetic.** The limb loop first read `a[oa + i - 1]` and
+  wrote `q[top + i - 1]`; its invariant's `pv a (oa + i) (la - i)` then meets the read
+  `a[(oa + i - 1).toNat]` only through linear arithmetic, which `grind` turns into case splits
+  (theory combination); `pv_cons` with a free read index had 1759 instances. With locals `pa`,
+  `pq` decremented before the read and the write, the read index and the slice offset are the same
+  term, `pv_cons` (`pv p o k', pv p o' k, p[o]`) binds directly, and the loop went through.
+  `pv_set_cons_off` prepends the written quotient limb to a slice read in the pool *before* the
+  bit loop's in-place passes (pattern includes the `Off` fact), because the slice in the current
+  pool is not a term yet. The exit (`i = la`, so `pa = oa`) is `pv_exit`, keyed on the loop
+  condition `i < la`.
+* **The quotient and the remainder** are `div_of_bounds`/`mod_of_bounds` (`Q · B ≤ A < Q · B + B`,
+  pattern `A / B, Q · B`), in `natcmp_grind`: in `arena_grind` they fired on the bit loop's
+  `x / 2^j` terms and broke it.
+* **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
+  none for the theorem (as `nat_shr`).
+
 ### `sorry`s
 
 None.
@@ -3324,13 +3667,51 @@ slice just written; `pv_set_succ` needs a `pv p o 0` term), stated with `l = 1` 
 because the length is `UInt64.toNat 1`, not the literal; `pow_shr25` (`a ^ (e >> 25) = 1`; the
 equation `(e >> 25).toNat = 0` alone does not reach the power); `shr_of_zero` for the exit.
 
+### `nat_divmod`: restoring shift-subtract, in place
+
+Knuth D needs a 128-by-64 division for its quotient estimate, which L does not have; con-ron
+itself does shift-subtract (`dm_limbs`/`dm_bits`), so `nat_divmod` does too, but in place:
+con-ron allocates a new remainder per bit (`shl1_or`, `sub`), which in an append-only pool would
+leave `64 · la` dead remainders behind. The quotient's `la` limbs and the remainder's `lb + 1`
+limbs are reserved above the top; per bit, `div_step(r, n, ob, lb, bit)` runs three in-place
+passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` with a borrow;
+`div_add`, only on a borrow: `R := R + b`, the restore) and returns the quotient bit. `a / 0 = 0`,
+`a % 0 = a` (the remainder is then `a`'s own slice, trimmed). Results: `(oq, lq, or, lr)`.
+
+* **The in-place frame is `Off p q o n`** (the pools agree off `[o, o + n)`), with `grind`
+  patterns for writing the next limb (`Off.set`), reading past the changed prefix (`Off.get`),
+  slices below the region (`Off.pv_below`), `Off.trans` and `Agree.of_off`. The three passes went
+  through in the house form at the first attempt, as did `div_step` (three calls, an `if`).
+* **The bit loop's body had to be one call.** With the three calls and the `if` inline, the
+  house form exhausted its splits and `nat_mul`'s recipe lost the frames (`and_intros` unfolds
+  `Frame` into components). With `div_step` it is straight-line (the arena lane's finding again).
+* **The bit loop's post is relative to its entry**: (`DBitPost`) `R₀ · 2^j₀ + x + q₀ · 2^j₀ · b = q · b + R +
+  (x / 2^j₀) · 2^j₀`, with no other limb of `a` or of the quotient in it. The first version
+  carried the whole dividend and quotient prefix through the bit loop (degree-3 terms
+  `QU · 2^(64 - j) · b`) and failed; the relative post went through in the house form.
+* **Pointer locals instead of index arithmetic.** The limb loop first read `a[oa + i - 1]` and
+  wrote `q[top + i - 1]`; its invariant's `pv a (oa + i) (la - i)` then meets the read
+  `a[(oa + i - 1).toNat]` only through linear arithmetic, which `grind` turns into case splits
+  (theory combination); `pv_cons` with a free read index had 1759 instances. With locals `pa`,
+  `pq` decremented before the read and the write, the read index and the slice offset are the same
+  term, `pv_cons` (`pv p o k', pv p o' k, p[o]`) binds directly, and the loop went through.
+  `pv_set_cons_off` prepends the written quotient limb to a slice read in the pool *before* the
+  bit loop's in-place passes (pattern includes the `Off` fact), because the slice in the current
+  pool is not a term yet. The exit (`i = la`, so `pa = oa`) is `pv_exit`, keyed on the loop
+  condition `i < la`.
+* **The quotient and the remainder** are `div_of_bounds`/`mod_of_bounds` (`Q · B ≤ A < Q · B + B`,
+  pattern `A / B, Q · B`), in `natcmp_grind`: in `arena_grind` they fired on the bit loop's
+  `x / 2^j` terms and broke it.
+* **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
+  none for the theorem (as `nat_shr`).
+
 ### `sorry`s
 
 None.
 
 ## Limb-pool `Nat` ops, round 2: compare, sub, shifts, pow, div/mod, the arms (2026-10-21, lane `nat2`)
 
-Files: `ConAgua/Arena/NatGrindAttr.lean`, `NatCmp.lean`, `NatSub.lean`, `NatShl.lean`, `NatShr.lean`, `NatPow.lean`, … Per-op numbers are in the lane `nat`
+Files: `ConAgua/Arena/NatGrindAttr.lean`, `NatCmp.lean`, `NatSub.lean`, `NatShl.lean`, `NatShr.lean`, `NatPow.lean`, `NatDiv.lean`, … Per-op numbers are in the lane `nat`
 table above (`lean` user time of the file, one run).
 
 ### `nat_cmp`: a non-recursive model
@@ -3431,6 +3812,44 @@ Three small `grind` facts were needed for the entry, each found from the failing
 slice just written; `pv_set_succ` needs a `pv p o 0` term), stated with `l = 1` as a hypothesis
 because the length is `UInt64.toNat 1`, not the literal; `pow_shr25` (`a ^ (e >> 25) = 1`; the
 equation `(e >> 25).toNat = 0` alone does not reach the power); `shr_of_zero` for the exit.
+
+### `nat_divmod`: restoring shift-subtract, in place
+
+Knuth D needs a 128-by-64 division for its quotient estimate, which L does not have; con-ron
+itself does shift-subtract (`dm_limbs`/`dm_bits`), so `nat_divmod` does too, but in place:
+con-ron allocates a new remainder per bit (`shl1_or`, `sub`), which in an append-only pool would
+leave `64 · la` dead remainders behind. The quotient's `la` limbs and the remainder's `lb + 1`
+limbs are reserved above the top; per bit, `div_step(r, n, ob, lb, bit)` runs three in-place
+passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` with a borrow;
+`div_add`, only on a borrow: `R := R + b`, the restore) and returns the quotient bit. `a / 0 = 0`,
+`a % 0 = a` (the remainder is then `a`'s own slice, trimmed). Results: `(oq, lq, or, lr)`.
+
+* **The in-place frame is `Off p q o n`** (the pools agree off `[o, o + n)`), with `grind`
+  patterns for writing the next limb (`Off.set`), reading past the changed prefix (`Off.get`),
+  slices below the region (`Off.pv_below`), `Off.trans` and `Agree.of_off`. The three passes went
+  through in the house form at the first attempt, as did `div_step` (three calls, an `if`).
+* **The bit loop's body had to be one call.** With the three calls and the `if` inline, the
+  house form exhausted its splits and `nat_mul`'s recipe lost the frames (`and_intros` unfolds
+  `Frame` into components). With `div_step` it is straight-line (the arena lane's finding again).
+* **The bit loop's post is relative to its entry**: (`DBitPost`) `R₀ · 2^j₀ + x + q₀ · 2^j₀ · b = q · b + R +
+  (x / 2^j₀) · 2^j₀`, with no other limb of `a` or of the quotient in it. The first version
+  carried the whole dividend and quotient prefix through the bit loop (degree-3 terms
+  `QU · 2^(64 - j) · b`) and failed; the relative post went through in the house form.
+* **Pointer locals instead of index arithmetic.** The limb loop first read `a[oa + i - 1]` and
+  wrote `q[top + i - 1]`; its invariant's `pv a (oa + i) (la - i)` then meets the read
+  `a[(oa + i - 1).toNat]` only through linear arithmetic, which `grind` turns into case splits
+  (theory combination); `pv_cons` with a free read index had 1759 instances. With locals `pa`,
+  `pq` decremented before the read and the write, the read index and the slice offset are the same
+  term, `pv_cons` (`pv p o k', pv p o' k, p[o]`) binds directly, and the loop went through.
+  `pv_set_cons_off` prepends the written quotient limb to a slice read in the pool *before* the
+  bit loop's in-place passes (pattern includes the `Off` fact), because the slice in the current
+  pool is not a term yet. The exit (`i = la`, so `pa = oa`) is `pv_exit`, keyed on the loop
+  condition `i < la`.
+* **The quotient and the remainder** are `div_of_bounds`/`mod_of_bounds` (`Q · B ≤ A < Q · B + B`,
+  pattern `A / B, Q · B`), in `natcmp_grind`: in `arena_grind` they fired on the bit loop's
+  `x / 2^j` terms and broke it.
+* **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
+  none for the theorem (as `nat_shr`).
 
 ### `sorry`s
 
@@ -3550,6 +3969,44 @@ Three small `grind` facts were needed for the entry, each found from the failing
 slice just written; `pv_set_succ` needs a `pv p o 0` term), stated with `l = 1` as a hypothesis
 because the length is `UInt64.toNat 1`, not the literal; `pow_shr25` (`a ^ (e >> 25) = 1`; the
 equation `(e >> 25).toNat = 0` alone does not reach the power); `shr_of_zero` for the exit.
+
+### `nat_divmod`: restoring shift-subtract, in place
+
+Knuth D needs a 128-by-64 division for its quotient estimate, which L does not have; con-ron
+itself does shift-subtract (`dm_limbs`/`dm_bits`), so `nat_divmod` does too, but in place:
+con-ron allocates a new remainder per bit (`shl1_or`, `sub`), which in an append-only pool would
+leave `64 · la` dead remainders behind. The quotient's `la` limbs and the remainder's `lb + 1`
+limbs are reserved above the top; per bit, `div_step(r, n, ob, lb, bit)` runs three in-place
+passes over the remainder (`div_shl1`: `R := 2R + bit`; `div_sub`: `R := R - b` with a borrow;
+`div_add`, only on a borrow: `R := R + b`, the restore) and returns the quotient bit. `a / 0 = 0`,
+`a % 0 = a` (the remainder is then `a`'s own slice, trimmed). Results: `(oq, lq, or, lr)`.
+
+* **The in-place frame is `Off p q o n`** (the pools agree off `[o, o + n)`), with `grind`
+  patterns for writing the next limb (`Off.set`), reading past the changed prefix (`Off.get`),
+  slices below the region (`Off.pv_below`), `Off.trans` and `Agree.of_off`. The three passes went
+  through in the house form at the first attempt, as did `div_step` (three calls, an `if`).
+* **The bit loop's body had to be one call.** With the three calls and the `if` inline, the
+  house form exhausted its splits and `nat_mul`'s recipe lost the frames (`and_intros` unfolds
+  `Frame` into components). With `div_step` it is straight-line (the arena lane's finding again).
+* **The bit loop's post is relative to its entry**: (`DBitPost`) `R₀ · 2^j₀ + x + q₀ · 2^j₀ · b = q · b + R +
+  (x / 2^j₀) · 2^j₀`, with no other limb of `a` or of the quotient in it. The first version
+  carried the whole dividend and quotient prefix through the bit loop (degree-3 terms
+  `QU · 2^(64 - j) · b`) and failed; the relative post went through in the house form.
+* **Pointer locals instead of index arithmetic.** The limb loop first read `a[oa + i - 1]` and
+  wrote `q[top + i - 1]`; its invariant's `pv a (oa + i) (la - i)` then meets the read
+  `a[(oa + i - 1).toNat]` only through linear arithmetic, which `grind` turns into case splits
+  (theory combination); `pv_cons` with a free read index had 1759 instances. With locals `pa`,
+  `pq` decremented before the read and the write, the read index and the slice offset are the same
+  term, `pv_cons` (`pv p o k', pv p o' k, p[o]`) binds directly, and the loop went through.
+  `pv_set_cons_off` prepends the written quotient limb to a slice read in the pool *before* the
+  bit loop's in-place passes (pattern includes the `Off` fact), because the slice in the current
+  pool is not a term yet. The exit (`i = la`, so `pa = oa`) is `pv_exit`, keyed on the loop
+  condition `i < la`.
+* **The quotient and the remainder** are `div_of_bounds`/`mod_of_bounds` (`Q · B ≤ A < Q · B + B`,
+  pattern `A / B, Q · B`), in `natcmp_grind`: in `arena_grind` they fired on the bit loop's
+  `x / 2^j` terms and broke it.
+* **`maxHeartbeats`.** The function proof is `nat_mul`'s recipe with 400k heartbeats per goal and
+  none for the theorem (as `nat_shr`).
 
 ### `sorry`s
 
