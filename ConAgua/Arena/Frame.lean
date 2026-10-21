@@ -82,6 +82,23 @@ instance (A₀ : List ArrId) (C₀ : List Word) (A : List ArrId) (C : List Word)
     Decidable (Apart S A₀ C₀ A C) := by
   unfold Apart; infer_instance
 
+/-- **The extension point's `Apart`**: a table below array `64` and below `CTL` word `64` is apart
+from any writer of arrays `≥ 64` and `CTL` words `≥ 64` (the space `ArenaRel.lean` leaves to
+other lanes). -/
+theorem apart_hi (A₀ : List ArrId) (C₀ : List Word) (A : List ArrId) (C : List Word)
+    (hlo : S.ra < 64 ∧ S.sa < 64 ∧ S.ca.toNat + 1 < 64 ∧ (∀ b ∈ A₀, b < 64 ∧ b ≠ CTL) ∧
+      ∀ x ∈ C₀, x.toNat < 64)
+    (hA : ∀ b ∈ A, 64 ≤ b) (hC : ∀ x ∈ C, 64 ≤ x.toNat) : Apart S A₀ C₀ A C := by
+  obtain ⟨h1, h2, h3, h4, h5⟩ := hlo
+  refine ⟨fun h => Nat.not_le_of_lt h1 (hA _ h), fun h => Nat.not_le_of_lt h2 (hA _ h),
+    fun b hb => ⟨fun h => Nat.not_le_of_lt (h4 b hb).1 (hA _ h), (h4 b hb).2⟩,
+    fun h => by have := hC _ h; omega, fun h => ?_,
+    fun h => by have := hC _ h; simp at this, fun x hx h => by have := hC _ h; have := h5 x hx; omega⟩
+  have := hC _ h
+  have : (S.ca + 1).toNat = S.ca.toNat + 1 := by
+    rw [UInt64.toNat_add]; simp; omega
+  omega
+
 /-- **A table's relation survives a writer it is apart from.** -/
 theorem storeR_frame (hS : S.WF) (A₀ : List ArrId) (C₀ : List Word) (hl : RLocal S R hs A₀ C₀)
     (A : List ArrId) (C : List Word) (hap : Apart S A₀ C₀ A C) (m m' : Mem) (hf : MemFrame A C m m') (on : Bool)
