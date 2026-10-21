@@ -10,3 +10,5 @@ date,lane,model,work_min,overhead_min,note
 2026-10-21,nat2,opus,15,3,"estimate: nat_cmp (non-recursive model), nat_sub (final borrow decides)"
 2026-10-21,nat2,opus,15,3,"estimate: nat_shl, nat_shr (branch-free bit shifts, amounts as slices)"
 2026-10-21,nat2,opus,27,4,"nat_pow (square-and-multiply over nat_mul), natop_grind, nat_divmod (in-place shift-subtract)"
+2026-10-21,exprops2,opus,20,3,"hasLooseBVar (der_b read, no twin), leaf DerR lemmas + natAddLit_refinesD, fvarRangeMemo (fmemo slot, abstract1's cutoff)"
+2026-10-21,nat2,opus,10,2,"NatBitsNat (bv is Nat.land/lor/xor), NatArms (11 natOpResult arms under ArenaR, one generic theorem)"

@@ -16,6 +16,8 @@ run under `ArenaD` and intern through `mk_*`.
 -/
 
 open ConRon.Arena ConLeche
+open Std.WP
+open scoped Lean.Order
 
 set_option linter.unusedSimpArgs false
 
@@ -485,6 +487,26 @@ theorem bvar_derProj (st : EStore) (n : NIdx) (i : Nat) (e : EIdx) :
   simp only [EStore.derOfView, EStore.derOfProj]
   exact bvarOfData_pack _ _ _ _ (bvar_lt _) (fvar_lt _)
 
+/-- A leaf other than `bvar` (`fvar`, `sort`, `const`, `lit`): range `0` (`zP`). -/
+theorem bvar_derFVar (st : EStore) (idx : Nat) (ty : EIdx) :
+    bvarOfData (st.derOfView (.fvar idx ty)) = 0 := by
+  simp only [EStore.derOfView, EStore.derOfFVar]
+  exact bvarOfData_pack _ _ _ _ (by decide) (satSucc_lt idx)
+
+theorem bvar_derSort (st : EStore) (u : LIdx) : bvarOfData (st.derOfView (.sort u)) = 0 := by
+  simp only [EStore.derOfView, EStore.derOfSort]
+  exact bvarOfData_pack _ _ _ _ (by decide) (by decide)
+
+theorem bvar_derConst (st : EStore) (n : NIdx) (us : LsIdx) :
+    bvarOfData (st.derOfView (.const n us)) = 0 := by
+  simp only [EStore.derOfView, EStore.derOfConst]
+  exact bvarOfData_pack _ _ _ _ (by decide) (by decide)
+
+theorem bvar_derLit (st : EStore) (l : ConLeche.Literal) :
+    bvarOfData (st.derOfView (.lit l)) = 0 := by
+  simp only [EStore.derOfView, EStore.derOfLit]
+  exact bvarOfData_pack _ _ _ _ (by decide) (by decide)
+
 /-- The guard of every `mk_*`: the handle words are below `2^32`. -/
 theorem or_shr32 (f x : Word) (h : (f ||| x) >>> 32 = 0) : f.toNat < 2 ^ 32 ∧ x.toNat < 2 ^ 32 := by
   have := congrArg UInt64.toNat h
@@ -907,6 +929,99 @@ theorem internBVar_D (m : Mem) (a : AState) (hA : ArenaD m a) (u r : Word) (m' :
   · exact ⟨⟨hD₁.bvar.1, derT_push hD₁.bvar.2 _ _ _ (bvar_derBVar _ _)⟩, hD₁.fvar, hD₁.sort,
       hD₁.const, hD₁.lit, hD₁.app, hD₁.lam, hD₁.forallE, hD₁.letE, hD₁.proj⟩
 
+/-- **`intern_fvar` refines `internE (.fvar _ _)` under `ArenaD`** (a leaf: range `0`). -/
+theorem internFVar_D (m : Mem) (a : AState) (hA : ArenaD m a) (u ty r : Word)
+    (hty : ty.toNat < 2 ^ 32) (m' : Mem) (hI : fvinternW m u ty = some (r, m')) :
+    AM.ok (internE (.fvar u.toNat (decE ty))) a ∧
+    ArenaD m' (AM.st (internE (.fvar u.toNat (decE ty))) a) ∧
+    AM.res (internE (.fvar u.toNat (decE ty))) a = decE r := by
+  obtain ⟨hR, hD⟩ := hA
+  obtain ⟨hok, hX, hres⟩ := fvintern_correct m a hR.fvar u ty hty _ _ hI
+  have hI₂ := hI; rw [fvinternW_eq] at hI₂
+  have hfr := internM_frame _ fvarSch_wf _ _ _ _ _ _ _ _ hI₂
+  have hcs := AM.proto_cases fvarLens _ _ _ _ _ _ a (internE_fvar_run _ _ a) hok
+  have hR₁ := hR.lift_fvar _ _ _ _ hX hfr
+    (AM.st_proto fvarLens _ _ _ _ _ _ a (internE_fvar_run _ _ a) hok)
+  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [fvarSch, FVREC, FVSLOT]) a hD
+  refine ⟨hok, ⟨hR₁, ?_⟩, hres⟩
+  rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
+  · exact hD₁
+  · exact ⟨hD₁.bvar, ⟨derT_push hD₁.fvar.1 _ _ _ (bvar_derFVar _ _ _), hD₁.fvar.2⟩, hD₁.sort,
+      hD₁.const, hD₁.lit, hD₁.app, hD₁.lam, hD₁.forallE, hD₁.letE, hD₁.proj⟩
+  · exact ⟨hD₁.bvar, ⟨hD₁.fvar.1, derT_push hD₁.fvar.2 _ _ _ (bvar_derFVar _ _ _)⟩, hD₁.sort,
+      hD₁.const, hD₁.lit, hD₁.app, hD₁.lam, hD₁.forallE, hD₁.letE, hD₁.proj⟩
+
+/-- **`intern_sort` refines `internE (.sort _)` under `ArenaD`** (a leaf: range `0`). -/
+theorem internSort_D (m : Mem) (a : AState) (hA : ArenaD m a) (u r : Word)
+    (hu : u.toNat < 2 ^ 32) (m' : Mem) (hI : sointernW m u = some (r, m')) :
+    AM.ok (internE (.sort (decI u))) a ∧ ArenaD m' (AM.st (internE (.sort (decI u))) a) ∧
+    AM.res (internE (.sort (decI u))) a = decI r := by
+  obtain ⟨hR, hD⟩ := hA
+  obtain ⟨hok, hX, hres⟩ := sointern_correct m a hR.sort u hu _ _ hI
+  have hI₂ := hI; rw [sointernW_eq] at hI₂
+  have hfr := internM_frame _ sortSch_wf _ _ _ _ _ _ _ _ hI₂
+  have hcs := AM.proto_cases sortLens _ _ _ _ _ _ a (internE_sort_run _ a) hok
+  have hR₁ := hR.lift_sort _ _ _ _ hX hfr
+    (AM.st_proto sortLens _ _ _ _ _ _ a (internE_sort_run _ a) hok)
+  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [sortSch, SOREC, SOSLOT]) a hD
+  refine ⟨hok, ⟨hR₁, ?_⟩, hres⟩
+  rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
+  · exact hD₁
+  · exact ⟨hD₁.bvar, hD₁.fvar, ⟨derT_push hD₁.sort.1 _ _ _ (bvar_derSort _ _), hD₁.sort.2⟩,
+      hD₁.const, hD₁.lit, hD₁.app, hD₁.lam, hD₁.forallE, hD₁.letE, hD₁.proj⟩
+  · exact ⟨hD₁.bvar, hD₁.fvar, ⟨hD₁.sort.1, derT_push hD₁.sort.2 _ _ _ (bvar_derSort _ _)⟩,
+      hD₁.const, hD₁.lit, hD₁.app, hD₁.lam, hD₁.forallE, hD₁.letE, hD₁.proj⟩
+
+/-- **`intern_const` refines `internE (.const _ _)` under `ArenaD`** (a leaf: range `0`). -/
+theorem internConst_D (m : Mem) (a : AState) (hA : ArenaD m a) (f x r : Word)
+    (hf : f.toNat < 2 ^ 32) (hx : x.toNat < 2 ^ 32) (m' : Mem)
+    (hI : ceinternW m f x = some (r, m')) :
+    AM.ok (internE (.const (decI (k := .name) f) (decI (k := .levels) x))) a ∧
+    ArenaD m' (AM.st (internE (.const (decI (k := .name) f) (decI (k := .levels) x))) a) ∧
+    AM.res (internE (.const (decI (k := .name) f) (decI (k := .levels) x))) a = decI r := by
+  obtain ⟨hR, hD⟩ := hA
+  obtain ⟨hok, hX, hres⟩ := ceintern_correct m a hR.const f x hf hx _ _ hI
+  have hI₂ := hI; rw [ceinternW_eq] at hI₂
+  have hfr := internM_frame _ constSch_wf _ _ _ _ _ _ _ _ hI₂
+  have hcs := AM.proto_cases constLens _ _ _ _ _ _ a (internE_const_run _ _ a) hok
+  have hR₁ := hR.lift_const _ _ _ _ hX hfr
+    (AM.st_proto constLens _ _ _ _ _ _ a (internE_const_run _ _ a) hok)
+  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [constSch, CREC, CSLOT]) a hD
+  refine ⟨hok, ⟨hR₁, ?_⟩, hres⟩
+  rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
+  · exact hD₁
+  · exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort,
+      ⟨derT_push hD₁.const.1 _ _ _ (bvar_derConst _ _ _), hD₁.const.2⟩, hD₁.lit, hD₁.app, hD₁.lam,
+      hD₁.forallE, hD₁.letE, hD₁.proj⟩
+  · exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort,
+      ⟨hD₁.const.1, derT_push hD₁.const.2 _ _ _ (bvar_derConst _ _ _)⟩, hD₁.lit, hD₁.app, hD₁.lam,
+      hD₁.forallE, hD₁.letE, hD₁.proj⟩
+
+/-- **`intern_lit` refines `internE (.lit (.natVal _))` under `ArenaD`** (a leaf: range `0`). -/
+theorem internLit_D (m : Mem) (a : AState) (hA : ArenaD m a) (o l r : Word)
+    (hq : SliceOK m o l) (hn : Norm (m.arr64 POOL) o.toNat l.toNat) (m' : Mem)
+    (hI : internW m o l = some (r, m')) :
+    AM.ok (internE (.lit (.natVal (pv (m.arr64 POOL) o.toNat l.toNat)))) a ∧
+    ArenaD m' (AM.st (internE (.lit (.natVal (pv (m.arr64 POOL) o.toNat l.toNat)))) a) ∧
+    AM.res (internE (.lit (.natVal (pv (m.arr64 POOL) o.toNat l.toNat)))) a = decE r := by
+  obtain ⟨hR, hD⟩ := hA
+  obtain ⟨hok, hX, hres⟩ := intern_correct m a hR.lit o l hq hn _ _ hI
+  have hI₂ := hI; rw [internW_eq] at hI₂
+  have hfr := internM_frame _ litS_wf _ _ _ _ _ _ _ _ hI₂
+  have hcs := AM.proto_cases litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok
+  have hR₁ := hR.lift_lit _ _ _ _ hX hfr
+    (AM.st_proto litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok)
+  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [litSch, REC, SLOT]) a hD
+  refine ⟨hok, ⟨hR₁, ?_⟩, hres⟩
+  rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
+  · exact hD₁
+  · exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, hD₁.const,
+      ⟨derT_push hD₁.lit.1 _ _ _ (bvar_derLit _ _), hD₁.lit.2⟩, hD₁.app, hD₁.lam, hD₁.forallE,
+      hD₁.letE, hD₁.proj⟩
+  · exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, hD₁.const,
+      ⟨hD₁.lit.1, derT_push hD₁.lit.2 _ _ _ (bvar_derLit _ _)⟩, hD₁.app, hD₁.lam, hD₁.forallE,
+      hD₁.letE, hD₁.proj⟩
+
 /-- `DerR` reads only the store: a state with the same store (other memos, caches) has it too. -/
 theorem DerR.of_store (m : Mem) (a a' : AState) (hD : DerR m a) (hs : a'.store = a.store) :
     DerR m a' := by
@@ -933,5 +1048,55 @@ theorem derR_init (m : Mem) : DerR m (AState.init EStore.empty) := by
 theorem arenaD_init (sizes : List Nat) (hlen : 64 ≤ sizes.length) (hctl : 64 ≤ sizes[1]?.getD 0)
     (hpool : sizes[0]?.getD 0 < 2 ^ 63) : ArenaD (initMem sizes) (AState.init EStore.empty) :=
   ⟨arenaR_init sizes hlen hctl hpool, derR_init _⟩
+
+/-! ## Appending to the pool keeps `ArenaD`, and `natAddLit_refinesD` -/
+
+/-- **Appending to the pool keeps `DerR`**: the five derived-range arrays (`42`‥`46`) are
+untouched by a pool append (only `POOL`, `0`, and `CTL[0]` move). -/
+theorem DerR.grow (m m' : Mem) (hg : Grows m m') (a : AState) (hD : DerR m a) : DerR m' a :=
+  DerR.frameM [POOL] [0] m m' (grows_frame m m' hg) (by decide) a hD
+
+/-- **Appending to the pool keeps `ArenaD`.** -/
+theorem ArenaD.grow (m m' : Mem) (hg : Grows m m') (a : AState) (hA : ArenaD m a) : ArenaD m' a :=
+  ⟨ArenaR.grow m m' hg a hA.1, DerR.grow m m' hg a hA.2⟩
+
+/-- `intern_lit` refines `internE (.lit (.natVal _))` under `ArenaD`. -/
+theorem internLit_refinesD (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
+    (hpe : p.lookup "limbs_eq" = some limbsEq) (hpm : p.lookup "lit_match" = some litMatch)
+    (hpf : p.lookup "lit_find" = some litFind) (hpp : p.lookup "lit_push" = some litPush)
+    (hp : p.lookup "intern_lit" = some internLit)
+    (a₀ : AState) (n : Nat) (s₀ : St) (o l : Word) (hA : ArenaD s₀.mem a₀)
+    (hq : SliceOK s₀.mem o l) (hn : Norm (s₀.mem.arr64 POOL) o.toNat l.toNat) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "intern_lit" [o, l]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀ ∧
+      ArenaD s'.mem (AM.st (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀) ∧
+      AM.res (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀ =
+        decE (r.headD 0); ⊤⦄ := by
+  have ⟨_, _, hps, htop⟩ := hA.1.lit.1
+  have hspec := internLit_spec p hph hpe hpm hpf hpp hp n s₀ o l (by omega)
+    (by simp only [SliceOK] at hq; omega)
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun hspec
+  subst hs
+  exact ⟨hloc, internLit_D s.mem a₀ hA o l _ hq hn _ hI⟩
+
+/-- **`nat_add_lit` refines `natOpResult`'s `Nat.add` arm under `ArenaD`.** -/
+theorem natAddLit_refinesD (n : Nat) (s₀ : St) (a₀ : AState) (hA : ArenaD s₀.mem a₀)
+    (oa la ob lb : Word) (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb) :
+    ⦃fun s => s = s₀⦄
+    invoke storeProg (exec storeProg n) "nat_add_lit" [oa, la, ob, lb]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (natAddArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
+        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀ ∧
+      ArenaD s'.mem (AM.st (natAddArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
+        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀) ∧
+      AM.res (natAddArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
+        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀ = some (decE (r.headD 0)); ⊤⦄ :=
+  natAddLit_refines storeProg rfl rfl rfl rfl rfl ArenaD (fun _ _ h => h.1.lit.1)
+    (fun m m' a hA hg => ArenaD.grow m m' hg a hA)
+    (internLit_refinesD storeProg rfl rfl rfl rfl rfl rfl) n s₀ a₀ hA oa la ob lb ha hb
 
 end L.Arena

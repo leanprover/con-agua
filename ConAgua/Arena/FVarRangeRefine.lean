@@ -1,0 +1,366 @@
+import ConAgua.Arena.FVarRange
+import ConAgua.Arena.View
+import ConRon.Arena.ExprOps
+
+/-!
+# `fr_go` refines the arena's `fvarRangeGo`
+
+`WalkRefine.lean`'s shape exactly (`FVarRange.lean` has the L code, its model `frW`/`frNodeW` and
+the `vcgen` specs), with the `bvar`/`fvar` arms swapped and no truncation on a binder's/`letE`'s
+last child (ROADMAP §1, `expr_ops.rs`; `FVarRange.lean`'s module doc).
+-/
+
+open ConRon.Arena
+open Std.WP
+open scoped Lean.Order
+
+set_option linter.unusedSimpArgs false
+
+namespace L.Arena
+
+/-! ## The memo operations under `ArenaR` -/
+
+/-- The arena state after `fvarBSet k r`. -/
+def withFC (a : AState) (mp : Std.HashMap EIdx Nat) : AState :=
+  { a with memos := { a.memos with fvarBC := mp } }
+
+theorem fvarBGet_run (k : EIdx) (a : AState) : (fvarBGet k).run a = .ok (a.memos.fvarBC[k]?, a) := rfl
+
+theorem fvarBSet_run (k : EIdx) (r : Nat) (a : AState) :
+    (fvarBSet k r).run a = .ok ((), withFC a (a.memos.fvarBC.insert k r)) := rfl
+
+theorem fvarBClear_run (a : AState) : fvarBClear.run a = .ok ((), withFC a ∅) := rfl
+
+/-- **`fm_put` (via `fr_set`) is `fvarBSet`.** -/
+theorem ArenaR.fmemo_set (m m' : Mem) (a : AState) (hR : ArenaR m a) (k v : Word)
+    (hk : k.toNat < 2 ^ 32) (hs : msetG frSch m k 0 v = some m') :
+    ArenaR m' (withFC a (a.memos.fvarBC.insert (decE k) v.toNat)) := by
+  have hf := msetG_frame frSch frSch_wf m m' k 0 v hs
+  arena_build hR, hf with exact memoRG_set frSch frSch_wf bmKey _ m _ hR.fmemo k 0 v ⟨hk, rfl⟩ m' hs
+
+/-- **`fm_clear` is `fvarBClear`.** -/
+theorem ArenaR.fmemo_clear (m : Mem) (a : AState) (hR : ArenaR m a)
+    (h0 : rdW (m.arr64 CTL) 46 + 2 ≠ 0) : ArenaR (mclearG frSch m) (withFC a ∅) := by
+  have hf := mclearG_frame frSch m
+  arena_build hR, hf with exact memoRG_clear frSch frSch_wf bmKey _ m _ hR.fmemo h0
+
+/-! ## The arena walk, unfolded -/
+
+/-- The arms of `fvarRangeGo` on a view (its inner `match`), named. -/
+def frArm (F : Nat) : ENodeView → AM Nat
+  | .fvar idx _ => pure (idx + 1)
+  | .bvar _ | .sort _ | .const _ _ | .lit _ => pure 0
+  | .app f a => fvarRangeArmApp F f a
+  | .lam ty body | .forallE ty body => fvarRangeArmBind F ty body
+  | .letE ty val body => fvarRangeArmLet F ty val body
+  | .proj _ _ sub => fvarRangeGo F sub
+
+/-- The node half of `fvarRangeGo`: view, then the arm. -/
+def frNodeA (F : Nat) (h : EIdx) : AM Nat := do
+  let v ← view h
+  frArm F v
+
+theorem fvarRangeGo_succ' (F : Nat) (h : EIdx) :
+    fvarRangeGo (F + 1) h = (do
+      match ← fvarBGet h with
+      | some r => pure r
+      | none => do
+        let r ← frNodeA F h
+        fvarBSet h r
+        pure r) := by
+  rw [fvarRangeGo_succ]
+  simp only [frNodeA]
+  congr
+
+theorem frNodeA_run (F : Nat) (h : EIdx) (a : AState) (v : ENodeView)
+    (hv : a.store.view h = some v) : (frNodeA F h).run a = (frArm F v).run a := by
+  simp only [frNodeA, StateT.run_bind, view_run h a v hv]; rfl
+
+/-! ## The refinement, by induction on the fuel -/
+
+/-- What `fr_go`'s model at fuel `n` says about the arena walk at any fuel `F ≥ n`. -/
+def FrGoOK (n : Nat) : Prop :=
+  ∀ (F : Nat) (m m' : Mem) (a : AState) (h r : Word), n ≤ F → ArenaR m a → h.toNat < 2 ^ 32 →
+    frW n m h = some (r, m') →
+    ∃ a', (fvarRangeGo F (decE h)).run a = .ok (r.toNat, a') ∧ ArenaR m' a'
+
+/-- The same for `fr_node`'s model and the arena's view-and-arm. -/
+def FrNodeOK (n : Nat) : Prop :=
+  ∀ (F : Nat) (m m' : Mem) (a : AState) (h r : Word), n ≤ F + 1 → ArenaR m a →
+    h.toNat < 2 ^ 32 → frNodeW n m h = some (r, m') →
+    ∃ a', (frNodeA F (decE h)).run a = .ok (r.toNat, a') ∧ ArenaR m' a'
+
+theorem frGoOK_succ (n : Nat) (ih : FrNodeOK n) : FrGoOK (n + 1) := by
+  intro F m m' a h r hF hR hh hb
+  obtain ⟨F, rfl⟩ : ∃ G, F = G + 1 := ⟨F - 1, by omega⟩
+  rw [fvarRangeGo_succ', StateT.run_bind, fvarBGet_run]
+  by_cases hr : mfindG frSch m h 0 = []
+  · rw [frW] at hb; simp [hr] at hb
+  by_cases hh0 : (mfindG frSch m h 0).headD 0 ≠ 0
+  · rw [frW_hit n m h hr hh0] at hb
+    simp only [Option.some.injEq, Prod.mk.injEq] at hb
+    obtain ⟨rfl, rfl⟩ := hb
+    rw [show a.memos.fvarBC[decE h]? = _ from memoRG_hit frSch bmKey _ m _ hR.fmemo h 0 hr hh0]
+    exact ⟨a, rfl, hR⟩
+  · simp only [ne_eq, Decidable.not_not] at hh0
+    rw [frW_miss n m h hr hh0] at hb
+    rw [show a.memos.fvarBC[decE h]? = none from
+      memoRG_miss frSch bmKey _ m _ hR.fmemo h 0 ⟨hh, rfl⟩ hr hh0]
+    cases hn : frNodeW n m h with
+    | none => simp [frK, hn] at hb
+    | some p =>
+      obtain ⟨r₁, m₁⟩ := p
+      simp only [hn, frK, frSet_eq] at hb
+      cases hs : msetG frSch m₁ h 0 r₁ with
+      | none => simp [hs, frSetK] at hb
+      | some m₂ =>
+        simp only [hs, frSetK, Option.some.injEq, Prod.mk.injEq] at hb
+        obtain ⟨rfl, rfl⟩ := hb
+        obtain ⟨a₁, ha₁, hR₁⟩ := ih F m m₁ a h r₁ (by omega) hR hh hn
+        refine ⟨_, ?_, ArenaR.fmemo_set m₁ m₂ a₁ hR₁ h r₁ hh hs⟩
+        change StateT.run (do let r ← frNodeA F (decE h); fvarBSet (decE h) r; pure r) a = _
+        simp only [StateT.run_bind, ha₁]
+        rfl
+
+/-- The `app` arm: two children, `max x y`. -/
+theorem frAppArm_ok (n F : Nat) (ih : FrGoOK n) (hF : n ≤ F) (m m' : Mem) (a : AState)
+    (hR : ArenaR m a) (fw aw r : Word) (hf : fw.toNat < 2 ^ 32) (ha : aw.toNat < 2 ^ 32)
+    (hb : frAppK₁ n aw (frW n m fw) = some (r, m')) :
+    ∃ a', (fvarRangeArmApp F (decE fw) (decE aw)).run a = .ok (r.toNat, a') ∧ ArenaR m' a' := by
+  cases h1 : frW n m fw with
+  | none => simp only [h1, frAppK₁, reduceCtorEq] at hb
+  | some p =>
+    obtain ⟨x, m₁⟩ := p
+    cases h2 : frW n m₁ aw with
+    | none => simp only [h1, h2, frAppK₁, frAppK₁.frAppK₂, reduceCtorEq] at hb
+    | some q =>
+      obtain ⟨y, m₂⟩ := q
+      simp only [h1, h2, frAppK₁, frAppK₁.frAppK₂, Option.some.injEq, Prod.mk.injEq] at hb
+      obtain ⟨rfl, rfl⟩ := hb
+      obtain ⟨a₁, ha₁, hR₁⟩ := ih F m m₁ a _ x hF hR hf h1
+      obtain ⟨a₂, ha₂, hR₂⟩ := ih F m₁ m₂ a₁ _ y hF hR₁ ha h2
+      refine ⟨a₂, ?_, hR₂⟩
+      rw [maxW_toNat]
+      simp only [fvarRangeArmApp, StateT.run_bind, ha₁, except_ok_bind, ha₂]
+      rfl
+
+/-- The binder arm (`lam`, `forallE`): two children, `max x y` (no truncation). -/
+theorem frBindArm_ok (n F : Nat) (ih : FrGoOK n) (hF : n ≤ F) (m m' : Mem) (a : AState)
+    (hR : ArenaR m a) (tw bw r : Word) (ht : tw.toNat < 2 ^ 32) (hb' : bw.toNat < 2 ^ 32)
+    (hb : frBindK₁ n bw (frW n m tw) = some (r, m')) :
+    ∃ a', (fvarRangeArmBind F (decE tw) (decE bw)).run a = .ok (r.toNat, a') ∧ ArenaR m' a' := by
+  cases h1 : frW n m tw with
+  | none => simp only [h1, frBindK₁, reduceCtorEq] at hb
+  | some p =>
+    obtain ⟨x, m₁⟩ := p
+    cases h2 : frW n m₁ bw with
+    | none => simp only [h1, h2, frBindK₁, frBindK₁.frBindK₂, reduceCtorEq] at hb
+    | some q =>
+      obtain ⟨y, m₂⟩ := q
+      simp only [h1, h2, frBindK₁, frBindK₁.frBindK₂, Option.some.injEq, Prod.mk.injEq] at hb
+      obtain ⟨rfl, rfl⟩ := hb
+      obtain ⟨a₁, ha₁, hR₁⟩ := ih F m m₁ a _ x hF hR ht h1
+      obtain ⟨a₂, ha₂, hR₂⟩ := ih F m₁ m₂ a₁ _ y hF hR₁ hb' h2
+      refine ⟨a₂, ?_, hR₂⟩
+      rw [maxW_toNat]
+      simp only [fvarRangeArmBind, StateT.run_bind, ha₁, except_ok_bind, ha₂]
+      rfl
+
+/-- The `letE` arm: three children, `max (max x y) z` (no truncation). -/
+theorem frLetArm_ok (n F : Nat) (ih : FrGoOK n) (hF : n ≤ F) (m m' : Mem) (a : AState)
+    (hR : ArenaR m a) (tw vw bw r : Word) (ht : tw.toNat < 2 ^ 32) (hv : vw.toNat < 2 ^ 32)
+    (hb' : bw.toNat < 2 ^ 32) (hb : frLetK₁ n vw bw (frW n m tw) = some (r, m')) :
+    ∃ a', (fvarRangeArmLet F (decE tw) (decE vw) (decE bw)).run a = .ok (r.toNat, a') ∧
+      ArenaR m' a' := by
+  cases h1 : frW n m tw with
+  | none => simp only [h1, frLetK₁, reduceCtorEq] at hb
+  | some p =>
+    obtain ⟨x, m₁⟩ := p
+    cases h2 : frW n m₁ vw with
+    | none => simp only [h1, h2, frLetK₁, frLetK₁.frLetK₂, reduceCtorEq] at hb
+    | some q =>
+      obtain ⟨y, m₂⟩ := q
+      cases h3 : frW n m₂ bw with
+      | none => simp only [h1, h2, h3, frLetK₁, frLetK₁.frLetK₂, frLetK₁.frLetK₃, reduceCtorEq] at hb
+      | some o =>
+        obtain ⟨z, m₃⟩ := o
+        simp only [h1, h2, h3, frLetK₁, frLetK₁.frLetK₂, frLetK₁.frLetK₃, Option.some.injEq,
+          Prod.mk.injEq] at hb
+        obtain ⟨rfl, rfl⟩ := hb
+        obtain ⟨a₁, ha₁, hR₁⟩ := ih F m m₁ a _ x hF hR ht h1
+        obtain ⟨a₂, ha₂, hR₂⟩ := ih F m₁ m₂ a₁ _ y hF hR₁ hv h2
+        obtain ⟨a₃, ha₃, hR₃⟩ := ih F m₂ m₃ a₂ _ z hF hR₂ hb' h3
+        refine ⟨a₃, ?_, hR₃⟩
+        rw [maxW_toNat, maxW_toNat]
+        simp only [fvarRangeArmLet, StateT.run_bind, ha₁, except_ok_bind, ha₂, ha₃]
+        rfl
+
+theorem frNodeOK_succ (n : Nat) (ih : FrGoOK n) : FrNodeOK (n + 1) := by
+  intro F m m' a h r hF hR hh hb
+  have hF' : n ≤ F := by omega
+  by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
+  · rw [frNodeW] at hb; simp only [ite_eq_left hs, reduceCtorEq] at hb
+  have vok : ∀ c, ¬ rdW (m.arr64 CTL) (c + tierW h) ≤ idxW h → viewOK m h c :=
+    fun c hc => ⟨hs, UInt64.not_le.mp hc⟩
+  have zero : ∀ v, a.store.view (decE h) = some v → frArm F v = pure 0 → r = 0 → m' = m →
+      ∃ a', (frNodeA F (decE h)).run a = .ok (r.toNat, a') ∧ ArenaR m' a' := by
+    intro v hv hx hr hm; subst hr hm
+    exact ⟨a, by rw [frNodeA_run F _ a _ hv, hx]; rfl, hR⟩
+  by_cases g0 : h >>> 28 = 0
+  · by_cases hc : rdW (m.arr64 CTL) (22 + tierW h) ≤ idxW h
+    · rw [frNodeW] at hb; simp [hs, g0, hc] at hb
+    rw [frNodeW_bvar n m h g0 (vok 22 hc)] at hb
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
+    exact zero _ (view_bvar m a hR h hh (vok 22 hc) g0) rfl rfl rfl
+  by_cases g1 : h >>> 28 = 1
+  · by_cases hc : rdW (m.arr64 CTL) (26 + tierW h) ≤ idxW h
+    · rw [frNodeW] at hb; simp [hs, g1, hc] at hb
+    by_cases h1 : rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) + 1 = 0
+    · rw [frNodeW] at hb; simp [hs, g1, hc, h1] at hb
+    rw [frNodeW_fvar n m h (vok 26 hc) g1 h1] at hb
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
+    obtain ⟨hv, -⟩ := view_fvar_idx m a hR h hh (vok 26 hc) g1
+    refine ⟨a, ?_, hR⟩
+    rw [frNodeA_run F _ a _ hv, show frArm F (.fvar _ _) = pure (_ + 1) from rfl,
+      succW_toNat _ h1]
+    rfl
+  by_cases g4 : h >>> 28 = 4
+  · by_cases hc : rdW (m.arr64 CTL) (4 + tierW h) ≤ idxW h
+    · rw [frNodeW] at hb; simp [hs, g4, hc] at hb
+    obtain ⟨hv, hf, ha⟩ := view_app m a hR h hh (vok 4 hc) g4
+    rw [frNodeW_app n m h (vok 4 hc) g4] at hb
+    obtain ⟨a', h1, h2⟩ := frAppArm_ok n F ih hF' m m' a hR _ _ r hf ha hb
+    exact ⟨a', (frNodeA_run F _ a _ hv).trans h1, h2⟩
+  by_cases g5 : h >>> 28 = 5
+  · by_cases hc : rdW (m.arr64 CTL) (28 + tierW h) ≤ idxW h
+    · rw [frNodeW] at hb; simp [hs, g5, hc] at hb
+    obtain ⟨hv, hf, ha⟩ := view_lam m a hR h hh (vok 28 hc) g5
+    rw [frNodeW_lam n m h (vok 28 hc) g5] at hb
+    obtain ⟨a', h1, h2⟩ := frBindArm_ok n F ih hF' m m' a hR _ _ r hf ha hb
+    exact ⟨a', (frNodeA_run F _ a _ hv).trans h1, h2⟩
+  by_cases g6 : h >>> 28 = 6
+  · by_cases hc : rdW (m.arr64 CTL) (30 + tierW h) ≤ idxW h
+    · rw [frNodeW] at hb; simp [hs, g6, hc] at hb
+    obtain ⟨hv, hf, ha⟩ := view_forall m a hR h hh (vok 30 hc) g6
+    rw [frNodeW_forall n m h (vok 30 hc) g6] at hb
+    obtain ⟨a', h1, h2⟩ := frBindArm_ok n F ih hF' m m' a hR _ _ r hf ha hb
+    exact ⟨a', (frNodeA_run F _ a _ hv).trans h1, h2⟩
+  by_cases g7 : h >>> 28 = 7
+  · by_cases hc : rdW (m.arr64 CTL) (20 + tierW h) ≤ idxW h
+    · rw [frNodeW] at hb; simp [hs, g7, hc] at hb
+    obtain ⟨hv, ht, hv', hb'⟩ := view_let m a hR h hh (vok 20 hc) g7
+    rw [frNodeW_let n m h (vok 20 hc) g7] at hb
+    obtain ⟨a', h1, h2⟩ := frLetArm_ok n F ih hF' m m' a hR _ _ _ r ht hv' hb' hb
+    exact ⟨a', (frNodeA_run F _ a _ hv).trans h1, h2⟩
+  by_cases g9 : h >>> 28 = 9
+  · by_cases hc : rdW (m.arr64 CTL) (32 + tierW h) ≤ idxW h
+    · rw [frNodeW] at hb; simp [hs, g9, hc] at hb
+    obtain ⟨hv, -, he⟩ := view_proj m a hR h hh (vok 32 hc) g9
+    rw [frNodeW_proj n m h (vok 32 hc) g9] at hb
+    obtain ⟨a', h1, h2⟩ := ih F m m' a _ r hF' hR he hb
+    exact ⟨a', (frNodeA_run F _ a _ hv).trans h1, h2⟩
+  by_cases g2 : h >>> 28 = 2
+  · by_cases hc : rdW (m.arr64 CTL) (16 + tierW h) ≤ idxW h
+    · rw [frNodeW] at hb; simp [hs, g2, hc] at hb
+    rw [frNodeW_sort n m h g2 (vok 16 hc)] at hb
+    obtain ⟨_, hv⟩ := view_sort m a hR h hh (vok 16 hc) g2
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
+    exact zero _ hv rfl rfl rfl
+  by_cases g3 : h >>> 28 = 3
+  · by_cases hc : rdW (m.arr64 CTL) (18 + tierW h) ≤ idxW h
+    · rw [frNodeW] at hb; simp [hs, g3, hc] at hb
+    rw [frNodeW_const n m h g3 (vok 18 hc)] at hb
+    obtain ⟨_, _, hv⟩ := view_const m a hR h hh (vok 18 hc) g3
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
+    exact zero _ hv rfl rfl rfl
+  by_cases g8 : h >>> 28 = 8
+  · by_cases hc : rdW (m.arr64 CTL) (2 + tierW h) ≤ idxW h
+    · rw [frNodeW] at hb; simp [hs, g8, hc] at hb
+    rw [frNodeW_lit n m h g8 (vok 2 hc)] at hb
+    obtain ⟨_, hv⟩ := view_lit m a hR h hh (vok 2 hc) g8
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
+    exact zero _ hv rfl rfl rfl
+  rw [frNodeW] at hb; simp [hs, g0, g1, g2, g3, g4, g5, g6, g7, g8, g9] at hb
+
+/-- **The model of `fr_go` refines `fvarRangeGo`** at every fuel. -/
+theorem frGoOK (n : Nat) : FrGoOK n ∧ FrNodeOK n := by
+  induction n with
+  | zero =>
+    exact ⟨fun _ _ _ _ _ _ _ _ _ hb => by simp [frW] at hb,
+      fun _ _ _ _ _ _ _ _ _ hb => by simp [frNodeW] at hb⟩
+  | succ n ih => exact ⟨frGoOK_succ n ih.2, frNodeOK_succ n ih.1⟩
+
+/-! ## The entry `fr_memo` refines `fvarRangeMemo` -/
+
+theorem fvarRangeMemo_run (F : Nat) (e : EIdx) (a : AState) :
+    (fvarRangeMemo F e).run a =
+      ((fvarRangeGo F e).run (withFC a ∅) >>= fun p => .ok (p.1, withFC p.2 ∅)) := by
+  simp only [fvarRangeMemo, StateT.run_bind, fvarBClear_run, except_ok_bind]
+  cases (fvarRangeGo F e).run (withFC a ∅) <;> rfl
+
+/-- **The model of `fr_memo` refines `fvarRangeMemo`**, at every arena fuel `F ≥ n`. -/
+theorem frMemoW_correct (n F : Nat) (hF : n ≤ F) (m m' : Mem) (a : AState) (hR : ArenaR m a)
+    (h r : Word) (hh : h.toNat < 2 ^ 32) (hb : frMemoW n m h = some (r, m')) :
+    ∃ a', (fvarRangeMemo F (decE h)).run a = .ok (r.toNat, a') ∧ ArenaR m' a' := by
+  simp only [frMemoW] at hb
+  by_cases h0 : rdW (m.arr64 CTL) 46 + 2 = 0
+  · simp [h0] at hb
+  simp only [h0, ↓reduceIte] at hb
+  have hR₀ := ArenaR.fmemo_clear m a hR h0
+  cases hw : frW n (mclearG frSch m) h with
+  | none => simp [hw, frClrK] at hb
+  | some p =>
+    obtain ⟨r₁, m₁⟩ := p
+    by_cases h1 : rdW (m₁.arr64 CTL) 46 + 2 = 0
+    · simp [hw, frClrK, h1] at hb
+    simp only [hw, frClrK, h1, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hb
+    obtain ⟨rfl, rfl⟩ := hb
+    obtain ⟨a₁, ha₁, hR₁⟩ := (frGoOK n).1 F _ _ _ h r₁ hF hR₀ hh hw
+    exact ⟨_, by rw [fvarRangeMemo_run, ha₁]; rfl, ArenaR.fmemo_clear m₁ a₁ hR₁ h1⟩
+
+/-- **`fr_memo` refines the arena's `fvarRangeMemo` under `ArenaR`**: if the L walk returns, the
+arena walk at any fuel `F ≥ n` succeeds with the same range, in a related state. -/
+theorem frMemo_refines (p : Prog) (hpf : p.lookup "fm_find" = some (memoFindG frSch))
+    (hps : p.lookup "fm_put" = some (memoPutG frSch)) (hpc : p.lookup "fm_clear" = some (memoClearG frSch))
+    (hp : p.lookup "fr_go" = some frGo) (hpn : p.lookup "fr_node" = some frNode)
+    (hpm : p.lookup "fr_memo" = some frMemo) (n F : Nat) (hF : n ≤ F) (s₀ : St) (a₀ : AState)
+    (hR : ArenaR s₀.mem a₀) (h : Word) (hh : h.toNat < 2 ^ 32) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p (n + 1)) "fr_memo" [h]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (fvarRangeMemo F (decE h)) a₀ ∧
+      ArenaR s'.mem (AM.st (fvarRangeMemo F (decE h)) a₀) ∧
+      AM.res (fvarRangeMemo F (decE h)) a₀ = (r.headD 0).toNat; ⊤⦄ := by
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (frMemo_spec p hpf hps hp hpn hpc hpm n s₀ h)
+  subst hs
+  obtain ⟨a', ha', hR'⟩ := frMemoW_correct n F hF _ _ a₀ hR h _ hh hI
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ ha'
+  exact ⟨hloc, hok, hst ▸ hR', hres⟩
+
+/-- From an L run of `fr_memo` to the arena run of `fvarRangeMemo`, at any fuel `F ≥ fuel`. -/
+theorem frMemo_run (fuel F : Nat) (hF : fuel ≤ F) (m : Mem) (a₀ : AState) (hR : ArenaR m a₀)
+    (h : Word) (hh : h.toNat < 2 ^ 32) (r : List Word) (m' : Mem)
+    (hrun : run fvarRangeProg fuel "fr_memo" [h] m = .ok (r, m')) :
+    ∃ a', (fvarRangeMemo F (decE h)).run a₀ = .ok ((r.headD 0).toNat, a') ∧ ArenaR m' a' := by
+  cases fuel with
+  | zero =>
+    have : (invoke fvarRangeProg (exec fvarRangeProg 0) "fr_memo" [h]).run
+        { mem := m, loc := Locals.init [] } = .error .outOfFuel := rfl
+    simp [run, this, Except.map] at hrun
+  | succ n =>
+    simp only [run] at hrun
+    cases hr : (invoke fvarRangeProg (exec fvarRangeProg (n + 1)) "fr_memo" [h]).run
+        { mem := m, loc := Locals.init [] } with
+    | error e => simp [hr, Except.map] at hrun
+    | ok rs =>
+      simp only [hr, Except.map] at hrun
+      injection hrun with hrun
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj hrun
+      have := M.of_run (P := fun s => s = { mem := m, loc := Locals.init [] }) rfl hr
+        (frMemo_refines fvarRangeProg rfl rfl rfl rfl rfl rfl n F (by omega) _ a₀ hR h hh)
+      obtain ⟨-, hok, hR', hres⟩ := this
+      exact ⟨_, by rw [AM.run_of_ok _ _ hok, hres], hR'⟩
+
+end L.Arena
