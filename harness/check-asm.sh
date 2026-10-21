@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Assemble and disassemble every program the compiler proof covers (the scanner, the `lit` store,
 # the arena walk) and check, instruction by instruction, that what `as`/`objdump` actually encode
-# agrees with what `asmText` (Kraken's AT&T printer, after con-agua's `fixImul` normalisation)
-# printed. This is the trusted-base check: the printer and the assembler are *not* proved, so
+# agrees with what `asmText` (Kraken's AT&T printer) printed. This is the trusted-base check: the
+# printer and the assembler are *not* proved, so
 # `compile_correct` only holds of the real machine if their printed/assembled text means what
 # Kraken's instruction semantics says, and this is as close to checking that automatically as we
 # get. See DESIGN.md ("the compiler", lane `walk`) and docs/gaps/kraken-att-imul-three-operand.lean

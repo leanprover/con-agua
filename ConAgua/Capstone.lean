@@ -1,5 +1,6 @@
 import ConAgua.Compiler.Main
 import ConAgua.Scan.Link
+import ConAgua.Scan.ValidatorLink
 import ConAgua.Arena.LitRefine
 import ConAgua.Arena.WalkRefine
 
@@ -234,6 +235,151 @@ theorem skipBraced_x64 [Host] (G : Layout) (hG : G.Ok) (hwf : Prog.wf G.tab scan
       simp
     · rw [herr] at h6
       exact absurd h6 (by simp [OutcomeRel])
+
+/-- Shared step of `validate_x64`/`validate_x64_parseBytes`: from a Kraken host holding the
+compiled `valProg`, run from `ca_enter` on a state whose input region holds `b` with `N` units of
+fuel, the run returns to the caller with the callee-saved registers restored, and either reports
+exhausted (`rdx = 1`), reports an `L` error other than fuel (`rdx = 2`: Stage B has no `_noErr`
+theorem for `validate` the way `skip_braced`/`str_close` have one above, so unlike `skipBraced_x64`
+this is a real, open third outcome, not yet ruled out — see `DESIGN.md`), or reports `rdx = 0`
+together with the raw `L` run `validate` made, for the two theorems below to read off. -/
+theorem validate_x64_core [Host] (G : Layout) (hG : G.Ok)
+    (hwf : Prog.wf G.tab L.Scan.Validator.valProg = true) (hnres : 1 ≤ G.tab.nres)
+    (k0 : Nat) (hcode : Code (compileProg G.tab L.Scan.Validator.valProg "validate") k0)
+    (b : ByteArray) (hnargs : G.nargs = 0)
+    (N : Nat) (dm : MachineData) (ra : Word)
+    (hT : dm.regs.rdi.toNat = G.T) (hN : dm.regs.rsi.toNat = N)
+    (hmem : MemRel G { bytes := #[b.data] } dm.dmem) (hroom : G.lo + 8 ≤ G.hi)
+    (htop : rdW dm.dmem (A G.T) = some (UInt64.ofNat G.hi))
+    (hargv : ∀ j (h : j < 0), rdW dm.dmem (A (G.T + G.tab.args.toNat + 8 * j)) =
+      some ([] : List Word)[j])
+    (hra : rdW dm.dmem (A dm.regs.rsp.toNat) = some ra)
+    (hcs : ∀ x, dm.regs.rsp.toNat - 24 ≤ x → x < dm.regs.rsp.toNat + 8 →
+      (dm.dmem.get? (A x)).isSome ∧ ¬ G.InStack x ∧ ¬ G.InArr x ∧ ¬ G.InTab x)
+    (hcs24 : 24 ≤ dm.regs.rsp.toNat) (hcs8 : dm.regs.rsp.toNat + 8 < 2 ^ 64) :
+    Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rsp.toNat = dm.regs.rsp.toNat + 8 ∧
+        st.data.regs.rbp = dm.regs.rbp ∧ st.data.regs.r14 = dm.regs.r14 ∧ st.data.regs.r15 = dm.regs.r15 ∧
+        (st.data.regs.rdx = 1 ∨ st.data.regs.rdx = 2 ∨
+          (st.data.regs.rdx = 0 ∧ ∃ r m', run L.Scan.Validator.valProg N "validate" []
+            { bytes := #[b.data] } = .ok (r, m') ∧ st.data.regs.rax = r.headD 0 ∧
+            MemRel G m' st.data.dmem)))
+      dm (label enterL) := by
+  have hargs : ([] : List Word).length = L.Scan.Line.validate.nparams := rfl
+  have hentry : L.Scan.Validator.valProg.lookup "validate" = some L.Scan.Line.validate := rfl
+  refine eventually_weaken _ _ _ _ ?_
+    (compile_correct L.Scan.Validator.valProg "validate" G hG hwf k0 hcode L.Scan.Line.validate
+      hentry [] hargs hnargs { bytes := #[b.data] } N dm ra hT hN hmem hroom htop hargv hra hcs hcs24 hcs8)
+  intro st hst
+  obtain ⟨h1, h2, h3, h4, h5, h6⟩ := hst
+  refine ⟨h1, h2, h3, h4, h5, ?_⟩
+  rcases h6 with h6 | h6
+  · exact Or.inl h6
+  · rcases hrun : run L.Scan.Validator.valProg N "validate" [] { bytes := #[b.data] } with e | ⟨r, m'⟩
+    · rw [hrun] at h6
+      rcases e with _ | _ | _ | _ <;> simp_all [OutcomeRel]
+    · rw [hrun] at h6
+      obtain ⟨hrdx, hres, hm'⟩ := h6
+      have hrax : st.data.regs.rax = r.headD 0 := by
+        have := hres 0 (by omega); simp only [rres] at this; rwa [show r.getD 0 0 = r.headD 0 by
+          cases r <;> rfl] at this
+      refine Or.inr (Or.inr ⟨hrdx, r, m', ?_, ?_, ?_⟩)
+      · rfl
+      · exact hrax
+      · exact hm'
+
+/-- **The fourth end-to-end theorem: Stage B's validator.** From a Kraken host holding the
+compiled `valProg`, run from `ca_enter` on a state whose input region holds a buffer `b` with `N`
+units of fuel: the run returns to the caller with the callee-saved registers restored, and either
+reports exhausted (`rdx = 1`), reports an `L` error other than fuel (`rdx = 2`, not yet ruled
+out, see `validate_x64_core`), or reports `rdx = 0` with `rax` the line number `scanLineFwd`'s own
+driver (`ConAgua.Scan.LineLink.scanDriver`, built directly from con-leche's
+`ConLeche.Frontend.scanLineFwd` over `b`'s real `ByteArray`/`USize` positions, with no `Nat`-model
+layer in between) reports: `0` if every line of `b` scans, else the number of the first line that
+does not; the input region is unchanged. -/
+theorem validate_x64 [Host] (G : Layout) (hG : G.Ok) (hwf : Prog.wf G.tab L.Scan.Validator.valProg = true)
+    (hnres : 1 ≤ G.tab.nres) (k0 : Nat) (hcode : Code (compileProg G.tab L.Scan.Validator.valProg "validate") k0)
+    (b : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63) (hnargs : G.nargs = 0)
+    (N : Nat) (dm : MachineData) (ra : Word)
+    (hT : dm.regs.rdi.toNat = G.T) (hN : dm.regs.rsi.toNat = N)
+    (hmem : MemRel G { bytes := #[b.data] } dm.dmem) (hroom : G.lo + 8 ≤ G.hi)
+    (htop : rdW dm.dmem (A G.T) = some (UInt64.ofNat G.hi))
+    (hargv : ∀ j (h : j < 0), rdW dm.dmem (A (G.T + G.tab.args.toNat + 8 * j)) =
+      some ([] : List Word)[j])
+    (hra : rdW dm.dmem (A dm.regs.rsp.toNat) = some ra)
+    (hcs : ∀ x, dm.regs.rsp.toNat - 24 ≤ x → x < dm.regs.rsp.toNat + 8 →
+      (dm.dmem.get? (A x)).isSome ∧ ¬ G.InStack x ∧ ¬ G.InArr x ∧ ¬ G.InTab x)
+    (hcs24 : 24 ≤ dm.regs.rsp.toNat) (hcs8 : dm.regs.rsp.toNat + 8 < 2 ^ 64) :
+    Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rsp.toNat = dm.regs.rsp.toNat + 8 ∧
+        st.data.regs.rbp = dm.regs.rbp ∧ st.data.regs.r14 = dm.regs.r14 ∧ st.data.regs.r15 = dm.regs.r15 ∧
+        (st.data.regs.rdx = 1 ∨ st.data.regs.rdx = 2 ∨
+          (st.data.regs.rdx = 0 ∧
+            st.data.regs.rax = UInt64.ofNat (ConAgua.Scan.LineLink.scanDriver b 0 0) ∧
+            MemRel G { bytes := #[b.data] } st.data.dmem)))
+      dm (label enterL) := by
+  refine eventually_weaken _ _ _ _ ?_
+    (validate_x64_core G hG hwf hnres k0 hcode b hnargs N dm ra hT hN hmem hroom htop hargv hra hcs hcs24 hcs8)
+  intro st hst
+  obtain ⟨h1, h2, h3, h4, h5, h6⟩ := hst
+  refine ⟨h1, h2, h3, h4, h5, ?_⟩
+  rcases h6 with h6 | h6 | ⟨hrdx, r, m', hrun, hrax, hm'⟩
+  · exact Or.inl h6
+  · exact Or.inr (Or.inl h6)
+  · obtain ⟨hr, hm2⟩ := L.Scan.Validator.validate_run b.data hb N r m' hrun
+    refine Or.inr (Or.inr ⟨hrdx, ?_, ?_⟩)
+    · rw [hrax, hr]; exact ConAgua.Scan.DriverLink.validN_zero b h64 hb
+    · rwa [hm2] at hm'
+
+/-- **Corollary, pushed down to con-leche's own parser.** `ConLeche.Frontend.parseBytes`
+(`vendor/con-leche/ConLeche/Frontend/ExportC.lean`) is the highest-level notion in this project's
+proof chain (`PLAN.md`): it scans every line *and* builds the records `scanLineFwd` leaves out.
+If it parses `b`, a normally-returning run of the compiled validator necessarily finds `rax = 0`
+(`ConAgua.Scan.ValidatorLink.validate_accepts`); if instead it finds `rax ≠ 0`, con-leche's parser
+fails, at that line or before (`validate_rejects`) — unconditionally, since a line `scanLineFwd`
+rejects can only make `parseBytes` fail too, at it or earlier. -/
+theorem validate_x64_parseBytes [Host] (G : Layout) (hG : G.Ok)
+    (hwf : Prog.wf G.tab L.Scan.Validator.valProg = true) (hnres : 1 ≤ G.tab.nres)
+    (k0 : Nat) (hcode : Code (compileProg G.tab L.Scan.Validator.valProg "validate") k0)
+    (b : ByteArray) (h64 : System.Platform.numBits = 64) (hb : b.size < 2 ^ 63) (hnargs : G.nargs = 0)
+    (N : Nat) (dm : MachineData) (ra : Word)
+    (hT : dm.regs.rdi.toNat = G.T) (hN : dm.regs.rsi.toNat = N)
+    (hmem : MemRel G { bytes := #[b.data] } dm.dmem) (hroom : G.lo + 8 ≤ G.hi)
+    (htop : rdW dm.dmem (A G.T) = some (UInt64.ofNat G.hi))
+    (hargv : ∀ j (h : j < 0), rdW dm.dmem (A (G.T + G.tab.args.toNat + 8 * j)) =
+      some ([] : List Word)[j])
+    (hra : rdW dm.dmem (A dm.regs.rsp.toNat) = some ra)
+    (hcs : ∀ x, dm.regs.rsp.toNat - 24 ≤ x → x < dm.regs.rsp.toNat + 8 →
+      (dm.dmem.get? (A x)).isSome ∧ ¬ G.InStack x ∧ ¬ G.InArr x ∧ ¬ G.InTab x)
+    (hcs24 : 24 ≤ dm.regs.rsp.toNat) (hcs8 : dm.regs.rsp.toNat + 8 < 2 ^ 64) :
+    Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rsp.toNat = dm.regs.rsp.toNat + 8 ∧
+        st.data.regs.rbp = dm.regs.rbp ∧ st.data.regs.r14 = dm.regs.r14 ∧ st.data.regs.r15 = dm.regs.r15 ∧
+        (st.data.regs.rdx = 1 ∨ st.data.regs.rdx = 2 ∨
+          (st.data.regs.rdx = 0 ∧
+            (∀ res, ConLeche.Frontend.parseBytes b = .ok res → st.data.regs.rax = 0) ∧
+            (st.data.regs.rax ≠ 0 → ∃ c k, ConLeche.Frontend.parseBytes b = .error (c, k) ∧
+              k ≤ st.data.regs.rax.toNat) ∧
+            MemRel G { bytes := #[b.data] } st.data.dmem)))
+      dm (label enterL) := by
+  refine eventually_weaken _ _ _ _ ?_
+    (validate_x64_core G hG hwf hnres k0 hcode b hnargs N dm ra hT hN hmem hroom htop hargv hra hcs hcs24 hcs8)
+  intro st hst
+  obtain ⟨h1, h2, h3, h4, h5, h6⟩ := hst
+  refine ⟨h1, h2, h3, h4, h5, ?_⟩
+  rcases h6 with h6 | h6 | ⟨hrdx, r, m', hrun, hrax, hm'⟩
+  · exact Or.inl h6
+  · exact Or.inr (Or.inl h6)
+  · obtain ⟨hr, hm2⟩ := L.Scan.Validator.validate_run b.data hb N r m' hrun
+    have hraxv : st.data.regs.rax = L.Scan.Line.validN b.data 0 0 := by rw [hrax, hr]; rfl
+    have hrsingle : r = [st.data.regs.rax] := by rw [hr, hraxv]
+    have hrun' : run L.Scan.Validator.valProg N "validate" [] { bytes := #[b.data] } =
+        .ok ([st.data.regs.rax], m') := by rw [← hrsingle]; exact hrun
+    refine Or.inr (Or.inr ⟨hrdx, ?_, ?_, ?_⟩)
+    · exact fun res hp => by
+        have hr0 := ConAgua.Scan.ValidatorLink.validate_accepts b h64 hb N r m' hrun res hp
+        have heq : ([L.Scan.Line.validN b.data 0 0] : List Word) = [0] := by rw [← hr]; exact hr0
+        injection heq with hval
+        rw [hraxv, hval]
+    · exact fun hne => ConAgua.Scan.ValidatorLink.validate_rejects b h64 hb N st.data.regs.rax m' hrun' hne
+    · rwa [hm2] at hm'
 
 end L.Compiler
 
