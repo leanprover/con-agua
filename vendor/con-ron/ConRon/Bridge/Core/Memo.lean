@@ -242,6 +242,7 @@ theorem takeModeMemos_spec (s₀ : AState) :
           { s₀.caches with
             whnfCoreC := ∅, whnfCoreCheapC := ∅, whnfC := ∅,
             inferC := ∅, inferIOC := ∅, defeqC := ∅ } }; ⊤⦄ := by
+  dsimp only  -- con-agua patch: zeta the nested `with` (`let __src`) as `defeqSet_spec` does
   vcgen [takeModeMemos] with finish
 
 /-- con-leche: ConLeche/Cached/StateC.lean:344-348 CState.putModeMemos —
@@ -253,6 +254,7 @@ theorem putModeMemos_spec (s₀ : AState) (mm : ModeMemos) :
           whnfCoreC := mm.whnfCoreC, whnfCoreCheapC := mm.whnfCoreCheapC,
           whnfC := mm.whnfC, inferC := mm.inferC,
           inferIOC := mm.inferIOC, defeqC := mm.defeqC } }; ⊤⦄ := by
+  dsimp only  -- con-agua patch: zeta the nested `with` (`let __src`) as `defeqSet_spec` does
   vcgen [putModeMemos] with finish
 
 /-! ## 3. The cache invariant under an insert

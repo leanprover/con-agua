@@ -135,10 +135,10 @@ theorem checkStructProjTable_shape {T C : NIdx} {lps : List NIdx} {nP nF : Nat}
   obtain ⟨bodies, s₂, -, z2⟩ := AM.bind_ok z1
   obtain ⟨sc, s₃, -, z3⟩ := AM.bind_ok z2
   obtain ⟨-, z4⟩ := AM.dunless_ok hnever z3
-  replace z4 := AM.pure_bind_ok z4
+  try replace z4 := AM.pure_bind_ok z4  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   obtain ⟨b5, s₅, -, z5⟩ := AM.bind_ok z4
   obtain ⟨-, z6⟩ := AM.dunless_ok hnever z5
-  replace z6 := AM.pure_bind_ok z6
+  try replace z6 := AM.pure_bind_ok z6  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   obtain ⟨rfl, rfl⟩ := AM.pure_ok z6
   exact ⟨_, rfl⟩
 

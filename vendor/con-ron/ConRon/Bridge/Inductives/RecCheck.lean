@@ -1582,6 +1582,7 @@ theorem restrictTo_push_find? {fe : IFEnv} {k : Nat} (hk : k ≤ fe.visibleBelow
     simp only [this, ↓reduceIte]
     exact hnone.symm
   · rw [ite_eq_right hEq]
+    rfl  -- con-agua patch: `X = X` differing only in an instance
 
 /-- con-leche: none — `IFEnvOK` reads the index only through `find?`. -/
 theorem IFEnvOK.of_find? {env : Env} {fe fe' : IFEnv} {s : AState} (h : IFEnvOK env fe s)
@@ -1998,18 +1999,14 @@ theorem targetRecPins_spec (p : Arena.BlockShape) (pP : ConLeche.BlockShape)
   case neg => rw [ite_eq_right c1] at hrun; exact absurd hrun RC.failBindOk
   rw [ite_eq_left c1] at hrun
   have hL : ConLeche.blockRecLpsOk pP = true := by rw [← blockRecLpsOk_spec hok.wf hsh]; exact c1
-  obtain ⟨_, s1, k1, z1⟩ := AM.bind_ok hrun
-  obtain ⟨-, hs1⟩ := AM.pure_ok k1
-  rw [hs1] at z1
+  have z1 := hrun  -- con-agua patch: no `pure () >>=` after the guard (new `do` elaborator)
   obtain ⟨u, s2, k2, z2⟩ := AM.bind_ok z1
   obtain ⟨p2, rfl⟩ := blockRecNamesUnreserved_spec pP p.recs _ _ u hok hp hrecs k2
   by_cases c2 : ConLeche.blockRecNamesUnreserved pP = true
   case neg => rw [ite_eq_right c2] at z2; exact absurd z2 RC.failBindOk
   rw [ite_eq_left c2] at z2
   have hU := c2
-  obtain ⟨_, s3, k3, z3⟩ := AM.bind_ok z2
-  obtain ⟨-, hs3⟩ := AM.pure_ok k3
-  rw [hs3] at z3
+  have z3 := z2  -- con-agua patch: no `pure () >>=` after the guard (new `do` elaborator)
   obtain ⟨u3, s4, k4, z4⟩ := AM.bind_ok z3
   have hown := RC.filter_recs (fun t => decide (t < pP.k))
     (mapM_option_ext (fun x y h => dRec_ext p2.ext x y h) _ _ hrecs)
@@ -2024,9 +2021,7 @@ theorem targetRecPins_spec (p : Arena.BlockShape) (pP : ConLeche.BlockShape)
   case neg => rw [ite_eq_right c3] at z4; exact absurd z4 RC.failBindOk
   rw [ite_eq_left c3] at z4
   have hS := c3
-  obtain ⟨_, s5, k5, z5⟩ := AM.bind_ok z4
-  obtain ⟨-, hs5⟩ := AM.pure_ok k5
-  rw [hs5] at z5
+  have z5 := z4  -- con-agua patch: no `pure () >>=` after the guard (new `do` elaborator)
   have p24 := p2.trans p4
   clear hown
   cases hm : p.members with
@@ -2087,18 +2082,14 @@ theorem targetRecPins_spec (p : Arena.BlockShape) (pP : ConLeche.BlockShape)
     case neg => rw [ite_eq_right cA] at zB; exact absurd zB RC.failBindOk
     rw [ite_eq_left cA] at zB
     rw [hA] at cA
-    obtain ⟨_, sC, kC, zC⟩ := AM.bind_ok zB
-    obtain ⟨-, hsC⟩ := AM.pure_ok kC
-    rw [hsC] at zC
+    have zC := zB  -- con-agua patch: no `pure () >>=` after the guard (new `do` elaborator)
     have hnames := recShapeNames_go hrecsB
     have hnd := nameNodup_spec pB.ok.wf _ _ hnames
     by_cases cN : nameNodup (List.map (fun x => x.cvR.name) p.recs) = true
     case neg => rw [ite_eq_right cN] at zC; exact absurd zC RC.failBindOk
     rw [ite_eq_left cN] at zC
     rw [hnd] at cN
-    obtain ⟨_, sD, kD, zD⟩ := AM.bind_ok zC
-    obtain ⟨-, hsD⟩ := AM.pure_ok kD
-    rw [hsD] at zD
+    have zD := zC  -- con-agua patch: no `pure () >>=` after the guard (new `do` elaborator)
     have hsp := blockSplit_spec sB.store block blockP (denoteCIList_mono pAB.ext _ _ hblk)
     cases hbs : Arena.blockSplit block with
     | none => rw [hbs] at zD; exact absurd zD (fun hc => AM.fail_ok hc)
@@ -2182,18 +2173,14 @@ theorem targetRecPins_spec (p : Arena.BlockShape) (pP : ConLeche.BlockShape)
     case neg => rw [ite_eq_right cA] at zB; exact absurd zB RC.failBindOk
     rw [ite_eq_left cA] at zB
     rw [hA] at cA
-    obtain ⟨_, sC, kC, zC⟩ := AM.bind_ok zB
-    obtain ⟨-, hsC⟩ := AM.pure_ok kC
-    rw [hsC] at zC
+    have zC := zB  -- con-agua patch: no `pure () >>=` after the guard (new `do` elaborator)
     have hnames := recShapeNames_go hrecsB
     have hnd := nameNodup_spec pB.ok.wf _ _ hnames
     by_cases cN : nameNodup (List.map (fun x => x.cvR.name) p.recs) = true
     case neg => rw [ite_eq_right cN] at zC; exact absurd zC RC.failBindOk
     rw [ite_eq_left cN] at zC
     rw [hnd] at cN
-    obtain ⟨_, sD, kD, zD⟩ := AM.bind_ok zC
-    obtain ⟨-, hsD⟩ := AM.pure_ok kD
-    rw [hsD] at zD
+    have zD := zC  -- con-agua patch: no `pure () >>=` after the guard (new `do` elaborator)
     have hsp := blockSplit_spec sB.store block blockP (denoteCIList_mono pAB.ext _ _ hblk)
     cases hbs : Arena.blockSplit block with
     | none => rw [hbs] at zD; exact absurd zD (fun hc => AM.fail_ok hc)
@@ -2406,9 +2393,7 @@ theorem targetMajorOf_spec {μ : CheckMode} {env : Env} (fe : IFEnv)
     rw [ite_eq_left ca] at z7
     rw [han] at ca
     rw [ite_eq_left ca]
-    obtain ⟨_, s8, k8, z8⟩ := AM.bind_ok z7
-    obtain ⟨-, hs8⟩ := AM.pure_ok k8
-    rw [hs8] at z8
+    have z8 := z7  -- con-agua patch: no `pure () >>=` after the guard (new `do` elaborator)
     obtain ⟨ni, s9, k9, z9⟩ := AM.bind_ok z8
     obtain ⟨c9, ⟨niP, lP⟩, ⟨hni1, hni2⟩, hFo⟩ := targetOutsideInst_spec fe I IP us usP _ _
       s7 s9 ni c7.ok ⟨denoteN_ext hI c7.ext, denoteLs_ext hus c7.ext,
@@ -2425,9 +2410,7 @@ theorem targetMajorOf_spec {μ : CheckMode} {env : Env} (fe : IFEnv)
     by_cases cb : b = true
     case neg => rw [ite_eq_right cb] at z11; exact absurd z11 RC.failBindOk
     rw [ite_eq_left cb] at z11
-    obtain ⟨_, s12, k12, z12⟩ := AM.bind_ok z11
-    obtain ⟨-, hs12⟩ := AM.pure_ok k12
-    rw [hs12] at z12
+    have z12 := z11  -- con-agua patch: no `pure () >>=` after the guard (new `do` elaborator)
     obtain ⟨rfl, rfl⟩ := AM.pure_ok z12
     have c10' := c79.trans c10
     refine ⟨c10', ConLeche.TargetMajor.mk IP usP (List.take nPc mtyP.getAppArgs) nPc niP ctorsP

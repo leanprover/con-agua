@@ -1138,6 +1138,11 @@ taking con-leche's same branch.  The legacy elaborator inlines the
 `kExpected?` join point into three copies of the recursor loop; the step is
 the same in all three, so it is written once as the tactic macros below. -/
 
+-- con-agua patch: on nightly-2026-10-20 the twin's loops elaborate with a
+-- `Prod` state too (`(none, ())`, `(none, arr, j)`), not `MProd`; the four
+-- `forIn_sim` relations below are retyped accordingly (and the inner loop's
+-- counter/array conjuncts re-paired so the destructuring names stay put).
+
 /-- con-leche: none — `Except`'s bind at a success, as a rewrite. -/
 theorem except_ok_bind {ε α β : Type} (a : α) (f : α → Except ε β) :
     (Except.ok a >>= f) = f a := rfl
@@ -1592,8 +1597,8 @@ macro "vind_rec_loop" : tactic => `(tactic| (
   obtain ⟨r2, s₂, hloop2, hrun⟩ := AM.bind_ok hrun
   refine except_bind_ex
     (forIn_sim (P := fun (a b : ConLeche.Frontend.IndRecRec) => a = b)
-      (R := fun (b : MProd (Option (RecordVerdict ⊕ List ConLeche.Frontend.IndCtorRec × Nat))
-          PUnit)
+      (R := fun (b : (Option (RecordVerdict ⊕ List ConLeche.Frontend.IndCtorRec × Nat))
+          × Unit)
         (c : Option (ConLeche.Frontend.RecordVerdict ⊕ List ConLeche.Frontend.IndCtorRec × Nat)
           × Unit) =>
           b.1.isNone = c.1.isNone ∧ VInv b.1 c.1)
@@ -1677,8 +1682,8 @@ macro "vind_rec_tail" : tactic => `(tactic| (
     refine except_bind_ex
       (forIn_sim (P := fun (a : NIdx × EIdx) (b : ConLeche.Name × Expr) =>
           denoteN s.store.ns a.1 = some b.1 ∧ denoteE s.store a.2 = some b.2)
-        (R := fun (b : MProd (Option (RecordVerdict ⊕ List ConLeche.Frontend.IndCtorRec × Nat))
-            PUnit)
+        (R := fun (b : (Option (RecordVerdict ⊕ List ConLeche.Frontend.IndCtorRec × Nat))
+            × Unit)
           (c : Option (ConLeche.Frontend.RecordVerdict ⊕ List ConLeche.Frontend.IndCtorRec × Nat)
             × Unit) =>
             b.1.isNone = c.1.isNone ∧ VInv b.1 c.1)
@@ -1845,8 +1850,8 @@ theorem validateIndD_run' {s s' : AState} (hok : StateOK s) {sd : StateD}
     (forIn_sim (P := fun (p : NIdx × List NIdx) (q : ConLeche.Name × List ConLeche.Name) =>
         denoteN s.store.ns p.1 = some q.1 ∧
         ListRel (fun h n => denoteN s.store.ns h = some n) p.2 q.2)
-      (R := fun (b : MProd (Option (RecordVerdict ⊕ List ConLeche.Frontend.IndCtorRec × Nat))
-          (Array ConLeche.Frontend.IndCtorRec))
+      (R := fun (b : (Option (RecordVerdict ⊕ List ConLeche.Frontend.IndCtorRec × Nat))
+          × Array ConLeche.Frontend.IndCtorRec)
         (c : Option (ConLeche.Frontend.RecordVerdict ⊕ List ConLeche.Frontend.IndCtorRec × Nat) ×
           Array ConLeche.Frontend.IndCtorRec) =>
           b.1.isNone = c.1.isNone ∧ VInv b.1 c.1 ∧ b.2 = c.2)
@@ -1857,12 +1862,12 @@ theorem validateIndD_run' {s s' : AState} (hok : StateOK s) {sd : StateD}
     obtain ⟨ri, s₁, hin, hstep⟩ := AM.bind_ok hstep
     refine except_bind_ex
       (forIn_sim (P := fun (a : NIdx) (b : ConLeche.Name) => denoteN s.store.ns a = some b)
-        (R := fun (b : MProd (Option (RecordVerdict ⊕ List ConLeche.Frontend.IndCtorRec × Nat))
-            (MProd Nat (Array ConLeche.Frontend.IndCtorRec)))
+        (R := fun (b : (Option (RecordVerdict ⊕ List ConLeche.Frontend.IndCtorRec × Nat))
+            × (Array ConLeche.Frontend.IndCtorRec × Nat))
           (c : Option (ConLeche.Frontend.RecordVerdict ⊕ List ConLeche.Frontend.IndCtorRec × Nat)
             × (Array ConLeche.Frontend.IndCtorRec × Nat)) =>
             b.1.isNone = c.1.isNone ∧ VInv b.1 c.1 ∧
-              b.2.1 = c.2.2 ∧ b.2.2 = c.2.1)
+              b.2.2 = c.2.2 ∧ b.2.1 = c.2.1)
         ?_ hns (c := (none, c0.2, 0)) ⟨rfl, VInv.nil, rfl, h20⟩ hin) ?_
     · intro n nm bi ci s0'' sti hdn hRi hsti
       obtain ⟨hni, hli, hj, hord2⟩ := hRi

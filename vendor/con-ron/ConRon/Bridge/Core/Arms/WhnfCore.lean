@@ -303,8 +303,10 @@ theorem whnfCoreLoop_spec {fe : IFEnv} {fuel : Nat}
       simp only [denoteStep, Option.map_eq_some_iff] at hdR
       obtain ⟨V, hdV, rfl⟩ := hdR
       vcgen
-      subst_vars
-      refine ⟨hok1, hx1, hp1, V, hdV, hwR, F1, ?_⟩
+      -- con-agua patch (lean4#15487): `vcgen` now splits the `∧` post itself
+      all_goals subst_vars
+      all_goals try first | rfl | exact hok1 | exact hx1 | exact hp1
+      refine ⟨V, hdV, hwR, F1, ?_⟩
       simp only [ConLeche.whnfCoreLoopM]
       rw [show ConLeche.whnfCoreStepW mode (ConLeche.pureFns mode env F1) env c d e
         = .ok (.done V) from hF1]

@@ -584,7 +584,7 @@ theorem ProjOut.push {fe : IFEnv} (hcoh : IFEnvCoh fe) (st : EStore)
       have hlt : cnt < fe.visibleBelow := by
         rw [hvb]
         exact mkIFEnvGo_counter_lt fe.env.consts n cnt cinfo (hcoh.2 n ▸ hg)
-      simp only [ite_eq_left (Nat.lt_succ_of_lt hlt)] at hf
+      simp only [Nat.lt_add_one_of_lt hlt, ite_true] at hf  -- con-agua patch: was `simp only [ite_eq_left ..]`, which now misses the `ite` (instance arg)
       simp only [IFEnv.find?, hg, ite_eq_left hlt]
       exact hf
 
@@ -620,7 +620,7 @@ theorem ProjOut.push_table {fe : IFEnv} (hcoh : IFEnvCoh fe) (st : EStore)
       have hlt : cnt < fe.visibleBelow := by
         rw [hvb]
         exact mkIFEnvGo_counter_lt fe.env.consts n cnt cinfo (hcoh.2 n ▸ hg)
-      simp only [ite_eq_left (Nat.lt_succ_of_lt hlt)] at hf
+      simp only [Nat.lt_add_one_of_lt hlt, ite_true] at hf  -- con-agua patch: was `simp only [ite_eq_left ..]`, which now misses the `ite` (instance arg)
       simp only [IFEnv.find?, hg, ite_eq_left hlt]
       exact hf
 

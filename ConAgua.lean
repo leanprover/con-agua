@@ -20,3 +20,5 @@ public import ConAgua.Compiler.SimCall
 public import ConAgua.Compiler.SimFun
 public import ConAgua.Compiler.Correct
 public import ConAgua.Compiler.Main
+public import ConAgua.Scan.Link
+public import ConAgua.Scan.Leaves

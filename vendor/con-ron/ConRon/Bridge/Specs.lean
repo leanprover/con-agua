@@ -431,7 +431,7 @@ theorem internLamE_spec_view (s₀ : AState) (ty b : EIdx)
         s'.store.view h = some (.lam ty b) ∧
         denoteE s'.store h = denoteEView s'.store (.lam ty b); ⊤⦄ := by
   sym only [bridge_grind, → EStore.view_of_findBind (tag := ETag.lam) (htag := rfl),
-      denoteE_view_eq, EStore.internBind_spec (tag := ETag.lam) (htag := rfl)] =>
+      denoteE_view_eq, → EStore.internBind_spec (tag := ETag.lam) (htag := rfl)] =>
     vcgen [internLamE] <;> finish
 
 theorem internForallEE_spec_view (s₀ : AState) (ty b : EIdx)
@@ -444,7 +444,7 @@ theorem internForallEE_spec_view (s₀ : AState) (ty b : EIdx)
         s'.store.view h = some (.forallE ty b) ∧
         denoteE s'.store h = denoteEView s'.store (.forallE ty b); ⊤⦄ := by
   sym only [bridge_grind, → EStore.view_of_findBind (tag := ETag.forallE) (htag := rfl),
-      denoteE_view_eq, EStore.internBind_spec (tag := ETag.forallE) (htag := rfl)] =>
+      denoteE_view_eq, → EStore.internBind_spec (tag := ETag.forallE) (htag := rfl)] =>
     vcgen [internForallEE] <;> finish
 
 /-- con-leche: none — `internLamE_spec_view` at denoting children: the face

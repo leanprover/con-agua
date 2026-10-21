@@ -560,8 +560,7 @@ theorem checkStructFieldSortsI_spec {μ : CheckMode} {env : Env} (fe : IFEnv)
       | true =>
       obtain ⟨rfl, rfl⟩ := AM.pure_ok k7
       simp only [ite_true] at z7
-      obtain ⟨_, s8, k8, z8⟩ := AM.bind_ok z7
-      obtain ⟨-, rfl⟩ := AM.pure_ok k8
+      have z8 := z7  -- con-agua patch: no `pure () >>=` after the guard (new `do` elaborator)
       obtain ⟨c, F3, restP, hF3, hr⟩ := tail _ (c5.trans c6) z8
       refine ⟨c, max (max F1 F2) F3, restP ++ [lu], ?_, hr⟩
       have e1 := hF1' (max (max F1 F2) F3)
@@ -578,8 +577,7 @@ theorem checkStructFieldSortsI_spec {μ : CheckMode} {env : Env} (fe : IFEnv)
     cases large with
     | false =>
       simp only [Bool.not_true, Bool.false_eq_true, ite_false] at z4
-      obtain ⟨_, s5, k5, z5⟩ := AM.bind_ok z4
-      obtain ⟨-, rfl⟩ := AM.pure_ok k5
+      have z5 := z4  -- con-agua patch: no `pure () >>=` after the guard (new `do` elaborator)
       obtain ⟨c, F3, restP, hF3, hr⟩ := tail _ (CoreStep.refl hok4) z5
       refine ⟨c, max (max F1 F2) F3, restP ++ [uP], ?_, hr⟩
       have e1 := hF1' (max (max F1 F2) F3)
@@ -612,8 +610,7 @@ theorem checkStructFieldSortsI_spec {μ : CheckMode} {env : Env} (fe : IFEnv)
       case isFalse hn =>
         obtain ⟨_, _, k, _⟩ := AM.bind_ok z6; exact absurd k (fun h => AM.fail_ok h)
       case isTrue hy =>
-      obtain ⟨_, s8, k8, z8⟩ := AM.bind_ok z6
-      obtain ⟨-, rfl⟩ := AM.pure_ok k8
+      have z8 := z6  -- con-agua patch: no `pure () >>=` after the guard (new `do` elaborator)
       obtain ⟨c, F3, restP, hF3, hr⟩ := tail _ c6 z8
       refine ⟨c, max (max F1 F2) F3, restP ++ [lu], ?_, hr⟩
       have e1 := hF1' (max (max F1 F2) F3)
@@ -822,7 +819,7 @@ theorem checkSumCtor_spec {μ : CheckMode} {env : Env} (fe₀ fe : IFEnv)
   obtain ⟨p5, hb5⟩ := structCtorResidOk_spec T TP lps lpsP nP nF nIdx cbody cbodyP s₂ s₅ b5
     c12.ok.state ⟨denoteN_ext hT x02, denoteNListE_ext x02 _ _ hlps, hcb⟩ k5
   obtain ⟨hr5, z6⟩ := AM.dunless_ok hnever z5
-  replace z6 := AM.pure_bind_ok z6
+  try replace z6 := AM.pure_bind_ok z6  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   rw [hb5] at hr5
   have c5 := c12.trans (p5.toCore c12.ok)
   -- the constructor's parameters, opened
@@ -906,7 +903,7 @@ theorem checkSumCtor_spec {μ : CheckMode} {env : Env} (fe₀ fe : IFEnv)
     (p8.ext.trans p10.ext).trans (c11.ext.trans (p12.ext.trans x12_15))
   have hg := AM.dunless_ok hnever z18
   obtain ⟨hg1, z19⟩ := hg
-  replace z19 := AM.pure_bind_ok z19
+  try replace z19 := AM.pure_bind_ok z19  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   rw [beq_of_denoteE hwf15 hxfn hhd,
     beq_of_denoteEList hwf15 (denoteEList_take hxargs nP) (denoteEList_ext x7_15 _ _ hcfvs),
     show xargs.length = xrestP.getAppArgs.length from
@@ -918,14 +915,14 @@ theorem checkSumCtor_spec {μ : CheckMode} {env : Env} (fe₀ fe : IFEnv)
   obtain ⟨p20, hb20⟩ := fieldDomsResolve_spec xq.1 xfvsP hread₀
     (denoteEList_ext x12_15 _ _ hxfvs) k20
   obtain ⟨hg2, z21⟩ := AM.dunless_ok hnever z20
-  replace z21 := AM.pure_bind_ok z21
+  try replace z21 := AM.pure_bind_ok z21  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   rw [hb20] at hg2
   obtain ⟨b22, s₂₂, k22, z22⟩ := AM.bind_ok z21
   obtain ⟨p22, hb22⟩ := idxArgsResolve_spec (xargs.drop nP) (xrestP.getAppArgs.drop nP)
     (hread₀.mono p20.ok p20.ext p20.pins)
     (denoteEList_drop (denoteEList_ext p20.ext _ _ hxargs) nP) k22
   obtain ⟨hg3, z23⟩ := AM.dunless_ok hnever z22
-  replace z23 := AM.pure_bind_ok z23
+  try replace z23 := AM.pure_bind_ok z23  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   rw [hb22] at hg3
   -- the field sorts
   have c22 := c15.trans ((p20.trans p22).toCore c15.ok)

@@ -1,6 +1,6 @@
 name = "ConAgua"
 version = "0.1.0"
-defaultTargets = ["ConAgua", "ConLeche", "ConRonArena"]
+defaultTargets = ["ConAgua", "ConLeche", "ConRonArena", "ConRonBridge"]
 
 [leanOptions]
 autoImplicit = false
@@ -16,115 +16,14 @@ name = "ConAgua"
 
 # Vendored from con-leche (rev 103562b) and con-ron (rev 4c9eaf7, proof/ dir).
 # See vendor/README.md for provenance and every patch applied.
-#
-# NOT globbed: "ConLeche" (bare root), "ConLeche.MainTheorem", "ConLeche.Model.+"
-# and "ConLeche.Verify.Cached.+" (~124 modules). These fail on our toolchain's
-# `grind` (not on nightly-2026-09-21 — a regression surfaced by the Kraken-fork
-# toolchain bump to nightly-2026-10-20): `ConLeche.Verify.Cached.KnotC`'s memo-hit
-# lemmas no longer let `grind` split a derived conjunction, and everything that
-# transitively imports it (see vendor/README.md) is excluded here. They are
-# still vendored (the .lean files are all present), just not in this lib's
-# buildable set.
 [[lean_lib]]
 name = "ConLeche"
 srcDir = "vendor/con-leche"
-# No implicit default root (which would be "ConLeche", the bare aggregator —
-# excluded, see above): roots = [] and an exact (non-"+") glob entry per
-# buildable module, generated and verified by a script that computed the
-# transitive import closure of the tier roots below and checked it has zero
-# edges into the excluded set. See vendor/README.md.
-roots = []
-globs = ["ConLeche.Accepts", "ConLeche.Cached.CheckerC", "ConLeche.Cached.CoreC", 
-  "ConLeche.Cached.ExprNodes", "ConLeche.Cached.ExprOpsC", "ConLeche.Cached.Installed", 
-  "ConLeche.Cached.ParsedC", "ConLeche.Cached.StateC", "ConLeche.Challenge", 
-  "ConLeche.Complete", "ConLeche.Complete.OfficialNested", 
-  "ConLeche.Complete.PosDerivComplete", "ConLeche.Complete.ProgActive", "ConLeche.Denotes", 
-  "ConLeche.Frontend.Export", "ConLeche.Frontend.ExportC", "ConLeche.Frontend.NatOpGround", 
-  "ConLeche.Frontend.Prelude", "ConLeche.Frontend.Prepare", "ConLeche.Frontend.Scan.Equiv", 
-  "ConLeche.Frontend.Scan.Equiv.Keys", "ConLeche.Frontend.Scan.Equiv.Kit", 
-  "ConLeche.Frontend.Scan.Equiv.Objects", "ConLeche.Frontend.Scan.Equiv.Scalars", 
-  "ConLeche.Frontend.Scan.Fast", "ConLeche.Frontend.Scan.Naive", 
-  "ConLeche.Frontend.Scan.Types", "ConLeche.Kernel.Basis", "ConLeche.Kernel.Basis.And", 
-  "ConLeche.Kernel.Basis.Builder", "ConLeche.Kernel.Basis.Empty", "ConLeche.Kernel.Basis.Eq", 
-  "ConLeche.Kernel.Basis.False", "ConLeche.Kernel.Basis.Names", "ConLeche.Kernel.Basis.Nat", 
-  "ConLeche.Kernel.Basis.Quot", "ConLeche.Kernel.BasisA", "ConLeche.Kernel.BasisGen", 
-  "ConLeche.Kernel.Canon", "ConLeche.Kernel.CheckDecl", "ConLeche.Kernel.Checker", 
-  "ConLeche.Kernel.CheckerBase", "ConLeche.Kernel.CheckerSplit", "ConLeche.Kernel.Core", 
-  "ConLeche.Kernel.CoreDefs", "ConLeche.Kernel.CoreIO", "ConLeche.Kernel.DeclCheck", 
-  "ConLeche.Kernel.Env", "ConLeche.Kernel.Exclusive", "ConLeche.Kernel.Expr", 
-  "ConLeche.Kernel.ExprOps", "ConLeche.Kernel.FEnv", 
-  "ConLeche.Kernel.Inductives.BlockInstall", "ConLeche.Kernel.Inductives.BlockInstallF", 
-  "ConLeche.Kernel.Inductives.BlockParts", "ConLeche.Kernel.Inductives.BlockRec", 
-  "ConLeche.Kernel.Inductives.BlockTail", "ConLeche.Kernel.Inductives.ClassRead", 
-  "ConLeche.Kernel.Inductives.FieldTele", "ConLeche.Kernel.Inductives.GenRec", 
-  "ConLeche.Kernel.Inductives.Positivity", "ConLeche.Kernel.Inductives.RecCheck", 
-  "ConLeche.Kernel.Inductives.StructInstall", "ConLeche.Kernel.Inductives.StructInstallF", 
-  "ConLeche.Kernel.Inductives.StructParts", "ConLeche.Kernel.Inductives.SumInstall", 
-  "ConLeche.Kernel.Inductives.SumInstallF", "ConLeche.Kernel.Inductives.SumParts", 
-  "ConLeche.Kernel.Level", "ConLeche.Kernel.Name", "ConLeche.Kernel.NatOpPinSet", 
-  "ConLeche.Kernel.NatOpPins", "ConLeche.Kernel.PropRead", "ConLeche.Kernel.PropWhen", 
-  "ConLeche.Kernel.StdAxioms", "ConLeche.Kernel.TrustAxioms", "ConLeche.Kernel.TrustPins", 
-  "ConLeche.Kernel.TypeChecker", "ConLeche.PinGen", "ConLeche.PinGen.Dump", 
-  "ConLeche.Semantics", "ConLeche.Semantics.BasisOk", "ConLeche.Semantics.BasisRules", 
-  "ConLeche.Semantics.BasisType", "ConLeche.Semantics.Bridge.Decl", 
-  "ConLeche.Semantics.Bridge.DeclRun", "ConLeche.Semantics.Bridge.Sound", 
-  "ConLeche.Semantics.Decl", "ConLeche.Semantics.DeclEta", "ConLeche.Semantics.DeclRun", 
-  "ConLeche.Semantics.DefEqList", "ConLeche.Semantics.DefEqStep", 
-  "ConLeche.Semantics.DivModEval", "ConLeche.Semantics.EnvFacts", 
-  "ConLeche.Semantics.EqTower", "ConLeche.Semantics.Frame", "ConLeche.Semantics.Hoist", 
-  "ConLeche.Semantics.IndBlockFacts", "ConLeche.Semantics.Inductives.DeclBlock", 
-  "ConLeche.Semantics.Inductives.DeclBlockEta", "ConLeche.Semantics.Inductives.HoleAcc", 
-  "ConLeche.Semantics.Inductives.HoleMono", "ConLeche.Semantics.Inductives.TeleAcc", 
-  "ConLeche.Semantics.Interp", "ConLeche.Semantics.Kit", "ConLeche.Semantics.LitParams", 
-  "ConLeche.Semantics.LitStep", "ConLeche.Semantics.NoBVar", "ConLeche.Semantics.Sat", 
-  "ConLeche.Semantics.Skeleton", "ConLeche.Semantics.SubstAV", 
-  "ConLeche.Semantics.Tower.BlockRecTower", "ConLeche.Semantics.Tower.BlockTower", 
-  "ConLeche.Semantics.Tower.FixTower", "ConLeche.Semantics.Tower.SumTower", 
-  "ConLeche.Semantics.Tower.TowerKit", "ConLeche.Semantics.Univ", 
-  "ConLeche.Semantics.WellDenoted", "ConLeche.SetModel", "ConLeche.SetModel.Access", 
-  "ConLeche.SetModel.GraphRec", "ConLeche.SetModel.HoleClose", "ConLeche.SetModel.Iter", 
-  "ConLeche.SetModel.NestRec", "ConLeche.SetModel.NestRecCls", "ConLeche.SetModel.Ops", 
-  "ConLeche.SetModel.TaggedSum", "ConLeche.SetModel.TupleTower", "ConLeche.SetModel.UnionRec", 
-  "ConLeche.SetModel.Value", "ConLeche.SetTheory.Basic", "ConLeche.SetTheory.Core", 
-  "ConLeche.SetTheory.Derive.Choice", "ConLeche.SetTheory.Derive.Empty", 
-  "ConLeche.SetTheory.Derive.Graphs", "ConLeche.SetTheory.Derive.Lfp", 
-  "ConLeche.SetTheory.Derive.LfpFam", "ConLeche.SetTheory.Derive.LfpTuple", 
-  "ConLeche.SetTheory.Derive.Natrec", "ConLeche.SetTheory.Derive.Omega", 
-  "ConLeche.SetTheory.Derive.Pair", "ConLeche.SetTheory.Derive.Pt", 
-  "ConLeche.SetTheory.Derive.Quot", "ConLeche.SetTheory.Derive.Sep", 
-  "ConLeche.SetTheory.Derive.Sigma", "ConLeche.SetTheory.Derive.Tg", 
-  "ConLeche.SetTheory.Derive.TypeU", "ConLeche.SetTheory.Derive.Univ", 
-  "ConLeche.SetTheory.Derive.Universe", "ConLeche.Term", "ConLeche.Term.Const", 
-  "ConLeche.Term.Subst", "ConLeche.Term.Syntax", "ConLeche.Util.PtrEq", 
-  "ConLeche.Verify.Abstract", "ConLeche.Verify.AbstractRange", "ConLeche.Verify.BridgeDecl", 
-  "ConLeche.Verify.BridgeWfImp", "ConLeche.Verify.Cached.Erase", "ConLeche.Verify.CheckerF", 
-  "ConLeche.Verify.Deep", "ConLeche.Verify.Denote", "ConLeche.Verify.Denote.IndFrame", 
-  "ConLeche.Verify.Denote.Install", "ConLeche.Verify.Denote.OpenVars", 
-  "ConLeche.Verify.Denote.Pinned", "ConLeche.Verify.Denote.Shift", 
-  "ConLeche.Verify.Denote.SubstConst", "ConLeche.Verify.Denote.TeleOpen", 
-  "ConLeche.Verify.Denote.VClosed", "ConLeche.Verify.DivModInv", "ConLeche.Verify.EnvBound", 
-  "ConLeche.Verify.EnvGuards", "ConLeche.Verify.EnvPreds", "ConLeche.Verify.EnvWF", 
-  "ConLeche.Verify.ExceptBind", "ConLeche.Verify.Extend.Inversions", 
-  "ConLeche.Verify.Extend.Recs", "ConLeche.Verify.FastOps", "ConLeche.Verify.Fueled", 
-  "ConLeche.Verify.Inductives.BlockInv", "ConLeche.Verify.Inductives.BlockPartsInv", 
-  "ConLeche.Verify.Inductives.BlockRecRun", "ConLeche.Verify.Inductives.BlockWF", 
-  "ConLeche.Verify.Inductives.DirectGen", "ConLeche.Verify.Inductives.DirectInv", 
-  "ConLeche.Verify.Inductives.GenRecRun", "ConLeche.Verify.Inductives.HoleImg", 
-  "ConLeche.Verify.Inductives.NestContInv", "ConLeche.Verify.Inductives.NestScope", 
-  "ConLeche.Verify.Inductives.NestedRead", "ConLeche.Verify.Inductives.PosDeriv", 
-  "ConLeche.Verify.Inductives.PosDerivFun", "ConLeche.Verify.Inductives.PosDerivInv", 
-  "ConLeche.Verify.Inductives.PosNodes", "ConLeche.Verify.Inductives.PositivityInv", 
-  "ConLeche.Verify.Inductives.RecCheckRun", "ConLeche.Verify.Inductives.RecStage", 
-  "ConLeche.Verify.Inductives.ReplaceApps", "ConLeche.Verify.Inductives.TargetAuxFire", 
-  "ConLeche.Verify.Inductives.UniformOcc", "ConLeche.Verify.InferIOLeaves", 
-  "ConLeche.Verify.InferIOLemmas", "ConLeche.Verify.InferLeaves", 
-  "ConLeche.Verify.InferLemmas", "ConLeche.Verify.InferProjSlots", 
-  "ConLeche.Verify.InstLevels", "ConLeche.Verify.InstList", "ConLeche.Verify.InstSpine", 
-  "ConLeche.Verify.Knot", "ConLeche.Verify.Leaves", "ConLeche.Verify.Level", 
-  "ConLeche.Verify.Modes", "ConLeche.Verify.Mono", "ConLeche.Verify.NatOpFrag", 
-  "ConLeche.Verify.PairM", "ConLeche.Verify.ProjSlots", "ConLeche.Verify.ProjTele", 
-  "ConLeche.Verify.PropRead", "ConLeche.Verify.ReducePinInv", "ConLeche.Verify.Shift", 
-  "ConLeche.Verify.StrLitExpr", "ConLeche.Verify.Subst"]
+# Everything under ConLeche/ (incl. the bare aggregator and MainTheorem). The
+# root is listed in `globs` verbatim too: with a bare-file root plus a `+`
+# glob, Lake can fail to schedule the root (vendor/README.md, "Lake quirk").
+roots = ["ConLeche"]
+globs = ["ConLeche", "ConLeche.+"]
 # con-leche's own lakefile sets no leanOptions (so autoImplicit/relaxedAutoImplicit
 # are Lean's defaults, both true); override our package-level false so vendored
 # files need no edits for this.
@@ -139,18 +38,9 @@ roots = ["ConRon.Arena"]
 leanOptions = {autoImplicit = true, relaxedAutoImplicit = true}
 
 # Theorem 1 (DESIGN.md §8.2): the bridge from the arena twin to con-leche's
-# pure checker. Imports ConRonArena + ConLeche only, no Aeneas/Mathlib.
-#
-# NOT in defaultTargets: it does not build on our current toolchain (the
-# Kraken-fork bump to nightly-2026-10-20). Two separate blockers, both
-# vendor/README.md "grind regressions", neither Aeneas/Mathlib-related:
-#   1. ConRon.Bridge.Inductives.BlockWF (and other modules) need
-#      ConLeche.Verify.Cached.{GenRecC,NestPosC,BlockRunC,TargetRecC}, which
-#      are excluded from the ConLeche lib above (the KnotC regression).
-#   2. ConRon/Bridge/Specs.lean itself has its own `finish` failures
-#      (`internLam`/`Ext`-preservation goals) independent of ConLeche, not
-#      yet investigated.
-# `lake build ConRonBridge` still works as a target to re-check this.
+# pure checker. Imports ConRonArena + ConLeche only, no Aeneas/Mathlib. Its
+# eighty-odd modules are siblings, not all reachable from the root, hence the
+# glob (as in con-ron's own lakefile).
 [[lean_lib]]
 name = "ConRonBridge"
 srcDir = "vendor/con-ron"

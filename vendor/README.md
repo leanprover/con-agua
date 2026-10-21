@@ -49,49 +49,31 @@ This surfaced real `grind`/compiler regressions between the two nightlies
    antecedent, so it can't be a `grind_pattern`; passing it straight to
    `finish` instead works fine).
 
-3. **One `grind` regression did NOT get a one-line fix**:
-   `ConLeche/Verify/Cached/KnotC.lean`'s five memo-wrapper proofs
-   (`memoEI_{whnfCore,whnf,infer,inferIO}_spec`, `memoBI_defeq_spec`'s
-   siblings) each do `<;> finish` after a `vcgen` that needs, among other
-   things, a fact like `CSOK.whnfCoreCheap_hit`'s conclusion
-   `Runs (...) r ∧ Expr.WScoped d r`. On nightly-2026-10-20, `grind`'s
-   `grind_pattern`-triggered instance of that lemma still fires (confirmed via
-   `set_option grind.debug true`-style diagnostics: `CSOK.whnfCoreCheap_hit`
-   instance count 1) but the derived *conjunction* is not re-split into a
-   usable `Expr.WScoped d r` fact — the negated goal `¬WScoped d x` is never
-   contradicted. Splitting the lemma into two (one per conjunct, each its own
-   `grind_pattern`) did not help either: the split-off `_wscoped` lemma itself
-   fires (instance count 1) but *still* doesn't close the goal, so this is not
-   merely "the conjunction isn't split", it looks like a deeper difference in
-   how a `grind_pattern`-triggered instance feeds back into contradiction
-   detection on this nightly. Tried and reverted: passing the `_hit` lemma
-   directly as a `finish [...]` hint (changes grind's auto-derived trigger
-   pattern for the worse — it drops the cache-read anchor term entirely),
-   raising `finish`'s `gen` parameter, both of the above together. Not
-   minimized to a standalone reproducer (would need a non-trivial amount of
-   `CSOK`/memo-map scaffolding) — this is the one place a real investigation
-   is still owed, filed here rather than attempted further.
+3. **The `KnotC` "grind regression" is a `vcgen` change** (fixed; this was
+   the blocker for ~124 `ConLeche` modules and for `ConRonBridge`).
+   Root cause: `vcgen` now splits a `∧` postcondition into one VC per
+   conjunct (lean4#15487, "split a `∧` on the RHS of a `vcgen` entailment";
+   nightly bisect: good nightly-2026-10-05, bad nightly-2026-10-06, still
+   bad on nightly-2026-10-21; commit-level: 1e15c3fdf8 = #15487 fails, its
+   parent c96933c169 passes, both built from source). `KnotC`'s memo-wrapper specs
+   post `CSOK .. ∧ Runs .. r ∧ WScoped d r`, and the memo-hit lemmas
+   `CSOK.{whnfCore,whnfCoreCheap,whnf,infer,inferIO}_hit` (conclusion
+   `Runs .. r ∧ WScoped d r`) are `grind_pattern`-triggered by the `Runs`
+   term. On v4.35.0 the whole conjunction was one VC, so that term was in the
+   e-graph while `grind` proved `WScoped`; now the `WScoped` VC has no `Runs`
+   term and the lemma cannot fire. (The "instance count 1" seen in the
+   failing goal's diagnostics, which the first investigation read as "fires
+   but the conjunction is not re-split", does not refer to that VC.)
+   Standalone reproducer: `docs/gaps/vcgen-conj-split-grind-trigger.lean`.
+   Fix (`ConLeche/Verify/Cached/KnotC.lean`, +40 lines, nothing removed):
+   after each of the five `_hit` lemmas, a companion `CSOK.*_hit_ws` lemma
+   stating just the `WScoped` conjunct (proved from `_hit`), with its own
+   `grind_pattern [conleche_grind] … => CSOK mode env s, s.xC[i]?,
+   Expr.WScoped d r` — the `WScoped` term *is* in that VC. No proof text
+   changed. With this, all of `ConLeche` builds (incl. `MainTheorem`).
 
-   **Consequence**: `ConLeche.Verify.Cached.KnotC` and everything that
-   transitively imports it — 124 modules, computed by script and listed in
-   full in the `lakefile.toml` comment above the `ConLeche` `[[lean_lib]]` —
-   do not build on this toolchain. That includes `ConLeche` (the bare
-   aggregator), `ConLeche.MainTheorem`, essentially all of `ConLeche.Model.*`
-   (~100 of 234 files; the untouched ~134 still build, just not via a single
-   glob prefix — see the generated per-module `globs` list) and most of
-   `ConLeche.Verify.Cached.*`. All are still vendored (every `.lean` file is
-   present on disk, byte-identical to upstream except where noted above); they
-   are simply not in the `ConLeche` lib's buildable `globs`/`roots`, which were
-   regenerated (a short Python script, computing the transitive import closure
-   of the still-good tier roots and checking it has zero edges into the
-   excluded set — see the script's output process in this session; not
-   committed as a file) as an exact per-module list rather than directory
-   prefixes, specifically so the excluded ~124 don't get swept in by a
-   broader "ConLeche.Verify.+"-style glob.
-
-   This also blocks `ConRonBridge` (see below): the modules it needs from
-   `ConLeche.Verify.Cached` (`GenRecC`, `NestPosC`, `BlockRunC`, `TargetRecC`)
-   all transitively import `KnotC`.
+   The same `vcgen` change, plus two other toolchain changes, account for
+   every `ConRonBridge` failure; see that section below.
 
 **A Lake quirk found along the way** (unrelated to the toolchain bump, but
 discovered while reworking the glob list): when a `lean_lib` has *both* a
@@ -139,12 +121,14 @@ the top-level `Main.lean` / `PinDump.lean` (con-leche's CLI binary and the
 pin-dump generator executable — entry points we don't need; nothing in
 `ConLeche.*` imports them).
 
-**Content changes to vendored `.lean` files**: five one-line/few-line patches,
+**Content changes to vendored `.lean` files**: six small patches,
 all from the toolchain switch (see above), none from the original
 nightly-2026-09-21 vendoring: `ConLeche/Kernel/Name.lean`,
 `ConLeche/Kernel/Expr.lean`, `ConLeche/Driver/OwnerParse.lean`,
-`ConLeche/Verify/Cached/ParInstall.lean` (all `withPtrEq`-related), and
-`ConLeche/Verify/Cached/DiscC3.lean` (the one `grind` fix). Plus one new
+`ConLeche/Verify/Cached/ParInstall.lean` (all `withPtrEq`-related),
+`ConLeche/Verify/Cached/DiscC3.lean` (the one-line `grind` fix) and
+`ConLeche/Verify/Cached/KnotC.lean` (five added companion lemmas, the
+`vcgen` ∧-split fix). Plus one new
 vendored file, `ConLeche/Util/PtrEq.lean`. Every other `.lean` file under
 `vendor/con-leche/` is still byte-identical to the reference clone.
 
@@ -160,11 +144,12 @@ these two):**
    package-level `[leanOptions]` sets both `false`. Without the per-lib
    override, files such as `ConLeche/Frontend/Scan/Types.lean`'s
    `IdTable (α : Type)` API (`α` mentioned, never rebound) fail to elaborate.
-2. `srcDir = "vendor/con-leche"`, `roots = []`, and an exact (non-`+`) `globs`
-   entry per buildable module (~550, generated by script — see "Toolchain
-   switch" above for why: a broad `"ConLeche.+"` glob would sweep in the
-   ~124 `KnotC`-regression modules, and `roots`-only misses orphan modules
-   nothing imports, same as upstream's own comments note for their own libs).
+2. `srcDir = "vendor/con-leche"`, `roots = ["ConLeche"]`,
+   `globs = ["ConLeche", "ConLeche.+"]` (everything; `roots`-only would miss
+   orphan modules nothing imports, as upstream's own comments note; the root
+   is repeated in `globs` because of the Lake quirk above). Until the `KnotC`
+   fix this was an exact per-module list excluding the ~124 modules above
+   `KnotC`.
 
 **Pin files, vendored verbatim, no generation attempted**: con-leche's pin
 mechanism (`pins/README.md`) tries several committed pin variants at
@@ -178,22 +163,18 @@ closure) has 2 pre-existing `sorry`s. These are upstream's, present
 unchanged at rev `103562b`; con-agua adds none.
 
 **Build**: `lake build ConLeche` builds clean, **zero errors**, on
-`leanprover/lean4:nightly-2026-10-20` (the Kraken fork's toolchain), for the
-~550 modules in the `globs` list; only pre-existing upstream `sorry`
-warnings. The ~124 modules excluded by the `KnotC` regression (see above)
-are not built by this target but remain on disk.
+`leanprover/lean4:nightly-2026-10-20` (the Kraken fork's toolchain), all
+567 modules (1138 jobs incl. deps), including the bare `ConLeche`
+aggregator, `ConLeche.MainTheorem` and the `Verify.Cached` capstone; only
+the pre-existing upstream `sorry` warnings in `Challenge.lean`.
 
-**Build time**: `lake build` (the whole project: `ConAgua` + `ConLeche` +
-`ConRonArena`) from completely clean (`lake clean`, `rm -rf .lake/build`,
-including re-fetching `Kraken`): **560 jobs, ~44s wall** (`user` ~6 min —
-96 cores). Reproduced twice. `ConLeche` alone is the bulk of that (~550 of
-the 560 jobs). The priority subset (`ConLeche.Frontend.Scan.*`, 8 modules)
-was ~16s of that once the rest is cached, or ~40s fully cold, back when it
-was measured standalone on nightly-2026-09-21 (first landed/merged
-separately, per the task's priority); it is included unchanged in the
-current `globs` list.
+**Build time**: `lake build` (the whole project, default targets `ConAgua` +
+`ConLeche` + `ConRonArena` + `ConRonBridge`) after `rm -rf .lake/build`
+(Kraken already fetched): **1497 jobs, 1m52s wall** (`user` 17m49s, 96
+cores), on nightly-2026-10-20 after the `KnotC`/Bridge fixes. Before them
+(only ~550 `ConLeche` modules, no Bridge) it was 560 jobs, ~44s wall.
 
-### History (three merges to `master` on this branch)
+### History
 
 1. First landed only `ConLeche.Frontend.Scan.{Types,Fast,Naive,Equiv,Equiv/*}`
    (the byte scanner con-agua's Stage A needs first, `docs/survey.md` §1.4),
@@ -206,16 +187,19 @@ current `globs` list.
    zero errors, ~1m57s wall cold, after adding `pins/` and
    `scripts/natop_prefix.json`. No `withPtrEq` issue and no `grind` issue
    turned up on that toolchain.
-3. Then the toolchain switch (this README's current state): nightly-2026-09-21
+3. Then the toolchain switch: nightly-2026-09-21
    → nightly-2026-10-20 via the Kraken fork, the `withPtrEq` shim, the one
    `grind` fix, the `KnotC`-regression exclusion (~124 modules), and
    `ConRonArena` joining `defaultTargets` (it was already vendored and
    buildable, just not yet wired into the default build).
+4. Then (branch `bridge`, the current state) the `KnotC` root cause
+   (lean4#15487) and fix, all of `ConLeche` re-enabled, and `ConRonBridge`
+   fixed and added to `defaultTargets`.
 
 ## vendor/con-ron — `ConRon` lib
 
-Source: `_tmp/ref/con-ron/proof/ConRon/` (rev `4c9eaf7`), copied verbatim (no
-edits) to `vendor/con-ron/ConRon/`, plus the repo-root `ConRon.lean`
+Source: `_tmp/ref/con-ron/proof/ConRon/` (rev `4c9eaf7`), copied verbatim
+(edits: see the two lib sections below) to `vendor/con-ron/ConRon/`, plus the repo-root `ConRon.lean`
 aggregator — 327 files total. con-ron's own `proof/lakefile.toml` defines
 three relevant libs: `ConRon` (roots `["ConRon"]`, i.e. the bare aggregator —
 this is actually the Aeneas-refinement tier, `ConRon.Generated` +
@@ -269,37 +253,68 @@ patch, before the toolchain switch — this part of con-ron needed no new
 fix for nightly-2026-10-20): **220 jobs, 0 errors, ~36s wall** with
 `ConLeche`/`Kraken` already built, or ~2m with everything cold.
 
-### `ConRonBridge` — does not build (not in `defaultTargets`)
+### `ConRonBridge` — builds clean (in `defaultTargets`)
 
 `roots = ["ConRon.Bridge"]`, `globs = ["ConRon.Bridge.+"]` (con-ron's own
 lakefile uses exactly this shape and comments that the tier's eighty-three
 modules are siblings, not all reachable from the root — unlike Arena, this
-one really does need the glob). Two independent blockers, confirmed on
-nightly-2026-10-20, neither Aeneas/Mathlib:
+one really does need the glob). **1424 jobs (incl. its `ConLeche`/`ConRonArena`
+deps), 0 errors, no `sorryAx`** in any of the tier's `#print axioms` gates
+(`Bridge/Axioms.lean`, `Bridge/*/Axioms.lean`).
 
-1. `ConRon.Bridge.Inductives.BlockWF` and others import
-   `ConLeche.Verify.Cached.{GenRecC,NestPosC,BlockRunC,TargetRecC}` directly,
-   and *all four* transitively import `ConLeche.Verify.Cached.KnotC` (traced
-   with the same reverse-import script used for the exclusion list above),
-   which is the broken module (see "Toolchain switch" §3). This is not
-   fixable by editing `vendor/con-ron/` at all — the fix has to land in
-   `ConLeche/Verify/Cached/KnotC.lean` first.
-2. Independently, `ConRon/Bridge/Specs.lean` itself fails: `internLam_spec`
-   and three siblings (`vc6.1`-shaped cases, `Ext s₀.store (...).fst` goals
-   about `internLam`/similar interning operations preserving the store's
-   `Ext`tension invariant) hit `` `finish` failed `` the same way `KnotC`
-   does — a derived fact fires (per diagnostics) but doesn't close the goal.
-   Not investigated beyond confirming it's a separate failure from (1) (it
-   doesn't go through `ConLeche` at all; `ConRon.Bridge.Rel`,
-   `ConRon.Bridge.StoreNested`, `ConRon.Bridge.Promote.*` and
-   `ConRon.Bridge.Grind` all build fine first).
+It needed 31 files patched (~290 changed lines, every patch site marked
+`-- con-agua patch` in the source; `git log -p` of the `bridge` merge has the
+full diff). No theorem statement changed, no `sorry`, no new axiom. Every
+failure traces to one of three toolchain changes between v4.35.0 and
+nightly-2026-10-20 (some were already present on nightly-2026-09-21, which is
+why this tier never built there either):
 
-Before the toolchain switch (on nightly-2026-09-21), `ConRonBridge` had
-*different* residual failures (`ConRon.Bridge.Inductives.PosWalks`,
-`ConRon.Bridge.Frontend.Lines`, `ConRon.Bridge.Core.Walks.Spine`, three
-`finish`/`split`/type-mismatch failures, not yet investigated either) — so
-it did not build cleanly even before the switch; the switch changed *which*
-modules fail rather than newly breaking a working target. `lake build
-ConRonBridge` remains a valid target to re-run and check progress against
-either set of issues; it is intentionally left out of `defaultTargets` so
-`lake build`'s plain invocation stays green.
+1. **`vcgen` splits a `∧` post into one VC per conjunct** (lean4#15487, see
+   "Toolchain switch" §3). Two kinds of breakage:
+   * `grind` lost a fact only derivable via a term in a *sibling* conjunct:
+     `Bridge/Specs.lean` (`internLamE_spec_view`/`internForallEE_spec_view`:
+     `EStore.internBind_spec` now passed as `→` forward lemma, so its
+     hypotheses — the capacity guard, present in every VC — trigger it instead
+     of the `StoreWF (..internBind..).1` term of one conjunct);
+     `ExprOps/Leaves.lean` (two local companion lemmas,
+     `SeenGrow.insert_of_leavesEq`/`SeenGrow.drop_insert_of_leavesEq`, keying
+     the `LeavesEq.black` → `BlackA` chain on the `SeenGrow` VC itself);
+     `ExprOps/Owed.lean` (`instLPGo_spec`: `→ Std.le_trans` added to the `sym`
+     list, so the store-order chain `s₀ ≤ s₁ ≤ …` is closed transitively — the
+     `Ext s₀ s'` conjunct that used to put `s₀ ≤ s'` in the e-graph is now a
+     separate VC).
+   * Explicit-term proofs `vcgen; subst_vars; exact ⟨rfl, h₁, …⟩` now face
+     several goals (the `rfl` conjuncts already closed): rewritten as
+     `all_goals subst_vars` + `all_goals first | rfl | exact h₁ | …` with the
+     same terms, in `ExprOps/{MemoSpecs,Abs,Owed}.lean`,
+     `Core/Walks/{InferSpine,BetaSpine}.lean`, `Core/Arms/{DefeqPeel,WhnfCore}.lean`.
+2. **`do` elaboration of con-ron's Arena twin changed** (it got `MProd`
+   states and `pure () >>=` on v4.35.0, which `Lines.lean`'s own comments
+   attribute to the legacy `do` elaborator): loop states are `Prod`, not `MProd`, and a guard
+   `if c then pure () else fail …; rest` no longer leaves a `pure () >>= rest`.
+   `Frontend/Lines.lean` (four `forIn_sim` relations retyped `MProd`→`Prod`,
+   one conjunct pair re-ordered so the destructuring names stay put);
+   `replace z := AM.pure_bind_ok z` → `try replace …` where the bind is gone
+   (`Checker/{Arms,Base,Basis,DeclVal,Split}.lean`,
+   `Inductives/{BlockInstall,BlockTail,GenRec,StructInstall,SumInstall}.lean`;
+   only the lines that fail were changed, checked one by one), and
+   `obtain ⟨_, s, k, z⟩ := AM.bind_ok z'; obtain ⟨-, …⟩ := AM.pure_ok k` →
+   `have z := z'` (`Inductives/{SumInstall,RecCheck,GenRec}.lean`);
+   `Frontend/Chunks.lean`'s `simp only [pure_bind] at hrun` → `try …` (three).
+3. **`simp`/`dsimp` no longer rewrite instance arguments** (new
+   `Simp.Config.instances := false`): after `simp only [f]`, an `ite`'s
+   `Decidable` instance still mentions the folded `f`, so a later
+   `generalize`/`cases h : …`/`split`/`rw [ite_eq_left …]` sees an ill-typed
+   motive, and `simp` leaves goals `X = X` that differ only in an instance.
+   Fixes: an extra `dsimp +instances only [same lemmas]` (`Core/Walks/{PropRead,
+   Stuck,IotaMajor}.lean`, `Checker/Split.lean`, `Frontend/Prepare.lean`), a
+   trailing `rfl` (`Core/Walks/PropRead.lean`, `Checker/Hyp.lean`,
+   `Inductives/RecCheck.lean`), `rw` → `exact` (`Inductives/PosWalks.lean`),
+   `simp only [ite_eq_left h]` → `simp only [h', ite_true]`
+   (`Inductives/Rel.lean`), a re-proof of `unfoldDefinition_eq` that decides
+   the `if` before unfolding (`Core/Walks/Spine.lean`, 25 lines), and
+   `dsimp only` before `vcgen` for two nested `{ s with caches := { … with … } }`
+   posts whose `let __src` `vcgen` will not zeta (`Core/Memo.lean`, the same
+   idiom the file already uses for `defeqSet_spec`). (The option
+   `backward.dsimp.instances` did not help for `simp only` here; `dsimp
+   +instances` did.)
