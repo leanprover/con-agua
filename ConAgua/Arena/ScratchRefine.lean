@@ -1,6 +1,7 @@
 import ConAgua.Arena.Scratch
 import ConAgua.Arena.Tiers
 import ConRon.Arena.Core
+import ConAgua.Census.Attr
 
 /-!
 # The scratch lifecycle refines `enterScratch` / `dropScratch` under `ArenaD`
@@ -108,6 +109,7 @@ def EStore.reset (st : EStore) (on : Bool) : EStore :=
 
 /-- **`scratch_reset(f)` keeps `ArenaD`**, with every scratch table emptied and every flag
 `f ≠ 0`; the memos stay. -/
+@[refines_part ConRon.Arena.EStore.enableScratch "ArenaD", refines_part ConRon.Arena.EStore.dropScratch "ArenaD"]
 theorem ArenaD.reset (m : Mem) (a : AState) (hD : ArenaD m a) (f : Word)
     (hlo : (rdW (m.arr64 CTL) SCB).toNat < 2 ^ 62) (h62 : SCB.toNat < (m.arr64 CTL).size) :
     ArenaD (resetMem m f) { a with store := EStore.reset a.store (f != 0) } := by
@@ -275,24 +277,26 @@ theorem resetCtl_lt : ∀ x ∈ resetCtl ++ memoCtl, x.toNat < 64 := by
 
 /-- The bracket keeps the upper tiers: it writes `CTL` words below 64 only, and `CoreR` (a stub)
 claims nothing about the caches `dropScratch` flushes. -/
-theorem CheckR.of_bracket {m m' : Mem} {a a' : AState} {vis : Word} {fe : IFEnv}
-    (hR : CheckR m a vis fe) (hD : ArenaD m' a') (hf : MemFrame [] (resetCtl ++ memoCtl) m m')
-    (hp : a'.pins = a.pins) : CheckR m' a' vis fe :=
+theorem CheckR.of_bracket {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
+    {vis : Word} {fe : IFEnv} (hR : CheckR dn m a vis fe) (hD : ArenaD m' a') (hf : MemFrame [] (resetCtl ++ memoCtl) m m')
+    (hp : a'.pins = a.pins) : CheckR dn m' a' vis fe :=
   ⟨hD, ⟨⟩, by rw [hp]; exact hR.pins.frame (.of_lt (k := 0) (by simp) (by decide)) hf,
     hR.env.frame (.of_lt (k := 0) (by simp) (by decide)) (.of_lt resetCtl_lt (by decide)) hf⟩
 
 /-- `scratch_enter()` refines `enterScratch` under `CheckR`. -/
+@[refines ConRon.Arena.enterScratch]
 theorem scratchEnter_refinesC (p : Prog) (hp : p.lookup "scratch_enter" = some scratchEnter)
     (hr : p.lookup "scratch_reset" = some scratchReset)
     (hb : p.lookup "bm_clear" = some (memoClearG bmSch))
     (hl : p.lookup "lf_clear" = some (memoClearG lfSch))
     (hi : p.lookup "if_clear" = some (memoClearG imSch))
     (hf : p.lookup "fm_clear" = some (memoClearG frSch))
-    (a₀ : AState) (n : Nat) (s₀ : St) (vis : Word) (fe : IFEnv) (hC : CheckR s₀.mem a₀ vis fe) :
+    (a₀ : AState) (n : Nat) (s₀ : St) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (hC : CheckR dn s₀.mem a₀ vis fe) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scratch_enter" []
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok enterScratch a₀ ∧
-      CheckR s'.mem (AM.st enterScratch a₀) vis fe; ⊤⦄ := by
+      CheckR dn s'.mem (AM.st enterScratch a₀) vis fe; ⊤⦄ := by
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hlo, h62, c1, c2, c3, c4, hm⟩ := M.of_run (P := fun s => s = s₀) hs hrun
@@ -304,13 +308,15 @@ theorem scratchEnter_refinesC (p : Prog) (hp : p.lookup "scratch_enter" = some s
   exact hC.of_bracket (ArenaD.enter _ _ hC.arena hlo h62 c1 c2 c3 c4) (enterMem_frame _) rfl
 
 /-- `scratch_drop()` refines `dropScratch` under `CheckR`. -/
+@[refines ConRon.Arena.dropScratch]
 theorem scratchDrop_refinesC (p : Prog) (hp : p.lookup "scratch_drop" = some scratchDrop)
     (hr : p.lookup "scratch_reset" = some scratchReset)
-    (a₀ : AState) (n : Nat) (s₀ : St) (vis : Word) (fe : IFEnv) (hC : CheckR s₀.mem a₀ vis fe) :
+    (a₀ : AState) (n : Nat) (s₀ : St) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (hC : CheckR dn s₀.mem a₀ vis fe) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scratch_drop" []
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok dropScratch a₀ ∧
-      CheckR s'.mem (AM.st dropScratch a₀) vis fe; ⊤⦄ := by
+      CheckR dn s'.mem (AM.st dropScratch a₀) vis fe; ⊤⦄ := by
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, -, hD⟩ := M.of_run (P := fun s => s = s₀) hs hrun
