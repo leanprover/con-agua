@@ -293,19 +293,37 @@ variable (p : Prog) (b : Array UInt8) (hb : b.size < 2 ^ 63)
 include hb
 
 include hpd hpn hps in
+attribute [local lang_grind] slotNatN in
 theorem slotNat_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (ks v : Word)
     (hv : v.toNat ≤ b.size) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "slot_nat" [ks, v]
     ⦃fun r s' => s' = s₀ ∧ r = [slotNatN b ks v]; ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hps]
+  simp only [callFn, slotNat]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have hb64 : b.size < 2 ^ 64 := by omega
+    sym only [lang_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+        L.Scan.Leaves.numEnd_spec p hpd hpn b hb64 n] <;> finish
 
 include hpd hpq in
+attribute [local lang_grind] quotedNatN in
 theorem scanQuotedNat_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "scan_quoted_nat" [i]
     ⦃fun r s' => s' = s₀ ∧ r = [quotedNatN b i]; ⊤⦄ := by
-  sorry
+  rw [invoke_eq _ hpq]
+  simp only [callFn, scanQuotedNat]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have hb64 : b.size < 2 ^ 64 := by omega
+    sym only [lang_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld8,
+        L.Scan.Leaves.skipDigits_spec p hpd b hb64 n] <;> finish
 
 include hpm in
 theorem matchWord_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i o l : Word)
