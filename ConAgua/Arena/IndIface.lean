@@ -374,11 +374,34 @@ def erecAlloc : FunDecl := lfn (n) locals (o) {
 }
 
 /-- `er_to_iw(off, len)`: the `EREC` slice copied into `IW`. -/
-def erToIw : FunDecl := lfn (o, l) locals (q, j) {
+def erToIw : FunDecl := lfn (o, l) locals (q, u) {
   q := call iw_alloc(l);
-  j := 0;
-  while j < l { IW.u64[q + j] := EREC.u64[o + j]; j += 1 };
+  u := call er_copy(q, o, l);
   return (q, l)
+}
+
+/-- `er_copy(d, s, l)`: `IW[d + j] := EREC[s + j]` for `j < l`, recursively. -/
+def erCopy : FunDecl := lfn (d, s, l) locals (u) {
+  if l == 0 { return 0 };
+  IW.u64[d] := EREC.u64[s];
+  u := call er_copy(d + 1, s + 1, l - 1);
+  return 0
+}
+
+/-- `iw_copy(d, s, l)`: `IW[d + j] := IW[s + j]` for `j < l` (ascending, recursively). -/
+def iwCopy : FunDecl := lfn (d, s, l) locals (u) {
+  if l == 0 { return 0 };
+  IW.u64[d] := IW.u64[s];
+  u := call iw_copy(d + 1, s + 1, l - 1);
+  return 0
+}
+
+/-- `pool_copy(d, s, l)`: `IW[d + j] := POOL[s + j]` for `j < l`. -/
+def poolCopy : FunDecl := lfn (d, s, l) locals (u) {
+  if l == 0 { return 0 };
+  IW.u64[d] := POOL.u64[s];
+  u := call pool_copy(d + 1, s + 1, l - 1);
+  return 0
 }
 
 /-- `sl_new1(x)`: the one-element list `[x]`. -/
@@ -389,68 +412,66 @@ def slNew1 : FunDecl := lfn (x) locals (q) {
 }
 
 /-- `sl_append(o1, l1, o2, l2)`: `xs ++ ys`, a copy. -/
-def slAppend : FunDecl := lfn (o1, l1, o2, l2) locals (q, j) {
+def slAppend : FunDecl := lfn (o1, l1, o2, l2) locals (q, u) {
   if l1 + l2 < l1 { abort };
   q := call iw_alloc(l1 + l2);
-  j := 0;
-  while j < l1 { IW.u64[q + j] := IW.u64[o1 + j]; j += 1 };
-  j := 0;
-  while j < l2 { IW.u64[q + l1 + j] := IW.u64[o2 + j]; j += 1 };
+  u := call iw_copy(q, o1, l1);
+  u := call iw_copy(q + l1, o2, l2);
   return (q, l1 + l2)
 }
 
 /-- `sl_snoc(o, l, x)`: `xs ++ [x]`, a copy. -/
-def slSnoc : FunDecl := lfn (o, l, x) locals (q, j) {
+def slSnoc : FunDecl := lfn (o, l, x) locals (q, u) {
   if l + 1 == 0 { abort };
   q := call iw_alloc(l + 1);
-  j := 0;
-  while j < l { IW.u64[q + j] := IW.u64[o + j]; j += 1 };
+  u := call iw_copy(q, o, l);
   IW.u64[q + l] := x;
   return (q, l + 1)
 }
 
 /-- `sl_cons(x, o, l)`: `x :: xs`, a copy. -/
-def slCons : FunDecl := lfn (x, o, l) locals (q, j) {
+def slCons : FunDecl := lfn (x, o, l) locals (q, u) {
   if l + 1 == 0 { abort };
   q := call iw_alloc(l + 1);
   IW.u64[q] := x;
-  j := 0;
-  while j < l { IW.u64[q + 1 + j] := IW.u64[o + j]; j += 1 };
+  u := call iw_copy(q + 1, o, l);
   return (q, l + 1)
 }
 
 /-- `sl_contains(o, l, x)`: `xs.contains x` (word equality). -/
-def slContains : FunDecl := lfn (o, l, x) locals (j) {
-  j := 0;
-  while j < l { if IW.u64[o + j] == x { return 1 }; j += 1 };
-  return 0
+def slContains : FunDecl := lfn (o, l, x) locals (r) {
+  if l == 0 { return 0 };
+  if IW.u64[o] == x { return 1 };
+  r := call sl_contains(o + 1, l - 1, x);
+  return r
 }
 
 /-- `sl_find(o, l, x)`: `xs.findIdx? (· == x)` as `(ok, i)`. -/
-def slFind : FunDecl := lfn (o, l, x) locals (j) {
-  j := 0;
-  while j < l { if IW.u64[o + j] == x { return (1, j) }; j += 1 };
-  return (0, 0)
+def slFind : FunDecl := lfn (o, l, x) locals (f, i) {
+  if l == 0 { return (0, 0) };
+  if IW.u64[o] == x { return (1, 0) };
+  (f, i) := call sl_find(o + 1, l - 1, x);
+  if f == 0 { return (0, 0) };
+  return (1, i + 1)
 }
 
 /-- `sl_eq(o1, l1, o2, l2)`: word-wise list equality. -/
-def slEq : FunDecl := lfn (o1, l1, o2, l2) locals (j) {
+def slEq : FunDecl := lfn (o1, l1, o2, l2) locals (r) {
   if l1 != l2 { return 0 };
-  j := 0;
-  while j < l1 { if IW.u64[o1 + j] != IW.u64[o2 + j] { return 0 }; j += 1 };
-  return 1
+  if l1 == 0 { return 1 };
+  if IW.u64[o1] != IW.u64[o2] { return 0 };
+  r := call sl_eq(o1 + 1, l1 - 1, o2 + 1, l2 - 1);
+  return r
 }
 
 /-- `sl_nodup(o, l)`: `nameNodup` (no word twice). -/
 @[l_impl ConRon.Arena.nameNodup]
-def slNodup : FunDecl := lfn (o, l) locals (i, j) {
-  i := 0;
-  while i < l {
-    j := i + 1;
-    while j < l { if IW.u64[o + i] == IW.u64[o + j] { return 0 }; j += 1 };
-    i += 1
-  };
-  return 1
+def slNodup : FunDecl := lfn (o, l) locals (b, r) {
+  if l == 0 { return 1 };
+  b := call sl_contains(o + 1, l - 1, IW.u64[o]);
+  if b != 0 { return 0 };
+  r := call sl_nodup(o + 1, l - 1);
+  return r
 }
 
 /-- `sl_get(o, l, i)`: `xs[i]`, aborting off the list. -/
@@ -467,21 +488,21 @@ def slGetD : FunDecl := lfn (o, l, i, d) locals () {
 
 /-- `sl_set_eq(o1, l1, o2, l2)`: the same length, and every element of each is in the other
 (`blockRecNameSetOk`'s test). -/
-def slSetEq : FunDecl := lfn (o1, l1, o2, l2) locals (j, b) {
+def slSetEq : FunDecl := lfn (o1, l1, o2, l2) locals (b) {
   if l1 != l2 { return 0 };
-  j := 0;
-  while j < l2 {
-    b := call sl_contains(o2, l2, IW.u64[o1 + j]);
-    if b == 0 { return 0 };
-    j += 1
-  };
-  j := 0;
-  while j < l1 {
-    b := call sl_contains(o1, l1, IW.u64[o2 + j]);
-    if b == 0 { return 0 };
-    j += 1
-  };
-  return 1
+  b := call sl_all_in(o1, l1, o2, l2);
+  if b == 0 { return 0 };
+  b := call sl_all_in(o2, l2, o1, l1);
+  return b
+}
+
+/-- `sl_all_in(o1, l1, o2, l2)`: every element of the first list is in the second. -/
+def slAllIn : FunDecl := lfn (o1, l1, o2, l2) locals (b) {
+  if l1 == 0 { return 1 };
+  b := call sl_contains(o2, l2, IW.u64[o1]);
+  if b == 0 { return 0 };
+  b := call sl_all_in(o1 + 1, l1 - 1, o2, l2);
+  return b
 }
 
 /-- `rec2(a, b)`: a fresh 2-word record. -/
@@ -552,11 +573,18 @@ def cvLps : FunDecl := lfn (q) locals (o, l) {
 
 /-- `reserved_contains(n)`: `(← reservedBasisNames).contains n` (the 16 reserved names,
 `PINS[55‥70]`). -/
-def reservedContains : FunDecl := lfn (n) locals (j) {
+def reservedContains : FunDecl := lfn (n) locals (r) {
   if PINS.u64[0] == 0 { abort };
-  j := 0;
-  while j < 16 { if PINS.u64[55 + j] == n { return 1 }; j += 1 };
-  return 0
+  r := call reserved_from(n, 0);
+  return r
+}
+
+/-- `reserved_from(n, j)`: `n` among `PINS[55 + j‥70]`. -/
+def reservedFrom : FunDecl := lfn (n, j) locals (r) {
+  if 16 <= j { return 0 };
+  if PINS.u64[55 + j] == n { return 1 };
+  r := call reserved_from(n, j + 1);
+  return r
 }
 
 /-- `lvl_eq_true(u, v)`: `lvlEq? u v == some true` as `0`/`1`. -/
@@ -626,11 +654,10 @@ def eView : FunDecl := lfn (h) locals (g, t, i, k) {
 }
 
 /-- `view_ls(us)`: the level handles of a level list (`viewLs`), copied from `POOL` into `IW`. -/
-def viewLsL : FunDecl := lfn (us) locals (o, l, q, j) {
+def viewLsL : FunDecl := lfn (us) locals (o, l, q, u) {
   (o, l) := call ls_node(us);
   q := call iw_alloc(l);
-  j := 0;
-  while j < l { IW.u64[q + j] := POOL.u64[o + j]; j += 1 };
+  u := call pool_copy(q, o, l);
   return (q, l)
 }
 
@@ -644,6 +671,8 @@ def viewLsLenL : FunDecl := lfn (us) locals (o, l) {
 /-- The library's functions. -/
 def libFns : Prog :=
   [("iw_alloc", iwAlloc), ("iw_reset", iwReset), ("erec_alloc", erecAlloc), ("er_to_iw", erToIw),
+   ("er_copy", erCopy), ("iw_copy", iwCopy), ("pool_copy", poolCopy), ("sl_all_in", slAllIn),
+   ("reserved_from", reservedFrom),
    ("sl_new1", slNew1), ("sl_append", slAppend), ("sl_snoc", slSnoc), ("sl_cons", slCons),
    ("sl_contains", slContains), ("sl_find", slFind), ("sl_eq", slEq), ("sl_nodup", slNodup),
    ("sl_get", slGet), ("sl_getd", slGetD), ("sl_set_eq", slSetEq),
