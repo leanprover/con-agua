@@ -536,4 +536,73 @@ theorem envPush_refines (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
         envRowSet_spec p hx hs n] <;>
       finish
 
+/-! ## A row write, in general; `env_erase`, `env_pop_temp` -/
+
+/-- **A row write**: the rows of the other names stay, the written row is `R`. -/
+theorem EnvR.setRow {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {fe : IFEnv}
+    (h : EnvR dn m vis fe) (w c q : Word) (hw2 : w.toNat < 2 ^ 32) (ht : rowTag w ≤ 2)
+    (hb : rowIx w + 1 < (m.arr64 (rowArr w)).size)
+    (idx' : Std.HashMap NIdx (Nat × IConstantInfo)) (R : Option (Nat × IConstantInfo))
+    (hidx : ∀ n : NIdx, idx'[n]? = if n.word.toUInt64 = w then R else fe.idx[n]?)
+    (hR1 : R.map Prod.fst = if c = 0 then none else some (c.toNat - 1))
+    (hR2 : c ≠ 0 → R.map Prod.snd = decCI (m.arr64 EREC) dn q.toNat) :
+    EnvR dn (rowSet m w c q) vis ⟨fe.env, idx', fe.visibleBelow⟩ := by
+  have hrr : rowArr w ≠ EREC := by simp only [rowArr, EREC, ArrId]; omega
+  have hre : rowArr w ≠ ECON := by simp only [rowArr, ECON, ArrId]; omega
+  have hra : rowArr w ≠ CTL := by simp only [rowArr, CTL, ArrId]; omega
+  refine ⟨h.vis, ?_, ?_, ?_⟩
+  · intro n hn
+    have e1 := rowC_rowSet (c := c) (p := q) (w' := n.word.toUInt64) hw2 ht hb hn
+    have e2 := rowP_rowSet (c := c) (p := q) (w' := n.word.toUInt64) hw2 ht hb hn
+    simp only [hidx]
+    by_cases e : n.word.toUInt64 = w
+    · simp only [e, ite_true] at e1 e2 ⊢
+      rw [hR1]; simp only [rowW, e1, e2]; split <;> simp
+    · simp only [e, ite_false] at e1 e2 ⊢
+      rw [h.keys n hn]; simp only [rowW, e1, e2]
+  · intro n hn h0
+    have e1 := rowC_rowSet (c := c) (p := q) (w' := n.word.toUInt64) hw2 ht hb hn
+    have e2 := rowP_rowSet (c := c) (p := q) (w' := n.word.toUInt64) hw2 ht hb hn
+    simp only [hidx, rowSet_arr _ _ _ _ _ (Ne.symm hrr)]
+    by_cases e : n.word.toUInt64 = w
+    · simp only [e, ite_true] at e1 e2 h0 ⊢
+      rw [e2]; exact hR2 (by rwa [e1] at h0)
+    · simp only [e, ite_false] at e1 e2 h0 ⊢
+      rw [e2]; exact h.vals n hn (by rwa [e1] at h0)
+  · rw [← h.consts]
+    simp only [envConsts, envLen, rowSet_arr _ _ _ _ _ (Ne.symm hrr),
+      rowSet_arr _ _ _ _ _ (Ne.symm hre), rowSet_arr _ _ _ _ _ (Ne.symm hra)]
+
+/-- `env_erase(w)`: drop the row of name `w` (one step of `eraseInstalled`). -/
+def envEraseL : FunDecl := lfn (w) locals (z) {
+  z := call env_row_set(w, 0, 0);
+  return 0
+}
+
+/-- **`env_erase` erases the index row** (`HashMap.erase` at `decI w`). -/
+theorem envErase_spec (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
+    (hs : p.lookup "env_row_set" = some envRowSetL) (hp : p.lookup "env_erase" = some envEraseL)
+    (n : Nat) (s₀ : St) {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} (vis w : Word)
+    (hE : EnvR dn s₀.mem vis fe) (hw : w.toNat < 2 ^ 32) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "env_erase" [w]
+    ⦃fun _ s' => LocEq s' s₀ ∧ EnvR dn s'.mem vis ⟨fe.env, fe.idx.erase (decI w), fe.visibleBelow⟩; ⊤⦄ := by
+  have key := fun ht hb => hE.setRow w 0 0 hw ht hb (fe.idx.erase (decI w)) none
+    (fun n => by
+      rw [Std.HashMap.getElem?_erase]
+      by_cases e : n.word.toUInt64 = w
+      · have : decI w = n := (decI_eq_iff w hw n).mpr e.symm
+        simp [e, this]
+      · have : ¬ decI w = n := fun h' => e ((decI_eq_iff w hw n).mp h').symm
+        simp [e, this])
+    (by simp) (by simp)
+  rw [invoke_eq _ hp]
+  simp only [callFn, envEraseL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, envRowSet_spec p hx hs n] <;>
+      finish
+
 end L.Arena
