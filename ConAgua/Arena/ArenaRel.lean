@@ -23,46 +23,18 @@ import ConAgua.Census.Attr
 /-!
 # The arena relation: one relation for the whole L memory
 
-`ArenaR m a` assembles every table relation of the arena tier on one memory layout, with the limb
-pool and the walk memo:
-
-| array | contents | `CTL` words |
-|---|---|---|
-| 0 `POOL` | limbs, level lists' handle words, names' bytes | 0: pool top |
-| 1 `CTL` | control words | 1: scratch flag |
-| 2, 3 `REC`, `SLOT` | expression `lit` | 2, 3 |
-| 4, 5 `AREC`, `ASLOT` | expression `app` | 4, 5 |
-| 6, 7 `SREC`, `SSLOT` | level `succ` | 6, 7 |
-| 8, 9 `ZREC`, `ZSLOT` | level `zero` | 8, 9 |
-| 10, 11 `MREC`, `MSLOT` | level `max` | 10, 11 |
-| 12, 13 `IREC`, `ISLOT` | level `imax` | 12, 13 |
-| 14, 15 `PREC`, `PSLOT` | level `param` | 14, 15 |
-| 16, 17 `SOREC`, `SOSLOT` | expression `sort` | 16, 17 |
-| 18, 19 `CREC`, `CSLOT` | expression `const` | 18, 19 |
-| 20, 21 `LEREC`, `LESLOT` | expression `letE` | 20, 21 |
-| 22, 23 `BREC`, `BSLOT` | expression `bvar` | 22, 23 |
-| 24 `BMEMO` | the `bvarBound` memo | 24: stamp − 1, 25: live count |
-| 25, 26 `FVREC`, `FVSLOT` | expression `fvar` | 26, 27 |
-| 27, 28 `LAREC`, `LASLOT` | expression `lam` | 28, 29 |
-| 29, 30 `FAREC`, `FASLOT` | expression `forallE` | 30, 31 |
-| 31, 32 `PJREC`, `PJSLOT` | expression `proj` | 32, 33 |
-| 33, 34 `NAREC`, `NASLOT` | name `anonymous` | 34, 35 |
-| 35, 36 `NSREC`, `NSSLOT` | name `str` (bytes in the pool) | 36, 37 |
-| 37, 38 `NNREC`, `NNSLOT` | name `num` | 38, 39 |
-| 39, 40 `LSREC`, `LSSLOT` | level lists (slices of the pool) | 40, 41 |
-
-| 41 `LMEMO`, 47 `IMEMO` | the `liftC`, `inst1C` memos | 42, 43; 44, 45 |
-| 42‥46 | derived bvar ranges (`DerR`, not in `ArenaR`) | – |
-| 48 `FRMEMO` | the `fvarRange` memo (`fvarBC`, `bmKey`'s codec) | 46: stamp − 1, 47: live count |
-| 49‥63 | reserved for lane `exprops` | – |
-| ≥ 64 | **free for other lanes** (`ArenaR.frame_ext`) | ≥ 64 |
+`ArenaR m a` assembles every table relation of the store tier on one memory layout, with the limb
+pool, and the walk memos as one nested group (`MemosR m a.memos`). The array and `CTL` map of the
+whole L memory is one table in DESIGN.md ("The memory map"); `storeArrs`/`storeCtl`,
+`memoArrs`/`memoCtl` below are its rows for this file, and `Tiers.lean` reserves the ranges of
+the tiers still to come.
 
 (Tables 2‥23: `CTL[r + t]` is tier `t`'s node count of the table with record array `r`; tables from
-25 on: `CTL[s + t]`, `s` the slot array.) **Extension point:** a writer of arrays `≥ 64` and `CTL`
-words `≥ 64` only keeps `ArenaR` (`ArenaR.frame_ext`, stable); `arenaR_init` takes at least 64
+25 on: `CTL[s + t]`, `s` the slot array.) **Extension point:** a writer that avoids `arenaArrs` and `arenaCtl` keeps
+`ArenaR` (`ArenaR.frame`, the group frame; `frame_ext` for arrays and words `≥ 64`); `arenaR_init` takes at least 64
 arrays and a `CTL` of at least 64 words, so a lane may add its own arrays above 63 without touching
-this file. A new relation over such arrays is a separate conjunct (`ArenaR m a ∧ MyR m a`), merged
-into `ArenaR` later. This file is maintained by hand (it was once generated; `arena_build` removed
+this file. A new relation over such arrays is a separate group over the projection it reads,
+with its own group frame (`Tiers.lean`), not a new field here. This file is maintained by hand (it was once generated; `arena_build` removed
 the text that grew quadratically). Each table relation reads only its own arrays and counts,
 the scratch flag, and (for `lit`, the level lists and the name `str` table) the pool and its top,
 so a writer of other arrays leaves it alone (`Frame.lean`, `storeR_frame`). Every `intern_*`
@@ -72,8 +44,8 @@ the interning replaces one table behind its lens, `AM.st_proto`). The tactic `ar
 an `ArenaR` field by field: the given tactic where it applies, the frame elsewhere. `arenaR_init`:
 the all-zero memory is related to the arena's initial state `AState.init EStore.empty`.
 
-Not represented: the derived columns, the other memos, the per-declaration caches and the pins,
-and the contents of `lit`'s `strVal` nodes. They are not in `ArenaR`, so nothing is claimed about
+Not represented here: the derived columns (`DerR`), the other six memos, the per-declaration
+caches and the pins (`Tiers.lean`), and the contents of `lit`'s `strVal` nodes. They are not in `ArenaR`, so nothing is claimed about
 them.
 -/
 

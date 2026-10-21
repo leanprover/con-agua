@@ -4937,10 +4937,10 @@ Lane `scale`'s "Recommended changes now", items 1–3, applied before the core b
   (`apushMem`, …, `pushG`) write `CTL (k + (t &&& 1))`. `pushG_ctl` takes `t ≤ 1` (via
   `and_one_of_le`) and keeps its old right-hand side, so nothing downstream changed: every
   `*Store`/`*Refine` proof and the `#guard`s passed unchanged.
-* Write sets, each `by decide +kernel` (≤ 0.5 s): `liftEntry_frame` (`LiftProg p` + `lift_entry`:
+* Write sets, each `by decide +kernel` (≤ 0.5 s), in `WriteSets.lean`: `liftEntry_frame` (`LiftProg p` + `lift_entry`:
   `liftA` = arrays 41‥46 and the six expression tables of `mk_*`, `liftC` = `CTL` 42, 43 and their
   counts), `instEntry_frame` (`instA = 47 :: liftA`, `instC = 44 :: 45 :: liftC`), `bbMemo_frame`
-  (`[24]`, `CTL` 24, 25), `storeProg_frame` (`nat_add_lit`/`intern_lit`: pool, `lit`, `CTL` 0, 2, 3).
+  (`[24]`, `CTL` 24, 25), `frMemo_frame` (`[48]`, `CTL` 46, 47), `storeProg_frame` (`nat_add_lit`/`intern_lit`: pool, `lit`, `CTL` 0, 2, 3).
 * Not replaced: front2's `mkAppW_above` … (`ApplyExprRefine.lean`) are frames of the **models**
   (`mkAppW m f x = some (r, m')`), not of runs. A text frame is about runs, and a model's `some`
   does not give a run (no termination argument), so these stay hand-written. A run-level user (any
@@ -4955,6 +4955,131 @@ mask the tier: `CTL.u64[k + (t & 1)]`, or `closedW` rejects it. (c) To carry you
 across a run of `f`: `run_keeps (hp.closed …) (by decide) hX hrun hx` with `hX : Stable A C X`
 (for `StateDR`: `fun m m' hf h => StateDR.frame hf (by decide) (by decide) (by decide) h`). (d)
 `pushG_ctl` has a new hypothesis `t ≤ 1` (third explicit argument after `hS m t vs j c`).
+
+### 3. The relation by tier, over projections (`ArenaRel.lean`, `Tiers.lean`)
+
+* **`MemosR m a.memos`** (the four walk memos, 10 when complete) is now one nested field
+  `ArenaR.memos` instead of four flat fields: `ArenaR` has 20 fields (19 tables and the memo
+  group) and stays that size when the remaining six memos land (they go into `MemosR`, 10 fields).
+  `DerR` (10 fields) is unchanged; `ArenaD = ArenaR ∧ DerR` stays the walks' tier.
+* **Ownership lists and one group frame each**: `storeArrs`/`storeCtl` (the store tier),
+  `memoArrs`/`memoCtl` (the memo tier), `arenaArrs`/`arenaCtl` (both). `MemosR.frame`,
+  `ArenaR.frame` (a writer that avoids `arenaArrs`/`arenaCtl` keeps `ArenaR`; `frame_above` and
+  `frame_ext` are now two-line corollaries), `ArenaR.stable` (for `run_keeps`), and
+  `ArenaR.with_memos`: a memo writer keeps `ArenaR` given the new `MemosR` (built with
+  `memos_build`, the memo tier's `arena_build`). The four memo set/clear lemmas
+  (`ArenaR.memo_set`, `ArenaD.lmemo_set`, …) use it; `arena_build` frames the memo group with one
+  `MemosR.frame` instead of four `memoRG_frame`s. `apart_own` turns an ownership list into the
+  per-table `Apart`.
+* **`Tiers.lean`**: `CoreR m a.caches` (arrays 96‥127, `CTL` 96‥127), `PinsR m a.pins` (128‥131),
+  `EnvR m vis fe` (132‥143, `CTL` 128‥135) as stubs (no fields: they claim nothing), each with
+  its group frame from the reserved range (`AvoidA`/`AvoidC`), and `CheckR m a vis fe` (the four
+  tiers). **`CheckR.of_walk`**: a run with L write set below 64 whose twin side keeps `cp` keeps
+  `CoreR`, `PinsR`, `EnvR`. `TierWalks.lean` lifts all four walk entries to `CheckR`
+  (`liftEntry_runC`, `instEntry_runC`, `bbMemo_runC`, `frMemo_runC`) with no lemma about the
+  walks: the L frame from `WriteSets.lean`, the twin frame from `Keeps.lean`. The memo-only walks
+  keep the store too (`Keeps sp`), so `bbMemo_runC`/`frMemo_runC` also get `DerR`, which
+  `bbMemo_run`/`frMemo_run` (`ArenaR` only) did not give.
+* `ArenaR` and every group stay opaque to `grind` (structures, fields named in proofs).
+* Lane `exprops` asked: `Walk.lean`'s `appK₁`/`bindK₁`/`letK₁` and `WalkRefine.lean`'s
+  `appArm_ok`/`bindArm_ok`/`letArm_ok` are renamed `bbAppK₁`, …, `bbAppArm_ok`, …; every walk file
+  can now be imported together.
+* Finding: `omega` does not see through `abbrev ArrId := Nat` (`docs/gaps/omega-abbrev-nat.lean`).
+
+### 2. Twin-side frames by composition (`Keeps.lean`)
+
+`Keeps π op` (irreducible): every successful run keeps `π a`. Closed under `bind`/`pure`/`fail`
+and, by `split`, under `if`/`match`. Primitives: the reads and `view` keep anything, the memo
+writes keep any `MemoBlind` projection, the interns keep `cp a = (a.caches, a.pins)`. The tactic
+`keeps_auto [arms] using ih, blind` does a walk's `succ` case: so each walk family is one
+induction of 4 lines (`keeps_inst1Go`, `keeps_liftGo`; `keeps_bvarBoundGo`, `keeps_fvarRangeGo`
+keep `sp = (store, caches, pins)`), and each entry 3 lines. This replaces adding `cp a' = cp a`
+to the `GoOK` posts: the posts stay as they are, and a new walk proves its `Keeps` by the same
+four lines. The spikes `Spike/TwinKeep.lean`, `Spike/WriteSet{,Inst}.lean` are removed.
+
+### The memory map (every array and `CTL` word)
+
+Word arrays (byte arrays are a separate id space: `IN` = byte array 0 is the input buffer).
+
+| array | name | owner (relation) | meaning |
+|---:|---|---|---|
+| 0 | `POOL` | `ArenaR` (`lit`, `ls`, `nstr` read it) | limb pool: limbs, level lists' handles, names' bytes |
+| 1 | `CTL` | – | control words (below) |
+| 2, 3 | `REC`, `SLOT` | `ArenaR.lit` | expression `lit` records / cons slots |
+| 4, 5 | `AREC`, `ASLOT` | `ArenaR.app` | expression `app` |
+| 6, 7 | `SREC`, `SSLOT` | `ArenaR.succ` | level `succ` |
+| 8, 9 | `ZREC`, `ZSLOT` | `ArenaR.zero` | level `zero` |
+| 10, 11 | `MREC`, `MSLOT` | `ArenaR.max` | level `max` |
+| 12, 13 | `IREC`, `ISLOT` | `ArenaR.imax` | level `imax` |
+| 14, 15 | `PREC`, `PSLOT` | `ArenaR.param` | level `param` |
+| 16, 17 | `SOREC`, `SOSLOT` | `ArenaR.sort` | expression `sort` |
+| 18, 19 | `CREC`, `CSLOT` | `ArenaR.const` | expression `const` |
+| 20, 21 | `LEREC`, `LESLOT` | `ArenaR.letE` | expression `letE` |
+| 22, 23 | `BREC`, `BSLOT` | `ArenaR.bvar` | expression `bvar` |
+| 24 | `BMEMO` | `MemosR.bvar` | `bvarBound` memo (`bvarBC`) |
+| 25, 26 | `FVREC`, `FVSLOT` | `ArenaR.fvar` | expression `fvar` |
+| 27, 28 | `LAREC`, `LASLOT` | `ArenaR.lam` | expression `lam` |
+| 29, 30 | `FAREC`, `FASLOT` | `ArenaR.forallE` | expression `forallE` |
+| 31, 32 | `PJREC`, `PJSLOT` | `ArenaR.proj` | expression `proj` |
+| 33, 34 | `NAREC`, `NASLOT` | `ArenaR.nanon` | name `anonymous` |
+| 35, 36 | `NSREC`, `NSSLOT` | `ArenaR.nstr` | name `str` |
+| 37, 38 | `NNREC`, `NNSLOT` | `ArenaR.nnum` | name `num` |
+| 39, 40 | `LSREC`, `LSSLOT` | `ArenaR.ls` | level lists |
+| 41 | `LMEMO` | `MemosR.lift` | `liftLooseBVars` memo (`liftC`) |
+| 42‥46 | `ADER`, `LADER`, `FADER`, `LEDER`, `PJDER` | `DerR` | derived bvar ranges of `app`, `lam`, `forallE`, `letE`, `proj` |
+| 47 | `IMEMO` | `MemosR.inst1` | `instantiate1` memo (`inst1C`) |
+| 48 | `FRMEMO` | `MemosR.fvar` | `fvarRange` memo (`fvarBC`) |
+| 49‥55 | – | `MemosR` (reserved) | the other six walk memos |
+| 56‥63 | – | reserved (store tier) | scratch epochs, the per-declaration tree heap |
+| 64, 65, 66 | `NID`, `LID`, `EID` | `StateDR` (front) | the export's name/level/expression id tables |
+| 67‥95 | – | reserved (front) | declaration records, `pend` |
+| 96‥127 | – | `CoreR` (stub) | the 14 caches and the eager-depth banks |
+| 128‥131 | – | `PinsR` (stub) | the pin table |
+| 132‥143 | – | `EnvR` (stub) | the environment index |
+| 144‥191 | – | argument relations (reserved) | `PMemo`, walk-local memos, `NestState` |
+
+`CTL` words:
+
+| word | owner | meaning |
+|---:|---|---|
+| 0 | `ArenaR` (`PoolOK`) | pool top |
+| 1 | `ArenaR` (every table) | scratch flag (`≠ 0`: scratch tier open) |
+| `r`, `r + 1` for `r` = 2, 4, …, 22 | `ArenaR` | node counts of tiers 0, 1 of the table with record array `r` (2‥23) |
+| 24, 25 | `MemosR.bvar` | `bvarBound` memo: stamp − 1, live count |
+| `s`, `s + 1` for `s` = 26, 28, …, 40 | `ArenaR` | node counts of the table with slot array `s` (`fvar` … `ls`) |
+| 42, 43 | `MemosR.lift` | lift memo: stamp − 1, live count |
+| 44, 45 | `MemosR.inst1` | `instantiate1` memo |
+| 46, 47 | `MemosR.fvar` | `fvarRange` memo |
+| 48‥61 | `MemosR` (reserved) | the other six memos |
+| 62, 63 | reserved | |
+| 64‥95 | reserved (front) | |
+| 96‥127 | `CoreR` (stub) | cache stamps/counts, eager depth |
+| 128‥135 | `EnvR` (stub) | environment counters |
+| 136‥191 | argument relations (reserved) | |
+
+A count store writes `CTL[k + (t & 1)]` (item 1). `arenaR_init` needs `CTL` ≥ 64 words; the
+reserved tiers will raise that when they get fields.
+
+### Measurements (`lake env lean`, user CPU, one run, 56 affected files)
+
+Before/after numbers are in the landing's velocity note.
+
+**Migration notes (items 2, 3).** (a) `hR.memo`/`.lmemo`/`.imemo`/`.fmemo` are now
+`hR.memos.bvar`/`.lift`/`.inst1`/`.fvar`. A new memo: a field of `MemosR` (and its row in
+`memoArrs`/`memoCtl` and the map above), not of `ArenaR`; `memos_build` and `MemosR.frame` get one
+line each. A memo writer: `exact hR.with_memos hf (by apart) (by apart) (by memos_build hR.memos,
+hf with exact memoRG_set …)` (pattern: `ArenaR.memo_set`, `WalkRefine.lean`). (b) A writer outside
+the arena: `ArenaR.frame` with `∀ b ∈ A, b ∉ arenaArrs` (`by decide` for concrete `A`; for `CTL`
+words above 63 `not_mem_arenaCtl`). (c) A new walk: prove `Keeps cp` (or `Keeps sp` if it interns
+nothing) by `induction F` + `keeps_auto [arms] using ih, cp_blind` (`Keeps.lean`), its write set in
+`WriteSets.lean`, and its `*_runC` in `TierWalks.lean` is three lines. (d) A new tier relation:
+a structure over the projection it reads, arrays from its reserved range above, one `frame`
+lemma from `AvoidA`/`AvoidC`, a field of `CheckR`. (e) `Walk.lean`'s continuations and
+`WalkRefine.lean`'s arm lemmas are renamed with a `bb` prefix.
+
+### `sorry`s
+
+None. The stubs `CoreR`, `PinsR`, `EnvR` have no fields (they claim nothing yet).
 
 ## Progress census (2026-10-21, lane `census`)
 
