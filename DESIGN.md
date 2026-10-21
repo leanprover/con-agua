@@ -3691,10 +3691,50 @@ Request to lane `arch`: add `LH` (array 192) and `CTL[192]` (heap top) to the me
 | `lv_comb` (`combining`) | 10 | 13 | 70 | `combW_ok` 50 (+ allocation lemmas 27) | | as `lv_eq` |
 | `lv_simp` (`simplify`) | 21 | 16 | 130 | `imaxW_ok` + `simpW_ok` 120 | | as `lv_eq` |
 | `lv_nz` (`isNeverZero`) | 9 | 12 | 70 | `nzW_ok` 40 | | as `lv_eq` |
-| total (files) | | 84 | `LevelHeap` 243, `LevelSimp` 291 | `LevelHeapRel` 432, `LevelSimpRel` 264 | 7.9 + 7.6 s, 1.1 + 1.1 s | |
+| `lv_subst` (`subst [k] [v]`, one key) | 24 (`subst`, `subst_go`) | 10 | 80 | `substW_ok` 60 | | as `lv_eq` |
+| `lv_subsimp`, `lv_dist1`, `lv_dist2` (operand builders) | in `by_cases`, `imax_rules_distrib*` | 17 | 100 | `ssW_ok`, `dist1W_ok`, `dist2W_ok` 55 | | as `lv_eq` |
+| `lv_leq` (`leqCore`) | 15 | 9 | | `leq_ok` 22 | | |
+| `lv_rest` (`rest`) | 37 | 27 | | `rest_ok` 130 | | |
+| `lv_imax`, `lv_imax_l`, `lv_imax_r` (`imaxRules`) | 88 (`imax_rules`, `by_cases_left/right`, `imax_rules_distrib*`) | 32 | | `imax_ok` + `imaxL_ok` + `imaxR_ok` 105 | | |
+| `lv_cases`, `lv_cases_at` (`byCases`) | 19 | 15 | | `cases_ok` + `ca_ok` 65 | | |
+| the comparison group (7 functions, one mutual model) | 159 | 83 | `LevelLeq` 474 (models, 49 arm lemmas), `LevelLeqSpec` 151 | `LevelLeqRel` 740 (incl. 30 equations of con-leche's arms, 60) | 3.7 + 35 s, 4.2 s | `vcgen` + `finish (gen := 20)`; refinement by hand |
+| `lv_leq_top` (`leq`, `defaultFuel`) | 6 | 6 | 30 | `leqTopW_ok` 25 | | as `lv_eq` |
+| `lv_equiv` (`isEquiv`) | 16 | 12 | 70 | `equivW_ok` 70 | | as `lv_eq` |
+| `lv_equivs` (`isEquivList`, lists in `POOL`) | 20 | 7 | 50 | `equivsW_ok` + `LvsR` 75 | | as `lv_eq` |
+| total (files) | | 232 | `LevelHeap` 243, `LevelSimp` 291, `LevelSubst` 251, `LevelLeq` 474, `LevelLeqSpec` 151, `LevelEquiv` 239 | `LevelHeapRel` 440, `LevelSimpRel` 264, `LevelLeqRel` 740, `LevelEquivRel` 200 | | |
+
+### The comparison (`LevelSubst`, `LevelLeq`, `LevelLeqSpec`, `LevelLeqRel`)
+
+* **Encodings.** The answer `Option Bool` is a word (`0` none, `1` false, `2` true, `encO`).
+  con-leche's fuel is the word argument `f`, decremented exactly where `leqCore`'s `fuel + 1`
+  pattern is: **the `10^4` counter is exact** (ROADMAP §3 (b)), and at `0` the answer is `none`,
+  which every caller sees. `diff : Int` is the biased word `d = diff + 2^32` (`DR`); the
+  refinement keeps `|diff| + fuel ≤ 2^31`, true from the entry (`0`, `10^4`) since `diff` moves
+  by one only where fuel is spent, so `d ± 1` never wraps.
+* **One key.** `byCases` substitutes one parameter; `lv_subst(l, k, v)` is `subst [k] [v]`
+  (`@[refines_part … "one key"]`). The list version (`instLPGo`'s callers, phases 4–5) reads its
+  keys from wherever the declaration's parameter names will live; not built here.
+* **The model** is one mutual block (`leqW`, `restW`, `imaxRW`, `imaxLW`, `imaxRrW`, `casesW`,
+  `caW` and 14 continuations), structural on the L fuel with the continuations ranked by a second
+  component (`termination_by (n, k)`). The refinement is the same mutual induction: seven
+  predicates (`LeqOK` … `CaOK`), one lemma each, with con-leche's overlapping `match` arms restated
+  as guarded equations over the tags (`LevelEq.rest_*`, `im_*`, by `unfold; split <;> simp_all`).
+* **The entries** (`LevelEquiv`, `LevelEquivRel`): `lv_leq_top` (`leq`: fuel word `10000`,
+  bias `2^32`), `lv_equiv` (`isEquiv`, simplifying each side once where con-leche's `leq`
+  simplifies again, to equal levels), `lv_equivs` (`isEquivList` over two `POOL` slices of level
+  pointers, `LvsR`; a length mismatch answers `false` only after the common prefix compared
+  `true`, as con-leche's). All three refinements went through at the first attempt.
+* **Inversion by tag** (`LvR.inv0` … `inv4`: from `lvG m p = t`, the level's constructor and the
+  children's relations) replaced `cases` on the derivation, whose impossible branches made
+  `simp_all` loop.
 
 ### Findings
 
+* **Split large L functions.** `lv_imax` as one function (two `byCases` arms and four
+  distribution arms, three re-reads of a child's view, 14 locals) gave `vcgen` verification
+  conditions with ~5000 lines of context; `finish (gen := 20)` failed after 6 min CPU. Split into
+  `lv_imax`/`lv_imax_l`/`lv_imax_r` (each a tail call to the next), the whole spec file
+  (seven functions) takes 35 s. The model and the refinement follow the split one-to-one.
 * `simp` on goals with `UInt64` literals such as `p - 4294967296 + 3` produced proofs on which the
   **kernel** hit "deep recursion" (elaboration was fine); stating the arithmetic once as lemmas
   (`heap_sub`, `heap_off`, `heap_below`) and using `rw` + `omega` avoids it. Likewise `decide`
