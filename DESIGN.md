@@ -2936,8 +2936,18 @@ whole-buffer parse accepts) and the final memory is related to `a'` by `ArenaD` 
   `intern_lit`.
 * **Escapes.** `str_put_esc(vs, ve)` decodes `\" \\ \/ \b \f \n \r \t \uXXXX` (surrogate pairs
   too) into UTF-8 bytes in the pool; `strPutEsc_link`: on con-leche's `scanString` result the
-  slice is `strWords s` (`\u` against `String.utf8EncodeChar`). Not yet wired into the name
-  `str` path (`apply_str` still refuses a body with a backslash).
+  slice is `strWords s` (`\u` against `String.utf8EncodeChar`). `apply_str` (name `str` lines)
+  goes through it; `NameR` now carries con-leche's `scanString` result (`StrR`) instead of
+  `StrOK`.
+* **Declaration lines** (axiom, def, thm, opaque, quot; second landing). Fields: `rec_decl_line`
+  with one generic object loop `rec_decl_obj` (one generic link `dobj_link` for con-leche's five
+  loops), eight words `DFld` (`DeclIface.lean`); `inductive` is recognised (`pl 25`, validated by
+  Stage B's `scan_ind_decl`) and aborts in the apply step. Apply: `apply_decl` pushes an 8-word
+  record to `DECL` (67, count in word 0) with the universe-parameter name handles in `DLP` (68);
+  `StateDR` gets `decls : DeclsR`; `applyDeclW_refinesAM` against `applyLine st (.decl d)`
+  (`processLineCoreD`, the arena state unchanged); unsafe axioms/opaques, a non-`safe` def and an
+  unknown quot kind abort where con-ron declines. `front_line`'s `apply_any` tries name/level,
+  expression, then declaration fields (`apply_dline`). `frontAll_refines` covers them.
 * **The driver.** `front_run()` = `front_init()`, then `front_line(i)` while `i < len(IN)`:
   `0` when every line applied, else the number of the first line that does not scan. Its loop
   spec is generic in the models of `front_init`/`front_line` (`runW`); `runI_refines` relates
@@ -2981,6 +2991,8 @@ whole-buffer parse accepts) and the final memory is related to `a'` by `ArenaD` 
 | `Unescape` / `UnescapeLink` | 418 / 721 | ~83 | 11.3 / 4.2 s |
 | `Preserve` / `Driver` / `DriverRefine` | 184 / 178 / 186 | 18 | 1.3 / 1.2 / 0.8 s |
 | `Line` / `LineRefine` / `FrontRun` | 311 / 335 / 224 | 45 | 3.7 / 1.2 / 8.0 s |
+| `FieldsDecl` / `FieldsDeclSpec` / `FieldsDeclLink` | 383 / 331 / 1103 | 132 | 0.6 / 89 / 14 s |
+| `ApplyDecl` / `ApplyDeclRefine` | 423 / 529 | 70 | 11.0 / 3.1 s |
 
 Rust counterparts: `nat_decimal.rs` ~50 lines of code, `unescape_bytes`+`utf8_of` ~110, the
 expression records of `scan_fast.rs`/`export_c.rs` ~400. `#guard`: the whole program accepts a
@@ -2993,8 +3005,22 @@ malformed line's number, aborts on an unbound id.
   contents (`LitRefine.lean`). Request to lane `exprops`: a contents-carrying `strVal` record (the
   bytes as a pool slice, as `nstr`) and an `intern_lit` entry for it; `str_put_esc` already
   produces the slice.
-* Declaration lines: next (below). Inductive blocks abort.
+* Inductive blocks abort (`validateIndD`/`installIndD` are not ported).
+* **`frontAllProg` no longer passes the compiler's static check**: the declaration fields pass
+  returns 8–9 words (`rec_decl_line`, `rec_decl_obj`, `d_member`, `decl_val`, `apply_dline`) and
+  the compiler allows 6 (`maxRes`, `Compile.lean`). Request to lane `compiler`: `maxRes ≥ 10`; else
+  the fields pass packs `pl`/`hk`/`flag` into one word. (The first landing's `frontAllProg_wf`,
+  without declarations, held; it is removed.)
+* A string compared as a literal (`safety`, quot `kind`) with an escape in it aborts (con-leche
+  decodes it first).
 * Ids at or past an id table's end abort (no sparse overflow).
+
+* The decl fields' heavy specs (8–9-word results) needed `sym (gen := 16..24) (instances := 5000)`
+  and up to 4M heartbeats; a failing attempt took 13–25 minutes, mostly printing goals. Writing
+  callee posts as explicit lists of per-field model functions instead of `.enc` of a structure
+  update, and inline conditions instead of a `Prop` wrapper with a `Decidable` instance, fixed it.
+* Census links: `l_impl`/`refines_part` on `apply_decl`/`processLineCoreD`, `applyExprW_refines`,
+  `natValR_decN`, `strPutEsc_link`, `rec_decl_line`.
 
 ### `sorry`s
 
@@ -3815,6 +3841,48 @@ ConRon.Arena.natOpResult]`) is one `vcgen` over the sixteen arms with the arm sp
 `finish`, not a failing search). The conditional facts (`hok`/`hst`/`hres`: `natOpResult` =
 `natOpSel` when the flag is set) are given as implications, so the flag-zero abort path needs no
 case split.
+
+### The environment (`Tiers.lean` `EnvR`, `EnvRec.lean`, `Env.lean`)
+
+**Decision: the name → constant index is directly addressed by the name handle, not hashed.** A
+name handle is `tag · 2^28 + tier · 2^27 + i` with `tag` ∈ {0, 1, 2} (`anonymous`, `str`, `num`),
+so its row is words `4 i + 2 tier` and `+ 1` of `EIXA`/`EIXS`/`EIXN` (132 + `tag`): the counter
+plus one (`0`: no row) and the record pointer. Lookup is two reads, `erase` writes `0`, there
+are no tombstones, no probe sequences, no load factor, and the relation needs no hashing argument
+(the one fact about a write is `rowC_rowSet`: rows of other names stay, from `rowIx_inj`). Cost:
+two words per name *slot* in each tier (the arrays are sized like the name tables; an index past
+the end is a capacity abort), against ≈ 3 words per *entry* at 3/4 load for open addressing; on
+`Init` (~10^6 names, ~4·10^5 constants) both are tens of MB. So the env index needs no deletion
+from lane `libs`' map library (note for `libs`: the env is not a client of deletion; tree-valued
+caches and the bank stack still are).
+
+* `ECON` (135): the record pointer of every constant by position, oldest first, `CTL[128]`
+  entries; the twin's `env.consts` (newest first) is its reverse. `EREC` (136) is the record pool,
+  `CTL[129]` its top (no writer yet: the installers build records there).
+* **Records** (`EnvRec.lean`): `IConstantInfo`, `IDeclaration`, `ValueGroup` as word runs in a
+  pool, lists as `(off, len)` slices of the same pool, rule lists as slices of 11-word records, an
+  inductive block as a slice of record pointers; decoders `decCI`, `decDecl`, `decVG` (value
+  relations, `Option`-valued; a handle word must be below `2^32`). Word `p + 1` of a constant
+  record is always its index key (`ci.name`, `decCI_name`). `PropWhen`'s names are name handles
+  in L, read back by a parameter `dn` (the consumers relate it to the store's `denoteN`); so
+  `EnvR` and `CheckR` take `dn`.
+* `EnvR dn m vis fe`: `fe.visibleBelow = vis`, every row's presence and counter is the twin's
+  (`idx[n]?.map fst`), every present row's record decodes to the twin's constant, and the
+  constants decode in order. Extensional through `idx[n]?`, so layout and history are free and
+  `find?` (`EnvR.find?_eq`) and the raw row (`GenRec`'s `prev`) both follow.
+* Refined (`@[refines]`): `IFEnv.find?` (`env_find`), `IFEnv.push` (`env_push`, the name read from
+  the record), `IFEnv.popTemp` (`env_pop_temp`, the previous row passed as two words that decode,
+  `prevD`), `IFEnv.restrictTo` (no code: `EnvR.restrictTo`). Also `env_erase` (`HashMap.erase` on
+  the index, a step of `eraseInstalled`), `EnvR.init` (`mkIFEnv IEnv.empty` on zero memory), the
+  generic `EnvR.setRow` and `EnvR.popLen`, and the write set `envProg_closed` (rows, `ECON`,
+  `CTL[128]`: by `decide +kernel`, so every other tier survives an env write by its frame).
+* Proof shape: L side `vcgen` + `finish` with the twin facts given as implications in the context
+  (`key := fun ht hb … => EnvR.push …`); the twin side by hand (≈ 60 lines for `push`, the
+  constants list by `List.range_succ` and `mapM_congr'`). Findings: `omega` hung (> 100 s, not a
+  heartbeat timeout) on the 2^27/2^28 decomposition with `UInt64.toNat` atoms in context; stated
+  over plain `Nat` (`nat_rowIx_inj`) it is instant. `split_ifs` is Mathlib (not here). The row
+  index computed inline in each function made `finish` chase bit-vector normal forms; moving it
+  into `env_ix(w)` with a spec `(tagW w, ixW w)` (two opaque words with `toNat` facts) fixed it.
 
 ## Library work before the core: the scratch lifecycle (2026-10-21, lane `libs`)
 

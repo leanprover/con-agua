@@ -2,6 +2,9 @@ import ConAgua.Front.StateDR
 import ConAgua.Front.FieldsLink
 import ConAgua.Front.ApplyExpr
 import ConAgua.Front.FieldsExpr
+import ConAgua.Front.Unescape
+import ConAgua.Front.ApplyDecl
+import ConAgua.Front.FieldsDeclSpec
 import ConAgua.Census.Attr
 
 /-!
@@ -29,6 +32,7 @@ open L.Arena
 open L.Scan.Member L.Scan.Values L.Scan.Records L.Scan.Line L.Front.Fields
 open L.Scan.Utf8 (byteW)
 open L.Scan.Leaves (skipWsN hasEscapeN)
+open L.Front.Unescape (strPutEscW strPutEsc_specW escSur escOne utf8Put strPutEsc)
 
 namespace L.Front
 
@@ -55,7 +59,16 @@ def applyAny : FunDecl := lfn (j) locals (pl, idx, a, c, d, z) {
     z := call apply_expr(pl, idx, a, c, d);
     return 0
   };
-  abort
+  z := call apply_dline(j);
+  return 0
+}
+
+/-- A declaration line: its fields, applied (an inductive block or any other line aborts). -/
+def applyDLine : FunDecl := lfn (j) locals (pl, nm, lps, ty, vl, hk, hn, fl, z) {
+  (pl, nm, lps, ty, vl, hk, hn, fl) := call rec_decl_line(j);
+  if pl == 0 { abort };
+  z := call apply_decl(pl, nm, lps, ty, vl, hk, hn, fl);
+  return 0
 }
 
 /-- A name or level line with fields `(pl, idx, a, c, d)`, applied. -/
@@ -76,34 +89,38 @@ def applyRec : FunDecl := lfn (pl, idx, a, c, d) locals (z) {
   return 0
 }
 
-/-- A `str` name line: the body `[c, d)` without escapes, copied to the pool and applied. -/
+/-- A `str` name line: the body `[c, d)`, unescaped into the pool and applied. -/
 def applyStr : FunDecl := lfn (idx, a, c, d) locals (z, o, l) {
-  if len(IN.u8) < c { abort };
-  z := call has_escape(c, d);
-  if z != 0 { abort };
-  (o, l) := call str_put(c, d);
+  if c == 0 { abort };
+  (o, l) := call str_put_esc(c, d);
+  if len(POOL.u64) < o { abort };
+  if len(POOL.u64) - o < l { abort };
   z := call apply_nstr(idx, a, o, l);
   return 0
 }
 
 /-! ## The model -/
 
-/-- `str_put`'s memory. -/
-def strPutW (m : Mem) (vs ve : Word) : Mem :=
-  (putW m m.top vs (ve - vs) 0).set64 CTL 0 (m.top + (ve - vs))
-
-instance (m : Mem) (vs ve : Word) : Decidable (strPutOK m vs ve) := by
-  unfold strPutOK; infer_instance
-
 /-- A line applied: `(1, next)` and the memory. -/
 def okRes (nx : Word) (m : Mem) : List Word × Mem := ([1, nx], m)
 
+/-- After `str_put_esc`: its result `(l, memory)` (`none`: it aborted), the slice at `o`. -/
+def strK (idx a o : Word) : Option (Word × Mem) → Option Mem
+  | none => none
+  | some (l, m₁) =>
+    if m₁.len64 POOL < o then none
+    else if m₁.len64 POOL - o < l then none
+    else applyNStrW m₁ idx a o l
+
+@[arena_grind =] theorem strK_none (idx a o : Word) : strK idx a o none = none := rfl
+@[arena_grind =] theorem strK_some (idx a o l : Word) (m₁ : Mem) : strK idx a o (some (l, m₁)) =
+    if m₁.len64 POOL < o then none
+    else if m₁.len64 POOL - o < l then none
+    else applyNStrW m₁ idx a o l := rfl
+
 /-- The model of `apply_str`. -/
 def applyStrW (b : Array UInt8) (m : Mem) (idx a c d : Word) : Option Mem :=
-  if UInt64.ofNat b.size < c then none
-  else if UInt64.ofNat (hasEscapeN b c.toNat d.toNat) ≠ 0 then none
-  else if strPutOK m c d then applyNStrW (strPutW m c d) idx a m.top (d - c)
-  else none
+  if c = 0 then none else strK idx a m.top (strPutEscW b m c d)
 
 /-- A name or level line with fields `f`, applied. -/
 def lineRecW (b : Array UInt8) (m : Mem) (pl idx a c d : Word) : Option Mem :=
@@ -115,6 +132,13 @@ def lineRecW (b : Array UInt8) (m : Mem) (pl idx a c d : Word) : Option Mem :=
   else if pl = 2 then applyNNumW m idx a c
   else applyLevelW m idx (pl - 2) a c
 
+/-- The model of `apply_dline(j)`. -/
+def applyDLineW (b : Array UInt8) (m : Mem) (j : Word) : Option Mem :=
+  if (declLineN b j).pl = 0 then none
+  else applyDeclW b m (declLineN b j).pl (declLineN b j).name (declLineN b j).lps
+    (declLineN b j).type (declLineN b j).value (declLineN b j).hk (declLineN b j).hn
+    (declLineN b j).flag
+
 /-- The model of `apply_any(j)`. -/
 def applyAnyW (b : Array UInt8) (m : Mem) (j : Word) : Option Mem :=
   if (recLineN b j).pl ≠ 0 then
@@ -123,7 +147,7 @@ def applyAnyW (b : Array UInt8) (m : Mem) (j : Word) : Option Mem :=
   else if (exprLineN b j).pl ≠ 0 then
     applyExprW b m (exprLineN b j).pl (exprLineN b j).idx (exprLineN b j).a (exprLineN b j).c
       (exprLineN b j).d
-  else none
+  else applyDLineW b m j
 
 /-- The model of `front_line(i)`. -/
 def frontLineW (b : Array UInt8) (m : Mem) (i : Word) : Option (List Word × Mem) :=
@@ -134,28 +158,6 @@ def frontLineW (b : Array UInt8) (m : Mem) (i : Word) : Option (List Word × Mem
   else some ([1, (lineFwdN b i).2], m)
 
 theorem map_okRes (nx : Word) (m : Mem) : Option.map (okRes nx) (some m) = some ([1, nx], m) := rfl
-
-/-- `str_put`'s memory has the pool's size, and the slice it wrote fits. -/
-theorem strPut_room (m : Mem) (vs ve : Word) (hps : (m.arr64 POOL).size < 2 ^ 63)
-    (h : strPutOK m vs ve) :
-    (((putW m m.top vs (ve - vs) 0).set64 CTL 0 (m.top + (ve - vs))).arr64 POOL).size < 2 ^ 64 ∧
-    m.top.toNat + (ve - vs).toNat ≤
-      (((putW m m.top vs (ve - vs) 0).set64 CTL 0 (m.top + (ve - vs))).arr64 POOL).size := by
-  obtain ⟨h1, h2, h3, h4⟩ := h
-  have hle := UInt64.le_iff_toNat_le.mp h1
-  have hn : (ve - vs).toNat = ve.toNat - vs.toNat := UInt64.toNat_sub_of_le _ _ h1
-  have hlen : (m.len64 POOL).toNat = (m.arr64 POOL).size := by
-    simp only [Mem.len64]; exact toNat_ofNat_size _ hps
-  have hroom : (ve - vs).toNat ≤ (m.arr64 POOL).size - m.top.toNat := by
-    have := UInt64.le_iff_toNat_le.mp h4
-    rwa [UInt64.toNat_sub_of_le _ _ h3, hlen] at this
-  have ht := UInt64.le_iff_toNat_le.mp h3
-  rw [hlen] at ht
-  have hve := ve.toNat_lt
-  obtain ⟨-, hsz, -⟩ := putW_facts m.top vs (ve - vs) (by omega) _ m 0 rfl
-    (UInt64.le_iff_toNat_le.mpr (by simp)) (by omega) hps
-  rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hsz]
-  omega
 
 /-! ## The spec -/
 
@@ -229,6 +231,10 @@ structure ScanLookups (p : Prog) : Prop where
   rec_obj : p.lookup "rec_obj" = some L.Front.Fields.recObj
   expr_val : p.lookup "expr_val" = some L.Front.Fields.exprVal
   rec_expr_loop : p.lookup "rec_expr_loop" = some L.Front.Fields.recExprLoop
+  esc_sur : p.lookup "esc_sur" = some escSur
+  esc_one : p.lookup "esc_one" = some escOne
+  utf8_put : p.lookup "utf8_put" = some utf8Put
+  str_put_esc : p.lookup "str_put_esc" = some strPutEsc
 
 section spec
 variable (p : Prog) (hS : ScanLookups p) (hL : FrontLookups p)
@@ -237,8 +243,9 @@ variable (p : Prog) (hS : ScanLookups p) (hL : FrontLookups p)
   (hpl : p.lookup "apply_level" = some applyLevel)
   (hpr : p.lookup "apply_rec" = some applyRec) (hpt : p.lookup "apply_str" = some applyStr)
   (hE : ExprLookups p) (hpy : p.lookup "apply_any" = some applyAny)
+  (hF : DeclFieldLookups p) (hDL : DeclLookups p) (hpz : p.lookup "apply_dline" = some applyDLine)
   (b : Array UInt8) (hb : b.size < 2 ^ 63)
-include hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hb
+include hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz hb
 
 attribute [local lang_grind =] map_okRes
 
@@ -252,12 +259,16 @@ theorem applyStr_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (hpool :
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    have hb64 : b.size < 2 ^ 64 := by omega
-    have hroom := strPut_room s₀.mem c d hpool
+    have hesc : ∀ (s₁ : St), s₁.mem.arr8 IN = b → ∀ c d : Word,
+        ⦃fun s => s = s₁⦄ invoke p (exec p n) "str_put_esc" [c, d]
+        ⦃fun r s' => (LocEq s' s₁ ∧ r.headD 0 = s₁.mem.top ∧
+          strPutEscW b s₁.mem c d = some (r.tail.headD 0, s'.mem)) ∧
+          Keep s₁.mem s'.mem ∧ LocEq s' s₁; ⊤⦄ := fun s₁ hm₁ c d =>
+      Triple.keep hE.no_st8 (strPutEsc_specW p b hb hS.byte_in hS.hex_val hS.hex4 hS.hex3
+        hS.esc_sur hS.esc_one hS.utf8_put hS.str_put_esc n s₁ hm₁ c d)
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        L.Scan.Leaves.hasEscape_spec p hS.has_escape b hb64 n,
-        strPut_specW p hps n, applyNStr_spec p hL hpn n] <;> finish [applyStrW, strPutW]
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hesc,
+        applyNStr_spec p hL hpn n] <;> finish [applyStrW, Keep.size]
 
 theorem applyRec_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (hpool : (s₀.mem.arr64 POOL).size < 2 ^ 63)
     (pl idx a c d : Word) :
@@ -271,8 +282,21 @@ theorem applyRec_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (hpool :
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        applyStr_spec p hS hL hpf hps hpn hpu hpl hpr hpt hE hpy b hb n,
+        applyStr_spec p hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz b hb n,
         applyNNum_spec p hL hpu n, applyLevel_spec p hL hpl n] <;> finish [lineRecW, NONE]
+
+theorem applyDLine_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (j : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "apply_dline" [j]
+    ⦃fun _ s' => LocEq s' s₀ ∧ applyDLineW b s₀.mem j = some s'.mem; ⊤⦄ := by
+  rw [invoke_eq _ hpz]
+  simp only [callFn, applyDLine]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym (gen := 16) only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+        recDeclLine_spec p hF b hb n, applyDecl_spec p hDL b hb n] <;> finish [applyDLineW, DFld.enc]
 
 theorem applyAny_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
     (hpool : (s₀.mem.arr64 POOL).size < 2 ^ 63) (j : Word) :
@@ -288,8 +312,10 @@ theorem applyAny_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         L.Front.Fields.recLineLoop_spec p b hb hS.skip_ws hS.skip_digits hS.key_end hS.num_end hS.key_at_g1 hS.key_at_g2 hS.key_at_g3 hS.key_at_g4 hS.key_at_g5 hS.key_at_g6 hS.key_at hS.value_at hS.next_member hS.slot_nat hS.utf8_char hS.utf8_valid hS.byte_in hS.hex_val hS.hex4 hS.hex3 hS.u_next hS.unescape hS.str_close hS.has_escape hS.scan_string hS.skip_braced hS.read_nat hS.rec_nat_list hS.rec_str_name hS.rec_num_name hS.rec_line_loop n,
         L.Front.Fields.recExprLoop_spec p b hb hS.skip_ws hS.skip_digits hS.key_end hS.num_end hS.key_at_g1 hS.key_at_g2 hS.key_at_g3 hS.key_at_g4 hS.key_at_g5 hS.key_at_g6 hS.key_at hS.value_at hS.next_member hS.slot_nat hS.scan_quoted_nat hS.match_word hS.scan_binder_info hS.scan_nat_list hS.match_lit hS.scan_bool hS.utf8_char hS.utf8_valid hS.byte_in hS.hex_val hS.hex4 hS.hex3 hS.u_next hS.unescape hS.str_close hS.has_escape hS.scan_string hS.read_nat hS.obj_val hS.rec_obj hS.expr_val hS.rec_expr_loop n,
-        applyRec_spec p hS hL hpf hps hpn hpu hpl hpr hpt hE hpy b hb n,
-        applyExpr_spec p hE b hb n] <;> finish [applyAnyW, Fld.enc]
+        applyRec_spec p hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz b hb n,
+        applyExpr_spec p hE b hb n,
+        applyDLine_spec p hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz b hb n] <;>
+        finish [applyAnyW, Fld.enc]
 
 theorem frontLine_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Word)
     (hi : i.toNat ≤ b.size) (hpool : (s₀.mem.arr64 POOL).size < 2 ^ 63) :
@@ -306,7 +332,7 @@ theorem frontLine_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i : Wo
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld8,
         L.Scan.Line.scanLine_spec p b hb hS.skip_ws hS.skip_digits hS.key_end hS.num_end hS.key_at_g1 hS.key_at_g2 hS.key_at_g3 hS.key_at_g4 hS.key_at_g5 hS.key_at_g6 hS.key_at hS.value_at hS.next_member hS.slot_nat hS.match_word hS.scan_binder_info hS.hints_num hS.hints_obj hS.scan_hints hS.scan_nat_list hS.match_lit hS.scan_bool hS.utf8_char hS.utf8_valid hS.byte_in hS.hex_val hS.hex4 hS.hex3 hS.u_next hS.unescape hS.str_close hS.has_escape hS.scan_string hS.scan_str_name hS.scan_num_name hS.scan_app hS.scan_binder hS.scan_let hS.scan_const hS.scan_proj hS.scan_rule hS.scan_rules hS.scan_ind_rec hS.scan_ind_recs hS.scan_ind_type hS.scan_ind_types hS.scan_ind_ctor hS.scan_ind_ctors hS.scan_axiom hS.scan_def hS.scan_thm hS.scan_opaque hS.scan_quot hS.scan_ind_decl hS.skip_braced hS.scan_quoted_nat hS.scan_line_loop hS.scan_line hS.validate n,
         L.Scan.Leaves.skipWs_spec p hS.skip_ws b hb64 n,
-        applyAny_spec p hS hL hpf hps hpn hpu hpl hpr hpt hE hpy b hb n] <;> finish [frontLineW]
+        applyAny_spec p hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz b hb n] <;> finish [frontLineW]
 
 end spec
 
