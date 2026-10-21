@@ -28,3 +28,4 @@ public import ConAgua.Scan.LitLink
 public import ConAgua.Scan.Utf8
 public import ConAgua.Arena.NatAdd
 public import ConAgua.Arena.NatMul
+public import ConAgua.Arena.Store
