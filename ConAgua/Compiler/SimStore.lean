@@ -43,24 +43,6 @@ theorem Mem.arr8_set8 (m : Mem) (a a' : ArrId) (i v : Word) :
 theorem Mem.arr8_set64 (m : Mem) (a : ArrId) (i v : Word) : (m.set64 a i v).arr8 = m.arr8 := rfl
 theorem Mem.arr64_set8 (m : Mem) (a : ArrId) (i v : Word) : (m.set8 a i v).arr64 = m.arr64 := rfl
 
-/-- Two 8-byte cells in disjoint sets of bytes do not overlap. -/
-theorem cell_disj {x y : Nat} {P Q : Nat → Prop} (hP : ∀ k < 8, P (x + k)) (hQ : ∀ k < 8, Q (y + k))
-    (h : ∀ t, P t → ¬ Q t) : y + 8 ≤ x ∨ x + 8 ≤ y := by
-  refine Classical.byContradiction fun hc => ?_
-  simp only [not_or, Nat.not_le] at hc
-  by_cases hxy : x ≤ y
-  · exact h y (by have := hP (y - x) (by omega); rwa [show x + (y - x) = y by omega] at this)
-      (by have := hQ 0 (by omega); simpa using this)
-  · exact h x (by have := hP 0 (by omega); simpa using this)
-      (by have := hQ (x - y) (by omega); rwa [show y + (x - y) = x by omega] at this)
-
-/-- A byte outside a set of bytes is not in an 8-byte cell inside it. -/
-theorem byte_cell_disj {x y : Nat} {P Q : Nat → Prop} (hP : ∀ k < 8, P (x + k)) (hQ : Q y)
-    (h : ∀ t, P t → ¬ Q t) : y < x ∨ x + 8 ≤ y := by
-  refine Classical.byContradiction fun hc => ?_
-  simp only [not_or, Nat.not_lt] at hc
-  exact h y (by have := hP (y - x) (by omega); rwa [show x + (y - x) = y by omega] at this) hQ
-
 section
 variable {G : Layout} (hG : G.Ok)
 include hG
@@ -81,7 +63,7 @@ theorem MemRel.store64 {m : Mem} {d : DataMem} (hm : MemRel G m d) {a : ArrId} (
       fun t h1 h2 => hG.tab_arr t h2 (Or.inr ⟨a, ha, h1⟩)
   refine ⟨by simpa [Mem.set64] using hm.nb, by simpa [Mem.set64] using hm.nw,
     fun c hc => by rw [Mem.arr8_set64]; exact hm.size8 c hc,
-    fun c hc => by rw [Mem.arr64_set64]; split <;> simp_all [hm.size64 c hc], ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    fun c hc => by rw [Mem.arr64_set64]; split <;> simp_all [hm.size64 c hc], ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro c hc k hk
     have hk2 : k < (m.arr8 c).size := hk
     have h8 := hm.size8 c hc
@@ -128,6 +110,7 @@ theorem MemRel.store64 {m : Mem} {d : DataMem} (hm : MemRel G m d) {a : ArrId} (
     exact byte_cell_disj (P := G.In64 a) (Q := G.InTab) hcell ⟨by omega, by simp only [Layout.tabEnd]; omega⟩
       fun t h1 h2 => hG.tab_arr t h2 (Or.inr ⟨a, ha, h1⟩)
   · intro x hx; exact isSome_get?_storeInt (hm.stack x hx)
+  · intro x hx; exact isSome_get?_storeInt (hm.res x hx)
 
 theorem MemRel.store8 {m : Mem} {d : DataMem} (hm : MemRel G m d) {a : ArrId} (ha : a < G.tab.nb)
     {i : Word} (hi : i.toNat < (m.arr8 a).size) (v : Word) (V : Int) (hV : (V.take 8).toNat.toUInt8 = v.toUInt8) :
@@ -149,7 +132,7 @@ theorem MemRel.store8 {m : Mem} {d : DataMem} (hm : MemRel G m d) {a : ArrId} (h
     exact hcellw _ (fun k hk h8 => hG.tab_arr _ ⟨by omega, by omega⟩ (Or.inl ⟨a, ha, h8⟩)) (by omega)
   refine ⟨by simpa [Mem.set8] using hm.nb, by simpa [Mem.set8] using hm.nw,
     fun c hc => by rw [Mem.arr8_set8]; split <;> simp_all [hm.size8 c hc],
-    fun c hc => by rw [Mem.arr64_set8]; exact hm.size64 c hc, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    fun c hc => by rw [Mem.arr64_set8]; exact hm.size64 c hc, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro c hc k hk
     have hk' := hk
     simp only [Mem.arr8_set8] at hk'
@@ -195,6 +178,7 @@ theorem MemRel.store8 {m : Mem} {d : DataMem} (hm : MemRel G m d) {a : ArrId} (h
     intro he
     exact hG.tab_arr _ ⟨by omega, by simp only [Layout.tabEnd]; omega⟩ (Or.inl ⟨a, ha, he ▸ hin⟩)
   · intro x hx; exact isSome_get?_storeInt (hm.stack x hx)
+  · intro x hx; exact isSome_get?_storeInt (hm.res x hx)
 
 theorem Inv.store64 {nl F : Nat} {σ : St} {s : MachineData} (hI : Inv G nl F σ s) {a : ArrId}
     (ha : a < G.tab.nw) {i : Word} (hi : i.toNat < (σ.mem.arr64 a).size) (v : Word) :
@@ -231,7 +215,7 @@ theorem Inv.store8 {nl F : Nat} {σ : St} {s : MachineData} (hI : Inv G nl F σ 
 theorem Pres.store64 {top : Nat} {d : DataMem} {a : ArrId} (ha : a < G.tab.nw) {j : Nat} (hj : j < G.s64 a)
     (v : BitVec 64) : Pres G top d (wrW d (A (G.b64 a + 8 * j)) v) := by
   have hend := hG.end64 a ha
-  refine ⟨fun _ h => isSome_get?_storeInt h, fun x hx _ hna => ?_⟩
+  refine ⟨fun _ h => isSome_get?_storeInt h, fun x hx _ hna _ => ?_⟩
   refine get?_wrW_A (by omega) hx ?_
   exact byte_cell_disj (P := G.In64 a) (Q := fun t => ¬ G.InArr t) (fun k hk => ⟨by omega, by omega⟩) hna
     fun t h1 h2 => h2 (Or.inr ⟨a, ha, h1⟩)
@@ -239,7 +223,7 @@ theorem Pres.store64 {top : Nat} {d : DataMem} {a : ArrId} (ha : a < G.tab.nw) {
 theorem Pres.store8 {top : Nat} {d : DataMem} {a : ArrId} (ha : a < G.tab.nb) {j : Nat} (hj : j < G.s8 a)
     (V : Int) : Pres G top d (Mem.storeInt d (A (G.b8 a + j)) 1 V) := by
   have hend := hG.end8 a ha
-  refine ⟨fun _ h => isSome_get?_storeInt h, fun x hx _ hna => ?_⟩
+  refine ⟨fun _ h => isSome_get?_storeInt h, fun x hx _ hna _ => ?_⟩
   refine get?_store1_A (by omega) hx fun he => hna (Or.inl ⟨a, ha, he ▸ ⟨by omega, by omega⟩⟩)
 
 end
@@ -255,7 +239,7 @@ theorem byte_val (r : Reg64s) :
   omega
 
 section
-variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords < maxOff)
+variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres < maxOff)
   (p : Prog) (K : Stmt → M Sig) (P : Nat → Prop)
 include hG hTab
 
