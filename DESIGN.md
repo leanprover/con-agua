@@ -236,6 +236,157 @@ induction hypothesis, and the expression lemmas are straight-line `kvcgen64` pro
 
 None.
 
+## The compiler (2026-10-21, lane `compiler`)
+
+Files: `ConAgua/Compiler/{Compile,Run,Tests,EmitScan}.lean`, `ConAgua/Compiler/harness/run.c`.
+Toolchain: nightly-2026-10-20 with sgraf812/kraken `ba12834` (the `vcgen` branch).
+
+### Shape
+
+`compileProg tab p entry : Program` (Kraken's `List Directive`) is the trampoline followed by
+`compileFn` of every function. One pass, no register allocation, no optimisation. `asmText` prints
+it with Kraken's AT&T printer (`Kraken.X64.toATT`) for `as`/`clang`.
+
+* **Expressions** go to `rax`. `bin op a b` evaluates `a`, stores it in a temporary slot,
+  evaluates `b`, moves it to `rcx`, reloads `a` and applies `op` (`imul` for `*`, `shl`/`shr` by
+  `cl`). `compileE e t` may write temporaries `t, t+1, …`; `tempsE e` bounds how many. A load
+  `A.u8[i]` is `cmp rax, [r15 + len]; jae ca_error; mov rcx, [r15 + base]; movzx rax, byte
+  [rcx + rax]`.
+* **Conditions** compile to jumps: `compileC c pol l` jumps to `l` if `c` evaluates to `pol` and
+  falls through otherwise, so `&&`/`||` short-circuit and `!` only flips `pol`.
+* **Statements**: `if` and `while` as usual, with labels `.Lca_<fn>_<path><M>` where `path` is the
+  node's position (lowercase letters) and `M` an uppercase marker. Labels are therefore distinct
+  without a counter, and `compileS` is a plain structural function. A loop back-edge is
+  `sub r14, 1; jb ca_exhausted; jmp head`. `break` jumps to the loop exit (at function level: to
+  the epilogue, which returns 0, as `L` does). `abort` jumps to `ca_error`.
+* **Calls**: arguments are evaluated into temporaries `0 … n-1`, `rsi` points at them,
+  `sub r14, 1; jb ca_exhausted; call ca_f_<f>`, then the result is stored from `rax`.
+* **Functions**: `rax := rsp - [r15 + 8]` (the distance to the stack limit; no wrap-around as long
+  as `rsp` stays above the limit); `cmp rax, 8F + 8; jb ca_exhausted` (the frame and the next
+  call's return address); `sub rsp, 8F`; copy the parameters from `[rsi + 8i]`; zero the other
+  locals; body; `.Z: rax := 0; .R: add rsp, 8F; ret`. `F = nlocals + tempsS body`.
+* **Trampoline** `ca_enter(T, fuel)` (System V: `rdi`, `rsi`; result in `rax`, outcome in
+  `rdx`): push `rbp`, `r14`, `r15`; `rbp := rsp`; `r15 := T`; `r14 := fuel`; `rsp := [T]`;
+  `rsi := T + args`; burn one unit of fuel; call the entry function; `rdx := 0`. The exits
+  `ca_exhausted` (`rdx := 1`) and `ca_error` (`rdx := 2`) and the normal return meet at
+  `ca_finish`: `rsp := rbp`, pop, `ret`.
+
+**Changes to the plan in "Intended compiler" above.** The saved stack pointer lives in `rbp`
+(pinned, never written by L code) instead of a table cell; temporaries are fixed frame slots
+instead of `rbx` plus pushes (so `rsp` is constant while a body runs and a local's address is
+always `rsp + 8x`); arguments are passed by pointer (`rsi`) into the caller's temporaries; the
+stack check compares `rsp - limit` with the frame size, which cannot wrap. The table is
+`[T]` stack top, `[T+8]` stack limit, then base/length pairs of the byte arrays and of the word
+arrays, then the entry arguments (`Tab`).
+
+**Fuel.** `r14` counts every back-edge and call (including the trampoline's call), while `L`'s
+fuel bounds only their nesting. The proof invariant is `r14 < n` while `exec p n` runs, so `L`
+never runs out while the machine has fuel left; the machine may run out first.
+
+### Testing
+
+* `Tests.lean`: `#guard` differential tests, compiled code on Kraken's executable semantics
+  (`Executable.eval` with Kraken's fake layout, `runKraken`) against `L.run`: `skip_braced` and
+  `str_close` on small inputs, word arrays and stores, all operators, signed comparisons, short
+  circuit, `break`, `abort`, out-of-bounds, recursion, fuel and stack exhaustion. They found a
+  real bug (the temporaries of an `if` condition were not counted in the frame size, so the
+  condition overwrote the return address).
+* Native: `lake env lean --run ConAgua/Compiler/EmitScan.lean scan.s && cc -O2 -o run
+  ConAgua/Compiler/harness/run.c scan.s`. `run FILE ARG…` calls `skip_braced` once;
+  `run --lines FILE` calls `skip_braced(start + 1, 0)` for every line of a lean4export file and
+  checks that it returns the end of the line. On con-leche's
+  `tests/e2e/complete_c04a_restart_70.ndjson.gz` (9.1 MB, 126481 lines) every line agrees.
+* Kraken's interpreter recurses once per executed straight-line block, so an infinite loop shows
+  up as "deep recursion detected at interpreter" in `withAddresses`, not as a timeout.
+
+### The correctness theorem (`ConAgua/Compiler/Main.lean`)
+
+```lean
+theorem compile_correct [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.Ok)
+    (hwf : Prog.wf G.tab p = true) (k0 : Nat) (hcode : Code (compileProg G.tab p entry) k0)
+    (fd : FunDecl) (hentry : p.lookup entry = some fd)
+    (args : List Word) (hargs : args.length = fd.nparams) (hnargs : G.nargs = args.length)
+    (m : Mem) (N : Nat) (d : MachineData) (ra : Word)
+    (hT : d.regs.rdi.toNat = G.T) (hN : d.regs.rsi.toNat = N)
+    (hmem : MemRel G m d.dmem) (hroom : G.lo + 8 ≤ G.hi)
+    (htop : rdW d.dmem (A G.T) = some (UInt64.ofNat G.hi))
+    (hargv : ∀ i (h : i < args.length), rdW d.dmem (A (G.T + G.tab.args.toNat + 8 * i)) = some args[i])
+    (hra : rdW d.dmem (A d.regs.rsp.toNat) = some ra)
+    (hcs : ∀ x, d.regs.rsp.toNat - 24 ≤ x → x < d.regs.rsp.toNat + 8 →
+      (d.dmem.get? (A x)).isSome ∧ ¬ G.InStack x ∧ ¬ G.InArr x ∧ ¬ G.InTab x)
+    (hcs24 : 24 ≤ d.regs.rsp.toNat) (hcs8 : d.regs.rsp.toNat + 8 < 2 ^ 64) :
+    Ev (fun st => st.pc = Int64.ofBitVec ra.toBitVec ∧ st.data.regs.rsp.toNat = d.regs.rsp.toNat + 8 ∧
+        st.data.regs.rbp = d.regs.rbp ∧ st.data.regs.r14 = d.regs.r14 ∧ st.data.regs.r15 = d.regs.r15 ∧
+        (st.data.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) st.data))
+      d (label enterL)
+```
+
+`Ev Q d pc` is Kraken's own judgment `Eventually (step1 Host.exe) Q ⟨d, pc⟩`: every run from `d`
+at `pc` reaches a state satisfying `Q` (it is inductive, so the code also terminates).
+`[Host]` is any host program and layout that contains the compiled program at index `k0`; the
+addresses are never fixed. `G : Layout` is ghost data: the table address `T`, the base and
+length of every array, the L stack `[lo, hi)` and the number of entry arguments; `G.Ok` says
+the regions lie inside the address space and are pairwise disjoint. `MemRel G m d.dmem` says
+the data memory holds L's memory `m` (every array's elements at its base), the table holds the
+layout, and the L stack is mapped. The remaining hypotheses describe the call of
+`ca_enter(T, N)`: the stack top in `[T]`, the arguments in the table, the return address `ra`,
+three free words below it, all outside the other regions.
+
+`OutcomeRel G (run p N entry args m) s` is `rdx = 0 ∧ rax = r ∧ MemRel G m' s.dmem` for
+`.ok (r, m')`, `rdx = 2` for an error other than `outOfFuel`, and `False` for `outOfFuel`. So:
+the machine returns to `ra` with the callee-saved registers restored, and either says
+`exhausted` (`rdx = 1`, out of fuel or stack) or says exactly what `L.run p N` says with the
+same fuel `N`. If L runs out of fuel, the machine says `exhausted`. "The machine said `rdx = 0`,
+`rax = r`" therefore implies `run p N entry args m = .ok (r, m')`, which the per-function L specs
+relate to the model.
+
+### The proof
+
+**Approach.** A forward simulation directly on Kraken's `Eventually (step1 Host.exe)`, in
+continuation-passing style: each lemma assumes `Ev Q` at every exit the code can take and
+concludes `Ev Q` at its entry. I did not use the fork's `Program.wp`/`vcgen`: `Program.wp` is the
+weakest precondition of one fragment with its own labels, and its control-flow rule
+(`Program.WP.cfg`) works by case analysis on a concrete list of labels. A generic compiler proof
+has symbolic code (`compileS ctx path s` for any `s`) whose sub-fragments jump to labels outside
+themselves (`break`, `return`, `ca_error`, `ca_exhausted`), calls of recursive functions whose
+specs come from an induction on fuel, and loops whose back-edge re-enters the same code at a
+smaller fuel; with `Ev` and continuations these are just hypotheses. From the fork I use `Host`
+(an abstract layout with label lemmas such as `Host.label_eq`), `Host.step1_addrOf` (one
+instruction at a known index) and the instruction semantics.
+
+**Structure** (`ConAgua/Compiler/*.lean`):
+* `Mem.lean`: words and bytes of Kraken's memory at natural-number addresses (`rdW`, `wrW`,
+  disjointness as arithmetic).
+* `Step.lean`: one lemma per instruction form the compiler emits (about 25), and the flags of
+  `cmp`: `(cmpCC op).interp (cmpFlags a b) = op.eval a b` for all six comparisons (signed ones
+  via `BitVec.ssubOverflow` and `bv_decide`).
+* `Rel.lean`, `WF.lean`: `Layout`, `MemRel`, `Inv` (the current frame holds the locals),
+  `Only a b d d'` (only bytes in `[a, b)` changed), the well-formedness check.
+* `SimExpr.lean`: `sim_expr`, `sim_cond` (by induction on the expression/condition).
+* `RunEq.lean`: one run equation per statement form of `L.step`.
+* `SimStmt.lean`, `SimCall.lean`, `SimFun.lean`: statements (`SimS`, with the exits as a
+  structure `Conts`), calls (`sim_call`, from the callee's `FunSim`), function bodies (`funSim`:
+  stack check, parameters, zeroed locals, body, epilogue).
+* `Correct.lean`: `execSim_all`: by induction on the fuel `n`, `ExecSim n` (statements under
+  `exec p n`) and `FunSim n`; inside, by induction on the statement. The machine fuel invariant
+  is `r14 < n` under `exec p n` and `r14 ≤ n` under `step p (exec p n)`.
+* `Main.lean`: the trampoline and `compile_correct`.
+
+**Status.** Proved: everything except the two array stores (`st8`, `st64` in `stepSim`), which
+are `sorry` (they are not used by `str_close`/`skip_braced`). About 2900 lines of proof
+(`Mem` 108, `Step` 479, `Rel` 208, `SimExpr` 529, `RunEq` 171, `SimStmt` 402, `SimCall` 297,
+`SimFun` 278, `Correct` 70, `Main` 370), against 281 lines of compiler. The whole library
+builds in a few seconds; no lemma is slow.
+
+**Static well-formedness** (`WF.lean`, `Prog.wf tab p`): locals in range, arrays exist in
+`tab`, call targets exist with matching arity, distinct function names, frame and table offsets
+below `2^28`. `L` itself gives every program a meaning; this is what the compiler needs. It
+lives in the compiler, not in `ConAgua/L`; `scanProg` passes it (`#guard` in `Tests.lean`).
+
+### `sorry`s (compiler lane)
+
+* `ConAgua/Compiler/Correct.lean`, `stepSim`: the cases `st8` and `st64` (array stores).
+
 ## Linking to con-leche, and more scan leaf functions (2026-10-21, lane `scan`)
 
 Files: `ConAgua/Scan/{Link,Leaves}.lean`.
