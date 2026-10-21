@@ -47,3 +47,9 @@ srcDir = "vendor/con-ron"
 roots = ["ConRon.Bridge"]
 globs = ["ConRon.Bridge.+"]
 leanOptions = {autoImplicit = true, relaxedAutoImplicit = true}
+
+# Baseline for the compiled-L measurement (DESIGN.md, "The compiler"): con-leche's compiled
+# `skipBraced` over a lean4export file.
+[[lean_exe]]
+name = "skipbench"
+root = "ConAgua.Compiler.Bench"
