@@ -46,7 +46,7 @@ globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.A
   "ConAgua.Arena.CoreCaches", "ConAgua.Arena.CoreRefine", "ConAgua.Arena.WhnfBase", "ConAgua.Arena.WhnfSpine", "ConAgua.Arena.CoreLevels", "ConAgua.Arena.WhnfCore", "ConAgua.Arena.WhnfCoreSlot", "ConAgua.Arena.WhnfIota",
   "ConAgua.Arena.IndGrindAttr", "ConAgua.Arena.IndIface", "ConAgua.Arena.IndStubs", "ConAgua.Arena.IndLibSpec", "ConAgua.Arena.IndView",
   "ConAgua.Arena.IndParts", "ConAgua.Arena.IndPartsSpec", "ConAgua.Arena.IndInstall", "ConAgua.Arena.IndSum", "ConAgua.Arena.IndSumSpec",
-  "ConAgua.Arena.IndPos", "ConAgua.Arena.IndPos2", "ConAgua.Arena.RecClass", "ConAgua.Arena.RecGen", "ConAgua.Arena.RecCheck", "ConAgua.Arena.IndProg",
+  "ConAgua.Arena.IndPos", "ConAgua.Arena.IndPos2", "ConAgua.Arena.RecClass", "ConAgua.Arena.RecGen", "ConAgua.Arena.RecGenSpec", "ConAgua.Arena.RecCheck", "ConAgua.Arena.RecCheckSpec", "ConAgua.Arena.IndProg",
   "ConAgua.Arena.Walk", "ConAgua.Arena.WalkRefine", "ConAgua.Arena.WalkBench", "ConAgua.Arena.WalkEmit",
   "ConAgua.Arena.WalkBenchLean",
   "ConAgua.Capstone", "ConAgua.Compiler.WFAll", "ConAgua.Compiler.WFAllBench",
