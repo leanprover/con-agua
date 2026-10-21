@@ -55,11 +55,11 @@ def lamatchW (r : Array Word) (t i ty body : Word) : Bool :=
 /-! ## `lam_find(t, ty, body, h)`: the probe -/
 
 /-- The model of the probe loop, from slot `j` after `d` steps (`probeW` with `lamatchW`). -/
-def laprobeW (sl r : Array Word) (t ty body n j d : Word) : List Word :=
+def laprobeW (sl r : Array Word) (t ty body b n j d : Word) : List Word :=
   if d < n then
-    if rdW sl (j * 2 + t) = 0 then [0, 0, j, d]
-    else if lamatchW r t (rdW sl (j * 2 + t) - 1) ty body then [1, rdW sl (j * 2 + t) - 1, j, d]
-    else laprobeW sl r t ty body n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
+    if slotV sl b (j * 2 + t) = 0 then [0, 0, j, d]
+    else if lamatchW r t (slotV sl b (j * 2 + t) - 1) ty body then [1, slotV sl b (j * 2 + t) - 1, j, d]
+    else laprobeW sl r t ty body b n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
   else []
 termination_by n.toNat - d.toNat
 decreasing_by
@@ -70,35 +70,38 @@ decreasing_by
   omega
 
 section probeArms
-variable (sl r : Array Word) (t ty body n j d : Word)
+variable (sl r : Array Word) (t ty body b n j d : Word)
 
 theorem laprobeW_free (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] = 0) : laprobeW sl r t ty body n j d = [0, 0, j, d] := by
-  rw [laprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv]
+    (hv : sl[k] ≤ b) : laprobeW sl r t ty body b n j d = [0, 0, j, d] := by
+  rw [laprobeW]; simp only [hd, ↓reduceIte, slotV_free sl b _ k hk hks hv]
 
 theorem laprobeW_hit (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] ≠ 0) (hm : lamatchW r t (sl[k] - 1) ty body = true) :
-    laprobeW sl r t ty body n j d = [1, sl[k] - 1, j, d] := by
-  rw [laprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv, hm]
+    (hv : ¬ sl[k] ≤ b) (hm : lamatchW r t (sl[k] - b - 1) ty body = true) :
+    laprobeW sl r t ty body b n j d = [1, sl[k] - b - 1, j, d] := by
+  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
+  rw [laprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]
 
 theorem laprobeW_next (k : Nat) (j' d' : Word) (hd : d < n) (hk : k = (j * 2 + t).toNat)
-    (hks : k < sl.size) (hv : sl[k] ≠ 0) (hm : lamatchW r t (sl[k] - 1) ty body = false)
+    (hks : k < sl.size) (hv : ¬ sl[k] ≤ b) (hm : lamatchW r t (sl[k] - b - 1) ty body = false)
     (hj' : j' = (j + 1) * (if j + 1 < n then 1 else 0)) (hd' : d' = d + 1) :
-    laprobeW sl r t ty body n j d = laprobeW sl r t ty body n j' d' := by
+    laprobeW sl r t ty body b n j d = laprobeW sl r t ty body b n j' d' := by
   subst hj' hd'
-  rw [laprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv, hm]; simp
+  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
+  rw [laprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]; simp
 
 end probeArms
 
-grind_pattern [arena_grind] laprobeW_free => laprobeW sl r t ty body n j d, sl[k]
-grind_pattern [arena_grind] laprobeW_hit => laprobeW sl r t ty body n j d, sl[k]
+grind_pattern [arena_grind] laprobeW_free => laprobeW sl r t ty body b n j d, sl[k]
+grind_pattern [arena_grind] laprobeW_hit => laprobeW sl r t ty body b n j d, sl[k]
 grind_pattern [arena_grind] laprobeW_next =>
-  laprobeW sl r t ty body n j d, sl[k], laprobeW sl r t ty body n j' d'
+  laprobeW sl r t ty body b n j d, sl[k], laprobeW sl r t ty body b n j' d'
 
-def lafindLoop : Stmt := lblk (t, ty, body, h, n, j, d, v) {
+def lafindLoop : Stmt := lblk (t, ty, body, h, n, j, d, v, b) {
   while d < n {
     v := LASLOT.u64[j * 2 + t];
-    if v == 0 { return (0, 0, j, d) };
+    if v <= b { return (0, 0, j, d) };
+    v := v - b;
     if LAREC.u64[(v - 1) * 4 + t * 2] == ty && LAREC.u64[(v - 1) * 4 + t * 2 + 1] == body {
       return (1, v - 1, j, d)
     };
@@ -107,8 +110,9 @@ def lafindLoop : Stmt := lblk (t, ty, body, h, n, j, d, v) {
   }
 }
 
-def lamFind : FunDecl := lfn (t, ty, body, h) locals (n, j, d, v) {
+def lamFind : FunDecl := lfn (t, ty, body, h) locals (n, j, d, v, b) {
   n := len(LASLOT.u64) >> 1;
+  b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪lafindLoop⟫;
   abort
@@ -122,24 +126,24 @@ theorem lafindLoop_spec (n : Nat) (s₀ : St) :
     exec p n lafindLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
       r.retOr (laprobeW (s₀.mem.arr64 LASLOT) (s₀.mem.arr64 LAREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
+        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
       laprobeW (s₀.mem.arr64 LASLOT) (s₀.mem.arr64 LAREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ := by
+        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
     rw [exec, step_while (w := lafindLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [lamatchW]
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [lamatchW, baseW]
 
 theorem lafindLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) lafindLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
       r.retOr (laprobeW (s₀.mem.arr64 LASLOT) (s₀.mem.arr64 LAREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
+        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
       laprobeW (s₀.mem.arr64 LASLOT) (s₀.mem.arr64 LAREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ :=
+        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ :=
   Triple.step_exec (lafindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `lam` table. -/
@@ -151,15 +155,15 @@ theorem lamFind_spec (n : Nat) (s₀ : St) (t ty body h : Word) :
     invoke p (exec p n) "lam_find" [t, ty, body, h]
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
       r = laprobeW (s₀.mem.arr64 LASLOT) (s₀.mem.arr64 LAREC) t ty body
-        (nSlotsLa s₀.mem) (homeW h (nSlotsLa s₀.mem)) 0; ⊤⦄ := by
+        (baseW s₀.mem t) (nSlotsLa s₀.mem) (homeW h (nSlotsLa s₀.mem)) 0; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, lamFind]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc, lafindLoop_step_spec p n] <;>
-      finish [nSlotsLa, homeW]
+      vcgen [exec, step, evalE, evalArgs, setLoc, lafindLoop_step_spec p n, ld64] <;>
+      finish [nSlotsLa, homeW, baseW]
 
 end find
 
@@ -176,7 +180,7 @@ def lapushOK (m : Mem) (t : Word) : Bool :=
 /-- The memory after `lam_push(t, ty, body, j)` appended node `c`. -/
 def lapushMem (m : Mem) (t ty body j c : Word) : Mem :=
   ((((m.set64 LAREC (c * 4 + t * 2) ty).set64 LAREC (c * 4 + t * 2 + 1) body).set64 LASLOT
-    (j * 2 + t) (c + 1)).set64 CTL (28 + (t &&& 1)) (c + 1))
+    (j * 2 + t) (baseW m t + c + 1)).set64 CTL (28 + (t &&& 1)) (c + 1))
 
 def lamPush : FunDecl := lfn (t, ty, body, j) locals (c, k) {
   c := CTL.u64[28 + t];
@@ -186,7 +190,7 @@ def lamPush : FunDecl := lfn (t, ty, body, j) locals (c, k) {
   k := c * 4 + t * 2;
   LAREC.u64[k] := ty;
   LAREC.u64[k + 1] := body;
-  LASLOT.u64[j * 2 + t] := c + 1;
+  LASLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[28 + (t & 1)] := c + 1;
   return c
 }
@@ -207,7 +211,7 @@ theorem lamPush_spec (n : Nat) (s₀ : St) (t ty body j : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
-      finish [lacnt, lapushOK, lapushMem, nSlotsLa]
+      finish [lacnt, lapushOK, lapushMem, nSlotsLa, baseW]
 
 end push
 
@@ -230,8 +234,8 @@ def laskipW (m : Mem) (ty body : Word) : Word :=
 aborts. -/
 def lainternW (m : Mem) (ty body : Word) : Option (Word × Mem) :=
   let h := lamHashW ty body
-  let rs₀ := laprobeW (m.arr64 LASLOT) (m.arr64 LAREC) 0 ty body (nSlotsLa m) (homeW h (nSlotsLa m)) 0
-  let rs₁ := laprobeW (m.arr64 LASLOT) (m.arr64 LAREC) 1 ty body (nSlotsLa m) (homeW h (nSlotsLa m)) 0
+  let rs₀ := laprobeW (m.arr64 LASLOT) (m.arr64 LAREC) 0 ty body (baseW m 0) (nSlotsLa m) (homeW h (nSlotsLa m)) 0
+  let rs₁ := laprobeW (m.arr64 LASLOT) (m.arr64 LAREC) 1 ty body (baseW m 1) (nSlotsLa m) (homeW h (nSlotsLa m)) 0
   if laskipW m ty body = 0 ∧ rs₀ = [] then none
   else if laskipW m ty body = 0 ∧ rs₀.headD 0 ≠ 0 then some (lamP + rs₀.tail.headD 0, m)
   else if rdW (m.arr64 CTL) 1 ≠ 0 then
@@ -275,8 +279,7 @@ other than `CTL`/`LAREC`/`LASLOT` are unused here and left empty; `CTL` reaches 
 words. -/
 def lamMem (scratch : Word) : Mem :=
   { words := #[#[],
-      #[0, scratch, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0],
+      (#[0, scratch] ++ Array.replicate 62 0),
       #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[],
       #[], #[], #[], #[], #[], #[], #[],
       Array.replicate 32 0, Array.replicate 32 0] }
@@ -313,7 +316,7 @@ theorem internLamL_spec (n : Nat) (s₀ : St) (ty body : Word) :
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         lamFind_spec p hpf n, lamPush_spec p hpp n] <;>
-      finish [lainternW, laskipW, lamHashW]
+      finish [lainternW, laskipW, lamHashW, baseW]
 
 end intern
 

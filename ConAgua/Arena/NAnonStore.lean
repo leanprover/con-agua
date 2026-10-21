@@ -45,11 +45,11 @@ def namatchW (_r : Array Word) (_t _i : Word) : Bool := true
 /-! ## `nanon_find(t, h)`: the probe -/
 
 /-- The model of the probe loop, from slot `j` after `d` steps (`probeW` with `namatchW`). -/
-def naprobeW (sl r : Array Word) (t n j d : Word) : List Word :=
+def naprobeW (sl r : Array Word) (t b n j d : Word) : List Word :=
   if d < n then
-    if rdW sl (j * 2 + t) = 0 then [0, 0, j, d]
-    else if namatchW r t (rdW sl (j * 2 + t) - 1) then [1, rdW sl (j * 2 + t) - 1, j, d]
-    else naprobeW sl r t n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
+    if slotV sl b (j * 2 + t) = 0 then [0, 0, j, d]
+    else if namatchW r t (slotV sl b (j * 2 + t) - 1) then [1, slotV sl b (j * 2 + t) - 1, j, d]
+    else naprobeW sl r t b n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
   else []
 termination_by n.toNat - d.toNat
 decreasing_by
@@ -60,43 +60,47 @@ decreasing_by
   omega
 
 section probeArms
-variable (sl r : Array Word) (t n j d : Word)
+variable (sl r : Array Word) (t b n j d : Word)
 
 theorem naprobeW_free (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] = 0) : naprobeW sl r t n j d = [0, 0, j, d] := by
-  rw [naprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv]
+    (hv : sl[k] ≤ b) : naprobeW sl r t b n j d = [0, 0, j, d] := by
+  rw [naprobeW]; simp only [hd, ↓reduceIte, slotV_free sl b _ k hk hks hv]
 
 theorem naprobeW_hit (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] ≠ 0) (hm : namatchW r t (sl[k] - 1) = true) :
-    naprobeW sl r t n j d = [1, sl[k] - 1, j, d] := by
-  rw [naprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv, hm]
+    (hv : ¬ sl[k] ≤ b) (hm : namatchW r t (sl[k] - b - 1) = true) :
+    naprobeW sl r t b n j d = [1, sl[k] - b - 1, j, d] := by
+  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
+  rw [naprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]
 
 theorem naprobeW_next (k : Nat) (j' d' : Word) (hd : d < n) (hk : k = (j * 2 + t).toNat)
-    (hks : k < sl.size) (hv : sl[k] ≠ 0) (hm : namatchW r t (sl[k] - 1) = false)
+    (hks : k < sl.size) (hv : ¬ sl[k] ≤ b) (hm : namatchW r t (sl[k] - b - 1) = false)
     (hj' : j' = (j + 1) * (if j + 1 < n then 1 else 0)) (hd' : d' = d + 1) :
-    naprobeW sl r t n j d = naprobeW sl r t n j' d' := by
+    naprobeW sl r t b n j d = naprobeW sl r t b n j' d' := by
   subst hj' hd'
-  rw [naprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv, hm]; simp
+  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
+  rw [naprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]; simp
 
 end probeArms
 
-grind_pattern [arena_grind] naprobeW_free => naprobeW sl r t n j d, sl[k]
-grind_pattern [arena_grind] naprobeW_hit => naprobeW sl r t n j d, sl[k]
+grind_pattern [arena_grind] naprobeW_free => naprobeW sl r t b n j d, sl[k]
+grind_pattern [arena_grind] naprobeW_hit => naprobeW sl r t b n j d, sl[k]
 grind_pattern [arena_grind] naprobeW_next =>
-  naprobeW sl r t n j d, sl[k], naprobeW sl r t n j' d'
+  naprobeW sl r t b n j d, sl[k], naprobeW sl r t b n j' d'
 
-def nafindLoop : Stmt := lblk (t, h, n, j, d, v) {
+def nafindLoop : Stmt := lblk (t, h, n, j, d, v, b) {
   while d < n {
     v := NASLOT.u64[j * 2 + t];
-    if v == 0 { return (0, 0, j, d) };
+    if v <= b { return (0, 0, j, d) };
+    v := v - b;
     if 0 == 0 { return (1, v - 1, j, d) };
     j := (j + 1) * u64(j + 1 < n);
     d += 1
   }
 }
 
-def nanonFind : FunDecl := lfn (t, h) locals (n, j, d, v) {
+def nanonFind : FunDecl := lfn (t, h) locals (n, j, d, v, b) {
   n := len(NASLOT.u64) >> 1;
+  b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪nafindLoop⟫;
   abort
@@ -110,24 +114,24 @@ theorem nafindLoop_spec (n : Nat) (s₀ : St) :
     exec p n nafindLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
       r.retOr (naprobeW (s₀.mem.arr64 NASLOT) (s₀.mem.arr64 NAREC) (s₀.loc 0)
-        (s₀.loc 2) (s₀.loc 3) (s₀.loc 4)) =
+        (s₀.loc 6) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4)) =
       naprobeW (s₀.mem.arr64 NASLOT) (s₀.mem.arr64 NAREC) (s₀.loc 0)
-        (s₀.loc 2) (s₀.loc 3) (s₀.loc 4); ⊤⦄ := by
+        (s₀.loc 6) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4); ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
     rw [exec, step_while (w := nafindLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [namatchW]
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [namatchW, baseW]
 
 theorem nafindLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) nafindLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
       r.retOr (naprobeW (s₀.mem.arr64 NASLOT) (s₀.mem.arr64 NAREC) (s₀.loc 0)
-        (s₀.loc 2) (s₀.loc 3) (s₀.loc 4)) =
+        (s₀.loc 6) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4)) =
       naprobeW (s₀.mem.arr64 NASLOT) (s₀.mem.arr64 NAREC) (s₀.loc 0)
-        (s₀.loc 2) (s₀.loc 3) (s₀.loc 4); ⊤⦄ :=
+        (s₀.loc 6) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4); ⊤⦄ :=
   Triple.step_exec (nafindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `anonymous` table. -/
@@ -139,15 +143,15 @@ theorem nanonFind_spec (n : Nat) (s₀ : St) (t h : Word) :
     invoke p (exec p n) "nanon_find" [t, h]
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
       r = naprobeW (s₀.mem.arr64 NASLOT) (s₀.mem.arr64 NAREC) t
-        (nSlotsNA s₀.mem) (homeW h (nSlotsNA s₀.mem)) 0; ⊤⦄ := by
+        (baseW s₀.mem t) (nSlotsNA s₀.mem) (homeW h (nSlotsNA s₀.mem)) 0; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, nanonFind]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc, nafindLoop_step_spec p n] <;>
-      finish [nSlotsNA, homeW]
+      vcgen [exec, step, evalE, evalArgs, setLoc, nafindLoop_step_spec p n, ld64] <;>
+      finish [nSlotsNA, homeW, baseW]
 
 end find
 
@@ -163,7 +167,7 @@ def napushOK (m : Mem) (t : Word) : Bool :=
 
 /-- The memory after `nanon_push(t, j)` appended node `c`. -/
 def napushMem (m : Mem) (t j c : Word) : Mem :=
-  (((m.set64 NAREC (c * 2 + t) 0).set64 NASLOT (j * 2 + t) (c + 1)).set64 CTL (34 + (t &&& 1)) (c + 1))
+  (((m.set64 NAREC (c * 2 + t) 0).set64 NASLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (34 + (t &&& 1)) (c + 1))
 
 def nanonPush : FunDecl := lfn (t, j) locals (c) {
   c := CTL.u64[34 + t];
@@ -171,7 +175,7 @@ def nanonPush : FunDecl := lfn (t, j) locals (c) {
   if len(NAREC.u64) >> 1 <= c { abort };
   if ((len(NASLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   NAREC.u64[c * 2 + t] := 0;
-  NASLOT.u64[j * 2 + t] := c + 1;
+  NASLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[34 + (t & 1)] := c + 1;
   return c
 }
@@ -192,7 +196,7 @@ theorem nanonPush_spec (n : Nat) (s₀ : St) (t j : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
-      finish [nacnt, napushOK, napushMem, nSlotsNA]
+      finish [nacnt, napushOK, napushMem, nSlotsNA, baseW]
 
 end push
 
@@ -209,8 +213,8 @@ def naS : Word := 0x08000000
 aborts. -/
 def nainternW (m : Mem) : Option (Word × Mem) :=
   let h := nahashW
-  let rs₀ := naprobeW (m.arr64 NASLOT) (m.arr64 NAREC) 0 (nSlotsNA m) (homeW h (nSlotsNA m)) 0
-  let rs₁ := naprobeW (m.arr64 NASLOT) (m.arr64 NAREC) 1 (nSlotsNA m) (homeW h (nSlotsNA m)) 0
+  let rs₀ := naprobeW (m.arr64 NASLOT) (m.arr64 NAREC) 0 (baseW m 0) (nSlotsNA m) (homeW h (nSlotsNA m)) 0
+  let rs₁ := naprobeW (m.arr64 NASLOT) (m.arr64 NAREC) 1 (baseW m 1) (nSlotsNA m) (homeW h (nSlotsNA m)) 0
   if rs₀ = [] then none
   else if rs₀.headD 0 ≠ 0 then some (naP + rs₀.tail.headD 0, m)
   else if rdW (m.arr64 CTL) 1 ≠ 0 then
@@ -245,7 +249,7 @@ def nanonProg : Prog :=
 /-- A memory with 8 `anonymous` slots per tier, the scratch tier closed or open. Arrays 0‥32 (the
 other tables') are unused here and left empty. -/
 def nanonMem (scratch : Word) : Mem :=
-  { words := ((Array.replicate 33 #[]).set! 1 ((Array.replicate 36 0).set! 1 scratch)) ++
+  { words := ((Array.replicate 33 #[]).set! 1 ((Array.replicate 64 0).set! 1 scratch)) ++
       #[Array.replicate 16 0, Array.replicate 32 0] }
 
 /-- Intern `anonymous` `k` times in a row: the handle, every time, is the first persistent
@@ -279,7 +283,7 @@ theorem internNAnon_spec (n : Nat) (s₀ : St) :
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         nanonFind_spec p hpf n, nanonPush_spec p hpp n] <;>
-      finish [nainternW, nahashW]
+      finish [nainternW, nahashW, baseW]
 
 end intern
 

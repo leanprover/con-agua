@@ -112,7 +112,7 @@ theorem goOK_succ (n : Nat) (ih : NodeOK n) : GoOK (n + 1) := by
   · rw [bbW_hit n m h hr hh0] at hb
     simp only [Option.some.injEq, Prod.mk.injEq] at hb
     obtain ⟨rfl, rfl⟩ := hb
-    rw [show a.memos.bvarBC[decE h]? = _ from memoRG_hit bmSch bmKey _ m _ hR.memos.bvar h 0 hr hh0]
+    rw [show a.memos.bvarBC[decE h]? = _ from memoRG_hit bmSch bmKey _ m _ hR.memos.bvar h 0 hr hh0 ⟨hh, rfl⟩]
     exact ⟨a, rfl, hR⟩
   · simp only [ne_eq, Decidable.not_not] at hh0
     rw [bbW_miss n m h hr hh0] at hb

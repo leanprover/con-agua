@@ -1,4 +1,5 @@
 import ConAgua.Front.NatDec
+import ConAgua.Census.Attr
 
 /-!
 # `nat_dec` reads con-leche's `natVal`
@@ -443,6 +444,7 @@ theorem readNat64_decN (e : USize) (he : e.toNat ≤ b.size) (i : USize) (acc : 
 
 include h64 hsize in
 /-- **A `natVal` the scanner accepted**: its digits `[c, d)` are in the buffer and denote `n`. -/
+@[refines_part ConLeche.Frontend.readNatAt "decimal digits into the limb pool"]
 theorem natValR_decN (c d : Word) (n : Nat) (h : ConAgua.Front.FieldsLink.NatValR b c d n) :
     c < d ∧ d.toNat ≤ b.size ∧ Digits b.data c.toNat (d.toNat - c.toNat) ∧
       n = decN b.data c.toNat (d.toNat - c.toNat) := by

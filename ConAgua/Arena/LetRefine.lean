@@ -83,7 +83,7 @@ theorem internE_let_run (ty val body : EIdx) (a : AState) :
 def letSch : Schema := ⟨LEREC, LESLOT, 3, 6, 20, ETag.letE⟩
 
 theorem letSch_wf : letSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_let0 (m : Mem) (t i : Word) :
     fld letSch m t i 0 = rdW (m.arr64 LEREC) (i * 6 + t * 3) := by
@@ -175,9 +175,9 @@ end query
 /-! ## The bridges from the L models -/
 
 theorem leprobeW_arm (m : Mem) (ty val body t : Word) :
-    ∀ j d, leprobeW (m.arr64 LESLOT) (m.arr64 LEREC) t ty val body (nSlotsLe m) j d =
+    ∀ j d, leprobeW (m.arr64 LESLOT) (m.arr64 LEREC) t ty val body (baseW m t) (nSlotsLe m) j d =
       probeArm letSch m t (leMt m ty val body t)
-        (leprobeW (m.arr64 LESLOT) (m.arr64 LEREC) t ty val body (nSlotsLe m)) j d := by
+        (leprobeW (m.arr64 LESLOT) (m.arr64 LEREC) t ty val body (baseW m t) (nSlotsLe m)) j d := by
   intro j d; rw [leprobeW]; rfl
 
 theorem lepushOK_room (m : Mem) (t : Word) (h : lepushOK m t = true) : PushRoom letSch m t := by
@@ -191,9 +191,9 @@ theorem lepushMem_eq (m : Mem) (t ty val body j c : Word) :
 
 theorem leinternW_eq (m : Mem) (ty val body : Word) :
     leinternW m ty val body = internM letSch m (leskipW m ty val body) (lepushOK m) [ty, val, body]
-      (leprobeW (m.arr64 LESLOT) (m.arr64 LEREC) 0 ty val body (nSlotsLe m)
+      (leprobeW (m.arr64 LESLOT) (m.arr64 LEREC) 0 ty val body (baseW m 0) (nSlotsLe m)
         (homeW (letHashW ty val body) (nSlotsLe m)) 0)
-      (leprobeW (m.arr64 LESLOT) (m.arr64 LEREC) 1 ty val body (nSlotsLe m)
+      (leprobeW (m.arr64 LESLOT) (m.arr64 LEREC) 1 ty val body (baseW m 1) (nSlotsLe m)
         (homeW (letHashW ty val body) (nSlotsLe m)) 0) := by
   have e0 : ∀ x, hdW letSch.tag.toUInt64 0 x = letP + x := fun x => by
     simp [hdW, letSch, letP, ETag.letE]

@@ -44,11 +44,11 @@ def immatchW (r : Array Word) (t i u v : Word) : Bool :=
 /-! ## `imax_find(t, u, v, h)`: the probe -/
 
 /-- The model of the probe loop, from slot `j` after `d` steps (`probeW` with `immatchW`). -/
-def improbeW (sl r : Array Word) (t u v n j d : Word) : List Word :=
+def improbeW (sl r : Array Word) (t u v b n j d : Word) : List Word :=
   if d < n then
-    if rdW sl (j * 2 + t) = 0 then [0, 0, j, d]
-    else if immatchW r t (rdW sl (j * 2 + t) - 1) u v then [1, rdW sl (j * 2 + t) - 1, j, d]
-    else improbeW sl r t u v n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
+    if slotV sl b (j * 2 + t) = 0 then [0, 0, j, d]
+    else if immatchW r t (slotV sl b (j * 2 + t) - 1) u v then [1, slotV sl b (j * 2 + t) - 1, j, d]
+    else improbeW sl r t u v b n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
   else []
 termination_by n.toNat - d.toNat
 decreasing_by
@@ -59,35 +59,38 @@ decreasing_by
   omega
 
 section probeArms
-variable (sl r : Array Word) (t u v n j d : Word)
+variable (sl r : Array Word) (t u v b n j d : Word)
 
 theorem improbeW_free (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] = 0) : improbeW sl r t u v n j d = [0, 0, j, d] := by
-  rw [improbeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv]
+    (hv : sl[k] ≤ b) : improbeW sl r t u v b n j d = [0, 0, j, d] := by
+  rw [improbeW]; simp only [hd, ↓reduceIte, slotV_free sl b _ k hk hks hv]
 
 theorem improbeW_hit (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] ≠ 0) (hm : immatchW r t (sl[k] - 1) u v = true) :
-    improbeW sl r t u v n j d = [1, sl[k] - 1, j, d] := by
-  rw [improbeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv, hm]
+    (hv : ¬ sl[k] ≤ b) (hm : immatchW r t (sl[k] - b - 1) u v = true) :
+    improbeW sl r t u v b n j d = [1, sl[k] - b - 1, j, d] := by
+  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
+  rw [improbeW]; simp only [hd, ↓reduceIte, e, ne, hm]
 
 theorem improbeW_next (k : Nat) (j' d' : Word) (hd : d < n) (hk : k = (j * 2 + t).toNat)
-    (hks : k < sl.size) (hv : sl[k] ≠ 0) (hm : immatchW r t (sl[k] - 1) u v = false)
+    (hks : k < sl.size) (hv : ¬ sl[k] ≤ b) (hm : immatchW r t (sl[k] - b - 1) u v = false)
     (hj' : j' = (j + 1) * (if j + 1 < n then 1 else 0)) (hd' : d' = d + 1) :
-    improbeW sl r t u v n j d = improbeW sl r t u v n j' d' := by
+    improbeW sl r t u v b n j d = improbeW sl r t u v b n j' d' := by
   subst hj' hd'
-  rw [improbeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv, hm]; simp
+  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
+  rw [improbeW]; simp only [hd, ↓reduceIte, e, ne, hm]; simp
 
 end probeArms
 
-grind_pattern [arena_grind] improbeW_free => improbeW sl r t u v n j d, sl[k]
-grind_pattern [arena_grind] improbeW_hit => improbeW sl r t u v n j d, sl[k]
+grind_pattern [arena_grind] improbeW_free => improbeW sl r t u v b n j d, sl[k]
+grind_pattern [arena_grind] improbeW_hit => improbeW sl r t u v b n j d, sl[k]
 grind_pattern [arena_grind] improbeW_next =>
-  improbeW sl r t u v n j d, sl[k], improbeW sl r t u v n j' d'
+  improbeW sl r t u v b n j d, sl[k], improbeW sl r t u v b n j' d'
 
-def imfindLoop : Stmt := lblk (t, u, v, h, n, j, d, w) {
+def imfindLoop : Stmt := lblk (t, u, v, h, n, j, d, w, b) {
   while d < n {
     w := ISLOT.u64[j * 2 + t];
-    if w == 0 { return (0, 0, j, d) };
+    if w <= b { return (0, 0, j, d) };
+    w := w - b;
     if IREC.u64[(w - 1) * 4 + t * 2] == u && IREC.u64[(w - 1) * 4 + t * 2 + 1] == v {
       return (1, w - 1, j, d)
     };
@@ -96,8 +99,9 @@ def imfindLoop : Stmt := lblk (t, u, v, h, n, j, d, w) {
   }
 }
 
-def imaxFind : FunDecl := lfn (t, u, v, h) locals (n, j, d, w) {
+def imaxFind : FunDecl := lfn (t, u, v, h) locals (n, j, d, w, b) {
   n := len(ISLOT.u64) >> 1;
+  b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪imfindLoop⟫;
   abort
@@ -111,24 +115,24 @@ theorem imfindLoop_spec (n : Nat) (s₀ : St) :
     exec p n imfindLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
       r.retOr (improbeW (s₀.mem.arr64 ISLOT) (s₀.mem.arr64 IREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
+        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
       improbeW (s₀.mem.arr64 ISLOT) (s₀.mem.arr64 IREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ := by
+        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
     rw [exec, step_while (w := imfindLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [immatchW]
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [immatchW, baseW]
 
 theorem imfindLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) imfindLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
       r.retOr (improbeW (s₀.mem.arr64 ISLOT) (s₀.mem.arr64 IREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
+        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
       improbeW (s₀.mem.arr64 ISLOT) (s₀.mem.arr64 IREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ :=
+        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ :=
   Triple.step_exec (imfindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `imax` table. -/
@@ -140,15 +144,15 @@ theorem imaxFind_spec (n : Nat) (s₀ : St) (t u v h : Word) :
     invoke p (exec p n) "imax_find" [t, u, v, h]
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
       r = improbeW (s₀.mem.arr64 ISLOT) (s₀.mem.arr64 IREC) t u v
-        (nSlotsI s₀.mem) (homeW h (nSlotsI s₀.mem)) 0; ⊤⦄ := by
+        (baseW s₀.mem t) (nSlotsI s₀.mem) (homeW h (nSlotsI s₀.mem)) 0; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, imaxFind]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc, imfindLoop_step_spec p n] <;>
-      finish [nSlotsI, homeW]
+      vcgen [exec, step, evalE, evalArgs, setLoc, imfindLoop_step_spec p n, ld64] <;>
+      finish [nSlotsI, homeW, baseW]
 
 end find
 
@@ -165,7 +169,7 @@ def impushOK (m : Mem) (t : Word) : Bool :=
 /-- The memory after `imax_push(t, u, v, j)` appended node `c`. -/
 def impushMem (m : Mem) (t u v j c : Word) : Mem :=
   ((((m.set64 IREC (c * 4 + t * 2) u).set64 IREC (c * 4 + t * 2 + 1) v).set64 ISLOT (j * 2 + t)
-    (c + 1)).set64 CTL (12 + (t &&& 1)) (c + 1))
+    (baseW m t + c + 1)).set64 CTL (12 + (t &&& 1)) (c + 1))
 
 def imaxPush : FunDecl := lfn (t, u, v, j) locals (c, k) {
   c := CTL.u64[12 + t];
@@ -175,7 +179,7 @@ def imaxPush : FunDecl := lfn (t, u, v, j) locals (c, k) {
   k := c * 4 + t * 2;
   IREC.u64[k] := u;
   IREC.u64[k + 1] := v;
-  ISLOT.u64[j * 2 + t] := c + 1;
+  ISLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[12 + (t & 1)] := c + 1;
   return c
 }
@@ -196,7 +200,7 @@ theorem imaxPush_spec (n : Nat) (s₀ : St) (t u v j : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
-      finish [imcnt, impushOK, impushMem, nSlotsI]
+      finish [imcnt, impushOK, impushMem, nSlotsI, baseW]
 
 end push
 
@@ -213,8 +217,8 @@ def imaxS : Word := 0x38000000
 aborts. -/
 def iminternW (m : Mem) (u v : Word) : Option (Word × Mem) :=
   let h := imaxHashW u v
-  let rs₀ := improbeW (m.arr64 ISLOT) (m.arr64 IREC) 0 u v (nSlotsI m) (homeW h (nSlotsI m)) 0
-  let rs₁ := improbeW (m.arr64 ISLOT) (m.arr64 IREC) 1 u v (nSlotsI m) (homeW h (nSlotsI m)) 0
+  let rs₀ := improbeW (m.arr64 ISLOT) (m.arr64 IREC) 0 u v (baseW m 0) (nSlotsI m) (homeW h (nSlotsI m)) 0
+  let rs₁ := improbeW (m.arr64 ISLOT) (m.arr64 IREC) 1 u v (baseW m 1) (nSlotsI m) (homeW h (nSlotsI m)) 0
   if rs₀ = [] then none
   else if rs₀.headD 0 ≠ 0 then some (imaxP + rs₀.tail.headD 0, m)
   else if rdW (m.arr64 CTL) 1 ≠ 0 then
@@ -248,7 +252,7 @@ def imaxProg : Prog :=
 
 /-- A memory with 8 `imax` nodes and 16 slots per tier, the scratch tier closed or open. -/
 def imaxMem (scratch : Word) : Mem :=
-  { words := #[#[], #[0, scratch, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], #[], #[], #[], #[], #[],
+  { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[], #[], #[],
       #[], #[], #[], #[], #[], Array.replicate 32 0, Array.replicate 32 0] }
 
 /-- Intern each pair in turn; the handles. -/
@@ -281,7 +285,7 @@ theorem internImax_spec (n : Nat) (s₀ : St) (u v : Word) :
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         imaxFind_spec p hpf n, imaxPush_spec p hpp n] <;>
-      finish [iminternW, imaxHashW]
+      finish [iminternW, imaxHashW, baseW]
 
 end intern
 

@@ -64,7 +64,7 @@ def storeArrs : List ArrId :=
   [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40]
 /-- The store tier's `CTL` words: the pool top, the scratch flag, the tables' counts. -/
 def storeCtl : List Word :=
-  [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41]
+  [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 62]
 /-- The memo tier's arrays: `BMEMO`, `LMEMO`, `IMEMO`, `FRMEMO`. -/
 def memoArrs : List ArrId := [24, 41, 47, 48]
 /-- The memo tier's `CTL` words: each memo's stamp and live count. -/
@@ -76,13 +76,13 @@ def arenaCtl : List Word := storeCtl ++ memoCtl
 /-- Decide that a table is apart from a writer (`Apart`, `BMEMO ∉ A`, `24 ∉ C`) for concrete
 schemas: `decide` times out on the `UInt64` list memberships, `simp` with the array ids is
 immediate. -/
-macro "apart" : tactic => `(tactic| simp [Apart, memoArrs, memoCtl, storeArrs, storeCtl, POOL, CTL, BMEMO, bmSch, LMEMO, lfSch, IMEMO, imSch, FRMEMO, frSch, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT])
+macro "apart" : tactic => `(tactic| simp [Apart, memoArrs, memoCtl, storeArrs, storeCtl, POOL, CTL, SCB, BMEMO, bmSch, LMEMO, lfSch, IMEMO, imSch, FRMEMO, frSch, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT])
 
 /-- The side condition of `apart_hi` for a concrete schema. -/
-macro "lo_apart" : tactic => `(tactic| simp [POOL, CTL, BMEMO, FRMEMO, frSch, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT])
+macro "lo_apart" : tactic => `(tactic| simp [POOL, CTL, SCB, BMEMO, FRMEMO, frSch, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT])
 
 /-- The ownership side condition of `apart_own` for a concrete schema of the store tier. -/
-macro "own" : tactic => `(tactic| (simp [storeArrs, storeCtl, POOL, CTL, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT, List.mem_cons, List.not_mem_nil, List.forall_mem_cons]))
+macro "own" : tactic => `(tactic| (simp [storeArrs, storeCtl, POOL, CTL, SCB, litSch, REC, SLOT, appSch, AREC, ASLOT, sortSch, SOREC, SOSLOT, constSch, CREC, CSLOT, letSch, LEREC, LESLOT, bvarSch, BREC, BSLOT, fvarSch, FVREC, FVSLOT, lamSch, LAREC, LASLOT, forallSch, FAREC, FASLOT, projSch, PJREC, PJSLOT, zeroSch, ZREC, ZSLOT, succSch, SREC, SSLOT, maxSch, MREC, MSLOT, imaxSch, IREC, ISLOT, paramSch, PREC, PSLOT, lsSch, LSREC, LSSLOT, nanonSch, NAREC, NASLOT, nstrSch, NSREC, NSSLOT, nnumSch, NNREC, NNSLOT, List.mem_cons, List.not_mem_nil, List.forall_mem_cons]))
 
 /-! ## Locality of each table's records -/
 
@@ -169,7 +169,7 @@ include hf
 theorem LitR.frame (hap : Apart litSch [POOL] [0] A C) (h : LitR m a) : LitR m' a := by
   obtain ⟨hp, hs⟩ := h
   refine ⟨?_, storeR_frame litSch RecRel litH litS_wf [POOL] [0] litLocal A C hap m m' hf _ _ _ hs⟩
-  obtain ⟨-, -, hA₀, -, -, -, hC₀⟩ := hap
+  obtain ⟨-, -, hA₀, -, -, -, -, hC₀⟩ := hap
   have h0 := hC₀ 0 (by simp)
   have hpool := hf.1 POOL (hA₀ POOL (by simp)).1 (by decide)
   have hc := hf.2.2.1 CTL
@@ -225,13 +225,13 @@ of one per writer. The lists are concrete, so a writer's side conditions are `by
 theorem apart_own (S : Schema) (A₀ : List ArrId)
     (C₀ : List Word) (own : List ArrId) (ownC : List Word)
     (hown : S.ra ∈ own ∧ S.sa ∈ own ∧ (∀ b ∈ A₀, b ∈ own ∧ b ≠ CTL) ∧ S.ca ∈ ownC ∧
-      S.ca + 1 ∈ ownC ∧ (1 : Word) ∈ ownC ∧ ∀ x ∈ C₀, x ∈ ownC)
+      S.ca + 1 ∈ ownC ∧ (1 : Word) ∈ ownC ∧ SCB ∈ ownC ∧ ∀ x ∈ C₀, x ∈ ownC)
     (A : List ArrId) (C : List Word) (hA : ∀ b ∈ A, b ∉ own) (hC : ∀ x ∈ C, x ∉ ownC) :
     Apart S A₀ C₀ A C := by
-  obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := hown
+  obtain ⟨h1, h2, h3, h4, h5, h6, h8, h7⟩ := hown
   exact ⟨fun h => hA _ h h1, fun h => hA _ h h2,
     fun b hb => ⟨fun h => hA _ h (h3 b hb).1, (h3 b hb).2⟩, fun h => hC _ h h4, fun h => hC _ h h5,
-    fun h => hC _ h h6, fun x hx h => hC _ h (h7 x hx)⟩
+    fun h => hC _ h h6, fun h => hC _ h h8, fun x hx h => hC _ h (h7 x hx)⟩
 
 /-! ## The memo tier -/
 
@@ -393,9 +393,9 @@ theorem storeR_init {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] (S : Sch
     intro t
     refine ⟨by simp [cntW, hz, Tbl.empty], by simp [Tbl.empty], by simp [Tbl.empty],
       fun i a h => by simp [Tbl.empty] at h, fun i a h => by simp [Tbl.empty] at h,
-      fun a x h => by simp [Tbl.empty] at h, fun j _ => by simp [slotW, hz],
+      fun a x h => by simp [Tbl.empty] at h, fun j _ => by simp [slotW, slotV, slotRd, hz],
       fun i hi => by simp [Tbl.empty] at hi⟩
-  exact ⟨hctl, by simp [hz], hT 0, hT 1⟩
+  exact ⟨⟨hctl, by simp [hz]⟩, by simp [hz], hT 0, hT 1⟩
 
 /-- **The relation holds initially**: the all-zero memory and the arena's initial state. -/
 theorem arenaR_init (sizes : List Nat) (hlen : 64 ≤ sizes.length) (hctl : 64 ≤ sizes[1]?.getD 0)

@@ -99,7 +99,7 @@ theorem internE_lam_run (ty b : EIdx) (a : AState) :
 def lamSch : Schema := ⟨LAREC, LASLOT, 2, 4, 28, ETag.lam⟩
 
 theorem lamSch_wf : lamSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_la0 (m : Mem) (t i : Word) :
     fld lamSch m t i 0 = rdW (m.arr64 LAREC) (i * 4 + t * 2) := by
@@ -178,9 +178,9 @@ end query
 /-! ## The bridges from the L models -/
 
 theorem laprobeW_arm (m : Mem) (ty body t : Word) :
-    ∀ j d, laprobeW (m.arr64 LASLOT) (m.arr64 LAREC) t ty body (nSlotsLa m) j d =
+    ∀ j d, laprobeW (m.arr64 LASLOT) (m.arr64 LAREC) t ty body (baseW m t) (nSlotsLa m) j d =
       probeArm lamSch m t (laMt m ty body t) (laprobeW (m.arr64 LASLOT) (m.arr64 LAREC) t ty body
-        (nSlotsLa m)) j d := by
+        (baseW m t) (nSlotsLa m)) j d := by
   intro j d; rw [laprobeW]; rfl
 
 theorem lapushOK_room (m : Mem) (t : Word) (h : lapushOK m t = true) : PushRoom lamSch m t := by
@@ -195,9 +195,9 @@ theorem lapushMem_eq (m : Mem) (t ty body j c : Word) :
 
 theorem lainternW_eq (m : Mem) (ty body : Word) :
     lainternW m ty body = internM lamSch m (laskipW m ty body) (lapushOK m) [ty, body]
-      (laprobeW (m.arr64 LASLOT) (m.arr64 LAREC) 0 ty body (nSlotsLa m)
+      (laprobeW (m.arr64 LASLOT) (m.arr64 LAREC) 0 ty body (baseW m 0) (nSlotsLa m)
         (homeW (lamHashW ty body) (nSlotsLa m)) 0)
-      (laprobeW (m.arr64 LASLOT) (m.arr64 LAREC) 1 ty body (nSlotsLa m)
+      (laprobeW (m.arr64 LASLOT) (m.arr64 LAREC) 1 ty body (baseW m 1) (nSlotsLa m)
         (homeW (lamHashW ty body) (nSlotsLa m)) 0) := by
   have e0 : ∀ x, hdW lamSch.tag.toUInt64 0 x = lamP + x := fun x => by
     simp [hdW, lamSch, lamP, ETag.lam]

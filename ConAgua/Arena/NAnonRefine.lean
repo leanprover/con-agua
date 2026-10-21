@@ -75,7 +75,7 @@ theorem internNNode_anon_run (a : AState) :
 def nanonSch : Schema := ⟨NAREC, NASLOT, 1, 2, 34, NTag.anonymous⟩
 
 theorem nanonSch_wf : nanonSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 /-- Node `i` of tier `t` holds the `anonymous` node: trivially (there is only one `AnonNode`). -/
 def NaRecRel (_m : Mem) (_t _i : Word) (_k : AnonNode) : Prop := True
@@ -115,8 +115,8 @@ theorem naNewOK (m : Mem) : NewOK nanonSch NaRecRel nahash m [0] naKey nahashW :
 /-! ## The bridges from the L models -/
 
 theorem naprobeW_arm (m : Mem) (t : Word) :
-    ∀ j d, naprobeW (m.arr64 NASLOT) (m.arr64 NAREC) t (nSlotsNA m) j d =
-      probeArm nanonSch m t (naMt m t) (naprobeW (m.arr64 NASLOT) (m.arr64 NAREC) t (nSlotsNA m)) j d := by
+    ∀ j d, naprobeW (m.arr64 NASLOT) (m.arr64 NAREC) t (baseW m t) (nSlotsNA m) j d =
+      probeArm nanonSch m t (naMt m t) (naprobeW (m.arr64 NASLOT) (m.arr64 NAREC) t (baseW m t) (nSlotsNA m)) j d := by
   intro j d; rw [naprobeW]; rfl
 
 theorem napushOK_room (m : Mem) (t : Word) (h : napushOK m t = true) : PushRoom nanonSch m t := by
@@ -131,8 +131,8 @@ theorem napushMem_eq (m : Mem) (t j c : Word) :
 
 theorem nainternW_eq (m : Mem) :
     nainternW m = internM nanonSch m 0 (napushOK m) [0]
-      (naprobeW (m.arr64 NASLOT) (m.arr64 NAREC) 0 (nSlotsNA m) (homeW nahashW (nSlotsNA m)) 0)
-      (naprobeW (m.arr64 NASLOT) (m.arr64 NAREC) 1 (nSlotsNA m) (homeW nahashW (nSlotsNA m)) 0) := by
+      (naprobeW (m.arr64 NASLOT) (m.arr64 NAREC) 0 (baseW m 0) (nSlotsNA m) (homeW nahashW (nSlotsNA m)) 0)
+      (naprobeW (m.arr64 NASLOT) (m.arr64 NAREC) 1 (baseW m 1) (nSlotsNA m) (homeW nahashW (nSlotsNA m)) 0) := by
   have e0 : ∀ x, hdW nanonSch.tag.toUInt64 0 x = naP + x := fun x => by
     simp [hdW, nanonSch, naP, NTag.anonymous]
   have e1 : ∀ x, hdW nanonSch.tag.toUInt64 1 x = naS + x := fun x => by

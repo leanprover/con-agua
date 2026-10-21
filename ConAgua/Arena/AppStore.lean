@@ -48,11 +48,11 @@ def amatchW (r : Array Word) (t i f a : Word) : Bool :=
 /-! ## `app_find(t, f, a, h)`: the probe -/
 
 /-- The model of the probe loop, from slot `j` after `d` steps (`probeW` with `amatchW`). -/
-def aprobeW (sl r : Array Word) (t f a n j d : Word) : List Word :=
+def aprobeW (sl r : Array Word) (t f a b n j d : Word) : List Word :=
   if d < n then
-    if rdW sl (j * 2 + t) = 0 then [0, 0, j, d]
-    else if amatchW r t (rdW sl (j * 2 + t) - 1) f a then [1, rdW sl (j * 2 + t) - 1, j, d]
-    else aprobeW sl r t f a n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
+    if slotV sl b (j * 2 + t) = 0 then [0, 0, j, d]
+    else if amatchW r t (slotV sl b (j * 2 + t) - 1) f a then [1, slotV sl b (j * 2 + t) - 1, j, d]
+    else aprobeW sl r t f a b n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
   else []
 termination_by n.toNat - d.toNat
 decreasing_by
@@ -63,35 +63,38 @@ decreasing_by
   omega
 
 section probeArms
-variable (sl r : Array Word) (t f a n j d : Word)
+variable (sl r : Array Word) (t f a b n j d : Word)
 
 theorem aprobeW_free (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] = 0) : aprobeW sl r t f a n j d = [0, 0, j, d] := by
-  rw [aprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv]
+    (hv : sl[k] ≤ b) : aprobeW sl r t f a b n j d = [0, 0, j, d] := by
+  rw [aprobeW]; simp only [hd, ↓reduceIte, slotV_free sl b _ k hk hks hv]
 
 theorem aprobeW_hit (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] ≠ 0) (hm : amatchW r t (sl[k] - 1) f a = true) :
-    aprobeW sl r t f a n j d = [1, sl[k] - 1, j, d] := by
-  rw [aprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv, hm]
+    (hv : ¬ sl[k] ≤ b) (hm : amatchW r t (sl[k] - b - 1) f a = true) :
+    aprobeW sl r t f a b n j d = [1, sl[k] - b - 1, j, d] := by
+  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
+  rw [aprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]
 
 theorem aprobeW_next (k : Nat) (j' d' : Word) (hd : d < n) (hk : k = (j * 2 + t).toNat)
-    (hks : k < sl.size) (hv : sl[k] ≠ 0) (hm : amatchW r t (sl[k] - 1) f a = false)
+    (hks : k < sl.size) (hv : ¬ sl[k] ≤ b) (hm : amatchW r t (sl[k] - b - 1) f a = false)
     (hj' : j' = (j + 1) * (if j + 1 < n then 1 else 0)) (hd' : d' = d + 1) :
-    aprobeW sl r t f a n j d = aprobeW sl r t f a n j' d' := by
+    aprobeW sl r t f a b n j d = aprobeW sl r t f a b n j' d' := by
   subst hj' hd'
-  rw [aprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv, hm]; simp
+  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
+  rw [aprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]; simp
 
 end probeArms
 
-grind_pattern [arena_grind] aprobeW_free => aprobeW sl r t f a n j d, sl[k]
-grind_pattern [arena_grind] aprobeW_hit => aprobeW sl r t f a n j d, sl[k]
+grind_pattern [arena_grind] aprobeW_free => aprobeW sl r t f a b n j d, sl[k]
+grind_pattern [arena_grind] aprobeW_hit => aprobeW sl r t f a b n j d, sl[k]
 grind_pattern [arena_grind] aprobeW_next =>
-  aprobeW sl r t f a n j d, sl[k], aprobeW sl r t f a n j' d'
+  aprobeW sl r t f a b n j d, sl[k], aprobeW sl r t f a b n j' d'
 
-def afindLoop : Stmt := lblk (t, f, a, h, n, j, d, v) {
+def afindLoop : Stmt := lblk (t, f, a, h, n, j, d, v, b) {
   while d < n {
     v := ASLOT.u64[j * 2 + t];
-    if v == 0 { return (0, 0, j, d) };
+    if v <= b { return (0, 0, j, d) };
+    v := v - b;
     if AREC.u64[(v - 1) * 4 + t * 2] == f && AREC.u64[(v - 1) * 4 + t * 2 + 1] == a {
       return (1, v - 1, j, d)
     };
@@ -100,8 +103,9 @@ def afindLoop : Stmt := lblk (t, f, a, h, n, j, d, v) {
   }
 }
 
-def appFind : FunDecl := lfn (t, f, a, h) locals (n, j, d, v) {
+def appFind : FunDecl := lfn (t, f, a, h) locals (n, j, d, v, b) {
   n := len(ASLOT.u64) >> 1;
+  b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪afindLoop⟫;
   abort
@@ -115,24 +119,24 @@ theorem afindLoop_spec (n : Nat) (s₀ : St) :
     exec p n afindLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
       r.retOr (aprobeW (s₀.mem.arr64 ASLOT) (s₀.mem.arr64 AREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
+        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
       aprobeW (s₀.mem.arr64 ASLOT) (s₀.mem.arr64 AREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ := by
+        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
     rw [exec, step_while (w := afindLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [amatchW]
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [amatchW, baseW]
 
 theorem afindLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) afindLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
       r.retOr (aprobeW (s₀.mem.arr64 ASLOT) (s₀.mem.arr64 AREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
+        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
       aprobeW (s₀.mem.arr64 ASLOT) (s₀.mem.arr64 AREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ :=
+        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ :=
   Triple.step_exec (afindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `app` table. -/
@@ -144,15 +148,15 @@ theorem appFind_spec (n : Nat) (s₀ : St) (t f a h : Word) :
     invoke p (exec p n) "app_find" [t, f, a, h]
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
       r = aprobeW (s₀.mem.arr64 ASLOT) (s₀.mem.arr64 AREC) t f a
-        (nSlotsA s₀.mem) (homeW h (nSlotsA s₀.mem)) 0; ⊤⦄ := by
+        (baseW s₀.mem t) (nSlotsA s₀.mem) (homeW h (nSlotsA s₀.mem)) 0; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, appFind]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc, afindLoop_step_spec p n] <;>
-      finish [nSlotsA, homeW]
+      vcgen [exec, step, evalE, evalArgs, setLoc, afindLoop_step_spec p n, ld64] <;>
+      finish [nSlotsA, homeW, baseW]
 
 end find
 
@@ -169,7 +173,7 @@ def apushOK (m : Mem) (t : Word) : Bool :=
 /-- The memory after `app_push(t, f, a, j)` appended node `c`. -/
 def apushMem (m : Mem) (t f a j c : Word) : Mem :=
   ((((m.set64 AREC (c * 4 + t * 2) f).set64 AREC (c * 4 + t * 2 + 1) a).set64 ASLOT (j * 2 + t)
-    (c + 1)).set64 CTL (4 + (t &&& 1)) (c + 1))
+    (baseW m t + c + 1)).set64 CTL (4 + (t &&& 1)) (c + 1))
 
 def appPush : FunDecl := lfn (t, f, a, j) locals (c, k) {
   c := CTL.u64[4 + t];
@@ -179,7 +183,7 @@ def appPush : FunDecl := lfn (t, f, a, j) locals (c, k) {
   k := c * 4 + t * 2;
   AREC.u64[k] := f;
   AREC.u64[k + 1] := a;
-  ASLOT.u64[j * 2 + t] := c + 1;
+  ASLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[4 + (t & 1)] := c + 1;
   return c
 }
@@ -200,7 +204,7 @@ theorem appPush_spec (n : Nat) (s₀ : St) (t f a j : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
-      finish [acnt, apushOK, apushMem, nSlotsA]
+      finish [acnt, apushOK, apushMem, nSlotsA, baseW]
 
 end push
 
@@ -222,8 +226,8 @@ def askipW (m : Mem) (f a : Word) : Word :=
 aborts. -/
 def ainternW (m : Mem) (f a : Word) : Option (Word × Mem) :=
   let h := appHashW f a
-  let rs₀ := aprobeW (m.arr64 ASLOT) (m.arr64 AREC) 0 f a (nSlotsA m) (homeW h (nSlotsA m)) 0
-  let rs₁ := aprobeW (m.arr64 ASLOT) (m.arr64 AREC) 1 f a (nSlotsA m) (homeW h (nSlotsA m)) 0
+  let rs₀ := aprobeW (m.arr64 ASLOT) (m.arr64 AREC) 0 f a (baseW m 0) (nSlotsA m) (homeW h (nSlotsA m)) 0
+  let rs₁ := aprobeW (m.arr64 ASLOT) (m.arr64 AREC) 1 f a (baseW m 1) (nSlotsA m) (homeW h (nSlotsA m)) 0
   if askipW m f a = 0 ∧ rs₀ = [] then none
   else if askipW m f a = 0 ∧ rs₀.headD 0 ≠ 0 then some (appP + rs₀.tail.headD 0, m)
   else if rdW (m.arr64 CTL) 1 ≠ 0 then
@@ -261,7 +265,7 @@ def appProg : Prog :=
 
 /-- A memory with 8 `app` nodes and 16 slots per tier, the scratch tier closed or open. -/
 def appMem (scratch : Word) : Mem :=
-  { words := #[#[], #[0, scratch, 0, 0, 0, 0], #[], #[], Array.replicate 32 0,
+  { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], Array.replicate 32 0,
       Array.replicate 32 0] }
 
 /-- Intern each pair in turn; the handles. -/
@@ -296,7 +300,7 @@ theorem internApp_spec (n : Nat) (s₀ : St) (f a : Word) :
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         appFind_spec p hpf n, appPush_spec p hpp n] <;>
-      finish [ainternW, askipW, appHashW]
+      finish [ainternW, askipW, appHashW, baseW]
 
 end intern
 

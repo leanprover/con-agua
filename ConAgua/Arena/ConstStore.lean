@@ -50,11 +50,11 @@ def cematchW (r : Array Word) (t i f a : Word) : Bool :=
 /-! ## `const_find(t, n, us, h)`: the probe -/
 
 /-- The model of the probe loop, from slot `j` after `d` steps (`probeW` with `cematchW`). -/
-def ceprobeW (sl r : Array Word) (t f a n j d : Word) : List Word :=
+def ceprobeW (sl r : Array Word) (t f a b n j d : Word) : List Word :=
   if d < n then
-    if rdW sl (j * 2 + t) = 0 then [0, 0, j, d]
-    else if cematchW r t (rdW sl (j * 2 + t) - 1) f a then [1, rdW sl (j * 2 + t) - 1, j, d]
-    else ceprobeW sl r t f a n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
+    if slotV sl b (j * 2 + t) = 0 then [0, 0, j, d]
+    else if cematchW r t (slotV sl b (j * 2 + t) - 1) f a then [1, slotV sl b (j * 2 + t) - 1, j, d]
+    else ceprobeW sl r t f a b n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
   else []
 termination_by n.toNat - d.toNat
 decreasing_by
@@ -65,35 +65,38 @@ decreasing_by
   omega
 
 section probeArms
-variable (sl r : Array Word) (t f a n j d : Word)
+variable (sl r : Array Word) (t f a b n j d : Word)
 
 theorem ceprobeW_free (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] = 0) : ceprobeW sl r t f a n j d = [0, 0, j, d] := by
-  rw [ceprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv]
+    (hv : sl[k] ≤ b) : ceprobeW sl r t f a b n j d = [0, 0, j, d] := by
+  rw [ceprobeW]; simp only [hd, ↓reduceIte, slotV_free sl b _ k hk hks hv]
 
 theorem ceprobeW_hit (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] ≠ 0) (hm : cematchW r t (sl[k] - 1) f a = true) :
-    ceprobeW sl r t f a n j d = [1, sl[k] - 1, j, d] := by
-  rw [ceprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv, hm]
+    (hv : ¬ sl[k] ≤ b) (hm : cematchW r t (sl[k] - b - 1) f a = true) :
+    ceprobeW sl r t f a b n j d = [1, sl[k] - b - 1, j, d] := by
+  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
+  rw [ceprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]
 
 theorem ceprobeW_next (k : Nat) (j' d' : Word) (hd : d < n) (hk : k = (j * 2 + t).toNat)
-    (hks : k < sl.size) (hv : sl[k] ≠ 0) (hm : cematchW r t (sl[k] - 1) f a = false)
+    (hks : k < sl.size) (hv : ¬ sl[k] ≤ b) (hm : cematchW r t (sl[k] - b - 1) f a = false)
     (hj' : j' = (j + 1) * (if j + 1 < n then 1 else 0)) (hd' : d' = d + 1) :
-    ceprobeW sl r t f a n j d = ceprobeW sl r t f a n j' d' := by
+    ceprobeW sl r t f a b n j d = ceprobeW sl r t f a b n j' d' := by
   subst hj' hd'
-  rw [ceprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv, hm]; simp
+  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
+  rw [ceprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]; simp
 
 end probeArms
 
-grind_pattern [arena_grind] ceprobeW_free => ceprobeW sl r t f a n j d, sl[k]
-grind_pattern [arena_grind] ceprobeW_hit => ceprobeW sl r t f a n j d, sl[k]
+grind_pattern [arena_grind] ceprobeW_free => ceprobeW sl r t f a b n j d, sl[k]
+grind_pattern [arena_grind] ceprobeW_hit => ceprobeW sl r t f a b n j d, sl[k]
 grind_pattern [arena_grind] ceprobeW_next =>
-  ceprobeW sl r t f a n j d, sl[k], ceprobeW sl r t f a n j' d'
+  ceprobeW sl r t f a b n j d, sl[k], ceprobeW sl r t f a b n j' d'
 
-def cefindLoop : Stmt := lblk (t, f, a, h, n, j, d, v) {
+def cefindLoop : Stmt := lblk (t, f, a, h, n, j, d, v, b) {
   while d < n {
     v := CSLOT.u64[j * 2 + t];
-    if v == 0 { return (0, 0, j, d) };
+    if v <= b { return (0, 0, j, d) };
+    v := v - b;
     if CREC.u64[(v - 1) * 4 + t * 2] == f && CREC.u64[(v - 1) * 4 + t * 2 + 1] == a {
       return (1, v - 1, j, d)
     };
@@ -102,8 +105,9 @@ def cefindLoop : Stmt := lblk (t, f, a, h, n, j, d, v) {
   }
 }
 
-def constFind : FunDecl := lfn (t, f, a, h) locals (n, j, d, v) {
+def constFind : FunDecl := lfn (t, f, a, h) locals (n, j, d, v, b) {
   n := len(CSLOT.u64) >> 1;
+  b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪cefindLoop⟫;
   abort
@@ -117,24 +121,24 @@ theorem cefindLoop_spec (n : Nat) (s₀ : St) :
     exec p n cefindLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
       r.retOr (ceprobeW (s₀.mem.arr64 CSLOT) (s₀.mem.arr64 CREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
+        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
       ceprobeW (s₀.mem.arr64 CSLOT) (s₀.mem.arr64 CREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ := by
+        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
     rw [exec, step_while (w := cefindLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [cematchW]
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [cematchW, baseW]
 
 theorem cefindLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) cefindLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
       r.retOr (ceprobeW (s₀.mem.arr64 CSLOT) (s₀.mem.arr64 CREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
+        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
       ceprobeW (s₀.mem.arr64 CSLOT) (s₀.mem.arr64 CREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ :=
+        (s₀.loc 2) (s₀.loc 8) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ :=
   Triple.step_exec (cefindLoop_spec p (n + 1) s₀)
 
 /-- The slot count of a tier of the `const` table. -/
@@ -146,15 +150,15 @@ theorem constFind_spec (n : Nat) (s₀ : St) (t f a h : Word) :
     invoke p (exec p n) "const_find" [t, f, a, h]
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
       r = ceprobeW (s₀.mem.arr64 CSLOT) (s₀.mem.arr64 CREC) t f a
-        (nSlotsCe s₀.mem) (homeW h (nSlotsCe s₀.mem)) 0; ⊤⦄ := by
+        (baseW s₀.mem t) (nSlotsCe s₀.mem) (homeW h (nSlotsCe s₀.mem)) 0; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, constFind]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc, cefindLoop_step_spec p n] <;>
-      finish [nSlotsCe, homeW]
+      vcgen [exec, step, evalE, evalArgs, setLoc, cefindLoop_step_spec p n, ld64] <;>
+      finish [nSlotsCe, homeW, baseW]
 
 end find
 
@@ -171,7 +175,7 @@ def cepushOK (m : Mem) (t : Word) : Bool :=
 /-- The memory after `const_push(t, n, us, j)` appended node `c`. -/
 def cepushMem (m : Mem) (t f a j c : Word) : Mem :=
   ((((m.set64 CREC (c * 4 + t * 2) f).set64 CREC (c * 4 + t * 2 + 1) a).set64 CSLOT (j * 2 + t)
-    (c + 1)).set64 CTL (18 + (t &&& 1)) (c + 1))
+    (baseW m t + c + 1)).set64 CTL (18 + (t &&& 1)) (c + 1))
 
 def constPush : FunDecl := lfn (t, f, a, j) locals (c, k) {
   c := CTL.u64[18 + t];
@@ -181,7 +185,7 @@ def constPush : FunDecl := lfn (t, f, a, j) locals (c, k) {
   k := c * 4 + t * 2;
   CREC.u64[k] := f;
   CREC.u64[k + 1] := a;
-  CSLOT.u64[j * 2 + t] := c + 1;
+  CSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[18 + (t & 1)] := c + 1;
   return c
 }
@@ -202,7 +206,7 @@ theorem constPush_spec (n : Nat) (s₀ : St) (t f a j : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
-      finish [cecnt, cepushOK, cepushMem, nSlotsCe]
+      finish [cecnt, cepushOK, cepushMem, nSlotsCe, baseW]
 
 end push
 
@@ -224,8 +228,8 @@ def ceskipW (m : Mem) (f a : Word) : Word :=
 aborts. -/
 def ceinternW (m : Mem) (f a : Word) : Option (Word × Mem) :=
   let h := constHashW f a
-  let rs₀ := ceprobeW (m.arr64 CSLOT) (m.arr64 CREC) 0 f a (nSlotsCe m) (homeW h (nSlotsCe m)) 0
-  let rs₁ := ceprobeW (m.arr64 CSLOT) (m.arr64 CREC) 1 f a (nSlotsCe m) (homeW h (nSlotsCe m)) 0
+  let rs₀ := ceprobeW (m.arr64 CSLOT) (m.arr64 CREC) 0 f a (baseW m 0) (nSlotsCe m) (homeW h (nSlotsCe m)) 0
+  let rs₁ := ceprobeW (m.arr64 CSLOT) (m.arr64 CREC) 1 f a (baseW m 1) (nSlotsCe m) (homeW h (nSlotsCe m)) 0
   if ceskipW m f a = 0 ∧ rs₀ = [] then none
   else if ceskipW m f a = 0 ∧ rs₀.headD 0 ≠ 0 then some (constP + rs₀.tail.headD 0, m)
   else if rdW (m.arr64 CTL) 1 ≠ 0 then
@@ -264,7 +268,7 @@ def constProg : Prog :=
 /-- A memory with 8 `const` nodes and 16 slots per tier, the scratch tier closed or open.
 Arrays 0‥17 (the other tables') are unused here and left empty. -/
 def constMem (scratch : Word) : Mem :=
-  { words := #[#[], #[0, scratch, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], #[], #[],
+  { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[],
       #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[], #[],
       Array.replicate 32 0, Array.replicate 32 0] }
 
@@ -300,7 +304,7 @@ theorem internConst_spec (n : Nat) (s₀ : St) (f a : Word) :
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         constFind_spec p hpf n, constPush_spec p hpp n] <;>
-      finish [ceinternW, ceskipW, constHashW]
+      finish [ceinternW, ceskipW, constHashW, baseW]
 
 end intern
 

@@ -73,20 +73,32 @@ theorem LvR.view {p : Word} {l : Level} (h : LvR N m p l) : lvNodeW m p ≠ [] :
 /-! ## Heap growth -/
 
 /-- Every view of `m` is a view of `m'`. -/
-def HeapExt (m m' : Mem) : Prop := ∀ p, lvNodeW m p ≠ [] → lvNodeW m' p = lvNodeW m p
+structure HeapExt (m m' : Mem) : Prop where
+  view : ∀ p, lvNodeW m p ≠ [] → lvNodeW m' p = lvNodeW m p
+  /-- The word arrays other than the heap and `CTL` are untouched. -/
+  arr : ∀ A : ArrId, A ≠ LH → A ≠ CTL → m'.arr64 A = m.arr64 A
+  /-- The `CTL` words other than the heap top are untouched. -/
+  ctl : ∀ k : Word, k ≠ 192 → rdW (m'.arr64 CTL) k = rdW (m.arr64 CTL) k
+  /-- No array changes its size. -/
+  size : ∀ b : ArrId, (m'.arr64 b).size = (m.arr64 b).size
+  wsize : m'.words.size = m.words.size
 
-theorem HeapExt.refl (m : Mem) : HeapExt m m := fun _ _ => rfl
+theorem HeapExt.refl (m : Mem) : HeapExt m m :=
+  ⟨fun _ _ => rfl, fun _ _ _ => rfl, fun _ _ => rfl, fun _ => rfl, rfl⟩
 
 theorem HeapExt.trans {m₁ m₂ m₃ : Mem} (h₁ : HeapExt m₁ m₂) (h₂ : HeapExt m₂ m₃) :
-    HeapExt m₁ m₃ := fun p hp => by rw [h₂ p (by rw [h₁ p hp]; exact hp), h₁ p hp]
+    HeapExt m₁ m₃ :=
+  ⟨fun p hp => by rw [h₂.view p (by rw [h₁.view p hp]; exact hp), h₁.view p hp],
+    fun A a b => by rw [h₂.arr A a b, h₁.arr A a b], fun k hk => by rw [h₂.ctl k hk, h₁.ctl k hk],
+    fun b => by rw [h₂.size b, h₁.size b], by rw [h₂.wsize, h₁.wsize]⟩
 
 theorem LvR.mono (he : HeapExt m m') {p : Word} {l : Level} (h : LvR N m p l) : LvR N m' p l := by
   induction h with
-  | zero hv => exact .zero (by rw [he _ (by simp [hv])]; exact hv)
-  | succ hv _ ih => exact .succ (by rw [he _ (by simp [hv])]; exact hv) ih
-  | max hv _ _ ih1 ih2 => exact .max (by rw [he _ (by simp [hv])]; exact hv) ih1 ih2
-  | imax hv _ _ ih1 ih2 => exact .imax (by rw [he _ (by simp [hv])]; exact hv) ih1 ih2
-  | param hv hn => exact .param (by rw [he _ (by simp [hv])]; exact hv) hn
+  | zero hv => exact .zero (by rw [he.view _ (by simp [hv])]; exact hv)
+  | succ hv _ ih => exact .succ (by rw [he.view _ (by simp [hv])]; exact hv) ih
+  | max hv _ _ ih1 ih2 => exact .max (by rw [he.view _ (by simp [hv])]; exact hv) ih1 ih2
+  | imax hv _ _ ih1 ih2 => exact .imax (by rw [he.view _ (by simp [hv])]; exact hv) ih1 ih2
+  | param hv hn => exact .param (by rw [he.view _ (by simp [hv])]; exact hv) hn
 
 theorem rdW_set64L (m : Mem) (a b : ArrId) (k v x : Word) :
     rdW ((m.set64 a k v).arr64 b) x =
@@ -114,6 +126,8 @@ structure HeapFrame (m m' : Mem) : Prop where
   ctl : ∀ k : Word, k ≠ 192 → rdW (m'.arr64 CTL) k = rdW (m.arr64 CTL) k
   top : (htop m).toNat ≤ (htop m').toNat
   lh : ∀ k : Word, k.toNat < (htop m).toNat → rdW (m'.arr64 LH) k = rdW (m.arr64 LH) k
+  size : ∀ b : ArrId, (m'.arr64 b).size = (m.arr64 b).size
+  wsize : m'.words.size = m.words.size
 
 theorem tierW_lt (p : Word) : (tierW p).toNat ≤ 1 := by
   have h : tierW p ≤ 1 := UInt64.and_le_right
@@ -190,7 +204,7 @@ theorem HeapFrame.heap (h : HeapFrame m m') (p : Word) (hb : ¬ p >>> 32 = 0)
     h.lh _ (by simp only [htop]; omega), h.lh _ (by simp only [htop]; omega)]
 
 theorem HeapFrame.ext (h : HeapFrame m m') : HeapExt m m' := by
-  intro p hp
+  refine ⟨fun p hp => ?_, fun A a b => h.arr A b a, h.ctl, h.size, h.wsize⟩
   by_cases hb : p >>> 32 = 0
   · simp only [lvNodeW, hb, ne_eq, not_true_eq_false, ↓reduceIte]
     have c1 : rdW (m'.arr64 CTL) 1 = rdW (m.arr64 CTL) 1 := h.ctl 1 (by simp)
@@ -277,7 +291,8 @@ theorem lhMkW_ext {g a b r : Word} (h : lhMkW m g a b = some (r, m')) :
       simp only [htop]; rw [lhMem_ctl _ _ _ _ _ hctl]; simp
     refine ⟨HeapFrame.ext ⟨fun A h1 h2 => lhMem_arr _ _ _ _ _ A h1 h2,
       fun k hk => by rw [lhMem_ctl _ _ _ _ _ hctl, if_neg hk], by rw [htop', e3]; omega,
-      fun k hk => ?_⟩, ?_, by rw [htop', e3]⟩
+      fun k hk => ?_, fun b => by simp only [lhMem, size_set64L],
+      by simp only [lhMem, Mem.words_size_set64]⟩, ?_, by rw [htop', e3]⟩
     · rw [lhMem_lh _ _ _ _ _ hl ht]
       have n2 : k ≠ htop m + 2 := fun e => by rw [e, ek 2 (by decide)] at hk; simp at hk; omega
       have n1 : k ≠ htop m + 1 := fun e => by rw [e, ek 1 (by decide)] at hk; simp at hk; omega

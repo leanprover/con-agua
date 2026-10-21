@@ -29,7 +29,7 @@ int main(int argc, char **argv) {
   uint8_t *st = mmap(0, stack, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
   if (st == MAP_FAILED) { perror("mmap"); return 2; }
   uint64_t len[NW] = {0};
-  len[1] = 42;                                   /* CTL */
+  len[1] = 64;                                   /* CTL */
   len[4] = 4 * (n + 16); len[5] = 4 * (n + 16);  /* AREC, ASLOT */
   for (int a = 6; a < 22; a++) len[a] = 64;      /* the other tables, unused */
   len[22] = 64; len[23] = 64;                    /* BREC, BSLOT */

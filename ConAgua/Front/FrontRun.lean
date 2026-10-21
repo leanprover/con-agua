@@ -111,9 +111,10 @@ variable (p : Prog) (hS : ScanLookups p) (hL : FrontLookups p)
   (hpl : p.lookup "apply_level" = some applyLevel)
   (hpr : p.lookup "apply_rec" = some applyRec) (hpt : p.lookup "apply_str" = some applyStr)
   (hE : ExprLookups p) (hpy : p.lookup "apply_any" = some applyAny)
+  (hF : DeclFieldLookups p) (hDL : DeclLookups p) (hpz : p.lookup "apply_dline" = some applyDLine)
   (hpi : p.lookup "front_init" = some frontInit) (hpd : p.lookup "front_run" = some frontRun)
 
-include hS hL hpf hps hpn hpu hpl hpr hpt hE hpy in
+include hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz in
 theorem frontLineK_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (Z : Nat) (hZ : Z < 2 ^ 63)
     (n : Nat) (s₀ : St) (i : Word) (hm : s₀.mem.arr8 IN = b) (hz : (s₀.mem.arr64 POOL).size = Z)
     (hi : i < UInt64.ofNat b.size) :
@@ -122,7 +123,7 @@ theorem frontLineK_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (Z : Nat) (hZ :
       Keep s₀.mem s'.mem ∧ LocEq s' s₀; ⊤⦄ := by
   have hi' : i.toNat ≤ b.size := by have := L.Scan.lt_of_lt_ofNat hi; omega
   have h := Triple.keep hE.no_st8
-    (frontLine_spec p hS hL hpf hps hpn hpu hpl hpr hpt hE hpy b hb n s₀ hm i hi' (by omega))
+    (frontLine_spec p hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz b hb n s₀ hm i hi' (by omega))
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hW, hk, hl⟩ := M.of_run (P := fun s => s = s₀) hs hrun h
@@ -144,12 +145,13 @@ theorem frontInitK_spec (n : Nat) (s₀ : St) :
   rw [hW]
   simp [Keep.arr8 hk]
 
-include hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hpi hpd in
+include hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz hpi hpd in
 /-- **Bytes → stores, in one theorem**: when `front_run()` returns `0` on a memory holding the
 input `b` and related to the arena state `a₀` (by `ArenaD`) and to the blank parse state, con-ron's
 `parseBytes b` accepts from `a₀`, and the memory after is related to its final arena state by
 `ArenaD` and to its final parse state by `StateDR`. -/
-@[refines_part ConRon.Arena.Frontend.parseBytes "name, level, expr lines (declarations abort)"]
+
+@[refines_part ConRon.Arena.Frontend.parseBytes "name, level, expr, non-inductive declaration lines (strVal and inductive lines abort)"]
 theorem frontRun_refines (b : ByteArray) (h64 : System.Platform.numBits = 64)
     (hsize : b.size < 2 ^ 63) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b.data)
     (hpool : (s₀.mem.arr64 POOL).size < 2 ^ 63) (a₀ : AState) (hA : ArenaD s₀.mem a₀)
@@ -162,7 +164,7 @@ theorem frontRun_refines (b : ByteArray) (h64 : System.Platform.numBits = 64)
   intro s r s' hs hrun h0
   have hW := M.of_run (P := fun s => s = s₀) hs hrun
     (frontRun_spec p (lineKW b.data) b.data _
-      (fun n s₀ i hm hz hi => frontLineK_spec p hS hL hpf hps hpn hpu hpl hpr hpt hE hpy b.data
+      (fun n s₀ i hm hz hi => frontLineK_spec p hS hL hpf hps hpn hpu hpl hpr hpt hE hpy hF hDL hpz b.data
         hsize _ hpool n s₀ i hm hz hi)
       initKW (fun n s₀ _ _ => frontInitK_spec p hL hE hpi n s₀) hpd n s₀ hm rfl)
   rw [h0] at hW
@@ -176,12 +178,19 @@ end run
 /-- Every function of the frontend: the validator, the fields passes, the stores, the apply
 steps, the line and the driver. -/
 def frontAllProg : Prog := L.Scan.Validator.valProg ++
-  [("read_nat", L.Front.Fields.readNat), ("rec_nat_list", recNatList), ("rec_str_name", recStrName),
+  [("rec_nat_list", recNatList), ("rec_str_name", recStrName),
    ("rec_num_name", recNumName), ("rec_line_loop", recLineLoop), ("obj_val", objVal),
    ("rec_obj", recObj), ("expr_val", exprVal), ("rec_expr_loop", recExprLoop)] ++
-  exprProg ++
+  exprProg.filter (fun f => f.1 != "skip_digits" && f.1 != "num_end") ++
   [("front_line", frontLine), ("apply_rec", applyRec), ("apply_str", applyStr),
-   ("apply_any", applyAny), ("front_run", frontRun)]
+   ("apply_any", applyAny), ("front_run", frontRun),
+   ("esc_sur", L.Front.Unescape.escSur), ("esc_one", L.Front.Unescape.escOne),
+   ("utf8_put", L.Front.Unescape.utf8Put), ("str_put_esc", L.Front.Unescape.strPutEsc),
+   ("match_dlit", matchDlit), ("str_code", strCode), ("hints_val", hintsVal),
+   ("d_member", dMember), ("decl_val", declVal), ("decl_code", declCodeF),
+   ("rec_decl_obj", recDeclObj), ("rec_decl_line", recDeclLine),
+   ("lp_put", lpPut), ("decl_kind", declKind), ("decl_push", declPush), ("decl_cv", declCv),
+   ("apply_decl", applyDecl), ("apply_dline", applyDLine)]
 
 theorem frontAllProg_noSt8 : frontAllProg.noSt8 = true := by decide
 
@@ -194,6 +203,11 @@ theorem frontAllProg_expr : ExprLookups frontAllProg := by
     ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
     ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, frontAllProg_noSt8⟩ <;> rfl
 
+theorem frontAllProg_dfields : DeclFieldLookups frontAllProg := by constructor <;> rfl
+
+theorem frontAllProg_decl : DeclLookups frontAllProg :=
+  ⟨frontAllProg_expr, rfl, rfl, rfl, rfl, rfl⟩
+
 /-- **Bytes → stores, for the whole program.** -/
 theorem frontAll_refines (b : ByteArray) (h64 : System.Platform.numBits = 64)
     (hsize : b.size < 2 ^ 63) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b.data)
@@ -204,18 +218,20 @@ theorem frontAll_refines (b : ByteArray) (h64 : System.Platform.numBits = 64)
     ⦃fun r s' => r.headD 0 = 0 → ∃ st' a', (parseBytes b).run a₀ = .ok (.ok (.ofState st'), a') ∧
       ArenaD s'.mem a' ∧ StateDR s'.mem st'; ⊤⦄ :=
   frontRun_refines frontAllProg frontAllProg_scan frontAllProg_front rfl rfl rfl rfl rfl rfl rfl
-    frontAllProg_expr rfl rfl rfl b h64 hsize n s₀ hm hpool a₀ hA hD
+    frontAllProg_expr rfl frontAllProg_dfields frontAllProg_decl rfl rfl rfl b h64 hsize n s₀ hm hpool a₀ hA hD
 
-/-- A memory with 67 word arrays of 4096 words and the input `s`. -/
-def frontMemOf (s : String) : Mem := { initMem (List.replicate 67 4096) with bytes := #[s.toUTF8.data] }
+/-- A memory with 69 word arrays of 4096 words and the input `s`. -/
+def frontMemOf (s : String) : Mem := { initMem (List.replicate 69 4096) with bytes := #[s.toUTF8.data] }
 
 /- A header, a name, a level, and expression lines of six kinds (a 30-digit literal among them):
 accepted. -/
 #guard (run frontAllProg 100000 "front_run" [] (frontMemOf
-  "{\"meta\":{\"x\":1}}\n{\"in\":1,\"str\":{\"pre\":0,\"str\":\"Nat\"}}\n{\"il\":1,\"succ\":0}\n\
+  "{\"meta\":{\"x\":1}}\n{\"in\":1,\"str\":{\"pre\":0,\"str\":\"N\\u00e4t\\n\"}}\n{\"il\":1,\"succ\":0}\n\
   {\"ie\":0,\"sort\":1}\n{\"ie\":1,\"const\":{\"name\":1,\"us\":[0,1]}}\n\
   {\"ie\":2,\"app\":{\"fn\":1,\"arg\":0}}\n{\"ie\":3,\"natVal\":\"123456789012345678901234567890\"}\n\
-  {\"ie\":4,\"lam\":{\"binderInfo\":\"default\",\"body\":0,\"name\":1,\"type\":2}}")).toOption.map
+  {\"ie\":4,\"lam\":{\"binderInfo\":\"default\",\"body\":0,\"name\":1,\"type\":2}}\n\
+  {\"axiom\":{\"isUnsafe\":false,\"levelParams\":[],\"name\":1,\"type\":0}}\n\
+  {\"def\":{\"hints\":{\"regular\":3},\"levelParams\":[1],\"name\":1,\"safety\":\"safe\",\"type\":0,\"value\":2}}")).toOption.map
   (·.1) == some [0]
 /- A line that does not scan: its number. An unbound id: the run aborts. -/
 #guard (run frontAllProg 100000 "front_run" [] (frontMemOf
