@@ -4325,10 +4325,20 @@ be asymptotically slower. con-ron at `_tmp/ref/con-ron` origin/HEAD (`proof/ConR
   refinement then applies each callee's own spec to its run (`CoreSpec.of_callW`) and threads
   `CoreAfter` (`CoreAfter.comp`). Loops get a named block and a model by fuel
   (`whnfCoreLoopB_spec`, `coreLoopW`), refined by induction (`coreLoopW_ok`).
-* **Proved so far** (no `sorry` of their own): the knot's `whnfCore` slot one level up
-  (`whnfCoreSlot_step`: stuck tags, both memos, hit and miss, from the body spec), the loop
-  (`whnfCore_loop`'s spec and `coreLoopW_ok`, from the step spec), `lvl_eq_c`/`lvls_eq_c`
-  completely, the flush.
+* **Proved so far** (no `sorry` of their own; they assume the callees' specs): the knot's
+  `whnfCore` slot one level up (`whnfCoreSlot_step`: stuck tags, both memos, hit and miss), the
+  loop and the body (`whnfCoreLoop_refines`, `whnfCoreBody_refines`, `WhnfCoreLoop.lean`), the
+  dispatcher `whnf_core_step` (`whnfCoreStep_refines`: one view lemma per tag, the app arm, the
+  projection arm through its spec, ζ through `inst1`), the app arm `whnf_core_app` and its second
+  half `whnf_core_app2` (`WhnfCoreStep.lean`), `proj_cert`; the `whnf` slot and loop
+  (`whnf_refines`, `whnfLoop_refines`, `WhnfDeltaSlot.lean`, a sub-lane); five spine walks
+  (`get_app_fn`, `pi_result`, `peel_pis`, `mk_app_n`, `mk_app_n_from`, `WhnfSpineRefine.lean`, a
+  sub-lane); `lvl_eq_c`/`lvls_eq_c` completely, the flush.
+* **Statement changes by the sub-lanes.** `mkAppN_refines`/`mkAppNFrom_refines` post a
+  `MemFrame [AREC, ASLOT, ADER] [4, 5]` instead of `Grows` (the walk never touches the Nat-limb
+  pool) and drop the `HW` of the result (a fresh handle's index bound is not established by the
+  store's relation yet); `whnfLoop_refines` takes the step spec at every fuel up to `n`
+  (`WhnfStepUpTo`), as `KnotUpTo`.
 * **L code written** (sorry'd specs): `whnf_core_step`, `whnf_app`, `beta_peel`,
   `whnf_core_step_proj`, `reduce_proj_core`, `proj_cert`, `proj_lit_to_ctor` (`WhnfCore.lean`,
   177 L lines); the spine walks (`WhnfSpine.lean`, 124, exact `coreWalkFuel` counters); ι
@@ -4350,11 +4360,31 @@ be asymptotically slower. con-ron at `_tmp/ref/con-ron` origin/HEAD (`proof/ConR
 
 * `WhnfBase.lean` `whnfCallees_stub`: the specs of the callees not written yet (`inst_list`,
   `inst_lp`, `str_lit_ctor`, `str_lit_supported`, the knot's `infer`/`infer_io`/`defeq` steps).
-* `WhnfSpine.lean`: the eight spine-walk specs (`getAppFn_refines`, …; a proof lane is on them).
-* `WhnfCore.lean`: `coreCallees_stub` and the specs of `whnf_core_step`, `whnf_core_loop`
-  (through `whnfCoreLoop_refines`), `whnf_app`, `beta_peel`, `whnf_core_step_proj`,
-  `reduce_proj_core`, `proj_cert`, `proj_lit_to_ctor`.
+* `WhnfSpine.lean`: `getAppArgs_refines`, `getAppSpine_refines`, `headAndArgs_refines` (a loop
+  writing the stack slice after the fuel-chase loop in one function: `finish` did not close the
+  two-stage split; the word models `gaaLoopW`/`gaaFillW` are there).
+* `WhnfCore.lean`: `coreCallees_stub` (`inst1` at `coreWalkFuel`, `find_proj`, `fire_ok`,
+  `iota_rec_at`) and the specs of `whnf_app`, `beta_peel`, `whnf_core_step_proj`,
+  `reduce_proj_core`, `proj_lit_to_ctor` (proof sub-lanes on them).
 * `WhnfIota.lean`: `iotaCallees_stub` and every spec (28).
+* `WhnfDelta.lean`: the δ/Nat specs (`whnf_step`, `reduce_nat`, `delta_step`, …; 14).
+
+### Numbers (2026-10-21)
+
+* Rust (con-ron's `whnf`/core, census phase 5): 1500 lines; L written for 720 of them, proved for
+  68 at the last census (the proved bodies call sorry'd callees, so their Rust counts once those
+  close).
+* L: 1101 lines (`CoreCaches` 14, `CoreLevels` 26, spine 94, `WhnfCore` 186, `WhnfIota` 504,
+  `WhnfDelta` 277). Refinement proofs: about 3600 lines for about 240 proved L lines, **15 proof
+  lines per L line** (the callW pattern: model ~1, L spec ~1 (`vcgen` + `finish`), refinement
+  ~10–13; most of the refinement is case splits on the callees' runs and threading `CoreAfter`).
+* CPU (`lake env lean`, user): `WhnfCoreSlot` 10.5 s, `WhnfCoreStep` 8.0 s,
+  `WhnfSpineRefine` 4.6 s, `WhnfDeltaSlot` 3.2 s, `CoreLevels` 3.1 s, the rest ≤ 2 s each: 33 s.
+* Automation: every L spec is `vcgen` + `finish` (or `simp_all`) against `callW_spec`; no L
+  spec needed a hand proof. The refinements are manual. Pattern breaks: a function with two loops
+  in sequence (`get_app_args`) defeated `finish`; a dispatcher with eight arms needed `by_cases`
+  per tag (`split_ifs` is Mathlib); `simp_all` on the dispatcher's VCs ran out of steps, `sym`
+  + `finish` took 7 s.
 
 ## Any number of results (2026-10-21, lane `cresults`)
 
