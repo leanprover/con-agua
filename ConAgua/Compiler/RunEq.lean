@@ -167,14 +167,14 @@ theorem step_call_run (x : Var) (f : FnName) (args : List Expr) :
 theorem evalP_error {σ : St} {e : Expr} {x : Err} (h : evalP σ e = .error x) : x = .oob := by
   induction e generalizing x with
   | const | var | len8 | len64 => simp [evalP] at h
-  | bin op a b iha ihb =>
+  | bin _ a b iha ihb | cmpw _ a b iha ihb =>
     simp only [evalP, bind, Except.bind] at h
     split at h
     · rename_i he; cases h; exact iha he
     · split at h
       · rename_i he; cases h; exact ihb he
       · cases h
-  | ld8 a i ih | ld64 a i ih =>
+  | ld8 _ i ih | ld64 _ i ih | ldc _ i ih =>
     simp only [evalP, bind, Except.bind] at h
     split at h
     · rename_i he; cases h; exact ih he

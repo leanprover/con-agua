@@ -81,7 +81,7 @@ theorem MemRel.store64 {m : Mem} {d : DataMem} (hm : MemRel G m d) {a : ArrId} (
       fun t h1 h2 => hG.tab_arr t h2 (Or.inr ⟨a, ha, h1⟩)
   refine ⟨by simpa [Mem.set64] using hm.nb, by simpa [Mem.set64] using hm.nw,
     fun c hc => by rw [Mem.arr8_set64]; exact hm.size8 c hc,
-    fun c hc => by rw [Mem.arr64_set64]; split <;> simp_all [hm.size64 c hc], ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    fun c hc => by rw [Mem.arr64_set64]; split <;> simp_all [hm.size64 c hc], ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro c hc k hk
     have hk2 : k < (m.arr8 c).size := hk
     have h8 := hm.size8 c hc
@@ -119,6 +119,14 @@ theorem MemRel.store64 {m : Mem} {d : DataMem} (hm : MemRel G m d) {a : ArrId} (
   · intro c hc; rw [htab _ (by omega) (by simp [Layout.tabEnd, Tab.len8] <;> omega)]; exact hm.len8 c hc
   · intro c hc; rw [htab _ (by omega) (by simp [Layout.tabEnd, Tab.base64] <;> omega)]; exact hm.base64 c hc
   · intro c hc; rw [htab _ (by omega) (by simp [Layout.tabEnd, Tab.len64] <;> omega)]; exact hm.len64 c hc
+  · intro k hk
+    have hw : G.tab.rom.length ≤ 8 * G.tab.romWords := by simp only [Tab.romWords]; omega
+    have := hG.tab_end
+    simp only [Layout.tabEnd] at this
+    rw [get?_wrW_A hov (by omega) ?_]
+    · exact hm.rom k hk
+    exact byte_cell_disj (P := G.In64 a) (Q := G.InTab) hcell ⟨by omega, by simp only [Layout.tabEnd]; omega⟩
+      fun t h1 h2 => hG.tab_arr t h2 (Or.inr ⟨a, ha, h1⟩)
   · intro x hx; exact isSome_get?_storeInt (hm.stack x hx)
 
 theorem MemRel.store8 {m : Mem} {d : DataMem} (hm : MemRel G m d) {a : ArrId} (ha : a < G.tab.nb)
@@ -141,7 +149,7 @@ theorem MemRel.store8 {m : Mem} {d : DataMem} (hm : MemRel G m d) {a : ArrId} (h
     exact hcellw _ (fun k hk h8 => hG.tab_arr _ ⟨by omega, by omega⟩ (Or.inl ⟨a, ha, h8⟩)) (by omega)
   refine ⟨by simpa [Mem.set8] using hm.nb, by simpa [Mem.set8] using hm.nw,
     fun c hc => by rw [Mem.arr8_set8]; split <;> simp_all [hm.size8 c hc],
-    fun c hc => by rw [Mem.arr64_set8]; exact hm.size64 c hc, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    fun c hc => by rw [Mem.arr64_set8]; exact hm.size64 c hc, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro c hc k hk
     have hk' := hk
     simp only [Mem.arr8_set8] at hk'
@@ -178,6 +186,14 @@ theorem MemRel.store8 {m : Mem} {d : DataMem} (hm : MemRel G m d) {a : ArrId} (h
   · intro c hc; rw [htab _ (by omega) (by simp [Layout.tabEnd, Tab.len8] <;> omega)]; exact hm.len8 c hc
   · intro c hc; rw [htab _ (by omega) (by simp [Layout.tabEnd, Tab.base64] <;> omega)]; exact hm.base64 c hc
   · intro c hc; rw [htab _ (by omega) (by simp [Layout.tabEnd, Tab.len64] <;> omega)]; exact hm.len64 c hc
+  · intro k hk
+    have hw : G.tab.rom.length ≤ 8 * G.tab.romWords := by simp only [Tab.romWords]; omega
+    have := hG.tab_end
+    simp only [Layout.tabEnd] at this
+    rw [get?_store1_A hx (by omega) ?_]
+    · exact hm.rom k hk
+    intro he
+    exact hG.tab_arr _ ⟨by omega, by simp only [Layout.tabEnd]; omega⟩ (Or.inl ⟨a, ha, he ▸ hin⟩)
   · intro x hx; exact isSome_get?_storeInt (hm.stack x hx)
 
 theorem Inv.store64 {nl F : Nat} {σ : St} {s : MachineData} (hI : Inv G nl F σ s) {a : ArrId}
@@ -239,7 +255,7 @@ theorem byte_val (r : Reg64s) :
   omega
 
 section
-variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) < maxOff)
+variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords < maxOff)
   (p : Prog) (K : Stmt → M Sig) (P : Nat → Prop)
 include hG hTab
 

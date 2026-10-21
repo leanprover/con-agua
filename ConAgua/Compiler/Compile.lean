@@ -32,10 +32,13 @@ namespace L.Compiler
 * `[T]` the initial stack pointer (top of the stack region), `[T + 8]` its lower limit;
 * `[T + 16 + 16a]` / `[T + 24 + 16a]` base / length of byte array `a < nb`;
 * then the same for word arrays `a < nw`;
+* then the constant data `rom` (the byte strings of the program's `ldc` reads), padded to whole
+  words;
 * then the arguments of the entry function, one word each. -/
 structure Tab where
   nb : Nat
   nw : Nat
+  rom : List UInt8 := []
   deriving Repr, DecidableEq
 
 def Tab.stackTop : Int := 0
@@ -44,7 +47,44 @@ def Tab.base8 (_ : Tab) (a : ArrId) : Int := 16 + 16 * a
 def Tab.len8 (_ : Tab) (a : ArrId) : Int := 24 + 16 * a
 def Tab.base64 (t : Tab) (a : ArrId) : Int := 16 + 16 * (t.nb + a)
 def Tab.len64 (t : Tab) (a : ArrId) : Int := 24 + 16 * (t.nb + a)
-def Tab.args (t : Tab) : Int := 16 + 16 * (t.nb + t.nw)
+/-- The words the constant data takes. -/
+def Tab.romWords (t : Tab) : Nat := (t.rom.length + 7) / 8
+def Tab.romBase (t : Tab) : Int := 16 + 16 * (t.nb + t.nw)
+def Tab.args (t : Tab) : Int := 16 + 16 * (t.nb + t.nw) + 8 * t.romWords
+
+/-- The first position of `d` in `rom` (`0` if there is none; `WF` checks that it is one). -/
+def romIdx (d : List UInt8) : List UInt8 → Nat
+  | [] => 0
+  | b :: rom => if d.isPrefixOf (b :: rom) then 0 else romIdx d rom + 1
+
+/-- The constant byte strings of an expression, a condition, a statement, a program. -/
+def Expr.roms : Expr → List (List UInt8)
+  | .bin _ a b | .cmpw _ a b => Expr.roms a ++ Expr.roms b
+  | .ld8 _ i | .ld64 _ i => Expr.roms i
+  | .ldc d i => d :: Expr.roms i
+  | _ => []
+
+def Cond.roms : Cond → List (List UInt8)
+  | .cmp _ a b => Expr.roms a ++ Expr.roms b
+  | .and p q | .or p q => Cond.roms p ++ Cond.roms q
+  | .not p => Cond.roms p
+
+def Stmt.roms : Stmt → List (List UInt8)
+  | .skip | .brk | .abort => []
+  | .set _ e => Expr.roms e
+  | .st8 _ i e | .st64 _ i e => Expr.roms i ++ Expr.roms e
+  | .seq s t => Stmt.roms s ++ Stmt.roms t
+  | .ite c s t => Cond.roms c ++ Stmt.roms s ++ Stmt.roms t
+  | .while c s => Cond.roms c ++ Stmt.roms s
+  | .ret e => Expr.roms e
+  | .call _ _ args => args.flatMap Expr.roms
+
+/-- The constant data of a program: its byte strings, each once. -/
+def Prog.rom (p : Prog) : List UInt8 :=
+  ((p.flatMap fun (_, fd) => Stmt.roms fd.body).foldl (fun acc d => if acc.contains d then acc else acc ++ [d]) []).flatten
+
+/-- The table layout of a program with `nb` byte arrays and `nw` word arrays. -/
+def Prog.tab (p : Prog) (nb nw : Nat) : Tab := { nb, nw, rom := Prog.rom p }
 
 /-! ## Instruction helpers -/
 
@@ -83,8 +123,8 @@ def fnL (f : FnName) : Label := "ca_f_" ++ f
 `compileE e t` evaluates `e` into `rax` and may write the temporaries `t, t+1, …, t + tempsE e - 1`. -/
 
 def tempsE : Expr → Nat
-  | .bin _ a b => max (tempsE a) (1 + tempsE b)
-  | .ld8 _ i | .ld64 _ i => tempsE i
+  | .bin _ a b | .cmpw _ a b => max (tempsE a) (1 + tempsE b)
+  | .ld8 _ i | .ld64 _ i | .ldc _ i => tempsE i
   | _ => 0
 
 def tempsC : Cond → Nat
@@ -145,6 +185,17 @@ def binInstr : BinOp → Directive
   | .xor => i64 (.xor (.reg (rr .rax)) (oR .rcx))
   | .shl => i64 (.shl (.reg (rr .rax)) .cl)
   | .shr => i64 (.shr (.reg (rr .rax)) .cl)
+  | .mulhi => i64 (.mul (.reg (rr .rcx)))
+
+/-- `rax := rax op rcx`: one instruction, and for `mulhi` a move from `rdx`. -/
+def binCode : BinOp → Program
+  | .mulhi => [binInstr .mulhi, movRR .rax .rdx]
+  | op => [binInstr op]
+
+/-- The condition code under which `cmp rax, rcx` (with `rax` = left, `rcx` = right) makes the
+comparison true. -/
+def cmpCC : Cmp → CondCode
+  | .eq => .z | .ne => .nz | .ult => .c | .ule => .be | .slt => .l | .sle => .le
 
 /-- `rax := e`. -/
 def compileE (ctx : Ctx) : Expr → Nat → Program
@@ -152,7 +203,7 @@ def compileE (ctx : Ctx) : Expr → Nat → Program
   | .var x, _ => [movRM .rax (mb .rsp (8 * x))]
   | .bin op a b, t =>
     compileE ctx a t ++ [movMR (ctx.tmp t) .rax] ++ compileE ctx b (t + 1) ++
-      [movRR .rcx .rax, movRM .rax (ctx.tmp t), binInstr op]
+      ([movRR .rcx .rax, movRM .rax (ctx.tmp t)] ++ binCode op)
   | .ld8 a i, t =>
     compileE ctx i t ++
       [i64 (.cmp (.reg (rr .rax)) (oM (mb .r15 (ctx.tab.len8 a)))), jccL .nc errorL,
@@ -165,11 +216,15 @@ def compileE (ctx : Ctx) : Expr → Nat → Program
        movRM .rax (mbi .rcx .rax .W64)]
   | .len8 a, _ => [movRM .rax (mb .r15 (ctx.tab.len8 a))]
   | .len64 a, _ => [movRM .rax (mb .r15 (ctx.tab.len64 a))]
-
-/-- The condition code under which `cmp rax, rcx` (with `rax` = left, `rcx` = right) makes the
-comparison true. -/
-def cmpCC : Cmp → CondCode
-  | .eq => .z | .ne => .nz | .ult => .c | .ule => .be | .slt => .l | .sle => .le
+  | .cmpw op a b, t =>
+    compileE ctx a t ++ [movMR (ctx.tmp t) .rax] ++ compileE ctx b (t + 1) ++
+      [movRR .rcx .rax, movRM .rax (ctx.tmp t), i64 (.cmp (.reg (rr .rax)) (oR .rcx)),
+       movRI .rax 0, movRI .rdx 1, i64 (.cmovcc (cmpCC op) (rr .rax) (.reg (rr .rdx)))]
+  | .ldc d i, t =>
+    compileE ctx i t ++
+      [i64 (.cmp (.reg (rr .rax)) (oI d.length)), jccL .nc errorL,
+       i64 (.lea (rr .rcx) (mb .r15 (ctx.tab.romBase + romIdx d ctx.tab.rom))),
+       i64 (.movzx (.reg (rr .rax)) (w' := .W8) (.mem (mbi .rcx .rax .W8)))]
 
 /-- The negation of a condition code. -/
 def CondCode.neg : CondCode → CondCode

@@ -80,6 +80,7 @@ def BinOp.eval : BinOp → Word → Word → Word
   | .xor, a, b => a ^^^ b
   | .shl, a, b => a <<< b
   | .shr, a, b => a >>> b
+  | .mulhi, a, b => UInt64.ofNat (a.toNat * b.toNat / 2 ^ 64)
 
 def Cmp.eval : Cmp → Word → Word → Bool
   | .eq, a, b => a == b
@@ -88,6 +89,9 @@ def Cmp.eval : Cmp → Word → Word → Bool
   | .ule, a, b => decide (a ≤ b)
   | .slt, a, b => decide (a.toInt64 < b.toInt64)
   | .sle, a, b => decide (a.toInt64 ≤ b.toInt64)
+
+/-- A comparison as a word. -/
+def Cmp.evalW (c : Cmp) (a b : Word) : Word := if c.eval a b then 1 else 0
 
 /-! ## Memory access -/
 
@@ -123,6 +127,10 @@ def ld64 (a : ArrId) (i : Word) : M Word := do
   let m := (← get).mem
   if h : i.toNat < (m.arr64 a).size then return (m.arr64 a)[i.toNat] else throw .oob
 
+/-- Byte `i` of the constant byte string `d`, zero-extended; `oob` out of bounds. -/
+def ldc (d : List UInt8) (i : Word) : M Word :=
+  if h : i.toNat < d.length then return d[i.toNat].toUInt64 else throw .oob
+
 /-- Store the low byte of `v` at byte `i` of byte array `a`; `oob` out of bounds. -/
 def st8 (a : ArrId) (i v : Word) : M Unit := do
   let s ← get
@@ -144,6 +152,11 @@ def evalE : Expr → M Word
   | .ld64 a i => do ld64 a (← evalE i)
   | .len8 a => do return (← get).mem.len8 a
   | .len64 a => do return (← get).mem.len64 a
+  | .cmpw c a b => do
+    let x ← evalE a
+    let y ← evalE b
+    return c.evalW x y
+  | .ldc d i => do ldc d (← evalE i)
 
 def evalC : Cond → M Bool
   | .cmp c a b => do

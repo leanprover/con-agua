@@ -101,4 +101,32 @@ def recProg : Prog := [("sum_to", sumTo), ("boom", boom)]
 #guard agrees recProg "sum_to" [2] {} 100000 128
 #guard (runKraken recProg "sum_to" [3] {} 100000 128).toOption == some .exhausted
 
+/-! `mulhi`, comparisons as words, constant data. -/
+
+def LITS : List UInt8 := "truefalse".toUTF8.toList
+
+/-- `mulhi(x, y)`, the carry of `x + y`, and whether `IN[i..]` starts with `"false"`. -/
+def ext : FunDecl := lfn (x, y, i) locals (k, ok) {
+  ok := 1;
+  while k < 5 {
+    if i + k >= len(B.u8) { ok := 0; break };
+    if B.u8[i + k] != LITS.c8[k + 4] { ok := 0 };
+    k += 1
+  };
+  return mulhi(x, y) ^ (u64(x + y < x) << 32) ^ (ok << 40) ^ u64(x ≤ₛ y) << 41
+}
+
+def extProg : Prog := [("ext", ext)]
+
+#guard Prog.wf (Prog.tab extProg 1 0) extProg
+#guard Prog.rom extProg = LITS
+#guard agrees extProg "ext" [0xffffffffffffffff, 0xffffffffffffffff, 0] (inp "false")
+#guard agrees extProg "ext" [0x123456789abcdef0, 0x0fedcba987654321, 1] (inp " false")
+#guard agrees extProg "ext" [3, 5, 1] (inp " fals")
+#guard agrees extProg "ext" [0x8000000000000000, 5, 0] (inp "falsy")
+-- `LITS.c8[9]` is out of bounds.
+def oobC : FunDecl := lfn (i) { return LITS.c8[i] }
+#guard agrees [("c", oobC)] "c" [8] {}
+#guard (runKraken [("c", oobC)] "c" [9] {} 100000).toOption == some .error
+
 end L.Compiler.Tests

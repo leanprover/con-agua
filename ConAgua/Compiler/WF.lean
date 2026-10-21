@@ -11,7 +11,7 @@ What the compiler needs of a program, as a decidable check (`Prog.wf tab p = tru
 in range, arrays exist in `tab`, call targets exist and get as many arguments as they have
 parameters, function names are distinct, and frames and table offsets are small enough to be
 immediates. (`L` itself gives a meaning to every program; these are the programs the compiler
-accepts.)
+accepts.) Every constant byte string of an `ldc` occurs in the table's constant data.
 -/
 
 namespace L.Compiler
@@ -28,6 +28,8 @@ def Expr.wf (nl : Nat) (tab : Tab) : Expr → Bool
   | .ld64 a i => a < tab.nw && Expr.wf nl tab i
   | .len8 a => a < tab.nb
   | .len64 a => a < tab.nw
+  | .cmpw _ a b => Expr.wf nl tab a && Expr.wf nl tab b
+  | .ldc d i => d.isPrefixOf (tab.rom.drop (romIdx d tab.rom)) && Expr.wf nl tab i
 
 def Cond.wf (nl : Nat) (tab : Tab) : Cond → Bool
   | .cmp _ a b => Expr.wf nl tab a && Expr.wf nl tab b
@@ -54,6 +56,6 @@ def FunDecl.wf (p : Prog) (tab : Tab) (fd : FunDecl) : Bool :=
 /-- The program is well formed for the table layout `tab`. -/
 def Prog.wf (tab : Tab) (p : Prog) : Bool :=
   p.all (fun (_, fd) => FunDecl.wf p tab fd) && decide (p.map (·.1)).Nodup &&
-    16 + 16 * (tab.nb + tab.nw) < maxOff
+    16 + 16 * (tab.nb + tab.nw) + 8 * tab.romWords < maxOff
 
 end L.Compiler

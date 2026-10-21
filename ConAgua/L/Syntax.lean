@@ -27,9 +27,10 @@ abbrev ArrId := Nat
 /-- A function name. -/
 abbrev FnName := String
 
-/-- Binary word operators. All wrap; shift counts are taken mod 64 (as on x64). -/
+/-- Binary word operators. All wrap; shift counts are taken mod 64 (as on x64). `mulhi` is the
+high word of the unsigned 128-bit product (`mul` is the low word). -/
 inductive BinOp where
-  | add | sub | mul | and | or | xor | shl | shr
+  | add | sub | mul | and | or | xor | shl | shr | mulhi
   deriving Repr, DecidableEq, Inhabited
 
 /-- Comparisons. `ult`/`ule` are unsigned, `slt`/`sle` read the words as two's complement. -/
@@ -50,6 +51,10 @@ inductive Expr where
   | len8 (a : ArrId)
   /-- The length (in elements) of word array `a`. -/
   | len64 (a : ArrId)
+  /-- A comparison as a word: `1` if it holds, else `0`. -/
+  | cmpw (c : Cmp) (a b : Expr)
+  /-- Byte `i` of the constant byte string `d` (read-only data, part of the program). -/
+  | ldc (d : List UInt8) (i : Expr)
   deriving Repr, DecidableEq, Inhabited
 
 /-- Conditions. `and`/`or` short-circuit. -/

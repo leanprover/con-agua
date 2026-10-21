@@ -25,7 +25,7 @@ namespace L
 open Std.WP
 open scoped Lean.Order
 
-attribute [lang_grind] BinOp.eval Cmp.eval Sig.retOr Sig.retVal
+attribute [lang_grind] BinOp.eval Cmp.eval Cmp.evalW Sig.retOr Sig.retVal
 attribute [lang_grind cases] Sig
 
 @[lang_grind =] theorem St.setLoc_loc (s : St) (x y : Var) (v : Word) :
