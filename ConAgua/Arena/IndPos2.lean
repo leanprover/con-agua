@@ -54,15 +54,14 @@ def nestKeyEqL : FunDecl := lfn (k1, k2) locals (e) {
   return e
 }
 
-/-- `nest_keys_contains(off, l, k)`: `xs.contains k` over a slice of `NestKey` pointers. -/
-def nestKeysContainsL : FunDecl := lfn (off, l, k) locals (j, b) {
-  j := 0;
-  while j < l {
-    b := call nest_key_eq(IW.u64[off + j], k);
-    if b != 0 { return 1 };
-    j += 1
-  };
-  return 0
+/-- `nest_keys_contains(off, l, k)`: `xs.contains k` over a slice of `NestKey` pointers,
+recursively (like `sl_contains`). -/
+def nestKeysContainsL : FunDecl := lfn (off, l, k) locals (r) {
+  if l == 0 { return 0 };
+  r := call nest_key_eq(IW.u64[off], k);
+  if r != 0 { return 1 };
+  r := call nest_keys_contains(off + 1, l - 1, k);
+  return r
 }
 
 /-- `nest_occ_any(namesOff, namesLen, lo, hi, off, l)`: `xs.anyM (nestOcc names lo hi ·)`,
@@ -172,17 +171,21 @@ def nestBlockOfL : FunDecl := lfn (vis, c) locals (found, q, kind) {
   return (EREC.u64[q + 15], EREC.u64[q + 16])
 }
 
-/-- `nestFrameMates.go`: the group-mates accumulator, each kept once. -/
+/-- `nestFrameMates.go`: the group-mates accumulator, each kept once, recursively (like
+`sl_contains`). The input slice `[off, off + l)` is `IndCaps.all`, hence `EREC`-resident (as
+module `IndPos`'s `nest_container_ctors` reads `caps.ctors` straight out of `EREC`, no copy); the
+accumulator `out` is `IW`-resident (built by `sl_snoc`). -/
 @[l_impl ConRon.Arena.nestFrameMates.go]
-def nestFrameMatesGoL : FunDecl := lfn (c, off, l, outOff, outLen) locals (j, n, b) {
-  j := 0;
-  while j < l {
-    n := IW.u64[off + j];
-    b := call sl_contains(outOff, outLen, n);
-    if n != c && b == 0 { (outOff, outLen) := call sl_snoc(outOff, outLen, n) };
-    j += 1
+def nestFrameMatesGoL : FunDecl := lfn (c, off, l, outOff, outLen) locals (b, r1, r2) {
+  if l == 0 { return (outOff, outLen) };
+  b := call sl_contains(outOff, outLen, EREC.u64[off]);
+  if EREC.u64[off] == c || b != 0 {
+    (r1, r2) := call nest_frame_mates_go(c, off + 1, l - 1, outOff, outLen);
+    return (r1, r2)
   };
-  return (outOff, outLen)
+  (outOff, outLen) := call sl_snoc(outOff, outLen, EREC.u64[off]);
+  (r1, r2) := call nest_frame_mates_go(c, off + 1, l - 1, outOff, outLen);
+  return (r1, r2)
 }
 
 /-- `nest_frame_mates(vis, c)`: a frame's group-mates (N2-eager). -/
@@ -241,20 +244,21 @@ def nestGrowGroupL : FunDecl := lfn (vis, ctx, hi, us, dsOff, dsLen, csOff, csLe
 }
 
 /-- `nest_accept_group(us, dsOff, dsLen, grpOff, grpLen, keysOff, keysLen)`: a frame's group
-accepted with its instantiation, those not cached yet. -/
+accepted with its instantiation, those not cached yet, recursively (like `sl_contains`). -/
 @[l_impl ConRon.Arena.nestAcceptGroup]
 def nestAcceptGroupL : FunDecl :=
-    lfn (us, dsOff, dsLen, grpOff, grpLen, keysOff, keysLen) locals (j, pr, c, key, b) {
-  j := 0;
-  while j < grpLen {
-    pr := IW.u64[grpOff + j];
-    c := IW.u64[pr];
-    key := call rec4(c, us, dsOff, dsLen);
-    b := call nest_keys_contains(keysOff, keysLen, key);
-    if b == 0 { (keysOff, keysLen) := call sl_snoc(keysOff, keysLen, key) };
-    j += 1
+    lfn (us, dsOff, dsLen, grpOff, grpLen, keysOff, keysLen) locals (c, key, b, r1, r2) {
+  if grpLen == 0 { return (keysOff, keysLen) };
+  c := IW.u64[IW.u64[grpOff]];
+  key := call rec4(c, us, dsOff, dsLen);
+  b := call nest_keys_contains(keysOff, keysLen, key);
+  if b != 0 {
+    (r1, r2) := call nest_accept_group(us, dsOff, dsLen, grpOff + 1, grpLen - 1, keysOff, keysLen);
+    return (r1, r2)
   };
-  return (keysOff, keysLen)
+  (keysOff, keysLen) := call sl_snoc(keysOff, keysLen, key);
+  (r1, r2) := call nest_accept_group(us, dsOff, dsLen, grpOff + 1, grpLen - 1, keysOff, keysLen);
+  return (r1, r2)
 }
 
 /-- `nest_walk_stack(ctx, dsOff, dsLen, progOff, progLen)`: the frame stack an instantiation is
@@ -893,29 +897,18 @@ theorem indPos2_wf :
       (indPos2Fns ++ libFns ++ stubFns ++ masterFns ++ indPos2Foreign) = true := by
   decide +kernel
 
--- `nestFrameMates.go` over the block `[3, 5, 3, 7]` at `c = 5`: `[3, 7]` (5 filtered, the
--- repeated 3 deduped).
+/-- `testMem` with `EREC[0..4) = [3, 5, 3, 7]` (`nestFrameMates.go`'s input is `IndCaps.all`, an
+`EREC` slice). -/
+def fmTestMem : Mem := { testMem with
+  words := testMem.words.set! EREC (#[(3 : Word), 5, 3, 7] ++ Array.replicate 60 0) }
+
+-- `nestFrameMates.go` over the `EREC` block `[3, 5, 3, 7]` at `c = 5`: `[3, 7]` (5 filtered, the
+-- repeated 3 deduped), built into `IW`.
 #guard
-  match run (indPos2Fns ++ libFns ++ stubFns ++ masterFns ++ indPos2Foreign) 1000 "sl_new1" [3]
-      testMem with
-  | .ok ([o1, 1], m1) =>
-    match run (indPos2Fns ++ libFns ++ stubFns ++ masterFns ++ indPos2Foreign) 1000 "sl_snoc"
-        [o1, 1, 5] m1 with
-    | .ok ([o2, 2], m2) =>
-      match run (indPos2Fns ++ libFns ++ stubFns ++ masterFns ++ indPos2Foreign) 1000 "sl_snoc"
-          [o2, 2, 3] m2 with
-      | .ok ([o3, 3], m3) =>
-        match run (indPos2Fns ++ libFns ++ stubFns ++ masterFns ++ indPos2Foreign) 1000 "sl_snoc"
-            [o3, 3, 7] m3 with
-        | .ok ([o4, 4], m4) =>
-          match run (indPos2Fns ++ libFns ++ stubFns ++ masterFns ++ indPos2Foreign) 1000
-              "nest_frame_mates_go" [5, o4, 4, 0, 0] m4 with
-          | .ok ([oo, 2], m5) =>
-            rdW (m5.arr64 IW) oo == 3 && rdW (m5.arr64 IW) (oo + 1) == 7
-          | _ => false
-        | _ => false
-      | _ => false
-    | _ => false
+  match run (indPos2Fns ++ libFns ++ stubFns ++ masterFns ++ indPos2Foreign) 1000
+      "nest_frame_mates_go" [5, 0, 4, 0, 0] fmTestMem with
+  | .ok ([oo, 2], m5) =>
+    rdW (m5.arr64 IW) oo == 3 && rdW (m5.arr64 IW) (oo + 1) == 7
   | _ => false
 
 end L.Ind
