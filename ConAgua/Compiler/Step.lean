@@ -4,6 +4,7 @@ public import ConAgua.Compiler.Compile
 public import ConAgua.Compiler.Mem
 public import Kraken.X64.WP.Basic
 public import Kraken.X64.Registers
+public import Std.Tactic.BVDecide
 
 @[expose] public section
 
@@ -396,5 +397,83 @@ theorem ev_pop {r : Reg64} (hk : Host.prog[k]? = some (i64 (.pop (.reg (rr r))))
   exact h
 
 end
+
+/-! ## The flags of `cmp` -/
+
+omit [Host] in
+theorem cf_cmp (a b : BitVec 64) :
+    (BitVec.unsigned (a - b) != a.unsigned - b.unsigned) = decide (a.toNat < b.toNat) := by
+  simp only [BitVec.unsigned_eq, BitVec.toNat_sub]
+  by_cases h : a.toNat < b.toNat <;> simp [h] <;> omega
+
+omit [Host] in
+theorem zf_cmp (a b : BitVec 64) : (a - b == BitVec.zero 64) = (a == b) := by
+  simp only [BitVec.zero_eq]; bv_decide
+
+omit [Host] in
+theorem of_cmp (a b : BitVec 64) :
+    (BitVec.signed (a - b) != a.signed - b.signed) = BitVec.ssubOverflow a b := by
+  simp only [BitVec.signed]
+  by_cases h : BitVec.ssubOverflow a b
+  · rw [h]
+    simp only [BitVec.ssubOverflow, Bool.or_eq_true, decide_eq_true_eq] at h
+    have h1 := BitVec.toInt_lt (x := a - b)
+    have h2 := BitVec.le_toInt (x := a - b)
+    simp only [bne_iff_ne, ne_eq]
+    omega
+  · rw [BitVec.toInt_sub_of_not_ssubOverflow h]; simp_all
+
+omit [Host] in
+theorem lt_cmp (a b : BitVec 64) :
+    ((a - b).msb != (BitVec.signed (a - b) != a.signed - b.signed)) = decide (a.toInt < b.toInt) := by
+  rw [of_cmp, BitVec.ssubOverflow_eq]
+  have : decide (a.toInt < b.toInt) = a.slt b := by
+    rw [Bool.eq_iff_iff, decide_eq_true_iff, BitVec.slt_iff_toInt_lt]
+  rw [this]
+  bv_decide
+
+omit [Host] in
+theorem cmpFlags_cf (a b : BitVec 64) : (cmpFlags a b).cf = decide (a.toNat < b.toNat) := by
+  simp only [cmpFlags, StatusFlags.cf_from_result]; exact cf_cmp a b
+
+omit [Host] in
+theorem cmpFlags_zf (a b : BitVec 64) : (cmpFlags a b).zf = (a == b) := by
+  simp only [cmpFlags, StatusFlags.zf_from_result, zf_cmp]
+
+omit [Host] in
+theorem cmpFlags_sf_of (a b : BitVec 64) :
+    ((cmpFlags a b).sf != (cmpFlags a b).of) = decide (a.toInt < b.toInt) := by
+  simp only [cmpFlags, StatusFlags.from_result, lt_cmp]
+
+/-- After `cmp a, b`, the condition code of a comparison is the comparison. -/
+omit [Host] in
+theorem cmpCC_interp (op : Cmp) (a b : UInt64) :
+    (cmpCC op).interp (cmpFlags a.toBitVec b.toBitVec) = op.eval a b := by
+  have hz := cmpFlags_zf a.toBitVec b.toBitVec
+  have hc := cmpFlags_cf a.toBitVec b.toBitVec
+  have hl := cmpFlags_sf_of a.toBitVec b.toBitVec
+  cases op <;> simp only [cmpCC, CondCode.interp, Cmp.eval] <;> simp only [hz, hc, hl] <;>
+    rw [Bool.eq_iff_iff] <;>
+    simp [UInt64.lt_iff_toNat_lt, UInt64.le_iff_toNat_le, Int64.lt_iff_toInt_lt, Int64.le_iff_toInt_le,
+      UInt64.toBitVec_inj]
+  · constructor
+    · rintro (h | rfl) <;> omega
+    · intro h
+      rcases Nat.lt_or_eq_of_le h with h | h
+      · exact Or.inl h
+      · exact Or.inr (UInt64.toNat_inj.mp h)
+  · exact Iff.rfl
+  · show _ ↔ a.toBitVec.toInt ≤ b.toBitVec.toInt
+    constructor
+    · rintro (h | rfl) <;> omega
+    · intro h
+      rcases Int.lt_or_eq_of_le h with h | h
+      · exact Or.inl h
+      · exact Or.inr (UInt64.toBitVec_inj.mp (BitVec.eq_of_toInt_eq h))
+
+omit [Host] in
+theorem neg_interp (cc : CondCode) (st : StatusFlags) : (CondCode.neg cc).interp st = !cc.interp st := by
+  obtain ⟨cf, pf, af, zf, sf, of⟩ := st
+  cases cc <;> cases cf <;> cases pf <;> cases zf <;> cases sf <;> cases of <;> rfl
 
 end L.Compiler
