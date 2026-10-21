@@ -1,0 +1,412 @@
+/-
+# `ConRon.Refine2.Core.LS.Prims` — the Core tier's primitive pairs that need `CoreCtx`
+
+Task #97-P5-Core round 5.  The `@[lockstep]` pairs whose statement needs the
+Core tier's own context (`CoreCtx`, `ExprOpsHyp`) and so cannot live in
+`Tactic/Prims.lean`, which the Core tier imports.
+-/
+import ConRon.Refine2.Core.LS.Knot
+
+open Aeneas Aeneas.Std Result
+open ConRon.Generated
+
+attribute [-grind] U32.bv_eq_imp_eq UScalar.val_eq_imp
+
+namespace ConRon.Refine2.Lockstep
+
+open ConRon.Arena ConRon.Refine2
+
+/-! ## The Core tier's side-goal extension
+
+A fact about an element of a list the context quantifies over (a binder
+stack's datum well-formedness, `∀ x ∈ stk.val, PropWhenWF x.2.pw`), through
+the shared tactic's extension tier. -/
+
+macro_rules
+  | `(tactic| lockstep_side_ext) => `(tactic| (solve_by_elim (maxDepth := 3) [List.getElem_mem]))
+
+/-! ## Converters from the `AOut₀` form -/
+
+theorem LSR.ofAOut₀ {α β : Type} {A : α → β} {pers : arena.store.PersTier}
+    {m : Result (core.result.Result α kernel.core_types.CheckError)}
+    {st : arena.monad.AState} {lst : AState} {x : AM β}
+    (h : ∀ o, m = ok o → AOut₀ A pers o st (x.run lst)) :
+    LSR pers (fun a b => b = A a) m st lst x := by
+  intro o hm
+  have := h o hm
+  cases o with
+  | Err e => exact this
+  | Ok a =>
+    obtain ⟨lst', hx, h1, h2⟩ := this
+    exact ⟨_, lst', hx, rfl, h1, h2⟩
+
+/-! ## Scalars and constants -/
+
+@[local lockstep_simp] theorem core_walk_fuel_val :
+    (arena.core.CORE_WALK_FUEL).val = coreWalkFuel := core_walk_fuel_abs
+
+attribute [local lockstep_simp] etag_const_abs etag_lit_abs etag_fvar_abs
+
+/-! ## Well-formedness facts in context
+
+A read that carries the Rust datum's well-formedness states it as
+`∀ l, o = some l → WF l`; after the case split on `o` that is
+`∀ l, some x = some l → WF l`, which these reduce to `WF x`. -/
+
+attribute [local lockstep_simp] Option.some.injEq forall_eq' ConRon.Refine.LiteralWF IConstantInfoWF
+
+/-! ## The environment -/
+
+/-- `arena::env::IProjEntry` as the twin's `IProjEntry`, field for field. -/
+def absIProjEntry (e : arena.env.IProjEntry) : IProjEntry :=
+  ⟨absNIdx e.struct_name, absU e.idx, e.level_params.val.map absNIdx, absU e.num_params,
+    absNIdx e.ctor, absU e.num_fields, absEIdx e.body, absLIdx e.field_sort,
+    absLIdx e.struct_sort, absU e.off⟩
+
+attribute [local lockstep_simp] absIProjEntry
+
+
+
+attribute [local lockstep_simp] absIConstantInfo
+
+/-- A constant `ifenv_find` answers is one of the environment's. -/
+theorem ifenv_find_mem {vis : Std.U64} {fe : arena.env.IFEnv} {n : arena.handle.NIdx}
+    {ci : arena.env.IConstantInfo} (h : arena.env.ifenv_find vis fe n = ok (some ci)) :
+    ci ∈ fe.env.consts.val := by
+  rw [arena.env.ifenv_find] at h
+  obtain ⟨r, -, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
+  cases r with
+  | none => cases Result.ok_injective h
+  | some p =>
+    obtain ⟨c, pos⟩ := p
+    replace h : (if c < vis then
+        (do
+          let i2 ← lift (Std.UScalar.cast .Usize pos)
+          if i2 < alloc.vec.Vec.len fe.env.consts then
+            (do
+              let i4 ← lift (Std.UScalar.cast .Usize pos)
+              let ii ← alloc.vec.Vec.index
+                (core.slice.index.SliceIndexUsizeSlice arena.env.IConstantInfo)
+                fe.env.consts i4
+              ok (some ii))
+          else ok none)
+      else (ok none : Result (Option arena.env.IConstantInfo))) = ok (some ci) := h
+    split at h
+    · obtain ⟨i2, -, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
+      split at h
+      · obtain ⟨i4, -, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
+        obtain ⟨ii, hii, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
+        cases Result.ok_injective h
+        obtain ⟨hb, hx⟩ := ExprOps.vecIndexAt hii
+        rw [← hx]
+        exact List.getElem_mem hb
+      · cases Result.ok_injective h
+    · cases Result.ok_injective h
+
+/-- `arena::env::ifenv_find` against `IFEnv.find?`: the twin's lookup is a
+pure expression, so the pair is a `TwinEq` the twin side is rewritten with;
+and the constant found is canonical Rust data (`IFEnvRel.envWF`, the
+coordinator's ruling (d) of task #97-P5-Core round 5). -/
+@[lockstep] theorem ifenv_find_ls {vis : Std.U64} {fe : arena.env.IFEnv} {lfe : IFEnv}
+    (hctx : CoreCtx vis fe lfe) (n : arena.handle.NIdx) :
+    LSP (arena.env.ifenv_find vis fe n)
+      (fun o => TwinEq (lfe.find? (absNIdx n)) (o.map absIConstantInfo) ∧
+        ∀ ci, o = some ci → IConstantInfoWF ci) :=
+  fun o h => ⟨(ifenv_find_abs hctx h).symm, fun ci hci => by
+    subst hci; exact hctx.fenv.envWF ci (ifenv_find_mem h)⟩
+
+@[lockstep] theorem reducibility_hint_dup_ls (h : kernel.env.ReducibilityHint) :
+    LSP (kernel.env.reducibility_hint_dup h) (fun r => r = h) := by
+  intro r hr
+  cases h <;> simp [kernel.env.reducibility_hint_dup] at hr <;> exact hr.symm
+
+/-! ## The `ExprOps` walks, through the `ExprOpsHyp` seam
+
+Each wrapper's `hx : ExprOpsHyp pers` premise is closed from the context by
+`assumption`: a body lemma carries the bundle as a hypothesis, and
+`Core/Arms.lean`'s `exprOpsHyp` is the one place it is discharged. -/
+
+@[lockstep] theorem is_proof_fast_ls {pers} (hx : ExprOpsHyp pers) {st lst vis fe lfe}
+    (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st) (hctx : CoreCtx vis fe lfe)
+    (fuel a) :
+    LS pers (fun a b => b = a) (arena.prop_read.is_proof_fast pers vis st fe fuel a)
+      lst (isProofFast lfe (absU fuel) (absEIdx a)) :=
+  LS.ofSim₀ (A := id) fun _ h => hx.isProofFast hrel hinv hctx h
+
+@[lockstep] theorem not_proof_fast_ls {pers} (hx : ExprOpsHyp pers) {st lst vis fe lfe}
+    (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st) (hctx : CoreCtx vis fe lfe)
+    (fuel a) :
+    LS pers (fun a b => b = a) (arena.prop_read.not_proof_fast pers vis st fe fuel a)
+      lst (notProofFast lfe (absU fuel) (absEIdx a)) :=
+  LS.ofSim₀ (A := id) fun _ h => hx.notProofFast hrel hinv hctx h
+
+/-! ## The Core lemmas closed before round 5, as `@[lockstep]` -/
+
+@[lockstep] theorem ensure_sort_ls {f : Nat} (hk : KnotRel f)
+    {pers vis st mode lane fu fe lfe depth e lst}
+    (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st)
+    (hctx : CoreCtx vis fe lfe) (hf : absU fu = f) :
+    LS pers (fun a b => b = absLIdx a)
+      (arena.core.ensure_sort pers vis st mode lane fu fe depth e) lst
+      (ensureSort (laneKnot (ConRon.Refine.absMode mode) lfe lane f) lfe
+        (absU depth) (absEIdx e)) :=
+  LS.ofSim₀ fun _ h => ensure_sort_refines hk hrel hinv hctx hf h
+
+@[lockstep] theorem unfold_definition_ls {pers vis st fe lfe e lst}
+    (hx : ExprOpsHyp pers) (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st)
+    (hctx : CoreCtx vis fe lfe) :
+    LS pers (fun a b => b = Option.map absEIdx a)
+      (arena.core.unfold_definition pers vis st fe e) lst
+      (unfoldDefinition lfe (absEIdx e)) :=
+  LS.ofSim₀ fun _ h => unfold_definition_refines hx hrel hinv hctx h
+
+/-! ## The environment's name builders (region C1's proofs, shared)
+
+`proj_fn_name` and `proj_table_name` intern two names on the bare store and
+answer `(Result, EStore)`: store-level steps (`LSS`). -/
+
+theorem code_points_from_val' (N : Nat) :
+    ∀ (codes : Slice Std.U32) (i : Std.Usize) (out r : alloc.vec.Vec Std.U32),
+      codes.val.length - i.val = N →
+      kernel.core_types.code_points_from codes i out = ok r →
+      r.val = out.val ++ codes.val.drop i.val := by
+  induction N with
+  | zero =>
+    intro codes i out r hN h
+    rw [kernel.core_types.code_points_from] at h
+    rw [ite_eq_left (by have := Slice.len_val codes; scalar_tac)] at h
+    rw [← Result.ok_injective h, List.drop_eq_nil_of_le (by omega)]; simp
+  | succ N ih =>
+    intro codes i out r hN h
+    rw [kernel.core_types.code_points_from] at h
+    rw [ite_eq_right (by have := Slice.len_val codes; scalar_tac)] at h
+    obtain ⟨x, hx, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
+    obtain ⟨o1, ho1, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
+    obtain ⟨i1, hi1, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
+    have hlt : i.val < codes.val.length := by omega
+    have hxv : codes.val[i.val] = x := by
+      simp only [Slice.index_usize] at hx
+      cases hq : codes[i]? with
+      | none => rw [hq] at hx; simp at hx
+      | some y =>
+        rw [hq] at hx
+        have hyx : y = x := Result.ok_injective hx
+        subst hyx
+        have : codes.val[i.val]? = some y := hq
+        rw [List.getElem?_eq_getElem hlt] at this
+        exact Option.some_injective _ this
+    have h2 := ConRon.Refine.Nat.uadd_val hi1
+    rw [ih codes i1 o1 r (by simp at h2; omega) h, ConRon.Refine.vec_push_val ho1,
+      show i1.val = i.val + 1 by simpa using h2, List.drop_eq_getElem_cons hlt, hxv]
+    simp
+
+theorem code_points_val' {codes : Slice Std.U32} {r : alloc.vec.Vec Std.U32}
+    (h : kernel.core_types.code_points codes = ok r) : r.val = codes.val := by
+  rw [kernel.core_types.code_points] at h
+  rw [code_points_from_val' _ codes 0#usize _ r rfl h]
+  simp [alloc.vec.Vec.with_capacity]
+
+theorem intern_n_node_of_estore {pers : arena.store.PersTier} {st : arena.monad.AState}
+    {v : arena.store.NNodeView} {r e}
+    (h : arena.store.EStore.intern_name st.store pers v = ok (r, e)) :
+    arena.monad.intern_n_node pers st v = ok (r, { st with store := e }) := by
+  rw [arena.monad.intern_n_node, h]; simp
+
+theorem proj_table_name_str_abs {v : alloc.vec.Vec Std.U32}
+    (h : kernel.core_types.code_points (Array.to_slice arena.env.proj_table_name.S) = ok v) :
+    ConRon.Refine.absString v = "projTable" ∧ ConRon.Refine.StrWF v := by
+  have hv : v.val = [112#u32, 114#u32, 111#u32, 106#u32, 84#u32, 97#u32, 98#u32, 108#u32,
+      101#u32] := by
+    rw [code_points_val' h, Array.val_to_slice, arena.env.proj_table_name.S, Array.make_val]
+  refine ⟨?_, ?_⟩
+  · rw [ConRon.Refine.absString, hv]; rfl
+  · intro c hc; rw [hv] at hc; fin_cases hc <;> decide
+
+/-- `arena::env::proj_table_name` (two name interns on the bare store) against
+`projTableName`. -/
+theorem proj_table_name_ls {pers st lst} (hrel : AStateRel₀ pers st lst)
+    (hinv : AStateInv pers st) (t : arena.handle.NIdx) :
+    LSS pers (fun a b => b = absNIdx a) (arena.env.proj_table_name pers st.store t) st lst
+      (projTableName (absNIdx t)) := by
+  intro o s' hm
+  rw [arena.env.proj_table_name] at hm
+  obtain ⟨n, hn, hm⟩ := ConRon.Refine.bind_eq_ok_iff.mp hm
+  obtain ⟨sl, hsl, hm⟩ := ConRon.Refine.bind_eq_ok_iff.mp hm
+  obtain ⟨v, hv, hm⟩ := ConRon.Refine.bind_eq_ok_iff.mp hm
+  obtain ⟨⟨r1, ar1⟩, h1, hm⟩ := ConRon.Refine.bind_eq_ok_iff.mp hm
+  simp only [lift, Result.ok.injEq] at hsl
+  subst hsl
+  have hnt : n = t := dupId_nidx _ _ hn
+  subst hnt
+  obtain ⟨hstr, hwf⟩ := proj_table_name_str_abs hv
+  have sim1 := intern_n_node_run₀ hrel hinv _ (by exact hwf) (intern_n_node_of_estore h1)
+  have htw : projTableName (absNIdx n)
+      = (Arena.internNNode (absNNodeView (.Str n v)) >>= fun s =>
+          Arena.internNNode (.num s (absU (0#u64)))) := by
+    rw [projTableName, absNNodeView, hstr]; rfl
+  rw [htw]
+  cases r1 with
+  | Err e =>
+    have ho := Result.ok_injective hm
+    cases ho
+    exact errSim_bind sim1
+  | Ok s1 =>
+    obtain ⟨lst1, hx1, hrel1, hinv1⟩ := sim1.apply
+    rw [run_bind_ok hx1]
+    have sim2 := intern_n_node_run₀ (st := { st with store := ar1 }) hrel1 hinv1
+      (.Num s1 0#u64) trivial (intern_n_node_of_estore hm)
+    show LOut pers _ o { st with store := s' } _
+    cases o with
+    | Err e => exact sim2
+    | Ok a =>
+      obtain ⟨lst2, hx2, hrel2, hinv2⟩ := sim2.apply
+      exact ⟨_, lst2, hx2, rfl, hrel2, hinv2⟩
+
+theorem i_proj_table_entry_abs {tbl : arena.env.IProjTable} {i : Std.U64}
+    {ie : arena.env.IProjEntry} (h : arena.env.i_proj_table_entry tbl i = ok ie) :
+    absIProjEntry ie = (absIProjTable tbl).entry (absU i) := by
+  rw [arena.env.i_proj_table_entry] at h
+  obtain ⟨i2, hi2, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
+  have hi2v : i2.val = tbl.bodies.val.length := by
+    simp only [lift, Result.ok.injEq] at hi2; subst hi2
+    simp
+  obtain ⟨body, hbody, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
+  obtain ⟨i4, hi4, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
+  have hi4v : i4.val = tbl.guards.val.length := by
+    simp only [lift, Result.ok.injEq] at hi4; subst hi4
+    simp
+  obtain ⟨fs, hfs, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
+  obtain ⟨n, hn, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
+  obtain ⟨v, hv, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
+  obtain ⟨n1, hn1, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
+  obtain ⟨l, hl, h⟩ := ConRon.Refine.bind_eq_ok_iff.mp h
+  cases Result.ok_injective h
+  rw [dupId_nidx _ _ hn, dupId_nidx _ _ hn1, dupId_lidx _ _ hl]
+  have hvv := nidx_vec_dup_val hv
+  have hb : absEIdx body = (tbl.bodies.val.map absEIdx).toArray.getD i.val default := by
+    split at hbody
+    · rename_i hlt
+      obtain ⟨j, hj, hbody⟩ := ConRon.Refine.bind_eq_ok_iff.mp hbody
+      obtain ⟨e, he, hbody⟩ := ConRon.Refine.bind_eq_ok_iff.mp hbody
+      have hjv : j.val = i.val := by
+        simp only [lift, Result.ok.injEq] at hj; subst hj
+        have hlen := tbl.bodies.property
+        exact ConRon.Refine.ExprOps.u64_cast_usize_val_of_lt (n := tbl.bodies.val.length)
+          hlen (by scalar_tac)
+      obtain ⟨hb, hx⟩ := ExprOps.vecIndexAt he
+      rw [dupId_eidx _ _ hbody]
+      subst hx
+      have : i.val < tbl.bodies.val.length := by scalar_tac
+      simp [Array.getD, this, hjv]
+    · rename_i hge
+      rw [← Result.ok_injective hbody]
+      have : ¬ i.val < tbl.bodies.val.length := by scalar_tac
+      simp [Array.getD, this]; rfl
+  have hg : absLIdx fs = (tbl.guards.val.map absLIdx).getD i.val default := by
+    split at hfs
+    · rename_i hlt
+      obtain ⟨j, hj, hfs⟩ := ConRon.Refine.bind_eq_ok_iff.mp hfs
+      obtain ⟨e, he, hfs⟩ := ConRon.Refine.bind_eq_ok_iff.mp hfs
+      have hjv : j.val = i.val := by
+        simp only [lift, Result.ok.injEq] at hj; subst hj
+        have hlen := tbl.guards.property
+        exact ConRon.Refine.ExprOps.u64_cast_usize_val_of_lt (n := tbl.guards.val.length)
+          hlen (by scalar_tac)
+      obtain ⟨hb, hx⟩ := ExprOps.vecIndexAt he
+      rw [dupId_lidx _ _ hfs]
+      subst hx
+      have : i.val < tbl.guards.val.length := by scalar_tac
+      simp [List.getD, this, hjv]
+    · rename_i hge
+      rw [← Result.ok_injective hfs]
+      have : ¬ i.val < tbl.guards.val.length := by scalar_tac
+      simp [List.getD, this]; rfl
+  simp only [absIProjEntry, absIProjTable, IProjTable.entry, hb, hg, hvv]
+
+/-- `proj_table_name_ls` at a store argument named apart from the state
+(`ifenv_find_proj_ls`'s form): the projection-miss arm of `infer_proj`
+(`infer_proj_miss`) builds the table name on the store the lookup returned. -/
+theorem proj_table_name_at_ls {pers st lst} (hrel : AStateRel₀ pers st lst)
+    (hinv : AStateInv pers st) (s : arena.store.EStore) (hs : st.store = s)
+    (t : arena.handle.NIdx) :
+    LSS pers (fun a b => b = absNIdx a) (arena.env.proj_table_name pers s t) st lst
+      (projTableName (absNIdx t)) := by
+  subst hs; exact proj_table_name_ls hrel hinv t
+
+/-- The projection-table lookup (`ifenv_find_proj`): it interns the table's
+reserved name (`proj_table_name`), then reads the environment.  The Rust store
+argument `s` is named apart from the state `st` the caller rebuilds (`hs`),
+so a second lookup on the store the first one returned matches without
+unifying `?st.store` with a store (region G's form). -/
+@[lockstep] theorem ifenv_find_proj_ls {pers vis st fe lfe lst}
+    (hrel : AStateRel₀ pers st lst) (hinv : AStateInv pers st)
+    (hctx : CoreCtx vis fe lfe) (s : arena.store.EStore) (hs : st.store = s)
+    (t : arena.handle.NIdx) (i : Std.U64) :
+    LSS pers (fun a b => b = Option.map absIProjEntry a)
+      (arena.env.ifenv_find_proj pers vis s fe t i) st lst
+      (lfe.findProj? (absNIdx t) (absU i)) := by
+  subst hs
+  intro o s' hm
+  rw [arena.env.ifenv_find_proj] at hm
+  obtain ⟨⟨r, ar1⟩, h1, hm⟩ := ConRon.Refine.bind_eq_ok_iff.mp hm
+  have sim1 := proj_table_name_ls hrel hinv t r ar1 h1
+  show LOut pers _ o _ ((projTableName (absNIdx t) >>= fun n =>
+      match lfe.find? n with
+      | some (.projInfo tbl) =>
+        pure (if absU i < tbl.numFields then some (tbl.entry (absU i)) else none)
+      | _ => pure none).run lst)
+  cases r with
+  | Err e =>
+    cases Result.ok_injective hm
+    exact errSim_bind sim1
+  | Ok tn =>
+    obtain ⟨b, lst1, hx1, hb, hrel1, hinv1⟩ := sim1
+    subst hb
+    rw [run_bind_ok hx1]
+    obtain ⟨oc, hoc, hm⟩ := ConRon.Refine.bind_eq_ok_iff.mp hm
+    rw [← ifenv_find_abs hctx hoc]
+    cases oc with
+    | none =>
+      simp only at hm
+      cases Result.ok_injective hm
+      exact ⟨_, lst1, rfl, rfl, hrel1, hinv1⟩
+    | some ci =>
+      cases ci with
+      | ProjInfo tbl =>
+        simp only at hm
+        simp only [Option.map_some, absIConstantInfo]
+        split at hm
+        · rename_i hlt
+          obtain ⟨ie, hie, hm⟩ := ConRon.Refine.bind_eq_ok_iff.mp hm
+          cases Result.ok_injective hm
+          have hlt' : absU i < (absIProjTable tbl).numFields := by
+            simp only [absIProjTable, absU]; exact hlt
+          refine ⟨_, lst1, rfl, ?_, hrel1, hinv1⟩
+          dsimp only
+          rw [ite_eq_left hlt', Option.map_some, i_proj_table_entry_abs hie]
+        · rename_i hge
+          cases Result.ok_injective hm
+          have hge' : ¬ absU i < (absIProjTable tbl).numFields := by
+            simp only [absIProjTable, absU]; exact hge
+          refine ⟨_, lst1, rfl, ?_, hrel1, hinv1⟩
+          dsimp only
+          rw [ite_eq_right hge']; rfl
+      | _ =>
+        simp only at hm
+        cases Result.ok_injective hm
+        exact ⟨_, lst1, rfl, rfl, hrel1, hinv1⟩
+
+end ConRon.Refine2.Lockstep
+
+/-! The region's `lockstep_simp` rules, registered `scoped` (task #97-P5-Core
+round 5): active under `open scoped ConRon.Refine2.Lockstep.CoreLSReg` only, so that they
+stay out of the other tiers' `lockstep` runs (the Checker lane imports the
+knot since task #97-T2-LOCKSTEP lane Checker DeclCheck). -/
+namespace ConRon.Refine2.Lockstep.CoreLSReg
+open Aeneas Aeneas.Std Result
+open ConRon.Generated
+open ConRon.Arena ConRon.Refine2
+attribute [scoped lockstep_simp] core_walk_fuel_val etag_const_abs etag_lit_abs
+  etag_fvar_abs Option.some.injEq forall_eq' ConRon.Refine.LiteralWF
+  IConstantInfoWF absIProjEntry absIConstantInfo
+end ConRon.Refine2.Lockstep.CoreLSReg

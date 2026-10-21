@@ -5,7 +5,7 @@ public import Std.Sync.Mutex
 /- `withPtrEq` is `public` but not `@[expose]`; `sameB_eq` below needs
 its body (it is *defined* as `k ()`).  `import all` makes it visible in
 this module only. -/
-import all Init.Util
+public import ConLeche.Util.PtrEq
 
 /-!
 # The rounds parse driver: owner threads (task #329)
@@ -101,7 +101,7 @@ the type's own lawful comparison (for the finished tables, entry by
 entry with the kernel's pointer-first equalities, `Prior`'s
 `LawfulBEq`; for bytes, `memcmp`). -/
 @[inline] def sameB {α : Type} [BEq α] [LawfulBEq α] (a b : α) : Bool :=
-  withPtrEq a b (fun _ => a == b) (fun h => by simp [h])
+  ConLeche.withPtrEq a b (fun _ => a == b) (fun h => by simp [h])
 
 theorem sameB_eq {α : Type} [BEq α] [LawfulBEq α] (a b : α) : sameB a b = (a == b) := by rfl
 

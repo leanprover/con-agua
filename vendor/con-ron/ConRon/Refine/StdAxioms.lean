@@ -1,0 +1,589 @@
+import ConRon.Refine.CoreKBase
+import ConRon.Refine.BasisNames
+import ConLeche.Kernel.StdAxioms
+import ConLeche.Kernel.DeclCheck
+
+/-! # `kernel::std_axioms` — the two recognized standard axioms (task #56)
+
+`CORE_PLAN.md` step 7.  `crates/con-ron-core/src/kernel/std_axioms.rs` is
+`ConLeche/Kernel/StdAxioms.lean`: the pinned names and the pins written with `Basis/Builder.lean`'s DSL.
+
+## The pins are plain values (task #119)
+
+Until con-leche's task #342 the pins were written twice — raw, and annotated
+by `#annotate_basis`/`#annotate_pins` — and the port compared against the raw
+one through `matchesPin`'s `erasePw`.  A binder carries no datum any more, so
+`iffA` … `choiceA` are hand-written with the builder and the port's
+`iff_a` … `choice_a` refine them directly.
+
+## What is stated against what
+
+* A **pin builder** gets a closed equality in the style of
+  `Refine/BasisTables.lean`: `absConstantInfo <the port's pin> = <the
+  con-leche pin>`, with the hereditary `ConstantInfoWF` beside it.  Nothing is
+  hypothesised; the pins are closed terms on both sides.
+* A **pinned name** gets `Refine/BasisNames.lean`'s shape
+  (`absName n = ConLeche.iffName ∧ NameWF n`), through `CoreKBase`'s
+  `str_lit_step`.
+* A **guard** (`iff_pinned`, …, `std_axiom_ok`) is a pure `bool`, so it gets
+  exactness: the Rust `Bool` *is* the cited Lean `Bool`, at the con-leche
+  spelling, i.e. the guard is literally the cited
+  `match` of `stdAxiomOkF`.  The hypotheses are `CoreKBase`'s `FindAgree`/
+  `FindWF` rather than the full `FEnv.FEnvRel`/`FEnv.FEnvWF` (the module reads
+  the index only through `fenv::find`), with `std_axiom_ok_refines_of_rel` the
+  bridge the tier consumes.
+* **The environment is the index** (task #18 deviation 3): `stdAxiomOk (env)`
+  and `stdAxiomOkF (fe)` are one Rust function, so the statement is against the
+  `F`-twin.  `stdAxiomOkF_eq` re-spells that definition's five conjuncts the way
+  the six guard lemmas spell them and is `rfl`; it is needed because the *same*
+  `match`, written in two modules, elaborates to two `match` auxiliaries, which
+  `rw` will not see through.
+
+Two things this file adds that belong elsewhere, each marked in place:
+`wf_kind_inv` and its nine wrappers (**to be moved to `Refine/Expr.lean`** beside
+the three the deleted `Refine/CoreKGuards.lean` had — the lockstep descent cases on the *second*
+term's kind, so it needs the inversion at every kind), and the eleven `bb_*`
+builder steps above (`kernel::basis_builder` is a module of its own).
+
+## The `Basis/Builder.lean` DSL, locally
+
+`kernel::basis_builder` is not this file's module, and no sibling file may be
+imported, so the thirteen builder steps this module needs are proved here under
+descriptive names (`bb_*`).  **To be unified into `Refine/BasisBuilder.lean`**
+when one exists.  They also record task #24's deviation 2: `pi`/`piI`/`piA` are
+one Rust function and `lm`/`lmI` another, because `Expr` carries no binder
+name, so each `bb_*` step concludes the *node* (`.forallE ty b`) and
+`BasisDSL_pi_eq`/`BasisDSL_lm_eq` say that node is every one of the cited
+spellings.
+
+## What is not this file's
+
+`kernel::basis_pins::eq_basis_pinned` — the `decide (fe.find? eqName = some
+eqA)` conjunct of `stdAxiomOk`'s `propext` arm — is `kernel/basis_pins.rs`, a
+different module (task #24's three stubs).  Its refinement is named here as
+`EqBasisPinned` and carried as a hypothesis by `std_axiom_ok_refines`, so the
+dependency is visible in every downstream lemma and `Refine/BasisPins.lean`
+discharges it in one place.
+
+`sorry` count in this file: 0.
+-/
+open Aeneas Aeneas.Std Result
+open ConRon.Generated ConRon.Generated.kernel
+
+namespace ConRon.Refine.StdAxioms
+
+/-! ## The builder, refined
+
+`ConLeche/Kernel/Basis/Builder.lean`.  Every helper is "a `def` whose body is a
+single `Expr` constructor application", so every step is one smart-constructor
+refinement plus its `ExprWF` constructor. -/
+
+/-- `Basis/Builder.lean:63-64 BasisDSL.bv` — `basis_builder::bv`. -/
+theorem bb_bv {i : Std.U64} {e : expr.Expr} (h : basis_builder.bv i = ok e) :
+    absExpr e = .bvar i.val ∧ ExprWF e := by
+  rw [basis_builder.bv] at h
+  exact ⟨Expr.bvar_refines h, Expr.bvar_wf h⟩
+
+/-- `Basis/Builder.lean:66-67 BasisDSL.srt` — `basis_builder::srt`. -/
+theorem bb_srt {u : level.Level} {e : expr.Expr} (hu : LevelWF u)
+    (h : basis_builder.srt u = ok e) : absExpr e = .sort (absLevel u) ∧ ExprWF e := by
+  rw [basis_builder.srt] at h
+  exact ⟨Expr.sort_refines h, Expr.sort_wf hu h⟩
+
+/-- `Basis/Builder.lean:69-70 BasisDSL.prop` — `basis_builder::prop`. -/
+theorem bb_prop {e : expr.Expr} (h : basis_builder.prop = ok e) :
+    absExpr e = ConLeche.BasisDSL.prop ∧ ExprWF e := by
+  rw [basis_builder.prop] at h
+  simp only [bind_eq_ok_iff] at h
+  obtain ⟨u, hu, hs⟩ := h
+  exact ⟨by rw [Expr.sort_refines hs, Level.zero_refines hu]; rfl,
+    Expr.sort_wf (Level.zero_wf hu) hs⟩
+
+/-- `Basis/Builder.lean:75-76 BasisDSL.cnst` — `basis_builder::cnst`.  The
+Lean's `us := []` default is spelled at every call site in the port. -/
+theorem bb_cnst {n : name.Name} {us : alloc.vec.Vec level.Level} {e : expr.Expr}
+    (hn : NameWF n) (hus : LevelsWF us) (h : basis_builder.cnst n us = ok e) :
+    absExpr e = .const (absName n) (absLevels us) ∧ ExprWF e := by
+  rw [basis_builder.cnst] at h
+  exact ⟨Expr.mk_const_refines h, Expr.mk_const_wf hn hus h⟩
+
+/-- `Basis/Builder.lean:85-97 BasisDSL.pi`/`piI`/`piA` — `basis_builder::pi`
+(one Rust function for all three; see `BasisDSL_pi_eq`). -/
+theorem bb_pi {ty b e : expr.Expr} (hty : ExprWF ty) (hb : ExprWF b)
+    (h : basis_builder.pi ty b = ok e) :
+    absExpr e = .forallE (absExpr ty) (absExpr b) ∧ ExprWF e := by
+  rw [basis_builder.pi] at h
+  exact ⟨Expr.forall_e_refines h, Expr.forall_e_wf hty hb h⟩
+
+/-- `Basis/Builder.lean:108-109 BasisDSL.ap2` — `basis_builder::ap2`. -/
+theorem bb_ap2 {f a b e : expr.Expr} (hf : ExprWF f) (ha : ExprWF a) (hb : ExprWF b)
+    (h : basis_builder.ap2 f a b = ok e) :
+    absExpr e = .app (.app (absExpr f) (absExpr a)) (absExpr b) ∧ ExprWF e := by
+  rw [basis_builder.ap2] at h
+  simp only [bind_eq_ok_iff] at h
+  obtain ⟨x, hx, hy⟩ := h
+  exact ⟨by rw [Expr.app_refines hy, Expr.app_refines hx],
+    Expr.app_wf (Expr.app_wf hf ha hx) hb hy⟩
+
+/-- `Basis/Builder.lean:111-112 BasisDSL.ap3` — `basis_builder::ap3`. -/
+theorem bb_ap3 {f a b c e : expr.Expr} (hf : ExprWF f) (ha : ExprWF a) (hb : ExprWF b)
+    (hc : ExprWF c) (h : basis_builder.ap3 f a b c = ok e) :
+    absExpr e = .app (.app (.app (absExpr f) (absExpr a)) (absExpr b)) (absExpr c) ∧
+      ExprWF e := by
+  rw [basis_builder.ap3] at h
+  simp only [bind_eq_ok_iff] at h
+  obtain ⟨x, hx, hy⟩ := h
+  obtain ⟨hxa, hxw⟩ := bb_ap2 hf ha hb hx
+  exact ⟨by rw [Expr.app_refines hy, hxa], Expr.app_wf hxw hc hy⟩
+
+/-- `Basis/Builder.lean:114-115 BasisDSL.ap4` — `basis_builder::ap4`. -/
+theorem bb_ap4 {f a b c d e : expr.Expr} (hf : ExprWF f) (ha : ExprWF a) (hb : ExprWF b)
+    (hc : ExprWF c) (hd : ExprWF d) (h : basis_builder.ap4 f a b c d = ok e) :
+    absExpr e =
+        .app (.app (.app (.app (absExpr f) (absExpr a)) (absExpr b)) (absExpr c))
+          (absExpr d) ∧ ExprWF e := by
+  rw [basis_builder.ap4] at h
+  simp only [bind_eq_ok_iff] at h
+  obtain ⟨x, hx, hy⟩ := h
+  obtain ⟨hxa, hxw⟩ := bb_ap3 hf ha hb hc hx
+  exact ⟨by rw [Expr.app_refines hy, hxa], Expr.app_wf hxw hd hy⟩
+
+/-- `Basis/Builder.lean:44-45 BasisDSL.uN` — `basis_builder::u_n`. -/
+theorem bb_u_n {n : name.Name} (h : basis_builder.u_n = ok n) :
+    absName n = ConLeche.BasisDSL.uN ∧ NameWF n := by
+  rw [basis_builder.u_n] at h
+  simp only [basis_builder.bn, bind_eq_ok_iff] at h
+  obtain ⟨s, hs, v, hv, a, ha, hmk⟩ := h
+  obtain ⟨h1, h1wf⟩ := str_lit_step (Name.anonymous_wf ha) hs hv hmk
+    (L := [117#u32]) (by simp [basis_builder.u_n.S]) (by decide)
+  exact ⟨by rw [h1, Name.anonymous_refines ha]; rfl, h1wf⟩
+
+/-- `Basis/Builder.lean:47-48 BasisDSL.u` — `basis_builder::u`. -/
+theorem bb_u {u : level.Level} (h : basis_builder.u = ok u) :
+    absLevel u = ConLeche.BasisDSL.u ∧ LevelWF u := by
+  rw [basis_builder.u] at h
+  simp only [bind_eq_ok_iff] at h
+  obtain ⟨n, hn, hp⟩ := h
+  obtain ⟨h1, h1wf⟩ := bb_u_n hn
+  exact ⟨by rw [Level.param_refines hp, h1]; rfl, Level.param_wf h1wf hp⟩
+
+/-! ## The pinned names (`StdAxioms.lean:38-69`)
+
+`Refine/BasisNames.lean`'s shape exactly: unfold, split the two-or-three-bind
+`do` chain, hand the pieces to `CoreKBase`'s `str_lit_step`. -/
+
+/-- `ConLeche/Kernel/StdAxioms.lean:38-39 propextName` —
+`std_axioms::propext_name` refines `propextName`. -/
+theorem propext_name_refines {n : name.Name} (h : std_axioms.propext_name = ok n) :
+    absName n = ConLeche.propextName ∧ NameWF n := by
+  rw [std_axioms.propext_name] at h
+  simp only [bind_eq_ok_iff] at h
+  obtain ⟨a, ha, s, hs, v, hv, hmk⟩ := h
+  obtain ⟨h1, h1wf⟩ := str_lit_step (Name.anonymous_wf ha) hs hv hmk
+    (L := [112#u32, 114#u32, 111#u32, 112#u32, 101#u32, 120#u32, 116#u32])
+    (by simp [std_axioms.propext_name.S]) (by decide)
+  exact ⟨by rw [h1, Name.anonymous_refines ha]; rfl, h1wf⟩
+
+/-- `ConLeche/Kernel/StdAxioms.lean:41-42 choiceName` —
+`std_axioms::choice_name` refines `choiceName`. -/
+theorem choice_name_refines {n : name.Name} (h : std_axioms.choice_name = ok n) :
+    absName n = ConLeche.choiceName ∧ NameWF n := by
+  rw [std_axioms.choice_name] at h
+  simp only [bind_eq_ok_iff] at h
+  obtain ⟨a, ha, s, hs, v, hv, n1, hn1, s1, hs1, v1, hv1, hmk⟩ := h
+  obtain ⟨e1, w1⟩ := str_lit_step (Name.anonymous_wf ha) hs hv hn1
+    (L := [67#u32, 108#u32, 97#u32, 115#u32, 115#u32, 105#u32, 99#u32, 97#u32, 108#u32])
+    (by simp [std_axioms.choice_name.S]) (by decide)
+  obtain ⟨e2, w2⟩ := str_lit_step w1 hs1 hv1 hmk
+    (L := [99#u32, 104#u32, 111#u32, 105#u32, 99#u32, 101#u32])
+    (by simp [std_axioms.choice_name.S_1]) (by decide)
+  exact ⟨by rw [e2, e1, Name.anonymous_refines ha]; rfl, w2⟩
+
+/-- `ConLeche/Kernel/StdAxioms.lean:53-54 iffName` — `std_axioms::iff_name`. -/
+theorem iff_name_refines {n : name.Name} (h : std_axioms.iff_name = ok n) :
+    absName n = ConLeche.iffName ∧ NameWF n := by
+  rw [std_axioms.iff_name] at h
+  simp only [bind_eq_ok_iff] at h
+  obtain ⟨a, ha, s, hs, v, hv, hmk⟩ := h
+  obtain ⟨h1, h1wf⟩ := str_lit_step (Name.anonymous_wf ha) hs hv hmk
+    (L := [73#u32, 102#u32, 102#u32]) (by simp [std_axioms.iff_name.S]) (by decide)
+  exact ⟨by rw [h1, Name.anonymous_refines ha]; rfl, h1wf⟩
+
+/-- `ConLeche/Kernel/StdAxioms.lean:56-57 iffIntroName` —
+`std_axioms::iff_intro_name`. -/
+theorem iff_intro_name_refines {n : name.Name} (h : std_axioms.iff_intro_name = ok n) :
+    absName n = ConLeche.iffIntroName ∧ NameWF n := by
+  rw [std_axioms.iff_intro_name] at h
+  simp only [bind_eq_ok_iff] at h
+  obtain ⟨a, ha, s, hs, v, hv, hmk⟩ := h
+  obtain ⟨hp, hpwf⟩ := iff_name_refines ha
+  obtain ⟨h1, h1wf⟩ := str_lit_step hpwf hs hv hmk
+    (L := [105#u32, 110#u32, 116#u32, 114#u32, 111#u32])
+    (by simp [std_axioms.iff_intro_name.S]) (by decide)
+  exact ⟨by rw [h1, hp]; rfl, h1wf⟩
+
+/-- `ConLeche/Kernel/StdAxioms.lean:59-60 iffRecName` —
+`std_axioms::iff_rec_name`. -/
+theorem iff_rec_name_refines {n : name.Name} (h : std_axioms.iff_rec_name = ok n) :
+    absName n = ConLeche.iffRecName ∧ NameWF n := by
+  rw [std_axioms.iff_rec_name] at h
+  simp only [bind_eq_ok_iff] at h
+  obtain ⟨a, ha, s, hs, v, hv, hmk⟩ := h
+  obtain ⟨hp, hpwf⟩ := iff_name_refines ha
+  obtain ⟨h1, h1wf⟩ := str_lit_step hpwf hs hv hmk
+    (L := [114#u32, 101#u32, 99#u32]) (by simp [std_axioms.iff_rec_name.S]) (by decide)
+  exact ⟨by rw [h1, hp]; rfl, h1wf⟩
+
+/-- `ConLeche/Kernel/StdAxioms.lean:62-63 nonemptyName` —
+`std_axioms::nonempty_name`. -/
+theorem nonempty_name_refines {n : name.Name} (h : std_axioms.nonempty_name = ok n) :
+    absName n = ConLeche.nonemptyName ∧ NameWF n := by
+  rw [std_axioms.nonempty_name] at h
+  simp only [bind_eq_ok_iff] at h
+  obtain ⟨a, ha, s, hs, v, hv, hmk⟩ := h
+  obtain ⟨h1, h1wf⟩ := str_lit_step (Name.anonymous_wf ha) hs hv hmk
+    (L := [78#u32, 111#u32, 110#u32, 101#u32, 109#u32, 112#u32, 116#u32, 121#u32])
+    (by simp [std_axioms.nonempty_name.S]) (by decide)
+  exact ⟨by rw [h1, Name.anonymous_refines ha]; rfl, h1wf⟩
+
+/-- `ConLeche/Kernel/StdAxioms.lean:65-66 nonemptyIntroName` —
+`std_axioms::nonempty_intro_name`. -/
+theorem nonempty_intro_name_refines {n : name.Name}
+    (h : std_axioms.nonempty_intro_name = ok n) :
+    absName n = ConLeche.nonemptyIntroName ∧ NameWF n := by
+  rw [std_axioms.nonempty_intro_name] at h
+  simp only [bind_eq_ok_iff] at h
+  obtain ⟨a, ha, s, hs, v, hv, hmk⟩ := h
+  obtain ⟨hp, hpwf⟩ := nonempty_name_refines ha
+  obtain ⟨h1, h1wf⟩ := str_lit_step hpwf hs hv hmk
+    (L := [105#u32, 110#u32, 116#u32, 114#u32, 111#u32])
+    (by simp [std_axioms.nonempty_intro_name.S]) (by decide)
+  exact ⟨by rw [h1, hp]; rfl, h1wf⟩
+
+/-- `ConLeche/Kernel/StdAxioms.lean:68-69 nonemptyRecName` —
+`std_axioms::nonempty_rec_name`. -/
+theorem nonempty_rec_name_refines {n : name.Name}
+    (h : std_axioms.nonempty_rec_name = ok n) :
+    absName n = ConLeche.nonemptyRecName ∧ NameWF n := by
+  rw [std_axioms.nonempty_rec_name] at h
+  simp only [bind_eq_ok_iff] at h
+  obtain ⟨a, ha, s, hs, v, hv, hmk⟩ := h
+  obtain ⟨hp, hpwf⟩ := nonempty_name_refines ha
+  obtain ⟨h1, h1wf⟩ := str_lit_step hpwf hs hv hmk
+    (L := [114#u32, 101#u32, 99#u32])
+    (by simp [std_axioms.nonempty_rec_name.S]) (by decide)
+  exact ⟨by rw [h1, hp]; rfl, h1wf⟩
+
+/-! ## `Vec` plumbing for the pins
+
+The pins build their `levelParams` and universe-argument lists with a
+`Vec::push` onto `Vec::new` (task #18's point 10: the Aeneas subset has no list
+literal), and the empty list is `Vec::new` itself. -/
+
+/-- The empty `Vec<Name>` a level-parameter-free pin carries. -/
+theorem names_new : absNames (alloc.vec.Vec.new name.Name) = [] ∧
+    NamesWF (alloc.vec.Vec.new name.Name) := by
+  refine ⟨by simp [absNames, alloc.vec.Vec.new], ?_⟩
+  intro x hx; simp [alloc.vec.Vec.new] at hx
+
+/-- The empty `Vec<Level>` a `cnst n []` carries. -/
+theorem levels_new : absLevels (alloc.vec.Vec.new level.Level) = [] ∧
+    LevelsWF (alloc.vec.Vec.new level.Level) := by
+  refine ⟨by simp [absLevels, alloc.vec.Vec.new], ?_⟩
+  intro x hx; simp [alloc.vec.Vec.new] at hx
+
+/-- A one-element `Vec<Name>` (`[uN]`, every universe-taking pin's
+`levelParams`). -/
+theorem names_singleton {v : alloc.vec.Vec name.Name} {n : name.Name} (hn : NameWF n)
+    (h : alloc.vec.Vec.push (alloc.vec.Vec.new name.Name) n = ok v) :
+    absNames v = [absName n] ∧ NamesWF v := by
+  have hval : v.val = [n] := by rw [vec_push_val h]; simp [alloc.vec.Vec.new]
+  refine ⟨by rw [absNames, hval]; simp, ?_⟩
+  intro x hx
+  rw [hval] at hx
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
+  rcases hx with rfl
+  exact hn
+
+/-- A one-element `Vec<Level>` (`[u]`, every universe-taking pin's constant
+arguments). -/
+theorem levels_singleton {v : alloc.vec.Vec level.Level} {u : level.Level}
+    (hu : LevelWF u)
+    (h : alloc.vec.Vec.push (alloc.vec.Vec.new level.Level) u = ok v) :
+    absLevels v = [absLevel u] ∧ LevelsWF v := by
+  have hval : v.val = [u] := by rw [vec_push_val h]; simp [alloc.vec.Vec.new]
+  refine ⟨by rw [absLevels, hval]; simp, ?_⟩
+  intro x hx
+  rw [hval] at hx
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
+  rcases hx with rfl
+  exact hu
+
+/-! ## The pins (`StdAxioms.lean:93-166`)
+
+Each is a closed equality in the style of `Refine/BasisTables.lean`: what the
+port builds *is* the con-leche pin, with the hereditary `*WF` beside it.  The
+pins are plain values since task #119. -/
+
+/-- `ConLeche/Kernel/StdAxioms.lean` `iffA` — `std_axioms::iff_a` refines `iffA`. Deviation: `IndCaps`' `{}` is `env::ind_caps_default`. -/
+theorem iff_a_refines {ci : env.ConstantInfo} (h : std_axioms.iff_a = ok ci) :
+    absConstantInfo ci = ConLeche.iffA ∧ ConstantInfoWF ci := by
+  rw [std_axioms.iff_a] at h
+  simp only [bind_eq_ok_iff, Result.ok.injEq] at h
+  obtain ⟨n, hn, e, he, e1, he1, e2, he2, ic, hic, rfl⟩ := h
+  obtain ⟨na, nw⟩ := iff_name_refines hn
+  obtain ⟨pa, pw⟩ := bb_prop he
+  obtain ⟨a1, w1⟩ := bb_pi pw pw he1
+  obtain ⟨a2, w2⟩ := bb_pi pw w1 he2
+  refine ⟨?_, ⟨nw, names_new.2, w2⟩, Env.ind_caps_default_wf hic⟩
+  rw [absConstantInfo, absConstantVal, na, a2, a1, pa, names_new.1,
+    Env.ind_caps_default_refines hic]
+  rfl
+
+/-- `ConLeche/Kernel/StdAxioms.lean` `iffIntroA` — `std_axioms::iff_intro_a` refines `iffIntroA`, at the pinned arity `2 2`. -/
+theorem iff_intro_a_refines {ci : env.ConstantInfo}
+    (h : std_axioms.iff_intro_a = ok ci) :
+    absConstantInfo ci = ConLeche.iffIntroA ∧ ConstantInfoWF ci := by
+  rw [std_axioms.iff_intro_a] at h
+  simp only [bind_eq_ok_iff, Result.ok.injEq] at h
+  obtain ⟨n, hn, e, he, e1, he1, e2, he2, e3, he3, e4, he4, n1, hn1, e5, he5,
+    e6, he6, e7, he7, e8, he8, e9, he9, e10, he10, e11, he11, rfl⟩ := h
+  obtain ⟨na, nw⟩ := iff_intro_name_refines hn
+  obtain ⟨pa, pw⟩ := bb_prop he
+  obtain ⟨a1, w1⟩ := bb_bv he1
+  obtain ⟨a2, w2⟩ := bb_pi w1 w1 he2
+  obtain ⟨a3, w3⟩ := bb_bv he3
+  obtain ⟨a4, w4⟩ := bb_pi w1 w3 he4
+  obtain ⟨na1, nw1⟩ := iff_name_refines hn1
+  obtain ⟨a5, w5⟩ := bb_cnst nw1 levels_new.2 he5
+  obtain ⟨a6, w6⟩ := bb_bv he6
+  obtain ⟨a7, w7⟩ := bb_ap2 w5 w3 w6 he7
+  obtain ⟨a8, w8⟩ := bb_pi w4 w7 he8
+  obtain ⟨a9, w9⟩ := bb_pi w2 w8 he9
+  obtain ⟨a10, w10⟩ := bb_pi pw w9 he10
+  obtain ⟨a11, w11⟩ := bb_pi pw w10 he11
+  refine ⟨?_, nw, names_new.2, w11⟩
+  rw [absConstantInfo, absConstantVal, na, a11, a10, a9, a8, a7, a6, a5, a4, a3,
+    a2, a1, pa, na1, levels_new.1, names_new.1]
+  rfl
+
+/-- `ConLeche/Kernel/StdAxioms.lean:231-236 iffRecIntro` —
+`std_axioms::iff_rec_intro` refines `iffRecIntro`, `Iff.rec`'s minor premise in
+the `a`/`b`/`motive` binder context. -/
+theorem iff_rec_intro_refines {e : expr.Expr} (h : std_axioms.iff_rec_intro = ok e) :
+    absExpr e = ConLeche.iffRecIntro ∧ ExprWF e := by
+  rw [std_axioms.iff_rec_intro] at h
+  simp only [bind_eq_ok_iff] at h
+  obtain ⟨e0, he0, e1, he1, e2, he2, e3, he3, n, hn, e4, he4, e5, he5, e6, he6,
+    e7, he7, e8, he8, e9, he9, e10, he10, hlast⟩ := h
+  obtain ⟨a0, w0⟩ := bb_bv he0
+  obtain ⟨a1, w1⟩ := bb_pi w0 w0 he1
+  obtain ⟨a2, w2⟩ := bb_bv he2
+  obtain ⟨a3, w3⟩ := bb_pi w0 w2 he3
+  obtain ⟨na, nw⟩ := iff_intro_name_refines hn
+  obtain ⟨a4, w4⟩ := bb_cnst nw levels_new.2 he4
+  obtain ⟨a5, w5⟩ := bb_bv he5
+  obtain ⟨a6, w6⟩ := bb_bv he6
+  obtain ⟨a7, w7⟩ := bb_bv he7
+  obtain ⟨a8, w8⟩ := bb_ap4 w4 w2 w5 w6 w7 he8
+  obtain ⟨a10, w10⟩ := bb_pi w3 (Expr.app_wf w0 w8 he9) he10
+  obtain ⟨alast, wlast⟩ := bb_pi w1 w10 hlast
+  refine ⟨?_, wlast⟩
+  rw [alast, a10, Expr.app_refines he9, a8, a7, a6, a5, a4, a3, a2, a1, a0, na,
+    levels_new.1]
+  rfl
+
+/-- `ConLeche/Kernel/StdAxioms.lean` `iffRecA` — `std_axioms::iff_rec_a` refines `iffRecA`, at the pinned arity `4 4` and
+with no reduction rules. -/
+theorem iff_rec_a_refines {ci : env.ConstantInfo}
+    (h : std_axioms.iff_rec_a = ok ci) :
+    absConstantInfo ci = ConLeche.iffRecA ∧ ConstantInfoWF ci := by
+  rw [std_axioms.iff_rec_a] at h
+  simp only [bind_eq_ok_iff, Result.ok.injEq] at h
+  obtain ⟨n, hn, lps, hlps, n1, hn1, e, he, n2, hn2, e1, he1, e2, he2, e3, he3,
+    e4, he4, l, hl, e5, he5, e6, he6, e7, he7, e8, he8, e9, he9, e10, he10,
+    e11, he11, e12, he12, e13, he13, e14, he14, e15, he15, e16, he16,
+    e17, he17, rfl⟩ := h
+  obtain ⟨ua, uw⟩ := bb_u_n hn
+  obtain ⟨la, lw⟩ := names_singleton uw hlps
+  obtain ⟨na, nw⟩ := iff_rec_name_refines hn1
+  obtain ⟨pa, pw⟩ := bb_prop he
+  obtain ⟨n2a, n2w⟩ := iff_name_refines hn2
+  obtain ⟨a1, w1⟩ := bb_cnst n2w levels_new.2 he1
+  obtain ⟨a2, w2⟩ := bb_bv he2
+  obtain ⟨a3, w3⟩ := bb_bv he3
+  obtain ⟨a4, w4⟩ := bb_ap2 w1 w2 w3 he4
+  obtain ⟨lva, lvw⟩ := bb_u hl
+  obtain ⟨a5, w5⟩ := bb_srt lvw he5
+  obtain ⟨a6, w6⟩ := bb_pi w4 w5 he6
+  obtain ⟨a7, w7⟩ := iff_rec_intro_refines he7
+  obtain ⟨a8, w8⟩ := bb_cnst n2w levels_new.2 he8
+  obtain ⟨a9, w9⟩ := bb_bv he9
+  obtain ⟨a10, w10⟩ := bb_bv he10
+  obtain ⟨a11, w11⟩ := bb_ap2 w8 w9 w10 he11
+  obtain ⟨a13, w13⟩ := bb_pi w11 (Expr.app_wf w10 w3 he12) he13
+  obtain ⟨a14, w14⟩ := bb_pi w7 w13 he14
+  obtain ⟨a15, w15⟩ := bb_pi w6 w14 he15
+  obtain ⟨a16, w16⟩ := bb_pi pw w15 he16
+  obtain ⟨a17, w17⟩ := bb_pi pw w16 he17
+  refine ⟨?_, ⟨nw, lw, w17⟩, ?_⟩
+  · rw [absConstantInfo, absConstantVal, na, la, ua, a17, a16, a15, a14, a13,
+      Expr.app_refines he12, a11, a10, a9, a8, a7, a6, a5, a4, a3, a2, a1, lva,
+      pa, n2a, levels_new.1]
+    simp only [alloc.vec.Vec.new]
+    rfl
+  · intro r hr; simp [alloc.vec.Vec.new] at hr
+
+/-- con-leche: none — `std_axioms::one_level` is the level list `[.succ .zero]`
+the pinned `Eq` of `propextA`'s conclusion carries; Lean writes it inline. -/
+theorem one_level_refines {v : alloc.vec.Vec level.Level}
+    (h : std_axioms.one_level = ok v) :
+    absLevels v = [.succ .zero] ∧ LevelsWF v := by
+  rw [std_axioms.one_level] at h
+  simp only [bind_eq_ok_iff] at h
+  obtain ⟨l, hl, l1, hl1, hpush⟩ := h
+  have hw : LevelWF l1 := Level.succ_wf (Level.zero_wf hl) hl1
+  obtain ⟨a, w⟩ := levels_singleton hw hpush
+  exact ⟨by rw [a, Level.succ_refines hl1, Level.zero_refines hl], w⟩
+
+/-- `ConLeche/Kernel/StdAxioms.lean` `propextA` — `std_axioms::propext_a` refines `propextA`. -/
+theorem propext_a_refines {cv : env.ConstantVal} (h : std_axioms.propext_a = ok cv) :
+    absConstantVal cv = ConLeche.propextA ∧ ConstantValWF cv := by
+  rw [std_axioms.propext_a] at h
+  simp only [bind_eq_ok_iff, Result.ok.injEq] at h
+  obtain ⟨n, hn, e, he, n1, hn1, e1, he1, e2, he2, e3, he3, e4, he4, n2, hn2,
+    vs, hvs, e5, he5, e6, he6, e7, he7, e8, he8, e9, he9, e10, he10, rfl⟩ := h
+  obtain ⟨na, nw⟩ := propext_name_refines hn
+  obtain ⟨pa, pw⟩ := bb_prop he
+  obtain ⟨n1a, n1w⟩ := iff_name_refines hn1
+  obtain ⟨a1, w1⟩ := bb_cnst n1w levels_new.2 he1
+  obtain ⟨a2, w2⟩ := bb_bv he2
+  obtain ⟨a3, w3⟩ := bb_bv he3
+  obtain ⟨a4, w4⟩ := bb_ap2 w1 w2 w3 he4
+  obtain ⟨n2a, n2w⟩ := BasisNames.eq_name_refines hn2
+  obtain ⟨vsa, vsw⟩ := one_level_refines hvs
+  obtain ⟨a5, w5⟩ := bb_cnst n2w vsw he5
+  obtain ⟨a6, w6⟩ := bb_bv he6
+  obtain ⟨a7, w7⟩ := bb_ap3 w5 pw w6 w2 he7
+  obtain ⟨a8, w8⟩ := bb_pi w4 w7 he8
+  obtain ⟨a9, w9⟩ := bb_pi pw w8 he9
+  obtain ⟨a10, w10⟩ := bb_pi pw w9 he10
+  refine ⟨?_, nw, names_new.2, w10⟩
+  rw [absConstantVal, na, a10, a9, a8, a7, a6, a5, a4, a3, a2, a1, pa, n1a, n2a,
+    vsa, levels_new.1, names_new.1]
+  rfl
+
+/-- `ConLeche/Kernel/StdAxioms.lean` `nonemptyA` — `std_axioms::nonempty_a` refines `nonemptyA`. -/
+theorem nonempty_a_refines {ci : env.ConstantInfo}
+    (h : std_axioms.nonempty_a = ok ci) :
+    absConstantInfo ci = ConLeche.nonemptyA ∧ ConstantInfoWF ci := by
+  rw [std_axioms.nonempty_a] at h
+  simp only [bind_eq_ok_iff, Result.ok.injEq] at h
+  obtain ⟨n, hn, lps, hlps, n1, hn1, l, hl, e, he, e1, he1, e2, he2, ic, hic, rfl⟩ := h
+  obtain ⟨ua, uw⟩ := bb_u_n hn
+  obtain ⟨la, lw⟩ := names_singleton uw hlps
+  obtain ⟨na, nw⟩ := nonempty_name_refines hn1
+  obtain ⟨lva, lvw⟩ := bb_u hl
+  obtain ⟨a, w⟩ := bb_srt lvw he
+  obtain ⟨pa, pw⟩ := bb_prop he1
+  obtain ⟨a2, w2⟩ := bb_pi w pw he2
+  refine ⟨?_, ⟨nw, lw, w2⟩, Env.ind_caps_default_wf hic⟩
+  rw [absConstantInfo, absConstantVal, na, la, ua, a2, a, pa, lva,
+    Env.ind_caps_default_refines hic]
+  rfl
+
+/-- `ConLeche/Kernel/StdAxioms.lean` `nonemptyIntroA` — `std_axioms::nonempty_intro_a` refines `nonemptyIntroA`, at arity `1 1`. -/
+theorem nonempty_intro_a_refines {ci : env.ConstantInfo}
+    (h : std_axioms.nonempty_intro_a = ok ci) :
+    absConstantInfo ci = ConLeche.nonemptyIntroA ∧ ConstantInfoWF ci := by
+  rw [std_axioms.nonempty_intro_a] at h
+  simp only [bind_eq_ok_iff, Result.ok.injEq] at h
+  obtain ⟨n, hn, lps, hlps, l, hl, us, hus, n1, hn1, e, he, e1, he1, n2, hn2,
+    e2, he2, e3, he3, e4, he4, e5, he5, e6, he6, rfl⟩ := h
+  obtain ⟨ua, uw⟩ := bb_u_n hn
+  obtain ⟨la, lw⟩ := names_singleton uw hlps
+  obtain ⟨lva, lvw⟩ := bb_u hl
+  obtain ⟨usa, usw⟩ := levels_singleton lvw hus
+  obtain ⟨na, nw⟩ := nonempty_intro_name_refines hn1
+  obtain ⟨a, w⟩ := bb_srt lvw he
+  obtain ⟨a1, w1⟩ := bb_bv he1
+  obtain ⟨n2a, n2w⟩ := nonempty_name_refines hn2
+  obtain ⟨a2, w2⟩ := bb_cnst n2w usw he2
+  obtain ⟨a3, w3⟩ := bb_bv he3
+  obtain ⟨a5, w5⟩ := bb_pi w1 (Expr.app_wf w2 w3 he4) he5
+  obtain ⟨a6, w6⟩ := bb_pi w w5 he6
+  refine ⟨?_, nw, lw, w6⟩
+  rw [absConstantInfo, absConstantVal, na, la, ua, a6, a5, Expr.app_refines he4,
+    a3, a2, a1, a, n2a, usa, lva]
+  rfl
+
+/-- `ConLeche/Kernel/StdAxioms.lean` `nonemptyRecA` — `std_axioms::nonempty_rec_a` refines `nonemptyRecA`, at arity `3 3`, with
+the motive sort pinned to `Prop` (the cited guidance). -/
+theorem nonempty_rec_a_refines {ci : env.ConstantInfo}
+    (h : std_axioms.nonempty_rec_a = ok ci) :
+    absConstantInfo ci = ConLeche.nonemptyRecA ∧ ConstantInfoWF ci := by
+  rw [std_axioms.nonempty_rec_a] at h
+  simp only [bind_eq_ok_iff, Result.ok.injEq] at h
+  obtain ⟨n, hn, lps, hlps, l, hl, us1, hus1, us2, hus2, us3, hus3, n1, hn1,
+    e, he, n2, hn2, e1, he1, e2, he2, e3, he3, e4, he4, e5, he5, e6, he6,
+    n3, hn3, e7, he7, e8, he8, e9, he9, e10, he10, e11, he11, e12, he12,
+    e13, he13, e14, he14, e15, he15, e16, he16, e17, he17, e18, he18, rfl⟩ := h
+  obtain ⟨ua, uw⟩ := bb_u_n hn
+  obtain ⟨la, lw⟩ := names_singleton uw hlps
+  obtain ⟨lva, lvw⟩ := bb_u hl
+  obtain ⟨u1a, u1w⟩ := levels_singleton lvw hus1
+  obtain ⟨u2a, u2w⟩ := levels_singleton lvw hus2
+  obtain ⟨u3a, u3w⟩ := levels_singleton lvw hus3
+  obtain ⟨na, nw⟩ := nonempty_rec_name_refines hn1
+  obtain ⟨a, w⟩ := bb_srt lvw he
+  obtain ⟨n2a, n2w⟩ := nonempty_name_refines hn2
+  obtain ⟨a1, w1⟩ := bb_cnst n2w u1w he1
+  obtain ⟨a2, w2⟩ := bb_bv he2
+  obtain ⟨pa, pw⟩ := bb_prop he4
+  obtain ⟨a5, w5⟩ := bb_pi (Expr.app_wf w1 w2 he3) pw he5
+  obtain ⟨a6, w6⟩ := bb_bv he6
+  obtain ⟨n3a, n3w⟩ := nonempty_intro_name_refines hn3
+  obtain ⟨a7, w7⟩ := bb_cnst n3w u2w he7
+  obtain ⟨a8, w8⟩ := bb_bv he8
+  obtain ⟨a9, w9⟩ := bb_ap2 w7 w8 w2 he9
+  obtain ⟨a11, w11⟩ := bb_pi w6 (Expr.app_wf w6 w9 he10) he11
+  obtain ⟨a12, w12⟩ := bb_cnst n2w u3w he12
+  obtain ⟨a15, w15⟩ :=
+    bb_pi (Expr.app_wf w12 w8 he13) (Expr.app_wf w8 w2 he14) he15
+  obtain ⟨a16, w16⟩ := bb_pi w11 w15 he16
+  obtain ⟨a17, w17⟩ := bb_pi w5 w16 he17
+  obtain ⟨a18, w18⟩ := bb_pi w w17 he18
+  refine ⟨?_, ⟨nw, lw, w18⟩, ?_⟩
+  · rw [absConstantInfo, absConstantVal, na, la, ua, a18, a17, a16, a15,
+      Expr.app_refines he13, Expr.app_refines he14, a12, a11,
+      Expr.app_refines he10, a9, a8, a7, a6, a5, Expr.app_refines he3, a2, a1,
+      pa, a, n2a, n3a, u1a, u2a, u3a, lva]
+    simp only [alloc.vec.Vec.new]
+    rfl
+  · intro r hr; simp [alloc.vec.Vec.new] at hr
+
+/-- `ConLeche/Kernel/StdAxioms.lean` `choiceA` — `std_axioms::choice_a` refines `choiceA`. -/
+theorem choice_a_refines {cv : env.ConstantVal} (h : std_axioms.choice_a = ok cv) :
+    absConstantVal cv = ConLeche.choiceA ∧ ConstantValWF cv := by
+  rw [std_axioms.choice_a] at h
+  simp only [bind_eq_ok_iff, Result.ok.injEq] at h
+  obtain ⟨n, hn, lps, hlps, l, hl, us, hus, n1, hn1, e, he, n2, hn2, e1, he1,
+    e2, he2, e3, he3, e4, he4, e5, he5, e6, he6, rfl⟩ := h
+  obtain ⟨ua, uw⟩ := bb_u_n hn
+  obtain ⟨la, lw⟩ := names_singleton uw hlps
+  obtain ⟨lva, lvw⟩ := bb_u hl
+  obtain ⟨usa, usw⟩ := levels_singleton lvw hus
+  obtain ⟨na, nw⟩ := choice_name_refines hn1
+  obtain ⟨a, w⟩ := bb_srt lvw he
+  obtain ⟨n2a, n2w⟩ := nonempty_name_refines hn2
+  obtain ⟨a1, w1⟩ := bb_cnst n2w usw he1
+  obtain ⟨a2, w2⟩ := bb_bv he2
+  obtain ⟨a4, w4⟩ := bb_bv he4
+  obtain ⟨a5, w5⟩ := bb_pi (Expr.app_wf w1 w2 he3) w4 he5
+  obtain ⟨a6, w6⟩ := bb_pi w w5 he6
+  refine ⟨?_, nw, lw, w6⟩
+  rw [absConstantVal, na, la, ua, a6, a5, a4, Expr.app_refines he3, a2, a1, a,
+    n2a, usa, lva]
+  rfl
+
+end ConRon.Refine.StdAxioms

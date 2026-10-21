@@ -1,0 +1,149 @@
+/-
+# `ConRon.Bridge.Axioms` — the trust census of Theorem 1's spec layer
+
+DESIGN §3.7 / OVERVIEW §8: every closed result of this library must reach
+`[propext, Classical.choice, Quot.sound]` and **nothing else** — in
+particular no `sorryAx` (which is what makes "closed" mean closed) and no
+`…_native.bv_decide.ax_…` (DESIGN `### Task #97a`'s reason for packing the
+handle word with `*`/`/`/`%` instead of `<<<`/`&&&`).
+
+The three standard axioms come in through `Std.HashMap`, `Classical` in
+`Option`'s lemmas and `Quot` in `String`; they are the same three every tier
+of this repository carries.
+
+It prints, not asserts: the gate is reading the output, and a `sorryAx` in any
+line is a failure of the task rather than of the build.
+-/
+import ConRon.Bridge.Specs
+import ConRon.Bridge.SpecsL
+import ConRon.Bridge.ExprOps.Inst1
+import ConRon.Bridge.ExprOps.Leaves
+import ConRon.Bridge.ExprOps.Guards
+
+namespace ConRon.Bridge
+
+/-! ## The store obligations -/
+
+#print axioms EStore.internName_spec
+#print axioms EStore.internLevel_spec
+#print axioms EStore.internLevels_spec
+#print axioms EStore.internBind_spec
+
+/-! ## The denotation calculus -/
+
+#print axioms AM.of_run
+#print axioms denoteE_view_eq
+#print axioms denote_app_inv
+#print axioms EStore.tagOf_of_view
+#print axioms view_of_viewApp
+#print axioms view_of_viewBind
+#print axioms view_forallE_of_viewBind
+#print axioms denoteEView_ext
+#print axioms denoteCI_ext
+
+/-! ## The answer relations -/
+
+
+/-! ## The state invariant -/
+
+#print axioms MemoOK.get
+#print axioms MemoOK.insert
+#print axioms MemoVOK.insert
+#print axioms MemoLOK.insert
+#print axioms MemoLsOK.insert
+#print axioms CacheOK.mono
+#print axioms CacheOK.of_empty
+#print axioms PinsOK.mono
+#print axioms IFEnvOK.mono
+#print axioms IFEnvOK.miss
+#print axioms CheckOK.mono
+
+/-! ## The `@[spec]` layer -/
+
+#print axioms fail_wp
+#print axioms view_spec
+#print axioms derivedE_spec
+#print axioms internE_spec
+#print axioms internAppE_spec
+#print axioms internLamE_spec
+#print axioms internBindE_spec
+#print axioms viewApp_spec
+#print axioms viewBind_spec
+#print axioms readName_spec
+#print axioms readNames_spec
+#print axioms internName_spec
+#print axioms internNNode_spec
+#print axioms internLNode_spec
+#print axioms internLsNode_spec
+#print axioms readLevelM_spec
+#print axioms readNameM_spec
+#print axioms readLevelsM_spec
+#print axioms inst1Get_spec
+#print axioms inst1Set_spec
+#print axioms inst1Clear_spec
+#print axioms instLPClear_spec
+#print axioms bvarBSet_spec
+#print axioms fvarBSet_spec
+#print axioms instListCutoff_spec
+#print axioms internLevel_spec
+#print axioms internLevelList_spec
+#print axioms internLevels_spec
+#print axioms readNamesM_spec
+#print axioms pinAt_spec
+#print axioms pinReserved_spec
+#print axioms pinSortOne_spec
+
+/-! ## The `ExprOps` tier's exemplar: `instantiate1`
+
+The binder arm goes through the intern specs; the `bvar` arm is a theorem of
+its own, where unfolding the answer relation cannot reach any other arm.  The
+whole chain is printed here — the five arm theorems, the dispatcher, the entry
+bracket and the run form — and every one of them must report the three. -/
+
+#print axioms ConRon.Arena.EStore.view_of_find
+#print axioms ConRon.Arena.NStore.view_of_find
+#print axioms ConRon.Arena.LStore.view_of_find
+#print axioms ConRon.Arena.LsStore.view_of_find
+
+#print axioms ExprOps.instantiate1ArmBVar_spec
+#print axioms ExprOps.instantiate1ArmApp_spec
+#print axioms ExprOps.instantiate1ArmBind_spec
+#print axioms ExprOps.instantiate1ArmLet_spec
+#print axioms ExprOps.instantiate1ArmProj_spec
+#print axioms ExprOps.instantiate1Go_spec
+#print axioms ExprOps.instantiate1Fast_spec
+#print axioms ExprOps.instantiate1Fast_run
+
+#print axioms ExprOps.instantiate1_of_bvarBound_le
+#print axioms ExprOps.instantiate1_of_raw_le
+
+/-! ## The `fvar`-leaf group
+
+`fvarLeavesGo_spec` carries con-leche's GRAY invariant
+(`Verify/Cached/GuardsC.lean`'s `SeenInv`), whose "is being processed by an
+ancestor of the current call" needs the store's acyclicity.  It takes
+`StoreWF`'s rank as a second PARAMETER of the invariant rather than as a
+second induction — `SeenOK.of_grow` is the whole argument — and the two
+theorems built on it, `fvarLeavesFast_spec` and `ExprOps/Guards.lean`'s
+`leafGuard_spec`, are printed with it.
+
+These three modules share one import closure, which is why they are printed
+here and the rest of the tier prints in its own files (lakefile's note: two
+modules of the tier that both make `grind` generate the same `match`-auxiliary
+for an `Arena/ExprOps.lean` definition cannot). -/
+
+#print axioms ExprOps.SeenOK.of_grow
+#print axioms ExprOps.SeenGrow.trans
+#print axioms ExprOps.SeenGrow.drop_insert
+#print axioms ExprOps.AccGrow.trans
+#print axioms ExprOps.LeavesEq.app_step
+#print axioms ExprOps.LeavesEq.letE_step
+#print axioms ExprOps.fvarLeavesGo_spec
+#print axioms ExprOps.fvarLeavesFast_spec
+#print axioms ExprOps.leafMem_spec
+#print axioms ExprOps.wscopedBGo_spec
+#print axioms ExprOps.wscopedBFast_spec
+#print axioms ExprOps.leavesSubGo_spec
+#print axioms ExprOps.leafGuard_spec
+
+end ConRon.Bridge
