@@ -19,7 +19,8 @@ each owning a disjoint range of arrays and `CTL` words, each with **one** group 
 | `StateDR` (front, `Front/StateDR.lean`) | the parse state | 64‥66; 67‥95 reserved | 64‥95 reserved | lane `front2` |
 | `CoreR` | `a.caches` | 96‥127 | 96‥127 | stub |
 | `PinsR` | `a.pins` | 128 (`PINS`); 129‥131 reserved | – | filled (lane `pinsenv`) |
-| `EnvR` | a view `vis` of `fe : IFEnv` (an argument) | 132‥136; 137‥143 reserved | 128, 129; 130‥135 reserved | filled (lane `pinsenv`) |
+| `EnvR` | a view `vis` of `fe : IFEnv` (an argument) | 132‥136 | 128 (129: the record top) | filled (lane `pinsenv`) |
+| `PendR` (`Checker.lean`) | `pend` (an argument) | 137 | 130 | lane `pinsenv` |
 | argument relations (`PMemo`, `pend`, saved `ModeMemos`, walk-local memos) | arguments | 144‥191 | 136‥191 | not yet |
 
 `ArenaD = ArenaR ∧ DerR` stays the walks' tier. `CheckR` is the whole relation. A walk changes
@@ -181,7 +182,7 @@ structure EnvR (dn : NIdx → Option ConLeche.Name) (m : Mem) (vis : Word) (fe :
   consts : envConsts dn m = some fe.env.consts
 
 theorem EnvR.congr {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word} {fe : IFEnv}
-    (he : ∀ b : Nat, 132 ≤ b → b < 144 → m'.arr64 b = m.arr64 b)
+    (he : ∀ b : Nat, 132 ≤ b → b < 137 → m'.arr64 b = m.arr64 b)
     (hc : rdW (m'.arr64 CTL) 128 = rdW (m.arr64 CTL) 128) (h : EnvR dn m vis fe) :
     EnvR dn m' vis fe := by
   have hC : ∀ w, rowC m' w = rowC m w := fun w => by
@@ -201,11 +202,13 @@ theorem EnvR.congr {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word
 
 theorem EnvR.frame {dn : NIdx → Option ConLeche.Name} {A : List ArrId} {C : List Word}
     {m m' : Mem} {vis : Word} {fe : IFEnv}
-    (hA : AvoidA 132 144 A) (hC : AvoidC 128 136 C) (hf : MemFrame A C m m') (h : EnvR dn m vis fe) :
+    (hA : AvoidA 132 137 A) (hC : AvoidC 128 129 C) (hf : MemFrame A C m m') (h : EnvR dn m vis fe) :
     EnvR dn m' vis fe :=
   h.congr (fun b h1 h2 => hf.1 b (fun hm => by have := hA _ hm; simp only [ArrId] at this; omega)
     (by simp only [CTL, ArrId]; omega))
     (hf.2.1 128 (fun hm => by have := hC _ hm; simp at this))
+
+
 
 /-! ## The whole relation -/
 
@@ -229,5 +232,24 @@ theorem CheckR.of_walk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
   refine ⟨hD, ?_, ?_, hR.env.frame (.of_lt hA (by decide)) (.of_lt hC (by decide)) hf⟩
   · rw [hc]; exact hR.core.frame (.of_lt hA (by decide)) (.of_lt hC (by decide)) hf
   · rw [hp]; exact hR.pins.frame (.of_lt hA (by decide)) hf
+
+/-- **Every tier but the arena's above a writer**: arrays from 137 and `CTL` words from 130 up
+(the argument relations: pending checks, `PMemo`, the level heap) keep `CheckR`. -/
+theorem CheckR.frame_hi {dn : NIdx → Option ConLeche.Name} {A : List ArrId} {C : List Word}
+    {m m' : Mem} {a : AState} {vis : Word} {fe : IFEnv} (hA : ∀ b ∈ A, 137 ≤ b)
+    (hC : ∀ x ∈ C, 130 ≤ x.toNat) (hf : MemFrame A C m m') (h : CheckR dn m a vis fe) :
+    CheckR dn m' a vis fe := by
+  have hA' : ∀ lo hi, hi ≤ 137 → AvoidA lo hi A := fun lo hi hh b hb => .inr (by
+    have := hA b hb; simp only [ArrId] at this ⊢; omega)
+  have hC' : ∀ lo hi, hi ≤ 130 → AvoidC lo hi C := fun lo hi hh x hx => .inr (by
+    have := hC x hx; omega)
+  refine ⟨⟨?_, ?_⟩, h.core.frame (hA' _ _ (by decide)) (hC' _ _ (by decide)) hf,
+    h.pins.frame (hA' _ _ (by decide)) hf,
+    h.env.frame (hA' _ _ (by decide)) (hC' _ _ (by decide)) hf⟩
+  · exact ArenaR.frame_ext A C (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega)
+      (fun x hx => by have := hC x hx; omega) m m' hf a h.arena.1
+  · exact DerR.frame m m' a h.arena.2 (fun B hB => hf.1 B (fun hm => by
+      have := hA B hm; rcases hB with rfl | rfl | rfl | rfl | rfl <;> revert this <;> decide)
+      (by rcases hB with rfl | rfl | rfl | rfl | rfl <;> decide))
 
 end L.Arena
