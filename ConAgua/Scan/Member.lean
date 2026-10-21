@@ -364,4 +364,44 @@ decreasing_by
 def objListEntryN (item : Word → Word) (b : Array UInt8) (i : Word) : Word :=
   if i < UInt64.ofNat b.size ∧ byteW b i = 91 then objListN item b (i + 1) 0 1 else 0
 
+/-! ### Arms of `objListN` -/
+
+section
+variable (item : Word → Word) (b : Array UInt8) (i cnt w : Word)
+
+theorem objListN_ws (h : i < UInt64.ofNat b.size)
+    (hc : byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13) :
+    objListN item b i cnt w = objListN item b (i + 1) cnt w := by
+  rw [objListN, dif_pos h, if_pos hc]
+theorem objListN_close (h : i < UInt64.ofNat b.size)
+    (hc : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13)) (h1 : byteW b i = 93) :
+    objListN item b i cnt w = if w ≠ 0 ∧ cnt ≠ 0 then 0 else i + 1 := by
+  rw [objListN, dif_pos h, if_neg hc, if_pos h1]
+theorem objListN_comma (h : i < UInt64.ofNat b.size)
+    (hc : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13)) (h1 : byteW b i ≠ 93)
+    (h2 : byteW b i = 44) :
+    objListN item b i cnt w = if w ≠ 0 then 0 else objListN item b (i + 1) cnt 1 := by
+  rw [objListN, dif_pos h, if_neg hc, if_neg h1, if_pos h2]
+theorem objListN_open (h : i < UInt64.ofNat b.size)
+    (hc : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13)) (h1 : byteW b i ≠ 93)
+    (h2 : byteW b i ≠ 44) (h3 : byteW b i = 123) :
+    objListN item b i cnt w =
+      if w = 0 then 0 else if i < item i then objListN item b (item i) (cnt + 1) 0 else 0 := by
+  rw [objListN, dif_pos h, if_neg hc, if_neg h1, if_neg h2, if_pos h3]
+theorem objListN_other (h : i < UInt64.ofNat b.size)
+    (hc : ¬ (byteW b i = 32 ∨ byteW b i = 9 ∨ byteW b i = 13)) (h1 : byteW b i ≠ 93)
+    (h2 : byteW b i ≠ 44) (h3 : byteW b i ≠ 123) : objListN item b i cnt w = 0 := by
+  rw [objListN, dif_pos h, if_neg hc, if_neg h1, if_neg h2, if_neg h3]
+theorem objListN_end (h : ¬ i < UInt64.ofNat b.size) : objListN item b i cnt w = 0 := by
+  rw [objListN, dif_neg h]
+
+grind_pattern [lang_grind] objListN_ws => objListN item b i cnt w, b[i.toNat]
+grind_pattern [lang_grind] objListN_close => objListN item b i cnt w, b[i.toNat]
+grind_pattern [lang_grind] objListN_comma => objListN item b i cnt w, b[i.toNat]
+grind_pattern [lang_grind] objListN_open => objListN item b i cnt w, b[i.toNat]
+grind_pattern [lang_grind] objListN_other => objListN item b i cnt w, b[i.toNat]
+grind_pattern [lang_grind] objListN_end => objListN item b i cnt w
+
+end
+
 end L.Scan.Member
