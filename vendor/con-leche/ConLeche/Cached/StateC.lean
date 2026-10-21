@@ -96,7 +96,23 @@ def etaCtorShapeC (fe : FEnv) (e : Expr) : Bool :=
 
 /-! ## The state -/
 
-/-- Per-declaration state: the memo caches for the five entry points, the lazy caches for
+/-- **The mode-dependent memos** (task #353): the six entry-point
+memos, whose entries are results of the knot at ONE mode.  The level
+memos, the stored-constant caches and the bulk-instantiation memo are
+functions of their keys alone and are not among them.  `CState` holds
+the plain tower's set in its own six fields and the eager tower's set
+in `eagerMemos` (task #361). -/
+structure ModeMemos where
+  whnfCoreC : Std.HashMap Expr Expr := {}
+  whnfCoreCheapC : Std.HashMap Expr Expr := {}
+  whnfC : Std.HashMap Expr Expr := {}
+  inferC : Std.HashMap Expr Expr := {}
+  inferIOC : Std.HashMap Expr Expr := {}
+  defeqC : Std.HashMap (Expr × Expr) Bool := {}
+
+/-- Per-declaration state: the memo caches for the five entry points
+(the plain tower's in their own fields, the eager tower's in
+`eagerMemos`), the lazy caches for
 level-instantiated stored constants, the level-operation memos, and
 the persistent bulk-instantiation memo (task #145). -/
 structure CState where
@@ -125,6 +141,13 @@ structure CState where
   lnzC : Std.HashMap Level Bool := {}
   eqvC : Std.HashMap (Level × Level) Bool := {}
   instC : Std.HashMap (Expr × List Expr × Nat) Expr := {}
+  /-- **The eager tower's mode memos** (task #361): the six entry-point
+  memos of the eager tower (the knot at `mode.toEager`, the `defeqE`
+  slot), stored here between eager comparisons and swapped in for each
+  one (`withEagerMemos`).  Kept for the declaration like the plain
+  ones, and apart from them: an eager entry never serves a plain query,
+  nor the other way round. -/
+  eagerMemos : ModeMemos := {}
 
 instance : Inhabited CState := ⟨{}⟩
 
@@ -317,47 +340,58 @@ def CState.flushed (s : CState) : CState :=
   { s with
       constTyAt := {}, constValAt := {}, ruleRhsAt := {},
       whnfCoreC := {}, whnfCoreCheapC := {}, whnfC := {}, inferC := {}, inferIOC := {},
-      defeqC := {}, instC := {} }
+      defeqC := {}, instC := {}, eagerMemos := {} }
 
 def flushC : CheckCM Unit := modify (·.flushed)
 
-/-- **The mode-dependent memos** (task #353): the six entry-point
-memos, whose entries are results of the knot at ONE mode.  The level
-memos, the stored-constant caches and the bulk-instantiation memo are
-functions of their keys alone and are not among them. -/
-structure ModeMemos where
-  whnfCoreC : Std.HashMap Expr Expr
-  whnfCoreCheapC : Std.HashMap Expr Expr
-  whnfC : Std.HashMap Expr Expr
-  inferC : Std.HashMap Expr Expr
-  inferIOC : Std.HashMap Expr Expr
-  defeqC : Std.HashMap (Expr × Expr) Bool
+/-- The plain tower's mode memos, read out of the state. -/
+def CState.modeMemos (s : CState) : ModeMemos :=
+  ⟨s.whnfCoreC, s.whnfCoreCheapC, s.whnfC, s.inferC, s.inferIOC, s.defeqC⟩
 
-/-- Detach the mode-dependent memos, leaving empty ones (the maps move
-out of the state: they are not shared, so the run that follows
-mutates its own maps in place). -/
-def CState.takeModeMemos (s : CState) : ModeMemos × CState :=
-  (⟨s.whnfCoreC, s.whnfCoreCheapC, s.whnfC, s.inferC, s.inferIOC, s.defeqC⟩,
-   { s with whnfCoreC := {}, whnfCoreCheapC := {}, whnfC := {}, inferC := {},
-            inferIOC := {}, defeqC := {} })
+/-- Enter the eager tower.  From a plain mode (`eager = false`): the
+plain memos move out (returned), the stored eager ones move into the
+six fields, and the eager slot is left empty.  Every map moves — none
+is shared — so the run that follows mutates the eager maps in place.
+From an eager mode the six fields already hold the eager set: nothing
+moves. -/
+def CState.enterEager (eager : Bool) (s : CState) : Option ModeMemos × CState :=
+  if eager then (none, s) else
+  (some s.modeMemos,
+   { s with whnfCoreC := s.eagerMemos.whnfCoreC, whnfCoreCheapC := s.eagerMemos.whnfCoreCheapC,
+            whnfC := s.eagerMemos.whnfC, inferC := s.eagerMemos.inferC,
+            inferIOC := s.eagerMemos.inferIOC, defeqC := s.eagerMemos.defeqC,
+            eagerMemos := {} })
 
-/-- Put detached mode-dependent memos back, dropping the state's own. -/
-def CState.putModeMemos (s : CState) (mm : ModeMemos) : CState :=
-  { s with whnfCoreC := mm.whnfCoreC, whnfCoreCheapC := mm.whnfCoreCheapC,
-           whnfC := mm.whnfC, inferC := mm.inferC, inferIOC := mm.inferIOC,
-           defeqC := mm.defeqC }
+/-- Leave the eager tower: the six fields (now the eager tower's, with
+what the run added) are stored back as the eager set, and the plain
+memos `saved` return to the six fields; nothing moves when `enterEager`
+moved nothing. -/
+def CState.leaveEager (s : CState) : Option ModeMemos → CState
+  | none => s
+  | some saved =>
+    { s with eagerMemos := s.modeMemos,
+             whnfCoreC := saved.whnfCoreC, whnfCoreCheapC := saved.whnfCoreCheapC,
+             whnfC := saved.whnfC, inferC := saved.inferC, inferIOC := saved.inferIOC,
+             defeqC := saved.defeqC }
 
-/-- **Run at another mode's memos** (task #353): the eager tower's
-comparison (`CoreFnsI.defeqE`) starts from empty mode-dependent memos
-and the caller's are restored afterwards — the task-#170 memo ruling
+/-- **Run on the eager tower's memos** (task #361; task #353 ran it on
+fresh, empty ones): the eager comparison (`CoreFnsI.defeqE`) runs on
+the eager set stored in the state, which keeps what it learned for the
+next eager comparison of the declaration — the task-#170 memo ruling
 ("since caching has no access to semantic reasoning we need two memos,
-one with and one without the flag") at the eager flag, without a
-second set of fields: an eager entry never serves a plain query, nor
-the other way round.  The mode-independent caches are shared. -/
-@[inline] def withFreshMemos (x : CheckCM α) : CheckCM α := do
-  let saved ← modifyGet CState.takeModeMemos
+one with and one without the flag") at the eager flag.  The
+mode-independent caches are shared.
+
+Nesting: inside the eager tower the mode is already eager
+(`mode.toEager = mode`) and the six fields already hold the eager set,
+so a nested eager comparison runs on them as they are, with no swap.
+The mode test sits in `enterEager`, not in a branch here: `x` occurs
+once, so the knot's `defeqE` slot inlines its memo wrapper once and
+builds no extra closure per knot record. -/
+@[inline] def withEagerMemos (mode : CheckMode) (x : CheckCM α) : CheckCM α := do
+  let saved ← modifyGet (CState.enterEager mode.eager)
   let r ← x
-  modify (·.putModeMemos saved)
+  modify (·.leaveEager saved)
   pure r
 
 /-! ## The parsed-index driver's syntactic guards

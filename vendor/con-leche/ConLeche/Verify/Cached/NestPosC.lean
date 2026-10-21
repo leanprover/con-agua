@@ -189,22 +189,6 @@ at `i + k`. -/
       have := h k nd (by simpa using hk)
       rwa [show i + 1 + k = i + (k + 1) by omega] at this
 
-/-- `nestFields`' step as one unconditional equation (its `match` on the
-telescope has a fall-through arm). -/
-theorem nestFields_succ {m : Type → Type} [Monad m] [MonadExceptOf CheckError m]
-    (rec : List NestHole → Nat → Nat → Expr → NestState → m (NestFieldKind × Expr × NestState))
-    (prog : List NestHole) (base : Nat) (err : CheckError) (nF j : Nat) (cur : Expr)
-    (st : NestState) :
-    nestFields rec prog base err (nF + 1) j cur st =
-      match cur with
-      | .forallE a b => do
-        let (k, nd, st) ← rec prog (base + j) 0 a st
-        let (ks, nds, res, st) ← nestFields rec prog base err nF (j + 1)
-          (b.instantiate1 (.fvar (base + j) a)) st
-        pure (k :: ks, nd :: nds, res, st)
-      | _ => throw err := by
-  cases cur <;> rfl
-
 theorem nestFieldsS_spec (hrec : RecSpec mode env rec rec')
     (prog : List NestHole) (base : Nat) (err : CheckError) :
     ∀ (nF j : Nat) (cur : Expr) (st : NestState) {s₀ : CState}, CSOK mode env s₀ →
@@ -221,8 +205,8 @@ theorem nestFieldsS_spec (hrec : RecSpec mode env rec rec')
       vcgen [nestFields] <;> finish
   | succ nF ih =>
     intro j cur st _ hs hw
-    sym only [conleche_grind, nestFields_succ, List.length_cons] =>
-      vcgen [nestFields_succ, hrec.triple,
+    sym only [conleche_grind, nestFields.eq_2, nestFields.eq_3, List.length_cons] =>
+      vcgen [nestFields.eq_def, hrec.triple,
         ih (j + 1)] <;> finish
 
 /-- A telescope closed over well-scoped pieces is well scoped. -/
@@ -512,27 +496,6 @@ theorem fvsWS_openPis {n d : Nat} {e : Expr} {fvs : List Expr} {body : Expr}
   simp only [WScoped] at hw'
   exact hw'.2
 
-theorem checkAbsCtorSorts_nil {m : Type → Type} [Monad m] [MonadExceptOf CheckError m]
-    (ops : CheckerOps m) (env : Env) (ctx : NestCtx) (os : List (List NestFieldKind × Expr)) :
-    checkAbsCtorSorts ops env ctx [] os = pure () := by
-  cases os <;> rfl
-
-theorem checkAbsCtorSorts_nil_right {m : Type → Type} [Monad m] [MonadExceptOf CheckError m]
-    (ops : CheckerOps m) (env : Env) (ctx : NestCtx) (cs : List (ConstantVal × Nat)) :
-    checkAbsCtorSorts ops env ctx cs [] = pure () := by
-  cases cs <;> rfl
-
-theorem checkAbsCtorSortsAll_nil_right {m : Type → Type} [Monad m] [MonadExceptOf CheckError m]
-    (ops : CheckerOps m) (env : Env) (ctx : NestCtx) (css : List (List (ConstantVal × Nat))) :
-    checkAbsCtorSortsAll ops env ctx css [] = pure () := by
-  cases css <;> rfl
-
-theorem checkAbsCtorSortsAll_nil {m : Type → Type} [Monad m] [MonadExceptOf CheckError m]
-    (ops : CheckerOps m) (env : Env) (ctx : NestCtx)
-    (oss : List (List (List NestFieldKind × Expr))) :
-    checkAbsCtorSortsAll ops env ctx [] oss = pure () := by
-  cases oss <;> rfl
-
 /-- The fields' universes at the holes, at the shared operations. -/
 theorem checkAbsCtorSortsS_spec (hμ : mode.verifiedChecks = true) (henv : EnvWF env)
     {ctx : NestCtx} :
@@ -545,15 +508,15 @@ theorem checkAbsCtorSortsS_spec (hμ : mode.verifiedChecks = true) (henv : EnvWF
   induction cs with
   | nil =>
     intro os _ hs _
-    sym only [conleche_grind, checkAbsCtorSorts_nil] =>
-      vcgen [checkAbsCtorSorts_nil] <;> finish
+    sym only [conleche_grind, checkAbsCtorSorts] =>
+      vcgen [checkAbsCtorSorts.eq_def] <;> finish
   | cons c cs ih =>
     intro os
     cases os with
     | nil =>
       intro _ hs _
-      sym only [conleche_grind, checkAbsCtorSorts_nil_right] =>
-        vcgen [checkAbsCtorSorts_nil_right] <;> finish
+      sym only [conleche_grind, checkAbsCtorSorts] =>
+        vcgen [checkAbsCtorSorts.eq_def] <;> finish
     | cons o os =>
       intro _ hs hos
       sym only [conleche_grind, checkAbsCtorSorts.eq_1, unwrapOr.eq_1, → fvsWS_openPis] =>
@@ -571,15 +534,15 @@ theorem checkAbsCtorSortsAllS_spec (hμ : mode.verifiedChecks = true) (henv : En
   induction css with
   | nil =>
     intro oss _ hs _
-    sym only [conleche_grind, checkAbsCtorSortsAll_nil] =>
-      vcgen [checkAbsCtorSortsAll_nil] <;> finish
+    sym only [conleche_grind, checkAbsCtorSortsAll] =>
+      vcgen [checkAbsCtorSortsAll.eq_def] <;> finish
   | cons cs css ih =>
     intro oss
     cases oss with
     | nil =>
       intro _ hs _
-      sym only [conleche_grind, checkAbsCtorSortsAll_nil_right] =>
-        vcgen [checkAbsCtorSortsAll_nil_right] <;> finish
+      sym only [conleche_grind, checkAbsCtorSortsAll] =>
+        vcgen [checkAbsCtorSortsAll.eq_def] <;> finish
     | cons os oss =>
       intro _ hs hos
       sym only [conleche_grind, checkAbsCtorSortsAll.eq_1] =>
