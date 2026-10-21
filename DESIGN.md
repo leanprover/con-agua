@@ -3811,6 +3811,13 @@ Request to lane `arch`: add `LH` (array 192) and `CTL[192]` (heap top) to the me
   `headD` projections the call's `setLocs` produces); a model that unfolded them in `finish`'s
   list confused `grind`.
 
+### Census at the end of the lane
+
+Phase 3: **16 of 16 targets proven** (0 before; 102 Lean / 291 Rust lines). Also `Level.beq`
+(phase 0) and `lvlEq?`, `lvlsEq?` (phase 5, under the cache hypotheses above). Totals on master at
+the last landing (all lanes): 267 of 1350 proven, 10.7 % of Lean lines, 7.3 % of Rust lines (91,
+7.6 %, 4.6 % when the lane started).
+
 ### `sorry`s
 
 None.
