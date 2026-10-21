@@ -401,7 +401,7 @@ theorem chunkStep_run {s s' : AState} (hok : StateOK s)
   · rw [ite_eq_left hsz] at hrun
     exact absurd (AM.pure_ok hrun).1 (by simp)
   · rw [ite_eq_right hsz] at hrun
-    simp only [pure_bind] at hrun
+    try simp only [pure_bind] at hrun  -- con-agua patch: no `pure ... >>=` left on nightly-2026-10-20
     obtain ⟨x, s₁, hfeed, hrest⟩ := AM.bind_ok hrun
     cases x with
     | error e =>
@@ -442,7 +442,7 @@ theorem chunkFinish_run {s s' : AState} (hok : StateOK s)
       by rw [ConLeche.Frontend.chunkFinish, ite_eq_left hce],
       ParseResultRel.ofState hrel⟩
   · rw [ite_eq_right hce] at hrun
-    simp only [pure_bind] at hrun
+    try simp only [pure_bind] at hrun  -- con-agua patch (as above)
     obtain ⟨x, s₁, hfin, hrest⟩ := AM.bind_ok hrun
     cases x with
     | error e =>
@@ -480,7 +480,7 @@ theorem parseBytes_run {s s' : AState} (hok : StateOK s)
   · rw [ite_eq_left hsz] at hrun
     exact absurd (AM.pure_ok hrun).1 (by simp)
   · rw [ite_eq_right hsz] at hrun
-    simp only [pure_bind] at hrun
+    try simp only [pure_bind] at hrun  -- con-agua patch (as above)
     obtain ⟨sd0, s0, hinit, hrest⟩ := AM.bind_ok hrun
     obtain ⟨hstep0, hp0, hrel0⟩ := StateD_init_run hok hoff hinit
     obtain ⟨x, s₁, hfeed, hrest2⟩ := AM.bind_ok hrest

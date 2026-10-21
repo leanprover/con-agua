@@ -66,9 +66,12 @@ open scoped Lean.Order
             MemoLOK f s'.memos.instLPLC s'.store; ⊤⦄ := by
   dsimp only
   vcgen [instLPLSet]
-  subst_vars
-  refine ⟨rfl, rfl, rfl, rfl, fun f hm hr => ?_⟩
-  exact MemoLOK.insert hm rfl hk hr
+  -- con-agua patch (lean4#15487): `vcgen` now splits the `∧` post itself and
+  -- closes the `rfl` conjuncts, leaving the memo equation and the `∀`-clause
+  all_goals subst_vars
+  · rfl
+  · rename_i f hm hr
+    exact MemoLOK.insert hm rfl hk hr
 
 /-- con-leche: ConLeche/Kernel/Level.lean:28-40 Level.subst — the same for
 `instLPLsSet`, the universe-argument-LIST memo, the one where the trap is a
@@ -85,9 +88,12 @@ false goal (module note). -/
             MemoLsOK f s'.memos.instLPLsC s'.store; ⊤⦄ := by
   dsimp only
   vcgen [instLPLsSet]
-  subst_vars
-  refine ⟨rfl, rfl, rfl, rfl, fun f hm hr => ?_⟩
-  exact MemoLsOK.insert hm rfl hk hr
+  -- con-agua patch (lean4#15487): `vcgen` now splits the `∧` post itself and
+  -- closes the `rfl` conjuncts, leaving the memo equation and the `∀`-clause
+  all_goals subst_vars
+  · rfl
+  · rename_i f hm hr
+    exact MemoLsOK.insert hm rfl hk hr
 
 /-! ## The readback memos, with the frame the walks need
 
@@ -335,9 +341,11 @@ theorem internRebuiltBind_specV (s₀ : AState) (h : EIdx) (same : Bool)
       simp [internRebuiltBind, hc]
     rw [hprog]
     vcgen
-    subst s₀
-    exact ⟨hwf, Ext.refl _, rfl, rfl, rfl, rfl, rfl, fun _ _ hj => hj, hsame hc,
-      denoteE_view_eq hwf (hsame hc)⟩
+    -- con-agua patch (lean4#15487): `vcgen` now splits the `∧` post itself
+    all_goals subst s₀
+    all_goals first
+      | exact hwf | exact Ext.refl _ | exact hsame hc
+      | exact denoteE_view_eq hwf (hsame hc) | (rename_i hj; exact hj)
   · have hprog : internRebuiltBind h same tag ty b = internBindE tag ty b := by
       simp [internRebuiltBind, hc]
     rw [hprog]

@@ -323,6 +323,7 @@ theorem lamProj?_eq (k : Nat) (x : Expr) : ConLeche.lamProj? k x =
     else none := by
   cases x <;> simp [ConLeche.lamProj?, exprTag, exprBody, exprBVar, ETag.forallE, ETag.bvar,
     ETag.fvar, ETag.sort, ETag.const, ETag.app, ETag.lam, ETag.letE, ETag.lit, ETag.proj]
+    <;> rfl  -- con-agua patch: `simp` leaves `X = X` differing in an `ite` instance
 
 /-- con-leche: none — the arity of a `lamProj?` answer. -/
 def lpK : Option (Nat × Nat) → Nat | some (k, _) => k | none => 0
@@ -350,7 +351,7 @@ theorem unwrapIdDefs_succ_eq (f : ConLeche.Name → Option ConstantInfo) (n : Na
   cases g <;> simp [exprTag, ETag.forallE, ETag.bvar, ETag.fvar, ETag.sort, ETag.const,
     ETag.app, ETag.lam, ETag.letE, ETag.lit, ETag.proj]
   rename_i c us
-  simp only [exprConstName]
+  dsimp +instances only [exprConstName]  -- con-agua patch: was `simp only` (instance args)
   cases hf : f c with
   | none => simp [cDefn?]
   | some ci =>
@@ -403,6 +404,7 @@ theorem headTypePW_eq (f : ConLeche.Name → Option ConstantInfo) (r : Expr) (d 
   cases x with
   | const I us =>
     simp only [ConLeche.headTypePW, exprTag, exprConstName, exprConstLevels, ite_true]
+    dsimp +instances only [exprTag, exprConstName, exprConstLevels]  -- con-agua patch (instance args)
     cases hf : f I with
     | none => simp [cTower?, cValP]
     | some ci =>
@@ -481,6 +483,7 @@ theorem headProofPW_eq (x : Expr) : ConLeche.headProofPW env.find? x =
   cases x with
   | const I us =>
     simp only [ConLeche.headProofPW, exprTag, exprConstName, exprConstLevels, ite_true]
+    dsimp +instances only [exprTag, exprConstName, exprConstLevels]  -- con-agua patch (instance args)
     cases hf : env.find? I with
     | none => simp [cTower?, cValP]
     | some ci =>

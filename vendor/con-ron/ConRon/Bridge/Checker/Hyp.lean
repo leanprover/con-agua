@@ -108,6 +108,7 @@ theorem IFEnv.find?_push_restrict (fe : IFEnv) (ci : IConstantInfo)
     simp only [h, ite_true, Nat.lt_irrefl, ite_false]
     rw [hfresh]
   · simp only [h, Bool.false_eq_true, ite_false]
+    rfl  -- con-agua patch: `simp` leaves `X = X` differing only in an instance
 
 /-- con-leche: none — `IFEnvOK` reads its index through `find?` only. -/
 theorem IFEnvOK.congr_find {env : Env} {fe fe' : IFEnv} {s : AState}

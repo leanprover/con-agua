@@ -1347,6 +1347,7 @@ theorem majorToCtorFueled_one {F d : Nat} {cn : ConLeche.Name} {rl : RecRule} {x
     cases ci with
     | ctorInfo cvj cnP cnF =>
       simp only [cCtor?, cCtorVal, cCtorNP, Bool.true_and]
+      dsimp +instances only [cCtor?, cCtorVal, cCtorNP]  -- con-agua patch (instance args)
       generalize hg : cvj.type.piResult.getAppFn = g
       cases g with
       | const T us =>

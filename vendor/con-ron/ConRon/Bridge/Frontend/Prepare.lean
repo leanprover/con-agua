@@ -1726,6 +1726,7 @@ theorem clHoistTargets_eq (dsP : Array Declaration) :
           intro u x
           obtain ⟨tg, st⟩ := x
           simp only [clB, clCloseStep, hoistDone]
+          dsimp +instances only [clB, clCloseStep, hoistDone]  -- con-agua patch: `simp` no longer rewrites instance args
           by_cases hsz : st.size > 0
           · rw [dite_eq_left hsz, dite_eq_left hsz]
             cases hk : tg[st[st.size - 1]]? with

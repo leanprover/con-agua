@@ -1355,7 +1355,7 @@ theorem nestHoleImg_spec (ctx : Arena.NestCtx) (prog : List Arena.NestHole) :
       refine ⟨PStep.refl hok, ?_⟩
       show ConLeche.nestHoleImg _ [] i = none
       simp only [ConLeche.nestHoleImg, ConLeche.NestCtx.hiAt]
-      rw [ite_eq_right (fun hh => hc (hiff.mpr hh))]
+      exact ite_eq_right (fun hh => hc (hiff.mpr hh))  -- con-agua patch: was `rw [..]`, motive not type-correct on nightly-2026-10-20
   | succ n ih =>
     intro i fnd ctxP progP s₀ s' r hok hpins hp hrun
     obtain ⟨h1, h2, h3⟩ := hp

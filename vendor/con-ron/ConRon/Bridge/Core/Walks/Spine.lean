@@ -341,29 +341,32 @@ function as ONE equation: the unfolding exactly when the head is unfoldable
         (cDefnVal (env.find? (exprConstName x.getAppFn))).levelParams (exprConstLevels x.getAppFn))
         x.getAppArgs)
     else none := by
-  simp only [ConLeche.unfoldDefinition, ConLeche.unfoldableHead]
-  split <;> rename_i hg
-  · split
-    · rename_i n us hfn
-      simp only [hfn] at hg ⊢
-      split at hg
-      · rename_i cv value hint hf
-        simp only [hf, exprConstName, exprConstLevels, cDefnValue, cDefnVal, beq_iff_eq] at hg ⊢
-        simp only [hg, ite_true]
-      · exact absurd hg (by simp)
-    · rename_i hfn
-      split at hg
-      · rename_i n us h; exact absurd h (hfn n us)
-      · exact absurd hg (by simp)
-  · split
-    · rename_i n us hfn
-      simp only [hfn] at hg ⊢
-      split
-      · rename_i cv value hint hf
-        simp only [hf, beq_iff_eq] at hg
-        simp only [hg, ite_false]
-      · rfl
-    · rfl
+  -- con-agua patch: the original `simp only [..]; split`-based proof fails on
+  -- nightly-2026-10-20 (`simp only` leaves the `if`'s `Decidable` instance
+  -- on the folded `unfoldableHead`, so `split`/`generalize` see an ill-typed
+  -- motive); decide the `if` first, then `delta` and case on the head.
+  by_cases hc : ConLeche.unfoldableHead env x = true
+  · rw [ite_eq_left_of_eq_true _ _ (eq_true hc)]
+    revert hc
+    delta ConLeche.unfoldDefinition ConLeche.unfoldableHead
+    generalize x.getAppFn = g
+    cases g <;> try (intro h; cases h)
+    rename_i n us
+    dsimp only [exprConstName, exprConstLevels]
+    generalize env.find? n = o
+    rcases o with _ | ⟨_ | _ | _ | _ | _ | _ | _ | _⟩ <;> try (intro h; cases h)
+    simp_all [cDefnValue, cDefnVal]
+  · rw [ite_eq_right_of_eq_false _ _ (eq_false hc)]
+    simp only [Bool.not_eq_true] at hc
+    revert hc
+    delta ConLeche.unfoldDefinition ConLeche.unfoldableHead
+    generalize x.getAppFn = g
+    cases g <;> try (intro; rfl)
+    rename_i n us
+    dsimp only
+    generalize env.find? n = o
+    rcases o with _ | ⟨_ | _ | _ | _ | _ | _ | _ | _⟩ <;> try (intro; rfl)
+    simp_all
 
 /-- con-leche: ConLeche/Kernel/CoreDefs.lean:145-151 headHint — the function
 as ONE equation: the hint at the head constant's name, `opaque` elsewhere. -/

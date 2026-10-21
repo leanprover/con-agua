@@ -278,8 +278,9 @@ theorem peel_eq_case (s₀ : AState) (a b : EIdx) (j : Nat) (ws : List Expr)
   subst hab'
   obtain rfl : ca = cb := Option.some.inj (ha.symm.trans hb)
   vcgen
-  subst_vars
-  exact ⟨hok, Ext.refl _, rfl, 1, isDefEqCore_refl_one⟩
+  -- con-agua patch (lean4#15487): `vcgen` now splits the `∧` post itself
+  all_goals subst_vars
+  all_goals first | rfl | exact hok | exact Ext.refl _ | exact ⟨1, isDefEqCore_refl_one⟩
 
 /-- con-leche: ConLeche/Kernel/Core.lean:1340-1366 quickDefEq — **THEOREM 1
 for the batched descent**: at every budget, `defeqPeel` answers the chain's
@@ -379,9 +380,13 @@ theorem defeqPeel_spec (hsim : KnotSpec mode env fe fuel) (d : Nat) :
       intro t2 dq s4 hok4 hx04 hp04 ht2 ⟨F1, hF1⟩
       cases dq with
       | false =>
-        vcgen +internalize; subst_vars
-        exact ⟨hok4, hx04, hp04, peel_step_pure (F2 := 0) hF1
-          (fun _ => rfl) (fun h => absurd h (by simp))⟩
+        vcgen +internalize
+        -- con-agua patch (lean4#15487): `vcgen` now splits the `∧` post itself
+        all_goals subst_vars
+        all_goals first
+                  | rfl | exact hok4 | exact hx04 | exact hp04
+                  | exact peel_step_pure (F2 := 0) hF1
+                      (fun _ => rfl) (fun h => absurd h (by simp))
       | true =>
         simp only [Bool.not_true, Bool.false_eq_true, ite_false]
         -- stage 4: the fresh free variable at the second opened domain
@@ -479,9 +484,13 @@ theorem defeqBinders_spec {fe : IFEnv} {fuel : Nat}
     fun F hF => ConLeche.isDefEqCore_mono hF hF1
   cases v with
   | false =>
-    vcgen +internalize; subst_vars
-    exact ⟨hok1, hx1, hp1, quick_step_pure (F2 := 0) hne hdq
-      (fun _ => rfl) (fun h => absurd h (by simp))⟩
+    vcgen +internalize
+    -- con-agua patch (lean4#15487): `vcgen` now splits the `∧` post itself
+    all_goals subst_vars
+    all_goals first
+              | rfl | exact hok1 | exact hx1 | exact hp1
+              | exact quick_step_pure (F2 := 0) hne hdq
+                  (fun _ => rfl) (fun h => absurd h (by simp))
   | true =>
     simp only [Bool.not_true, Bool.false_eq_true, ite_false]
     -- stage 2: the first free variable, at the second domain

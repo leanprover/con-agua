@@ -164,7 +164,7 @@ theorem installValueGuards_bridge {μ : CheckMode} {env : Env} {fe : IFEnv}
     rfl g5r (ConRon.Bridge.ExprOps.looseBVarsBoundedFast_spec coreWalkFuel 0 s
       value hck0.state (by rw [hv]; rfl))
   obtain ⟨hlbb, r8⟩ := AM.dunless_ok AM.Never.fail_any r7
-  replace r8 := AM.pure_bind_ok r8
+  try replace r8 := AM.pure_bind_ok r8  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   have hlbbP : x.looseBVarsBounded 0 = true := by
     rw [← h5r x hv]; exact hlbb
   have hck5 : CheckOK μ env fe s5 :=
@@ -181,7 +181,7 @@ theorem installValueGuards_bridge {μ : CheckMode} {env : Env} {fe : IFEnv}
     rfl g6r (ConRon.Bridge.ExprOps.hasFvarFast_spec coreWalkFuel s5 value
       hck5.state (by rw [hv5]; rfl))
   obtain ⟨hfv, r10⟩ := AM.dguard_ok AM.Never.fail_any r9
-  replace r10 := AM.pure_bind_ok r10
+  try replace r10 := AM.pure_bind_ok r10  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   have hfvP : x.hasFvar = false := by
     rw [← h6r x hv5]
     cases hb : b6 with
@@ -198,7 +198,7 @@ theorem installValueGuards_bridge {μ : CheckMode} {env : Env} {fe : IFEnv}
   obtain ⟨h8st, h8c, h8p, h8r⟩ :=
     allLevelParamsDefined_run hck6.state hlps6 hv6 g8r
   obtain ⟨hlpd, r13⟩ := AM.dunless_ok AM.Never.fail_any r12
-  replace r13 := AM.pure_bind_ok r13
+  try replace r13 := AM.pure_bind_ok r13  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   have hlpdP : x.allLevelParamsDefined c.levelParams = true := by
     rw [← h8r]; exact hlpd
   have hck8 : CheckOK μ env fe s8 :=
@@ -388,7 +388,7 @@ theorem checkDefnVal_bridge {μ : CheckMode} {env : Env}
       (ConLeche.Expr.WScoped.of_not_hasFvar htw.fvar))
   obtain ⟨F3, hF3⟩ := hsim3
   obtain ⟨hb, r4⟩ := AM.dunless_ok AM.Never.fail_any r3
-  replace r4 := AM.pure_bind_ok r4
+  try replace r4 := AM.pure_bind_ok r4  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   obtain ⟨rfl, rfl⟩ := AM.pure_ok r4
   subst hb
   -- 4. the answer
@@ -484,7 +484,7 @@ theorem checkThmVal_bridge {μ : CheckMode} {env : Env}
     | some bb => exact ⟨bb, rfl⟩
   obtain ⟨rfl, rfl⟩ := AM.pure_ok ge
   obtain ⟨hprop, rf⟩ := AM.dunless_ok AM.Never.fail_any re
-  replace rf := AM.pure_bind_ok rf
+  try replace rf := AM.pure_bind_ok rf  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   have heqv : ConLeche.Level.isEquiv uu .zero = some true := by
     rw [← hod, hprop]
   -- 6. the install half
@@ -518,7 +518,7 @@ theorem checkThmVal_bridge {μ : CheckMode} {env : Env}
     rfl gi (hknot.defeq s7 0 vtype cv.type vt c.type hck7 hvt7 hty7 hwsvt hwsty)
   obtain ⟨F3, hF3⟩ := hsim8
   obtain ⟨hb, rj⟩ := AM.dunless_ok AM.Never.fail_any ri
-  replace rj := AM.pure_bind_ok rj
+  try replace rj := AM.pure_bind_ok rj  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   obtain ⟨rfl, rfl⟩ := AM.pure_ok rj
   subst hb
   -- 9. the answer
@@ -591,7 +591,7 @@ theorem checkOpaqueVal_bridge {μ : CheckMode} {env : Env}
       (ConLeche.Expr.WScoped.of_not_hasFvar htw.fvar))
   obtain ⟨F3, hF3⟩ := hsim3
   obtain ⟨hb, r4⟩ := AM.dunless_ok AM.Never.fail_any r3
-  replace r4 := AM.pure_bind_ok r4
+  try replace r4 := AM.pure_bind_ok r4  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   obtain ⟨rfl, rfl⟩ := AM.pure_ok r4
   subst hb
   have hext : Ext s.store s'.store := hstep1.ext.trans (hx2.trans hx3)

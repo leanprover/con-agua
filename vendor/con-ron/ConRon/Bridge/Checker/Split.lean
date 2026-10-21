@@ -102,7 +102,7 @@ theorem installHeader_bridge {μ : CheckMode} {env : Env}
   simp only [Arena.installHeader] at hrun
   -- 1. the duplicate-declaration guard
   obtain ⟨hdup, r1⟩ := AM.dguard_ok AM.Never.fail_any hrun
-  replace r1 := AM.pure_bind_ok r1
+  try replace r1 := AM.pure_bind_ok r1  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   have hfind : fe.find? cv.name = none := by
     cases hf : fe.find? cv.name with
     | none => rfl
@@ -118,7 +118,7 @@ theorem installHeader_bridge {μ : CheckMode} {env : Env}
       = some c.levelParams := denoteNList_ext hp2.ext.lss.ls.ns _ _ hlps
   have hty2 : denoteE s2.store cv.type = some c.type := denote_ext hty hp2.ext
   obtain ⟨hres, r3⟩ := AM.dguard_ok AM.Never.fail_any r2
-  replace r3 := AM.pure_bind_ok r3
+  try replace r3 := AM.pure_bind_ok r3  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   have hresP : ConLeche.reservedBasisNames.contains c.name = false := by
     have hc := denoteNList_contains hck2.state.wf rs reservedBasisNameValues
       (denoteNL_toList rs reservedBasisNameValues hrs) cv.name c.name hnm2
@@ -130,7 +130,7 @@ theorem installHeader_bridge {μ : CheckMode} {env : Env}
   obtain ⟨b3, s3, g3r, r4⟩ := AM.bind_ok r3
   obtain ⟨hs3, hb3⟩ := isProjFnShape_run hck2.state rfl hnm2 g3r
   obtain ⟨hproj, r5⟩ := AM.dguard_ok AM.Never.fail_any r4
-  replace r5 := AM.pure_bind_ok r5
+  try replace r5 := AM.pure_bind_ok r5  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   have hprojP : c.name.isProjFnShape = false := by
     rw [← hb3]
     cases hb : b3 with
@@ -138,7 +138,7 @@ theorem installHeader_bridge {μ : CheckMode} {env : Env}
     | true => rw [hb] at hproj; exact absurd rfl hproj
   -- 4. the duplicate-universe-parameter guard
   obtain ⟨hnod, r6⟩ := AM.dunless_ok AM.Never.fail_any r5
-  replace r6 := AM.pure_bind_ok r6
+  try replace r6 := AM.pure_bind_ok r6  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   have hnodP : ConLeche.Name.nodup c.levelParams = true := by
     rw [← nameNodup_spec hck2.state.wf cv.levelParams c.levelParams hlps2]
     exact hnod
@@ -151,7 +151,7 @@ theorem installHeader_bridge {μ : CheckMode} {env : Env}
     rfl g5r (ConRon.Bridge.ExprOps.looseBVarsBoundedFast_spec coreWalkFuel 0 s3
       cv.type hck2.state (by rw [hty2]; rfl))
   obtain ⟨hlbb, r8⟩ := AM.dunless_ok AM.Never.fail_any r7
-  replace r8 := AM.pure_bind_ok r8
+  try replace r8 := AM.pure_bind_ok r8  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   have hlbbP : c.type.looseBVarsBounded 0 = true := by
     rw [← h5r c.type hty2]; exact hlbb
   have hck5 : CheckOK μ env fe s5 :=
@@ -169,7 +169,7 @@ theorem installHeader_bridge {μ : CheckMode} {env : Env}
     rfl g6r (ConRon.Bridge.ExprOps.hasFvarFast_spec coreWalkFuel s5 cv.type
       hck5.state (by rw [hty5]; rfl))
   obtain ⟨hfv, r10⟩ := AM.dguard_ok AM.Never.fail_any r9
-  replace r10 := AM.pure_bind_ok r10
+  try replace r10 := AM.pure_bind_ok r10  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   have hfvP : c.type.hasFvar = false := by
     rw [← h6r c.type hty5]
     cases hb : b6 with
@@ -187,7 +187,7 @@ theorem installHeader_bridge {μ : CheckMode} {env : Env}
   obtain ⟨h8st, h8c, h8p, h8r⟩ :=
     allLevelParamsDefined_run hck6.state hlps6 hty6 g8r
   obtain ⟨hlpd, r13⟩ := AM.dunless_ok AM.Never.fail_any r12
-  replace r13 := AM.pure_bind_ok r13
+  try replace r13 := AM.pure_bind_ok r13  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
   have hlpdP : c.type.allLevelParamsDefined c.levelParams = true := by
     rw [← h8r]; exact hlpd
   have hck8 : CheckOK μ env fe s8 :=
@@ -381,7 +381,7 @@ theorem checkValueGroup_bridge {μ : CheckMode} {env : Env}
       | some bb => exact ⟨bb, rfl⟩
     obtain ⟨rfl, rfl⟩ := AM.pure_ok gg
     obtain ⟨hprop, rg⟩ := AM.dunless_ok AM.Never.fail_any rf
-    replace rg := AM.pure_bind_ok rg
+    try replace rg := AM.pure_bind_ok rg  -- con-agua patch: may be no `pure () >>=` left (new `do` elaborator)
     have heqv : ConLeche.Level.isEquiv uu .zero = some true := by
       rw [← hod, hprop]
     have hext5 : Ext s2.store s6.store := by rw [hstd]; exact Ext.refl _
@@ -660,6 +660,7 @@ theorem IFEnvOK_restrictTo {μ : CheckMode} {env : Env} {fe : IFEnv}
         (fun d => d.name == n) = some ci := by
     intro n ci hf
     simp only [IFEnv.find?, IFEnv.restrictTo, hok.coh.2 n] at hf
+    dsimp +instances only [IFEnv.restrictTo] at hf  -- con-agua patch: `simp` no longer rewrites the `ite`'s instance
     cases hg : (mkIFEnvGo fe.env.consts).2[n]? with
     | none => rw [hg] at hf; simp at hf
     | some p =>
@@ -678,6 +679,7 @@ theorem IFEnvOK_restrictTo {μ : CheckMode} {env : Env} {fe : IFEnv}
     intro n ci hf
     obtain ⟨c, hc, hck⟩ := mkIFEnvGo_below_of _ n k ci hk' hndH hf
     simp only [IFEnv.find?, IFEnv.restrictTo, hok.coh.2 n, hc]
+    dsimp +instances only [IFEnv.restrictTo]  -- con-agua patch: `simp` no longer rewrites the `ite`'s instance
     rw [ite_eq_left hck]
   refine ⟨?_, ?_, ?_⟩
   · intro n ci hf
@@ -1019,6 +1021,7 @@ theorem IFEnvOK_prefix {μ : CheckMode} {env : Env} {fe : IFEnv} {s : AState}
     have hfind : ∀ n, (fe.restrictTo k).find? n = fe.find? n := by
       intro n
       simp only [IFEnv.find?, IFEnv.restrictTo]
+      dsimp +instances only [IFEnv.restrictTo]  -- con-agua patch: `simp` no longer rewrites the `ite`'s instance
       cases hg : fe.idx[n]? with
       | none => rfl
       | some p =>
