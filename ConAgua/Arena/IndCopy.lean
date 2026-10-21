@@ -169,7 +169,7 @@ theorem slCons_dec {m m' : Mem} {x o l : Word} {n : Nat} {xs : List EIdx}
     (hsrc : o.toNat + l.toNat ≤ (rdW (m.arr64 CTL) 200).toNat)
     (hx : x.toNat < 2 ^ 32) (hxs : decHL m o.toNat l.toNat = some xs) :
     decHL m' (rdW (m.arr64 CTL) 200).toNat (l + 1).toNat = some (decI x :: xs) ∧
-    IWGrow m m' ∧ MemFrame [IW] [200] m m' := by
+    IWGrow m m' ∧ MemFrame [IW] [200] m m' ∧ rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 + (l + 1) := by
   generalize hq : rdW (m.arr64 CTL) 200 = q at *
   have hlm : l.toNat ≠ 2 ^ 64 - 1 := fun h0 => hne (by
     apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp [h0])
@@ -215,7 +215,7 @@ theorem slCons_dec {m m' : Mem} {x o l : Word} {n : Nat} {xs : List EIdx}
   have htop : rdW (m'.arr64 CTL) 200 = q + (l + 1) := by
     rw [hA CTL (by decide)]; simp only [consPre, allocMem]
     rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), rdW_set64]; simp [hc, hq]
-  refine ⟨?_, ⟨?_, ?_, ?_, ?_⟩, ⟨?_, ?_, ?_, ?_⟩⟩
+  refine ⟨?_, ⟨?_, ?_, ?_, ?_⟩, ⟨?_, ?_, ?_, ?_⟩, htop⟩
   · simp only [decHL, hl1, hslice?_succ]
     have h0 : (hd? (iwA m') q.toNat : Option EIdx) = some (decI x) := by
       simp [hd?, iwA, hget, hx]
@@ -245,5 +245,108 @@ theorem slCons_dec {m m' : Mem} {x o l : Word} {n : Nat} {xs : List EIdx}
     · subst hb; rw [hS, hm1sz]
     · rw [hA b hb]; simp only [consPre, allocMem, size_set64]
   · rw [hW]; simp only [consPre, allocMem, Mem.words_size_set64]
+
+end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+/-! ## Word models of the allocators, for callers' models -/
+
+/-- The model of `iw_alloc(k)`: the offset and the memory, `none` where it aborts. -/
+def allocW (m : Mem) (k : Word) : Option (Word × Mem) :=
+  let o := rdW (m.arr64 CTL) 200
+  if m.len64 IW < o then none
+  else if m.len64 IW - o < k then none
+  else some (o, allocMem m k)
+
+theorem iwAlloc_specW (p : Prog) (hp : p.lookup "iw_alloc" = some iwAlloc) (n : Nat) (s₀ : St)
+    (k : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "iw_alloc" [k]
+    ⦃fun r s' => LocEq s' s₀ ∧ allocW s₀.mem k = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, iwAlloc]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64] <;>
+      finish [allocW, allocMem]
+
+/-- The model of `sl_cons(x, o, l)` at the caller's fuel `n` (the copy runs at `n - 1`). -/
+def consW (n : Nat) (m : Mem) (x o l : Word) : Option (List Word × Mem) :=
+  if l + 1 = 0 then none
+  else match allocW m (l + 1) with
+    | none => none
+    | some (q, m1) =>
+      match copyW (n - 1) (m1.set64 IW q x) (q + 1) o l with
+      | none => none
+      | some m2 => some ([q, l + 1], m2)
+
+theorem slCons_specW (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hc : p.lookup "iw_copy" = some iwCopy) (hp : p.lookup "sl_cons" = some slCons) (n : Nat)
+    (s₀ : St) (x o l : Word) :
+    ⦃fun st => st = s₀⦄ invoke p (exec p n) "sl_cons" [x, o, l]
+    ⦃fun r s' => LocEq s' s₀ ∧ consW n s₀.mem x o l = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, slCons]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have hcons : ∀ q m1 m2, l + 1 ≠ 0 → allocW s₀.mem (l + 1) = some (q, m1) →
+        copyW n (m1.set64 IW q x) (q + 1) o l = some m2 →
+        consW (n + 1) s₀.mem x o l = some ([q, l + 1], m2) := by
+      intro q m1 m2 h0 h1 h2
+      simp [consW, h0, h1, h2]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        iwAlloc_specW p ha n, iwCopy_spec p hc n] <;>
+      finish (gen := 20)
+
+/-- `consW` is the memory `slCons_dec` speaks about. -/
+theorem consW_dec {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} {xs : List EIdx}
+    (h : consW n m x o l = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64)
+    (hc : 200 < (m.arr64 CTL).size) (hsrc : o.toNat + l.toNat ≤ iwTop m)
+    (hx : x.toNat < 2 ^ 32) (hxs : decHL m o.toNat l.toNat = some xs) :
+    r = [rdW (m.arr64 CTL) 200, l + 1] ∧
+    decHL m' (rdW (m.arr64 CTL) 200).toNat (l + 1).toNat = some (decI x :: xs) ∧
+    IWGrow m m' ∧ MemFrame [IW] [200] m m' ∧ (l + 1).toNat = l.toNat + 1 ∧
+    (rdW (m.arr64 CTL) 200).toNat + (l + 1).toNat = iwTop m' := by
+  simp only [consW] at h
+  by_cases h0 : l + 1 = 0
+  · simp [h0] at h
+  simp only [h0, if_false] at h
+  simp only [allocW] at h
+  by_cases h1 : m.len64 IW < rdW (m.arr64 CTL) 200
+  · simp [h1] at h
+  by_cases h2 : m.len64 IW - rdW (m.arr64 CTL) 200 < l + 1
+  · simp [h1, h2] at h
+  simp only [h1, h2, if_false] at h
+  cases hcp : copyW (n - 1) ((allocMem m (l + 1)).set64 IW (rdW (m.arr64 CTL) 200) x)
+      (rdW (m.arr64 CTL) 200 + 1) o l with
+  | none => simp [hcp] at h
+  | some m2 =>
+    simp [hcp] at h
+    obtain ⟨rfl, rfl⟩ := h
+    have hlen : (m.len64 IW).toNat = (m.arr64 IW).size := by simp [Mem.len64]; omega
+    have hq : (rdW (m.arr64 CTL) 200).toNat ≤ (m.arr64 IW).size := by
+      have : ¬ (m.len64 IW).toNat < (rdW (m.arr64 CTL) 200).toNat := h1
+      omega
+    have hroom : (rdW (m.arr64 CTL) 200).toNat + (l + 1).toNat ≤ (m.arr64 IW).size := by
+      have : ¬ (m.len64 IW - rdW (m.arr64 CTL) 200).toNat < (l + 1).toNat := h2
+      rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; omega)] at this
+      omega
+    have hlm : l.toNat ≠ 2 ^ 64 - 1 := fun e => h0 (by
+      apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp [e])
+    have hl1 : (l + 1).toNat = l.toNat + 1 := by
+      rw [UInt64.toNat_add]; simp; have := l.toNat_lt; omega
+    obtain ⟨hd, hg, hf, ht⟩ := slCons_dec (n := n - 1) (xs := xs) hcp h0 hroom hsz hc
+      (by simpa [iwTop] using hsrc) hx hxs
+    refine ⟨rfl, hd, hg, hf, hl1, ?_⟩
+    have e : (rdW (m.arr64 CTL) 200 + (l + 1)).toNat =
+        (rdW (m.arr64 CTL) 200).toNat + (l + 1).toNat := by
+      rw [UInt64.toNat_add]; omega
+    simp only [iwTop, ht, e]
 
 end L.Ind
