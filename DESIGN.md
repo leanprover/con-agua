@@ -219,8 +219,7 @@ induction hypothesis, and the expression lemmas are straight-line `kvcgen64` pro
 * **USize.** con-leche's scanner works over `ByteArray`/`USize`. The models here use `Nat`
   positions over `Array UInt8`. Bridging needs `USize.size = 2^64`, which Lean cannot prove
   (`System.Platform.numBits`); it will be a hypothesis, discharged at the end as a platform fact.
-  Relating `strCloseN`/`skipBracedN` to the vendored `ConLeche.Frontend.strClose`/`skipBraced` is
-  the next step of Stage A.
+  **Done** (lane `scan`, see below): `ConAgua/Scan/Link.lean`.
 * **Several results.** A function returns one word. Rust functions returning enums or tuples
   (`ScanRes`, `Member`) must return them through a word array (or a packed word). A convention
   for result cells is still to be chosen.
@@ -236,3 +235,89 @@ induction hypothesis, and the expression lemmas are straight-line `kvcgen64` pro
 ### `sorry`s
 
 None.
+
+## Linking to con-leche, and more scan leaf functions (2026-10-21, lane `scan`)
+
+Files: `ConAgua/Scan/{Link,Leaves}.lean`.
+
+### Link: `strCloseN`/`skipBracedN` agree with con-leche's `strClose`/`skipBraced`
+
+`ConAgua/Scan/Link.lean` proves `ConAgua.Scan.strClose_toNat_eq`/`skipBraced_toNat_eq`:
+`(strClose b j).toNat = strCloseN b.data j.toNat` (and the `skipBraced` analogue), under
+`h64 : System.Platform.numBits = 64` and `hsize : b.size < 2 ^ 64`. This is the missing link from
+`L.Examples.skipBraced_run`'s `skipBracedN` to the real, vendored `ConLeche.Frontend.skipBraced`
+(`USize` positions over `ByteArray`), completing Stage A's proof chain end to end.
+
+* The proof is `fun_induction strClose b j`/`fun_induction skipBraced b i depth`, case for case
+  the same split as con-leche's own `strClose_eq`/`skipBraced_eq`
+  (`vendor/con-leche/ConLeche/Frontend/Scan/Equiv/{Scalars,Keys}.lean`) — unsurprising, since
+  `strCloseN`/`skipBracedN` were written to mirror `strClose`/`skipBraced` arm for arm in the
+  first place. Each case bridges `b.uget i h` to `b.data[i.toNat]` (`uget_eq`, `rfl`: `ByteArray`
+  is a bare `Array UInt8` wrapper and `uget`/`GetElem` unfold to it definitionally) and then
+  discharges with the already-proved `strCloseN_*`/`skipBracedN_*` arm lemmas from
+  `L.Examples`.
+* **Where `h64`/`hsize` are actually needed**: nowhere in the *positive* direction (`usizeInBounds`,
+  `usizeStep`, `usize_step_of_lt` — all from con-leche, all unconditional: a position that is
+  already inside the array never overflows, on any platform). They are needed in exactly one
+  place, `usizeGe`: showing `¬ i < b.usize → b.size ≤ i.toNat`. `ByteArray.size : Nat` has no
+  upper bound, so `b.usize.toNat` is `b.size % USize.size` in general — only `h64 + hsize` collapse
+  that to `b.size` outright. (`str_close`'s OOB case and `skip_braced`'s OOB and the `exfalso`
+  "`noProgress`" case all go through `usizeGe`.)
+* Measured (`lake env lean`, cold): 264 lines, ~0.6 s.
+
+### More `scan_fast.rs` leaf functions, `ConAgua/Scan/Leaves.lean`
+
+Order per the task: `is_ws`/`skip_ws`, `skip_digits`, `newline_from`, `key_end`, `has_escape`,
+`num_end` (`match_lit`/`scan_bool`/`utf8_decode`/`read_nat_at` not attempted this round — see
+"Not done" below). Each is an `L` function close to the Rust, a `Nat`-position model in the
+`findFrom`/`strCloseN` style (own model, not reusing con-leche directly — these have no vendored
+Lean twin at this granularity beyond what `Link.lean` already covers), and a `vcgen`+`grind` spec
+proof.
+
+| function | Rust lines | L lines | vcgen+grind clean? |
+|---|---:|---:|---|
+| `is_ws`/`skip_ws` (`:96,107`) | 3+7 | 7 | yes |
+| `skip_digits` (`:118`) | 7 | 7 | yes |
+| `newline_from` (`:4072`) | 10 | 7 | yes |
+| `key_end` (`:149`) | 14 | 9 | yes |
+| `has_escape` (`:818`) | 10 | 7 | yes |
+| `num_end` (`:733`) | 10 | 6 (+ call to `skip_digits`, no loop) | **no — `sorry`**, see below |
+
+Whole-file build (`ConAgua.Scan.Leaves`, `lake env lean`, cold): ~2.5 s for all six.
+`ConAgua.Scan.Link` + `ConAgua.Scan.Leaves` together add about 750 lines to the `ConAgua` lib;
+the whole project (`lake build`, from a warm `.lake`) still finishes in well under a minute.
+
+* **A control-flow deviation from the Rust, found on `is_ws`/`skip_ws`/`skip_digits`.** Rust's
+  `while i < b.len() && is_ws(b[i])` — the very example DESIGN.md's "Expressions" section cites
+  as the reason `Cond` has short-circuit `&&`/`||` — does not go through `vcgen`+`grind` as
+  written: seven of the loop's verification conditions close, the eighth (the plain
+  `i ≥ len` exit, nothing to do with the whitespace test at all) does not, even raising
+  `finish`'s `liaSteps` two orders of magnitude. Reproducer:
+  `docs/gaps/grind-and-or-while-cond.lean`. Workaround, used for `skip_ws`/`skip_digits`
+  (`has_escape`'s `j < e` bound is written the same way): drop the `&&` and use the
+  `findLoop`/`strCloseLoop` idiom instead — the array bound alone in the `while`, an explicit
+  `return i` when the byte fails the test. Both shapes stop at the same position; only the
+  `L` control flow differs, not the model.
+* **`num_end` is the first function with a `sorry`.** It is the first leaf function that calls
+  another (`skip_digits`) and then compares the CALL'S RESULT against a local the call left
+  untouched (`if e == i`). Proving this needs `grind` to read `s'.loc 0` (`i`, unchanged) off the
+  callee's own postcondition `s' = s₀` — a record-field projection through a *hypothesis*
+  `t = { mem := _, loc := _ }`, which `grind`'s congruence closure never resolves (confirmed:
+  `subst`ing the same hypothesis first makes the identical `finish` call succeed instantly, and a
+  registered congruence lemma does not help either — `grind_pattern` refuses it, since the
+  pattern cannot mention the hypothesis's own two implicit arguments). Reproducer:
+  `docs/gaps/grind-state-eq-projection.lean`. No workaround found that keeps the house style
+  (`sym only [lang_grind] => vcgen [...] <;> finish`); `numEnd_spec`'s `sorry` records this.
+  Model (`numEndN`) and the rest of the proof (the `skip_digits` call's own spec, the `b[i]`
+  bounds argument) are complete; only the final `finish` is missing.
+* **Not done, this round**: `match_lit` (needs a second named array for the literal, or one `L`
+  function per literal — `L` has no array-valued parameters — not attempted for time), and with
+  it `scan_bool` (calls `match_lit` twice); `utf8_decode` (deeply nested multi-byte decode,
+  `Option (List …)`-shaped — a different result-cell question than anything tried so far);
+  `read_nat_at` (skipped per the task: `u64` accumulation is in scope for Theorem-2-style
+  refinement but not for this spike).
+
+### `sorry`s
+
+* `ConAgua.Scan.Leaves.numEnd_spec`'s `succ` case: see "num_end" above and
+  `docs/gaps/grind-state-eq-projection.lean`.
