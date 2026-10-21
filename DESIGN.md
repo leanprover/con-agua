@@ -238,7 +238,9 @@ None.
 
 ## The compiler (2026-10-21, lane `compiler`)
 
-Files: `ConAgua/Compiler/{Compile,Run,Tests,EmitScan}.lean`, `ConAgua/Compiler/harness/run.c`.
+Files: `ConAgua/Compiler/*.lean` (compiler `Compile`, check `WF`, Kraken runner `Run`, tests
+`Tests`, emitter `EmitScan`, benchmark `Bench`, proof: the rest), `ConAgua/Compiler/harness/run.c`,
+the `skipbench` executable in `lakefile.toml`.
 Toolchain: nightly-2026-10-20 with sgraf812/kraken `ba12834` (the `vcgen` branch).
 
 ### Shape
@@ -364,9 +366,10 @@ instruction at a known index) and the instruction semantics.
   `Only a b d d'` (only bytes in `[a, b)` changed), the well-formedness check.
 * `SimExpr.lean`: `sim_expr`, `sim_cond` (by induction on the expression/condition).
 * `RunEq.lean`: one run equation per statement form of `L.step`.
-* `SimStmt.lean`, `SimCall.lean`, `SimFun.lean`: statements (`SimS`, with the exits as a
-  structure `Conts`), calls (`sim_call`, from the callee's `FunSim`), function bodies (`funSim`:
-  stack check, parameters, zeroed locals, body, epilogue).
+* `SimStmt.lean`, `SimCall.lean`, `SimFun.lean`, `SimStore.lean`: statements (`SimS`, with the
+  exits as a structure `Conts`), calls (`sim_call`, from the callee's `FunSim`), function bodies
+  (`funSim`: stack check, parameters, zeroed locals, body, epilogue), array stores (the memory
+  relation after a byte or word store).
 * `Correct.lean`: `execSim_all`: by induction on the fuel `n`, `ExecSim n` (statements under
   `exec p n`) and `FunSim n`; inside, by induction on the statement. The machine fuel invariant
   is `r14 < n` under `exec p n` and `r14 ≤ n` under `step p (exec p n)`.
