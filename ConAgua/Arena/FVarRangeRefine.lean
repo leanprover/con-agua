@@ -104,7 +104,7 @@ theorem frGoOK_succ (n : Nat) (ih : FrNodeOK n) : FrGoOK (n + 1) := by
   · rw [frW_hit n m h hr hh0] at hb
     simp only [Option.some.injEq, Prod.mk.injEq] at hb
     obtain ⟨rfl, rfl⟩ := hb
-    rw [show a.memos.fvarBC[decE h]? = _ from memoRG_hit frSch bmKey _ m _ hR.memos.fvar h 0 hr hh0]
+    rw [show a.memos.fvarBC[decE h]? = _ from memoRG_hit frSch bmKey _ m _ hR.memos.fvar h 0 hr hh0 ⟨hh, rfl⟩]
     exact ⟨a, rfl, hR⟩
   · simp only [ne_eq, Decidable.not_not] at hh0
     rw [frW_miss n m h hr hh0] at hb

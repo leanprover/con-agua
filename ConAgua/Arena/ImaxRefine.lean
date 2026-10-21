@@ -71,7 +71,7 @@ theorem internLNode_imax_run (u v : LIdx) (a : AState) :
 def imaxSch : Schema := ⟨IREC, ISLOT, 2, 4, 12, LTag.imax⟩
 
 theorem iimaxSch_wf : imaxSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_imax0 (m : Mem) (t i : Word) : fld imaxSch m t i 0 = rdW (m.arr64 IREC) (i * 4 + t * 2) := by
   simp [fld, Schema.ad, imaxSch]
@@ -149,8 +149,8 @@ end query
 /-! ## The bridges from the L models -/
 
 theorem iimprobeW_arm (m : Mem) (u v t : Word) :
-    ∀ j d, improbeW (m.arr64 ISLOT) (m.arr64 IREC) t u v (nSlotsI m) j d =
-      probeArm imaxSch m t (imMt m u v t) (improbeW (m.arr64 ISLOT) (m.arr64 IREC) t u v (nSlotsI m)) j d := by
+    ∀ j d, improbeW (m.arr64 ISLOT) (m.arr64 IREC) t u v (baseW m t) (nSlotsI m) j d =
+      probeArm imaxSch m t (imMt m u v t) (improbeW (m.arr64 ISLOT) (m.arr64 IREC) t u v (baseW m t) (nSlotsI m)) j d := by
   intro j d; rw [improbeW]; rfl
 
 theorem iimpushOK_room (m : Mem) (t : Word) (h : impushOK m t = true) : PushRoom imaxSch m t := by
@@ -165,8 +165,8 @@ theorem iimpushMem_eq (m : Mem) (t u v j c : Word) :
 
 theorem iiminternW_eq (m : Mem) (u v : Word) :
     iminternW m u v = internM imaxSch m 0 (impushOK m) [u, v]
-      (improbeW (m.arr64 ISLOT) (m.arr64 IREC) 0 u v (nSlotsI m) (homeW (imaxHashW u v) (nSlotsI m)) 0)
-      (improbeW (m.arr64 ISLOT) (m.arr64 IREC) 1 u v (nSlotsI m) (homeW (imaxHashW u v) (nSlotsI m)) 0) := by
+      (improbeW (m.arr64 ISLOT) (m.arr64 IREC) 0 u v (baseW m 0) (nSlotsI m) (homeW (imaxHashW u v) (nSlotsI m)) 0)
+      (improbeW (m.arr64 ISLOT) (m.arr64 IREC) 1 u v (baseW m 1) (nSlotsI m) (homeW (imaxHashW u v) (nSlotsI m)) 0) := by
   have e0 : ∀ x, hdW imaxSch.tag.toUInt64 0 x = imaxP + x := fun x => by
     simp [hdW, imaxSch, imaxP, LTag.imax]
   have e1 : ∀ x, hdW imaxSch.tag.toUInt64 1 x = imaxS + x := fun x => by

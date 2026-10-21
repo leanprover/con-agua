@@ -24,20 +24,20 @@ theorem instC_lt : ∀ x ∈ instC, x.toNat < 64 := by simp [instC, liftC]
 
 /-- **`lift_entry` under `CheckR`.** -/
 theorem liftEntry_runC (fuel F : Nat) (hF : fuel ≤ F) (m : Mem) (a₀ : AState) (vis : Word)
-    (fe : IFEnv) (hR : CheckR m a₀ vis fe) (h k c : Word) (hh : h.toNat < 2 ^ 32) (r : List Word)
+    (fe : IFEnv) {dn : NIdx → Option ConLeche.Name} (hR : CheckR dn m a₀ vis fe) (h k c : Word) (hh : h.toNat < 2 ^ 32) (r : List Word)
     (m' : Mem) (hrun : run liftProg fuel "lift_entry" [h, k, c] m = .ok (r, m')) :
     ∃ a', (liftLooseBVarsFast F k.toNat c.toNat (decE h)).run a₀ = .ok (decE (r.headD 0), a') ∧
-      CheckR m' a' vis fe := by
+      CheckR dn m' a' vis fe := by
   obtain ⟨a', hr, hD⟩ := liftEntry_run fuel F hF m a₀ hR.arena h k c hh r m' hrun
   exact ⟨a', hr, hR.of_walk hD (liftEntry_frame liftProg_ok rfl hrun) (by decide) liftC_lt
     ((keeps_liftFast _ _ _ _).run hr)⟩
 
 /-- **`inst_entry` under `CheckR`.** -/
 theorem instEntry_runC (fuel F : Nat) (hF : fuel ≤ F) (m : Mem) (a₀ : AState) (vis : Word)
-    (fe : IFEnv) (hR : CheckR m a₀ vis fe) (e v d : Word) (he : e.toNat < 2 ^ 32) (r : List Word)
+    (fe : IFEnv) {dn : NIdx → Option ConLeche.Name} (hR : CheckR dn m a₀ vis fe) (e v d : Word) (he : e.toNat < 2 ^ 32) (r : List Word)
     (m' : Mem) (hrun : run instProg fuel "inst_entry" [e, v, d] m = .ok (r, m')) :
     ∃ a', (instantiate1Fast F (decE e) (decE v) d.toNat).run a₀ = .ok (decE (r.headD 0), a') ∧
-      CheckR m' a' vis fe := by
+      CheckR dn m' a' vis fe := by
   obtain ⟨a', hr, hD⟩ := instEntry_run fuel F hF m a₀ hR.arena e v d he r m' hrun
   exact ⟨a', hr, hR.of_walk hD (instEntry_frame instProg_ok rfl rfl hrun) (by decide) instC_lt
     ((keeps_inst1Fast _ _ _ _).run hr)⟩
@@ -45,9 +45,9 @@ theorem instEntry_runC (fuel F : Nat) (hF : fuel ≤ F) (m : Mem) (a₀ : AState
 /-- **`bb_memo` under `CheckR`**: `bbMemo_run` gives `ArenaR`; the walk keeps the store and
 writes only its memo, so `DerR` carries over too. -/
 theorem bbMemo_runC (fuel F : Nat) (hF : fuel ≤ F) (m : Mem) (a₀ : AState) (vis : Word)
-    (fe : IFEnv) (hR : CheckR m a₀ vis fe) (h : Word) (hh : h.toNat < 2 ^ 32) (r : List Word)
+    (fe : IFEnv) {dn : NIdx → Option ConLeche.Name} (hR : CheckR dn m a₀ vis fe) (h : Word) (hh : h.toNat < 2 ^ 32) (r : List Word)
     (m' : Mem) (hrun : run walkProg fuel "bb_memo" [h] m = .ok (r, m')) :
-    ∃ a', (bvarBoundMemo F (decE h)).run a₀ = .ok ((r.headD 0).toNat, a') ∧ CheckR m' a' vis fe := by
+    ∃ a', (bvarBoundMemo F (decE h)).run a₀ = .ok ((r.headD 0).toNat, a') ∧ CheckR dn m' a' vis fe := by
   obtain ⟨a', hr, hR'⟩ := bbMemo_run fuel F hF m a₀ hR.arena.1 h hh r m' hrun
   have hs := (keeps_bvarBoundMemo _ _).run hr
   have hf := bbMemo_frame rfl rfl rfl rfl rfl rfl hrun
@@ -57,9 +57,9 @@ theorem bbMemo_runC (fuel F : Nat) (hF : fuel ≤ F) (m : Mem) (a₀ : AState) (
 
 /-- **`fr_memo` under `CheckR`.** -/
 theorem frMemo_runC (fuel F : Nat) (hF : fuel ≤ F) (m : Mem) (a₀ : AState) (vis : Word)
-    (fe : IFEnv) (hR : CheckR m a₀ vis fe) (h : Word) (hh : h.toNat < 2 ^ 32) (r : List Word)
+    (fe : IFEnv) {dn : NIdx → Option ConLeche.Name} (hR : CheckR dn m a₀ vis fe) (h : Word) (hh : h.toNat < 2 ^ 32) (r : List Word)
     (m' : Mem) (hrun : run fvarRangeProg fuel "fr_memo" [h] m = .ok (r, m')) :
-    ∃ a', (fvarRangeMemo F (decE h)).run a₀ = .ok ((r.headD 0).toNat, a') ∧ CheckR m' a' vis fe := by
+    ∃ a', (fvarRangeMemo F (decE h)).run a₀ = .ok ((r.headD 0).toNat, a') ∧ CheckR dn m' a' vis fe := by
   obtain ⟨a', hr, hR'⟩ := frMemo_run fuel F hF m a₀ hR.arena.1 h hh r m' hrun
   have hs := (keeps_fvarRangeMemo _ _).run hr
   have hf := frMemo_frame rfl rfl rfl rfl rfl rfl hrun

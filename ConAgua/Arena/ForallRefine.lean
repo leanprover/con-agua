@@ -98,7 +98,7 @@ theorem internE_forall_run (ty b : EIdx) (a : AState) :
 def forallSch : Schema := ⟨FAREC, FASLOT, 2, 4, 30, ETag.forallE⟩
 
 theorem forallSch_wf : forallSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_fa0 (m : Mem) (t i : Word) :
     fld forallSch m t i 0 = rdW (m.arr64 FAREC) (i * 4 + t * 2) := by
@@ -179,9 +179,9 @@ end query
 /-! ## The bridges from the L models -/
 
 theorem faprobeW_arm (m : Mem) (ty body t : Word) :
-    ∀ j d, faprobeW (m.arr64 FASLOT) (m.arr64 FAREC) t ty body (nSlotsFa m) j d =
+    ∀ j d, faprobeW (m.arr64 FASLOT) (m.arr64 FAREC) t ty body (baseW m t) (nSlotsFa m) j d =
       probeArm forallSch m t (faMt m ty body t) (faprobeW (m.arr64 FASLOT) (m.arr64 FAREC) t ty
-        body (nSlotsFa m)) j d := by
+        body (baseW m t) (nSlotsFa m)) j d := by
   intro j d; rw [faprobeW]; rfl
 
 theorem fapushOK_room (m : Mem) (t : Word) (h : fapushOK m t = true) : PushRoom forallSch m t := by
@@ -196,9 +196,9 @@ theorem fapushMem_eq (m : Mem) (t ty body j c : Word) :
 
 theorem fainternW_eq (m : Mem) (ty body : Word) :
     fainternW m ty body = internM forallSch m (faskipW m ty body) (fapushOK m) [ty, body]
-      (faprobeW (m.arr64 FASLOT) (m.arr64 FAREC) 0 ty body (nSlotsFa m)
+      (faprobeW (m.arr64 FASLOT) (m.arr64 FAREC) 0 ty body (baseW m 0) (nSlotsFa m)
         (homeW (forallHashW ty body) (nSlotsFa m)) 0)
-      (faprobeW (m.arr64 FASLOT) (m.arr64 FAREC) 1 ty body (nSlotsFa m)
+      (faprobeW (m.arr64 FASLOT) (m.arr64 FAREC) 1 ty body (baseW m 1) (nSlotsFa m)
         (homeW (forallHashW ty body) (nSlotsFa m)) 0) := by
   have e0 : ∀ x, hdW forallSch.tag.toUInt64 0 x = forallP + x := fun x => by
     simp [hdW, forallSch, forallP, ETag.forallE]

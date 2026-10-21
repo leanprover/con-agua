@@ -70,7 +70,7 @@ theorem internE_bvar_run (i : Nat) (a : AState) :
 def bvarSch : Schema := ⟨BREC, BSLOT, 1, 2, 22, ETag.bvar⟩
 
 theorem bvarSch_wf : bvarSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_bvar0 (m : Mem) (t i : Word) : fld bvarSch m t i 0 = rdW (m.arr64 BREC) (i * 2 + t) := by
   simp [fld, Schema.ad, bvarSch]
@@ -131,8 +131,8 @@ end query
 /-! ## The bridges from the L models -/
 
 theorem bprobeW_arm (m : Mem) (u t : Word) :
-    ∀ j d, bprobeW (m.arr64 BSLOT) (m.arr64 BREC) t u (nSlotsB m) j d =
-      probeArm bvarSch m t (bMt m u t) (bprobeW (m.arr64 BSLOT) (m.arr64 BREC) t u (nSlotsB m)) j d := by
+    ∀ j d, bprobeW (m.arr64 BSLOT) (m.arr64 BREC) t u (baseW m t) (nSlotsB m) j d =
+      probeArm bvarSch m t (bMt m u t) (bprobeW (m.arr64 BSLOT) (m.arr64 BREC) t u (baseW m t) (nSlotsB m)) j d := by
   intro j d; rw [bprobeW]; rfl
 
 theorem bpushOK_room (m : Mem) (t : Word) (h : bpushOK m t = true) : PushRoom bvarSch m t := by
@@ -147,8 +147,8 @@ theorem bpushMem_eq (m : Mem) (t u j c : Word) :
 
 theorem binternW_eq (m : Mem) (u : Word) :
     binternW m u = internM bvarSch m 0 (bpushOK m) [u]
-      (bprobeW (m.arr64 BSLOT) (m.arr64 BREC) 0 u (nSlotsB m) (homeW (bvarHashW u) (nSlotsB m)) 0)
-      (bprobeW (m.arr64 BSLOT) (m.arr64 BREC) 1 u (nSlotsB m) (homeW (bvarHashW u) (nSlotsB m)) 0) := by
+      (bprobeW (m.arr64 BSLOT) (m.arr64 BREC) 0 u (baseW m 0) (nSlotsB m) (homeW (bvarHashW u) (nSlotsB m)) 0)
+      (bprobeW (m.arr64 BSLOT) (m.arr64 BREC) 1 u (baseW m 1) (nSlotsB m) (homeW (bvarHashW u) (nSlotsB m)) 0) := by
   have e0 : ∀ x, hdW bvarSch.tag.toUInt64 0 x = bvarP + x := fun x => by
     simp [hdW, bvarSch, bvarP, ETag.bvar]
   have e1 : ∀ x, hdW bvarSch.tag.toUInt64 1 x = bvarS + x := fun x => by

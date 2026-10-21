@@ -3551,7 +3551,7 @@ Word arrays (byte arrays are a separate id space: `IN` = byte array 0 is the inp
 | 47 | `IMEMO` | `MemosR.inst1` | `instantiate1` memo (`inst1C`) |
 | 48 | `FRMEMO` | `MemosR.fvar` | `fvarRange` memo (`fvarBC`) |
 | 49‥55 | – | `MemosR` (reserved) | the other six walk memos |
-| 56‥63 | – | reserved (store tier) | scratch epochs, the per-declaration tree heap |
+| 56‥63 | – | reserved (store tier) | (the scratch epoch is `CTL[62]`, no array; lane `libs`) |
 | 64, 65, 66 | `NID`, `LID`, `EID` | `StateDR` (front) | the export's name/level/expression id tables |
 | 67‥95 | – | reserved (front) | declaration records, `pend` |
 | 96‥127 | – | `CoreR` (stub) | the 14 caches and the eager-depth banks |
@@ -3572,7 +3572,8 @@ Word arrays (byte arrays are a separate id space: `IN` = byte array 0 is the inp
 | 44, 45 | `MemosR.inst1` | `instantiate1` memo |
 | 46, 47 | `MemosR.fvar` | `fvarRange` memo |
 | 48‥61 | `MemosR` (reserved) | the other six memos |
-| 62, 63 | reserved | |
+| 62 | `ArenaR` (every table, `StoreR`) | scratch slot base `B` (lane `libs`): tier-1 slots hold `B + i + 1`; `scratch_reset` adds `2^32` |
+| 63 | reserved | |
 | 64‥95 | reserved (front) | |
 | 96‥127 | `CoreR` (stub) | cache stamps/counts, eager depth |
 | 128‥135 | `EnvR` (stub) | environment counters |
@@ -3665,3 +3666,337 @@ Hard numbers for planning: `scripts/census.py` (PLAN.md, "Progress census"). Pie
 (among them all twelve `natOpResult` literal arms and 18 of the 19 store arms).
 Per phase in `docs/progress.md`. The census takes about 30 s (the link pass imports the modules in a few groups; axioms come
 from the oleans' precomputed tables).
+
+## Levels: the scratch heap and the level algorithms (2026-10-21, lane `levels`)
+
+Phase 3 (ROADMAP §1, `kernel/level.rs`): con-leche's pure `Level` algorithms that the twin runs on
+read-back trees (`Level.isEquiv`, `leq`, `simplify`, `subst`, …), translated into L over a scratch
+heap. Files: `ConAgua/Arena/Level*.lean` (other than the store files `LevelStore`/`LevelRefine`).
+
+### The heap, and why the readback is free (`LevelHeap.lean`, `LevelHeapRel.lean`)
+
+* **Pointers.** A level pointer is a word: below `2^32` a store handle (the level store's tags
+  0‥4 in bits 31…28, tier bit 27, index), at or above `2^32` heap node `p - 2^32`. The heap is the
+  word array `LH` (array **192**) of three-word nodes `[tag, a, b]` with the store's tags (`a` a
+  name handle word for `param`; unused fields `0`), bump-allocated below the top `CTL[192]`.
+  `lv_node(p)` views either kind (`abort` on a dangling pointer), `lh_mk(g, a, b)` allocates.
+* **No readback, no tree cache.** The twin reads a handle back into a `Level` (`readLevelM`, cached
+  in `readLC`) and runs the algorithm on the tree. L runs the algorithm on the handle itself and
+  allocates heap nodes only for what the algorithm builds, so a store DAG is never copied, and
+  `readLC`/`readNC`/`readLsC` need no L table: their rows equal `denoteL`/`denoteN` of the
+  handle, which is all a refinement needs to know about them (lane `scale`'s "tree-valued caches"
+  item is moot for levels). The heap is reset by the entry of each comparison (per call, ROADMAP
+  §2 item 5), not per declaration.
+* **The decoder is an inductive relation** `LvR N m p l` (a constructor per tag, children
+  related recursively, `param` names through `N : Word → Name → Prop`, functional and injective:
+  `NameRel`). It needs no fuel and holds only along finite views; `LvR.fn` (a pointer denotes one
+  level) is an induction. Under `ArenaR`, `N` is the store's name readback; store handles are
+  related through the store's tables, heap nodes through `LH`.
+* **Growth.** `HeapExt m m'` ("every view of `m` is a view of `m'`") carries `LvR` (`LvR.mono`);
+  `HeapFrame` (store arrays, `CTL` words other than 192, the heap below the top) implies it, and
+  `lhMkW_ext` gives it for an allocation. The new node's view is the written one.
+* `lv_eq(p, q)` is `Level.beq` (`decide (l = r)`): pointer equality first, then tags, `param`
+  names by word (injectivity of `N`), children recursively. `lvEqW_ok` (`@[refines
+  ConLeche.Level.beq]`).
+
+Note for lane `libs` (MemoLib tree values, a per-declaration tree heap): the level algorithms do
+not need it. Their heap is per call and holds intermediate trees; the readback caches it would
+serve are not represented for levels at all (above). If the tree heap lands with the same node
+shape, `lv_node` can view it as a third pointer kind.
+
+Hypotheses left for the callers (no `sorry`): see `lvl_eq` below.
+
+Request to lane `arch`: add `LH` (array 192) and `CTL[192]` (heap top) to the memory map, owner
+`levels` (per call, no relation: the heap is scratch, nothing in `AState` corresponds to it).
+
+### Per function
+
+| function | Rust lines | L lines | spec lines (model + arms + spec) | refinement lines | `lean` user | automation |
+|---|---:|---:|---:|---:|---|---|
+| `lv_node` (view) | – (store `view` / tree match) | 23 | 50 | `HeapFrame.ext` 60 | | `vcgen` + `finish` |
+| `lh_mk` | – (`Rc::new`) | 9 | 25 | `lhMkW_ext` + `lhMem_*` 110 | | `vcgen` + `finish`; frames by hand |
+| `lv_eq` (`Level.beq`) | 19 (`beq`) | 11 | 70 | `lvEqW_ok` 115 | | `vcgen` + `finish (gen := 20)`; refinement by hand (cases per tag) |
+| `lv_comb` (`combining`) | 10 | 13 | 70 | `combW_ok` 50 (+ allocation lemmas 27) | | as `lv_eq` |
+| `lv_simp` (`simplify`) | 21 | 16 | 130 | `imaxW_ok` + `simpW_ok` 120 | | as `lv_eq` |
+| `lv_nz` (`isNeverZero`) | 9 | 12 | 70 | `nzW_ok` 40 | | as `lv_eq` |
+| `lv_subst` (`subst [k] [v]`, one key) | 24 (`subst`, `subst_go`) | 10 | 80 | `substW_ok` 60 | | as `lv_eq` |
+| `lv_subsimp`, `lv_dist1`, `lv_dist2` (operand builders) | in `by_cases`, `imax_rules_distrib*` | 17 | 100 | `ssW_ok`, `dist1W_ok`, `dist2W_ok` 55 | | as `lv_eq` |
+| `lv_leq` (`leqCore`) | 15 | 9 | | `leq_ok` 22 | | |
+| `lv_rest` (`rest`) | 37 | 27 | | `rest_ok` 130 | | |
+| `lv_imax`, `lv_imax_l`, `lv_imax_r` (`imaxRules`) | 88 (`imax_rules`, `by_cases_left/right`, `imax_rules_distrib*`) | 32 | | `imax_ok` + `imaxL_ok` + `imaxR_ok` 105 | | |
+| `lv_cases`, `lv_cases_at` (`byCases`) | 19 | 15 | | `cases_ok` + `ca_ok` 65 | | |
+| the comparison group (7 functions, one mutual model) | 159 | 83 | `LevelLeq` 474 (models, 49 arm lemmas), `LevelLeqSpec` 151 | `LevelLeqRel` 740 (incl. 30 equations of con-leche's arms, 60) | 3.7 + 35 s, 4.2 s | `vcgen` + `finish (gen := 20)`; refinement by hand |
+| `lv_leq_top` (`leq`, `defaultFuel`) | 6 | 6 | 30 | `leqTopW_ok` 25 | | as `lv_eq` |
+| `lv_equiv` (`isEquiv`) | 16 | 12 | 70 | `equivW_ok` 70 | | as `lv_eq` |
+| `lv_equivs` (`isEquivList`, lists in `POOL`) | 20 | 7 | 50 | `equivsW_ok` + `LvsR` 75 | | as `lv_eq` |
+| `lvl_eq` (`lvlEq?`: heap reset, then `lv_equiv`; the verdict cache not in L) | 33 (`lvl_eq_q`) | 5 | 25 | `lvlEq_refines` + `lvlEq?_run` + `lvlEq_run` 110; the view bridge (`lvNodeW_store`, `denoteL_lvR`) 190 | 1 s | `vcgen` + `finish`; bridge by hand |
+| total (files) | | 237 | `LevelHeap` 243, `LevelSimp` 291, `LevelSubst` 251, `LevelLeq` 474, `LevelLeqSpec` 151, `LevelEquiv` 285 | `LevelHeapRel` 460, `LevelSimpRel` 264, `LevelLeqRel` 740, `LevelEquivRel` 200, `LevelArena` 344 | | |
+
+### The comparison (`LevelSubst`, `LevelLeq`, `LevelLeqSpec`, `LevelLeqRel`)
+
+* **Encodings.** The answer `Option Bool` is a word (`0` none, `1` false, `2` true, `encO`).
+  con-leche's fuel is the word argument `f`, decremented exactly where `leqCore`'s `fuel + 1`
+  pattern is: **the `10^4` counter is exact** (ROADMAP §3 (b)), and at `0` the answer is `none`,
+  which every caller sees. `diff : Int` is the biased word `d = diff + 2^32` (`DR`); the
+  refinement keeps `|diff| + fuel ≤ 2^31`, true from the entry (`0`, `10^4`) since `diff` moves
+  by one only where fuel is spent, so `d ± 1` never wraps.
+* **One key.** `byCases` substitutes one parameter; `lv_subst(l, k, v)` is `subst [k] [v]`
+  (`@[refines_part … "one key"]`). The list version (`instLPGo`'s callers, phases 4–5) reads its
+  keys from wherever the declaration's parameter names will live; not built here.
+* **The model** is one mutual block (`leqW`, `restW`, `imaxRW`, `imaxLW`, `imaxRrW`, `casesW`,
+  `caW` and 14 continuations), structural on the L fuel with the continuations ranked by a second
+  component (`termination_by (n, k)`). The refinement is the same mutual induction: seven
+  predicates (`LeqOK` … `CaOK`), one lemma each, with con-leche's overlapping `match` arms restated
+  as guarded equations over the tags (`LevelEq.rest_*`, `im_*`, by `unfold; split <;> simp_all`).
+* **The entries** (`LevelEquiv`, `LevelEquivRel`): `lv_leq_top` (`leq`: fuel word `10000`,
+  bias `2^32`), `lv_equiv` (`isEquiv`, simplifying each side once where con-leche's `leq`
+  simplifies again, to equal levels), `lv_equivs` (`isEquivList` over two `POOL` slices of level
+  pointers, `LvsR`; a length mismatch answers `false` only after the common prefix compared
+  `true`, as con-leche's). All three refinements went through at the first attempt.
+* **Under `ArenaR`** (`LevelArena.lean`, not a `module`: it reads con-ron's store): L's view of
+  a level handle is the arena's (`lvNodeW_store`, one case per tag over the five level tables'
+  `StoreR`), so `denoteL` of a handle is related to its word (`denoteL_lvR`, by induction on
+  `denoteLAux`'s fuel) with the name decoder `nameN` (the store's `denoteN` on handle words),
+  which is a `NameRel` under con-ron's `NStoreWF` (`denoteN_inj`).
+* **`lvl_eq(u, v)` refines `lvlEq?`** (`lvlEq_refines`, `lvlEq_run` from a run of `levelProg`).
+  Hypotheses, as lane `nat2` did for pins: `NStoreWF` of the name store, the two readbacks
+  defined, and the twin's caches holding what they claim (`ReadLCOK`: every `readLC` row is the
+  readback; `LvlEqCOK`: a `lvlEqC` row at `(u, v)` is the verdict). L keeps neither cache: it
+  recomputes, which the twin's cache returns unchanged; the twin's state after differs only in
+  `caches` (`ArenaR.with_caches`), L's only in the heap (`HeapExt.memFrame`, write set
+  `levelProg_closed`: `[LH]`, `CTL` `[192]`, by `decide +kernel`). When `CoreR` gets `lvlEqC`,
+  the L cache goes in front of `lv_equiv` and `LvlEqCOK` becomes a field of the relation.
+* **Inversion by tag** (`LvR.inv0` … `inv4`: from `lvG m p = t`, the level's constructor and the
+  children's relations) replaced `cases` on the derivation, whose impossible branches made
+  `simp_all` loop.
+
+### Findings
+
+* **Split large L functions.** `lv_imax` as one function (two `byCases` arms and four
+  distribution arms, three re-reads of a child's view, 14 locals) gave `vcgen` verification
+  conditions with ~5000 lines of context; `finish (gen := 20)` failed after 6 min CPU. Split into
+  `lv_imax`/`lv_imax_l`/`lv_imax_r` (each a tail call to the next), the whole spec file
+  (seven functions) takes 35 s. The model and the refinement follow the split one-to-one.
+* `simp` on goals with `UInt64` literals such as `p - 4294967296 + 3` produced proofs on which the
+  **kernel** hit "deep recursion" (elaboration was fine); stating the arithmetic once as lemmas
+  (`heap_sub`, `heap_off`, `heap_below`) and using `rw` + `omega` avoids it. Likewise `decide`
+  on `(1 : Word) ≠ 192`: use `simp`.
+* `finish` failed on `lv_eq` (a wrong case split, no hint) until `(gen := 20)`, as lane `exprops`
+  found for three callee posts.
+* The refinements are short because the decoder is a relation: each is one induction on the L
+  fuel and one `cases` on the argument's `LvR` derivation, whose constructor fixes the view's tag
+  (`lv_fields`), and the twin's `match` reduces by `simp [Level.f]`. Allocations are three lemmas
+  (`mk_succ`, `mk_max`, `mk_imax`). The first full drafts of `combW_ok`/`simpW_ok`/`nzW_ok` took
+  three rounds of small fixes; no `grind` in the refinements.
+* Two `match`es with the same arms but different auxiliary matchers (`simplify`'s `imax` arm and
+  a restatement) are not syntactically equal; `cases` on the discriminant and `rfl` closes it.
+* The model's view fields are named (`lvG`/`lvA`/`lvB` with `@[level_grind =]` equations to the
+  `headD` projections the call's `setLocs` produces); a model that unfolded them in `finish`'s
+  list confused `grind`.
+
+### `sorry`s
+
+None.
+
+## Pins, the environment, the declaration loop (2026-10-21, lane `pinsenv`)
+
+### The pin table (`Tiers.lean` `PinsR`, `Pins.lean`)
+
+`PINS` (array 128) holds the twin's `Pins`: word 0 a ready flag, words `1‥51` the 51 name slots
+(`PIN_*` at `1 + PIN_*`), 52‥54 `emptyLevels`/`zeroLevel`/`sortOne`, 55‥70 the 16 reserved names.
+`PinsR m p := flag ≠ 0 → PinsFull m p` (sizes, words below `2^32`, every field `decI` of its
+word). Every reader checks the flag and aborts on `0`, where the twin's empty table raises
+`.internal`, so the relation claims nothing before the driver fills it, and all-zero memory is
+related to `Pins.empty` (`PinsR.of_flag`). Frame: `PinsR.congr` (array 128 unchanged).
+
+* `pin_at(i)` (flag, `i < 51`, word `1 + i`) refines `pinAt` (`pinAt_refines`, post: memory
+  unchanged, `(pinAt i).run a = .ok (decI r, a)`); `pin_word(k)` the three interned values. The
+  88 named readers (`pinNat`, …, Core's `natAddName`, `boolTrueName`, `emptyLevels`, …) are one
+  line each (`PinSlotSpec`/`PinWordSpec`), generated.
+* Twin side: `pinAt_run`, `pinEmptyLevels_run`, … (`simp` with the `StateT`/`Except` unfoldings;
+  `rfl` alone does not see through the `do`).
+
+### `natOpResult`, the whole dispatch (`NatArms.lean` `natOpResultL`, `PinsNatOp.lean`)
+
+`nat_op_result(c, oa, la, ob, lb)` is in `natArmProg` (so lane `nat2`'s arm theorems apply
+verbatim): the flag, then fifteen `c == PINS[k]` tests in the twin's order, each calling its arm;
+`beq`/`ble` get `PINS[31]`, `PINS[32]`, `PINS[52]` (the pins nat2 took as arguments, whose
+hypotheses `hT`/`hF`/`hE` are now discharged from `PinsFull`). Returns `(1, h)` / `(0, 0)`
+(`decOpt`). `natOpResult_sel`: under `PinsFull` the twin runs as `natOpSel`, the same chain on
+word equality (`decI_beq`: handle words below `2^32`). `natOpResultL_refines` (`@[refines
+ConRon.Arena.natOpResult]`) is one `vcgen` over the sixteen arms with the arm specs as terms and
+`finish`; it needs `maxHeartbeats 2000000` (≈ 17 s; the default runs out in `whnf` inside
+`finish`, not a failing search). The conditional facts (`hok`/`hst`/`hres`: `natOpResult` =
+`natOpSel` when the flag is set) are given as implications, so the flag-zero abort path needs no
+case split.
+
+## Library work before the core: the scratch lifecycle (2026-10-21, lane `libs`)
+
+Lane `scale`'s recommended item 4, first half. Files: `StoreLib.lean`, `Store.lean` and the 18
+other `*Store.lean`/`*Refine.lean` (the probe and the append, mechanically), `Frame.lean`
+(`Apart`), `ArenaRel.lean` (`storeCtl` gets 62), new `Scratch.lean` (L) and `ScratchRefine.lean`.
+No `sorry`; axioms `propext`, `Classical.choice`, `Quot.sound`.
+
+### Epoch-stamped scratch slots: a slot base
+
+`SlotsOKG` required every slot of a tier to be at most its count, so emptying the scratch tier
+meant zeroing every scratch slot of 19 tables per declaration. Now a slot of tier `t` holds
+`B t + i + 1` for node `i`, with `B 0 = 0` and `B 1 = CTL[62]` (`SCB`, `baseW m t =
+CTL[62] * t`), and a slot word at or below the base reads free (`slotV`/`slotRd`). Raising `B` by
+`2^32` empties the scratch tier of every table at once: old scratch slots hold at most `B + 2^27`.
+For tier 0 nothing changes (`B 0 = 0`: `slotV … 0 x` is the raw word).
+
+* **L, per table** (19 × 5 lines, by script): `*_find` loads `b := CTL.u64[62] * t`, tests
+  `v <= b` instead of `v == 0` and continues with `v - b`; `*_push` stores `CTL.u64[62] * t + c +
+  1`. Models take the base (`aprobeW … t f a b n j d`); the probe-arm lemmas state `sl[k] ≤ b` /
+  `¬ sl[k] ≤ b` and `sl[k] - b - 1`. Every `vcgen` spec went through unchanged except for adding
+  `ld64`/`baseW` to its lists. `#guard` memories need a `CTL` of 63+ words (and `harness/walk.c`
+  now allocates 64).
+* **The library**: `slotW` reads through the base; `pushG` writes `baseW m t + c + 1`; new
+  `slotV_pushG`/`slotV_new`/`baseW_pushG` (`store_grind`) replace `pushG_slot` in the generic
+  proofs (one lesson: state the slot read after an append over the **address** `j * 2 + t`, as
+  `slotV … x`, so congruence closes the run arguments; a lemma over `slotW S m t j` with a
+  condition `j' * 2 + t' = j * 2 + t` left `grind` without the injectivity it needs). `StoreR`'s
+  first conjunct is now `count room ∧ CTL[62] < 2^63`; `Schema.WF` gets `scb` (`ca`, `ca + 1`
+  avoid 1 and 62); `Apart` gets `SCB ∉ C`; `tierR_mono` takes `baseW m' t = baseW m t`.
+* **`storeR_reset`** (library): a memory whose arrays, pool top and tier-0 count are unchanged,
+  whose base rose by `2^32` from below `2^62`, tier-1 count `0` and flag `on'`, relates the same
+  persistent table and `Tbl.empty`. No slot is read: the old `SlotsOKG` bound gives the
+  freedom of every old slot against the new base.
+
+### The bracket (`Scratch.lean`, `ScratchRefine.lean`)
+
+* `scratch_reset(f)`: `B += 2^32` (abort at `B ≥ 2^62`: 2^30 declarations), `CTL[1] := f`, the
+  19 tier-1 counts `:= 0`. `scratch_enter()` = reset(1) + the four walk memos' clears;
+  `scratch_drop()` = reset(0). `@[l_impl]`: `enterScratch`, `dropScratch`,
+  `EStore.enableScratch`/`dropScratch`.
+* `ArenaD.reset`: under `ArenaD`, `resetMem m f` relates `{a with store := EStore.reset a.store (f
+  != 0)}` (enable or drop: all four stores' scratch tables emptied and flags set): 19
+  applications of `storeR_resetMem` (one line each, generated), the pool, the memo frame, the
+  derived ranges (persistent unchanged, scratch empty). `ArenaD.enter` adds the four clears.
+* `scratchEnter_refines`/`scratchDrop_refines` (`ArenaD`) and `…_refinesC` (`CheckR`: `CoreR` is a
+  stub, so `flushCaches` is free for now; pins and environment by their frames).
+  `scratchProg_closed`: write set `CTL` words only, `decide +kernel`.
+
+### Measurements (`lake env lean`, user CPU, one run, machine under load)
+
+| file | lines before → after | user s before → after |
+|---|---:|---:|
+| `StoreLib.lean` | 699 → 786 | 9.1 → 9.7 |
+| `Store.lean` (`lit`) | 549 → 579 | 9.4 → 10.2 |
+| `AppStore.lean` (typical table) | 303 → 307 | 8.9 → 11.3 |
+| `AppRefine.lean` (typical relation) | 230 → 230 | 1.2 → 1.2 |
+| `ArenaRel.lean` | 1024 → 1024 | 23.6 → 24.4 |
+| `Scratch.lean` (new) | 165 | 4.9 |
+| `ScratchRefine.lean` (new) | 347 | 1.4 |
+
+Every table's L code grew by 3 lines (a base load, a free test, a subtraction), each relation file
+by 0–4. The 19 tables were converted by a script (`*probeW` argument insertion, arm lemmas, L
+loop, push); all 38 files built at the first attempt after the library was fixed.
+
+### For the core lanes: how to use
+
+* A **new table**: write `*_find` with `b := CTL.u64[62] * t` and the `v <= b` / `v := v - b`
+  test, `*_push` with `CTL.u64[62] * t + c + 1`, the model with a base argument; pass
+  `(baseW m t)` in the `probeArm` bridge and `(baseW m 0)`/`(baseW m 1)` in `internW`; add the
+  table to `scratchCnts`/`scratch_reset` (its `ca + 1`) and one line to `ArenaD.reset`.
+* The **declaration bracket**: call `scratch_enter` / `scratch_drop`; use `scratchEnter_refinesC`
+  / `scratchDrop_refinesC`. When `CoreR` gets fields, `flushCaches` becomes the 14 caches' clears in
+  `scratch_drop` (and `CheckR.of_bracket` needs the `CoreR` of the empty caches).
+* **Tree heap (note for lane `levels`)**: lane `levels` built its own level heap (`LH`, array
+  192, `CTL[192]`) with pointers that may be store handles, so `readLC` needs no L table. The library
+  side for tree-valued memo entries is a memory-reading value relation (next section).
+
+### `sorry`s
+
+None.
+
+## Library work before the core: memos with tree values, deletion and banks (2026-10-21, lane `libs`)
+
+Lane `scale`'s item 4, second half. Files: `MemoLib.lean` (L: `X_erase`, `X_bank_enter`,
+`X_bank_leave`), `MemoLibRel.lean` (the relation generalised), new `MemoBank.lean`,
+`MemoTree.lean`; one argument added at the four `memoRG_hit` call sites (`WalkRefine`,
+`LiftRefine`, `Inst1Refine`, `FVarRangeRefine`). No `sorry`; standard axioms.
+
+### Tree-valued entries: `MemoRV`
+
+`MemoRV S K VR m mp` replaces the word decoder `dv : Word → ν` by a **value relation that may read
+memory**, `VR : Mem → Word → ν → Prop` (a live slot's word `w` denotes `mp`'s value: `MemoV VR m
+w mp[k]?`). `MemoRG S K dv` is now `MemoRV` at `fun _ w v => v = dv w`, and its six lemmas are
+one-line corollaries with the old statements (`memoRG_hit` takes `K.ok k1 k2` as a last argument,
+see deletion). What an instance with a memory-reading relation proves once is `VStable S VR`
+(the relation survives the memo's own writes); `memoRV_frame` takes the relation's transport
+across any other writer (`HeapExt` for a growing heap).
+
+The client (`MemoTree.lean`): values are lane `levels`' level pointers, decoded by `LvR N m p l`.
+`lvNodeW_congr` (what `lvNodeW` reads: `LH`, the four level record arrays, `CTL` words below 16
+and 192) gives `lvR_stable` for any schema outside them (`TreeSafe`; through `LvR.of_view`, since `HeapExt` now also frames every other array), and `memoRV_heapExt` carries
+the memo across `lh_mk`. `lt_set`/`lt_hit` instantiate it for a test schema of `readLC`'s shape
+(`ltSch`: array 100, `CTL[100]`, inside `CoreR`'s reserved range, not claimed by `CoreR`). Since
+lane `levels`' pointers include store handles, `readLC` can store the handle itself; `readNC`
+and `readLsC` take the same route once names and level lists have pointer decoders.
+
+### Deletion: tombstones in `MemoLib`, no separate map library
+
+Decision: `X_erase(j)` overwrites the first key word of the live slot `j` a probe found with
+`TOMB = 2^64 − 1`; no valid key starts with it (`MemoKey.ok_tomb`), so the slot stays live for
+probing and never matches. The relation's live/uniqueness clauses skip tombstone slots, and every
+entry of `mp` is the decoding of its own encoding (a new clause, needed so that erasing one key
+cannot strand another key with the same encoding: `lfKey`'s `Nat` cutoff is not injective).
+`memoRV_erase`: find (a hit), then erase, is `mp.erase`. Tombstones are not reused (they go at
+the next epoch `clear`), so they count against the 3/4 load limit. A separate open-addressing
+map library was not worth it: the environment index, the one `erase` user ROADMAP named, is
+directly addressed by the name handle (lane `pinsenv`, `Tiers.lean`: no hashing, no tombstones),
+so erase has no client yet; it cost one L function (4 lines) and one lemma (~70 lines).
+
+### Banks: generation-tagged keys (`MemoBank.lean`)
+
+ROADMAP §2 item 3 proposed `D` banks selected by the eager depth, the new bank cleared by epoch on
+entry. Built instead: **one memo per table, the generation in the key** (`genKey K`: `K` with
+a generation `g < 2^32` in the high half of the second key word). The twin's table at
+generation `g` is `Bank M g mp` (`mp[k]? = M[(k, g)]?`) of the memo's whole map `M`.
+`X_bank_enter()` (`bankEnterG c`) allocates `G + 1` (`CTL[c]` the last generation, `CTL[c + 1]`
+the current), aborts at `2^32`, and returns the caller's generation, which the caller keeps in an
+L local and restores with `X_bank_leave(s)`. `bank_enter`: the new bank is empty
+(`takeModeMemos`'s fresh tables, by `Fresh M G`), the caller's bank still holds its table (what
+`putModeMemos` puts back), the memo relation is untouched (two `CTL` words written). `bank_put`:
+`find; put` at the current generation is an insert in its bank, leaving others (`bank_other`).
+Why not `D` banks: no static dispatch over `D` copies of the L code, no depth bound `D` (only the
+generation bound per memo clear), and the bank relation is pure `HashMap` reasoning (20 lines).
+The cost: entries of finished generations stay until `flushCaches` (capacity, not semantics).
+The test instance `tbSch`/`tbKey` (`whnfCoreC`'s shape, `EIdx → EIdx`) and a `#guard` run store
+under generation 0, enter, miss and store under 1, leave, and hit the generation-0 value.
+
+### Measurements (`lake env lean`, user CPU, one run)
+
+| file | lines before → after | user s before → after |
+|---|---:|---:|
+| `MemoLib.lean` | 292 → 379 | 6.1 → 6.8 |
+| `MemoLibRel.lean` | 545 → 732 | 2.6 → 3.0 |
+| `MemoBank.lean` (new) | 286 | 0.8 |
+| `MemoTree.lean` (new) | 109 | 0.6 |
+| walk users (`WalkRefine`, `LiftRefine`) | +0 | unchanged |
+
+All new L specs (`memoEraseG_spec`, `bankEnterG_spec`, `bankLeaveG_spec`) went through `vcgen`
+at the first attempt, generic in the schema; `memoRV_set`'s proof is `memoRG_set`'s with the
+tombstone antecedent and the existential value.
+
+### For the core lanes: how to use
+
+* **A cache with handle values** (`constTyC`, `lvlEqC`, …): `MemoRG` as before (schema, key codec
+  with `ok_tomb`, `dv`); nothing changed.
+* **A cache with tree values** (`readLC`, …): `MemoRV S K VR`; prove `VStable S VR` once (for
+  level pointers: `lvR_stable` with `TreeSafe S`), carry it across heap writers with
+  `memoRV_frame` (`memoRV_heapExt`).
+* **A mode memo** (`whnfCoreC`, `whnfCoreCheapC`, `whnfC`, `inferC`, `inferIOC`, `defeqC`): key codec
+  `genKey K` (second key word below `2^32`; pack two handles into the first word), one bank counter
+  pair `CTL[c]`, `CTL[c + 1]` shared by the six tables (one `X_bank_enter` per eager `defeqE`).
+  State it as `MemoRV S (genKey K) VR m M ∧ BankW c m G g ∧ Fresh M G ∧ Bank M g a.caches.whnfCoreC`,
+  and the saved tables as `Bank M gᵢ savedᵢ` on the knot's arguments; `bank_enter` on entry, the
+  `Bank` of the saved generation on exit, `bank_put` for inserts, `bank_find` for
+  lookups (key word `genW k2 g`).
+* **Deletion**: `X_erase` at the slot of a `find` hit; `memoRV_erase`.
+
+### `sorry`s
+
+None.

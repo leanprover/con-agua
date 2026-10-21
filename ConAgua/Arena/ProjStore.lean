@@ -52,11 +52,11 @@ def pjmatchW (r : Array Word) (t i n u e : Word) : Bool :=
 /-! ## `proj_find(t, n, u, e, h)`: the probe -/
 
 /-- The model of the probe loop, from slot `j` after `d` steps (`probeW` with `pjmatchW`). -/
-def pjprobeW (sl r : Array Word) (t n u e nn j d : Word) : List Word :=
+def pjprobeW (sl r : Array Word) (t n u e b nn j d : Word) : List Word :=
   if d < nn then
-    if rdW sl (j * 2 + t) = 0 then [0, 0, j, d]
-    else if pjmatchW r t (rdW sl (j * 2 + t) - 1) n u e then [1, rdW sl (j * 2 + t) - 1, j, d]
-    else pjprobeW sl r t n u e nn ((j + 1) * (if j + 1 < nn then 1 else 0)) (d + 1)
+    if slotV sl b (j * 2 + t) = 0 then [0, 0, j, d]
+    else if pjmatchW r t (slotV sl b (j * 2 + t) - 1) n u e then [1, slotV sl b (j * 2 + t) - 1, j, d]
+    else pjprobeW sl r t n u e b nn ((j + 1) * (if j + 1 < nn then 1 else 0)) (d + 1)
   else []
 termination_by nn.toNat - d.toNat
 decreasing_by
@@ -67,35 +67,38 @@ decreasing_by
   omega
 
 section probeArms
-variable (sl r : Array Word) (t n u e nn j d : Word)
+variable (sl r : Array Word) (t n u e b nn j d : Word)
 
 theorem pjprobeW_free (k : Nat) (hd : d < nn) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] = 0) : pjprobeW sl r t n u e nn j d = [0, 0, j, d] := by
-  rw [pjprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv]
+    (hv : sl[k] ≤ b) : pjprobeW sl r t n u e b nn j d = [0, 0, j, d] := by
+  rw [pjprobeW]; simp only [hd, ↓reduceIte, slotV_free sl b _ k hk hks hv]
 
 theorem pjprobeW_hit (k : Nat) (hd : d < nn) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] ≠ 0) (hm : pjmatchW r t (sl[k] - 1) n u e = true) :
-    pjprobeW sl r t n u e nn j d = [1, sl[k] - 1, j, d] := by
-  rw [pjprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv, hm]
+    (hv : ¬ sl[k] ≤ b) (hm : pjmatchW r t (sl[k] - b - 1) n u e = true) :
+    pjprobeW sl r t n u e b nn j d = [1, sl[k] - b - 1, j, d] := by
+  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
+  rw [pjprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]
 
 theorem pjprobeW_next (k : Nat) (j' d' : Word) (hd : d < nn) (hk : k = (j * 2 + t).toNat)
-    (hks : k < sl.size) (hv : sl[k] ≠ 0) (hm : pjmatchW r t (sl[k] - 1) n u e = false)
+    (hks : k < sl.size) (hv : ¬ sl[k] ≤ b) (hm : pjmatchW r t (sl[k] - b - 1) n u e = false)
     (hj' : j' = (j + 1) * (if j + 1 < nn then 1 else 0)) (hd' : d' = d + 1) :
-    pjprobeW sl r t n u e nn j d = pjprobeW sl r t n u e nn j' d' := by
+    pjprobeW sl r t n u e b nn j d = pjprobeW sl r t n u e b nn j' d' := by
   subst hj' hd'
-  rw [pjprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv, hm]; simp
+  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
+  rw [pjprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]; simp
 
 end probeArms
 
-grind_pattern [arena_grind] pjprobeW_free => pjprobeW sl r t n u e nn j d, sl[k]
-grind_pattern [arena_grind] pjprobeW_hit => pjprobeW sl r t n u e nn j d, sl[k]
+grind_pattern [arena_grind] pjprobeW_free => pjprobeW sl r t n u e b nn j d, sl[k]
+grind_pattern [arena_grind] pjprobeW_hit => pjprobeW sl r t n u e b nn j d, sl[k]
 grind_pattern [arena_grind] pjprobeW_next =>
-  pjprobeW sl r t n u e nn j d, sl[k], pjprobeW sl r t n u e nn j' d'
+  pjprobeW sl r t n u e b nn j d, sl[k], pjprobeW sl r t n u e b nn j' d'
 
-def pjfindLoop : Stmt := lblk (t, n, u, e, h, nn, j, d, w) {
+def pjfindLoop : Stmt := lblk (t, n, u, e, h, nn, j, d, w, b) {
   while d < nn {
     w := PJSLOT.u64[j * 2 + t];
-    if w == 0 { return (0, 0, j, d) };
+    if w <= b { return (0, 0, j, d) };
+    w := w - b;
     if PJREC.u64[(w - 1) * 6 + t * 3] == n && PJREC.u64[(w - 1) * 6 + t * 3 + 1] == u
         && PJREC.u64[(w - 1) * 6 + t * 3 + 2] == e {
       return (1, w - 1, j, d)
@@ -105,8 +108,9 @@ def pjfindLoop : Stmt := lblk (t, n, u, e, h, nn, j, d, w) {
   }
 }
 
-def projFind : FunDecl := lfn (t, n, u, e, h) locals (nn, j, d, w) {
+def projFind : FunDecl := lfn (t, n, u, e, h) locals (nn, j, d, w, b) {
   nn := len(PJSLOT.u64) >> 1;
+  b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), nn);
   ⟪pjfindLoop⟫;
   abort
@@ -120,24 +124,24 @@ theorem pjfindLoop_spec (nn : Nat) (s₀ : St) :
     exec p nn pjfindLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
       r.retOr (pjprobeW (s₀.mem.arr64 PJSLOT) (s₀.mem.arr64 PJREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 3) (s₀.loc 5) (s₀.loc 6) (s₀.loc 7)) =
+        (s₀.loc 2) (s₀.loc 3) (s₀.loc 9) (s₀.loc 5) (s₀.loc 6) (s₀.loc 7)) =
       pjprobeW (s₀.mem.arr64 PJSLOT) (s₀.mem.arr64 PJREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 3) (s₀.loc 5) (s₀.loc 6) (s₀.loc 7); ⊤⦄ := by
+        (s₀.loc 2) (s₀.loc 3) (s₀.loc 9) (s₀.loc 5) (s₀.loc 6) (s₀.loc 7); ⊤⦄ := by
   induction nn generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ nn ih =>
     rw [exec, step_while (w := pjfindLoop) rfl]
     sym only [lang_grind, arena_grind] =>
-      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [pjmatchW]
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;> finish [pjmatchW, baseW]
 
 theorem pjfindLoop_step_spec (nn : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p nn) pjfindLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
       r.retOr (pjprobeW (s₀.mem.arr64 PJSLOT) (s₀.mem.arr64 PJREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 3) (s₀.loc 5) (s₀.loc 6) (s₀.loc 7)) =
+        (s₀.loc 2) (s₀.loc 3) (s₀.loc 9) (s₀.loc 5) (s₀.loc 6) (s₀.loc 7)) =
       pjprobeW (s₀.mem.arr64 PJSLOT) (s₀.mem.arr64 PJREC) (s₀.loc 0) (s₀.loc 1)
-        (s₀.loc 2) (s₀.loc 3) (s₀.loc 5) (s₀.loc 6) (s₀.loc 7); ⊤⦄ :=
+        (s₀.loc 2) (s₀.loc 3) (s₀.loc 9) (s₀.loc 5) (s₀.loc 6) (s₀.loc 7); ⊤⦄ :=
   Triple.step_exec (pjfindLoop_spec p (nn + 1) s₀)
 
 /-- The slot count of a tier of the `proj` table. -/
@@ -149,15 +153,15 @@ theorem projFind_spec (nn : Nat) (s₀ : St) (t n u e h : Word) :
     invoke p (exec p nn) "proj_find" [t, n, u, e, h]
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
       r = pjprobeW (s₀.mem.arr64 PJSLOT) (s₀.mem.arr64 PJREC) t n u e
-        (nSlotsPj s₀.mem) (homeW h (nSlotsPj s₀.mem)) 0; ⊤⦄ := by
+        (baseW s₀.mem t) (nSlotsPj s₀.mem) (homeW h (nSlotsPj s₀.mem)) 0; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, projFind]
   cases nn with
   | zero => vcgen [exec] <;> grind
   | succ nn =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc, pjfindLoop_step_spec p nn] <;>
-      finish [nSlotsPj, homeW]
+      vcgen [exec, step, evalE, evalArgs, setLoc, pjfindLoop_step_spec p nn, ld64] <;>
+      finish [nSlotsPj, homeW, baseW]
 
 end find
 
@@ -177,7 +181,7 @@ def pjpushOK (m : Mem) (t : Word) : Bool :=
 /-- The memory after `proj_push(t, n, u, e, j)` appended node `c`. -/
 def pjpushMem (m : Mem) (t n u e j c : Word) : Mem :=
   ((((m.set64 PJREC (c * 6 + t * 3) n).set64 PJREC (c * 6 + t * 3 + 1) u).set64 PJREC
-    (c * 6 + t * 3 + 2) e).set64 PJSLOT (j * 2 + t) (c + 1)).set64 CTL (32 + (t &&& 1)) (c + 1)
+    (c * 6 + t * 3 + 2) e).set64 PJSLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (32 + (t &&& 1)) (c + 1)
 
 def projPush : FunDecl := lfn (t, n, u, e, j) locals (c, k) {
   c := CTL.u64[32 + t];
@@ -188,7 +192,7 @@ def projPush : FunDecl := lfn (t, n, u, e, j) locals (c, k) {
   PJREC.u64[k] := n;
   PJREC.u64[k + 1] := u;
   PJREC.u64[k + 2] := e;
-  PJSLOT.u64[j * 2 + t] := c + 1;
+  PJSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[32 + (t & 1)] := c + 1;
   return c
 }
@@ -209,7 +213,7 @@ theorem projPush_spec (nn : Nat) (s₀ : St) (t n u e j : Word) :
   | succ nn =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
-      finish [pjcnt, pjpushOK, pjpushMem, nSlotsPj]
+      finish [pjcnt, pjpushOK, pjpushMem, nSlotsPj, baseW]
 
 end push
 
@@ -232,8 +236,8 @@ def pjskipW (m : Mem) (n e : Word) : Word :=
 aborts. -/
 def pjinternW (m : Mem) (n u e : Word) : Option (Word × Mem) :=
   let h := projHashW n u e
-  let rs₀ := pjprobeW (m.arr64 PJSLOT) (m.arr64 PJREC) 0 n u e (nSlotsPj m) (homeW h (nSlotsPj m)) 0
-  let rs₁ := pjprobeW (m.arr64 PJSLOT) (m.arr64 PJREC) 1 n u e (nSlotsPj m) (homeW h (nSlotsPj m)) 0
+  let rs₀ := pjprobeW (m.arr64 PJSLOT) (m.arr64 PJREC) 0 n u e (baseW m 0) (nSlotsPj m) (homeW h (nSlotsPj m)) 0
+  let rs₁ := pjprobeW (m.arr64 PJSLOT) (m.arr64 PJREC) 1 n u e (baseW m 1) (nSlotsPj m) (homeW h (nSlotsPj m)) 0
   if pjskipW m n e = 0 ∧ rs₀ = [] then none
   else if pjskipW m n e = 0 ∧ rs₀.headD 0 ≠ 0 then some (projP + rs₀.tail.headD 0, m)
   else if rdW (m.arr64 CTL) 1 ≠ 0 then
@@ -272,7 +276,7 @@ def projProg : Prog :=
 /-- A memory with 8 `proj` nodes and 16 slots per tier, the scratch tier closed or open. Arrays
 0‥30 (the other tables') are unused here and left empty. -/
 def projMem (scratch : Word) : Mem :=
-  { words := (Array.replicate 31 #[]).set! 1 ((Array.replicate 34 0).set! 1 scratch) ++
+  { words := (Array.replicate 31 #[]).set! 1 ((Array.replicate 64 0).set! 1 scratch) ++
       #[Array.replicate 48 0, Array.replicate 32 0] }
 
 /-- Intern each `(n, i, e)` triple in turn; the handles. -/
@@ -309,7 +313,7 @@ theorem internProj_spec (nn : Nat) (s₀ : St) (n u e : Word) :
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         projFind_spec p hpf nn, projPush_spec p hpp nn] <;>
-      finish [pjinternW, pjskipW, projHashW]
+      finish [pjinternW, pjskipW, projHashW, baseW]
 
 end intern
 

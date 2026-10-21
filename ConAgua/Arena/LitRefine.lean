@@ -217,7 +217,7 @@ theorem pv_of_eqW (p : Array Word) (a b l : Word) (hab : a.toNat + l.toNat < 2 ^
 def litSch : Schema := ⟨REC, SLOT, 4, 8, 2, ETag.lit⟩
 
 theorem litS_wf : litSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_lit0 (m : Mem) (t i : Word) : fld litSch m t i 0 = rdW (m.arr64 REC) (i * 8 + t * 4) := by
   simp [fld, Schema.ad, litSch]
@@ -331,9 +331,9 @@ end query
 /-! ## The bridges from the L models -/
 
 theorem probeW_arm (m : Mem) (o l h t : Word) :
-    ∀ j d, probeW (m.arr64 SLOT) (m.arr64 REC) (m.arr64 POOL) t o l h (nSlots m) j d =
+    ∀ j d, probeW (m.arr64 SLOT) (m.arr64 REC) (m.arr64 POOL) t o l h (baseW m t) (nSlots m) j d =
       probeArm litSch m t (litMt m o l h t)
-        (probeW (m.arr64 SLOT) (m.arr64 REC) (m.arr64 POOL) t o l h (nSlots m)) j d := by
+        (probeW (m.arr64 SLOT) (m.arr64 REC) (m.arr64 POOL) t o l h (baseW m t) (nSlots m)) j d := by
   intro j d; rw [probeW]; rfl
 
 theorem pushOK_room (m : Mem) (t : Word) (h : pushOK m t = true) : PushRoom litSch m t := by
@@ -350,10 +350,10 @@ theorem internW_eq (m : Mem) (o l : Word) :
     internW m o l = internM litSch m 0 (pushOK m)
       [0, o, l, hashN (m.arr64 POOL) o.toNat l.toNat]
       (probeW (m.arr64 SLOT) (m.arr64 REC) (m.arr64 POOL) 0 o l
-        (hashN (m.arr64 POOL) o.toNat l.toNat) (nSlots m)
+        (hashN (m.arr64 POOL) o.toNat l.toNat) (baseW m 0) (nSlots m)
         (homeW (hashN (m.arr64 POOL) o.toNat l.toNat) (nSlots m)) 0)
       (probeW (m.arr64 SLOT) (m.arr64 REC) (m.arr64 POOL) 1 o l
-        (hashN (m.arr64 POOL) o.toNat l.toNat) (nSlots m)
+        (hashN (m.arr64 POOL) o.toNat l.toNat) (baseW m 1) (nSlots m)
         (homeW (hashN (m.arr64 POOL) o.toNat l.toNat) (nSlots m)) 0) := by
   have e0 : ∀ x, hdW litSch.tag.toUInt64 0 x = litP + x := fun x => by
     simp [hdW, litSch, litP, ETag.lit]
@@ -421,7 +421,8 @@ theorem TierRel_grow (t : Word) (ht : t ≤ 1) (tb : Tbl LitNode EIdx UInt64)
     (hT : TierR litSch RecRel litH m t tb) : TierR litSch RecRel litH m' t tb := by
   have hr := grow_arr m m' hg REC (by decide) (by decide)
   exact tierR_mono litSch RecRel litH m m' t tb hr (grow_arr m m' hg SLOT (by decide) (by decide))
-    (grow_ctl m m' hg (2 + t) (by grind)) (fun i k => RecRel_grow m m' hg t i k)
+    (grow_ctl m m' hg (2 + t) (by grind)) (by simp only [baseW, grow_ctl m m' hg SCB (by decide)])
+    (fun i k => RecRel_grow m m' hg t i k)
     (fun i => by simp only [litH, hr]) hT
 
 include hg in
@@ -435,7 +436,7 @@ theorem LitR.grow (a : AState) (hR : LitR m a) : LitR m' a := by
     TierRel_grow m m' hg 1 (by decide) _ hT1⟩
   · obtain ⟨-, -, -, h1, h2⟩ := hg
     grind [PoolOK, store_grind]
-  · grind [store_grind]
+  · exact ⟨by grind [store_grind], by rw [grow_ctl m m' hg SCB (by decide)]; exact hctl.2⟩
 
 end grow
 
@@ -470,7 +471,7 @@ def storeProg : Prog := natProg ++ [("nat_add_lit", natAddLit)] ++ litProg
 
 /- `5 + 7` twice and `12` (`7 + 5`): one node, handle `0x80000000`; `5 + 5` is the second. -/
 #guard
-  let m : Mem := { words := #[#[5, 7, 0, 0, 0, 0, 0, 0, 0, 0], #[2, 0, 0, 0],
+  let m : Mem := { words := #[#[5, 7, 0, 0, 0, 0, 0, 0, 0, 0], #[2] ++ Array.replicate 63 0,
     Array.replicate 64 0, Array.replicate 32 0] }
   let go (m : Mem) (a b : Word) : Option (Word × Mem) :=
     match run storeProg 100 "nat_add_lit" [a, 1, b, 1] m with

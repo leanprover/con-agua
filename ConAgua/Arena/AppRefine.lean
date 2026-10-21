@@ -78,7 +78,7 @@ theorem internE_app_run (f x : EIdx) (a : AState) :
 def appSch : Schema := ⟨AREC, ASLOT, 2, 4, 4, ETag.app⟩
 
 theorem appSch_wf : appSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_app0 (m : Mem) (t i : Word) : fld appSch m t i 0 = rdW (m.arr64 AREC) (i * 4 + t * 2) := by
   simp [fld, Schema.ad, appSch]
@@ -155,8 +155,8 @@ end query
 /-! ## The bridges from the L models -/
 
 theorem aprobeW_arm (m : Mem) (f a t : Word) :
-    ∀ j d, aprobeW (m.arr64 ASLOT) (m.arr64 AREC) t f a (nSlotsA m) j d =
-      probeArm appSch m t (aMt m f a t) (aprobeW (m.arr64 ASLOT) (m.arr64 AREC) t f a (nSlotsA m)) j d := by
+    ∀ j d, aprobeW (m.arr64 ASLOT) (m.arr64 AREC) t f a (baseW m t) (nSlotsA m) j d =
+      probeArm appSch m t (aMt m f a t) (aprobeW (m.arr64 ASLOT) (m.arr64 AREC) t f a (baseW m t) (nSlotsA m)) j d := by
   intro j d; rw [aprobeW]; rfl
 
 theorem apushOK_room (m : Mem) (t : Word) (h : apushOK m t = true) : PushRoom appSch m t := by
@@ -171,8 +171,8 @@ theorem apushMem_eq (m : Mem) (t f a j c : Word) :
 
 theorem ainternW_eq (m : Mem) (f a : Word) :
     ainternW m f a = internM appSch m (askipW m f a) (apushOK m) [f, a]
-      (aprobeW (m.arr64 ASLOT) (m.arr64 AREC) 0 f a (nSlotsA m) (homeW (appHashW f a) (nSlotsA m)) 0)
-      (aprobeW (m.arr64 ASLOT) (m.arr64 AREC) 1 f a (nSlotsA m) (homeW (appHashW f a) (nSlotsA m)) 0) := by
+      (aprobeW (m.arr64 ASLOT) (m.arr64 AREC) 0 f a (baseW m 0) (nSlotsA m) (homeW (appHashW f a) (nSlotsA m)) 0)
+      (aprobeW (m.arr64 ASLOT) (m.arr64 AREC) 1 f a (baseW m 1) (nSlotsA m) (homeW (appHashW f a) (nSlotsA m)) 0) := by
   have e0 : ∀ x, hdW appSch.tag.toUInt64 0 x = appP + x := fun x => by
     simp [hdW, appSch, appP, ETag.app]
   have e1 : ∀ x, hdW appSch.tag.toUInt64 1 x = appS + x := fun x => by

@@ -73,18 +73,18 @@ theorem lsMatch_spec (n : Nat) (s₀ : St) (t i o l h : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, limbsEq_spec p hpe n] <;>
-      finish [lsmatchW]
+      finish [lsmatchW, baseW]
 
 end match_
 
 /-! ## `ls_find(t, o, l, h)`: the probe -/
 
 /-- The model of the probe loop, from slot `j` after `d` steps. -/
-def lsprobeW (sl r p : Array Word) (t o l h n j d : Word) : List Word :=
+def lsprobeW (sl r p : Array Word) (t o l h b n j d : Word) : List Word :=
   if d < n then
-    if rdW sl (j * 2 + t) = 0 then [0, 0, j, d]
-    else if lsmatchW r p t (rdW sl (j * 2 + t) - 1) o l h then [1, rdW sl (j * 2 + t) - 1, j, d]
-    else lsprobeW sl r p t o l h n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
+    if slotV sl b (j * 2 + t) = 0 then [0, 0, j, d]
+    else if lsmatchW r p t (slotV sl b (j * 2 + t) - 1) o l h then [1, slotV sl b (j * 2 + t) - 1, j, d]
+    else lsprobeW sl r p t o l h b n ((j + 1) * (if j + 1 < n then 1 else 0)) (d + 1)
   else []
 termination_by n.toNat - d.toNat
 decreasing_by
@@ -95,35 +95,38 @@ decreasing_by
   omega
 
 section probeArms
-variable (sl r p : Array Word) (t o l h n j d : Word)
+variable (sl r p : Array Word) (t o l h b n j d : Word)
 
 theorem lsprobeW_free (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] = 0) : lsprobeW sl r p t o l h n j d = [0, 0, j, d] := by
-  rw [lsprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv]
+    (hv : sl[k] ≤ b) : lsprobeW sl r p t o l h b n j d = [0, 0, j, d] := by
+  rw [lsprobeW]; simp only [hd, ↓reduceIte, slotV_free sl b _ k hk hks hv]
 
 theorem lsprobeW_hit (k : Nat) (hd : d < n) (hk : k = (j * 2 + t).toNat) (hks : k < sl.size)
-    (hv : sl[k] ≠ 0) (hm : lsmatchW r p t (sl[k] - 1) o l h = true) :
-    lsprobeW sl r p t o l h n j d = [1, sl[k] - 1, j, d] := by
-  rw [lsprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv, hm]
+    (hv : ¬ sl[k] ≤ b) (hm : lsmatchW r p t (sl[k] - b - 1) o l h = true) :
+    lsprobeW sl r p t o l h b n j d = [1, sl[k] - b - 1, j, d] := by
+  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
+  rw [lsprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]
 
 theorem lsprobeW_next (k : Nat) (j' d' : Word) (hd : d < n) (hk : k = (j * 2 + t).toNat)
-    (hks : k < sl.size) (hv : sl[k] ≠ 0) (hm : lsmatchW r p t (sl[k] - 1) o l h = false)
+    (hks : k < sl.size) (hv : ¬ sl[k] ≤ b) (hm : lsmatchW r p t (sl[k] - b - 1) o l h = false)
     (hj' : j' = (j + 1) * (if j + 1 < n then 1 else 0)) (hd' : d' = d + 1) :
-    lsprobeW sl r p t o l h n j d = lsprobeW sl r p t o l h n j' d' := by
+    lsprobeW sl r p t o l h b n j d = lsprobeW sl r p t o l h b n j' d' := by
   subst hj' hd'
-  rw [lsprobeW]; simp only [hd, ↓reduceIte, rdW_eq sl _ k hk hks, hv, hm]; simp
+  obtain ⟨e, ne⟩ := slotV_used sl b _ k hk hks hv
+  rw [lsprobeW]; simp only [hd, ↓reduceIte, e, ne, hm]; simp
 
 end probeArms
 
-grind_pattern [arena_grind] lsprobeW_free => lsprobeW sl r p t o l h n j d, sl[k]
-grind_pattern [arena_grind] lsprobeW_hit => lsprobeW sl r p t o l h n j d, sl[k]
+grind_pattern [arena_grind] lsprobeW_free => lsprobeW sl r p t o l h b n j d, sl[k]
+grind_pattern [arena_grind] lsprobeW_hit => lsprobeW sl r p t o l h b n j d, sl[k]
 grind_pattern [arena_grind] lsprobeW_next =>
-  lsprobeW sl r p t o l h n j d, sl[k], lsprobeW sl r p t o l h n j' d'
+  lsprobeW sl r p t o l h b n j d, sl[k], lsprobeW sl r p t o l h b n j' d'
 
-def lsfindLoop : Stmt := lblk (t, o, l, h, n, j, d, v, m) {
+def lsfindLoop : Stmt := lblk (t, o, l, h, n, j, d, v, m, b) {
   while d < n {
     v := LSSLOT.u64[j * 2 + t];
-    if v == 0 { return (0, 0, j, d) };
+    if v <= b { return (0, 0, j, d) };
+    v := v - b;
     m := call ls_match(t, v - 1, o, l, h);
     if m != 0 { return (1, v - 1, j, d) };
     j := (j + 1) * u64(j + 1 < n);
@@ -131,8 +134,9 @@ def lsfindLoop : Stmt := lblk (t, o, l, h, n, j, d, v, m) {
   }
 }
 
-def lsFind : FunDecl := lfn (t, o, l, h) locals (n, j, d, v, m) {
+def lsFind : FunDecl := lfn (t, o, l, h) locals (n, j, d, v, m, b) {
   n := len(LSSLOT.u64) >> 1;
+  b := CTL.u64[62] * t;
   j := mulhi((h * ⟪golden⟫) ^ ((h * ⟪golden⟫) >> 32), n);
   ⟪lsfindLoop⟫;
   abort
@@ -148,9 +152,9 @@ theorem lsfindLoop_spec (n : Nat) (s₀ : St) :
     exec p n lsfindLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
       r.retOr (lsprobeW (s₀.mem.arr64 LSSLOT) (s₀.mem.arr64 LSREC) (s₀.mem.arr64 POOL) (s₀.loc 0)
-        (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
+        (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 9) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
       lsprobeW (s₀.mem.arr64 LSSLOT) (s₀.mem.arr64 LSREC) (s₀.mem.arr64 POOL) (s₀.loc 0)
-        (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ := by
+        (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 9) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
@@ -165,9 +169,9 @@ theorem lsfindLoop_step_spec (n : Nat) (s₀ : St) :
     step p (exec p n) lsfindLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧ r.retOr [0] ≠ [] ∧
       r.retOr (lsprobeW (s₀.mem.arr64 LSSLOT) (s₀.mem.arr64 LSREC) (s₀.mem.arr64 POOL) (s₀.loc 0)
-        (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
+        (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 9) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6)) =
       lsprobeW (s₀.mem.arr64 LSSLOT) (s₀.mem.arr64 LSREC) (s₀.mem.arr64 POOL) (s₀.loc 0)
-        (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ :=
+        (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 9) (s₀.loc 4) (s₀.loc 5) (s₀.loc 6); ⊤⦄ :=
   Triple.step_exec (lsfindLoop_spec p hpe hpm (n + 1) s₀)
 
 /-- The slot count of a tier of the level-list table. -/
@@ -179,15 +183,15 @@ theorem lsFind_spec (n : Nat) (s₀ : St) (t o l h : Word) :
     invoke p (exec p n) "ls_find" [t, o, l, h]
     ⦃fun r s' => s' = s₀ ∧ r ≠ [] ∧
       r = lsprobeW (s₀.mem.arr64 LSSLOT) (s₀.mem.arr64 LSREC) (s₀.mem.arr64 POOL) t o l h
-        (nSlotsLs s₀.mem) (homeW h (nSlotsLs s₀.mem)) 0; ⊤⦄ := by
+        (baseW s₀.mem t) (nSlotsLs s₀.mem) (homeW h (nSlotsLs s₀.mem)) 0; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, lsFind]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalArgs, setLoc, lsfindLoop_step_spec p hpe hpm n] <;>
-      finish [nSlotsLs, homeW]
+      vcgen [exec, step, evalE, evalArgs, setLoc, lsfindLoop_step_spec p hpe hpm n, ld64] <;>
+      finish [nSlotsLs, homeW, baseW]
 
 end find
 
@@ -205,7 +209,7 @@ def lspushOK (m : Mem) (t : Word) : Bool :=
 /-- The memory after `ls_push(t, o, l, h, j)` appended node `c`. -/
 def lspushMem (m : Mem) (t o l h j c : Word) : Mem :=
   ((((m.set64 LSREC (c * 6 + t * 3) o).set64 LSREC (c * 6 + t * 3 + 1) l).set64 LSREC
-    (c * 6 + t * 3 + 2) h).set64 LSSLOT (j * 2 + t) (c + 1)).set64 CTL (40 + (t &&& 1)) (c + 1)
+    (c * 6 + t * 3 + 2) h).set64 LSSLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (40 + (t &&& 1)) (c + 1)
 
 def lsPush : FunDecl := lfn (t, o, l, h, j) locals (c, k) {
   c := CTL.u64[40 + t];
@@ -216,7 +220,7 @@ def lsPush : FunDecl := lfn (t, o, l, h, j) locals (c, k) {
   LSREC.u64[k] := o;
   LSREC.u64[k + 1] := l;
   LSREC.u64[k + 2] := h;
-  LSSLOT.u64[j * 2 + t] := c + 1;
+  LSSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[40 + (t & 1)] := c + 1;
   return c
 }
@@ -237,7 +241,7 @@ theorem lsPush_spec (n : Nat) (s₀ : St) (t o l h j : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
-      finish [lscnt, lspushOK, lspushMem, nSlotsLs]
+      finish [lscnt, lspushOK, lspushMem, nSlotsLs, baseW]
 
 end push
 
@@ -254,9 +258,9 @@ def lsS : Word := 0x08000000
 aborts. -/
 def lsinternW (m : Mem) (o l : Word) : Option (Word × Mem) :=
   let h := hashN (m.arr64 POOL) o.toNat l.toNat
-  let rs₀ := lsprobeW (m.arr64 LSSLOT) (m.arr64 LSREC) (m.arr64 POOL) 0 o l h (nSlotsLs m)
+  let rs₀ := lsprobeW (m.arr64 LSSLOT) (m.arr64 LSREC) (m.arr64 POOL) 0 o l h (baseW m 0) (nSlotsLs m)
     (homeW h (nSlotsLs m)) 0
-  let rs₁ := lsprobeW (m.arr64 LSSLOT) (m.arr64 LSREC) (m.arr64 POOL) 1 o l h (nSlotsLs m)
+  let rs₁ := lsprobeW (m.arr64 LSSLOT) (m.arr64 LSREC) (m.arr64 POOL) 1 o l h (baseW m 1) (nSlotsLs m)
     (homeW h (nSlotsLs m)) 0
   if rs₀ = [] then none
   else if rs₀.headD 0 ≠ 0 then some (lsP + rs₀.tail.headD 0, m)
@@ -294,7 +298,7 @@ def lsProg : Prog :=
 /-- A memory with the lists `[5]`, `[7]`, `[5]`, `[5, 7]`, `[]` in the pool (top 5), 8 nodes and
 16 slots per tier, the scratch tier closed or open. -/
 def lsMem (scratch : Word) : Mem :=
-  { words := #[#[5, 7, 5, 5, 7, 0, 0, 0], (Array.replicate 42 0).set! 1 scratch |>.set! 0 5] ++
+  { words := #[#[5, 7, 5, 5, 7, 0, 0, 0], (Array.replicate 64 0).set! 1 scratch |>.set! 0 5] ++
       Array.replicate 37 #[] ++ #[Array.replicate 48 0, Array.replicate 32 0] }
 
 /-- Intern each slice in turn; the handles. -/
@@ -331,7 +335,7 @@ theorem internLs_spec (n : Nat) (s₀ : St) (o l : Word) (hs : (s₀.mem.arr64 P
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, litHash_spec p hph n,
         lsFind_spec p hpe hpm hpf n, lsPush_spec p hpp n] <;>
-      finish [lsinternW]
+      finish [lsinternW, baseW]
 
 end intern
 

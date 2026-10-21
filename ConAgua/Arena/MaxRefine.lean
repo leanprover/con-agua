@@ -71,7 +71,7 @@ theorem internLNode_max_run (u v : LIdx) (a : AState) :
 def maxSch : Schema := ⟨MREC, MSLOT, 2, 4, 10, LTag.max⟩
 
 theorem maxSch_wf : maxSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 theorem fld_max0 (m : Mem) (t i : Word) : fld maxSch m t i 0 = rdW (m.arr64 MREC) (i * 4 + t * 2) := by
   simp [fld, Schema.ad, maxSch]
@@ -149,8 +149,8 @@ end query
 /-! ## The bridges from the L models -/
 
 theorem mprobeW_arm (m : Mem) (u v t : Word) :
-    ∀ j d, mprobeW (m.arr64 MSLOT) (m.arr64 MREC) t u v (nSlotsM m) j d =
-      probeArm maxSch m t (mMt m u v t) (mprobeW (m.arr64 MSLOT) (m.arr64 MREC) t u v (nSlotsM m)) j d := by
+    ∀ j d, mprobeW (m.arr64 MSLOT) (m.arr64 MREC) t u v (baseW m t) (nSlotsM m) j d =
+      probeArm maxSch m t (mMt m u v t) (mprobeW (m.arr64 MSLOT) (m.arr64 MREC) t u v (baseW m t) (nSlotsM m)) j d := by
   intro j d; rw [mprobeW]; rfl
 
 theorem mpushOK_room (m : Mem) (t : Word) (h : mpushOK m t = true) : PushRoom maxSch m t := by
@@ -165,8 +165,8 @@ theorem mpushMem_eq (m : Mem) (t u v j c : Word) :
 
 theorem minternW_eq (m : Mem) (u v : Word) :
     minternW m u v = internM maxSch m 0 (mpushOK m) [u, v]
-      (mprobeW (m.arr64 MSLOT) (m.arr64 MREC) 0 u v (nSlotsM m) (homeW (maxHashW u v) (nSlotsM m)) 0)
-      (mprobeW (m.arr64 MSLOT) (m.arr64 MREC) 1 u v (nSlotsM m) (homeW (maxHashW u v) (nSlotsM m)) 0) := by
+      (mprobeW (m.arr64 MSLOT) (m.arr64 MREC) 0 u v (baseW m 0) (nSlotsM m) (homeW (maxHashW u v) (nSlotsM m)) 0)
+      (mprobeW (m.arr64 MSLOT) (m.arr64 MREC) 1 u v (baseW m 1) (nSlotsM m) (homeW (maxHashW u v) (nSlotsM m)) 0) := by
   have e0 : ∀ x, hdW maxSch.tag.toUInt64 0 x = maxP + x := fun x => by
     simp [hdW, maxSch, maxP, LTag.max]
   have e1 : ∀ x, hdW maxSch.tag.toUInt64 1 x = maxS + x := fun x => by

@@ -71,7 +71,7 @@ theorem internLNode_zero_run (a : AState) :
 def zeroSch : Schema := ⟨ZREC, ZSLOT, 1, 2, 8, LTag.zero⟩
 
 theorem zeroSch_wf : zeroSch.WF :=
-  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
+  ⟨by decide, by decide, by decide, by decide, by decide, by decide, by decide, by decide⟩
 
 /-- Node `i` of tier `t` holds the `zero` node: trivially (there is only one `ZeroNode`). -/
 def ZRecRel (_m : Mem) (_t _i : Word) (_k : ZeroNode) : Prop := True
@@ -111,8 +111,8 @@ theorem zeroNewOK (m : Mem) : NewOK zeroSch ZRecRel zhash m [0] zeroKey zeroHash
 /-! ## The bridges from the L models -/
 
 theorem zprobeW_arm (m : Mem) (t : Word) :
-    ∀ j d, zprobeW (m.arr64 ZSLOT) (m.arr64 ZREC) t (nSlotsZ m) j d =
-      probeArm zeroSch m t (zMt m t) (zprobeW (m.arr64 ZSLOT) (m.arr64 ZREC) t (nSlotsZ m)) j d := by
+    ∀ j d, zprobeW (m.arr64 ZSLOT) (m.arr64 ZREC) t (baseW m t) (nSlotsZ m) j d =
+      probeArm zeroSch m t (zMt m t) (zprobeW (m.arr64 ZSLOT) (m.arr64 ZREC) t (baseW m t) (nSlotsZ m)) j d := by
   intro j d; rw [zprobeW]; rfl
 
 theorem zpushOK_room (m : Mem) (t : Word) (h : zpushOK m t = true) : PushRoom zeroSch m t := by
@@ -127,8 +127,8 @@ theorem zpushMem_eq (m : Mem) (t j c : Word) :
 
 theorem zinternW_eq (m : Mem) :
     zinternW m = internM zeroSch m 0 (zpushOK m) [0]
-      (zprobeW (m.arr64 ZSLOT) (m.arr64 ZREC) 0 (nSlotsZ m) (homeW zeroHashW (nSlotsZ m)) 0)
-      (zprobeW (m.arr64 ZSLOT) (m.arr64 ZREC) 1 (nSlotsZ m) (homeW zeroHashW (nSlotsZ m)) 0) := by
+      (zprobeW (m.arr64 ZSLOT) (m.arr64 ZREC) 0 (baseW m 0) (nSlotsZ m) (homeW zeroHashW (nSlotsZ m)) 0)
+      (zprobeW (m.arr64 ZSLOT) (m.arr64 ZREC) 1 (baseW m 1) (nSlotsZ m) (homeW zeroHashW (nSlotsZ m)) 0) := by
   have e0 : ∀ x, hdW zeroSch.tag.toUInt64 0 x = zeroP + x := fun x => by
     simp [hdW, zeroSch, zeroP, LTag.zero]
   have e1 : ∀ x, hdW zeroSch.tag.toUInt64 1 x = zeroS + x := fun x => by
