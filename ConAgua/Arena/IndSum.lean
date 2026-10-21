@@ -309,18 +309,19 @@ def sumRulesL : FunDecl :=
 
 /-- `check_struct_doms_at(vis, off, fvsOff, fvsLen, domsOff, domsLen, n)`: the reference kernels'
 binder-domain comparisons, binder by binder at its own frame (`off + j`), from the last binder to
-the first. No result (`Unit`). -/
+the first (`n` the twin's own recursion count, `j = n - 1` the index it checks before recursing to
+`n - 1`). No result (`Unit`): self-recursive, as the twin is, so the proof is a plain induction on
+`n` (round 2: rewritten from a `while` loop to make the refinement tractable). -/
 @[l_impl ConRon.Arena.checkStructDomsAt]
 def checkStructDomsAtL : FunDecl := lfn (vis, off, fvsOff, fvsLen, domsOff, domsLen, n)
-  locals (j, a, b, t, r) {
-  j := n;
-  while j != 0 {
-    j := j - 1;
-    a := call sl_get(fvsOff, fvsLen, j);
-    b := call sl_get(domsOff, domsLen, j);
+  locals (a, b, t, r, z) {
+  if n != 0 {
+    a := call sl_get(fvsOff, fvsLen, n - 1);
+    b := call sl_get(domsOff, domsLen, n - 1);
     t := call fvar_type_d(a);
-    r := call is_def_eq_core(vis, off + j, t, b);
-    if r == 0 { abort }
+    r := call is_def_eq_core(vis, off + (n - 1), t, b);
+    if r == 0 { abort };
+    z := call check_struct_doms_at(vis, off, fvsOff, fvsLen, domsOff, domsLen, n - 1)
   }
 }
 
@@ -384,18 +385,17 @@ def checkStructProjTableL : FunDecl :=
 
 /-! ## `StructParts.lean`: level lists, spines -/
 
-/-- `param_levels_go(off, len)`: `lps.map .param`, interned one at a time, in order. -/
+/-- `param_levels_go(off, n)`: `lps.map .param`, interned one at a time, in order (`n` the
+remaining length; the head at `off` is interned, then the tail `(off + 1, n - 1)`, then consed).
+Self-recursive, as the twin's `go` is (round 2: rewritten from a `while` loop). -/
 @[l_impl ConRon.Arena.paramLevels.go]
-def paramLevelsGoL : FunDecl := lfn (off, n) locals (res, j, nm, u) {
-  res := call iw_alloc(n);
-  j := 0;
-  while j < n {
-    nm := call sl_get(off, n, j);
-    u := call intern_param(nm);
-    IW.u64[res + j] := u;
-    j += 1
-  };
-  return (res, n)
+def paramLevelsGoL : FunDecl := lfn (off, n) locals (res, nm, u, ro, rl, res2, len2) {
+  if n == 0 { res := call iw_alloc(0); return (res, 0) };
+  nm := call sl_get(off, n, 0);
+  u := call intern_param(nm);
+  (ro, rl) := call param_levels_go(off + 1, n - 1);
+  (res2, len2) := call sl_cons(u, ro, rl);
+  return (res2, len2)
 }
 
 /-- `param_levels(off, len)`: the interned level list `lps.map .param`. -/
@@ -408,17 +408,15 @@ def paramLevelsL : FunDecl := lfn (off, n) locals (lo, ll, us) {
 
 /-- `struct_ps_at_go(o, nP, n, k)`: `nP`'s parameter spine as seen from `o` extra binders,
 `p_k = bvar (o + nP - 1 - k)`, for `k = k, …, k + n - 1` (so the top call `n = nP, k = 0` builds
-the whole spine). -/
+the whole spine). Self-recursive, as the twin's `go` is (round 2: rewritten from a `while` loop):
+`bvar (o + nP - 1 - k)` interned first, then the rest at `(n - 1, k + 1)`, then consed. -/
 @[l_impl ConRon.Arena.structPsAt.go]
-def structPsAtGoL : FunDecl := lfn (o, nP, n, k) locals (res, j, b) {
-  res := call iw_alloc(n);
-  j := 0;
-  while j < n {
-    b := call intern_bvar(o + nP - 1 - (k + j));
-    IW.u64[res + j] := b;
-    j += 1
-  };
-  return (res, n)
+def structPsAtGoL : FunDecl := lfn (o, nP, n, k) locals (res, b, ro, rl, res2, len2) {
+  if n == 0 { res := call iw_alloc(0); return (res, 0) };
+  b := call intern_bvar(o + nP - 1 - k);
+  (ro, rl) := call struct_ps_at_go(o, nP, n - 1, k + 1);
+  (res2, len2) := call sl_cons(b, ro, rl);
+  return (res2, len2)
 }
 
 /-- `struct_ps_at(o, nP)`: the parameter variables as seen from under `o` extra binders. -/
