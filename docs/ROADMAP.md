@@ -335,6 +335,11 @@ checker's `run.c` must compare `rax` with `ACCEPT` itself, not print `rax` (toda
   preferred long-term fix is upstream: change con-leche (and so con-ron's twin) so that the
   pin-variant check distinguishes "error" from "not defeq" in its result, instead of throwing and
   catching. Then L needs no recovery at all and no completeness is lost.
+  *Maintainer decision (2026-10-21):* support **a single toolchain, the latest**: the pin list
+  (`NatOpPinSet`s, one per toolchain) has exactly one entry, for the Nat ops and for the
+  `Nat.div`/`Nat.mod` pin check alike. With one variant, `checkDivModPinLoop`'s recovery can only
+  lead to the "no variant matched" decline, so "L recovers nowhere" (abort) gives the same
+  non-accept verdict and loses no completeness. `PipelineRefines` is stated at that one pin list.
 * **(d) Pool.** The x64 checker runs phase A (`installFold`) and then phase B on one worker
   (`checkPendingList` from `s'.worker`, as the Rust's sequential `check_decls_phased`), which is
   `PooledAccepts` with `parts = [pend.toList]` (`Arena/Pooled.lean`; the vendored twin has no
