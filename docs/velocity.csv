@@ -20,3 +20,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-21,levels,opus,22,5,"level scratch heap (LH 192, CTL 192): lv_node/lh_mk/lv_eq, LvR decoder, HeapExt/HeapFrame, lv_eq refines Level.beq"
 2026-10-21,levels,opus,14,3,"lv_comb/lv_simp/lv_nz refine Level.combining/simplify/isNeverZero"
 2026-10-21,pinsenv,opus,20,3,"PinsR (PINS 128) and EnvR (direct name-indexed rows) filled, record decoders (EnvRec), pin_at/pin_word + 88 pin readers refined, nat_op_result refines natOpResult (whole dispatch)"
+2026-10-21,pinsenv,opus,22,2,"EnvR environment: direct name-addressed rows, env_find/push/pop_temp refine IFEnv.find?/push/popTemp, env_erase, EnvR.init/setRow/popLen, envProg write set"

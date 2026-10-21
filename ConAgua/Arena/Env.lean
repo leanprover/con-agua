@@ -281,7 +281,8 @@ theorem EnvR.find?_eq (h : EnvR dn m vis fe) (w : Word) (hw : w.toNat < 2 ^ 32)
       simp only [e, Option.map_some, Option.some.injEq] at hk hv
       simp [h0, hk, ← hv]
 
-/-- A view of the same index: `restrictTo` is the view word alone. -/
+/-- A view of the same index: `restrictTo` is the view word alone (no L code). -/
+@[refines ConRon.Arena.IFEnv.restrictTo]
 theorem EnvR.restrictTo (h : EnvR dn m vis fe) (k : Word) :
     EnvR dn m k (fe.restrictTo k.toNat) :=
   ⟨rfl, h.keys, h.vals, h.consts⟩
@@ -671,5 +672,120 @@ theorem EnvR.popLen {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word}
       obtain ⟨x, -, rest, hrest, hx⟩ := hcs
       simp only [Option.some.injEq] at hx
       rw [← hx]; simpa using hrest
+
+/-- The previous row of a temporary push, as `env_pop_temp` gets it: `c = 0` is `none`, else
+the counter `c - 1` and the record at `q`. -/
+def prevD (dn : NIdx → Option ConLeche.Name) (m : Mem) (c q : Word) :
+    Option (Option (Nat × IConstantInfo)) :=
+  if c = 0 then some none else (decCI (m.arr64 EREC) dn q.toNat).map fun ci => some (c.toNat - 1, ci)
+
+/-- `env_pop_temp(vis, w, c, q)`: undo a temporary push of name `w`: its row put back to
+`(c, q)` (`IFEnv.popTemp`'s `prev`), the newest constant dropped, the view lowered. -/
+@[l_impl ConRon.Arena.IFEnv.popTemp]
+def envPopTempL : FunDecl := lfn (vis, w, c, q) locals (k, z) {
+  z := call env_row_set(w, c, q);
+  k := CTL.u64[128];
+  if k != 0 { CTL.u64[128] := k - 1 };
+  if vis == 0 { return 0 };
+  return vis - 1
+}
+
+theorem popIdx_get (idx : Std.HashMap NIdx (Nat × IConstantInfo)) (n0 n : NIdx)
+    (prev : Option (Nat × IConstantInfo)) :
+    (match prev with
+      | some r => idx.insert n0 r
+      | none => idx.erase n0)[n]? = if n0 == n then prev else idx[n]? := by
+  cases prev with
+  | none => simp [Std.HashMap.getElem?_erase]
+  | some r => simp [Std.HashMap.getElem?_insert]
+
+/-- **`env_pop_temp` refines `IFEnv.popTemp`**, given the previous row as words that decode. -/
+@[refines ConRon.Arena.IFEnv.popTemp]
+theorem envPopTemp_refines (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
+    (hs : p.lookup "env_row_set" = some envRowSetL)
+    (hp : p.lookup "env_pop_temp" = some envPopTempL)
+    (n : Nat) (s₀ : St) {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} (vis w c q : Word)
+    (prev : Option (Nat × IConstantInfo)) (hE : EnvR dn s₀.mem vis fe) (hw : w.toNat < 2 ^ 32)
+    (hprev : prevD dn s₀.mem c q = some prev) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "env_pop_temp" [vis, w, c, q]
+    ⦃fun r s' => LocEq s' s₀ ∧ EnvR dn s'.mem (r.headD 0) (fe.popTemp (decI w) prev); ⊤⦄ := by
+  have hidx : ∀ n : NIdx, (match prev with
+      | some r => fe.idx.insert (decI w) r
+      | none => fe.idx.erase (decI w))[n]? = if n.word.toUInt64 = w then prev else fe.idx[n]? := by
+    intro n; rw [popIdx_get]
+    by_cases e : n.word.toUInt64 = w
+    · have : decI w = n := (decI_eq_iff w hw n).mpr e.symm
+      simp [e, this]
+    · have : ¬ decI w = n := fun h' => e ((decI_eq_iff w hw n).mp h').symm
+      simp [e, this]
+  have hR1 : prev.map Prod.fst = if c = 0 then none else some (c.toNat - 1) := by
+    simp only [prevD] at hprev; split at hprev
+    · simp_all
+    · rename_i h0
+      cases e : decCI (s₀.mem.arr64 EREC) dn q.toNat with
+      | none => simp [e] at hprev
+      | some ci =>
+        simp only [e, Option.map_some, Option.some.injEq] at hprev; subst hprev; simp [h0]
+  have hR2 : c ≠ 0 → prev.map Prod.snd = decCI (s₀.mem.arr64 EREC) dn q.toNat := by
+    intro h0; simp only [prevD, h0, ite_false] at hprev
+    cases e : decCI (s₀.mem.arr64 EREC) dn q.toNat with
+    | none => simp [e] at hprev
+    | some ci => simp only [e, Option.map_some, Option.some.injEq] at hprev; subst hprev; simp
+  have key := fun ht hb hc =>
+    (hE.setRow w c q hw ht hb _ prev hidx hR1 hR2).popLen hc
+  have hra : rowArr w ≠ CTL := by simp only [rowArr, CTL, ArrId]; omega
+  have hctl : (rowSet s₀.mem w c q).arr64 CTL = s₀.mem.arr64 CTL := rowSet_arr _ _ _ _ _ (Ne.symm hra)
+  have hrd : ∀ (h : 128 < (s₀.mem.arr64 CTL).size),
+      rdW (s₀.mem.arr64 CTL) 128 = (s₀.mem.arr64 CTL)[128] := fun h => rdW_eq _ _ 128 rfl h
+  simp only [popLenMem, popVis, hctl] at key
+  rw [invoke_eq _ hp]
+  simp only [callFn, envPopTempL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        envRowSet_spec p hx hs n] <;>
+      finish [IFEnv.popTemp]
+
+/-- **The empty environment** (`mkIFEnv IEnv.empty`, the fold's start) is memory whose rows and
+constant count are zero, at view `0` (all-zero memory in particular). -/
+theorem EnvR.init {dn : NIdx → Option ConLeche.Name} {m : Mem}
+    (hz : ∀ w, rowC m w = 0) (hl : rdW (m.arr64 CTL) 128 = 0) :
+    EnvR dn m 0 (mkIFEnv IEnv.empty) := by
+  refine ⟨rfl, fun n _ => ?_, fun n _ h0 => absurd (hz _) h0, ?_⟩
+  · simp [mkIFEnv, IEnv.empty, mkIFEnvGo, rowW, hz]
+  · simp [envConsts, envLen, hl, mkIFEnv, IEnv.empty]
+
+/-! ## The program and its write set -/
+
+/-- The environment functions. -/
+def envProg : Prog :=
+  [("env_ix", envIxL), ("env_row_get", envRowGetL), ("env_row_set", envRowSetL),
+   ("env_find", envFindL), ("env_push", envPushL), ("env_erase", envEraseL),
+   ("env_pop_temp", envPopTempL)]
+
+def envFns : List FnName :=
+  ["env_ix", "env_row_get", "env_row_set", "env_find", "env_push", "env_erase", "env_pop_temp"]
+
+/-- **The environment functions write only the rows, `ECON` and `CTL[128]`**: every other tier
+(`ArenaR`, `PinsR`, `CoreR`, the front's `StateDR`) survives them by its group frame. -/
+theorem envProg_closed : closedA envProg [EIXA, EIXS, EIXN, ECON] [128] envFns = true := by
+  decide +kernel
+
+/- Push the axiom record at `EREC[0]` (name `0x10000005`, a `str` name) at counter 0, then find
+it in view 1 and miss it in view 0. -/
+#guard
+  let m : Mem := { words := (Array.replicate 132 (Array.replicate 140 0)) ++
+    #[Array.replicate 8 0, Array.replicate 32 0, Array.replicate 8 0, Array.replicate 4 0,
+      #[0, 0x10000005, 0, 0, 0, 0, 0, 0]] }
+  match run envProg 100 "env_push" [0, 0] m with
+  | .ok (r, m) =>
+    r == [1] &&
+    (match run envProg 100 "env_find" [0x10000005, 1] m, run envProg 100 "env_find" [0x10000005, 0] m with
+      | .ok (r1, _), .ok (r0, _) => r1 == [1, 0] && r0 == [0, 0]
+      | _, _ => false)
+  | .error _ => false
 
 end L.Arena
