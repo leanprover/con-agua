@@ -373,6 +373,86 @@ theorem oneOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbOK
     have e : (ns2.ctorNfs.toList ++ [x]).toArray = ns2.ctorNfs.push x := Array.ext' (by simp)
     simpa [e] using hNS3
 
+theorem ctorsOK_step (n : Nat) (ih : NbOK dn vis fe n) : CtorsOK dn vis fe (n + 1) := by
+  obtain ⟨-, -, -, -, -, -, -, hCtors, hOne, -, -⟩ := ih
+  intro m m' a ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL c prog ds names holes cs NS outs r h hS hW hC
+    hcl hcb hcs hns hout houtb
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  rw [nbCtorsW_succ] at h
+  by_cases h0 : cL = 0
+  · rw [if_pos h0] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    subst h0
+    have : cs = [] := List.eq_nil_of_length_eq_zero (by simpa using hcl.symm)
+    subst this
+    exact ⟨(outs, NS), a, by rw [ConRon.Arena.nestCtors.eq_def]; rfl, hS, IWGrow.refl _, hout, houtb, hns⟩
+  rw [if_neg h0] at h
+  obtain ⟨⟨cvv, nFn⟩, cs', rfl⟩ : ∃ x cs', cs = x :: cs' := by
+    cases cs with
+    | nil => exact absurd (UInt64.toNat_inj.mp (by simpa using hcl)) h0
+    | cons x cs' => exact ⟨x, cs', rfl⟩
+  simp only [List.length_cons] at hcl hcb
+  obtain ⟨w, hw, hcn⟩ := hcs 0 (by simp)
+  obtain ⟨hp0, hp1, q, hq, hcvv, hnF⟩ := hcn
+  simp only [Nat.add_zero, List.getElem_cons_zero] at hw hcvv hnF
+  have hrw : rdW (m.arr64 IW) cO = w := by simp [rdW, hw]
+  have hw1 : (w + 1).toNat = w.toNat + 1 := word_add_toNat (by simp; omega)
+  have hrq : (rdW (m.arr64 IW) w).toNat = q := by
+    have := rd_iwN (m := m) (p := w) (i := 0) (by simpa using hq) (by simp; omega); simpa using this
+  have hrn : (rdW (m.arr64 IW) (w + 1)).toNat = nFn := rd_iwN (by simpa using hnF) (by simp; omega)
+  rw [hrw] at h
+  obtain ⟨-, -, hty⟩ := decCV_some hcvv
+  obtain ⟨wt, hwt, -⟩ := hd?_some hty
+  have hq3 : q + 3 < 2 ^ 64 := by
+    have := (Array.getElem?_eq_some_iff.mp hwt).1; have := erecP_size_lt m; omega
+  -- one constructor
+  cases ho : nbOneW n m vis ctx root fu po pl hi us dO dL no nl hO hL (rdW (m.arr64 IW) w)
+      (rdW (m.arr64 IW) (w + 1)) ns with
+  | none => rw [ho] at h; simp [nbCtorsK1] at h
+  | some pr =>
+  obtain ⟨r1, m1⟩ := pr
+  rw [ho, nbCtorsK1_some] at h
+  obtain ⟨ks, closed, NS3, a1, hK1, hS1, hg1, hks, hksb, hclH, hcld, hns3⟩ :=
+    hOne m m1 a ctx root fu po pl hi us dO dL no nl hO hL _ _ ns c prog ds names holes cvv NS r1 ho hS hW hC
+      (by rw [hrq]; exact hcvv) (by rw [hrq]; exact hq3) hns
+  rw [hrn] at hK1
+  -- its record, appended
+  cases hr3 : posRecW m1 [r1.headD 0, r1.tail.headD 0, r1.tail.tail.headD 0] with
+  | none => rw [hr3] at h; simp [nbCtorsK2] at h
+  | some pr2 =>
+  obtain ⟨rec, m2⟩ := pr2
+  rw [hr3, nbCtorsK2_some] at h
+  obtain ⟨hS2, hg2, hrq2, ht2, hget2⟩ := posRecW_stage hr3 hS1 (by simp)
+  simp only [List.length_cons, List.length_nil] at ht2
+  have hke := pos2_ke_rec (by omega) hget2 (hks.grow hg2) hclH hcld
+  cases hsn : snocW n m2 oO oL rec with
+  | none => rw [hsn] at h; simp [nbCtorsK3] at h
+  | some pr3 =>
+  obtain ⟨ro, m3⟩ := pr3
+  rw [hsn, nbCtorsK3_some] at h
+  have hg12 := hg1.trans hg2
+  obtain ⟨hS3, hg3, h30, h31, ht3, hw3, hx3⟩ := snocW_words hsn hS2 (by have := hg12.1; omega)
+  have hout3 : OutsB m3 (ro.headD 0).toNat (ro.tail.headD 0).toNat (outs ++ [(ks, closed)]) := by
+    rw [h30, h31]
+    exact pos2_decB_snoc decKE_mono (hout.grow hg12) hg3 (by omega) hw3 hx3 (DecB.grow (decKE_mono _) hg3 hke)
+  have hg13 := hg12.trans hg3
+  have hcO1 : (cO + 1).toNat = cO.toNat + 1 := word_add_toNat (by simp; omega)
+  have hcL1 : (cL - 1).toNat = cs'.length := by rw [pos2_word_pred h0]; omega
+  obtain ⟨x, a', hrun, hS', hg', hO', hOb', hns'⟩ := hCtors m3 m' a1 ctx root fu po pl hi us dO dL no nl hO hL
+    (cO + 1) (cL - 1) _ _ _ c prog ds names holes cs' NS3 (outs ++ [(ks, closed)]) r h hS3 (hW.grow hg13)
+    ⟨hC.hus, hC.hds.grow (OMono.decHL _ _) hg13, by have := hC.hdsb; have := hg13.1; omega,
+      by rw [decHL_agree (RdS.of_grow hg13) (fun j hj => by have := hC.hnamesb; omega)]; exact hC.hnames,
+      by have := hC.hnamesb; have := hg13.1; omega, hC.hnn,
+      by rw [decHL_agree (RdS.of_grow hg13) (fun j hj => by have := hC.hholesb; omega)]; exact hC.hholes,
+      by have := hC.hholesb; have := hg13.1; omega⟩
+    hcL1 (by rw [hcO1]; have := hg13.1; omega) (by rw [hcO1]; exact (hcs.grow (by simpa using hcb) hg13).tail)
+    ((hns3.grow hg2 (Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1)).grow hg3 (Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1))
+    hout3 (by rw [h30, h31]; omega)
+  refine ⟨x, a', ?_, hS', hg13.trans hg', hO', hOb', hns'⟩
+  rw [nestCtors_cons, hK1]
+  exact hrun
+
 end steps
 
 end L.Ind
