@@ -1,4 +1,5 @@
 import ConAgua.Arena.DeclHeader
+import ConAgua.Arena.DeclRec
 import ConAgua.Arena.DeclStepSpec
 import ConAgua.Arena.PinsNatOp
 import ConAgua.Arena.WhnfBase
@@ -347,6 +348,80 @@ theorem cdT_run {mode : ConLeche.CheckMode} {pins : List INatOpPinSet} {fe fe' :
     {d : IDeclaration} {a a' : AState} (h : (checkDecl mode pins fe d).run a = .ok (fe', a')) :
     (cdT mode pins fe d).run a = .ok ((fe', none), a') := by
   simp only [cdT, StateT.run_bind, h, exc_ok_bind']; rfl
+
+/-! ## `install_value(i, vis, ck, vk)`: model and `vcgen` spec -/
+
+section ivModel
+variable (p : Prog)
+
+mutual
+/-- **The model of `install_value`** (`env_push` through `callW`: its spec needs the name word's
+bound, which only the relational lemma knows). -/
+def ivW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _, _, _ => none
+  | n + 1, m, i, vis, ck, vk => ivK1 n vis vk (erecCiW n m i ck)
+
+def ivK1 (n : Nat) (vis vk : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r1, m1) => ivK2 n vis vk (r1.headD 0) (ihW n m1 vis (r1.headD 0 + 1))
+
+def ivK2 (n : Nat) (vis vk q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (_, m2) =>
+    if vk ≠ 1 then ivK3 n vis vk q (ivgW n m2 vis (q + 1) (rdW (m2.arr64 EREC) (q + 5)))
+    else ivK4 vis vk q (callW p n "env_push" [vis, q] m2)
+
+def ivK3 (n : Nat) (vis vk q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (_, m3) => ivK4 vis vk q (callW p n "env_push" [vis, q] m3)
+
+def ivK4 (vis vk q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r4, m4) => ivK5 (r4.headD 0) (erecVgW m4 q vk)
+
+def ivK5 (v : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r5, m5) => some ([v, r5.headD 0], m5)
+end
+
+section arms
+variable (n : Nat) (m m1 m2 m3 m4 m5 : Mem) (i vis ck vk q v : Word) (r1 r2 r3 r4 r5 : List Word)
+theorem ivW_step : ivW p (n + 1) m i vis ck vk = ivK1 p n vis vk (erecCiW n m i ck) := rfl
+theorem ivK1_some : ivK1 p n vis vk (some (r1, m1)) =
+    ivK2 p n vis vk (r1.headD 0) (ihW n m1 vis (r1.headD 0 + 1)) := rfl
+theorem ivK2_some : ivK2 p n vis vk q (some (r2, m2)) =
+    if vk ≠ 1 then ivK3 p n vis vk q (ivgW n m2 vis (q + 1) (rdW (m2.arr64 EREC) (q + 5)))
+    else ivK4 p vis vk q (callW p n "env_push" [vis, q] m2) := rfl
+theorem ivK3_some : ivK3 p n vis vk q (some (r3, m3)) =
+    ivK4 p vis vk q (callW p n "env_push" [vis, q] m3) := rfl
+theorem ivK4_some : ivK4 p vis vk q (some (r4, m4)) = ivK5 p (r4.headD 0) (erecVgW m4 q vk) := rfl
+theorem ivK5_some : ivK5 p v (some (r5, m5)) = some ([v, r5.headD 0], m5) := rfl
+end arms
+
+grind_pattern [ind_grind] ivW_step => ivW p (n + 1) m i vis ck vk
+grind_pattern [ind_grind] ivK1_some => ivK1 p n vis vk (some (r1, m1))
+grind_pattern [ind_grind] ivK2_some => ivK2 p n vis vk q (some (r2, m2))
+grind_pattern [ind_grind] ivK3_some => ivK3 p n vis vk q (some (r3, m3))
+grind_pattern [ind_grind] ivK4_some => ivK4 p vis vk q (some (r4, m4))
+grind_pattern [ind_grind] ivK5_some => ivK5 p v (some (r5, m5))
+
+set_option maxHeartbeats 1600000 in
+theorem iv_specW (hv : p.lookup "install_value" = some installValueL) (hR : RecProg p)
+    (hI : IhProg p) (hC : CvgProg p) (n : Nat) (s₀ : St) (i vis ck vk : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_value" [i, vis, ck, vk]
+    ⦃fun r s' => LocEq s' s₀ ∧ ivW p n s₀.mem i vis ck vk = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hv]
+  simp only [callFn, installValueL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        erecCi_specW p hR n, ih_specW p hI n, ivg_specW p hC n, callW_spec p n "env_push",
+        erecVg_specW p hR n] <;>
+      finish (gen := 20) [rdW_eq]
+
+end ivModel
 
 /-! ## The callees' specs at the loop's relation -/
 
