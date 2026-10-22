@@ -11,7 +11,7 @@ import ConAgua.Census.Attr
 # The specs of `abstractRange`'s arms, and the entry
 
 As `Abs1Spec.lean`; the entry `ar_entry(e, d, k, c)` (`abstractRangeFast`) adds the `k = 0`
-identity and the `d + k` capacity check before the two clears.
+identity before the two clears.
 -/
 
 set_option experimental.vcgen true
@@ -121,17 +121,16 @@ end specs
 /-- **The model of `ar_entry`.** -/
 def arEntryW (n : Nat) (m : Mem) (e d k c : Word) : Option (Word × Mem) :=
   if k = 0 then some (e, m)
-  else if d + k < d then none
   else if rdW (m.arr64 CTL) 48 + 2 = 0 then none
   else aclrK (arW n (mclearG abSch m) e c d k)
 
 theorem arEntryW_zero (n : Nat) (m : Mem) (e d k c : Word) (hk : k = 0) :
     arEntryW n m e d k c = some (e, m) := by simp [arEntryW, hk]
 
-theorem arEntryW_eq (n : Nat) (m : Mem) (e d k c : Word) (hk : k ≠ 0) (hdk : ¬ d + k < d)
+theorem arEntryW_eq (n : Nat) (m : Mem) (e d k c : Word) (hk : k ≠ 0)
     (h0 : rdW (m.arr64 CTL) 48 + 2 ≠ 0) :
     arEntryW n m e d k c = aclrK (arW n (mclearG abSch m) e c d k) := by
-  simp [arEntryW, hk, hdk, h0]
+  simp [arEntryW, hk, h0]
 
 grind_pattern [arena_grind] arEntryW_zero => arEntryW n m e d k c
 grind_pattern [arena_grind] arEntryW_eq => arEntryW n m e d k c
@@ -140,7 +139,6 @@ grind_pattern [arena_grind] arEntryW_eq => arEntryW n m e d k c
 @[l_impl ConRon.Arena.abstractRangeFast]
 def arEntry : FunDecl := lfn (e, d, k, c) locals (r, u) {
   if k == 0 { return e };
-  if d + k < d { abort };
   u := call ab_clear();
   r := call ar_go(e, c, d, k);
   u := call ab_clear();

@@ -47,6 +47,7 @@ def arNodeW : Nat → Mem → Word → Word → Word → Word → Option (Word �
     else if h >>> 28 = 1 then
       if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
       else if rdW (m.arr64 CTL) (26 + tierW h) ≤ idxW h then none
+      else if d + k < d then none
       else if d ≤ rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) ∧ rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) < d + k then
         if c + (d + k - 1 - rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2)) < c then none
         else binternW m (c + (d + k - 1 - rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2)))
@@ -252,17 +253,17 @@ theorem arNodeW_proj (hg : h >>> 28 = 9) : arNodeW (n + 1) m h c d k = arProjW n
   rw [arNodeW]; simp [hg]
 
 theorem arNodeW_fvar_in (hv : viewOK m h 26) (hg : h >>> 28 = 1)
-    (hi : d ≤ rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) ∧ rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) < d + k)
+    (hdk : ¬ d + k < d) (hi : d ≤ rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) ∧ rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) < d + k)
     (ho : ¬ c + (d + k - 1 - rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2)) < c) :
     arNodeW (n + 1) m h c d k = binternW m (c + (d + k - 1 - rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2))) := by
   obtain ⟨hv1, hv2⟩ := hv
-  rw [arNodeW]; simp only [hv1, hg, ↓reduceIte, UInt64.not_le.mpr hv2, hi, ho]; simp
+  rw [arNodeW]; simp only [hv1, hg, ↓reduceIte, UInt64.not_le.mpr hv2, hdk, hi, ho]; simp
 
 theorem arNodeW_fvar_out (hv : viewOK m h 26) (hg : h >>> 28 = 1)
-    (hi : ¬ (d ≤ rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) ∧ rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) < d + k)) :
+    (hdk : ¬ d + k < d) (hi : ¬ (d ≤ rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) ∧ rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2) < d + k)) :
     arNodeW (n + 1) m h c d k = some (h, m) := by
   obtain ⟨hv1, hv2⟩ := hv
-  rw [arNodeW]; simp only [hv1, hg, ↓reduceIte, UInt64.not_le.mpr hv2, hi]; simp
+  rw [arNodeW]; simp only [hv1, hg, ↓reduceIte, UInt64.not_le.mpr hv2, hdk, hi]; simp
 
 theorem arNodeW_leaf (h1 : h >>> 28 ≠ 1)
     (h4 : h >>> 28 ≠ 4) (h5 : h >>> 28 ≠ 5) (h6 : h >>> 28 ≠ 6) (h7 : h >>> 28 ≠ 7)
@@ -392,6 +393,7 @@ def arNode : FunDecl := lfn (h, c, d, k) locals (x, g, t, i, v, r) {
     i := h & 134217727;
     if t != 0 && CTL.u64[1] == 0 { abort };
     if CTL.u64[26 + t] <= i { abort };
+    if d + k < d { abort };
     x := FVREC.u64[i * 4 + t * 2];
     if d <= x && x < d + k {
       v := c + (d + k - 1 - x);
