@@ -164,7 +164,7 @@ def mcK1 (n : Nat) (d ihso ihsl body : Word) : Option (List Word × Mem) → Opt
 
 /-- **The model of `class_gen_minor_ty_close`.** -/
 def mcW : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
-  | 0, _, _, _, _, _, _ => none
+  | 0, _, _, _, _, _, _, _ => none
   | n + 1, m, fo, fl, ihso, ihsl, d, res => mcK1 n d ihso ihsl res (stubM "fvar_type_ds" m [fo, fl])
 
 def c2K3 : Option (List Word × Mem) → Option (List Word × Mem)
@@ -516,8 +516,8 @@ theorem classGenMinorTyConcl_spec (n : Nat) (s₀ : St) (g c x d lvls ds0 dl0 nP
         stubM_spec p "get_app_args_f" n, internConst_spec p h.cf h.cp h.ic n,
         slAppend_specW p h.alloc h.copy h.app n, stubM_spec p "mk_app_n_f" n,
         classGenMinorTyConcl2_spec p h n] <;>
-      finish (gen := 40) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9, loc_init10,
-        loc_init11, loc_init12]
+      finish (gen := 80) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9,
+        loc_init10, loc_init11, loc_init12]
 
 theorem classGenMinorTyBody_spec (n : Nat) (s₀ : St) (g c x d lvls ds0 dl0 nPc : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_minor_ty_body" [g, c, x, d, lvls, ds0, dl0, nPc]
