@@ -680,13 +680,15 @@ def checkBlockRec : FunDecl := lfn
 }
 
 /-- `check_block_tables_one(p, m, cs.off, ss.off, vis)`: one structure-like member's (one
-constructor, no index) projection table install. -/
+constructor, no index) projection table install (`nP + nF + 1` past `2^64` a capacity abort:
+the twin's `structProjGuards` computes it in `Nat`). -/
 -- con-ron: ConRon/Arena/Inductives/BlockTail.lean:86-105 ConRon.Arena.checkBlockTables
 @[l_impl ConRon.Arena.checkBlockTables]
 def checkBlockTablesOne : FunDecl := lfn (p, m, csOff, ssOff, vis) locals
     (ctorPtr, cA, nF, sortsPtr, sortsO, sortsL, lpsO, lpsL, guardsO, guardsL, vis2) {
   ctorPtr := IW.u64[csOff]; cA := IW.u64[ctorPtr]; nF := IW.u64[ctorPtr + 1];
   sortsPtr := IW.u64[ssOff]; sortsO := IW.u64[sortsPtr]; sortsL := IW.u64[sortsPtr + 1];
+  if IW.u64[p + 4] + nF + 1 <= IW.u64[p + 4] { abort };
   (guardsO, guardsL) := call struct_proj_guards(EREC.u64[cA + 3], IW.u64[p + 4], nF, sortsO, sortsL);
   (lpsO, lpsL) := call block_shape_lps(p);
   vis2 := call check_struct_proj_table(EREC.u64[IW.u64[m]], EREC.u64[cA], lpsO, lpsL,
@@ -696,27 +698,26 @@ def checkBlockTablesOne : FunDecl := lfn (p, m, csOff, ssOff, vis) locals
 
 /-- `check_block_tables(p, ms.off, ms.len, cs.off, cs.len, ss.off, ss.len, vis)`: the projection
 table at every structure-like member, the three lists walked side by side, stopping at the
-shortest. -/
+shortest; recursion as the twin's. -/
 -- con-ron: ConRon/Arena/Inductives/BlockTail.lean:86-105 ConRon.Arena.checkBlockTables
 @[l_impl ConRon.Arena.checkBlockTables]
 def checkBlockTables : FunDecl := lfn (p, msO, msL, csO, csL, ssO, ssL, vis) locals
-    (n, j, m, csp, ssp, cslen, sslen, vis2) {
-  n := msL;
-  if csL < n { n := csL };
-  if ssL < n { n := ssL };
-  j := 0;
+    (m, csp, ssp, vis2) {
+  if msL == 0 { return vis };
+  if csL == 0 { return vis };
+  if ssL == 0 { return vis };
+  m := IW.u64[msO];
+  csp := IW.u64[csO];
+  ssp := IW.u64[ssO];
   vis2 := vis;
-  while j < n {
-    m := IW.u64[msO + j];
-    csp := IW.u64[csO + j];
-    ssp := IW.u64[ssO + j];
-    cslen := IW.u64[csp + 1];
-    sslen := IW.u64[ssp + 1];
-    if cslen == 1 && sslen == 1 && IW.u64[m + 1] == 0 {
-      vis2 := call check_block_tables_one(p, m, IW.u64[csp], IW.u64[ssp], vis2)
-    };
-    j += 1
+  if IW.u64[csp + 1] == 1 {
+    if IW.u64[ssp + 1] == 1 {
+      if IW.u64[m + 1] == 0 {
+        vis2 := call check_block_tables_one(p, m, IW.u64[csp], IW.u64[ssp], vis)
+      }
+    }
   };
+  vis2 := call check_block_tables(p, msO + 1, msL - 1, csO + 1, csL - 1, ssO + 1, ssL - 1, vis2);
   return vis2
 }
 
