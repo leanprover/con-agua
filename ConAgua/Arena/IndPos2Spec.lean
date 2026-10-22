@@ -3279,4 +3279,137 @@ theorem nestOcc_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Opt
 
 end census3
 
+/-! ## `member_idx_at` -/
+
+def memK (n : Nat) (m : Mem) (no nl lvls : Word) (v : List Word) : Option (List Word × Mem) :=
+  if v = [] then none
+  else if v.tail.tail.headD 0 ≠ lvls then some ([0, 0], m)
+  else match findW n m no nl (v.tail.headD 0) with
+    | none => none
+    | some r => some ([r.headD 0, r.tail.headD 0], m)
+
+def memW (n : Nat) (m : Mem) (no nl lvls e : Word) : Option (List Word × Mem) :=
+  if e >>> 28 ≠ 3 then some ([0, 0], m) else memK n m no nl lvls (eViewW m e)
+
+theorem memW_not (n : Nat) (m : Mem) (no nl lvls e : Word) (h : e >>> 28 ≠ 3) :
+    memW n m no nl lvls e = some ([0, 0], m) := by simp [memW, h]
+theorem memW_const (n : Nat) (m : Mem) (no nl lvls e : Word) (h : ¬ e >>> 28 ≠ 3) :
+    memW n m no nl lvls e = memK n m no nl lvls (eViewW m e) := by simp only [memW]; rw [if_neg h]
+theorem memK_abort (n : Nat) (m : Mem) (no nl lvls : Word) (v : List Word) (h : v = []) :
+    memK n m no nl lvls v = none := by simp [memK, h]
+theorem memK_miss (n : Nat) (m : Mem) (no nl lvls : Word) (v : List Word) (h : v ≠ [])
+    (h2 : v.tail.tail.headD 0 ≠ lvls) : memK n m no nl lvls v = some ([0, 0], m) := by
+  simp only [memK]; rw [if_neg h, if_pos h2]
+theorem memK_find (n : Nat) (m : Mem) (no nl lvls : Word) (v : List Word) (h : v ≠ [])
+    (h2 : ¬ v.tail.tail.headD 0 ≠ lvls) : memK n m no nl lvls v =
+      (match findW n m no nl (v.tail.headD 0) with
+        | none => none
+        | some r => some ([r.headD 0, r.tail.headD 0], m)) := by
+  simp only [memK]; rw [if_neg h, if_neg h2]
+attribute [ind_grind] memW_not memW_const memK_abort memK_miss memK_find
+
+theorem memberIdxAt_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
+    (hf : p.lookup "sl_find" = some slFind) (hp : p.lookup "member_idx_at" = some memberIdxAt)
+    (n : Nat) (s₀ : St) (no nl lvls e : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "member_idx_at" [no, nl, lvls, e]
+    ⦃fun r s' => LocEq s' s₀ ∧ memW n s₀.mem no nl lvls e = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, memberIdxAt]
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, eView_spec p hv n,
+      slFind_spec p hf n] <;> finish (gen := 20)
+
+
+/-- `(ok, idx)` against an `Option Nat`. -/
+def MemIdxOut (r : List Word) : Option Nat → Prop
+  | none => r = [0, 0]
+  | some i => r = [1, UInt64.ofNat i]
+
+theorem memW_ok (n : Nat) (m m' : Mem) (a : AState) (no nl lvls e : Word) (r : List Word)
+    (ws : List Word) (hA : ArenaR m a) (he : H e)
+    (hlv : H lvls) (hws : SlR m no nl ws) (hwlt : ∀ w ∈ ws, w.toNat < 2 ^ 32)
+    (hlen : ws.length < 2 ^ 64) (h : memW n m no nl lvls e = some (r, m')) :
+    m' = m ∧ ∃ o, (ConRon.Arena.memberIdxAt? (ws.map (fun w => (decI w : NIdx))) (decI lvls)
+      (decI e)).run a = .ok (o, a) ∧ MemIdxOut r o := by
+  have htag := tag_const_iff e he
+  by_cases hd : e >>> 28 ≠ 3
+  · rw [memW_not n m no nl lvls e hd] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    refine ⟨rfl, none, ?_, rfl⟩
+    have : ¬ ((decI e : EIdx).tag == ETag.const) = true := by rw [htag]; simpa using hd
+    simp only [ConRon.Arena.memberIdxAt?, this, if_false]; rfl
+  · rw [memW_const n m no nl lvls e hd] at h
+    have he3 : e >>> 28 = 3 := by simpa using hd
+    cases hvl : eViewW m e with
+    | nil => rw [hvl] at h; simp [memK] at h
+    | cons g vt =>
+      have hne : eViewW m e ≠ [] := by rw [hvl]; simp
+      obtain ⟨v, hv, hvr⟩ := eViewW_ok m a hA e hne
+      rw [hvl] at hvr h
+      have ht : (decE e).tag = ETag.const := by
+        have h1 : ((decI e : EIdx).tag == ETag.const) = true := by rw [htag, he3]; decide
+        exact beq_iff_eq.mp h1
+      obtain ⟨nn, us0, rfl⟩ := EStore.view_const a.store (decE e) ht v hv
+      simp only [ViewR, getD1_eq', getD2_eq] at hvr
+      obtain ⟨-, hx, hdx, hy, hdy⟩ := hvr
+      have hview : a.store.viewConst (decE e) = some (nn, us0) :=
+        EStore.viewConst_of_view _ _ ht nn us0 hv
+      have hbeq : (us0 == decI lvls) = decide ((g :: vt).tail.tail.headD 0 = lvls) := by
+        rw [← hdy]; exact decI_beq' _ _ hy hlv
+      by_cases hl : (g :: vt).tail.tail.headD 0 ≠ lvls
+      · rw [memK_miss n m no nl lvls _ (by simp) hl] at h
+        simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        refine ⟨rfl, none, ?_, rfl⟩
+        have : ¬ (us0 == decI lvls) = true := by rw [hbeq]; simpa using hl
+        have htg : ((decI e : EIdx).tag == ETag.const) = true := by rw [htag, he3]; decide
+        simp only [ConRon.Arena.memberIdxAt?, htg, if_true, StateT.run_bind]
+        rw [show (decI e : EIdx) = decE e from rfl, viewConst_run, except_ok_bind, hview]
+        simp only [this, if_false]; rfl
+      · rw [memK_find n m no nl lvls _ (by simp) hl] at h
+        cases hfw : findW n m no nl ((g :: vt).tail.headD 0) with
+        | none => rw [hfw] at h; simp at h
+        | some fr =>
+          rw [hfw] at h
+          simp only [Option.some.injEq, Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl⟩ := h
+          have hfr := findW_ok n _ _ _ _ _ _ hws hfw hlen
+          have hl' : (g :: vt).tail.tail.headD 0 = lvls := by simpa using hl
+          have htg : ((decI e : EIdx).tag == ETag.const) = true := by rw [htag, he3]; decide
+          have hfi := findIdx_decI ws ((g :: vt).tail.headD 0) hwlt hx
+          refine ⟨rfl, (ws.map (fun w => (decI w : NIdx))).findIdx? (· == nn), ?_, ?_⟩
+          · simp only [ConRon.Arena.memberIdxAt?, htg, if_true, StateT.run_bind]
+            rw [show (decI e : EIdx) = decE e from rfl, viewConst_run, except_ok_bind, hview]
+            have : (us0 == decI lvls) = true := by rw [hbeq]; simpa using hl'
+            simp only [this, if_true]; rfl
+          · rw [← hdx, hfi, hfr]
+            cases hwi : ws.findIdx? (· == (g :: vt).tail.headD 0) <;> simp [MemIdxOut]
+
+section census
+variable (p : Prog) (hv : p.lookup "e_view" = some eView) (hf : p.lookup "sl_find" = some slFind)
+  (hp : p.lookup "member_idx_at" = some memberIdxAt)
+include hv hf hp
+
+/-- **`member_idx_at` refines `memberIdxAt?`**. -/
+@[refines ConRon.Arena.memberIdxAt?]
+theorem memberIdxAt_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+    (fe : IFEnv) (vis no nl lvls e : Word) (ws : List Word) (he : H e) (hlv : H lvls)
+    (hS : StageR dn vis fe s₀.mem a₀) (hws : SlR s₀.mem no nl ws) (hwlt : ∀ w ∈ ws, w.toNat < 2 ^ 32)
+    (hlen : ws.length < 2 ^ 64) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "member_idx_at" [no, nl, lvls, e]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (ConRon.Arena.memberIdxAt? (ws.map (fun w => (decI w : NIdx))) (decI lvls) (decI e)) a₀ ∧
+      AM.st (ConRon.Arena.memberIdxAt? (ws.map (fun w => (decI w : NIdx))) (decI lvls) (decI e)) a₀ = a₀ ∧
+      MemIdxOut r
+        (AM.res (ConRon.Arena.memberIdxAt? (ws.map (fun w => (decI w : NIdx))) (decI lvls) (decI e)) a₀) ∧
+      s'.mem = s₀.mem; ⊤⦄ := by
+  refine triple_post (memberIdxAt_spec p hv hf hp n s₀ no nl lvls e) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨hmem, o, hrun, hout⟩ := memW_ok n _ _ a₀ no nl lvls e r ws hS.1.arena.1 he hlv hws hwlt hlen hm
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, hst, by rw [hres]; exact hout, hmem⟩
+
+end census
+
 end L.Ind
