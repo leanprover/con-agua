@@ -19,6 +19,125 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
+/-! ## `rec_info_rec` -/
+
+/-- The memory after `rec_info_rec`'s nine writes (each copy reads the memory of its time). -/
+def riMem (m1 : Mem) (q cv mi rp3 reo rel : Word) : Mem :=
+  let m2 := m1.set64 EREC q 5
+  let m3 := m2.set64 EREC (q + 1) (rdW (m2.arr64 EREC) cv)
+  let m4 := m3.set64 EREC (q + 2) (rdW (m3.arr64 EREC) (cv + 1))
+  let m5 := m4.set64 EREC (q + 3) (rdW (m4.arr64 EREC) (cv + 2))
+  let m6 := m5.set64 EREC (q + 4) (rdW (m5.arr64 EREC) (cv + 3))
+  ((((m6.set64 EREC (q + 5) mi).set64 EREC (q + 6) rp3).set64 EREC (q + 7) reo).set64 EREC (q + 8) rel)
+
+/-- **The model of `rec_info_rec`.** -/
+def riW (m : Mem) (cv mi rp3 reo rel : Word) : Option (List Word × Mem) :=
+  match erAllocW m 9 with
+  | none => none
+  | some (q, m1) => some ([q], riMem m1 q cv mi rp3 reo rel)
+
+theorem ri_spec (p : Prog) (L : CbrLook p) (n : Nat) (s₀ : St) (cv mi rp3 reo rel : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec_info_rec" [cv, mi, rp3, reo, rel]
+    ⦃fun r s' => LocEq s' s₀ ∧ riW s₀.mem cv mi rp3 reo rel = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ L.rir]
+  simp only [callFn, recInfoRec]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        erecAlloc_specW p L.tsr.ea n] <;>
+      finish [riW, riMem]
+
+theorem riMem_eq {m1 : Mem} {q cq mi rp3 reo rel : Word} (hlt : cq.toNat + 4 ≤ q.toNat) (hq : q.toNat + 9 < 2 ^ 64) :
+    riMem m1 q cq mi rp3 reo rel = wrER m1 q [5, rdW (m1.arr64 EREC) cq, rdW (m1.arr64 EREC) (cq + 1),
+      rdW (m1.arr64 EREC) (cq + 2), rdW (m1.arr64 EREC) (cq + 3), mi, rp3, reo, rel] := by
+  have t1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  have t2 : (q + 2).toNat = q.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
+  have t3 : (q + 3).toNat = q.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
+  have c1 : (cq + 1).toNat = cq.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  have c2 : (cq + 2).toNat = cq.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
+  have c3 : (cq + 3).toNat = cq.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
+  simp only [riMem, wrER]
+  rw [show q + 1 + 1 = q + 2 by ac_rfl, show q + 2 + 1 = q + 3 by ac_rfl,
+    show q + 3 + 1 = q + 4 by ac_rfl, show q + 4 + 1 = q + 5 by ac_rfl,
+    show q + 5 + 1 = q + 6 by ac_rfl, show q + 6 + 1 = q + 7 by ac_rfl, show q + 7 + 1 = q + 8 by ac_rfl]
+  simp (disch := ((try simp only [t1, t2, t3, c1, c2, c3]); omega)) only [rdW_set64_ne_er]
+
+/-- **`class_fe_r_rec` under the stage relation**: a fresh rule-less `.recInfo` record of the constant
+at `cq`. -/
+theorem riRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+    {m m' : Mem} {cq mi rp3 reo rel q : Word} {cv : IConstantVal} {rules : List IRecRule}
+    (h : riW m cq mi rp3 reo rel = some ([q], m'))
+    (hS : StageR dn vis fe m a) (hcv : decCV (erecP m) cq.toNat = some cv)
+    (hru : decRules (erecP m) reo.toNat rel.toNat = some rules) :
+    StageR dn vis fe m' a ∧ IWGrow m m' ∧ MFr [] [] m m' ∧
+      decCI (erecP m') dn q.toNat = some (.recInfo cv mi.toNat rp3.toNat rules) := by
+  cases h1 : erAllocW m 9 with
+  | none => simp [riW, h1] at h
+  | some x =>
+  obtain ⟨q1, m1⟩ := x
+  simp only [riW, h1, Option.some.injEq, Prod.mk.injEq, List.cons.injEq, and_true] at h
+  obtain ⟨rfl, rfl⟩ := h
+  have h3 : (erecP m)[cq.toNat + 3]? ≠ none := by
+    have := decCV_type hcv; intro e; simp [hd?, e] at this
+  have hcq : cq.toNat + 4 ≤ erTop m := by
+    obtain ⟨v, hv⟩ := Option.ne_none_iff_exists'.mp h3; have := erecP_lt hv; omega
+  have hE1 : m1.arr64 EREC = m.arr64 EREC := by
+    simp only [erAllocW] at h1; split at h1; · cases h1
+    split at h1; · cases h1
+    simp only [Option.some.injEq, Prod.mk.injEq] at h1; obtain ⟨-, rfl⟩ := h1
+    simp only [erAllocMem]; exact Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  obtain ⟨-, hEtop, -, hEsz, -⟩ := hS.2
+  have hq1 : q1.toNat = erTop m := by
+    simp only [erAllocW] at h1; split at h1; · cases h1
+    split at h1; · cases h1
+    simp only [Option.some.injEq, Prod.mk.injEq] at h1; obtain ⟨rfl, -⟩ := h1; rfl
+  obtain ⟨hS', hg, -, htop', hget⟩ := erRec_stage h1 hS [5, rdW (m.arr64 EREC) cq,
+    rdW (m.arr64 EREC) (cq + 1), rdW (m.arr64 EREC) (cq + 2), rdW (m.arr64 EREC) (cq + 3), mi, rp3, reo, rel]
+    (by simp)
+  have hroom : q1.toNat + 9 < 2 ^ 64 := by
+    obtain ⟨-, h2, -, h4, -⟩ := hS'.2; simp only [List.length_cons, List.length_nil] at htop'; omega
+  rw [riMem_eq (by omega) hroom, hE1]
+  refine ⟨hS', hg, by rw [← hE1]; exact erRec_mfr h1 _, ?_⟩
+  generalize hM : wrER m1 q1 _ = M at hS' hg htop' hget
+  have hP : ∀ j, j < 9 → (erecP M)[q1.toNat + j]? = ((M.arr64 EREC))[q1.toNat + j]? :=
+    fun j hj => erecP_getE (by simp at htop'; omega)
+  have c1 : (cq + 1).toNat = cq.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  have c2 : (cq + 2).toNat = cq.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
+  have c3 : (cq + 3).toNat = cq.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
+  have hw : ∀ i, i < 4 → (erecP M)[q1.toNat + 1 + i]? = (erecP M)[cq.toNat + i]? := by
+    intro i hi
+    rw [show q1.toNat + 1 + i = q1.toNat + (i + 1) by omega, hP (i + 1) (by omega),
+      hget (i + 1) (by simp; omega), erecP_getE (by omega), hg.2.2.2 _ (by omega)]
+    have hlt : cq.toNat + i < (m.arr64 EREC).size := by simp only [erTop] at hEtop hcq; omega
+    rcases i with _ | _ | _ | _ | i
+    all_goals first
+      | omega
+      | (simp only [Nat.add_zero, Nat.zero_add] at hlt ⊢
+         simp only [List.getElem?_cons_succ, List.getElem?_cons_zero, rdW, c1, c2, c3,
+          Array.getElem?_eq_getElem hlt, Option.getD_some])
+  have hcv' : decCV (erecP M) (q1.toNat + 1) = some cv := by
+    rw [decCV_shift (by simpa using hw 0 (by decide)) (by simpa using hw 1 (by decide))
+      (by simpa [Nat.add_assoc] using hw 2 (by decide)) (by simpa [Nat.add_assoc] using hw 3 (by decide))]
+    exact ArrExt.decCV (IWGrow.erecPExtR hg) hcv
+  have nk : ∀ j (hj : j < 9), nat? (erecP M) (q1.toNat + j) =
+      some (([5, rdW (m.arr64 EREC) cq, rdW (m.arr64 EREC) (cq + 1), rdW (m.arr64 EREC) (cq + 2),
+        rdW (m.arr64 EREC) (cq + 3), mi, rp3, reo, rel] : List Word)[j]'(by simpa using hj)).toNat := by
+    intro j hj
+    simp only [nat?, hP j hj, hget j (by simpa using hj)]
+    rw [List.getElem?_eq_getElem (by simp; omega)]; rfl
+  have n0 := nk 0 (by decide)
+  have n5 := nk 5 (by decide)
+  have n6 := nk 6 (by decide)
+  have n7 := nk 7 (by decide)
+  have n8 := nk 8 (by decide)
+  simp only [Nat.add_zero, List.getElem_cons_zero, List.getElem_cons_succ] at n0 n5 n6 n7 n8
+  have hru' : decRules (erecP M) reo.toNat rel.toNat = some rules := (IWGrow.erecPExtR hg).decRules hru
+  simp only [decCI, Option.bind_eq_bind, n0, Option.bind_some, hcv', n5, n6, n7, n8, Option.pure_def]
+  simp [hru']
+
+
 section rel
 variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 
