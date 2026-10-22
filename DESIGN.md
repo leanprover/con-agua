@@ -5719,3 +5719,36 @@ import `RecordsSpec`.
   `DefEqLeaves2` (`cplL`, …) from when that file did not build; replace by an import.
 * Lesson: a word model reads memory after a callee returns, where the L code reads it (`callW_spec`
   says nothing about memory kept), else `finish` fails.
+
+### The middle layer (`DefEqMid*.lean`, helper `defeq-mid`)
+* Refined, no `sorry` (eight files, ~5800 lines, ~98 s CPU): `defeq_no_fvars`, `lazy_fold_ok`,
+  `bool_true_shortcut`, `try_unfold_proj_app`, `delta_quick`, `defeq_offset`, `defeq_lams_inner`
+  (`DefEqMid`); `defeq_lst`, `defeq_list_rev` (`DefEqMidLoops`); `defeq_peel`, `defeq_binders`
+  (`DefEqMidPeel`); `defeq_lams` (`DefEqMidLams`); `quick_defeq` (`DefEqMidQuick`, closes
+  `QuickDefeqSpec`); `defeq_spine` (`DefEqMidSpine`); `lds_left`/`lds_right`/`lds_both`,
+  `lazy_delta_step` (`DefEqMidLazy`); `lazy_delta_reduction` (`DefEqMidLazy2`). Each at L fuel
+  `n + 1` from `KnotUpTo p n`, against `coreKnot (decMode mode) fe id F`, `F ≥ n`.
+* **L split for the proofs** (same semantics, new functions with citations): `peel_leaf`,
+  `peel_dom`, `peel_step(2)`, `peel_push`; `lams_open`, `lams_inst`, `lam_pair`; `quick_sort`,
+  `quick_forall`, `quick_lam`; `spine_head`, `defeq_spine2`, `spine_cmp`; `lds_unfold2`,
+  `lds_same`; `lazy_nat`, `lazy_iter`; the loops of `defeq_lst`, `defeq_list_rev`, `defeq_peel`,
+  `defeq_lams`, `lazy_delta_reduction` as named blocks. `defeq_binders` pushes through
+  `peel_push`. Node reads go through `e_view`.
+* **L fixes** (words the twin reads differently): `spine_cmp` takes any `lvls_eq_c` word `≥ 2` as
+  `some true` and `lds_same` any hint kind `≥ 2` as regular (`decO`/`decHintW`'s readings);
+  `lazy_nat`/`lazy_iter` normalise a verdict word to `0`/`1`, and `lazy_iter` continues only on a
+  step answer `0` (any other word but `1`, `2` is `.unknown`, as `decDS`).
+* **Hypotheses** (`LazyCallees`): `InstListOK`, `Inst1OK`, `HasFvarOK`; `NatPredW` (`nat_pred`
+  with `ResW`: `natPred_refines` proves `ResH` only); `UnfoldDefOK`, `ReduceNatSpec` (lane `whnf`'s
+  theorems are `sorry`); `StoreDenotes` (a stored sort's level and a stored constant's level list
+  read back, which `lvl(s)_eq_c`'s refinements take as hypotheses). Depth `< 2^63` throughout.
+* The twin's `defeqPeel`, `defeqLams`, `lazyDeltaReduction` get no equation lemmas in the
+  heartbeat budget; their one-level unfoldings are stated with the recursion abstracted
+  (`peelLvl`, `lamsLvl`, `lazyLvl`) and proved by `delta` + `rfl`, as con-ron's bridge does.
+* Findings: (1) `finish (gen := N)` did not raise the term-generation limit here (the diagnostics
+  still said `gen := 8`); `sym (gen := 80) (instances := 5000) only [...]` did, and made the
+  specs with three or more calls and 4–5-tuple results pass. (2) A multi-pattern arm lemma whose
+  only binding of a variable is its right side is never instantiated: state the callee's run as
+  a hypothesis instead (`lamsW_inner`). (3) `omega` with `2^24` and `2^64` produced a proof the
+  kernel rejects (deep recursion), `docs/gaps/omega-kernel-deep-recursion-2pow24.lean`; stated
+  with the `@[noinline]` `peelFuel` it is an atom and fine.
