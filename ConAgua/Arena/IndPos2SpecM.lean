@@ -879,3 +879,4 @@ theorem roW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (h
   · rw [hr3]; cases b <;> rfl
 
 end L.Ind
+

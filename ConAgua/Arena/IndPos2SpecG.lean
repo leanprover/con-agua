@@ -150,13 +150,13 @@ theorem nuWf_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
     (a : AState) (ctx cv : Word) (c : NestCtx) (cvv : IConstantVal) (r : List Word)
     (h : nuWf k m ctx cv = some (r, m')) (hS : StageR dn vis fe m a)
     (hc : decCtx m ctx.toNat = some c) (hin : CtxIn m ctx.toNat (· < iwTop m)) (hsl : CtxSl m ctx.toNat)
-    (hcv : decCV (erecP m) cv.toNat = some cvv) (hcvs : CVSl m cv) (hhi : c.hiAt 0 < 2 ^ 64)
+    (hcv : decCV (erecP m) cv.toNat = some cvv) (hhi : c.hiAt 0 < 2 ^ 64)
     (hMra : ∀ (m2 : Mem) (a2 : AState), StageR dn vis fe m2 a2 → ∃ mp0, rpMR m2 mp0)
     (hMno : ∀ (m2 : Mem) (a2 : AState), StageR dn vis fe m2 a2 → ∃ mp0, noMR m2 mp0) :
     ∃ x a', (ConRon.Arena.nestUniformOk c cvv).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' ∧ r = [if x then 1 else 0] := by
   match k, h with
-  | k + 4, h => exact nuW_ok k dn fe vis m m' a ctx cv c cvv r h hS hc hin hsl hcv hcvs hhi hMra hMno
+  | k + 4, h => exact nuW_ok k dn fe vis m m' a ctx cv c cvv r h hS hc hin hsl hcv hhi hMra hMno
 
 theorem CsAt.tail {m : Mem} {o : Nat} {x : IConstantVal × Nat} {xs : List (IConstantVal × Nat)}
     {P : Nat → Prop} (h : CsAt m o (x :: xs) P) : CsAt m (o + 1) xs P := fun i hi => by
@@ -237,7 +237,7 @@ theorem ucW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Word
     obtain ⟨r1, m1⟩ := pr
     rw [hnu] at h
     obtain ⟨b1, a1, hrun1, hS1, hg1, hr1⟩ := nuWf_ok k dn fe vis m m1 a ctx q c x.1 r1 hnu hS hU.dec hU.inn
-      hU.sl hcvv hcvs hhi hMra hMno
+      hU.sl hcvv hhi hMra hMno
     rw [List.allM_cons]
     cases b1 with
     | false =>

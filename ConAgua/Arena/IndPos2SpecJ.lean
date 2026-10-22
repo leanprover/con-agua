@@ -172,7 +172,7 @@ theorem nestGrowGroup_spec (p : Prog) (hl : NitLook p) (h2 : p.lookup "rec2" = s
 theorem ggW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx hi us dO dL : Word) (HI : Nat)
     (hHI : hi.toNat = HI) (c : NestCtx) (ds : List EIdx) (hus : H us)
     (hMno : ∀ (m2 : Mem) (a2 : AState), StageR dn vis fe m2 a2 → ∃ mp0, noMR m2 mp0)
-    (hCV : ∀ (m2 : Mem) (a2 : AState), StageR dn vis fe m2 a2 → CVSlAll m2) (k : Nat) :
+    (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (cO cL gO gL : Word) (cs : List NIdx) (grp : List (NIdx × EIdx))
       (r : List Word),
     ggW k m vis ctx hi us dO dL cO cL gO gL = some (r, m') → StageR dn vis fe m a →
@@ -256,7 +256,7 @@ theorem ggW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx hi us 
     obtain ⟨r2, m2⟩ := pr2
     rw [hnit, ggK2_some] at h
     obtain ⟨x, a2, hrun2, hS2, hg2, hx1, htH, htd⟩ := nitW_ok k dn fe vis ctx hi HI hHI c m1 m2 a key _ r2 hnit
-      hS1 (hU.grow hg1) hdk hkin hksl (hCV m1 a hS1) hMno
+      hS1 (hU.grow hg1) hdk hkin hksl hMno
     -- the pair record and the snoc
     cases hpr : posRecW m2 [cw, r2.tail.headD 0] with
     | none => rw [hpr] at h; simp [ggK3] at h
@@ -320,7 +320,7 @@ theorem nestGrowGroup_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx �
     (hcs : decHL s₀.mem cO.toNat cL.toNat = some cs) (hcb : ∀ j < cL.toNat, cO.toNat + j < iwTop s₀.mem)
     (hgl : gL.toNat = grp.length) (hgb : gO.toNat + grp.length ≤ iwTop s₀.mem) (hgrp : GrpAt s₀.mem gO.toNat grp)
     (hMno : ∀ (m2 : Mem) (a2 : AState), StageR dn vis fe m2 a2 → ∃ mp0, noMR m2 mp0)
-    (hCV : ∀ (m2 : Mem) (a2 : AState), StageR dn vis fe m2 a2 → CVSlAll m2) :
+ :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_grow_group" [vis, ctx, hi, us, dO, dL, cO, cL, gO, gL]
     ⦃fun r s' => LocEq s' s₀ ∧
       AM.ok (ConRon.Arena.nestGrowGroup fe c hi.toNat (decI us) ds cs grp) a₀ ∧
@@ -331,7 +331,7 @@ theorem nestGrowGroup_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx �
       ⊤⦄ := by
   refine triple_post (nestGrowGroup_spec p hl h2 h4 hsn hp k s₀ vis ctx hi us dO dL cO cL gO gL) ?_
   rintro r s' ⟨hlc, hm⟩
-  obtain ⟨res, a', hrun, hS', hg, h1, -, h3⟩ := ggW_ok dn fe vis ctx hi us dO dL hi.toNat rfl c ds hus hMno hCV
+  obtain ⟨res, a', hrun, hS', hg, h1, -, h3⟩ := ggW_ok dn fe vis ctx hi us dO dL hi.toNat rfl c ds hus hMno
     k _ _ a₀ cO cL gO gL cs grp _ hm hS hU hds hdb hcs hcb hgl hgb hgrp
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hlc, hok, by rw [hst]; exact hS', hg, by rw [hres]; simpa using h1, by rw [hres]; simpa using h3⟩
