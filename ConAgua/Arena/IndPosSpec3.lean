@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndPosSpec2
 import ConAgua.Arena.MemoBank
+import ConAgua.Arena.IndSim
 
 /-! # `replaceFVars` and its maps (lane `indproofs2`, helper `pos`)
 
@@ -808,7 +809,7 @@ def DsOK (n : Nat) : Prop :=
   ∀ (m m' : Mem) (a : AState) (f o l q l' : Word) (fm : FvMap) (xs : List EIdx)
     (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word), rxDsW n m f o l = some (q, l', m') →
     StageR dn vis fe m a → FMOk m f.toNat fm → decHL m o.toNat l.toNat = some xs →
-    o.toNat + l.toNat ≤ iwTop m → RfInv m M G g →
+    (∀ j < l.toNat, o.toNat + j < iwTop m) → RfInv m M G g →
     ∃ ys a', (xs.mapM fun x => ConRon.Arena.replaceFVars fm x).run a = .ok (ys, a') ∧
       decHL m' q.toNat l'.toNat = some ys ∧ q.toNat + l'.toNat ≤ iwTop m' ∧ RxPost dn fe vis m m' a' M G g
 
@@ -816,7 +817,7 @@ def DsGoOK (n : Nat) : Prop :=
   ∀ (m0 m m' : Mem) (a : AState) (f o l q j : Word) (fm : FvMap) (xs acc : List EIdx)
     (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word), rxDsGoW n m f o l q j = some m' →
     StageR dn vis fe m a → IWGrow m0 m → iwTop m0 ≤ q.toNat → q.toNat + l.toNat ≤ iwTop m →
-    FMOk m0 f.toNat fm → decHL m0 o.toNat l.toNat = some xs → o.toNat + l.toNat ≤ iwTop m0 →
+    FMOk m0 f.toNat fm → decHL m0 o.toNat l.toNat = some xs → (∀ j < l.toNat, o.toNat + j < iwTop m0) →
     j.toNat ≤ l.toNat → decHL m q.toNat j.toNat = some acc → RfInv m M G g →
     ∃ ys a', ((xs.drop j.toNat).mapM fun x => ConRon.Arena.replaceFVars fm x).run a = .ok (ys, a') ∧
       decHL m' q.toNat l.toNat = some (acc ++ ys) ∧ StageR dn vis fe m' a' ∧ IWGrow m0 m' ∧
@@ -841,5 +842,167 @@ def RfOK (n : Nat) : Prop :=
       RxPost dn fe vis m m' a' M G g
 
 end stmts
+
+end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+/-! ### Word reads and small facts -/
+
+theorem rdIW0 {m : Mem} {f : Word} {v : Nat} (h : iwN m f.toNat = some v) : (rdW (m.arr64 IW) f).toNat = v := by
+  simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at h
+  obtain ⟨w, hw, rfl⟩ := h
+  simp [rdW, hw]
+
+theorem word_of_toNat {w : Word} {k : Nat} (h : w.toNat = k) (hk : k < 2 ^ 64) : w = UInt64.ofNat k := by
+  apply UInt64.toNat_inj.mp; rw [h]; simp; omega
+
+theorem rdIW {m : Mem} {f : Word} {i v : Nat} (h : iwN m (f.toNat + i) = some v) (hb : f.toNat + i < 2 ^ 64)
+    (hi : i < 2 ^ 64) : (rdW (m.arr64 IW) (f + UInt64.ofNat i)).toNat = v :=
+  rd_iwN (by rwa [UInt64.toNat_ofNat_of_lt' hi]) (by rwa [UInt64.toNat_ofNat_of_lt' hi])
+
+/-- `nest_key_map` decodes `nestKeyMap`. -/
+theorem kmW_ok {m : Mem} {dO dL hO hL i : Word} {ds holes : List EIdx}
+    (hds : decHL m dO.toNat dL.toNat = some ds) (hho : decHL m hO.toNat hL.toNat = some holes)
+    (h1 : dO.toNat + dL.toNat < 2 ^ 64) (h2 : hO.toNat + hL.toNat < 2 ^ 64) :
+    OptE (kmW m dO dL hO hL i).1 (kmW m dO dL hO hL i).2 (ConRon.Arena.nestKeyMap ds holes i.toNat) := by
+  have hdl : ds.length = dL.toNat := decHL_length m hds
+  have hhl : holes.length = hL.toNat := decHL_length m hho
+  unfold kmW ConRon.Arena.nestKeyMap
+  by_cases hc1 : i < dL
+  · have hc1' : i.toNat < dL.toNat := UInt64.lt_iff_toNat_lt.mp hc1
+    obtain ⟨hH, hd⟩ := rd_iwH (p := dO) (i := i) (decHL_getI hds i.toNat hc1') (by omega)
+    simp only [hc1, hc1', hdl, ite_true, List.getElem?_eq_getElem (show i.toNat < ds.length by omega)]
+    exact ⟨by simp, hd⟩
+  · have hc1' : ¬ i.toNat < dL.toNat := fun e => hc1 (UInt64.lt_iff_toNat_lt.mpr e)
+    have hsub : (i - dL).toNat = i.toNat - dL.toNat :=
+      UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by omega))
+    simp only [hc1, hc1', hdl, ite_false]
+    by_cases hc2 : i - dL < hL
+    · have hc2' : i.toNat - dL.toNat < hL.toNat := by rw [← hsub]; exact UInt64.lt_iff_toNat_lt.mp hc2
+      obtain ⟨hH, hd⟩ := rd_iwH (p := hO) (i := i - dL) (by rw [hsub]; exact decHL_getI hho _ hc2')
+        (by rw [hsub]; omega)
+      simp only [hc2, ite_true, List.getElem?_eq_getElem (show i.toNat - dL.toNat < holes.length by omega)]
+      exact ⟨by simp, by rw [decE_eq, hd]⟩
+    · have hc2' : ¬ i.toNat - dL.toNat < hL.toNat := fun e => hc2 (by
+        rw [UInt64.lt_iff_toNat_lt, hsub]; exact e)
+      simp only [hc2, ite_false, List.getElem?_eq_none (show holes.length ≤ i.toNat - dL.toNat by omega)]
+      rfl
+
+theorem RfInv.post {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word} {m m' : Mem} {a' : AState}
+    {M : Std.HashMap (EIdx × Word) EIdx} {G g : Word} (hR : RfInv m M G g) (hS : StageR dn vis fe m' a')
+    (hg : IWGrow m m') (hf : RfFr m m') : RxPost dn fe vis m m' a' M G g :=
+  ⟨M, G, hS, hg, hR.frame hf, GKeep.refl _ _, UInt64.le_refl _⟩
+
+theorem RxPost.trans {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word} {m m1 m2 : Mem}
+    {a1 a2 : AState} {M : Std.HashMap (EIdx × Word) EIdx} {G g : Word}
+    (h₁ : RxPost dn fe vis m m1 a1 M G g)
+    (h₂ : ∀ M1 G1, RfInv m1 M1 G1 g → G ≤ G1 → ∃ M2 G2, StageR dn vis fe m2 a2 ∧ IWGrow m1 m2 ∧
+      RfInv m2 M2 G2 g ∧ GKeep M1 M2 G1 ∧ G1 ≤ G2) :
+    RxPost dn fe vis m m2 a2 M G g := by
+  obtain ⟨M1, G1, -, hg1, hR1, hk1, hG1⟩ := h₁
+  obtain ⟨M2, G2, hS2, hg2, hR2, hk2, hG2⟩ := h₂ M1 G1 hR1 hG1
+  exact ⟨M2, G2, hS2, hg1.trans hg2, hR2, hk1.trans hk2 hG1, UInt64.le_trans hG1 hG2⟩
+
+section steps
+variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
+
+theorem mapOK_step (n : Nat) (hImg : ImgOK dn fe vis n) : MapOK dn fe vis (n + 1) := by
+  intro m m' a f i fm r0 r1 M G g h hS hfm hR
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  cases fm with
+  | holeImg ctx prog nn =>
+    obtain ⟨h0, hb, ⟨c, hc, hdc, hci⟩, ⟨po, pl, hpo, hpl, hs⟩, hn, hlt⟩ := hfm
+    have e0 : rdW (m.arr64 IW) f = 0 := UInt64.toNat_inj.mp (by rw [rdIW0 h0]; rfl)
+    rw [rxMapW_img n m f i e0] at h
+    have rc := rdIW (i := 1) (by simpa using hc) (by omega) (by decide)
+    have rpo := rdIW (i := 2) (by simpa using hpo) (by omega) (by decide)
+    have rpl := rdIW (i := 3) (by simpa using hpl) (by omega) (by decide)
+    have rn := rdIW (i := 4) (by simpa using hn) (by omega) (by decide)
+    simp only [show UInt64.ofNat 1 = (1 : Word) from rfl, show UInt64.ofNat 2 = (2 : Word) from rfl,
+      show UInt64.ofNat 3 = (3 : Word) from rfl, show UInt64.ofNat 4 = (4 : Word) from rfl] at rc rpo rpl rn
+    obtain ⟨x, a', hrun, hout, hpost⟩ := hImg m m' a _ _ _ _ i ctx prog r0 r1 M G g h hS
+      (by rw [rc]; exact hdc) (by rw [rc]; exact hci) (by rw [rpo, rpl]; exact hs) (by rw [rn]; exact hlt) hR
+    refine ⟨x, a', ?_, hout, hpost⟩
+    rw [ConRon.Arena.fvMapAt.eq_1, ← rn]; exact hrun
+  | keyMap ds holes =>
+    obtain ⟨h0, hb, ⟨o, l, ho, hl, hd, hol⟩, ⟨o2, l2, ho2, hl2, hd2, hol2⟩⟩ := hfm
+    have e1 : rdW (m.arr64 IW) f = 1 := UInt64.toNat_inj.mp (by rw [rdIW0 h0]; rfl)
+    rw [rxMapW_km n m f i e1] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl, rfl⟩ := h
+    have r1 := rdIW (i := 1) (by simpa using ho) (by omega) (by decide)
+    have r2 := rdIW (i := 2) (by simpa using hl) (by omega) (by decide)
+    have r3 := rdIW (i := 3) (by simpa using ho2) (by omega) (by decide)
+    have r4 := rdIW (i := 4) (by simpa using hl2) (by omega) (by decide)
+    simp only [show UInt64.ofNat 1 = (1 : Word) from rfl, show UInt64.ofNat 2 = (2 : Word) from rfl,
+      show UInt64.ofNat 3 = (3 : Word) from rfl, show UInt64.ofNat 4 = (4 : Word) from rfl] at r1 r2 r3 r4
+    refine ⟨_, a, ?_, kmW_ok (by rw [r1, r2]; exact hd) (by rw [r3, r4]; exact hd2) (by omega) (by omega),
+      hR.post hS (IWGrow.refl _) (RfFr.refl _)⟩
+    rw [ConRon.Arena.fvMapAt.eq_def]; rfl
+  | erase =>
+    obtain ⟨h0, hb⟩ := hfm
+    have e2 : rdW (m.arr64 IW) f = 2 := UInt64.toNat_inj.mp (by rw [rdIW0 h0]; rfl)
+    rw [rxMapW_er n m f i e2] at h
+    cases hpw : pinWordV m 53 with
+    | none => rw [hpw] at h; simp [erK1] at h
+    | some z =>
+    rw [hpw, erK1_some] at h
+    obtain ⟨hzl, hzH⟩ := pinZero_stage hS hpw
+    cases hso : sointernW m z with
+    | none => rw [hso] at h; simp [erK2] at h
+    | some p1 =>
+    obtain ⟨s, m1⟩ := p1
+    rw [hso] at h
+    by_cases hsb : 4294967296 ≤ s
+    · rw [erK2_big (h := hsb)] at h; simp at h
+    rw [erK2_ok (h := hsb)] at h
+    obtain ⟨a1, hr1, hS1, hg1⟩ := internSort_stage hS z hzH hso
+    cases hfv : fvinternW m1 i s with
+    | none => rw [hfv] at h; simp [erK3] at h
+    | some p2 =>
+    obtain ⟨v, m2⟩ := p2
+    rw [hfv, erK3_some] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl, rfl⟩ := h
+    obtain ⟨a2, hr2, hS2, hg2⟩ := internFVar_stage hS1 i s (lt_of_notbig hsb) hfv
+    refine ⟨some (decE v), a2, ?_, ⟨by simp, rfl⟩,
+      hR.post hS2 (hg1.trans hg2) (RfFr.of_low ((sointernW_low hso).trans (fvinternW_low hfv)))⟩
+    rw [ConRon.Arena.fvMapAt.eq_def]
+    simp only [StateT.run_bind, hzl, except_ok_bind, ConRon.Arena.internSortE, ConRon.Arena.internFVarE]
+    rw [hr1]
+    simp only [except_ok_bind, StateT.run_bind]
+    rw [hr2]
+    rfl
+  | canon pfvs =>
+    obtain ⟨h0, hb, ⟨o, l, ho, hl, hd, hol⟩⟩ := hfm
+    have hn0 : ¬ rdW (m.arr64 IW) f = 0 := fun e => by have := rdIW0 h0; rw [e] at this; simp at this
+    have hn1 : ¬ rdW (m.arr64 IW) f = 1 := fun e => by have := rdIW0 h0; rw [e] at this; simp at this
+    have hn2 : ¬ rdW (m.arr64 IW) f = 2 := fun e => by have := rdIW0 h0; rw [e] at this; simp at this
+    have r1 := rdIW (i := 1) (by simpa using ho) (by omega) (by decide)
+    have r2 := rdIW (i := 2) (by simpa using hl) (by omega) (by decide)
+    simp only [show UInt64.ofNat 1 = (1 : Word) from rfl, show UInt64.ofNat 2 = (2 : Word) from rfl] at r1 r2
+    have hpl := decHL_length m hd
+    by_cases hi : i < rdW (m.arr64 IW) (f + 2)
+    · rw [rxMapW_cin n m f i hn0 hn1 hn2 hi] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl⟩ := h
+      have hi' : i.toNat < l := by rw [← r2]; exact UInt64.lt_iff_toNat_lt.mp hi
+      obtain ⟨hH, hdd⟩ := rd_iwH (p := rdW (m.arr64 IW) (f + 1)) (i := i) (by rw [r1]; exact decHL_getI hd _ hi')
+        (by rw [r1]; omega)
+      refine ⟨pfvs[i.toNat]?, a, ?_, ?_, hR.post hS (IWGrow.refl _) (RfFr.refl _)⟩
+      · rw [ConRon.Arena.fvMapAt.eq_def]; rfl
+      · rw [List.getElem?_eq_getElem (by omega)]; exact ⟨by simp, hdd⟩
+    · rw [rxMapW_cout n m f i hn0 hn1 hn2 hi] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl, rfl⟩ := h
+      have hi' : ¬ i.toNat < l := fun e => hi (by rw [UInt64.lt_iff_toNat_lt, r2]; exact e)
+      refine ⟨pfvs[i.toNat]?, a, ?_, ?_, hR.post hS (IWGrow.refl _) (RfFr.refl _)⟩
+      · rw [ConRon.Arena.fvMapAt.eq_def]; rfl
+      · rw [List.getElem?_eq_none (by omega)]; rfl
+
+end steps
 
 end L.Ind
