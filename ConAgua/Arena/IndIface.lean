@@ -623,14 +623,14 @@ def reservedFrom : FunDecl := lfn (n, j) locals (r) {
 /-- `lvl_eq_true(u, v)`: `lvlEq? u v == some true` as `0`/`1`. -/
 -- con-ron: ConRon/Arena/Core.lean:132-149 ConRon.Arena.lvlEq?
 def lvlEqTrue : FunDecl := lfn (u, v) locals (r) {
-  r := call lvl_eq(u, v);
+  r := call lvl_eq_c(u, v);
   return u64(r == 2)
 }
 
 /-- `lvl_eq_fueled(u, v)`: `liftFueled (← lvlEq? u v)`: `none` aborts. -/
 -- con-ron: ConRon/Arena/Core.lean:132-149 ConRon.Arena.lvlEq?
 def lvlEqFueled : FunDecl := lfn (u, v) locals (r) {
-  r := call lvl_eq(u, v);
+  r := call lvl_eq_c(u, v);
   if r == 0 { abort };
   return u64(r == 2)
 }
@@ -784,7 +784,7 @@ schemas above (`X_find`, `X_put`, `X_clear`, `X_bank_enter`, `X_bank_leave`, ins
 `MemoLib`). The whole program uses the real ones. -/
 def masterFns : Prog :=
   [("env_find", stub 2), ("env_push", stub 2), ("env_pop_temp", stub 4), ("env_row_get", stub 1),
-   ("flush_caches", stub 0), ("pin_at", stub 1), ("pin_word", stub 1), ("lvl_eq", stub 2),
+   ("flush_caches", stub 0), ("pin_at", stub 1), ("pin_word", stub 1), ("lvl_eq", stub 2), ("lvl_eq_c", stub 2),
    ("lvls_eq", stub 2), ("lv_nz", stub 1), ("lv_leq_top", stub 2), ("intern_bvar", stub 1),
    ("intern_sort", stub 1), ("intern_const", stub 2), ("intern_fvar", stub 2), ("mk_app", stub 2),
    ("mk_lam", stub 2), ("mk_forall", stub 2), ("mk_let", stub 3), ("mk_proj", stub 3),

@@ -245,9 +245,12 @@ variable (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
 def decLvlEq (_m : Mem) (r : List Word) (x : Option Bool) : Prop :=
   r.headD 0 = (match x with | none => 0 | some false => 1 | some true => 2)
 
-/-- `lvl_eq(u, v)`: `lvlEq?` on two level handles. No stage-level (`StageR`) model of `lvl_eq` yet. -/
+/-- `lvl_eq_c(u, v)`: `lvlEq?` on two level handles, through the verdict cache `lvlEqC` as the
+twin's `lvlEq?` (lane `whnf`'s `lvl_eq_c`; the uncached `lvl_eq` leaves the cache behind the
+twin's). No stage-level (`StageR`) model yet: lane `whnf`'s `lvlEqC_refines` holds under `CoreS`,
+which carries invariants `StageR` lacks (DESIGN.md, lane `decls3`). -/
 theorem lvlEqStub_spec (u v : Word) (hu : H u) (hv : H v) :
-    RelAM "lvl_eq" [u, v] (StageR dn vis fe) (lvlEq? (decI u) (decI v))
+    RelAM "lvl_eq_c" [u, v] (StageR dn vis fe) (lvlEq? (decI u) (decI v))
       (KeepPost dn vis fe decLvlEq) := sorry
 
 /-- `intern_nanon()`: `internNNode .anonymous`. No stage-level (`StageR`) model of `intern_nanon` yet
