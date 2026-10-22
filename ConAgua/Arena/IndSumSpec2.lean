@@ -1,0 +1,547 @@
+import ConAgua.Arena.IndInstallSpec
+
+/-!
+# Refinements of `IndSum`, second file (lane `indproofs`)
+
+Functions of `IndSum.lean` whose proofs reuse `IndInstallSpec.lean` (which imports `IndSumSpec`).
+
+* `check_struct_doms_at` refines `checkStructDomsAt`: its model is `check_block_doms_at`'s
+  (`domsW`) with the empty result list, and the twin is `checkBlockDomsAt` up to the error
+  message, so the relational lemma is `domsW_ok` and an `ok`-run transfer.
+-/
+
+set_option experimental.vcgen true
+
+open ConRon.Arena
+open Std.WP
+open scoped Lean.Order
+
+namespace L.Ind
+
+open L.Arena
+
+local notation "V" => ConLeche.CheckMode.verified
+
+/-! ## `check_struct_doms_at` -/
+
+mutual
+/-- **The model of `check_struct_doms_at`**: `domsW` returning no words. -/
+def sdomsW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word →
+    Option (List Word × Mem)
+  | 0, _, _, _, _, _, _, _, _ => none
+  | n + 1, m, vis, off, fo, fl, dO, dl, j =>
+    if j = 0 then some ([], m)
+    else if fl ≤ j - 1 then none
+    else if dl ≤ j - 1 then none
+    else
+      sdomsK1 n vis off fo fl dO dl j (rdW (m.arr64 IW) (dO + (j - 1)))
+        (stubM "fvar_type_d" m [rdW (m.arr64 IW) (fo + (j - 1))])
+
+/-- After `fvar_type_d`. -/
+def sdomsK1 (n : Nat) (vis off fo fl dO dl j b : Word) :
+    Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (ra, m1) =>
+    sdomsK2 n vis off fo fl dO dl j
+      (stubM "is_def_eq_core" m1 [vis, off + (j - 1), ra.headD 0, b])
+
+/-- After `is_def_eq_core`. -/
+def sdomsK2 (n : Nat) (vis off fo fl dO dl j : Word) :
+    Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rb, m2) =>
+    if rb.headD 0 = 0 then none else sdomsK3 (sdomsW n m2 vis off fo fl dO dl (j - 1))
+
+/-- After the recursive call (its result discarded). -/
+def sdomsK3 : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (_, m) => some ([], m)
+end
+
+section arms
+variable (n : Nat) (m m1 m2 : Mem) (vis off fo fl dO dl j b : Word) (ra rb : List Word)
+
+theorem sdomsW_zero (hj : j = 0) : sdomsW (n + 1) m vis off fo fl dO dl j = some ([], m) := by
+  simp [sdomsW, hj]
+theorem sdomsW_abortF (hj : j ≠ 0) (hfl : fl ≤ j - 1) :
+    sdomsW (n + 1) m vis off fo fl dO dl j = none := by simp [sdomsW, hj, hfl]
+theorem sdomsW_abortD (hj : j ≠ 0) (hfl : ¬ fl ≤ j - 1) (hdl : dl ≤ j - 1) :
+    sdomsW (n + 1) m vis off fo fl dO dl j = none := by simp [sdomsW, hj, hfl, hdl]
+theorem sdomsW_cons (hj : j ≠ 0) (hfl : ¬ fl ≤ j - 1) (hdl : ¬ dl ≤ j - 1) :
+    sdomsW (n + 1) m vis off fo fl dO dl j =
+      sdomsK1 n vis off fo fl dO dl j (rdW (m.arr64 IW) (dO + (j - 1)))
+        (stubM "fvar_type_d" m [rdW (m.arr64 IW) (fo + (j - 1))]) := by
+  simp [sdomsW, hj, hfl, hdl]
+theorem sdomsK1_some :
+    sdomsK1 n vis off fo fl dO dl j b (some (ra, m1)) =
+      sdomsK2 n vis off fo fl dO dl j
+        (stubM "is_def_eq_core" m1 [vis, off + (j - 1), ra.headD 0, b]) := by
+  rw [sdomsK1]
+theorem sdomsK2_abort (heq : rb.headD 0 = 0) :
+    sdomsK2 n vis off fo fl dO dl j (some (rb, m2)) = none := by
+  rw [sdomsK2, if_pos heq]
+theorem sdomsK2_ok (heq : rb.headD 0 ≠ 0) :
+    sdomsK2 n vis off fo fl dO dl j (some (rb, m2)) =
+      sdomsK3 (sdomsW n m2 vis off fo fl dO dl (j - 1)) := by
+  rw [sdomsK2, if_neg heq]
+theorem sdomsK3_some (r : List Word) (m : Mem) : sdomsK3 (some (r, m)) = some ([], m) := rfl
+end arms
+
+grind_pattern [ind_grind] sdomsW_zero => sdomsW (n + 1) m vis off fo fl dO dl j
+grind_pattern [ind_grind] sdomsW_abortF => sdomsW (n + 1) m vis off fo fl dO dl j
+grind_pattern [ind_grind] sdomsW_abortD => sdomsW (n + 1) m vis off fo fl dO dl j
+grind_pattern [ind_grind] sdomsW_cons => sdomsW (n + 1) m vis off fo fl dO dl j
+grind_pattern [ind_grind] sdomsK1_some => sdomsK1 n vis off fo fl dO dl j b (some (ra, m1))
+grind_pattern [ind_grind] sdomsK2_abort => sdomsK2 n vis off fo fl dO dl j (some (rb, m2))
+grind_pattern [ind_grind] sdomsK2_ok => sdomsK2 n vis off fo fl dO dl j (some (rb, m2))
+grind_pattern [ind_grind] sdomsK3_some => sdomsK3 (some (r, m))
+
+section spec
+variable (p : Prog) (hg : p.lookup "sl_get" = some slGet)
+  (hp : p.lookup "check_struct_doms_at" = some checkStructDomsAtL)
+include hg hp
+
+theorem sdomsW_spec (n : Nat) : ∀ (s₀ : St) (vis off fo fl dO dl j : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_struct_doms_at" [vis, off, fo, fl, dO, dl, j]
+    ⦃fun r s' => LocEq s' s₀ ∧ sdomsW n s₀.mem vis off fo fl dO dl j = some (r, s'.mem); ⊤⦄ := by
+  induction n with
+  | zero =>
+    intro s₀ vis off fo fl dO dl j
+    rw [invoke_eq _ hp]; simp only [callFn, checkStructDomsAtL]
+    vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ vis off fo fl dO dl j
+    rw [invoke_eq _ hp]
+    simp only [callFn, checkStructDomsAtL]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        slGet_specW p hg n, stubM_spec p "fvar_type_d" n, stubM_spec p "is_def_eq_core" n, ih] <;>
+      finish (gen := 20) [getW]
+
+end spec
+
+/-- `sdomsW` is `domsW` with the result words dropped. -/
+theorem sdomsW_eq (n : Nat) : ∀ (m : Mem) (vis off fo fl dO dl j : Word),
+    sdomsW n m vis off fo fl dO dl j =
+      (domsW n m vis off fo fl dO dl j).map (fun r => ([], r.2)) := by
+  induction n with
+  | zero => intro m vis off fo fl dO dl j; simp [sdomsW, domsW]
+  | succ n ih =>
+    intro m vis off fo fl dO dl j
+    simp only [sdomsW, domsW]
+    split <;> try rfl
+    split <;> try rfl
+    split <;> try rfl
+    cases stubM "fvar_type_d" m [rdW (m.arr64 IW) (fo + (j - 1))] with
+    | none => simp [sdomsK1, domsK1]
+    | some x =>
+      obtain ⟨ra, m1⟩ := x
+      simp only [sdomsK1, domsK1]
+      cases stubM "is_def_eq_core" m1 [vis, off + (j - 1), ra.headD 0, rdW (m.arr64 IW) (dO + (j - 1))] with
+      | none => simp [sdomsK2, domsK2]
+      | some y =>
+        obtain ⟨rb, m2⟩ := y
+        simp only [sdomsK2, domsK2]
+        split <;> try rfl
+        rw [ih]
+        cases domsW n m2 vis off fo fl dO dl (j - 1) with
+        | none => simp [sdomsK3, domsK3]
+        | some z => rfl
+
+/-- The twins agree on successful runs (they differ in the error message only). -/
+theorem checkStructDomsAt_of_block (fe : IFEnv) (off : Nat) (fvs doms : List EIdx) :
+    ∀ (j : Nat) (a a' : AState),
+    (ConRon.Arena.checkBlockDomsAt V fe off fvs doms j).run a = .ok ((), a') →
+    (ConRon.Arena.checkStructDomsAt V fe off fvs doms j).run a = .ok ((), a') := by
+  intro j
+  induction j with
+  | zero => intro a a' h; simpa [ConRon.Arena.checkBlockDomsAt, ConRon.Arena.checkStructDomsAt] using h
+  | succ j ih =>
+    intro a a' h
+    simp only [ConRon.Arena.checkBlockDomsAt, ConRon.Arena.checkStructDomsAt] at h ⊢
+    cases hf : fvs[j]? with
+    | none => simp [hf, unwrapOr] at h; cases h
+    | some x =>
+    cases hd : doms[j]? with
+    | none => simp [hf, hd, unwrapOr] at h; cases h
+    | some y =>
+    simp only [hf, hd, unwrapOr, pure_bind, StateT.run_bind] at h ⊢
+    cases h1 : (fvarTypeD x).run a with
+    | error e => rw [h1] at h; cases h
+    | ok v =>
+    obtain ⟨t, a1⟩ := v
+    simp only [h1] at h ⊢
+    simp only [bind, Except.bind] at h ⊢
+    cases h2 : (isDefEqCore V fe checkFuel (off + j) t y).run a1 with
+    | error e => rw [h2] at h; cases h
+    | ok w =>
+    obtain ⟨bv, a2⟩ := w
+    simp only [h2] at h ⊢
+    cases bv with
+    | false => simp [fail] at h; cases h
+    | true => simp only [bind, Except.bind] at h ⊢; exact ih _ _ (by simpa using h)
+
+/-- **`check_struct_doms_at` refines `checkStructDomsAt .verified`** (through the stubs
+`fvar_type_d`, `is_def_eq_core`). -/
+@[refines ConRon.Arena.checkStructDomsAt]
+theorem checkStructDomsAt_refines (p : Prog) (hg : p.lookup "sl_get" = some slGet)
+    (hp : p.lookup "check_struct_doms_at" = some checkStructDomsAtL) (n : Nat) (s₀ : St)
+    (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis off fo fl dO dl j : Word)
+    (fvs doms : List EIdx) (hStage : StageR dn vis fe s₀.mem a₀)
+    (hfvs : decHL s₀.mem fo.toNat fl.toNat = some fvs)
+    (hdoms : decHL s₀.mem dO.toNat dl.toNat = some doms)
+    (hfob : fo.toNat + fl.toNat < 2 ^ 64) (hdob : dO.toNat + dl.toNat < 2 ^ 64)
+    (hfot : fo.toNat + fl.toNat ≤ iwTop s₀.mem) (hdot : dO.toNat + dl.toNat ≤ iwTop s₀.mem)
+    (hoob : off.toNat + fl.toNat < 2 ^ 64) (hjf : j.toNat ≤ fl.toNat) (hjd : j.toNat ≤ dl.toNat) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_struct_doms_at" [vis, off, fo, fl, dO, dl, j]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (ConRon.Arena.checkStructDomsAt V fe off.toNat fvs doms j.toNat) a₀ ∧
+      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.checkStructDomsAt V fe off.toNat fvs doms j.toNat) a₀) ∧
+      IWGrow s₀.mem s'.mem; ⊤⦄ := by
+  refine triple_post (sdomsW_spec p hg hp n s₀ vis off fo fl dO dl j) ?_
+  rintro r s' ⟨hl, hm⟩
+  rw [sdomsW_eq] at hm
+  cases hd : domsW n s₀.mem vis off fo fl dO dl j with
+  | none => rw [hd] at hm; cases hm
+  | some x =>
+  obtain ⟨r0, m0⟩ := x
+  rw [hd] at hm
+  simp only [Option.map_some, Option.some.injEq, Prod.mk.injEq] at hm
+  obtain ⟨-, rfl⟩ := hm
+  obtain ⟨a', hrun, hStage', hg'⟩ := domsW_ok n dn fe s₀.mem _ a₀ vis off fo fl dO dl j fvs doms r0
+    hd hStage hfvs hdoms hfob hdob hfot hdot hoob hjf hjd
+  obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ (checkStructDomsAt_of_block fe _ fvs doms _ _ _ hrun)
+  exact ⟨hl, hok, by rw [hst]; exact hStage', hg'⟩
+
+end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+/-! ## Slices, head first -/
+
+/-- **A decoding slice of length `l ≥ 1`**: its head is the word at `o`, its tail decodes at
+`o + 1`. -/
+theorem decHL_cons {k : IdxKind} {m : Mem} {o l : Word} {xs : List (Idx k)}
+    (h : decHL m o.toNat l.toNat = some xs) (hl : l ≠ 0) (hb : o.toNat + l.toNat < 2 ^ 64) :
+    ∃ w xs', xs = decI w :: xs' ∧ rdW (m.arr64 IW) o = w ∧ w.toNat < 2 ^ 32 ∧
+      decHL m (o + 1).toNat (l - 1).toNat = some xs' := by
+  have hl1 : 1 ≤ l.toNat := by
+    rcases Nat.eq_zero_or_pos l.toNat with h0 | h0
+    · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hl
+    · omega
+  have ho1 : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  have hlm : (l - 1).toNat = l.toNat - 1 := by
+    rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hl1))]; simp
+  rw [ho1, hlm]
+  have hs : l.toNat = (l.toNat - 1) + 1 := by omega
+  rw [hs] at h
+  simp only [decHL] at h
+  rw [hslice?_succ] at h
+  cases hx : hd? (iwA m) o.toNat with
+  | none => rw [hx] at h; cases h
+  | some x =>
+    cases ht : (hslice? (iwA m) (o.toNat + 1) (l.toNat - 1) : Option (List (Idx k))) with
+    | none => rw [hx, ht] at h; cases h
+    | some xs' =>
+      rw [hx, ht] at h
+      simp only [Option.bind_eq_bind, Option.bind_some, Option.pure_def, Option.some.injEq] at h
+      obtain ⟨w, hw1, hw2, hw3⟩ := iwH_rdW (m := m) (i := o.toNat) (x := x) hx (by omega)
+      refine ⟨w, xs', by rw [← h, hw3], by simpa using hw1, hw2, ht⟩
+
+/-! ## `field_doms_resolve`, `idx_args_resolve` -/
+
+mutual
+/-- **The model of `field_doms_resolve`.** -/
+def fdrW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _, _ => none
+  | n + 1, m, v, o, l =>
+    if l = 0 then some ([1], m)
+    else fdrK1 n v o l (stubM "fvar_type_d" m [rdW (m.arr64 IW) o])
+/-- After `fvar_type_d`. -/
+def fdrK1 (n : Nat) (v o l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (ra, m1) => fdrK2 n v o l (stubM "consts_resolve_ffast" m1 [v, ra.headD 0])
+/-- After `consts_resolve_ffast`. -/
+def fdrK2 (n : Nat) (v o l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rb, m2) => if rb.headD 0 = 0 then some ([0], m2) else resK (fdrW n m2 v (o + 1) (l - 1))
+/-- After a recursive call: its first word. -/
+def resK : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m) => some ([r.headD 0], m)
+end
+
+mutual
+/-- **The model of `idx_args_resolve`.** -/
+def iarW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _, _ => none
+  | n + 1, m, v, o, l =>
+    if l = 0 then some ([1], m)
+    else iarK n v o l (stubM "consts_resolve_ffast" m [v, rdW (m.arr64 IW) o])
+/-- After `consts_resolve_ffast`. -/
+def iarK (n : Nat) (v o l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rb, m2) => if rb.headD 0 = 0 then some ([0], m2) else resK' (iarW n m2 v (o + 1) (l - 1))
+/-- After a recursive call: its first word. -/
+def resK' : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m) => some ([r.headD 0], m)
+end
+
+section arms
+variable (n : Nat) (m m1 m2 : Mem) (v o l : Word) (ra rb r : List Word)
+theorem fdrW_nil (hl : l = 0) : fdrW (n + 1) m v o l = some ([1], m) := by simp [fdrW, hl]
+theorem fdrW_cons (hl : l ≠ 0) :
+    fdrW (n + 1) m v o l = fdrK1 n v o l (stubM "fvar_type_d" m [rdW (m.arr64 IW) o]) := by
+  simp [fdrW, hl]
+theorem fdrK1_some : fdrK1 n v o l (some (ra, m1)) =
+    fdrK2 n v o l (stubM "consts_resolve_ffast" m1 [v, ra.headD 0]) := by rw [fdrK1]
+theorem fdrK2_no (h : rb.headD 0 = 0) : fdrK2 n v o l (some (rb, m2)) = some ([0], m2) := by
+  rw [fdrK2, if_pos h]
+theorem fdrK2_yes (h : rb.headD 0 ≠ 0) :
+    fdrK2 n v o l (some (rb, m2)) = resK (fdrW n m2 v (o + 1) (l - 1)) := by rw [fdrK2, if_neg h]
+theorem resK_some : resK (some (r, m)) = some ([r.headD 0], m) := rfl
+theorem iarW_nil (hl : l = 0) : iarW (n + 1) m v o l = some ([1], m) := by simp [iarW, hl]
+theorem iarW_cons (hl : l ≠ 0) :
+    iarW (n + 1) m v o l = iarK n v o l (stubM "consts_resolve_ffast" m [v, rdW (m.arr64 IW) o]) := by
+  simp [iarW, hl]
+theorem iarK_no (h : rb.headD 0 = 0) : iarK n v o l (some (rb, m2)) = some ([0], m2) := by
+  rw [iarK, if_pos h]
+theorem iarK_yes (h : rb.headD 0 ≠ 0) :
+    iarK n v o l (some (rb, m2)) = resK' (iarW n m2 v (o + 1) (l - 1)) := by rw [iarK, if_neg h]
+theorem resK'_some : resK' (some (r, m)) = some ([r.headD 0], m) := rfl
+end arms
+
+grind_pattern [ind_grind] fdrW_nil => fdrW (n + 1) m v o l
+grind_pattern [ind_grind] fdrW_cons => fdrW (n + 1) m v o l
+grind_pattern [ind_grind] fdrK1_some => fdrK1 n v o l (some (ra, m1))
+grind_pattern [ind_grind] fdrK2_no => fdrK2 n v o l (some (rb, m2))
+grind_pattern [ind_grind] fdrK2_yes => fdrK2 n v o l (some (rb, m2))
+grind_pattern [ind_grind] resK_some => resK (some (r, m))
+grind_pattern [ind_grind] iarW_nil => iarW (n + 1) m v o l
+grind_pattern [ind_grind] iarW_cons => iarW (n + 1) m v o l
+grind_pattern [ind_grind] iarK_no => iarK n v o l (some (rb, m2))
+grind_pattern [ind_grind] iarK_yes => iarK n v o l (some (rb, m2))
+grind_pattern [ind_grind] resK'_some => resK' (some (r, m))
+
+section spec
+variable (p : Prog)
+
+theorem fdrW_spec (hp : p.lookup "field_doms_resolve" = some fieldDomsResolveL) (n : Nat) :
+    ∀ (s₀ : St) (v o l : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "field_doms_resolve" [v, o, l]
+    ⦃fun r s' => LocEq s' s₀ ∧ fdrW n s₀.mem v o l = some (r, s'.mem); ⊤⦄ := by
+  induction n with
+  | zero =>
+    intro s₀ v o l; rw [invoke_eq _ hp]; simp only [callFn, fieldDomsResolveL]
+    vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ v o l
+    rw [invoke_eq _ hp]
+    simp only [callFn, fieldDomsResolveL]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        stubM_spec p "fvar_type_d" n, stubM_spec p "consts_resolve_ffast" n, ih] <;>
+      finish (gen := 20)
+
+theorem iarW_spec (hp : p.lookup "idx_args_resolve" = some idxArgsResolveL) (n : Nat) :
+    ∀ (s₀ : St) (v o l : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "idx_args_resolve" [v, o, l]
+    ⦃fun r s' => LocEq s' s₀ ∧ iarW n s₀.mem v o l = some (r, s'.mem); ⊤⦄ := by
+  induction n with
+  | zero =>
+    intro s₀ v o l; rw [invoke_eq _ hp]; simp only [callFn, idxArgsResolveL]
+    vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ v o l
+    rw [invoke_eq _ hp]
+    simp only [callFn, idxArgsResolveL]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        stubM_spec p "consts_resolve_ffast" n, ih] <;>
+      finish (gen := 20)
+
+end spec
+
+/-! ## The relational lemmas -/
+
+theorem toNat_succ_of_lt {o l : Word} (hb : o.toNat + l.toNat < 2 ^ 64) (hl : l ≠ 0) :
+    (o + 1).toNat + (l - 1).toNat = o.toNat + l.toNat ∧ (o + 1).toNat = o.toNat + 1 := by
+  have hl1 : 1 ≤ l.toNat := by
+    rcases Nat.eq_zero_or_pos l.toNat with h0 | h0
+    · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hl
+    · omega
+  have ho1 : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  have hlm : (l - 1).toNat = l.toNat - 1 := by
+    rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hl1))]; simp
+  omega
+
+theorem fdrW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
+    ∀ (m m' : Mem) (a : AState) (v o l : Word) (xs : List EIdx) (r : List Word),
+    fdrW n m v o l = some (r, m') → StageR dn v fe m a → decHL m o.toNat l.toNat = some xs →
+    o.toNat + l.toNat < 2 ^ 64 → o.toNat + l.toNat ≤ iwTop m →
+    ∃ b a', (fieldDomsResolve fe xs).run a = .ok (b, a') ∧ KeepPost dn v fe decW0B m m' a' r b := by
+  induction n with
+  | zero => intro m m' a v o l xs r h; simp [fdrW] at h
+  | succ n ih =>
+    intro m m' a v o l xs r h hS hd hb ht
+    by_cases hl : l = 0
+    · subst hl
+      rw [fdrW_nil n m v o 0 rfl] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      have : xs = [] := by simpa [decHL, hslice?] using hd.symm
+      subst this
+      exact ⟨true, a, rfl, hS, IWGrow.refl m, by simp [decW0B]⟩
+    · obtain ⟨w, xs', rfl, hw, hw32, hd'⟩ := decHL_cons hd hl hb
+      obtain ⟨hsum, -⟩ := toNat_succ_of_lt hb hl
+      rw [fdrW_cons n m v o l hl, hw] at h
+      cases h1 : stubM "fvar_type_d" m [w] with
+      | none => rw [h1] at h; simp [fdrK1] at h
+      | some x1 =>
+      obtain ⟨ra, m1⟩ := x1
+      rw [h1, fdrK1_some] at h
+      obtain ⟨t, a1, hrun1, hS1, hg1, ht32, hteq⟩ := fvarTypeD_spec dn v fe w hw32 m m1 a ra h1 hS
+      cases h2 : stubM "consts_resolve_ffast" m1 [v, ra.headD 0] with
+      | none => rw [h2] at h; simp [fdrK2] at h
+      | some x2 =>
+      obtain ⟨rb, m2⟩ := x2
+      rw [h2] at h
+      obtain ⟨c, a2, hrun2, hS2, hg2, hceq, hc1⟩ :=
+        constsResolveFFast_spec dn v fe (ra.headD 0) ht32 m1 m2 a1 rb h2 hS1
+      have hrun12 : ∀ (k : Bool → AM Bool),
+          (do let t ← fvarTypeD (decI w); let c ← constsResolveFFast fe t; k c).run a = (k c).run a2 := by
+        intro k
+        simp only [StateT.run_bind]
+        rw [hrun1]
+        simp only [bind, Except.bind]
+        rw [← hteq, hrun2]
+      by_cases hz : rb.headD 0 = 0
+      · rw [fdrK2_no n m2 v o l rb hz] at h
+        simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        have hc : c = false := by rw [← hceq, hz]; rfl
+        subst hc
+        refine ⟨false, a2, ?_, hS2, hg1.trans hg2, by simp [decW0B]⟩
+        have := hrun12 (fun c => if c then fieldDomsResolve fe xs' else pure false)
+        simp only [fieldDomsResolve]
+        rw [this]; rfl
+      · rw [fdrK2_yes n m2 v o l rb hz] at h
+        have hc : c = true := by rw [← hceq]; exact bne_iff_ne.mpr hz
+        subst hc
+        cases h3 : fdrW n m2 v (o + 1) (l - 1) with
+        | none => rw [h3] at h; simp [resK] at h
+        | some x3 =>
+        obtain ⟨r3, m3⟩ := x3
+        rw [h3, resK_some] at h
+        simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        have hg12 := hg1.trans hg2
+        obtain ⟨b3, a3, hrun3, hS3, hg3, hd3, hd31⟩ := ih m2 m3 a2 v (o + 1) (l - 1) xs' r3 h3 hS2
+          (by rw [decHL_grow hg12 (by omega)]; exact hd') (by omega) (by have := hg12.1; omega)
+        refine ⟨b3, a3, ?_, hS3, hg12.trans hg3, by simpa [decW0B] using And.intro hd3 hd31⟩
+        have := hrun12 (fun c => if c then fieldDomsResolve fe xs' else pure false)
+        simp only [fieldDomsResolve]
+        rw [this]; exact hrun3
+
+theorem iarW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
+    ∀ (m m' : Mem) (a : AState) (v o l : Word) (xs : List EIdx) (r : List Word),
+    iarW n m v o l = some (r, m') → StageR dn v fe m a → decHL m o.toNat l.toNat = some xs →
+    o.toNat + l.toNat < 2 ^ 64 → o.toNat + l.toNat ≤ iwTop m →
+    ∃ b a', (idxArgsResolve fe xs).run a = .ok (b, a') ∧ KeepPost dn v fe decW0B m m' a' r b := by
+  induction n with
+  | zero => intro m m' a v o l xs r h; simp [iarW] at h
+  | succ n ih =>
+    intro m m' a v o l xs r h hS hd hb ht
+    by_cases hl : l = 0
+    · subst hl
+      rw [iarW_nil n m v o 0 rfl] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      have : xs = [] := by simpa [decHL, hslice?] using hd.symm
+      subst this
+      exact ⟨true, a, rfl, hS, IWGrow.refl m, by simp [decW0B]⟩
+    · obtain ⟨w, xs', rfl, hw, hw32, hd'⟩ := decHL_cons hd hl hb
+      obtain ⟨hsum, -⟩ := toNat_succ_of_lt hb hl
+      rw [iarW_cons n m v o l hl, hw] at h
+      cases h2 : stubM "consts_resolve_ffast" m [v, w] with
+      | none => rw [h2] at h; simp [iarK] at h
+      | some x2 =>
+      obtain ⟨rb, m2⟩ := x2
+      rw [h2] at h
+      obtain ⟨c, a2, hrun2, hS2, hg2, hceq, hc1⟩ :=
+        constsResolveFFast_spec dn v fe w hw32 m m2 a rb h2 hS
+      have hrun12 : ∀ (k : Bool → AM Bool),
+          (do let c ← constsResolveFFast fe (decI w); k c).run a = (k c).run a2 := by
+        intro k
+        simp only [StateT.run_bind]
+        rw [hrun2]
+        rfl
+      by_cases hz : rb.headD 0 = 0
+      · rw [iarK_no n m2 v o l rb hz] at h
+        simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        have hc : c = false := by rw [← hceq, hz]; rfl
+        subst hc
+        refine ⟨false, a2, ?_, hS2, hg2, by simp [decW0B]⟩
+        have := hrun12 (fun c => if c then idxArgsResolve fe xs' else pure false)
+        simp only [idxArgsResolve]
+        rw [this]; rfl
+      · rw [iarK_yes n m2 v o l rb hz] at h
+        have hc : c = true := by rw [← hceq]; exact bne_iff_ne.mpr hz
+        subst hc
+        cases h3 : iarW n m2 v (o + 1) (l - 1) with
+        | none => rw [h3] at h; simp [resK'] at h
+        | some x3 =>
+        obtain ⟨r3, m3⟩ := x3
+        rw [h3, resK'_some] at h
+        simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨b3, a3, hrun3, hS3, hg3, hd3, hd31⟩ := ih m2 m3 a2 v (o + 1) (l - 1) xs' r3 h3 hS2
+          (by rw [decHL_grow hg2 (by omega)]; exact hd') (by omega) (by have := hg2.1; omega)
+        refine ⟨b3, a3, ?_, hS3, hg2.trans hg3, by simpa [decW0B] using And.intro hd3 hd31⟩
+        have := hrun12 (fun c => if c then idxArgsResolve fe xs' else pure false)
+        simp only [idxArgsResolve]
+        rw [this]; exact hrun3
+
+/-! ## The census theorems -/
+
+/-- **`field_doms_resolve` refines `fieldDomsResolve`** (through the stubs `fvar_type_d`,
+`consts_resolve_ffast`), at the view `vis0` of the pre-block environment `fe₀`. -/
+@[refines ConRon.Arena.fieldDomsResolve]
+theorem fieldDomsResolve_refines (p : Prog)
+    (hp : p.lookup "field_doms_resolve" = some fieldDomsResolveL) (n : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (fe₀ : IFEnv) (vis0 o l : Word) (xs : List EIdx)
+    (hS : StageR dn vis0 fe₀ s₀.mem a₀) (hd : decHL s₀.mem o.toNat l.toNat = some xs)
+    (hb : o.toNat + l.toNat < 2 ^ 64) (ht : o.toNat + l.toNat ≤ iwTop s₀.mem) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "field_doms_resolve" [vis0, o, l]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (fieldDomsResolve fe₀ xs) a₀ ∧
+      KeepPost dn vis0 fe₀ decW0B s₀.mem s'.mem (AM.st (fieldDomsResolve fe₀ xs) a₀) r
+        (AM.res (fieldDomsResolve fe₀ xs) a₀); ⊤⦄ := by
+  refine triple_post (fdrW_spec p hp n s₀ vis0 o l) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨b, a', hrun, hpost⟩ := fdrW_ok dn fe₀ n _ _ a₀ vis0 o l xs r hm hS hd hb ht
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hst, hres]; exact hpost⟩
+
+/-- **`idx_args_resolve` refines `idxArgsResolve`** (through the stub `consts_resolve_ffast`),
+at the view `vis0` of the pre-block environment `fe₀`. -/
+@[refines ConRon.Arena.idxArgsResolve]
+theorem idxArgsResolve_refines (p : Prog)
+    (hp : p.lookup "idx_args_resolve" = some idxArgsResolveL) (n : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (fe₀ : IFEnv) (vis0 o l : Word) (xs : List EIdx)
+    (hS : StageR dn vis0 fe₀ s₀.mem a₀) (hd : decHL s₀.mem o.toNat l.toNat = some xs)
+    (hb : o.toNat + l.toNat < 2 ^ 64) (ht : o.toNat + l.toNat ≤ iwTop s₀.mem) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "idx_args_resolve" [vis0, o, l]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (idxArgsResolve fe₀ xs) a₀ ∧
+      KeepPost dn vis0 fe₀ decW0B s₀.mem s'.mem (AM.st (idxArgsResolve fe₀ xs) a₀) r
+        (AM.res (idxArgsResolve fe₀ xs) a₀); ⊤⦄ := by
+  refine triple_post (iarW_spec p hp n s₀ vis0 o l) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨b, a', hrun, hpost⟩ := iarW_ok dn fe₀ n _ _ a₀ vis0 o l xs r hm hS hd hb ht
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hst, hres]; exact hpost⟩
+
+end L.Ind
