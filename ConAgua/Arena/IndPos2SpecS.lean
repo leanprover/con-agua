@@ -48,6 +48,37 @@ theorem pos2_ns_rd {m m' : Mem} (hg : IWGrow m m') {p : Word} (hp : p.toNat + 6 
     (htop : iwTop m < 2 ^ 64) (i : Word) (hi : i.toNat < 6) : rdW (m'.arr64 IW) (p + i) = rdW (m.arr64 IW) (p + i) :=
   pos2_rd_grow hg (by rw [word_add_toNat (by omega)]; omega)
 
+/-- A handle slice split at `k`. -/
+theorem pos2_decHL_split {k : IdxKind} {m : Mem} {o l n : Nat} {xs : List (Idx k)} (h : decHL m o l = some xs)
+    (hn : n ≤ l) : decHL m o n = some (xs.take n) ∧ decHL m (o + n) (l - n) = some (xs.drop n) := by
+  obtain ⟨hl, hg⟩ := pos2_hslice_get h
+  have get : ∀ j (hj : j < xs.length), iwH m (o + j) = some xs[j] := fun j hj => by
+    have := mapM_opt_get (fun j => (hd? (iwA m) (o + j) : Option (Idx k))) (List.range l) xs h j
+      (by simp; omega)
+    simpa [iwH] using this
+  constructor
+  · have := decHL_of_get m (xs.take n) o (fun j hj => by
+      simp only [List.length_take] at hj; rw [List.getElem_take]; exact get j (by omega))
+    simpa [List.length_take, hl, Nat.min_eq_left hn] using this
+  · have := decHL_of_get m (xs.drop n) (o + n) (fun j hj => by
+      simp only [List.length_drop] at hj; rw [List.getElem_drop, show o + n + j = o + (n + j) by omega]
+      exact get (n + j) (by omega))
+    simpa [List.length_drop, hl] using this
+
+/-- `aL == nPc + nI` on words is the twin's comparison, `nPc ≤ aL`. -/
+theorem pos2_len_eq {aL nPc nI : Word} (h : nPc.toNat ≤ aL.toNat) :
+    (aL = nPc + nI) ↔ aL.toNat = nPc.toNat + nI.toNat := by
+  constructor
+  · intro e
+    rcases Nat.lt_or_ge (nPc.toNat + nI.toNat) (2 ^ 64) with hl | hl
+    · rw [e, word_add_toNat hl]
+    · exfalso
+      have := congrArg UInt64.toNat e; rw [UInt64.toNat_add] at this
+      have := nI.toNat_lt; have := nPc.toNat_lt
+      omega
+  · intro e
+    apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add, ← e]; exact (Nat.mod_eq_of_lt aL.toNat_lt).symm
+
 section steps
 variable (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (hM : PosMemo dn vis fe)
   (hcs : CtorSums fe)
@@ -869,6 +900,121 @@ theorem keyOK_step (n : Nat) (ih : NbOK dn vis fe n) : KeyOK dn vis fe (n + 1) :
     subst hbc
     obtain ⟨x, a', hrun, rest⟩ := hnew r m' h
     exact ⟨x, a', by rw [htwin]; simpa using hrun, rest.1, hg12.trans rest.2.1, rest.2.2⟩
+
+include hM hcs in
+theorem contOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbOK dn vis fe n) :
+    ContOK dn vis fe (n + 1) := by
+  obtain ⟨-, -, -, -, hKey, -, -, -, -, -, -⟩ := ih
+  intro m m' a ctx fu po pl kb nn us aO aL ns c prog args NS r h hS hW hnn hus hargs hab hns
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  rw [nbContW_succ] at h
+  cases n with
+  | zero => simp [ntWf, nbContK1] at h
+  | succ n' =>
+  simp only [ntWf] at h
+  cases hnt : ntW n' m vis nn with
+  | none => rw [hnt] at h; simp [nbContK1] at h
+  | some pr =>
+  obtain ⟨r1, m1⟩ := pr
+  rw [hnt, nbContK1_some] at h
+  obtain ⟨xc, a1, hrun1, hS1, hg1, hnc⟩ := ntW_ok dn fe vis nn hnn hcs n' m m1 a r1 hnt hS
+  cases xc with
+  | none => simp only [NcOut] at hnc; rw [if_pos hnc] at h; cases h
+  | some pc =>
+  obtain ⟨nPc, ctors⟩ := pc
+  obtain ⟨hnc0, hnc1, -, -, -⟩ := hnc
+  rw [if_neg (by rw [hnc0]; decide)] at h
+  have hal := decHL_length m hargs
+  by_cases hlt : aL < r1.tail.headD 0
+  · rw [if_pos hlt] at h; cases h
+  rw [if_neg hlt] at h
+  have hle : nPc ≤ args.length := by
+    have : ¬ aL.toNat < (r1.tail.headD 0).toNat := fun e => hlt (UInt64.lt_iff_toNat_lt.mpr e)
+    omega
+  generalize hP : r1.tail.headD 0 = nPcW at h hnc1
+  have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
+  have hW1 := hW.grow hg1
+  have hhp : (nhiW m1 ctx pl).toNat = c.hiAt prog.length := hW1.hi htop1
+  have hargs1 : decHL m1 aO.toNat aL.toNat = some args := by
+    rw [decHL_agree (RdS.of_grow hg1) (fun j hj => by omega)]; exact hargs
+  obtain ⟨hds, hidx⟩ := pos2_decHL_split hargs1 (show nPcW.toNat ≤ aL.toNat by omega)
+  have hab1 : aO.toNat + aL.toNat ≤ iwTop m1 := by have := hg1.1; omega
+  have hPle : nPcW.toNat ≤ aL.toNat := by omega
+  have hiO : (aO + nPcW).toNat = aO.toNat + nPcW.toNat := word_add_toNat (by omega)
+  have hiL : (aL - nPcW).toNat = aL.toNat - nPcW.toNat := by
+    rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by omega))]
+  -- the checks
+  cases hcc : p2ccW (n' + 1) m1 ctx (nhiW m1 ctx pl) nn aO nPcW (aO + nPcW) (aL - nPcW) with
+  | none => rw [hcc] at h; simp [nbContK2] at h
+  | some pr2 =>
+  obtain ⟨r2, m2⟩ := pr2
+  rw [hcc, nbContK2_some] at h
+  obtain ⟨-, q, a2, hrun2a, hrun2q, hq, hrun2c, -, hS2, hg2⟩ := p2ccW_ok dn vis fe hM (by omega) hcc hS1 hW1.u hds
+    (fun j hj => by omega) (by rw [hiO, hiL]; exact hidx) (fun j hj => by rw [hiO, hiL] at *; omega) hnn
+  -- the instantiation's former
+  cases hk4 : posRecW m2 [nn, us, aO, nPcW] with
+  | none => rw [hk4] at h; simp [nbContK3] at h
+  | some pr3 =>
+  obtain ⟨key, m3⟩ := pr3
+  rw [hk4, nbContK3_some] at h
+  obtain ⟨hS3, hg3, hkq, ht3, hget3⟩ := posRecW_stage hk4 hS2 (by simp)
+  simp only [List.length_cons, List.length_nil] at ht3
+  have hg13 := hg1.trans (hg2.trans hg3)
+  have hab3 : aO.toNat + aL.toNat ≤ iwTop m3 := by have := (hg2.trans hg3).1; omega
+  have htop3 : iwTop m3 < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.2.1 hS3.2.2.2.1
+  have hdsB : DecB (fun m => (decHL m aO.toNat nPcW.toNat : Option (List EIdx))) m3 (args.take nPcW.toNat) :=
+    decHL_decB (by rw [decHL_agree (RdS.of_grow (hg2.trans hg3)) (fun j hj => by omega)]; exact hds)
+      (by have := (hg2.trans hg3).1; omega)
+  have hK : DecB (fun m => decNK m key.toNat) m3 ⟨decI nn, decI us, args.take nPcW.toNat⟩ :=
+    pos2_key_rec hnn hus (by omega) hget3 hdsB
+  obtain ⟨hKd, hKin⟩ := pos2_nk_in hK
+  simp only [nitWf] at h
+  cases hni : nitW n' m3 vis ctx (nhiW m1 ctx pl) key with
+  | none => rw [hni] at h; simp [nbContK4] at h
+  | some pr4 =>
+  obtain ⟨r4, m4⟩ := pr4
+  rw [hni, nbContK4_some] at h
+  have hksl : NKSl m3 key := by
+    unfold NKSl
+    rw [pos2_rd_get (by simpa using hget3 2 (by simp)) (by simp; omega),
+      pos2_rd_get (by simpa using hget3 3 (by simp)) (by simp; omega)]
+    have := (hg2.trans hg3).1; omega
+  obtain ⟨xi, a4, hrun4, hS4, hg4, hni0, hctyH, hctyd⟩ := nitW_ok n' dn fe vis ctx (nhiW m1 ctx pl)
+    (c.hiAt prog.length) hhp c m3 m4 a2 key _ r4 hni hS3 ((hW1.grow (hg2.trans hg3)).u) hKd hKin hksl hM.no
+  by_cases hne : aL ≠ nPcW + r4.headD 0
+  · rw [if_pos hne] at h; cases h
+  rw [if_neg hne] at h
+  have heq : args.length = nPc + xi.1 := by
+    have := (pos2_len_eq (nI := r4.headD 0) (show nPcW.toNat ≤ aL.toNat by omega)).mp (by simpa using hne)
+    omega
+  -- the instantiation met
+  cases hky : nbKeyW (n' + 1) m4 vis ctx fu po pl kb nn us aO nPcW nPcW (r4.tail.headD 0) ns with
+  | none => rw [hky] at h; simp [nbAppK6] at h
+  | some pr5 =>
+  obtain ⟨r5, m5⟩ := pr5
+  rw [hky, nbAppK6_some] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  have hg14 := hg13.trans hg4
+  obtain ⟨x, a', hrun5, hS5, hg5, hk5, hns5⟩ := hKey m4 m5 a4 ctx fu po pl kb nn us aO nPcW nPcW (r4.tail.headD 0) ns
+    c prog (args.take nPcW.toNat) NS r5 hky hS4 (hW.grow hg14) hnn hus (hdsB.grow (OMono.decHL _ _) hg4)
+    (by have := hg14.1; omega) hctyH (hns.grow hg14 htop)
+  refine ⟨x, a', ?_, hS5, hg14.trans hg5, by simpa using hk5, by simpa using hns5⟩
+  rw [hnc1] at hrun2a hrun2c hrun4 hrun5
+  rw [hhp] at hrun2a hrun2c
+  rw [hctyd] at hrun5
+  have hpc : ((args.take nPc).allM fun x => do
+      let bb ← bvarB coreWalkFuel x
+      if bb != 0 then pure false
+      else do
+        let fb ← fvarB coreWalkFuel x
+        pure (decide (fb ≤ c.hiAt prog.length))).run a1 = .ok (true, a2) := hrun2c
+  have hlt' : ¬ args.length < nPc := by omega
+  rw [ConRon.Arena.nestCont.eq_def]
+  simp only [StateT.run_bind, hrun1, except_ok_bind, hlt', ite_false, hrun2a, Bool.false_eq_true, hrun2q, hq,
+    hpc, Bool.not_true, hrun4]
+  simp only [heq, bne_self_eq_false, Bool.false_eq_true, ite_false]
+  exact hrun5
 
 end steps
 
