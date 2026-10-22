@@ -177,8 +177,9 @@ per-function separation logic.
 - **Deviations from the twin.** L is a close twin of con-ron. Any place where L does something else
   than its twin (aborts where the twin continues, other than fuel and fixed capacities; a
   simplified algorithm; a missing arm; an unmirrored cache; a "for now") gets a row in
-  `docs/deviations.md` (where, what the twin does, what L does, effect, owner, proposed fix) in the
-  commit that introduces it, and leaves the row when it is fixed (move it to "Fixed"). The
+  `docs/deviations.md`, under `## Temporary` (we intend to fix it) or `## Deliberate` (by design,
+  stays; say why) (where, what the twin does, what L does, effect, owner, proposed fix) in the
+  commit that introduces it, and when a Temporary row is fixed it moves to `## Fixed` as a one-line bullet. The
   coordinator reviews the list at each batch of landings and assigns the open rows.
 - Write in DESIGN.md (a journal: decisions, measurements, findings). Never use "load-bearing" or "licenses" in
   prose.

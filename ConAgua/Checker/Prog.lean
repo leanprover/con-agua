@@ -1,4 +1,4 @@
-import ConAgua.Compiler.WFFast
+import ConAgua.Compiler.WFSplit
 import ConAgua.Checker.Entry
 import ConAgua.Checker.Prelude
 import ConAgua.Arena.Abs1
@@ -557,6 +557,8 @@ def checkerProg : Prog := [
   ("class_ctor_of_nfs", L.Ind.classCtorOfNfs),
   ("class_ctors_of", L.Ind.classCtorsOfL),
   ("class_fe_r", L.Ind.classFeRL),
+  ("class_fe_r_go", L.Ind.classFeRGo),
+  ("class_fe_r_rec", L.Ind.classFeRRec),
   ("class_fields_agree", L.Ind.classFieldsAgreeL),
   ("class_fields_of", L.Ind.classFieldsOfL),
   ("class_fields_of_go", L.Ind.classFieldsOfGo),
@@ -630,10 +632,12 @@ def checkerProg : Prog := [
   ("class_rec_ty_ok_guards", L.Ind.classRecTyOkGuards),
   ("class_rec_tys_ok", L.Ind.classRecTysOkL),
   ("class_recs_rules_ok", L.Ind.classRecsRulesOkL),
+  ("class_recs_rules_ok_go", L.Ind.classRecsRulesOkGo),
   ("class_rule_ok", L.Ind.classRuleOkL),
   ("class_rule_ok_domains", L.Ind.classRuleOkDomains),
   ("class_rule_ok_guards", L.Ind.classRuleOkGuards),
   ("class_rules_ok", L.Ind.classRulesOkL),
+  ("class_rules_ok_one", L.Ind.classRulesOkOne),
   ("class_seeds", L.Ind.classSeedsL),
   ("class_slot_is_minor", L.Ind.classSlotIsMinor),
   ("class_stream_recs", L.Ind.classStreamRecsL),
@@ -1737,14 +1741,9 @@ def checkerProg : Prog := [
   ("ta_find", L.Arena.memoFindG L.Ind.taSch),
   ("ta_put", L.Arena.memoPutG L.Ind.taSch),
   ("target_abs", L.Ind.targetAbs),
-  ("target_abs_app", L.Ind.targetAbsApp),
   ("target_abs_const", L.Ind.targetAbsConst),
-  ("target_abs_forall", L.Ind.targetAbsForall),
   ("target_abs_go", L.Ind.targetAbsGo),
-  ("target_abs_lam", L.Ind.targetAbsLam),
-  ("target_abs_let", L.Ind.targetAbsLet),
   ("target_abs_node", L.Ind.targetAbsNode),
-  ("target_abs_proj", L.Ind.targetAbsProj),
   ("target_canon_params", L.Ind.targetCanonParams),
   ("target_class_match", L.Ind.targetClassMatch),
   ("target_ctor_at", L.Ind.targetCtorAt),
@@ -2003,15 +2002,18 @@ def checkerProg : Prog := [
   ("rec_rule_bits", abortStub 2),
   ("reserved_rec_name", abortStub 1)]
 
-/-- The table for the arrays the program names (`Prog.wfAuto`'s). -/
-def checkerTab : Tab := Prog.tab checkerProg (Prog.arrs checkerProg).1 (Prog.arrs checkerProg).2
+set_option maxRecDepth 100000 in
+/-- The table for the arrays the program names (`Prog.wfAuto`'s), as a literal (`tab_lit%`: every
+per-chunk check of `checkerProg_wf` unfolds it). -/
+def checkerTab : Tab := tab_lit% (Prog.tab checkerProg (Prog.arrs checkerProg).1 (Prog.arrs checkerProg).2)
+
+#guard checkerTab == Prog.tab checkerProg (Prog.arrs checkerProg).1 (Prog.arrs checkerProg).2
 
 -- the word arrays are the ones `cap_check` checks
 #guard (Prog.arrs checkerProg).2 == wordArrays
 
 /-- **`checkerProg` passes the compiler's static check** (every call resolves, with the callee's
 parameter count; the names are distinct; the frames fit). -/
-theorem checkerProg_wf : Prog.wf checkerTab checkerProg = true :=
-  Prog.wf_of_wfFast (by decide +kernel)
+prog_wf checkerProg_wf : checkerTab checkerProg
 
 end L.Checker
