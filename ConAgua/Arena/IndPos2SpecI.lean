@@ -183,16 +183,71 @@ theorem ntyW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
   exact ⟨cv, caps, a3, q3, a4, tl, a5, ty, by rw [← hcd]; exact hfind, hvl, hrun3, hrun4, hrun5, hS6,
     (hg35.trans hg6), hx6H, hx6d⟩
 
+theorem lveW_mfr {m m' : Mem} {u v : Word} {r : List Word} (h : lveW m u v = some (r, m')) : MFr [] [] m m' := by
+  unfold lveW at h
+  split at h; · simp at h
+  rename_i r1 m1 hs
+  split at h; · simp at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨-, rfl⟩ := h
+  exact MFr.stub (by decide) hs
+
+theorem ntyW_mfr {k : Nat} {m m' : Mem} {vis key : Word} {r : List Word} (h : ntyW k m vis key = some (r, m')) :
+    MFr [] [] m m' := by
+  unfold ntyW at h
+  cases he : envFindW m (rdW (m.arr64 IW) key) vis with
+  | none => rw [he] at h; simp [ntyK1] at h
+  | some p0 =>
+  obtain ⟨r0, m0⟩ := p0
+  rw [he] at h
+  obtain rfl := envFindW_mem he
+  simp only [ntyK1] at h
+  split at h; · simp at h
+  split at h; · simp at h
+  split at h; · simp at h
+  split at h; · simp at h
+  cases h1 : stubM "strip_pis" m0 [rdW (m0.arr64 IW) (key + 3), rdW (m0.arr64 EREC) (r0.tail.headD 0 + 1 + 3)] with
+  | none => rw [h1] at h; simp [ntyK3] at h
+  | some p1 =>
+  obtain ⟨r1, m1⟩ := p1
+  rw [h1] at h
+  simp only [ntyK3] at h
+  split at h; · simp at h
+  cases h2 : cvLpsW k m1 (r0.tail.headD 0 + 1) with
+  | none => rw [h2] at h; simp [ntyK4] at h
+  | some p2 =>
+  obtain ⟨r2, m2⟩ := p2
+  rw [h2] at h
+  simp only [ntyK4] at h
+  cases h3 : stubM "inst_lp_fast" m2 [CWF, r2.headD 0, r2.tail.headD 0, rdW (m2.arr64 IW) (key + 1),
+      rdW (m2.arr64 EREC) (r0.tail.headD 0 + 1 + 3)] with
+  | none => rw [h3] at h; simp [ntyK5] at h
+  | some p3 =>
+  obtain ⟨r3, m3⟩ := p3
+  rw [h3] at h
+  simp only [ntyK5] at h
+  cases h4 : instW k m3 (rdW (m3.arr64 IW) (key + 2)) (rdW (m3.arr64 IW) (key + 3)) (r3.headD 0) with
+  | none => rw [h4] at h; simp [ntyK6] at h
+  | some p4 =>
+  obtain ⟨r4, m4⟩ := p4
+  rw [h4] at h
+  simp only [ntyK6] at h
+  split at h; · simp at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨-, rfl⟩ := h
+  exact (((MFr.stub (by decide) h1).trans (posmemo_cvLpsW_mfr h2)).trans (MFr.stub (by decide) h3)).trans
+    (instW_mfr _ _ _ _ _ _ _ h4)
+
 /-! ## `nest_inst_type` refines `nestInstType` -/
 
 theorem nitW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx hi : Word) (HI : Nat)
     (hHI : hi.toNat = HI) (c : NestCtx) (m m' : Mem) (a : AState) (key : Word) (kk : NestKey) (r : List Word)
     (h : nitW k m vis ctx hi key = some (r, m')) (hS : StageR dn vis fe m a)
     (hU : UCtx dn vis fe m ctx c) (hk : decNK m key.toNat = some kk) (hkin : NKIn m key.toNat (· < iwTop m))
-    (hksl : NKSl m key)
-    (hMno : ∀ (m2 : Mem) (a2 : AState), StageR dn vis fe m2 a2 → ∃ mp0, noMR m2 mp0) :
+    (hksl : NKSl m key) (hP : PosMR m) :
     ∃ x a', (ConRon.Arena.nestInstType fe c HI kk).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
-      IWGrow m m' ∧ (r.headD 0).toNat = x.1 ∧ H (r.tail.headD 0) ∧ decI (r.tail.headD 0) = x.2 := by
+      IWGrow m m' ∧ (r.headD 0).toNat = x.1 ∧ H (r.tail.headD 0) ∧ decI (r.tail.headD 0) = x.2 ∧
+      PosMR m' := by
   unfold nitW at h
   cases k with
   | zero => simp [ntyWf, nitK1] at h
@@ -236,8 +291,8 @@ theorem nitW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
   | some pr3 =>
   obtain ⟨r3, m3⟩ := pr3
   rw [hoa] at h
-  obtain ⟨b, hrunoa, hS3, hg3, hr3⟩ := noaW_ok dn fe vis _ _ _ _ c.names hMno (k + 1) m2 m3 a5 _ _ bs r3 hoa hS2
-    hn2 hne2 hdecbs (fun j hj => by omega)
+  obtain ⟨b, hrunoa, hS3, hg3, hr3, hP3⟩ := noaW_ok dn fe vis _ _ _ _ c.names (k + 1) m2 m3 a5 _ _ bs r3 hoa hS2
+    hn2 hne2 hdecbs (fun j hj => by omega) ((hP.fr (ntyW_mfr hty)).fr (piBW_mfr _ _ _ _ _ _ hpb))
   rw [hnP2, hHI] at hrunoa
   cases b with
   | true => rw [nitK4_occ (h := by rw [hr3]; decide)] at h; simp at h
@@ -261,7 +316,7 @@ theorem nitW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
   rw [nitK5_some (h := by rw [hr4]; decide)] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
-  refine ⟨(bs.length, ty), a6, ?_, hS4, (hg12.trans hg3).trans hg4, ?_, htyH, htyd⟩
+  refine ⟨(bs.length, ty), a6, ?_, hS4, (hg12.trans hg3).trans hg4, ?_, htyH, htyd, hP3.fr (lveW_mfr hle)⟩
   · have hrunpb' : (ConRon.Arena.piBinders coreWalkFuel ty).run a5 = .ok ((bs, e), a5) := htyd ▸ hrunpb
     have hview' : (view e).run a5 = .ok (.sort u, a5) := view_run _ _ _ (hresd ▸ hview)
     simp only [ConRon.Arena.nestInstType, hfind, unwrapOr, StateT.run_bind, StateT.run_pure, pure_bind,
@@ -276,28 +331,27 @@ variable (p : Prog) (hl : NitLook p)
 include hl
 
 /-- **`nest_inst_type` refines `nestInstType`** (through the `strip_pis`/`inst_lp_fast`/
-`instantiate1_fast`/`lvl_eq` stubs; the key's `ds` slice ends below the top, the `nest_occ` memo well-formed in every stage state). -/
--- untagged (lane indproofs2): assumes a memo relation in every stage state (`∀ m a, StageR … → ∃ mp, …MR m mp`), not satisfiable (DESIGN.md, landing 9)
--- @[refines ConRon.Arena.nestInstType]
+`instantiate1_fast`/`lvl_eq` stubs; the key's `ds` slice ends below the top; the walk memos well formed in the
+memory at hand, `PosMR`, and again after). -/
+@[refines ConRon.Arena.nestInstType]
 theorem nestInstType_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis ctx hi key : Word) (c : NestCtx) (kk : NestKey) (hS : StageR dn vis fe s₀.mem a₀)
     (hU : UCtx dn vis fe s₀.mem ctx c) (hk : decNK s₀.mem key.toNat = some kk)
-    (hkin : NKIn s₀.mem key.toNat (· < iwTop s₀.mem)) (hksl : NKSl s₀.mem key)
-    (hMno : ∀ (m2 : Mem) (a2 : AState), StageR dn vis fe m2 a2 → ∃ mp0, noMR m2 mp0) :
+    (hkin : NKIn s₀.mem key.toNat (· < iwTop s₀.mem)) (hksl : NKSl s₀.mem key) (hP : PosMR s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_inst_type" [vis, ctx, hi, key]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.nestInstType fe c hi.toNat kk) a₀ ∧
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.nestInstType fe c hi.toNat kk) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       (r.headD 0).toNat = (AM.res (ConRon.Arena.nestInstType fe c hi.toNat kk) a₀).1 ∧
-      H (r.tail.headD 0) ∧ decI (r.tail.headD 0) = (AM.res (ConRon.Arena.nestInstType fe c hi.toNat kk) a₀).2;
-      ⊤⦄ := by
+      H (r.tail.headD 0) ∧ decI (r.tail.headD 0) = (AM.res (ConRon.Arena.nestInstType fe c hi.toNat kk) a₀).2 ∧
+      PosMR s'.mem; ⊤⦄ := by
   refine triple_post (nestInstType_spec p hl k s₀ vis ctx hi key) ?_
   rintro r s' ⟨hlc, hm⟩
-  obtain ⟨x, a', hrun, hS', hg, h1, h2, h3⟩ := nitW_ok k dn fe vis ctx hi hi.toNat rfl c _ _ a₀ key kk _ hm hS
-    hU hk hkin hksl hMno
+  obtain ⟨x, a', hrun, hS', hg, h1, h2, h3, hP'⟩ := nitW_ok k dn fe vis ctx hi hi.toNat rfl c _ _ a₀ key kk _ hm hS
+    hU hk hkin hksl hP
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hlc, hok, by rw [hst]; exact hS', hg, by rw [hres]; simpa using h1, by simpa using h2,
-    by rw [hres]; simpa using h3⟩
+    by rw [hres]; simpa using h3, hP'⟩
 
 end census
 
