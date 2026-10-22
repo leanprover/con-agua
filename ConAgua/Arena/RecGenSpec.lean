@@ -1,6 +1,7 @@
 import ConAgua.Arena.RecGen
 import ConAgua.Arena.IndLibSpec
 import ConAgua.Arena.IndInstallSpec
+import ConAgua.Arena.RecClassSpec
 
 /-!
 # Refinements of `RecGen` (lane `induct`, round 2)
@@ -202,33 +203,6 @@ theorem classMinorSlotGo_spec (p : Prog) (hp : p.lookup "class_minor_slot_go" = 
       finish (gen := 20)
 
 
-theorem iwN_lt {m : Mem} {i v : Nat} (h : iwN m i = some v) : i < (m.arr64 IW).size := by
-  simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at h
-  obtain ⟨w, hw, -⟩ := h
-  exact (Array.getElem?_eq_some_iff.mp hw).1
-
-theorem iwN_off {m : Mem} {p k v : Nat} (h : iwN m (p + k) = some v) (hb : p + k < 2 ^ 64) :
-    (UInt64.ofNat p + UInt64.ofNat k).toNat < (m.arr64 IW).size ∧
-    rdW (m.arr64 IW) (UInt64.ofNat p + UInt64.ofNat k) = UInt64.ofNat v := by
-  have e : UInt64.ofNat p + UInt64.ofNat k = UInt64.ofNat (p + k) := by simp [UInt64.ofNat_add]
-  have hl := iwN_lt h
-  rw [e]
-  refine ⟨?_, (iwN_rdW h hb).1⟩
-  simp; omega
-
-theorem iwH_off {m : Mem} {k' : IdxKind} {p k : Nat} {x : Idx k'} (h : iwH m (p + k) = some x) (hb : p + k < 2 ^ 64) :
-    (UInt64.ofNat p + UInt64.ofNat k).toNat < (m.arr64 IW).size ∧
-    ∃ w, rdW (m.arr64 IW) (UInt64.ofNat p + UInt64.ofNat k) = w ∧ w.toNat < 2 ^ 32 ∧ decI w = x := by
-  have e : UInt64.ofNat p + UInt64.ofNat k = UInt64.ofNat (p + k) := by simp [UInt64.ofNat_add]
-  have hl : p + k < (m.arr64 IW).size := by
-    simp only [iwH, hd?, iwA] at h
-    cases hw : (m.arr64 IW)[p + k]? with
-    | none => simp [hw] at h
-    | some w => exact (Array.getElem?_eq_some_iff.mp hw).1
-  rw [e]
-  refine ⟨by simp; omega, iwH_rdW h hb⟩
-
-
 theorem decCS_motive {m : Mem} {p : Nat} {key : ClassKey} (h : decCS m p = some (.motive key)) :
     iwN m p = some 0 := by
   have := decCS_tag h
@@ -310,35 +284,6 @@ theorem hit_of_decCS_hit {m : Mem} {p : Nat} {ihs : List (Nat × Nat)} (c cc : W
   · rw [h2b]
     have := congrArg (fun x : Idx IdxKind.name => x.word.toUInt64) h2d
     simpa only [decI_word_self w h2c, decI_word_self cc hcc] using this
-
-theorem decPL_succ {α : Type} (m : Mem) (f : Nat → Option α) (o l : Nat) :
-    decPL m f o (l + 1) = (do
-      let x ← (do let p ← iwN m o; f p)
-      let ys ← decPL m f (o + 1) l
-      pure (x :: ys)) := by
-  simp only [decPL, List.range_succ_eq_map, List.mapM_cons, List.mapM_map, Nat.add_zero]
-  congr 1; funext x; congr 1
-  apply congrArg (fun f => List.mapM f (List.range l))
-  funext j
-  simp only [Function.comp]
-  congr 2
-  omega
-
-theorem decPL_cons {α : Type} {m : Mem} {f : Nat → Option α} {o l : Nat} {xs : List α}
-    (h : decPL m f o (l + 1) = some xs) :
-    ∃ p x ys, xs = x :: ys ∧ iwN m o = some p ∧ f p = some x ∧ decPL m f (o + 1) l = some ys := by
-  rw [decPL_succ] at h
-  cases hp : iwN m o with
-  | none => simp [hp] at h
-  | some p =>
-    cases hf : f p with
-    | none => simp [hp, hf] at h
-    | some x =>
-      cases hr : decPL m f (o + 1) l with
-      | none => simp [hp, hf, hr] at h
-      | some ys =>
-        simp [hp, hf, hr] at h
-        exact ⟨p, x, ys, h.symm, rfl, hf, rfl⟩
 
 /-- The twin's hits of `classMinorSlot`, from index `j`. -/
 def hitsFrom (c : Nat) (C : NIdx) : Nat → List ClassSlot → List (Nat × List (Nat × Nat))
@@ -505,19 +450,6 @@ theorem hitsFrom_eq (c : Nat) (C : NIdx) : ∀ (j : Nat) (sls : List ClassSlot),
     | motive k => simp [hitsFrom]
     | minor c' C' ihs => by_cases hh : (c' == c && C' == C) = true <;> simp [hitsFrom, hh]
 
-
-theorem decPL_le {α : Type} {m : Mem} {f : Nat → Option α} : ∀ {o l : Nat} {xs : List α},
-    decPL m f o l = some xs → l = 0 ∨ o + l ≤ (m.arr64 IW).size := by
-  intro o l
-  induction l generalizing o with
-  | zero => intro xs _; exact Or.inl rfl
-  | succ l ih =>
-    intro xs h
-    obtain ⟨p, x, ys, -, hp, -, hr⟩ := decPL_cons h
-    have h1 := iwN_lt hp
-    rcases ih hr with h0 | h0
-    · right; omega
-    · right; omega
 
 theorem classMinorSlotW_ok (n : Nat) (m : Mem) (rd c cc : Word) (R : ClassRead) (r : List Word)
     (hR : decCR m rd.toNat = some R) (hcc : cc.toNat < 2 ^ 32) (hsz : (m.arr64 IW).size + 5 < 2 ^ 64)

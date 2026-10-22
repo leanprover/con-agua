@@ -64,6 +64,76 @@ theorem slR_of_decNL (m : Mem) : ∀ (n off : Nat) (ns : List Nat),
         · have := (iwN_rdW hx (by omega)).2
           simp; omega
 
+theorem iwN_lt {m : Mem} {i v : Nat} (h : iwN m i = some v) : i < (m.arr64 IW).size := by
+  simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at h
+  obtain ⟨w, hw, -⟩ := h
+  exact (Array.getElem?_eq_some_iff.mp hw).1
+
+theorem iwN_off {m : Mem} {p k v : Nat} (h : iwN m (p + k) = some v) (hb : p + k < 2 ^ 64) :
+    (UInt64.ofNat p + UInt64.ofNat k).toNat < (m.arr64 IW).size ∧
+    rdW (m.arr64 IW) (UInt64.ofNat p + UInt64.ofNat k) = UInt64.ofNat v := by
+  have e : UInt64.ofNat p + UInt64.ofNat k = UInt64.ofNat (p + k) := by simp [UInt64.ofNat_add]
+  have hl := iwN_lt h
+  rw [e]
+  refine ⟨?_, (iwN_rdW h hb).1⟩
+  simp; omega
+
+theorem iwH_off {m : Mem} {k' : IdxKind} {p k : Nat} {x : Idx k'} (h : iwH m (p + k) = some x) (hb : p + k < 2 ^ 64) :
+    (UInt64.ofNat p + UInt64.ofNat k).toNat < (m.arr64 IW).size ∧
+    ∃ w, rdW (m.arr64 IW) (UInt64.ofNat p + UInt64.ofNat k) = w ∧ w.toNat < 2 ^ 32 ∧ decI w = x := by
+  have e : UInt64.ofNat p + UInt64.ofNat k = UInt64.ofNat (p + k) := by simp [UInt64.ofNat_add]
+  have hl : p + k < (m.arr64 IW).size := by
+    simp only [iwH, hd?, iwA] at h
+    cases hw : (m.arr64 IW)[p + k]? with
+    | none => simp [hw] at h
+    | some w => exact (Array.getElem?_eq_some_iff.mp hw).1
+  rw [e]
+  refine ⟨by simp; omega, iwH_rdW h hb⟩
+
+
+theorem decPL_succ {α : Type} (m : Mem) (f : Nat → Option α) (o l : Nat) :
+    decPL m f o (l + 1) = (do
+      let x ← (do let p ← iwN m o; f p)
+      let ys ← decPL m f (o + 1) l
+      pure (x :: ys)) := by
+  simp only [decPL, List.range_succ_eq_map, List.mapM_cons, List.mapM_map, Nat.add_zero]
+  congr 1; funext x; congr 1
+  apply congrArg (fun f => List.mapM f (List.range l))
+  funext j
+  simp only [Function.comp]
+  congr 2
+  omega
+
+theorem decPL_cons {α : Type} {m : Mem} {f : Nat → Option α} {o l : Nat} {xs : List α}
+    (h : decPL m f o (l + 1) = some xs) :
+    ∃ p x ys, xs = x :: ys ∧ iwN m o = some p ∧ f p = some x ∧ decPL m f (o + 1) l = some ys := by
+  rw [decPL_succ] at h
+  cases hp : iwN m o with
+  | none => simp [hp] at h
+  | some p =>
+    cases hf : f p with
+    | none => simp [hp, hf] at h
+    | some x =>
+      cases hr : decPL m f (o + 1) l with
+      | none => simp [hp, hf, hr] at h
+      | some ys =>
+        simp [hp, hf, hr] at h
+        exact ⟨p, x, ys, h.symm, rfl, hf, rfl⟩
+
+theorem decPL_le {α : Type} {m : Mem} {f : Nat → Option α} : ∀ {o l : Nat} {xs : List α},
+    decPL m f o l = some xs → l = 0 ∨ o + l ≤ (m.arr64 IW).size := by
+  intro o l
+  induction l generalizing o with
+  | zero => intro xs _; exact Or.inl rfl
+  | succ l ih =>
+    intro xs h
+    obtain ⟨p, x, ys, -, hp, -, hr⟩ := decPL_cons h
+    have h1 := iwN_lt hp
+    rcases ih hr with h0 | h0
+    · right; omega
+    · right; omega
+
+
 /-! ## `class_of_motive_var` -/
 
 theorem findIdx_toNat (ws : List Word) (x : Word) :
@@ -633,5 +703,251 @@ theorem closeLams_refines (p : Prog) (hd : p.lookup "der_b" = some derB)
     hbs hbo hbt hib
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok (ConRon.Arena.closeLams bs i.toNat (decI body)) a₀ a' x hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hg, h1, by rw [hres]; exact h2⟩
+
+
+/-! ## `class_rec_of` (the round-1 `while` rewritten as a self-recursion on the shifted slices) -/
+
+/-- After the recursive call. -/
+def croK : Option (List Word) → Option (List Word)
+  | none => none
+  | some r => some [r.headD 0, r.tail.headD 0]
+
+/-- **The model of `class_rec_of`.** -/
+def classRecOfW : Nat → Mem → Word → Word → Word → Word → Word → Option (List Word)
+  | 0, _, _, _, _, _, _ => none
+  | n + 1, m, rco, rcl, cgo, cgl, t =>
+    if cgl = 0 then some [0, 0]
+    else if rcl ≠ 0 ∧ ¬ rco.toNat < (m.arr64 IW).size then none
+    else if (if rcl ≠ 0 then rdW (m.arr64 IW) rco else 0) = t then
+      (if cgo.toNat < (m.arr64 IW).size ∧ (rdW (m.arr64 IW) cgo).toNat < (m.arr64 EREC).size
+        then some [1, rdW (m.arr64 EREC) (rdW (m.arr64 IW) cgo)] else none)
+    else croK (classRecOfW n m (rco + 1) (if rcl ≠ 0 then rcl - 1 else 0) (cgo + 1) (cgl - 1) t)
+
+section arms
+variable (n : Nat) (m : Mem) (rco rcl cgo cgl t : Word)
+theorem classRecOfW_nil (h : cgl = 0) : classRecOfW (n + 1) m rco rcl cgo cgl t = some [0, 0] := by
+  simp [classRecOfW, h]
+theorem classRecOfW_oob (h : cgl ≠ 0) (h1 : rcl ≠ 0) (h2 : ¬ rco.toNat < (m.arr64 IW).size) :
+    classRecOfW (n + 1) m rco rcl cgo cgl t = none := by
+  simp [classRecOfW, h, h1, h2]
+theorem classRecOfW_hit (h : cgl ≠ 0) (h1 : rcl ≠ 0 → rco.toNat < (m.arr64 IW).size)
+    (h2 : (if rcl ≠ 0 then rdW (m.arr64 IW) rco else 0) = t) :
+    classRecOfW (n + 1) m rco rcl cgo cgl t =
+      (if cgo.toNat < (m.arr64 IW).size ∧ (rdW (m.arr64 IW) cgo).toNat < (m.arr64 EREC).size
+        then some [1, rdW (m.arr64 EREC) (rdW (m.arr64 IW) cgo)] else none) := by
+  have : ¬ (rcl ≠ 0 ∧ ¬ rco.toNat < (m.arr64 IW).size) := fun ⟨a, b⟩ => b (h1 a)
+  simp only [classRecOfW, h, this, h2, if_false, if_true]
+theorem classRecOfW_miss (h : cgl ≠ 0) (h1 : rcl ≠ 0 → rco.toNat < (m.arr64 IW).size)
+    (h2 : ¬ (if rcl ≠ 0 then rdW (m.arr64 IW) rco else 0) = t) :
+    classRecOfW (n + 1) m rco rcl cgo cgl t =
+      croK (classRecOfW n m (rco + 1) (if rcl ≠ 0 then rcl - 1 else 0) (cgo + 1) (cgl - 1) t) := by
+  have : ¬ (rcl ≠ 0 ∧ ¬ rco.toNat < (m.arr64 IW).size) := fun ⟨a, b⟩ => b (h1 a)
+  simp only [classRecOfW, h, this, h2, if_false, if_true]
+end arms
+
+grind_pattern [ind_grind] classRecOfW_nil => classRecOfW (n + 1) m rco rcl cgo cgl t
+grind_pattern [ind_grind] classRecOfW_oob => classRecOfW (n + 1) m rco rcl cgo cgl t
+grind_pattern [ind_grind] classRecOfW_hit => classRecOfW (n + 1) m rco rcl cgo cgl t
+grind_pattern [ind_grind] classRecOfW_miss => classRecOfW (n + 1) m rco rcl cgo cgl t
+
+theorem classRecOf_spec (p : Prog) (hp : p.lookup "class_rec_of" = some classRecOf) (n : Nat) :
+    ∀ (s₀ : St) (rco rcl cgo cgl t : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_rec_of" [rco, rcl, cgo, cgl, t]
+    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ classRecOfW n s₀.mem rco rcl cgo cgl t = some r; ⊤⦄ := by
+  induction n with
+  | zero =>
+    intro s₀ rco rcl cgo cgl t; rw [invoke_eq _ hp]; simp only [callFn, classRecOf]
+    vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ rco rcl cgo cgl t
+    rw [invoke_eq _ hp]
+    simp only [callFn, classRecOf]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
+      finish (gen := 20) [croK]
+
+
+/-- The twin's `classRecOf`, as a recursion on the shifted lists. -/
+def crOf (t : Nat) : List Nat → List IConstantVal → Option NIdx
+  | _, [] => none
+  | rc, cv :: cs => if rc.headD 0 == t then some cv.name else crOf t rc.tail cs
+
+theorem crOf_eq (t : Nat) : ∀ (cs : List IConstantVal) (rc : List Nat),
+    ((List.range cs.length).find? fun r => rc.getD r 0 == t).map (fun r => (cs.getD r default).name) =
+      crOf t rc cs := by
+  intro cs
+  induction cs with
+  | nil => intro rc; simp [crOf]
+  | cons cv cs ih =>
+    intro rc
+    have e0 : rc.getD 0 0 = rc.headD 0 := by cases rc <;> simp
+    have e1 : ∀ r, rc.getD (r + 1) 0 = rc.tail.getD r 0 := by intro r; cases rc <;> simp
+    rw [List.length_cons, List.range_succ_eq_map, List.find?_cons, e0]
+    by_cases h : (rc.headD 0 == t) = true
+    · simp only [h, crOf, ite_true, Option.map_some]; rfl
+    · have h' : ¬ (rc.headD 0 == t) = true := h
+      simp only [h', crOf, Bool.false_eq_true, if_false]
+      rw [← ih rc.tail, List.find?_map]
+      simp only [Option.map_map, Function.comp_def, e1, List.getD_cons_succ]
+
+
+theorem decCVp_name {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp m q = some cv) :
+    ∃ w, (m.arr64 EREC)[q]? = some w ∧ w.toNat < 2 ^ 32 ∧ decI w = cv.name := by
+  simp only [decCVp, decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  obtain ⟨nm, hnm, -, -, -, -, -, rfl⟩ := h
+  simp only [hd?] at hnm
+  cases hq : (erA m)[q]? with
+  | none => simp [hq] at hnm
+  | some w =>
+    simp only [hq, Option.bind_some] at hnm
+    by_cases hl : w.toNat < 2 ^ 32
+    · simp [hl] at hnm
+      exact ⟨w, by simpa [erA] using hq, hl, hnm⟩
+    · simp [hl] at hnm
+
+theorem classRecOfW_ok (n : Nat) : ∀ (m : Mem) (rco rcl cgo cgl t : Word) (r : List Word)
+    (rc : List Nat) (cs : List IConstantVal),
+    classRecOfW n m rco rcl cgo cgl t = some r → decNL m rco.toNat rcl.toNat = some rc →
+    decPL m (decCVp m) cgo.toNat cgl.toNat = some cs → rco.toNat + rcl.toNat < 2 ^ 64 →
+    cgo.toNat + cgl.toNat < 2 ^ 64 →
+    (crOf t.toNat rc cs = none → r = [0, 0]) ∧
+    ∀ nm, crOf t.toNat rc cs = some nm → r.headD 0 = 1 ∧ (r.tail.headD 0).toNat < 2 ^ 32 ∧
+      decI (r.tail.headD 0) = nm := by
+  induction n with
+  | zero => intro m rco rcl cgo cgl t r rc cs h; simp [classRecOfW] at h
+  | succ n ih =>
+    intro m rco rcl cgo cgl t r rc cs h hrc hcs hb1 hb2
+    by_cases hcgl : cgl = 0
+    · rw [classRecOfW_nil n m rco rcl cgo cgl t hcgl] at h
+      simp only [Option.some.injEq] at h
+      subst h
+      have : cgl.toNat = 0 := by rw [hcgl]; rfl
+      rw [this] at hcs
+      simp [decPL] at hcs
+      subst hcs
+      exact ⟨fun _ => rfl, fun nm hnm => by simp [crOf] at hnm⟩
+    · have hpos : 1 ≤ cgl.toNat := by
+        rcases Nat.eq_zero_or_pos cgl.toNat with h0 | h0
+        · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hcgl
+        · omega
+      obtain ⟨c1, hc1⟩ : ∃ c1, cgl.toNat = c1 + 1 := ⟨cgl.toNat - 1, by omega⟩
+      rw [hc1] at hcs
+      obtain ⟨pn, cv, cs', rfl, hpn, hcv, hcs'⟩ := decPL_cons hcs
+      have hgo : cgo.toNat < (m.arr64 IW).size := iwN_lt hpn
+      have hpn' := iwN_rdW hpn (by omega)
+      rw [UInt64.ofNat_toNat] at hpn'
+      obtain ⟨wn, hwn1, hwn2, hwn3⟩ := decCVp_name hcv
+      have hcgl1 : (cgl - 1).toNat = c1 := by
+        rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hpos))]; simp; omega
+      have hcgo1 : (cgo + 1).toNat = cgo.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      -- the first recursion-count entry and the shifted slice
+      obtain ⟨v, rc', P1, P2, P3, P4, P5, P6⟩ : ∃ (v : Word) (rc' : List Nat),
+          (if rcl ≠ 0 then rdW (m.arr64 IW) rco else 0) = v ∧
+          (rcl ≠ 0 → rco.toNat < (m.arr64 IW).size) ∧ rc.headD 0 = v.toNat ∧ rc.tail = rc' ∧
+          decNL m (rco + 1).toNat (if rcl ≠ 0 then rcl - 1 else 0).toNat = some rc' ∧
+          (rco + 1).toNat + (if rcl ≠ 0 then rcl - 1 else 0).toNat < 2 ^ 64 := by
+        by_cases hrcl : rcl = 0
+        · have hr0 : rcl.toNat = 0 := by rw [hrcl]; rfl
+          rw [hr0] at hrc
+          simp [decNL] at hrc
+          subst hrc
+          refine ⟨0, [], by simp [hrcl], fun h => absurd hrcl h, by simp, by simp, ?_, ?_⟩
+          · simp [hrcl, decNL]
+          · simp [hrcl]; omega
+        · have hpos' : 1 ≤ rcl.toNat := by
+            rcases Nat.eq_zero_or_pos rcl.toNat with h0 | h0
+            · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hrcl
+            · omega
+          obtain ⟨r1, hr1⟩ : ∃ r1, rcl.toNat = r1 + 1 := ⟨rcl.toNat - 1, by omega⟩
+          rw [hr1, decNL_succ] at hrc
+          cases hx : iwN m rco.toNat with
+          | none => simp [hx] at hrc
+          | some x =>
+            cases hxs : decNL m (rco.toNat + 1) r1 with
+            | none => simp [hx, hxs] at hrc
+            | some xs =>
+              simp [hx, hxs] at hrc
+              subst hrc
+              have hx' := iwN_rdW hx (by omega)
+              rw [UInt64.ofNat_toNat] at hx'
+              have hrcl1 : (rcl - 1).toNat = r1 := by
+                rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hpos'))]; simp; omega
+              have hrco1 : (rco + 1).toNat = rco.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+              refine ⟨UInt64.ofNat x, xs, by simp [hrcl, hx'.1], fun _ => iwN_lt hx, ?_, rfl, ?_, ?_⟩
+              · rw [UInt64.toNat_ofNat_of_lt' hx'.2]; rfl
+              · simp only [hrcl, ne_eq, not_false_eq_true, if_true, hrco1, hrcl1]; exact hxs
+              · simp only [hrcl, ne_eq, not_false_eq_true, if_true, hrco1, hrcl1]; omega
+      have hxv : (v = t) ↔ (rc.headD 0 == t.toNat) = true := by
+        rw [P3]
+        constructor
+        · intro e; subst e; simp
+        · intro e; simp at e; exact UInt64.toNat_inj.mp e
+      have hcrOf : crOf t.toNat rc (cv :: cs') =
+          if (rc.headD 0 == t.toNat) = true then some cv.name else crOf t.toNat rc' cs' := by
+        simp only [crOf, P4]
+      by_cases hvt : v = t
+      · rw [classRecOfW_hit n m rco rcl cgo cgl t hcgl P2 (by rw [P1]; exact hvt)] at h
+        have hpe : pn < (m.arr64 EREC).size := (Array.getElem?_eq_some_iff.mp hwn1).1
+        have hg : cgo.toNat < (m.arr64 IW).size ∧
+            (rdW (m.arr64 IW) cgo).toNat < (m.arr64 EREC).size := by
+          refine ⟨hgo, ?_⟩
+          have e : (m.arr64 IW)[cgo.toNat]? = some (UInt64.ofNat pn) := by
+            have := hpn'.1
+            simpa [rdW, hgo] using this
+          rw [hpn'.1, UInt64.toNat_ofNat_of_lt' hpn'.2]; exact hpe
+        rw [if_pos hg] at h
+        simp only [Option.some.injEq] at h
+        subst h
+        have hrd : rdW (m.arr64 EREC) (rdW (m.arr64 IW) cgo) = wn := by
+          rw [hpn'.1]
+          simp [rdW, UInt64.toNat_ofNat_of_lt' hpn'.2, hwn1]
+        rw [hrd, hcrOf, if_pos (hxv.mp hvt)]
+        refine ⟨fun e => by simp at e, fun nm hnm => ?_⟩
+        simp only [Option.some.injEq] at hnm
+        subst hnm
+        exact ⟨rfl, by simpa using hwn2, by simpa using hwn3⟩
+      · rw [classRecOfW_miss n m rco rcl cgo cgl t hcgl P2 (by rw [P1]; exact hvt)] at h
+        cases hr : classRecOfW n m (rco + 1) (if rcl ≠ 0 then rcl - 1 else 0) (cgo + 1) (cgl - 1) t with
+        | none => rw [hr] at h; simp [croK] at h
+        | some r1 =>
+          rw [hr] at h
+          simp only [croK, Option.some.injEq] at h
+          subst h
+          have hcs'' : decPL m (decCVp m) (cgo + 1).toNat (cgl - 1).toNat = some cs' := by
+            rw [hcgo1, hcgl1]; exact hcs'
+          obtain ⟨g1, g2⟩ := ih m (rco + 1) _ (cgo + 1) (cgl - 1) t r1 rc' cs' hr P5 hcs'' P6
+            (by rw [hcgo1, hcgl1]; omega)
+          have hn : ¬ (rc.headD 0 == t.toNat) = true := fun e => hvt (hxv.mpr e)
+          rw [hcrOf, if_neg hn]
+          refine ⟨fun e => ?_, fun nm hnm => ?_⟩
+          · have := g1 e; simp [this]
+          · obtain ⟨a1, a2, a3⟩ := g2 nm hnm
+            exact ⟨a1, a2, a3⟩
+
+
+/-- **`class_rec_of` refines `classRecOf`**: `(1, name)` for `some name`, `(0, 0)` for `none`; the
+memory is unchanged. -/
+@[refines ConRon.Arena.classRecOf]
+theorem classRecOf_refines (p : Prog) (hp : p.lookup "class_rec_of" = some classRecOf) (n : Nat)
+    (s₀ : St) (rco rcl cgo cgl t : Word) (rc : List Nat) (cs : List IConstantVal)
+    (hrc : decNL s₀.mem rco.toNat rcl.toNat = some rc)
+    (hcs : decPL s₀.mem (decCVp s₀.mem) cgo.toNat cgl.toNat = some cs)
+    (hb1 : rco.toNat + rcl.toNat < 2 ^ 64) (hb2 : cgo.toNat + cgl.toNat < 2 ^ 64) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_rec_of" [rco, rcl, cgo, cgl, t]
+    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
+      (match ConRon.Arena.classRecOf rc cs t.toNat with
+        | none => r = [0, 0]
+        | some nm => r.headD 0 = 1 ∧ (r.tail.headD 0).toNat < 2 ^ 32 ∧ decI (r.tail.headD 0) = nm);
+      ⊤⦄ := by
+  refine triple_post (classRecOf_spec p hp n s₀ rco rcl cgo cgl t) ?_
+  rintro r s' ⟨hl, hm, hw⟩
+  obtain ⟨g1, g2⟩ := classRecOfW_ok n _ rco rcl cgo cgl t r rc cs hw hrc hcs hb1 hb2
+  refine ⟨hl, hm, ?_⟩
+  have e := crOf_eq t.toNat cs rc
+  simp only [ConRon.Arena.classRecOf] at *
+  rw [e]
+  cases hc : crOf t.toNat rc cs with
+  | none => exact g1 hc
+  | some nm => exact g2 nm hc
 
 end L.Ind

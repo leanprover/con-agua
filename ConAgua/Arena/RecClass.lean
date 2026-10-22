@@ -512,15 +512,14 @@ def classGenRecTy : FunDecl := lfn (g, c) locals
 /-- `class_rec_of(rco, rcl, cgo, cgl, t)`: the recursor a call at class `t` names: the family's
 first recursor at that class. -/
 @[l_impl ConRon.Arena.classRecOf]
-def classRecOf : FunDecl := lfn (rco, rcl, cgo, cgl, t) locals (r, v) {
-  r := 0;
-  while r < cgl {
-    v := 0;
-    if r < rcl { v := IW.u64[rco + r] };
-    if v == t { return (1, EREC.u64[IW.u64[cgo + r]]) };
-    r += 1
-  };
-  return (0, 0)
+def classRecOf : FunDecl := lfn (rco, rcl, cgo, cgl, t) locals (v, nr, ok, nm) {
+  if cgl == 0 { return (0, 0) };
+  v := 0;
+  nr := 0;
+  if rcl != 0 { v := IW.u64[rco]; nr := rcl - 1 };
+  if v == t { return (1, EREC.u64[IW.u64[cgo]]) };
+  (ok, nm) := call class_rec_of(rco + 1, nr, cgo + 1, cgl - 1, t);
+  return (ok, nm)
 }
 
 /-- `class_gen_rule_find_slot(g, c, ctorName)`: `classGenRule`'s `hit`, the prefix position of
