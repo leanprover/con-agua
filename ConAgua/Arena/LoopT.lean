@@ -469,4 +469,157 @@ theorem LoopT.restrict {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche
     LoopT pins dn m a v (fe.restrictTo v.toNat) pend ds :=
   ⟨h.loop.restrict v, h.twin.restrict (by rw [h.loop.vis]; exact hv), h.flag⟩
 
+/-! ## A core call keeps `LoopT`
+
+The core's write set from the program text, at the loop's granularity: no function the stage's
+core entry points reach writes the pools, the pins, nor anything the loop keeps beside the stage
+(the pending checks, the declaration records, the promotion memos, `CTL[130]`, `CTL[140‥147]`,
+the pin variants' header `CTL[150]`, `CTL[151]`). Decided for the checker's program in
+`ConAgua/Checker/LoopCore.lean`. A core call starts and ends in `CoreS` and writes no `EREC`, so
+`TwinOK` (the projection clause included) comes back with it. -/
+
+/-- The arrays a core function may write, at the loop's granularity. -/
+def coreLoopA : List ArrId := stepA.filter fun b => b ≠ EREC ∧ b ≠ IW ∧ b ≠ PINS
+
+/-- The `CTL` words a core function may write, at the loop's granularity. -/
+def coreLoopC : List Word := stepC.filter fun x => x ≠ 129 ∧ x ≠ 200
+
+/-- **The program hypothesis**: the core leaves the loop's state alone. -/
+def CoreLoopClosed (p : Prog) : Prop := closedA p coreLoopA coreLoopC stageCoreFns = true
+
+theorem coreLoopA_erec : EREC ∉ coreLoopA := by simp [coreLoopA]
+theorem coreLoopA_iw : IW ∉ coreLoopA := by simp [coreLoopA]
+theorem coreLoopA_pins : PINS ∉ coreLoopA := by simp [coreLoopA]
+theorem coreLoopC_129 : (129 : Word) ∉ coreLoopC := by simp [coreLoopC]
+theorem coreLoopC_200 : (200 : Word) ∉ coreLoopC := by simp [coreLoopC]
+
+/-- **After a core call**: the core's own post (`CoreS` after) and its write set give `LoopT` after
+(the same view, environment, pending checks and records), the pools unchanged. -/
+theorem LoopT.of_core {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {vis : Word}
+    {fe : IFEnv} {pend : Array PendingCheck} {ds : Array IDeclaration} {p : Prog}
+    (hcl : CoreLoopClosed p) {f : FnName} (hf : f ∈ stageCoreFns) {n : Nat} {vs : List Word}
+    {m m' : Mem} {r : List Word} {a a' : AState} {M : ModeMaps}
+    (h : callW p n f vs m = some (r, m')) (hL : LoopT pins dn m a vis fe pend ds)
+    (hC : CoreS dn m' a' vis fe M 0) : LoopT pins dn m' a' vis fe pend ds ∧ IWGrow m m' := by
+  obtain ⟨hfr, -⟩ := run_memFrame hcl hf (run_of_callW h)
+  have hI : m'.arr64 IW = m.arr64 IW := hfr.1 _ coreLoopA_iw (by decide)
+  have hE : m'.arr64 EREC = m.arr64 EREC := hfr.1 _ coreLoopA_erec (by decide)
+  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hfr.2.1 _ coreLoopC_129
+  have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hfr.2.1 _ coreLoopC_200
+  obtain ⟨hCR, hT⟩ := hC.checkR
+  have hS : StageR dn vis fe m' a' :=
+    ⟨hCR, IWOK.frame hfr coreLoopA_iw coreLoopA_erec coreLoopC_129 coreLoopC_200 hL.loop.iw⟩
+  have hst : MemFrame stepA stepC m m' :=
+    hfr.mono (fun b hb => (List.mem_filter.mp hb).1) (fun x hx => (List.mem_filter.mp hx).1)
+  refine ⟨⟨hL.loop.of_step hS hst (by rw [erecP_congr hE h129]; exact ArrExt.refl _), hT,
+    by rw [pinW_frame hfr coreLoopA_pins]; exact hL.flag⟩, ?_⟩
+  exact ⟨by simp [iwTop, h200], by simp [erTop, h129], fun i _ => by rw [hI], fun i _ => by rw [hE]⟩
+
+/-- **A core entry point's refinement as a `Sim` under `LoopT`** (the loop-level twin of
+`StageT.sim_core`). -/
+theorem LoopT.sim_core {α : Type} [Inhabited α] {pins : List INatOpPinSet}
+    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {pend : Array PendingCheck}
+    {ds : Array IDeclaration} {p : Prog} (hcl : CoreLoopClosed p) {f : FnName}
+    (hf : f ∈ stageCoreFns) {n : Nat} {args : List Word} {T : AM α} {dec : List Word → α}
+    {m : Mem} {a : AState} (hL : LoopT pins dn m a vis fe pend ds)
+    (hspec : ∀ (s₀ : St) (M : ModeMaps), CoreS dn s₀.mem a vis fe M 0 →
+      CoreSpec p n f args T dec s₀ a dn vis fe M 0) :
+    Sim (callW p n f args m) T a (fun r x m' a' => LoopT pins dn m' a' vis fe pend ds ∧
+      IWGrow m m' ∧ dec r = x ∧ ResH r) := by
+  intro r m' e
+  obtain ⟨M, hC⟩ := hL.core
+  obtain ⟨s', rfl, -, hok, ⟨M', hC', -, -⟩, hres, hrh⟩ :=
+    triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (hspec ⟨m, Locals.init []⟩ M hC) e
+  obtain ⟨hT', hg⟩ := LoopT.of_core hcl hf e hL hC'
+  exact ⟨_, _, partsRunOfOk hok, hT', hg, hres.symm, hrh⟩
+
+/-! ### The entry points under `LoopT` -/
+
+section entryL
+variable (p : Prog) (hp : KnotEntryProg p) (hw : p.lookup "whnf_top" = some whnfTopL)
+  (hK : ∀ n, KnotOK p n) (hcl : CoreLoopClosed p)
+variable {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+  {pend : Array PendingCheck} {ds : Array IDeclaration}
+
+include hw hK hcl in
+/-- **`whnf_top` under `LoopT`.** -/
+theorem whnfTop_simL (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
+    (hL : LoopT pins dn m a vis fe pend ds) (dep e : Word) (he : H e) :
+    Sim (callW p n "whnf_top" [vis, dep, e] m) (whnf .verified fe checkFuel dep.toNat (decI e)) a
+      (fun r x m' a' => LoopT pins dn m' a' vis fe pend ds ∧ IWGrow m m' ∧ decW0E m' r x) := by
+  rcases n with _ | k
+  · intro r m' h; rw [callW_zero] at h; cases h
+  refine Sim.mono (LoopT.sim_core hcl (by simp [stageCoreFns]) hL
+    (fun s₀ M hC => whnfTop_core p hw hK k hn checkFuel (stage_fuel hn) s₀ a M dep e hC (hw_of_h he))) ?_
+  rintro r x m' a' ⟨hT, hg, hd, hr⟩
+  exact ⟨hT, hg, hr, by rw [← hd]; rfl⟩
+
+include hp hK hcl in
+/-- **`infer_type_core` under `LoopT`.** -/
+theorem inferTypeCore_simL (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
+    (hL : LoopT pins dn m a vis fe pend ds) (dep e : Word) (he : H e) :
+    Sim (callW p n "infer_type_core" [vis, dep, e] m)
+      (inferTypeCore .verified fe checkFuel dep.toNat (decI e)) a
+      (fun r x m' a' => LoopT pins dn m' a' vis fe pend ds ∧ IWGrow m m' ∧ decW0E m' r x) := by
+  rcases n with _ | k
+  · intro r m' h; rw [callW_zero] at h; cases h
+  refine Sim.mono (LoopT.sim_core hcl (by simp [stageCoreFns]) hL
+    (fun s₀ M hC => inferTypeCore_core p hp hK k hn checkFuel (stage_fuel hn) s₀ a M dep e hC
+      (hw_of_h he))) ?_
+  rintro r x m' a' ⟨hT, hg, hd, hr⟩
+  exact ⟨hT, hg, hr, by rw [← hd]; rfl⟩
+
+include hp hK hcl in
+/-- **`is_def_eq_core` under `LoopT`.** -/
+theorem isDefEqCore_simL (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
+    (hL : LoopT pins dn m a vis fe pend ds) (dep x y : Word) (hx : H x) (hy : H y) :
+    Sim (callW p n "is_def_eq_core" [vis, dep, x, y] m)
+      (isDefEqCore .verified fe checkFuel dep.toNat (decI x) (decI y)) a
+      (fun r b m' a' => LoopT pins dn m' a' vis fe pend ds ∧ IWGrow m m' ∧ decBool r = b) := by
+  rcases n with _ | k
+  · intro r m' h; rw [callW_zero] at h; cases h
+  refine Sim.mono (LoopT.sim_core (dec := decBool) hcl (by simp [stageCoreFns]) hL
+    (fun s₀ M hC => isDefEqCore_refines p hp k (hK k).defeq checkFuel s₀ a dn vis fe M dep x y
+      (stage_fuel hn) (by omega) hC (hw_of_h hx) (hw_of_h hy))) ?_
+  rintro r b m' a' ⟨hT, hg, hd, -⟩
+  exact ⟨hT, hg, hd⟩
+
+include hp hK hcl in
+/-- **`ensure_sort_core` under `LoopT`.** -/
+theorem ensureSortCore_simL (hl : InferLeafProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem}
+    {a : AState} (hL : LoopT pins dn m a vis fe pend ds) (dep t : Word) (ht : H t) :
+    Sim (callW p n "ensure_sort_core" [vis, dep, t] m)
+      (ensureSortCore .verified fe checkFuel dep.toNat (decI t)) a
+      (fun r x m' a' => LoopT pins dn m' a' vis fe pend ds ∧ IWGrow m m' ∧ decW0L m' r x) := by
+  rcases n with _ | _ | k
+  · intro r m' h; rw [callW_zero] at h; cases h
+  · intro r m' h
+    obtain ⟨s', -, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+      (L.Arena.ensureSortCore_spec p hp 0 _ vis dep t) h
+    simp [call1W, callW_zero] at hW
+  refine Sim.mono (LoopT.sim_core hcl (by simp [stageCoreFns]) hL
+    (fun s₀ M hC => ensureSortCore_refines p hl hp k (fun j _ => hK j) checkFuel s₀ a dn vis fe M
+      dep t (stage_fuel (by omega)) (by omega) hC (hw_of_h ht))) ?_
+  rintro r x m' a' ⟨hT, hg, hd, hr⟩
+  exact ⟨hT, hg, hr, by rw [← hd]; rfl⟩
+
+include hcl in
+/-- **`lvl_eq_c` under `LoopT`**: the two handles' readbacks are the caller's (`StoreDen.lvlAll`,
+`StoreDen.zero` of `hL.twin.den`). -/
+theorem lvlEqC_simL (hL' : LvlCacheProg p) (hpc : p.lookup "lvl_eq_c" = some lvlEqCL) (n : Nat)
+    {m : Mem} {a : AState} (hL : LoopT pins dn m a vis fe pend ds) (u v : Word) (hu : H u)
+    (hv : H v) (lu lv : ConLeche.Level) (hdu : denoteL a.store.ls (decI u) = some lu)
+    (hdv : denoteL a.store.ls (decI v) = some lv) :
+    Sim (callW p n "lvl_eq_c" [u, v] m) (lvlEq? (decI u) (decI v)) a
+      (fun r x m' a' => LoopT pins dn m' a' vis fe pend ds ∧ IWGrow m m' ∧
+        decO (r.headD 0) = x ∧ H (r.headD 0)) := by
+  rcases Nat.lt_or_ge n 2 with hn | hn
+  · intro r m' h; rw [lvlEqC_small p hpc n hn] at h; cases h
+  obtain ⟨k, rfl⟩ : ∃ k, n = k + 2 := ⟨n - 2, by omega⟩
+  exact Sim.mono (LoopT.sim_core hcl (by simp [stageCoreFns]) hL
+    (fun s₀ M hC => lvlEqC_refines p hL' k s₀ a dn vis fe M 0 hC u v hu hv lu lv hdu hdv))
+    fun r x m' a' ⟨hT, hg, hd, hr⟩ => ⟨hT, hg, hd, hr⟩
+
+end entryL
+
 end L.Arena
