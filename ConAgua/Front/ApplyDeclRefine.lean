@@ -529,7 +529,7 @@ theorem applyDeclW_refines (b : ByteArray) (m m' : Mem) (a₀ : AState) (st : St
     · rw [q3 h']; simp [applyLine, applyDeclD, processLineCoreD, hpc, pushDecl, declOf, quotW, h']
     · rw [q4 h']; simp [applyLine, applyDeclD, processLineCoreD, hpc, pushDecl, declOf, quotW, h']
   | ind tys cts rcs =>
-    have hpl : f.pl = 25 := hE
+    have hpl : f.pl = 25 := hE.1
     rcases hks with ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ <;>
       (rw [hpl] at h1; exact absurd h1 (by decide))
 
