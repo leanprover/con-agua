@@ -1,4 +1,5 @@
 import ConAgua.Arena.DeclNatEq
+import ConAgua.Arena.RecClassSpec
 
 /-!
 # The structural-`Nat` gate: constant substitution (lane `decls3`, helper `decls3-nat`)
@@ -37,6 +38,74 @@ theorem viewR_shape {rv : List Word} {v : ENodeView} (h : ViewR rv v) :
   all_goals
     right; right
     refine ⟨?_, ?_, fun _ _ => by simp, fun _ _ => by simp⟩ <;> simp_all
+
+theorem decNL_getW : ∀ (m : Mem) (l o : Nat) (xs : List Nat), decNL m o l = some xs →
+    xs.length = l ∧ ∀ (j : Nat) (hj : j < xs.length), ∃ w : Word, (iwA m)[o + j]? = some w ∧
+      w.toNat = xs[j]
+  | m, 0, o, xs, h => by simp [decNL] at h; subst h; simp
+  | m, l + 1, o, xs, h => by
+    rw [decNL_succ] at h
+    simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨x, hx, xs', hxs, rfl⟩ := h
+    obtain ⟨hl, hg⟩ := decNL_getW m l (o + 1) xs' hxs
+    refine ⟨by simp [hl], fun j hj => ?_⟩
+    cases j with
+    | zero =>
+      simp only [iwN, nat?, Option.map_eq_some_iff] at hx
+      obtain ⟨w, hw, rfl⟩ := hx
+      exact ⟨w, by simpa using hw, by simp⟩
+    | succ j =>
+      obtain ⟨w, hw, hwx⟩ := hg j (by simpa using hj)
+      exact ⟨w, by simpa [Nat.add_assoc, Nat.add_comm 1 j] using hw, by simpa using hwx⟩
+
+theorem EqL.decNL {m : Mem} {o l : Nat} {ps : List (EIdx × EIdx)} (h : EqL m o l ps) :
+    ∃ xs, decNL m o l = some xs := by
+  obtain ⟨h1, h2, h3⟩ := h
+  have hget : ∀ j (hj : j < ps.length), ∃ p : Word, (iwA m)[o + j]? = some p := fun j hj => by
+    obtain ⟨p, a, b, hp, -⟩ := h3 j hj
+    exact ⟨p, hp⟩
+  refine ⟨(List.range ps.length).map (fun j => ((iwN m (o + j)).getD 0)), ?_⟩
+  have := decNL_of_get m ((List.range ps.length).map (fun j => ((iwN m (o + j)).getD 0))) o (fun j hj => by
+    simp only [List.length_map, List.length_range] at hj
+    obtain ⟨p, hp⟩ := hget j hj
+    simp [iwN, nat?, hp])
+  simpa [h2] using this
+
+theorem eqL_cons {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
+    {m m' : Mem} {x o l : Word} {r : List Word} {es : List (EIdx × EIdx)} {ea eb : Word}
+    (h : consW n m x o l = some (r, m')) (hS : StageR dn vis fe m a)
+    (hE : EqL m o.toNat l.toNat es) (hx : RecAt m x ea eb) (hea : H ea) (heb : H eb) :
+    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+      EqL m' (r.headD 0).toNat (r.tail.headD 0).toNat ((decE ea, decE eb) :: es) := by
+  obtain ⟨xs, hxs⟩ := hE.decNL
+  obtain ⟨hS', hg, hd, ht⟩ := consW_stageN h hS hE.1 hxs
+  obtain ⟨hlen, hget⟩ := decNL_getW m l.toNat o.toNat xs hxs
+  obtain ⟨hlen', hget'⟩ := decNL_getW m' _ _ _ hd
+  simp only [List.length_cons] at hlen'
+  have hel := hE.2.1
+  refine ⟨hS', hg, ?_, ?_, ?_⟩
+  · omega
+  · simp only [List.length_cons]; omega
+  · intro j hj
+    cases j with
+    | zero =>
+      obtain ⟨w, hw, hwx⟩ := hget' 0 (by simp)
+      have : w = x := UInt64.toNat_inj.mp (by simpa using hwx)
+      subst this
+      exact ⟨w, ea, eb, by simpa using hw, hx.grow hg, hea, heb, by simp⟩
+    | succ j =>
+      have hj' : j < es.length := by simpa using hj
+      obtain ⟨w, hw, hwx⟩ := hget' (j + 1) (by simp only [List.length_cons]; omega)
+      obtain ⟨p, pa, pb, hp, hr, hpa, hpb, hpe⟩ := hE.2.2 j hj'
+      obtain ⟨w0, hw0, hwx0⟩ := hget j (by omega)
+      have hpw : w0 = p := by
+        have := hp; rw [hw0] at this; exact Option.some.inj this
+      have : w = p := UInt64.toNat_inj.mp (by
+        simp only [List.getElem_cons_succ] at hwx
+        rw [hwx, ← hwx0, hpw])
+      subst this
+      refine ⟨w, pa, pb, ?_, hr.grow hg, hpa, hpb, by simpa using hpe⟩
+      simpa [Nat.add_assoc, Nat.add_comm 1 j] using hw
 
 section sub
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
