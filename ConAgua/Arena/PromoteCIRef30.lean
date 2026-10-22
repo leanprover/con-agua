@@ -189,11 +189,7 @@ theorem pnew_main (dn : NIdx → Option ConLeche.Name) (n : Nat) (m₁ : Mem) (a
     intro b h1 h2
     apply hfr₃.1 b _ (fun h => by rw [h] at h1; simp [CTL] at h1)
     intro hb
-    rcases pnew_arrs' b hb with h | h | h | h
-    · omega
-    · omega
-    · omega
-    · omega
+    rcases pnew_arrs' b hb with h | h | h | h <;> (simp only [ArrId] at h; omega)
   -- the constants after the promotion
   have hBdec : cdec dn (erecP m₃) (m₃.arr64 ECON) (n0.toNat - c.toNat) = some B := by
     refine cdec_mono hg₁₃.ext (n0.toNat - c.toNat) B (fun i hi => ?_) hB
