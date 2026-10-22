@@ -280,4 +280,76 @@ theorem ircT_ok {n : Nat} {mx m' : Mem} {s q r nn kw p : Word}
     rw [e2]
     by_cases hk2 : k = 2 <;> simp [hk2, hk5]
 
+/-! ## From the copy's words to the relocation's premises -/
+
+theorem shR_of_copy {P B : Array Word} {t : Nat} {sW : Word} {p : Nat} {K : Nat → Prop}
+    (hs0 : sW ≠ 0) (hP : P.size < 2 ^ 63)
+    (hcopy : ∀ k, K k → B[p + k]? = some (rdW P (sW + UInt64.ofNat k))) :
+    ShR (trunc P t) B sW.toNat p K := by
+  intro k v hk hv
+  have hs : sW.toNat ≠ 0 := fun h0 => hs0 (UInt64.toNat_inj.mp (by simpa using h0))
+  have hx : sW.toNat + k ≠ 0 := by omega
+  have hlt := trunc_lt hv hx
+  rw [hcopy k hk, rdW_of_trunc hv hx (toNat_add_ofNat (by omega))]
+
+/-- A slice of the cut pool whose copy is at `q`. -/
+theorem slice_of_copy {P B : Array Word} {t : Nat} {offW cntW : Word} {q : Nat}
+    (hP : P.size < 2 ^ 63) (hne : cntW ≠ 0 → offW ≠ 0)
+    (hcopy : ∀ j < cntW.toNat, B[q + j]? = some (rdW P (offW + UInt64.ofNat j))) :
+    ∀ j v, j < cntW.toNat → (trunc P t)[offW.toNat + j]? = some v → B[q + j]? = some v := by
+  intro j v hj hv
+  have hc0 : cntW ≠ 0 := fun h0 => by subst h0; simp at hj
+  have ho : offW.toNat ≠ 0 := fun h0 => hne hc0 (UInt64.toNat_inj.mp (by simpa using h0))
+  have hx : offW.toNat + j ≠ 0 := by omega
+  have hlt := trunc_lt hv hx
+  rw [hcopy j hj, rdW_of_trunc hv hx (toNat_add_ofNat (by omega))]
+
+/-- A header word the cut pool holds at `s + k` is the pool's word at the word index `s + k`. -/
+theorem hdr_of_trunc {P : Array Word} {t : Nat} {sW : Word} {k x : Nat} (hP : P.size < 2 ^ 63)
+    (hs0 : sW ≠ 0) (hx : nat? (trunc P t) (sW.toNat + k) = some x) :
+    (rdW P (sW + UInt64.ofNat k)).toNat = x := by
+  simp only [nat?, Option.map_eq_some_iff] at hx
+  obtain ⟨w, hw, rfl⟩ := hx
+  have hs : sW.toNat ≠ 0 := fun h0 => hs0 (UInt64.toNat_inj.mp (by simpa using h0))
+  have hlt := trunc_lt hw (by omega)
+  rw [rdW_of_trunc hw (by omega) (toNat_add_ofNat (by omega))]
+
+/-- **The relocation, from the copy's words.** -/
+theorem decCI_of_copy {P B : Array Word} {t : Nat} {dn0 dn : NIdx → Option ConLeche.Name}
+    {sW qW rW : Word} {p : Nat} {c : IConstantInfo}
+    (hc : decCI (trunc P t) dn0 sW.toNat = some c) (hF : FrontCI c) (hP : P.size < 2 ^ 63)
+    (hs0 : sW ≠ 0)
+    (hkind : ∀ kk, nat? (trunc P t) sW.toNat = some kk → ∀ k, relocK kk k →
+      B[p + k]? = some (rdW P (sW + UInt64.ofNat k)))
+    (hq : B[p + 2]? = some qW)
+    (hl : ∀ j < (rdW P (sW + 3)).toNat,
+      B[qW.toNat + j]? = some (rdW P (rdW P (sW + 2) + UInt64.ofNat j)))
+    (hl0 : rdW P (sW + 3) ≠ 0 → rdW P (sW + 2) ≠ 0)
+    (hr : nat? (trunc P t) sW.toNat = some 5 → B[p + 7]? = some rW ∧
+      (∀ x < 11 * (rdW P (sW + 8)).toNat,
+        B[rW.toNat + x]? = some (rdW P (rdW P (sW + 7) + UInt64.ofNat x))) ∧
+      (rdW P (sW + 8) ≠ 0 → rdW P (sW + 7) ≠ 0) ∧ (rdW P (sW + 8)).toNat < 2 ^ 60) :
+    decCI B dn p = some c := by
+  refine decCI_reloc (q := qW.toNat) (r := rW.toNat) hc hF
+    (fun kk hkk => shR_of_copy hs0 hP (hkind kk hkk)) (by simp [nat?, hq]) ?_ ?_
+  · intro off cnt hoff hcnt
+    have e2 := hdr_of_trunc (k := 2) hP hs0 hoff
+    have e3 := hdr_of_trunc (k := 3) hP hs0 hcnt
+    simp only [show UInt64.ofNat 2 = 2 from rfl, show UInt64.ofNat 3 = 3 from rfl] at e2 e3
+    rw [← e2, ← e3]
+    exact slice_of_copy hP hl0 hl
+  · intro h5
+    obtain ⟨h7, hrs, hr0, hb⟩ := hr h5
+    refine ⟨by simp [nat?, h7], fun off cnt hoff hcnt => ?_⟩
+    have e7 := hdr_of_trunc (k := 7) hP hs0 hoff
+    have e8 := hdr_of_trunc (k := 8) hP hs0 hcnt
+    simp only [show UInt64.ofNat 7 = 7 from rfl, show UInt64.ofNat 8 = 8 from rfl] at e7 e8
+    rw [← e7, ← e8]
+    have hcw : (UInt64.ofNat (11 * (rdW P (sW + 8)).toNat)).toNat = 11 * (rdW P (sW + 8)).toNat :=
+      UInt64.toNat_ofNat_of_lt' (by rw [show UInt64.size = 2 ^ 64 from rfl]; omega)
+    have hcp := slice_of_copy (t := t) (cntW := UInt64.ofNat (11 * (rdW P (sW + 8)).toNat)) hP
+      (fun hne => hr0 (fun h0 => hne (by rw [h0]; rfl))) (fun j hj => hrs j (by rw [hcw] at hj; exact hj))
+    intro x v hx hv
+    exact hcp x v (by rw [hcw]; exact hx) hv
+
 end L.Arena
