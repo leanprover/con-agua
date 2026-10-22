@@ -357,16 +357,25 @@ def ilwBinW (R : ArrId) (mk : FnName) (p : Prog) (n : Nat) (m : Mem) (h ko kc vo
     (rdW (m.arr64 R) (idxW h * 4 + tierW h * 2 + 1)) ko kc vo vc fu
     (callW p n "lp_go" [rdW (m.arr64 R) (idxW h * 4 + tierW h * 2), ko, kc, vo, vc, fu] m))
 
-/-- `lp_let` after its third child. -/
-def ilwLetK₃ (p : Prog) (n : Nat) (h f a b x y : Word) : Option (List Word × Mem) → Option (Word × Mem)
+/-- `lp_let_tail` after the third child: the rebuild. -/
+def ilwLetTK (p : Prog) (n : Nat) (h f a b x y : Word) : Option (List Word × Mem) → Option (Word × Mem)
   | none => none
-  | some (z, m₃) => ilwSetK h (ilwHd (callW p n "lp_rb_let" [h, f, a, b, x, y, z.headD 0] m₃))
+  | some (z, m₃) => ilwHd (callW p n "lp_rb_let" [h, f, a, b, x, y, z.headD 0] m₃)
 
-/-- `lp_let` after its second child. -/
+@[arena_grind =] theorem ilwLetTK_some (p : Prog) (n : Nat) (h f a b x y : Word) (z : List Word) (m₃ : Mem) :
+    ilwLetTK p n h f a b x y (some (z, m₃)) = ilwHd (callW p n "lp_rb_let" [h, f, a, b, x, y, z.headD 0] m₃) :=
+  rfl
+
+/-- **The model of `lp_let_tail`** at L fuel `n + 1`: the third child, the rebuild. -/
+def ilwLetTW (p : Prog) (n : Nat) (m : Mem) (h f a b x y ko kc vo vc fu : Word) : Option (Word × Mem) :=
+  ilwLetTK p n h f a b x y (callW p n "lp_go" [b, ko, kc, vo, vc, fu] m)
+
+/-- `lp_let` after its second child: the tail, the memo write. -/
 def ilwLetK₂ (p : Prog) (n : Nat) (h f a b ko kc vo vc fu x : Word) :
     Option (List Word × Mem) → Option (Word × Mem)
   | none => none
-  | some (y, m₂) => ilwLetK₃ p n h f a b x (y.headD 0) (callW p n "lp_go" [b, ko, kc, vo, vc, fu] m₂)
+  | some (y, m₂) =>
+    ilwSetK h (ilwHd (callW p n "lp_let_tail" [h, f, a, b, x, y.headD 0, ko, kc, vo, vc, fu] m₂))
 
 /-- `lp_let` after its first child. -/
 def ilwLetK₁ (p : Prog) (n : Nat) (h f a b ko kc vo vc fu : Word) :
@@ -374,12 +383,9 @@ def ilwLetK₁ (p : Prog) (n : Nat) (h f a b ko kc vo vc fu : Word) :
   | none => none
   | some (x, m₁) => ilwLetK₂ p n h f a b ko kc vo vc fu (x.headD 0) (callW p n "lp_go" [a, ko, kc, vo, vc, fu] m₁)
 
-@[arena_grind =] theorem ilwLetK₃_some (p : Prog) (n : Nat) (h f a b x y : Word) (z : List Word) (m₃ : Mem) :
-    ilwLetK₃ p n h f a b x y (some (z, m₃)) =
-      ilwSetK h (ilwHd (callW p n "lp_rb_let" [h, f, a, b, x, y, z.headD 0] m₃)) := rfl
 @[arena_grind =] theorem ilwLetK₂_some (p : Prog) (n : Nat) (h f a b ko kc vo vc fu x : Word) (y : List Word)
     (m₂ : Mem) : ilwLetK₂ p n h f a b ko kc vo vc fu x (some (y, m₂)) =
-      ilwLetK₃ p n h f a b x (y.headD 0) (callW p n "lp_go" [b, ko, kc, vo, vc, fu] m₂) := rfl
+      ilwSetK h (ilwHd (callW p n "lp_let_tail" [h, f, a, b, x, y.headD 0, ko, kc, vo, vc, fu] m₂)) := rfl
 @[arena_grind =] theorem ilwLetK₁_some (p : Prog) (n : Nat) (h f a b ko kc vo vc fu : Word) (x : List Word)
     (m₁ : Mem) : ilwLetK₁ p n h f a b ko kc vo vc fu (some (x, m₁)) =
       ilwLetK₂ p n h f a b ko kc vo vc fu (x.headD 0) (callW p n "lp_go" [a, ko, kc, vo, vc, fu] m₁) := rfl
@@ -522,6 +528,7 @@ structure ILWProg (p : Prog) : Prop where
   lam : p.lookup "lp_lam" = some lpLam
   fa : p.lookup "lp_forall" = some lpForall
   le : p.lookup "lp_let" = some lpLet
+  lt : p.lookup "lp_let_tail" = some lpLetTail
   pj : p.lookup "lp_proj" = some lpProj
   core : p.lookup "inst_lp_core" = some instLPCore
   lp : p.lookup "inst_lp" = some instLPL
@@ -584,6 +591,16 @@ theorem lpRbLet_spec (n : Nat) (s₀ : St) (h f a b x y z : Word) :
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "mk_let"] <;>
     finish
+
+theorem lpLetTail_spec (n : Nat) (s₀ : St) (h f a b x y ko kc vo vc fu : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "lp_let_tail" [h, f, a, b, x, y, ko, kc, vo, vc, fu]
+    ⦃fun r s' => LocEq s' s₀ ∧ ilwLetTW p n s₀.mem h f a b x y ko kc vo vc fu = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp.lt]
+  simp only [callFn, lpLetTail]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      callW_spec p n "lp_go", callW_spec p n "lp_rb_let"] <;>
+    finish (gen := 20) [ilwLetTW]  -- eleven parameters: `Locals.init` reads at depth 10
 
 set_option maxHeartbeats 1000000 in
 theorem lpProj_spec (n : Nat) (s₀ : St) (h ko kc vo vc fu : Word) :
