@@ -144,7 +144,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1714 functions, 9 of them stubs.
+1717 functions, 9 of them stubs.
 -/
 
 namespace L.Checker
@@ -372,10 +372,10 @@ def checkerProg : Prog := [
   ("block_caps_at", L.Ind.blockCapsAt),
   ("block_caps_at_er_copy", L.Ind.blockCapsAtErCopy),
   ("block_caps_at_er_copy_go", L.Ind.blockCapsAtErCopyGo),
-  ("block_caps_at_finish", L.Ind.blockCapsAtFinish),
-  ("block_caps_at_one", L.Ind.blockCapsAtOne),
-  ("block_caps_at_rest", L.Ind.blockCapsAtRest),
   ("block_caps_ctor_names", L.Ind.blockCapsCtorNames),
+  ("block_caps_fin", L.Ind.blockCapsFin),
+  ("block_caps_head", L.Ind.blockCapsHead),
+  ("block_caps_one", L.Ind.blockCapsOne),
   ("block_counts", L.Ind.blockCounts),
   ("block_counts_head", L.Ind.blockCountsHead),
   ("block_counts_pure", L.Ind.blockCountsPure),
@@ -496,6 +496,7 @@ def checkerProg : Prog := [
   ("check_block_classes_keys", L.Ind.checkBlockClassesKeys),
   ("check_block_classes_one_per_member", L.Ind.checkBlockClassesOnePerMember),
   ("check_block_ctors", L.Ind.checkBlockCtors),
+  ("check_block_ctors_go", L.Ind.checkBlockCtorsGo),
   ("check_block_ctors_one", L.Ind.checkBlockCtorsOne),
   ("check_block_doms_at", L.Ind.checkBlockDomsAt),
   ("check_block_idx_sorts", L.Ind.checkBlockIdxSorts),
@@ -753,6 +754,7 @@ def checkerProg : Prog := [
   ("er_copy", L.Ind.erCopy),
   ("er_from_iw", L.Ind.erFromIw),
   ("er_from_iw_go", L.Ind.erFromIwGo),
+  ("er_put5", L.Ind.erPut5),
   ("er_sl_at", L.Ind.erSlAt),
   ("er_sl_eq", L.Ind.erSlEq),
   ("er_slice_eq", L.Arena.erSliceEqL),
@@ -927,6 +929,7 @@ def checkerProg : Prog := [
   ("ind_ctor", L.Front.Ind.indCtor),
   ("ind_cv", L.Front.Ind.indCv),
   ("ind_fields", L.Front.Ind.indFields),
+  ("ind_info_rec", L.Ind.indInfoRec),
   ("ind_list", L.Front.Ind.indList),
   ("ind_member", L.Front.Ind.indMember),
   ("ind_nlist", L.Front.Ind.indNList),
@@ -2019,7 +2022,7 @@ def checkerProg : Prog := [
   ("consts_resolve_ffast", abortStub 2),
   ("fvar_b", abortStub 2),
   ("intern_ls_iw", abortStub 2),
-  ("lv_zero_caps", abortStub 2),
+  ("lv_zero_caps", abortStub 1),
   ("name_rec", abortStub 1),
   ("name_rec_i", abortStub 2),
   ("open_pis_at_fvars_f", abortStub 3),

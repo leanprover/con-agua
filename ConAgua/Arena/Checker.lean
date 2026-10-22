@@ -6,6 +6,7 @@ import ConAgua.Arena.DeclStepGo
 import ConAgua.Arena.PromoteRecRef
 import ConAgua.Arena.DeclCheckLoop
 import ConAgua.Arena.PromoteCIRef31
+import ConAgua.Arena.DeclTwin
 
 /-!
 # The declaration loop in L, top down: `installFold`, `checkPendingList`, `installThenCheck`
@@ -737,7 +738,7 @@ theorem installStep_pieces (hm : mode = .verified) (hdc : DeclCallees dn p) (hb 
     (hpn : p.lookup "is_none" = some isNoneL) (hps : p.lookup "is_some" = some isSomeL)
     (hp : p.lookup "install_step" = some installStepL) (n : Nat) (s₀ : St) (a₀ : AState)
     (i vis : Word) (fe : IFEnv) (pend : Array PendingCheck) (hi : i.toNat < ds.size)
-    (hR : LoopR pins dn s₀.mem a₀ vis fe pend ds) :
+    (hok : ConRon.Bridge.StateOK a₀) (hR : LoopR pins dn s₀.mem a₀ vis fe pend ds) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_step" [i, vis]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok flushCaches a₀ ∧ AM.ok enterScratch (AM.st flushCaches a₀) ∧ AM.ok (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀)) ∧
       AM.ok (installStepK i.toNat vis.toNat pend (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀)))) (AM.st (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))) ∧ LoopR pins dn s'.mem (AM.st (installStepK i.toNat vis.toNat pend (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀)))) (AM.st (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀)))) (r.headD 0) (AM.res (installStepK i.toNat vis.toNat pend (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀)))) (AM.st (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀)))).1
@@ -762,7 +763,7 @@ theorem installStep_pieces (hm : mode = .verified) (hdc : DeclCallees dn p) (hb 
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         (flush_loop (pins := pins) dn ds p hb n · a₀ vis fe pend),
         (enter_loop (pins := pins) dn ds p hb n · (AM.st flushCaches a₀) vis fe pend),
-        (installStepGo_spec mode pins dn ds p hm (hm ▸ checkDecl_loop hdc.cd pins dn hdc.dninj ds) hdc.istg hdc.iv hdc.cvg n · (AM.st enterScratch (AM.st flushCaches a₀)) · fe pend · ·),
+        (installStepGo_spec mode pins dn ds p hm (hm ▸ checkDecl_loop hdc.cd pins dn hdc.dninj ds) hdc.istg hdc.iv hdc.cvg n · (AM.st enterScratch (AM.st flushCaches a₀)) · fe pend · · (TwinFold.enterAM hok)),
         (isNone_refines pins dn ds p hb hpn n · (AM.st (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))) · · (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).1 pend),
         (isSome_refines pins dn ds p hb hpp hps n · (AM.st (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))) · · · · (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).1 pend ((AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).2.getD default))] <;>
       -- the view `vis` is read after three calls: four `LocEq` hops (depth, not search)
@@ -774,12 +775,12 @@ theorem installStep_refines (hm : mode = .verified) (hdc : DeclCallees dn p) (hb
     (hpn : p.lookup "is_none" = some isNoneL) (hps : p.lookup "is_some" = some isSomeL)
     (hp : p.lookup "install_step" = some installStepL) (n : Nat) (s₀ : St) (a₀ : AState)
     (i vis : Word) (fe : IFEnv) (pend : Array PendingCheck) (hi : i.toNat < ds.size)
-    (hR : LoopR pins dn s₀.mem a₀ vis fe pend ds) :
+    (hok : ConRon.Bridge.StateOK a₀) (hR : LoopR pins dn s₀.mem a₀ vis fe pend ds) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_step" [i, vis]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (installStep mode pins i.toNat fe pend (dsAt ds i)) a₀ ∧
       LoopR pins dn s'.mem (AM.st (installStep mode pins i.toNat fe pend (dsAt ds i)) a₀) (r.headD 0) (AM.res (installStep mode pins i.toNat fe pend (dsAt ds i)) a₀).1 (AM.res (installStep mode pins i.toNat fe pend (dsAt ds i)) a₀).2 ds; ⊤⦄ := by
   have hv := hR.vis
-  refine triple_post (installStep_pieces mode pins dn ds p hm hdc hb hpp hpn hps hp n s₀ a₀ i vis fe pend hi hR)
+  refine triple_post (installStep_pieces mode pins dn ds p hm hdc hb hpp hpn hps hp n s₀ a₀ i vis fe pend hi hok hR)
     fun r s' ⟨hl, h1, h2, h3, h4, h5⟩ => ?_
   rw [← hv] at h4 h5
   obtain ⟨o, st, rs⟩ := installStep_ok mode pins i.toNat fe pend (dsAt ds i) a₀ h1 h2 h3 h4
@@ -794,12 +795,15 @@ theorem installDeclStep_refines (hm : mode = .verified) (hb : BracketProg p) (hd
     (hpi : p.lookup "install_step" = some installStepL)
     (hp : p.lookup "install_decl_step" = some installDeclStepL) (n : Nat) (s₀ : St) (a₀ : AState)
     (i vis : Word) (fe : IFEnv) (pend : Array PendingCheck) (hi : i.toNat < ds.size)
-    (hR : LoopR pins dn s₀.mem a₀ vis fe pend ds) :
+    (hT : TwinFold pins ds fe pend a₀) (hR : LoopR pins dn s₀.mem a₀ vis fe pend ds) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_decl_step" [i, vis]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (installDeclStep mode pins (i.toNat, fe, pend) (dsAt ds i)) a₀ ∧
       AM.res (installDeclStep mode pins (i.toNat, fe, pend) (dsAt ds i)) a₀ = .ok (i.toNat + 1, (AM.res (installStep mode pins i.toNat fe pend (dsAt ds i)) (AM.st (andPinOk (dsAt ds i)) a₀)).1, (AM.res (installStep mode pins i.toNat fe pend (dsAt ds i)) (AM.st (andPinOk (dsAt ds i)) a₀)).2) ∧
       LoopR pins dn s'.mem (AM.st (installDeclStep mode pins (i.toNat, fe, pend) (dsAt ds i)) a₀) (r.headD 0) (AM.res (installStep mode pins i.toNat fe pend (dsAt ds i)) (AM.st (andPinOk (dsAt ds i)) a₀)).1 (AM.res (installStep mode pins i.toNat fe pend (dsAt ds i)) (AM.st (andPinOk (dsAt ds i)) a₀)).2 ds; ⊤⦄ := by
   have hok := installDeclStep_ok mode pins (i.toNat, fe, pend) (dsAt ds i) a₀
+  have hokA : AM.ok (andPinOk (dsAt ds i)) a₀ → ConRon.Bridge.StateOK (AM.st (andPinOk (dsAt ds i)) a₀) := by
+    have e : dsAt ds i = ds[i.toNat] := by simp [dsAt, Array.getD, hi]
+    rw [e]; exact hT.andPinAM hi
   rw [invoke_eq _ hp]
   simp only [callFn, installDeclStepL]
   cases n with
@@ -829,14 +833,16 @@ def FoldPost (m : Mem) (a : AState) (v : Word) (k : Nat) (fe : IFEnv) (pend : Ar
 /-- `install_fold_go`'s spec at fuel `n`. -/
 def FoldGoSpec (n : Nat) : Prop :=
   ∀ (s₀ : St) (a₀ : AState) (i cnt vis : Word) (fe : IFEnv) (pend : Array PendingCheck),
-    i.toNat ≤ ds.size → cnt.toNat = ds.size → LoopR pins dn s₀.mem a₀ vis fe pend ds →
+    i.toNat ≤ ds.size → cnt.toNat = ds.size → TwinFold pins ds fe pend a₀ →
+    LoopR pins dn s₀.mem a₀ vis fe pend ds →
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_fold_go" [i, cnt, vis]
     ⦃fun r s' => LocEq s' s₀ ∧ FoldPost mode pins dn ds s'.mem a₀ (r.headD 0) i.toNat fe pend; ⊤⦄
 
 /-- `install_fold_next`'s spec at fuel `n`. -/
 def FoldNextSpec (n : Nat) : Prop :=
   ∀ (s₀ : St) (a₀ : AState) (i cnt vis : Word) (fe : IFEnv) (pend : Array PendingCheck),
-    i.toNat < ds.size → cnt.toNat = ds.size → LoopR pins dn s₀.mem a₀ vis fe pend ds →
+    i.toNat < ds.size → cnt.toNat = ds.size → TwinFold pins ds fe pend a₀ →
+    LoopR pins dn s₀.mem a₀ vis fe pend ds →
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_fold_next" [i, cnt, vis]
     ⦃fun r s' => LocEq s' s₀ ∧ FoldPost mode pins dn ds s'.mem a₀ (r.headD 0) i.toNat fe pend; ⊤⦄
 
@@ -853,7 +859,7 @@ include hpp hpn hps hpi hpd hpg hpx hsz hb hdc hm
 theorem foldGo_step (n : Nat) (ih : FoldNextSpec mode pins dn ds p n) :
     FoldGoSpec mode pins dn ds p (n + 1) := by
   unfold FoldNextSpec at ih
-  intro s₀ a₀ i cnt vis fe pend hi hc hR
+  intro s₀ a₀ i cnt vis fe pend hi hc hT hR
   have hlt : i ≠ cnt → i.toNat < ds.size := fun h => by
     have : i.toNat ≠ cnt.toNat := fun e => h (UInt64.toNat_inj.mp e)
     omega
@@ -875,8 +881,16 @@ theorem foldGo_step (n : Nat) (ih : FoldNextSpec mode pins dn ds p n) :
 theorem foldNext_step (n : Nat) (ih : FoldGoSpec mode pins dn ds p n) :
     FoldNextSpec mode pins dn ds p (n + 1) := by
   unfold FoldGoSpec at ih
-  intro s₀ a₀ i cnt vis fe pend hi hc hR
+  intro s₀ a₀ i cnt vis fe pend hi hc hT hR
   have h1 : (i + 1).toNat = i.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  have hstep : AM.ok (installDeclStep mode pins (i.toNat, fe, pend) (dsAt ds i)) a₀ →
+      AM.res (installDeclStep mode pins (i.toNat, fe, pend) (dsAt ds i)) a₀ = .ok (i.toNat + 1, (AM.res (installStep mode pins i.toNat fe pend (dsAt ds i)) (AM.st (andPinOk (dsAt ds i)) a₀)).1, (AM.res (installStep mode pins i.toNat fe pend (dsAt ds i)) (AM.st (andPinOk (dsAt ds i)) a₀)).2) →
+      TwinFold pins ds (AM.res (installStep mode pins i.toNat fe pend (dsAt ds i)) (AM.st (andPinOk (dsAt ds i)) a₀)).1
+        (AM.res (installStep mode pins i.toNat fe pend (dsAt ds i)) (AM.st (andPinOk (dsAt ds i)) a₀)).2
+        (AM.st (installDeclStep mode pins (i.toNat, fe, pend) (dsAt ds i)) a₀) := by
+    have e : dsAt ds i = ds[i.toNat] := by simp [dsAt, Array.getD, hi]
+    subst hm; rw [e]
+    exact hT.stepAM hi
   have h2 : (i + 1).toNat ≤ ds.size := by omega
   have hcons : ∀ (m : Mem) (v j : Word), j = i + 1 → AM.ok (installDeclStep mode pins (i.toNat, fe, pend) (dsAt ds i)) a₀ → AM.res (installDeclStep mode pins (i.toNat, fe, pend) (dsAt ds i)) a₀ = .ok (i.toNat + 1, (AM.res (installStep mode pins i.toNat fe pend (dsAt ds i)) (AM.st (andPinOk (dsAt ds i)) a₀)).1, (AM.res (installStep mode pins i.toNat fe pend (dsAt ds i)) (AM.st (andPinOk (dsAt ds i)) a₀)).2) →
       FoldPost mode pins dn ds m (AM.st (installDeclStep mode pins (i.toNat, fe, pend) (dsAt ds i)) a₀) v j.toNat (AM.res (installStep mode pins i.toNat fe pend (dsAt ds i)) (AM.st (andPinOk (dsAt ds i)) a₀)).1
@@ -925,9 +939,9 @@ theorem installFoldGo_refines (n : Nat) :
   induction n with
   | zero =>
     constructor
-    · intro s₀ a₀ i cnt vis fe pend _ _ _; rw [invoke_eq _ hpg]; simp only [callFn]
+    · intro s₀ a₀ i cnt vis fe pend _ _ _ _; rw [invoke_eq _ hpg]; simp only [callFn]
       vcgen [exec] <;> grind
-    · intro s₀ a₀ i cnt vis fe pend _ _ _; rw [invoke_eq _ hpx]; simp only [callFn]
+    · intro s₀ a₀ i cnt vis fe pend _ _ _ _; rw [invoke_eq _ hpx]; simp only [callFn]
       vcgen [exec] <;> grind
   | succ n ih =>
     exact ⟨foldGo_step mode pins dn ds p hpp hpn hps hpi hpd hpg hpx hsz hb hdc hm n ih.2,
@@ -1115,6 +1129,7 @@ theorem installThenCheck_refines (hm : mode = .verified) (hb : BracketProg p) (h
     (hpcg : p.lookup "check_pending_go" = some checkPendingGoL)
     (hpcx : p.lookup "check_pending_next" = some checkPendingNextL)
     (hp : p.lookup "install_then_check" = some installThenCheckL) (n : Nat) (s₀ : St) (a₀ : AState)
+    (hT : TwinFold pins ds (mkIFEnv IEnv.empty) #[] a₀)
     (hR : LoopR pins dn s₀.mem a₀ 0 (mkIFEnv IEnv.empty) #[] ds) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_then_check" []
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (installThenCheck mode pins ds) a₀ ∧ AM.res (installThenCheck mode pins ds) a₀ = .ok (foldFe (AM.res (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀)) ∧

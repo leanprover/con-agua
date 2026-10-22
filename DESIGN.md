@@ -7953,6 +7953,90 @@ child dangled when it was interned (no `StoreWF` needed).
   commit `8c21b5d`, adapted to master's `LvlCnt` (list counts) and `CoreS.of_ls`'s `hlsa`/`hlc`.
   The WIP `InstLPWalkLet` is not landed. No L change. Globals rule: the instLP family uses only
   existing slots (`CTL[136]` spine top, `CTL[192]` level-heap top, MemoLib schemas `CTL[54‥59]`).
+## Phase 2, round 5: the twin's well-formedness, the real ROM readers (2026-10-22, lane `decls4`)
+
+### Landing 1: `StateOK` from the twin's fold; canon in the arms; the ROM readers as callees; `subst_const_all`
+
+* **The twin's store well-formedness, without touching `StageR`.** Canon's comparisons
+  (`cvCanonEq_refines`, `ciCanonEq_refines`, `canonEqList_refines`) compare literal handles where the
+  twin compares values; that needs `LitInj a`, a fact about the twin state alone (con-ron's
+  `EWFAt.view_inj` under `StateOK`). No memory relation can give it, and `StageR` relates memories to
+  states without saying anything about the state's own invariants. So it is carried on the twin
+  side: **`TwinFold pins ds fe pend a`** (`DeclTwin.lean`) is con-ron's `installFold_bridge`
+  induction invariant (`FoldOK` at some `env` with unique names, the pins and the records denote, the
+  pin sets, records and pending groups persistent), and **`TwinFold.step`** is that induction's step
+  (`installStep_split`, `andPinOk_run`, `checkDecl_nodup`/`SplitInstall.nodup`, all con-ron's),
+  applied to the twin run each L step refines. Pure twin reasoning, ~150 lines.
+  - Threading: `FoldGoSpec`/`FoldNextSpec`/`installThenCheck_refines` take `TwinFold` (the pipeline
+    supplies it from `stages_frame`: `FoldOK` at the start, `NodupNames Env.empty`, `PinsDenote`,
+    `PersPinSets`, `PersDecl`, `denoteDecls`); `installDeclStep_refines` takes `TwinFold` and passes
+    `StateOK` of the state after `andPinOk` (`TwinFold.andPinAM`); `installStep_*` and
+    `installStepGo_spec` take `StateOK` and pass it through the bracket's opening
+    (`TwinFold.enterAM`: `EStore.enableScratch_wf`); `CheckDeclSpec` and `ArmSpec` take `StateOK a₀`.
+    `LoopR` is unchanged.
+  - In the arms: after the ROM read `BasisKind.decls_run` (con-ron) keeps `StateOK`, after
+    `ci_to_cv` our `toConstantVal_stateOK` (the `.projInfo` arm's three interns), and
+    `StateOK.view_inj` gives `LitInj`; `PoolSmall` from `StageR` (`poolSmall_of_stage`).
+  - **Discharged**: `CvCanonSpec` (quotient arm) and `CiCanonSpec` (axiom arm, `Quot.sound`) are
+    gone; the arms use canon's theorems directly.
+  - **Not discharged: `lvlEqStub_spec`'s gap** (`TwinOK` at `lvl_eq_c`'s callers). Its callers
+    (`DeclCvg`, lane `induct`'s files) call `lvl_eq_c` after core stubs (`infer_type_core`,
+    `ensure_sort_core`), whose posts are `KeepPost`: `TwinOK`'s caches (`ReadLCOK`, `ReadLsCOK`),
+    `CoreMemos` and `StoreDen` at the state after a core call are not derivable from the twin's fold
+    (they are `CoreS` facts). They come with the knot: when the core's stub specs become the real
+    `CoreS`-carrying ones (lanes `defeq2`/`whnf4`), `StageR.coreS` + their posts give `TwinOK`.
+* **The ROM readers as real callees.** The arms' models called `stubM "rom_*"` and used the six
+  `sorry`'d `RelAM` specs of `DeclRomStubs.lean`, which no proof of the real readers (lane
+  `integrate`'s `CIRead.lean`) could ever discharge (`stubM` is opaque). They now call
+  `callW p n "rom_*"` and take **`L.Rom.RomRefs p`** (`ConAgua/Rom/CIReadSpec.lean`: the six
+  refinements in `CallRef` shape, same pre/twin values/posts as before) as a field of their program
+  bundles (`RedProg.rom`, `QuotProg.rom`, `DmProg7.lRom`, and the explicit `hR` of
+  `checkBasisDecl_refines`, `reduce*_refines`). `RomRefs p` is `romRefs_of (RomReady p)`: the
+  program's readers are `romCIProg` over a buffer starting with `romData` (`RomCIProg`), i.e. the
+  substituted program `P.subPB bs` after `pb_check` (`triple_subPB`, as lane `romload`'s stage
+  theorems). `romRefs_of` is `sorry` (helper `decls4-rom` proving it). The six `RelAM` stub specs are
+  deleted. Models changed (fuel and program threaded): `selW`, `fpcW`/`fpcK1`, `tcoK4`, `famK6`,
+  `reo*`.
+* **`subst_const_all` refines `substConstAll`** (helper `decls4-sca`, 18 min, `DeclNatSubAll.lean`,
+  418 lines, sorry-free, `@[refines]`): `CheckDeclProg.substAll` is gone (`substCAll_of`).
+* Helpers running: `decls4-rom` (the ROM readers' proofs), `decls4-andpin` (`and_pin_ok`'s inductive
+  arm: `and_block_named`, `ind_block_to_erec`, the canonical comparison against `rom_and_pin`).
+* Census (`scripts/census.py`): phase 2 **218 proven, 40 sorry, 33 written, 40 todo** (lane start,
+  master `b678e1d`: 206 / 50 / 35 / 40); totals 758 proven / 154 sorry of 1352. Caveat: targets
+  through the ROM readers now rest on the hypothesis `RomRefs p` (a program fact, `romRefs_of`,
+  `sorry` until the helper lands) instead of `sorry`'d stub specs.
+
+### Landing 13: helper `install`; the lane's close
+* Helper `install` (4.75 h): whole `@[refines]` for `checkBlockTele(s)`, `checkBlockAgree`,
+  `consBlockCtors` (no new stub), `blockCapsAt`, `consBlockInds`, `checkBlockInds` (through the new
+  `lvZeroCaps_spec` contract: `lv_zero_caps(l)` now *returns* the three `PropWhen` words, the caller
+  writes the record), `checkBlockIdxSorts`, `checkAbsCtorSorts(All)`, `checkBlockRec`,
+  `checkBlockCtors` (through "pending" contracts for `check_struct_field_sorts_i`, `gen_rec_check`,
+  `check_sum_ctors` — **follow-up**: the first and third are proven since landing 12; replace those
+  two contracts by the real refinements). **Bugs** (L, fixed): `check_block_agree` opened member 0's
+  telescope once where the twin re-opens per member; `block_caps_at` computed `ruleK` from the raw
+  `isProp` word (wrong for words other than 0/1); `block_caps_at` wrote its record across calls
+  below the record pool's top (now computes all fields, then `ind_info_rec` writes the record).
+  Open: `checkBlockPositivity` (needs `nestRoot_refines`' preconditions `UCtx`, `CssAt`, `NSB`,
+  `PosMR`, fuel), `checkBlockTables`, `checkBlockPass`, `checkBlockTail`, `checkBlock`,
+  `blockLargeElimAllowed`. ~4.3k proof lines for ~230 L lines.
+* `lv_zero_caps`: lane defeq2's `CapsNeverZeroCore.lean` proves it under `CoreS`; using it for the
+  stage needs the `StageR`→`CoreS` bridge (landing 1, "tried and dropped") — the next structural
+  step for this lane's successor, together with `lvl_eq_c`, `lv_leq_top` and the whnf adapters.
+* Census: phase 8 **79 proven, 108 sorry, 30 written, 6 todo** (lane start 58 / 38 / 119 / 8);
+  totals 767 proven / 165 sorry / 149 written of 1352 (lane start 411 / 90).
+### For the coordinator and lane `indproofs3`: `StageR` is not changed by `decls4`
+
+`decls4` did not put `StateOK` into `StageR` and will not: it is a fact about the twin state alone, kept
+by no memory frame, so it travels on the twin side (`TwinFold`, landing 1). What `lvl_eq_c`,
+`lv_leq_top`, `lv_zero_caps` need at their callers is `TwinOK` (`DeclLvlStage.lean`: `ReadLCOK`,
+`ReadLsCOK`, `NStoreWF`, `CoreMemos`, `StoreDen dn m a fe`, the sizes): `CoreS` facts, true after core
+calls only if the core stubs' posts say so. Suggested single sweep (lane `indproofs3`): a field
+`twin : TwinOK dn m a fe` in `StageR` (or `StageR' := StageR ∧ TwinOK`, migrated per file), with
+every core stub spec's `KeepPost` carrying it (from `CoreS` via `StageR.coreS`/`CoreS.checkR`).
+`StateOK` need not be in it (the callers get it from `TwinFold`). The only `decls4` files involved
+are `DeclCvg.lean`'s `lvl_eq_c` call sites; `indproofs3` may edit them.
+
 
 ### Landing 11 (defeq2): `KnotCallees.recFireLevels` discharged (`recFireLevelsOK_of`)
 * **Statement**: `RecFireLevelsOK` now asks that what `rec_fire_levels` reads back does so:
