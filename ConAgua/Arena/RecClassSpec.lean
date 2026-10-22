@@ -1211,4 +1211,169 @@ theorem classReadMotiveSlot_refines (p : Prog)
   simp only [ConRon.Arena.ClassRead.motiveSlot]
   erw [this]
 
+
+/-! ## `class_gen_slot_var` (through `pin_word`, `intern_sort`, `intern_fvar`) -/
+
+/-- The word model of `pin_word(k)`. -/
+def pinWordW (m : Mem) (k : Word) : Option Word :=
+  if 0 < (m.arr64 PINS).size ∧ rdW (m.arr64 PINS) 0 ≠ 0 then
+    (if k.toNat < (m.arr64 PINS).size then some (rdW (m.arr64 PINS) k) else none)
+  else none
+
+theorem pinWord_specW (p : Prog) (hp : p.lookup "pin_word" = some pinWordL) (n : Nat) (s₀ : St)
+    (k : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "pin_word" [k]
+    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ pinWordW s₀.mem k = some (r.headD 0); ⊤⦄ := by
+  rw [invoke_eq _ hp]; simp only [callFn, pinWordL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+      finish [pinWordW]
+
+/-- After the sort interning. -/
+def svK2 (m : Mem) (g s : Word) : Option (Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (z, m1) =>
+    if 4294967296 ≤ z then none
+    else if g.toNat < (m1.arr64 IW).size then
+      (match fvinternW m1 (rdW (m1.arr64 IW) g + s) z with
+       | none => none
+       | some (fv, m2) => if 4294967296 ≤ fv then none else some ([fv], m2))
+    else none
+
+/-- **The model of `class_gen_slot_var`.** -/
+def slotVarW (m : Mem) (g s : Word) : Option (List Word × Mem) :=
+  match pinWordW m 53 with
+  | none => none
+  | some u => if 4294967296 ≤ u then none else svK2 m g s (sointernW m u)
+
+theorem slotVar_spec (p : Prog) (hpin : p.lookup "pin_word" = some pinWordL)
+    (hsf : p.lookup "sort_find" = some sortFind) (hsp : p.lookup "sort_push" = some sortPush)
+    (his : p.lookup "intern_sort" = some internSort)
+    (hff : p.lookup "fvar_find" = some fvarFind) (hfp : p.lookup "fvar_push" = some fvarPush)
+    (hif : p.lookup "intern_fvar" = some internFVar)
+    (hp : p.lookup "class_gen_slot_var" = some classGenSlotVar) (n : Nat) (s₀ : St) (g s : Word) :
+    ⦃fun s_ => s_ = s₀⦄ invoke p (exec p n) "class_gen_slot_var" [g, s]
+    ⦃fun r s' => LocEq s' s₀ ∧ slotVarW s₀.mem g s = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]; simp only [callFn, classGenSlotVar]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        pinWord_specW p hpin n, internSort_spec p hsf hsp his n, internFVar_spec p hff hfp hif n] <;>
+      finish [slotVarW, svK2]
+
+
+theorem slotVarW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
+    (a : AState) (g s : Word) (G : ClassGen) (r : List Word) (hS : StageR dn vis fe m a)
+    (hg : iwN m g.toNat = some G.nP) (hgt : g.toNat < iwTop m) (hns : G.nP + s.toNat < 2 ^ 64)
+    (h : slotVarW m g s = some (r, m')) :
+    ∃ x a', (ConRon.Arena.ClassGen.slotVar G s.toNat).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
+      IWGrow m m' ∧ (r.headD 0).toNat < 2 ^ 32 ∧ decE (r.headD 0) = x := by
+  simp only [slotVarW] at h
+  cases hpw : pinWordW m 53 with
+  | none => rw [hpw] at h; simp at h
+  | some u =>
+    rw [hpw] at h
+    by_cases hu : 4294967296 ≤ u
+    · simp [hu] at h
+    simp only [hu, if_false] at h
+    have hu32 : u.toNat < 2 ^ 32 := by
+      have : ¬ (4294967296 : Nat) ≤ u.toNat := hu
+      omega
+    cases hso : sointernW m u with
+    | none => rw [hso] at h; simp [svK2] at h
+    | some zm1 =>
+      obtain ⟨z, m1⟩ := zm1
+      rw [hso] at h
+      simp only [svK2] at h
+      by_cases hz : 4294967296 ≤ z
+      · simp [hz] at h
+      simp only [hz, if_false] at h
+      have hz32 : z.toNat < 2 ^ 32 := by
+        have : ¬ (4294967296 : Nat) ≤ z.toNat := hz
+        omega
+      -- pin
+      have hpin : pinW m 0 ≠ 0 := by
+        simp only [pinWordW] at hpw
+        split at hpw
+        · rename_i hh; exact hh.2
+        · simp at hpw
+      have hfull := hS.1.pins.full hpin
+      have hzl : zeroLevel.run a = .ok (decI (pinW m 53), a) := pinZeroLevel_run hfull
+      have hpu : u = pinW m 53 := by
+        simp only [pinWordW] at hpw
+        split at hpw
+        · rename_i hh
+          split at hpw
+          · simp only [Option.some.injEq] at hpw
+            rw [← hpw]; rfl
+          · simp at hpw
+        · simp at hpw
+      obtain ⟨a1, hrun1, hS1, hg1⟩ := internSort_stage hS u hu32 hso
+      obtain ⟨hg0, hmem⟩ : g.toNat < (m1.arr64 IW).size ∧ True := by
+        by_cases hb : g.toNat < (m1.arr64 IW).size
+        · exact ⟨hb, trivial⟩
+        · simp [hb] at h
+      simp only [hg0, if_true] at h
+      -- IW[g] is unchanged
+      have hrd : rdW (m1.arr64 IW) g = UInt64.ofNat G.nP := by
+        have e1 := (iwN_rdW hg (by have := g.toNat_lt; omega))
+        rw [UInt64.ofNat_toNat] at e1
+        have e2 := hg1.2.2.1 g.toNat hgt
+        simp only [rdW] at e1 ⊢
+        have : (m1.arr64 IW)[g.toNat]? = (m.arr64 IW)[g.toNat]? := e2
+        rw [this]; exact e1.1
+      rw [hrd] at h
+      cases hfv : fvinternW m1 (UInt64.ofNat G.nP + s) z with
+      | none => rw [hfv] at h; simp at h
+      | some fvm2 =>
+        obtain ⟨fv, m2⟩ := fvm2
+        rw [hfv] at h
+        by_cases hf : 4294967296 ≤ fv
+        · simp [hf] at h
+        simp only [hf, if_false, Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨a2, hrun2, hS2, hg2⟩ := internFVar_stage hS1 (UInt64.ofNat G.nP + s) z hz32 hfv
+        have hnP : G.nP < 2 ^ 64 := by omega
+        have hsum : (UInt64.ofNat G.nP + s).toNat = G.nP + s.toNat := by
+          rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' hnP]; exact Nat.mod_eq_of_lt hns
+        have hf32 : fv.toNat < 2 ^ 32 := by
+          have : ¬ (4294967296 : Nat) ≤ fv.toNat := hf
+          omega
+        refine ⟨decE fv, a2, ?_, hS2, hg1.trans hg2, by simpa using hf32, rfl⟩
+        rw [hsum] at hrun2
+        simp only [ConRon.Arena.ClassGen.slotVar]
+        have e0 : (zeroLevel : AM LIdx) a = .ok (decI (pinW m 53), a) := hzl
+        rw [← hpu] at e0
+        simp only [StateT.run] at hrun1 hrun2 ⊢
+        simp only [StateT.bind, e0, bind, Except.bind, hrun1]
+        exact hrun2
+
+
+/-- **`class_gen_slot_var` refines `ClassGen.slotVar`** (through `pin_word` and master's interning). -/
+@[refines ConRon.Arena.ClassGen.slotVar]
+theorem classGenSlotVar_refines (p : Prog) (hpin : p.lookup "pin_word" = some pinWordL)
+    (hsf : p.lookup "sort_find" = some sortFind) (hsp : p.lookup "sort_push" = some sortPush)
+    (his : p.lookup "intern_sort" = some internSort)
+    (hff : p.lookup "fvar_find" = some fvarFind) (hfp : p.lookup "fvar_push" = some fvarPush)
+    (hif : p.lookup "intern_fvar" = some internFVar)
+    (hp : p.lookup "class_gen_slot_var" = some classGenSlotVar) (n : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (g s : Word) (G : ClassGen)
+    (hS : StageR dn vis fe s₀.mem a₀) (hg : iwN s₀.mem g.toNat = some G.nP)
+    (hgt : g.toNat < iwTop s₀.mem) (hns : G.nP + s.toNat < 2 ^ 64) :
+    ⦃fun s_ => s_ = s₀⦄ invoke p (exec p n) "class_gen_slot_var" [g, s]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.ClassGen.slotVar G s.toNat) a₀ ∧
+      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.ClassGen.slotVar G s.toNat) a₀) ∧
+      IWGrow s₀.mem s'.mem ∧ (r.headD 0).toNat < 2 ^ 32 ∧
+      decE (r.headD 0) = AM.res (ConRon.Arena.ClassGen.slotVar G s.toNat) a₀; ⊤⦄ := by
+  refine triple_post (slotVar_spec p hpin hsf hsp his hff hfp hif hp n s₀ g s) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨x, a', hrun, hS', hgr, h1, h2⟩ := slotVarW_ok dn vis fe _ _ a₀ g s G r hS hg hgt hns hm
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok (ConRon.Arena.ClassGen.slotVar G s.toNat) a₀ a' x hrun
+  exact ⟨hl, hok, by rw [hst]; exact hS', hgr, h1, by rw [hres]; exact h2⟩
+
 end L.Ind

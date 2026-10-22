@@ -300,8 +300,11 @@ def classGenBinder : FunDecl := lfn (g, x) locals (t) {
 @[l_impl ConRon.Arena.ClassGen.slotVar]
 def classGenSlotVar : FunDecl := lfn (g, s) locals (u, z, fv) {
   u := call pin_word(53);
+  if 4294967296 <= u { abort };
   z := call intern_sort(u);
+  if 4294967296 <= z { abort };
   fv := call intern_fvar(IW.u64[g] + s, z);
+  if 4294967296 <= fv { abort };
   return fv
 }
 
