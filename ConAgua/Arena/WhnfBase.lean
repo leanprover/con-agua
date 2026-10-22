@@ -340,11 +340,50 @@ abbrev coreWsSch : MemoSch := ⟨151, 152⟩
 abbrev coreFlSch : MemoSch := ⟨152, 154⟩
 abbrev coreLsbSch : MemoSch := ⟨153, 156⟩
 
-/-- The three walk-local memos are well formed (lane `whnf3`). -/
+/-- `InstLP.lean`'s three walk memos (`lpSch`, `lplSch`, `lplsSch`: arrays 52‥54, `CTL[54‥59]`),
+restated here. -/
+abbrev coreLpSch : MemoSch := ⟨52, 54⟩
+abbrev coreLplSch : MemoSch := ⟨53, 56⟩
+abbrev coreLplsSch : MemoSch := ⟨54, 58⟩
+
+/-- A one-word level (or level-list) key: the handle word, second word `0`. -/
+def ilKey {k : IdxKind} : MemoKey (Idx k) where
+  dk k1 _ := decI k1
+  ek x := (x.word.toUInt64, 0)
+  ok k1 k2 := k1.toNat < 2 ^ 32 ∧ k2 = 0
+  ek_dk k1 k2 h := by simp only [(word_decI _ k1 h.1).mpr rfl, h.2]
+  ok_tomb k1 k2 h e := by subst e; exact absurd h.1 (by decide)
+
+/-- A level-valued memo's value relation: a handle word that denotes the entry. -/
+def VI {k : IdxKind} (_ : Mem) (w : Word) (v : Idx k) : Prop := v = decI w ∧ w.toNat < 2 ^ 32
+
+/-- **The `instLP` walk's memos are well formed** (at some maps): `inst_lp_core` clears them on
+entry (an epoch bump, sound on a well-formed memo; the twin starts from `∅`). -/
+def LPMemos (m : Mem) : Prop :=
+  (∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRV coreLpSch lfKey VH m mp) ∧
+  (∃ mp : Std.HashMap LIdx LIdx, MemoRV coreLplSch ilKey VI m mp) ∧
+  (∃ mp : Std.HashMap LsIdx LsIdx, MemoRV coreLplsSch ilKey VI m mp)
+
+theorem coreLpSch_wf : coreLpSch.WF := ⟨by decide, by decide⟩
+theorem coreLplSch_wf : coreLplSch.WF := ⟨by decide, by decide⟩
+theorem coreLplsSch_wf : coreLplsSch.WF := ⟨by decide, by decide⟩
+
+/-- **`LPMemos` across a writer** that avoids arrays 52‥54 and `CTL` words 54, 56, 58. -/
+theorem LPMemos.frame {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+    (hA : (52 : ArrId) ∉ A ∧ (53 : ArrId) ∉ A ∧ (54 : ArrId) ∉ A)
+    (hC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C) (h : LPMemos m) : LPMemos m' :=
+  ⟨let ⟨mp, hm⟩ := h.1;
+    ⟨mp, memoRV_frame coreLpSch coreLpSch_wf lfKey VH A C hA.1 hC.1 m m' hf (fun _ _ h => h) mp hm⟩,
+    let ⟨mp, hm⟩ := h.2.1;
+    ⟨mp, memoRV_frame coreLplSch coreLplSch_wf ilKey VI A C hA.2.1 hC.2.1 m m' hf (fun _ _ h => h) mp hm⟩,
+    let ⟨mp, hm⟩ := h.2.2;
+    ⟨mp, memoRV_frame coreLplsSch coreLplsSch_wf ilKey VI A C hA.2.2 hC.2.2 m m' hf (fun _ _ h => h) mp hm⟩⟩
+
+/-- The walk-local memos are well formed (lane `whnf3`'s three, and the `instLP` walk's). -/
 def WalkMemos (m : Mem) : Prop :=
   (∃ mp : Std.HashMap (EIdx × Nat) Bool, MemoRG coreWsSch lfKey (fun w => w != 0) m mp) ∧
     (∃ mp : Std.HashMap EIdx Unit, MemoRG coreFlSch bmKey (fun _ => ()) m mp) ∧
-    (∃ mp : Std.HashMap EIdx Bool, MemoRG coreLsbSch bmKey (fun w => w != 0) m mp)
+    (∃ mp : Std.HashMap EIdx Bool, MemoRG coreLsbSch bmKey (fun w => w != 0) m mp) ∧ LPMemos m
 
 /-- The walk memos are well formed (`MemoRG` at some map). -/
 def CoreMemos (m : Mem) : Prop :=
@@ -360,21 +399,44 @@ theorem coreLsbSch_wf : coreLsbSch.WF := ⟨by decide, by decide⟩
 /-- **`WalkMemos` across a writer** that avoids arrays 151‥153 and `CTL` words 152, 154, 156. -/
 theorem WalkMemos.frame {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
     (hA : (151 : ArrId) ∉ A ∧ (152 : ArrId) ∉ A ∧ (153 : ArrId) ∉ A)
-    (hC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C) (h : WalkMemos m) : WalkMemos m' :=
+    (hC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C) (h : WalkMemos m)
+    (hLA : (52 : ArrId) ∉ A ∧ (53 : ArrId) ∉ A ∧ (54 : ArrId) ∉ A := by decide)
+    (hLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C := by decide) : WalkMemos m' :=
   ⟨let ⟨mp, hm⟩ := h.1; ⟨mp, memoRG_frame coreWsSch coreWsSch_wf lfKey _ A C hA.1 hC.1 m m' hf mp hm⟩,
     let ⟨mp, hm⟩ := h.2.1; ⟨mp, memoRG_frame coreFlSch coreFlSch_wf bmKey _ A C hA.2.1 hC.2.1 m m' hf mp hm⟩,
-    let ⟨mp, hm⟩ := h.2.2; ⟨mp, memoRG_frame coreLsbSch coreLsbSch_wf bmKey _ A C hA.2.2 hC.2.2 m m' hf mp hm⟩⟩
+    let ⟨mp, hm⟩ := h.2.2.1; ⟨mp, memoRG_frame coreLsbSch coreLsbSch_wf bmKey _ A C hA.2.2 hC.2.2 m m' hf mp hm⟩,
+    h.2.2.2.frame hf hLA hLC⟩
 
 /-- **`CoreMemos` across a writer** that avoids arrays 49, 50, 151‥153 and `CTL` words 48, 50, 152,
 154, 156 (the last two avoidances are auto-params: `decide` on concrete lists). -/
 theorem CoreMemos.frame {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
     (hA : (50 : ArrId) ∉ A ∧ (49 : ArrId) ∉ A) (hC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C) (h : CoreMemos m)
     (hWA : (151 : ArrId) ∉ A ∧ (152 : ArrId) ∉ A ∧ (153 : ArrId) ∉ A := by decide)
-    (hWC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C := by decide) :
+    (hWC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C := by decide)
+    (hLA : (52 : ArrId) ∉ A ∧ (53 : ArrId) ∉ A ∧ (54 : ArrId) ∉ A := by decide)
+    (hLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C := by decide) :
     CoreMemos m' :=
   ⟨let ⟨mp, hm⟩ := h.1; ⟨mp, memoRG_frame coreIlSch coreIlSch_wf lfKey decE A C hA.1 hC.1 m m' hf mp hm⟩,
     let ⟨mp, hm⟩ := h.2.1; ⟨mp, memoRG_frame coreAbSch coreAbSch_wf lfKey decE A C hA.2 hC.2 m m' hf mp hm⟩,
-    h.2.2.frame hf hWA hWC⟩
+    h.2.2.frame hf hWA hWC hLA hLC⟩
+
+/-- **`CoreMemos` across a write of the `instLP` walk's memos** (arrays 52‥54, `CTL[54‥59]`), the
+walk memos after it given. -/
+theorem CoreMemos.frameLP {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+    (h : CoreMemos m) (hLP : LPMemos m')
+    (hA : ∀ b ∈ A, 52 ≤ b ∧ b ≤ 54 := by decide) (hC : ∀ x ∈ C, 54 ≤ x.toNat ∧ x.toNat ≤ 59 := by simp) :
+    CoreMemos m' :=
+  ⟨let ⟨mp, hm⟩ := h.1; ⟨mp, memoRG_frame coreIlSch coreIlSch_wf lfKey decE A C
+      (fun e => absurd (hA _ e) (by decide)) (fun e => absurd (hC _ e) (by decide)) m m' hf mp hm⟩,
+    let ⟨mp, hm⟩ := h.2.1; ⟨mp, memoRG_frame coreAbSch coreAbSch_wf lfKey decE A C
+      (fun e => absurd (hA _ e) (by decide)) (fun e => absurd (hC _ e) (by decide)) m m' hf mp hm⟩,
+    let ⟨mp, hm⟩ := h.2.2.1; ⟨mp, memoRG_frame coreWsSch coreWsSch_wf lfKey _ A C
+      (fun e => absurd (hA _ e) (by decide)) (fun e => absurd (hC _ e) (by decide)) m m' hf mp hm⟩,
+    let ⟨mp, hm⟩ := h.2.2.2.1; ⟨mp, memoRG_frame coreFlSch coreFlSch_wf bmKey _ A C
+      (fun e => absurd (hA _ e) (by decide)) (fun e => absurd (hC _ e) (by decide)) m m' hf mp hm⟩,
+    let ⟨mp, hm⟩ := h.2.2.2.2.1; ⟨mp, memoRG_frame coreLsbSch coreLsbSch_wf bmKey _ A C
+      (fun e => absurd (hA _ e) (by decide)) (fun e => absurd (hC _ e) (by decide)) m m' hf mp hm⟩,
+    hLP⟩
 
 /-- **`CoreMemos` across a writer at or above array 64** (and `CTL` word 64), away from the walk
 memos (arrays 151‥153, `CTL` 152‥157). -/
@@ -388,6 +450,10 @@ theorem CoreMemos.frame_hi {A : List ArrId} {C : List Word} {m m' : Mem} (hf : M
       fun h => absurd (hWA _ h) (by decide)⟩
     ⟨fun h => absurd (hWC _ h) (by decide), fun h => absurd (hWC _ h) (by decide),
       fun h => absurd (hWC _ h) (by decide)⟩
+    ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide),
+      fun h => absurd (hA _ h) (by decide)⟩
+    ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide),
+      fun h => absurd (hC _ h) (by decide)⟩
 
 /-- **The core's relation** at explicit cache maps. -/
 structure CoreS (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis : Word) (fe : IFEnv)

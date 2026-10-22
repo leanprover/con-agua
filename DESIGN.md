@@ -7954,6 +7954,53 @@ child dangled when it was interned (no `StoreWF` needed).
   commit `8c21b5d`, adapted to master's `LvlCnt` (list counts) and `CoreS.of_ls`'s `hlsa`/`hlc`.
   The WIP `InstLPWalkLet` is not landed. No L change. Globals rule: the instLP family uses only
   existing slots (`CTL[136]` spine top, `CTL[192]` level-heap top, MemoLib schemas `CTL[54‥59]`).
+### Helper `whnf4-ilp`: `InstLPOK` proved, `KnotCallees` gone
+* **Theorem.** `instLP_refines (p) (hp : ILWEntryProg p) : InstLPOK p` (`InstLPEntry.lean`,
+  `@[refines ConRon.Arena.instLPFast]`), sorry-free, on nothing but `CoreS`. `KnotCallees` is
+  removed: `KnotAllProg` gains `ilw : ILWEntryProg p`, `KnotAllProg.instLP := instLP_refines p
+  hq.ilw`, the bundle theorems are renamed `KnotCallees.*` → `KnotAllProg.*` (`infer` → `inferC`:
+  a field of that name exists). The knot (`knot_all`) now takes only `KnotAllProg p`.
+* **No `StoreWF`, no readback hypothesis.** The level arms (helper `whnf4-ilp-lev`,
+  `InstLPLevel*.lean`) re-prove `lv_intern`/`lv_sub_int` under `CoreS` by the node-by-node
+  induction, keeping `LvlStep`/`StoreDen.lvlAll` (`lvlAll_internLNode`) instead of con-ron's
+  `internLevel_spec`. The universe arguments read back by `StoreDen.lsAll` (`ls_node(us)` aborts on
+  a handle not stored; the model now says so). The keys: a new L function **`keys_ok(o, l)`**
+  checks each key word on the spine stack to be a stored name handle (tag, scratch tier, count);
+  under `ArenaR` such a handle views (`viewN_anon/str/num`), under `CoreS.nwf` it reads back
+  (con-ron's `denoteN_of_view`) — `keysOkW_names`. It runs past the cut-off (where the twin's
+  `readNamesM` runs) and aborts exactly where `readNamesM` fails (a cached name reads back by
+  `StoreDen.readN`, so a cache hit is a stored name): no deviation.
+* **Other L changes (no deviation; same values).** `lp_go`'s `const` arm reads the name word before
+  `sls_memo` (the twin has it from the view; no frame of `sls_memo` over `CREC` needed).
+  `lp_let`'s third child and rebuild moved to **`lp_let_tail`**, its rebuild to **`lp_rb_let`**
+  (helper `whnf4-ilp-let`: `finish` on the 3-child body needed `(instances := 5000)` even then).
+  `Checker/Prog.lean` regenerated (1720 functions, 9 stubs), `coreFns` 536.
+* **The walk memos in `CoreMemos`.** `inst_lp_core` clears arrays 52‥54 by an epoch bump, sound only
+  on a well-formed memo: `WalkMemos` gains a fourth conjunct `LPMemos` (`WhnfBase.lean`, with
+  `coreLpSch`/`coreLplSch`/`coreLplsSch`, `ilKey`, `VI` moved there); `WalkMemos.frame`/
+  `CoreMemos.frame` gain auto-params `hLA`/`hLC` (`decide` on concrete write sets; the abstract
+  ones in `CoreS.of_level`, `CoreS.of_ls`, `WhnfProjRefine`, `CoreS.arena_frame(D)`,
+  `CoreS.arenaFrame` pass them), `CoreMemos.frameLP` for the walk's own memo writes;
+  projections `.2.2.2.2` → `.2.2.2.2.1` in `WalkCore.lean`, `RecFireCore.lean` (`CoreS.ctl136`).
+* **Proof structure.** Models with every callee through `callW` (`InstLPWalk.lean`: one `vcgen`
+  per function; `lp_go`'s dispatch by guarded equations `ilwDispW_*`; specs split into
+  `InstLPWalkGo`/`Arms`/`Let` for build parallelism). The walk's invariants (`InstLPWalkBase`):
+  `ILWMemo` (the three memos hold the twin's maps, level values read back), `ILWEnv` (keys on the
+  stack below its top, values a pool slice below its top), `ILWGrow`; `ILWStep T a … r` (the twin's
+  run, `CoreAfter`, the invariants) with `ILWStep.bind`, `ilw_arm` (probe + write around a body),
+  `ilw_rebuild` (`internRebuilt*`); `ilwGo_ok` (`@[refines instLPGo]`) by induction on the L fuel
+  over all smaller fuels (`ilwGo_succ`); the entry `ilwCore_ok` (cut-off, `ls_node`, `keys_ok`, the
+  clears `ilw_clears`, the walk, the clears); `inst_lp` (`ekCopyW_slice`: the record-pool slice
+  lands on the stack; the top put back).
+* **Also.** `RecFireEnv.lean`'s `decRule_fire` renamed `decRule_fireE` (clashed with
+  `PromoteCIRef2`'s at `checker_prog.py`'s import check).
+* **Numbers.** New: `InstLPWalk` 641 lines, `InstLPWalkBase` 317, `InstLPWalkStep` 139,
+  `InstLPWalkRef` 182, `InstLPWalkRef2` 274, `InstLPWalkRef3` 342, `InstLPKeys` 170,
+  `InstLPEntry` 387, `InstLPWalkGo`/`Arms`/`Let` 39/60/38, `InstLPLevel`/`2` 421/316 (helper);
+  ~3300 lines. Elaboration: `InstLPWalkGo` 52 s, `InstLPWalkArms` 14 s, `InstLPWalkLet` ~6 s, the
+  rest ~1 s each. Rebuild after the `WhnfBase` change: ~10 min wall (`DefEqKnot` cone); full
+  `scripts/lake build ConAgua` ~20 min wall.
+
 ## Phase 2, round 5: the twin's well-formedness, the real ROM readers (2026-10-22, lane `decls4`)
 
 ### Landing 1: `StateOK` from the twin's fold; canon in the arms; the ROM readers as callees; `subst_const_all`
@@ -8492,5 +8539,50 @@ needs many lookups should `have` them once, or take the bundle.
 * **`scripts/checker_prog.py` on master**: it builds the whole library first now (the dump sees
   only modules with an olean; a partial build made it fail with "`builtin_prelude` calls
   `pre_front_run`, …"), and it stopped on an import clash `L.Arena.decRule_fire` between
-  `RecFireEnv` (lane `defeq2`) and `PromoteCIRef2`: `RecFireEnv`'s lemma is renamed
-  `decRule_fireW` (two lines). `checker_prog.py --check` passes on this landing.
+  `RecFireEnv` (lane `defeq2`) and `PromoteCIRef2`, which master meanwhile fixed the same way
+  (`decRule_fireE`). `checker_prog.py --check` passes on this landing.
+
+### Lane `whnf4` closing
+* `KnotCallees` is gone: `knot_all` needs only `KnotAllProg p` (program lookups). Lane `whnf4` (with
+  helpers `whnf4-knot`, `-leaves`, `-rs`, `-d23`, `-ilp`) discharged `whnfCoreStep`, `whnfStep`,
+  `proofIrrel`, `reduceProjCore`, `unfold`, `constTy`, `projSmall`, `fireOk`, `recShape`,
+  `instLP`; lane `defeq2` `den`, `lvlsEqDen`, `capsNeverZero`, `recFireLevels`. D23 fixed (F15).
+  The census-tagged whnf statements still instantiate the stub bundles (`whnfCallees_stub`,
+  `coreCallees_stub`, `iotaCallees_stub`); re-stating them through `DefEqKnot`'s bundles is
+  the next step for the census (not done here).
+
+### The plan for `LoopT` (the loop carrying `TwinOK` and the pin flag), for its own lane
+`StageT` (above) holds at the stage's entry only if the declaration loop carries `TwinOK` and
+`pinW m 0 ≠ 0`. What that takes, from reading the code (lane `indproofs3`, at master `b3519c32`):
+* **(a) The arms call the core through `stubM` in their models.** `DeclCvg`'s `check_value_group`
+  model has `stubM "infer_type_core"`, `"ensure_sort_core"`, `"lvl_eq_c"`, `"is_def_eq_core"` (and
+  `loose_bvars_bounded_fast`, `has_fvar_fast`, `all_level_params_defined`, `consts_resolve_ffast`)
+  inline (`cvgK1`‥`cvgK8`, `ivgK1`‥`ivgK5`). `TwinOK` cannot be carried across a `stubM` step (the
+  stub contracts give `StageR` only, and a generic "stubs keep `TwinOK`" contract would be false
+  for an arbitrary twin op). The models must call `callW p n f` and use the real `Sim`s under
+  `StageT` (`IndTwin.lean`: `inferTypeCore_simT`, `ensureSortCore_simT`, `lvlEqC_simT`,
+  `isDefEqCore_simT`, `whnfTop_simT`, `lvLeqTop_simT`); `all_level_params_defined` has lane
+  `decls3`'s real refinement (`ApdEnv`: `NStoreWF` and `StoreDen`'s level fields — both in
+  `TwinOK`). Nine callees have no L code (`abortStub` in `checkerProg`: `consts_resolve_ffast`,
+  `lv_zero_caps`, `name_rec`, `name_rec_i`, `rec_rule_bits`, `reserved_rec_name`,
+  `open_pis_at_fvars_f`, `intern_ls_iw`, `fvar_b`): the real program aborts there, so `callW` is
+  `none` and any `Sim` through them is trivial — the models should call them by `callW` too, and
+  the stub contracts go away as their L code lands.
+* **(b) The loop's own steps**, each needs a `TwinOK`/flag lemma: `flush_loop` (caches reset:
+  `ReadLCOK` holds of empty caches; `StoreDen.caches`), `enter_loop` (`enableScratch`: a cached
+  scratch handle must stay a readback — provable now from lane `decls4`'s `StateOK`/`LsWF` via
+  `TwinFold.enterAM`, which is what killed `indproofs2`'s first attempt), `drop_loop`, the
+  promotion (`promoteVG`/`promoteNew`), `pendPush`, the pending checks, the pin install
+  (`DeclPins`), `andPinOk`, and the arms (axiom, quotient: no core call but canon; definition/
+  theorem/opaque: (a); inductive: the stage, under `StageT`).
+* **(c) The start.** `TwinOK` of the state after the pin stage (`StoreDen` of the store the pins
+  interned, `CoreMemos` of the memory as the pipeline leaves it, empty caches) from the pipeline's
+  stage theorems (lanes `romload`/`integrate`), and the flag from the pin stage's post.
+* **Order**: define `LoopT := LoopR ∧ TwinOK ∧ flag` as a separate predicate (`LoopR` unchanged);
+  (b)'s bracket lemmas first (they unblock `lvlEqStub_spec` at `DeclCvg`'s call sites); then the
+  axiom and quotient arms; then (a) for `check_value_group`; then the start (c); last the
+  inductive arm (`check_ind_decl` under `StageT`, which needs the stage's theorems restated under
+  `StageT` — `StageT.of_iw`, `StageT.of_coreRef`, `internSort_stageT`, `internFVar_stageT` are the
+  frames for that, and the stage's remaining stubs block it the same way as (a)).
+* For `romBasisRef_quot`/`romBasisARef_quot` (`rom_basis_decls` kind 4: a level read back through
+  `dn`): `StageT.twin.den.dnN` is the link `dn k = some x → denoteN … k = some x`.
