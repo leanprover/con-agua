@@ -83,7 +83,7 @@ theorem ciList_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem
     have hbd := (Array.getElem?_eq_some_iff.mp hptr).1
     rw [if_neg (by omega)] at hW
     have hrd : rdW (m.arr64 ECON) j = ptr := by
-      rw [rdW_of_get? _ j (by simpa using hptr)]
+      rw [pci_rdW_of_get? _ j (by simpa using hptr)]
     rw [hrd] at hW
     cases hca : callW p n "promote_ci" [f, ptr] m with
     | none => rw [hca] at hW; cases hW

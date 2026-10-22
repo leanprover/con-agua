@@ -109,7 +109,7 @@ theorem stP_facts (d : Word) : ∀ (ps : List (Word × Word)) (m m' : Mem),
 
 /-! ## Reads -/
 
-theorem rdW_of_get? (a : Array Word) (i : Word) {w : Word} (h : a[i.toNat]? = some w) :
+theorem pci_rdW_of_get? (a : Array Word) (i : Word) {w : Word} (h : a[i.toNat]? = some w) :
     rdW a i = w := by
   rw [rdW, h]; rfl
 
@@ -122,7 +122,7 @@ theorem rd1W_of {m : Mem} {s a : Word} (hsz : (m.arr64 EREC).size < 2 ^ 64) (h0 
   have b0 : s.toNat + 0 < (m.arr64 EREC).size := (Array.getElem?_eq_some_iff.mp h0).1
   simp only [rd1W]
   rw [if_neg (by omega)]
-  rw [rdW_of_get? _ s (by simpa using h0)]
+  rw [pci_rdW_of_get? _ s (by simpa using h0)]
 
 theorem rd2W_of {m : Mem} {s a b : Word} (hsz : (m.arr64 EREC).size < 2 ^ 64) (h0 : (m.arr64 EREC)[s.toNat + 0]? = some a) (h1 : (m.arr64 EREC)[s.toNat + 1]? = some b) :
     rd2W m s = [a, b] := by
@@ -131,8 +131,8 @@ theorem rd2W_of {m : Mem} {s a b : Word} (hsz : (m.arr64 EREC).size < 2 ^ 64) (h
   have e1 : (s + 1).toNat = s.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
   simp only [rd2W]
   rw [if_neg (by omega)]
-  rw [rdW_of_get? _ s (by simpa using h0)]
-  rw [rdW_of_get? _ (s + 1) (by rw [e1]; simpa using h1)]
+  rw [pci_rdW_of_get? _ s (by simpa using h0)]
+  rw [pci_rdW_of_get? _ (s + 1) (by rw [e1]; simpa using h1)]
 
 theorem rd3W_of {m : Mem} {s a b c : Word} (hsz : (m.arr64 EREC).size < 2 ^ 64) (h0 : (m.arr64 EREC)[s.toNat + 0]? = some a) (h1 : (m.arr64 EREC)[s.toNat + 1]? = some b) (h2 : (m.arr64 EREC)[s.toNat + 2]? = some c) :
     rd3W m s = [a, b, c] := by
@@ -143,9 +143,9 @@ theorem rd3W_of {m : Mem} {s a b c : Word} (hsz : (m.arr64 EREC).size < 2 ^ 64) 
   have e2 : (s + 2).toNat = s.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
   simp only [rd3W]
   rw [if_neg (by omega)]
-  rw [rdW_of_get? _ s (by simpa using h0)]
-  rw [rdW_of_get? _ (s + 1) (by rw [e1]; simpa using h1)]
-  rw [rdW_of_get? _ (s + 2) (by rw [e2]; simpa using h2)]
+  rw [pci_rdW_of_get? _ s (by simpa using h0)]
+  rw [pci_rdW_of_get? _ (s + 1) (by rw [e1]; simpa using h1)]
+  rw [pci_rdW_of_get? _ (s + 2) (by rw [e2]; simpa using h2)]
 
 theorem rd4W_of {m : Mem} {s a b c d : Word} (hsz : (m.arr64 EREC).size < 2 ^ 64) (h0 : (m.arr64 EREC)[s.toNat + 0]? = some a) (h1 : (m.arr64 EREC)[s.toNat + 1]? = some b) (h2 : (m.arr64 EREC)[s.toNat + 2]? = some c) (h3 : (m.arr64 EREC)[s.toNat + 3]? = some d) :
     rd4W m s = [a, b, c, d] := by
@@ -158,10 +158,10 @@ theorem rd4W_of {m : Mem} {s a b c d : Word} (hsz : (m.arr64 EREC).size < 2 ^ 64
   have e3 : (s + 3).toNat = s.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
   simp only [rd4W]
   rw [if_neg (by omega)]
-  rw [rdW_of_get? _ s (by simpa using h0)]
-  rw [rdW_of_get? _ (s + 1) (by rw [e1]; simpa using h1)]
-  rw [rdW_of_get? _ (s + 2) (by rw [e2]; simpa using h2)]
-  rw [rdW_of_get? _ (s + 3) (by rw [e3]; simpa using h3)]
+  rw [pci_rdW_of_get? _ s (by simpa using h0)]
+  rw [pci_rdW_of_get? _ (s + 1) (by rw [e1]; simpa using h1)]
+  rw [pci_rdW_of_get? _ (s + 2) (by rw [e2]; simpa using h2)]
+  rw [pci_rdW_of_get? _ (s + 3) (by rw [e3]; simpa using h3)]
 
 theorem rd5W_of {m : Mem} {s a b c d e : Word} (hsz : (m.arr64 EREC).size < 2 ^ 64) (h0 : (m.arr64 EREC)[s.toNat + 0]? = some a) (h1 : (m.arr64 EREC)[s.toNat + 1]? = some b) (h2 : (m.arr64 EREC)[s.toNat + 2]? = some c) (h3 : (m.arr64 EREC)[s.toNat + 3]? = some d) (h4 : (m.arr64 EREC)[s.toNat + 4]? = some e) :
     rd5W m s = [a, b, c, d, e] := by
@@ -176,11 +176,11 @@ theorem rd5W_of {m : Mem} {s a b c d e : Word} (hsz : (m.arr64 EREC).size < 2 ^ 
   have e4 : (s + 4).toNat = s.toNat + 4 := by rw [UInt64.toNat_add]; simp; omega
   simp only [rd5W]
   rw [if_neg (by omega)]
-  rw [rdW_of_get? _ s (by simpa using h0)]
-  rw [rdW_of_get? _ (s + 1) (by rw [e1]; simpa using h1)]
-  rw [rdW_of_get? _ (s + 2) (by rw [e2]; simpa using h2)]
-  rw [rdW_of_get? _ (s + 3) (by rw [e3]; simpa using h3)]
-  rw [rdW_of_get? _ (s + 4) (by rw [e4]; simpa using h4)]
+  rw [pci_rdW_of_get? _ s (by simpa using h0)]
+  rw [pci_rdW_of_get? _ (s + 1) (by rw [e1]; simpa using h1)]
+  rw [pci_rdW_of_get? _ (s + 2) (by rw [e2]; simpa using h2)]
+  rw [pci_rdW_of_get? _ (s + 3) (by rw [e3]; simpa using h3)]
+  rw [pci_rdW_of_get? _ (s + 4) (by rw [e4]; simpa using h4)]
 
 theorem rd1_call (p : Prog) (hp : PromoteProg p) {n : Nat} {s : Word} {m m' : Mem} {r : List Word}
     (hc : callW p n "erec_rd1" [s] m = some (r, m')) : m' = m ∧ r = rd1W m s ∧ r ≠ [] := by

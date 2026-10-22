@@ -48,7 +48,7 @@ theorem erase_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem)
     have hbd : j.toNat < (m.arr64 ECON).size := (Array.getElem?_eq_some_iff.mp hptr).1
     rw [if_neg (by omega)] at hW
     have hrdp : rdW (m.arr64 ECON) j = ptr := by
-      rw [rdW_of_get? _ j (by simpa using hptr)]
+      rw [pci_rdW_of_get? _ j (by simpa using hptr)]
     rw [hrdp] at hW
     obtain ⟨w, hwA, hwl, hname⟩ := decCI_name hdec
     have hwm := erecP_get hwA
