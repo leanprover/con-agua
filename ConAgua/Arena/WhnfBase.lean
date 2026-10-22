@@ -246,6 +246,12 @@ theorem KeptAll.trans {M₁ M₂ M₃ : ModeMaps} {eb : Word} (h₁ : KeptAll M�
   exact ⟨fun k => (a2 k).trans (a1 k), fun k => (b2 k).trans (b1 k), fun k => (c2 k).trans (c1 k),
     fun k => (d2 k).trans (d1 k), fun k => (e2 k).trans (e1 k), fun k => (f2 k).trans (f1 k)⟩
 
+/-- The twin's name readback cache holds readbacks (as `ReadLCOK` for levels; `CoreS` has no such
+field yet: `readNameM` answers a cached row without looking at the store). Used by lane `defeq`'s
+`Knot.lean` and the `instLP` proofs. -/
+def ReadNCOK (a : AState) : Prop :=
+  ∀ (h : NIdx) (x : ConLeche.Name), a.caches.readNC[h]? = some x → denoteN a.store.ns h = some x
+
 /-! ## The walk memos the core's walks reuse
 
 `instantiateListFast` (`instLC`, array 50 `ILMEMO`, `CTL[50‥51]`) and `abstract1Fast`/

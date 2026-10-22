@@ -57,10 +57,6 @@ theorem internLevel_facts {a a' : AState} {u : Level} {h : LIdx} (hwf : StoreWF 
 
 /-! ## The name readback cache -/
 
-/-- The name readback cache holds readbacks. -/
-def ReadNCOK (a : AState) : Prop :=
-  ∀ (h : NIdx) (x : Name), a.caches.readNC[h]? = some x → denoteN a.store.ns h = some x
-
 theorem readNameM_run (a : AState) (h : NIdx) (x : Name) (hd : denoteN a.store.ns h = some x)
     (hc : ReadNCOK a) :
     ∃ c, (readNameM h).run a = .ok (x, { a with caches := c }) ∧ ReadNCOK { a with caches := c } ∧

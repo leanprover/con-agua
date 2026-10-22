@@ -185,7 +185,7 @@ theorem recFireLevelsW_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m' : Mem) (a :
   rw [h2] at hW
   obtain ⟨s₂, hs₂m, -, hW₂⟩ := triple_of_callW (keysPush_spec p hL.toLvSubProg n ⟨m₀, Locals.init []⟩ po pc) h2
   rw [hs₂m] at hW₂
-  have hk := nmsR_of_hslice a.store.lss.ls.ns m₀ EREC lps ks po pc hlps hpb hks
+  have hk := lp_nmsR_of_hslice a.store.lss.ls.ns m₀ EREC lps ks po pc hlps hpb hks
   obtain ⟨hb, hk₁, hf₁, htop₁, hroom, hbel₁⟩ := keysPushW_ok n m₀ m₁ po pc (bs.headD 0) ks hk hsz hctl hW₂
   -- the twin's readbacks
   obtain ⟨c₁, hrn, hnc₁, el₁, els₁, eq₁⟩ := readNamesM_run a hnc lps ks hks
@@ -311,7 +311,7 @@ theorem capsNeverZeroW_run (n : Nat) (m m' : Mem) (a : AState) (po pc us swd so 
       ReadNCOK a' ∧ ReadLsCOK a' ∧
       MemFrame [LH, SPN] [192, 136] m m' ∧ spTop m' = spTop m ∧
       (∀ i : Word, i < spTop m → spW m' i = spW m i) ∧ x.toNat < 2 ^ 32 := by
-  have hk := nmsR_of_hslice a.store.lss.ls.ns m EREC lps ks po pc hlps hpb hks
+  have hk := lp_nmsR_of_hslice a.store.lss.ls.ns m EREC lps ks po pc hlps hpb hks
   obtain ⟨hA', hf, htop, hbel, hx, hlt⟩ :=
     capsNeverZeroW_ok n m m' a po pc us swd so sc x ks vs caps.sortZ hA hwf hus hsz hdl hk hp hW
   obtain ⟨c₁, hrn, hnc₁, -, els₁, eq₁⟩ := readNamesM_run a hnc lps ks hks

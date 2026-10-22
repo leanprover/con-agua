@@ -447,33 +447,33 @@ def npfV (k c : Word) : Word := if k = 0 then 0 else if k = 2 ∧ c = 0 then 0 e
 def ipfV (k c : Word) : Word := if k = 2 ∧ c = 0 then 1 else 0
 
 /-- After `proof_pw`, a verdict. -/
-def armK (V : Word → Word → Word) : Option (List Word × Mem) → Option (Word × Mem)
+def propArmK (V : Word → Word → Word) : Option (List Word × Mem) → Option (Word × Mem)
   | none => none
   | some (r, m) => some (V (r.headD 0) (r.tail.tail.headD 0), m)
 
 theorem notProofFast_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St) (vis a : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "not_proof_fast" [vis, a]
     ⦃fun r s' => LocEq s' s₀ ∧ (192 : Word).toNat < (s₀.mem.arr64 CTL).size ∧
-      armK npfV (callW p n "proof_pw" [vis, 4000000000, a] (s₀.mem.set64 CTL 192 0)) =
+      propArmK npfV (callW p n "proof_pw" [vis, 4000000000, a] (s₀.mem.set64 CTL 192 0)) =
         some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp.npf]
   simp only [callFn, notProofFastL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64_spec,
       callW_spec p n "proof_pw"] <;>
-  simp_all [armK, npfV, LocEq, BinOp.eval, St.setLocs_cons, CTL,
+  simp_all [propArmK, npfV, LocEq, BinOp.eval, St.setLocs_cons, CTL,
     Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ]
 
 theorem isProofFast_spec (p : Prog) (hp : PropReadProg p) (n : Nat) (s₀ : St) (vis a : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "is_proof_fast" [vis, a]
     ⦃fun r s' => LocEq s' s₀ ∧ (192 : Word).toNat < (s₀.mem.arr64 CTL).size ∧
-      armK ipfV (callW p n "proof_pw" [vis, 4000000000, a] (s₀.mem.set64 CTL 192 0)) =
+      propArmK ipfV (callW p n "proof_pw" [vis, 4000000000, a] (s₀.mem.set64 CTL 192 0)) =
         some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp.ipf]
   simp only [callFn, isProofFastL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64_spec,
       callW_spec p n "proof_pw"] <;>
-  simp_all [armK, ipfV, LocEq, BinOp.eval, St.setLocs_cons, CTL,
+  simp_all [propArmK, ipfV, LocEq, BinOp.eval, St.setLocs_cons, CTL,
     Cmp.eval, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ]
 

@@ -387,7 +387,7 @@ theorem lp_hslice_succ {k : IdxKind} (a : Array Word) (off n : Nat) :
   omega
 
 /-- **A record-pool name slice that reads back is an `NmsR` slice.** -/
-theorem nmsR_of_hslice (ns : NStore) (m : Mem) (A : ArrId) :
+theorem lp_nmsR_of_hslice (ns : NStore) (m : Mem) (A : ArrId) :
     ∀ (lps : List NIdx) (ks : List Name) (o k : Word),
       hslice? (m.arr64 A) o.toNat k.toNat = some lps → o.toNat + k.toNat < 2 ^ 64 →
       lps.mapM (denoteN ns) = some ks → NmsR (nameN ns) m A o k ks := by
