@@ -112,6 +112,7 @@ variable {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) (hr : RomOK rom)
 include hL hr
 
 /-- **`rci_names_to` refines `internNameList`**, the handles to `EREC[o ‥]`. -/
+@[refines ConRon.Arena.Frontend.internNameList]
 theorem namesTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr) (memo : EMemo) :
     ∀ (ns : List ConLeche.Name), ns.all nameFits = true → ∀ (k : Nat) (m : Mem) (a : AState)
       (q o kw : Word) (rest : List UInt8) (r : List Word) (m' : Mem), RInv m₀ a₀ T m a →

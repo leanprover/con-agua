@@ -426,6 +426,7 @@ theorem ci_rec {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConL
     simp at erules; simp [erules]
 
 /-- **`rci_ci` refines `Frontend.internCI`** for the constants `ciFits` admits. -/
+@[refines_part ConRon.Arena.Frontend.internCI "the pinned constants' kinds"]
 theorem ci_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConLeche.Name)
     (seen : List ConLeche.Expr) (memo : EMemo) (c : ConLeche.ConstantInfo) (hfit : ciFits c = true)
     (k : Nat) (m : Mem) (a : AState) (q : Word) (rest : List UInt8) (r : List Word) (m' : Mem)

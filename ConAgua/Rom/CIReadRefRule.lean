@@ -79,6 +79,7 @@ include hL hr
 
 set_option maxHeartbeats 8000000 in
 /-- **`rci_rule` refines `Frontend.internRule`** for a plain rule, into the 11 words at `rr`. -/
+@[refines_part ConRon.Arena.Frontend.internRule "plain rules"]
 theorem rule_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr) (memo : EMemo)
     (rl : ConLeche.RecRule) (hfit : ruleFits rl = true) (k : Nat) (m : Mem) (a : AState)
     (q rr : Word) (rest : List UInt8) (r : List Word) (m' : Mem) (hI : RInv m₀ a₀ T m a)
@@ -231,6 +232,7 @@ variable {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) (hr : RomOK rom)
 include hL hr
 
 /-- **`rci_rules_to` refines `Frontend.internRules`**, into the 11-word records at `o`, `o + 11`, …. -/
+@[refines_part ConRon.Arena.Frontend.internRules "plain rules"]
 theorem rulesTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} :
     ∀ (rs : List ConLeche.RecRule), rs.all ruleFits = true → ∀ (seen : List ConLeche.Expr) (memo : EMemo)
       (k : Nat) (m : Mem) (a : AState) (q o kw : Word) (rest : List UInt8) (r : List Word) (m' : Mem),

@@ -39,6 +39,7 @@ variable {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) (hr : RomOK rom)
 include hL hr
 
 /-- **`rci_block_to` refines `Frontend.internCIList`** at one memo. -/
+@[refines_part ConRon.Arena.Frontend.internCIList "the pinned constants' kinds"]
 theorem blockTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConLeche.Name) :
     ∀ (cs : List ConLeche.ConstantInfo), cs.all ciFits = true → ∀ (seen : List ConLeche.Expr)
       (memo : EMemo) (k : Nat) (m : Mem) (a : AState) (q o kw : Word) (rest : List UInt8)

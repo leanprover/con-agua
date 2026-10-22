@@ -72,6 +72,7 @@ include hL hr
 
 /-- **`rci_cv` refines `Frontend.internCV`** at the memo `memo` (`seen`), into the 4-word record
 at `pp` (allocated above the entry's top). -/
+@[refines_part ConRon.Arena.Frontend.internCV "values whose type fits the ROM encoding"]
 theorem cv_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr) (memo : EMemo)
     (cv : ConLeche.ConstantVal) (hfit : cvFits cv = true) (k : Nat) (m : Mem) (a : AState)
     (q pp : Word) (rest : List UInt8) (r : List Word) (m' : Mem) (hI : RInv m₀ a₀ T m a)

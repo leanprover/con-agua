@@ -139,6 +139,8 @@ variable {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) (hr : RomOK rom) (
 include hL hr hrom
 
 /-- **`rom_ci(id)` refines `romCiT id`.** -/
+@[refines ConRon.Arena.eqA ConRon.Arena.natA ConRon.Arena.iffA ConRon.Arena.iffIntroA
+  ConRon.Arena.iffRecA ConRon.Arena.nonemptyA ConRon.Arena.nonemptyIntroA ConRon.Arena.nonemptyRecA]
 theorem romCiRef_of (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) :
     RomCiRef p dn vis fe := by
   intro id hid n m a r m' hS hc
@@ -188,6 +190,9 @@ theorem romCiRef_of (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
     exact hH.decB (fun i hi => hi.2) (fun _ h => h.elim)
 
 /-- **`rom_cv(id)` refines `romCvT id`.** -/
+@[refines ConRon.Arena.propextA ConRon.Arena.choiceA ConRon.Arena.trueCvA ConRon.Arena.trueIntroCvA
+  ConRon.Arena.trustCompilerA ConRon.Arena.boolCvA ConRon.Arena.reduceNatCvA ConRon.Arena.reduceBoolCvA
+  ConRon.Arena.ofReduceNatA ConRon.Arena.ofReduceBoolA]
 theorem romCvRef_of (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) :
     RomCvRef p dn vis fe := by
   intro id hid n m a r m' hS hc
@@ -244,6 +249,7 @@ theorem romCvRef_of (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEn
     exact hH.decB (fun i hi => by omega) (fun _ h => h.elim)
 
 /-- **`rom_expr_pin(id)` refines `romExprT id`.** -/
+@[refines ConRon.Arena.reduceNatDeclPin ConRon.Arena.reduceBoolDeclPin]
 theorem romExprPinRef_of (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) :
     RomExprPinRef p dn vis fe := by
   intro id hid n m a r m' hS hc
@@ -290,6 +296,7 @@ theorem romExprPinRef_of (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe :
   · exact ⟨by simpa using hlt, by simp⟩
 
 /-- **`rci_block(s)` refines `internCIList`** of the block at slot `s`. -/
+@[refines_part ConRon.Arena.internCIList "the blocks of the ROM region"]
 theorem blockCall (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (s : Word)
     (hs : s.toNat < 31) (cs : List ConLeche.ConstantInfo)
     (hcs : ciEntries[s.toNat]'(by rw [ciEntries_len]; exact hs) = encBlock cs)
@@ -372,6 +379,7 @@ theorem blockCall (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     exact hH.decB (fun i hi => hi.2) (fun i hi => by rw [hik4.1, ht3, ← ho3]; omega)
 
 /-- **`rom_and_pin()` refines `andPinDecls`.** -/
+@[refines ConRon.Arena.andPinDecls]
 theorem romAndPinRef_of (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) :
     RomAndPinRef p dn vis fe := by
   intro n m a r m' hS hc
@@ -394,6 +402,7 @@ theorem romAndPinRef_of (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : 
   simpa using hdec
 
 /-- The raw basis block of a kind `basisPinHit` tries (`eqK`, `natK`, `emptyK`, `falseK`). -/
+@[refines_part ConRon.Arena.BasisKind.decls "the four kinds basisPinHit tries"]
 theorem romBasisRef_lt4 (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k : Word)
     (hk : k.toNat < 4) :
     RomRef p "rom_basis_decls" [k] (StageR dn vis fe) (BasisKind.decls (basisOfW k.toNat))
@@ -422,6 +431,7 @@ theorem romBasisRef_lt4 (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : 
   · simpa using hdec
 
 /-- The annotated basis block of a kind `basisPinHit` tries. -/
+@[refines_part ConRon.Arena.BasisKind.declsA "the four kinds basisPinHit tries"]
 theorem romBasisARef_lt4 (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k : Word)
     (hk : k.toNat < 4) :
     RomRef p "rom_basis_decls_a" [k] (StageR dn vis fe) (BasisKind.declsA (basisOfW k.toNat))
@@ -450,5 +460,37 @@ theorem romBasisARef_lt4 (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe :
   · simpa using hdec
 
 end entries
+
+/-! ## All six -/
+
+/-- **The quotient block** (`rom_basis_decls(4)`, `rom_basis_decls_a(4)`): open. `Quot`'s `sortZ`
+is `.ifAllZero [u]`; `decCaps` reads `u`'s handle back through `dn`, and nothing in `StageR`
+relates `dn` to the store (the statement needs a hypothesis like "`dn` reads back the store's
+names"). -/
+theorem romBasisRef_quot (p : Prog) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) :
+    RomRef p "rom_basis_decls" [4] (StageR dn vis fe) (BasisKind.decls (basisOfW 4))
+      (KeepPost dn vis fe (decRBlk dn)) := sorry
+
+/-- The annotated quotient block: open, as `romBasisRef_quot`. -/
+theorem romBasisARef_quot (p : Prog) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) :
+    RomRef p "rom_basis_decls_a" [4] (StageR dn vis fe) (BasisKind.declsA (basisOfW 4))
+      (KeepPost dn vis fe (decRBlk dn)) := sorry
+
+/-- **The readers refine the twin**, for a program reading a buffer that starts with `romData`
+(moved here from `CIReadSpec.lean`). Everything but the quotient blocks is proved
+(`romBasisRef_quot`, `romBasisARef_quot`). -/
+theorem romRefs_of (p : Prog) (h : RomReady p) : RomRefs p := by
+  obtain ⟨rom, rest, hr, hrom, hL⟩ := h
+  refine ⟨romCiRef_of hL hr rest hrom, romCvRef_of hL hr rest hrom,
+    romExprPinRef_of hL hr rest hrom, fun dn vis fe k hk => ?_, fun dn vis fe k hk => ?_,
+    romAndPinRef_of hL hr rest hrom⟩
+  · by_cases h4 : k.toNat < 4
+    · exact romBasisRef_lt4 hL hr rest hrom dn vis fe k h4
+    · have : k = 4 := by apply UInt64.toNat_inj.mp; simp; omega
+      subst this; exact romBasisRef_quot p dn vis fe
+  · by_cases h4 : k.toNat < 4
+    · exact romBasisARef_lt4 hL hr rest hrom dn vis fe k h4
+    · have : k = 4 := by apply UInt64.toNat_inj.mp; simp; omega
+      subst this; exact romBasisARef_quot p dn vis fe
 
 end L.Rom

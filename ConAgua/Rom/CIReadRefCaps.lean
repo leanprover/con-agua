@@ -172,6 +172,7 @@ include hL hr
 
 set_option maxHeartbeats 8000000 in
 /-- **`rci_caps` refines `Frontend.internCaps`**, into the 15 words at `c`. -/
+@[refines_part ConRon.Arena.Frontend.internCaps "sortZ without names"]
 theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConLeche.Name)
     (seen : List ConLeche.Expr) (memo : EMemo)
     (caps : ConLeche.IndCaps) (hfit : capsFits caps = true) (k : Nat) (m : Mem) (a : AState)
