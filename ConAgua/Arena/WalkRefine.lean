@@ -97,21 +97,23 @@ at `c = 0` the L code aborts where the twin throws. -/
 
 /-- What `bb_go`'s model at L fuel `n` and counter `c` says about the arena walk at `c.toNat`. -/
 def GoOK (n : Nat) : Prop :=
-  ∀ (m m' : Mem) (a : AState) (h c r : Word), ArenaR m a → h.toNat < 2 ^ 32 →
-    bbW n m h c = some (r, m') →
-    ∃ a', (bvarBoundGo c.toNat (decE h)).run a = .ok (r.toNat, a') ∧ ArenaR m' a'
+  ∀ (F : Nat) (m m' : Mem) (a : AState) (h c r : Word), (c.toNat ≤ F ∨ n ≤ F) → ArenaR m a →
+    h.toNat < 2 ^ 32 → bbW n m h c = some (r, m') →
+    ∃ a', (bvarBoundGo F (decE h)).run a = .ok (r.toNat, a') ∧ ArenaR m' a'
 
 /-- The same for `bb_node`'s model and the arena's view-and-arm. -/
 def NodeOK (n : Nat) : Prop :=
-  ∀ (m m' : Mem) (a : AState) (h c r : Word), ArenaR m a →
+  ∀ (F : Nat) (m m' : Mem) (a : AState) (h c r : Word), (c.toNat ≤ F ∨ n ≤ F) → ArenaR m a →
     h.toNat < 2 ^ 32 → bbNodeW n m h c = some (r, m') →
-    ∃ a', (bbNodeA c.toNat (decE h)).run a = .ok (r.toNat, a') ∧ ArenaR m' a'
+    ∃ a', (bbNodeA F (decE h)).run a = .ok (r.toNat, a') ∧ ArenaR m' a'
 
 theorem goOK_succ (n : Nat) (ih : NodeOK n) : GoOK (n + 1) := by
-  intro m m' a h c r hR hh hb
+  intro F m m' a h c r hF hR hh hb
   by_cases hc : c = 0
   · rw [bbW] at hb; simp [hc] at hb
-  rw [ctrW_toNat c hc, bvarBoundGo_succ', StateT.run_bind, bvarBGet_run]
+  have hc1 := ctrW_toNat c hc
+  obtain ⟨G, rfl⟩ : ∃ G, F = G + 1 := ⟨F - 1, by omega⟩
+  rw [bvarBoundGo_succ', StateT.run_bind, bvarBGet_run]
   by_cases hr : mfindG bmSch m h 0 = []
   · rw [bbW] at hb; simp [hc, hr] at hb
   by_cases hh0 : (mfindG bmSch m h 0).headD 0 ≠ 0
@@ -134,17 +136,18 @@ theorem goOK_succ (n : Nat) (ih : NodeOK n) : GoOK (n + 1) := by
       | some m₂ =>
         simp only [hs, setK, Option.some.injEq, Prod.mk.injEq] at hb
         obtain ⟨rfl, rfl⟩ := hb
-        obtain ⟨a₁, ha₁, hR₁⟩ := ih m m₁ a h (c - 1) r₁ hR hh hn
+        obtain ⟨a₁, ha₁, hR₁⟩ := ih G m m₁ a h (c - 1) r₁ (by omega) hR hh hn
         refine ⟨_, ?_, ArenaR.memo_set m₁ m₂ a₁ hR₁ h r₁ hh hs⟩
-        change StateT.run (do let r ← bbNodeA (c - 1).toNat (decE h); bvarBSet (decE h) r; pure r) a = _
+        change StateT.run (do let r ← bbNodeA G (decE h); bvarBSet (decE h) r; pure r) a = _
         simp only [StateT.run_bind, ha₁]
         rfl
 
 /-- The `app` arm: two children, `max x y`. -/
-theorem bbAppArm_ok (n : Nat) (ih : GoOK n) (m m' : Mem) (a : AState)
+theorem bbAppArm_ok (n : Nat) (ih : GoOK n) (F : Nat) (m m' : Mem) (a : AState)
     (hR : ArenaR m a) (c fw aw r : Word) (hf : fw.toNat < 2 ^ 32) (ha : aw.toNat < 2 ^ 32)
+    (hF : c.toNat ≤ F ∨ n ≤ F)
     (hb : bbAppK₁ n c aw (bbW n m fw c) = some (r, m')) :
-    ∃ a', (bvarBoundArmApp c.toNat (decE fw) (decE aw)).run a = .ok (r.toNat, a') ∧ ArenaR m' a' := by
+    ∃ a', (bvarBoundArmApp F (decE fw) (decE aw)).run a = .ok (r.toNat, a') ∧ ArenaR m' a' := by
   cases h1 : bbW n m fw c with
   | none => simp only [h1, bbAppK₁, reduceCtorEq] at hb
   | some p =>
@@ -155,18 +158,19 @@ theorem bbAppArm_ok (n : Nat) (ih : GoOK n) (m m' : Mem) (a : AState)
       obtain ⟨y, m₂⟩ := q
       simp only [h1, h2, bbAppK₁, bbAppK₁.bbAppK₂, Option.some.injEq, Prod.mk.injEq] at hb
       obtain ⟨rfl, rfl⟩ := hb
-      obtain ⟨a₁, ha₁, hR₁⟩ := ih m m₁ a _ c x hR hf h1
-      obtain ⟨a₂, ha₂, hR₂⟩ := ih m₁ m₂ a₁ _ c y hR₁ ha h2
+      obtain ⟨a₁, ha₁, hR₁⟩ := ih F m m₁ a _ c x hF hR hf h1
+      obtain ⟨a₂, ha₂, hR₂⟩ := ih F m₁ m₂ a₁ _ c y hF hR₁ ha h2
       refine ⟨a₂, ?_, hR₂⟩
       rw [maxW_toNat]
       simp only [bvarBoundArmApp, StateT.run_bind, ha₁, except_ok_bind, ha₂]
       rfl
 
 /-- The binder arm (`lam`, `forallE`): two children, `max x (y - 1)`. -/
-theorem bbBindArm_ok (n : Nat) (ih : GoOK n) (m m' : Mem) (a : AState)
+theorem bbBindArm_ok (n : Nat) (ih : GoOK n) (F : Nat) (m m' : Mem) (a : AState)
     (hR : ArenaR m a) (c tw bw r : Word) (ht : tw.toNat < 2 ^ 32) (hb' : bw.toNat < 2 ^ 32)
+    (hF : c.toNat ≤ F ∨ n ≤ F)
     (hb : bbBindK₁ n c bw (bbW n m tw c) = some (r, m')) :
-    ∃ a', (bvarBoundArmBind c.toNat (decE tw) (decE bw)).run a = .ok (r.toNat, a') ∧ ArenaR m' a' := by
+    ∃ a', (bvarBoundArmBind F (decE tw) (decE bw)).run a = .ok (r.toNat, a') ∧ ArenaR m' a' := by
   cases h1 : bbW n m tw c with
   | none => simp only [h1, bbBindK₁, reduceCtorEq] at hb
   | some p =>
@@ -177,18 +181,19 @@ theorem bbBindArm_ok (n : Nat) (ih : GoOK n) (m m' : Mem) (a : AState)
       obtain ⟨y, m₂⟩ := q
       simp only [h1, h2, bbBindK₁, bbBindK₁.bbBindK₂, Option.some.injEq, Prod.mk.injEq] at hb
       obtain ⟨rfl, rfl⟩ := hb
-      obtain ⟨a₁, ha₁, hR₁⟩ := ih m m₁ a _ c x hR ht h1
-      obtain ⟨a₂, ha₂, hR₂⟩ := ih m₁ m₂ a₁ _ c y hR₁ hb' h2
+      obtain ⟨a₁, ha₁, hR₁⟩ := ih F m m₁ a _ c x hF hR ht h1
+      obtain ⟨a₂, ha₂, hR₂⟩ := ih F m₁ m₂ a₁ _ c y hF hR₁ hb' h2
       refine ⟨a₂, ?_, hR₂⟩
       rw [maxW_toNat, predW_toNat]
       simp only [bvarBoundArmBind, StateT.run_bind, ha₁, except_ok_bind, ha₂]
       rfl
 
 /-- The `letE` arm: three children, `max (max x y) (z - 1)`. -/
-theorem bbLetArm_ok (n : Nat) (ih : GoOK n) (m m' : Mem) (a : AState)
+theorem bbLetArm_ok (n : Nat) (ih : GoOK n) (F : Nat) (m m' : Mem) (a : AState)
     (hR : ArenaR m a) (c tw vw bw r : Word) (ht : tw.toNat < 2 ^ 32) (hv : vw.toNat < 2 ^ 32)
-    (hb' : bw.toNat < 2 ^ 32) (hb : bbLetK₁ n c vw bw (bbW n m tw c) = some (r, m')) :
-    ∃ a', (bvarBoundArmLet c.toNat (decE tw) (decE vw) (decE bw)).run a = .ok (r.toNat, a') ∧
+    (hb' : bw.toNat < 2 ^ 32) (hF : c.toNat ≤ F ∨ n ≤ F)
+    (hb : bbLetK₁ n c vw bw (bbW n m tw c) = some (r, m')) :
+    ∃ a', (bvarBoundArmLet F (decE tw) (decE vw) (decE bw)).run a = .ok (r.toNat, a') ∧
       ArenaR m' a' := by
   cases h1 : bbW n m tw c with
   | none => simp only [h1, bbLetK₁, reduceCtorEq] at hb
@@ -205,24 +210,25 @@ theorem bbLetArm_ok (n : Nat) (ih : GoOK n) (m m' : Mem) (a : AState)
         simp only [h1, h2, h3, bbLetK₁, bbLetK₁.bbLetK₂, bbLetK₁.bbLetK₃, Option.some.injEq,
           Prod.mk.injEq] at hb
         obtain ⟨rfl, rfl⟩ := hb
-        obtain ⟨a₁, ha₁, hR₁⟩ := ih m m₁ a _ c x hR ht h1
-        obtain ⟨a₂, ha₂, hR₂⟩ := ih m₁ m₂ a₁ _ c y hR₁ hv h2
-        obtain ⟨a₃, ha₃, hR₃⟩ := ih m₂ m₃ a₂ _ c z hR₂ hb' h3
+        obtain ⟨a₁, ha₁, hR₁⟩ := ih F m m₁ a _ c x hF hR ht h1
+        obtain ⟨a₂, ha₂, hR₂⟩ := ih F m₁ m₂ a₁ _ c y hF hR₁ hv h2
+        obtain ⟨a₃, ha₃, hR₃⟩ := ih F m₂ m₃ a₂ _ c z hF hR₂ hb' h3
         refine ⟨a₃, ?_, hR₃⟩
         rw [maxW_toNat, maxW_toNat, predW_toNat]
         simp only [bvarBoundArmLet, StateT.run_bind, ha₁, except_ok_bind, ha₂, ha₃]
         rfl
 
 theorem nodeOK_succ (n : Nat) (ih : GoOK n) : NodeOK (n + 1) := by
-  intro m m' a h c r hR hh hb
+  intro F m m' a h c r hF hR hh hb
+  have hF' : c.toNat ≤ F ∨ n ≤ F := by omega
   by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
   · rw [bbNodeW] at hb; simp only [ite_eq_left hs, reduceCtorEq] at hb
   have vok : ∀ c, ¬ rdW (m.arr64 CTL) (c + tierW h) ≤ idxW h → viewOK m h c :=
     fun c hc => ⟨hs, UInt64.not_le.mp hc⟩
-  have zero : ∀ v, a.store.view (decE h) = some v → bbArm c.toNat v = pure 0 → r = 0 → m' = m →
-      ∃ a', (bbNodeA c.toNat (decE h)).run a = .ok (r.toNat, a') ∧ ArenaR m' a' := by
+  have zero : ∀ v, a.store.view (decE h) = some v → bbArm F v = pure 0 → r = 0 → m' = m →
+      ∃ a', (bbNodeA F (decE h)).run a = .ok (r.toNat, a') ∧ ArenaR m' a' := by
     intro v hv hx hr hm; subst hr hm
-    exact ⟨a, by rw [bbNodeA_run c.toNat _ a _ hv, hx]; rfl, hR⟩
+    exact ⟨a, by rw [bbNodeA_run F _ a _ hv, hx]; rfl, hR⟩
   by_cases g0 : h >>> 28 = 0
   · by_cases hc : rdW (m.arr64 CTL) (22 + tierW h) ≤ idxW h
     · rw [bbNodeW] at hb; simp [hs, g0, hc] at hb
@@ -231,42 +237,42 @@ theorem nodeOK_succ (n : Nat) (ih : GoOK n) : NodeOK (n + 1) := by
     rw [bbNodeW_bvar n m h c (vok 22 hc) g0 h1] at hb
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     refine ⟨a, ?_, hR⟩
-    rw [bbNodeA_run c.toNat _ a _ (view_bvar m a hR h hh (vok 22 hc) g0), succW_toNat _ h1]; rfl
+    rw [bbNodeA_run F _ a _ (view_bvar m a hR h hh (vok 22 hc) g0), succW_toNat _ h1]; rfl
   by_cases g4 : h >>> 28 = 4
   · by_cases hc : rdW (m.arr64 CTL) (4 + tierW h) ≤ idxW h
     · rw [bbNodeW] at hb; simp [hs, g4, hc] at hb
     obtain ⟨hv, hf, ha⟩ := view_app m a hR h hh (vok 4 hc) g4
     rw [bbNodeW_app n m h c (vok 4 hc) g4] at hb
-    obtain ⟨a', h1, h2⟩ := bbAppArm_ok n ih m m' a hR c _ _ r hf ha hb
-    exact ⟨a', (bbNodeA_run c.toNat _ a _ hv).trans h1, h2⟩
+    obtain ⟨a', h1, h2⟩ := bbAppArm_ok n ih F m m' a hR c _ _ r hf ha hF' hb
+    exact ⟨a', (bbNodeA_run F _ a _ hv).trans h1, h2⟩
   by_cases g5 : h >>> 28 = 5
   · by_cases hc : rdW (m.arr64 CTL) (28 + tierW h) ≤ idxW h
     · rw [bbNodeW] at hb; simp [hs, g5, hc] at hb
     obtain ⟨hv, hf, ha⟩ := view_lam m a hR h hh (vok 28 hc) g5
     rw [bbNodeW_lam n m h c (vok 28 hc) g5] at hb
-    obtain ⟨a', h1, h2⟩ := bbBindArm_ok n ih m m' a hR c _ _ r hf ha hb
-    exact ⟨a', (bbNodeA_run c.toNat _ a _ hv).trans h1, h2⟩
+    obtain ⟨a', h1, h2⟩ := bbBindArm_ok n ih F m m' a hR c _ _ r hf ha hF' hb
+    exact ⟨a', (bbNodeA_run F _ a _ hv).trans h1, h2⟩
   by_cases g6 : h >>> 28 = 6
   · by_cases hc : rdW (m.arr64 CTL) (30 + tierW h) ≤ idxW h
     · rw [bbNodeW] at hb; simp [hs, g6, hc] at hb
     obtain ⟨hv, hf, ha⟩ := view_forall m a hR h hh (vok 30 hc) g6
     rw [bbNodeW_forall n m h c (vok 30 hc) g6] at hb
-    obtain ⟨a', h1, h2⟩ := bbBindArm_ok n ih m m' a hR c _ _ r hf ha hb
-    exact ⟨a', (bbNodeA_run c.toNat _ a _ hv).trans h1, h2⟩
+    obtain ⟨a', h1, h2⟩ := bbBindArm_ok n ih F m m' a hR c _ _ r hf ha hF' hb
+    exact ⟨a', (bbNodeA_run F _ a _ hv).trans h1, h2⟩
   by_cases g7 : h >>> 28 = 7
   · by_cases hc : rdW (m.arr64 CTL) (20 + tierW h) ≤ idxW h
     · rw [bbNodeW] at hb; simp [hs, g7, hc] at hb
     obtain ⟨hv, ht, hv', hb'⟩ := view_let m a hR h hh (vok 20 hc) g7
     rw [bbNodeW_let n m h c (vok 20 hc) g7] at hb
-    obtain ⟨a', h1, h2⟩ := bbLetArm_ok n ih m m' a hR c _ _ _ r ht hv' hb' hb
-    exact ⟨a', (bbNodeA_run c.toNat _ a _ hv).trans h1, h2⟩
+    obtain ⟨a', h1, h2⟩ := bbLetArm_ok n ih F m m' a hR c _ _ _ r ht hv' hb' hF' hb
+    exact ⟨a', (bbNodeA_run F _ a _ hv).trans h1, h2⟩
   by_cases g9 : h >>> 28 = 9
   · by_cases hc : rdW (m.arr64 CTL) (32 + tierW h) ≤ idxW h
     · rw [bbNodeW] at hb; simp [hs, g9, hc] at hb
     obtain ⟨hv, -, he⟩ := view_proj m a hR h hh (vok 32 hc) g9
     rw [bbNodeW_proj n m h c (vok 32 hc) g9] at hb
-    obtain ⟨a', h1, h2⟩ := ih m m' a _ c r hR he hb
-    exact ⟨a', (bbNodeA_run c.toNat _ a _ hv).trans h1, h2⟩
+    obtain ⟨a', h1, h2⟩ := ih F m m' a _ c r hF' hR he hb
+    exact ⟨a', (bbNodeA_run F _ a _ hv).trans h1, h2⟩
   by_cases g1 : h >>> 28 = 1
   · by_cases hc : rdW (m.arr64 CTL) (26 + tierW h) ≤ idxW h
     · rw [bbNodeW] at hb; simp [hs, g1, hc] at hb
@@ -301,8 +307,8 @@ theorem nodeOK_succ (n : Nat) (ih : GoOK n) : NodeOK (n + 1) := by
 theorem goOK (n : Nat) : GoOK n ∧ NodeOK n := by
   induction n with
   | zero =>
-    exact ⟨fun _ _ _ _ _ _ _ _ hb => by simp [bbW] at hb,
-      fun _ _ _ _ _ _ _ _ hb => by simp [bbNodeW] at hb⟩
+    exact ⟨fun _ _ _ _ _ _ _ _ _ _ hb => by simp [bbW] at hb,
+      fun _ _ _ _ _ _ _ _ _ _ hb => by simp [bbNodeW] at hb⟩
   | succ n ih => exact ⟨goOK_succ n ih.2, nodeOK_succ n ih.1⟩
 
 /-! ## The entry `bb_memo` refines `bvarBoundMemo` -/
@@ -313,10 +319,12 @@ theorem bvarBoundMemo_run (F : Nat) (e : EIdx) (a : AState) :
   simp only [bvarBoundMemo, StateT.run_bind, bvarBClear_run, except_ok_bind]
   cases (bvarBoundGo F e).run (withBC a ∅) <;> rfl
 
-/-- **The model of `bb_memo` refines `bvarBoundMemo`** at the counter's value `c.toNat`. -/
-theorem bbMemoW_correct (n : Nat) (m m' : Mem) (a : AState) (hR : ArenaR m a)
-    (h c r : Word) (hh : h.toNat < 2 ^ 32) (hb : bbMemoW n m h c = some (r, m')) :
-    ∃ a', (bvarBoundMemo c.toNat (decE h)).run a = .ok (r.toNat, a') ∧ ArenaR m' a' := by
+/-- **The model of `bb_memo` refines `bvarBoundMemo` at any twin fuel `F`** with `c.toNat ≤ F` or the
+L fuel `n ≤ F` (the walk's counter or its L fuel bounds the twin's). -/
+theorem bbMemoW_correctF (n F : Nat) (m m' : Mem) (a : AState) (hR : ArenaR m a)
+    (h c r : Word) (hh : h.toNat < 2 ^ 32) (hF : c.toNat ≤ F ∨ n ≤ F)
+    (hb : bbMemoW n m h c = some (r, m')) :
+    ∃ a', (bvarBoundMemo F (decE h)).run a = .ok (r.toNat, a') ∧ ArenaR m' a' := by
   simp only [bbMemoW] at hb
   by_cases h0 : rdW (m.arr64 CTL) 24 + 2 = 0
   · simp [h0] at hb
@@ -330,8 +338,14 @@ theorem bbMemoW_correct (n : Nat) (m m' : Mem) (a : AState) (hR : ArenaR m a)
     · simp [hw, clrK, h1] at hb
     simp only [hw, clrK, h1, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hb
     obtain ⟨rfl, rfl⟩ := hb
-    obtain ⟨a₁, ha₁, hR₁⟩ := (goOK n).1 _ _ _ h c r₁ hR₀ hh hw
+    obtain ⟨a₁, ha₁, hR₁⟩ := (goOK n).1 F _ _ _ h c r₁ hF hR₀ hh hw
     exact ⟨_, by rw [bvarBoundMemo_run, ha₁]; rfl, ArenaR.memo_clear m₁ a₁ hR₁ h1⟩
+
+/-- **The model of `bb_memo` refines `bvarBoundMemo`** at the counter's value `c.toNat`. -/
+theorem bbMemoW_correct (n : Nat) (m m' : Mem) (a : AState) (hR : ArenaR m a)
+    (h c r : Word) (hh : h.toNat < 2 ^ 32) (hb : bbMemoW n m h c = some (r, m')) :
+    ∃ a', (bvarBoundMemo c.toNat (decE h)).run a = .ok (r.toNat, a') ∧ ArenaR m' a' := by
+  exact bbMemoW_correctF n _ m m' a hR h c r hh (.inl (Nat.le_refl _)) hb
 
 /-- **`bb_memo` refines the arena's `bvarBoundMemo` under `ArenaR`**: if the L walk returns, the
 arena walk at the counter's fuel `c.toNat` succeeds with the same bound, in a related state. -/
