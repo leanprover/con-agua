@@ -605,7 +605,7 @@ theorem spnLsW_ok (n : Nat) (m m' : Mem) (a : AState) (b l r : Word) (hs : List 
   have htop₃ : m₃.top = m₂.top := by simp only [top_rdW]; exact hf₃.2.1 0 (by simp [lsSch])
   refine ⟨_, hrun, hA₃, UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hr), ?_, ?_, ?_, ?_, hca, hpi, hme⟩
   · exact (hf₁.mono (by simp) (by simp)).trans ((by rw [← hm₂]; exact (MemFrame.setCtl _ _ _).mono (by simp) (by simp)
-      : MemFrame [POOL, LSREC, LSSLOT] [0, 40, 41] m₁ m₂).trans (hf₃.mono (by simp [lsSch]) (by simp [lsSch])))
+      : MemFrame [POOL, LSREC, LSSLOT, LSHP] [0, 40, 41] m₁ m₂).trans (hf₃.mono (by simp [lsSch]) (by simp [lsSch])))
   · intro i hi
     rw [hpool₃, hpool₂]
     have := hg₁.2.1 i.toNat hi
