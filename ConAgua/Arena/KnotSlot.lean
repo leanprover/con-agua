@@ -779,8 +779,8 @@ structure KnotEntryProg (p : Prog) : Prop where
 /-- A level handle result word. -/
 def decLv (r : List Word) : LIdx := decI (r.headD 0)
 
-/-- `ensure_sort(mode, vis, d, e)` refines `ensureSort` at the knot (no L proof yet: a hypothesis
-of `ensureSortCore_refines`). -/
+/-- `ensure_sort(mode, vis, d, e)` refines `ensureSort` at the knot (`ensureSort_refines`,
+`InferLeaves.lean`, proves it from the knot's `whnf` slot). -/
 def EnsureSortSpec (p : Prog) (n : Nat) : Prop :=
   ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb mode d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode →
@@ -864,10 +864,9 @@ theorem isDefEqCore_refines (n : Nat) (hd : DefeqSlot p n) (F : Nat) (s₀ : St)
     (fun r r' h => by simp only [decBool, h]) hW⟩
 
 include hp in
-/-- **`ensure_sort_core` refines `ensureSortCore`** at the verified mode, from `ensure_sort`'s
-spec (`EnsureSortSpec`, a hypothesis until `ensure_sort` is proved). -/
-@[refines_part ConRon.Arena.ensureSortCore "from EnsureSortSpec"]
-theorem ensureSortCore_refines (n : Nat) (hs : EnsureSortSpec p n) (F : Nat) (s₀ : St)
+/-- `ensure_sort_core` refines `ensureSortCore` at the verified mode, from `ensure_sort`'s spec
+(`ensureSortCore_refines`, `InferLeaves.lean`, discharges it from the knot). -/
+theorem ensureSortCore_of_spec (n : Nat) (hs : EnsureSortSpec p n) (F : Nat) (s₀ : St)
     (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (dep t : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hS : CoreS dn s₀.mem a₀ vis fe M 0) (ht : HW t) :
     CoreSpec p (n + 1) "ensure_sort_core" [vis, dep, t]
