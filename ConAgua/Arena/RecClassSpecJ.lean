@@ -305,7 +305,8 @@ theorem gtW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   rw [e13]
   have hlen : G.pre.length = l12 := decHL_length _ (hpre.get (OMono.decHL _ _))
   have hm := mjW_sim dn vis fe n m a g c (UInt64.ofNat l12) G hS hG
-  rw [t13, ← hlen] at hm
+  have hd13 : (UInt64.ofNat l12 : Word).toNat = G.pre.length := by rw [t13, hlen]
+  rw [hd13] at hm
   refine RSim.bind (K := gtK1 n g c (UInt64.ofNat l12)) rfl hm ?_
   rintro ⟨r1, m1⟩ o1 a1 - ⟨hS1, hg1, ho1⟩
   dsimp only at hS1 hg1 ho1
@@ -326,9 +327,10 @@ theorem gtW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     have : ¬ (UInt64.ofNat l12 + r1.tail.tail.headD 0).toNat < (UInt64.ofNat l12 : Word).toNat :=
       fun x => hov (UInt64.lt_iff_toNat_lt.mpr x)
     rw [UInt64.toNat_add] at this ⊢
-    have h1 := (UInt64.ofNat l12 : Word).toNat_lt
+    have h1 : l12 < 2 ^ 64 := by have := (UInt64.ofNat l12 : Word).toNat_lt; rw [t13] at this; exact this
     have h2 := (r1.tail.tail.headD 0).toNat_lt
-    rw [decHL_length _ hifs, ← t13, hlen]
+    rw [decHL_length _ hifs, hlen]
+    rw [t13] at this ⊢
     omega
   have hi := simInternFVar hS1 (UInt64.ofNat l12 + r1.tail.tail.headD 0) hmH
   rw [hu, hmd] at hi
