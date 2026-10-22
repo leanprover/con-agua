@@ -285,6 +285,31 @@ theorem natEqCtx_ref (hN : NatSubProg' p) (pi d : Word) :
       have hj8 : j = 0 ∨ j = 1 ∨ j = 2 ∨ j = 3 ∨ j = 4 ∨ j = 5 ∨ j = 6 ∨ j = 7 := by omega
       rcases hj8 with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> rfl
 
+/-! ### The dispatch -/
+
+def natEqDispW (p : Prog) (n : Nat) (m : Mem) (c pi cx : Word) : Option (List Word × Mem) :=
+  let fin := fun (r : List Word) (m' : Mem) => some ([r.headD 0, r.getD 1 0], m')
+  if c = pw m pi 0 then bW (callW p n "nat_eq_pr" [c, pw m cx 2, pw m cx 0, pw m cx 4] m) fin else
+  if c = pw m pi 1 then bW (callW p n "nat_eq_un" [c, pw m cx 0, pw m cx 1, pw m cx 2, pw m cx 5, pw m cx 3] m) fin else
+  if c = pw m pi 2 then bW (callW p n "nat_eq_un" [c, pw m cx 0, pw m cx 1, pw m cx 2, pw m cx 5, pw m pi 0] m) fin else
+  if c = pw m pi 3 then bW (callW p n "nat_eq_mu" [c, pw m cx 0, pw m cx 1, pw m cx 2, pw m cx 5, pw m pi 1] m) fin else
+  if c = pw m pi 4 then bW (callW p n "nat_eq_po" [c, pw m cx 0, pw m cx 1, pw m cx 2, pw m cx 5, pw m cx 3, pw m pi 3] m) fin else
+  if c = pw m pi 5 then bW (callW p n "nat_eq_be" [c, pw m cx 0, pw m cx 1, pw m cx 2, pw m cx 4, pw m cx 5, pw m cx 6, pw m cx 7] m) fin else
+  if c = pw m pi 6 then bW (callW p n "nat_eq_bl" [c, pw m cx 0, pw m cx 1, pw m cx 2, pw m cx 4, pw m cx 5, pw m cx 6, pw m cx 7] m) fin else
+  some ([0, 0], m)
+
+theorem natEqDisp_specW (p : Prog) (hp : p.lookup "nat_eq_disp" = some natEqDisp) (n : Nat) (s₀ : St)
+    (c pi cx : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_eq_disp" [c, pi, cx]
+    ⦃fun r s' => LocEq s' s₀ ∧ natEqDispW p n s₀.mem c pi cx = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, natEqDisp]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      callW_spec p n "nat_eq_pr", callW_spec p n "nat_eq_un", callW_spec p n "nat_eq_mu",
+      callW_spec p n "nat_eq_po", callW_spec p n "nat_eq_be", callW_spec p n "nat_eq_bl"] <;>
+    finish (gen := 20) (instances := 10000) [natEqDispW, bW, pw]
+
 end opeq
 
 end L.Ind
