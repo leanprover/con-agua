@@ -92,4 +92,90 @@ theorem nck_spec (p : Prog) (hP : NckProg p) (n : Nat) (s₀ : St) (q fo fl : Wo
       iwAlloc_specW p hP.alloc n] <;>
     finish (gen := 20) [nckW, nckRec, nctxMem, allocMem, allocW, rdW_eq]
 
+/-! ## The shape record's members, below the tops -/
+
+/-- What the projections' lemmas ask of a shape record decoded below the tops whose members' slice
+lies below the top. -/
+theorem partsShapeFacts {m : Mem} {q : Word} {bs : BlockShape}
+    (hq : DecB (fun m => decBS m q.toNat) m bs)
+    (hsrc : ∀ o l, iwN m q.toNat = some o → iwN m (q.toNat + 1) = some l → o + l ≤ iwTop m) :
+    decBS m q.toNat = some bs ∧ q.toNat + 9 ≤ iwTop m ∧
+    (∀ o l j v, iwN m q.toNat = some o → iwN m (q.toNat + 1) = some l → j < l →
+      iwN m (o + j) = some v → v + 1 < iwTop m) := by
+  have hqt : decBS (truncM m) q.toNat = some bs := hq
+  obtain ⟨hmem, -, -, -, -, -, hpr⟩ := decBS_some hqt
+  have hq8 : q.toNat + 8 < iwTop m := by
+    simp only [iwB, bool?, Option.map_eq_some_iff] at hpr
+    obtain ⟨w, hw, -⟩ := hpr
+    exact (truncM_iw_get hw).1
+  refine ⟨hq.get (decBS_mono _), by omega, ?_⟩
+  obtain ⟨o, l, ho, hl, hdm, -⟩ := partsAt decMS_mono hmem
+  have hoN : iwN m q.toNat = some o.toNat := by rw [← iwN_truncM (by omega)]; exact ho
+  have hlN : iwN m (q.toNat + 1) = some l.toNat := by rw [← iwN_truncM (by omega)]; exact hl
+  intro o' l' j v h1 h2 hj hv
+  rw [hoN] at h1; rw [hlN] at h2
+  simp only [Option.some.injEq] at h1 h2; subst h1 h2
+  obtain ⟨v', hv', hms⟩ := decPL_getH (truncM m) (show decPL _ _ _ _ = _ from hdm) j hj
+  have hlt := partsIwLt hv'
+  rw [iwN_truncM hlt, hv] at hv'
+  simp only [Option.some.injEq] at hv'; subst hv'
+  obtain ⟨-, hn, -⟩ := decMS_some hms
+  exact partsIwLt hn
+
+theorem nIdxsW_room {n : Nat} {m m' : Mem} {p : Word} {r : List Word}
+    (h : nIdxsW n m p = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64) :
+    iwTop m + (rdW (m.arr64 IW) (p + 1)).toNat ≤ (m.arr64 IW).size := by
+  unfold nIdxsW at h
+  cases hal : allocW m (rdW (m.arr64 IW) (p + 1)) with
+  | none => rw [hal] at h; cases h
+  | some x =>
+    obtain ⟨hq, -, hr⟩ := allocW_facts hal hsz
+    simp only [iwTop]; rw [hq] at hr; exact hr
+
+/-- The members' count word of a decoded shape record. -/
+theorem partsShapeK {m : Mem} {q : Word} {bs : BlockShape} (hq : decBS m q.toNat = some bs)
+    (hb : q.toNat + 9 ≤ iwTop m) : rdW (m.arr64 IW) (q + 1) = UInt64.ofNat bs.k := by
+  have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
+  have := decBS_k hq (by omega)
+  rwa [show UInt64.ofNat (q.toNat + 1) = q + 1 from by
+    apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp] at this
+
+/-- **`block_shape_lps`, below the tops** (no global bound on the record pool needed). -/
+theorem lpsW_ok' {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
+    {m m' : Mem} {q : Word} {r : List Word} {bs : BlockShape} (h : lpsW n m q = some (r, m'))
+    (hS : StageR dn vis fe m a) (hq : DecB (fun m => decBS m q.toNat) m bs) :
+    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+      decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some bs.lps ∧
+      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
+  have hqt : decBS (truncM m) q.toNat = some bs := hq
+  obtain ⟨hmem, -, -, -, -, -, hpr⟩ := decBS_some hqt
+  have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
+  have hq8 : q.toNat + 8 < iwTop m := by
+    simp only [iwB, bool?, Option.map_eq_some_iff] at hpr
+    obtain ⟨w, hw, -⟩ := hpr
+    exact (truncM_iw_get hw).1
+  obtain ⟨o, l, ho, hl, hdm, hb⟩ := partsAt decMS_mono hmem
+  obtain ⟨how, -, -⟩ := partsIwRd ho rfl
+  obtain ⟨hlw, -, -⟩ := partsIwRd hl (show (q + 1).toNat = q.toNat + 1 by rw [UInt64.toNat_add]; simp; omega)
+  rw [ofNat_toNat_word] at how hlw
+  cases n with
+  | zero => simp [lpsW] at h
+  | succ n =>
+  by_cases hl0 : l = 0
+  · rw [lpsW_nil n m q (by rw [hlw, hl0])] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    have : bs.members = [] := by have := decPL_length _ (show decPL _ _ _ _ = _ from hdm); rw [hl0] at this; simpa using this
+    refine ⟨hS, IWGrow.refl _, ?_, by simp⟩
+    simp [BlockShape.lps, this, decHL, hslice?]
+  rw [lpsW_cons n m q (by rw [hlw]; exact hl0)] at h
+  have hPS : PSlR decMS bs.members o l m := ⟨hdm, hb.resolve_left hl0⟩
+  obtain ⟨pc, ms0, ms', hms, hw0, hpb, hm0, -⟩ := partsPSl_cons hPS hl0
+  obtain ⟨⟨cvp, hcvp, hcv⟩, -, -⟩ := decMS_some (show decMS (truncM m) pc = some ms0 from hm0)
+  obtain ⟨hcw, hcvb, -⟩ := partsIwRd hcvp (UInt64.toNat_ofNat_of_lt' hpb)
+  rw [how, hw0, hcw] at h
+  obtain ⟨hS', hg, hd, ht⟩ := partsLpsCopy h hS (show DecB (fun m => decCVp m cvp) m ms0.cvT from hcv) hcvb
+  refine ⟨hS', hg, ?_, Nat.le_of_eq ht⟩
+  rw [hd]; simp [BlockShape.lps, hms]
+
 end L.Ind
