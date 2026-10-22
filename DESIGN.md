@@ -7403,3 +7403,27 @@ grows (the memo library's capacity rule, as every L memo). Refinement: not yet (
   different instance needs its own name.
 * `KnotCallees` left (9): `whnfCoreStep`, `whnfStep`, `proofIrrel`, `towerSlots`,
   `reduceProjCore`, `unfold`, `constTy`, `instLP`, `den`.
+
+### Landing 4: `tower_slots_all` on the real `find_proj`; the plan for `CoreS.den`
+* `tsW_ok`/`towerSlotsAll_refines'` take `FindProjOK`/`ProjFound` instead of all of
+  `CoreCallees` (lane defeq2's request); the tagged `towerSlotsAll_refines`
+  (`WhnfProjRefine3.lean`) uses `findProj_refines`/`projFound` and is sorry-free given `ProjProg p`.
+* **`CoreS.den : StoreDen m a fe`** (lane defeq2's invariant; it closes `CoreS.lvl_den`,
+  `LvlsEqDen`, `ProjSortDen`, `FireDen`, `CoreDen`) is not added yet. What it takes:
+  memory-only frames keep it when `EREC` is kept (`frameSM`/`frameS`/`frameM`/`frame_stk`: all
+  avoid 136); cache-only steps (`setMemo`, the slots' memo writes, `lvl_eq_c`) when `readNC`,
+  `pins` and the store are unchanged; store steps (`arena_frame`, `of_walk`, `of_app`, …, about 70
+  call sites) need the sort/const views of the new state: for a frame avoiding the `sort` and
+  `const` tables (`SOREC`/`SOSLOT`, `CREC`/`CSLOT`, `CTL` 16‥19) with `cpl` kept, the views are
+  determined by those arrays under `ArenaR` (`view_sort`/`view_const` and their converse, to be
+  written), so `StoreDen` transfers; the interning of a `sort` or `const` node (`of_const`, the
+  inference's `Sort`/`imax` results, `nat_op_result`'s `Bool` constants at the pinned empty list)
+  needs the new level or list to read back, which the callers know from where it came (a stored
+  view, or con-ron's `LStore.intern_spec`/`LsStore.intern_spec` on reading-back children).
+* Helper `whnf3-lp`'s `instLP` family (branch `whnf3-next`): the L code and the level-substitution
+  proofs (`capsNeverZero`, `substLevelsAt`, `substParamLevels`, `recFireLevels`, `internLevel`, at
+  `ArenaD`, on `StoreWF a.store` and the readback caches) keep the keys on the spine stack
+  (`lvLookupG SPN POOL`) and the `PropWhen` names in `EREC` (`lvSpwG EREC`), which clash by name
+  with lane defeq2's `lv_lookup`/`lv_spw`; they need their own names (and so their own copies of
+  `lv_substl`/`lv_substpw`, which call those names) before they can land. D23 (no `lp` cutoff in
+  L's derived words) blocks `InstLPOK`: either an `lp` bit in `DerR` or `StoreWF` in `CoreS`.
