@@ -4378,7 +4378,13 @@ be asymptotically slower. con-ron at `_tmp/ref/con-ron` origin/HEAD (`proof/ConR
 * `WhnfCoreProj.lean`: none of its own. `reduce_proj_core` is proved on its split into
   `_core`/`_head`/`_fire`/`_arg` (sub-lane); the inner two leave the argument slice on the stack, so
   their post is `GrowSpec` (`CoreSpec` with `StackGrew`); the outer one restores the top.
-* `WhnfIota.lean`: `iotaCallees_stub` and every spec (28).
+* `WhnfIota.lean`: `iotaCallees_stub` and eight specs: `iota_ctor_never_prop`, `iota_case3` (need a
+  corrected `caps_never_zero` stub: its twin runs readbacks), `prepare_major`, `major_to_ctor`,
+  `proof_irrel` (calls `lvl_eq_c`), `iota_certs_full(_aux)`, `iota_rec_at`. Eighteen are proved
+  (`WhnfIotaRefine*.lean`, sub-lane); its fixes to the L code: `const_ty_at`/`rule_rhs_at` probe
+  the memo again after `inst_lp`, `defeq_list` compares the common prefix before the lengths (the
+  twin's order of `defeq` calls), `iota_index_ok`/`iota_certs_full` restore the top,
+  `inst_spine_pins` raises the top after each store, `and_rescue_slots` runs `fire_ok` first.
 * `WhnfDelta.lean`: the δ/Nat specs (`whnf_step`, `reduce_nat`, `delta_step`, …; 14).
 
 ### Lane `exprops4`'s walks as this lane's callees (open)
@@ -5668,6 +5674,26 @@ Census at landing 3 (`--no-build`): phase 2 **130 proven, 11 sorry, 79 written**
 `installHeader`, `installValueGuards`, `checkValueGroup` now `sorry` — through stubs only); bad
 links 0 (`@[l_impl]` moved off the ROM readers, which are functions of the ROM, onto
 `romExprL`/`internAllPinsL` at the program's ROM).
+
+### `decE` (`ConAgua/Scan/Utf8Link.lean:239`): `simp` under a `dite` with proof-carrying branches
+
+- **Cause.** `assemble₄` is `if h₁ : r < 0x10000 then none else if h₂ : 0x10ffff < r then none else
+  some ⟨r, proof(h₁, h₂)⟩`. `simp only [UInt32.lt_iff_toNat_lt, hv, UInt32.reduceToNat]` rewrote both
+  conditions under the binders, so the `Char.valid` proof became `Eq.mpr_not (… hv …) h` casts; any
+  leaf proof that then rewrote with `hr`/`hs` made the kernel spend 6 s (uncontended; 21.9 s in the
+  contended build) checking them. Each of the three leaves alone costs the full 6 s; with all three
+  `sorry`ed, nothing. `decD` (same shape, smaller numbers) is cheap.
+- **Fix.** Leave the `dite`s alone: two `iff`s (`e1`, `e2`: the `UInt32` condition iff its `Nat`
+  form, by `UInt32.lt_iff_toNat_lt` and `v4L`), case on the `Nat` form and step through the `dite`s
+  with `dite_eq_left`/`dite_eq_right`. Same statement.
+- **Before/after.** `decE` 6 s → under 0.1 s; module 38 s (contended) → 2.3 s.
+
+### `Scan/Records.lean` split (2270 lines)
+
+Pure move, as in `Front/FieldsDecl*`: `Records.lean` keeps the L code and the models (1357
+lines), `RecordsSpec.lean` the `specs` section (941 lines, same namespace, names and statements;
+it repeats the local `attribute [local lang_grind] boolEndN`). `Scan/Line.lean` and the root
+import `RecordsSpec`.
 
 ### Landing 2 (lane `defeq`)
 * Merged helpers `defeq-slots` (KnotSlot, InferLeaves). The phase-4 callees landed by lane

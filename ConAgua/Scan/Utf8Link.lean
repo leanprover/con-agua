@@ -259,14 +259,23 @@ theorem decE (h : 240 ≤ B[i].toNat ∧ B[i].toNat < 245) : encChar (B.utf8Deco
     · have hv := v4L B[i] B[i + 1] B[i + 2] B[i + 3]
       simp only [hc, decide_true, Bool.not_true, Bool.or_self, Bool.false_eq_true, ite_false, ite_true,
         and_self]
-      simp only [UInt32.lt_iff_toNat_lt, hv, UInt32.reduceToNat]
+      have e1 : assemble₄Unchecked B[i] B[i + 1] B[i + 2] B[i + 3] < 0x10000 ↔
+          B[i].toNat % 8 * 262144 + B[i + 1].toNat % 64 * 4096 + B[i + 2].toNat % 64 * 64 +
+            B[i + 3].toNat % 64 < 65536 := by
+        rw [UInt32.lt_iff_toNat_lt, hv]; rfl
+      have e2 : 0x10ffff < assemble₄Unchecked B[i] B[i + 1] B[i + 2] B[i + 3] ↔
+          1114111 < B[i].toNat % 8 * 262144 + B[i + 1].toNat % 64 * 4096 + B[i + 2].toNat % 64 * 64 +
+            B[i + 3].toNat % 64 := by
+        rw [UInt32.lt_iff_toNat_lt, hv]; rfl
       by_cases hr : B[i].toNat % 8 * 262144 + B[i + 1].toNat % 64 * 4096 + B[i + 2].toNat % 64 * 64 +
               B[i + 3].toNat % 64 < 65536
-      · simp [hr, encChar]
-      · by_cases hs : 1114111 < B[i].toNat % 8 * 262144 + B[i + 1].toNat % 64 * 4096 +
+      · rw [dite_eq_left (e1.2 hr)]; simp [hr, encChar]
+      · rw [dite_eq_right (mt e1.1 hr)]
+        by_cases hs : 1114111 < B[i].toNat % 8 * 262144 + B[i + 1].toNat % 64 * 4096 +
             B[i + 2].toNat % 64 * 64 + B[i + 3].toNat % 64
-        · simp [hr, hs, encChar]
-        · simp only [hr, hs, ite_false, dite_false, false_or]
+        · rw [dite_eq_left (e2.2 hs)]; simp [hr, hs, encChar]
+        · rw [dite_eq_right (mt e2.1 hs)]
+          simp only [hr, hs, ite_false, false_or]
           simp only [encChar, Char.utf8Size, UInt32.le_iff_toNat_le, hv, UInt32.toNat_ofNatLT]
           rw [ite_eq_right (by omega), ite_eq_right (by omega), ite_eq_right (by omega)]
           have := B[i].toNat_lt; have := B[i + 1].toNat_lt; have := B[i + 2].toNat_lt
