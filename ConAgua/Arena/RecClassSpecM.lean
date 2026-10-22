@@ -165,7 +165,7 @@ theorem gpbK3_some : gpbK3 (some (r3, m3)) = some ([1, r3.headD 0, r3.tail.headD
 end arms
 
 attribute [ind_grind] fcK_some fcgW_nil fcgW_hit fcgW_miss fcW_none fcW_go pfK3_some pfK2_fail pfK2_ok
-  pfK1_fail pfK1_ok pfK4_fail pfK4_ok psW_end psW_mot psW_min gpbW_eq gpbK1_some gpbK2_fail gpbK2_ok gpbK3_some
+  pfK1_fail pfK1_ok pfK4_fail pfK4_ok pfR_some psW_end psW_mot psW_min smW_eq snW_eq gpbW_eq gpbK1_some gpbK2_fail gpbK2_ok gpbK3_some
 
 /-! ## Specs -/
 
