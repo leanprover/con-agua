@@ -140,3 +140,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-22,indproofs2,opus,10,20,"landing 10: helper rec3 merged (targetAbs(Go), classFeR, ClassRead.classes sorry-free; classRulesOk etc. through stubs; RecsOK/SlotsExt discharged); phase 8: 78 proven / 75 sorry"
 2026-10-22,whnf4,opus,30,8,"landing 3 (helper whnf4-leaves): KnotCallees.projSmall (reduce_proj_fire no-wrap test) and fireOk (fireOk_core from den) discharged; 6 fields left"
 2026-10-22,indproofs2,opus,10,20,"landing 11: helper posmemo merged (PosMR threaded through the positivity walks; 22 tags restored honestly); phase 8: 78 proven / 92 sorry / 47 written"
+2026-10-22,decls3,opus,95,8,"defn arm: L split into gates, checkDecl_defn_eq, arm proved through gate specs (DefnProg), PinSetsR.grow; stepC excludes pin header"

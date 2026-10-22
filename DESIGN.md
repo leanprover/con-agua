@@ -7683,6 +7683,23 @@ entry. The memo-hit bug (the probe depth returned as the value) was found by thi
   name-handle guard in `class_fe_r_rec`; D18 extended. ~2.6k proof lines for ~170 L lines.
 * Census: phase 8 **78 proven, 75 sorry, 64 written, 6 todo**; totals 718 proven / 119 sorry.
 
+### Landing 10 (lane `decls3`): the definition arm through its gates
+
+* **L**: `check_decl_defn` now calls two gate functions, `defn_nat_gate(vis, w, n)` (the
+  structural-`Nat` gate, `checkDecl`'s lines 104-119) and `defn_div_gate(vis, w, n)` (the
+  `Nat.div`-family pin gate, lines 123-124); the code is unchanged, only split.
+* **Twin**: `natGateT`, `divGateT` (`DeclArmDefn.lean`) and `checkDecl_defn_eq`: the arm is
+  `checkConstantVal; let fe2 ← checkDefnVal; natGateT; divGateT; pure fe2` (the twin's `do` join
+  points distributed: `bind_assoc`, case splits, `fail_bindAM`).
+* **Proof**: `cdfW_ok`/`checkDeclDefn_loop'` at the loop's relation through `DefnProg p pins`:
+  `NatGateSpec`, `DivGateSpec` (`RefAM` of the gate against the twin fragment, pre `StageR ∧
+  PinSetsR m pins`, post `KeepPost ∧ PinSetsR ∧ MemFrame stepA stepC`), for helpers
+  `decls3-nat`/`decls3-divmod`. `PinSetsR.grow`/`.step`: the variant list survives the step
+  (`stepC` now excludes `CTL[150]`, `CTL[151]`; every closed text still checks).
+* **Open**: `checkDeclDefn_loop` stays `sorry` until the loop's relation carries the variant list
+  (`PinSetsR m pins`: `LoopR` gains `pins`, or the chain `CheckDeclSpec` → `installStepGo_spec`
+  → `Checker.lean` threads it) and the two gate specs are proved.
+
 ### Landing 11: helper `posmemo` — the positivity theorems honest again
 * `IndPosMemo.lean`: `PosMR m` (the five walk memos — `nest_occ`, `depth`, `replace_apps`,
   `has_loose_bvar_b`, the banked `replace_fvars` (`RfInv`) — well formed in *this* memory),

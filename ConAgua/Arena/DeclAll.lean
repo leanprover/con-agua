@@ -38,6 +38,7 @@ import ConAgua.Arena.DeclCanonInfo
 import ConAgua.Arena.DeclApd
 import ConAgua.Arena.DeclApdSpec
 import ConAgua.Arena.DeclApdRef
+import ConAgua.Arena.DeclArmDefn
 
 /-!
 # Every declaration-loop module (lane `decls3`)
