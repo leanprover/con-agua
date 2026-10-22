@@ -238,4 +238,260 @@ theorem sctW_spec (p : Prog) (hp : p.lookup "check_struct_proj_table_scoped" = s
         stubM_spec p "consts_resolve_ffast" n, stubM_spec p "loose_bvars_bounded_fast" n, ih] <;>
       finish (gen := 30) (instances := 5000) [rdW_eq]
 
+/-- The twin's per-body scoping test (`checkStructProjTable`'s `allM` body, verbatim). -/
+def scopeT (fe : IFEnv) (lps : List NIdx) (nP : Nat) (b : EIdx) : AM Bool := do
+  pure (!(← hasFvarFast coreWalkFuel b) &&
+    (← allLevelParamsDefined lps b) &&
+    (← constsResolveFFast fe b) &&
+    (← looseBVarsBoundedFast coreWalkFuel (nP + 1) b))
+
+theorem sumB01 {r : Word} {b : Bool} (h : (r != 0) = b) (hl : r.toNat ≤ 1) :
+    (r = 1 ↔ b = true) ∧ (r = 0 ↔ b = false) := by
+  subst h
+  have : r = 0 ∨ r = 1 := by
+    rcases (show r.toNat = 0 ∨ r.toNat = 1 by omega) with h | h
+    · exact .inl (UInt64.toNat_inj.mp (by simpa using h))
+    · exact .inr (UInt64.toNat_inj.mp (by simpa using h))
+  rcases this with rfl | rfl <;> decide
+
+/-- **`check_struct_proj_table_scoped`'s model refines the twin's `bodies.toList.allM`**. -/
+theorem sctW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (nP lo ll : Word)
+    (lps : List NIdx) (hnP : nP.toNat + 1 < 2 ^ 64) (n : Nat) :
+    ∀ (m : Mem) (a : AState) (bO bL : Word) (bs : List EIdx),
+    StageR dn vis fe m a → decHL m lo.toNat ll.toNat = some lps → lo.toNat + ll.toNat ≤ iwTop m →
+    decHL m bO.toNat bL.toNat = some bs → bO.toNat + bL.toNat ≤ iwTop m →
+    Sim (sctW n m vis nP lo ll bO bL) (bs.allM (scopeT fe lps nP.toNat)) a
+      (fun r b m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧ (r.headD 0 != 0) = b ∧
+        (r.headD 0).toNat ≤ 1) := by
+  induction n with
+  | zero => intro m a bO bL bs _ _ _ _ _; exact Sim.of_none
+  | succ n ih =>
+  intro m a bO bL bs hS hlps hlb hbs hbb
+  by_cases hl : bL = 0
+  · rw [sctW_nil (h := hl)]
+    have : bs = [] := by
+      subst hl; have := decHL_length m hbs; simp at this; exact this
+    subst this
+    exact Sim.ret ⟨hS, IWGrow.refl _, rfl, by decide⟩
+  rw [sctW_cons (h := hl)]
+  obtain ⟨w, bs', rfl, hw, hwl, hbs'⟩ := decHL_cons hbs hl (hS.lt64 hbb)
+  rw [hw]
+  simp only [List.allM, scopeT, bind_assoc, pure_bind]
+  have hcwf : CWF.toNat = coreWalkFuel := CWF_eq
+  have h1 := hasFvarFast_spec dn vis fe CWF w hwl
+  rw [hcwf] at h1
+  refine Sim.bindK (K := sctK1 _ vis nP lo ll w) rfl (fun _ _ => rfl) (sumSim_of_relAM h1 hS)
+    fun r1 a1 m1 s1 hQ => ?_
+  obtain ⟨hS1, hg1, hb1, hl1⟩ := hQ
+  rw [sctK1_some]
+  refine Sim.bindK (K := sctK2 _ vis nP w (r1.headD 0)) rfl (fun _ _ => rfl)
+    (sumSim_of_relAM (allLevelParamsDefined_spec dn vis fe lo ll w hwl lps)
+      ⟨hS1, by rw [decHL_grow hg1 hlb]; exact hlps⟩) fun r2 a2 m2 s2 hQ => ?_
+  obtain ⟨hS2, hg2, hb2, hl2⟩ := hQ
+  rw [sctK2_some]
+  refine Sim.bindK (K := sctK3 _ nP w (r1.headD 0) (r2.headD 0)) rfl (fun _ _ => rfl)
+    (sumSim_of_relAM (constsResolveFFast_spec dn vis fe w hwl) hS2) fun r3 a3 m3 s3 hQ => ?_
+  obtain ⟨hS3, hg3, hb3, hl3⟩ := hQ
+  rw [sctK3_some]
+  have h4 := looseBVarsBoundedFast_spec dn vis fe CWF (nP + 1) w hwl
+  rw [hcwf, sumToNat_succ (by omega)] at h4
+  refine Sim.bindK (K := sctK4 _ (r1.headD 0) (r2.headD 0) (r3.headD 0)) rfl (fun _ _ => rfl)
+    (sumSim_of_relAM h4 hS3) fun r4 a4 m4 s4 hQ => ?_
+  obtain ⟨hS4, hg4, hb4, hl4⟩ := hQ
+  have hg14 := ((hg1.trans hg2).trans hg3).trans hg4
+  obtain ⟨-, e1⟩ := sumB01 hb1 hl1
+  obtain ⟨e2, -⟩ := sumB01 hb2 hl2
+  obtain ⟨e3, -⟩ := sumB01 hb3 hl3
+  obtain ⟨e4, -⟩ := sumB01 hb4 hl4
+  by_cases hc : r1.headD 0 = 0 ∧ r2.headD 0 = 1 ∧ r3.headD 0 = 1 ∧ r4.headD 0 = 1
+  · rw [sctK4_yes (h := hc)]
+    have ht : (!a1 && a2 && a3 && a4) = true := by
+      rw [e1.mp hc.1, e2.mp hc.2.1, e3.mp hc.2.2.1, e4.mp hc.2.2.2]; rfl
+    simp only [ht]
+    have hT := hS.lt64 hbb
+    have hbL : bL.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e))
+    have hb1' : (bO + 1).toNat + (bL - 1).toNat ≤ iwTop m := by
+      rw [sumToNat_succ (by omega), sumToNat_pred hl]; omega
+    refine sumSim_map (K := sctK5) rfl (fun _ _ => rfl)
+      (ih m4 s4 (bO + 1) (bL - 1) bs' hS4 (by rw [decHL_grow hg14 hlb]; exact hlps)
+        (by have := hg14.1; omega) (by rw [decHL_grow hg14 hb1']; exact hbs') (by have := hg14.1; omega))
+      fun r b m' a' hQ => ⟨hQ.1, hg14.trans hQ.2.1, by simpa using hQ.2.2.1, by simpa using hQ.2.2.2⟩
+  · rw [sctK4_no (h := hc)]
+    have ht : (!a1 && a2 && a3 && a4) = false := by
+      cases a1 <;> cases a2 <;> cases a3 <;> cases a4 <;> simp_all
+    simp only [ht]
+    exact Sim.ret ⟨hS4, hg14, rfl, by decide⟩
+
+
+/-! ## `check_struct_proj_table`: the word model -/
+
+/-- The memory after the `projInfo` record's fourteen writes. -/
+def tblMem (m : Mem) (q tn T lo2 ll2 nP C nF rs bo2 bl2 go2 gl2 off : Word) : Mem :=
+  (((((((((((((m.set64 EREC q 6).set64 EREC (q + 1) tn).set64 EREC (q + 2) T).set64 EREC (q + 3) lo2
+    ).set64 EREC (q + 4) ll2).set64 EREC (q + 5) nP).set64 EREC (q + 6) C).set64 EREC (q + 7) nF
+    ).set64 EREC (q + 8) rs).set64 EREC (q + 9) bo2).set64 EREC (q + 10) bl2).set64 EREC (q + 11) go2
+    ).set64 EREC (q + 12) gl2).set64 EREC (q + 13) off
+
+theorem tblMem_eq (m : Mem) (q tn T lo2 ll2 nP C nF rs bo2 bl2 go2 gl2 off : Word) :
+    tblMem m q tn T lo2 ll2 nP C nF rs bo2 bl2 go2 gl2 off =
+      wrER m q [6, tn, T, lo2, ll2, nP, C, nF, rs, bo2, bl2, go2, gl2, off] := by
+  simp only [tblMem, wrER]
+  rw [show q + 1 + 1 = q + 2 by ac_rfl, show q + 2 + 1 = q + 3 by ac_rfl,
+    show q + 3 + 1 = q + 4 by ac_rfl, show q + 4 + 1 = q + 5 by ac_rfl,
+    show q + 5 + 1 = q + 6 by ac_rfl, show q + 6 + 1 = q + 7 by ac_rfl,
+    show q + 7 + 1 = q + 8 by ac_rfl, show q + 8 + 1 = q + 9 by ac_rfl,
+    show q + 9 + 1 = q + 10 by ac_rfl, show q + 10 + 1 = q + 11 by ac_rfl,
+    show q + 11 + 1 = q + 12 by ac_rfl, show q + 12 + 1 = q + 13 by ac_rfl]
+
+/-- After `env_push`. -/
+def tblK9 : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rv, m) => some ([rv.headD 0], m)
+/-- After the record's allocation: the writes, the push. -/
+def tblK8 (p : Prog) (n : Nat) (vis tn T nP C nF rs off lo2 ll2 bo2 bl2 go2 gl2 : Word) :
+    Option (Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (q, m) => tblK9 (callW p (n + 1) "env_push" [vis, q]
+      (tblMem m q tn T lo2 ll2 nP C nF rs bo2 bl2 go2 gl2 off))
+/-- After the guards' copy. -/
+def tblK7 (p : Prog) (n : Nat) (vis tn T nP C nF rs off lo2 ll2 bo2 bl2 : Word) :
+    Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rg, m) => tblK8 p n vis tn T nP C nF rs off lo2 ll2 bo2 bl2 (rg.headD 0) (rg.tail.headD 0)
+      (erAllocW m 14)
+/-- After the bodies' copy. -/
+def tblK6 (p : Prog) (n : Nat) (vis tn T nP C nF rs off go gl lo2 ll2 : Word) :
+    Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rb, m) => tblK7 p n vis tn T nP C nF rs off lo2 ll2 (rb.headD 0) (rb.tail.headD 0)
+      (efW n m go gl)
+/-- After the level parameters' copy. -/
+def tblK5 (p : Prog) (n : Nat) (vis tn T nP C nF rs off go gl bO bL : Word) :
+    Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rl, m) => tblK6 p n vis tn T nP C nF rs off go gl (rl.headD 0) (rl.tail.headD 0)
+      (efW n m bO bL)
+/-- After `env_find`: the name must be free. -/
+def tblK4 (p : Prog) (n : Nat) (vis tn T lo ll nP C nF rs off go gl bO bL : Word) :
+    Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rf, m) => if rf.headD 0 ≠ 0 then none
+    else tblK5 p n vis tn T nP C nF rs off go gl bO bL (efW n m lo ll)
+/-- After `proj_table_name`. -/
+def tblK3 (p : Prog) (n : Nat) (vis T lo ll nP C nF rs off go gl bO bL : Word) :
+    Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rt, m) => tblK4 p n vis (rt.headD 0) T lo ll nP C nF rs off go gl bO bL
+      (envFindW m (rt.headD 0) vis)
+/-- After the scoping check. -/
+def tblK2 (p : Prog) (n : Nat) (vis T lo ll nP C nF rs off go gl bO bL : Word) :
+    Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rs', m) => if bL ≠ nF then none else if rs'.headD 0 ≠ 1 then none
+    else tblK3 p n vis T lo ll nP C nF rs off go gl bO bL (stubM "proj_table_name" m [T])
+/-- After `struct_proj_bodies`. -/
+def tblK1 (p : Prog) (n : Nat) (vis T lo ll nP C nF rs off go gl : Word) :
+    Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rb, m) => if rb.headD 0 = 0 then none
+    else tblK2 p n vis T lo ll nP C nF rs off go gl (rb.tail.headD 0) (rb.tail.tail.headD 0)
+      (sctW (n + 1) m vis nP lo ll (rb.tail.headD 0) (rb.tail.tail.headD 0))
+
+/-- **The model of `check_struct_proj_table(T, C, lo, ll, nP, nF, rs, go, gl, off, cvCa, vis)`**
+(its callees at exec fuel `n + 1`). -/
+def tblW (p : Prog) (n : Nat) (m : Mem) (T C lo ll nP nF rs go gl off cvCa vis : Word) :
+    Option (List Word × Mem) :=
+  tblK1 p n vis T lo ll nP C nF rs off go gl (spbW (n + 1) m T nP nF (rdW (m.arr64 EREC) (cvCa + 3)))
+
+section arms
+variable (p : Prog) (n : Nat) (m : Mem)
+  (vis tn T lo ll nP C nF rs off go gl bO bL lo2 ll2 bo2 bl2 go2 gl2 q : Word) (r : List Word)
+theorem tblK9_some : tblK9 (some (r, m)) = some ([r.headD 0], m) := rfl
+theorem tblK8_some : tblK8 p n vis tn T nP C nF rs off lo2 ll2 bo2 bl2 go2 gl2 (some (q, m)) =
+    tblK9 (callW p (n + 1) "env_push" [vis, q]
+      (tblMem m q tn T lo2 ll2 nP C nF rs bo2 bl2 go2 gl2 off)) := rfl
+theorem tblK7_some : tblK7 p n vis tn T nP C nF rs off lo2 ll2 bo2 bl2 (some (r, m)) =
+    tblK8 p n vis tn T nP C nF rs off lo2 ll2 bo2 bl2 (r.headD 0) (r.tail.headD 0) (erAllocW m 14) := rfl
+theorem tblK6_some : tblK6 p n vis tn T nP C nF rs off go gl lo2 ll2 (some (r, m)) =
+    tblK7 p n vis tn T nP C nF rs off lo2 ll2 (r.headD 0) (r.tail.headD 0) (efW n m go gl) := rfl
+theorem tblK5_some : tblK5 p n vis tn T nP C nF rs off go gl bO bL (some (r, m)) =
+    tblK6 p n vis tn T nP C nF rs off go gl (r.headD 0) (r.tail.headD 0) (efW n m bO bL) := rfl
+theorem tblK4_found (h : r.headD 0 ≠ 0) :
+    tblK4 p n vis tn T lo ll nP C nF rs off go gl bO bL (some (r, m)) = none := by
+  simp only [tblK4]; rw [if_pos h]
+theorem tblK4_free (h : r.headD 0 = 0) :
+    tblK4 p n vis tn T lo ll nP C nF rs off go gl bO bL (some (r, m)) =
+      tblK5 p n vis tn T nP C nF rs off go gl bO bL (efW n m lo ll) := by
+  simp only [tblK4]; rw [if_neg ((fun e => e h))]
+theorem tblK3_some : tblK3 p n vis T lo ll nP C nF rs off go gl bO bL (some (r, m)) =
+    tblK4 p n vis (r.headD 0) T lo ll nP C nF rs off go gl bO bL (envFindW m (r.headD 0) vis) := rfl
+theorem tblK2_len (h : bL ≠ nF) :
+    tblK2 p n vis T lo ll nP C nF rs off go gl bO bL (some (r, m)) = none := by
+  simp only [tblK2]; rw [if_pos h]
+theorem tblK2_bad (h : bL = nF) (h1 : r.headD 0 ≠ 1) :
+    tblK2 p n vis T lo ll nP C nF rs off go gl bO bL (some (r, m)) = none := by
+  simp only [tblK2]; rw [if_neg ((fun e => e h)), if_pos h1]
+theorem tblK2_ok (h : bL = nF) (h1 : r.headD 0 = 1) :
+    tblK2 p n vis T lo ll nP C nF rs off go gl bO bL (some (r, m)) =
+      tblK3 p n vis T lo ll nP C nF rs off go gl bO bL (stubM "proj_table_name" m [T]) := by
+  simp only [tblK2]; rw [if_neg ((fun e => e h)), if_neg ((fun e => e h1))]
+theorem tblK1_no (h : r.headD 0 = 0) :
+    tblK1 p n vis T lo ll nP C nF rs off go gl (some (r, m)) = none := by
+  simp only [tblK1]; rw [if_pos h]
+theorem tblK1_yes (h : r.headD 0 ≠ 0) :
+    tblK1 p n vis T lo ll nP C nF rs off go gl (some (r, m)) =
+      tblK2 p n vis T lo ll nP C nF rs off go gl (r.tail.headD 0) (r.tail.tail.headD 0)
+        (sctW (n + 1) m vis nP lo ll (r.tail.headD 0) (r.tail.tail.headD 0)) := by
+  simp only [tblK1]; rw [if_neg h]
+end arms
+attribute [ind_grind] tblK9_some tblK8_some tblK7_some tblK6_some tblK5_some tblK4_found tblK4_free
+  tblK3_some tblK2_len tblK2_bad tblK2_ok tblK1_no tblK1_yes
+
+/-- The program lookups of `check_struct_proj_table`. -/
+structure TblProg (p : Prog) : Prop where
+  ha : p.lookup "iw_alloc" = some iwAlloc
+  hc : p.lookup "iw_copy" = some iwCopy
+  hsc : p.lookup "sl_cons" = some slCons
+  hv : p.lookup "e_view" = some eView
+  hd : p.lookup "der_b" = some derB
+  hpf : p.lookup "bvar_find" = some bvarFind
+  hpp : p.lookup "bvar_push" = some bvarPush
+  hib : p.lookup "intern_bvar" = some internBVar
+  hjf : p.lookup "proj_find" = some projFind
+  hjp : p.lookup "proj_push" = some projPush
+  hji : p.lookup "intern_proj" = some internProj
+  hmp : p.lookup "mk_proj" = some mkProj
+  hap : p.lookup "struct_proj_arg_p" = some structProjArgPL
+  hpg : p.lookup "struct_proj_bodies_go" = some structProjBodiesGoL
+  hgo : p.lookup "struct_ps_at_go" = some structPsAtGoL
+  hps : p.lookup "struct_ps_at" = some structPsAtL
+  hpj : p.lookup "struct_proj_ps" = some structProjPsL
+  hspb : p.lookup "struct_proj_bodies" = some structProjBodiesL
+  hsct : p.lookup "check_struct_proj_table_scoped" = some checkStructProjTableScopedL
+  hix : p.lookup "env_ix" = some envIxL
+  hrg : p.lookup "env_row_get" = some envRowGetL
+  hfind : p.lookup "env_find" = some envFindL
+  hea : p.lookup "erec_alloc" = some erecAlloc
+  hefg : p.lookup "er_from_iw_go" = some erFromIwGo
+  hef : p.lookup "er_from_iw" = some erFromIw
+  htbl : p.lookup "check_struct_proj_table" = some checkStructProjTableL
+
+set_option maxHeartbeats 4000000 in
+theorem tblW_spec (p : Prog) (hP : TblProg p) (n : Nat) (s₀ : St)
+    (T C lo ll nP nF rs go gl off cvCa vis : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 2)) "check_struct_proj_table"
+      [T, C, lo, ll, nP, nF, rs, go, gl, off, cvCa, vis]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      tblW p n s₀.mem T C lo ll nP nF rs go gl off cvCa vis = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hP.htbl]
+  simp only [callFn, checkStructProjTableL]
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      spbW_spec p hP.ha hP.hc hP.hsc hP.hv hP.hd hP.hpf hP.hpp hP.hib hP.hjf hP.hjp hP.hji hP.hmp hP.hap
+        hP.hpg hP.hgo hP.hps hP.hpj hP.hspb (n + 1),
+      sctW_spec p hP.hsct (n + 1), stubM_spec p "proj_table_name" (n + 1),
+      envFind_specW p hP.hix hP.hrg hP.hfind (n + 1), efW_spec p hP.hea hP.hefg hP.hef n,
+      erecAlloc_specW p hP.hea (n + 1), callW_spec p (n + 1) "env_push"] <;>
+    finish (gen := 30) (instances := 5000) [tblW, tblMem, rdW_eq]
+
 end L.Ind
