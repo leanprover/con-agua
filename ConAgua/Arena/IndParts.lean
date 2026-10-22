@@ -805,13 +805,12 @@ def blockLargeElimAllowed : FunDecl := lfn (p, nested) locals (nz, n, large, k) 
 member skipped. -/
 -- con-ron: ConRon/Arena/CheckDecl.lean:52-65 ConRon.Arena.checkShapelessFormers
 @[l_impl ConRon.Arena.checkShapelessFormers]
-def checkShapelessFormers : FunDecl := lfn (vis, off, cnt) locals (j, ci, z) {
-  j := 0;
-  while j < cnt {
-    ci := EREC.u64[off + j];
-    if EREC.u64[ci] == 3 { z := call check_constant_val(vis, ci + 1) };
-    j += 1
-  }
+def checkShapelessFormers : FunDecl := lfn (vis, off, cnt) locals (ci, z, r) {
+  if cnt == 0 { return 0 };
+  ci := EREC.u64[off];
+  if EREC.u64[ci] == 3 { z := call check_constant_val(vis, ci + 1) };
+  r := call check_shapeless_formers(vis, off + 1, cnt - 1);
+  return 0
 }
 
 /-- `check_shapeless(vis, off, cnt)`: `checkShapeless`: check the formers, then always decline
