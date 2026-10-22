@@ -75,7 +75,7 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-- `whnf(vis, dep, e)`. -/
 theorem whnf_spec (dep e : Word) (he : H e) :
-    RelAM "whnf" [vis, dep, e] (StageR dn vis fe)
+    RelAM "whnf_top" [vis, dep, e] (StageR dn vis fe)
       (whnf V fe checkFuel dep.toNat (decI e)) (KeepPost dn vis fe decW0E) := sorry
 
 /-- `infer_type_core(vis, dep, e)`. -/
@@ -121,17 +121,17 @@ theorem openPisAtFvarsF_spec (k e i : Word) (he : H e) :
 
 /-- `get_app_fn(fuel, e)`. -/
 theorem getAppFn_spec (f e : Word) (he : H e) :
-    RelAM "get_app_fn" [f, e] (StageR dn vis fe)
+    RelAM "get_app_fn_f" [f, e] (StageR dn vis fe)
       (getAppFn f.toNat (decI e)) (KeepPost dn vis fe decW0E) := sorry
 
 /-- `get_app_args(fuel, e)`. -/
 theorem getAppArgs_spec (f e : Word) (he : H e) :
-    RelAM "get_app_args" [f, e] (StageR dn vis fe)
+    RelAM "get_app_args_f" [f, e] (StageR dn vis fe)
       (getAppArgs f.toNat (decI e)) (KeepPost dn vis fe (decRL (fun m => decHL m) 0)) := sorry
 
 /-- `mk_app_n(f, off, len)`. -/
 theorem mkAppN_spec (f o l : Word) (hf : H f) (xs : List EIdx) :
-    RelAM "mk_app_n" [f, o, l] (fun m a => StageR dn vis fe m a ∧ decHL m o.toNat l.toNat = some xs)
+    RelAM "mk_app_n_f" [f, o, l] (fun m a => StageR dn vis fe m a ∧ decHL m o.toNat l.toNat = some xs)
       (mkAppN (decI f) xs) (KeepPost dn vis fe decW0E) := sorry
 
 /-- `fvar_type_d(e)`. -/
@@ -146,7 +146,7 @@ theorem fvarTypeDs_spec (o l : Word) (xs : List EIdx) :
 
 /-- `pi_result(fuel, e)`. -/
 theorem piResult_spec (f e : Word) (he : H e) :
-    RelAM "pi_result" [f, e] (StageR dn vis fe)
+    RelAM "pi_result_f" [f, e] (StageR dn vis fe)
       (piResult f.toNat (decI e)) (KeepPost dn vis fe decW0E) := sorry
 
 /-- `inst_lp_fast(fuel, ks.off, ks.len, us, e)`. -/

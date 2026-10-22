@@ -313,6 +313,7 @@ def reduceCertVarL : FunDecl := lfn (c) locals (rn, n, t, r) {
   rn := call pin_at(43);
   if c == rn { n := call pin_at(1) } else { n := call pin_at(29) };
   t := call const_e(n);
+  if 4294967296 <= t { abort };
   r := call intern_fvar(0, t);
   return r
 }
