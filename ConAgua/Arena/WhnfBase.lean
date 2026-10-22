@@ -114,30 +114,74 @@ theorem BKept.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFr
   have hb : m'.arr64 BSTK = m.arr64 BSTK := hf.1 BSTK hA (by decide)
   exact ⟨hf.2.1 137 hC, by rw [hb], fun j _ => by rw [hb]⟩
 
-/-- **The limb pool only grew**: below the old top unchanged, the top no lower, the size the same. -/
+/-- The `CTL` words of the level tables' counts (`succ` 6/7, `zero` 8/9, `max` 10/11, `imax`
+12/13, `param` 14/15) and the scratch flag (1). -/
+def lvlCtlW : List Word := [1, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+
+/-- A writer that avoids the level tables' counts and the scratch flag. -/
+def LvlFree (C : List Word) : Prop := ∀ x ∈ lvlCtlW, x ∉ C
+
+theorem LvlFree.intro {C : List Word} (h1 : (1 : Word) ∉ C) (h6 : (6 : Word) ∉ C)
+    (h7 : (7 : Word) ∉ C) (h8 : (8 : Word) ∉ C) (h9 : (9 : Word) ∉ C) (h10 : (10 : Word) ∉ C)
+    (h11 : (11 : Word) ∉ C) (h12 : (12 : Word) ∉ C) (h13 : (13 : Word) ∉ C) (h14 : (14 : Word) ∉ C)
+    (h15 : (15 : Word) ∉ C) : LvlFree C := by
+  intro x hx
+  simp only [lvlCtlW, List.mem_cons, List.mem_nil_iff, or_false] at hx
+  rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> assumption
+
+/-- Decide `LvlFree C` for a concrete `C`, word by word. -/
+macro "lvl_free" : tactic => `(tactic| exact LvlFree.intro (by decide) (by decide) (by decide)
+  (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide))
+
+theorem LvlFree.of_ge {C : List Word} (hC : ∀ x ∈ C, 16 ≤ x.toNat) : LvlFree C := by
+  intro x hx h
+  have := hC x h
+  simp only [lvlCtlW, List.mem_cons, List.mem_nil_iff, or_false] at hx
+  rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp at this
+
+/-- **The level tables only grow** (lane `defeq2`): the scratch flag is kept and no level table's
+count drops, so a level handle `lv_node` accepts stays accepted (`lvNodeW_mono`). Part of
+`PoolGrew` (the store's growth), so `CoreAfter` carries it. -/
+structure LvlCnt (m m' : Mem) : Prop where
+  flag : rdW (m'.arr64 CTL) 1 = rdW (m.arr64 CTL) 1
+  cnt : ∀ x ∈ lvlCtlW, (rdW (m.arr64 CTL) x).toNat ≤ (rdW (m'.arr64 CTL) x).toNat
+
+theorem LvlCnt.refl (m : Mem) : LvlCnt m m := ⟨rfl, fun _ _ => Nat.le_refl _⟩
+
+theorem LvlCnt.trans {m₁ m₂ m₃ : Mem} (h₁ : LvlCnt m₁ m₂) (h₂ : LvlCnt m₂ m₃) : LvlCnt m₁ m₃ :=
+  ⟨h₂.flag.trans h₁.flag, fun x hx => Nat.le_trans (h₁.cnt x hx) (h₂.cnt x hx)⟩
+
+theorem LvlCnt.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
+    (hL : LvlFree C) : LvlCnt m m' :=
+  ⟨hf.2.1 1 (hL 1 (by decide)), fun x hx => by rw [hf.2.1 x (hL x hx)]; exact Nat.le_refl _⟩
+
+/-- **The limb pool only grew**: below the old top unchanged, the top no lower, the size the same;
+and the level tables only grew (`lvl`). -/
 structure PoolGrew (m m' : Mem) : Prop where
   top : m.top.toNat ≤ m'.top.toNat
   size : (m'.arr64 POOL).size = (m.arr64 POOL).size
   below : Agree (m'.arr64 POOL) (m.arr64 POOL) m.top.toNat
+  lvl : LvlCnt m m'
 
-theorem PoolGrew.refl (m : Mem) : PoolGrew m m := ⟨Nat.le_refl _, rfl, Agree.refl _ _⟩
+theorem PoolGrew.refl (m : Mem) : PoolGrew m m := ⟨Nat.le_refl _, rfl, Agree.refl _ _, LvlCnt.refl m⟩
 
 theorem PoolGrew.trans {m₁ m₂ m₃ : Mem} (h₁ : PoolGrew m₁ m₂) (h₂ : PoolGrew m₂ m₃) :
     PoolGrew m₁ m₃ :=
   ⟨Nat.le_trans h₁.top h₂.top, h₂.size.trans h₁.size,
-    fun j hj => (h₂.below j (Nat.lt_of_lt_of_le hj h₁.top)).trans (h₁.below j hj)⟩
+    fun j hj => (h₂.below j (Nat.lt_of_lt_of_le hj h₁.top)).trans (h₁.below j hj),
+    h₁.lvl.trans h₂.lvl⟩
 
 theorem PoolGrew.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
-    (hA : POOL ∉ A) (hC : (0 : Word) ∉ C) : PoolGrew m m' := by
+    (hA : POOL ∉ A) (hC : (0 : Word) ∉ C) (hL : LvlFree C := by lvl_free) : PoolGrew m m' := by
   have hp : m'.arr64 POOL = m.arr64 POOL := hf.1 POOL hA (by decide)
   have ht : m'.top = m.top := by
     have := hf.2.1 0 hC
     simp only [rdW] at this
     simpa [Mem.top] using this
-  exact ⟨by rw [ht]; exact Nat.le_refl _, by rw [hp], fun j _ => by rw [hp]⟩
+  exact ⟨by rw [ht]; exact Nat.le_refl _, by rw [hp], fun j _ => by rw [hp], LvlCnt.of_frame hf hL⟩
 
 theorem PoolGrew.of_grows {m m' : Mem} (h : Grows m m') : PoolGrew m m' :=
-  ⟨h.2.2.1, h.2.2.2.2, h.2.1⟩
+  ⟨h.2.2.1, h.2.2.2.2, h.2.1, LvlCnt.of_frame (grows_frame m m' h) (by lvl_free)⟩
 
 /-- The stack below the top is unchanged, and so is the top; the binder stack is kept and the
 limb pool only grew. -/
@@ -193,22 +237,23 @@ theorem StackKept.of_spnFrame {m m' : Mem} (hf : MemFrame [SPN] [136] m m') (ht 
 /-- **A frame that avoids both stacks and the pool keeps them.** -/
 theorem StackKept.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
     (hA : SPN ∉ A ∧ BSTK ∉ A ∧ POOL ∉ A := by decide)
-    (hC : (136 : Word) ∉ C ∧ (137 : Word) ∉ C ∧ (0 : Word) ∉ C := by decide) : StackKept m m' := by
+    (hC : (136 : Word) ∉ C ∧ (137 : Word) ∉ C ∧ (0 : Word) ∉ C := by decide)
+    (hL : LvlFree C := by lvl_free) : StackKept m m' := by
   have hspn : m'.arr64 SPN = m.arr64 SPN := hf.1 SPN hA.1 (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 hC.1
   exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn],
-    BKept.of_frame hf hA.2.1 hC.2.1, PoolGrew.of_frame hf hA.2.2 hC.2.2⟩
+    BKept.of_frame hf hA.2.1 hC.2.1, PoolGrew.of_frame hf hA.2.2 hC.2.2 hL⟩
 
 /-- **A frame inside arrays 1‥143 and `CTL` words 1‥135** keeps the stacks and the pool. -/
 theorem StackKept.of_frame_range {m m' : Mem} {A : List ArrId} {C : List Word}
     (hf : MemFrame A C m m') (hA : ∀ b ∈ A, 1 ≤ b ∧ b < 144)
-    (hC : ∀ x ∈ C, 1 ≤ x.toNat ∧ x.toNat < 136) : StackKept m m' :=
+    (hC : ∀ x ∈ C, 1 ≤ x.toNat ∧ x.toNat < 136) (hL : LvlFree C := by lvl_free) : StackKept m m' :=
   StackKept.of_frame hf
     ⟨fun h => by have := hA _ h; simp only [SPN, ArrId] at this; omega,
      fun h => by have := hA _ h; simp only [BSTK, ArrId] at this; omega,
      fun h => by have := hA _ h; simp only [POOL, ArrId] at this; omega⟩
     ⟨fun h => by have := hC _ h; simp at this, fun h => by have := hC _ h; simp at this,
-     fun h => by have := hC _ h; simp at this⟩
+     fun h => by have := hC _ h; simp at this⟩ hL
 
 /-- **Appending to the pool** keeps the stacks. -/
 theorem StackKept.of_grows {m m' : Mem} (hg : Grows m m') : StackKept m m' := by
@@ -222,8 +267,9 @@ theorem StackKept.of_grows {m m' : Mem} (hg : Grows m m') : StackKept m m' := by
 theorem StackKept.of_frame_grows {m m₁ m' : Mem} {A : List ArrId} {C : List Word}
     (hg : Grows m m₁) (hf : MemFrame A C m₁ m')
     (hA : SPN ∉ A ∧ BSTK ∉ A ∧ POOL ∉ A := by decide)
-    (hC : (136 : Word) ∉ C ∧ (137 : Word) ∉ C ∧ (0 : Word) ∉ C := by decide) : StackKept m m' := by
-  exact (StackKept.of_grows hg).trans (StackKept.of_frame hf hA hC)
+    (hC : (136 : Word) ∉ C ∧ (137 : Word) ∉ C ∧ (0 : Word) ∉ C := by decide)
+    (hL : LvlFree C := by lvl_free) : StackKept m m' := by
+  exact (StackKept.of_grows hg).trans (StackKept.of_frame hf hA hC hL)
 
 /-! ## The relation the core runs under -/
 
@@ -401,6 +447,7 @@ theorem CoreS.frameM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
      fun h => by have := hA _ h; simp only [POOL, ArrId] at this; omega⟩
     ⟨fun h => by have := hC _ h; simp at this, fun h => by have := hC _ h; simp at this,
      fun h => by have := hC _ h; simp at this⟩
+    (LvlFree.of_ge fun x hx => by have := hC x hx; omega)
 
 /-- **The relation across a writer outside every tier and the stacks**, away from the walk-local
 memos: the level heap (`LH`, `CTL[192]`), say. -/
