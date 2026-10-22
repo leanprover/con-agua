@@ -447,4 +447,186 @@ theorem inferSpineIO_refines (p : Prog) (hq : SpineInferProg p) (hil : InstListO
   refine ⟨hok, ?_, by rw [hres, hx]; rfl, hrw⟩
   rw [hst]; exact ⟨M', hS', hK, hSt⟩
 
+/-! ## `infer_app_io` -/
+
+/-- **`head_and_args` at an `app` handle** refines `headAndArgs` with no hypothesis on the stack top
+(`headAndArgs_refines` needs one for the empty slice of a non-`app` head). -/
+theorem headAndArgs_app (p : Prog) (hp : SpineProg p) (n : Nat) (s₀ : St) (a₀ : AState)
+    (hR : ArenaR s₀.mem a₀) (v : Word) (hv : HW v) (h4 : v >>> 28 = 4)
+    (hspn : (s₀.mem.arr64 SPN).size < 2 ^ 63) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "head_and_args" [v]
+    ⦃fun r s' => LocEq s' s₀ ∧ MemFrame [SPN] [136] s₀.mem s'.mem ∧ StackGrew s₀.mem s'.mem ∧
+      HW (r.headD 0) ∧ r.tail.headD 0 = spTop s₀.mem ∧
+      spTop s'.mem = spTop s₀.mem + r.tail.tail.headD 0 ∧
+      ∃ xs, (headAndArgs (decE v)).run a₀ = .ok ((decE (r.headD 0), xs), a₀) ∧
+        SpineR s'.mem (r.tail.headD 0) (r.tail.tail.headD 0) xs; ⊤⦄ := by
+  apply M.triple_of_run
+  intro s r s' hs0 hrun
+  subst hs0
+  obtain ⟨hloc, hcall⟩ := M.of_run (P := fun x => x = s) rfl hrun (callW_spec p n "head_and_args" [v] s)
+  cases n with
+  | zero => rw [callW_zero] at hcall; cases hcall
+  | succ n =>
+  obtain ⟨t, ht, -, hW⟩ := triple_of_callW (haa_spec p hp.hargs n s v) hcall
+  rw [ht] at hW
+  refine ⟨hloc, ?_⟩
+  simp only [haaW] at hW
+  rw [if_pos h4] at hW
+  cases h1 : callW p n "get_app_fn" [v] s.mem with
+  | none => rw [h1] at hW; simp at hW
+  | some q =>
+  obtain ⟨r₁, m₁⟩ := q
+  simp only [h1] at hW
+  cases h2 : callW p n "get_app_args" [v] m₁ with
+  | none => rw [h2] at hW; simp at hW
+  | some q =>
+  obtain ⟨r₂, m₂⟩ := q
+  simp only [h2, Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨hr0, hr1, hr2, hm⟩ := hW
+  obtain ⟨t₁, ht₁, hm₁, -, hhw, hfnrun⟩ := triple_of_callW (getAppFn_refines' p hp.fn n s a₀ hR v hv) h1
+  rw [ht₁] at hm₁
+  subst hm₁
+  obtain ⟨t₂, ht₂, -, hfr, hgrow, ho, htop, xs, hxs, hsr⟩ :=
+    triple_of_callW (getAppArgs_refines' p hp.args hp.cnt hp.fill n s a₀ hR v hv hspn) h2
+  rw [ht₂] at hfr hgrow htop hsr
+  subst hm
+  refine ⟨hfr, hgrow, by rw [← hr0]; exact hhw, by rw [← hr1]; exact ho,
+    by rw [← hr2]; exact htop, xs.toArray, ?_, by rw [← hr1, ← hr2]; exact hsr⟩
+  have htag : (decE v).tag = ETag.app := (decE_tag_app v hv).mpr h4
+  rw [← hr0]
+  simp [headAndArgs, htag, StateT.run_bind, hfnrun, except_ok_bind]
+  simp only [StateT.run] at hxs ⊢
+  simp only [StateT.map, hxs]
+  rfl
+
+/-- `infer_spine_io` at every L fuel up to `n + 1`. -/
+theorem inferSpineIO_any (p : Prog) (hq : SpineInferProg p) (hil : InstListOK p) :
+    ∀ n, KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 → ∀ (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
+    (eb mode d ty ao an : Word) (args : Array EIdx), SlotPre s₀ a₀ dn vis fe M eb mode →
+    HW ty → SpineR s₀.mem ao an args → ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat →
+    CoreSpec p n "infer_spine_io" [mode, vis, d, ty, ao, an]
+      (inferSpineIO (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)) fe d.toNat (decE ty) #[]
+        args 0) decH s₀ a₀ dn vis fe M eb
+  | 0, _, _, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _, _ =>
+      CoreSpec.zero p _ _ _ _ s₀ a₀ dn vis fe M eb _
+  | n + 1, hk, F, hF, hn, s₀, a₀, dn, vis, fe, M, eb, mode, d, ty, ao, an, args, hs, ht, har, hlo =>
+      inferSpineIO_refines p hq hil n (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe M
+        eb mode d ty ao an args hs ht har hlo
+
+section appK
+variable (p : Prog) (n : Nat) (mode vis d top : Word)
+
+def appIOK4 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
+  match res with
+  | none => none
+  | some (r, m) => if (136 : Word).toNat < (m.arr64 CTL).size then some (r.headD 0, m.set64 CTL 136 top)
+      else none
+
+def appIOK3 (ao an : Word) (res : Option (List Word × Mem)) : Option (Word × Mem) :=
+  match res with
+  | none => none
+  | some (r, m) => appIOK4 top (callW p n "infer_spine_io" [mode, vis, d, r.headD 0, ao, an] m)
+
+/-- **The model of `infer_app_io`** past `head_and_args`' run. -/
+def appIOK2 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
+  match res with
+  | none => none
+  | some (r, m) => appIOK3 p n mode vis d top (r.tail.headD 0) (r.tail.tail.headD 0)
+      (callW p n "infer_io" [mode, vis, d, r.headD 0] m)
+
+end appK
+
+theorem inferAppIO_spec (p : Prog) (hq : SpineInferProg p) (n : Nat) (s₀ : St) (mode vis d e : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "infer_app_io" [mode, vis, d, e]
+    ⦃fun r s' => LocEq s' s₀ ∧ appIOK2 p n mode vis d (rdW (s₀.mem.arr64 CTL) 136)
+      (callW p n "head_and_args" [e] s₀.mem) = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hq.appIO]
+  simp only [callFn, inferAppIOL]
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, st64_spec,
+      callW_spec p n "head_and_args", callW_spec p n "infer_io", callW_spec p n "infer_spine_io"] <;>
+  simp_all [appIOK2, appIOK3, appIOK4, LocEq, BinOp.eval, St.setLocs_cons, CTL, Cmp.eval,
+    St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
+    Locals.init_cons_succ]
+
+/-- `inferBodyIO`'s `.app` arm is `inferAppIOAt`. -/
+@[refines_part ConRon.Arena.inferBodyIO "app"]
+theorem inferBodyIO_app (r : CoreFnsA) (fe : IFEnv) (d : Nat) (e : EIdx) (a : AState)
+    (f x : EIdx) (hv : a.store.view e = some (.app f x)) :
+    (inferBodyIO r fe d e).run a = (inferAppIOAt r fe d e).run a := by
+  simp only [inferBodyIO, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]
+
+/-- **`infer_app_io` refines `inferAppIOAt`** at the io view of the knot, at an `app` handle. -/
+@[refines ConRon.Arena.inferAppIOAt]
+theorem inferAppIO_refines (p : Prog) (hq : SpineInferProg p) (hsp : SpineProg p)
+    (hil : InstListOK p) (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
+    (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (M : ModeMaps) (eb mode d e : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (he : HW e)
+    (h4 : e >>> 28 = 4) :
+    CoreSpec p (n + 1) "infer_app_io" [mode, vis, d, e]
+      (inferAppIOAt (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)) fe d.toNat (decE e)) decH
+      s₀ a₀ dn vis fe M eb := by
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
+    (inferAppIO_spec p hq n s₀ mode vis d e)
+  subst hs0
+  refine ⟨hloc, ?_⟩
+  have hS := hs.rel
+  have hK := hk n (Nat.le_refl _)
+  obtain ⟨r₁, m₁, hc1, hW⟩ := callW_cases rfl hW
+  dsimp only [appIOK2] at hW
+  obtain ⟨r₂, m₂, hc2, hW⟩ := callW_cases rfl hW
+  dsimp only [appIOK3] at hW
+  obtain ⟨r₃, m₃, hc3, hW⟩ := callW_cases rfl hW
+  dsimp only [appIOK4] at hW
+  have h136 : (136 : Word).toNat < (m₃.arr64 CTL).size := by
+    refine Classical.byContradiction fun h => ?_; rw [if_neg h] at hW; cases hW
+  rw [if_pos h136] at hW
+  simp only [Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨hr, hm⟩ := hW
+  -- the head and the arguments
+  obtain ⟨t₁, ht₁, -, hf₁, hg₁, hhw, ho1, htop1, xs, hha, hxs⟩ := triple_of_callW
+    (headAndArgs_app p hsp n s a₀ hS.arena.1 e he h4 hS.spn) hc1
+  rw [ht₁] at hf₁ hg₁ htop1 hxs
+  have hS₁ := hS.frame_stk hf₁ (by simp) (by simp)
+  have hb1 := hxs.bound
+  have hspn₁ := hS₁.spn
+  have hadd : (r₁.tail.headD 0 + r₁.tail.tail.headD 0).toNat =
+      (r₁.tail.headD 0).toNat + (r₁.tail.tail.headD 0).toNat := addW _ _ (by omega)
+  have htopN : (spTop m₁).toNat = (r₁.tail.headD 0).toNat + (r₁.tail.tail.headD 0).toNat := by
+    rw [htop1, ← ho1, hadd]
+  -- the head's type
+  have h₂ := CoreSpec.of_callW (hK.inferIO F ⟨m₁, Locals.init []⟩ a₀ dn vis fe M eb mode d (r₁.headD 0)
+    hF hn ⟨hS₁, hs.mode4, hs.eb_mode⟩ hhw) hc2
+  obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hrw2⟩ := h₂
+  have hxs₂ : SpineR m₂ (r₁.tail.headD 0) (r₁.tail.tail.headD 0) xs :=
+    hxs.keep hSt₂.2.1 hSt₂.2.2 (by rw [htopN]; exact Nat.le_refl _) hspn₁
+  -- the spine
+  have h₃ := CoreSpec.of_callW (inferSpineIO_any p hq hil n hk F hF hn ⟨m₂, Locals.init []⟩ _ dn vis fe
+    M₂ eb mode d (r₂.headD 0) _ _ xs ⟨hS₂, hs.mode4, hs.eb_mode⟩ hrw2 hxs₂
+    (by rw [hSt₂.1, htopN]; exact Nat.le_refl _)) hc3
+  obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hrw3⟩ := h₃
+  -- the twin's run
+  have hrun : (inferAppIOAt (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)) fe d.toNat (decE e)).run a₀ =
+      .ok (decE (r₃.headD 0), AM.st (inferSpineIO (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)) fe
+        d.toNat (decE (r₂.headD 0)) #[] xs 0)
+        (AM.st ((coreKnot (decMode mode) fe id F).inferIO d.toNat (decE (r₁.headD 0))) a₀)) := by
+    simp only [inferAppIOAt, StateT.run_bind, hha, except_ok_bind]
+    have e1 := AM.run_of_ok _ _ hok2
+    simp only [decH] at hres2
+    rw [hres2] at e1
+    simp only [show (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)).infer =
+      (coreKnot (decMode mode) fe id F).inferIO from rfl]
+    rw [e1, except_ok_bind, AM.run_of_ok _ _ hok3, hres3]; rfl
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  refine ⟨hok, ?_, by rw [hres, decH, hr], by unfold ResH; rw [← hr]; exact hrw3⟩
+  rw [hst, ← hm]
+  refine ⟨M₃, hS₃.frame_stk (MemFrame.setCtl m₃ 136 _) (by simp) (by simp), hK₂.trans hK₃, ?_⟩
+  have hSt23 := hSt₂.trans hSt₃
+  refine StackKept.restore (fun j hj => ?_) (hSt23.2.1.trans (hg₁.2.1)) h136
+  rw [hSt23.2.2 j (UInt64.lt_of_lt_of_le hj hg₁.1)]
+  exact hg₁.2.2 j hj
+
 end L.Arena
