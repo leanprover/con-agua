@@ -415,10 +415,29 @@ def rowW (m : Mem) (w : Word) : Option (Nat × Word) :=
 /-- The number of constants, `CTL[128]`. -/
 def envLen (m : Mem) : Nat := (rdW (m.arr64 CTL) 128).toNat
 
+/-- The record pool's top, `CTL[129]`. -/
+def erecTop (m : Mem) : Nat := (rdW (m.arr64 CTL) 129).toNat
+
+/-- **The record pool in use**: `EREC` below its top. Every record the relations decode is
+decoded here, so a writer above the top (an allocation, `erec_alloc`) keeps them all
+(`decCI_mono`). -/
+def erecP (m : Mem) : Array Word := (m.arr64 EREC).extract 0 (erecTop m)
+
 /-- The constants, newest first, decoded. -/
 def envConsts (dn : NIdx → Option ConLeche.Name) (m : Mem) : Option (List IConstantInfo) :=
   (List.range (envLen m)).reverse.mapM fun c => do
-    decCI (m.arr64 EREC) dn (← nat? (m.arr64 ECON) c)
+    decCI (erecP m) dn (← nat? (m.arr64 ECON) c)
+
+theorem erecP_get {m : Mem} {i : Nat} {v : Word} (h : (erecP m)[i]? = some v) :
+    (m.arr64 EREC)[i]? = some v := by
+  simp only [erecP, Array.getElem?_extract] at h
+  split at h
+  · simpa using h
+  · simp at h
+
+theorem erecP_congr {m m' : Mem} (he : m'.arr64 EREC = m.arr64 EREC)
+    (hc : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129) : erecP m' = erecP m := by
+  simp only [erecP, erecTop, he, hc]
 
 /-- **The environment, seen through the view `vis`.** -/
 structure EnvR (dn : NIdx → Option ConLeche.Name) (m : Mem) (vis : Word) (fe : IFEnv) : Prop where
@@ -426,12 +445,13 @@ structure EnvR (dn : NIdx → Option ConLeche.Name) (m : Mem) (vis : Word) (fe :
   keys : ∀ n : NIdx, rowTag n.word.toUInt64 ≤ 2 →
     (fe.idx[n]?).map Prod.fst = (rowW m n.word.toUInt64).map Prod.fst
   vals : ∀ n : NIdx, rowTag n.word.toUInt64 ≤ 2 → rowC m n.word.toUInt64 ≠ 0 →
-    (fe.idx[n]?).map Prod.snd = decCI (m.arr64 EREC) dn (rowP m n.word.toUInt64).toNat
+    (fe.idx[n]?).map Prod.snd = decCI (erecP m) dn (rowP m n.word.toUInt64).toNat
   consts : envConsts dn m = some fe.env.consts
 
 theorem EnvR.congr {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word} {fe : IFEnv}
     (he : ∀ b : Nat, 132 ≤ b → b < 137 → m'.arr64 b = m.arr64 b)
-    (hc : rdW (m'.arr64 CTL) 128 = rdW (m.arr64 CTL) 128) (h : EnvR dn m vis fe) :
+    (hc : rdW (m'.arr64 CTL) 128 = rdW (m.arr64 CTL) 128)
+    (hc9 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129) (h : EnvR dn m vis fe) :
     EnvR dn m' vis fe := by
   have hC : ∀ w, rowC m' w = rowC m w := fun w => by
     unfold rowC; split
@@ -442,20 +462,84 @@ theorem EnvR.congr {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word
     · rw [he _ (by omega) (by omega)]
     · rfl
   have hW : ∀ w, rowW m' w = rowW m w := fun w => by simp only [rowW, hC, hP]
-  have hR : m'.arr64 EREC = m.arr64 EREC := he _ (by decide) (by decide)
+  have hR : erecP m' = erecP m := by
+    simp only [erecP, erecTop, he EREC (by decide) (by decide), hc9]
   have hN : m'.arr64 ECON = m.arr64 ECON := he _ (by decide) (by decide)
   refine ⟨h.vis, fun n hn => (hW _).symm ▸ h.keys n hn, fun n hn h0 => ?_, ?_⟩
   · rw [hP, hR]; exact h.vals n hn (by rwa [← hC])
   · rw [← h.consts]; simp only [envConsts, envLen, hc, hR, hN]
 
-/-- The frame over exactly what `EnvR` reads: arrays 132‥136 and `CTL[128]`. -/
+/-- Every record in use is in `EREC` (a decoding in `erecP` is one in the whole array). -/
+theorem erecP_ext (m : Mem) : ArrExt (erecP m) (m.arr64 EREC) := fun _ _ h => erecP_get h
+
+/-- **The record pool grew**: its top did not go down and nothing below the old top changed. -/
+def ErecGrow (m m' : Mem) : Prop :=
+  erecTop m ≤ erecTop m' ∧ (∀ i, i < erecTop m → (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?) ∧
+    (m'.arr64 EREC).size = (m.arr64 EREC).size
+
+theorem ErecGrow.ext {m m' : Mem} (h : ErecGrow m m') : ArrExt (erecP m) (erecP m') := by
+  intro i v hv
+  simp only [erecP, Array.getElem?_extract] at hv ⊢
+  split at hv
+  · rename_i hi
+    have hi' : i < erecTop m := by simp at hi; omega
+    have := h.1; have := h.2.2
+    rw [if_pos (by simp at hi ⊢; omega)]
+    simp only [Nat.zero_add] at hv ⊢
+    rw [h.2.1 i hi']
+    exact hv
+  · simp at hv
+
+theorem ErecGrow.refl (m : Mem) : ErecGrow m m := ⟨Nat.le_refl _, fun _ _ => rfl, rfl⟩
+
+theorem ErecGrow.trans {m₁ m₂ m₃ : Mem} (h₁ : ErecGrow m₁ m₂) (h₂ : ErecGrow m₂ m₃) :
+    ErecGrow m₁ m₃ :=
+  ⟨Nat.le_trans h₁.1 h₂.1, fun i hi => (h₂.2.1 i (by have := h₁.1; omega)).trans (h₁.2.1 i hi),
+    h₂.2.2.trans h₁.2.2⟩
+
+/-- **`EnvR` across a pool growth** (rows, constants and `CTL[128]` unchanged). -/
+theorem EnvR.grow {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word} {fe : IFEnv}
+    (he : ∀ b : Nat, 132 ≤ b → b < 136 → m'.arr64 b = m.arr64 b)
+    (hc : rdW (m'.arr64 CTL) 128 = rdW (m.arr64 CTL) 128) (hg : ErecGrow m m')
+    (h : EnvR dn m vis fe) : EnvR dn m' vis fe := by
+  have hC : ∀ w, rowC m' w = rowC m w := fun w => by
+    unfold rowC; split
+    · rw [he _ (by omega) (by omega)]
+    · rfl
+  have hP : ∀ w, rowP m' w = rowP m w := fun w => by
+    unfold rowP; split
+    · rw [he _ (by omega) (by omega)]
+    · rfl
+  have hW : ∀ w, rowW m' w = rowW m w := fun w => by simp only [rowW, hC, hP]
+  have hN : m'.arr64 ECON = m.arr64 ECON := he _ (by decide) (by decide)
+  have hx := hg.ext
+  refine ⟨h.vis, fun n hn => (hW _).symm ▸ h.keys n hn, fun n hn h0 => ?_, ?_⟩
+  · rw [hC] at h0
+    have hv := h.vals n hn h0
+    have hk := h.keys n hn
+    simp only [rowW, h0, ite_false, Option.map_some] at hk
+    cases e : fe.idx[n]? with
+    | none => simp [e] at hk
+    | some r =>
+      rw [e] at hv; simp only [Option.map_some] at hv
+      rw [hP]; simp only [Option.map_some]
+      exact (hx.decCI hv.symm).symm
+  · have hcs := h.consts
+    simp only [envConsts, envLen, hc, hN] at hcs ⊢
+    exact ArrExt.mapM (fun c x hcx => by
+      simp only [Option.bind_eq_bind, Option.bind_eq_some_iff] at hcx ⊢
+      obtain ⟨q, hq, hd⟩ := hcx
+      exact ⟨q, hq, hx.decCI hd⟩) _ _ hcs
+
+/-- The frame over exactly what `EnvR` reads: arrays 132‥136 and `CTL[128]`, `CTL[129]`. -/
 theorem EnvR.frameN {dn : NIdx → Option ConLeche.Name} {A : List ArrId} {C : List Word}
     {m m' : Mem} {vis : Word} {fe : IFEnv}
-    (hA : AvoidA 132 137 A) (hC : AvoidC 128 129 C) (hf : MemFrame A C m m') (h : EnvR dn m vis fe) :
+    (hA : AvoidA 132 137 A) (hC : AvoidC 128 130 C) (hf : MemFrame A C m m') (h : EnvR dn m vis fe) :
     EnvR dn m' vis fe :=
   h.congr (fun b h1 h2 => hf.1 b (fun hm => by have := hA _ hm; simp only [ArrId] at this; omega)
     (by simp only [CTL, ArrId]; omega))
     (hf.2.1 128 (fun hm => by have := hC _ hm; simp at this))
+    (hf.2.1 129 (fun hm => by have := hC _ hm; simp at this))
 
 theorem EnvR.frame {dn : NIdx → Option ConLeche.Name} {A : List ArrId} {C : List Word}
     {m m' : Mem} {vis : Word} {fe : IFEnv}

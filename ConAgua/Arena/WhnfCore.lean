@@ -11,7 +11,7 @@ slot, `:3546`), in L:
 |---|---|
 | `whnf_core(mode, cheap, vis, d, e)` | the knot's `whnfCore` slot: `whnfCoreStuckTag`, the memo (`whnfCoreCheapC` / `whnfCoreC`, at the mode's eager bit), `whnfCoreBody` |
 | `whnf_core_loop(mode, cheap, vis, d, e)` | `whnfCoreBody` = `whnfCoreLoop … whnfCoreLoopFuel` (an uncounted L loop) |
-| `whnf_core_step(mode, cheap, vis, d, e)` | `whnfCoreStep` (`(0, e)` done, `(1, e)` continue) |
+| `whnf_core_step(mode, cheap, vis, d, e)` | `whnfCoreStep` (`(0, e)` done, `(1, e)` continue); its `app` arm is `whnf_core_app` |
 | `whnf_app(mode, vis, d, v, hd, vo, vn, same, ao, an, i)` | `whnfApp`: the head's arguments `vargs` a stack slice `(vo, vn)` at the top, the spine's arguments and nodes the slices `(ao, an)`, `(ao + an, an)` |
 | `beta_peel(t, a, ao, an, i)` | `betaPeel t #[a] args i` (the accumulator a stack slice) |
 | `whnf_core_step_proj(mode, cheap, vis, d, e, sn, i, pe)` | `whnfCoreStepProj` |
@@ -80,22 +80,39 @@ def whnfCoreLoopL : FunDecl := lfn (mode, cheap, vis, d, e) locals (st, r) {
   abort
 }
 
+/-- The `app` arm of `whnf_core_step` (its own function: the arms' chains of calls are proved
+apart). -/
+@[l_impl ConRon.Arena.whnfCoreStep]
+def whnfCoreAppL : FunDecl :=
+    lfn (mode, cheap, vis, d, e) locals (top, h, so, sn, v, st, r) {
+  top := CTL.u64[136];
+  (h, so, sn) := call get_app_spine(e);
+  v := call whnf_core(mode, cheap, vis, d, h);
+  (st, r) := call whnf_core_app2(mode, vis, d, v, h, so, sn);
+  CTL.u64[136] := top;
+  return (st, r)
+}
+
+/-- The second half of the `app` arm: the reduct's spine, then the β/ι walk. -/
+@[l_impl ConRon.Arena.whnfCoreStep]
+def whnfCoreApp2L : FunDecl := lfn (mode, vis, d, v, h, so, sn) locals (top, hd, ho, hn, st, r) {
+  top := CTL.u64[136];
+  (hd, ho, hn) := call head_and_args(v);
+  (st, r) := call whnf_app(mode, vis, d, v, hd, ho, hn, u64(v == h), so, sn, 0);
+  CTL.u64[136] := top;
+  return (st, r)
+}
+
 @[l_impl ConRon.Arena.whnfCoreStep]
 def whnfCoreStepL : FunDecl :=
-    lfn (mode, cheap, vis, d, e) locals (g, t, i, top, h, so, sn, v, same, hd, ho, hn, st, r) {
+    lfn (mode, cheap, vis, d, e) locals (g, t, i, st, r) {
   g := e >> 28;
   t := (e >> 27) & 1;
   i := e & 134217727;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if g == 4 {
     if CTL.u64[4 + t] <= i { abort };
-    top := CTL.u64[136];
-    (h, so, sn) := call get_app_spine(e);
-    v := call whnf_core(mode, cheap, vis, d, h);
-    same := u64(v == h);
-    (hd, ho, hn) := call head_and_args(v);
-    (st, r) := call whnf_app(mode, vis, d, v, hd, ho, hn, same, so, sn, 0);
-    CTL.u64[136] := top;
+    (st, r) := call whnf_core_app(mode, cheap, vis, d, e);
     return (st, r)
   };
   if g == 9 {
@@ -234,7 +251,7 @@ def projCertL : FunDecl := lfn (vis, k, ao, an) locals (f, q, ok, r) {
   if f == 0 { return 0 };
   if EREC.u64[q] != 4 { return 0 };
   (ok, r) := call peel_pis(an, EREC.u64[q + 4]);
-  return ok
+  return u64(ok != 0)
 }
 
 @[l_impl ConRon.Arena.projLitToCtor]
@@ -255,6 +272,7 @@ def projLitToCtorL : FunDecl := lfn (mode, vis, d, h) locals (t, x, s, c) {
 /-- The functions of this file. -/
 def whnfCoreFns : Prog :=
   [("whnf_core", whnfCoreL), ("whnf_core_loop", whnfCoreLoopL), ("whnf_core_step", whnfCoreStepL),
+   ("whnf_core_app", whnfCoreAppL), ("whnf_core_app2", whnfCoreApp2L),
    ("whnf_app", whnfAppL), ("beta_peel", betaPeelL), ("whnf_core_step_proj", whnfCoreStepProjL),
    ("reduce_proj_core", reduceProjCoreL), ("proj_cert", projCertL),
    ("proj_lit_to_ctor", projLitToCtorL)]
@@ -265,6 +283,8 @@ structure WhnfCoreProg (p : Prog) : Prop where
   core : p.lookup "whnf_core" = some whnfCoreL
   loop : p.lookup "whnf_core_loop" = some whnfCoreLoopL
   step : p.lookup "whnf_core_step" = some whnfCoreStepL
+  capp : p.lookup "whnf_core_app" = some whnfCoreAppL
+  capp2 : p.lookup "whnf_core_app2" = some whnfCoreApp2L
   app : p.lookup "whnf_app" = some whnfAppL
   peel : p.lookup "beta_peel" = some betaPeelL
   sproj : p.lookup "whnf_core_step_proj" = some whnfCoreStepProjL
@@ -341,38 +361,6 @@ given the knot's slots at every fuel up to `n` (`KnotUpTo p n`). -/
 section specs
 variable (p : Prog) (hp : WhnfCoreProg p) (hw : WhnfCallees p) (hc : CoreCallees p)
 
-/-- **`whnf_core_step` refines `whnfCoreStep`.** -/
-@[refines ConRon.Arena.whnfCoreStep]
-theorem whnfCoreStep_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
-    (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb mode cheap d e : Word) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode)
-    (he : HW e) :
-    CoreSpec p (n + 1) "whnf_core_step" [mode, cheap, vis, d, e]
-      (whnfCoreStep (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat
-        (decE e)) decStep s₀ a₀ dn vis fe MM eb ResW := sorry
-
-/-- **`whnf_core_loop` refines `whnfCoreLoop` at every twin loop fuel `K ≥ n`.** -/
-@[refines ConRon.Arena.whnfCoreLoop]
-theorem whnfCoreLoop_refines (n : Nat) (hk : KnotUpTo p n) (F K : Nat) (hF : n ≤ F) (hK : n ≤ K)
-    (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (MM : ModeMaps) (eb mode cheap d e : Word)
-    (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e) :
-    CoreSpec p (n + 1) "whnf_core_loop" [mode, cheap, vis, d, e]
-      (whnfCoreLoop (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat K
-        (decE e)) decH s₀ a₀ dn vis fe MM eb := sorry
-
-/-- **`whnf_core_loop` refines `whnfCoreBody`** (the loop at `whnfCoreLoopFuel = 2^62`). -/
-@[refines ConRon.Arena.whnfCoreBody]
-theorem whnfCoreBody_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F)
-    (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (MM : ModeMaps) (eb mode cheap d e : Word)
-    (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e) :
-    CoreSpec p (n + 1) "whnf_core_loop" [mode, cheap, vis, d, e]
-      (whnfCoreBody (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat
-        (decE e)) decH s₀ a₀ dn vis fe MM eb :=
-  whnfCoreLoop_refines p n hk F whnfCoreLoopFuel hF (by simp only [whnfCoreLoopFuel]; omega) hn s₀
-    a₀ dn vis fe MM eb mode cheap d e hs he
-
 /-- **`whnf_app` refines `whnfApp`**: `vargs` the slice `(vo, vn)` at the top of the stack, the
 spine's arguments and nodes the slices `(ao, an)`, `(ao + an, an)` below it. -/
 @[refines ConRon.Arena.whnfApp]
@@ -415,14 +403,6 @@ theorem reduceProjCore_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n �
     CoreSpec p (n + 1) "reduce_proj_core" [mode, vis, d, sn, i, c]
       (reduceProjCore (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat
         (decE c)) decOptR s₀ a₀ dn vis fe MM eb ResW := sorry
-
-/-- **`proj_cert` refines `projCertAt fe true`** (`projCert`). -/
-@[refines ConRon.Arena.projCert]
-theorem projCert_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb k ao an : Word) (args : Array EIdx)
-    (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (hk' : HW k) (har : SpineR s₀.mem ao an args) :
-    CoreSpec p (n + 1) "proj_cert" [vis, k, ao, an] (projCert fe (decI k) args.toList) decBool s₀ a₀
-      dn vis fe MM eb := sorry
 
 /-- **`proj_lit_to_ctor` refines `projLitToCtor`.** -/
 @[refines ConRon.Arena.projLitToCtor]
