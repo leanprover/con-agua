@@ -5,6 +5,9 @@ import ConAgua.Arena.DeclMasterStage
 import ConAgua.Arena.DeclCanonSpec
 import ConAgua.Arena.DeclCanonEq
 import ConAgua.Arena.DeclCanonSpec2
+import ConAgua.Arena.DeclCanonView
+import ConAgua.Arena.DeclCanonView2
+import ConAgua.Arena.DeclCanonLvl
 
 /-!
 # Every declaration-loop module (lane `decls3`)

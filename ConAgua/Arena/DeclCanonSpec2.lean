@@ -156,7 +156,7 @@ theorem ctcW_small {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
 
 
 /-- A word of a record below the old top reads the same after the pool grew. -/
-theorem rdW_grow {m m3 : Mem} (hg : IWGrow m m3) (hsz3 : (m3.arr64 EREC).size < 2 ^ 64) {x k : Word}
+theorem cnRdW_grow {m m3 : Mem} (hg : IWGrow m m3) (hsz3 : (m3.arr64 EREC).size < 2 ^ 64) {x k : Word}
     {kn : Nat} {w : Word} (hk : k.toNat = kn) (h : (erecP m)[x.toNat + kn]? = some w) :
     rdW (m3.arr64 EREC) (x + k) = w := by
   have hlt := erecP_lt h
@@ -246,9 +246,9 @@ theorem ctcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   obtain ⟨a3, hr3, hS3, hg3⟩ := internSort_stage hS2 o ho' hso
   have hg13 : IWGrow m m3 := hg1.trans (hg2.trans hg3)
   have hsz3 : (m3.arr64 EREC).size < 2 ^ 64 := hS3.2.2.2.2.1
-  have rn := rdW_grow hg13 hsz3 (x := x) (k := 1) (kn := 1) rfl hwn
-  have rlo := rdW_grow hg13 hsz3 (x := x) (k := 3) (kn := 3) rfl hwo
-  have rll := rdW_grow hg13 hsz3 (x := x) (k := 4) (kn := 3 + 1) rfl hwl
+  have rn := cnRdW_grow hg13 hsz3 (x := x) (k := 1) (kn := 1) rfl hwn
+  have rlo := cnRdW_grow hg13 hsz3 (x := x) (k := 3) (kn := 3) rfl hwo
+  have rll := cnRdW_grow hg13 hsz3 (x := x) (k := 4) (kn := 3 + 1) rfl hwl
   rw [rn, rlo, rll] at h
   simp only [ctcK4] at h
   cases hcn : cvNewW m3 wn wo wl t with
