@@ -186,7 +186,9 @@ def romPinSetsL : FunDecl := lfn () locals (o, l, q) {
 }
 
 /-- `intern_all_pins()` over the buffer: the memo reset, the startup walk's items at
-`allPinsOff`, then the variant list right after them. -/
+`allPinsOff`, then the variant list right after them, which must end inside the buffer (the
+readers' models read `255` past the end, which is no tag, but a trailing number could lie past
+it). -/
 -- con-ron: ConRon/Arena/Checker.lean:309-339 ConRon.Arena.internAllPins
 @[l_impl ConRon.Arena.internAllPins]
 def internAllPinsPB : FunDecl := lfn () locals (q, z) {
@@ -194,6 +196,7 @@ def internAllPinsPB : FunDecl := lfn () locals (q, z) {
   z := call rset_clear();
   q := call rom_items(⟪allPinsOff⟫);
   q := call intern_pin_sets(q);
+  if len(PB.u8) < q { abort };
   return 0
 }
 
