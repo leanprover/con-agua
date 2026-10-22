@@ -204,11 +204,12 @@ def indBlockToErec : FunDecl := lfn (i) locals (bo, bl, o, u) {
 /-- `check_decl(i, vis)`: `checkDecl` on record `i`. -/
 -- con-ron: ConRon/Arena/CheckDecl.lean:82-214 ConRon.Arena.checkDecl
 @[l_impl ConRon.Arena.checkDecl]
-def checkDeclL : FunDecl := lfn (i, vis) locals (k, bo, bl, v) {
+def checkDeclL : FunDecl := lfn (i, vis) locals (k, bo, bl, np, v) {
   k := DECL.u64[1 + 8 * i];
   if k == 6 {
     (bo, bl) := call ind_block_to_erec(i);
-    v := call check_ind_decl(vis, bo, bl, DECL.u64[5 + 8 * i]);
+    np := DECL.u64[5 + 8 * i];
+    v := call check_ind_decl(vis, bo, bl, np);
     return v
   };
   if k == 1 { v := call check_decl_axiom(i, vis); return v };

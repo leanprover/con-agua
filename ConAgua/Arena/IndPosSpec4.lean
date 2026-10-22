@@ -158,7 +158,7 @@ theorem frameTail (n : Nat) (hDs : DsOK dn fe vis n) (mh m' : Mem) (a : AState) 
   rw [frK4_ok (hb := hdb)] at hk
   obtain ⟨a4, hr4, hS4, hg4⟩ := internConst_stage hS3 _ _ hcnH hlvH hci
   have hiw4 : m4.arr64 IW = m3.arr64 IW := lowFr_iw (ceinternW_low hci)
-  cases hst : stubM "mk_app_n" m4 [hd, q, l3] with
+  cases hst : stubM "mk_app_n_f" m4 [hd, q, l3] with
   | none => rw [hst] at hk; simp [frK5] at hk
   | some pr5 =>
   obtain ⟨rr, m5⟩ := pr5

@@ -1,4 +1,5 @@
 import ConAgua.Arena.WhnfIotaRefine2
+import ConAgua.Arena.Abs1Refine
 
 /-!
 # ι-reduction: proofs of `WhnfIota.lean`'s specs, part 3 (`rec_fire_args` … `eta_fab_args`)
@@ -934,34 +935,29 @@ theorem callW_mkProj (p : Prog) (hp : IotaProg' p) (n : Nat) (s₀ : St) (a₀ :
     AM.ok (internE (.proj (decI nm) i.toNat (decE e))) a₀ ∧
     ArenaD m' (AM.st (internE (.proj (decI nm) i.toNat (decE e))) a₀) ∧
     AM.res (internE (.proj (decI nm) i.toNat (decE e))) a₀ = decE (r.headD 0) ∧
-    MemFrame L.Rom.StoreA L.Rom.StoreC s₀.mem m' ∧ HW (r.headD 0) := by
+    MemFrame [PJREC, PJSLOT, PJDER] [32, 33] s₀.mem m' ∧ HW (r.headD 0) := by
   obtain ⟨s', rfl, hm⟩ := triple_of_callW (mkProj_spec p hp.spine.derb hp.projf hp.projp hp.proji
     hp.mkproj n s₀ nm i e) h
   obtain ⟨-, hm⟩ := hm
   obtain ⟨h1, h2, h3⟩ := mkProj_ok s₀.mem a₀ hD nm i e _ _ hm
-  exact ⟨h1, h2, h3, L.Rom.mkProjW_store hm, mkProjW_hw _ a₀ hD nm i e _ _ hm⟩
+  exact ⟨h1, h2, h3, mkProjW_frameA _ _ _ _ _ _ hm, mkProjW_hw _ a₀ hD nm i e _ _ hm⟩
 
 /-- **`CoreS` across a `proj` interning step.** -/
 theorem CoreS.of_proj {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) (hD : ArenaD m' a')
-    (hcpl : cpl a' = cpl a) (hf : MemFrame L.Rom.StoreA L.Rom.StoreC m m') :
+    (hcpl : cpl a' = cpl a) (hf : MemFrame [PJREC, PJSLOT, PJDER] [32, 33] m m') :
     CoreS dn m' a' vis fe M eb :=
   hS.arena_frame hD hcpl hf
-    (fun b hb => by
-      have : b < 64 := by unfold L.Rom.StoreA at hb; exact List.mem_range.mp hb
-      exact Or.inl (Nat.lt_of_lt_of_le this (by decide)))
-    (by unfold L.Rom.StoreA; simp [PINS])
-    (fun b hb => by
-      have : b < 64 := by unfold L.Rom.StoreA at hb; exact List.mem_range.mp hb
-      exact Or.inl (Nat.lt_of_lt_of_le this (by decide)))
-    (fun x hx => by
-      obtain ⟨k, hk, rfl⟩ := List.mem_map.mp (show x ∈ (List.range 64).map UInt64.ofNat by unfold L.Rom.StoreC at hx; exact hx)
-      have := List.mem_range.mp hk
-      left; simp [UInt64.toNat_ofNat]; omega)
-    (fun x hx => by
-      obtain ⟨k, hk, rfl⟩ := List.mem_map.mp (show x ∈ (List.range 64).map UInt64.ofNat by unfold L.Rom.StoreC at hx; exact hx)
-      have := List.mem_range.mp hk
-      left; simp [UInt64.toNat_ofNat]; omega)
+    (fun b hb => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
+                    rcases hb with rfl | rfl | rfl <;> decide)
+    (by simp [PJREC, PJSLOT, PJDER])
+    (fun b hb => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
+                    rcases hb with rfl | rfl | rfl <;> decide)
+    (fun x hx => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
+                    rcases hx with rfl | rfl <;> decide)
+    (fun x hx => by simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
+                    rcases hx with rfl | rfl <;> decide)
+    (by simp [PJREC, PJSLOT, PJDER]) (by simp)
 
 theorem StackKept.of_store {m m' : Mem} (hf : MemFrame L.Rom.StoreA L.Rom.StoreC m m') : StackKept m m' := by
   have hspn : m'.arr64 SPN = m.arr64 SPN :=
@@ -1120,10 +1116,18 @@ theorem etpW_ok (p : Prog) (hp : IotaProg' p) (dn : NIdx → Option ConLeche.Nam
     rw [etpW_cont p T b nF o k m m₁ j r₁ hlt hc1 hg] at hL
     obtain ⟨hok1, hD1, hres1, hfr1, hw1⟩ := callW_mkProj p hp k ⟨m, Locals.init []⟩ a hS.arena T j b
       r₁ m₁ hc1
-    have hfr1 : MemFrame L.Rom.StoreA L.Rom.StoreC m m₁ := hfr1
+    have hfr1c : MemFrame L.Rom.StoreA L.Rom.StoreC m m₁ := hfr1.mono
+      (fun b hb => by
+        simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
+        unfold L.Rom.StoreA; rcases hb with rfl | rfl | rfl <;> simp [PJREC, PJSLOT, PJDER])
+      (fun x hx => by
+        simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
+        unfold L.Rom.StoreC; rcases hx with rfl | rfl
+        · exact List.mem_map.mpr ⟨32, by simp, rfl⟩
+        · exact List.mem_map.mpr ⟨33, by simp, rfl⟩)
     have hrun1 := AM.run_of_ok _ _ hok1
     have hspn1 : m₁.arr64 SPN = m.arr64 SPN :=
-      hfr1.1 SPN (fun h => by
+      hfr1c.1 SPN (fun h => by
         have : SPN < 64 := by unfold L.Rom.StoreA at h; exact List.mem_range.mp h
         simp [SPN] at this) (by decide)
     have hcpl := Keeps.run (keeps_cpl_internProj (decI T) j.toNat (decE b)) hrun1
@@ -1166,7 +1170,7 @@ theorem etpW_ok (p : Prog) (hp : IotaProg' p) (dn : NIdx → Option ConLeche.Nam
     · rw [htop3]
       unfold spTop
       rw [Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ SPN by decide)]
-      exact hfr1.2.1 136 (fun h => by
+      exact hfr1c.2.1 136 (fun h => by
         unfold L.Rom.StoreC at h
         obtain ⟨k', hk', hkk⟩ := List.mem_map.mp h
         have := List.mem_range.mp hk'

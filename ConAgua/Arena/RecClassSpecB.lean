@@ -829,7 +829,7 @@ def ihK1 (nPc : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | some (r, m1) =>
     if r.headD 0 = 0 then some ([0, 0, 0, 0, 0], m1)
     else ihK2 nPc (r.tail.headD 0) (r.tail.tail.headD 0)
-      (stubM "get_app_args" m1 [CWF, r.tail.tail.tail.headD 0])
+      (stubM "get_app_args_f" m1 [CWF, r.tail.tail.tail.headD 0])
 
 /-- **The model of `class_gen_ih_parts`.** -/
 def ihW (m : Mem) (g t tele w d : Word) : Option (List Word × Mem) :=
@@ -844,7 +844,7 @@ theorem ihK2_some : ihK2 nPc xo xl (some (r, m1)) =
 theorem ihK1_some : ihK1 nPc (some (r, m1)) =
     (if r.headD 0 = 0 then some ([0, 0, 0, 0, 0], m1)
     else ihK2 nPc (r.tail.headD 0) (r.tail.tail.headD 0)
-      (stubM "get_app_args" m1 [CWF, r.tail.tail.tail.headD 0])) := rfl
+      (stubM "get_app_args_f" m1 [CWF, r.tail.tail.tail.headD 0])) := rfl
 end arms
 grind_pattern [ind_grind] ihK2_some => ihK2 nPc xo xl (some (r, m1))
 grind_pattern [ind_grind] ihK1_some => ihK1 nPc (some (r, m1))
@@ -857,7 +857,7 @@ theorem classGenIhParts_spec (p : Prog) (hp : p.lookup "class_gen_ih_parts" = so
   rw [invoke_eq _ hp]; simp only [callFn, classGenIhParts]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      stubM_spec p "open_pis_at_fvars_f" n, stubM_spec p "get_app_args" n] <;>
+      stubM_spec p "open_pis_at_fvars_f" n, stubM_spec p "get_app_args_f" n] <;>
     finish (gen := 20) [ihW]
 
 
@@ -993,7 +993,7 @@ theorem ihW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m
           | cons a2 t2 => cases t2 <;> rfl
       rw [hleaf3] at h
       obtain ⟨hl1, hl2⟩ := hleaf
-      cases ha : stubM "get_app_args" m1 [CWF, (r1.drop 3).headD 0] with
+      cases ha : stubM "get_app_args_f" m1 [CWF, (r1.drop 3).headD 0] with
       | none => rw [ha] at h; simp [ihK2] at h
       | some r2m =>
         obtain ⟨r2, m2⟩ := r2m

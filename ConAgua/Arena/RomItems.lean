@@ -243,7 +243,7 @@ theorem romItemsW_ok (is : List Item) (hfit : is.all itemFits = true) :
       131 < (mem.arr64 CTL).size → romItemsW rom n mem pos = some (q, mem') →
       ∃ (m' : EMemo) (a' : AState) (seen' : List ConLeche.Expr), (runItems m is).run a = .ok (m', a') ∧
         ArenaD mem' a' ∧ MemoR mem' seen' m' ∧ q.toNat = pos.toNat + (encItems seen is).length ∧
-        MemFrame ExprA ExprC mem mem' ∧ stkTop mem' = stkTop mem := by
+        MemFrame ExprA ExprC mem mem' ∧ stkTop mem' = stkTop mem ∧ (RsetR mem → RsetR mem') := by
   induction is with
   | nil =>
     intro n mem a pos rest seen m q mem' hA hM hd hst hc hW
@@ -255,7 +255,7 @@ theorem romItemsW_ok (is : List Item) (hfit : is.all itemFits = true) :
     rw [romItemsW_end rom n mem pos h0] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, rfl⟩ := hW
-    refine ⟨m, a, seen, rfl, hA, hM, ?_, MemFrame.refl _ _ _, rfl⟩
+    refine ⟨m, a, seen, rfl, hA, hM, ?_, MemFrame.refl _ _ _, rfl, id⟩
     have hp1 := drop_pos rom hr pos _ rest hd 1 (by simp)
     simp only [UInt64.ofNat_one] at hp1
     rw [hp1]; simp
@@ -276,11 +276,12 @@ theorem romItemsW_ok (is : List Item) (hfit : is.all itemFits = true) :
         have := drop_shift rom hr pos [4] (encItems [] is) rest (by simpa using hd)
           (pos + 1) (drop_pos rom hr pos _ rest hd 1 (by simp))
         simpa using this
-      obtain ⟨m', a', seen', r, hR, hM', hq, hf, hs⟩ := ih hfit.2 n (resetMem mem) a (pos + 1) rest [] ∅ q mem'
+      obtain ⟨m', a', seen', r, hR, hM', hq, hf, hs, hz⟩ := ih hfit.2 n (resetMem mem) a (pos + 1) rest [] ∅ q mem'
         (ArenaD.frameHi (resetMem_frame1 mem) (by simp) (by simp) hA) hM.reset hd1
         (by rw [resetMem_stk]; exact hst) (by rw [(resetMem_frame1 mem).2.2.1]; exact hc) hW
       refine ⟨m', a', seen', by simp only [runItems, runItem]; rw [run_bind_of _ _ _ _ _ rfl]; exact r,
-        hR, hM', ?_, (resetMem_frame mem).trans hf, by rw [hs, resetMem_stk]⟩
+        hR, hM', ?_, (resetMem_frame mem).trans hf, by rw [hs, resetMem_stk],
+        fun h0 => hz (h0.reset (by assumption))⟩
       have hp1 := drop_pos rom hr pos _ rest hd 1 (by simp)
       simp only [UInt64.ofNat_one] at hp1
       rw [hq, hp1]; simp; omega
@@ -303,9 +304,10 @@ theorem romItemsW_ok (is : List Item) (hfit : is.all itemFits = true) :
       obtain ⟨ok1, hR1, -, -, hq1, hf1⟩ := romNameW_ok rom hr nme hfit.1 n mem a (pos + 1) _ h₁ q₁ m₁ hA hd1 hN
       have hd2 : rom.drop q₁.toNat = encItems seen is ++ rest :=
         drop_shift rom hr (pos + 1) _ _ rest (by rw [hd1, List.append_assoc]) q₁ hq1
-      obtain ⟨m', a', seen', r, hR, hM', hq, hf, hs⟩ := ih hfit.2 n m₁ _ q₁ rest seen m q mem' hR1
+      obtain ⟨m', a', seen', r, hR, hM', hq, hf, hs, hz⟩ := ih hfit.2 n m₁ _ q₁ rest seen m q mem' hR1
         (hM.frame (frame_romA hf1)) hd2 (by rw [frame_exprA_stk hf1]; exact hst) (by rw [hf1.2.2.1]; exact hc) hW
-      refine ⟨m', a', seen', ?_, hR, hM', ?_, (frame_storeE hf1).trans hf, by rw [hs, frame_exprA_stk hf1]⟩
+      refine ⟨m', a', seen', ?_, hR, hM', ?_, (frame_storeE hf1).trans hf, by rw [hs, frame_exprA_stk hf1],
+        fun h0 => hz (h0.frameS hf1)⟩
       · simp only [runItems, runItem]
         rw [run_bind_of _ _ _ _ m (by rw [run_bind_of _ _ _ _ _ (AM.run_of_ok _ _ ok1)]; rfl)]; exact r
       · have hp1 := drop_pos rom hr pos _ rest hd 1 (by simp)
@@ -330,9 +332,10 @@ theorem romItemsW_ok (is : List Item) (hfit : is.all itemFits = true) :
       obtain ⟨ok1, hR1, -, -, hq1, hf1⟩ := romLevelW_ok rom hr u hfit.1 n mem a (pos + 1) _ h₁ q₁ m₁ hA hd1 hN
       have hd2 : rom.drop q₁.toNat = encItems seen is ++ rest :=
         drop_shift rom hr (pos + 1) _ _ rest (by rw [hd1, List.append_assoc]) q₁ hq1
-      obtain ⟨m', a', seen', r, hR, hM', hq, hf, hs⟩ := ih hfit.2 n m₁ _ q₁ rest seen m q mem' hR1
+      obtain ⟨m', a', seen', r, hR, hM', hq, hf, hs, hz⟩ := ih hfit.2 n m₁ _ q₁ rest seen m q mem' hR1
         (hM.frame (frame_romA hf1)) hd2 (by rw [frame_exprA_stk hf1]; exact hst) (by rw [hf1.2.2.1]; exact hc) hW
-      refine ⟨m', a', seen', ?_, hR, hM', ?_, (frame_storeE hf1).trans hf, by rw [hs, frame_exprA_stk hf1]⟩
+      refine ⟨m', a', seen', ?_, hR, hM', ?_, (frame_storeE hf1).trans hf, by rw [hs, frame_exprA_stk hf1],
+        fun h0 => hz (h0.frameS hf1)⟩
       · simp only [runItems, runItem]
         rw [run_bind_of _ _ _ _ m (by rw [run_bind_of _ _ _ _ _ (AM.run_of_ok _ _ ok1)]; rfl)]; exact r
       · have hp1 := drop_pos rom hr pos _ rest hd 1 (by simp)
@@ -358,9 +361,10 @@ theorem romItemsW_ok (is : List Item) (hfit : is.all itemFits = true) :
         (by omega) hc hN
       have hd2 : rom.drop q₁.toNat = encItems seen is ++ rest :=
         drop_shift rom hr (pos + 1) _ _ rest (by rw [hd1, List.append_assoc]) q₁ hq1
-      obtain ⟨m', a', seen', r, hR, hM', hq, hf, hs⟩ := ih hfit.2 n m₁ _ q₁ rest seen m q mem' hR1
+      obtain ⟨m', a', seen', r, hR, hM', hq, hf, hs, hz⟩ := ih hfit.2 n m₁ _ q₁ rest seen m q mem' hR1
         (hM.frame hf1) hd2 (by rw [hs1]; exact hst) (by rw [hf1.2.2.1]; exact hc) hW
-      refine ⟨m', a', seen', ?_, hR, hM', ?_, (frame_exprA hf1).trans hf, by rw [hs, hs1]⟩
+      refine ⟨m', a', seen', ?_, hR, hM', ?_, (frame_exprA hf1).trans hf, by rw [hs, hs1],
+        fun h0 => hz (h0.frameR hf1)⟩
       · simp only [runItems, runItem]
         rw [run_bind_of _ _ _ _ m (by rw [run_bind_of _ _ _ _ _ (AM.run_of_ok _ _ ok1)]; rfl)]; exact r
       · have hp1 := drop_pos rom hr pos _ rest hd 1 (by simp)
@@ -383,13 +387,13 @@ theorem romItemsW_ok (is : List Item) (hfit : is.all itemFits = true) :
       | some r =>
       obtain ⟨h₁, q₁, m₁⟩ := r
       rw [hN, itK_some] at hW
-      obtain ⟨me, a₁, r1, hR1, hM1, -, hq1, hf1, hs1, -⟩ := romExprW_ok rom hr e hfit.1 n mem a (pos + 1) _ seen m
+      obtain ⟨me, a₁, r1, hR1, hM1, -, hq1, hf1, hs1, hz1⟩ := romExprW_ok rom hr e hfit.1 n mem a (pos + 1) _ seen m
         h₁ q₁ m₁ hA hM hd1 hst hc hN
       have hd2 : rom.drop q₁.toNat = encItems (encExprM seen e).2 is ++ rest :=
         drop_shift rom hr (pos + 1) _ _ rest (by rw [hd1, List.append_assoc]) q₁ hq1
-      obtain ⟨m', a', seen', r, hR, hM', hq, hf, hs⟩ := ih hfit.2 n m₁ a₁ q₁ rest _ me q mem' hR1 hM1 hd2
+      obtain ⟨m', a', seen', r, hR, hM', hq, hf, hs, hz⟩ := ih hfit.2 n m₁ a₁ q₁ rest _ me q mem' hR1 hM1 hd2
         (by rw [hs1]; exact hst) (by rw [hf1.2.2.1]; exact hc) hW
-      refine ⟨m', a', seen', ?_, hR, hM', ?_, hf1.trans hf, by rw [hs, hs1]⟩
+      refine ⟨m', a', seen', ?_, hR, hM', ?_, hf1.trans hf, by rw [hs, hs1], fun h0 => hz (hz1 h0)⟩
       · simp only [runItems, runItem]
         rw [run_bind_of _ _ _ _ me (by rw [run_bind_of _ _ _ _ _ r1]; rfl)]; exact r
       · have hp1 := drop_pos rom hr pos _ rest hd 1 (by simp)

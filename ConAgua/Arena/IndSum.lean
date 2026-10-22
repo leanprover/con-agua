@@ -51,7 +51,7 @@ and at the end, where it must be a sort. Returns `(bs.off, bs.len, s)`. -/
 -- con-ron: ConRon/Arena/Inductives/SumInstall.lean:37-55 ConRon.Arena.whnfTelescope
 @[l_impl ConRon.Arena.whnfTelescope]
 def whnfTelescopeL : FunDecl := lfn (vis, i, n, e) locals (e', g, x, y, z, fv, b, bo, bl, s, o, l) {
-  e' := call whnf(vis, i, e);
+  e' := call whnf_top(vis, i, e);
   (g, x, y, z) := call e_view(e');
   if g == 2 && n == 0 { return (0, 0, x) };
   if g == 6 && n != 0 {
@@ -169,8 +169,8 @@ def checkSumCtorTailL : FunDecl :=
   if xqOk == 0 { abort };
   us := call param_levels(lpsOff, lpsLen);
   hd := call intern_const(T, us);
-  xfn := call get_app_fn(⟪CWF⟫, xqBody);
-  (xargsOff, xargsLen) := call get_app_args(⟪CWF⟫, xqBody);
+  xfn := call get_app_fn_f(⟪CWF⟫, xqBody);
+  (xargsOff, xargsLen) := call get_app_args_f(⟪CWF⟫, xqBody);
   eqFn := u64(xfn == hd);
   eqLen := u64(xargsLen == nP + nIdx);
   leOk := u64(nP <= xargsLen);
@@ -469,8 +469,8 @@ def structCtorResidOkL : FunDecl :=
   us := call param_levels(lpsOff, lpsLen);
   hd := call intern_const(T, us);
   if 4294967296 <= hd { abort };
-  fn := call get_app_fn(⟪CWF⟫, cbody);
-  (argsOff, argsLen) := call get_app_args(⟪CWF⟫, cbody);
+  fn := call get_app_fn_f(⟪CWF⟫, cbody);
+  (argsOff, argsLen) := call get_app_args_f(⟪CWF⟫, cbody);
   (psOff, psLen) := call struct_ps_at(o, nP);
   eq1 := u64(fn == hd);
   eq2 := u64(argsLen == nP + nIdx);
