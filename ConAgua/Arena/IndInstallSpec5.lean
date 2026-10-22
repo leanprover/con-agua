@@ -471,4 +471,29 @@ theorem brgoW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
       rintro r2 b2 m2 a2 ⟨rfl, rfl, hM2, hS2, hg2⟩
       exact Sim.ret ⟨rfl, rfl, hM2, hS2, hg1.trans hg2⟩
 
+/-- **The model of `block_raw_rec`** (at exec fuel `n + 1`). -/
+def brrW (n : Nat) (m : Mem) (p : Word) : Option (List Word × Mem) :=
+  match memberNamesW n m p with
+  | none => none
+  | some (r1, m1) =>
+    match brgoW n m1 (r1.headD 0) (r1.tail.headD 0) (rdW (m1.arr64 IW) p) (rdW (m1.arr64 IW) (p + 1)) with
+    | none => none
+    | some (r2, m2) => some ([r2.headD 0], m2)
+
+theorem brr_spec (p : Prog) (hM : MaProg p) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hc : p.lookup "member_names_copy" = some memberNamesCopy)
+    (hn : p.lookup "block_shape_member_names" = some blockShapeMemberNames)
+    (hpd : p.lookup "pi_doms_mention_any" = some piDomsMentionAny)
+    (hm : p.lookup "block_raw_rec_member" = some blockRawRecMember)
+    (hg : p.lookup "block_raw_rec_go" = some blockRawRecGo)
+    (hp : p.lookup "block_raw_rec" = some blockRawRec) (n : Nat) (s₀ : St) (q : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "block_raw_rec" [q]
+    ⦃fun r s' => LocEq s' s₀ ∧ brrW n s₀.mem q = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, blockRawRec]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      blockShapeMemberNames_spec p ha hc hn n, brgo_spec p hM hpd hm hg n] <;>
+    finish (gen := 20) [brrW, rdW_eq]
+
 end L.Ind
