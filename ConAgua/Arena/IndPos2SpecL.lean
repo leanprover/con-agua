@@ -423,3 +423,162 @@ theorem fgW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (h
     · simpa [hcd] using hN'
 
 end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+/-! ## `nest_frame_holes`: the group's holes, interned in order -/
+
+mutual
+def fhW : Nat → Mem → Word → Word → Word → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _, _, _, _ => none
+  | n + 1, m, hi, gO, gL, aO, aL =>
+    if gL = 0 then some ([aO, aL], m)
+    else if hi + 1 = 0 then none
+    else fhK1 n hi gO gL aO aL (fvinternW m hi (rdW (m.arr64 IW) (rdW (m.arr64 IW) gO + 1)))
+def fhK1 (n : Nat) (hi gO gL aO aL : Word) : Option (Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (v, m1) => if 4294967296 ≤ v then none else fhK2 n hi gO gL (snocW n m1 aO aL v)
+def fhK2 (n : Nat) (hi gO gL : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m2) => fhW n m2 (hi + 1) (gO + 1) (gL - 1) (r.headD 0) (r.tail.headD 0)
+end
+
+section arms
+variable (n : Nat) (m m1 : Mem) (hi gO gL aO aL v : Word) (r : List Word)
+theorem fhW_nil (h : gL = 0) : fhW (n + 1) m hi gO gL aO aL = some ([aO, aL], m) := by simp [fhW, h]
+theorem fhW_ovf (h : ¬ gL = 0) (h1 : hi + 1 = 0) : fhW (n + 1) m hi gO gL aO aL = none := by simp [fhW, h, h1]
+theorem fhW_cons (h : ¬ gL = 0) (h1 : ¬ hi + 1 = 0) : fhW (n + 1) m hi gO gL aO aL =
+    fhK1 n hi gO gL aO aL (fvinternW m hi (rdW (m.arr64 IW) (rdW (m.arr64 IW) gO + 1))) := by simp [fhW, h, h1]
+theorem fhK1_big (h : 4294967296 ≤ v) : fhK1 n hi gO gL aO aL (some (v, m1)) = none := by simp [fhK1, h]
+theorem fhK1_ok (h : ¬ 4294967296 ≤ v) : fhK1 n hi gO gL aO aL (some (v, m1)) =
+    fhK2 n hi gO gL (snocW n m1 aO aL v) := by simp [fhK1, h]
+theorem fhK2_some : fhK2 n hi gO gL (some (r, m1)) =
+    fhW n m1 (hi + 1) (gO + 1) (gL - 1) (r.headD 0) (r.tail.headD 0) := by rw [fhK2]
+end arms
+attribute [ind_grind] fhW_nil fhW_ovf fhW_cons fhK1_big fhK1_ok fhK2_some
+
+theorem nestFrameHoles_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hc2 : p.lookup "iw_copy" = some iwCopy) (hsn : p.lookup "sl_snoc" = some slSnoc)
+    (hff : p.lookup "fvar_find" = some fvarFind) (hfp : p.lookup "fvar_push" = some fvarPush)
+    (hif : p.lookup "intern_fvar" = some internFVar)
+    (hp : p.lookup "nest_frame_holes" = some nestFrameHolesL) (n : Nat) :
+    ∀ (s₀ : St) (hi gO gL aO aL : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_frame_holes" [hi, gO, gL, aO, aL]
+    ⦃fun r s' => LocEq s' s₀ ∧ fhW n s₀.mem hi gO gL aO aL = some ([r.headD 0, r.tail.headD 0], s'.mem); ⊤⦄ := by
+  induction n with
+  | zero =>
+    intro s₀ hi gO gL aO aL
+    rw [invoke_eq _ hp]; simp only [callFn, nestFrameHolesL]; vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ hi gO gL aO aL
+    rw [invoke_eq _ hp]
+    simp only [callFn, nestFrameHolesL]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        internFVar_spec p hff hfp hif n, slSnoc_specW p ha hc2 hsn n, ih] <;>
+      finish (gen := 20) (instances := 5000) [rdW_eq, Locals.init_cons_zero]
+
+end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+/-- The twin's holes of a group from `hi` on, one by one. -/
+def pos2FhT (hi : Nat) : List (NIdx × EIdx) → AM (List EIdx)
+  | [] => pure []
+  | x :: g => do
+    let v ← internFVarE hi x.2
+    let vs ← pos2FhT (hi + 1) g
+    pure (v :: vs)
+
+theorem pos2_zipIdx_holes (hi : Nat) : ∀ (grp : List (NIdx × EIdx)) (k : Nat),
+    (grp.zipIdx k).mapM (fun (x : (NIdx × EIdx) × Nat) => internFVarE (hi + x.2) x.1.2) =
+      pos2FhT (hi + k) grp
+  | [], k => rfl
+  | x :: g, k => by
+    simp only [List.zipIdx_cons, List.mapM_cons, pos2FhT]
+    rw [pos2_zipIdx_holes hi g (k + 1), Nat.add_assoc]
+
+/-- **`nest_frame_holes`**: the group's holes from `hi` on, appended to the accumulator. -/
+theorem fhW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) : ∀ (n : Nat) (m m' : Mem)
+    (a : AState) (hi gO gL aO aL : Word) (grp : List (NIdx × EIdx)) (acc : List EIdx) (r : List Word),
+    fhW n m hi gO gL aO aL = some (r, m') → StageR dn vis fe m a →
+    gL.toNat = grp.length → gO.toNat + grp.length ≤ iwTop m → GrpAt m gO.toNat grp →
+    decHL m aO.toNat aL.toNat = some acc → aO.toNat + aL.toNat ≤ iwTop m →
+    ∃ vs a', (pos2FhT hi.toNat grp).run a = .ok (vs, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+      decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (acc ++ vs) ∧
+      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
+  intro n
+  induction n with
+  | zero => intro m m' a hi gO gL aO aL grp acc r h; simp [fhW] at h
+  | succ n ih =>
+    intro m m' a hi gO gL aO aL grp acc r h hS hgl hgb hgrp hA hAb
+    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+    by_cases hg0 : gL = 0
+    · rw [fhW_nil (h := hg0)] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      subst hg0
+      have : grp = [] := List.eq_nil_of_length_eq_zero (by simpa using hgl.symm)
+      subst this
+      exact ⟨[], a, rfl, hS, IWGrow.refl _, by simpa using hA, by simpa using hAb⟩
+    by_cases hov : hi + 1 = 0
+    · rw [fhW_ovf (h := hg0) (h1 := hov)] at h; cases h
+    rw [fhW_cons (h := hg0) (h1 := hov)] at h
+    obtain ⟨⟨c, t⟩, grp', rfl⟩ : ∃ x grp', grp = x :: grp' := by
+      cases grp with
+      | nil => exact absurd (UInt64.toNat_inj.mp (by simpa using hgl)) hg0
+      | cons x grp' => exact ⟨x, grp', rfl⟩
+    simp only [List.length_cons] at hgl hgb
+    obtain ⟨w, cw, tw, hrw, hw1, -, -, -, hrt, htH, htd⟩ := hgrp.head (by omega) htop
+    rw [UInt64.ofNat_toNat] at hrw
+    rw [hrw, hrt] at h
+    cases hf : fvinternW m hi tw with
+    | none => rw [hf] at h; simp [fhK1] at h
+    | some pr =>
+    obtain ⟨v, m1⟩ := pr
+    rw [hf] at h
+    by_cases hvb : 4294967296 ≤ v
+    · rw [fhK1_big (h := hvb)] at h; cases h
+    rw [fhK1_ok (h := hvb)] at h
+    obtain ⟨a1, hrun1, hS1, hg1⟩ := internFVar_stage hS hi tw htH hf
+    cases hs : snocW n m1 aO aL v with
+    | none => rw [hs] at h; simp [fhK2] at h
+    | some pr2 =>
+    obtain ⟨r2, m2⟩ := pr2
+    rw [hs, fhK2_some] at h
+    have hvH : H v := by
+      have : ¬ (4294967296 : Word).toNat ≤ v.toNat := fun h' => hvb (UInt64.le_iff_toNat_le.mpr h')
+      simp only [H]; simpa using this
+    obtain ⟨hr2, hA2, hg2, -, -, ht2⟩ := snocW_decK hs hS1.2.2.2.1 hS1.2.2.2.2.2 (by have := hg1.1; omega)
+      hvH (by rw [decHL_agree (RdS.of_grow hg1) (fun j hj => by omega)]; exact hA)
+    have hS2 := snocW_stage hs hS1
+    have hgO1 : (gO + 1).toNat = gO.toNat + 1 := word_add_toNat (by simp; omega)
+    have hgL1 : (gL - 1).toNat = grp'.length := by
+      rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
+    have hhi1 : (hi + 1).toNat = hi.toNat + 1 := by
+      rcases Nat.lt_or_ge (hi.toNat + 1) (2 ^ 64) with hl | hl
+      · exact word_add_toNat (by simpa using hl)
+      · exfalso; apply hov; apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; have := hi.toNat_lt; simp; omega
+    have hg12 := hg1.trans hg2
+    have hb2 : (gO + 1).toNat + grp'.length ≤ iwTop m2 := by
+      rw [hgO1]; have := hg12.1; omega
+    have hgr2 : GrpAt m2 (gO + 1).toNat grp' := by
+      rw [hgO1]; exact (hgrp.grow (by simpa using hgb) hg12).tail
+    have hA2' : decHL m2 (r2.headD 0).toNat (r2.tail.headD 0).toNat = some (acc ++ [decI v]) := by
+      rw [hr2]; simpa using hA2
+    have hAb2 : (r2.headD 0).toNat + (r2.tail.headD 0).toNat ≤ iwTop m2 := by
+      rw [hr2]; simp only [List.headD_cons, List.tail_cons]; omega
+    obtain ⟨vs, a', hrun, hS', hg', hA', hAb'⟩ := ih m2 m' a1 (hi + 1) (gO + 1) (gL - 1) _ _ grp' _ r h hS2
+      hgL1 hb2 hgr2 hA2' hAb2
+    refine ⟨decI v :: vs, a', ?_, hS', hg12.trans hg', by simpa using hA', hAb'⟩
+    rw [hhi1] at hrun
+    have htd' : t = decE tw := by simpa [decE_eq] using htd.symm
+    subst htd'
+    simp only [pos2FhT, internFVarE, StateT.run_bind, hrun1, except_ok_bind, hrun]
+    rfl
+
+end L.Ind
