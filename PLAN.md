@@ -76,7 +76,8 @@ per-function separation logic.
   `COMPLETE_BY_PARTS` in `scripts/census.py`. Tag in the same commit that lands the code.
 - **Census.** `scripts/census.py` builds what it needs (`--no-build` to skip) and prints, per roadmap phase,
   how many targets are proven / proven with `sorry` / have L code / have nothing, by count and weighted by
-  Lean and Rust lines (~30 s). `--list [REGEX]` lists targets with their status and links. Targets: the
+  Lean and Rust lines (~30 s). `--list [REGEX]` lists targets with their status and links. The exe runs under a memory guard
+  (killed above 6 GB; it peaks at about 2.8 GB). Targets: the
   `ConRon`/`ConLeche` definitions `ConAgua.Final.TwinAccepts` reaches (no instances, auxiliaries, types,
   predicates, ROM data). Proven means every `@[refines T]` theorem uses only `propext`, `Classical.choice`,
   `Quot.sound`; a target reached only through proven targets counts as proven (only sorry-free ones
@@ -92,22 +93,18 @@ per-function separation logic.
   (`scripts/bump-con-ron.sh --check`). Never edit a vendored file without putting the edit in a
   patch: edit, then `scripts/bump-con-ron.sh --refresh-patches` (an edit outside every patch lands in
   `NNNN-new.patch`: rename it and give it a description), and commit both.
-- **Fingerprints.** `docs/twin-fingerprints.tsv` records, for every target with L code, a proof or
-  coverage, a hash of its twin definition as it was when that L code or proof was last checked
-  (DESIGN.md, "Twin fingerprints"). The census flags a target **stale** when the hash differs:
-  `scripts/census.py --stale` is the work queue, and `docs/progress.md` lists it. A lane that checked
-  (and if needed fixed) the L code and proofs of stale targets against the new twin runs
-  `scripts/census.py --reviewed REGEX` and commits the changed rows with the fix. New links get their
-  row from the coordinator's `--write`.
+- **Staleness** (which L code and proofs a bump invalidated). TODO: tracked by source citations
+  (`con-ron: ConRon/Arena/File.lean:120-200 name` doc lines on our L code and proofs, checked by a
+  pure-Python gate like con-ron's `scripts/provenance.py`), built by a separate lane. The census
+  fingerprints that did this before were dropped (DESIGN.md, "Census memory").
 - **The bump.** In a worktree on its own branch: `scripts/bump-con-ron.sh <rev>` (e.g. `origin/HEAD`)
   re-vendors con-ron at `<rev>` and con-leche at the rev con-ron's `proof/lake-manifest.json` pins,
   re-applies the patches with `git apply --3way` (conflicts are reported and left with markers),
-  regenerates `scripts/census-rust.tsv`, builds, and prints the stale list. Fix what the build
+  regenerates `scripts/census-rust.tsv`, builds, runs the census, and lists the changed upstream
+  files. Fix what the build
   breaks (vendored files: in a patch; our files: small fixes now, otherwise `sorry` + DESIGN.md),
-  land it, and announce it in DESIGN.md: what changed upstream, the stale targets, which lane owns
-  them. Stale targets stay counted as before until their lane reviews them. Never bump the toolchain
-  and the twin in the same step (fingerprints are per toolchain; after a toolchain bump re-record
-  with `--reviewed .` once the build is green).
+  land it, and announce it in DESIGN.md: what changed upstream, and which lanes' code it touches.
+  Never bump the toolchain and the twin in the same step.
 
 ## Process rules
 - Worktrees and large files go in `_tmp/` (tmpfs and a memory cap). Use `git -C <dir>` and stage by explicit

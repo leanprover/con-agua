@@ -9,12 +9,6 @@ an L counterpart and a refinement proof. The data comes from `lake exe census`
     scripts/census.py --write         also write docs/progress.md and append to docs/progress.csv
     scripts/census.py --list [REGEX]  print every target (or those matching REGEX) with its status
     scripts/census.py --rust DIR      regenerate scripts/census-rust.tsv from a con-ron checkout
-    scripts/census.py --stale         print the stale targets (the work queue after a twin bump)
-    scripts/census.py --record        add missing fingerprint rows, settle changed todo targets
-                                      that no linked target reaches (--write does this too)
-    scripts/census.py --reviewed REGEX  record the current fingerprint of the linked (or covered)
-                                      targets matching REGEX: their L code and proofs were checked
-                                      against the twin as vendored now
 
 TARGETS. Every definition of `ConRon.*` and `ConLeche.*` reached from
 `ConAgua.Final.TwinAccepts` through definition bodies, without instances, compiler/elaborator
@@ -32,17 +26,6 @@ STATUS of a target, best first:
 Partial refinements (`@[refines_part T "label"]`) are listed separately; they never make T
 proven, except through COMPLETE_BY_PARTS.
 
-STALE (a flag beside the status). docs/twin-fingerprints.tsv records, for every target, the
-fingerprint of its twin definition (Main.lean: a hash of its elaborated code and of the non-target
-helpers it walks through); for a target that is not `todo`, as of the last review of its L code
-or proof. Such a target is stale when its fingerprint differs from the recorded one, or when a
-`todo` target below it (reached through `todo` targets only: twin code that its own L code stands
-for, e.g. `Caches.empty` under `flushCaches`) changed: the vendored twin changed under the L code
-(a con-ron/con-leche bump, scripts/bump-con-ron.sh). A stale covered target (no link of its own)
-names the linked targets above it whose proofs cover it. `--reviewed REGEX` re-records the
-matching targets (run by the lane that checked them) and every changed `todo` target no other
-stale target still reaches; `--write` only adds rows for targets that have none (new links).
-
 WEIGHTS. `lean`: lines of the target's own definition (blank lines, comments and doc comments
 excluded, nested target definitions subtracted). `rust`: lines of the con-ron Rust functions
 whose doc comment cites the target (`Lean twin: proof/ConRon/Arena/F.lean:a-b name`, or for
@@ -55,14 +38,13 @@ import csv
 import datetime
 import os
 import re
+import signal
 import subprocess
 import sys
 import tomllib
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RUST_TSV = os.path.join(ROOT, "scripts", "census-rust.tsv")
-FP_TSV = os.path.join(ROOT, "docs", "twin-fingerprints.tsv")
-UPSTREAM = os.path.join(ROOT, "vendor", "UPSTREAM")
 
 # A target whose refinement is split over parts: it is proven when every listed part is (status =
 # the worst part). Value: (the target the parts are tagged on, the `@[refines_part T "label"]`
@@ -290,28 +272,86 @@ def lake():
     return [w] if os.path.exists(w) else ["lake"]
 
 
+MEM_LIMIT_GB = 6  # the census exe peaks at about 2.8 GB (DESIGN.md, "Census memory")
+
+
+def tree_pids(pid):
+    out, todo = [], [pid]
+    while todo:
+        p = todo.pop()
+        out.append(p)
+        try:
+            for tid in os.listdir(f"/proc/{p}/task"):
+                with open(f"/proc/{p}/task/{tid}/children") as fh:
+                    todo += [int(x) for x in fh.read().split()]
+        except (OSError, ValueError):
+            pass
+    return out
+
+
+def tree_rss(pid):
+    """Resident memory (bytes) of `pid` and all its descendants, from /proc."""
+    total = 0
+    for p in tree_pids(pid):
+        try:
+            with open(f"/proc/{p}/status") as fh:
+                total += next((int(l.split()[1]) * 1024 for l in fh if l.startswith("VmRSS:")), 0)
+        except (OSError, ValueError):
+            pass
+    return total
+
+
+def run_guarded(cmd, limit_gb=MEM_LIMIT_GB, timeout=600):
+    """Run `cmd` with its output in temporary files; poll the resident memory of its process
+    tree every 0.2 s and kill that tree (by pid) above `limit_gb` GB or after `timeout` s, so a
+    runaway census can never exhaust the session's memory (it took the machine down twice)."""
+    import tempfile
+    import time
+    with tempfile.TemporaryFile("w+") as out, tempfile.TemporaryFile("w+") as err:
+        p = subprocess.Popen(cmd, cwd=ROOT, stdout=out, stderr=err, text=True, start_new_session=True)
+        t0, peak, why = time.time(), 0, None
+        while p.poll() is None:
+            m = tree_rss(p.pid)
+            peak = max(peak, m)
+            if m > limit_gb * 2**30:
+                why = f"used {m / 2**30:.1f} GB, over the census memory limit of {limit_gb} GB"
+            elif time.time() - t0 > timeout:
+                why = f"ran over {timeout} s"
+            if why:
+                for q in tree_pids(p.pid):
+                    try:
+                        os.kill(q, signal.SIGKILL)
+                    except OSError:
+                        pass
+                p.wait()
+                sys.exit(f"census exe killed: it {why} (MEM_LIMIT_GB in scripts/census.py)")
+            time.sleep(0.2)
+        out.seek(0)
+        err.seek(0)
+        return p.returncode, out.read(), err.read(), peak
+
+
 def run_census(build):
     if build:
         subprocess.run(lake() + ["build", "census"] + modules_to_scan(), cwd=ROOT, check=True,
                        stdout=subprocess.DEVNULL)
-    r = subprocess.run(lake() + ["exe", "census", "ConAgua.Final.Twin"] + modules_to_scan(), cwd=ROOT,
-                       capture_output=True, text=True, timeout=600)
-    if r.returncode != 0:
-        sys.stderr.write(r.stderr)
-        sys.exit(f"census exe failed ({r.returncode})")
-    for l in r.stderr.splitlines():
+    rc, out, err, peak = run_guarded(lake() + ["exe", "census", "ConAgua.Final.Twin"] + modules_to_scan())
+    if rc != 0:
+        sys.stderr.write(err)
+        sys.exit(f"census exe failed ({rc})")
+    for l in err.splitlines():
         if not l.startswith("census: module clash"):
             sys.stderr.write(l + "\n")
-    return r.stdout
+    if os.environ.get("CENSUS_PEAK"):
+        sys.stderr.write(f"census exe peak memory: {peak / 2**30:.2f} GB\n")
+    return out
 
 
 def analyse(out):
-    targets, edges, roots, links, fps = {}, collections.defaultdict(set), [], [], {}
+    targets, edges, roots, links = {}, collections.defaultdict(set), [], []
     for line in out.splitlines():
         f = line.split("\t")
-        if f[0] == "F":
-            fps[f[1]] = f[2]
-        elif f[0] == "T":
+        if f[0] == "T":
             if ROM_MODULES.match(f[2]):
                 continue
             targets[f[1]] = dict(name=f[1], module=f[2], start=int(f[3]), end=int(f[4]), kind=f[5],
@@ -402,162 +442,7 @@ def analyse(out):
         t["parts"] = parts[n]
         t["impl"] = impl[n]
         t["refs"] = refs[n]
-        t["fp"] = fps.get(n, "")
-    stale_marks(targets, edges)
     return targets, links, dangling + bad, rust_unmatched, edges
-
-
-# ---------------------------------------------------------------- fingerprints
-
-
-def upstream_revs():
-    revs = {}
-    if os.path.exists(UPSTREAM):
-        for row in open(UPSTREAM):
-            if row.strip() and not row.startswith("#"):
-                f = row.split("\t")
-                revs[f[0]] = f[1].strip()
-    return revs
-
-
-def repo_of(t):
-    return "con-ron" if t["module"].startswith("ConRon") else "con-leche"
-
-
-def read_fps():
-    rec = {}
-    if os.path.exists(FP_TSV):
-        for row in open(FP_TSV):
-            if row.strip() and not row.startswith("#"):
-                name, fp, rev = row.rstrip("\n").split("\t")
-                rec[name] = (fp, rev)
-    return rec
-
-
-def write_fps(rec):
-    with open(FP_TSV, "w") as fh:
-        fh.write("# The twin fingerprint of every census target; for one with L code, a proof or coverage, as of\n"
-                 "# the last review of that code (scripts/census.py, \"STALE\"; DESIGN.md, \"Twin fingerprints\").\n"
-                 "# Columns: target, fingerprint, upstream rev (con-ron or con-leche) it was recorded at. Update\n"
-                 "# with `scripts/census.py --reviewed REGEX` after checking the L code against the new twin.\n")
-        for n in sorted(rec):
-            fh.write(f"{n}\t{rec[n][0]}\t{rec[n][1]}\n")
-
-
-def via_changed(targets, edges, rec, n):
-    """The `todo` targets reachable from n through `todo` targets only (the part of the twin n's
-    own L code stands for) whose fingerprint differs from their recorded one."""
-    out, seen, st = set(), set(), list(edges.get(n, ()))
-    while st:
-        m = st.pop()
-        if m in seen or m not in targets:
-            continue
-        seen.add(m)
-        u = targets[m]
-        if u["status"] != "todo":
-            continue  # linked or covered: flagged on its own
-        r = rec.get(m)
-        if r is not None and r[0] != u["fp"]:
-            out.add(m)
-        st.extend(edges.get(m, ()))
-    return out
-
-
-def stale_marks(targets, edges, rec=None):
-    """Set, on every target that is not todo: t["via"] (changed todo targets below it, see
-    via_changed), t["stale"] (its own recorded fingerprint differs, or `via` is not empty),
-    t["unrecorded"] (no row); and t["above"] (the linked targets whose proofs cover a stale
-    covered target)."""
-    if rec is None:
-        rec = read_fps()
-    for t in targets.values():
-        r = rec.get(t["name"])
-        live = t["status"] != "todo"
-        t["recorded"] = r
-        t["own_stale"] = live and r is not None and r[0] != t["fp"]
-        t["via"] = sorted(via_changed(targets, edges, rec, t["name"])) if live and r is not None else []
-        t["stale"] = t["own_stale"] or bool(t["via"])
-        t["unrecorded"] = live and r is None
-        t["above"] = []
-    callers = collections.defaultdict(set)
-    for a, bs in edges.items():
-        for b in bs:
-            callers[b].add(a)
-    for t in targets.values():
-        if not (t["stale"] and t["covered"]):
-            continue
-        seen, st, above = set(), list(callers[t["name"]]), set()
-        while st:
-            n = st.pop()
-            if n in seen or n not in targets:
-                continue
-            seen.add(n)
-            u = targets[n]
-            if u["own"] in ("proven", "sorry"):
-                above.add(n)
-            else:
-                st.extend(callers[n])
-        t["above"] = sorted(above)
-
-
-def record_fps(targets, edges, rx=None):
-    """Record fingerprints. Every target gets a row (todo ones too: a linked target is also stale
-    when a todo target below it changed). Rows of targets without one, and with `rx` of the matching
-    targets that are not todo, are set to the current fingerprint (= reviewed). A changed todo target
-    is then re-recorded unless a linked target outside this review is still stale through it.
-    Returns the names written."""
-    rec = read_fps()
-    revs = upstream_revs()
-    cur = lambda t: (t["fp"], revs.get(repo_of(t), "?")[:8])
-    done = set()
-    for t in targets.values():
-        n = t["name"]
-        if n not in rec or (rx and rx.search(n) and t["status"] != "todo"):
-            if rec.get(n) != cur(t):
-                rec[n] = cur(t)
-                done.add(n)
-    reviewed = {t["name"] for t in targets.values() if t["status"] != "todo" and
-                (t["name"] in done or (rx and rx.search(t["name"])))}
-    pending = set()
-    for t in targets.values():
-        if t["status"] == "todo" or t["name"] in reviewed or t["name"] not in rec:
-            continue
-        pending |= via_changed(targets, edges, rec, t["name"])
-    for t in targets.values():
-        n = t["name"]
-        if t["status"] == "todo" and rec[n][0] != t["fp"] and n not in pending:
-            rec[n] = cur(t)
-            done.add(n)
-    for n in [n for n in rec if n not in targets and (rx is None or rx.search(n))]:
-        del rec[n]
-        done.add(n)
-    write_fps(rec)
-    stale_marks(targets, edges, rec)
-    return sorted(done)
-
-
-def stale_lines(targets):
-    """The work queue: one entry per stale target, with what to look at."""
-    revs = upstream_revs()
-    out = []
-    st = sorted((t for t in targets.values() if t["stale"]), key=lambda t: (int(t["phase"]), t["name"]))
-    for t in st:
-        repo = repo_of(t)
-        mods = {t["module"]} | {targets[v]["module"] for v in t["via"] if repo_of(targets[v]) == repo}
-        path = " ".join(sorted(("proof/" if repo == "con-ron" else "") + m.replace(".", "/") + ".lean"
-                               for m in mods))
-        old = t["recorded"][1]
-        new = revs.get(repo, "?")[:8]
-        what = describe(t) or "covered"
-        if not t["own_stale"]:
-            what += "; its own code is unchanged"
-        if t["via"]:
-            what += "; changed below it (no L code of their own): " + ", ".join(f"`{v}`" for v in t["via"])
-        if t["above"]:
-            what += "; covered by " + ", ".join(f"`{a}`" for a in t["above"])
-        out.append((t, f"`{t['name']}` ({t['status']}, phase {t['phase']}): {what}. "
-                       f"Diff: `git -C _tmp/ref/{repo} diff {old} {new} -- {path}`"))
-    return out
 
 
 def totals(ts):
@@ -637,17 +522,6 @@ def write_md(targets, links, dangling, rows, path):
              "lines citing it.\n")
     o.append("## Summary\n")
     o.append(fmt_table(rows) + "\n")
-    st = stale_lines(targets)
-    o.append("## Stale targets\n")
-    if st:
-        o.append("The twin changed under the L code (fingerprint differs from `docs/twin-fingerprints.tsv`): "
-                 "check the L code and proofs against the new twin, then `scripts/census.py --reviewed "
-                 "REGEX`.\n")
-        for _, line in st:
-            o.append("* " + line)
-        o.append("")
-    else:
-        o.append("None: every linked or covered target's twin is as recorded in `docs/twin-fingerprints.tsv`.\n")
     # partial refinements
     plist = [(t, l) for t in targets.values() for l in t["parts"]]
     if plist:
@@ -720,37 +594,17 @@ def main():
     ap.add_argument("--list", nargs="?", const=".", metavar="REGEX", help="list targets")
     ap.add_argument("--no-build", action="store_true", help="do not build the census exe and modules first")
     ap.add_argument("--rust", metavar="DIR", help="regenerate scripts/census-rust.tsv from a con-ron checkout")
-    ap.add_argument("--stale", action="store_true", help="print the stale targets (and unrecorded ones)")
-    ap.add_argument("--reviewed", metavar="REGEX", help="record the current fingerprints of matching targets")
-    ap.add_argument("--record", action="store_true",
-                    help="only add missing fingerprint rows and settle changed todo targets (as --write does)")
     a = ap.parse_args()
     if a.rust:
         regen_rust(a.rust)
         return
     out = run_census(not a.no_build)
     targets, links, dangling, rust_unmatched, edges = analyse(out)
-    if a.reviewed or a.record:
-        done = record_fps(targets, edges, re.compile(a.reviewed) if a.reviewed else None)
-        print(f"recorded {len(done)} fingerprint(s) in docs/twin-fingerprints.tsv" +
-              "".join(f"\n  {n}" for n in sorted(done)))
-        return
-    if a.stale:
-        st = stale_lines(targets)
-        print(f"{len(st)} stale target(s):")
-        for _, line in st:
-            print("  " + line)
-        unrec = sorted(t["name"] for t in targets.values() if t["unrecorded"])
-        if unrec:
-            print(f"{len(unrec)} linked/covered target(s) without a recorded fingerprint "
-                  f"(--write records them): " + ", ".join(unrec))
-        return
     if a.list:
         rx = re.compile(a.list)
         for t in sorted(targets.values(), key=lambda t: (int(t["phase"]), t["module"], t["start"])):
             if rx.search(t["name"]):
-                flag = "+stale" if t["stale"] else ""
-                print(f"{t['phase']}\t{t['status']}{flag}\t{t['lean']}\t{t['rust']}\t{t['name']}\t{describe(t)}")
+                print(f"{t['phase']}\t{t['status']}\t{t['lean']}\t{t['rust']}\t{t['name']}\t{describe(t)}")
         return
     rows = summary_rows(targets)
     print(fmt_table(rows))
@@ -762,14 +616,10 @@ def main():
     for l in dangling:
         print(f"  bad link: {l['decl']} ({l['kind']}) -> {l['target']}"
               + (f": {l['status']}" if l["status"].startswith("error") else ": not a target"))
-    nstale = sum(1 for t in targets.values() if t["stale"])
-    nunrec = sum(1 for t in targets.values() if t["unrecorded"])
-    print(f"stale: {nstale} (`--stale` lists them); without a recorded fingerprint: {nunrec}")
     if a.write:
-        record_fps(targets, edges)
         write_md(targets, links, dangling, rows, os.path.join(ROOT, "docs", "progress.md"))
         append_csv(targets, os.path.join(ROOT, "docs", "progress.csv"))
-        print("wrote docs/progress.md, appended docs/progress.csv, recorded new fingerprints")
+        print("wrote docs/progress.md, appended docs/progress.csv")
 
 
 if __name__ == "__main__":
