@@ -290,10 +290,11 @@ def capsK1 (n : Nat) (swd so sc pc vo vc : Word) : Option (Word × Mem) → Opti
     capsK1 n swd so sc pc vo vc (some (b, m₁)) =
       capsK2 b (substPWW SPN POOL EREC n (m₁.set64 CTL 192 0) swd so sc b pc vo vc) := rfl
 
-/-- **The model of `caps_never_zero`.** -/
+/-- **The model of `caps_never_zero`** (none on a handle `ls_node` aborts on). -/
 def capsNeverZeroW : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (Word × Mem)
   | 0, _, _, _, _, _, _, _ => none
   | n + 1, m, po, pc, us, swd, so, sc =>
+    if lsNodeW m us = [] then none else
     capsK1 n swd so sc pc ((lsNodeW m us).headD 0) ((lsNodeW m us).tail.headD 0) (keysPushW n m po pc)
 
 /-- The functions `lv_sub_int` and `caps_never_zero` call. -/

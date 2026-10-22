@@ -134,8 +134,8 @@ theorem lvNodeW_mono {m m' : Mem} (hl : LvlCnt m m') {u : Word} (hu : HW u)
 /-- **A level read back before a core run reads back after it** (`LvlCnt` from `PoolGrew`):
 stored at the start (`lvNodeW_store`), stored at the end (`lvNodeW_mono`, `lview_of_lvNodeW`),
 read back by `StoreDen.lvlAll`. -/
-theorem lvl_den_later {m m' : Mem} {a a' : AState} {fe : IFEnv} (hR : ArenaR m a)
-    (hR' : ArenaR m' a') (hD' : StoreDen m' a' fe) (hl : LvlCnt m m') {u : Word} (hu : HW u)
+theorem lvl_den_later {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {fe : IFEnv} (hR : ArenaR m a)
+    (hR' : ArenaR m' a') (hD' : StoreDen dn m' a' fe) (hl : LvlCnt m m') {u : Word} (hu : HW u)
     (hd : ∃ l, denoteL a.store.ls (decI u) = some l) : ∃ l, denoteL a'.store.ls (decI u) = some l := by
   obtain ⟨l, hl'⟩ := hd
   have hv : ∃ v, a.store.lss.ls.view (decI u) = some v := by
@@ -224,8 +224,8 @@ theorem lsNodeW_of_den {m : Mem} {a : AState} (hR : ArenaR m a) {u : Word} (hu :
   | some ids => rw [(lsNodeW_store hR hu e).1]; simp
 
 /-- **A list read back before a core run reads back after it.** -/
-theorem ls_den_later {m m' : Mem} {a a' : AState} {fe : IFEnv} (hR : ArenaR m a)
-    (hR' : ArenaR m' a') (hD' : StoreDen m' a' fe) (hl : LvlCnt m m') {u : Word} (hu : HW u)
+theorem ls_den_later {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {fe : IFEnv} (hR : ArenaR m a)
+    (hR' : ArenaR m' a') (hD' : StoreDen dn m' a' fe) (hl : LvlCnt m m') {u : Word} (hu : HW u)
     (hd : ∃ ls, denoteLs a.store.lss (decI u) = some ls) :
     ∃ ls, denoteLs a'.store.lss (decI u) = some ls := by
   obtain ⟨ids, hv, -⟩ := lsNodeW_view hR' hu (lsNodeW_mono hl (lsNodeW_of_den hR hu hd))

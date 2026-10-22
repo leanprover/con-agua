@@ -256,7 +256,8 @@ theorem iccW_ok (p : Prog) (hp : IotaProg4 p) (hcn : CapsNeverZeroOK p) (n : Nat
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (eb : Word) (indP us : Word)
     (hus : HW us) (m : Mem) (a : AState) (M : ModeMaps) (hS : CoreS dn m a vis fe M eb)
     (cvT : IConstantVal) (caps : IIndCaps)
-    (hci : decCI (m.arr64 EREC) dn indP.toNat = some (.indInfo cvT caps)) (w : Word) (mF : Mem)
+    (hci : decCI (m.arr64 EREC) dn indP.toNat = some (.indInfo cvT caps))
+    (hfe : ∃ c, fe.find? c = some (.indInfo cvT caps)) (w : Word) (mF : Mem)
     (h : iccW p n m indP us = some (w, mF)) :
     ∃ (b : Bool) (a' : AState), (inpTail cvT caps (decI us)).run a = .ok (b, a') ∧
       (w != 0) = b ∧ CoreAfter dn m mF a' vis fe M eb ∧ HW w := by
@@ -388,7 +389,8 @@ theorem iccW_ok (p : Prog) (hp : IotaProg4 p) (hcn : CapsNeverZeroOK p) (n : Nat
   rw [hpo', hlp, hswd', hso', hsc'] at c7
   obtain ⟨ok7, ⟨M7, hS7, hK7, hSt7⟩, res7, hr7⟩ := CoreSpec.of_callW
     (hcn (n' + 1) ⟨m2, Locals.init []⟩ a dn vis fe M eb po pc us swd so sc cvT.levelParams
-      caps.sortZ hS hus hlps hpw) c7
+      caps.sortZ hS hus hlps
+      (hS.den.constLps _ _ cvT hfe.choose_spec rfl (fun _ => rfl)) hpw) c7
   have hrun7 := AM.run_of_ok _ _ ok7
   rw [res7] at hrun7
   have hrunC : (capsNeverZero cvT.levelParams (decI us) caps).run a =
@@ -613,7 +615,7 @@ theorem iotaCtorNeverProp_refines (p : Prog) (hp : IotaProg4 p) (hcn : CapsNever
   · have hg := rdW_eq_three hk3
     obtain ⟨cvT, caps, rfl, -⟩ := L.Ind.decCI_kind3 hciF (nat?_of hg)
     obtain ⟨b, a', htail, hb, hCA, hw5⟩ := iccW_ok p hp hcn n' dn vis fe eb (r4.tail.headD 0) us hus
-      s.mem a₀ MM hS cvT caps hciF (r5.headD 0) m5 hicc
+      s.mem a₀ MM hS cvT caps hciF ⟨_, hfind'⟩ (r5.headD 0) m5 hicc
     have hrun := inp_run_ind fe cvj (decI us) a₀ _ _ hpr hga (decI (r3.headD 0)) hvn htag cvT caps
       hfind' b a' htail
     obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun

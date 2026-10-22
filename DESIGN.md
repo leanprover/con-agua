@@ -7907,3 +7907,17 @@ child dangled when it was interned (no `StoreWF` needed).
   model used to compare an empty slice).
 * `LvlsEqDen` and its `hden` threading through `WhnfIotaRecRefine*` are removed; `iotaRecAt_refines`
   and `LvlsEqCH`'s callers drop the readback hypotheses' use. `KnotCallees` has 3 fields left.
+
+### Landing 10 (defeq2): `KnotCallees.capsNeverZero` discharged (`capsNeverZeroOK_of`)
+* **`StoreDen dn m a fe`** takes the record decoder `dn` and gains `dnN`: `dn` agrees with the
+  name store (`dn` is the store's `denoteN` at the declaration's start, and names only grow, so
+  `mono` keeps it). It relates an inductive's `PropWhen` datum (`decPWw`, through `dn`) to the
+  twin's readbacks (`PWR (nameN ns)`, `pwR_of_decPWw`). `TwinOK` (`DeclLvlStage.lean`) takes `dn` too.
+* The universe arguments need no readback hypothesis: `caps_never_zero` calls `ls_node(us)`, which
+  aborts on a handle not stored (model fix: `capsNeverZeroW` is `none` there), so `StoreDen.lsAll`
+  reads the list back. The level parameters do: `CapsNeverZeroOK` now asks them to read back, and
+  its callers (`iccW_ok`, `m2cEta_ok`, `m2cArms_ok`, now taking the family's `fe.find?`) get
+  them from `StoreDen.constLps`.
+* `CapsNeverZeroCore.lean`: `CoreS.frame_lhs` (a writer of `LH`/`SPN` keeps `CoreS`),
+  `StackKept.of_lhsFrame`, and the proof. `KnotAllProg` gained `caps : LvSubProg p`;
+  `KnotCallees` has 2 fields left (`instLP`, `recFireLevels`, both whnf4's).

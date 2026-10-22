@@ -62,7 +62,8 @@ structure ApdEnv (a : AState) : Prop where
     ∃ ls, denoteLs a.store.lss us = some ls
 
 /-- `StoreDen`'s two level fields, with the name store's well-formedness. -/
-theorem ApdEnv.of_den {m : Mem} {a : AState} {fe : IFEnv} (hd : StoreDen m a fe)
+theorem ApdEnv.of_den {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {fe : IFEnv}
+    (hd : StoreDen dn m a fe)
     (hw : NStoreWF a.store.lss.ls.ns) : ApdEnv a := ⟨hw, hd.sort, hd.constLs⟩
 
 /-! ## The parameter slice -/

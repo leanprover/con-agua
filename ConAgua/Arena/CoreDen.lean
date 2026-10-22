@@ -15,7 +15,7 @@ namespace L.Arena
 /-- **Stored levels read back under `CoreS`.** -/
 def CoreDen : Prop :=
   ∀ (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis : Word) (fe : IFEnv)
-    (M : ModeMaps) (eb : Word), CoreS dn m a vis fe M eb → StoreDen m a fe
+    (M : ModeMaps) (eb : Word), CoreS dn m a vis fe M eb → StoreDen dn m a fe
 
 /-- **`CoreDen` holds**: it is the field `CoreS.den`. -/
 theorem coreDen_of : CoreDen := fun _ _ _ _ _ _ _ hS => hS.den

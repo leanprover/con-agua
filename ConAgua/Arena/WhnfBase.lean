@@ -412,7 +412,7 @@ structure CoreS (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis
   bstk : (m.arr64 145).size < 2 ^ 63
   /-- **Stored levels read back** (`StoreDen.lean`, lane `defeq2`): what the level readers need,
   since the twin compares levels on their readbacks. -/
-  den : StoreDen m a fe
+  den : StoreDen dn m a fe
 
 /-- **The relation across a writer outside every tier and the spine stack**, the walk memos given
 (`hmem`): arrays `≥ 145` (or the front's 64‥95), `CTL` words `≥ 137` (or 64‥95): the binder stack,
