@@ -1,4 +1,4 @@
-import ConAgua.Arena.IndPosSpec5
+import ConAgua.Arena.IndPosSpec6
 import ConAgua.Arena.IndSumSpec5
 import ConAgua.Arena.IndPos2SpecE
 
@@ -169,6 +169,7 @@ macro_rules
       | (simp only [reduceCtorEq] at $h:ident; done)
       | (first $[| refine MFr.trans ($ts (by with_reducible assumption)) ?_]*)
       | (first $[| refine MFr.trans (MFr.up ($ts (by with_reducible assumption))) ?_]*)
+      | (first $[| refine MFr.trans (MFr.mono ($ts (by with_reducible assumption)) (by simp) (by simp)) ?_]*)
       | split at $h:ident))
 
 theorem MFr.ofStub {f : FnName} {m m' : Mem} {args r : List Word} (h : stubM f m args = some (r, m'))
@@ -325,5 +326,26 @@ theorem hbFastW_mfr {n : Nat} {m m' : Mem} {i e r : Word} (h : hbFastW n m i e =
   split at h
   · simp at h
   exact MFr.trans ⟨_, _, mclearG_frame hbSch m, by simp, by simp [hbSch]⟩ (hbGoW_mfr _ _ _ _ _ _ h)
+
+theorem ncnW_mfr {k : Nat} {m m' : Mem} {ctx po pl us dO dL cv closed r : Word}
+    (h : ncnW k m ctx po pl us dO dL cv closed = some (r, m')) : RxFr m m' := by
+  unfold ncnW ncnK1 ncnK2 ncnK3 at h
+  mfr_auto h [posRecW_mfr, rxDsW_mfr, rxW_mfr]
+
+
+/-- `nest_crest`'s write set among the memos: `replace_apps`' and the banked `replace_fvars`'. -/
+abbrev CrFr (m m' : Mem) : Prop := MFr [RAM, RFM] [210, 211, 208, 209, 218, 219] m m'
+
+theorem pcrW_mfr {k : Nat} {m m' : Mem} {no nl us dO dL hO hL cty : Word} {r : List Word}
+    (h : pcrW k m no nl us dO dL hO hL cty = some (r, m')) : CrFr m m' := by
+  unfold pcrW pcrK1 pcrK2 pcrK3 at h
+  mfr_auto h [pccW_mfr, posRecW_mfr, rxW_mfr]
+
+/-- Across `nest_crest`. -/
+theorem PosMR.setCr {m m' : Mem} (h : PosMR m) (hf : CrFr m m') (hrp : ∃ mp, rpMR m' mp)
+    (hrf : ∃ M G g, RfInv m' M G g) : PosMR m' := by
+  obtain ⟨⟨a, ha⟩, ⟨b, hb⟩, -, ⟨d, hd⟩, -⟩ := h
+  exact ⟨⟨a, noMR_mfr hf (by decide) (by decide) ha⟩, ⟨b, dpMR_mfr hf (by decide) (by decide) hb⟩, hrp,
+    ⟨d, hbMR_mfr hf (by decide) (by decide) hd⟩, hrf⟩
 
 end L.Ind

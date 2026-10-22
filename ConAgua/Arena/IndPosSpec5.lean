@@ -736,6 +736,9 @@ theorem posmemo_rx_mfr (n : Nat) :
 theorem rxW_mfr {n : Nat} {m m' : Mem} {f e r : Word} (h : rxW n m f e = some (r, m')) : RxFr m m' :=
   (posmemo_rx_mfr n).2.2.2.2.2.1 _ _ _ _ _ h
 
+theorem rxDsW_mfr {n : Nat} {m m' : Mem} {f o l a b : Word} (h : rxDsW n m f o l = some (a, b, m')) : RxFr m m' :=
+  (posmemo_rx_mfr n).2.2.2.1 _ _ _ _ _ _ _ h
+
 end L.Ind
 
 namespace L.Ind

@@ -578,7 +578,7 @@ theorem dpConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) 
     (m m' : Mem) (a : AState) (e r : Word) (mp0 : Std.HashMap EIdx Nat)
     (hb : dpConstW n m e = some (r, m')) (hS : StageR dn vis fe m a) (he : H e) (hM : dpMR m mp0) :
     ∃ d, (ConRon.Arena.depth (decE e)).run a = .ok (d, a) ∧ r.toNat = d ∧ dpMR m' ∅ ∧
-      StageR dn vis fe m' a ∧ IWGrow m m' := by
+      StageR dn vis fe m' a ∧ IWGrow m m' ∧ MFr [DPM] [206, 207] m m' := by
   by_cases h0 : rdW (m.arr64 CTL) dpSch.cs + 2 = 0
   · simp [dpConstW, h0] at hb
   rw [dpConstW_eq n m e h0] at hb
@@ -608,7 +608,7 @@ theorem dpConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) 
     obtain ⟨hS', hg'⟩ := StageR.frame_hi hS hfall (by intro b hb; simp at hb; subst hb; decide)
       (by intro x hx; simp [dpSch] at hx; rcases hx with rfl | rfl <;> decide) (by decide)
       (by simp [dpSch])
-    refine ⟨d, ?_, hbb, hM2, hS', hg'⟩
+    refine ⟨d, ?_, hbb, hM2, hS', hg', ⟨_, _, hfall, by simp, fun x hx => .inr (.inr (by simpa [dpSch] using hx))⟩⟩
     simp only [ConRon.Arena.depth, StateT.run_bind]
     rw [hrun]
     rfl
@@ -617,7 +617,7 @@ theorem wfW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
     (m m' : Mem) (a : AState) (e r : Word) (mp0 : Std.HashMap EIdx Nat)
     (hb : wfW n m e = some (r, m')) (hS : StageR dn vis fe m a) (he : H e) (hM : dpMR m mp0) :
     ∃ d, (ConRon.Arena.whnfWalkFuel (decE e)).run a = .ok (d, a) ∧ r.toNat = d ∧ dpMR m' ∅ ∧
-      StageR dn vis fe m' a ∧ IWGrow m m' := by
+      StageR dn vis fe m' a ∧ IWGrow m m' ∧ MFr [DPM] [206, 207] m m' := by
   unfold wfW at hb
   cases hc : dpConstW n m e with
   | none => rw [hc] at hb; simp at hb
@@ -628,12 +628,12 @@ theorem wfW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
     · simp [hbig] at hb
     simp only [hbig, if_false, Option.some.injEq, Prod.mk.injEq] at hb
     obtain ⟨rfl, rfl⟩ := hb
-    obtain ⟨dd, hrun, hdd, hM', hS', hg⟩ := dpConstW_ok n dn fe vis m m1 a e d mp0 hc hS he hM
+    obtain ⟨dd, hrun, hdd, hM', hS', hg, hf⟩ := dpConstW_ok n dn fe vis m m1 a e d mp0 hc hS he hM
     have hlt : d.toNat < 2 ^ 32 := by
       have e1 : (4294967296 : Word).toNat = 4294967296 := by decide
       have : ¬ (4294967296 : Word).toNat ≤ d.toNat := fun hh => hbig (UInt64.le_iff_toNat_le.mpr hh)
       omega
-    refine ⟨dd + 1024, ?_, ?_, hM', hS', hg⟩
+    refine ⟨dd + 1024, ?_, ?_, hM', hS', hg, hf⟩
     · simp only [ConRon.Arena.whnfWalkFuel, StateT.run_bind]
       rw [hrun]
       simp only [except_ok_bind]
@@ -686,7 +686,7 @@ theorem depth_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Optio
       dpMR s'.mem ∅ ∧ StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (depth_spec p hv hf hput hgo hnode hcl hd n s₀ e) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨d, hrun, hb, hM', hS', hg⟩ := dpConstW_ok n dn fe vis _ _ a₀ e _ mp0 hm hS he hM
+  obtain ⟨d, hrun, hb, hM', hS', hg, -⟩ := dpConstW_ok n dn fe vis _ _ a₀ e _ mp0 hm hS he hM
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, hst, by rw [hres]; exact hb, hM', hS', hg⟩
 
@@ -703,7 +703,7 @@ theorem whnfWalkFuel_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx �
       dpMR s'.mem ∅ ∧ StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (whnfWalkFuel_spec p hv hf hput hgo hnode hcl hd hw n s₀ e) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨d, hrun, hb, hM', hS', hg⟩ := wfW_ok n dn fe vis _ _ a₀ e _ mp0 hm hS he hM
+  obtain ⟨d, hrun, hb, hM', hS', hg, -⟩ := wfW_ok n dn fe vis _ _ a₀ e _ mp0 hm hS he hM
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, hst, by rw [hres]; exact hb, hM', hS', hg⟩
 

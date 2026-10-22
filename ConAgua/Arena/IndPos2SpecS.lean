@@ -92,14 +92,13 @@ theorem pos2_getD2 (vl : List Word) : vl.getD 2 0 = vl.tail.tail.headD 0 := by
   rcases vl with _ | ⟨a, _ | ⟨b, _ | ⟨c, t⟩⟩⟩ <;> rfl
 
 section steps
-variable (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (hM : PosMemo dn vis fe)
+variable (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   (hcs : CtorSums fe)
 
-include hM in
 theorem fieldsOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbOK dn vis fe n) :
     FieldsOK dn vis fe (n + 1) := by
   obtain ⟨hPos, -, -, -, -, -, -, -, -, -, hFields⟩ := ih
-  intro m m' a ctx fu po pl base nF j cur ns kO kL dO dL c prog NS ks nds r h hS hW hcur hns hks hkb hnd hndb
+  intro m m' a ctx fu po pl base nF j cur ns kO kL dO dL c prog NS ks nds r h hS hW hcur hns hks hkb hnd hndb hP
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
   rw [nbFieldsW_succ] at h
   by_cases h0 : nF = 0
@@ -108,7 +107,7 @@ theorem fieldsOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : N
     obtain ⟨rfl, rfl⟩ := h
     subst h0
     refine ⟨(ks, nds, decI cur, NS), a, by rw [ConRon.Arena.nestFields.eq_def]; rfl, hS, IWGrow.refl _, hks, hkb, hnd, hndb,
-      hcur, rfl, hns, by simp, by simp, by simp⟩
+      hcur, rfl, hns, by simp, by simp, by simp, hP⟩
   rw [if_neg h0] at h
   by_cases h6 : cur >>> 28 ≠ 6
   · rw [if_pos h6] at h; cases h
@@ -137,8 +136,8 @@ theorem fieldsOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : N
   obtain ⟨rp, m1⟩ := pr
   rw [hp, nbFieldsK1_some] at h
   simp only [List.tail_cons, List.headD_cons] at h
-  obtain ⟨x1, a1, hrun1, hS1, hg1, hk1, hnd1H, hnd1, hns1⟩ := hPos m m1 a ctx fu po pl (base + j) 0 d ns c prog NS rp
-    hp hS hW hd hns
+  obtain ⟨x1, a1, hrun1, hS1, hg1, hk1, hnd1H, hnd1, hns1, hP1⟩ := hPos m m1 a ctx fu po pl (base + j) 0 d ns c prog
+    NS rp hp hS hW hd hns hP
   -- the field's variable
   cases hfv : fvinternW m1 (base + j) d with
   | none => rw [hfv] at h; simp [nbFieldsK2] at h
@@ -185,7 +184,7 @@ theorem fieldsOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : N
   -- the rest of the fields
   have hj1 : (j + 1).toNat = j.toNat + 1 := word_add_toNat (by have := (base + j + 1).toNat_lt; simp; omega)
   have hnF1 : (nF - 1).toNat = nF' := by rw [pos2_word_pred h0]; omega
-  obtain ⟨x, a', hrun, hS', hg', hK', hKb', hD', hDb', hcH', hcd', hns', hl1, hl2, hov'⟩ :=
+  obtain ⟨x, a', hrun, hS', hg', hK', hKb', hD', hDb', hcH', hcd', hns', hl1, hl2, hov', hP'⟩ :=
     hFields m5 m' a3 ctx fu po pl base (nF - 1) (j + 1) (rb.headD 0) (rp.tail.tail.headD 0) (rk.headD 0)
       (rk.tail.headD 0) (rd.headD 0) (rd.tail.headD 0) c prog x1.2.2 (ks ++ [x1.1]) (nds ++ [decI (rp.tail.headD 0)])
       r h hS5 (hW.grow (hg15.trans (IWGrow.refl _))) (by simpa using hb2H)
@@ -193,7 +192,8 @@ theorem fieldsOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : N
         (Nat.lt_of_le_of_lt hS3.2.1 hS3.2.2.2.1))
       (hks4.grow hg5) (by rw [hk40, hk41]; have := hg5.1; omega)
       (by rw [hrd]; simpa using hnd5) (by rw [hrd]; simp only [List.headD_cons, List.tail_cons]; omega)
-  refine ⟨x, a', ?_, hS', hg15.trans hg', hK', hKb', hD', hDb', hcH', hcd', hns', ?_, ?_, ?_⟩
+      ((((hP1.fr (fvinternW_mfr hfv)).stub (by decide) hin).fr (snocW_mfr hs1)).fr (snocW_mfr hs2))
+  refine ⟨x, a', ?_, hS', hg15.trans hg', hK', hKb', hD', hDb', hcH', hcd', hns', ?_, ?_, ?_, hP'⟩
   · rw [hnF', ConRon.Arena.nestFields.eq_def]
     simp only [htag, beq_self_eq_true, if_true, StateT.run_bind, hvb, except_ok_bind]
     have e1 := hrun1; simp only [hbj, UInt64.toNat_zero] at e1
@@ -209,14 +209,13 @@ theorem fieldsOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : N
     · rw [hnF1] at h'; subst h'; have := (base + j + 1).toNat_lt; omega
     · rw [hj1, hnF1] at h'; omega
 
-include hM in
 theorem walkOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbOK dn vis fe n) :
     WalkOK dn vis fe (n + 1) := by
   obtain ⟨-, -, -, -, -, -, -, -, -, -, hFields⟩ := ih
-  intro m m' a ctx root fu po pl hi nF crest ns c prog NS r h hS hW hcr hns
+  intro m m' a ctx root fu po pl hi nF crest ns c prog NS r h hS hW hcr hns hP
   rw [nbWalkW_succ] at h
   -- the fields walked, at the input-derived fuel or the given one
-  have hF : ∀ (fu' : Word) (m1 : Mem) (a1 : AState), StageR dn vis fe m1 a1 → IWGrow m m1 →
+  have hF : ∀ (fu' : Word) (m1 : Mem) (a1 : AState), StageR dn vis fe m1 a1 → IWGrow m m1 → PosMR m1 →
       nbWalkK2 n hi (nbFieldsW n m1 vis ctx fu' po pl hi nF 0 crest ns 0 0 0 0) = some (r, m') →
       ∃ ks nds cur ns2 closed a',
         (∀ {β : Type} (K : List NestFieldKind → List EIdx → EIdx → NestState → EIdx → AM β),
@@ -227,18 +226,18 @@ theorem walkOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbO
         (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ ks.length = nF.toNat ∧
         H (r.tail.tail.headD 0) ∧ decI (r.tail.tail.headD 0) = cur ∧
         H (r.tail.tail.tail.headD 0) ∧ decI (r.tail.tail.tail.headD 0) = closed ∧
-        NSB m' (r.tail.tail.tail.tail.headD 0) ns2 := by
-    intro fu' m1 a1 hS1 hg1 h
+        NSB m' (r.tail.tail.tail.tail.headD 0) ns2 ∧ PosMR m' := by
+    intro fu' m1 a1 hS1 hg1 hP1 h
     have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
     cases hf : nbFieldsW n m1 vis ctx fu' po pl hi nF 0 crest ns 0 0 0 0 with
     | none => rw [hf] at h; simp [nbWalkK2] at h
     | some pr =>
     obtain ⟨rf, m2⟩ := pr
     rw [hf, nbWalkK2_some] at h
-    obtain ⟨x, a2, hrun, hS2, hg2, hK, hKb, hD, hDb, hcH, hcd, hns2, hl1, hl2, hov⟩ :=
+    obtain ⟨x, a2, hrun, hS2, hg2, hK, hKb, hD, hDb, hcH, hcd, hns2, hl1, hl2, hov, hP2⟩ :=
       hFields m1 m2 a1 ctx fu' po pl hi nF 0 crest ns 0 0 0 0 c prog NS [] [] rf hf hS1 (hW.grow hg1) hcr
         (hns.grow hg1 (Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1)) (KlB.nil _ _) (by simp)
-        (by simp [decHL, hslice?]) (by simp)
+        (by simp [decHL, hslice?]) (by simp) hP1
     cases hcl : closeW n m2 (rf.tail.tail.headD 0) (rf.tail.tail.tail.headD 0) hi (rf.tail.tail.tail.tail.headD 0) with
     | none => rw [hcl] at h; simp [nbWalkK3] at h
     | some pr2 =>
@@ -258,7 +257,8 @@ theorem walkOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbO
     obtain ⟨cl, a3, hrun3, hS3, hg3, hclH, hcld⟩ := closeW_ok n dn fe vis m2 m3 a2 _ _ hi _ x.2.1 rc hcl hS2 hcH hD
       (by omega) hDb hib
     refine ⟨x.1, x.2.1, x.2.2.1, x.2.2.2, cl, a3, fun K => ?_, hS3, hg2.trans hg3, hK.grow hg3,
-      by have := hg3.1; omega, by simpa using hl1, hcH, hcd, hclH, hcld, hns2.grow hg3 htop2⟩
+      by have := hg3.1; omega, by simpa using hl1, hcH, hcd, hclH, hcld, hns2.grow hg3 htop2,
+      hP2.fr (closeW_mfr _ _ _ _ _ _ _ _ hcl)⟩
     rw [hcd] at hrun3
     simp only [UInt64.toNat_zero] at hrun
     simp only [StateT.run_bind, hrun, except_ok_bind, hrun3]
@@ -278,26 +278,25 @@ theorem walkOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbO
     obtain ⟨wf, m1⟩ := pr
     rw [hw] at h
     simp only [nbWalkK1_some, List.headD_cons] at h
-    obtain ⟨mp, hmp⟩ := hM.dp m a hS
-    obtain ⟨d, hrunw, hwd, -, hS1, hg1⟩ := wfW_ok n'' dn fe vis m m1 a crest wf mp hw hS hcr hmp
-    obtain ⟨ks, nds, cur, ns2, closed, a', hK, rest⟩ := hF wf m1 a hS1 hg1 h
+    obtain ⟨mp, hmp⟩ := hP.dp
+    obtain ⟨d, hrunw, hwd, hM1, hS1, hg1, hf1⟩ := wfW_ok n'' dn fe vis m m1 a crest wf mp hw hS hcr hmp
+    obtain ⟨ks, nds, cur, ns2, closed, a', hK, rest⟩ := hF wf m1 a hS1 hg1 (hP.setDp hf1 ⟨∅, hM1⟩) h
     refine ⟨ks, nds, cur, ns2, closed, a', fun K => ?_, rest.1, hg1.trans rest.2.1, rest.2.2⟩
     rw [← hK K, hwd]
     simp only [walkK, hdec, dite_true, StateT.run_bind, ← decE_eq, hrunw, except_ok_bind]
   · rw [if_neg hr] at h
     have hdec : decide (root ≠ 0) = false := by simpa using hr
-    obtain ⟨ks, nds, cur, ns2, closed, a', hK, rest⟩ := hF fu m a hS (IWGrow.refl _) h
+    obtain ⟨ks, nds, cur, ns2, closed, a', hK, rest⟩ := hF fu m a hS (IWGrow.refl _) hP h
     refine ⟨ks, nds, cur, ns2, closed, a', fun K => ?_, rest⟩
     rw [← hK K]
     simp only [walkK, hdec]
     rfl
 
-include hM in
 theorem oneOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbOK dn vis fe n) :
     OneOK dn vis fe (n + 1) := by
   obtain ⟨-, -, -, -, -, -, -, -, -, hWalk, -⟩ := ih
   intro m m' a ctx root fu po pl hi us dO dL no nl hO hL cv nF ns c prog ds names holes cvv NS r h hS hW hC hcv
-    hcv3 hns
+    hcv3 hns hP
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
   rw [nbOneW_succ] at h
   -- the crest, typed
@@ -306,18 +305,18 @@ theorem oneOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbOK
   | some pr =>
   obtain ⟨rc, m1⟩ := pr
   rw [hct, nbOneK1_some] at h
-  obtain ⟨cty, a1, crest, a2, ty, a3, so, a4, hnod, hrun1, hrun2, hrun3, hrun4, hS1, hg1, hcrH, hcrd⟩ :=
-    p2ctW_ok dn vis fe hM hct hS hC.hus hC.hnames hC.hnamesb hC.hnn (hC.hds.get (OMono.decHL _ _)) hC.hdsb
-      hC.hholes hC.hholesb ((erecP_ext m).decCV hcv) hcv3
+  obtain ⟨cty, a1, crest, a2, ty, a3, so, a4, hnod, hrun1, hrun2, hrun3, hrun4, hS1, hg1, hcrH, hcrd, hP1⟩ :=
+    p2ctW_ok dn vis fe hct hS hC.hus hC.hnames hC.hnamesb hC.hnn (hC.hds.get (OMono.decHL _ _)) hC.hdsb
+      hC.hholes hC.hholesb ((erecP_ext m).decCV hcv) hcv3 hP
   -- the walk
   cases hwk : nbWalkW n m1 vis ctx root fu po pl hi nF (rc.headD 0) ns with
   | none => rw [hwk] at h; simp [nbOneK2] at h
   | some pr2 =>
   obtain ⟨rw, m2⟩ := pr2
   rw [hwk, nbOneK2_some] at h
-  obtain ⟨ks, nds, cur, ns2, closed, a5, hW5, hS2, hg2, hks, hksb, hksl, hcurH, hcurd, hclH, hcld, hns2⟩ :=
+  obtain ⟨ks, nds, cur, ns2, closed, a5, hW5, hS2, hg2, hks, hksb, hksl, hcurH, hcurd, hclH, hcld, hns2, hP2⟩ :=
     hWalk m1 m2 a4 ctx root fu po pl hi nF (rc.headD 0) ns c prog NS rw hwk hS1 (hW.grow hg1) hcrH
-      (hns.grow hg1 htop)
+      (hns.grow hg1 htop) hP1
   -- U4
   have hkl : (rw.tail.headD 0).toNat = nF.toNat := by rw [← hks.length, hksl]
   have hksT : decKL (truncM m2) (rw.headD 0).toNat nF.toNat = some ks := by rw [← hkl]; exact hks
@@ -326,8 +325,8 @@ theorem oneOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbOK
   | some pr3 =>
   obtain ⟨ru, m3⟩ := pr3
   rw [hu, nbOneK3_some] at h
-  obtain ⟨bu, a6, hrun6, hS3, hg3, hru⟩ := u4W_ok dn vis fe hM (m0 := m2) _ nF _ ks hclH hksT n m2 m3 a5 0 ru
-    (by omega) hu hS2 (IWGrow.refl _) (by simp)
+  obtain ⟨bu, a6, hrun6, hS3, hg3, hru, hP3⟩ := u4W_ok dn vis fe (m0 := m2) _ nF _ ks hclH hksT n m2 m3 a5 0 ru
+    (by omega) hu hS2 (IWGrow.refl _) (by simp) hP2
   cases bu with
   | true => rw [if_pos (by rw [hru]; decide)] at h; cases h
   | false =>
@@ -339,7 +338,7 @@ theorem oneOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbOK
   | some pr4 =>
   obtain ⟨rr, m4⟩ := pr4
   rw [hro, nbOneK4_some] at h
-  obtain ⟨bo, a7, hrun7, hS4, hg4, hrr⟩ := roW_ok dn vis fe hM hro hS3 hU3 hcurH
+  obtain ⟨bo, a7, hrun7, hS4, hg4, hrr, hP4⟩ := roW_ok dn vis fe hro hS3 hU3 hcurH hP3
   cases bo with
   | false => rw [if_pos (by rw [hrr]; rfl)] at h; cases h
   | true =>
@@ -357,9 +356,9 @@ theorem oneOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbOK
   obtain ⟨nf, m5⟩ := pr5
   rw [hnf] at h
   simp only [nbOneK5_some, List.headD_cons] at h
-  obtain ⟨M, G, g, hR⟩ := hM.rf m4 a7 hS4
+  obtain ⟨M, G, g, hR⟩ := hP4.rf
   have htop4 : iwTop m4 < 2 ^ 64 := Nat.lt_of_le_of_lt hS4.2.1 hS4.2.2.2.1
-  obtain ⟨x, a8, hrun8, hnfd, hnfb, M', G', hS5, hg5, -⟩ := ncnW_ok dn fe vis n' m4 m5 a7 ctx po pl us dO dL cv _ nf c prog
+  obtain ⟨x, a8, hrun8, hnfd, hnfb, M', G', hS5, hg5, hR5, -⟩ := ncnW_ok dn fe vis n' m4 m5 a7 ctx po pl us dO dL cv _ nf c prog
     ds cvv M G g hnf hS4 hW4.u.dec hW4.u.inn hW4.hs (by have := hW.hb; simp [NestCtx.hiAt] at this; omega) hC.hus
     ((hC.hds.grow (OMono.decHL _ _) hg14).get (OMono.decHL _ _)) (fun j hj => by have := hC.hdsb; have := hg14.1; omega)
     hclH ((GrowX.of_grow (q := 0) (n := 0) hg14).erecP.decCV hcv) hR
@@ -403,7 +402,7 @@ theorem oneOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbOK
     (hnfs6.grow hg7) (by rw [h60, h61]; have := hg7.1; omega)
   have hgall := (hg14.trans hg5).trans hg67
   refine ⟨ks, closed, { ns2 with ctorNfs := ns2.ctorNfs.push x }, a8, fun K => ?_, hS7, hgall,
-    ?_, ?_, hclH, hcld, ?_⟩
+    ?_, ?_, hclH, hcld, ?_, ((hP4.setRf (ncnW_mfr hnf) ⟨M', G', g, hR5⟩).fr (snocW_mfr hsn)).fr (posRecW_mfr hq)⟩
   · have hr6 : ((List.range nF.toNat).anyM (u4F ks closed)).run a5 = .ok (false, a6) := by
       rw [List.range_eq_range', ← hcld]; simpa using hrun6
     have hr8 : (ConRon.Arena.nestCtorNf c prog (decI us) ds cvv closed).run a7 = .ok (x, a8) := by
@@ -427,7 +426,7 @@ theorem oneOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbOK
 theorem ctorsOK_step (n : Nat) (ih : NbOK dn vis fe n) : CtorsOK dn vis fe (n + 1) := by
   obtain ⟨-, -, -, -, -, -, -, hCtors, hOne, -, -⟩ := ih
   intro m m' a ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL c prog ds names holes cs NS outs r h hS hW hC
-    hcl hcb hcs hns hout houtb
+    hcl hcb hcs hns hout houtb hP
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
   rw [nbCtorsW_succ] at h
   by_cases h0 : cL = 0
@@ -437,7 +436,7 @@ theorem ctorsOK_step (n : Nat) (ih : NbOK dn vis fe n) : CtorsOK dn vis fe (n + 
     subst h0
     have : cs = [] := List.eq_nil_of_length_eq_zero (by simpa using hcl.symm)
     subst this
-    exact ⟨(outs, NS), a, by rw [ConRon.Arena.nestCtors.eq_def]; rfl, hS, IWGrow.refl _, hout, houtb, hns⟩
+    exact ⟨(outs, NS), a, by rw [ConRon.Arena.nestCtors.eq_def]; rfl, hS, IWGrow.refl _, hout, houtb, hns, hP⟩
   rw [if_neg h0] at h
   obtain ⟨⟨cvv, nFn⟩, cs', rfl⟩ : ∃ x cs', cs = x :: cs' := by
     cases cs with
@@ -464,9 +463,9 @@ theorem ctorsOK_step (n : Nat) (ih : NbOK dn vis fe n) : CtorsOK dn vis fe (n + 
   | some pr =>
   obtain ⟨r1, m1⟩ := pr
   rw [ho, nbCtorsK1_some] at h
-  obtain ⟨ks, closed, NS3, a1, hK1, hS1, hg1, hks, hksb, hclH, hcld, hns3⟩ :=
+  obtain ⟨ks, closed, NS3, a1, hK1, hS1, hg1, hks, hksb, hclH, hcld, hns3, hP1⟩ :=
     hOne m m1 a ctx root fu po pl hi us dO dL no nl hO hL _ _ ns c prog ds names holes cvv NS r1 ho hS hW hC
-      (by rw [hrq]; exact hcvv) (by rw [hrq]; exact hq3) hns
+      (by rw [hrq]; exact hcvv) (by rw [hrq]; exact hq3) hns hP
   rw [hrn] at hK1
   -- its record, appended
   cases hr3 : posRecW m1 [r1.headD 0, r1.tail.headD 0, r1.tail.tail.headD 0] with
@@ -490,7 +489,7 @@ theorem ctorsOK_step (n : Nat) (ih : NbOK dn vis fe n) : CtorsOK dn vis fe (n + 
   have hg13 := hg12.trans hg3
   have hcO1 : (cO + 1).toNat = cO.toNat + 1 := word_add_toNat (by simp; omega)
   have hcL1 : (cL - 1).toNat = cs'.length := by rw [pos2_word_pred h0]; omega
-  obtain ⟨x, a', hrun, hS', hg', hO', hOb', hns'⟩ := hCtors m3 m' a1 ctx root fu po pl hi us dO dL no nl hO hL
+  obtain ⟨x, a', hrun, hS', hg', hO', hOb', hns', hP'⟩ := hCtors m3 m' a1 ctx root fu po pl hi us dO dL no nl hO hL
     (cO + 1) (cL - 1) _ _ _ c prog ds names holes cs' NS3 (outs ++ [(ks, closed)]) r h hS3 (hW.grow hg13)
     ⟨hC.hus, hC.hds.grow (OMono.decHL _ _) hg13, by have := hC.hdsb; have := hg13.1; omega,
       by rw [decHL_agree (RdS.of_grow hg13) (fun j hj => by have := hC.hnamesb; omega)]; exact hC.hnames,
@@ -499,22 +498,22 @@ theorem ctorsOK_step (n : Nat) (ih : NbOK dn vis fe n) : CtorsOK dn vis fe (n + 
       by have := hC.hholesb; have := hg13.1; omega⟩
     hcL1 (by rw [hcO1]; have := hg13.1; omega) (by rw [hcO1]; exact (hcs.grow (by simpa using hcb) hg13).tail)
     ((hns3.grow hg2 (Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1)).grow hg3 (Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1))
-    hout3 (by rw [h30, h31]; omega)
-  refine ⟨x, a', ?_, hS', hg13.trans hg', hO', hOb', hns'⟩
+    hout3 (by rw [h30, h31]; omega) ((hP1.fr (posRecW_mfr hr3)).fr (snocW_mfr hsn))
+  refine ⟨x, a', ?_, hS', hg13.trans hg', hO', hOb', hns', hP'⟩
   rw [nestCtors_cons, hK1]
   exact hrun
 
 include hcs in
 theorem frameOK_step (n : Nat) (ih : NbOK dn vis fe n) : FrameOK dn vis fe (n + 1) := by
   obtain ⟨-, -, -, -, -, -, -, hCtors, -, -, -⟩ := ih
-  intro m m' a ctx fu po pl hi us dO dL nPc gO gL ns c prog ds grp NS r h hS hW hhi hus hds hdsb hgl hgb hgrp hns
+  intro m m' a ctx fu po pl hi us dO dL nPc gO gL ns c prog ds grp NS r h hS hW hhi hus hds hdsb hgl hgb hgrp hns hP
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
   rw [nbFrameW_succ] at h
   -- the group's head name
   have hhn : (if gL = 0 then stubM "intern_nanon" m [] else some ([rdW (m.arr64 IW) (rdW (m.arr64 IW) gO)], m)) =
         none ∨ ∃ (rn : List Word) (m1 : Mem) (a1 : AState),
       (if gL = 0 then stubM "intern_nanon" m [] else some ([rdW (m.arr64 IW) (rdW (m.arr64 IW) gO)], m)) =
-        some (rn, m1) ∧ StageR dn vis fe m1 a1 ∧ IWGrow m m1 ∧ H (rn.headD 0) ∧
+        some (rn, m1) ∧ StageR dn vis fe m1 a1 ∧ IWGrow m m1 ∧ MFr [] [] m m1 ∧ H (rn.headD 0) ∧
       (match grp with
         | [] => internNNode .anonymous
         | (c, _) :: _ => pure c : AM NIdx).run a = .ok (decI (rn.headD 0), a1) := by
@@ -527,7 +526,7 @@ theorem frameOK_step (n : Nat) (ih : NbOK dn vis fe n) : FrameOK dn vis fe (n + 
       | some pr =>
       obtain ⟨rn, m1⟩ := pr
       obtain ⟨x, a1, hrun, hS1, hg1, hxH, hxd⟩ := internNanonStub_spec dn vis fe m m1 a rn hst hS
-      exact Or.inr ⟨rn, m1, a1, rfl, hS1, hg1, hxH, by rw [hxd]; exact hrun⟩
+      exact Or.inr ⟨rn, m1, a1, rfl, hS1, hg1, MFr.stub (by decide) hst, hxH, by rw [hxd]; exact hrun⟩
     · rw [if_neg h0]
       obtain ⟨⟨cg, tg⟩, grp', rfl⟩ : ∃ x grp', grp = x :: grp' := by
         cases grp with
@@ -537,8 +536,8 @@ theorem frameOK_step (n : Nat) (ih : NbOK dn vis fe n) : FrameOK dn vis fe (n + 
       obtain ⟨w, cw, tw, hrw, hw1, hrc, hcH, hcd, -, -, -⟩ := hgrp.head (by omega) htop
       rw [UInt64.ofNat_toNat] at hrw
       rw [hrw, hrc]
-      exact Or.inr ⟨[cw], m, a, rfl, hS, IWGrow.refl _, hcH, by simp only [List.headD_cons]; rw [hcd]; rfl⟩
-  rcases hhn with hnone | ⟨rn, m1, a1, hrn, hS1, hg1, hrnH, hrun1⟩
+      exact Or.inr ⟨[cw], m, a, rfl, hS, IWGrow.refl _, MFr.refl _ _ _, hcH, by simp only [List.headD_cons]; rw [hcd]; rfl⟩
+  rcases hhn with hnone | ⟨rn, m1, a1, hrn, hS1, hg1, hf1, hrnH, hrun1⟩
   · rw [hnone] at h; simp [nbFrameK1] at h
   rw [hrn, nbFrameK1_some] at h
   have hrnb : ¬ 4294967296 ≤ rn.headD 0 := by
@@ -622,7 +621,7 @@ theorem frameOK_step (n : Nat) (ih : NbOK dn vis fe n) : FrameOK dn vis fe (n + 
   obtain ⟨rfl, rfl⟩ := h
   have hP7 := hP5.grow (hg6.trans hg7)
   have hpl2 : (rp.tail.headD 0).toNat = pl.toNat + gL.toNat := by rw [← hP7.1, List.length_append, hW.len]; simp [hgl]
-  obtain ⟨x, a8, hrun8, hS8, hg8, -, -, hns8⟩ := hCtors m7 m8 a7 ctx 0 fu _ _ (hi + gL) us dO dL _ _ _ _ _ _ ns 0 0
+  obtain ⟨x, a8, hrun8, hS8, hg8, -, -, hns8, hPm8⟩ := hCtors m7 m8 a7 ctx 0 fu _ _ (hi + gL) us dO dL _ _ _ _ _ _ ns 0 0
     c (prog ++ grp.map fun x => (⟨⟨x.1, decI us, ds⟩, hi.toNat⟩ : NestHole)) ds (grp.map (·.1)) holes ctors NS [] r8
     hct hS7 ⟨hW.u.grow hg17, hP7, by
       have := hW.hb; rw [hW.len] at hhi; simp only [NestCtx.hiAt] at this hhi ⊢; rw [hpl2]
@@ -632,7 +631,10 @@ theorem frameOK_step (n : Nat) (ih : NbOK dn vis fe n) : FrameOK dn vis fe (n + 
       by have := (hg6.trans hg7).1; omega, by simp only [List.length_map]; rw [← hgl, ← hdg]; exact (dL + gL).toNat_lt,
       hH7, hHb7⟩
     hcl6 (by have := hg7.1; omega) (hcs6.grow hcb6 hg7) (hns.grow hg17 htop) (OutsB.nil _ _) (by simp)
-  refine ⟨x.2, a8, ?_, hS8, hg17.trans hg8, by simpa using hns8⟩
+    ((((((hP.fr hf1).fr (ceinternW_mfr hic)).stub (by decide) hma).stub (by decide) hit).fr
+      (fgW_mfr _ _ _ _ _ _ _ _ _ _ _ _ _ _ hfg)).fr (gcW_mfr _ _ _ _ _ _ _ _ _ _ hgc) |>.fr
+      (fhW_mfr _ _ _ _ _ _ _ _ _ hfh))
+  refine ⟨x.2, a8, ?_, hS8, hg17.trans hg8, by simpa using hns8, hPm8⟩
   rw [ConRon.Arena.nestFrame.eq_def]
   have hz : (grp.zipIdx.mapM fun ((_, ty), i) => internFVarE (hi.toNat + i) ty) = pos2FhT hi.toNat grp := by
     simpa using pos2_zipIdx_holes hi.toNat grp 0
@@ -655,10 +657,9 @@ theorem frameOK_step (n : Nat) (ih : NbOK dn vis fe n) : FrameOK dn vis fe (n + 
 
 
 
-include hM in
 theorem newOK_step (n : Nat) (ih : NbOK dn vis fe n) : NewOK dn vis fe (n + 1) := by
   obtain ⟨-, -, -, -, -, -, hFrame, -, -, -, -⟩ := ih
-  intro m m' a ctx fu po pl kb nn us dO dL nPc cty ns c prog ds NS r h hS hW hnn hus hds hdsb hcty hns
+  intro m m' a ctx fu po pl kb nn us dO dL nPc cty ns c prog ds NS r h hS hW hnn hus hds hdsb hcty hns hP
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
   have hdsD := hds.get (OMono.decHL _ _)
   have hhi0 : c.hiAt 0 < 2 ^ 64 := by have := hW.hb; simp only [NestCtx.hiAt] at this ⊢; omega
@@ -725,12 +726,13 @@ theorem newOK_step (n : Nat) (ih : NbOK dn vis fe n) : NewOK dn vis fe (n + 1) :
   obtain ⟨rg, m5⟩ := pr5
   rw [hgg, nbNewK5_some] at h
   have hg14 := hg1.trans (hg2.trans hg24)
-  obtain ⟨grp, a5, hrun5, hS5, hg5, hgl5, hgb5, hgrp5⟩ := ggW_ok dn fe vis ctx (nhiW m2 ctx (rw.tail.headD 0)) us dO dL
-    (c.hiAt wp.length) hhw c ds hus hM.no (n' + 1) m4 m5 a1 (rm.headD 0) (rm.tail.headD 0) (g0.headD 0) 1
+  obtain ⟨grp, a5, hrun5, hS5, hg5, hgl5, hgb5, hgrp5, hP5⟩ := ggW_ok dn fe vis ctx (nhiW m2 ctx (rw.tail.headD 0)) us
+    dO dL (c.hiAt wp.length) hhw c ds hus (n' + 1) m4 m5 a1 (rm.headD 0) (rm.tail.headD 0) (g0.headD 0) 1
     (nestFrameMates fe (decI nn)) [(decI nn, decI cty)] rg hgg hS4 (hW.u.grow hg14)
     (by rw [decHL_agree (RdS.of_grow hg14) (fun j hj => by omega)]; exact hdsD) (by have := hg14.1; omega)
     (by rw [decHL_agree (RdS.of_grow hg24) (fun j hj => by omega)]; exact hmd)
     (fun j hj => by have := hg24.1; omega) (by simp) (by simp only [List.length_cons, List.length_nil]; omega) hgrp0
+    ((((hP.fr (nwsW_mfr hws)).fr (nfmW_mfr hfm)).fr (posRecW_mfr hpr)).fr (new1W_mfr hn1))
   have hg15 := hg14.trans hg5
   have htop5 : iwTop m5 < 2 ^ 64 := Nat.lt_of_le_of_lt hS5.2.1 hS5.2.2.2.1
   -- its keys, then the active list
@@ -782,9 +784,10 @@ theorem newOK_step (n : Nat) (ih : NbOK dn vis fe n) : NewOK dn vis fe (n + 1) :
   obtain ⟨r9, m9⟩ := pr9
   rw [hfr, nbNewK9_some] at h
   have hg58 := (hg6.trans hg7).trans hg8
-  obtain ⟨x9, a9, hrun9, hS9, hg9, hns9⟩ := hFrame m8 m9 a5 ctx fu _ _ _ us dO dL nPc _ _ ns1 c wp ds grp _ r9 hfr hS8
-    (hWp2.grow ((hg24.trans hg5).trans hg58)) hhw hus (hds.grow (OMono.decHL _ _) hg18)
+  obtain ⟨x9, a9, hrun9, hS9, hg9, hns9, hP9⟩ := hFrame m8 m9 a5 ctx fu _ _ _ us dO dL nPc _ _ ns1 c wp ds grp _ r9 hfr
+    hS8 (hWp2.grow ((hg24.trans hg5).trans hg58)) hhw hus (hds.grow (OMono.decHL _ _) hg18)
     (by have := hg18.1; omega) (by simpa using hgl5) (by have := hg58.1; omega) (hgrp5.grow hgb5 hg58) hns1
+    (((hP5.fr (caW_mfr _ _ _ _ _ _ _ _ _ _ _ hca)).fr (appendW_mfr hap)).fr (posRecW_mfr hq1))
   have hg19 := hg18.trans hg9
   rw [pos2_ns_rd hg19 hp6 htop 2 (by decide), pos2_ns_rd hg19 hp6 htop 3 (by decide)] at h
   cases hcf : cfW (n' + 1) m9 ctx us dO dL (rg.headD 0) (rg.tail.headD 0) (r9.headD 0) (rdW (m.arr64 IW) (ns + 2))
@@ -799,7 +802,7 @@ theorem newOK_step (n : Nat) (ih : NbOK dn vis fe n) : NewOK dn vis fe (n + 1) :
     (hds.grow (OMono.decHL _ _) hg19) (by have := hg19.1; omega) (by simpa using hgl5)
     (by have := (hg58.trans hg9).1; omega) (hgrp5.grow hgb5 (hg58.trans hg9)) hns9 (ha0.grow hg19)
     (by have := hns.b2; have := hg19.1; omega)
-  refine ⟨x, a', ?_, hS10, hg19.trans hg10, by simpa using hk10, by simpa using hns10⟩
+  refine ⟨x, a', ?_, hS10, hg19.trans hg10, by simpa using hk10, by simpa using hns10, hP9.fr (cfW_mfr hcf)⟩
   rw [hhw] at hrun9
   rw [ConRon.Arena.nestContNew.eq_def]
   simp only [StateT.run_bind, hrun1, except_ok_bind, hrun5, hrun9]
@@ -807,7 +810,7 @@ theorem newOK_step (n : Nat) (ih : NbOK dn vis fe n) : NewOK dn vis fe (n + 1) :
 
 theorem keyOK_step (n : Nat) (ih : NbOK dn vis fe n) : KeyOK dn vis fe (n + 1) := by
   obtain ⟨-, -, -, -, -, hNew, -, -, -, -, -⟩ := ih
-  intro m m' a ctx fu po pl kb nn us dO dL nPc cty ns c prog ds NS r h hS hW hnn hus hds hdsb hcty hns
+  intro m m' a ctx fu po pl kb nn us dO dL nPc cty ns c prog ds NS r h hS hW hnn hus hds hdsb hcty hns hP
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
   have hhi0 : c.hiAt 0 < 2 ^ 64 := by have := hW.hb; simp only [NestCtx.hiAt] at this ⊢; omega
   rw [nbKeyW_succ] at h
@@ -850,12 +853,13 @@ theorem keyOK_step (n : Nat) (ih : NbOK dn vis fe n) : KeyOK dn vis fe (n + 1) :
     (hW.grow hg1).u.dec (hW.grow hg1).u.inn hhi0 ((hds.grow (OMono.decHL _ _) hg1).get (OMono.decHL _ _))
     (fun j hj => by have := hg1.1; omega)
   have hg12 := hg1.trans hg2
+  have hP2 : PosMR m2 := (hP.fr (posRecW_mfr hk)).fr (dcWf_mfr hdc)
   -- the frame, when not cached
   have hnew : ∀ (rr : List Word) (mm : Mem),
       nbAppK6 (nbNewW (n' + 1) m2 vis ctx fu po pl kb nn us dO dL nPc cty ns) = some (rr, mm) →
       ∃ x a', (nestContNew V fe c fu.toNat prog kb.toNat (decI nn) (decI us) ds nPc.toNat (decI cty) NS).run a2 =
           .ok (x, a') ∧ StageR dn vis fe mm a' ∧ IWGrow m2 mm ∧ decNFK (rr.headD 0) = some x.1 ∧
-        NSB mm (rr.tail.headD 0) x.2 := by
+        NSB mm (rr.tail.headD 0) x.2 ∧ PosMR mm := by
     intro rr mm hh
     cases hn : nbNewW (n' + 1) m2 vis ctx fu po pl kb nn us dO dL nPc cty ns with
     | none => rw [hn] at hh; simp [nbAppK6] at hh
@@ -864,10 +868,10 @@ theorem keyOK_step (n : Nat) (ih : NbOK dn vis fe n) : KeyOK dn vis fe (n + 1) :
     rw [hn, nbAppK6_some] at hh
     simp only [Option.some.injEq, Prod.mk.injEq] at hh
     obtain ⟨rfl, rfl⟩ := hh
-    obtain ⟨x, a', hrun, hS3, hg3, hk3, hns3⟩ := hNew m2 m3 a2 ctx fu po pl kb nn us dO dL nPc cty ns c prog ds NS r3
-      hn hS2 (hW.grow hg12) hnn hus (hds.grow (OMono.decHL _ _) hg12) (by have := hg12.1; omega) hcty
-      (hns.grow hg12 htop)
-    exact ⟨x, a', hrun, hS3, hg3, by simpa using hk3, by simpa using hns3⟩
+    obtain ⟨x, a', hrun, hS3, hg3, hk3, hns3, hP3⟩ := hNew m2 m3 a2 ctx fu po pl kb nn us dO dL nPc cty ns c prog ds NS
+      r3 hn hS2 (hW.grow hg12) hnn hus (hds.grow (OMono.decHL _ _) hg12) (by have := hg12.1; omega) hcty
+      (hns.grow hg12 htop) hP2
+    exact ⟨x, a', hrun, hS3, hg3, by simpa using hk3, by simpa using hns3, hP3⟩
   have hrun2' : (ds.allM fun x => do
       let b ← fvarB coreWalkFuel x
       pure (decide (b ≤ c.hiAt 0))).run a = .ok (bc, a2) := hrun2
@@ -898,7 +902,7 @@ theorem keyOK_step (n : Nat) (ih : NbOK dn vis fe n) : KeyOK dn vis fe (n + 1) :
         | true => rfl
         | false => rw [e] at hb2; exact absurd hb2 (by simpa using hb2n)
       refine ⟨(NestFieldKind.nested (kb.toNat != 0), NS), a2, by rw [htwin]; simp [hin]; rfl, hS2, hg12,
-        by simpa using decNFK_nestedW kb, by simpa using hns.grow hg12 htop⟩
+        by simpa using decNFK_nestedW kb, by simpa using hns.grow hg12 htop, hP2⟩
     · rw [if_neg hb2n] at h
       have hout : NS.keys.contains ⟨decI nn, decI us, ds⟩ = false := by
         rw [← Array.contains_toList]
@@ -913,11 +917,11 @@ theorem keyOK_step (n : Nat) (ih : NbOK dn vis fe n) : KeyOK dn vis fe (n + 1) :
     obtain ⟨x, a', hrun, rest⟩ := hnew r m' h
     exact ⟨x, a', by rw [htwin]; simpa using hrun, rest.1, hg12.trans rest.2.1, rest.2.2⟩
 
-include hM hcs in
+include hcs in
 theorem contOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbOK dn vis fe n) :
     ContOK dn vis fe (n + 1) := by
   obtain ⟨-, -, -, -, hKey, -, -, -, -, -, -⟩ := ih
-  intro m m' a ctx fu po pl kb nn us aO aL ns c prog args NS r h hS hW hnn hus hargs hab hns
+  intro m m' a ctx fu po pl kb nn us aO aL ns c prog args NS r h hS hW hnn hus hargs hab hns hP
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
   rw [nbContW_succ] at h
   cases n with
@@ -943,7 +947,7 @@ theorem contOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbO
   have hle : nPc ≤ args.length := by
     have : ¬ aL.toNat < (r1.tail.headD 0).toNat := fun e => hlt (UInt64.lt_iff_toNat_lt.mpr e)
     omega
-  generalize hP : r1.tail.headD 0 = nPcW at h hnc1
+  generalize hPw : r1.tail.headD 0 = nPcW at h hnc1
   have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
   have hW1 := hW.grow hg1
   have hhp : (nhiW m1 ctx pl).toNat = c.hiAt prog.length := hW1.hi htop1
@@ -961,8 +965,9 @@ theorem contOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbO
   | some pr2 =>
   obtain ⟨r2, m2⟩ := pr2
   rw [hcc, nbContK2_some] at h
-  obtain ⟨-, q, a2, hrun2a, hrun2q, hq, hrun2c, -, hS2, hg2⟩ := p2ccW_ok dn vis fe hM (by omega) hcc hS1 hW1.u hds
+  obtain ⟨-, q, a2, hrun2a, hrun2q, hq, hrun2c, -, hS2, hg2, hP2⟩ := p2ccW_ok dn vis fe (by omega) hcc hS1 hW1.u hds
     (fun j hj => by omega) (by rw [hiO, hiL]; exact hidx) (fun j hj => by rw [hiO, hiL] at *; omega) hnn
+    (hP.fr (ntWf_mfr (k := n' + 1) (by simpa [ntWf] using hnt)))
   -- the instantiation's former
   cases hk4 : posRecW m2 [nn, us, aO, nPcW] with
   | none => rw [hk4] at h; simp [nbContK3] at h
@@ -991,8 +996,9 @@ theorem contOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbO
     rw [pos2_rd_get (by simpa using hget3 2 (by simp)) (by simp; omega),
       pos2_rd_get (by simpa using hget3 3 (by simp)) (by simp; omega)]
     have := (hg2.trans hg3).1; omega
-  obtain ⟨xi, a4, hrun4, hS4, hg4, hni0, hctyH, hctyd⟩ := nitW_ok n' dn fe vis ctx (nhiW m1 ctx pl)
-    (c.hiAt prog.length) hhp c m3 m4 a2 key _ r4 hni hS3 ((hW1.grow (hg2.trans hg3)).u) hKd hKin hksl hM.no
+  obtain ⟨xi, a4, hrun4, hS4, hg4, hni0, hctyH, hctyd, hP4⟩ := nitW_ok n' dn fe vis ctx (nhiW m1 ctx pl)
+    (c.hiAt prog.length) hhp c m3 m4 a2 key _ r4 hni hS3 ((hW1.grow (hg2.trans hg3)).u) hKd hKin hksl
+    (hP2.fr (posRecW_mfr hk4))
   by_cases hne : aL ≠ nPcW + r4.headD 0
   · rw [if_pos hne] at h; cases h
   rw [if_neg hne] at h
@@ -1008,10 +1014,10 @@ theorem contOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbO
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   have hg14 := hg13.trans hg4
-  obtain ⟨x, a', hrun5, hS5, hg5, hk5, hns5⟩ := hKey m4 m5 a4 ctx fu po pl kb nn us aO nPcW nPcW (r4.tail.headD 0) ns
-    c prog (args.take nPcW.toNat) NS r5 hky hS4 (hW.grow hg14) hnn hus (hdsB.grow (OMono.decHL _ _) hg4)
-    (by have := hg14.1; omega) hctyH (hns.grow hg14 htop)
-  refine ⟨x, a', ?_, hS5, hg14.trans hg5, by simpa using hk5, by simpa using hns5⟩
+  obtain ⟨x, a', hrun5, hS5, hg5, hk5, hns5, hP5⟩ := hKey m4 m5 a4 ctx fu po pl kb nn us aO nPcW nPcW (r4.tail.headD 0)
+    ns c prog (args.take nPcW.toNat) NS r5 hky hS4 (hW.grow hg14) hnn hus (hdsB.grow (OMono.decHL _ _) hg4)
+    (by have := hg14.1; omega) hctyH (hns.grow hg14 htop) hP4
+  refine ⟨x, a', ?_, hS5, hg14.trans hg5, by simpa using hk5, by simpa using hns5, hP5⟩
   rw [hnc1] at hrun2a hrun2c hrun4 hrun5
   rw [hhp] at hrun2a hrun2c
   rw [hctyd] at hrun5
@@ -1028,10 +1034,9 @@ theorem contOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbO
   simp only [heq, bne_self_eq_false, Bool.false_eq_true, ite_false]
   exact hrun5
 
-include hM in
 theorem appOK_step (n : Nat) (ih : NbOK dn vis fe n) : AppOK dn vis fe (n + 1) := by
   obtain ⟨-, -, -, hCont, -, -, -, -, -, -, -⟩ := ih
-  intro m m' a ctx fu po pl kb hi w ns c prog NS r h hS hW hhi hw hns
+  intro m m' a ctx fu po pl kb hi w ns c prog NS r h hS hW hhi hw hns hP
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
   rw [nbAppW_succ] at h
   cases hga : stubM "get_app_args_f" m [CWF, w] with
@@ -1051,6 +1056,7 @@ theorem appOK_step (n : Nat) (ih : NbOK dn vis fe n) : AppOK dn vis fe (n + 1) :
   obtain ⟨hd, a2, hrun2, hS2, hg2, hhdH, hhdd⟩ := getAppFn_spec dn vis fe CWF w hw m1 m2 a1 rh hgf hS1
   rw [CWF_eq] at hrun2
   have hg12 := hg1.trans hg2
+  have hP2 : PosMR m2 := (hP.stub (by decide) hga).stub (by decide) hgf
   by_cases hev : eViewW m2 (rh.headD 0) = []
   · rw [if_pos hev] at h; cases h
   rw [if_neg hev] at h
@@ -1073,10 +1079,10 @@ theorem appOK_step (n : Nat) (ih : NbOK dn vis fe n) : AppOK dn vis fe (n + 1) :
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     have hhi0 : c.hiAt 0 < 2 ^ 64 := by have := hW.hb; simp only [NestCtx.hiAt] at this ⊢; omega
-    obtain ⟨k, a3, hK, hS3, hg3, hk⟩ := pfW_ok dn vis fe hM hpf hS2 (hW.grow hg12).u (hW.grow hg12).hs hhi0 hargs2
-      (by have := hg2.1; omega)
+    obtain ⟨k, a3, hK, hS3, hg3, hk, hP3⟩ := pfW_ok dn vis fe hpf hS2 (hW.grow hg12).u (hW.grow hg12).hs hhi0 hargs2
+      (by have := hg2.1; omega) hP2
     refine ⟨(k, decI w, NS), a3, ?_, hS3, hg12.trans hg3, by simpa using hk, rfl,
-      by simpa using (hns.grow (hg12.trans hg3) htop)⟩
+      by simpa using (hns.grow (hg12.trans hg3) htop), hP3⟩
     rw [hi1] at hK
     simp only [posAppT, StateT.run_bind, hrun1, except_ok_bind, hrun2, hvrun]
     rw [hK]; rfl
@@ -1119,18 +1125,17 @@ theorem appOK_step (n : Nat) (ih : NbOK dn vis fe n) : AppOK dn vis fe (n + 1) :
   rw [hct, nbAppK6_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
-  obtain ⟨x, a4, hrun4, hS4, hg4, hk4, hns4⟩ := hCont m2 m4 a2 ctx fu po pl kb _ _ _ _ ns c prog args NS rc hct hS2
-    (hW.grow hg12) hnH husH hargs2 (by have := hg2.1; omega) (hns.grow hg12 htop)
+  obtain ⟨x, a4, hrun4, hS4, hg4, hk4, hns4, hP4⟩ := hCont m2 m4 a2 ctx fu po pl kb _ _ _ _ ns c prog args NS rc hct
+    hS2 (hW.grow hg12) hnH husH hargs2 (by have := hg2.1; omega) (hns.grow hg12 htop) hP2
   rw [hnd, husd] at hrun4
-  refine ⟨(x.1, decI w, x.2), a4, ?_, hS4, hg12.trans hg4, by simpa using hk4, rfl, by simpa using hns4⟩
+  refine ⟨(x.1, decI w, x.2), a4, ?_, hS4, hg12.trans hg4, by simpa using hk4, rfl, by simpa using hns4, hP4⟩
   simp only [posAppT, StateT.run_bind, hrun1, except_ok_bind, hrun2, hvrun, hnotin, Bool.false_eq_true, ite_false,
     hrun4]
   rfl
 
-include hM in
 theorem bindOK_step (n : Nat) (ih : NbOK dn vis fe n) : BindOK dn vis fe (n + 1) := by
   obtain ⟨hPos, -, -, -, -, -, -, -, -, -, -⟩ := ih
-  intro m m' a ctx fu po pl dep kb w ns c prog NS r h hS hW hw h6 hns
+  intro m m' a ctx fu po pl dep kb w ns c prog NS r h hS hW hw h6 hns hP
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
   rw [nbBindW_succ] at h
   by_cases hev : eViewW m w = []
@@ -1149,8 +1154,8 @@ theorem bindOK_step (n : Nat) (ih : NbOK dn vis fe n) : BindOK dn vis fe (n + 1)
   | some pr =>
   obtain ⟨o, m1⟩ := pr
   rw [hno, nbBindK1_some] at h
-  obtain ⟨mp, hmp⟩ := hM.no m a hS
-  obtain ⟨bo, hrun1, hbo, -, hS1, hg1⟩ := noConstWf_ok n dn fe vis m m1 a _ _ _ _ d o c.names mp hno hS hd hn0
+  obtain ⟨mp, hmp⟩ := hP.no
+  obtain ⟨bo, hrun1, hbo, hM1, hS1, hg1, hf1⟩ := noConstWf_ok n dn fe vis m m1 a _ _ _ _ d o c.names mp hno hS hd hn0
     (by omega) hmp
   rw [hnP, hhi, decE_eq] at hrun1
   by_cases ho : o ≠ 0
@@ -1194,8 +1199,9 @@ theorem bindOK_step (n : Nat) (ih : NbOK dn vis fe n) : BindOK dn vis fe (n + 1)
   | some pr4 =>
   obtain ⟨rp, m4⟩ := pr4
   rw [hp, nbBindK4_some] at h
-  obtain ⟨x, a4, hrun4, hS4, hg4, hk4, hnbH, hnbd, hns4⟩ := hPos m3 m4 a3 ctx fu po pl (dep + 1) (kb + 1) (rb.headD 0) ns
-    c prog NS rp hp hS3 (hW.grow hg13) (by simpa using hb2H) (hns.grow hg13 htop)
+  obtain ⟨x, a4, hrun4, hS4, hg4, hk4, hnbH, hnbd, hns4, hP4⟩ := hPos m3 m4 a3 ctx fu po pl (dep + 1) (kb + 1)
+    (rb.headD 0) ns c prog NS rp hp hS3 (hW.grow hg13) (by simpa using hb2H) (hns.grow hg13 htop)
+    (((hP.setNo hf1 ⟨∅, hM1⟩).fr (fvinternW_mfr hfv)).stub (by decide) hin)
   cases hab : stubM "abstract1_fast" m4 [CWF, rp.tail.headD 0, dep, 0] with
   | none => rw [hab] at h; simp [nbBindK5] at h
   | some pr5 =>
@@ -1219,7 +1225,8 @@ theorem bindOK_step (n : Nat) (ih : NbOK dn vis fe n) : BindOK dn vis fe (n + 1)
     simp only [H]; simpa using this
   have htop4 : iwTop m4 < 2 ^ 64 := Nat.lt_of_le_of_lt hS4.2.1 hS4.2.2.2.1
   refine ⟨(x.1, decI z, x.2.2), a6, ?_, hS6, ((hg13.trans hg4).trans hg5).trans hg6, by simpa using hk4,
-    by simpa using hzH, by simp, by simpa using (hns4.grow (hg5.trans hg6) htop4)⟩
+    by simpa using hzH, by simp, by simpa using (hns4.grow (hg5.trans hg6) htop4),
+    (hP4.stub (by decide) hab).fr (mkForallW_mfr hmf)⟩
   rw [pos2_word_succ hd1, pos2_word_succ hk1, hb2d] at hrun4
   rw [hnbd] at hrun5
   have e2 : (internFVarE dep.toNat (decI d)).run a = .ok (decI fv, a2) := by simpa [internFVarE, decE_eq] using hrun2
@@ -1231,10 +1238,9 @@ theorem bindOK_step (n : Nat) (ih : NbOK dn vis fe n) : BindOK dn vis fe (n + 1)
     e5, e6]
   rfl
 
-include hM in
 theorem posOK_step (n : Nat) (ih : NbOK dn vis fe n) : PosOK dn vis fe (n + 1) := by
   obtain ⟨-, hBind, hApp, -, -, -, -, -, -, -, -⟩ := ih
-  intro m m' a ctx fu po pl dep kb e ns c prog NS r h hS hW he hns
+  intro m m' a ctx fu po pl dep kb e ns c prog NS r h hS hW he hns hP
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
   rw [nbPosW_succ] at h
   by_cases hf0 : fu = 0
@@ -1262,14 +1268,16 @@ theorem posOK_step (n : Nat) (ih : NbOK dn vis fe n) : PosOK dn vis fe (n + 1) :
   | some pr2 =>
   obtain ⟨o, m2⟩ := pr2
   rw [hno, nbPosK2_some] at h
-  obtain ⟨mp, hmp⟩ := hM.no m1 a1 hS1
-  obtain ⟨bo, hrun2, hbo, -, hS2, hg2⟩ := noConstWf_ok n dn fe vis m1 m2 a1 _ _ _ _ _ o c.names mp hno hS1 hwH hn1
+  have hP1 : PosMR m1 := hP.stub (by decide) hwt
+  obtain ⟨mp, hmp⟩ := hP1.no
+  obtain ⟨bo, hrun2, hbo, hM2, hS2, hg2, hf2⟩ := noConstWf_ok n dn fe vis m1 m2 a1 _ _ _ _ _ o c.names mp hno hS1 hwH hn1
     (by omega) hmp
   rw [hnP1, hhi1, decE_eq, hwd] at hrun2
   have hg12 := hg1.trans hg2
   have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
   have hW2 := hW.grow hg12
   have hns2 := hns.grow hg12 htop
+  have hP2 : PosMR m2 := hP1.setNo hf2 ⟨∅, hM2⟩
   have hrun1' : (whnf V fe checkFuel dep.toNat (decI e)).run a = .ok (w, a1) := hrun1
   by_cases ho : o = 0
   · -- no occurrence in the reduct: the original, or the reduct
@@ -1284,11 +1292,12 @@ theorem posOK_step (n : Nat) (ih : NbOK dn vis fe n) : PosOK dn vis fe (n + 1) :
     | some pr3 =>
     obtain ⟨o2, m3⟩ := pr3
     rw [hno2] at h
-    obtain ⟨mp2, hmp2⟩ := hM.no m2 a1 hS2
-    obtain ⟨bo2, hrun3, hbo2, -, hS3, hg3⟩ := noConstWf_ok n dn fe vis m2 m3 a1 _ _ _ _ _ o2 c.names mp2 hno2 hS2
+    obtain ⟨mp2, hmp2⟩ := hP2.no
+    obtain ⟨bo2, hrun3, hbo2, hM3, hS3, hg3, hf3⟩ := noConstWf_ok n dn fe vis m2 m3 a1 _ _ _ _ _ o2 c.names mp2 hno2 hS2
       he hn2 (by omega) hmp2
     rw [hnP2, hhi1, decE_eq] at hrun3
     have hns3 := hns2.grow hg3 htop2
+    have hP3 : PosMR m3 := hP2.setNo hf3 ⟨∅, hM3⟩
     simp only [nbPosK3] at h
     by_cases ho2 : o2 ≠ 0
     · rw [if_pos ho2] at h
@@ -1297,7 +1306,7 @@ theorem posOK_step (n : Nat) (ih : NbOK dn vis fe n) : PosOK dn vis fe (n + 1) :
       have hbo2' : bo2 = true := by rw [← hbo2]; simpa using ho2
       subst hbo2'
       refine ⟨(.ordinary, w, NS), a1, ?_, hS3, hg12.trans hg3, by simp [decNFK], by simpa using hwH,
-        by simpa using hwd, by simpa using hns3⟩
+        by simpa using hwd, by simpa using hns3, hP3⟩
       rw [hfu, nestPos_succ]
       simp only [StateT.run_bind, hrun1', except_ok_bind, hrun2, Bool.not_false, ite_true, hrun3]
       rfl
@@ -1307,7 +1316,7 @@ theorem posOK_step (n : Nat) (ih : NbOK dn vis fe n) : PosOK dn vis fe (n + 1) :
       have hbo2' : bo2 = false := by rw [← hbo2]; simpa using ho2
       subst hbo2'
       refine ⟨(.ordinary, decI e, NS), a1, ?_, hS3, hg12.trans hg3, by simp [decNFK], by simpa using he,
-        by simp, by simpa using hns3⟩
+        by simp, by simpa using hns3, hP3⟩
       rw [hfu, nestPos_succ]
       simp only [StateT.run_bind, hrun1', except_ok_bind, hrun2, Bool.not_false, ite_true, hrun3]
       rfl
@@ -1324,10 +1333,10 @@ theorem posOK_step (n : Nat) (ih : NbOK dn vis fe n) : PosOK dn vis fe (n + 1) :
     rw [hb] at h
     simp only [nbPosK4, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
-    obtain ⟨x, a4, hrun4, hS4, hg4, hk4, hxH, hxd, hns4⟩ :=
-      hBind m2 m4 a1 ctx (fu - 1) po pl dep kb (rw.headD 0) ns c prog NS rb hb hS2 hW2 hwH h6 hns2
+    obtain ⟨x, a4, hrun4, hS4, hg4, hk4, hxH, hxd, hns4, hP4⟩ :=
+      hBind m2 m4 a1 ctx (fu - 1) po pl dep kb (rw.headD 0) ns c prog NS rb hb hS2 hW2 hwH h6 hns2 hP2
     refine ⟨x, a4, ?_, hS4, hg12.trans hg4, by simpa using hk4, by simpa using hxH, by simpa using hxd,
-      by simpa using hns4⟩
+      by simpa using hns4, hP4⟩
     have htag : w.tag = ETag.forallE := by rw [← hwd]; exact (decE_tag_forall _ hwH).mpr h6
     rw [hwd] at hrun4
     rw [hfu, nestPos_succ]
@@ -1342,10 +1351,10 @@ theorem posOK_step (n : Nat) (ih : NbOK dn vis fe n) : PosOK dn vis fe (n + 1) :
     rw [hp] at h
     simp only [nbPosK5, Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
-    obtain ⟨x, a4, hrun4, hS4, hg4, hk4, hx1, hns4⟩ :=
-      hApp m2 m4 a1 ctx (fu - 1) po pl kb (nhiW m ctx pl) (rw.headD 0) ns c prog NS rp hp hS2 hW2 hhi1 hwH hns2
+    obtain ⟨x, a4, hrun4, hS4, hg4, hk4, hx1, hns4, hP4⟩ :=
+      hApp m2 m4 a1 ctx (fu - 1) po pl kb (nhiW m ctx pl) (rw.headD 0) ns c prog NS rp hp hS2 hW2 hhi1 hwH hns2 hP2
     refine ⟨x, a4, ?_, hS4, hg12.trans hg4, by simpa using hk4, by simpa using hwH,
-      by simpa [hwd] using hx1.symm, by simpa using hns4⟩
+      by simpa [hwd] using hx1.symm, by simpa using hns4, hP4⟩
     have htag : ¬ w.tag = ETag.forallE := by rw [← hwd]; exact fun e' => h6 ((decE_tag_forall _ hwH).mp e')
     rw [hwd, hhi1] at hrun4
     rw [hfu, nestPos_succ]
@@ -1358,16 +1367,16 @@ theorem nbOK_zero : NbOK dn vis fe 0 := by
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> intros <;>
     simp_all [nbPosW, nbBindW, nbAppW, nbContW, nbKeyW, nbNewW, nbFrameW, nbCtorsW, nbOneW, nbWalkW, nbFieldsW]
 
-include hM hcs in
+include hcs in
 /-- The block's relational content at every fuel up to the walk fuel. -/
 theorem nbOK_all : ∀ n, 2 ^ 31 + n ≤ coreWalkFuel → NbOK dn vis fe n
   | 0, _ => nbOK_zero dn vis fe
   | n + 1, hk => by
     have ih := nbOK_all n (by omega)
-    exact ⟨posOK_step dn vis fe hM n ih, bindOK_step dn vis fe hM n ih, appOK_step dn vis fe hM n ih,
-      contOK_step dn vis fe hM hcs n hk ih, keyOK_step dn vis fe n ih, newOK_step dn vis fe hM n ih,
-      frameOK_step dn vis fe hcs n ih, ctorsOK_step dn vis fe n ih, oneOK_step dn vis fe hM n hk ih,
-      walkOK_step dn vis fe hM n hk ih, fieldsOK_step dn vis fe hM n hk ih⟩
+    exact ⟨posOK_step dn vis fe n ih, bindOK_step dn vis fe n ih, appOK_step dn vis fe n ih,
+      contOK_step dn vis fe hcs n hk ih, keyOK_step dn vis fe n ih, newOK_step dn vis fe n ih,
+      frameOK_step dn vis fe hcs n ih, ctorsOK_step dn vis fe n ih, oneOK_step dn vis fe n hk ih,
+      walkOK_step dn vis fe n hk ih, fieldsOK_step dn vis fe n hk ih⟩
 
 end steps
 

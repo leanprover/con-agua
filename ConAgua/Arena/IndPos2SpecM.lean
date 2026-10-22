@@ -184,6 +184,26 @@ theorem decNFK_nestedW (kb : Word) : decNFK (nestedW kb) = some (.nested (kb.toN
     simp only [nestedW, h, ne_eq, not_false_eq_true, if_true]
     simp [decNFK, this]
 
+theorem cfW_mfr {k : Nat} {m m' : Mem} {ctx us dO dL gO gL ns2 aO aL kb : Word} {r : List Word}
+    (h : cfW k m ctx us dO dL gO gL ns2 aO aL kb = some (r, m')) : MFr [] [] m m' := by
+  cases k with
+  | zero => simp [cfW] at h
+  | succ k =>
+  simp only [cfW] at h
+  cases h1 : dcWf k m ctx dO dL with
+  | none => rw [h1] at h; simp [cfK1] at h
+  | some p1 =>
+  obtain ⟨r1, m1⟩ := p1
+  rw [h1] at h
+  refine (dcWf_mfr h1).trans ?_
+  simp only [cfK1] at h
+  split at h
+  · unfold cfK2 cfK3 at h
+    mfr_auto h [nagW_mfr _ _ _ _ _ _ _ _ _ _ _, posRecW_mfr]
+  · simp only [cfK2] at h
+    unfold cfK3 at h
+    mfr_auto h [posRecW_mfr]
+
 theorem cfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {k : Nat} {m m' : Mem} {a : AState}
     {ctx us dO dL gO gL ns2 aO aL kb : Word} {c : NestCtx} {ds : List EIdx} {grp : List (NIdx × EIdx)}
     {NS2 : NestState} {act : List NestKey} {r : List Word}
@@ -479,15 +499,15 @@ theorem nh_key_words {m : Mem} {p : Word} {hl : NestHole} (hd : decNH m p.toNat 
   obtain ⟨h0, h1, -, -, h4, -, -⟩ := nk_fields (key := UInt64.ofNat k) (by rw [hk']; exact hK) (by rw [hk']; exact hkin) htop
   exact ⟨h0, h1, by rw [← decHL_length m h4]⟩
 
-theorem pfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (hM : PosMemo dn vis fe)
+theorem pfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     {k : Nat} {m m' : Mem} {a : AState} {ctx po pl kb hi i aO aL : Word} {c : NestCtx}
     {prog : List NestHole} {args : List EIdx} {r : List Word}
     (h : pfW k m vis ctx po pl kb hi i aO aL = some (r, m')) (hS : StageR dn vis fe m a)
     (hU : UCtx dn vis fe m ctx c) (hpr : HSl m po.toNat pl.toNat prog) (hhi : c.hiAt 0 < 2 ^ 64)
-    (hargs : decHL m aO.toNat aL.toNat = some args) (hab : aO.toNat + aL.toNat ≤ iwTop m) :
+    (hargs : decHL m aO.toNat aL.toNat = some args) (hab : aO.toNat + aL.toNat ≤ iwTop m) (hP : PosMR m) :
     ∃ x a', (∀ {β : Type} (K : NestFieldKind → AM β),
       (pfK fe c prog kb.toNat hi.toNat i.toNat args K).run a = (K x).run a') ∧ StageR dn vis fe m' a' ∧
-      IWGrow m m' ∧ decNFK (r.headD 0) = some x := by
+      IWGrow m m' ∧ decNFK (r.headD 0) = some x ∧ PosMR m' := by
   cases k with
   | zero => simp [pfW] at h
   | succ k =>
@@ -521,9 +541,9 @@ theorem pfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (h
   | some pr2 =>
   obtain ⟨r2, m2⟩ := pr2
   rw [hoa, p2pfK2_eq] at h
-  obtain ⟨b, hrunoa, hS2, hg2, hr2⟩ := noaW_ok dn fe vis _ _ _ _ c.names hM.no (k + 1) m1 m2 a _ _ args r2 hoa hS1
+  obtain ⟨b, hrunoa, hS2, hg2, hr2, hP2⟩ := noaW_ok dn fe vis _ _ _ _ c.names (k + 1) m1 m2 a _ _ args r2 hoa hS1
     hn1 hne1 (by rw [decHL_agree (RdS.of_grow hg1) (fun j hj => by omega)]; exact hargs)
-    (fun j hj => by have := hg1.1; omega)
+    (fun j hj => by have := hg1.1; omega) (hP.fr (haW_mfr (by simpa [haWf] using hha)))
   rw [hnP1] at hrunoa
   cases b with
   | true => rw [if_pos (by rw [hr2]; decide)] at h; cases h
@@ -566,7 +586,8 @@ theorem pfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (h
   have hU3 := (hU1.grow hg2).grow hg3
   have htop3 : iwTop m3 < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.2.1 hS3.2.2.2.1
   have hw := hkW_ok (by simpa [hkWf] using hk) hU3.dec hU3.inn htop3 hhi (nestHoleAt_nP hnh)
-  refine ⟨holeKind c kb.toNat i.toNat, a3, fun K => ?_, hS3, (hg1.trans hg2).trans hg3, by simpa using hw⟩
+  refine ⟨holeKind c kb.toNat i.toNat, a3, fun K => ?_, hS3, (hg1.trans hg2).trans hg3, by simpa using hw,
+    hP2.fr (naW_mfr (by simpa [naWf] using hna))⟩
   simp only [pfK, hnh, StateT.run_bind, hrunoa, except_ok_bind, Bool.false_eq_true, ite_false, hrun3, heq,
     beq_self_eq_true, ite_true]
 
@@ -689,25 +710,25 @@ theorem decNFK_ordinary {w : Word} {x : NestFieldKind} (h : decNFK w = some x) :
          · cases h)
       | (cases h; done)
 
-theorem u4W_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (hM : PosMemo dn vis fe)
+theorem u4W_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     {m0 : Mem} (ko nF cl : Word) (ks : List NestFieldKind) (hcl : H cl)
     (hks : decKL (truncM m0) ko.toNat nF.toNat = some ks) :
     ∀ (n : Nat) (m m' : Mem) (a : AState) (i : Word) (r : List Word), 2 ^ 31 + n ≤ coreWalkFuel →
-    u4W n m ko nF cl i = some (r, m') → StageR dn vis fe m a → IWGrow m0 m → i.toNat ≤ nF.toNat →
+    u4W n m ko nF cl i = some (r, m') → StageR dn vis fe m a → IWGrow m0 m → i.toNat ≤ nF.toNat → PosMR m →
     ∃ b a', ((List.range' i.toNat (nF.toNat - i.toNat)).anyM (u4F ks (decI cl))).run a = .ok (b, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) := by
+      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) ∧ PosMR m' := by
   intro n
   obtain ⟨hkl, hkw⟩ := decKL_get hks
   induction n with
   | zero => intro m m' a i r _ h; simp [u4W] at h
   | succ n ih =>
-    intro m m' a i r hn h hS hg0 hi
+    intro m m' a i r hn h hS hg0 hi hP
     by_cases hd : nF ≤ i
     · rw [u4W_done (h := hd)] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       have : nF.toNat - i.toNat = 0 := by have := UInt64.le_iff_toNat_le.mp hd; omega
-      rw [this]; exact ⟨false, a, rfl, hS, IWGrow.refl _, rfl⟩
+      rw [this]; exact ⟨false, a, rfl, hS, IWGrow.refl _, rfl, hP⟩
     have hlt : i.toNat < nF.toNat := by
       have : ¬ nF.toNat ≤ i.toNat := fun e => hd (UInt64.le_iff_toNat_le.mpr e); omega
     obtain ⟨w, hw, hx⟩ := hkw i.toNat hlt
@@ -739,31 +760,33 @@ theorem u4W_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (h
       | some pr =>
       obtain ⟨su, m1⟩ := pr
       simp only [ustWf] at h; rw [hu] at h
-      obtain ⟨mp, hmp⟩ := hM.hb m a hS
-      obtain ⟨b1, a1, hrun1, hsu, -, hS1, hg1⟩ := ustW_ok n m m1 a cl 0 i su mp (by omega)
+      obtain ⟨mp, hmp⟩ := hP.hb
+      obtain ⟨b1, a1, hrun1, hsu, hM1, hS1, hg1⟩ := ustW_ok n m m1 a cl 0 i su mp (by omega)
         (by have := nF.toNat_lt; simp; omega) hcl hS hmp hu
+      have hP1 := hP.setHb (ustW_mfr hu) hM1
       by_cases hs : su ≠ 0
       · rw [u4K_hit (h := hs)] at h
         simp only [Option.some.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
         have hb1 : b1 = true := by cases b1 <;> simp_all
         subst hb1
-        refine ⟨true, a1, ?_, hS1, hg1, rfl⟩
+        refine ⟨true, a1, ?_, hS1, hg1, rfl, hP1⟩
         simp only [u4F, hord, hw0, Bool.false_eq_true, ite_false, StateT.run_bind]
         simp only [UInt64.toNat_zero] at hrun1
         rw [hrun1]; rfl
       · rw [u4K_miss (h := hs)] at h
         have hb1 : b1 = false := by cases b1 <;> simp_all
         subst hb1
-        obtain ⟨b, a', hrun, hS', hg', hr⟩ := ih m1 m' a1 (i + 1) r (by omega) h hS1 (hg0.trans hg1) (by rw [hi1]; omega)
-        refine ⟨b, a', ?_, hS', hg1.trans hg', hr⟩
+        obtain ⟨b, a', hrun, hS', hg', hr, hP'⟩ := ih m1 m' a1 (i + 1) r (by omega) h hS1 (hg0.trans hg1)
+          (by rw [hi1]; omega) hP1
+        refine ⟨b, a', ?_, hS', hg1.trans hg', hr, hP'⟩
         simp only [u4F, hord, hw0, Bool.false_eq_true, ite_false, StateT.run_bind]
         simp only [UInt64.toNat_zero] at hrun1
         rw [hrun1, except_ok_bind]; simpa using hrun
     · rw [u4W_ord (h := hd) (hk := hk)] at h
       have hw0 : (w == 0) = true := by rw [← hrd]; simpa using hk
-      obtain ⟨b, a', hrun, hS', hg', hr⟩ := ih m m' a (i + 1) r (by omega) h hS hg0 (by rw [hi1]; omega)
-      refine ⟨b, a', ?_, hS', hg', hr⟩
+      obtain ⟨b, a', hrun, hS', hg', hr, hP'⟩ := ih m m' a (i + 1) r (by omega) h hS hg0 (by rw [hi1]; omega) hP
+      refine ⟨b, a', ?_, hS', hg', hr, hP'⟩
       simp only [u4F, hord, hw0, ite_true, StateT.run_bind]
       simpa using hrun
 
@@ -825,12 +848,12 @@ def roK {β : Type} (c : NestCtx) (hi : Nat) (cur : EIdx) (K : Bool → AM β) :
     else pure false
   K resOk
 
-theorem roW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (hM : PosMemo dn vis fe)
+theorem roW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     {k : Nat} {m m' : Mem} {a : AState} {ctx hi cur : Word} {c : NestCtx} {r : List Word}
     (h : roW k m ctx hi cur = some (r, m')) (hS : StageR dn vis fe m a) (hU : UCtx dn vis fe m ctx c)
-    (hcur : H cur) :
+    (hcur : H cur) (hP : PosMR m) :
     ∃ b a', (∀ {β : Type} (K : Bool → AM β), (roK c hi.toNat (decI cur) K).run a = (K b).run a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) := by
+      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) ∧ PosMR m' := by
   cases k with
   | zero => simp [roW] at h
   | succ k =>
@@ -845,7 +868,7 @@ theorem roW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (h
   · rw [if_pos h0] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
-    refine ⟨false, a1, fun K => ?_, hS1, hg1, rfl⟩
+    refine ⟨false, a1, fun K => ?_, hS1, hg1, rfl, hP.fr (resHeadW_mfr hrh)⟩
     simp only [roK, StateT.run_bind, hrun1, except_ok_bind, h0, bne_self_eq_false, Bool.false_eq_true, ite_false]
     rfl
   rw [if_neg h0] at h
@@ -873,10 +896,10 @@ theorem roW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (h
   rw [hoa, roK2_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
-  obtain ⟨b, hrunoa, hS3, hg3, hr3⟩ := noaW_ok dn fe vis _ _ _ _ c.names hM.no k m2 m3 a2 _ _ args r3 hoa hS2
-    hn2 hne2 hdA (fun j hj => by omega)
+  obtain ⟨b, hrunoa, hS3, hg3, hr3, hP3⟩ := noaW_ok dn fe vis _ _ _ _ c.names k m2 m3 a2 _ _ args r3 hoa hS2
+    hn2 hne2 hdA (fun j hj => by omega) ((hP.fr (resHeadW_mfr hrh)).stub (by decide) hga)
   rw [hnP2] at hrunoa
-  refine ⟨!b, a2, ?_, hS3, (hg1.trans hg2).trans hg3, ?_⟩
+  refine ⟨!b, a2, ?_, hS3, (hg1.trans hg2).trans hg3, ?_, hP3⟩
   · intro β K; simp only [roK, StateT.run_bind, hrun1, except_ok_bind, hne, ite_true, hrun2, hrunoa]; rfl
   · rw [hr3]; cases b <;> rfl
 
@@ -994,7 +1017,7 @@ namespace L.Ind
 
 open L.Arena
 
-theorem p2ctW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (hM : PosMemo dn vis fe)
+theorem p2ctW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     {k : Nat} {m m' : Mem} {a : AState} {no nl us dO dL hO hL cv hi : Word} {names : List NIdx}
     {ds holes : List EIdx} {cvv : IConstantVal} {r : List Word}
     (h : p2ctW k m vis no nl us dO dL hO hL cv hi = some (r, m')) (hS : StageR dn vis fe m a)
@@ -1002,13 +1025,13 @@ theorem p2ctW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
     (hnn : dL.toNat + names.length < 2 ^ 64)
     (hds : decHL m dO.toNat dL.toNat = some ds) (hdsb : dO.toNat + dL.toNat ≤ iwTop m)
     (hho : decHL m hO.toNat hL.toNat = some holes) (hhob : hO.toNat + hL.toNat ≤ iwTop m)
-    (hcv : decCVp m cv.toNat = some cvv) (hcv3 : cv.toNat + 3 < 2 ^ 64) :
+    (hcv : decCVp m cv.toNat = some cvv) (hcv3 : cv.toNat + 3 < 2 ^ 64) (hP : PosMR m) :
     ∃ cty a1 crest a2 ty a3 so a4, nameNodup cvv.levelParams = true ∧
       (instLPFast coreWalkFuel cvv.levelParams (decI us) cvv.type).run a = .ok (cty, a1) ∧
       (ConRon.Arena.nestCrest names (decI us) ds holes cty).run a1 = .ok (some crest, a2) ∧
       (inferTypeCore .verified fe checkFuel hi.toNat crest).run a2 = .ok (ty, a3) ∧
       (ensureSortCore .verified fe checkFuel hi.toNat ty).run a3 = .ok (so, a4) ∧
-      StageR dn vis fe m' a4 ∧ IWGrow m m' ∧ H (r.headD 0) ∧ decI (r.headD 0) = crest := by
+      StageR dn vis fe m' a4 ∧ IWGrow m m' ∧ H (r.headD 0) ∧ decI (r.headD 0) = crest ∧ PosMR m' := by
   cases k with
   | zero => simp [p2ctW] at h
   | succ k =>
@@ -1070,11 +1093,13 @@ theorem p2ctW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   | some pr3 =>
   obtain ⟨r3, m3⟩ := pr3
   rw [hpc, p2ctK3_eq] at h
-  obtain ⟨M, G, g, hR⟩ := hM.rf m2 a1 hS2
-  obtain ⟨x, a2, hrun2, hx, M', G', hS3, hg3, -⟩ := pcrW_ok dn fe vis k m2 m3 a1 no nl us dO dL hO hL (r2.headD 0)
-    r3 names ds holes M G g hpc hS2 hcH hus
+  have hP2 : PosMR m2 := (hP.fr (posmemo_cvLpsW_mfr hlp)).stub (by decide) hil
+  obtain ⟨M, G, g, hR⟩ := hP2.rf
+  obtain ⟨mp2, hM2⟩ := hP2.rp
+  obtain ⟨x, a2, hrun2, hx, ⟨M', G', hS3, hg3, hR3, -⟩, hM3⟩ := pcrW_ok dn fe vis k m2 m3 a1 no nl us dO dL hO hL
+    (r2.headD 0) r3 names ds holes M G g hpc hS2 hcH hus
     (by rw [decHL_agree (RdS.of_grow hg12) (fun j hj => by omega)]; exact hdec) (by omega)
-    (by have := hg12.1; omega) hnn hM.rp
+    (by have := hg12.1; omega) hnn mp2 hM2
     (by rw [decHL_agree (RdS.of_grow hg12) (fun j hj => by omega)]; exact hds) (by have := hg12.1; omega)
     (by rw [decHL_agree (RdS.of_grow hg12) (fun j hj => by omega)]; exact hho) (by have := hg12.1; omega) hR
   rw [hcd] at hrun2
@@ -1102,6 +1127,7 @@ theorem p2ctW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   rw [hxd'] at hrun3
   rw [htyd] at hrun4
   exact ⟨cty, a1, crest, a2, ty, a3, so, a4, hnod, hrun1, hrun2, hrun3, hrun4, hS5,
-    ((hg12.trans hg3).trans hg4).trans hg5, by simpa using hxH', by simpa using hxd'⟩
+    ((hg12.trans hg3).trans hg4).trans hg5, by simpa using hxH', by simpa using hxd',
+    ((hP2.setCr (pcrW_mfr hpc) hM3 ⟨M', G', g, hR3⟩).stub (by decide) hit2).stub (by decide) hes⟩
 
 end L.Ind
