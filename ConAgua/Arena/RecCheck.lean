@@ -508,19 +508,26 @@ def blockRecWantAuxNames : FunDecl := lfn (n0, auxl) locals (wo, j, nm) {
   return (wo, auxl)
 }
 
+/-- `ptr_names_copy(d, s, l)`: `IW[d + j] := EREC[IW[IW[s + j]]]` for `j < l`, recursively (the
+constants' names of a slice of pointers whose word `0` is a constant pointer). -/
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:362-397 ConRon.Arena.targetRecPins
+@[l_impl ConRon.Arena.targetRecPins]
+def ptrNamesCopy : FunDecl := lfn (d, s, l) locals (ptr, cv, u) {
+  if l == 0 { return 0 };
+  ptr := IW.u64[s];
+  cv := IW.u64[ptr];
+  IW.u64[d] := EREC.u64[cv];
+  u := call ptr_names_copy(d + 1, s + 1, l - 1);
+  return 0
+}
+
 /-- The constants' names of a slice of pointers whose word `0` is a constant pointer (a
 `RecShape`'s `cvR`, or a `(cv, nF)` constructor entry). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:362-397 ConRon.Arena.targetRecPins
 @[l_impl ConRon.Arena.targetRecPins]
-def ptrListNames : FunDecl := lfn (o, l) locals (go, j, ptr, nm) {
+def ptrListNames : FunDecl := lfn (o, l) locals (go, u) {
   go := call iw_alloc(l);
-  j := 0;
-  while j < l {
-    ptr := IW.u64[o + j];
-    nm := EREC.u64[IW.u64[ptr]];
-    IW.u64[go + j] := nm;
-    j += 1
-  };
+  u := call ptr_names_copy(go, o, l);
   return (go, l)
 }
 
@@ -884,7 +891,7 @@ def recCheckFns : Prog :=
    ("target_major_of_outside", targetMajorOfOutside), ("target_major_of", targetMajorOf),
    ("target_pin_tys", targetPinTys), ("target_major_pins", targetMajorPins),
    ("block_rec_split_own_aux", blockRecSplitOwnAux),
-   ("block_rec_want_aux_names", blockRecWantAuxNames), ("ptr_list_names", ptrListNames),
+   ("block_rec_want_aux_names", blockRecWantAuxNames), ("ptr_names_copy", ptrNamesCopy), ("ptr_list_names", ptrListNames),
    ("target_rec_pins_names", targetRecPinsNames), ("target_rec_pins_split", targetRecPinsSplit),
    ("target_rec_pins", targetRecPins), ("target_ctor_at", targetCtorAt),
    ("erase_each", eraseEach), ("target_k53_tele", targetK53Tele),

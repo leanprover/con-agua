@@ -2,6 +2,7 @@ import ConAgua.Arena.RecCheck
 import ConAgua.Arena.RecCheckSpec
 import ConAgua.Arena.IndSumSpec2
 import ConAgua.Arena.RecGenSpec2
+import ConAgua.Arena.IndPartsSpec2
 
 /-!
 # More refinements of `RecCheck` (lane `indproofs`, helper `recb`)
@@ -168,5 +169,166 @@ theorem targetMajorOfOutsideClosed_refines (p : Prog)
   obtain ⟨b, a', hrun, hpost⟩ := ckcW_ok dn fe n _ _ a₀ vis nP dso dsl xs r hm hS hd hb ht
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst, hres]; exact hpost⟩
+
+
+/-! ## `ptr_list_names`: the names of a slice of constant-headed records
+
+`ptr_names_copy` is `member_names_copy`'s loop (same model `nameCopyW`); `ptr_list_names` is
+`block_shape_member_names` with the slice a parameter. -/
+
+theorem ptrNamesCopy_spec (p : Prog) (hp : p.lookup "ptr_names_copy" = some ptrNamesCopy) (n : Nat) :
+    ∀ (s₀ : St) (d s l : Word),
+    ⦃fun st => st = s₀⦄ invoke p (exec p n) "ptr_names_copy" [d, s, l]
+    ⦃fun _ s' => LocEq s' s₀ ∧ nameCopyW n s₀.mem d s l = some s'.mem; ⊤⦄ := by
+  induction n with
+  | zero =>
+    intro s₀ d s l; rw [invoke_eq _ hp]; simp only [callFn, ptrNamesCopy]; vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ d s l
+    rw [invoke_eq _ hp]
+    simp only [callFn, ptrNamesCopy]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
+      finish (gen := 20)
+
+/-- The model of `ptr_list_names`. -/
+def ptrNamesW (n : Nat) (m : Mem) (o l : Word) : Option (List Word × Mem) :=
+  match allocW m l with
+  | none => none
+  | some (q, m1) =>
+    match nameCopyW (n - 1) m1 q o l with
+    | none => none
+    | some m2 => some ([q, l], m2)
+
+theorem ptrListNames_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hc : p.lookup "ptr_names_copy" = some ptrNamesCopy)
+    (hp : p.lookup "ptr_list_names" = some ptrListNames) (n : Nat) (s₀ : St) (o l : Word) :
+    ⦃fun st => st = s₀⦄ invoke p (exec p n) "ptr_list_names" [o, l]
+    ⦃fun r s' => LocEq s' s₀ ∧ ptrNamesW n s₀.mem o l = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, ptrListNames]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have hmod : ∀ a m1 m2, allocW s₀.mem l = some (a, m1) → nameCopyW n m1 a o l = some m2 →
+        ptrNamesW (n + 1) s₀.mem o l = some ([a, l], m2) := by
+      intro a m1 m2 h1 h2
+      simp [ptrNamesW, h1, h2]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        iwAlloc_specW p ha n, ptrNamesCopy_spec p hc n] <;>
+      finish (gen := 20)
+
+
+/-- **`ptr_list_names` copies the names**: given the slice's records' constants. -/
+theorem ptrNamesW_dec {n : Nat} {m m' : Mem} {o l : Word} {r : List Word} (cvs : List IConstantVal)
+    (h : ptrNamesW n m o l = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64)
+    (hc : 200 < (m.arr64 CTL).size) (hlen : cvs.length = l.toNat)
+    (hsrc : o.toNat + l.toNat ≤ iwTop m)
+    (hcv : ∀ j (hj : j < cvs.length), ∃ v a, iwN m (o.toNat + j) = some v ∧ v < iwTop m ∧
+      iwN m v = some a ∧ decCVp m a = some cvs[j]) :
+    r = [rdW (m.arr64 CTL) 200, l] ∧
+    decHL m' (rdW (m.arr64 CTL) 200).toNat l.toNat = some (cvs.map (·.name)) ∧
+    IWGrow m m' ∧ MemFrame [IW] [200] m m' ∧
+    (rdW (m.arr64 CTL) 200).toNat + l.toNat = iwTop m' := by
+  have htl : iwTop m < 2 ^ 64 := UInt64.toNat_lt _
+  simp only [ptrNamesW] at h
+  cases hal : allocW m l with
+  | none => simp [hal] at h
+  | some qm =>
+  obtain ⟨q, m1⟩ := qm
+  obtain ⟨hq', hm1, hroom⟩ := allocW_facts hal hsz
+  simp only [hal] at h
+  cases hcp : nameCopyW (n - 1) m1 q o l with
+  | none => simp [hcp] at h
+  | some m2 =>
+  simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  subst hq' hm1
+  generalize hqq : rdW (m.arr64 CTL) 200 = q at *
+  have hIW := allocMem_IW m l
+  have hEE : (allocMem m l).arr64 EREC = m.arr64 EREC := by
+    simp only [allocMem]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  have hptr' : ∀ j < l.toNat,
+      (rdW ((allocMem m l).arr64 IW) (UInt64.ofNat (o.toNat + j))).toNat < q.toNat := by
+    intro j hj
+    obtain ⟨v, a, hv, hvb, -, -⟩ := hcv j (by omega)
+    obtain ⟨hv', -⟩ := iwN_rdW hv (by omega)
+    rw [hIW, hv']
+    simp only [iwTop, hqq] at hvb
+    rw [UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)]; exact hvb
+  obtain ⟨hA, hS, hW, hG⟩ := nameCopyW_get (n - 1) _ _ _ _ _ hcp
+    (by simp only [iwTop, hqq] at hsrc; omega)
+    (by rw [hIW]; exact hroom) (by rw [hIW]; exact hsz) hptr'
+  rw [hIW] at hS hG
+  rw [hEE] at hG
+  have hfr : MemFrame [IW] [200] m m2 :=
+    (allocMem_frame m _).trans (copy_frame hA (by rw [hS, hIW]) hW)
+  have htop : rdW (m2.arr64 CTL) 200 = q + l := by
+    rw [hA CTL (by decide), allocMem_top m _ hc, hqq]
+  have hsum : (q + l).toNat = q.toNat + l.toNat := by
+    rw [UInt64.toNat_add]; simp; omega
+  refine ⟨rfl, ?_, ?_, hfr, ?_⟩
+  · have := decHL_of_get m2 (cvs.map (·.name)) q.toNat (fun j hj => by
+      have hj' : j < cvs.length := by simpa using hj
+      obtain ⟨v, a, hv, hvb, hva, hcvj⟩ := hcv j hj'
+      have hGj := hG (q.toNat + j)
+      rw [if_pos (by omega)] at hGj
+      have e2 : q.toNat + j - q.toNat = j := by omega
+      rw [e2] at hGj
+      obtain ⟨hv', -⟩ := iwN_rdW hv (by omega)
+      rw [hv'] at hGj
+      obtain ⟨hva', hab⟩ := iwN_rdW hva (by omega)
+      rw [hva'] at hGj
+      obtain ⟨w, hw, hwl', hnm'⟩ := decCV_name (a := erA m) (by simpa [decCVp] using hcvj)
+      have hrd : rdW (m.arr64 EREC) (UInt64.ofNat a) = w := by
+        have : (UInt64.ofNat a).toNat = a := by simp; omega
+        have hw' : (m.arr64 EREC)[a]? = some w := hw
+        simp [rdW, this, hw']
+      rw [hrd] at hGj
+      simp only [List.getElem_map]
+      simp only [iwH, hd?, iwA, hGj, hwl', if_true, Option.bind_some]
+      simp [hwl', hnm'])
+    simpa [hlen] using this
+  · refine iwGrow_of_frame hfr (N := l) ?_ ?_ hsz ?_
+    · rw [htop, hqq]
+    · simp only [iwTop, hqq]; omega
+    · intro i hi
+      simp only [iwTop, hqq] at hi
+      rw [hG, if_neg (by omega)]
+  · simp only [iwTop, htop, hsum]
+
+
+/-- **`ptr_list_names` is `xs.map (cvOf · |>.name)`** for any slice decoded by `f` whose records
+lead with a constant pointer (`RecShape`: `decRS`/`.cvR`, constructor entry: `decCN`/`.1`). Through
+`iw_alloc`; a piece of `targetRecPins` and `targetMajorNfs`' callers. -/
+theorem ptrListNames_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hc : p.lookup "ptr_names_copy" = some ptrNamesCopy)
+    (hp : p.lookup "ptr_list_names" = some ptrListNames) (n : Nat) (s₀ : St) (o l : Word)
+    {α : Type} (f : Nat → Option α) (cvOf : α → IConstantVal) (xs : List α)
+    (hf : ∀ pp x, f pp = some x → ∃ a, iwN s₀.mem pp = some a ∧ decCVp s₀.mem a = some (cvOf x))
+    (hd : decPL s₀.mem f o.toNat l.toNat = some xs) (hsz : (s₀.mem.arr64 IW).size < 2 ^ 64)
+    (hcl : 200 < (s₀.mem.arr64 CTL).size) (hsrc : o.toNat + l.toNat ≤ iwTop s₀.mem)
+    (hptr : ∀ j v, j < l.toNat → iwN s₀.mem (o.toNat + j) = some v → v < iwTop s₀.mem) :
+    ⦃fun st => st = s₀⦄ invoke p (exec p n) "ptr_list_names" [o, l]
+    ⦃fun r s' => LocEq s' s₀ ∧ r = [rdW (s₀.mem.arr64 CTL) 200, l] ∧
+      decHL s'.mem (rdW (s₀.mem.arr64 CTL) 200).toNat l.toNat = some (xs.map (fun x => (cvOf x).name)) ∧
+      IWGrow s₀.mem s'.mem ∧ MemFrame [IW] [200] s₀.mem s'.mem ∧
+      (rdW (s₀.mem.arr64 CTL) 200).toNat + l.toNat = iwTop s'.mem; ⊤⦄ := by
+  refine triple_post (ptrListNames_spec p ha hc hp n s₀ o l) ?_
+  rintro r s' ⟨hl, h⟩
+  have hlen := decPL_length s₀.mem hd
+  have := ptrNamesW_dec (xs.map cvOf) h hsz hcl (by simpa using hlen) hsrc (fun j hj => by
+    have hj' : j < l.toNat := by simpa [hlen] using hj
+    obtain ⟨v, y, hv, hy, hget⟩ := decPL_get l.toNat o.toNat xs hd j hj'
+    obtain ⟨a, hva, hcv⟩ := hf v y hy
+    refine ⟨v, a, hv, hptr j v hj' hv, hva, ?_⟩
+    have hy' : xs[j]'(by omega) = y := by
+      simpa [List.getElem?_eq_getElem (show j < xs.length by omega)] using hget
+    simpa [List.getElem_map, hy'] using hcv)
+  obtain ⟨h1, h2, h3, h4, h5⟩ := this
+  refine ⟨hl, h1, ?_, h3, h4, h5⟩
+  rw [List.map_map] at h2
+  exact h2
 
 end L.Ind
