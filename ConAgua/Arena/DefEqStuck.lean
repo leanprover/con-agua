@@ -1,5 +1,6 @@
 import ConAgua.Arena.InferBodyDisp
 import ConAgua.Arena.DefEqLeaves2
+import ConAgua.Arena.CoreDen
 
 /-!
 # The stuck and irrelevance side of `DefEq.lean`: `prop_irrel` (lane `defeq`, helper `defeq-top`)
@@ -78,12 +79,14 @@ def ReservedContainsOK (p : Prog) : Prop :=
     (M : ModeMaps) (eb x : Word), CoreS dn s₀.mem a₀ vis fe M eb → HW x →
     CoreSpec p n "reserved_contains_w" [x] (reservedContainsT (decI x)) decBool s₀ a₀ dn vis fe M eb
 
-/-- `lvls_eq_c(us, vs)` refines `lvlsEq?` under `CoreS` alone. Lane `whnf`'s `lvlsEqC_refines`
-proves it when both lists denote (`denoteLs`); that a stored level list denotes is an invariant
-`CoreS` does not carry yet (the gap of `InferProjOK`). -/
+/-- `lvls_eq_c(us, vs)` refines `lvlsEq?` at two level lists that read back (lane `whnf`'s
+`lvlsEqC_refines`; `lvlsEqCH_of`, `DefEqKnot.lean`). The callers' lists are stored constants'
+(`StoreDen.constLs`). -/
 def LvlsEqCH (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb us vs : Word), CoreS dn s₀.mem a₀ vis fe M eb → HW us → HW vs →
+    (∃ lu, denoteLs a₀.store.lss (decI us) = some lu) →
+    (∃ lv, denoteLs a₀.store.lss (decI vs) = some lv) →
     CoreSpec p n "lvls_eq_c" [us, vs] (lvlsEq? (decI us) (decI vs)) (fun r => decO (r.headD 0))
       s₀ a₀ dn vis fe M eb
 
@@ -138,6 +141,8 @@ structure StuckCallees (p : Prog) : Prop where
   reservedContains : ReservedContainsOK p
   towerSlots : TowerSlotsAllOK p
   lvlsEqC : LvlsEqCH p
+  /-- Stored levels read back (`StoreDen.lean`). -/
+  den : CoreDen
   strLitSupported : StrLitSupportedOK p
   strLitCtor : StrLitCtorOK p
   /-- `strLitSupported` keeps every stored node's view (`supKeep_twin`, a `sorry` in `WhnfBase`). -/
