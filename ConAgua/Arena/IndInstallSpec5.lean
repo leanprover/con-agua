@@ -256,4 +256,83 @@ theorem pdmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     rw [hf1, ha2, hnm'] at hr2
     exact ⟨b2, a, hr2, by rw [hR2]; rfl, rfl, hM2, hS2, hg1.trans hg2⟩
 
+/-! ## `block_raw_rec` -/
+
+theorem partsAnyM_cons {m : Type → Type} [Monad m] {α : Type} (f : α → m Bool) (a : α) (l : List α) :
+    List.anyM f (a :: l) = (do let b ← f a; if b then pure true else List.anyM f l) := by
+  simp only [List.anyM]; congr 1; funext b; cases b <;> rfl
+
+/-- After the element's test. -/
+def brrK (n : Nat) (rest : Mem → Option (List Word × Mem)) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m1) => if r.headD 0 ≠ 0 then some ([1], m1) else pdmK3 (rest m1)
+
+/-- **The model of `block_raw_rec_member`.** -/
+def brmW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _, _, _ => none
+  | n + 1, m, no, nl, coff, clen =>
+    if clen = 0 then some ([0], m)
+    else brrK n (fun m1 => brmW n m1 no nl (coff + 1) (clen - 1))
+      (pdmW n m no nl CWF (rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) coff) + 3)))
+
+/-- **The model of `block_raw_rec_go`.** -/
+def brgoW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _, _, _ => none
+  | n + 1, m, no, nl, moff, mlen =>
+    if mlen = 0 then some ([0], m)
+    else brrK n (fun m1 => brgoW n m1 no nl (moff + 1) (mlen - 1))
+      (brmW n m no nl (rdW (m.arr64 IW) (rdW (m.arr64 IW) moff + 2))
+        (rdW (m.arr64 IW) (rdW (m.arr64 IW) moff + 3)))
+
+section arms
+variable (n : Nat) (m m1 : Mem) (no nl coff clen moff mlen : Word) (r : List Word)
+  (rest : Mem → Option (List Word × Mem))
+theorem brrK_hit (h : r.headD 0 ≠ 0) : brrK n rest (some (r, m1)) = some ([1], m1) := by
+  simp only [brrK]; exact if_pos h
+theorem brrK_miss (h : ¬ r.headD 0 ≠ 0) : brrK n rest (some (r, m1)) = pdmK3 (rest m1) := by
+  simp only [brrK]; exact if_neg h
+theorem brmW_nil (h : clen = 0) : brmW (n + 1) m no nl coff clen = some ([0], m) := by simp [brmW, h]
+theorem brmW_cons (h : clen ≠ 0) : brmW (n + 1) m no nl coff clen =
+    brrK n (fun m1 => brmW n m1 no nl (coff + 1) (clen - 1))
+      (pdmW n m no nl CWF (rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) coff) + 3))) := by
+  simp [brmW, h]
+theorem brgoW_nil (h : mlen = 0) : brgoW (n + 1) m no nl moff mlen = some ([0], m) := by simp [brgoW, h]
+theorem brgoW_cons (h : mlen ≠ 0) : brgoW (n + 1) m no nl moff mlen =
+    brrK n (fun m1 => brgoW n m1 no nl (moff + 1) (mlen - 1))
+      (brmW n m no nl (rdW (m.arr64 IW) (rdW (m.arr64 IW) moff + 2))
+        (rdW (m.arr64 IW) (rdW (m.arr64 IW) moff + 3))) := by simp [brgoW, h]
+end arms
+attribute [ind_grind] brrK_hit brrK_miss brmW_nil brmW_cons brgoW_nil brgoW_cons
+
+theorem brm_spec (p : Prog) (hM : MaProg p) (hpd : p.lookup "pi_doms_mention_any" = some piDomsMentionAny)
+    (hp : p.lookup "block_raw_rec_member" = some blockRawRecMember) (n : Nat) :
+    ∀ (s₀ : St) (no nl coff clen : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_raw_rec_member" [no, nl, coff, clen]
+    ⦃fun r s' => LocEq s' s₀ ∧ brmW n s₀.mem no nl coff clen = some (r, s'.mem); ⊤⦄ := by
+  induction n with
+  | zero => intro s₀ no nl coff clen; rw [invoke_eq _ hp]; simp only [callFn, blockRawRecMember]; vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ no nl coff clen
+    rw [invoke_eq _ hp]
+    simp only [callFn, blockRawRecMember]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, pdm_spec p hM hpd n, ih] <;>
+      finish (gen := 20) [rdW_eq, CWF]
+
+theorem brgo_spec (p : Prog) (hM : MaProg p) (hpd : p.lookup "pi_doms_mention_any" = some piDomsMentionAny)
+    (hm : p.lookup "block_raw_rec_member" = some blockRawRecMember)
+    (hp : p.lookup "block_raw_rec_go" = some blockRawRecGo) (n : Nat) :
+    ∀ (s₀ : St) (no nl moff mlen : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_raw_rec_go" [no, nl, moff, mlen]
+    ⦃fun r s' => LocEq s' s₀ ∧ brgoW n s₀.mem no nl moff mlen = some (r, s'.mem); ⊤⦄ := by
+  induction n with
+  | zero => intro s₀ no nl moff mlen; rw [invoke_eq _ hp]; simp only [callFn, blockRawRecGo]; vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ no nl moff mlen
+    rw [invoke_eq _ hp]
+    simp only [callFn, blockRawRecGo]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, brm_spec p hM hpd hm n, ih] <;>
+      finish (gen := 20) [rdW_eq]
+
 end L.Ind
