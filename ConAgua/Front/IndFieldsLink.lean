@@ -287,4 +287,94 @@ theorem pushLW_facts (m m' : Mem) (x o : Word) (hR : Room m) (h : pushLW m x = s
     · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
       exact a7 IFR (by decide)
 
+/-! ## `ifl_ids` -/
+
+theorem idsLoopM_facts (b : Array UInt8) : ∀ (m : Mem) (i : Word) (m' : Mem),
+    idsLoopM b m i = some m' → Room m →
+    topN m' IFL = topN m IFL + (itemsN b i).length ∧ Room m' ∧ Grow m m' ∧
+      m'.arr64 IFR = m.arr64 IFR ∧
+      (∀ k (hk : k < (itemsN b i).length), wd m' IFL (topN m IFL + 1 + k) = (itemsN b i)[k]) ∧
+      (∀ x ∈ itemsN b i, x ≠ NONE) := by
+  intro m i
+  fun_induction idsLoopM b m i with
+  | case1 m i h1 h2 =>
+    intro m' h hR; cases h
+    rw [L.Front.Fields.itemsN_close _ _ h1 h2]
+    exact ⟨rfl, hR, IGrow.refl _ _ _ _, rfl, fun k hk => by simp at hk, by simp⟩
+  | case2 m i h1 h2 h3 h4 h5 => intro m' h; cases h
+  | case3 m i h1 h2 h3 h4 h5 h6 => intro m' h; cases h
+  | case4 m i h1 h2 h3 h4 h5 o m₁ h6 ih =>
+    intro m' h hR
+    obtain ⟨p1, p2, p3, p4, p5, p6⟩ := pushLW_facts m m₁ _ o hR h6
+    obtain ⟨i1, i2, i3, i4, i5, i6⟩ := ih m' h p3
+    rw [L.Front.Fields.itemsN_digit _ _ h1 h2 h3 h4]
+    refine ⟨by rw [i1, p2]; simp; omega, i2, p4.trans i3, i4.trans p6, fun k hk => ?_, ?_⟩
+    · cases k with
+      | zero =>
+        simp only [Nat.add_zero, List.getElem_cons_zero]
+        rw [i3.keep IFL (.inr rfl) _ (by omega) (by rw [p2]; exact Nat.le_refl _) (by simp), p5]
+      | succ k =>
+        simp only [List.getElem_cons_succ]
+        rw [← i5 k (by simpa using hk), p2]; congr 1; omega
+    · intro x hx
+      simp only [List.mem_cons] at hx
+      rcases hx with rfl | hx
+      · exact h5
+      · exact i6 x hx
+  | case5 m i h1 h2 h3 h4 => intro m' h; cases h
+  | case6 m i h1 h2 h3 ih =>
+    intro m' h hR
+    rw [L.Front.Fields.itemsN_other _ _ h1 h2 h3]
+    exact ih m' h hR
+  | case7 m i h1 =>
+    intro m' h hR; cases h
+    rw [L.Front.Fields.itemsN_end _ _ h1]
+    exact ⟨rfl, hR, IGrow.refl _ _ _ _, rfl, fun k hk => by simp at hk, by simp⟩
+
+theorem lsCntN_len (b : Array UInt8) : ∀ (i cnt : Word),
+    cnt.toNat + (itemsN b i).length < 2 ^ 64 →
+    (lsCntN b i cnt).toNat = cnt.toNat + (itemsN b i).length := by
+  intro i cnt
+  fun_induction lsCntN b i cnt with
+  | case1 i cnt h1 h2 => intro _; rw [L.Front.Fields.itemsN_close _ _ h1 h2]; rfl
+  | case2 i cnt h1 h2 h3 h4 ih =>
+    intro hlt
+    rw [L.Front.Fields.itemsN_digit _ _ h1 h2 h3 h4] at hlt ⊢
+    simp only [List.length_cons] at hlt ⊢
+    have hc : (cnt + 1).toNat = cnt.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+    rw [ih (by rw [hc]; omega), hc]; omega
+  | case3 i cnt h1 h2 h3 h4 => intro _; rw [L.Front.Fields.itemsN_noprog _ _ h1 h2 h3 h4]; rfl
+  | case4 i cnt h1 h2 h3 ih =>
+    intro hlt; rw [L.Front.Fields.itemsN_other _ _ h1 h2 h3] at hlt ⊢; exact ih hlt
+  | case5 i cnt h1 => intro _; rw [L.Front.Fields.itemsN_end _ _ h1]; rfl
+
+/-- **`ifl_ids(v)`**: the items of the list at `v` appended to `IFL` above its top. -/
+theorem idsM_facts (b : Array UInt8) (m m' : Mem) (v : Word) (hR : Room m)
+    (h : idsM b m v = some m') :
+    topN m' IFL = topN m IFL + (listN b v).length ∧ Room m' ∧ Grow m m' ∧
+      m'.arr64 IFR = m.arr64 IFR ∧
+      (∀ k (hk : k < (listN b v).length), wd m' IFL (topN m IFL + 1 + k) = (listN b v)[k]) ∧
+      (∀ x ∈ listN b v, x ≠ NONE) ∧
+      (rdW (m.arr64 IFL) 0 + 1).toNat = topN m IFL + 1 ∧
+      (lsCntN b (v + 1) 0).toNat = (listN b v).length := by
+  unfold idsM at h
+  cases ha : allocW m IFL 0 with
+  | none => rw [ha, idsK0_none] at h; cases h
+  | some om =>
+    obtain ⟨o, m₁⟩ := om
+    rw [ha, idsK0_some] at h
+    obtain ⟨a1, a2, a3, a4, -, -, a7⟩ := allocW_facts m m₁ IFL (.inr rfl) 0 o hR ha
+    have a2' : topN m₁ IFL = topN m IFL := by rw [a2]; rfl
+    obtain ⟨i1, i2, i3, i4, i5, i6⟩ := idsLoopM_facts b m₁ (v + 1) m' h a3
+    have hlist : listN b v = itemsN b (v + 1) := rfl
+    have hs := i2.2.2.2
+    have hs2 := i2.2.1
+    refine ⟨by rw [hlist, i1, a2'], i2, a4.trans i3, i4.trans (a7 IFR (by decide)),
+      fun k hk => by rw [← a2']; exact i5 k hk, i6, ?_, ?_⟩
+    · have ht : (rdW (m.arr64 IFL) 0).toNat = topN m IFL := rfl
+      have := hR.2.2.2
+      have := hR.2.1
+      rw [UInt64.toNat_add, ht, UInt64.toNat_one, Nat.mod_eq_of_lt (by omega)]
+    · rw [lsCntN_len b _ _ (by rw [hlist] at *; simp; omega)]; simp [hlist]
+
 end L.Front.Ind
