@@ -806,7 +806,7 @@ theorem iotaRecCmp_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
   have hS3 : CoreS dn m3 _ vis fe M2 eb := hS2.frame_stk fr3 (by simp) (by simp)
   have e3 : m3.arr64 EREC = E := by rw [fr3.1 EREC (by simp) (by decide), e2]
   rw [e3] at hW
-  have hxs3 : SpineR m3 (ra.headD 0) (ra.tail.headD 0) xs.toArray := SpineR.of_spn hxs
+  have hxs3 : SpineR m3 (ra.headD 0) (ra.tail.headD 0) xs.toArray := SpineR.of_spn_core hxs
     (by rw [fr3.1 SPN (by simp) (by decide)])
   have hxb := hxs.bound
   have hsz2 : (m2.arr64 SPN).size = (s.mem.arr64 SPN).size := gr2.2.1.trans gr1.2.1
