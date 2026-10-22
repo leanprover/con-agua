@@ -184,4 +184,95 @@ theorem lvIntern_spec (n : Nat) : ∀ (s₀ : St) (q : Word),
 
 end spec
 
+/-! ## `lv_sub_int(u, ko, kc, vo, vc)`: substitute, then intern -/
+
+/-- con-ron: ConRon/Arena/ExprOps.lean:2079-2087 ConRon.Arena.substLMemoAt
+con-ron: ConRon/Arena/Core.lean:1942-1950 ConRon.Arena.substLevelsAt -/
+def lvSubInt : FunDecl := lfn (u, ko, kc, vo, vc) locals (x, h) {
+  CTL.u64[192] := 0;
+  x := call lv_substl(u, ko, kc, vo, vc);
+  h := call lv_intern(x);
+  return h
+}
+
+/-- After the substitution: intern its result. -/
+def subIntK (n : Nat) : Option (Word × Mem) → Option (Word × Mem)
+  | none => none
+  | some (x, m₁) => lvInternW n m₁ x
+
+@[arena_grind =] theorem subIntK_some (n : Nat) (x : Word) (m₁ : Mem) :
+    subIntK n (some (x, m₁)) = lvInternW n m₁ x := rfl
+
+/-- **The model of `lv_sub_int`.** -/
+def lvSubIntW : Nat → Mem → Word → Word → Word → Word → Word → Option (Word × Mem)
+  | 0, _, _, _, _, _, _ => none
+  | n + 1, m, u, ko, kc, vo, vc => subIntK n (substLW EREC POOL n (m.set64 CTL 192 0) u ko kc vo vc)
+
+/-! ## `caps_never_zero(po, pc, us, swd, so, sc)` -/
+
+/-- con-ron: ConRon/Arena/Core.lean:340-346 ConRon.Arena.capsNeverZero -/
+@[l_impl ConRon.Arena.capsNeverZero]
+def capsNeverZeroL : FunDecl := lfn (po, pc, us, swd, so, sc) locals (vo, vc, x) {
+  (vo, vc) := call ls_node(us);
+  CTL.u64[192] := 0;
+  x := call lv_substpw(swd, so, sc, po, pc, vo, vc);
+  return x
+}
+
+/-- **The model of `caps_never_zero`.** -/
+def capsNeverZeroW : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (Word × Mem)
+  | 0, _, _, _, _, _, _, _ => none
+  | n + 1, m, po, pc, us, swd, so, sc => substPWW EREC POOL EREC n (m.set64 CTL 192 0) swd so sc po pc ((lsNodeW m us).headD 0)
+    ((lsNodeW m us).tail.headD 0)
+
+/-- The functions `lv_sub_int` and `caps_never_zero` call. -/
+structure LvSubProg (p : Prog) : Prop extends LvInternProg p where
+  lv_sub_int : p.lookup "lv_sub_int" = some lvSubInt
+  lv_substl : p.lookup "lv_substl" = some lvSubstL
+  lv_lookup : p.lookup "lv_lookup" = some lvLookupLP
+  lh_mk : p.lookup "lh_mk" = some lhMk
+  caps_never_zero : p.lookup "caps_never_zero" = some capsNeverZeroL
+  ls_node : p.lookup "ls_node" = some lsNode
+  lv_substpw : p.lookup "lv_substpw" = some lvSubstPW
+  lv_spw : p.lookup "lv_spw" = some lvSpwLP
+  lv_zero : p.lookup "lv_zero" = some lvZero
+  lh_push : p.lookup "lh_push" = some lhPush
+
+section spec2
+variable (p : Prog) (hL : LvSubProg p)
+include hL
+
+theorem lvSubInt_spec (n : Nat) (s₀ : St) (u ko kc vo vc : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "lv_sub_int" [u, ko, kc, vo, vc]
+    ⦃fun r s' => LocEq s' s₀ ∧ lvSubIntW n s₀.mem u ko kc vo vc = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hL.lv_sub_int]
+  simp only [callFn, lvSubInt]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64,
+        lvSubstL_spec EREC POOL p hL.lv_lookup hL.lv_node hL.lh_mk hL.lv_substl n,
+        lvIntern_spec p hL.toLvInternProg n] <;>
+      finish [lvSubIntW]
+
+theorem capsNeverZero_spec (n : Nat) (s₀ : St) (po pc us swd so sc : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "caps_never_zero" [po, pc, us, swd, so, sc]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      capsNeverZeroW n s₀.mem po pc us swd so sc = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hL.caps_never_zero]
+  simp only [callFn, capsNeverZeroL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, level_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, lsNode_spec p hL.ls_node n,
+        lvSubstPW_spec EREC POOL EREC p hL.lv_lookup hL.lv_node hL.lh_push hL.lv_zero hL.lv_spw
+          hL.lv_substpw n] <;>
+      finish (gen := 20) [capsNeverZeroW]
+
+end spec2
+
 end L.Arena
