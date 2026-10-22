@@ -446,8 +446,11 @@ def classGenMotiveTy : FunDecl := lfn (g, c, d) locals (ok, fo, fl, maj, srt, bo
   (ok, fo, fl, maj) := call class_gen_major(g, c, d);
   if ok == 0 { return (0, 0) };
   srt := call intern_sort(IW.u64[g + 11]);
+  if 4294967296 <= srt { abort };
   body2 := call mk_forall(maj, srt);
+  if 4294967296 <= body2 { abort };
   (bo, bl) := call fvar_type_ds(fo, fl);
+  if d + bl < d { abort };
   r := call close_telescope(bo, bl, d, body2);
   return (1, r)
 }
