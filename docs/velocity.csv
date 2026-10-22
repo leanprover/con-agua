@@ -130,4 +130,6 @@ date,lane,model,work_min,overhead_min,note
 2026-10-22,defeq2,opus,10,10,"landing 5: KnotCallees.findProj/projFound from whnf3 proofs; 9 fields left"
 2026-10-22,whnf3,opus,15,10,"landing 4: tower_slots_all on the real find_proj (tsW_ok generalized, tagged statement sorry-free given ProjProg); CoreS.den and instLP plans"
 2026-10-22,defeq2,opus,5,5,"towerSlots plugged (whnf3 landing 4); KnotCallees 8 fields left"
+2026-10-22,decls3,opus,25,2,"alpd_go memo-hit fix (returned the probe depth); checker_prog --check: Prog.lean up to date"
+2026-10-22,indproofs2,opus,30,30,"landing 9: helper pos2 merged (rest of IndPos2, models/specs); 25 census tags removed whose theorems assumed memo WF in every StageR state (vacuous); phase 8: 73 proven / 72 sorry"
 2026-10-22,whnf4,opus,8,4,"landing 1: whnf3-next instLP family landed under its own names (lp_lookup/lp_substl/lp_spw/lp_substpw); Prog 9 stubs, coreFns 533"

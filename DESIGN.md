@@ -7477,3 +7477,36 @@ grows (the memo library's capacity rule, as every L memo). Refinement: not yet (
   to `DefEqKnot` + `KnotWF`: ~5 min wall, ~12 CPU-min (`WhnfBase` changed, so every whnf/defeq/infer
   module elaborates once); per module: `WhnfDeltaRefine2` 10 s, `WhnfCoreLoop` 8 s,
   `WhnfIotaRefine4` 5 s, `WhnfCoreProj` 4 s, `DefEqKnot` 1.2 s.
+
+### Landing 9: helper `pos2`; vacuous memo hypotheses untagged
+* Helper `pos2` (3 h): word models, specs and relational lemmas for the rest of `IndPos2`
+  (`nestGrowGroup`, `nestAcceptGroup`, the `nestPos` block `nestFields`/`nestCtors`/`nestFrame`/
+  `nestContNew`/`nestContKey`/`nestCont`/`nestPos`, `nestRoot`, `nestSeeds`; L: `nest_root`,
+  `nest_seeds` to self-recursion, `nest_seeds_fuel` split out and added to `checkerProg`).
+* **Finding (lead's review): a family of vacuous hypotheses.** Its census theorems take
+  `PosMemo dn vis fe`, which says *every* memory in the stage relation carries well-formed memos
+  (`∀ m a, StageR dn vis fe m a → ∃ mp, noMR m mp`, likewise `dp`, `hb`, `rp`, `RfInv`). `StageR`
+  says nothing about arrays 201‥208, so this is false (a memory with garbage in a memo array is
+  still in `StageR`), and a theorem assuming it proves nothing. Helper `pos`'s landing-4 theorems
+  had the same pattern (`hMstage`, `hMra`, `hMno`): `nestCanonCrest`, `nestRootCanon`,
+  `nestUniformOk`, `nestUniform`, `nestInstType`, `nestGrowGroup`, `nestCrest`, `nestSeedOf`.
+  **All of them are untagged** (kept as lemmas, with a comment; the census shows them `written`),
+  25 tags in all. The fix is to thread the memo relation of the *current* memory through the posts
+  (as `hasLooseBVarBGo_refines` and the `mentionsAnyGo` walks do: the memo relation in the pre,
+  `∃ mp', …MR m' mp'` in the post, `stubM_memoFrame` across stubs) instead of quantifying over all
+  stage states; or to add "the memos are well formed" (a memory-only `∃ mp` form, plus a weak
+  form that holds for zeroed memory and gives `MemoRV` after a clear) to `StageR` and `LoopR`.
+* Census (master `e49af3c`+ this lane): phase 8 **73 proven, 72 sorry, 70 written, 8 todo**
+  (the untagging moved ~8 targets from `sorry` back to `written`); totals 703 proven / 116 sorry.
+### What discharging `CvCanonSpec`/`CiCanonSpec` needs (lane `decls3`, open)
+
+Canon's theorems (`cvCanonEq_refines`, `ciCanonEq_refines`) take, beyond `StageR` and the records'
+decodings, `PoolSmall m` and `LitInj a`. `PoolSmall` follows from `StageR` (`LitR`'s `PoolOK`:
+the pool is below `2^63`), and decoding in `erA m` transfers to `erecP m` (`ArrExt.decCV`/`decCI`
+with `erecP_ext`). **`LitInj a` does not follow from `StageR`**: it is con-ron's
+`EWFAt.view_inj` (the twin store's cons maps are consistent and the tiers fresh), i.e. a
+consequence of `StateOK a`. So the arms need `StateOK` at the comparison: carried by `LoopR` (the
+twin's `FoldOK` has it) and kept across the arms' earlier callees (`find_pinned`'s reads keep the
+state; `rom_ci`'s interns need con-ron's `intern*` well-formedness lemmas, or a `StateOK` clause in
+the ROM stubs' `KeepPost`). This is the same gap as `lvlEqStub_spec`'s `TwinOK`: the stage
+relation should carry the twin's well-formedness (`StateOK`, which gives `NStoreWF` too).
