@@ -4915,3 +4915,57 @@ only (lane `induct` found the same by hand). Afterwards `check` passes at `12752
 * `scripts/provenance.py check` must pass before landing (a second; no build).
 * A `-- con-ron: CHANGED since …` line on your code: compare your L code and proofs with the
   printed diff (or `git -C _tmp/ref/con-ron diff <old> <new> -- proof/<path>`), fix, delete the line.
+
+## Phase 8 proofs, bottom up (2026-10-22, lane `indproofs`)
+
+The lane proves the inductive stage's L code against the twin with lane `induct`'s template
+(`IndSumSpec.lean`'s `struct_ps_at_go`: word model, `vcgen` spec with callee models, relational
+lemma by fuel induction, census theorem by `triple_post`), leaves first, with three sonnet
+helpers (`parts`: `IndParts`/`IndInstall`; `rec`: `Rec*`; `pos`: `IndPos*`) and the lead on
+`IndSum` and the shared library.
+
+### Shared pieces (lead)
+* `IndMaster.lean`: master's callees under the stage relation, sorry-free — `internBVar_stage`,
+  `internFVar_stage`, `internSort_stage`, `internConst_stage`, `mkApp/Lam/Forall/Let/Proj_stage`,
+  `internParam/Zero/Max_stage` (from master's `_D`/`_ok`/`*intern_correct` lemmas and
+  `StageR.of_walk`: a writer below array 64 and `CTL[64]` whose twin keeps caches and pins keeps
+  `StageR`), `consW_stage` (`sl_cons`), `allocW_stage` (`iw_alloc`), `DerR.lvl` (`DerR` reads the
+  expression tables only). With these a master callee enters a proof exactly as a stub does, but
+  without `sorry`; no helper needed a `sorry`'d master stub.
+* `IWOK` (part of `StageR`) now also carries `IW`/`EREC` lengths below `2^64` and `CTL[200]` in
+  range: an allocation after a stub call needs them, and a stub's post (`KeepPost`) only carries
+  `StageR`.
+* `IndLibSpec`: `getW`/`getDW` (`sl_get`, `sl_getd`); `consW_dec`/`slCons_dec` are kind-generic.
+
+### The template, and where it needed changes
+* **Twins without equation lemmas.** Structural recursion that matches under a bind
+  (`whnfTelescope`: `match ← view e', n with`) gets no equation lemma. Workaround
+  (`IndSumSpec2.whnfTelescope_eq`): an own arm function (`wtArm`, the arms verbatim) and the
+  unfolding `delta f; dsimp only [Nat.brecOn, Nat.brecOn.go, f._f]`, then `funext` under the
+  two binds and `cases` on the view (`rfl` per arm). The matchers differ, so no plain `rfl`.
+* **`while` loops become self-recursion** mirroring the twin's list recursion
+  (`field_doms_resolve`, `idx_args_resolve`, and several in the helpers' modules); then the fuel
+  induction applies directly. The recursion costs a call frame per element.
+* **Handle bounds after an interning.** Master's intern models carry no `< 2^32` bound on the
+  result; where the next callee needs `H r`, the L code gets the template's guard
+  `if 4294967296 <= r { abort }` (a capacity abort; `whnf_telescope`, `param_levels_go`, and
+  helpers' sites).
+* Twins equal up to the error message (`checkStructDomsAt` vs `checkBlockDomsAt`): one
+  `ok`-run transfer lemma by induction, the model reused (`sdomsW = domsW` with the results
+  dropped).
+* Pitfalls: a `local notation "V"` does not survive into the next `namespace` block (it becomes
+  an auto-bound variable); `set` is Mathlib; `ViewR` uses `getD i 0`, models `tail.headD 0`.
+
+### Numbers (first landing, 01:53)
+* Census phase 8: **34 proven, 15 sorry (through stubs only), 166 written, 8 todo** (before: 15
+  proven, 1 sorry, 199 written); totals 336 proven / 67 sorry of 1352.
+* Lead (`IndSumSpec2.lean`, 1.3k lines): `check_struct_doms_at`, `field_doms_resolve`,
+  `idx_args_resolve`, `struct_proj_arg_p`, `struct_ps_at`, `struct_proj_ps`, `whnf_telescope`,
+  `param_levels_go`, `param_levels`. Helpers: see their landing lines below.
+* Proof lines: ~6.4k added for ~40 `@[refines]` theorems over ~330 L lines, **~19 proof lines
+  per L line** (the template's model + spec + relational lemma; the relational lemma is two thirds).
+  Every spec file checks in 5–40 s; a `vcgen` spec is usually one `finish (gen := 20)`, the
+  relational lemmas are hand-written case splits on the model's continuations.
+
+### `sorry`s
+None new: every `sorry` a refinement inherits is a stub's (`IndStubs.lean`).
