@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndPosSpec6
+import ConAgua.Arena.IndPos2SpecF
 
 /-! # `nestSeedOf` (lane `indproofs2`, helper `pos`): a resolved class's parameters, each through
 `replaceApps` then `replaceFVars (.keyMap params holes)`, written into a fresh slice. -/
@@ -115,21 +116,6 @@ end spec
 
 /-! ### The relational side -/
 
-/-- The `NestCtx` record's `names` and `params` slices end below the top (as sums: `replace_apps`'
-lemmas and `FMOk`'s key maps take them so). -/
-def CtxSl (m : Mem) (p : Nat) : Prop :=
-  (∀ o l, iwN m p = some o → iwN m (p + 1) = some l → o + l ≤ iwTop m) ∧
-  (∀ o l, iwN m (p + 7) = some o → iwN m (p + 8) = some l → o + l ≤ iwTop m)
-
-theorem CtxSl.grow {m m' : Mem} {p : Nat} (h : CtxSl m p) (hin : CtxIn m p (· < iwTop m)) (hg : IWGrow m m') :
-    CtxSl m' p := by
-  have e : ∀ j < 11, iwN m' (p + j) = iwN m (p + j) := fun j hj => posIwN_grow hg (hin.1 j hj)
-  refine ⟨fun o l ho hl => ?_, fun o l ho hl => ?_⟩
-  · rw [show p = p + 0 by omega, e 0 (by omega)] at ho; rw [e 1 (by omega)] at hl
-    exact Nat.le_trans (h.1 o l (by simpa using ho) hl) hg.1
-  · rw [e 7 (by omega)] at ho; rw [e 8 (by omega)] at hl
-    exact Nat.le_trans (h.2 o l ho hl) hg.1
-
 /-- The twin's per-parameter step of `nestSeedOf`. -/
 def sgF (c : NestCtx) (holes : List EIdx) (x : EIdx) : AM EIdx := do
   let y ← ConRon.Arena.replaceApps c.names c.lvls 0 c.nP x
@@ -178,7 +164,7 @@ theorem sgGoW_ok (k : Nat) (hMstage : ∀ (m2 : Mem) (a2 : AState), StageR dn vi
     have r0 : (rdW (m.arr64 IW) ctx).toNat = o := by
       have := rd_iwN (m := m) (p := ctx) (i := 0) (by simpa using ho) (by simp; omega); simpa using this
     have r1 : (rdW (m.arr64 IW) (ctx + 1)).toNat = l := rd_iwN (by simpa using hl) (by simp; omega)
-    rw [r0, r1]; exact hsl'.1 o l ho hl
+    rw [r0, r1]; exact hsl' 0 (by omega) o l (by simpa using ho) (by simpa using hl)
   -- the parameter
   have hoj := hdsb j.toNat hjl
   obtain ⟨hxH, hxd⟩ := rd_iwH (m := m) (p := dO) (i := j)
@@ -253,7 +239,7 @@ theorem sgW_ok (k : Nat) (hMstage : ∀ (m2 : Mem) (a2 : AState), StageR dn vis 
     obtain ⟨o, l, ho, hl, -⟩ := decAt_some hpm
     rw [rd_iwN (m := m) (p := ctx) (i := 7) (by simpa using ho) (by simp; omega),
       rd_iwN (m := m) (p := ctx) (i := 8) (by simpa using hl) (by simp; omega)]
-    exact hsl.2 o l ho hl
+    exact hsl 7 (by omega) o l ho hl
   unfold sgW at h
   cases hr1 : posRecW m [1, rdW (m.arr64 IW) (ctx + 7), rdW (m.arr64 IW) (ctx + 8), hO, hL] with
   | none => rw [hr1] at h; simp [sgA] at h

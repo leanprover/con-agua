@@ -273,30 +273,30 @@ open L.Arena
 
 /-! ## `nest_crest` refines `nestCrest` -/
 
-def crK3 : Option (Word × Mem) → Option (List Word × Mem)
+def pcrK3 : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m3) => some ([1, r], m3)
-def crK2 (k : Nat) (c : Word) : Option (Word × Mem) → Option (List Word × Mem)
+def pcrK2 (k : Nat) (c : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (f, m2) => crK3 (rxW (k + 2) m2 f c)
-def crK1 (k : Nat) (dO dL hO hL : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | some (f, m2) => pcrK3 (rxW (k + 2) m2 f c)
+def pcrK1 (k : Nat) (dO dL hO hL : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r1, m1) => if r1.headD 0 = 0 then some ([0, 0], m1)
-      else crK2 k (r1.tail.headD 0) (posRecW m1 [1, dO, dL, hO, hL])
+      else pcrK2 k (r1.tail.headD 0) (posRecW m1 [1, dO, dL, hO, hL])
 /-- The model of `nest_crest` at exec fuel `k + 3`. -/
-def crW (k : Nat) (m : Mem) (no nl us dO dL hO hL cty : Word) : Option (List Word × Mem) :=
-  crK1 k dO dL hO hL (pccW k m no nl us dL cty)
+def pcrW (k : Nat) (m : Mem) (no nl us dO dL hO hL cty : Word) : Option (List Word × Mem) :=
+  pcrK1 k dO dL hO hL (pccW k m no nl us dL cty)
 
 section arms
 variable (k : Nat) (m1 m2 m3 : Mem) (dO dL hO hL c f r : Word) (r1 : List Word)
-theorem crK3_some : crK3 (some (r, m3)) = some ([1, r], m3) := rfl
-theorem crK2_some : crK2 k c (some (f, m2)) = crK3 (rxW (k + 2) m2 f c) := rfl
-theorem crK1_zero (h : r1.headD 0 = 0) : crK1 k dO dL hO hL (some (r1, m1)) = some ([0, 0], m1) := by
-  simp only [crK1]; rw [if_pos h]
-theorem crK1_ok (h : ¬ r1.headD 0 = 0) : crK1 k dO dL hO hL (some (r1, m1)) =
-    crK2 k (r1.tail.headD 0) (posRecW m1 [1, dO, dL, hO, hL]) := by simp only [crK1]; rw [if_neg h]
+theorem pcrK3_some : pcrK3 (some (r, m3)) = some ([1, r], m3) := rfl
+theorem pcrK2_some : pcrK2 k c (some (f, m2)) = pcrK3 (rxW (k + 2) m2 f c) := rfl
+theorem pcrK1_zero (h : r1.headD 0 = 0) : pcrK1 k dO dL hO hL (some (r1, m1)) = some ([0, 0], m1) := by
+  simp only [pcrK1]; rw [if_pos h]
+theorem pcrK1_ok (h : ¬ r1.headD 0 = 0) : pcrK1 k dO dL hO hL (some (r1, m1)) =
+    pcrK2 k (r1.tail.headD 0) (posRecW m1 [1, dO, dL, hO, hL]) := by simp only [pcrK1]; rw [if_neg h]
 end arms
-attribute [ind_grind] crK3_some crK2_some crK1_zero crK1_ok
+attribute [ind_grind] pcrK3_some pcrK2_some pcrK1_zero pcrK1_ok
 
 /-- The lookups of `nest_crest`. -/
 structure CrLook (p : Prog) : Prop where
@@ -315,7 +315,7 @@ structure CrLook (p : Prog) : Prop where
 
 theorem nestCrest_spec (p : Prog) (L : CrLook p) (k : Nat) (s₀ : St) (no nl us dO dL hO hL cty : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 3)) "nest_crest" [no, nl, us, dO, dL, hO, hL, cty]
-    ⦃fun r s' => LocEq s' s₀ ∧ crW k s₀.mem no nl us dO dL hO hL cty = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ pcrW k s₀.mem no nl us dO dL hO hL cty = some (r, s'.mem); ⊤⦄ := by
   have R := L.rx
   rw [invoke_eq _ L.cr]
   simp only [callFn, nestCrest]
@@ -323,14 +323,14 @@ theorem nestCrest_spec (p : Prog) (L : CrLook p) (k : Nat) (s₀ : St) (no nl us
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       nestCanonCrest_spec p R.ha R.hl R.hk L.ng L.np L.ip L.raf L.rap L.rgo L.rnd L.rcl L.ra L.cc k,
       posRec5_specW p R.ha R.h5 (k + 2), (rxSpec_all p R (k + 2)).2.2.2.2.2.2.2] <;>
-    finish (gen := 20) [crW]
+    finish (gen := 20) [pcrW]
 
 section rel
 variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 
-theorem crW_ok (k : Nat) (m m' : Mem) (a : AState) (no nl us dO dL hO hL cty : Word) (r : List Word)
+theorem pcrW_ok (k : Nat) (m m' : Mem) (a : AState) (no nl us dO dL hO hL cty : Word) (r : List Word)
     (names : List NIdx) (ds holes : List EIdx) (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word)
-    (h : crW k m no nl us dO dL hO hL cty = some (r, m')) (hS : StageR dn vis fe m a) (hcty : H cty)
+    (h : pcrW k m no nl us dO dL hO hL cty = some (r, m')) (hS : StageR dn vis fe m a) (hcty : H cty)
     (hus : H us) (hdec : decHL m no.toNat nl.toNat = some names) (hno : no.toNat + nl.toNat < 2 ^ 64)
     (hit : no.toNat + nl.toNat ≤ iwTop m) (hnn : dL.toNat + names.length < 2 ^ 64)
     (hMstage : ∀ (m2 : Mem) (a2 : AState), StageR dn vis fe m2 a2 → ∃ mp0, rpMR m2 mp0)
@@ -339,10 +339,10 @@ theorem crW_ok (k : Nat) (m m' : Mem) (a : AState) (no nl us dO dL hO hL cty : W
     (hR : RfInv m M G g) :
     ∃ x a', (ConRon.Arena.nestCrest names (decI us) ds holes (decI cty)).run a = .ok (x, a') ∧
       decOE m' r x ∧ RxPost dn fe vis m m' a' M G g := by
-  unfold crW at h
+  unfold pcrW at h
   have hdl := decHL_length m hds
   cases hpc : pccW k m no nl us dL cty with
-  | none => rw [hpc] at h; simp [crK1] at h
+  | none => rw [hpc] at h; simp [pcrK1] at h
   | some p1 =>
   obtain ⟨r1, m1⟩ := p1
   rw [hpc] at h
@@ -352,7 +352,7 @@ theorem crW_ok (k : Nat) (m m' : Mem) (a : AState) (no nl us dO dL hO hL cty : W
   cases x with
   | none =>
     have hz : r1.headD 0 = 0 := hout1
-    rw [crK1_zero (h := hz)] at h
+    rw [pcrK1_zero (h := hz)] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     refine ⟨none, a1, ?_, rfl, hR.post hS1 hg1 (pccW_fr hpc)⟩
@@ -360,12 +360,12 @@ theorem crW_ok (k : Nat) (m m' : Mem) (a : AState) (no nl us dO dL hO hL cty : W
     rw [hdl, hrun1]; rfl
   | some c =>
     obtain ⟨h1, hcH, hcd⟩ := hout1
-    rw [crK1_ok (h := by rw [h1]; decide)] at h
+    rw [pcrK1_ok (h := by rw [h1]; decide)] at h
     cases hrec : posRecW m1 [1, dO, dL, hO, hL] with
-    | none => rw [hrec] at h; simp [crK2] at h
+    | none => rw [hrec] at h; simp [pcrK2] at h
     | some p2 =>
     obtain ⟨f, m2⟩ := p2
-    rw [hrec, crK2_some] at h
+    rw [hrec, pcrK2_some] at h
     obtain ⟨hS2, hg2, hf2, ht2, hget2⟩ := posRecW_stage hrec hS1 (by simp)
     simp only [List.length_cons, List.length_nil] at ht2
     have hg12 := hg1.trans hg2
@@ -379,10 +379,10 @@ theorem crW_ok (k : Nat) (m m' : Mem) (a : AState) (no nl us dO dL hO hL cty : W
         by have := hg12.1; omega⟩, ⟨hO.toNat, hL.toNat, g3, g4, by rw [decHL_grow hg12 hhob]; exact hho,
         by have := hg12.1; omega⟩⟩
     cases hrx : rxW (k + 2) m2 f (r1.tail.headD 0) with
-    | none => rw [hrx] at h; simp [crK3] at h
+    | none => rw [hrx] at h; simp [pcrK3] at h
     | some p3 =>
     obtain ⟨rr, m3⟩ := p3
-    rw [hrx, crK3_some] at h
+    rw [hrx, pcrK3_some] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     obtain ⟨a3, hrun3, hH3, hpost3⟩ := (rxOK_all dn fe vis (k + 2)).2.2.2.2.2.2 m2 m3 a1 f _ _ rr M G g hrx hS2 hfm
@@ -419,7 +419,7 @@ theorem nestCrest_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → O
       ⊤⦄ := by
   refine triple_post (nestCrest_spec p L k s₀ no nl us dO dL hO hL cty) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨x, a', hrun, hout, hpost⟩ := crW_ok dn fe vis k _ _ a₀ no nl us dO dL hO hL cty r names ds holes M G g hm
+  obtain ⟨x, a', hrun, hout, hpost⟩ := pcrW_ok dn fe vis k _ _ a₀ no nl us dO dL hO hL cty r names ds holes M G g hm
     hS hcty hus hdec hno hit hnn hMstage hds hdsb hho hhob hR
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hres]; exact hout, by rw [hst]; exact hpost⟩
