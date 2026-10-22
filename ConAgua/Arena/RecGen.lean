@@ -393,14 +393,8 @@ with the stream's `cvRi`. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:527-547 ConRon.Arena.classRecTyOk
 @[l_impl ConRon.Arena.classRecTyOk]
 def classRecTyOkL : FunDecl := lfn (vis, g, k, rc, cvRi, c)
-    locals (ci, memw, memv, ok, gty, cvp, cvG, r, eq) {
-  ci := call target_major_at(IW.u64[g + 3], IW.u64[g + 4], c);
-  memw := IW.u64[ci + 8];
-  memv := k;
-  if memw != 0 { memv := memw - 1 };
-  if IW.u64[rc + 3] != memv { abort };
-  if IW.u64[rc + 1] != IW.u64[g] + IW.u64[g + 8] { abort };
-  if IW.u64[rc + 2] != IW.u64[rc + 1] + IW.u64[ci + 5] { abort };
+    locals (u, ok, gty, cvp, cvG, r, eq) {
+  u := call class_rec_ty_ok_guards(g, k, rc, c);
   (ok, gty) := call class_gen_rec_ty(g, c);
   if ok == 0 { abort };
   cvp := IW.u64[rc];
@@ -409,6 +403,23 @@ def classRecTyOkL : FunDecl := lfn (vis, g, k, rc, cvRi, c)
   eq := call is_def_eq_core(vis, 0, EREC.u64[cvRi + 3], gty);
   if eq == 0 { abort };
   return cvG
+}
+
+/-- `class_rec_ty_ok_guards(g, k, rc, c)`: `classRecTyOk`'s guards: the record's member, rule
+prefix and major index are the generated ones (aborts where the twin fails; the word sums must not
+wrap). -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:527-547 ConRon.Arena.classRecTyOk
+@[l_impl ConRon.Arena.classRecTyOk]
+def classRecTyOkGuards : FunDecl := lfn (g, k, rc, c) locals (ci, memw, memv) {
+  ci := call target_major_at(IW.u64[g + 3], IW.u64[g + 4], c);
+  memw := IW.u64[ci + 8];
+  memv := k;
+  if memw != 0 { memv := memw - 1 };
+  if IW.u64[rc + 3] != memv { abort };
+  if IW.u64[rc + 1] != IW.u64[g] + IW.u64[g + 8] { abort };
+  if IW.u64[rc + 1] + IW.u64[ci + 5] < IW.u64[rc + 1] { abort };
+  if IW.u64[rc + 2] != IW.u64[rc + 1] + IW.u64[ci + 5] { abort };
+  return 0
 }
 
 /-- `class_rec_tys_ok(vis, g, k, rcs.off, rcs.len, cvs.off, cvs.len, cs.off, cs.len)`: every
@@ -867,6 +878,7 @@ def recGenFns : Prog :=
    ("classes_ctors", classesCtorsL), ("class_majors", classMajorsL),
    ("classes_nfs", classesNfsL), ("class_former_ty", classFormerTyL),
    ("class_const_ok_header", classConstOkHeader), ("class_const_ok", classConstOkL), ("class_rec_ty_ok", classRecTyOkL),
+   ("class_rec_ty_ok_guards", classRecTyOkGuards),
    ("class_rec_tys_ok", classRecTysOkL), ("class_rule_ok_domains", classRuleOkDomains),
    ("class_rule_ok_guards", classRuleOkGuards), ("class_rule_ok", classRuleOkL), ("class_rules_ok", classRulesOkL),
    ("class_recs_rules_ok", classRecsRulesOkL), ("class_stream_recs", classStreamRecsL),
