@@ -505,4 +505,226 @@ theorem ivgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     ex4, hrun5, ex5, if_true, Bool.false_eq_true, if_false, StateT.run_pure]
   rfl
 
+/-- **`lvl_eq_c(u, v)` under the stage relation** (`sorry`): lane `whnf`'s `lvlEqC_refines` proves
+it under `CoreS`, which has the readback-cache invariants and `NStoreWF` that `StageR` lacks; the
+stub `lvl_eq` of lane `indproofs` has the same gap (and calls the uncached `lvl_eq`). -/
+theorem lvlEqCStage_spec (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (u v : Word)
+    (hu : H u) (hv : H v) :
+    RelAM "lvl_eq_c" [u, v] (StageR dn vis fe) (lvlEq? (decI u) (decI v))
+      (KeepPost dn vis fe decLvlEq) := sorry
+
+theorem decVG_words {a : Array Word} {g : Nat} {vg : ValueGroup} (h : decVG a g = some vg) :
+    (∃ wk, a[g]? = some wk ∧ decVK wk.toNat = some vg.kind) ∧ decCV a (g + 1) = some vg.cv ∧
+    ∃ wj, a[g + 5]? = some wj ∧ wj.toNat < 2 ^ 32 ∧ vg.jv = decI wj := by
+  simp only [decVG, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  obtain ⟨k, hk, vk, hvk, cv, hcv, jv, hjv, rfl⟩ := h
+  simp only [nat?, Option.map_eq_some_iff] at hk
+  obtain ⟨wk, hwk, rfl⟩ := hk
+  obtain ⟨wj, hwj, hlt, rfl⟩ := hd?_some hjv
+  exact ⟨⟨wk, hwk, hvk⟩, hcv, wj, hwj, hlt, rfl⟩
+
+theorem decCV_typeW {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV a q = some cv) :
+    ∃ w, a[q + 3]? = some w ∧ w.toNat < 2 ^ 32 ∧ cv.type = decI w := by
+  simp only [decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  obtain ⟨_, _, _, _, ty, hty, rfl⟩ := h
+  exact hd?_some hty
+
+/-- A grown pool keeps every record of the old one. -/
+theorem IWGrow.erecExt {m m' : Mem} (h : IWGrow m m') : ArrExt (erecP m) (erA m') := by
+  intro i v hv
+  simp only [erecP, Array.getElem?_extract] at hv
+  split at hv
+  · rename_i hi
+    simp only [Nat.zero_add] at hv
+    have hi' : i < erTop m := by simp [erTop, erecTop] at hi ⊢; omega
+    simp only [erA]; rw [h.2.2.2 i hi']; exact hv
+  · simp at hv
+
+/-- The memory after `iw_reset` is in the stage relation. -/
+theorem iwReset_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
+    {a : AState} (hS : StageR dn vis fe m a) :
+    StageR dn vis fe (m.set64 CTL 200 0) a ∧ m.set64 CTL 200 0 = m.set64 CTL 200 0 ∧
+      (m.set64 CTL 200 0).arr64 EREC = m.arr64 EREC ∧ erTop (m.set64 CTL 200 0) = erTop m := by
+  have hf : MemFrame [] [200] m (m.set64 CTL 200 0) := MemFrame.setCtl m 200 0
+  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
+  have hE : (m.set64 CTL 200 0).arr64 EREC = m.arr64 EREC := hf.1 EREC (by simp) (by decide)
+  have h129 : erTop (m.set64 CTL 200 0) = erTop m := by simp only [erTop, hf.2.1 129 (by simp)]
+  refine ⟨⟨CheckR.frame_hi (by simp) (by simp) hf hS.1, ?_, ?_, ?_, ?_, ?_⟩, rfl, hE, h129⟩
+  · have hIW := hf.2.2.1 IW
+    simp only [iwTop, rdW_set64]; split
+    · simp
+    · rw [hIW]; exact hI1
+  · rw [h129, hE]; exact hE1
+  · rw [hf.2.2.1 IW]; exact hsz
+  · rw [hE]; exact hEs
+  · rw [hf.2.2.1 CTL]; exact hc
+
+theorem erecP_reset (m : Mem) : erecP (m.set64 CTL 200 0) = erecP m := by
+  have hf : MemFrame [] [200] m (m.set64 CTL 200 0) := MemFrame.setCtl m 200 0
+  simp only [erecP, erecTop, hf.1 EREC (by simp) (by decide), hf.2.1 129 (by simp)]
+
+theorem word_add_toNat (g : Word) (k : Nat) (h : g.toNat + k < 2 ^ 64) :
+    (g + UInt64.ofNat k).toNat = g.toNat + k := by
+  rw [UInt64.toNat_add]; simp; omega
+
+/-- **`check_value_group` refines `checkValueGroup .verified`** at the model level, from the
+memory after `iw_reset`. -/
+theorem cvgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+    {n : Nat} {m m' : Mem} {g : Word} {r : List Word} {vg : ValueGroup}
+    (h : cvgW n m vis g = some (r, m')) (hS : StageR dn vis fe m a)
+    (hg : decVG (erecP m) g.toNat = some vg) :
+    ∃ a', (checkValueGroup V fe vg).run a = .ok ((), a') ∧ StageR dn vis fe m' a' ∧
+      IWGrow (m.set64 CTL 200 0) m' := by
+  cases n with
+  | zero => simp [cvgW] at h
+  | succ n =>
+  rw [cvgW_step, show iwResetW m = some ([], m.set64 CTL 200 0) from rfl, cvgK0_some] at h
+  generalize hm0 : m.set64 CTL 200 0 = m0 at h
+  obtain ⟨hS0, -, hE0, -⟩ := iwReset_stage hS
+  rw [hm0] at hS0 hE0
+  have hP0 : erecP m0 = erecP m := by rw [← hm0]; exact erecP_reset m
+  rw [← hP0] at hg
+  have hEs := hS0.2.2.2.2.1
+  obtain ⟨⟨wk, hwk, hvk⟩, hcv, wj, hwj, hwjl, hjv⟩ := decVG_words hg
+  obtain ⟨wt, hwt, hwtl, hty⟩ := decCV_typeW hcv
+  have hb5 : g.toNat + 5 < (m0.arr64 EREC).size := by
+    have := (Array.getElem?_eq_some_iff.mp (erecP_get hwj)).1; exact this
+  have et : rdW (m0.arr64 EREC) (g + 4) = wt :=
+    rdW_of_get? (k := g.toNat + 4) (by rw [UInt64.toNat_add]; simp; omega)
+      (erecP_get (by simpa [Nat.add_assoc] using hwt))
+  have ev : rdW (m0.arr64 EREC) (g + 5) = wj :=
+    rdW_of_get? (k := g.toNat + 5) (by rw [UInt64.toNat_add]; simp; omega) (erecP_get hwj)
+  rw [et, ev] at h
+  -- `infer_type_core(vis, 0, t)`
+  cases h1 : stubM "infer_type_core" m0 [vis, 0, wt] with
+  | none => rw [h1] at h; simp [cvgK1] at h
+  | some rm1 =>
+  obtain ⟨r1, m1⟩ := rm1
+  rw [h1, cvgK1_some] at h
+  obtain ⟨x1, a1, hrun1, hS1, hg1, hx1l, hx1⟩ :=
+    inferTypeCore_spec dn vis fe 0 wt hwtl m0 m1 a r1 h1 hS0
+  -- `ensure_sort_core(vis, 0, st)`
+  cases h2 : stubM "ensure_sort_core" m1 [vis, 0, r1.headD 0] with
+  | none => rw [h2] at h; simp [cvgK2] at h
+  | some rm2 =>
+  obtain ⟨r2, m2⟩ := rm2
+  rw [h2, cvgK2_some] at h
+  obtain ⟨x2, a2, hrun2, hS2, hg2, hx2l, hx2⟩ :=
+    ensureSortCore_spec dn vis fe 0 (r1.headD 0) hx1l m1 m2 a1 r2 h2 hS1
+  have hext2 : ArrExt (erecP m0) (erA m2) := IWGrow.erecExt (hg1.trans hg2)
+  have ek : rdW (m2.arr64 EREC) g = wk := rdW_of_get? rfl (hext2 _ _ hwk)
+  rw [ek] at h
+  have h00 : (0 : Word).toNat = 0 := rfl
+  rw [h00] at hrun1 hrun2
+  rw [← hty] at hrun1
+  rw [hx1] at hrun2
+  -- the tail: `infer_type_core(vis, 0, v)`, `is_def_eq_core(vis, 0, vt, t)`
+  have tail : ∀ (m5 : Mem) (a5 : AState), StageR dn vis fe m5 a5 → IWGrow m0 m5 →
+      cvgK6 vis wt wj m5 = some (r, m') →
+      ∃ a', (do
+          let vtype ← inferTypeCore V fe checkFuel 0 vg.jv
+          unless ← isDefEqCore V fe checkFuel 0 vtype vg.cv.type do
+            fail (.invalid s!"type mismatch in {vg.kind.word}") : AM Unit).run a5 = .ok ((), a') ∧
+        StageR dn vis fe m' a' ∧ IWGrow m0 m' := by
+    intro m5 a5 hS5 hg5 h
+    rw [cvgK6_eq] at h
+    cases h7 : stubM "infer_type_core" m5 [vis, 0, wj] with
+    | none => rw [h7] at h; simp [cvgK7] at h
+    | some rm7 =>
+    obtain ⟨r7, m7⟩ := rm7
+    rw [h7, cvgK7_some] at h
+    obtain ⟨x7, a7, hrun7, hS7, hg7, hx7l, hx7⟩ :=
+      inferTypeCore_spec dn vis fe 0 wj hwjl m5 m7 a5 r7 h7 hS5
+    cases h8 : stubM "is_def_eq_core" m7 [vis, 0, r7.headD 0, wt] with
+    | none => rw [h8] at h; simp [cvgK8] at h
+    | some rm8 =>
+    obtain ⟨r8, m8⟩ := rm8
+    rw [h8, cvgK8_some] at h
+    obtain ⟨x8, a8, hrun8, hS8, hg8, hx8, -⟩ :=
+      isDefEqCore_spec dn vis fe 0 (r7.headD 0) wt hx7l hwtl m7 m8 a7 r8 h8 hS7
+    by_cases hb8 : r8.headD 0 = 0
+    · rw [if_pos hb8] at h; simp at h
+    rw [if_neg hb8] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨-, rfl⟩ := h
+    have ex8 : x8 = true := by rw [← hx8]; simpa using hb8
+    rw [h00, ← hjv] at hrun7
+    rw [h00, hx7, ← hty] at hrun8
+    refine ⟨a8, ?_, hS8, hg5.trans (hg7.trans hg8)⟩
+    simp only [StateT.run_bind, hrun7, exc_ok_bind', hrun8, ex8, if_true, StateT.run_pure]
+    rfl
+  by_cases hk1 : wk = 1
+  · -- a theorem: the proposition test and the value's guards
+    rw [if_pos hk1] at h
+    subst hk1
+    have hkind : vg.kind = .thm := by simpa [decVK] using hvk.symm
+    cases h3 : pinWordW m2 53 with
+    | none => rw [h3] at h; simp [cvgK3] at h
+    | some rm3 =>
+    obtain ⟨r3, m3⟩ := rm3
+    rw [h3, cvgK3_some] at h
+    have hflag : pinW m2 0 ≠ 0 := by
+      intro h0; simp [pinWordW, h0] at h3
+    simp only [pinWordW, hflag, if_false, Option.some.injEq, Prod.mk.injEq] at h3
+    obtain ⟨rfl, rfl⟩ := h3
+    have hF := hS2.1.pins.full hflag
+    have hz : rdW (m2.arr64 PINS) 53 = pinW m2 53 := by simp [rdW, pinW]
+    simp only [List.headD_cons, hz] at h
+    cases h4 : stubM "lvl_eq_c" m2 [r2.headD 0, pinW m2 53] with
+    | none => rw [h4] at h; simp [cvgK4] at h
+    | some rm4 =>
+    obtain ⟨r4, m4⟩ := rm4
+    rw [h4, cvgK4_some] at h
+    obtain ⟨x4, a4, hrun4, hS4, hg4, hx4⟩ :=
+      lvlEqCStage_spec dn vis fe (r2.headD 0) (pinW m2 53) hx2l hF.lv_lt.2.1 m2 m4 a2 r4 h4 hS2
+    by_cases hb4 : r4.headD 0 ≠ 2
+    · rw [if_pos hb4] at h; simp at h
+    rw [if_neg hb4] at h
+    have ex4 : x4 = some true := by
+      simp only [L.Ind.decLvlEq] at hx4
+      have : r4.headD 0 = 2 := by simpa using hb4
+      rw [this] at hx4
+      cases x4 with
+      | none => simp at hx4
+      | some b =>
+        cases b with
+        | false => simp at hx4
+        | true => rfl
+    cases h5 : ivgW n m4 vis (g + 1) wj with
+    | none => rw [h5] at h; simp [cvgK5] at h
+    | some rm5 =>
+    obtain ⟨r5, m5⟩ := rm5
+    rw [h5, cvgK5_some] at h
+    have hg1' : (g + 1).toNat = g.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+    have hcv4 : decCV (erA m4) (g + 1).toNat = some vg.cv := by
+      rw [hg1']
+      exact ArrExt.decCV (IWGrow.erecExt (hg1.trans (hg2.trans hg4))) hcv
+    obtain ⟨a5, hrun5, hS5, hg5⟩ :=
+      ivgW_ok h5 hS4 hcv4 (by rw [hg1']; omega) hwjl
+    obtain ⟨a', hrun', hS', hg'⟩ :=
+      tail m5 a5 hS5 (hg1.trans (hg2.trans (hg4.trans hg5))) h
+    refine ⟨a', ?_, hS', hg'⟩
+    rw [hx2] at hrun4
+    rw [← hjv] at hrun5
+    rw [ex4] at hrun4
+    rw [hkind] at hrun'
+    simp only [checkValueGroup, StateT.run_bind, hrun1, exc_ok_bind', hrun2, hkind,
+      show (ValueKind.thm == ValueKind.thm) = true from rfl, if_true, zeroLevel,
+      pinZeroLevel_run hF, hrun4, liftFueled, StateT.run_pure, hrun5]
+    simp only [pure_bind, if_true, StateT.run_bind, hrun5, exc_ok_bind']
+    exact hrun'
+  · rw [if_neg hk1] at h
+    have hkind : vg.kind ≠ .thm := by
+      intro hk; rw [hk] at hvk
+      have : wk.toNat = 1 := by
+        unfold decVK at hvk; split at hvk <;> simp_all
+      exact hk1 (UInt64.toNat_inj.mp (by simpa using this))
+    obtain ⟨a', hrun', hS', hg'⟩ := tail m2 a2 hS2 (hg1.trans hg2) h
+    refine ⟨a', ?_, hS', hg'⟩
+    have hb : (vg.kind == ValueKind.thm) = false := by
+      revert hkind; cases vg.kind <;> decide
+    simp only [checkValueGroup, StateT.run_bind, hrun1, exc_ok_bind', hrun2, hb,
+      Bool.false_eq_true, if_false]
+    exact hrun'
+
 end L.Arena
