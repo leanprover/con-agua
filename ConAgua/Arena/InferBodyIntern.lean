@@ -23,7 +23,8 @@ namespace L.Arena
 as a proof argument, which `simp_all` cannot rewrite under; this spec answers `rdW` instead. -/
 
 theorem ld64_rdW_spec (a : ArrId) (i : Word) (s₀ : St) :
-    ⦃fun s => s = s₀⦄ ld64 a i ⦃fun r s' => s' = s₀ ∧ r = rdW (s₀.mem.arr64 a) i; ⊤⦄ := by
+    ⦃fun s => s = s₀⦄ ld64 a i
+    ⦃fun r s' => s' = s₀ ∧ r = rdW (s₀.mem.arr64 a) i ∧ i.toNat < (s₀.mem.arr64 a).size; ⊤⦄ := by
   apply L.M.triple_of_run
   intro s r s' hs hrun
   subst hs
@@ -32,7 +33,7 @@ theorem ld64_rdW_spec (a : ArrId) (i : Word) (s₀ : St) :
   · rename_i h
     simp only [pure] at hrun
     obtain ⟨rfl, rfl⟩ := hrun
-    exact ⟨rfl, by simp [rdW, h]⟩
+    exact ⟨rfl, by simp [rdW, h], h⟩
   · simp [throw, throwThe, MonadExceptOf.throw, StateT.run, StateT.lift] at hrun
     cases hrun
 

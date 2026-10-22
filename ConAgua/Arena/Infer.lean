@@ -253,7 +253,8 @@ def inferForallL : FunDecl := lfn (mode, vis, d, ty, body) locals (tty, w, t, i,
 /-! ## The application spine
 
 The arguments are the slice `(ao, an)` `head_and_args` left on the stack; the accumulator is the
-slice `(co, cn)` above it (`co` the top on entry). The `whnf` re-entry resets it to `#[a]`. -/
+slice `(co, cn)` above it (`co` the top on entry; a top past the stack's end is a capacity
+abort, so that the empty accumulator is a slice). The `whnf` re-entry resets it to `#[a]`. -/
 
 /-- con-ron: ConRon/Arena/Core.lean:2615-2621 ConRon.Arena.defeqArg -/
 @[l_impl ConRon.Arena.defeqArg]
@@ -283,6 +284,7 @@ def inferSpineArgL : FunDecl := lfn (mode, vis, d, a, dom2) locals (ta, ok) {
 def inferSpineL : FunDecl :=
     lfn (mode, vis, d, ty, ao, an) locals (co, cn, i, a, t, x, dom, dom2, ty2, w, z, r) {
   co := CTL.u64[136];
+  if len(SPN.u64) < co { abort };
   cn := 0;
   i := 0;
   while i < an {
@@ -339,6 +341,7 @@ def inferAppL : FunDecl := lfn (mode, vis, d, e) locals (top, hd, ao, an, tf, r)
 def inferSpineIOL : FunDecl :=
     lfn (mode, vis, d, ty, ao, an) locals (co, cn, i, a, t, x, ty2, w, r) {
   co := CTL.u64[136];
+  if len(SPN.u64) < co { abort };
   cn := 0;
   i := 0;
   while i < an {
