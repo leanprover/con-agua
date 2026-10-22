@@ -335,4 +335,52 @@ theorem brgo_spec (p : Prog) (hM : MaProg p) (hpd : p.lookup "pi_doms_mention_an
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, brm_spec p hM hpd hm n, ih] <;>
       finish (gen := 20) [rdW_eq]
 
+/-- The post of the memo walks: the result a `Bool` word, the twin's state kept, a memo left. -/
+def RawR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (m : Mem) (a : AState) :
+    List Word → Bool → Mem → AState → Prop :=
+  fun r b m' a' => r = [if b then 1 else 0] ∧ a' = a ∧ (∃ mp', maMR m' mp') ∧ StageR dn vis fe m' a ∧ IWGrow m m'
+
+/-- **`block_raw_rec_member`'s model refines a member's `ctors.anyM`.** -/
+theorem brmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {no nl : Word}
+    {names : List NIdx} (n : Nat) : ∀ (m : Mem) (a : AState) (coff clen : Word) (cs : List (IConstantVal × Nat))
+    (mp : Std.HashMap EIdx Bool),
+    StageR dn vis fe m a → PSlR decCN cs coff clen m → DecB (fun m => decHL m no.toNat nl.toNat) m names →
+    no.toNat + nl.toNat ≤ iwTop m → maMR m mp →
+    Sim (brmW n m no nl coff clen)
+      (cs.anyM fun c => ConRon.Arena.piDomsMentionAny names coreWalkFuel c.1.type) a
+      (RawR (dn := dn) (vis := vis) (fe := fe) m a) := by
+  induction n with
+  | zero => intro m a coff clen cs mp _ _ _ _ _ r m' h; simp [brmW] at h
+  | succ n ih =>
+    intro m a coff clen cs mp hS hcs hns hnb hM
+    by_cases hl : clen = 0
+    · rw [brmW_nil n m no nl coff clen hl]
+      subst hl; rw [partsPSl_nil hcs]
+      exact Sim.ret ⟨rfl, rfl, ⟨mp, hM⟩, hS, IWGrow.refl _⟩
+    rw [brmW_cons n m no nl coff clen hl]
+    obtain ⟨pc, ⟨cv, nF⟩, cs', rfl, hw, hpb, hc0, hcs'⟩ := partsPSl_cons hcs hl
+    obtain ⟨⟨cvp, hcvp, hcv⟩, -⟩ := decCN_some (show decCN (truncM m) pc = some (cv, nF) from hc0)
+    obtain ⟨hcw, hcvb, -⟩ := partsIwRd hcvp (UInt64.toNat_ofNat_of_lt' hpb)
+    obtain ⟨htyl, htye⟩ := partsCVType hcv (UInt64.toNat_ofNat_of_lt' hcvb)
+    rw [hw, hcw, partsAnyM_cons]
+    have h1 := pdmW_sim (names := names) n m a CWF _ mp hS htyl hns hnb hM
+    rw [CWF_eq, show decE (rdW (m.arr64 EREC) (UInt64.ofNat cvp + 3)) = cv.type from htye] at h1
+    refine Sim.bindK (K := brrK n (fun m1 => brmW n m1 no nl (coff + 1) (clen - 1)))
+      (body := fun r1 m1 => if r1.headD 0 ≠ 0 then some ([1], m1)
+        else pdmK3 (brmW n m1 no nl (coff + 1) (clen - 1))) rfl (fun _ _ => rfl) h1 ?_
+    rintro r1 b m1 a1 ⟨rfl, rfl, ⟨mp1, hM1⟩, hS1, hg1⟩
+    cases b with
+    | true =>
+      simp only [if_true, show (1 : Word) ≠ 0 by decide, List.headD_cons, ne_eq, not_false_eq_true]
+      exact Sim.ret ⟨rfl, rfl, ⟨mp1, hM1⟩, hS1, hg1⟩
+    | false =>
+      simp only [Bool.false_eq_true, if_false, List.headD_cons, ne_eq, not_true_eq_false]
+      refine Sim.congr (op := List.anyM (fun c => ConRon.Arena.piDomsMentionAny names coreWalkFuel c.1.type) cs' >>= pure)
+        ?_ (bind_pure _)
+      refine Sim.bindK (K := pdmK3) (body := fun r m => some ([r.headD 0], m)) rfl (fun _ _ => rfl)
+        (ih m1 a1 (coff + 1) (clen - 1) cs' mp1 hS1 (hcs'.grow decCN_mono hg1) (hns.grow (OMono.decHL _ _) hg1)
+          (Nat.le_trans hnb hg1.1) hM1) ?_
+      rintro r2 b2 m2 a2 ⟨rfl, rfl, hM2, hS2, hg2⟩
+      exact Sim.ret ⟨rfl, rfl, hM2, hS2, hg1.trans hg2⟩
+
 end L.Ind
