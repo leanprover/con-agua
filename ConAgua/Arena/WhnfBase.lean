@@ -132,14 +132,8 @@ theorem PoolGrew.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : Me
   have ht : m'.top = m.top := by
     have := hf.2.1 0 hC
     simp only [rdW] at this
-    simp only [Mem.top]
-    by_cases h0 : 0 < (m.arr64 CTL).size
-    · have h0' : 0 < (m'.arr64 CTL).size := by rw [hf.2.2.1 CTL]; exact h0
-      simp only [h0, h0', getElem?_pos, Option.getD_some] at this ⊢
-      simpa using this
-    · have h0' : ¬ 0 < (m'.arr64 CTL).size := by rw [hf.2.2.1 CTL]; exact h0
-      simp [h0, h0']
-  exact ⟨by rw [ht], by rw [hp], fun j _ => by rw [hp]⟩
+    simpa [Mem.top] using this
+  exact ⟨by rw [ht]; exact Nat.le_refl _, by rw [hp], fun j _ => by rw [hp]⟩
 
 theorem PoolGrew.of_grows {m m' : Mem} (h : Grows m m') : PoolGrew m m' :=
   ⟨h.2.2.1, h.2.2.2.2, h.2.1⟩
@@ -172,7 +166,7 @@ theorem StackKept.trans {m₁ m₂ m₃ : Mem} (h₁ : StackKept m₁ m₂) (h�
     h₁.pool.trans h₂.pool⟩
 
 theorem StackGrew.refl (m : Mem) : StackGrew m m :=
-  ⟨Nat.le_refl _ |> fun _ => UInt64.le_refl _, rfl, fun _ _ => rfl, BKept.refl m, PoolGrew.refl m⟩
+  ⟨UInt64.le_refl _, rfl, fun _ _ => rfl, BKept.refl m, PoolGrew.refl m⟩
 
 theorem StackGrew.trans {m₁ m₂ m₃ : Mem} (h₁ : StackGrew m₁ m₂) (h₂ : StackGrew m₂ m₃) :
     StackGrew m₁ m₃ :=
@@ -181,7 +175,19 @@ theorem StackGrew.trans {m₁ m₂ m₃ : Mem} (h₁ : StackGrew m₁ m₂) (h�
     h₁.bstk.trans h₂.bstk, h₁.pool.trans h₂.pool⟩
 
 theorem StackKept.toGrew {m₁ m₂ : Mem} (h : StackKept m₁ m₂) : StackGrew m₁ m₂ :=
-  ⟨by rw [h.top], h.size, h.below, h.bstk, h.pool⟩
+  ⟨by rw [h.top]; exact UInt64.le_refl _, h.size, h.below, h.bstk, h.pool⟩
+
+/-- **A writer of the spine stack alone** (a slice pushed above the top) grows the stack. -/
+theorem StackGrew.of_spnFrame {m m' : Mem} (hf : MemFrame [SPN] [136] m m') (ht : spTop m ≤ spTop m')
+    (hb : ∀ i : Word, i < spTop m → spW m' i = spW m i) : StackGrew m m' :=
+  ⟨ht, hf.2.2.1 SPN, hb, BKept.of_frame hf (by decide) (by decide),
+    PoolGrew.of_frame hf (by decide) (by decide)⟩
+
+/-- **A writer of the spine stack alone** that puts the top back keeps the stack. -/
+theorem StackKept.of_spnFrame {m m' : Mem} (hf : MemFrame [SPN] [136] m m') (ht : spTop m' = spTop m)
+    (hb : ∀ i : Word, i < spTop m → spW m' i = spW m i) : StackKept m m' :=
+  ⟨ht, hf.2.2.1 SPN, hb, BKept.of_frame hf (by decide) (by decide),
+    PoolGrew.of_frame hf (by decide) (by decide)⟩
 
 /-- **A frame that avoids both stacks and the pool keeps them.** -/
 theorem StackKept.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
@@ -192,18 +198,20 @@ theorem StackKept.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : M
   exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn],
     BKept.of_frame hf hA.2.1 hC.2.1, PoolGrew.of_frame hf hA.2.2 hC.2.2⟩
 
+/-- **Appending to the pool** keeps the stacks. -/
+theorem StackKept.of_grows {m m' : Mem} (hg : Grows m m') : StackKept m m' := by
+  have hgf : MemFrame [POOL] [0] m m' := grows_frame m m' hg
+  have hspn : m'.arr64 SPN = m.arr64 SPN := hgf.1 SPN (by decide) (by decide)
+  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hgf.2.1 136 (by decide)
+  exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn],
+    BKept.of_frame hgf (by decide) (by decide), PoolGrew.of_grows hg⟩
+
 /-- **A frame that avoids both stacks and appends to the pool** (`Grows` on the pool's part). -/
 theorem StackKept.of_frame_grows {m m₁ m' : Mem} {A : List ArrId} {C : List Word}
     (hg : Grows m m₁) (hf : MemFrame A C m₁ m')
     (hA : SPN ∉ A ∧ BSTK ∉ A ∧ POOL ∉ A := by decide)
     (hC : (136 : Word) ∉ C ∧ (137 : Word) ∉ C ∧ (0 : Word) ∉ C := by decide) : StackKept m m' := by
-  have hgf : MemFrame [POOL] [0] m m₁ := grows_frame m m₁ hg
-  have k1 : StackKept m m₁ := by
-    have hspn : m₁.arr64 SPN = m.arr64 SPN := hgf.1 SPN (by decide) (by decide)
-    have h136 : rdW (m₁.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hgf.2.1 136 (by decide)
-    exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn],
-      BKept.of_frame hgf (by decide) (by decide), PoolGrew.of_grows hg⟩
-  exact k1.trans (StackKept.of_frame hf hA hC)
+  exact (StackKept.of_grows hg).trans (StackKept.of_frame hf hA hC)
 
 /-! ## The relation the core runs under -/
 

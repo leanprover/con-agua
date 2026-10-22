@@ -982,7 +982,7 @@ theorem StackKept.of_store {m m' : Mem} (hf : MemFrame L.Rom.StoreA L.Rom.StoreC
       have := List.mem_range.mp hk
       have h' := congrArg UInt64.toNat hkk
       simp [UInt64.toNat_ofNat] at h'; omega)
-  exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
+  exact StackKept.of_frame hf
 
 /-! ## `eta_projs(T, b, nF)` -/
 

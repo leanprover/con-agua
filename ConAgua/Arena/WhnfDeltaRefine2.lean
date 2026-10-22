@@ -408,7 +408,7 @@ theorem StackKept.of_nat_frame {m m' : Mem} (hf : MemFrame natA natC m m') : Sta
   have hspn : m'.arr64 SPN = m.arr64 SPN :=
     hf.1 SPN (by simp [natA, POOL, CREC, CSLOT, SPN]) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp [natC])
-  exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
+  exact StackKept.of_frame hf
 
 theorem keeps_cpl_natPredArm (a : Nat) : Keeps cpl (natPredArm a) := by
   unfold natPredArm
@@ -826,7 +826,7 @@ theorem CoreS.set_cv {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
         (fun x hx => by simp at hx; subst hx; decide) hf,
       fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf,
       hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.2.2.1 145 ▸ hS.bstk⟩,
-    by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
+    StackKept.of_frame hf⟩
 
 
 /-- The model of `const_val_at`. -/

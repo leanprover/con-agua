@@ -445,7 +445,7 @@ theorem StackKept.of_bvar_frame {m m' : Mem} (hf : MemFrame [BREC, BSLOT] [22, 2
   have hspn : m'.arr64 SPN = m.arr64 SPN :=
     hf.1 SPN (by simp [BREC, BSLOT, SPN]) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp)
-  exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
+  exact StackKept.of_frame hf
 
 /-- A slice survives a change that leaves the stack array alone. -/
 theorem SpineR.of_spn_core {m m' : Mem} {off cnt : Word} {xs : Array EIdx} (h : SpineR m off cnt xs)
