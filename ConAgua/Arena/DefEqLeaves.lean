@@ -1,6 +1,6 @@
 import ConAgua.Arena.DefEq
 import ConAgua.Arena.WhnfCoreRefine
-import ConAgua.Arena.IndView
+import ConAgua.Arena.IndPartsSpec3
 
 /-!
 # Refinements of `DefEq.lean`'s small leaves
@@ -34,6 +34,7 @@ structure DefEqLeafProg (p : Prog) : Prop where
   bt : p.lookup "is_bool_true" = some isBoolTrueL
   hproj : p.lookup "head_is_proj" = some headIsProjL
   ion : p.lookup "io_neutral" = some ioNeutralL
+  eager : p.lookup "is_eager_reduce" = some isEagerReduceL
 
 /-! ## Shared lemmas -/
 
@@ -312,5 +313,153 @@ theorem ioNeutral_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St
         true_or, or_true, or_false] <;> rfl
   · exact (decBool_of' hr).symm
   · exact resH_of hw0 hw1 hr
+
+/-! ## `is_eager_reduce` -/
+
+/-- The scratch-tier and count checks of a view (`none`: the L code aborts). -/
+def viewChk (m : Mem) (h c : Word) : Prop :=
+  ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) ∧ ¬ rdW (m.arr64 CTL) (c + tierW h) ≤ idxW h
+
+instance (m : Mem) (h c : Word) : Decidable (viewChk m h c) := by unfold viewChk; infer_instance
+
+theorem viewChk_ok {m : Mem} {h c : Word} (hc : viewChk m h c) : viewOK m h c :=
+  ⟨hc.1, by have := hc.2; simpa using this⟩
+
+/-- `is_eager_reduce`'s last stage: the head `g` of `eagerReduce _ _`. -/
+def eagerG (m : Mem) (g : Word) : Option Word :=
+  if g >>> 28 ≠ 3 then some 0
+  else if tierW g ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
+  else if rdW (m.arr64 CTL) (18 + tierW g) ≤ idxW g then none
+  else some (if rdW (m.arr64 CREC) (idxW g * 4 + tierW g * 2) = rdW (m.arr64 PINS) (1 + 50) then 1
+    else 0)
+
+def eagerF (m : Mem) (f : Word) : Option Word :=
+  if f >>> 28 ≠ 4 then some 0
+  else if tierW f ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
+  else if rdW (m.arr64 CTL) (4 + tierW f) ≤ idxW f then none
+  else eagerG m (rdW (m.arr64 AREC) (idxW f * 4 + tierW f * 2))
+
+/-- The model of `is_eager_reduce`. -/
+def isEagerReduceW (m : Mem) (h : Word) : Option Word :=
+  if h >>> 28 ≠ 4 then some 0
+  else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
+  else if rdW (m.arr64 CTL) (4 + tierW h) ≤ idxW h then none
+  else eagerF m (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2))
+
+section eagerArms
+variable (m : Mem) (h : Word)
+
+theorem eagerG_tag (h3 : ¬ h >>> 28 = 3) : eagerG m h = some 0 := by simp [eagerG, h3]
+theorem eagerG_go (h3 : h >>> 28 = 3) (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
+    (hc : ¬ rdW (m.arr64 CTL) (18 + tierW h) ≤ idxW h) :
+    eagerG m h = some (if rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2) = rdW (m.arr64 PINS) (1 + 50)
+      then 1 else 0) := by
+  simp only [eagerG, h3, hs, hc, ne_eq, not_true_eq_false, ↓reduceIte]
+theorem eagerF_tag (h4 : ¬ h >>> 28 = 4) : eagerF m h = some 0 := by simp [eagerF, h4]
+theorem eagerF_go (h4 : h >>> 28 = 4) (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
+    (hc : ¬ rdW (m.arr64 CTL) (4 + tierW h) ≤ idxW h) :
+    eagerF m h = eagerG m (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2)) := by
+  simp only [eagerF, h4, hs, hc, ne_eq, not_true_eq_false, ↓reduceIte]
+theorem eagerW_tag (h4 : ¬ h >>> 28 = 4) : isEagerReduceW m h = some 0 := by
+  simp [isEagerReduceW, h4]
+theorem eagerW_go (h4 : h >>> 28 = 4) (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
+    (hc : ¬ rdW (m.arr64 CTL) (4 + tierW h) ≤ idxW h) :
+    isEagerReduceW m h = eagerF m (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2)) := by
+  simp only [isEagerReduceW, h4, hs, hc, ne_eq, not_true_eq_false, ↓reduceIte]
+
+end eagerArms
+
+set_option maxHeartbeats 2000000 in
+theorem isEagerReduce_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St) (h : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "is_eager_reduce" [h]
+    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ isEagerReduceW s₀.mem h = some (r.headD 0); ⊤⦄ := by
+  rw [invoke_eq _ hp.eager]
+  simp only [callFn, isEagerReduceL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      pinAt_rd p hp.pinat n] <;>
+    finish [eagerW_tag, eagerW_go, eagerF_tag, eagerF_go, eagerG_tag, eagerG_go, tierW, idxW]
+
+theorem tag_beq_app (h : Word) (hh : HW h) :
+    ((decE h).tag == ETag.app) = decide (h >>> 28 = 4) := tag_beq_w h hh 4 (by decide) _ rfl 4 rfl
+
+theorem isEagerReduce_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFull m a.pins)
+    (h : Word) (hh : HW h) (w : Word) (hW : isEagerReduceW m h = some w) :
+    (isEagerReduce (decE h)).run a = .ok (w != 0, a) := by
+  unfold isEagerReduceW at hW
+  rcases (Classical.em (h >>> 28 = 4)).symm with h4 | h4
+  · simp only [ne_eq, h4, not_false_eq_true, ↓reduceIte, Option.some.injEq] at hW
+    subst hW
+    simp only [isEagerReduce, tag_beq_app h hh, h4, decide_false, Bool.false_eq_true, ↓reduceIte]
+    rfl
+  by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
+  · simp [h4, hs] at hW
+  by_cases hc : rdW (m.arr64 CTL) (4 + tierW h) ≤ idxW h
+  · simp [h4, hs, hc] at hW
+  simp only [h4, hs, hc, ne_eq, not_true_eq_false, ↓reduceIte] at hW
+  have hvo : viewOK m h 4 := ⟨hs, by simpa using hc⟩
+  obtain ⟨-, hf, -⟩ := view_app m a hR h hh hvo h4
+  simp only [isEagerReduce, tag_beq_app h hh, h4, decide_true, ↓reduceIte, StateT.run_bind,
+    viewApp_run', viewApp_ok m a hR h hh hvo, except_ok_bind]
+  generalize rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2) = f at hf hW ⊢
+  unfold eagerF at hW
+  rcases (Classical.em (f >>> 28 = 4)).symm with f4 | f4
+  · simp only [ne_eq, f4, not_false_eq_true, ↓reduceIte, Option.some.injEq] at hW
+    subst hW
+    simp only [tag_beq_app f hf, f4, decide_false, Bool.false_eq_true, ↓reduceIte]
+    rfl
+  by_cases fs : tierW f ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
+  · simp [f4, fs] at hW
+  by_cases fc : rdW (m.arr64 CTL) (4 + tierW f) ≤ idxW f
+  · simp [f4, fs, fc] at hW
+  simp only [f4, fs, fc, ne_eq, not_true_eq_false, ↓reduceIte] at hW
+  have fvo : viewOK m f 4 := ⟨fs, by simpa using fc⟩
+  obtain ⟨-, hg, -⟩ := view_app m a hR f hf fvo f4
+  simp only [tag_beq_app f hf, f4, decide_true, ↓reduceIte, StateT.run_bind,
+    viewApp_run', viewApp_ok m a hR f hf fvo, except_ok_bind]
+  generalize rdW (m.arr64 AREC) (idxW f * 4 + tierW f * 2) = g at hg hW ⊢
+  unfold eagerG at hW
+  rcases (Classical.em (g >>> 28 = 3)).symm with g3 | g3
+  · simp only [ne_eq, g3, not_false_eq_true, ↓reduceIte, Option.some.injEq] at hW
+    subst hW
+    simp only [tag_beq_const g hg, g3, decide_false, Bool.false_eq_true, ↓reduceIte]
+    rfl
+  by_cases gs : tierW g ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
+  · simp [g3, gs] at hW
+  by_cases gc : rdW (m.arr64 CTL) (18 + tierW g) ≤ idxW g
+  · simp [g3, gs, gc] at hW
+  simp only [g3, gs, gc, ne_eq, not_true_eq_false, ↓reduceIte, Option.some.injEq] at hW
+  have gvo : viewOK m g 18 := ⟨gs, by simpa using gc⟩
+  obtain ⟨-, hn, -⟩ := L.Ind.view_const_f m a hR g hg gvo g3
+  have her := hP.names_lt 50 (by decide)
+  rw [pinW_rdW m (1 + 50) (1 + 50) rfl] at her
+  subst hW
+  simp only [tag_beq_const g hg, g3, decide_true, ↓reduceIte, StateT.run_bind, L.Ind.viewConst_run',
+    L.Ind.viewConst_ok m a hR g hg gvo, except_ok_bind, eagerReduceName, pinEagerReduce,
+    PIN_EAGER_REDUCE, pinAt_run hP 50 (by decide), pinW_rdW m (1 + 50) (1 + 50) rfl,
+    StateT.run_pure]
+  rw [decI_beq _ _ hn her]
+  split <;> (rename_i hx; simp only [hx, decide_true, decide_false]; rfl)
+
+/-- **`is_eager_reduce` refines `isEagerReduce`.** -/
+@[refines ConRon.Arena.isEagerReduce]
+theorem isEagerReduce_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb h : Word)
+    (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (hh : HW h) :
+    CoreSpec p (n + 1) "is_eager_reduce" [h] (isEagerReduce (decE h)) decBool s₀ a₀ dn vis fe MM eb := by
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hm, hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
+    (isEagerReduce_spec p hp n s₀ h)
+  subst hs0
+  refine ⟨hloc, ?_⟩
+  rw [hm]
+  have hrun' := isEagerReduce_run _ _ hS.arena.1 hS.pins h hh _ hW
+  refine coreRef_pure hS hrun' rfl ?_
+  unfold isEagerReduceW eagerF eagerG at hW
+  unfold ResH HW
+  repeat' split at hW
+  all_goals simp only [reduceCtorEq, Option.some.injEq] at hW
+  all_goals (rw [← hW]; decide)
 
 end L.Arena
