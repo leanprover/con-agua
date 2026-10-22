@@ -666,7 +666,7 @@ theorem StageR.of_walk {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : I
   have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 :=
     hf.2.1 129 (fun h => by have := hC _ h; simp at this)
   refine ⟨⟨CheckR.of_walk hS.1 hD hf hA hC hk, ?_⟩, ?_⟩
-  · simp only [IWOK, iwTop, erTop, hI, hE, h200, h129]; exact hS.2
+  · simp only [IWOK, iwTop, erTop, hI, hE, h200, h129, hf.2.2.1 CTL]; exact hS.2
   · refine ⟨?_, ?_, fun i _ => by rw [hI], fun i _ => by rw [hE]⟩
     · simp only [iwTop, h200]; exact Nat.le_refl _
     · simp only [erTop, h129]; exact Nat.le_refl _
