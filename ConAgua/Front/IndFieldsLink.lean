@@ -263,6 +263,23 @@ theorem allocW_facts (m m' : Mem) (a : ArrId) (ha : a = IFR ∨ a = IFL) (n o : 
     · exact Nat.le_refl _
   · rw [wd_set64, if_neg (by rintro ⟨-, h5, -⟩; simp at h5; omega)]
 
+/-- What an allocation leaves alone, without room assumptions. -/
+theorem allocW_facts' (m m' : Mem) (a : ArrId) (n o : Word) (h : allocW m a n = some (o, m')) :
+    ∀ c, c ≠ a → m'.arr64 c = m.arr64 c := by
+  unfold allocW at h
+  by_cases h0 : m.len64 a = 0
+  · rw [if_pos h0] at h; cases h
+  rw [if_neg h0] at h
+  by_cases h1 : m.len64 a < rdW (m.arr64 a) 0 + 1
+  · rw [if_pos h1] at h; cases h
+  rw [if_neg h1] at h
+  by_cases h2 : m.len64 a - (rdW (m.arr64 a) 0 + 1) < n
+  · rw [if_pos h2] at h; cases h
+  rw [if_neg h2] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  exact fun c hc => Mem.arr64_set64_ne _ _ _ _ _ hc
+
 theorem pushLW_facts (m m' : Mem) (x o : Word) (hR : Room m) (h : pushLW m x = some (o, m')) :
     o.toNat = topN m IFL + 1 ∧ topN m' IFL = topN m IFL + 1 ∧ Room m' ∧ Grow m m' ∧
       wd m' IFL (topN m IFL + 1) = x ∧ m'.arr64 IFR = m.arr64 IFR := by
@@ -526,18 +543,20 @@ theorem ilist_link {α : Type} (G : USize → List α → Bool → ScanRes (List
     (Rec : Nat → α → Mem → Prop)
     (stab : ∀ t x m m' x0 x1, Rec t x m → 1 ≤ t → t + sz ≤ topN m A + 1 → IGrow m m' A x0 x1 →
       t + sz ≤ x0 → Rec t x m')
+    (Q : Mem → Mem → Prop) (hQr : ∀ m, Q m m) (hQt : ∀ m₁ m₂ m₃, Q m₁ m₂ → Q m₂ m₃ → Q m₁ m₃)
+    (hQa : ∀ m m₁ n q, allocW m A n = some (q, m₁) → Q m m₁)
     (item : ∀ i (m m₁ : Mem) (q : Word) x e (e₂ : Word) m₂, i < b.usize → byteAt b i = 123 →
       S i = .ok x e → Room m → allocW m A (indSizeN sub) = some (q, m₁) →
       objW b.data (flagsW m₁ sub q) i.toUInt64 sub q = some (e₂, m₂) →
       e₂ = e.toUInt64 ∧ Rec q.toNat x m₂ ∧ IGrow m₁ m₂ A q.toNat (q.toNat + sz) ∧ Room m₂ ∧
-        topN m₂ A = topN m₁ A) :
+        topN m₂ A = topN m₁ A ∧ Q m₁ m₂) :
     ∀ (i : USize) (acc : List α) (w : Bool) (m : Mem) (o cnt : Word) (l : List α) (e : USize)
       (r : Word × Word × Word) (m' : Mem),
       G i acc w = .ok l e → Room m → cnt.toNat = acc.length →
       o.toNat + sz * acc.length = topN m A + 1 → RunR Rec A sz m o.toNat acc.reverse →
       listLoopW b.data m sub (indSizeN sub) o cnt i.toUInt64 = some (r, m') →
       r.1 = o ∧ r.2.1.toNat = l.length ∧ r.2.2 = e.toUInt64 ∧ RunR Rec A sz m' o.toNat l ∧
-        Grow m m' ∧ Room m' ∧ o.toNat + sz * l.length = topN m' A + 1 := by
+        Grow m m' ∧ Room m' ∧ o.toNat + sz * l.length = topN m' A + 1 ∧ Q m m' := by
   intro i acc w m o cnt l e r m' h hR hc ho hrun hm
   by_cases hi : i < b.usize
   · have hiW := (lt_usize_iff b h64 hsize i).mp hi
@@ -551,7 +570,7 @@ theorem ilist_link {α : Type} (G : USize → List α → Bool → ScanRes (List
         rcases hk with rfl | rfl <;> revert this <;> decide
       rw [listLoopW_other _ _ _ _ _ _ _ hiW (hne 93 (.inl rfl)) (hne 123 (.inr rfl)),
         ← succ_toUInt64 b h64 hsize] at hm
-      exact ilist_link G S HG sub A hA sz hsz1 hsz hfa Rec stab item (i + 1) acc w m o cnt l e r m' h hR hc
+      exact ilist_link G S HG sub A hA sz hsz1 hsz hfa Rec stab Q hQr hQt hQa item (i + 1) acc w m o cnt l e r m' h hR hc
         ho hrun hm
     by_cases h93 : byteAt b i = 93
     · obtain ⟨rfl, rfl⟩ := HG.close i acc w l e hi h93 h
@@ -559,12 +578,12 @@ theorem ilist_link {α : Type} (G : USize → List α → Bool → ScanRes (List
       simp only [Option.some.injEq, Prod.mk.injEq] at hm
       obtain ⟨rfl, rfl⟩ := hm
       refine ⟨rfl, by simp [hc], (succ_toUInt64 b h64 hsize i).symm, hrun, IGrow.refl _ _ _ _, hR,
-        by simpa using ho⟩
+        by simpa using ho, hQr _⟩
     by_cases h44 : byteAt b i = 44
     · have h' := HG.comma i acc w l e hi h44 h
       rw [listLoopW_other _ _ _ _ _ _ _ hiW (by rw [byteW_eq b h64 hsize, h44]; decide)
         (by rw [byteW_eq b h64 hsize, h44]; decide), ← succ_toUInt64 b h64 hsize] at hm
-      exact ilist_link G S HG sub A hA sz hsz1 hsz hfa Rec stab item (i + 1) acc true m o cnt l e r m' h'
+      exact ilist_link G S HG sub A hA sz hsz1 hsz hfa Rec stab Q hQr hQt hQa item (i + 1) acc true m o cnt l e r m' h'
         hR hc ho hrun hm
     by_cases h123 : byteAt b i = 123
     · obtain ⟨x, e₁, hS, hie, h'⟩ := HG.item i acc w l e hi h123 h
@@ -580,7 +599,7 @@ theorem ilist_link {α : Type} (G : USize → List α → Bool → ScanRes (List
       | some em =>
       obtain ⟨e₂, m₂⟩ := em
       rw [hob, listK2_some] at hm
-      obtain ⟨t1, t2, t3, t4, t5⟩ := item i m m₁ q x e₁ e₂ m₂ hi h123 hS hR hal hob
+      obtain ⟨t1, t2, t3, t4, t5, t6⟩ := item i m m₁ q x e₁ e₂ m₂ hi h123 hS hR hal hob
       subst t1
       rw [if_pos ((lt_toUInt64_iff _ _).mp hie)] at hm
       obtain ⟨a1, a2, a3, a4, -, a6, -⟩ := allocW_facts m m₁ A hA _ q hR hal
@@ -617,9 +636,11 @@ theorem ilist_link {α : Type} (G : USize → List α → Bool → ScanRes (List
           rw [← hq]; exact t2
       have ho' : o.toNat + sz * (x :: acc).length = topN m₂ A + 1 := by
         rw [t5, a2]; simp; rw [Nat.mul_add]; omega
-      obtain ⟨c1, c2, c3, c4, c5, c6, c7⟩ := ilist_link G S HG sub A hA sz hsz1 hsz hfa Rec stab item e₁
-        (x :: acc) false m₂ o (cnt + 1) l e r m' h' t4 hc1 ho' hrun' hm
-      exact ⟨c1, c2, c3, c4, (hg.grow (by omega)).trans c5, c6, c7⟩
+      obtain ⟨c1, c2, c3, c4, c5, c6, c7, c8⟩ := ilist_link G S HG sub A hA sz hsz1 hsz hfa Rec stab
+        Q hQr hQt hQa item e₁ (x :: acc) false m₂ o (cnt + 1) l e r m' h' t4 hc1 ho' hrun' hm
+      have hQ1 : Q m m₁ := hQa _ _ _ _ hal
+      exact ⟨c1, c2, c3, c4, (hg.grow (by omega)).trans c5, c6, c7,
+        hQt _ _ _ hQ1 (hQt _ _ _ t6 c8)⟩
     · exact absurd h (HG.other i acc w l e hi (by simpa using hws) h93 h44 h123)
   · exact absurd h (HG.stop i acc w l e hi)
 termination_by i acc w m o cnt l e r m' => b.size - i.toNat
@@ -638,15 +659,17 @@ theorem ilistW_link {α : Type} (G : USize → List α → Bool → ScanRes (Lis
     (Rec : Nat → α → Mem → Prop)
     (stab : ∀ t x m m' x0 x1, Rec t x m → 1 ≤ t → t + sz ≤ topN m A + 1 → IGrow m m' A x0 x1 →
       t + sz ≤ x0 → Rec t x m')
+    (Q : Mem → Mem → Prop) (hQr : ∀ m, Q m m) (hQt : ∀ m₁ m₂ m₃, Q m₁ m₂ → Q m₂ m₃ → Q m₁ m₃)
+    (hQa : ∀ m m₁ n q, allocW m A n = some (q, m₁) → Q m m₁)
     (item : ∀ i (m m₁ : Mem) (q : Word) x e (e₂ : Word) m₂, i < b.usize → byteAt b i = 123 →
       S i = .ok x e → Room m → allocW m A (indSizeN sub) = some (q, m₁) →
       objW b.data (flagsW m₁ sub q) i.toUInt64 sub q = some (e₂, m₂) →
       e₂ = e.toUInt64 ∧ Rec q.toNat x m₂ ∧ IGrow m₁ m₂ A q.toNat (q.toNat + sz) ∧ Room m₂ ∧
-        topN m₂ A = topN m₁ A)
+        topN m₂ A = topN m₁ A ∧ Q m₁ m₂)
     (v : USize) (m : Mem) (l : List α) (e : USize) (r : Word × Word × Word) (m' : Mem)
     (h : W v = .ok l e) (hR : Room m) (hm : listW b.data m v.toUInt64 sub = some (r, m')) :
     r.2.2 = e.toUInt64 ∧ r.2.1.toNat = l.length ∧ RunR Rec A sz m' r.1.toNat l ∧ Grow m m' ∧
-      Room m' ∧ r.1.toNat = topN m A + 1 ∧ r.1.toNat + sz * l.length = topN m' A + 1 := by
+      Room m' ∧ r.1.toNat = topN m A + 1 ∧ r.1.toNat + sz * l.length = topN m' A + 1 ∧ Q m m' := by
   obtain ⟨h91, hG⟩ := hW v l e h
   have hv : v < b.usize := lt_of_byteAt_ne b h64 hsize v (by rw [h91]; decide)
   have hvW := (lt_usize_iff b h64 hsize v).mp hv
@@ -658,11 +681,11 @@ theorem ilistW_link {α : Type} (G : USize → List α → Bool → ScanRes (Lis
   rw [hal, listK0_some, ← succ_toUInt64 b h64 hsize] at hm
   obtain ⟨a1, a2, a3, a4, -, -, -⟩ := allocW_facts m m₁ A hA _ o hR hal
   have a2' : topN m₁ A = topN m A := by rw [a2]; rfl
-  obtain ⟨c1, c2, c3, c4, c5, c6, c7⟩ := ilist_link b h64 hsize G S HG sub A hA sz hsz1 hsz hfa Rec
-    stab item (v + 1) [] true m₁ o 0 l e r m' hG a3 rfl (by simp; omega)
+  obtain ⟨c1, c2, c3, c4, c5, c6, c7, c8⟩ := ilist_link b h64 hsize G S HG sub A hA sz hsz1 hsz hfa Rec
+    stab Q hQr hQt hQa item (v + 1) [] true m₁ o 0 l e r m' hG a3 rfl (by simp; omega)
     ⟨by omega, by simp; omega, fun j hj => by simp at hj⟩ hm
   subst c1
-  exact ⟨c3, c2, c4, a4.trans c5, c6, a1, c7⟩
+  exact ⟨c3, c2, c4, a4.trans c5, c6, a1, c7, hQt _ _ _ (hQa _ _ _ _ hal) c8⟩
 
 end glist
 

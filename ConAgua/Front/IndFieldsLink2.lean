@@ -58,7 +58,7 @@ include h64 hsize
 
 /-- The rule record read so far. -/
 def RuleLR (m₁ : Mem) (q : Word) (seen : UInt32) (st : Nat × Nat × Nat) (m : Mem) : Prop :=
-  RecInv IFL 3 q m₁ m ∧ topN m IFL = topN m₁ IFL ∧ SeenR seen 1 (NumW (wd m IFL (q.toNat + 0)) st.1) ∧
+  RecInv IFL 3 q m₁ m ∧ topN m IFL = topN m₁ IFL ∧ m.arr64 IFR = m₁.arr64 IFR ∧ SeenR seen 1 (NumW (wd m IFL (q.toNat + 0)) st.1) ∧
     SeenR seen 2 (NumW (wd m IFL (q.toNat + 1)) st.2.1) ∧
     SeenR seen 4 (NumW (wd m IFL (q.toNat + 2)) st.2.2)
 
@@ -68,19 +68,19 @@ theorem fldPutW_rule (m : Mem) (q s x : Word) : fldPutW m 3 q s x = m.set64 IFL 
 
 theorem rule_loop (m₁ : Mem) (q : Word) :
     IObjLoop b (fun i w seen (st : Nat × Nat × Nat) => scanRuleLoop b i w seen st.1 st.2.1 st.2.2)
-      3 q (RuleLR m₁ q) (fun d m => (RecInv IFL 3 q m₁ m ∧ topN m IFL = topN m₁ IFL) ∧
-        RuleF m q.toNat d) := by
+      3 q (RuleLR m₁ q) (fun d m => (RecInv IFL 3 q m₁ m ∧ topN m IFL = topN m₁ IFL ∧
+        m.arr64 IFR = m₁.arr64 IFR) ∧ RuleF m q.toNat d) := by
   constructor
   · dloop_stop scanRuleLoop
   · dloop_ws scanRuleLoop
   · dloop_close scanRuleLoop
-    obtain ⟨hI, ht, h1, h2, h3⟩ := hR
-    exact ⟨⟨hI, ht⟩, seenR_close h1 hM (by decide) (by decide), seenR_close h2 hM (by decide) (by decide),
+    obtain ⟨hI, ht, hfr, h1, h2, h3⟩ := hR
+    exact ⟨⟨hI, ht, hfr⟩, seenR_close h1 hM (by decide) (by decide), seenR_close h2 hM (by decide) (by decide),
       seenR_close h3 hM (by decide) (by decide)⟩
   · dloop_comma scanRuleLoop
   · dloop_quote scanRuleLoop
   · iloop_key scanRuleLoop
-    all_goals obtain ⟨hI, ht, h1, h2, h3⟩ := hR
+    all_goals obtain ⟨hI, ht, hfr, h1, h2, h3⟩ := hR
     case kCtor =>
       rw [show UInt64.ofNat Key.kCtor.ctorIdx = (10 : Word) from rfl] at hmem
       ikey_num
@@ -89,7 +89,7 @@ theorem rule_loop (m₁ : Mem) (q : Word) :
       rw [fldPutW_rule]
       obtain ⟨p1, p2, p3, -, p5⟩ := slot_put IFL (.inr rfl) 3 (by decide) q 0 x m₁ m hI (by decide)
       refine ⟨numEnd b v, _, (readNatAt b v (numEnd b v), st.2.1, st.2.2), rfl, hok,
-        p1, by rw [p5, ht], .inl (by rw [show q.toNat + 0 = q.toNat + (0 : Word).toNat from rfl, p2]; exact hx),
+        p1, by rw [p5, ht], by rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hfr], .inl (by rw [show q.toNat + 0 = q.toNat + (0 : Word).toNat from rfl, p2]; exact hx),
         seenR_or h2 (by decide) (by rw [p3 _ (by simp)]; exact id),
         seenR_or h3 (by decide) (by rw [p3 _ (by simp)]; exact id)⟩
     case kNfields =>
@@ -100,7 +100,7 @@ theorem rule_loop (m₁ : Mem) (q : Word) :
       rw [fldPutW_rule]
       obtain ⟨p1, p2, p3, -, p5⟩ := slot_put IFL (.inr rfl) 3 (by decide) q 1 x m₁ m hI (by decide)
       refine ⟨numEnd b v, _, (st.1, readNatAt b v (numEnd b v), st.2.2), rfl, hok,
-        p1, by rw [p5, ht], seenR_or h1 (by decide) (by rw [p3 _ (by simp)]; exact id),
+        p1, by rw [p5, ht], by rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hfr], seenR_or h1 (by decide) (by rw [p3 _ (by simp)]; exact id),
         .inl (by rw [show q.toNat + 1 = q.toNat + (1 : Word).toNat from rfl, p2]; exact hx),
         seenR_or h3 (by decide) (by rw [p3 _ (by simp)]; exact id)⟩
     case kRhs =>
@@ -111,7 +111,7 @@ theorem rule_loop (m₁ : Mem) (q : Word) :
       rw [fldPutW_rule]
       obtain ⟨p1, p2, p3, -, p5⟩ := slot_put IFL (.inr rfl) 3 (by decide) q 2 x m₁ m hI (by decide)
       refine ⟨numEnd b v, _, (st.1, st.2.1, readNatAt b v (numEnd b v)), rfl, hok,
-        p1, by rw [p5, ht], seenR_or h1 (by decide) (by rw [p3 _ (by simp)]; exact id),
+        p1, by rw [p5, ht], by rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hfr], seenR_or h1 (by decide) (by rw [p3 _ (by simp)]; exact id),
         seenR_or h2 (by decide) (by rw [p3 _ (by simp)]; exact id),
         .inl (by rw [show q.toNat + 2 = q.toNat + (2 : Word).toNat from rfl, p2]; exact hx)⟩
   · dloop_other scanRuleLoop
@@ -190,26 +190,30 @@ theorem rules_link (v : USize) (m : Mem) (l : List RuleRec) (e : USize) (r : Wor
     (hm : listW b.data m v.toUInt64 3 = some (r, m')) :
     r.2.2 = e.toUInt64 ∧ r.2.1.toNat = l.length ∧
       RunR (fun t x m => RuleF m t x) IFL 3 m' r.1.toNat l ∧ Grow m m' ∧ Room m' ∧
-      r.1.toNat = topN m IFL + 1 ∧ r.1.toNat + 3 * l.length = topN m' IFL + 1 := by
+      r.1.toNat = topN m IFL + 1 ∧ r.1.toNat + 3 * l.length = topN m' IFL + 1 ∧
+      m'.arr64 IFR = m.arr64 IFR := by
   refine ilistW_link b h64 hsize (scanRuleListLoop b) (scanRule b) (ruleList_shape b h64 hsize)
     (scanRules b) (fun v l e h => ?_) 3 IFL (.inr rfl) 3 (by decide) rfl
-    (fun m n => by simp [fldAllocW]) (fun t x m => RuleF m t x) ruleF_stab ?_ v m l e r m' h hR hm
+    (fun m n => by simp [fldAllocW]) (fun t x m => RuleF m t x) ruleF_stab
+    (fun m m' => m'.arr64 IFR = m.arr64 IFR) (fun _ => rfl) (fun _ _ _ h1 h2 => h2.trans h1)
+    (fun m m₁ n q hal => allocW_facts' m m₁ IFL n q hal IFR (by decide)) ?_ v m l e r m' h hR hm
   · unfold scanRules at h; split at h
     · rename_i h91; exact ⟨by simpa using h91, h⟩
     · cases h
   · intro i m m₁ q x e e₂ m₂ hi h123 hS hR hal hob
     rw [show flagsW m₁ 3 q = m₁ by simp [flagsW]] at hob
     have hI := recInv_alloc IFL (.inr rfl) 3 _ q m m₁ hR rfl hal
-    obtain ⟨t1, ⟨t2, t3⟩, t4⟩ := item_gen b h64 hsize
+    obtain ⟨t1, ⟨t2, t3, t5⟩, t4⟩ := item_gen b h64 hsize
       (fun i w seen (st : Nat × Nat × Nat) => scanRuleLoop b i w seen st.1 st.2.1 st.2.2) 3 IFL 3
-      (fun m₁ q d m => (RecInv IFL 3 q m₁ m ∧ topN m IFL = topN m₁ IFL) ∧ RuleF m q.toNat d) RuleLR
+      (fun m₁ q d m => (RecInv IFL 3 q m₁ m ∧ topN m IFL = topN m₁ IFL ∧
+        m.arr64 IFR = m₁.arr64 IFR) ∧ RuleF m q.toNat d) RuleLR
       ((0 : Nat), (0 : Nat), (0 : Nat)) (scanRule b) (fun i x e h => by
         unfold scanRule at h; split at h
         · exact h
         · cases h) (rule_loop b h64 hsize)
-      (fun m₁ q hI => ⟨hI, rfl, seenR_zero _ _, seenR_zero _ _, seenR_zero _ _⟩)
+      (fun m₁ q hI => ⟨hI, rfl, rfl, seenR_zero _ _, seenR_zero _ _, seenR_zero _ _⟩)
       i m₁ q x e e₂ m₂ hS hI hob
-    exact ⟨t1, t4, t2.1, t2.2.1, t3⟩
+    exact ⟨t1, t4, t2.1, t2.2.1, t3, t5⟩
 
 end kinds
 
