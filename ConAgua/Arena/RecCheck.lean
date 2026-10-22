@@ -280,14 +280,12 @@ def targetClassMatch : FunDecl := lfn (vis, p, fto, ftl, pfo, pfl, us, dso, dsl,
 /-- Does any of `ctors` carry the constructor name `name`? -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:226-241 ConRon.Arena.targetMajorNfs
 @[l_impl ConRon.Arena.targetMajorNfs]
-def ctorsHaveName : FunDecl := lfn (co, cl, name) locals (j, ce) {
-  j := 0;
-  while j < cl {
-    ce := IW.u64[co + j];
-    if EREC.u64[IW.u64[ce]] == name { return 1 };
-    j += 1
-  };
-  return 0
+def ctorsHaveName : FunDecl := lfn (co, cl, name) locals (ce, r) {
+  if cl == 0 { return 0 };
+  ce := IW.u64[co];
+  if EREC.u64[IW.u64[ce]] == name { return 1 };
+  r := call ctors_have_name(co + 1, cl - 1, name);
+  return r
 }
 
 /-- **`target_major_nfs`**: the walk's recorded constructor normal forms matching this class,
