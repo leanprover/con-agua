@@ -855,3 +855,98 @@ theorem cpW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hp : Word)
     exact hrun
 
 end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+/-! ## `pin_at` (a copy of lane `decls3`'s model, `DeclBasisSpec.lean`, which this chain does not
+import) -/
+
+def pos2PinW (m : Mem) (i : Word) : Option (List Word × Mem) :=
+  if pinW m 0 = 0 then none else if 51 ≤ i then none else some ([rdW (m.arr64 PINS) (1 + i)], m)
+
+theorem pos2Pin_spec (p : Prog) (hp : p.lookup "pin_at" = some pinAtL) (n : Nat) (s₀ : St) (i : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "pin_at" [i]
+    ⦃fun r s' => LocEq s' s₀ ∧ pos2PinW s₀.mem i = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, pinAtL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+      finish [pos2PinW, pinW_eq, rdW_eq]
+
+theorem pos2PinW_ok {m m' : Mem} {a : AState} {i : Word} {r : List Word}
+    (h : pos2PinW m i = some (r, m')) (hP : PinsR m a.pins) :
+    m' = m ∧ H (r.headD 0) ∧ (pinAt i.toNat).run a = .ok (decI (r.headD 0), a) := by
+  unfold pos2PinW at h
+  by_cases h0 : pinW m 0 = 0
+  · simp [h0] at h
+  rw [if_neg h0] at h
+  by_cases hi : 51 ≤ i
+  · simp [hi] at h
+  rw [if_neg hi] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  have hF := hP.full h0
+  have hi' : i.toNat < 51 := by
+    have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hi); simpa using this
+  have e : rdW (m.arr64 PINS) (1 + i) = pinW m (1 + i.toNat) := by
+    simp only [rdW, pinW]
+    congr 2
+    rw [UInt64.toNat_add]; simp; omega
+  refine ⟨rfl, ?_, ?_⟩ <;> simp only [List.headD_cons] <;> rw [e]
+  · exact hF.names_lt i.toNat hi'
+  · exact pinAt_run hF i.toNat hi'
+
+/-! ## `nest_cont_checks`: hole-free indices, not `Quot`, parameters without local variables -/
+
+def p2ccK2 : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m2) => if r.headD 0 = 0 then none else some ([0], m2)
+def p2ccK1 (k : Nat) (hp nn dO dL : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m1) =>
+    if r.headD 0 ≠ 0 then none
+    else match pos2PinW m1 47 with
+      | none => none
+      | some (q, m2) => if nn = q.headD 0 then none else p2ccK2 (cpW k m2 hp dO dL)
+/-- The model of `nest_cont_checks(ctx, hp, n, dsOff, dsLen, idxOff, idxLen)`. -/
+def p2ccW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _, _, _, _, _, _ => none
+  | k + 1, m, ctx, hp, nn, dO, dL, iO, iL =>
+    p2ccK1 k hp nn dO dL (noaW k m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1))
+      (rdW (m.arr64 IW) (ctx + 4)) hp iO iL)
+
+section arms
+variable (k : Nat) (m1 m2 : Mem) (hp nn dO dL : Word) (r : List Word)
+theorem p2ccK2_z (h : r.headD 0 = 0) : p2ccK2 (some (r, m2)) = none := by rw [p2ccK2, if_pos h]
+theorem p2ccK2_nz (h : ¬ r.headD 0 = 0) : p2ccK2 (some (r, m2)) = some ([0], m2) := by rw [p2ccK2, if_neg h]
+theorem p2ccK1_eq : p2ccK1 k hp nn dO dL (some (r, m1)) =
+    if r.headD 0 ≠ 0 then none
+    else match pos2PinW m1 47 with
+      | none => none
+      | some (q, m2) => if nn = q.headD 0 then none else p2ccK2 (cpW k m2 hp dO dL) := rfl
+end arms
+attribute [ind_grind] p2ccK2_z p2ccK2_nz
+
+theorem nestContChecks_spec (p : Prog) (hl : NoLook p) (hoa : p.lookup "nest_occ_any" = some nestOccAnyL)
+    (hpa : p.lookup "pin_at" = some pinAtL) (hb : BvbProg p)
+    (hpc : p.lookup "nest_cont_params_closed" = some nestContParamsClosedL)
+    (hp : p.lookup "nest_cont_checks" = some nestContChecksL) (n : Nat) (s₀ : St)
+    (ctx hpw nn dO dL iO iL : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_cont_checks" [ctx, hpw, nn, dO, dL, iO, iL]
+    ⦃fun r s' => LocEq s' s₀ ∧ p2ccW n s₀.mem ctx hpw nn dO dL iO iL = some ([r.headD 0], s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, nestContChecksL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        nestOccAny_spec p hl hoa n, pos2Pin_spec p hpa n, nestContParamsClosed_spec p hb hpc n] <;>
+      finish (gen := 20) [p2ccW, p2ccK1, rdW_eq]
+
+end L.Ind
