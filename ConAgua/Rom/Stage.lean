@@ -1,5 +1,6 @@
 import ConAgua.Rom.PinReadSpec
-import ConAgua.Rom.DecExpr
+import ConAgua.Rom.PinSets
+import ConRon.Bridge.Checker.Pins
 
 open ConRon.Arena
 open Std.WP
@@ -145,5 +146,49 @@ theorem RsetR_zero (m : Mem) (hz : ∀ b x, rdW (m.arr64 b) x = 0) (hctl : 150 �
     RsetR m := by
   refine ⟨∅, memoRG_zero rsetSch bmKey (fun _ => ()) m hz (by simp [rsetSch]; omega), fun k hk => ?_⟩
   simp [memoCnt, hz] at hk
+
+open ConRon.Bridge ConRon.Bridge.Frontend in
+/-- **`intern_all_pins`'s model, in the decoder direction**: on a buffer that starts with
+`romData`, a run that returns is the twin's `internAllPins P` for the pin list `P` the buffer's
+variant list decodes to, and the 24-word records hold the interned variants (`PinSetsR`). -/
+theorem internAllPinsW_dec (rom : List UInt8) (hr : RomOK rom) (rest : List UInt8)
+    (hrom : rom = romData ++ rest) (n : Nat) (mem mem' : Mem) (a : AState) (hA : ArenaD mem a)
+    (hP : PinsReadyP a) (hok : StateOK a) (hpins : PinsOK a) (hpp : PersPins a)
+    (hoff : a.store.scratchOn = false) (hR : RsetR mem) (hst : (stkTop mem).toNat < 2 ^ 61)
+    (hc : 151 < (mem.arr64 CTL).size) (hW : internAllPinsW rom n mem = some mem') :
+    ∃ (pins : List ConLeche.NatOpPinSet) (ips : List INatOpPinSet) (a' : AState),
+      (internAllPins pins).run a = .ok (ips, a') ∧ ArenaD mem' a' ∧ PinSetsR mem' ips ∧
+      StateOK a' ∧ RsetR mem' := by
+  obtain ⟨n', m₁, a₁, v, q', hv, hA1, hz, hs, hf, hS⟩ :=
+    internAllPinsW_fixed rom hr rest hrom n mem mem' a hA hP hst (by omega) hW
+  obtain ⟨hok1, -⟩ := internAllPins_run hok hpins hpp hoff hv
+  obtain ⟨pins, ips, a', hrun, hA', hPS, hok', hR', -⟩ := internPinSetsW_dec rom hr n' m₁ a₁ _ q' mem' hA1
+    (hz hR) hok1 (by rw [hs]; exact hst) (by rw [hf.2.2.1]; exact hc) hS
+  refine ⟨pins, ips, a', ?_, hA', hPS, hok', hR'⟩
+  rw [internAllPins_split, run_bind_of _ _ _ _ _ hv]; exact hrun
+
+/-- **`intern_all_pins` over the pin-data buffer refines `internAllPins P`**, `P` the pin list the
+buffer decodes to (any buffer that starts with `romData`, `pb_check`); the variant records hold
+`P` interned (`PinSetsR`). The program's substituted functions must be the ROM version's
+(`PinProg bs (P.subPB bs)`). -/
+@[refines_part ConRon.Arena.internAllPins "over the pin-data buffer, at the decoded pin list"]
+theorem internAllPins_PB (P : Prog) (hno : Prog.noSt8PB P = true) (bs : List UInt8)
+    (hL : PinProg bs (Prog.subPB bs P)) (hr : RomOK bs) (hpre : bs = romData ++ bs.drop romData.length)
+    (n : Nat) (s₀ : St) (a₀ : AState) (hbs : s₀.mem.arr8 PB = bs.toArray) (hA : ArenaD s₀.mem a₀)
+    (hP : PinsReadyP a₀) (hok : ConRon.Bridge.StateOK a₀) (hpins : ConRon.Bridge.PinsOK a₀)
+    (hpp : ConRon.Bridge.PersPins a₀) (hoff : a₀.store.scratchOn = false) (hR : RsetR s₀.mem)
+    (hst : (stkTop s₀.mem).toNat < 2 ^ 61) (hc : 151 < (s₀.mem.arr64 CTL).size) :
+    ⦃fun s => s = s₀⦄
+    invoke P (exec P n) "intern_all_pins" []
+    ⦃fun _ s' => LocEq s' s₀ ∧ ∃ (pins : List ConLeche.NatOpPinSet) (ips : List INatOpPinSet) (a' : AState),
+      (internAllPins pins).run a₀ = .ok (ips, a') ∧ ArenaD s'.mem a' ∧ PinSetsR s'.mem ips ∧
+      ConRon.Bridge.StateOK a' ∧ RsetR s'.mem; ⊤⦄ := by
+  refine triple_subPB (bs := bs) hno (fun s hs => hs ▸ hbs) ?_
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (internAllPinsPB_specW bs (Prog.subPB bs P) hL n s₀ hA.1.lit.1.2.2.1)
+  subst hs
+  exact ⟨hloc, internAllPinsW_dec bs hr _ hpre n _ _ a₀ hA hP hok hpins hpp hoff hR hst hc hW⟩
 
 end L.Rom
