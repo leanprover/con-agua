@@ -268,10 +268,10 @@ theorem checkDeclOpaque_loop' {p : Prog} (hA : ArmProg p) (hV : ValProg p) (hC :
     (dn : NIdx → Option ConLeche.Name) (hdn : DnInj dn) (ds : Array IDeclaration) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
       (i : Word) (cv : IConstantVal) (v : EIdx), i.toNat < ds.size →
-      ds[i.toNat]? = some (.opaqueDecl cv v) → LoopR dn s₀.mem a₀ vis fe pend ds →
+      ds[i.toNat]? = some (.opaqueDecl cv v) → LoopR pins dn s₀.mem a₀ vis fe pend ds →
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_decl_opaque" [i, vis]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkDecl V pins fe (.opaqueDecl cv v)) a₀ ∧
-      LoopR dn s'.mem (AM.st (checkDecl V pins fe (.opaqueDecl cv v)) a₀) (r.headD 0)
+      LoopR pins dn s'.mem (AM.st (checkDecl V pins fe (.opaqueDecl cv v)) a₀) (r.headD 0)
         (AM.res (checkDecl V pins fe (.opaqueDecl cv v)) a₀) pend ds; ⊤⦄ := by
   intro n s₀ a₀ vis fe pend i cv v hi hd hR
   apply M.triple_of_run

@@ -61,6 +61,11 @@ theorem RecGrow.of_ext {m m' : Mem} (hw : IWOK m) (hx : ArrExt (erecP m) (erecP 
   · omega
   · have := (hk (erTop m - 1) (by omega)).2; omega
 
+theorem RecGrow.of_eq {m m' : Mem} (hE : m'.arr64 EREC = m.arr64 EREC)
+    (h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129) : RecGrow m m' := by
+  refine ⟨?_, fun i _ => by rw [hE]⟩
+  simp only [erTop, h129]; exact Nat.le_refl _
+
 theorem rdW_keep {a a' : Array Word} {T : Nat} (h : ∀ i < T, a'[i]? = a[i]?) {x : Word}
     (hx : x.toNat < T) : rdW a' x = rdW a x := by
   simp only [rdW, h _ hx]
