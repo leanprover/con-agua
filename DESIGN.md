@@ -6813,3 +6813,30 @@ introduces it; the coordinator reviews the list at each batch of landings.
   not), `erecKeptKnot_stub` and the knot steps (lane `defeq`). The new named hypotheses of the iota
   proofs (`ErecKeptRec`, `LvlsEqDen`, `RecShape`, `ProofIrrelOKM`) are listed above.
 
+### Landing 4: the quotient and axiom arms; `and_pin_ok`'s inductive arm in L
+
+* **`checkDecl_loop`: every arm's spec is proved but the definition arm's** (`DeclArmQuot.lean`,
+  `DeclArmAxiom.lean`; `@[refines_part checkDecl "one-constant records"]`). The quotient arm
+  (`quot_pin_hit`: the pinned block's constant at the record's slot, `ci_to_cv`, `cv_canon_eq`) and
+  the axiom arm (`Quot.sound` against the block's slot 4 by `ci_canon_eq`, the constant check,
+  `std_axiom_ok`/`trust_compiler_ok`/`of_reduce_ax_ok` then the push, `propext`/`choice` declining,
+  `sorryAx` skipped) at `LoopR` through the arms' text (now covering both: real interns
+  `intern_zero/succ/sort/nanon/nnum` in `armMasterFns`; `closedA` by `decide +kernel`, 8 s).
+* **Hypotheses instead of the helper's not-yet-landed specs**: `CvCanonSpec p` / `CiCanonSpec p`
+  (fields of `QuotProg`/`AxProg`, inside `CheckDeclProg`): the `RefAM` statements of `cv_canon_eq`,
+  `ci_canon_eq`. Helper `decls3-canon` proves the canonical comparisons; its `canon_expr_eq` takes a
+  literal-injectivity hypothesis (`LitInj`), which these statements will gain when its specs land.
+* **`and_pin_ok` has the inductive arm in L** (`and_block_named` over the block's records in
+  `DLP`, then for a two-parameter block `canon_eq_list` of the block (copied by
+  `ind_block_to_erec`, `er_to_iw`) against `rom_and_pin()`, a new ROM stub with spec
+  `romAndPin_spec`). The proof stays `refines_part … "one-constant records"`: `LoopR` still holds
+  the one-constant `DeclsR`; the inductive arm becomes provable once the loop's relation takes the
+  front's `DeclsF` (lane `indproofs2`'s `DeclAtF`/`IndDeclAt`, now on master) and `canon_eq_list`
+  is in.
+* **For every lane that changes L code reached from `check`**: rerun `scripts/checker_prog.py`
+  (regenerates `ConAgua/Checker/Prog.lean`, lane `integrate`'s whole program); a stale file fails
+  `checkerProg_wf` in the kernel.
+
+`sorry`s now (lane `decls3`): `checkDeclDefn_loop`; the six ROM stub specs (`romAndPin_spec` new);
+`lvlEqStub_spec`; `promoteNew_spec` (helper running). Census at landing 4: phase 2 **146 proven,
+26 sorry, 73 written, 86 todo**.
