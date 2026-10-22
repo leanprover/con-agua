@@ -248,7 +248,7 @@ def lpK1 (res : Option (List Word × Mem)) : Option (Word × Word × Word × Wor
   | some (ra, m) => lpK2 ra (callW p n "e_view" [b] m)
 
 /-- The model of `lam_pair`. -/
-def lpW (m : Mem) (a : Word) : Option (Word × Word × Word × Word × Word × Mem) :=
+def lpeelW (m : Mem) (a : Word) : Option (Word × Word × Word × Word × Word × Mem) :=
   if a >>> 28 ≠ 5 ∨ b >>> 28 ≠ 5 then some (0, 0, 0, 0, 0, m)
   else lpK1 p n b (callW p n "e_view" [a] m)
 
@@ -256,16 +256,16 @@ variable (ra rb : List Word) (m : Mem) (a : Word)
 theorem lpK2_s : lpK2 ra (some (rb, m)) = some (1, ra.tail.headD 0, ra.tail.tail.headD 0,
     rb.tail.headD 0, rb.tail.tail.headD 0, m) := rfl
 theorem lpK1_s : lpK1 p n b (some (ra, m)) = lpK2 ra (callW p n "e_view" [b] m) := rfl
-theorem lpW_no (h : a >>> 28 ≠ 5 ∨ b >>> 28 ≠ 5) : lpW p n b m a = some (0, 0, 0, 0, 0, m) := by
-  simp only [lpW, h, ↓reduceIte]
+theorem lpW_no (h : a >>> 28 ≠ 5 ∨ b >>> 28 ≠ 5) : lpeelW p n b m a = some (0, 0, 0, 0, 0, m) := by
+  simp only [lpeelW, h, ↓reduceIte]
 theorem lpW_go (h : ¬ (a >>> 28 ≠ 5 ∨ b >>> 28 ≠ 5)) :
-    lpW p n b m a = lpK1 p n b (callW p n "e_view" [a] m) := by
-  simp only [lpW, h, ↓reduceIte]
+    lpeelW p n b m a = lpK1 p n b (callW p n "e_view" [a] m) := by
+  simp only [lpeelW, h, ↓reduceIte]
 end lpK
 
 theorem lamPair_spec (p : Prog) (hp : LamsProg p) (n : Nat) (s₀ : St) (a b : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "lam_pair" [a, b]
-    ⦃fun r s' => LocEq s' s₀ ∧ lpW p n b s₀.mem a = some (r.headD 0, r.tail.headD 0,
+    ⦃fun r s' => LocEq s' s₀ ∧ lpeelW p n b s₀.mem a = some (r.headD 0, r.tail.headD 0,
       r.tail.tail.headD 0, r.tail.tail.tail.headD 0, r.tail.tail.tail.tail.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp.pair]
   simp only [callFn, lamPairL]

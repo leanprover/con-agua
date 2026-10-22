@@ -78,8 +78,8 @@ theorem store_spn {m m' : Mem} (hf : MemFrame L.Rom.StoreA L.Rom.StoreC m m') :
     have h' := congrArg UInt64.toNat hkk
     simp [UInt64.toNat_ofNat] at h'; omega)
 
-theorem const_spn {m m' : Mem} (hf : MemFrame [CREC, CSLOT] [18, 19] m m') :
-    m'.arr64 SPN = m.arr64 SPN := hf.1 SPN (by simp [CREC, CSLOT, SPN]) (by decide)
+theorem const_spn {m m' : Mem} (hf : MemFrame [CREC, CSLOT, CLP] [18, 19] m m') :
+    m'.arr64 SPN = m.arr64 SPN := hf.1 SPN (by simp [CREC, CSLOT, CLP, SPN]) (by decide)
 
 theorem app_spn {m m' : Mem} (hf : MemFrame [AREC, ASLOT, ADER] [4, 5] m m') :
     m'.arr64 SPN = m.arr64 SPN := hf.1 SPN (by simp [AREC, ASLOT, ADER, SPN]) (by decide)

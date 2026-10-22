@@ -54,16 +54,16 @@ theorem keeps_cpl_internConst' (n : NIdx) (us : LsIdx) : Keeps cpl (internE (.co
 
 theorem CoreS.of_const' {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
     {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb)
-    (hD : ArenaD m' a') (hcpl : cpl a' = cpl a) (hf : MemFrame [CREC, CSLOT] [18, 19] m m') :
+    (hD : ArenaD m' a') (hcpl : cpl a' = cpl a) (hf : MemFrame [CREC, CSLOT, CLP] [18, 19] m m') :
     CoreS dn m' a' vis fe M eb :=
   hS.arena_frame hD hcpl hf
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
-      rcases hb with rfl | rfl <;> decide)
+      rcases hb with rfl | rfl | rfl <;> decide)
     (by simp [CREC, CSLOT, CLP, PINS])
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
-      rcases hb with rfl | rfl <;> decide)
+      rcases hb with rfl | rfl | rfl <;> decide)
     (fun x hx => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl <;> decide)
@@ -71,7 +71,7 @@ theorem CoreS.of_const' {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' 
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl <;> decide)
 
-theorem StackKept.of_constF {m m' : Mem} (hf : MemFrame [CREC, CSLOT] [18, 19] m m') :
+theorem StackKept.of_constF {m m' : Mem} (hf : MemFrame [CREC, CSLOT, CLP] [18, 19] m m') :
     StackKept m m' := by
   have hspn : m'.arr64 SPN = m.arr64 SPN :=
     hf.1 SPN (by simp [CREC, CSLOT, CLP, SPN]) (by decide)
@@ -98,14 +98,13 @@ theorem callW_internConst' (hpf : p.lookup "const_find" = some constFind)
     AM.ok (internE (.const (decI f) (decI x))) a₀ ∧
     ArenaD m' (AM.st (internE (.const (decI f) (decI x))) a₀) ∧
     AM.res (internE (.const (decI f) (decI x))) a₀ = decI (r.headD 0) ∧
-    MemFrame [CREC, CSLOT] [18, 19] m m' ∧ HW (r.headD 0) := by
+    MemFrame [CREC, CSLOT, CLP] [18, 19] m m' ∧ HW (r.headD 0) := by
   obtain ⟨s', rfl, hm⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (internConst_spec p hpf hpp hp n _ f x) h
   obtain ⟨-, hm⟩ := hm
   obtain ⟨h1, h2, h3⟩ := internConst_D m a₀ hD f x _ hf hx _ hm
   refine ⟨h1, h2, h3, ?_, ceinternW_hw' m a₀ ?_ f x hf hx _ _ hm⟩
-  · have := internM_frame constSch constSch_wf _ _ _ _ _ _ _ _ (ceinternW_eq _ _ _ ▸ hm)
-    simpa [constSch] using this
+  · exact ceinternW_frame (hI := hm)
   · exact hD.1.const
 
 /-- **`mk_app_n` as a run**, with the result a handle word. -/

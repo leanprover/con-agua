@@ -134,9 +134,9 @@ abbrev lvCtl : List Word := [6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
 section
 set_option maxRecDepth 4000
 theorem lvSch_sub : (∀ b ∈ [zeroSch.ra, zeroSch.sa], b ∈ lvArrs) ∧ (∀ x ∈ [zeroSch.ca, zeroSch.ca + 1], x ∈ lvCtl) ∧
-    (∀ b ∈ [succSch.ra, succSch.sa], b ∈ lvArrs) ∧ (∀ x ∈ [succSch.ca, succSch.ca + 1], x ∈ lvCtl) ∧
-    (∀ b ∈ [maxSch.ra, maxSch.sa], b ∈ lvArrs) ∧ (∀ x ∈ [maxSch.ca, maxSch.ca + 1], x ∈ lvCtl) ∧
-    (∀ b ∈ [imaxSch.ra, imaxSch.sa], b ∈ lvArrs) ∧ (∀ x ∈ [imaxSch.ca, imaxSch.ca + 1], x ∈ lvCtl) ∧
+    (∀ b ∈ [succSch.ra, succSch.sa, SHP], b ∈ lvArrs) ∧ (∀ x ∈ [succSch.ca, succSch.ca + 1], x ∈ lvCtl) ∧
+    (∀ b ∈ [maxSch.ra, maxSch.sa, MHP], b ∈ lvArrs) ∧ (∀ x ∈ [maxSch.ca, maxSch.ca + 1], x ∈ lvCtl) ∧
+    (∀ b ∈ [imaxSch.ra, imaxSch.sa, IHP], b ∈ lvArrs) ∧ (∀ x ∈ [imaxSch.ca, imaxSch.ca + 1], x ∈ lvCtl) ∧
     (∀ b ∈ [paramSch.ra, paramSch.sa], b ∈ lvArrs) ∧ (∀ x ∈ [paramSch.ca, paramSch.ca + 1], x ∈ lvCtl) := by
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;>
     simp [lvArrs, lvCtl, zeroSch, succSch, maxSch, imaxSch, paramSch, ZREC, ZSLOT, SREC, SSLOT, SHP, MREC, MSLOT, MHP, IREC, ISLOT, IHP, PREC, PSLOT, LH]

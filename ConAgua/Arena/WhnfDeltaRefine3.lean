@@ -764,9 +764,9 @@ theorem natAddArm_run_internE {a₁ a₂ : AState} {x : EIdx} {u v : Nat}
 
 
 
-theorem pinW_const_frame {m m' : Mem} (hf : MemFrame [CREC, CSLOT] [18, 19] m m') (k : Nat) :
+theorem pinW_const_frame {m m' : Mem} (hf : MemFrame [CREC, CSLOT, CLP] [18, 19] m m') (k : Nat) :
     pinW m' k = pinW m k := by
-  have : m'.arr64 PINS = m.arr64 PINS := hf.arr_eq PINS (by simp [CREC, CSLOT, PINS]) (by decide)
+  have : m'.arr64 PINS = m.arr64 PINS := hf.arr_eq PINS (by simp [CREC, CSLOT, CLP, PINS]) (by decide)
   simp only [pinW, this]
 
 section refs18

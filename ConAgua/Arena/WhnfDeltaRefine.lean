@@ -185,16 +185,16 @@ theorem keeps_cpl_internLit (l : ConLeche.Literal) : Keeps cpl (internE (.lit l)
 
 theorem CoreS.of_const {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
     {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb)
-    (hD : ArenaD m' a') (hcpl : cpl a' = cpl a) (hf : MemFrame [CREC, CSLOT] [18, 19] m m') :
+    (hD : ArenaD m' a') (hcpl : cpl a' = cpl a) (hf : MemFrame [CREC, CSLOT, CLP] [18, 19] m m') :
     CoreS dn m' a' vis fe M eb :=
   hS.arena_frame hD hcpl hf
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
-      rcases hb with rfl | rfl <;> decide)
+      rcases hb with rfl | rfl | rfl <;> decide)
     (by simp [CREC, CSLOT, CLP, PINS])
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
-      rcases hb with rfl | rfl <;> decide)
+      rcases hb with rfl | rfl | rfl <;> decide)
     (fun x hx => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl <;> decide)
@@ -202,7 +202,7 @@ theorem CoreS.of_const {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl <;> decide)
 
-theorem StackKept.of_const_frame {m m' : Mem} (hf : MemFrame [CREC, CSLOT] [18, 19] m m') :
+theorem StackKept.of_const_frame {m m' : Mem} (hf : MemFrame [CREC, CSLOT, CLP] [18, 19] m m') :
     StackKept m m' := by
   have hspn : m'.arr64 SPN = m.arr64 SPN :=
     hf.1 SPN (by simp [CREC, CSLOT, CLP, SPN]) (by decide)
@@ -347,7 +347,7 @@ theorem callW_constE (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AStat
     (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (hnm : HW nm) (r : List Word) (m' : Mem)
     (h : callW p n "const_e" [nm] s₀.mem = some (r, m')) :
     AM.ok (constE (decI nm)) a₀ ∧ CoreS dn m' (AM.st (constE (decI nm)) a₀) vis fe MM eb ∧
-    AM.res (constE (decI nm)) a₀ = decH r ∧ MemFrame [CREC, CSLOT] [18, 19] s₀.mem m' ∧
+    AM.res (constE (decI nm)) a₀ = decH r ∧ MemFrame [CREC, CSLOT, CLP] [18, 19] s₀.mem m' ∧
     HW (r.headD 0) := by
   cases n with
   | zero => rw [callW_zero] at h; cases h
@@ -420,7 +420,7 @@ def CRef {α : Type} [Inhabited α] (T : AM α) (a₀ : AState) (dec : List Word
     (dn : NIdx → Option ConLeche.Name) (m₀ : Mem) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb : Word) (r : List Word) (m' : Mem) (ok : List Word → Prop) : Prop :=
   AM.ok T a₀ ∧ CoreS dn m' (AM.st T a₀) vis fe M eb ∧ AM.res T a₀ = dec r ∧
-    MemFrame [CREC, CSLOT] [18, 19] m₀ m' ∧ ok r
+    MemFrame [CREC, CSLOT, CLP] [18, 19] m₀ m' ∧ ok r
 
 theorem CRef.pure {α : Type} [Inhabited α] {T : AM α} {a₀ : AState} {dec : List Word → α}
     {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps}

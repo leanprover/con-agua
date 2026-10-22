@@ -359,7 +359,7 @@ theorem plsArm_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f h : Word) (r
     (lsL m (tierW h) (idxW h)) (by simp only [SliceOK, htop₂, hT]; omega) us'
     (by rw [hpool₂]; exact hsl₁) hk₁ _ _ hW₂
   rw [← hm]
-  refine ⟨a₂, pm₁, ?_, hD₂', hP₂.frameLo (by simp [LSREC, LSSLOT]) (by simp) hfr₂, hr ▸ hpw₂,
+  refine ⟨a₂, pm₁, ?_, hD₂', hP₂.frameLo (by simp [LSREC, LSSLOT, LSHP]) (by simp) hfr₂, hr ▸ hpw₂,
     hcp₂.trans hcp₁, ?_, he₁⟩
   · unfold plsArmT
     rw [run_bind_ok (promote_viewLs_run hv), run_bind_ok hrun₁]
