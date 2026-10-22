@@ -211,13 +211,31 @@ theorem CoreK.grow {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN]),
     h.2.trans (StackKept.of_grows hg)⟩
 
-/-- **`intern_lit` keeps `CoreK`.** -/
+/-- An interned `lit` handle word is below `2^32`: `WhnfDeltaRefine3.lean`'s `internW_hw`, which
+this file does not import (it would pull in the whnf walks); `natPredW_of` discharges it. -/
+def LitInternHW : Prop :=
+  ∀ (m : Mem) (a : AState) (o l w : Word) (m' : Mem), LitR m a → internW m o l = some (w, m') → HW w
+
+/-- `InternSpec` with the handle word below `2^32`. -/
+def InternSpecW (p : Prog) (R : Mem → AState → Prop) : Prop :=
+  ∀ (a₀ : AState) (n : Nat) (s₀ : St) (o l : Word), R s₀.mem a₀ →
+    SliceOK s₀.mem o l → Norm (s₀.mem.arr64 POOL) o.toNat l.toNat →
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "intern_lit" [o, l]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀ ∧
+      R s'.mem (AM.st (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀) ∧
+      AM.res (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀ =
+        decE (r.headD 0) ∧ HW (r.headD 0); ⊤⦄
+
+/-- **`intern_lit` keeps `CoreK`**, with a handle word result. -/
 theorem internLit_core (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
     (hpe : p.lookup "limbs_eq" = some limbsEq) (hpm : p.lookup "lit_match" = some litMatch)
     (hpf : p.lookup "lit_find" = some litFind) (hpp : p.lookup "lit_push" = some litPush)
-    (hp : p.lookup "intern_lit" = some internLit) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+    (hp : p.lookup "intern_lit" = some internLit) (hlw : LitInternHW)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word)
     (fe : IFEnv) (M : ModeMaps) (eb : Word) (m₀ : Mem) :
-    InternSpec p (CoreK dn vis fe M eb m₀) := by
+    InternSpecW p (CoreK dn vis fe M eb m₀) := by
   intro a₀ n s₀ o l hK hq hn
   have ⟨_, _, hps, htop⟩ := hK.1.arena.1.lit.1
   have hspec := internLit_spec p hph hpe hpm hpf hpp hp n s₀ o l (by omega)
@@ -235,7 +253,7 @@ theorem internLit_core (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
     have := AM.run_of_ok _ _ hok
     exact (keeps_cplL_internNodeE _).run (by simpa only [internE] using this)
   refine ⟨hloc, hok, ⟨hK.1.arenaFrame hD hcpl hfr (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN])
-    (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN]), hK.2.trans (StackKept.of_frame hfr)⟩, hres⟩
+    (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN]), hK.2.trans (StackKept.of_frame hfr)⟩, hres, hlw s.mem a₀ o l _ _ hK.1.arena.1.lit hI⟩
 
 /-! ## `nat_pred` -/
 
@@ -254,6 +272,38 @@ structure NatPredProg (p : Prog) : Prop where
   lfind : p.lookup "lit_find" = some litFind
   lpush : p.lookup "lit_push" = some litPush
   lintern : p.lookup "intern_lit" = some internLit
+
+section predhw
+variable (p : Prog) (R : Mem → AState → Prop)
+  (hpool : ∀ m a, R m a → PoolOK m) (hgrow : ∀ m m' a, R m a → Grows m m' → R m' a)
+  (hI : InternSpecW p R)
+  (hpl : p.lookup "nat_limb" = some natLimb) (hps : p.lookup "sub_borrow" = some subBorrow)
+  (hpt : p.lookup "nat_trim" = some natTrim) (hpn : p.lookup "nat_sub" = some natSub)
+
+include hpool hgrow hI hpl hps hpt hpn in
+/-- `natPredLit_refines` (`NatArms.lean`) with a handle word result. -/
+theorem natPredLit_refines_hw (hg : p.lookup "nat_pred_lit" = some natPredLit) (n : Nat) (s₀ : St)
+    (a₀ : AState) (hR : R s₀.mem a₀) (oa la : Word) (ha : SliceOK s₀.mem oa la) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "nat_pred_lit" [oa, la]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (natPredArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)) a₀ ∧
+      R s'.mem (AM.st (natPredArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)) a₀) ∧
+      AM.res (natPredArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)) a₀ =
+        some (decE (r.headD 0)) ∧ HW (r.headD 0); ⊤⦄ := by
+  have hok := hpool _ _ hR
+  simp only [PoolOK, SliceOK] at hok ha
+  rw [invoke_eq _ hg]
+  simp only [callFn, natPredLit]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, natop_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        natSub_spec p hpl hps hpt hpn n, hI a₀ n] <;>
+      finish (gen := 20) [natPredArm, PoolOK, SliceOK, Grows]
+
+end predhw
 
 /-- After `nat_pred_lit`: `(1, handle)`. -/
 def npLitF (x : List Word × Mem) : Option (Word × Word × Mem) := some (1, x.1.headD 0, x.2)
@@ -302,12 +352,12 @@ theorem am_eq_run {α : Type} [Inhabited α] {T T' : AM α} {a : AState} (h : T.
 
 theorem decOptR_zero : decOptR [0, 0] = none := rfl
 
-/-- **`nat_pred` refines `natPred?`.** -/
+/-- **`nat_pred` refines `natPred?`**, both result words handle words (`ResW`). -/
 @[refines ConRon.Arena.natPred?]
-theorem natPred_refines (p : Prog) (hp : NatPredProg p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb e : Word)
-    (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (he : HW e) :
-    CoreSpec p (n + 1) "nat_pred" [e] (natPred? (decE e)) decOptR s₀ a₀ dn vis fe MM eb := by
+theorem natPred_refines (p : Prog) (hp : NatPredProg p) (hlw : LitInternHW) (n : Nat) (s₀ : St)
+    (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
+    (eb e : Word) (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (he : HW e) :
+    CoreSpec p (n + 1) "nat_pred" [e] (natPred? (decE e)) decOptR s₀ a₀ dn vis fe MM eb ResW := by
   apply L.M.triple_of_run
   intro s r s' hs0 hrun
   obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (natPred_spec p hp n s₀ e)
@@ -317,15 +367,16 @@ theorem natPred_refines (p : Prog) (hp : NatPredProg p) (n : Nat) (s₀ : St) (a
   have hP := hS.pins
   -- the arms that keep the state
   have hres : ∀ (x y : Word), some (x, y, s.mem) = some (r.headD 0, r.tail.headD 0, s'.mem) →
-      HW x → (natPred? (decE e)).run a₀ = .ok (decOpt x y, a₀) →
-      CoreRef (natPred? (decE e)) a₀ decOptR dn s.mem vis fe MM eb r s'.mem := by
-    intro x y hxy hx hv
+      HW x → HW y → (natPred? (decE e)).run a₀ = .ok (decOpt x y, a₀) →
+      CoreRef (natPred? (decE e)) a₀ decOptR dn s.mem vis fe MM eb r s'.mem ResW := by
+    intro x y hxy hx hy hv
     simp only [Option.some.injEq, Prod.mk.injEq] at hxy
     obtain ⟨h1, h2, h3⟩ := hxy
     rw [← h3]
-    refine coreRef_pure hS hv ?_ ?_
-    · rw [decOptR, ← h1, ← h2]
-    · unfold ResH; rw [← h1]; exact hx
+    obtain ⟨hok, hst, hrs⟩ := AM.of_run_ok _ _ _ _ hv
+    refine ⟨hok, ?_, by rw [hrs, decOptR, ← h1, ← h2], ?_⟩
+    · rw [hst]; exact ⟨MM, hS, KeptAll.refl _ _, StackKept.refl _⟩
+    · unfold ResW; rw [← h1, ← h2]; exact ⟨hx, hy⟩
   unfold natPredW at hW
   by_cases h8 : e >>> 28 = 8
   · simp only [h8, ↓reduceIte] at hW
@@ -347,7 +398,7 @@ theorem natPred_refines (p : Prog) (hp : NatPredProg p) (n : Nat) (s₀ : St) (a
       simp only [RecRel_strVal, StrRec] at hkr
       have h1 : rdW (s.mem.arr64 REC) (idxW e * 8 + tierW e * 4) ≠ 0 := by rw [hkr.1]; decide
       simp only [h1, ne_eq, not_false_eq_true, ↓reduceIte] at hW
-      refine hres 0 0 hW hw0 ?_
+      refine hres 0 0 hW hw0 hw0 ?_
       simp only [natPred?, htl, ↓reduceIte, StateT.run_bind, view_run _ _ _ (hview _ rfl),
         except_ok_bind]
       rfl
@@ -359,7 +410,7 @@ theorem natPred_refines (p : Prog) (hp : NatPredProg p) (n : Nat) (s₀ : St) (a
       · simp only [hl0, ↓reduceIte] at hW
         have hN : N = 0 := by rw [← hpv, hl0]; rfl
         subst hN
-        refine hres 0 0 hW hw0 ?_
+        refine hres 0 0 hW hw0 hw0 ?_
         simp only [natPred?, htl, ↓reduceIte, StateT.run_bind, view_run _ _ _ (hview _ rfl),
           except_ok_bind]
         rfl
@@ -374,10 +425,11 @@ theorem natPred_refines (p : Prog) (hp : NatPredProg p) (n : Nat) (s₀ : St) (a
       obtain ⟨r₁, m₁⟩ := q
       rw [hc2, Option.bind_some, npLitF, Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq] at hW
       obtain ⟨hr0, hr1, hm⟩ := hW
-      obtain ⟨t, ht, -, hok, hK, hres'⟩ := triple_of_callW
-        (natPredLit_refines p (CoreK dn vis fe MM eb s.mem) (fun _ _ h => h.1.arena.1.lit.1)
+      obtain ⟨t, ht, -, hok, hK, hres', hhw⟩ := triple_of_callW
+        (natPredLit_refines_hw p (CoreK dn vis fe MM eb s.mem) (fun _ _ h => h.1.arena.1.lit.1)
           (fun m m' a h hg => h.grow hg)
-          (internLit_core p hp.lhash hp.leq hp.lmatch hp.lfind hp.lpush hp.lintern dn vis fe MM eb s.mem)
+          (internLit_core p hp.lhash hp.leq hp.lmatch hp.lfind hp.lpush hp.lintern hlw dn vis fe MM eb
+            s.mem)
           hp.limb hp.sbb hp.trim hp.sub hp.npl n s a₀ ⟨hS, StackKept.refl _⟩ _ _ hsl) hc2
       rw [hpv] at hok hK hres'
       have hrun : (natPred? (decE e)).run a₀ = (natPredArm N).run a₀ := by
@@ -387,7 +439,7 @@ theorem natPred_refines (p : Prog) (hp : NatPredProg p) (n : Nat) (s₀ : St) (a
       obtain ⟨eok, est, eres⟩ := am_eq_run hrun
       simp only at hm
       rw [ht, hm] at hK
-      refine ⟨eok ▸ hok, ?_, ?_, by unfold ResH; rw [← hr0]; exact hw1⟩
+      refine ⟨eok ▸ hok, ?_, ?_, by unfold ResW; rw [← hr0, ← hr1]; exact ⟨hw1, hhw⟩⟩
       · rw [est]; exact ⟨MM, hK.1, KeptAll.refl _ _, hK.2⟩
       · rw [eres, hres', decOptR, ← hr0, ← hr1, decOpt_ne _ _ (by decide)]
   -- the `app` arm
@@ -395,7 +447,7 @@ theorem natPred_refines (p : Prog) (hp : NatPredProg p) (n : Nat) (s₀ : St) (a
   simp only [h8, ↓reduceIte] at hW
   rcases (Classical.em (e >>> 28 = 4)).symm with h4 | h4
   · simp only [h4, ↓reduceIte] at hW
-    refine hres 0 0 hW hw0 ?_
+    refine hres 0 0 hW hw0 hw0 ?_
     simp only [natPred?, htl, tag_beq_app e he, h4, decide_false, Bool.false_eq_true, ↓reduceIte]
     rfl
   simp only [h4, ↓reduceIte] at hW
@@ -425,7 +477,7 @@ theorem natPred_refines (p : Prog) (hp : NatPredProg p) (n : Nat) (s₀ : St) (a
   generalize rdW (s.mem.arr64 AREC) (idxW e * 4 + tierW e * 2 + 1) = x at hx hW hpre
   rcases (Classical.em (f >>> 28 = 3)).symm with f3 | f3
   · simp only [ne_eq, f3, not_false_eq_true, ↓reduceIte] at hW
-    refine hres 0 0 hW hw0 ?_
+    refine hres 0 0 hW hw0 hw0 ?_
     rw [hpre]
     simp only [tag_beq_const f hf, f3, decide_false, Bool.false_eq_true, ↓reduceIte]
     rfl
@@ -456,9 +508,9 @@ theorem natPred_refines (p : Prog) (hp : NatPredProg p) (n : Nat) (s₀ : St) (a
   by_cases hc2 : rdW (s.mem.arr64 CREC) (idxW f * 4 + tierW f * 2) = rdW (s.mem.arr64 PINS) (1 + 3) ∧
       rdW (s.mem.arr64 CREC) (idxW f * 4 + tierW f * 2 + 1) = rdW (s.mem.arr64 PINS) 52
   · simp only [hc2, and_self, ↓reduceIte] at hW hrun2
-    exact hres 1 x hW hw1 (by rw [hrun2, decOpt_ne _ _ (by decide)])
+    exact hres 1 x hW hw1 hx (by rw [hrun2, decOpt_ne _ _ (by decide)])
   · simp only [hc2, ↓reduceIte] at hW hrun2
-    exact hres 0 0 hW hw0 (by rw [hrun2]; rfl)
+    exact hres 0 0 hW hw0 hw0 (by rw [hrun2]; rfl)
 
 /-! ## `lit_eq`: the literal comparison of `quickDefEq` -/
 

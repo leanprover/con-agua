@@ -267,7 +267,7 @@ grind_pattern [ind_grind] rulesEqB_len => rulesEqB a o1 l1 o2 l2
 grind_pattern [ind_grind] rulesEqB_nil => rulesEqB a o1 l1 o2 l2
 grind_pattern [ind_grind] rulesEqB_step => rulesEqB a o1 l1 o2 l2
 
-theorem envFindW_mem {m m1 : Mem} {w vis : Word} {r : List Word}
+theorem cnEnvFindW_mem {m m1 : Mem} {w vis : Word} {r : List Word}
     (h : envFindW m w vis = some (r, m1)) : m1 = m := by
   unfold envFindW at h
   repeat' split at h
@@ -532,7 +532,7 @@ theorem findIs_spec' (n : Nat) (s₀ : St) (nm vis pin : Word) :
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         envFind_specW p hp.env_ix hp.env_row_get hp.env_find n, ciEq_spec' p hp n] <;>
-      finish (gen := 20) [findIsW, envFindW_mem]
+      finish (gen := 20) [findIsW, cnEnvFindW_mem]
 
 end specs
 

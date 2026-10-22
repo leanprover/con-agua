@@ -172,6 +172,7 @@ theorem setWtb_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : St
     (eb mode d b us c pc ao an wtb : Word) (aargs : Array EIdx) (cvc : IConstantVal) (np nf : Nat)
     (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hb : HW b)
     (hus : HW us) (hcw : HW c) (hwtb : HW wtb)
+    (hvus : ∃ x c', a₀.store.view x = some (.const c' (decI us)))
     (hcvc : decCI (erecP s₀.mem) dn pc.toNat = some (.ctorInfo cvc np nf))
     (ha : SpineR s₀.mem ao an aargs) (hat : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat) :
     GrowSpec p (n + 1) "struct_eta_cert_wtb" [mode, vis, d, b, us, c, pc, ao, an, wtb]
@@ -254,7 +255,7 @@ theorem setWtb_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : St
     (setGo_refines p hq hi hc n' (hk.mono (by omega)) F ⟨m₃, Locals.init []⟩ a₀ dn vis fe M eb mode d
       b us c pc k (r₂.tail.headD 0) us2 ao an (r₃.headD 0) (r₃.tail.headD 0) aargs targs.toArray
       cvc np nf cvT caps (by omega) (by omega) ⟨hS₃, hs.mode4, hs.eb_mode⟩ hb hus hcw hnw huw
-      (by rw [hep]; exact hcvc) (by rw [hep]; exact hci) (ha.grew hg3 hat hspn) hsp
+      hvus ⟨_, _, hv⟩ (by rw [hep]; exact hcvc) (by rw [hep]; exact hci) (ha.grew hg3 hat hspn) hsp
       (Nat.le_trans hat (UInt64.le_iff_toNat_le.mp hg3.1)) htt)
     (fun r r' h => by simp only [decBool, h]) (by simpa using hW3)
 
@@ -478,7 +479,7 @@ theorem setWith_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : S
     have hg := GrowSpec.of_callW (setWtb_refines p hq hi hc n' (hk.mono (by omega)) F
       ⟨m₃, Locals.init []⟩ a₀ dn vis fe M eb mode d b us k (r₂.tail.headD 0) (r₃.headD 0)
       (r₃.tail.headD 0) wtb aargs.toArray cvc _ _ (by omega) (by omega) ⟨hS₃, hs.mode4, hs.eb_mode⟩
-      hb huw hnw hwtb (by rw [hep]; exact hci) hsp (by
+      hb huw hnw hwtb ⟨_, _, hv⟩ (by rw [hep]; exact hci) hsp (by
         have e := addW_toNat (x := r₃.headD 0) (y := r₃.tail.headD 0) (by have := hsp.bound; omega)
         rw [htop3, ← hr30]; omega)) hc4
     have hg' := growRef_preG hg3 hg

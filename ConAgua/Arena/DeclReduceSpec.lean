@@ -5,7 +5,7 @@ import ConAgua.Arena.WhnfDeltaRefine
 # Pin-selected ROM values: `reduceOpCvA`, `ofReducePinA`, `reduceDeclPin` (lane `decls3`)
 
 Three twin functions of one shape: read a pin, compare the argument with it, intern one of two
-con-leche values (`if c == pin then A else B`). In L: `pin_at(k)`, then `rom_cv`/`rom_expr` at one
+con-leche values (`if c == pin then A else B`). In L: `pin_at(k)`, then `rom_cv`/`rom_expr_pin` at one
 of two ids. One model (`selW`) and one relational lemma (`selW_ok`) serve all three; through the
 ROM stubs (`DeclRomStubs.lean`), so census `sorry`.
 -/
@@ -141,7 +141,7 @@ theorem ofReducePinA_specW (hp : p.lookup "of_reduce_pin_a" = some ofReducePinAL
 theorem reduceDeclPin_specW (hp : p.lookup "reduce_decl_pin" = some reduceDeclPinL) (n : Nat)
     (s₀ : St) (c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "reduce_decl_pin" [c]
-    ⦃fun r s' => LocEq s' s₀ ∧ selW s₀.mem c 43 "rom_expr" 0 1 = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ selW s₀.mem c 43 "rom_expr_pin" 0 1 = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, reduceDeclPinL]
   cases n with
@@ -149,7 +149,7 @@ theorem reduceDeclPin_specW (hp : p.lookup "reduce_decl_pin" = some reduceDeclPi
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, pinAt_specW p hpa n,
-        stubM_spec p "rom_expr" n] <;>
+        stubM_spec p "rom_expr_pin" n] <;>
       finish (gen := 20) [selW]
 
 end specs
@@ -196,7 +196,7 @@ theorem ofReducePinA_refines (hp : p.lookup "of_reduce_pin_a" = some ofReducePin
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst, hres]; exact hP⟩
 
-/-- **`reduce_decl_pin(c)` refines `reduceDeclPin`** (through `rom_expr`'s stub). -/
+/-- **`reduce_decl_pin(c)` refines `reduceDeclPin`** (through `rom_expr_pin`'s stub). -/
 @[refines ConRon.Arena.reduceDeclPin]
 theorem reduceDeclPin_refines (hp : p.lookup "reduce_decl_pin" = some reduceDeclPinL) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "reduce_decl_pin" [c]
@@ -516,7 +516,7 @@ theorem rpg_specW (hp : p.lookup "reduce_pin_guard" = some reducePinGuardL) (n :
 
 end rpg
 
-/-- **`reduce_pin_guard(vis, c)` refines `reducePinGuard`** (through the walks' and `rom_expr`'s
+/-- **`reduce_pin_guard(vis, c)` refines `reducePinGuard`** (through the walks' and `rom_expr_pin`'s
 stubs). -/
 @[refines ConRon.Arena.reducePinGuard]
 theorem reducePinGuard_refines (p : Prog) (hpa : p.lookup "pin_at" = some pinAtL)

@@ -284,7 +284,8 @@ theorem setTail_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : S
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb mode d b us T us2 ao an to tn ep nf : Word) (aargs targs : Array EIdx) (hF : n ≤ F)
     (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hb : HW b) (hus : HW us)
-    (hT : HW T) (hus2 : HW us2) (ha : SpineR s₀.mem ao an aargs) (ht : SpineR s₀.mem to tn targs)
+    (hT : HW T) (hus2 : HW us2) (hdus : ∃ lu, denoteLs a₀.store.lss (decI us) = some lu)
+    (hdus2 : ∃ lv, denoteLs a₀.store.lss (decI us2) = some lv) (ha : SpineR s₀.mem ao an aargs) (ht : SpineR s₀.mem to tn targs)
     (hat : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat)
     (htt : to.toNat + tn.toNat ≤ (spTop s₀.mem).toNat) :
     GrowSpec p (n + 1) "struct_eta_cert_tail" [mode, vis, d, b, us, T, us2, ao, an, to, tn, ep, nf]
@@ -298,7 +299,7 @@ theorem setTail_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : S
   refine ⟨hloc, ?_⟩
   have hspn := hs.rel.spn
   obtain ⟨r₁, m₁, hc1, hW⟩ := callW_cases rfl hW
-  have h₁ := CoreSpec.of_callW (hc.lvlsEqC n s a₀ dn vis fe M eb us us2 hs.rel hus hus2) hc1
+  have h₁ := CoreSpec.of_callW (hc.lvlsEqC n s a₀ dn vis fe M eb us us2 hs.rel hus hus2 hdus hdus2) hc1
   obtain ⟨_, _, _, hst₁⟩ := h₁.2.1
   unfold setTailT
   refine growRef_bindS (GrowRef.of_core h₁) (fun M₁ hS₁ => ?_)

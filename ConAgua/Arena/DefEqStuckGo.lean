@@ -305,6 +305,61 @@ theorem reservedContains_callW {p : Prog} (hc : StuckCallees p) {n : Nat}
   refine ⟨hst ▸ h.2.1, ?_⟩
   rw [← h.2.2.1, hres]
 
+/-! ## `towerSlotsAll` keeps the expression views
+
+It interns name nodes only (`projTableName`), which leaves the expression tables alone: a
+`const` node seen before the call is still there after it, so its level list still reads back
+(`StoreDen.constLs` at the later state). -/
+
+/-- The store without its level/name part (what `EStore.view` reads). -/
+def noLss (a : AState) : EStore := { a.store with lss := LsStore.empty }
+
+theorem view_of_noLss {a a' : AState} (h : noLss a' = noLss a) (x : EIdx) :
+    a'.store.view x = a.store.view x := by
+  have : (noLss a').view x = (noLss a).view x := by rw [h]
+  exact this
+
+theorem keeps_noLss_internNNode (v : NNodeView) : Keeps noLss (internNNode v) := by
+  unfold Keeps; intro a r a' h
+  simp only [internNNode, StateT.run_bind, StateT.run_get, pure_bind] at h
+  repeat' split at h
+  all_goals simp only [StateT.run_bind, StateT.run_set, StateT.run_pure, pure_bind,
+    ConRon.Arena.fail, throwThe, MonadExceptOf.throw] at h
+  all_goals first
+    | (cases h; rfl)
+    | (simp [throwThe, Functor.map, Except.map] at h)
+
+theorem keeps_noLss_findProj (fe : IFEnv) (T : NIdx) (i : Nat) :
+    Keeps noLss (fe.findProj? T i) := by
+  unfold IFEnv.findProj? projTableName
+  refine Keeps.bind (Keeps.bind (keeps_noLss_internNNode _) fun _ => keeps_noLss_internNNode _)
+    fun _ => ?_
+  split <;> exact Keeps.pure _
+
+theorem keeps_noLss_towerSlotsAll (fe : IFEnv) (T : NIdx) (nF : Nat) :
+    Keeps noLss (towerSlotsAll fe T nF) := by
+  unfold towerSlotsAll
+  suffices ∀ n j, Keeps noLss (towerSlotsAllGo fe T n j) from this _ _
+  intro n
+  induction n with
+  | zero => intro j; rw [towerSlotsAllGo]; exact Keeps.pure _
+  | succ n ih =>
+    intro j; rw [towerSlotsAllGo]
+    refine Keeps.bind (keeps_noLss_findProj _ _ _) fun o => ?_
+    split
+    · exact ih _
+    · exact Keeps.pure _
+
+/-- A `const` node's level list at a state, read back after `towerSlotsAll`. -/
+theorem constLs_after_tower {fe : IFEnv} {T : NIdx} {nF : Nat} {a : AState} {x : EIdx} {c : NIdx}
+    {us : LsIdx} (hv : a.store.view x = some (.const c us)) :
+    (AM.st (towerSlotsAll fe T nF) a).store.view x = some (.const c us) := by
+  unfold AM.st
+  split
+  · rename_i a' heq
+    rw [view_of_noLss (Keeps.run (keeps_noLss_towerSlotsAll fe T nF) heq)]; exact hv
+  · exact hv
+
 /-- **`struct_eta_cert_go` refines `setGoT`** at the knot (the projections' slice left on the
 stack). -/
 @[refines_part ConRon.Arena.structEtaCertWith "the keys, then the tail (setGoT)"]
@@ -315,6 +370,8 @@ theorem setGo_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : Stu
     (cvc : IConstantVal) (np nf : Nat) (cvT : IConstantVal) (caps : IIndCaps) (hF : n ≤ F)
     (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hb : HW b) (hus : HW us)
     (hcw : HW c) (hT : HW T) (hus2 : HW us2)
+    (hvus : ∃ x c', a₀.store.view x = some (.const c' (decI us)))
+    (hvus2 : ∃ x c', a₀.store.view x = some (.const c' (decI us2)))
     (hcvc : decCI (erecP s₀.mem) dn pc.toNat = some (.ctorInfo cvc np nf))
     (hcvT : decCI (erecP s₀.mem) dn q.toNat = some (.indInfo cvT caps))
     (ha : SpineR s₀.mem ao an aargs) (ht : SpineR s₀.mem to tn targs)
@@ -406,7 +463,12 @@ theorem setGo_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : Stu
     have hg := GrowSpec.of_call1W (s₀ := ⟨m₅, Locals.init []⟩)
       (setTail_refines p hq hi hc n' (hk.mono (by omega)) F ⟨m₅, Locals.init []⟩ _ dn vis fe M₅ eb
         mode d b us T us2 ao an to tn _ _ aargs targs (by omega) (by omega)
-        ⟨hS₅, hs.mode4, hs.eb_mode⟩ hb hus hT hus2 (ha.keep hk₅.size hk₅.below hat hspn)
+        ⟨hS₅, hs.mode4, hs.eb_mode⟩ hb hus hT hus2
+        (by obtain ⟨x, c', hx⟩ := hvus
+            exact (hc.den _ _ _ _ _ _ _ hS₅).constLs _ _ _ (constLs_after_tower hx))
+        (by obtain ⟨x, c', hx⟩ := hvus2
+            exact (hc.den _ _ _ _ _ _ _ hS₅).constLs _ _ _ (constLs_after_tower hx))
+        (ha.keep hk₅.size hk₅.below hat hspn)
         (ht.keep hk₅.size hk₅.below htt hspn) (by rw [htop]; exact hat) (by rw [htop]; exact htt))
       (fun r r' h => by simp only [decBool, h]) hW5
     rw [← hIR.etaParams, ← hIR.etaFields] at hg
