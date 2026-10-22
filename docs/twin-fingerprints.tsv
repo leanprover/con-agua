@@ -531,7 +531,7 @@ ConRon.Arena.andPinNameFree	f0f18f3b6711fa6a	4c9eaf78
 ConRon.Arena.andPinNameHs	8ed19c381c6c4116	4c9eaf78
 ConRon.Arena.andPinOk	1d6d65c751beb367	4c9eaf78
 ConRon.Arena.andRescueSlots	1262b9aecb7d1e69	4c9eaf78
-ConRon.Arena.andRescueSlotsGo	51a1f6e6deb8198e	4c9eaf78
+ConRon.Arena.andRescueSlotsGo	51a1f6e6deb8198e	12752ca7
 ConRon.Arena.appHole?	5a7830daa1bb6564	4c9eaf78
 ConRon.Arena.attemptRestore	3b776d23f8c0f22a	4c9eaf78
 ConRon.Arena.attemptSnapshot	b563776de4d8e75a	4c9eaf78
@@ -863,7 +863,7 @@ ConRon.Arena.instListGoArmProj	93a9948b999f637a	4c9eaf78
 ConRon.Arena.instPisAtLift	2a6bbf4fb686d1de	4c9eaf78
 ConRon.Arena.instPisWith	19ec49c548405596	4c9eaf78
 ConRon.Arena.instSpine	08475dc2a3d5f57e	4c9eaf78
-ConRon.Arena.instSpinePins	994e19882f18999c	4c9eaf78
+ConRon.Arena.instSpinePins	994e19882f18999c	12752ca7
 ConRon.Arena.installBasisDecl	9111c265dc82234c	4c9eaf78
 ConRon.Arena.installBasisDecls	bdc90e79cc4cb759	4c9eaf78
 ConRon.Arena.installDeclStep	91a24ec26dddc374	4c9eaf78
@@ -931,9 +931,9 @@ ConRon.Arena.ioNeutral	c510e6e434a9b705	4c9eaf78
 ConRon.Arena.iotaCase3	2219979c59d7ec46	4c9eaf78
 ConRon.Arena.iotaCertsFull	fd1e7dbe489d6027	4c9eaf78
 ConRon.Arena.iotaCertsFullAux	f3dedb6e3b2697c5	4c9eaf78
-ConRon.Arena.iotaCtorNeverProp	fed290a409dcae50	4c9eaf78
+ConRon.Arena.iotaCtorNeverProp	fed290a409dcae50	12752ca7
 ConRon.Arena.iotaIndexOk	446a9797d5406601	4c9eaf78
-ConRon.Arena.iotaRecAt	4a6b85edf44907c8	4c9eaf78
+ConRon.Arena.iotaRecAt	4a6b85edf44907c8	12752ca7
 ConRon.Arena.isBoolTrue	82c4ef51e289054f	4c9eaf78
 ConRon.Arena.isCtorApp	6119d18b73e5fcc3	4c9eaf78
 ConRon.Arena.isDefEqCore	e1ade14a22bec806	4c9eaf78
@@ -977,7 +977,7 @@ ConRon.Arena.litToCtorIfNat	2cbe090c36d8f4f0	4c9eaf78
 ConRon.Arena.looseBVarsBoundedFast	60b05f0e13e49711	4c9eaf78
 ConRon.Arena.lvlEq?	da469e259acad1ff	12752ca7
 ConRon.Arena.lvlsEq?	90c28e7fd3dc8c8c	12752ca7
-ConRon.Arena.majorToCtor	36898a17d9cc0398	4c9eaf78
+ConRon.Arena.majorToCtor	36898a17d9cc0398	12752ca7
 ConRon.Arena.memberIdxAt?	965dc76f4bb7db91	4c9eaf78
 ConRon.Arena.mentionsAnyConst	b49fbb7b66e27c84	4c9eaf78
 ConRon.Arena.mentionsAnyGo	c28a38f5e9b6925a	4c9eaf78

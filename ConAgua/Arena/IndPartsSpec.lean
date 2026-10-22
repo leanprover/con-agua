@@ -450,3 +450,155 @@ theorem blockShapeNumCtors_refines (p : Prog) (hc : p.lookup "num_ctors_of" = so
     exact ⟨h1, blockShapeNumCtorsW_ok n s₀.mem q (r.headD 0) bs hq hb hol hsmall h2⟩
 
 end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+/-! ## `BlockShape.nIdxs`: a copy with one extra indirection per element
+
+`n_idxs_copy` is `iw_copy`-shaped (`IndCopy.lean`'s `copyW`/`copyW_get`) but each written word is
+the member pointer's OWN `nIdx` field, not the pointer itself: one more indirection, both reads
+(the pointer, then its field) off the source side, which stays frozen throughout (the destination
+is the fresh top, disjoint from both the source slice and the member records it points into). -/
+
+/-- `UInt64.size` is `2 ^ 64`. -/
+theorem UInt64_size_eq : UInt64.size = 2 ^ 64 := rfl
+
+/-- The model of `n_idxs_copy`. -/
+def nIdxsCopyW : Nat → Mem → Word → Word → Word → Option Mem
+  | 0, _, _, _, _ => none
+  | n + 1, m, d, s, l =>
+    if l = 0 then some m
+    else nIdxsCopyW n (m.set64 IW d (rdW (m.arr64 IW) (rdW (m.arr64 IW) s + 1))) (d + 1) (s + 1) (l - 1)
+
+section arms
+variable (n : Nat) (m : Mem) (d s l : Word)
+theorem nIdxsCopyW_nil (hl : l = 0) : nIdxsCopyW (n + 1) m d s l = some m := by
+  simp [nIdxsCopyW, hl]
+theorem nIdxsCopyW_step (hl : l ≠ 0) :
+    nIdxsCopyW (n + 1) m d s l =
+      nIdxsCopyW n (m.set64 IW d (rdW (m.arr64 IW) (rdW (m.arr64 IW) s + 1))) (d + 1) (s + 1) (l - 1) := by
+  simp [nIdxsCopyW, hl]
+end arms
+
+grind_pattern [ind_grind] nIdxsCopyW_nil => nIdxsCopyW (n + 1) m d s l
+grind_pattern [ind_grind] nIdxsCopyW_step => nIdxsCopyW (n + 1) m d s l
+
+theorem nIdxsCopy_spec (p : Prog) (hp : p.lookup "n_idxs_copy" = some nIdxsCopy) (n : Nat) :
+    ∀ (s₀ : St) (d s l : Word),
+    ⦃fun st => st = s₀⦄ invoke p (exec p n) "n_idxs_copy" [d, s, l]
+    ⦃fun _ s' => LocEq s' s₀ ∧ nIdxsCopyW n s₀.mem d s l = some s'.mem; ⊤⦄ := by
+  induction n with
+  | zero =>
+    intro s₀ d s l; rw [invoke_eq _ hp]; simp only [callFn, nIdxsCopy]; vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ d s l
+    rw [invoke_eq _ hp]
+    simp only [callFn, nIdxsCopy]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
+      finish (gen := 20)
+
+/-- **What `n_idxs_copy` leaves**, as `copyW_get` does for `iw_copy`: the destination slice holds
+each source pointer's `nIdx` field, read off the ORIGINAL memory throughout (both the pointer
+read at `s + j` and the field read at `p + 1`, `p` that pointer, lie below the fresh destination
+`d`, so neither is ever disturbed by this function's own writes). -/
+theorem nIdxsCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), nIdxsCopyW n m d s l = some m' →
+    s.toNat + l.toNat ≤ d.toNat → d.toNat + l.toNat ≤ (m.arr64 IW).size →
+    (m.arr64 IW).size < 2 ^ 64 →
+    (∀ j < l.toNat, (rdW (m.arr64 IW) (UInt64.ofNat (s.toNat + j)) + 1).toNat < d.toNat) →
+    (∀ b, b ≠ IW → m'.arr64 b = m.arr64 b) ∧ (m'.arr64 IW).size = (m.arr64 IW).size ∧
+    m'.words.size = m.words.size ∧
+    ∀ i, (m'.arr64 IW)[i]? =
+      if d.toNat ≤ i ∧ i < d.toNat + l.toNat
+      then some (rdW (m.arr64 IW) (rdW (m.arr64 IW) (UInt64.ofNat (s.toNat + (i - d.toNat))) + 1))
+      else (m.arr64 IW)[i]? := by
+  induction n with
+  | zero => intro m m' d s l h; simp [nIdxsCopyW] at h
+  | succ n ih =>
+    intro m m' d s l h hsd hd hsz hptr
+    by_cases hl : l = 0
+    · rw [nIdxsCopyW_nil n m d s l hl] at h
+      cases h
+      subst hl
+      refine ⟨fun _ _ => rfl, rfl, rfl, fun i => ?_⟩
+      have : ¬ (d.toNat ≤ i ∧ i < d.toNat + (0 : Word).toNat) := by
+        simp only [UInt64.toNat_zero]; omega
+      simp only [this, if_false]
+    · rw [nIdxsCopyW_step n m d s l hl] at h
+      have hl0 : 0 < l.toNat := by
+        have : l.toNat ≠ 0 := fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
+        omega
+      have hl1 : (l - 1).toNat = l.toNat - 1 := by rw [UInt64.toNat_sub]; simp; omega
+      have hd1 : (d + 1).toNat = d.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      have hs1 : (s + 1).toNat = s.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      have hslt : s.toNat < (m.arr64 IW).size := by omega
+      have hdlt : d.toNat < (m.arr64 IW).size := by omega
+      have hp0 : (rdW (m.arr64 IW) s + 1).toNat < d.toNat := by
+        have := hptr 0 hl0; simpa using this
+      have hplt : (rdW (m.arr64 IW) s + 1).toNat < (m.arr64 IW).size := by omega
+      obtain ⟨v, hv⟩ : ∃ v : Word, v = rdW (m.arr64 IW) (rdW (m.arr64 IW) s + 1) := ⟨_, rfl⟩
+      rw [← hv] at h
+      obtain ⟨m1, hm1⟩ : ∃ m1, m1 = m.set64 IW d v := ⟨_, rfl⟩
+      rw [← hm1] at h
+      have hsz1 : (m1.arr64 IW).size = (m.arr64 IW).size := by
+        rw [hm1, Mem.arr64_set64_same]; simp
+      have hm1get : ∀ i, (m1.arr64 IW)[i]? = if i = d.toNat then some v else (m.arr64 IW)[i]? := by
+        intro i
+        rw [hm1, Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+        by_cases hi : d.toNat = i
+        · subst hi; simp only [hdlt, true_and, if_true]
+        · simp [hi, Ne.symm hi]
+      have hptr1 : ∀ j < (l - 1).toNat,
+          (rdW (m1.arr64 IW) (UInt64.ofNat ((s + 1).toNat + j)) + 1).toNat < (d + 1).toNat := by
+        intro j hj
+        have hj' : j + 1 < l.toNat := by rw [hl1] at hj; omega
+        have hbase := hptr (j + 1) hj'
+        have e1 : (s + 1).toNat + j = s.toNat + (j + 1) := by omega
+        have hidx : (UInt64.ofNat (s.toNat + (j + 1))).toNat = s.toNat + (j + 1) :=
+          UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)
+        have e2 : rdW (m1.arr64 IW) (UInt64.ofNat (s.toNat + (j + 1))) =
+            rdW (m.arr64 IW) (UInt64.ofNat (s.toNat + (j + 1))) := by
+          simp only [rdW, hidx, hm1get]
+          have hne : s.toNat + (j + 1) ≠ d.toNat := by omega
+          simp [hne]
+        rw [e1, e2]; omega
+      obtain ⟨hA, hS, hW, hG⟩ := ih m1 m' (d + 1) (s + 1) (l - 1) h
+        (by rw [hs1, hd1, hl1]; omega) (by rw [hd1, hl1, hsz1]; omega) (by rw [hsz1]; exact hsz)
+        hptr1
+      refine ⟨fun b hb => (hA b hb).trans ?_, hS.trans hsz1, hW.trans ?_, fun i => ?_⟩
+      · rw [hm1, Mem.arr64_set64_ne _ _ _ _ _ hb]
+      · rw [hm1]; exact Mem.words_size_set64 _ _ _ _
+      · rw [hG i, hd1, hl1, hs1]
+        by_cases hi : d.toNat ≤ i ∧ i < d.toNat + l.toNat
+        · rw [if_pos hi]
+          by_cases hid : i = d.toNat
+          · subst hid
+            have hnot : ¬ (d.toNat + 1 ≤ d.toNat ∧ d.toNat < d.toNat + 1 + (l.toNat - 1)) := by omega
+            rw [if_neg hnot]
+            have e3 : s.toNat + (d.toNat - d.toNat) = s.toNat := by omega
+            rw [e3, ofNat_toNat_word, ← hv, hm1get, if_pos rfl]
+          · have h2 : d.toNat + 1 ≤ i ∧ i < d.toNat + 1 + (l.toNat - 1) := by omega
+            rw [if_pos h2]
+            have e4 : s.toNat + 1 + (i - (d.toNat + 1)) = s.toNat + (i - d.toNat) := by omega
+            rw [e4]
+            have hidx2 : (UInt64.ofNat (s.toNat + (i - d.toNat))).toNat = s.toNat + (i - d.toNat) :=
+              UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)
+            have e5 : rdW (m1.arr64 IW) (UInt64.ofNat (s.toNat + (i - d.toNat))) =
+                rdW (m.arr64 IW) (UInt64.ofNat (s.toNat + (i - d.toNat))) := by
+              simp only [rdW, hidx2, hm1get]
+              have hne : s.toNat + (i - d.toNat) ≠ d.toNat := by omega
+              simp [hne]
+            rw [e5]
+            have hb2 := hptr (i - d.toNat) (by omega)
+            obtain ⟨w, hw⟩ : ∃ w : Word, w = rdW (m.arr64 IW) (UInt64.ofNat (s.toNat + (i - d.toNat))) + 1 :=
+              ⟨_, rfl⟩
+            rw [← hw] at hb2 ⊢
+            have hne2 : w.toNat ≠ d.toNat := by omega
+            have e6 : rdW (m1.arr64 IW) w = rdW (m.arr64 IW) w := by
+              simp only [rdW, hm1get]; simp [hne2]
+            rw [e6]
+        · rw [if_neg hi, if_neg (by omega), hm1get, if_neg (by omega)]
+
+end L.Ind
