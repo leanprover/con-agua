@@ -31,7 +31,7 @@ def defeqExtFns : Prog :=
    ("de_find", memoFindG deSch), ("de_put", memoPutG deSch),
    ("intern_fvar", internFVar), ("intern_imax", internImax), ("intern_sort", internSort),
    ("intern_succ", internSucc), ("limbs_eq", limbsEq), ("ls_node", lsNode),
-   ("lvl_eq_c", lvlEqCL), ("lvls_eq_c", lvlsEqCL), ("mk_app", mkApp), ("mk_forall", mkForall),
+   ("lvl_eq_c", lvlEqCL), ("lv_node", lvNode), ("lvls_eq_c", lvlsEqCL), ("mk_app", mkApp), ("mk_forall", mkForall),
    ("nat_lit_supported", natLitSupportedL), ("nat_pred_lit", natPredLit), ("pin_at", pinAtL),
    ("pin_word", pinWordL), ("proof_irrel", proofIrrelL), ("reduce_nat", reduceNatL),
    ("reduce_proj_core", reduceProjCoreL), ("reserved_contains_w", reservedContainsL),

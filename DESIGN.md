@@ -7317,7 +7317,7 @@ grows (the memo library's capacity rule, as every L memo). Refinement: not yet (
   record and the bytes are read at the memory the spine runs on and the twin-side view of `h`
   carries over by `VMono` alone; reading it first would have needed pool/record frames through
   every `CoreRef` (which keeps only `CoreS`).
-* Deviation D21 (performance): `str_ls1` and `rom_lit` leave their pushed word at the pool top
+* Deviation D24 (performance): `str_ls1` and `rom_lit` leave their pushed word at the pool top
   even when the node exists.
 * Numbers: 389 L lines, 3524 proof lines (`StrLitList` 954, `StrLitChar` 478, `StrLitCtor` 467,
   `StrLitSup` 455, `StrLitBase` 437, `StrLitCv` 247, `StrLitTy` 213, `StrLitKeep` 147,
