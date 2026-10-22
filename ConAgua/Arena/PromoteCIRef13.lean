@@ -12,6 +12,13 @@ set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
+theorem hlist?_unfold {a : Array Word} {i : Nat} {k : IdxKind} {xs : List (Idx k)}
+    (h : hlist? a i = some xs) :
+    ∃ o c : Nat, nat? a i = some o ∧ nat? a (i + 1) = some c ∧ hslice? a o c = some xs := by
+  simp only [L.Arena.hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at h
+  obtain ⟨o, ho, c, hc, hs⟩ := h
+  exact ⟨o, c, ho, hc, hs⟩
+
 section rel
 variable (p : Prog) (hp : PromoteProg p)
 include hp
@@ -94,8 +101,33 @@ theorem projB_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (ct
   simp only [Option.bind_some] at hW
   obtain ⟨wo4, wl4, hn4, hn4', hsl4, a4, pm4, gs', hrun4, hD4, hP4, hcp4, hfr4, hq4, hg4, hT4, hts4,
     hsl4'⟩ := psAt1_rel p hp n m₃ a3 pm3 f (q + 11) guards c12 m₄ hD3 hP3 hsz3
-      (by rw [e11]; exact hg3.ext.hlist? (by rw [hP2', hP1']; exact hbs |> fun h => by sorry)) hcd
-  sorry
+      (by rw [e11]; exact hg3.ext.hlist? (by rw [hP2', hP1']; exact hgs)) hcd
+  obtain ⟨hlist, hm4⟩ := Prod.mk.inj (Option.some.inj hW)
+  subst hm4
+  -- the length word of the guards, read in the original pool
+  obtain ⟨og, cg, hog, hcg, -⟩ := hlist?_unfold hgs
+  have hcg3 : nat? (erecP m₃) (q.toNat + 11 + 1) = some cg := hg3.ext.nat? (by rw [hP2', hP1']; exact hcg)
+  rw [e11] at hn4'
+  have hcgw : cg = wl4.toNat := Option.some.inj (hcg3.symm.trans hn4')
+  have hg04 : ErecGrow m m₄ :=
+    ⟨by rw [← hT1, ← hT2]; exact Nat.le_trans hg3.1 hg4.1, fun i hi => by
+      rw [hg4.2.1 i (by rw [hT3, hT2, hT1]; omega), hg3.2.1 i (by rw [hT2, hT1]; exact hi), hE2, hE1],
+      by rw [hg4.2.2, hg3.2.2, hE2, hE1]⟩
+  refine ⟨a1, pm1, a2, pm2, a3, pm3, a4, pm4, decI (c9.headD 0), decI (c10.headD 0), bs', gs',
+    wl3, wl4, hrun1, hrun2, hrun3, hrun4, hD4, hP4, hcp4.trans (hcp3.trans (hcp2.trans hcp1)),
+    (((hfr1.mono (by simp) (by simp)).trans (hfr2.mono (by simp) (by simp))).trans hfr3).trans hfr4,
+    hg04, hts4, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · rw [← hlist]; exact hpw1
+  · rw [← hlist] <;> rfl
+  · rw [← hlist]; exact hpw2
+  · rw [← hlist] <;> rfl
+  · rw [e9, hP2', hP1'] at hn3'; exact hn3'
+  · rw [← hcgw]; exact hcg
+  · rw [← hlist]; simp only [g2, List.headD_cons, List.tail_cons]; rw [hq3, hT2, hT1]
+  · rw [← hlist]; simp only [g3, List.headD_cons, List.tail_cons]; rw [hq4, hT3, hT2, hT1]
+  · rw [hT4, hT3, hT2, hT1]
+  · rw [hT2, hT1] at hsl3'; exact hg4.ext.hslice? hsl3'
+  · rw [hT3, hT2, hT1] at hsl4'; exact hsl4'
 
 end rel
 
