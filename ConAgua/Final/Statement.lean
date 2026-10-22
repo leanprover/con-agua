@@ -20,7 +20,13 @@ that has it.
 ## What is trusted (see `docs/ROADMAP.md` §3, "Trusted base")
 
 * Kraken's x64 semantics (`Ev`, `MachineData`), the assembler, the printer and the loader: the
-  printed assembly of `compileProg G.tab p "check"` sits at `k0` (`hcode`);
+  printed assembly of `compileProg G.tab p "check"` sits at `k0` (`hcode`). For the checker itself
+  the code hypothesis is over a literal: `ConAgua/Checker/AsmFinal.lean` restates these theorems
+  with `hcode : Code checkerAsm k0`, where `checkerAsm_eq : compileProg checkerTab checkerProg
+  "check" = checkerAsm` is checked by the kernel and the harness prints `checkerAsm`
+  (`ConAgua/Checker/AsmEmit.lean`), so the Lean compiler and runtime that would otherwise compute
+  the code are not trusted; the printer and the assembler are checked against each other on the
+  printed file by `harness/check-asm.sh` (DESIGN.md, "Kernel-checked compiler output");
 * the loader's layout: the input bytes, the pin-data bytes, every other array zero, the table and
   the stack, as `G` says (`hG`, `hmem`, `HarnessCall`);
 * the harness: it calls `ca_enter` as `HarnessCall` states and reads the verdict as `rdx = 0 ∧ rax =
