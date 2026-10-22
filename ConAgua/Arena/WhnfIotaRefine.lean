@@ -378,6 +378,7 @@ structure IotaProg' (p : Prog) : Prop extends IotaProg p where
   ctp : p.lookup "ct_put" = some (memoPutG ctSch)
   rrf : p.lookup "rr_find" = some (memoFindG rrSch)
   rrp : p.lookup "rr_put" = some (memoPutG rrSch)
+  pinat : p.lookup "pin_at" = some pinAtL
 
 /-! ## `is_ctor_app(vis, e)` -/
 
@@ -2789,5 +2790,49 @@ theorem arW_ok (p : Prog) (hcc : CoreCallees p) (dn : NIdx → Option ConLeche.N
         rw [hct, ← hW6, decI_beq _ _ hh6 hctor]
         exact decide_eq_false hc6
       simp [this]
+
+theorem andRescueSlots_run (fe : IFEnv) (ctor : NIdx) (nP : Nat) (ust : LsIdx) (an : NIdx)
+    (a a₁ : AState) (b : Bool) (hp : (pinAt PIN_AND).run a = .ok (an, a))
+    (hr : (andRescueSlotsGo fe an ctor nP ust 2 0).run a = .ok (b, a₁)) :
+    (andRescueSlots fe ctor nP ust).run a = .ok (b, a₁) := by
+  simp only [andRescueSlots, pinAnd, StateT.run_bind, hp, except_ok_bind, hr]
+
+/-- **`and_rescue_slots` refines `andRescueSlots`** (`find_proj`, `fire_ok` and their facts as
+`CoreCallees`). -/
+theorem andRescueSlots_refines' (p : Prog) (hp : IotaProg' p) (hcc : CoreCallees p) :
+    AndRescueSlotsOK p := by
+  intro n s₀ a₀ dn vis fe MM eb ctor nP us hS hctor hus
+  cases n with
+  | zero =>
+    apply L.M.triple_of_run
+    intro s r s' _ hrun
+    exact (invoke_zero_run _ _ _ _ _ _ hrun).elim
+  | succ n =>
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
+    (andRescueSlots_spec p hp.andRescueSlots n s₀ vis ctor nP us)
+  subst hs0
+  refine ⟨hloc, ?_⟩
+  simp only [arTop] at hW
+  cases hc0 : callW p n "pin_at" [11] s.mem with
+  | none => rw [hc0] at hW; cases hW
+  | some q =>
+  obtain ⟨r₀, m₀⟩ := q
+  rw [hc0] at hW
+  simp only at hW
+  obtain ⟨t₀, ht₀, hm₀, hloc0, hanHW, hpin⟩ := triple_of_callW
+    (pinAt_refines p hp.pinat n ⟨s.mem, Locals.init []⟩ a₀ ⟨fun _ => hS.pins⟩ 11) hc0
+  have hmm : m₀ = s.mem := by rw [← ht₀]; exact hm₀
+  subst hmm
+  have hanW : HW (r₀.headD 0) := hanHW
+  obtain ⟨hok, hca, hres, hL1⟩ := arW_ok p hcc dn vis fe eb ctor nP us (r₀.headD 0) hctor hus hanW 2
+    (n + 1) s.mem a₀ MM 0 r s'.mem (by simp) hS hW
+  have hrunA := andRescueSlots_run fe (decI ctor) nP.toNat (decI us) (decI (r₀.headD 0)) a₀ _ _
+    (by simpa [PIN_AND] using hpin) (AM.run_of_ok _ _ hok)
+  obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ hrunA
+  refine ⟨hokF, ?_, ?_, hL1⟩
+  · rw [hstF]; simpa using hca
+  · rw [hresF]; simpa using hres
 
 end L.Arena
