@@ -15,6 +15,7 @@ import ConAgua.Arena.LsStore
 import ConAgua.Arena.LevelEquiv
 import ConAgua.Arena.Env
 import ConAgua.Compiler.WF
+import ConAgua.Compiler.WFFast
 
 /-!
 # The promotion's program: every function it calls, by name
@@ -383,7 +384,7 @@ set_option maxHeartbeats 0 in
 theorem promoteProg_ok : PromoteProg promoteProg := by
   constructor <;> rfl
 
-theorem promoteProg_wf : L.Compiler.Prog.wf L.Ind.indTab promoteProg = true := by
-  decide +kernel
+theorem promoteProg_wf : L.Compiler.Prog.wf L.Ind.indTab promoteProg = true :=
+  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
 
 end L.Arena
