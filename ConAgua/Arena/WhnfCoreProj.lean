@@ -934,6 +934,145 @@ theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (hc : CoreCallees p) (n 
     · rw [hres]; unfold decOptR; rw [← hr0]; rfl
     · unfold ResW; rw [← hr0, ← hr1]; exact ⟨by unfold HW; decide, by unfold HW; decide⟩
 
+/-! ## `reduce_proj_head` -/
+
+theorem decE_const_tag (h : Word) (hh : HW h) : ((decE h).tag == ETag.const) = (h >>> 28 == 3) := by
+  rw [decE_tag h hh, ETag.const]
+  rw [show (3 : UInt32) = (3 : Word).toUInt32 from rfl]
+  exact toUInt32_beq _ _ (shr28_lt h hh) (by decide)
+
+/-- **A `const` node past the view checks**: its name and level-list handles are the record's
+words. -/
+theorem view_const_words (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
+    (hv : viewOK m h 18) (hg : h >>> 28 = 3) :
+    ∃ n us, a.store.view (decE h) = some (.const n us) ∧
+      n = decI (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2)) ∧
+      us = decI (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1)) ∧
+      HW (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2)) ∧
+      HW (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1)) := by
+  obtain ⟨k, hk, hkr⟩ := node_of m a h constSch CeRecRel cehash (·.consts) _ hR.const hv.2
+  obtain ⟨h1, h2⟩ := hkr
+  refine ⟨k.n, k.us, ?_, ?_, ?_, ?_, ?_⟩
+  · rw [view_tier m a hR h hh hv.1, get_const _ h hh hg, Tbl.node?, hk]; rfl
+  · rw [h1, decI_word]
+  · rw [h2, decI_word]
+  · rw [h1]; unfold HW; rw [UInt32.toNat_toUInt64]; exact k.n.word.toNat_lt
+  · rw [h2]; unfold HW; rw [UInt32.toNat_toUInt64]; exact k.us.word.toNat_lt
+
+/-- The twin from the scrutinee's head on. -/
+def rpHeadT (mode : ConLeche.CheckMode) (fe : IFEnv) (entry : IProjEntry) (i : Nat) (e' : EIdx) :
+    AM (Option EIdx) := do
+  let hh ← getAppFn coreWalkFuel e'
+  if hh.tag == ETag.const then
+    match ← view hh with
+    | .const k us => rpFireT mode fe entry i e' k us
+    | _ => pure none
+  else pure none
+
+/-- The model of `reduce_proj_head`. -/
+def rpHeadW (p : Prog) (n : Nat) (m : Mem) (mode vis e1 q i : Word) : Option (Word × Word × Mem) :=
+  match callW p n "get_app_fn" [e1] m with
+  | none => none
+  | some (r₁, m₁) =>
+    if r₁.headD 0 >>> 28 ≠ 3 then some (0, 0, m₁)
+    else if tierW (r₁.headD 0) ≠ 0 ∧ rdW (m₁.arr64 CTL) 1 = 0 then none
+    else if rdW (m₁.arr64 CTL) (18 + tierW (r₁.headD 0)) ≤ idxW (r₁.headD 0) then none
+    else match callW p n "reduce_proj_fire" [mode, vis, e1, q, i,
+        rdW (m₁.arr64 CREC) (idxW (r₁.headD 0) * 4 + tierW (r₁.headD 0) * 2),
+        rdW (m₁.arr64 CREC) (idxW (r₁.headD 0) * 4 + tierW (r₁.headD 0) * 2 + 1)] m₁ with
+      | none => none
+      | some (r₂, m₂) => some (r₂.headD 0, r₂.tail.headD 0, m₂)
+
+theorem rpHead_spec (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) (mode vis e1 q i : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "reduce_proj_head" [mode, vis, e1, q, i]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      rpHeadW p n s₀.mem mode vis e1 q i = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp.rphead]
+  simp only [callFn, reduceProjHeadL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      callW_spec p n "get_app_fn", callW_spec p n "reduce_proj_fire"] <;>
+    finish [rpHeadW, tierW, idxW]
+
+theorem rpHead_refines (p : Prog) (hp : WhnfCoreProg p) (hc : CoreCallees p) (n : Nat)
+    (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (MM : ModeMaps) (eb mode e1 q i : Word) (tbl : IProjTable)
+    (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he1 : HW e1)
+    (hq : decTbl (s₀.mem.arr64 EREC) q.toNat = some tbl) :
+    GrowSpec p (n + 1) "reduce_proj_head" [mode, vis, e1, q, i]
+      (rpHeadT (decMode mode) fe (tbl.entry i.toNat) i.toNat (decE e1))
+      decOptR s₀ a₀ dn vis fe MM eb ResW := by
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
+    (rpHead_spec p hp n s₀ mode vis e1 q i)
+  subst hs0
+  refine ⟨hloc, ?_⟩
+  have hS := hs.rel
+  unfold rpHeadW at hW
+  cases hc1 : callW p n "get_app_fn" [e1] s.mem with
+  | none => simp [hc1] at hW
+  | some q₁ =>
+  obtain ⟨r₁, m₁⟩ := q₁
+  simp only [hc1] at hW
+  obtain ⟨t₁, ht₁, hm₁, -, hhw, hrun1⟩ := triple_of_callW
+    (getAppFn_refines p hp.spine n s a₀ hS.arena.1 e1 he1) hc1
+  have hm₁' : m₁ = s.mem := by rw [← ht₁]; exact hm₁
+  subst hm₁'
+  by_cases g : r₁.headD 0 >>> 28 ≠ 3
+  · rw [if_pos g] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨hr0, hr1, hm⟩ := hW
+    have hT : (rpHeadT (decMode mode) fe (tbl.entry i.toNat) i.toNat (decE e1)).run a₀ =
+        .ok (none, a₀) := by
+      have hb : (r₁.headD 0 >>> 28 == 3) = false := by simpa using g
+      simp only [rpHeadT, StateT.run_bind, hrun1, except_ok_bind, decE_const_tag _ hhw, hb]
+      rfl
+    obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hT
+    refine ⟨hok, ?_, ?_, ?_⟩
+    · rw [hst, ← hm]; exact ⟨MM, hS, KeptAll.refl _ _, (StackKept.refl _).toGrew⟩
+    · rw [hres]; unfold decOptR; rw [← hr0]; rfl
+    · unfold ResW; rw [← hr0, ← hr1]; exact ⟨by unfold HW; decide, by unfold HW; decide⟩
+  rw [if_neg g] at hW
+  have g3 : r₁.headD 0 >>> 28 = 3 := by simpa using g
+  by_cases hsc : tierW (r₁.headD 0) ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0
+  · rw [if_pos hsc] at hW; cases hW
+  rw [if_neg hsc] at hW
+  by_cases hbd : rdW (s.mem.arr64 CTL) (18 + tierW (r₁.headD 0)) ≤ idxW (r₁.headD 0)
+  · rw [if_pos hbd] at hW; cases hW
+  rw [if_neg hbd] at hW
+  have hvOK : viewOK s.mem (r₁.headD 0) 18 := ⟨hsc, by simpa using hbd⟩
+  obtain ⟨n', us', hv, hn, hus, hhn, hhus⟩ := view_const_words s.mem a₀ hS.arena.1 (r₁.headD 0)
+    hhw hvOK g3
+  cases hc2 : callW p n "reduce_proj_fire" [mode, vis, e1, q, i,
+      rdW (s.mem.arr64 CREC) (idxW (r₁.headD 0) * 4 + tierW (r₁.headD 0) * 2),
+      rdW (s.mem.arr64 CREC) (idxW (r₁.headD 0) * 4 + tierW (r₁.headD 0) * 2 + 1)] s.mem with
+  | none => rw [hc2] at hW; cases hW
+  | some q₂ =>
+  obtain ⟨r₂, m₂⟩ := q₂
+  simp only [hc2, Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨hr0, hr1, hm⟩ := hW
+  cases n with
+  | zero => simp [callW_zero] at hc2
+  | succ N =>
+  have hfire := rpFire_refines p hp hc N s a₀ dn vis fe MM eb mode e1 q i _ _ tbl hs he1 hhn hhus hq
+  obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hrw2⟩ := GrowSpec.of_callW hfire hc2
+  have hrun2 := AM.run_of_ok _ _ hok2
+  rw [hres2] at hrun2
+  have hT : (rpHeadT (decMode mode) fe (tbl.entry i.toNat) i.toNat (decE e1)).run a₀ =
+      (rpFireT (decMode mode) fe (tbl.entry i.toNat) i.toNat (decE e1)
+        (decI (rdW (s.mem.arr64 CREC) (idxW (r₁.headD 0) * 4 + tierW (r₁.headD 0) * 2)))
+        (decI (rdW (s.mem.arr64 CREC) (idxW (r₁.headD 0) * 4 + tierW (r₁.headD 0) * 2 + 1)))).run a₀ := by
+    have hb : (r₁.headD 0 >>> 28 == 3) = true := by simpa using g3
+    simp only [rpHeadT, StateT.run_bind, hrun1, except_ok_bind, decE_const_tag _ hhw, hb, if_true,
+      view_run _ _ _ hv]
+    rw [hn, hus]
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ (hT.trans hrun2)
+  refine ⟨hok, ?_, ?_, ?_⟩
+  · rw [hst, ← hm]; exact ⟨M₂, hS₂, hK₂, hSt₂⟩
+  · rw [hres]; unfold decOptR; rw [← hr0, ← hr1]
+  · unfold ResW; rw [← hr0, ← hr1]; exact hrw2
+
 /-! ## `reduce_proj_core` -/
 
 /-- **`reduce_proj_core` refines `reduceProjCore`.** -/
