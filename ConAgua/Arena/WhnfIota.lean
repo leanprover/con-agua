@@ -595,17 +595,22 @@ def constTyAtL : FunDecl := lfn (n, po, pl, ty, us) locals (fd, j, dd, r, dum) {
 
 /-! ## `rec_fire_args(…)`: `instSpine`, `inst_spine_pins`, `rec_fire_args` -/
 
+/-- The instantiation walk of `inst_spine` (a named block, for the proofs). -/
+def instSpineLoop : Stmt := lblk (ao, an, t, e, i) {
+  while i < an {
+    e := call inst_entry(e, SPN.u64[ao + i], t);
+    t := t - 1;
+    i += 1
+  }
+}
+
 /-- con-leche: `ExprOps.lean:1305-1313` `instSpine` — instantiate a telescope-context expression
 at an argument spine `(ao, an)`, the fuel-like index `t` decreasing by one per argument. -/
 -- con-ron: ConRon/Arena/ExprOps.lean:1379-1385 ConRon.Arena.instSpine
 @[l_impl ConRon.Arena.instSpine]
 def instSpineL : FunDecl := lfn (ao, an, t, e) locals (i) {
   i := 0;
-  while i < an {
-    e := call inst_entry(e, SPN.u64[ao + i], t);
-    t := t - 1;
-    i += 1
-  };
+  ⟪instSpineLoop⟫;
   return e
 }
 
