@@ -244,6 +244,21 @@ theorem StackKept.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : M
   exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn],
     BKept.of_frame hf hA.2.1 hC.2.1, PoolGrew.of_frame hf hA.2.2 hC.2.2 hL⟩
 
+/-- `StackKept.of_frame` for a writer of the level tables, their growth given (`hlc`). -/
+theorem StackKept.of_frameL {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
+    (hA : SPN ∉ A ∧ BSTK ∉ A ∧ POOL ∉ A) (hC : (136 : Word) ∉ C ∧ (137 : Word) ∉ C ∧ (0 : Word) ∉ C)
+    (hlc : LvlCnt m m') : StackKept m m' := by
+  have hspn : m'.arr64 SPN = m.arr64 SPN := hf.1 SPN hA.1 (by decide)
+  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 hC.1
+  have hp : m'.arr64 POOL = m.arr64 POOL := hf.1 POOL hA.2.2 (by decide)
+  have ht : m'.top = m.top := by
+    have := hf.2.1 0 hC.2.2
+    simp only [rdW] at this
+    simpa [Mem.top] using this
+  exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn],
+    BKept.of_frame hf hA.2.1 hC.2.1,
+    ⟨by rw [ht]; exact Nat.le_refl _, by rw [hp], fun j _ => by rw [hp], hlc⟩⟩
+
 /-- **A frame inside arrays 1‥143 and `CTL` words 1‥135** keeps the stacks and the pool. -/
 theorem StackKept.of_frame_range {m m' : Mem} {A : List ArrId} {C : List Word}
     (hf : MemFrame A C m m') (hA : ∀ b ∈ A, 1 ≤ b ∧ b < 144)
