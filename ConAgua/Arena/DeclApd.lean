@@ -20,7 +20,7 @@ on the node (fresh per call), at `coreWalkFuel`. In L:
 
 `alpd_go` re-probes before its put: the recursive calls may have filled the slot the first probe
 returned. A hit returns the slot's value word `APDM.u64[j * 4 + 3]` (`d` is the probe depth, not
-the value: the first version returned `d`; helper `decls3-apd`'s spec exposed it).
+the value: the first version of this file returned `d`, which the spec in `DeclApdSpec.lean` exposed).
 -/
 
 open ConRon.Arena

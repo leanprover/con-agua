@@ -7510,3 +7510,14 @@ twin's `FoldOK` has it) and kept across the arms' earlier callees (`find_pinned`
 state; `rom_ci`'s interns need con-ron's `intern*` well-formedness lemmas, or a `StateOK` clause in
 the ROM stubs' `KeepPost`). This is the same gap as `lvlEqStub_spec`'s `TwinOK`: the stage
 relation should carry the twin's well-formedness (`StateOK`, which gives `NStoreWF` too).
+
+### Landing 9 (lane `decls3`): `all_level_params_defined` refines the twin (helper `decls3-apd`)
+
+`DeclApdSpec.lean` (word models, `vcgen` specs), `DeclApdRef.lean` (relational):
+`allLevelParamsDefined_refines` (`@[refines]`, `RefAM … (KeepPost dn vis fe decW0B)`, through
+`ApdProg p`) and `alpdGo_refines` (twin fuel `f.toNat`), sorry-free. Extra premises the stub
+spec does not have, which the callers (`DeclCvg`, `DeclHeader`, `DeclReduceSpec`, `RecGenSpec3/4`)
+must supply before the `stubM "all_level_params_defined"` uses can go: `ApdEnv a`
+(`NStoreWF` and `StoreDen`'s level fields — again the twin's well-formedness the stage relation
+lacks, as for `LitInj`/`TwinOK`), the parameter names read back, and some memo in `APDM` on
+entry. The memo-hit bug (the probe depth returned as the value) was found by this spec.
