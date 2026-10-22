@@ -581,6 +581,121 @@ theorem natOpTyPinned_refines (hN : NatTyProg p) (c ty : Word) :
       (natOpTyPinned fe (decI c) (decI ty)) (KeepPost dn vis fe decW0B) :=
   (natOpTyPinned_ref hN c ty).refAM
 
+/-! ### `nat_op_stored_ok` -/
+
+def osK2 : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m) => some ([r.headD 0], m)
+
+def osK1 (p : Prog) (n : Nat) (vis w : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rf, m) =>
+    if rf.headD 0 = 0 then some ([0], m)
+    else if rdW (m.arr64 EREC) (rf.tail.headD 0) ≠ 1 then some ([0], m)
+    else if rdW (m.arr64 EREC) (rf.tail.headD 0 + 3) ≠ 0 then some ([0], m)
+    else osK2 (callW p n "nat_op_ty_pinned" [vis, w, rdW (m.arr64 EREC) (rf.tail.headD 0 + 4)] m)
+
+def natOpStoredOkW (p : Prog) (n : Nat) (m : Mem) (vis w : Word) : Option (List Word × Mem) :=
+  osK1 p n vis w (callW p n "env_find" [w, vis] m)
+
+section osarms
+variable (p : Prog) (n : Nat) (vis w : Word) (r : List Word) (m : Mem)
+theorem osK2_some : osK2 (some (r, m)) = some ([r.headD 0], m) := rfl
+theorem osK1_some : osK1 p n vis w (some (r, m)) =
+    if r.headD 0 = 0 then some ([0], m)
+    else if rdW (m.arr64 EREC) (r.tail.headD 0) ≠ 1 then some ([0], m)
+    else if rdW (m.arr64 EREC) (r.tail.headD 0 + 3) ≠ 0 then some ([0], m)
+    else osK2 (callW p n "nat_op_ty_pinned" [vis, w, rdW (m.arr64 EREC) (r.tail.headD 0 + 4)] m) := rfl
+end osarms
+
+grind_pattern [ind_grind] osK2_some => osK2 (some (r, m))
+grind_pattern [ind_grind] osK1_some => osK1 p n vis w (some (r, m))
+
+theorem natOpStoredOk_specW (p : Prog) (hp : p.lookup "nat_op_stored_ok" = some natOpStoredOkL)
+    (n : Nat) (s₀ : St) (vis w : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_op_stored_ok" [vis, w]
+    ⦃fun r s' => LocEq s' s₀ ∧ natOpStoredOkW p n s₀.mem vis w = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, natOpStoredOkL]
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      callW_spec p n "env_find", callW_spec p n "nat_op_ty_pinned"] <;>
+    finish (gen := 20) [natOpStoredOkW]
+
+theorem natOpStoredOk_ref (hN : NatTyProg p) (w : Word) :
+    CallRef p "nat_op_stored_ok" [vis, w] (fun m a => StageR dn vis fe m a ∧ H w)
+      (natOpStoredOk fe (decI w)) (KeepPost dn vis fe decW0B) := by
+  refine CallRef.of_succ fun k m a r m' ⟨hS, hw⟩ hcall => ?_
+  have hW := callW_model (M := fun mm => natOpStoredOkW p k mm vis w) (natOpStoredOk_specW p hN.lNatOpStoredOk k · vis w) hcall
+  unfold natOpStoredOkW at hW
+  cases h1 : callW p k "env_find" [w, vis] m with
+  | none => rw [h1] at hW; simp [osK1] at hW
+  | some q1 =>
+  obtain ⟨rf, m1⟩ := q1
+  rw [h1, osK1_some] at hW
+  obtain ⟨hm1, hfd⟩ := envFind_call hN.toMasterProg w hw hS.1.env h1
+  rw [hm1] at hW
+  cases hf : fe.find? (decI w) with
+  | none =>
+    rw [hf] at hfd
+    have hz : rf.headD 0 = 0 := hfd
+    rw [if_pos hz] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, rfl⟩ := hW
+    exact ⟨false, a, by simp only [natOpStoredOk, hf]; rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
+  | some ci =>
+    rw [hf] at hfd
+    obtain ⟨hf1, hci⟩ := hfd
+    rw [if_neg (by rw [hf1]; decide)] at hW
+    have hsz := hS.2.2.2.2.1
+    rcases defnMono_words hsz hci with ⟨hne, hdm⟩ | ⟨hk1, hiff⟩
+    · rw [if_pos hne] at hW
+      simp only [Option.some.injEq, Prod.mk.injEq] at hW
+      obtain ⟨rfl, rfl⟩ := hW
+      refine ⟨false, a, ?_, hS, IWGrow.refl _, by simp [decW0B]⟩
+      simp only [natOpStoredOk, hf]
+      cases ci <;> first | rfl | (simp [defnMono] at hdm; simp [hdm]; rfl)
+    · rw [if_neg (by simpa using hk1)] at hW
+      -- the record is a definition
+      obtain ⟨cv, v, hint, rfl, hk, hcv⟩ : ∃ cv v hint, ci = .defnInfo cv v hint ∧
+          (erecP m)[(rf.tail.headD 0).toNat]? = some 1 ∧ decCV (erecP m) ((rf.tail.headD 0).toNat + 1) = some cv := by
+        rcases decCI_defn_cases hci with h | ⟨wk, hwk, hne, -⟩
+        · exact h
+        · exfalso; have := rdW_erec_of hsz hwk; rw [hk1] at this; exact hne this.symm
+      obtain ⟨wt, hiffc, hrd, hlt, hty, -⟩ := cvWords hsz hcv
+      by_cases hl : rdW (m.arr64 EREC) (rf.tail.headD 0 + 3) = 0
+      · rw [if_neg (by simpa using hl)] at hW
+        cases h2 : callW p k "nat_op_ty_pinned" [vis, w, rdW (m.arr64 EREC) (rf.tail.headD 0 + 4)] m with
+        | none => rw [h2] at hW; simp [osK2] at hW
+        | some q2 =>
+        obtain ⟨rt, m2⟩ := q2
+        rw [h2, osK2_some] at hW
+        simp only [Option.some.injEq, Prod.mk.injEq] at hW
+        obtain ⟨rfl, rfl⟩ := hW
+        rw [hrd] at h2
+        obtain ⟨x2, a2, hrun2, hS2, hg2, hx2⟩ := natOpTyPinned_ref (dn := dn) (vis := vis) (fe := fe) hN w wt
+          k m a rt m2 ⟨hS, hw, hlt⟩ h2
+        refine ⟨x2, a2, ?_, hS2, hg2, by simpa [decW0B] using hx2⟩
+        have hisE : cv.levelParams.isEmpty = true := hiffc.mp hl
+        simp only [natOpStoredOk, hf, hisE, if_true, hty]
+        exact hrun2
+      · rw [if_pos (by simpa using hl)] at hW
+        simp only [Option.some.injEq, Prod.mk.injEq] at hW
+        obtain ⟨rfl, rfl⟩ := hW
+        have hisE : cv.levelParams.isEmpty = false := by
+          cases h : cv.levelParams.isEmpty
+          · rfl
+          · exact absurd (hiffc.mpr h) hl
+        refine ⟨false, a, ?_, hS, IWGrow.refl _, by simp [decW0B]⟩
+        simp only [natOpStoredOk, hf, hisE]
+        rfl
+
+@[refines ConRon.Arena.natOpStoredOk]
+theorem natOpStoredOk_refines (hN : NatTyProg p) (w : Word) :
+    RefAM p "nat_op_stored_ok" [vis, w] (fun m a => StageR dn vis fe m a ∧ H w)
+      (natOpStoredOk fe (decI w)) (KeepPost dn vis fe decW0B) :=
+  (natOpStoredOk_ref hN w).refAM
+
 end ty
 
 end L.Ind
