@@ -5743,6 +5743,21 @@ links 0 (`@[l_impl]` moved off the ROM readers, which are functions of the ROM, 
   `vcgen` 26 s → 1.4 s, largest `grind` 7.8 s; module 100 s (contended) → 17 s (Lake).
 - The same cause is behind `Scan.Line` (`lineLoop_spec`, `||` chains over the key code).
 
+### `Scan.Line` (117 s): not fixed, diagnosis
+
+- Nearly all of it is `lineLoop_spec` (108 s uncontended): `vcgen` takes 1 s and leaves 89 goals;
+  `finish` on them takes the rest (~1.2 s each, part of it shown as `sym`'s own time). With the
+  `finish`es replaced by `sorry` the theorem takes under 2 s.
+- `L.evalC_spec` does not help here: the `||` chains over the key code `k` become disjunctive
+  hypotheses, and `finish` then needs more case splits than the separate paths cost (85 s with 5
+  goals failing at the default split limit; 139 s with `splits := 24`, one goal 55 s). With
+  `[grind norm]` on the `pval` equations `finish` sees the unfolded conditions, so the remaining
+  cost is the splitting itself.
+- What should work: the PLAN recipe, one named block per arm group of the dispatch (the six
+  `else if k == …` groups), each with its own spec, so that each goal sees one arm's callee posts
+  instead of all of them. That changes the L code's shape (not its behaviour), so it is left to the
+  owner of `Scan/Line.lean`.
+
 ### `Scan/Records.lean` split (2270 lines)
 
 Pure move, as in `Front/FieldsDecl*`: `Records.lean` keeps the L code and the models (1357
