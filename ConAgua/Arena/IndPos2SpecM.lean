@@ -768,3 +768,114 @@ theorem u4W_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (h
       simpa using hrun
 
 end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+/-! ## `nest_ctors_res_ok`: the result headed by a hole, hole-free indices -/
+
+def roK2 : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m3) => some ([if r.headD 0 = 0 then 1 else 0], m3)
+def roK1 (k : Nat) (ctx hi : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m2) => roK2 (noaW k m2 (rdW (m2.arr64 IW) ctx) (rdW (m2.arr64 IW) (ctx + 1))
+      (rdW (m2.arr64 IW) (ctx + 4)) hi (r.headD 0) (r.tail.headD 0))
+def roK0 (k : Nat) (ctx hi cur : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m1) => if r.headD 0 = 0 then some ([0], m1) else roK1 k ctx hi (stubM "get_app_args_f" m1 [CWF, cur])
+/-- The model of `nest_ctors_res_ok(ctx, hi, cur)`. -/
+def roW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _, _ => none
+  | k + 1, m, ctx, hi, cur => roK0 k ctx hi cur (resHeadW m cur)
+
+section arms
+variable (k : Nat) (m1 m2 m3 : Mem) (ctx hi cur : Word) (r : List Word)
+theorem roK2_some : roK2 (some (r, m3)) = some ([if r.headD 0 = 0 then 1 else 0], m3) := rfl
+theorem roK1_some : roK1 k ctx hi (some (r, m2)) = roK2 (noaW k m2 (rdW (m2.arr64 IW) ctx)
+    (rdW (m2.arr64 IW) (ctx + 1)) (rdW (m2.arr64 IW) (ctx + 4)) hi (r.headD 0) (r.tail.headD 0)) := rfl
+theorem roK0_eq : roK0 k ctx hi cur (some (r, m1)) =
+    if r.headD 0 = 0 then some ([0], m1) else roK1 k ctx hi (stubM "get_app_args_f" m1 [CWF, cur]) := rfl
+end arms
+attribute [ind_grind] roK2_some roK1_some
+
+theorem nestCtorsResOk_spec (p : Prog) (hl : NoLook p) (hoa : p.lookup "nest_occ_any" = some nestOccAnyL)
+    (hrh : p.lookup "nest_res_head" = some nestResHeadL)
+    (hp : p.lookup "nest_ctors_res_ok" = some nestCtorsResOkL) (n : Nat) (s₀ : St) (ctx hi cur : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_ctors_res_ok" [ctx, hi, cur]
+    ⦃fun r s' => LocEq s' s₀ ∧ roW n s₀.mem ctx hi cur = some ([r.headD 0], s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, nestCtorsResOkL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        nestResHead_spec p hrh n, stubM_spec p "get_app_args_f" n, nestOccAny_spec p hl hoa n] <;>
+      finish (gen := 20) [roW, roK0_eq, rdW_eq]
+
+/-- The twin's result check of `nestCtors`. -/
+def roT (c : NestCtx) (hi : Nat) (cur : EIdx) : AM Bool := do
+  if ← nestResHead cur then do
+    let args ← getAppArgs coreWalkFuel cur
+    let occ ← args.anyM fun x => ConRon.Arena.nestOcc c.names c.nP hi x
+    pure !occ
+  else pure false
+
+theorem roW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (hM : PosMemo dn vis fe)
+    {k : Nat} {m m' : Mem} {a : AState} {ctx hi cur : Word} {c : NestCtx} {r : List Word}
+    (h : roW k m ctx hi cur = some (r, m')) (hS : StageR dn vis fe m a) (hU : UCtx dn vis fe m ctx c)
+    (hcur : H cur) :
+    ∃ b a', (roT c hi.toNat (decI cur)).run a = .ok (b, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+      r.headD 0 = (if b then 1 else 0) := by
+  cases k with
+  | zero => simp [roW] at h
+  | succ k =>
+  simp only [roW] at h
+  cases hrh : resHeadW m cur with
+  | none => rw [hrh] at h; simp [roK0] at h
+  | some pr =>
+  obtain ⟨r1, m1⟩ := pr
+  rw [hrh, roK0_eq] at h
+  obtain ⟨a1, hrun1, hS1, hg1⟩ := resHeadW_ok dn fe vis m m1 a cur r1 hcur hrh hS
+  by_cases h0 : r1.headD 0 = 0
+  · rw [if_pos h0] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    refine ⟨false, a1, ?_, hS1, hg1, rfl⟩
+    simp only [roT, StateT.run_bind, hrun1, except_ok_bind, h0, bne_self_eq_false, Bool.false_eq_true, ite_false]
+    rfl
+  rw [if_neg h0] at h
+  have hne : (r1.headD 0 != 0) = true := by simpa using h0
+  cases hga : stubM "get_app_args_f" m1 [CWF, cur] with
+  | none => rw [hga] at h; simp [roK1] at h
+  | some pr2 =>
+  obtain ⟨r2, m2⟩ := pr2
+  rw [hga, roK1_some] at h
+  obtain ⟨args, a2, hrun2, hS2, hg2, hargs⟩ := getAppArgs_spec dn vis fe CWF cur hcur m1 m2 a1 r2 hga hS1
+  rw [CWF_eq] at hrun2
+  have hU2 := (hU.grow hg1).grow hg2
+  have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
+  obtain ⟨hn2, -, -, -, hnP2, -⟩ := ctx_fields hU2.dec hU2.inn htop2
+  have hne2 := ctx_names_end hU2.dec hU2.inn hU2.sl htop2
+  obtain ⟨hdA, hbA⟩ := hargs
+  have e0 : r2.getD 0 0 = r2.headD 0 := by cases r2 <;> rfl
+  have e1 : r2.getD 1 0 = r2.tail.headD 0 := by rcases r2 with _ | ⟨_, _ | ⟨_, _⟩⟩ <;> rfl
+  rw [e0, e1] at hdA hbA
+  cases hoa : noaW k m2 (rdW (m2.arr64 IW) ctx) (rdW (m2.arr64 IW) (ctx + 1)) (rdW (m2.arr64 IW) (ctx + 4)) hi
+      (r2.headD 0) (r2.tail.headD 0) with
+  | none => rw [hoa] at h; simp [roK2] at h
+  | some pr3 =>
+  obtain ⟨r3, m3⟩ := pr3
+  rw [hoa, roK2_some] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨b, hrunoa, hS3, hg3, hr3⟩ := noaW_ok dn fe vis _ _ _ _ c.names hM.no k m2 m3 a2 _ _ args r3 hoa hS2
+    hn2 hne2 hdA (fun j hj => by omega)
+  rw [hnP2] at hrunoa
+  refine ⟨!b, a2, ?_, hS3, (hg1.trans hg2).trans hg3, ?_⟩
+  · simp only [roT, StateT.run_bind, hrun1, except_ok_bind, hne, ite_true, hrun2, hrunoa]; rfl
+  · rw [hr3]; cases b <;> rfl
+
+end L.Ind
