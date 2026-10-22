@@ -266,4 +266,133 @@ theorem prefixBinders_spec (n : Nat) (s₀ : St) (g : Word) :
 
 end specs
 
+/-! ## Finding the constructor -/
+
+theorem rec2DecI_inj {k : IdxKind} {v w : Word} (hv : H v) (hw : H w) (h : (decI v : Idx k) = decI w) : v = w := by
+  rw [← decI_word_self (k := k) v hv, ← decI_word_self (k := k) w hw, h]
+
+/-- What `find_ctor(_go)` returns. -/
+def FcRes (m : Mem) (r : List Word) : Option ClassCtor → Prop
+  | none => r.headD 0 = 0
+  | some X => r.headD 0 = 1 ∧ DecB (fun m => decCC m (r.tail.headD 0).toNat) m X
+
+theorem fcgW_ok (n : Nat) : ∀ (m m' : Mem) (io il cn : Word) (r : List Word) (xs : List ClassCtor),
+    fcgW n m io il cn = some (r, m') → DecB (fun m => decPL m (decCC m) io.toNat il.toNat) m xs → H cn →
+    (m.arr64 IW).size < 2 ^ 64 →
+    m' = m ∧ FcRes m r (xs.find? (fun x => x.cv.name == decI cn)) := by
+  induction n with
+  | zero => intro m m' io il cn r xs h; simp [fcgW] at h
+  | succ n ih =>
+  intro m m' io il cn r xs h hxs hcn hsz
+  by_cases hl : il = 0
+  · rw [fcgW_nil (h := hl)] at h
+    cases h
+    have : xs = [] := by
+      have := decPL_length _ (hxs.get (OMono.decPL (fun q => decCC_mono q) _ _))
+      rw [hl] at this; exact List.eq_nil_of_length_eq_zero (by simpa using this)
+    subst this
+    exact ⟨rfl, rfl⟩
+  have hl0 : il.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e))
+  obtain ⟨k, hk⟩ : ∃ k, il.toNat = k + 1 := ⟨il.toNat - 1, by omega⟩
+  have hxs' : decPL (truncM m) (decCC (truncM m)) io.toNat (k + 1) = some xs := by rw [← hk]; exact hxs
+  obtain ⟨p, X0, rest, rfl, hp, hX0, hrest⟩ := decPL_cons hxs'
+  obtain ⟨hpt, hpm⟩ := rec2IwN_trunc hp
+  obtain ⟨ep, tp⟩ := rec2RdN (w := io) (k := 0) (by simpa using hpm) hsz
+  simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero] at ep
+  have hX0m : decCC m (UInt64.ofNat p : Word).toNat = some X0 := by
+    rw [tp]; exact (show DecB (fun m => decCC m p) m X0 from hX0).get (decCC_mono _)
+  obtain ⟨w, ew, hwH, hwd⟩ := rec2CCName hX0m hsz
+  by_cases hhit : w = cn
+  · subst hhit
+    rw [fcgW_hit (h := hl) (h2 := by rw [ep, ew])] at h
+    cases h
+    refine ⟨rfl, ?_⟩
+    have : (X0.cv.name == decI w) = true := by rw [← hwd]; simp
+    simp only [List.find?_cons, this]
+    exact ⟨rfl, by rw [ep]; simp only [List.headD_cons, List.tail_cons]; rw [tp]; exact hX0⟩
+  · rw [fcgW_miss (h := hl) (h2 := by rw [ep, ew]; exact hhit)] at h
+    cases hr : fcgW n m (io + 1) (il - 1) cn with
+    | none => rw [hr] at h; cases h
+    | some rm =>
+    obtain ⟨r', m''⟩ := rm
+    rw [hr, fcK_some] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    have := iwN_lt hpm
+    have hio1 : (io + 1).toNat = io.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+    have hil1 : (il - 1).toNat = k := by
+      rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
+    obtain ⟨hm, hres⟩ := ih m m'' (io + 1) (il - 1) cn r' rest hr (by rw [hio1, hil1]; exact hrest) hcn hsz
+    subst hm
+    refine ⟨rfl, ?_⟩
+    have : (X0.cv.name == decI cn) = false := by
+      rw [← hwd]; simp only [beq_eq_false_iff_ne, ne_eq]
+      exact fun e => hhit (rec2DecI_inj hwH hcn e)
+    simp only [List.find?_cons, this]
+    cases hf : rest.find? (fun x => x.cv.name == decI cn) with
+    | none => rw [hf] at hres; exact hres
+    | some X => rw [hf] at hres; exact hres
+
+theorem fcW_ok (n : Nat) (m m' : Mem) (g c cn : Word) (r : List Word) (G : ClassGen)
+    (h : fcW n m g c cn = some (r, m')) (hG : DecB (fun m => decCG m g.toNat) m G) (hcn : H cn)
+    (hsz : (m.arr64 IW).size < 2 ^ 64) :
+    m' = m ∧ FcRes m r ((G.ctors.getD c.toNat []).find? (fun x => x.cv.name == decI cn)) := by
+  cases n with
+  | zero => simp [fcW] at h
+  | succ n =>
+  have hG' : decCG (truncM m) g.toNat = some G := hG
+  simp only [decCG, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hG'
+  obtain ⟨nP, hnP, ps, hps, cls, hcls, ft, hft, sl, hsl, cts, hcts, el, hel, pre, hpre, rfl⟩ := hG'
+  obtain ⟨co, cl, hco, hcl, hctd⟩ := decAt_some hcts
+  obtain ⟨hcot, hcom⟩ := rec2IwN_trunc hco
+  obtain ⟨hclt, hclm⟩ := rec2IwN_trunc hcl
+  obtain ⟨e9, t9⟩ := rec2RdN (w := g) (k := 9) hcom hsz
+  obtain ⟨e10, t10⟩ := rec2RdN (w := g) (k := 10) (by simpa [Nat.add_assoc] using hclm) hsz
+  simp only [show UInt64.ofNat 9 = (9 : Word) from rfl, show UInt64.ofNat 10 = (10 : Word) from rfl] at e9 e10
+  have hlen := decPL_length _ hctd
+  by_cases hc : rdW (m.arr64 IW) (g + 10) ≤ c
+  · rw [fcW_none (h := hc)] at h
+    cases h
+    have : cts.length ≤ c.toNat := by rw [hlen, ← t10]; rw [e10] at hc; exact UInt64.le_iff_toNat_le.mp hc
+    refine ⟨rfl, ?_⟩
+    have hn : cts.getD c.toNat [] = [] := by simp [List.getD_eq_getElem?_getD, List.getElem?_eq_none this]
+    rw [hn]
+    rfl
+  rw [fcW_go (h := hc)] at h
+  have hcl' : c.toNat < cl := by
+    rw [e10] at hc; have := UInt64.lt_iff_toNat_lt.mp (by simpa using hc); rwa [t10] at this
+  obtain ⟨lp, hlp, hlpd⟩ := decPL_getH (truncM m) hctd c.toNat hcl'
+  obtain ⟨-, hlpm⟩ := rec2IwN_trunc hlp
+  obtain ⟨xo, xl, hio, hil, hdx⟩ := decAt_some hlpd
+  obtain ⟨-, hiom⟩ := rec2IwN_trunc hio
+  obtain ⟨-, hilm⟩ := rec2IwN_trunc hil
+  have elp : rdW (m.arr64 IW) (rdW (m.arr64 IW) (g + 9) + c) = UInt64.ofNat lp := by
+    rw [e9]
+    have := (rec2RdN (w := UInt64.ofNat co) (k := c.toNat) (by rw [t9]; exact hlpm) hsz).1
+    simpa using this
+  have lplt := (iwN_rdW hlpm (by have := iwN_lt hlpm; omega)).2
+  obtain ⟨eio, -⟩ := rec2RdN (w := UInt64.ofNat lp) (k := 0) (by simpa [UInt64.toNat_ofNat_of_lt' lplt] using hiom) hsz
+  obtain ⟨eil, -⟩ := rec2RdN (w := UInt64.ofNat lp) (k := 1)
+    (by simpa [UInt64.toNat_ofNat_of_lt' lplt] using hilm) hsz
+  simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero,
+    show UInt64.ofNat 1 = (1 : Word) from rfl] at eio eil
+  rw [elp, eio, eil] at h
+  cases hr : fcgW n m (UInt64.ofNat xo) (UInt64.ofNat xl) cn with
+  | none => rw [hr] at h; cases h
+  | some rm =>
+  obtain ⟨r', m''⟩ := rm
+  rw [hr, fcK_some] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  have iolt := (iwN_rdW hiom (by have := iwN_lt hiom; omega)).2
+  have illt := (iwN_rdW hilm (by have := iwN_lt hilm; omega)).2
+  obtain ⟨hm, hres⟩ := fcgW_ok n m m'' _ _ cn r' (cts[c.toNat]'(by omega)) hr
+    (by rw [UInt64.toNat_ofNat_of_lt' iolt, UInt64.toNat_ofNat_of_lt' illt]; exact hdx) hcn hsz
+  subst hm
+  refine ⟨rfl, ?_⟩
+  rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem (show c.toNat < cts.length by omega), Option.getD_some]
+  cases hf : (cts[c.toNat]'(by omega)).find? (fun x => x.cv.name == decI cn) with
+  | none => rw [hf] at hres; exact hres
+  | some X => rw [hf] at hres; exact hres
+
 end L.Ind
