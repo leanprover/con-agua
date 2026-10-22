@@ -111,3 +111,23 @@ capacities), `flag : pinW m 0 ≠ 0` — and a file migrates to it only where a 
   frames for that, and the stage's remaining stubs block it the same way as (a)).
 * For `romBasisRef_quot`/`romBasisARef_quot` (`rom_basis_decls` kind 4: a level read back through
   `dn`): `StageT.twin.den.dnN` is the link `dn k = some x → denoteN … k = some x`.
+
+### Landing 5: helper `tail` — `checkBlockTables`; the tail, pass and block prepared
+* Helper `indproofs3-tail` (~3 h, ~1.8k proof lines, `IndInstallSpec24‥31`):
+  **`checkBlockTables_refines`** (`@[refines]`, through the existing stubs; callees
+  `struct_proj_guards`, `block_shape_lps`, `check_struct_proj_table`). Preconditions beyond the
+  stage relation: `HbMemo s₀.mem` (the `has_loose_bvar_b` memo holds some memo; returned after),
+  and `2^31 + n ≤ coreWalkFuel` (from `structProjGuards_refines`). `HbMemo` comes from the stage's
+  entry: lane `loopt`'s clause "the stage memos hold some well-formed memo" (arrays 201‥208, `CTL`
+  202‥219; the twin starts each walk from `∅`, L clears by an epoch bump whose lemma
+  `memoRV_clear` needs some memo before).
+* Prepared, not tagged: `decBPass` (the 19-word `BlockPass` record, `OMono`), word models and
+  `vcgen` specs of `check_block_pass(_rec)`, `check_block_tail(_rec)`, `check_block`;
+  `ictlW_sim` (the tail's model refines `checkBlockTail` given a `Sim` for `cons_block_recs_tf`,
+  `ConsRecsTFSim p`, which helper `rec` is proving); `PosMR.ofClosed`/`HbMemo.ofClosed` (memo
+  preservation from the callees' write sets in the text, `closedA`).
+* L: `check_block_tables` loop → self-recursion; capacity guard `nP + nF + 1 ≤ nP → abort`;
+  `check_block_pass_rec`, `check_block_tail_rec` split off (without the splits `vcgen` + `finish` ran
+  > 20 min).
+* Open for `check_block`: `blockRawRec` needs `maMR` (the mentions-any memo; part of the same
+  `loopt` clause); `class_seeds` has no refinement yet and writes the walk memos.
