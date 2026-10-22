@@ -327,6 +327,34 @@ theorem validateW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st :
         rw [List.any_eq_true]; exact ⟨tys[k], List.getElem_mem hk, by simpa using hk'⟩
       rw [hany] at hr
       simp at hr
+  -- the order's facts, per type and position
+  have hordf : ∀ i (hi : i < LS.length) c (hc : c < LS[i].length), ∃ k,
+      ∃ _ : fpos LS i + c < (ordList m₅ oo.toNat co.toNat cts cts.length).length,
+        (ordList m₅ oo.toNat co.toNat cts cts.length)[fpos LS i + c] = cts[k]! ∧
+        CtorOK st a cts (islice m₄ cno.toNat cts.length) LS[i][c] c
+          ((islice (k := .name) m₁ tyn.toNat tys.length)[i]!) np.toNat fuel.toNat k := by
+    intro i hi c hc
+    have hi' : i < tys.length := by omega
+    have hcn' : c < cntF m₄ to i := by
+      rw [hcnt i hi']
+      have := congrArg (fun l => l[i]?) l9
+      simp only [List.getElem?_map, List.getElem?_eq_getElem hi, List.getElem?_eq_getElem hi',
+        Option.map_some, Option.some.injEq] at this
+      rw [← this]; exact hc
+    obtain ⟨kk, w1, w2⟩ := o5 i (by omega) c hcn'
+    rw [hps4 i (by omega)] at w1 w2
+    have hpl := fpos_lt LS i c hi hc
+    have hkk : kk < cts.length := w2.1
+    refine ⟨kk, by rw [ordList_length]; omega, ?_, ?_⟩
+    · rw [ordList_get, ← Nat.add_assoc, ptr_rec cts co kk hkk hco _ w1, getElem!_pos cts kk hkk]
+    · have hnn : LS[i][c] = decI (wd m₄ IFL (fo.toNat + (fpos LS i + c))) := by
+        rw [getElem_flatten' LS i c hi hc, List.getElem_of_eq l7, islice_get, hkeep34 _ hpl]
+      have htt : (islice (k := .name) m₁ tyn.toNat tys.length)[i]! = decI (wd m₄ IFL (tyn.toNat + i)) := by
+        rw [getElem!_pos _ i (by rw [islice_length]; exact hi'), islice_get,
+          ((u2.trans (l2.trans v2)).keep _ (by omega) (by omega))]
+      rw [hnn, htt, ← Nat.add_assoc]
+      exact w2
   sorry
+
 
 end L.Front.Ind
