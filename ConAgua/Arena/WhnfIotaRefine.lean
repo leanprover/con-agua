@@ -586,7 +586,12 @@ theorem CoreS.setMemo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
           rw [UInt64.toNat_add]; simp; omega
         omega)
   · exact hf.2.2.1 145 ▸ hS.bstk
-  · refine StackKept.of_frame hf
+  · refine StackKept.of_frame_range hf (fun b hb => by
+      simp at hb; subst hb; rw [← har]; exact ⟨by omega, by omega⟩) (fun x hx => by
+      simp at hx; subst hx
+      have : (S.cs + 1).toNat = S.cs.toNat + 1 := by
+        rw [UInt64.toNat_add]; simp; omega
+      omega)
 
 /-- **`constTyC`'s `find; put`**: the tier across it. -/
 theorem CoreRM.setCt {m m' : Mem} {c : Caches} {M : ModeMaps} {eb : Word} (h : CoreRM m c M eb)

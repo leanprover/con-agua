@@ -273,7 +273,7 @@ theorem spineCmp_refines (p : Prog) (hp : SpineDProg p) (n : Nat) (hk : KnotUpTo
       exact CoreSpec.of_call1W (s₀ := ⟨m₁, Locals.init []⟩)
         (defeqListRev_refines p hp.rev (n₂ + 1) (hk.mono (by omega)) F (by omega) (by omega) _ _
           dn vis fe M₁ eb mode d ao an bo bn ⟨hS₁, hs.mode4, hs.eb_mode⟩ xs ys
-          (hx.keep hst₁.2.1 hst₁.2.2 hxt hS.spn) (hy.keep hst₁.2.1 hst₁.2.2 hyt hS.spn)
+          (hx.keep hst₁.size hst₁.below hxt hS.spn) (hy.keep hst₁.size hst₁.below hyt hS.spn)
           (hst₁.1 ▸ hxt) (hst₁.1 ▸ hyt))
         (fun r r' h => by simp only [decBool, h]) hW
     · rw [scK_f (h := h2), Option.some.injEq, Prod.mk.injEq] at hW
@@ -387,10 +387,10 @@ theorem defeqSpine2_refines (p : Prog) (hp : SpineDProg p) (n : Nat) (hk : KnotU
   have htop₁' : (spTop m₁).toNat = (r₁.headD 0).toNat + (r₁.tail.headD 0).toNat := by
     rw [htop₁, UInt64.toNat_add, ← ho₁]; omega
   have htop₂' : (spTop m₂).toNat = (r₂.headD 0).toNat + (r₂.tail.headD 0).toNat := by
-    have hsz₂ : (m₂.arr64 SPN).size = (m₁.arr64 SPN).size := hg₂.2.1
+    have hsz₂ : (m₂.arr64 SPN).size = (m₁.arr64 SPN).size := hg₂.size
     rw [htop₂, UInt64.toNat_add, ← ho₂]; omega
   have hle : (spTop m₁).toNat ≤ (spTop m₂).toNat := UInt64.le_iff_toNat_le.mp hg₂.1
-  have hx₂ := hx₁.keep hg₂.2.1 hg₂.2.2 (by omega) hsp₁
+  have hx₂ := hx₁.keep hg₂.size hg₂.below (by omega) hsp₁
   cases hc3 : callW p n "spine_cmp" [mode, vis, d, nm, us, nm₂, us₂, r₁.headD 0, r₁.tail.headD 0,
       r₂.headD 0, r₂.tail.headD 0] m₂ with
   | none => rw [hc3] at hW; cases hW

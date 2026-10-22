@@ -620,8 +620,6 @@ theorem inferApp_refines (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (h
   rw [hst, ← hm]
   refine ⟨M₃, hS₃.frame_stk (MemFrame.setCtl m₃ 136 _) (by simp) (by simp), hK₂.trans hK₃, ?_⟩
   have hSt23 := hSt₂.trans hSt₃
-  refine StackKept.restore (fun j hj => ?_) (hSt23.size.trans (hg₁.2.1)) h136
-  rw [hSt23.below j (UInt64.lt_of_lt_of_le hj hg₁.1)]
-  exact hg₁.2.2 j hj
+  exact StackKept.restoreG (hg₁.trans hSt23.toGrew) h136
 
 end L.Arena

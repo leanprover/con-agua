@@ -144,7 +144,7 @@ theorem coreApp2_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) 
     (headAndArgs_refines p hp.spine (n + 1) s a₀ hS.arena.1 v hv hS.spn htop) h3
   rw [ht₃] at hf₃ hg₃ htop3 hxs
   have hS₃ := hS.frame_stk hf₃ (by simp) (by simp)
-  obtain ⟨hgt, hgsz, hgk⟩ := hg₃
+  obtain ⟨hgt, hgsz, hgk, hgb, hgp⟩ := hg₃
   have har₃ := har.keep hgsz hgk (by omega) hS.spn
   have hno₃ := hno.keep hgsz hgk (by
     have hb := har.bound; have := hS.spn
@@ -167,7 +167,7 @@ theorem coreApp2_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) 
   refine ⟨hok', ?_, ?_, ?_⟩
   · rw [hst', ← hm]
     refine ⟨M', hS₄.frame_stk (MemFrame.setCtl m₄ 136 _) (by simp) (by simp), hK₄, ?_⟩
-    apply StackKept.restore _ (by rw [hSt₄.size, hgsz]) h136'
+    apply StackKept.restore _ (by rw [hSt₄.size, hgsz]) (hgb.trans hSt₄.bstk) (hgp.trans hSt₄.pool) h136'
     intro i hi
     rw [hSt₄.below i (UInt64.lt_of_lt_of_le hi hgt)]; exact hgk i hi
   · rw [hres', hres]; simp only [decStep, hr0, hr1]
@@ -230,7 +230,7 @@ theorem coreApp_refines (N : Nat) (hk : KnotUpTo p N) (F : Nat) (hF : N ≤ F) (
     (getAppSpine_refines p hp.spine N s a₀ hS.arena.1 e he hS.spn) h1
   rw [ht₁] at hf₁ hg₁ htop1 hxs hns
   have hS₁ := hS.frame_stk hf₁ (by simp) (by simp)
-  obtain ⟨hgt, hgsz, hgk⟩ := hg₁
+  obtain ⟨hgt, hgsz, hgk, hgb, hgp⟩ := hg₁
   -- the head
   have hslot := (hk N (Nat.le_refl _)).whnfCore F ⟨m₁, Locals.init []⟩ a₀ dn vis fe MM eb mode cheap
     d (r₁.headD 0) hF hn ⟨hS₁, hs.mode4, hs.eb_mode⟩ hhw
@@ -283,7 +283,8 @@ theorem coreApp_refines (N : Nat) (hk : KnotUpTo p N) (F : Nat) (hF : N ≤ F) (
     refine ⟨M'', hS₄.frame_stk (MemFrame.setCtl m₄ 136 _) (by simp) (by simp), hK₂.trans hK₄, ?_⟩
     have h22 := hSt₂.1
     simp only at h22
-    apply StackKept.restore _ (by rw [hSt₄.size, hSt₂.size, hgsz]) h136'
+    apply StackKept.restore _ (by rw [hSt₄.size, hSt₂.size, hgsz]) ((hgb.trans hSt₂.bstk).trans hSt₄.bstk)
+      ((hgp.trans hSt₂.pool).trans hSt₄.pool) h136'
     intro i hi
     have hi1 : i < spTop m₁ := UInt64.lt_of_lt_of_le hi hgt
     rw [hSt₄.below i (by rw [h22]; exact hi1), hSt₂.below i hi1, hgk i hi]

@@ -198,6 +198,17 @@ theorem StackKept.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : M
   exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn],
     BKept.of_frame hf hA.2.1 hC.2.1, PoolGrew.of_frame hf hA.2.2 hC.2.2⟩
 
+/-- **A frame inside arrays 1‥143 and `CTL` words 1‥135** keeps the stacks and the pool. -/
+theorem StackKept.of_frame_range {m m' : Mem} {A : List ArrId} {C : List Word}
+    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, 1 ≤ b ∧ b < 144)
+    (hC : ∀ x ∈ C, 1 ≤ x.toNat ∧ x.toNat < 136) : StackKept m m' :=
+  StackKept.of_frame hf
+    ⟨fun h => by have := hA _ h; simp only [SPN, ArrId] at this; omega,
+     fun h => by have := hA _ h; simp only [BSTK, ArrId] at this; omega,
+     fun h => by have := hA _ h; simp only [POOL, ArrId] at this; omega⟩
+    ⟨fun h => by have := hC _ h; simp at this, fun h => by have := hC _ h; simp at this,
+     fun h => by have := hC _ h; simp at this⟩
+
 /-- **Appending to the pool** keeps the stacks. -/
 theorem StackKept.of_grows {m m' : Mem} (hg : Grows m m') : StackKept m m' := by
   have hgf : MemFrame [POOL] [0] m m' := grows_frame m m' hg
