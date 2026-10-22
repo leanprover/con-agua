@@ -242,76 +242,60 @@ def blockPartsComplete : FunDecl := lfn (p0, p1) locals () {
 
 /-- `block_split_recs(off, l)`: `blockSplitRecs` of the `off, l` slice of `EREC` constant-record
 pointers: `(1, q, l)` if every element is `recInfo` (kind `5`), each folded into a fresh
-`[cvR, mI, rP, rules.off, rules.len]` record; `(0, …)` at the first that is not (pure, so any
-order gives the same answer). -/
+`[cvR, mI, rP, rules.off, rules.len]` record; `(0, …)` at the first that is not. Recursive as the
+twin (the rest first, then `sl_cons`; lane `indproofs2`: was a loop). -/
 -- con-ron: ConRon/Arena/Inductives/BlockParts.lean:166-175 ConRon.Arena.blockSplitRecs
 @[l_impl ConRon.Arena.blockSplitRecs]
-def blockSplitRecs : FunDecl := lfn (off, l) locals (q, j, ci, ro) {
-  q := call iw_alloc(l);
-  j := 0;
-  while j < l {
-    ci := EREC.u64[off + j];
-    if EREC.u64[ci] != 5 { break };
-    ro := call iw_alloc(5);
-    IW.u64[ro] := ci + 1;
-    IW.u64[ro + 1] := EREC.u64[ci + 5];
-    IW.u64[ro + 2] := EREC.u64[ci + 6];
-    IW.u64[ro + 3] := EREC.u64[ci + 7];
-    IW.u64[ro + 4] := EREC.u64[ci + 8];
-    IW.u64[q + j] := ro;
-    j += 1
-  };
-  if j != l { return (0, 0, 0) };
-  return (1, q, l)
+def blockSplitRecs : FunDecl := lfn (off, l) locals (ci, ok, ro, rl, rc, o2, l2) {
+  if l == 0 { return (1, 0, 0) };
+  ci := EREC.u64[off];
+  if EREC.u64[ci] != 5 { return (0, 0, 0) };
+  (ok, ro, rl) := call block_split_recs(off + 1, l - 1);
+  if ok == 0 { return (0, 0, 0) };
+  rc := call rec5(ci + 1, EREC.u64[ci + 5], EREC.u64[ci + 6], EREC.u64[ci + 7], EREC.u64[ci + 8]);
+  (o2, l2) := call sl_cons(rc, ro, rl);
+  return (1, o2, l2)
 }
 
 /-- `block_split_ctors(off, l)`: `blockSplitCtors`: the leading `ctorInfo` (kind `4`) elements, each
-folded into `[cv, nP, nF]`, then `block_split_recs` on the rest. -/
+folded into `[cv, nP, nF]`, then `block_split_recs` on the rest (recursive as the twin). -/
 -- con-ron: ConRon/Arena/Inductives/BlockParts.lean:177-189 ConRon.Arena.blockSplitCtors
 @[l_impl ConRon.Arena.blockSplitCtors]
-def blockSplitCtors : FunDecl := lfn (off, l) locals (q, j, ci, co, ok, ro, rl) {
-  q := call iw_alloc(l);
-  j := 0;
-  while j < l {
-    ci := EREC.u64[off + j];
-    if EREC.u64[ci] != 4 { break };
-    co := call iw_alloc(3);
-    IW.u64[co] := ci + 1;
-    IW.u64[co + 1] := EREC.u64[ci + 5];
-    IW.u64[co + 2] := EREC.u64[ci + 6];
-    IW.u64[q + j] := co;
-    j += 1
+def blockSplitCtors : FunDecl := lfn (off, l) locals (ci, ok, co, cl, ro, rl, c, o2, l2) {
+  if l == 0 { return (1, 0, 0, 0, 0) };
+  ci := EREC.u64[off];
+  if EREC.u64[ci] != 4 {
+    (ok, ro, rl) := call block_split_recs(off, l);
+    if ok == 0 { return (0, 0, 0, 0, 0) };
+    return (1, 0, 0, ro, rl)
   };
-  (ok, ro, rl) := call block_split_recs(off + j, l - j);
+  (ok, co, cl, ro, rl) := call block_split_ctors(off + 1, l - 1);
   if ok == 0 { return (0, 0, 0, 0, 0) };
-  return (1, q, j, ro, rl)
+  c := call rec3(ci + 1, EREC.u64[ci + 5], EREC.u64[ci + 6]);
+  (o2, l2) := call sl_cons(c, co, cl);
+  return (1, o2, l2, ro, rl)
 }
 
 /-- `block_split(off, l)`: `blockSplit`: the leading `indInfo` (kind `3`) elements (their `cv`
-pointers), then `block_split_ctors` on the rest. The twin's 3-list result is 7 words, past the
-6-result cap, so `(ok, q)` with `q` a fresh `[cvTs.off, cvTs.len, cs.off, cs.len, rs.off, rs.len]`
-record. -/
+pointers), then `block_split_ctors` on the rest (recursive as the twin). The twin's 3-list result
+is 7 words, past the 6-result cap, so `(ok, q)` with `q` a fresh `[cvTs.off, cvTs.len, cs.off,
+cs.len, rs.off, rs.len]` record. -/
 -- con-ron: ConRon/Arena/Inductives/BlockParts.lean:191-203 ConRon.Arena.blockSplit
 @[l_impl ConRon.Arena.blockSplit]
-def blockSplit : FunDecl := lfn (off, l) locals (fo, j, ci, ok, co, cl, ro, rl, q) {
-  fo := call iw_alloc(l);
-  j := 0;
-  while j < l {
-    ci := EREC.u64[off + j];
-    if EREC.u64[ci] != 3 { break };
-    IW.u64[fo + j] := ci + 1;
-    j += 1
+def blockSplit : FunDecl := lfn (off, l) locals (ci, ok, q, co, cl, ro, rl, fo, fl, q2) {
+  if l == 0 { q := call rec6(0, 0, 0, 0, 0, 0); return (1, q) };
+  ci := EREC.u64[off];
+  if EREC.u64[ci] != 3 {
+    (ok, co, cl, ro, rl) := call block_split_ctors(off, l);
+    if ok == 0 { return (0, 0) };
+    q := call rec6(0, 0, co, cl, ro, rl);
+    return (1, q)
   };
-  (ok, co, cl, ro, rl) := call block_split_ctors(off + j, l - j);
+  (ok, q) := call block_split(off + 1, l - 1);
   if ok == 0 { return (0, 0) };
-  q := call iw_alloc(6);
-  IW.u64[q] := fo;
-  IW.u64[q + 1] := j;
-  IW.u64[q + 2] := co;
-  IW.u64[q + 3] := cl;
-  IW.u64[q + 4] := ro;
-  IW.u64[q + 5] := rl;
-  return (1, q)
+  (fo, fl) := call sl_cons(ci + 1, IW.u64[q], IW.u64[q + 1]);
+  q2 := call rec6(fo, fl, IW.u64[q + 2], IW.u64[q + 3], IW.u64[q + 4], IW.u64[q + 5]);
+  return (1, q2)
 }
 
 /-- `rec_target_of(no, nl, mI, ty)`: `recTargetOf`: strip `mI` leading `∀`s off `ty`; if the
