@@ -46,6 +46,7 @@ def encLevels (us : List ConLeche.Level) : List UInt8 := u64B us.length ++ encLe
 
 /-! ## `stk_push(h)` -/
 
+/-- con-ron: none — the ROM reader (L has constant bytes where the twin has con-leche values) -/
 def stkPush : FunDecl := lfn (h) locals (o) {
   o := CTL.u64[131];
   if len(RSTK.u64) <= o { abort };
@@ -76,6 +77,7 @@ theorem stkPush_spec (p : Prog) (hp : p.lookup "stk_push" = some stkPush) (n : N
 section go
 variable (rom : List UInt8)
 
+/-- con-ron: none — the ROM reader (L has constant bytes where the twin has con-leche values) -/
 def romLvlsGo : FunDecl := lfn (q, k) locals (h, z, r) {
   if k == 0 { return q };
   (h, q) := call rom_level(q);
@@ -143,6 +145,7 @@ def sputLoop : Stmt := lblk (b, k, top, j) {
   }
 }
 
+/-- con-ron: none — the ROM reader (L has constant bytes where the twin has con-leche values) -/
 def stkPool : FunDecl := lfn (b, k) locals (top, j) {
   top := CTL.u64[0];
   if len(POOL.u64) < top { abort };
@@ -232,6 +235,7 @@ instance (m : Mem) (k : Word) : Decidable (stkPoolOK m k) := by unfold stkPoolOK
 section lv
 variable (rom : List UInt8)
 
+/-- con-ron: none — the ROM reader (L has constant bytes where the twin has con-leche values) -/
 def romLevels : FunDecl := lfn (pos) locals (k, b, q, o, h) {
   k := call rom_u64(pos);
   b := CTL.u64[131];

@@ -66,8 +66,10 @@ def matchDlitLoop : Stmt := lblk (i, o, n, k, c) {
   }
 }
 
+/-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2427-2574 ConLeche.Frontend.scanLineLoop -/
 def matchDlit : FunDecl := lfn (i, o, n) locals (k, c) { ⟪matchDlitLoop⟫; return 1 }
 
+/-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2427-2574 ConLeche.Frontend.scanLineLoop -/
 def strCode : FunDecl := lfn (c, d, k) locals (z, m) {
   if len(IN.u8) < c { return 0 };
   z := call has_escape(c, d);
@@ -108,6 +110,7 @@ def strCodeN (b : Array UInt8) (c d k : Word) : Word :=
 
 /-! ## `hints_val` -/
 
+/-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2427-2574 ConLeche.Frontend.scanLineLoop -/
 def hintsVal : FunDecl := lfn (v) locals (p, ke, x, e) {
   if len(IN.u8) <= v { return (0, 0) };
   if IN.u8[v] == 34 {
@@ -142,6 +145,7 @@ def hkvN (b : Array UInt8) (v : Word) : Word × Word :=
 
 /-- One member, by key `k` (value at `v`, key quote at `ks`), with the fields so far: the end
 of the value (`0`: failure) and the fields after. -/
+-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2427-2574 ConLeche.Frontend.scanLineLoop
 def dMember : FunDecl := lfn (ks, k, v, nm, lp, ty, vl, hk, hn, fl) locals (e, x, ok, y) {
   if k == 34 || k == 61 || k == 65 {  -- `name`, `type`, `value`
     e := call slot_nat(ks, v);
@@ -185,6 +189,7 @@ def dobjLoop : Stmt := lblk (i, w, nm, lp, ty, vl, hk, hn, fl, tag, ks, k, v, e)
   }
 }
 
+/-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2427-2574 ConLeche.Frontend.scanLineLoop -/
 def recDeclObj : FunDecl :=
     lfn (i) locals (w, nm, lp, ty, vl, hk, hn, fl, tag, ks, k, v, e) {
   i += 1;
@@ -277,6 +282,7 @@ grind_pattern [lang_grind] dobjN_key => dobjN b i w f, nextMemberN b i w
 
 /-! ## `rec_decl_line` -/
 
+/-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2427-2574 ConLeche.Frontend.scanLineLoop -/
 def declCodeF : FunDecl := lfn (k) {
   if k == 4 { return 20 };
   if k == 12 { return 21 };
@@ -287,6 +293,7 @@ def declCodeF : FunDecl := lfn (k) {
 
 /-- One member of a declaration line, by key `k` (value at `v`, key quote at `ks`), with the
 fields so far: the end of the value (`0`: failure) and the fields after. -/
+-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2427-2574 ConLeche.Frontend.scanLineLoop
 def declVal : FunDecl :=
     lfn (ks, k, v, pl, nm, lp, ty, vl, hk, hn, fl) locals (e) {
   if k == 4 || k == 12 || k == 60 || k == 45 || k == 49 {
@@ -313,6 +320,7 @@ def dlineLoop : Stmt := lblk (i, w, pl, nm, lp, ty, vl, hk, hn, fl, tag, ks, k, 
   }
 }
 
+/-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2427-2574 ConLeche.Frontend.scanLineLoop -/
 @[l_impl ConLeche.Frontend.scanLineLoop]
 def recDeclLine : FunDecl := lfn (i) locals (w, pl, nm, lp, ty, vl, hk, hn, fl, tag, ks, k, v, e) {
   w := 1;

@@ -21,12 +21,13 @@
 #      that does not apply becomes a three-way merge); conflicts are reported and left in the
 #      working tree with markers;
 #   4. writes vendor/UPSTREAM, regenerates scripts/census-rust.tsv from the new Rust;
-#   5. builds (`scripts/lake build` and the census), log in _tmp/bump-<short>/build.log, and
-#      prints the files with errors;
-#   6. runs the census (counts only).
-# TODO: which L code and proofs the bump made stale is not computed here any more (the census
-# fingerprints were dropped); the coming source-citation gate (`con-ron: ConRon/Arena/F.lean:a-b
-# name` doc lines, checked like con-ron's scripts/provenance.py) will report it.
+#   5. runs `scripts/provenance.py update --old <old con-ron rev>` (no build needed): relocates
+#      the `con-ron:`/`con-leche:` citations of our L code, puts a CHANGED marker on every item
+#      whose cited twin code (or a helper right below it) changed, prints the diffs; the
+#      findings also go to _tmp/bump-<short>/provenance.json. This is the work queue;
+#   6. builds (`scripts/lake build`), log in _tmp/bump-<short>/build.log, and prints the files
+#      with errors;
+#   7. runs the census (counts only).
 # Nothing is committed. Afterwards: fix the build (an edit to a vendored file goes into a patch:
 # --refresh-patches), commit, and announce the bump (DESIGN.md): what changed upstream (the
 # changed-files list above).
@@ -207,6 +208,9 @@ bump() {
   git -C "$(ref_dir con-ron)" archive "$new_cr" crates | tar -x -C "$tmp"
   python3 scripts/census.py --rust "$tmp" | sed 's/^/   /'
   rm -rf "$tmp"
+  echo "== the work queue (scripts/provenance.py update --old ${old_cr:0:8}; markers inserted)"
+  python3 scripts/provenance.py update --old "$old_cr" --json "$work/provenance.json" \
+    | sed 's/^/   /' || true
   echo "== changed upstream files:"
   git -C "$(ref_dir con-ron)" diff --stat "$old_cr" "$new_cr" -- proof/ConRon proof/ConRon.lean | sed 's/^/   con-ron /'
   git -C "$(ref_dir con-leche)" diff --stat "$old_cl" "$new_cl" -- ConLeche ConLeche.lean pins | sed 's/^/   con-leche /'
@@ -229,13 +233,11 @@ bump() {
   echo "   build ok"
   echo "== the census"
   timeout 1800 python3 scripts/census.py
-  # TODO: the stale list (L code and proofs whose cited twin changed), from the coming
-  # source-citation gate.
 }
 
 case "${1:-}" in
   --check) check ;;
   --refresh-patches) refresh ;;
-  ""|-h|--help) sed -n '2,32p' "$0" ;;
+  ""|-h|--help) sed -n '2,33p' "$0" ;;
   *) bump "$1" ;;
 esac

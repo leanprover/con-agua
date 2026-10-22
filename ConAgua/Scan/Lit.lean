@@ -44,6 +44,7 @@ def matchLitLoop : Stmt := lblk (i, o, n, k, c) {
   }
 }
 
+/-- con-leche: ConLeche/Frontend/Scan/Fast.lean:121-131 ConLeche.Frontend.matchLit -/
 @[l_impl ConLeche.Frontend.matchLit]
 def matchLit : FunDecl := lfn (i, o, n) locals (k, c) { ⟪matchLitLoop⟫; return 1 }
 
@@ -146,6 +147,7 @@ end matchLit
 
 /-! ## `scan_bool` -/
 
+/-- con-leche: ConLeche/Frontend/Scan/Fast.lean:460-464 ConLeche.Frontend.scanBool -/
 @[l_impl ConLeche.Frontend.scanBool]
 def scanBool : FunDecl := lfn (i) locals (m) {
   m := call match_lit(i, 0, 4);

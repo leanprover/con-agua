@@ -353,6 +353,7 @@ grind_pattern [level_grind] caK₂_some => caK₂ n f d x (some (y, m₁))
 
 /-! ## The L code -/
 
+/-- con-leche: ConLeche/Kernel/Level.lean:86-93 ConLeche.Level.leqCore -/
 @[l_impl ConLeche.Level.leqCore]
 def lvLeq : FunDecl := lfn (f, l, r, d) locals (g, a, b, h, c, e, x) {
   if f == 0 { return 0 };
@@ -364,6 +365,7 @@ def lvLeq : FunDecl := lfn (f, l, r, d) locals (g, a, b, h, c, e, x) {
   return x
 }
 
+/-- con-leche: ConLeche/Kernel/Level.lean:95-113 ConLeche.Level.rest -/
 @[l_impl ConLeche.Level.rest]
 def lvRest : FunDecl := lfn (f, l, r, d) locals (g, a, b, h, c, e, x) {
   (g, a, b) := call lv_node(l);
@@ -393,6 +395,7 @@ def lvRest : FunDecl := lfn (f, l, r, d) locals (g, a, b, h, c, e, x) {
   return x
 }
 
+/-- con-leche: ConLeche/Kernel/Level.lean:115-125 ConLeche.Level.imaxRules -/
 @[l_impl ConLeche.Level.imaxRules]
 def lvImax : FunDecl := lfn (f, l, r, d) locals (g, a, b, h, c, e, i, j, k, x) {
   (g, a, b) := call lv_node(l);
@@ -409,6 +412,7 @@ def lvImax : FunDecl := lfn (f, l, r, d) locals (g, a, b, h, c, e, i, j, k, x) {
   return x
 }
 
+/-- con-leche: ConLeche/Kernel/Level.lean:115-125 ConLeche.Level.imaxRules -/
 @[l_impl ConLeche.Level.imaxRules]
 def lvImaxL : FunDecl := lfn (f, l, r, d) locals (g, a, b, i, j, k, x) {
   (g, a, b) := call lv_node(l);
@@ -421,6 +425,7 @@ def lvImaxL : FunDecl := lfn (f, l, r, d) locals (g, a, b, i, j, k, x) {
   return x
 }
 
+/-- con-leche: ConLeche/Kernel/Level.lean:115-125 ConLeche.Level.imaxRules -/
 @[l_impl ConLeche.Level.imaxRules]
 def lvImaxR : FunDecl := lfn (f, l, r, d) locals (h, c, e, i, j, k, x) {
   (h, c, e) := call lv_node(r);
@@ -432,6 +437,7 @@ def lvImaxR : FunDecl := lfn (f, l, r, d) locals (h, c, e, i, j, k, x) {
   return 0
 }
 
+/-- con-leche: ConLeche/Kernel/Level.lean:127-135 ConLeche.Level.byCases -/
 @[l_impl ConLeche.Level.byCases]
 def lvCases : FunDecl := lfn (f, p, l, r, d) locals (z, x) {
   z := call lh_mk(0, 0, 0);
@@ -443,6 +449,7 @@ def lvCases : FunDecl := lfn (f, p, l, r, d) locals (z, x) {
   return x
 }
 
+/-- con-leche: ConLeche/Kernel/Level.lean:127-135 ConLeche.Level.byCases -/
 @[l_impl ConLeche.Level.byCases]
 def lvCasesAt : FunDecl := lfn (f, p, l, r, d, v) locals (x, y) {
   x := call lv_subsimp(l, p, v);

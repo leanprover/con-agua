@@ -102,6 +102,7 @@ def nnfindLoop : Stmt := lblk (t, pre, u, h, n, j, d, w, b) {
   }
 }
 
+/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def nnumFind : FunDecl := lfn (t, pre, u, h) locals (n, j, d, w, b) {
   n := len(NNSLOT.u64) >> 1;
   b := CTL.u64[62] * t;
@@ -174,6 +175,7 @@ def nnpushMem (m : Mem) (t pre u j c : Word) : Mem :=
   ((((m.set64 NNREC (c * 4 + t * 2) pre).set64 NNREC (c * 4 + t * 2 + 1) u).set64 NNSLOT
     (j * 2 + t) (baseW m t + c + 1)).set64 CTL (38 + (t &&& 1)) (c + 1))
 
+/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def nnumPush : FunDecl := lfn (t, pre, u, j) locals (c, k) {
   c := CTL.u64[38 + t];
   if c >= 134217728 { abort };
@@ -234,6 +236,7 @@ def nninternW (m : Mem) (pre u : Word) : Option (Word × Mem) :=
     some (nnP + nncnt m 0, nnpushMem m 0 pre u (rs₀.tail.tail.headD 0) (nncnt m 0))
   else none
 
+/-- con-ron: ConRon/Arena/Monad.lean:381-397 ConRon.Arena.internNNode -/
 @[l_impl ConRon.Arena.internNNode]
 def internNNum : FunDecl := lfn (pre, u) locals (h, fd, i, j, d) {
   h := ((⟪fnvBasis⟫ ^ pre) * ⟪fnvPrime⟫ ^ u) * ⟪fnvPrime⟫;

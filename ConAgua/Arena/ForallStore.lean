@@ -110,6 +110,7 @@ def fafindLoop : Stmt := lblk (t, ty, body, h, n, j, d, v, b) {
   }
 }
 
+/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def forallFind : FunDecl := lfn (t, ty, body, h) locals (n, j, d, v, b) {
   n := len(FASLOT.u64) >> 1;
   b := CTL.u64[62] * t;
@@ -182,6 +183,7 @@ def fapushMem (m : Mem) (t ty body j c : Word) : Mem :=
   ((((m.set64 FAREC (c * 4 + t * 2) ty).set64 FAREC (c * 4 + t * 2 + 1) body).set64 FASLOT
     (j * 2 + t) (baseW m t + c + 1)).set64 CTL (30 + (t &&& 1)) (c + 1))
 
+/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def forallPush : FunDecl := lfn (t, ty, body, j) locals (c, k) {
   c := CTL.u64[30 + t];
   if c >= 134217728 { abort };
@@ -253,6 +255,8 @@ def fainternW (m : Mem) (ty body : Word) : Option (Word × Mem) :=
 /-- The L FunDecl for `intern_forall`. Named `internForallL`, not `internForallE`: con-ron's
 `ConRon.Arena.internForallEE`/`EStore.internForallE` are sibling names in a different namespace,
 but the `L`-suffix keeps the two visually apart in this file, which `open`s `ConRon.Arena`. -/
+-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
+-- con-ron: ConRon/Arena/Monad.lean:199-216 ConRon.Arena.internForallEE
 @[l_impl ConRon.Arena.internE ConRon.Arena.internForallEE]
 def internForallL : FunDecl := lfn (ty, body) locals (h, sk, fd, i, j, d) {
   h := ((⟪fnvBasis⟫ ^ ty) * ⟪fnvPrime⟫ ^ body) * ⟪fnvPrime⟫;

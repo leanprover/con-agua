@@ -66,6 +66,7 @@ def readNatLoop : Stmt := lblk (v, e, x) {
   }
 }
 
+/-- con-leche: ConLeche/Frontend/Scan/Fast.lean:493-497 ConLeche.Frontend.readNatAt -/
 @[l_impl ConLeche.Frontend.readNatAt]
 def readNat : FunDecl := lfn (v, e) locals (x) {
   if v + 18 < e { return 0xFFFFFFFFFFFFFFFF };
@@ -117,6 +118,7 @@ def pairLoop : Stmt := lblk (i, cnt, x0, x1, c, e, x) {
   }
 }
 
+/-- con-leche: ConLeche/Frontend/Scan/Fast.lean:697-699 ConLeche.Frontend.scanNatList -/
 @[l_impl ConLeche.Frontend.scanNatList]
 def recNatList : FunDecl := lfn (i) locals (cnt, x0, x1, c, e, x) {
   i += 1;
@@ -197,6 +199,7 @@ def strRecLoop : Stmt := lblk (i, w, pre, vs, ve, tag, ks, k, v, e) {
   }
 }
 
+/-- con-leche: ConLeche/Frontend/Scan/Fast.lean:831-835 ConLeche.Frontend.scanStrName -/
 @[l_impl ConLeche.Frontend.scanStrName]
 def recStrName : FunDecl := lfn (i) locals (w, pre, vs, ve, tag, ks, k, v, e) {
   i += 1;
@@ -222,6 +225,7 @@ def numRecLoop : Stmt := lblk (i, w, pre, n, tag, ks, k, v, e) {
   }
 }
 
+/-- con-leche: ConLeche/Frontend/Scan/Fast.lean:886-890 ConLeche.Frontend.scanNumName -/
 @[l_impl ConLeche.Frontend.scanNumName]
 def recNumName : FunDecl := lfn (i) locals (w, pre, n, tag, ks, k, v, e) {
   i += 1;
@@ -372,6 +376,7 @@ def recLoop : Stmt := lblk (i, w, pl, idx, a, c, d, tag, ks, k, v, e, x) {
   }
 }
 
+/-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2427-2574 ConLeche.Frontend.scanLineLoop -/
 @[l_impl ConLeche.Frontend.scanLineLoop]
 def recLineLoop : FunDecl := lfn (i) locals (w, pl, idx, a, c, d, tag, ks, k, v, e, x) {
   w := 1;
