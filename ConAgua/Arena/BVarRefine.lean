@@ -1,4 +1,5 @@
 import ConAgua.Arena.StoreLib
+import ConAgua.Arena.SimLib
 import ConAgua.Arena.BVarStore
 
 /-!
@@ -184,11 +185,8 @@ theorem internBVar_refines (p : Prog) (hpf : p.lookup "bvar_find" = some bvarFin
     invoke p (exec p n) "intern_bvar" [u]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internE (.bvar u.toNat)) a₀ ∧
       BVarR s'.mem (AM.st (internE (.bvar u.toNat)) a₀) ∧
-      AM.res (internE (.bvar u.toNat)) a₀ = decE (r.headD 0); ⊤⦄ := by
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun (internBVar_spec p hpf hpp hp n s₀ u)
-  subst hs
-  exact ⟨hloc, bintern_correct s.mem a₀ hR u _ _ hI⟩
+      AM.res (internE (.bvar u.toNat)) a₀ = decE (r.headD 0); ⊤⦄ :=
+  Sim.tripleD (internBVar_spec p hpf hpp hp n s₀ u)
+    (Sim.ofOkD (bintern_correct s₀.mem a₀ hR u))
 
 end L.Arena

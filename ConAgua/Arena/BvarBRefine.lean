@@ -35,57 +35,23 @@ theorem bbSet_frame (m m' : Mem) (h r r' : Word) (hb : bbSet m h r = some (r', m
 def BbOK (m : Mem) (o : Option (Word × Mem)) : Prop := ∀ r m', o = some (r, m') → BbFrame m m'
 
 theorem BbOK.app {n : Nat} {m : Mem} {c y : Word} {o : Option (Word × Mem)} (ho : BbOK m o)
-    (hw : ∀ m₁, BbOK m₁ (bbW n m₁ y c)) : BbOK m (bbAppK₁ n c y o) := by
-  intro r m' hb
-  cases o with
-  | none => cases hb
-  | some p =>
-    obtain ⟨x, m₁⟩ := p
-    simp only [bbAppK₁] at hb
-    cases h2 : bbW n m₁ y c with
-    | none => simp [h2, bbAppK₁.bbAppK₂] at hb
-    | some q =>
-      obtain ⟨y', m₂⟩ := q
-      simp only [h2, bbAppK₁.bbAppK₂, Option.some.injEq, Prod.mk.injEq] at hb
-      obtain ⟨-, rfl⟩ := hb
-      exact (ho _ _ rfl).trans (hw m₁ _ _ h2)
+    (hw : ∀ m₁, BbOK m₁ (bbW n m₁ y c)) : BbOK m (bbAppK₁ n c y o) :=
+  MPost.bindK rfl (fun _ _ => rfl) ho fun _ m₁ h1 =>
+    MPost.bindK (K := bbAppK₁.bbAppK₂ _) rfl (fun _ _ => rfl) (hw m₁)
+      fun _ _ h2 => MPost.ret (h1.trans h2)
 
 theorem BbOK.bind {n : Nat} {m : Mem} {c y : Word} {o : Option (Word × Mem)} (ho : BbOK m o)
-    (hw : ∀ m₁, BbOK m₁ (bbW n m₁ y c)) : BbOK m (bbBindK₁ n c y o) := by
-  intro r m' hb
-  cases o with
-  | none => cases hb
-  | some p =>
-    obtain ⟨x, m₁⟩ := p
-    simp only [bbBindK₁] at hb
-    cases h2 : bbW n m₁ y c with
-    | none => simp [h2, bbBindK₁.bbBindK₂] at hb
-    | some q =>
-      obtain ⟨y', m₂⟩ := q
-      simp only [h2, bbBindK₁.bbBindK₂, Option.some.injEq, Prod.mk.injEq] at hb
-      obtain ⟨-, rfl⟩ := hb
-      exact (ho _ _ rfl).trans (hw m₁ _ _ h2)
+    (hw : ∀ m₁, BbOK m₁ (bbW n m₁ y c)) : BbOK m (bbBindK₁ n c y o) :=
+  MPost.bindK rfl (fun _ _ => rfl) ho fun _ m₁ h1 =>
+    MPost.bindK (K := bbBindK₁.bbBindK₂ _) rfl (fun _ _ => rfl) (hw m₁)
+      fun _ _ h2 => MPost.ret (h1.trans h2)
 
 theorem BbOK.letE {n : Nat} {m : Mem} {c y z : Word} {o : Option (Word × Mem)} (ho : BbOK m o)
-    (hw : ∀ m₁ w, BbOK m₁ (bbW n m₁ w c)) : BbOK m (bbLetK₁ n c y z o) := by
-  intro r m' hb
-  cases o with
-  | none => cases hb
-  | some p =>
-    obtain ⟨x, m₁⟩ := p
-    simp only [bbLetK₁] at hb
-    cases h2 : bbW n m₁ y c with
-    | none => simp [h2, bbLetK₁.bbLetK₂] at hb
-    | some q =>
-      obtain ⟨y', m₂⟩ := q
-      simp only [h2, bbLetK₁.bbLetK₂] at hb
-      cases h3 : bbW n m₂ z c with
-      | none => simp [h3, bbLetK₁.bbLetK₃] at hb
-      | some o =>
-        obtain ⟨z', m₃⟩ := o
-        simp only [h3, bbLetK₁.bbLetK₃, Option.some.injEq, Prod.mk.injEq] at hb
-        obtain ⟨-, rfl⟩ := hb
-        exact ((ho _ _ rfl).trans (hw m₁ _ _ _ h2)).trans (hw m₂ _ _ _ h3)
+    (hw : ∀ m₁ w, BbOK m₁ (bbW n m₁ w c)) : BbOK m (bbLetK₁ n c y z o) :=
+  MPost.bindK rfl (fun _ _ => rfl) ho fun _ m₁ h1 =>
+    MPost.bindK (K := bbLetK₁.bbLetK₂ _ _ _ _) rfl (fun _ _ => rfl) (hw m₁ _) fun _ m₂ h2 =>
+    MPost.bindK (K := bbLetK₁.bbLetK₃ _ _) rfl (fun _ _ => rfl) (hw m₂ _) fun _ _ h3 =>
+    MPost.ret ((h1.trans h2).trans h3)
 
 theorem bbW_frame (n : Nat) :
     (∀ m h c, BbOK m (bbW n m h c)) ∧ (∀ m h c, BbOK m (bbNodeW n m h c)) := by
