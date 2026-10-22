@@ -1072,7 +1072,7 @@ theorem pirW_ok (p : Prog) (hinst : IotaInst1OK p) (dn : NIdx → Option ConLech
 /-- **`pi_residual` refines `piResidual`.** Statement change: `PiResidualOK` plus
 `ao + an ≤ spTop` (the argument slice lies below the stack top, so the `inst_entry` calls, which
 may use the stack above it, leave it alone). -/
-theorem piResidual_refines (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) :
+theorem piResidual_refines (p : Prog) (hp : IotaProg' p) (hi1 : IotaInst1OK p) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb e ao an : Word) (args : Array EIdx), CoreS dn s₀.mem a₀ vis fe MM eb →
     HW e → SpineR s₀.mem ao an args → ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat →
@@ -1091,7 +1091,7 @@ theorem piResidual_refines (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) :
     (piResidual_spec p hp.piResidual n s₀ e ao an)
   subst hs0
   refine ⟨hloc, ?_⟩
-  obtain ⟨hok, hca, hres, hL1, hL2⟩ := pirW_ok p hc.inst1 dn vis fe eb ao an args
+  obtain ⟨hok, hca, hres, hL1, hL2⟩ := pirW_ok p hi1 dn vis fe eb ao an args
     (an.toNat - (0 : Word).toNat) (n + 1) s.mem a₀ MM e 0 r s'.mem rfl (by simp) hS he hsp htop hW
   refine ⟨hok, ?_, ?_, ⟨hL1, hL2⟩⟩
   · simpa using hca
