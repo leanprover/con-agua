@@ -7427,3 +7427,36 @@ grows (the memo library's capacity rule, as every L memo). Refinement: not yet (
   with lane defeq2's `lv_lookup`/`lv_spw`; they need their own names (and so their own copies of
   `lv_substl`/`lv_substpw`, which call those names) before they can land. D23 (no `lp` cutoff in
   L's derived words) blocks `InstLPOK`: either an `lp` bit in `DerR` or `StoreWF` in `CoreS`.
+
+### Landing 6: `CoreS.den` (coordinator's request after lane `whnf3`)
+* **`CoreS` carries `den : StoreDen m a fe`** (`WhnfBase.lean`). `StoreDen` grew to: sort levels,
+  const level lists, the zero and empty-list pins, the `readNC` rows, a constant's level-parameter
+  names (`constLps`), projection tables' levels (`proj`), and **`lvlAll`: every level handle with
+  a view reads back** (a cons hit of a level interning returns an old handle; without `lvlAll` its
+  readback would need a rank argument).
+* **How it is kept** (all construction sites, ~25 explicit, ~35 lemmas): memory-only frames and
+  cache writes by `StoreDen.frameE`/`caches` (`EREC` kept, the store unchanged); interning a node
+  that is neither `sort` nor `const` by `StoreDen.of_arena` — the `sort`/`const` tables are
+  determined by their memory under `ArenaR` (`scTabs_eq`), so a writer that avoids `SOREC`/`CREC`
+  and `CTL` 1, 16‥19 (`arena_frame`'s new auto-params) keeps their views — or, from the twin run,
+  by `internNodeE_sc`/`internE_pure_views` (a push adds only a view of the pushed kind); interning
+  a `sort u`/`const c us` by `StoreDen.of_internSort`/`of_internConst` given `u`/`us` reads back
+  (`CoreS.arena_frameD`, `of_const` now take the run and that readback); level interning by
+  `lvlAll_internLNode` (helper `defeq2-lvl`, `StoreDenLvl.lean`: under `ArenaR`, a hit's handle has
+  the probed view, a push's readback is its children's at the old fuel); name and list interning
+  by `LsExt` (`NameStep.son`, `LsStep.son`, `lsExt_of_tables`); `nat_op_result`'s leaves by a third
+  clause of `LeafStep` (new `sort`/`const` views are `const c emptyLevels` only).
+* **Readbacks across knot calls.** `CoreAfter` says nothing about the twin's store growing, so a
+  level read before a knot call (the domain sort of a `∀`, the binder sorts on `BSTK`) is not known
+  to read back at the `imax` after it. L now checks with `lv_node` that both `imax` arguments (and
+  the codomain sort) are stored levels (`lvl_live`, `Infer.lean`; deviation D25), and `lvlAll`
+  gives their readbacks (`lvlLive_call`; `lview_of_lvNodeW` moved from `DeclCanonView` to
+  `LevelView.lean`). The `M2C` arms carry the type head's list as a view (forward-view lemmas:
+  `internNodeE_fwd`, `etaFabArgsE_fwd`, `view_after_noLss` for `towerSlotsAll`, `andRescueSlots`,
+  `capsNeverZeroPW`).
+* **Discharged**: `CoreS.lvl_den` (was a `sorry`), `CoreDen` (`coreDen_of`), `ProjSortDen`
+  (`projSortDen_of`), `ProofIrrelOK` (`proofIrrelOK_of` now sorry-free); `KnotCallees.den` and
+  `.proofIrrel` removed. Still open for lane `whnf4`: `FireDen` quantifies over every field index
+  (`StoreDen.proj` gives `i < numFields`), `LvlsEqDen` (from `StoreDen.constLs` at its callers).
+* For other lanes building `CoreS` from outside the core: `TwinOK` (`DeclLvlStage.lean`) gained
+  `den` and the `fe` parameter.

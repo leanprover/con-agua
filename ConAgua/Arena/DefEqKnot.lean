@@ -87,6 +87,7 @@ structure KnotAllProg (p : Prog) : Prop where
   proj : InferProjProg p
   str : StrLitProg p
   projp : ProjProg p
+  iota4 : IotaProg4 p
   /-- The core's write set leaves `EREC` alone (lane `whnf3`'s `CoreErec.lean`). -/
   hcl : closedA p coreErecA coreErecC coreFns = true
 
@@ -95,15 +96,11 @@ structure KnotCallees (p : Prog) : Prop where
   /-- Lane `whnf`'s slot steps (proved there over its inline stub bundles). -/
   whnfCoreStep : ∀ n, KnotUpTo p n → WhnfCoreSlot p (n + 1)
   whnfStep : ∀ n, KnotUpTo p n → WhnfSlot p (n + 1)
-  /-- Lane `whnf`'s `proofIrrel_refines` rests on `CoreS.lvl_den` (`proofIrrelOK_of`). -/
-  proofIrrel : ProofIrrelOK p
   /-- Lane `whnf`'s `reduceProjCore_refines'` takes all of `WhnfCallees`, which holds the slot
   steps this file proves. -/
   reduceProjCore : ReduceProjCoreH p
   /-- Lane `whnf`'s `unfoldDefinition_refines'` takes all of `WhnfCallees` (it uses `instLP`). -/
   unfold : UnfoldDefOK p
-  /-- Stored levels read back under `CoreS` (`StoreDen.lean`; to become a field of `CoreS`). -/
-  den : CoreDen
   constTy : ConstTyAtOK p
   /-- `inst_lp` (lane `whnf3`'s `instLPFast` walk). -/
   instLP : InstLPOK p
@@ -155,21 +152,21 @@ include hq hc in
 /-- `DefeqCallees`: the walks from `CoreWalks.lean`, the rest from `KnotCallees`. -/
 theorem KnotCallees.defeq : DefeqCallees p :=
   ⟨hasFvar_core hq.walks.abs hq.walks.hf,
-    notProofFast_core hq.prop hc.den (constLpsDen_of hc.den) (findProj_refines p hq.projp) (erecKept_of hq.hcl) (projFound p hq.projp),
-    isProofFast_core hq.prop hc.den (constLpsDen_of hc.den) (findProj_refines p hq.projp) (erecKept_of hq.hcl) (projFound p hq.projp),
+    notProofFast_core hq.prop coreDen_of (constLpsDen_of coreDen_of) (findProj_refines p hq.projp) (erecKept_of hq.hcl) (projFound p hq.projp),
+    isProofFast_core hq.prop coreDen_of (constLpsDen_of coreDen_of) (findProj_refines p hq.projp) (erecKept_of hq.hcl) (projFound p hq.projp),
     abs1_core hq.walks.abs hq.walks.ae, absRange_core hq.walks.ar hq.walks.are, fieldSortZero_core p hq.fsz⟩
 
 include hq hc in
 theorem KnotCallees.lazy : LazyCallees p :=
   ⟨hq.walks.instListOK, hq.walks.inst1OK, (hc.defeq hq).hasFvar, natPredW_of p hq.natPred, hc.unfold,
-    reduceNat_of p hq.delta (natOpResultOK_of_agree hq.delta.natAgree), StoreDenotes.of_den hc.den⟩
+    reduceNat_of p hq.delta (natOpResultOK_of_agree hq.delta.natAgree), StoreDenotes.of_den coreDen_of⟩
 
 include hq hc in
 theorem KnotCallees.stuck : StuckCallees p :=
-  ⟨hc.defeq hq, hc.proofIrrel, hq.walks.inst1OK, defeqLstOK_of p hq.lst,
+  ⟨hc.defeq hq, proofIrrelOK_of p hq.iota4, hq.walks.inst1OK, defeqLstOK_of p hq.lst,
     reservedContainsOK_of p hq.rc,
     towerSlotsAll_refines' p hq.body.iota (findProj_refines p hq.projp) (projFound p hq.projp),
-    lvlsEqCH_of p hq.lvc, hc.den, strLitSupported_core p hq.str, strLitCtor_core p hq.str, supKeep_of,
+    lvlsEqCH_of p hq.lvc, coreDen_of, strLitSupported_core p hq.str, strLitCtor_core p hq.str, supKeep_of,
     lazyDeltaStepH_of p hq.body.lazy (hc.lazy hq), hc.reduceProjCore⟩
 
 include hq in
@@ -183,7 +180,7 @@ include hq hc in
 theorem KnotCallees.infer : InferCallees p :=
   ⟨hq.walks.inst1OK, hq.walks.instListOK, (hc.defeq hq).abstract1, (hc.defeq hq).abstractRange,
     hc.constTy, hq.lit, isEagerReduceH_of p hq.body.stuck.leaf, bstkCap_of,
-    inferProj_refines p hq.proj ⟨hc.den, (findProj_refines p hq.projp), (projFound p hq.projp), erecKept_of hq.hcl, hc.instLP, erecKeptProj_of hq.hcl⟩⟩
+    inferProj_refines p hq.proj ⟨coreDen_of, (findProj_refines p hq.projp), (projFound p hq.projp), erecKept_of hq.hcl, hc.instLP, erecKeptProj_of hq.hcl⟩⟩
 
 /-- **The knot at fuel `0`**: every L call at fuel `0` fails. -/
 theorem knot_zero (p : Prog) : KnotOK p 0 where
