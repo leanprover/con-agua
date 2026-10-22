@@ -7858,3 +7858,14 @@ child dangled when it was interned (no `StoreWF` needed).
   on `CheckDeclProg`'s spec fields (`CvCanonSpec`, `CiCanonSpec`, `DefnProg`) and the callees' stub
   specs. Whoever establishes `LoopR` at the loop's entry (the pipeline) supplies `PinSetsR` from
   `internAllPins_PB`'s post.
+
+### Landing 12: helper `sum` — `IndSum` complete
+* Helper `sum` (2 h): `sumRules`, `checkStructFieldSortsI`, `checkSumCtor` (precondition: the
+  pre-block environment is `fe.restrictTo vis0`), `checkSumCtors`, `checkStructProjTable` (with
+  its `_scoped` helper and `er_from_iw`; lane decls2's `env_find`/`env_push`), all through stubs.
+  New stub contract `lvLeqTopStub_spec` (`lv_leq_top`: `Level.leq` on the readbacks, `sorry`, like
+  `lvl_eq_c`'s; the real one needs the `CoreS` bridge of landing 1). Program bundles `SumProg`,
+  `TblProg`. L: four loops to self-recursion, `check_field_sort_bound` split off, a handle guard
+  after `intern_const`, D18 extended to `check_sum_ctors`. ~2.9k proof lines for ~205 L lines
+  (**~14 per L line**, down from ~19, with `Sim`, `DecB`, program bundles).
+* Census: phase 8 **78 proven, 97 sorry, 42 written, 6 todo**; totals 719 proven / 140 sorry.
