@@ -381,4 +381,63 @@ theorem p2sdW_ok : ∀ (n : Nat), 2 ^ 31 + n ≤ coreWalkFuel → ∀ (m m' : Me
 
 end seeds
 
+/-! ## Census -/
+
+section census
+variable {p : Prog} (L : RsLook p) (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+  (hM : PosMemo dn vis fe)
+
+include L hM in
+@[refines_part ConRon.Arena.nestSeeds "the seed's fuel fold (nest_seeds_fuel)"]
+theorem nestSeedsFuel_refines (s₀ : St) (a₀ : AState) (dO dL k f : Word) (ds : List EIdx)
+    (hS : StageR dn vis fe s₀.mem a₀) (hlen : ds.length = dL.toNat)
+    (hel : ∀ j < dL.toNat, ∃ w, (s₀.mem.arr64 IW)[dO.toNat + j]? = some w ∧ H w ∧ ds[j]? = some (decI w))
+    (hb : dO.toNat + dL.toNat ≤ iwTop s₀.mem) (hk : k.toNat ≤ dL.toNat) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_seeds_fuel" [dO, dL, k, f]
+    ⦃fun r s' => LocEq s' s₀ ∧ ∃ a', ((ds.drop k.toNat).foldlM pos2FuelF f.toNat).run a₀ =
+      .ok ((r.headD 0).toNat, a') ∧ StageR dn vis fe s'.mem a' ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
+  refine triple_post (nestSeedsFuel_spec L n s₀ dO dL k f) ?_
+  rintro r s' ⟨hlc, hm⟩
+  have := p2sfW_ok dn vis fe hM dO dL ds s₀.mem hlen hel hb n s₀.mem s'.mem a₀ k f _ hm hS (IWGrow.refl _) hk
+  exact ⟨hlc, by simpa using this⟩
+
+variable (hcs : CtorSums fe)
+include L hM hcs
+
+@[refines ConRon.Arena.nestRoot]
+theorem nestRoot_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx hO hL cO cL ns oO oL : Word)
+    (c : NestCtx) (holes : List EIdx) (css : List (List (IConstantVal × Nat))) (NS : NestState)
+    (outss : List (List (List NestFieldKind × EIdx))) (hS : StageR dn vis fe s₀.mem a₀)
+    (hU : UCtx dn vis fe s₀.mem ctx c) (hhi : c.hiAt 0 < 2 ^ 64) (hpn : c.params.length + c.names.length < 2 ^ 64)
+    (hho : decHL s₀.mem hO.toNat hL.toNat = some holes) (hhob : hO.toNat + hL.toNat ≤ iwTop s₀.mem)
+    (hcl : cL.toNat = css.length) (hcb : cO.toNat + css.length ≤ iwTop s₀.mem) (hcss : CssAt s₀.mem cO.toNat css)
+    (hns : NSB s₀.mem ns NS) (hout : RootOutsB s₀.mem oO.toNat oL.toNat outss)
+    (houtb : oO.toNat + oL.toNat ≤ iwTop s₀.mem) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_root" [vis, ctx, hO, hL, cO, cL, ns, oO, oL]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      ∃ x a', (nestRoot V fe c holes css NS outss).run a₀ = .ok (x, a') ∧ StageR dn vis fe s'.mem a' ∧
+      IWGrow s₀.mem s'.mem ∧ RootOutsB s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat x.1 ∧
+      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop s'.mem ∧ NSB s'.mem (r.tail.tail.headD 0) x.2; ⊤⦄ := by
+  refine triple_post (nestRoot_spec L n s₀ vis ctx hO hL cO cL ns oO oL) ?_
+  rintro r s' ⟨hlc, hm⟩
+  have := p2rtW_ok dn vis fe hM hcs ctx hO hL c holes n hn s₀.mem s'.mem a₀ cO cL ns oO oL css NS outss _ hm hS hU
+    hhi hpn hho hhob hcl hcb hcss hns hout houtb
+  exact ⟨hlc, by simpa using this⟩
+
+@[refines ConRon.Arena.nestSeeds]
+theorem nestSeeds_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx sO sL ns : Word)
+    (c : NestCtx) (seeds : List (NestKey × Nat)) (NS : NestState) (hS : StageR dn vis fe s₀.mem a₀)
+    (hU : UCtx dn vis fe s₀.mem ctx c) (hhi : c.hiAt 0 < 2 ^ 64) (hsl : sL.toNat = seeds.length)
+    (hsd : SeedsAt s₀.mem sO.toNat seeds) (hns : NSB s₀.mem ns NS) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_seeds" [vis, ctx, sO, sL, ns]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      ∃ x a', (nestSeeds V fe c seeds NS).run a₀ = .ok (x, a') ∧ StageR dn vis fe s'.mem a' ∧
+      IWGrow s₀.mem s'.mem ∧ NSB s'.mem (r.headD 0) x; ⊤⦄ := by
+  refine triple_post (nestSeeds_spec L n s₀ vis ctx sO sL ns) ?_
+  rintro r s' ⟨hlc, hm⟩
+  have := p2sdW_ok dn vis fe hM hcs ctx c n hn s₀.mem s'.mem a₀ sO sL ns seeds NS _ hm hS hU hhi hsl hsd hns
+  exact ⟨hlc, by simpa using this⟩
+
+end census
+
 end L.Ind
