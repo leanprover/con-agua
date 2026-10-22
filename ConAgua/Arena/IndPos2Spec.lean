@@ -3,6 +3,7 @@ import ConAgua.Arena.IndLibSpec
 import ConAgua.Arena.Env
 import ConAgua.Arena.IndPosSpec
 import ConAgua.Arena.IndMaster
+import ConAgua.Arena.IndPartsSpec3
 import ConAgua.Arena.Pins
 import ConAgua.Arena.IndCopy2
 import ConAgua.Arena.MemoLibRel
@@ -1371,7 +1372,7 @@ theorem nestCanonSub_spec (n : Nat) (s₀ : St) (no nl us nn c v : Word) :
 end spec
 
 
-theorem findIdx_decI (ws : List Word) (c : Word) (hws : ∀ w ∈ ws, w.toNat < 2 ^ 32) (hc : c.toNat < 2 ^ 32) :
+theorem findIdx_decIP (ws : List Word) (c : Word) (hws : ∀ w ∈ ws, w.toNat < 2 ^ 32) (hc : c.toNat < 2 ^ 32) :
     (ws.map (fun w => (decI w : NIdx))).findIdx? (· == (decI c : NIdx)) = ws.findIdx? (· == c) := by
   induction ws with
   | nil => rfl
@@ -1428,7 +1429,7 @@ theorem canonW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFE
     | some fr =>
       rw [hfw] at h
       have hfr := findW_ok n _ _ _ _ _ _ hws hfw hlen
-      have hfi := findIdx_decI ws c hwlt hc
+      have hfi := findIdx_decIP ws c hwlt hc
       cases hwi : ws.findIdx? (· == c) with
       | none =>
         rw [hwi] at hfr
@@ -3377,7 +3378,7 @@ theorem memW_ok (n : Nat) (m m' : Mem) (a : AState) (no nl lvls e : Word) (r : L
           have hfr := findW_ok n _ _ _ _ _ _ hws hfw hlen
           have hl' : (g :: vt).tail.tail.headD 0 = lvls := by simpa using hl
           have htg : ((decI e : EIdx).tag == ETag.const) = true := by rw [htag, he3]; decide
-          have hfi := findIdx_decI ws ((g :: vt).tail.headD 0) hwlt hx
+          have hfi := findIdx_decIP ws ((g :: vt).tail.headD 0) hwlt hx
           refine ⟨rfl, (ws.map (fun w => (decI w : NIdx))).findIdx? (· == nn), ?_, ?_⟩
           · simp only [ConRon.Arena.memberIdxAt?, htg, if_true, StateT.run_bind]
             rw [show (decI e : EIdx) = decE e from rfl, viewConst_run, except_ok_bind, hview]
@@ -4923,5 +4924,703 @@ theorem replaceApps_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx →
   exact ⟨hlc, hok, by rw [hres], hM', by rw [hst]; exact hS', hg⟩
 
 end census2
+
+/-! ## `depth_go`, `depth_node`: word models -/
+
+def dpFin (mx : Word) (m : Mem) : Option (Word × Mem) :=
+  if 4294967295 ≤ mx then none else some (mx + 1, m)
+
+mutual
+def dpGoW : Nat → Mem → Word → Word → Option (Word × Mem)
+  | 0, _, _, _ => none
+  | n + 1, m, f, h => if f = 0 then none else dpG1 n m f h (eViewW m h)
+def dpG1 (n : Nat) (m : Mem) (f h : Word) (v : List Word) : Option (Word × Mem) :=
+  if v = [] then none
+  else if v.headD 0 = 0 ∨ v.headD 0 = 1 ∨ v.headD 0 = 2 ∨ v.headD 0 = 3 ∨ v.headD 0 = 8 then some (1, m)
+  else dpG3 n m f h v (mfindG dpSch m h 0)
+def dpG3 (n : Nat) (m : Mem) (f h : Word) (v fr : List Word) : Option (Word × Mem) :=
+  if fr = [] then none
+  else if fr.headD 0 ≠ 0 then some (rdW (m.arr64 DPM) (fr.tail.headD 0 * 4 + 3), m)
+  else dpG4 h (dpNodeW n m (f - 1) (v.headD 0) (v.tail.headD 0) (v.tail.tail.headD 0)
+    (v.tail.tail.tail.headD 0))
+def dpG4 (h : Word) : Option (Word × Mem) → Option (Word × Mem)
+  | none => none
+  | some (r, m1) => dpG5 r (msetG dpSch m1 h 0 r)
+def dpG5 (r : Word) : Option Mem → Option (Word × Mem)
+  | none => none
+  | some m2 => some (r, m2)
+def dpNodeW : Nat → Mem → Word → Word → Word → Word → Word → Option (Word × Mem)
+  | 0, _, _, _, _, _, _ => none
+  | n + 1, m, f1, g, x, y, z =>
+    if g = 4 ∨ g = 5 ∨ g = 6 then dpB1 n f1 y (dpGoW n m f1 x)
+    else if g = 7 then dpL1 n f1 y z (dpGoW n m f1 x)
+    else dpP1 (dpGoW n m f1 z)
+def dpB1 (n : Nat) (f1 y : Word) : Option (Word × Mem) → Option (Word × Mem)
+  | none => none
+  | some (d1, m1) => dpB2 d1 (dpGoW n m1 f1 y)
+def dpB2 (d1 : Word) : Option (Word × Mem) → Option (Word × Mem)
+  | none => none
+  | some (d2, m2) => dpFin (maxW d1 d2) m2
+def dpL1 (n : Nat) (f1 y z : Word) : Option (Word × Mem) → Option (Word × Mem)
+  | none => none
+  | some (d1, m1) => dpL2 n f1 z d1 (dpGoW n m1 f1 y)
+def dpL2 (n : Nat) (f1 z d1 : Word) : Option (Word × Mem) → Option (Word × Mem)
+  | none => none
+  | some (d2, m2) => dpL3 d1 d2 (dpGoW n m2 f1 z)
+def dpL3 (d1 d2 : Word) : Option (Word × Mem) → Option (Word × Mem)
+  | none => none
+  | some (d3, m3) => dpFin (maxW (maxW d1 d2) d3) m3
+def dpP1 : Option (Word × Mem) → Option (Word × Mem)
+  | none => none
+  | some (d1, m1) => dpFin d1 m1
+end
+
+section arms
+variable (n : Nat) (m m1 m2 m3 : Mem) (f f1 h g x y z d1 d2 d3 r : Word) (v fr : List Word)
+theorem dpGoW_abort (hf : f = 0) : dpGoW (n + 1) m f h = none := by simp [dpGoW, hf]
+theorem dpGoW_view (hf : f ≠ 0) : dpGoW (n + 1) m f h = dpG1 n m f h (eViewW m h) := by simp [dpGoW, hf]
+theorem dpG1_abort (hv : v = []) : dpG1 n m f h v = none := by simp [dpG1, hv]
+theorem dpG1_leaf (hv : v ≠ [])
+    (hg : v.headD 0 = 0 ∨ v.headD 0 = 1 ∨ v.headD 0 = 2 ∨ v.headD 0 = 3 ∨ v.headD 0 = 8) :
+    dpG1 n m f h v = some (1, m) := by simp only [dpG1]; rw [if_neg hv, if_pos hg]
+theorem dpG1_node (hv : v ≠ [])
+    (hg : ¬ (v.headD 0 = 0 ∨ v.headD 0 = 1 ∨ v.headD 0 = 2 ∨ v.headD 0 = 3 ∨ v.headD 0 = 8)) :
+    dpG1 n m f h v = dpG3 n m f h v (mfindG dpSch m h 0) := by
+  simp only [dpG1]; rw [if_neg hv, if_neg hg]
+theorem dpG3_abort (hr : fr = []) : dpG3 n m f h v fr = none := by simp [dpG3, hr]
+theorem dpG3_hit (hr : fr ≠ []) (hh : fr.headD 0 ≠ 0) :
+    dpG3 n m f h v fr = some (rdW (m.arr64 DPM) (fr.tail.headD 0 * 4 + 3), m) := by
+  simp only [dpG3]; rw [if_neg hr, if_pos hh]
+theorem dpG3_miss (hr : fr ≠ []) (hh : ¬ fr.headD 0 ≠ 0) :
+    dpG3 n m f h v fr = dpG4 h (dpNodeW n m (f - 1) (v.headD 0) (v.tail.headD 0)
+      (v.tail.tail.headD 0) (v.tail.tail.tail.headD 0)) := by
+  simp only [dpG3]; rw [if_neg hr, if_neg hh]
+theorem dpG4_some : dpG4 h (some (r, m1)) = dpG5 r (msetG dpSch m1 h 0 r) := by rw [dpG4]
+theorem dpG5_some : dpG5 r (some m2) = some (r, m2) := by rw [dpG5]
+theorem dpNodeW_bin (hg : g = 4 ∨ g = 5 ∨ g = 6) :
+    dpNodeW (n + 1) m f1 g x y z = dpB1 n f1 y (dpGoW n m f1 x) := by
+  simp only [dpNodeW]; rw [if_pos hg]
+theorem dpNodeW_let (hg : g = 7) : dpNodeW (n + 1) m f1 g x y z = dpL1 n f1 y z (dpGoW n m f1 x) := by
+  have : ¬ (g = 4 ∨ g = 5 ∨ g = 6) := by
+    intro e; rcases e with e | e | e <;> (rw [hg] at e; exact absurd e (by decide))
+  simp only [dpNodeW]; rw [if_neg this, if_pos hg]
+theorem dpNodeW_proj (hg2 : ¬ (g = 4 ∨ g = 5 ∨ g = 6)) (hg3 : g ≠ 7) :
+    dpNodeW (n + 1) m f1 g x y z = dpP1 (dpGoW n m f1 z) := by
+  simp only [dpNodeW]; rw [if_neg hg2, if_neg hg3]
+theorem dpB1_some : dpB1 n f1 y (some (d1, m1)) = dpB2 d1 (dpGoW n m1 f1 y) := by rw [dpB1]
+theorem dpB2_some : dpB2 d1 (some (d2, m2)) = dpFin (maxW d1 d2) m2 := by rw [dpB2]
+theorem dpL1_some : dpL1 n f1 y z (some (d1, m1)) = dpL2 n f1 z d1 (dpGoW n m1 f1 y) := by rw [dpL1]
+theorem dpL2_some : dpL2 n f1 z d1 (some (d2, m2)) = dpL3 d1 d2 (dpGoW n m2 f1 z) := by rw [dpL2]
+theorem dpL3_some : dpL3 d1 d2 (some (d3, m3)) = dpFin (maxW (maxW d1 d2) d3) m3 := by rw [dpL3]
+theorem dpP1_some : dpP1 (some (d1, m1)) = dpFin d1 m1 := by rw [dpP1]
+theorem dpFin_big (hb : 4294967295 ≤ d1) : dpFin d1 m = none := by simp [dpFin, hb]
+theorem dpFin_ok (hb : ¬ 4294967295 ≤ d1) : dpFin d1 m = some (d1 + 1, m) := by simp [dpFin, hb]
+end arms
+attribute [ind_grind] dpGoW_abort dpGoW_view dpG1_abort dpG1_leaf dpG1_node dpG3_abort dpG3_hit dpG3_miss
+  dpG4_some dpG5_some dpNodeW_bin dpNodeW_let dpNodeW_proj dpB1_some dpB2_some dpL1_some dpL2_some
+  dpL3_some dpP1_some dpFin_big dpFin_ok
+
+section spec
+variable (p : Prog) (hv : p.lookup "e_view" = some eView)
+  (hf : p.lookup "dp_find" = some (memoFindG dpSch)) (hput : p.lookup "dp_put" = some (memoPutG dpSch))
+  (hgo : p.lookup "depth_go" = some depthGo) (hnode : p.lookup "depth_node" = some depthNode)
+
+def DpGoSpec (n : Nat) : Prop := ∀ (s₀ : St) (f h : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "depth_go" [f, h]
+    ⦃fun r s' => LocEq s' s₀ ∧ dpGoW n s₀.mem f h = some (r.headD 0, s'.mem); ⊤⦄
+
+def DpNodeSpec (n : Nat) : Prop := ∀ (s₀ : St) (f1 g x y z : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "depth_node" [f1, g, x, y, z]
+    ⦃fun r s' => LocEq s' s₀ ∧ dpNodeW n s₀.mem f1 g x y z = some (r.headD 0, s'.mem); ⊤⦄
+
+include hv hf hput hgo in
+theorem dpGo_step (n : Nat) (ih : DpNodeSpec p n) : DpGoSpec p (n + 1) := by
+  unfold DpNodeSpec at ih
+  intro s₀ f h
+  rw [invoke_eq _ hgo]
+  simp only [callFn, depthGo]
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      eView_spec p hv n, memoFindG_spec dpSch p _ hf n, memoPutG_spec dpSch p _ hput n, ih] <;>
+    finish (gen := 20)
+
+include hgo hnode in
+theorem dpNode_step (n : Nat) (ih : DpGoSpec p n) : DpNodeSpec p (n + 1) := by
+  unfold DpGoSpec at ih
+  intro s₀ f1 g x y z
+  rw [invoke_eq _ hnode]
+  simp only [callFn, depthNode]
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ih] <;>
+    finish (gen := 20) [maxW]
+
+include hv hf hput hgo hnode in
+theorem dpGo_spec (n : Nat) : DpGoSpec p n ∧ DpNodeSpec p n := by
+  induction n with
+  | zero =>
+    constructor
+    · intro s₀ f h; rw [invoke_eq _ hgo]; simp only [callFn, depthGo]; vcgen [exec] <;> grind
+    · intro s₀ f1 g x y z; rw [invoke_eq _ hnode]; simp only [callFn, depthNode]; vcgen [exec] <;> grind
+  | succ n ih => exact ⟨dpGo_step p hv hf hput hgo n ih.2, dpNode_step p hgo hnode n ih.1⟩
+
+end spec
+
+
+/-! ### The relational side -/
+
+def dpArm (memo : Std.HashMap EIdx Nat) (fuel : Nat) : ENodeView → AM (Nat × Std.HashMap EIdx Nat)
+  | .app f a => do
+    let (d1, m) ← ConRon.Arena.depthGo memo fuel f
+    let (d2, m2) ← ConRon.Arena.depthGo m fuel a
+    pure (max d1 d2 + 1, m2)
+  | .lam ty body => do
+    let (d1, m) ← ConRon.Arena.depthGo memo fuel ty
+    let (d2, m2) ← ConRon.Arena.depthGo m fuel body
+    pure (max d1 d2 + 1, m2)
+  | .forallE ty body => do
+    let (d1, m) ← ConRon.Arena.depthGo memo fuel ty
+    let (d2, m2) ← ConRon.Arena.depthGo m fuel body
+    pure (max d1 d2 + 1, m2)
+  | .letE ty val body => do
+    let (d1, m) ← ConRon.Arena.depthGo memo fuel ty
+    let (d2, m2) ← ConRon.Arena.depthGo m fuel val
+    let (d3, m3) ← ConRon.Arena.depthGo m2 fuel body
+    pure (max (max d1 d2) d3 + 1, m3)
+  | .proj _ _ x => do
+    let (d, m) ← ConRon.Arena.depthGo memo fuel x
+    pure (d + 1, m)
+  | _ => pure (1, memo)
+
+def NodeVd : ENodeView → Prop
+  | .app .. | .lam .. | .forallE .. | .letE .. | .proj .. => True
+  | _ => False
+
+theorem depthGo_succ' (memo : Std.HashMap EIdx Nat) (fuel : Nat) (h : EIdx) :
+    ConRon.Arena.depthGo memo (fuel + 1) h = (do
+      let v ← view h
+      match v with
+      | .bvar _ => pure (1, memo)
+      | .fvar _ _ => pure (1, memo)
+      | .sort _ => pure (1, memo)
+      | .const _ _ => pure (1, memo)
+      | .lit _ => pure (1, memo)
+      | v =>
+        match memo[h]? with
+        | some r => pure (r, memo)
+        | none => do
+          let (r, m) ← dpArm memo fuel v
+          pure (r, m.insert h r)) := by
+  rw [ConRon.Arena.depthGo.eq_2]
+  congr 1
+  funext v
+  cases v <;> first | rfl | (simp only [dpArm, bind_assoc, pure_bind]; rfl)
+
+theorem dpTwin_node (memo : Std.HashMap EIdx Nat) (fuel : Nat) (h : EIdx) (a : AState) (v : ENodeView)
+    (hv : a.store.view h = some v) (hnv : NodeVd v) :
+    (ConRon.Arena.depthGo memo (fuel + 1) h).run a =
+      ((match memo[h]? with
+        | some r => pure (r, memo)
+        | none => do
+          let (r, m) ← dpArm memo fuel v
+          pure (r, m.insert h r) : AM (Nat × Std.HashMap EIdx Nat)).run a) := by
+  cases v <;> first
+    | exact False.elim hnv
+    | (rw [depthGo_succ', StateT.run_bind, view_run _ a _ hv, except_ok_bind])
+
+theorem dpSch_wf : dpSch.WF := ⟨by decide, by decide⟩
+
+theorem dpFrame_arena {m m' : Mem} {a : AState} (hf : MemFrame [DPM] [207] m m') (hR : ArenaR m a) :
+    ArenaR m' a :=
+  ArenaR.frame (fun b hb => by simp at hb; subst hb; simp [arenaArrs, storeArrs, memoArrs, DPM])
+    (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hf hR
+
+abbrev dpMR (m : Mem) (mp : Std.HashMap EIdx Nat) : Prop :=
+  MemoRG dpSch bmKey (fun w : Word => w.toNat) m mp
+
+def DpGoOK (n : Nat) : Prop :=
+  ∀ (m m' : Mem) (a : AState) (f h r : Word) (mp : Std.HashMap EIdx Nat),
+    dpGoW n m f h = some (r, m') → ArenaR m a → H h → dpMR m mp →
+    ∃ d mp', (ConRon.Arena.depthGo mp f.toNat (decE h)).run a = .ok ((d, mp'), a) ∧ r.toNat = d ∧
+      dpMR m' mp' ∧ MemFrame [DPM] [207] m m'
+
+theorem fin_toNat {d : Word} (hb : ¬ 4294967295 ≤ d) : (d + 1).toNat = d.toNat + 1 := by
+  have : d.toNat < 4294967295 := by
+    have e : (4294967295 : Word).toNat = 4294967295 := by decide
+    have : ¬ (4294967295 : Word).toNat ≤ d.toNat := fun hh => hb (UInt64.le_iff_toNat_le.mpr hh)
+    omega
+  rw [UInt64.toNat_add]; simp; omega
+
+
+theorem dpNodeBin_ok (n : Nat) (ih : DpGoOK n) (m m' : Mem) (a : AState) (f1 g x y z r : Word)
+    (mp : Std.HashMap EIdx Nat) (hg : g = 4 ∨ g = 5 ∨ g = 6) (hx : H x) (hy : H y)
+    (hn : dpNodeW (n + 1) m f1 g x y z = some (r, m')) (hA : ArenaR m a) (hM : dpMR m mp) :
+    ∃ d mp', (do
+        let (d1, mm) ← ConRon.Arena.depthGo mp f1.toNat (decE x)
+        let (d2, m2) ← ConRon.Arena.depthGo mm f1.toNat (decE y)
+        pure (max d1 d2 + 1, m2) : AM (Nat × Std.HashMap EIdx Nat)).run a = .ok ((d, mp'), a) ∧
+      r.toNat = d ∧ dpMR m' mp' ∧ MemFrame [DPM] [207] m m' := by
+  rw [dpNodeW_bin n m f1 g x y z hg] at hn
+  cases h1 : dpGoW n m f1 x with
+  | none => rw [h1] at hn; simp [dpB1] at hn
+  | some p1 =>
+    obtain ⟨d1w, m1⟩ := p1
+    rw [h1, dpB1_some] at hn
+    cases h2 : dpGoW n m1 f1 y with
+    | none => rw [h2] at hn; simp [dpB2] at hn
+    | some p2 =>
+      obtain ⟨d2w, m2⟩ := p2
+      rw [h2, dpB2_some] at hn
+      by_cases hb : 4294967295 ≤ maxW d1w d2w
+      · rw [dpFin_big _ _ hb] at hn; simp at hn
+      rw [dpFin_ok _ _ hb] at hn
+      simp only [Option.some.injEq, Prod.mk.injEq] at hn
+      obtain ⟨rfl, rfl⟩ := hn
+      obtain ⟨c1, mp1, hr1, hb1, hM1, hf1⟩ := ih m m1 a f1 x d1w mp h1 hA hx hM
+      obtain ⟨c2, mp2, hr2, hb2, hM2, hf2⟩ := ih m1 m2 a f1 y d2w mp1 h2 (dpFrame_arena hf1 hA) hy hM1
+      refine ⟨max c1 c2 + 1, mp2, ?_, ?_, hM2, hf1.trans hf2⟩
+      · simp only [StateT.run_bind]
+        rw [hr1]
+        simp only [except_ok_bind, StateT.run_bind]
+        rw [hr2]
+        simp only [except_ok_bind]
+        rfl
+      · rw [fin_toNat hb, maxW_toNat, hb1, hb2]
+
+theorem dpNodeLet_ok (n : Nat) (ih : DpGoOK n) (m m' : Mem) (a : AState) (f1 x y z r : Word)
+    (mp : Std.HashMap EIdx Nat) (hx : H x) (hy : H y) (hz : H z)
+    (hn : dpNodeW (n + 1) m f1 7 x y z = some (r, m')) (hA : ArenaR m a) (hM : dpMR m mp) :
+    ∃ d mp', (do
+        let (d1, mm) ← ConRon.Arena.depthGo mp f1.toNat (decE x)
+        let (d2, m2) ← ConRon.Arena.depthGo mm f1.toNat (decE y)
+        let (d3, m3) ← ConRon.Arena.depthGo m2 f1.toNat (decE z)
+        pure (max (max d1 d2) d3 + 1, m3) : AM (Nat × Std.HashMap EIdx Nat)).run a = .ok ((d, mp'), a) ∧
+      r.toNat = d ∧ dpMR m' mp' ∧ MemFrame [DPM] [207] m m' := by
+  rw [dpNodeW_let n m f1 7 x y z rfl] at hn
+  cases h1 : dpGoW n m f1 x with
+  | none => rw [h1] at hn; simp [dpL1] at hn
+  | some p1 =>
+    obtain ⟨d1w, m1⟩ := p1
+    rw [h1, dpL1_some] at hn
+    cases h2 : dpGoW n m1 f1 y with
+    | none => rw [h2] at hn; simp [dpL2] at hn
+    | some p2 =>
+      obtain ⟨d2w, m2⟩ := p2
+      rw [h2, dpL2_some] at hn
+      cases h3 : dpGoW n m2 f1 z with
+      | none => rw [h3] at hn; simp [dpL3] at hn
+      | some p3 =>
+        obtain ⟨d3w, m3⟩ := p3
+        rw [h3, dpL3_some] at hn
+        by_cases hb : 4294967295 ≤ maxW (maxW d1w d2w) d3w
+        · rw [dpFin_big _ _ hb] at hn; simp at hn
+        rw [dpFin_ok _ _ hb] at hn
+        simp only [Option.some.injEq, Prod.mk.injEq] at hn
+        obtain ⟨rfl, rfl⟩ := hn
+        obtain ⟨c1, mp1, hr1, hb1, hM1, hf1⟩ := ih m m1 a f1 x d1w mp h1 hA hx hM
+        obtain ⟨c2, mp2, hr2, hb2, hM2, hf2⟩ := ih m1 m2 a f1 y d2w mp1 h2 (dpFrame_arena hf1 hA) hy hM1
+        obtain ⟨c3, mp3, hr3, hb3, hM3, hf3⟩ := ih m2 m3 a f1 z d3w mp2 h3
+          (dpFrame_arena (hf1.trans hf2) hA) hz hM2
+        refine ⟨max (max c1 c2) c3 + 1, mp3, ?_, ?_, hM3, (hf1.trans hf2).trans hf3⟩
+        · simp only [StateT.run_bind]
+          rw [hr1]
+          simp only [except_ok_bind, StateT.run_bind]
+          rw [hr2]
+          simp only [except_ok_bind, StateT.run_bind]
+          rw [hr3]
+          simp only [except_ok_bind]
+          rfl
+        · rw [fin_toNat hb, maxW_toNat, maxW_toNat, hb1, hb2, hb3]
+
+theorem dpNodeProj_ok (n : Nat) (ih : DpGoOK n) (m m' : Mem) (a : AState) (f1 g x y z r : Word)
+    (mp : Std.HashMap EIdx Nat) (hg2 : ¬ (g = 4 ∨ g = 5 ∨ g = 6)) (hg3 : g ≠ 7) (hz : H z)
+    (hn : dpNodeW (n + 1) m f1 g x y z = some (r, m')) (hA : ArenaR m a) (hM : dpMR m mp) :
+    ∃ d mp', (do
+        let (d, mm) ← ConRon.Arena.depthGo mp f1.toNat (decE z)
+        pure (d + 1, mm) : AM (Nat × Std.HashMap EIdx Nat)).run a = .ok ((d, mp'), a) ∧
+      r.toNat = d ∧ dpMR m' mp' ∧ MemFrame [DPM] [207] m m' := by
+  rw [dpNodeW_proj n m f1 g x y z hg2 hg3] at hn
+  cases h1 : dpGoW n m f1 z with
+  | none => rw [h1] at hn; simp [dpP1] at hn
+  | some p1 =>
+    obtain ⟨d1w, m1⟩ := p1
+    rw [h1, dpP1_some] at hn
+    by_cases hb : 4294967295 ≤ d1w
+    · rw [dpFin_big _ _ hb] at hn; simp at hn
+    rw [dpFin_ok _ _ hb] at hn
+    simp only [Option.some.injEq, Prod.mk.injEq] at hn
+    obtain ⟨rfl, rfl⟩ := hn
+    obtain ⟨c1, mp1, hr1, hb1, hM1, hf1⟩ := ih m m1 a f1 z d1w mp h1 hA hz hM
+    refine ⟨c1 + 1, mp1, ?_, ?_, hM1, hf1⟩
+    · simp only [StateT.run_bind]
+      rw [hr1]
+      simp only [except_ok_bind]
+      rfl
+    · rw [fin_toNat hb, hb1]
+
+
+theorem dpNode_arm (k : Nat) (ih : DpGoOK k) (vl : List Word) (v : ENodeView) (hvr : ViewR vl v)
+    (hnv : NodeVd v) (m m' : Mem) (a : AState) (f1 r : Word) (mp : Std.HashMap EIdx Nat)
+    (hn : dpNodeW (k + 1) m f1 (vl.headD 0) (vl.tail.headD 0) (vl.tail.tail.headD 0)
+      (vl.tail.tail.tail.headD 0) = some (r, m'))
+    (hA : ArenaR m a) (hM : dpMR m mp) :
+    ∃ d mp', (dpArm mp f1.toNat v).run a = .ok ((d, mp'), a) ∧ r.toNat = d ∧ dpMR m' mp' ∧
+      MemFrame [DPM] [207] m m' := by
+  cases v with
+  | app f x' =>
+    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
+    have := dpNodeBin_ok k ih m m' a f1 _ _ _ _ r mp (Or.inl hg) hx hy hn hA hM
+    rw [hdx, hdy] at this
+    simp only [dpArm]; exact this
+  | lam f x' =>
+    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
+    have := dpNodeBin_ok k ih m m' a f1 _ _ _ _ r mp (Or.inr (Or.inl hg)) hx hy hn hA hM
+    rw [hdx, hdy] at this
+    simp only [dpArm]; exact this
+  | forallE f x' =>
+    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
+    have := dpNodeBin_ok k ih m m' a f1 _ _ _ _ r mp (Or.inr (Or.inr hg)) hx hy hn hA hM
+    rw [hdx, hdy] at this
+    simp only [dpArm]; exact this
+  | letE t v' b' =>
+    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    obtain ⟨hg, hx, hdx, hy, hdy, hz, hdz⟩ := hvr
+    rw [hg] at hn
+    have := dpNodeLet_ok k ih m m' a f1 _ _ _ r mp hx hy hz hn hA hM
+    rw [hdx, hdy, hdz] at this
+    simp only [dpArm]; exact this
+  | proj s i e =>
+    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    obtain ⟨hg, hx, hdx, -, hz, hdz⟩ := hvr
+    rw [hg] at hn
+    have := dpNodeProj_ok k ih m m' a f1 9 _ _ _ r mp (by decide) (by decide) hz hn hA hM
+    rw [hdz] at this
+    simp only [dpArm]; exact this
+  | bvar _ => exact False.elim hnv
+  | sort _ => exact False.elim hnv
+  | const _ _ => exact False.elim hnv
+  | lit _ => exact False.elim hnv
+  | fvar _ _ => exact False.elim hnv
+
+theorem dpGo_nodeCase (j : Nat) (ih : ∀ k, k + 1 < j + 1 → DpGoOK k) (m m' : Mem) (a : AState)
+    (f h r : Word) (mp : Std.HashMap EIdx Nat) (F : Nat)
+    (hF : f.toNat = F + 1) (hf0 : f ≠ 0) (vl : List Word) (v : ENodeView) (hvr : ViewR vl v)
+    (hnv : NodeVd v) (hv : a.store.view (decE h) = some v) (hvl : vl ≠ [])
+    (hgs : vl.headD 0 = 4 ∨ vl.headD 0 = 5 ∨ vl.headD 0 = 6 ∨ vl.headD 0 = 7 ∨ vl.headD 0 = 9)
+    (hb : dpG1 j m f h vl = some (r, m')) (hA : ArenaR m a) (hh : H h) (hM : dpMR m mp) :
+    ∃ d mp', (ConRon.Arena.depthGo mp (F + 1) (decE h)).run a = .ok ((d, mp'), a) ∧ r.toNat = d ∧
+      dpMR m' mp' ∧ MemFrame [DPM] [207] m m' := by
+  have hnl : ¬ (vl.headD 0 = 0 ∨ vl.headD 0 = 1 ∨ vl.headD 0 = 2 ∨ vl.headD 0 = 3 ∨ vl.headD 0 = 8) := by
+    rcases hgs with e | e | e | e | e <;> rw [e] <;> decide
+  rw [dpG1_node j m f h vl hvl hnl] at hb
+  rw [dpTwin_node _ _ _ a v hv hnv]
+  by_cases hfr : mfindG dpSch m h 0 = []
+  · rw [dpG3_abort j m f h vl _ hfr] at hb; simp at hb
+  by_cases hhit : (mfindG dpSch m h 0).headD 0 ≠ 0
+  · rw [dpG3_hit j m f h vl _ hfr hhit] at hb
+    simp only [Option.some.injEq, Prod.mk.injEq] at hb
+    obtain ⟨rfl, rfl⟩ := hb
+    have hmem := memoRG_hit dpSch bmKey (fun w : Word => w.toNat) m mp hM h 0 hfr hhit ⟨hh, rfl⟩
+    have : bmKey.dk h 0 = decE h := rfl
+    rw [this] at hmem
+    refine ⟨_, mp, ?_, rfl, hM, MemFrame.refl _ _ _⟩
+    simp only [hmem]; rfl
+  · rw [dpG3_miss j m f h vl _ hfr hhit] at hb
+    have hmiss := memoRG_miss dpSch bmKey (fun w : Word => w.toNat) m mp hM h 0 ⟨hh, rfl⟩ hfr (by simpa using hhit)
+    have : bmKey.dk h 0 = decE h := rfl
+    rw [this] at hmiss
+    cases j with
+    | zero => simp [dpNodeW, dpG4] at hb
+    | succ k =>
+      cases hnode : dpNodeW (k + 1) m (f - 1) (vl.headD 0) (vl.tail.headD 0) (vl.tail.tail.headD 0)
+          (vl.tail.tail.tail.headD 0) with
+      | none => rw [hnode] at hb; simp [dpG4] at hb
+      | some pn =>
+        obtain ⟨rn, m1⟩ := pn
+        rw [hnode, dpG4_some] at hb
+        cases hset : msetG dpSch m1 h 0 rn with
+        | none => rw [hset] at hb; simp [dpG5] at hb
+        | some m2 =>
+          rw [hset, dpG5_some] at hb
+          simp only [Option.some.injEq, Prod.mk.injEq] at hb
+          obtain ⟨rfl, rfl⟩ := hb
+          have hF1 : (f - 1).toNat = F := by rw [toNat_sub_one' hf0, hF]; rfl
+          obtain ⟨d, mp1, hr1, hbb, hM1, hfr1⟩ := dpNode_arm k (ih k (by omega)) vl v hvr hnv m m1 a (f - 1) rn mp
+            hnode hA hM
+          rw [hF1] at hr1
+          have hset' := memoRG_set dpSch dpSch_wf bmKey (fun w : Word => w.toNat) m1 mp1 hM1 h 0 rn ⟨hh, rfl⟩ m2 hset
+          have hfs : MemFrame [DPM] [dpSch.cs + 1] m1 m2 := msetG_frame dpSch dpSch_wf m1 m2 h 0 rn hset
+          refine ⟨d, mp1.insert (decE h) d, ?_, hbb, ?_, hfr1.trans hfs⟩
+          · rw [hmiss]
+            simp only [StateT.run_bind]
+            rw [hr1]
+            simp only [except_ok_bind]
+            rfl
+          · rw [← hbb]; exact hset'
+
+
+theorem dpGo_step_ok (j : Nat) (ih : ∀ k, k + 1 < j + 1 → DpGoOK k) : DpGoOK (j + 1) := by
+  intro m m' a f h r mp hb hA hh hM
+  by_cases hf0 : f = 0
+  · rw [dpGoW_abort j m f h hf0] at hb; simp at hb
+  rw [dpGoW_view j m f h hf0] at hb
+  obtain ⟨F, hF⟩ : ∃ F, f.toNat = F + 1 := ⟨f.toNat - 1, by have := toNat_ne_zero' hf0; omega⟩
+  cases hvl : eViewW m h with
+  | nil => rw [hvl] at hb; simp [dpG1] at hb
+  | cons g vt =>
+    have hne : eViewW m h ≠ [] := by rw [hvl]; simp
+    obtain ⟨v, hv, hvr⟩ := eViewW_ok m (a) hA h hne
+    rw [hvl] at hvr hb
+    have leaf : ∀ (hg : (g :: vt).headD 0 = 0 ∨ (g :: vt).headD 0 = 1 ∨ (g :: vt).headD 0 = 2 ∨
+        (g :: vt).headD 0 = 3 ∨ (g :: vt).headD 0 = 8),
+        (match v with | .bvar _ | .sort _ | .lit _ | .fvar _ _ | .const _ _ => True | _ => False) →
+        ∃ d mp', (ConRon.Arena.depthGo mp f.toNat (decE h)).run a = .ok ((d, mp'), a) ∧ r.toNat = d ∧
+          dpMR m' mp' ∧ MemFrame [DPM] [207] m m' := by
+      intro hg hv'
+      rw [dpG1_leaf j m f h _ (by simp) hg] at hb
+      simp only [Option.some.injEq, Prod.mk.injEq] at hb
+      obtain ⟨rfl, rfl⟩ := hb
+      refine ⟨1, mp, ?_, rfl, hM, MemFrame.refl _ _ _⟩
+      rw [hF, depthGo_succ', StateT.run_bind, view_run _ a _ hv, except_ok_bind]
+      cases v <;> first | rfl | exact False.elim hv'
+    cases v with
+    | bvar i =>
+      have hg0 : (g :: vt).headD 0 = 0 := by simpa [ViewR] using hvr.1
+      exact leaf (Or.inl hg0) trivial
+    | fvar i ty =>
+      have hg0 : (g :: vt).headD 0 = 1 := hvr.1
+      exact leaf (Or.inr (Or.inl hg0)) trivial
+    | sort u =>
+      have hg0 : (g :: vt).headD 0 = 2 := by simpa [ViewR] using hvr.1
+      exact leaf (Or.inr (Or.inr (Or.inl hg0))) trivial
+    | const nn us =>
+      have hg0 : (g :: vt).headD 0 = 3 := hvr.1
+      exact leaf (Or.inr (Or.inr (Or.inr (Or.inl hg0)))) trivial
+    | lit l =>
+      have hg0 : (g :: vt).headD 0 = 8 := by simpa [ViewR] using hvr
+      exact leaf (Or.inr (Or.inr (Or.inr (Or.inr hg0)))) trivial
+    | app f' x' =>
+      rw [hF]
+      exact dpGo_nodeCase j ih m m' a f h r mp F hF hf0 _ _ hvr trivial hv (by simp)
+        (Or.inl hvr.1) hb hA hh hM
+    | lam f' x' =>
+      rw [hF]
+      exact dpGo_nodeCase j ih m m' a f h r mp F hF hf0 _ _ hvr trivial hv (by simp)
+        (Or.inr (Or.inl hvr.1)) hb hA hh hM
+    | forallE f' x' =>
+      rw [hF]
+      exact dpGo_nodeCase j ih m m' a f h r mp F hF hf0 _ _ hvr trivial hv (by simp)
+        (Or.inr (Or.inr (Or.inl hvr.1))) hb hA hh hM
+    | letE t v' b' =>
+      rw [hF]
+      exact dpGo_nodeCase j ih m m' a f h r mp F hF hf0 _ _ hvr trivial hv (by simp)
+        (Or.inr (Or.inr (Or.inr (Or.inl hvr.1)))) hb hA hh hM
+    | proj s i e =>
+      rw [hF]
+      exact dpGo_nodeCase j ih m m' a f h r mp F hF hf0 _ _ hvr trivial hv (by simp)
+        (Or.inr (Or.inr (Or.inr (Or.inr hvr.1)))) hb hA hh hM
+
+theorem dpGoOK (n : Nat) : DpGoOK n := by
+  induction n using Nat.strongRecOn with
+  | _ n ih =>
+    cases n with
+    | zero => intro m m' a f h r mp hb; simp [dpGoW] at hb
+    | succ j => exact dpGo_step_ok j (fun k hk => ih k (by omega))
+
+
+def dpClrK : Option (Word × Mem) → Option (Word × Mem)
+  | none => none
+  | some (r, m1) => if rdW (m1.arr64 CTL) dpSch.cs + 2 = 0 then none else some (r, mclearG dpSch m1)
+
+def dpConstW (n : Nat) (m : Mem) (e : Word) : Option (Word × Mem) :=
+  if rdW (m.arr64 CTL) dpSch.cs + 2 = 0 then none else dpClrK (dpGoW n (mclearG dpSch m) CWF e)
+
+theorem dpConstW_eq (n : Nat) (m : Mem) (e : Word) (h0 : rdW (m.arr64 CTL) dpSch.cs + 2 ≠ 0) :
+    dpConstW n m e = dpClrK (dpGoW n (mclearG dpSch m) CWF e) := by simp [dpConstW, h0]
+theorem dpClrK_some (r : Word) (m1 : Mem) (h0 : rdW (m1.arr64 CTL) dpSch.cs + 2 ≠ 0) :
+    dpClrK (some (r, m1)) = some (r, mclearG dpSch m1) := by simp [dpClrK, h0]
+attribute [ind_grind] dpConstW_eq dpClrK_some
+
+def wfW (n : Nat) (m : Mem) (e : Word) : Option (Word × Mem) :=
+  match dpConstW n m e with
+  | none => none
+  | some (d, m1) => if 4294967296 ≤ d then none else some (d + 1024, m1)
+
+theorem wf_none (n : Nat) (m : Mem) (e : Word) (h : dpConstW n m e = none) : wfW n m e = none := by
+  simp [wfW, h]
+theorem wf_big (n : Nat) (m m1 : Mem) (e d : Word) (h : dpConstW n m e = some (d, m1))
+    (hb : 4294967296 ≤ d) : wfW n m e = none := by simp [wfW, h, hb]
+theorem wf_ok (n : Nat) (m m1 : Mem) (e d : Word) (h : dpConstW n m e = some (d, m1))
+    (hb : ¬ 4294967296 ≤ d) : wfW n m e = some (d + 1024, m1) := by simp [wfW, h, hb]
+attribute [ind_grind] wf_none wf_big wf_ok
+
+section spec2
+variable (p : Prog) (hv : p.lookup "e_view" = some eView)
+  (hf : p.lookup "dp_find" = some (memoFindG dpSch)) (hput : p.lookup "dp_put" = some (memoPutG dpSch))
+  (hgo : p.lookup "depth_go" = some depthGo) (hnode : p.lookup "depth_node" = some depthNode)
+  (hcl : p.lookup "dp_clear" = some (memoClearG dpSch))
+  (hd : p.lookup "depth" = some depth)
+
+include hv hf hput hgo hnode hcl hd in
+theorem depth_spec (n : Nat) (s₀ : St) (e : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "depth" [e]
+    ⦃fun r s' => LocEq s' s₀ ∧ dpConstW n s₀.mem e = some (r.headD 0, s'.mem); ⊤⦄ := by
+  have ih := (dpGo_spec p hv hf hput hgo hnode n).1
+  unfold DpGoSpec at ih
+  rw [invoke_eq _ hd]
+  simp only [callFn, depth]
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec dpSch p _ hcl n, ih] <;>
+    finish
+
+include hv hf hput hgo hnode hcl hd in
+theorem whnfWalkFuel_spec (hw : p.lookup "whnf_walk_fuel" = some whnfWalkFuel) (n : Nat) (s₀ : St) (e : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 2)) "whnf_walk_fuel" [e]
+    ⦃fun r s' => LocEq s' s₀ ∧ wfW n s₀.mem e = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hw]
+  simp only [callFn, whnfWalkFuel]
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, depth_spec p hv hf hput hgo hnode hcl hd n] <;>
+    finish (gen := 20) [wfW]
+
+end spec2
+
+
+theorem dpConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
+    (m m' : Mem) (a : AState) (e r : Word) (mp0 : Std.HashMap EIdx Nat)
+    (hb : dpConstW n m e = some (r, m')) (hS : StageR dn vis fe m a) (he : H e) (hM : dpMR m mp0) :
+    ∃ d, (ConRon.Arena.depth (decE e)).run a = .ok (d, a) ∧ r.toNat = d ∧ dpMR m' ∅ ∧
+      StageR dn vis fe m' a ∧ IWGrow m m' := by
+  by_cases h0 : rdW (m.arr64 CTL) dpSch.cs + 2 = 0
+  · simp [dpConstW, h0] at hb
+  rw [dpConstW_eq n m e h0] at hb
+  have hf0 := mclearG_frame dpSch m
+  have hM0 := memoRG_clear dpSch dpSch_wf bmKey (fun w : Word => w.toNat) m mp0 hM h0
+  have hA0 : ArenaR (mclearG dpSch m) a :=
+    ArenaR.frame (A := []) (C := [dpSch.cs, dpSch.cs + 1]) (fun b hb => by simp at hb)
+      (fun x hx => by simp [dpSch] at hx; rcases hx with rfl | rfl <;> exact not_mem_arenaCtl _ (by decide)) hf0
+      hS.1.arena.1
+  cases hg : dpGoW n (mclearG dpSch m) CWF e with
+  | none => rw [hg] at hb; simp [dpClrK] at hb
+  | some p1 =>
+    obtain ⟨r1, m1⟩ := p1
+    rw [hg] at hb
+    by_cases h1 : rdW (m1.arr64 CTL) dpSch.cs + 2 = 0
+    · simp [dpClrK, h1] at hb
+    rw [dpClrK_some r1 m1 h1] at hb
+    simp only [Option.some.injEq, Prod.mk.injEq] at hb
+    obtain ⟨rfl, rfl⟩ := hb
+    obtain ⟨d, mp1, hrun, hbb, hM1, hfr1⟩ := dpGoOK n _ _ a CWF e r1 ∅ hg hA0 he hM0
+    rw [CWF_eq] at hrun
+    have hM2 := memoRG_clear dpSch dpSch_wf bmKey (fun w : Word => w.toNat) m1 mp1 hM1 h1
+    have hf2 := mclearG_frame dpSch m1
+    have hfall : MemFrame [DPM] [dpSch.cs, dpSch.cs + 1] m (mclearG dpSch m1) :=
+      ((hf0.mono (by simp) (by simp)).trans (hfr1.mono (by simp) (by simp [dpSch]))).trans
+        (hf2.mono (by simp) (by simp))
+    obtain ⟨hS', hg'⟩ := StageR.frame_hi hS hfall (by intro b hb; simp at hb; subst hb; decide)
+      (by intro x hx; simp [dpSch] at hx; rcases hx with rfl | rfl <;> decide) (by decide)
+      (by simp [dpSch])
+    refine ⟨d, ?_, hbb, hM2, hS', hg'⟩
+    simp only [ConRon.Arena.depth, StateT.run_bind]
+    rw [hrun]
+    rfl
+
+theorem wfW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
+    (m m' : Mem) (a : AState) (e r : Word) (mp0 : Std.HashMap EIdx Nat)
+    (hb : wfW n m e = some (r, m')) (hS : StageR dn vis fe m a) (he : H e) (hM : dpMR m mp0) :
+    ∃ d, (ConRon.Arena.whnfWalkFuel (decE e)).run a = .ok (d, a) ∧ r.toNat = d ∧ dpMR m' ∅ ∧
+      StageR dn vis fe m' a ∧ IWGrow m m' := by
+  unfold wfW at hb
+  cases hc : dpConstW n m e with
+  | none => rw [hc] at hb; simp at hb
+  | some p1 =>
+    obtain ⟨d, m1⟩ := p1
+    rw [hc] at hb
+    by_cases hbig : 4294967296 ≤ d
+    · simp [hbig] at hb
+    simp only [hbig, if_false, Option.some.injEq, Prod.mk.injEq] at hb
+    obtain ⟨rfl, rfl⟩ := hb
+    obtain ⟨dd, hrun, hdd, hM', hS', hg⟩ := dpConstW_ok n dn fe vis m m1 a e d mp0 hc hS he hM
+    have hlt : d.toNat < 2 ^ 32 := by
+      have e1 : (4294967296 : Word).toNat = 4294967296 := by decide
+      have : ¬ (4294967296 : Word).toNat ≤ d.toNat := fun hh => hbig (UInt64.le_iff_toNat_le.mpr hh)
+      omega
+    refine ⟨dd + 1024, ?_, ?_, hM', hS', hg⟩
+    · simp only [ConRon.Arena.whnfWalkFuel, StateT.run_bind]
+      rw [hrun]
+      simp only [except_ok_bind]
+      show (pure (dd + fuelSlack) : AM Nat).run a = _
+      rfl
+    · rw [UInt64.toNat_add, hdd]
+      have e2 : (1024 : Word).toNat = 1024 := by decide
+      rw [e2]
+      have h64 : dd < 2 ^ 32 := by rw [← hdd]; exact hlt
+      exact Nat.mod_eq_of_lt (by simp; omega)
+
+
+section census
+variable (p : Prog) (hv : p.lookup "e_view" = some eView)
+  (hf : p.lookup "dp_find" = some (memoFindG dpSch)) (hput : p.lookup "dp_put" = some (memoPutG dpSch))
+  (hgo : p.lookup "depth_go" = some depthGo) (hnode : p.lookup "depth_node" = some depthNode)
+  (hcl : p.lookup "dp_clear" = some (memoClearG dpSch))
+  (hd : p.lookup "depth" = some depth) (hw : p.lookup "whnf_walk_fuel" = some whnfWalkFuel)
+
+include hv hf hput hgo hnode in
+/-- **`depth_go` (with `depth_node`) refines `depthGo`**, from a memo related to the twin's. -/
+@[refines ConRon.Arena.depthGo]
+theorem depthGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+    (fe : IFEnv) (vis f h : Word) (mp : Std.HashMap EIdx Nat) (hh : H h)
+    (hS : StageR dn vis fe s₀.mem a₀) (hM : dpMR s₀.mem mp) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "depth_go" [f, h]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.depthGo mp f.toNat (decE h)) a₀ ∧
+      AM.st (ConRon.Arena.depthGo mp f.toNat (decE h)) a₀ = a₀ ∧
+      (r.headD 0).toNat = (AM.res (ConRon.Arena.depthGo mp f.toNat (decE h)) a₀).1 ∧
+      dpMR s'.mem (AM.res (ConRon.Arena.depthGo mp f.toNat (decE h)) a₀).2 ∧
+      StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
+  refine triple_post ((dpGo_spec p hv hf hput hgo hnode n).1 s₀ f h) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨d, mp', hrun, hb, hM', hfr⟩ := dpGoOK n _ _ a₀ f h _ mp hm hS.1.arena.1 hh hM
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  obtain ⟨hS', hg⟩ := StageR.frame_hi hS hfr (by intro b hb; simp at hb; subst hb; decide)
+    (by intro x hx; simp at hx; subst hx; decide) (by decide) (by decide)
+  refine ⟨hl, hok, hst, by rw [hres]; exact hb, by rw [hres]; exact hM', hS', hg⟩
+
+include hv hf hput hgo hnode hcl hd in
+/-- **`depth` refines `depth`**: one memoised DAG walk between two clears. -/
+@[refines ConRon.Arena.depth]
+theorem depth_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+    (fe : IFEnv) (vis e : Word) (mp0 : Std.HashMap EIdx Nat) (he : H e)
+    (hS : StageR dn vis fe s₀.mem a₀) (hM : dpMR s₀.mem mp0) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "depth" [e]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.depth (decE e)) a₀ ∧
+      AM.st (ConRon.Arena.depth (decE e)) a₀ = a₀ ∧
+      (r.headD 0).toNat = AM.res (ConRon.Arena.depth (decE e)) a₀ ∧
+      dpMR s'.mem ∅ ∧ StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
+  refine triple_post (depth_spec p hv hf hput hgo hnode hcl hd n s₀ e) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨d, hrun, hb, hM', hS', hg⟩ := dpConstW_ok n dn fe vis _ _ a₀ e _ mp0 hm hS he hM
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, hst, by rw [hres]; exact hb, hM', hS', hg⟩
+
+include hv hf hput hgo hnode hcl hd hw in
+/-- **`whnf_walk_fuel` refines `whnfWalkFuel`**: the depth plus the slack. -/
+@[refines ConRon.Arena.whnfWalkFuel]
+theorem whnfWalkFuel_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+    (fe : IFEnv) (vis e : Word) (mp0 : Std.HashMap EIdx Nat) (he : H e)
+    (hS : StageR dn vis fe s₀.mem a₀) (hM : dpMR s₀.mem mp0) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 2)) "whnf_walk_fuel" [e]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.whnfWalkFuel (decE e)) a₀ ∧
+      AM.st (ConRon.Arena.whnfWalkFuel (decE e)) a₀ = a₀ ∧
+      (r.headD 0).toNat = AM.res (ConRon.Arena.whnfWalkFuel (decE e)) a₀ ∧
+      dpMR s'.mem ∅ ∧ StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
+  refine triple_post (whnfWalkFuel_spec p hv hf hput hgo hnode hcl hd hw n s₀ e) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨d, hrun, hb, hM', hS', hg⟩ := wfW_ok n dn fe vis _ _ a₀ e _ mp0 hm hS he hM
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, hst, by rw [hres]; exact hb, hM', hS', hg⟩
+
+end census
 
 end L.Ind

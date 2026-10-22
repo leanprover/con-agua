@@ -183,6 +183,7 @@ def depthNode : FunDecl := lfn (fuel1, g, x, y, z) locals (d1, d2, d3, m) {
     d1 := call depth_go(fuel1, x);
     d2 := call depth_go(fuel1, y);
     m := d1 + (d2 - d1) * u64(d1 < d2);
+    if m >= 4294967295 { abort };
     return m + 1
   };
   if g == 7 {
@@ -191,10 +192,12 @@ def depthNode : FunDecl := lfn (fuel1, g, x, y, z) locals (d1, d2, d3, m) {
     d3 := call depth_go(fuel1, z);
     m := d1 + (d2 - d1) * u64(d1 < d2);
     m := m + (d3 - m) * u64(m < d3);
+    if m >= 4294967295 { abort };
     return m + 1
   };
   -- g == 9 (proj)
   d1 := call depth_go(fuel1, z);
+  if d1 >= 4294967295 { abort };
   return d1 + 1
 }
 
@@ -232,6 +235,7 @@ def depth : FunDecl := lfn (e) locals (r, u) {
 @[l_impl ConRon.Arena.whnfWalkFuel]
 def whnfWalkFuel : FunDecl := lfn (e) locals (d) {
   d := call depth(e);
+  if d >= 4294967296 { abort };
   return d + 1024
 }
 
