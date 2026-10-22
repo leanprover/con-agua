@@ -239,7 +239,9 @@ arrays, the result area (nine results) and entry arguments. -/
 abbrev GA : GVar := ⟨0⟩
 abbrev GB : GVar := ⟨2⟩
 
+/-- con-ron: none — a compiler test program -/
 def gbump : FunDecl := lfn (x) { GA += x; GB := GB + 1; return GA }
+/-- con-ron: none — a compiler test program -/
 def gmain : FunDecl := lfn (n) locals (i, r) {
   GA := 10;
   while i < n { r := call gbump(i); i += 1 };
