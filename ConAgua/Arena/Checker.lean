@@ -60,8 +60,6 @@ def promoteVGL : FunDecl := lfn (g, vis) locals () { abort }
 /-- Stub: `promoteNew pm coreWalkFuel k` at view `vis` (`fresh ≠ 0`: `pm = PMemo.empty`, else
 the memo `promote_vg` left). -/
 def promoteNewL : FunDecl := lfn (k, vis, fresh) locals () { abort }
-/-- Stub: `checkValueGroup` at view `vis` on the value group record `g`. -/
-def checkValueGroupL : FunDecl := lfn (vis, g) locals () { abort }
 
 theorem installStepGo_spec :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
