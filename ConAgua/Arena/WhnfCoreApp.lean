@@ -1,4 +1,5 @@
-import ConAgua.Arena.WhnfCoreStep
+import ConAgua.Arena.WhnfCoreRefine
+import ConAgua.Arena.PinsNatOp
 
 /-!
 # `beta_peel` (proved) and `whnf_app` (groundwork): the batched β spine
@@ -24,7 +25,7 @@ rest of what `CoreS` reads kept by `keeps_cpl_mkAppNFrom`). `inst_list` is used 
 `callW_mkApp`/`callW_mkAppNFrom` re-derive it from the store (`internM_hw`: a hit's index is below
 the tier's node count, a push's below `2^27`).
 
-**Proved here: `whnfApp_refines'`** (with `hp : WhnfCoreProg p`; it depends on the stubs'
+**Proved here: `whnfApp_refines`** (with `hp : WhnfCoreProg p`; it depends on the stubs'
 `sorry`s: `(whnfCallees_stub p).instList` through `betaPeel_refines`, and
 `(coreCallees_stub p).iota` for `iota_rec_at`). The loop of `whnfAppL` is spliced from named blocks
 (`whnfAppW` is `while i < an { ⟪whnfAppBodyW⟫ }`, the body is `a := ..; node := ..; ⟪whnfAppLamW⟫;
@@ -1542,7 +1543,7 @@ include hp in
 /-- **`whnf_app` refines `whnfApp`**: `vargs` the slice `(vo, vn)` at the top of the stack, the
 spine's arguments and nodes the slices `(ao, an)`, `(ao + an, an)` below it. -/
 @[refines ConRon.Arena.whnfApp]
-theorem whnfApp_refines' (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
+theorem whnfApp_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode d v hd vo vn same ao an i : Word)
     (vargs args nodes : Array EIdx) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (hv : HW v)
