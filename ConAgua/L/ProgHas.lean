@@ -40,6 +40,8 @@ variable {p q fs l₁ l₂ : Prog}
 
 theorem refl (p : Prog) : ProgHas p p := fun _ _ h => h
 
+theorem nil : ProgHas p [] := fun _ _ h => by cases h
+
 theorem trans (h₁ : ProgHas p q) (h₂ : ProgHas q fs) : ProgHas p fs := fun f fd h => h₁ f fd (h₂ f fd h)
 
 /-- **One lookup**, its body computed from the list (`rfl` on `fs.lookup f`). -/
@@ -89,6 +91,23 @@ theorem append (h₁ : ProgHas p l₁) (h₂ : ProgHas p l₂) : ProgHas p (l₁
   cases h : l₁.lookup f with
   | none => rw [h] at hf; exact h₂ f fd hf
   | some g => rw [h] at hf; cases hf; exact h₁ f _ h
+
+/-- Add one lookup in front. -/
+theorem cons {f : FnName} {fd : FunDecl} (h₁ : p.lookup f = some fd) (h₂ : ProgHas p l₂) :
+    ProgHas p ((f, fd) :: l₂) := fun g gd hg => by
+  rw [List.lookup_cons] at hg
+  split at hg
+  · rename_i e; cases hg; rw [(beq_iff_eq.mp e)]; exact h₁
+  · exact h₂ g gd hg
+
+/-- **`p` and `q` agree on the names `ns`** (each bound in `fs`, which both have). -/
+theorem agreeWith (h : ProgHas p fs) (hq : ProgHas q fs) (ns : List FnName)
+    (hn : ns.all (fun f => (fs.lookup f).isSome) = true := by decide) :
+    ∀ f ∈ ns, p.lookup f = q.lookup f := by
+  intro f hf
+  have := List.all_eq_true.mp hn f hf
+  obtain ⟨fd, e⟩ := Option.isSome_iff_exists.mp this
+  rw [h f fd e, hq f fd e]
 
 /-- **`p` agrees with `fs` on the names `ns`** (each of them bound in `fs`). -/
 theorem agree (h : ProgHas p fs) (ns : List FnName)

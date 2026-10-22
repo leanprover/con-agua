@@ -30,12 +30,12 @@ theorem absApp_step (n : Nat) (ih : AbsGoSpec p n) (s₀ : St) (h k d fu : Word)
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "abs_app" [h, k, d, fu]
     ⦃fun r s' => LocEq s' s₀ ∧ absAppW (n + 1) s₀.mem h k d fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold AbsGoSpec at ih
-  rw [invoke_eq _ hp.app]
+  rw [invoke_eq _ (hp.get "abs_app")]
   simp only [callFn, absApp]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      memoFindG_spec abSch p _ hp.abf n, memoPutG_spec abSch p _ hp.abp n, ih,
-      mkApp_spec p hp.base.derb hp.base.appf hp.base.appp hp.base.appi hp.base.mkapp n] <;>
+      memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n, ih,
+      mkApp_spec p (hp.get "der_b") (hp.get "app_find") (hp.get "app_push") (hp.get "intern_app") (hp.get "mk_app") n] <;>
     finish (gen := 20) [viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
@@ -44,12 +44,12 @@ theorem absLam_step (n : Nat) (ih : AbsGoSpec p n) (s₀ : St) (h k d fu : Word)
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "abs_lam" [h, k, d, fu]
     ⦃fun r s' => LocEq s' s₀ ∧ absLamW (n + 1) s₀.mem h k d fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold AbsGoSpec at ih
-  rw [invoke_eq _ hp.lam]
+  rw [invoke_eq _ (hp.get "abs_lam")]
   simp only [callFn, absLam]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      memoFindG_spec abSch p _ hp.abf n, memoPutG_spec abSch p _ hp.abp n, ih,
-      mkLam_spec p hp.base.derb hp.base.lamf hp.base.lamp hp.base.lami hp.base.mklam n] <;>
+      memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n, ih,
+      mkLam_spec p (hp.get "der_b") (hp.get "lam_find") (hp.get "lam_push") (hp.get "intern_lam") (hp.get "mk_lam") n] <;>
     finish (gen := 20) [viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
@@ -58,12 +58,12 @@ theorem absForall_step (n : Nat) (ih : AbsGoSpec p n) (s₀ : St) (h k d fu : Wo
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "abs_forall" [h, k, d, fu]
     ⦃fun r s' => LocEq s' s₀ ∧ absForallW (n + 1) s₀.mem h k d fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold AbsGoSpec at ih
-  rw [invoke_eq _ hp.fa]
+  rw [invoke_eq _ (hp.get "abs_forall")]
   simp only [callFn, absForall]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      memoFindG_spec abSch p _ hp.abf n, memoPutG_spec abSch p _ hp.abp n, ih,
-      mkForall_spec p hp.base.derb hp.base.faf hp.base.fap hp.base.fai hp.base.mkfa n] <;>
+      memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n, ih,
+      mkForall_spec p (hp.get "der_b") (hp.get "forall_find") (hp.get "forall_push") (hp.get "intern_forall") (hp.get "mk_forall") n] <;>
     finish (gen := 20) [viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
@@ -72,12 +72,12 @@ theorem absLet_step (n : Nat) (ih : AbsGoSpec p n) (s₀ : St) (h k d fu : Word)
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "abs_let" [h, k, d, fu]
     ⦃fun r s' => LocEq s' s₀ ∧ absLetW (n + 1) s₀.mem h k d fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold AbsGoSpec at ih
-  rw [invoke_eq _ hp.le]
+  rw [invoke_eq _ (hp.get "abs_let")]
   simp only [callFn, absLet]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      memoFindG_spec abSch p _ hp.abf n, memoPutG_spec abSch p _ hp.abp n, ih,
-      mkLet_spec p hp.base.derb hp.base.lef hp.base.lep hp.base.lei hp.base.mklet n] <;>
+      memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n, ih,
+      mkLet_spec p (hp.get "der_b") (hp.get "letE_find") (hp.get "letE_push") (hp.get "intern_letE") (hp.get "mk_let") n] <;>
     finish (gen := 20) [viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
@@ -86,12 +86,12 @@ theorem absProj_step (n : Nat) (ih : AbsGoSpec p n) (s₀ : St) (h k d fu : Word
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "abs_proj" [h, k, d, fu]
     ⦃fun r s' => LocEq s' s₀ ∧ absProjW (n + 1) s₀.mem h k d fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold AbsGoSpec at ih
-  rw [invoke_eq _ hp.pj]
+  rw [invoke_eq _ (hp.get "abs_proj")]
   simp only [callFn, absProj]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      memoFindG_spec abSch p _ hp.abf n, memoPutG_spec abSch p _ hp.abp n, ih,
-      mkProj_spec p hp.base.derb hp.base.pjf hp.base.pjp hp.base.pji hp.base.mkpj n] <;>
+      memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n, ih,
+      mkProj_spec p (hp.get "der_b") (hp.get "proj_find") (hp.get "proj_push") (hp.get "intern_proj") (hp.get "mk_proj") n] <;>
     finish (gen := 20) [viewOK, tierW, idxW]
 
 include hp in
@@ -101,13 +101,13 @@ theorem absGo_spec (n : Nat) : AbsGoSpec p n ∧ AbsNodeSpec p n ∧ AbsArmSpec 
   | zero =>
     refine ⟨fun s₀ h k d fu => ?_, fun s₀ h k d fu => ?_, fun s₀ h k d fu => ⟨?_, ?_, ?_, ?_, ?_⟩⟩ <;>
     first
-    | (rw [invoke_eq _ hp.go]; simp only [callFn, absGo]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ hp.node]; simp only [callFn, absNode]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ hp.app]; simp only [callFn, absApp]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ hp.lam]; simp only [callFn, absLam]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ hp.fa]; simp only [callFn, absForall]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ hp.le]; simp only [callFn, absLet]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ hp.pj]; simp only [callFn, absProj]; vcgen [exec] <;> grind)
+    | (rw [invoke_eq _ (hp.get "abs_go")]; simp only [callFn, absGo]; vcgen [exec] <;> grind)
+    | (rw [invoke_eq _ (hp.get "ab_node")]; simp only [callFn, absNode]; vcgen [exec] <;> grind)
+    | (rw [invoke_eq _ (hp.get "abs_app")]; simp only [callFn, absApp]; vcgen [exec] <;> grind)
+    | (rw [invoke_eq _ (hp.get "abs_lam")]; simp only [callFn, absLam]; vcgen [exec] <;> grind)
+    | (rw [invoke_eq _ (hp.get "abs_forall")]; simp only [callFn, absForall]; vcgen [exec] <;> grind)
+    | (rw [invoke_eq _ (hp.get "abs_let")]; simp only [callFn, absLet]; vcgen [exec] <;> grind)
+    | (rw [invoke_eq _ (hp.get "abs_proj")]; simp only [callFn, absProj]; vcgen [exec] <;> grind)
   | succ n ih =>
     exact ⟨absGo_step p hp n ih.2.1, absNode_step p hp n ih.2.2, fun s₀ h k d fu =>
       ⟨absApp_step p hp n ih.1 s₀ h k d fu, absLam_step p hp n ih.1 s₀ h k d fu,
@@ -161,19 +161,13 @@ theorem absEntry_spec (p : Prog) (hp : AbsProg p) (he : p.lookup "abs_entry" = s
   rw [invoke_eq _ he]
   simp only [callFn, absEntry]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec abSch p _ hp.abc n,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec abSch p _ (hp.get "ab_clear") n,
       ih] <;>
     finish
 
 /-- The walk, its memo, `fvarRangeProg` and `liftProg` (the `mk_*`, the stores), as one program. -/
-def absProg : Prog :=
-  [("ab_find", memoFindG abSch), ("ab_put", memoPutG abSch), ("ab_clear", memoClearG abSch),
-    ("ab_fvb", abFvb), ("abs_go", absGo), ("ab_node", absNode), ("abs_app", absApp),
-    ("abs_lam", absLam), ("abs_forall", absForall), ("abs_let", absLet), ("abs_proj", absProj),
-    ("abs_entry", absEntry)] ++ fvarRangeProg ++ liftProg
+def absProg : Prog := absWalkProg ++ [("abs_entry", absEntry)]
 
-theorem absProg_ok : AbsProg absProg := by
-  refine ⟨?_, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
-  constructor <;> rfl
+theorem absProg_ok : AbsProg absProg := (ProgHas.refl _).left
 
 end L.Arena

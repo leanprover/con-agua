@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.Inst1Spec
 public import ConAgua.Arena.FVarRange
+public import ConAgua.L.ProgHas
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.Store
 import ConAgua.Census.Attr
@@ -611,26 +612,19 @@ def absProj : FunDecl := lfn (h, k, d, fu) locals (fd, j, e0, t, i, nm, ix, e, x
 
 /-! ## The program and its specs -/
 
-/-- What the specs need of the program. -/
-structure AbsProg (p : Prog) : Prop where
-  base : LiftProg p
-  fmf : p.lookup "fm_find" = some (memoFindG frSch)
-  fmp : p.lookup "fm_put" = some (memoPutG frSch)
-  fmc : p.lookup "fm_clear" = some (memoClearG frSch)
-  frgo : p.lookup "fr_go" = some frGo
-  frnode : p.lookup "fr_node" = some frNode
-  frmemo : p.lookup "fr_memo" = some frMemo
-  abf : p.lookup "ab_find" = some (memoFindG abSch)
-  abp : p.lookup "ab_put" = some (memoPutG abSch)
-  abc : p.lookup "ab_clear" = some (memoClearG abSch)
-  fvb : p.lookup "ab_fvb" = some abFvb
-  go : p.lookup "abs_go" = some absGo
-  node : p.lookup "ab_node" = some absNode
-  app : p.lookup "abs_app" = some absApp
-  lam : p.lookup "abs_lam" = some absLam
-  fa : p.lookup "abs_forall" = some absForall
-  le : p.lookup "abs_let" = some absLet
-  pj : p.lookup "abs_proj" = some absProj
+/-- The walk without its entry, `fvarRangeProg` and `liftProg` (the `mk_*`, the stores). -/
+def absWalkProg : Prog :=
+  [("ab_find", memoFindG abSch), ("ab_put", memoPutG abSch), ("ab_clear", memoClearG abSch),
+    ("ab_fvb", abFvb), ("abs_go", absGo), ("ab_node", absNode), ("abs_app", absApp),
+    ("abs_lam", absLam), ("abs_forall", absForall), ("abs_let", absLet), ("abs_proj", absProj)] ++
+  fvarRangeProg ++ liftProg
+
+/-- What the specs need of the program: `absWalkProg`'s functions. -/
+def AbsProg (p : Prog) : Prop := ProgHas p absWalkProg
+
+theorem AbsProg.base {p : Prog} (hp : AbsProg p) : LiftProg p := by
+  have h : ProgHas p liftProg := hp.right
+  constructor <;> exact h.get _
 
 section specs
 variable (p : Prog) (hp : AbsProg p)
@@ -642,21 +636,21 @@ theorem fvbN_spec (n : Nat) (s₀ : St) (h fu : Word) :
     invoke p (exec p n) "fr_memo" [h, fu]
     ⦃fun r s' => LocEq s' s₀ ∧ fvbN n s₀.mem h fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   cases n with
-  | zero => rw [invoke_eq _ hp.frmemo]; simp only [callFn, frMemo]; vcgen [exec] <;> grind
-  | succ n => exact frMemo_spec p hp.fmf hp.fmp hp.frgo hp.frnode hp.fmc hp.frmemo n s₀ h fu
+  | zero => rw [invoke_eq _ (hp.get "fr_memo")]; simp only [callFn, frMemo]; vcgen [exec] <;> grind
+  | succ n => exact frMemo_spec p (hp.get "fm_find") (hp.get "fm_put") (hp.get "fr_go") (hp.get "fr_node") (hp.get "fm_clear") (hp.get "fr_memo") n s₀ h fu
 
 include hp in
 theorem abFvb_spec (n : Nat) (s₀ : St) (h fu : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "ab_fvb" [h, fu]
     ⦃fun r s' => LocEq s' s₀ ∧ fvbW n s₀.mem h fu = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.fvb]
+  rw [invoke_eq _ (hp.get "ab_fvb")]
   simp only [callFn, abFvb]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, derB_spec p hp.base.derb n,
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, derB_spec p (hp.get "der_b") n,
         fvbN_spec p hp n] <;>
       finish
 
@@ -689,7 +683,7 @@ include hp in
 theorem absGo_step (n : Nat) (ih : AbsNodeSpec p n) : AbsGoSpec p (n + 1) := by
   unfold AbsNodeSpec at ih
   intro s₀ h k d fu
-  rw [invoke_eq _ hp.go]
+  rw [invoke_eq _ (hp.get "abs_go")]
   simp only [callFn, absGo]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, abFvb_spec p hp n, ih] <;>
@@ -703,11 +697,11 @@ theorem absNode_step (n : Nat) (ih : AbsArmSpec p n) : AbsNodeSpec p (n + 1) := 
   have ihF := fun s h k d fu => (ih s h k d fu).2.2.1
   have ihE := fun s h k d fu => (ih s h k d fu).2.2.2.1
   have ihP := fun s h k d fu => (ih s h k d fu).2.2.2.2
-  rw [invoke_eq _ hp.node]
+  rw [invoke_eq _ (hp.get "ab_node")]
   simp only [callFn, absNode]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      internBVar_spec p hp.base.bvf hp.base.bvp hp.base.bvi n, ihA, ihL, ihF, ihE, ihP] <;>
+      internBVar_spec p (hp.get "bvar_find") (hp.get "bvar_push") (hp.get "intern_bvar") n, ihA, ihL, ihF, ihE, ihP] <;>
     finish [viewOK, tierW, idxW]
 
 end specs
