@@ -6422,3 +6422,46 @@ Census at landing 2 (`--no-build`): phase 2 **142 proven, 19 sorry, 80 written, 
 * Provenance: the nine split functions of `WhnfDelta.lean` had no citation (`check` failed on
   master); cited.
 
+### Landing 2: exact walk counters, the walks and `nat_op_result` under `CoreS`, `major_to_ctor`
+* **Exact `coreWalkFuel` counters** (helper `whnf2-walks`, ROADMAP §3 (b)): `fr_go`/`fr_memo`,
+  `bb_go`/`bb_memo`, `inst_go`, `il_go`/`ilg_go`, `abs_go`/`ab_node`, `ar_*` take the twin's depth
+  counter as an L argument (`if f == 0 { abort }`, children at `f - 1`; `abstract1`'s cut-off
+  `ab_fvb(h, f - 1)`, as the twin's `fvarB fuel h` at the decremented fuel). The entries keep their
+  arity and start at `4000000000` (`coreWalkFuel_toNat`); `bvar_b`/`loose_bvars_bounded_fast`/
+  `has_fvar_fast` use their (formerly unused) `f`. Statements: twin at exactly `c.toNat`, any L
+  fuel; the bb/fr walks also at any `F` with `c.toNat ≤ F ∨ n ≤ F` (`*_correctF`, `bvbW_okF`), which
+  lane `indproofs2`'s counter-less `has_loose_b_var_b_go` needs (its `bvbW_stage`; `IndSumSpec5`
+  adapted minimally; that walk itself still has no exact counter: lane `indproofs2`'s).
+* **Result words.** `CoreSpec`'s default post wants the result *word* below `2^32` (callers compute
+  with it; `decE` truncates). The four entries (`inst_entry`, `inst_list`, `abs_entry`,
+  `ar_entry`) return `r & 4294967295` and post `(r.headD 0).toNat < 2^32`; the Boolean ones post
+  `≤ 1`; `reduce_nat_op` normalises `nat_op_result`'s pair (`u64(rf != 0)`, `rh & 4294967295`):
+  the same values under `decE`/`decOpt`, one `and` each.
+* **`CoreWalks.lean`**: `CoreS.of_walk` (an L frame below 64, `cpl` kept, the walk memos given),
+  `Keeps cpl` for every core walk (`keepsL_auto`, `cpl`'s primitives; the memo probes under
+  `with_reducible`, else unification unfolds `instLGet` against `inst1Get` and times out), and the
+  bridges `instListOK_core` (`WhnfCallees.instList`), `inst1_core` (`CoreCallees.inst1`: one
+  `FunDecl`, `instEntry`, at the two names `inst_entry`/`inst1`), `lbb_core` (`IotaCallees`;
+  `fab_scope_ok` now passes the counter), and lane `defeq`'s `abs1_core`, `absRange_core`,
+  `hasFvar_core` (`Knot.lean`'s `Abstract1OK`, `AbstractRangeOK`, `HasFvarOK`, same statements).
+  The walk-memo trick: the twin's run from `a₀` *is* its run from `a₀` with `instLC`/`abs1C`
+  replaced by `CoreMemos`' map (the entry clears it first: `rfl`), and `ArenaD` does not read those
+  memos (`ArenaD.memo_irrel`); `ar_entry` at `k = 0` changes nothing and is a separate case.
+  The stub bundles still carry these fields (`whnfCallees_stub` …): replacing them needs program
+  hypotheses (`InstListProg p`, …) on every census-tagged theorem; done together with the knot.
+* **`nat_op_result` under `CoreS`** (first assumed fact, gone): `CoreAgree.lean`'s
+  `exec_agree`/`invoke_agree` (programs agreeing on a call-closed set run it alike; `closedW` is the
+  closure witness) move lane `pinsenv`'s `natOpResultL_refines` from `natArmProg` to any `p` with
+  `WhnfDeltaProg'.natAgree` (new field; `natClosed` now a theorem); `CoreNatOp.lean`'s `LeafOp`
+  (a twin step interning only `lit`/`const` leaves keeps `cpl` and carries `DerR` at any memory)
+  gives the rest. `natOpResultOK_stub` deleted.
+* **`major_to_ctor`** (helper `whnf2-m2c`): split into 12 L functions (`WhnfM2C.lean`: head,
+  constructor, the constant view, the three arms and their halves, a shared type check), proved
+  (`WhnfM2CRefine{,2..5}.lean`, `majorToCtor_refines'`, axioms `propext`/`Classical.choice`/
+  `Quot.sound`; new hypothesis `ProofIrrelOK`, the statement of `proofIrrel_refines`, which rests
+  on `CoreS.lvl_den`). `major_to_ctor` puts `CTL[136]` back. The tagged `majorToCtor_refines` and
+  `prepareMajor_refines` now live in `WhnfM2CRefine5` (import order). ~150 L lines, 2634 proof
+  lines; `WhnfM2CRefine` 33 s user, the rest 1–3 s.
+* Census, phase 5: **67 proven / 23 sorry / 28 written / 24 todo** (start: 62 / 26 / 29 / 25);
+  phase 4: 63 proven (+1).
+
