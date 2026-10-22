@@ -307,7 +307,7 @@ def lpLetTail : FunDecl := lfn (h, f, a, b, x, y, ko, kc, vo, vc, fu) locals (z,
 }
 
 /-- `lp_let`'s rebuild: `h` when the three children came back equal, else `mk_let`.
-con-ron: ConRon/Arena/ExprOps.lean:154-155 ConRon.Arena.internRebuiltLetE -/
+con-ron: ConRon/Arena/ExprOps.lean:153-155 ConRon.Arena.internRebuiltLetE -/
 def lpRbLet : FunDecl := lfn (h, f, a, b, x, y, z) locals (r) {
   if x == f && y == a { if z == b { return h } };
   r := call mk_let(x, y, z);
