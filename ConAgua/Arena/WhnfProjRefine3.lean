@@ -32,10 +32,6 @@ def ProjSortDen : Prop :=
     (∃ l, denoteL a.store.ls tbl.structSort = some l) ∧
       (∃ l, denoteL a.store.ls a.pins.zeroLevel = some l)
 
-/-- `ProjSortDen` is `CoreS.den` (`StoreDen.proj`, `StoreDen.zero`). -/
-theorem projSortDen_of : ProjSortDen := fun _ _ _ _ _ _ _ _ _ hS ht =>
-  ⟨(hS.den.proj _ _ ht).1, hS.den.zero⟩
-
 /-- **A projection table's readbacks for `field_sort_zero`** (named hypothesis, as
 `ProjSortDen`; lane `defeq2`'s `StoreDen.proj` and `readN` give it once `CoreS` carries `den`): the
 name readback cache holds readbacks, the table's level parameters and the field guards below
