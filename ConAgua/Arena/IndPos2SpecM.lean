@@ -636,6 +636,7 @@ structure UslLook (p : Prog) : Prop where
   hins : p.lookup "has_loose_b_var_b_ins" = some hasLooseBVarBInsL
   hgo : p.lookup "has_loose_b_var_b_go" = some hasLooseBVarBGoL
   hbp : BvbProg p
+  hst : StripProg p
   hcl : p.lookup "hb_clear" = some (memoClearG hbSch)
   hfast : p.lookup "has_loose_b_var_b_fast" = some hasLooseBVarBFastL
   hp : p.lookup "struct_used_later" = some structUsedLaterL
@@ -648,7 +649,7 @@ theorem structUsedLater_spec' (p : Prog) (L : UslLook p) (n : Nat) (s₀ : St) (
   | 1 =>
     rw [invoke_eq _ L.hp]; simp only [callFn, structUsedLaterL]
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, invoke_exec0 p] <;> grind
-  | n + 2 => exact structUsedLater_spec p L.hv L.hf L.hput L.hins L.hgo L.hbp L.hcl L.hfast L.hp n s₀ cty nP j
+  | n + 2 => exact structUsedLater_spec p L.hv L.hf L.hput L.hins L.hgo L.hbp L.hst L.hcl L.hfast L.hp n s₀ cty nP j
 
 theorem nestCtorsU4_spec (p : Prog) (L : UslLook p) (hp : p.lookup "nest_ctors_u4" = some nestCtorsU4L)
     (n : Nat) : ∀ (s₀ : St) (ko nF cl i : Word),

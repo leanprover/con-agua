@@ -353,7 +353,7 @@ def stripK (ciq nPc nF : Word) : Option (List Word × Mem) → Option (List Word
 def stripW (m : Mem) (ciq : Word) : Option (List Word × Mem) :=
   if rdW (m.arr64 EREC) ciq ≠ 4 then some ([0, 0, 0, 0, 0], m)
   else stripK ciq (rdW (m.arr64 EREC) (ciq + 5)) (rdW (m.arr64 EREC) (ciq + 6))
-    (stubM "strip_pis" m [rdW (m.arr64 EREC) (ciq + 5) + rdW (m.arr64 EREC) (ciq + 6),
+    (stripF 6 m [rdW (m.arr64 EREC) (ciq + 5) + rdW (m.arr64 EREC) (ciq + 6),
       rdW (m.arr64 EREC) (ciq + 1 + 3)])
 
 section arms
@@ -362,7 +362,7 @@ theorem stripW_notctor (h : rdW (m.arr64 EREC) ciq ≠ 4) : stripW m ciq = some 
   simp [stripW, h]
 theorem stripW_ctor (h : rdW (m.arr64 EREC) ciq = 4) : stripW m ciq =
     stripK ciq (rdW (m.arr64 EREC) (ciq + 5)) (rdW (m.arr64 EREC) (ciq + 6))
-    (stubM "strip_pis" m [rdW (m.arr64 EREC) (ciq + 5) + rdW (m.arr64 EREC) (ciq + 6),
+    (stripF 6 m [rdW (m.arr64 EREC) (ciq + 5) + rdW (m.arr64 EREC) (ciq + 6),
       rdW (m.arr64 EREC) (ciq + 1 + 3)]) := by
   simp [stripW, h]
 theorem stripK_fail (h : r.headD 0 = 0) : stripK ciq nPc nF (some (r, m1)) = some ([0, 0, 0, 0, 0], m1) := by
@@ -377,7 +377,7 @@ grind_pattern [ind_grind] stripK_fail => stripK ciq nPc nF (some (r, m1))
 grind_pattern [ind_grind] stripK_ok => stripK ciq nPc nF (some (r, m1))
 
 theorem nestCtorEntryStrip_spec (p : Prog) (hp : p.lookup "nest_ctor_entry_strip" = some nestCtorEntryStrip)
-    (n : Nat) (s₀ : St) (ciq : Word) :
+    (hst : StripProg p) (n : Nat) (s₀ : St) (ciq : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_ctor_entry_strip" [ciq]
     ⦃fun r s' => LocEq s' s₀ ∧ stripW s₀.mem ciq = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
@@ -387,7 +387,7 @@ theorem nestCtorEntryStrip_spec (p : Prog) (hp : p.lookup "nest_ctor_entry_strip
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "strip_pis" n] <;> finish (gen := 20)
+        stripPis_specF p hst n] <;> finish (gen := 20)
 
 
 /-! ### Reading `EREC` records at a word index -/
@@ -489,7 +489,7 @@ theorem stripW_ok {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word}
     intro cv' nPc' nF' hc hsum
     obtain ⟨rfl, rfl, rfl⟩ : cv = cv' ∧ nPc = nPc' ∧ nF = nF' := by
       simp only [IConstantInfo.ctorInfo.injEq] at hc; exact ⟨hc.1, hc.2.1, hc.2.2⟩
-    cases hs : stubM "strip_pis" m [UInt64.ofNat nPc + UInt64.ofNat nF, wt] with
+    cases hs : stripF 6 m [UInt64.ofNat nPc + UInt64.ofNat nF, wt] with
     | none => rw [hs] at h; simp [stripK] at h
     | some rm =>
       obtain ⟨r1, m1⟩ := rm
@@ -498,7 +498,7 @@ theorem stripW_ok {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word}
         rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' hP.2, UInt64.toNat_ofNat_of_lt' hF.2]
         exact Nat.mod_eq_of_lt hsum
       obtain ⟨x, a1, hrun, hS1, hg, hdec⟩ :=
-        stripPis_spec dn vis fe (UInt64.ofNat nPc + UInt64.ofNat nF) wt hwtlt m m1 a r1 hs hS
+        stripF_pis_ok dn vis fe (UInt64.ofNat nPc + UInt64.ofNat nF) wt hwtlt m m1 a r1 hs hS
       rw [hk', hwtd] at hrun
       refine ⟨x, a1, hrun, ?_⟩
       by_cases hz : r1.headD 0 = 0
@@ -606,7 +606,8 @@ grind_pattern [ind_grind] entryK1_ok => entryK1 C (some (r, m1))
 
 theorem nestCtorEntry_spec (p : Prog) (hs : p.lookup "nest_ctor_entry_strip" = some nestCtorEntryStrip)
     (hv : p.lookup "e_view" = some eView)
-    (hp : p.lookup "nest_ctor_entry" = some nestCtorEntry) (n : Nat) (s₀ : St) (C ciq : Word) :
+    (hp : p.lookup "nest_ctor_entry" = some nestCtorEntry) (hst : StripProg p) (n : Nat) (s₀ : St)
+    (C ciq : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_ctor_entry" [C, ciq]
     ⦃fun r s' => LocEq s' s₀ ∧ entryW s₀.mem C ciq = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
@@ -616,7 +617,7 @@ theorem nestCtorEntry_spec (p : Prog) (hs : p.lookup "nest_ctor_entry_strip" = s
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        nestCtorEntryStrip_spec p hs n, stubM_spec p "get_app_fn_f" n, eView_spec p hv n] <;>
+        nestCtorEntryStrip_spec p hs hst n, stubM_spec p "get_app_fn_f" n, eView_spec p hv n] <;>
       finish (gen := 20) [entryW]
 
 
@@ -778,10 +779,10 @@ theorem entryW_ok {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word}
 section census
 variable (p : Prog) (hs : p.lookup "nest_ctor_entry_strip" = some nestCtorEntryStrip)
     (hv : p.lookup "e_view" = some eView)
-    (hp : p.lookup "nest_ctor_entry" = some nestCtorEntry)
-include hs hv hp
+    (hp : p.lookup "nest_ctor_entry" = some nestCtorEntry) (hst : StripProg p)
+include hs hv hp hst
 
-/-- **`nest_ctor_entry` refines `nestCtorEntry`** (through the `strip_pis`/`get_app_fn` stubs; the
+/-- **`nest_ctor_entry` refines `nestCtorEntry`** (through the `get_app_fn` stub; the
 parameter and field counts sum without overflow). -/
 @[refines ConRon.Arena.nestCtorEntry]
 theorem nestCtorEntry_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
@@ -793,7 +794,7 @@ theorem nestCtorEntry_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx �
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.nestCtorEntry (decI C) ci) a₀) ∧
       IWGrow s₀.mem s'.mem ∧
       EntryOut s'.mem r ciq (AM.res (ConRon.Arena.nestCtorEntry (decI C) ci) a₀); ⊤⦄ := by
-  refine triple_post (nestCtorEntry_spec p hs hv hp n s₀ C ciq) ?_
+  refine triple_post (nestCtorEntry_spec p hs hv hp hst n s₀ C ciq) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨x, a', hrun, hS', hg, hout⟩ := entryW_ok hC hm hS hci hsum
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun

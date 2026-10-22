@@ -352,12 +352,12 @@ def ctK1 (k : Nat) (vis cv n cvTa0 : Word) : Option (List Word × Mem) → Optio
 def ctW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _ => none
   | k + 1, m, vis, cv, n, cvTa0 =>
-    ctK1 k vis cv n cvTa0 (stubM "strip_pis" m [n, rdW (m.arr64 EREC) (cvTa0 + 3)])
+    ctK1 k vis cv n cvTa0 (stripF 6 m [n, rdW (m.arr64 EREC) (cvTa0 + 3)])
 
 section arms
 variable (k : Nat) (m m1 m2 : Mem) (vis cv n cvTa0 : Word) (r r1 : List Word)
 theorem ctW_succ : ctW (k + 1) m vis cv n cvTa0 =
-    ctK1 k vis cv n cvTa0 (stubM "strip_pis" m [n, rdW (m.arr64 EREC) (cvTa0 + 3)]) := rfl
+    ctK1 k vis cv n cvTa0 (stripF 6 m [n, rdW (m.arr64 EREC) (cvTa0 + 3)]) := rfl
 theorem ctK1_fast (h : r1.headD 0 = 1 ∧ r1.tail.tail.tail.headD 0 >>> 28 = 2)
     (hne : eViewW m1 (r1.tail.tail.tail.headD 0) ≠ []) : ctK1 k vis cv n cvTa0 (some (r1, m1)) =
       some ([cvTa0, (eViewW m1 (r1.tail.tail.tail.headD 0)).tail.headD 0], m1) := by
@@ -393,8 +393,8 @@ variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hct : p.lookup "close_telescope" = some closeTelescope)
   (hea : p.lookup "erec_alloc" = some erecAlloc) (hcn : p.lookup "cv_new" = some cvNew)
   (hsl : p.lookup "check_sum_tele_slow" = some checkSumTeleSlowL)
-  (hp : p.lookup "check_sum_tele" = some checkSumTeleL)
-include ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct hea hcn hsl hp
+  (hp : p.lookup "check_sum_tele" = some checkSumTeleL) (hst : StripProg p)
+include ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct hea hcn hsl hp hst
 
 theorem ctW_spec (k : Nat) (s₀ : St) (vis cv n cvTa0 : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "check_sum_tele" [vis, cv, n, cvTa0]
@@ -406,7 +406,7 @@ theorem ctW_spec (k : Nat) (s₀ : St) (vis cv n cvTa0 : Word) :
   | succ k =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "strip_pis" k, eView_spec p hv k,
+        stripPis_specF p hst k, eView_spec p hv k,
         ctsW_spec p ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct hea hcn hsl k] <;>
       finish (gen := 20)
 
@@ -450,12 +450,12 @@ theorem ctW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k
   have hw' : rdW (m.arr64 EREC) (cvTa0 + 3) = w := by
     rw [← hw]; congr 1
   rw [hw'] at h
-  cases h1 : stubM "strip_pis" m [n, w] with
+  cases h1 : stripF 6 m [n, w] with
   | none => rw [h1] at h; cases h
   | some x1 =>
   obtain ⟨r1, m1⟩ := x1
   rw [h1] at h
-  obtain ⟨x, a1, hrun1, hS1, hg1, hdec⟩ := stripPis_spec dn vis fe n w hw32 m m1 a r1 h1 hS
+  obtain ⟨x, a1, hrun1, hS1, hg1, hdec⟩ := stripF_pis_ok dn vis fe n w hw32 m m1 a r1 h1 hS
   have hcv1 := decCVp_grow hg1 hcvb hsl hcv
   have hta1 := decCVp_grow hg1 hta4 hslTa hta
   have hnat : ∀ q : Word, q.toNat + 4 ≤ erTop m → ∀ j, j < 4 →
@@ -553,8 +553,8 @@ variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hct : p.lookup "close_telescope" = some closeTelescope)
   (hea : p.lookup "erec_alloc" = some erecAlloc) (hcn : p.lookup "cv_new" = some cvNew)
   (hsl : p.lookup "check_sum_tele_slow" = some checkSumTeleSlowL)
-  (hp : p.lookup "check_sum_tele" = some checkSumTeleL)
-include ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct hea hcn hsl hp
+  (hp : p.lookup "check_sum_tele" = some checkSumTeleL) (hst : StripProg p)
+include ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct hea hcn hsl hp hst
 
 /-- **`check_sum_tele` refines `checkSumTele .verified`** (through the stubs `strip_pis`, `whnf`,
 `instantiate1_fast`, `abstract1_fast`, `check_constant_val`). -/
@@ -579,7 +579,7 @@ theorem checkSumTele_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx �
       (∀ lo ll, nat? (erA s'.mem) ((r.headD 0).toNat + 1) = some lo →
         nat? (erA s'.mem) ((r.headD 0).toNat + 2) = some ll → lo + ll ≤ erTop s'.mem ∨ ll = 0); ⊤⦄ := by
   refine triple_post (ctW_spec p ha hc hsc hv hff hfp hif hwt hsf hsp his hd hpf hpp hpi hmk hct
-    hea hcn hsl hp k s₀ vis cv n cvTa0) ?_
+    hea hcn hsl hp hst k s₀ vis cv n cvTa0) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨res, a', hrun, hS', hg, hdec, hb, hslr, hs32, hs⟩ :=
     ctW_ok dn vis fe k _ _ _ _ _ _ _ _ _ hm hS hcv hcvb hsl' hta hta4 hslTa

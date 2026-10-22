@@ -606,8 +606,8 @@ end mcCensus2
 /-! ## The `hb` memo walks: callees outside this lane
 
 `bvar_b` is lane `exprops4`'s real function (`bvarBL`, `BvarBRefine.lean`), run under the stage relation
-(`bvbW_stage`, lane `indproofs2`); `strip_pis` is a stub, and leaves the `hb` memo alone by the stubs'
-write set `stubM_memoFrame`. -/
+(`bvbW_stage`, lane `indproofs2`); `strip_pis` (`StripTeleSpec.lean`) leaves the `hb` memo alone by
+its write set `stripF_frame`. -/
 
 section hbStubs
 variable (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -641,17 +641,6 @@ theorem bvbW_stage {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a) (n F : 
     intro c hc; simp only [List.mem_cons, List.not_mem_nil, or_false] at hc
     rcases hc with rfl | rfl <;> decide) hcp
   exact ⟨a', hrun, hS', hg, hfr⟩
-
-/-- The stub that runs around the `hb`-memo walks (`strip_pis`) leaves the `hb` memo (array
-`HBM`, epoch word `CTL[214]`) alone: an instance of the stubs' write set `stubM_memoFrame`. -/
-theorem stubHbFrame (f : FnName) (hf : f = "strip_pis") (m m' : Mem) (args r : List Word)
-    (h : stubM f m args = some (r, m')) :
-    ∃ (A : List ArrId) (C : List Word), HBM ∉ A ∧ (214 : Word) ∉ C ∧ MemFrame A C m m' := by
-  have hn : f ∈ stubNames := by subst hf; decide
-  obtain ⟨A, C, hA, hC, hfr⟩ := stubM_memoFrame f hn m m' args r h
-  refine ⟨A, C, fun hm => ?_, fun hm => ?_, hfr⟩
-  · have := hA _ hm; simp [HBM] at this
-  · have := hC _ hm; simp at this
 
 end hbStubs
 

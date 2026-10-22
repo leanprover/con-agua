@@ -105,16 +105,6 @@ theorem constsResolveFFast_spec (e : Word) (he : H e) :
     RelAM "consts_resolve_ffast" [vis, e] (StageR dn vis fe)
       (constsResolveFFast fe (decI e)) (KeepPost dn vis fe decW0B) := sorry
 
-/-- `strip_pis(k, e)`. -/
-theorem stripPis_spec (k e : Word) (he : H e) :
-    RelAM "strip_pis" [k, e] (StageR dn vis fe)
-      (stripPis k.toNat (decI e)) (KeepPost dn vis fe decOLE) := sorry
-
-/-- `strip_lams(k, e)`. -/
-theorem stripLams_spec (k e : Word) (he : H e) :
-    RelAM "strip_lams" [k, e] (StageR dn vis fe)
-      (stripLams k.toNat (decI e)) (KeepPost dn vis fe decOLE) := sorry
-
 /-- `open_pis_at_fvars_f(n, e, i)`. -/
 theorem openPisAtFvarsF_spec (k e i : Word) (he : H e) :
     RelAM "open_pis_at_fvars_f" [k, e, i] (StageR dn vis fe)
