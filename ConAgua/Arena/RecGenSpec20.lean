@@ -100,4 +100,77 @@ theorem stab_decCK_ext {m : Mem} {k : Nat} {ck : ClassKey} (h : StabD (fun m => 
     first | exact hwd.symm.trans hwd' | exact hwd.trans hwd'.symm | exact hwd.symm.trans hwd'.symm | exact hwd.trans hwd'
   exact word_succ_ne w (congrArg UInt64.toNat ((clsDecI_inj hwH hwH').mp this).symm)
 
+theorem decCK_lt_size {m : Mem} {k : Nat} {ck : ClassKey} (h : decCK m k = some ck) : k < (m.arr64 IW).size := by
+  simp only [decCK, bind, Option.bind_eq_some_iff] at h
+  obtain ⟨c, hc, -⟩ := h
+  obtain ⟨w, hw, -, -⟩ := hd?_some hc
+  exact (Array.getElem?_eq_some_iff.mp hw).1
+
+theorem decCS_some_cases {m : Mem} {p : Nat} {s : ClassSlot} (h : decCS m p = some s) :
+    (iwN m p = some 0 ∧ ∃ kp k, iwN m (p + 1) = some kp ∧ decCK m kp = some k ∧ s = .motive k) ∨
+    (iwN m p = some 1 ∧ ∃ c, iwN m (p + 1) = some c ∧ ∃ cc ihs, s = .minor c cc ihs) := by
+  simp only [decCS, bind, Option.bind_eq_some_iff] at h
+  obtain ⟨t, ht, h⟩ := h
+  rcases t with _ | _ | t
+  · left
+    simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h
+    obtain ⟨kp, hkp, k, hk, rfl⟩ := h
+    exact ⟨ht, kp, k, hkp, hk, rfl⟩
+  · right
+    simp only [pure, Option.bind_eq_some_iff, Option.some.injEq] at h
+    obtain ⟨c, hc, cc, hcc, ihs, hihs, rfl⟩ := h
+    exact ⟨ht, c, hc, cc, ihs, rfl⟩
+  · simp at h
+
+/-- **A stably decoding class slot lies below the top**, and so does a motive's key. -/
+theorem stab_decCS_ext {m : Mem} {sp : Nat} {slot : ClassSlot} (h : StabD (fun m => decCS m sp) m slot)
+    (hsz : (m.arr64 IW).size < 2 ^ 64) :
+    sp + 2 ≤ iwTop m ∧ ∀ kp, iwN m sp = some 0 → iwN m (sp + 1) = some kp → CKExt m kp := by
+  have h0 := h.get
+  have hs1 : sp + 1 < iwTop m := by
+    rcases Nat.lt_or_ge (sp + 1) (iwTop m) with hlt | hge
+    · exact hlt
+    exfalso
+    rcases decCS_some_cases h0 with ⟨ht, kp, k, hkp, hk, rfl⟩ | ⟨ht, c, hc, cc, ihs, rfl⟩
+    · obtain ⟨w, hw, -⟩ := iwN_set_word hkp
+      have hil := (Array.getElem?_eq_some_iff.mp hw).1
+      obtain ⟨hg, hset, hother⟩ := perturb hge hil hsz (UInt64.ofNat (2 ^ 64 - 1))
+      have ht' : iwN (m.set64 IW (UInt64.ofNat (sp + 1)) (UInt64.ofNat (2 ^ 64 - 1))) sp = some 0 := by
+        simp only [iwN, nat?, iwA]; rw [hother _ (by omega)]; simpa [iwN, nat?, iwA] using ht
+      rcases decCS_some_cases (h _ hg) with ⟨-, kp', k', hkp', hk', -⟩ | ⟨ht'', -⟩
+      · have e : iwN (m.set64 IW (UInt64.ofNat (sp + 1)) (UInt64.ofNat (2 ^ 64 - 1))) (sp + 1) =
+            some (2 ^ 64 - 1) := by simp only [iwN, nat?, iwA]; rw [hset]; rfl
+        rw [e] at hkp'; cases hkp'
+        have h1 := decCK_lt_size hk'
+        have h2 : ((m.set64 IW (UInt64.ofNat (sp + 1)) (UInt64.ofNat (2 ^ 64 - 1))).arr64 IW).size =
+            (m.arr64 IW).size := (set64IW_frame m _ _).2.2.1 IW
+        omega
+      · rw [ht'] at ht''; cases ht''
+    · obtain ⟨w, hw, rfl⟩ := iwN_set_word hc
+      have hil := (Array.getElem?_eq_some_iff.mp hw).1
+      obtain ⟨hg, hset, hother⟩ := perturb hge hil hsz (w + 1)
+      have ht' : iwN (m.set64 IW (UInt64.ofNat (sp + 1)) (w + 1)) sp = some 1 := by
+        simp only [iwN, nat?, iwA]; rw [hother _ (by omega)]; simpa [iwN, nat?, iwA] using ht
+      have h1 := h _ hg
+      rcases decCS_some_cases h1 with ⟨ht'', -⟩ | ⟨-, c', hc', cc', ihs', heq⟩
+      · rw [ht'] at ht''; cases ht''
+      · have e : iwN (m.set64 IW (UInt64.ofNat (sp + 1)) (w + 1)) (sp + 1) = some (w + 1).toNat := by
+          simp only [iwN, nat?, iwA]; rw [hset]; rfl
+        rw [e] at hc'; cases hc'
+        simp only [ClassSlot.minor.injEq] at heq
+        exact word_succ_ne w heq.1.symm
+  refine ⟨by omega, fun kp ht hkp => ?_⟩
+  rcases decCS_some_cases h0 with ⟨-, kp', k, hkp', hk, rfl⟩ | ⟨ht', -⟩
+  · rw [hkp] at hkp'; cases hkp'
+    refine stab_decCK_ext (ck := k) (fun m' hg => ?_) hsz
+    have h1 := h m' hg
+    have e0 : iwN m' sp = some 0 := by rw [iwN_grow hg (by omega)]; exact ht
+    have e1 : iwN m' (sp + 1) = some kp := by rw [iwN_grow hg hs1]; exact hkp
+    rcases decCS_some_cases h1 with ⟨-, kp'', k'', hkp'', hk'', heq⟩ | ⟨ht'', -⟩
+    · rw [e1] at hkp''; cases hkp''
+      simp only [ClassSlot.motive.injEq] at heq
+      rw [← heq] at hk''; exact hk''
+    · rw [e0] at ht''; cases ht''
+  · rw [ht] at ht'; cases ht'
+
 end L.Ind
