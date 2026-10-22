@@ -142,7 +142,7 @@ theorem m2cAnd2_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   rw [res2, show (1 : Word).toNat = 1 from rfl] at hrun2
   have hS2 := hS1.of_proj hD2 (Keeps.run (keeps_cpl_internProj _ _ _) hrun2) hfr2
   obtain ⟨e2, t2⟩ := store_spn hfr2.pjStore
-  have hsp2 : SpineR m2 to tn targs.toArray := (hsp.of_spn e1).of_spn e2
+  have hsp2 : SpineR m2 to tn targs.toArray := (hsp.of_spn_core e1).of_spn_core e2
   cases c3 : and2Push m2 to tn (r1.headD 0) (r2.headD 0) with
   | none => rw [c3] at hW; cases hW
   | some m3 =>
@@ -160,7 +160,7 @@ theorem m2cAnd2_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   have hrun4 := AM.run_of_ok _ _ ok4
   rw [res4] at hrun4
   have hS4 := hS3.of_const' hD4 (Keeps.run (keeps_cpl_internConst' _ _) hrun4) hfr4
-  have hsp4 := hsp3.of_spn (const_spn hfr4)
+  have hsp4 := hsp3.of_spn_core (const_spn hfr4)
   cases c5 : callW p (N' + 1) "mk_app_n" [r4.headD 0, to, tn + 2] m4 with
   | none => rw [c5] at hW; cases hW
   | some q =>

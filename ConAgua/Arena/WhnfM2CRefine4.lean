@@ -161,7 +161,7 @@ theorem m2cEta2_ok (N : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (
   have hrun5 := AM.run_of_ok _ _ ok5
   rw [res5] at hrun5
   have hS5 := hS4.of_const' hD5 (Keeps.run (keeps_cpl_internConst' _ _) hrun5) hfr5
-  have hsp5 := hsp4.of_spn (const_spn hfr5)
+  have hsp5 := hsp4.of_spn_core (const_spn hfr5)
   cases c6 : callW p N "mk_app_n" [r5.headD 0, r4.headD 0, r4.tail.headD 0] m5 with
   | none => rw [c6] at hW; cases hW
   | some q =>

@@ -561,7 +561,7 @@ theorem m2cK2_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2
   rw [res2] at hrun2
   have hS2 := hS1.of_const' hD2 (Keeps.run (keeps_cpl_internConst' _ _) hrun2) hfr2
   have hsp2 : SpineR m2 (r1.headD 0) cnP (xs.take cnP.toNat).toArray :=
-    (hsp1.take' (by rw [← hlen]; exact hle)).of_spn
+    (hsp1.take' (by rw [← hlen]; exact hle)).of_spn_core
       (hfr2.1 SPN (by simp [CREC, CSLOT, SPN]) (by decide))
   cases c3 : callW p (N' + 1) "mk_app_n" [r2.headD 0, r1.headD 0, cnP] m2 with
   | none => rw [c3] at hW; cases hW
