@@ -120,3 +120,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-22,whnf3,opus,20,10,"landing 1: strip_pis/strip_lams in L (helper whnf3-walks, lane induct IW convention, no refinement yet); Checker/Prog regenerated (e2e blocker)"
 2026-10-22,decls3,opus,35,4,"all_level_params_defined in L (memoized walk, APDM memo; lv_apd at IW); RomBlock dropped (integrate did rom_and_pin)"
 2026-10-22,defeq2,opus,30,20,"landing 2: PropRead in L + proved (helper prop: not/is_proof_fast and 11 sub-walks), infer_proj proved (helper proj: inferProj, IProjEntry.typeAt), both plugged into the knot; StoreDen.constLps"
+2026-10-22,decls3,opus,15,1,"promoteProg_wf/declArms_wf via wf_of_wfFast (DeclArms >15.5 GB -> 3.1 GB)"
