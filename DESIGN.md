@@ -957,6 +957,50 @@ with the original (none does).
 
 None.
 
+## Program well-formedness: guarded, and per function (2026-10-22, lane `lfeat`)
+
+Two requests of the coordinator: `decide +kernel` on the structural `Prog.wf` is a trap
+(`declArms_wf` used ~19 GB that way), and `checkerProg_wf` (`Prog.wf_of_wfFast` over 1566
+functions) peaked at 12.2 GB and grows with the program.
+
+* **The guard** (`Compiler/WF.lean`). `FunDecl.wf` and `Prog.wf` are now `kernelOpaque` of their
+  former bodies (`FunDecl.wfSpec`, `Prog.wfSpec`): `kernelOpaque x := cond (Lean.opaqueId true) x
+  x`. The kernel cannot reduce `Lean.opaqueId true` (an `opaque` constant), so neither the
+  kernel nor `decide` gets past the `cond`, and `kernelOpaque_eq : kernelOpaque x = x` (by
+  `cases` on the stuck Boolean) keeps every proof about them. `decide`/`decide +kernel` on
+  `Prog.wf …` now fails at once ("failed to reduce"); compiled code (`#guard`) is unaffected.
+  (`Lean.opaqueId` alone cannot be the wrapper: it has no equation, so nothing could be proved
+  about a wrapped body.) Statements of `compile_correct` and of every `…_wf` theorem unchanged.
+  Three sites decided `Prog.wf` directly and now go through `Prog.wf_of_wfFast`
+  (`Scan/Validator.lean` `valProg_wf`, `Arena/DeclArmsCanon.lean`, `Arena/DeclArmsNat.lean`);
+  `Arena/KnotWF.lean` (`FunDecl.wf` of some functions) through the new `Prog.funsWf_of_fast`.
+* **Per function** (`Compiler/WFSplit.lean`, `prog_wf name : tab p`): separate kernel checks,
+  none of which sees every body: the name tree as a literal and `progTree p = some tree`
+  (names only); one `romOk tab d` per distinct byte string the program reads; one check per
+  chunk of 32 functions (`FunDecl.wfTN`, the check without the constant data, plus each
+  function's byte strings from the `romOk` facts, `FunOk`); the table bound; and the main
+  theorem, `Prog.wf_of_parts'`, assembled from the chunks without evaluation. The table must be
+  a literal: `tab_lit% e` evaluates `e` (compiled code) and inserts it. `Prog.rom` now puts the
+  short strings first (`romSort`), so that finding `LITS` in the table no longer scans the 37 KB
+  ROM. `scripts/checker_prog.py` emits `checkerTab := tab_lit% …` (with a `#guard` that it is
+  `Prog.tab checkerProg …`) and `prog_wf checkerProg_wf : checkerTab checkerProg`.
+* **Measurements** (`Checker/Prog.lean`, `lake env lean`, peak RSS by `VmHWM`): before 12.2 GB,
+  45 s; after **6.3 GB**, 54–62 s. The file without any check is 2.9 GB. Of the rest, the
+  largest single check is `romOk checkerTab romData` (≈ 13 s, ≈ 3 GB): the kernel evaluates
+  `romData` (`encNames pinNames ++ …`, `Arena/Prelude.lean`) and compares 37 KB; it depends on
+  the ROM, not on the number of functions. The name tree is ≈ 5 s, 1.2 GB (UTF-8 codes of 1566
+  names; each name costs the kernel ≈ 5 ms); every chunk ≤ 0.7 s. Next steps if needed: a
+  literal `romData` (lane `romload`) and per-module name trees. For a small program
+  `Prog.wf_of_wfFast (by decide +kernel)` stays faster (`indProg_wf`: 5.0 s, +1.2 GB, against
+  7.2 s, +0.7 GB split), so the other `…_wf` theorems keep it.
+* `harness`/e2e: the ROM's byte order in the table changed (shortest string first); `asmText`
+  and the drivers take it from `Prog.tab`. `scripts/e2e.py --only 'restart_7|basic|nat'`: same
+  classes as on master (2 `l-error`s at `hoist_ok`, the rest blocked by the `strip_pis` stub).
+
+### `sorry`s
+
+None.
+
 ## The `lit` store, `intern_lit`, and the state relation (2026-10-21, lane `store`)
 
 Files: `ConAgua/Arena/Store.lean` (L code, word-level models, `vcgen` specs),

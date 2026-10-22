@@ -11,7 +11,7 @@ DESIGN.md, "The checker as one program (lane `integrate`)". Steps:
    bodies, or a call whose argument count differs from the callee's parameters, is an error.
    A name with no L code becomes `abortStub n` (listed in the file and in DESIGN.md).
 3. Ask `ConAgua/Checker/Sources.lean` for each chosen binding's Lean term and modules, and write
-   the file: the imports, `checkerProg`, `checkerStubs`, and `Prog.wf` by `Prog.wf_of_wfFast`.
+   the file: the imports, `checkerProg`, `checkerStubs`, and `Prog.wf` by `prog_wf` (`WFSplit.lean`).
 
 Usage: scripts/checker_prog.py [--no-build] [--check]   (`--check`: fail if the file would change)
 """
@@ -142,7 +142,7 @@ def sources(src_of):
     return res, errs
 
 
-HEADER = '''import ConAgua.Compiler.WFFast
+HEADER = '''import ConAgua.Compiler.WFSplit
 import ConAgua.Checker.Entry
 import ConAgua.Checker.Prelude
 {imports}
@@ -176,16 +176,19 @@ def preTree : NTree := nameTree preNames
 def checkerProg : Prog := [
 {entries}]
 
-/-- The table for the arrays the program names (`Prog.wfAuto`'s). -/
-def checkerTab : Tab := Prog.tab checkerProg (Prog.arrs checkerProg).1 (Prog.arrs checkerProg).2
+set_option maxRecDepth 100000 in
+/-- The table for the arrays the program names (`Prog.wfAuto`'s), as a literal (`tab_lit%`: every
+per-chunk check of `checkerProg_wf` unfolds it). -/
+def checkerTab : Tab := tab_lit% (Prog.tab checkerProg (Prog.arrs checkerProg).1 (Prog.arrs checkerProg).2)
+
+#guard checkerTab == Prog.tab checkerProg (Prog.arrs checkerProg).1 (Prog.arrs checkerProg).2
 
 -- the word arrays are the ones `cap_check` checks
 #guard (Prog.arrs checkerProg).2 == wordArrays
 
 /-- **`checkerProg` passes the compiler's static check** (every call resolves, with the callee's
 parameter count; the names are distinct; the frames fit). -/
-theorem checkerProg_wf : Prog.wf checkerTab checkerProg = true :=
-  Prog.wf_of_wfFast (by decide +kernel)
+prog_wf checkerProg_wf : checkerTab checkerProg
 
 end L.Checker
 '''

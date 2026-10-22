@@ -49,7 +49,7 @@ names are distinct. -/
 theorem defeqInferFns_wf :
     (defeqInferFns.all fun (_, fd) =>
       L.Compiler.FunDecl.wf (defeqInferFns ++ defeqExtFns) L.Ind.indTab fd) = true ∧
-    decide ((defeqInferFns ++ defeqExtFns).map (·.1)).Nodup = true := by
-  decide +kernel
+    decide ((defeqInferFns ++ defeqExtFns).map (·.1)).Nodup = true :=
+  L.Compiler.Prog.funsWf_of_fast (by decide +kernel)
 
 end L.Arena
