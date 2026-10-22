@@ -122,7 +122,7 @@ per-function separation logic.
   plain `lake`**: the wrapper points `LAKE_CACHE_DIR` at the shared cache; plain `lake` falls back to the
   toolchain's own cache directory, a different mount in the sandbox that copies instead of hard-linking. Start
   a fresh worktree with no `.lake/build` and let the cache restore it (seconds, ~0 bytes of disk) — do not copy
-  a built `.lake/build` in by hand, that was last resort before the cache existed. Remove your worktree when done.
+  a built `.lake/build` in by hand, that was last resort before the cache existed. The wrapper also WRITES every build to the cache (default since 2026-10-22), so each module elaborates once for the whole project; no separate reseeding step is needed. Remove your worktree when done.
 - Every checker run gets a `timeout`. Never use `ulimit -v`. Never wait on or kill processes by name pattern.
 - Never push. Commits end with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - This is the full project now, built top-down: `sorry` on master is fine (e.g. stubs for callees not yet
