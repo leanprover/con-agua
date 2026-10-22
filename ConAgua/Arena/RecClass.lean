@@ -276,35 +276,52 @@ def classReadRecCls : FunDecl := lfn (nP, mo, ml, ro, rl) locals
   return (1, co, cl)
 }
 
+/-- `class_read_mot_pos(so, sl, j)`: the prefix positions `j ‥< sl` whose slot is a motive (the
+motive positions `classRead` filters off the slots), a self-recursion. -/
+-- con-ron: ConRon/Arena/Inductives/ClassRead.lean:226-247 ConRon.Arena.classRead
+@[l_impl ConRon.Arena.classRead]
+def classReadMotPos : FunDecl := lfn (so, sl, j) locals (ro, rl, co, cl) {
+  if sl <= j { return (0, 0) };
+  (ro, rl) := call class_read_mot_pos(so, sl, j + 1);
+  if IW.u64[IW.u64[so + j]] == 0 {
+    (co, cl) := call sl_cons(j, ro, rl);
+    return (co, cl)
+  };
+  return (ro, rl)
+}
+
 /-- `class_read_finish(nP, so, sl, ro, rl)`: the motive positions off the slots just read, then
 every recursor's class, then the `ClassRead` record. -/
 -- con-ron: ConRon/Arena/Inductives/ClassRead.lean:226-247 ConRon.Arena.classRead
 @[l_impl ConRon.Arena.classRead]
-def classReadFinish : FunDecl := lfn (nP, so, sl, ro, rl) locals (q, cnt, j, ok, reco, recl, res) {
-  q := call iw_alloc(sl);
-  cnt := 0;
-  j := 0;
-  while j < sl {
-    if IW.u64[IW.u64[so + j]] == 0 { IW.u64[q + cnt] := j; cnt += 1 };
-    j += 1
-  };
-  (ok, reco, recl) := call class_read_rec_cls(nP, q, cnt, ro, rl);
+def classReadFinish : FunDecl := lfn (nP, so, sl, ro, rl) locals (qo, ql, ok, reco, recl, res) {
+  (qo, ql) := call class_read_mot_pos(so, sl, 0);
+  (ok, reco, recl) := call class_read_rec_cls(nP, qo, ql, ro, rl);
   if ok == 0 { return (0, 0) };
   res := call rec4(so, sl, reco, recl);
   return (1, res)
+}
+
+/-- `class_read_n_slots(rP, nP)`: `rP - nP`, truncated at `0` (the twin's `Nat` subtraction). -/
+-- con-ron: ConRon/Arena/Inductives/ClassRead.lean:226-247 ConRon.Arena.classRead
+@[l_impl ConRon.Arena.classRead]
+def classReadNSlots : FunDecl := lfn (rP, nP) locals () {
+  if nP <= rP { return rP - nP };
+  return 0
 }
 
 /-- `class_read(p, vis, nP, ro, rl)`: the pre-pass, off the first recursor's type. -/
 -- con-ron: ConRon/Arena/Inductives/ClassRead.lean:226-247 ConRon.Arena.classRead
 @[l_impl ConRon.Arena.classRead]
 def classRead : FunDecl := lfn (p, vis, nP, ro, rl) locals
-    (rc0, ty, ok, jo, jl, body, so, sl, res) {
+    (rc0, ty, ok, jo, jl, body, k, so, sl, res) {
   if rl == 0 { return (0, 0) };
   rc0 := IW.u64[ro];
   ty := EREC.u64[IW.u64[rc0] + 3];
   (ok, jo, jl, body) := call open_pis_at_fvars_f(nP, ty, 0);
   if ok == 0 { return (0, 0) };
-  (ok, so, sl) := call class_read_slots(p, vis, nP, IW.u64[rc0 + 1] - nP, 0, 0, nP, body);
+  k := call class_read_n_slots(IW.u64[rc0 + 1], nP);
+  (ok, so, sl) := call class_read_slots(p, vis, nP, k, 0, 0, nP, body);
   if ok == 0 { return (0, 0) };
   (ok, res) := call class_read_finish(nP, so, sl, ro, rl);
   return (ok, res)
@@ -718,7 +735,8 @@ def recClassFns : Prog :=
    ("class_read_slot", classReadSlot),
    ("class_read_slots", classReadSlots), ("class_read_slots_next", classReadSlotsNext),
    ("class_read_slots_snoc", classReadSlotsSnoc), ("class_read_rec_cls", classReadRecCls),
-   ("class_read_finish", classReadFinish), ("class_read", classRead),
+   ("class_read_mot_pos", classReadMotPos), ("class_read_finish", classReadFinish),
+   ("class_read_n_slots", classReadNSlots), ("class_read", classRead),
    ("close_lams", closeLams), ("expr_get_d", exprGetD), ("class_binder", classBinder),
    ("class_gen_binder", classGenBinder), ("class_gen_slot_var", classGenSlotVar),
    ("class_gen_mot_var", classGenMotVar), ("class_gen_major", classGenMajor),
