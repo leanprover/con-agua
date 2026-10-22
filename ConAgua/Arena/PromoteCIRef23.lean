@@ -69,7 +69,7 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     have hK : kk = 0 := (Option.some.inj (hkk.symm.trans hk))
     have hkw0 : kw = 0 := UInt64.toNat_inj.mp (by rw [hkwk, hK]; rfl)
     subst hkw0
-    rw [if_pos (Or.inl rfl)] at hW
+    simp only [show ((0:Word) = 0 ∨ (0:Word) = 2) by decide, show ¬((0:Word) = 1) by decide, show ¬((0:Word) = 3) by decide, show ¬((0:Word) = 4) by decide, show ¬((0:Word) = 5) by decide, show ¬((0:Word) = 6) by decide, ↓reduceIte] at hW
     simp only [armK] at hW
     cases hcl : callW p n "pci_plain" [f, q] m with
     | none => rw [hcl] at hW; cases hW
@@ -82,19 +82,19 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     have hr' : dl.headD 0 = r.headD 0 := hr
     have hpre := preE_size_le m D
     have hb := decCV_bound hcv
-    obtain ⟨a', pm', cv', hrun, hDf, hPf, hcp, hfr, hg, hts', d, hdr, hdlo, hdhi, hkind, hQ⟩ :=
+    obtain ⟨a', pm1, cv', hrun, hDf, hPf, hcp, hfr, hg, hts', d, hdr, hdlo, hdhi, hkind, hQ⟩ :=
       plain_rel p hp n m a pm f q D cv 0 dl m1 hD hP hsz hts hcv hkwm (by omega) hDt hcl
-    refine ⟨a', pm', .axiomInfo cv', ?_, hDf, hPf, hcp, hfr, hg, hts', ?_, ?_, ?_⟩
+    refine ⟨a', pm1, .axiomInfo cv', ?_, hDf, hPf, hcp, hfr, hg, hts', ?_, ?_, ?_⟩
     · simp only [promoteCI]; rw [run_bind_ok hrun]; rfl
     · rw [← hr', hdr]; exact hdlo
     · rw [← hr', hdr]; omega
     · rw [← hr', hdr]
-      exact decCI_ax (by have h := nat?_of_pre (m := m') (T := erecTop m') (by omega) hkind; simpa using h) hQ.1
+      exact decCI_ax (by have h := nat?_of_pre (m := m1) (T := erecTop m1) (by omega) hkind; simpa using h) hQ.1
   · -- defn
     have hK : kk = 1 := (Option.some.inj (hkk.symm.trans hk))
     have hkw0 : kw = 1 := UInt64.toNat_inj.mp (by rw [hkwk, hK]; rfl)
     subst hkw0
-    rw [if_neg (by decide), if_pos rfl] at hW
+    simp only [show ¬((1:Word) = 0 ∨ (1:Word) = 2) by decide, show ((1:Word) = 1) by decide, show ¬((1:Word) = 3) by decide, show ¬((1:Word) = 4) by decide, show ¬((1:Word) = 5) by decide, show ¬((1:Word) = 6) by decide, ↓reduceIte] at hW
     simp only [armK] at hW
     cases hcl : callW p n "pci_defn" [f, q] m with
     | none => rw [hcl] at hW; cases hW
@@ -109,29 +109,29 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     obtain ⟨wv, hwv, hwvl, rfl⟩ := hd?_some he
     obtain ⟨hlt5, hm5⟩ := preE_get_lt hwv
     have hb6 := decHint_bound hhh
-    obtain ⟨a', pm', x, ⟨a1, pm1, hrun1, hrun2⟩, hDf, hPf, hcp, hfr, hg, hts', d, hdr, hdlo, hdhi,
+    obtain ⟨a', pm1, x, ⟨a1, pm1, hrun1, hrun2⟩, hDf, hPf, hcp, hfr, hg, hts', d, hdr, hdlo, hdhi,
       hkind, hdcv, hd5, w6, w7, e6, e7, s6, s7⟩ :=
       defn_rel p hp n m a pm f q D cv 1 wv dl m1 hD hP hsz hts hcv hkwm hm5 hwvl (by omega) hDt hcl
-    have hrun2' : (promoteE pm1 f.toNat (decI wv)).run a1 = .ok ((pm', x.2), a') := hrun2
-    have hhint : decHint (erecP m') (d + 6) = some hh := by
-      refine decHint_move' (a := preE m D) (b := erecP m') (i := q.toNat + 6) (j := d + 6) ?_ ?_ hhh
+    have hrun2' : (promoteE pm1 f.toNat (decI wv)).run a1 = .ok ((pm1, x.2), a') := hrun2
+    have hhint : decHint (erecP m1) (d + 6) = some hh := by
+      refine decHint_move' (a := preE m D) (b := erecP m1) (i := q.toNat + 6) (j := d + 6) ?_ ?_ hhh
       · rw [e6, preE_get, if_pos (by omega)]; exact s6.symm
       · by_cases h : q.toNat + 6 + 1 < D
         · right
-          have e7' : (erecP m')[d + 6 + 1]? = some w7 := e7
+          have e7' : (erecP m1)[d + 6 + 1]? = some w7 := e7
           rw [e7', preE_get, if_pos h]; exact s7.symm
         · left; rw [preE_get, if_neg h]
-    refine ⟨a', pm', .defnInfo x.1 x.2 hh, ?_, hDf, hPf, hcp, hfr, hg, hts', ?_, ?_, ?_⟩
+    refine ⟨a', pm1, .defnInfo x.1 x.2 hh, ?_, hDf, hPf, hcp, hfr, hg, hts', ?_, ?_, ?_⟩
     · simp only [promoteCI]; rw [run_bind_ok hrun1]; simp only; rw [run_bind_ok hrun2']; rfl
     · rw [← hr', hdr]; exact hdlo
     · rw [← hr', hdr]; omega
     · rw [← hr', hdr]
-      exact decCI_df (by have h := nat?_of_pre (m := m') (T := erecTop m') (by omega) hkind; simpa using h) hdcv hd5 hhint
+      exact decCI_df (by have h := nat?_of_pre (m := m1) (T := erecTop m1) (by omega) hkind; simpa using h) hdcv hd5 hhint
   · -- thm
     have hK : kk = 2 := (Option.some.inj (hkk.symm.trans hk))
     have hkw0 : kw = 2 := UInt64.toNat_inj.mp (by rw [hkwk, hK]; rfl)
     subst hkw0
-    rw [if_pos (Or.inr rfl)] at hW
+    simp only [show ((2:Word) = 0 ∨ (2:Word) = 2) by decide, show ¬((2:Word) = 1) by decide, show ¬((2:Word) = 3) by decide, show ¬((2:Word) = 4) by decide, show ¬((2:Word) = 5) by decide, show ¬((2:Word) = 6) by decide, ↓reduceIte] at hW
     simp only [armK] at hW
     cases hcl : callW p n "pci_plain" [f, q] m with
     | none => rw [hcl] at hW; cases hW
@@ -144,19 +144,19 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     have hr' : dl.headD 0 = r.headD 0 := hr
     have hpre := preE_size_le m D
     have hb := decCV_bound hcv
-    obtain ⟨a', pm', cv', hrun, hDf, hPf, hcp, hfr, hg, hts', d, hdr, hdlo, hdhi, hkind, hQ⟩ :=
+    obtain ⟨a', pm1, cv', hrun, hDf, hPf, hcp, hfr, hg, hts', d, hdr, hdlo, hdhi, hkind, hQ⟩ :=
       plain_rel p hp n m a pm f q D cv 2 dl m1 hD hP hsz hts hcv hkwm (by omega) hDt hcl
-    refine ⟨a', pm', .thmInfo cv', ?_, hDf, hPf, hcp, hfr, hg, hts', ?_, ?_, ?_⟩
+    refine ⟨a', pm1, .thmInfo cv', ?_, hDf, hPf, hcp, hfr, hg, hts', ?_, ?_, ?_⟩
     · simp only [promoteCI]; rw [run_bind_ok hrun]; rfl
     · rw [← hr', hdr]; exact hdlo
     · rw [← hr', hdr]; omega
     · rw [← hr', hdr]
-      exact decCI_th (by have h := nat?_of_pre (m := m') (T := erecTop m') (by omega) hkind; simpa using h) hQ.1
+      exact decCI_th (by have h := nat?_of_pre (m := m1) (T := erecTop m1) (by omega) hkind; simpa using h) hQ.1
   · -- ind
     have hK : kk = 3 := (Option.some.inj (hkk.symm.trans hk))
     have hkw0 : kw = 3 := UInt64.toNat_inj.mp (by rw [hkwk, hK]; rfl)
     subst hkw0
-    rw [if_neg (by decide), if_neg (by decide), if_pos rfl] at hW
+    simp only [show ¬((3:Word) = 0 ∨ (3:Word) = 2) by decide, show ¬((3:Word) = 1) by decide, show ((3:Word) = 3) by decide, show ¬((3:Word) = 4) by decide, show ¬((3:Word) = 5) by decide, show ¬((3:Word) = 6) by decide, ↓reduceIte] at hW
     simp only [armK] at hW
     cases hcl : callW p n "pci_ind" [f, q] m with
     | none => rw [hcl] at hW; cases hW
@@ -169,20 +169,20 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     have hr' : dl.headD 0 = r.headD 0 := hr
     have hpre := preE_size_le m D
     have hb := decCaps_bound hcp
-    obtain ⟨a', pm', x, ⟨a1, pm1, hrun1, hrun2⟩, hDf, hPf, hcp', hfr, hg, hts', d, hdr, hdlo, hdhi,
+    obtain ⟨a', pm1, x, ⟨a1, pm1, hrun1, hrun2⟩, hDf, hPf, hcp', hfr, hg, hts', d, hdr, hdlo, hdhi,
       hkind, hdcv, hdcaps⟩ :=
       ind_rel p hp n m a pm f q D dn cv caps 3 dl m1 hD hP hsz hts hcv hcp hkwm (by omega) hDt hcl
-    refine ⟨a', pm', .indInfo x.1 x.2, ?_, hDf, hPf, hcp', hfr, hg, hts', ?_, ?_, ?_⟩
+    refine ⟨a', pm1, .indInfo x.1 x.2, ?_, hDf, hPf, hcp', hfr, hg, hts', ?_, ?_, ?_⟩
     · simp only [promoteCI]; rw [run_bind_ok hrun1]; simp only; rw [run_bind_ok hrun2]; rfl
     · rw [← hr', hdr]; exact hdlo
     · rw [← hr', hdr]; omega
     · rw [← hr', hdr]
-      exact decCI_in (by have h := nat?_of_pre (m := m') (T := erecTop m') (by omega) hkind; simpa using h) hdcv hdcaps
+      exact decCI_in (by have h := nat?_of_pre (m := m1) (T := erecTop m1) (by omega) hkind; simpa using h) hdcv hdcaps
   · -- ctor
     have hK : kk = 4 := (Option.some.inj (hkk.symm.trans hk))
     have hkw0 : kw = 4 := UInt64.toNat_inj.mp (by rw [hkwk, hK]; rfl)
     subst hkw0
-    rw [if_neg (by decide), if_neg (by decide), if_neg (by decide), if_pos rfl] at hW
+    simp only [show ¬((4:Word) = 0 ∨ (4:Word) = 2) by decide, show ¬((4:Word) = 1) by decide, show ¬((4:Word) = 3) by decide, show ((4:Word) = 4) by decide, show ¬((4:Word) = 5) by decide, show ¬((4:Word) = 6) by decide, ↓reduceIte] at hW
     simp only [armK] at hW
     cases hcl : callW p n "pci_ctor" [f, q] m with
     | none => rw [hcl] at hW; cases hW
@@ -194,22 +194,22 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     subst hm1
     have hr' : dl.headD 0 = r.headD 0 := hr
     have hpre := preE_size_le m D
-    obtain ⟨w5, hw5, hw5k, hlt5⟩ := nat_word_pre hnp
-    obtain ⟨w6, hw6, hw6k, hlt6⟩ := nat_word_pre hnf
-    obtain ⟨a', pm', cv', hrun, hDf, hPf, hcp', hfr, hg, hts', d, hdr, hdlo, hdhi,
+    obtain ⟨w5, hw5, rfl, hlt5⟩ := nat_word_pre hnp
+    obtain ⟨w6, hw6, rfl, hlt6⟩ := nat_word_pre hnf
+    obtain ⟨a', pm1, cv', hrun, hDf, hPf, hcp', hfr, hg, hts', d, hdr, hdlo, hdhi,
       hkind, hdcv, hn5, hn6⟩ :=
       ctor_rel p hp n m a pm f q D cv 4 w5 w6 dl m1 hD hP hsz hts hcv hkwm hw5 hw6 (by omega) hDt hcl
-    refine ⟨a', pm', .ctorInfo cv' np nf, ?_, hDf, hPf, hcp', hfr, hg, hts', ?_, ?_, ?_⟩
+    refine ⟨a', pm1, .ctorInfo cv' np nf, ?_, hDf, hPf, hcp', hfr, hg, hts', ?_, ?_, ?_⟩
     · simp only [promoteCI]; rw [run_bind_ok hrun]; rfl
     · rw [← hr', hdr]; exact hdlo
     · rw [← hr', hdr]; omega
     · rw [← hr', hdr]
-      exact decCI_ct (by have h := nat?_of_pre (m := m') (T := erecTop m') (by omega) hkind; simpa using h) hdcv (by rw [← hw5k]; exact hn5) (by rw [← hw6k]; exact hn6)
+      exact decCI_ct (by have h := nat?_of_pre (m := m1) (T := erecTop m1) (by omega) hkind; simpa using h) hdcv (by simp [nat?, hn5]) (by simp [nat?, hn6])
   · -- rec
     have hK : kk = 5 := (Option.some.inj (hkk.symm.trans hk))
     have hkw0 : kw = 5 := UInt64.toNat_inj.mp (by rw [hkwk, hK]; rfl)
     subst hkw0
-    rw [if_neg (by decide), if_neg (by decide), if_neg (by decide), if_neg (by decide), if_pos rfl] at hW
+    simp only [show ¬((5:Word) = 0 ∨ (5:Word) = 2) by decide, show ¬((5:Word) = 1) by decide, show ¬((5:Word) = 3) by decide, show ¬((5:Word) = 4) by decide, show ((5:Word) = 5) by decide, show ¬((5:Word) = 6) by decide, ↓reduceIte] at hW
     simp only [armK] at hW
     cases hcl : callW p n "pci_rec" [f, q] m with
     | none => rw [hcl] at hW; cases hW
@@ -221,26 +221,25 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     subst hm1
     have hr' : dl.headD 0 = r.headD 0 := hr
     have hpre := preE_size_le m D
-    obtain ⟨w5, hw5, hw5k, hlt5⟩ := nat_word_pre hmi
-    obtain ⟨w6, hw6, hw6k, hlt6⟩ := nat_word_pre hrp
-    obtain ⟨w7, hw7, hw7k, hlt7⟩ := nat_word_pre hro
-    obtain ⟨w8, hw8, hw8k, hlt8⟩ := nat_word_pre hrc
-    rw [← hw7k, ← hw8k] at hrl
-    obtain ⟨a', pm', x, ⟨a1, pm1, hrun1, hrun2⟩, hDf, hPf, hcp', hfr, hg, hts', d, hdr, hdlo, hdhi,
+    obtain ⟨w5, hw5, rfl, hlt5⟩ := nat_word_pre hmi
+    obtain ⟨w6, hw6, rfl, hlt6⟩ := nat_word_pre hrp
+    obtain ⟨w7, hw7, rfl, hlt7⟩ := nat_word_pre hro
+    obtain ⟨w8, hw8, rfl, hlt8⟩ := nat_word_pre hrc
+    obtain ⟨a', pm1, x, ⟨a1, pm1, hrun1, hrun2⟩, hDf, hPf, hcp', hfr, hg, hts', d, hdr, hdlo, hdhi,
       hkind, hdcv, hn5, hn6, hn8, pw, hn7, hdr7⟩ :=
       rec_rel p hp n m a pm f q D cv rls 5 w5 w6 w7 w8 dl m1 hD hP hsz hts hcv hkwm hw5 hw6 hw7 hw8
         hrl (by omega) hDt hcl
-    refine ⟨a', pm', .recInfo x.1 mi rp x.2, ?_, hDf, hPf, hcp', hfr, hg, hts', ?_, ?_, ?_⟩
+    refine ⟨a', pm1, .recInfo x.1 mi rp x.2, ?_, hDf, hPf, hcp', hfr, hg, hts', ?_, ?_, ?_⟩
     · simp only [promoteCI]; rw [run_bind_ok hrun1]; simp only; rw [run_bind_ok hrun2]; rfl
     · rw [← hr', hdr]; exact hdlo
     · rw [← hr', hdr]; omega
     · rw [← hr', hdr]
-      exact decCI_rc (by have h := nat?_of_pre (m := m') (T := erecTop m') (by omega) hkind; simpa using h) hdcv (by rw [← hw5k]; exact hn5) (by rw [← hw6k]; exact hn6) hn7 (by rw [← hw8k]; exact hn8) (by rw [← hw8k]; exact hdr7)
+      exact decCI_rc (by have h := nat?_of_pre (m := m1) (T := erecTop m1) (by omega) hkind; simpa using h) hdcv hn5 hn6 hn7 hn8 hdr7
   · -- proj
     have hK : kk = 6 := (Option.some.inj (hkk.symm.trans hk))
     have hkw0 : kw = 6 := UInt64.toNat_inj.mp (by rw [hkwk, hK]; rfl)
     subst hkw0
-    rw [if_neg (by decide), if_neg (by decide), if_neg (by decide), if_neg (by decide), if_neg (by decide), if_pos rfl] at hW
+    simp only [show ¬((6:Word) = 0 ∨ (6:Word) = 2) by decide, show ¬((6:Word) = 1) by decide, show ¬((6:Word) = 3) by decide, show ¬((6:Word) = 4) by decide, show ¬((6:Word) = 5) by decide, show ((6:Word) = 6) by decide, ↓reduceIte] at hW
     simp only [armK] at hW
     cases hcl : callW p n "promote_proj_table" [f, q] m with
     | none => rw [hcl] at hW; cases hW
@@ -253,14 +252,14 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     have hr' : dl.headD 0 = r.headD 0 := hr
     have hpre := preE_size_le m D
     have hb := decTbl_bound ht
-    obtain ⟨a', pm', tbl', hrun, hDf, hPf, hcp', hfr, hg, hts', hptr, hptr14, hker, hdec⟩ :=
+    obtain ⟨a', pm1, tbl', hrun, hDf, hPf, hcp', hfr, hg, hts', hptr, hptr14, hker, hdec⟩ :=
       proj_rel p hp n m a pm f q D tbl dl m1 hD hP hsz hts ht hkwm (by omega) hDt hcl
-    refine ⟨a', pm', .projInfo tbl', ?_, hDf, hPf, hcp', hfr, hg, hts', ?_, ?_, ?_⟩
+    refine ⟨a', pm1, .projInfo tbl', ?_, hDf, hPf, hcp', hfr, hg, hts', ?_, ?_, ?_⟩
     · simp only [promoteCI]; rw [run_bind_ok hrun]; rfl
     · rw [← hr']; omega
     · rw [← hr']; omega
     · rw [← hr']
-      exact decCI_pj (by have h := nat?_of_pre (m := m') (T := erecTop m') (by omega) hker; simpa using h) hdec
+      exact decCI_pj (by have h := nat?_of_pre (m := m1) (T := erecTop m1) (by omega) hker; simpa using h) hdec
 
 end rel
 
