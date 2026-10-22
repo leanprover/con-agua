@@ -7,6 +7,7 @@ import ConAgua.Arena.WhnfM2CRefine
 import ConAgua.Arena.InferFieldSort
 import ConAgua.Arena.InferFieldSortNat
 import ConAgua.Arena.WhnfIotaRecRefine
+import ConAgua.Arena.PropReadRefine4
 
 /-!
 # The knot tied (lane `defeq`)
@@ -77,16 +78,18 @@ structure KnotAllProg (p : Prog) : Prop where
   fsz : FieldSortZeroProg p
   natPred : NatPredProg p
   lvc : LvlCacheProg p
+  prop : PropReadProg p
 
 /-- **Every assumption the knot still makes.** -/
 structure KnotCallees (p : Prog) : Prop where
   /-- Lane `whnf`'s slot steps (proved there over its inline stub bundles). -/
   whnfCoreStep : ∀ n, KnotUpTo p n → WhnfCoreSlot p (n + 1)
   whnfStep : ∀ n, KnotUpTo p n → WhnfSlot p (n + 1)
-  /-- `DefeqCallees` without the walks (`KnotAllProg.walks`) and `field_sort_zero`: the
-  `PropRead` readers. -/
-  notProofFast : NotProofFastOK p
-  isProofFast : IsProofFastOK p
+  /-- Lane `whnf`'s `find_proj` facts (lane `whnf3`), for `PropRead`'s projection arm and
+  `infer_proj`. -/
+  findProj : FindProjOK p
+  erecKept : ErecKept p
+  projFound : ProjFound p
   /-- Lane `whnf`'s `proofIrrel_refines` rests on `CoreS.lvl_den` (`proofIrrelOK_of`). -/
   proofIrrel : ProofIrrelOK p
   towerSlots : TowerSlotsAllOK p
@@ -127,6 +130,10 @@ theorem lvlsEqCH_of (p : Prog) (hp : LvlCacheProg p) : LvlsEqCH p := by
   · obtain ⟨k, rfl⟩ : ∃ k, n = k + 2 := ⟨n - 2, by omega⟩
     exact lvlsEqC_refines p hp k s₀ a₀ dn vis fe M eb hS us vs hu hv lu lv hlu hlv
 
+/-- `ConstLpsDen` (helper `defeq2-prop`) is `StoreDen.constLps`. -/
+theorem constLpsDen_of (h : CoreDen) : ConstLpsDen :=
+  fun dn m a vis fe M eb hS => (h dn m a vis fe M eb hS).constLps
+
 /-- `BStkCap` is `CoreS.bstk` (lane `whnf2`'s landing 1). -/
 theorem bstkCap_of : BStkCap := fun _ _ _ _ _ _ _ hS => hS.bstk
 
@@ -136,7 +143,9 @@ variable {p : Prog} (hq : KnotAllProg p) (hc : KnotCallees p)
 include hq hc in
 /-- `DefeqCallees`: the walks from `CoreWalks.lean`, the rest from `KnotCallees`. -/
 theorem KnotCallees.defeq : DefeqCallees p :=
-  ⟨hasFvar_core hq.walks.abs hq.walks.hf, hc.notProofFast, hc.isProofFast,
+  ⟨hasFvar_core hq.walks.abs hq.walks.hf,
+    notProofFast_core hq.prop hc.den (constLpsDen_of hc.den) hc.findProj hc.erecKept hc.projFound,
+    isProofFast_core hq.prop hc.den (constLpsDen_of hc.den) hc.findProj hc.erecKept hc.projFound,
     abs1_core hq.walks.abs hq.walks.ae, absRange_core hq.walks.ar hq.walks.are, fieldSortZero_core p hq.fsz⟩
 
 include hq hc in

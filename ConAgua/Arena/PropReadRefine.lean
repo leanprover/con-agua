@@ -387,7 +387,7 @@ theorem spa_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
   -- the keys
   have hbound : lo.toNat + lc.toNat < 2 ^ 64 := by
     have := hS.erec
-    rcases hslice?_bound _ _ _ _ hl with h0 | h0
+    rcases hslice?_bound_fsz _ _ _ _ hl with h0 | h0
     · have := lo.toNat_lt; omega
     · omega
   have hkr : NmsR (nameN a.store.lss.ls.ns) m EREC lo lc ks :=
