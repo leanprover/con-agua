@@ -231,4 +231,99 @@ theorem rteW_ok (n : Nat) {m m' : Mem} {a : AState} {ro rl : Word} {r : List Wor
 
 end rel
 
+
+/-! ## `cons_block_recs_push` -/
+
+def cbpK3 : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rv, m) => some ([rv.headD 0], m)
+
+def cbpK2 (p : Prog) (n : Nat) (vis : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rq, m) => cbpK3 (callW p n "env_push" [vis, rq.headD 0] m)
+
+def cbpK1 (p : Prog) (n : Nat) (vis cv mI rP : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (re, m) => cbpK2 p n vis (riW m cv mI rP (re.headD 0) (re.tail.headD 0))
+
+/-- **The model of `cons_block_recs_push`** (exec fuel). -/
+def cbpW (p : Prog) : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _, _, _, _, _ => none
+  | n + 1, m, vis, cv, mI, rP, ro, rl => cbpK1 p n vis cv mI rP (rteW n m ro rl)
+
+section arms
+variable (p : Prog) (n : Nat) (m : Mem) (vis cv mI rP ro rl : Word) (rv rq re : List Word)
+theorem cbpW_succ : cbpW p (n + 1) m vis cv mI rP ro rl = cbpK1 p n vis cv mI rP (rteW n m ro rl) := rfl
+theorem cbpK1_some : cbpK1 p n vis cv mI rP (some (re, m)) =
+    cbpK2 p n vis (riW m cv mI rP (re.headD 0) (re.tail.headD 0)) := rfl
+theorem cbpK2_some : cbpK2 p n vis (some (rq, m)) = cbpK3 (callW p n "env_push" [vis, rq.headD 0] m) := rfl
+theorem cbpK3_some : cbpK3 (some (rv, m)) = some ([rv.headD 0], m) := rfl
+end arms
+attribute [ind_grind] cbpW_succ cbpK1_some cbpK2_some cbpK3_some
+
+theorem cbp_spec (p : Prog) (L : CbrLook p) (n : Nat) (s₀ : St) (vis cv mI rP ro rl : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "cons_block_recs_push" [vis, cv, mI, rP, ro, rl]
+    ⦃fun r s' => LocEq s' s₀ ∧ cbpW p n s₀.mem vis cv mI rP ro rl = some (r, s'.mem); ⊤⦄ := by
+  cases n with
+  | zero => exact triple_post (invoke_exec_zero p _ _ _) (fun _ _ h => h.elim)
+  | succ n =>
+    rw [invoke_eq _ L.push]
+    simp only [callFn, consBlockRecsPush]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, rte_spec p L n, ri_spec p L n,
+        callW_spec p n "env_push"] <;>
+      finish (gen := 20) [loc_init4, loc_init5]
+
+section rel2
+variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
+
+/-- **`cons_block_recs_push` under the stage relation**: the rules' run, the `.recInfo` record, pushed. -/
+theorem cbpW_ok (p : Prog) (L : CbrLook p) (n : Nat) {m m' : Mem} {a : AState} {cv mI rP ro rl : Word}
+    {r : List Word} {cvv : IConstantVal} {rules : List IRecRule}
+    (h : cbpW p n m vis cv mI rP ro rl = some (r, m')) (hS : StageR dn vis fe m a)
+    (hcv : decCV (erecP m) cv.toNat = some cvv)
+    (hd : decPL m (rlDec m) ro.toNat rl.toNat = some rules) (hb : ro.toNat + rl.toNat ≤ iwTop m) :
+    StageR dn (r.headD 0) (fe.push (.recInfo cvv mI.toNat rP.toNat rules)) m' a ∧ IWGrow m m' := by
+  cases n with
+  | zero => simp [cbpW] at h
+  | succ n =>
+  rw [cbpW_succ] at h
+  cases h1 : rteW n m ro rl with
+  | none => rw [h1] at h; simp [cbpK1] at h
+  | some x =>
+  obtain ⟨re, m1⟩ := x
+  rw [h1, cbpK1_some] at h
+  obtain ⟨hS1, hg1, hre, hru, -⟩ := rteW_ok dn fe vis n h1 hS hd hb
+  rw [hre] at h
+  cases h2 : riW m1 cv mI rP (re.headD 0) rl with
+  | none => rw [h2] at h; simp [cbpK2] at h
+  | some x =>
+  obtain ⟨rq, m2⟩ := x
+  rw [h2, cbpK2_some] at h
+  have hrq : rq = [rq.headD 0] := by
+    simp only [riW] at h2; split at h2
+    · cases h2
+    · simp only [Option.some.injEq, Prod.mk.injEq] at h2; rw [← h2.1]; rfl
+  rw [hrq] at h2
+  obtain ⟨hS2, hg2, -, hci⟩ := riRec_stage h2 hS1 ((IWGrow.erecPExtR hg1).decCV hcv) hru
+  obtain ⟨wn, hwn, hwnl, -⟩ := decCI_name hci
+  have hwn' : (rdW (m2.arr64 EREC) (rq.headD 0 + 1)).toNat < 2 ^ 32 := by
+    have hq1 : (rq.headD 0 + 1).toNat = (rq.headD 0).toNat + 1 := by
+      have := erecP_lt hwn; obtain ⟨-, h2', -, h4, -⟩ := hS2.2
+      rw [UInt64.toNat_add, show (1 : Word).toNat = 1 from rfl]; exact Nat.mod_eq_of_lt (by omega)
+    rw [rdW_of_get? hq1.symm (erecP_get hwn)]; exact hwnl
+  cases h3 : callW p n "env_push" [vis, rq.headD 0] m2 with
+  | none => rw [h3] at h; simp [cbpK3] at h
+  | some x =>
+  obtain ⟨rv, m3⟩ := x
+  rw [h3, cbpK3_some] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨s4, hs4, -, hW4⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
+    (envPush_specW p L.rp n ⟨m2, Locals.init []⟩ vis (rq.headD 0) hwn') h3
+  subst hs4
+  obtain ⟨hS3, hg3⟩ := envPushW_ok hW4 hS2 hci
+  exact ⟨by simpa using hS3, (hg1.trans hg2).trans hg3⟩
+
+end rel2
+
 end L.Ind
