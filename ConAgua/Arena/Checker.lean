@@ -46,6 +46,8 @@ open L.Front (DECL DLP DeclsR)
 /-- The translated callees of the loop (`Decl*.lean`), as program lookups. -/
 structure DeclCallees (p : Prog) : Prop where
   and_pin_ok : p.lookup "and_pin_ok" = some andPinOkL
+  /-- `check_value_group`'s text (its write set, `DeclCvg.lean`). -/
+  cvg : CvgProg p
 
 section stubs
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
@@ -879,7 +881,7 @@ theorem pend_words (m : Mem) (pend : Array PendingCheck) (hP : PendR m pend) (j 
 
 /-- **`check_pending` refines `checkPending`** (from the stub specs). -/
 @[refines ConRon.Arena.checkPending]
-theorem checkPending_refines (hm : mode = .verified) (hb : BracketProg p) (hp : p.lookup "check_pending" = some checkPendingL) (n : Nat)
+theorem checkPending_refines (hm : mode = .verified) (hb : BracketProg p) (hcv : CvgProg p) (hp : p.lookup "check_pending" = some checkPendingL) (n : Nat)
     (s₀ : St) (a₀ : AState) (j vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
     (hj : j.toNat < pend.size) (hR : LoopR dn s₀.mem a₀ vis fe pend ds) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_pending" [j, vis]
@@ -907,7 +909,7 @@ theorem checkPending_refines (hm : mode = .verified) (hb : BracketProg p) (hp : 
       sym only [lang_grind, arena_grind] =>
         vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
           (enter_loop dn ds p hb n · a₀ vis fe pend),
-          (checkValueGroup_spec mode dn ds p hm n · (AM.st enterScratch a₀) · (fe.restrictTo (pdAt pend j).vis) pend · (pdAt pend j).vg),
+          (checkValueGroup_spec mode dn ds p hm hcv n · (AM.st enterScratch a₀) · (fe.restrictTo (pdAt pend j).vis) pend · (pdAt pend j).vg),
           (drop_loop dn ds p hb n · (AM.st (checkValueGroup mode (fe.restrictTo (pdAt pend j).vis) (pdAt pend j).vg) (AM.st enterScratch a₀)) vis fe pend)] <;>
         finish
   exact triple_post inner fun r s' ⟨h0, h1, h2, h3, h4⟩ => by
@@ -945,8 +947,8 @@ section cp
 variable (hpc : p.lookup "check_pending" = some checkPendingL)
     (hpg : p.lookup "check_pending_go" = some checkPendingGoL)
     (hpx : p.lookup "check_pending_next" = some checkPendingNextL) (hb : BracketProg p)
-    (hm : mode = .verified)
-include hpc hpg hpx hb hm
+    (hm : mode = .verified) (hcv : CvgProg p)
+include hpc hpg hpx hb hm hcv
 
 theorem cpGo_step (n : Nat) (ih : CPNextSpec mode dn ds p fe pend n) :
     CPGoSpec mode dn ds p fe pend (n + 1) := by
@@ -998,7 +1000,7 @@ theorem cpNext_step (n : Nat) (ih : CPGoSpec mode dn ds p fe pend n) :
     simp only [callFn, checkPendingNextL]
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        (checkPending_refines mode dn ds p hm hb hpc n · a₀ · · fe pend ·),
+        (checkPending_refines mode dn ds p hm hb hcv hpc n · a₀ · · fe pend ·),
         (ih · (AM.st (checkPending mode fe (pdAt pend j)) a₀) · · ·)] <;>
       finish
   exact triple_post inner fun r s' ⟨h0, h62, h2, h3⟩ => ⟨h0, hcons h62 _ (j + 1) rfl h2 h3⟩
@@ -1016,8 +1018,8 @@ theorem checkPendingGo_refines (n : Nat) :
     · intro s₀ a₀ j cnt vis _ _ _; rw [invoke_eq _ hpx]; simp only [callFn]
       vcgen [exec] <;> grind
   | succ n ih =>
-    exact ⟨cpGo_step mode dn ds p fe pend hpc hpg hpx hb hm n ih.2,
-      cpNext_step mode dn ds p fe pend hpc hpg hpx hb hm n ih.1⟩
+    exact ⟨cpGo_step mode dn ds p fe pend hpc hpg hpx hb hm hcv n ih.2,
+      cpNext_step mode dn ds p fe pend hpc hpg hpx hb hm hcv n ih.1⟩
 
 end cp
 end phaseB
@@ -1068,7 +1070,7 @@ theorem installThenCheck_refines (hm : mode = .verified) (hb : BracketProg p) (h
         vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
           ((installFoldGo_refines mode pins dn ds p hpp hpn hps hpi hpd hpg hpx hsz hb hdc hm n).1 · a₀ · · ·
             (mkIFEnv IEnv.empty) #[]),
-          ((checkPendingGo_refines mode dn ds p (foldFe (AM.res (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀)) (foldPend (AM.res (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀)) hpc hpcg hpcx hb hm n).1 ·
+          ((checkPendingGo_refines mode dn ds p (foldFe (AM.res (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀)) (foldPend (AM.res (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀)) hpc hpcg hpcx hb hm hdc.cvg n).1 ·
             (AM.st (installFold mode pins (0, mkIFEnv IEnv.empty, #[]) ds.toList) a₀) · · ·)] <;>
         finish
   exact triple_post inner fun r s' ⟨h0, h1, h2, h3⟩ => by
