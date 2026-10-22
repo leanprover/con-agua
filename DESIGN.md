@@ -6599,6 +6599,25 @@ Merge master and adapt new uses:
 
 Census at landing 3 (`--no-build`): phase 2 **145 proven, 26 sorry, 71 written, 89 todo**.
 
+### Landing 6: the stuck/irrelevance side (`DefEqStuck*.lean`, helper `defeq-top`)
+* Refined (no `sorry`, ~4.9k lines, 81 s CPU): `prop_irrel`, `eta_cert`, `eta_ctor_shape`, the
+  structure-η certificate (`struct_eta_cert*`), `struct_unit_cert`, `stuck_irrel`, `stuck_str`,
+  `stuck_app`, `defeq_stuck`, `defeq_proj_pair`, `lazy_delta_proj_reduction`, `defeq_tail`.
+  Hypotheses (`StuckCallees`): `DefeqLstOK`, `LazyDeltaStepH` (both proved by `defeq-mid`: to be
+  plugged in), `ProofIrrelOK` (lane whnf's `proofIrrel_refines` has two more premises, `n ≤ 2^62`
+  and the eager bit: add them here when plugging), `ReduceProjCoreH`, `Inst1OK`,
+  `TowerSlotsAllOK`, `StrLit*`, `SupKeep`, `ReservedContainsOK`, `LvlsEqCH` (needs the "stored
+  level lists denote" invariant, as `InferProjOK`).
+* L: `eta_cert_body` aborts on depth wrap; `defeq_stuck`'s constant arm reads a level verdict
+  `≠ 1` as true (`decO`); proof splits as listed in the helper's commits; one test per `if` took
+  `defeq_stuck`'s spec from ~2 min to 3 s.
+* Merge with lane `integrate`: duplicate top-level names between helper files clash in
+  `scripts/checker_prog.py` (`decDS`, `decOptR_*`, `growRef_*`, the `Inhabited DeltaStepA`
+  instance, now in `DefEq.lean`): the stuck files' copies are suffixed `S`. `Checker/Prog.lean`
+  regenerated (1467 functions).
+* Left for the lane: `defeq_body` itself, plugging the proved specs into the hypotheses, the knot
+  induction (`KnotUpTo p n → KnotOK p (n + 1)`), `infer_proj`, and the `CoreS` invariants above.
+
 ### Landing 2: exact walk counters, the walks and `nat_op_result` under `CoreS`, `major_to_ctor`
 * **Exact `coreWalkFuel` counters** (helper `whnf2-walks`, ROADMAP §3 (b)): `fr_go`/`fr_memo`,
   `bb_go`/`bb_memo`, `inst_go`, `il_go`/`ilg_go`, `abs_go`/`ab_node`, `ar_*` take the twin's depth
