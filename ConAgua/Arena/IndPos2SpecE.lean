@@ -506,4 +506,200 @@ theorem nestWalkStack_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx �
 
 end census
 
+
+/-! ## `pi_doms_occ` refines `piDomsOcc` -/
+
+/-- `nest_occ` at any exec fuel. -/
+def noConstWf : Nat → Mem → Word → Word → Word → Word → Word → Option (Word × Mem)
+  | 0, _, _, _, _, _, _ => none
+  | n + 1, m, no, nl, lo, hi, e => noConstW n m no nl lo hi e
+
+/-- The lookups of `nest_occ`. -/
+structure NoLook (p : Prog) : Prop where
+  hv : p.lookup "e_view" = some eView
+  hc : p.lookup "sl_contains" = some slContains
+  hf : p.lookup "no_find" = some (memoFindG noSch)
+  hput : p.lookup "no_put" = some (memoPutG noSch)
+  hgo : p.lookup "nest_occ_go" = some nestOccGo
+  hnode : p.lookup "nest_occ_node" = some nestOccNode
+  hcl : p.lookup "no_clear" = some (memoClearG noSch)
+  hp : p.lookup "nest_occ" = some nestOcc
+
+theorem nestOcc_spec' (p : Prog) (hl : NoLook p) (n : Nat) (s₀ : St) (no nl lo hi e : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_occ" [no, nl, lo, hi, e]
+    ⦃fun r s' => LocEq s' s₀ ∧ noConstWf n s₀.mem no nl lo hi e = some (r.headD 0, s'.mem); ⊤⦄ := by
+  cases n with
+  | zero => rw [invoke_eq _ hl.hp]; simp only [callFn, nestOcc]; vcgen [exec] <;> grind
+  | succ n => exact nestOcc_spec p hl.hv hl.hc hl.hf hl.hput hl.hgo hl.hnode hl.hcl hl.hp n s₀ no nl lo hi e
+
+/-- `nest_occ` from the stage relation, its names a decoded slice below the top. -/
+theorem noConstWf_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
+    (m m' : Mem) (a : AState) (no nl lo hi e r : Word) (names : List NIdx) (mp0 : Std.HashMap EIdx Bool)
+    (hb : noConstWf n m no nl lo hi e = some (r, m')) (hS : StageR dn vis fe m a) (hh : H e)
+    (hn : decHL m no.toNat nl.toNat = some names) (hnb : no.toNat + nl.toNat < 2 ^ 64)
+    (hM : noMR m mp0) :
+    ∃ b, (ConRon.Arena.nestOcc names lo.toNat hi.toNat (decE e)).run a = .ok (b, a) ∧ (r != 0) = b ∧
+      noMR m' ∅ ∧ StageR dn vis fe m' a ∧ IWGrow m m' := by
+  cases n with
+  | zero => simp [noConstWf] at hb
+  | succ n =>
+    obtain ⟨ws, hws, rfl, hwlt⟩ := slR_of_decHL m nl.toNat no.toNat names hn hnb
+    simp only [UInt64.ofNat_toNat] at hws
+    exact noConstW_ok n dn fe vis m m' a no nl lo hi e r ws mp0 hb hS hh hws hwlt hM
+
+mutual
+def pdW : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _, _, _, _, _ => none
+  | k + 1, m, no, nl, lo, hi, n, e =>
+    if n = 0 then some ([0], m)
+    else if e >>> 28 ≠ 6 then some ([0], m)
+    else if eViewW m e = [] then none
+    else pdK1 k no nl lo hi n (eViewW m e) (noConstWf k m no nl lo hi ((eViewW m e).tail.headD 0))
+def pdK1 (k : Nat) (no nl lo hi n : Word) (v : List Word) : Option (Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m1) =>
+    if r ≠ 0 then some ([1], m1) else pdW k m1 no nl lo hi (n - 1) (v.tail.tail.headD 0)
+end
+
+section arms
+variable (k : Nat) (m m1 : Mem) (no nl lo hi n e r : Word) (v : List Word)
+theorem pdW_zero (h : n = 0) : pdW (k + 1) m no nl lo hi n e = some ([0], m) := by simp [pdW, h]
+theorem pdW_notpi (h : ¬ n = 0) (h6 : e >>> 28 ≠ 6) : pdW (k + 1) m no nl lo hi n e = some ([0], m) := by
+  simp [pdW, h, h6]
+theorem pdW_empty (h : ¬ n = 0) (h6 : ¬ e >>> 28 ≠ 6) (hv : eViewW m e = []) :
+    pdW (k + 1) m no nl lo hi n e = none := by
+  simp only [pdW]; rw [if_neg h, if_neg h6, if_pos hv]
+theorem pdW_pi (h : ¬ n = 0) (h6 : ¬ e >>> 28 ≠ 6) (hv : eViewW m e ≠ []) : pdW (k + 1) m no nl lo hi n e =
+    pdK1 k no nl lo hi n (eViewW m e) (noConstWf k m no nl lo hi ((eViewW m e).tail.headD 0)) := by
+  simp only [pdW]; rw [if_neg h, if_neg h6, if_neg hv]
+theorem pdK1_hit (h : r ≠ 0) : pdK1 k no nl lo hi n v (some (r, m1)) = some ([1], m1) := by
+  rw [pdK1, if_pos h]
+theorem pdK1_miss (h : ¬ r ≠ 0) : pdK1 k no nl lo hi n v (some (r, m1)) =
+    pdW k m1 no nl lo hi (n - 1) (v.tail.tail.headD 0) := by rw [pdK1, if_neg h]
+end arms
+attribute [ind_grind] pdW_zero pdW_notpi pdW_empty pdW_pi pdK1_hit pdK1_miss
+
+theorem piDomsOcc_spec (p : Prog) (hl : NoLook p) (hp : p.lookup "pi_doms_occ" = some piDomsOccL)
+    (k : Nat) : ∀ (s₀ : St) (no nl lo hi n e : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p k) "pi_doms_occ" [no, nl, lo, hi, n, e]
+    ⦃fun r s' => LocEq s' s₀ ∧ pdW k s₀.mem no nl lo hi n e = some ([r.headD 0], s'.mem); ⊤⦄ := by
+  induction k with
+  | zero =>
+    intro s₀ no nl lo hi n e
+    rw [invoke_eq _ hp]; simp only [callFn, piDomsOccL]; vcgen [exec] <;> grind
+  | succ k ih =>
+    intro s₀ no nl lo hi n e
+    rw [invoke_eq _ hp]
+    simp only [callFn, piDomsOccL]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+        eView_spec p hl.hv k, nestOcc_spec' p hl k, ih] <;>
+      finish (gen := 20)
+
+theorem pdW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo hi : Word)
+    (names : List NIdx) (k : Nat) :
+    ∀ (m m' : Mem) (a : AState) (n e : Word) (r : List Word) (mp : Std.HashMap EIdx Bool),
+    pdW k m no nl lo hi n e = some (r, m') → StageR dn vis fe m a → H e →
+    decHL m no.toNat nl.toNat = some names → (∀ j < nl.toNat, no.toNat + j < iwTop m) →
+    noMR m mp →
+    ∃ b a' mp', (ConRon.Arena.piDomsOcc names lo.toNat hi.toNat n.toNat (decE e)).run a = .ok (b, a') ∧
+      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) ∧ noMR m' mp' := by
+  induction k with
+  | zero => intro m m' a n e r mp h; simp [pdW] at h
+  | succ k ih =>
+    intro m m' a n e r mp h hS he hn hnb hM
+    by_cases h0 : n = 0
+    · rw [pdW_zero (h := h0)] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      subst h0
+      exact ⟨false, a, mp, rfl, hS, IWGrow.refl _, rfl, hM⟩
+    have hn0 : n.toNat ≠ 0 := fun e' => h0 (UInt64.toNat_inj.mp (by simpa using e'))
+    have hsucc : n.toNat = (n.toNat - 1) + 1 := by omega
+    by_cases h6 : e >>> 28 ≠ 6
+    · rw [pdW_notpi (h := h0) (h6 := h6)] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      refine ⟨false, a, mp, ?_, hS, IWGrow.refl _, rfl, hM⟩
+      have htag : ¬ (decE e).tag = ETag.forallE := fun h' => h6 ((decE_tag_forall e he).mp h')
+      rw [hsucc, ConRon.Arena.piDomsOcc.eq_2]
+      simp [htag]; rfl
+    have hg6 : e >>> 28 = 6 := by simpa using h6
+    have hR := hS.1.arena.1
+    by_cases hr : eViewW m e = []
+    · rw [pdW_empty (h := h0) (h6 := h6) (hv := hr)] at h; simp at h
+    rw [pdW_pi (h := h0) (h6 := h6) (hv := hr)] at h
+    obtain ⟨hvok, hew⟩ := eViewW_forall m e hg6 hr
+    obtain ⟨-, hty, hb⟩ := view_forall m a hR e he hvok hg6
+    have hvb := viewBind_forall m a hR e he hvok hg6
+    rw [hew] at h
+    simp only [List.tail_cons, List.headD_cons] at h
+    generalize hd : rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2) = d at h hty hvb
+    generalize hbd : rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2 + 1) = b at h hb hvb
+    cases hnc : noConstWf k m no nl lo hi d with
+    | none => rw [hnc] at h; simp [pdK1] at h
+    | some pr =>
+    obtain ⟨r1, m1⟩ := pr
+    rw [hnc] at h
+    have hnb' : no.toNat + nl.toNat < 2 ^ 64 := by
+      rcases Nat.eq_zero_or_pos nl.toNat with hz | hz
+      · rw [hz]; simpa using no.toNat_lt
+      · have := hnb (nl.toNat - 1) (by omega); have := hS.2.1; have := hS.2.2.2.1; omega
+    obtain ⟨c, hrun1, hc, hM1, hS1, hg1⟩ := noConstWf_ok k dn fe vis m m1 a no nl lo hi d r1 names mp hnc
+      hS hty hn hnb' hM
+    have hpre : (ConRon.Arena.piDomsOcc names lo.toNat hi.toNat n.toNat (decE e)).run a =
+        (do let x ← ConRon.Arena.nestOcc names lo.toNat hi.toNat (decE d)
+            if x = true then pure true
+            else ConRon.Arena.piDomsOcc names lo.toNat hi.toNat (n.toNat - 1) (decE b)).run a := by
+      rw [hsucc, ConRon.Arena.piDomsOcc.eq_2]
+      have htag : (decE e).tag = ETag.forallE := (decE_tag_forall e he).mpr hg6
+      simp only [htag, beq_self_eq_true, if_true, StateT.run_bind, viewBind_run' _ a, hvb, except_ok_bind]
+      rfl
+    by_cases hr1 : r1 ≠ 0
+    · rw [pdK1_hit (h := hr1)] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      have hcT : c = true := by rw [← hc]; simpa using hr1
+      subst hcT
+      refine ⟨true, a, ∅, ?_, hS1, hg1, rfl, hM1⟩
+      rw [hpre]; simp only [StateT.run_bind, hrun1, except_ok_bind]; rfl
+    · rw [pdK1_miss (h := hr1)] at h
+      simp only [List.tail_cons, List.headD_cons] at h
+      have hcF : c = false := by rw [← hc]; simpa using hr1
+      subst hcF
+      have hn1 : (n - 1).toNat = n.toNat - 1 :=
+        UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))
+      obtain ⟨b', a', mp', hrun, hS', hg', hr', hM'⟩ := ih m1 m' a (n - 1) b r ∅ h hS1 hb
+        (by rw [decHL_agree (RdS.of_grow hg1) hnb]; exact hn)
+        (fun j hj => Nat.lt_of_lt_of_le (hnb j hj) hg1.1) hM1
+      refine ⟨b', a', mp', ?_, hS', hg1.trans hg', hr', hM'⟩
+      rw [hpre]; simp only [StateT.run_bind, hrun1, except_ok_bind]
+      rw [← hn1]; exact hrun
+
+section census
+variable (p : Prog) (hl : NoLook p) (hp : p.lookup "pi_doms_occ" = some piDomsOccL)
+include hl hp
+
+/-- **`pi_doms_occ` refines `piDomsOcc`** (the `nest_occ` memo well-formed on entry). -/
+@[refines ConRon.Arena.piDomsOcc]
+theorem piDomsOcc_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+    (fe : IFEnv) (vis no nl lo hi n e : Word) (names : List NIdx) (mp : Std.HashMap EIdx Bool)
+    (hS : StageR dn vis fe s₀.mem a₀) (he : H e) (hn : decHL s₀.mem no.toNat nl.toNat = some names)
+    (hnb : ∀ j < nl.toNat, no.toNat + j < iwTop s₀.mem) (hM : noMR s₀.mem mp) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p k) "pi_doms_occ" [no, nl, lo, hi, n, e]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (ConRon.Arena.piDomsOcc names lo.toNat hi.toNat n.toNat (decE e)) a₀ ∧
+      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.piDomsOcc names lo.toNat hi.toNat n.toNat (decE e)) a₀) ∧
+      IWGrow s₀.mem s'.mem ∧
+      r.headD 0 = (if AM.res (ConRon.Arena.piDomsOcc names lo.toNat hi.toNat n.toNat (decE e)) a₀
+        then 1 else 0) ∧ ∃ mp', noMR s'.mem mp'; ⊤⦄ := by
+  refine triple_post (piDomsOcc_spec p hl hp k s₀ no nl lo hi n e) ?_
+  rintro r s' ⟨hlc, hm⟩
+  obtain ⟨b, a', mp', hrun, hS', hg, hr, hM'⟩ := pdW_ok dn fe vis no nl lo hi names k _ _ a₀ n e _ mp hm hS
+    he hn hnb hM
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hlc, hok, by rw [hst]; exact hS', hg, by rw [hres]; simpa using hr, mp', hM'⟩
+
+end census
+
 end L.Ind

@@ -230,17 +230,14 @@ in the slice, looked up and appended. -/
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:766-778 ConRon.Arena.nestGroupCtors
 @[l_impl ConRon.Arena.nestGroupCtors]
 def nestGroupCtorsL : FunDecl := lfn (vis, nPc, off, l, outOff, outLen) locals
-    (j, c, ok, nPc2, csOff, csLen) {
-  j := 0;
-  while j < l {
-    c := IW.u64[off + j];
-    (ok, nPc2, csOff, csLen) := call nest_container(vis, c);
-    if ok == 0 { abort };
-    if nPc2 != nPc && csLen != 0 { abort };
-    (outOff, outLen) := call sl_append(outOff, outLen, csOff, csLen);
-    j += 1
-  };
-  return (outOff, outLen)
+    (ok, nPc2, csOff, csLen, r1, r2) {
+  if l == 0 { return (outOff, outLen) };
+  (ok, nPc2, csOff, csLen) := call nest_container(vis, IW.u64[off]);
+  if ok == 0 { abort };
+  if nPc2 != nPc && csLen != 0 { abort };
+  (outOff, outLen) := call sl_append(outOff, outLen, csOff, csLen);
+  (r1, r2) := call nest_group_ctors(vis, nPc, off + 1, l - 1, outOff, outLen);
+  return (r1, r2)
 }
 
 /-- `nest_grow_group(vis, ctx, hi, us, dsOff, dsLen, csOff, csLen, grpOff, grpLen)`: a frame's
@@ -727,29 +724,23 @@ def nestPosL : FunDecl :=
 /-! ## The member holes and the root frame's crest -/
 
 /-- `nestHoles.go`: the member holes, member by member — the former's type instantiated at the
-canonical parameters; aborts (the twin's `none`) when a member is not a stored former or its
-type does not bind the parameters. -/
+canonical parameters, recursively over the names; `(0, _, _)` (the twin's `none`) when a member
+is not a stored former or its type does not bind the parameters. -/
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:1103-1120 ConRon.Arena.nestHoles.go
 @[l_impl ConRon.Arena.nestHoles.go]
 def nestHolesGoL : FunDecl := lfn (vis, ctx, mm, off, l, outOff, outLen) locals
-    (j, n, found, q, kind, parOff, parLen, ok2, t, v) {
-  parOff := IW.u64[ctx + 7];
-  parLen := IW.u64[ctx + 8];
-  j := 0;
-  while j < l {
-    n := IW.u64[off + j];
-    (found, q) := call env_find(n, vis);
-    if found == 0 { return (0, 0, 0) };
-    kind := EREC.u64[q];
-    if kind != 3 { return (0, 0, 0) };
-    (ok2, t) := call inst_pis_with(parOff, parLen, EREC.u64[q + 4]);
-    if ok2 == 0 { return (0, 0, 0) };
-    v := call intern_fvar(IW.u64[ctx + 4] + mm, t);
-    (outOff, outLen) := call sl_snoc(outOff, outLen, v);
-    mm += 1;
-    j += 1
-  };
-  return (1, outOff, outLen)
+    (found, q, ok2, t, v, r0, r1, r2) {
+  if l == 0 { return (1, outOff, outLen) };
+  (found, q) := call env_find(IW.u64[off], vis);
+  if found == 0 { return (0, 0, 0) };
+  if EREC.u64[q] != 3 { return (0, 0, 0) };
+  (ok2, t) := call inst_pis_with(IW.u64[ctx + 7], IW.u64[ctx + 8], EREC.u64[q + 4]);
+  if ok2 == 0 { return (0, 0, 0) };
+  v := call intern_fvar(IW.u64[ctx + 4] + mm, t);
+  if 4294967296 <= v { abort };
+  (outOff, outLen) := call sl_snoc(outOff, outLen, v);
+  (r0, r1, r2) := call nest_holes_go(vis, ctx, mm + 1, off + 1, l - 1, outOff, outLen);
+  return (r0, r1, r2)
 }
 
 /-- `nest_holes(vis, ctx)`: the member holes (`go 0 ctx.names []`). -/
@@ -779,17 +770,14 @@ def nestRootCanonL : FunDecl := lfn (ctx, cv) locals (lo, ll, t, ok, e) {
 first `n` binder domains of `e`? -/
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:1131-1143 ConRon.Arena.piDomsOcc
 @[l_impl ConRon.Arena.piDomsOcc]
-def piDomsOccL : FunDecl := lfn (namesOff, namesLen, lo, hi, n, e) locals (tag, g, d, b, occ) {
-  while n > 0 {
-    tag := e >> 28;
-    if tag != 6 { return 0 };
-    (g, d, b, occ) := call e_view(e);
-    occ := call nest_occ(namesOff, namesLen, lo, hi, d);
-    if occ != 0 { return 1 };
-    e := b;
-    n -= 1
-  };
-  return 0
+def piDomsOccL : FunDecl := lfn (namesOff, namesLen, lo, hi, n, e) locals (g, d, b, z, occ, r) {
+  if n == 0 { return 0 };
+  if e >> 28 != 6 { return 0 };
+  (g, d, b, z) := call e_view(e);
+  occ := call nest_occ(namesOff, namesLen, lo, hi, d);
+  if occ != 0 { return 1 };
+  r := call pi_doms_occ(namesOff, namesLen, lo, hi, n - 1, b);
+  return r
 }
 
 /-- `nest_uniform_ok(ctx, cv)`: official's `check_uniform_ind_occs` at one constructor. -/
