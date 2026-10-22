@@ -194,4 +194,99 @@ theorem orderInW_twin : ∀ (n : Nat) (m m' : Mem) (t tt jj pos pos' : Word),
 
 end order
 
+
+/-! ## `vi_order_go` -/
+
+/-- The constructor count of type record `k` (at `to + 11 k`). -/
+def cntF (m : Mem) (to : Word) (k : Nat) : Nat := (wd m IFR (to.toNat + 11 * k + 4)).toNat
+
+/-- The position of type `i`'s first constructor in the block's order. -/
+def psum (m : Mem) (to : Word) (i : Nat) : Nat := ((List.range i).map (cntF m to)).sum
+
+theorem psum_succ (m : Mem) (to : Word) (i : Nat) : psum m to (i + 1) = psum m to i + cntF m to i := by
+  simp [psum, List.range_succ]
+
+theorem psum_mono (m : Mem) (to : Word) (i j : Nat) (h : i ≤ j) : psum m to i ≤ psum m to j := by
+  induction j with
+  | zero => have : i = 0 := by omega
+            subst this; exact Nat.le_refl _
+  | succ j ih =>
+    rw [psum_succ]
+    by_cases hij : i = j + 1
+    · subst hij; rw [psum_succ]; exact Nat.le_refl _
+    · have := ih (by omega); omega
+
+section orderGo
+variable {b : ByteArray} {m₀ : Mem} {a : AState} {st : StateD} (hR : ArenaR m₀ a)
+  (hD : StateDR m₀ st) {cts : List IndCtorRec} {to tn tyn fo cno co cn fuel np oo : Word}
+  (hCt : ListF (CtF b m₀) m₀ 10 co.toNat cts) (hcn : cn.toNat = cts.length)
+  (hCN : ∀ k, k < cts.length → (wd m₀ IFL (cno.toNat + k)).toNat < 2 ^ 32)
+  (hcnB : cno.toNat + cts.length ≤ oo.toNat) (hnp : np.toNat < 10 ^ 18)
+  (hco : co.toNat + 10 * cts.length < 2 ^ 63) (hsz : oo.toNat + cts.length ≤ (m₀.arr64 IFL).size)
+  (hsz63 : (m₀.arr64 IFL).size < 2 ^ 63)
+  (hto : to.toNat + 11 * tn.toNat < 2 ^ 63) (htyn : tyn.toNat + tn.toNat ≤ oo.toNat)
+  (hfo : ∀ p, p < psum m₀ to tn.toNat → fo.toNat + p < oo.toNat ∧ (wd m₀ IFL (fo.toNat + p)).toNat < 2 ^ 32)
+  (hps : psum m₀ to tn.toNat ≤ cts.length)
+include hR hD hCt hcn hCN hcnB hnp hco hsz hsz63 hto htyn hfo hps
+
+theorem orderGoW_twin : ∀ (n : Nat) (m m' : Mem) (ti pos : Word),
+    orderGoW n m to tn tyn fo cno co cn fuel np oo ti pos = some m' → IOnly oo.toNat m₀ m → ti ≤ tn →
+    pos.toNat = psum m₀ to ti.toNat →
+    IOnly oo.toNat m₀ m' ∧ (∀ i, i < oo.toNat + pos.toNat → wd m' IFL i = wd m IFL i) ∧
+    ∀ k, ti.toNat ≤ k → k < tn.toNat → ∀ c, c < cntF m₀ to k →
+      ∃ kk, wd m' IFL (oo.toNat + psum m₀ to k + c) = co + 10 * UInt64.ofNat kk ∧
+        CtorOK st a cts (islice m₀ cno.toNat cts.length) (decI (wd m₀ IFL (fo.toNat + psum m₀ to k + c)))
+          c (decI (wd m₀ IFL (tyn.toNat + k))) np.toNat fuel.toNat kk := by
+  intro n
+  induction n with
+  | zero => intro m m' ti pos h; simp [orderGoW] at h
+  | succ n ih =>
+    intro m m' ti pos h hI hti hpos
+    simp only [orderGoW] at h
+    split at h
+    · rename_i hle
+      cases h
+      have := UInt64.le_iff_toNat_le.mp hle
+      have := UInt64.le_iff_toNat_le.mp hti
+      exact ⟨hI, fun _ _ => rfl, fun k h1 h2 => by omega⟩
+    rename_i hlt
+    have hlt' := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hlt)
+    have hti1 := wsucc ti tn (UInt64.not_le.mp hlt)
+    have htt : rdW (m.arr64 IFL) (tyn + ti) = wd m₀ IFL (tyn.toNat + ti.toNat) := by
+      rw [wd_eq, widx2 _ _ (by omega), hI.2 _ (by omega)]
+    rw [htt] at h
+    have hmono := psum_mono m₀ to (ti.toNat + 1) tn.toNat (by omega)
+    rw [psum_succ] at hmono
+    cases hin : orderInW n m fo cno co cn fuel np oo (to + 11 * ti) (wd m₀ IFL (tyn.toNat + ti.toNat)) 0 pos with
+    | none => rw [hin, allocK_none] at h; cases h
+    | some q =>
+    obtain ⟨q, m₁⟩ := q
+    rw [hin, allocK_some] at h
+    have ht : (to + 11 * ti).toNat = to.toNat + 11 * ti.toNat := by
+      have := widx to 11 ti 0 (by simp; omega); simpa using this
+    have hc4 : wd m₀ IFR ((to + 11 * ti).toNat + 4) = wd m₀ IFR (to.toNat + 11 * ti.toNat + 4) := by rw [ht]
+    obtain ⟨x1, x2, x3, x4⟩ := orderInW_twin hR hD hCt hcn hCN hcnB hnp hco hsz hsz63 n m m₁
+      (to + 11 * ti) _ 0 pos q hin hI (by rw [ht]; omega) (by simp)
+      (by simp only [show (0 : Word).toNat = 0 from rfl, Nat.sub_zero]; rw [hc4]; unfold cntF at hmono; omega)
+      (fun c h1 h2 => by
+        simp only [show (0 : Word).toNat = 0 from rfl, Nat.sub_zero] at h2 ⊢
+        rw [hc4] at h2
+        have := hfo (pos.toNat + c) (by rw [hpos]; unfold cntF at hmono; omega)
+        rw [Nat.add_assoc]; exact this)
+    simp only [show (0 : Word).toNat = 0 from rfl, Nat.sub_zero] at x2
+    rw [hc4] at x2
+    obtain ⟨y1, y2, y3⟩ := ih m₁ m' (ti + 1) q h x1 (UInt64.le_iff_toNat_le.mpr (by rw [hti1]; exact hlt'))
+      (by rw [hti1, psum_succ, x2, hpos]; rfl)
+    rw [hti1] at y3
+    refine ⟨y1, fun i hi => by rw [y2 _ (by rw [x2]; omega), x3 _ hi], fun k h1 h2 c hc => ?_⟩
+    by_cases hk : k = ti.toNat
+    · subst hk
+      obtain ⟨kk, e1, e2⟩ := x4 c (Nat.zero_le _) (by rw [hc4]; exact hc)
+      simp only [show (0 : Word).toNat = 0 from rfl, Nat.sub_zero] at e1 e2
+      refine ⟨kk, ?_, by rw [← hpos]; exact e2⟩
+      rw [y2 _ (by rw [x2]; unfold cntF at hc; omega), ← hpos]; exact e1
+    · exact y3 k (by omega) h2 c hc
+
+end orderGo
+
 end L.Front.Ind
