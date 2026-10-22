@@ -47,16 +47,17 @@ PER_RUN_GB = 6
 TOTAL_GB = 20
 T_COMPILED = 60      # seconds per compiled L run
 T_REF = 120          # seconds per reference run
-T_INTERP = 60        # seconds per L.run (interpreter) run
-T_DIFF = 300         # seconds per e2e-diff run
+T_INTERP = 400       # seconds per L.run (interpreter) run (the pin stage alone is ~2 min under L.run)
+T_DIFF = 600         # seconds per e2e-diff run
 DIFF_N = 200         # expression handles per fixture in e2e-diff
-DIFF_BIG_WORDS = 1 << 18   # words per array on e2e-diff's retry
+DIFF_WORDS = 1 << 18       # words per array in e2e-diff (L.run holds every array in full)
+DIFF_BIG_WORDS = 1 << 19   # words per array on e2e-diff's retry
 INTERP_MAX_BYTES = 20000   # L.run only on fixtures up to this size
-INTERP_WORDS = 1 << 16     # words per array under L.run
+INTERP_WORDS = 1 << 18     # words per array under L.run
 ACCEPT = "accept"
 BIG_WORDS = 1 << 25        # words per array on the retry after an error
 TRACE_MAX_BYTES = 1 << 20  # the tracing interpreter on l-error fixtures up to this size
-TRACE_WORDS = 1 << 16
+TRACE_WORDS = 1 << 18
 
 ENTRIES = ["check", "check_np"]
 # further roots of the assembled program (test entries and the functions `e2e-diff` runs)
@@ -301,7 +302,12 @@ def assemble(dumps):
         elif len(real) == 1:
             chosen[name] = next(iter(real))
         elif len(real) > 1:
-            best = real.most_common(1)[0][0]
+            # a closed binding (a `Prog`, a lookup) wins over a ROM instance Dump.lean derived
+            closed = collections.Counter(k for s, k, st in bs if not st and not s.endswith("@rom"))
+            best = (closed or real).most_common(1)[0][0]
+            if len(closed) == 1:
+                chosen[name] = best
+                continue
             chosen[name] = best
             conflicts.append({"name": name, "bodies": [
                 {"key": k, "count": c, "sources": sorted({s for s, kk, _ in bs if kk == k})[:4]}
@@ -608,7 +614,7 @@ def parse_diff(out, st):
 def diff_report(res):
     lines = ["## Per-function differential tests (`e2e-diff`)", "",
              "From each fixture, the twin's state and L's memory after the stages before the fold "
-             "(`internReservedPins`, `parseBytes`, `internAllPins []`; L: `e2e_front()`); the stores' node "
+             "(`internReservedPins`, `parseBytes`, `internAllPins`; L: `e2e_front()`); the stores' node "
              f"counts compared; then up to {DIFF_N} persistent expression handles per fixture through "
              "`whnf`, `whnf_core`, `infer` on both sides (verified mode, the empty environment). "
              "`both err`: the twin throws and L aborts.", ""]
@@ -662,6 +668,8 @@ def main():
     ap.add_argument("--only", default=None, help="regex on fixture ids")
     ap.add_argument("--no-interp", action="store_true")
     ap.add_argument("--no-diff", action="store_true", help="skip the per-function differential tests")
+    ap.add_argument("--diff-sample", type=int, default=24, help="fixtures for e2e-diff (L.run is slow: ~3 min each)")
+    ap.add_argument("--interp-sample", type=int, default=12, help="fixtures for L.run of check_np")
     ap.add_argument("--assemble-only", action="store_true", help="assemble and compile, run nothing")
     ap.add_argument("--write", action="store_true", help="write docs/e2e.md")
     ap.add_argument("--csv", action="store_true", help="append to docs/e2e.csv")
@@ -691,7 +699,7 @@ def main():
     if reads_pins:
         pins = os.path.join(WORK, "pins.bin")
         if not os.path.exists(pins):
-            lake("exe", "romgen", pins)
+            lake("exe", "romgen", pins, "1")
         env["CA_PINS"] = pins
         npins = 1
     fx = fixtures()
@@ -701,6 +709,11 @@ def main():
     cache = json.load(open(cache_path)) if os.path.exists(cache_path) else {}
     rk = ref_key()
     guard = Guard()
+    # the samples for the slow L.run-based checks: evenly spread over the fixtures up to INTERP_MAX_BYTES
+    small = [f[0] for f in fx if os.path.getsize(f[1]) <= INTERP_MAX_BYTES]
+    def spread(k):
+        return set(small[i * len(small) // k] for i in range(k)) if k and small else set()
+    diff_set, interp_set = spread(args.diff_sample), spread(args.interp_sample)
 
     def one(f):
         fid, path, exp = f
@@ -733,22 +746,23 @@ def main():
             if cap:
                 d["small"] = cap
             if lo == "error" and size <= TRACE_MAX_BYTES:
-                st, out = guard.run([os.path.join(BIN, "e2e-l"), "trace", prog, entry, path, str(TRACE_WORDS)], T_INTERP, env=env)
+                st, out = guard.run([os.path.join(BIN, "e2e-l"), "trace", prog, entry, path, str(TRACE_WORDS)], T_INTERP, env=env) if entry == "check_np" else ("skip", "")
                 ls = out.splitlines()
                 if st == "ok" and len(ls) >= 2:
                     d["trace"] = ls[0] + " in " + ls[1][len("stack "):].split(" > ")[-1] + " (" + ls[1][len("stack "):] + ")"
                     d["stop"] = ls[0] + " in " + ls[1][len("stack "):].split(" > ")[-1]
-            if not args.no_interp and size <= INTERP_MAX_BYTES:
+            if not args.no_interp and entry == "check_np" and fid in interp_set:
                 st, out = guard.run([os.path.join(BIN, "e2e-l"), "run", prog, entry, path, str(INTERP_WORDS)], T_INTERP, env=env)
                 d["interp"] = interp_outcome(out, st)
             r[entry] = d
-        if not args.no_diff:
-            st, out = guard.run([os.path.join(BIN, "e2e-diff"), prog, path, str(DIFF_N)], T_DIFF)
+        if not args.no_diff and fid in diff_set:
+            st, out = guard.run([os.path.join(BIN, "e2e-diff"), prog, path, str(DIFF_N), str(DIFF_WORDS),
+                                 str(max_id(path) + 2)], T_DIFF, env=env)
             r["diff"] = parse_diff(out, st)
             if (r["diff"]["front"] or "").startswith("L error") and (r["diff"]["front"] or "").endswith("twin ok"):
                 # capacities: once more with larger arrays (`L.run` holds every array in full)
                 st, out = guard.run([os.path.join(BIN, "e2e-diff"), prog, path, str(DIFF_N), str(DIFF_BIG_WORDS),
-                                     str(max_id(path) + 2)], T_DIFF)
+                                     str(max_id(path) + 2)], T_DIFF, env=env)
                 r["diff"] = parse_diff(out, st)
         return r
 

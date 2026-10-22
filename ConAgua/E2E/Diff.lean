@@ -8,7 +8,7 @@ import ConAgua.Final.Statement
 `e2e-diff PROG FILE [N] [WORDS] [IDWORDS]`: from the same input, build the twin's state and L's memory the way the
 pipeline does, compare the stores, then run single functions on both sides and compare results.
 
-* **States.** Twin: `internReservedPins`, `parseBytes FILE`, `internAllPins []` from
+* **States.** Twin: `internReservedPins`, `parseBytes FILE`, `internAllPins P` from
   `AState.init EStore.empty` (the first stages of `e2e-ref --no-prelude`). L: `L.run` of
   `e2e_front()` (`ConAgua/E2E/Check.lean`: the same three stages) on `loadMem FILE …` (the stubs
   of `PROG` call `__missing_<name>`, so a missing callee is named).
@@ -122,12 +122,13 @@ def runFn (p : Prog) (m₁ : Mem) (a₁ : AState) (name : String) (args : Nat �
     | .error _, .error _ => t := { t with bothErr := t.bothErr + 1 }
   return t
 
-def twinFront (b : ByteArray) : AM (Except ConRon.Arena.CheckError Unit) := do
+def twinFront (b : ByteArray) (pins : List ConLeche.NatOpPinSet) :
+    AM (Except ConRon.Arena.CheckError Unit) := do
   internReservedPins
   match ← Frontend.parseBytes b with
   | .error (e, n) => return .error (Frontend.atLine e n)
   | .ok _ =>
-    let _ ← internAllPins []
+    let _ ← internAllPins pins
     return .ok ()
 
 def main (args : List String) : IO UInt32 := do
@@ -145,12 +146,16 @@ def main (args : List String) : IO UInt32 := do
     (f, { nparams := np, nlocals := np, body := .call [] ("__missing_" ++ f) [] })
   let b ← IO.FS.readBinFile file
   let fuel := 2 ^ 40
-  let m₀ := ConAgua.Final.loadMem b .empty []
+  -- the pin-data buffer (`$CA_PINS`, DESIGN.md lane `romload`) and the twin's list: its first variant
+  let (pb, pins) ← match ← IO.getEnv "CA_PINS" with
+    | some f => pure (← IO.FS.readBinFile f, ConLeche.natOpPinSets.take 1)
+    | none => pure (ByteArray.empty, [])
+  let m₀ := ConAgua.Final.loadMem b pb []
     ((List.range (nw + 1)).map fun a => if 64 ≤ a && a ≤ 66 then idWords else words)
   let (m₁, front) := match L.run p fuel "e2e_front" [] m₀ with
     | .ok (rs, m) => (m, s!"ok {rs.headD 0}")
     | .error e => (m₀, s!"error {repr e}")
-  let (a₁, tfront) := match (twinFront b).run (AState.init EStore.empty) with
+  let (a₁, tfront) := match (twinFront b pins).run (AState.init EStore.empty) with
     | .ok (.ok (), a) => (a, "ok")
     | .ok (.error e, a) => (a, s!"reject {e.message}")
     | .error e => (AState.init EStore.empty, s!"error {e.message}")
