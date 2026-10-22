@@ -250,7 +250,12 @@ def main():
     a = ap.parse_args()
     if not a.no_build:
         e2e.log("building")
-        e2e.lake("build", "ConAgua.Checker.Sources", "ConAgua.Checker.Entry", "ConAgua.Checker.Prelude", "ConAgua.E2E.Dump")
+        # the whole library: the dump only sees modules with an olean (`e2e.all_modules`), so a
+        # partial build silently drops lanes' modules (e.g. the frontend's, then `front_run` is
+        # missing: "`builtin_prelude` calls `pre_front_run`, but `front_run` is not a copied
+        # frontend function")
+        e2e.lake("build", "ConAgua", "ConAgua.Checker.Sources", "ConAgua.Checker.Entry",
+                 "ConAgua.Checker.Prelude", "ConAgua.E2E.Dump")
     e2e.log("dumping")
     mods = [m for m in e2e.all_modules() if not SKIP.match(m)]
     dumps, clashes = e2e.dump_sets(mods)
