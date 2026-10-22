@@ -8373,3 +8373,12 @@ for kinds `0‥3` sorry-free (axioms `propext`, `Classical.choice`, `Quot.sound`
   totals 789 proven / 165 sorry of 1352. The phase-2 `sorry`s left go through the core's stub specs
   (`isDefEqCore_spec`, `inferTypeCore_spec`, `ensureSortCore_spec`, `whnf_spec`; the knot) and
   `lvl_eq_c`'s `TwinOK` gap (lane `indproofs3`).
+
+### Lane `whnf4` closing
+* `KnotCallees` is gone: `knot_all` needs only `KnotAllProg p` (program lookups). Lane `whnf4` (with
+  helpers `whnf4-knot`, `-leaves`, `-rs`, `-d23`, `-ilp`) discharged `whnfCoreStep`, `whnfStep`,
+  `proofIrrel`, `reduceProjCore`, `unfold`, `constTy`, `projSmall`, `fireOk`, `recShape`,
+  `instLP`; lane `defeq2` `den`, `lvlsEqDen`, `capsNeverZero`, `recFireLevels`. D23 fixed (F15).
+  The census-tagged whnf statements still instantiate the stub bundles (`whnfCallees_stub`,
+  `coreCallees_stub`, `iotaCallees_stub`); re-stating them through `DefEqKnot`'s bundles is
+  the next step for the census (not done here).
