@@ -1,0 +1,212 @@
+import ConAgua.Arena.DeclLvlStage
+import ConAgua.Arena.CoreErec
+import ConAgua.Arena.KnotSlot
+import ConAgua.Arena.WhnfEntry
+import ConAgua.Arena.IndInstallSpec8
+
+/-!
+# The stage relation with the twin's invariants: `StageT` (lane `indproofs3`)
+
+The inductive stage runs on `StageR = CheckR ∧ IWOK`. The core functions it calls (`whnf`,
+`infer_type_core`, `is_def_eq_core`, `ensure_sort_core`, `lvl_eq_c`, …) are refined under `CoreS`,
+which adds the twin's invariants `TwinOK` (`DeclLvlStage.lean`: the readback caches, the name store's
+well-formedness, the stored levels' readbacks, the walk memos, three capacities) and a filled pin
+table. `StageT` is the stage relation with those parts, **by named components** (docs/proof-review.md
+§5): `stage` (what every stage lemma keeps), `twin` (what only the core's posts and a few frames
+keep), `flag` (the pin table's flag word, kept by every writer that leaves `PINS` alone).
+
+What is here:
+* `StageT.core`: `StageT` is `CoreS` (at the empty mode maps' existential).
+* The core's write set **from the program text** (`CoreStageClosed p`: no function the core reaches
+  writes `IW`, `EREC`, `PINS`, `CTL[129]`, `CTL[200]`; decided for the checker's program in
+  `ConAgua/Checker/IndCore.lean`), and `StageT.of_core`: a core run's `CoreAfter` is `StageT` after,
+  with the pools unchanged (`IWGrow`).
+* The entry points as `Sim` facts under `StageT` (the "whnf adapters"): `whnf_top`,
+  `infer_type_core`, `is_def_eq_core`, `ensure_sort_core`, from the knot (`KnotOK p n` at every `n`,
+  `knot_all`). They replace the `IndStubs` contracts of the same names wherever the caller carries
+  `StageT`.
+-/
+
+set_option experimental.vcgen true
+set_option linter.deprecated false
+
+open ConRon.Arena
+open Std.WP
+open scoped Lean.Order
+
+namespace L.Ind
+
+open L.Arena
+
+local notation "V" => ConLeche.CheckMode.verified
+
+/-- **The stage relation with the twin's invariants**, by named components. -/
+structure StageT (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem) (a : AState) :
+    Prop where
+  /-- The stage relation (`CheckR ∧ IWOK`). -/
+  stage : StageR dn vis fe m a
+  /-- The twin's invariants `CoreS` has beyond `CheckR`. -/
+  twin : TwinOK dn m a fe
+  /-- The pin table is filled (its flag word). -/
+  flag : pinW m 0 ≠ 0
+
+section
+variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+
+/-- `StageT` is `CoreS` at the eager bit `0`. -/
+theorem StageT.core {m : Mem} {a : AState} (h : StageT dn vis fe m a) : ∃ M, CoreS dn m a vis fe M 0 :=
+  StageR.coreS h.stage h.twin h.flag
+
+/-! ## The core's write set -/
+
+/-- The arrays a core function may write: every array but the pools and the pins. -/
+def coreStageA : List ArrId := (List.range 256).filter fun b => b ≠ EREC ∧ b ≠ IW ∧ b ≠ PINS
+
+/-- The `CTL` words a core function may write: all but the pools' tops. -/
+def coreStageC : List Word := ((List.range 256).filter fun x => x ≠ 129 ∧ x ≠ 200).map Nat.toUInt64
+
+/-- The entry points the stage calls, and everything the core reaches. -/
+def stageCoreFns : List FnName :=
+  ["whnf_top", "infer_type_core", "is_def_eq_core", "ensure_sort_core"] ++ coreFns
+
+/-- **The program hypothesis**: no function the stage's core entry points reach writes the pools,
+their tops or the pins (decided for the checker's program, `ConAgua/Checker/IndCore.lean`). -/
+def CoreStageClosed (p : Prog) : Prop := closedA p coreStageA coreStageC stageCoreFns = true
+
+theorem coreStageA_iw : IW ∉ coreStageA := by simp [coreStageA]
+theorem coreStageA_erec : EREC ∉ coreStageA := by simp [coreStageA]
+theorem coreStageA_pins : PINS ∉ coreStageA := by simp [coreStageA]
+theorem coreStageC_not {w : Word} (hw : w.toNat < 256) (h1 : w = 129 ∨ w = 200) : w ∉ coreStageC := by
+  simp only [coreStageC, List.mem_map, List.mem_filter, List.mem_range, not_exists, not_and]
+  intro x hx heq
+  obtain ⟨hx, hd⟩ := hx
+  have e : x = w.toNat := by rw [← heq]; simp [Nat.toUInt64]; omega
+  subst e
+  rcases h1 with rfl | rfl <;> simp at hd
+theorem coreStageC_129 : (129 : Word) ∉ coreStageC := coreStageC_not (by decide) (.inl rfl)
+theorem coreStageC_200 : (200 : Word) ∉ coreStageC := coreStageC_not (by decide) (.inr rfl)
+
+/-- **After a core call**: the core's own post (`CoreS` at the state after) and the write set give
+`StageT`, with the pools unchanged. -/
+theorem StageT.of_core {p : Prog} (hcl : CoreStageClosed p) {f : FnName} (hf : f ∈ stageCoreFns)
+    {n : Nat} {vs : List Word} {m m' : Mem} {r : List Word} {a a' : AState} {M : ModeMaps}
+    (h : callW p n f vs m = some (r, m')) (hS : StageT dn vis fe m a)
+    (hC : CoreS dn m' a' vis fe M 0) : StageT dn vis fe m' a' ∧ IWGrow m m' := by
+  obtain ⟨hfr, -⟩ := run_memFrame hcl hf (run_of_callW h)
+  have hI : m'.arr64 IW = m.arr64 IW := hfr.1 _ coreStageA_iw (by decide)
+  have hE : m'.arr64 EREC = m.arr64 EREC := hfr.1 _ coreStageA_erec (by decide)
+  have hP : m'.arr64 PINS = m.arr64 PINS := hfr.1 _ coreStageA_pins (by decide)
+  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hfr.2.1 _ coreStageC_129
+  have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hfr.2.1 _ coreStageC_200
+  obtain ⟨hCR, hT⟩ := hC.checkR
+  refine ⟨⟨⟨hCR, IWOK.frame hfr coreStageA_iw coreStageA_erec coreStageC_129 coreStageC_200
+    hS.stage.2⟩, hT, by simp only [pinW, hP]; exact hS.flag⟩, ?_⟩
+  exact ⟨by simp [iwTop, h200], by simp [erTop, h129], fun i _ => by rw [hI], fun i _ => by rw [hE]⟩
+
+/-- **A core entry point's refinement as a `Sim` under `StageT`**: a `CoreSpec` at every state in
+`CoreS` turns a run of the call into the twin's run, `StageT` after, the pools unchanged. -/
+theorem StageT.sim_core {α : Type} [Inhabited α] {p : Prog} (hcl : CoreStageClosed p) {f : FnName}
+    (hf : f ∈ stageCoreFns) {n : Nat} {args : List Word} {T : AM α} {dec : List Word → α}
+    {m : Mem} {a : AState} (hS : StageT dn vis fe m a)
+    (hspec : ∀ (s₀ : St) (M : ModeMaps), CoreS dn s₀.mem a vis fe M 0 →
+      CoreSpec p n f args T dec s₀ a dn vis fe M 0) :
+    Sim (callW p n f args m) T a (fun r x m' a' => StageT dn vis fe m' a' ∧ IWGrow m m' ∧
+      dec r = x ∧ ResH r) := by
+  intro r m' e
+  obtain ⟨M, hC⟩ := hS.core
+  obtain ⟨s', rfl, -, hok, ⟨M', hC', -, -⟩, hres, hrh⟩ :=
+    triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (hspec ⟨m, Locals.init []⟩ M hC) e
+  obtain ⟨hT', hg⟩ := StageT.of_core hcl hf e hS hC'
+  exact ⟨_, _, partsRunOfOk hok, hT', hg, hres.symm, hrh⟩
+
+end
+
+/-! ## The entry points -/
+
+section entry
+variable (p : Prog) (hp : KnotEntryProg p) (hw : p.lookup "whnf_top" = some whnfTopL)
+  (hK : ∀ n, KnotOK p n) (hcl : CoreStageClosed p)
+variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+
+include hw in
+theorem whnfTop_spec (n : Nat) (s₀ : St) (vis dep e : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "whnf_top" [vis, dep, e]
+    ⦃fun r s' => LocEq s' s₀ ∧ call1W p n "whnf" [0, vis, dep, e] s₀.mem = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hw]
+  simp only [callFn, whnfTopL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "whnf"] <;>
+    finish [call1W_some]
+
+theorem stage_fuel {n : Nat} (hn : n + 1 ≤ 2 ^ 62) : n ≤ checkFuel := by
+  unfold checkFuel; omega
+
+include hw hK in
+/-- `whnf_top(vis, dep, e)` refines `whnf .verified fe checkFuel dep e` under `CoreS`. -/
+theorem whnfTop_core (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (F : Nat) (hF : n ≤ F) (s₀ : St) (a₀ : AState)
+    (M : ModeMaps) (dep e : Word) (hS : CoreS dn s₀.mem a₀ vis fe M 0) (he : HW e) :
+    CoreSpec p (n + 1) "whnf_top" [vis, dep, e] (whnf V fe F dep.toNat (decE e)) decH
+      s₀ a₀ dn vis fe M 0 := by
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (whnfTop_spec p hw n s₀ vis dep e)
+  subst hs0
+  exact ⟨hloc, CoreSpec.of_call1W ((hK n).whnf F s a₀ dn vis fe M 0 0 dep e hF
+    (by omega) (slotPre_zero hS) he) (fun r r' h => by simp only [decH, h]) hW⟩
+
+/-- `H` and `HW` are one bound. -/
+theorem hw_of_h {e : Word} (he : H e) : HW e := he
+
+include hw hK hcl in
+/-- **`whnf_top` under `StageT`** (replaces `IndStubs.whnf_spec` for a caller carrying `StageT`). -/
+theorem whnfTop_simT (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState} (hS : StageT dn vis fe m a)
+    (dep e : Word) (he : H e) :
+    Sim (callW p n "whnf_top" [vis, dep, e] m) (whnf V fe checkFuel dep.toNat (decI e)) a
+      (fun r x m' a' => StageT dn vis fe m' a' ∧ IWGrow m m' ∧ decW0E m' r x) := by
+  rcases n with _ | k
+  · intro r m' h; rw [callW_zero] at h; cases h
+  refine Sim.mono (StageT.sim_core hcl (by simp [stageCoreFns]) hS
+    (fun s₀ M hC => whnfTop_core p hw hK k hn checkFuel (stage_fuel hn) s₀ a M dep e hC (hw_of_h he))) ?_
+  rintro r x m' a' ⟨hT, hg, hd, hr⟩
+  exact ⟨hT, hg, hr, by rw [← hd]; rfl⟩
+
+include hp hK in
+theorem inferTypeCore_core (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (F : Nat) (hF : n ≤ F) (s₀ : St)
+    (a₀ : AState) (M : ModeMaps) (dep e : Word) (hS : CoreS dn s₀.mem a₀ vis fe M 0) (he : HW e) :
+    CoreSpec p (n + 1) "infer_type_core" [vis, dep, e]
+      (inferTypeCore V fe F dep.toNat (decE e)) decH s₀ a₀ dn vis fe M 0 :=
+  inferTypeCore_refines p hp n (hK n).infer F s₀ a₀ dn vis fe M dep e hF (by omega) hS he
+
+include hp hK hcl in
+/-- **`infer_type_core` under `StageT`** (replaces `IndStubs.inferTypeCore_spec`). -/
+theorem inferTypeCore_simT (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
+    (hS : StageT dn vis fe m a) (dep e : Word) (he : H e) :
+    Sim (callW p n "infer_type_core" [vis, dep, e] m) (inferTypeCore V fe checkFuel dep.toNat (decI e)) a
+      (fun r x m' a' => StageT dn vis fe m' a' ∧ IWGrow m m' ∧ decW0E m' r x) := by
+  rcases n with _ | k
+  · intro r m' h; rw [callW_zero] at h; cases h
+  refine Sim.mono (StageT.sim_core hcl (by simp [stageCoreFns]) hS
+    (fun s₀ M hC => inferTypeCore_core p hp hK k hn checkFuel (stage_fuel hn) s₀ a M dep e hC (hw_of_h he))) ?_
+  rintro r x m' a' ⟨hT, hg, hd, hr⟩
+  exact ⟨hT, hg, hr, by rw [← hd]; rfl⟩
+
+include hp hK hcl in
+/-- **`is_def_eq_core` under `StageT`** (replaces `IndStubs.isDefEqCore_spec`). -/
+theorem isDefEqCore_simT (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
+    (hS : StageT dn vis fe m a) (dep x y : Word) (hx : H x) (hy : H y) :
+    Sim (callW p n "is_def_eq_core" [vis, dep, x, y] m)
+      (isDefEqCore V fe checkFuel dep.toNat (decI x) (decI y)) a
+      (fun r b m' a' => StageT dn vis fe m' a' ∧ IWGrow m m' ∧ decBool r = b) := by
+  rcases n with _ | k
+  · intro r m' h; rw [callW_zero] at h; cases h
+  refine Sim.mono (StageT.sim_core (dec := decBool) hcl (by simp [stageCoreFns]) hS
+    (fun s₀ M hC => ?_)) ?_
+  · have := isDefEqCore_refines p hp k (hK k).defeq checkFuel s₀ a dn vis fe M dep x y (stage_fuel hn)
+      (by omega) hC (hw_of_h hx) (hw_of_h hy)
+    exact this
+  rintro r b m' a' ⟨hT, hg, hd, -⟩
+  exact ⟨hT, hg, hd⟩
+
+end entry
+
+end L.Ind
