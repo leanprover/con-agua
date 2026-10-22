@@ -118,6 +118,7 @@ open L.Compiler
 #guard Prog.wfAuto L.Front.Unescape.escProg
 #guard Prog.wfAuto L.Examples.findProg
 #guard Prog.wfAuto L.Examples.scanProg
+#guard Prog.wfAuto L.Examples.bumpProg
 #guard Prog.wfAuto L.Scan.Key.keyProg
 #guard Prog.wfAuto L.Scan.Lit.litProg
 #guard Prog.wfAuto L.Scan.Str.strProg

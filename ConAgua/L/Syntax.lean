@@ -33,7 +33,11 @@ Declare one as a Lean constant, `abbrev HTOP : L.GVar := ⟨3⟩`, and use it in
 (read) and `HTOP := e` (write). Distinct globals need distinct numbers. -/
 structure GVar where
   id : Nat
-  deriving Repr, DecidableEq, Inhabited
+  deriving Repr, Inhabited
+
+/-- Equality of globals is equality of their numbers (reduces under `decide`). -/
+instance : DecidableEq GVar := fun a b =>
+  decidable_of_iff (a.id = b.id) (by cases a; cases b; simp)
 
 /-- Binary word operators. All wrap; shift counts are taken mod 64 (as on x64). `mulhi` is the
 high word of the unsigned 128-bit product (`mul` is the low word). -/
