@@ -65,7 +65,8 @@ globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.A
   "ConAgua.Arena.Promote", "ConAgua.Arena.PromoteProg", "ConAgua.Arena.PromoteMemo", "ConAgua.Arena.PromoteTest", "ConAgua.Arena.PromoteTwin", "ConAgua.Arena.PromoteFlag", "ConAgua.Arena.PromotePi", "ConAgua.Arena.PromotePiE", "ConAgua.Arena.PromoteN", "ConAgua.Arena.PromoteNRef", "ConAgua.Arena.PromoteL", "ConAgua.Arena.PromoteLRef", "ConAgua.Arena.PromoteLsRef", "ConAgua.Arena.PromoteE", "ConAgua.Arena.PromoteERef", "ConAgua.Arena.PromoteRec", "ConAgua.Arena.PromoteRecRef",
   "ConAgua.Front.Fields", "ConAgua.Front.FieldsLink",
   "ConAgua.Front.Apply", "ConAgua.Front.StateDR", "ConAgua.Front.Line", "ConAgua.Front.LineRefine",
-  "ConAgua.Front.ExprIface", "ConAgua.Front.Preserve", "ConAgua.Front.Driver", "ConAgua.Front.DriverRefine", "ConAgua.Front.DeclIface", "ConAgua.Front.FrontRun", "ConAgua.Front.NatDec", "ConAgua.Front.NatDecLink", "ConAgua.Front.Unescape", "ConAgua.Front.UnescapeLink", "ConAgua.Front.ApplyExpr", "ConAgua.Front.ApplyExprRefine", "ConAgua.Front.FieldsExpr", "ConAgua.Front.FieldsExprLink", "ConAgua.Front.ApplyDecl", "ConAgua.Front.ApplyDeclRefine", "ConAgua.Front.FieldsDecl", "ConAgua.Front.FieldsDeclSpec", "ConAgua.Front.FieldsDeclLink", "ConAgua.Front.IndFields", "ConAgua.Front.IndApply"]
+  "ConAgua.Front.ExprIface", "ConAgua.Front.Preserve", "ConAgua.Front.Driver", "ConAgua.Front.DriverRefine", "ConAgua.Front.DeclIface", "ConAgua.Front.FrontRun", "ConAgua.Front.NatDec", "ConAgua.Front.NatDecLink", "ConAgua.Front.Unescape", "ConAgua.Front.UnescapeLink", "ConAgua.Front.ApplyExpr", "ConAgua.Front.ApplyExprRefine", "ConAgua.Front.FieldsExpr", "ConAgua.Front.FieldsExprLink", "ConAgua.Front.ApplyDecl", "ConAgua.Front.ApplyDeclRefine", "ConAgua.Front.FieldsDecl", "ConAgua.Front.FieldsDeclSpec", "ConAgua.Front.FieldsDeclLink", "ConAgua.Front.IndFields", "ConAgua.Front.IndApply",
+  "ConAgua.Rom.PinStream"]
 
 # Vendored from con-leche and con-ron (proof/ dir) at the revisions in vendor/UPSTREAM, plus the
 # patch series vendor/patches/ (scripts/bump-con-ron.sh; vendor/README.md).
@@ -137,3 +138,8 @@ root = "ConAgua.Scan.Bench"
 name = "census"
 root = "ConAgua.Census.Main"
 supportInterpreter = true
+
+# Lane `romload`: the pin-data buffer generator (`ConAgua/Rom/Gen.lean`), `romgen OUT`.
+[[lean_exe]]
+name = "romgen"
+root = "ConAgua.Rom.Gen"

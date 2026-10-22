@@ -349,7 +349,7 @@ theorem encExprM_seen (e : ConLeche.Expr) :
   | bvar i => intro seen x hx; exact .inl (by simpa [encExprM] using hx)
   | sort u => intro seen x hx; exact .inl (by simpa [encExprM] using hx)
   | const n us => intro seen x hx; exact .inl (by simpa [encExprM] using hx)
-  | lit l => intro seen x hx; exact .inl (by simpa [encExprM] using hx)
+  | lit l => intro seen x hx; cases l <;> exact .inl (by simpa [encExprM] using hx)
   | fvar i ty ih =>
     intro seen x hx
     simp only [encExprM] at hx

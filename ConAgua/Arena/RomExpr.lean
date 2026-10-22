@@ -15,9 +15,10 @@ twin's memo holds at each point, and where the twin's memo hits it emits a **bac
 the count is `seen.length`, `RMEMO[k]` decodes to the twin's `m[seen[k]]`, and every key of `m` is
 in `seen`) is all the proof needs; the ROM's contents are never evaluated.
 
-Tags: `0` bvar (index), `1` sort (level), `2` const (name, levels), `4` fvar (index, type), `5`
-app, `6` lam, `7` forallE, `8` letE, `9` back reference, `10` proj (name, index, structure). A
-literal has no encoding (`exprFits`): no constant datum of the checker contains one.
+Tags: `0` bvar (index), `1` sort (level), `2` const (name, levels), `3` a `natVal` literal below
+`2^64` (its value), `4` fvar (index, type), `5` app, `6` lam, `7` forallE, `8` letE, `9` back
+reference, `10` proj (name, index, structure). A string literal (`11`) has no reader: no datum of the
+checker contains one.
 -/
 
 open ConRon.Arena
@@ -45,7 +46,8 @@ def encExprM (seen : List ConLeche.Expr) : ConLeche.Expr → List UInt8 × List 
   | .bvar i => (0 :: u64B i, seen)
   | .sort u => (1 :: encLevel u, seen)
   | .const n us => (2 :: (encName n ++ encLevels us), seen)
-  | .lit _ => ([3], seen)
+  | .lit (.natVal n) => (3 :: u64B n, seen)
+  | .lit (.strVal _) => ([11], seen)
   | e@(.fvar i ty) =>
     if e ∈ seen then (9 :: u64B (seen.idxOf e), seen) else
       let r := encExprM seen ty
