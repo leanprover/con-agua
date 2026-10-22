@@ -231,4 +231,57 @@ theorem bsealW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
       by simp only [StateT.run_bind, hrun3]; rfl, ⟨rfl, ?_⟩, hS2, hg3.trans hg2⟩
     rw [← hae, ← hsv, ← hip]; exact hd2
 
+/-! ## `block_shape_fin` -/
+
+/-- `finJP` after `isProp`. -/
+def finRest (nP : Nat) (cvTs : List IConstantVal) (nIdxs : List Nat) (lps : List NIdx)
+    (cs : List (IConstantVal × Nat × Nat)) (rs : List (IConstantVal × Nat × Nat × List IRecRule))
+    (cvR0 : IConstantVal) (s : LIdx) (isProp : Bool) : AM (Option BlockShape) := do
+  let ctors : List (IConstantVal × Nat) := cs.map fun c => (c.1, c.2.2)
+  let lvls ← paramLevels lps
+  let groups ← ConRon.Arena.blockGroups (cvTs.map (·.name)) lvls nP cvTs.length ctors
+  let members : List MemberShape := ((cvTs.zip nIdxs).zip groups).map fun a => ⟨a.1.1, a.1.2, a.2⟩
+  let recsL ← rs.mapM fun r => do
+    let tgt ← ConRon.Arena.recTargetOf (cvTs.map (·.name)) r.2.1 r.1.type
+    pure (⟨r.1, r.2.2.1, r.2.1, tgt, r.2.2.2.map (·.rhs)⟩ : RecShape)
+  let large? : Option NIdx := match cvR0.levelParams with
+    | [] => none
+    | elim :: relps => if relps == lps && !lps.contains elim then some elim else none
+  match large? with
+  | some elim => pure (some ⟨members, recsL, nP, elim, s, true, isProp⟩)
+  | none => do
+    let anon ← internNNode .anonymous
+    pure (some ⟨members, recsL, nP, anon, s, false, isProp⟩)
+
+theorem finJP_eq (nP : Nat) (cvTs : List IConstantVal) (nIdxs : List Nat) (lps : List NIdx)
+    (cs : List (IConstantVal × Nat × Nat)) (rs : List (IConstantVal × Nat × Nat × List IRecRule))
+    (cvR0 : IConstantVal) (s : LIdx) :
+    finJP nP cvTs nIdxs lps cs rs cvR0 s = (do
+      let z ← zeroLevel
+      let eq ← lvlEq? s z
+      finRest nP cvTs nIdxs lps cs rs cvR0 s (isPropOf eq)) := by
+  unfold finJP finRest; congr 1
+
+theorem partsMapM_length {α β : Type} (f : α → AM β) : ∀ (l : List α) (a a' : AState) (ys : List β),
+    (l.mapM f).run a = .ok (ys, a') → ys.length = l.length
+  | [], a, a', ys, h => by simp [StateT.run, pure, StateT.pure, Except.pure] at h; simp [← h.1]
+  | x :: l, a, a', ys, h => by
+    rw [List.mapM_cons] at h
+    simp only [StateT.run_bind] at h
+    obtain ⟨⟨y, a1⟩, -, h⟩ := partsExBind h
+    obtain ⟨⟨zs, a2⟩, hz, h⟩ := partsExBind h
+    have := partsMapM_length f l a1 a2 zs hz
+    simp [StateT.run, pure, StateT.pure, Except.pure] at h
+    rw [← h.1]; simp [this]
+
+theorem blockGroups_length {names : List NIdx} {lvls : LsIdx} {nP k : Nat} {cs : List (IConstantVal × Nat)}
+    {a a' : AState} {gss : List (List (IConstantVal × Nat))}
+    (h : (ConRon.Arena.blockGroups names lvls nP k cs).run a = .ok (gss, a')) : gss.length = k := by
+  unfold ConRon.Arena.blockGroups at h
+  split at h
+  · rename_i hk
+    simp [StateT.run, pure, StateT.pure, Except.pure] at h
+    rw [← h.1]; simp at hk; simp [hk]
+  · rw [partsMapM_length _ _ _ _ _ h]; simp
+
 end L.Ind
