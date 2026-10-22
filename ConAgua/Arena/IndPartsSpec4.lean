@@ -483,4 +483,192 @@ theorem checkShapeless_fails (fe : IFEnv) (blk : List IConstantInfo) (a : AState
   | error e => exact ⟨e, rfl⟩
   | ok q => exact ⟨_, rfl⟩
 
+
+/-! ## `block_shape_with_sort` -/
+
+/-- One word copy inside `IW`: `IW[d] := IW[s]`. -/
+def cpyIW (m : Mem) (d s : Word) : Mem := m.set64 IW d (rdW (m.arr64 IW) s)
+
+/-- The nine writes of `block_shape_with_sort` to the fresh record `q` (copying `p`'s words, with
+the sort `s` and the flag `f` in words 6 and 8). -/
+def wsWrites (m : Mem) (q p s f : Word) : Mem :=
+  let m4 := cpyIW m q p
+  let m5 := cpyIW m4 (q + 1) (p + 1)
+  let m6 := cpyIW m5 (q + 2) (p + 2)
+  let m7 := cpyIW m6 (q + 3) (p + 3)
+  let m8 := cpyIW m7 (q + 4) (p + 4)
+  let m9 := cpyIW m8 (q + 5) (p + 5)
+  let m10 := m9.set64 IW (q + 6) s
+  let m11 := cpyIW m10 (q + 7) (p + 7)
+  m11.set64 IW (q + 8) f
+
+mutual
+/-- **The model of `block_shape_with_sort`.** -/
+def wsW : Nat → Mem → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _ => none
+  | n + 1, m, p, s => wsK1 p s (stubM "pin_word" m [53])
+
+def wsK1 (p s : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r1, m1) => wsK2 p s (stubM "lvl_eq" m1 [s, r1.headD 0])
+
+def wsK2 (p s : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r2, m2) =>
+    match allocW m2 9 with
+    | none => none
+    | some (q, m3) => some ([q], wsWrites m3 q p s (if r2.headD 0 = 2 then 1 else 0))
+end
+
+section arms
+variable (n : Nat) (m m1 m2 : Mem) (p s : Word) (r1 r2 : List Word)
+theorem wsW_step : wsW (n + 1) m p s = wsK1 p s (stubM "pin_word" m [53]) := rfl
+theorem wsK1_some : wsK1 p s (some (r1, m1)) = wsK2 p s (stubM "lvl_eq" m1 [s, r1.headD 0]) := rfl
+theorem wsK2_some : wsK2 p s (some (r2, m2)) = (match allocW m2 9 with
+    | none => none
+    | some (q, m3) => some ([q], wsWrites m3 q p s (if r2.headD 0 = 2 then 1 else 0))) := rfl
+end arms
+
+grind_pattern [ind_grind] wsW_step => wsW (n + 1) m p s
+grind_pattern [ind_grind] wsK1_some => wsK1 p s (some (r1, m1))
+grind_pattern [ind_grind] wsK2_some => wsK2 p s (some (r2, m2))
+
+section spec
+variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+  (hp : p.lookup "block_shape_with_sort" = some blockShapeWithSort)
+include ha hp
+
+set_option maxHeartbeats 1600000 in
+theorem blockShapeWithSort_spec (n : Nat) (s₀ : St) (q s : Word) :
+    ⦃fun st => st = s₀⦄ invoke p (exec p n) "block_shape_with_sort" [q, s]
+    ⦃fun r s' => LocEq s' s₀ ∧ wsW n s₀.mem q s = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, blockShapeWithSort]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        stubM_spec p "pin_word" n, stubM_spec p "lvl_eq" n, iwAlloc_specW p ha n] <;>
+      finish (gen := 20) [wsWrites, cpyIW]
+
+end spec
+
+
+/-- Word `j` of the new record. -/
+def wsWd (m : Mem) (p s f : Word) (j : Nat) : Word :=
+  if j = 6 then s else if j = 8 then f else rdW (m.arr64 IW) (p + UInt64.ofNat j)
+
+section wsget
+variable (m : Mem) (q p s f : Word) (hpq : p.toNat + 9 ≤ q.toNat)
+  (hqs : q.toNat + 9 ≤ (m.arr64 IW).size) (hsz : (m.arr64 IW).size < 2 ^ 64)
+
+/-- After `k` writes the first `k` cells of the record hold their words. -/
+def WsP (k : Nat) (m' : Mem) : Prop :=
+  (m'.arr64 IW).size = (m.arr64 IW).size ∧
+  ∀ i, (m'.arr64 IW)[i]? =
+    if q.toNat ≤ i ∧ i < q.toNat + k then some (wsWd m p s f (i - q.toNat)) else (m.arr64 IW)[i]?
+
+include hpq hqs hsz in
+theorem wsP_step (k : Nat) (hk : k < 9) (m' : Mem) (hP : WsP m q p s f k m') (d v : Word)
+    (hd : d.toNat = q.toNat + k) (hv : v = wsWd m p s f k) :
+    WsP m q p s f (k + 1) (m'.set64 IW d v) := by
+  obtain ⟨hS, hG⟩ := hP
+  refine ⟨by rw [Mem.arr64_set64_same]; simpa using hS, fun i => ?_⟩
+  rw [set64IW_get, hG]
+  by_cases hi : i = q.toNat + k
+  · subst hi
+    have : (q.toNat + k < (m'.arr64 IW).size) := by omega
+    rw [if_pos ⟨by omega, this⟩, if_pos ⟨by omega, by omega⟩]
+    have : q.toNat + k - q.toNat = k := by omega
+    rw [this, hv]
+  · by_cases hi2 : q.toNat ≤ i ∧ i < q.toNat + k
+    · rw [if_neg (by omega), if_pos hi2, if_pos (by omega)]
+    · rw [if_neg (by omega), if_neg hi2, if_neg (by omega)]
+
+include hpq hqs hsz in
+theorem wsP_rd (k : Nat) (m' : Mem) (hP : WsP m q p s f k m') (j : Nat) (hj : j < 9) :
+    rdW (m'.arr64 IW) (p + UInt64.ofNat j) = rdW (m.arr64 IW) (p + UInt64.ofNat j) := by
+  obtain ⟨hS, hG⟩ := hP
+  have hx : (p + UInt64.ofNat j).toNat = p.toNat + j := by
+    rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)]
+    exact Nat.mod_eq_of_lt (by omega)
+  simp only [rdW, hx, hG, if_neg (show ¬ (q.toNat ≤ p.toNat + j ∧ p.toNat + j < q.toNat + k) by omega)]
+
+include hpq hqs hsz in
+theorem wsWrites_get : WsP m q p s f 9 (wsWrites m q p s f) := by
+  have h0 : WsP m q p s f 0 m := ⟨rfl, fun i => by rw [if_neg (by omega)]⟩
+  have qk : ∀ k : Nat, k < 9 → (q + UInt64.ofNat k).toNat = q.toNat + k := by
+    intro k hk
+    rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)]
+    exact Nat.mod_eq_of_lt (by omega)
+  have cpy : ∀ (k : Nat) (hk : k < 9) (hk6 : k ≠ 6) (hk8 : k ≠ 8) (m' : Mem) (d e : Word)
+      (hd : d = q + UInt64.ofNat k) (he : e = p + UInt64.ofNat k), WsP m q p s f k m' →
+      WsP m q p s f (k + 1) (cpyIW m' d e) := by
+    intro k hk hk6 hk8 m' d e hd he hP
+    subst hd he
+    exact wsP_step m q p s f hpq hqs hsz k hk m' hP (q + UInt64.ofNat k)
+      (rdW (m'.arr64 IW) (p + UInt64.ofNat k)) (qk k hk)
+      (by rw [wsP_rd m q p s f hpq hqs hsz k m' hP k hk]; simp [wsWd, hk6, hk8])
+  have lit : ∀ (k : Nat) (hk : k < 9) (v : Word) (hv : v = wsWd m p s f k) (m' : Mem) (d : Word)
+      (hd : d = q + UInt64.ofNat k), WsP m q p s f k m' → WsP m q p s f (k + 1) (m'.set64 IW d v) := by
+    intro k hk v hv m' d hd hP
+    subst hd
+    exact wsP_step m q p s f hpq hqs hsz k hk m' hP _ v (qk k hk) hv
+  have h1 := cpy 0 (by omega) (by omega) (by omega) m q p (by simp) (by simp) h0
+  have h2 := cpy 1 (by omega) (by omega) (by omega) _ (q + 1) (p + 1) (by simp) (by simp) h1
+  have h3 := cpy 2 (by omega) (by omega) (by omega) _ (q + 2) (p + 2) (by simp [UInt64.ofNat_add]) (by simp [UInt64.ofNat_add]) h2
+  have h4 := cpy 3 (by omega) (by omega) (by omega) _ (q + 3) (p + 3) (by simp [UInt64.ofNat_add]) (by simp [UInt64.ofNat_add]) h3
+  have h5 := cpy 4 (by omega) (by omega) (by omega) _ (q + 4) (p + 4) (by simp [UInt64.ofNat_add]) (by simp [UInt64.ofNat_add]) h4
+  have h6 := cpy 5 (by omega) (by omega) (by omega) _ (q + 5) (p + 5) (by simp [UInt64.ofNat_add]) (by simp [UInt64.ofNat_add]) h5
+  have h7 := lit 6 (by omega) s (by simp [wsWd]) _ (q + 6) (by simp [UInt64.ofNat_add]) h6
+  have h8 := cpy 7 (by omega) (by omega) (by omega) _ (q + 7) (p + 7) (by simp [UInt64.ofNat_add]) (by simp [UInt64.ofNat_add]) h7
+  have h9 := lit 8 (by omega) f (by simp [wsWd]) _ (q + 8) (by simp [UInt64.ofNat_add]) h8
+  exact h9
+
+end wsget
+
+
+theorem iwN_congr {m : Mem} {i j : Nat} (h : (m.arr64 IW)[i]? = (m.arr64 IW)[j]?) :
+    iwN m i = iwN m j := by simp only [iwN, nat?, iwA, h]
+
+theorem decAt_congr {m : Mem} {α : Type} (g : Nat → Nat → Option (List α)) {i j : Nat}
+    (h0 : (m.arr64 IW)[i]? = (m.arr64 IW)[j]?) (h1 : (m.arr64 IW)[i + 1]? = (m.arr64 IW)[j + 1]?) :
+    decAt m g i = decAt m g j := by
+  simp only [decAt, iwN_congr h0, iwN_congr h1]
+
+/-- **A record copied from `p` with a new sort and flag decodes as the shape `with` those**. -/
+theorem decBS_ws {m : Mem} {q p : Nat} {s f : Word} {bs : BlockShape}
+    (hp : decBS m p = some bs) (hs : s.toNat < 2 ^ 32)
+    (c0 : (m.arr64 IW)[q]? = (m.arr64 IW)[p]?) (c1 : (m.arr64 IW)[q + 1]? = (m.arr64 IW)[p + 1]?)
+    (c2 : (m.arr64 IW)[q + 2]? = (m.arr64 IW)[p + 2]?) (c3 : (m.arr64 IW)[q + 3]? = (m.arr64 IW)[p + 3]?)
+    (c4 : (m.arr64 IW)[q + 4]? = (m.arr64 IW)[p + 4]?) (c5 : (m.arr64 IW)[q + 5]? = (m.arr64 IW)[p + 5]?)
+    (c7 : (m.arr64 IW)[q + 7]? = (m.arr64 IW)[p + 7]?)
+    (c6 : (m.arr64 IW)[q + 6]? = some s) (c8 : (m.arr64 IW)[q + 8]? = some f) :
+    decBS m q = some { bs with resSort := decI s, isProp := f != 0 } := by
+  obtain ⟨h1, h2, h3, h4, -, h6, -⟩ := decBS_some hp
+  have e1 := decAt_congr (m := m) (decPL m (decMS m)) c0 c1
+  have e2 := decAt_congr (m := m) (decPL m (decRS m)) (i := q + 2) (j := p + 2) c2 c3
+  rw [decBS]
+  simp only [bind, pure]
+  rw [e1, h1]
+  simp only [Option.bind_some]
+  rw [e2, h2]
+  simp only [Option.bind_some]
+  rw [iwN_congr c4, h3]
+  simp only [Option.bind_some]
+  have e5 : iwH m (q + 5) = (iwH m (p + 5) : Option NIdx) := by simp only [iwH, hd?, iwA, c5]
+  rw [e5, h4]
+  simp only [Option.bind_some]
+  have e6 : iwH m (q + 6) = (some (decI s) : Option LIdx) := by
+    simp only [iwH, hd?, iwA, c6, hs]; simp; omega
+  rw [e6]
+  simp only [Option.bind_some]
+  have e7 : iwB m (q + 7) = iwB m (p + 7) := by simp only [iwB, bool?, iwA, c7]
+  rw [e7, h6]
+  simp only [Option.bind_some]
+  have e8 : iwB m (q + 8) = some (f != 0) := by simp only [iwB, bool?, iwA, c8]; rfl
+  rw [e8]
+  rfl
+
 end L.Ind
