@@ -27,7 +27,8 @@ def capsHead (m : Mem) (pp mi : Word) : List Word :=
   if rdW (m.arr64 IW) (pp + 1) ≤ mi then [0, 0, 0, 0]
   else
     let ms := rdW (m.arr64 IW) (rdW (m.arr64 IW) pp + mi)
-    [rdW (m.arr64 IW) (ms + 2), rdW (m.arr64 IW) (ms + 3), Cmp.evalW .eq (rdW (m.arr64 IW) (ms + 3)) 1, ms]
+    if rdW (m.arr64 IW) (ms + 3) = 0 then [0, 0, 0, ms]
+    else [rdW (m.arr64 IW) (ms + 2), rdW (m.arr64 IW) (ms + 3), Cmp.evalW .eq (rdW (m.arr64 IW) (ms + 3)) 1, ms]
 
 theorem capsHead_spec (p : Prog) (hp : p.lookup "block_caps_head" = some blockCapsHead) (n : Nat)
     (s₀ : St) (pp mi : Word) :

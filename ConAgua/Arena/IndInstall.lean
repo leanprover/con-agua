@@ -125,12 +125,14 @@ def blockCapsFin : FunDecl := lfn (p, coff, clen, w0, w1, w2, w3, w4, w6, z0, z1
 }
 
 /-- `block_caps_head(p, mi)`: member `mi`'s constructor slice `(coff, clen)` (`(0, 0)` past the
-members), whether it has exactly one constructor, and its record pointer. -/
+members; `(0, 0)` also at no constructor, whatever its offset word), whether it has exactly one
+constructor, and its record pointer. -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:47-92 ConRon.Arena.blockCapsAt
 @[l_impl ConRon.Arena.blockCapsAt]
 def blockCapsHead : FunDecl := lfn (p, mi) locals (ms) {
   if IW.u64[p + 1] <= mi { return (0, 0, 0, 0) };
   ms := IW.u64[IW.u64[p] + mi];
+  if IW.u64[ms + 3] == 0 { return (0, 0, 0, ms) };
   return (IW.u64[ms + 2], IW.u64[ms + 3], u64(IW.u64[ms + 3] == 1), ms)
 }
 
