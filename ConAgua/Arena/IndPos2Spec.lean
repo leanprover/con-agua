@@ -113,7 +113,7 @@ whose size is nowhere near `2 ^ 64`). -/
 theorem nestBlockOf_key {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {c : Word} {m : Mem}
     (found q : Word) (hfound : fe.find? (decI c) = decFound dn m found q)
     (hwf : rdW (m.arr64 EREC) q = (3 : Word) →
-      ∃ cv caps, decCI (m.arr64 EREC) dn q.toNat = some (.indInfo cv caps))
+      ∃ cv caps, decCI (erecP m) dn q.toNat = some (.indInfo cv caps))
     (hqb : q.toNat + 16 < 2 ^ 64) :
     hslice? (erA m)
         (if found = 0 then (0 : Word) else if rdW (m.arr64 EREC) q = 3 then
@@ -130,8 +130,9 @@ theorem nestBlockOf_key {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {c : W
     have hqlt : q.toNat < 2 ^ 64 := q.toNat_lt
     have hsize : UInt64.size = 2 ^ 64 := rfl
     by_cases hk3 : rdW (m.arr64 EREC) q = (3 : Word)
-    · obtain ⟨cv, caps, hci⟩ := hwf hk3
-      rw [hci] at hfound
+    · obtain ⟨cv, caps, hci0⟩ := hwf hk3
+      rw [hci0] at hfound
+      have hci := (erecP_ext m).decCI hci0
       rw [hfound]
       simp only [if_pos hk3]
       obtain ⟨cv', caps', he, hcaps⟩ := decCI_kind3 hci (decCI_indInfo_kind hci)
@@ -179,6 +180,7 @@ theorem nestBlockOf_key {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {c : W
       have hnind : ∀ cv caps, fe.find? (decI c) ≠ some (.indInfo cv caps) := by
         intro cv caps hfc
         rw [hfound] at hfc
+        have hfc := (erecP_ext m).decCI hfc
         exact hk3 (by
           have hk := decCI_indInfo_kind hfc
           have := erN_rdW hk hqlt

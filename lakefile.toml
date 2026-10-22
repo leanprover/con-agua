@@ -53,6 +53,7 @@ globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.A
   "ConAgua.Arena.WalkBenchLean",
   "ConAgua.Capstone", "ConAgua.Compiler.WFAll", "ConAgua.Compiler.WFAllBench",
   "ConAgua.Final.Twin", "ConAgua.Final.Statement",
+  "ConAgua.Arena.DeclBase", "ConAgua.Arena.DeclAndPin", "ConAgua.Arena.RomLevel",
   "ConAgua.Front.Fields", "ConAgua.Front.FieldsLink",
   "ConAgua.Front.Apply", "ConAgua.Front.StateDR", "ConAgua.Front.Line", "ConAgua.Front.LineRefine",
   "ConAgua.Front.ExprIface", "ConAgua.Front.Preserve", "ConAgua.Front.Driver", "ConAgua.Front.DriverRefine", "ConAgua.Front.DeclIface", "ConAgua.Front.FrontRun", "ConAgua.Front.NatDec", "ConAgua.Front.NatDecLink", "ConAgua.Front.Unescape", "ConAgua.Front.UnescapeLink", "ConAgua.Front.ApplyExpr", "ConAgua.Front.ApplyExprRefine", "ConAgua.Front.FieldsExpr", "ConAgua.Front.FieldsExprLink", "ConAgua.Front.ApplyDecl", "ConAgua.Front.ApplyDeclRefine", "ConAgua.Front.FieldsDecl", "ConAgua.Front.FieldsDeclSpec", "ConAgua.Front.FieldsDeclLink", "ConAgua.Front.IndFields", "ConAgua.Front.IndApply"]

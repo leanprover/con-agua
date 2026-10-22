@@ -252,7 +252,7 @@ theorem decI_eq_iff {k : IdxKind} (w : Word) (hw : w.toNat < 2 ^ 32) (n : Idx k)
 
 /-- What a found row decodes to: `(0, _)` is `none`, `(1, q)` the record at `q`. -/
 def decFound (dn : NIdx → Option ConLeche.Name) (m : Mem) (f q : Word) : Option IConstantInfo :=
-  if f = 0 then none else decCI (m.arr64 EREC) dn q.toNat
+  if f = 0 then none else decCI (erecP m) dn q.toNat
 
 section rel
 variable {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {fe : IFEnv}
@@ -261,7 +261,7 @@ variable {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {fe : IFEnv
 theorem EnvR.find?_eq (h : EnvR dn m vis fe) (w : Word) (hw : w.toNat < 2 ^ 32)
     (ht : rowTag w ≤ 2) :
     fe.find? (decI w) = if rowC m w = 0 then none
-      else if (rowC m w).toNat - 1 < vis.toNat then decCI (m.arr64 EREC) dn (rowP m w).toNat
+      else if (rowC m w).toNat - 1 < vis.toNat then decCI (erecP m) dn (rowP m w).toNat
       else none := by
   have hk := h.keys (decI w) (by rwa [decI_word_self w hw])
   have hv := h.vals (decI w) (by rwa [decI_word_self w hw])
@@ -380,7 +380,7 @@ def envPushMem (m : Mem) (vis q : Word) : Mem :=
 
 theorem EnvR.push {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {fe : IFEnv}
     (h : EnvR dn m vis fe) (q : Word) (ci : IConstantInfo)
-    (hci : decCI (m.arr64 EREC) dn q.toNat = some ci) (hv : vis + 1 ≠ 0)
+    (hci : decCI (erecP m) dn q.toNat = some ci) (hv : vis + 1 ≠ 0)
     (ht : rowTag (rdN (m.arr64 EREC) (q.toNat + 1)) ≤ 2)
     (hb : rowIx (rdN (m.arr64 EREC) (q.toNat + 1)) + 1 <
       (m.arr64 (rowArr (rdN (m.arr64 EREC) (q.toNat + 1)))).size)
@@ -388,7 +388,7 @@ theorem EnvR.push {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {f
     (hk1 : rdW (m.arr64 CTL) 128 + 1 ≠ 0) (hc : 128 < (m.arr64 CTL).size) :
     EnvR dn (envPushMem m vis q) (vis + 1) (fe.push ci) := by
   obtain ⟨w, hw1, hw2, hname⟩ := decCI_name hci
-  have hw : rdN (m.arr64 EREC) (q.toNat + 1) = w := by simp [rdN, hw1]
+  have hw : rdN (m.arr64 EREC) (q.toNat + 1) = w := by simp [rdN, erecP_get hw1]
   rw [hw] at ht hb
   have hra : rowArr w ≠ CTL := by simp only [rowArr, CTL, ArrId]; omega
   have hre : rowArr w ≠ ECON := by simp only [rowArr, ECON, ArrId]; omega
@@ -405,8 +405,12 @@ theorem EnvR.push {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {f
   have hP : ∀ w', rowTag w' ≤ 2 → rowP (envPushMem m vis q) w' = rowP (rowSet m w (vis + 1) q) w' := by
     intro w' h'; simp only [rowP, h', ite_true]
     rw [hA _ (by simp only [CTL, ArrId]; omega) (by simp only [ECON, ArrId]; omega)]
-  have hR : (envPushMem m vis q).arr64 EREC = m.arr64 EREC := by
-    rw [hA _ (by decide) (by decide), rowSet_arr _ _ _ _ _ (Ne.symm hrr)]
+  have hR : erecP (envPushMem m vis q) = erecP m := by
+    apply erecP_congr
+    · rw [hA _ (by decide) (by decide), rowSet_arr _ _ _ _ _ (Ne.symm hrr)]
+    · simp only [envPushMem, hw, Mem.arr64_set64_same, rdW_set!,
+        Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ ECON by decide), rowSet_arr _ _ _ _ _ (Ne.symm hra)]
+      simp
   have hW : ∀ n : NIdx, rowTag n.word.toUInt64 ≤ 2 →
       rowW (envPushMem m vis q) n.word.toUInt64 =
         if n.word.toUInt64 = w then some (vis.toNat, q) else rowW m n.word.toUInt64 := by
@@ -474,7 +478,7 @@ theorem EnvR.push {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {f
     have hk' : nat? ((m.arr64 ECON).set! (rdW (m.arr64 CTL) 128).toNat q)
         (rdW (m.arr64 CTL) 128).toNat = some q.toNat := by
       simp [nat?, Array.set!_eq_setIfInBounds, hk]
-    rw [mapM_congr' _ (fun c => do decCI (m.arr64 EREC) dn (← nat? (m.arr64 ECON) c))]
+    rw [mapM_congr' _ (fun c => do decCI (erecP m) dn (← nat? (m.arr64 ECON) c))]
     · simp only [Array.set!_eq_setIfInBounds] at hk'
       simp [hk', hci, envLen] at hcs ⊢; rw [hcs]; simp [IFEnv.push, Option.bind]
     · intro c hc'
@@ -504,11 +508,12 @@ theorem envPush_refines (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
     (hs : p.lookup "env_row_set" = some envRowSetL) (hp : p.lookup "env_push" = some envPushL)
     (n : Nat) (s₀ : St) {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} (vis q : Word)
     (ci : IConstantInfo) (hE : EnvR dn s₀.mem vis fe)
-    (hci : decCI (s₀.mem.arr64 EREC) dn q.toNat = some ci) :
+    (hci : decCI (erecP s₀.mem) dn q.toNat = some ci) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "env_push" [vis, q]
     ⦃fun r s' => LocEq s' s₀ ∧ EnvR dn s'.mem (r.headD 0) (fe.push ci); ⊤⦄ := by
   obtain ⟨w, hw1, hw2, -⟩ := decCI_name hci
+  have hw1 := erecP_get hw1
   have hw : rdN (s₀.mem.arr64 EREC) (q.toNat + 1) = w := by simp [rdN, hw1]
   have key := fun (hv : vis + 1 ≠ 0) ht hb hk hk1 hc =>
     EnvR.push hE q ci hci hv ht hb hk hk1 hc
@@ -546,11 +551,13 @@ theorem EnvR.setRow {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} 
     (idx' : Std.HashMap NIdx (Nat × IConstantInfo)) (R : Option (Nat × IConstantInfo))
     (hidx : ∀ n : NIdx, idx'[n]? = if n.word.toUInt64 = w then R else fe.idx[n]?)
     (hR1 : R.map Prod.fst = if c = 0 then none else some (c.toNat - 1))
-    (hR2 : c ≠ 0 → R.map Prod.snd = decCI (m.arr64 EREC) dn q.toNat) :
+    (hR2 : c ≠ 0 → R.map Prod.snd = decCI (erecP m) dn q.toNat) :
     EnvR dn (rowSet m w c q) vis ⟨fe.env, idx', fe.visibleBelow⟩ := by
   have hrr : rowArr w ≠ EREC := by simp only [rowArr, EREC, ArrId]; omega
   have hre : rowArr w ≠ ECON := by simp only [rowArr, ECON, ArrId]; omega
   have hra : rowArr w ≠ CTL := by simp only [rowArr, CTL, ArrId]; omega
+  have hE' : erecP (rowSet m w c q) = erecP m :=
+    erecP_congr (rowSet_arr _ _ _ _ _ (Ne.symm hrr)) (by rw [rowSet_arr _ _ _ _ _ (Ne.symm hra)])
   refine ⟨h.vis, ?_, ?_, ?_⟩
   · intro n hn
     have e1 := rowC_rowSet (c := c) (p := q) (w' := n.word.toUInt64) hw2 ht hb hn
@@ -564,14 +571,14 @@ theorem EnvR.setRow {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} 
   · intro n hn h0
     have e1 := rowC_rowSet (c := c) (p := q) (w' := n.word.toUInt64) hw2 ht hb hn
     have e2 := rowP_rowSet (c := c) (p := q) (w' := n.word.toUInt64) hw2 ht hb hn
-    simp only [hidx, rowSet_arr _ _ _ _ _ (Ne.symm hrr)]
+    simp only [hidx, hE']
     by_cases e : n.word.toUInt64 = w
     · simp only [e, ite_true] at e1 e2 h0 ⊢
       rw [e2]; exact hR2 (by rwa [e1] at h0)
     · simp only [e, ite_false] at e1 e2 h0 ⊢
       rw [e2]; exact h.vals n hn (by rwa [e1] at h0)
   · rw [← h.consts]
-    simp only [envConsts, envLen, rowSet_arr _ _ _ _ _ (Ne.symm hrr),
+    simp only [envConsts, envLen, hE',
       rowSet_arr _ _ _ _ _ (Ne.symm hre), rowSet_arr _ _ _ _ _ (Ne.symm hra)]
 
 /-- `env_erase(w)`: drop the row of name `w` (one step of `eraseInstalled`). -/
@@ -633,7 +640,11 @@ theorem EnvR.popLen {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word}
     · rw [hframe _ (by simp only [CTL, ArrId]; omega)]
     · rfl
   have hW : ∀ w, rowW (popLenMem m) w = rowW m w := fun w => by simp only [rowW, hC, hP]
-  have hR : (popLenMem m).arr64 EREC = m.arr64 EREC := hframe _ (by decide)
+  have hR : erecP (popLenMem m) = erecP m := by
+    apply erecP_congr (hframe _ (by decide))
+    simp only [popLenMem]; split
+    · rfl
+    · rw [Mem.arr64_set64_same, rdW_set!]; simp
   have hN : (popLenMem m).arr64 ECON = m.arr64 ECON := hframe _ (by decide)
   refine ⟨?_, fun n hn => (hW _).symm ▸ h.keys n hn, fun n hn h0 => ?_, ?_⟩
   · simp only [popVis, hv]; split
@@ -677,7 +688,7 @@ theorem EnvR.popLen {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word}
 the counter `c - 1` and the record at `q`. -/
 def prevD (dn : NIdx → Option ConLeche.Name) (m : Mem) (c q : Word) :
     Option (Option (Nat × IConstantInfo)) :=
-  if c = 0 then some none else (decCI (m.arr64 EREC) dn q.toNat).map fun ci => some (c.toNat - 1, ci)
+  if c = 0 then some none else (decCI (erecP m) dn q.toNat).map fun ci => some (c.toNat - 1, ci)
 
 /-- `env_pop_temp(vis, w, c, q)`: undo a temporary push of name `w`: its row put back to
 `(c, q)` (`IFEnv.popTemp`'s `prev`), the newest constant dropped, the view lowered. -/
@@ -723,13 +734,13 @@ theorem envPopTemp_refines (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
     simp only [prevD] at hprev; split at hprev
     · simp_all
     · rename_i h0
-      cases e : decCI (s₀.mem.arr64 EREC) dn q.toNat with
+      cases e : decCI (erecP s₀.mem) dn q.toNat with
       | none => simp [e] at hprev
       | some ci =>
         simp only [e, Option.map_some, Option.some.injEq] at hprev; subst hprev; simp [h0]
-  have hR2 : c ≠ 0 → prev.map Prod.snd = decCI (s₀.mem.arr64 EREC) dn q.toNat := by
+  have hR2 : c ≠ 0 → prev.map Prod.snd = decCI (erecP s₀.mem) dn q.toNat := by
     intro h0; simp only [prevD, h0, ite_false] at hprev
-    cases e : decCI (s₀.mem.arr64 EREC) dn q.toNat with
+    cases e : decCI (erecP s₀.mem) dn q.toNat with
     | none => simp [e] at hprev
     | some ci => simp only [e, Option.map_some, Option.some.injEq] at hprev; subst hprev; simp
   have key := fun ht hb hc =>
