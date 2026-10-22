@@ -573,18 +573,18 @@ theorem pciRec_spec (f q : Word) :
 /-! ## `promote_ci`, `promote_ci_list` -/
 
 /-- The result of a `pci_*` arm as `promote_ci`'s answer. -/
-def armK (p : Prog) (n : Nat) (f q : Word) (nm : FnName) (m : Mem) : Option (Word × Mem) :=
+def promoteArmK (p : Prog) (n : Nat) (f q : Word) (nm : FnName) (m : Mem) : Option (Word × Mem) :=
   (callW p n nm [f, q] m).bind fun d => some (g0 d.1, d.2)
 
 /-- **The model of `promote_ci(f, q)`.** -/
 def ciW (p : Prog) (n : Nat) (m : Mem) (f q : Word) : Option (Word × Mem) :=
   (callW p n "erec_rd1" [q] m).bind fun r =>
-  if g0 r.1 = 0 ∨ g0 r.1 = 2 then armK p n f q "pci_plain" r.2
-  else if g0 r.1 = 1 then armK p n f q "pci_defn" r.2
-  else if g0 r.1 = 3 then armK p n f q "pci_ind" r.2
-  else if g0 r.1 = 4 then armK p n f q "pci_ctor" r.2
-  else if g0 r.1 = 5 then armK p n f q "pci_rec" r.2
-  else if g0 r.1 = 6 then armK p n f q "promote_proj_table" r.2
+  if g0 r.1 = 0 ∨ g0 r.1 = 2 then promoteArmK p n f q "pci_plain" r.2
+  else if g0 r.1 = 1 then promoteArmK p n f q "pci_defn" r.2
+  else if g0 r.1 = 3 then promoteArmK p n f q "pci_ind" r.2
+  else if g0 r.1 = 4 then promoteArmK p n f q "pci_ctor" r.2
+  else if g0 r.1 = 5 then promoteArmK p n f q "pci_rec" r.2
+  else if g0 r.1 = 6 then promoteArmK p n f q "promote_proj_table" r.2
   else none
 
 theorem promoteCI_spec (f q : Word) :
@@ -597,7 +597,7 @@ theorem promoteCI_spec (f q : Word) :
       callW_spec p n "erec_rd1", callW_spec p n "pci_plain", callW_spec p n "pci_defn",
       callW_spec p n "pci_ind", callW_spec p n "pci_ctor", callW_spec p n "pci_rec",
       callW_spec p n "promote_proj_table"] <;>
-    finish (gen := 20) [ciW, armK, Option.bind_some, Option.bind_none]
+    finish (gen := 20) [ciW, promoteArmK, Option.bind_some, Option.bind_none]
 
 /-- **The model of `promote_ci_list(f, j, k)`.** -/
 def ciListW (p : Prog) (n : Nat) (m : Mem) (f j k : Word) : Option Mem :=
