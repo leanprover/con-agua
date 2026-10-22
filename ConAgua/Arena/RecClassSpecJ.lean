@@ -56,39 +56,39 @@ theorem rec2SimMotVar {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
 
 /-! ## `class_gen_rec_ty_tail` -/
 
-def rtK7 : Option (List Word × Mem) → Option (List Word × Mem)
+def grtK7 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r7, m7) => some ([1, r7.headD 0], m7)
 
-def rtK6 (n : Nat) (b2o b2l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def grtK6 (n : Nat) (b2o b2l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r6, m6) => rtK7 (closeW n m6 b2o b2l 0 (r6.headD 0))
+  | some (r6, m6) => grtK7 (closeW n m6 b2o b2l 0 (r6.headD 0))
 
-def rtK5 (n : Nat) (b2o b2l mv : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def grtK5 (n : Nat) (b2o b2l mv : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r5, m5) => rtK6 n b2o b2l (stubM "mk_app_n_f" m5 [mv, r5.headD 0, r5.tail.headD 0])
+  | some (r5, m5) => grtK6 n b2o b2l (stubM "mk_app_n_f" m5 [mv, r5.headD 0, r5.tail.headD 0])
 
-def rtK4 (n : Nat) (fo fl t b2o b2l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def grtK4 (n : Nat) (fo fl t b2o b2l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r4, m4) => rtK5 n b2o b2l (r4.headD 0) (snocW n m4 fo fl t)
+  | some (r4, m4) => grtK5 n b2o b2l (r4.headD 0) (snocW n m4 fo fl t)
 
-def rtK3 (n : Nat) (g c fo fl t : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def grtK3 (n : Nat) (g c fo fl t : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r3, m3) => rtK4 n fo fl t (r3.headD 0) (r3.tail.headD 0) (rec2MotVarF n m3 g c)
+  | some (r3, m3) => grtK4 n fo fl t (r3.headD 0) (r3.tail.headD 0) (rec2MotVarF n m3 g c)
 
-def rtK2 (n : Nat) (g c fo fl maj t : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def grtK2 (n : Nat) (g c fo fl maj t : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r2, m2) => rtK3 n g c fo fl t (snocW n m2 (r2.headD 0) (r2.tail.headD 0) maj)
+  | some (r2, m2) => grtK3 n g c fo fl t (snocW n m2 (r2.headD 0) (r2.tail.headD 0) maj)
 
-def rtK1 (n : Nat) (g c rP fo fl maj t : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def grtK1 (n : Nat) (g c rP fo fl maj t : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r1, m1) =>
-    rtK2 n g c fo fl maj t (appendW n m1 (rdW (m1.arr64 IW) (g + 12)) rP (r1.headD 0) (r1.tail.headD 0))
+    grtK2 n g c fo fl maj t (appendW n m1 (rdW (m1.arr64 IW) (g + 12)) rP (r1.headD 0) (r1.tail.headD 0))
 
 /-- **The model of `class_gen_rec_ty_tail`.** -/
-def rtW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
+def grtW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _, _ => none
-  | n + 1, m, g, c, rP, fo, fl, maj, t => rtK1 n g c rP fo fl maj t (stubM "fvar_type_ds" m [fo, fl])
+  | n + 1, m, g, c, rP, fo, fl, maj, t => grtK1 n g c rP fo fl maj t (stubM "fvar_type_ds" m [fo, fl])
 
 def gtK2 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -96,7 +96,7 @@ def gtK2 : Option (List Word × Mem) → Option (List Word × Mem)
 
 def gtK3 (n : Nat) (g c rP fo fl maj : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (t, m2) => if 4294967296 ≤ t then none else gtK2 (rtW n m2 g c rP fo fl maj t)
+  | some (t, m2) => if 4294967296 ≤ t then none else gtK2 (grtW n m2 g c rP fo fl maj t)
 
 def gtK1 (n : Nat) (g c rP : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -114,18 +114,18 @@ def gtW : Nat → Mem → Word → Word → Option (List Word × Mem)
 section arms
 variable (n : Nat) (m m1 m2 m3 m4 m5 m6 m7 : Mem) (g c rP fo fl maj t b2o b2l mv : Word)
   (r r1 r2 r3 r4 r5 r6 r7 : List Word)
-theorem rtW_eq : rtW (n + 1) m g c rP fo fl maj t = rtK1 n g c rP fo fl maj t (stubM "fvar_type_ds" m [fo, fl]) := rfl
-theorem rtK1_some : rtK1 n g c rP fo fl maj t (some (r1, m1)) =
-    rtK2 n g c fo fl maj t (appendW n m1 (rdW (m1.arr64 IW) (g + 12)) rP (r1.headD 0) (r1.tail.headD 0)) := rfl
-theorem rtK2_some : rtK2 n g c fo fl maj t (some (r2, m2)) =
-    rtK3 n g c fo fl t (snocW n m2 (r2.headD 0) (r2.tail.headD 0) maj) := rfl
-theorem rtK3_some : rtK3 n g c fo fl t (some (r3, m3)) =
-    rtK4 n fo fl t (r3.headD 0) (r3.tail.headD 0) (rec2MotVarF n m3 g c) := rfl
-theorem rtK4_some : rtK4 n fo fl t b2o b2l (some (r4, m4)) = rtK5 n b2o b2l (r4.headD 0) (snocW n m4 fo fl t) := rfl
-theorem rtK5_some : rtK5 n b2o b2l mv (some (r5, m5)) =
-    rtK6 n b2o b2l (stubM "mk_app_n_f" m5 [mv, r5.headD 0, r5.tail.headD 0]) := rfl
-theorem rtK6_some : rtK6 n b2o b2l (some (r6, m6)) = rtK7 (closeW n m6 b2o b2l 0 (r6.headD 0)) := rfl
-theorem rtK7_some : rtK7 (some (r7, m7)) = some ([1, r7.headD 0], m7) := rfl
+theorem grtW_eq : grtW (n + 1) m g c rP fo fl maj t = grtK1 n g c rP fo fl maj t (stubM "fvar_type_ds" m [fo, fl]) := rfl
+theorem grtK1_some : grtK1 n g c rP fo fl maj t (some (r1, m1)) =
+    grtK2 n g c fo fl maj t (appendW n m1 (rdW (m1.arr64 IW) (g + 12)) rP (r1.headD 0) (r1.tail.headD 0)) := rfl
+theorem grtK2_some : grtK2 n g c fo fl maj t (some (r2, m2)) =
+    grtK3 n g c fo fl t (snocW n m2 (r2.headD 0) (r2.tail.headD 0) maj) := rfl
+theorem grtK3_some : grtK3 n g c fo fl t (some (r3, m3)) =
+    grtK4 n fo fl t (r3.headD 0) (r3.tail.headD 0) (rec2MotVarF n m3 g c) := rfl
+theorem grtK4_some : grtK4 n fo fl t b2o b2l (some (r4, m4)) = grtK5 n b2o b2l (r4.headD 0) (snocW n m4 fo fl t) := rfl
+theorem grtK5_some : grtK5 n b2o b2l mv (some (r5, m5)) =
+    grtK6 n b2o b2l (stubM "mk_app_n_f" m5 [mv, r5.headD 0, r5.tail.headD 0]) := rfl
+theorem grtK6_some : grtK6 n b2o b2l (some (r6, m6)) = grtK7 (closeW n m6 b2o b2l 0 (r6.headD 0)) := rfl
+theorem grtK7_some : grtK7 (some (r7, m7)) = some ([1, r7.headD 0], m7) := rfl
 theorem gtW_eq : gtW (n + 1) m g c =
     gtK1 n g c (rdW (m.arr64 IW) (g + 13)) (mjW n m g c (rdW (m.arr64 IW) (g + 13))) := rfl
 theorem gtK2_some : gtK2 (some (r, m)) = some ([r.headD 0, r.tail.headD 0], m) := rfl
@@ -140,18 +140,18 @@ theorem gtK1_ok (h : r1.headD 0 ≠ 0) (h2 : ¬ rP + r1.tail.tail.headD 0 < rP) 
 theorem gtK3_big (h : 4294967296 ≤ t) : gtK3 n g c rP fo fl maj (some (t, m2)) = none := by
   rw [gtK3, if_pos h]
 theorem gtK3_ok (h : ¬ 4294967296 ≤ t) : gtK3 n g c rP fo fl maj (some (t, m2)) =
-    gtK2 (rtW n m2 g c rP fo fl maj t) := by
+    gtK2 (grtW n m2 g c rP fo fl maj t) := by
   rw [gtK3, if_neg h]
 end arms
 
-grind_pattern [ind_grind] rtW_eq => rtW (n + 1) m g c rP fo fl maj t
-grind_pattern [ind_grind] rtK1_some => rtK1 n g c rP fo fl maj t (some (r1, m1))
-grind_pattern [ind_grind] rtK2_some => rtK2 n g c fo fl maj t (some (r2, m2))
-grind_pattern [ind_grind] rtK3_some => rtK3 n g c fo fl t (some (r3, m3))
-grind_pattern [ind_grind] rtK4_some => rtK4 n fo fl t b2o b2l (some (r4, m4))
-grind_pattern [ind_grind] rtK5_some => rtK5 n b2o b2l mv (some (r5, m5))
-grind_pattern [ind_grind] rtK6_some => rtK6 n b2o b2l (some (r6, m6))
-grind_pattern [ind_grind] rtK7_some => rtK7 (some (r7, m7))
+grind_pattern [ind_grind] grtW_eq => grtW (n + 1) m g c rP fo fl maj t
+grind_pattern [ind_grind] grtK1_some => grtK1 n g c rP fo fl maj t (some (r1, m1))
+grind_pattern [ind_grind] grtK2_some => grtK2 n g c fo fl maj t (some (r2, m2))
+grind_pattern [ind_grind] grtK3_some => grtK3 n g c fo fl t (some (r3, m3))
+grind_pattern [ind_grind] grtK4_some => grtK4 n fo fl t b2o b2l (some (r4, m4))
+grind_pattern [ind_grind] grtK5_some => grtK5 n b2o b2l mv (some (r5, m5))
+grind_pattern [ind_grind] grtK6_some => grtK6 n b2o b2l (some (r6, m6))
+grind_pattern [ind_grind] grtK7_some => grtK7 (some (r7, m7))
 grind_pattern [ind_grind] gtW_eq => gtW (n + 1) m g c
 grind_pattern [ind_grind] gtK2_some => gtK2 (some (r, m))
 grind_pattern [ind_grind] gtK1_fail => gtK1 n g c rP (some (r1, m1))
@@ -174,7 +174,7 @@ structure GtProg (p : Prog) extends MtProg p : Prop where
 
 theorem classGenRecTyTail_spec (p : Prog) (h : GtProg p) (n : Nat) (s₀ : St) (g c rP fo fl maj t : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_rec_ty_tail" [g, c, rP, fo, fl, maj, t]
-    ⦃fun r s' => LocEq s' s₀ ∧ rtW n s₀.mem g c rP fo fl maj t = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ grtW n s₀.mem g c rP fo fl maj t = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.rtt]
   simp only [callFn, classGenRecTyTail]
   cases n with
@@ -222,63 +222,63 @@ theorem rec2RecTy_eq (G : ClassGen) (c : Nat) : ConRon.Arena.classGenRecTy G c =
 section sims
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 
-theorem rtW_sim (n : Nat) (m : Mem) (a : AState) (g c rP fo fl maj t : Word) (G : ClassGen)
+theorem grtW_sim (n : Nat) (m : Mem) (a : AState) (g c rP fo fl maj t : Word) (G : ClassGen)
     (ifs : List EIdx) (po : Nat) (hS : StageR dn vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G)
     (hns : G.nP + G.slots.length < 2 ^ 64)
     (hpo : iwN m (g.toNat + 12) = some po)
     (hpre : DecB (fun m => (decHL m po rP.toNat : Option (List EIdx))) m G.pre)
     (hifs : decHL m fo.toNat fl.toNat = some ifs) (hfb : fo.toNat + fl.toNat ≤ iwTop m)
     (hmaj : H maj) (ht : H t) :
-    RSim (rtW n m g c rP fo fl maj t) (rec2RecTyTail G c.toNat ifs (decI maj) (decI t)) a
+    RSim (grtW n m g c rP fo fl maj t) (rec2RecTyTail G c.toNat ifs (decI maj) (decI t)) a
       (KP dn vis fe m decOE) := by
   cases n with
   | zero => exact RSim.none
   | succ n =>
-  rw [rtW_eq]
+  rw [grtW_eq]
   unfold rec2RecTyTail
   rw [rec2MapM_genBinder]
   obtain ⟨-, hgt, -⟩ := rec2CG_parts hG
-  refine RSim.bind (K := rtK1 n g c rP fo fl maj t) rfl ((fvarTypeDs_spec dn vis fe fo fl ifs).sim ⟨hS, hifs⟩) ?_
+  refine RSim.bind (K := grtK1 n g c rP fo fl maj t) rfl ((fvarTypeDs_spec dn vis fe fo fl ifs).sim ⟨hS, hifs⟩) ?_
   rintro ⟨r1, m1⟩ ibs a1 - ⟨hS1, hg1, hibs, hib⟩
   dsimp only at hS1 hg1 hibs hib
   simp only [getD_zero, Nat.zero_add, getD_one] at hibs hib
-  rw [rtK1_some]
+  rw [grtK1_some]
   have hpo1 : iwN m1 (g.toNat + 12) = some po := by rw [iwN_grow hg1 (by omega)]; exact hpo
   obtain ⟨e12, t12⟩ := rec2RdN (w := g) (k := 12) hpo1 hS1.2.2.2.1
   simp only [show UInt64.ofNat 12 = (12 : Word) from rfl] at e12
   rw [e12]
-  refine RSim.lstep (K := rtK2 n g c fo fl maj t) rfl fun ⟨r2, m2⟩ h2 => ?_
+  refine RSim.lstep (K := grtK2 n g c fo fl maj t) rfl fun ⟨r2, m2⟩ h2 => ?_
   obtain ⟨hS2, hg2, hd2, hb2⟩ := rec2AppendW_dec h2 hS1 (by rw [t12]; exact hpre.grow (OMono.decHL _ _) hg1) hibs hib
-  rw [rtK2_some]
-  refine RSim.lstep (K := rtK3 n g c fo fl t) rfl fun ⟨r3, m3⟩ h3 => ?_
+  rw [grtK2_some]
+  refine RSim.lstep (K := grtK3 n g c fo fl t) rfl fun ⟨r3, m3⟩ h3 => ?_
   obtain ⟨hr3, hd3, hg3, -, -, ht3⟩ := snocW_dec h3 hS2.2.2.2.1 hS2.2.2.2.2.2 hb2 hmaj hd2
   have hS3 := snocW_stage h3 hS2
-  rw [rtK3_some]
+  rw [grtK3_some]
   have hg13 := hg1.trans (hg2.trans hg3)
-  refine RSim.bind (K := rtK4 n fo fl t (r3.headD 0) (r3.tail.headD 0)) rfl
+  refine RSim.bind (K := grtK4 n fo fl t (r3.headD 0) (r3.tail.headD 0)) rfl
     (rec2SimMotVar n hS3 c (hG.grow (decCG_mono _) hg13) hns) ?_
   rintro ⟨r4, m4⟩ mv a4 - ⟨hS4, hg4, hmvH, hmvd⟩
   dsimp only at hS4 hg4 hmvH hmvd
   subst hmvd
-  rw [rtK4_some]
+  rw [grtK4_some]
   have hg14 := hg13.trans hg4
-  refine RSim.lstep (K := rtK5 n (r3.headD 0) (r3.tail.headD 0) (r4.headD 0)) rfl fun ⟨r5, m5⟩ h5 => ?_
+  refine RSim.lstep (K := grtK5 n (r3.headD 0) (r3.tail.headD 0) (r4.headD 0)) rfl fun ⟨r5, m5⟩ h5 => ?_
   obtain ⟨hr5, hd5, hg5, -, -, ht5⟩ := snocW_dec h5 hS4.2.2.2.1 hS4.2.2.2.2.2 (Nat.le_trans hfb hg14.1) ht
     (by rw [decHL_grow hg14 hfb]; exact hifs)
   have hS5 := snocW_stage h5 hS4
-  rw [rtK5_some]
+  rw [grtK5_some]
   rw [hr5] at ⊢
   simp only [List.headD_cons, List.tail_cons]
-  refine RSim.bind (K := rtK6 n (r3.headD 0) (r3.tail.headD 0)) rfl
+  refine RSim.bind (K := grtK6 n (r3.headD 0) (r3.tail.headD 0)) rfl
     ((mkAppN_spec dn vis fe _ _ _ hmvH (ifs ++ [decI t])).sim ⟨hS5, hd5⟩) ?_
   rintro ⟨r6, m6⟩ body a6 - ⟨hS6, hg6, hbH, hbd⟩
   dsimp only at hS6 hg6 hbH hbd
-  rw [rtK6_some]
+  rw [grtK6_some]
   have hg36 := hg4.trans (hg5.trans hg6)
   have hb3 : (r3.headD 0).toNat + (r3.tail.headD 0).toNat ≤ iwTop m3 := by rw [hr3]; simp only [List.headD_cons, List.tail_cons]; omega
   have hd3' : decHL m6 (r3.headD 0).toNat (r3.tail.headD 0).toNat = some (G.pre ++ ibs ++ [decI maj]) := by
     rw [decHL_grow hg36 hb3, hr3]; exact hd3
-  refine RSim.bind (K := rtK7) rfl (Q1 := fun b a' x => StageR dn vis fe b.2 a' ∧ IWGrow m6 b.2 ∧
+  refine RSim.bind (K := grtK7) rfl (Q1 := fun b a' x => StageR dn vis fe b.2 a' ∧ IWGrow m6 b.2 ∧
     decW0E b.2 b.1 x) ?_ ?_
   · rintro ⟨r7, m7⟩ h7
     obtain ⟨x, a', hrun, hS', hg, hx⟩ := closeW_ok n dn fe vis m6 m7 a6 _ _ 0 _ _ r7 h7 hS6 hbH hd3'
@@ -286,7 +286,7 @@ theorem rtW_sim (n : Nat) (m : Mem) (a : AState) (g c rP fo fl maj t : Word) (G 
     refine ⟨x, a', ?_, hS', hg, hx⟩
     rw [← hbd]; simpa using hrun
   rintro ⟨r7, m7⟩ x a7 - ⟨hS7, hg7, hx⟩
-  rw [rtK7_some]
+  rw [grtK7_some]
   exact RSim.pure_some ⟨hS7, hg14.trans (hg5.trans (hg6.trans hg7)), rfl, by simpa [decW0E] using hx⟩
 
 end sims
@@ -344,7 +344,7 @@ theorem gtW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     have : ¬ (4294967296 : Word).toNat ≤ t.toNat := fun x => hbig (UInt64.le_iff_toNat_le.mpr x)
     simp at this; exact this
   have hg12 := hg1.trans hg2
-  have hr := rtW_sim (dn := dn) (vis := vis) (fe := fe) n m2 a2 g c (UInt64.ofNat l12) _ _ _ t G ifs o12 hS2
+  have hr := grtW_sim (dn := dn) (vis := vis) (fe := fe) n m2 a2 g c (UInt64.ofNat l12) _ _ _ t G ifs o12 hS2
     (hG.grow (decCG_mono _) hg12) hns (by rw [iwN_grow hg12 (by omega)]; exact h12)
     (by rw [t13]; exact hpre.grow (OMono.decHL _ _) hg12) (by rw [decHL_grow hg2 hfb]; exact hifs)
     (Nat.le_trans hfb hg2.1) hmH htH

@@ -46,36 +46,36 @@ def iclW : Nat → Mem → Word → Word → Word → Word → Option (List Word
   | 0, _, _, _, _, _ => none
   | n + 1, m, xso, xsl, e, body => iclK1 n e body (stubM "fvar_type_ds" m [xso, xsl])
 
-def itK5 : Option (List Word × Mem) → Option (List Word × Mem)
+def mitK5 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) => some ([r.headD 0, r.tail.headD 0], m)
 
-def itK4b (n : Nat) (xso xsl e : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def mitK4b (n : Nat) (xso xsl e : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r5, m5) => itK5 (iclW n m5 xso xsl e (r5.headD 0))
+  | some (r5, m5) => mitK5 (iclW n m5 xso xsl e (r5.headD 0))
 
-def itK4 (n : Nat) (xso xsl e mt : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def mitK4 (n : Nat) (xso xsl e mt : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r4, m4) => itK4b n xso xsl e (stubM "mk_app_n_f" m4 [mt, r4.headD 0, r4.tail.headD 0])
+  | some (r4, m4) => mitK4b n xso xsl e (stubM "mk_app_n_f" m4 [mt, r4.headD 0, r4.tail.headD 0])
 
-def itK3 (n : Nat) (xso xsl idxo idxl e fx : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def mitK3 (n : Nat) (xso xsl idxo idxl e fx : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r3, m3) => itK4 n xso xsl e (r3.headD 0) (snocW n m3 idxo idxl fx)
+  | some (r3, m3) => mitK4 n xso xsl e (r3.headD 0) (snocW n m3 idxo idxl fx)
 
-def itK2 (n : Nat) (g t xso xsl idxo idxl e : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def mitK2 (n : Nat) (g t xso xsl idxo idxl e : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r2, m2) => itK3 n xso xsl idxo idxl e (r2.headD 0) (rec2MotVarF n m2 g t)
+  | some (r2, m2) => mitK3 n xso xsl idxo idxl e (r2.headD 0) (rec2MotVarF n m2 g t)
 
-def itK1 (n : Nat) (g t xso xsl idxo idxl e : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def mitK1 (n : Nat) (g t xso xsl idxo idxl e : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r1, m1) => itK2 n g t xso xsl idxo idxl e (stubM "mk_app_n_f" m1 [r1.headD 0, xso, xsl])
+  | some (r1, m1) => mitK2 n g t xso xsl idxo idxl e (stubM "mk_app_n_f" m1 [r1.headD 0, xso, xsl])
 
 /-- **The model of `class_gen_minor_ty_ih1_tail`.** -/
 def itW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
     Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _, _, _, _, _ => none
   | n + 1, m, g, t, xso, xsl, idxo, idxl, fvso, fvsl, i, e =>
-    itK1 n g t xso xsl idxo idxl e (fuelW n (exprGetDW m fvso fvsl i))
+    mitK1 n g t xso xsl idxo idxl e (fuelW n (exprGetDW m fvso fvsl i))
 
 /-! ## `class_gen_minor_ty_ih1` -/
 
@@ -127,7 +127,7 @@ def isKp (m : Mem) (x i : Word) : Word := rdW (m.arr64 IW) (rdW (m.arr64 IW) (x 
 
 mutual
 /-- **The model of `class_gen_minor_ty_ihs_go`.** -/
-def isW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
+def misW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
     Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _, _, _, _, _ => none
   | n + 1, m, g, x, d, nF, wso, wsl, fvso, fvsl, i, l =>
@@ -138,13 +138,13 @@ def isW : Nat → Mem → Word → Word → Word → Word → Word → Word → 
       else isK1 n g x d nF wso wsl fvso fvsl i l
         (i1W n m g (rdW (m.arr64 IW) (isKp m x i + 1)) (rdW (m.arr64 IW) (isKp m x i + 2)) wso wsl fvso fvsl
           i (d + nF + l))
-    else isK3 (isW n m g x d nF wso wsl fvso fvsl (i + 1) l)
+    else isK3 (misW n m g x d nF wso wsl fvso fvsl (i + 1) l)
 def isK1 (n : Nat) (g x d nF wso wsl fvso fvsl i l : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r1, m1) =>
     if r1.headD 0 = 0 then some ([0, 0, 0], m1)
-    else isK2 n (r1.tail.headD 0) (isW n m1 g x d nF wso wsl fvso fvsl (i + 1) (l + 1))
+    else isK2 n (r1.tail.headD 0) (misW n m1 g x d nF wso wsl fvso fvsl (i + 1) (l + 1))
 end
 
 /-! ## `class_gen_minor_ty_concl2`, `_concl`, `_body`, `class_gen_minor_ty` -/
@@ -229,33 +229,33 @@ def cW : Nat → Mem → Word → Word → Word → Word → Word → Word → W
   | n + 1, m, g, c, x, d, lvls, ds0, dl0, nPc, fo, fl, res, ihso, ihsl =>
     cK1 n g c x d lvls ds0 dl0 nPc fo fl ihso ihsl (stubM "get_app_args_f" m [CWF, res])
 
-def bK3 (n : Nat) (g c x d lvls ds0 dl0 nPc fo fl res : Word) :
+def mbK3 (n : Nat) (g c x d lvls ds0 dl0 nPc fo fl res : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r3, m3) =>
     if r3.headD 0 = 0 then some ([0, 0], m3)
     else cK4 (cW n m3 g c x d lvls ds0 dl0 nPc fo fl res (r3.tail.headD 0) (r3.tail.tail.headD 0))
 
-def bK2 (n : Nat) (g c x d lvls ds0 dl0 nPc fo fl res : Word) :
+def mbK2 (n : Nat) (g c x d lvls ds0 dl0 nPc fo fl res : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r2, m2) =>
     if r2.headD 0 = 0 then some ([0, 0], m2)
-    else bK3 n g c x d lvls ds0 dl0 nPc fo fl res
-      (isW n m2 g x d (rdW (m2.arr64 IW) (x + 1)) (r2.tail.headD 0) (r2.tail.tail.headD 0) fo fl 0 0)
+    else mbK3 n g c x d lvls ds0 dl0 nPc fo fl res
+      (misW n m2 g x d (rdW (m2.arr64 IW) (x + 1)) (r2.tail.headD 0) (r2.tail.tail.headD 0) fo fl 0 0)
 
-def bK1 (n : Nat) (g c x d lvls ds0 dl0 nPc : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def mbK1 (n : Nat) (g c x d lvls ds0 dl0 nPc : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r1, m1) =>
     if r1.headD 0 = 0 then some ([0, 0], m1)
-    else bK2 n g c x d lvls ds0 dl0 nPc (r1.tail.headD 0) (r1.tail.tail.headD 0) (r1.tail.tail.tail.headD 0)
+    else mbK2 n g c x d lvls ds0 dl0 nPc (r1.tail.headD 0) (r1.tail.tail.headD 0) (r1.tail.tail.tail.headD 0)
       (pdW n m1 (r1.tail.headD 0) (r1.tail.tail.headD 0) (rdW (m1.arr64 IW) (x + 5)))
 
 /-- **The model of `class_gen_minor_ty_body`.** -/
 def bW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _, _, _ => none
   | n + 1, m, g, c, x, d, lvls, ds0, dl0, nPc =>
-    bK1 n g c x d lvls ds0 dl0 nPc
+    mbK1 n g c x d lvls ds0 dl0 nPc
       (stubM "open_pis_at_fvars_f" m [rdW (m.arr64 IW) (x + 1), rdW (m.arr64 IW) (x + 4), d])
 
 def mnK1 (n : Nat) (g c x d : Word) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -277,17 +277,17 @@ variable (n : Nat) (m m1 m2 m3 m4 m5 m6 m7 : Mem)
   (g t c x d e tele xso xsl idxo idxl fvso fvsl wso wsl i l nF fx mt body ih nPc fo fl ihso ihsl rao ral
     capp mc lvls ds0 dl0 res cc : Word) (r r1 r2 r3 r4 r5 r6 r7 : List Word)
 theorem itW_eq : itW (n + 1) m g t xso xsl idxo idxl fvso fvsl i e =
-    itK1 n g t xso xsl idxo idxl e (fuelW n (exprGetDW m fvso fvsl i)) := rfl
-theorem itK1_some : itK1 n g t xso xsl idxo idxl e (some (r1, m1)) =
-    itK2 n g t xso xsl idxo idxl e (stubM "mk_app_n_f" m1 [r1.headD 0, xso, xsl]) := rfl
-theorem itK2_some : itK2 n g t xso xsl idxo idxl e (some (r2, m2)) =
-    itK3 n xso xsl idxo idxl e (r2.headD 0) (rec2MotVarF n m2 g t) := rfl
-theorem itK3_some : itK3 n xso xsl idxo idxl e fx (some (r3, m3)) =
-    itK4 n xso xsl e (r3.headD 0) (snocW n m3 idxo idxl fx) := rfl
-theorem itK4_some : itK4 n xso xsl e mt (some (r4, m4)) =
-    itK4b n xso xsl e (stubM "mk_app_n_f" m4 [mt, r4.headD 0, r4.tail.headD 0]) := rfl
-theorem itK4b_some : itK4b n xso xsl e (some (r5, m5)) = itK5 (iclW n m5 xso xsl e (r5.headD 0)) := rfl
-theorem itK5_some : itK5 (some (r, m)) = some ([r.headD 0, r.tail.headD 0], m) := rfl
+    mitK1 n g t xso xsl idxo idxl e (fuelW n (exprGetDW m fvso fvsl i)) := rfl
+theorem mitK1_some : mitK1 n g t xso xsl idxo idxl e (some (r1, m1)) =
+    mitK2 n g t xso xsl idxo idxl e (stubM "mk_app_n_f" m1 [r1.headD 0, xso, xsl]) := rfl
+theorem mitK2_some : mitK2 n g t xso xsl idxo idxl e (some (r2, m2)) =
+    mitK3 n xso xsl idxo idxl e (r2.headD 0) (rec2MotVarF n m2 g t) := rfl
+theorem mitK3_some : mitK3 n xso xsl idxo idxl e fx (some (r3, m3)) =
+    mitK4 n xso xsl e (r3.headD 0) (snocW n m3 idxo idxl fx) := rfl
+theorem mitK4_some : mitK4 n xso xsl e mt (some (r4, m4)) =
+    mitK4b n xso xsl e (stubM "mk_app_n_f" m4 [mt, r4.headD 0, r4.tail.headD 0]) := rfl
+theorem mitK4b_some : mitK4b n xso xsl e (some (r5, m5)) = mitK5 (iclW n m5 xso xsl e (r5.headD 0)) := rfl
+theorem mitK5_some : mitK5 (some (r, m)) = some ([r.headD 0, r.tail.headD 0], m) := rfl
 theorem iclW_eq : iclW (n + 1) m xso xsl e body = iclK1 n e body (stubM "fvar_type_ds" m [xso, xsl]) := rfl
 theorem iclK1_big (h : e + r6.tail.headD 0 < e) : iclK1 n e body (some (r6, m6)) = none := by rw [iclK1, if_pos h]
 theorem iclK1_ok (h : ¬ e + r6.tail.headD 0 < e) : iclK1 n e body (some (r6, m6)) =
@@ -304,26 +304,26 @@ theorem i1K2_ok (h : r2.headD 0 ≠ 0) : i1K2 n g t fvso fvsl i e (some (r2, m2)
       (r2.tail.tail.tail.tail.headD 0) fvso fvsl i e) := by
   rw [i1K2, if_neg h]
 theorem i1K3_some : i1K3 (some (r, m)) = some ([r.headD 0, r.tail.headD 0], m) := rfl
-theorem isW_end (h : nF ≤ i) : isW (n + 1) m g x d nF wso wsl fvso fvsl i l = some ([1, 0, 0], m) := by
-  simp only [isW]; rw [if_pos h]
-theorem isW_rec (h : ¬ nF ≤ i) (ht : isTag m x i = 1) (h1 : ¬ d + nF < d) (h2 : ¬ d + nF + l < d + nF) :
-    isW (n + 1) m g x d nF wso wsl fvso fvsl i l = isK1 n g x d nF wso wsl fvso fvsl i l
+theorem misW_end (h : nF ≤ i) : misW (n + 1) m g x d nF wso wsl fvso fvsl i l = some ([1, 0, 0], m) := by
+  simp only [misW]; rw [if_pos h]
+theorem misW_rec (h : ¬ nF ≤ i) (ht : isTag m x i = 1) (h1 : ¬ d + nF < d) (h2 : ¬ d + nF + l < d + nF) :
+    misW (n + 1) m g x d nF wso wsl fvso fvsl i l = isK1 n g x d nF wso wsl fvso fvsl i l
       (i1W n m g (rdW (m.arr64 IW) (isKp m x i + 1)) (rdW (m.arr64 IW) (isKp m x i + 2)) wso wsl fvso fvsl
         i (d + nF + l)) := by
-  simp only [isW]; rw [if_neg h, if_pos ht, if_neg h1, if_neg h2]
-theorem isW_ov1 (h : ¬ nF ≤ i) (ht : isTag m x i = 1) (h1 : d + nF < d) :
-    isW (n + 1) m g x d nF wso wsl fvso fvsl i l = none := by
-  simp only [isW]; rw [if_neg h, if_pos ht, if_pos h1]
-theorem isW_ov2 (h : ¬ nF ≤ i) (ht : isTag m x i = 1) (h1 : ¬ d + nF < d) (h2 : d + nF + l < d + nF) :
-    isW (n + 1) m g x d nF wso wsl fvso fvsl i l = none := by
-  simp only [isW]; rw [if_neg h, if_pos ht, if_neg h1, if_pos h2]
-theorem isW_ord (h : ¬ nF ≤ i) (ht : ¬ isTag m x i = 1) :
-    isW (n + 1) m g x d nF wso wsl fvso fvsl i l = isK3 (isW n m g x d nF wso wsl fvso fvsl (i + 1) l) := by
-  simp only [isW]; rw [if_neg h, if_neg ht]
+  simp only [misW]; rw [if_neg h, if_pos ht, if_neg h1, if_neg h2]
+theorem misW_ov1 (h : ¬ nF ≤ i) (ht : isTag m x i = 1) (h1 : d + nF < d) :
+    misW (n + 1) m g x d nF wso wsl fvso fvsl i l = none := by
+  simp only [misW]; rw [if_neg h, if_pos ht, if_pos h1]
+theorem misW_ov2 (h : ¬ nF ≤ i) (ht : isTag m x i = 1) (h1 : ¬ d + nF < d) (h2 : d + nF + l < d + nF) :
+    misW (n + 1) m g x d nF wso wsl fvso fvsl i l = none := by
+  simp only [misW]; rw [if_neg h, if_pos ht, if_neg h1, if_pos h2]
+theorem misW_ord (h : ¬ nF ≤ i) (ht : ¬ isTag m x i = 1) :
+    misW (n + 1) m g x d nF wso wsl fvso fvsl i l = isK3 (misW n m g x d nF wso wsl fvso fvsl (i + 1) l) := by
+  simp only [misW]; rw [if_neg h, if_neg ht]
 theorem isK1_fail (h : r1.headD 0 = 0) : isK1 n g x d nF wso wsl fvso fvsl i l (some (r1, m1)) =
     some ([0, 0, 0], m1) := by rw [isK1, if_pos h]
 theorem isK1_ok (h : r1.headD 0 ≠ 0) : isK1 n g x d nF wso wsl fvso fvsl i l (some (r1, m1)) =
-    isK2 n (r1.tail.headD 0) (isW n m1 g x d nF wso wsl fvso fvsl (i + 1) (l + 1)) := by rw [isK1, if_neg h]
+    isK2 n (r1.tail.headD 0) (misW n m1 g x d nF wso wsl fvso fvsl (i + 1) (l + 1)) := by rw [isK1, if_neg h]
 theorem isK2_fail (h : r2.headD 0 = 0) : isK2 n ih (some (r2, m2)) = some ([0, 0, 0], m2) := by
   rw [isK2, if_pos h]
 theorem isK2_ok (h : r2.headD 0 ≠ 0) : isK2 n ih (some (r2, m2)) =
@@ -361,25 +361,25 @@ theorem cK2b_some : cK2b n g c d nPc fo fl ihso ihsl rao ral cc (some (r3, m3)) 
 theorem cK3_some : cK3 n g c d nPc fo fl ihso ihsl rao ral (some (r3, m3)) =
     cK4 (c2W n m3 g c d nPc fo fl ihso ihsl rao ral (r3.headD 0)) := rfl
 theorem cK4_some : cK4 (some (r, m)) = some ([r.headD 0, r.tail.headD 0], m) := rfl
-theorem bW_eq : bW (n + 1) m g c x d lvls ds0 dl0 nPc = bK1 n g c x d lvls ds0 dl0 nPc
+theorem bW_eq : bW (n + 1) m g c x d lvls ds0 dl0 nPc = mbK1 n g c x d lvls ds0 dl0 nPc
     (stubM "open_pis_at_fvars_f" m [rdW (m.arr64 IW) (x + 1), rdW (m.arr64 IW) (x + 4), d]) := rfl
-theorem bK1_fail (h : r1.headD 0 = 0) : bK1 n g c x d lvls ds0 dl0 nPc (some (r1, m1)) = some ([0, 0], m1) := by
-  rw [bK1, if_pos h]
-theorem bK1_ok (h : r1.headD 0 ≠ 0) : bK1 n g c x d lvls ds0 dl0 nPc (some (r1, m1)) =
-    bK2 n g c x d lvls ds0 dl0 nPc (r1.tail.headD 0) (r1.tail.tail.headD 0) (r1.tail.tail.tail.headD 0)
+theorem mbK1_fail (h : r1.headD 0 = 0) : mbK1 n g c x d lvls ds0 dl0 nPc (some (r1, m1)) = some ([0, 0], m1) := by
+  rw [mbK1, if_pos h]
+theorem mbK1_ok (h : r1.headD 0 ≠ 0) : mbK1 n g c x d lvls ds0 dl0 nPc (some (r1, m1)) =
+    mbK2 n g c x d lvls ds0 dl0 nPc (r1.tail.headD 0) (r1.tail.tail.headD 0) (r1.tail.tail.tail.headD 0)
       (pdW n m1 (r1.tail.headD 0) (r1.tail.tail.headD 0) (rdW (m1.arr64 IW) (x + 5))) := by
-  rw [bK1, if_neg h]
-theorem bK2_fail (h : r2.headD 0 = 0) : bK2 n g c x d lvls ds0 dl0 nPc fo fl res (some (r2, m2)) =
-    some ([0, 0], m2) := by rw [bK2, if_pos h]
-theorem bK2_ok (h : r2.headD 0 ≠ 0) : bK2 n g c x d lvls ds0 dl0 nPc fo fl res (some (r2, m2)) =
-    bK3 n g c x d lvls ds0 dl0 nPc fo fl res
-      (isW n m2 g x d (rdW (m2.arr64 IW) (x + 1)) (r2.tail.headD 0) (r2.tail.tail.headD 0) fo fl 0 0) := by
-  rw [bK2, if_neg h]
-theorem bK3_fail (h : r3.headD 0 = 0) : bK3 n g c x d lvls ds0 dl0 nPc fo fl res (some (r3, m3)) =
-    some ([0, 0], m3) := by rw [bK3, if_pos h]
-theorem bK3_ok (h : r3.headD 0 ≠ 0) : bK3 n g c x d lvls ds0 dl0 nPc fo fl res (some (r3, m3)) =
+  rw [mbK1, if_neg h]
+theorem mbK2_fail (h : r2.headD 0 = 0) : mbK2 n g c x d lvls ds0 dl0 nPc fo fl res (some (r2, m2)) =
+    some ([0, 0], m2) := by rw [mbK2, if_pos h]
+theorem mbK2_ok (h : r2.headD 0 ≠ 0) : mbK2 n g c x d lvls ds0 dl0 nPc fo fl res (some (r2, m2)) =
+    mbK3 n g c x d lvls ds0 dl0 nPc fo fl res
+      (misW n m2 g x d (rdW (m2.arr64 IW) (x + 1)) (r2.tail.headD 0) (r2.tail.tail.headD 0) fo fl 0 0) := by
+  rw [mbK2, if_neg h]
+theorem mbK3_fail (h : r3.headD 0 = 0) : mbK3 n g c x d lvls ds0 dl0 nPc fo fl res (some (r3, m3)) =
+    some ([0, 0], m3) := by rw [mbK3, if_pos h]
+theorem mbK3_ok (h : r3.headD 0 ≠ 0) : mbK3 n g c x d lvls ds0 dl0 nPc fo fl res (some (r3, m3)) =
     cK4 (cW n m3 g c x d lvls ds0 dl0 nPc fo fl res (r3.tail.headD 0) (r3.tail.tail.headD 0)) := by
-  rw [bK3, if_neg h]
+  rw [mbK3, if_neg h]
 theorem mnW_eq : mnW (n + 1) m g c x d =
     mnK1 n g c x d (tmaW n m (rdW (m.arr64 IW) (g + 3)) (rdW (m.arr64 IW) (g + 4)) c) := rfl
 theorem mnK1_some : mnK1 n g c x d (some (r1, m1)) =
@@ -387,12 +387,12 @@ theorem mnK1_some : mnK1 n g c x d (some (r1, m1)) =
       (rdW (m1.arr64 IW) (r1.headD 0 + 3)) (rdW (m1.arr64 IW) (r1.headD 0 + 4))) := rfl
 end arms
 
-attribute [ind_grind] itW_eq itK1_some itK2_some itK3_some itK4_some itK4b_some itK5_some iclW_eq iclK1_big iclK1_ok
+attribute [ind_grind] itW_eq mitK1_some mitK2_some mitK3_some mitK4_some mitK4b_some mitK5_some iclW_eq iclK1_big iclK1_ok
   iclK2_some
-  i1W_eq i1K1_some i1K2_fail i1K2_ok i1K3_some isW_end isW_rec isW_ov1 isW_ov2 isW_ord isK1_fail isK1_ok
+  i1W_eq i1K1_some i1K2_fail i1K2_ok i1K3_some misW_end misW_rec misW_ov1 misW_ov2 misW_ord isK1_fail isK1_ok
   isK2_fail isK2_ok isK3_some isK4_some c2W_eq c2K1_some c2K2_some c2K2b_some c2K3_some mcW_eq mcK1_some mcK2_big mcK2_ok
-  mcK3_some cW_eq cK1_some cK2_big cK2_ok cK2b_some cK3_some cK4_some bW_eq bK1_fail bK1_ok bK2_fail bK2_ok
-  bK3_fail bK3_ok mnW_eq mnK1_some
+  mcK3_some cW_eq cK1_some cK2_big cK2_ok cK2b_some cK3_some cK4_some bW_eq mbK1_fail mbK1_ok mbK2_fail mbK2_ok
+  mbK3_fail mbK3_ok mnW_eq mnK1_some
 
 /-! ## Specs -/
 
@@ -460,7 +460,7 @@ theorem classGenMinorTyIh1_spec (n : Nat) (s₀ : St) (g t tele wso wsl fvso fvs
 
 theorem classGenMinorTyIhsGo_spec (n : Nat) : ∀ (s₀ : St) (g x d nF wso wsl fvso fvsl i l : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_minor_ty_ihs_go" [g, x, d, nF, wso, wsl, fvso, fvsl, i, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ isW n s₀.mem g x d nF wso wsl fvso fvsl i l = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ misW n s₀.mem g x d nF wso wsl fvso fvsl i l = some (r, s'.mem); ⊤⦄ := by
   induction n with
   | zero =>
     intro s₀ g x d nF wso wsl fvso fvsl i l
@@ -633,54 +633,54 @@ theorem i1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g t tele wso ws
   | zero => rw [show (itW 0 _ _ _ _ _ _ _ _ _ _ _) = none from rfl]; exact (by rw [show i1K3 none = none from rfl, hK]; exact RSim.none)
   | succ n =>
   rw [itW_eq]
-  refine RSim.bind (K := fun o => K (i1K3 (itK1 n g t _ _ _ _ e o))) hK
+  refine RSim.bind (K := fun o => K (i1K3 (mitK1 n g t _ _ _ _ e o))) hK
     (rec2SimExprGetD n hS2 (by rw [decHL_grow hg12 hfb]; exact hfvs) (hS2.lt64 (Nat.le_trans hfb hg12.1))) ?_
   rintro ⟨r3, m3⟩ f a3 - ⟨hS3, hg3, hfH, hfd⟩
   dsimp only at hS3 hg3 hfH hfd
   subst hfd
-  rw [itK1_some]
-  refine RSim.bind (K := fun o => K (i1K3 (itK2 n g t _ _ _ _ e o))) hK
+  rw [mitK1_some]
+  refine RSim.bind (K := fun o => K (i1K3 (mitK2 n g t _ _ _ _ e o))) hK
     ((mkAppN_spec dn vis fe _ _ _ hfH xs).sim ⟨hS3, by rw [decHL_grow hg3 hxb]; exact hxs⟩) ?_
   rintro ⟨r4, m4⟩ fx a4 - ⟨hS4, hg4, hfxH, hfxd⟩
   dsimp only at hS4 hg4 hfxH hfxd
   subst hfxd
-  rw [itK2_some]
+  rw [mitK2_some]
   have hg24 := hg3.trans hg4
-  refine RSim.bind (K := fun o => K (i1K3 (itK3 n _ _ _ _ e (r4.headD 0) o))) hK
+  refine RSim.bind (K := fun o => K (i1K3 (mitK3 n _ _ _ _ e (r4.headD 0) o))) hK
     (rec2SimMotVar n hS4 t (hG.grow (decCG_mono _) (hg12.trans hg24)) hns) ?_
   rintro ⟨r5, m5⟩ mt a5 - ⟨hS5, hg5, hmtH, hmtd⟩
   dsimp only at hS5 hg5 hmtH hmtd
   subst hmtd
-  rw [itK3_some]
+  rw [mitK3_some]
   have hg25 := hg24.trans hg5
-  refine RSim.lstep (K := fun o => K (i1K3 (itK4 n _ _ e (r5.headD 0) o))) hK fun ⟨r6, m6⟩ h6 => ?_
+  refine RSim.lstep (K := fun o => K (i1K3 (mitK4 n _ _ e (r5.headD 0) o))) hK fun ⟨r6, m6⟩ h6 => ?_
   obtain ⟨hr6, hd6, hg6, -, -, ht6⟩ := snocW_dec h6 hS5.2.2.2.1 hS5.2.2.2.2.2 (Nat.le_trans hidb hg25.1) hfxH
     (by rw [decHL_grow hg25 hidb]; exact hidx)
   have hS6 := snocW_stage h6 hS5
-  rw [itK4_some, hr6]
+  rw [mitK4_some, hr6]
   simp only [List.headD_cons, List.tail_cons]
-  refine RSim.bind (K := fun o => K (i1K3 (itK4b n _ _ e o))) hK
+  refine RSim.bind (K := fun o => K (i1K3 (mitK4b n _ _ e o))) hK
     ((mkAppN_spec dn vis fe _ _ _ hmtH (idx ++ [decI (r4.headD 0)])).sim ⟨hS6, hd6⟩) ?_
   rintro ⟨r7, m7⟩ body a7 - ⟨hS7, hg7, hbH, hbd⟩
   dsimp only at hS7 hg7 hbH hbd
   subst hbd
-  rw [itK4b_some]
+  rw [mitK4b_some]
   have hg27 := hg25.trans (hg6.trans hg7)
   rw [rec2MapM_genBinder]
   -- `class_gen_minor_ty_ih1_close`
   cases n with
   | zero =>
     rw [show (iclW 0 _ _ _ _ _) = none from rfl]
-    exact (by rw [show itK5 none = none from rfl, show i1K3 none = none from rfl, hK]; exact RSim.none)
+    exact (by rw [show mitK5 none = none from rfl, show i1K3 none = none from rfl, hK]; exact RSim.none)
   | succ n =>
   rw [iclW_eq]
-  refine RSim.bind (K := fun o => K (i1K3 (itK5 (iclK1 n e (r7.headD 0) o)))) hK
+  refine RSim.bind (K := fun o => K (i1K3 (mitK5 (iclK1 n e (r7.headD 0) o)))) hK
     ((fvarTypeDs_spec dn vis fe _ _ xs).sim ⟨hS7, by rw [decHL_grow hg27 hxb]; exact hxs⟩) ?_
   rintro ⟨r8, m8⟩ bs a8 - ⟨hS8, hg8, hbs, hbb⟩
   dsimp only at hS8 hg8 hbs hbb
   simp only [getD_zero, Nat.zero_add, getD_one] at hbs hbb
   by_cases hov : e + r8.tail.headD 0 < e
-  · rw [iclK1_big (h := hov)]; simp only [show itK5 none = none from rfl, show i1K3 none = none from rfl, hK]
+  · rw [iclK1_big (h := hov)]; simp only [show mitK5 none = none from rfl, show i1K3 none = none from rfl, hK]
     exact RSim.none
   rw [iclK1_ok (h := hov)]
   have hel : e.toNat + (r8.tail.headD 0).toNat < 2 ^ 64 := by
@@ -688,7 +688,7 @@ theorem i1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g t tele wso ws
     rw [UInt64.toNat_add] at this
     have h1 := e.toNat_lt; have h2 := (r8.tail.headD 0).toNat_lt
     omega
-  refine RSim.bind (K := fun o => K (i1K3 (itK5 (iclK2 o)))) hK (Q1 := fun b a' x =>
+  refine RSim.bind (K := fun o => K (i1K3 (mitK5 (iclK2 o)))) hK (Q1 := fun b a' x =>
     StageR dn vis fe b.2 a' ∧ IWGrow m8 b.2 ∧ decW0E b.2 b.1 x) ?_ ?_
   · rintro ⟨r9, m9⟩ h9
     obtain ⟨x, a', hrun, hS', hg, hx⟩ := closeW_ok n dn fe vis m8 m9 a8 _ _ e _ bs r9 h9 hS8 hbH hbs
@@ -697,7 +697,7 @@ theorem i1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g t tele wso ws
   rintro ⟨r9, m9⟩ ih a9 - ⟨hS9, hg9, hih, hihd⟩
   dsimp only at hS9 hg9 hih hihd
   subst hihd
-  simp only [iclK2_some, itK5_some, i1K3_some, List.headD_cons, List.tail_cons]
+  simp only [iclK2_some, mitK5_some, i1K3_some, List.headD_cons, List.tail_cons]
   exact hsome m9 a9 _ hS9 (hg12.trans (hg27.trans (hg8.trans hg9))) hih
 
 end sims
@@ -793,7 +793,7 @@ def decIHO (m' : Mem) (r : List Word) : Option (List EIdx) → Prop
   | some ihs => r.headD 0 = 1 ∧ decHL m' (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat = some ihs ∧
       (r.tail.headD 0).toNat + (r.tail.tail.headD 0).toNat ≤ iwTop m'
 
-theorem isW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (G : ClassGen) (X : ClassCtor)
+theorem misW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (G : ClassGen) (X : ClassCtor)
     (hns : G.nP + G.slots.length < 2 ^ 64) (g x d nF wso wsl fvso fvsl : Word) (ws fvs : List EIdx)
     (hnF : nF.toNat = X.nF) (n : Nat) :
     ∀ (m : Mem) (a : AState) (i l : Word), StageR dn vis fe m a → DecB (fun m => decCG m g.toNat) m G →
@@ -801,16 +801,16 @@ theorem isW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     decHL m wso.toNat wsl.toNat = some ws → wso.toNat + wsl.toNat ≤ iwTop m →
     decHL m fvso.toNat fvsl.toNat = some fvs → fvso.toNat + fvsl.toNat ≤ iwTop m →
     l.toNat ≤ i.toNat → i.toNat ≤ X.nF →
-    RSim (isW n m g x d nF wso wsl fvso fvsl i l)
+    RSim (misW n m g x d nF wso wsl fvso fvsl i l)
       (ConRon.Arena.ClassGen.minorTy.ihsGo G X d.toNat fvs ws l.toNat (rec2Recs X i.toNat)) a
       (fun b a' o => StageR dn vis fe b.2 a' ∧ IWGrow m b.2 ∧ decIHO b.2 b.1 o) := by
   induction n with
-  | zero => intros; intro b hb; simp [isW] at hb
+  | zero => intros; intro b hb; simp [misW] at hb
   | succ n ih =>
   intro m a i l hS hG hX hws hwb hfvs hfb hli hiX
   have hsz := hS.2.2.2.1
   by_cases hend : nF ≤ i
-  · rw [isW_end (h := hend)]
+  · rw [misW_end (h := hend)]
     have : X.nF ≤ i.toNat := by rw [← hnF]; exact UInt64.le_iff_toNat_le.mp hend
     rw [rec2Recs_end this, ConRon.Arena.ClassGen.minorTy.ihsGo.eq_1]
     exact RSim.pure_some ⟨hS, IWGrow.refl m, rfl, by simp [decHL, hslice?], by simp⟩
@@ -822,7 +822,7 @@ theorem isW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   obtain ⟨hord, hrec⟩ := rec2IsTag (hX.get (decCC_mono _)) hsz (i := i)
   cases hk : X.kinds.getD i.toNat .ordinary with
   | ordinary =>
-    rw [isW_ord (h := hend) (ht := hord hk)]
+    rw [misW_ord (h := hend) (ht := hord hk)]
     simp only [List.nil_append]
     have hih := ih m a (i + 1) l hS hG hX hws hwb hfvs hfb (by omega) (by omega)
     rw [hi1] at hih
@@ -836,9 +836,9 @@ theorem isW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   obtain ⟨ht, et, tlt, ete, telelt⟩ := hrec t tele hk
   simp only [List.singleton_append]
   by_cases ov1 : d + nF < d
-  · rw [isW_ov1 (h := hend) (ht := ht) (h1 := ov1)]; exact RSim.none
+  · rw [misW_ov1 (h := hend) (ht := ht) (h1 := ov1)]; exact RSim.none
   by_cases ov2 : d + nF + l < d + nF
-  · rw [isW_ov2 (h := hend) (ht := ht) (h1 := ov1) (h2 := ov2)]; exact RSim.none
+  · rw [misW_ov2 (h := hend) (ht := ht) (h1 := ov1) (h2 := ov2)]; exact RSim.none
   have he : (d + nF + l).toNat = d.toNat + X.nF + l.toNat := by
     have a1 : ¬ (d + nF).toNat < d.toNat := fun x => ov1 (UInt64.lt_iff_toNat_lt.mpr x)
     have a2 : ¬ (d + nF + l).toNat < (d + nF).toNat := fun x => ov2 (UInt64.lt_iff_toNat_lt.mpr x)
@@ -850,7 +850,7 @@ theorem isW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   have tt : (UInt64.ofNat t : Word).toNat = t := UInt64.toNat_ofNat_of_lt' tlt
   have tte : (UInt64.ofNat tele : Word).toNat = tele := UInt64.toNat_ofNat_of_lt' telelt
   rw [ConRon.Arena.ClassGen.minorTy.ihsGo.eq_2, ← he, ← tt, ← tte]
-  rw [isW_rec (h := hend) (ht := ht) (h1 := ov1) (h2 := ov2), et, ete]
+  rw [misW_rec (h := hend) (ht := ht) (h1 := ov1) (h2 := ov2), et, ete]
   cases n with
   | zero => intro b hb; simp [i1W, isK1] at hb
   | succ n =>

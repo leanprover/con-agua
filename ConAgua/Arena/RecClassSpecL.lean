@@ -252,26 +252,26 @@ theorem mnW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   rw [enF, evD]
   have ho := simOpenPis (k := UInt64.ofNat X.nF) (i := d) hS1 hvD
   rw [tnF, dvD] at ho
-  refine RSim.bind (K := fun o => cK4 (bK1 n g c x d vl _ _ _ o)) rfl ho ?_
+  refine RSim.bind (K := fun o => cK4 (mbK1 n g c x d vl _ _ _ o)) rfl ho ?_
   rintro ⟨r2, m2⟩ o2 a2 - ⟨hS2, hg2, ho2⟩
   dsimp only at hS2 hg2 ho2
   cases o2 with
   | none =>
-    rw [bK1_fail (h := ho2)]
+    rw [mbK1_fail (h := ho2)]
     exact RSim.pure_some ⟨hS2, hg1.trans hg2, rfl⟩
   | some p2 =>
   obtain ⟨fvs, res⟩ := p2
   obtain ⟨h21, ⟨hfvs, hfb⟩, hrH, hrd⟩ := ho2
   simp only [getD_one, getD_two, Nat.reduceAdd] at hfvs hfb
   simp only [drop3_headD] at hrH hrd
-  rw [bK1_ok (h := by rw [h21]; decide)]
+  rw [mbK1_ok (h := by rw [h21]; decide)]
   have hg12 := hg1.trans hg2
   have hX2 := hX.stab (decCC_mono _) m2 hg12
   obtain ⟨-, -, htyN2⟩ := rec2CC_parts hX2
   obtain ⟨vN, evN, hvN, dvN⟩ := iwH_rdW_at (w := x) (k := 5) htyN2 hS2.2.2.2.1
   simp only [show UInt64.ofNat 5 = (5 : Word) from rfl] at evN
   rw [evN]
-  refine RSim.bind (K := fun o => cK4 (bK2 n g c x d vl _ _ _ _ _ _ o)) rfl (Q1 := fun b a' x =>
+  refine RSim.bind (K := fun o => cK4 (mbK2 n g c x d vl _ _ _ _ _ _ o)) rfl (Q1 := fun b a' x =>
     StageR dn vis fe b.2 a' ∧ IWGrow m2 b.2 ∧ PdRes b.2 b.1 x) ?_ ?_
   · rintro ⟨r3, m3⟩ h3
     obtain ⟨res', a', hrun, hS', hg, hres⟩ := pdW_ok dn vis fe n m2 m3 a2 _ _ vN r3 fvs h3 hS2 hvN hfvs
@@ -282,18 +282,18 @@ theorem mnW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   dsimp only at hS3 hg3 ho3
   cases o3 with
   | none =>
-    rw [bK2_fail (h := ho3)]
+    rw [mbK2_fail (h := ho3)]
     exact RSim.pure_some ⟨hS3, hg12.trans hg3, rfl⟩
   | some ws =>
   obtain ⟨h31, hws, hwb⟩ := ho3
-  rw [bK2_ok (h := by rw [h31]; decide)]
+  rw [mbK2_ok (h := by rw [h31]; decide)]
   have hg13 := hg12.trans hg3
   have hX3 := hX.grow (decCC_mono _) hg13
   obtain ⟨hnF3, -, -⟩ := rec2CC_parts (hX3.get (decCC_mono _))
   obtain ⟨enF3, -⟩ := rec2RdN (w := x) (k := 1) hnF3 hS3.2.2.2.1
   simp only [show UInt64.ofNat 1 = (1 : Word) from rfl] at enF3
   rw [enF3]
-  have hi := isW_sim dn vis fe G X hns g x d (UInt64.ofNat X.nF) _ _ _ _ ws fvs tnF n m3 a3 0 0 hS3
+  have hi := misW_sim dn vis fe G X hns g x d (UInt64.ofNat X.nF) _ _ _ _ ws fvs tnF n m3 a3 0 0 hS3
     (hG.grow (decCG_mono _) hg13) hX3 hws hwb (by rw [decHL_grow hg3 hfb]; exact hfvs)
     (Nat.le_trans hfb hg3.1) (by simp) (by simp)
   simp only [UInt64.toNat_zero] at hi
@@ -301,17 +301,17 @@ theorem mnW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
       match X.kinds.getD i ClassField.ordinary with
       | ClassField.recursive t tele => some (i, t, tele)
       | ClassField.ordinary => none) := rec2Recs_zero X
-  refine RSim.bind (K := fun o => cK4 (bK3 n g c x d vl _ _ _ _ _ _ o)) rfl
+  refine RSim.bind (K := fun o => cK4 (mbK3 n g c x d vl _ _ _ _ _ _ o)) rfl
     (hr.symm ▸ hi : RSim _ (ConRon.Arena.ClassGen.minorTy.ihsGo G X d.toNat fvs ws 0 _) a3 _) ?_
   rintro ⟨r4, m4⟩ o4 a4 - ⟨hS4, hg4, ho4⟩
   dsimp only at hS4 hg4 ho4
   cases o4 with
   | none =>
-    rw [bK3_fail (h := ho4)]
+    rw [mbK3_fail (h := ho4)]
     exact RSim.pure_some ⟨hS4, hg13.trans hg4, rfl⟩
   | some ihs =>
   obtain ⟨h41, hihs, hib⟩ := ho4
-  rw [bK3_ok (h := by rw [h41]; decide)]
+  rw [mbK3_ok (h := by rw [h41]; decide)]
   have hg14 := hg13.trans hg4
   cases n with
   | zero => intro b hb; simp [cW, cK4] at hb
