@@ -117,3 +117,4 @@ import ConAgua.Arena.IndPos2SpecV
 the helpers' files do not clash on names. -/
 import ConAgua.Arena.RecCheckSpec9
 import ConAgua.Arena.RecCheckSpec10
+import ConAgua.Arena.RecCheckSpec11
