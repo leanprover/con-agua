@@ -707,4 +707,89 @@ theorem bpoW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   refine ⟨hS3, hg1.trans hg3, ?_⟩
   rw [hat, hbt, hrc]; simp only [Bool.true_and]; rfl
 
+/-! ## `block_shape_large` -/
+
+theorem partsErToIw_zero (n : Nat) (m : Mem) (o : Word) : erToIwW n m o 0 = erToIwW n m 0 0 := by
+  simp only [erToIwW]
+  rcases allocW m 0 with _ | ⟨q, m1⟩
+  · rfl
+  · simp only; rw [erCopyW_zero _ _ _ o 0]
+
+/-- **`er_to_iw` of an `EREC` handle slice decoded below the tops.** -/
+theorem partsSliceCopy {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
+    {m m' : Mem} {o l : Word} {r : List Word} {xs : List NIdx} (h : erToIwW n m o l = some (r, m'))
+    (hS : StageR dn vis fe m a) (hs : hslice? (erA (truncM m)) o.toNat l.toNat = some xs) :
+    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+      decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some xs ∧
+      (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
+  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
+  have hdl : ∀ {r m'} (o : Word), erToIwW n m o l = some (r, m') →
+      o.toNat + l.toNat ≤ (m.arr64 EREC).size → hslice? (erA m) o.toNat l.toNat = some xs →
+      StageR dn vis fe m' a ∧ IWGrow m m' ∧
+      decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some xs ∧
+      (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
+    intro r m' o h hsrc hs
+    have hroom : iwTop m + l.toNat ≤ (m.arr64 IW).size := by
+      simp only [erToIwW] at h
+      cases hal : allocW m l with
+      | none => rw [hal] at h; cases h
+      | some x =>
+        obtain ⟨hq', -, hr⟩ := allocW_facts hal hsz
+        rw [hq'] at hr; simp only [iwTop]; omega
+    obtain ⟨hr, hd, hg, hf, -, ht⟩ := erToIwW_dec (k := IdxKind.name) h hsz hc hEs hsrc
+    subst hr
+    simp only [List.headD_cons, List.tail_cons]
+    refine ⟨stage_frame_iw hS hf (by simp only [iwTop] at ht hroom ⊢; omega), hg, ?_, ht⟩
+    rw [hd, hs]
+  have hs' : hslice? (erA m) o.toNat l.toNat = some xs := ArrExt.hslice? (IWGrow.refl m).truncExt.2 hs
+  rcases Nat.eq_zero_or_pos l.toNat with h0 | hpos
+  · have hl0 : l = 0 := UInt64.toNat_inj.mp (by simpa using h0)
+    subst hl0
+    rw [partsErToIw_zero] at h
+    have : xs = [] := by simpa [hslice?] using hs.symm
+    subst this
+    exact hdl 0 h (by simp) (by simp [hslice?])
+  · obtain ⟨w, hw⟩ := partsHslice_last (l.toNat - 1) o.toNat xs (by rw [Nat.sub_add_cancel hpos]; exact hs)
+    have := (truncM_er_get hw).1
+    have hE : erTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 129).toNat_lt
+    exact hdl _ h (by omega) hs'
+
+/-- The twin's eliminator choice. -/
+def largeOf (lps : List NIdx) (cv : IConstantVal) : Option NIdx :=
+  match cv.levelParams with
+  | [] => none
+  | elim :: relps => if relps == lps && !lps.contains elim then some elim else none
+
+/-- `block_shape_large`'s `(ok, elim)` against the twin's `Option`. -/
+def LargeR : Option NIdx → List Word → Prop
+  | none, r => r.headD 0 = 0
+  | some e, r => r.headD 0 = 1 ∧ H (r.tail.headD 0) ∧ decI (r.tail.headD 0) = e
+
+/-- **The model of `block_shape_large`.** -/
+def bslW (n : Nat) (m : Mem) (cvR0 lo ll : Word) : Option (List Word × Mem) :=
+  if rdW (m.arr64 EREC) (cvR0 + 2) = 0 then some ([0, 0], m)
+  else match erToIwW n m (rdW (m.arr64 EREC) (cvR0 + 1) + 1) (rdW (m.arr64 EREC) (cvR0 + 2) - 1) with
+    | none => none
+    | some (rp, m1) =>
+      match eqW n m1 (rp.headD 0) (rp.tail.headD 0) lo ll with
+      | none => none
+      | some e =>
+        if e = 0 then some ([0, 0], m1)
+        else match containsW n m1 lo ll (rdW (m.arr64 EREC) (rdW (m.arr64 EREC) (cvR0 + 1))) with
+          | none => none
+          | some hs => if hs ≠ 0 then some ([0, 0], m1)
+            else some ([1, rdW (m.arr64 EREC) (rdW (m.arr64 EREC) (cvR0 + 1))], m1)
+
+theorem bsl_spec (p : Prog) (hP : IndPartsProg4 p) (hec : p.lookup "er_copy" = some erCopy)
+    (het : p.lookup "er_to_iw" = some erToIw) (hseq : p.lookup "sl_eq" = some slEq)
+    (hp : p.lookup "block_shape_large" = some blockShapeLarge) (n : Nat) (s₀ : St) (cvR0 lo ll : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "block_shape_large" [cvR0, lo, ll]
+    ⦃fun r s' => LocEq s' s₀ ∧ bslW n s₀.mem cvR0 lo ll = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, blockShapeLarge]
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, erToIw_specW p hP.alloc hec het n,
+      slEq_spec p hseq n, slContains_spec p hP.contains n] <;>
+    finish (gen := 20) [bslW, rdW_eq]
+
 end L.Ind
