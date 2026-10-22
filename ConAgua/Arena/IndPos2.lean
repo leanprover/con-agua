@@ -614,6 +614,7 @@ def nestPosFvarL :=
   cname := IW.u64[keyP];
   dsLen2 := IW.u64[keyP + 3];
   ar := call nest_arity(vis, cname);
+  if argsLen + dsLen2 < argsLen { abort };
   if argsLen + dsLen2 != ar { abort };
   kind2 := call nest_pos_hole_kind(ctx, kb, i);
   return kind2

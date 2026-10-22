@@ -489,21 +489,6 @@ theorem ctx_names_end {m : Mem} {p : Word} {c : NestCtx} (hc : decCtx m p.toNat 
   have r1 : (rdW (m.arr64 IW) (p + 1)).toNat = l := rd_iwN (by simpa using hl) (by simp; omega)
   rw [r0, r1]; exact hsl 0 (by omega) o l (by simpa using ho) hl
 
-/-- A constant record's level-parameter slice ends inside `EREC` (`cv_lps` copies it). -/
-def CVSl (m : Mem) (q : Word) : Prop :=
-  (rdW (m.arr64 EREC) (q + 1)).toNat + (rdW (m.arr64 EREC) (q + 2)).toNat ≤ erTop m
-
-theorem CVSl.grow {m m' : Mem} {q : Word} (h : CVSl m q) (hq : q.toNat + 3 < erTop m) (hg : IWGrow m m') :
-    CVSl m' q := by
-  have e1 : (q + 1).toNat = q.toNat + 1 := word_add_toNat (by simp; have := hq; have := (rdW (m.arr64 CTL) 129).toNat_lt; simp [erTop] at *; omega)
-  have e2 : (q + 2).toNat = q.toNat + 2 := word_add_toNat (by simp; have := hq; have := (rdW (m.arr64 CTL) 129).toNat_lt; simp [erTop] at *; omega)
-  unfold CVSl at *
-  have r1 : rdW (m'.arr64 EREC) (q + 1) = rdW (m.arr64 EREC) (q + 1) := by
-    simp only [rdW, e1]; rw [hg.2.2.2 _ (by omega)]
-  have r2 : rdW (m'.arr64 EREC) (q + 2) = rdW (m.arr64 EREC) (q + 2) := by
-    simp only [rdW, e2]; rw [hg.2.2.2 _ (by omega)]
-  rw [r1, r2]; exact Nat.le_trans h hg.2.1
-
 theorem nrcW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (m m' : Mem)
     (a : AState) (ctx cv : Word) (c : NestCtx) (cvv : IConstantVal) (r : List Word)
     (h : nrcW k m ctx cv = some (r, m')) (hS : StageR dn vis fe m a)
