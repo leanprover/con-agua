@@ -43,68 +43,41 @@ def targetAbsConst : FunDecl := lfn (no, nl, lvls, ho, hl, h, n, vus) locals (ok
   return IW.u64[ho + t]
 }
 
-/-- The `app` arm. -/
+/-- `target_abs_node(names.off, names.len, lvls, holes.off, holes.len, fuel1, g, x, y, z)`: the memoised
+fallback's arms (`app`, `lam`, `forallE`, `letE`, else `proj`; the other five tags are handled in
+`target_abs_go` before the memo is touched). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:56-110 ConRon.Arena.targetAbsGo
 @[l_impl ConRon.Arena.targetAbsGo]
-def targetAbsApp : FunDecl := lfn (no, nl, lvls, ho, hl, fuel, a, b) locals (ap, bp, r) {
-  ap := call target_abs_go(no, nl, lvls, ho, hl, fuel, a);
-  bp := call target_abs_go(no, nl, lvls, ho, hl, fuel, b);
-  r := call mk_app(ap, bp);
+def targetAbsNode : FunDecl := lfn (no, nl, lvls, ho, hl, fuel, g, x, y, z) locals (a2, x2, c2, r) {
+  if g == 4 {
+    a2 := call target_abs_go(no, nl, lvls, ho, hl, fuel, x);
+    x2 := call target_abs_go(no, nl, lvls, ho, hl, fuel, y);
+    r := call mk_app(a2, x2);
+    return r
+  };
+  if g == 5 {
+    a2 := call target_abs_go(no, nl, lvls, ho, hl, fuel, x);
+    x2 := call target_abs_go(no, nl, lvls, ho, hl, fuel, y);
+    r := call mk_lam(a2, x2);
+    return r
+  };
+  if g == 6 {
+    a2 := call target_abs_go(no, nl, lvls, ho, hl, fuel, x);
+    x2 := call target_abs_go(no, nl, lvls, ho, hl, fuel, y);
+    r := call mk_forall(a2, x2);
+    return r
+  };
+  if g == 7 {
+    a2 := call target_abs_go(no, nl, lvls, ho, hl, fuel, x);
+    x2 := call target_abs_go(no, nl, lvls, ho, hl, fuel, y);
+    c2 := call target_abs_go(no, nl, lvls, ho, hl, fuel, z);
+    r := call mk_let(a2, x2, c2);
+    return r
+  };
+  -- g == 9 (proj)
+  a2 := call target_abs_go(no, nl, lvls, ho, hl, fuel, z);
+  r := call mk_proj(x, y, a2);
   return r
-}
-
-/-- The `lam` arm. -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:56-110 ConRon.Arena.targetAbsGo
-@[l_impl ConRon.Arena.targetAbsGo]
-def targetAbsLam : FunDecl := lfn (no, nl, lvls, ho, hl, fuel, ty, body) locals (tp, bp, r) {
-  tp := call target_abs_go(no, nl, lvls, ho, hl, fuel, ty);
-  bp := call target_abs_go(no, nl, lvls, ho, hl, fuel, body);
-  r := call mk_lam(tp, bp);
-  return r
-}
-
-/-- The `forallE` arm. -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:56-110 ConRon.Arena.targetAbsGo
-@[l_impl ConRon.Arena.targetAbsGo]
-def targetAbsForall : FunDecl := lfn (no, nl, lvls, ho, hl, fuel, ty, body) locals (tp, bp, r) {
-  tp := call target_abs_go(no, nl, lvls, ho, hl, fuel, ty);
-  bp := call target_abs_go(no, nl, lvls, ho, hl, fuel, body);
-  r := call mk_forall(tp, bp);
-  return r
-}
-
-/-- The `letE` arm. -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:56-110 ConRon.Arena.targetAbsGo
-@[l_impl ConRon.Arena.targetAbsGo]
-def targetAbsLet : FunDecl := lfn (no, nl, lvls, ho, hl, fuel, ty, val, body)
-    locals (tp, vp, bp, r) {
-  tp := call target_abs_go(no, nl, lvls, ho, hl, fuel, ty);
-  vp := call target_abs_go(no, nl, lvls, ho, hl, fuel, val);
-  bp := call target_abs_go(no, nl, lvls, ho, hl, fuel, body);
-  r := call mk_let(tp, vp, bp);
-  return r
-}
-
-/-- The `proj` arm. -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:56-110 ConRon.Arena.targetAbsGo
-@[l_impl ConRon.Arena.targetAbsGo]
-def targetAbsProj : FunDecl := lfn (no, nl, lvls, ho, hl, fuel, s, i, sub) locals (u, r) {
-  u := call target_abs_go(no, nl, lvls, ho, hl, fuel, sub);
-  r := call mk_proj(s, i, u);
-  return r
-}
-
-/-- The memoised fallback's dispatch (`app`, `lam`, `forallE`, `letE`, `proj`; the other five tags
-are handled in `target_abs_go` before the memo is touched). -/
--- con-ron: ConRon/Arena/Inductives/RecCheck.lean:56-110 ConRon.Arena.targetAbsGo
-@[l_impl ConRon.Arena.targetAbsGo]
-def targetAbsNode : FunDecl := lfn (no, nl, lvls, ho, hl, fuel, g, x, y, z) locals (r) {
-  if g == 4 { r := call target_abs_app(no, nl, lvls, ho, hl, fuel, x, y); return r };
-  if g == 5 { r := call target_abs_lam(no, nl, lvls, ho, hl, fuel, x, y); return r };
-  if g == 6 { r := call target_abs_forall(no, nl, lvls, ho, hl, fuel, x, y); return r };
-  if g == 7 { r := call target_abs_let(no, nl, lvls, ho, hl, fuel, x, y, z); return r };
-  if g == 9 { r := call target_abs_proj(no, nl, lvls, ho, hl, fuel, x, y, z); return r };
-  abort
 }
 
 /-- **`target_abs_go`**: `bvar`/`sort`/`lit`/`fvar` unchanged, `const` via `target_abs_const`,
@@ -877,9 +850,7 @@ def consBlockRecsTF : FunDecl := lfn (vis2, p, m, lo, ll, vis)
 
 /-- This module's functions. -/
 def recCheckFns : Prog :=
-  [("target_abs_const", targetAbsConst), ("target_abs_app", targetAbsApp),
-   ("target_abs_lam", targetAbsLam), ("target_abs_forall", targetAbsForall),
-   ("target_abs_let", targetAbsLet), ("target_abs_proj", targetAbsProj),
+  [("target_abs_const", targetAbsConst),
    ("target_abs_node", targetAbsNode), ("target_abs_go", targetAbsGo), ("target_abs", targetAbs),
    ("target_holes", targetHoles), ("mk_target_major", mkTargetMajor),
    ("target_major_default", targetMajorDefault), ("target_major_at", targetMajorAt),
