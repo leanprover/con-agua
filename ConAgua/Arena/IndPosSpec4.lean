@@ -41,6 +41,44 @@ theorem RxPost.then {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Wor
   obtain ⟨M1, G1, -, hg1, hR1, hk1, hG1⟩ := h
   exact ⟨M1, G1, hS, hg1.trans hg, hR1.frame hf, hk1, hG1⟩
 
+/-! ### Entering and leaving a bank -/
+
+theorem rfEnter {m : Mem} {M : Std.HashMap (EIdx × Word) EIdx} {G g : Word} (hR : RfInv m M G g)
+    (hG : (G + 1).toNat < 2 ^ 32) :
+    RfInv (benterG 218 m) M (G + 1) (G + 1) ∧ Bank M (G + 1) ∅ ∧ G.toNat < 2 ^ 32 ∧ g ≤ G := by
+  obtain ⟨hMR, hB, hF⟩ := hR
+  have hG1 : (G + 1).toNat = G.toNat + 1 := by
+    rw [UInt64.toNat_add, show (1 : Word).toNat = 1 from rfl]; have := hB.2.2.2.1; omega
+  -- `bank_enter` wants the caller's bank only for its last conjunct
+  refine ⟨⟨?_, ?_, fresh_mono M G hF hG1⟩, bank_fresh M G hF hG1, hB.2.2.2.1, hB.2.2.1⟩
+  · exact memoRV_frame rfSch rfSch_wf rfK rfV [] [218, 218 + 1] (by simp) (by simp [rfSch]) m _
+      (benterG_frame 218 m) (fun _ _ h => h) M hMR
+  · obtain ⟨hB1, hB2, hgG, hGl, hsz⟩ := hB
+    have hf := benterG_frame 218 m
+    have hne : (218 : Word) ≠ 218 + 1 := by decide
+    refine ⟨?_, ?_, UInt64.le_refl _, hG, by rw [hf.2.2.1]; exact hsz⟩
+    · have h218 : (218 : Word).toNat = 218 := rfl
+      simp only [benterG, rdW_set64, size_set64, hB1]
+      simp [Ne.symm hne]; omega
+    · have h218 : (218 : Word).toNat = 218 := rfl
+      simp only [benterG, rdW_set64, size_set64, hB1]
+      simp; intro; omega
+
+theorem rfLeave {m : Mem} {M : Std.HashMap (EIdx × Word) EIdx} {G g' g : Word} (hR : RfInv m M G g')
+    (hg : g ≤ G) : RfInv (m.set64 CTL 219 g) M G g := by
+  obtain ⟨hMR, ⟨hB1, hB2, hgG, hGl, hsz⟩, hF⟩ := hR
+  have hf := MemFrame.setCtl m 219 g
+  have h218 : (218 : Word).toNat = 218 := rfl
+  refine ⟨memoRV_frame rfSch rfSch_wf rfK rfV [] [219] (by simp) (by simp [rfSch]) m _ hf (fun _ _ h => h) M hMR,
+    ⟨by rw [hf.2.1 218 (by simp)]; exact hB1, ?_, hg, hGl, by rw [hf.2.2.1]; exact hsz⟩, hF⟩
+  rw [show (218 : Word) + 1 = 219 from rfl, rdW_set64]
+  have : (219 : Word).toNat < (m.arr64 CTL).size := by
+    rw [show (219 : Word).toNat = 219 from rfl]; omega
+  simp; intro; simp at this; omega
+
+theorem uint_le_succ {G : Word} (h : G.toNat < 2 ^ 32) : G ≤ G + 1 := by
+  rw [UInt64.le_iff_toNat_le, UInt64.toNat_add, show (1 : Word).toNat = 1 from rfl]; omega
+
 section steps
 variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 
@@ -272,6 +310,38 @@ theorem dsGoOK_step (n : Nat) (hRf : RfOK dn fe vis n) (hDg : DsGoOK dn fe vis n
   simp only [except_ok_bind, StateT.run_bind]
   rw [hj1] at hrun
   rw [hrun]
+  rfl
+
+theorem rfOK_step (n : Nat) (hGo : GoOK dn fe vis n) : RfOK dn fe vis (n + 1) := by
+  intro m m' a f e fm r M G g h hS hfm he hR
+  have hB1 : rdW (m.arr64 CTL) 218 = G := hR.2.1.1
+  have hB2 : rdW (m.arr64 CTL) 219 = g := hR.2.1.2.1
+  by_cases hb : 4294967296 ≤ rdW (m.arr64 CTL) 218 + 1
+  · rw [rxW_big (hb := hb)] at h; simp at h
+  rw [rxW_ok (hb := hb), hB2] at h
+  have hG : (G + 1).toNat < 2 ^ 32 := by rw [← hB1]; exact lt_of_notbig hb
+  obtain ⟨hR1, hbank, hGl, hgG⟩ := rfEnter hR hG
+  obtain ⟨hS1, hg1⟩ := StageR.frame_hi hS (benterG_frame 218 m) (by simp) (by simp) (by simp) (by simp)
+  cases hgo : rxGoW n (benterG 218 m) f CWF e with
+  | none => rw [hgo] at h; simp [rxK1] at h
+  | some pr =>
+  obtain ⟨r1, m1⟩ := pr
+  rw [hgo] at h
+  by_cases hrb : 4294967296 ≤ r1
+  · rw [rxK1_big (hb := hrb)] at h; simp at h
+  rw [rxK1_ok (hb := hrb)] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨mp', a', M1, G1, hrun, hS2, hg2, hR2, -, hkx, hG1⟩ := hGo _ m1 a f CWF e fm ∅ _ M (G + 1) (G + 1) hgo hS1
+    (hfm.grow hg1) he hR1 hbank
+  have hGG : G ≤ G + 1 := uint_le_succ hGl
+  obtain ⟨hS3, hg3⟩ := StageR.frame_hi hS2 (MemFrame.setCtl m1 219 g) (by simp) (by simp) (by simp) (by simp)
+  refine ⟨a', ?_, lt_of_notbig hrb, M1, G1, hS3, (hg1.trans hg2).trans hg3,
+    rfLeave hR2 (UInt64.le_trans hgG (UInt64.le_trans hGG hG1)), fun k gen hgen => hkx k gen
+      (UInt64.le_trans hgen hGG) (fun e => by
+        subst e; rw [UInt64.le_iff_toNat_le, UInt64.toNat_add, show (1 : Word).toNat = 1 from rfl] at hgen; omega),
+    UInt64.le_trans hGG hG1⟩
+  rw [ConRon.Arena.replaceFVars.eq_1, StateT.run_bind, ← CWF_eq, hrun]
   rfl
 
 end steps
