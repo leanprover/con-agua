@@ -72,6 +72,43 @@ def kcW (k : Nat) (m : Mem) (po pl key : Word) : Option (List Word × Mem) :=
   | some (q, m1) => kcK key q (rdW (m.arr64 IW) (key + 3))
       (ckgW k m1 po pl (rdW (m.arr64 IW) (key + 2)) (rdW (m.arr64 IW) (key + 3)) q 0)
 
+mutual
+/-- **The model of `class_key_of_closed`**, with `bvar_b` the master's walk (`bvbW`). -/
+def ckc2W : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _, _ => none
+  | n + 1, m, nP, o, l =>
+    if l = 0 then some ([1], m)
+    else ckc2K1 n nP o l (rdW (m.arr64 IW) o) (bvbW n m (rdW (m.arr64 IW) o) CWF)
+/-- After `bvar_b`. -/
+def ckc2K1 (n : Nat) (nP o l e : Word) : Option (Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rb, m1) =>
+    if rb ≠ 0 then some ([0], m1) else ckc2K2 n nP o l (stubM "fvar_b" m1 [CWF, e])
+/-- After `fvar_b`. -/
+def ckc2K2 (n : Nat) (nP o l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rf, m2) =>
+    if nP < rf.headD 0 then some ([0], m2) else ckcK3 (ckc2W n m2 nP (o + 1) (l - 1))
+end
+
+section arms0
+variable (n : Nat) (m m1 m2 : Mem) (nP o l e rb : Word) (rf : List Word)
+theorem ckc2W_nil (hl : l = 0) : ckc2W (n + 1) m nP o l = some ([1], m) := by simp [ckc2W, hl]
+theorem ckc2W_cons (hl : l ≠ 0) : ckc2W (n + 1) m nP o l =
+    ckc2K1 n nP o l (rdW (m.arr64 IW) o) (bvbW n m (rdW (m.arr64 IW) o) CWF) := by simp [ckc2W, hl]
+theorem ckc2K1_open (h : rb ≠ 0) : ckc2K1 n nP o l e (some (rb, m1)) = some ([0], m1) := by
+  rw [ckc2K1, if_pos h]
+theorem ckc2K1_closed (h : ¬ rb ≠ 0) :
+    ckc2K1 n nP o l e (some (rb, m1)) = ckc2K2 n nP o l (stubM "fvar_b" m1 [CWF, e]) := by
+  rw [ckc2K1, if_neg h]
+theorem ckc2K2_open (h : nP < rf.headD 0) : ckc2K2 n nP o l (some (rf, m2)) = some ([0], m2) := by
+  rw [ckc2K2, if_pos h]
+theorem ckc2K2_closed (h : ¬ nP < rf.headD 0) :
+    ckc2K2 n nP o l (some (rf, m2)) = ckcK3 (ckc2W n m2 nP (o + 1) (l - 1)) := by
+  rw [ckc2K2, if_neg h]
+end arms0
+attribute [ind_grind] ckc2W_nil ckc2W_cons ckc2K1_open ckc2K1_closed ckc2K2_open ckc2K2_closed
+
 /-- After `class_key_of_closed`. -/
 def kofK2 (k2 : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -79,7 +116,7 @@ def kofK2 (k2 : Word) : Option (List Word × Mem) → Option (List Word × Mem)
 /-- After `class_key_canon`. -/
 def kofK1 (k : Nat) (nP : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r, m) => kofK2 (r.headD 0) (ckcW (k + 1) m nP (rdW (m.arr64 IW) (r.headD 0 + 2))
+  | some (r, m) => kofK2 (r.headD 0) (ckc2W (k + 1) m nP (rdW (m.arr64 IW) (r.headD 0 + 2))
       (rdW (m.arr64 IW) (r.headD 0 + 3)))
 
 /-- **The model of `class_key_of(nP, po, pl, key)`** at exec fuel `k + 2`. -/
@@ -92,7 +129,7 @@ theorem kofK2_fail (h : r.headD 0 = 0) : kofK2 k2 (some (r, m)) = none := by
   simp only [kofK2]; rw [if_pos h]
 theorem kofK2_ok (h : ¬ r.headD 0 = 0) : kofK2 k2 (some (r, m)) = some ([k2], m) := by
   simp only [kofK2]; rw [if_neg h]
-theorem kofK1_some : kofK1 k nP (some (r, m)) = kofK2 (r.headD 0) (ckcW (k + 1) m nP
+theorem kofK1_some : kofK1 k nP (some (r, m)) = kofK2 (r.headD 0) (ckc2W (k + 1) m nP
     (rdW (m.arr64 IW) (r.headD 0 + 2)) (rdW (m.arr64 IW) (r.headD 0 + 3))) := rfl
 end arms2
 attribute [ind_grind] kofK2_fail kofK2_ok kofK1_some
@@ -106,6 +143,7 @@ structure KofProg (p : Prog) : Prop where
   kc : p.lookup "class_key_canon" = some classKeyCanonL
   kcl : p.lookup "class_key_of_closed" = some classKeyOfClosed
   kof : p.lookup "class_key_of" = some classKeyOfL
+  bvb : BvbProg p
 
 /-! ## The `vcgen` specs -/
 
@@ -157,6 +195,22 @@ theorem kc_spec (k : Nat) (s₀ : St) (po pl key : Word) :
       iwAlloc_specW p L.rx.ha k, ckg_spec L k, posRec4_specW p L.rx.ha L.rx.h4 k] <;>
     finish (gen := 20) [kcW, kcK, rdW_eq]
 
+theorem ckc2_spec (k : Nat) : ∀ (s₀ : St) (nP o l : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p k) "class_key_of_closed" [nP, o, l]
+    ⦃fun r s' => LocEq s' s₀ ∧ ckc2W k s₀.mem nP o l = some (r, s'.mem); ⊤⦄ := by
+  induction k with
+  | zero =>
+    intro s₀ nP o l; rw [invoke_eq _ L.kcl]; simp only [callFn, classKeyOfClosed]
+    vcgen [exec] <;> grind
+  | succ k ih =>
+    intro s₀ nP o l
+    rw [invoke_eq _ L.kcl]
+    simp only [callFn, classKeyOfClosed]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        bvarBL_spec p L.bvb k, stubM_spec p "fvar_b" k, ih] <;>
+      finish (gen := 20)
+
 theorem kof_spec (k : Nat) (s₀ : St) (nP po pl key : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (k + 2)) "class_key_of" [nP, po, pl, key]
     ⦃fun r s' => LocEq s' s₀ ∧ kofW k s₀.mem nP po pl key = some (r, s'.mem); ⊤⦄ := by
@@ -164,7 +218,7 @@ theorem kof_spec (k : Nat) (s₀ : St) (nP po pl key : Word) :
   simp only [callFn, classKeyOfL]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      kc_spec L k, classKeyOfClosed_spec p L.kcl (k + 1)] <;>
+      kc_spec L k, ckc2_spec L (k + 1)] <;>
     finish (gen := 20) [kofW, rdW_eq]
 
 end spec
@@ -364,6 +418,251 @@ theorem kcW_ok (k : Nat) (m m' : Mem) (a : AState) (po pl key : Word) (r : List 
   simp only [except_ok_bind, hcd, hud]
   rfl
 
+theorem ckc2W_mfr : ∀ (n : Nat) (m m' : Mem) (nP o l : Word) (r : List Word),
+    ckc2W n m nP o l = some (r, m') → MFr [] [] m m'
+  | 0, _, _, _, _, _, _, h => by simp [ckc2W] at h
+  | n + 1, m, m', nP, o, l, r, h => by
+    by_cases hl : l = 0
+    · rw [ckc2W_nil n m nP o l hl] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
+    rw [ckc2W_cons n m nP o l hl] at h
+    cases h1 : bvbW n m (rdW (m.arr64 IW) o) CWF with
+    | none => rw [h1] at h; simp [ckc2K1] at h
+    | some p1 =>
+    obtain ⟨rb, m1⟩ := p1
+    rw [h1] at h
+    refine (bvbW_mfr h1).trans ?_
+    by_cases hb : rb ≠ 0
+    · rw [ckc2K1_open (h := hb)] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
+    rw [ckc2K1_closed (h := hb)] at h
+    cases h2 : stubM "fvar_b" m1 [CWF, rdW (m.arr64 IW) o] with
+    | none => rw [h2] at h; simp [ckc2K2] at h
+    | some p2 =>
+    obtain ⟨rf, m2⟩ := p2
+    rw [h2] at h
+    refine (MFr.ofStub h2).trans ?_
+    by_cases hf : nP < rf.headD 0
+    · rw [ckc2K2_open (h := hf)] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h; rw [← h.2]; exact MFr.refl _ _ _
+    rw [ckc2K2_closed (h := hf)] at h
+    cases h3 : ckc2W n m2 nP (o + 1) (l - 1) with
+    | none => rw [h3] at h; simp [ckcK3] at h
+    | some p3 =>
+    obtain ⟨r3, m3⟩ := p3
+    rw [h3, ckcK3_some] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    rw [← h.2]; exact ckc2W_mfr n _ _ _ _ _ _ h3
+
+theorem ckc2W_ok (n : Nat) :
+    ∀ (m m' : Mem) (a : AState) (nP o l : Word) (xs : List EIdx) (r : List Word),
+    2 ^ 31 + n ≤ coreWalkFuel →
+    ckc2W n m nP o l = some (r, m') → StageR dn vis fe m a → decHL m o.toNat l.toNat = some xs →
+    o.toNat + l.toNat < 2 ^ 64 → o.toNat + l.toNat ≤ iwTop m →
+    ∃ b a', (xs.allM (keyClosedTest nP.toNat)).run a = .ok (b, a') ∧
+      KeepPost dn vis fe decW0B m m' a' r b := by
+  induction n with
+  | zero => intro m m' a nP o l xs r _ h; simp [ckc2W] at h
+  | succ n ih =>
+    intro m m' a nP o l xs r hn h hS hd hb ht
+    by_cases hl : l = 0
+    · subst hl
+      rw [ckc2W_nil n m nP o 0 rfl] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      have : xs = [] := by simpa [decHL, hslice?] using hd.symm
+      subst this
+      exact ⟨true, a, rfl, hS, IWGrow.refl m, by simp [decW0B]⟩
+    · obtain ⟨w, xs', rfl, hw, hw32, hd'⟩ := decHL_cons hd hl hb
+      obtain ⟨hsum, -⟩ := toNat_succ_of_lt hb hl
+      rw [ckc2W_cons n m nP o l hl, hw] at h
+      cases h2 : bvbW n m w CWF with
+      | none => rw [h2] at h; simp [ckc2K1] at h
+      | some x2 =>
+      obtain ⟨rb, m1⟩ := x2
+      rw [h2] at h
+      obtain ⟨a1, hrun1, hS1, hg1, -⟩ := bvbW_stage dn vis fe hS n coreWalkFuel (by omega) w rb hw32 h2
+      by_cases hz : rb ≠ 0
+      · rw [ckc2K1_open n m1 nP o l w rb hz] at h
+        simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        have hk : rb.toNat ≠ 0 := fun e => hz (UInt64.toNat_inj.mp (by simpa using e))
+        refine ⟨false, a1, ?_, hS1, hg1, by simp [decW0B]⟩
+        simp only [List.allM_cons, StateT.run_bind, keyClosedTest]
+        rw [show (decI w : EIdx) = decE w from rfl, hrun1]
+        simp only [bind, Except.bind, hk, bne_iff_ne, ne_eq, not_false_eq_true, ite_true]
+        rfl
+      · rw [ckc2K1_closed n m1 nP o l w rb hz] at h
+        have hk : rb.toNat = 0 := by have hz' : rb = 0 := by simpa using hz
+                                     rw [hz']; rfl
+        cases h3 : stubM "fvar_b" m1 [CWF, w] with
+        | none => rw [h3] at h; simp [ckc2K2] at h
+        | some x3 =>
+        obtain ⟨rf, m2⟩ := x3
+        rw [h3] at h
+        obtain ⟨kf, a2, hrun2, hS2, hg2, hkf⟩ := fvarB_spec dn vis fe CWF w hw32 m1 m2 a1 rf h3 hS1
+        rw [CWF_eq] at hrun2
+        have hg12 := hg1.trans hg2
+        have hlt : (nP < rf.headD 0) ↔ ¬ kf ≤ nP.toNat := by
+          rw [UInt64.lt_iff_toNat_lt, hkf]; omega
+        have hrunT : (keyClosedTest nP.toNat (decI w)).run a = .ok (decide (kf ≤ nP.toNat), a2) := by
+          simp only [keyClosedTest, StateT.run_bind]
+          rw [show (decI w : EIdx) = decE w from rfl, hrun1]
+          simp only [bind, Except.bind, hk, bne_self_eq_false, Bool.false_eq_true, ite_false]
+          simp only [StateT.bind, StateT.run] at hrun2 ⊢
+          rw [show (decE w : EIdx) = decI w from rfl, hrun2]
+          rfl
+        by_cases hn' : nP < rf.headD 0
+        · rw [ckc2K2_open n m2 nP o l rf hn'] at h
+          simp only [Option.some.injEq, Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl⟩ := h
+          have hn'' := hlt.mp hn'
+          refine ⟨false, a2, ?_, hS2, hg12, by simp [decW0B]⟩
+          simp only [List.allM_cons, StateT.run_bind]
+          rw [hrunT]
+          simp only [bind, Except.bind, hn'', decide_false, Bool.false_eq_true, ite_false]
+          rfl
+        · rw [ckc2K2_closed n m2 nP o l rf hn'] at h
+          have hn'' : kf ≤ nP.toNat := by have := mt hlt.mpr hn'; omega
+          cases h4 : ckc2W n m2 nP (o + 1) (l - 1) with
+          | none => rw [h4] at h; simp [ckcK3] at h
+          | some x4 =>
+          obtain ⟨r4, m3⟩ := x4
+          rw [h4, ckcK3_some] at h
+          simp only [Option.some.injEq, Prod.mk.injEq] at h
+          obtain ⟨rfl, rfl⟩ := h
+          obtain ⟨b3, a3, hrun3, hS3, hg3, hd3, hd31⟩ := ih m2 m3 a2 nP (o + 1) (l - 1) xs' r4 (by omega) h4 hS2
+            (by rw [decHL_grow hg12 (by omega)]; exact hd') (by omega) (by have := hg12.1; omega)
+          refine ⟨b3, a3, ?_, hS3, hg12.trans hg3, by simpa [decW0B] using And.intro hd3 hd31⟩
+          simp only [List.allM_cons, StateT.run_bind]
+          rw [hrunT]
+          simp only [bind, Except.bind, hn'', decide_true, ite_true]
+          exact hrun3
+
+/-- **`class_key_of`'s model simulates `classKeyOf`.** -/
+theorem kofW_ok (k : Nat) (m m' : Mem) (a : AState) (nP po pl key : Word) (r : List Word)
+    (pfvs : List EIdx) (ck : ClassKey) (h : kofW k m nP po pl key = some (r, m')) (hS : StageR dn vis fe m a)
+    (hpf : decHL m po.toNat pl.toNat = some pfvs) (hpb : po.toNat + pl.toNat ≤ iwTop m)
+    (hk : DecB (fun m => decCK m key.toNat) m ck) (hP : PosMR m) (hn : 2 ^ 31 + (k + 1) ≤ coreWalkFuel) :
+    ∃ x a', (ConRon.Arena.classKeyOf nP.toNat pfvs ck).run a = .ok (x, a') ∧
+      DecB (fun m => decCK m (r.headD 0).toNat) m' x ∧ (r.headD 0).toNat + 4 ≤ iwTop m' ∧
+      (rdW (m'.arr64 IW) (r.headD 0 + 2)).toNat + (rdW (m'.arr64 IW) (r.headD 0 + 3)).toNat ≤ iwTop m' ∧
+      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PosMR m' := by
+  unfold kofW at h
+  cases hc : kcW k m po pl key with
+  | none => rw [hc] at h; cases h
+  | some p1 =>
+  obtain ⟨r1, m1⟩ := p1
+  rw [hc, kofK1_some] at h
+  obtain ⟨x1, a1, hrun1, hd1, hb1, hds1, hS1, hg1, hP1⟩ := kcW_ok dn fe vis k m m1 a po pl key r1 pfvs ck hc hS hpf hpb hk hP
+  have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
+  obtain ⟨nk, hnk, rfl⟩ := decCK_decB_nk hd1
+  obtain ⟨-, -, -, -, hds, -, -⟩ := pos2_nk_fields hnk htop1
+  cases hcl : ckc2W (k + 1) m1 nP (rdW (m1.arr64 IW) (r1.headD 0 + 2)) (rdW (m1.arr64 IW) (r1.headD 0 + 3)) with
+  | none => rw [hcl] at h; simp [kofK2] at h
+  | some p2 =>
+  obtain ⟨r2, m2⟩ := p2
+  rw [hcl] at h
+  obtain ⟨b, a2, hrun2, hS2, hg2, hb2, -⟩ := ckc2W_ok dn fe vis (k + 1) m1 m2 a1 nP _ _ nk.ds r2 (by omega) hcl hS1 hds
+    (by omega) hds1
+  by_cases h0 : r2.headD 0 = 0
+  · rw [kofK2_fail (h := h0)] at h; cases h
+  rw [kofK2_ok (h := h0)] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  have hbt : b = true := by rw [← hb2]; exact bne_iff_ne.mpr h0
+  subst hbt
+  refine ⟨ckOfNk nk, a2, ?_, ?_, by simpa using (by have := hg2.1; omega : (r1.headD 0).toNat + 4 ≤ iwTop m2), ?_,
+    hS2, hg1.trans hg2, hP1.fr (ckc2W_mfr _ _ _ _ _ _ _ hcl)⟩
+  · simp only [ConRon.Arena.classKeyOf, StateT.run_bind]
+    rw [hrun1]
+    simp only [except_ok_bind]
+    have e : (ckOfNk nk).ds = nk.ds := rfl
+    have hr2' : ((ckOfNk nk).ds.allM fun x => do
+        if (← bvarB coreWalkFuel x) != 0 then pure false
+        else pure ((← fvarB coreWalkFuel x) ≤ nP.toNat)).run a1 = .ok (true, a2) := hrun2
+    rw [hr2']
+    rfl
+  · simpa using hd1.grow (decCK_mono _) hg2
+  · have e2 : rdW (m2.arr64 IW) (r1.headD 0 + 2) = rdW (m1.arr64 IW) (r1.headD 0 + 2) := by
+      have e : (r1.headD 0 + 2).toNat = (r1.headD 0).toNat + 2 :=
+        word_add_toNat (by rw [show (2 : Word).toNat = 2 from rfl]; omega)
+      simp only [rdW, e]; rw [hg2.2.2.1 _ (by omega)]
+    have e3 : rdW (m2.arr64 IW) (r1.headD 0 + 3) = rdW (m1.arr64 IW) (r1.headD 0 + 3) := by
+      have e : (r1.headD 0 + 3).toNat = (r1.headD 0).toNat + 3 :=
+        word_add_toNat (by rw [show (3 : Word).toNat = 3 from rfl]; omega)
+      simp only [rdW, e]; rw [hg2.2.2.1 _ (by omega)]
+    simp only [List.headD_cons]; rw [e2, e3]; have := hg2.1; omega
+
 end rel
+
+/-! ## Census -/
+
+section census
+variable {p : Prog} (L : KofProg p) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
+include L
+
+/-- **`target_canon_params` refines `targetCanonParams`** (`replace_fvars` through its `mk_app_n`
+stub): the parameters a slice below the top, the walk memos well formed before and after. -/
+@[refines ConRon.Arena.targetCanonParams]
+theorem targetCanonParams_refines (k : Nat) (s₀ : St) (a₀ : AState) (pfo pfl e : Word) (pfvs : List EIdx)
+    (hS : StageR dn vis fe s₀.mem a₀) (hpf : decHL s₀.mem pfo.toNat pfl.toNat = some pfvs)
+    (hpb : pfo.toNat + pfl.toNat ≤ iwTop s₀.mem) (he : H e) (hP : PosMR s₀.mem) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "target_canon_params" [pfo, pfl, e]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.targetCanonParams pfvs (decE e)) a₀ ∧
+      decE (r.headD 0) = AM.res (ConRon.Arena.targetCanonParams pfvs (decE e)) a₀ ∧ H (r.headD 0) ∧
+      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.targetCanonParams pfvs (decE e)) a₀) ∧
+      IWGrow s₀.mem s'.mem ∧ PosMR s'.mem; ⊤⦄ := by
+  refine triple_post (tcp_spec L k s₀ pfo pfl e) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨a', hrun, hH, hS', hg, hP'⟩ := tcpW_ok dn fe vis k _ _ a₀ pfo pfl e _ pfvs hm hS hpf hpb he hP
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hres], hH, by rw [hst]; exact hS', hg, hP'⟩
+
+/-- **`class_key_canon` refines `classKeyCanon`** (through `replace_fvars`' stub): the key decoded
+below the tops, the canonical parameters a slice below the top; the canonical key a fresh record
+decoded below the tops, its parameter slice below the top. -/
+@[refines ConRon.Arena.classKeyCanon]
+theorem classKeyCanon_refines (k : Nat) (s₀ : St) (a₀ : AState) (po pl key : Word) (pfvs : List EIdx)
+    (ck : ClassKey) (hS : StageR dn vis fe s₀.mem a₀) (hpf : decHL s₀.mem po.toNat pl.toNat = some pfvs)
+    (hpb : po.toNat + pl.toNat ≤ iwTop s₀.mem) (hk : DecB (fun m => decCK m key.toNat) s₀.mem ck)
+    (hP : PosMR s₀.mem) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "class_key_canon" [po, pl, key]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.classKeyCanon pfvs ck) a₀ ∧
+      DecB (fun m => decCK m (r.headD 0).toNat) s'.mem (AM.res (ConRon.Arena.classKeyCanon pfvs ck) a₀) ∧
+      (r.headD 0).toNat + 4 ≤ iwTop s'.mem ∧
+      (rdW (s'.mem.arr64 IW) (r.headD 0 + 2)).toNat + (rdW (s'.mem.arr64 IW) (r.headD 0 + 3)).toNat ≤
+        iwTop s'.mem ∧
+      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.classKeyCanon pfvs ck) a₀) ∧
+      IWGrow s₀.mem s'.mem ∧ PosMR s'.mem; ⊤⦄ := by
+  refine triple_post (kc_spec L k s₀ po pl key) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨x, a', hrun, h1, h2, h3, h4, h5, h6⟩ := kcW_ok dn fe vis k _ _ a₀ po pl key r pfvs ck hm hS hpf hpb hk hP
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hres]; exact h1, h2, h3, by rw [hst]; exact h4, h5, h6⟩
+
+/-- **`class_key_of` refines `classKeyOf`** (through `replace_fvars`' and `fvar_b`'s stubs;
+`bvar_b` the master's walk, at exec fuel below `coreWalkFuel`). -/
+@[refines ConRon.Arena.classKeyOf]
+theorem classKeyOf_refines (k : Nat) (hn : 2 ^ 31 + (k + 1) ≤ coreWalkFuel) (s₀ : St) (a₀ : AState)
+    (nP po pl key : Word) (pfvs : List EIdx) (ck : ClassKey) (hS : StageR dn vis fe s₀.mem a₀)
+    (hpf : decHL s₀.mem po.toNat pl.toNat = some pfvs) (hpb : po.toNat + pl.toNat ≤ iwTop s₀.mem)
+    (hk : DecB (fun m => decCK m key.toNat) s₀.mem ck) (hP : PosMR s₀.mem) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (k + 2)) "class_key_of" [nP, po, pl, key]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.classKeyOf nP.toNat pfvs ck) a₀ ∧
+      DecB (fun m => decCK m (r.headD 0).toNat) s'.mem (AM.res (ConRon.Arena.classKeyOf nP.toNat pfvs ck) a₀) ∧
+      (r.headD 0).toNat + 4 ≤ iwTop s'.mem ∧
+      (rdW (s'.mem.arr64 IW) (r.headD 0 + 2)).toNat + (rdW (s'.mem.arr64 IW) (r.headD 0 + 3)).toNat ≤
+        iwTop s'.mem ∧
+      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.classKeyOf nP.toNat pfvs ck) a₀) ∧
+      IWGrow s₀.mem s'.mem ∧ PosMR s'.mem; ⊤⦄ := by
+  refine triple_post (kof_spec L k s₀ nP po pl key) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨x, a', hrun, h1, h2, h3, h4, h5, h6⟩ :=
+    kofW_ok dn fe vis k _ _ a₀ nP po pl key r pfvs ck hm hS hpf hpb hk hP hn
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hres]; exact h1, h2, h3, by rw [hst]; exact h4, h5, h6⟩
+
+end census
 
 end L.Ind
