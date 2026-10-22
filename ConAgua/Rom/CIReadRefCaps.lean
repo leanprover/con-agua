@@ -163,6 +163,13 @@ theorem encCaps_eq (c : ConLeche.IndCaps)
       (encName c.etaCtor ++ (encNameL c.all ++ (encNameL c.ctors ++ (encNameL [] ++ rest))))))))))) := by
   rcases hz with h | h <;> simp [encCaps, h, szTag, List.append_assoc]
 
+theorem encCaps_len (c : ConLeche.IndCaps) (hz : c.sortZ = .never ∨ c.sortZ = .ifAllZero []) :
+    (encCaps c).length = 64 + (encName c.etaCtor).length + (encNameL c.all).length +
+      (encNameL c.ctors).length + (encNameL []).length := by
+  have h := congrArg List.length (encCaps_eq c hz [])
+  simp only [List.append_nil, List.length_append, bw, u64B, List.length_cons, List.length_nil] at h
+  omega
+
 theorem ofNat_toNat_lt {n : Nat} (h : n < 2 ^ 64) : (UInt64.ofNat n).toNat = n := by
   rw [UInt64.toNat_ofNat']; exact Nat.mod_eq_of_lt h
 
@@ -198,8 +205,8 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option Co
   have hlt := hI.er_lt
   have hgo := hI.grow.2.1
   have hrom := hr; simp only [RomOK] at hrom
-  have hlen := drop_len rom _ _ _ hd' (by simp [bw, u64B])
-  simp only [List.length_append, bw, u64B, List.length_cons, List.length_nil] at hlen
+  have hlen := drop_len rom q.toNat (u64B (if caps.eta then 1 else 0)) _ hd' (by simp [u64B])
+  simp only [u64B, List.length_cons, List.length_nil] at hlen
   have hw := callW_model (M := fun mq => capsW p k mq q c) (caps_specW rom p hL k · q c) hc
   unfold capsW at hw
   replace hw := rdU_some hL hw; replace hw := rdU_some hL hw; replace hw := rdU_some hL hw
@@ -227,6 +234,7 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option Co
     u64B (if caps.unitlike then 1 else 0) ++ u64B caps.unitParams ++ u64B (if caps.ruleK then 1 else 0) ++ u64B caps.nparams) (szTag caps.sortZ) _
     (by rw [hd']; repeat rw [List.append_assoc]) (by simp [bw, u64B]) htag
   rw [e0, e1, e2, e3, e4, e5, e6, e7] at hw
+  clear e0 e1 e2 e3 e4 e5 e6 e7
   generalize hv0 : UInt64.ofNat (if caps.eta then 1 else 0) = v0 at hw
   generalize hv3 : UInt64.ofNat (if caps.unitlike then 1 else 0) = v3 at hw
   generalize hv5 : UInt64.ofNat (if caps.ruleK then 1 else 0) = v5 at hw
@@ -277,6 +285,7 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option Co
       (encNameL caps.ctors ++ (encNameL [] ++ rest))) := by
     rw [hq64, ← List.drop_drop, hd']; simp [u64B]
   obtain ⟨a1, hrun1, hA1, hk1, hlt1, hq1, hf1⟩ := nameCall hL hr _ hfn hI1.arena hdn h1
+  clear hd hd'
   obtain ⟨hI8, hE8, hIW8, ht8, -⟩ := hI1.expr hA1 (hf1.mono (fun b hb => by simp [ExprA, RomA, hb])
     (fun x hx => by simp [ExprC, RomC, hx])) hk1
   have hM8 := hM1.frameG hf1 (by decide) (by decide)
@@ -355,8 +364,6 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option Co
   have hA' := (hH10.ekeep hek11 (fun i hi => ⟨by omega, by omega⟩) hIW11).ekeep hek12
     (fun i hi => ⟨by omega, by omega⟩) hIW12
   have hC' := hH11.ekeep hek12 (fun i hi => ⟨by omega, by omega⟩) hIW12
-  have hlenC := congrArg List.length (hd.symm.trans hd')
-  simp only [List.length_append, u64B, List.length_cons, List.length_nil] at hlenC
   refine ⟨⟨caps.eta, decI (r1.headD 0), caps.etaParams, caps.etaFields, caps.unitlike, caps.unitParams,
     caps.ruleK, caps.sortZ, wsA.map decI, caps.nparams, wsC.map decI⟩, a4, ?_, hI12, hM12,
     by rw [hs12, hs11, hs10, hs9, hs8, hs1, hst], ?_, ⟨by omega, fun i hi hR => ?_⟩, by omega,
@@ -364,7 +371,8 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option Co
   · simp only [Frontend.internCaps]
     rw [run_bind_of _ _ _ _ _ hrun1, run_bind_of _ _ _ _ _ hrun2, run_bind_of _ _ _ _ _ hrun3]
     rfl
-  · simp only [List.headD_cons]; rw [hq4, hq3, hq2, hq1, hq64]; simp [encNameL, u64B] at hlenC ⊢; omega
+  · simp only [List.headD_cons]; rw [hq4, hq3, hq2, hq1, hq64, encCaps_len caps hz]; simp [encNameL, u64B]
+    omega
   · rw [hk12 _ (by omega) (by omega) (by omega), er_set_ne _ _ _ _ (by rw [hc1]; omega), hE8',
       setERs_ne ws m i (by
         intro jw hjw; rw [← hws] at hjw
