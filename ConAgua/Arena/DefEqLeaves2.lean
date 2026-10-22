@@ -11,6 +11,7 @@ open Std.WP
 open scoped Lean.Order
 
 set_option experimental.vcgen true
+set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
@@ -146,5 +147,98 @@ theorem erSliceEq_refines (p : Prog) (hp : p.lookup "er_slice_eq" = some erSlice
     rw [he1] at he2
     have := decI_inj hl1' hl2' (Option.some.inj he2)
     rw [hext _ _ hw1, hext _ _ hw2, this]
+
+/-! ## `CoreS` across the `Nat` literal arms (`nat_pred_lit`)
+
+`NatArms.lean`'s arm refinements are generic in the relation `R` they keep: it must give the pool
+(`PoolOK`), survive appending to the pool (`Grows`) and an `intern_lit` (`InternSpec`). `CoreS`
+(with the stack kept from a fixed memory) is such a relation: the pool append and the `lit` tables
+lie outside the core tier, the pins, the environment and the stack, and the interning keeps the
+caches, the pins and the level store (`cpl`). -/
+
+/-- What `CoreS` reads of the twin's state, besides `ArenaD` (a copy of `WhnfCoreApp.lean`'s `cpl`,
+which does not build at this commit). -/
+def cplL (a : AState) : Caches × Pins × LsStore := (a.caches, a.pins, a.store.lss)
+
+theorem keeps_cplL_internNodeE (v : ENodeView) : Keeps cplL (internNodeE v) := by
+  unfold Keeps; intro a r a' h
+  simp only [internNodeE, StateT.run_bind, StateT.run_get, pure_bind] at h
+  repeat' split at h
+  all_goals simp only [StateT.run_bind, StateT.run_set, StateT.run_pure, pure_bind,
+    ConRon.Arena.fail, throwThe, MonadExceptOf.throw] at h
+  all_goals first
+    | (cases h; rfl)
+    | (cases h; simp only [cplL, EStore.lss_intern])
+    | (simp [throwThe, Functor.map, Except.map] at h)
+
+/-- **`CoreS` across an interning step** (`WhnfCoreApp.lean`'s `CoreS.arena_frame`, copied). -/
+theorem CoreS.arenaFrame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
+    {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List ArrId} {C : List Word}
+    (hS : CoreS dn m a vis fe M eb) (hD : ArenaD m' a') (hcpl : cplL a' = cplL a)
+    (hf : MemFrame A C m m')
+    (h128 : ∀ b ∈ A, b < 96 ∨ 128 ≤ b) (hpins : (128 : ArrId) ∉ A)
+    (henv : ∀ b ∈ A, b < 132 ∨ 144 ≤ b)
+    (hC128 : ∀ x ∈ C, x.toNat < 96 ∨ 128 ≤ x.toNat)
+    (hCenv : ∀ x ∈ C, x.toNat < 128 ∨ 136 ≤ x.toNat) :
+    CoreS dn m' a' vis fe M eb := by
+  simp only [cplL, Prod.mk.injEq] at hcpl
+  obtain ⟨hc, hp, hl⟩ := hcpl
+  refine ⟨hD, ?_, ?_, hS.env.frame (fun b hb => (henv b hb).elim (fun h => .inl h) (fun h => .inr h))
+      (fun x hx => (hCenv x hx).elim (fun h => .inl h) (fun h => .inr h)) hf, ?_, ?_, ?_,
+      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn⟩
+  · rw [hc]
+    exact CoreRM.frame (A := A) (C := C)
+      (fun b hb => (h128 b hb).elim (fun h => .inl h) (fun h => .inr h))
+      (fun x hx => (hC128 x hx).elim (fun h => .inl h) (fun h => .inr h)) hf hS.core
+  · rw [hp]; exact hS.pins.congr (hf.1 PINS hpins (by decide))
+  · intro h l e; rw [hc] at e; have := hS.readL h l e; simp only [EStore.ls] at this ⊢; rw [hl]; exact this
+  · intro h l e; rw [hc] at e; have := hS.readLs h l e; rw [hl]; exact this
+  · rw [hl]; exact hS.nwf
+
+/-- `CoreS`, with the stack as it was in `m₀`. -/
+def CoreK (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb : Word)
+    (m₀ : Mem) (m : Mem) (a : AState) : Prop :=
+  CoreS dn m a vis fe M eb ∧ StackKept m₀ m
+
+theorem StackKept.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
+    (hA : SPN ∉ A) (hC : (136 : Word) ∉ C) : StackKept m m' := by
+  have hspn : m'.arr64 SPN = m.arr64 SPN := hf.1 SPN hA (by decide)
+  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 hC
+  exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
+
+theorem CoreK.grow {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {M : ModeMaps}
+    {eb : Word} {m₀ m m' : Mem} {a : AState} (h : CoreK dn vis fe M eb m₀ m a) (hg : Grows m m') :
+    CoreK dn vis fe M eb m₀ m' a := by
+  have hf := grows_frame m m' hg
+  refine ⟨h.1.arenaFrame (ArenaD.grow m m' hg a h.1.arena) rfl hf (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN])
+    (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN]),
+    h.2.trans (StackKept.of_frame hf (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN]))⟩
+
+/-- **`intern_lit` keeps `CoreK`.** -/
+theorem internLit_core (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
+    (hpe : p.lookup "limbs_eq" = some limbsEq) (hpm : p.lookup "lit_match" = some litMatch)
+    (hpf : p.lookup "lit_find" = some litFind) (hpp : p.lookup "lit_push" = some litPush)
+    (hp : p.lookup "intern_lit" = some internLit) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+    (fe : IFEnv) (M : ModeMaps) (eb : Word) (m₀ : Mem) :
+    InternSpec p (CoreK dn vis fe M eb m₀) := by
+  intro a₀ n s₀ o l hK hq hn
+  have ⟨_, _, hps, htop⟩ := hK.1.arena.1.lit.1
+  have hspec := internLit_spec p hph hpe hpm hpf hpp hp n s₀ o l (by omega)
+    (by simp only [SliceOK] at hq; omega)
+  apply L.M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, hI⟩ := L.M.of_run (P := fun s => s = s₀) hs hrun hspec
+  subst hs
+  obtain ⟨hok, hD, hres⟩ := internLit_D s.mem a₀ hK.1.arena o l _ hq hn _ hI
+  have hI₂ := hI; rw [internW_eq] at hI₂
+  have hfr := internM_frame _ litS_wf _ _ _ _ _ _ _ _ hI₂
+  simp only [litSch] at hfr
+  have hcpl : cplL (AM.st (internE (.lit (.natVal (pv (s.mem.arr64 POOL) o.toNat l.toNat)))) a₀) =
+      cplL a₀ := by
+    have := AM.run_of_ok _ _ hok
+    exact (keeps_cplL_internNodeE _).run (by simpa only [internE] using this)
+  refine ⟨hloc, hok, ⟨hK.1.arenaFrame hD hcpl hfr (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN])
+    (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN]), hK.2.trans (StackKept.of_frame hfr (by simp [POOL, REC, SLOT, PINS, SPN])
+    (by simp [POOL, REC, SLOT, PINS, SPN]))⟩, hres⟩
 
 end L.Arena
