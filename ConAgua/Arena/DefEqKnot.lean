@@ -174,9 +174,9 @@ theorem KnotCallees.stuck : StuckCallees p :=
     lvlsEqCH_of p hq.lvc, hc.den, strLitSupported_core p hq.str, strLitCtor_core p hq.str, supKeep_of,
     lazyDeltaStepH_of p hq.body.lazy (hc.lazy hq), hc.reduceProjCore⟩
 
-include hq hc in
+include hq in
 /-- The literal callees: `nat_lit_supported`, `const_e` (lane `whnf`'s proofs), `str_lit_supported`. -/
-theorem KnotCallees.lit : InferLitCallees p :=
+theorem KnotAllProg.lit : InferLitCallees p :=
   ⟨fun n s₀ a₀ dn vis fe M eb hS => natLitSupported_refines p hq.delta n s₀ a₀ dn vis fe M eb hS,
     strLitSupported_core p hq.str,
     fun n s₀ a₀ dn vis fe M eb nm hS hnm => constE_refines p hq.delta n s₀ a₀ dn vis fe M eb nm hS hnm⟩
@@ -184,7 +184,7 @@ theorem KnotCallees.lit : InferLitCallees p :=
 include hq hc in
 theorem KnotCallees.infer : InferCallees p :=
   ⟨hq.walks.inst1OK, hq.walks.instListOK, (hc.defeq hq).abstract1, (hc.defeq hq).abstractRange,
-    hc.constTy, hc.lit hq, isEagerReduceH_of p hq.body.stuck.leaf, bstkCap_of,
+    hc.constTy, hq.lit, isEagerReduceH_of p hq.body.stuck.leaf, bstkCap_of,
     inferProj_refines p hq.proj ⟨hc.den, hc.findProj, hc.projFound, erecKept_of hq.hcl, hc.instLP, erecKeptProj_of hq.hcl⟩⟩
 
 /-- **The knot at fuel `0`**: every L call at fuel `0` fails. -/

@@ -7324,3 +7324,11 @@ grows (the memo library's capacity rule, as every L memo). Refinement: not yet (
   `StrLitUtf8` 126); user CPU per module ≤ 10 s except `StrLitChar` (~28 s, the
   `string_of_list_ty_ok` spec at `maxHeartbeats 2000000`). 12:04–12:56, sub-helpers
   `-keep`, `-utf8`, `-list`, `-sup`.
+
+### Landing 4: string literals plugged (helper `defeq2-str`, section above)
+* `KnotCallees.strLitSupported`, `strLitCtor`, `supKeep` removed: `strLitSupported_core`,
+  `strLitCtor_core` (program field `KnotAllProg.str : StrLitProg p`) and `supKeep_of`.
+  Lane `whnf`'s `supKeep_twin` (`WhnfBase.lean`, a `sorry`) can now be `supKeep_of` (lane
+  `whnf3`'s file). `StrLitBase` adapted to the `StackKept` structure (helper `defeq2-strfix`).
+* `KnotCallees` left (11), all lane `whnf3`'s: `whnfCoreStep`, `whnfStep`, `findProj`,
+  `projFound`, `proofIrrel`, `towerSlots`, `reduceProjCore`, `unfold`, `constTy`, `instLP`, `den`.
