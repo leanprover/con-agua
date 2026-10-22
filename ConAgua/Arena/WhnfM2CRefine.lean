@@ -642,19 +642,19 @@ theorem resContLoop_step_spec (p : Prog) (k : Nat) (s₀ : St) :
   Triple.step_exec (resContLoop_spec p (k + 1) s₀)
 
 /-- Model of `reserved_contains`. -/
-def rcW (k : Nat) (m : Mem) (x : Word) : Option (List Word × Mem) :=
+def rcW_m2c (k : Nat) (m : Mem) (x : Word) : Option (List Word × Mem) :=
   if rdW (m.arr64 PINS) 0 = 0 then none else rcLoopW m x (k + 1) 0
 
 theorem reservedContains_spec (p : Prog) (hp : p.lookup "reserved_contains_w" = some reservedContainsL)
     (k : Nat) (s₀ : St) (x : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p (k + 1)) "reserved_contains_w" [x]
-    ⦃fun r s' => LocEq s' s₀ ∧ rcW k s₀.mem x = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ rcW_m2c k s₀.mem x = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp, reservedContainsL_eq]
   simp only [callFn]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, resContLoop_step_spec p k] <;>
-    finish [rcW, rdW]
+    finish [rcW_m2c, rdW]
 
 /-- The loop's answer: a hit from `j` on, or none. -/
 theorem rcLoopW_ok (m : Mem) (x : Word) :
@@ -719,7 +719,7 @@ theorem callW_reservedContains (p : Prog) (hp : p.lookup "reserved_contains_w" =
   | succ k =>
   obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (reservedContains_spec p hp k _ x) h
-  simp only [rcW] at hW
+  simp only [rcW_m2c] at hW
   by_cases h0 : rdW (m.arr64 PINS) 0 = 0
   · rw [if_pos h0] at hW; cases hW
   rw [if_neg h0] at hW

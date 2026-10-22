@@ -170,7 +170,7 @@ theorem GrowRef.of_run {T : AM EIdx} {a a' : AState} {v : EIdx} {dn : NIdx → O
 theorem decH_of (w : Word) (r : List Word) (h : w = r.headD 0) : decE w = decH r := by
   rw [h]; rfl
 
-theorem resH_of (w : Word) (r : List Word) (h : w = r.headD 0) (hw : HW w) : ResH r := by
+theorem resH_of_m2c (w : Word) (r : List Word) (h : w = r.headD 0) (hw : HW w) : ResH r := by
   unfold ResH; rw [← h]; exact hw
 
 theorem CoreAfterG.of_after {dn : NIdx → Option ConLeche.Name} {m₀ m : Mem} {a : AState} {vis : Word}
@@ -330,10 +330,10 @@ theorem m2cPre_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
 
 end pre
 
-theorem decBool_f {r : List Word} (h : r.headD 0 = 0) : decBool r = false := by
+theorem decBool_f_m2c {r : List Word} (h : r.headD 0 = 0) : decBool r = false := by
   unfold decBool; rw [h]; rfl
 
-theorem decBool_t {r : List Word} (h : ¬ r.headD 0 = 0) : decBool r = true := by
+theorem decBool_t_m2c {r : List Word} (h : ¬ r.headD 0 = 0) : decBool r = true := by
   unfold decBool; exact bne_iff_ne.mpr h
 
 theorem ret_eq {w : Word} {m₁ m' : Mem} {r : List Word}
@@ -388,12 +388,12 @@ theorem m2cCheck_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
   by_cases g1 : r1.headD 0 = 0
   · rw [if_pos g1] at hW
     obtain ⟨hr, rfl⟩ := ret_eq hW
-    rw [decBool_f g1] at hrun1
-    refine CoreRef.of_run ?_ ⟨M1, hS1, hK1, hSt1⟩ (decH_of _ _ hr) (resH_of _ _ hr hmaj)
+    rw [decBool_f_m2c g1] at hrun1
+    refine CoreRef.of_run ?_ ⟨M1, hS1, hK1, hSt1⟩ (decH_of _ _ hr) (resH_of_m2c _ _ hr hmaj)
     simp only [m2cCheckT, StateT.run_bind, hrun1, except_ok_bind, Bool.false_eq_true, ↓reduceIte]
     rfl
   rw [if_neg g1] at hW
-  rw [decBool_t g1] at hrun1
+  rw [decBool_t_m2c g1] at hrun1
   cases c2 : callW p (N' + 1) "infer_io" [mode, vis, d, fab] m1 with
   | none => rw [c2] at hW; cases hW
   | some q =>
@@ -421,13 +421,13 @@ theorem m2cCheck_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
   by_cases g3 : r3.headD 0 = 0
   · rw [if_pos g3] at hW
     obtain ⟨hr, rfl⟩ := ret_eq hW
-    rw [decBool_f g3] at hrun3
-    refine CoreRef.of_run ?_ ⟨M3, hS3, hKA, hStA⟩ (decH_of _ _ hr) (resH_of _ _ hr hmaj)
+    rw [decBool_f_m2c g3] at hrun3
+    refine CoreRef.of_run ?_ ⟨M3, hS3, hKA, hStA⟩ (decH_of _ _ hr) (resH_of_m2c _ _ hr hmaj)
     simp only [m2cCheckT, StateT.run_bind, hrun1, except_ok_bind, ↓reduceIte, hrun2, hrun3,
       Bool.false_eq_true]
     rfl
   rw [if_neg g3] at hW
-  rw [decBool_t g3] at hrun3
+  rw [decBool_t_m2c g3] at hrun3
   have hv := decMode_verified mode hm4
   by_cases g4 : mode &&& 1 = 0
   · rw [if_pos g4] at hW
@@ -446,24 +446,24 @@ theorem m2cCheck_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N �
     by_cases g5 : r4.headD 0 = 0
     · rw [if_neg (by simpa using g5)] at hW
       obtain ⟨hr, rfl⟩ := ret_eq hW
-      rw [decBool_f g5] at hrun4
+      rw [decBool_f_m2c g5] at hrun4
       refine CoreRef.of_run ?_ ⟨M4, hS4, hKA.trans hK4, hStA.trans hSt4⟩ (decH_of _ _ hr)
-        (resH_of _ _ hr hmaj)
+        (resH_of_m2c _ _ hr hmaj)
       simp only [m2cCheckT, StateT.run_bind, hrun1, except_ok_bind, ↓reduceIte, hrun2, hrun3, hv',
         hrun4, Bool.false_eq_true]
       rfl
     · rw [if_pos (by simpa using g5)] at hW
       obtain ⟨hr, rfl⟩ := ret_eq hW
-      rw [decBool_t g5] at hrun4
+      rw [decBool_t_m2c g5] at hrun4
       refine CoreRef.of_run ?_ ⟨M4, hS4, hKA.trans hK4, hStA.trans hSt4⟩ (decH_of _ _ hr)
-        (resH_of _ _ hr hfab)
+        (resH_of_m2c _ _ hr hfab)
       simp only [m2cCheckT, StateT.run_bind, hrun1, except_ok_bind, ↓reduceIte, hrun2, hrun3, hv',
         hrun4]
       rfl
   · rw [if_neg g4] at hW
     have hv' : (decMode mode).verifiedChecks = false := by rw [hv]; simpa using g4
     obtain ⟨hr, rfl⟩ := ret_eq hW
-    refine CoreRef.of_run ?_ ⟨M3, hS3, hKA, hStA⟩ (decH_of _ _ hr) (resH_of _ _ hr hfab)
+    refine CoreRef.of_run ?_ ⟨M3, hS3, hKA, hStA⟩ (decH_of _ _ hr) (resH_of_m2c _ _ hr hfab)
     simp only [m2cCheckT, StateT.run_bind, hrun1, except_ok_bind, ↓reduceIte, hrun2, hrun3, hv',
       Bool.false_eq_true]
     rfl
@@ -476,7 +476,7 @@ theorem keeps_cpl_mkAppN' (f : EIdx) (xs : List EIdx) : Keeps cpl (mkAppN f xs) 
   have := keeps_cpl_mkAppNFrom f xs.toArray 0
   rwa [mkAppNFrom_eq_mkAppN, List.toList_toArray] at this
 
-theorem decI_inj' {k : IdxKind} {x y : Word} (hx : HW x) (hy : HW y) :
+theorem decI_inj_m2c {k : IdxKind} {x y : Word} (hx : HW x) (hy : HW y) :
     (decI x : Idx k) = decI y ↔ x = y := by
   rw [decI_eq_iff x hx, decI_word_self y hy]
 
@@ -543,7 +543,7 @@ theorem m2cK2_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2
   by_cases g1 : r1.tail.headD 0 < cnP
   · rw [if_pos g1] at hW
     obtain ⟨hr, rfl⟩ := ret_eq hW
-    refine GrowRef.of_run ?_ hA1 (decH_of _ _ hr) (resH_of _ _ hr hmaj)
+    refine GrowRef.of_run ?_ hA1 (decH_of _ _ hr) (resH_of_m2c _ _ hr hmaj)
     have : ¬ cnP.toNat ≤ xs.length := by rw [hlen]; exact Nat.not_le.mpr g1
     simp only [m2cK2T, StateT.run_bind, hargs, except_ok_bind, this, ↓reduceIte]
     rfl
@@ -623,7 +623,7 @@ theorem m2cK_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2 
   · rw [if_pos g0] at hW
     obtain ⟨hr, rfl⟩ := ret_eq hW
     refine GrowRef.of_run ?_ (CoreAfter.toG ⟨M1, hS1, hK1, hSt1⟩) (decH_of _ _ hr)
-      (resH_of _ _ hr hmaj)
+      (resH_of_m2c _ _ hr hmaj)
     unfold m2cKT; exact m2cPreT_none hpre g0 _
   rw [if_neg g0] at hW
   obtain ⟨htm, hT2, hus⟩ := hhw g0
@@ -633,9 +633,9 @@ theorem m2cK_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2 
   · rw [if_pos g2] at hW
     obtain ⟨hr, rfl⟩ := ret_eq hW
     refine GrowRef.of_run ?_ (CoreAfter.toG ⟨M1, hS1, hK1, hSt1⟩) (decH_of _ _ hr)
-      (resH_of _ _ hr hmaj)
+      (resH_of_m2c _ _ hr hmaj)
     have hc : ¬ ((decI (L.tail.tail.headD 0) : NIdx) = decI T ∧ lpl.toNat = l.length) :=
-      fun e => g2 ((decI_inj' hT2 hT).mp e.1)
+      fun e => g2 ((decI_inj_m2c hT2 hT).mp e.1)
     unfold m2cKT; rw [hpre']
     simp only [StateT.run_bind, hvls, except_ok_bind]
     rw [if_neg hc]; rfl
@@ -645,7 +645,7 @@ theorem m2cK_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2 
   · rw [if_pos g3] at hW
     obtain ⟨hr, rfl⟩ := ret_eq hW
     refine GrowRef.of_run ?_ (CoreAfter.toG ⟨M1, hS1, hK1, hSt1⟩) (decH_of _ _ hr)
-      (resH_of _ _ hr hmaj)
+      (resH_of_m2c _ _ hr hmaj)
     have hc : ¬ ((decI (L.tail.tail.headD 0) : NIdx) = decI T ∧ lpl.toNat = l.length) :=
       fun e => g3 (UInt64.toNat_inj.mp (e.2.trans hll))
     unfold m2cKT; rw [hpre']

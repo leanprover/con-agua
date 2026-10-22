@@ -9,7 +9,7 @@ Lane `nat2`/`pinsenv` proved `natOpResultL_refines`: `nat_op_result` in the conc
 `natArmProg` refines `natOpResult` under `ArenaR`. `NatOpResultOK p` (`WhnfDeltaRefine3.lean`)
 wants it in any program `p` that agrees with `natArmProg'` on `natFns`, under `CoreS`:
 
-* **The program**: `invoke_agree` (`CoreAgree.lean`) twice, `p` → `natArmProg'` → `natArmProg`,
+* **The program**: `invoke_agreeOn` (`CoreAgree.lean`) twice, `p` → `natArmProg'` → `natArmProg`,
   with `natArmProg'_closed` and `natArmProg_closed` (both `decide +kernel` on the text) as the
   call-closure witnesses.
 * **The memory**: `nat_op_result`'s write set (`natA`, `natC`: the pool, the `lit` and `const`
@@ -164,8 +164,8 @@ theorem natC_lt : ∀ x ∈ natC, x.toNat < 20 := by
 theorem invoke_natOpResult {p : Prog} (hp : ∀ f ∈ natFns, p.lookup f = natArmProg'.lookup f)
     (n : Nat) (vs : List Word) :
     invoke p (exec p n) "nat_op_result" vs = invoke natArmProg (exec natArmProg n) "nat_op_result" vs :=
-  (invoke_agree natArmProg'_closed hp n (by decide) vs).trans
-    (invoke_agree natArmProg_closed natArmProg'_agree n (by decide) vs)
+  (invoke_agreeOn natArmProg'_closed hp n (by decide) vs).trans
+    (invoke_agreeOn natArmProg_closed natArmProg'_agree n (by decide) vs)
 
 /-! ## The relation -/
 

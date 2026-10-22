@@ -402,10 +402,10 @@ theorem fire2T_run_fire (a a1 a2 a3 a4 : AState) (rhs x1 x : EIdx)
 
 end fire2Run
 
-theorem decOptR_none (r : List Word) (h0 : r.headD 0 = 0) : decOptR r = none := by
+theorem decOptR_none_rec (r : List Word) (h0 : r.headD 0 = 0) : decOptR r = none := by
   unfold decOptR decOpt; rw [if_pos h0]
 
-theorem decOptR_some (r : List Word) (h1 : r.headD 0 = 1) : decOptR r = some (decE (r.tail.headD 0)) := by
+theorem decOptR_some_rec (r : List Word) (h1 : r.headD 0 = 1) : decOptR r = some (decE (r.tail.headD 0)) := by
   unfold decOptR decOpt; rw [if_neg (by rw [h1]; decide)]
 
 theorem cpl_mkAppN (f : EIdx) (l : List EIdx) (a a' : AState) (x : EIdx)
@@ -478,7 +478,7 @@ theorem iotaRecFire2_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees
     intro m a M hSm hK hSt h0 h1 hm hrunT
     obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ hrunT
     refine ⟨hokF, ⟨M, by rw [hstF, hm]; exact hSm, hK, by rw [hm]; exact hSt⟩, ?_, ?_⟩
-    · rw [hresF, decOptR_none r h0]
+    · rw [hresF, decOptR_none_rec r h0]
     · unfold ResW HW; rw [h0, h1]; decide
   by_cases l1 : mn < rdW E (rl + 2)
   · rw [if_pos l1] at hW
@@ -583,7 +583,7 @@ theorem iotaRecFire2_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees
   obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ hrunF
   refine ⟨hokF, ⟨M2, by rw [hstF, ← hm]; exact hS4, hK1.trans hK2,
     by rw [← hm]; exact hSt13.trans hSt4⟩, ?_, ?_⟩
-  · rw [hresF, decOptR_some r h0.symm, ← h1]
+  · rw [hresF, decOptR_some_rec r h0.symm, ← h1]
   · unfold ResW HW; rw [← h0, ← h1]; exact ⟨by decide, hw4⟩
 
 /-! ## `iota_rec_fire(mode, vis, d, c, us, recP, so, usj, ctorP, rl, major)` -/
@@ -1097,7 +1097,7 @@ theorem iotaRecMajor_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees
     intro a M hSa hK h0 h1 hrunT
     obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ hrunT
     refine ⟨hokF, ⟨M, by rw [hstF]; exact hSa, hK, hSt12⟩, ?_, ?_⟩
-    · rw [hresF, decOptR_none r h0]
+    · rw [hresF, decOptR_none_rec r h0]
     · unfold ResW HW; rw [h0, h1]; decide
   by_cases v0 : rv.headD 0 = 0
   · rw [if_pos v0] at hW

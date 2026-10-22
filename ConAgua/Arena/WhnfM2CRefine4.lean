@@ -70,7 +70,7 @@ theorem m2cEta2_ok (N : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (
   by_cases g1 : r1.headD 0 ≠ 0
   · rw [if_pos g1] at hW
     obtain ⟨hr, rfl⟩ := ret_eq hW
-    refine GrowRef.of_run ?_ hA0 (decH_of _ _ hr) (resH_of _ _ hr hmaj)
+    refine GrowRef.of_run ?_ hA0 (decH_of _ _ hr) (resH_of_m2c _ _ hr hmaj)
     have hn : ¬ (l.contains (decI T) = false ∧ l.contains (decI ec) = false) := fun e => by
       have e1 := e.1; rw [hcT] at e1; exact g1 (by simpa using e1)
     simp only [m2cEta2T, StateT.run_bind, hl, except_ok_bind]
@@ -93,7 +93,7 @@ theorem m2cEta2_ok (N : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (
   by_cases g2 : r2.headD 0 ≠ 0
   · rw [if_pos g2] at hW
     obtain ⟨hr, rfl⟩ := ret_eq hW
-    refine GrowRef.of_run ?_ hA0 (decH_of _ _ hr) (resH_of _ _ hr hmaj)
+    refine GrowRef.of_run ?_ hA0 (decH_of _ _ hr) (resH_of_m2c _ _ hr hmaj)
     have hn : ¬ (l'.contains (decI T) = false ∧ l'.contains (decI ec) = false) := fun e => by
       have e2 := e.2; rw [hcE] at e2; exact g2 (by simpa using e2)
     simp only [m2cEta2T, StateT.run_bind, hl, except_ok_bind]
@@ -117,14 +117,14 @@ theorem m2cEta2_ok (N : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (
   · rw [if_pos g3] at hW
     obtain ⟨hr, rfl⟩ := ret_eq hW
     refine GrowRef.of_run ?_ (CoreAfter.toG ⟨M3, hS3, hK3, hSt3⟩) (decH_of _ _ hr)
-      (resH_of _ _ hr hmaj)
-    rw [decBool_f g3] at hrun3
+      (resH_of_m2c _ _ hr hmaj)
+    rw [decBool_f_m2c g3] at hrun3
     simp only [m2cEta2T, StateT.run_bind, hl, except_ok_bind]
     rw [if_pos hres]
     simp only [StateT.run_bind, hrun3, except_ok_bind, Bool.false_eq_true, ↓reduceIte]
     rfl
   rw [if_neg g3] at hW
-  rw [decBool_t g3] at hrun3
+  rw [decBool_t_m2c g3] at hrun3
   have hspn := hS.spn
   have hsp3 : SpineR m3 to tn targs.toArray :=
     hsp.ofKept hSt3 (by
@@ -202,12 +202,12 @@ theorem m2cEta2_ok (N : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (
   by_cases g7 : r7.headD 0 = 0
   · rw [if_pos g7] at hW
     obtain ⟨hr, rfl⟩ := ret_eq hW
-    refine GrowRef.of_run ?_ hA7 (decH_of _ _ hr) (resH_of _ _ hr hmaj)
-    rw [hpre, decBool_f g7]; rfl
+    refine GrowRef.of_run ?_ hA7 (decH_of _ _ hr) (resH_of_m2c _ _ hr hmaj)
+    rw [hpre, decBool_f_m2c g7]; rfl
   · rw [if_neg g7] at hW
     obtain ⟨hr, rfl⟩ := ret_eq hW
-    refine GrowRef.of_run ?_ hA7 (decH_of _ _ hr) (resH_of _ _ hr hh6)
-    rw [hpre, decBool_t g7]; rfl
+    refine GrowRef.of_run ?_ hA7 (decH_of _ _ hr) (resH_of_m2c _ _ hr hh6)
+    rw [hpre, decBool_t_m2c g7]; rfl
 
 include hE in
 /-- **`m2c_eta` refines `m2cEtaT`** (`indP` the family's record). -/
@@ -256,7 +256,7 @@ theorem m2cEta_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
   · rw [if_pos g0] at hW
     obtain ⟨hr, rfl⟩ := ret_eq hW
     refine GrowRef.of_run ?_ (CoreAfter.toG ⟨M1, hS1, hK1, hSt1⟩) (decH_of _ _ hr)
-      (resH_of _ _ hr hmaj)
+      (resH_of_m2c _ _ hr hmaj)
     unfold m2cEtaT; exact m2cPreT_none hpre g0 _
   rw [if_neg g0] at hW
   obtain ⟨htm, hT2, hus⟩ := hhw g0
@@ -309,12 +309,12 @@ theorem m2cEta_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
         decH dn m vis fe M eb r m' := by
     intro hn hr hm
     subst hm
-    refine GrowRef.of_run ?_ hA3 (decH_of _ _ hr) (resH_of _ _ hr hmaj)
+    refine GrowRef.of_run ?_ hA3 (decH_of _ _ hr) (resH_of_m2c _ _ hr hmaj)
     rw [hstep, if_neg hn]; rfl
   by_cases g2 : L.tail.tail.headD 0 ≠ T
   · rw [if_pos g2] at hW
     obtain ⟨hr, hm⟩ := ret_eq hW
-    exact hmaj' (fun e => g2 ((decI_inj' hT2 hT).mp e.1)) hr hm
+    exact hmaj' (fun e => g2 ((decI_inj_m2c hT2 hT).mp e.1)) hr hm
   rw [if_neg g2] at hW
   have g2' : L.tail.tail.headD 0 = T := by simpa using g2
   by_cases g3 : r2'.tail.headD 0 ≠ w7
@@ -332,11 +332,11 @@ theorem m2cEta_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
   by_cases g5 : r3'.headD 0 = 0
   · rw [if_pos g5] at hW
     obtain ⟨hr, hm⟩ := ret_eq hW
-    exact hmaj' (fun e => by rw [decBool_f g5] at e; exact Bool.false_ne_true e.2.2.2) hr hm
+    exact hmaj' (fun e => by rw [decBool_f_m2c g5] at e; exact Bool.false_ne_true e.2.2.2) hr hm
   rw [if_neg g5] at hW
   have hcond : (decI (L.tail.tail.headD 0) : NIdx) = decI T ∧ xs.length = caps.etaParams ∧
       l.length = cvT.levelParams.length ∧ decBool r3' = true :=
-    ⟨by rw [g2'], by rw [hlen, g3', hep], by rw [hll, g4', hlps], decBool_t g5⟩
+    ⟨by rw [g2'], by rw [hlen, g3', hep], by rw [hll, g4', hlps], decBool_t_m2c g5⟩
   cases c4 : callW p (N' + 1) "m2c_eta2" [vis, d, T, w6, w8, r2'.headD 0, r2'.tail.headD 0,
       L.tail.tail.tail.headD 0, major] m3 with
   | none => rw [c4] at hW; cases hW

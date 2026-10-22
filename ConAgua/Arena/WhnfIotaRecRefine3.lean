@@ -175,7 +175,7 @@ theorem iotaRecC_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ hrunT
     refine ⟨hokF, ⟨MM, by rw [hstF, hm]; exact hS, KeptAll.refl _ _, by rw [hm]; exact StackKept.refl _⟩,
       ?_, ?_⟩
-    · rw [hresF, decOptR_none r h0]
+    · rw [hresF, decOptR_none_rec r h0]
     · unfold ResW HW; rw [h0, h1]; decide
   -- the recursor's record
   cases c1 : callW p n "env_find" [c, vis] s.mem with
@@ -384,7 +384,7 @@ theorem iotaRecAt_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
       (coreKnot (decMode mode) fe id F) fe d.toNat (decE hd) xs xs.size a₀ (hnot v0))
     refine ⟨hokF, ⟨M, by rw [hstF, ← hm]; exact hS, KeptAll.refl _ _, by rw [← hm]; exact StackKept.refl _⟩,
       ?_, ?_⟩
-    · rw [hresF, decOptR_none r h0.symm]
+    · rw [hresF, decOptR_none_rec r h0.symm]
     · unfold ResW HW; rw [← h0, ← h1]; decide
   rw [if_neg v0] at hW
   obtain ⟨htag, hview, hcw, husw⟩ := hyes v0

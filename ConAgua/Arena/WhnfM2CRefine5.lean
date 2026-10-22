@@ -219,7 +219,7 @@ theorem m2cCtor_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   by_cases g2 : r2.headD 0 >>> 28 ≠ 3
   · rw [if_pos g2] at hW
     obtain ⟨hr, rfl⟩ := ret_eq hW
-    refine GrowRef.of_run ?_ hA0 (decH_of _ _ hr) (resH_of _ _ hr hmaj)
+    refine GrowRef.of_run ?_ hA0 (decH_of _ _ hr) (resH_of_m2c _ _ hr hmaj)
     have ht : ((decE (r2.headD 0)).tag == ETag.const) = false := by
       rw [decE_const_tag _ hh2]; simpa using g2
     simp only [m2cCtorT, StateT.run_bind, hpr', except_ok_bind, hga, ht]; rfl
@@ -261,7 +261,7 @@ theorem m2cCtor_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   by_cases g4 : r4.headD 0 = 0
   · rw [if_pos g4] at hW
     obtain ⟨hr, rfl⟩ := ret_eq hW
-    refine GrowRef.of_run ?_ hA0 (decH_of _ _ hr) (resH_of _ _ hr hmaj)
+    refine GrowRef.of_run ?_ hA0 (decH_of _ _ hr) (resH_of_m2c _ _ hr hmaj)
     have hn : fe.find? (decI (r3.headD 0)) = none := by rw [hfind]; simp only [decFound, g4, ↓reduceIte]
     simp only [m2cCtorT, StateT.run_bind, hpr', except_ok_bind, hga, ht, ↓reduceIte, hview, hn]; rfl
   rw [if_neg g4] at hW
@@ -275,7 +275,7 @@ theorem m2cCtor_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   by_cases g5 : wk ≠ 3
   · rw [if_pos g5] at hW
     obtain ⟨hr, rfl⟩ := ret_eq hW
-    refine GrowRef.of_run ?_ hA0 (decH_of _ _ hr) (resH_of _ _ hr hmaj)
+    refine GrowRef.of_run ?_ hA0 (decH_of _ _ hr) (resH_of_m2c _ _ hr hmaj)
     simp only [m2cCtorT, StateT.run_bind, hpr', except_ok_bind, hga, ht, ↓reduceIte, hview, hfind']
     cases ci with
     | indInfo cv caps => exact absurd (hind.mp ⟨cv, caps, rfl⟩) g5
@@ -335,11 +335,11 @@ theorem m2cHead_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   by_cases g1 : r1.headD 0 ≠ 0
   · rw [if_pos g1] at hW
     obtain ⟨hr', rfl⟩ := ret_eq hW
-    refine GrowRef.of_run ?_ hA1 (decH_of _ _ hr') (resH_of _ _ hr' hmaj)
-    rw [decBool_t (by simpa using g1)] at hrun1
+    refine GrowRef.of_run ?_ hA1 (decH_of _ _ hr') (resH_of_m2c _ _ hr' hmaj)
+    rw [decBool_t_m2c (by simpa using g1)] at hrun1
     simp only [m2cHeadT, StateT.run_bind, hrun1, except_ok_bind, ↓reduceIte]; rfl
   rw [if_neg g1] at hW
-  rw [decBool_f (by simpa using g1)] at hrun1
+  rw [decBool_f_m2c (by simpa using g1)] at hrun1
   have hstep : (m2cHeadT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat rules
       (decE major)).run a = (match rules with
         | [rl] =>
@@ -355,7 +355,7 @@ theorem m2cHead_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   by_cases g2 : rc ≠ 1
   · rw [if_pos g2] at hW
     obtain ⟨hr', rfl⟩ := ret_eq hW
-    refine GrowRef.of_run ?_ hA1 (decH_of _ _ hr') (resH_of _ _ hr' hmaj)
+    refine GrowRef.of_run ?_ hA1 (decH_of _ _ hr') (resH_of_m2c _ _ hr' hmaj)
     rw [hstep]
     match rules, hlen with
     | [], _ => rfl
@@ -383,7 +383,7 @@ theorem m2cHead_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   by_cases g3 : r2.headD 0 = 0
   · rw [if_pos g3] at hW
     obtain ⟨hr', rfl⟩ := ret_eq hW
-    refine GrowRef.of_run ?_ hA1 (decH_of _ _ hr') (resH_of _ _ hr' hmaj)
+    refine GrowRef.of_run ?_ hA1 (decH_of _ _ hr') (resH_of_m2c _ _ hr' hmaj)
     have hn : fe.find? rl.ctor = none := by
       rw [hctor, hfind]; simp only [decFound, g3, ↓reduceIte]
     rw [hstep]; simp only [hn]; rfl
@@ -398,7 +398,7 @@ theorem m2cHead_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   by_cases g4 : wk ≠ 4
   · rw [if_pos g4] at hW
     obtain ⟨hr', rfl⟩ := ret_eq hW
-    refine GrowRef.of_run ?_ hA1 (decH_of _ _ hr') (resH_of _ _ hr' hmaj)
+    refine GrowRef.of_run ?_ hA1 (decH_of _ _ hr') (resH_of_m2c _ _ hr' hmaj)
     rw [hstep]; simp only [hfind']
     cases ci with
     | ctorInfo cv nP nF => exact absurd (hctr.mp ⟨cv, nP, nF, rfl⟩) g4

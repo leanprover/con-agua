@@ -233,8 +233,8 @@ theorem m2cAnd_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
   · rw [if_pos g1] at hW
     obtain ⟨hr, rfl⟩ := ret_eq hW
     refine GrowRef.of_run ?_ (CoreAfter.toG ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩)
-      (decH_of _ _ hr) (resH_of _ _ hr hmaj)
-    have hcond : ¬ ((decI T : NIdx) = decI (r1.headD 0)) := fun e => g1 ((decI_inj' hT hanHW).mp e)
+      (decH_of _ _ hr) (resH_of_m2c _ _ hr hmaj)
+    have hcond : ¬ ((decI T : NIdx) = decI (r1.headD 0)) := fun e => g1 ((decI_inj_m2c hT hanHW).mp e)
     simp only [m2cAndT, StateT.run_bind, hpin', except_ok_bind]
     rw [if_neg hcond]; rfl
   rw [if_neg g1] at hW
@@ -253,7 +253,7 @@ theorem m2cAnd_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
   · rw [if_pos g0] at hW
     obtain ⟨hr, rfl⟩ := ret_eq hW
     refine GrowRef.of_run ?_ (CoreAfter.toG ⟨M2, hS2, hK2, hSt2⟩) (decH_of _ _ hr)
-      (resH_of _ _ hr hmaj)
+      (resH_of_m2c _ _ hr hmaj)
     simp only [m2cAndT, StateT.run_bind, hpin', except_ok_bind]
     rw [if_pos hTan]; exact m2cPreT_none hpre g0 _
   rw [if_neg g0] at hW
@@ -303,12 +303,12 @@ theorem m2cAnd_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
         lpl.toNat cnP.toNat (decI T) (decE major)) a decH dn m vis fe M eb r m' := by
     intro hn hr hm
     subst hm
-    refine GrowRef.of_run ?_ hA4 (decH_of _ _ hr) (resH_of _ _ hr hmaj)
+    refine GrowRef.of_run ?_ hA4 (decH_of _ _ hr) (resH_of_m2c _ _ hr hmaj)
     rw [hstep, if_neg hn]; rfl
   by_cases g2 : L.tail.tail.headD 0 ≠ T
   · rw [if_pos g2] at hW
     obtain ⟨hr, hm⟩ := ret_eq hW
-    exact hmaj' (fun e => g2 ((decI_inj' hT2 hT).mp e.1)) hr hm
+    exact hmaj' (fun e => g2 ((decI_inj_m2c hT2 hT).mp e.1)) hr hm
   rw [if_neg g2] at hW
   have g2' : L.tail.tail.headD 0 = T := by simpa using g2
   by_cases g3 : r3.tail.headD 0 ≠ cnP
@@ -326,11 +326,11 @@ theorem m2cAnd_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
   by_cases g5 : r4.headD 0 = 0
   · rw [if_pos g5] at hW
     obtain ⟨hr, hm⟩ := ret_eq hW
-    exact hmaj' (fun e => by rw [decBool_f g5] at e; exact Bool.false_ne_true e.2.2.2) hr hm
+    exact hmaj' (fun e => by rw [decBool_f_m2c g5] at e; exact Bool.false_ne_true e.2.2.2) hr hm
   rw [if_neg g5] at hW
   have hcond : (decI (L.tail.tail.headD 0) : NIdx) = decI T ∧ xs.length = cnP.toNat ∧
       lpl.toNat = (L.tail.tail.tail.tail.headD 0).toNat ∧ decBool r4 = true :=
-    ⟨by rw [g2'], by rw [hlen, g3'], by rw [g4'], decBool_t g5⟩
+    ⟨by rw [g2'], by rw [hlen, g3'], by rw [g4'], decBool_t_m2c g5⟩
   cases c5 : callW p (N' + 1) "m2c_and2" [mode, vis, d, ctor, T, L.tail.headD 0, r3.headD 0,
       r3.tail.headD 0, L.tail.tail.tail.headD 0, major] m4 with
   | none => rw [c5] at hW; cases hW
