@@ -143,7 +143,7 @@ theorem iisW_sim {p : Prog} (hP : IdxProg p) (n : Nat) {dn : NIdx → Option Con
       have h := installSimFsorts (dn := dn) (fe := fe) hP.sum n 1 0
         (rdW (m.arr64 IW) (pp + 6)) (UInt64.ofNat bs.nP) _ _ 0 0 (UInt64.ofNat msh.nIdx) hrs32
         (fvs.drop bs.nP) [] ⟨hS1, hdT, hbT, by simp [decHL, hslice?], by simp⟩
-        (by rw [← hk]; exact UInt64.toNat_lt _)
+        (by rw [← partsAddNoOv hov]; exact UInt64.toNat_lt _)
       rw [hrse, UInt64.toNat_ofNat_of_lt' hnpb, UInt64.toNat_ofNat_of_lt' hnib,
         show ((1 : Word) != 0) = true from rfl, show ((0 : Word) != 0) = false from rfl] at h
       exact h) ?_
