@@ -1127,6 +1127,110 @@ theorem appOK_step (n : Nat) (ih : NbOK dn vis fe n) : AppOK dn vis fe (n + 1) :
     hrun4]
   rfl
 
+include hM in
+theorem bindOK_step (n : Nat) (ih : NbOK dn vis fe n) : BindOK dn vis fe (n + 1) := by
+  obtain ⟨hPos, -, -, -, -, -, -, -, -, -, -⟩ := ih
+  intro m m' a ctx fu po pl dep kb w ns c prog NS r h hS hW hw h6 hns
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  rw [nbBindW_succ] at h
+  by_cases hev : eViewW m w = []
+  · rw [if_pos hev] at h; cases h
+  rw [if_neg hev] at h
+  obtain ⟨d, b, hv, hd, hb, hvb, htag⟩ := pos2_forall_view hS hw h6 hev
+  rw [hv] at h
+  simp only [List.tail_cons, List.headD_cons] at h
+  -- the domain mentions no member and no hole
+  obtain ⟨hn0, hnb0, -, -, hnP, -⟩ := ctx_fields hW.u.dec hW.u.inn htop
+  have hne0 := ctx_names_end hW.u.dec hW.u.inn hW.u.sl htop
+  have hhi := hW.hi htop
+  cases hno : noConstWf n m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) (rdW (m.arr64 IW) (ctx + 4))
+      (nhiW m ctx pl) d with
+  | none => rw [hno] at h; simp [nbBindK1] at h
+  | some pr =>
+  obtain ⟨o, m1⟩ := pr
+  rw [hno, nbBindK1_some] at h
+  obtain ⟨mp, hmp⟩ := hM.no m a hS
+  obtain ⟨bo, hrun1, hbo, -, hS1, hg1⟩ := noConstWf_ok n dn fe vis m m1 a _ _ _ _ d o c.names mp hno hS hd hn0
+    (by omega) hmp
+  rw [hnP, hhi, decE_eq] at hrun1
+  by_cases ho : o ≠ 0
+  · rw [if_pos ho] at h; cases h
+  rw [if_neg ho] at h
+  have hbo' : bo = false := by rw [← hbo]; simpa using ho
+  subst hbo'
+  by_cases hd1 : dep + 1 = 0
+  · rw [if_pos hd1] at h; cases h
+  rw [if_neg hd1] at h
+  by_cases hk1 : kb + 1 = 0
+  · rw [if_pos hk1] at h; cases h
+  rw [if_neg hk1] at h
+  simp only [List.tail_cons, List.headD_cons] at h
+  -- the variable, the body opened
+  cases hfv : fvinternW m1 dep d with
+  | none => rw [hfv] at h; simp [nbBindK2] at h
+  | some pr2 =>
+  obtain ⟨fv, m2⟩ := pr2
+  rw [hfv, nbBindK2_some] at h
+  by_cases hfvb : 4294967296 ≤ fv
+  · rw [if_pos hfvb] at h; cases h
+  rw [if_neg hfvb] at h
+  simp only [List.tail_cons, List.headD_cons] at h
+  have hfvH : H fv := by
+    have : ¬ (4294967296 : Word).toNat ≤ fv.toNat := fun e => hfvb (UInt64.le_iff_toNat_le.mpr e)
+    simp only [H]; simpa using this
+  obtain ⟨a2, hrun2, hS2, hg2⟩ := internFVar_stage hS1 dep d hd hfv
+  cases hin : stubM "instantiate1_fast" m2 [CWF, b, fv, 0] with
+  | none => rw [hin] at h; simp [nbBindK3] at h
+  | some pr3 =>
+  obtain ⟨rb, m3⟩ := pr3
+  rw [hin, nbBindK3_some] at h
+  simp only [List.tail_cons, List.headD_cons] at h
+  obtain ⟨b2, a3, hrun3, hS3, hg3, hb2H, hb2d⟩ := instantiate1Fast_spec dn vis fe CWF b fv 0 hb hfvH m2 m3 a2 rb hin hS2
+  rw [CWF_eq] at hrun3
+  have hg13 := (hg1.trans hg2).trans hg3
+  -- the codomain walked
+  cases hp : nbPosW n m3 vis ctx fu po pl (dep + 1) (kb + 1) (rb.headD 0) ns with
+  | none => rw [hp] at h; simp [nbBindK4] at h
+  | some pr4 =>
+  obtain ⟨rp, m4⟩ := pr4
+  rw [hp, nbBindK4_some] at h
+  obtain ⟨x, a4, hrun4, hS4, hg4, hk4, hnbH, hnbd, hns4⟩ := hPos m3 m4 a3 ctx fu po pl (dep + 1) (kb + 1) (rb.headD 0) ns
+    c prog NS rp hp hS3 (hW.grow hg13) (by simpa using hb2H) (hns.grow hg13 htop)
+  cases hab : stubM "abstract1_fast" m4 [CWF, rp.tail.headD 0, dep, 0] with
+  | none => rw [hab] at h; simp [nbBindK5] at h
+  | some pr5 =>
+  obtain ⟨ra, m5⟩ := pr5
+  rw [hab, nbBindK5_some] at h
+  obtain ⟨nb2, a5, hrun5, hS5, hg5, hnb2H, hnb2d⟩ := abstract1Fast_spec dn vis fe CWF _ dep 0 hnbH m4 m5 a4 ra hab hS4
+  rw [CWF_eq] at hrun5
+  cases hmf : mkForallW m5 d (ra.headD 0) with
+  | none => rw [hmf] at h; simp [nbBindK6] at h
+  | some pr6 =>
+  obtain ⟨z, m6⟩ := pr6
+  rw [hmf, nbBindK6_some] at h
+  by_cases hzb : 4294967296 ≤ z
+  · rw [if_pos hzb] at h; cases h
+  rw [if_neg hzb] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨a6, hrun6, hS6, hg6⟩ := mkForall_stage hS5 d (ra.headD 0) hmf
+  have hzH : H z := by
+    have : ¬ (4294967296 : Word).toNat ≤ z.toNat := fun e => hzb (UInt64.le_iff_toNat_le.mpr e)
+    simp only [H]; simpa using this
+  have htop4 : iwTop m4 < 2 ^ 64 := Nat.lt_of_le_of_lt hS4.2.1 hS4.2.2.2.1
+  refine ⟨(x.1, decI z, x.2.2), a6, ?_, hS6, ((hg13.trans hg4).trans hg5).trans hg6, by simpa using hk4,
+    by simpa using hzH, by simp, by simpa using (hns4.grow (hg5.trans hg6) htop4)⟩
+  rw [pos2_word_succ hd1, pos2_word_succ hk1, hb2d] at hrun4
+  rw [hnbd] at hrun5
+  have e2 : (internFVarE dep.toNat (decI d)).run a = .ok (decI fv, a2) := by simpa [internFVarE, decE_eq] using hrun2
+  have e3 : (instantiate1Fast coreWalkFuel (decI b) (decI fv) 0).run a2 = .ok (b2, a3) := by simpa using hrun3
+  have e5 : (abstract1Fast coreWalkFuel x.2.1 dep.toNat 0).run a4 = .ok (nb2, a5) := by simpa using hrun5
+  have e6 : (internForallEE (decI d) nb2).run a5 = .ok (decI z, a6) := by
+    rw [← hnb2d]; exact hrun6
+  simp only [posBindT, StateT.run_bind, hvb, except_ok_bind, hrun1, Bool.false_eq_true, ite_false, e2, e3, hrun4,
+    e5, e6]
+  rfl
+
 end steps
 
 end L.Ind
