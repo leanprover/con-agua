@@ -24,7 +24,7 @@ open L.Front.Fields (rdNatN NONE rdLoopN listN itemsN)
 open L.Front (lsCntN)
 open L.Scan.Utf8 (byteW)
 open L.Scan.Member (nextMemberN)
-open L.Scan.Leaves (numEndN skipDigitsN)
+open L.Scan.Leaves (numEndN skipDigitsN keyEndN)
 
 set_option linter.unusedSimpArgs false
 set_option linter.unusedSectionVars false
@@ -665,5 +665,215 @@ theorem ilistW_link {α : Type} (G : USize → List α → Bool → ScanRes (Lis
   exact ⟨c3, c2, c4, a4.trans c5, c6, a1, c7⟩
 
 end glist
+
+/-! ## Keys and values -/
+
+theorem skipWsN_ge (a : Array UInt8) (i : Nat) : i ≤ L.Scan.Leaves.skipWsN a i := by
+  fun_induction L.Scan.Leaves.skipWsN a i <;> omega
+
+section kv
+variable (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
+include h64 hsize
+
+/-- A member's value starts after its key's quote. -/
+theorem valueAt_gt (i : USize) (hi : i < b.usize) (hk : keyEnd b (i + 1) ≠ 0)
+    (hv : valueAt b i (keyEnd b (i + 1)) ≠ i) : i < valueAt b i (keyEnd b (i + 1)) := by
+  have hb64 : b.size < 2 ^ 64 := by omega
+  have hbs : b.data.size = b.size := rfl
+  have hin := usizeInBounds b i hi
+  have hi1 := usizeStep b i hi
+  have hke := keyEnd_toNat_eq b h64 hb64 (i + 1)
+  have hkn0 : keyEndN b.data (i + 1).toNat ≠ 0 := fun h0 => hk (by
+    apply USize.toNat_inj.mp; rw [hke, h0]; rfl)
+  have hkb := keyEndN_bounds b.data _ hkn0
+  generalize hK : keyEnd b (i + 1) = ke at hv hke ⊢
+  unfold valueAt at hv ⊢
+  dsimp only at hv ⊢
+  by_cases h58 : (byteAt b (skipWs b (ke + 1)) == 58) = true
+  · rw [if_pos h58] at hv ⊢
+    have hke' : ke < b.usize := by
+      rw [USize.lt_iff_toNat_lt, usize_toNat_eq b h64 hb64]; omega
+    have hk1 := usizeStep b ke hke'
+    have hp := skipWs_toNat_eq b h64 hb64 (ke + 1)
+    have hpU : skipWs b (ke + 1) < b.usize :=
+      lt_of_byteAt_ne b h64 hsize _ (by simp at h58; rw [h58]; decide)
+    have hp1 := usizeStep b _ hpU
+    have hq := skipWs_toNat_eq b h64 hb64 (skipWs b (ke + 1) + 1)
+    have g1 := skipWsN_ge b.data (ke + 1).toNat
+    have g2 := skipWsN_ge b.data (skipWs b (ke + 1) + 1).toNat
+    rw [USize.lt_iff_toNat_lt]; omega
+  · rw [if_neg h58] at hv; exact absurd rfl hv
+
+end kv
+
+/-! ## `ind_member`'s arms, on con-leche's values -/
+
+section arms
+variable (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
+include h64 hsize
+
+/-- A number value: the end, the word, below `10^18`. -/
+theorem num_word (i v : USize) (hne : ¬ numEnd b v = v) (hie : i < numEnd b v)
+    (hvle : v.toNat ≤ b.size) :
+    L.Scan.Values.slotNatN b.data i.toUInt64 v.toUInt64 = (numEnd b v).toUInt64 ∧
+    (rdNatN b.data v.toUInt64 (numEnd b v).toUInt64 ≠ NONE →
+      NumW (rdNatN b.data v.toUInt64 (numEnd b v).toUInt64) (readNatAt b v (numEnd b v))) := by
+  obtain ⟨hsl, hRn⟩ := num_val b h64 hsize i v hne hie hvle
+  refine ⟨hsl, fun hx => ⟨hRn hx, ?_⟩⟩
+  rw [← hRn hx]
+  have hb64 : b.size < 2 ^ 64 := by omega
+  have hnt := numEnd_toNat_eq b h64 hb64 v
+  apply rdNatN_lt _ _ _ (by rw [USize.toNat_toUInt64]; omega) _ hx
+  intro j hj1 hj2
+  rw [USize.toNat_toUInt64] at hj1 hj2
+  rw [hnt] at hj2
+  exact numEndN_digits b.data v.toNat j hj1 hj2
+
+/-- A number key (slot `(1, s, _)`). -/
+theorem num_arm (m m' : Mem) (kind q K s sb : Word) (i v : USize) (e' : Word)
+    (hk : indSlotN kind K = (1, s, sb)) (hne : ¬ numEnd b v = v) (hie : i < numEnd b v)
+    (hvle : v.toNat ≤ b.size)
+    (hmem : memberW b.data m kind q i.toUInt64 K v.toUInt64 = some (e', m')) :
+    e' = (numEnd b v).toUInt64 ∧
+      ∃ x, m' = fldPutW m kind q s x ∧ NumW x (readNatAt b v (numEnd b v)) := by
+  rw [memberW_eq, hk] at hmem
+  simp only [true_or, if_true] at hmem
+  unfold numW at hmem
+  obtain ⟨hsl, hnum⟩ := num_word b h64 hsize i v hne hie hvle
+  rw [hsl] at hmem
+  split at hmem
+  · cases hmem
+  rename_i hx
+  rw [if_neg (by decide)] at hmem
+  simp only [Option.some.injEq, Prod.mk.injEq] at hmem
+  obtain ⟨rfl, rfl⟩ := hmem
+  exact ⟨rfl, _, rfl, hnum hx⟩
+
+/-- An optional number key (slot `(6, s, _)`): the flag `1`, then the number. -/
+theorem opt_arm (m m' : Mem) (kind q K s sb : Word) (i v : USize) (e' : Word)
+    (hk : indSlotN kind K = (6, s, sb)) (hne : ¬ numEnd b v = v) (hie : i < numEnd b v)
+    (hvle : v.toNat ≤ b.size)
+    (hmem : memberW b.data m kind q i.toUInt64 K v.toUInt64 = some (e', m')) :
+    e' = (numEnd b v).toUInt64 ∧
+      ∃ x, m' = fldPutW (fldPutW m kind q s 1) kind q (s + 1) x ∧
+        NumW x (readNatAt b v (numEnd b v)) := by
+  rw [memberW_eq, hk] at hmem
+  simp only [or_true, if_true] at hmem
+  unfold numW at hmem
+  obtain ⟨hsl, hnum⟩ := num_word b h64 hsize i v hne hie hvle
+  rw [hsl] at hmem
+  split at hmem
+  · cases hmem
+  rename_i hx
+  rw [if_pos rfl] at hmem
+  simp only [Option.some.injEq, Prod.mk.injEq] at hmem
+  obtain ⟨rfl, rfl⟩ := hmem
+  exact ⟨rfl, _, rfl, hnum hx⟩
+
+/-- A Boolean key (slot `(2, s, _)`). -/
+theorem bool_arm (m m' : Mem) (kind q ks K s sb : Word) (v : USize) (x : Bool) (e : USize)
+    (e' : Word) (hk : indSlotN kind K = (2, s, sb)) (hx : scanBool b v = .ok x e)
+    (hmem : memberW b.data m kind q ks K v.toUInt64 = some (e', m')) :
+    e' = e.toUInt64 ∧ m' = fldPutW m kind q s (if x then 1 else 0) := by
+  rw [memberW_eq, hk] at hmem
+  simp only [show ¬ ((2 : Word) = 1 ∨ (2 : Word) = 6) by decide, true_or, if_true, if_false] at hmem
+  unfold boolW at hmem
+  obtain ⟨hh, hend, hval⟩ := boolV_link b h64 hsize v x e hx
+  rw [if_neg hh, if_pos rfl] at hmem
+  simp only [Option.some.injEq, Prod.mk.injEq] at hmem
+  obtain ⟨rfl, rfl⟩ := hmem
+  exact ⟨hend, by rw [← hval]; rfl⟩
+
+/-- A Boolean key read past (slot `(8, _, _)`). -/
+theorem boolp_arm (m m' : Mem) (kind q ks K s sb : Word) (v : USize) (x : Bool) (e : USize)
+    (e' : Word) (hk : indSlotN kind K = (8, s, sb)) (hx : scanBool b v = .ok x e)
+    (hmem : memberW b.data m kind q ks K v.toUInt64 = some (e', m')) :
+    e' = e.toUInt64 ∧ m' = m := by
+  rw [memberW_eq, hk] at hmem
+  simp only [show ¬ ((8 : Word) = 1 ∨ (8 : Word) = 6) by decide, or_true, if_true, if_false] at hmem
+  unfold boolW at hmem
+  obtain ⟨hh, hend, -⟩ := boolV_link b h64 hsize v x e hx
+  rw [if_neg hh, if_neg (by decide)] at hmem
+  simp only [Option.some.injEq, Prod.mk.injEq] at hmem
+  obtain ⟨rfl, rfl⟩ := hmem
+  exact ⟨hend, rfl⟩
+
+/-- A number list's position (slot `(3, s, _)`, `levelParams`). -/
+theorem lps_arm (m m' : Mem) (kind q ks K s sb : Word) (v : USize) (xs : List Nat) (e : USize)
+    (e' : Word) (hk : indSlotN kind K = (3, s, sb)) (hx : scanNatList b v = .ok xs e)
+    (hmem : memberW b.data m kind q ks K v.toUInt64 = some (e', m')) :
+    e' = e.toUInt64 ∧ m' = fldPutW m kind q s v.toUInt64 ∧ ItemsR (listN b.data v.toUInt64) xs := by
+  rw [memberW_eq, hk] at hmem
+  simp only [show ¬ ((3 : Word) = 1 ∨ (3 : Word) = 6) by decide,
+    show ¬ ((3 : Word) = 2 ∨ (3 : Word) = 8) by decide, true_or, if_true, if_false] at hmem
+  unfold nlistW at hmem
+  rw [if_pos rfl] at hmem
+  simp only [Option.some.injEq, Prod.mk.injEq] at hmem
+  obtain ⟨rfl, rfl⟩ := hmem
+  have hend := scanNatList_link b h64 hsize v
+  rw [hx] at hend
+  exact ⟨hend.symm, rfl, list_link b h64 hsize v xs e hx⟩
+
+/-- A number list read past (slot `(4, _, _)`, `all`). -/
+theorem all_arm (m m' : Mem) (kind q ks K s sb : Word) (v : USize) (xs : List Nat) (e : USize)
+    (e' : Word) (hk : indSlotN kind K = (4, s, sb)) (hx : scanNatList b v = .ok xs e)
+    (hmem : memberW b.data m kind q ks K v.toUInt64 = some (e', m')) :
+    e' = e.toUInt64 ∧ m' = m := by
+  rw [memberW_eq, hk] at hmem
+  simp only [show ¬ ((4 : Word) = 1 ∨ (4 : Word) = 6) by decide,
+    show ¬ ((4 : Word) = 2 ∨ (4 : Word) = 8) by decide, true_or, or_true, if_true,
+    if_false] at hmem
+  unfold nlistW at hmem
+  rw [if_neg (by decide), if_neg (by decide)] at hmem
+  simp only [Option.some.injEq, Prod.mk.injEq] at hmem
+  obtain ⟨rfl, rfl⟩ := hmem
+  have hend := scanNatList_link b h64 hsize v
+  rw [hx] at hend
+  exact ⟨hend.symm, rfl⟩
+
+/-- A list of name ids into `IFL` (slot `(5, s, _)`, a type's `ctors`). -/
+theorem ids_arm (m m' : Mem) (kind q ks K s sb : Word) (v : USize) (xs : List Nat) (e : USize)
+    (e' : Word) (hk : indSlotN kind K = (5, s, sb)) (hx : scanNatList b v = .ok xs e)
+    (hmem : memberW b.data m kind q ks K v.toUInt64 = some (e', m')) :
+    e' = e.toUInt64 ∧ ∃ m₁, idsM b.data m v.toUInt64 = some m₁ ∧
+      m' = fldPutW (fldPutW m₁ kind q s (rdW (m.arr64 IFL) 0 + 1)) kind q (s + 1)
+        (lsCntN b.data (v.toUInt64 + 1) 0) ∧ ItemsR (listN b.data v.toUInt64) xs := by
+  rw [memberW_eq, hk] at hmem
+  simp only [show ¬ ((5 : Word) = 1 ∨ (5 : Word) = 6) by decide,
+    show ¬ ((5 : Word) = 2 ∨ (5 : Word) = 8) by decide, or_true, if_true, if_false] at hmem
+  unfold nlistW at hmem
+  rw [if_neg (by decide), if_pos rfl] at hmem
+  have hend := scanNatList_link b h64 hsize v
+  rw [hx] at hend
+  cases hi : idsM b.data m v.toUInt64 with
+  | none => rw [hi, nlK_none] at hmem; cases hmem
+  | some m₁ =>
+    rw [hi, nlK_some] at hmem
+    simp only [Option.some.injEq, Prod.mk.injEq] at hmem
+    obtain ⟨rfl, rfl⟩ := hmem
+    exact ⟨hend.symm, m₁, rfl, rfl, list_link b h64 hsize v xs e hx⟩
+
+/-- A list of records (slot `(7, s, sub)`). -/
+theorem list_arm (m m' : Mem) (kind q K s sub : Word) (i v : USize) (e' : Word)
+    (hk : indSlotN kind K = (7, s, sub)) (hiv : i < v)
+    (hmem : memberW b.data m kind q i.toUInt64 K v.toUInt64 = some (e', m')) :
+    ∃ o c m₁, listW b.data m v.toUInt64 sub = some ((o, c, e'), m₁) ∧
+      m' = fldPutW (fldPutW m₁ kind q s o) kind q (s + 1) c := by
+  rw [memberW_eq, hk] at hmem
+  simp only [show ¬ ((7 : Word) = 1 ∨ (7 : Word) = 6) by decide,
+    show ¬ ((7 : Word) = 2 ∨ (7 : Word) = 8) by decide,
+    show ¬ ((7 : Word) = 3 ∨ (7 : Word) = 4 ∨ (7 : Word) = 5) by decide, if_true,
+    if_false] at hmem
+  rw [if_pos ((lt_toUInt64_iff _ _).mp hiv)] at hmem
+  cases hl : listW b.data m v.toUInt64 sub with
+  | none => rw [hl, memK_none] at hmem; cases hmem
+  | some r =>
+    obtain ⟨⟨o, c, e₁⟩, m₁⟩ := r
+    rw [hl, memK_some] at hmem
+    simp only [Option.some.injEq, Prod.mk.injEq] at hmem
+    obtain ⟨rfl, rfl⟩ := hmem
+    exact ⟨o, c, m₁, rfl, rfl⟩
+
+end arms
 
 end L.Front.Ind
