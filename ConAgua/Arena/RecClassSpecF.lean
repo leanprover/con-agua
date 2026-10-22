@@ -1,4 +1,5 @@
 import ConAgua.Arena.RecClassSpecE
+import ConAgua.Arena.IndSumSpec4
 
 /-!
 # `RecClass`: `classReadSlot`, `classReadSlots` (lane `indproofs2`, helper `rec`)
@@ -186,17 +187,6 @@ theorem tag_beq (e : Word) (hh : H e) (t : UInt32) (k : Nat) (hk : k < 16) (ht :
   have := decE_tag_eq e hh k hk
   simp only [beq_iff_eq]; exact this
 
-theorem decHL_take {k : IdxKind} {m : Mem} : ∀ {o l j : Nat} {xs : List (Idx k)},
-    decHL m o l = some xs → j ≤ l → decHL m o j = some (xs.take j)
-  | o, l, 0, xs, _, _ => by simp [decHL, hslice?]
-  | o, l + 1, j + 1, xs, h, hj => by
-    obtain ⟨x, ys, rfl, hys, hx⟩ := decHL_cons_r h
-    have := decHL_take hys (by omega : j ≤ l)
-    simp only [decHL, hslice?_succ] at this ⊢
-    simp only [decHL, iwH] at hx
-    rw [hx, this]; rfl
-  | o, 0, j + 1, xs, _, hj => by omega
-
 theorem decAt_stab {α : Type} {g : Mem → Nat → Nat → Option (List α)} {m : Mem} {i o l : Nat}
     {xs : List α} (h0 : StabD (fun m => iwN m i) m o) (h1 : StabD (fun m => iwN m (i + 1)) m l)
     (hg : StabD (fun m => g m o l) m xs) : StabD (fun m => decAt m (g m) i) m xs := by
@@ -295,7 +285,7 @@ theorem slotMotW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
   simp only [List.headD_cons, List.tail_cons]
   have hlen3 := decHL_length m3 hd3
   have hds : decHL m3 (r3.headD 0).toNat (min N (r3.tail.headD 0).toNat) = some (args.take N) := by
-    rw [decHL_take hd3 (Nat.min_le_right _ _)]
+    rw [decHL_take hd3 _ (Nat.min_le_right _ _)]
     congr 1; rw [List.take_eq_take_iff]; simp [hlen3]
   have hq5 : rdW (m4.arr64 CTL) 200 = rdW (m4.arr64 CTL) 200 := rfl
   have k0 := rec_iwH_stab (kk := IdxKind.name) hq5 hget5 htop5 0 (by simp) hnH
