@@ -333,4 +333,213 @@ theorem blockShapeMemberNames_refines (p : Prog) (ha : p.lookup "iw_alloc" = som
   intro r s' ⟨_, h⟩
   exact memberNamesW_dec h hsz hcl hq hb hsrc hptr
 
+
+/-! ## `BlockParts.complete` -/
+
+/-- **`block_parts_complete` is `BlockParts.complete`**: the identity on the shape pointer
+(`BlockParts` and its shape share one pointer). -/
+@[refines ConRon.Arena.BlockParts.complete]
+theorem blockPartsComplete_refines (p : Prog)
+    (hp : p.lookup "block_parts_complete" = some blockPartsComplete) (n : Nat) (s₀ : St)
+    (p0 p1 : Word) (b0 : BlockParts) (bs : BlockShape) (h1 : decBS s₀.mem p1.toNat = some bs) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_parts_complete" [p0, p1]
+    ⦃fun r s' => s' = s₀ ∧ r.headD 0 = p1 ∧
+      decBP s₀.mem (r.headD 0).toNat = some (BlockParts.complete b0 bs); ⊤⦄ := by
+  have hd : decBP s₀.mem p1.toNat = some (BlockParts.complete b0 bs) := by
+    simp [decBP, h1, BlockParts.complete]
+  rw [invoke_eq _ hp]
+  simp only [callFn, blockPartsComplete]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs] <;>
+      finish [Sig.retVal, Locals.init]
+
+/-! ## `BlockShape.lps` -/
+
+/-- A successful handle slice read is in bounds. -/
+theorem hslice?_bound {k : IdxKind} (a : Array Word) : ∀ (c o : Nat) (xs : List (Idx k)),
+    hslice? a o c = some xs → 0 < c → o + c ≤ a.size
+  | 0, o, xs, h, hc => absurd hc (by omega)
+  | c + 1, o, xs, h, _ => by
+    rw [hslice?_succ] at h
+    simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+    obtain ⟨x, hx, ys, hys, rfl⟩ := h
+    have h2 : o < a.size := by
+      cases hw : a[o]? with
+      | none => simp [hd?, hw] at hx
+      | some w => exact (Array.getElem?_eq_some_iff.mp hw).1
+    cases c with
+    | zero => omega
+    | succ c =>
+      have h1 := hslice?_bound a (c + 1) (o + 1) ys hys (by omega)
+      omega
+
+
+theorem erToIwW_two {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
+    (h : erToIwW n m o l = some (r, m')) : r = [r.headD 0, r.tail.headD 0] := by
+  simp only [erToIwW] at h
+  cases hal : allocW m l with
+  | none => simp [hal] at h
+  | some qm =>
+    obtain ⟨q, m1⟩ := qm
+    simp only [hal] at h
+    cases hcp : erCopyW (n - 1) m1 q o l with
+    | none => simp [hcp] at h
+    | some m2 =>
+      simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, -⟩ := h
+      rfl
+
+/-- `er_to_iw`'s spec with the result's shape (two words) spelt out. -/
+theorem erToIw_specW2 (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hc : p.lookup "er_copy" = some erCopy) (hp : p.lookup "er_to_iw" = some erToIw) (n : Nat)
+    (s₀ : St) (o l : Word) :
+    ⦃fun st => st = s₀⦄ invoke p (exec p n) "er_to_iw" [o, l]
+    ⦃fun r s' => LocEq s' s₀ ∧ erToIwW n s₀.mem o l = some (r, s'.mem) ∧
+      r = [r.headD 0, r.tail.headD 0]; ⊤⦄ :=
+  triple_post (erToIw_specW p ha hc hp n s₀ o l) (fun r s' ⟨h1, h2⟩ => ⟨h1, h2, erToIwW_two h2⟩)
+
+/-- The model of `block_shape_lps` (its callee runs at `n - 1`). -/
+def lpsW : Nat → Mem → Word → Option (List Word × Mem)
+  | 0, _, _ => none
+  | n + 1, m, p =>
+    if rdW (m.arr64 IW) (p + 1) = 0 then some ([0, 0], m)
+    else erToIwW n m
+      (rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) p)) + 1))
+      (rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) p)) + 2))
+
+section arms
+variable (n : Nat) (m : Mem) (p : Word)
+theorem lpsW_nil (h : rdW (m.arr64 IW) (p + 1) = 0) : lpsW (n + 1) m p = some ([0, 0], m) := by
+  simp [lpsW, h]
+theorem lpsW_cons (h : rdW (m.arr64 IW) (p + 1) ≠ 0) : lpsW (n + 1) m p =
+    erToIwW n m
+      (rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) p)) + 1))
+      (rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) p)) + 2)) := by
+  simp [lpsW, h]
+end arms
+
+grind_pattern [ind_grind] lpsW_nil => lpsW (n + 1) m p
+grind_pattern [ind_grind] lpsW_cons => lpsW (n + 1) m p
+
+theorem blockShapeLps_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hc : p.lookup "er_copy" = some erCopy) (he : p.lookup "er_to_iw" = some erToIw)
+    (hp : p.lookup "block_shape_lps" = some blockShapeLps) (n : Nat) (s₀ : St) (q : Word) :
+    ⦃fun st => st = s₀⦄ invoke p (exec p n) "block_shape_lps" [q]
+    ⦃fun r s' => LocEq s' s₀ ∧ lpsW n s₀.mem q = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, blockShapeLps]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        erToIw_specW2 p ha hc he n] <;>
+      finish (gen := 20) [rdW_eq]
+
+
+theorem lpsW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : BlockShape}
+    (h : lpsW n m p = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64)
+    (hc : 200 < (m.arr64 CTL).size) (hE : (m.arr64 EREC).size < 2 ^ 64)
+    (hq : decBS m p.toNat = some bs) (hb : p.toNat + 9 < 2 ^ 64)
+    (hlpb : ∀ a o' l', nat? (erA m) (a + 1) = some o' → nat? (erA m) (a + 2) = some l' →
+      o' + l' ≤ (m.arr64 EREC).size) :
+    r = [r.headD 0, r.tail.headD 0] ∧
+    decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some bs.lps ∧
+    IWGrow m m' ∧ MemFrame [IW] [200] m m' := by
+  obtain ⟨o, l, ho, hl, hg⟩ := decAt_some (decBS_some hq).1
+  have hlen := decPL_length m hg
+  obtain ⟨ho', hob⟩ := iwN_rdW ho (by omega)
+  obtain ⟨hl', hlb⟩ := iwN_rdW hl (by omega)
+  have e1 : UInt64.ofNat (p.toNat + 1) = p + 1 := by
+    apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
+  rw [ofNat_toNat_word] at ho'
+  rw [e1] at hl'
+  cases n with
+  | zero => simp [lpsW] at h
+  | succ n =>
+  by_cases hl0 : l = 0
+  · have hz : rdW (m.arr64 IW) (p + 1) = 0 := by rw [hl', hl0]; rfl
+    rw [lpsW_nil n m p hz] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    have hms : bs.members = [] := List.eq_nil_of_length_eq_zero (by omega)
+    refine ⟨rfl, ?_, IWGrow.refl m, MemFrame.refl _ _ m⟩
+    simp [BlockShape.lps, hms, decHL, hslice?]
+  · have hz : rdW (m.arr64 IW) (p + 1) ≠ 0 := by
+      rw [hl']; intro h0
+      apply hl0
+      have := congrArg UInt64.toNat h0
+      simp [UInt64.toNat_ofNat_of_lt' (show l < UInt64.size by rw [UInt64_size_eq]; exact hlb)] at this
+      exact this
+    rw [lpsW_cons n m p hz] at h
+    obtain ⟨v, y, hv, hy, hget⟩ := decPL_get l o bs.members hg 0 (by omega)
+    obtain ⟨⟨a, hva, hcv⟩, -, -⟩ := decMS_some hy
+    have hmem : bs.members = y :: bs.members.tail := by
+      cases hm : bs.members with
+      | nil => rw [hm] at hlen; simp at hlen; omega
+      | cons y0 ys => rw [hm] at hget; simp at hget; rw [hget]; rfl
+    have hlps : bs.lps = y.cvT.levelParams := by unfold BlockShape.lps; rw [hmem]
+    replace hv : iwN m o = some v := by simpa using hv
+    obtain ⟨hv', hvb⟩ := iwN_rdW hv (by omega)
+    obtain ⟨hva', hab⟩ := iwN_rdW hva (by omega)
+    have hcv' := hcv
+    simp only [decCVp, decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hcv'
+    obtain ⟨nm, -, lv, hlv, ce, -, hcvT⟩ := hcv'
+    have hlvE : lv = y.cvT.levelParams := by rw [← hcvT]
+    simp only [hlist?, bind, Option.bind_eq_some_iff] at hlv
+    obtain ⟨o', ho2, l', hl2, hsl⟩ := hlv
+    simp only [nat?, erA, Option.map_eq_some_iff] at ho2 hl2
+    obtain ⟨w1, hw1, rfl⟩ := ho2
+    obtain ⟨w2, hw2, rfl⟩ := hl2
+    have hi1 := (Array.getElem?_eq_some_iff.mp hw1).1
+    have hi2 := (Array.getElem?_eq_some_iff.mp hw2).1
+    replace hi1 : a + 1 < (m.arr64 EREC).size := hi1
+    replace hi2 : a + 2 < (m.arr64 EREC).size := hi2
+    have e2 : ∀ k : Nat, k < 2 ^ 64 → UInt64.ofNat a + UInt64.ofNat k = UInt64.ofNat (a + k) := by
+      intro k _; exact (ofNat_add_word a k).symm
+    have hrd1 : rdW (m.arr64 EREC) (UInt64.ofNat (a + 1)) = w1 := by
+      have : (UInt64.ofNat (a + 1)).toNat = a + 1 :=
+        UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)
+      simp only [rdW, this]; rw [hw1]; rfl
+    have hrd2 : rdW (m.arr64 EREC) (UInt64.ofNat (a + 2)) = w2 := by
+      have : (UInt64.ofNat (a + 2)).toNat = a + 2 :=
+        UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)
+      simp only [rdW, this]; rw [hw2]; rfl
+    have e3 : UInt64.ofNat a + 1 = UInt64.ofNat (a + 1) := by
+      apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
+    have e4 : UInt64.ofNat a + 2 = UInt64.ofNat (a + 2) := by
+      apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
+    have hv'' : rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) p)) = UInt64.ofNat a := by
+      rw [ho', hv']; exact hva'
+    rw [hv'', e3, e4, hrd1, hrd2] at h
+    have hlpb' := hlpb a w1.toNat w2.toNat (by simp [nat?, erA, hw1]) (by simp [nat?, erA, hw2])
+    obtain ⟨hr, hdec, hgrow, hfr, -, -⟩ := erToIwW_dec (k := IdxKind.name) h hsz hc hE hlpb'
+    have hh := erToIwW_two h
+    refine ⟨hh, ?_, hgrow, hfr⟩
+    rw [hr] at hh ⊢
+    simp only [List.headD_cons, List.tail_cons]
+    rw [hdec, hlps, ← hlvE]
+    exact hsl
+
+/-- **`block_shape_lps` is `BlockShape.lps`**: a fresh `IW` copy of member 0's level parameters. -/
+@[refines ConRon.Arena.BlockShape.lps]
+theorem blockShapeLps_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hc : p.lookup "er_copy" = some erCopy) (he : p.lookup "er_to_iw" = some erToIw)
+    (hp : p.lookup "block_shape_lps" = some blockShapeLps) (n : Nat) (s₀ : St) (q : Word)
+    (bs : BlockShape) (hq : decBS s₀.mem q.toNat = some bs) (hb : q.toNat + 9 < 2 ^ 64)
+    (hsz : (s₀.mem.arr64 IW).size < 2 ^ 64) (hcl : 200 < (s₀.mem.arr64 CTL).size)
+    (hE : (s₀.mem.arr64 EREC).size < 2 ^ 64)
+    (hlpb : ∀ a o' l', nat? (erA s₀.mem) (a + 1) = some o' → nat? (erA s₀.mem) (a + 2) = some l' →
+      o' + l' ≤ (s₀.mem.arr64 EREC).size) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_shape_lps" [q]
+    ⦃fun r s' => r = [r.headD 0, r.tail.headD 0] ∧
+      decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat = some bs.lps ∧
+      IWGrow s₀.mem s'.mem ∧ MemFrame [IW] [200] s₀.mem s'.mem; ⊤⦄ := by
+  refine triple_post (blockShapeLps_spec p ha hc he hp n s₀ q) ?_
+  intro r s' ⟨_, h⟩
+  exact lpsW_dec h hsz hcl hE hq hb hlpb
+
 end L.Ind
