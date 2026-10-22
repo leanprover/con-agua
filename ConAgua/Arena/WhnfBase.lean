@@ -792,17 +792,11 @@ structure WhnfCallees (p : Prog) : Prop where
   strLitCtor : StrLitCtorOK p
   strLitSupported : StrLitSupportedOK p
 
-/-- **The stubs' specs, assumed** until their L code lands (phases 4, 6, 7; string literals). -/
-theorem whnfCallees_stub (p : Prog) : WhnfCallees p := sorry
-
 /-- **`strLitSupported` keeps every stored node's view** (it reads the pins and the environment
 and interns the nodes it compares against, which only adds nodes). `StrLitSupportedOK` says
 nothing about the store; `proj_lit_to_ctor` carries a `view` fact across the call. -/
 def SupKeep (fe : IFEnv) : Prop :=
   ∀ (a : AState) (h : EIdx) (w : ENodeView), a.store.view h = some w →
     (AM.st (strLitSupported fe) a).store.view h = some w
-
-/-- `SupKeep`, assumed until `strLitSupported`'s store monotonicity is proved (DESIGN.md). -/
-theorem supKeep_twin (fe : IFEnv) : SupKeep fe := sorry
 
 end L.Arena

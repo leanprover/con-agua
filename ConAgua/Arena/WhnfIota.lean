@@ -902,9 +902,6 @@ structure IotaCallees (p : Prog) : Prop where
   leafGuard : LeafGuardOK p
   litToCtorIfNat : LitToCtorIfNatOK p
 
-/-- **The stubs' specs, assumed** until their L code lands. -/
-theorem iotaCallees_stub (p : Prog) : IotaCallees p := sorry
-
 /-! ## The statements (`CoreSpec` shape; all `sorry` for now)
 
 A knot-calling function quantifies over the knot fuel `F` (`n ≤ F`) and takes `KnotUpTo p n` for the

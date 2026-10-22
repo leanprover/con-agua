@@ -1347,50 +1347,6 @@ theorem whnfCoreStepProj_refines' (p : Prog) (hp : WhnfCoreProg p) (hStrSup : St
 section wrap
 variable (p : Prog) (hp : WhnfCoreProg p)
 
-include hp in
-/-- **`whnf_core_step_proj` refines `whnfCoreStepProj`.** -/
-@[refines ConRon.Arena.whnfCoreStepProj]
-theorem whnfCoreStepProj_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F)
-    (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (MM : ModeMaps) (eb mode cheap d e sn i pe : Word)
-    (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e) (hsn : HW sn) (hpe : HW pe) :
-    CoreSpec p (n + 1) "whnf_core_step_proj" [mode, cheap, vis, d, e, sn, i, pe]
-      (whnfCoreStepProj (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat
-        (decE e) (decI sn) i.toNat (decE pe)) decStep s₀ a₀ dn vis fe MM eb ResW :=
-  whnfCoreStepProj_refines' p hp (whnfCallees_stub p).strLitSupported
-    (whnfCallees_stub p).strLitCtor (coreCallees_stub p).toProjCallees hp.lsn
-    (coreCallees_stub p).erec n hk F hF hn s₀ a₀ dn vis fe MM eb mode cheap d e sn i pe hs he hsn hpe
-    (supKeep_twin fe)
-
-include hp in
-/-- **`reduce_proj_core` refines `reduceProjCore`.** -/
-@[refines ConRon.Arena.reduceProjCore]
-theorem reduceProjCore_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F)
-    (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (MM : ModeMaps) (eb mode d sn i c : Word)
-    (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (hsn : HW sn) (hc' : HW c) :
-    CoreSpec p (n + 1) "reduce_proj_core" [mode, vis, d, sn, i, c]
-      (reduceProjCore (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat
-        (decE c)) decOptR s₀ a₀ dn vis fe MM eb ResW :=
-  reduceProjCore_refines' p hp (whnfCallees_stub p).strLitSupported
-    (whnfCallees_stub p).strLitCtor (coreCallees_stub p).toProjCallees hp.lsn
-    (coreCallees_stub p).erec n hk F hF hn s₀ a₀ dn vis fe MM eb mode d sn i c hs hsn hc'
-    (supKeep_twin fe)
-
-include hp in
-/-- **`proj_lit_to_ctor` refines `projLitToCtor`.** -/
-@[refines ConRon.Arena.projLitToCtor]
-theorem projLitToCtor_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F)
-    (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (MM : ModeMaps) (eb mode d h : Word) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode)
-    (hh : HW h) :
-    CoreSpec p (n + 1) "proj_lit_to_ctor" [mode, vis, d, h]
-      (projLitToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h)) decH s₀ a₀ dn vis fe
-      MM eb :=
-  projLitToCtor_refines' p hp (whnfCallees_stub p).strLitSupported
-    (whnfCallees_stub p).strLitCtor n hk F hF hn s₀ a₀ dn vis fe MM eb mode d h hs hh
-    (supKeep_twin fe)
-
 end wrap
 
 end L.Arena
