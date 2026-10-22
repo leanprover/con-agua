@@ -744,17 +744,21 @@ def classRecOf : FunDecl := lfn (rco, rcl, cgo, cgl, t) locals (v, nr, ok, nm) {
 the minor premise of constructor `ctorName` at class `c`. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:265-318 ConRon.Arena.classGenRule
 @[l_impl ConRon.Arena.classGenRule]
-def classGenRuleFindSlot : FunDecl := lfn (g, c, ctorName) locals (so, sl, j, sp, tag) {
-  so := IW.u64[g + 7];
-  sl := IW.u64[g + 8];
-  j := 0;
-  while j < sl {
-    sp := IW.u64[so + j];
-    tag := IW.u64[sp];
-    if tag == 1 && IW.u64[sp + 1] == c && IW.u64[sp + 2] == ctorName { return (1, j) };
-    j += 1
-  };
-  return (0, 0)
+def classGenRuleFindSlot : FunDecl := lfn (g, c, ctorName) locals (ok, j) {
+  (ok, j) := call class_gen_rule_find_slot_go(IW.u64[g + 7], IW.u64[g + 8], 0, c, ctorName);
+  return (ok, j)
+}
+
+/-- `class_gen_rule_find_slot_go(so, sl, j, c, ctorName)`: the first slot `j ‥< sl` that is
+`.minor c ctorName _` (as a self-recursion). -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:265-318 ConRon.Arena.classGenRule
+@[l_impl ConRon.Arena.classGenRule]
+def classGenRuleFindSlotGo : FunDecl := lfn (so, sl, j, c, ctorName) locals (sp, ok, r) {
+  if sl <= j { return (0, 0) };
+  sp := IW.u64[so + j];
+  if IW.u64[sp] == 1 && IW.u64[sp + 1] == c && IW.u64[sp + 2] == ctorName { return (1, j) };
+  (ok, r) := call class_gen_rule_find_slot_go(so, sl, j + 1, c, ctorName);
+  return (ok, r)
 }
 
 /-- `class_gen_rule_pvars_go(g, rP, i)`: `classGenRule`'s `pvars`, the prefix variables
@@ -776,20 +780,41 @@ i, e)`: `classGenRule`'s `callsGo` body for one recursive field `i` landing at c
 @[l_impl ConRon.Arena.classGenRule]
 def classGenRuleCall1 : FunDecl := lfn
     (g, t, tele, wso, wsl, fvso, fvsl, pvo, pvl, rlvls, rco, rcl, cgo, cgl, i, e) locals
-    (w, ok, xso, xsl, idxo, idxl, rc, f, fx, a1o, a1l, a2o, a2l, bso, bsl, rv) {
+    (w, ok, xso, xsl, idxo, idxl, rc, r0, r1) {
   w := call expr_get_d(wso, wsl, i);
   (ok, xso, xsl, idxo, idxl) := call class_gen_ih_parts(g, t, tele, w, e);
   if ok == 0 { return (0, 0) };
   (ok, rc) := call class_rec_of(rco, rcl, cgo, cgl, t);
   if ok == 0 { return (0, 0) };
+  (r0, r1) := call class_gen_rule_call1_tail(fvso, fvsl, pvo, pvl, rlvls, xso, xsl, idxo, idxl, rc, i, e);
+  return (r0, r1)
+}
+
+/-- `class_gen_rule_call1_tail(fvs.off, fvs.len, pv.off, pv.len, rlvls, xs.off, xs.len, idx.off,
+idx.len, r, i, e)`: one recursive call after its telescope, indices and recursor are known. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:265-318 ConRon.Arena.classGenRule
+@[l_impl ConRon.Arena.classGenRule]
+def classGenRuleCall1Tail : FunDecl := lfn (fvso, fvsl, pvo, pvl, rlvls, xso, xsl, idxo, idxl, r, i, e)
+    locals (f, fx, rc, a1o, a1l, a2o, a2l, rv, r0, r1) {
   f := call expr_get_d(fvso, fvsl, i);
   fx := call mk_app_n_f(f, xso, xsl);
-  rc := call intern_const(rc, rlvls);
+  rc := call intern_const(r, rlvls);
+  if 4294967296 <= rc { abort };
   (a1o, a1l) := call sl_append(pvo, pvl, idxo, idxl);
   (a2o, a2l) := call sl_snoc(a1o, a1l, fx);
   rv := call mk_app_n_f(rc, a2o, a2l);
+  (r0, r1) := call class_gen_rule_call1_close(xso, xsl, e, rv);
+  return (r0, r1)
+}
+
+/-- `class_gen_rule_call1_close(xs.off, xs.len, e, app)`: the call closed over its telescope's
+binders at depth `e` (the depth must not wrap). -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:265-318 ConRon.Arena.classGenRule
+@[l_impl ConRon.Arena.classGenRule]
+def classGenRuleCall1Close : FunDecl := lfn (xso, xsl, e, app) locals (bso, bsl, rv) {
   (bso, bsl) := call fvar_type_ds(xso, xsl);
-  rv := call close_lams(bso, bsl, e, rv);
+  if e + bsl < e { abort };
+  rv := call close_lams(bso, bsl, e, app);
   return (1, rv)
 }
 
@@ -825,28 +850,46 @@ class `c` for its constructor `x`. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:265-318 ConRon.Arena.classGenRule
 @[l_impl ConRon.Arena.classGenRule]
 def classGenRule : FunDecl := lfn (g, rco, rcl, cgo, cgl, rlvls, c, x) locals
-    (rP, ok, s, fo, fl, jnk, wso, wsl, pvo, pvl, nF, e, ihso, ihsl, sv, a1o, a1l, body,
-     fbso, fbsl, prefo, prefl, allo, alll, r) {
+    (rP, ok, s, fo, fl, jnk, r0, r1) {
   rP := IW.u64[g + 13];
   (ok, s) := call class_gen_rule_find_slot(g, c, EREC.u64[IW.u64[x]]);
   if ok == 0 { return (0, 0) };
   (ok, fo, fl, jnk) := call open_pis_at_fvars_f(IW.u64[x + 1], IW.u64[x + 4], rP);
   if ok == 0 { return (0, 0) };
+  (r0, r1) := call class_gen_rule_body(g, rco, rcl, cgo, cgl, rlvls, x, rP, s, fo, fl);
+  return (r0, r1)
+}
+
+/-- `class_gen_rule_body(g, rco, rcl, cgo, cgl, rlvls, x, rP, s, fvs.off, fvs.len)`: the rule after its
+fields are opened: the walked types, the prefix variables, the recursive calls (at depth `rP + nF`,
+which must not wrap), then the closing. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:265-318 ConRon.Arena.classGenRule
+@[l_impl ConRon.Arena.classGenRule]
+def classGenRuleBody : FunDecl := lfn (g, rco, rcl, cgo, cgl, rlvls, x, rP, s, fo, fl) locals
+    (ok, wso, wsl, pvo, pvl, nF, ihso, ihsl, r0, r1) {
   (ok, wso, wsl) := call target_pi_doms_with(fo, fl, IW.u64[x + 5]);
   if ok == 0 { return (0, 0) };
   (pvo, pvl) := call class_gen_rule_pvars_go(g, rP, 0);
   nF := IW.u64[x + 1];
-  e := rP + nF;
+  if rP + nF < rP { abort };
   (ok, ihso, ihsl) := call class_gen_rule_calls_go(g, x, wso, wsl, fo, fl, pvo, pvl, rlvls,
-    rco, rcl, cgo, cgl, e, nF, 0);
+    rco, rcl, cgo, cgl, rP + nF, nF, 0);
   if ok == 0 { return (0, 0) };
+  (r0, r1) := call class_gen_rule_close(g, s, fo, fl, ihso, ihsl);
+  return (r0, r1)
+}
+
+/-- `class_gen_rule_close(g, s, fvs.off, fvs.len, ihs.off, ihs.len)`: the minor premise applied to the
+fields and the calls, closed over the prefix and the fields' binders. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:265-318 ConRon.Arena.classGenRule
+@[l_impl ConRon.Arena.classGenRule]
+def classGenRuleClose : FunDecl := lfn (g, s, fo, fl, ihso, ihsl) locals
+    (sv, a1o, a1l, body, fbso, fbsl, allo, alll, r) {
   sv := call class_gen_slot_var(g, s);
   (a1o, a1l) := call sl_append(fo, fl, ihso, ihsl);
   body := call mk_app_n_f(sv, a1o, a1l);
   (fbso, fbsl) := call fvar_type_ds(fo, fl);
-  prefo := IW.u64[g + 12];
-  prefl := IW.u64[g + 13];
-  (allo, alll) := call sl_append(prefo, prefl, fbso, fbsl);
+  (allo, alll) := call sl_append(IW.u64[g + 12], IW.u64[g + 13], fbso, fbsl);
   r := call close_lams(allo, alll, 0, body);
   return (1, r)
 }
@@ -889,7 +932,10 @@ def recClassFns : Prog :=
    ("class_gen_rec_ty_tail", classGenRecTyTail),
    ("class_rec_of", classRecOf), ("class_gen_rule_find_slot", classGenRuleFindSlot),
    ("class_gen_rule_pvars_go", classGenRulePvarsGo), ("class_gen_rule_call1", classGenRuleCall1),
-   ("class_gen_rule_calls_go", classGenRuleCallsGo), ("class_gen_rule", classGenRule)]
+   ("class_gen_rule_calls_go", classGenRuleCallsGo), ("class_gen_rule", classGenRule),
+   ("class_gen_rule_find_slot_go", classGenRuleFindSlotGo), ("class_gen_rule_call1_tail", classGenRuleCall1Tail),
+   ("class_gen_rule_call1_close", classGenRuleCall1Close), ("class_gen_rule_body", classGenRuleBody),
+   ("class_gen_rule_close", classGenRuleClose)]
 
 /-- Stubs for the functions of OTHER modules this module calls: `pi_binders` and
 `block_shape_member_names` (`IndParts`), `target_major_at` and `target_pi_doms_with`
