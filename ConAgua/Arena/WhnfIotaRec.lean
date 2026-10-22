@@ -10,7 +10,7 @@ the head and calls the pieces below, one per block of the twin's nest:
 * `iota_rec_c(mode, vis, d, c, us, so, sn)`: the recursor's lookup, the arity, the level-list
   length, the recursor's telescope (`peelPis`);
 * `iota_rec_major(mode, vis, d, c, us, recP, so, sn)`: the major's preparation, its head's
-  constructor, the rule;
+  constructor (`iota_rec_head`: a `const` handle's view), the rule;
 * `iota_rec_fire(…, major)`: the major's arguments (a slice at the stack top, `get_app_args`), the
   top put back after the rest (`iota_rec_fire2`);
 * `iota_rec_fire2(…, mo, mn)`: the argument count, the certificate family (`iota_rec_fam`), the
@@ -145,27 +145,34 @@ def iotaRecFireL : FunDecl := lfn (mode, vis, d, c, us, recP, so, usj, ctorP, rl
   return (r1, r2)
 }
 
-/-- The major premise prepared, its head a stored constructor with a rule. -/
+/-- A `const` handle's name and level list: `(0, _, _)` for another tag; a dangling handle aborts
+(the twin's `view` fails). -/
 -- con-ron: ConRon/Arena/Core.lean:2012-2097 ConRon.Arena.iotaRecAt
-def iotaRecMajorL : FunDecl := lfn (mode, vis, d, c, us, recP, so, sn)
-    locals (b0, major, hh, t, i, cj, cf, ctorP, rf, rl, r1, r2) {
-  b0 := call intern_bvar(0);
-  major := call prepare_major(mode, vis, d, c, EREC.u64[recP + 7], EREC.u64[recP + 8],
-    SPN.u64[so + EREC.u64[recP + 5]]);
-  hh := call get_app_fn(major);
-  if hh >> 28 != 3 { return (0, 0) };
+def iotaRecHeadL : FunDecl := lfn (hh) locals (t, i) {
+  if hh >> 28 != 3 { return (0, 0, 0) };
   t := (hh >> 27) & 1;
   i := hh & 134217727;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if CTL.u64[18 + t] <= i { abort };
-  cj := CREC.u64[i * 4 + t * 2];
+  return (1, CREC.u64[i * 4 + t * 2], CREC.u64[i * 4 + t * 2 + 1])
+}
+
+/-- The major premise prepared, its head a stored constructor with a rule. -/
+-- con-ron: ConRon/Arena/Core.lean:2012-2097 ConRon.Arena.iotaRecAt
+def iotaRecMajorL : FunDecl := lfn (mode, vis, d, c, us, recP, so, sn)
+    locals (b0, major, hh, hf, cj, usj, cf, ctorP, rf, rl, r1, r2) {
+  b0 := call intern_bvar(0);
+  major := call prepare_major(mode, vis, d, c, EREC.u64[recP + 7], EREC.u64[recP + 8],
+    SPN.u64[so + EREC.u64[recP + 5]]);
+  hh := call get_app_fn(major);
+  (hf, cj, usj) := call iota_rec_head(hh);
+  if hf == 0 { return (0, 0) };
   (cf, ctorP) := call env_find(cj, vis);
   if cf == 0 { return (0, 0) };
   if EREC.u64[ctorP] != 4 { return (0, 0) };
   (rf, rl) := call find_rule(EREC.u64[recP + 7], EREC.u64[recP + 8], cj);
   if rf == 0 { return (0, 0) };
-  (r1, r2) := call iota_rec_fire(mode, vis, d, c, us, recP, so, CREC.u64[i * 4 + t * 2 + 1],
-    ctorP, rl, major);
+  (r1, r2) := call iota_rec_fire(mode, vis, d, c, us, recP, so, usj, ctorP, rl, major);
   return (r1, r2)
 }
 
@@ -191,7 +198,8 @@ def iotaRecCL : FunDecl := lfn (mode, vis, d, c, us, so, sn)
 def iotaRecProg : Prog :=
   [("erec_push", erecPushL), ("stack_cover", stackCoverL), ("iota_rec_cmp", iotaRecCmpL), ("iota_rec_vck", iotaRecVckL),
    ("iota_rec_fam", iotaRecFamL), ("iota_rec_fire2", iotaRecFire2L),
-   ("iota_rec_fire", iotaRecFireL), ("iota_rec_major", iotaRecMajorL), ("iota_rec_c", iotaRecCL)]
+   ("iota_rec_fire", iotaRecFireL), ("iota_rec_head", iotaRecHeadL),
+   ("iota_rec_major", iotaRecMajorL), ("iota_rec_c", iotaRecCL)]
 
 /-- What the pieces' specs need of a program: the pieces, at their names. -/
 structure IotaRecProg (p : Prog) : Prop where
@@ -202,6 +210,7 @@ structure IotaRecProg (p : Prog) : Prop where
   fam : p.lookup "iota_rec_fam" = some iotaRecFamL
   fire2 : p.lookup "iota_rec_fire2" = some iotaRecFire2L
   fire : p.lookup "iota_rec_fire" = some iotaRecFireL
+  head : p.lookup "iota_rec_head" = some iotaRecHeadL
   major : p.lookup "iota_rec_major" = some iotaRecMajorL
   recC : p.lookup "iota_rec_c" = some iotaRecCL
 

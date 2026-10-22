@@ -717,4 +717,169 @@ theorem iotaRecFire_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees 
   · rw [hresF]; simp only [decOptR, h0, h1]
   · unfold ResW at hr2 ⊢; rw [← h0, ← h1]; exact hr2
 
+/-! ## `env_find` and `intern_bvar` as runs -/
+
+/-- **`env_find` as a run**: the memory unchanged, `find?` decoded at the record pool. -/
+theorem irEnvFind (p : Prog) (hp : IotaProg' p) (n : Nat) (dn : NIdx → Option ConLeche.Name)
+    (m : Mem) (vis : Word) (fe : IFEnv) (hE : EnvR dn m vis fe) (w : Word) (hw : HW w)
+    (r : List Word) (m' : Mem) (h : callW p n "env_find" [w, vis] m = some (r, m')) :
+    m' = m ∧ (r.headD 0 = 0 → fe.find? (decI w) = none) ∧
+      (r.headD 0 ≠ 0 → ∃ ci, fe.find? (decI w) = some ci ∧
+        decCI (m.arr64 EREC) dn (r.tail.headD 0).toNat = some ci) := by
+  obtain ⟨t₂, ht₂, hm₂, -, hfind⟩ := triple_of_callW
+    (envFind_refines p hp.envix hp.envrow hp.envfind n ⟨m, Locals.init []⟩ vis w hE hw) h
+  obtain ⟨t₂', ht₂', hm₂', -, hfound⟩ := triple_of_callW
+    (envFind_found p hp.envix hp.envrow hp.envfind n ⟨m, Locals.init []⟩ vis w hw) h
+  rw [ht₂] at hm₂
+  refine ⟨hm₂, fun h0 => ?_, fun h0 => ?_⟩
+  · rw [hfind]; simp only [decFound, h0, ↓reduceIte]
+  · obtain ⟨htag2, hrow, hq⟩ := hfound h0
+    obtain ⟨ci, hci⟩ := hE.found_some w hw htag2 hrow
+    refine ⟨ci, ?_, ?_⟩
+    · rw [hfind]; simp only [decFound, h0, ↓reduceIte, hq]; exact hci
+    · rw [hq]; exact (erecP_ext m).decCI hci
+
+/-- **`intern_bvar` under `CoreS`.** -/
+theorem irCallW_internBVar (p : Prog) (hp : IotaRecProg' p) (n : Nat)
+    {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {vis : Word} {fe : IFEnv}
+    {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) (u : Word) (r : List Word) (m' : Mem)
+    (h : callW p n "intern_bvar" [u] m = some (r, m')) :
+    (internE (.bvar u.toNat)).run a = .ok (decE (r.headD 0), AM.st (internE (.bvar u.toNat)) a) ∧
+    CoreS dn m' (AM.st (internE (.bvar u.toNat)) a) vis fe M eb ∧ StackKept m m' ∧
+    m'.arr64 EREC = m.arr64 EREC ∧ (m'.arr64 SPN) = m.arr64 SPN := by
+  obtain ⟨s', rfl, -, hm⟩ := triple_of_callW
+    (internBVar_spec p hp.bvf hp.bvp hp.bvi n ⟨m, Locals.init []⟩ u) h
+  obtain ⟨h1, h2, h3⟩ := internBVar_D m a hS.arena u _ _ hm
+  have hfr := binternW_frame _ _ _ _ hm
+  have hrun := AM.run_of_ok _ _ h1
+  rw [h3] at hrun
+  obtain ⟨-, hst, -⟩ := AM.of_run_ok _ _ _ _ hrun
+  have hcpl : cpl (AM.st (internE (.bvar u.toNat)) a) = cpl a := by
+    have := keeps_cpl_internBVar u.toNat
+    unfold Keeps at this
+    exact this a _ _ hrun
+  refine ⟨hrun, hS.of_bvar h2 hcpl hfr, ?_, hfr.1 EREC (by simp [BREC, BSLOT, EREC]) (by decide),
+    hfr.1 SPN (by simp [BREC, BSLOT, SPN]) (by decide)⟩
+  have hspn : s'.mem.arr64 SPN = m.arr64 SPN := hfr.1 SPN (by simp [BREC, BSLOT, SPN]) (by decide)
+  have h136 : rdW (s'.mem.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hfr.2.1 136 (by simp)
+  exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
+
+/-! ## `iota_rec_major(mode, vis, d, c, us, recP, so, sn)` -/
+
+/-! ## `iota_rec_head(hh)` -/
+
+/-- Model of `iota_rec_head`. -/
+def irHeadW (m : Mem) (hh : Word) : Option (List Word) :=
+  if hh >>> 28 ≠ 3 then some [0, 0, 0]
+  else if tierW hh ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
+  else if rdW (m.arr64 CTL) (18 + tierW hh) ≤ idxW hh then none
+  else some [1, rdW (m.arr64 CREC) (idxW hh * 4 + tierW hh * 2),
+    rdW (m.arr64 CREC) (idxW hh * 4 + tierW hh * 2 + 1)]
+
+theorem iotaRecHead_spec (p : Prog) (hp : p.lookup "iota_rec_head" = some iotaRecHeadL) (k : Nat)
+    (s₀ : St) (hh : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p k) "iota_rec_head" [hh]
+    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ irHeadW s₀.mem hh = some r; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, iotaRecHeadL]
+  cases k with
+  | zero => vcgen [exec] <;> grind
+  | succ k =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+      finish [irHeadW, tierW, idxW]
+
+/-- **`iota_rec_head` as a run**: the memory unchanged; another tag, or the `const` view. -/
+theorem irCallW_head (p : Prog) (hp : p.lookup "iota_rec_head" = some iotaRecHeadL) (n : Nat)
+    (m : Mem) (a : AState) (hR : ArenaR m a) (hh : Word) (hw : HW hh) (r : List Word) (m' : Mem)
+    (h : callW p n "iota_rec_head" [hh] m = some (r, m')) :
+    m' = m ∧ (r.headD 0 = 0 → (decE hh).tag ≠ ETag.const) ∧
+      (r.headD 0 ≠ 0 → (decE hh).tag = ETag.const ∧
+        a.store.view (decE hh) = some (.const (decI (r.tail.headD 0)) (decI (r.tail.tail.headD 0))) ∧
+        HW (r.tail.headD 0) ∧ HW (r.tail.tail.headD 0)) := by
+  obtain ⟨t, ht, -, hm, hW⟩ := triple_of_callW (iotaRecHead_spec p hp n ⟨m, Locals.init []⟩ hh) h
+  rw [ht] at hm
+  refine ⟨hm, fun h0 => ?_, fun h0 => ?_⟩
+  · simp only [irHeadW] at hW
+    intro htag
+    have h3 : hh >>> 28 = 3 := (decE_tag_eq _ hw 3 (by decide)).mp htag
+    simp only [h3, ne_eq, not_true_eq_false, ↓reduceIte] at hW
+    split at hW
+    · cases hW
+    split at hW
+    · cases hW
+    · simp only [Option.some.injEq] at hW; rw [← hW] at h0; simp at h0
+  · simp only [irHeadW] at hW
+    by_cases h3 : hh >>> 28 = 3
+    · simp only [h3, ne_eq, not_true_eq_false, ↓reduceIte] at hW
+      by_cases hv1 : tierW hh ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
+      · rw [if_pos hv1] at hW; cases hW
+      rw [if_neg hv1] at hW
+      by_cases hv2 : rdW (m.arr64 CTL) (18 + tierW hh) ≤ idxW hh
+      · rw [if_pos hv2] at hW; cases hW
+      rw [if_neg hv2] at hW
+      simp only [Option.some.injEq] at hW
+      subst hW
+      obtain ⟨hvw, hn32, hu32⟩ := view_const_f m a hR hh hw ⟨hv1, UInt64.not_le.mp hv2⟩ h3
+      exact ⟨(decE_tag_eq _ hw 3 (by decide)).mpr h3, hvw, hn32, hu32⟩
+    · simp only [h3, ne_eq, not_false_eq_true, ↓reduceIte, Option.some.injEq] at hW
+      rw [← hW] at h0; simp at h0
+
+/-! ## `iota_rec_major(mode, vis, d, c, us, recP, so, sn)` -/
+
+/-- Model of `iota_rec_major` past the head. -/
+def irMajorTail (p : Prog) (n : Nat) (m : Mem) (mode vis d c us recP so major cj usj : Word) :
+    Option (Word × Word × Mem) :=
+  match callW p n "env_find" [cj, vis] m with
+  | none => none
+  | some (re, m4) =>
+  if re.headD 0 = 0 then some (0, 0, m4) else
+  if rdW (m4.arr64 EREC) (re.tail.headD 0) ≠ 4 then some (0, 0, m4) else
+  match callW p n "find_rule" [rdW (m4.arr64 EREC) (recP + 7), rdW (m4.arr64 EREC) (recP + 8), cj]
+      m4 with
+  | none => none
+  | some (rr, m5) =>
+  if rr.headD 0 = 0 then some (0, 0, m5) else
+  match callW p n "iota_rec_fire" [mode, vis, d, c, us, recP, so, usj, re.tail.headD 0,
+      rr.tail.headD 0, major] m5 with
+  | none => none
+  | some (rf, m6) => some (rf.headD 0, rf.tail.headD 0, m6)
+
+/-- Model of `iota_rec_major`. -/
+def irMajorW (p : Prog) (n : Nat) (m : Mem) (mode vis d c us recP so sn : Word) :
+    Option (Word × Word × Mem) :=
+  match callW p n "intern_bvar" [0] m with
+  | none => none
+  | some (rb, m1) =>
+  match callW p n "prepare_major" [mode, vis, d, c, rdW (m1.arr64 EREC) (recP + 7),
+      rdW (m1.arr64 EREC) (recP + 8), rdW (m1.arr64 SPN) (so + rdW (m1.arr64 EREC) (recP + 5))] m1 with
+  | none => none
+  | some (rm, m2) =>
+  match callW p n "get_app_fn" [rm.headD 0] m2 with
+  | none => none
+  | some (rh, m3) =>
+  match callW p n "iota_rec_head" [rh.headD 0] m3 with
+  | none => none
+  | some (rv, m4) =>
+  if rv.headD 0 = 0 then some (0, 0, m4)
+  else irMajorTail p n m4 mode vis d c us recP so (rm.headD 0) (rv.tail.headD 0)
+    (rv.tail.tail.headD 0)
+
+theorem iotaRecMajor_spec (p : Prog) (hp : p.lookup "iota_rec_major" = some iotaRecMajorL)
+    (n : Nat) (s₀ : St) (mode vis d c us recP so sn : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p (n + 1)) "iota_rec_major" [mode, vis, d, c, us, recP, so, sn]
+    ⦃fun r s' => LocEq s' s₀ ∧ irMajorW p n s₀.mem mode vis d c us recP so sn =
+      some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, iotaRecMajorL]
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+    callW_spec p n "intern_bvar", callW_spec p n "prepare_major", callW_spec p n "get_app_fn",
+    callW_spec p n "iota_rec_head", callW_spec p n "env_find", callW_spec p n "find_rule",
+    callW_spec p n "iota_rec_fire"] <;>
+  simp_all [-UInt64.toNat_add, irMajorW, irMajorTail, EREC, CTL, SPN, BinOp.eval, getElem_rdW',
+    Cmp.eval, LocEq, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
+    Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr]
+
 end L.Arena

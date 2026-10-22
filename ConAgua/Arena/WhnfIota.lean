@@ -814,18 +814,14 @@ def iotaCertsFullL : FunDecl := lfn (mode, vis, d, h, ao, an) locals (top, res) 
 /-- con-leche: `Core.lean:777-876` `iotaRec`/`iotaRecAt` — one ι step at a spine the caller
 already holds: `hd` the head, `(so, sn)` the stack slice of arguments, `sn` the spine's length
 (`whnfApp`'s only call site passes `va.size` for both `n` and the slice length). The head's
-`const` view here; the rest is split into small functions (`WhnfIotaRec.lean`, from
-`iota_rec_c` on). -/
+`const` view (`iota_rec_head`), then the rest, split into small functions (`WhnfIotaRec.lean`,
+from `iota_rec_c` on). -/
 -- con-ron: ConRon/Arena/Core.lean:2012-2097 ConRon.Arena.iotaRecAt
 @[l_impl ConRon.Arena.iotaRecAt]
-def iotaRecAtL : FunDecl := lfn (mode, vis, d, hd, so, sn) locals (t, i, r1, r2) {
-  if hd >> 28 != 3 { return (0, 0) };
-  t := (hd >> 27) & 1;
-  i := hd & 134217727;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[18 + t] <= i { abort };
-  (r1, r2) := call iota_rec_c(mode, vis, d, CREC.u64[i * 4 + t * 2], CREC.u64[i * 4 + t * 2 + 1],
-    so, sn);
+def iotaRecAtL : FunDecl := lfn (mode, vis, d, hd, so, sn) locals (hf, c, us, r1, r2) {
+  (hf, c, us) := call iota_rec_head(hd);
+  if hf == 0 { return (0, 0) };
+  (r1, r2) := call iota_rec_c(mode, vis, d, c, us, so, sn);
   return (r1, r2)
 }
 
