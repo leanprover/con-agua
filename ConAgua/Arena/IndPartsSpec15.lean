@@ -401,4 +401,59 @@ theorem bfW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   | none => exact hR7
   | some bs => exact hR7
 
+/-! ## `block_shape_tail` -/
+
+/-- **`block_shape_tail`'s model refines the twin's result sort and the rest (`tailJP`).** -/
+theorem btW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
+    {nPd cto ctl cso csl rso rsl no nl io lo ll : Word} {cvT0 : IConstantVal} {cvTs : List IConstantVal}
+    {nIdxs : List Nat} {cs : List (IConstantVal × Nat × Nat)} {r0 : IConstantVal × Nat × Nat × List IRecRule}
+    {rs : List (IConstantVal × Nat × Nat × List IRecRule)}
+    (hS : StageR dn vis fe m a) (hts : PSlR decCVp (cvT0 :: cvTs) cto ctl m) (hcs : PSlR decSC cs cso csl m)
+    (hrs : PSlR decSR (r0 :: rs) rso rsl m)
+    (hnm : DecB (fun m => decHL m no.toNat nl.toNat) m ((cvT0 :: cvTs).map (·.name)))
+    (hnb : no.toNat + nl.toNat ≤ iwTop m)
+    (hns : DecB (fun m => decNL m io.toNat ctl.toNat) m nIdxs) (hnsb : io.toNat + ctl.toNat ≤ iwTop m)
+    (hl : decHL m lo.toNat ll.toNat = some cvT0.levelParams) (hlb : lo.toNat + ll.toNat ≤ iwTop m) :
+    Sim (btW n m nPd cto ctl cso csl rso rsl no nl io ctl lo ll)
+      (tailJP nPd.toNat nIdxs cvT0.type
+        (finJP nPd.toNat (cvT0 :: cvTs) nIdxs cvT0.levelParams cs (r0 :: rs) r0.1)) a
+      (fun r x m' a' => ShapeR x r m' ∧ StageR dn vis fe m' a' ∧ IWGrow m m') := by
+  have hctl : ctl ≠ 0 := by intro e; subst e; exact absurd (partsPSl_nil hts) (by simp)
+  obtain ⟨p0, cv0, ts', he, hw, hpb, hcv0, -⟩ := partsPSl_cons hts hctl
+  simp only [List.cons.injEq] at he; obtain ⟨rfl, rfl⟩ := he
+  obtain ⟨htyl, htye⟩ := partsCVType hcv0 (UInt64.toNat_ofNat_of_lt' hpb)
+  rw [tailJP_eq]
+  unfold btW
+  rw [hw]
+  refine Sim.bindK (K := btK1 n nPd cto ctl cso csl rso rsl no nl io lo ll)
+    (body := fun r1 m1 => btK2 n nPd cto ctl cso csl rso rsl no nl io lo ll (r1.headD 0) m1 (pinWordV m1 53))
+    rfl (fun _ _ => rfl)
+    (Q := fun r s m' a' => H (r.headD 0) ∧ decI (r.headD 0) = s ∧ StageR dn vis fe m' a' ∧ IWGrow m m') ?_ ?_
+  · have := bsoW_sim (nP := nPd) (ty := rdW (m.arr64 EREC) (UInt64.ofNat p0 + 3)) hS hns hnsb htyl
+    rwa [htye] at this
+  rintro r1 sv m1 a1 ⟨hs, hsv, hS1, hg1⟩
+  rw [finJP_eq]
+  intro r m' e
+  cases hz : pinWordV m1 53 with
+  | none => rw [hz] at e; cases e
+  | some z =>
+  rw [hz, btK2_some] at e
+  obtain ⟨hzrun, hzh⟩ := pinZero_stage hS1 hz
+  revert r m' e
+  refine Sim.bind_twin hzrun ?_
+  refine Sim.bindK (K := btK3 n nPd cto ctl cso csl rso rsl no nl io lo ll (r1.headD 0))
+    (body := fun r2 m2 => bgoK3 (bfW n m2 nPd cto ctl cso csl rso rsl no nl io lo ll (r1.headD 0)
+      (if r2.headD 0 = 2 then 1 else 0))) rfl (fun _ _ => rfl)
+    (Q := fun r x m' a' => KeepPost dn vis fe decLvlEq m1 m' a' r x) ?_ ?_
+  · have := partsSimStub (lvlEqStub_spec dn vis fe (r1.headD 0) z hs hzh) hS1
+    rwa [hsv] at this
+  rintro r2 x2 m2 a2 ⟨hS2, hg2, hd2⟩
+  have hg02 := hg1.trans hg2
+  refine Sim.k3 (bfW_sim n hS2 (hts.grow (fun _ => OMono.decCVp _) hg02) (hcs.grow decSC_mono hg02)
+    (hrs.grow decSR_mono hg02) (hnm.grow (OMono.decHL _ _) hg02) (Nat.le_trans hnb hg02.1)
+    (hns.grow (OMono.decNL _ _) hg02) (Nat.le_trans hnsb hg02.1) (by rw [decHL_grow3 hg02 hlb]; exact hl)
+    (Nat.le_trans hlb hg02.1) hs hsv (lvlEq_prop rfl hd2)) ?_
+  rintro r x m3 a3 ⟨hR, hS3, hg3⟩
+  exact ⟨by cases x <;> exact hR, hS3, hg02.trans hg3⟩
+
 end L.Ind
