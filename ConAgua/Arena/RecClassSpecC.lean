@@ -44,7 +44,7 @@ def ih1K4 (rr : Word) (m3 : Mem) : Option (List Word) → Option (List Word × M
   | none => none
   | some r4 =>
     if r4.headD 0 = 0 then some ([0, 0, 0], m3)
-    else ih1K5 d (r4.tail.headD 0) (stubM "get_app_args" m3 [CWF, rr])
+    else ih1K5 d (r4.tail.headD 0) (stubM "get_app_args_f" m3 [CWF, rr])
 
 /-- After the first `fvar_head`. -/
 def ih1K3 (rr : Word) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -61,7 +61,7 @@ def ih1K2 : Option (List Word × Mem) → Option (List Word × Mem)
 /-- After `fvar_type_d`. -/
 def ih1K1 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r1, m1) => ih1K2 n nP mo ml d (stubM "pi_result" m1 [CWF, r1.headD 0])
+  | some (r1, m1) => ih1K2 n nP mo ml d (stubM "pi_result_f" m1 [CWF, r1.headD 0])
 
 end models
 
@@ -134,7 +134,7 @@ def tK1 (fo fl c : Word) : Option (List Word × Mem) → Option (List Word × Me
   | some (r5, m5) =>
     if r5.tail.headD 0 = 0 then some ([0, 0], m5)
     else tK2 n nP mo ml d fo fl c
-      (stubM "get_app_fn" m5 [CWF, rdW (m5.arr64 IW) (r5.headD 0 + r5.tail.headD 0 - 1)])
+      (stubM "get_app_fn_f" m5 [CWF, rdW (m5.arr64 IW) (r5.headD 0 + r5.tail.headD 0 - 1)])
 
 end models2
 
@@ -142,7 +142,7 @@ end models2
 def tailW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _, _, _ => none
   | n + 1, m, nP, mo, ml, d, fo, fl, concl, c =>
-    tK1 n nP mo ml d fo fl c (stubM "get_app_args" m [CWF, concl])
+    tK1 n nP mo ml d fo fl c (stubM "get_app_args_f" m [CWF, concl])
 
 section models3
 variable (n : Nat) (nP mo ml d : Word)
@@ -189,7 +189,7 @@ variable (n : Nat) (m m1 m2 m3 m4 m5 m6 m7 : Mem) (nP mo ml d x fo fl hd c cn t 
 
 theorem ih1W_eq : ih1W (n + 1) m nP mo ml d x = ih1K1 n nP mo ml d (stubM "fvar_type_d" m [x]) := rfl
 theorem ih1K1_some : ih1K1 n nP mo ml d (some (r1, m1)) =
-    ih1K2 n nP mo ml d (stubM "pi_result" m1 [CWF, r1.headD 0]) := rfl
+    ih1K2 n nP mo ml d (stubM "pi_result_f" m1 [CWF, r1.headD 0]) := rfl
 theorem ih1K2_some : ih1K2 n nP mo ml d (some (r2, m2)) =
     ih1K3 n nP mo ml d (r2.headD 0) (fvarHeadW m2 (r2.headD 0)) := rfl
 theorem ih1K3_fail (h : r3.headD 0 = 0) : ih1K3 n nP mo ml d rr (some (r3, m3)) = some ([0, 0, 0], m3) := by
@@ -199,7 +199,7 @@ theorem ih1K3_ok (h : r3.headD 0 ≠ 0) : ih1K3 n nP mo ml d rr (some (r3, m3)) 
 theorem ih1K4_fail (h : r4.headD 0 = 0) : ih1K4 d rr m3 (some r4) = some ([0, 0, 0], m3) := by
   rw [ih1K4, if_pos h]
 theorem ih1K4_ok (h : r4.headD 0 ≠ 0) : ih1K4 d rr m3 (some r4) =
-    ih1K5 d (r4.tail.headD 0) (stubM "get_app_args" m3 [CWF, rr]) := by rw [ih1K4, if_neg h]
+    ih1K5 d (r4.tail.headD 0) (stubM "get_app_args_f" m3 [CWF, rr]) := by rw [ih1K4, if_neg h]
 theorem ih1K5_fail (h : r5.tail.headD 0 = 0) : ih1K5 d t (some (r5, m5)) = some ([0, 0, 0], m5) := by
   rw [ih1K5, if_pos h]
 theorem ih1K5_ok (h : r5.tail.headD 0 ≠ 0) : ih1K5 d t (some (r5, m5)) =
@@ -254,11 +254,11 @@ theorem mK4_ok (h : r4.headD 0 ≠ 0) : mK4 n nP mo ml d fo fl concl m3 (some r4
     mK5 (tailW n m3 nP mo ml d fo fl concl (r4.tail.headD 0)) := by rw [mK4, if_neg h]
 theorem mK5_some : mK5 (some (r5, m5)) = some ([r5.headD 0, r5.tail.headD 0], m5) := rfl
 theorem tailW_eq : tailW (n + 1) m nP mo ml d fo fl concl c =
-    tK1 n nP mo ml d fo fl c (stubM "get_app_args" m [CWF, concl]) := rfl
+    tK1 n nP mo ml d fo fl c (stubM "get_app_args_f" m [CWF, concl]) := rfl
 theorem tK1_fail (h : r5.tail.headD 0 = 0) : tK1 n nP mo ml d fo fl c (some (r5, m5)) = some ([0, 0], m5) := by
   rw [tK1, if_pos h]
 theorem tK1_ok (h : r5.tail.headD 0 ≠ 0) : tK1 n nP mo ml d fo fl c (some (r5, m5)) =
-    tK2 n nP mo ml d fo fl c (stubM "get_app_fn" m5 [CWF, rdW (m5.arr64 IW) (r5.headD 0 + r5.tail.headD 0 - 1)]) := by
+    tK2 n nP mo ml d fo fl c (stubM "get_app_fn_f" m5 [CWF, rdW (m5.arr64 IW) (r5.headD 0 + r5.tail.headD 0 - 1)]) := by
   rw [tK1, if_neg h]
 theorem tK2_some : tK2 n nP mo ml d fo fl c (some (r6, m6)) =
     tK3 (finW n m6 nP mo ml d fo fl (r6.headD 0) c) := rfl
@@ -329,7 +329,7 @@ theorem classReadMinorIh1_spec (n : Nat) (s₀ : St) (nP mo ml d x : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "fvar_type_d" n, stubM_spec p "pi_result" n, stubM_spec p "get_app_args" n,
+        stubM_spec p "fvar_type_d" n, stubM_spec p "pi_result_f" n, stubM_spec p "get_app_args_f" n,
         fvarHead_spec p hfh hv n, classOfMotiveVar_spec p hf hcm n] <;>
       finish (gen := 20) [rdW_eq, getD_one, getD_two, getD_three]
 
@@ -374,7 +374,7 @@ theorem classReadMinorTail_spec (n : Nat) (s₀ : St) (nP mo ml d fo fl concl c 
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "get_app_args" n, stubM_spec p "get_app_fn" n,
+        stubM_spec p "get_app_args_f" n, stubM_spec p "get_app_fn_f" n,
         classReadMinorFinish_spec p hfh hv hf hcm hc ha hsc h2 h5 hi1 his hfin n] <;>
       finish (gen := 20) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7]
 

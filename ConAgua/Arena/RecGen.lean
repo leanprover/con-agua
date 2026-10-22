@@ -154,7 +154,7 @@ def classNodesAgreeL : FunDecl := lfn
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:383-391 ConRon.Arena.classLeafAt
 @[l_impl ConRon.Arena.classLeafAt]
 def classLeafAtL : FunDecl := lfn (m, leaf) locals (hd, g, nI, us, z) {
-  hd := call get_app_fn(⟪CWF⟫, leaf);
+  hd := call get_app_fn_f(⟪CWF⟫, leaf);
   if hd >> 28 != 3 { return 0 };
   (g, nI, us, z) := call e_view(hd);
   return u64(nI == IW.u64[m])
@@ -283,7 +283,7 @@ def classMajorsL : FunDecl := lfn (vis, p, ctorsAsOff, ctorsAsLen, pfvsOff, pfvs
   while j < keysLen {
     key := IW.u64[keysOff + j];
     hd := call intern_const(IW.u64[key], IW.u64[key + 1]);
-    mty := call mk_app_n(hd, IW.u64[key + 2], IW.u64[key + 3]);
+    mty := call mk_app_n_f(hd, IW.u64[key + 2], IW.u64[key + 3]);
     m := call target_major_of(vis, p, ctorsAsOff, ctorsAsLen, pfvsOff, pfvsLen, pfvsOff, pfvsLen,
       mty);
     r := call target_major_pins(vis, IW.u64[p + 4], m);

@@ -786,7 +786,7 @@ mutual
 /-- **The model of `whnf_telescope`.** -/
 def wtW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _ => none
-  | k + 1, m, vis, i, n, e => wtK1 k vis i n (stubM "whnf" m [vis, i, e])
+  | k + 1, m, vis, i, n, e => wtK1 k vis i n (stubM "whnf_top" m [vis, i, e])
 /-- After `whnf`: the view. -/
 def wtK1 (k : Nat) (vis i n : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -815,7 +815,7 @@ end
 
 section arms
 variable (k : Nat) (m m1 m2 m3 m4 m5 : Mem) (vis i n e x y s fv : Word) (v r1 rb rr ro : List Word)
-theorem wtW_succ : wtW (k + 1) m vis i n e = wtK1 k vis i n (stubM "whnf" m [vis, i, e]) := by
+theorem wtW_succ : wtW (k + 1) m vis i n e = wtK1 k vis i n (stubM "whnf_top" m [vis, i, e]) := by
   simp [wtW]
 theorem wtK1_some : wtK1 k vis i n (some (r1, m1)) = wtK2 k vis i n m1 (eViewW m1 (r1.headD 0)) := by
   rw [wtK1]
@@ -873,7 +873,7 @@ theorem wtW_spec (k : Nat) : ∀ (s₀ : St) (vis i n e : Word),
     simp only [callFn, whnfTelescopeL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        stubM_spec p "whnf" k, eView_spec p hv k, internFVar_spec p hff hfp hif k,
+        stubM_spec p "whnf_top" k, eView_spec p hv k, internFVar_spec p hff hfp hif k,
         stubM_spec p "instantiate1_fast" k, slCons_specW p ha hc hsc k, ih] <;>
       finish (gen := 20)
 
@@ -929,7 +929,7 @@ theorem wtW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (k : Nat) :
   | succ k ih =>
     intro m m' a vis i n e r h hS he hin
     rw [wtW_succ] at h
-    cases h1 : stubM "whnf" m [vis, i, e] with
+    cases h1 : stubM "whnf_top" m [vis, i, e] with
     | none => rw [h1] at h; simp [wtK1] at h
     | some x1 =>
     obtain ⟨r1, m1⟩ := x1

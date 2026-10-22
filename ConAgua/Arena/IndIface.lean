@@ -730,17 +730,17 @@ def stub (k : Nat) : FunDecl := ⟨k, k, .abort⟩
 
 /-- The stubs: name, parameter count, and (in the doc) the twin and the convention.
 
-* `whnf(vis, dep, e)` → `e'`: `whnf .verified fe checkFuel dep e`.
+* `whnf_top(vis, dep, e)` (lane `whnf`'s entry, `WhnfEntry.lean`) → `e'`: `whnf .verified fe checkFuel dep e`.
 * `infer_type_core(vis, dep, e)` → `t`; `ensure_sort_core(vis, dep, t)` → `u` (a level handle);
   `is_def_eq_core(vis, dep, a, b)` → `0`/`1`.
 * `check_constant_val(vis, cv)` → nothing (`cv` an `EREC` pointer).
 * `consts_resolve_ffast(vis, e)` → `0`/`1`.
 * `strip_pis(k, e)` → `(ok, bs.off, bs.len, body)`; `strip_lams(k, e)` the same.
 * `open_pis_at_fvars_f(n, e, i)` → `(ok, fvs.off, fvs.len, body)`.
-* `get_app_fn(fuel, e)` → `hd`; `get_app_args(fuel, e)` → `(off, len)`.
-* `mk_app_n(f, off, len)` → `e`.
+* `get_app_fn_f(fuel, e)` → `hd`; `get_app_args_f(fuel, e)` → `(off, len)` (lane `whnf`'s adapters, `WhnfEntry.lean`).
+* `mk_app_n_f(f, off, len)` → `e`.
 * `fvar_type_d(e)` → `t`; `fvar_type_ds(off, len)` → `(off, len)`.
-* `pi_result(fuel, e)` → `r`.
+* `pi_result_f(fuel, e)` → `r`.
 * `inst_lp_fast(fuel, ks.off, ks.len, us, e)` → `e'`.
 * `inst_pis_at_lift(fuel, off, len, e)` → `(ok, e')`.
 * `instantiate1_fast(fuel, e, v, d)` → `e'`; `instantiate1_lift_fast(fuel, e, v, d)` → `e'`;
@@ -758,11 +758,11 @@ def stub (k : Nat) : FunDecl := ⟨k, k, .abort⟩
 * `lv_zero_caps(l, q)` → nothing: `zeronessOf (← readLevelM l)` written as a `PropWhen` at `EREC`
   word `q` (lane `pinsenv`'s `decPW` layout; `lv_zero` pushes the names on the level heap). -/
 def stubFns : Prog :=
-  [("whnf", stub 3), ("infer_type_core", stub 3), ("ensure_sort_core", stub 3),
+  [("whnf_top", stub 3), ("infer_type_core", stub 3), ("ensure_sort_core", stub 3),
    ("is_def_eq_core", stub 4), ("check_constant_val", stub 2), ("consts_resolve_ffast", stub 2),
    ("strip_pis", stub 2), ("strip_lams", stub 2), ("open_pis_at_fvars_f", stub 3),
-   ("get_app_fn", stub 2), ("get_app_args", stub 2), ("mk_app_n", stub 3),
-   ("fvar_type_d", stub 1), ("fvar_type_ds", stub 2), ("pi_result", stub 2),
+   ("get_app_fn_f", stub 2), ("get_app_args_f", stub 2), ("mk_app_n_f", stub 3),
+   ("fvar_type_d", stub 1), ("fvar_type_ds", stub 2), ("pi_result_f", stub 2),
    ("inst_lp_fast", stub 5), ("inst_pis_at_lift", stub 4), ("instantiate1_fast", stub 4),
    ("instantiate1_lift_fast", stub 4), ("abstract1_fast", stub 4),
    ("fvar_b", stub 2), ("has_fvar_fast", stub 2), ("loose_bvars_bounded_fast", stub 3),
