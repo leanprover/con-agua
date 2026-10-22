@@ -257,6 +257,7 @@ def indMember : FunDecl := lfn (kind, p, ks, k, v) locals (h, s, sub, e, x, o, c
   if h == 2 || h == 8 { e := call ind_bool(kind, p, v, h, s); return e };
   if h == 3 || h == 4 || h == 5 { e := call ind_nlist(kind, p, v, h, s); return e };
   if h == 7 {
+    if v <= ks { abort };
     (o, c, e) := call ind_list(v, sub);
     x := call fld_put(kind, p, s, o);
     x := call fld_put(kind, p, s + 1, c);

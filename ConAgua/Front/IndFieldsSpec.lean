@@ -182,6 +182,222 @@ def nlistW (b : Array UInt8) (m : Mem) (kind p v h s : Word) : Option (Word × M
 def flagsW (m : Mem) (sub q : Word) : Mem :=
   if sub = 1 then (m.set64 IFR (q + 6) 0).set64 IFR (q + 8) 0 else m
 
+
+/-! ## The objects and lists: one `mutual` block
+
+The measure is the input position (`b.size - pos`) with a rank, lexicographic: a call at the same
+or a later position goes to a lower rank, a call to a higher rank moves forward. -/
+
+mutual
+/-- **The model of `ind_obj(i, kind, p)`**: the end and the memory after. -/
+def objW (b : Array UInt8) (m : Mem) (i kind p : Word) : Option (Word × Mem) :=
+  objLoopW b m kind p (i + 1) 1
+termination_by (b.size - (i + 1).toNat, 5)
+
+/-- `ind_obj`'s member loop from `i` (`w`: a member is wanted). -/
+def objLoopW (b : Array UInt8) (m : Mem) (kind p i w : Word) : Option (Word × Mem) :=
+  if h0 : (nextMemberN b i w).tag = 0 then none
+  else if h1 : (nextMemberN b i w).tag = 1 then some ((nextMemberN b i w).pos + 1, m)
+  else match memberW b m kind p (nextMemberN b i w).pos (nextMemberN b i w).key
+      (nextMemberN b i w).val with
+    | none => none
+    | some (e, m₁) =>
+      if hlt : (nextMemberN b i w).pos < e then objLoopW b m₁ kind p e 0 else none
+termination_by (b.size - i.toNat, 4)
+decreasing_by
+  all_goals
+    have hk := nextMemberN_key b i w (nextMemberN_tag b i w h0 h1)
+    have := L.Scan.lt_of_lt_ofNat hk.2
+    rw [UInt64.le_iff_toNat_le] at hk
+  · exact Prod.Lex.right' _ (by omega) (by decide)
+  · rw [UInt64.lt_iff_toNat_lt] at hlt
+    exact Prod.Lex.left _ _ (by omega)
+
+/-- **The model of `ind_member(kind, p, ks, k, v)`.** -/
+def memberW (b : Array UInt8) (m : Mem) (kind p ks k v : Word) : Option (Word × Mem) :=
+  if (indSlotN kind k).1 = 1 ∨ (indSlotN kind k).1 = 6 then
+    numW b m kind p ks v (indSlotN kind k).1 (indSlotN kind k).2.1
+  else if (indSlotN kind k).1 = 2 ∨ (indSlotN kind k).1 = 8 then
+    boolW b m kind p v (indSlotN kind k).1 (indSlotN kind k).2.1
+  else if (indSlotN kind k).1 = 3 ∨ (indSlotN kind k).1 = 4 ∨ (indSlotN kind k).1 = 5 then
+    nlistW b m kind p v (indSlotN kind k).1 (indSlotN kind k).2.1
+  else if (indSlotN kind k).1 = 7 then
+    if hv : ks < v then
+      match listW b m v (indSlotN kind k).2.2 with
+      | none => none
+      | some ((o, c, e), m₁) =>
+        some (e, fldPutW (fldPutW m₁ kind p (indSlotN kind k).2.1 o) kind p
+          ((indSlotN kind k).2.1 + 1) c)
+    else none
+  else none
+termination_by (b.size - ks.toNat, 3)
+decreasing_by
+  rw [UInt64.lt_iff_toNat_lt] at hv
+  exact Prod.Lex.right' _ (by omega) (by decide)
+
+/-- **The model of `ind_list(v, sub)`**: `(off, cnt, end)` and the memory after. -/
+def listW (b : Array UInt8) (m : Mem) (v sub : Word) : Option ((Word × Word × Word) × Mem) :=
+  if hv : v < UInt64.ofNat b.size then
+    if byteW b v ≠ 91 then none
+    else match fldAllocW m sub 0 with
+      | none => none
+      | some (o, m₁) => listLoopW b m₁ sub (indSizeN sub) o 0 (v + 1)
+  else none
+termination_by (b.size - v.toNat, 2)
+decreasing_by
+  have := L.Scan.lt_of_lt_ofNat hv
+  have := L.Scan.toNat_add_one_of_lt_ofNat hv
+  exact Prod.Lex.right' _ (by omega) (by decide)
+
+/-- `ind_list`'s loop from `i`, `cnt` records read at `o`. -/
+def listLoopW (b : Array UInt8) (m : Mem) (sub sz o cnt i : Word) :
+    Option ((Word × Word × Word) × Mem) :=
+  if hi : i < UInt64.ofNat b.size then
+    if byteW b i = 93 then some ((o, cnt, i + 1), m)
+    else if byteW b i = 123 then
+      match fldAllocW m sub sz with
+      | none => none
+      | some (q, m₁) =>
+        match objW b (flagsW m₁ sub q) i sub q with
+        | none => none
+        | some (e, m₂) =>
+          if hie : i < e then listLoopW b m₂ sub sz o (cnt + 1) e else none
+    else listLoopW b m sub sz o cnt (i + 1)
+  else none
+termination_by (b.size - i.toNat, 1)
+decreasing_by
+  all_goals
+    have := L.Scan.lt_of_lt_ofNat hi
+    have := L.Scan.toNat_add_one_of_lt_ofNat hi
+  · exact Prod.Lex.left _ _ (by omega)
+  · rw [UInt64.lt_iff_toNat_lt] at hie
+    exact Prod.Lex.left _ _ (by omega)
+  · exact Prod.Lex.left _ _ (by omega)
+end
+
+
+/-! ### The models' arms, with named continuations -/
+
+/-- After `ind_member` in `ind_obj`'s loop. -/
+def objK (b : Array UInt8) (kind p ks : Word) : Option (Word × Mem) → Option (Word × Mem)
+  | none => none
+  | some (e, m₁) => if ks < e then objLoopW b m₁ kind p e 0 else none
+
+/-- After `ind_list` in `ind_member`. -/
+def memK (kind p s : Word) : Option ((Word × Word × Word) × Mem) → Option (Word × Mem)
+  | none => none
+  | some ((o, c, e), m₁) => some (e, fldPutW (fldPutW m₁ kind p s o) kind p (s + 1) c)
+
+/-- After `fld_alloc(sub, 0)` in `ind_list`. -/
+def listK0 (b : Array UInt8) (sub v : Word) :
+    Option (Word × Mem) → Option ((Word × Word × Word) × Mem)
+  | none => none
+  | some (o, m₁) => listLoopW b m₁ sub (indSizeN sub) o 0 (v + 1)
+
+/-- After `ind_obj` in `ind_list`'s loop. -/
+def listK2 (b : Array UInt8) (sub sz o cnt i : Word) :
+    Option (Word × Mem) → Option ((Word × Word × Word) × Mem)
+  | none => none
+  | some (e, m₂) => if i < e then listLoopW b m₂ sub sz o (cnt + 1) e else none
+
+/-- After `fld_alloc(sub, sz)` in `ind_list`'s loop. -/
+def listK1 (b : Array UInt8) (sub sz o cnt i : Word) :
+    Option (Word × Mem) → Option ((Word × Word × Word) × Mem)
+  | none => none
+  | some (q, m₁) => listK2 b sub sz o cnt i (objW b (flagsW m₁ sub q) i sub q)
+
+section kArms
+variable (b : Array UInt8) (kind p ks s sub sz o cnt i v e c q : Word) (m₁ : Mem)
+  (r : Word × Word × Word)
+@[arena_grind =] theorem objK_none : objK b kind p ks none = none := rfl
+@[arena_grind =] theorem objK_some :
+    objK b kind p ks (some (e, m₁)) = if ks < e then objLoopW b m₁ kind p e 0 else none := rfl
+@[arena_grind =] theorem memK_none : memK kind p s none = none := rfl
+@[arena_grind =] theorem memK_some :
+    memK kind p s (some ((o, c, e), m₁)) =
+      some (e, fldPutW (fldPutW m₁ kind p s o) kind p (s + 1) c) := rfl
+@[arena_grind =] theorem listK0_none : listK0 b sub v none = none := rfl
+@[arena_grind =] theorem listK0_some :
+    listK0 b sub v (some (o, m₁)) = listLoopW b m₁ sub (indSizeN sub) o 0 (v + 1) := rfl
+@[arena_grind =] theorem listK2_none : listK2 b sub sz o cnt i none = none := rfl
+@[arena_grind =] theorem listK2_some :
+    listK2 b sub sz o cnt i (some (e, m₁)) =
+      if i < e then listLoopW b m₁ sub sz o (cnt + 1) e else none := rfl
+@[arena_grind =] theorem listK1_none : listK1 b sub sz o cnt i none = none := rfl
+@[arena_grind =] theorem listK1_some :
+    listK1 b sub sz o cnt i (some (q, m₁)) =
+      listK2 b sub sz o cnt i (objW b (flagsW m₁ sub q) i sub q) := rfl
+end kArms
+
+section mArms
+variable (b : Array UInt8) (m : Mem) (kind p i w ks k v sub sz o cnt : Word)
+
+theorem objW_eq : objW b m i kind p = objLoopW b m kind p (i + 1) 1 := by
+  rw [objW]
+
+theorem objLoopW_err (h : (nextMemberN b i w).tag = 0) : objLoopW b m kind p i w = none := by
+  rw [objLoopW, dif_pos h]
+theorem objLoopW_close (h : (nextMemberN b i w).tag = 1) :
+    objLoopW b m kind p i w = some ((nextMemberN b i w).pos + 1, m) := by
+  rw [objLoopW, dif_neg (by simp [h]), dif_pos h]
+theorem objLoopW_key (h0 : (nextMemberN b i w).tag ≠ 0) (h1 : (nextMemberN b i w).tag ≠ 1) :
+    objLoopW b m kind p i w = objK b kind p (nextMemberN b i w).pos
+      (memberW b m kind p (nextMemberN b i w).pos (nextMemberN b i w).key (nextMemberN b i w).val) := by
+  rw [objLoopW, dif_neg h0, dif_neg h1]
+  unfold objK; split <;> simp_all
+
+theorem memberW_eq : memberW b m kind p ks k v =
+    if (indSlotN kind k).1 = 1 ∨ (indSlotN kind k).1 = 6 then
+      numW b m kind p ks v (indSlotN kind k).1 (indSlotN kind k).2.1
+    else if (indSlotN kind k).1 = 2 ∨ (indSlotN kind k).1 = 8 then
+      boolW b m kind p v (indSlotN kind k).1 (indSlotN kind k).2.1
+    else if (indSlotN kind k).1 = 3 ∨ (indSlotN kind k).1 = 4 ∨ (indSlotN kind k).1 = 5 then
+      nlistW b m kind p v (indSlotN kind k).1 (indSlotN kind k).2.1
+    else if (indSlotN kind k).1 = 7 then
+      (if ks < v then memK kind p (indSlotN kind k).2.1 (listW b m v (indSlotN kind k).2.2)
+       else none)
+    else none := by
+  rw [memberW]
+  repeat' split
+  all_goals first | rfl | (simp_all; done) | skip
+  all_goals (unfold memK; simp_all)
+
+theorem listW_eq : listW b m v sub =
+    if v < UInt64.ofNat b.size then
+      (if byteW b v ≠ 91 then none else listK0 b sub v (fldAllocW m sub 0))
+    else none := by
+  rw [listW]
+  by_cases hv : v < UInt64.ofNat b.size
+  · rw [dif_pos hv, if_pos hv]; unfold listK0; split <;> simp_all
+  · rw [dif_neg hv, if_neg hv]
+
+theorem listLoopW_end (h : ¬ i < UInt64.ofNat b.size) : listLoopW b m sub sz o cnt i = none := by
+  rw [listLoopW, dif_neg h]
+theorem listLoopW_close (h : i < UInt64.ofNat b.size) (hc : byteW b i = 93) :
+    listLoopW b m sub sz o cnt i = some ((o, cnt, i + 1), m) := by
+  rw [listLoopW, dif_pos h, if_pos hc]
+theorem listLoopW_open (h : i < UInt64.ofNat b.size) (hc : byteW b i ≠ 93) (ho : byteW b i = 123) :
+    listLoopW b m sub sz o cnt i = listK1 b sub sz o cnt i (fldAllocW m sub sz) := by
+  rw [listLoopW, dif_pos h, if_neg hc, if_pos ho]
+  unfold listK1 listK2; split
+  · rfl
+  · split <;> simp_all
+theorem listLoopW_other (h : i < UInt64.ofNat b.size) (hc : byteW b i ≠ 93) (ho : byteW b i ≠ 123) :
+    listLoopW b m sub sz o cnt i = listLoopW b m sub sz o cnt (i + 1) := by
+  rw [listLoopW, dif_pos h, if_neg hc, if_neg ho]
+end mArms
+
+grind_pattern [lang_grind] objW_eq => objW b m i kind p
+grind_pattern [lang_grind] objLoopW_err => objLoopW b m kind p i w, nextMemberN b i w
+grind_pattern [lang_grind] objLoopW_close => objLoopW b m kind p i w, nextMemberN b i w
+grind_pattern [lang_grind] objLoopW_key => objLoopW b m kind p i w, nextMemberN b i w
+grind_pattern [lang_grind] memberW_eq => memberW b m kind p ks k v
+grind_pattern [lang_grind] listW_eq => listW b m v sub
+grind_pattern [lang_grind] listLoopW_end => listLoopW b m sub sz o cnt i
+grind_pattern [lang_grind] listLoopW_close => listLoopW b m sub sz o cnt i, b[i.toNat]
+grind_pattern [lang_grind] listLoopW_open => listLoopW b m sub sz o cnt i, b[i.toNat]
+grind_pattern [lang_grind] listLoopW_other => listLoopW b m sub sz o cnt i, b[i.toNat]
+
 /-- What an allocation returns. -/
 theorem allocW_eq (m : Mem) (a : ArrId) (n : Word) : allocW m a n = none ∨
     allocW m a n = some (rdW (m.arr64 a) 0 + 1, m.set64 a 0 (rdW (m.arr64 a) 0 + 1 - 1 + n)) := by
@@ -332,6 +548,51 @@ theorem iflIds_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (v : Word)
     sym (gen := 16) only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         iflAlloc_spec p hL.ifl_alloc n, idsLoop_step_spec p hL b hb n] <;> finish [idsM, allocW_eq]
+
+theorem indNum_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (kind q ks v h s : Word)
+    (hv : v.toNat ≤ b.size) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "ind_num" [kind, q, ks, v, h, s]
+    ⦃fun r s' => LocEq s' s₀ ∧ numW b s₀.mem kind q ks v h s = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hL.ind_num]
+  simp only [callFn, indNum]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym (gen := 16) only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+        slotNat_spec p b hb hL.skip_digits hL.num_end hL.slot_nat n,
+        L.Front.Fields.readNat_spec p b hb hL.read_nat n, fldPut_spec p hL n] <;>
+      finish [numW, NONE]
+
+theorem indBool_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (kind q v h s : Word)
+    (hv : v.toNat ≤ b.size) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "ind_bool" [kind, q, v, h, s]
+    ⦃fun r s' => LocEq s' s₀ ∧ boolW b s₀.mem kind q v h s = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hL.ind_bool]
+  simp only [callFn, indBool]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have hb64 : b.size < 2 ^ 64 := by omega
+    have hv5 : v.toNat + 5 < 2 ^ 64 := by omega
+    sym (gen := 16) only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+        L.Scan.Lit.scanBool_spec p hL.match_lit hL.scan_bool b hb64 n, fldPut_spec p hL n] <;>
+      finish [boolW]
+
+theorem indNList_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (kind q v h s : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "ind_nlist" [kind, q, v, h, s]
+    ⦃fun r s' => LocEq s' s₀ ∧ nlistW b s₀.mem kind q v h s = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hL.ind_nlist]
+  simp only [callFn, indNList]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym (gen := 16) only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+        scanNatList_spec p b hb hL.skip_digits hL.num_end hL.scan_nat_list n,
+        iflIds_spec p hL b hb n, fldPut_spec p hL n] <;>
+      finish [nlistW]
 
 end specs
 
