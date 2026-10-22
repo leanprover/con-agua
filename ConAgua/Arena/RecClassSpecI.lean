@@ -778,14 +778,15 @@ theorem motW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   simp only [drop3_headD] at hmH hmd
   rw [motK1_ok (h := by rw [h11]; decide)]
   obtain ⟨-, hgt, -, -, hel, -⟩ := rec2CG_parts hG
-  obtain ⟨ve, eve, hve, dve⟩ := iwH_rdW_at (w := g) (k := 11) (iwH_grow hg1 (by omega) ▸ hel) hS1.2.2.2.1
+  obtain ⟨ve, eve, hve, dve⟩ := iwH_rdW_at (w := g) (k := 11) (by rw [iwH_grow hg1 (show g.toNat + 11 < iwTop m by omega)]; exact hel) hS1.2.2.2.1
   simp only [show UInt64.ofNat 11 = (11 : Word) from rfl] at eve
   rw [eve]
   refine RSim.bind (K := motK2 n d _ _ _) rfl (Q1 := fun b a' x => StageR dn vis fe b.2 a' ∧
     IWGrow m1 b.2 ∧ x = decE b.1) ?_ ?_
   · rintro ⟨srt, m2⟩ h2
     obtain ⟨a', hrun, hS', hg⟩ := internSort_stage hS1 ve hve h2
-    exact ⟨decE srt, a', by rw [← dve]; exact hrun, hS', hg, rfl⟩
+    rw [dve] at hrun
+    exact ⟨decE srt, a', hrun, hS', hg, rfl⟩
   rintro ⟨srt, m2⟩ x a2 - ⟨hS2, hg2, rfl⟩
   by_cases hbig : 4294967296 ≤ srt
   · rw [motK2_big (h := hbig)]; exact RSim.none
@@ -808,25 +809,21 @@ theorem motW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
     ⟨hS3, by rw [decHL_grow (hg2.trans hg3) hfb]; exact hifs⟩) ?_
   rintro ⟨r4, m4⟩ bs a4 - ⟨hS4, hg4, hbs, hbb⟩
   dsimp only at hS4 hg4 hbs hbb
-  simp only [getD_zero, getD_one] at hbs hbb
+  simp only [getD_zero, Nat.zero_add, getD_one] at hbs hbb
   by_cases hov : d + r4.tail.headD 0 < d
   · rw [motK4_big (h := hov)]; exact RSim.none
   rw [motK4_ok (h := hov)]
   have hdl : d.toNat + (r4.tail.headD 0).toNat < 2 ^ 64 := by
     have : ¬ (d + r4.tail.headD 0).toNat < d.toNat := fun x => hov (UInt64.lt_iff_toNat_lt.mpr x)
     rw [UInt64.toNat_add] at this
-    by_contra hc
-    have : (d.toNat + (r4.tail.headD 0).toNat) % 2 ^ 64 = d.toNat + (r4.tail.headD 0).toNat - 2 ^ 64 := by
-      rw [Nat.mod_eq_sub_mod (by omega), Nat.mod_eq_of_lt (by have := d.toNat_lt; have := (r4.tail.headD 0).toNat_lt; omega)]
-    have := (r4.tail.headD 0).toNat_lt
-    simp only [UInt64.size] at *
+    have h1 := d.toNat_lt
+    have h2 := (r4.tail.headD 0).toNat_lt
     omega
-  refine RSim.bindPure (K := motK5) rfl (Q1 := fun b a' x => StageR dn vis fe b.2 a' ∧ IWGrow m4 b.2 ∧
+  refine RSim.bind (K := motK5) rfl (Q1 := fun b a' x => StageR dn vis fe b.2 a' ∧ IWGrow m4 b.2 ∧
     decW0E b.2 b.1 x) ?_ ?_
   · rintro ⟨r5, m5⟩ h5
     obtain ⟨x, a', hrun, hS', hg, hx⟩ := closeW_ok n dn fe vis m4 m5 a4 _ _ d b bs r5 h5 hS4 hbH hbs
       (hS4.lt64 hbb) hbb hdl
-    rw [decE_eq] at *
     exact ⟨x, a', hrun, hS', hg, hx⟩
   rintro ⟨r5, m5⟩ x a5 - ⟨hS5, hg5, hx⟩
   rw [motK5_some]
