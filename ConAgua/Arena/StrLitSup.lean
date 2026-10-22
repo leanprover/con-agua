@@ -225,6 +225,7 @@ def TestRef (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IF
     (c : FnName) (C : Option IConstantInfo → AM Bool) : Prop :=
   ∀ {m m' : Mem} {a : AState} {M : ModeMaps} {r : List Word} {found q : Word},
     CoreS dn m a vis fe M eb → (found ≠ 0 → ∃ ci, decCI (erecP m) dn q.toNat = some ci) →
+    (∀ ci, decFound dn m found q = some ci → ∃ x, fe.find? x = some ci) →
     callW p n c [found, q] m = some (r, m') →
     CoreRef (C (decFound dn m found q)) a decBool dn m vis fe M eb r m'
 
@@ -284,7 +285,7 @@ theorem find_ref {i : Word} (hi : i.toNat < 51) {c : FnName} {C : Option IConsta
     x m₁ fq m₂ h1 h2
   subst m₁ m₂
   refine coreRef_congr (T' := C (decFound dn m (fq.headD 0) (fq.tail.headD 0)) >>= g) ?_
-    (coreRef_bind (hC hS hdec h3) hk)
+    (coreRef_bind (hC hS hdec (fun ci h => ⟨_, hfind.trans h⟩) h3) hk)
   simp only [StateT.run_bind, pinAt_run hS.pins _ hi, except_ok_bind, hfind]
 
 /-- **A guarded stage** `str_sup_k`. -/
@@ -368,7 +369,7 @@ theorem strSup6_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word}
   | succ n =>
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (strSup6_spec p hp.strSup6 n _ vis) h
-  exact sup_stage p hp (i := 10) (by decide) (fun hS hdec h => charTyOk_call p hp hS hdec h)
+  exact sup_stage p hp (i := 10) (by decide) (fun hS hdec _ h => charTyOk_call p hp hS hdec h)
     (strSup7_call p hp) hS hW rfl
 
 theorem strSup5_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
@@ -379,7 +380,7 @@ theorem strSup5_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word}
   | succ n =>
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (strSup5_spec p hp.strSup5 n _ vis) h
-  exact sup_stage p hp (i := 9) (by decide) (fun hS hdec h => listConsTyOk_call p hp hS hdec h)
+  exact sup_stage p hp (i := 9) (by decide) (fun hS hdec hfe h => listConsTyOk_call p hp hS hdec hfe h)
     (strSup6_call p hp) hS hW rfl
 
 theorem strSup4_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
@@ -390,7 +391,7 @@ theorem strSup4_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word}
   | succ n =>
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (strSup4_spec p hp.strSup4 n _ vis) h
-  exact sup_stage p hp (i := 8) (by decide) (fun hS hdec h => listNilTyOk_call p hp hS hdec h)
+  exact sup_stage p hp (i := 8) (by decide) (fun hS hdec hfe h => listNilTyOk_call p hp hS hdec hfe h)
     (strSup5_call p hp) hS hW rfl
 
 theorem strSup3_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
@@ -401,7 +402,7 @@ theorem strSup3_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word}
   | succ n =>
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (strSup3_spec p hp.strSup3 n _ vis) h
-  exact sup_stage p hp (i := 7) (by decide) (fun hS hdec h => listTyOk_call p hp hS hdec h)
+  exact sup_stage p hp (i := 7) (by decide) (fun hS hdec hfe h => listTyOk_call p hp hS hdec hfe h)
     (strSup4_call p hp) hS hW rfl
 
 theorem strSup2_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
@@ -412,7 +413,7 @@ theorem strSup2_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word}
   | succ n =>
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (strSup2_spec p hp.strSup2 n _ vis) h
-  exact sup_stage p hp (i := 6) (by decide) (fun hS hdec h => stringOfListTyOk_call p hp hS hdec h)
+  exact sup_stage p hp (i := 6) (by decide) (fun hS hdec _ h => stringOfListTyOk_call p hp hS hdec h)
     (strSup3_call p hp) hS hW rfl
 
 theorem strSup1_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
@@ -423,7 +424,7 @@ theorem strSup1_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word}
   | succ n =>
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (strSup1_spec p hp.strSup1 n _ vis) h
-  exact sup_stage p hp (i := 5) (by decide) (fun hS hdec h => stringTyOk_call p hp hS hdec h)
+  exact sup_stage p hp (i := 5) (by decide) (fun hS hdec _ h => stringTyOk_call p hp hS hdec h)
     (strSup2_call p hp) hS hW rfl
 
 /-- **`str_lit_supported` as a call.** -/

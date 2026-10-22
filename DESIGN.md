@@ -7413,7 +7413,7 @@ grows (the memo library's capacity rule, as every L memo). Refinement: not yet (
   record and the bytes are read at the memory the spine runs on and the twin-side view of `h`
   carries over by `VMono` alone; reading it first would have needed pool/record frames through
   every `CoreRef` (which keeps only `CoreS`).
-* Deviation D21 (performance): `str_ls1` and `rom_lit` leave their pushed word at the pool top
+* Deviation D24 (performance): `str_ls1` and `rom_lit` leave their pushed word at the pool top
   even when the node exists.
 * Numbers: 389 L lines, 3524 proof lines (`StrLitList` 954, `StrLitChar` 478, `StrLitCtor` 467,
   `StrLitSup` 455, `StrLitBase` 437, `StrLitCv` 247, `StrLitTy` 213, `StrLitKeep` 147,
@@ -7811,3 +7811,50 @@ child dangled when it was interned (no `StoreWF` needed).
   changes. ~1.5k lines, 65 min.
 * Census: phase 8 **78 proven, 92 sorry, 47 written, 6 todo** (the re-tagged theorems go through
   stubs); totals 718 proven / 136 sorry.
+
+### Landing 6: `CoreS.den` (coordinator's request after lane `whnf3`)
+* **`CoreS` carries `den : StoreDen m a fe`** (`WhnfBase.lean`). `StoreDen` grew to: sort levels,
+  const level lists, the zero and empty-list pins, the `readNC` rows, a constant's level-parameter
+  names (`constLps`), projection tables' levels (`proj`), and **`lvlAll`: every level handle with
+  a view reads back** (a cons hit of a level interning returns an old handle; without `lvlAll` its
+  readback would need a rank argument).
+* **How it is kept** (all construction sites, ~25 explicit, ~35 lemmas): memory-only frames and
+  cache writes by `StoreDen.frameE`/`caches` (`EREC` kept, the store unchanged); interning a node
+  that is neither `sort` nor `const` by `StoreDen.of_arena` — the `sort`/`const` tables are
+  determined by their memory under `ArenaR` (`scTabs_eq`), so a writer that avoids `SOREC`/`CREC`
+  and `CTL` 1, 16‥19 (`arena_frame`'s new auto-params) keeps their views — or, from the twin run,
+  by `internNodeE_sc`/`internE_pure_views` (a push adds only a view of the pushed kind); interning
+  a `sort u`/`const c us` by `StoreDen.of_internSort`/`of_internConst` given `u`/`us` reads back
+  (`CoreS.arena_frameD`, `of_const` now take the run and that readback); level interning by
+  `lvlAll_internLNode` (helper `defeq2-lvl`, `StoreDenLvl.lean`: under `ArenaR`, a hit's handle has
+  the probed view, a push's readback is its children's at the old fuel); name and list interning
+  by `LsExt` (`NameStep.son`, `LsStep.son`, `lsExt_of_tables`); `nat_op_result`'s leaves by a third
+  clause of `LeafStep` (new `sort`/`const` views are `const c emptyLevels` only).
+* **Readbacks across knot calls.** `CoreAfter` says nothing about the twin's store growing, so a
+  level read before a knot call (the domain sort of a `∀`, the binder sorts on `BSTK`) is not known
+  to read back at the `imax` after it. L now checks with `lv_node` that both `imax` arguments (and
+  the codomain sort) are stored levels (`lvl_live`, `Infer.lean`; deviation D25), and `lvlAll`
+  gives their readbacks (`lvlLive_call`; `lview_of_lvNodeW` moved from `DeclCanonView` to
+  `LevelView.lean`). The `M2C` arms carry the type head's list as a view (forward-view lemmas:
+  `internNodeE_fwd`, `etaFabArgsE_fwd`, `view_after_noLss` for `towerSlotsAll`, `andRescueSlots`,
+  `capsNeverZeroPW`).
+* **Discharged**: `CoreS.lvl_den` (was a `sorry`), `CoreDen` (`coreDen_of`), `ProjSortDen`
+  (`projSortDen_of`), `ProofIrrelOK` (`proofIrrelOK_of` now sorry-free); `KnotCallees.den` and
+  `.proofIrrel` removed. Still open for lane `whnf4`: `FireDen` quantifies over every field index
+  (`StoreDen.proj` gives `i < numFields`), `LvlsEqDen` (from `StoreDen.constLs` at its callers).
+* For other lanes building `CoreS` from outside the core: `TwinOK` (`DeclLvlStage.lean`) gained
+  `den` and the `fe` parameter.
+### Landing 11 (lane `decls3`): the loop's relation carries the pin variants
+
+* **`LoopR pins dn m a vis fe pend ds`** (new first parameter) has a field `pinsets : PinSetsR m pins`
+  (lane `romload`'s relation of the variant records at `CTL[150]`/`CTL[151]`). Every step keeps it
+  (`DeclPins.lean`: `RecGrow` — the record pool only grew — from `IWGrow`, from `ArrExt` of
+  `erecP` at an in-bounds top, or from an unchanged `EREC`; `stepC` excludes `CTL[150..151]`); the
+  promotion and the bracket's frames show it directly. The theorems of the loop now take `pins`
+  where they mention `LoopR` (mechanical; `FoldOut`, `IstgPost`, `PendPost`, `CPGoSpec`,
+  `CPNextSpec` gained the argument).
+* **`checkDeclDefn_loop` is proved** from `checkDeclDefn_loop'` and `CheckDeclProg.defn : ∀ pins,
+  DefnProg p pins` (the two gates' specs). `checkDecl_loop` has no `sorry` of its own now; it rests
+  on `CheckDeclProg`'s spec fields (`CvCanonSpec`, `CiCanonSpec`, `DefnProg`) and the callees' stub
+  specs. Whoever establishes `LoopR` at the loop's entry (the pipeline) supplies `PinSetsR` from
+  `internAllPins_PB`'s post.

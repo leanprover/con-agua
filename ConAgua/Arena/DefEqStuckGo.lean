@@ -305,51 +305,6 @@ theorem reservedContains_callW {p : Prog} (hc : StuckCallees p) {n : Nat}
   refine ⟨hst ▸ h.2.1, ?_⟩
   rw [← h.2.2.1, hres]
 
-/-! ## `towerSlotsAll` keeps the expression views
-
-It interns name nodes only (`projTableName`), which leaves the expression tables alone: a
-`const` node seen before the call is still there after it, so its level list still reads back
-(`StoreDen.constLs` at the later state). -/
-
-/-- The store without its level/name part (what `EStore.view` reads). -/
-def noLss (a : AState) : EStore := { a.store with lss := LsStore.empty }
-
-theorem view_of_noLss {a a' : AState} (h : noLss a' = noLss a) (x : EIdx) :
-    a'.store.view x = a.store.view x := by
-  have : (noLss a').view x = (noLss a).view x := by rw [h]
-  exact this
-
-theorem keeps_noLss_internNNode (v : NNodeView) : Keeps noLss (internNNode v) := by
-  unfold Keeps; intro a r a' h
-  simp only [internNNode, StateT.run_bind, StateT.run_get, pure_bind] at h
-  repeat' split at h
-  all_goals simp only [StateT.run_bind, StateT.run_set, StateT.run_pure, pure_bind,
-    ConRon.Arena.fail, throwThe, MonadExceptOf.throw] at h
-  all_goals first
-    | (cases h; rfl)
-    | (simp [throwThe, Functor.map, Except.map] at h)
-
-theorem keeps_noLss_findProj (fe : IFEnv) (T : NIdx) (i : Nat) :
-    Keeps noLss (fe.findProj? T i) := by
-  unfold IFEnv.findProj? projTableName
-  refine Keeps.bind (Keeps.bind (keeps_noLss_internNNode _) fun _ => keeps_noLss_internNNode _)
-    fun _ => ?_
-  split <;> exact Keeps.pure _
-
-theorem keeps_noLss_towerSlotsAll (fe : IFEnv) (T : NIdx) (nF : Nat) :
-    Keeps noLss (towerSlotsAll fe T nF) := by
-  unfold towerSlotsAll
-  suffices ∀ n j, Keeps noLss (towerSlotsAllGo fe T n j) from this _ _
-  intro n
-  induction n with
-  | zero => intro j; rw [towerSlotsAllGo]; exact Keeps.pure _
-  | succ n ih =>
-    intro j; rw [towerSlotsAllGo]
-    refine Keeps.bind (keeps_noLss_findProj _ _ _) fun o => ?_
-    split
-    · exact ih _
-    · exact Keeps.pure _
-
 /-- A `const` node's level list at a state, read back after `towerSlotsAll`. -/
 theorem constLs_after_tower {fe : IFEnv} {T : NIdx} {nF : Nat} {a : AState} {x : EIdx} {c : NIdx}
     {us : LsIdx} (hv : a.store.view x = some (.const c us)) :

@@ -1,5 +1,6 @@
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Arena.PinsNatOp
+import ConAgua.Arena.StoreDenIntern
 
 /-!
 # `beta_peel` (proved) and `whnf_app` (groundwork): the batched β spine
@@ -90,9 +91,39 @@ theorem keeps_cpl_mkAppNFrom (f : EIdx) (args : Array EIdx) (i : Nat) :
       exact ih g (i + 1) (by omega)
     · exact Keeps.pure _
 
-/-- **`CoreS` across an interning step**: `ArenaD` comes from the step's own refinement, the
-twin's state keeps what else `CoreS` reads (`cpl`), and the memory write is confined to arrays
+/-- **`CoreS` across an interning step**, `StoreDen` of the new state given (`hden`: an interning
+of a `sort`/`const` node, `StoreDenIntern.lean`): `ArenaD` comes from the step's own refinement,
+the twin's state keeps what else `CoreS` reads (`cpl`), and the memory write is confined to arrays
 and `CTL` words outside the core tier, the pins and the environment. -/
+theorem CoreS.arena_frameD {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
+    {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List ArrId} {C : List Word}
+    (hS : CoreS dn m a vis fe M eb) (hD : ArenaD m' a') (hcpl : cpl a' = cpl a)
+    (hf : MemFrame A C m m')
+    (h128 : ∀ b ∈ A, b < 96 ∨ 128 ≤ b) (hpins : (128 : ArrId) ∉ A)
+    (henv : ∀ b ∈ A, b < 132 ∨ 144 ≤ b)
+    (hC128 : ∀ x ∈ C, x.toNat < 96 ∨ 128 ≤ x.toNat)
+    (hCenv : ∀ x ∈ C, x.toNat < 128 ∨ 136 ≤ x.toNat) (hden : StoreDen m' a' fe)
+    (hmA : (50 : ArrId) ∉ A ∧ (49 : ArrId) ∉ A := by decide) (hmC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C := by decide)
+    (hmWA : (151 : ArrId) ∉ A ∧ (152 : ArrId) ∉ A ∧ (153 : ArrId) ∉ A := by decide)
+    (hmWC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C := by decide) :
+    CoreS dn m' a' vis fe M eb := by
+  simp only [cpl, Prod.mk.injEq] at hcpl
+  obtain ⟨hc, hp, hl⟩ := hcpl
+  refine ⟨hD, ?_, ?_, hS.env.frame (fun b hb => (henv b hb).elim (fun h => .inl h) (fun h => .inr h))
+      (fun x hx => (hCenv x hx).elim (fun h => .inl h) (fun h => .inr h)) hf, ?_, ?_, ?_,
+      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf hmA hmC hmWA hmWC,
+      hf.2.2.1 145 ▸ hS.bstk, hden⟩
+  · rw [hc]
+    exact CoreRM.frame (A := A) (C := C)
+      (fun b hb => (h128 b hb).elim (fun h => .inl h) (fun h => .inr h))
+      (fun x hx => (hC128 x hx).elim (fun h => .inl h) (fun h => .inr h)) hf hS.core
+  · rw [hp]; exact hS.pins.congr (hf.1 PINS hpins (by decide))
+  · intro h l e; rw [hc] at e; have := hS.readL h l e; simp only [EStore.ls] at this ⊢; rw [hl]; exact this
+  · intro h l e; rw [hc] at e; have := hS.readLs h l e; rw [hl]; exact this
+  · rw [hl]; exact hS.nwf
+
+/-- **`CoreS` across an interning step** that writes neither the `sort` nor the `const` tables
+(`StoreDen` carries over by `StoreDen.of_arena`). -/
 theorem CoreS.arena_frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
     {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List ArrId} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hD : ArenaD m' a') (hcpl : cpl a' = cpl a)
@@ -103,22 +134,16 @@ theorem CoreS.arena_frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a
     (hCenv : ∀ x ∈ C, x.toNat < 128 ∨ 136 ≤ x.toNat)
     (hmA : (50 : ArrId) ∉ A ∧ (49 : ArrId) ∉ A := by decide) (hmC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C := by decide)
     (hmWA : (151 : ArrId) ∉ A ∧ (152 : ArrId) ∉ A ∧ (153 : ArrId) ∉ A := by decide)
-    (hmWC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C := by decide) :
+    (hmWC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C := by decide)
+    (hscA : SOREC ∉ A ∧ CREC ∉ A := by decide)
+    (hscC : (1 : Word) ∉ C ∧ (16 : Word) ∉ C ∧ (17 : Word) ∉ C ∧ (18 : Word) ∉ C ∧ (19 : Word) ∉ C :=
+      by decide) :
     CoreS dn m' a' vis fe M eb := by
-  simp only [cpl, Prod.mk.injEq] at hcpl
-  obtain ⟨hc, hp, hl⟩ := hcpl
-  refine ⟨hD, ?_, ?_, hS.env.frame (fun b hb => (henv b hb).elim (fun h => .inl h) (fun h => .inr h))
-      (fun x hx => (hCenv x hx).elim (fun h => .inl h) (fun h => .inr h)) hf, ?_, ?_, ?_,
-      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf hmA hmC hmWA hmWC,
-      hf.2.2.1 145 ▸ hS.bstk⟩
-  · rw [hc]
-    exact CoreRM.frame (A := A) (C := C)
-      (fun b hb => (h128 b hb).elim (fun h => .inl h) (fun h => .inr h))
-      (fun x hx => (hC128 x hx).elim (fun h => .inl h) (fun h => .inr h)) hf hS.core
-  · rw [hp]; exact hS.pins.congr (hf.1 PINS hpins (by decide))
-  · intro h l e; rw [hc] at e; have := hS.readL h l e; simp only [EStore.ls] at this ⊢; rw [hl]; exact this
-  · intro h l e; rw [hc] at e; have := hS.readLs h l e; rw [hl]; exact this
-  · rw [hl]; exact hS.nwf
+  have hk := hcpl
+  simp only [cpl, Prod.mk.injEq] at hk
+  exact hS.arena_frameD hD hcpl hf h128 hpins henv hC128 hCenv
+    (hS.den.of_arena hS.arena.1 hD.1 hk.1 hk.2.1 hk.2.2 hf
+      (fun h => by have := henv _ h; simp [EREC] at this) hscA hscC) hmA hmC hmWA hmWC
 
 /-! ## Handle words of the interning functions' results
 

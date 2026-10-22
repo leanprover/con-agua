@@ -221,9 +221,21 @@ theorem cv_call (hS : CoreS dn m a vis fe M eb) {q : Word} {ci : IConstantInfo}
     ((sort_erec p hp h3).trans (succ_erec p hp h2)).trans (zero_erec p hp h1)
   have R₁ := zero_call p hp hS h1
   obtain ⟨M₁, hS₁, hK₁, hT₁⟩ := R₁.2.1
-  have R₂ := succ_call p hp hS₁ R₁.2.2.2 h2
+  have hd₁ : ∃ l, denoteL (AM.st (internLNode .zero) a).store.ls (decI (z.headD 0)) = some l := by
+    have hd := internLNode_res_den (v := .zero) hS (fun c hc => by simp [LNodeView.lchildren] at hc)
+      (fun n hn => by simp [LNodeView.nchildren] at hn) R₁.1
+    rw [R₁.2.2.1] at hd; exact hd
+  have R₂ := succ_call p hp hS₁ R₁.2.2.2 h2 hd₁
   obtain ⟨M₂, hS₂, hK₂, hT₂⟩ := R₂.2.1
-  have R₃ := sort_call p hp hS₂ R₂.2.2.2 h3
+  have hd₂ : ∃ l, denoteL (AM.st (internLNode (.succ (decI (z.headD 0))))
+      (AM.st (internLNode .zero) a)).store.ls (decI (o.headD 0)) = some l := by
+    have hd := internLNode_res_den (v := .succ (decI (z.headD 0))) hS₁
+      (fun c hc => by
+        simp only [LNodeView.lchildren, List.mem_cons, List.mem_nil_iff, or_false] at hc
+        subst hc; exact hd₁)
+      (fun n hn => by simp [LNodeView.nchildren] at hn) R₂.1
+    rw [R₂.2.2.1] at hd; exact hd
+  have R₃ := sort_call p hp hS₂ R₂.2.2.2 h3 hd₂
   have hrun : (IConstantInfo.projInfo tbl).toConstantVal.run a =
       .ok (⟨tbl.tableName, tbl.levelParams, decH t⟩,
         AM.st (internE (.sort (decI (o.headD 0))))

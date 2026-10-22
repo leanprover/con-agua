@@ -18,14 +18,14 @@ section rel
 variable (p : Prog) (hp : PromoteProg p)
 include hp
 
-theorem promoteNew_rel (dn : NIdx → Option ConLeche.Name) (n : Nat) (m : Mem) (a : AState)
+theorem promoteNew_rel {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Name) (n : Nat) (m : Mem) (a : AState)
     (pm : PMemo) (k vis fresh : Word) (fe : IFEnv) (pend : Array PendingCheck)
     (ds : Array IDeclaration) (r : List Word) (m' : Mem)
     (hpm : if fresh = 0 then PMemoR m pm else pm = PMemo.empty)
-    (hR : LoopR dn m a vis fe pend ds) (hk : k.toNat ≤ vis.toNat)
+    (hR : LoopR pins dn m a vis fe pend ds) (hk : k.toNat ≤ vis.toNat)
     (hc : callW p n "promote_new" [k, vis, fresh] m = some (r, m')) :
     ∃ a' pm' fe', (promoteNew pm coreWalkFuel k.toNat fe).run a = .ok ((pm', fe'), a') ∧
-      LoopR dn m' a' vis fe' pend ds := by
+      LoopR pins dn m' a' vis fe' pend ds := by
   cases n with
   | zero => rw [callW_zero'] at hc; cases hc
   | succ n =>
@@ -75,7 +75,7 @@ theorem promoteNew_rel (dn : NIdx → Option ConLeche.Name) (n : Nat) (m : Mem) 
     have hT₁ : erecTop m₁ = erecTop m := by simp only [erecTop]; rw [hf1.2.1 129 (by simp)]
     have hEE₁ : m₁.arr64 EREC = m.arr64 EREC := hf1.1 EREC (by simp) (by decide)
     obtain ⟨hiw1, hiw2, hiw3, hiw4, hiw5⟩ := hR.iw
-    have hR₁ : LoopR dn m₁ a vis ⟨⟨consts⟩, idx, vb⟩ pend ds :=
+    have hR₁ : LoopR pins dn m₁ a vis ⟨⟨consts⟩, idx, vb⟩ pend ds :=
       LoopR.of_frame hR hD₁ hf1 (fun b hb => by simp at hb)
         (fun x hx => by
           simp only [List.mem_cons, List.not_mem_nil, or_false] at hx

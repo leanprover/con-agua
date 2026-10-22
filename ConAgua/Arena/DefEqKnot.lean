@@ -105,11 +105,9 @@ structure KnotAllProg (p : Prog) : Prop where
   ws : WsProg p
   lg : LgProg p
 
-/-- **Every assumption the knot still makes**: leaf facts with no proof yet, plus `den` and
+/-- **Every assumption the knot still makes**: leaf facts with no proof yet, plus
 `instLP`. -/
 structure KnotCallees (p : Prog) : Prop where
-  /-- Stored levels read back under `CoreS` (`StoreDen.lean`; to become a field of `CoreS`). -/
-  den : CoreDen
   /-- `inst_lp` (lane `whnf3`'s `instLPFast` walk). -/
   instLP : InstLPOK p
   /-- `caps_never_zero`, `rec_fire_levels` under `CoreS` (helper `whnf3-lp` proved them at
@@ -172,7 +170,7 @@ theorem KnotCallees.whnfC : WhnfCallees p :=
 
 include hq hc in
 /-- `fire_ok` (lane `whnf3`'s `fireOk_refines` over `CoreDen`, helper `whnf4-leaves`). -/
-theorem KnotCallees.fireOk : FireOkOK p := fireOk_core p hq.fire (fieldSortZero_core p hq.fsz) hc.den
+theorem KnotCallees.fireOk : FireOkOK p := fireOk_core p hq.fire (fieldSortZero_core p hq.fsz) coreDen_of
 
 include hq hc in
 /-- `find_proj`, `fire_ok` and their record-pool facts. -/
@@ -189,7 +187,7 @@ theorem KnotCallees.iotaC : IotaCallees p :=
 
 include hq hc in
 /-- `proof_irrel` (lane `whnf`'s `proofIrrel_refines'` over `CoreDen`). -/
-theorem KnotCallees.proofIrrel : ProofIrrelOK p := proofIrrelOK_of p hq.m2c.toIotaProg4 hc.den
+theorem KnotCallees.proofIrrel : ProofIrrelOK p := proofIrrelOK_of p hq.m2c.toIotaProg4 coreDen_of
 
 include hq hc in
 /-- `iota_rec_at` one level up (lane `whnf`'s `iotaRecAt_refines'`, with `major_to_ctor` from
@@ -244,21 +242,21 @@ include hq hc in
 /-- `DefeqCallees`: the walks from `CoreWalks.lean`, the rest from `KnotCallees`. -/
 theorem KnotCallees.defeq : DefeqCallees p :=
   ⟨hasFvar_core hq.walks.abs hq.walks.hf,
-    notProofFast_core hq.prop hc.den (constLpsDen_of hc.den) (findProj_refines p hq.projp) (erecKept_of hq.hcl) (projFound p hq.projp),
-    isProofFast_core hq.prop hc.den (constLpsDen_of hc.den) (findProj_refines p hq.projp) (erecKept_of hq.hcl) (projFound p hq.projp),
+    notProofFast_core hq.prop coreDen_of (constLpsDen_of coreDen_of) (findProj_refines p hq.projp) (erecKept_of hq.hcl) (projFound p hq.projp),
+    isProofFast_core hq.prop coreDen_of (constLpsDen_of coreDen_of) (findProj_refines p hq.projp) (erecKept_of hq.hcl) (projFound p hq.projp),
     abs1_core hq.walks.abs hq.walks.ae, absRange_core hq.walks.ar hq.walks.are, fieldSortZero_core p hq.fsz⟩
 
 include hq hc in
 theorem KnotCallees.lazy : LazyCallees p :=
   ⟨hq.walks.instListOK, hq.walks.inst1OK, (hc.defeq hq).hasFvar, natPredW_of p hq.natPred, hc.unfold hq,
-    reduceNat_of p hq.delta (natOpResultOK_of_agree hq.delta.natAgree), StoreDenotes.of_den hc.den⟩
+    reduceNat_of p hq.delta (natOpResultOK_of_agree hq.delta.natAgree), StoreDenotes.of_den coreDen_of⟩
 
 include hq hc in
 theorem KnotCallees.stuck : StuckCallees p :=
   ⟨hc.defeq hq, hc.proofIrrel hq, hq.walks.inst1OK, defeqLstOK_of p hq.lst,
     reservedContainsOK_of p hq.rc,
     towerSlotsAll_refines' p hq.body.iota (findProj_refines p hq.projp) (projFound p hq.projp),
-    lvlsEqCH_of p hq.lvc, hc.den, strLitSupported_core p hq.str, strLitCtor_core p hq.str, supKeep_of,
+    lvlsEqCH_of p hq.lvc, coreDen_of, strLitSupported_core p hq.str, strLitCtor_core p hq.str, supKeep_of,
     lazyDeltaStepH_of p hq.body.lazy (hc.lazy hq), hc.reduceProjCore hq⟩
 
 include hq in
@@ -272,7 +270,7 @@ include hq hc in
 theorem KnotCallees.infer : InferCallees p :=
   ⟨hq.walks.inst1OK, hq.walks.instListOK, (hc.defeq hq).abstract1, (hc.defeq hq).abstractRange,
     hc.constTy hq, hq.lit, isEagerReduceH_of p hq.body.stuck.leaf, bstkCap_of,
-    inferProj_refines p hq.proj ⟨hc.den, (findProj_refines p hq.projp), (projFound p hq.projp), erecKept_of hq.hcl, hc.instLP, erecKeptProj_of hq.hcl⟩⟩
+    inferProj_refines p hq.proj ⟨coreDen_of, (findProj_refines p hq.projp), (projFound p hq.projp), erecKept_of hq.hcl, hc.instLP, erecKeptProj_of hq.hcl⟩⟩
 
 /-- **The knot at fuel `0`**: every L call at fuel `0` fails. -/
 theorem knot_zero (p : Prog) : KnotOK p 0 where

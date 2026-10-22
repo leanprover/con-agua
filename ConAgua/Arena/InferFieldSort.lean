@@ -147,13 +147,14 @@ theorem fieldSortZeroT_run (a : AState) (lps : List NIdx) (us : LsIdx) (fs : LId
       .ok (Level.isEquiv (Level.subst ks vs f) .zero == some true,
         { a with caches := { a.caches with readNC := X, readLsC := Y, readLC := Z } }) ∧
       ReadLCOK { a with caches := { a.caches with readNC := X, readLsC := Y, readLC := Z } } ∧
-      ReadLsCOK { a with caches := { a.caches with readNC := X, readLsC := Y, readLC := Z } } := by
-  obtain ⟨X, h₁, -⟩ := readNamesM_run' lps a ks hk hn
+      ReadLsCOK { a with caches := { a.caches with readNC := X, readLsC := Y, readLC := Z } } ∧
+      ReadNCOK { a with caches := { a.caches with readNC := X } } := by
+  obtain ⟨X, h₁, hnX⟩ := readNamesM_run' lps a ks hk hn
   obtain ⟨Y, h₂, hls₂⟩ := readLevelsM_run' { a with caches := { a.caches with readNC := X } } us vs
     hv (fun h l e => hls h l e)
   obtain ⟨Z, h₃, hl₃⟩ := readLevelM_run'
     { a with caches := { a.caches with readNC := X, readLsC := Y } } fs f hf (fun h l e => hl h l e)
-  refine ⟨X, Y, Z, ?_, hl₃, fun h l e => hls₂ h l e⟩
+  refine ⟨X, Y, Z, ?_, hl₃, fun h l e => hls₂ h l e, hnX⟩
   simp only [fieldSortZeroT, StateT.run_bind, h₁, except_ok_bind, h₂, h₃]
   rfl
 
@@ -288,13 +289,15 @@ theorem fszW_ok {dn : NIdx → Option Name} {m m' : Mem} {a : AState} {vis : Wor
     ((reset_frame m).mono (by simp) (by simp)).trans ((he₁.trans (he₂.trans he₃)).memFrame)
   obtain ⟨hS₁, hK₁⟩ := hS.frame hf₁ (by simp [LH]) (by simp)
   -- the twin
-  obtain ⟨X, Y, Z, hrun, hl₃, hls₃⟩ := fieldSortZeroT_run a lps (decI us) (decI fs) ks vs f hk hv hf
+  obtain ⟨X, Y, Z, hrun, hl₃, hls₃, hnX⟩ := fieldSortZeroT_run a lps (decI us) (decI fs) ks vs f hk hv hf
     hn hS.readL hS.readLs
   subst hr
   refine ⟨_, by rw [hrun, decBool_fsz], ⟨M, ?_, KeptAll.refl _ _, hK₁⟩, by unfold HW; split <;> decide⟩
   exact ⟨⟨ArenaR.caches_irrel _ hS₁.arena.1, DerR.of_store _ _ _ hS₁.arena.2 rfl⟩,
     ((hS₁.core.readNC X).readLsC Y).readLC Z, hS₁.pins, hS₁.env, hl₃, hls₃, hS₁.nwf, hS₁.erec,
-    hS₁.spn, hS₁.memos, hS₁.bstk⟩
+    hS₁.spn, hS₁.memos, hS₁.bstk,
+    hS₁.den.mono (LsExt.refl _) rfl rfl (fun k x hk => .inr (hnX k x hk)) rfl (fun _ _ hv => hv)
+      (fun _ _ _ hv => .inl hv) (hS₁.den.lvlAll.congr rfl)⟩
 
 /-- **`field_sort_zero` refines the twin's propositional-structure test** (`FieldSortZeroOK`). -/
 @[refines_part ConRon.Arena.inferProj "the propositional-structure test (field_sort_zero)"]
