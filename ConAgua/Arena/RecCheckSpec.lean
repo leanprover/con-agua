@@ -84,35 +84,11 @@ theorem targetMajorAt_refines_hit (p : Prog) (hp : p.lookup "target_major_at" = 
 
 /-! ## `target_ctor_at`'s MEMBER arm -/
 
-/-- `decCV`'s fields, read back (the `Env.lean` decoder, over an explicit array). -/
-theorem decCV_some {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV a q = some cv) :
-    hd? a q = some cv.name ∧ hlist? a (q + 1) = some cv.levelParams ∧
-      hd? a (q + 3) = some cv.type := by
-  simp only [decCV, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
-  obtain ⟨nm, hnm, l, hl, t, ht, heq⟩ := h
-  obtain rfl := (Option.some.injEq _ _).mp heq.symm
-  exact ⟨hnm, hl, ht⟩
-
-/-- A decoded `EREC` handle, read back as a memory word (`iwH_rdW`'s analogue over `EREC`). -/
-theorem erH_rdW {k : IdxKind} {m : Mem} {i : Nat} {x : Idx k} (h : hd? (erA m) i = some x)
-    (hi : i < 2 ^ 64) :
-    ∃ w, rdW (m.arr64 EREC) (UInt64.ofNat i) = w ∧ w.toNat < 2 ^ 32 ∧ decI w = x := by
-  simp only [hd?, erA] at h
-  cases hw : (m.arr64 EREC)[i]? with
-  | none => simp [hw] at h
-  | some w =>
-    simp only [hw] at h
-    by_cases hl : w.toNat < 2 ^ 32
-    · simp [hl] at h
-      have hiw : (UInt64.ofNat i).toNat = i := by simp; omega
-      exact ⟨w, by simp [rdW, hiw, hw], hl, h⟩
-    · simp [hl] at h
-
 /-! ## `abstract_prefix` (the round-1 `while` rewritten as a self-recursion) -/
 
 mutual
 /-- **The model of `abstract_prefix`.** -/
-def apW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
+def absPrefW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _ => none
   | n + 1, m, k, c, e =>
     if k = 0 then some ([e], m)
@@ -121,7 +97,7 @@ def apW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
 /-- After `abstract1_fast`. -/
 def apK1 (n : Nat) (k c : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r, m1) => apK2 (apW n m1 (k - 1) (c + 1) (r.headD 0))
+  | some (r, m1) => apK2 (absPrefW n m1 (k - 1) (c + 1) (r.headD 0))
 
 /-- After the recursive call. -/
 def apK2 : Option (List Word × Mem) → Option (List Word × Mem)
@@ -131,25 +107,25 @@ end
 
 section arms
 variable (n : Nat) (m m1 : Mem) (k c e : Word) (r : List Word)
-theorem apW_nil (h : k = 0) : apW (n + 1) m k c e = some ([e], m) := by simp [apW, h]
-theorem apW_cons (h : k ≠ 0) :
-    apW (n + 1) m k c e = apK1 n k c (stubM "abstract1_fast" m [CWF, e, k - 1, c]) := by
-  simp [apW, h]
-theorem apK1_some : apK1 n k c (some (r, m1)) = apK2 (apW n m1 (k - 1) (c + 1) (r.headD 0)) := by
+theorem absPrefW_nil (h : k = 0) : absPrefW (n + 1) m k c e = some ([e], m) := by simp [absPrefW, h]
+theorem absPrefW_cons (h : k ≠ 0) :
+    absPrefW (n + 1) m k c e = apK1 n k c (stubM "abstract1_fast" m [CWF, e, k - 1, c]) := by
+  simp [absPrefW, h]
+theorem apK1_some : apK1 n k c (some (r, m1)) = apK2 (absPrefW n m1 (k - 1) (c + 1) (r.headD 0)) := by
   rw [apK1]
 theorem apK2_some : apK2 (some (r, m)) = some ([r.headD 0], m) := by
   rw [apK2]
 end arms
 
-grind_pattern [ind_grind] apW_nil => apW (n + 1) m k c e
-grind_pattern [ind_grind] apW_cons => apW (n + 1) m k c e
+grind_pattern [ind_grind] absPrefW_nil => absPrefW (n + 1) m k c e
+grind_pattern [ind_grind] absPrefW_cons => absPrefW (n + 1) m k c e
 grind_pattern [ind_grind] apK1_some => apK1 n k c (some (r, m1))
 grind_pattern [ind_grind] apK2_some => apK2 (some (r, m))
 
 theorem abstractPrefix_spec (p : Prog) (hp : p.lookup "abstract_prefix" = some abstractPrefix) (n : Nat) :
     ∀ (s₀ : St) (k c e : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "abstract_prefix" [k, c, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ apW n s₀.mem k c e = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ absPrefW n s₀.mem k c e = some (r, s'.mem); ⊤⦄ := by
   induction n with
   | zero =>
     intro s₀ k c e; rw [invoke_eq _ hp]; simp only [callFn, abstractPrefix]
@@ -164,23 +140,23 @@ theorem abstractPrefix_spec (p : Prog) (hp : p.lookup "abstract_prefix" = some a
       finish (gen := 20)
 
 
-theorem apW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) :
+theorem absPrefW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) :
     ∀ (m m' : Mem) (a : AState) (k c e : Word) (r : List Word),
-    apW n m k c e = some (r, m') → StageR dn vis fe m a → H e → c.toNat + k.toNat < 2 ^ 64 →
+    absPrefW n m k c e = some (r, m') → StageR dn vis fe m a → H e → c.toNat + k.toNat < 2 ^ 64 →
     ∃ x a', (ConRon.Arena.abstractPrefix k.toNat c.toNat (decI e)).run a = .ok (x, a') ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' ∧ (r.headD 0).toNat < 2 ^ 32 ∧ decI (r.headD 0) = x := by
   induction n with
-  | zero => intro m m' a k c e r h; simp [apW] at h
+  | zero => intro m m' a k c e r h; simp [absPrefW] at h
   | succ n ih =>
     intro m m' a k c e r h hS he hb
     by_cases hk : k = 0
-    · rw [apW_nil n m k c e hk] at h
+    · rw [absPrefW_nil n m k c e hk] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       have hk0 : k.toNat = 0 := by rw [hk]; rfl
       rw [hk0]
       exact ⟨decI e, a, rfl, hS, IWGrow.refl m, by simpa using he, rfl⟩
-    · rw [apW_cons n m k c e hk] at h
+    · rw [absPrefW_cons n m k c e hk] at h
       have hpos : 1 ≤ k.toNat := by
         rcases Nat.eq_zero_or_pos k.toNat with h0 | h0
         · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hk
@@ -195,7 +171,7 @@ theorem apW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
         rw [ha, apK1_some] at h
         obtain ⟨x1, a1, hrun1, hS1, hg1, hd1, hd2⟩ :=
           abstract1Fast_spec dn vis fe CWF e (k - 1) c he m m1 a ra ha hS
-        cases hr : apW n m1 (k - 1) (c + 1) (ra.headD 0) with
+        cases hr : absPrefW n m1 (k - 1) (c + 1) (ra.headD 0) with
         | none => rw [hr] at h; simp [apK2] at h
         | some rm =>
           obtain ⟨r2, m2⟩ := rm
@@ -227,7 +203,7 @@ theorem abstractPrefix_refines (p : Prog) (hp : p.lookup "abstract_prefix" = som
       decI (r.headD 0) = AM.res (ConRon.Arena.abstractPrefix k.toNat c.toNat (decI e)) a₀; ⊤⦄ := by
   refine triple_post (abstractPrefix_spec p hp n s₀ k c e) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨x, a', hrun, hS', hg, h1, h2⟩ := apW_ok dn vis fe n _ _ a₀ k c e r hm hS he hb
+  obtain ⟨x, a', hrun, hS', hg, h1, h2⟩ := absPrefW_ok dn vis fe n _ _ a₀ k c e r hm hS he hb
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok (ConRon.Arena.abstractPrefix k.toNat c.toNat (decI e)) a₀ a' x hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hg, h1, by rw [hres]; exact h2⟩
 
@@ -241,7 +217,7 @@ def aplW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _ => none
   | n + 1, m, rP, dso, dsl =>
     if dsl = 0 then some ([0, 0], m)
-    else aplK1 n rP dso dsl (apW n m rP 0 (rdW (m.arr64 IW) dso))
+    else aplK1 n rP dso dsl (absPrefW n m rP 0 (rdW (m.arr64 IW) dso))
 
 /-- After the first element's abstraction. -/
 def aplK1 (n : Nat) (rP dso dsl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -263,7 +239,7 @@ section arms
 variable (n : Nat) (m m1 m2 m3 : Mem) (rP dso dsl x : Word) (r : List Word)
 theorem aplW_nil (h : dsl = 0) : aplW (n + 1) m rP dso dsl = some ([0, 0], m) := by simp [aplW, h]
 theorem aplW_cons (h : dsl ≠ 0) :
-    aplW (n + 1) m rP dso dsl = aplK1 n rP dso dsl (apW n m rP 0 (rdW (m.arr64 IW) dso)) := by
+    aplW (n + 1) m rP dso dsl = aplK1 n rP dso dsl (absPrefW n m rP 0 (rdW (m.arr64 IW) dso)) := by
   simp [aplW, h]
 theorem aplK1_some : aplK1 n rP dso dsl (some (r, m1)) =
     aplK2 n (r.headD 0) (aplW n m1 rP (dso + 1) (dsl - 1)) := by rw [aplK1]
@@ -328,19 +304,19 @@ theorem aplW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
         · omega
       obtain ⟨c1, hc1⟩ : ∃ c1, dsl.toNat = c1 + 1 := ⟨dsl.toNat - 1, by omega⟩
       rw [hc1] at hds
-      obtain ⟨d, ds', rfl, hds', hd⟩ := decHL_cons hds
+      obtain ⟨d, ds', rfl, hds', hd⟩ := decHL_cons_r hds
       obtain ⟨w, hw1, hw2, hw3⟩ := iwH_rdW hd (by omega)
       rw [UInt64.ofNat_toNat] at hw1
       have hdsl1 : (dsl - 1).toNat = c1 := by
         rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hpos))]; simp; omega
       have hdso1 : (dso + 1).toNat = dso.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
       rw [hw1] at h
-      cases ha : apW n m rP 0 w with
+      cases ha : absPrefW n m rP 0 w with
       | none => rw [ha] at h; simp [aplK1] at h
       | some ram =>
         obtain ⟨ra, m1⟩ := ram
         rw [ha, aplK1_some] at h
-        obtain ⟨x1, a1, hrun1, hS1, hg1, hd11, hd12⟩ := apW_ok dn vis fe n m m1 a rP 0 w ra ha hS hw2
+        obtain ⟨x1, a1, hrun1, hS1, hg1, hd11, hd12⟩ := absPrefW_ok dn vis fe n m m1 a rP 0 w ra ha hS hw2
           (by simpa using hrP)
         simp only [UInt64.toNat_zero] at hrun1
         cases hr : aplW n m1 rP (dso + 1) (dsl - 1) with
@@ -494,7 +470,7 @@ theorem thW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
         · omega
       obtain ⟨c1, hc1⟩ : ∃ c1, tyl.toNat = c1 + 1 := ⟨tyl.toNat - 1, by omega⟩
       rw [hc1] at htys
-      obtain ⟨ty, tys', rfl, htys', hty⟩ := decHL_cons htys
+      obtain ⟨ty, tys', rfl, htys', hty⟩ := decHL_cons_r htys
       obtain ⟨w, hw1, hw2, hw3⟩ := iwH_rdW hty (by omega)
       rw [UInt64.ofNat_toNat] at hw1
       have htyl1 : (tyl - 1).toNat = c1 := by
@@ -650,7 +626,7 @@ theorem tptW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
         · omega
       obtain ⟨c1, hc1⟩ : ∃ c1, xl.toNat = c1 + 1 := ⟨xl.toNat - 1, by omega⟩
       rw [hc1] at hxs
-      obtain ⟨x, xs', rfl, hxs', hx⟩ := decHL_cons hxs
+      obtain ⟨x, xs', rfl, hxs', hx⟩ := decHL_cons_r hxs
       obtain ⟨w, hw1, hw2, hw3⟩ := iwH_rdW hx (by omega)
       rw [UInt64.ofNat_toNat] at hw1
       have hxl1 : (xl - 1).toNat = c1 := by
@@ -798,7 +774,7 @@ theorem tpd_step (x d b b' : EIdx) (e : Word) (xs : List EIdx) (a a1 a2 : AState
   cases res <;> rfl
 
 
-theorem viewBind_run' (h : EIdx) (a : AState) :
+theorem viewBind_run_r (h : EIdx) (a : AState) :
     (ConRon.Arena.viewBind h).run a = .ok (a.store.viewBind h, a) := rfl
 
 /-- The result words of `target_pi_doms_with` against the twin's result. -/
@@ -834,7 +810,7 @@ theorem pdW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
         · omega
       obtain ⟨c1, hc1⟩ : ∃ c1, xl.toNat = c1 + 1 := ⟨xl.toNat - 1, by omega⟩
       rw [hc1] at hxs
-      obtain ⟨x, xs', rfl, hxs', hx⟩ := decHL_cons hxs
+      obtain ⟨x, xs', rfl, hxs', hx⟩ := decHL_cons_r hxs
       have hftag : (decE e).tag = ETag.forallE ↔ e >>> 28 = 6 := ctag_iff e he 6 (by decide)
       by_cases hf : e >>> 28 ≠ 6
       · rw [pdW_nf n m xo xl e hxl hf] at h

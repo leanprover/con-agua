@@ -473,7 +473,7 @@ end spec
 theorem decE_tag_const (e : Word) (hh : e.toNat < 2 ^ 32) :
     ((decE e).tag = ETag.const) ↔ e >>> 28 = 3 := decE_tag_eq e hh 3 (by decide)
 
-theorem findIdx_decI (ws : List Word) (x : Word) (hws : ∀ w ∈ ws, w.toNat < 2 ^ 32)
+theorem findIdx_decI_parts (ws : List Word) (x : Word) (hws : ∀ w ∈ ws, w.toNat < 2 ^ 32)
     (hx : x.toNat < 2 ^ 32) :
     ((ws.map (decI : Word → NIdx)).findIdx? (· == (decI x : NIdx))) = ws.findIdx? (· == x) := by
   induction ws with
@@ -615,7 +615,7 @@ theorem recTW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
         | none => rw [hf] at hrt; simp [recTK5] at hrt
         | some rf =>
         have hfk := findW_ok n m3 no nl _ rf ws hws hf hlen
-        have hfi := findIdx_decI ws _ hwlt hxlt
+        have hfi := findIdx_decI_parts ws _ hwlt hxlt
         rw [← hnm] at hfi
         have hrun3' : StateT.run (getAppFn coreWalkFuel (decE
             ((eViewW m1 (r1.tail.tail.tail.headD 0)).getD 1 0))) a1 = Except.ok (x3, a3) := by

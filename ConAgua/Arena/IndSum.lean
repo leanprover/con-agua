@@ -467,6 +467,7 @@ def structCtorResidOkL : FunDecl :=
   locals (us, hd, fn, argsOff, argsLen, psOff, psLen, eq1, eq2, le, eq3) {
   us := call param_levels(lpsOff, lpsLen);
   hd := call intern_const(T, us);
+  if 4294967296 <= hd { abort };
   fn := call get_app_fn(⟪CWF⟫, cbody);
   (argsOff, argsLen) := call get_app_args(⟪CWF⟫, cbody);
   (psOff, psLen) := call struct_ps_at(o, nP);
@@ -652,6 +653,7 @@ def structProjBodiesGoL : FunDecl :=
   if h >> 28 != 6 { return (0, 0, 0) };
   (g, x, y, z) := call e_view(h);
   a := call struct_proj_arg_p(T, i);
+  if 4294967296 <= a { abort };
   b := call instantiate1_lift_fast(⟪CWF⟫, y, a, 0);
   (ok2, ro, rl) := call struct_proj_bodies_go(T, k - 1, i + 1, b);
   if ok2 == 0 { return (0, 0, 0) };
