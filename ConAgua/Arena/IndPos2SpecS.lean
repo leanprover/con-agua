@@ -1231,6 +1231,128 @@ theorem bindOK_step (n : Nat) (ih : NbOK dn vis fe n) : BindOK dn vis fe (n + 1)
     e5, e6]
   rfl
 
+include hM in
+theorem posOK_step (n : Nat) (ih : NbOK dn vis fe n) : PosOK dn vis fe (n + 1) := by
+  obtain ⟨-, hBind, hApp, -, -, -, -, -, -, -, -⟩ := ih
+  intro m m' a ctx fu po pl dep kb e ns c prog NS r h hS hW he hns
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  rw [nbPosW_succ] at h
+  by_cases hf0 : fu = 0
+  · rw [if_pos hf0] at h; cases h
+  rw [if_neg hf0] at h
+  have hfu : fu.toNat = (fu - 1).toNat + 1 := by
+    have : fu.toNat ≠ 0 := fun e' => hf0 (UInt64.toNat_inj.mp (by simpa using e'))
+    rw [pos2_word_pred hf0]; omega
+  have hhi := hW.hi htop
+  -- the reduct
+  cases hwt : stubM "whnf_top" m [vis, dep, e] with
+  | none => rw [hwt] at h; simp [nbPosK1] at h
+  | some pr =>
+  obtain ⟨rw, m1⟩ := pr
+  rw [hwt, nbPosK1_some] at h
+  obtain ⟨w, a1, hrun1, hS1, hg1, hwH, hwd⟩ := whnf_spec dn vis fe dep e he m m1 a rw hwt hS
+  have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
+  have hW1 := hW.grow hg1
+  obtain ⟨hn1, -, -, -, hnP1, -⟩ := ctx_fields hW1.u.dec hW1.u.inn htop1
+  have hne1 := ctx_names_end hW1.u.dec hW1.u.inn hW1.u.sl htop1
+  have hhi1 : (nhiW m ctx pl).toNat = c.hiAt prog.length := hhi
+  cases hno : noConstWf n m1 (rdW (m1.arr64 IW) ctx) (rdW (m1.arr64 IW) (ctx + 1)) (rdW (m1.arr64 IW) (ctx + 4))
+      (nhiW m ctx pl) (rw.headD 0) with
+  | none => rw [hno] at h; simp [nbPosK2] at h
+  | some pr2 =>
+  obtain ⟨o, m2⟩ := pr2
+  rw [hno, nbPosK2_some] at h
+  obtain ⟨mp, hmp⟩ := hM.no m1 a1 hS1
+  obtain ⟨bo, hrun2, hbo, -, hS2, hg2⟩ := noConstWf_ok n dn fe vis m1 m2 a1 _ _ _ _ _ o c.names mp hno hS1 hwH hn1
+    (by omega) hmp
+  rw [hnP1, hhi1, decE_eq, hwd] at hrun2
+  have hg12 := hg1.trans hg2
+  have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
+  have hW2 := hW.grow hg12
+  have hns2 := hns.grow hg12 htop
+  have hrun1' : (whnf V fe checkFuel dep.toNat (decI e)).run a = .ok (w, a1) := hrun1
+  by_cases ho : o = 0
+  · -- no occurrence in the reduct: the original, or the reduct
+    rw [if_pos ho] at h
+    have hbo' : bo = false := by rw [← hbo]; simp [ho]
+    subst hbo'
+    obtain ⟨hn2, -, -, -, hnP2, -⟩ := ctx_fields hW2.u.dec hW2.u.inn htop2
+    have hne2 := ctx_names_end hW2.u.dec hW2.u.inn hW2.u.sl htop2
+    cases hno2 : noConstWf n m2 (rdW (m2.arr64 IW) ctx) (rdW (m2.arr64 IW) (ctx + 1)) (rdW (m2.arr64 IW) (ctx + 4))
+        (nhiW m ctx pl) e with
+    | none => rw [hno2] at h; simp [nbPosK3] at h
+    | some pr3 =>
+    obtain ⟨o2, m3⟩ := pr3
+    rw [hno2] at h
+    obtain ⟨mp2, hmp2⟩ := hM.no m2 a1 hS2
+    obtain ⟨bo2, hrun3, hbo2, -, hS3, hg3⟩ := noConstWf_ok n dn fe vis m2 m3 a1 _ _ _ _ _ o2 c.names mp2 hno2 hS2
+      he hn2 (by omega) hmp2
+    rw [hnP2, hhi1, decE_eq] at hrun3
+    have hns3 := hns2.grow hg3 htop2
+    simp only [nbPosK3] at h
+    by_cases ho2 : o2 ≠ 0
+    · rw [if_pos ho2] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      have hbo2' : bo2 = true := by rw [← hbo2]; simpa using ho2
+      subst hbo2'
+      refine ⟨(.ordinary, w, NS), a1, ?_, hS3, hg12.trans hg3, by simp [decNFK], by simpa using hwH,
+        by simpa using hwd, by simpa using hns3⟩
+      rw [hfu, nestPos_succ]
+      simp only [StateT.run_bind, hrun1', except_ok_bind, hrun2, Bool.not_false, ite_true, hrun3]
+      rfl
+    · rw [if_neg ho2] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      have hbo2' : bo2 = false := by rw [← hbo2]; simpa using ho2
+      subst hbo2'
+      refine ⟨(.ordinary, decI e, NS), a1, ?_, hS3, hg12.trans hg3, by simp [decNFK], by simpa using he,
+        by simp, by simpa using hns3⟩
+      rw [hfu, nestPos_succ]
+      simp only [StateT.run_bind, hrun1', except_ok_bind, hrun2, Bool.not_false, ite_true, hrun3]
+      rfl
+  rw [if_neg ho] at h
+  have hbo' : bo = true := by rw [← hbo]; simpa using ho
+  subst hbo'
+  by_cases h6 : rw.headD 0 >>> 28 = 6
+  · -- a binder
+    rw [if_pos h6] at h
+    cases hb : nbBindW n m2 vis ctx (fu - 1) po pl dep kb (rw.headD 0) ns with
+    | none => rw [hb] at h; simp [nbPosK4] at h
+    | some pr4 =>
+    obtain ⟨rb, m4⟩ := pr4
+    rw [hb] at h
+    simp only [nbPosK4, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨x, a4, hrun4, hS4, hg4, hk4, hxH, hxd, hns4⟩ :=
+      hBind m2 m4 a1 ctx (fu - 1) po pl dep kb (rw.headD 0) ns c prog NS rb hb hS2 hW2 hwH h6 hns2
+    refine ⟨x, a4, ?_, hS4, hg12.trans hg4, by simpa using hk4, by simpa using hxH, by simpa using hxd,
+      by simpa using hns4⟩
+    have htag : w.tag = ETag.forallE := by rw [← hwd]; exact (decE_tag_forall _ hwH).mpr h6
+    rw [hwd] at hrun4
+    rw [hfu, nestPos_succ]
+    simp only [StateT.run_bind, hrun1', except_ok_bind, hrun2, Bool.not_true, htag, beq_iff_eq]
+    simpa using hrun4
+  · -- an application
+    rw [if_neg h6] at h
+    cases hp : nbAppW n m2 vis ctx (fu - 1) po pl kb (nhiW m ctx pl) (rw.headD 0) ns with
+    | none => rw [hp] at h; simp [nbPosK5] at h
+    | some pr4 =>
+    obtain ⟨rp, m4⟩ := pr4
+    rw [hp] at h
+    simp only [nbPosK5, Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨x, a4, hrun4, hS4, hg4, hk4, hx1, hns4⟩ :=
+      hApp m2 m4 a1 ctx (fu - 1) po pl kb (nhiW m ctx pl) (rw.headD 0) ns c prog NS rp hp hS2 hW2 hhi1 hwH hns2
+    refine ⟨x, a4, ?_, hS4, hg12.trans hg4, by simpa using hk4, by simpa using hwH,
+      by simpa [hwd] using hx1.symm, by simpa using hns4⟩
+    have htag : ¬ w.tag = ETag.forallE := by rw [← hwd]; exact fun e' => h6 ((decE_tag_forall _ hwH).mp e')
+    rw [hwd, hhi1] at hrun4
+    rw [hfu, nestPos_succ]
+    simp only [StateT.run_bind, hrun1', except_ok_bind, hrun2, Bool.not_true, htag, beq_iff_eq]
+    simpa using hrun4
+
+
 end steps
 
 end L.Ind
