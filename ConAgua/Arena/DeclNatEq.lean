@@ -162,6 +162,29 @@ theorem natAp2_refines (hN : NatEqProg p) (nm a b : Word) :
       (natAp2 (decI nm) (decE a) (decE b)) (KeepPost dn vis fe decW0E) :=
   (natAp2_ref hN nm a b).refAM
 
+/-- Emitting an equation list: `ws` the record pointers, written into a fresh slice. -/
+theorem emit_eqL {p : Prog} (hal : p.lookup "iw_alloc" = some iwAlloc) {k : Nat} {m mq m' : Mem}
+    {a : AState} {rq r : List Word} {N : Word} {ws : List Word} {ps : List (EIdx × EIdx)}
+    (hS : StageR dn vis fe m a) (hN : N.toNat = ws.length) (hlen : ps.length = ws.length)
+    (hrec : ∀ (j : Nat) (hj : j < ws.length), ∃ x y : Word, RecAt m ws[j] x y ∧ x.toNat < 2 ^ 32 ∧
+      y.toNat < 2 ^ 32 ∧ ps[j]'(by omega) = (decE x, decE y))
+    (hq : callW p k "iw_alloc" [N] m = some (rq, mq)) (hr : r = [rq.headD 0, N])
+    (hm : m' = wrIW mq (rq.headD 0) ws) :
+    StageR dn vis fe m' a ∧ IWGrow m m' ∧ decEqRL m' r ps := by
+  obtain ⟨hq0, hmq, hKeep, hroom, htop⟩ := iwAlloc_fref p hal N k m rq mq hS.2 hq
+  have hrec' := recPost_wr m ws N hN hS.2 (by simpa [iwTop, hN] using hroom)
+  subst hmq; subst hr; rw [hq0]; rw [hq0] at hm; subst hm
+  obtain ⟨hqq, hKp, hroom', htop', hget⟩ := hrec'
+  have hq' : (rdW (m.arr64 CTL) 200).toNat = iwTop m := rfl
+  refine ⟨hKp.stage hS, hKp.1, ?_⟩
+  simp only [decEqRL, EqL, List.getD_cons_zero, List.getD_cons_succ, hq', hN]
+  refine ⟨by omega, hlen.symm, fun j hj => ?_⟩
+  obtain ⟨x, y, hr', hx, hy, he⟩ := hrec j (by omega)
+  refine ⟨ws[j]'(by omega), x, y, ?_, hr'.grow hKp.1, hx, hy, he⟩
+  simp only [iwA]
+  rw [hget j (by omega)]
+  simp [List.getElem?_eq_getElem (show j < ws.length by omega)]
+
 end eq
 
 end L.Ind
