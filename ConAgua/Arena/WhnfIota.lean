@@ -535,13 +535,15 @@ def iotaIndexOkL : FunDecl := lfn (mode, vis, d, mI, rP, cnP, tyCtor, mo, mn, xo
 
 /-! ## `proof_irrel(mode, vis, d, a, b)` -/
 
-/-- con-leche: `Core.lean:298-320` `proofIrrel` — proof irrelevance: both sides' types' sorts are
-`Prop`. `lvl_eq`'s result word is `0` none (a decline, `abort`), `1` false, `2` true. -/
+/-- One side of `proof_irrel`: infer the type's type at the io grade, head-normalize, and compare a
+`Sort`'s level with zero. Result `0`: not a sort; `1`: a sort that is not `Prop`; `2`: `Prop`
+(callers test `!= 1`, which the cache decoder `decO` reads the same as `== 2`).
+`lvl_eq_c`'s answer word is `0` none (a decline, `abort`), `1` false, `2` true. The comparison is the
+CACHED `lvl_eq_c` (the twin's `lvlEq?` consults and fills the verdict cache). -/
 -- con-ron: ConRon/Arena/Core.lean:1360-1385 ConRon.Arena.proofIrrel
-@[l_impl ConRon.Arena.proofIrrel]
-def proofIrrelL : FunDecl := lfn (mode, vis, d, a, b)
-    locals (ta, tta, hh, t, i, uT, z, okA, tb, ttb, hh2, t2, i2, vT, okB) {
-  ta := call infer_io(mode, vis, d, a);
+def proofIrrelHalfL : FunDecl := lfn (mode, vis, d, x)
+    locals (ta, tta, hh, t, i, uT, z, ok) {
+  ta := call infer_io(mode, vis, d, x);
   tta := call infer_io(mode, vis, d, ta);
   hh := call whnf(mode, vis, d, tta);
   if hh >> 28 != 2 { return 0 };
@@ -551,23 +553,21 @@ def proofIrrelL : FunDecl := lfn (mode, vis, d, a, b)
   if CTL.u64[16 + t] <= i { abort };
   uT := SOREC.u64[i * 2 + t];
   z := call pin_word(53);
-  okA := call lvl_eq(uT, z);
-  if okA == 0 { abort };
-  okA := u64(okA == 2);
-  tb := call infer_io(mode, vis, d, b);
-  ttb := call infer_io(mode, vis, d, tb);
-  hh2 := call whnf(mode, vis, d, ttb);
-  if hh2 >> 28 != 2 { return 0 };
-  t2 := (hh2 >> 27) & 1;
-  i2 := hh2 & 134217727;
-  if t2 != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[16 + t2] <= i2 { abort };
-  vT := SOREC.u64[i2 * 2 + t2];
-  z := call pin_word(53);
-  okB := call lvl_eq(vT, z);
-  if okB == 0 { abort };
-  okB := u64(okB == 2);
-  return u64(okA != 0) & u64(okB != 0)
+  ok := call lvl_eq_c(uT, z);
+  if ok == 0 { abort };
+  return ok
+}
+
+/-- con-leche: `Core.lean:298-320` `proofIrrel` — proof irrelevance: both sides' types' sorts are
+`Prop` (two `proof_irrel_half`s; the second only if the first is a sort, as the twin). -/
+-- con-ron: ConRon/Arena/Core.lean:1360-1385 ConRon.Arena.proofIrrel
+@[l_impl ConRon.Arena.proofIrrel]
+def proofIrrelL : FunDecl := lfn (mode, vis, d, a, b) locals (ra, rb) {
+  ra := call proof_irrel_half(mode, vis, d, a);
+  if ra == 0 { return 0 };
+  rb := call proof_irrel_half(mode, vis, d, b);
+  if rb == 0 { return 0 };
+  return u64(ra != 1) & u64(rb != 1)
 }
 
 /-! ## `rule_rhs_at(rec, ctor, po, pl, rhs, us)`, `const_ty_at(n, po, pl, ty, us)`
@@ -823,7 +823,7 @@ def iotaProg : Prog :=
    ("fab_scope_ok", fabScopeOkL), ("lit_major_to_ctor", litMajorToCtorL),
    ("major_to_ctor", majorToCtorL), ("prepare_major", prepareMajorL),
    ("pi_residual", piResidualL), ("defeq_list", defeqListL), ("iota_index_ok", iotaIndexOkL),
-   ("proof_irrel", proofIrrelL), ("rule_rhs_at", ruleRhsAtL), ("const_ty_at", constTyAtL),
+   ("proof_irrel", proofIrrelL), ("proof_irrel_half", proofIrrelHalfL), ("rule_rhs_at", ruleRhsAtL), ("const_ty_at", constTyAtL),
    ("inst_spine", instSpineL), ("inst_spine_pins", instSpinePinsL),
    ("rec_fire_args", recFireArgsL), ("iota_certs_full_aux", iotaCertsFullAuxL),
    ("iota_certs_full", iotaCertsFullL), ("iota_rec_at", iotaRecAtL)]
@@ -849,6 +849,7 @@ structure IotaProg (p : Prog) : Prop where
   defeqList : p.lookup "defeq_list" = some defeqListL
   iotaIndexOk : p.lookup "iota_index_ok" = some iotaIndexOkL
   proofIrrel : p.lookup "proof_irrel" = some proofIrrelL
+  proofIrrelHalf : p.lookup "proof_irrel_half" = some proofIrrelHalfL
   ruleRhsAt : p.lookup "rule_rhs_at" = some ruleRhsAtL
   constTyAt : p.lookup "const_ty_at" = some constTyAtL
   instSpine : p.lookup "inst_spine" = some instSpineL
@@ -1105,19 +1106,6 @@ def IotaIndexOkOK (p : Prog) : Prop :=
       (iotaIndexOk (coreKnot (decMode mode) fe id F) fe d.toNat mI.toNat rP.toNat cnP.toNat
         (decE tyCtor) margs.toList idx.toList) decBool s₀ a₀ dn vis fe MM eb
 
-
-/-- con-leche: `Core.lean:298-320` `proofIrrel`. -/
-def ProofIrrelOK (p : Prog) : Prop :=
-  ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F →
-  ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb mode d a b : Word), CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → HW a →
-    HW b →
-    CoreSpec p (n + 1) "proof_irrel" [mode, vis, d, a, b]
-      (proofIrrel (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decBool s₀ a₀ dn
-      vis fe MM eb
-
-@[refines ConRon.Arena.proofIrrel]
-theorem proofIrrel_refines : ProofIrrelOK p := sorry
 
 /-- con-leche: none (`ruleRhsAt`'s cache probe). -/
 def RuleRhsAtOK (p : Prog) : Prop :=
