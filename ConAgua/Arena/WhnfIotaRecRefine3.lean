@@ -415,10 +415,12 @@ theorem iotaRecAt_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
 /-- **`iota_rec_at` refines `iotaRecAt`** (the statement is `WhnfCore.lean`'s `IotaRecAtOK`, what
 `whnf_app` assumes), at the stub bundles; the three new assumptions stay hypotheses. -/
 @[refines ConRon.Arena.iotaRecAt]
-theorem iotaRecAt_refines (p : Prog) (hp : IotaRecProg' p) (hm : M2CProg' p) (hER : ErecKeptRec p)
+theorem iotaRecAt_refines (p : Prog) (hp : IotaRecProg' p) (hm : M2CProg' p)
+    (hcl : closedA p coreErecA coreErecC coreFns = true)
     (hden : LvlsEqDen p) (hshape : RecShape) (n : Nat) (hk : KnotUpTo p n) :
     IotaRecAtOK p (n + 1) :=
   iotaRecAt_refines' p hp (iotaCallees_stub p) (whnfCallees_stub p) supKeep_twin
-    (majorToCtor_refines p hm) (erecKeptInst_stub p) hER (erecKeptKnot_stub p) hden hshape n hk
+    (majorToCtor_refines p hm hcl) (ErecKeptInst.of_closed hcl) (ErecKeptRec.of_closed hcl)
+    (ErecKeptKnot.of_closed hcl) hden hshape n hk
 
 end L.Arena

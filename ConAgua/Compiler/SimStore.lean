@@ -63,7 +63,7 @@ theorem MemRel.store64 {m : Mem} {d : DataMem} (hm : MemRel G m d) {a : ArrId} (
       fun t h1 h2 => hG.tab_arr t h2 (Or.inr ⟨a, ha, h1⟩)
   refine ⟨by simpa [Mem.set64] using hm.nb, by simpa [Mem.set64] using hm.nw,
     fun c hc => by rw [Mem.arr8_set64]; exact hm.size8 c hc,
-    fun c hc => by rw [Mem.arr64_set64]; split <;> simp_all [hm.size64 c hc], ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    fun c hc => by rw [Mem.arr64_set64]; split <;> simp_all [hm.size64 c hc], ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro c hc k hk
     have hk2 : k < (m.arr8 c).size := hk
     have h8 := hm.size8 c hc
@@ -111,6 +111,12 @@ theorem MemRel.store64 {m : Mem} {d : DataMem} (hm : MemRel G m d) {a : ArrId} (
       fun t h1 h2 => hG.tab_arr t h2 (Or.inr ⟨a, ha, h1⟩)
   · intro x hx; exact isSome_get?_storeInt (hm.stack x hx)
   · intro x hx; exact isSome_get?_storeInt (hm.res x hx)
+  · intro g hg
+    have hT : G.globAddr g + 8 ≤ G.tabEnd := by
+      simp only [Layout.tabEnd, Layout.globAddr, Layout.globStart]; omega
+    have := htab (G.globAddr g - G.T) (by omega) (by simp only [Layout.globAddr, Layout.globStart] at hT ⊢; omega)
+    rw [show G.T + (G.globAddr g - G.T) = G.globAddr g by simp only [Layout.globAddr, Layout.globStart]; omega] at this
+    rw [this]; exact hm.glob g hg
 
 theorem MemRel.store8 {m : Mem} {d : DataMem} (hm : MemRel G m d) {a : ArrId} (ha : a < G.tab.nb)
     {i : Word} (hi : i.toNat < (m.arr8 a).size) (v : Word) (V : Int) (hV : (V.take 8).toNat.toUInt8 = v.toUInt8) :
@@ -132,7 +138,7 @@ theorem MemRel.store8 {m : Mem} {d : DataMem} (hm : MemRel G m d) {a : ArrId} (h
     exact hcellw _ (fun k hk h8 => hG.tab_arr _ ⟨by omega, by omega⟩ (Or.inl ⟨a, ha, h8⟩)) (by omega)
   refine ⟨by simpa [Mem.set8] using hm.nb, by simpa [Mem.set8] using hm.nw,
     fun c hc => by rw [Mem.arr8_set8]; split <;> simp_all [hm.size8 c hc],
-    fun c hc => by rw [Mem.arr64_set8]; exact hm.size64 c hc, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    fun c hc => by rw [Mem.arr64_set8]; exact hm.size64 c hc, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · intro c hc k hk
     have hk' := hk
     simp only [Mem.arr8_set8] at hk'
@@ -179,6 +185,12 @@ theorem MemRel.store8 {m : Mem} {d : DataMem} (hm : MemRel G m d) {a : ArrId} (h
     exact hG.tab_arr _ ⟨by omega, by simp only [Layout.tabEnd]; omega⟩ (Or.inl ⟨a, ha, he ▸ hin⟩)
   · intro x hx; exact isSome_get?_storeInt (hm.stack x hx)
   · intro x hx; exact isSome_get?_storeInt (hm.res x hx)
+  · intro g hg
+    have hT : G.globAddr g + 8 ≤ G.tabEnd := by
+      simp only [Layout.tabEnd, Layout.globAddr, Layout.globStart]; omega
+    have := htab (G.globAddr g - G.T) (by omega) (by simp only [Layout.globAddr, Layout.globStart] at hT ⊢; omega)
+    rw [show G.T + (G.globAddr g - G.T) = G.globAddr g by simp only [Layout.globAddr, Layout.globStart]; omega] at this
+    rw [this]; exact hm.glob g hg
 
 theorem Inv.store64 {nl F : Nat} {σ : St} {s : MachineData} (hI : Inv G nl F σ s) {a : ArrId}
     (ha : a < G.tab.nw) {i : Word} (hi : i.toNat < (σ.mem.arr64 a).size) (v : Word) :
@@ -215,7 +227,7 @@ theorem Inv.store8 {nl F : Nat} {σ : St} {s : MachineData} (hI : Inv G nl F σ 
 theorem Pres.store64 {top : Nat} {d : DataMem} {a : ArrId} (ha : a < G.tab.nw) {j : Nat} (hj : j < G.s64 a)
     (v : BitVec 64) : Pres G top d (wrW d (A (G.b64 a + 8 * j)) v) := by
   have hend := hG.end64 a ha
-  refine ⟨fun _ h => isSome_get?_storeInt h, fun x hx _ hna _ => ?_⟩
+  refine ⟨fun _ h => isSome_get?_storeInt h, fun x hx _ hna _ _ => ?_⟩
   refine get?_wrW_A (by omega) hx ?_
   exact byte_cell_disj (P := G.In64 a) (Q := fun t => ¬ G.InArr t) (fun k hk => ⟨by omega, by omega⟩) hna
     fun t h1 h2 => h2 (Or.inr ⟨a, ha, h1⟩)
@@ -223,8 +235,34 @@ theorem Pres.store64 {top : Nat} {d : DataMem} {a : ArrId} (ha : a < G.tab.nw) {
 theorem Pres.store8 {top : Nat} {d : DataMem} {a : ArrId} (ha : a < G.tab.nb) {j : Nat} (hj : j < G.s8 a)
     (V : Int) : Pres G top d (Mem.storeInt d (A (G.b8 a + j)) 1 V) := by
   have hend := hG.end8 a ha
-  refine ⟨fun _ h => isSome_get?_storeInt h, fun x hx _ hna _ => ?_⟩
+  refine ⟨fun _ h => isSome_get?_storeInt h, fun x hx _ hna _ _ => ?_⟩
   refine get?_store1_A (by omega) hx fun he => hna (Or.inl ⟨a, ha, he ▸ ⟨by omega, by omega⟩⟩)
+
+/-- The memory relation after a write of a global variable, with the frame. -/
+theorem Inv.storeG {nl F : Nat} {σ : St} {s : MachineData} (hI : Inv G nl F σ s) {g : GVar}
+    (hg : g.id < G.tab.ng) (v : Word) :
+    Inv G nl F (σ.setG g v) { s with dmem := wrW s.dmem (A (G.globAddr g)) v.toBitVec } := by
+  have hc := Layout.inGlob_cell (G := G) hg
+  have := hG.tab_end
+  have hT : G.globAddr g + 8 ≤ G.tabEnd := by
+    simp only [Layout.tabEnd, Layout.globAddr, Layout.globStart]; omega
+  refine ⟨hI.r15, hI.lo8, hI.hi, hI.nlF, fun x hx => ?_, hI.mem.storeG hG hg v⟩
+  have := hI.hi; have := hG.hi_le; have := hI.nlF; have := hI.lo
+  show rdW (wrW s.dmem _ _) (A (s.regs.rsp.toNat + 8 * x)) = some (σ.loc x)
+  rw [rdW_wrW_A (by omega) (by omega) ?_]
+  · exact hI.frame x hx
+  exact cell_disj (P := G.InGlob) (Q := G.InStack) hc
+    (fun k hk => ⟨by omega, by omega⟩) fun t h1 h2 => hG.tab_stack t h1.tab h2
+
+/-- A write of a global variable keeps every byte outside the global variables. -/
+theorem Pres.storeG {top : Nat} {d : DataMem} {g : GVar} (hg : g.id < G.tab.ng) (v : BitVec 64) :
+    Pres G top d (wrW d (A (G.globAddr g)) v) := by
+  have := hG.tab_end
+  have hT : G.globAddr g + 8 ≤ G.tabEnd := by
+    simp only [Layout.tabEnd, Layout.globAddr, Layout.globStart]; omega
+  exact Pres.of_glob (Only.wrW (by omega)) fun x h1 h2 => by
+    have hx := Layout.inGlob_cell (G := G) hg (x - G.globAddr g) (by omega)
+    rwa [show G.globAddr g + (x - G.globAddr g) = x by omega] at hx
 
 end
 
@@ -239,7 +277,7 @@ theorem byte_val (r : Reg64s) :
   omega
 
 section
-variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres < maxOff)
+variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
   (p : Prog) (K : Stmt → M Sig) (P : Nat → Prop)
 include hG hTab
 
@@ -428,6 +466,39 @@ theorem sim_st8 (a : ArrId) (i e : Expr) : SimS p G (stepRun p K) P (.st8 a i e)
     refine hK.err s1 ⟨x, ?_, by rw [evalP_error hx]; simp⟩ (hE1.spost (G := G) hI.lo).gpost
     rw [step_st8_run]; simp only [hx]
 
+
+theorem sim_gset (g : GVar) (e : Expr) : SimS p G (stepRun p K) P (.gset g e) := by
+  intro ctx F path k hT hF hc hwf htmp σ d Q hI hP hK
+  simp only [Stmt.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
+  simp only [compileS] at hc hK
+  simp only [tempsS] at htmp
+  have hF' := hF; simp only [maxOff] at hF'
+  have hTab' := hTab; simp only [maxOff] at hTab'
+  refine sim_expr hG ctx hT hTab F hF e 0 k hc.left hwf.2 (by omega) σ d Q hI ?_ ?_
+  · intro v s1 hv hrax hE1
+    have hI1 := hI.only hG (hE1.mem.mono (by omega) (Nat.le_refl _)) hE1.rsp hE1.r15
+    have haddr : (s1.regs.get64 .r15).toNat + (ctx.tab.globOff g).toNat = G.globAddr g := by
+      rw [Reg64s.get64_r15, UInt64.toNat_toBitVec, hI1.r15, hT, Layout.globAddr_toNat]
+    have hg := hwf.1
+    have := hG.tab_end
+    have hT' : G.globAddr g + 8 ≤ G.tabEnd := by
+      simp only [Layout.tabEnd, Layout.globAddr, Layout.globStart]; omega
+    refine ev_movMR hc.right.head ⟨by simp [Tab.globOff, Tab.globBase]; lomega,
+      by simp [hT, Tab.globOff, Tab.globBase]; lomega⟩ ?_ ?_
+    · rw [haddr, hI1.mem.glob g hg]; rfl
+    rw [haddr]
+    have hv' : s1.regs.get64 .rax = v.toBitVec := by simp [hrax]
+    rw [hv']
+    refine ev_congr (hK.normal (σ.setG g v) _ ?_ (hI1.storeG hG hg v) ?_) ?_
+    · simp [step_gset_run, hv]; rfl
+    · exact (hE1.spost hI.lo).trans ⟨rfl, rfl, rfl, Nat.le_refl _, Pres.storeG hG hg _⟩
+    · simp; omega
+  · intro s1 herr hE1
+    obtain ⟨y, hy⟩ := herr
+    refine hK.err s1 ⟨y, by simp [step_gset_run, hy]; rfl, by rw [evalP_error hy]; simp⟩
+      (hE1.spost hI.lo).gpost
+
 end
+
 
 end L.Compiler
