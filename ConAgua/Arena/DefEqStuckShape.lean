@@ -91,7 +91,7 @@ theorem CoreS.restoreTop {dn : NIdx → Option ConLeche.Name} {m m₁ : Mem} {a 
       StackKept m (m₁.set64 CTL 136 (rdW (m.arr64 CTL) 136)) := by
   have hS₁ := hS.frame_stk hf (by simp) (by simp)
   have hS₂ := hS₁.frame_stk (MemFrame.setCtl m₁ 136 (rdW (m.arr64 CTL) 136)) (by simp) (by simp)
-  exact ⟨hS₂, StackKept.restore hg.2.2 hg.2.1 h136⟩
+  exact ⟨hS₂, StackKept.restoreG hg h136⟩
 
 /-! ## `eta_ctor_shape` -/
 

@@ -376,15 +376,17 @@ theorem pisFull_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : In
       BStkR m lo k ws → bTop m = lo + k → (∀ (i : Nat) (h : i < ws.size), HW ws[i]) →
       d.toNat + k.toNat + peel.toNat < 2 ^ 64 →
       (∀ j, j < fo → spW m j = spW m₀ j) → (m.arr64 SPN).size = (m₀.arr64 SPN).size →
+      (∀ j, j < lo → rdW (m.arr64 BSTK) j = rdW (m₀.arr64 BSTK) j) →
+      (m.arr64 BSTK).size = (m₀.arr64 BSTK).size → PoolGrew m₀ m →
       ∀ w mF, pisFull p N j m mode vis d peel t k fo lo = some (w, mF) →
-      TelPost dn vis fe M eb m₀ fo a
+      TelPost dn vis fe M eb m₀ fo lo a
         (inferPis (coreKnot (decMode mode) fe id F) fe d.toNat peel.toNat (decE t) k.toNat fvs
           (ws.map decI)) w mF := by
   intro j
   induction j with
-  | zero => intro _ m a M peel t k fvs ws _ _ _ _ _ _ _ _ _ _ w mF hF; simp [pisFull, pisLoop] at hF
+  | zero => intro _ m a M peel t k fvs ws _ _ _ _ _ _ _ _ _ _ _ _ _ w mF hF; simp [pisFull, pisLoop] at hF
   | succ j ih =>
-    intro hjN m a M peel t k fvs ws hS ht hf htop hB hbt hws hdk hb0 hsz w mF hF
+    intro hjN m a M peel t k fvs ws hS ht hf htop hB hbt hws hdk hb0 hsz hbb0 hbsz0 hpg0 w mF hF
     have hspn := hS.spn
     have hcp := hcap _ _ _ _ _ _ _ hS
     have hfb := hf.bound
@@ -399,7 +401,7 @@ theorem pisFull_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : In
           k.toNat fvs (ws.map decI)).run a = (inferPisLeaf (coreKnot (decMode mode) fe id F) fe
           d.toNat (decE t) k.toNat fvs (ws.map decI)).run a),
         call1W p N "infer_pis_leaf" [mode, vis, d, t, k, fo, lo] m = some (w, mF) →
-        TelPost dn vis fe M eb m₀ fo a (inferPis (coreKnot (decMode mode) fe id F) fe d.toNat
+        TelPost dn vis fe M eb m₀ fo lo a (inferPis (coreKnot (decMode mode) fe id F) fe d.toNat
           peel.toNat (decE t) k.toNat fvs (ws.map decI)) w mF := by
       intro hT hc
       have hl := CoreSpec.of_call1W (r := [w]) (s₀ := ⟨m, Locals.init []⟩)
@@ -408,10 +410,14 @@ theorem pisFull_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : In
         (fun r r' h => by simp only [decH, h]) hc
       obtain ⟨hok, ⟨M', hS', hK', hSt'⟩, hres, hrw⟩ := hl
       refine ⟨_, _, hT.trans (AM.run_of_ok _ _ hok), hres, hrw, M', hS', hK', fun i hi => ?_,
-        hSt'.2.1.trans hsz⟩
-      have hi' : i < spTop m := by
-        rw [htop, UInt64.lt_iff_toNat_lt, haddf]; have := UInt64.lt_iff_toNat_lt.mp hi; omega
-      exact (hSt'.2.2 i hi').trans (hb0 i hi)
+        hSt'.size.trans hsz, fun i hi => ?_, hSt'.bstk.2.1.trans hbsz0, hpg0.trans hSt'.pool⟩
+      · have hi' : i < spTop m := by
+          rw [htop, UInt64.lt_iff_toNat_lt, haddf]; have := UInt64.lt_iff_toNat_lt.mp hi; omega
+        exact (hSt'.below i hi').trans (hb0 i hi)
+      · have haddl : (lo + k).toNat = lo.toNat + k.toNat := addW _ _ (by omega)
+        have hi' : i < bTop m := by
+          rw [hbt, UInt64.lt_iff_toNat_lt, haddl]; have := UInt64.lt_iff_toNat_lt.mp hi; omega
+        exact (hSt'.bstk.2.2 i hi').trans (hbb0 i hi)
     by_cases hc : peel ≠ 0 ∧ t >>> 28 = 6
     · obtain ⟨hp0, ht6⟩ := hc
       have hc1 : ¬ (tierW t ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun g => by
@@ -477,14 +483,19 @@ theorem pisFull_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : In
       -- the stacks kept across the four calls
       have hSt14 := hSt₁.trans (hSt₂.trans (hSt₃.trans hSt₄))
       have hBK := hB₁.trans (hB₂.trans (hB₃.trans hB₄))
-      have hf₄ : SpineR m₄ fo k fvs := hf.keep hSt14.2.1 hSt14.2.2 hftop hspn
+      have hf₄ : SpineR m₄ fo k fvs := hf.keep hSt14.size hSt14.below hftop hspn
       have hB4 : BStkR m₄ lo k ws := hB.keep hBK hbtop hcp
       have hb₄ : ∀ i, i < fo → spW m₄ i = spW m₀ i := fun i hi => by
         have hi' : i < spTop m := by
           rw [htop, UInt64.lt_iff_toNat_lt, haddf]; have := UInt64.lt_iff_toNat_lt.mp hi; omega
-        exact (hSt14.2.2 i hi').trans (hb0 i hi)
-      obtain ⟨hS', hf', htop', hB', hbt', hb', hsz', -⟩ := tPush_step (m₀ := m₀) hS₄
-        (by rw [hBK.2.1]; exact hcp) hf₄ hB4 hb₄ (hSt14.2.1.trans hsz) g2 hrw4
+        exact (hSt14.below i hi').trans (hb0 i hi)
+      have hbb₄ : ∀ i, i < lo → rdW (m₄.arr64 BSTK) i = rdW (m₀.arr64 BSTK) i := fun i hi => by
+        have haddl : (lo + k).toNat = lo.toNat + k.toNat := addW _ _ (by omega)
+        have hi' : i < bTop m := by
+          rw [hbt, UInt64.lt_iff_toNat_lt, haddl]; have := UInt64.lt_iff_toNat_lt.mp hi; omega
+        exact (hBK.2.2 i hi').trans (hbb0 i hi)
+      obtain ⟨hS', hf', htop', hB', hbt', hb', hsz', hbszT, hbbT, hpgT⟩ := tPush_step (m₀ := m₀) hS₄
+        (by rw [hBK.2.1]; exact hcp) hf₄ hB4 hb₄ (hSt14.size.trans hsz) g2 hrw4
       obtain ⟨hvs, hu⟩ := L.Ind.view_sort_f m₃ _ hS₃.arena.1 (r₃.headD 0) hrw3 ⟨gs1, UInt64.not_le.mp gs2⟩ g1
       have hws' : ∀ (i : Nat) (h : i < (ws.push (rdW (m₃.arr64 SOREC) (idxW (r₃.headD 0) * 2 +
           tierW (r₃.headD 0)))).size), HW (ws.push (rdW (m₃.arr64 SOREC) (idxW (r₃.headD 0) * 2 +
@@ -500,9 +511,12 @@ theorem pisFull_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : In
         have : peel.toNat ≠ 0 := fun h' => hp0 (UInt64.toNat_inj.mp (by simpa using h')); omega
       have hk1 : (k + 1).toNat = k.toNat + 1 := addW _ _ (by simp; omega)
       have hp0' : peel.toNat ≠ 0 := fun h' => hp0 (UInt64.toNat_inj.mp (by simpa using h'))
-      obtain ⟨x, a', hrun', hx, hrw, M', hS'', hK, hb'', hsz''⟩ := ih (by omega) _ _ M₄ (peel - 1)
-        _ (k + 1) _ _ hS' hbody hf' htop' hB' hbt' hws' (by rw [hk1, hpeel1]; omega) hb' hsz' w mF hF'
-      refine ⟨x, a', ?_, hx, hrw, M', hS'', hK₁.trans (hK₂.trans (hK₃.trans (hK₄.trans hK))), hb'', hsz''⟩
+      obtain ⟨x, a', hrun', hx, hrw, M', hS'', hK, hb'', hsz'', hbb'', hbsz'', hpg''⟩ := ih (by omega)
+        _ _ M₄ (peel - 1) _ (k + 1) _ _ hS' hbody hf' htop' hB' hbt' hws' (by rw [hk1, hpeel1]; omega)
+        hb' hsz' (fun i hi => (hbbT i hi).trans (hbb₄ i hi)) (hbszT.trans (hBK.2.1.trans hbsz0))
+        ((hpg0.trans hSt14.pool).trans hpgT) w mF hF'
+      refine ⟨x, a', ?_, hx, hrw, M', hS'', hK₁.trans (hK₂.trans (hK₃.trans (hK₄.trans hK))), hb'',
+        hsz'', hbb'', hbsz'', hpg''⟩
       rw [← hrun']
       obtain ⟨p', hp'⟩ : ∃ p', peel.toNat = p' + 1 := ⟨peel.toNat - 1, by omega⟩
       have hlam : ((decE t).tag != ETag.forallE) = false := by
@@ -548,9 +562,11 @@ theorem inferPis_tel (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ht : HW t) (hf : SpineR s₀.mem fo k fvs)
     (htop : spTop s₀.mem = fo + k) (hB : BStkR s₀.mem lo k ws) (hbt : bTop s₀.mem = lo + k)
     (hws : ∀ (i : Nat) (h : i < ws.size), HW ws[i]) (hdk : d.toNat + k.toNat + peel.toNat < 2 ^ 64)
-    (hb0 : ∀ j, j < fo → spW s₀.mem j = spW m₀ j) (hsz : (s₀.mem.arr64 SPN).size = (m₀.arr64 SPN).size) :
+    (hb0 : ∀ j, j < fo → spW s₀.mem j = spW m₀ j) (hsz : (s₀.mem.arr64 SPN).size = (m₀.arr64 SPN).size)
+    (hbb0 : ∀ j, j < lo → rdW (s₀.mem.arr64 BSTK) j = rdW (m₀.arr64 BSTK) j)
+    (hbsz0 : (s₀.mem.arr64 BSTK).size = (m₀.arr64 BSTK).size) (hpg0 : PoolGrew m₀ s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "infer_pis" [mode, vis, d, peel, t, k, fo, lo]
-    ⦃fun r s' => LocEq s' s₀ ∧ TelPost dn vis fe M eb m₀ fo a₀
+    ⦃fun r s' => LocEq s' s₀ ∧ TelPost dn vis fe M eb m₀ fo lo a₀
       (inferPis (coreKnot (decMode mode) fe id F) fe d.toNat peel.toNat (decE t) k.toNat fvs
         (ws.map decI)) (r.headD 0) s'.mem; ⊤⦄ := by
   apply L.M.triple_of_run
@@ -560,7 +576,7 @@ theorem inferPis_tel (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
   subst hs0
   exact ⟨hloc, pisFull_ref p hp hq hb hil hbc hcap n hk F hF hn dn vis fe mode d fo lo eb hs.mode4
     hs.eb_mode m₀ (n + 1) (Nat.le_refl _) s.mem a₀ M peel t k fvs ws hs.rel ht hf htop hB hbt hws hdk
-    hb0 hsz _ _ hW⟩
+    hb0 hsz hbb0 hbsz0 hpg0 _ _ hW⟩
 
 
 /-! ## `infer_forall` -/
@@ -697,7 +713,7 @@ theorem inferForall_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) 
   have hloS : lo.toNat ≤ (m₃.arr64 BSTK).size := by
     have := g2.2.2.2.1; simp at this; omega
   have g2' : tPushOK m₃ so lo 0 := g2
-  obtain ⟨hS', hf', htop', hB', hbt', hb', hsz', -⟩ := tPush_step (m₀ := m₃) (fvs := #[]) (ws := #[])
+  obtain ⟨hS', hf', htop', hB', hbt', hb', hsz', hbszT, hbbT, hpgT⟩ := tPush_step (m₀ := m₃) (fvs := #[]) (ws := #[])
     hS₃ hcp (SpineR.empty _ _ hsoS) (BStkR.empty _ _ hloS) (fun _ _ => rfl) rfl g2' hrw3
   have e01 : (0 : Word) + 1 = 1 := rfl
   rw [e01] at hf' htop' hB' hbt'
@@ -707,9 +723,9 @@ theorem inferForall_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) 
   obtain ⟨t₄, ht₄, -, hTel⟩ := triple_of_callW (s₀ := ⟨_, Locals.init []⟩)
     (inferPis_tel p hp hq hb hil hbc hcap n' (hk.mono (by omega)) F (by omega) (by omega) _ _ dn
       vis fe M₃ eb mode d 16777216 body 1 so lo _ _ m₃ ⟨hS', hs.mode4, hs.eb_mode⟩ hbody hf' htop' hB'
-      hbt' (by intro i hi; simp at hi; subst hi; simpa [HW] using hu) (by simp; omega) hb' hsz') h4
+      hbt' (by intro i hi; simp at hi; subst hi; simpa [HW] using hu) (by simp; omega) hb' hsz' hbbT hbszT hpgT) h4
   rw [ht₄] at hTel
-  obtain ⟨x, a', hrun4, hx, hrw4, M', hS₄, hK₄, hb₄, hsz₄⟩ := hTel
+  obtain ⟨x, a', hrun4, hx, hrw4, M', hS₄, hK₄, hb₄, hsz₄, hbb₄, hbsz₄, hpg₄⟩ := hTel
   -- the twin's run
   have hsort : ((decE (r₂.headD 0)).tag == ETag.sort) = true := tag_sort_beq _ hrw2 (by simpa using g1)
   have hrun : (inferForall (coreKnot (decMode mode) fe id F) fe d.toNat (decE ty) (decE body)).run a₀ =
@@ -733,7 +749,7 @@ theorem inferForall_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) 
   rw [hst, ← hm, hso, hlo]
   have htop3 : spTop m₃ = so := hso.symm
   obtain ⟨hSF, hkF⟩ := tops_restore (m₀ := s.mem) hS₄ hSt13
-    (fun j hj => hb₄ j (htop3 ▸ hj)) hsz₄ g3
+    (fun j hj => hb₄ j (htop3 ▸ hj)) hsz₄ (fun j hj => hbb₄ j (by rw [hlo]; exact hj)) hbsz₄ hpg₄ g3
   exact ⟨M', hSF, hK₁.trans (hK₂.trans (hK₃.trans hK₄)), hkF⟩
 
 

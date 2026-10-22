@@ -404,11 +404,13 @@ theorem CoreS.of_nat {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : A
       simp only [natC, List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl | rfl | rfl | rfl <;> decide)
 
-theorem StackKept.of_nat_frame {m m' : Mem} (hf : MemFrame natA natC m m') : StackKept m m' := by
+theorem StackKept.of_nat_frame {m m' : Mem} (hf : MemFrame natA natC m m') (hP : PoolGrew m m') :
+    StackKept m m' := by
   have hspn : m'.arr64 SPN = m.arr64 SPN :=
     hf.1 SPN (by simp [natA, POOL, CREC, CSLOT, SPN]) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp [natC])
-  exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
+  exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn],
+    BKept.of_frame hf (by decide) (by decide), hP⟩
 
 theorem keeps_cpl_natPredArm (a : Nat) : Keeps cpl (natPredArm a) := by
   unfold natPredArm
@@ -428,6 +430,35 @@ theorem natPredLit_inst (hp : WhnfDeltaProg' p) : InternSpec p ArenaD :=
   fun a₀ n s₀ o l hA hq hn => internLit_refinesD p hp.litHash' hp.limbsEq' hp.litMatch' hp.litFind'
     hp.litPush' hp.internLit a₀ n s₀ o l hA hq hn
 
+/-- The functions of `intern_lit`: they write the `lit` table only, never the pool. -/
+def litFns : List FnName := ["intern_lit", "lit_hash", "limbs_eq", "lit_match", "lit_find", "lit_push"]
+
+theorem litFns_closed : closedA storeProg [REC, SLOT] [2, 3] litFns = true := by decide +kernel
+
+theorem WhnfDeltaProg'.litClosed (hp : WhnfDeltaProg' p) : closedA p [REC, SLOT] [2, 3] litFns = true :=
+  closedW_of_agree litFns_closed (by
+    intro f hf
+    simp only [litFns, List.mem_cons, List.mem_nil_iff, or_false] at hf
+    rcases hf with rfl | rfl | rfl | rfl | rfl | rfl
+    · rw [hp.internLit]; rfl
+    · rw [hp.litHash']; rfl
+    · rw [hp.limbsEq']; rfl
+    · rw [hp.litMatch']; rfl
+    · rw [hp.litFind']; rfl
+    · rw [hp.litPush']; rfl)
+
+/-- `intern_lit` under `ArenaD` and "the pool only grew since `m₀`". -/
+theorem natPredLit_instP (hp : WhnfDeltaProg' p) (m₀ : Mem) :
+    InternSpec p (fun m a => ArenaD m a ∧ PoolGrew m₀ m) := by
+  intro a₀ n s₀ o l ⟨hA, hP⟩ hq hn
+  apply L.M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, hok, hD, hres⟩ := L.M.of_run (P := fun s => s = s₀) hs hrun (natPredLit_inst p hp a₀ n s₀ o l hA hq hn)
+  obtain ⟨hfr, -⟩ := L.M.of_run (P := fun s => s = s₀) hs hrun
+    (invoke_memFrame hp.litClosed n (f := "intern_lit") (by decide) [o, l] s₀)
+  subst hs
+  exact ⟨hloc, hok, ⟨hD, hP.trans (PoolGrew.of_frame hfr (by decide) (by decide))⟩, hres⟩
+
 theorem callW_natPredLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb o cnt : Word)
     (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (hs : SliceOK s₀.mem o cnt) (r : List Word) (m' : Mem)
@@ -435,13 +466,15 @@ theorem callW_natPredLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : A
     AM.ok (natPredArm (pv (s₀.mem.arr64 POOL) o.toNat cnt.toNat)) a₀ ∧
     CoreS dn m' (AM.st (natPredArm (pv (s₀.mem.arr64 POOL) o.toNat cnt.toNat)) a₀) vis fe MM eb ∧
     AM.res (natPredArm (pv (s₀.mem.arr64 POOL) o.toNat cnt.toNat)) a₀ = some (decE (r.headD 0)) ∧
-    MemFrame natA natC s₀.mem m' := by
-  obtain ⟨s', rfl, -, hok, hD, hres⟩ := triple_of_callW
-    (natPredLit_refines p ArenaD (fun _ _ h => h.1.lit.1)
-      (fun m m' a hA hg => ArenaD.grow m m' hg a hA) (natPredLit_inst p hp) hp.natLimb' hp.subBorrow'
-      hp.natTrim' hp.natSub hp.predLit n s₀ a₀ hC.arena o cnt hs) h
+    MemFrame natA natC s₀.mem m' ∧ PoolGrew s₀.mem m' := by
+  obtain ⟨s', rfl, -, hok, ⟨hD, hP⟩, hres⟩ := triple_of_callW
+    (natPredLit_refines p (fun m a => ArenaD m a ∧ PoolGrew s₀.mem m) (fun _ _ h => h.1.1.lit.1)
+      (fun m m' a hA hg => ⟨ArenaD.grow m m' hg a hA.1, hA.2.trans (PoolGrew.of_grows hg)⟩)
+      (natPredLit_instP p hp s₀.mem) hp.natLimb' hp.subBorrow'
+      hp.natTrim' hp.natSub hp.predLit n s₀ a₀ ⟨hC.arena, PoolGrew.refl _⟩ o cnt hs) h
   have hfr := callW_natFrame p hp.natClosed "nat_pred_lit" (by decide +kernel) n _ _ _ _ h
-  exact ⟨hok, hC.of_nat hD (Keeps.run (keeps_cpl_natPredArm _) (AM.run_of_ok _ _ hok)) hfr, hres, hfr⟩
+  exact ⟨hok, hC.of_nat hD (Keeps.run (keeps_cpl_natPredArm _) (AM.run_of_ok _ _ hok)) hfr, hres, hfr,
+    hP⟩
 
 end refs10
 
@@ -567,7 +600,7 @@ theorem natLitToCtor_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀
   obtain ⟨r₃, m₃⟩ := q₃
   rw [h3] at hW
   dsimp only at hW
-  obtain ⟨hok3, hS3, hres3, hfr3⟩ := callW_natPredLit p hp n ⟨m₂, Locals.init []⟩ _ dn vis fe MM eb o cnt
+  obtain ⟨hok3, hS3, hres3, hfr3, hP3⟩ := callW_natPredLit p hp n ⟨m₂, Locals.init []⟩ _ dn vis fe MM eb o cnt
     hS hs₂ r₃ m₃ h3
   rw [hPool, hk] at hok3 hS3 hres3
   cases h4 : callW p n "mk_app" [r₂.headD 0, r₃.headD 0] m₃ with
@@ -598,7 +631,7 @@ theorem natLitToCtor_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀
   · rw [hst', ← hm]
     refine ⟨MM, hS3.of_app hD4 (Keeps.run (keeps_cpl_internApp _ _) (AM.run_of_ok _ _ hok4)) hfr4,
       KeptAll.refl _ _, ?_⟩
-    exact ((StackKept.of_const_frame hfr).trans (StackKept.of_nat_frame hfr3)).trans
+    exact ((StackKept.of_const_frame hfr).trans (StackKept.of_nat_frame hfr3 hP3)).trans
       (StackKept.of_app_frame hfr4)
   · rw [hres', decH, ← hr]
   · unfold ResH; rw [← hr]; exact hhw4
@@ -826,7 +859,7 @@ theorem CoreS.set_cv {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
         (fun x hx => by simp at hx; subst hx; decide) hf,
       fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf,
       hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.2.2.1 145 ▸ hS.bstk⟩,
-    by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
+    StackKept.of_frame hf⟩
 
 
 /-- The model of `const_val_at`. -/
@@ -1188,10 +1221,12 @@ theorem callW_unfoldDefnAt (hp : WhnfDeltaProg' p) (hwc : WhnfCallees p) (n : Na
     have := h136 (by rw [← hr0]; decide)
     rw [← hm, size_set64] at this; exact this
   have hStK : StackKept m₃ (m₅.set64 CTL 136 (rdW (m₃.arr64 CTL) 136)) := by
-    apply StackKept.restore _ (by rw [hspn5, hgrew.2.1]) h136'
+    apply StackKept.restore _ (by rw [hspn5, hgrew.size])
+      (hgrew.bstk.trans (BKept.of_frame hfr3 (by decide) (by decide)))
+      (hgrew.pool.trans (PoolGrew.of_frame hfr3 (by decide) (by decide))) h136'
     intro i hi
     simp only [spW, hspn5]
-    exact hgrew.2.2 i hi
+    exact hgrew.below i hi
   refine ⟨hok', ?_, ?_, ?_⟩
   · rw [hst', ← hm]
     exact ⟨M', hS₆, hK₃, hSt₃.trans hStK⟩

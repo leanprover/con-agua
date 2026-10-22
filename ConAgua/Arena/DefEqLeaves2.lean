@@ -202,11 +202,6 @@ def CoreK (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : Mo
     (m₀ : Mem) (m : Mem) (a : AState) : Prop :=
   CoreS dn m a vis fe M eb ∧ StackKept m₀ m
 
-theorem StackKept.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
-    (hA : SPN ∉ A) (hC : (136 : Word) ∉ C) : StackKept m m' := by
-  have hspn : m'.arr64 SPN = m.arr64 SPN := hf.1 SPN hA (by decide)
-  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 hC
-  exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
 
 theorem CoreK.grow {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {M : ModeMaps}
     {eb : Word} {m₀ m m' : Mem} {a : AState} (h : CoreK dn vis fe M eb m₀ m a) (hg : Grows m m') :
@@ -214,7 +209,7 @@ theorem CoreK.grow {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
   have hf := grows_frame m m' hg
   refine ⟨h.1.arenaFrame (ArenaD.grow m m' hg a h.1.arena) rfl hf (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN])
     (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN]),
-    h.2.trans (StackKept.of_frame hf (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN]))⟩
+    h.2.trans (StackKept.of_grows hg)⟩
 
 /-- An interned `lit` handle word is below `2^32`: `WhnfDeltaRefine3.lean`'s `internW_hw`, which
 this file does not import (it would pull in the whnf walks); `natPredW_of` discharges it. -/
@@ -258,8 +253,7 @@ theorem internLit_core (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
     have := AM.run_of_ok _ _ hok
     exact (keeps_cplL_internNodeE _).run (by simpa only [internE] using this)
   refine ⟨hloc, hok, ⟨hK.1.arenaFrame hD hcpl hfr (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN])
-    (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN]), hK.2.trans (StackKept.of_frame hfr (by simp [POOL, REC, SLOT, PINS, SPN])
-    (by simp [POOL, REC, SLOT, PINS, SPN]))⟩, hres, hlw s.mem a₀ o l _ _ hK.1.arena.1.lit hI⟩
+    (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN]), hK.2.trans (StackKept.of_frame hfr)⟩, hres, hlw s.mem a₀ o l _ _ hK.1.arena.1.lit hI⟩
 
 /-! ## `nat_pred` -/
 

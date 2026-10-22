@@ -280,16 +280,26 @@ theorem SpineR.keep {m m' : Mem} {off cnt : Word} {xs : Array EIdx} (h : SpineR 
 
 /-- The top restored after a run that kept everything below the old top. -/
 theorem StackKept.restore {m m₁ : Mem} (hk : ∀ i : Word, i < spTop m → spW m₁ i = spW m i)
-    (hsz : (m₁.arr64 SPN).size = (m.arr64 SPN).size)
+    (hsz : (m₁.arr64 SPN).size = (m.arr64 SPN).size) (hb : BKept m m₁) (hp : PoolGrew m m₁)
     (h136 : (136 : Word).toNat < (m₁.arr64 CTL).size) :
     StackKept m (m₁.set64 CTL 136 (rdW (m.arr64 CTL) 136)) := by
+  have hfs : MemFrame [] [136] m₁ (m₁.set64 CTL 136 (rdW (m.arr64 CTL) 136)) :=
+    MemFrame.setCtl m₁ 136 _
   have hspn : (m₁.set64 CTL 136 (rdW (m.arr64 CTL) 136)).arr64 SPN = m₁.arr64 SPN :=
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-  refine ⟨?_, by rw [hspn, hsz], fun i hi => by simp only [spW, hspn]; exact hk i hi⟩
+  refine ⟨?_, by rw [hspn, hsz], fun i hi => by simp only [spW, hspn]; exact hk i hi,
+    hb.trans (BKept.of_frame hfs (by decide) (by decide)),
+    hp.trans (PoolGrew.of_frame hfs (by decide) (by decide))⟩
   simp only [spTop, rdW_set64]
   have : (136 : Word).toNat = 136 := rfl
   simp only [this] at h136
   simp; intro h; omega
+
+/-- The top restored after a run that grew the stack. -/
+theorem StackKept.restoreG {m m₁ : Mem} (hg : StackGrew m m₁)
+    (h136 : (136 : Word).toNat < (m₁.arr64 CTL).size) :
+    StackKept m (m₁.set64 CTL 136 (rdW (m.arr64 CTL) 136)) :=
+  StackKept.restore hg.below hg.size hg.bstk hg.pool h136
 
 theorem addW (a b : Word) (h : a.toNat + b.toNat < 2 ^ 64) : (a + b).toNat = a.toNat + b.toNat := by
   rw [UInt64.toNat_add, Nat.mod_eq_of_lt h]
