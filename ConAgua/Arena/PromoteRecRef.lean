@@ -674,4 +674,94 @@ theorem cv_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s : Word) (cv : 
 
 end cv
 
+/-! ## `promote_clear`, `promote_vg` -/
+
+/-- **The four clears give the empty memo.** -/
+theorem clear_rel {m m' : Mem} {pm : PMemo} (hP : PMemoR m pm) (h : clearW m = some m') :
+    PMemoR m' PMemo.empty ∧ MemFrame [] [140, 141, 142, 143, 144, 145, 146, 147] m m' := by
+  unfold clearW at h
+  by_cases h1 : rdW (m.arr64 CTL) pnSch.cs + 2 = 0
+  · simp [clrK, h1] at h
+  rw [clrK_some _ _ h1] at h
+  by_cases h2 : rdW ((mclearG pnSch m).arr64 CTL) plSch.cs + 2 = 0
+  · simp [clrK, h2] at h
+  rw [clrK_some _ _ h2] at h
+  by_cases h3 : rdW ((mclearG plSch (mclearG pnSch m)).arr64 CTL) plsSch.cs + 2 = 0
+  · simp [clrK, h3] at h
+  rw [clrK_some _ _ h3] at h
+  by_cases h4 : rdW ((mclearG plsSch (mclearG plSch (mclearG pnSch m))).arr64 CTL) peSch.cs + 2 = 0
+  · simp [clrK, h4] at h
+  rw [clrK_some _ _ h4] at h
+  cases h
+  have f1 := mclearG_frame pnSch m
+  have f2 := mclearG_frame plSch (mclearG pnSch m)
+  have f3 := mclearG_frame plsSch (mclearG plSch (mclearG pnSch m))
+  have f4 := mclearG_frame peSch (mclearG plsSch (mclearG plSch (mclearG pnSch m)))
+  have fr : ∀ {k : IdxKind} (S T : MemoSch) (K : MemoKey (Idx k))
+      (VR : Mem → Word → Idx k → Prop) (hT : T.WF) (hS1 : S.arr ≠ T.arr)
+      (hS2 : T.cs ∉ [S.cs, S.cs + 1]) (m₁ : Mem) (mp : Std.HashMap (Idx k) (Idx k)),
+      VR = VP k → MemoRV T K VR m₁ mp → MemoRV T K VR (mclearG S m₁) mp :=
+    fun S T K VR hT _ hS2 m₁ mp hV h => by
+      subst hV
+      exact memoRV_frame T hT K _ [] _ (by simp) hS2 m₁ _ (mclearG_frame S m₁) (fun _ _ h => h) mp h
+  refine ⟨⟨?_, ?_, ?_, ?_⟩, ?_⟩
+  · exact fr _ _ _ _ pnSch_wf (by decide) (by decide) _ _ rfl
+      (fr _ _ _ _ pnSch_wf (by decide) (by decide) _ _ rfl
+        (fr _ _ _ _ pnSch_wf (by decide) (by decide) _ _ rfl
+          (memoRV_clear pnSch pnSch_wf _ _ m _ hP.n h1)))
+  · exact fr _ _ _ _ plSch_wf (by decide) (by decide) _ _ rfl
+      (fr _ _ _ _ plSch_wf (by decide) (by decide) _ _ rfl
+        (memoRV_clear plSch plSch_wf _ _ _ _
+          (fr _ _ _ _ plSch_wf (by decide) (by decide) _ _ rfl hP.l) h2))
+  · exact fr _ _ _ _ plsSch_wf (by decide) (by decide) _ _ rfl
+      (memoRV_clear plsSch plsSch_wf _ _ _ _
+        (fr _ _ _ _ plsSch_wf (by decide) (by decide) _ _ rfl
+          (fr _ _ _ _ plsSch_wf (by decide) (by decide) _ _ rfl hP.ls)) h3)
+  · exact memoRV_clear peSch peSch_wf _ _ _ _
+      (fr _ _ _ _ peSch_wf (by decide) (by decide) _ _ rfl
+        (fr _ _ _ _ peSch_wf (by decide) (by decide) _ _ rfl
+          (fr _ _ _ _ peSch_wf (by decide) (by decide) _ _ rfl hP.e))) h4
+  · exact (((f1.mono (by simp) (by simp)).trans (f2.mono (by simp) (by simp))).trans
+      (f3.mono (by simp) (by simp))).trans (f4.mono (by simp) (by simp))
+
+theorem vgStore_facts {m m' : Mem} {d k nm q l t x : Word}
+    (h : vgStore m d k nm q l t x = some m') (hd : d.toNat + 5 < 2 ^ 64) :
+    d.toNat + 5 < (m.arr64 EREC).size ∧
+    (m'.arr64 EREC)[d.toNat]? = some k ∧ (m'.arr64 EREC)[d.toNat + 1]? = some nm ∧
+    (m'.arr64 EREC)[d.toNat + 2]? = some q ∧ (m'.arr64 EREC)[d.toNat + 3]? = some l ∧
+    (m'.arr64 EREC)[d.toNat + 4]? = some t ∧ (m'.arr64 EREC)[d.toNat + 5]? = some x ∧
+    (∀ i < d.toNat, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?) ∧
+    (m'.arr64 EREC).size = (m.arr64 EREC).size ∧ MemFrame [EREC] [] m m' := by
+  unfold vgStore at h
+  split at h
+  · cases h
+  rename_i hc
+  cases h
+  have e1 : (d + 1).toNat = d.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  have e2 : (d + 2).toNat = d.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
+  have e3 : (d + 3).toNat = d.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
+  have e4 : (d + 4).toNat = d.toNat + 4 := by rw [UInt64.toNat_add]; simp; omega
+  have e5 : (d + 5).toNat = d.toNat + 5 := by rw [UInt64.toNat_add]; simp; omega
+  have hlt : d.toNat + 5 < (m.arr64 EREC).size := by
+    simp only [not_or, Nat.not_le] at hc; have := hc.2.2.2.2.2; rw [e5] at this; exact this
+  have fr : ∀ (m₁ : Mem) (i v : Word), MemFrame [EREC] [] m₁ (m₁.set64 EREC i v) :=
+    fun m₁ i v => MemFrame.set64 m₁ EREC (by decide) i v
+  have b0 : d.toNat < (m.arr64 EREC).size := by omega
+  have b1 : d.toNat + 1 < (m.arr64 EREC).size := by omega
+  have b2 : d.toNat + 2 < (m.arr64 EREC).size := by omega
+  have b3 : d.toNat + 3 < (m.arr64 EREC).size := by omega
+  have b4 : d.toNat + 4 < (m.arr64 EREC).size := by omega
+  refine ⟨hlt, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  all_goals (try intros)
+  all_goals (try simp only [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds,
+    Array.getElem?_setIfInBounds, size_set64, Array.size_setIfInBounds, e1, e2, e3, e4, e5])
+  all_goals (try simp [b0, b1, b2, b3, b4, hlt])
+  all_goals (try omega)
+  · rename_i i hi
+    simp [show d.toNat + 5 ≠ i by omega, show d.toNat + 4 ≠ i by omega,
+      show d.toNat + 3 ≠ i by omega, show d.toNat + 2 ≠ i by omega,
+      show d.toNat + 1 ≠ i by omega, show d.toNat ≠ i by omega]
+  · exact (((((fr _ _ _).trans (fr _ _ _)).trans (fr _ _ _)).trans (fr _ _ _)).trans
+      (fr _ _ _)).trans (fr _ _ _)
+
 end L.Arena
