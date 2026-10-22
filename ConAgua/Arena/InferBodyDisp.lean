@@ -129,7 +129,6 @@ structure InferCallees (p : Prog) : Prop where
   constTy : ConstTyAtOK p
   lit : InferLitCallees p
   eager : IsEagerReduceH p
-  bstk : BStkCallees p
   bcap : BStkCap
   proj : InferProjOK p
 
@@ -456,7 +455,7 @@ theorem inferBody_refines (p : Prog) (hq : InferAllProg p) (hc : InferCallees p)
     | succ k =>
     rw [← hd1, ← hd2] at hv
     exact coreRef_congr (inferBody_forall _ fe d.toNat (decE e) a₀ _ _ hv)
-      (fin (inferForall_refines p hq.leaf hq.bind hq.body hc.instList hc.bstk hc.bcap k (hk.mono (by omega))
+      (fin (inferForall_refines p hq.leaf hq.bind hq.body hc.instList hc.bcap k (hk.mono (by omega))
         F (by omega) (by omega) _ a₀ dn vis fe MM eb mode d _ _ hsl h1 h2) hW)
   | lam ty b =>
     obtain ⟨hg, h1, hd1, h2, hd2⟩ := hvr
@@ -467,7 +466,7 @@ theorem inferBody_refines (p : Prog) (hq : InferAllProg p) (hc : InferCallees p)
     | succ k =>
     rw [← hd1, ← hd2] at hv
     exact coreRef_congr (inferBody_lam _ fe d.toNat (decE e) a₀ _ _ hv)
-      (fin (inferLam_refines p hq.leaf hq.bind hq.body hc.instList hc.absRange hc.bstk hc.bcap k
+      (fin (inferLam_refines p hq.leaf hq.bind hq.body hc.instList hc.absRange hc.bcap k
         (hk.mono (by omega)) F (by omega) (by omega) _ a₀ dn vis fe MM eb mode d _ _ hsl h1 h2) hW)
   | app f x =>
     obtain ⟨hg, -⟩ := hvr
