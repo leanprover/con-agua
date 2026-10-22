@@ -270,6 +270,7 @@ def closeLams : FunDecl := lfn (bo, bl, i, body) locals (inner, closed, e) {
   inner := call close_lams(bo + 1, bl - 1, i + 1, body);
   closed := call abstract1_fast(⟪CWF⟫, inner, i, 0);
   e := call mk_lam(IW.u64[bo], closed);
+  if 4294967296 <= e { abort };
   return e
 }
 
@@ -278,6 +279,7 @@ def closeLams : FunDecl := lfn (bo, bl, i, body) locals (inner, closed, e) {
 def exprGetD : FunDecl := lfn (o, l, i) locals (x) {
   if i < l { return IW.u64[o + i] };
   x := call intern_bvar(0);
+  if 4294967296 <= x { abort };
   return x
 }
 

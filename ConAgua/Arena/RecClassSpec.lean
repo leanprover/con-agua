@@ -2,6 +2,7 @@ import ConAgua.Arena.IndSumSpec
 import ConAgua.Arena.RecClass
 import ConAgua.Arena.IndInstallSpec
 import ConAgua.Arena.IndView
+import ConAgua.Arena.IndMaster
 
 /-!
 # Refinements of `RecClass` (lane `induct`)
@@ -197,18 +198,20 @@ def exprGetDW (m : Mem) (o l i : Word) : Option (List Word × Mem) :=
   if i < l then
     (if (o + i).toNat < (m.arr64 IW).size then some ([rdW (m.arr64 IW) (o + i)], m) else none)
   else
-    match stubM "intern_bvar" m [0] with
+    match binternW m 0 with
     | none => none
-    | some (r, m') => some ([r.headD 0], m')
+    | some (r, m') => if 4294967296 ≤ r then none else some ([r], m')
 
-theorem exprGetD_spec (p : Prog) (hp : p.lookup "expr_get_d" = some exprGetD) (n : Nat) (s₀ : St)
+theorem exprGetD_spec (p : Prog) (hpf : p.lookup "bvar_find" = some bvarFind)
+    (hpp : p.lookup "bvar_push" = some bvarPush) (hib : p.lookup "intern_bvar" = some internBVar)
+    (hp : p.lookup "expr_get_d" = some exprGetD) (n : Nat) (s₀ : St)
     (o l i : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "expr_get_d" [o, l, i]
     ⦃fun r s' => LocEq s' s₀ ∧ exprGetDW s₀.mem o l i = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]; simp only [callFn, exprGetD]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      stubM_spec p "intern_bvar" n] <;>
+      internBVar_spec p hpf hpp hib n] <;>
     finish [exprGetDW]
 
 theorem exprGetDW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
@@ -233,26 +236,33 @@ theorem exprGetDW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
       · simp only [List.headD_cons]; rw [hoi, hw1]; exact hw3.symm
     · simp at h
   · simp only [hi, ite_false] at h
-    cases hs : stubM "intern_bvar" m [0] with
+    cases hs : binternW m 0 with
     | none => rw [hs] at h; simp at h
     | some rm =>
       obtain ⟨r1, m1⟩ := rm
       rw [hs] at h
-      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      by_cases hbig : 4294967296 ≤ r1
+      · simp [hbig] at h
+      simp only [hbig, ite_false, Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      obtain ⟨x, a', hrun, hS', hg, hd1, hd2⟩ := recInternBVar_spec dn vis fe 0 m m1 a r1 hs hS
+      obtain ⟨a', hrun, hS', hg⟩ := internBVar_stage hS 0 hs
       have hge : l.toNat ≤ i.toNat := by
         have : ¬ i.toNat < l.toNat := fun h => hi (UInt64.lt_iff_toNat_lt.mpr h)
         omega
-      refine ⟨x, a', ?_, hS', hg, hd1, by simpa using hd2⟩
+      have hlt : r1.toNat < 2 ^ 32 := by
+        have : ¬ (4294967296 : Nat) ≤ r1.toNat := hbig
+        omega
+      refine ⟨decE r1, a', ?_, hS', hg, by simpa using hlt, by simp [decE_eq]⟩
       have hn : xs[i.toNat]? = none := by
         rw [List.getElem?_eq_none_iff, decHL_length m hxs]; exact hge
       simp only [ConRon.Arena.exprGetD, hn]
       exact hrun
 
-/-- **`expr_get_d` refines `exprGetD`** (through the `intern_bvar` master stub). -/
+/-- **`expr_get_d` refines `exprGetD`** (through master's `intern_bvar`). -/
 @[refines ConRon.Arena.exprGetD]
-theorem exprGetD_refines (p : Prog) (hp : p.lookup "expr_get_d" = some exprGetD) (n : Nat)
+theorem exprGetD_refines (p : Prog) (hpf : p.lookup "bvar_find" = some bvarFind)
+    (hpp : p.lookup "bvar_push" = some bvarPush) (hib : p.lookup "intern_bvar" = some internBVar)
+    (hp : p.lookup "expr_get_d" = some exprGetD) (n : Nat)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (o l i : Word) (xs : List EIdx) (hS : StageR dn vis fe s₀.mem a₀)
     (hxs : decHL s₀.mem o.toNat l.toNat = some xs) (hb : o.toNat + l.toNat < 2 ^ 64) :
@@ -261,7 +271,7 @@ theorem exprGetD_refines (p : Prog) (hp : p.lookup "expr_get_d" = some exprGetD)
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.exprGetD xs i.toNat) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ (r.headD 0).toNat < 2 ^ 32 ∧
       decI (r.headD 0) = AM.res (ConRon.Arena.exprGetD xs i.toNat) a₀; ⊤⦄ := by
-  refine triple_post (exprGetD_spec p hp n s₀ o l i) ?_
+  refine triple_post (exprGetD_spec p hpf hpp hib hp n s₀ o l i) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨x, a', hrun, hS', hg, h1, h2⟩ := exprGetDW_ok dn vis fe _ _ a₀ o l i xs r hm hS hxs hb
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok (ConRon.Arena.exprGetD xs i.toNat) a₀ a' x hrun
@@ -446,17 +456,17 @@ def clK2 (bo : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (ra, m2) =>
     if bo.toNat < (m2.arr64 IW).size then
-      clK3 (stubM "mk_lam" m2 [rdW (m2.arr64 IW) bo, ra.headD 0])
+      clK3 (mkLamW m2 (rdW (m2.arr64 IW) bo) (ra.headD 0))
     else none
 
 /-- After `mk_lam`. -/
-def clK3 : Option (List Word × Mem) → Option (List Word × Mem)
+def clK3 : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (rb, m3) => some ([rb.headD 0], m3)
+  | some (rb, m3) => if 4294967296 ≤ rb then none else some ([rb], m3)
 end
 
 section arms
-variable (n : Nat) (m m1 m2 m3 : Mem) (bo bl i body : Word) (r ra rb : List Word)
+variable (n : Nat) (m m1 m2 m3 : Mem) (bo bl i body rb : Word) (r ra : List Word)
 theorem closeLamsW_nil (h : bl = 0) : closeLamsW (n + 1) m bo bl i body = some ([body], m) := by
   simp [closeLamsW, h]
 theorem closeLamsW_cons (h : bl ≠ 0) : closeLamsW (n + 1) m bo bl i body =
@@ -467,9 +477,11 @@ theorem clK1_some : clK1 bo i (some (r, m1)) =
 theorem clK2_oob (h : ¬ bo.toNat < (m2.arr64 IW).size) : clK2 bo (some (ra, m2)) = none := by
   simp [clK2, h]
 theorem clK2_ok (h : bo.toNat < (m2.arr64 IW).size) : clK2 bo (some (ra, m2)) =
-    clK3 (stubM "mk_lam" m2 [rdW (m2.arr64 IW) bo, ra.headD 0]) := by
+    clK3 (mkLamW m2 (rdW (m2.arr64 IW) bo) (ra.headD 0)) := by
   simp [clK2, h]
-theorem clK3_some : clK3 (some (rb, m3)) = some ([rb.headD 0], m3) := rfl
+theorem clK3_big (h : 4294967296 ≤ rb) : clK3 (some (rb, m3)) = none := by simp [clK3, h]
+theorem clK3_ok (h : ¬ 4294967296 ≤ rb) : clK3 (some (rb, m3)) = some ([rb], m3) := by
+  simp [clK3, h]
 end arms
 
 grind_pattern [ind_grind] closeLamsW_nil => closeLamsW (n + 1) m bo bl i body
@@ -477,9 +489,13 @@ grind_pattern [ind_grind] closeLamsW_cons => closeLamsW (n + 1) m bo bl i body
 grind_pattern [ind_grind] clK1_some => clK1 bo i (some (r, m1))
 grind_pattern [ind_grind] clK2_oob => clK2 bo (some (ra, m2))
 grind_pattern [ind_grind] clK2_ok => clK2 bo (some (ra, m2))
-grind_pattern [ind_grind] clK3_some => clK3 (some (rb, m3))
+grind_pattern [ind_grind] clK3_big => clK3 (some (rb, m3))
+grind_pattern [ind_grind] clK3_ok => clK3 (some (rb, m3))
 
-theorem closeLams_spec (p : Prog) (hp : p.lookup "close_lams" = some closeLams) (n : Nat) :
+theorem closeLams_spec (p : Prog) (hd : p.lookup "der_b" = some derB)
+    (hpf : p.lookup "lam_find" = some lamFind) (hpp : p.lookup "lam_push" = some lamPush)
+    (hpi : p.lookup "intern_lam" = some internLamL) (hml : p.lookup "mk_lam" = some mkLam)
+    (hp : p.lookup "close_lams" = some closeLams) (n : Nat) :
     ∀ (s₀ : St) (bo bl i body : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "close_lams" [bo, bl, i, body]
     ⦃fun r s' => LocEq s' s₀ ∧ closeLamsW n s₀.mem bo bl i body = some (r, s'.mem); ⊤⦄ := by
@@ -493,7 +509,7 @@ theorem closeLams_spec (p : Prog) (hp : p.lookup "close_lams" = some closeLams) 
     simp only [callFn, closeLams]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "abstract1_fast" n, stubM_spec p "mk_lam" n, ih] <;>
+        stubM_spec p "abstract1_fast" n, mkLam_spec p hd hpf hpp hpi hml n, ih] <;>
       finish (gen := 20)
 
 
@@ -567,16 +583,21 @@ theorem closeLamsW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IF
               have e : (m2.arr64 IW)[bo.toNat]? = (m.arr64 IW)[bo.toNat]? := this
               rw [e]; exact hw1
             rw [hrd] at h
-            cases hm : stubM "mk_lam" m2 [w, ra.headD 0] with
+            cases hm : mkLamW m2 w (ra.headD 0) with
             | none => rw [hm] at h; simp [clK3] at h
             | some rbm =>
               obtain ⟨rb, m3⟩ := rbm
-              rw [hm, clK3_some] at h
+              rw [hm] at h
+              by_cases hbig : 4294967296 ≤ rb
+              · rw [clK3_big m3 rb hbig] at h; simp at h
+              rw [clK3_ok m3 rb hbig] at h
               simp only [Option.some.injEq, Prod.mk.injEq] at h
               obtain ⟨rfl, rfl⟩ := h
-              obtain ⟨x3, a3, hrun3, hS3, hg3, hd31, hd32⟩ :=
-                recMkLam_spec dn vis fe w (ra.headD 0) hw2 hd21 m2 m3 a2 rb hm hS2
-              refine ⟨x3, a3, ?_, hS3, (hg1.trans hg2).trans hg3, by simpa using hd31, by simpa using hd32⟩
+              obtain ⟨a3, hrun3, hS3, hg3⟩ := mkLam_stage hS2 w (ra.headD 0) hm
+              have hlt : rb.toNat < 2 ^ 32 := by
+                have : ¬ (4294967296 : Nat) ≤ rb.toNat := hbig
+                omega
+              refine ⟨decE rb, a3, ?_, hS3, (hg1.trans hg2).trans hg3, by simpa using hlt, by simp [decE_eq]⟩
               rw [CWF_eq] at hrun2
               have hz : (0 : Word).toNat = 0 := rfl
               rw [hz] at hrun2
@@ -593,7 +614,10 @@ theorem closeLamsW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IF
 
 /-- **`close_lams` refines `closeLams`** (through the `abstract1_fast` and `mk_lam` stubs). -/
 @[refines ConRon.Arena.closeLams]
-theorem closeLams_refines (p : Prog) (hp : p.lookup "close_lams" = some closeLams) (n : Nat)
+theorem closeLams_refines (p : Prog) (hd : p.lookup "der_b" = some derB)
+    (hpf : p.lookup "lam_find" = some lamFind) (hpp : p.lookup "lam_push" = some lamPush)
+    (hpi : p.lookup "intern_lam" = some internLamL) (hml : p.lookup "mk_lam" = some mkLam)
+    (hp : p.lookup "close_lams" = some closeLams) (n : Nat)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (bo bl i body : Word) (bs : List EIdx) (hS : StageR dn vis fe s₀.mem a₀) (hb : H body)
     (hbs : decHL s₀.mem bo.toNat bl.toNat = some bs) (hbo : bo.toNat + bl.toNat < 2 ^ 64)
@@ -603,7 +627,7 @@ theorem closeLams_refines (p : Prog) (hp : p.lookup "close_lams" = some closeLam
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.closeLams bs i.toNat (decI body)) a₀) ∧
       IWGrow s₀.mem s'.mem ∧ (r.headD 0).toNat < 2 ^ 32 ∧
       decI (r.headD 0) = AM.res (ConRon.Arena.closeLams bs i.toNat (decI body)) a₀; ⊤⦄ := by
-  refine triple_post (closeLams_spec p hp n s₀ bo bl i body) ?_
+  refine triple_post (closeLams_spec p hd hpf hpp hpi hml hp n s₀ bo bl i body) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨x, a', hrun, hS', hg, h1, h2⟩ := closeLamsW_ok dn vis fe n _ _ a₀ bo bl i body bs r hm hS hb
     hbs hbo hbt hib
