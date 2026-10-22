@@ -60,7 +60,7 @@ theorem cvLpsA_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
     StageR dn vis fe m' a ∧ IWGrow m m' ∧
       decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some cv.levelParams ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
-  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_words hq
+  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice hq
   have e1 : rdW (m.arr64 EREC) (q + 1) = w1 :=
     rdW_of_get? (by rw [UInt64.toNat_add]; simp; omega) hw1
   have e2 : rdW (m.arr64 EREC) (q + 2) = w2 :=
