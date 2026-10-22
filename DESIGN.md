@@ -7886,3 +7886,14 @@ child dangled when it was interned (no `StoreWF` needed).
   after `intern_const`, D18 extended to `check_sum_ctors`. ~2.9k proof lines for ~205 L lines
   (**~14 per L line**, down from ~19, with `Sim`, `DecB`, program bundles).
 * Census: phase 8 **78 proven, 97 sorry, 42 written, 6 todo**; totals 719 proven / 140 sorry.
+
+### Landing 8: level lists too (`StoreDen.lsAll`, list counts in `LvlCnt`)
+* **`StoreDen.lsAll : LsAll a`**: every valid level-list handle reads back (the list twin of
+  `lvlAll`); `StoreDen.mono` takes it as its last argument. Kept by name/level steps (`LsAll.congr`,
+  `LsAll.of_ext`) and by list interning (`lsAll_internLsNode`: given the elements read back, the
+  new store has `LsAll` and the new handle reads back).
+* **`LvlCnt` covers the list table counts** (`CTL` 40, 41; `lvlCtlW`), so `LvlFree.of_ge` now needs
+  `42 ≤ x`. A list interning gets it from `lvlCnt_internLsNode` (`LsTables` only push); `CoreS.of_ls`
+  takes `hlsa`/`hlc` and uses `StackKept.of_frameL`; `ls1_call` now needs its element to read back.
+* **Why**: a list stays stored after a run (`lsNodeW_mono`), so `ls_den_later`/`lsNodeW_of_den`
+  read it back later — what whnf4's `instLP`/`LvlsEqDen` need for constants' level lists.

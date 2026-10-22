@@ -115,8 +115,8 @@ theorem BKept.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFr
   exact ⟨hf.2.1 137 hC, by rw [hb], fun j _ => by rw [hb]⟩
 
 /-- The `CTL` words of the level tables' counts (`succ` 6/7, `zero` 8/9, `max` 10/11, `imax`
-12/13, `param` 14/15) and the scratch flag (1). -/
-def lvlCtlW : List Word := [1, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+12/13, `param` 14/15), the level-list table's (40/41) and the scratch flag (1). -/
+def lvlCtlW : List Word := [1, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 40, 41]
 
 /-- A writer that avoids the level tables' counts and the scratch flag. -/
 def LvlFree (C : List Word) : Prop := ∀ x ∈ lvlCtlW, x ∉ C
@@ -124,20 +124,23 @@ def LvlFree (C : List Word) : Prop := ∀ x ∈ lvlCtlW, x ∉ C
 theorem LvlFree.intro {C : List Word} (h1 : (1 : Word) ∉ C) (h6 : (6 : Word) ∉ C)
     (h7 : (7 : Word) ∉ C) (h8 : (8 : Word) ∉ C) (h9 : (9 : Word) ∉ C) (h10 : (10 : Word) ∉ C)
     (h11 : (11 : Word) ∉ C) (h12 : (12 : Word) ∉ C) (h13 : (13 : Word) ∉ C) (h14 : (14 : Word) ∉ C)
-    (h15 : (15 : Word) ∉ C) : LvlFree C := by
+    (h15 : (15 : Word) ∉ C) (h40 : (40 : Word) ∉ C) (h41 : (41 : Word) ∉ C) : LvlFree C := by
   intro x hx
   simp only [lvlCtlW, List.mem_cons, List.mem_nil_iff, or_false] at hx
-  rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> assumption
+  rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+    assumption
 
 /-- Decide `LvlFree C` for a concrete `C`, word by word. -/
 macro "lvl_free" : tactic => `(tactic| exact LvlFree.intro (by decide) (by decide) (by decide)
-  (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide))
+  (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
+  (by decide) (by decide))
 
-theorem LvlFree.of_ge {C : List Word} (hC : ∀ x ∈ C, 16 ≤ x.toNat) : LvlFree C := by
+theorem LvlFree.of_ge {C : List Word} (hC : ∀ x ∈ C, 42 ≤ x.toNat) : LvlFree C := by
   intro x hx h
   have := hC x h
   simp only [lvlCtlW, List.mem_cons, List.mem_nil_iff, or_false] at hx
-  rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp at this
+  rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+    simp at this
 
 /-- **The level tables only grow** (lane `defeq2`): the scratch flag is kept and no level table's
 count drops, so a level handle `lv_node` accepts stays accepted (`lvNodeW_mono`). Part of

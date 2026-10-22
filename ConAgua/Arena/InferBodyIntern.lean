@@ -108,7 +108,12 @@ theorem CoreS.of_level {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
         (by rw [hL.pins]) (fun _ _ hk => .inl (hL.caches ▸ hk))
         (hf.1 EREC (fun h => by have := hA _ h; simp only [EREC, ArrId] at this; omega) (by decide))
         (fun x u hv => by simpa only [EStore.view, hL.pers, hL.scr, hL.son] using hv)
-        (fun x c us hv => .inl (by simpa only [EStore.view, hL.pers, hL.scr, hL.son] using hv)) hlv⟩,
+        (fun x c us hv => .inl (by simpa only [EStore.view, hL.pers, hL.scr, hL.son] using hv)) hlv
+        (hS.den.lsAll.of_ext (fun u hu => by
+            have e : a'.store.lss.view u = a.store.lss.view u := by
+              unfold LsStore.view; rw [hL.lsp, hL.lss, hL.lon]
+            rw [← e]; exact hu)
+          (lsExt_of_tables hL.lsp hL.lss hL.lon hL.ext))⟩,
     StackKept.of_frameL hf
       ⟨fun h => by have := hA _ h; simp only [SPN, ArrId] at this; omega,
        fun h => by have := hA _ h; simp only [BSTK, ArrId] at this; omega, hP⟩
@@ -229,7 +234,8 @@ theorem internSucc_core (hS : CoreS dn m a vis fe M eb) (u : Word) (hu : HW u)
       (fun c hc => by simp only [LNodeView.lchildren, List.mem_cons, List.mem_nil_iff, or_false] at hc; subst hc; exact hdu)
       (fun n hn => by simp [LNodeView.nchildren] at hn) (AM.run_of_ok _ _ hok)).1
     (lvlCnt_of_arena hS.arena.1 hR' (hf.2.1 1 (by decide))
-      (LTGrow.internLNode (AM.run_of_ok _ _ hok)).1 (LTGrow.internLNode (AM.run_of_ok _ _ hok)).2)
+      (LTGrow.internLNode (AM.run_of_ok _ _ hok)).1 (LTGrow.internLNode (AM.run_of_ok _ _ hok)).2
+      (by simp [hL.lsp]) (by simp [hL.lss]))
   have hw := internM_hw succSch SRecRel shash succSch_wf m _ _ _ hS.arena.1.succ (sMt m u) _ _ _ _
     (probe_homeG succSch m 0 _ _ (sprobeW_arm m u 0) _)
     (probe_homeG succSch m 1 _ _ (sprobeW_arm m u 1) _) _ (spushOK_room m) _ _ _ _ hI₂
@@ -260,7 +266,8 @@ theorem internImax_core (hS : CoreS dn m a vis fe M eb) (u v : Word) (hu : HW u)
         · exact hdv)
       (fun n hn => by simp [LNodeView.nchildren] at hn) (AM.run_of_ok _ _ hok)).1
     (lvlCnt_of_arena hS.arena.1 hR' (hf.2.1 1 (by decide))
-      (LTGrow.internLNode (AM.run_of_ok _ _ hok)).1 (LTGrow.internLNode (AM.run_of_ok _ _ hok)).2)
+      (LTGrow.internLNode (AM.run_of_ok _ _ hok)).1 (LTGrow.internLNode (AM.run_of_ok _ _ hok)).2
+      (by simp [hL.lsp]) (by simp [hL.lss]))
   have hw := internM_hw imaxSch IRecRel imhash iimaxSch_wf m _ _ _ hS.arena.1.imax (imMt m u v) _ _ _ _
     (probe_homeG imaxSch m 0 _ _ (iimprobeW_arm m u v 0) _)
     (probe_homeG imaxSch m 1 _ _ (iimprobeW_arm m u v 1) _) _ (iimpushOK_room m) _ _ _ _ hI₂
