@@ -79,6 +79,18 @@ theorem pos2_len_eq {aL nPc nI : Word} (h : nPc.toNat ≤ aL.toNat) :
   · intro e
     apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add, ← e]; exact (Nat.mod_eq_of_lt aL.toNat_lt).symm
 
+theorem pos2_contains_map (ws : List Word) (hw : ∀ w ∈ ws, H w) (x : Word) (hx : H x) :
+    (ws.map (decI : Word → NIdx)).contains (decI x) = ws.contains x := by
+  rw [Bool.eq_iff_iff]
+  simp only [List.contains_iff_mem, List.mem_map]
+  constructor
+  · rintro ⟨v, hv, e⟩
+    rw [decI_inj (hw v hv) hx e] at hv; exact hv
+  · intro h; exact ⟨x, h, rfl⟩
+
+theorem pos2_getD2 (vl : List Word) : vl.getD 2 0 = vl.tail.tail.headD 0 := by
+  rcases vl with _ | ⟨a, _ | ⟨b, _ | ⟨c, t⟩⟩⟩ <;> rfl
+
 section steps
 variable (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (hM : PosMemo dn vis fe)
   (hcs : CtorSums fe)
@@ -1015,6 +1027,105 @@ theorem contOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbO
     hpc, Bool.not_true, hrun4]
   simp only [heq, bne_self_eq_false, Bool.false_eq_true, ite_false]
   exact hrun5
+
+include hM in
+theorem appOK_step (n : Nat) (ih : NbOK dn vis fe n) : AppOK dn vis fe (n + 1) := by
+  obtain ⟨-, -, -, hCont, -, -, -, -, -, -, -⟩ := ih
+  intro m m' a ctx fu po pl kb hi w ns c prog NS r h hS hW hhi hw hns
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  rw [nbAppW_succ] at h
+  cases hga : stubM "get_app_args_f" m [CWF, w] with
+  | none => rw [hga] at h; simp [nbAppK1] at h
+  | some pr =>
+  obtain ⟨ra, m1⟩ := pr
+  rw [hga, nbAppK1_some] at h
+  obtain ⟨args, a1, hrun1, hS1, hg1, hargs, hargsb⟩ := getAppArgs_spec dn vis fe CWF w hw m m1 a ra hga hS
+  rw [CWF_eq] at hrun1
+  have e0 : ra.getD 0 0 = ra.headD 0 := by cases ra <;> rfl
+  rw [e0, getD1_eq] at hargs hargsb
+  cases hgf : stubM "get_app_fn_f" m1 [CWF, w] with
+  | none => rw [hgf] at h; simp [nbAppK2] at h
+  | some pr2 =>
+  obtain ⟨rh, m2⟩ := pr2
+  rw [hgf, nbAppK2_some] at h
+  obtain ⟨hd, a2, hrun2, hS2, hg2, hhdH, hhdd⟩ := getAppFn_spec dn vis fe CWF w hw m1 m2 a1 rh hgf hS1
+  rw [CWF_eq] at hrun2
+  have hg12 := hg1.trans hg2
+  by_cases hev : eViewW m2 (rh.headD 0) = []
+  · rw [if_pos hev] at h; cases h
+  rw [if_neg hev] at h
+  obtain ⟨v, hview, hvr⟩ := eViewW_ok m2 a2 hS2.1.arena.1 (rh.headD 0) hev
+  have hvrun : (view hd).run a2 = .ok (v, a2) := by rw [← hhdd, ← decE_eq]; exact view_run _ _ _ hview
+  have hargs2 : decHL m2 (ra.headD 0).toNat (ra.tail.headD 0).toNat = some args := by
+    rw [decHL_agree (RdS.of_grow hg2) (fun j hj => by omega)]; exact hargs
+  by_cases h1 : (eViewW m2 (rh.headD 0)).headD 0 = 1
+  · rw [if_pos h1] at h
+    -- a hole
+    obtain ⟨i, ty, rfl⟩ : ∃ i ty, v = .fvar i ty := by
+      cases v <;> simp only [ViewR] at hvr <;> (try (rw [h1] at hvr; simp at hvr)) <;> exact ⟨_, _, rfl⟩
+    obtain ⟨-, hi1, -, -⟩ := hvr
+    rw [getD1_eq] at hi1
+    cases hpf : pfW n m2 vis ctx po pl kb hi ((eViewW m2 (rh.headD 0)).tail.headD 0) (ra.headD 0) (ra.tail.headD 0) with
+    | none => rw [hpf] at h; simp [nbAppK4] at h
+    | some pr3 =>
+    obtain ⟨rp, m3⟩ := pr3
+    rw [hpf, nbAppK4_some] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    have hhi0 : c.hiAt 0 < 2 ^ 64 := by have := hW.hb; simp only [NestCtx.hiAt] at this ⊢; omega
+    obtain ⟨k, a3, hK, hS3, hg3, hk⟩ := pfW_ok dn vis fe hM hpf hS2 (hW.grow hg12).u (hW.grow hg12).hs hhi0 hargs2
+      (by have := hg2.1; omega)
+    refine ⟨(k, decI w, NS), a3, ?_, hS3, hg12.trans hg3, by simpa using hk, rfl,
+      by simpa using (hns.grow (hg12.trans hg3) htop)⟩
+    rw [hi1] at hK
+    simp only [posAppT, StateT.run_bind, hrun1, except_ok_bind, hrun2, hvrun]
+    rw [hK]; rfl
+  rw [if_neg h1] at h
+  have h3 : (eViewW m2 (rh.headD 0)).headD 0 = 3 := by
+    by_cases h3 : (eViewW m2 (rh.headD 0)).headD 0 = 3
+    · exact h3
+    · rw [if_neg h3] at h; cases h
+  rw [if_pos h3] at h
+  -- a constant: a container
+  obtain ⟨nn, us, rfl⟩ : ∃ nn us, v = .const nn us := by
+    cases v <;> simp only [ViewR] at hvr <;> (try (rw [h3] at hvr; simp at hvr)) <;> exact ⟨_, _, rfl⟩
+  obtain ⟨-, hnH, hnd, husH, husd⟩ := hvr
+  rw [getD1_eq] at hnH hnd
+  rw [pos2_getD2] at husH husd
+  have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
+  obtain ⟨hn2, hnb2, -, -, -, -⟩ := ctx_fields (hW.grow hg12).u.dec (hW.grow hg12).u.inn htop2
+  have hne2 := ctx_names_end (hW.grow hg12).u.dec (hW.grow hg12).u.inn (hW.grow hg12).u.sl htop2
+  obtain ⟨ws, hws, hwsd, hwsH⟩ := slR_of_decHL m2 _ _ _ hn2 (by omega)
+  simp only [UInt64.ofNat_toNat] at hws
+  cases hco : containsW n m2 (rdW (m2.arr64 IW) ctx) (rdW (m2.arr64 IW) (ctx + 1))
+      ((eViewW m2 (rh.headD 0)).tail.headD 0) with
+  | none => rw [hco] at h; simp [nbAppK5] at h
+  | some o =>
+  rw [hco, nbAppK5_some] at h
+  have ho := containsW_ok n m2 _ _ _ o ws hws hco
+  by_cases hon : o ≠ 0
+  · rw [if_pos hon] at h; cases h
+  rw [if_neg hon] at h
+  have hnotin : c.names.contains nn = false := by
+    rw [hwsd, ← hnd, pos2_contains_map ws hwsH _ hnH]
+    cases e : ws.contains ((eViewW m2 (rh.headD 0)).tail.headD 0) with
+    | false => rfl
+    | true => rw [e] at ho; simp at hon; rw [hon] at ho; exact absurd ho (by decide)
+  cases hct : nbContW n m2 vis ctx fu po pl kb ((eViewW m2 (rh.headD 0)).tail.headD 0)
+      ((eViewW m2 (rh.headD 0)).tail.tail.headD 0) (ra.headD 0) (ra.tail.headD 0) ns with
+  | none => rw [hct] at h; simp [nbAppK6] at h
+  | some pr4 =>
+  obtain ⟨rc, m4⟩ := pr4
+  rw [hct, nbAppK6_some] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨x, a4, hrun4, hS4, hg4, hk4, hns4⟩ := hCont m2 m4 a2 ctx fu po pl kb _ _ _ _ ns c prog args NS rc hct hS2
+    (hW.grow hg12) hnH husH hargs2 (by have := hg2.1; omega) (hns.grow hg12 htop)
+  rw [hnd, husd] at hrun4
+  refine ⟨(x.1, decI w, x.2), a4, ?_, hS4, hg12.trans hg4, by simpa using hk4, rfl, by simpa using hns4⟩
+  simp only [posAppT, StateT.run_bind, hrun1, except_ok_bind, hrun2, hvrun, hnotin, Bool.false_eq_true, ite_false,
+    hrun4]
+  rfl
 
 end steps
 
