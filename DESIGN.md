@@ -6142,3 +6142,14 @@ the finding of lane `decls2`.
 
 Census at landing 1 (`--no-build`): phase 2 **139 proven, 15 sorry, 86 written, 91 todo** (lane
 start 136 / 11 / 93 / 91); totals 558 proven / 71 sorry of 1352.
+
+### Landing 3 (interim: helpers `rec`, `pos` merged at their current heads)
+* Helper `rec`: `classNPcOf`, `blockNestedBit` (proven), `classReadMinor`, `classReadSlot(s)`,
+  `classRead`, `targetMajorAt` (`sorry` through stubs); its own composition helper `RSim`
+  (`RecSim.lean`) and `RecStab.lean`. Helper `pos`: `NestCtx.rootHoles`, `nestHoleAt` (proven),
+  `fvMapAt`, `nestHoleImg`, `replaceFVars(Go)`, `nestContainer` (through `mk_app_n`'s stub),
+  `nestUniform`/`nestOccAny` pieces. L changes by both: loops to self-recursion, handle guards.
+* Lemma-name clashes between the two helpers' files (`rec2/4/5_specW`, `frK*`, `rowPW_eq`,
+  `iwN_grow`) were renamed on `pos`'s side at the merge (`posRec*_specW`, `pfrK*`, …); `IndAll`
+  caught them.
+* Census: phase 8 **65 proven, 47 sorry, 103 written, 8 todo**.
