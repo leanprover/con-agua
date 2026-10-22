@@ -27,7 +27,7 @@ theorem envConsts_eq (dn : NIdx → Option ConLeche.Name) (m : Mem) :
   | succ n ih =>
     rw [List.range_succ, List.reverse_append, List.reverse_singleton, List.singleton_append,
       List.mapM_cons, ih]
-    simp [cdec, Option.bind_eq_bind]
+    simp [cdec, Option.bind_eq_bind, Option.bind_assoc]
 
 theorem cdec_mono {dn : NIdx → Option ConLeche.Name} {A A' E E' : Array Word} (hA : ArrExt A A') :
     ∀ (j : Nat) (B : List IConstantInfo), (∀ i, i < j → E'[i]? = E[i]?) →
@@ -47,14 +47,14 @@ theorem cdec_join {dn : NIdx → Option ConLeche.Name} {A E : Array Word} :
   | [], j, B, _, h => by simpa using h
   | ci :: L, j, B, ⟨⟨ptr, hp, hd⟩, hrest⟩, h => by
     have ih := cdec_join L j B (by
-      have : j + (ci :: L).length - 1 - 1 = j + L.length - 1 := by simp; omega
+      have : j + (ci :: L).length - 1 - 1 = j + L.length - 1 := by simp only [List.length_cons]; omega
       rw [← this]; exact hrest) h
-    have e : j + (ci :: L).length = (j + L.length) + 1 := by simp; omega
+    have e : j + (ci :: L).length = (j + L.length) + 1 := by simp only [List.length_cons]; omega
     rw [e]
     simp only [cdec, Option.bind_eq_bind, ih, Option.bind_some]
-    have e2 : j + (ci :: L).length - 1 = j + L.length := by simp; omega
+    have e2 : j + (ci :: L).length - 1 = j + L.length := by simp only [List.length_cons]; omega
     rw [e2] at hp
-    simp [L.Arena.nat?, hp, hd]
+    simp [nat?, hp, hd]
 
 theorem cdec_split {dn : NIdx → Option ConLeche.Name} {A E : Array Word} :
     ∀ (c j : Nat) (cs : List IConstantInfo), cdec dn A E (j + c) = some cs →
