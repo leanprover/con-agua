@@ -12,6 +12,9 @@ set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
+theorem nat?_erecP {m : Mem} {i : Nat} {w : Word} (h : i < erecTop m)
+    (hw : (m.arr64 EREC)[i]? = some w) : nat? (erecP m) i = some w.toNat := nat?_of_pre h hw
+
 theorem decHint_bound {a : Array Word} {q : Nat} {h : ConLeche.ReducibilityHint}
     (hd : decHint a q = some h) : q < a.size := by
   unfold decHint at hd
@@ -89,7 +92,7 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     · rw [← hr', hdr]; exact hdlo
     · rw [← hr', hdr]; omega
     · rw [← hr', hdr]
-      exact decCI_ax (by have h := nat?_of_pre (m := m1) (T := erecTop m1) (by omega) hkind; simpa using h) hQ.1
+      exact decCI_ax (by have h := nat?_erecP (m := m1) (i := d) (by omega) hkind; simpa using h) hQ.1
   · -- defn
     have hK : kk = 1 := (Option.some.inj (hkk.symm.trans hk))
     have hkw0 : kw = 1 := UInt64.toNat_inj.mp (by rw [hkwk, hK]; rfl)
@@ -109,10 +112,10 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     obtain ⟨wv, hwv, hwvl, rfl⟩ := hd?_some he
     obtain ⟨hlt5, hm5⟩ := preE_get_lt hwv
     have hb6 := decHint_bound hhh
-    obtain ⟨a', pm1, x, ⟨a1, pm1, hrun1, hrun2⟩, hDf, hPf, hcp, hfr, hg, hts', d, hdr, hdlo, hdhi,
+    obtain ⟨a', pm1, x, ⟨aA, pmA, hrun1, hrun2⟩, hDf, hPf, hcp, hfr, hg, hts', d, hdr, hdlo, hdhi,
       hkind, hdcv, hd5, w6, w7, e6, e7, s6, s7⟩ :=
       defn_rel p hp n m a pm f q D cv 1 wv dl m1 hD hP hsz hts hcv hkwm hm5 hwvl (by omega) hDt hcl
-    have hrun2' : (promoteE pm1 f.toNat (decI wv)).run a1 = .ok ((pm1, x.2), a') := hrun2
+    have hrun2' : (promoteE pmA f.toNat (decI wv)).run aA = .ok ((pm1, x.2), a') := hrun2
     have hhint : decHint (erecP m1) (d + 6) = some hh := by
       refine decHint_move' (a := preE m D) (b := erecP m1) (i := q.toNat + 6) (j := d + 6) ?_ ?_ hhh
       · rw [e6, preE_get, if_pos (by omega)]; exact s6.symm
@@ -126,7 +129,7 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     · rw [← hr', hdr]; exact hdlo
     · rw [← hr', hdr]; omega
     · rw [← hr', hdr]
-      exact decCI_df (by have h := nat?_of_pre (m := m1) (T := erecTop m1) (by omega) hkind; simpa using h) hdcv hd5 hhint
+      exact decCI_df (by have h := nat?_erecP (m := m1) (i := d) (by omega) hkind; simpa using h) hdcv hd5 hhint
   · -- thm
     have hK : kk = 2 := (Option.some.inj (hkk.symm.trans hk))
     have hkw0 : kw = 2 := UInt64.toNat_inj.mp (by rw [hkwk, hK]; rfl)
@@ -151,7 +154,7 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     · rw [← hr', hdr]; exact hdlo
     · rw [← hr', hdr]; omega
     · rw [← hr', hdr]
-      exact decCI_th (by have h := nat?_of_pre (m := m1) (T := erecTop m1) (by omega) hkind; simpa using h) hQ.1
+      exact decCI_th (by have h := nat?_erecP (m := m1) (i := d) (by omega) hkind; simpa using h) hQ.1
   · -- ind
     have hK : kk = 3 := (Option.some.inj (hkk.symm.trans hk))
     have hkw0 : kw = 3 := UInt64.toNat_inj.mp (by rw [hkwk, hK]; rfl)
@@ -169,7 +172,7 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     have hr' : dl.headD 0 = r.headD 0 := hr
     have hpre := preE_size_le m D
     have hb := decCaps_bound hcp
-    obtain ⟨a', pm1, x, ⟨a1, pm1, hrun1, hrun2⟩, hDf, hPf, hcp', hfr, hg, hts', d, hdr, hdlo, hdhi,
+    obtain ⟨a', pm1, x, ⟨aA, pmA, hrun1, hrun2⟩, hDf, hPf, hcp', hfr, hg, hts', d, hdr, hdlo, hdhi,
       hkind, hdcv, hdcaps⟩ :=
       ind_rel p hp n m a pm f q D dn cv caps 3 dl m1 hD hP hsz hts hcv hcp hkwm (by omega) hDt hcl
     refine ⟨a', pm1, .indInfo x.1 x.2, ?_, hDf, hPf, hcp', hfr, hg, hts', ?_, ?_, ?_⟩
@@ -177,7 +180,7 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     · rw [← hr', hdr]; exact hdlo
     · rw [← hr', hdr]; omega
     · rw [← hr', hdr]
-      exact decCI_in (by have h := nat?_of_pre (m := m1) (T := erecTop m1) (by omega) hkind; simpa using h) hdcv hdcaps
+      exact decCI_in (by have h := nat?_erecP (m := m1) (i := d) (by omega) hkind; simpa using h) hdcv hdcaps
   · -- ctor
     have hK : kk = 4 := (Option.some.inj (hkk.symm.trans hk))
     have hkw0 : kw = 4 := UInt64.toNat_inj.mp (by rw [hkwk, hK]; rfl)
@@ -199,12 +202,12 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     obtain ⟨a', pm1, cv', hrun, hDf, hPf, hcp', hfr, hg, hts', d, hdr, hdlo, hdhi,
       hkind, hdcv, hn5, hn6⟩ :=
       ctor_rel p hp n m a pm f q D cv 4 w5 w6 dl m1 hD hP hsz hts hcv hkwm hw5 hw6 (by omega) hDt hcl
-    refine ⟨a', pm1, .ctorInfo cv' np nf, ?_, hDf, hPf, hcp', hfr, hg, hts', ?_, ?_, ?_⟩
+    refine ⟨a', pm1, .ctorInfo cv' w5.toNat w6.toNat, ?_, hDf, hPf, hcp', hfr, hg, hts', ?_, ?_, ?_⟩
     · simp only [promoteCI]; rw [run_bind_ok hrun]; rfl
     · rw [← hr', hdr]; exact hdlo
     · rw [← hr', hdr]; omega
     · rw [← hr', hdr]
-      exact decCI_ct (by have h := nat?_of_pre (m := m1) (T := erecTop m1) (by omega) hkind; simpa using h) hdcv (by simp [nat?, hn5]) (by simp [nat?, hn6])
+      exact decCI_ct (by have h := nat?_erecP (m := m1) (i := d) (by omega) hkind; simpa using h) hdcv (by simp [nat?, hn5]) (by simp [nat?, hn6])
   · -- rec
     have hK : kk = 5 := (Option.some.inj (hkk.symm.trans hk))
     have hkw0 : kw = 5 := UInt64.toNat_inj.mp (by rw [hkwk, hK]; rfl)
@@ -225,16 +228,16 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     obtain ⟨w6, hw6, rfl, hlt6⟩ := nat_word_pre hrp
     obtain ⟨w7, hw7, rfl, hlt7⟩ := nat_word_pre hro
     obtain ⟨w8, hw8, rfl, hlt8⟩ := nat_word_pre hrc
-    obtain ⟨a', pm1, x, ⟨a1, pm1, hrun1, hrun2⟩, hDf, hPf, hcp', hfr, hg, hts', d, hdr, hdlo, hdhi,
+    obtain ⟨a', pm1, x, ⟨aA, pmA, hrun1, hrun2⟩, hDf, hPf, hcp', hfr, hg, hts', d, hdr, hdlo, hdhi,
       hkind, hdcv, hn5, hn6, hn8, pw, hn7, hdr7⟩ :=
       rec_rel p hp n m a pm f q D cv rls 5 w5 w6 w7 w8 dl m1 hD hP hsz hts hcv hkwm hw5 hw6 hw7 hw8
         hrl (by omega) hDt hcl
-    refine ⟨a', pm1, .recInfo x.1 mi rp x.2, ?_, hDf, hPf, hcp', hfr, hg, hts', ?_, ?_, ?_⟩
+    refine ⟨a', pm1, .recInfo x.1 w5.toNat w6.toNat x.2, ?_, hDf, hPf, hcp', hfr, hg, hts', ?_, ?_, ?_⟩
     · simp only [promoteCI]; rw [run_bind_ok hrun1]; simp only; rw [run_bind_ok hrun2]; rfl
     · rw [← hr', hdr]; exact hdlo
     · rw [← hr', hdr]; omega
     · rw [← hr', hdr]
-      exact decCI_rc (by have h := nat?_of_pre (m := m1) (T := erecTop m1) (by omega) hkind; simpa using h) hdcv hn5 hn6 hn7 hn8 hdr7
+      exact decCI_rc (by have h := nat?_erecP (m := m1) (i := d) (by omega) hkind; simpa using h) hdcv hn5 hn6 hn7 hn8 hdr7
   · -- proj
     have hK : kk = 6 := (Option.some.inj (hkk.symm.trans hk))
     have hkw0 : kw = 6 := UInt64.toNat_inj.mp (by rw [hkwk, hK]; rfl)
@@ -259,7 +262,7 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     · rw [← hr']; omega
     · rw [← hr']; omega
     · rw [← hr']
-      exact decCI_pj (by have h := nat?_of_pre (m := m1) (T := erecTop m1) (by omega) hker; simpa using h) hdec
+      exact decCI_pj (by simp [nat?, hker]) hdec
 
 end rel
 
