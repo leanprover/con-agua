@@ -861,10 +861,32 @@ def structEtaCertGoL : FunDecl :=
   return r
 }
 
+/-- `structEtaCertWith` past the constructor's spine: the type's head and spine, then the keys
+(split off for the proofs). Leaves its slices on the stack. -/
+-- con-ron: ConRon/Arena/Core.lean:1492-1538 ConRon.Arena.structEtaCertWith
+@[l_impl ConRon.Arena.structEtaCertWith]
+def structEtaCertWtbL : FunDecl :=
+    lfn (mode, vis, d, b, us, c, p, ao, an, wtb) locals (hh, t, i, T, us2, f, q, to, tn, r) {
+  hh := call get_app_fn(wtb);
+  if hh >> 28 != 3 { return 0 };
+  t := (hh >> 27) & 1;
+  i := hh & 134217727;
+  if t != 0 && CTL.u64[1] == 0 { abort };
+  if CTL.u64[18 + t] <= i { abort };
+  T := CREC.u64[i * 4 + t * 2];
+  us2 := CREC.u64[i * 4 + t * 2 + 1];
+  (f, q) := call env_find(T, vis);
+  if f == 0 { return 0 };
+  if EREC.u64[q] != 3 { return 0 };
+  (to, tn) := call get_app_args(wtb);
+  r := call struct_eta_cert_go(mode, vis, d, b, us, c, p, T, q, us2, ao, an, to, tn);
+  return r
+}
+
 /-- con-ron: ConRon/Arena/Core.lean:1492-1538 ConRon.Arena.structEtaCertWith -/
 @[l_impl ConRon.Arena.structEtaCertWith]
 def structEtaCertWithL : FunDecl :=
-    lfn (mode, vis, d, a, b, wtb) locals (top, hh, t, i, c, us, f, p, ao, an, nf, T, us2, q, to, tn, r) {
+    lfn (mode, vis, d, a, b, wtb) locals (top, hh, t, i, c, us, f, p, ao, an, nf, r) {
   hh := call get_app_fn(a);
   if hh >> 28 != 3 { return 0 };
   t := (hh >> 27) & 1;
@@ -883,24 +905,7 @@ def structEtaCertWithL : FunDecl :=
     CTL.u64[136] := top;
     return 0
   };
-  hh := call get_app_fn(wtb);
-  if hh >> 28 != 3 {
-    CTL.u64[136] := top;
-    return 0
-  };
-  t := (hh >> 27) & 1;
-  i := hh & 134217727;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[18 + t] <= i { abort };
-  T := CREC.u64[i * 4 + t * 2];
-  us2 := CREC.u64[i * 4 + t * 2 + 1];
-  (f, q) := call env_find(T, vis);
-  if f == 0 || EREC.u64[q] != 3 {
-    CTL.u64[136] := top;
-    return 0
-  };
-  (to, tn) := call get_app_args(wtb);
-  r := call struct_eta_cert_go(mode, vis, d, b, us, c, p, T, q, us2, ao, an, to, tn);
+  r := call struct_eta_cert_wtb(mode, vis, d, b, us, c, p, ao, an, wtb);
   CTL.u64[136] := top;
   return r
 }
@@ -1128,7 +1133,8 @@ def defeqFns : Prog :=
    ("lazy_delta_proj_reduction", lazyDeltaProjReductionL), ("defeq_proj_pair", defeqProjPairL),
    ("prop_irrel", propIrrelL), ("eta_cert_ty", etaCertTyL), ("eta_cert_body", etaCertBodyL),
    ("eta_cert", etaCertL), ("eta_ctor_shape", etaCtorShapeL),
-   ("struct_eta_cert_tail", structEtaCertTailL), ("struct_eta_cert_go", structEtaCertGoL), ("struct_eta_cert_with", structEtaCertWithL),
+   ("struct_eta_cert_tail", structEtaCertTailL), ("struct_eta_cert_go", structEtaCertGoL), ("struct_eta_cert_wtb", structEtaCertWtbL),
+   ("struct_eta_cert_with", structEtaCertWithL),
    ("struct_eta_cert", structEtaCertL), ("struct_unit_cert", structUnitCertL),
    ("stuck_irrel", stuckIrrelL), ("stuck_str", stuckStrL), ("stuck_app", stuckAppL),
    ("defeq_stuck", defeqStuckL), ("defeq_tail", defeqTailL), ("defeq_body", defeqBodyL)]

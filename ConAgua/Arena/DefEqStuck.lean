@@ -36,6 +36,7 @@ structure StuckProg (p : Prog) : Prop where
   ers : p.lookup "er_slice_eq" = some erSliceEqL
   setTail : p.lookup "struct_eta_cert_tail" = some structEtaCertTailL
   setGo : p.lookup "struct_eta_cert_go" = some structEtaCertGoL
+  setWtb : p.lookup "struct_eta_cert_wtb" = some structEtaCertWtbL
   setWith : p.lookup "struct_eta_cert_with" = some structEtaCertWithL
   setCert : p.lookup "struct_eta_cert" = some structEtaCertL
   sunit : p.lookup "struct_unit_cert" = some structUnitCertL
