@@ -7945,3 +7945,33 @@ child dangled when it was interned (no `StoreWF` needed).
 * `CapsNeverZeroCore.lean`: `CoreS.frame_lhs` (a writer of `LH`/`SPN` keeps `CoreS`),
   `StackKept.of_lhsFrame`, and the proof. `KnotAllProg` gained `caps : LvSubProg p`;
   `KnotCallees` has 2 fields left (`instLP`, `recFireLevels`, both whnf4's).
+
+### The ROM constant readers refine the twin (helper `decls4-rom`)
+
+`romRefs_of` (moved from `CIReadSpec.lean` to `ConAgua/Rom/CIReadRefs.lean`, above the proofs)
+is proved except for the quotient blocks: `rom_ci`, `rom_cv`, `rom_expr_pin`, `rom_and_pin`
+(`@[refines]` of `eqA` … `ofReduceBoolA`, the reduce pins, `andPinDecls`) and `rom_basis_decls(_a)`
+for kinds `0‥3` sorry-free (axioms `propext`, `Classical.choice`, `Quot.sound`).
+* **Shape.** Word models through `callW` (`CIReadRefW.lean`, no model recursive, every spec one
+  `vcgen`; `finish (gen := 30)`). The invariant `RInv m₀ a₀ T m a` (`CIReadRefBase.lean`):
+  `ArenaD`, the twin keeping `cp`, writes only to `ExprA`/`ExprC`, `EREC`, `IW` and their tops,
+  `IWGrow` from the entry, `IWOK`, the pool top `T`; `RInv.stage` gives `StageR` back at the
+  entry's environment. A record is decoded by **`Holds SE SI f m x`** ("`f` gives `x` in every
+  memory agreeing with `m` on the `EREC` words `SE` and the `IW` words `SI`"): it survives every
+  later write outside its words (`Holds.keep`, `EKeep`), and at the end is `DecB` (`Holds.decB`).
+  The ROM side reuses `romNameW_ok`, `romExprW_ok` (`MemoR` at a fresh memo); the region's layout
+  is `slot_pos` (`ciTable`, `flatten_drop`), the values' fit is `decide +kernel` (< 1 s).
+* **L changes.** `rci_fresh` also resets the level stack top `CTL[131]` (`rom_levels` needs
+  `stkTop < 2^61`, which nothing in `StageR` bounds; nothing holds the stack between two ROM
+  reads). `rci_ci`'s kind arms return instead of falling through (the merged paths made its
+  `vcgen` spec run out of simp steps). `Checker/Prog.lean` unchanged (same names), `checkerProg_wf`
+  builds. `scripts/checker_prog.py` stops at an unrelated, pre-existing problem
+  (`builtin_prelude` calls `pre_front_run`).
+* **Open (`sorry`): `romBasisRef_quot`, `romBasisARef_quot`** (kind `4`). `Quot`'s `sortZ` is
+  `.ifAllZero [u]`: `decCaps` reads `u`'s handle back through `dn`, and nothing in `StageR`
+  relates `dn` to the store, so the statement is false at `dn := fun _ => none`. It needs a
+  hypothesis such as "`dn` reads back the store's names" (and the reader interns `u` where the twin
+  keeps it as a value: a no-op on the store only because `u` is already a level parameter, which
+  the proof would have to show). Every other pinned constant has `sortZ = .never` or
+  `.ifAllZero []` (`capsFits`).
+* `CIReadRefCaps.lean` elaborates in ~70 s (one 200-line proof, many `omega`s in a large context).
