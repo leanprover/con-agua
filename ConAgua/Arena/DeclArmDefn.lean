@@ -1,5 +1,5 @@
 import ConAgua.Arena.DeclArmOpaque
-import ConAgua.Rom.PinSets
+import ConAgua.Arena.DeclPins
 
 /-!
 # The definition arm `check_decl_defn(i, vis)` (lane `decls3`)
@@ -113,64 +113,6 @@ def DivGateSpec (p : Prog) (pins : List INatOpPinSet) : Prop :=
       (fun m m' a r x => KeepPost dn w fe2 decUnit m m' a r x ∧ PinSetsR m' pins ∧
         MemFrame stepA stepC m m')
 
-/-! ## The variant list across a growing record pool -/
-
-theorem rdW_keep {a a' : Array Word} {T : Nat} (h : ∀ i < T, a'[i]? = a[i]?) {x : Word}
-    (hx : x.toNat < T) : rdW a' x = rdW a x := by
-  simp only [rdW, h _ hx]
-
-theorem SliceR.grow {m m' : Mem} {o l : Word} {hs : List EIdx} (h : SliceR m o l hs)
-    (hg : IWGrow m m') : SliceR m' o l hs := by
-  obtain ⟨hb, hl, hw⟩ := h
-  obtain ⟨-, het, -, hek⟩ := hg
-  have het' : erecTop m ≤ erecTop m' := het
-  have e0 : erTop m = erecTop m := rfl
-  refine ⟨by omega, hl, fun i hi => ?_⟩
-  have hlt : (o + UInt64.ofNat i).toNat < erecTop m := by
-    have : (rdW (m.arr64 CTL) 129).toNat < 2 ^ 64 := UInt64.toNat_lt_size _
-    have : erecTop m < 2 ^ 64 := this
-    rw [toNat_add_small o i (by omega)]; omega
-  rw [rdW_keep hek hlt]; exact hw i hi
-
-theorem PinSetR.grow {m m' : Mem} {r : Word} {ip : INatOpPinSet} (h : PinSetR m r ip)
-    (hg : IWGrow m m') : PinSetR m' r ip := by
-  obtain ⟨hb, hs, hh⟩ := h
-  have het : erecTop m ≤ erecTop m' := hg.2.1
-  have hek := hg.2.2.2
-  have e0 : erTop m = erecTop m := rfl
-  have htop : erecTop m < 2 ^ 64 := UInt64.toNat_lt_size _
-  refine ⟨by omega, SliceR.grow hs hg, fun j hj => ?_⟩
-  have e8 : (r + 8 + 2 * UInt64.ofNat j).toNat = r.toNat + 8 + 2 * j := by
-    have : (2 * UInt64.ofNat j).toNat = 2 * j := by
-      rw [UInt64.toNat_mul, UInt64.toNat_ofNat']; simp; omega
-    rw [UInt64.toNat_add, UInt64.toNat_add, this]; simp; omega
-  have e9 : (r + 9 + 2 * UInt64.ofNat j).toNat = r.toNat + 9 + 2 * j := by
-    have : (2 * UInt64.ofNat j).toNat = 2 * j := by
-      rw [UInt64.toNat_mul, UInt64.toNat_ofNat']; simp; omega
-    rw [UInt64.toNat_add, UInt64.toNat_add, this]; simp; omega
-  have h8 : rdW (m'.arr64 EREC) (r + 8 + 2 * UInt64.ofNat j) =
-      rdW (m.arr64 EREC) (r + 8 + 2 * UInt64.ofNat j) := rdW_keep hek (by rw [e8]; omega)
-  have h9 : rdW (m'.arr64 EREC) (r + 9 + 2 * UInt64.ofNat j) =
-      rdW (m.arr64 EREC) (r + 9 + 2 * UInt64.ofNat j) := rdW_keep hek (by rw [e9]; omega)
-  have := SliceR.grow (hh j hj) hg
-  unfold HdrR at this ⊢
-  rw [h8, h9]; exact this
-
-/-- **The variant list survives a run that grows the pools and leaves `CTL[150]`, `CTL[151]`.** -/
-theorem PinSetsR.grow {m m' : Mem} {ips : List INatOpPinSet} (h : PinSetsR m ips)
-    (hg : IWGrow m m') (h150 : rdW (m'.arr64 CTL) 150 = rdW (m.arr64 CTL) 150)
-    (h151 : rdW (m'.arr64 CTL) 151 = rdW (m.arr64 CTL) 151) : PinSetsR m' ips := by
-  obtain ⟨hc, hb, hr⟩ := h
-  have het : erecTop m ≤ erecTop m' := hg.2.1
-  have hek := hg.2.2.2
-  have e0 : erTop m = erecTop m := rfl
-  have htop : erecTop m < 2 ^ 64 := UInt64.toNat_lt_size _
-  refine ⟨by rw [h151]; exact hc, by rw [h150]; omega, fun k hk => ?_⟩
-  have ek : (rdW (m.arr64 CTL) 150 + UInt64.ofNat k).toNat = (rdW (m.arr64 CTL) 150).toNat + k :=
-    toNat_add_small _ k (by omega)
-  rw [h150, rdW_keep hek (by rw [ek]; omega)]
-  exact PinSetR.grow (hr k hk) hg
-
 /-! ## The model -/
 
 section model
@@ -257,7 +199,7 @@ structure DefnProg (p : Prog) (pins : List INatOpPinSet) : Prop where
 /-- A frame of the step's write set keeps the variant list. -/
 theorem PinSetsR.step {m m' : Mem} {ips : List INatOpPinSet} (h : PinSetsR m ips)
     (hg : IWGrow m m') (hf : MemFrame stepA stepC m m') : PinSetsR m' ips :=
-  PinSetsR.grow h hg (hf.2.1 _ step_pins.1) (hf.2.1 _ step_pins.2)
+  PinSetsR.grow h (IWGrow.recGrow hg) (hf.2.1 _ step_pins.1) (hf.2.1 _ step_pins.2)
 
 /-- **The definition arm at the stage relation.** -/
 theorem cdfW_ok {p : Prog} (hA : ArmProg p) (hV : ValProg p) {pins : List INatOpPinSet}
@@ -368,13 +310,12 @@ theorem checkDeclDefn_loop' {p : Prog} (hA : ArmProg p) (hV : ValProg p)
     (ds : Array IDeclaration) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
       (i : Word) (cv : IConstantVal) (v : EIdx) (hh : ConLeche.ReducibilityHint), i.toNat < ds.size →
-      ds[i.toNat]? = some (.defnDecl cv v hh) → LoopR dn s₀.mem a₀ vis fe pend ds →
-      PinSetsR s₀.mem pins →
+      ds[i.toNat]? = some (.defnDecl cv v hh) → LoopR pins dn s₀.mem a₀ vis fe pend ds →
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_decl_defn" [i, vis]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkDecl V pins fe (.defnDecl cv v hh)) a₀ ∧
-      LoopR dn s'.mem (AM.st (checkDecl V pins fe (.defnDecl cv v hh)) a₀) (r.headD 0)
+      LoopR pins dn s'.mem (AM.st (checkDecl V pins fe (.defnDecl cv v hh)) a₀) (r.headD 0)
         (AM.res (checkDecl V pins fe (.defnDecl cv v hh)) a₀) pend ds; ⊤⦄ := by
-  intro n s₀ a₀ vis fe pend i cv v hh hi hd hR hPS
+  intro n s₀ a₀ vis fe pend i cv v hh hi hd hR
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun (cdf_specW p hG.df n s₀ i vis)
@@ -382,7 +323,7 @@ theorem checkDeclDefn_loop' {p : Prog} (hA : ArmProg p) (hV : ValProg p)
   have hd' : ds[i.toNat] = .defnDecl cv v hh := by
     rw [Array.getElem?_eq_getElem hi] at hd; exact Option.some.inj hd
   obtain ⟨fe', a', hrun', hS', hg', hf⟩ :=
-    cdfW_ok hA hV hG hW ⟨hR.check, hR.iw⟩ hPS hR.decls hi hd'
+    cdfW_ok hA hV hG hW ⟨hR.check, hR.iw⟩ hR.pinsets hR.decls hi hd'
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
   refine ⟨hloc, hok, ?_⟩
   rw [hst, hres]

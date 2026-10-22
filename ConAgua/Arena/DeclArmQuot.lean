@@ -351,10 +351,10 @@ theorem checkDeclQuot_loop' {p : Prog} (hA : ArmProg p) (hR : RecProg p) (hQ : Q
     (ds : Array IDeclaration) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
       (i : Word) (k : ConLeche.QuotKind) (cv : IConstantVal), i.toNat < ds.size →
-      ds[i.toNat]? = some (.quotDecl k cv) → LoopR dn s₀.mem a₀ vis fe pend ds →
+      ds[i.toNat]? = some (.quotDecl k cv) → LoopR pins dn s₀.mem a₀ vis fe pend ds →
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_decl_quot" [i, vis]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkDecl V pins fe (.quotDecl k cv)) a₀ ∧
-      LoopR dn s'.mem (AM.st (checkDecl V pins fe (.quotDecl k cv)) a₀) (r.headD 0)
+      LoopR pins dn s'.mem (AM.st (checkDecl V pins fe (.quotDecl k cv)) a₀) (r.headD 0)
         (AM.res (checkDecl V pins fe (.quotDecl k cv)) a₀) pend ds; ⊤⦄ := by
   intro n s₀ a₀ vis fe pend i k cv hi hd hLR
   apply M.triple_of_run

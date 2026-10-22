@@ -522,10 +522,10 @@ theorem checkDeclAxiom_loop' {p : Prog} (hA : ArmProg p) (hX : AxProg p)
     (ds : Array IDeclaration) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
       (i : Word) (cv : IConstantVal), i.toNat < ds.size →
-      ds[i.toNat]? = some (.axiomDecl cv) → LoopR dn s₀.mem a₀ vis fe pend ds →
+      ds[i.toNat]? = some (.axiomDecl cv) → LoopR pins dn s₀.mem a₀ vis fe pend ds →
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_decl_axiom" [i, vis]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkDecl V pins fe (.axiomDecl cv)) a₀ ∧
-      LoopR dn s'.mem (AM.st (checkDecl V pins fe (.axiomDecl cv)) a₀) (r.headD 0)
+      LoopR pins dn s'.mem (AM.st (checkDecl V pins fe (.axiomDecl cv)) a₀) (r.headD 0)
         (AM.res (checkDecl V pins fe (.axiomDecl cv)) a₀) pend ds; ⊤⦄ := by
   intro n s₀ a₀ vis fe pend i cv hi hd hLR
   apply M.triple_of_run

@@ -1,4 +1,5 @@
 import ConAgua.Arena.DeclArmAxiom
+import ConAgua.Arena.DeclArmDefn
 
 /-!
 # `check_decl` refines `checkDecl` at the loop's relation (lane `decls3`)
@@ -9,9 +10,11 @@ front's records (`DeclsR`: every record is an axiom, definition, theorem, opaque
 `check_ind_decl`) is never taken here; it becomes reachable with the front's inductive records
 (lane `indproofs2`).
 
-Each arm's spec at the loop's relation is a theorem: `checkDeclThm_loop` (`DeclArmLoop.lean`) is
-proved; the other four are stated below with `sorry` (listed in DESIGN.md) until their callees'
-specs are in (the canonical comparisons, the ROM readers, the `Nat` gate).
+Each arm's spec at the loop's relation is a theorem, all five proved: the theorem arm
+(`DeclArmLoop.lean`), the opaque arm (`DeclArmOpaque.lean`), and through specs that are fields of
+`CheckDeclProg` (to be discharged by the callees' proofs): the quotient arm (`CvCanonSpec`), the
+axiom arm (`CiCanonSpec`), the definition arm (`DefnProg`: the two gates' specs, `NatGateSpec`,
+`DivGateSpec`). The callees' own stub specs (the ROM readers, `lvl_eq_c`) are `sorry`.
 -/
 
 open ConRon.Arena
@@ -42,6 +45,8 @@ structure CheckDeclProg (p : Prog) : Prop where
   crp : CrpProg p
   quot : QuotProg p
   axp : AxProg p
+  /-- The definition arm's two gates (`DeclArmDefn.lean`), at every variant list. -/
+  defn : ∀ pins, DefnProg p pins
 
 /-! ## The arms not proved yet -/
 
@@ -52,10 +57,10 @@ variable {p : Prog} (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Na
 /-- The shape of an arm's spec at the loop's relation, for the record `d` at `i`. -/
 def ArmSpec (p : Prog) (f : FnName) (d : IDeclaration) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
-    (i : Word), i.toNat < ds.size → ds[i.toNat]? = some d → LoopR dn s₀.mem a₀ vis fe pend ds →
+    (i : Word), i.toNat < ds.size → ds[i.toNat]? = some d → LoopR pins dn s₀.mem a₀ vis fe pend ds →
   ⦃fun s => s = s₀⦄ invoke p (exec p n) f [i, vis]
   ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkDecl V pins fe d) a₀ ∧
-    LoopR dn s'.mem (AM.st (checkDecl V pins fe d) a₀) (r.headD 0)
+    LoopR pins dn s'.mem (AM.st (checkDecl V pins fe d) a₀) (r.headD 0)
       (AM.res (checkDecl V pins fe d) a₀) pend ds; ⊤⦄
 
 /-- `check_decl_axiom` (`DeclArmAxiom.lean`; through `CiCanonSpec`, a field of `AxProg`). -/
@@ -64,13 +69,13 @@ theorem checkDeclAxiom_loop (hP : CheckDeclProg p) (hdn : DnInj dn) (cv : IConst
   fun n s₀ a₀ vis fe pend i hi hd hR =>
     checkDeclAxiom_loop' hP.arm hP.axp pins dn hdn ds n s₀ a₀ vis fe pend i cv hi hd hR
 
-/-- `check_decl_defn` (`sorry`). Proved as `checkDeclDefn_loop'` (`DeclArmDefn.lean`) through the
-two gates' specs (`DefnProg`: `NatGateSpec`, `DivGateSpec`, helpers `decls3-nat`/`decls3-divmod`)
-and lane `romload`'s `PinSetsR s₀.mem pins` at the arm's entry: what is missing here is that
-fact, i.e. the loop's relation carrying the variant list (`LoopR` with `pins`). -/
+/-- `check_decl_defn` (`DeclArmDefn.lean`; through the gates' specs, `DefnProg`, a field of
+`CheckDeclProg`). -/
 theorem checkDeclDefn_loop (hP : CheckDeclProg p) (cv : IConstantVal) (v : EIdx)
     (h : ConLeche.ReducibilityHint) :
-    ArmSpec pins dn ds p "check_decl_defn" (.defnDecl cv v h) := sorry
+    ArmSpec pins dn ds p "check_decl_defn" (.defnDecl cv v h) :=
+  fun n s₀ a₀ vis fe pend i hi hd hR =>
+    checkDeclDefn_loop' hP.arm hP.val pins (hP.defn pins) dn ds n s₀ a₀ vis fe pend i cv v h hi hd hR
 
 /-- `check_decl_opaque` (`DeclArmOpaque.lean`). -/
 theorem checkDeclOpaque_loop (hP : CheckDeclProg p) (hdn : DnInj dn) (cv : IConstantVal)
@@ -154,9 +159,9 @@ theorem arm_callW {p : Prog} {pins : List INatOpPinSet} {dn : NIdx → Option Co
     {ds : Array IDeclaration} {f : FnName} {d : IDeclaration} (hA : ArmSpec pins dn ds p f d)
     {n : Nat} {m m' : Mem} {a : AState} {vis : Word} {fe : IFEnv} {pend : Array PendingCheck}
     {i : Word} {r : List Word} (hi : i.toNat < ds.size) (hd : ds[i.toNat]? = some d)
-    (hR : LoopR dn m a vis fe pend ds) (h : cdRet (callW p n f [i, vis] m) = some (r, m')) :
+    (hR : LoopR pins dn m a vis fe pend ds) (h : cdRet (callW p n f [i, vis] m) = some (r, m')) :
     AM.ok (checkDecl V pins fe d) a ∧
-      LoopR dn m' (AM.st (checkDecl V pins fe d) a) (r.headD 0) (AM.res (checkDecl V pins fe d) a)
+      LoopR pins dn m' (AM.st (checkDecl V pins fe d) a) (r.headD 0) (AM.res (checkDecl V pins fe d) a)
         pend ds := by
   cases h1 : callW p n f [i, vis] m with
   | none => rw [h1] at h; cases h

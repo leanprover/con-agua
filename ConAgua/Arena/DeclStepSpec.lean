@@ -69,16 +69,17 @@ theorem step_pmemo : (∀ b ∈ stepA, b < 146 ∨ 149 < b) ∧
     obtain ⟨k, ⟨hk, -, -, -, hr⟩, rfl⟩ := hx
     rw [UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)]; exact hr
 
-theorem LoopR.of_step {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis vis' : Word} {fe fe' : IFEnv}
-    {pend : Array PendingCheck} {ds : Array IDeclaration} (h : LoopR dn m a vis fe pend ds)
+theorem LoopR.of_step {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis vis' : Word} {fe fe' : IFEnv}
+    {pend : Array PendingCheck} {ds : Array IDeclaration} (h : LoopR pins dn m a vis fe pend ds)
     (hS : L.Ind.StageR dn vis' fe' m' a') (hf : MemFrame stepA stepC m m')
-    (hx : ArrExt (erecP m) (erecP m')) : LoopR dn m' a' vis' fe' pend ds := by
+    (hx : ArrExt (erecP m) (erecP m')) : LoopR pins dn m' a' vis' fe' pend ds := by
   have hP : m'.arr64 PEND = m.arr64 PEND := hf.1 _ step_keeps.1 (by decide)
   have hD1 : m'.arr64 DECL = m.arr64 DECL := hf.1 _ step_keeps.2.1 (by decide)
   have hD2 : m'.arr64 DLP = m.arr64 DLP := hf.1 _ step_keeps.2.2.1 (by decide)
   have hc : rdW (m'.arr64 CTL) 130 = rdW (m.arr64 CTL) 130 := hf.2.1 _ step_keeps.2.2.2
   exact ⟨hS.1, h.pend.ext hP hc hx, by rw [hD1, hD2]; exact h.decls, hS.2,
-    h.pmemo.imp fun _ hq => hq.frame step_pmemo.1 step_pmemo.2 hf⟩
+    h.pmemo.imp fun _ hq => hq.frame step_pmemo.1 step_pmemo.2 hf,
+    PinSetsR.grow h.pinsets (RecGrow.of_ext h.iw hx) (hf.2.1 _ step_pins.1) (hf.2.1 _ step_pins.2)⟩
 
 section specs
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
@@ -90,10 +91,10 @@ core and the walks): from the loop's relation, the loop's relation after it. -/
 theorem checkValueGroup_spec (hm : mode = .verified) (hP : CvgProg p) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
       (g : Word) (vg : ValueGroup), decVG (erecP s₀.mem) g.toNat = some vg →
-      LoopR dn s₀.mem a₀ vis fe pend ds →
+      LoopR pins dn s₀.mem a₀ vis fe pend ds →
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_value_group" [vis, g]
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (checkValueGroup mode fe vg) a₀ ∧
-      LoopR dn s'.mem (AM.st (checkValueGroup mode fe vg) a₀) vis fe pend ds; ⊤⦄ := by
+      LoopR pins dn s'.mem (AM.st (checkValueGroup mode fe vg) a₀) vis fe pend ds; ⊤⦄ := by
   intro n s₀ a₀ vis fe pend g vg hg hR
   subst hm
   apply M.triple_of_run
