@@ -5265,6 +5265,21 @@ fuel of the top-level run bounds every nested call's), as the whnf slots already
 | `ArRangeSpec.lean` | 173 | 64 s |
 | `ArRangeRefine.lean` | 480 | 1.2 s |
 | `HasFvar.lean` + `HasFvarRefine.lean` | 149 | < 2 s |
+
+### `bvarB`, `looseBVarsBoundedFast` (`BvarB{,Refine}.lean`)
+
+`bvar_b(f, e)` refines `bvarB F e`, `loose_bvars_bounded_fast(f, k, e)` refines
+`looseBVarsBoundedFast F k e`, both under `ArenaD` (**no `sorry`**; the stub interfaces' names and
+arities of lanes `decls`/`indproofs`, `f` unused). `fvarB`'s proof for the bvar range: `der_b`, on
+`32767` `bb_memo` (`bbMemoW_correct`, `ArenaR`); `DerR` across `bb_memo` by `bbW_frame` (the
+`frW_frame` induction renamed: `BMEMO`, `CTL[24‥25]`) and `keeps_bvarBoundMemo`.
+
+Census, phase 4, after this lane: 62 proven / 1 sorry / 1 written / 49 todo (before `abstract1`
+landed: 36 proven / 74 todo, counted after it). Left in phase 4 (todo): `instantiate1LiftGo`/`Fast`,
+`instLPGo`/`Fast`, `leavesSubGo`, `wscopedBGo`/`Fast`, `fvarLeavesGo`/`Fast`, `stripLams`/`stripPis`,
+`substLevelList`/`substLMemoAt`/`substLsMemoAt`, `leafGuard`/`leafMem`, `fvarTypeD`, `takeEidx`
+(the twin's own helpers `internRebuilt*`, `eidxCopyUpto`, `lastEidx` stay todo: inlined in L, reached
+from walks not yet ported).
 ## Definitional equality, inference, the knot: L code top down (2026-10-22, lane `defeq`)
 
 Phases 6 and 7 (ROADMAP §1): con-ron's `Arena/Core.lean:2439-3675` and the helpers it reaches
