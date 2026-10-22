@@ -519,7 +519,7 @@ end decoders
 /-- The memory with both pools cut at their tops. -/
 def truncM (m : Mem) : Mem :=
   ⟨m.bytes, (m.words.set! IW ((m.arr64 IW).extract 0 (iwTop m))).set! EREC
-      ((m.arr64 EREC).extract 0 (erTop m))⟩
+      ((m.arr64 EREC).extract 0 (erTop m)), m.glob⟩
 
 /-- A word of the cut `IW`: the pool's word below the top. -/
 theorem truncM_iw_get? (m : Mem) (i : Nat) :

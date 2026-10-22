@@ -100,6 +100,7 @@ def _root_.L.Stmt.noPB : L.Stmt → Bool
   | .ite c s t => c.noPB && s.noPB && t.noPB
   | .while c s => c.noPB && s.noPB
   | .ret es | .call _ _ es => es.all L.Expr.noPB
+  | .gset _ e => e.noPB
   | _ => true
 
 theorem _root_.L.Expr.subPB_noPB (bs : List UInt8) : ∀ e : L.Expr, e.noPB = true → e.subPB bs = e := by
