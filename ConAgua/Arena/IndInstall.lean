@@ -82,84 +82,68 @@ def blockCapsAtErCopyGo : FunDecl := lfn (d, s, l) locals (u) {
   return 0
 }
 
-/-- `block_caps_at_finish(p, caps, coff, clen)`: the fields shared by both ctor-count branches —
-`sortZ` (the stub writes it at `caps + 7`), `all` (the block's member names, copied into `EREC`),
-`nparams`, `ctors` (the names of the ctors slice `(coff, clen)`, copied into `EREC`). -/
+/-- `block_caps_at(p, mi, is_rec)`: member `mi`'s `IIndCaps`, a fresh 15-word `IW` record (the
+`EREC` layout of `decCaps`; `cons_block_inds` copies it into the former's record). At exactly one
+constructor `c`: `eta`, `etaCtor`, `etaParams`, `etaFields`, `unitlike`, `unitParams`, `ruleK`
+(AENEAS_FINDINGS F18); else (no member, or another ctor count) their defaults `0`. At every
+member the result sort's zero-ness (`lv_zero_caps`, three words), `all` (the member names, copied
+into `EREC`), `nparams`, `ctors` (the member's ctor names, copied into `EREC`). Every field is
+computed first, the record written last (three consecutive `rec5`s) (lane `indproofs2`: round 2 wrote the record across
+calls, below the record pool's top, which the stage relation cannot follow; and `ruleK` took the
+`isProp` word unnormalised, wrong for a word other than `0`/`1`). -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:47-92 ConRon.Arena.blockCapsAt
 @[l_impl ConRon.Arena.blockCapsAt]
-def blockCapsAtFinish : FunDecl := lfn (p, caps, coff, clen) locals
-    (z, namesO, namesL, allQ, allL, ctNO, ctNL, ctQ, ctL) {
-  z := call lv_zero_caps(IW.u64[p + 6], caps + 7);
+def blockCapsAt : FunDecl := lfn (p, mi, isRec) locals
+    (coff, clen, one, ms, w0, w1, w2, w3, w4, w6, z0, z1, z2, caps) {
+  (coff, clen, one, ms) := call block_caps_head(p, mi);
+  if one == 1 {
+    (w0, w1, w2, w3, w4, w6) := call block_caps_one(p, ms, isRec)
+  } else {
+    w0 := 0; w1 := 0; w2 := 0; w3 := 0; w4 := 0; w6 := 0
+  };
+  (z0, z1, z2) := call lv_zero_caps(IW.u64[p + 6]);
+  caps := call block_caps_fin(p, coff, clen, w0, w1, w2, w3, w4, w6, z0, z1, z2);
+  return caps
+}
+
+/-- `block_caps_fin(p, coff, clen, w0, w1, w2, w3, w4, w6, z0, z1, z2)`: `blockCapsAt`'s record —
+the member names and the ctor names copied into `EREC`, then the 15 words (three consecutive
+`rec5`s at the pool top). -/
+-- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:47-92 ConRon.Arena.blockCapsAt
+@[l_impl ConRon.Arena.blockCapsAt]
+def blockCapsFin : FunDecl := lfn (p, coff, clen, w0, w1, w2, w3, w4, w6, z0, z1, z2) locals
+    (namesO, namesL, allQ, allL, ctNO, ctNL, ctQ, ctL, np, caps, u) {
   (namesO, namesL) := call block_shape_member_names(p);
   (allQ, allL) := call block_caps_at_er_copy(namesO, namesL);
-  EREC.u64[caps + 10] := allQ;
-  EREC.u64[caps + 11] := allL;
-  EREC.u64[caps + 12] := IW.u64[p + 4];
   (ctNO, ctNL) := call block_caps_ctor_names(coff, clen);
   (ctQ, ctL) := call block_caps_at_er_copy(ctNO, ctNL);
-  EREC.u64[caps + 13] := ctQ;
-  EREC.u64[caps + 14] := ctL;
+  np := IW.u64[p + 4];
+  caps := call rec5(w0, w1, w2, w3, w4);
+  u := call rec5(w2, w6, z0, z1, z2);
+  u := call rec5(allQ, allL, np, ctQ, ctL);
   return caps
 }
 
-/-- `block_caps_at_one(p, ms, is_rec)`: the branch at exactly one constructor `c` — `eta`,
-`unitlike`, `ruleK` computed by branches (AENEAS_FINDINGS F18), `sortZ`/`all`/`nparams`/`ctors`
-shared with the other branch. -/
+/-- `block_caps_head(p, mi)`: member `mi`'s constructor slice `(coff, clen)` (`(0, 0)` past the
+members), whether it has exactly one constructor, and its record pointer. -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:47-92 ConRon.Arena.blockCapsAt
 @[l_impl ConRon.Arena.blockCapsAt]
-def blockCapsAtOne : FunDecl := lfn (p, ms, isRec) locals
-    (nIdx, coff, c, cv, nF, isPropW, mlen, caps) {
-  nIdx := IW.u64[ms + 1];
-  coff := IW.u64[ms + 2];
-  c := IW.u64[coff];
-  cv := IW.u64[c];
-  nF := IW.u64[c + 1];
-  isPropW := IW.u64[p + 8];
-  mlen := IW.u64[p + 1];
-  caps := call erec_alloc(15);
-  EREC.u64[caps] := u64(nIdx == 0) & u64(isPropW == 0) & u64(isRec == 0);
-  EREC.u64[caps + 1] := EREC.u64[cv];
-  EREC.u64[caps + 2] := IW.u64[p + 4];
-  EREC.u64[caps + 3] := nF;
-  EREC.u64[caps + 4] := u64(nIdx == 0) & u64(nF == 0) & u64(isRec == 0);
-  EREC.u64[caps + 5] := IW.u64[p + 4];
-  EREC.u64[caps + 6] := u64(mlen == 1) & u64(nF == 0) & isPropW;
-  caps := call block_caps_at_finish(p, caps, coff, 1);
-  return caps
+def blockCapsHead : FunDecl := lfn (p, mi) locals (ms) {
+  if IW.u64[p + 1] <= mi { return (0, 0, 0, 0) };
+  ms := IW.u64[IW.u64[p] + mi];
+  return (IW.u64[ms + 2], IW.u64[ms + 3], u64(IW.u64[ms + 3] == 1), ms)
 }
 
-/-- `block_caps_at_rest(p, coff, clen)`: the branch at any other ctor count (0 or ≥ 2): the
-explicit fields default to their `IIndCaps` defaults (`false`/`0`). -/
+/-- `block_caps_one(p, ms, is_rec)`: the fields of exactly one constructor `c` — `eta`,
+`etaCtor`, `etaParams` (= `unitParams`), `etaFields`, `unitlike`, `ruleK` (AENEAS_FINDINGS F18;
+`isProp` normalised to `0`/`1`). -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:47-92 ConRon.Arena.blockCapsAt
 @[l_impl ConRon.Arena.blockCapsAt]
-def blockCapsAtRest : FunDecl := lfn (p, coff, clen) locals (caps) {
-  caps := call erec_alloc(15);
-  EREC.u64[caps] := 0;
-  EREC.u64[caps + 1] := 0;
-  EREC.u64[caps + 2] := 0;
-  EREC.u64[caps + 3] := 0;
-  EREC.u64[caps + 4] := 0;
-  EREC.u64[caps + 5] := 0;
-  EREC.u64[caps + 6] := 0;
-  caps := call block_caps_at_finish(p, caps, coff, clen);
-  return caps
-}
-
-/-- `block_caps_at(p, mi, is_rec)`: member `mi`'s `IIndCaps` — at no member (`p.members[mi]?` is
-`none`) or more than one ctor, the shared-defaults branch at the member's own ctors slice
-(`(0, 0)` when there is no member). -/
--- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:47-92 ConRon.Arena.blockCapsAt
-@[l_impl ConRon.Arena.blockCapsAt]
-def blockCapsAt : FunDecl := lfn (p, mi, isRec) locals (moff, mlen, ms, coff, clen, caps) {
-  moff := IW.u64[p]; mlen := IW.u64[p + 1];
-  coff := 0; clen := 0;
-  if mi < mlen {
-    ms := IW.u64[moff + mi];
-    coff := IW.u64[ms + 2]; clen := IW.u64[ms + 3];
-    if clen == 1 { caps := call block_caps_at_one(p, ms, isRec); return caps }
-  };
-  caps := call block_caps_at_rest(p, coff, clen);
-  return caps
+def blockCapsOne : FunDecl := lfn (p, ms, isRec) locals (nIdx, c, nF, isP) {
+  nIdx := IW.u64[ms + 1]; c := IW.u64[IW.u64[ms + 2]]; nF := IW.u64[c + 1];
+  isP := u64(IW.u64[p + 8] != 0);
+  return (u64(nIdx == 0) & u64(isP == 0) & u64(isRec == 0), EREC.u64[IW.u64[c]], IW.u64[p + 4], nF,
+    u64(nIdx == 0) & u64(nF == 0) & u64(isRec == 0), u64(IW.u64[p + 1] == 1) & u64(nF == 0) & isP)
 }
 
 /-! ## `piDomsMentionAny`, `blockRawRec`: official's `is_rec` -/
@@ -302,25 +286,38 @@ def checkBlockAgree : FunDecl := lfn (vis, nP, cvTa0, s0, restO, restL) locals
   return 0
 }
 
-/-- `cons_block_inds(p1, is_rec, cvTas.off, cvTas.len, vis)`: the members' formers consed, in
-block order, each with its capability record at `is_rec`; returns the new view. -/
+/-- `cons_block_inds(p1, is_rec, cvTas.off, cvTas.len, vis, i)`: the members' formers consed, in
+block order, each with its capability record at `is_rec` (member `i` first), by recursion as the
+twin's; the `.indInfo` record (kind `3`, the constant's four words, the capability record's 15) is
+written right after its allocation. Returns the new view. -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:181-190 ConRon.Arena.consBlockInds
 @[l_impl ConRon.Arena.consBlockInds]
-def consBlockInds : FunDecl := lfn (p1, isRec, cvO, cvL, vis) locals (i, cv, caps, rec, j) {
-  i := 0;
-  while i < cvL {
-    cv := IW.u64[cvO + i];
-    caps := call block_caps_at(p1, i, isRec);
-    rec := call erec_alloc(20);
-    EREC.u64[rec] := 3;
-    j := 0;
-    while j < 4 { EREC.u64[rec + 1 + j] := EREC.u64[cv + j]; j += 1 };
-    j := 0;
-    while j < 15 { EREC.u64[rec + 5 + j] := EREC.u64[caps + j]; j += 1 };
-    vis := call env_push(vis, rec);
-    i += 1
-  };
-  return vis
+def consBlockInds : FunDecl := lfn (p1, isRec, cvO, cvL, vis, i) locals (cv, caps, rec, v1, v2) {
+  if cvL == 0 { return vis };
+  cv := IW.u64[cvO];
+  caps := call block_caps_at(p1, i, isRec);
+  rec := call erec_alloc(20);
+  EREC.u64[rec] := 3;
+  EREC.u64[rec + 1] := EREC.u64[cv]; EREC.u64[rec + 2] := EREC.u64[cv + 1];
+  EREC.u64[rec + 3] := EREC.u64[cv + 2]; EREC.u64[rec + 4] := EREC.u64[cv + 3];
+  EREC.u64[rec + 5] := IW.u64[caps + 0];
+  EREC.u64[rec + 6] := IW.u64[caps + 1];
+  EREC.u64[rec + 7] := IW.u64[caps + 2];
+  EREC.u64[rec + 8] := IW.u64[caps + 3];
+  EREC.u64[rec + 9] := IW.u64[caps + 4];
+  EREC.u64[rec + 10] := IW.u64[caps + 5];
+  EREC.u64[rec + 11] := IW.u64[caps + 6];
+  EREC.u64[rec + 12] := IW.u64[caps + 7];
+  EREC.u64[rec + 13] := IW.u64[caps + 8];
+  EREC.u64[rec + 14] := IW.u64[caps + 9];
+  EREC.u64[rec + 15] := IW.u64[caps + 10];
+  EREC.u64[rec + 16] := IW.u64[caps + 11];
+  EREC.u64[rec + 17] := IW.u64[caps + 12];
+  EREC.u64[rec + 18] := IW.u64[caps + 13];
+  EREC.u64[rec + 19] := IW.u64[caps + 14];
+  v1 := call env_push(vis, rec);
+  v2 := call cons_block_inds(p1, isRec, cvO + 1, cvL - 1, v1, i + 1);
+  return v2
 }
 
 /-- `check_block_inds_cv_tas(cvTa0, rest.off, rest.len)`: `cvTa0 :: rest.map (·.1)`, the
@@ -361,7 +358,7 @@ def checkBlockInds : FunDecl := lfn (vis, p, isRec) locals
   u := call check_block_agree(vis, nP, cvTa0, s0, cvsO, cvsL);
   p1 := call block_shape_with_sort(p, s0);
   (cvTasO, cvTasL) := call check_block_inds_cv_tas(cvTa0, cvsO, cvsL);
-  fe1 := call cons_block_inds(p1, isRec, cvTasO, cvTasL, vis);
+  fe1 := call cons_block_inds(p1, isRec, cvTasO, cvTasL, vis, 0);
   return (fe1, cvTasO, cvTasL, p1)
 }
 
@@ -767,8 +764,7 @@ def checkBlock : FunDecl := lfn (vis, blockO, blockL, p0) locals
 def indInstallFns : Prog :=
   [("block_caps_ctor_names", blockCapsCtorNames), ("block_caps_at_er_copy", blockCapsAtErCopy),
    ("block_caps_at_er_copy_go", blockCapsAtErCopyGo),
-   ("block_caps_at_finish", blockCapsAtFinish), ("block_caps_at_one", blockCapsAtOne),
-   ("block_caps_at_rest", blockCapsAtRest), ("block_caps_at", blockCapsAt),
+   ("block_caps_at", blockCapsAt), ("block_caps_head", blockCapsHead), ("block_caps_fin", blockCapsFin), ("block_caps_one", blockCapsOne),
    ("pi_doms_mention_any", piDomsMentionAny), ("block_raw_rec_member", blockRawRecMember), ("block_raw_rec_go", blockRawRecGo),
    ("block_raw_rec", blockRawRec), ("check_block_tele", checkBlockTele),
    ("check_block_teles", checkBlockTeles), ("check_block_doms_at", checkBlockDomsAt),

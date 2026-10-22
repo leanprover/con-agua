@@ -248,6 +248,28 @@ theorem indParamsOk_spec (nP o l : Word) (blk : List IConstantInfo) :
       (fun m a => StageR dn vis fe m a ∧ decPL m (fun q => decCI (erA m) dn q) o.toNat l.toNat = some blk)
       (indParamsOk nP.toNat blk) (KeepPost dn vis fe decW0B) := sorry
 
+/-- A `PropWhen` from its three words (`decPW`'s layout: `0` `never`, `1` `ifAllZero` with the
+names the handle slice `(o, l)` of `a`). -/
+def pwWords (a : Array Word) (t o l : Word) : Option ConLeche.PropWhen :=
+  match t.toNat with
+  | 0 => some .never
+  | 1 => do
+    let ns : List NIdx ← hslice? a o.toNat l.toNat
+    pure (.ifAllZero (← ns.mapM dn))
+  | _ => none
+
+/-- `lv_zero_caps`' result `(tag, off, len)`: the zero-ness of the level `lv`, decoded in every
+array that agrees with the record pool below its top. -/
+def decZC (m : Mem) (r : List Word) (lv : ConLeche.Level) : Prop :=
+  ∀ a : Array Word, (∀ i < erTop m, a[i]? = (erA m)[i]?) →
+    pwWords dn a (r.headD 0) (r.tail.headD 0) (r.tail.tail.headD 0) = some (ConLeche.Level.zeronessOf lv)
+
+/-- `lv_zero_caps(l)` (lane `indproofs2`, stub contract): the level read back, its zero-ness as
+three words. -/
+theorem lvZeroCaps_spec (l : Word) (hl : H l) :
+    RelAM "lv_zero_caps" [l] (StageR dn vis fe) (readLevelM (decI l))
+      (KeepPost dn vis fe (decZC dn)) := sorry
+
 end specs
 
 /-! ## Master callees without a model yet (lane indproofs) -/
