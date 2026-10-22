@@ -105,7 +105,7 @@ theorem CoreS.of_level {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
         (by rw [hL.pins]) (fun _ _ hk => .inl (hL.caches ▸ hk))
         (hf.1 EREC (fun h => by have := hA _ h; simp only [EREC, ArrId] at this; omega) (by decide))
         (fun x u hv => by simpa only [EStore.view, hL.pers, hL.scr, hL.son] using hv)
-        (fun x c us hv => by simpa only [EStore.view, hL.pers, hL.scr, hL.son] using hv) hlv⟩,
+        (fun x c us hv => .inl (by simpa only [EStore.view, hL.pers, hL.scr, hL.son] using hv)) hlv⟩,
     StackKept.of_frame hf
       ⟨fun h => by have := hA _ h; simp only [SPN, ArrId] at this; omega,
        fun h => by have := hA _ h; simp only [BSTK, ArrId] at this; omega, hP⟩

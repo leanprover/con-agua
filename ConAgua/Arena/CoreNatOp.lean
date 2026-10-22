@@ -29,12 +29,20 @@ namespace L.Arena
 /-! ## Leaf steps of the twin -/
 
 /-- **A leaf step**: the caches, pins and level store kept, `DerR` carried over at any memory. -/
-def LeafStep (a a' : AState) : Prop := cpl a' = cpl a ∧ ∀ m, DerR m a → DerR m a'
+def LeafStep (a a' : AState) : Prop := cpl a' = cpl a ∧ (∀ m, DerR m a → DerR m a') ∧
+  ∀ x w, IsSC w → a'.store.view x = some w →
+    a.store.view x = some w ∨ ∃ c, w = .const c a.pins.emptyLevels
 
-theorem LeafStep.refl (a : AState) : LeafStep a a := ⟨rfl, fun _ h => h⟩
+theorem LeafStep.refl (a : AState) : LeafStep a a := ⟨rfl, fun _ h => h, fun _ _ _ hv => .inl hv⟩
 
 theorem LeafStep.trans {a₁ a₂ a₃ : AState} (h₁ : LeafStep a₁ a₂) (h₂ : LeafStep a₂ a₃) :
-    LeafStep a₁ a₃ := ⟨h₂.1.trans h₁.1, fun m h => h₂.2 m (h₁.2 m h)⟩
+    LeafStep a₁ a₃ := by
+  refine ⟨h₂.1.trans h₁.1, fun m h => h₂.2.1 m (h₁.2.1 m h), fun x w hw hv => ?_⟩
+  have hp : a₂.pins = a₁.pins := by
+    have := h₁.1; simp only [cpl, Prod.mk.injEq] at this; exact this.2.1
+  rcases h₂.2.2 x w hw hv with h | ⟨c, rfl⟩
+  · exact h₁.2.2 x w hw h
+  · exact .inr ⟨c, by rw [hp]⟩
 
 /-- Every successful run of `op` is a leaf step. -/
 @[irreducible] def LeafOp {α : Type} (op : AM α) : Prop :=
@@ -86,7 +94,8 @@ theorem leafOp_internLit (l : ConLeche.Literal) : LeafOp (internE (.lit l)) := b
   unfold LeafOp; intro a r a' h
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ h
   have hk : cpl a' = cpl a := Keeps.run (keeps_cpl_internNodeE _) (by simpa [internE] using h)
-  refine ⟨hk, fun m hD => ?_⟩
+  refine ⟨hk, fun m hD => ?_, fun x w hw hv => .inl (internNodeE_views (v := .lit l)
+    (by rintro (⟨_, h⟩ | ⟨_, _, h⟩) <;> cases h) (by simpa [internE] using h) x w hw hv)⟩
   have hcs := AM.proto_cases litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok
   rw [← hst]
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
@@ -98,12 +107,20 @@ theorem leafOp_internLit (l : ConLeche.Literal) : LeafOp (internE (.lit l)) := b
       ⟨hD.lit.1, derT_push hD.lit.2 _ _ _ ⟨bvar_derLit _ _, fvar_derLit _ _⟩⟩, hD.app, hD.lam,
       hD.forallE, hD.letE, hD.proj⟩
 
-/-- Interning a `const` node is a leaf step. -/
-theorem leafOp_internConst (n : NIdx) (us : LsIdx) : LeafOp (internE (.const n us)) := by
-  unfold LeafOp; intro a r a' h
+/-- A leaf step when the list `us` is the pinned empty one. -/
+def LeafOpU {α : Type} (us : LsIdx) (op : AM α) : Prop :=
+  ∀ a, us = a.pins.emptyLevels → ∀ r a', op.run a = .ok (r, a') → LeafStep a a'
+
+/-- Interning a `const` node at the pinned empty list is a leaf step. -/
+theorem leafOp_internConst (n : NIdx) (us : LsIdx) : LeafOpU us (internE (.const n us)) := by
+  intro a hus r a' h
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ h
   have hk : cpl a' = cpl a := Keeps.run (keeps_cpl_internNodeE _) (by simpa [internE] using h)
-  refine ⟨hk, fun m hD => ?_⟩
+  refine ⟨hk, fun m hD => ?_, fun x w hw hv => by
+    obtain ⟨-, -, -, hsc⟩ := internNodeE_sc (v := .const n us) (by simpa [internE] using h)
+    rcases hsc x w hw hv with h' | rfl
+    · exact .inl h'
+    · exact .inr ⟨n, by rw [hus]⟩⟩
   have hcs := AM.proto_cases constLens _ _ _ _ _ _ a (internE_const_run _ _ a) hok
   rw [← hst]
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
@@ -115,13 +132,30 @@ theorem leafOp_internConst (n : NIdx) (us : LsIdx) : LeafOp (internE (.const n u
       ⟨hD.const.1, derT_push hD.const.2 _ _ _ ⟨bvar_derConst _ _ _, fvar_derConst _ _ _⟩⟩, hD.lit,
       hD.app, hD.lam, hD.forallE, hD.letE, hD.proj⟩
 
+/-- `constE n` (the pinned empty list, then the `const` node) is a leaf step. -/
+theorem leafOp_constE {n : NIdx} : LeafOp (constE n) := by
+  unfold LeafOp; intro a r a' h
+  simp only [constE, emptyLevels, StateT.run_bind] at h
+  cases h1 : pinEmptyLevels.run a with
+  | error e => rw [h1] at h; cases h
+  | ok q =>
+    obtain ⟨us, a1⟩ := q
+    rw [h1] at h
+    have e1 : a1 = a ∧ us = a.pins.emptyLevels := by
+      simp only [pinEmptyLevels, StateT.run_bind, StateT.run_get, pure_bind] at h1
+      split at h1
+      · cases h1; exact ⟨rfl, rfl⟩
+      · simp [ConRon.Arena.fail, throwThe, MonadExceptOf.throw, Functor.map, Except.map] at h1
+    obtain ⟨e1, e2⟩ := e1
+    rw [e1] at h
+    exact leafOp_internConst n us a e2 r a' h
+
 /-- **`natOpResult` is a leaf step**: fifteen pin reads, then at most one leaf interned. -/
 theorem leafOp_natOpResult (c : NIdx) (x y : Nat) : LeafOp (natOpResult c x y) := by
   have hl : ∀ v : Nat, LeafOp (do let r ← internE (.lit (.natVal v)); Pure.pure (some r) : AM (Option EIdx)) :=
     fun v => LeafOp.bind (leafOp_internLit _) (fun _ => LeafOp.pure _)
   have hc : ∀ n : NIdx, LeafOp (do let r ← constE n; Pure.pure (some r) : AM (Option EIdx)) :=
-    fun n => LeafOp.bind (LeafOp.bind leafOp_pinEmptyLevels (fun _ => leafOp_internConst _ _))
-      (fun _ => LeafOp.pure _)
+    fun n => LeafOp.bind leafOp_constE (fun _ => LeafOp.pure _)
   simp only [natOpResult, natPredName, natAddName, natSubName, natMulName, natPowName,
     natBeqName, natBleName, natDivName, natModName, natGcdName, natLandName, natLorName,
     natXorName, natShiftLeftName, natShiftRightName, pinNatPred, pinNatAdd, pinNatSub,
@@ -265,7 +299,7 @@ theorem CoreS.of_natOp {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) (hR : ArenaR m' a')
     (hL : LeafStep a a') (hf : MemFrame natA natC m m') (hP : PoolGrew m m') :
     CoreS dn m' a' vis fe M eb ∧ StackKept m m' := by
-  obtain ⟨hcpl, hder⟩ := hL
+  obtain ⟨hcpl, hder, hview⟩ := hL
   simp only [cpl, Prod.mk.injEq] at hcpl
   obtain ⟨hc, hp, hl⟩ := hcpl
   have hD : DerR m' a := DerR.frameM natA natC m m' hf (by decide) a hS.arena.2
@@ -273,7 +307,13 @@ theorem CoreS.of_natOp {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by decide)
   refine ⟨⟨⟨hR, hder m' hD⟩, ?_, ?_, hS.env.frame (by decide) (.of_lt natC_lt (by decide)) hf, ?_, ?_, ?_,
     hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide),
-    hf.2.2.1 145 ▸ hS.bstk⟩, by simp only [spTop, h136], by rw [hspn],
+    hf.2.2.1 145 ▸ hS.bstk,
+    hS.den.mono (by rw [hl]; exact LsExt.refl _) (by rw [hp]) (by rw [hp])
+      (fun _ _ hk => .inl (hc ▸ hk)) (hf.1 EREC (by decide) (by decide))
+      (fun x u hv => (hview x _ (.inl ⟨_, rfl⟩) hv).resolve_right (by rintro ⟨_, h⟩; cases h))
+      (fun x c us hv => (hview x _ (.inr ⟨_, _, rfl⟩) hv).imp id (by
+        rintro ⟨c', h⟩; cases h; exact hS.den.emptyLs))
+      (hS.den.lvlAll.congr (by simp only [EStore.ls, hl]))⟩, by simp only [spTop, h136], by rw [hspn],
     fun i _ => by simp only [spW, hspn], BKept.of_frame hf (by decide) (by decide), hP⟩
   · rw [hc]; exact hS.core.frame (by decide) (.of_lt natC_lt (by decide)) hf
   · rw [hp]; exact hS.pins.congr (hf.1 PINS (by decide) (by decide))

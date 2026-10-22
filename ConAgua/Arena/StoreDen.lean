@@ -200,7 +200,8 @@ theorem StoreDen.mono {m m' : Mem} {a a' : AState} {fe : IFEnv} (h : StoreDen m 
       a.caches.readNC[k]? = some x ∨ denoteN a'.store.ns k = some x)
     (he : m'.arr64 EREC = m.arr64 EREC)
     (hs : ∀ x u, a'.store.view x = some (.sort u) → a.store.view x = some (.sort u))
-    (hc : ∀ x c us, a'.store.view x = some (.const c us) → a.store.view x = some (.const c us))
+    (hc : ∀ x c us, a'.store.view x = some (.const c us) →
+      a.store.view x = some (.const c us) ∨ ∃ ls, denoteLs a.store.lss us = some ls)
     (hlv : LvlAll a') :
     StoreDen m' a' fe := by
   have hN : ∀ i n, denoteN a.store.ns i = some n → denoteN a'.store.ns i = some n := hx.ls.ns
@@ -217,7 +218,9 @@ theorem StoreDen.mono {m m' : Mem} {a a' : AState} {fe : IFEnv} (h : StoreDen m 
   refine ⟨fun x u hv => ?_, fun x c us hv => ?_, ?_, ?_, fun k x hk => ?_,
     fun c ci cv hf ht hcv => ?_, fun q tbl ht => ?_, hlv⟩
   · obtain ⟨l, hl⟩ := h.sort x u (hs x u hv); exact ⟨l, hx.ls.lvl _ _ hl⟩
-  · obtain ⟨l, hl⟩ := h.constLs x c us (hc x c us hv); exact ⟨l, hx.lst _ _ hl⟩
+  · rcases hc x c us hv with h' | ⟨l, hl⟩
+    · obtain ⟨l, hl⟩ := h.constLs x c us h'; exact ⟨l, hx.lst _ _ hl⟩
+    · exact ⟨l, hx.lst _ _ hl⟩
   · obtain ⟨l, hl⟩ := h.zero; exact ⟨l, by rw [hz]; exact hx.ls.lvl _ _ hl⟩
   · obtain ⟨l, hl⟩ := h.emptyLs; exact ⟨l, by rw [hzs]; exact hx.lst _ _ hl⟩
   · rcases hr k x hk with h' | h'
@@ -243,13 +246,13 @@ theorem StoreDen.of_arena {m m' : Mem} {a a' : AState} {fe : IFEnv} {A : List Ar
         first | exact hscC.1 | exact hscC.2.1 | exact hscC.2.2.1 | exact hscC.2.2.2.1 | exact hscC.2.2.2.2))
   exact h.mono (by rw [hl]; exact LsExt.refl _) (by rw [hp]) (by rw [hp]) (fun _ _ hk => .inl (hc ▸ hk))
     (hf.1 EREC heA (by decide)) (fun _ _ hv => view_sort_keep hsc hv)
-    (fun _ _ _ hv => view_const_keep hsc hv) (h.lvlAll.congr (by simp only [EStore.ls, hl]))
+    (fun _ _ _ hv => .inl (view_const_keep hsc hv)) (h.lvlAll.congr (by simp only [EStore.ls, hl]))
 
 /-- `StoreDen` across a memory step that keeps `EREC` (the twin unchanged). -/
 theorem StoreDen.frameE {m m' : Mem} {a : AState} {fe : IFEnv} (h : StoreDen m a fe)
     (he : m'.arr64 EREC = m.arr64 EREC) : StoreDen m' a fe :=
-  h.mono (LsExt.refl _) rfl rfl (fun _ _ hk => .inl hk) he (fun _ _ hv => hv) (fun _ _ _ hv => hv)
-    h.lvlAll
+  h.mono (LsExt.refl _) rfl rfl (fun _ _ hk => .inl hk) he (fun _ _ hv => hv)
+    (fun _ _ _ hv => .inl hv) h.lvlAll
 
 /-- `StoreDen` across a step that changes only the twin's caches other than `readNC`. -/
 theorem StoreDen.caches {m : Mem} {a a' : AState} {fe : IFEnv} (h : StoreDen m a fe)
@@ -257,7 +260,7 @@ theorem StoreDen.caches {m : Mem} {a a' : AState} {fe : IFEnv} (h : StoreDen m a
     StoreDen m a' fe :=
   h.mono (by rw [hst]; exact LsExt.refl _) (by rw [hp]) (by rw [hp]) (fun _ _ hk => .inl (hn ▸ hk))
     rfl
-    (fun _ _ hv => hst ▸ hv) (fun _ _ _ hv => hst ▸ hv)
+    (fun _ _ hv => hst ▸ hv) (fun _ _ _ hv => .inl (hst ▸ hv))
     (h.lvlAll.congr (by simp only [EStore.ls, hst]))
 
 end L.Arena

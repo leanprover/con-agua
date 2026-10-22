@@ -309,7 +309,7 @@ theorem StoreDen.of_views {m m' : Mem} {a a' : AState} {fe : IFEnv} (h : StoreDe
     (hv : ∀ x w, IsSC w → a'.store.view x = some w → a.store.view x = some w) :
     StoreDen m' a' fe :=
   h.mono (by rw [hl]; exact LsExt.refl _) (by rw [hp]) (by rw [hp]) (fun _ _ hk => .inl (hc ▸ hk))
-    he (fun x u hx => hv x _ (.inl ⟨_, rfl⟩) hx) (fun x c us hx => hv x _ (.inr ⟨_, _, rfl⟩) hx)
+    he (fun x u hx => hv x _ (.inl ⟨_, rfl⟩) hx) (fun x c us hx => .inl (hv x _ (.inr ⟨_, _, rfl⟩) hx))
     (h.lvlAll.congr (by simp only [EStore.ls, hl]))
 
 /-- Interning a node that is neither a `sort` nor a `const` creates no such view. -/

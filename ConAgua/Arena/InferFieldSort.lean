@@ -297,7 +297,7 @@ theorem fszW_ok {dn : NIdx → Option Name} {m m' : Mem} {a : AState} {vis : Wor
     ((hS₁.core.readNC X).readLsC Y).readLC Z, hS₁.pins, hS₁.env, hl₃, hls₃, hS₁.nwf, hS₁.erec,
     hS₁.spn, hS₁.memos, hS₁.bstk,
     hS₁.den.mono (LsExt.refl _) rfl rfl (fun k x hk => .inr (hnX k x hk)) rfl (fun _ _ hv => hv)
-      (fun _ _ _ hv => hv) (hS₁.den.lvlAll.congr rfl)⟩
+      (fun _ _ _ hv => .inl hv) (hS₁.den.lvlAll.congr rfl)⟩
 
 /-- **`field_sort_zero` refines the twin's propositional-structure test** (`FieldSortZeroOK`). -/
 @[refines_part ConRon.Arena.inferProj "the propositional-structure test (field_sort_zero)"]
