@@ -68,9 +68,61 @@ theorem fpos_succ (LS : List (List NIdx)) (i : Nat) (hi : i < LS.length) :
   simp only [Option.toList_some, List.map_append, List.sum_append, List.map_cons, List.map_nil,
     List.sum_cons, List.sum_nil, Nat.add_zero]
 
+theorem fpos_full (LS : List (List NIdx)) : fpos LS LS.length = LS.flatten.length := by
+  rw [fpos, List.take_length]
+  induction LS with
+  | nil => rfl
+  | cons l L ih =>
+    simp only [List.map_cons, List.sum_cons, List.flatten_cons, List.length_append]
+    rw [ih]
+
 theorem take_push {α : Type} (l : List α) (p : Nat) (hp : p < l.length) :
     (l.take p).toArray.push l[p] = (l.take (p + 1)).toArray := by
   rw [List.take_succ, List.getElem?_eq_getElem hp]; simp
+
+set_option hygiene false in
+/-- The recursor loop of `validateIndD`, once `kExpected?` is `KE`. -/
+macro "recs_tac" : tactic => `(tactic| (
+  rw [run_bind _ _ a _ (forIn_yield' _ a _ _
+    (fun _ => ((none : Option (RecordVerdict ⊕ List IndCtorRec × Nat)), ())) rfl ?rstep)]
+  case rstep =>
+    intro j hj
+    obtain ⟨rn, hrn, h1, h2, h3, hk, v, hv, hin⟩ := hV.recs _ (List.getElem_mem hj)
+    rw [run_bind _ _ a _ hrn]
+    simp only [h1, h2, h3, beq_self_eq_true, if_true]
+    rcases hK : KE with _ | kE
+    all_goals (try simp only [hk _ hK, beq_self_eq_true, if_true])
+    all_goals
+      rw [run_bind _ _ a _ hv]
+      rcases v with _ | ⟨T, sv⟩ | ⟨T, nv⟩
+      · rfl
+      · by_cases hsv : sv = "rec"
+        · subst hsv
+          simp only []
+          rw [run_bind _ _ a _ (forIn_yield' _ a _ _
+            (fun _ => ((none : Option (RecordVerdict ⊕ List IndCtorRec × Nat)), ())) rfl ?_)]
+          · rfl
+          · intro j' hj'
+            simp only [List.getElem_zip]
+            have hj2 := hj'
+            rw [List.length_zip] at hj2
+            have hj1 : j' < TN.length := by omega
+            by_cases hT : TN[j']'hj1 = T
+            · obtain ⟨o, ho, hon⟩ := hin T rfl j' (by omega) (by omega) hT
+              simp only [hT, beq_self_eq_true, if_true]
+              rw [run_bind _ _ a _ ho]
+              cases o with
+              | none => rfl
+              | some x => simp only [hon x rfl, beq_self_eq_true, if_true]; rfl
+            · simp only [hT, beq_iff_eq, if_false]
+              rfl
+        · split
+          · rename_i heq
+            simp only [NNodeView.str.injEq] at heq
+            exact absurd heq.2 hsv
+          · rfl
+      · rfl
+  rfl))
 
 theorem validateIndD_ok {st : StateD} {a : AState} {tys : List IndTypeRec} {cts : List IndCtorRec}
     {rcs : List IndRecRec} {TN : List NIdx} {TT : List EIdx} {LS : List (List NIdx)} {CN : List NIdx}
@@ -118,6 +170,56 @@ theorem validateIndD_ok {st : StateD} {a : AState} {tys : List IndTypeRec} {cts 
     have hi' : i < LS.length := by simp at hi; omega
     simp only [fpos_succ LS i hi']
     rfl
-  sorry
+  have hzl : (TN.zip LS).length = LS.length := by simp [hV.tnlen, hV.lslen]
+  have htk : ordered.take (fpos LS LS.length) = ordered := by
+    rw [fpos_full, hV.flen, ← hV.ordlen, List.take_length]
+  simp only [hzl, List.toList_toArray, htk]
+  split
+  · rename_i ty hd c
+    obtain ⟨r, v, hr, hv, hnone, hsort⟩ := hV.kyes ty hd c rfl rfl rfl
+    rw [run_bind _ _ a _ hr, run_bind _ _ a _ hv]
+    rcases hvs : v with _ | _ | ⟨s⟩ | _ | _ | _ | _ | _ | _ | _
+    case sort =>
+      obtain ⟨L, hL, hKE⟩ := hsort s hvs
+      simp only []
+      rw [run_bind _ _ a _ hL, ← hKE]
+      simp only [pure_bind]
+      recs_tac
+    all_goals
+      have hKE : KE = none := hnone (fun s' h' => by rw [hvs] at h'; cases h')
+      simp only []
+      rw [← hKE]
+      simp only [pure_bind]
+      recs_tac
+  · rename_i hne
+    have hKE : KE = some false := hV.kno (fun ⟨h1, h2⟩ => by
+      obtain ⟨ty, hty⟩ : ∃ ty, TT = [ty] := by
+        cases hT : TT with
+        | nil => rw [hT] at h1; simp at h1
+        | cons x xs => cases xs with
+          | nil => exact ⟨x, rfl⟩
+          | cons _ _ => rw [hT] at h1; simp at h1
+      obtain ⟨hd, hls⟩ : ∃ hd, LS = [[hd]] := by
+        cases hL : LS with
+        | nil => rw [hL] at h2; simp at h2
+        | cons l ls => cases ls with
+          | nil => cases l with
+            | nil => rw [hL] at h2; simp at h2
+            | cons x xs => cases xs with
+              | nil => exact ⟨x, rfl⟩
+              | cons _ _ => rw [hL] at h2; simp at h2
+          | cons _ _ => rw [hL] at h2; simp at h2
+      have hol : ordered.length = 1 := by
+        rw [hV.ordlen, ← hV.flen, hls]; rfl
+      obtain ⟨c, hc⟩ : ∃ c, ordered = [c] := by
+        cases ho : ordered with
+        | nil => rw [ho] at hol; simp at hol
+        | cons x xs => cases xs with
+          | nil => exact ⟨x, rfl⟩
+          | cons _ _ => rw [ho] at hol; simp at hol
+      exact hne ty hd c hty hls hc)
+    rw [← hKE]
+    simp only [pure_bind]
+    recs_tac
 
 end L.Front.Ind
