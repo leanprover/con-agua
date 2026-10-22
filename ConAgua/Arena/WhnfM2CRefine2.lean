@@ -54,9 +54,11 @@ theorem keeps_cpl_internConst' (n : NIdx) (us : LsIdx) : Keeps cpl (internE (.co
 
 theorem CoreS.of_const' {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
     {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb)
-    (hD : ArenaD m' a') (hcpl : cpl a' = cpl a) (hf : MemFrame [CREC, CSLOT, CLP] [18, 19] m m') :
+    (hD : ArenaD m' a') (hcpl : cpl a' = cpl a) (hf : MemFrame [CREC, CSLOT, CLP] [18, 19] m m')
+    {n : NIdx} {us : LsIdx} {r : EIdx} (hrun : (internE (.const n us)).run a = .ok (r, a'))
+    (hus : ∃ ls, denoteLs a.store.lss us = some ls) :
     CoreS dn m' a' vis fe M eb :=
-  hS.arena_frame hD hcpl hf
+  hS.arena_frameD hD hcpl hf
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl <;> decide)
@@ -70,6 +72,7 @@ theorem CoreS.of_const' {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' 
     (fun x hx => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl <;> decide)
+    (hS.den.of_internConst hus hrun (hf.1 EREC (by simp [CREC, CSLOT, CLP, EREC]) (by decide)))
 
 theorem StackKept.of_constF {m m' : Mem} (hf : MemFrame [CREC, CSLOT, CLP] [18, 19] m m') :
     StackKept m m' := by
@@ -526,6 +529,7 @@ theorem m2cK2_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2
     (eb mode d ctor cnP tmaj ust major : Word) (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1)
     (hctor : HW ctor) (htm : HW tmaj) (hus : HW ust) (hmaj : HW major) (m : Mem) (a : AState)
     (M : ModeMaps) (hS : CoreS dn m a vis fe M eb) (r : List Word) (m' : Mem)
+    (hdus : ∃ ls, denoteLs a.store.lss (decI ust) = some ls)
     (h : callW p (N + 1) "m2c_k2" [mode, vis, d, ctor, cnP, tmaj, ust, major] m = some (r, m')) :
     GrowRef (m2cK2T (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI ctor)
       cnP.toNat (decE tmaj) (decI ust) (decE major)) a decH dn m vis fe M eb r m' := by
@@ -568,7 +572,7 @@ theorem m2cK2_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2
     hp.internConst' (N' + 1) m1 a hS1.arena ctor ust hctor hus r2 m2 c2
   have hrun2 := AM.run_of_ok _ _ ok2
   rw [res2] at hrun2
-  have hS2 := hS1.of_const' hD2 (Keeps.run (keeps_cpl_internConst' _ _) hrun2) hfr2
+  have hS2 := hS1.of_const' hD2 (Keeps.run (keeps_cpl_internConst' _ _) hrun2) hfr2 hrun2 hdus
   have hsp2 : SpineR m2 (r1.headD 0) cnP (xs.take cnP.toNat).toArray :=
     (hsp1.take' (by rw [← hlen]; exact hle)).of_spn_core
       (hfr2.1 SPN (by simp [CREC, CSLOT, CLP, SPN]) (by decide))
@@ -670,7 +674,9 @@ theorem m2cK_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2 
   rw [c2] at hW
   obtain ⟨hr, rfl⟩ := ret_eq hW
   obtain ⟨ok2, hA2, res2, hr2⟩ := m2cK2_ok p hp hc hpi N' F (hk.mono (Nat.le_succ _)) (by omega)
-    (by omega) dn vis fe eb mode d ctor cnP _ _ major hm4 hebm hctor htm hus hmaj m1 a1 M1 hS1 r2 m2 c2
+    (by omega) dn vis fe eb mode d ctor cnP _ _ major hm4 hebm hctor htm hus hmaj m1 a1 M1 hS1 r2 m2
+    (by obtain ⟨_, _, _, _, _, _, _, _, hp5⟩ := hpre
+        exact hS1.den.constLs _ _ _ (hp5 g0).2.2.1) c2
   have hrun2 := AM.run_of_ok _ _ ok2
   rw [res2] at hrun2
   have hc : ((decI (L.tail.tail.headD 0) : NIdx) = decI T ∧ lpl.toNat = l.length) :=

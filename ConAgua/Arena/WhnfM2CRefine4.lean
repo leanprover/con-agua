@@ -48,7 +48,7 @@ theorem m2cEta2_ok (N : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (
     (eb d T ec ef to tn ust major : Word) (hT : HW T) (hec : HW ec) (hus : HW ust)
     (hmaj : HW major) (targs : List EIdx) (m : Mem) (a : AState) (M : ModeMaps)
     (hS : CoreS dn m a vis fe M eb) (hsp : SpineR m to tn targs.toArray) (htop : to + tn = spTop m)
-    (r : List Word) (m' : Mem)
+    (r : List Word) (m' : Mem) (hvus : ∃ x c, a.store.view x = some (.const c (decI ust)))
     (h : callW p (N + 1) "m2c_eta2" [vis, d, T, ec, ef, to, tn, ust, major] m = some (r, m')) :
     GrowRef (m2cEta2T fe d.toNat (decI T) (decI ec) ef.toNat targs (decI ust) (decE major)) a decH
       dn m vis fe M eb r m' := by
@@ -160,7 +160,10 @@ theorem m2cEta2_ok (N : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (
     hp.internConst' N m4 _ hS4.arena ec ust hec hus r5 m5 c5
   have hrun5 := AM.run_of_ok _ _ ok5
   rw [res5] at hrun5
-  have hS5 := hS4.of_const' hD5 (Keeps.run (keeps_cpl_internConst' _ _) hrun5) hfr5
+  have hS5 := hS4.of_const' hD5 (Keeps.run (keeps_cpl_internConst' _ _) hrun5) hfr5 hrun5 (by
+    obtain ⟨x, c, hx⟩ := hvus
+    have hx1 := view_after_noLss (keeps_noLss_towerSlotsAll fe (decI T) ef.toNat) hx
+    exact hS4.den.constLs _ _ _ (etaFabArgsE_fwd hrun4 x _ (.inr ⟨_, _, rfl⟩) hx1))
   have hsp5 := hsp4.of_spn_core (const_spn hfr5)
   cases c6 : callW p N "mk_app_n" [r5.headD 0, r4.headD 0, r4.tail.headD 0] m5 with
   | none => rw [c6] at hW; cases hW
@@ -353,7 +356,12 @@ theorem m2cEta_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
       rw [htop2', ← htop2, UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
       exact Nat.le_refl _) hspn2
   obtain ⟨ok4, hA4, res4, hr4⟩ := m2cEta2_ok p hp hc hcc N' dn vis fe eb d T w6 w8 _ _ _ major hT l6
-    hus hmaj xs m3 _ M3 hS3 hsp3 htop3 r4 m4 c4
+    hus hmaj xs m3 _ M3 hS3 hsp3 htop3 r4 m4
+    (by obtain ⟨_, _, _, _, _, _, _, _, hp5⟩ := hpre
+        exact ⟨_, _, view_after_noLss (by
+          unfold capsNeverZeroPW
+          exact Keeps.noLss_of_stP (Keeps.bind (keeps_stP_readNamesM _) fun _ =>
+            Keeps.bind (keeps_stP_readLevelsM _) fun _ => Keeps.pure _)) (hp5 g0).2.2.1⟩) c4
   have hrun4 := AM.run_of_ok _ _ ok4
   rw [res4] at hrun4
   refine GrowRef.of_run (v := decH r4) ?_ (CoreAfterG.compK (hK1.trans hK3)

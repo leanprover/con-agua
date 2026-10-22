@@ -25,6 +25,8 @@ structure InferBodyProg (p : Prog) : Prop where
   inferLet : p.lookup "infer_let" = some inferLetL
   inferLamIO : p.lookup "infer_lam_io" = some inferLamIOL
   inferForallIO : p.lookup "infer_forall_io" = some inferForallIOL
+  live : p.lookup "lvl_live" = some lvlLiveL
+  lvn : p.lookup "lv_node" = some lvNode
   fvf : p.lookup "fvar_find" = some fvarFind
   fvp : p.lookup "fvar_push" = some fvarPush
   fvi : p.lookup "intern_fvar" = some internFVar
@@ -393,10 +395,22 @@ def faK8 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
   | none => none
   | some (r, m) => call1W p n "intern_sort" [r.headD 0] m
 
+/-- After the second level check: the `imax`. -/
+def faKl2 (v : Word) (res : Option (List Word × Mem)) : Option (Word × Mem) :=
+  match res with
+  | none => none
+  | some (_, m) => faK8 p n (callW p n "intern_imax" [u, v] m)
+
+/-- After the first level check: the second. -/
+def faKl1 (v : Word) (res : Option (List Word × Mem)) : Option (Word × Mem) :=
+  match res with
+  | none => none
+  | some (_, m) => faKl2 p n u v (callW p n "lvl_live" [v] m)
+
 def faK7 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
   match res with
   | none => none
-  | some (r, m) => faK8 p n (callW p n "intern_imax" [u, r.headD 0] m)
+  | some (r, m) => faKl1 p n u (r.headD 0) (callW p n "lvl_live" [u] m)
 
 def faK6 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
   match res with
@@ -436,7 +450,12 @@ def faK (m : Mem) : Option (Word × Mem) :=
 variable (r : List Word) (m : Mem)
 
 theorem faK8_some : faK8 p n (some (r, m)) = call1W p n "intern_sort" [r.headD 0] m := rfl
-theorem faK7_some : faK7 p n u (some (r, m)) = faK8 p n (callW p n "intern_imax" [u, r.headD 0] m) := rfl
+theorem faK7_some : faK7 p n u (some (r, m)) =
+    faKl1 p n u (r.headD 0) (callW p n "lvl_live" [u] m) := rfl
+theorem faKl1_some (v : Word) : faKl1 p n u v (some (r, m)) =
+    faKl2 p n u v (callW p n "lvl_live" [v] m) := rfl
+theorem faKl2_some (v : Word) : faKl2 p n u v (some (r, m)) =
+    faK8 p n (callW p n "intern_imax" [u, v] m) := rfl
 theorem faK6_some : faK6 p n mode vis d u (some (r, m)) =
     faK7 p n u (callW p n "ensure_sort" [mode, vis, d + 1, r.headD 0] m) := rfl
 theorem faK5_some : faK5 p n mode vis d u (some (r, m)) =
@@ -459,8 +478,10 @@ theorem inferForallIO_spec (n : Nat) (s₀ : St) (mode vis d ty body : Word) :
   simp only [callFn, inferForallIOL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, callW_spec p n "infer_io",
       callW_spec p n "whnf", callW_spec p n "intern_fvar", callW_spec p n "inst1",
-      callW_spec p n "ensure_sort", callW_spec p n "intern_imax", callW_spec p n "intern_sort"] <;>
-  simp_all [faK, faK2_some, faK3, faK4_some, faK5_some, faK6_some, faK7_some, faK8_some, call1W,
+      callW_spec p n "ensure_sort", callW_spec p n "lvl_live", callW_spec p n "intern_imax",
+      callW_spec p n "intern_sort"] <;>
+  simp_all [faK, faK2_some, faK3, faK4_some, faK5_some, faK6_some, faK7_some, faKl1_some,
+    faKl2_some, faK8_some, call1W,
     Cmp.eval, LocEq, BinOp.eval, tierW, idxW, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem,
     St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr]
 
@@ -535,6 +556,10 @@ theorem inferForallIO_refines (p : Prog) (hp : InferLeafProg p) (hb : InferBodyP
   rw [faK6_some] at hW
   obtain ⟨r₆, m₆, hc6, hW⟩ := callW_cases rfl hW
   rw [faK7_some] at hW
+  obtain ⟨rl₁, ml₁, hl1, hW⟩ := callW_cases rfl hW
+  rw [faKl1_some] at hW
+  obtain ⟨rl₂, ml₂, hl2, hW⟩ := callW_cases rfl hW
+  rw [faKl2_some] at hW
   obtain ⟨r₇, m₇, hc7, hW⟩ := callW_cases rfl hW
   rw [faK8_some] at hW
   obtain ⟨s₃, hs₃, -, hfv⟩ := triple_of_callW
@@ -553,13 +578,24 @@ theorem inferForallIO_refines (p : Prog) (hp : InferLeafProg p) (hb : InferBodyP
     hF hn ⟨hS₅, hs.mode4, hs.eb_mode⟩ h₅.2.2.2) hc6
   rw [hd1] at h₆
   refine coreRef_bind h₆ (fun M₆ hS₆ => ?_)
+  obtain ⟨e1, hdu⟩ := lvlLive_call hb.live hb.lvn hS₆ hu hl1
+  rw [e1] at hl2
+  obtain ⟨e2, hdv⟩ := lvlLive_call hb.live hb.lvn hS₆ h₆.2.2.2 hl2
+  rw [e2] at hc7
   obtain ⟨s₇, hs₇, -, him⟩ := triple_of_callW
     (internImax_spec p hb.imf hb.imp hb.imi n ⟨m₆, Locals.init []⟩ _ (r₆.headD 0)) hc7
   rw [hs₇] at him
-  have h₇ := internImax_core hS₆ _ _ hu h₆.2.2.2 r₇ him
+  have h₇ := internImax_core hS₆ _ _ hu h₆.2.2.2 r₇ him hdu hdv
   refine coreRef_bind h₇ (fun M₇ hS₇ => ?_)
   have hso := of_call1W (X := fun m w m' => sointernW m (r₇.headD 0) = some (w, m'))
     (fun s₀ => internSort_spec p hb.sof hb.sop hb.soi n s₀ (r₇.headD 0)) hW
-  exact internSort_core hS₇ (r₇.headD 0) h₇.2.2.2 r hso
+  exact internSort_core hS₇ (r₇.headD 0) h₇.2.2.2 r hso (by
+    have hd := internLNode_res_den hS₆
+      (fun c hc => by
+        simp only [LNodeView.lchildren, List.mem_cons, List.mem_nil_iff, or_false] at hc; rcases hc with rfl | rfl
+        · exact hdu
+        · exact hdv)
+      (fun n hn => by simp [LNodeView.nchildren] at hn) h₇.1
+    rw [h₇.2.2.1] at hd; exact hd)
 
 end L.Arena

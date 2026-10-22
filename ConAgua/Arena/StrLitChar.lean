@@ -383,7 +383,8 @@ theorem slTail_ref (hS : CoreS dn m a vis fe M eb) {ty w : Word} (hty : HW ty)
   | some q₄ =>
   obtain ⟨lc, m₄⟩ := q₄
   rw [h4] at h; simp only [cnK1, cnK2, cnK3, cnK4, slK1, slK2, slK3, slK4, slK5, slK6, slK7, slK8, slK9] at h
-  refine pin_step p hp hS₂ h3 (coreRef_bind (const_call p hp hS₂ hli' hzs h4) fun M₄ hS₄ => ?_)
+  have hzd := ls1_den p hp hS hzl' h2 (zero_den hS hzl)
+  refine pin_step p hp hS₂ h3 (coreRef_bind (const_call p hp hS₂ hli' hzs h4 hzd) fun M₄ hS₄ => ?_)
   cases h5 : callW p n "pin_at" [10] m₄ with
   | none => rw [h5] at h; cases h
   | some q₅ =>

@@ -185,9 +185,11 @@ theorem keeps_cpl_internLit (l : ConLeche.Literal) : Keeps cpl (internE (.lit l)
 
 theorem CoreS.of_const {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
     {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb)
-    (hD : ArenaD m' a') (hcpl : cpl a' = cpl a) (hf : MemFrame [CREC, CSLOT, CLP] [18, 19] m m') :
+    (hD : ArenaD m' a') (hcpl : cpl a' = cpl a) (hf : MemFrame [CREC, CSLOT, CLP] [18, 19] m m')
+    {n : NIdx} {us : LsIdx} {r : EIdx} (hrun : (internE (.const n us)).run a = .ok (r, a'))
+    (hus : ∃ ls, denoteLs a.store.lss us = some ls) :
     CoreS dn m' a' vis fe M eb :=
-  hS.arena_frame hD hcpl hf
+  hS.arena_frameD hD hcpl hf
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl <;> decide)
@@ -201,6 +203,7 @@ theorem CoreS.of_const {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
     (fun x hx => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl <;> decide)
+    (hS.den.of_internConst hus hrun (hf.1 EREC (by simp [CREC, CSLOT, CLP, EREC]) (by decide)))
 
 theorem StackKept.of_const_frame {m m' : Mem} (hf : MemFrame [CREC, CSLOT, CLP] [18, 19] m m') :
     StackKept m m' := by
@@ -375,6 +378,7 @@ theorem callW_constE (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AStat
   refine ⟨by rw [hok']; exact hok, ?_, ?_, hfr, by rw [← hr]; exact hhw⟩
   · rw [hst']
     exact hC.of_const hD' (Keeps.run (keeps_cpl_internConst _ _) (AM.run_of_ok _ _ hok)) hfr
+      (AM.run_of_ok _ _ hok) (by rw [hr₁, ← hC.pins.emptyLevels]; exact hC.den.emptyLs)
   · rw [hres', hres, decH, ← hr]; rfl
 
 /-- **`const_e` refines `constE`.** `WhnfDeltaProg'` for the extra function lookups. -/

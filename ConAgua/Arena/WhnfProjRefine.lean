@@ -109,6 +109,7 @@ structure NameStep (a a' : AState) : Prop where
   lon2 : a'.store.lss.ls.scratchOn = a.store.lss.ls.scratchOn
   nwf : NStoreWF a'.store.lss.ls.ns
   next : NExt a.store.lss.ls.ns a'.store.lss.ls.ns
+  son : a'.store.scratchOn = a.store.scratchOn
 
 theorem internNNode_nstep {v : NNodeView} {a a' : AState} {h : NIdx}
     (hwf : NStoreWF a.store.lss.ls.ns) (hv : a.store.lss.ls.ns.ViewOK v)
@@ -124,7 +125,7 @@ theorem internNNode_nstep {v : NNodeView} {a a' : AState} {h : NIdx}
     | some i =>
       rw [nstore_find_some_intern hf]
       exact ⟨hwf, NStore.view_of_find hwf hf⟩
-  exact ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, key.1, NStore.intern_ext _ _⟩, key.2⟩
+  exact ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, key.1, NStore.intern_ext _ _, rfl⟩, key.2⟩
 
 theorem NameStep.lext {a a' : AState} (h : NameStep a a') : LExt a.store.lss.ls a'.store.lss.ls := by
   refine LExt.of_view_mono h.next (fun i w hw => ?_) ?_
@@ -142,7 +143,8 @@ theorem NameStep.lsext {a a' : AState} (h : NameStep a a') : LsExt a.store.lss a
 theorem NameStep.trans {a b c : AState} (h₁ : NameStep a b) (h₂ : NameStep b c) : NameStep a c :=
   ⟨h₂.caches.trans h₁.caches, h₂.pins.trans h₁.pins, h₂.pers.trans h₁.pers, h₂.scr.trans h₁.scr,
     h₂.lsp.trans h₁.lsp, h₂.lss.trans h₁.lss, h₂.lon.trans h₁.lon, h₂.lp.trans h₁.lp,
-    h₂.ls.trans h₁.ls, h₂.lon2.trans h₁.lon2, h₂.nwf, fun i n hn => h₂.next i n (h₁.next i n hn)⟩
+    h₂.ls.trans h₁.ls, h₂.lon2.trans h₁.lon2, h₂.nwf, fun i n hn => h₂.next i n (h₁.next i n hn),
+    h₂.son.trans h₁.son⟩
 
 /-- **`CoreS` across name interning** whose memory writes are confined to the store's arrays
 (below 42) and counts (`CTL` below 42). -/
@@ -162,7 +164,16 @@ theorem CoreS.of_name {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
           fun h => absurd (hA _ h) (by decide)⟩
         ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide),
           fun h => absurd (hC _ h) (by decide)⟩,
-      hf.2.2.1 145 ▸ hS.bstk⟩
+      hf.2.2.1 145 ▸ hS.bstk,
+      hS.den.mono hN.lsext (by rw [hN.pins]) (by rw [hN.pins]) (fun _ _ hk => .inl (hN.caches ▸ hk))
+        (hf.1 EREC (fun h => by have := hA _ h; simp only [EREC, ArrId] at this; omega) (by decide))
+        (fun x u hv => by simpa only [EStore.view, hN.pers, hN.scr, hN.son] using hv)
+        (fun x c us hv => .inl (by simpa only [EStore.view, hN.pers, hN.scr, hN.son] using hv))
+        (hS.den.lvlAll.of_lext (fun u hu => by
+          have e : a'.store.ls.view u = a.store.ls.view u := by
+            show a'.store.lss.ls.view u = a.store.lss.ls.view u
+            unfold LStore.view; rw [hN.lp, hN.ls, hN.lon2]
+          rw [← e]; exact hu) hN.lext)⟩
   · rw [hN.caches]
     exact CoreRM.frame (A := A) (C := C) (fun b hb => .inl (by have := hA b hb; simp only [ArrId] at this ⊢; omega))
       (fun x hx => .inl (by have := hC x hx; omega)) hf hS.core

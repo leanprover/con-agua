@@ -654,6 +654,76 @@ theorem consA_ok {ty so b0 d3 c3 w : Word} (hty : HW ty) (hso : HW so) (hb0 : HW
 
 end oks2
 
+/-! ## The found constant's level-parameter names read back -/
+
+theorem projInfo_lps {tbl : IProjTable} {a a' : AState} {cv : IConstantVal}
+    (h : (IConstantInfo.projInfo tbl).toConstantVal.run a = .ok (cv, a')) :
+    cv.levelParams = tbl.levelParams := by
+  simp only [IConstantInfo.toConstantVal, StateT.run_bind] at h
+  revert h
+  cases (internLNode .zero).run a with
+  | error e => intro h; cases h
+  | ok p1 =>
+  simp only [except_ok_bind]
+  cases (internLNode (.succ p1.1)).run p1.2 with
+  | error e => intro h; cases h
+  | ok p2 =>
+  simp only [except_ok_bind]
+  cases (internE (.sort p2.1)).run p2.2 with
+  | error e => intro h; cases h
+  | ok p3 =>
+  simp only [except_ok_bind, StateT.run_pure]
+  intro h; cases h; rfl
+
+/-- **A found constant's level-parameter names read back** after its `toConstantVal`: a projection
+table's from `StoreDen.proj`, any other constant's from `StoreDen.constLps`. -/
+theorem cv_lps {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {eb : Word}
+    {m m₁ : Mem} {a a₁ : AState} {M₁ : ModeMaps} (hS₁ : CoreS dn m₁ a₁ vis fe M₁ eb)
+    (he : m₁.arr64 EREC = m.arr64 EREC) {q : Word} {ci : IConstantInfo}
+    (hci : decCI (erecP m) dn q.toNat = some ci) (hfe : ∃ c, fe.find? c = some ci)
+    {cv : IConstantVal} (hrun : ci.toConstantVal.run a = .ok (cv, a₁)) :
+    ∃ ks, cv.levelParams.mapM (denoteN a₁.store.ns) = some ks := by
+  obtain ⟨c, hc⟩ := hfe
+  by_cases ht : ci.isTowerEntry = true
+  · cases ci with
+    | projInfo tbl =>
+      obtain ⟨wk, -, hk⟩ := strCiD hci
+      have htb : decTbl (erecP m) q.toNat = some tbl := by
+        rcases hk with ⟨-, _, -, h⟩ | ⟨-, _, _, _, -, -, -, h⟩ | ⟨-, _, -, h⟩ | ⟨-, _, _, -, -, h⟩ |
+          ⟨-, _, _, _, -, -, -, h⟩ | ⟨-, _, _, _, _, _, _, -, -, -, -, -, -, h⟩ | ⟨-, tbl', ht', h⟩
+        all_goals first | (cases h; exact ht') | cases h
+      have htb' := (erecP_ext m).decTbl htb
+      rw [← he] at htb'
+      rw [projInfo_lps hrun]
+      exact (hS₁.den.proj _ _ htb').2.2
+    | _ => simp [IConstantInfo.isTowerEntry] at ht
+  · have hf : ci.isTowerEntry = false := by simpa using ht
+    have hp : ∀ s, ci.toConstantVal.run s = .ok (cv, s) := by
+      cases ci with
+      | projInfo => simp [IConstantInfo.isTowerEntry] at hf
+      | _ =>
+        simp only [IConstantInfo.toConstantVal, StateT.run_pure] at hrun ⊢
+        cases hrun; intro s; rfl
+    have := hp a; rw [hrun] at this; cases this
+    exact hS₁.den.constLps c ci cv hc hf hp
+
+/-- The one level parameter of a found constant reads back, at the state after its
+`toConstantVal` (`cv_lps`). -/
+theorem lp_den {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {eb : Word}
+    {m m₁ : Mem} {a a₁ : AState} {M₁ : ModeMaps} (hS₁ : CoreS dn m₁ a₁ vis fe M₁ eb)
+    (he : m₁.arr64 EREC = m.arr64 EREC) {q : Word} {ci : IConstantInfo}
+    (hci : decCI (erecP m) dn q.toNat = some ci) (hfe : ∃ c, fe.find? c = some ci)
+    {cv : IConstantVal} (hrun : ci.toConstantVal.run a = .ok (cv, a₁)) {pn : Word}
+    (hlp : cv.levelParams = [decI pn]) :
+    ∃ x, denoteN (AM.st ci.toConstantVal a).store.ls.ns (decI pn) = some x := by
+  obtain ⟨ks, hks⟩ := cv_lps hS₁ he hci hfe hrun
+  rw [hlp] at hks
+  have hst : AM.st ci.toConstantVal a = a₁ := by unfold AM.st; rw [hrun]
+  rw [hst]
+  cases hx : denoteN a₁.store.ns (decI pn) with
+  | none => simp [List.mapM_cons, hx] at hks
+  | some x => exact ⟨x, hx⟩
+
 section calls
 variable (p : Prog) (hp : StrLitProg p) {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
   {a : AState} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} {r : List Word}
@@ -661,10 +731,12 @@ include hp
 
 /-- **`str_param_sort` as the prefix of a twin `do` block**: the level `param pn`, its successor,
 the sort, then any continuation `k` on the level and the sort. -/
-theorem paramSort_run (hS : CoreS dn m a vis fe M eb) {pn : Word} (hpn : HW pn) {r₁ : List Word}
+theorem paramSort_run (hS : CoreS dn m a vis fe M eb) {pn : Word} (hpn : HW pn)
+    (hpd : ∃ x, denoteN a.store.ls.ns (decI pn) = some x) {r₁ : List Word}
     {m₁ : Mem} (h : callW p n "str_param_sort" [pn] m = some (r₁, m₁)) {β : Type} [Inhabited β]
     {k : LIdx → EIdx → AM β} {dec : List Word → β} {ok : List Word → Prop}
-    (hk : ∀ M' a', HW (r₁.headD 0) → HW (r₁.tail.headD 0) → CoreS dn m₁ a' vis fe M' eb →
+    (hk : ∀ M' a', HW (r₁.headD 0) → HW (r₁.tail.headD 0) →
+      (∃ l, denoteL a'.store.ls (decI (r₁.headD 0)) = some l) → CoreS dn m₁ a' vis fe M' eb →
       CoreRef (k (decI (r₁.headD 0)) (decE (r₁.tail.headD 0))) a' dec dn m₁ vis fe M' eb r m' ok) :
     CoreRef (do
       let pl ← internLNode (.param (decI pn))
@@ -695,18 +767,31 @@ theorem paramSort_run (hS : CoreS dn m a vis fe M eb) {pn : Word} (hpn : HW pn) 
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨rfl, hm⟩ := hW
   rw [hm] at h3
-  have R1 := param_call p hp hS hpn h1
+  have R1 := param_call p hp hS hpn h1 hpd
+  have hd1 := lnode_den (v := .param (decI pn)) hS
+    (fun c hc => by simp [LNodeView.lchildren] at hc)
+    (fun n hn => by
+      simp only [LNodeView.nchildren, List.mem_cons, List.mem_nil_iff, or_false] at hn
+      subst hn; exact hpd) R1 rfl
   refine coreRef_bind R1 (fun M₁ hS₁ => ?_)
-  have R2 := succ_call p hp hS₁ R1.2.2.2 h2
+  have R2 := succ_call p hp hS₁ R1.2.2.2 h2 hd1
+  have hd2 := lnode_den (v := .succ (decLv x)) hS₁
+    (fun c hc => by
+      simp only [LNodeView.lchildren, List.mem_cons, List.mem_nil_iff, or_false] at hc
+      subst hc; exact hd1)
+    (fun n hn => by simp [LNodeView.nchildren] at hn) R2 rfl
   refine coreRef_bind R2 (fun M₂ hS₂ => ?_)
-  have R3 := sort_call p hp hS₂ R2.2.2.2 h3
+  have R3 := sort_call p hp hS₂ R2.2.2.2 h3 hd2
+  have hp3 := ls_den (op := internE (.sort (decLv y))) (lnode_lvl (v := .succ (decLv x)) hd1 R2 rfl)
+    (keeps_cpl_internSort _) R3 rfl
   refine coreRef_bind R3 (fun M₃ hS₃ => ?_)
-  exact hk M₃ _ R1.2.2.2 R3.2.2.2 hS₃
+  exact hk M₃ _ R1.2.2.2 R3.2.2.2 hp3 hS₃
 
 /-- **`list_ty_ok` refines `listTyOk`.** -/
 @[refines ConRon.Arena.listTyOk]
 theorem listTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
     (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) dn q.toNat = some ci)
+    (hfe : ∀ ci, decFound dn m found q = some ci → ∃ x, fe.find? x = some ci)
     (h : callW p n "list_ty_ok" [found, q] m = some (r, m')) :
     CoreRef (listTyOk (decFound dn m found q)) a decBool dn m vis fe M eb r m' := by
   cases n with
@@ -730,6 +815,7 @@ theorem listTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
   obtain ⟨c, m₁⟩ := q₁
   rw [h1] at hW
   obtain ⟨cv, a₁, hrun, hA, he, hsl, hlen, hty, hhw⟩ := cv_call p hp hS hci h1
+  have hfe' := hfe ci (by simp only [decFound, hf0, ↓reduceIte, hci])
   simp only [listTyOk]
   refine coreRef_bind (cref_run (dec := fun _ => cv) (ok := fun _ => True) (r := c) hrun hA rfl
     trivial) (fun M₁ hS₁ => ?_)
@@ -752,7 +838,8 @@ theorem listTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
   | some q₂ =>
   obtain ⟨s, m₂⟩ := q₂
   rw [h2] at hW
-  refine paramSort_run p hp hS₁ hw h2 (fun M₂ a₂ hpl hso hS₂ => ?_)
+  have hpd := lp_den hA.choose_spec.1 he hci hfe' hrun hlp
+  refine paramSort_run p hp hS₁ hw hpd h2 (fun M₂ a₂ hpl hso hpd₂ hS₂ => ?_)
   rw [listK2_s, faEqA_eq] at hW
   rw [hty]
   obtain ⟨hrun₂, hm, hres⟩ := faEqW_ok hp.eView hS₂.arena.1 hhw hso hso hW
@@ -763,6 +850,7 @@ theorem listTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
 @[refines ConRon.Arena.listNilTyOk]
 theorem listNilTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
     (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) dn q.toNat = some ci)
+    (hfe : ∀ ci, decFound dn m found q = some ci → ∃ x, fe.find? x = some ci)
     (h : callW p n "list_nil_ty_ok" [found, q] m = some (r, m')) :
     CoreRef (listNilTyOk (decFound dn m found q)) a decBool dn m vis fe M eb r m' := by
   cases n with
@@ -786,6 +874,7 @@ theorem listNilTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
   obtain ⟨c, m₁⟩ := q₁
   rw [h1] at hW
   obtain ⟨cv, a₁, hrun, hA, he, hsl, hlen, hty, hhw⟩ := cv_call p hp hS hci h1
+  have hfe' := hfe ci (by simp only [decFound, hf0, ↓reduceIte, hci])
   simp only [listNilTyOk]
   refine coreRef_bind (cref_run (dec := fun _ => cv) (ok := fun _ => True) (r := c) hrun hA rfl
     trivial) (fun M₁ hS₁ => ?_)
@@ -808,7 +897,8 @@ theorem listNilTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
   | some q₂ =>
   obtain ⟨s, m₂⟩ := q₂
   rw [h2] at hW
-  refine paramSort_run p hp hS₁ hw h2 (fun M₂ a₂ hpl hso hS₂ => ?_)
+  have hpd := lp_den hA.choose_spec.1 he hci hfe' hrun hlp
+  refine paramSort_run p hp hS₁ hw hpd h2 (fun M₂ a₂ hpl hso hpd₂ hS₂ => ?_)
   rw [nilK2_s] at hW
   cases h3 : callW p n "str_ls1" [s.headD 0] m₂ with
   | none => rw [h3] at hW; cases hW
@@ -837,6 +927,7 @@ theorem listNilTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
 @[refines ConRon.Arena.listConsTyOk]
 theorem listConsTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
     (hdec : found ≠ 0 → ∃ ci, decCI (erecP m) dn q.toNat = some ci)
+    (hfe : ∀ ci, decFound dn m found q = some ci → ∃ x, fe.find? x = some ci)
     (h : callW p n "list_cons_ty_ok" [found, q] m = some (r, m')) :
     CoreRef (listConsTyOk (decFound dn m found q)) a decBool dn m vis fe M eb r m' := by
   cases n with
@@ -860,6 +951,7 @@ theorem listConsTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
   obtain ⟨c, m₁⟩ := q₁
   rw [h1] at hW
   obtain ⟨cv, a₁, hrun, hA, he, hsl, hlen, hty, hhw⟩ := cv_call p hp hS hci h1
+  have hfe' := hfe ci (by simp only [decFound, hf0, ↓reduceIte, hci])
   simp only [listConsTyOk]
   refine coreRef_bind (cref_run (dec := fun _ => cv) (ok := fun _ => True) (r := c) hrun hA rfl
     trivial) (fun M₁ hS₁ => ?_)
@@ -882,7 +974,8 @@ theorem listConsTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
   | some q₂ =>
   obtain ⟨s, m₂⟩ := q₂
   rw [h2] at hW
-  refine paramSort_run p hp hS₁ hw h2 (fun M₂ a₂ hpl hso hS₂ => ?_)
+  have hpd := lp_den hA.choose_spec.1 he hci hfe' hrun hlp
+  refine paramSort_run p hp hS₁ hw hpd h2 (fun M₂ a₂ hpl hso hpd₂ hS₂ => ?_)
   rw [consK2_s] at hW
   cases h3 : callW p n "str_ls1" [s.headD 0] m₂ with
   | none => rw [h3] at hW; cases hW
@@ -890,6 +983,7 @@ theorem listConsTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
   obtain ⟨l, m₃⟩ := q₃
   rw [h3, consK3_s] at hW
   have R3 := ls1_call p hp hS₂ hpl h3
+  have hl3 := ls1_den p hp hS₂ hpl h3 hpd₂
   refine coreRef_bind R3 (fun M₃ hS₃ => ?_)
   cases h4 : callW p n "pin_at" [7] m₃ with
   | none => rw [h4] at hW; cases hW
@@ -928,7 +1022,10 @@ theorem listConsTyOk_call (hS : CoreS dn m a vis fe M eb) {found q : Word}
   | some q₈ =>
   obtain ⟨y1, m₈⟩ := q₈
   rw [h8, consK8_s] at hW
-  have R8 := const_call p hp hS₇ hiw R3.2.2.2 h8
+  have hl7 := lss_den (op := internE (.bvar 2)) (lss_den (op := internE (.bvar 1))
+    (lss_den (op := internE (.bvar 0)) (lss_pin (op := pinList) hl3 hS₃.pins (i := 7) (by decide) rfl)
+      (keeps_cpl_internBVar _) R5 rfl) (keeps_cpl_internBVar _) R6 rfl) (keeps_cpl_internBVar _) R7 rfl
+  have R8 := const_call p hp hS₇ hiw R3.2.2.2 h8 hl7
   refine coreRef_bind R8 (fun M₈ hS₈ => ?_)
   cases h9 : callW p n "mk_app" [y1.headD 0, x1.headD 0] m₈ with
   | none => rw [h9] at hW; cases hW
