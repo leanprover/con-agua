@@ -6,7 +6,7 @@ import ConAgua.Arena.WhnfM2CRefine5
 
 `iota_rec_c` (the recursor's record, the arity, the level-list length, the telescope) and
 `iota_rec_at` itself: `iotaRecAt_refines'` proves `WhnfCore.lean`'s `IotaRecAtOK` from the
-callees' specs and the stub assumptions (`ErecKeptRec`, `LvlsEqDen`, `RecShape`); the
+callees' specs and the stub assumptions (`ErecKeptRec`, `LvlsEqDen`); the
 census-tagged `iotaRecAt_refines` instantiates them.
 -/
 
@@ -145,8 +145,7 @@ end cRun
 /-- **`iota_rec_c` refines the recursor's block.** -/
 theorem iotaRecC_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     (hw : WhnfCallees p) (hsup : ∀ fe : IFEnv, SupKeep fe) (hmtc : MajorToCtorOK p)
-    (hEI : ErecKeptInst p) (hER : ErecKeptRec p) (hEK : ErecKeptKnot p) (hden : LvlsEqDen p)
-    (hshape : RecShape) :
+    (hEI : ErecKeptInst p) (hER : ErecKeptRec p) (hEK : ErecKeptKnot p) (hden : LvlsEqDen p) :
     ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
     ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode d c us so sn : Word) (xs : Array EIdx),
@@ -278,7 +277,6 @@ theorem iotaRecC_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
       (fun ⟨_, _, h3⟩ => by rw [p0] at h3; simp [decOpt] at h3))
   rw [if_neg p0] at hW
   -- the major
-  obtain ⟨hshr, hshp⟩ := hshape dn s.mem vis fe (decI c) _ _ _ _ hS.env hfind
   cases n with
   | zero => rw [callW_zero] at hW; cases hW
   | succ N =>
@@ -294,7 +292,7 @@ theorem iotaRecC_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     hm4 hebm hcw hus
   simp only [hE0] at hma
   obtain ⟨ok4, ⟨M4, hS4, hK4, hSt4⟩, res4, hr4⟩ := CoreSpec.of_callW (hma hcv hrules hsa hsat
-    (by omega) (by omega) hshp) c4
+    (by omega)) c4
   have hrun4 := AM.run_of_ok _ _ ok4
   rw [res4] at hrun4
   obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ (cT_run_major _ _ _ _ _ _ _ _ a₀ _ _ _ _ _ _ _ _
@@ -351,14 +349,13 @@ theorem at_run_c (a a' : AState) (c : NIdx) (us : LsIdx) (res : Option EIdx)
 end atRun
 
 /-- **`iota_rec_at` refines `iotaRecAt`** (`IotaRecAtOK`, what `whnf_app` assumes), from the
-callees' specs and three new stub assumptions: `ErecKeptRec` (the callees the pieces read the
+callees' specs and two stub assumptions: `ErecKeptRec` (the callees the pieces read the
 record pool after leave it alone), `LvlsEqDen` (a level-list comparison that runs compares lists
-that read back), `RecShape` (a stored recursor's rule prefix and plain rules' parameters fit its
-major index). -/
+that read back). -/
 theorem iotaRecAt_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     (hw : WhnfCallees p) (hsup : ∀ fe : IFEnv, SupKeep fe) (hmtc : MajorToCtorOK p)
     (hEI : ErecKeptInst p) (hER : ErecKeptRec p) (hEK : ErecKeptKnot p) (hden : LvlsEqDen p)
-    (hshape : RecShape) (n : Nat) (hk : KnotUpTo p n) : IotaRecAtOK p (n + 1) := by
+    (n : Nat) (hk : KnotUpTo p n) : IotaRecAtOK p (n + 1) := by
   intro F s₀ a₀ dn vis fe M eb mode d hd so sn xs hnF hn62 hpre hhd hsa hsat
   have hS := hpre.rel
   apply L.M.triple_of_run
@@ -401,7 +398,7 @@ theorem iotaRecAt_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨h0, h1, hm⟩ := hW
   obtain ⟨ok2, ⟨M2, hS2, hK2, hSt2⟩, res2, hr2⟩ := CoreSpec.of_callW
-    (iotaRecC_refines' p hp hc hw hsup hmtc hEI hER hEK hden hshape N (hk.mono (by omega)) F
+    (iotaRecC_refines' p hp hc hw hsup hmtc hEI hER hEK hden N (hk.mono (by omega)) F
       (by omega) (by omega) ⟨s.mem, Locals.init []⟩ a₀ dn vis fe M eb mode d _ _ so sn xs hS
       hpre.mode4 hpre.eb_mode hcw husw hsa hsat) c2
   have hrun2 := AM.run_of_ok _ _ ok2
@@ -417,10 +414,10 @@ theorem iotaRecAt_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
 @[refines ConRon.Arena.iotaRecAt]
 theorem iotaRecAt_refines (p : Prog) (hp : IotaRecProg' p) (hm : M2CProg' p)
     (hcl : closedA p coreErecA coreErecC coreFns = true)
-    (hden : LvlsEqDen p) (hshape : RecShape) (n : Nat) (hk : KnotUpTo p n) :
+    (hden : LvlsEqDen p) (n : Nat) (hk : KnotUpTo p n) :
     IotaRecAtOK p (n + 1) :=
   iotaRecAt_refines' p hp (iotaCallees_stub p) (whnfCallees_stub p) supKeep_twin
     (majorToCtor_refines p hm hcl) (ErecKeptInst.of_closed hcl) (ErecKeptRec.of_closed hcl)
-    (ErecKeptKnot.of_closed hcl) hden hshape n hk
+    (ErecKeptKnot.of_closed hcl) hden n hk
 
 end L.Arena
