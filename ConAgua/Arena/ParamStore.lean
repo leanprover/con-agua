@@ -96,6 +96,7 @@ def pfindLoop : Stmt := lblk (t, u, h, n, j, d, v, b) {
   }
 }
 
+/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def paramFind : FunDecl := lfn (t, u, h) locals (n, j, d, v, b) {
   n := len(PSLOT.u64) >> 1;
   b := CTL.u64[62] * t;
@@ -167,6 +168,7 @@ def ppushOK (m : Mem) (t : Word) : Bool :=
 def ppushMem (m : Mem) (t u j c : Word) : Mem :=
   (((m.set64 PREC (c * 2 + t) u).set64 PSLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (14 + (t &&& 1)) (c + 1))
 
+/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def paramPush : FunDecl := lfn (t, u, j) locals (c) {
   c := CTL.u64[14 + t];
   if c >= 134217728 { abort };
@@ -225,6 +227,7 @@ def pinternW (m : Mem) (u : Word) : Option (Word × Mem) :=
     some (paramP + pcnt m 0, ppushMem m 0 u (rs₀.tail.tail.headD 0) (pcnt m 0))
   else none
 
+/-- con-ron: ConRon/Arena/Monad.lean:441-457 ConRon.Arena.internLNode -/
 @[l_impl ConRon.Arena.internLNode]
 def internParam : FunDecl := lfn (u) locals (h, fd, i, j, d) {
   h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫;

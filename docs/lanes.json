@@ -218,7 +218,7 @@
 {
 "lane": "induct",
 "model": "opus",
-"status": "running",
+"status": "done",
 "focus": "Phase 8: inductive declarations (top-down)"
 },
 {
@@ -238,5 +238,23 @@
 "model": "opus",
 "status": "running",
 "focus": "Phase 2: ROM interner, declaration loop callees, declaration checks"
+},
+{
+"lane": "censusmem",
+"model": "opus",
+"status": "done",
+"focus": "Census memory blowup (18 GB): drop fingerprints, add a memory guard"
+},
+{
+"lane": "provenance",
+"model": "opus",
+"status": "done",
+"focus": "con-ron-style source citations + provenance gate for syncing"
+},
+{
+"lane": "indproofs",
+"model": "opus",
+"status": "running",
+"focus": "Prove the phase-8 L code bottom-up; hook inductive lines into the frontend"
 }
 ]

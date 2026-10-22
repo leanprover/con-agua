@@ -59,6 +59,8 @@ grind_pattern [level_grind] leqTopW_succ => leqTopW (n + 1) m l r
 grind_pattern [level_grind] ltK₁_some => ltK₁ n r (some (x, m₁))
 grind_pattern [level_grind] ltK₂_some => ltK₁.ltK₂ n x (some (y, m₁))
 
+/-- con-leche: ConLeche/Kernel/Level.lean:144-146 ConLeche.Level.leq
+con-leche: ConLeche/Kernel/Level.lean:139-142 ConLeche.Level.defaultFuel -/
 @[l_impl ConLeche.Level.leq ConLeche.Level.defaultFuel]
 def lvLeqTop : FunDecl := lfn (l, r) locals (x, y) {
   x := call lv_simp(l);
@@ -123,6 +125,7 @@ grind_pattern [level_grind] evK₄_zero => evK₁.evK₄ n m₁ x y (some 0)
 grind_pattern [level_grind] evK₅_stop => evK₁.evK₅ n x y (some (z, m₁))
 grind_pattern [level_grind] evK₅_go => evK₁.evK₅ n x y (some (2, m₁))
 
+/-- con-leche: ConLeche/Kernel/Level.lean:148-167 ConLeche.Level.isEquiv -/
 @[l_impl ConLeche.Level.isEquiv]
 def lvEquiv : FunDecl := lfn (l, r) locals (x, y, z) {
   z := call lv_eq(l, r);
@@ -175,6 +178,7 @@ grind_pattern [level_grind] equivsW_cons => equivsW (n + 1) m a ln b k
 grind_pattern [level_grind] esK_stop => esK n a ln b k (some (z, m₁))
 grind_pattern [level_grind] esK_go => esK n a ln b k (some (2, m₁))
 
+/-- con-leche: ConLeche/Kernel/Level.lean:169-175 ConLeche.Level.isEquivList -/
 @[l_impl ConLeche.Level.isEquivList]
 def lvEquivs : FunDecl := lfn (a, n, b, k) locals (z) {
   if n == 0 || k == 0 { if n == k { return 2 }; return 1 };
@@ -246,6 +250,7 @@ def lvlEqW : Nat → Mem → Word → Word → Option (Word × Mem)
 fresh heap (the top reset to `0`). The verdict cache `lvlEqC` is not represented (`CoreR` has no
 fields yet): the answer is recomputed, which the twin's cache returns unchanged
 (`LevelArena.lean`, `lvlEq_refines`). -/
+-- con-ron: ConRon/Arena/Core.lean:132-149 ConRon.Arena.lvlEq?
 @[l_impl ConRon.Arena.lvlEq?]
 def lvlEqL : FunDecl := lfn (u, v) locals (z) {
   CTL.u64[192] := 0;
@@ -279,6 +284,7 @@ def lsNodeW (m : Mem) (h : Word) : List Word :=
   else if rdW (m.arr64 CTL) (40 + tierW h) ≤ idxW h then []
   else [rdW (m.arr64 LSREC) (idxW h * 6 + tierW h * 3), rdW (m.arr64 LSREC) (idxW h * 6 + tierW h * 3 + 1)]
 
+/-- con-ron: ConRon/Arena/Monad.lean:491-497 ConRon.Arena.viewLs -/
 def lsNode : FunDecl := lfn (h) locals (t, i) {
   if h >> 28 != 0 { abort };
   t := (h >> 27) & 1;
@@ -311,6 +317,7 @@ def lvlsEqW : Nat → Mem → Word → Word → Option (Word × Mem)
 
 /-- con-ron's `lvlsEq?` (`Arena/Core.lean:155`) on two level-list handles: `isEquivList` on their
 slices, on a fresh heap; the verdict cache `lvlsEqC` is not represented (as for `lvl_eq`). -/
+-- con-ron: ConRon/Arena/Core.lean:151-168 ConRon.Arena.lvlsEq?
 @[l_impl ConRon.Arena.lvlsEq?]
 def lvlsEqL : FunDecl := lfn (us, vs) locals (a, n, b, k, z) {
   (a, n) := call ls_node(us);

@@ -39,6 +39,7 @@ def skipWsLoop : Stmt := lblk (i) {
   while i < len(IN.u8) && (IN.u8[i] == 32 || IN.u8[i] == 9 || IN.u8[i] == 13) { i += 1 }
 }
 
+/-- con-leche: ConLeche/Frontend/Scan/Fast.lean:84-91 ConLeche.Frontend.skipWs -/
 @[l_impl ConLeche.Frontend.skipWs]
 def skipWs : FunDecl := lfn (i) { ⟪skipWsLoop⟫; return i }
 
@@ -109,6 +110,7 @@ def skipDigitsLoop : Stmt := lblk (i) {
   while i < len(IN.u8) && 48 <= IN.u8[i] && IN.u8[i] <= 57 { i += 1 }
 }
 
+/-- con-leche: ConLeche/Frontend/Scan/Fast.lean:93-101 ConLeche.Frontend.skipDigits -/
 @[l_impl ConLeche.Frontend.skipDigits]
 def skipDigits : FunDecl := lfn (i) { ⟪skipDigitsLoop⟫; return i }
 
@@ -205,6 +207,7 @@ def newlineFromLoop : Stmt := lblk (k) {
   }
 }
 
+/-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2601-2610 ConLeche.Frontend.newlineFrom -/
 @[l_impl ConLeche.Frontend.newlineFrom]
 def newlineFrom : FunDecl := lfn (k) { ⟪newlineFromLoop⟫; return 0 }
 
@@ -279,6 +282,7 @@ def keyEndLoop : Stmt := lblk (j, c) {
   }
 }
 
+/-- con-leche: ConLeche/Frontend/Scan/Fast.lean:133-146 ConLeche.Frontend.keyEnd -/
 @[l_impl ConLeche.Frontend.keyEnd]
 def keyEnd : FunDecl := lfn (j) locals (c) { ⟪keyEndLoop⟫; return 0 }
 
@@ -357,6 +361,7 @@ def hasEscapeLoop : Stmt := lblk (j, e) {
   }
 }
 
+/-- con-leche: ConLeche/Frontend/Scan/Fast.lean:522-531 ConLeche.Frontend.hasEscape -/
 @[l_impl ConLeche.Frontend.hasEscape]
 def hasEscape : FunDecl := lfn (j, e) { ⟪hasEscapeLoop⟫; return 0 }
 
@@ -427,6 +432,7 @@ end hasEscape
 
 No loop: a call to `skip_digits` and two comparisons. -/
 
+/-- con-leche: ConLeche/Frontend/Scan/Fast.lean:480-491 ConLeche.Frontend.numEnd -/
 @[l_impl ConLeche.Frontend.numEnd]
 def numEnd : FunDecl := lfn (i) locals (e) {
   e := call skip_digits(i);

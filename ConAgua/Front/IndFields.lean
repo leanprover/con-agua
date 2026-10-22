@@ -53,6 +53,7 @@ abbrev IFL : ArrId := 71
 /-! ## The scratch arrays -/
 
 /-- `if_reset()`: both scratch arrays empty. -/
+-- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
 def ifReset : FunDecl := lfn () {
   if len(IFR.u64) == 0 || len(IFL.u64) == 0 { abort };
   IFR.u64[0] := 0;
@@ -61,6 +62,7 @@ def ifReset : FunDecl := lfn () {
 }
 
 /-- `ifr_alloc(n)`: `n` zeroed words of `IFR`; their absolute index. -/
+-- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
 def ifrAlloc : FunDecl := lfn (n) locals (o, j) {
   if len(IFR.u64) == 0 { abort };
   o := IFR.u64[0] + 1;
@@ -73,6 +75,7 @@ def ifrAlloc : FunDecl := lfn (n) locals (o, j) {
 }
 
 /-- `ifl_alloc(n)`: `n` zeroed words of `IFL`; their absolute index. -/
+-- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
 def iflAlloc : FunDecl := lfn (n) locals (o, j) {
   if len(IFL.u64) == 0 { abort };
   o := IFL.u64[0] + 1;
@@ -85,6 +88,7 @@ def iflAlloc : FunDecl := lfn (n) locals (o, j) {
 }
 
 /-- `ifl_push(x)`: `x` appended to `IFL`; its index. -/
+-- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
 def iflPush : FunDecl := lfn (x) locals (o) {
   o := call ifl_alloc(1);
   IFL.u64[o] := x;
@@ -92,6 +96,7 @@ def iflPush : FunDecl := lfn (x) locals (o) {
 }
 
 /-- `fld_alloc(kind, n)`: a record of kind `kind` (`3`, a rule, in `IFL`; else in `IFR`). -/
+-- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
 def fldAlloc : FunDecl := lfn (kind, n) locals (o) {
   if kind == 3 { o := call ifl_alloc(n); return o };
   o := call ifr_alloc(n);
@@ -99,6 +104,7 @@ def fldAlloc : FunDecl := lfn (kind, n) locals (o) {
 }
 
 /-- `fld_put(kind, p, s, x)`: word `s` of the record of kind `kind` at `p` is `x`. -/
+-- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
 def fldPut : FunDecl := lfn (kind, p, s, x) {
   if kind == 3 { IFL.u64[p + s] := x; return 0 };
   IFR.u64[p + s] := x;
@@ -106,6 +112,7 @@ def fldPut : FunDecl := lfn (kind, p, s, x) {
 }
 
 /-- `ind_size(kind)`: the record size of each kind. -/
+-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2397-2401 ConLeche.Frontend.scanIndDecl
 def indSize : FunDecl := lfn (kind) {
   if kind == 0 || kind == 2 { return 11 };
   if kind == 1 { return 10 };
@@ -121,6 +128,7 @@ record of kind `kind` is read, and where it goes. `how`: `1` a number, `2` a Boo
 (into `IFL`, slots `slot`, `slot + 1`), `6` an optional number (flag at `slot`, value at
 `slot + 1`), `7` a list of records of kind `sub` (slots `slot`, `slot + 1`), `8` a Boolean read
 past; `0` a key the record cannot have (aborts). -/
+/-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2397-2401 ConLeche.Frontend.scanIndDecl -/
 def indSlot : FunDecl := lfn (kind, k) {
   if k == 34 { if kind <= 2 { return (1, 0, 0) } };  -- `name`
   if k == 61 { if kind <= 2 { return (1, 2, 0) } };  -- `type`
@@ -173,6 +181,7 @@ def indSlot : FunDecl := lfn (kind, k) {
 
 /-- `ifl_ids(v)`: the number list whose `[` is at `v`, its items appended to `IFL`;
 `(off, cnt)`. -/
+-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2397-2401 ConLeche.Frontend.scanIndDecl
 def iflIds : FunDecl := lfn (v) locals (i, o, cnt, c, e, x) {
   o := call ifl_alloc(0);
   i := v + 1;
@@ -197,6 +206,11 @@ def iflIds : FunDecl := lfn (v) locals (i, o, cnt, c, e, x) {
 
 /-- `ind_member(kind, p, ks, k, v)`: the member with key `k` (key quote at `ks`, value at `v`) of
 the record of kind `kind` at `p`, read into it; the end of the value. -/
+-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2397-2401 ConLeche.Frontend.scanIndDecl
+-- con-leche: ConLeche/Frontend/Scan/Fast.lean:1698-1702 ConLeche.Frontend.scanIndType
+-- con-leche: ConLeche/Frontend/Scan/Fast.lean:1845-1851 ConLeche.Frontend.scanIndCtor
+-- con-leche: ConLeche/Frontend/Scan/Fast.lean:1523-1527 ConLeche.Frontend.scanIndRec
+-- con-leche: ConLeche/Frontend/Scan/Fast.lean:1349-1353 ConLeche.Frontend.scanRule
 @[l_impl ConLeche.Frontend.scanIndDecl ConLeche.Frontend.scanIndType ConLeche.Frontend.scanIndCtor
   ConLeche.Frontend.scanIndRec ConLeche.Frontend.scanRule]
 def indMember : FunDecl := lfn (kind, p, ks, k, v) locals (h, s, sub, e, x, o, c) {
@@ -236,6 +250,7 @@ def indMember : FunDecl := lfn (kind, p, ks, k, v) locals (h, s, sub, e, x, o, c
 
 /-- `ind_obj(i, kind, p)`: the object whose `{` is at `i`, read into the record of kind `kind`
 at `p`; the position after its `}`. -/
+-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2397-2401 ConLeche.Frontend.scanIndDecl
 def indObj : FunDecl := lfn (i, kind, p) locals (w, tag, ks, k, v, e) {
   i += 1;
   w := 1;
@@ -253,6 +268,10 @@ def indObj : FunDecl := lfn (i, kind, p) locals (w, tag, ks, k, v, e) {
 
 /-- `ind_list(v, sub)`: the list of objects whose `[` is at `v`, each read into a fresh record of
 kind `sub` (consecutive records); `(off, cnt, end)`. -/
+-- con-leche: ConLeche/Frontend/Scan/Fast.lean:1732-1736 ConLeche.Frontend.scanIndTypes
+-- con-leche: ConLeche/Frontend/Scan/Fast.lean:1881-1885 ConLeche.Frontend.scanIndCtors
+-- con-leche: ConLeche/Frontend/Scan/Fast.lean:1557-1561 ConLeche.Frontend.scanIndRecs
+-- con-leche: ConLeche/Frontend/Scan/Fast.lean:1383-1387 ConLeche.Frontend.scanRules
 @[l_impl ConLeche.Frontend.scanIndTypes ConLeche.Frontend.scanIndCtors
   ConLeche.Frontend.scanIndRecs ConLeche.Frontend.scanRules]
 def indList : FunDecl := lfn (v, sub) locals (i, o, cnt, c, e, q, sz) {
@@ -280,6 +299,7 @@ def indList : FunDecl := lfn (v, sub) locals (i, o, cnt, c, e, q, sz) {
 
 /-- `ind_fields(v)`: the `inductive` object whose `{` is at `v`, read (the scratch arrays reset
 first); its three lists `(types.off, types.cnt, ctors.off, ctors.cnt, recs.off, recs.cnt)`. -/
+-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2397-2401 ConLeche.Frontend.scanIndDecl
 @[l_impl ConLeche.Frontend.scanIndDecl]
 def indFields : FunDecl := lfn (v) locals (p, e) {
   e := call if_reset();
@@ -297,6 +317,7 @@ def indFieldsFns : Prog :=
    ("ind_fields", indFields)]
 
 /-- A stub with `k` parameters (the closure check's stand-in for a callee of another file). -/
+-- con-ron: none — a closure-check stub for a callee in another file
 def stub (k : Nat) : FunDecl := ⟨k, k, .abort⟩
 
 /-- The callees of other files (Stage B's scanners, `read_nat`), by arity. -/

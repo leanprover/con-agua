@@ -366,6 +366,7 @@ grind_pattern [arena_grind] instProjW_miss => instProjW (n + 1) m h d v
 
 /-! ## The L code -/
 
+/-- con-ron: ConRon/Arena/ExprOps.lean:251-277 ConRon.Arena.instantiate1Go -/
 @[l_impl ConRon.Arena.instantiate1Go]
 def instGo : FunDecl := lfn (h, d, v) locals (x, g, t, i, r) {
   x := call der_b(h);
@@ -389,6 +390,7 @@ def instGo : FunDecl := lfn (h, d, v) locals (x, g, t, i, r) {
   return h
 }
 
+/-- con-ron: ConRon/Arena/ExprOps.lean:279-294 ConRon.Arena.instantiate1ArmApp -/
 @[l_impl ConRon.Arena.instantiate1ArmApp]
 def instApp : FunDecl := lfn (h, d, v) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   (fd, j, e0) := call if_find(h, d);
@@ -407,6 +409,7 @@ def instApp : FunDecl := lfn (h, d, v) locals (fd, j, e0, t, i, f, a, x, y, r, u
   return r
 }
 
+/-- con-ron: ConRon/Arena/ExprOps.lean:296-312 ConRon.Arena.instantiate1ArmBind -/
 @[l_impl ConRon.Arena.instantiate1ArmBind]
 def instLam : FunDecl := lfn (h, d, v) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   if d + 1 == 0 { abort };
@@ -426,6 +429,7 @@ def instLam : FunDecl := lfn (h, d, v) locals (fd, j, e0, t, i, f, a, x, y, r, u
   return r
 }
 
+/-- con-ron: ConRon/Arena/ExprOps.lean:296-312 ConRon.Arena.instantiate1ArmBind -/
 @[l_impl ConRon.Arena.instantiate1ArmBind]
 def instForall : FunDecl := lfn (h, d, v) locals (fd, j, e0, t, i, f, a, x, y, r, u) {
   if d + 1 == 0 { abort };
@@ -445,6 +449,7 @@ def instForall : FunDecl := lfn (h, d, v) locals (fd, j, e0, t, i, f, a, x, y, r
   return r
 }
 
+/-- con-ron: ConRon/Arena/ExprOps.lean:314-330 ConRon.Arena.instantiate1ArmLet -/
 @[l_impl ConRon.Arena.instantiate1ArmLet]
 def instLet : FunDecl := lfn (h, d, v) locals (fd, j, e0, t, i, f, a, b, x, y, z, r, u) {
   if d + 1 == 0 { abort };
@@ -466,6 +471,7 @@ def instLet : FunDecl := lfn (h, d, v) locals (fd, j, e0, t, i, f, a, b, x, y, z
   return r
 }
 
+/-- con-ron: ConRon/Arena/ExprOps.lean:332-346 ConRon.Arena.instantiate1ArmProj -/
 @[l_impl ConRon.Arena.instantiate1ArmProj]
 def instProj : FunDecl := lfn (h, d, v) locals (fd, j, e0, t, i, nm, ix, e, x, r, u) {
   (fd, j, e0) := call if_find(h, d);

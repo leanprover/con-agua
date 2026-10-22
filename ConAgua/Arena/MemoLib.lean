@@ -123,6 +123,7 @@ def mfindLoopG (S : MemoSch) : Stmt := lblk (k1, k2, n, e, j, d) {
   }
 }
 
+/-- con-ron: none — the memo library (open addressing over fixed arrays; the twin's `Std.HashMap` caches) -/
 def memoFindG (S : MemoSch) : FunDecl := lfn (k1, k2) locals (n, e, j, d) {
   n := len(S.arr.u64) >> 2;
   e := CTL.u64[⟪S.cs⟫] + 1;
@@ -199,6 +200,7 @@ def msetG (S : MemoSch) (m : Mem) (k1 k2 v : Word) : Option Mem :=
   if mfindG S m k1 k2 = [] then none
   else mputG S m k1 k2 v ((mfindG S m k1 k2).headD 0) ((mfindG S m k1 k2).tail.headD 0)
 
+/-- con-ron: none — the memo library (open addressing over fixed arrays; the twin's `Std.HashMap` caches) -/
 def memoPutG (S : MemoSch) : FunDecl := lfn (k1, k2, v, fd, j) locals (c, e) {
   if fd == 0 {
     c := CTL.u64[⟪S.cs + 1⟫];
@@ -233,6 +235,7 @@ theorem memoPutG_spec (S : MemoSch) (p : Prog) (f : FnName) (hp : p.lookup f = s
 def mclearG (S : MemoSch) (m : Mem) : Mem :=
   (m.set64 CTL S.cs (rdW (m.arr64 CTL) S.cs + 1)).set64 CTL (S.cs + 1) 0
 
+/-- con-ron: none — the memo library (open addressing over fixed arrays; the twin's `Std.HashMap` caches) -/
 def memoClearG (S : MemoSch) : FunDecl := lfn () locals () {
   if CTL.u64[⟪S.cs⟫] + 2 == 0 { abort };
   CTL.u64[⟪S.cs⟫] := CTL.u64[⟪S.cs⟫] + 1;
@@ -276,6 +279,7 @@ def TOMB : Word := 0xFFFFFFFFFFFFFFFF
 /-- The memory after `X_erase(j)`. -/
 def meraseG (S : MemoSch) (m : Mem) (j : Word) : Mem := m.set64 S.arr (j * 4 + 1) TOMB
 
+/-- con-ron: none — the memo library (open addressing over fixed arrays; the twin's `Std.HashMap` caches) -/
 def memoEraseG (S : MemoSch) : FunDecl := lfn (j) locals () {
   S.arr.u64[j * 4 + 1] := ⟪TOMB⟫;
   return 0
@@ -309,6 +313,7 @@ memo's `clear`. -/
 def benterG (c : Word) (m : Mem) : Mem :=
   (m.set64 CTL c (rdW (m.arr64 CTL) c + 1)).set64 CTL (c + 1) (rdW (m.arr64 CTL) c + 1)
 
+/-- con-ron: none — the memo library (open addressing over fixed arrays; the twin's `Std.HashMap` caches) -/
 def bankEnterG (c : Word) : FunDecl := lfn () locals (s, g) {
   s := CTL.u64[⟪c + 1⟫];
   g := CTL.u64[⟪c⟫] + 1;
@@ -318,6 +323,7 @@ def bankEnterG (c : Word) : FunDecl := lfn () locals (s, g) {
   return s
 }
 
+/-- con-ron: none — the memo library (open addressing over fixed arrays; the twin's `Std.HashMap` caches) -/
 def bankLeaveG (c : Word) : FunDecl := lfn (s) locals () {
   CTL.u64[⟪c + 1⟫] := s;
   return 0

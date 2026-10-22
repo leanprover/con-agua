@@ -1,4 +1,4 @@
-import ConAgua.Arena.IndLibSpec
+import ConAgua.Arena.IndCopy2
 import ConAgua.Arena.DerRel
 import ConAgua.Arena.ExprMk
 
@@ -137,5 +137,151 @@ theorem mkProj_stage (hS : StageR dn vis fe m a) (n i e : Word) (hI : mkProjW m 
   exact stage_of_ok hS hok hD hres hf (by simp [PJDER, PJREC, PJSLOT]) (by simp) (keeps_internE _)
 
 end
+
+/-! ## The pool's `sl_cons` under the stage relation -/
+
+/-- The pool's top after a `sl_cons` stays within the array. -/
+theorem consW_room {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word}
+    (h : consW n m x o l = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64)
+    (hc : 200 < (m.arr64 CTL).size) (hsrc : o.toNat + l.toNat ≤ iwTop m)
+    (hx : x.toNat < 2 ^ 32) {k : IdxKind} {xs : List (Idx k)} (hxs : decHL m o.toNat l.toNat = some xs) :
+    iwTop m' ≤ (m'.arr64 IW).size := by
+  obtain ⟨-, -, -, hf, -, ht⟩ := consW_dec h hsz hc hsrc hx hxs
+  rw [← ht, hf.2.2.1 IW]
+  simp only [consW] at h
+  by_cases h0 : l + 1 = 0
+  · simp [h0] at h
+  simp only [h0, if_false] at h
+  simp only [allocW] at h
+  by_cases h1 : m.len64 IW < rdW (m.arr64 CTL) 200
+  · simp [h1] at h
+  by_cases h2 : m.len64 IW - rdW (m.arr64 CTL) 200 < l + 1
+  · simp [h1, h2] at h
+  have hlen : (m.len64 IW).toNat = (m.arr64 IW).size := by simp [Mem.len64]; omega
+  have : ¬ (m.len64 IW).toNat < (rdW (m.arr64 CTL) 200).toNat := h1
+  have h2' : ¬ (m.len64 IW - rdW (m.arr64 CTL) 200).toNat < (l + 1).toNat := h2
+  rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; omega)] at h2'
+  omega
+
+/-- **`sl_cons` keeps the stage relation**: the pool grew by the new slice, which decodes to
+`x :: xs`. -/
+theorem consW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+    {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} {k : IdxKind} {xs : List (Idx k)}
+    (h : consW n m x o l = some (r, m')) (hS : StageR dn vis fe m a)
+    (hsrc : o.toNat + l.toNat ≤ iwTop m) (hx : x.toNat < 2 ^ 32)
+    (hxs : decHL m o.toNat l.toNat = some xs) :
+    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+      decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (decI x :: xs) ∧
+      (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
+  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
+  obtain ⟨hr, hd, hg, hf, -, ht⟩ := consW_dec h hsz hc hsrc hx hxs
+  have hroom := consW_room h hsz hc hsrc hx hxs
+  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.2.1 129 (by simp)
+  have hE : m'.arr64 EREC = m.arr64 EREC := hf.1 EREC (by simp [EREC, IW]) (by decide)
+  subst hr
+  refine ⟨⟨CheckR.frame_iw hf hS.1, hroom, ?_, ?_, ?_, ?_⟩, hg, by simpa using hd, by simpa using ht⟩
+  · simp only [erTop, h129, hE]; exact hE1
+  · rw [hf.2.2.1 IW]; exact hsz
+  · rw [hE]; exact hEs
+  · rw [hf.2.2.1 CTL]; exact hc
+
+/-! ## Level interning under the stage relation -/
+
+/-- `DerR` reads only the expression tables. -/
+theorem DerR.lvl {m : Mem} {a a' : AState} (h1 : a'.store.pers = a.store.pers := by rfl)
+    (h2 : a'.store.scr = a.store.scr := by rfl) (hD : DerR m a) : DerR m a' := by
+  obtain ⟨b, f, s, c, l, ap, la, fa, le, pj⟩ := hD
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> simp only [DerT2, h1, h2] <;> assumption
+
+section levels
+variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem} {a : AState}
+  {r : Word}
+
+/-- A level interning (a proto run over a level lens) from the stage relation: the expression
+tables, caches and pins are untouched, so `DerR` and `cp` carry over. -/
+theorem stage_of_level {β : Type} [BEq β] [Hashable β] {L : Lens β LDer .level} {op : AM LIdx}
+    {key : β} {tag : UInt32} {pf : Option LIdx} {d : LDer} {err : CheckError}
+    {A : List ArrId} {C : List Word}
+    (hS : StageR dn vis fe m a) (hrun : op.run a = protoRun L key tag pf d err a) (hok : AM.ok op a)
+    (hR : ArenaR m' (AM.st op a)) (hres : AM.res op a = decI r) (hf : MemFrame A C m m')
+    (hA : ∀ b ∈ A, b < 42) (hC : ∀ x ∈ C, x.toNat < 64)
+    (hset : ∀ t, (DerR m' a → DerR m' (L.setP a t)) ∧ cp (L.setP a t) = cp a)
+    (hsetS : ∀ t, (DerR m' a → DerR m' (L.setS a t)) ∧ cp (L.setS a t) = cp a) :
+    ∃ a', op.run a = .ok (decI r, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' := by
+  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hf (fun b hb => .inl (hA b hb)) a hS.1.arena.2
+  have hcs := AM.st_proto L op key tag pf d err a hrun hok
+  have hDk : DerR m' (AM.st op a) ∧ cp (AM.st op a) = cp a := by
+    rcases hcs with h | ⟨t, h⟩ | ⟨t, h⟩ <;> rw [h]
+    · exact ⟨hD₁, rfl⟩
+    · exact ⟨(hset t).1 hD₁, (hset t).2⟩
+    · exact ⟨(hsetS t).1 hD₁, (hsetS t).2⟩
+  have hrun' := AM.run_of_ok op a hok
+  rw [hres] at hrun'
+  obtain ⟨h1, h2⟩ := StageR.of_walk hS ⟨hR, hDk.1⟩ hf (fun b hb => Nat.lt_trans (hA b hb) (by decide))
+    hC hDk.2
+  exact ⟨_, hrun', h1, h2⟩
+
+theorem internParam_stage (hS : StageR dn vis fe m a) (u : Word) (hu : u.toNat < 2 ^ 32)
+    (hI : pinternW m u = some (r, m')) :
+    ∃ a', (internLNode (.param (decI u))).run a = .ok (decI r, a') ∧ StageR dn vis fe m' a' ∧
+      IWGrow m m' := by
+  have hR := hS.1.arena.1
+  obtain ⟨hok, hX, hres⟩ := pintern_correct m a hR.param u hu _ _ hI
+  have hI₂ := hI; rw [pinternW_eq] at hI₂
+  have hfr := internM_frame _ paramSch_wf _ _ _ _ _ _ _ _ hI₂
+  exact stage_of_level hS (internLNode_param_run _ a) hok
+    (hR.lift_param _ _ _ _ hX hfr (AM.st_proto paramLens _ _ _ _ _ _ a (internLNode_param_run _ a) hok))
+    hres hfr (by simp [paramSch, PREC, PSLOT]) (by simp [paramSch]) (fun _ => ⟨DerR.lvl, rfl⟩)
+    (fun _ => ⟨DerR.lvl, rfl⟩)
+
+theorem internZero_stage (hS : StageR dn vis fe m a) (hI : zinternW m = some (r, m')) :
+    ∃ a', (internLNode .zero).run a = .ok (decI r, a') ∧ StageR dn vis fe m' a' ∧
+      IWGrow m m' := by
+  have hR := hS.1.arena.1
+  obtain ⟨hok, hX, hres⟩ := zintern_correct m a hR.zero _ _ hI
+  have hI₂ := hI; rw [zinternW_eq] at hI₂
+  have hfr := internM_frame _ zeroSch_wf _ _ _ _ _ _ _ _ hI₂
+  exact stage_of_level hS (internLNode_zero_run a) hok
+    (hR.lift_zero _ _ _ _ hX hfr (AM.st_proto zeroLens _ _ _ _ _ _ a (internLNode_zero_run a) hok))
+    hres hfr (by simp [zeroSch, ZREC, ZSLOT]) (by simp [zeroSch]) (fun _ => ⟨DerR.lvl, rfl⟩)
+    (fun _ => ⟨DerR.lvl, rfl⟩)
+
+theorem internMax_stage (hS : StageR dn vis fe m a) (u v : Word) (hu : u.toNat < 2 ^ 32)
+    (hv : v.toNat < 2 ^ 32) (hI : minternW m u v = some (r, m')) :
+    ∃ a', (internLNode (.max (decI u) (decI v))).run a = .ok (decI r, a') ∧
+      StageR dn vis fe m' a' ∧ IWGrow m m' := by
+  have hR := hS.1.arena.1
+  obtain ⟨hok, hX, hres⟩ := mintern_correct m a hR.max u v hu hv _ _ hI
+  have hI₂ := hI; rw [minternW_eq] at hI₂
+  have hfr := internM_frame _ maxSch_wf _ _ _ _ _ _ _ _ hI₂
+  exact stage_of_level hS (internLNode_max_run _ _ a) hok
+    (hR.lift_max _ _ _ _ hX hfr (AM.st_proto maxLens _ _ _ _ _ _ a (internLNode_max_run _ _ a) hok))
+    hres hfr (by simp [maxSch, MREC, MSLOT]) (by simp [maxSch]) (fun _ => ⟨DerR.lvl, rfl⟩)
+    (fun _ => ⟨DerR.lvl, rfl⟩)
+
+end levels
+
+/-! ## `iw_alloc` under the stage relation -/
+
+theorem allocW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+    {m m1 : Mem} {k q : Word} (h : allocW m k = some (q, m1)) (hS : StageR dn vis fe m a) :
+    StageR dn vis fe m1 a ∧ IWGrow m m1 ∧ q.toNat = iwTop m ∧ iwTop m1 = iwTop m + k.toNat := by
+  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
+  obtain ⟨rfl, rfl, hroom⟩ := allocW_facts h hsz
+  have hf := allocMem_frame m k
+  have htop : iwTop (allocMem m k) = iwTop m + k.toNat := by
+    simp only [iwTop, allocMem, rdW_set64]
+    have h200 : UInt64.toNat 200 < (m.arr64 CTL).size := by simpa using hc
+    rw [if_pos ⟨trivial, trivial, h200⟩, UInt64.toNat_add]
+    omega
+  have h129 : rdW ((allocMem m k).arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.2.1 129 (by simp)
+  have hE : (allocMem m k).arr64 EREC = m.arr64 EREC := hf.1 EREC (by simp [EREC, IW]) (by decide)
+  refine ⟨⟨CheckR.frame_iw hf hS.1, ?_, ?_, ?_, ?_, ?_⟩, ?_, rfl, htop⟩
+  · rw [htop, hf.2.2.1 IW]; simp only [iwTop]; omega
+  · simp only [erTop, h129, hE]; exact hE1
+  · rw [hf.2.2.1 IW]; exact hsz
+  · rw [hE]; exact hEs
+  · rw [hf.2.2.1 CTL]; exact hc
+  · exact allocMem_grow m k (by simp only [iwTop]; omega) hc
 
 end L.Ind

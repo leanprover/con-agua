@@ -152,11 +152,13 @@ theorem rowSet_arr (m : Mem) (w c p : Word) (b : ArrId) (h : b ≠ rowArr w) :
 /-! ## `env_row_get`, `env_row_set` -/
 
 /-- `env_ix(w)`: the tag and the row index of name handle `w`. -/
+-- con-ron: none — row access of L's environment table (the twin's `IFEnv` map)
 def envIxL : FunDecl := lfn (w) locals () {
   return (w >> 28, ((w - ((w >> 27) << 27)) << 2) + (((w >> 27) - ((w >> 28) << 1)) << 1))
 }
 
 /-- `env_row_get(w)`: the row of name handle `w`, `(counter + 1, record)`. -/
+-- con-ron: none — row access of L's environment table (the twin's `IFEnv` map)
 def envRowGetL : FunDecl := lfn (w) locals (g, ix) {
   (g, ix) := call env_ix(w);
   if g == 0 { return (EIXA.u64[ix], EIXA.u64[ix + 1]) };
@@ -166,6 +168,7 @@ def envRowGetL : FunDecl := lfn (w) locals (g, ix) {
 }
 
 /-- `env_row_set(w, c, p)`: write the row of name handle `w`. -/
+-- con-ron: none — row access of L's environment table (the twin's `IFEnv` map)
 def envRowSetL : FunDecl := lfn (w, c, p) locals (g, ix) {
   (g, ix) := call env_ix(w);
   if 2 < g { abort };
@@ -292,6 +295,7 @@ end rel
 /-! ## `env_find` -/
 
 /-- `env_find(w, vis)`: `(1, record)` if name `w` has a row below the view `vis`, else `(0, 0)`. -/
+-- con-ron: ConRon/Arena/Env.lean:283-288 ConRon.Arena.IFEnv.find?
 @[l_impl ConRon.Arena.IFEnv.find?]
 def envFindL : FunDecl := lfn (w, vis) locals (c, q) {
   (c, q) := call env_row_get(w);
@@ -488,6 +492,7 @@ theorem EnvR.push {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {f
 
 /-- `env_push(vis, q)`: install the record at `q` (its name is word `q + 1`) at counter `vis`:
 its row, its slot in `ECON`; returns the new view `vis + 1`. -/
+-- con-ron: ConRon/Arena/Env.lean:295-300 ConRon.Arena.IFEnv.push
 @[l_impl ConRon.Arena.IFEnv.push]
 def envPushL : FunDecl := lfn (vis, q) locals (w, k, z) {
   if vis + 1 == 0 { abort };
@@ -582,6 +587,7 @@ theorem EnvR.setRow {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} 
       rowSet_arr _ _ _ _ _ (Ne.symm hre), rowSet_arr _ _ _ _ _ (Ne.symm hra)]
 
 /-- `env_erase(w)`: drop the row of name `w` (one step of `eraseInstalled`). -/
+-- con-ron: ConRon/Arena/Promote.lean:339-348 ConRon.Arena.eraseInstalled
 def envEraseL : FunDecl := lfn (w) locals (z) {
   z := call env_row_set(w, 0, 0);
   return 0
@@ -692,6 +698,7 @@ def prevD (dn : NIdx → Option ConLeche.Name) (m : Mem) (c q : Word) :
 
 /-- `env_pop_temp(vis, w, c, q)`: undo a temporary push of name `w`: its row put back to
 `(c, q)` (`IFEnv.popTemp`'s `prev`), the newest constant dropped, the view lowered. -/
+-- con-ron: ConRon/Arena/Env.lean:302-311 ConRon.Arena.IFEnv.popTemp
 @[l_impl ConRon.Arena.IFEnv.popTemp]
 def envPopTempL : FunDecl := lfn (vis, w, c, q) locals (k, z) {
   z := call env_row_set(w, c, q);

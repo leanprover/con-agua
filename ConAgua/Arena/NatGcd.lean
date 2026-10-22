@@ -44,6 +44,7 @@ theorem Norm.of_agree (p q : Array Word) (t o l : Nat) (h : Agree p q t) (hk : o
 grind_pattern [natop_grind] Norm.of_agree => Agree p q t, Norm q o l
 
 /-- One step of Euclid: `(a, b) := (b % a, a)`. -/
+-- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
 def gcdStep : FunDecl := lfn (oa, la, ob, lb) locals (q, ql, ro, rl) {
   (q, ql, ro, rl) := call nat_divmod(ob, lb, oa, la);
   return (ro, rl, oa, la)
@@ -55,6 +56,7 @@ def gcdLoop : Stmt := lblk (oa, la, ob, lb) {
   }
 }
 
+/-- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult -/
 @[l_impl ConRon.Arena.natOpResult]
 def natGcd : FunDecl := lfn (oa, la, ob, lb) {
   ⟪gcdLoop⟫;

@@ -67,6 +67,7 @@ grind_pattern [level_grind] combW_zr => combW (n + 1) m l r
 grind_pattern [level_grind] combW_ss => combW (n + 1) m l r
 grind_pattern [level_grind] combW_mx => combW (n + 1) m l r
 
+/-- con-leche: ConLeche/Kernel/Level.lean:62-67 ConLeche.Level.combining -/
 @[l_impl ConLeche.Level.combining]
 def lvComb : FunDecl := lfn (l, r) locals (g, a, b, h, c, d, x) {
   (g, a, b) := call lv_node(l);
@@ -177,6 +178,7 @@ grind_pattern [level_grind] imaxW_rz => imaxW n m x y
 grind_pattern [level_grind] imaxW_rs => imaxW n m x y
 grind_pattern [level_grind] imaxW_mk => imaxW n m x y
 
+/-- con-leche: ConLeche/Kernel/Level.lean:69-82 ConLeche.Level.simplify -/
 @[l_impl ConLeche.Level.simplify]
 def lvSimp : FunDecl := lfn (p) locals (g, a, b, x, y, h, c, d) {
   (g, a, b) := call lv_node(p);
@@ -254,6 +256,7 @@ grind_pattern [level_grind] nzW_leaf => nzW (n + 1) m p
 grind_pattern [level_grind] nzK_one => nzW.nzK n m b (some x)
 grind_pattern [level_grind] nzK_zero => nzW.nzK n m b (some 0)
 
+/-- con-leche: ConLeche/Kernel/Level.lean:51-60 ConLeche.Level.isNeverZero -/
 @[l_impl ConLeche.Level.isNeverZero]
 def lvNz : FunDecl := lfn (p) locals (g, a, b, x) {
   (g, a, b) := call lv_node(p);

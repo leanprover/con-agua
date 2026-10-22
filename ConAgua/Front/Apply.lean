@@ -78,6 +78,7 @@ def putK (b : ArrId) (i : Word) : Option (Word × Mem) → Option Mem
 
 /-! ## `name_get`, `level_get`, `name_fresh`, `level_fresh` -/
 
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:113-118 ConRon.Arena.Frontend.StateD.name -/
 def nameGet : FunDecl := lfn (i) locals (e) {
   if len(NID.u64) <= i { abort };
   e := NID.u64[i];
@@ -85,6 +86,7 @@ def nameGet : FunDecl := lfn (i) locals (e) {
   return e - 1
 }
 
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:120-125 ConRon.Arena.Frontend.StateD.level -/
 def levelGet : FunDecl := lfn (i) locals (e) {
   if len(LID.u64) <= i { abort };
   e := LID.u64[i];
@@ -92,12 +94,14 @@ def levelGet : FunDecl := lfn (i) locals (e) {
   return e - 1
 }
 
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:147-152 ConRon.Arena.Frontend.StateD.freshName -/
 def nameFresh : FunDecl := lfn (i) {
   if len(NID.u64) <= i { abort };
   if NID.u64[i] != 0 { abort };
   return 0
 }
 
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:154-157 ConRon.Arena.Frontend.StateD.freshLevel -/
 def levelFresh : FunDecl := lfn (i) {
   if len(LID.u64) <= i { abort };
   if LID.u64[i] != 0 { abort };
@@ -106,6 +110,7 @@ def levelFresh : FunDecl := lfn (i) {
 
 /-! ## `front_init()` -/
 
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:490-499 ConRon.Arena.Frontend.StateD.init -/
 @[l_impl ConRon.Arena.Frontend.StateD.init]
 def frontInit : FunDecl := lfn () locals (h) {
   h := call intern_nanon();
@@ -132,6 +137,7 @@ def frontInitW (m : Mem) : Option Mem := initK (putK NID 0 (nainternW m))
 
 /-! ## `apply_nstr(i, pre, o, l)`, `apply_nnum(i, pre, x)` -/
 
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:166-178 ConRon.Arena.Frontend.parseNameEntryD -/
 @[l_impl ConRon.Arena.Frontend.parseNameEntryD]
 def applyNStr : FunDecl := lfn (i, pre, o, l) locals (q, z, h) {
   q := call name_get(pre);
@@ -148,6 +154,7 @@ def applyNStrW (m : Mem) (i pre o l : Word) : Option Mem :=
     putK NID i (nsinternW m (tblW m NID pre) o l)
   else none
 
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:166-178 ConRon.Arena.Frontend.parseNameEntryD -/
 @[l_impl ConRon.Arena.Frontend.parseNameEntryD]
 def applyNNum : FunDecl := lfn (i, pre, x) locals (q, z, h) {
   q := call name_get(pre);
@@ -166,6 +173,7 @@ def applyNNumW (m : Mem) (i pre x : Word) : Option Mem :=
 
 /-! ## `apply_level(i, k, a, c)` -/
 
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:180-189 ConRon.Arena.Frontend.parseLevelEntryD -/
 @[l_impl ConRon.Arena.Frontend.parseLevelEntryD]
 def applyLevel : FunDecl := lfn (i, k, a, c) locals (u, v, h, z) {
   z := call level_fresh(i);
@@ -248,6 +256,7 @@ def putLoop : Stmt := lblk (vs, ve, top, n, j) {
   }
 }
 
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:166-178 ConRon.Arena.Frontend.parseNameEntryD -/
 def strPut : FunDecl := lfn (vs, ve) locals (top, n, j) {
   if ve < vs { abort };
   if len(IN.u8) < ve { abort };
