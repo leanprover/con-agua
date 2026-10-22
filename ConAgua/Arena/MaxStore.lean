@@ -99,6 +99,7 @@ def mfindLoop : Stmt := lblk (t, u, v, h, n, j, d, w, b) {
   }
 }
 
+/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def maxFind : FunDecl := lfn (t, u, v, h) locals (n, j, d, w, b) {
   n := len(MSLOT.u64) >> 1;
   b := CTL.u64[62] * t;
@@ -171,6 +172,7 @@ def mpushMem (m : Mem) (t u v j c : Word) : Mem :=
   ((((m.set64 MREC (c * 4 + t * 2) u).set64 MREC (c * 4 + t * 2 + 1) v).set64 MSLOT (j * 2 + t)
     (baseW m t + c + 1)).set64 CTL (10 + (t &&& 1)) (c + 1))
 
+/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def maxPush : FunDecl := lfn (t, u, v, j) locals (c, k) {
   c := CTL.u64[10 + t];
   if c >= 134217728 { abort };
@@ -231,6 +233,7 @@ def minternW (m : Mem) (u v : Word) : Option (Word × Mem) :=
     some (maxP + mcnt m 0, mpushMem m 0 u v (rs₀.tail.tail.headD 0) (mcnt m 0))
   else none
 
+/-- con-ron: ConRon/Arena/Monad.lean:441-457 ConRon.Arena.internLNode -/
 @[l_impl ConRon.Arena.internLNode]
 def internMax : FunDecl := lfn (u, v) locals (h, fd, i, j, d) {
   h := ((⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ ^ v) * ⟪fnvPrime⟫;

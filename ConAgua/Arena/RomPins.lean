@@ -36,6 +36,7 @@ open L.Arena
 section namesTo
 variable (rom : List UInt8)
 
+/-- con-ron: none — the ROM reader (L has constant bytes where the twin has con-leche values) -/
 def romNamesTo : FunDecl := lfn (q, k, d) locals (h, r) {
   if k == 0 { return q };
   (h, q) := call rom_name(q);
@@ -99,14 +100,6 @@ theorem romNamesTo_specW (n : Nat) : ∀ (s₀ : St) (q k d : Word), (s₀.mem.a
 end namesToSpec
 
 /-! ## `rom_names_to` refines `internNameList` -/
-
-theorem ArenaD.frameHi {A : List ArrId} {C : List Word} {m m' : Mem} {a : AState}
-    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, 64 ≤ b) (hC : ∀ x ∈ C, 64 ≤ x.toNat) (h : ArenaD m a) :
-    ArenaD m' a :=
-  ⟨ArenaR.frame_ext A C hA hC m m' hf a h.1,
-   DerR.frame m m' a h.2 (fun B hB => hf.1 B (fun hm => by
-      have := hA B hm; rcases hB with rfl | rfl | rfl | rfl | rfl <;> revert this <;> decide)
-      (by rcases hB with rfl | rfl | rfl | rfl | rfl <;> decide))⟩
 
 theorem pinW_set (m : Mem) (d h : Word) (i : Nat) (hd : d.toNat < (m.arr64 PINS).size) :
     pinW (m.set64 PINS d h) i = if i = d.toNat then h else pinW m i := by
@@ -219,8 +212,8 @@ end namesToRef
 
 /-- `intern_reserved_pins()` for the ROM offset `off` of `encNames pinNames ++ encNames
 reservedBasisNameValues`. -/
-@[l_impl ConRon.Arena.internReservedPins]
-def internReservedPinsL (off : Word) : FunDecl := lfn () locals (q, us, z, o, s1) {
+-- con-ron: ConRon/Arena/Pins.lean:228-242 ConRon.Arena.internReservedPins
+def internReservedPinsAt (off : Word) : FunDecl := lfn () locals (q, us, z, o, s1) {
   if len(PINS.u64) < 71 { abort };
   q := call rom_names_to(⟪off⟫, 51, 1);
   q := call rom_names_to(q, 16, 55);
@@ -238,6 +231,11 @@ def internReservedPinsL (off : Word) : FunDecl := lfn () locals (q, us, z, o, s1
   PINS.u64[0] := 1;
   return 0
 }
+
+/-- `intern_reserved_pins()` as the program has it: the ROM starts with the two name lists. -/
+-- con-ron: ConRon/Arena/Pins.lean:228-242 ConRon.Arena.internReservedPins
+@[l_impl ConRon.Arena.internReservedPins]
+def internReservedPinsL : FunDecl := internReservedPinsAt 0
 
 section irpModel
 variable (rom : List UInt8)
@@ -306,7 +304,7 @@ structure IrpProg (rom : List UInt8) (off : Word) (p : Prog) : Prop extends Name
   sort_find : p.lookup "sort_find" = some sortFind
   sort_push : p.lookup "sort_push" = some sortPush
   intern_sort : p.lookup "intern_sort" = some internSort
-  irp : p.lookup "intern_reserved_pins" = some (internReservedPinsL off)
+  irp : p.lookup "intern_reserved_pins" = some (internReservedPinsAt off)
 
 section irpSpec
 variable (rom : List UInt8) (off : Word) (p : Prog) (hL : IrpProg rom off p)
@@ -317,7 +315,7 @@ theorem internReservedPins_specW (n : Nat) (s₀ : St) (hs : (s₀.mem.arr64 POO
     invoke p (exec p n) "intern_reserved_pins" []
     ⦃fun _ s' => LocEq s' s₀ ∧ irpW rom n off s₀.mem = some s'.mem; ⊤⦄ := by
   rw [invoke_eq _ hL.irp]
-  simp only [callFn, internReservedPinsL]
+  simp only [callFn, internReservedPinsAt]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
@@ -372,10 +370,6 @@ theorem internReservedPins_run (a : AState)
   rw [run_bind_ok _ _ _ ok5]; try dsimp only
   refine (run_bind_ok _ _ _ ok6).trans ?_
   rfl
-
-theorem AM.of_run_ok {α : Type} [Inhabited α] {x : AM α} {a a' : AState} {r : α}
-    (h : x.run a = .ok (r, a')) : AM.ok x a ∧ AM.st x a = a' ∧ AM.res x a = r := by
-  simp only [AM.ok, AM.st, AM.res, h, and_self]
 
 theorem pinW_frame {C : List Word} {m m' : Mem} (h : MemFrame StoreA C m m') (i : Nat) :
     pinW m' i = pinW m i := by
@@ -497,7 +491,7 @@ theorem irpW_ok (off : Word) (rest : List UInt8)
   rw [← res4] at ok5 hR5 res5 ok6 hR6 res6
   rw [← res5] at ok6 hR6 res6
   have hrun := internReservedPins_run a ok1 ok2 ok3 _ rfl ok4 ok5 _ rfl ok6
-  obtain ⟨okX, stX, -⟩ := AM.of_run_ok hrun
+  obtain ⟨okX, stX, -⟩ := AM.of_run_ok _ _ _ _ hrun
   have hfS : MemFrame StoreA StoreC m₂ m₆ :=
     ((frame_store hf3 (by simp [lsSch, LSREC, LSSLOT]) (by simp [lsSch])).trans
       (frame_store hf4 (by simp [zeroSch, ZREC, ZSLOT]) (by simp [zeroSch]))).trans

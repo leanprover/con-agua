@@ -391,6 +391,7 @@ grind_pattern [arena_grind] liftProjW_miss => liftProjW (n + 1) m h c k
 
 /-! ## The L code -/
 
+/-- con-ron: ConRon/Arena/ExprOps.lean:655-688 ConRon.Arena.liftLooseBVarsGo -/
 @[l_impl ConRon.Arena.liftLooseBVarsGo]
 def liftGo : FunDecl := lfn (h, c, k) locals (x, g, t, i, r) {
   x := call der_b(h);
@@ -419,6 +420,7 @@ def liftGo : FunDecl := lfn (h, c, k) locals (x, g, t, i, r) {
   abort
 }
 
+/-- con-ron: ConRon/Arena/ExprOps.lean:690-702 ConRon.Arena.liftArmApp -/
 @[l_impl ConRon.Arena.liftArmApp]
 def liftApp : FunDecl := lfn (h, c, k) locals (fd, j, d, t, i, f, a, x, y, r, u) {
   (fd, j, d) := call lf_find(h, c);
@@ -435,6 +437,7 @@ def liftApp : FunDecl := lfn (h, c, k) locals (fd, j, d, t, i, f, a, x, y, r, u)
   return r
 }
 
+/-- con-ron: ConRon/Arena/ExprOps.lean:704-716 ConRon.Arena.liftArmLam -/
 @[l_impl ConRon.Arena.liftArmLam]
 def liftLam : FunDecl := lfn (h, c, k) locals (fd, j, d, t, i, f, a, x, y, r, u) {
   if c + 1 == 0 { abort };
@@ -452,6 +455,7 @@ def liftLam : FunDecl := lfn (h, c, k) locals (fd, j, d, t, i, f, a, x, y, r, u)
   return r
 }
 
+/-- con-ron: ConRon/Arena/ExprOps.lean:718-730 ConRon.Arena.liftArmForallE -/
 @[l_impl ConRon.Arena.liftArmForallE]
 def liftForall : FunDecl := lfn (h, c, k) locals (fd, j, d, t, i, f, a, x, y, r, u) {
   if c + 1 == 0 { abort };
@@ -469,6 +473,7 @@ def liftForall : FunDecl := lfn (h, c, k) locals (fd, j, d, t, i, f, a, x, y, r,
   return r
 }
 
+/-- con-ron: ConRon/Arena/ExprOps.lean:732-745 ConRon.Arena.liftArmLet -/
 @[l_impl ConRon.Arena.liftArmLet]
 def liftLet : FunDecl := lfn (h, c, k) locals (fd, j, d, t, i, f, a, b, x, y, z, r, u) {
   if c + 1 == 0 { abort };
@@ -488,6 +493,7 @@ def liftLet : FunDecl := lfn (h, c, k) locals (fd, j, d, t, i, f, a, b, x, y, z,
   return r
 }
 
+/-- con-ron: ConRon/Arena/ExprOps.lean:747-758 ConRon.Arena.liftArmProj -/
 @[l_impl ConRon.Arena.liftArmProj]
 def liftProj : FunDecl := lfn (h, c, k) locals (fd, j, d, t, i, nm, ix, e, x, r, u) {
   (fd, j, d) := call lf_find(h, c);

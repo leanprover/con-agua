@@ -40,6 +40,7 @@ theorem decO_encO (o : Option Bool) : decO (encO o) = o := by
 
 /-! ## The L code -/
 
+/-- con-ron: ConRon/Arena/Core.lean:132-149 ConRon.Arena.lvlEq? -/
 @[l_impl ConRon.Arena.lvlEq?]
 def lvlEqCL : FunDecl := lfn (u, v) locals (fd, j, d, z) {
   (fd, j, d) := call lq_find(u, v);
@@ -49,6 +50,7 @@ def lvlEqCL : FunDecl := lfn (u, v) locals (fd, j, d, z) {
 }
 
 /-- A miss of `lvl_eq_c`: run the algorithm, record a `some` answer. -/
+-- con-ron: ConRon/Arena/Core.lean:132-149 ConRon.Arena.lvlEq?
 def lvlEqRecL : FunDecl := lfn (u, v) locals (fd, j, d, z, x) {
   z := call lvl_eq(u, v);
   if z == 0 { return 0 };
@@ -57,6 +59,7 @@ def lvlEqRecL : FunDecl := lfn (u, v) locals (fd, j, d, z, x) {
   return z
 }
 
+/-- con-ron: ConRon/Arena/Core.lean:151-168 ConRon.Arena.lvlsEq? -/
 @[l_impl ConRon.Arena.lvlsEq?]
 def lvlsEqCL : FunDecl := lfn (us, vs) locals (fd, j, d, z) {
   (fd, j, d) := call lsq_find(us, vs);
@@ -66,6 +69,7 @@ def lvlsEqCL : FunDecl := lfn (us, vs) locals (fd, j, d, z) {
 }
 
 /-- A miss of `lvls_eq_c`. -/
+-- con-ron: ConRon/Arena/Core.lean:151-168 ConRon.Arena.lvlsEq?
 def lvlsEqRecL : FunDecl := lfn (us, vs) locals (fd, j, d, z, x) {
   z := call lvls_eq(us, vs);
   if z == 0 { return 0 };
@@ -314,7 +318,8 @@ theorem CoreS.set_lq {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
       hS.pins.congr (hf.1 PINS (by simp [PINS]) (by decide)),
       hS.env.frame (fun b hb => by simp at hb; subst hb; decide)
         (fun x hx => by simp at hx; subst hx; decide) hf,
-      fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf⟩,
+      fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf,
+      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn⟩,
     by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
 
 end L.Arena
@@ -389,7 +394,7 @@ theorem lvlEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState
   have hS₂ : CoreS dn m₁ { a with caches := { a.caches with readLC := X } } vis fe M eb :=
     ⟨⟨ArenaR.caches_irrel _ hS₁.arena.1, DerR.of_store _ _ _ hS₁.arena.2 rfl⟩, hS₁.core.readLC X,
       hS₁.pins,
-      hS₁.env, hrl, fun h l e => hS₁.readLs h l e, hS₁.nwf⟩
+      hS₁.env, hrl, fun h l e => hS₁.readLs h l e, hS₁.nwf, hS₁.erec, hS₁.spn⟩
   by_cases hz0 : z₁ = 0
   · rw [rcdK_zero _ _ _ _ _ hz0] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
@@ -533,7 +538,8 @@ theorem CoreS.set_lsq {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
       hS.pins.congr (hf.1 PINS (by simp [PINS]) (by decide)),
       hS.env.frame (fun b hb => by simp at hb; subst hb; decide)
         (fun x hx => by simp at hx; subst hx; decide) hf,
-      fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf⟩,
+      fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf,
+      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn⟩,
     by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
 
 /-- **The model of `lvls_eq_c` refines `lvlsEq?`** under `CoreS`. -/
@@ -589,7 +595,8 @@ theorem lvlsEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AStat
   obtain ⟨X, hrun, hrl⟩ := lvlsEq?_miss a (decI us) (decI vs) lu lv hdu hdv hS.readLs miss
   have hS₂ : CoreS dn m₁ { a with caches := { a.caches with readLsC := X } } vis fe M eb :=
     ⟨⟨ArenaR.caches_irrel _ hS₁.arena.1, DerR.of_store _ _ _ hS₁.arena.2 rfl⟩,
-      hS₁.core.readLsC X, hS₁.pins, hS₁.env, fun h l e => hS₁.readL h l e, hrl, hS₁.nwf⟩
+      hS₁.core.readLsC X, hS₁.pins, hS₁.env, fun h l e => hS₁.readL h l e, hrl, hS₁.nwf,
+      hS₁.erec, hS₁.spn⟩
   by_cases hz0 : z₁ = 0
   · rw [rcdK_zero _ _ _ _ _ hz0] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h

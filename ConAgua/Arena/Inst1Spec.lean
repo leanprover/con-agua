@@ -132,6 +132,7 @@ theorem iclrK_some (r : Word) (m₁ : Mem) (h0 : rdW (m₁.arr64 CTL) 44 + 2 ≠
 grind_pattern [arena_grind] instEntryW_eq => instEntryW n m e v d
 grind_pattern [arena_grind] iclrK_some => iclrK (some (r, m₁))
 
+/-- con-ron: ConRon/Arena/ExprOps.lean:377-384 ConRon.Arena.instantiate1Fast -/
 @[l_impl ConRon.Arena.instantiate1Fast]
 def instEntry : FunDecl := lfn (e, v, d) locals (r, u) {
   u := call if_clear();

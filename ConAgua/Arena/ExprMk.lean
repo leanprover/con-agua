@@ -83,6 +83,7 @@ def derBW (m : Mem) (h : Word) : Word :=
     else rdW (m.arr64 PJDER) (idxW h * 2 + tierW h) &&& 32767
   else 0
 
+/-- con-ron: none — reads L's derived-range array (the twin's `bvarOfData (derived h)`) -/
 def derB : FunDecl := lfn (h) locals (g, t, i, x) {
   g := h >> 28;
   t := (h >> 27) & 1;
@@ -208,6 +209,7 @@ def mkAppW (m : Mem) (f a : Word) : Option (Word × Mem) :=
   else mkK ADER 4 (cnt2 m 4)
     (packBF (maxW (derBW m f) (derBW m a)) (maxW (derFW m f) (derFW m a))) (ainternW m f a)
 
+/-- con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
 def mkApp : FunDecl := lfn (f, a) locals (x, y, s, r, q, xf, yf) {
   if (f | a) >> 32 != 0 { abort };
   x := call der_b(f);
@@ -234,6 +236,7 @@ def mkLamW (m : Mem) (t b : Word) : Option (Word × Mem) :=
     (packBF (maxW (derBW m t) (satPredW (derBW m b))) (maxW (derFW m t) (derFW m b)))
     (lainternW m t b)
 
+/-- con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
 def mkLam : FunDecl := lfn (t, b) locals (x, y, s, r, q, xf, yf) {
   if (t | b) >> 32 != 0 { abort };
   x := call der_b(t);
@@ -258,6 +261,7 @@ def mkForallW (m : Mem) (t b : Word) : Option (Word × Mem) :=
     (packBF (maxW (derBW m t) (satPredW (derBW m b))) (maxW (derFW m t) (derFW m b)))
     (fainternW m t b)
 
+/-- con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
 def mkForall : FunDecl := lfn (t, b) locals (x, y, s, r, q, xf, yf) {
   if (t | b) >> 32 != 0 { abort };
   x := call der_b(t);
@@ -285,6 +289,7 @@ def mkLetW (m : Mem) (t v b : Word) : Option (Word × Mem) :=
       (maxW (maxW (derFW m t) (derFW m v)) (derFW m b)))
     (leinternW m t v b)
 
+/-- con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
 def mkLet : FunDecl := lfn (t, v, b) locals (x, y, z, s, r, q, xf, yf, zf) {
   if (t | v | b) >> 32 != 0 { abort };
   x := call der_b(t);
@@ -313,6 +318,7 @@ def mkProjW (m : Mem) (n i e : Word) : Option (Word × Mem) :=
   if (n ||| e) >>> 32 ≠ 0 then none
   else mkK PJDER 32 (cnt2 m 32) (packBF (derBW m e) (derFW m e)) (pjinternW m n i e)
 
+/-- con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
 def mkProj : FunDecl := lfn (n, i, e) locals (x, s, r, q, xf) {
   if (n | e) >> 32 != 0 { abort };
   x := call der_b(e);

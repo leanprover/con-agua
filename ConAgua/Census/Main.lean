@@ -16,17 +16,6 @@ theorem. Prints tab-separated lines for the Python report:
     E   from  to                                    target `from` calls target `to`
     X   name  module  why                           a reached def that is not a target (verbose)
     L   kind  decl  target  label  module  status   a link (status: ok | sorry | axioms:a,b | n/a)
-    F   name  fingerprint                           a target's fingerprint (16 hex digits)
-
-The FINGERPRINT of a target (`docs/twin-fingerprints.tsv`, DESIGN.md "Twin fingerprints") is a
-hash of the elaborated declarations that make up its code: its own type and value, and the type
-and value of every non-target it walks through (instances, matchers, auxiliaries such as a
-`partial def`'s `_unsafe_rec` body, projections), each with its name; not the targets it calls
-(they have their own). So it is insensitive to comments, doc comments, line moves and binder
-names, and sensitive to everything the compiled twin does, including a structure gaining a field
-(the anonymous constructors and projections in the value change). It is the toolchain's
-`Expr.hash`, so it is stable for one toolchain only: re-record after a toolchain bump, never in
-the same step as a twin bump.
 
 What is reached: the VALUE of a definition (not its type), through definitions only (theorems,
 types and proofs are not walked into), plus `@[implemented_by]` of an opaque (`partial def`).
@@ -38,7 +27,9 @@ macro scopes). What is neither: type formers (the value is a type), `Prop`-value
 Module groups: some ConAgua modules declare the same names (`L.Arena.appK₁.appK₂` in `Walk` and in
 `Lift`; `main` in the emitters), so one environment cannot import them all. The link pass imports
 the modules greedily in groups: on a clash it moves the failing module and everything that imports
-it into the next group.
+it into the next group. Each import runs in a child process of its own (`mainLinks`): Lean never
+frees an imported environment, and a failed import leaks what it read, so one process importing
+group after group grew past 18 GB.
 -/
 
 open Lean
@@ -94,18 +85,6 @@ def isTypeOrProp (ci : ConstantInfo) : Bool :=
   | .sort _ => true
   | _ => false
 
-/-- The hash of one declaration: name, type and value (for a definition or an opaque). -/
-def declHash (n : Name) (ci : ConstantInfo) : UInt64 :=
-  let v : UInt64 := match ci with
-    | .defnInfo d => hash d.value
-    | .opaqueInfo d => hash d.value
-    | _ => 0
-  mixHash (hash n) (mixHash (hash ci.type) v)
-
-def hex16 (x : UInt64) : String :=
-  let s := String.ofList (Nat.toDigits 16 x.toNat)
-  "".pushn '0' (16 - s.length) ++ s
-
 def depsOf (env : Environment) (n : Name) (ci : ConstantInfo) : Array Name :=
   match ci with
   -- `v.all`: the members of a well-founded mutual block call each other through the block's
@@ -150,10 +129,6 @@ def targets (env : Environment) (root : Name) (verbose : Bool) : IO Unit := do
       | some ci => depsOf env t ci
       | none => #[]
     let mut out : NameSet := {}
-    -- the declarations the fingerprint hashes: `t` and the non-targets walked through from it
-    let mut parts : Array (Name × UInt64) := match env.find? t with
-      | some ci => #[(t, declHash t ci)]
-      | none => #[]
     while h2 : st.size > 0 do
       let n := st.back
       st := st.pop
@@ -166,11 +141,6 @@ def targets (env : Environment) (root : Name) (verbose : Bool) : IO Unit := do
         skipped := skipped.insert n why
         if let some ci := env.find? n then
           st := st ++ depsOf env n ci
-          parts := parts.push (n, declHash n ci)
-    if t != root then
-      let fp := (parts.qsort (fun a b => a.1.toString < b.1.toString)).foldl
-        (fun h (_, x) => mixHash h x) 7
-      IO.println s!"F\t{t}\t{hex16 fp}"
     for o in out do
       if t != root then edges := edges.push (t, o)
       else IO.println s!"R\t{o}"
@@ -228,40 +198,89 @@ def links (env : Environment) (printed : IO.Ref NameSet) : IO Unit := do
             else "axioms:" ++ ",".intercalate (bad.toList.map toString)
       IO.println s!"L\t{kindStr l.kind}\t{l.decl}\t{l.target}\t{l.label}\t{m}\t{status}"
 
-def main (args : List String) : IO UInt32 := do
-  let verbose := args.contains "-v"
-  let args := args.filter (· != "-v")
-  let root :: mods := args | do
-    IO.eprintln "usage: census [-v] ROOT_MODULE MODULE..."; return 2
-  initSearchPath (← findSysroot)
+/-- Child `--targets ROOT`: the target pass, in a process of its own. -/
+def mainTargets (root : Name) (verbose : Bool) : IO UInt32 := do
   -- `loadExts`: the instance and matcher tables are built by extension initializers; without them
   -- `isInstanceCore` answers `false` for everything.
   unsafe enableInitializersExecution
-  let env ← importModules #[{ module := root.toName }] {} (loadExts := true)
+  let env ← importModules #[{ module := root }] {} (loadExts := true)
   targets env `ConAgua.Final.TwinAccepts verbose
-  let memo ← IO.mkRef {}
-  let printed ← IO.mkRef {}
-  let mut pending := mods.toArray.map String.toName
+  return 0
+
+/-- Child `--links MODULE...`: import one group and print its links (exit 0); on a clash print
+`C bad message` and a line `D m` for every module of the group that imports `bad` (exit 3). Each
+child imports once: an environment is never freed, and a failed `importModules` leaks what it
+read, so importing group after group in one process grew by about 2 GB per attempt. -/
+def mainLinks (grp : Array Name) : IO UInt32 := do
+  let env ← try importModules (grp.map fun m => ({ module := m } : Import)) {}
+    catch e =>
+      let msg := toString e
+      let bad := (((msg.drop 7).takeWhile (· != ' ')).toString).toName
+      let memo ← IO.mkRef {}
+      let mut defer := #[]
+      for m in grp do
+        if (← closure memo m).contains bad then defer := defer.push m
+      if defer.isEmpty || defer.size == grp.size then throw e
+      IO.println s!"C\t{bad}\t{msg.replace "\n" " "}"
+      for m in defer do IO.println s!"D\t{m}"
+      return 3
+  links env (← IO.mkRef {})
+  return 0
+
+/-- Run this executable on `args`; forward its stderr, return its exit code and stdout. -/
+def child (args : Array String) : IO (UInt32 × String) := do
+  let out ← IO.Process.output { cmd := (← IO.appPath).toString, args }
+  IO.eprint out.stderr
+  return (out.exitCode, out.stdout)
+
+/-- The driver: the target pass and every link group each run in a child process (see
+`mainLinks`), one at a time, so the peak memory is that of one import (about 2.5 GB), not the sum
+of all imports. -/
+def main (args : List String) : IO UInt32 := do
+  let verbose := args.contains "-v"
+  let args := args.filter (· != "-v")
+  initSearchPath (← findSysroot)
+  match args with
+  | ["--targets", root] => return ← mainTargets root.toName verbose
+  | "--links" :: grp => return ← mainLinks (grp.toArray.map String.toName)
+  | _ => pure ()
+  let root :: mods := args | do
+    IO.eprintln "usage: census [-v] ROOT_MODULE MODULE..."; return 2
+  let (rc, out) ← child (#["--targets", root] ++ (if verbose then #["-v"] else #[]))
+  IO.print out
+  if rc != 0 then return rc
+  -- links: modules printed by an earlier group are skipped (a module is in every group that
+  -- imports it)
+  let mut printed : Std.HashSet String := {}
+  let mut pending := mods.toArray
   while pending.size > 0 do
     let mut grp := pending
-    let mut rest : Array Name := #[]
-    let mut envO : Option Environment := none
-    while envO.isNone do
-      try
-        envO := some (← importModules (grp.map fun m => ({ module := m } : Import)) {})
-      catch e =>
-        let msg := toString e
-        let bad := (((msg.drop 7).takeWhile (· != ' ')).toString).toName
-        unless msg.startsWith "import " && grp.any (fun m => m == bad) || true do throw e
-        IO.eprintln s!"census: module clash, next group: {msg}"
-        let mut keep := #[]
-        for m in grp do
-          if (← closure memo m).contains bad then rest := rest.push m else keep := keep.push m
-        if keep.size == grp.size then throw e
-        grp := keep
+    let mut rest : Array String := #[]
+    let mut done := false
+    while !done do
+      let (rc, out) ← child (#["--links"] ++ grp)
+      let lines := out.splitOn "\n" |>.filter (· != "")
+      if rc == 3 then
+        let defer := lines.filterMap fun l => match l.splitOn "\t" with
+          | ["D", m] => some m
+          | _ => none
+        for l in lines do
+          if l.startsWith "C\t" then
+            IO.eprintln s!"census: module clash, next group: {(l.splitOn "\t").drop 2 |> "\t".intercalate}"
+        rest := rest ++ defer
+        grp := grp.filter (!defer.contains ·)
+      else if rc != 0 then return rc
+      else
+        let mut now : Std.HashSet String := {}
+        for l in lines do
+          let f := l.splitOn "\t"
+          let m := f.getD 5 ""
+          unless printed.contains m do
+            IO.println l
+            now := now.insert m
+        printed := printed.union now
+        done := true
     pending := rest
-    let some env := envO | unreachable!
-    links env printed
   return 0
 
 end ConAgua.Census

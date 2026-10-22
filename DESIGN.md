@@ -4327,10 +4327,20 @@ be asymptotically slower. con-ron at `_tmp/ref/con-ron` origin/HEAD (`proof/ConR
   refinement then applies each callee's own spec to its run (`CoreSpec.of_callW`) and threads
   `CoreAfter` (`CoreAfter.comp`). Loops get a named block and a model by fuel
   (`whnfCoreLoopB_spec`, `coreLoopW`), refined by induction (`coreLoopW_ok`).
-* **Proved so far** (no `sorry` of their own): the knot's `whnfCore` slot one level up
-  (`whnfCoreSlot_step`: stuck tags, both memos, hit and miss, from the body spec), the loop
-  (`whnfCore_loop`'s spec and `coreLoopW_ok`, from the step spec), `lvl_eq_c`/`lvls_eq_c`
-  completely, the flush.
+* **Proved so far** (no `sorry` of their own; they assume the callees' specs): the knot's
+  `whnfCore` slot one level up (`whnfCoreSlot_step`: stuck tags, both memos, hit and miss), the
+  loop and the body (`whnfCoreLoop_refines`, `whnfCoreBody_refines`, `WhnfCoreLoop.lean`), the
+  dispatcher `whnf_core_step` (`whnfCoreStep_refines`: one view lemma per tag, the app arm, the
+  projection arm through its spec, ζ through `inst1`), the app arm `whnf_core_app` and its second
+  half `whnf_core_app2` (`WhnfCoreStep.lean`), `proj_cert`; the `whnf` slot and loop
+  (`whnf_refines`, `whnfLoop_refines`, `WhnfDeltaSlot.lean`, a sub-lane); five spine walks
+  (`get_app_fn`, `pi_result`, `peel_pis`, `mk_app_n`, `mk_app_n_from`, `WhnfSpineRefine.lean`, a
+  sub-lane); `lvl_eq_c`/`lvls_eq_c` completely, the flush.
+* **Statement changes by the sub-lanes.** `mkAppN_refines`/`mkAppNFrom_refines` post a
+  `MemFrame [AREC, ASLOT, ADER] [4, 5]` instead of `Grows` (the walk never touches the Nat-limb
+  pool) and drop the `HW` of the result (a fresh handle's index bound is not established by the
+  store's relation yet); `whnfLoop_refines` takes the step spec at every fuel up to `n`
+  (`WhnfStepUpTo`), as `KnotUpTo`.
 * **L code written** (sorry'd specs): `whnf_core_step`, `whnf_app`, `beta_peel`,
   `whnf_core_step_proj`, `reduce_proj_core`, `proj_cert`, `proj_lit_to_ctor` (`WhnfCore.lean`,
   177 L lines); the spine walks (`WhnfSpine.lean`, 124, exact `coreWalkFuel` counters); ι
@@ -4352,11 +4362,45 @@ be asymptotically slower. con-ron at `_tmp/ref/con-ron` origin/HEAD (`proof/ConR
 
 * `WhnfBase.lean` `whnfCallees_stub`: the specs of the callees not written yet (`inst_list`,
   `inst_lp`, `str_lit_ctor`, `str_lit_supported`, the knot's `infer`/`infer_io`/`defeq` steps).
-* `WhnfSpine.lean`: the eight spine-walk specs (`getAppFn_refines`, …; a proof lane is on them).
-* `WhnfCore.lean`: `coreCallees_stub` and the specs of `whnf_core_step`, `whnf_core_loop`
-  (through `whnfCoreLoop_refines`), `whnf_app`, `beta_peel`, `whnf_core_step_proj`,
-  `reduce_proj_core`, `proj_cert`, `proj_lit_to_ctor`.
+* `WhnfSpine.lean`: `getAppArgs_refines`, `getAppSpine_refines`, `headAndArgs_refines` (a loop
+  writing the stack slice after the fuel-chase loop in one function: `finish` did not close the
+  two-stage split; the word models `gaaLoopW`/`gaaFillW` are there).
+* `WhnfCore.lean`: `coreCallees_stub` (`inst1` at `coreWalkFuel`, `find_proj`, `fire_ok`,
+  `iota_rec_at`) and the specs of `whnf_app`, `beta_peel`, `whnf_core_step_proj`,
+  `reduce_proj_core`, `proj_lit_to_ctor` (proof sub-lanes on them).
 * `WhnfIota.lean`: `iotaCallees_stub` and every spec (28).
+* `WhnfDelta.lean`: the δ/Nat specs (`whnf_step`, `reduce_nat`, `delta_step`, …; 14).
+
+### Lane `induct`'s stubs of this phase (reconciliation, planned)
+
+Lane `induct` calls `whnf(vis, dep, e)`, `get_app_fn(fuel, e)`, `get_app_args(fuel, e)` (an `IW`
+slice), `mk_app_n(f, off, len)` (an `IW` slice), `pi_result(fuel, e)` with the specs of
+`IndStubs.lean` (`RelAM` over `StageR`). This lane's functions of the same names differ: `whnf`
+takes the mode word first, the spine walks count `coreWalkFuel` internally (no fuel argument; the
+induct call sites pass `⟪CWF⟫` = `coreWalkFuel`), and slices are on the spine stack `SPN`. Plan,
+after the running proof sub-lanes land (they use the names): this lane renames its functions
+(`whnf_m`, `app_fn_c`, `app_args_c`, `mk_app_n_c`, `pi_result_c`; the fuel stays a counter) and
+adds `induct`'s names as adapters with `induct`'s conventions (`whnf` = `whnf_m` at the verified
+mode word; the slice adapters copy between `SPN` and `IW`; the fuel adapters run the counted walk
+when `fuel = coreWalkFuel`, the only fuel `induct` passes, and abort otherwise), with the
+`IndStubs` specs as their refinements at that fuel.
+
+### Numbers (2026-10-21)
+
+* Rust (con-ron's `whnf`/core, census phase 5): 1500 lines; L written for 720 of them, proved for
+  68 at the last census (the proved bodies call sorry'd callees, so their Rust counts once those
+  close).
+* L: 1101 lines (`CoreCaches` 14, `CoreLevels` 26, spine 94, `WhnfCore` 186, `WhnfIota` 504,
+  `WhnfDelta` 277). Refinement proofs: about 3600 lines for about 240 proved L lines, **15 proof
+  lines per L line** (the callW pattern: model ~1, L spec ~1 (`vcgen` + `finish`), refinement
+  ~10–13; most of the refinement is case splits on the callees' runs and threading `CoreAfter`).
+* CPU (`lake env lean`, user): `WhnfCoreSlot` 10.5 s, `WhnfCoreStep` 8.0 s,
+  `WhnfSpineRefine` 4.6 s, `WhnfDeltaSlot` 3.2 s, `CoreLevels` 3.1 s, the rest ≤ 2 s each: 33 s.
+* Automation: every L spec is `vcgen` + `finish` (or `simp_all`) against `callW_spec`; no L
+  spec needed a hand proof. The refinements are manual. Pattern breaks: a function with two loops
+  in sequence (`get_app_args`) defeated `finish`; a dispatcher with eight arms needed `by_cases`
+  per tag (`split_ifs` is Mathlib); `simp_all` on the dispatcher's VCs ran out of steps, `sym`
+  + `finish` took 7 s.
 
 ## Any number of results (2026-10-21, lane `cresults`)
 
@@ -4435,6 +4479,10 @@ final arena and parse states. Only `propext`, `Classical.choice`, `Quot.sound`.
 None.
 
 ## Twin fingerprints and the bump machinery (2026-10-21, lane `sync`)
+
+*Superseded in part (2026-10-22, "Census memory"): the fingerprints, the stale flag,
+`--stale`/`--reviewed`/`--record` and `docs/twin-fingerprints.tsv` are gone; the patch series and
+`scripts/bump-con-ron.sh` stay.*
 
 Question: when con-ron moves, which of our L code and proofs must be looked at again? The census
 links (`@[l_impl T]`, `@[refines T]`, `@[refines_part T]`) say which twin target `T` each piece
@@ -4685,9 +4733,204 @@ parallel, 20–32 min each (sonnet, 250–320k tokens each); the interface took 
 * Memory map additions: arrays 69‥71 (front, inductive lines), 200‥208 (`IW`, the eight walk
   memos), `CTL` 200‥219.
 
+### Stale flags after the con-ron bump (reviewed by hand, census not run)
+
+The census lists 28 phase-8 targets as stale after `4c9eaf7 → 12752ca7`. Every one has its own code
+unchanged; what changed below them is only `readLevelM`/`readLevelsM` (`Monad.lean`), whose diff is
+doc-comment line references only. False positives: to be cleared with `scripts/census.py
+--reviewed` once the census runs again (lane `censusmem`'s memory guard). Also proved since the
+second landing: `classOfMotiveVar` (through `sl_find`'s model, `findW_ok`); **`checkBlockDomsAt`
+through the stubs** (`IndInstallSpec.lean`: model `domsW` calling `stubM "fvar_type_d"` and `stubM
+"is_def_eq_core"`, the twin side from their `RelAM` statements — census status `sorry`, inherited
+from the stubs only: the first skeleton function refined end to end through stubs; finding: a
+stub may grow memory, so decoded argument slices are carried by `decHL_grow` and the caller passes
+`off + len ≤ iwTop`); `IndCopy2.lean` (worker): models and `_dec` lemmas for `sl_snoc`,
+`sl_append`, `er_copy`/`er_to_iw`, `rec2`‥`rec6`.
+
 ### `sorry`s
 
 `IndStubs.lean`: the 34 stub specs (by design, above). No other.
+
+## Phase 2 continued: the ROM, the pins, the declaration loop's callees (2026-10-21, lane `decls`)
+
+### The ROM (`Rom.lean`, `RomPins.lean`)
+
+con-ron interns con-leche **values** (the pinned names, basis blocks, axiom shapes, pin sets) at
+startup and inside some checks. In L they are bytes of the program's constant data: one byte
+string `rom` (`ldc`, `rom.c8[i]`), every ROM reader a function of `rom` (the program fixes it).
+
+* **Encoding, no decoder.** `encName`, … serialise a value prefix first, in the twin's intern
+  order (a node's tag byte, its children as the twin interns them, then its payload; numbers 8
+  bytes little endian, strings their UTF-8 length and bytes). A reader's spec is stated at
+  `rom.drop pos = enc x ++ rest` and proved by induction on `x`; the ROM's contents enter only
+  through that equation, which for the program's ROM (`enc A ++ enc B ++ …`) is `List.drop_append`.
+  No kernel evaluation of a decoder; `RomOK rom` (`length < 2^63`) is the one `decide` (0.8 s
+  for the names).
+* `rom_u64(i)`, `rom_put(i, l)` (ROM bytes to the pool top, `str_put`'s analogue: `Grows`, the
+  slice is `strWords`), `rom_name(pos)`: **refines `internName`** (`romName_refines`, `@[refines]`):
+  `ArenaD` kept, the store tier only written (`MemFrame StoreA StoreC`, arrays and `CTL` words
+  below 64), the position after the encoding returned. Proof shape: the W-model (`romNameW`, one
+  continuation per call, grind arm lemmas) for the L side, then a pure induction on the name
+  over the front's `_A` lemmas (`nanon_A`, `nstr_A`, `nnum_A`).
+* `rom_names_to(q, k, d)` (`internNameList`, the handles to `PINS[d ‥]`) and
+  **`intern_reserved_pins()` refines `internReservedPins`** (`internReservedPins_refines`): from
+  `ArenaD` (any pin table), with `encNames pinNames ++ encNames reservedBasisNameValues` at the
+  offset `off` the program is built with: `PinsFull` for the twin's new table and the flag set,
+  `ArenaD` kept, writes only the store tier and `PINS`. So **`PinsR` is established from the
+  initial state** by one call. The twin's run is assembled from its six pieces
+  (`internReservedPins_run`, `run_bind_ok`); `AM.st`/`AM.res` must be `local irreducible` there or
+  `rfl`/`rw` time out unfolding the stores.
+* Memo: `internExprGo`'s `EMemo` (per call, keyed by `Expr` value) is transparent (a memo hit is
+  a re-intern of a present subtree, which changes nothing), but proving that needs "re-interning
+  a denoted tree is the identity" on the twin side (the stores' `consP`/`consS`); the expression
+  ROM reader is not written yet. Not mirrored, its cost is a re-walk of constant data at startup
+  and in the rare pin checks.
+
+### `EnvR` over the pool below its top (`Tiers.lean`, at lane `induct`'s request)
+
+`EnvR`, `PendR` and `vgOut` decode records in **`erecP m` = `EREC` below `CTL[129]`**, not in
+the whole array. A writer that allocates above the top (`erec_alloc`) and writes there keeps
+every decoding: the decoders are stable under extension (`ArrExt`, `EnvRec.lean`: a successful
+decode read only words that exist), `ErecGrow m m'` (top up, nothing below the old top changed)
+gives `ArrExt (erecP m) (erecP m')`, and `EnvR.grow` carries the environment. `erecP_ext`:
+a decoding in `erecP m` is one in `m.arr64 EREC` (callee specs of lanes `whnf`/`induct` that decode
+in the whole array take it from there). `EnvR.frameN` now also keeps `CTL[129]`.
+
+### The fold's `And` pin (`DeclAndPin.lean`)
+
+`and_pin_ok(i)` **refines `andPinOk`** for every record kind the front produces (`DeclAt`:
+axiom, definition, theorem, opaque, quotient): the name word of record `i` cut to its low 32
+bits (`decI` reads only those, so no bound on the front's word is needed) against `PINS[12]`,
+`PINS[49]`, `PINS[50]`. Tagged `refines_part … "one-constant records"`: the `indDecl` arm
+(`canonEqList` against the interned `andPin`, ROM) waits for the front's inductive records. The
+stub and its `sorry` are gone from `Checker.lean`; the skeleton theorems take `DeclCallees p`
+(the callees' lookups). `LoopR`, `PendR`, `dsAt`, `vgOut` moved to `DeclBase.lean`.
+
+### Levels, and what comes next
+
+`rom_level(pos)` **refines `internLevel`** (`RomLevel.lean`, same shape as `rom_name`; the
+`.max`/`.imax` arms one template). `internReservedPinsL` (the census link) is
+`internReservedPinsAt 0`: the program's ROM starts with the two pin name lists.
+
+Next, in order (designs settled, not written):
+* `rom_levels` (`internLevels`): the level handles on a stack array `RSTK` (138, top `CTL[131]`),
+  copied to the pool top, then `intern_ls`; a parameter's name writes the pool between levels.
+* `rom_expr` with the twin's `EMemo` **mirrored exactly**: the encoder threads the list of
+  compound subterms already interned in the current call and emits a back reference (tag + index)
+  where the twin's memo hits; L keeps the handles in `RMEMO` (139, count `CTL[132]`), reset per
+  call. The relation (memo keys = the encoder's list, `RMEMO[k]` the handle of entry `k`) needs
+  no kernel evaluation of the ROM.
+* constant records into `EREC` (`internCV`/`internCI`/`internCIList`), then `internAllPins`.
+* `install_step_go` on lane `induct`'s conventions (`StageR`, `RefAM`, the stubs of
+  `IndStubs.lean`); `LoopR` gets `IWOK`; the callees' frame for `PEND`/`DECL`/`DLP` from the text
+  (`closedW` over a concrete `declProg`). `check_value_group` likewise.
+* Stale: `installStep`, `installDeclStep`, `checkPending(List)` wait for lane `whnf`'s `CoreR`;
+  `checkDecl`/`checkShapelessFormers` are lane `induct`'s L code. Not reviewed (census paused).
+
+### `sorry`s
+
+None new (the four remaining stub specs of `Checker.lean` are lane `pinsenv`'s).
+
+## Census memory, and the fingerprints dropped (2026-10-22, lane `censusmem`)
+
+The census took the machine down twice (the session has a 50 GB memory cap; the census was seen at
+18 GB). Measured under a watchdog (tree RSS polled every 0.2 s, killed by pid at 8 GB): the target
+pass alone (import `ConAgua.Final.Twin`, walk, fingerprints) peaks at 2.3 GB in 0.8 s, so the
+fingerprints were not the cause (`Expr.hash` is cached in the `Expr`). The link pass was: it
+imported all 165 modules, and on a module clash retried with fewer, all in one process. Lean never
+frees an imported environment, a failed `importModules` leaks what it read, and (presumably) a re-import of an
+olean whose fixed mmap address is taken reads it into the heap: about 2 GB more per attempt
+(measured: root alone 2.3 GB, root plus one more import 4.2 GB; there are seven clash retries). Killed at 8 GB after 4 s.
+
+* **Fix: one import per process.** `lake exe census ROOT MODULE...` is now a driver that runs
+  itself (`IO.appPath`) as `--targets ROOT` and then once per link-group attempt as `--links
+  MODULE...`, one child at a time. A child that hits a clash prints the modules to defer (`C`/`D`
+  lines, exit 3) and the driver retries without them; the driver drops `L` lines of modules an
+  earlier group printed. Same groups as before, same output: `docs/progress.md` regenerated
+  identical at `c33ad06`. Peak 2.8 GB (python + lake + one child), about 38 s.
+* **Guard.** `scripts/census.py` runs the exe with its output in temporary files and polls the
+  resident memory of its process tree every 0.2 s; above `MEM_LIMIT_GB` (6) or after 600 s it
+  kills that tree by pid and exits with an error. `CENSUS_PEAK=1` prints the peak.
+* **Fingerprints dropped** (decision with the user): not how con-ron syncs, and per toolchain.
+  Gone: the `F` lines, the stale flag and section of `docs/progress.md`, `--stale`, `--reviewed`,
+  `--record`, `docs/twin-fingerprints.tsv`. `scripts/bump-con-ron.sh` now builds, runs the census
+  and lists the changed upstream files. TODO: staleness by source citations (`con-ron:
+  ConRon/Arena/File.lean:120-200 name` doc lines on our L code and proofs, a pure-Python gate like
+  con-ron's `scripts/provenance.py`), a separate lane. The dashboard's stale card
+  (`docs/dashboard.html`, `scripts/dashboard_data.py`) now reads an empty list.
+
+## Provenance: citations instead of fingerprints (2026-10-22, lane `provenance`)
+
+Which L code must be looked at again when con-ron moves, now that the census fingerprints are gone
+("Census memory"). The answer is con-ron's own (`_tmp/ref/con-ron/scripts/provenance.py`, its
+DESIGN §3.7 and §7): every ported item cites the twin source it stands for, and a pure-Python gate
+diffs the cited text between two upstream revisions. Ours is `scripts/provenance.py` (~1000 lines,
+stdlib only, reads `_tmp/ref/<repo>` with one `git cat-file --batch` per tree). Workflow: PLAN.md,
+"Bumping the twin".
+
+### Decisions
+* **The citation.** A line in the declaration block (doc comment, attributes, `--` lines directly
+  above the `def`): `con-ron: ConRon/Arena/Core.lean:3682-3688 ConRon.Arena.flushCaches` (or
+  `con-leche: ConLeche/Frontend/Scan/Fast.lean:… ConLeche.Frontend.strClose`, or `con-ron: none —
+  <reason>`), optionally followed by ` — <prose>`. The range is the whole block (doc comment and
+  attributes to the next column-0 declaration), the name fully qualified, as in `@[l_impl]`. A
+  line after `con-ron:` that starts with anything but `ConRon/`, `ConLeche/`, `none` is prose
+  (`WhnfIota.lean`'s older `` con-leche: `CoreDefs.lean:51-58` `` notes) and is not checked.
+* **Upstream paths and revisions, not the vendored tree.** The path is the vendored one
+  (`vendor/con-ron/ConRon/…` = upstream `proof/ConRon/…`), the line numbers are upstream's at the
+  revision in `vendor/UPSTREAM`, read from the reference clones. `update --old <rev>` is then a
+  diff of two upstream commits that our patch series never enters, and the old text is always
+  there (any commit the clone has). The patches move no line of cited code today, so `check`
+  falls back to `vendor/` when a clone lacks the revision.
+* **What must cite:** every `def`/`abbrev … : FunDecl :=` under `ConAgua/**` (`ConAgua/Spike/`
+  exempt). Lean models of ours may cite; a citation anywhere is checked. Each `@[l_impl T]` target
+  must have a citation naming `T`, so the attribute and the citation cannot drift; `annotate`
+  writes the citations the attributes imply.
+* **Format of the insertions** (merge friendliness): an item without a doc comment got a new
+  one-line `/-- con-ron: … -/`; an item with one got a `-- con-ron: …` line right after it. Every
+  edit of this lane to `ConAgua/**` is an inserted line.
+* **Helpers below** (the gap a pure range diff has). con-ron needs nothing extra: its Rust and arena
+  port every con-leche declaration one to one, each with its own citation, and `coverage` lists
+  what is not cited. Our L functions inline twin helpers (`flush_caches` has no L function for
+  `Caches.empty`). So `update` also diffs every declaration of the changed upstream files
+  (comment-stripped), builds a textual call graph of the twin (identifiers resolved under the
+  enclosing namespaces and the file's `open`s), and marks a cited item when an UNCITED declaration
+  at most `--depth` calls below its twin (default 1) changed. Cited callees are not looked
+  through: they get their own finding. Changed structures and inductives are reported as `TYPE`
+  (a question for the relations, `CoreR` and friends), not followed: following them flags every
+  function whose signature mentions `Caches`. Depth 3 gives 28 findings on the test below, nearly
+  all through the uncited knot (`inferTypeCore → coreKnot → enterEager`), which is twin code no L
+  function stands for yet.
+* **Markers are a queue, not a red gate.** `update` puts `-- con-ron: CHANGED since <old> — …`
+  under the citation; the owning lane re-checks and deletes it. `check` lists markers and passes;
+  `check --strict` fails on them (con-ron fails; we land bumps with markers and let lanes drain).
+* **Dashboard:** `update … --json FILE` writes `{old, new, counts, findings: [{kind, where, item,
+  cites, note}], types}`; `bump-con-ron.sh` keeps it at `_tmp/bump-<short>/provenance.json`. The
+  markers left on master are `check`'s `queue:` lines (`scripts/provenance.py check | grep
+  '^queue:'`: file:line and the marker text).
+
+### Numbers (master + this lane)
+814 FunDecls: 716 cite twin code (622 citations generated from `@[l_impl]`, 127 FunDecls without the
+attribute assigned by hand, by file: store `*_find`/`*_push` → `Tbl.find?`/`Tbl.push`, stubs and
+pieces → the twin function they are part of), 98 `none` (memo library, limb arithmetic, scratch
+arrays, ROM readers, compiler tests, benchmarks, examples). `check` 1.1 s, `update` 2.4 s.
+
+### Test: `update --old 4c9eaf7` (the bump to `12752ca7`)
+With the citations rewritten to their ranges at `4c9eaf7`: 3 MOVED (`flushCaches`, `enterScratch`,
+`dropScratch`, Core.lean +18 lines), 0 CHANGED, `TYPE Caches`/`CState`/`ModeMemos`, 1 CALLEE:
+`flushCachesL` (`Caches.empty` below `flushCaches`). Against the seven stale targets of the
+fingerprint census: `flushCaches` found; `installStep`, `installDeclStep`, `checkPending(List)`
+reach `Caches.empty` only through `flushCaches`, which is cited and flagged itself (the fix is
+there); `lvlEq?`/`lvlsEq?` changed only by elaboration (`{ s.caches with … }` over the new field)
+— here that is `TYPE Caches`, and their callees `readLevelM`/`readLevelsM` changed in comments
+only (lane `induct` found the same by hand). Afterwards `check` passes at `12752ca7`.
+
+### Migration notes (for every lane)
+* New L code must carry a citation: write `@[l_impl T]` and run `scripts/provenance.py annotate`
+  (or `locate T` and paste), or write `/-- con-ron: none — <why> -/` for plumbing.
+* `scripts/provenance.py check` must pass before landing (a second; no build).
+* A `-- con-ron: CHANGED since …` line on your code: compare your L code and proofs with the
+  printed diff (or `git -C _tmp/ref/con-ron diff <old> <new> -- proof/<path>`), fix, delete the line.
 
 ## The fvar-range derived column (2026-10-21, lane `exprops3`)
 

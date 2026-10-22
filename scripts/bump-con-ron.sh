@@ -21,12 +21,16 @@
 #      that does not apply becomes a three-way merge); conflicts are reported and left in the
 #      working tree with markers;
 #   4. writes vendor/UPSTREAM, regenerates scripts/census-rust.tsv from the new Rust;
-#   5. builds (`scripts/lake build` and the census), log in _tmp/bump-<short>/build.log, and
-#      prints the files with errors;
-#   6. runs the census: records the new targets' fingerprints and those of changed targets no
-#      linked target reaches (`--record`), and prints the stale targets: the work queue.
+#   5. runs `scripts/provenance.py update --old <old con-ron rev>` (no build needed): relocates
+#      the `con-ron:`/`con-leche:` citations of our L code, puts a CHANGED marker on every item
+#      whose cited twin code (or a helper right below it) changed, prints the diffs; the
+#      findings also go to _tmp/bump-<short>/provenance.json. This is the work queue;
+#   6. builds (`scripts/lake build`), log in _tmp/bump-<short>/build.log, and prints the files
+#      with errors;
+#   7. runs the census (counts only).
 # Nothing is committed. Afterwards: fix the build (an edit to a vendored file goes into a patch:
-# --refresh-patches), commit, and announce the stale list (DESIGN.md).
+# --refresh-patches), commit, and announce the bump (DESIGN.md): what changed upstream (the
+# changed-files list above).
 set -euo pipefail
 
 root="$(git rev-parse --show-toplevel)"
@@ -204,13 +208,16 @@ bump() {
   git -C "$(ref_dir con-ron)" archive "$new_cr" crates | tar -x -C "$tmp"
   python3 scripts/census.py --rust "$tmp" | sed 's/^/   /'
   rm -rf "$tmp"
+  echo "== the work queue (scripts/provenance.py update --old ${old_cr:0:8}; markers inserted)"
+  python3 scripts/provenance.py update --old "$old_cr" --json "$work/provenance.json" \
+    | sed 's/^/   /' || true
   echo "== changed upstream files:"
   git -C "$(ref_dir con-ron)" diff --stat "$old_cr" "$new_cr" -- proof/ConRon proof/ConRon.lean | sed 's/^/   con-ron /'
   git -C "$(ref_dir con-leche)" diff --stat "$old_cl" "$new_cl" -- ConLeche ConLeche.lean pins | sed 's/^/   con-leche /'
   if [[ -n "$conflicts" ]]; then
     echo "== conflicts in:$conflicts"
     git diff --name-only --diff-filter=U | sed 's/^/   /'
-    echo "   resolve (git add), then --refresh-patches, build, scripts/census.py --record, --stale" >&2
+    echo "   resolve (git add), then --refresh-patches, build, scripts/census.py" >&2
     exit 1
   fi
   log="$work/build.log"
@@ -220,18 +227,17 @@ bump() {
   if [[ $bok == 1 ]]; then
     echo "   build FAILED; files with errors:"
     grep -o '^error: [^:]*\.lean' "$log" | sort | uniq -c | sed 's/^/   /' || true
-    echo "   (the census needs a build; fix, then run scripts/census.py --record and --stale)"
+    echo "   (the census needs a build; fix, then run scripts/census.py)"
     exit 1
   fi
   echo "   build ok"
-  echo "== the work queue (scripts/census.py --stale)"
-  timeout 1800 python3 scripts/census.py --record >/dev/null
-  timeout 1800 python3 scripts/census.py --no-build --stale
+  echo "== the census"
+  timeout 1800 python3 scripts/census.py
 }
 
 case "${1:-}" in
   --check) check ;;
   --refresh-patches) refresh ;;
-  ""|-h|--help) sed -n '2,32p' "$0" ;;
+  ""|-h|--help) sed -n '2,33p' "$0" ;;
   *) bump "$1" ;;
 esac

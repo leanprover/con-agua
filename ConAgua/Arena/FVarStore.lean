@@ -105,6 +105,7 @@ def fvfindLoop : Stmt := lblk (t, u, ty, h, n, j, d, v, b) {
   }
 }
 
+/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def fvarFind : FunDecl := lfn (t, u, ty, h) locals (n, j, d, v, b) {
   n := len(FVSLOT.u64) >> 1;
   b := CTL.u64[62] * t;
@@ -177,6 +178,7 @@ def fvpushMem (m : Mem) (t u ty j c : Word) : Mem :=
   ((((m.set64 FVREC (c * 4 + t * 2) u).set64 FVREC (c * 4 + t * 2 + 1) ty).set64 FVSLOT
     (j * 2 + t) (baseW m t + c + 1)).set64 CTL (26 + (t &&& 1)) (c + 1))
 
+/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def fvarPush : FunDecl := lfn (t, u, ty, j) locals (c, k) {
   c := CTL.u64[26 + t];
   if c >= 134217728 { abort };
@@ -243,6 +245,8 @@ def fvinternW (m : Mem) (u ty : Word) : Option (Word × Mem) :=
     some (fvarP + fvcnt m 0, fvpushMem m 0 u ty (rs₀.tail.tail.headD 0) (fvcnt m 0))
   else none
 
+/-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
+con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
 @[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internFVar : FunDecl := lfn (u, ty) locals (h, sk, fd, i, j, d) {
   h := ((⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫ ^ ty) * ⟪fnvPrime⟫;

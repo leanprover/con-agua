@@ -76,7 +76,8 @@ per-function separation logic.
   `COMPLETE_BY_PARTS` in `scripts/census.py`. Tag in the same commit that lands the code.
 - **Census.** `scripts/census.py` builds what it needs (`--no-build` to skip) and prints, per roadmap phase,
   how many targets are proven / proven with `sorry` / have L code / have nothing, by count and weighted by
-  Lean and Rust lines (~30 s). `--list [REGEX]` lists targets with their status and links. Targets: the
+  Lean and Rust lines (~30 s). `--list [REGEX]` lists targets with their status and links. The exe runs under a memory guard
+  (killed above 6 GB; it peaks at about 2.8 GB). Targets: the
   `ConRon`/`ConLeche` definitions `ConAgua.Final.TwinAccepts` reaches (no instances, auxiliaries, types,
   predicates, ROM data). Proven means every `@[refines T]` theorem uses only `propext`, `Classical.choice`,
   `Quot.sound`; a target reached only through proven targets counts as proven (only sorry-free ones
@@ -92,22 +93,26 @@ per-function separation logic.
   (`scripts/bump-con-ron.sh --check`). Never edit a vendored file without putting the edit in a
   patch: edit, then `scripts/bump-con-ron.sh --refresh-patches` (an edit outside every patch lands in
   `NNNN-new.patch`: rename it and give it a description), and commit both.
-- **Fingerprints.** `docs/twin-fingerprints.tsv` records, for every target with L code, a proof or
-  coverage, a hash of its twin definition as it was when that L code or proof was last checked
-  (DESIGN.md, "Twin fingerprints"). The census flags a target **stale** when the hash differs:
-  `scripts/census.py --stale` is the work queue, and `docs/progress.md` lists it. A lane that checked
-  (and if needed fixed) the L code and proofs of stale targets against the new twin runs
-  `scripts/census.py --reviewed REGEX` and commits the changed rows with the fix. New links get their
-  row from the coordinator's `--write`.
+- **Citations** (DESIGN.md, "Provenance: citations instead of fingerprints"). Every L `FunDecl` carries
+  a line in its declaration block naming the twin code it stands for, at the upstream revision in
+  `vendor/UPSTREAM`: `/-- con-ron: ConRon/Arena/Core.lean:3682-3688 ConRon.Arena.flushCaches -/` (path
+  relative to con-ron's `proof/`, the block's line range, the qualified name; `con-leche:
+  ConLeche/...` for code ported from con-leche; several lines for an L function that merges several
+  twin functions; `con-ron: none — <reason>` for L plumbing with no twin). New code: write
+  `@[l_impl T]`, run `scripts/provenance.py annotate` (inserts the citation of `T`), or `locate T`
+  for the line. `scripts/provenance.py check` (a second, no build) must pass before landing.
 - **The bump.** In a worktree on its own branch: `scripts/bump-con-ron.sh <rev>` (e.g. `origin/HEAD`)
   re-vendors con-ron at `<rev>` and con-leche at the rev con-ron's `proof/lake-manifest.json` pins,
   re-applies the patches with `git apply --3way` (conflicts are reported and left with markers),
-  regenerates `scripts/census-rust.tsv`, builds, and prints the stale list. Fix what the build
-  breaks (vendored files: in a patch; our files: small fixes now, otherwise `sorry` + DESIGN.md),
-  land it, and announce it in DESIGN.md: what changed upstream, the stale targets, which lane owns
-  them. Stale targets stay counted as before until their lane reviews them. Never bump the toolchain
-  and the twin in the same step (fingerprints are per toolchain; after a toolchain bump re-record
-  with `--reviewed .` once the build is green).
+  regenerates `scripts/census-rust.tsv`, runs `scripts/provenance.py update --old <old rev>`
+  (relocates moved citations, inserts a `-- con-ron: CHANGED since …` marker under every citation
+  whose twin code, or a helper right below it, changed, and prints the diffs), builds, runs the
+  census, and lists the changed upstream files. Fix what the build breaks (vendored files: in a
+  patch; our files: small fixes now, otherwise `sorry` + DESIGN.md), land it with the markers, and
+  announce it in DESIGN.md: what changed upstream, the marked items, which lanes own them. The
+  owning lane checks (and if needed fixes) the L code and proofs against the new twin and deletes
+  the marker; `check` lists the markers left (the queue; `check --strict` fails on them).
+  Never bump the toolchain and the twin in the same step.
 
 ## Process rules
 - Worktrees and large files go in `_tmp/` (tmpfs and a memory cap). Use `git -C <dir>` and stage by explicit
