@@ -7844,3 +7844,17 @@ child dangled when it was interned (no `StoreWF` needed).
   (`StoreDen.proj` gives `i < numFields`), `LvlsEqDen` (from `StoreDen.constLs` at its callers).
 * For other lanes building `CoreS` from outside the core: `TwinOK` (`DeclLvlStage.lean`) gained
   `den` and the `fe` parameter.
+### Landing 11 (lane `decls3`): the loop's relation carries the pin variants
+
+* **`LoopR pins dn m a vis fe pend ds`** (new first parameter) has a field `pinsets : PinSetsR m pins`
+  (lane `romload`'s relation of the variant records at `CTL[150]`/`CTL[151]`). Every step keeps it
+  (`DeclPins.lean`: `RecGrow` — the record pool only grew — from `IWGrow`, from `ArrExt` of
+  `erecP` at an in-bounds top, or from an unchanged `EREC`; `stepC` excludes `CTL[150..151]`); the
+  promotion and the bracket's frames show it directly. The theorems of the loop now take `pins`
+  where they mention `LoopR` (mechanical; `FoldOut`, `IstgPost`, `PendPost`, `CPGoSpec`,
+  `CPNextSpec` gained the argument).
+* **`checkDeclDefn_loop` is proved** from `checkDeclDefn_loop'` and `CheckDeclProg.defn : ∀ pins,
+  DefnProg p pins` (the two gates' specs). `checkDecl_loop` has no `sorry` of its own now; it rests
+  on `CheckDeclProg`'s spec fields (`CvCanonSpec`, `CiCanonSpec`, `DefnProg`) and the callees' stub
+  specs. Whoever establishes `LoopR` at the loop's entry (the pipeline) supplies `PinSetsR` from
+  `internAllPins_PB`'s post.

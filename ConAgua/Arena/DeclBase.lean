@@ -4,6 +4,7 @@ import ConAgua.Arena.CoreRefine
 import ConAgua.Front.StateDR
 import ConAgua.Arena.PromoteMemo
 import ConRon.Arena.Checker
+import ConAgua.Arena.DeclPins
 
 /-!
 # The declaration loop's relation (`LoopR`) and the pending checks (`PendR`)
@@ -49,8 +50,8 @@ structure PendR (m : Mem) (pend : Array PendingCheck) : Prop where
 
 /-- **What the declaration loop keeps**: the checker state at the view `vis` of `fe`, the
 pending checks, and the declaration records. -/
-structure LoopR (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis : Word) (fe : IFEnv)
-    (pend : Array PendingCheck) (ds : Array IDeclaration) : Prop where
+structure LoopR (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState)
+    (vis : Word) (fe : IFEnv) (pend : Array PendingCheck) (ds : Array IDeclaration) : Prop where
   check : CheckR dn m a vis fe
   pend : PendR m pend
   decls : DeclsR (m.arr64 DECL) (m.arr64 DLP) ds
@@ -60,6 +61,9 @@ structure LoopR (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis
   /-- The promotion memo's arrays hold some memo (`PMemoR`): the promotion clears them at each
   declaration (an epoch bump), which needs them well formed. -/
   pmemo : ∃ pm, PMemoR m pm
+  /-- The pin variants the startup interned are `pins` (lane `romload`'s `PinSetsR`): the
+  definition arm's `Nat.div`-family gate reads them. -/
+  pinsets : L.Rom.PinSetsR m pins
 
 /-- `IWOK` survives a frame that keeps `IW`, `EREC` and the two tops `CTL[129]`, `CTL[200]`. -/
 theorem IWOK.frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
@@ -76,9 +80,9 @@ theorem IWOK.frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame 
 def dsAt (ds : Array IDeclaration) (i : Word) : IDeclaration := ds.getD i.toNat default
 
 /-- The result of phase A: `.ok` with every record installed, and the loop's relation. -/
-def FoldOut (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (v : Word)
+def FoldOut (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (v : Word)
     (ds : Array IDeclaration) : Except (CheckError × Nat) (Nat × IFEnv × Array PendingCheck) → Prop
-  | .ok (k, fe, pend) => k = ds.size ∧ LoopR dn m a v fe pend ds
+  | .ok (k, fe, pend) => k = ds.size ∧ LoopR pins dn m a v fe pend ds
   | .error _ => False
 
 /-- Phase A's environment and pending checks out of its result. -/
@@ -89,10 +93,10 @@ def foldPend : Except (CheckError × Nat) (Nat × IFEnv × Array PendingCheck) �
   | .ok (_, _, pend) => pend
   | .error _ => #[]
 
-theorem FoldOut.eq {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {v : Word}
+theorem FoldOut.eq {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {v : Word}
     {ds : Array IDeclaration} {x : Except (CheckError × Nat) (Nat × IFEnv × Array PendingCheck)}
-    (h : FoldOut dn m a v ds x) :
-    x = .ok (ds.size, foldFe x, foldPend x) ∧ LoopR dn m a v (foldFe x) (foldPend x) ds := by
+    (h : FoldOut pins dn m a v ds x) :
+    x = .ok (ds.size, foldFe x, foldPend x) ∧ LoopR pins dn m a v (foldFe x) (foldPend x) ds := by
   match x, h with
   | .ok (k, fe, pend), ⟨hk, hR⟩ => exact ⟨by rw [hk]; rfl, hR⟩
 
