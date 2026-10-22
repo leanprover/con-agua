@@ -217,14 +217,13 @@ structure CoreS (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis
   its offsets do not wrap. -/
   bstk : (m.arr64 145).size < 2 ^ 63
 
-/-- **The relation across a writer outside every tier and the stack**: arrays `≥ 145` (or the
-front's 64‥95), `CTL` words `≥ 137` (or 64‥95): the level heap (`LH`, `CTL[192]`), say. -/
-theorem CoreS.frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
+/-- **The relation across a writer outside every tier and the stack**, the walk memos given
+(`hmem`): a writer of the walk-local memos (arrays 151‥153) proves them itself. -/
+theorem CoreS.frameM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List ArrId} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, 64 ≤ b ∧ (b < 96 ∨ 145 ≤ b)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 137 ≤ x.toNat))
-    (hWA : ∀ b ∈ A, b < 151 ∨ 153 < b := by decide)
-    (hWC : ∀ x ∈ C, x.toNat < 152 ∨ 157 < x.toNat := by simp) :
+    (hmem : CoreMemos m') :
     CoreS dn m' a vis fe M eb ∧ StackKept m m' := by
   have aA : ∀ lo hi : Nat, 96 ≤ lo → hi ≤ 145 → AvoidA lo hi A := fun lo hi h1 h2 b hb => by
     have := hA b hb; simp only [ArrId] at this ⊢; omega
@@ -242,9 +241,21 @@ theorem CoreS.frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AStat
       (by decide)),
     hS.env.frame (aA 132 144 (by decide) (by decide)) (aC 128 136 (by decide) (by decide)) hf,
     hS.readL, hS.readLs, hS.nwf, hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn,
-    hS.memos.frame_hi hf (fun b hb => (hA b hb).1) (fun x hx => (hC x hx).1) hWA hWC,
+    hmem,
     hf.2.2.1 145 ▸ hS.bstk⟩, ?_⟩
   refine ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
+
+/-- **The relation across a writer outside every tier and the stack**: arrays `≥ 145` (or the
+front's 64‥95), `CTL` words `≥ 137` (or 64‥95), away from the walk-local memos: the level heap
+(`LH`, `CTL[192]`), say. -/
+theorem CoreS.frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List ArrId} {C : List Word}
+    (hS : CoreS dn m a vis fe M eb) (hf : MemFrame A C m m')
+    (hA : ∀ b ∈ A, 64 ≤ b ∧ (b < 96 ∨ 145 ≤ b)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 137 ≤ x.toNat))
+    (hWA : ∀ b ∈ A, b < 151 ∨ 153 < b := by decide)
+    (hWC : ∀ x ∈ C, x.toNat < 152 ∨ 157 < x.toNat := by simp) :
+    CoreS dn m' a vis fe M eb ∧ StackKept m m' :=
+  hS.frameM hf hA hC (hS.memos.frame_hi hf (fun b hb => (hA b hb).1) (fun x hx => (hC x hx).1) hWA hWC)
 
 /-- **After a core run** from `m₀` at maps `M`, `G`, generation `g`: the relation holds at some
 maps that keep every other generation's bank, and the stack below the top is as it was. -/

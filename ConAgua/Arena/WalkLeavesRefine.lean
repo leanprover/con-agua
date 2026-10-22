@@ -577,7 +577,7 @@ theorem lsbNodeOK_succ (n : Nat) (ih : LsbGoOK n) : LsbNodeOK (n + 1) := by
       rw [lsbNodeW_fvar_in n m h k c g1 (vok 26 hc) (by rw [hlm]; decide)] at hb
       simp only [hin, ↓reduceIte]
       exact ih m m' a memo bl _ k c r hD hM hL hty hb
-    · rw [ite_cond_eq_false _ _ (eq_false hin)] at hlm
+    · simp only [hin, Bool.false_eq_true, ↓reduceIte] at hlm
       rw [lsbNodeW_fvar_out n m h k c g1 (vok 26 hc) hlm] at hb
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
       simp only [hin, Bool.false_eq_true, ↓reduceIte]
