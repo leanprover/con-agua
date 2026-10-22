@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndInstallSpec19
+import ConAgua.Arena.IndPos2SpecQ
 
 /-!
 # Refinements of `IndInstall`, part 20 (lane `indproofs2`, helper `install`): `checkAbsCtorSorts`,
@@ -82,5 +83,136 @@ theorem iaoW_sim {p : Prog} (n : Nat) {dn : NIdx → Option ConLeche.Name} {vis 
       exact h) ?_
   rintro r2 - m2 a2 ⟨hS2, hg2, -⟩
   exact Sim.ret ⟨hS2, hg1.trans hg2⟩
+
+/-- A pointer slice decoded below the tops, below the top unless empty (an empty slice's offset is
+whatever its record holds). -/
+def PSlR0 {α : Type} (f : Mem → Nat → Option α) (xs : List α) (o l : Word) (m : Mem) : Prop :=
+  DecB (fun m => decPL m (f m) o.toNat l.toNat) m xs ∧ (l = 0 ∨ o.toNat + l.toNat ≤ iwTop m)
+
+theorem PSlR0.grow {α : Type} {f : Mem → Nat → Option α} (hf : ∀ q, OMono (fun m => f m q))
+    {xs : List α} {o l : Word} {m m' : Mem} (h : PSlR0 f xs o l m) (hg : IWGrow m m') : PSlR0 f xs o l m' :=
+  ⟨h.1.grow (OMono.decPL hf _ _) hg, h.2.imp id fun h2 => Nat.le_trans h2 hg.1⟩
+
+theorem PSlR0.nil {α : Type} {f : Mem → Nat → Option α} {xs : List α} {o l : Word} {m : Mem}
+    (h : PSlR0 f xs o l m) (hl : l = 0) : xs = [] := by
+  have h1 := h.1; simp only [DecB, hl] at h1
+  simpa [decPL] using h1.symm
+
+theorem PSlR0.pslr {α : Type} {f : Mem → Nat → Option α} {xs : List α} {o l : Word} {m : Mem}
+    (h : PSlR0 f xs o l m) (hl : l ≠ 0) : PSlR f xs o l m := ⟨h.1, h.2.resolve_left hl⟩
+
+/-- The lookups of the fields' universes at the holes. -/
+structure AbsProg (p : Prog) : Prop where
+  hiAt : p.lookup "nest_ctx_hi_at" = some nestCtxHiAt
+  one : p.lookup "check_abs_ctor_sorts_one" = some checkAbsCtorSortsOne
+  abs : p.lookup "check_abs_ctor_sorts" = some checkAbsCtorSorts
+  all : p.lookup "check_abs_ctor_sorts_all" = some checkAbsCtorSortsAll
+
+/-- **`check_abs_ctor_sorts`' model refines `checkAbsCtorSorts`.** -/
+theorem iacW_sim {p : Prog} (hP : AbsProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (ctx isP : Word) (c : NestCtx) (b : Bool) (hb : (isP != 0) = b) (hhi : c.hiAt 0 < 2 ^ 64) (n : Nat) :
+    ∀ (m : Mem) (a : AState) (co cl oo ol : Word) (cs : List (IConstantVal × Nat))
+      (os : List (List NestFieldKind × EIdx)),
+    StageR dn vis fe m a → DecB (fun m => decCtx m ctx.toNat) m c →
+    PSlR0 decCN cs co cl m → PSlR0 decKE os oo ol m →
+    Sim (iacW p n m vis ctx isP co cl oo ol) (ConRon.Arena.checkAbsCtorSorts V fe c b cs os) a
+      (fun _ _ m' a' => StageR dn vis fe m' a' ∧ IWGrow m m') := by
+  induction n with
+  | zero => intro m a co cl oo ol cs os _ _ _ _; rw [iacW_zero]; exact Sim.of_none
+  | succ n ih =>
+  intro m a co cl oo ol cs os hS hc hcs hos
+  by_cases hcl : cl = 0
+  · rw [iacW_nil1 p n m vis ctx isP co cl oo ol hcl, hcs.nil hcl]
+    exact Sim.ret ⟨hS, IWGrow.refl m⟩
+  by_cases hol : ol = 0
+  · rw [iacW_nil2 p n m vis ctx isP co cl oo ol hcl hol, hos.nil hol]
+    have : ConRon.Arena.checkAbsCtorSorts V fe c b cs [] = pure () := by
+      cases cs <;> simp [ConRon.Arena.checkAbsCtorSorts]
+    rw [this]
+    exact Sim.ret ⟨hS, IWGrow.refl m⟩
+  obtain ⟨qc, ⟨cv, nF⟩, cs', rfl, hwc, hqcb, hdc, hcs'⟩ := partsPSl_cons (hcs.pslr hcl) hcl
+  obtain ⟨qo, ⟨ks, e⟩, os', rfl, hwo, hqob, hdo, hos'⟩ := partsPSl_cons (hos.pslr hol) hol
+  have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
+  have hqc' : (UInt64.ofNat qc : Word).toNat = qc := UInt64.toNat_ofNat_of_lt' hqcb
+  have hqo' : (UInt64.ofNat qo : Word).toNat = qo := UInt64.toNat_ofNat_of_lt' hqob
+  -- the words read
+  have hcT : decCtx (truncM m) ctx.toNat = some c := hc
+  obtain ⟨-, hlps, hnP, -, -, -, -⟩ := decCtx_some hcT
+  obtain ⟨lo, ll, hlo, hll, hlpsd⟩ := decAt_some hlps
+  have hlolt := partsIwLt hll
+  obtain ⟨hwlo, hlob, -⟩ := partsIwRd hlo (w := ctx + 2) (by rw [UInt64.toNat_add]; simp; omega)
+  obtain ⟨hwll, hllb, -⟩ := partsIwRd hll (w := ctx + 3) (by rw [UInt64.toNat_add]; simp; omega)
+  have hdoT : decKE (truncM m) qo = some (ks, e) := hdo
+  simp only [decKE, bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at hdoT
+  obtain ⟨-, -, ee, hee, -, rfl⟩ := hdoT
+  obtain ⟨heelt, hee'⟩ := rec2IwH_trunc hee
+  obtain ⟨ew, hew, hew32, hewe⟩ := iwH_rdW_at (w := UInt64.ofNat qo) (k := 2) (by rw [hqo']; exact hee')
+    hS.2.2.2.1
+  rw [show (UInt64.ofNat 2 : Word) = 2 from rfl] at hew
+  rw [iacW_cons p n m vis ctx isP co cl oo ol hcl hol, hwc, hwo, hwlo, hwll, hew]
+  simp only [ConRon.Arena.checkAbsCtorSorts]
+  have hlpsm : decHL m (UInt64.ofNat lo : Word).toNat (UInt64.ofNat ll : Word).toNat = some c.lps := by
+    rw [UInt64.toNat_ofNat_of_lt' hlob, UInt64.toNat_ofNat_of_lt' hllb]
+    exact DecB.get (f := fun m => (decHL m lo ll : Option (List NIdx))) (OMono.decHL _ _) hlpsd
+  refine Sim.bindK (K := iacK1 p n vis ctx isP co cl oo ol (UInt64.ofNat qc) (UInt64.ofNat qo))
+    (body := fun r1 m1 => if r1.headD 0 = 0 then none
+      else iacK2 p n vis ctx isP co cl oo ol (UInt64.ofNat qc) (UInt64.ofNat qo)
+        (callW p n "nest_ctx_hi_at" [ctx, 0] m1)) (by simp [iacK1])
+    (fun r m₁ => by
+      by_cases h : r.headD 0 = 0
+      · rw [iacK1_none p n m₁ _ _ _ _ _ _ _ _ _ r h, if_pos h]
+      · rw [iacK1_some p n m₁ _ _ _ _ _ _ _ _ _ r h, if_neg h])
+    (by
+      have h := installSimStub (p := p) (n := n) (allLevelParamsDefined_spec dn vis fe
+        (UInt64.ofNat lo) (UInt64.ofNat ll) ew hew32 c.lps) ⟨hS, hlpsm⟩
+      rw [hewe] at h; exact h) ?_
+  rintro r1 ok m1 a1 ⟨hS1, hg1, hok1, -⟩
+  by_cases h0 : r1.headD 0 = 0
+  · simp only [h0, if_true]; exact Sim.of_none
+  have hokt : ok = true := by rw [← hok1]; simp only [bne_iff_ne, ne_eq, h0, not_false_eq_true]
+  subst hokt
+  simp only [h0, if_false]
+  rw [if_pos trivial]
+  -- `NestCtx.hiAt`
+  have hc1 : decCtx m1 ctx.toNat = some c := hc.stab (decCtx_mono _) m1 hg1
+  have hnPlt := partsIwLt hnP
+  refine Sim.mstep (K := iacK2 p n vis ctx isP co cl oo ol (UInt64.ofNat qc) (UInt64.ofNat qo))
+    (by simp [iacK2]) (fun r m₁ => iacK2_some p n m₁ vis ctx isP co cl oo ol _ _ r) fun r2 m2 h2 => ?_
+  obtain ⟨s2, hs2, hpost2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
+    (nestCtxHiAt_refines p hP.hiAt n _ ctx 0 c hc1 (by omega) (by omega)) h2
+  obtain ⟨rfl, hr2⟩ := hpost2
+  simp only at hs2; subst hs2
+  rw [hr2]
+  -- the constructor's fields
+  have hdcT : decCN (truncM m) qc = some (cv, nF) := hdc
+  obtain ⟨-, hnF⟩ := decCN_some hdcT
+  have hnFlt := partsIwLt hnF
+  obtain ⟨hwnF, hnFb, -⟩ := partsIwRd hnF (w := UInt64.ofNat qc + 1) (by rw [UInt64.toNat_add, hqc']; simp; omega)
+  have hwnF1 : rdW (m1.arr64 IW) (UInt64.ofNat qc + 1) = UInt64.ofNat nF := by
+    rw [← hwnF]; simp only [rdW]; rw [show (UInt64.ofNat qc + 1 : Word).toNat = qc + 1 by
+      rw [UInt64.toNat_add, hqc']; simp; omega, hg1.2.2.1 _ hnFlt]
+  have hwe1 : rdW (m1.arr64 IW) (UInt64.ofNat qo + 2) = ew := by
+    rw [← hew]; simp only [rdW]; rw [show (UInt64.ofNat qo + 2 : Word).toNat = qo + 2 by
+      rw [UInt64.toNat_add, hqo']; simp; omega, hg1.2.2.1 _ heelt]
+  rw [hwnF1, hwe1]
+  refine Sim.congr (op := absOneAM fe c b nF ee >>= fun _ => ConRon.Arena.checkAbsCtorSorts V fe c b cs' os')
+    ?_ (by simp only [absOneAM, bind_assoc, pure_bind])
+  have hhiw : (UInt64.ofNat (c.hiAt 0) : Word).toNat = c.hiAt 0 := UInt64.toNat_ofNat_of_lt' hhi
+  refine Sim.bindK (K := iacK3 p n vis ctx isP co cl oo ol) (body := fun _ m3 => iacK4
+      (iacW p n m3 vis ctx isP (co + 1) (cl - 1) (oo + 1) (ol - 1))) (by simp [iacK3])
+      (fun r m₁ => iacK3_some p n m₁ vis ctx isP co cl oo ol r)
+    (Sim.callW_pos (Q := fun _ _ m' a' => StageR dn vis fe m' a' ∧ IWGrow m1 m') (fun k r m' e => by
+      obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
+        (iao_spec p hP.one k _ vis ctx isP (UInt64.ofNat nF) ew (UInt64.ofNat (c.hiAt 0))) e
+      have := iaoW_sim (p := p) k hS1 (hc.grow (decCtx_mono _) hg1) hew32 hhiw hb r s'.mem hW
+      rw [UInt64.toNat_ofNat_of_lt' hnFb, hewe] at this; dsimp only at this; exact this) n) ?_
+  rintro - - m3 a3 ⟨hS3, hg3⟩
+  have hg13 := hg1.trans hg3
+  refine Sim.post (K := iacK4) rfl (fun _ _ => rfl)
+    (ih m3 a3 (co + 1) (cl - 1) (oo + 1) (ol - 1) cs' os' hS3 (hc.grow (decCtx_mono _) hg13)
+      (PSlR0.grow decCN_mono (⟨hcs'.1, Or.inr hcs'.2⟩ : PSlR0 decCN cs' (co + 1) (cl - 1) m) hg13)
+      (PSlR0.grow decKE_mono (⟨hos'.1, Or.inr hos'.2⟩ : PSlR0 decKE os' (oo + 1) (ol - 1) m) hg13)) ?_
+  rintro _ _ _ _ ⟨hS4, hg4⟩
+  exact ⟨hS4, hg13.trans hg4⟩
 
 end L.Ind
