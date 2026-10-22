@@ -454,6 +454,16 @@ factors (the naive compiler, bounds checks, fuel counters, double memo probes), 
 4. **Fixed capacities:** a full table aborts and the harness reruns with doubled sizes, which costs at most about
    2× in total.
 
+**Known limitation: sparse export ids** (lane `e2e`'s bug 5, recorded by lane `integrate`, 2026-10-22). The
+frontend's id tables `NID`/`LID`/`EID` (and the prelude's copies `PNID`/`PLID`/`PEID`) are dense word arrays
+indexed by the export id, so a file whose ids are sparse and large (`e2e/rounds_huge_gaps`, ids up to
+`3·10^15`) aborts in `name_fresh` at the capacity check, where the twin's `IdTable` hash maps accept. A
+completeness loss, never a soundness one (an abort declines). Proposed fix: make the three id tables
+open-addressing maps keyed by the id, on the memo library's schema (`MemoLib`: key word, value word, epoch,
+`CTL` slots, as the walk memos), with `TblR` restated as "the map's entries are the table's" (`StateDR`'s
+three conjuncts and `tblOK`/`tblW`'s readers in `Front/Apply*.lean` change; the line arms do not). Dense
+files (every toolchain export) keep their cost within a constant factor (one hash probe per id).
+
 **Rule: every con-ron cache must be mirrored in L.** Skipping one can be asymptotically worse; for example, the
 levels lane recomputes level-equality verdicts that con-ron caches. That cache goes in front of `lv_equiv` once
 `CoreR` has fields. The lanes that fill `CoreR` list every con-ron cache and say where L mirrors it.
