@@ -262,7 +262,7 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     · rw [← hr']; omega
     · rw [← hr']; omega
     · rw [← hr']
-      exact decCI_pj (by simp [nat?, hker]) hdec
+      exact decCI_pj (by unfold nat?; rw [hker]; rfl) hdec
 
 end rel
 

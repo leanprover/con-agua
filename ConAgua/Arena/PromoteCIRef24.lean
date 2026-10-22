@@ -147,10 +147,10 @@ theorem ciList_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem
         exact preE_ext (fun i hi => by
           rw [hEE]; exact hg1.2.1 i (by omega))
     obtain ⟨a3, pm3, cs', hrun3, hD3, hP3, hcp3, hfr3, hg3, hts3, hlen3, hcons3, hout3, hsz3E⟩ :=
-      ih (m1.set64 ECON j (dl.headD 0)) a1 pm1 f (j - 1) (k - 1) D cs z m' hDf hPf
+      ih (m1.set64 ECON j (dl.headD 0)) a1 pm1 f (j - 1) (k - 1) D cs z m3 hDf hPf
         (by rw [hEE]; exact hsz1) (by rw [hEE, hT2]; exact hts1) hlenk hj1 hcon'
         (by rw [hT2]; have := hg1.1; omega) hcb
-    have hext : ErecGrow m1 m' := hg12.trans hg3
+    have hext : ErecGrow m1 m3 := hg12.trans hg3
     refine ⟨a3, pm3, ci' :: cs', ?_, hD3, hP3, hcp3.trans hcp1, ?_, hg1.trans hext, hts3, ?_, ?_, ?_, ?_⟩
     · rw [promoteCIList_cons, run_bind_ok hrun1]
       simp only
@@ -162,7 +162,7 @@ theorem ciList_rel (dn : NIdx → Option ConLeche.Name) : ∀ (n : Nat) (m : Mem
         · subst h; simp; omega
         · rw [toNat_sub1 j h]; have := toNat_pred j h; omega
       have hbd' : j.toNat < (m1.arr64 ECON).size := by rw [hE1]; exact hbd
-      refine ⟨⟨dl.headD 0, ?_, hext.ext.decCI (by rw [hP2e]; exact hdec1)⟩, ?_⟩
+      refine ⟨⟨dl.headD 0, ?_, hext.ext.decCI hdec1⟩, ?_⟩
       · rw [hout3 _ hj_out, hE2, arr_set!_get?, if_pos ⟨rfl, hbd'⟩]
       · rcases hjn with h | h
         · subst h; have : cs' = [] := List.length_eq_zero_iff.mp (by simpa using hlen3)
