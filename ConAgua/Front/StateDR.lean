@@ -148,7 +148,7 @@ macro "tapart" : tactic => `(tactic| simp [nanonSch, NAREC, NASLOT, zeroSch, ZRE
   ISLOT, paramSch, PREC, PSLOT, POOL, NID, LID, EID, lsSch, LSREC, LSSLOT, sortSch, SOREC, SOSLOT,
   constSch, CREC, CSLOT, bvarSch, BREC, BSLOT, litSch, REC, SLOT, appSch, AREC, ASLOT, lamSch, LAREC,
   LASLOT, forallSch, FAREC, FASLOT, letSch, LEREC, LESLOT, projSch, PJREC, PJSLOT, ADER, LADER, FADER,
-  LEDER, PJDER, DECL, DLP])
+  LEDER, PJDER, DECL, DLP, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP])
 
 /-- A store's arrays are outside the id tables' (`idArrs`), its `CTL` words outside `idCtl`
 (concrete schemas). -/

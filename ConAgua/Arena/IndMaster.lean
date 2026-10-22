@@ -209,7 +209,7 @@ theorem stage_of_level {β : Type} [BEq β] [Hashable β] {L : Lens β LDer .lev
     (hset : ∀ t, (DerR m' a → DerR m' (L.setP a t)) ∧ cp (L.setP a t) = cp a)
     (hsetS : ∀ t, (DerR m' a → DerR m' (L.setS a t)) ∧ cp (L.setS a t) = cp a) :
     ∃ a', op.run a = .ok (decI r, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' := by
-  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hf (fun b hb => by have := hA b hb; omega) a
+  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hf (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega) a
     hS.1.arena.2
   have hcs := AM.st_proto L op key tag pf d err a hrun hok
   have hDk : DerR m' (AM.st op a) ∧ cp (AM.st op a) = cp a := by
@@ -219,7 +219,7 @@ theorem stage_of_level {β : Type} [BEq β] [Hashable β] {L : Lens β LDer .lev
     · exact ⟨(hsetS t).1 hD₁, (hsetS t).2⟩
   have hrun' := AM.run_of_ok op a hok
   rw [hres] at hrun'
-  obtain ⟨h1, h2⟩ := StageR.of_walk hS ⟨hR, hDk.1⟩ hf (fun b hb => by have := hA b hb; omega)
+  obtain ⟨h1, h2⟩ := StageR.of_walk hS ⟨hR, hDk.1⟩ hf (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega)
     hC hDk.2
   exact ⟨_, hrun', h1, h2⟩
 

@@ -222,7 +222,8 @@ theorem mkAppW_hw (m : Mem) (a : AState) (hA : ArenaD m a) (f x r : Word) (m' : 
   obtain ⟨r₁, m₁⟩ := p
   simp only [hI₁, mkK_some] at hI
   cases hP : derPutW ADER 4 m₁ (cnt2 m 4) r₁
-      (packBF (maxW (derBW m f) (derBW m x)) (maxW (derFW m f) (derFW m x))) with
+      (packBFL (maxW (derBW m f) (derBW m x)) (maxW (derFW m f) (derFW m x))
+        (exprLPW m f ||| exprLPW m x)) with
   | none => simp [hP] at hI
   | some m₂ =>
   simp only [hP, Option.some.injEq, Prod.mk.injEq] at hI

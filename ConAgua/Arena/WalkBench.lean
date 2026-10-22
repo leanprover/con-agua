@@ -44,8 +44,8 @@ def benchProg : Prog :=
   walkProg ++ appProg ++ bvarProg ++ sortProg ++ letProg ++ fvarProg ++ lamProg ++ forallProg ++
     projProg ++ [("bb_bench", bbBench)]
 
-/-- A memory with room for `c` nodes per table the walk reads: the 41 word arrays of the arena
-layout (`ArenaRel.lean`), all zero; the tables the walk does not read are empty. -/
+/-- A memory with room for `c` nodes per table the walk reads: the 62 word arrays of the arena
+layout (`ArenaRel.lean`) and the level-parameter columns 55‥61, all zero; the tables the walk does not read are empty. -/
 def walkMem (c : Nat) : Mem :=
   { words := #[#[], Array.replicate 64 0, #[], #[], Array.replicate (4 * c) 0,
       Array.replicate (4 * c) 0] ++ Array.replicate 10 #[] ++
@@ -54,7 +54,7 @@ def walkMem (c : Nat) : Mem :=
         Array.replicate (4 * c) 0, Array.replicate (8 * c) 0] ++
       #[Array.replicate (4 * c) 0, Array.replicate (4 * c) 0, Array.replicate (4 * c) 0,
         Array.replicate (4 * c) 0, Array.replicate (4 * c) 0, Array.replicate (4 * c) 0,
-        Array.replicate (6 * c) 0, Array.replicate (4 * c) 0] ++ Array.replicate 14 #[] ++
+        Array.replicate (6 * c) 0, Array.replicate (4 * c) 0] ++ Array.replicate 22 #[] ++
       Array.replicate 7 (Array.replicate (2 * c) 0) }
 
 /-- Run `f` from the memory `m`; the first result. -/
