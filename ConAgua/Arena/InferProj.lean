@@ -119,7 +119,7 @@ def ErecKeptProj (p : Prog) : Prop :=
 /-! ## `proj_type_at` -/
 
 /-- The body word `proj_type_at` reads: entry `i` of the bodies' slice, or `0`. -/
-def bodyW (m : Mem) (q i : Word) : Word :=
+def projBodyW (m : Mem) (q i : Word) : Word :=
   sliceAt (m.arr64 EREC) (rdW (m.arr64 EREC) (q + 9)) (rdW (m.arr64 EREC) (q + 10)) i
 
 /-- The guard word `infer_proj_at` reads: entry `i` of the guards' slice, or `0`. -/
@@ -159,7 +159,7 @@ end ptaK
 /-- **The model of `proj_type_at`.** -/
 def ptaW (p : Prog) (n : Nat) (m : Mem) (q i us to tn pe : Word) : Option (Word × Mem) :=
   ptaK1 p n to tn pe (callW p n "inst_lp" [rdW (m.arr64 EREC) (q + 3), rdW (m.arr64 EREC) (q + 4),
-    us, bodyW m q i] m)
+    us, projBodyW m q i] m)
 
 theorem projTypeAt_spec (p : Prog) (hp : InferProjProg p) (n : Nat) (s₀ : St)
     (q i us to tn pe : Word) :
@@ -169,7 +169,7 @@ theorem projTypeAt_spec (p : Prog) (hp : InferProjProg p) (n : Nat) (s₀ : St)
   simp only [callFn, projTypeAtL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, st64_spec,
       callW_spec p n "inst_lp", callW_spec p n "inst_list"] <;>
-  simp_all [ptaW, ptaK1, ptaK2, ptPush, bodyW, sliceAt, Cmp.eval, LocEq, BinOp.eval,
+  simp_all [ptaW, ptaK1, ptaK2, ptPush, projBodyW, sliceAt, Cmp.eval, LocEq, BinOp.eval,
     St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ, size_set64, CTL, EREC, SPN, w_lt_false]
 
@@ -218,11 +218,11 @@ theorem projTypeAt_refines (p : Prog) (hp : InferProjProg p) (hlp : InstLPOK p) 
   have hil := hp.walk.instListOK
   obtain ⟨hlps, -, -, hbd, -⟩ := decTbl_fields hq hS.erec
   obtain ⟨hbw, hbdec⟩ := sliceAt_dec (k := .expr) hS.erec hbd i
-  have hbody : (decE (bodyW s.mem q i) : EIdx) = (tbl.entry i.toNat).body := by
+  have hbody : (decE (projBodyW s.mem q i) : EIdx) = (tbl.entry i.toNat).body := by
     simp only [IProjTable.entry, array_getD_toList]; exact hbdec
   unfold ptaW at hW
   obtain ⟨r₁, m₁, hc1, hW⟩ := callW_cases rfl hW
-  have h₁ := CoreSpec.of_callW (hlp n s a₀ dn vis fe M eb _ _ us (bodyW s.mem q i) tbl.levelParams
+  have h₁ := CoreSpec.of_callW (hlp n s a₀ dn vis fe M eb _ _ us (projBodyW s.mem q i) tbl.levelParams
     hS hbw hus hlps) hc1
   rw [hbody] at h₁
   have hrun1 := ipRun_of_ref h₁

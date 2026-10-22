@@ -8,6 +8,7 @@ import ConAgua.Arena.InferFieldSort
 import ConAgua.Arena.InferFieldSortNat
 import ConAgua.Arena.WhnfIotaRecRefine
 import ConAgua.Arena.PropReadRefine4
+import ConAgua.Arena.InferProj2
 
 /-!
 # The knot tied (lane `defeq`)
@@ -79,6 +80,7 @@ structure KnotAllProg (p : Prog) : Prop where
   natPred : NatPredProg p
   lvc : LvlCacheProg p
   prop : PropReadProg p
+  proj : InferProjProg p
 
 /-- **Every assumption the knot still makes.** -/
 structure KnotCallees (p : Prog) : Prop where
@@ -106,7 +108,10 @@ structure KnotCallees (p : Prog) : Prop where
   den : CoreDen
   constTy : ConstTyAtOK p
   bstk : BStkCallees p
-  proj : InferProjOK p
+  /-- `inst_lp` (lane `whnf3`'s `instLPFast` walk). -/
+  instLP : InstLPOK p
+  /-- `lvl_eq_c` and `field_sort_zero` keep `EREC` (helper `defeq2-proj`, `InferProj.lean`). -/
+  erecProj : ErecKeptProj p
 
 /-- `reserved_contains_w` refines `reservedContainsT` under `CoreS` (lane `whnf2`'s
 `callW_reservedContains`: memory unchanged, the pins' reserved list). -/
@@ -170,7 +175,8 @@ theorem KnotCallees.lit : InferLitCallees p :=
 include hq hc in
 theorem KnotCallees.infer : InferCallees p :=
   ⟨hq.walks.inst1OK, hq.walks.instListOK, (hc.defeq hq).abstract1, (hc.defeq hq).abstractRange,
-    hc.constTy, hc.lit hq, isEagerReduceH_of p hq.body.stuck.leaf, hc.bstk, bstkCap_of, hc.proj⟩
+    hc.constTy, hc.lit hq, isEagerReduceH_of p hq.body.stuck.leaf, hc.bstk, bstkCap_of,
+    inferProj_refines p hq.proj ⟨hc.den, hc.findProj, hc.projFound, hc.erecKept, hc.instLP, hc.erecProj⟩⟩
 
 /-- **The knot at fuel `0`**: every L call at fuel `0` fails. -/
 theorem knot_zero (p : Prog) : KnotOK p 0 where
@@ -210,9 +216,9 @@ theorem knot_all (n : Nat) : KnotOK p n := knotUpTo_all hq hc n n (Nat.le_refl _
 
 include hq hc in
 /-- Lane `whnf`'s `WhnfCallees` from `KnotCallees`: its `inferStep`/`inferIOStep`/`defeqStep` are
-the slot steps (no induction); `instLP` is the one stub `KnotCallees` does not carry. -/
-theorem whnfCallees_of (hil : InstLPOK p) : WhnfCallees p :=
-  ⟨hq.walks.instListOK, hil, hc.strLitCtor, hc.strLitSupported,
+the slot steps (no induction). -/
+theorem whnfCallees_of : WhnfCallees p :=
+  ⟨hq.walks.instListOK, hc.instLP, hc.strLitCtor, hc.strLitSupported,
     fun n hk => inferSlot_step p hq.infer (hc.infer hq) n hk,
     fun n hk => inferIOSlot_step p hq.infer (hc.infer hq) n hk,
     fun n hk => defeqSlot_step p hq.body ⟨hc.stuck hq, hc.lazy hq⟩ n hk⟩
