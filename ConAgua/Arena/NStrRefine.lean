@@ -1,3 +1,4 @@
+import ConAgua.Arena.SimLib
 import ConAgua.Arena.PoolSlice
 import ConAgua.Arena.LsStore
 
@@ -305,10 +306,6 @@ theorem internNStr_refines (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
   have ⟨_, _, hps, htop⟩ := hpool
   have hspec := internNStr_spec p hph hpe hpm hpf hpp hp n s₀ q o l (by omega)
     (by simp only [SliceOK] at hq; omega)
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun hspec
-  subst hs
-  exact ⟨hloc, nsintern_correct s.mem a₀ hpool hR q o l hqw hq _ hk _ _ hI⟩
+  exact Sim.tripleD hspec (Sim.ofOkD (nsintern_correct s₀.mem a₀ hpool hR q o l hqw hq _ hk))
 
 end L.Arena
