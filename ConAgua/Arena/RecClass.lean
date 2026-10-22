@@ -643,31 +643,44 @@ def classGenPrefixBindersFindCtorGo : FunDecl := lfn (io, il, cName) locals (cp,
 count of motives before slot `s`. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:210-239 ConRon.Arena.ClassGen.prefixBinders
 @[l_impl ConRon.Arena.ClassGen.prefixBinders]
-def classGenPrefixBindersSlotsGo : FunDecl := lfn (g, s, mc) locals
-    (so, sl, sp, tag, d, ok, ty, cls2, ctor2, ok2, x, restok, resto, restl, co, cl) {
-  so := IW.u64[g + 7];
-  sl := IW.u64[g + 8];
-  if sl <= s { return (1, 0, 0) };
-  sp := IW.u64[so + s];
-  tag := IW.u64[sp];
-  d := IW.u64[g] + s;
-  if tag == 0 {
-    (ok, ty) := call class_gen_motive_ty(g, mc, d);
-    if ok == 0 { return (0, 0, 0) };
-    (restok, resto, restl) := call class_gen_prefix_binders_slots_go(g, s + 1, mc + 1);
-    if restok == 0 { return (0, 0, 0) };
-    (co, cl) := call sl_cons(ty, resto, restl);
-    return (1, co, cl)
+def classGenPrefixBindersSlotsGo : FunDecl := lfn (g, s, mc) locals (sp, r0, r1, r2) {
+  if IW.u64[g + 8] <= s { return (1, 0, 0) };
+  sp := IW.u64[IW.u64[g + 7] + s];
+  if IW.u64[sp] == 0 {
+    (r0, r1, r2) := call class_gen_prefix_binders_slot_motive(g, s, mc, IW.u64[g] + s);
+    return (r0, r1, r2)
   };
-  cls2 := IW.u64[sp + 1];
-  ctor2 := IW.u64[sp + 2];
+  (r0, r1, r2) := call class_gen_prefix_binders_slot_minor(g, s, mc, IW.u64[g] + s, IW.u64[sp + 1],
+    IW.u64[sp + 2]);
+  return (r0, r1, r2)
+}
+
+/-- `class_gen_prefix_binders_slot_motive(g, s, mc, d)`: a motive slot's binder (class `mc`, depth
+`d`), then the rest. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:210-239 ConRon.Arena.ClassGen.prefixBinders
+@[l_impl ConRon.Arena.ClassGen.prefixBinders]
+def classGenPrefixBindersSlotMotive : FunDecl := lfn (g, s, mc, d) locals (ok, ty, r0, r1, r2, co, cl) {
+  (ok, ty) := call class_gen_motive_ty(g, mc, d);
+  if ok == 0 { return (0, 0, 0) };
+  (r0, r1, r2) := call class_gen_prefix_binders_slots_go(g, s + 1, mc + 1);
+  if r0 == 0 { return (0, 0, 0) };
+  (co, cl) := call sl_cons(ty, r1, r2);
+  return (1, co, cl)
+}
+
+/-- `class_gen_prefix_binders_slot_minor(g, s, mc, d, cls, ctorName)`: a minor slot's binder (its
+constructor's minor premise at depth `d`), then the rest. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:210-239 ConRon.Arena.ClassGen.prefixBinders
+@[l_impl ConRon.Arena.ClassGen.prefixBinders]
+def classGenPrefixBindersSlotMinor : FunDecl := lfn (g, s, mc, d, cls2, ctor2)
+    locals (ok2, x, ok, ty, r0, r1, r2, co, cl) {
   (ok2, x) := call class_gen_prefix_binders_find_ctor(g, cls2, ctor2);
   if ok2 == 0 { return (0, 0, 0) };
   (ok, ty) := call class_gen_minor_ty(g, cls2, x, d);
   if ok == 0 { return (0, 0, 0) };
-  (restok, resto, restl) := call class_gen_prefix_binders_slots_go(g, s + 1, mc);
-  if restok == 0 { return (0, 0, 0) };
-  (co, cl) := call sl_cons(ty, resto, restl);
+  (r0, r1, r2) := call class_gen_prefix_binders_slots_go(g, s + 1, mc);
+  if r0 == 0 { return (0, 0, 0) };
+  (co, cl) := call sl_cons(ty, r1, r2);
   return (1, co, cl)
 }
 
@@ -870,7 +883,9 @@ def recClassFns : Prog :=
    ("class_gen_prefix_binders_find_ctor", classGenPrefixBindersFindCtor),
    ("class_gen_prefix_binders_slots_go", classGenPrefixBindersSlotsGo),
    ("class_gen_prefix_binders", classGenPrefixBinders),
-   ("class_gen_prefix_binders_find_ctor_go", classGenPrefixBindersFindCtorGo), ("class_gen_rec_ty", classGenRecTy),
+   ("class_gen_prefix_binders_find_ctor_go", classGenPrefixBindersFindCtorGo),
+   ("class_gen_prefix_binders_slot_motive", classGenPrefixBindersSlotMotive),
+   ("class_gen_prefix_binders_slot_minor", classGenPrefixBindersSlotMinor), ("class_gen_rec_ty", classGenRecTy),
    ("class_gen_rec_ty_tail", classGenRecTyTail),
    ("class_rec_of", classRecOf), ("class_gen_rule_find_slot", classGenRuleFindSlot),
    ("class_gen_rule_pvars_go", classGenRulePvarsGo), ("class_gen_rule_call1", classGenRuleCall1),
