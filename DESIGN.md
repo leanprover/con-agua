@@ -6921,3 +6921,14 @@ No new `sorry`. Open: the refinements of `builtin_prelude` (through `preFn`), `p
 arrays of `2^64` words or more), `basis_pin_hit`, `ind_params_ok`, `is_proj_fn_shape` (specs
 already stated with `sorry` in `IndStubs.lean` for the last three), the adapters (from
 `instEntry_refines`/`absEntry_refines`), the ROM readers (`DeclRomStubs.lean`'s five `RelAM`s).
+
+### Landing 3: `rom_and_pin`; a stale shared-cache artifact
+
+* `rom_and_pin()` (lane decls3's new stub for `and_pin_ok`'s inductive arm, which made every
+  fixture's prelude `And` block decline) reads ROM slot 30 (`encBlock andPin`; `CIReadTest` checks
+  it against `andPinDecls`). `check` is back at `strip_pis` on every fixture that reaches the fold.
+* **The shared Lake cache restored a stale `ConAgua.Checker.Entry` olean** (a `synthetic` trace,
+  `inputs: []`, built from an older `Entry.lean` without `indParamsOkL`): `scripts/lake build`
+  said "completed" while `#check L.Checker.indParamsOkL` failed, and `checker_prog.py` then saw
+  `ind_params_ok` as a stub. Plain `lake` with `LAKE_CACHE_DIR=` rebuilt it correctly. Not
+  investigated further (coordinator: the cache key of a module restored with an empty `inputs` list).
