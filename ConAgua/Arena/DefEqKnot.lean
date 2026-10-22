@@ -12,7 +12,7 @@ import ConAgua.Arena.InferProj2
 import ConAgua.Arena.StrLitSup
 import ConAgua.Arena.StrLitCtor
 import ConAgua.Arena.StrLitKeep
-import ConAgua.Arena.WhnfProjRefine2
+import ConAgua.Arena.WhnfProjRefine3
 import ConAgua.Arena.WhnfIotaRecRefine3
 import ConAgua.Arena.WalkCore
 
@@ -91,6 +91,8 @@ structure KnotAllProg (p : Prog) : Prop where
   proj : InferProjProg p
   str : StrLitProg p
   projp : ProjProg p
+  /-- `fire_ok` and its callees (`pin_word`, the level cache, `lvl_eq_c`'s text). -/
+  fire : FireProg p
   /-- The core's write set leaves `EREC` alone (lane `whnf3`'s `CoreErec.lean`). -/
   hcl : closedA p coreErecA coreErecC coreFns = true
   /-- Lane `whnf`'s `whnf_core` family, the ι side (`iota_rec_at`, `major_to_ctor`) and the two
@@ -108,10 +110,6 @@ structure KnotCallees (p : Prog) : Prop where
   den : CoreDen
   /-- `inst_lp` (lane `whnf3`'s `instLPFast` walk). -/
   instLP : InstLPOK p
-  /-- `fire_ok` at any universe list (lane `whnf3`'s `fireOk_refines` gives `FireOkOKD`: the list
-  must read back, and its `FireDen` asks for every field guard, past `numFields` too, while
-  `StoreDen.proj` gives those below it). -/
-  fireOk : FireOkOK p
   /-- `caps_never_zero`, `rec_fire_levels` under `CoreS` (helper `whnf3-lp` proved them at
   `ArenaD`, on `StoreWF` and the readback caches, which `CoreS` does not carry: D23). -/
   capsNeverZero : CapsNeverZeroOK p
@@ -170,15 +168,19 @@ theorem KnotCallees.whnfC : WhnfCallees p :=
   ⟨hq.walks.instListOK, hc.instLP, strLitCtor_core p hq.str, strLitSupported_core p hq.str⟩
 
 include hq hc in
+/-- `fire_ok` (lane `whnf3`'s `fireOk_refines` over `CoreDen`, helper `whnf4-leaves`). -/
+theorem KnotCallees.fireOk : FireOkOK p := fireOk_core p hq.fire (fieldSortZero_core p hq.fsz) hc.den
+
+include hq hc in
 /-- `find_proj`, `fire_ok` and their record-pool facts. -/
 theorem KnotCallees.projC : ProjCallees p :=
-  ⟨findProj_refines p hq.projp, hc.fireOk, erecKept_of hq.hcl, projFound p hq.projp⟩
+  ⟨findProj_refines p hq.projp, hc.fireOk hq, erecKept_of hq.hcl, projFound p hq.projp⟩
 
 include hq hc in
 /-- Lane `whnf`'s `IotaCallees`: the walks, `find_proj`, `lit_to_ctor_if_nat` proved; `fire_ok`,
 `caps_never_zero`, `rec_fire_levels` from `KnotCallees`. -/
 theorem KnotCallees.iotaC : IotaCallees p :=
-  ⟨hq.walks.iotaInst1OK, findProj_refines p hq.projp, hc.fireOk, hc.capsNeverZero, hc.recFireLevels,
+  ⟨hq.walks.iotaInst1OK, findProj_refines p hq.projp, hc.fireOk hq, hc.capsNeverZero, hc.recFireLevels,
     wscoped_core hq.ws, hq.walks.lbbOK, leafGuard_core hq.lg,
     fun n s₀ a₀ dn vis fe MM eb h hS hh => litToCtorIfNat_refines p hq.delta n s₀ a₀ dn vis fe MM eb h hS hh⟩
 

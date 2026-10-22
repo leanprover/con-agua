@@ -370,11 +370,16 @@ def FindProjOK (p : Prog) : Prop :=
       (fun r => decEntry (s₀.mem.arr64 EREC) (r.headD 0) (r.tail.headD 0) i.toNat) s₀ a₀ dn vis fe
       M eb
 
-/-- `fire_ok(q, i, us)` refines `IProjEntry.fireOk` at the entry of table record `q`. -/
+/-- `fire_ok(q, i, us)` refines `IProjEntry.fireOk` at the entry of table record `q`. **Statement
+correction** (helper `whnf4-leaves`): at a field `i` below the table's `numFields` (the twin's
+`findProj?` answers no other entry) and universe arguments that are a stored `const` node's list
+(the callers' `us` is; the twin reads them back when the structure is a proposition, and a
+stored `const` node's list reads back, `StoreDen.constLs`). -/
 def FireOkOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb q i us : Word) (tbl : IProjTable), CoreS dn s₀.mem a₀ vis fe M eb →
-    HW us → decTbl (s₀.mem.arr64 EREC) q.toNat = some tbl →
+    HW us → decTbl (s₀.mem.arr64 EREC) q.toNat = some tbl → i.toNat < tbl.numFields →
+    (∃ (h : EIdx) (c : NIdx), a₀.store.view h = some (.const c (decI us))) →
     CoreSpec p n "fire_ok" [q, i, us] ((tbl.entry i.toNat).fireOk (decI us)) decBool s₀ a₀ dn vis
       fe M eb
 
