@@ -956,8 +956,6 @@ def IsCtorAppOK (p : Prog) : Prop :=
     (MM : ModeMaps) (eb e : Word), CoreS dn s₀.mem a₀ vis fe MM eb → HW e →
     CoreSpec p n "is_ctor_app" [vis, e] (isCtorApp fe (decE e)) decBool s₀ a₀ dn vis fe MM eb
 
-@[refines ConRon.Arena.isCtorApp]
-theorem isCtorApp_refines : IsCtorAppOK p := sorry
 
 /-- con-leche: `Core.lean:695-699` `isStrLit`. -/
 def IsStrLitOK (p : Prog) : Prop :=
@@ -996,8 +994,6 @@ def TowerSlotsAllOK (p : Prog) : Prop :=
     CoreSpec p n "tower_slots_all" [vis, T, nF] (towerSlotsAll fe (decI T) nF.toNat) decBool s₀ a₀
       dn vis fe MM eb
 
-@[refines ConRon.Arena.towerSlotsAll]
-theorem towerSlotsAll_refines : TowerSlotsAllOK p := sorry
 
 /-- con-leche: `CoreDefs.lean:730-735`/`Cached/CoreC.lean:310-317` `etaProjs`. -/
 def EtaProjsOK (p : Prog) : Prop :=
@@ -1010,8 +1006,6 @@ def EtaProjsOK (p : Prog) : Prop :=
       ∃ xs, AM.res (etaProjs (decI T) (decE b) nF.toNat) a₀ = xs ∧
         SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄
 
-@[refines ConRon.Arena.etaProjs]
-theorem etaProjs_refines : EtaProjsOK p := sorry
 
 /-- con-leche: `CoreDefs.lean:750-754` `etaFabArgsE`. -/
 def EtaFabArgsOK (p : Prog) : Prop :=
@@ -1027,8 +1021,6 @@ def EtaFabArgsOK (p : Prog) : Prop :=
       ∃ xs, AM.res (etaFabArgsE (decI T) targs.toList (decE major) nF.toNat) a₀ = xs ∧
         SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄
 
-@[refines ConRon.Arena.etaFabArgsE]
-theorem etaFabArgs_refines : EtaFabArgsOK p := sorry
 
 /-- con-leche: `CoreDefs.lean:793-806`/`:808-810`/`FEnv.lean:199-201` `andRescueSlots`. -/
 def AndRescueSlotsOK (p : Prog) : Prop :=
@@ -1037,8 +1029,6 @@ def AndRescueSlotsOK (p : Prog) : Prop :=
     CoreSpec p n "and_rescue_slots" [vis, ctor, nP, us]
       (andRescueSlots fe (decI ctor) nP.toNat (decI us)) decBool s₀ a₀ dn vis fe MM eb
 
-@[refines ConRon.Arena.andRescueSlots]
-theorem andRescueSlots_refines : AndRescueSlotsOK p := sorry
 
 /-- con-leche: `Core.lean:502-663` (the shared scope guard) `fabScopeOk`. -/
 def FabScopeOkOK (p : Prog) : Prop :=
@@ -1047,8 +1037,6 @@ def FabScopeOkOK (p : Prog) : Prop :=
     CoreSpec p n "fab_scope_ok" [d, fab, major] (fabScopeOk d.toNat (decE fab) (decE major)) decBool
       s₀ a₀ dn vis fe MM eb
 
-@[refines ConRon.Arena.fabScopeOk]
-theorem fabScopeOk_refines : FabScopeOkOK p := sorry
 
 /-- con-leche: `Core.lean:665-677` `litMajorToCtor`. -/
 def LitMajorToCtorOK (p : Prog) : Prop :=
@@ -1059,8 +1047,6 @@ def LitMajorToCtorOK (p : Prog) : Prop :=
       (litMajorToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h)) decH s₀ a₀ dn vis fe MM
       eb
 
-@[refines ConRon.Arena.litMajorToCtor]
-theorem litMajorToCtor_refines : LitMajorToCtorOK p := sorry
 
 /-- con-leche: `Core.lean:502-663`/`Cached/CoreC.lean:428-453` `majorToCtor`. -/
 def MajorToCtorOK (p : Prog) : Prop :=
@@ -1119,8 +1105,6 @@ def IotaIndexOkOK (p : Prog) : Prop :=
       (iotaIndexOk (coreKnot (decMode mode) fe id F) fe d.toNat mI.toNat rP.toNat cnP.toNat
         (decE tyCtor) margs.toList idx.toList) decBool s₀ a₀ dn vis fe MM eb
 
-@[refines ConRon.Arena.iotaIndexOk]
-theorem iotaIndexOk_refines : IotaIndexOkOK p := sorry
 
 /-- con-leche: `Core.lean:298-320` `proofIrrel`. -/
 def ProofIrrelOK (p : Prog) : Prop :=
@@ -1144,8 +1128,6 @@ def RuleRhsAtOK (p : Prog) : Prop :=
     CoreSpec p n "rule_rhs_at" [rec, ctor, po, pl, rhs, us]
       (ruleRhsAt (decI rec) (decI ctor) lps (decE rhs) (decI us)) decH s₀ a₀ dn vis fe MM eb
 
-@[refines ConRon.Arena.ruleRhsAt]
-theorem ruleRhsAt_refines : RuleRhsAtOK p := sorry
 
 /-- con-leche: none (`constTyAt`'s cache probe). -/
 def ConstTyAtOK (p : Prog) : Prop :=
@@ -1155,8 +1137,6 @@ def ConstTyAtOK (p : Prog) : Prop :=
     CoreSpec p n "const_ty_at" [nn, po, pl, ty, us]
       (constTyAt ⟨decI nn, lps, decE ty⟩ (decI us)) decH s₀ a₀ dn vis fe MM eb
 
-@[refines ConRon.Arena.constTyAt]
-theorem constTyAt_refines : ConstTyAtOK p := sorry
 
 /-- con-leche: `ExprOps.lean:1305-1313` `instSpine`. -/
 def InstSpineOK (p : Prog) : Prop :=
@@ -1166,8 +1146,6 @@ def InstSpineOK (p : Prog) : Prop :=
     CoreSpec p n "inst_spine" [ao, an, t, e] (instSpine coreWalkFuel args.toList t.toNat (decE e))
       decH s₀ a₀ dn vis fe MM eb
 
-@[refines ConRon.Arena.instSpine]
-theorem instSpine_refines : InstSpineOK p := sorry
 
 /-- con-leche: `CoreDefs.lean:908-927` `instSpinePins`. -/
 def InstSpinePinsOK (p : Prog) : Prop :=
@@ -1185,8 +1163,6 @@ def InstSpinePinsOK (p : Prog) : Prop :=
       ∃ xs, AM.res (instSpinePins lps (decI us) args.toList rP.toNat pins.toList) a₀ = xs ∧
         SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄
 
-@[refines ConRon.Arena.instSpinePins]
-theorem instSpinePins_refines : InstSpinePinsOK p := sorry
 
 /-- con-leche: `CoreDefs.lean:908-927` `recFireComparands` (its `.2`, `recFireArgs`). -/
 def RecFireArgsOK (p : Prog) : Prop :=
@@ -1204,8 +1180,6 @@ def RecFireArgsOK (p : Prog) : Prop :=
       ∃ xs, AM.res (recFireArgs rl lps (decI us) args.toList rP.toNat) a₀ = xs ∧
         SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄
 
-@[refines ConRon.Arena.recFireArgs]
-theorem recFireArgs_refines : RecFireArgsOK p := sorry
 
 /-- con-leche: `ConLeche/Cached/CoreC.lean:149-176` `iotaCertsFullAux`. -/
 def IotaCertsFullAuxOK (p : Prog) : Prop :=
@@ -1250,32 +1224,9 @@ Pure/read-only, over `EREC` alone (no `CoreS` needed): `find_rule`, `rec_rule_k`
 def decRuleAt (m : Mem) (f q : Word) : Option IRecRule :=
   if f = 0 then none else decRule (m.arr64 EREC) q.toNat
 
-/-- **`find_rule` refines `findRule`.** -/
-@[refines ConRon.Arena.findRule]
-theorem findRule_refines (p : Prog) (hp : p.lookup "find_rule" = some findRuleL) (n : Nat)
-    (s₀ : St) (ro rc c : Word) (rules : List IRecRule)
-    (hr : decRules (s₀.mem.arr64 EREC) ro.toNat rc.toNat = some rules) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "find_rule" [ro, rc, c]
-    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧
-      findRule rules (decI c) = decRuleAt s₀.mem (r.headD 0) (r.tail.headD 0); ⊤⦄ := sorry
 
-/-- **`rec_rule_k` refines `recRuleK`.** -/
-@[refines ConRon.Arena.recRuleK]
-theorem recRuleK_refines (p : Prog) (hp : p.lookup "rec_rule_k" = some recRuleKL) (n : Nat)
-    (s₀ : St) (ro rc : Word) (rules : List IRecRule)
-    (hr : decRules (s₀.mem.arr64 EREC) ro.toNat rc.toNat = some rules) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "rec_rule_k" [ro, rc]
-    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ (r.headD 0 != 0) = recRuleK rules; ⊤⦄ := sorry
 
-@[refines ConRon.Arena.isStrLit]
-theorem isStrLit_refines (p : Prog) (hp : IotaProg p) : IsStrLitOK p := sorry
 
-theorem defeqList_refines (p : Prog) (hp : IotaProg p) (hw : WhnfCallees p) (hc : IotaCallees p) :
-    DefeqListOK p := sorry
 
-theorem piResidual_refines (p : Prog) (hp : IotaProg p) (hw : WhnfCallees p) (hc : IotaCallees p) :
-    PiResidualOK p := sorry
 
 end L.Arena
