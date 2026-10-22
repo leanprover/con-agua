@@ -1,0 +1,279 @@
+import ConAgua.Arena.IndStubs
+import ConAgua.Arena.IndLibSpec
+import ConAgua.Arena.IndCopy2
+
+/-!
+# A word model simulates a twin run (lane `indproofs2`, helper `rec`)
+
+The relational half of the phase-8 template (`IndSumSpec.lean`) as a few combinators, so that a
+relational lemma is a chain of `Sim.bind` steps instead of a hand-written case split ending in a
+step-by-step rewrite of the twin's run.
+
+`Sim o op a Q`: whenever the word model `o` returns `b`, the twin's `op` run from `a` succeeds
+with some `x`, `a'`, and `Q b a' x`. A model is a chain of continuations `K (callee …)` with
+`K none = none`; `Sim.bind` composes a callee's `Sim` with its continuation's, `Sim.lstep` takes an
+L-only step (a pure model the twin computes inline), `Sim.pure` ends the chain.
+
+`fuelW n o`: `none` at fuel `0`, `o` above. A callee whose spec holds at fuel `n + 1` only gets a
+spec at every fuel through it (`invoke_exec_zero`: a call at fuel `0` never returns).
+-/
+
+set_option experimental.vcgen true
+
+open ConRon.Arena
+open Std.WP
+open scoped Lean.Order
+
+namespace L.Ind
+
+open L.Arena
+
+/-! ## Fuel `0` -/
+
+/-- A call at fuel `0` never returns. -/
+theorem invoke_exec_zero (p : Prog) (f : FnName) (args : List Word) (P : St → Prop) :
+    ⦃P⦄ invoke p (exec p 0) f args ⦃fun _ _ => False; ⊤⦄ := by
+  refine M.triple_of_run fun s r s' _ h => ?_
+  have he : (invoke p (exec p 0) f args).run s = .error (match p.lookup f with
+      | some _ => .outOfFuel | none => .noFun f) := by
+    cases hl : p.lookup f with
+    | none => simp only [invoke, lookupFn, hl]; rfl
+    | some fd => simp only [invoke, lookupFn, hl]; rfl
+  rw [he] at h; cases h
+
+/-- `none` at fuel `0`. -/
+def fuelW {β : Type} : Nat → Option β → Option β
+  | 0, _ => none
+  | _ + 1, o => o
+
+@[simp] theorem fuelW_zero {β : Type} (o : Option β) : fuelW 0 o = none := rfl
+@[simp] theorem fuelW_succ {β : Type} (n : Nat) (o : Option β) : fuelW (n + 1) o = o := rfl
+
+/-! ## The simulation -/
+
+/-- **The word model's result `o` simulates the twin's `op` from `a`**, with post `Q`. -/
+def Sim {β α : Type} (o : Option β) (op : AM α) (a : AState) (Q : β → AState → α → Prop) : Prop :=
+  ∀ b, o = some b → ∃ x a', op.run a = .ok (x, a') ∧ Q b a' x
+
+namespace Sim
+variable {β γ α δ : Type}
+
+theorem none {op : AM α} {a : AState} {Q : β → AState → α → Prop} : Sim none op a Q := by
+  intro b h; cases h
+
+theorem fuel0 {op : AM α} {a : AState} {Q : β → AState → α → Prop} {o : Option β} :
+    Sim (fuelW 0 o) op a Q := Sim.none
+
+/-- End of the chain: a pure twin result. -/
+theorem pure {o : Option β} {x : α} {a : AState} {Q : β → AState → α → Prop}
+    (h : ∀ b, o = some b → Q b a x) : Sim o (Pure.pure x : AM α) a Q :=
+  fun b hb => ⟨x, a, rfl, h b hb⟩
+
+/-- End of the chain at a model result `some b`. -/
+theorem pure_some {b : β} {x : α} {a : AState} {Q : β → AState → α → Prop}
+    (h : Q b a x) : Sim (some b) (Pure.pure x : AM α) a Q :=
+  Sim.pure fun _ hb => by cases hb; exact h
+
+/-- **A callee step**: the callee's simulation, then its continuation's. -/
+theorem bind {K : Option β → Option γ} (hK : K Option.none = Option.none) {o : Option β}
+    {op : AM α} {f : α → AM δ} {a : AState} {Q1 : β → AState → α → Prop}
+    {Q : γ → AState → δ → Prop} (h1 : Sim o op a Q1)
+    (h2 : ∀ b x a1, o = some b → Q1 b a1 x → Sim (K (some b)) (f x) a1 Q) :
+    Sim (K o) (op >>= f) a Q := by
+  intro c hc
+  cases ho : o with
+  | none => rw [ho, hK] at hc; cases hc
+  | some b =>
+    rw [ho] at hc
+    obtain ⟨x, a1, hr1, hq1⟩ := h1 b ho
+    obtain ⟨y, a2, hr2, hq2⟩ := h2 b x a1 ho hq1 c hc
+    refine ⟨y, a2, ?_, hq2⟩
+    show (op >>= f) a = _
+    have hr1' : op a = .ok (x, a1) := hr1
+    show (do let (x, s) ← op a; f x s) = _
+    rw [hr1']
+    exact hr2
+
+/-- **An L-only step**: the model computes something (a pure word model) the twin does not run. -/
+theorem lstep {K : Option β → Option γ} (hK : K Option.none = Option.none) {o : Option β}
+    {op : AM δ} {a : AState} {Q : γ → AState → δ → Prop}
+    (h : ∀ b, o = some b → Sim (K (some b)) op a Q) : Sim (K o) op a Q := by
+  cases ho : o with
+  | none => rw [hK]; exact Sim.none
+  | some b => exact h b ho
+
+/-- Rewrite the model. -/
+theorem of_eq {o o' : Option β} {op : AM α} {a : AState} {Q : β → AState → α → Prop}
+    (he : o = o') (h : Sim o' op a Q) : Sim o op a Q := he ▸ h
+
+/-- Rewrite the twin. -/
+theorem of_eq_op {o : Option β} {op op' : AM α} {a : AState} {Q : β → AState → α → Prop}
+    (he : op = op') (h : Sim o op' a Q) : Sim o op a Q := he ▸ h
+
+/-- Weaken the post. -/
+theorem mono {o : Option β} {op : AM α} {a : AState} {Q Q' : β → AState → α → Prop}
+    (h : Sim o op a Q) (hq : ∀ b a' x, o = some b → Q b a' x → Q' b a' x) : Sim o op a Q' := by
+  intro b hb
+  obtain ⟨x, a', hr, hq'⟩ := h b hb
+  exact ⟨x, a', hr, hq b a' x hb hq'⟩
+
+/-- A twin that throws is never simulated, unless the model fails. -/
+theorem of_none {o : Option β} {op : AM α} {a : AState} {Q : β → AState → α → Prop}
+    (h : o = Option.none) : Sim o op a Q := by rw [h]; exact Sim.none
+
+/-- The usual way to conclude: a `Sim` of a successful model run gives the twin run. -/
+theorem run {o : Option β} {op : AM α} {a : AState} {Q : β → AState → α → Prop} {b : β}
+    (h : Sim o op a Q) (hb : o = some b) : ∃ x a', op.run a = .ok (x, a') ∧ Q b a' x := h b hb
+
+/-- The census theorem's post from a `Sim` of the model a triple gives. -/
+theorem am {o : Option β} {op : AM α} [Inhabited α] {a : AState} {Q : β → AState → α → Prop}
+    {b : β} (h : Sim o op a Q) (hb : o = some b) : AM.ok op a ∧ Q b (AM.st op a) (AM.res op a) := by
+  obtain ⟨x, a', hr, hq⟩ := h b hb
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok op a a' x hr
+  exact ⟨hok, by rw [hst, hres]; exact hq⟩
+
+end Sim
+
+/-- A stub's `RelAM` as a `Sim`. -/
+theorem RelAM.sim {α : Type} {f : FnName} {args : List Word} {pre : Mem → AState → Prop} {op : AM α}
+    {post : Mem → Mem → AState → List Word → α → Prop} (h : RelAM f args pre op post)
+    {m : Mem} {a : AState} (hp : pre m a) :
+    Sim (stubM f m args) op a (fun b a' x => post m b.2 a' b.1 x) := by
+  intro b hb
+  obtain ⟨r, m'⟩ := b
+  exact h m m' a r hb hp
+
+/-! ## The usual post -/
+
+/-- The usual post as a `Sim` post on `(r, m')`: the stage relation, growth from `m`, the result
+decoded by `dec`. -/
+def KP {α : Type} (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem)
+    (dec : Mem → List Word → α → Prop) (b : List Word × Mem) (a' : AState) (x : α) : Prop :=
+  StageR dn vis fe b.2 a' ∧ IWGrow m b.2 ∧ dec b.2 b.1 x
+
+theorem KP.of_keep {α : Type} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+    {m m' : Mem} {a' : AState} {r : List Word} {x : α} {dec : Mem → List Word → α → Prop}
+    (h : KeepPost dn vis fe dec m m' a' r x) : KP dn vis fe m dec (r, m') a' x := h
+
+/-! ## Words read at a decoded record -/
+
+theorem ofNat_add_toNat (w : Word) (k : Nat) (h : w.toNat + k < 2 ^ 64) :
+    (w + UInt64.ofNat k).toNat = w.toNat + k := by
+  rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by omega : k < 2 ^ 64)]
+  exact Nat.mod_eq_of_lt h
+
+/-- A number at `IW[w + k]`, read at the word address. -/
+theorem iwN_rdW_at {m : Mem} {w : Word} {k v : Nat} (h : iwN m (w.toNat + k) = some v)
+    (hsz : (m.arr64 IW).size < 2 ^ 64) :
+    rdW (m.arr64 IW) (w + UInt64.ofNat k) = UInt64.ofNat v ∧ v < 2 ^ 64 := by
+  have hlt : w.toNat + k < (m.arr64 IW).size := by
+    simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at h
+    obtain ⟨x, hx, -⟩ := h
+    exact (Array.getElem?_eq_some_iff.mp hx).1
+  have := iwN_rdW h (by omega)
+  have he : UInt64.ofNat (w.toNat + k) = w + UInt64.ofNat k := by
+    apply UInt64.toNat_inj.mp
+    rw [ofNat_add_toNat w k (by omega)]; simp; omega
+  rw [he] at this; exact this
+
+/-- A handle at `IW[w + k]`, read at the word address. -/
+theorem iwH_rdW_at {m : Mem} {kk : IdxKind} {w : Word} {k : Nat} {x : Idx kk}
+    (h : iwH m (w.toNat + k) = some x) (hsz : (m.arr64 IW).size < 2 ^ 64) :
+    ∃ v, rdW (m.arr64 IW) (w + UInt64.ofNat k) = v ∧ v.toNat < 2 ^ 32 ∧ decI v = x := by
+  have hlt : w.toNat + k < (m.arr64 IW).size := by
+    simp only [iwH, hd?, iwA] at h
+    cases hw : (m.arr64 IW)[w.toNat + k]? with
+    | none => simp [hw] at h
+    | some _ => exact (Array.getElem?_eq_some_iff.mp hw).1
+  have := iwH_rdW h (by omega)
+  have he : UInt64.ofNat (w.toNat + k) = w + UInt64.ofNat k := by
+    apply UInt64.toNat_inj.mp
+    rw [ofNat_add_toNat w k (by omega)]; simp; omega
+  rw [he] at this; exact this
+
+/-! ## Records without a size precondition -/
+
+/-- The model of `recN(ws)`: an allocation of `|ws|` words, then the words. -/
+def recW (m : Mem) (k : Word) (ws : List Word) : Option (List Word × Mem) :=
+  match allocW m k with
+  | none => none
+  | some (q, m1) => some ([q], wrIW m1 q ws)
+
+section recs
+variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (n : Nat) (s₀ : St)
+include ha
+
+theorem rec2_specW (hp : p.lookup "rec2" = some rec2) (a b : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec2" [a, b]
+    ⦃fun r s' => LocEq s' s₀ ∧ recW s₀.mem 2 [a, b] = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]; simp only [callFn, rec2]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        iwAlloc_specW p ha n] <;>
+      finish [recW, wrIW]
+
+theorem rec3_specW (hp : p.lookup "rec3" = some rec3) (a b c : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec3" [a, b, c]
+    ⦃fun r s' => LocEq s' s₀ ∧ recW s₀.mem 3 [a, b, c] = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]; simp only [callFn, rec3]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        iwAlloc_specW p ha n] <;>
+      finish [recW, wrIW, UInt64.add_assoc]
+
+theorem rec4_specW (hp : p.lookup "rec4" = some rec4) (a b c d : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec4" [a, b, c, d]
+    ⦃fun r s' => LocEq s' s₀ ∧ recW s₀.mem 4 [a, b, c, d] = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]; simp only [callFn, rec4]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        iwAlloc_specW p ha n] <;>
+      finish [recW, wrIW, UInt64.add_assoc]
+
+theorem rec5_specW (hp : p.lookup "rec5" = some rec5) (a b c d e : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec5" [a, b, c, d, e]
+    ⦃fun r s' => LocEq s' s₀ ∧ recW s₀.mem 5 [a, b, c, d, e] = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]; simp only [callFn, rec5]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        iwAlloc_specW p ha n] <;>
+      finish [recW, wrIW, UInt64.add_assoc]
+
+end recs
+
+/-- **What a record leaves**: the pointer is the old top, the words are there, the pool only
+grew, only `IW` and `CTL[200]` changed, the new top is `q + |ws|`. -/
+theorem recW_post {m m' : Mem} {k : Word} {ws r : List Word} (h : recW m k ws = some (r, m'))
+    (hc : 200 < (m.arr64 CTL).size) (hsz : (m.arr64 IW).size < 2 ^ 64) (hk : k.toNat = ws.length) :
+    r = [rdW (m.arr64 CTL) 200] ∧
+    (∀ j < ws.length, (m'.arr64 IW)[(rdW (m.arr64 CTL) 200).toNat + j]? = ws[j]?) ∧
+    IWGrow m m' ∧ MemFrame [IW] [200] m m' ∧ iwTop m' = iwTop m + ws.length ∧
+    iwTop m + ws.length ≤ (m.arr64 IW).size := by
+  simp only [recW] at h
+  cases hal : allocW m k with
+  | none => rw [hal] at h; cases h
+  | some qm =>
+    obtain ⟨q, m1⟩ := qm
+    rw [hal] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨hq, rfl, hroom⟩ := allocW_facts hal hsz
+    subst hq
+    rw [hk] at hroom
+    obtain ⟨hget, hg, hf, htop⟩ := recMem_post m ws k hk hc hroom hsz
+    refine ⟨rfl, hget, hg, hf, ?_, by simpa [iwTop] using hroom⟩
+    simp only [iwTop, htop]; rw [UInt64.toNat_add, hk]; omega
+
+end L.Ind
