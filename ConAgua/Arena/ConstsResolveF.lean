@@ -51,12 +51,16 @@ else a `Nat` literal's three). -/
 -- con-ron: ConRon/Arena/Core.lean:514-560 ConRon.Arena.constsResolve
 def crLitPins : FunDecl := lfn (vis, s) locals (a, b, c, d, f, g, h, i, j, k) {
   a := call pin_found(vis, 1); b := call pin_found(vis, 2); c := call pin_found(vis, 3);
-  if s == 0 { return u64(a != 0 && b != 0 && c != 0) };
+  if s == 0 {
+    if a != 0 && b != 0 && c != 0 { return 1 };
+    return 0
+  };
   d := call pin_found(vis, 5); f := call pin_found(vis, 6); g := call pin_found(vis, 7);
   h := call pin_found(vis, 8); i := call pin_found(vis, 9); j := call pin_found(vis, 10);
   k := call pin_found(vis, 12);
-  return u64(a != 0 && b != 0 && c != 0 && d != 0 && f != 0 && g != 0 && h != 0 && i != 0 &&
-    j != 0 && k != 0)
+  if a != 0 && b != 0 && c != 0 && d != 0 && f != 0 && g != 0 && h != 0 && i != 0 &&
+    j != 0 && k != 0 { return 1 };
+  return 0
 }
 
 /-- `cr_leaf(vis, g, x, h)`: `constsResolve` at a leaf of tag `g` (`x` the view's first field). -/
@@ -84,18 +88,18 @@ def crfGo : FunDecl := lfn (vis, f, h) locals (fd, j, d, g, x, y, w, r, a, b, q)
   else if g == 4 || g == 5 || g == 6 {
     a := call crf_go(vis, f - 1, x);
     b := call crf_go(vis, f - 1, y);
-    r := u64(a != 0 && b != 0)
+    if a != 0 && b != 0 { r := 1 } else { r := 0 }
   }
   else if g == 7 {
     a := call crf_go(vis, f - 1, x);
     b := call crf_go(vis, f - 1, y);
     r := call crf_go(vis, f - 1, w);
-    r := u64(a != 0 && b != 0 && r != 0)
+    if a != 0 && b != 0 && r != 0 { r := 1 } else { r := 0 }
   }
   else {
     r := call crf_go(vis, f - 1, w);
     (a, q) := call env_find(x, vis);
-    r := u64(a != 0 && r != 0)
+    if a != 0 && r != 0 { r := 1 } else { r := 0 }
   };
   (fd, j, d) := call crm_find(h, 0);
   d := call crm_put(h, 0, r, fd, j);

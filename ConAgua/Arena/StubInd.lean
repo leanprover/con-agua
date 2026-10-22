@@ -85,7 +85,8 @@ def ctorFamily : FunDecl := lfn (vis, c) locals (f, q, pr, hh, t, f2, q2) {
 def recRuleKOfL : FunDecl := lfn (vis, c) locals (q, tq) {
   (q, tq) := call ctor_family(vis, c);
   if tq == 0 { return 0 };
-  return u64(EREC.u64[tq + 11] != 0 && EREC.u64[q + 6] == 0)
+  if EREC.u64[tq + 11] != 0 && EREC.u64[q + 6] == 0 { return 1 };
+  return 0
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:1868-1886 ConRon.Arena.recRuleEtaOf -/

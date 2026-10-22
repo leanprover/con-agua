@@ -56,8 +56,9 @@ def litGuardHas : FunDecl := lfn (n) locals (a, b, c, d, f, g, h, i, j, k) {
   a := call pin_at(1); b := call pin_at(2); c := call pin_at(3); d := call pin_at(5);
   f := call pin_at(6); g := call pin_at(7); h := call pin_at(8); i := call pin_at(9);
   j := call pin_at(10); k := call pin_at(12);
-  return u64(n == a || n == b || n == c || n == d || n == f || n == g || n == h || n == i ||
-    n == j || n == k)
+  if n == a || n == b || n == c || n == d || n == f || n == g || n == h || n == i ||
+    n == j || n == k { return 1 };
+  return 0
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:1475-1490 ConRon.Arena.reservedRecName -/
