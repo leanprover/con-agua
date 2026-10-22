@@ -45,5 +45,9 @@ for l in lanes:
     l["last_commit_min"] = min(ages) if ages else None
 (out / "lanes.json").write_text(json.dumps(lanes, indent=1))
 shutil.copy(root / "docs/progress.csv", out / "progress.csv")
-shutil.copy(root / "docs/velocity.csv", out / "velocity.csv")
+# velocity: repair rows with unquoted commas in the note (lanes append by hand)
+import csv
+vrows = list(csv.reader(open(root / "docs/velocity.csv")))
+with open(out / "velocity.csv", "w", newline="") as f:
+    csv.writer(f, lineterminator="\n").writerows([r[:5] + [",".join(r[5:])] if len(r) > 6 else r for r in vrows])
 print("phases:", len(rows), "stale:", len(stale), "running lanes:", sum(l["status"] == "running" for l in lanes))

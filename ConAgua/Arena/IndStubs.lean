@@ -47,6 +47,20 @@ theorem stubM_spec (p : Prog) (f : FnName) (n : Nat) (s₀ : St) (args : List Wo
     ⦃fun s => s = s₀⦄ invoke p (exec p n) f args
     ⦃fun r s' => LocEq s' s₀ ∧ stubM f s₀.mem args = some (r, s'.mem); ⊤⦄ := sorry
 
+/-- The names `stubM` stands for: the stubs proper and the two master callees without a stage
+model (`lvl_eq`, `intern_nanon`). -/
+def stubNames : List FnName := stubFns.map (·.1) ++ ["lvl_eq", "intern_nanon"]
+
+/-- **The write set of every stub** (lane `indproofs2`): a stub leaves the stage's per-call memos
+alone (arrays `MAM`‥`MCM` = 201‥208, their control words `CTL[202]`‥`CTL[219]`), and keeps every
+array's size. `sorry` until the owning lanes land the functions, like `stubM_spec`; with it a memo
+relation (`maMR`, `hbMR`, …) is carried across a stub call (`MemoRV` reads the memo's array and
+control words only). Replaces helper `memo`'s `stubHbFrame` (lane `indproofs`). -/
+theorem stubM_memoFrame (f : FnName) (hf : f ∈ stubNames) (m m' : Mem) (args r : List Word)
+    (h : stubM f m args = some (r, m')) :
+    ∃ (A : List ArrId) (C : List Word), (∀ b ∈ A, b < 201 ∨ 208 < b) ∧
+      (∀ x ∈ C, x.toNat < 202 ∨ 219 < x.toNat) ∧ MemFrame A C m m' := sorry
+
 /-- **The twin side of a stub**: a model run of `f(args)` from a memory satisfying `pre` against
 `a` is a successful twin run of `op` with `post` after. -/
 def RelAM {α : Type} (f : FnName) (args : List Word) (pre : Mem → AState → Prop) (op : AM α)
@@ -245,9 +259,12 @@ variable (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
 def decLvlEq (_m : Mem) (r : List Word) (x : Option Bool) : Prop :=
   r.headD 0 = (match x with | none => 0 | some false => 1 | some true => 2)
 
-/-- `lvl_eq(u, v)`: `lvlEq?` on two level handles. No stage-level (`StageR`) model of `lvl_eq` yet. -/
+/-- `lvl_eq_c(u, v)`: `lvlEq?` on two level handles, through the verdict cache `lvlEqC` as the
+twin's `lvlEq?` (lane `whnf`'s `lvl_eq_c`; the uncached `lvl_eq` leaves the cache behind the
+twin's). No stage-level (`StageR`) model yet: lane `whnf`'s `lvlEqC_refines` holds under `CoreS`,
+which carries invariants `StageR` lacks (DESIGN.md, lane `decls3`). -/
 theorem lvlEqStub_spec (u v : Word) (hu : H u) (hv : H v) :
-    RelAM "lvl_eq" [u, v] (StageR dn vis fe) (lvlEq? (decI u) (decI v))
+    RelAM "lvl_eq_c" [u, v] (StageR dn vis fe) (lvlEq? (decI u) (decI v))
       (KeepPost dn vis fe decLvlEq) := sorry
 
 /-- `intern_nanon()`: `internNNode .anonymous`. No stage-level (`StageR`) model of `intern_nanon` yet
