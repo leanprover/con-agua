@@ -38,14 +38,12 @@ open L.Arena
 /-- `nat_op_names()`: `natOpNames` (`pred, add, sub, mul, pow, beq, ble`), an `IW` slice. -/
 -- con-ron: ConRon/Arena/Core.lean:876-882 ConRon.Arena.natOpNames
 @[l_impl ConRon.Arena.natOpNames]
-def natOpNamesL : FunDecl := lfn () locals (q, j, x) {
+def natOpNamesL : FunDecl := lfn () locals (a, b, c, d, e, f, g, q) {
+  a := call pin_at(14); b := call pin_at(15); c := call pin_at(16); d := call pin_at(17);
+  e := call pin_at(18); f := call pin_at(19); g := call pin_at(20);
   q := call iw_alloc(7);
-  j := 0;
-  while j < 7 {
-    x := call pin_at(14 + j);
-    IW.u64[q + j] := x;
-    j += 1
-  };
+  IW.u64[q] := a; IW.u64[q + 1] := b; IW.u64[q + 2] := c; IW.u64[q + 3] := d;
+  IW.u64[q + 4] := e; IW.u64[q + 5] := f; IW.u64[q + 6] := g;
   return (q, 7)
 }
 
@@ -53,14 +51,12 @@ def natOpNamesL : FunDecl := lfn () locals (q, j, x) {
 shiftRight`), an `IW` slice. -/
 -- con-ron: ConRon/Arena/Core.lean:884-890 ConRon.Arena.natDivModNames
 @[l_impl ConRon.Arena.natDivModNames]
-def natDivModNamesL : FunDecl := lfn () locals (q, j, x) {
+def natDivModNamesL : FunDecl := lfn () locals (a, b, c, d, e, f, g, h, q) {
+  a := call pin_at(21); b := call pin_at(22); c := call pin_at(23); d := call pin_at(24);
+  e := call pin_at(25); f := call pin_at(26); g := call pin_at(27); h := call pin_at(28);
   q := call iw_alloc(8);
-  j := 0;
-  while j < 8 {
-    x := call pin_at(21 + j);
-    IW.u64[q + j] := x;
-    j += 1
-  };
+  IW.u64[q] := a; IW.u64[q + 1] := b; IW.u64[q + 2] := c; IW.u64[q + 3] := d;
+  IW.u64[q + 4] := e; IW.u64[q + 5] := f; IW.u64[q + 6] := g; IW.u64[q + 7] := h;
   return (q, 8)
 }
 

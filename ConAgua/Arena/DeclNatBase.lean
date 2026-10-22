@@ -789,4 +789,30 @@ theorem envFind_call {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
     rw [← hm, if_neg hc, if_neg hv']
     exact ⟨rfl, rfl⟩
 
+
+/-! ## The named pin readers are `pin_at` at their slots -/
+
+@[simp] theorem natPredName_eq : natPredName = pinAt 14 := rfl
+@[simp] theorem natAddName_eq : natAddName = pinAt 15 := rfl
+@[simp] theorem natSubName_eq : natSubName = pinAt 16 := rfl
+@[simp] theorem natMulName_eq : natMulName = pinAt 17 := rfl
+@[simp] theorem natPowName_eq : natPowName = pinAt 18 := rfl
+@[simp] theorem natBeqName_eq : natBeqName = pinAt 19 := rfl
+@[simp] theorem natBleName_eq : natBleName = pinAt 20 := rfl
+@[simp] theorem natDivName_eq : natDivName = pinAt 21 := rfl
+@[simp] theorem natModName_eq : natModName = pinAt 22 := rfl
+@[simp] theorem natGcdName_eq : natGcdName = pinAt 23 := rfl
+@[simp] theorem natLandName_eq : natLandName = pinAt 24 := rfl
+@[simp] theorem natLorName_eq : natLorName = pinAt 25 := rfl
+@[simp] theorem natXorName_eq : natXorName = pinAt 26 := rfl
+@[simp] theorem natShiftLeftName_eq : natShiftLeftName = pinAt 27 := rfl
+@[simp] theorem natShiftRightName_eq : natShiftRightName = pinAt 28 := rfl
+@[simp] theorem boolName_eq : boolName = pinAt 29 := rfl
+@[simp] theorem boolTrueName_eq : boolTrueName = pinAt 30 := rfl
+@[simp] theorem boolFalseName_eq : boolFalseName = pinAt 31 := rfl
+@[simp] theorem pinNat_eq : pinNat = pinAt 1 := rfl
+@[simp] theorem pinNatZero_eq : pinNatZero = pinAt 2 := rfl
+@[simp] theorem pinNatSucc_eq : pinNatSucc = pinAt 3 := rfl
+@[simp] theorem pinEq_eq : pinEq = pinAt 0 := rfl
+
 end L.Ind
