@@ -111,4 +111,80 @@ theorem classOfMotiveVar_refines (p : Prog) (hf : p.lookup "sl_find" = some slFi
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, slFind_spec p hf n] <;>
     finish
 
+
+/-! ## `class_binder`, `class_gen_binder`: one `fvar_type_d` call (through the stub) -/
+
+/-- The word model of a one-call wrapper of `fvar_type_d`. -/
+def fvarTypeDW1 (m : Mem) (x : Word) : Option (List Word × Mem) :=
+  match stubM "fvar_type_d" m [x] with
+  | none => none
+  | some (r, m') => some ([r.headD 0], m')
+
+theorem classBinder_spec (p : Prog) (hp : p.lookup "class_binder" = some classBinder) (n : Nat)
+    (s₀ : St) (x : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "class_binder" [x]
+    ⦃fun r s' => LocEq s' s₀ ∧ fvarTypeDW1 s₀.mem x = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]; simp only [callFn, classBinder]
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, stubM_spec p "fvar_type_d" n] <;>
+    finish [fvarTypeDW1]
+
+theorem classGenBinder_spec (p : Prog) (hp : p.lookup "class_gen_binder" = some classGenBinder)
+    (n : Nat) (s₀ : St) (g x : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "class_gen_binder" [g, x]
+    ⦃fun r s' => LocEq s' s₀ ∧ fvarTypeDW1 s₀.mem x = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]; simp only [callFn, classGenBinder]
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, stubM_spec p "fvar_type_d" n] <;>
+    finish [fvarTypeDW1]
+
+/-- The relational lemma of `fvarTypeDW1`. -/
+theorem fvarTypeDW1_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
+    (a : AState) (x : Word) (hx : H x) (r : List Word) (h : fvarTypeDW1 m x = some (r, m'))
+    (hS : StageR dn vis fe m a) :
+    ∃ t a', (fvarTypeD (decI x)).run a = .ok (t, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+      (r.headD 0).toNat < 2 ^ 32 ∧ decI (r.headD 0) = t := by
+  simp only [fvarTypeDW1] at h
+  cases hs : stubM "fvar_type_d" m [x] with
+  | none => rw [hs] at h; simp at h
+  | some rm =>
+    obtain ⟨r1, m1⟩ := rm
+    rw [hs] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨t, a', hrun, hS', hg, hd1, hd2⟩ := fvarTypeD_spec dn vis fe x hx m m1 a r1 hs hS
+    exact ⟨t, a', hrun, hS', hg, hd1, by simpa using hd2⟩
+
+/-- **`class_binder` refines `classBinder`** (through the `fvar_type_d` stub). -/
+@[refines ConRon.Arena.classBinder]
+theorem classBinder_refines (p : Prog) (hp : p.lookup "class_binder" = some classBinder) (n : Nat)
+    (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (x : Word)
+    (hx : H x) (hS : StageR dn vis fe s₀.mem a₀) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "class_binder" [x]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.classBinder (decI x)) a₀ ∧
+      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.classBinder (decI x)) a₀) ∧
+      IWGrow s₀.mem s'.mem ∧ (r.headD 0).toNat < 2 ^ 32 ∧
+      decI (r.headD 0) = AM.res (ConRon.Arena.classBinder (decI x)) a₀; ⊤⦄ := by
+  refine triple_post (classBinder_spec p hp n s₀ x) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨t, a', hrun, hS', hg, h1, h2⟩ := fvarTypeDW1_ok dn vis fe _ _ a₀ x hx r hm hS
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok (ConRon.Arena.classBinder (decI x)) a₀ a' t hrun
+  exact ⟨hl, hok, by rw [hst]; exact hS', hg, h1, by rw [hres]; exact h2⟩
+
+/-- **`class_gen_binder` refines `ClassGen.binder`** (through the `fvar_type_d` stub). -/
+@[refines ConRon.Arena.ClassGen.binder]
+theorem classGenBinder_refines (p : Prog) (hp : p.lookup "class_gen_binder" = some classGenBinder)
+    (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (G : ClassGen) (g x : Word) (hx : H x) (hS : StageR dn vis fe s₀.mem a₀) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "class_gen_binder" [g, x]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.ClassGen.binder G (decI x)) a₀ ∧
+      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.ClassGen.binder G (decI x)) a₀) ∧
+      IWGrow s₀.mem s'.mem ∧ (r.headD 0).toNat < 2 ^ 32 ∧
+      decI (r.headD 0) = AM.res (ConRon.Arena.ClassGen.binder G (decI x)) a₀; ⊤⦄ := by
+  refine triple_post (classGenBinder_spec p hp n s₀ g x) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨t, a', hrun, hS', hg, h1, h2⟩ := fvarTypeDW1_ok dn vis fe _ _ a₀ x hx r hm hS
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok (ConRon.Arena.ClassGen.binder G (decI x)) a₀ a' t hrun
+  exact ⟨hl, hok, by rw [hst]; exact hS', hg, h1, by rw [hres]; exact h2⟩
+
 end L.Ind
