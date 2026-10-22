@@ -5241,6 +5241,30 @@ also says the stack array is unchanged. Both twins in L: the pure walk `il_go` +
 | `InstList.lean` (models, L, dispatcher steps) | 230 | 935 | 4.5 s |
 | `InstListSpec.lean` (arm steps, entry) | | 273 | 34 s |
 | `InstListRefine.lean` | | 979 | 2.7 s |
+
+**The L fuel against `coreWalkFuel`.** All three refinements here are "at every twin fuel `F ≥`
+the L fuel `n`". The stub interfaces of lanes `whnf`/`defeq` (`InstListOK`, `HasFvarOK`) state the
+twin at `coreWalkFuel` (4·10⁹) with no bound on `n`; the bridge needs `n ≤ coreWalkFuel` (the L
+fuel of the top-level run bounds every nested call's), as the whnf slots already assume `n ≤ F`.
+
+### `abstractRangeGo`/`abstractRangeFast` (`ArRange{,Spec,Refine}.lean`), `hasFvarFast` (`HasFvar{,Refine}.lean`)
+
+* `ar_entry(e, d, k, c)` refines `abstractRangeFast F e d k c` under `ArenaA`
+  (`arEntry_refines`, **no `sorry`**). `abstract1`'s files with the range `(d, k)` and the cursor
+  `c` (memo key `(h, c)`, the same `abs1C`, `ab_fvb`, rebuild, `ArenaA`, probe/tail lemmas reused).
+  Generated from the `Abs1*` files by a renaming script (`k ↦ c`, `k` appended after `d`), then the
+  `fvar` arm and the entry by hand. The `fvar` arm checks `d + k` and `c + (d + k - 1 - i)` for
+  wrap (capacities: the twin is over `Nat`; `dk_toNat`, `rng_iff`, `rng_word`). Entry: `k = 0` is
+  `e` (no clear), else clear, walk, clear.
+* `has_fvar_fast(f, e)` and `has_fvar(e)` (the two stub interfaces' names) refine `hasFvarFast F e`
+  (`hasFvarFast_refines`, `hasFvar_refines`): `ab_fvb` and `u64(x != 0)`; `f` is unused.
+
+| | file lines | `lean` user |
+|---|---:|---:|
+| `ArRange.lean` | 581 | 3.9 s |
+| `ArRangeSpec.lean` | 173 | 64 s |
+| `ArRangeRefine.lean` | 480 | 1.2 s |
+| `HasFvar.lean` + `HasFvarRefine.lean` | 149 | < 2 s |
 ## Definitional equality, inference, the knot: L code top down (2026-10-22, lane `defeq`)
 
 Phases 6 and 7 (ROADMAP §1): con-ron's `Arena/Core.lean:2439-3675` and the helpers it reaches
