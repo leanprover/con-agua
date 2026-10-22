@@ -235,6 +235,125 @@ theorem sgGoW_ok (k : Nat) (hMstage : ∀ (m2 : Mem) (a2 : AState), StageR dn vi
   rw [hrun]
   rfl
 
+theorem sgW_ok (k : Nat) (hMstage : ∀ (m2 : Mem) (a2 : AState), StageR dn vis fe m2 a2 → ∃ mp0, rpMR m2 mp0)
+    (m m' : Mem) (a : AState) (ctx hO hL ind us dO dL nPc : Word) (r : List Word) (c : NestCtx)
+    (holes ds : List EIdx) (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word)
+    (h : sgW k m ctx hO hL ind us dO dL nPc = some (r, m')) (hS : StageR dn vis fe m a)
+    (hc : decCtx m ctx.toNat = some c) (hin : CtxIn m ctx.toNat (· < iwTop m)) (hsl : CtxSl m ctx.toNat)
+    (hb : c.nP + c.names.length < 2 ^ 64) (hho : decHL m hO.toNat hL.toNat = some holes)
+    (hhob : hO.toNat + hL.toNat ≤ iwTop m) (hds : decHL m dO.toNat dL.toNat = some ds)
+    (hdsb : ∀ j < dL.toNat, dO.toNat + j < iwTop m) (hind : H ind) (hus : H us) (hR : RfInv m M G g) :
+    ∃ x a', (ConRon.Arena.nestSeedOf c holes (decI ind) (decI us) ds nPc.toNat).run a = .ok (x, a') ∧
+      decNK m' (r.headD 0).toNat = some x.1 ∧ (r.tail.headD 0).toNat = x.2 ∧
+      NKIn m' (r.headD 0).toNat (· < iwTop m') ∧ RxPost dn fe vis m m' a' M G g := by
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  obtain ⟨-, -, hpa, hpa', -, -, -, -, -, h11⟩ := ctx_fields hc hin htop
+  have hpsum : (rdW (m.arr64 IW) (ctx + 7)).toNat + (rdW (m.arr64 IW) (ctx + 8)).toNat ≤ iwTop m := by
+    obtain ⟨-, -, -, -, hpm, -⟩ := decCtx_some hc
+    obtain ⟨o, l, ho, hl, -⟩ := decAt_some hpm
+    rw [rd_iwN (m := m) (p := ctx) (i := 7) (by simpa using ho) (by simp; omega),
+      rd_iwN (m := m) (p := ctx) (i := 8) (by simpa using hl) (by simp; omega)]
+    exact hsl.2 o l ho hl
+  unfold sgW at h
+  cases hr1 : posRecW m [1, rdW (m.arr64 IW) (ctx + 7), rdW (m.arr64 IW) (ctx + 8), hO, hL] with
+  | none => rw [hr1] at h; simp [sgA] at h
+  | some p1 =>
+  obtain ⟨f, m1⟩ := p1
+  rw [hr1] at h
+  simp only [sgA] at h
+  obtain ⟨hS1, hg1, hf1, ht1, hget1⟩ := posRecW_stage hr1 hS (by simp)
+  simp only [List.length_cons, List.length_nil] at ht1
+  have g0 := iwN_of_get (by simpa using hget1 0 (by simp))
+  have g1 := iwN_of_get (by simpa using hget1 1 (by simp))
+  have g2 := iwN_of_get (by simpa using hget1 2 (by simp))
+  have g3 := iwN_of_get (by simpa using hget1 3 (by simp))
+  have g4 := iwN_of_get (by simpa using hget1 4 (by simp))
+  have hfm : FMOk m1 f.toNat (.keyMap c.params holes) :=
+    ⟨by simpa using g0, by omega, ⟨_, _, g1, g2, by rw [decHL_grow hg1 hpsum]; exact hpa, by have := hg1.1; omega⟩,
+      ⟨_, _, g3, g4, by rw [decHL_grow hg1 hhob]; exact hho, by have := hg1.1; omega⟩⟩
+  obtain ⟨ec1, hci1⟩ := hin.grow hg1
+  have hsl1 := hsl.grow hin hg1
+  have hR1 := hR.frame (posRecW_fr hr1)
+  cases hal : allocW m1 dL with
+  | none => rw [hal] at h; simp [sgB] at h
+  | some p2 =>
+  obtain ⟨q, m2⟩ := p2
+  rw [hal] at h
+  simp only [sgB] at h
+  obtain ⟨hS2, hg2, hqd, hroom, htop2⟩ := hS1.alloc hal
+  have hqt : q.toNat = iwTop m1 := by simp only [iwTop, hqd]
+  cases hgo : sgGoW k m2 ctx f dO dL q 0 with
+  | none => rw [hgo] at h; simp at h
+  | some m3 =>
+  rw [hgo] at h
+  simp only at h
+  obtain ⟨ys, a3, hrun, hdec3, hS3, hg13, ht3, M3, G3, hR3, hk3, hG3⟩ := sgGoW_ok dn fe vis k hMstage m1 m2 m3 a ctx f
+    dO dL q 0 c holes ds [] M G g hgo hS2 hg2 (by omega) (by omega) (by rw [ec1]; exact hc) hci1 hsl1 hb hfm
+    (by rw [decHL_agree (RdS.of_grow hg1) hdsb]; exact hds) (fun j hj => Nat.lt_of_lt_of_le (hdsb j hj) hg1.1)
+    (by simp) (by simp [decHL, hslice?]) (hR1.frame (allocW_fr hal))
+  cases hr4 : posRecW m3 [ind, us, q, dL] with
+  | none => rw [hr4] at h; simp [sgC] at h
+  | some p4 =>
+  obtain ⟨key, m4⟩ := p4
+  rw [hr4] at h
+  simp only [sgC, Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨hS4, hg4, hk4, ht4, hget4⟩ := posRecW_stage hr4 hS3 (by simp)
+  simp only [List.length_cons, List.length_nil] at ht4
+  have hqb : q.toNat + dL.toNat ≤ iwTop m3 := by have := hg13.1; omega
+  have hdk : decNK m4 key.toNat = some ⟨decI ind, decI us, ys⟩ :=
+    decNK_of_words (by simpa using hget4 0 (by simp)) hind (hget4 1 (by simp)) hus (hget4 2 (by simp))
+      (hget4 3 (by simp)) (by rw [decHL_grow hg4 hqb]; simpa using hdec3)
+  refine ⟨(⟨decI ind, decI us, ys⟩, nPc.toNat), a3, ?_, hdk, rfl, ?_, ?_⟩
+  · simp only [ConRon.Arena.nestSeedOf, StateT.run_bind]
+    have : (ds.mapM fun x => do
+        let y ← ConRon.Arena.replaceApps c.names c.lvls 0 c.nP x
+        ConRon.Arena.replaceFVars (.keyMap c.params holes) y) = ds.mapM (sgF c holes) := rfl
+    rw [this, show ds = ds.drop (0 : Word).toNat from rfl, hrun]
+    rfl
+  · simp only [List.headD_cons]
+    refine ⟨fun j hj => by omega, fun o l ho hl j hj => ?_⟩
+    have e2 := iwN_of_get (m := m4) (by simpa using hget4 2 (by simp))
+    have e3 := iwN_of_get (m := m4) (by simpa using hget4 3 (by simp))
+    rw [e2] at ho; rw [e3] at hl
+    cases ho; cases hl
+    have := hg4.1; omega
+  · exact ⟨M3, G3, hS4, (hg1.trans hg13).trans hg4, hR3.frame (posRecW_fr hr4), hk3, hG3⟩
+
 end rel
 
+
+section census
+variable (p : Prog) (L : SgLook p)
+include L
+
+/-- **`nest_seed_of` refines `nestSeedOf`** (through the stubs below `replace_apps` and `replace_fvars`;
+`replace_apps`' memo well-formed at every stage memory). -/
+@[refines ConRon.Arena.nestSeedOf]
+theorem nestSeedOf_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
+    (vis ctx hO hL ind us dO dL nPc : Word) (c : NestCtx) (holes ds : List EIdx)
+    (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word)
+    (hMstage : ∀ (m2 : Mem) (a2 : AState), StageR dn vis fe m2 a2 → ∃ mp0, rpMR m2 mp0)
+    (hS : StageR dn vis fe s₀.mem a₀) (hc : decCtx s₀.mem ctx.toNat = some c)
+    (hin : CtxIn s₀.mem ctx.toNat (· < iwTop s₀.mem)) (hsl : CtxSl s₀.mem ctx.toNat)
+    (hb : c.nP + c.names.length < 2 ^ 64) (hho : decHL s₀.mem hO.toNat hL.toNat = some holes)
+    (hhob : hO.toNat + hL.toNat ≤ iwTop s₀.mem) (hds : decHL s₀.mem dO.toNat dL.toNat = some ds)
+    (hdsb : ∀ j < dL.toNat, dO.toNat + j < iwTop s₀.mem) (hind : H ind) (hus : H us)
+    (hR : RfInv s₀.mem M G g) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_seed_of" [ctx, hO, hL, ind, us, dO, dL, nPc]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.nestSeedOf c holes (decI ind) (decI us) ds nPc.toNat) a₀ ∧
+      decNK s'.mem (r.headD 0).toNat =
+        some (AM.res (ConRon.Arena.nestSeedOf c holes (decI ind) (decI us) ds nPc.toNat) a₀).1 ∧
+      (r.tail.headD 0).toNat = (AM.res (ConRon.Arena.nestSeedOf c holes (decI ind) (decI us) ds nPc.toNat) a₀).2 ∧
+      NKIn s'.mem (r.headD 0).toNat (· < iwTop s'.mem) ∧
+      RxPost dn fe vis s₀.mem s'.mem (AM.st (ConRon.Arena.nestSeedOf c holes (decI ind) (decI us) ds nPc.toNat) a₀)
+        M G g; ⊤⦄ := by
+  refine triple_post (nestSeedOf_spec p L k s₀ ctx hO hL ind us dO dL nPc) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨x, a', hrun, h1, h2, h3, h4⟩ := sgW_ok dn fe vis k hMstage _ _ a₀ ctx hO hL ind us dO dL nPc r c holes ds
+    M G g hm hS hc hin hsl hb hho hhob hds hdsb hind hus hR
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hres]; exact h1, by rw [hres]; exact h2, h3, by rw [hst]; exact h4⟩
+
+end census
 end L.Ind
