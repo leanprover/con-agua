@@ -92,10 +92,10 @@ theorem leafOp_internLit (l : ConLeche.Literal) : LeafOp (internE (.lit l)) := b
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
   · exact hD
   · exact ⟨hD.bvar, hD.fvar, hD.sort, hD.const,
-      ⟨derT_push hD.lit.1 _ _ _ ⟨bvar_derLit _ _, fvar_derLit _ _⟩, hD.lit.2⟩, hD.app, hD.lam,
+      ⟨derT_push hD.lit.1 _ _ _ ⟨bvar_derLit _ _, fvar_derLit _ _, lp_derLit _ _⟩, hD.lit.2⟩, hD.app, hD.lam,
       hD.forallE, hD.letE, hD.proj⟩
   · exact ⟨hD.bvar, hD.fvar, hD.sort, hD.const,
-      ⟨hD.lit.1, derT_push hD.lit.2 _ _ _ ⟨bvar_derLit _ _, fvar_derLit _ _⟩⟩, hD.app, hD.lam,
+      ⟨hD.lit.1, derT_push hD.lit.2 _ _ _ ⟨bvar_derLit _ _, fvar_derLit _ _, lp_derLit _ _⟩⟩, hD.app, hD.lam,
       hD.forallE, hD.letE, hD.proj⟩
 
 /-- Interning a `const` node is a leaf step. -/

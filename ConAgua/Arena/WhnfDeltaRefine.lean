@@ -191,7 +191,7 @@ theorem CoreS.of_const {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl <;> decide)
-    (by simp [CREC, CSLOT, PINS])
+    (by simp [CREC, CSLOT, CLP, PINS])
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl <;> decide)
@@ -205,7 +205,7 @@ theorem CoreS.of_const {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
 theorem StackKept.of_const_frame {m m' : Mem} (hf : MemFrame [CREC, CSLOT] [18, 19] m m') :
     StackKept m m' := by
   have hspn : m'.arr64 SPN = m.arr64 SPN :=
-    hf.1 SPN (by simp [CREC, CSLOT, SPN]) (by decide)
+    hf.1 SPN (by simp [CREC, CSLOT, CLP, SPN]) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp)
   exact StackKept.of_frame hf
 
@@ -213,7 +213,8 @@ theorem StackKept.of_const_frame {m m' : Mem} (hf : MemFrame [CREC, CSLOT] [18, 
 theorem ceinternW_hw (m : Mem) (a : AState) (hR : ConstR m a) (f x : Word) (hf : f.toNat < 2 ^ 32)
     (hx : x.toNat < 2 ^ 32) (w : Word) (m' : Mem) (hI : ceinternW m f x = some (w, m')) :
     w.toNat < 2 ^ 32 := by
-  rw [ceinternW_eq] at hI
+  rw [ceinternW_eqK (hctl := hR.1.1)] at hI
+  obtain ⟨_, hI, -⟩ := mkK_split _ _ _ _ _ _ _ hI
   exact internM_hw constSch CeRecRel cehash constSch_wf m _ _ _ hR (ceMt m f x) _ _ _ _
     (probe_homeG constSch m 0 _ _ (ceprobeW_arm m f x 0) _)
     (probe_homeG constSch m 1 _ _ (ceprobeW_arm m f x 1) _) _ (cepushOK_room m) _ _ w m' hI
@@ -660,7 +661,7 @@ theorem callW_natZeroOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   dsimp only at hW
   have hr₁' : r₁.headD 0 = pinW s₀.mem 2 := hr₁
   rw [hr₁'] at hok hS hres
-  have hE : m₂.arr64 EREC = s₀.mem.arr64 EREC := hfr.arr_eq EREC (by simp [CREC, CSLOT, EREC]) (by decide)
+  have hE : m₂.arr64 EREC = s₀.mem.arr64 EREC := hfr.arr_eq EREC (by simp [CREC, CSLOT, CLP, EREC]) (by decide)
   have hrun := AM.run_of_ok _ _ hok
   have hrun' : (constE (decI (pinW s₀.mem 2))).run a₀ =
       .ok (decE (r₂.headD 0), AM.st (constE (decI (pinW s₀.mem 2))) a₀) := by
@@ -848,7 +849,7 @@ theorem callW_natSuccOk (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AS
   have hr₁' : r₁.headD 0 = pinW s₀.mem 2 := hr₁
   rw [hr₁'] at hok hS hres
   have hE : m₂.arr64 EREC = s₀.mem.arr64 EREC :=
-    hfr.arr_eq EREC (by simp [CREC, CSLOT, EREC]) (by decide)
+    hfr.arr_eq EREC (by simp [CREC, CSLOT, CLP, EREC]) (by decide)
   have hrun := AM.run_of_ok _ _ hok
   have hrun' : (constE (decI (pinW s₀.mem 2))).run a₀ =
       .ok (decE (r₂.headD 0), AM.st (constE (decI (pinW s₀.mem 2))) a₀) := by

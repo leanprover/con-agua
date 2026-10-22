@@ -658,9 +658,8 @@ theorem lamsFull_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
       have h₄ := internFVar_core hS₃ (d + k) (r₁.headD 0) hrw1 r₄ hfv
       obtain ⟨hok4, ⟨M₄, hS₄, hK₄, hSt₄⟩, hres4, hrw4⟩ := h₄
       have hB₄ : BKept m₃ m₄ := by
-        have hI₂ := hfv; rw [fvinternW_eq] at hI₂
-        exact BKept.of_frame (internM_frame _ fvarSch_wf _ _ _ _ _ _ _ _ hI₂)
-          (by simp [fvarSch, FVREC, FVSLOT, BSTK]) (by simp [fvarSch])
+        exact BKept.of_frame ((fvinternW_frame (hI := hfv)))
+          (by simp [fvarSch, FVREC, FVSLOT, FVLP, BSTK]) (by simp [fvarSch])
       -- the stacks kept across the four calls
       have hSt14 := hSt₁.trans (hSt₂.trans (hSt₃.trans hSt₄))
       have hBK := hB₁.trans (hB₂.trans (hB₃.trans hB₄))

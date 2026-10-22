@@ -63,44 +63,18 @@ theorem internBVar_DF (u : Word) (hI : binternW m u = some (r, m')) :
 theorem internSort_D (u : Word) (hu : u.toNat < 2 ^ 32) (hI : sointernW m u = some (r, m')) :
     AM.ok (internE (.sort (decI u))) a ∧ ArenaD m' (AM.st (internE (.sort (decI u))) a) ∧
     AM.res (internE (.sort (decI u))) a = decI r ∧
-    MemFrame [sortSch.ra, sortSch.sa] [sortSch.ca, sortSch.ca + 1] m m' := by
-  obtain ⟨hR, hD⟩ := hA
-  obtain ⟨hok, hX, hres⟩ := sointern_correct m a hR.sort u hu _ _ hI
-  have hI₂ := hI; rw [sointernW_eq] at hI₂
-  have hfr := internM_frame _ sortSch_wf _ _ _ _ _ _ _ _ hI₂
-  have hcs := AM.proto_cases sortLens _ _ _ _ _ _ a (internE_sort_run _ a) hok
-  have hR₁ := hR.lift_sort _ _ _ _ hX hfr
-    (AM.st_proto sortLens _ _ _ _ _ _ a (internE_sort_run _ a) hok)
-  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [sortSch, SOREC, SOSLOT]) a hD
-  refine ⟨hok, ⟨hR₁, ?_⟩, hres, hfr⟩
-  rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
-  · exact hD₁
-  · exact ⟨hD₁.bvar, hD₁.fvar, ⟨derT_push hD₁.sort.1 _ _ _ ⟨bvar_derSort _ _, fvar_derSort _ _⟩, hD₁.sort.2⟩,
-      hD₁.const, hD₁.lit, hD₁.app, hD₁.lam, hD₁.forallE, hD₁.letE, hD₁.proj⟩
-  · exact ⟨hD₁.bvar, hD₁.fvar, ⟨hD₁.sort.1, derT_push hD₁.sort.2 _ _ _ ⟨bvar_derSort _ _, fvar_derSort _ _⟩⟩,
-      hD₁.const, hD₁.lit, hD₁.app, hD₁.lam, hD₁.forallE, hD₁.letE, hD₁.proj⟩
+    MemFrame [sortSch.ra, sortSch.sa, SOLP] [sortSch.ca, sortSch.ca + 1] m m' := by
+  obtain ⟨hok, hD', hres⟩ := L.Arena.internSort_D m a hA u r hu m' hI
+  exact ⟨hok, hD', hres, sointernW_frame (hI := hI)⟩
 
 theorem internConst_D (f x : Word) (hf : f.toNat < 2 ^ 32) (hx : x.toNat < 2 ^ 32)
     (hI : ceinternW m f x = some (r, m')) :
     AM.ok (internE (.const (decI f) (decI x))) a ∧
     ArenaD m' (AM.st (internE (.const (decI f) (decI x))) a) ∧
     AM.res (internE (.const (decI f) (decI x))) a = decI r ∧
-    MemFrame [constSch.ra, constSch.sa] [constSch.ca, constSch.ca + 1] m m' := by
-  obtain ⟨hR, hD⟩ := hA
-  obtain ⟨hok, hX, hres⟩ := ceintern_correct m a hR.const f x hf hx _ _ hI
-  have hI₂ := hI; rw [ceinternW_eq] at hI₂
-  have hfr := internM_frame _ constSch_wf _ _ _ _ _ _ _ _ hI₂
-  have hcs := AM.proto_cases constLens _ _ _ _ _ _ a (internE_const_run _ _ a) hok
-  have hR₁ := hR.lift_const _ _ _ _ hX hfr
-    (AM.st_proto constLens _ _ _ _ _ _ a (internE_const_run _ _ a) hok)
-  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [constSch, CREC, CSLOT]) a hD
-  refine ⟨hok, ⟨hR₁, ?_⟩, hres, hfr⟩
-  rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
-  · exact hD₁
-  · exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, ⟨derT_push hD₁.const.1 _ _ _ ⟨bvar_derConst _ _ _, fvar_derConst _ _ _⟩,
-      hD₁.const.2⟩, hD₁.lit, hD₁.app, hD₁.lam, hD₁.forallE, hD₁.letE, hD₁.proj⟩
-  · exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, ⟨hD₁.const.1, derT_push hD₁.const.2 _ _ _
-      ⟨bvar_derConst _ _ _, fvar_derConst _ _ _⟩⟩, hD₁.lit, hD₁.app, hD₁.lam, hD₁.forallE, hD₁.letE, hD₁.proj⟩
+    MemFrame [constSch.ra, constSch.sa, CLP] [constSch.ca, constSch.ca + 1] m m' := by
+  obtain ⟨hok, hD', hres⟩ := L.Arena.internConst_D m a hA f x r hf hx m' hI
+  exact ⟨hok, hD', hres, ceinternW_frame (hI := hI)⟩
 
 theorem internLit_D (o l : Word) (hq : SliceOK m o l) (hn : Norm (m.arr64 POOL) o.toNat l.toNat)
     (hI : internW m o l = some (r, m')) :
@@ -120,10 +94,10 @@ theorem internLit_D (o l : Word) (hq : SliceOK m o l) (hn : Norm (m.arr64 POOL) 
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
   · exact hD₁
   · exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, hD₁.const,
-      ⟨derT_push hD₁.lit.1 _ _ _ ⟨bvar_derLit _ _, fvar_derLit _ _⟩, hD₁.lit.2⟩, hD₁.app, hD₁.lam, hD₁.forallE,
+      ⟨derT_push hD₁.lit.1 _ _ _ ⟨bvar_derLit _ _, fvar_derLit _ _, lp_derLit _ _⟩, hD₁.lit.2⟩, hD₁.app, hD₁.lam, hD₁.forallE,
       hD₁.letE, hD₁.proj⟩
   · exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, hD₁.const,
-      ⟨hD₁.lit.1, derT_push hD₁.lit.2 _ _ _ ⟨bvar_derLit _ _, fvar_derLit _ _⟩⟩, hD₁.app, hD₁.lam, hD₁.forallE,
+      ⟨hD₁.lit.1, derT_push hD₁.lit.2 _ _ _ ⟨bvar_derLit _ _, fvar_derLit _ _, lp_derLit _ _⟩⟩, hD₁.app, hD₁.lam, hD₁.forallE,
       hD₁.letE, hD₁.proj⟩
 
 theorem internLitStr_D (o l : Word) (hq : SliceOK m o l) (s : String)
@@ -145,23 +119,23 @@ theorem internLitStr_D (o l : Word) (hq : SliceOK m o l) (s : String)
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
   · exact hD₁
   · exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, hD₁.const,
-      ⟨derT_push hD₁.lit.1 _ _ _ ⟨bvar_derLit _ _, fvar_derLit _ _⟩, hD₁.lit.2⟩, hD₁.app, hD₁.lam, hD₁.forallE,
+      ⟨derT_push hD₁.lit.1 _ _ _ ⟨bvar_derLit _ _, fvar_derLit _ _, lp_derLit _ _⟩, hD₁.lit.2⟩, hD₁.app, hD₁.lam, hD₁.forallE,
       hD₁.letE, hD₁.proj⟩
   · exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, hD₁.const,
-      ⟨hD₁.lit.1, derT_push hD₁.lit.2 _ _ _ ⟨bvar_derLit _ _, fvar_derLit _ _⟩⟩, hD₁.app, hD₁.lam, hD₁.forallE,
+      ⟨hD₁.lit.1, derT_push hD₁.lit.2 _ _ _ ⟨bvar_derLit _ _, fvar_derLit _ _, lp_derLit _ _⟩⟩, hD₁.app, hD₁.lam, hD₁.forallE,
       hD₁.letE, hD₁.proj⟩
 
 theorem internLs_D (o l : Word) (hq : SliceOK m o l) (us : List LIdx)
     (hk : sliceL (m.arr64 POOL) o.toNat l.toNat = lsWords us) (hI : lsinternW m o l = some (r, m')) :
     AM.ok (internLsNode us) a ∧ ArenaD m' (AM.st (internLsNode us) a) ∧
     AM.res (internLsNode us) a = decI r ∧
-    MemFrame [lsSch.ra, lsSch.sa] [lsSch.ca, lsSch.ca + 1] m m' := by
+    MemFrame [lsSch.ra, lsSch.sa, LSHP] [lsSch.ca, lsSch.ca + 1] m m' := by
   obtain ⟨hR, hD⟩ := hA
   obtain ⟨hok, hX, hres⟩ := lsintern_correct m a hR.lit.1 hR.ls o l hq us hk _ _ hI
-  have hI₂ := hI; rw [lsinternW_eq] at hI₂
-  have hfr := internM_frame _ lsSch_wf _ _ _ _ _ _ _ _ hI₂
+  have hLp := lsintern_hp m a hR.lit.1 hR.ls o l hq us hk hR.lsHp (lsOrW_ok m a hR o l hq us hk) _ _ hI
+  have hfr := (lsinternW_frame (hI := hI))
   have hst := AM.st_proto lsLens _ _ _ _ _ _ a (internLsNode_run us a) hok
-  exact ⟨hok, ⟨hR.lift_ls _ _ _ _ hX hfr hst, derR_lss _ (fun _ _ => ⟨rfl, rfl⟩)
+  exact ⟨hok, ⟨hR.lift_ls _ _ _ _ ⟨hX, hLp⟩ hfr hst, derR_lss _ (fun _ _ => ⟨rfl, rfl⟩)
     (fun _ _ => ⟨rfl, rfl⟩) hst (DerR.frameT hfr (by tapart) hD)⟩, hres, hfr⟩
 
 end leaves
@@ -304,7 +278,7 @@ theorem node_sort (u : Nat) (x y z : Word) (hx : ItemR x u) (hI : nodeW b.data m
       simp [exprOp, StateD.level, hg]
     obtain ⟨h1, h2, h3, hf⟩ := internSort_D m a hA w m₁ _ hw hI
     unfold NodeOK; rw [hop]
-    exact ⟨h1, h2, h3, hD.above (MemFrame.above hf (by simp [sortSch, SOREC, SOSLOT]))⟩
+    exact ⟨h1, h2, h3, hD.above (MemFrame.above hf (by simp [sortSch, SOREC, SOSLOT, SOLP]))⟩
   · cases hI
 
 theorem node_bin (k : Word) (hk : k = 10 ∨ k = 11 ∨ k = 12) (x y z : Word) (p q : Nat)
@@ -526,8 +500,8 @@ theorem node_const (x c z : Word) (nm : Nat) (us : List Nat) (hx : ItemR x nm)
   refine ⟨hok', ?_, ?_, ?_⟩
   · rw [hop] at hok' ⊢; rw [AM.st_bind _ _ _ hok', l3]; exact c2
   · rw [hop, AM.res_bind _ _ _ l1, l3]; exact c3
-  · exact ((hD.above hab).above (MemFrame.above lf (by simp [lsSch, LSREC, LSSLOT]))).above
-      (MemFrame.above cf (by simp [constSch, CREC, CSLOT]))
+  · exact ((hD.above hab).above (MemFrame.above lf (by simp [lsSch, LSREC, LSSLOT, LSHP]))).above
+      (MemFrame.above cf (by simp [constSch, CREC, CSLOT, CLP]))
 
 /-- **Every expression kind**: the node the fields `f` describe is interned. -/
 theorem node_ok (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63) (f : Fld)
