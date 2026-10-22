@@ -99,7 +99,7 @@ def cdaQ1 (c : Word) : Option (List Word × Mem) → Option (List Word × Mem)
 def cdaK2 (c nm : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) =>
-    if nm = r.headD 0 then cdaQ1 p n vis c (stubM "rom_basis_decls" m [4])
+    if nm = r.headD 0 then cdaQ1 p n vis c (callW p n "rom_basis_decls" [4] m)
     else cdaK3 p n vis c nm (callW p n "check_constant_val" [vis, c + 1] m)
 
 /-- After `erec_ci`. -/
@@ -121,7 +121,7 @@ theorem cdaW_step : cdaW p (n + 1) m i vis = cdaK1 p n vis (erecCiW n m i 0) := 
 theorem cdaK1_some : cdaK1 p n vis (some (r, m)) =
     cdaK2 p n vis (r.headD 0) (rdW (m.arr64 EREC) (r.headD 0 + 1)) (pinAtW m 4) := rfl
 theorem cdaK2_some : cdaK2 p n vis c nm (some (r, m)) =
-    if nm = r.headD 0 then cdaQ1 p n vis c (stubM "rom_basis_decls" m [4])
+    if nm = r.headD 0 then cdaQ1 p n vis c (callW p n "rom_basis_decls" [4] m)
     else cdaK3 p n vis c nm (callW p n "check_constant_val" [vis, c + 1] m) := rfl
 theorem cdaQ1_some : cdaQ1 p n vis c (some (r, m)) =
     if r.tail.headD 0 ≤ 4 then none
@@ -179,7 +179,7 @@ theorem cda_specW (p : Prog) (hp : p.lookup "check_decl_axiom" = some checkDeclA
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, erecCi_specW p hR n,
-        pinAt_specW p hpa n, stubM_spec p "rom_basis_decls" n, callW_spec p n "ci_canon_eq",
+        pinAt_specW p hpa n, callW_spec p n "rom_basis_decls", callW_spec p n "ci_canon_eq",
         callW_spec p n "check_constant_val", callW_spec p n "std_axiom_ok",
         callW_spec p n "env_push", callW_spec p n "trust_compiler_ok",
         callW_spec p n "of_reduce_ax_ok"] <;>
@@ -259,13 +259,13 @@ theorem cdaW_ok {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name} 
     rw [if_pos eq2] at h
     rw [ep2] at eq2
     simp only [eq2, decide_true, if_true]
-    cases e3 : stubM "rom_basis_decls" m1 [4] with
+    cases e3 : callW p n "rom_basis_decls" [4] m1 with
     | none => rw [e3] at h; cases h
     | some rm3 =>
     obtain ⟨r3, m3⟩ := rm3
     rw [e3, cdaQ1_some] at h
     obtain ⟨blk, a3, hrun3, hS3, hg3, hD3, -⟩ :=
-      romBasisDecls_spec dn vis fe 4 (by decide) m1 m3 a r3 e3 hS1
+      hX.quot.rom.basis dn vis fe 4 (by decide) n m1 a r3 m3 hS1 e3
     have hrun3' : (BasisKind.decls .quotK).run a = .ok (blk, a3) := hrun3
     have hok3 := (ConRon.Bridge.BasisKind.decls_run hok hrun3').1
     generalize r3.headD 0 = o3 at h hD3

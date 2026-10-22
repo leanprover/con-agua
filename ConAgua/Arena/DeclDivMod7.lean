@@ -25,6 +25,7 @@ structure DmProg7 (p : Prog) : Prop extends DmProg6 p where
   lDivModEnvGuard : p.lookup "div_mod_env_guard" = some divModEnvGuardL
   lFindIs : p.lookup "find_is" = some findIs
   lNatOpGuard' : p.lookup "nat_op_guard" = some natOpGuardL
+  lRom : L.Rom.RomRefs p
 
 section envguard
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
@@ -36,7 +37,7 @@ def egW (p : Prog) (n : Nat) (m : Mem) (v c : Word) : Option (List Word × Mem) 
   ntBW (callW p n "nat_op_stored_ok_all" [v, r2.headD 0, r2.tail.headD 0] m2) fun r3 m3 =>
   if r3.headD 0 = 0 then some ([0], m3) else
   ntBW (callW p n "pin_at" [0] m3) fun r4 m4 =>
-  ntBW (stubM "rom_ci" m4 [0]) fun r5 m5 =>
+  ntBW (callW p n "rom_ci" [0] m4) fun r5 m5 =>
   ntBW (callW p n "find_is" [v, r4.headD 0, r5.headD 0] m5) fun r6 m6 =>
   if r6.headD 0 = 0 then some ([0], m6) else
   ntBW (callW p n "pin_at" [30] m6) fun r7 m7 =>
@@ -55,7 +56,7 @@ theorem eg_specW (p : Prog) (hp : p.lookup "div_mod_env_guard" = some divModEnvG
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "nat_op_guard", callW_spec p n "nat_op_deps",
-      callW_spec p n "nat_op_stored_ok_all", callW_spec p n "pin_at", stubM_spec p "rom_ci" n,
+      callW_spec p n "nat_op_stored_ok_all", callW_spec p n "pin_at", callW_spec p n "rom_ci",
       callW_spec p n "find_is", callW_spec p n "bool_ctor_typed"] <;>
     finish (gen := 30) (instances := 10000) [egW, ntBW]
 
@@ -112,7 +113,7 @@ theorem eg_ref (hD : DmProg7 p) (hdn : DnInj dn) (c : Word) :
   obtain ⟨r4, m4, x4, a4, hrun4, ⟨hS4, hg4, hl4, rfl⟩, hw⟩ :=
     (pinSlot_ref p hD.toDmProg6.toDmProg5.lPinAt 0 pinEq rfl).bind_ hS3 hw
   obtain ⟨r5, m5, x5, a5, hrun5, ⟨hS5, hg5, hd5⟩, hw⟩ :=
-    (romCi_spec dn vis fe 0 (by decide)).bind_ hS4 hw
+    CallRef.bind_ (hD.lRom.ci dn vis fe 0 (by decide)) hS4 hw
   have hrun5' : eqA.run a4 = .ok (x5, a5) := hrun5
   cases h6 : callW p k "find_is" [vis, r4.headD 0, r5.headD 0] m5 with
   | none => rw [h6] at hw; simp at hw

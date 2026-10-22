@@ -173,6 +173,7 @@ structure RedProg (p : Prog) : Prop where
   ocv : p.lookup "reduce_op_cv_a" = some reduceOpCvAL
   pa : p.lookup "pin_at" = some pinAtL
   ih : IhProg p
+  rom : L.Rom.RomRefs p
 
 theorem rso_specW (h : RedProg p) (n : Nat) (s₀ : St) (vis c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "reduce_stored_ok" [vis, c]
@@ -243,7 +244,7 @@ theorem rsoW_ok {p : Prog} (h : RedProg p) {dn : NIdx → Option ConLeche.Name} 
   obtain ⟨r2, m2⟩ := rm2
   rw [h2, rsoK2_some] at hW
   obtain ⟨s2, hs2, -, hok2, hS2, hg2, hd2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
-    (reduceOpCvA_refines p h.pa n ⟨m1, Locals.init []⟩ a dn fe vis c hS hc h.ocv) h2
+    (reduceOpCvA_refines p h.pa n ⟨m1, Locals.init []⟩ a dn fe vis c hS hc h.rom h.ocv) h2
   subst hs2
   have hrun2 := AM.run_of_ok _ _ hok2
   have hpin := DecB.get ⟨fun _ _ _ he h => he.2.decCV h⟩ hd2
@@ -283,17 +284,17 @@ def reoB3 (q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | some (r4, m4) => mpW m4 (q + 1) (r4.headD 0)
 
 /-- `Bool`: after the lookup. -/
-def reoB2 : Option (List Word × Mem) → Option (List Word × Mem)
+def reoB2 (n : Nat) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r3, m3) =>
     if r3.headD 0 = 0 then some ([0], m3)
     else if rdW (m3.arr64 EREC) (r3.tail.headD 0) ≠ 3 then some ([0], m3)
-    else reoB3 (r3.tail.headD 0) (stubM "rom_cv" m3 [5])
+    else reoB3 (r3.tail.headD 0) (callW p n "rom_cv" [5] m3)
 
 /-- `Bool`: after the pin. -/
-def reoB1 (vis : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def reoB1 (n : Nat) (vis : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r2, m2) => reoB2 (envFindW m2 (r2.headD 0) vis)
+  | some (r2, m2) => reoB2 p n (envFindW m2 (r2.headD 0) vis)
 
 /-- `Nat`: after `rom_ci(1)`, the comparison (a miss answers `0`). -/
 def reoN3 (r3 : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -303,56 +304,56 @@ def reoN3 (r3 : List Word) : Option (List Word × Mem) → Option (List Word × 
     else some ([if ciEqB (m4.arr64 EREC) (r3.tail.headD 0) (r4.headD 0) then 1 else 0], m4)
 
 /-- `Nat`: after the lookup. -/
-def reoN2 : Option (List Word × Mem) → Option (List Word × Mem)
+def reoN2 (n : Nat) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r3, m3) => reoN3 r3 (stubM "rom_ci" m3 [1])
+  | some (r3, m3) => reoN3 r3 (callW p n "rom_ci" [1] m3)
 
 /-- `Nat`: after the pin. -/
-def reoN1 (vis : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def reoN1 (n : Nat) (vis : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r2, m2) => reoN2 (envFindW m2 (r2.headD 0) vis)
+  | some (r2, m2) => reoN2 p n (envFindW m2 (r2.headD 0) vis)
 
 /-- After the `reduceNat` pin. -/
-def reoK1 (vis c : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def reoK1 (n : Nat) (vis c : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r1, m1) => if c = r1.headD 0 then reoN1 vis (pinAtW m1 1) else reoB1 vis (pinAtW m1 29)
+  | some (r1, m1) => if c = r1.headD 0 then reoN1 p n vis (pinAtW m1 1) else reoB1 p n vis (pinAtW m1 29)
 
 /-- **The model of `reduce_elem_ok(vis, c)`.** -/
 def reoW : Nat → Mem → Word → Word → Option (List Word × Mem)
   | 0, _, _, _ => none
-  | _ + 1, m, vis, c => reoK1 vis c (pinAtW m 43)
+  | n + 1, m, vis, c => reoK1 p n vis c (pinAtW m 43)
 
 section arms
 variable (n : Nat) (m m1 m2 m3 m4 : Mem) (vis c q : Word) (r1 r2 r3 r4 : List Word)
-theorem reoW_step : reoW (n + 1) m vis c = reoK1 vis c (pinAtW m 43) := rfl
-theorem reoK1_some : reoK1 vis c (some (r1, m1)) =
-    if c = r1.headD 0 then reoN1 vis (pinAtW m1 1) else reoB1 vis (pinAtW m1 29) := rfl
-theorem reoN1_some : reoN1 vis (some (r2, m2)) = reoN2 (envFindW m2 (r2.headD 0) vis) := rfl
-theorem reoN2_some : reoN2 (some (r3, m3)) = reoN3 r3 (stubM "rom_ci" m3 [1]) := rfl
+theorem reoW_step : reoW p (n + 1) m vis c = reoK1 p n vis c (pinAtW m 43) := rfl
+theorem reoK1_some : reoK1 p n vis c (some (r1, m1)) =
+    if c = r1.headD 0 then reoN1 p n vis (pinAtW m1 1) else reoB1 p n vis (pinAtW m1 29) := rfl
+theorem reoN1_some : reoN1 p n vis (some (r2, m2)) = reoN2 p n (envFindW m2 (r2.headD 0) vis) := rfl
+theorem reoN2_some : reoN2 p n (some (r3, m3)) = reoN3 r3 (callW p n "rom_ci" [1] m3) := rfl
 theorem reoN3_some : reoN3 r3 (some (r4, m4)) =
     if r3.headD 0 = 0 then some ([0], m4)
     else some ([if ciEqB (m4.arr64 EREC) (r3.tail.headD 0) (r4.headD 0) then 1 else 0], m4) := rfl
-theorem reoB1_some : reoB1 vis (some (r2, m2)) = reoB2 (envFindW m2 (r2.headD 0) vis) := rfl
-theorem reoB2_some : reoB2 (some (r3, m3)) =
+theorem reoB1_some : reoB1 p n vis (some (r2, m2)) = reoB2 p n (envFindW m2 (r2.headD 0) vis) := rfl
+theorem reoB2_some : reoB2 p n (some (r3, m3)) =
     if r3.headD 0 = 0 then some ([0], m3)
     else if rdW (m3.arr64 EREC) (r3.tail.headD 0) ≠ 3 then some ([0], m3)
-    else reoB3 (r3.tail.headD 0) (stubM "rom_cv" m3 [5]) := rfl
+    else reoB3 (r3.tail.headD 0) (callW p n "rom_cv" [5] m3) := rfl
 theorem reoB3_some : reoB3 q (some (r4, m4)) = mpW m4 (q + 1) (r4.headD 0) := rfl
 end arms
 
-grind_pattern [ind_grind] reoW_step => reoW (n + 1) m vis c
-grind_pattern [ind_grind] reoK1_some => reoK1 vis c (some (r1, m1))
-grind_pattern [ind_grind] reoN1_some => reoN1 vis (some (r2, m2))
-grind_pattern [ind_grind] reoN2_some => reoN2 (some (r3, m3))
+grind_pattern [ind_grind] reoW_step => reoW p (n + 1) m vis c
+grind_pattern [ind_grind] reoK1_some => reoK1 p n vis c (some (r1, m1))
+grind_pattern [ind_grind] reoN1_some => reoN1 p n vis (some (r2, m2))
+grind_pattern [ind_grind] reoN2_some => reoN2 p n (some (r3, m3))
 grind_pattern [ind_grind] reoN3_some => reoN3 r3 (some (r4, m4))
-grind_pattern [ind_grind] reoB1_some => reoB1 vis (some (r2, m2))
-grind_pattern [ind_grind] reoB2_some => reoB2 (some (r3, m3))
+grind_pattern [ind_grind] reoB1_some => reoB1 p n vis (some (r2, m2))
+grind_pattern [ind_grind] reoB2_some => reoB2 p n (some (r3, m3))
 grind_pattern [ind_grind] reoB3_some => reoB3 q (some (r4, m4))
 
 set_option maxHeartbeats 1600000 in
 theorem reo_specW (h : RedProg p) (n : Nat) (s₀ : St) (vis c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "reduce_elem_ok" [vis, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ reoW n s₀.mem vis c = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ reoW p n s₀.mem vis c = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.reo]
   simp only [callFn, reduceElemOkL]
   cases n with
@@ -360,16 +361,16 @@ theorem reo_specW (h : RedProg p) (n : Nat) (s₀ : St) (vis c : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, pinAt_specW p h.pa n,
-        envFind_specW p h.ih.ix h.ih.rowGet h.ih.find n, stubM_spec p "rom_ci" n,
-        stubM_spec p "rom_cv" n, ciEq_spec' p h.canon n, mp_specW p h.canon h.mp n] <;>
+        envFind_specW p h.ih.ix h.ih.rowGet h.ih.find n, callW_spec p n "rom_ci",
+        callW_spec p n "rom_cv", ciEq_spec' p h.canon n, mp_specW p h.canon h.mp n] <;>
       finish (gen := 20) [rdW_eq, mpW]
 
 end reo
 
 /-- **`reduce_elem_ok(vis, c)` refines `reduceElemOk`** at the model level. -/
-theorem reoW_ok {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis : Word}
+theorem reoW_ok {p : Prog} {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) (hR : L.Rom.RomRefs p) {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {c : Word} {r : List Word}
-    (hW : reoW n m vis c = some (r, m')) (hS : StageR dn vis fe m a) (hc : c.toNat < 2 ^ 32) :
+    (hW : reoW p n m vis c = some (r, m')) (hS : StageR dn vis fe m a) (hc : c.toNat < 2 ^ 32) :
     ∃ b a', (reduceElemOk fe (decI c)).run a = .ok (b, a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' ∧ decW0B m' r b := by
   cases n with
@@ -403,7 +404,7 @@ theorem reoW_ok {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis : Wor
     | some rm3 =>
     obtain ⟨r3, m3⟩ := rm3
     rw [h3, reoN2_some] at hW
-    cases h4 : stubM "rom_ci" m3 [1] with
+    cases h4 : callW p n "rom_ci" [1] m3 with
     | none => rw [h4] at hW; cases hW
     | some rm4 =>
     obtain ⟨r4, m4⟩ := rm4
@@ -412,7 +413,7 @@ theorem reoW_ok {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis : Wor
       unfold envFindW at h3; split at h3 <;> (try split at h3) <;> (try split at h3) <;>
         simp_all
     subst hfm3
-    obtain ⟨na, a4, hrun4, hS4, hg4, hna⟩ := romCi_spec dn vis fe 1 (by decide) _ m4 a r4 h4 hS
+    obtain ⟨na, a4, hrun4, hS4, hg4, hna⟩ := hR.ci dn vis fe 1 (by decide) n _ a r4 m4 hS h4
     have hrun4' : ConRon.Arena.natA.run a = .ok (na, a4) := hrun4
     have htwin : (reduceElemOk fe (decI c)).run a =
         .ok (fe.find? (decI (pinW m3 (1 + (1 : Word).toNat))) == some na, a4) := by
@@ -493,12 +494,12 @@ theorem reoW_ok {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis : Wor
       | _ => rfl
     rw [if_neg hk] at hW
     obtain ⟨cvB, caps, hcvB, rfl⟩ := hk3 (by simpa using hk)
-    cases h4 : stubM "rom_cv" m3 [5] with
+    cases h4 : callW p n "rom_cv" [5] m3 with
     | none => rw [h4] at hW; cases hW
     | some rm4 =>
     obtain ⟨r4, m4⟩ := rm4
     rw [h4, reoB3_some] at hW
-    obtain ⟨pin, a4, hrun4, hS4, hg4, hpin⟩ := romCv_spec dn vis fe 5 (by decide) _ m4 a r4 h4 hS
+    obtain ⟨pin, a4, hrun4, hS4, hg4, hpin⟩ := hR.cv dn vis fe 5 (by decide) n _ a r4 m4 hS h4
     have hrun4' : boolCvA.run a = .ok (pin, a4) := hrun4
     have hq1b : q.toNat + 1 < 2 ^ 64 := by
       obtain ⟨w, hw, -, -⟩ := decCV_typeW hcvB
@@ -523,7 +524,7 @@ theorem reduceElemOk_refines (p : Prog) (h : RedProg p) (dn : NIdx → Option Co
   intro n s₀ a₀ hS
   refine triple_post (reo_specW p h n s₀ vis c) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨b, a', hrun, hS', hg, hd⟩ := reoW_ok hdn hm hS hc
+  obtain ⟨b, a', hrun, hS', hg, hd⟩ := reoW_ok hdn h.rom hm hS hc
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst, hres]; exact ⟨hS', hg, hd⟩⟩
 

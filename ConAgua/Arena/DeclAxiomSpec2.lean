@@ -37,34 +37,34 @@ def fpcK2 (q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | some (r2, m2) => mpW m2 (q + 1) (r2.headD 0)
 
 /-- After the lookup: the shape tests. -/
-def fpcK1 (k id : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def fpcK1 (n : Nat) (k id : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r1, m1) =>
     if r1.headD 0 = 0 then some ([0], m1)
     else if rdW (m1.arr64 EREC) (r1.tail.headD 0) ≠ k then some ([0], m1)
     else if k = 4 ∧ (rdW (m1.arr64 EREC) (r1.tail.headD 0 + 5) ≠ 0 ∨
         rdW (m1.arr64 EREC) (r1.tail.headD 0 + 6) ≠ 0) then some ([0], m1)
-    else fpcK2 (r1.tail.headD 0) (stubM "rom_cv" m1 [id])
+    else fpcK2 (r1.tail.headD 0) (callW p n "rom_cv" [id] m1)
 
 /-- **The model of `find_pinned_cv(vis, n, k, id)`.** -/
 def fpcW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _ => none
-  | _ + 1, m, vis, nm, k, id => fpcK1 k id (envFindW m nm vis)
+  | n + 1, m, vis, nm, k, id => fpcK1 p n k id (envFindW m nm vis)
 
 section arms
 variable (n : Nat) (m m1 m2 : Mem) (vis nm k id q : Word) (r1 r2 : List Word)
-theorem fpcW_step : fpcW (n + 1) m vis nm k id = fpcK1 k id (envFindW m nm vis) := rfl
-theorem fpcK1_some : fpcK1 k id (some (r1, m1)) =
+theorem fpcW_step : fpcW p (n + 1) m vis nm k id = fpcK1 p n k id (envFindW m nm vis) := rfl
+theorem fpcK1_some : fpcK1 p n k id (some (r1, m1)) =
     if r1.headD 0 = 0 then some ([0], m1)
     else if rdW (m1.arr64 EREC) (r1.tail.headD 0) ≠ k then some ([0], m1)
     else if k = 4 ∧ (rdW (m1.arr64 EREC) (r1.tail.headD 0 + 5) ≠ 0 ∨
         rdW (m1.arr64 EREC) (r1.tail.headD 0 + 6) ≠ 0) then some ([0], m1)
-    else fpcK2 (r1.tail.headD 0) (stubM "rom_cv" m1 [id]) := rfl
+    else fpcK2 (r1.tail.headD 0) (callW p n "rom_cv" [id] m1) := rfl
 theorem fpcK2_some : fpcK2 q (some (r2, m2)) = mpW m2 (q + 1) (r2.headD 0) := rfl
 end arms
 
-grind_pattern [ind_grind] fpcW_step => fpcW (n + 1) m vis nm k id
-grind_pattern [ind_grind] fpcK1_some => fpcK1 k id (some (r1, m1))
+grind_pattern [ind_grind] fpcW_step => fpcW p (n + 1) m vis nm k id
+grind_pattern [ind_grind] fpcK1_some => fpcK1 p n k id (some (r1, m1))
 grind_pattern [ind_grind] fpcK2_some => fpcK2 q (some (r2, m2))
 
 /-- The lookups of the compiler-trust family. -/
@@ -76,7 +76,7 @@ structure TcoProg (p : Prog) : Prop where
 set_option maxHeartbeats 1600000 in
 theorem fpc_specW (h : TcoProg p) (n : Nat) (s₀ : St) (vis nm k id : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "find_pinned_cv" [vis, nm, k, id]
-    ⦃fun r s' => LocEq s' s₀ ∧ fpcW n s₀.mem vis nm k id = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ fpcW p n s₀.mem vis nm k id = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.fpc]
   simp only [callFn, findPinnedCv]
   cases n with
@@ -84,7 +84,7 @@ theorem fpc_specW (h : TcoProg p) (n : Nat) (s₀ : St) (vis nm k id : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        envFind_specW p h.red.ih.ix h.red.ih.rowGet h.red.ih.find n, stubM_spec p "rom_cv" n,
+        envFind_specW p h.red.ih.ix h.red.ih.rowGet h.red.ih.find n, callW_spec p n "rom_cv",
         mp_specW p h.red.canon h.red.mp n] <;>
       finish (gen := 20) [rdW_eq, mpW]
 
@@ -184,9 +184,9 @@ def FpcT (fe : IFEnv) (nm : NIdx) (k : Word) (T : AM IConstantVal) (a : AState) 
     (fun cvT => (do let pin ← T; pure (decide (cvT = pin)) : AM Bool).run a = .ok (b, a'))
 
 /-- **`find_pinned_cv` against the twin's clause**, at the model level. -/
-theorem fpcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
-    {n : Nat} {m m' : Mem} {nm k id : Word} {r : List Word}
-    (hW : fpcW n m vis nm k id = some (r, m')) (hS : StageR dn vis fe m a)
+theorem fpcW_ok {p : Prog} (hR : L.Rom.RomRefs p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+    {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {nm k id : Word} {r : List Word}
+    (hW : fpcW p n m vis nm k id = some (r, m')) (hS : StageR dn vis fe m a)
     (hnm : nm.toNat < 2 ^ 32) (hk : k = 3 ∨ k = 4) (hid : id.toNat < 10) :
     ∃ b a', StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decW0B m' r b ∧
       FpcT fe (decI nm) k (romCvT id.toNat) a b a' := by
@@ -237,12 +237,12 @@ theorem fpcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   obtain ⟨cvT, hshape, -⟩ := fpc_pass hsz hk hciA hkw hc
   have hcvP := fpcShape_cv hci hshape
   -- the pin
-  cases h2 : stubM "rom_cv" m1 [id] with
+  cases h2 : callW p n "rom_cv" [id] m1 with
   | none => rw [h2] at hW; cases hW
   | some rm2 =>
   obtain ⟨r2, m2⟩ := rm2
   rw [h2, fpcK2_some] at hW
-  obtain ⟨pin, a2, hrun2, hS2, hg2, hpin⟩ := romCv_spec dn vis fe id hid m1 m2 a r2 h2 hS
+  obtain ⟨pin, a2, hrun2, hS2, hg2, hpin⟩ := hR.cv dn vis fe id hid n m1 a r2 m2 hS h2
   have hq1b : q.toNat + 1 < 2 ^ 64 := by
     obtain ⟨w, hw, -, -⟩ := decCV_typeW hcvP
     have := erecP_bound hw hS.2; omega
@@ -268,14 +268,14 @@ def tcoK5 (q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | some (r5, m5) => mpW m5 q (r5.headD 0)
 
 /-- After the `True.intro` clause. -/
-def tcoK4 (q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def tcoK4 (n : Nat) (q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r4, m4) => if r4.headD 0 = 0 then some ([0], m4) else tcoK5 q (stubM "rom_cv" m4 [4])
+  | some (r4, m4) => if r4.headD 0 = 0 then some ([0], m4) else tcoK5 q (callW p n "rom_cv" [4] m4)
 
 /-- After the `True.intro` pin. -/
 def tcoK3 (n : Nat) (vis q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r3, m3) => tcoK4 q (callW p n "find_pinned_cv" [vis, r3.headD 0, 4, 3] m3)
+  | some (r3, m3) => tcoK4 p n q (callW p n "find_pinned_cv" [vis, r3.headD 0, 4, 3] m3)
 
 /-- After the `True` clause. -/
 def tcoK2 (n : Nat) (vis q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -300,9 +300,9 @@ theorem tcoK1_some : tcoK1 p n vis q (some (r1, m1)) =
 theorem tcoK2_some : tcoK2 p n vis q (some (r2, m2)) =
     if r2.headD 0 = 0 then some ([0], m2) else tcoK3 p n vis q (pinAtW m2 41) := rfl
 theorem tcoK3_some : tcoK3 p n vis q (some (r3, m3)) =
-    tcoK4 q (callW p n "find_pinned_cv" [vis, r3.headD 0, 4, 3] m3) := rfl
-theorem tcoK4_some : tcoK4 q (some (r4, m4)) =
-    if r4.headD 0 = 0 then some ([0], m4) else tcoK5 q (stubM "rom_cv" m4 [4]) := rfl
+    tcoK4 p n q (callW p n "find_pinned_cv" [vis, r3.headD 0, 4, 3] m3) := rfl
+theorem tcoK4_some : tcoK4 p n q (some (r4, m4)) =
+    if r4.headD 0 = 0 then some ([0], m4) else tcoK5 q (callW p n "rom_cv" [4] m4) := rfl
 theorem tcoK5_some : tcoK5 q (some (r5, m5)) = mpW m5 q (r5.headD 0) := rfl
 end arms
 
@@ -310,7 +310,7 @@ grind_pattern [ind_grind] tcoW_step => tcoW p (n + 1) m vis q
 grind_pattern [ind_grind] tcoK1_some => tcoK1 p n vis q (some (r1, m1))
 grind_pattern [ind_grind] tcoK2_some => tcoK2 p n vis q (some (r2, m2))
 grind_pattern [ind_grind] tcoK3_some => tcoK3 p n vis q (some (r3, m3))
-grind_pattern [ind_grind] tcoK4_some => tcoK4 q (some (r4, m4))
+grind_pattern [ind_grind] tcoK4_some => tcoK4 p n q (some (r4, m4))
 grind_pattern [ind_grind] tcoK5_some => tcoK5 q (some (r5, m5))
 
 set_option maxHeartbeats 1600000 in
@@ -324,7 +324,7 @@ theorem tco_specW (h : TcoProg p) (n : Nat) (s₀ : St) (vis q : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, pinAt_specW p h.red.pa n,
-        callW_spec p n "find_pinned_cv", stubM_spec p "rom_cv" n,
+        callW_spec p n "find_pinned_cv", callW_spec p n "rom_cv",
         mp_specW p h.red.canon h.red.mp n] <;>
       finish (gen := 20) [mpW]
 
@@ -398,7 +398,7 @@ theorem fpc_call {p : Prog} (h : TcoProg p) {dn : NIdx → Option ConLeche.Name}
   obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (fpc_specW p h n ⟨m, Locals.init []⟩ vis nm k id) hc
   rw [hs'] at hW
-  obtain ⟨b, a', hS', hg, hd, hF⟩ := fpcW_ok hW hS hnm hk hid
+  obtain ⟨b, a', hS', hg, hd, hF⟩ := fpcW_ok h.red.rom hW hS hnm hk hid
   exact ⟨b, a', clauseT_of_fpc hF, hS', hg, hd⟩
 
 /-- **`trust_compiler_ok(vis, q)` refines `trustCompilerOk`** at the model level. -/
@@ -472,12 +472,12 @@ theorem tcoW_ok {p : Prog} (h : TcoProg p) {dn : NIdx → Option ConLeche.Name} 
   have hb4 : b4 = true := by rw [← hd4.1]; simpa using e4
   simp only [hb4, Bool.not_true, Bool.false_eq_true, if_false]
   -- the axiom's pin
-  cases h5 : stubM "rom_cv" m4 [4] with
+  cases h5 : callW p n "rom_cv" [4] m4 with
   | none => rw [h5] at hW; cases hW
   | some rm5 =>
   obtain ⟨r5, m5⟩ := rm5
   rw [h5, tcoK5_some] at hW
-  obtain ⟨pin, a5, hrun5, hS5, hg5, hpin⟩ := romCv_spec dn vis fe 4 (by decide) m4 m5 a4 r5 h5 hS4
+  obtain ⟨pin, a5, hrun5, hS5, hg5, hpin⟩ := h.red.rom.cv dn vis fe 4 (by decide) n m4 a4 r5 m5 hS4 h5
   have hrun5' : trustCompilerA.run a4 = .ok (pin, a5) := hrun5
   have hg := hg2.trans (hg4.trans hg5)
   have hq5 : decCV (erA m5) q.toNat = some cv := ArrExt.decCV (IWGrow.erecExt hg) hq
