@@ -37,7 +37,7 @@ structure LazyCallees (p : Prog) : Prop where
   hasFvar : HasFvarOK p
   natPred : NatPredW p
   unfold : UnfoldDefOK p
-  reduceNat : ∀ n, ReduceNatSpec p n
+  reduceNat : ∀ n, n ≤ 2 ^ 62 → ReduceNatSpec p n
   store : StoreDenotes
 
 /-- The lookups of this file. -/

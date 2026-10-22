@@ -26,8 +26,8 @@ git -C "$root" worktree add "$wt_path" "$rev"
 
 abs_wt="$root/$wt_path"
 
-# Share _tmp/ (and with it _tmp/lake-cache) with the main tree, so
-# scripts/lake's `git rev-parse --show-toplevel`/_tmp/lake-cache resolves to
+# Share _tmp/ (and with it _tmp/lake-cache-v2) with the main tree, so
+# scripts/lake's `git rev-parse --show-toplevel`/_tmp/lake-cache-v2 resolves to
 # the one shared cache from inside the worktree too.
 if [[ ! -e "$abs_wt/_tmp" ]]; then
   ln -s "$root/_tmp" "$abs_wt/_tmp"

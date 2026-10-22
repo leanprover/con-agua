@@ -264,7 +264,7 @@ theorem ldpr_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (mode vis 
 /-- **The loop's model refines `lazyDeltaProjReduction`** at every twin loop fuel `K + 1 ≥ k`. -/
 theorem ldprW_ok (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat) (hk : KnotUpTo p n)
     (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (mode d sn i : Word) (hmode : mode < 4) (hsn : HW sn) :
+    (fe : IFEnv) (mode d sn i : Word) (hmode : mode < 4) (hsn : HW sn) (hd : d.toNat < 2 ^ 63) :
     ∀ k, k ≤ n + 1 → ∀ K, k ≤ K + 1 → ∀ (m m' : Mem) (a : AState) (MM : ModeMaps) (eb x y v : Word),
       CoreS dn m a vis fe MM eb → eb = (mode >>> 1) &&& 1 → HW x → HW y →
       ldprW p k m mode vis d sn i x y = some (v, m') →
@@ -286,7 +286,7 @@ theorem ldprW_ok (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat) (
     | succ j =>
     obtain ⟨K', rfl⟩ : ∃ K', K = K' + 1 := ⟨K - 1, by omega⟩
     have hstep := hc.lazyDeltaStep j (hk.mono (by omega)) F (by omega) (by omega)
-      ⟨m, Locals.init []⟩ a dn vis fe MM eb mode d x y ⟨hS, hmode, heb⟩ hx hy
+      ⟨m, Locals.init []⟩ a dn vis fe MM eb mode d x y ⟨hS, hmode, heb⟩ hx hy hd
     obtain ⟨hok, hA, hres, hrw⟩ := CoreSpec.of_callW hstep hcl
     have hsr := AM.run_of_ok _ _ hok
     rw [hres] at hsr
@@ -326,7 +326,7 @@ theorem ldpr_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Na
     (hk : KnotUpTo p n) (F K : Nat) (hF : n ≤ F) (hK : n ≤ K) (hn : n ≤ 2 ^ 62) (s₀ : St)
     (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb mode d sn i a b : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hsn : HW sn) (ha : HW a)
-    (hb : HW b) :
+    (hb : HW b) (hd : d.toNat < 2 ^ 63) :
     CoreSpec p (n + 1) "lazy_delta_proj_reduction" [mode, vis, d, sn, i, a, b]
       (lazyDeltaProjReduction (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn)
         i.toNat K (decE a) (decE b)) decBool s₀ a₀ dn vis fe M eb := by
@@ -336,7 +336,7 @@ theorem ldpr_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Na
     (ldpr_spec p hq n s₀ mode vis d sn i a b)
   subst hs0
   refine ⟨hloc, ?_⟩
-  obtain ⟨hok, hA, hres, hrw⟩ := ldprW_ok p hq hc n hk F hF hn dn vis fe mode d sn i hs.mode4 hsn
+  obtain ⟨hok, hA, hres, hrw⟩ := ldprW_ok p hq hc n hk F hF hn dn vis fe mode d sn i hs.mode4 hsn hd
     (n + 1) (Nat.le_refl _) K (by omega) s.mem s'.mem a₀ M eb a b (r.headD 0) hs.rel hs.eb_mode ha hb hW
   exact ⟨hok, hA, hres.trans (by simp [decBool]), hrw⟩
 
@@ -399,21 +399,23 @@ theorem ldpr_at (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) :
     ∀ (n : Nat), KnotUpTo p n → ∀ (F K : Nat), n ≤ F → n ≤ K + 1 → n ≤ 2 ^ 62 → ∀ (s₀ : St)
       (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
       (eb mode d sn i a b : Word), SlotPre s₀ a₀ dn vis fe M eb mode → HW sn → HW a → HW b →
+      d.toNat < 2 ^ 63 →
       CoreSpec p n "lazy_delta_proj_reduction" [mode, vis, d, sn, i, a, b]
         (lazyDeltaProjReduction (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn)
           i.toNat K (decE a) (decE b)) decBool s₀ a₀ dn vis fe M eb
-  | 0, _, _, _, _, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _, _ =>
+  | 0, _, _, _, _, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _, _, _ =>
       CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
-  | n + 1, hk, F, K, hF, hK, hn, s₀, a₀, dn, vis, fe, M, eb, mode, d, sn, i, a, b, hs, h1, h2, h3 =>
+  | n + 1, hk, F, K, hF, hK, hn, s₀, a₀, dn, vis, fe, M, eb, mode, d, sn, i, a, b, hs, h1, h2, h3, hd =>
       ldpr_refines p hq hc n (hk.mono (by omega)) F K (by omega) (by omega) (by omega) s₀ a₀ dn vis fe
-        M eb mode d sn i a b hs h1 h2 h3
+        M eb mode d sn i a b hs h1 h2 h3 hd
 
 /-- **`defeq_proj_pair` refines `defeqProjPair`** at the knot. -/
 @[refines ConRon.Arena.defeqProjPair]
 theorem projPair_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
     (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word) (hF : n ≤ F)
-    (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
+    (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b)
+    (hd : d.toNat < 2 ^ 63) :
     CoreSpec p (n + 1) "defeq_proj_pair" [mode, vis, d, a, b]
       (defeqProjPair (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b))
       decBool s₀ a₀ dn vis fe M eb := by
@@ -495,6 +497,6 @@ theorem projPair_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n 
   simp only [beq_self_eq_true, Bool.and_self, ↓reduceIte]
   exact CoreSpec.of_call1W (s₀ := ⟨s.mem, Locals.init []⟩)
     (ldpr_at p hq hc n hk F defeqLoopFuel hF (by unfold defeqLoopFuel; omega) hn _ a₀ dn vis fe M eb
-      mode d x1 x2 x3 y3 ⟨hS, hs.mode4, hs.eb_mode⟩ hx1 hx3 hy3) (fun r r' h => by simp only [decBool, h]) hW
+      mode d x1 x2 x3 y3 ⟨hS, hs.mode4, hs.eb_mode⟩ hx1 hx3 hy3 hd) (fun r r' h => by simp only [decBool, h]) hW
 
 end L.Arena
