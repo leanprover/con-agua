@@ -189,40 +189,25 @@ theorem rec2W_inj {a b : Nat} (ha : a < 2 ^ 64) (hb : b < 2 ^ 64)
 
 theorem rec2W_add (a b : Nat) (ha : a < 2 ^ 64) (hb : b < 2 ^ 64) :
     ((UInt64.ofNat a + UInt64.ofNat b : Word)).toNat = (a + b) % 2 ^ 64 := by
-  rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' ha, UInt64.toNat_ofNat_of_lt' hb]; rfl
-
-/-- The twin's guards of `classRecTyOk`. -/
-def rec2RtoGuards (g : ClassGen) (k : Nat) (rc : RecShape) (c : Nat) : AM Unit := do
-  let ci ← ConRon.Arena.targetMajorAt g.cls c
-  unless rc.tgt == ci.member.getD k do
-    fail (.invalid "generated recursor: the recursor record's member is not its class's")
-  unless rc.rP == g.nP + g.slots.length && rc.mI == rc.rP + ci.nIdx do
-    fail (.invalid "generated recursor: the recursor record's rule prefix or major index is \
-      not the generated one")
-
-theorem rec2RecTyOk_eq (fe : IFEnv) (g : ClassGen) (k : Nat) (rc : RecShape) (cvRi : IConstantVal)
-    (c : Nat) : ConRon.Arena.classRecTyOk V fe g k rc cvRi c = (do
-    rec2RtoGuards g k rc c
-    match ← ConRon.Arena.classGenRecTy g c with
-    | none => fail (.internal "generated recursor: recursor type")
-    | some gty => do
-      let cvG : IConstantVal := ⟨rc.cvR.name, rc.cvR.levelParams, gty⟩
-      ConRon.Arena.classConstOk V fe cvG
-      if ← isDefEqCore V fe checkFuel 0 cvRi.type cvG.type then pure cvG
-      else fail (.invalid "generated recursor: the type of  is not the generated one \
-        (official: invalid recursor)")) := rfl
+  rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' ha, UInt64.toNat_ofNat_of_lt' hb]
 
 section sims
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
 
-theorem rgW_sim (n : Nat) (m : Mem) (a : AState) (g k rc c : Word) (G : ClassGen) (RS : RecShape)
-    (hS : StageR dn vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G)
-    (hns : G.nP + G.slots.length < 2 ^ 64) (hrc : DecB (fun m => decRS m rc.toNat) m RS) :
-    RSim (rgW n m g k rc c) (rec2RtoGuards G k.toNat RS c.toNat) a
-      (fun b a' _ => StageR dn vis fe b.2 a' ∧ IWGrow m b.2) := by
-  cases n with
-  | zero => exact RSim.none
-  | succ n =>
+theorem rgW_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g k rc c : Word) (G : ClassGen)
+    (RS : RecShape) (hS : StageR dn vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G)
+    (hns : G.nP + G.slots.length < 2 ^ 64) (hrc : DecB (fun m => decRS m rc.toNat) m RS)
+    (K : Option (List Word × Mem) → Option β) (hK : K none = none) (rest : AM γ)
+    (Q : β → AState → γ → Prop)
+    (hrest : ∀ m1 a1, StageR dn vis fe m1 a1 → IWGrow m m1 → RSim (K (some ([0], m1))) rest a1 Q) :
+    RSim (K (rgW (n + 1) m g k rc c)) (do
+      let ci ← ConRon.Arena.targetMajorAt G.cls c.toNat
+      unless RS.tgt == ci.member.getD k.toNat do
+        fail (.invalid "generated recursor: the recursor record's member is not its class's")
+      unless RS.rP == G.nP + G.slots.length && RS.mI == RS.rP + ci.nIdx do
+        fail (.invalid "generated recursor: the recursor record's rule prefix or major index is \
+          not the generated one")
+      rest) a Q := by
   rw [rgW_eq]
   have hsz := hS.2.2.2.1
   have htop := hS.2.1
@@ -235,14 +220,28 @@ theorem rgW_sim (n : Nat) (m : Mem) (a : AState) (g k rc c : Word) (G : ClassGen
     by_cases hl : l3 = 0
     · have := iwN_rdW h3 (by omega); omega
     · have := rec2DecB_PL_top hcls hl; omega
-  unfold rec2RtoGuards
-  refine RSim.bind (K := rgK g k rc) rfl (rec2SimTMA dn vis fe n m a _ _ c G.cls hS
+  refine RSim.bind (K := fun o => K (rgK g k rc o)) hK (rec2SimTMA dn vis fe n m a _ _ c G.cls hS
     (by rw [t3, t4]; exact hcls) (by rw [t3, t4]; exact hb3)) ?_
   rintro ⟨r1, m1⟩ tm a1 - ⟨hS1, hg1, hTM, -⟩
   dsimp only at hS1 hg1 hTM
-  intro b hb
+  cases hr : rgK g k rc (some (r1, m1)) with
+  | none => rw [hK]; exact RSim.none
+  | some b =>
+  have hb := hr
   simp only [rgK] at hb
-  split_ifs at hb with c1 c2 c3 c4
+  by_cases c1 : rdW (m1.arr64 IW) (rc + 3) ≠ (if rdW (m1.arr64 IW) (r1.headD 0 + 8) ≠ 0
+      then rdW (m1.arr64 IW) (r1.headD 0 + 8) - 1 else k)
+  · rw [if_pos c1] at hb; cases hb
+  rw [if_neg c1] at hb
+  by_cases c2 : rdW (m1.arr64 IW) (rc + 1) ≠ rdW (m1.arr64 IW) g + rdW (m1.arr64 IW) (g + 8)
+  · rw [if_pos c2] at hb; cases hb
+  rw [if_neg c2] at hb
+  by_cases c3 : rdW (m1.arr64 IW) (rc + 1) + rdW (m1.arr64 IW) (r1.headD 0 + 5) < rdW (m1.arr64 IW) (rc + 1)
+  · rw [if_pos c3] at hb; cases hb
+  rw [if_neg c3] at hb
+  by_cases c4 : rdW (m1.arr64 IW) (rc + 2) ≠ rdW (m1.arr64 IW) (rc + 1) + rdW (m1.arr64 IW) (r1.headD 0 + 5)
+  · rw [if_pos c4] at hb; cases hb
+  rw [if_neg c4] at hb
   cases hb
   have hsz1 := hS1.2.2.2.1
   obtain ⟨k8, hk8, hmem⟩ := decTM_member hTM
@@ -252,7 +251,7 @@ theorem rgW_sim (n : Nat) (m : Mem) (a : AState) (g k rc c : Word) (G : ClassGen
   have k8lt := (iwN_rdW_at (w := r1.headD 0) (k := 8) hk8 hsz1).2
   have nilt := (iwN_rdW_at (w := r1.headD 0) (k := 5) hni hsz1).2
   simp only [show UInt64.ofNat 8 = (8 : Word) from rfl, show UInt64.ofNat 5 = (5 : Word) from rfl] at e8 e5
-  obtain ⟨-, -, hrP, hmI, htgt⟩ := rec2DecRS_parts (hrc.stab (decRS_mono _) m1 hg1)
+  obtain ⟨-, -, -, hrP, hmI, htgt⟩ := rec2DecRS_parts (hrc.stab (decRS_mono _) m1 hg1)
   obtain ⟨eP, -⟩ := rec2RdN (w := rc) (k := 1) hrP hsz1
   obtain ⟨eI, -⟩ := rec2RdN (w := rc) (k := 2) hmI hsz1
   obtain ⟨eT, -⟩ := rec2RdN (w := rc) (k := 3) htgt hsz1
@@ -269,51 +268,50 @@ theorem rgW_sim (n : Nat) (m : Mem) (a : AState) (g k rc c : Word) (G : ClassGen
   have nPlt := (iwN_rdW_at (w := g) (k := 0) (by simpa using hnP) hsz1).2
   simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero,
     show UInt64.ofNat 8 = (8 : Word) from rfl] at eg eg8
-  rw [eT, e8, eP, eg, eg8, e5, eI] at *
+  rw [eT, e8] at c1
+  rw [eP, eg, eg8] at c2
+  rw [eP, e5] at c3
+  rw [eI, eP, e5] at c4
+  have sllt := (iwN_rdW_at (w := g) (k := 8) (by simpa [Nat.add_assoc] using hsl') hsz1).2
   -- the member guard
   have g1 : (RS.tgt == tm.member.getD k.toNat) = true := by
     rw [hmem]; simp only [decON]
     by_cases hz : k8 = 0
     · subst hz
-      simp only [show (UInt64.ofNat 0 : Word) = 0 from rfl, ne_eq, not_true_eq_false, if_false] at c1
+      simp only [show (UInt64.ofNat 0 : Word) = 0 from rfl, ne_eq, not_true_eq_false, if_false,
+        Decidable.not_not] at c1
       have : RS.tgt = k.toNat := by
-        have := congrArg UInt64.toNat (not_not.mp c1)
+        have := congrArg UInt64.toNat c1
         rwa [UInt64.toNat_ofNat_of_lt' tglt] at this
       simp [this]
     · have hz' : (UInt64.ofNat k8 : Word) ≠ 0 := fun e => hz (rec2W_inj k8lt (by decide) e)
-      simp only [hz', ne_eq, not_false_eq_true, if_true] at c1
+      simp only [hz', ne_eq, not_false_eq_true, if_true, Decidable.not_not] at c1
       have e1 : (UInt64.ofNat k8 - 1 : Word) = UInt64.ofNat (k8 - 1) := by
-        apply UInt64.toNat_inj.mp
-        rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by
-          rw [UInt64.toNat_ofNat_of_lt' k8lt]; simp; omega)), UInt64.toNat_ofNat_of_lt' k8lt,
-          UInt64.toNat_ofNat_of_lt' (by omega)]; simp
+        obtain ⟨j, rfl⟩ : ∃ j, k8 = j + 1 := ⟨k8 - 1, by omega⟩
+        simp [UInt64.ofNat_add]
       rw [e1] at c1
-      have := rec2W_inj tglt (by omega) (not_not.mp c1)
+      have := rec2W_inj tglt (by omega) c1
       simp [hz, this]
   -- the prefix and major index guards
   have hsl8 : sl = G.slots.length := hlen.symm
-  have c2' := not_not.mp c2
+  have c2' := Decidable.of_not_not c2
   have hrPe : RS.rP = G.nP + G.slots.length := by
     have := congrArg UInt64.toNat c2'
-    rw [UInt64.toNat_ofNat_of_lt' rPlt, rec2W_add _ _ nPlt (by omega), ← hsl8] at this
-    rw [this, Nat.mod_eq_of_lt (by omega)]
+    rw [UInt64.toNat_ofNat_of_lt' rPlt, rec2W_add _ _ nPlt sllt, hsl8] at this
+    rw [this, Nat.mod_eq_of_lt hns]
   have hno : RS.rP + tm.nIdx < 2 ^ 64 := by
     have : ¬ (UInt64.ofNat RS.rP + UInt64.ofNat tm.nIdx : Word).toNat < (UInt64.ofNat RS.rP : Word).toNat :=
       fun x => c3 (UInt64.lt_iff_toNat_lt.mpr x)
     rw [rec2W_add _ _ rPlt nilt, UInt64.toNat_ofNat_of_lt' rPlt] at this
-    by_contra hc
-    have : (RS.rP + tm.nIdx) % 2 ^ 64 = RS.rP + tm.nIdx - 2 ^ 64 := by
-      rw [Nat.mod_eq_sub_mod (by omega), Nat.mod_eq_of_lt (by omega)]
     omega
   have hmIe : RS.mI = RS.rP + tm.nIdx := by
-    have := congrArg UInt64.toNat (not_not.mp c4)
+    have := congrArg UInt64.toNat (Decidable.of_not_not c4)
     rw [UInt64.toNat_ofNat_of_lt' mIlt, rec2W_add _ _ rPlt nilt, Nat.mod_eq_of_lt hno] at this
     exact this
   have g2 : (RS.rP == G.nP + G.slots.length && RS.mI == RS.rP + tm.nIdx) = true := by
     simp [hrPe, hmIe]
-  refine ⟨(), a1, ?_, hS1, hg1⟩
-  simp only [g1, g2]
-  rfl
+  simp only [g1, g2, if_true, ite_true, pure_bind]
+  exact hrest m1 a1 hS1 hg1
 
 end sims
 
