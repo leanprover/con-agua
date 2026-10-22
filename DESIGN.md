@@ -7945,3 +7945,28 @@ child dangled when it was interned (no `StoreWF` needed).
 * `CapsNeverZeroCore.lean`: `CoreS.frame_lhs` (a writer of `LH`/`SPN` keeps `CoreS`),
   `StackKept.of_lhsFrame`, and the proof. `KnotAllProg` gained `caps : LvSubProg p`;
   `KnotCallees` has 2 fields left (`instLP`, `recFireLevels`, both whnf4's).
+
+### Helper `decls4-andpin`: `and_pin_ok`'s inductive arm refines `andPinOk`
+
+* `DeclAndPinInd.lean`: `and_block_named` (`andBlockNamed_specW`, model `abnW`) and `abnW_eq`: it is
+  `blockAndNamed (andHs m) block` on the block the front's record decodes to (`IndDeclAt`'s cut
+  pool `trunc`), `andHs` the three pin words `andPinNameHs` reads (`andPinNameHs_runW`).
+* `DeclAndPinIndDec.lean`: `FrontCI`/`FrontBlock` (an inductive with empty `all`/`ctors` and a
+  name-free `sortZ`, a constructor, a recursor with plain rules: what `installIndD` pushes) and
+  `decCI_reloc`: a relocated copy (word `2` the level parameters, word `7` a recursor's rules, every
+  other word shifted, `ShR`) decodes to the same constant at any name decoder. The copy keeps a
+  record's other slices as they are, so it is only right for front-shaped constants.
+* `DeclAndPinIndCopy.lean`/`Copy2.lean`: word models and specs of `dind_copy`, `ind_rec_copy`,
+  `ind_copy_go`, `ind_block_to_erec`; `EW W m m'` (an `EREC` writer changing below the old top only
+  `W`); `indBlockToErec_ok`: `StageR` kept, `IWGrow`, frame `[EREC] [129]`, the result an `EREC`
+  slice decoding (`decCIs`, `erecP`) to the block. Robust record decodings (`RecOK`: in every array
+  agreeing on the record's words) survive the later slot writes.
+* **L change**: `dind_copy` aborts on a non-empty source at word `0` (the pool's top word, never a
+  record's or a slice's place; `IndDeclAt`'s `trunc` reads it as `0`). Only non-front data hits it.
+* `DeclAndPinIndRef.lean`: `apW` (all of `and_pin_ok`), `apW_ind_ok`, `andPinOkInd_refines`
+  (`RefAM … (andPinOk (.indDecl block nP)) (KeepPost … decW0B)`, pre `StageR ∧ IndDeclAt ∧
+  FrontBlock ∧ StateOK ∧` `DECL`/`DLP` below `2^63`), `andPinOkF_refines` (every `DeclAtF`
+  record; `basisDecl` has no front record). Hypotheses: `RomAndPinRef p dn vis fe` (helper
+  `decls4-rom`), `AndPinIndProg p` (lookups, `CanonProg`). Both tagged `refines_part`:
+  `FrontBlock` of the front's blocks is not proved yet (lane front: a `DeclsF` clause, or from
+  `installIndD`'s constants). `StateOK` after `andPinDecls`: con-ron's `internCIList_sstep`.
