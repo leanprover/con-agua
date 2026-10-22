@@ -285,4 +285,154 @@ theorem projTypeAt_refines (p : Prog) (hp : InferProjProg p) (hlp : InstLPOK p) 
       exact hSt₁.2.2 j hj
     · rw [hSt₂.2.1]; simp only [spPush, size_set64]; exact hsz₁
 
+/-! ## The twin past the table lookup -/
+
+/-- `inferProj`'s propositional-structure test and the type (its innermost block, copied). -/
+def fszTail (entry : IProjEntry) (us : LsIdx) (targs : List EIdx) (pe : EIdx) : AM EIdx := do
+  let ks ← readNamesM entry.levelParams
+  let vs ← readLevelsM us
+  let fs ← readLevelM entry.fieldSort
+  if !(ConLeche.Level.isEquiv (ConLeche.Level.subst ks vs fs) .zero == some true) then
+    fail (.invalid "projection from a propositional structure must be a proposition")
+  else entry.typeAt us targs pe
+
+/-- **`inferProj` past the table lookup** (copied; `inferProj_hit`): the subject type's arguments,
+the shape checks, the propositional-structure test, the type. -/
+def projAtT (sn T : NIdx) (us : LsIdx) (entry : IProjEntry) (te pe : EIdx) : AM EIdx := do
+  let targs ← getAppArgs coreWalkFuel te
+  if T != sn then
+    fail (.invalid "invalid projection: the node names another structure")
+  else if targs.length != entry.numParams then
+    fail (.invalid "projection parameter mismatch")
+  else
+    match ← viewLsLen us with
+    | none => failDanglingLs
+    | some usl =>
+    if usl = entry.levelParams.length then do
+      let z ← zeroLevel
+      if (← lvlEq? entry.structSort z) == some true then fszTail entry us targs pe
+      else entry.typeAt us targs pe
+    else fail (.notImplemented "projection without a native entry")
+
+/-- **`inferProj` at a hit** is `projAtT` from the state after the lookup. -/
+theorem inferProj_hit (r : CoreFnsA) (fe : IFEnv) (d : Nat) (sn : NIdx) (i : Nat) (pe : EIdx)
+    (a a₁ a₂ a₃ : AState) (it te hh : EIdx) (T : NIdx) (us : LsIdx) (entry : IProjEntry)
+    (h1 : (r.infer d pe).run a = .ok (it, a₁)) (h2 : (r.whnf d it).run a₁ = .ok (te, a₂))
+    (h3 : (getAppFn coreWalkFuel te).run a₂ = .ok (hh, a₂)) (ht : (hh.tag == ETag.const) = true)
+    (hv : a₂.store.view hh = some (.const T us))
+    (h4 : (fe.findProj? T i).run a₂ = .ok (some entry, a₃)) :
+    (inferProj r fe d sn i pe).run a = (projAtT sn T us entry te pe).run a₃ := by
+  simp only [inferProj, StateT.run_bind, h1, except_ok_bind, h2, h3, ht, if_true,
+    view_run _ _ _ hv, h4]
+  rfl
+
+/-- **The test's run is the twin's three readbacks** (`fieldSortZeroT`, `Knot.lean`). -/
+theorem fszTail_run (entry : IProjEntry) (us : LsIdx) (targs : List EIdx) (pe : EIdx)
+    (a a' : AState) (b : Bool)
+    (h : (fieldSortZeroT entry.levelParams us entry.fieldSort).run a = .ok (b, a')) :
+    (fszTail entry us targs pe).run a =
+      (if !b then fail (.invalid "projection from a propositional structure must be a proposition")
+        else entry.typeAt us targs pe).run a' := by
+  simp only [fieldSortZeroT, StateT.run_bind] at h
+  simp only [fszTail, StateT.run_bind]
+  cases h1 : (readNamesM entry.levelParams).run a with
+  | error e => rw [h1] at h; cases h
+  | ok x =>
+  rw [h1] at h
+  simp only [except_ok_bind] at h ⊢
+  cases h2 : (readLevelsM us).run x.2 with
+  | error e => rw [h2] at h; cases h
+  | ok y =>
+  rw [h2] at h
+  simp only [except_ok_bind] at h ⊢
+  cases h3 : (readLevelM entry.fieldSort).run y.2 with
+  | error e => rw [h3] at h; cases h
+  | ok z =>
+  rw [h3] at h
+  simp only [except_ok_bind] at h ⊢
+  cases h
+  rfl
+
+/-- **`lvlEq?` leaves the store alone** (it writes the readback and verdict caches only). -/
+theorem lvlEq?_store (u v : LIdx) (a a' : AState) (o : Option Bool) (lu lv : ConLeche.Level)
+    (hu : denoteL a.store.ls u = some lu) (hv : denoteL a.store.ls v = some lv) (hc : ReadLCOK a)
+    (h : (lvlEq? u v).run a = .ok (o, a')) : a'.store = a.store := by
+  cases hm : a.caches.lvlEqC[(u, v)]? with
+  | some r => rw [lvlEq?_hit a u v r hm] at h; cases h; rfl
+  | none =>
+    obtain ⟨X, hr, -⟩ := lvlEq?_miss a u v lu lv hu hv hc hm
+    rw [hr] at h; cases h; rfl
+
+theorem w_le_false {a b : Word} (h : a < b) : (b ≤ a) = False := eq_false (UInt64.not_le.mpr h)
+
+/-! ## `infer_proj_at` -/
+
+section ipaK
+variable (p : Prog) (n : Nat) (top i pe us q to tn : Word)
+
+/-- After `proj_type_at`: the top put back. -/
+def ipaK5 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
+  match res with
+  | none => none
+  | some (r, m) =>
+    if ¬ (136 : Word).toNat < (m.arr64 CTL).size then none
+    else some (r.headD 0, m.set64 CTL 136 top)
+
+/-- After `field_sort_zero`: its verdict, then the type. -/
+def ipaK4 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
+  match res with
+  | none => none
+  | some (r, m) =>
+    if r.headD 0 = 0 then none
+    else ipaK5 top (callW p n "proj_type_at" [q, i, us, to, tn, pe] m)
+
+/-- After `lvl_eq_c`: the propositional-structure test when the structure is a `Prop`. -/
+def ipaK3 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
+  match res with
+  | none => none
+  | some (r, m) =>
+    if 2 ≤ r.headD 0 then
+      ipaK4 p n top i pe us q to tn (callW p n "field_sort_zero"
+        [rdW (m.arr64 EREC) (q + 3), rdW (m.arr64 EREC) (q + 4), us, guardW m q i] m)
+    else ipaK5 top (callW p n "proj_type_at" [q, i, us, to, tn, pe] m)
+
+/-- After `ls_node`: the level count, then `lvl_eq_c` against the pinned zero. -/
+def ipaK2 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
+  match res with
+  | none => none
+  | some (r, m) =>
+    if r.tail.headD 0 ≠ rdW (m.arr64 EREC) (q + 4) then none
+    else ipaK3 p n top i pe us q to tn
+      (callW p n "lvl_eq_c" [rdW (m.arr64 EREC) (q + 8), rdW (m.arr64 PINS) 53] m)
+
+end ipaK
+
+/-- After `get_app_args`: the structure and the parameter count, then `ls_node`. -/
+def ipaK1 (p : Prog) (n : Nat) (top sn i pe T us q : Word) (res : Option (List Word × Mem)) :
+    Option (Word × Mem) :=
+  match res with
+  | none => none
+  | some (r, m) =>
+    if T ≠ sn then none
+    else if r.tail.headD 0 ≠ rdW (m.arr64 EREC) (q + 5) then none
+    else ipaK2 p n top i pe us q (r.headD 0) (r.tail.headD 0) (callW p n "ls_node" [us] m)
+
+/-- **The model of `infer_proj_at`.** -/
+def ipaW (p : Prog) (n : Nat) (m : Mem) (sn i pe te T us q : Word) : Option (Word × Mem) :=
+  ipaK1 p n (rdW (m.arr64 CTL) 136) sn i pe T us q (callW p n "get_app_args" [te] m)
+
+theorem inferProjAt_spec (p : Prog) (hp : InferProjProg p) (n : Nat) (s₀ : St)
+    (vis sn i pe te T us q : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "infer_proj_at" [vis, sn, i, pe, te, T, us, q]
+    ⦃fun r s' => LocEq s' s₀ ∧ ipaW p n s₀.mem sn i pe te T us q = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp.ipa]
+  simp only [callFn, inferProjAtL]
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, st64_spec,
+      callW_spec p n "get_app_args", callW_spec p n "ls_node", pinWord_rd p hp.leaf.pinword n,
+      callW_spec p n "lvl_eq_c", callW_spec p n "field_sort_zero", callW_spec p n "proj_type_at"] <;>
+  simp_all [ipaW, ipaK1, ipaK2, ipaK3, ipaK4, ipaK5, guardW, sliceAt, Cmp.eval, LocEq, BinOp.eval,
+    St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
+    Locals.init_cons_zero, Locals.init_cons_succ, size_set64, CTL, EREC, SPN, PINS, w_lt_false,
+    w_le_false]
+
 end L.Arena
