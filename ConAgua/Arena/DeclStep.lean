@@ -292,7 +292,7 @@ def declStepStubs : Prog := [("check_decl_const", L.Ind.stub 2)]
 /-- The step's program: this module, lane `induct`'s stage (with its stubs), the stubs. -/
 def declStepProg : Prog := declStepFns ++ declStepStubs ++ L.Ind.indProg
 
-theorem declStepProg_wf : L.Compiler.Prog.wf L.Ind.indTab declStepProg = true := by
-  decide +kernel
+theorem declStepProg_wf : L.Compiler.Prog.wf L.Ind.indTab declStepProg = true :=
+  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
 
 end L.Arena

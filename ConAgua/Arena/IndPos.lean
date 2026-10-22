@@ -775,8 +775,8 @@ def indPosForeign : Prog := []
 
 theorem indPos_wf :
     L.Compiler.Prog.wf indTab (indPosFns ++ libFns ++ stubFns ++ masterFns ++ indPosForeign) =
-      true := by
-  decide +kernel
+      true :=
+  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
 
 /-! ## A few `#guard`s: the pure-enough paths (no stub on them) -/
 
