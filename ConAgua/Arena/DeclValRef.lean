@@ -301,7 +301,7 @@ theorem tvW_ok {p : Prog} (hRp : RecProg p) {dn : NIdx → Option ConLeche.Name}
 
 /-! ## The census theorems -/
 
-theorem decCI_defn {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat} {cv : IConstantVal}
+theorem decls_decCI_defn {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat} {cv : IConstantVal}
     {v : EIdx} {hh : ConLeche.ReducibilityHint} (h : decCI a dn q = some (.defnInfo cv v hh)) :
     decCV a (q + 1) = some cv ∧ hd? a (q + 5) = some v := by
   simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at h
@@ -348,7 +348,7 @@ theorem checkDefnVal_refines (p : Prog) (hp : ValProg p) (n : Nat) (s₀ : St) (
         (AM.st (checkDefnVal V fe cv v hh) a₀) ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (dv_specW p hp n s₀ vis c) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨hcv, hv⟩ := decCI_defn hc
+  obtain ⟨hcv, hv⟩ := decls_decCI_defn hc
   obtain ⟨a', hrun, hS', hg⟩ := dvW_ok hp.rcp "type mismatch in definition" hm hS hc hcv hv
   rw [← checkDefnVal_dvT] at hrun
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun

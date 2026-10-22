@@ -29,7 +29,7 @@ def romData : List UInt8 :=
 /-- Where the startup walk's items start. -/
 def allPinsOff : Word := UInt64.ofNat (encNames pinNames ++ encNames reservedBasisNameValues).length
 
-/-- `intern_all_pins()` as the program has it. -/
+/-- `intern_all_pins_rom()`: the ROM-only pin stage (superseded by `L.Rom.internAllPinsPB`, the program's `intern_all_pins`; renamed by lane integrate so that one name has one body). -/
 -- con-ron: ConRon/Arena/Checker.lean:309-339 ConRon.Arena.internAllPins
 @[l_impl ConRon.Arena.internAllPins]
 def internAllPinsL : FunDecl := internAllPinsAt allPinsOff
@@ -87,10 +87,10 @@ theorem internReservedPins_rom (p : Prog) (hL : IrpProg romData 0 p) (n : Nat) (
 
 /-- **The program's `intern_all_pins` refines `internAllPins romPins`'s store effect.** -/
 theorem internAllPins_rom (p : Prog) (hL : ItemsProg romData p)
-    (hp : p.lookup "intern_all_pins" = some internAllPinsL) (n : Nat) (s₀ : St) (a₀ : AState)
+    (hp : p.lookup "intern_all_pins_rom" = some internAllPinsL) (n : Nat) (s₀ : St) (a₀ : AState)
     (hA : ArenaD s₀.mem a₀) (hP : PinsReadyP a₀) (hst : (stkTop s₀.mem).toNat < 2 ^ 61) :
     ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "intern_all_pins" []
+    invoke p (exec p n) "intern_all_pins_rom" []
     ⦃fun _ s' => LocEq s' s₀ ∧ ∃ v a', (internAllPins romPins).run a₀ = .ok (v, a') ∧
       ArenaD s'.mem a' ∧ MemFrame ExprA ExprC s₀.mem s'.mem; ⊤⦄ :=
   internAllPins_refines romData allPinsOff p hL hp romData_ok romPins allPins_noProj allPins_fits []
