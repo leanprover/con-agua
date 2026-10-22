@@ -185,6 +185,218 @@ theorem emit_eqL {p : Prog} (hal : p.lookup "iw_alloc" = some iwAlloc) {k : Nat}
   rw [hget j (by omega)]
   simp [List.getElem?_eq_getElem (show j < ws.length by omega)]
 
+theorem recAt_of_post {m m1 : Mem} {r : List Word} {a b : Word} (h : RecPost m m1 r [a, b])
+    (hI : IWOK m) : RecAt m1 (r.headD 0) a b := by
+  obtain ⟨hq, hK, hroom, htop, hget⟩ := h
+  have hq' : (r.headD 0).toNat = iwTop m := by rw [hq]; rfl
+  refine ⟨by rw [hq']; simp at htop; omega, ?_, ?_⟩
+  · have := hget 0 (by simp); simp only [iwA, hq']; simpa using this
+  · have := hget 1 (by simp); simp only [iwA, hq']; simpa using this
+
+def natEqList2W (p : Prog) (n : Nat) (m : Mem) (a1 b1 a2 b2 : Word) : Option (List Word × Mem) :=
+  bW (callW p n "rec2" [a1, b1] m) fun r1 m1 =>
+  bW (callW p n "rec2" [a2, b2] m1) fun r2 m2 =>
+  bW (callW p n "iw_alloc" [2] m2) fun rq mq =>
+  some ([rq.headD 0, 2], ((mq.set64 IW (rq.headD 0) (r1.headD 0)).set64 IW (rq.headD 0 + 1) (r2.headD 0)))
+
+theorem natEqList2_specW (p : Prog) (hp : p.lookup "nat_eq_list2" = some natEqList2) (n : Nat) (s₀ : St)
+    (a1 b1 a2 b2 : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_eq_list2" [a1, b1, a2, b2]
+    ⦃fun r s' => LocEq s' s₀ ∧ natEqList2W p n s₀.mem a1 b1 a2 b2 = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, natEqList2]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      callW_spec p n "rec2", callW_spec p n "iw_alloc"] <;>
+    finish (gen := 20) [natEqList2W, bW]
+
+theorem natEqList2_ref (hN : NatEqProg p) (a1 b1 a2 b2 : Word) :
+    CallRef p "nat_eq_list2" [a1, b1, a2, b2] (fun m s => StageR dn vis fe m s ∧ H a1 ∧ H b1 ∧ H a2 ∧ H b2)
+      (pure [(decE a1, decE b1), (decE a2, decE b2)] : AM (List (EIdx × EIdx))) (KeepPost dn vis fe decEqRL) := by
+  refine CallRef.of_succ fun k m s r m' ⟨hS, ha1, hb1, ha2, hb2⟩ hc => ?_
+  have hw := callW_model (M := fun mm => natEqList2W p k mm a1 b1 a2 b2) (natEqList2_specW p hN.lNatEqList2 k · a1 b1 a2 b2) hc
+  unfold natEqList2W at hw
+  cases h1 : callW p k "rec2" [a1, b1] m with
+  | none => rw [h1] at hw; simp at hw
+  | some q1 =>
+  obtain ⟨r1, m1⟩ := q1
+  rw [h1, bW_some] at hw
+  have hR1 := rec2_fref p hN.lIwAlloc hN.lRec2 a1 b1 k m r1 m1 hS.2 h1
+  have hK1 := hR1.2.1
+  have hS1 := hK1.stage hS
+  have rec1 : RecAt m1 (r1.headD 0) a1 b1 := recAt_of_post hR1 hS.2
+  cases h2 : callW p k "rec2" [a2, b2] m1 with
+  | none => rw [h2] at hw; simp at hw
+  | some q2 =>
+  obtain ⟨r2, m2⟩ := q2
+  rw [h2, bW_some] at hw
+  have hR2 := rec2_fref p hN.lIwAlloc hN.lRec2 a2 b2 k m1 r2 m2 hS1.2 h2
+  have hK2 := hR2.2.1
+  have hS2 := hK2.stage hS1
+  have rec2 : RecAt m2 (r2.headD 0) a2 b2 := recAt_of_post hR2 hS1.2
+  cases hq : callW p k "iw_alloc" [2] m2 with
+  | none => rw [hq] at hw; simp at hw
+  | some qq =>
+  obtain ⟨rq, mq⟩ := qq
+  rw [hq, bW_some] at hw
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨hr, hm⟩ := hw
+  have hrec : ∀ (j : Nat) (hj : j < [r1.headD 0, r2.headD 0].length), ∃ x y : Word, RecAt m2 ([r1.headD 0, r2.headD 0][j]) x y ∧ x.toNat < 2 ^ 32 ∧ y.toNat < 2 ^ 32 ∧ [(decE a1, decE b1), (decE a2, decE b2)][j]'(by simpa using hj) = (decE x, decE y) := by
+    intro j hj
+    simp only [List.length_cons, List.length_nil] at hj
+    match j, hj with
+    | 0, _ => exact ⟨a1, b1, (rec1.grow (hK2.1)), ha1, hb1, rfl⟩
+    | 1, _ => exact ⟨a2, b2, rec2, ha2, hb2, rfl⟩
+  have hall := emit_eqL (dn := dn) (vis := vis) (fe := fe) hN.lIwAlloc (k := k) (m' := m') (r := r) (ws := [r1.headD 0, r2.headD 0]) (ps := [(decE a1, decE b1), (decE a2, decE b2)]) hS2 rfl rfl hrec hq hr.symm (by rw [← hm]; simp [wrIW, UInt64.add_assoc])
+  exact ⟨_, s, rfl, hall.1, ((hK1.1).trans hK2.1).trans hall.2.1, hall.2.2⟩
+
+def natEqList3W (p : Prog) (n : Nat) (m : Mem) (a1 b1 a2 b2 a3 b3 : Word) : Option (List Word × Mem) :=
+  bW (callW p n "rec2" [a1, b1] m) fun r1 m1 =>
+  bW (callW p n "rec2" [a2, b2] m1) fun r2 m2 =>
+  bW (callW p n "rec2" [a3, b3] m2) fun r3 m3 =>
+  bW (callW p n "iw_alloc" [3] m3) fun rq mq =>
+  some ([rq.headD 0, 3], (((mq.set64 IW (rq.headD 0) (r1.headD 0)).set64 IW (rq.headD 0 + 1) (r2.headD 0)).set64 IW (rq.headD 0 + 2) (r3.headD 0)))
+
+theorem natEqList3_specW (p : Prog) (hp : p.lookup "nat_eq_list3" = some natEqList3) (n : Nat) (s₀ : St)
+    (a1 b1 a2 b2 a3 b3 : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_eq_list3" [a1, b1, a2, b2, a3, b3]
+    ⦃fun r s' => LocEq s' s₀ ∧ natEqList3W p n s₀.mem a1 b1 a2 b2 a3 b3 = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, natEqList3]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      callW_spec p n "rec2", callW_spec p n "iw_alloc"] <;>
+    finish (gen := 20) [natEqList3W, bW]
+
+theorem natEqList3_ref (hN : NatEqProg p) (a1 b1 a2 b2 a3 b3 : Word) :
+    CallRef p "nat_eq_list3" [a1, b1, a2, b2, a3, b3] (fun m s => StageR dn vis fe m s ∧ H a1 ∧ H b1 ∧ H a2 ∧ H b2 ∧ H a3 ∧ H b3)
+      (pure [(decE a1, decE b1), (decE a2, decE b2), (decE a3, decE b3)] : AM (List (EIdx × EIdx))) (KeepPost dn vis fe decEqRL) := by
+  refine CallRef.of_succ fun k m s r m' ⟨hS, ha1, hb1, ha2, hb2, ha3, hb3⟩ hc => ?_
+  have hw := callW_model (M := fun mm => natEqList3W p k mm a1 b1 a2 b2 a3 b3) (natEqList3_specW p hN.lNatEqList3 k · a1 b1 a2 b2 a3 b3) hc
+  unfold natEqList3W at hw
+  cases h1 : callW p k "rec2" [a1, b1] m with
+  | none => rw [h1] at hw; simp at hw
+  | some q1 =>
+  obtain ⟨r1, m1⟩ := q1
+  rw [h1, bW_some] at hw
+  have hR1 := rec2_fref p hN.lIwAlloc hN.lRec2 a1 b1 k m r1 m1 hS.2 h1
+  have hK1 := hR1.2.1
+  have hS1 := hK1.stage hS
+  have rec1 : RecAt m1 (r1.headD 0) a1 b1 := recAt_of_post hR1 hS.2
+  cases h2 : callW p k "rec2" [a2, b2] m1 with
+  | none => rw [h2] at hw; simp at hw
+  | some q2 =>
+  obtain ⟨r2, m2⟩ := q2
+  rw [h2, bW_some] at hw
+  have hR2 := rec2_fref p hN.lIwAlloc hN.lRec2 a2 b2 k m1 r2 m2 hS1.2 h2
+  have hK2 := hR2.2.1
+  have hS2 := hK2.stage hS1
+  have rec2 : RecAt m2 (r2.headD 0) a2 b2 := recAt_of_post hR2 hS1.2
+  cases h3 : callW p k "rec2" [a3, b3] m2 with
+  | none => rw [h3] at hw; simp at hw
+  | some q3 =>
+  obtain ⟨r3, m3⟩ := q3
+  rw [h3, bW_some] at hw
+  have hR3 := rec2_fref p hN.lIwAlloc hN.lRec2 a3 b3 k m2 r3 m3 hS2.2 h3
+  have hK3 := hR3.2.1
+  have hS3 := hK3.stage hS2
+  have rec3 : RecAt m3 (r3.headD 0) a3 b3 := recAt_of_post hR3 hS2.2
+  cases hq : callW p k "iw_alloc" [3] m3 with
+  | none => rw [hq] at hw; simp at hw
+  | some qq =>
+  obtain ⟨rq, mq⟩ := qq
+  rw [hq, bW_some] at hw
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨hr, hm⟩ := hw
+  have hrec : ∀ (j : Nat) (hj : j < [r1.headD 0, r2.headD 0, r3.headD 0].length), ∃ x y : Word, RecAt m3 ([r1.headD 0, r2.headD 0, r3.headD 0][j]) x y ∧ x.toNat < 2 ^ 32 ∧ y.toNat < 2 ^ 32 ∧ [(decE a1, decE b1), (decE a2, decE b2), (decE a3, decE b3)][j]'(by simpa using hj) = (decE x, decE y) := by
+    intro j hj
+    simp only [List.length_cons, List.length_nil] at hj
+    match j, hj with
+    | 0, _ => exact ⟨a1, b1, (rec1.grow ((hK2.1).trans hK3.1)), ha1, hb1, rfl⟩
+    | 1, _ => exact ⟨a2, b2, (rec2.grow (hK3.1)), ha2, hb2, rfl⟩
+    | 2, _ => exact ⟨a3, b3, rec3, ha3, hb3, rfl⟩
+  have hall := emit_eqL (dn := dn) (vis := vis) (fe := fe) hN.lIwAlloc (k := k) (m' := m') (r := r) (ws := [r1.headD 0, r2.headD 0, r3.headD 0]) (ps := [(decE a1, decE b1), (decE a2, decE b2), (decE a3, decE b3)]) hS3 rfl rfl hrec hq hr.symm (by rw [← hm]; simp [wrIW, UInt64.add_assoc])
+  exact ⟨_, s, rfl, hall.1, (((hK1.1).trans hK2.1).trans hK3.1).trans hall.2.1, hall.2.2⟩
+
+def natEqList4W (p : Prog) (n : Nat) (m : Mem) (a1 b1 a2 b2 a3 b3 a4 b4 : Word) : Option (List Word × Mem) :=
+  bW (callW p n "rec2" [a1, b1] m) fun r1 m1 =>
+  bW (callW p n "rec2" [a2, b2] m1) fun r2 m2 =>
+  bW (callW p n "rec2" [a3, b3] m2) fun r3 m3 =>
+  bW (callW p n "rec2" [a4, b4] m3) fun r4 m4 =>
+  bW (callW p n "iw_alloc" [4] m4) fun rq mq =>
+  some ([rq.headD 0, 4], ((((mq.set64 IW (rq.headD 0) (r1.headD 0)).set64 IW (rq.headD 0 + 1) (r2.headD 0)).set64 IW (rq.headD 0 + 2) (r3.headD 0)).set64 IW (rq.headD 0 + 3) (r4.headD 0)))
+
+theorem natEqList4_specW (p : Prog) (hp : p.lookup "nat_eq_list4" = some natEqList4) (n : Nat) (s₀ : St)
+    (a1 b1 a2 b2 a3 b3 a4 b4 : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_eq_list4" [a1, b1, a2, b2, a3, b3, a4, b4]
+    ⦃fun r s' => LocEq s' s₀ ∧ natEqList4W p n s₀.mem a1 b1 a2 b2 a3 b3 a4 b4 = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, natEqList4]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      callW_spec p n "rec2", callW_spec p n "iw_alloc"] <;>
+    finish (gen := 20) [natEqList4W, bW]
+
+theorem natEqList4_ref (hN : NatEqProg p) (a1 b1 a2 b2 a3 b3 a4 b4 : Word) :
+    CallRef p "nat_eq_list4" [a1, b1, a2, b2, a3, b3, a4, b4] (fun m s => StageR dn vis fe m s ∧ H a1 ∧ H b1 ∧ H a2 ∧ H b2 ∧ H a3 ∧ H b3 ∧ H a4 ∧ H b4)
+      (pure [(decE a1, decE b1), (decE a2, decE b2), (decE a3, decE b3), (decE a4, decE b4)] : AM (List (EIdx × EIdx))) (KeepPost dn vis fe decEqRL) := by
+  refine CallRef.of_succ fun k m s r m' ⟨hS, ha1, hb1, ha2, hb2, ha3, hb3, ha4, hb4⟩ hc => ?_
+  have hw := callW_model (M := fun mm => natEqList4W p k mm a1 b1 a2 b2 a3 b3 a4 b4) (natEqList4_specW p hN.lNatEqList4 k · a1 b1 a2 b2 a3 b3 a4 b4) hc
+  unfold natEqList4W at hw
+  cases h1 : callW p k "rec2" [a1, b1] m with
+  | none => rw [h1] at hw; simp at hw
+  | some q1 =>
+  obtain ⟨r1, m1⟩ := q1
+  rw [h1, bW_some] at hw
+  have hR1 := rec2_fref p hN.lIwAlloc hN.lRec2 a1 b1 k m r1 m1 hS.2 h1
+  have hK1 := hR1.2.1
+  have hS1 := hK1.stage hS
+  have rec1 : RecAt m1 (r1.headD 0) a1 b1 := recAt_of_post hR1 hS.2
+  cases h2 : callW p k "rec2" [a2, b2] m1 with
+  | none => rw [h2] at hw; simp at hw
+  | some q2 =>
+  obtain ⟨r2, m2⟩ := q2
+  rw [h2, bW_some] at hw
+  have hR2 := rec2_fref p hN.lIwAlloc hN.lRec2 a2 b2 k m1 r2 m2 hS1.2 h2
+  have hK2 := hR2.2.1
+  have hS2 := hK2.stage hS1
+  have rec2 : RecAt m2 (r2.headD 0) a2 b2 := recAt_of_post hR2 hS1.2
+  cases h3 : callW p k "rec2" [a3, b3] m2 with
+  | none => rw [h3] at hw; simp at hw
+  | some q3 =>
+  obtain ⟨r3, m3⟩ := q3
+  rw [h3, bW_some] at hw
+  have hR3 := rec2_fref p hN.lIwAlloc hN.lRec2 a3 b3 k m2 r3 m3 hS2.2 h3
+  have hK3 := hR3.2.1
+  have hS3 := hK3.stage hS2
+  have rec3 : RecAt m3 (r3.headD 0) a3 b3 := recAt_of_post hR3 hS2.2
+  cases h4 : callW p k "rec2" [a4, b4] m3 with
+  | none => rw [h4] at hw; simp at hw
+  | some q4 =>
+  obtain ⟨r4, m4⟩ := q4
+  rw [h4, bW_some] at hw
+  have hR4 := rec2_fref p hN.lIwAlloc hN.lRec2 a4 b4 k m3 r4 m4 hS3.2 h4
+  have hK4 := hR4.2.1
+  have hS4 := hK4.stage hS3
+  have rec4 : RecAt m4 (r4.headD 0) a4 b4 := recAt_of_post hR4 hS3.2
+  cases hq : callW p k "iw_alloc" [4] m4 with
+  | none => rw [hq] at hw; simp at hw
+  | some qq =>
+  obtain ⟨rq, mq⟩ := qq
+  rw [hq, bW_some] at hw
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨hr, hm⟩ := hw
+  have hrec : ∀ (j : Nat) (hj : j < [r1.headD 0, r2.headD 0, r3.headD 0, r4.headD 0].length), ∃ x y : Word, RecAt m4 ([r1.headD 0, r2.headD 0, r3.headD 0, r4.headD 0][j]) x y ∧ x.toNat < 2 ^ 32 ∧ y.toNat < 2 ^ 32 ∧ [(decE a1, decE b1), (decE a2, decE b2), (decE a3, decE b3), (decE a4, decE b4)][j]'(by simpa using hj) = (decE x, decE y) := by
+    intro j hj
+    simp only [List.length_cons, List.length_nil] at hj
+    match j, hj with
+    | 0, _ => exact ⟨a1, b1, (rec1.grow (((hK2.1).trans hK3.1).trans hK4.1)), ha1, hb1, rfl⟩
+    | 1, _ => exact ⟨a2, b2, (rec2.grow ((hK3.1).trans hK4.1)), ha2, hb2, rfl⟩
+    | 2, _ => exact ⟨a3, b3, (rec3.grow (hK4.1)), ha3, hb3, rfl⟩
+    | 3, _ => exact ⟨a4, b4, rec4, ha4, hb4, rfl⟩
+  have hall := emit_eqL (dn := dn) (vis := vis) (fe := fe) hN.lIwAlloc (k := k) (m' := m') (r := r) (ws := [r1.headD 0, r2.headD 0, r3.headD 0, r4.headD 0]) (ps := [(decE a1, decE b1), (decE a2, decE b2), (decE a3, decE b3), (decE a4, decE b4)]) hS4 rfl rfl hrec hq hr.symm (by rw [← hm]; simp [wrIW, UInt64.add_assoc])
+  exact ⟨_, s, rfl, hall.1, ((((hK1.1).trans hK2.1).trans hK3.1).trans hK4.1).trans hall.2.1, hall.2.2⟩
+
 end eq
 
 end L.Ind
