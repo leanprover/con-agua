@@ -53,7 +53,7 @@ theorem pnew_arrs : ∀ b ∈ EIXA :: EIXS :: EIXN :: ECON :: EREC :: eArrs,
   · right; left; simp [ECON]
   · rcases vg_arrs b (List.mem_cons.mpr hb) with h | h | h
     · exact .inl h
-    · right; left; omega
+    · right; left; subst h; exact ⟨by decide, by decide⟩
     · exact .inr (.inr h)
 
 theorem pnew_arrs' : ∀ b ∈ ECON :: EREC :: eArrs,
@@ -80,7 +80,6 @@ theorem take_drop_min {α : Type} (L B : List α) (N K : Nat) (hN : (L ++ B).len
   · have hK : L.length = K := by omega
     exact ⟨List.take_left' hK, List.drop_left' hK⟩
   · have hB : B = [] := by
-      have := congrArg List.length (rfl : (L ++ B).length = (L ++ B).length)
       simp only [List.length_append] at hN
       exact List.length_eq_zero_iff.mp (by omega)
     subst hB
@@ -97,12 +96,12 @@ theorem pnew_main (dn : NIdx → Option ConLeche.Name) (n : Nat) (m₁ : Mem) (a
     (ds : Array IDeclaration) (m' : Mem) (hP₁ : PMemoR m₁ pm)
     (hR₁ : LoopR dn m₁ a vis ⟨⟨consts⟩, idx, vb⟩ pend ds) (hk : k.toNat ≤ vis.toNat)
     (hW : newRest p n k vis m₁ = some m') :
-    ∃ a' pm' L', (promoteCIList pm coreWalkFuel (consts.take k.toNat)).run a =
-        .ok ((pm', L'), a') ∧
-      LoopR dn m' a' vis ⟨⟨L' ++ consts.drop k.toNat⟩,
-        indexPromoted (eraseInstalled idx (consts.take k.toNat)) vb L', vb⟩ pend ds := by
+    ∃ a' pm' Lc', (promoteCIList pm coreWalkFuel (consts.take k.toNat)).run a =
+        .ok ((pm', Lc'), a') ∧
+      LoopR dn m' a' vis ⟨⟨Lc' ++ consts.drop k.toNat⟩,
+        indexPromoted (eraseInstalled idx (consts.take k.toNat)) vb Lc', vb⟩ pend ds := by
   have hE₁ := hR₁.check.env
-  have hvis : vb = vis.toNat := hR₁.vis
+  have hvis : vb = vis.toNat := hR₁.check.env.vis
   subst hvis
   obtain ⟨hiw1, hiw2, hiw3, hiw4, hiw5⟩ := hR₁.iw
   have hsz₁ : (m₁.arr64 EREC).size < 2 ^ 64 := hiw4
@@ -128,32 +127,32 @@ theorem pnew_main (dn : NIdx → Option ConLeche.Name) (n : Nat) (m₁ : Mem) (a
   rw [hlenv] at hcons
   have hlen : consts.length = n0.toNat := cdec_length _ _ hcons
   have hcle : c.toNat ≤ n0.toNat := by omega
-  obtain ⟨L, B, hLB, hLl, hCA, hB⟩ := cdec_split c.toNat (n0.toNat - c.toNat) consts
+  obtain ⟨Lc, B, hLB, hLl, hCA, hB⟩ := cdec_split c.toNat (n0.toNat - c.toNat) consts
     (by rw [show n0.toNat - c.toNat + c.toNat = n0.toNat by omega]; exact hcons)
-  obtain ⟨htake, hdrop⟩ := take_drop_min L B n0.toNat k.toNat (by rw [← hLB]; exact hlen)
+  obtain ⟨htake, hdrop⟩ := take_drop_min Lc B n0.toNat k.toNat (by rw [← hLB]; exact hlen)
     (by rw [hLl, hcn]) |> fun h => by rw [← hLB] at h; exact h
-  have hjn : L = [] ∨ n0 ≠ 0 := by
+  have hjn : Lc = [] ∨ n0 ≠ 0 := by
     by_cases h : n0 = 0
     · left
       have : n0.toNat = 0 := by rw [h]; rfl
       exact List.length_eq_zero_iff.mp (by omega)
     · exact .inr h
-  have hjt : L = [] ∨ (n0 - 1).toNat = n0.toNat - 1 := by
+  have hjt : Lc = [] ∨ (n0 - 1).toNat = n0.toNat - 1 := by
     rcases hjn with h | h
     · exact .inl h
     · exact .inr (toNat_sub1 n0 h)
-  have hLlen : L.length = c.toNat := hLl
-  have hj1 : L.length ≤ (n0 - 1).toNat + 1 := by
+  have hLlen : Lc.length = c.toNat := hLl
+  have hj1 : Lc.length ≤ (n0 - 1).toNat + 1 := by
     rcases hjt with h | h
     · subst h; simp
     · rw [h]; omega
-  have hCA' : ConstsAt dn (erecP m₁) (m₁.arr64 ECON) (n0 - 1).toNat L := by
+  have hCA' : ConstsAt dn (erecP m₁) (m₁.arr64 ECON) (n0 - 1).toNat Lc := by
     rcases hjt with h | h
     · subst h; trivial
     · rw [h]; have : n0.toNat - c.toNat + c.toNat - 1 = n0.toNat - 1 := by omega
       rw [this] at hCA; exact hCA
-  have hclk : c.toNat = L.length := hLl.symm
-  have hcL : L.length = c.toNat := hLl
+  have hclk : c.toNat = Lc.length := hLl.symm
+  have hcL : Lc.length = c.toNat := hLl
   have hkc : c.toNat ≤ k.toNat := by omega
   -- erase
   cases hca : callW p n "erase_installed" [n0 - 1, c] m₁ with
@@ -162,7 +161,7 @@ theorem pnew_main (dn : NIdx → Option ConLeche.Name) (n : Nat) (m₁ : Mem) (a
   obtain ⟨r₁, m₂⟩ := x
   rw [hca] at hW
   simp only [Option.bind_some] at hW
-  obtain ⟨hE₂, hfr₂⟩ := erase_rel p hp dn n m₁ vis (n0 - 1) c _ L r₁ m₂ hE₁ hsz₁ hcL hj1 hCA' hca
+  obtain ⟨hE₂, hfr₂⟩ := erase_rel p hp dn n m₁ vis (n0 - 1) c _ Lc r₁ m₂ hE₁ hsz₁ hLl.symm hj1 hCA' hca
   obtain ⟨hD₂, hP₂⟩ := arenaD_rows hD₁ hP₁ hfr₂
   have hEE₂ : m₂.arr64 EREC = m₁.arr64 EREC := hfr₂.1 EREC (by decide) (by decide)
   have hEC₂ : m₂.arr64 ECON = m₁.arr64 ECON := hfr₂.1 ECON (by decide) (by decide)
@@ -180,8 +179,8 @@ theorem pnew_main (dn : NIdx → Option ConLeche.Name) (n : Nat) (m₁ : Mem) (a
   obtain ⟨r₂, m₃⟩ := x
   rw [hcb] at hW
   simp only [Option.bind_some] at hW
-  obtain ⟨a₃, pm₃, L', hrun₃, hD₃, hP₃, hcp₃, hfr₃, hg₂₃, hts₃, hlen₃, hcons₃, hout₃, hszE₃⟩ :=
-    ciList_rel p hp dn n m₂ a pm L.Ind.CWF (n0 - 1) c (erecTop m₂) L r₂ m₃ hD₂ hP₂ hsz₂ hts₂ hcL
+  obtain ⟨a₃, pm₃, Lc', hrun₃, hD₃, hP₃, hcp₃, hfr₃, hg₂₃, hts₃, hlen₃, hcons₃, hout₃, hszE₃⟩ :=
+    ciList_rel p hp dn n m₂ a pm L.Ind.CWF (n0 - 1) c (erecTop m₂) Lc r₂ m₃ hD₂ hP₂ hsz₂ hts₂ hLl.symm
       hj1 (by rw [← erecP_eq_preE, hP₂e, hEC₂]; exact hCA') (Nat.le_refl _) hcb
   have hg₁₃ : ErecGrow m₁ m₃ := hg₁₂.trans hg₂₃
   have hE128₃ : rdW (m₃.arr64 CTL) 128 = rdW (m₁.arr64 CTL) 128 := by
@@ -200,21 +199,21 @@ theorem pnew_main (dn : NIdx → Option ConLeche.Name) (n : Nat) (m₁ : Mem) (a
     rw [hout₃ i (by rcases hjt with h | h
                     · subst h; simp only [List.length_nil]; omega
                     · rw [h]; omega), hEC₂]
-  have hcons₃' : ConstsAt dn (erecP m₃) (m₃.arr64 ECON) (n0.toNat - c.toNat + L'.length - 1) L' := by
+  have hcons₃' : ConstsAt dn (erecP m₃) (m₃.arr64 ECON) (n0.toNat - c.toNat + Lc'.length - 1) Lc' := by
     rcases hjt with h | h
-    · subst h; simp at hlen₃; have : L' = [] := List.length_eq_zero_iff.mpr hlen₃; subst this; trivial
+    · subst h; simp at hlen₃; have : Lc' = [] := List.length_eq_zero_iff.mpr hlen₃; subst this; trivial
     · rw [hlen₃, hLlen]
       have : n0.toNat - c.toNat + c.toNat - 1 = n0.toNat - 1 := by omega
       rw [this, ← h]; exact hcons₃
-  have hcdec₃ := cdec_join L' (n0.toNat - c.toNat) B hcons₃' hBdec
-  have hEnv₃c : envConsts dn m₃ = some (L' ++ B) := by
+  have hcdec₃ := cdec_join Lc' (n0.toNat - c.toNat) B hcons₃' hBdec
+  have hEnv₃c : envConsts dn m₃ = some (Lc' ++ B) := by
     rw [envConsts_eq]
     have : envLen m₃ = n0.toNat := by simp only [envLen, hE128₃, hn0]
     rw [this]
-    have e : n0.toNat - c.toNat + L'.length = n0.toNat := by rw [hlen₃, hLlen]; omega
+    have e : n0.toNat - c.toNat + Lc'.length = n0.toNat := by rw [hlen₃, hLlen]; omega
     rw [← e]; exact hcdec₃
-  have hE₃ : EnvR dn m₃ vis ⟨⟨L' ++ B⟩, eraseInstalled idx L, vis.toNat⟩ :=
-    (show EnvR dn m₂ vis ⟨⟨consts⟩, eraseInstalled idx L, vis.toNat⟩ from hE₂).promoted hEC₃rows hg₂₃ (L' ++ B)
+  have hE₃ : EnvR dn m₃ vis ⟨⟨Lc' ++ B⟩, eraseInstalled idx Lc, vis.toNat⟩ :=
+    (show EnvR dn m₂ vis ⟨⟨consts⟩, eraseInstalled idx Lc, vis.toNat⟩ from hE₂).promoted hEC₃rows hg₂₃ (Lc' ++ B)
       hEnv₃c
   have hsz₃ : (m₃.arr64 EREC).size < 2 ^ 64 := by rw [hg₂₃.2.2]; exact hsz₂
   -- index
@@ -225,8 +224,8 @@ theorem pnew_main (dn : NIdx → Option ConLeche.Name) (n : Nat) (m₁ : Mem) (a
   rw [hcd, memK_some] at hW
   have hm4 : m₄ = m' := Option.some.inj hW
   subst hm4
-  have hL'c : L'.length = c.toNat := by rw [hlen₃, hLlen]
-  obtain ⟨hE₄, hfr₄⟩ := index_rel p hp dn n m₃ vis vis (n0 - 1) c _ L' r₃ m₄ hE₃ hsz₃ hL'c.symm
+  have hL'c : Lc'.length = c.toNat := by rw [hlen₃, hLlen]
+  obtain ⟨hE₄, hfr₄⟩ := index_rel p hp dn n m₃ vis vis (n0 - 1) c _ Lc' r₃ m₄ hE₃ hsz₃ hL'c.symm
     (by rw [hL'c]; rcases hjt with h | h
         · subst h; simp at hLl; omega
         · rw [h]; omega)
@@ -236,14 +235,18 @@ theorem pnew_main (dn : NIdx → Option ConLeche.Name) (n : Nat) (m₁ : Mem) (a
   have hT₄ : erecTop m₄ = erecTop m₃ := by simp only [erecTop]; rw [hfr₄.2.1 129 (by simp)]
   have hg₁₄ : ErecGrow m₁ m₄ := hg₁₃.trans (ErecGrow.of_eq hEE₄ hT₄)
   have hts₄ : erecTop m₄ ≤ (m₄.arr64 EREC).size := by rw [hEE₄, hT₄]; exact hts₃
+  have hrowsub : ∀ b ∈ [EIXA, EIXS, EIXN], b ∈ EIXA :: EIXS :: EIXN :: ECON :: EREC :: eArrs := by
+    intro b hb
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hb
+    rcases hb with rfl | rfl | rfl <;> simp
   have hfA : MemFrame (EIXA :: EIXS :: EIXN :: ECON :: EREC :: eArrs) (129 :: eCtl) m₁ m₄ :=
-    ((hfr₂.mono (fun b hb => by simp only [List.mem_cons] at hb ⊢; tauto) (by simp)).trans
-      (hfr₃.mono (fun b hb => by simp only [List.mem_cons] at hb ⊢; tauto) (by simp))).trans
-      (hfr₄.mono (fun b hb => by simp only [List.mem_cons] at hb ⊢; tauto) (by simp))
+    ((hfr₂.mono hrowsub (by simp)).trans
+      (hfr₃.mono (fun b hb => List.mem_cons_of_mem _ (List.mem_cons_of_mem _
+        (List.mem_cons_of_mem _ hb))) (fun x hx => hx))).trans (hfr₄.mono hrowsub (by simp))
   have hrun₃' : (promoteCIList pm coreWalkFuel (consts.take k.toNat)).run a =
-      .ok ((pm₃, L'), a₃) := by
+      .ok ((pm₃, Lc'), a₃) := by
     rw [htake, ← L.Ind.CWF_eq]; exact hrun₃
-  refine ⟨a₃, pm₃, L', hrun₃', ?_⟩
+  refine ⟨a₃, pm₃, Lc', hrun₃', ?_⟩
   rw [htake, hdrop]
   exact LoopR.of_frame hR₁ hD₄ hfA pnew_arrs pnew_ctl hcp₃ hg₁₄ hts₄ hP₄ hE₄
 
