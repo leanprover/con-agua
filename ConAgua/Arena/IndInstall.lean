@@ -736,32 +736,35 @@ def checkBlockTables : FunDecl := lfn (p, msO, msL, csO, csL, ssO, ssL, vis) loc
 }
 
 /-- `check_block_tail(block.off, block.len, q)`: the install after the pass — the index binders'
-sorts, the constructors consed (with the flush entering that environment), the recursor stage,
-the recursors consed at their majors, and the projection tables (`q` a `BlockPass` pointer). -/
+sorts, the constructors consed (with the flush entering that environment), the container bit, then
+`check_block_tail_rec` (`q` a `BlockPass` pointer). -/
 -- con-ron: ConRon/Arena/Inductives/BlockTail.lean:107-122 ConRon.Arena.checkBlockTail
 @[l_impl ConRon.Arena.checkBlockTail]
 def checkBlockTail : FunDecl := lfn (blockO, blockL, q) locals
-    (env1, p, isoO, isoL, nP, caO, caL, fe2, u, vis2, kO, kL, nested, pO, pL, tO, tL, rd, mO, mL,
-     cvO, cvL, fe2b, outO, outL, fe3, ssO, ssL, fe4) {
+    (env1, p, isoO, isoL, fe2, u, nested, fe4) {
   env1 := IW.u64[q];
   p := IW.u64[q + 3];
   (isoO, isoL) := call check_block_idx_sorts(env1, p, IW.u64[p], IW.u64[p + 1], IW.u64[q + 1], IW.u64[q + 2]);
-  nP := IW.u64[p + 4];
-  caO := IW.u64[q + 4]; caL := IW.u64[q + 5];
-  fe2 := call cons_block_ctors(nP, caO, caL, env1);
+  fe2 := call cons_block_ctors(IW.u64[p + 4], IW.u64[q + 4], IW.u64[q + 5], env1);
   u := call flush_caches();
-  vis2 := fe2;
-  kO := IW.u64[q + 8]; kL := IW.u64[q + 9];
-  nested := call block_nested_bit(p, kO, kL);
-  pO := IW.u64[q + 12]; pL := IW.u64[q + 13];
-  tO := IW.u64[q + 17]; tL := IW.u64[q + 18];
-  rd := IW.u64[q + 14];
-  mO := IW.u64[q + 15]; mL := IW.u64[q + 16];
-  cvO := IW.u64[q + 1]; cvL := IW.u64[q + 2];
-  (fe2b, outO, outL) := call check_block_rec(fe2, p, nested, pO, pL, tO, tL, rd, mO, mL, blockO, blockL, cvO, cvL);
-  fe3 := call cons_block_recs_tf(vis2, p, 0, outO, outL, fe2b);
-  ssO := IW.u64[q + 6]; ssL := IW.u64[q + 7];
-  fe4 := call check_block_tables(p, IW.u64[p], IW.u64[p + 1], caO, caL, ssO, ssL, fe3);
+  nested := call block_nested_bit(p, IW.u64[q + 8], IW.u64[q + 9]);
+  fe4 := call check_block_tail_rec(blockO, blockL, q, p, fe2, nested);
+  return fe4
+}
+
+/-- `check_block_tail_rec(block.off, block.len, q, p, fe2, nested)`: the rest of the tail — the
+recursor stage at the constructors' environment `fe2`, the recursors consed at their majors (the
+rules' lookups bounded at `fe2`), and the projection tables. -/
+-- con-ron: ConRon/Arena/Inductives/BlockTail.lean:107-122 ConRon.Arena.checkBlockTail
+@[l_impl ConRon.Arena.checkBlockTail]
+def checkBlockTailRec : FunDecl := lfn (blockO, blockL, q, p, fe2, nested) locals
+    (fe2b, outO, outL, fe3, fe4) {
+  (fe2b, outO, outL) := call check_block_rec(fe2, p, nested, IW.u64[q + 12], IW.u64[q + 13],
+    IW.u64[q + 17], IW.u64[q + 18], IW.u64[q + 14], IW.u64[q + 15], IW.u64[q + 16], blockO, blockL,
+    IW.u64[q + 1], IW.u64[q + 2]);
+  fe3 := call cons_block_recs_tf(fe2, p, 0, outO, outL, fe2b);
+  fe4 := call check_block_tables(p, IW.u64[p], IW.u64[p + 1], IW.u64[q + 4], IW.u64[q + 5],
+    IW.u64[q + 6], IW.u64[q + 7], fe3);
   return fe4
 }
 
@@ -811,6 +814,7 @@ def indInstallFns : Prog :=
    ("check_block_pass", checkBlockPass),
    ("check_block_rec", checkBlockRec), ("check_block_tables_one", checkBlockTablesOne),
    ("check_block_tables", checkBlockTables), ("check_block_tail", checkBlockTail),
+   ("check_block_tail_rec", checkBlockTailRec),
    ("check_block", checkBlock)]
 
 /-- Stubs for the functions of OTHER modules this module calls (arity per the naming rule; see

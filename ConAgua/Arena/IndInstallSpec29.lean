@@ -16,46 +16,73 @@ namespace L.Ind
 
 open L.Arena
 
-/-! ## `check_block_tail` -/
+/-! ## `check_block_tail_rec` -/
 
 def ictlK7 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) => some ([r.headD 0], m)
 /-- After `cons_block_recs_tf`: the projection tables. -/
-def ictlK6 (p : Prog) (n : Nat) (q pp caO caL : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def ictrK6 (p : Prog) (n : Nat) (q pp : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r6, m) => ictlK7 (callW p n "check_block_tables" [pp, rdW (m.arr64 IW) pp, rdW (m.arr64 IW) (pp + 1),
-      caO, caL, rdW (m.arr64 IW) (q + 6), rdW (m.arr64 IW) (q + 7), r6.headD 0] m)
+      rdW (m.arr64 IW) (q + 4), rdW (m.arr64 IW) (q + 5), rdW (m.arr64 IW) (q + 6), rdW (m.arr64 IW) (q + 7),
+      r6.headD 0] m)
 /-- After `check_block_rec`: the recursors consed. -/
-def ictlK5 (p : Prog) (n : Nat) (q pp caO caL fe2 : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def ictrK5 (p : Prog) (n : Nat) (q pp fe2 : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r5, m) => ictlK6 p n q pp caO caL (callW p n "cons_block_recs_tf"
+  | some (r5, m) => ictrK6 p n q pp (callW p n "cons_block_recs_tf"
       [fe2, pp, 0, r5.tail.headD 0, r5.tail.tail.headD 0, r5.headD 0] m)
-/-- After `block_nested_bit`: the recursor stage. -/
-def ictlK4 (p : Prog) (n : Nat) (bO bL q pp caO caL fe2 : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
+
+/-- **The model of `check_block_tail_rec(block.off, block.len, q, p, fe2, nested)`** (body fuel `n`). -/
+def ictrW (p : Prog) (n : Nat) (m : Mem) (bO bL q pp fe2 nested : Word) : Option (List Word × Mem) :=
+  ictrK5 p n q pp fe2 (callW p n "check_block_rec"
+    [fe2, pp, nested, rdW (m.arr64 IW) (q + 12), rdW (m.arr64 IW) (q + 13), rdW (m.arr64 IW) (q + 17),
+      rdW (m.arr64 IW) (q + 18), rdW (m.arr64 IW) (q + 14), rdW (m.arr64 IW) (q + 15),
+      rdW (m.arr64 IW) (q + 16), bO, bL, rdW (m.arr64 IW) (q + 1), rdW (m.arr64 IW) (q + 2)] m)
+
+section arms
+variable (p : Prog) (n : Nat) (m : Mem) (q pp fe2 : Word) (r : List Word)
+theorem ictlK7_some : ictlK7 (some (r, m)) = some ([r.headD 0], m) := rfl
+theorem ictrK6_some : ictrK6 p n q pp (some (r, m)) = ictlK7 (callW p n "check_block_tables"
+      [pp, rdW (m.arr64 IW) pp, rdW (m.arr64 IW) (pp + 1), rdW (m.arr64 IW) (q + 4), rdW (m.arr64 IW) (q + 5),
+        rdW (m.arr64 IW) (q + 6), rdW (m.arr64 IW) (q + 7), r.headD 0] m) := rfl
+theorem ictrK5_some : ictrK5 p n q pp fe2 (some (r, m)) = ictrK6 p n q pp
+      (callW p n "cons_block_recs_tf" [fe2, pp, 0, r.tail.headD 0, r.tail.tail.headD 0, r.headD 0] m) := rfl
+end arms
+attribute [ind_grind] ictlK7_some ictrK6_some ictrK5_some
+
+set_option maxHeartbeats 1600000 in
+theorem ictr_spec (p : Prog) (hp : p.lookup "check_block_tail_rec" = some checkBlockTailRec) (n : Nat) (s₀ : St)
+    (bO bL q pp fe2 nested : Word) :
+    ⦃fun st => st = s₀⦄ invoke p (exec p (n + 1)) "check_block_tail_rec" [bO, bL, q, pp, fe2, nested]
+    ⦃fun r s' => LocEq s' s₀ ∧ ictrW p n s₀.mem bO bL q pp fe2 nested = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, checkBlockTailRec]
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      callW_spec p n "check_block_rec", callW_spec p n "cons_block_recs_tf", callW_spec p n "check_block_tables"] <;>
+    finish (gen := 40) (instances := 20000) [ictrW, rdW_eq]
+
+/-! ## `check_block_tail` -/
+
+/-- After `block_nested_bit`: the rest. -/
+def ictlK4 (p : Prog) (n : Nat) (bO bL q pp fe2 : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r4, m) => ictlK5 p n q pp caO caL fe2 (callW p n "check_block_rec"
-      [fe2, pp, r4.headD 0, rdW (m.arr64 IW) (q + 12), rdW (m.arr64 IW) (q + 13), rdW (m.arr64 IW) (q + 17),
-        rdW (m.arr64 IW) (q + 18), rdW (m.arr64 IW) (q + 14), rdW (m.arr64 IW) (q + 15),
-        rdW (m.arr64 IW) (q + 16), bO, bL, rdW (m.arr64 IW) (q + 1), rdW (m.arr64 IW) (q + 2)] m)
+  | some (r4, m) => ictlK7 (callW p n "check_block_tail_rec" [bO, bL, q, pp, fe2, r4.headD 0] m)
 /-- After the flush: the container bit. -/
-def ictlK3 (p : Prog) (n : Nat) (bO bL q pp caO caL fe2 : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
+def ictlK3 (p : Prog) (n : Nat) (bO bL q pp fe2 : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (_, m) => ictlK4 p n bO bL q pp caO caL fe2 (callW p n "block_nested_bit"
+  | some (_, m) => ictlK4 p n bO bL q pp fe2 (callW p n "block_nested_bit"
       [pp, rdW (m.arr64 IW) (q + 8), rdW (m.arr64 IW) (q + 9)] m)
 /-- After `cons_block_ctors`: the flush. -/
-def ictlK2 (p : Prog) (n : Nat) (bO bL q pp caO caL : Word) :
-    Option (List Word × Mem) → Option (List Word × Mem)
+def ictlK2 (p : Prog) (n : Nat) (bO bL q pp : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r2, m) => ictlK3 p n bO bL q pp caO caL (r2.headD 0) (callW p n "flush_caches" [] m)
-/-- After `check_block_idx_sorts`: the constructors consed (`nP`, `ctorsAs` read here). -/
+  | some (r2, m) => ictlK3 p n bO bL q pp (r2.headD 0) (callW p n "flush_caches" [] m)
+/-- After `check_block_idx_sorts`: the constructors consed. -/
 def ictlK1 (p : Prog) (n : Nat) (bO bL q pp env1 : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (_, m) => ictlK2 p n bO bL q pp (rdW (m.arr64 IW) (q + 4)) (rdW (m.arr64 IW) (q + 5))
-      (callW p n "cons_block_ctors" [rdW (m.arr64 IW) (pp + 4), rdW (m.arr64 IW) (q + 4),
-        rdW (m.arr64 IW) (q + 5), env1] m)
+  | some (_, m) => ictlK2 p n bO bL q pp (callW p n "cons_block_ctors" [rdW (m.arr64 IW) (pp + 4),
+      rdW (m.arr64 IW) (q + 4), rdW (m.arr64 IW) (q + 5), env1] m)
 
 /-- **The model of `check_block_tail(block.off, block.len, q)`** (body fuel `n`). -/
 def ictlW (p : Prog) (n : Nat) (m : Mem) (bO bL q : Word) : Option (List Word × Mem) :=
@@ -64,28 +91,31 @@ def ictlW (p : Prog) (n : Nat) (m : Mem) (bO bL q : Word) : Option (List Word ×
       rdW (m.arr64 IW) (rdW (m.arr64 IW) (q + 3) + 1), rdW (m.arr64 IW) (q + 1), rdW (m.arr64 IW) (q + 2)] m)
 
 section arms
-variable (p : Prog) (n : Nat) (m : Mem) (bO bL q pp env1 caO caL fe2 : Word) (r : List Word)
-theorem ictlK7_some : ictlK7 (some (r, m)) = some ([r.headD 0], m) := rfl
-theorem ictlK6_some : ictlK6 p n q pp caO caL (some (r, m)) = ictlK7 (callW p n "check_block_tables"
-      [pp, rdW (m.arr64 IW) pp, rdW (m.arr64 IW) (pp + 1), caO, caL, rdW (m.arr64 IW) (q + 6),
-        rdW (m.arr64 IW) (q + 7), r.headD 0] m) := rfl
-theorem ictlK5_some : ictlK5 p n q pp caO caL fe2 (some (r, m)) = ictlK6 p n q pp caO caL
-      (callW p n "cons_block_recs_tf" [fe2, pp, 0, r.tail.headD 0, r.tail.tail.headD 0, r.headD 0] m) := rfl
-theorem ictlK4_some : ictlK4 p n bO bL q pp caO caL fe2 (some (r, m)) = ictlK5 p n q pp caO caL fe2
-      (callW p n "check_block_rec" [fe2, pp, r.headD 0, rdW (m.arr64 IW) (q + 12), rdW (m.arr64 IW) (q + 13),
-        rdW (m.arr64 IW) (q + 17), rdW (m.arr64 IW) (q + 18), rdW (m.arr64 IW) (q + 14),
-        rdW (m.arr64 IW) (q + 15), rdW (m.arr64 IW) (q + 16), bO, bL, rdW (m.arr64 IW) (q + 1),
-        rdW (m.arr64 IW) (q + 2)] m) := rfl
-theorem ictlK3_some : ictlK3 p n bO bL q pp caO caL fe2 (some (r, m)) = ictlK4 p n bO bL q pp caO caL fe2
+variable (p : Prog) (n : Nat) (m : Mem) (bO bL q pp env1 fe2 : Word) (r : List Word)
+theorem ictlK4_some : ictlK4 p n bO bL q pp fe2 (some (r, m)) =
+    ictlK7 (callW p n "check_block_tail_rec" [bO, bL, q, pp, fe2, r.headD 0] m) := rfl
+theorem ictlK3_some : ictlK3 p n bO bL q pp fe2 (some (r, m)) = ictlK4 p n bO bL q pp fe2
       (callW p n "block_nested_bit" [pp, rdW (m.arr64 IW) (q + 8), rdW (m.arr64 IW) (q + 9)] m) := rfl
-theorem ictlK2_some : ictlK2 p n bO bL q pp caO caL (some (r, m)) =
-    ictlK3 p n bO bL q pp caO caL (r.headD 0) (callW p n "flush_caches" [] m) := rfl
+theorem ictlK2_some : ictlK2 p n bO bL q pp (some (r, m)) =
+    ictlK3 p n bO bL q pp (r.headD 0) (callW p n "flush_caches" [] m) := rfl
 theorem ictlK1_some : ictlK1 p n bO bL q pp env1 (some (r, m)) =
-    ictlK2 p n bO bL q pp (rdW (m.arr64 IW) (q + 4)) (rdW (m.arr64 IW) (q + 5))
-      (callW p n "cons_block_ctors" [rdW (m.arr64 IW) (pp + 4), rdW (m.arr64 IW) (q + 4),
-        rdW (m.arr64 IW) (q + 5), env1] m) := rfl
+    ictlK2 p n bO bL q pp (callW p n "cons_block_ctors" [rdW (m.arr64 IW) (pp + 4), rdW (m.arr64 IW) (q + 4),
+      rdW (m.arr64 IW) (q + 5), env1] m) := rfl
 end arms
-attribute [ind_grind] ictlK7_some ictlK6_some ictlK5_some ictlK4_some ictlK3_some ictlK2_some ictlK1_some
+attribute [ind_grind] ictlK4_some ictlK3_some ictlK2_some ictlK1_some
+
+set_option maxHeartbeats 1600000 in
+theorem ictl_spec (p : Prog) (hp : p.lookup "check_block_tail" = some checkBlockTail) (n : Nat) (s₀ : St)
+    (bO bL q : Word) :
+    ⦃fun st => st = s₀⦄ invoke p (exec p (n + 1)) "check_block_tail" [bO, bL, q]
+    ⦃fun r s' => LocEq s' s₀ ∧ ictlW p n s₀.mem bO bL q = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, checkBlockTail]
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      callW_spec p n "check_block_idx_sorts", callW_spec p n "cons_block_ctors",
+      callW_spec p n "flush_caches", callW_spec p n "block_nested_bit", callW_spec p n "check_block_tail_rec"] <;>
+    finish (gen := 40) (instances := 20000) [ictlW, rdW_eq]
 
 /-! ## `check_block` -/
 

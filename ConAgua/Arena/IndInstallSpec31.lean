@@ -58,6 +58,7 @@ structure TailProg (p : Prog) : Prop where
   ng : p.lookup "block_nested_bit_go" = some blockNestedBitGo
   nb : p.lookup "block_nested_bit" = some blockNestedBit
   crec : p.lookup "check_block_rec" = some checkBlockRec
+  tailrec : p.lookup "check_block_tail_rec" = some checkBlockTailRec
   tabs : TabsProg p
   tail : p.lookup "check_block_tail" = some checkBlockTail
 
@@ -142,10 +143,9 @@ theorem ictlW_sim {p : Prog} (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : L
   -- `cons_block_ctors` (the twin's `fe₂`, a pure function)
   obtain ⟨hnp1, -, -, -⟩ := partsShapeWords hg1 hbsD hq9
   have hca1 := hcas.grow decCNS_mono hg1
-  refine Sim.mstep (K := ictlK2 p n bO bL q (UInt64.ofNat pw) (rdW (m1.arr64 IW) (q + 4))
-    (rdW (m1.arr64 IW) (q + 5))) rfl (fun _ _ => rfl) fun r2 m2 h2 => ?_
+  refine Sim.mstep (K := ictlK2 p n bO bL q (UInt64.ofNat pw)) rfl (fun _ _ => rfl) fun r2 m2 h2 => ?_
   rw [partsRdIW_grow hg1 (w := q + 4) (by rw [e 4 (by decide) (q + 4) rfl]; omega),
-    partsRdIW_grow hg1 (w := q + 5) (by rw [e 5 (by decide) (q + 5) rfl]; omega)] at h2 ⊢
+    partsRdIW_grow hg1 (w := q + 5) (by rw [e 5 (by decide) (q + 5) rfl]; omega)] at h2
   rw [hnp1] at h2
   obtain ⟨s2, rfl, -, hS2, hg2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
     (consBlockCtors_refines p hP.recp hP.hci hP.hcs hP.hcbc n _ a1 dn fe _ _ _ vis ctorsAs hS1 hca1) h2
@@ -154,14 +154,12 @@ theorem ictlW_sim {p : Prog} (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : L
   rw [ictlK2_some]
   -- the flush
   dsimp only
-  refine Sim.bindK (K := ictlK3 p n bO bL q (UInt64.ofNat pw) (rdW (m.arr64 IW) (q + 4))
-    (rdW (m.arr64 IW) (q + 5)) (r2.headD 0)) rfl (fun _ _ => rfl) (tailSimFlush hP.flush n hS2 hM2) ?_
+  refine Sim.bindK (K := ictlK3 p n bO bL q (UInt64.ofNat pw) (r2.headD 0)) rfl (fun _ _ => rfl) (tailSimFlush hP.flush n hS2 hM2) ?_
   rintro - - m3 a3 ⟨hS3, hg3, hM3⟩
   rw [ictlK3_some]
   have hg03 := (hg1.trans hg2).trans hg3
   -- `block_nested_bit` (the twin's `nested`, a pure function)
-  refine Sim.mstep (K := ictlK4 p n bO bL q (UInt64.ofNat pw) (rdW (m.arr64 IW) (q + 4))
-    (rdW (m.arr64 IW) (q + 5)) (r2.headD 0)) rfl (fun _ _ => rfl) fun r4 m4 h4 => ?_
+  refine Sim.mstep (K := ictlK4 p n bO bL q (UInt64.ofNat pw) (r2.headD 0)) rfl (fun _ _ => rfl) fun r4 m4 h4 => ?_
   have hks3 := hks.grow hkfm hg03
   rw [partsRdIW_grow hg03 (w := q + 8) (by rw [e 8 (by decide) (q + 8) rfl]; omega),
     partsRdIW_grow hg03 (w := q + 9) (by rw [e 9 (by decide) (q + 9) rfl]; omega)] at h4
@@ -171,7 +169,6 @@ theorem ictlW_sim {p : Prog} (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : L
   subst hs4
   have hnb : (r4.headD 0 != 0) = ConRon.Arena.blockNestedBit bs kinds := by
     rw [hr4]; cases ConRon.Arena.blockNestedBit bs kinds <;> rfl
-  rw [ictlK4_some]
   -- `check_block_rec`
   have hrd3 : rdW (m3.arr64 IW) (q + 14) = UInt64.ofNat rdp := by
     rw [partsRdIW_grow hg03 (w := q + 14) (by rw [e 14 (by decide) (q + 14) rfl]; omega)]; exact hw14
@@ -193,43 +190,54 @@ theorem ictlW_sim {p : Prog} (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : L
     · rw [r 15 (by decide) (q + 15) rfl, r 16 (by decide) (q + 16) rfl]; exact hcls'.grow (fun q => decTM_mono q) hg03
     · rw [r 1 (by decide) (q + 1) rfl, r 2 (by decide) (q + 2) rfl]; exact hcvs.grow (fun q => OMono.decCVp q) hg03
     · exact decEBlk_mono _ _ _
-  have hrec : Sim (callW p n "check_block_rec" [r2.headD 0, UInt64.ofNat pw, r4.headD 0,
+  -- through `check_block_tail_rec`
+  rw [ictlK4_some]
+  refine Sim.post (K := ictlK7) rfl (fun _ _ => rfl) ?_ (fun r x m' a' h => h)
+  cases n with
+  | zero => rw [callW_zero]; exact Sim.of_none
+  | succ k =>
+  intro r m' e
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
+    (ictr_spec p hP.tailrec k _ bO bL q (UInt64.ofNat pw) (r2.headD 0) (r4.headD 0)) e
+  refine (?_ : Sim (ictrW p k m3 bO bL q (UInt64.ofNat pw) (r2.headD 0) (r4.headD 0)) _ a3 _) r s'.mem hW
+  unfold ictrW
+  have hrec : Sim (callW p k "check_block_rec" [r2.headD 0, UInt64.ofNat pw, r4.headD 0,
         rdW (m3.arr64 IW) (q + 12), rdW (m3.arr64 IW) (q + 13), rdW (m3.arr64 IW) (q + 17),
         rdW (m3.arr64 IW) (q + 18), rdW (m3.arr64 IW) (q + 14), rdW (m3.arr64 IW) (q + 15),
         rdW (m3.arr64 IW) (q + 16), bO, bL, rdW (m3.arr64 IW) (q + 1), rdW (m3.arr64 IW) (q + 2)] m3)
       (ConRon.Arena.checkBlockRec V (ConRon.Arena.consBlockCtors bs.nP ctorsAs fe) ⟨bs⟩ (ConRon.Arena.blockNestedBit bs kinds) params tbl rd
         cls block cvTas) a3
       (fun r x m' a' => (StageR dn (r.headD 0) x.1 m' a' ∧ IWGrow m3 m' ∧ decRRS m' r.tail x.2) ∧ HbMemo m') := by
-    refine Sim.withFr (Sim.callW_pos (fun k => installSimCall
-      (checkBlockRec_refines p hP.crec k ⟨m3, Locals.init []⟩ a3 dn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ bs params tbl rd
-        cls cvTas block hS3 hpre) (fun r s' h => by obtain ⟨-, hok, hS', hg, hd⟩ := h; rw [hnb] at hok hS' hd; exact ⟨hok, hS', hg, hd⟩)) n)
+    refine Sim.withFr (Sim.callW_pos (fun j => installSimCall
+      (checkBlockRec_refines p hP.crec j ⟨m3, Locals.init []⟩ a3 dn _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ bs params tbl rd
+        cls cvTas block hS3 hpre) (fun r s' h => by obtain ⟨-, hok, hS', hg, hd⟩ := h; rw [hnb] at hok hS' hd; exact ⟨hok, hS', hg, hd⟩)) k)
       (fun r m' e5 => HbMemo.ofClosed hcl (hfs _ (by decide)) e5 hM3)
-  refine Sim.bindK (K := ictlK5 p n q (UInt64.ofNat pw) (rdW (m.arr64 IW) (q + 4)) (rdW (m.arr64 IW) (q + 5))
-    (r2.headD 0)) rfl (fun _ _ => rfl) hrec ?_
+  refine Sim.bindK (K := ictrK5 p k q (UInt64.ofNat pw) (r2.headD 0)) rfl (fun _ _ => rfl) hrec ?_
   rintro r5 ⟨fe2b, outs⟩ m5 a5 ⟨⟨hS5, hg5, hd5⟩, hM5⟩
   dsimp only
-  rw [ictlK5_some, hS2.1.env.vis]
+  rw [ictrK5_some, hS2.1.env.vis]
   -- `cons_block_recs_tf`
-  refine Sim.bindK (K := ictlK6 p n q (UInt64.ofNat pw) (rdW (m.arr64 IW) (q + 4)) (rdW (m.arr64 IW) (q + 5)))
+  refine Sim.bindK (K := ictrK6 p k q (UInt64.ofNat pw))
     rfl (fun _ _ => rfl)
-    (hRecs n dn (r5.headD 0) (r2.headD 0) (UInt64.ofNat pw) fe2b m5 a5 bs r5.tail outs hS5
+    (hRecs k dn (r5.headD 0) (r2.headD 0) (UInt64.ofNat pw) fe2b m5 a5 bs r5.tail outs hS5
       ((hbsD.grow (decBS_mono _) hg03).grow (decBS_mono _) hg5) hd5 hM5) ?_
   rintro r6 fe3 m6 a6 ⟨hS6, hg6, hM6⟩
-  rw [ictlK6_some]
+  rw [ictrK6_some]
   -- `check_block_tables`
   have hg06 := (hg03.trans hg5).trans hg6
   have r : ∀ k, k < 19 → ∀ w : Word, w = q + UInt64.ofNat k → rdW (m6.arr64 IW) w = rdW (m.arr64 IW) w :=
     fun k hk w hw => partsRdIW_grow hg06 (by rw [e k hk w hw]; omega)
   rw [partsRdIW_grow hg06 (w := UInt64.ofNat pw) (by rw [hpw']; omega),
     partsRdIW_grow hg06 (w := UInt64.ofNat pw + 1) (by rw [UInt64.toNat_add, hpw']; simp; omega),
-    r 6 (by decide) (q + 6) rfl, r 7 (by decide) (q + 7) rfl]
+    r 4 (by decide) (q + 4) rfl, r 5 (by decide) (q + 5) rfl, r 6 (by decide) (q + 6) rfl,
+    r 7 (by decide) (q + 7) rfl]
   refine Sim.post (K := ictlK7) rfl (fun _ _ => rfl)
     (Q := fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m6 m' ∧ HbMemo m')
     (fun r m' e7 => by
       obtain ⟨s7, rfl, -, hW7⟩ := triple_of_callW (s₀ := ⟨m6, Locals.init []⟩)
-        (ctb_spec p hP.tabs.tabs n _ _ _ _ _ _ _ _ _) e7
-      exact ctbW_sim hP.tabs dn (UInt64.ofNat pw) bs n m6 a6 (r6.headD 0) fe3 _ _ _ _ _ _ bs.members ctorsAs sss
-        hn hS6 ((hbsD.grow (decBS_mono _) hg06)) (partsHsrc_grow hg06 hq9 hsrc) (hmss.grow decMS_mono hg06)
+        (ctb_spec p hP.tabs.tabs k _ _ _ _ _ _ _ _ _) e7
+      exact ctbW_sim hP.tabs dn (UInt64.ofNat pw) bs k m6 a6 (r6.headD 0) fe3 _ _ _ _ _ _ bs.members ctorsAs sss
+        (by omega) hS6 ((hbsD.grow (decBS_mono _) hg06)) (partsHsrc_grow hg06 hq9 hsrc) (hmss.grow decMS_mono hg06)
         (hcas.grow decCNS_mono hg06) (hsss'.grow decISS_mono hg06) hM6 r s7.mem hW7)
     (fun r x m7 a7 h => ⟨h.1, hg06.trans h.2.1, h.2.2⟩)
 

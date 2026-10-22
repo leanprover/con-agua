@@ -516,6 +516,7 @@ def checkerProg : Prog := [
   ("check_block_tables", L.Ind.checkBlockTables),
   ("check_block_tables_one", L.Ind.checkBlockTablesOne),
   ("check_block_tail", L.Ind.checkBlockTail),
+  ("check_block_tail_rec", L.Ind.checkBlockTailRec),
   ("check_block_tele", L.Ind.checkBlockTele),
   ("check_block_teles", L.Ind.checkBlockTeles),
   ("check_constant_val", L.Ind.checkConstantValL),
