@@ -429,7 +429,7 @@ def reduceNatOpW (p : Prog) (n : Nat) (m : Mem) (mode vis d c a b : Word) :
   match callW p n "nat_op_result" [c, r₂.tail.headD 0, r₂.tail.tail.headD 0, r₄.tail.headD 0,
       r₄.tail.tail.headD 0] m₄ with
   | none => none
-  | some (r₅, m₅) => some (r₅.headD 0, r₅.tail.headD 0, m₅)
+  | some (r₅, m₅) => some (Cmp.evalW .ne (r₅.headD 0) 0, BinOp.eval .and (r₅.tail.headD 0) 4294967295, m₅)
 
 section ropw
 variable (p : Prog) (n : Nat) (mode vis d c a b : Word) (m m₁ m₂ m₃ m₄ m₅ : Mem)
@@ -453,7 +453,8 @@ theorem reduceNatOpW_3 (h1 : callW p n "whnf" [mode, vis, d, a] m = some (r₁, 
     (h4 : callW p n "raw_nat_lit" [r₃.headD 0] m₃ = some (r₄, m₄)) (h00 : ¬ r₄.headD 0 = 0)
     (h5 : callW p n "nat_op_result" [c, r₂.tail.headD 0, r₂.tail.tail.headD 0, r₄.tail.headD 0,
       r₄.tail.tail.headD 0] m₄ = some (r₅, m₅)) :
-    reduceNatOpW p n m mode vis d c a b = some (r₅.headD 0, r₅.tail.headD 0, m₅) := by
+    reduceNatOpW p n m mode vis d c a b =
+      some (Cmp.evalW .ne (r₅.headD 0) 0, BinOp.eval .and (r₅.tail.headD 0) 4294967295, m₅) := by
   simp only [reduceNatOpW, h1, h2, h0, h3, h4, h00, h5, ↓reduceIte]
 
 end ropw
@@ -467,7 +468,7 @@ theorem reduceNatOp_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St)
   simp only [callFn, reduceNatOpL]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "whnf", callW_spec p n "raw_nat_lit", callW_spec p n "nat_op_result"] <;>
-  simp_all [reduceNatOpW, Cmp.eval, BinOp.eval, LocEq, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
+  simp_all [reduceNatOpW, Cmp.evalW, Cmp.eval, BinOp.eval, LocEq, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
     Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr]
 
 
@@ -927,7 +928,33 @@ def NatOpResultOK (p : Prog) : Prop :=
     Norm (s₀.mem.arr64 POOL) oa.toNat la.toNat → Norm (s₀.mem.arr64 POOL) ob.toNat lb.toNat →
     CoreSpec p n "nat_op_result" [c, oa, la, ob, lb]
       (natOpResult (decI c) (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
-        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) decOptR s₀ a₀ dn vis fe MM eb ResW
+        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) decOptR s₀ a₀ dn vis fe MM eb (fun _ => True)
+
+/-- The 32-bit mask keeps a handle word's handle. -/
+theorem decE_mask32 (y : Word) : decE (y &&& 4294967295) = decE y := by
+  have h : (y &&& 4294967295).toUInt32 = y.toUInt32 := by
+    apply UInt32.toNat_inj.mp
+    simp only [UInt64.toNat_toUInt32, UInt64.toNat_and]
+    rw [show (4294967295 : UInt64).toNat = 2 ^ 32 - 1 from rfl, Nat.and_two_pow_sub_one_eq_mod,
+      Nat.mod_mod]
+  simp only [decE, h]
+
+theorem hw_mask32 (y : Word) : HW (y &&& 4294967295) := by
+  unfold HW
+  rw [UInt64.toNat_and, show (4294967295 : UInt64).toNat = 2 ^ 32 - 1 from rfl,
+    Nat.and_two_pow_sub_one_eq_mod]
+  exact Nat.mod_lt _ (by decide)
+
+/-- `reduce_nat_op`'s normalised result reads as `nat_op_result`'s. -/
+theorem decOpt_norm (x y : Word) :
+    decOpt (Cmp.evalW .ne x 0) (BinOp.eval .and y 4294967295) = decOpt x y := by
+  by_cases hx : x = 0
+  · subst hx; simp [decOpt, Cmp.evalW, Cmp.eval]
+  · simp [decOpt, Cmp.evalW, Cmp.eval, hx, BinOp.eval, decE_mask32]
+
+theorem resW_norm (x y : Word) : ResW [Cmp.evalW .ne x 0, BinOp.eval .and y 4294967295] := by
+  refine ⟨?_, hw_mask32 y⟩
+  unfold HW; simp only [List.headD_cons, Cmp.evalW]; split <;> decide
 
 
 section refs19
@@ -1059,8 +1086,9 @@ theorem callW_reduceNatOp (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (n F :
   obtain ⟨hok', hst', hres'⟩ := AM.of_run_ok _ _ _ _ hz
   refine ⟨hok', ?_, ?_, ?_⟩
   · rw [hst']; exact ⟨M₅, hS₅, (hK₁.trans hK₃).trans hK₅, (hSt₁.trans hSt₃).trans hSt₅⟩
-  · rw [hres']; simp only [decOptR, ← hr0, ← hr1]
-  · unfold ResW at hrw5 ⊢; rw [← hr0, ← hr1]; exact hrw5
+  · rw [hres']; simp only [decOptR, ← hr0, ← hr1, decOpt_norm]
+  · have := resW_norm (r₅.headD 0) (r₅.tail.headD 0)
+    unfold ResW at this ⊢; rw [← hr0, ← hr1]; exact this
 
 end refs19
 
