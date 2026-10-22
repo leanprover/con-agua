@@ -118,12 +118,12 @@ theorem stepRef_done {T : AM WhnfStep} {a : AState} {dn : NIdx → Option ConLec
   · exact ⟨by rw [h0]; unfold HW; decide, by rw [h1]; exact he⟩
 
 section step
-variable (p : Prog) (hp : WhnfCoreProg p)
+variable (p : Prog) (hp : WhnfCoreProg p) (hwc : WhnfCallees p) (hcc : CoreCallees p)
+  (hsup : ∀ fe : IFEnv, SupKeep fe)
 
-include hp in
+include hp hwc hcc hsup in
 /-- **`whnf_core_step` refines `whnfCoreStep`.** -/
-@[refines ConRon.Arena.whnfCoreStep]
-theorem whnfCoreStep_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
+theorem whnfCoreStep_refines' (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode cheap d e : Word) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode)
     (he : HW e) :
@@ -176,7 +176,7 @@ theorem whnfCoreStep_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤
     | zero => simp [callW_zero] at hca
     | succ N =>
     have hv := (view_app s.mem a₀ hR e hh ⟨ht, by simpa using hc4⟩ g4).1
-    have happ := coreApp_refines p hp N (hk.mono (by omega)) F (by omega) (by omega) s a₀ dn vis fe
+    have happ := coreApp_refines p hp hwc hcc N (hk.mono (by omega)) F (by omega) (by omega) s a₀ dn vis fe
       MM eb mode cheap d e hs he
     obtain ⟨hok, hA, hres, hrw⟩ := CoreSpec.of_callW happ hca
     refine whnf_coreRef_congr (step_run_app _ _ hv) ⟨hok, hm ▸ hA, ?_, ?_⟩
@@ -202,10 +202,11 @@ theorem whnfCoreStep_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤
     | zero => simp [callW_zero] at hca
     | succ N =>
     obtain ⟨hv, hsn, hpe⟩ := view_proj s.mem a₀ hR e hh ⟨ht, by simpa using hc9⟩ g9
-    have hpr := whnfCoreStepProj_refines p hp N (hk.mono (by omega)) F (by omega) (by omega) s a₀ dn
+    have hpr := whnfCoreStepProj_refines' p hp hwc.strLitSupported hwc.strLitCtor hcc.toProjCallees
+      hp.lsn hcc.erec N (hk.mono (by omega)) F (by omega) (by omega) s a₀ dn
       vis fe MM eb mode cheap d e (rdW (s.mem.arr64 PJREC) (idxW e * 6 + tierW e * 3))
       (rdW (s.mem.arr64 PJREC) (idxW e * 6 + tierW e * 3 + 1))
-      (rdW (s.mem.arr64 PJREC) (idxW e * 6 + tierW e * 3 + 2)) hs he hsn hpe
+      (rdW (s.mem.arr64 PJREC) (idxW e * 6 + tierW e * 3 + 2)) hs he hsn hpe (hsup fe)
     obtain ⟨hok, hA, hres, hrw⟩ := CoreSpec.of_callW hpr hca
     refine whnf_coreRef_congr (step_run_proj _ _ _ hv) ⟨hok, hm ▸ hA, ?_, ?_⟩
     · rw [hres]; simp only [decStep, h0, h1, ↓reduceIte]
@@ -225,7 +226,7 @@ theorem whnfCoreStep_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤
     simp only [hca, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨h0, h1, hm⟩ := hW
     obtain ⟨hv, -, hvv, hbb⟩ := view_let s.mem a₀ hR e hh ⟨ht, by simpa using hc7⟩ g7
-    have hi := (coreCallees_stub p).inst1 n s a₀ dn vis fe MM eb _ _ 0 hS hbb hvv
+    have hi := hcc.inst1 n s a₀ dn vis fe MM eb _ _ 0 hS hbb hvv
     obtain ⟨hok, hA, hres, hrw⟩ := CoreSpec.of_callW hi hca
     have hrun := AM.run_of_ok _ _ hok
     refine whnf_coreRef_congr (step_run_let _ _ _ hv) ?_
@@ -284,13 +285,27 @@ theorem whnfCoreStep_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤
   rw [if_neg g8] at hW
   simp at hW
 
+include hp in
+/-- **`whnf_core_step` refines `whnfCoreStep`.** -/
+@[refines ConRon.Arena.whnfCoreStep]
+theorem whnfCoreStep_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
+    (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (MM : ModeMaps) (eb mode cheap d e : Word) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode)
+    (he : HW e) :
+    CoreSpec p (n + 1) "whnf_core_step" [mode, cheap, vis, d, e]
+      (whnfCoreStep (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat
+        (decE e)) decStep s₀ a₀ dn vis fe MM eb ResW :=
+  whnfCoreStep_refines' p hp (whnfCallees_stub p) (coreCallees_stub p) supKeep_twin n hk F hF hn s₀ a₀ dn vis fe MM eb mode
+    cheap d e hs he
+
 end step
 
 
 section loopRef
-variable (p : Prog) (hp : WhnfCoreProg p)
+variable (p : Prog) (hp : WhnfCoreProg p) (hwc : WhnfCallees p) (hcc : CoreCallees p)
+  (hsup : ∀ fe : IFEnv, SupKeep fe)
 
-include hp in
+include hp hwc hcc hsup in
 /-- **The model of the loop refines `whnfCoreLoop`** at every twin loop fuel `K ≥ k`. -/
 theorem coreLoopW_ok (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (mode cheap d : Word)
@@ -315,7 +330,7 @@ theorem coreLoopW_ok (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn 
     | zero => simp [callW_zero] at hc
     | succ j =>
     obtain ⟨K', rfl⟩ : ∃ K', K = K' + 1 := ⟨K - 1, by omega⟩
-    have hstep := whnfCoreStep_refines p hp j (hk.mono (by omega)) F (by omega) (by omega)
+    have hstep := whnfCoreStep_refines' p hp hwc hcc hsup j (hk.mono (by omega)) F (by omega) (by omega)
       ⟨m, Locals.init []⟩ a dn vis fe MM eb mode cheap d e ⟨hS, hmode, heb⟩ he
     obtain ⟨hok, hA, hres, hrw⟩ := CoreSpec.of_callW hstep hc
     have hsr := AM.run_of_ok _ _ hok
@@ -341,10 +356,9 @@ theorem coreLoopW_ok (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn 
       rw [hst']
       exact CoreAfter.comp hK₁ hSt₁ hA₂
 
-include hp in
+include hp hwc hcc hsup in
 /-- **`whnf_core_loop` refines `whnfCoreLoop` at every twin loop fuel `K ≥ n`.** -/
-@[refines ConRon.Arena.whnfCoreLoop]
-theorem whnfCoreLoop_refines (n : Nat) (hk : KnotUpTo p n) (F K : Nat) (hF : n ≤ F) (hK : n ≤ K)
+theorem whnfCoreLoop_refines' (n : Nat) (hk : KnotUpTo p n) (F K : Nat) (hF : n ≤ F) (hK : n ≤ K)
     (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
     (fe : IFEnv) (MM : ModeMaps) (eb mode cheap d e : Word)
     (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e) :
@@ -357,9 +371,34 @@ theorem whnfCoreLoop_refines (n : Nat) (hk : KnotUpTo p n) (F K : Nat) (hF : n �
     (whnfCoreLoop_spec p hp n s₀ mode cheap vis d e)
   subst hs0
   refine ⟨hloc, ?_⟩
-  obtain ⟨hok, hA, hres, hrw⟩ := coreLoopW_ok p hp n hk F hF hn dn vis fe mode cheap d hs.mode4
+  obtain ⟨hok, hA, hres, hrw⟩ := coreLoopW_ok p hp hwc hcc hsup n hk F hF hn dn vis fe mode cheap d hs.mode4
     (n + 1) (Nat.le_refl _) K (by omega) s.mem s'.mem a₀ MM eb e (r.headD 0) hs.rel hs.eb_mode he hW
   exact ⟨hok, hA, hres, hrw⟩
+
+include hp in
+/-- **`whnf_core_loop` refines `whnfCoreLoop` at every twin loop fuel `K ≥ n`.** -/
+@[refines ConRon.Arena.whnfCoreLoop]
+theorem whnfCoreLoop_refines (n : Nat) (hk : KnotUpTo p n) (F K : Nat) (hF : n ≤ F) (hK : n ≤ K)
+    (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+    (fe : IFEnv) (MM : ModeMaps) (eb mode cheap d e : Word)
+    (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e) :
+    CoreSpec p (n + 1) "whnf_core_loop" [mode, cheap, vis, d, e]
+      (whnfCoreLoop (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat K
+        (decE e)) decH s₀ a₀ dn vis fe MM eb :=
+  whnfCoreLoop_refines' p hp (whnfCallees_stub p) (coreCallees_stub p) supKeep_twin n hk F K hF hK hn s₀ a₀ dn vis fe
+    MM eb mode cheap d e hs he
+
+include hp hwc hcc hsup in
+/-- **`whnf_core_loop` refines `whnfCoreBody`** (the loop at `whnfCoreLoopFuel = 2^62`). -/
+theorem whnfCoreBody_refines' (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F)
+    (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+    (fe : IFEnv) (MM : ModeMaps) (eb mode cheap d e : Word)
+    (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e) :
+    CoreSpec p (n + 1) "whnf_core_loop" [mode, cheap, vis, d, e]
+      (whnfCoreBody (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat
+        (decE e)) decH s₀ a₀ dn vis fe MM eb :=
+  whnfCoreLoop_refines' p hp hwc hcc hsup n hk F whnfCoreLoopFuel hF (by simp only [whnfCoreLoopFuel]; omega) hn s₀
+    a₀ dn vis fe MM eb mode cheap d e hs he
 
 include hp in
 /-- **`whnf_core_loop` refines `whnfCoreBody`** (the loop at `whnfCoreLoopFuel = 2^62`). -/
@@ -371,18 +410,20 @@ theorem whnfCoreBody_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤
     CoreSpec p (n + 1) "whnf_core_loop" [mode, cheap, vis, d, e]
       (whnfCoreBody (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat
         (decE e)) decH s₀ a₀ dn vis fe MM eb :=
-  whnfCoreLoop_refines p hp n hk F whnfCoreLoopFuel hF (by simp only [whnfCoreLoopFuel]; omega) hn s₀
-    a₀ dn vis fe MM eb mode cheap d e hs he
+  whnfCoreBody_refines' p hp (whnfCallees_stub p) (coreCallees_stub p) supKeep_twin n hk F hF hn s₀ a₀ dn vis fe MM eb
+    mode cheap d e hs he
 
 end loopRef
 
 section slot
-variable (p : Prog) (hp : WhnfCoreProg p)
+variable (p : Prog) (hp : WhnfCoreProg p) (hwc : WhnfCallees p) (hcc : CoreCallees p)
+  (hsup : ∀ fe : IFEnv, SupKeep fe)
 
-include hp in
+include hp hwc hcc hsup in
 /-- **The knot's `whnfCore` slot, one level up**: given the knot at every fuel up to `n` (for
 the body's callees), `whnf_core` at `n + 1` refines the slot of `coreKnot mode fe id F`,
-`F ≥ n + 1`. The body's own refinement is `whnfCoreBody_refines`. -/
+`F ≥ n + 1`. The body's own refinement is `whnfCoreBody_refines'`. Over the bundles
+`WhnfCallees`, `CoreCallees` and `SupKeep` (`DefEqKnot.lean` builds them from real proofs). -/
 theorem whnfCoreSlot_step (n : Nat) (hk : KnotUpTo p n) : WhnfCoreSlot p (n + 1) := by
   intro F s₀ a₀ dn vis fe MM eb mode cheap d e hF hn hs he
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
@@ -431,7 +472,7 @@ theorem whnfCoreSlot_step (n : Nat) (hk : KnotUpTo p n) : WhnfCoreSlot p (n + 1)
     cases n with
     | zero => simp [callW_zero] at hcall
     | succ n' =>
-    have hbody := whnfCoreBody_refines p hp n' (hk.mono (by omega)) F' (by omega) (by omega) s a₀ dn vis
+    have hbody := whnfCoreBody_refines' p hp hwc hcc hsup n' (hk.mono (by omega)) F' (by omega) (by omega) s a₀ dn vis
       fe MM eb mode 1 d e hs he
     obtain ⟨hok, ⟨M', hS₁, hK₁, hSt₁⟩, hres, hrw⟩ := CoreSpec.of_callW hbody hcall
     cases hset : msetG wkSch m₁ e (genW 0 eb) (r₁.headD 0) with
@@ -476,7 +517,7 @@ theorem whnfCoreSlot_step (n : Nat) (hk : KnotUpTo p n) : WhnfCoreSlot p (n + 1)
     cases n with
     | zero => simp [callW_zero] at hcall
     | succ n' =>
-    have hbody := whnfCoreBody_refines p hp n' (hk.mono (by omega)) F' (by omega) (by omega) s a₀ dn vis
+    have hbody := whnfCoreBody_refines' p hp hwc hcc hsup n' (hk.mono (by omega)) F' (by omega) (by omega) s a₀ dn vis
       fe MM eb mode 0 d e hs he
     obtain ⟨hok, ⟨M', hS₁, hK₁, hSt₁⟩, hres, hrw⟩ := CoreSpec.of_callW hbody hcall
     cases hset : msetG wcSch m₁ e (genW 0 eb) (r₁.headD 0) with

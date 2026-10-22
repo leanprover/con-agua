@@ -150,42 +150,16 @@ theorem nuWf_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
     (a : AState) (ctx cv : Word) (c : NestCtx) (cvv : IConstantVal) (r : List Word)
     (h : nuWf k m ctx cv = some (r, m')) (hS : StageR dn vis fe m a)
     (hc : decCtx m ctx.toNat = some c) (hin : CtxIn m ctx.toNat (· < iwTop m)) (hsl : CtxSl m ctx.toNat)
-    (hcv : decCV (erecP m) cv.toNat = some cvv) (hcvs : CVSl m cv) (hhi : c.hiAt 0 < 2 ^ 64)
-    (hMra : ∀ (m2 : Mem) (a2 : AState), StageR dn vis fe m2 a2 → ∃ mp0, rpMR m2 mp0)
-    (hMno : ∀ (m2 : Mem) (a2 : AState), StageR dn vis fe m2 a2 → ∃ mp0, noMR m2 mp0) :
+    (hcv : decCV (erecP m) cv.toNat = some cvv) (hhi : c.hiAt 0 < 2 ^ 64) (hP : PosMR m) :
     ∃ x a', (ConRon.Arena.nestUniformOk c cvv).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
-      IWGrow m m' ∧ r = [if x then 1 else 0] := by
+      IWGrow m m' ∧ r = [if x then 1 else 0] ∧ PosMR m' := by
   match k, h with
-  | k + 4, h => exact nuW_ok k dn fe vis m m' a ctx cv c cvv r h hS hc hin hsl hcv hcvs hhi hMra hMno
+  | k + 4, h => exact nuW_ok k dn fe vis m m' a ctx cv c cvv r h hS hc hin hsl hcv hhi hP
 
 theorem CsAt.tail {m : Mem} {o : Nat} {x : IConstantVal × Nat} {xs : List (IConstantVal × Nat)}
     {P : Nat → Prop} (h : CsAt m o (x :: xs) P) : CsAt m (o + 1) xs P := fun i hi => by
   obtain ⟨w, hw, hc⟩ := h (i + 1) (by simp; omega)
   exact ⟨w, by rw [show o + 1 + i = o + (i + 1) by omega]; exact hw, by simpa using hc⟩
-
-/-- The constructors' constant records have their level-parameter slices below `EREC`'s top. -/
-def CvsOk (m : Mem) (o : Nat) (cs : List (IConstantVal × Nat)) : Prop :=
-  ∀ i, i < cs.length → ∀ w q : Word, (m.arr64 IW)[o + i]? = some w → (m.arr64 IW)[w.toNat]? = some q →
-    CVSl m q
-
-theorem CvsOk.tail {m : Mem} {o : Nat} {x : IConstantVal × Nat} {xs : List (IConstantVal × Nat)}
-    (h : CvsOk m o (x :: xs)) : CvsOk m (o + 1) xs := fun i hi w q hw hq =>
-  h (i + 1) (by simp; omega) w q (by rw [show o + (i + 1) = o + 1 + i by omega]; exact hw) hq
-
-theorem CvsOk.grow {m m' : Mem} {o : Nat} {cs : List (IConstantVal × Nat)} (h : CvsOk m o cs)
-    (hcs : CsAt m o cs (· < iwTop m)) (hb : o + cs.length ≤ iwTop m) (hg : IWGrow m m') :
-    CvsOk m' o cs := by
-  intro i hi w q hw hq
-  obtain ⟨w', hw', h0, h1, q', hq', hcv, -⟩ := hcs i hi
-  rw [hg.2.2.1 _ (by omega)] at hw
-  rw [hw] at hw'; cases hw'
-  rw [hg.2.2.1 _ h0] at hq
-  have hqq : q.toNat = q' := by simp [iwN, nat?, iwA, hq] at hq'; exact hq'
-  obtain ⟨-, -, hty⟩ := decCV_some hcv
-  obtain ⟨wt, hwt, -⟩ := hd?_some hty
-  have := (Array.getElem?_eq_some_iff.mp hwt).1
-  have := erecP_size_le m
-  exact (h i hi w q hw hq).grow (by omega) hg
 
 /-- The context facts the uniform checks need, at one memory. -/
 structure UCtx (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m : Mem) (ctx : Word)
@@ -199,19 +173,16 @@ theorem UCtx.grow {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
   ⟨by rw [(CtxIn.grow h.inn hg).1]; exact h.dec, (CtxIn.grow h.inn hg).2, h.sl.grow h.inn hg⟩
 
 theorem ucW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Word) (c : NestCtx)
-    (hhi : c.hiAt 0 < 2 ^ 64)
-    (hMra : ∀ (m2 : Mem) (a2 : AState), StageR dn vis fe m2 a2 → ∃ mp0, rpMR m2 mp0)
-    (hMno : ∀ (m2 : Mem) (a2 : AState), StageR dn vis fe m2 a2 → ∃ mp0, noMR m2 mp0) (k : Nat) :
+    (hhi : c.hiAt 0 < 2 ^ 64) (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (o l : Word) (cs : List (IConstantVal × Nat)) (r : List Word),
     ucW k m ctx o l = some (r, m') → StageR dn vis fe m a → UCtx dn vis fe m ctx c →
-    l.toNat = cs.length → o.toNat + cs.length ≤ iwTop m → CsAt m o.toNat cs (· < iwTop m) →
-    CvsOk m o.toNat cs →
+    l.toNat = cs.length → o.toNat + cs.length ≤ iwTop m → CsAt m o.toNat cs (· < iwTop m) → PosMR m →
     ∃ b a', (cs.allM (fun x => ConRon.Arena.nestUniformOk c x.1)).run a = .ok (b, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) := by
+      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) ∧ PosMR m' := by
   induction k with
   | zero => intro m m' a o l cs r h; simp [ucW] at h
   | succ k ih =>
-    intro m m' a o l cs r h hS hU hl hob hcs hcv
+    intro m m' a o l cs r h hS hU hl hob hcs hP
     by_cases hl0 : l = 0
     · rw [ucW_nil (h := hl0)] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h
@@ -219,7 +190,7 @@ theorem ucW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Word
       subst hl0
       have : cs = [] := List.eq_nil_of_length_eq_zero (by rw [← hl]; rfl)
       subst this
-      exact ⟨true, a, rfl, hS, IWGrow.refl _, rfl⟩
+      exact ⟨true, a, rfl, hS, IWGrow.refl _, rfl, hP⟩
     rw [ucW_cons (h := hl0)] at h
     have hlz : l.toNat ≠ 0 := fun e => hl0 (UInt64.toNat_inj.mp (by simpa using e))
     obtain ⟨x, cs', rfl⟩ := List.exists_cons_of_ne_nil (show cs ≠ [] from fun e => by rw [e] at hl; exact hlz hl)
@@ -230,14 +201,13 @@ theorem ucW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Word
       simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at hqn; exact hqn
     have hrq : rdW (m.arr64 IW) w = q := by simp [rdW, hq]
     rw [hrw, hrq] at h
-    have hcvs : CVSl m q := hcv 0 (by simp) w q (by simpa using hw) hq
     cases hnu : nuWf k m ctx q with
     | none => rw [hnu] at h; simp [ucK] at h
     | some pr =>
     obtain ⟨r1, m1⟩ := pr
     rw [hnu] at h
-    obtain ⟨b1, a1, hrun1, hS1, hg1, hr1⟩ := nuWf_ok k dn fe vis m m1 a ctx q c x.1 r1 hnu hS hU.dec hU.inn
-      hU.sl hcvv hcvs hhi hMra hMno
+    obtain ⟨b1, a1, hrun1, hS1, hg1, hr1, hP1⟩ := nuWf_ok k dn fe vis m m1 a ctx q c x.1 r1 hnu hS hU.dec hU.inn
+      hU.sl hcvv hhi hP
     rw [List.allM_cons]
     cases b1 with
     | false =>
@@ -245,7 +215,7 @@ theorem ucW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Word
       rw [ucK_no (h := rfl)] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      refine ⟨false, a1, ?_, hS1, hg1, rfl⟩
+      refine ⟨false, a1, ?_, hS1, hg1, rfl, hP1⟩
       simp only [StateT.run_bind, hrun1, except_ok_bind]; rfl
     | true =>
       subst hr1
@@ -256,11 +226,10 @@ theorem ucW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Word
         UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))
       have hcs1 := hcs.tail
       have hb1 : o.toNat + 1 + cs'.length ≤ iwTop m := by simp at hob; omega
-      obtain ⟨b, a', hrun, hS', hg', hr⟩ := ih m1 m' a1 (o + 1) (l - 1) cs' r h hS1 (hU.grow hg1)
+      obtain ⟨b, a', hrun, hS', hg', hr, hP'⟩ := ih m1 m' a1 (o + 1) (l - 1) cs' r h hS1 (hU.grow hg1)
         (by rw [hl1, hl]; simp) (by rw [ho1]; have := hg1.1; omega)
-        (by rw [ho1]; exact hcs1.grow hb1 hg1)
-        (by rw [ho1]; exact (hcv.tail).grow hcs1 hb1 hg1)
-      refine ⟨b, a', ?_, hS', hg1.trans hg', hr⟩
+        (by rw [ho1]; exact hcs1.grow hb1 hg1) hP1
+      refine ⟨b, a', ?_, hS', hg1.trans hg', hr, hP'⟩
       simp only [StateT.run_bind, hrun1, except_ok_bind, if_true]
       exact hrun
 
@@ -269,45 +238,44 @@ def CssAt (m : Mem) (off : Nat) (css : List (List (IConstantVal × Nat))) : Prop
   ∀ i (hi : i < css.length), ∃ hdr o l : Word, (m.arr64 IW)[off + i]? = some hdr ∧
     (m.arr64 IW)[hdr.toNat]? = some o ∧ (m.arr64 IW)[hdr.toNat + 1]? = some l ∧
     off + i < iwTop m ∧ hdr.toNat + 1 < iwTop m ∧ l.toNat = css[i].length ∧
-    o.toNat + l.toNat ≤ iwTop m ∧ CsAt m o.toNat css[i] (· < iwTop m) ∧ CvsOk m o.toNat css[i]
+    o.toNat + l.toNat ≤ iwTop m ∧ CsAt m o.toNat css[i] (· < iwTop m)
 
 theorem CssAt.tail {m : Mem} {off : Nat} {x : List (IConstantVal × Nat)} {xs : List (List (IConstantVal × Nat))}
     (h : CssAt m off (x :: xs)) : CssAt m (off + 1) xs := fun i hi => by
-  obtain ⟨hdr, o, l, h1, h2, h3, h4, h5, h6, h7, h8, h9⟩ := h (i + 1) (by simp; omega)
+  obtain ⟨hdr, o, l, h1, h2, h3, h4, h5, h6, h7, h8⟩ := h (i + 1) (by simp; omega)
   exact ⟨hdr, o, l, by rw [show off + 1 + i = off + (i + 1) by omega]; exact h1, h2, h3, by omega, h5,
-    by simpa using h6, h7, by simpa using h8, by simpa using h9⟩
+    by simpa using h6, h7, by simpa using h8⟩
 
 theorem CssAt.grow {m m' : Mem} {off : Nat} {css : List (List (IConstantVal × Nat))} (h : CssAt m off css)
     (hg : IWGrow m m') : CssAt m' off css := fun i hi => by
-  obtain ⟨hdr, o, l, h1, h2, h3, h4, h5, h6, h7, h8, h9⟩ := h i hi
+  obtain ⟨hdr, o, l, h1, h2, h3, h4, h5, h6, h7, h8⟩ := h i hi
   refine ⟨hdr, o, l, by rw [hg.2.2.1 _ h4]; exact h1, by rw [hg.2.2.1 _ (by omega)]; exact h2,
     by rw [hg.2.2.1 _ h5]; exact h3, by have := hg.1; omega, by have := hg.1; omega, h6,
-    by have := hg.1; omega, h8.grow (by omega) hg, h9.grow h8 (by omega) hg⟩
+    by have := hg.1; omega, h8.grow (by omega) hg⟩
 
 theorem unW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Word) (c : NestCtx)
-    (hhi : c.hiAt 0 < 2 ^ 64)
-    (hMra : ∀ (m2 : Mem) (a2 : AState), StageR dn vis fe m2 a2 → ∃ mp0, rpMR m2 mp0)
-    (hMno : ∀ (m2 : Mem) (a2 : AState), StageR dn vis fe m2 a2 → ∃ mp0, noMR m2 mp0) (k : Nat) :
+    (hhi : c.hiAt 0 < 2 ^ 64) (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (off l : Word) (css : List (List (IConstantVal × Nat))),
     unW k m ctx off l = some m' → StageR dn vis fe m a → UCtx dn vis fe m ctx c →
-    l.toNat = css.length → CssAt m off.toNat css →
-    ∃ a', (ConRon.Arena.nestUniform c css).run a = .ok ((), a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' := by
+    l.toNat = css.length → CssAt m off.toNat css → PosMR m →
+    ∃ a', (ConRon.Arena.nestUniform c css).run a = .ok ((), a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+      PosMR m' := by
   induction k with
   | zero => intro m m' a off l css h; simp [unW] at h
   | succ k ih =>
-    intro m m' a off l css h hS hU hl hcss
+    intro m m' a off l css h hS hU hl hcss hP
     by_cases hl0 : l = 0
     · rw [unW_nil (h := hl0)] at h
       cases h
       subst hl0
       have : css = [] := List.eq_nil_of_length_eq_zero (by rw [← hl]; rfl)
       subst this
-      exact ⟨a, rfl, hS, IWGrow.refl _⟩
+      exact ⟨a, rfl, hS, IWGrow.refl _, hP⟩
     rw [unW_cons (h := hl0)] at h
     have hlz : l.toNat ≠ 0 := fun e => hl0 (UInt64.toNat_inj.mp (by simpa using e))
     obtain ⟨cs, css', rfl⟩ := List.exists_cons_of_ne_nil (show css ≠ [] from fun e => by rw [e] at hl; exact hlz hl)
-    obtain ⟨hdr, o, ll, h1, h2, h3, h4, h5, h6, h7, h8, h9⟩ := hcss 0 (by simp)
-    simp only [Nat.add_zero, List.getElem_cons_zero] at h1 h6 h8 h9
+    obtain ⟨hdr, o, ll, h1, h2, h3, h4, h5, h6, h7, h8⟩ := hcss 0 (by simp)
+    simp only [Nat.add_zero, List.getElem_cons_zero] at h1 h6 h8
     have r1 : rdW (m.arr64 IW) off = hdr := by simp [rdW, h1]
     have r2 : rdW (m.arr64 IW) hdr = o := by simp [rdW, h2]
     have hh1 : (hdr + 1).toNat = hdr.toNat + 1 := word_add_toNat (by
@@ -319,8 +287,8 @@ theorem unW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Word
     | some pr =>
     obtain ⟨r, m1⟩ := pr
     rw [huc] at h
-    obtain ⟨b, a1, hrun1, hS1, hg1, hr⟩ := ucW_ok dn fe vis ctx c hhi hMra hMno k m m1 a o ll cs r huc hS hU
-      h6 (by omega) h8 h9
+    obtain ⟨b, a1, hrun1, hS1, hg1, hr, hP1⟩ := ucW_ok dn fe vis ctx c hhi k m m1 a o ll cs r huc hS hU
+      h6 (by omega) h8 hP
     rw [ConRon.Arena.nestUniform.eq_2]
     cases b with
     | false => rw [unK_no (h := hr)] at h; simp at h
@@ -330,9 +298,9 @@ theorem unW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis ctx : Word
         have := hS.2.1; have := hS.2.2.2.1; simp; omega)
       have hl1 : (l - 1).toNat = l.toNat - 1 :=
         UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))
-      obtain ⟨a', hrun, hS', hg'⟩ := ih m1 m' a1 (off + 1) (l - 1) css' h hS1 (hU.grow hg1)
-        (by rw [hl1, hl]; simp) (by rw [ho1]; exact hcss.tail.grow hg1)
-      refine ⟨a', ?_, hS', hg1.trans hg'⟩
+      obtain ⟨a', hrun, hS', hg', hP'⟩ := ih m1 m' a1 (off + 1) (l - 1) css' h hS1 (hU.grow hg1)
+        (by rw [hl1, hl]; simp) (by rw [ho1]; exact hcss.tail.grow hg1) hP1
+      refine ⟨a', ?_, hS', hg1.trans hg', hP'⟩
       simp only [StateT.run_bind, hrun1, except_ok_bind, if_true]
       exact hrun
 
@@ -341,23 +309,22 @@ variable (p : Prog) (hl : NuLook p) (hc : p.lookup "nest_uniform_cs" = some nest
   (hp : p.lookup "nest_uniform" = some nestUniformL)
 include hl hc hp
 
-/-- **`nest_uniform` refines `nestUniform`** (through `nest_root_canon`'s stubs; the `replace_apps`
-and `nest_occ` memos well-formed in every stage state). -/
+/-- **`nest_uniform` refines `nestUniform`** (through `nest_root_canon`'s stubs; the walk memos
+well formed in the memory at hand, `PosMR`, and again after). -/
 @[refines ConRon.Arena.nestUniform]
 theorem nestUniform_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis ctx off l : Word) (c : NestCtx) (css : List (List (IConstantVal × Nat)))
     (hS : StageR dn vis fe s₀.mem a₀) (hU : UCtx dn vis fe s₀.mem ctx c) (hhi : c.hiAt 0 < 2 ^ 64)
-    (hlen : l.toNat = css.length) (hcss : CssAt s₀.mem off.toNat css)
-    (hMra : ∀ (m2 : Mem) (a2 : AState), StageR dn vis fe m2 a2 → ∃ mp0, rpMR m2 mp0)
-    (hMno : ∀ (m2 : Mem) (a2 : AState), StageR dn vis fe m2 a2 → ∃ mp0, noMR m2 mp0) :
+    (hlen : l.toNat = css.length) (hcss : CssAt s₀.mem off.toNat css) (hP : PosMR s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_uniform" [ctx, off, l]
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.nestUniform c css) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.nestUniform c css) a₀) ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
+      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.nestUniform c css) a₀) ∧ IWGrow s₀.mem s'.mem ∧
+      PosMR s'.mem; ⊤⦄ := by
   refine triple_post (nestUniform_spec p hl hc hp k s₀ ctx off l) ?_
   rintro r s' ⟨hlc, hm⟩
-  obtain ⟨a', hrun, hS', hg⟩ := unW_ok dn fe vis ctx c hhi hMra hMno k _ _ a₀ off l css hm hS hU hlen hcss
+  obtain ⟨a', hrun, hS', hg, hP'⟩ := unW_ok dn fe vis ctx c hhi k _ _ a₀ off l css hm hS hU hlen hcss hP
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hlc, hok, by rw [hst]; exact hS', hg⟩
+  exact ⟨hlc, hok, by rw [hst]; exact hS', hg, hP'⟩
 
 end census
 

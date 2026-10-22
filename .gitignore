@@ -2,3 +2,5 @@ _tmp
 .lake/
 _scratch/
 __pycache__/
+docs/progress.md
+docs/progress.csv

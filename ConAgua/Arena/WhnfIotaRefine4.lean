@@ -1,5 +1,6 @@
 import ConAgua.Arena.WhnfIotaRefine3
 import ConAgua.Arena.CoreLevels
+import ConAgua.Arena.CoreDen
 
 /-!
 # ι-reduction: proofs of `WhnfIota.lean`'s specs, part 4 (`proof_irrel`, `prepare_major`, …)
@@ -103,6 +104,18 @@ theorem CoreS.lvl_den {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState
     (∃ l, denoteL a.store.ls a.pins.zeroLevel = some l) :=
   ⟨fun e u hv => hS.den.sort e u hv, hS.den.zero⟩
 
+/-- **What `proof_irrel` needs of the store** (`CoreS.lvl_den`'s statement, as a named
+hypothesis): a `sort` node's level and the pinned zero level read back. -/
+def LvlDen : Prop :=
+  ∀ (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis : Word) (fe : IFEnv)
+    (M : ModeMaps) (eb : Word), CoreS dn m a vis fe M eb →
+    (∀ (e : EIdx) (u : LIdx), a.store.view e = some (.sort u) → ∃ l, denoteL a.store.ls u = some l) ∧
+    (∃ l, denoteL a.store.ls a.pins.zeroLevel = some l)
+
+/-- `LvlDen` from `CoreDen` (`StoreDen.sort`, `StoreDen.zero`). -/
+theorem LvlDen.of_den (h : CoreDen) : LvlDen :=
+  fun dn m a vis fe M eb hS => ⟨(h dn m a vis fe M eb hS).sort, (h dn m a vis fe M eb hS).zero⟩
+
 /-- `lvl_eq_c` cannot run on fuel below two. -/
 theorem lvlEqC_small (p : Prog) (hp : p.lookup "lvl_eq_c" = some lvlEqCL) (n : Nat) (hn : n < 2)
     (vs : List Word) (m : Mem) : callW p n "lvl_eq_c" vs m = none := by
@@ -191,7 +204,7 @@ theorem pinWord_specM (p : Prog) (hp : p.lookup "pin_word" = some pinWordL) (n :
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
       finish [pinWordM, pinW_eq, rdW_eq]
 
-theorem pihW_ok (p : Prog) (hp : IotaProg4 p) (n F : Nat) (hknot : KnotUpTo p n) (hnF : n ≤ F)
+theorem pihW_ok (p : Prog) (hp : IotaProg4 p) (hld : LvlDen) (n F : Nat) (hknot : KnotUpTo p n) (hnF : n ≤ F)
     (hn62 : n ≤ 2 ^ 62) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (eb mode d x : Word) (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1) (hx : HW x)
     (m : Mem) (a : AState) (M : ModeMaps) (hS : CoreS dn m a vis fe M eb) (w : Word) (m' : Mem)
@@ -283,7 +296,7 @@ theorem pihW_ok (p : Prog) (hp : IotaProg4 p) (n F : Nat) (hknot : KnotUpTo p n)
   obtain ⟨r5, m5⟩ := q
   rw [c5] at h
   simp only at h
-  obtain ⟨hdn1, hdn2⟩ := hS3.lvl_den
+  obtain ⟨hdn1, hdn2⟩ := hld _ _ _ _ _ _ _ hS3
   obtain ⟨lu, hdu⟩ := hdn1 _ _ hvw
   have hzl : a3.pins.zeroLevel = decI (r4.headD 0) := by rw [hP.zeroLevel, hr4']
   obtain ⟨lz, hdz⟩ := hdn2
@@ -313,12 +326,8 @@ theorem pihW_ok (p : Prog) (hp : IotaProg4 p) (n F : Nat) (hknot : KnotUpTo p n)
     hvw, hz, hrunL, rfl⟩⟩, ⟨M5, hS5, hKA.trans hK5, hStA.trans hSt5⟩, hr5⟩
 
 
-/-- **`proof_irrel` refines `proofIrrel`.** Statement changes (the knot's slots, `lvl_eq_c` and the
-level readback need them): `n ≤ 2 ^ 62`, the eager bit `eb = (mode >>> 1) &&& 1`; the
-`CoreS.lvl_den` stub; the L code calls the cached `lvl_eq_c` (not `lvl_eq`) and is split in two
-halves (`proof_irrel_half`, fuel). -/
-@[refines ConRon.Arena.proofIrrel]
-theorem proofIrrel_refines (p : Prog) (hp : IotaProg4 p) :
+/-- `proofIrrel_refines` over the named hypothesis `LvlDen` (`LvlDen.of_den` from `CoreDen`). -/
+theorem proofIrrel_refines' (p : Prog) (hp : IotaProg4 p) (hld : LvlDen) :
     ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
     ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode d a b : Word), CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 →
@@ -346,7 +355,7 @@ theorem proofIrrel_refines (p : Prog) (hp : IotaProg4 p) :
   obtain ⟨t1, ht1, -, hpa⟩ := triple_of_callW
     (proofIrrelHalf_spec p hp.proofIrrelHalf n' ⟨s.mem, Locals.init []⟩ mode vis d a) c1
   rw [ht1] at hpa
-  obtain ⟨a1, hA1, hCA1, hw1⟩ := pihW_ok p hp n' F (hk.mono (Nat.le_succ n')) (by omega) (by omega)
+  obtain ⟨a1, hA1, hCA1, hw1⟩ := pihW_ok p hp hld n' F (hk.mono (Nat.le_succ n')) (by omega) (by omega)
     dn vis fe eb mode d a hm4 hebm ha s.mem a₀ MM hS (ra.headD 0) m1 hpa
   by_cases hwa : ra.headD 0 = 0
   · rw [if_pos hwa] at hW
@@ -372,7 +381,7 @@ theorem proofIrrel_refines (p : Prog) (hp : IotaProg4 p) :
   obtain ⟨t2, ht2, -, hpb⟩ := triple_of_callW
     (proofIrrelHalf_spec p hp.proofIrrelHalf n' ⟨m1, Locals.init []⟩ mode vis d b) c2
   rw [ht2] at hpb
-  obtain ⟨a2, hA2, hCA2, hw2⟩ := pihW_ok p hp n' F (hk.mono (Nat.le_succ n')) (by omega) (by omega)
+  obtain ⟨a2, hA2, hCA2, hw2⟩ := pihW_ok p hp hld n' F (hk.mono (Nat.le_succ n')) (by omega) (by omega)
     dn vis fe eb mode d b hm4 hebm hb m1 a1 M1 hS1 (rb.headD 0) m2 hpb
   have hCA := CoreAfter.comp hK1 hSt1 hCA2
   have hrunF := proofIrrel_run_half (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)
@@ -404,6 +413,20 @@ theorem proofIrrel_refines (p : Prog) (hp : IotaProg4 p) :
       generalize rb.headD 0 = vb
       by_cases h1 : va = 1 <;> by_cases h2 : vb = 1 <;> simp [h1, h2] <;> decide
 
+/-- **`proof_irrel` refines `proofIrrel`.** Statement changes (the knot's slots, `lvl_eq_c` and the
+level readback need them): `n ≤ 2 ^ 62`, the eager bit `eb = (mode >>> 1) &&& 1`; the
+`CoreS.lvl_den` stub; the L code calls the cached `lvl_eq_c` (not `lvl_eq`) and is split in two
+halves (`proof_irrel_half`, fuel). -/
+@[refines ConRon.Arena.proofIrrel]
+theorem proofIrrel_refines (p : Prog) (hp : IotaProg4 p) :
+    ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
+    ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (MM : ModeMaps) (eb mode d a b : Word), CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 →
+    eb = (mode >>> 1) &&& 1 → HW a → HW b →
+    CoreSpec p (n + 1) "proof_irrel" [mode, vis, d, a, b]
+      (proofIrrel (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decBool s₀ a₀ dn
+      vis fe MM eb :=
+  proofIrrel_refines' p hp (fun _ _ _ _ _ _ _ hS => hS.lvl_den)
 
 /-! ## `prepare_major(mode, vis, d, rec, ro, rc, major)` -/
 

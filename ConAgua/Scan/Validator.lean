@@ -1,7 +1,7 @@
 module
 
 public import ConAgua.Scan.Line
-public import ConAgua.Compiler.WF
+public import ConAgua.Compiler.WFFast
 meta import ConAgua.L.Semantics
 
 @[expose] public section
@@ -117,6 +117,7 @@ theorem validate_run (b : Array UInt8) (hb : b.size < 2 ^ 63) (fuel : Nat) (r : 
     grind
 
 /-- The compiler's static check passes (`compile_correct` applies). -/
-theorem valProg_wf : L.Compiler.Prog.wf (L.Compiler.Prog.tab valProg 1 0) valProg = true := by decide +kernel
+theorem valProg_wf : L.Compiler.Prog.wf (L.Compiler.Prog.tab valProg 1 0) valProg = true :=
+  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
 
 end L.Scan.Validator

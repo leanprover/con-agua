@@ -497,6 +497,15 @@ theorem CoreAfterG.of_stk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a :
     (hf : MemFrame [SPN] [136] m m') (hg : StackGrew m m') : CoreAfterG dn m m' a vis fe M eb :=
   ⟨M, hS.frame_stk hf (by simp) (by simp), KeptAll.refl _ _, hg⟩
 
+/-- A successful prefix's universe arguments are a stored `const` node's list (the scrutinee's
+type's head). -/
+theorem PreRun.cview {R : CoreFnsA} {d : Nat} {major : EIdx} {a a' : AState} {L : List Word}
+    (h : PreRun R d major a L a') (h0 : L.headD 0 ≠ 0) :
+    ∃ (hh : EIdx) (c : NIdx), a'.store.view hh = some (.const c (decI (L.tail.tail.tail.headD 0))) := by
+  obtain ⟨ta, tmaj, hh, a₁, -, -, -, -, hs⟩ := h
+  obtain ⟨-, -, hv, -⟩ := hs h0
+  exact ⟨hh, _, hv⟩
+
 /-- The facts a successful prefix hands the arms. -/
 theorem PreRun.view {R : CoreFnsA} {d : Nat} {major : EIdx} {a a' : AState} {L : List Word}
     (h : PreRun R d major a L a') (h0 : L.headD 0 ≠ 0) :

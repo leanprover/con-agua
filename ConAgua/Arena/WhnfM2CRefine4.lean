@@ -40,7 +40,7 @@ theorem decCI_ind_eta (b : Array Word) (dn : NIdx → Option ConLeche.Name) (q :
 
 section etaarm
 variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hE : ErecKeptKnot p)
-  (hcc : CoreCallees p)
+  (hcc : ProjCallees p)
 include hp hc hcc
 
 /-- **`m2c_eta2` refines `m2cEta2T`** (the slice `(to, tn)` ends at the stack top). -/

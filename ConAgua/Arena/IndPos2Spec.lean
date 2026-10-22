@@ -578,7 +578,7 @@ theorem dpConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) 
     (m m' : Mem) (a : AState) (e r : Word) (mp0 : Std.HashMap EIdx Nat)
     (hb : dpConstW n m e = some (r, m')) (hS : StageR dn vis fe m a) (he : H e) (hM : dpMR m mp0) :
     ∃ d, (ConRon.Arena.depth (decE e)).run a = .ok (d, a) ∧ r.toNat = d ∧ dpMR m' ∅ ∧
-      StageR dn vis fe m' a ∧ IWGrow m m' := by
+      StageR dn vis fe m' a ∧ IWGrow m m' ∧ MFr [DPM] [206, 207] m m' := by
   by_cases h0 : rdW (m.arr64 CTL) dpSch.cs + 2 = 0
   · simp [dpConstW, h0] at hb
   rw [dpConstW_eq n m e h0] at hb
@@ -608,7 +608,7 @@ theorem dpConstW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) 
     obtain ⟨hS', hg'⟩ := StageR.frame_hi hS hfall (by intro b hb; simp at hb; subst hb; decide)
       (by intro x hx; simp [dpSch] at hx; rcases hx with rfl | rfl <;> decide) (by decide)
       (by simp [dpSch])
-    refine ⟨d, ?_, hbb, hM2, hS', hg'⟩
+    refine ⟨d, ?_, hbb, hM2, hS', hg', ⟨_, _, hfall, by simp, fun x hx => .inr (.inr (by simpa [dpSch] using hx))⟩⟩
     simp only [ConRon.Arena.depth, StateT.run_bind]
     rw [hrun]
     rfl
@@ -617,7 +617,7 @@ theorem wfW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
     (m m' : Mem) (a : AState) (e r : Word) (mp0 : Std.HashMap EIdx Nat)
     (hb : wfW n m e = some (r, m')) (hS : StageR dn vis fe m a) (he : H e) (hM : dpMR m mp0) :
     ∃ d, (ConRon.Arena.whnfWalkFuel (decE e)).run a = .ok (d, a) ∧ r.toNat = d ∧ dpMR m' ∅ ∧
-      StageR dn vis fe m' a ∧ IWGrow m m' := by
+      StageR dn vis fe m' a ∧ IWGrow m m' ∧ MFr [DPM] [206, 207] m m' := by
   unfold wfW at hb
   cases hc : dpConstW n m e with
   | none => rw [hc] at hb; simp at hb
@@ -628,12 +628,12 @@ theorem wfW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
     · simp [hbig] at hb
     simp only [hbig, if_false, Option.some.injEq, Prod.mk.injEq] at hb
     obtain ⟨rfl, rfl⟩ := hb
-    obtain ⟨dd, hrun, hdd, hM', hS', hg⟩ := dpConstW_ok n dn fe vis m m1 a e d mp0 hc hS he hM
+    obtain ⟨dd, hrun, hdd, hM', hS', hg, hf⟩ := dpConstW_ok n dn fe vis m m1 a e d mp0 hc hS he hM
     have hlt : d.toNat < 2 ^ 32 := by
       have e1 : (4294967296 : Word).toNat = 4294967296 := by decide
       have : ¬ (4294967296 : Word).toNat ≤ d.toNat := fun hh => hbig (UInt64.le_iff_toNat_le.mpr hh)
       omega
-    refine ⟨dd + 1024, ?_, ?_, hM', hS', hg⟩
+    refine ⟨dd + 1024, ?_, ?_, hM', hS', hg, hf⟩
     · simp only [ConRon.Arena.whnfWalkFuel, StateT.run_bind]
       rw [hrun]
       simp only [except_ok_bind]
@@ -686,7 +686,7 @@ theorem depth_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Optio
       dpMR s'.mem ∅ ∧ StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (depth_spec p hv hf hput hgo hnode hcl hd n s₀ e) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨d, hrun, hb, hM', hS', hg⟩ := dpConstW_ok n dn fe vis _ _ a₀ e _ mp0 hm hS he hM
+  obtain ⟨d, hrun, hb, hM', hS', hg, -⟩ := dpConstW_ok n dn fe vis _ _ a₀ e _ mp0 hm hS he hM
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, hst, by rw [hres]; exact hb, hM', hS', hg⟩
 
@@ -703,7 +703,7 @@ theorem whnfWalkFuel_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx �
       dpMR s'.mem ∅ ∧ StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (whnfWalkFuel_spec p hv hf hput hgo hnode hcl hd hw n s₀ e) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨d, hrun, hb, hM', hS', hg⟩ := wfW_ok n dn fe vis _ _ a₀ e _ mp0 hm hS he hM
+  obtain ⟨d, hrun, hb, hM', hS', hg, -⟩ := wfW_ok n dn fe vis _ _ a₀ e _ mp0 hm hS he hM
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, hst, by rw [hres]; exact hb, hM', hS', hg⟩
 
@@ -1134,113 +1134,5 @@ theorem nestCanonCrest_spec (n : Nat) (s₀ : St) (no nl us nn cty : Word) :
 end spec
 
 
-theorem pccW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
-    (m m' : Mem) (a : AState) (no nl us nn cty : Word) (names : List NIdx) (r : List Word)
-    (h : pccW k m no nl us nn cty = some (r, m')) (hS : StageR dn vis fe m a) (hcty : H cty) (hus : H us)
-    (hdec : decHL m no.toNat nl.toNat = some names) (hno : no.toNat + nl.toNat < 2 ^ 64)
-    (hit : no.toNat + nl.toNat ≤ iwTop m) (hnn : nn.toNat + names.length < 2 ^ 64)
-    (hMstage : ∀ (m2 : Mem) (a2 : AState), StageR dn vis fe m2 a2 → ∃ mp0, rpMR m2 mp0) :
-    ∃ x a', (ConRon.Arena.nestCanonCrest names (decI us) nn.toNat (decI cty)).run a = .ok (x, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decOE m' r x := by
-  unfold pccW at h
-  cases hph : phsW k m nn with
-  | none => rw [hph] at h; simp [pccA] at h
-  | some p1 =>
-    obtain ⟨r1, m1⟩ := p1
-    rw [hph, pccA_some] at h
-    obtain ⟨phs, a1, hrun1, hS1, hg1, hdec1, hbd1⟩ := phsW_ok k dn fe vis m m1 a nn r1 hph hS
-    have hb1 : (r1.headD 0).toNat + (r1.tail.headD 0).toNat < 2 ^ 64 := by
-      have : iwTop m1 < 2 ^ 64 := (rdW (m1.arr64 CTL) 200).toNat_lt
-      omega
-    cases hin : instW (k + 1) m1 (r1.headD 0) (r1.tail.headD 0) cty with
-    | none => rw [hin] at h; simp [pccB] at h
-    | some p2 =>
-      obtain ⟨r2, m2⟩ := p2
-      rw [hin] at h
-      obtain ⟨x, a2, hrun2, hS2, hg2, hout2⟩ := instW_ok (k + 1) dn fe vis m1 m2 a1 (r1.headD 0) (r1.tail.headD 0)
-        cty phs r2 hin hS1 hcty hdec1 hb1 hbd1
-      by_cases hz : r2.headD 0 = 0
-      · rw [pccB_zero k no nl us nn r2 m2 hz] at h
-        simp only [Option.some.injEq, Prod.mk.injEq] at h
-        obtain ⟨rfl, rfl⟩ := h
-        cases x with
-        | none =>
-          refine ⟨none, a2, ?_, hS2, hg1.trans hg2, rfl⟩
-          simp only [ConRon.Arena.nestCanonCrest, StateT.run_bind]
-          rw [hrun1]
-          simp only [except_ok_bind, StateT.run_bind]
-          rw [hrun2]
-          rfl
-        | some t => simp only [decOE] at hout2; rw [hz] at hout2; simp at hout2
-      · rw [pccB_ok k no nl us nn r2 m2 hz] at h
-        cases x with
-        | none => exact absurd hout2 hz
-        | some t =>
-          simp only [decOE, decW0E] at hout2
-          obtain ⟨-, htlt, htd⟩ := hout2
-          obtain ⟨mp0, hM2⟩ := hMstage m2 a2 hS2
-          cases hrc : rpConstW k m2 no nl us 0 nn (r2.tail.headD 0) with
-          | none => rw [hrc] at h; simp [pccC] at h
-          | some p3 =>
-            obtain ⟨r3, m3⟩ := p3
-            rw [hrc] at h
-            by_cases hb3 : 4294967296 ≤ r3
-            · rw [pccC_big _ _ _ hb3] at h; simp at h
-            rw [pccC_some _ _ _ hb3] at h
-            simp only [Option.some.injEq, Prod.mk.injEq] at h
-            obtain ⟨rfl, rfl⟩ := h
-            have hg12 := hg1.trans hg2
-            have hdec2 : decHL m2 no.toNat nl.toNat = some names := by rw [decHL_grow hg12 hit]; exact hdec
-            obtain ⟨a3, hrun3, hM3, hS3, hg3⟩ := rpConstW_ok k dn fe vis m2 m3 a2 no nl us 0 nn (r2.tail.headD 0) r3
-              nn.toNat names mp0 hrc hS2 htlt hus hdec2 hno (by have := hg12.1; omega) rfl hnn
-              (by simp; omega) hM2
-            refine ⟨some (decE r3), a3, ?_, hS3, hg12.trans hg3, ?_⟩
-            · simp only [ConRon.Arena.nestCanonCrest, StateT.run_bind]
-              rw [hrun1]
-              simp only [except_ok_bind, StateT.run_bind]
-              rw [hrun2]
-              simp only [except_ok_bind, StateT.run_bind]
-              have h3 : StateT.run (ConRon.Arena.replaceApps names (decI us) 0 nn.toNat (decI (r2.tail.headD 0))) a2 = .ok (decE r3, a3) := hrun3
-              rw [← htd, h3]
-              rfl
-            · simp only [decOE, decW0E]
-              exact ⟨rfl, lt_of_notbig hb3, rfl⟩
-
-
-section census3
-variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (hl : AhLook p) (hk : MkLook p)
-  (hng : p.lookup "nest_phs_go" = some nestPhsGo) (hnp : p.lookup "nest_phs" = some nestPhs)
-  (hip : p.lookup "inst_pis_with" = some instPisWith)
-  (hf : p.lookup "ra_find" = some (memoFindG raSch)) (hput : p.lookup "ra_put" = some (memoPutG raSch))
-  (hgo : p.lookup "replace_apps_go" = some replaceAppsGo)
-  (hnode : p.lookup "replace_apps_node" = some replaceAppsNode)
-  (hcl : p.lookup "ra_clear" = some (memoClearG raSch))
-  (hra : p.lookup "replace_apps" = some replaceApps)
-  (hp : p.lookup "nest_canon_crest" = some nestCanonCrest)
-include ha hl hk hng hnp hip hf hput hgo hnode hcl hra hp
-
-/-- **`nest_canon_crest` refines `nestCanonCrest`**: instantiate the pis with the canonical parameter
-variables, then rewrite the applications (result `[1, e]`, or `[0, 0]` for `none`). -/
-@[refines ConRon.Arena.nestCanonCrest]
-theorem nestCanonCrest_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (fe : IFEnv) (vis no nl us nn cty : Word) (names : List NIdx) (hS : StageR dn vis fe s₀.mem a₀)
-    (hcty : H cty) (hus : H us) (hdec : decHL s₀.mem no.toNat nl.toNat = some names)
-    (hno : no.toNat + nl.toNat < 2 ^ 64) (hit : no.toNat + nl.toNat ≤ iwTop s₀.mem)
-    (hnn : nn.toNat + names.length < 2 ^ 64)
-    (hMstage : ∀ (m2 : Mem) (a2 : AState), StageR dn vis fe m2 a2 → ∃ mp0, rpMR m2 mp0) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 2)) "nest_canon_crest" [no, nl, us, nn, cty]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (ConRon.Arena.nestCanonCrest names (decI us) nn.toNat (decI cty)) a₀ ∧
-      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.nestCanonCrest names (decI us) nn.toNat (decI cty)) a₀) ∧
-      IWGrow s₀.mem s'.mem ∧
-      decOE s'.mem r (AM.res (ConRon.Arena.nestCanonCrest names (decI us) nn.toNat (decI cty)) a₀); ⊤⦄ := by
-  refine triple_post (nestCanonCrest_spec p ha hl hk hng hnp hip hf hput hgo hnode hcl hra hp n s₀ no nl us nn cty) ?_
-  rintro r s' ⟨hl', hm⟩
-  obtain ⟨x, a', hrun, hS', hgr, hout⟩ := pccW_ok n dn fe vis _ _ a₀ no nl us nn cty names r hm hS hcty hus hdec hno hit
-    hnn hMstage
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl', hok, by rw [hst]; exact hS', hgr, by rw [hres]; exact hout⟩
-
-end census3
 
 end L.Ind

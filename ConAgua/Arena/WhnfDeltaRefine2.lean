@@ -903,7 +903,7 @@ theorem constValAt_run_miss (a a₁ : AState) (n : NIdx) (lps : List NIdx) (valu
 section refs13
 variable (p : Prog)
 
-theorem callW_constValAt (hp : WhnfDeltaProg p) (hwc : WhnfCallees p) (n : Nat) (s₀ : St)
+theorem callW_constValAt (hp : WhnfDeltaProg p) (hlp : InstLPOK p) (n : Nat) (s₀ : St)
     (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
     (eb nm po pl value us : Word) (lps : List NIdx) (hC : CoreS dn s₀.mem a₀ vis fe MM eb)
     (hnm : HW nm) (hv : HW value) (hu : HW us)
@@ -938,7 +938,7 @@ theorem callW_constValAt (hp : WhnfDeltaProg p) (hwc : WhnfCallees p) (n : Nat) 
   rw [hcall] at hW
   dsimp only at hW
   obtain ⟨hok, ⟨M', hS₁, hK₁, hSt₁⟩, hres, hrw⟩ :=
-    CoreSpec.of_callW (hwc.instLP n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb po pl us value lps hC hv
+    CoreSpec.of_callW (hlp n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb po pl us value lps hC hv
       hu hlps) hcall
   cases hset : msetG cvSch m₁ nm us (r₁.headD 0) with
   | none => rw [hset] at hW; cases hW
@@ -961,10 +961,10 @@ theorem constValAt_refines' (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (a₀ :
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
     (eb nm po pl value us : Word) (lps : List NIdx)
     (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (hnm : HW nm) (hv : HW value) (hu : HW us)
-    (hwc : WhnfCallees p) (hlps : hslice? (s₀.mem.arr64 EREC) po.toNat pl.toNat = some lps) :
+    (hlp : InstLPOK p) (hlps : hslice? (s₀.mem.arr64 EREC) po.toNat pl.toNat = some lps) :
     CoreSpec p n "const_val_at" [nm, po, pl, value, us]
       (constValAt (decI nm) lps (decE value) (decI us)) decH s₀ a₀ dn vis fe MM eb :=
-  CoreSpec.of_call fun r m' h => callW_constValAt p hp hwc n s₀ a₀ dn vis fe MM eb nm po pl value us lps
+  CoreSpec.of_call fun r m' h => callW_constValAt p hp hlp n s₀ a₀ dn vis fe MM eb nm po pl value us lps
     hC hnm hv hu hlps r m' h
 
 end refs13
@@ -1105,7 +1105,7 @@ end refs14
 section refs15
 variable (p : Prog)
 
-theorem callW_unfoldDefnAt (hp : WhnfDeltaProg' p) (hwc : WhnfCallees p) (n : Nat) (s₀ : St)
+theorem callW_unfoldDefnAt (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : Nat) (s₀ : St)
     (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
     (eb e nw usw q : Word) (cv : IConstantVal) (value : EIdx) (hint : ConLeche.ReducibilityHint)
     (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (he : HW e) (hnw : HW nw) (hus : HW usw)
@@ -1171,7 +1171,7 @@ theorem callW_unfoldDefnAt (hp : WhnfDeltaProg' p) (hwc : WhnfCallees p) (n : Na
   obtain ⟨r₃, m₃⟩ := q₁
   rw [h1] at hW
   dsimp only at hW
-  obtain ⟨hok1, ⟨M', hS₃, hK₃, hSt₃⟩, hres1, hrh1⟩ := callW_constValAt p hp.toWhnfDeltaProg hwc n s₀ a₀ dn vis
+  obtain ⟨hok1, ⟨M', hS₃, hK₃, hSt₃⟩, hres1, hrh1⟩ := callW_constValAt p hp.toWhnfDeltaProg hlp n s₀ a₀ dn vis
     fe MM eb nw _ _ _ usw cv.levelParams hC hnw hvl hus hslice r₃ m₃ h1
   have hv'' : value = decE (rdW (s₀.mem.arr64 EREC) (q + 5)) := hv'
   rw [← hv''] at hok1 hS₃ hres1
@@ -1276,7 +1276,7 @@ theorem unfoldDef_run_tail (fe : IFEnv) (e hh : EIdx) (a : AState) (n : NIdx) (u
 section refs16
 variable (p : Prog)
 
-theorem callW_unfoldDefinition (hp : WhnfDeltaProg' p) (hwc : WhnfCallees p) (n : Nat) (s₀ : St)
+theorem callW_unfoldDefinition (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : Nat) (s₀ : St)
     (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
     (eb e : Word) (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (he : HW e) (r : List Word) (m' : Mem)
     (h : callW p n "unfold_definition" [vis, e] s₀.mem = some (r, m')) :
@@ -1367,7 +1367,7 @@ theorem callW_unfoldDefinition (hp : WhnfDeltaProg' p) (hwc : WhnfCallees p) (n 
   obtain ⟨hr0, hr1, hm⟩ := hW
   rw [← hm]
   have hci' : decCI (erecP s₀.mem) dn (r₂.tail.headD 0).toNat = some (.defnInfo cv value hint) := hci
-  have hcore := callW_unfoldDefnAt p hp hwc n s₀ a₀ dn vis fe MM eb e _ _ (r₂.tail.headD 0) cv value hint
+  have hcore := callW_unfoldDefnAt p hp hlp n s₀ a₀ dn vis fe MM eb e _ _ (r₂.tail.headD 0) cv value hint
     hC he hnl hul hci' g4' r₃ m₃ h3
   have hrun := unfoldDef_run_tail fe (decE e) (decE (r₁.headD 0)) a₀ n_ us_ cv value hint hgf ht hview
     hfind'
@@ -1383,10 +1383,10 @@ theorem callW_unfoldDefinition (hp : WhnfDeltaProg' p) (hwc : WhnfCallees p) (n 
 /-- **`unfold_definition` refines `unfoldDefinition`**, given the stub `inst_lp`'s spec. -/
 theorem unfoldDefinition_refines' (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb e : Word)
-    (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (he : HW e) (hwc : WhnfCallees p) :
+    (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (he : HW e) (hlp : InstLPOK p) :
     CoreSpec p n "unfold_definition" [vis, e] (unfoldDefinition fe (decE e)) decOptR s₀ a₀ dn vis fe
       MM eb ResW :=
-  CoreSpec.of_call fun r m' h => callW_unfoldDefinition p hp hwc n s₀ a₀ dn vis fe MM eb e hC he r m' h
+  CoreSpec.of_call fun r m' h => callW_unfoldDefinition p hp hlp n s₀ a₀ dn vis fe MM eb e hC he r m' h
 
 end refs16
 

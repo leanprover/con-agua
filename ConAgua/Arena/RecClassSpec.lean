@@ -631,7 +631,7 @@ theorem classReadRecCls_refines (p : Prog) (hfh : p.lookup "fvar_head" = some fv
 slice). -/
 def CVExt (m : Mem) (q : Nat) : Prop :=
   q + 4 ≤ erTop m ∧ ∀ o l, nat? (erA m) (q + 1) = some o → nat? (erA m) (q + 2) = some l →
-    o + l ≤ erTop m
+    o + l ≤ erTop m ∨ l = 0
 
 theorem decCVp_grow_r {m m' : Mem} (hg : IWGrow m m') {q : Nat} (hq : CVExt m q) :
     decCVp m' q = decCVp m q := by
@@ -686,7 +686,7 @@ theorem CVExt_grow {m m' : Mem} (hg : IWGrow m m') {q : Nat} (hq : CVExt m q) : 
   refine ⟨Nat.le_trans h1 hg.2.1, fun o l ho hl => ?_⟩
   rw [hn (q + 1) (by omega)] at ho
   rw [hn (q + 2) (by omega)] at hl
-  exact Nat.le_trans (h2 o l ho hl) hg.2.1
+  exact (h2 o l ho hl).imp_left fun h => Nat.le_trans h hg.2.1
 
 theorem mapM_decCVp_grow {m m' : Mem} (hg : IWGrow m m') :
     ∀ (ps : List Nat), (∀ q ∈ ps, CVExt m q) → ps.mapM (decCVp m') = ps.mapM (decCVp m)
@@ -701,7 +701,7 @@ theorem mapM_decCVp_grow {m m' : Mem} (hg : IWGrow m m') :
 
 /-- A class-key record lies below the pool's top, with its datum slice. -/
 def CKExt (m : Mem) (k : Nat) : Prop :=
-  k + 4 ≤ iwTop m ∧ ∀ o l, iwN m (k + 2) = some o → iwN m (k + 3) = some l → o + l ≤ iwTop m
+  k + 4 ≤ iwTop m ∧ ∀ o l, iwN m (k + 2) = some o → iwN m (k + 3) = some l → o + l ≤ iwTop m ∨ l = 0
 
 theorem decCK_grow {m m' : Mem} (hg : IWGrow m m') {k : Nat} (hk : CKExt m k) :
     decCK m' k = decCK m k := by
@@ -722,7 +722,9 @@ theorem decCK_grow {m m' : Mem} (hg : IWGrow m m') {k : Nat} (hk : CKExt m k) :
       | none => simp
       | some l =>
         show decHL m' o l = decHL m o l
-        exact decHL_grow hg (h2 o l ho (by simpa using hl))
+        rcases h2 o l ho (by simpa using hl) with hb | rfl
+        · exact decHL_grow hg hb
+        · simp [decHL, hslice?]
   rw [hat]
 
 theorem mapM_decCK_grow {m m' : Mem} (hg : IWGrow m m') :
@@ -740,7 +742,7 @@ theorem CKExt_grow {m m' : Mem} (hg : IWGrow m m') {k : Nat} (hk : CKExt m k) : 
   refine ⟨Nat.le_trans h1 hg.1, fun o l ho hl => ?_⟩
   rw [hiw (k + 2) (by omega)] at ho
   rw [hiw (k + 3) (by omega)] at hl
-  exact Nat.le_trans (h2 o l ho hl) hg.1
+  exact (h2 o l ho hl).imp_left fun h => Nat.le_trans h hg.1
 
 
 mutual
@@ -825,10 +827,10 @@ theorem decCS_motive_key {m : Mem} {p : Nat} {key : ClassKey} (h : decCS m p = s
 /-- The slots' key records lie below the pool's top. -/
 def SlotsExt (m : Mem) (so sl : Nat) : Prop :=
   so + sl ≤ iwTop m ∧ ∀ j, j < sl → ∀ sp, iwN m (so + j) = some sp →
-    sp + 5 ≤ iwTop m ∧ ∀ kp, iwN m sp = some 0 → iwN m (sp + 1) = some kp → CKExt m kp
+    sp + 2 ≤ iwTop m ∧ ∀ kp, iwN m sp = some 0 → iwN m (sp + 1) = some kp → CKExt m kp
 
 theorem SlotsExt_cons {m : Mem} {so sl : Nat} (h : SlotsExt m so (sl + 1)) :
-    (∀ sp, iwN m so = some sp → sp + 5 ≤ iwTop m ∧
+    (∀ sp, iwN m so = some sp → sp + 2 ≤ iwTop m ∧
       ∀ kp, iwN m sp = some 0 → iwN m (sp + 1) = some kp → CKExt m kp) ∧ SlotsExt m (so + 1) sl := by
   obtain ⟨h1, h2⟩ := h
   refine ⟨fun sp hsp => h2 0 (by omega) sp (by simpa using hsp), by omega, fun j hj sp hsp => ?_⟩

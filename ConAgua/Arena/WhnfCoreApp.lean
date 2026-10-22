@@ -26,9 +26,9 @@ rest of what `CoreS` reads kept by `keeps_cpl_mkAppNFrom`). `inst_list` is used 
 `callW_mkApp`/`callW_mkAppNFrom` re-derive it from the store (`internM_hw`: a hit's index is below
 the tier's node count, a push's below `2^27`).
 
-**Proved here: `whnfApp_refines`** (with `hp : WhnfCoreProg p`; it depends on the stubs'
-`sorry`s: `hil` through `betaPeel_refines`, and
-`(coreCallees_stub p).iota` for `iota_rec_at`). The loop of `whnfAppL` is spliced from named blocks
+**Proved in `WhnfCoreAppLoop.lean`: `whnfApp_refines'`** (with `hp : WhnfCoreProg p`, over
+`WhnfCallees` (`instList` through `betaPeel_refines'`) and `CoreCallees` (`iota` for
+`iota_rec_at`); the tagged `whnfApp_refines` instantiates the stub bundles). The loop of `whnfAppL` is spliced from named blocks
 (`whnfAppW` is `while i < an { ⟪whnfAppBodyW⟫ }`, the body is `a := ..; node := ..; ⟪whnfAppLamW⟫;
 ⟪whnfAppRestW⟫`, the rest contains the ι arm `⟪whnfAppIotaW⟫`; `whnfAppL_eq := rfl`; a spliced block
 must be a single statement unless it is the last of its sequence, which is why the push is not a

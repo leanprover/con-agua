@@ -105,9 +105,9 @@ theorem coreApp_spec (p : Prog) (hp : p.lookup "whnf_core_app" = some whnfCoreAp
 /-! ## `whnf_core_app2` refines the reduct's spine and the β/ι walk -/
 
 section app2
-variable (p : Prog) (hp : WhnfCoreProg p)
+variable (p : Prog) (hp : WhnfCoreProg p) (hwc : WhnfCallees p) (hcc : CoreCallees p)
 
-include hp in
+include hp hwc hcc in
 /-- **`whnf_core_app2` refines the second half of the `.app` clause**, the spine's arguments and
 nodes the slices `(so, sn)`, `(so + sn, sn)` below the top. -/
 theorem coreApp2_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
@@ -150,7 +150,7 @@ theorem coreApp2_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) 
     have hb := har.bound; have := hS.spn
     rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]; omega) hS.spn
   have hvo : spTop m₃ = r₃.tail.headD 0 + r₃.tail.tail.headD 0 := by rw [htop3, ho3]
-  have hwapp := whnfApp_refines p hp n hk F hF hn ⟨m₃, Locals.init []⟩ a₀ dn vis fe MM eb mode d v
+  have hwapp := whnfApp_refines' p hp hwc hcc n hk F hF hn ⟨m₃, Locals.init []⟩ a₀ dn vis fe MM eb mode d v
     (r₃.headD 0) (r₃.tail.headD 0) (r₃.tail.tail.headD 0) (Cmp.evalW .eq v h) so sn 0 xs args nodes
     ⟨hS₃, hs.mode4, hs.eb_mode⟩ hv hhw hxs hvo har₃ hno₃ (by rw [ho3]; omega)
   obtain ⟨hok, ⟨M', hS₄, hK₄, hSt₄⟩, hres, hrw⟩ := CoreSpec.of_callW hwapp h4
@@ -190,9 +190,9 @@ theorem coreApp2W_zero (p : Prog) (m : Mem) (mode vis d v h so sn : Word) :
   simp [coreApp2W, callW_zero]
 
 section app
-variable (p : Prog) (hp : WhnfCoreProg p)
+variable (p : Prog) (hp : WhnfCoreProg p) (hwc : WhnfCallees p) (hcc : CoreCallees p)
 
-include hp in
+include hp hwc hcc in
 /-- **`whnf_core_app` refines the `.app` clause of `whnfCoreStep`** (`whnfCoreAppT`). -/
 theorem coreApp_refines (N : Nat) (hk : KnotUpTo p N) (F : Nat) (hF : N ≤ F) (hn : N ≤ 2 ^ 62)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -256,7 +256,7 @@ theorem coreApp_refines (N : Nat) (hk : KnotUpTo p N) (F : Nat) (hF : N ≤ F) (
     rw [htop1, ← ho1, addW _ _ (by rw [e1]; omega), e1]
   have hxs₂ := hxs.keep hSt₂.size hSt₂.below (by omega) hspn₁
   have hns₂ := hns.keep hSt₂.size hSt₂.below (by rw [e1]; omega) hspn₁
-  have happ := coreApp2_refines p hp n' (hk.mono (by omega)) F (by omega) (by omega)
+  have happ := coreApp2_refines p hp hwc hcc n' (hk.mono (by omega)) F (by omega) (by omega)
     ⟨m₂, Locals.init []⟩ _ dn vis fe M' eb mode d (r₂.headD 0) (r₁.headD 0) (r₁.tail.headD 0)
     (r₁.tail.tail.headD 0) xs ns ⟨hS₂, hs.mode4, hs.eb_mode⟩ hrw₂ hhw hxs₂ hns₂
     (by have h22 := hSt₂.1; simp only at h22 ⊢; rw [h22]; omega)
