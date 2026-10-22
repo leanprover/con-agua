@@ -59,6 +59,9 @@ abbrev FADER : ArrId := 44
 abbrev LEDER : ArrId := 45
 abbrev PJDER : ArrId := 46
 
+theorem tierW_le (h : Word) : tierW h ≤ 1 := by
+  simp only [tierW]; exact UInt64.and_le_right
+
 /-- A boolean as the word `1`/`0`. -/
 def b2w (b : Bool) : Word := if b then 1 else 0
 
@@ -104,6 +107,18 @@ theorem lsOrW_zero (m : Mem) (o : Word) : lsOrW m o 0 = 0 := rfl
 
 theorem lsOrW_succ (m : Mem) (o : Word) (k : Nat) :
     lsOrW m o (k + 1) = lsOrW m o k ||| lvlHPW m (rdW (m.arr64 POOL) (o + UInt64.ofNat k)) := rfl
+
+/-- `lsOrW` from the front: the first element's bit, then the rest's. -/
+theorem lsOrW_cons (m : Mem) (o : Word) : ∀ n : Nat,
+    lsOrW m o (n + 1) = lvlHPW m (rdW (m.arr64 POOL) o) ||| lsOrW m (o + 1) n := by
+  intro n
+  induction n with
+  | zero => simp [lsOrW]
+  | succ n ih =>
+    rw [lsOrW_succ, ih, lsOrW_succ]
+    have e : o + UInt64.ofNat (n + 1) = o + 1 + UInt64.ofNat n := by
+      rw [UInt64.ofNat_add]; simp; ac_rfl
+    rw [e, UInt64.or_assoc]
 
 /-- **An expression handle's `lp` bit** (`der_b`'s third result, the model of `fvar_push`'s inline
 block): `sort`, `const`, `fvar` read their column (`SOLP`, `CLP`, `FVLP`; counts `CTL[16 + t]`,

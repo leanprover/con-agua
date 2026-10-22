@@ -362,6 +362,84 @@ theorem constMk (L : Lens α δ k) (pr : δ → Prop) (a a' : AState) (key : α)
 
 end col
 
+/-! ## Reading a column -/
+
+theorem derAt_out {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] [Inhabited δ]
+    {tb : Tbl α (Idx k) δ} (hs : tb.der.size = tb.nodes.size) (i : Nat) (hi : tb.nodes.size ≤ i) :
+    tb.derAt i = default := by
+  simp only [Tbl.derAt, Array.getD_eq_getD_getElem?]
+  rw [Array.getElem?_eq_none (by rw [hs]; exact hi)]; rfl
+
+/-- **A column read with the count check is `f` of the derived record** (`f default = 0`: a
+dangling index reads `0`, the twin's `default`). -/
+theorem col_read {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] [Inhabited δ] (S : Schema)
+    (R : Mem → Word → Word → α → Prop) (hs : Mem → Word → Word → Word) (A : ArrId) (f : δ → Word)
+    (m : Mem) (on : Bool) (P Q : Tbl α (Idx k) δ) (hT : StoreR S R hs m on P Q)
+    (hc0 : ColT A f m 0 P) (hc1 : ColT A f m 1 Q) (hf0 : f default = 0) (t i : Word) (ht : t ≤ 1) :
+    (if i < rdW (m.arr64 CTL) (S.ca + t) then rdW (m.arr64 A) (i * 2 + t) else 0) =
+      f ((if t = 0 then P else Q).derAt i.toNat) := by
+  have hcnt := cnt_tier S R hs m on P Q hT t ht
+  have hc : ColT A f m t (if t = 0 then P else Q) := by
+    rcases word_le_one t ht with rfl | rfl
+    · simpa using hc0
+    · simpa using hc1
+  simp only [cntW] at hcnt
+  split
+  · rename_i hlt
+    have hi : i.toNat < (if t = 0 then P else Q).nodes.size := by
+      rw [← hcnt]; exact UInt64.lt_iff_toNat_lt.mp hlt
+    have := hc.2 i.toNat _ (Array.getElem?_eq_getElem hi)
+    simpa only [UInt64.ofNat_toNat] using this
+  · rename_i hge
+    rw [derAt_out hc.1 _ (by rw [← hcnt]; exact UInt64.not_lt.mp hge |> UInt64.le_iff_toNat_le.mp), hf0]
+
+/-- **A constant bit with the count check.** -/
+theorem const_read {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] [Inhabited δ] (S : Schema)
+    (R : Mem → Word → Word → α → Prop) (hs : Mem → Word → Word → Word) (f : δ → Word) (v : Word)
+    (m : Mem) (on : Bool) (P Q : Tbl α (Idx k) δ) (hT : StoreR S R hs m on P Q)
+    (hc0 : ConstT (fun d => f d = v) P) (hc1 : ConstT (fun d => f d = v) Q) (hf0 : f default = 0)
+    (t i : Word) (ht : t ≤ 1) :
+    (if i < rdW (m.arr64 CTL) (S.ca + t) then v else 0) = f ((if t = 0 then P else Q).derAt i.toNat) := by
+  have hcnt := cnt_tier S R hs m on P Q hT t ht
+  have hc : ConstT (fun d => f d = v) (if t = 0 then P else Q) := by
+    rcases word_le_one t ht with rfl | rfl
+    · simpa using hc0
+    · simpa using hc1
+  simp only [cntW] at hcnt
+  split
+  · rename_i hlt
+    have hi : i.toNat < (if t = 0 then P else Q).nodes.size := by
+      rw [← hcnt]; exact UInt64.lt_iff_toNat_lt.mp hlt
+    exact (hc.2 i.toNat _ (Array.getElem?_eq_getElem hi)).symm
+  · rename_i hge
+    rw [derAt_out hc.1 _ (by rw [← hcnt]; exact UInt64.not_lt.mp hge |> UInt64.le_iff_toNat_le.mp), hf0]
+
+/-! ## Handle decoding at any kind (moved here from `PromoteNRef.lean`) -/
+
+theorem decI_tag {k : IdxKind} (h : Word) (hh : h.toNat < 2 ^ 32) :
+    (decI h : Idx k).tag = (h >>> 28).toUInt32 := by
+  simp only [decI, Idx.tag]
+  apply UInt32.toNat_inj.mp
+  simp [UInt32.toNat_div, UInt64.toNat_toUInt32, UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]
+  omega
+
+theorem decI_idx {k : IdxKind} (h : Word) : (decI h : Idx k).idxNat = (idxW h).toNat := by
+  simp only [decI, Idx.idxNat, Idx.index, idxW]
+  simp [UInt32.toNat_mod, UInt64.toNat_toUInt32, UInt64.toNat_and]
+  have : (134217727 : Nat) = 2 ^ 27 - 1 := rfl
+  rw [this, Nat.and_two_pow_sub_one_eq_mod]
+
+theorem decI_tag_eq {k : IdxKind} (h : Word) (hh : h.toNat < 2 ^ 32) (g : Nat) (hg : g < 16) :
+    ((decI h : Idx k).tag = UInt32.ofNat g) ↔ (h >>> 28 = UInt64.ofNat g) := by
+  rw [decI_tag h hh]
+  have hgt : (h >>> 28).toNat < 16 := by
+    simp [UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]; omega
+  constructor
+  · intro e; apply UInt64.toNat_inj.mp
+    have := congrArg UInt32.toNat e
+    simp [UInt64.toNat_toUInt32] at this ⊢; omega
+  · intro e; rw [e]; apply UInt32.toNat_inj.mp; simp
+
 /-! ## An interning with a column -/
 
 /-- The two halves of a `mkK`. -/

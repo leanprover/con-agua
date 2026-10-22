@@ -186,9 +186,9 @@ theorem pintern_correct (w : Word) (m' : Mem) (hI : pinternW m u = some (w, m'))
 
 include hR hu in
 /-- **The `param` table's constant bit across `intern_param`**: `hasParam = true`. -/
-theorem pintern_hp (hC : ConstT2 paramLens (fun d : LDer => d.hasParam = true) a) (w : Word) (m' : Mem)
+theorem pintern_hp (hC : ConstT2 paramLens (fun d : LDer => hpW d = 1) a) (w : Word) (m' : Mem)
     (hI : pinternW m u = some (w, m')) :
-    ConstT2 paramLens (fun d : LDer => d.hasParam = true) (AM.st (internLNode (.param (decI u))) a) := by
+    ConstT2 paramLens (fun d : LDer => hpW d = 1) (AM.st (internLNode (.param (decI u))) a) := by
   obtain ⟨hok, -, -⟩ := pintern_correct m a hR u hu w m' hI
   exact constMk paramLens _ a _ _ _ _ _ hC rfl
     (AM.proto_casesG paramLens _ _ _ _ _ _ a (internLNode_param_run _ a) hok)

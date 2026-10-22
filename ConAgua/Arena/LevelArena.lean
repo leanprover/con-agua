@@ -343,10 +343,6 @@ theorem lvlEq_run {m m' : Mem} {a : AState} (hR : ArenaR m a) (hwf : NStoreWF a.
 
 /-! ## Level lists -/
 
-theorem sliceL_succ (p : Array Word) (o l : Nat) :
-    sliceL p o (l + 1) = (p[o]?.getD 0) :: sliceL p (o + 1) l := by
-  simp only [sliceL, List.ofFn_succ, Fin.val_zero, Nat.add_zero, Fin.val_succ]
-  congr 1; congr; funext k; congr 2; omega
 
 /-- **A slice of handle words is related to the readbacks** (`LvsR`), element by element. -/
 theorem lvsR_of_slice {m : Mem} {a : AState} (hR : ArenaR m a) :

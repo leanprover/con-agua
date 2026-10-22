@@ -158,9 +158,9 @@ theorem zintern_correct (w : Word) (m' : Mem) (hI : zinternW m = some (w, m')) :
 
 include hR in
 /-- **The `zero` table's constant bit across `intern_zero`**: `hasParam = false`. -/
-theorem zintern_hp (hC : ConstT2 zeroLens (fun d : LDer => d.hasParam = false) a) (w : Word) (m' : Mem)
+theorem zintern_hp (hC : ConstT2 zeroLens (fun d : LDer => hpW d = 0) a) (w : Word) (m' : Mem)
     (hI : zinternW m = some (w, m')) :
-    ConstT2 zeroLens (fun d : LDer => d.hasParam = false) (AM.st (internLNode .zero) a) := by
+    ConstT2 zeroLens (fun d : LDer => hpW d = 0) (AM.st (internLNode .zero) a) := by
   obtain ⟨hok, -, -⟩ := zintern_correct m a hR w m' hI
   exact constMk zeroLens _ a _ _ _ _ _ hC rfl
     (AM.proto_casesG zeroLens _ _ _ _ _ _ a (internLNode_zero_run a) hok)
