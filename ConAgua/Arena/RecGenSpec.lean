@@ -621,4 +621,236 @@ theorem classLeafAt_refines (p : Prog) (hp : p.lookup "class_leaf_at" = some cla
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok (ConRon.Arena.classLeafAt bigM (decI leaf)) a₀ a' b hrun
   exact ⟨hl', hok, by rw [hst]; exact hS', hg, by rw [hres]; exact ⟨h1, h2⟩⟩
 
+
+/-! ## `class_stream_recs` (loop rewritten as recursion: check the first, the rest, then `sl_cons`) -/
+
+mutual
+/-- **The model of `class_stream_recs`.** -/
+def csrW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _, _ => none
+  | n + 1, m, vis, rcso, rcsl =>
+    if rcsl = 0 then some ([0, 0], m)
+    else csK1 n vis rcso rcsl (rdW (m.arr64 IW) (rdW (m.arr64 IW) rcso))
+      (stubM "check_constant_val" m [vis, rdW (m.arr64 IW) (rdW (m.arr64 IW) rcso)])
+
+/-- After `check_constant_val`. -/
+def csK1 (n : Nat) (vis rcso rcsl cv : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (_, m1) => csK2 n cv (csrW n m1 vis (rcso + 1) (rcsl - 1))
+
+/-- After the recursive call: `sl_cons`. -/
+def csK2 (n : Nat) (cv : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m2) => csK3 (consW n m2 cv (r.headD 0) (r.tail.headD 0))
+
+/-- After `sl_cons`. -/
+def csK3 : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m3) => some ([r.headD 0, r.tail.headD 0], m3)
+end
+
+section arms
+variable (n : Nat) (m m1 m2 m3 : Mem) (vis rcso rcsl cv : Word) (r : List Word)
+theorem csrW_nil (h : rcsl = 0) : csrW (n + 1) m vis rcso rcsl = some ([0, 0], m) := by simp [csrW, h]
+theorem csrW_cons (h : rcsl ≠ 0) : csrW (n + 1) m vis rcso rcsl =
+    csK1 n vis rcso rcsl (rdW (m.arr64 IW) (rdW (m.arr64 IW) rcso))
+      (stubM "check_constant_val" m [vis, rdW (m.arr64 IW) (rdW (m.arr64 IW) rcso)]) := by
+  simp [csrW, h]
+theorem csK1_some (r0 : List Word) : csK1 n vis rcso rcsl cv (some (r0, m1)) =
+    csK2 n cv (csrW n m1 vis (rcso + 1) (rcsl - 1)) := by rw [csK1]
+theorem csK2_some : csK2 n cv (some (r, m2)) = csK3 (consW n m2 cv (r.headD 0) (r.tail.headD 0)) := by
+  rw [csK2]
+theorem csK3_some : csK3 (some (r, m3)) = some ([r.headD 0, r.tail.headD 0], m3) := by rw [csK3]
+end arms
+
+grind_pattern [ind_grind] csrW_nil => csrW (n + 1) m vis rcso rcsl
+grind_pattern [ind_grind] csrW_cons => csrW (n + 1) m vis rcso rcsl
+grind_pattern [ind_grind] csK1_some => csK1 n vis rcso rcsl cv (some (r0, m1))
+grind_pattern [ind_grind] csK2_some => csK2 n cv (some (r, m2))
+grind_pattern [ind_grind] csK3_some => csK3 (some (r, m3))
+
+theorem classStreamRecs_spec (p : Prog) (hc : p.lookup "iw_copy" = some iwCopy)
+    (ha : p.lookup "iw_alloc" = some iwAlloc) (hsc : p.lookup "sl_cons" = some slCons)
+    (hp : p.lookup "class_stream_recs" = some classStreamRecsL) (n : Nat) :
+    ∀ (s₀ : St) (vis rcso rcsl : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_stream_recs" [vis, rcso, rcsl]
+    ⦃fun r s' => LocEq s' s₀ ∧ csrW n s₀.mem vis rcso rcsl = some (r, s'.mem); ⊤⦄ := by
+  induction n with
+  | zero =>
+    intro s₀ vis rcso rcsl; rw [invoke_eq _ hp]; simp only [callFn, classStreamRecsL]
+    vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ vis rcso rcsl
+    rw [invoke_eq _ hp]
+    simp only [callFn, classStreamRecsL]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        stubM_spec p "check_constant_val" n, slCons_specW p ha hc hsc n, ih] <;>
+      finish (gen := 20) [rdW_eq]
+
+
+/-- The recursor shapes' constant records, as `class_stream_recs` reads them: slice entry `j` is a
+pointer to a shape whose first word points to the constant `cvs[j]`, all below the pools' tops. -/
+def RecsOK (m : Mem) (ro rl : Nat) (cvs : List IConstantVal) : Prop :=
+  ro + rl ≤ iwTop m ∧ cvs.length = rl ∧ ∀ j, j < rl → ∃ p0 q cv, iwN m (ro + j) = some p0 ∧
+    p0 + 1 ≤ iwTop m ∧ iwN m p0 = some q ∧ decCVp m q = some cv ∧ CVExt m q ∧ cvs[j]? = some cv
+
+theorem RecsOK_grow {m m' : Mem} (hg : IWGrow m m') {ro rl : Nat} {cvs : List IConstantVal}
+    (h : RecsOK m ro rl cvs) : RecsOK m' ro rl cvs := by
+  obtain ⟨h1, h2, h3⟩ := h
+  refine ⟨Nat.le_trans h1 hg.1, h2, fun j hj => ?_⟩
+  obtain ⟨p0, q, cv, hp0, hp1, hq, hcv, hext, hcvs⟩ := h3 j hj
+  have hiw : ∀ i, i < iwTop m → iwN m' i = iwN m i := fun i hi => by
+    simp only [iwN, nat?, iwA]; rw [hg.2.2.1 i hi]
+  refine ⟨p0, q, cv, ?_, Nat.le_trans hp1 hg.1, ?_, ?_, CVExt_grow hg hext, hcvs⟩
+  · rw [hiw _ (by omega)]; exact hp0
+  · rw [hiw _ (by omega)]; exact hq
+  · rw [decCVp_grow hg hext]; exact hcv
+
+theorem RecsOK_cons {m : Mem} {ro rl : Nat} {cv : IConstantVal} {cvs : List IConstantVal}
+    (h : RecsOK m ro (rl + 1) (cv :: cvs)) :
+    (∃ p0 q, iwN m ro = some p0 ∧ p0 + 1 ≤ iwTop m ∧ iwN m p0 = some q ∧ decCVp m q = some cv ∧
+      CVExt m q) ∧ RecsOK m (ro + 1) rl cvs := by
+  obtain ⟨h1, h2, h3⟩ := h
+  refine ⟨?_, by omega, by simpa using h2, fun j hj => ?_⟩
+  · obtain ⟨p0, q, cv', hp0, hp1, hq, hcv, hext, hcvs⟩ := h3 0 (by omega)
+    simp only [Nat.add_zero, List.getElem?_cons_zero, Option.some.injEq] at hp0 hcvs
+    subst hcvs
+    exact ⟨p0, q, hp0, hp1, hq, hcv, hext⟩
+  · obtain ⟨p0, q, cv', hp0, hp1, hq, hcv, hext, hcvs⟩ := h3 (j + 1) (by omega)
+    simp only [List.getElem?_cons_succ] at hcvs
+    refine ⟨p0, q, cv', ?_, hp1, hq, hcv, hext, hcvs⟩
+    have : ro + 1 + j = ro + (j + 1) := by omega
+    rw [this]; exact hp0
+
+/-- What `class_stream_recs` returns: a slice of constant pointers decoding to the constants. -/
+def CsRes (m' : Mem) (r : List Word) (cvs : List IConstantVal) : Prop :=
+  ∃ ptrs, decNL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some ptrs ∧
+    decPL m' (decCVp m') (r.headD 0).toNat (r.tail.headD 0).toNat = some cvs ∧
+    (∀ q ∈ ptrs, CVExt m' q) ∧ (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m'
+
+local notation "V" => ConLeche.CheckMode.verified
+
+theorem csrW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
+    ∀ (m m' : Mem) (a : AState) (vis rcso rcsl : Word) (r : List Word) (recs : List RecShape),
+    csrW n m vis rcso rcsl = some (r, m') → StageR dn vis fe m a →
+    RecsOK m rcso.toNat rcsl.toNat (recs.map (·.cvR)) →
+    ∃ cvs a', (ConRon.Arena.classStreamRecs V fe recs).run a = .ok (cvs, a') ∧
+      cvs = recs.map (·.cvR) ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧ CsRes m' r cvs := by
+  induction n with
+  | zero => intro m m' a vis rcso rcsl r recs h; simp [csrW] at h
+  | succ n ih =>
+    intro m m' a vis rcso rcsl r recs h hS hOK
+    by_cases hrl : rcsl = 0
+    · rw [csrW_nil n m vis rcso rcsl hrl] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      have hz : rcsl.toNat = 0 := by rw [hrl]; rfl
+      have hlen := hOK.2.1
+      rw [hz] at hlen
+      have hnil : recs = [] := List.eq_nil_of_length_eq_zero (by simpa using hlen)
+      subst hnil
+      refine ⟨[], a, rfl, rfl, hS, IWGrow.refl m, ?_⟩
+      exact ⟨[], by simp [decNL], by simp [decPL], by simp, by simp⟩
+    · have hpos : 1 ≤ rcsl.toNat := by
+        rcases Nat.eq_zero_or_pos rcsl.toNat with h0 | h0
+        · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hrl
+        · omega
+      obtain ⟨l1, hl1⟩ : ∃ l1, rcsl.toNat = l1 + 1 := ⟨rcsl.toNat - 1, by omega⟩
+      have hlen := hOK.2.1
+      obtain ⟨rc, rest, rfl⟩ : ∃ rc rest, recs = rc :: rest := by
+        cases recs with
+        | nil => simp at hlen; omega
+        | cons rc rest => exact ⟨rc, rest, rfl⟩
+      rw [hl1] at hOK
+      obtain ⟨⟨p0, q, hp0, hp1, hq, hcv, hext⟩, hOKt⟩ := RecsOK_cons (by simpa using hOK)
+      have hrcso64 : rcso.toNat < 2 ^ 64 := rcso.toNat_lt
+      have e0 : UInt64.ofNat rcso.toNat = rcso := UInt64.ofNat_toNat
+      have hIW64 : (m.arr64 IW).size < 2 ^ 64 := hS.2.2.2.1
+      have hrd0 := iwN_rdW hp0 (by have := iwN_lt hp0; omega)
+      rw [e0] at hrd0
+      have hp0b : p0 < 2 ^ 64 := hrd0.2
+      have hrdq := iwN_rdW hq (by omega)
+      have hqb : q < 2 ^ 64 := hrdq.2
+      rw [csrW_cons n m vis rcso rcsl hrl, hrd0.1, hrdq.1] at h
+      have hqt : (UInt64.ofNat q).toNat = q := UInt64.toNat_ofNat_of_lt' hqb
+      cases hs : stubM "check_constant_val" m [vis, UInt64.ofNat q] with
+      | none => rw [hs] at h; simp [csK1] at h
+      | some r0m =>
+        obtain ⟨r0, m1⟩ := r0m
+        rw [hs, csK1_some] at h
+        obtain ⟨x0, a1, hrun1, hS1, hg1, -⟩ :=
+          checkConstantVal_spec dn vis fe (UInt64.ofNat q) rc.cvR m m1 a r0 hs ⟨hS, by rw [hqt]; exact hcv⟩
+        have hxu : x0 = () := rfl
+        subst hxu
+        have hOK1 : RecsOK m1 (rcso + 1).toNat (rcsl - 1).toNat (rest.map (·.cvR)) := by
+          have htopsz : iwTop m ≤ (m.arr64 IW).size := hS.2.1
+          have hOKb := hOK.1
+          have hro1 : (rcso + 1).toNat = rcso.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+          have hrl1 : (rcsl - 1).toNat = l1 := by
+            rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hpos))]; simp; omega
+          rw [hro1, hrl1]
+          exact RecsOK_grow hg1 hOKt
+        cases hr : csrW n m1 vis (rcso + 1) (rcsl - 1) with
+        | none => rw [hr] at h; simp [csK2] at h
+        | some r2m =>
+          obtain ⟨r2, m2⟩ := r2m
+          rw [hr, csK2_some] at h
+          obtain ⟨cvs2, a2, hrun2, hcvs2, hS2, hg2, ptrs2, hdn2, hdp2, hext2, htop2⟩ :=
+            ih m1 m2 a1 vis (rcso + 1) (rcsl - 1) r2 rest hr hS1 hOK1
+          cases hcw : consW n m2 (UInt64.ofNat q) (r2.headD 0) (r2.tail.headD 0) with
+          | none => rw [hcw] at h; simp [csK3] at h
+          | some r3m =>
+            obtain ⟨r3, m3⟩ := r3m
+            rw [hcw, csK3_some] at h
+            simp only [Option.some.injEq, Prod.mk.injEq] at h
+            obtain ⟨rfl, rfl⟩ := h
+            obtain ⟨hS3, hg3, hdn3, ht3⟩ := consW_stageN hcw hS2 htop2 hdn2
+            have hg13 := (hg1.trans hg2).trans hg3
+            have hg23 := hg2.trans hg3
+            have hextm3 : CVExt m3 q := CVExt_grow hg13 hext
+            refine ⟨rc.cvR :: cvs2, a2, ?_, by rw [hcvs2]; rfl, hS3, hg13, ?_⟩
+            · simp only [ConRon.Arena.classStreamRecs, StateT.run_bind]
+              rw [hrun1]
+              simp only [bind, Except.bind]
+              rw [hrun2]
+              rfl
+            · refine ⟨q :: ptrs2, by simpa [hqt] using hdn3, ?_, ?_, by simpa using Nat.le_of_eq ht3⟩
+              · have hdn3' : decNL m3 (r3.headD 0).toNat (r3.tail.headD 0).toNat = some (q :: ptrs2) := by
+                  simpa [hqt] using hdn3
+                rw [decPL_eq_bind]
+                simp only [List.headD_cons, List.tail_cons]
+                rw [hdn3']
+                simp only [Option.bind_some, List.mapM_cons]
+                rw [decCVp_grow hg13 hext, hcv]
+                have h2 : ptrs2.mapM (decCVp m2) = some cvs2 := by
+                  rw [decPL_eq_bind, hdn2] at hdp2; simpa using hdp2
+                rw [mapM_decCVp_grow hg3 ptrs2 hext2, h2]
+                rfl
+              · intro q' hq'
+                simp only [List.mem_cons] at hq'
+                rcases hq' with rfl | hq'
+                · exact hextm3
+                · exact CVExt_grow hg3 (hext2 q' hq')
+
+
+/-- **`class_stream_recs` refines `classStreamRecs .verified`** (through the `check_constant_val`
+stub and `sl_cons`): the result slice holds the recursors' constant pointers, in order. -/
+@[refines ConRon.Arena.classStreamRecs]
+theorem classStreamRecs_refines (p : Prog) (hc : p.lookup "iw_copy" = some iwCopy)
+    (ha : p.lookup "iw_alloc" = some iwAlloc) (hsc : p.lookup "sl_cons" = some slCons)
+    (hp : p.lookup "class_stream_recs" = some classStreamRecsL) (n : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis rcso rcsl : Word) (recs : List RecShape)
+    (hS : StageR dn vis fe s₀.mem a₀) (hOK : RecsOK s₀.mem rcso.toNat rcsl.toNat (recs.map (·.cvR))) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_stream_recs" [vis, rcso, rcsl]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.classStreamRecs V fe recs) a₀ ∧
+      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.classStreamRecs V fe recs) a₀) ∧
+      IWGrow s₀.mem s'.mem ∧ CsRes s'.mem r (AM.res (ConRon.Arena.classStreamRecs V fe recs) a₀);
+      ⊤⦄ := by
+  refine triple_post (classStreamRecs_spec p hc ha hsc hp n s₀ vis rcso rcsl) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨cvs, a', hrun, hcvs, hS', hg, hres⟩ := csrW_ok dn fe n _ _ a₀ vis rcso rcsl r recs hm hS hOK
+  obtain ⟨hok, hst, hrs⟩ := AM.of_run_ok (ConRon.Arena.classStreamRecs V fe recs) a₀ a' cvs hrun
+  exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hrs]; exact hres⟩
+
 end L.Ind

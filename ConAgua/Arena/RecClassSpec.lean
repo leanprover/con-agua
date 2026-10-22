@@ -2642,4 +2642,76 @@ theorem classReadRecCls_refines (p : Prog) (hfh : p.lookup "fvar_head" = some fv
   obtain ⟨hok, hst, hrs⟩ := AM.of_run_ok (ConRon.Arena.classReadRecCls nP.toNat motPos recs) a₀ a' res hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hrs]; exact hres⟩
 
+
+/-! ## Constant records are stable under the pool's growth -/
+
+/-- `q`'s constant-value record lies below the `EREC` top (its four words and its level-parameter
+slice). -/
+def CVExt (m : Mem) (q : Nat) : Prop :=
+  q + 4 ≤ erTop m ∧ ∀ o l, nat? (erA m) (q + 1) = some o → nat? (erA m) (q + 2) = some l →
+    o + l ≤ erTop m
+
+theorem decCVp_grow {m m' : Mem} (hg : IWGrow m m') {q : Nat} (hq : CVExt m q) :
+    decCVp m' q = decCVp m q := by
+  have hag : ∀ i, i < erTop m → (erA m')[i]? = (erA m)[i]? := fun i hi => by
+    simp only [erA]; exact hg.2.2.2 i hi
+  have hn : ∀ i, i < erTop m → nat? (erA m') i = nat? (erA m) i := fun i hi => by
+    simp only [nat?, hag i hi]
+  have hh : ∀ {k : IdxKind} i, i < erTop m → (hd? (erA m') i : Option (Idx k)) = hd? (erA m) i :=
+    fun i hi => by simp only [hd?, hag i hi]
+  obtain ⟨hq4, hl⟩ := hq
+  simp only [decCVp, decCV]
+  rw [hh q (by omega), hh (q + 3) (by omega)]
+  have hlist : (hlist? (erA m') (q + 1) : Option (List (Idx IdxKind.name))) = hlist? (erA m) (q + 1) := by
+    simp only [hlist?]
+    rw [hn (q + 1) (by omega), hn (q + 1 + 1) (by omega)]
+    cases ho : nat? (erA m) (q + 1) with
+    | none => simp
+    | some o =>
+      cases hl' : nat? (erA m) (q + 1 + 1) with
+      | none => simp
+      | some l =>
+        try simp only [Option.bind_some]
+        apply hslice?_congr
+        intro j hj
+        have := hl o l ho hl'
+        exact hag (o + j) (by omega)
+  rw [hlist]
+
+
+theorem decPL_eq_bind {α : Type} (m : Mem) (f : Nat → Option α) : ∀ (l o : Nat),
+    decPL m f o l = (decNL m o l).bind (fun ps => ps.mapM f) := by
+  intro l
+  induction l with
+  | zero => intro o; simp [decPL, decNL]
+  | succ l ih =>
+    intro o
+    rw [decPL_succ_do, decNL_succ, ih (o + 1)]
+    cases hp : iwN m o with
+    | none => simp
+    | some p =>
+      cases hf : f p with
+      | none => cases hr : decNL m (o + 1) l <;> simp [hf, hr]
+      | some x =>
+        cases hr : decNL m (o + 1) l with
+        | none => simp
+        | some ps => simp [hf]
+
+theorem CVExt_grow {m m' : Mem} (hg : IWGrow m m') {q : Nat} (hq : CVExt m q) : CVExt m' q := by
+  obtain ⟨h1, h2⟩ := hq
+  have hn : ∀ i, i < erTop m → nat? (erA m') i = nat? (erA m) i := fun i hi => by
+    simp only [nat?, erA]; rw [hg.2.2.2 i hi]
+  refine ⟨Nat.le_trans h1 hg.2.1, fun o l ho hl => ?_⟩
+  rw [hn (q + 1) (by omega)] at ho
+  rw [hn (q + 2) (by omega)] at hl
+  exact Nat.le_trans (h2 o l ho hl) hg.2.1
+
+theorem mapM_decCVp_grow {m m' : Mem} (hg : IWGrow m m') :
+    ∀ (ps : List Nat), (∀ q ∈ ps, CVExt m q) → ps.mapM (decCVp m') = ps.mapM (decCVp m)
+  | [], _ => rfl
+  | q :: ps, h => by
+    simp only [List.mapM_cons]
+    rw [decCVp_grow hg (h q (List.mem_cons_self ..)),
+      mapM_decCVp_grow hg ps (fun q' hq' => h q' (List.mem_cons_of_mem _ hq'))]
+
 end L.Ind
