@@ -182,33 +182,35 @@ def piDomsMentionAny : FunDecl := lfn (namesO, namesL, fuel, e) locals (g, x, y,
 member `ms` mention one of `names` in some binder domain of its telescope? -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:108-114 ConRon.Arena.blockRawRec
 @[l_impl ConRon.Arena.blockRawRec]
-def blockRawRecMember : FunDecl := lfn (namesO, namesL, ms) locals (coff, clen, j, c, cv, b) {
-  coff := IW.u64[ms + 2]; clen := IW.u64[ms + 3];
-  j := 0;
-  while j < clen {
-    c := IW.u64[coff + j];
-    cv := IW.u64[c];
-    b := call pi_doms_mention_any(namesO, namesL, ⟪CWF⟫, EREC.u64[cv + 3]);
-    if b != 0 { return 1 };
-    j += 1
-  };
-  return 0
+def blockRawRecMember : FunDecl := lfn (namesO, namesL, coff, clen) locals (b, r) {
+  if clen == 0 { return 0 };
+  b := call pi_doms_mention_any(namesO, namesL, ⟪CWF⟫, EREC.u64[IW.u64[IW.u64[coff]] + 3]);
+  if b != 0 { return 1 };
+  r := call block_raw_rec_member(namesO, namesL, coff + 1, clen - 1);
+  return r
+}
+
+/-- `block_raw_rec_go(names.off, names.len, moff, mlen)`: the members' `anyM`, in order
+(recursive, lane `indproofs2`: was a loop). -/
+-- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:108-114 ConRon.Arena.blockRawRec
+@[l_impl ConRon.Arena.blockRawRec]
+def blockRawRecGo : FunDecl := lfn (namesO, namesL, moff, mlen) locals (ms, b, r) {
+  if mlen == 0 { return 0 };
+  ms := IW.u64[moff];
+  b := call block_raw_rec_member(namesO, namesL, IW.u64[ms + 2], IW.u64[ms + 3]);
+  if b != 0 { return 1 };
+  r := call block_raw_rec_go(namesO, namesL, moff + 1, mlen - 1);
+  return r
 }
 
 /-- `block_raw_rec(p)`: official's `is_rec` — some member occurs in some binder domain of some
 declared constructor's telescope. -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:108-114 ConRon.Arena.blockRawRec
 @[l_impl ConRon.Arena.blockRawRec]
-def blockRawRec : FunDecl := lfn (p) locals (namesO, namesL, moff, mlen, i, b) {
+def blockRawRec : FunDecl := lfn (p) locals (namesO, namesL, b) {
   (namesO, namesL) := call block_shape_member_names(p);
-  moff := IW.u64[p]; mlen := IW.u64[p + 1];
-  i := 0;
-  while i < mlen {
-    b := call block_raw_rec_member(namesO, namesL, IW.u64[moff + i]);
-    if b != 0 { return 1 };
-    i += 1
-  };
-  return 0
+  b := call block_raw_rec_go(namesO, namesL, IW.u64[p], IW.u64[p + 1]);
+  return b
 }
 
 /-! ## Stage 1: the formers -/
@@ -768,7 +770,7 @@ def indInstallFns : Prog :=
    ("block_caps_at_er_copy_go", blockCapsAtErCopyGo),
    ("block_caps_at_finish", blockCapsAtFinish), ("block_caps_at_one", blockCapsAtOne),
    ("block_caps_at_rest", blockCapsAtRest), ("block_caps_at", blockCapsAt),
-   ("pi_doms_mention_any", piDomsMentionAny), ("block_raw_rec_member", blockRawRecMember),
+   ("pi_doms_mention_any", piDomsMentionAny), ("block_raw_rec_member", blockRawRecMember), ("block_raw_rec_go", blockRawRecGo),
    ("block_raw_rec", blockRawRec), ("check_block_tele", checkBlockTele),
    ("check_block_teles", checkBlockTeles), ("check_block_doms_at", checkBlockDomsAt),
    ("check_block_agree_one", checkBlockAgreeOne), ("check_block_agree", checkBlockAgree),
