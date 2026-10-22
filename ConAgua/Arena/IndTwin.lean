@@ -6,6 +6,9 @@ import ConAgua.Arena.InferLeaves
 import ConAgua.Arena.InferBodyIntern
 import ConAgua.Arena.CoreLevels
 import ConAgua.Arena.WhnfIotaRefine4
+import ConAgua.Arena.LevelEquivRel
+import ConAgua.Arena.LevelEquiv
+import ConAgua.Arena.InstLPLevel
 import ConAgua.Arena.IndInstallSpec8
 
 /-!
@@ -311,5 +314,67 @@ theorem lvlEqC_simT (hL : LvlCacheProg p) (hpc : p.lookup "lvl_eq_c" = some lvlE
     fun r x m' a' ⟨hT, hg, hd, hr⟩ => ⟨hT, hg, hd, hr⟩
 
 end entry
+
+/-! ## `lv_leq_top` under `StageT` -/
+
+section leq
+variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+
+/-- **`StageT` from `CoreS` after a heap-only run** (the level programs write only `LH` and
+`CTL[192]`): the pools and the pins are untouched. -/
+theorem StageT.of_heap {m m' : Mem} {a a' : AState} {M : ModeMaps} (hT : StageT dn vis fe m a)
+    (hC : CoreS dn m a' vis fe M 0) (hf : MemFrame [LH] [192] m m') : StageT dn vis fe m' a' ∧ IWGrow m m' := by
+  have hC' := hC.frameSM hf
+    (by intro b hb; simp only [List.mem_singleton] at hb; subst hb; decide)
+    (by intro x hx; simp only [List.mem_singleton] at hx; subst hx; decide)
+    (hC.memos.frame hf (by decide) (by decide) (by decide) (by decide))
+  have hI : m'.arr64 IW = m.arr64 IW := hf.1 IW (by decide) (by decide)
+  have hE : m'.arr64 EREC = m.arr64 EREC := hf.1 EREC (by decide) (by decide)
+  have hP : m'.arr64 PINS = m.arr64 PINS := hf.1 PINS (by decide) (by decide)
+  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.2.1 129 (by decide)
+  have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hf.2.1 200 (by decide)
+  obtain ⟨hCR, hTw⟩ := hC'.checkR
+  refine ⟨⟨⟨hCR, IWOK.frame hf (by decide) (by decide) (by decide) (by decide) hT.stage.2⟩, hTw,
+    by simp only [pinW, hP]; exact hT.flag⟩, ?_⟩
+  exact ⟨by simp [iwTop, h200], by simp [erTop, h129], fun i _ => by rw [hI], fun i _ => by rw [hE]⟩
+
+/-- The twin side of `lv_leq_top`: the two readbacks, then `Level.leq`. -/
+def leqTopAM (u v : LIdx) : AM (Option Bool) := do
+  let lu ← readLevelM u
+  let lv ← readLevelM v
+  pure (ConLeche.Level.leq lu lv)
+
+/-- **`lv_leq_top` under `StageT`** (replaces `IndStubs.lvLeqTopStub_spec`): from master's
+`leqTopW_ok` (`LevelEquivRel.lean`) at the two handles' readbacks (`denoteL_lvR`). The readbacks
+are the caller's (`StoreDen.lvlAll` for a handle the store holds). -/
+theorem lvLeqTop_simT (p : Prog) (hL : LevelProg p) (hpt : p.lookup "lv_leq_top" = some lvLeqTop)
+    (n : Nat) {m : Mem} {a : AState} (hS : StageT dn vis fe m a) (u v : Word) (hu : H u) (hv : H v)
+    (lu lv : ConLeche.Level) (hdu : denoteL a.store.ls (decI u) = some lu)
+    (hdv : denoteL a.store.ls (decI v) = some lv) :
+    Sim (callW p n "lv_leq_top" [u, v] m) (leqTopAM (decI u) (decI v)) a
+      (fun r x m' a' => StageT dn vis fe m' a' ∧ IWGrow m m' ∧ decLvlEq m' r x) := by
+  intro r m' e
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (lvLeqTop_spec p hL hpt n _ u v) e
+  obtain ⟨M, hC⟩ := hS.core
+  have hlu := denoteL_lvR hC.arena.1 (decI u) lu hdu
+  have hlv := denoteL_lvR hC.arena.1 (decI v) lv hdv
+  rw [word_decI _ _ hu |>.mpr rfl] at hlu
+  rw [word_decI _ _ hv |>.mpr rfl] at hlv
+  obtain ⟨hx, hz⟩ := leqTopW_ok (nameN_rel _ hC.nwf) n _ _ _ _ _ _ _ hlu hlv hW
+  obtain ⟨X1, h1, hc1⟩ := readLevelM_run' a (decI u) lu hdu hC.readL
+  obtain ⟨X2, h2, hc2⟩ := readLevelM_run' { a with caches := { a.caches with readLC := X1 } } (decI v)
+    lv hdv hc1
+  have hC1 := hC.withReadLC X1 hc1
+  have hC2 := hC1.withReadLC X2 hc2
+  obtain ⟨hT', hg⟩ := StageT.of_heap hS hC2 hx.memFrame
+  refine ⟨ConLeche.Level.leq lu lv, _, ?_, hT', hg, ?_⟩
+  · simp only [leqTopAM, StateT.run_bind, h1, except_ok_bind, h2]; rfl
+  · show r.headD 0 = _
+    rw [hz]; cases ConLeche.Level.leq lu lv with
+    | none => rfl
+    | some b => cases b <;> rfl
+
+end leq
 
 end L.Ind
