@@ -600,3 +600,45 @@ theorem findW_ok (n : Nat) : ∀ (m : Mem) (o l x : Word) (r : List Word) (ws : 
             simp [← h]
 
 end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+/-! ## `sl_get`, `sl_getd`: one word of a slice (lane `indproofs`) -/
+
+/-- The model of `sl_get(o, l, i)`: `none` (abort) past the end. -/
+def getW (m : Mem) (o l i : Word) : Option Word :=
+  if l ≤ i then none else some (rdW (m.arr64 IW) (o + i))
+
+/-- The model of `sl_getd(o, l, i, d)`. -/
+def getDW (m : Mem) (o l i d : Word) : Word :=
+  if l ≤ i then d else rdW (m.arr64 IW) (o + i)
+
+theorem slGet_specW (p : Prog) (hp : p.lookup "sl_get" = some slGet) (n : Nat) (s₀ : St)
+    (o l i : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "sl_get" [o, l, i]
+    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ getW s₀.mem o l i = some (r.headD 0); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, slGet]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+      finish [getW]
+
+theorem slGetD_specW (p : Prog) (hp : p.lookup "sl_getd" = some slGetD) (n : Nat) (s₀ : St)
+    (o l i d : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "sl_getd" [o, l, i, d]
+    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ r.headD 0 = getDW s₀.mem o l i d; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, slGetD]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+      finish [getDW]
+
+end L.Ind
