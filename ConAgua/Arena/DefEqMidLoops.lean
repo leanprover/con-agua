@@ -41,7 +41,7 @@ theorem coreRef_bindS {α β : Type} [Inhabited α] [Inhabited β] {T₁ : AM α
 theorem slice_kept {m₀ m : Mem} {o c : Word} (hk : StackKept m₀ m)
     (ht : o.toNat + c.toNat ≤ (spTop m₀).toNat) (j : Word) (hj : j.toNat < c.toNat) :
     spW m (o + j) = spW m₀ (o + j) := by
-  apply hk.2.2
+  apply hk.below
   have h1 : (o + j).toNat = o.toNat + j.toNat := by
     rw [UInt64.toNat_add]; have := (spTop m₀).toNat_lt; omega
   rw [UInt64.lt_iff_toNat_lt, h1]; omega

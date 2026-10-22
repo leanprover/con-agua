@@ -80,7 +80,8 @@ store's arrays (below 42) and counts (`CTL` below 42). -/
 theorem CoreS.of_level {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List ArrId} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hL : LvlStep a a') (hR : ArenaR m' a')
-    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b < 42) (hC : ∀ x ∈ C, x.toNat < 42) :
+    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b < 42) (hC : ∀ x ∈ C, x.toNat < 42)
+    (hP : POOL ∉ A := by decide) (hP0 : (0 : Word) ∉ C := by decide) :
     CoreS dn m' a' vis fe M eb ∧ StackKept m m' := by
   have hD : DerR m' a' := DerR.of_tiers m' a a'
     (DerR.frameM A C m m' hf (fun b hb => .inl (hA b hb)) a hS.arena.2) hL.pers hL.scr
@@ -92,9 +93,16 @@ theorem CoreS.of_level {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
       (fun x hx => .inl (by have := hC x hx; omega)) hf, ?_, ?_, ?_,
       hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn,
       hS.memos.frame hf ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide)⟩
-        ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide)⟩,
+        ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide)⟩
+        ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide),
+          fun h => absurd (hA _ h) (by decide)⟩
+        ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide),
+          fun h => absurd (hC _ h) (by decide)⟩,
       hf.2.2.1 145 ▸ hS.bstk⟩,
-    by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
+    StackKept.of_frame hf
+      ⟨fun h => by have := hA _ h; simp only [SPN, ArrId] at this; omega,
+       fun h => by have := hA _ h; simp only [BSTK, ArrId] at this; omega, hP⟩
+      ⟨fun h => by have := hC _ h; simp at this, fun h => by have := hC _ h; simp at this, hP0⟩⟩
   · rw [hL.caches]
     exact CoreRM.frame (A := A) (C := C) (fun b hb => .inl (by have := hA b hb; simp only [ArrId] at this ⊢; omega))
       (fun x hx => .inl (by have := hC x hx; omega)) hf hS.core
@@ -124,12 +132,6 @@ theorem keeps_cpl_internFVar (i : Nat) (ty : EIdx) : Keeps cpl (internE (.fvar i
 theorem keeps_cpl_internSort (u : LIdx) : Keeps cpl (internE (.sort u)) := by
   simp only [internE]; exact keeps_cpl_internNodeE _
 
-/-- A frame of arrays other than the stack and `CTL` words other than its top keeps the stack. -/
-theorem StackKept.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
-    (hA : SPN ∉ A) (hC : (136 : Word) ∉ C) : StackKept m m' := by
-  have hspn : m'.arr64 SPN = m.arr64 SPN := hf.1 SPN hA (by decide)
-  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 hC
-  exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
 
 section leaves
 variable {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
@@ -156,7 +158,7 @@ theorem internFVar_core (hS : CoreS dn m a vis fe M eb) (u ty : Word) (hty : HW 
                     rcases hx with rfl | rfl <;> decide)
     (fun x hx => by simp only [fvarSch, List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
-  have hst := StackKept.of_frame hf (by simp [fvarSch, FVREC, FVSLOT, SPN]) (by simp [fvarSch])
+  have hst := StackKept.of_frame hf
   exact ⟨hok, ⟨M, hS', KeptAll.refl _ _, hst⟩, by rw [hres]; rfl, hw⟩
 
 /-- **`intern_sort` refines `internE (.sort …)` under `CoreS`.** -/
@@ -179,7 +181,7 @@ theorem internSort_core (hS : CoreS dn m a vis fe M eb) (u : Word) (hu : HW u)
                     rcases hx with rfl | rfl <;> decide)
     (fun x hx => by simp only [sortSch, List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
-  have hst := StackKept.of_frame hf (by simp [sortSch, SOREC, SOSLOT, SPN]) (by simp [sortSch])
+  have hst := StackKept.of_frame hf
   exact ⟨hok, ⟨M, hS', KeptAll.refl _ _, hst⟩, by rw [hres]; rfl, hw⟩
 
 /-- **`intern_succ` refines `internLNode (.succ …)` under `CoreS`.** -/

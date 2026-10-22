@@ -7,6 +7,7 @@ import ConAgua.Arena.InstListSpec
 import ConAgua.Arena.HasFvar
 import ConAgua.Arena.InferFieldSort
 import ConAgua.Arena.PropRead
+import ConAgua.Arena.StrLit
 
 /-!
 # Phases 6–7 close over their callees (lane `defeq`)
@@ -41,7 +42,7 @@ def defeqExtFns : Prog :=
    ("field_sort_zero", fieldSortZeroL),
    ("find_proj", stub 3), ("inst1", instEntry),
    ("inst_lp", stub 4), ("is_proof_fast", isProofFastL), ("not_proof_fast", notProofFastL),
-   ("str_lit_ctor", stub 1), ("str_lit_supported", stub 1)]
+   ("str_lit_ctor", strLitCtorL), ("str_lit_supported", strLitSupportedL)]
 
 /-- Every function of phases 6–7 is well formed in the program of it and its callees: every
 call resolves, with the right arity (the callees' own bodies are checked in their lanes); the
@@ -49,7 +50,7 @@ names are distinct. -/
 theorem defeqInferFns_wf :
     (defeqInferFns.all fun (_, fd) =>
       L.Compiler.FunDecl.wf (defeqInferFns ++ defeqExtFns) L.Ind.indTab fd) = true ∧
-    decide ((defeqInferFns ++ defeqExtFns).map (·.1)).Nodup = true := by
-  decide +kernel
+    decide ((defeqInferFns ++ defeqExtFns).map (·.1)).Nodup = true :=
+  L.Compiler.Prog.funsWf_of_fast (by decide +kernel)
 
 end L.Arena

@@ -11,8 +11,8 @@ What the compiler needs of a program, as a decidable check (`Prog.wf tab p = tru
 in range, arrays exist in `tab`, call targets exist and get as many arguments as they have
 parameters, function names are distinct, and frames and table offsets are small enough to be
 immediates. (`L` itself gives a meaning to every program; these are the programs the compiler
-accepts.) Every constant byte string of an `ldc` occurs in the table's constant data, and no `return` gives
-and no call reads more than `tab.nres` results.
+accepts.) Every constant byte string of an `ldc` occurs in the table's constant data, no `return` gives
+and no call reads more than `tab.nres` results, and every global variable is below `tab.ng`.
 -/
 
 namespace L.Compiler
@@ -31,6 +31,7 @@ def Expr.wf (nl : Nat) (tab : Tab) : Expr → Bool
   | .len64 a => a < tab.nw
   | .cmpw _ a b => Expr.wf nl tab a && Expr.wf nl tab b
   | .ldc d i => d.isPrefixOf (tab.rom.drop (romIdx d tab.rom)) && Expr.wf nl tab i
+  | .glob g => g.id < tab.ng
 
 def Cond.wf (nl : Nat) (tab : Tab) : Cond → Bool
   | .cmp _ a b => Expr.wf nl tab a && Expr.wf nl tab b
@@ -51,14 +52,43 @@ def Stmt.wf (p : Prog) (nl : Nat) (tab : Tab) : Stmt → Bool
       match p.lookup f with
       | some fd => args.length == fd.nparams
       | none => false
+  | .gset g e => g.id < tab.ng && Expr.wf nl tab e
 
-def FunDecl.wf (p : Prog) (tab : Tab) (fd : FunDecl) : Bool :=
+/-! ## The checks, guarded against kernel evaluation
+
+`FunDecl.wf` and `Prog.wf` look call targets up by `String` comparison, which the kernel does
+byte by byte: `decide +kernel` on a large program's `Prog.wf` took tens of seconds and up to
+19 GB (DESIGN.md, "Slow declarations", "Program well-formedness, per function"). They are
+therefore wrapped in `kernelOpaque`, which neither the kernel nor `decide` can unfold
+(`Lean.opaqueId true` is stuck), so evaluating them by accident fails at once. Their contents are
+`FunDecl.wfSpec`/`Prog.wfSpec` (`FunDecl.wf_eq`, `Prog.wf_eq`); a concrete program's check goes
+through `Prog.wfFast` (`WFFast.lean`) or `prog_wf` (`WFSplit.lean`). Compiled code (`#guard`)
+evaluates them as before. -/
+
+/-- `x`, in a form the kernel cannot reduce (`Lean.opaqueId true` does not reduce, so neither
+does the `cond` on it); `kernelOpaque_eq` proves it equal to `x`. -/
+def kernelOpaque {α : Sort _} (x : α) : α := cond (Lean.opaqueId true) x x
+
+theorem kernelOpaque_eq {α : Sort _} (x : α) : kernelOpaque x = x := by
+  unfold kernelOpaque; cases Lean.opaqueId true <;> rfl
+
+def FunDecl.wfSpec (p : Prog) (tab : Tab) (fd : FunDecl) : Bool :=
   fd.nparams ≤ fd.nlocals && Stmt.wf p fd.nlocals tab fd.body && 8 * frameWords fd + 8 < maxOff
 
-/-- The program is well formed for the table layout `tab`. -/
-def Prog.wf (tab : Tab) (p : Prog) : Bool :=
+/-- A function is well formed in program `p` (guarded: see above). -/
+def FunDecl.wf (p : Prog) (tab : Tab) (fd : FunDecl) : Bool := kernelOpaque (FunDecl.wfSpec p tab fd)
+
+theorem FunDecl.wf_eq (p : Prog) (tab : Tab) (fd : FunDecl) :
+    FunDecl.wf p tab fd = FunDecl.wfSpec p tab fd := kernelOpaque_eq _
+
+def Prog.wfSpec (tab : Tab) (p : Prog) : Bool :=
   p.all (fun (_, fd) => FunDecl.wf p tab fd) && decide (p.map (·.1)).Nodup &&
-    16 + 16 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres < maxOff
+    16 + 16 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng < maxOff
+
+/-- The program is well formed for the table layout `tab` (guarded: see above). -/
+def Prog.wf (tab : Tab) (p : Prog) : Bool := kernelOpaque (Prog.wfSpec tab p)
+
+theorem Prog.wf_eq (tab : Tab) (p : Prog) : Prog.wf tab p = Prog.wfSpec tab p := kernelOpaque_eq _
 
 /-! ## The arrays a program names
 
@@ -90,6 +120,7 @@ def Stmt.arrs : Stmt → Nat × Nat
   | .ite c s t => arrsMax (Cond.arrs c) (arrsMax (Stmt.arrs s) (Stmt.arrs t))
   | .while c s => arrsMax (Cond.arrs c) (Stmt.arrs s)
   | .ret es | .call _ _ es => es.foldl (fun acc e => arrsMax acc (Expr.arrs e)) (0, 0)
+  | .gset _ e => Expr.arrs e
 
 def Prog.arrs (p : Prog) : Nat × Nat := p.foldl (fun acc (_, fd) => arrsMax acc (Stmt.arrs fd.body)) (0, 0)
 

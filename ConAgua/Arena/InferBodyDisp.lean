@@ -129,7 +129,6 @@ structure InferCallees (p : Prog) : Prop where
   constTy : ConstTyAtOK p
   lit : InferLitCallees p
   eager : IsEagerReduceH p
-  bstk : BStkCallees p
   bcap : BStkCap
   proj : InferProjOK p
 
@@ -456,7 +455,7 @@ theorem inferBody_refines (p : Prog) (hq : InferAllProg p) (hc : InferCallees p)
     | succ k =>
     rw [← hd1, ← hd2] at hv
     exact coreRef_congr (inferBody_forall _ fe d.toNat (decE e) a₀ _ _ hv)
-      (fin (inferForall_refines p hq.leaf hq.bind hq.body hc.instList hc.bstk hc.bcap k (hk.mono (by omega))
+      (fin (inferForall_refines p hq.leaf hq.bind hq.body hc.instList hc.bcap k (hk.mono (by omega))
         F (by omega) (by omega) _ a₀ dn vis fe MM eb mode d _ _ hsl h1 h2) hW)
   | lam ty b =>
     obtain ⟨hg, h1, hd1, h2, hd2⟩ := hvr
@@ -467,7 +466,7 @@ theorem inferBody_refines (p : Prog) (hq : InferAllProg p) (hc : InferCallees p)
     | succ k =>
     rw [← hd1, ← hd2] at hv
     exact coreRef_congr (inferBody_lam _ fe d.toNat (decE e) a₀ _ _ hv)
-      (fin (inferLam_refines p hq.leaf hq.bind hq.body hc.instList hc.absRange hc.bstk hc.bcap k
+      (fin (inferLam_refines p hq.leaf hq.bind hq.body hc.instList hc.absRange hc.bcap k
         (hk.mono (by omega)) F (by omega) (by omega) _ a₀ dn vis fe MM eb mode d _ _ hsl h1 h2) hW)
   | app f x =>
     obtain ⟨hg, -⟩ := hvr
@@ -658,13 +657,13 @@ end L.Arena
 
 namespace L.Arena
 
-/-- **The knot's `infer` slot one level up** (`WhnfCallees.inferStep`), from the body. -/
+/-- **The knot's `infer` slot one level up**, from the body. -/
 @[refines_part ConRon.Arena.coreKnot "infer (step)"]
 theorem inferSlot_step (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat)
     (hk : KnotUpTo p n) : InferSlot p (n + 1) :=
   infer_refines p hq.knot n hk (inferBody_refines p hq hc n)
 
-/-- **The knot's `inferIO` slot one level up** (`WhnfCallees.inferIOStep`), from the io body. -/
+/-- **The knot's `inferIO` slot one level up**, from the io body. -/
 @[refines_part ConRon.Arena.coreKnot "inferIO (step)"]
 theorem inferIOSlot_step (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat)
     (hk : KnotUpTo p n) : InferIOSlot p (n + 1) :=

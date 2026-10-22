@@ -320,7 +320,7 @@ theorem CoreS.set_lq {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
         (fun x hx => by simp at hx; subst hx; decide) hf,
       fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf,
       hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.2.2.1 145 ▸ hS.bstk⟩,
-    by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
+    StackKept.of_frame hf⟩
 
 end L.Arena
 
@@ -540,7 +540,7 @@ theorem CoreS.set_lsq {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
         (fun x hx => by simp at hx; subst hx; decide) hf,
       fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf,
       hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.2.2.1 145 ▸ hS.bstk⟩,
-    by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
+    StackKept.of_frame hf⟩
 
 /-- **The model of `lvls_eq_c` refines `lvlsEq?`** under `CoreS`. -/
 theorem lvlsEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}

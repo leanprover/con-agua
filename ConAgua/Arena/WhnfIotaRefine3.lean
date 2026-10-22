@@ -136,7 +136,8 @@ theorem recFireArgs_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) 
       exact hsa.take cp hle |> fun h => by simpa [hcp] using h
 
 @[refines ConRon.Arena.recFireArgs]
-theorem recFireArgs_refines (p : Prog) (hp : IotaProg' p) :
+theorem recFireArgs_refines (p : Prog) (hp : IotaProg' p)
+    (hcl : closedA p coreErecA coreErecC coreFns = true) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb fireKind pvo pvc po pc us ao rP ctorParams : Word) (rl : IRecRule)
     (lps : List NIdx) (args : Array EIdx), CoreS dn s₀.mem a₀ vis fe MM eb → HW us →
@@ -152,7 +153,7 @@ theorem recFireArgs_refines (p : Prog) (hp : IotaProg' p) :
         fe MM eb ∧
       ∃ xs, AM.res (recFireArgs rl lps (decI us) args.toList rP.toNat) a₀ = xs ∧
         SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄ :=
-  recFireArgs_refines' (p := p) (hc := iotaCallees_stub p) (hw := whnfCallees_stub p) (hE := erecKeptInst_stub p)  (hp := hp)
+  recFireArgs_refines' (p := p) (hc := iotaCallees_stub p) (hw := whnfCallees_stub p) (hE := ErecKeptInst.of_closed hcl)  (hp := hp)
 
 /-! ## `and_rescue_slots(vis, ctor, nP, us)` -/
 
@@ -276,10 +277,11 @@ theorem addW13 (q c : Word) (a : Array Word) (hq : q.toNat + 13 < a.size)
   rw [UInt64.toNat_add]; simp; omega
 
 /-- **The `and_rescue_slots` loop refines `andRescueSlotsGo`**. -/
-theorem arW_ok (p : Prog) (hcc : CoreCallees p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
     (fe : IFEnv) (eb ctor nP us anW : Word) (hctor : HW ctor) (hus : HW us) (hanW : HW anW) :
     ∀ (K k : Nat) (m : Mem) (a : AState) (M : ModeMaps) (j : Word) (L : List Word) (m' : Mem),
       j.toNat + K = 2 → CoreS dn m a vis fe M eb →
+      (∃ (h : EIdx) (c : NIdx), a.store.view h = some (.const c (decI us))) →
       iotaArW p vis ctor nP us anW k m j = some (L, m') →
       AM.ok (andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat (decI us) K j.toNat) a ∧
       CoreAfter dn m m' (AM.st (andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat (decI us) K
@@ -289,7 +291,7 @@ theorem arW_ok (p : Prog) (hcc : CoreCallees p) (dn : NIdx → Option ConLeche.N
   intro K
   induction K with
   | zero =>
-    intro k m a M j L m' hK hS hL
+    intro k m a M j L m' hK hS hV hL
     have hn : ¬ j < 2 := fun h => by
       have : j.toNat < 2 := h
       omega
@@ -304,7 +306,7 @@ theorem arW_ok (p : Prog) (hcc : CoreCallees p) (dn : NIdx → Option ConLeche.N
     · rw [hst]; exact ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩
     · rw [hres]; simp [decBool]
   | succ K ih =>
-    intro k m a M j L m' hK hS hL
+    intro k m a M j L m' hK hS hV hL
     have hlt : j < 2 := by
       have : j.toNat < 2 := by omega
       exact this
@@ -345,7 +347,8 @@ theorem arW_ok (p : Prog) (hcc : CoreCallees p) (dn : NIdx → Option ConLeche.N
     obtain ⟨r₂, m₂⟩ := q
     obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hr₂⟩ := CoreSpec.of_callW
       (hcc.fireOk k ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb (r₁.tail.headD 0) j us tbl hS₁ hus
-        (by rw [hEr1]; exact htbl)) hc2
+        (by rw [hEr1]; exact htbl) (by simpa [IProjTable.entry] using findProj?_lt hrunF)
+        (by obtain ⟨h, c, hv⟩ := hV; exact ⟨h, c, by rw [findProj?_eview hrunF]; exact hv⟩)) hc2
     have hSt₂ : StackKept m₁ m₂ := hSt₂
     have hEr2 : m₂.arr64 EREC = m₁.arr64 EREC := hcc.erec k "fire_ok" _ m₁ r₂ m₂ (Or.inr rfl) hc2
     have hrunB := AM.run_of_ok _ _ hok2
@@ -411,7 +414,9 @@ theorem arW_ok (p : Prog) (hcc : CoreCallees p) (dn : NIdx → Option ConLeche.N
           · rw [if_neg hr20] at hL'
             have h1 : (j + 1).toNat = j.toNat + 1 := uint64_succ_toNat 2 j hlt
             obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hL1⟩ := ih k m₂ _ M₂ (j + 1) L m'
-              (by omega) hS₂ hL'
+              (by omega) hS₂ (by
+                obtain ⟨h, c, hv⟩ := hV
+                exact ⟨h, c, by rw [fireOk_store hb, findProj?_eview hrunF]; exact hv⟩) hL'
             rw [h1] at hok3 hS₃ hres3
             have hrunR := AM.run_of_ok _ _ hok3
             have hcond : ((tbl.entry j.toNat).ctor == decI ctor && (tbl.entry j.toNat).numParams == nP.toNat &&
@@ -468,10 +473,10 @@ theorem andRescueSlots_run (fe : IFEnv) (ctor : NIdx) (nP : Nat) (ust : LsIdx) (
   simp only [andRescueSlots, pinAnd, StateT.run_bind, hp, except_ok_bind, hr]
 
 /-- **`and_rescue_slots` refines `andRescueSlots`** (`find_proj`, `fire_ok` and their facts as
-`CoreCallees`). -/
-theorem andRescueSlots_refines' (p : Prog) (hp : IotaProg' p) (hcc : CoreCallees p) :
+`ProjCallees`). -/
+theorem andRescueSlots_refines' (p : Prog) (hp : IotaProg' p) (hcc : ProjCallees p) :
     AndRescueSlotsOK p := by
-  intro n s₀ a₀ dn vis fe MM eb ctor nP us hS hctor hus
+  intro n s₀ a₀ dn vis fe MM eb ctor nP us hS hctor hus hV
   cases n with
   | zero =>
     apply L.M.triple_of_run
@@ -497,7 +502,7 @@ theorem andRescueSlots_refines' (p : Prog) (hp : IotaProg' p) (hcc : CoreCallees
   subst hmm
   have hanW : HW (r₀.headD 0) := hanHW
   obtain ⟨hok, hca, hres, hL1⟩ := arW_ok p hcc dn vis fe eb ctor nP us (r₀.headD 0) hctor hus hanW 2
-    (n + 1) s.mem a₀ MM 0 r s'.mem (by simp) hS hW
+    (n + 1) s.mem a₀ MM 0 r s'.mem (by simp) hS hV hW
   have hrunA := andRescueSlots_run fe (decI ctor) nP.toNat (decI us) (decI (r₀.headD 0)) a₀ _ _
     (by simpa [PIN_AND] using hpin) (AM.run_of_ok _ _ hok)
   obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ hrunA
@@ -508,7 +513,7 @@ theorem andRescueSlots_refines' (p : Prog) (hp : IotaProg' p) (hcc : CoreCallees
 @[refines ConRon.Arena.andRescueSlots]
 theorem andRescueSlots_refines (p : Prog) (hp : IotaProg' p) :
     AndRescueSlotsOK p :=
-  andRescueSlots_refines' (p := p) (hcc := coreCallees_stub p)  (hp := hp)
+  andRescueSlots_refines' (p := p) (hcc := (coreCallees_stub p).toProjCallees)  (hp := hp)
 
 /-! ## `fab_scope_ok(d, fab, major)` -/
 
@@ -971,18 +976,6 @@ theorem CoreS.of_proj {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
                     rcases hx with rfl | rfl <;> decide)
     (by simp [PJREC, PJSLOT, PJDER]) (by simp)
 
-theorem StackKept.of_store {m m' : Mem} (hf : MemFrame L.Rom.StoreA L.Rom.StoreC m m') : StackKept m m' := by
-  have hspn : m'.arr64 SPN = m.arr64 SPN :=
-    hf.1 SPN (fun h => by have : SPN < 64 := by unfold L.Rom.StoreA at h; exact List.mem_range.mp h
-                          simp [SPN] at this) (by decide)
-  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 :=
-    hf.2.1 136 (fun h => by
-      obtain ⟨k, hk, hkk⟩ := List.mem_map.mp (show (136 : Word) ∈ (List.range 64).map UInt64.ofNat by unfold L.Rom.StoreC at h; exact h)
-      have := List.mem_range.mp hk
-      have h' := congrArg UInt64.toNat hkk
-      simp [UInt64.toNat_ofNat] at h'; omega)
-  exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
-
 /-! ## `eta_projs(T, b, nF)` -/
 
 /-- Model of the `eta_projs` loop at L fuel `k`: the memory after the stores. -/
@@ -1082,7 +1075,7 @@ theorem etpW_ok (p : Prog) (hp : IotaProg' p) (dn : NIdx → Option ConLeche.Nam
         CoreS dn m' (AM.st (projNodesGo (decI T) (decE b) K j.toNat) a) vis fe M eb ∧
         AM.res (projNodesGo (decI T) (decE b) K j.toNat) a = ys ∧
         (∀ i : Word, i < o + j → spW m' i = spW m i) ∧ (m'.arr64 SPN).size = (m.arr64 SPN).size ∧
-        spTop m' = spTop m ∧ SpineR m' (o + j) (nF - j) ys.toArray := by
+        spTop m' = spTop m ∧ SpineR m' (o + j) (nF - j) ys.toArray ∧ BKept m m' ∧ PoolGrew m m' := by
   intro K
   induction K with
   | zero =>
@@ -1096,7 +1089,7 @@ theorem etpW_ok (p : Prog) (hp : IotaProg' p) (dn : NIdx → Option ConLeche.Nam
     rw [etpW_end p T b nF o k m j hn] at hL
     cases hL
     obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ (projNodesGo_nil_run (decI T) (decE b) j.toNat a)
-    refine ⟨[], hok, ?_, hres, fun i _ => rfl, rfl, rfl, ?_⟩
+    refine ⟨[], hok, ?_, hres, fun i _ => rfl, rfl, rfl, ?_, BKept.refl _, PoolGrew.refl _⟩
     · rw [hst]; exact hS
     · have hjp : nF - j = 0 := by
         apply UInt64.toNat_inj.mp
@@ -1145,7 +1138,7 @@ theorem etpW_ok (p : Prog) (hp : IotaProg' p) (dn : NIdx → Option ConLeche.Nam
     have hsz2 : ((m₁.set64 SPN (o + j) (r₁.headD 0)).arr64 SPN).size = (m.arr64 SPN).size := by
       rw [size_set64, hsz1]
     have h1 : (j + 1).toNat = j.toNat + 1 := uint64_succ_toNat nF j hlt
-    obtain ⟨ys, hok3, hS3, hres3, hbelow, hsz3, htop3, hys⟩ := ih k _ _ M (j + 1) m' (by omega)
+    obtain ⟨ys, hok3, hS3, hres3, hbelow, hsz3, htop3, hys, hbk3, hpg3⟩ := ih k _ _ M (j + 1) m' (by omega)
       (by omega) hS2 (by rw [hsz2]; exact hso) hL
     have hrunI := AM.run_of_ok _ _ hok1
     rw [hres1] at hrunI
@@ -1167,7 +1160,11 @@ theorem etpW_ok (p : Prog) (hp : IotaProg' p) (dn : NIdx → Option ConLeche.Nam
         exact absurd (UInt64.lt_iff_toNat_lt.mp hi) (Nat.lt_irrefl _)
       rw [spW_set64_ne _ _ _ _ hne]
       simp only [spW, hspn1]
-    refine ⟨decE (r₁.headD 0) :: ys, hokF, ?_, ?_, hbelow', ?_, ?_, ?_⟩
+    have hfr12 : MemFrame [PJREC, PJSLOT, PJDER, SPN] [32, 33] m (m₁.set64 SPN (o + j) (r₁.headD 0)) :=
+      (hfr1.mono (by simp) (by simp)).trans (hfrS.mono (by simp) (by simp))
+    refine ⟨decE (r₁.headD 0) :: ys, hokF, ?_, ?_, hbelow', ?_, ?_, ?_,
+      (BKept.of_frame hfr12 (by decide) (by decide)).trans hbk3,
+      (PoolGrew.of_frame hfr12 (by decide) (by decide)).trans hpg3⟩
     · rw [hstF]; exact hS3
     · rw [hresF]
     · rw [hsz3, hsz2]
@@ -1263,7 +1260,7 @@ theorem etaProjs_refines (p : Prog) (hp : IotaProg' p) :
       rw [UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' h64]; exact hsolt),
       UInt64.toNat_ofNat_of_lt' h64] at h2
     omega
-  obtain ⟨ys, hok, hS', hres, hbelow, hsz, htop, hys⟩ := etpW_ok p hp dn vis fe eb T b nF
+  obtain ⟨ys, hok, hS', hres, hbelow, hsz, htop, hys, hbk, hpg⟩ := etpW_ok p hp dn vis fe eb T b nF
     (rdW (s.mem.arr64 CTL) 136) hT hb (nF.toNat - (0 : Word).toNat) (n + 1) s.mem a₀ MM 0 m' rfl
     (by simp) hS hso hm
   have hr1 : r.headD 0 = rdW (s.mem.arr64 CTL) 136 := by
@@ -1279,7 +1276,8 @@ theorem etaProjs_refines (p : Prog) (hp : IotaProg' p) :
   refine ⟨hok, ⟨MM, ?_, KeptAll.refl _ _, ?_⟩, hr1, hr2, ys, hres, ?_⟩
   · rw [← hmm]; simpa using hS''
   · rw [← hmm]
-    refine ⟨?_, ?_, fun i hi => ?_⟩
+    refine ⟨?_, ?_, fun i hi => ?_, hbk.trans (BKept.of_frame hfS (by decide) (by decide)),
+      hpg.trans (PoolGrew.of_frame hfS (by decide) (by decide))⟩
     · unfold spTop
       rw [rdW_set64, if_pos ⟨rfl, rfl, hg3⟩, UInt64.le_iff_toNat_le, hoo]
       omega
@@ -1388,7 +1386,7 @@ theorem etaFabArgs_refines (p : Prog) (hp : IotaProg' p) :
   have hspn := hS.spn
   have hsp₁ : SpineR m₁ to tn targs := by
     have hb := hsp.bound
-    refine hsp.keep hSt₁.2.1 hSt₁.2.2 ?_ hspn
+    refine hsp.keep hSt₁.size hSt₁.below ?_ hspn
     have : (to + tn).toNat = to.toNat + tn.toNat := by
       rw [UInt64.toNat_add]; simp; omega
     rw [← this, htop]
@@ -1400,7 +1398,7 @@ theorem etaFabArgs_refines (p : Prog) (hp : IotaProg' p) :
   have hys' : SpineR m₁ (to + tn) (r₁.tail.headD 0) ys.toArray := by
     have : r₁.headD 0 = to + tn := by rw [htop]; exact hhead
     rw [← this]; exact hys
-  have happ := hsp₁.append hys' (by rw [hSt₁.2.1]; exact hspn)
+  have happ := hsp₁.append hys' (by rw [hSt₁.size]; exact hspn)
   obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _
     (etaFabArgsE_run (decI T) targs.toList (decE major) nF.toNat a₀ _ ys
       (by simpa [etaProjs] using AM.run_of_ok _ _ hok |> fun h => by rw [hres] at h; exact h))

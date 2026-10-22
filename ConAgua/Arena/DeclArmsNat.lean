@@ -1194,8 +1194,8 @@ def romStubs : Prog :=
 
 theorem declArmsNat_wf :
     L.Compiler.Prog.wf indTab (declArmsNatFns ++ declArmsCanonFns ++ libFns ++ stubFns ++
-      masterFns ++ armsMasterFns ++ romStubs) = true := by
-  decide +kernel
+      masterFns ++ armsMasterFns ++ romStubs) = true :=
+  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
 
 /-! ## Runs on stub-free paths -/
 

@@ -201,7 +201,7 @@ section refs22
 variable (p : Prog)
 
 theorem callW_reduceNatAp (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (N F : Nat) (hF : N ≤ F)
-    (hn2 : N ≤ 2 ^ 62) (hk : KnotUpTo p N) (hgr : WhnfGrowsUpTo p N) (s₀ : St) (a₀ : AState)
+    (hn2 : N ≤ 2 ^ 62) (hk : KnotUpTo p N) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
     (eb mode d f b : Word) (hS : SlotPre s₀ a₀ dn vis fe MM eb mode) (hf : HW f) (hb : HW b)
     (hg4 : f >>> 28 = 4) (hsc : ¬(tierW f ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0))
@@ -326,7 +326,7 @@ theorem callW_reduceNatAp (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (N F :
     obtain ⟨hr0, hr1, hm⟩ := hW
     rw [← hm]
     have hop := callW_reduceNatOp p hp hno n F (by omega) (by omega) (hk.mono (by omega))
-      (fun k hk' => hgr k (by omega)) ⟨m₃, Locals.init []⟩ a₀ dn vis fe MM eb mode d cw xw b hSP3 hnl hxw hb r₄ m₄ h4
+      ⟨m₃, Locals.init []⟩ a₀ dn vis fe MM eb mode d cw xw b hSP3 hnl hxw hb r₄ m₄ h4
     have hcg : (redAppT (coreKnot (decMode mode) fe id F) fe d.toNat (decE gw) (decE xw) (decE b)).run a₀ =
         (redOpT (coreKnot (decMode mode) fe id F) d.toNat (decI cw) (decE xw) (decE b)).run a₀ := by
       rw [hcongrApp, hredbin, hbool, decide_eq_true hgo]; rfl
@@ -382,7 +382,7 @@ section refs23
 variable (p : Prog)
 
 theorem callW_reduceNatHead (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (N F : Nat) (hF : N ≤ F)
-    (hn2 : N ≤ 2 ^ 62) (hk : KnotUpTo p N) (hgr : WhnfGrowsUpTo p N) (s₀ : St) (a₀ : AState)
+    (hn2 : N ≤ 2 ^ 62) (hk : KnotUpTo p N) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
     (eb mode d f b : Word) (hS : SlotPre s₀ a₀ dn vis fe MM eb mode) (hf : HW f) (hb : HW b)
     (r : List Word) (m' : Mem)
@@ -466,7 +466,7 @@ theorem callW_reduceNatHead (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (N F
       rw [if_pos hbd] at hW2; cases hW2
     obtain ⟨hview, -, -⟩ := view_app s₀.mem a₀ hC.arena.1 f hf ⟨hsc, by simpa using hbd⟩ g4
     have hA := callW_reduceNatAp p hp hno n F (by omega) (by omega) (hk.mono (by omega))
-      (fun k hk' => hgr k (by omega)) s₀ a₀ dn vis fe MM eb mode d f b hS hf hb g4 hsc _ _ hview r₁ m₁ h1
+      s₀ a₀ dn vis fe MM eb mode d f b hS hf hb g4 hsc _ _ hview r₁ m₁ h1
     have hcg := redHead_app (coreKnot (decMode mode) fe id F) fe d.toNat (decE f) (decE b) _ _ a₀ hview
     have hA' := CoreRef.congr hcg.symm hA
     obtain ⟨hok, hA2, hres, hrw⟩ := hA'
@@ -520,7 +520,7 @@ section refs24
 variable (p : Prog)
 
 theorem callW_reduceNat (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (N F : Nat) (hF : N ≤ F)
-    (hn2 : N ≤ 2 ^ 62) (hk : KnotUpTo p N) (hgr : WhnfGrowsUpTo p N) (s₀ : St) (a₀ : AState)
+    (hn2 : N ≤ 2 ^ 62) (hk : KnotUpTo p N) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
     (eb mode d e : Word) (hS : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e)
     (r : List Word) (m' : Mem)
@@ -568,7 +568,7 @@ theorem callW_reduceNat (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (N F : N
   obtain ⟨hr0, hr1, hm⟩ := hW
   rw [← hm]
   have hH := callW_reduceNatHead p hp hno n F (by omega) (by omega) (hk.mono (by omega))
-    (fun k hk' => hgr k (by omega)) s₀ a₀ dn vis fe MM eb mode d fw bw hS hfw hbw r₁ m₁ h1
+    s₀ a₀ dn vis fe MM eb mode d fw bw hS hfw hbw r₁ m₁ h1
   have hcg := reduceNat_head_eq (coreKnot (decMode mode) fe id F) fe d.toNat (decE e) (decE fw) (decE bw) a₀
     (by rw [hap]; exact beq_iff_eq.mpr g4') hview
   have hH' := CoreRef.congr hcg.symm hH
@@ -579,10 +579,9 @@ theorem callW_reduceNat (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (N F : N
 
 /-- **`reduce_nat` refines `reduceNat`** (the statement of `reduceNat_refines`, with the fuel bound
 `n ≤ 2 ^ 62` the knot's `whnf` slot needs, and the program/stub hypotheses explicit). -/
-theorem reduceNat_refines' (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (n : Nat)
-    (hgr : WhnfGrowsUpTo p n) : ReduceNatSpec' p n := by
+theorem reduceNat_refines' (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (n : Nat) : ReduceNatSpec' p n := by
   intro F s₀ a₀ dn vis fe MM eb mode d e hF hn2 hS he hk
-  exact CoreSpec.of_call fun r m' h => callW_reduceNat p hp hno n F hF hn2 hk hgr s₀ a₀ dn vis fe MM eb
+  exact CoreSpec.of_call fun r m' h => callW_reduceNat p hp hno n F hF hn2 hk s₀ a₀ dn vis fe MM eb
     mode d e hS he r m' h
 
 end refs24
@@ -649,7 +648,7 @@ def WhnfStepSpec' (p : Prog) (n : Nat) : Prop :=
 section refs25
 variable (p : Prog)
 
-theorem whnfStep_refines' (hp : WhnfDeltaProg' p) (hwc : WhnfCallees p) (n : Nat)
+theorem whnfStep_refines' (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : Nat)
     (hrn : ∀ k, k ≤ n → ReduceNatSpec' p k) : WhnfStepSpec' p n := by
   intro F s₀ a₀ dn vis fe MM eb mode d e hF hn2 hS he hk
   have hC := hS.rel
@@ -711,7 +710,7 @@ theorem whnfStep_refines' (hp : WhnfDeltaProg' p) (hwc : WhnfCallees p) (n : Nat
   rw [h3] at hW
   dsimp only at hW
   obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hrw3⟩ := CoreSpec.of_callW
-    (unfoldDefinition_refines' p hp n ⟨m₂, Locals.init []⟩ a₂ dn vis fe M₂ eb (r₁.headD 0) hS₂ hrw1 hwc) h3
+    (unfoldDefinition_refines' p hp n ⟨m₂, Locals.init []⟩ a₂ dn vis fe M₂ eb (r₁.headD 0) hS₂ hrw1 hlp) h3
   have hrun3 := AM.run_of_ok _ _ hok3
   rw [hres3] at hrun3
   generalize AM.st (unfoldDefinition fe (decE (r₁.headD 0))) a₂ = a₃ at hrun3 hS₃
@@ -747,9 +746,6 @@ end refs25
 
 /-! ## The census-tagged statements: the stubs instantiated -/
 
-/-- A `whnf` call only grows the limb pool (assumed until the knot's specs say so). -/
-theorem whnfGrowsUpTo_stub (p : Prog) (n : Nat) : WhnfGrowsUpTo p n := sorry
-
 section tagged
 variable (p : Prog)
 
@@ -762,7 +758,7 @@ theorem constValAt_refines (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (a₀ : 
     CoreSpec p n "const_val_at" [nm, po, pl, value, us]
       (constValAt (decI nm) lps (decE value) (decI us)) decH s₀ a₀ dn vis fe MM eb :=
   constValAt_refines' p hp n s₀ a₀ dn vis fe MM eb nm po pl value us lps hC hnm hv hu
-    (whnfCallees_stub p) hlps
+    (whnfCallees_stub p).instLP hlps
 
 @[refines ConRon.Arena.unfoldDefinition]
 theorem unfoldDefinition_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AState)
@@ -770,15 +766,15 @@ theorem unfoldDefinition_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (
     (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (he : HW e) :
     CoreSpec p n "unfold_definition" [vis, e] (unfoldDefinition fe (decE e)) decOptR s₀ a₀ dn vis fe
       MM eb ResW :=
-  unfoldDefinition_refines' p hp n s₀ a₀ dn vis fe MM eb e hC he (whnfCallees_stub p)
+  unfoldDefinition_refines' p hp n s₀ a₀ dn vis fe MM eb e hC he (whnfCallees_stub p).instLP
 
 @[refines ConRon.Arena.reduceNat]
 theorem reduceNat_refines (hp : WhnfDeltaProg' p) (n : Nat) : ReduceNatSpec' p n :=
-  reduceNat_refines' p hp (natOpResultOK_of_agree hp.natAgree) n (whnfGrowsUpTo_stub p n)
+  reduceNat_refines' p hp (natOpResultOK_of_agree hp.natAgree) n
 
 @[refines ConRon.Arena.whnfStep]
 theorem whnfStep_refines (hp : WhnfDeltaProg' p) (n : Nat) : WhnfStepSpec' p n :=
-  whnfStep_refines' p hp (whnfCallees_stub p) n (fun k _ => reduceNat_refines p hp k)
+  whnfStep_refines' p hp (whnfCallees_stub p).instLP n (fun k _ => reduceNat_refines p hp k)
 
 end tagged
 

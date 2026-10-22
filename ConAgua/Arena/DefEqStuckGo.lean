@@ -468,8 +468,8 @@ theorem setGo_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : Stu
             exact (hc.den _ _ _ _ _ _ _ hS₅).constLs _ _ _ (constLs_after_tower hx))
         (by obtain ⟨x, c', hx⟩ := hvus2
             exact (hc.den _ _ _ _ _ _ _ hS₅).constLs _ _ _ (constLs_after_tower hx))
-        (ha.keep hk₅.2.1 hk₅.2.2 hat hspn)
-        (ht.keep hk₅.2.1 hk₅.2.2 htt hspn) (by rw [htop]; exact hat) (by rw [htop]; exact htt))
+        (ha.keep hk₅.size hk₅.below hat hspn)
+        (ht.keep hk₅.size hk₅.below htt hspn) (by rw [htop]; exact hat) (by rw [htop]; exact htt))
       (fun r r' h => by simp only [decBool, h]) hW5
     rw [← hIR.etaParams, ← hIR.etaFields] at hg
     exact hg

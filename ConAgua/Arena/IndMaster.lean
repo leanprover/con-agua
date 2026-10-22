@@ -438,7 +438,7 @@ theorem decCV_copy {a a' : Array Word} {cq q : Nat} {cv : IConstantVal} {ty : Wo
     (h : decCV a cq = some cv) (h0 : a'[q]? = a[cq]?) (h1 : a'[q + 1]? = a[cq + 1]?)
     (h2 : a'[q + 2]? = a[cq + 2]?) (h3 : a'[q + 3]? = some ty) (hty : ty.toNat < 2 ^ 32)
     (hlow : ∀ i < N, a'[i]? = a[i]?)
-    (hsl : ∀ lo ll, nat? a (cq + 1) = some lo → nat? a (cq + 2) = some ll → lo + ll ≤ N) :
+    (hsl : ∀ lo ll, nat? a (cq + 1) = some lo → nat? a (cq + 2) = some ll → lo + ll ≤ N ∨ ll = 0) :
     decCV a' q = some { cv with type := decI ty } := by
   simp only [decCV, bind, Option.bind, pure] at h ⊢
   have hn : (hd? a' q : Option NIdx) = hd? a cq := by simp only [hd?, h0]
@@ -522,11 +522,11 @@ theorem cvNew_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
       = some (q, m'))
     (hS : StageR dn vis fe m a) (hcv : decCVp m cq.toNat = some cv) (hcq : cq.toNat + 4 ≤ erTop m)
     (hsl : ∀ lo ll, nat? (erA m) (cq.toNat + 1) = some lo → nat? (erA m) (cq.toNat + 2) = some ll →
-      lo + ll ≤ erTop m)
+      lo + ll ≤ erTop m ∨ ll = 0)
     (hty : ty.toNat < 2 ^ 32) :
     StageR dn vis fe m' a ∧ IWGrow m m' ∧ q.toNat = erTop m ∧ erTop m' = erTop m + 4 ∧
       (∀ lo ll, nat? (erA m') (q.toNat + 1) = some lo → nat? (erA m') (q.toNat + 2) = some ll →
-        lo + ll ≤ erTop m) ∧
+        lo + ll ≤ erTop m ∨ ll = 0) ∧
       decCVp m' q.toNat = some { cv with type := decI ty } := by
   simp only [cvNewW] at h
   cases h1 : erAllocW m 4 with

@@ -458,7 +458,7 @@ theorem notProofFast_core : NotProofFastOK p := by
   rcases hc : callW p n "proof_pw" [vis, 4000000000, x] (s.mem.set64 CTL 192 0) with _ | ⟨r₁, m₁⟩
   · rw [hc] at hW; cases hW
   rw [hc] at hW
-  simp only [armK, Option.some.injEq, Prod.mk.injEq] at hW
+  simp only [propArmK, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, rfl⟩ := hW
   obtain ⟨res, a', hrun', hA, hd⟩ := arm_run hp hden hlps hfp hek hpf hS hx hc
   obtain ⟨hv, -, hok', -⟩ := npfV_ok hd
@@ -492,7 +492,7 @@ theorem isProofFast_core : IsProofFastOK p := by
   rcases hc : callW p n "proof_pw" [vis, 4000000000, x] (s.mem.set64 CTL 192 0) with _ | ⟨r₁, m₁⟩
   · rw [hc] at hW; cases hW
   rw [hc] at hW
-  simp only [armK, Option.some.injEq, Prod.mk.injEq] at hW
+  simp only [propArmK, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, rfl⟩ := hW
   obtain ⟨res, a', hrun', hA, hd⟩ := arm_run hp hden hlps hfp hek hpf hS hx hc
   obtain ⟨-, hv, -, hok'⟩ := npfV_ok hd

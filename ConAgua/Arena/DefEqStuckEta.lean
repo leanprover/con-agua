@@ -47,7 +47,7 @@ theorem mkApp_core {p : Prog} (hp : SpineProg p) {n : Nat} {dn : NIdx → Option
     (fun x hx => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl <;> decide)
-  have hst := StackKept.of_frame hf (by simp [AREC, ASLOT, ADER, SPN]) (by simp)
+  have hst := StackKept.of_frame hf
   exact ⟨hok, ⟨M, hS', KeptAll.refl _ _, hst⟩, by rw [hres]; rfl, hw⟩
 
 /-- The mode test of `eta_cert_body` is `verifiedChecks`. -/

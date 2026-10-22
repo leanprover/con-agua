@@ -858,6 +858,201 @@ has hypotheses before the triple).
   `num_end` `sorry` is gone. No `sorry` anywhere in `ConAgua`.
 
 
+## Global variables (2026-10-22, lane `lfeat`)
+
+Counters, tops, epochs and flags have lived in the `CTL` word array (`CTL[62]`, `CTL[192]`,
+`CTL[k + (t & 1)]`), with frames over `CTL` indices stated and proved by hand. L now has
+**statically declared global word variables**, additively: no existing constructor, lemma name or
+statement changed, and nothing has to migrate. Files: `L/{Syntax,Semantics,Logic,PureEval,
+Notation,WriteSet,Examples}.lean`, `Compiler/{Compile,WF,WFFast,Run,Rel,SimExpr,RunEq,SimStmt,
+SimStore,SimCall,Correct,Main,Tests,WFAll}.lean`, `harness/e2e.c`, `Compiler/harness/run.c`; one
+arm each in the other passes over L syntax (`Front/{Preserve,RunModel}`, `Rom/{Subst,PinRead,Stage}`,
+`E2E/{Ser,Trace}`, `Checker/Prelude`), one field in `Arena/Frame.lean` (`wFr_wframe`), one
+anonymous constructor in `Arena/IndDecStab.lean`.
+
+### Design
+
+* **Syntax.** `structure GVar where id : Nat` (a global is a number, as an array is);
+  `Expr.glob g` and `Stmt.gset g e`, appended as the last constructors. Notation: an identifier
+  that is not a local names a global, so `HTOP` reads it and `HTOP := e`, `HTOP += e` write it.
+  Declare one as `abbrev HTOP : L.GVar := ⟨3⟩` (distinct globals need distinct numbers; a
+  `GVar` cannot be confused with an `ArrId`, which a plain `Nat` could).
+* **Semantics.** A separate store in the memory: `Mem.glob : GVar → Word` (default `0`), written
+  by `Mem.setG`. A global access never fails (no bounds, no `oob`).
+* **Proof support** (`lang_grind`): `Mem.setG_glob` (read after write, decided on the numbers
+  `h.id = g.id`, which `grind` settles for literal globals; stating it over `GVar` equality left
+  `grind` unable to refute `⟨1⟩ = ⟨0⟩`), every array/global non-interference equation in applied
+  form (`(m.set64 a i v).glob g = m.glob g`: the unapplied form `(m.set64 a i v).glob = m.glob`
+  is a partial application `grind` does not use, as with `St.loc`), `Expr.pval` of a global.
+  `vcgen` needs `setG` in its list for a write (as `setLoc`).
+* **Write sets by name** (`L/WriteSet.lean`). `closedG p G fs`: every function of the
+  call-closed set `fs` writes only the globals in the list `G` (array stores unrestricted); then
+  every run keeps the others, `GFrame G m m'` (`run_gframe`, `invoke_gframe`). For a caller's
+  `vcgen`, `Triple.gframe hclosed hf spec` adds `GFrame G s₀.mem s.mem` to a callee's spec, and
+  `GFrame.glob` (pattern `GFrame G m m', m'.glob g`) with `GVar.mem_cons` gives `grind` every
+  untouched global: **the frame is by construction**, a callee's spec says nothing about
+  globals it does not write. `closedW`/`closedA` (the array write sets) ignore globals: a
+  `WFrame` gained one field, `setG` (closure under any global write), which `MemFrame`-based
+  frames prove by `h` (`Arena/Frame.lean`, one line).
+* **Compiler.** Global `g` is the word at `T + Tab.globOff g`: a **global area** in the
+  descriptor table after the result area, before the entry arguments (`Tab.ng` words;
+  `Prog.tab` takes one more than the largest global the program names). A read is
+  `mov rax, [r15 + off]`, a write `compileE e; mov [r15 + off], rax`: two existing instruction
+  forms, so no new step lemma. For `ng = 0` the code and the table are unchanged (every `Emit*`
+  driver prints the same assembly). `Prog.wf`/`wfFast`: every global below `tab.ng`, and the
+  table offsets with the area below `maxOff`.
+* **The proof.** `MemRel` gained `glob` (the area holds `m.glob`); `Layout.InGlob`, `globAddr`;
+  `MemRel.onlyG` (the old `onlyD` body, generalized to a memory with the same arrays and any
+  globals the machine holds) gives `onlyD` (now also requiring the change to avoid the area) and
+  `MemRel.storeG`; `Pres` allows changes in the area; `sim_expr`'s `glob` case is `len64`'s;
+  `sim_gset` is `sim_set` with a table store (`Inv.storeG`, `Pres.storeG`). `compile_correct`'s
+  statement is unchanged (`MemRel` now also says the area holds the globals; `InTab` covers it);
+  no `sorry`, `#print axioms`: `propext`, `Classical.choice`, `Quot.sound`.
+* **Harness.** `asmText` emits `ca_ng`; `harness/e2e.c` sizes the table `+ ca_ng` (mmap zeroes
+  the globals: `L.run` starts them at `0` too), `run.c` places the arguments after them.
+  `runKraken` stores the memory's globals. `harness/check-asm.sh` now builds with `scripts/lake`
+  (scan 303, store 1313, walk 6794 instructions: OK).
+
+### Measurements
+
+* Compiler proof: **+173 lines** (`Rel` +77, `SimStore` +71, `SimExpr` +10, `SimStmt` +7, `RunEq`
+  +6, `SimCall` +1, `Correct` +1; `Main`, `SimFun`, `Step`, `Mem` unchanged); compiler +41
+  (`Compile` +33, `WF` +3, `WFFast` +1, `Run` +4). Build time (`lake env lean`, user s, machine
+  shared): `Rel` 2.1 → 2.5, `SimStore` 3.0 → 3.6, the other compiler modules within noise;
+  `L/WriteSet` 1.2 → 2.0 (the `closedG` induction).
+* Tests (`Compiler/Tests.lean`, on Kraken against `L.run`): `globProg`, two globals across calls,
+  in a condition and with `+=`, nine results (result area and global area side by side), the
+  initial globals from the memory.
+* **Demo** (`L/Examples.lean`, `bump`/`bump_user`): the two words a callee writes and the one its
+  caller keeps across the call were `CTL.u64[0]`, `[1]`, `[2]`; now `LAST`, `CALLS`, `MARK`.
+  Before (with the arena's `rdW`, `store_grind` and `arena_grind`): 48 non-blank lines, a size
+  precondition on each spec, a hand-stated frame `CtlFrame` (the other `CTL` words and the size,
+  with `rdW` and `getElem` forms and three patterns, 14 lines; the first attempt without the
+  `getElem` form failed), and array lemmas in both `finish` calls. After: 31 non-blank lines
+  (with the three declarations and the one-line write set `bump_closed : closedG … := by
+  decide`), no precondition, no frame in `bump`'s spec, `finish` with no arguments. Both check
+  in about 1 s.
+
+### How to use
+
+* Declare: `abbrev CNT : L.GVar := ⟨k⟩`, a number no other global of the program uses. Read
+  `CNT`, write `CNT := e` / `CNT += e` in `lfn`. Pass `setG` to `vcgen`. A model reads
+  `m.glob CNT`.
+* Frames: prove `closedG prog [CNT, …] ["f", …] = true := by decide` for the function set, and pass
+  `Triple.gframe hclosed (by decide) (f_spec …)` to the caller's `vcgen`. A run-level user gets
+  `run_gframe`.
+* A program with globals runs with `harness/e2e.c`/`run.c` unchanged in use (`ca_ng` from the
+  assembly).
+
+### Migration notes (every lane)
+
+Nothing has to change to keep building. If you write a function over L syntax by pattern
+matching without a wildcard, it needs arms for `Expr.glob` and `Stmt.gset` (done for every one
+on master); an anonymous `Mem` constructor needs the third field (`m.glob`); a `WFrame` instance
+needs `setG _ _ _ _ h := h` if the frame does not look at globals. `Checker/Prelude.lean`'s
+renaming copies globals unrenamed: a copied frontend function that uses a global would share it
+with the original (none does).
+
+### `sorry`s
+
+None.
+
+## Records (2026-10-22, lane `lfeat`)
+
+Struct-of-arrays addressing by hand (`AREC.u64[i * 4 + t * 2 + 1]`) needs the injectivity of the
+address (`Schema.ad_inj`) and bounds in every proof that reads after a write. L now has record
+layouts as **surface syntax plus generic lemmas**: no new constructor, no change to the
+semantics or the compiler (compiler-proof delta 0), so the choice of the smaller compiler delta
+was free. Files: `L/{Syntax,Notation,Records,Examples}.lean`, tests in `Compiler/{Tests,WFAll}.lean`.
+
+### Design
+
+* **Declaration.** `structure Record where arr : ArrId; stride : Nat` and `structure Field where
+  off : Nat`: `abbrev NODE : L.Record := ⟨1, 3⟩`, `abbrev NODE.tag : L.Field := ⟨0⟩`, … (offsets
+  below the stride, distinct).
+* **Syntax.** `NODE[i].tag` reads, `NODE[i].tag := e` writes (the field constant is
+  `NODE.tag`, found by name). Both are `ld64`/`st64` of `NODE.arr` at the address expression
+  `Record.at R i f = i * stride + off`, built by a named function.
+* **Semantics** are those of the word access, so the address wraps around as `UInt64` (as the
+  hand-written form does, and as the compiled code computes it).
+* **Proof support** (`L/Records.lean`, all in `lang_grind`): `evalE_at` (pass it to `vcgen`
+  next to `evalE`: the address is the named word `Record.ad R j f`, not arithmetic), `Mem.fld m R
+  j f` (field `f` of record `j`, `0` out of bounds: what a model is stated with), `fld_getElem`
+  (`vcgen`'s `arr[addr]` read is `Mem.fld`), **`fld_set64`** (a field after a field store is the
+  stored word if it is the same record and field, else the old field, decided on record numbers
+  and offsets), `fld_set64_ne`, `fld_setG`, `fld_set8` (other arrays, globals, byte stores),
+  `Record.ad_inj` (distinct fields or records have distinct addresses), `Record.ad_lt` (a field's
+  bound from a bound on the record number and room for the records). The only side condition is
+  `Record.Ok R j` (`j * stride + stride < 2^64`: no wrap-around), which `grind` discharges from a
+  bound on `j` (`j < 2^32` for any stride below `2^32`).
+
+### Measurements
+
+* Compiler and its proof: unchanged (0 lines). `L/Records.lean` 147 lines, 0.4 s.
+* **Example** (`L/Examples.lean`, `node_mk`): a node `[tag, a, b]` written field by field, a field
+  of another node read, three fields read back; the spec states the results and two frame facts
+  over `Mem.fld`. Proof: the standard `vcgen [… evalE_at …] <;> finish`, no hint, 1.8 s. The
+  same function with raw addresses (`NODES.u64[i * 3 + 1]`, the spec over `rdW … (j * 3 + 1)`,
+  with `arena_grind`/`store_grind`) fails in `finish` after 11 s: `grind` cannot refute
+  `i * 3 + 1 = j * 3 + 1` in `UInt64` without the injectivity lemma.
+* Tests: `node_mk` on Kraken against `L.run`, and an out-of-bounds record.
+
+### How to use
+
+* Declare the layout and the fields as above; write `R[i].f` in `lfn`; pass `evalE_at` (and
+  `ld64`/`st64`) to `vcgen`. State models with `m.fld R j f`. For a store library: its schema can
+  become a `Record` (record number `i * 2 + t` for two tiers) with the field reads `Mem.fld`;
+  `fld_set64` replaces the per-library `ad_inj` reasoning.
+* No migration is forced; existing hand-written addressing keeps working.
+
+### `sorry`s
+
+None.
+
+## Program well-formedness: guarded, and per function (2026-10-22, lane `lfeat`)
+
+Two requests of the coordinator: `decide +kernel` on the structural `Prog.wf` is a trap
+(`declArms_wf` used ~19 GB that way), and `checkerProg_wf` (`Prog.wf_of_wfFast` over 1566
+functions) peaked at 12.2 GB and grows with the program.
+
+* **The guard** (`Compiler/WF.lean`). `FunDecl.wf` and `Prog.wf` are now `kernelOpaque` of their
+  former bodies (`FunDecl.wfSpec`, `Prog.wfSpec`): `kernelOpaque x := cond (Lean.opaqueId true) x
+  x`. The kernel cannot reduce `Lean.opaqueId true` (an `opaque` constant), so neither the
+  kernel nor `decide` gets past the `cond`, and `kernelOpaque_eq : kernelOpaque x = x` (by
+  `cases` on the stuck Boolean) keeps every proof about them. `decide`/`decide +kernel` on
+  `Prog.wf …` now fails at once ("failed to reduce"); compiled code (`#guard`) is unaffected.
+  (`Lean.opaqueId` alone cannot be the wrapper: it has no equation, so nothing could be proved
+  about a wrapped body.) Statements of `compile_correct` and of every `…_wf` theorem unchanged.
+  Three sites decided `Prog.wf` directly and now go through `Prog.wf_of_wfFast`
+  (`Scan/Validator.lean` `valProg_wf`, `Arena/DeclArmsCanon.lean`, `Arena/DeclArmsNat.lean`);
+  `Arena/KnotWF.lean` (`FunDecl.wf` of some functions) through the new `Prog.funsWf_of_fast`.
+* **Per function** (`Compiler/WFSplit.lean`, `prog_wf name : tab p`): separate kernel checks,
+  none of which sees every body: the name tree as a literal and `progTree p = some tree`
+  (names only); one `romOk tab d` per distinct byte string the program reads; one check per
+  chunk of 32 functions (`FunDecl.wfTN`, the check without the constant data, plus each
+  function's byte strings from the `romOk` facts, `FunOk`); the table bound; and the main
+  theorem, `Prog.wf_of_parts'`, assembled from the chunks without evaluation. The table must be
+  a literal: `tab_lit% e` evaluates `e` (compiled code) and inserts it. `Prog.rom` now puts the
+  short strings first (`romSort`), so that finding `LITS` in the table no longer scans the 37 KB
+  ROM. `scripts/checker_prog.py` emits `checkerTab := tab_lit% …` (with a `#guard` that it is
+  `Prog.tab checkerProg …`) and `prog_wf checkerProg_wf : checkerTab checkerProg`.
+* **Measurements** (`Checker/Prog.lean`, `lake env lean`, peak RSS by `VmHWM`): before 12.2 GB,
+  45 s; after **6.3 GB**, 54–62 s. The file without any check is 2.9 GB. Of the rest, the
+  largest single check is `romOk checkerTab romData` (≈ 13 s, ≈ 3 GB): the kernel evaluates
+  `romData` (`encNames pinNames ++ …`, `Arena/Prelude.lean`) and compares 37 KB; it depends on
+  the ROM, not on the number of functions. The name tree is ≈ 5 s, 1.2 GB (UTF-8 codes of 1566
+  names; each name costs the kernel ≈ 5 ms); every chunk ≤ 0.7 s. Next steps if needed: a
+  literal `romData` (lane `romload`) and per-module name trees. For a small program
+  `Prog.wf_of_wfFast (by decide +kernel)` stays faster (`indProg_wf`: 5.0 s, +1.2 GB, against
+  7.2 s, +0.7 GB split), so the other `…_wf` theorems keep it.
+* `harness`/e2e: the ROM's byte order in the table changed (shortest string first); `asmText`
+  and the drivers take it from `Prog.tab`. `scripts/e2e.py --only 'restart_7|basic|nat'`: same
+  classes as on master (2 `l-error`s at `hoist_ok`, the rest blocked by the `strip_pis` stub).
+
+### `sorry`s
+
+None.
+
 ## The `lit` store, `intern_lit`, and the state relation (2026-10-21, lane `store`)
 
 Files: `ConAgua/Arena/Store.lean` (L code, word-level models, `vcgen` specs),
@@ -7125,7 +7320,333 @@ grows (the memo library's capacity rule, as every L memo). Refinement: not yet (
 * Merging: lemma-name clashes renamed on this side (`hslice?_bound_fsz`, `projBodyW`);
   `scripts/checker_prog.py` dumps modules it does not build: build `ConAgua.Rom.CIRead` first, or
   `rom_ci` comes out as a stub and `checkerProg_wf` fails on `reduce_decl_pin`'s arity.
+## Phase 5 continued: the stacks and the pool in `CoreAfter`, the record pool from the text (2026-10-22, lane `whnf3`)
 
+### Landing 1: `strip_pis`, `strip_lams` (helper `whnf3-walks`)
+* L code only (`StripTele.lean`, lane induct's convention `(ok, off, len, body)`, the domains an
+  `IW` slice), to unblock e2e (`check` stopped at the stub on 630/675 fixtures). Refinements later.
+  New modules must be listed in `lakefile.toml`'s `globs` (the generator dumps built modules only).
+
+### Landing 2: `StackKept` carries the binder stack and the limb pool (with lane `defeq`)
+* **Shape** (agreed with lane `defeq`, its request part 2 and whnf2's open handoff route (3)):
+  `StackKept m m'` and `StackGrew m m'` are structures with fields `top`, `size`, `below` (the old
+  three conjuncts), `bstk : BKept m m'` (binder stack `BSTK` = 145 below `CTL[137]` kept, top and
+  size equal; `bTop`/`BKept` moved from `InferBodyBind.lean` to `WhnfBase.lean`) and
+  `pool : PoolGrew m m'` (pool below `m`'s top `CTL[0]` unchanged, top no lower, size equal). So
+  `CoreAfter` carries both, and they compose with `trans`.
+* **Construction**: `StackKept.of_frame hf` (auto-params `SPN`/`BSTK`/`POOL ∉ A`, `136`/`137`/`0 ∉ C`
+  by `decide`), `.of_frame_range`, `.of_grows`/`.of_frame_grows` (a `Grows` then a frame),
+  `.of_spnFrame`/`StackGrew.of_spnFrame` (pushes on the spine stack), `StackKept.restore`
+  (now also takes the `BKept`/`PoolGrew` of the run) and `.restoreG` (a grew-run, top put back).
+  `CoreS.frame` now avoids arrays `≥ 146`/`CTL ≥ 138` (it posts `StackKept`); the old range is
+  `CoreS.frameS` (CoreS only: the telescopes' `BSTK` pushes).
+* **The telescopes** (`InferBodyBind`, `InferBodyBindPi`, lane `defeq`'s): `TelPost` gains `lo`
+  and "`BSTK` below `lo` kept, size equal, pool grew"; `tPush_step` posts them; `tops_restore`
+  builds the restored `StackKept` (both tops) directly. `BStkCallees`/`BStkCap` stay as lane
+  `defeq`'s hypotheses; both follow from the callees' `CoreAfter` now (`hSt.bstk`, `CoreS.bstk`).
+* **The `Nat` arms keep the pool**: every arm refinement is generic in the relation, so
+  `nat_op_result` refines at `ArenaP m₀ = ArenaR ∧ PoolGrew m₀` (`PinsNatOp.lean`:
+  `natOpResultL_refinesR` over `NatArmsR R`, the tagged `natOpResultL_refines` its `ArenaR`
+  instance; `CoreNatOp.lean`: `natArmsR_pool`, `intern_lit`/`intern_const` from their text write
+  sets). `nat_pred_lit`/`nat_succ_lit` likewise (`callW_natPredLit`/`callW_natSuccLit` post
+  `PoolGrew`).
+* **`whnfGrowsUpTo_stub` is gone**: `reduce_nat_op` reads the first literal's slice across the
+  second `whnf` through that call's `CoreAfter` (`hSt.pool`, `PoolGrew.slice`).
+* About 300 sites, 40 files (whnf and defeq); one-line shapes mostly (`.2.1` → `.size`,
+  `⟨t, s, b⟩` → `of_frame`); loops with an explicit "kept below the start" invariant
+  (`peelFull_ref`, `appFull_ref`, `spioFull_ref`, `spFull_ref`, `lamsFull_ref`, `pisFull_ref`)
+  gained `BKept m₀ m`/`PoolGrew m₀ m` (or the `BSTK`-below-`lo` triple) in their invariant.
+
+### The record pool from the program text (`CoreErec.lean`)
+* `ErecKept`, `ErecKeptInst`, `ErecKeptKnot`, `ErecKeptRec` ("a call of `f` leaves `EREC`") are
+  facts about the text: no function the core reaches stores into `EREC`. `coreFns` (the call
+  closure of `coreRoots` in `checkerProg`, a literal list regenerated by `scripts/core_fns.py`, 443 functions) and
+  `closedA p coreErecA coreErecC coreFns` (all arrays but `EREC`, every `CTL` word below 256);
+  `callW_erec_closed`; `ErecKept*.of_closed`. At `checkerProg` it is
+  `L.Checker.checkerProg_coreErec` (`decide +kernel`, 74 s). `erecKeptInst_stub` and
+  `erecKeptKnot_stub` deleted; the tagged `instSpinePins_refines`, `recFireArgs_refines`,
+  `majorToCtor_refines`, `prepareMajor_refines`, `iotaRecAt_refines` take `hcl` instead (and
+  `iotaRecAt_refines` no longer takes `ErecKeptRec`). When a stub of the closure gets code that
+  calls new functions, regenerate `coreFns`.
+
+### Landing 3: the binder stack and `EREC` from lane `whnf3`'s sweep
+* **`BStkCallees` is gone**: the telescopes (`InferBodyBind`, `InferBodyBindPi`) read the binder
+  stack's preservation off each callee's `CoreAfter` (`StackKept.bstk`, `CoreAfter.bkept`);
+  `BStkCap` is `CoreS.bstk`. `KnotCallees.bstk` removed.
+* **`ErecKept`, `ErecKeptProj` from the core's write set** (`erecKept_of`, `erecKeptProj_of`:
+  `callW_erec_closed`), the program hypothesis `KnotAllProg.hcl : closedA p coreErecA coreErecC
+  coreFns`. `KnotCallees.erecKept`/`erecProj` removed.
+* `KnotCallees` left (14): `whnfCoreStep`, `whnfStep`, `findProj`, `projFound`, `proofIrrel`,
+  `towerSlots`, `reduceProjCore`, `unfold`, `constTy`, `instLP`, `den` (lane `whnf3`'s next
+  landings: `find_proj`/`fire_ok`, the `instLP` family, `CoreS.den`); `strLitSupported`,
+  `strLitCtor`, `supKeep` (helper `defeq2-str`).
+
+### String literals in L (`StrLit*.lean`, helper `defeq2-str`)
+* **L code** (`StrLit.lean`, 389 lines): `str_lit_supported` and its seven stages `str_sup_1…7`
+  (one per tested declaration, the suffixes of the twin's chain), the tests `string_ty_ok`,
+  `char_ty_ok` (one body), `list_ty_ok`, `list_nil_ty_ok`, `list_cons_ty_ok`,
+  `char_of_nat_ty_ok`, `string_of_list_ty_ok`; `str_cv` (`toConstantVal`, including the
+  projection-table arm that interns `Sort 1`); `str_param_sort`, `str_ls1` (`internLsNode [u]`:
+  the word at the pool top, then `intern_ls`); `str_lit_ctor` = `str_ctor_pre` (the
+  literal-independent prefix) + `str_cons_spine` (recursion over the characters, as the twin's)
+  + `String.ofList`. Characters are decoded from the pool's UTF-8 byte words by
+  `str_utf8_char` (`utf8_char` reading `POOL.u64[k] & 255`), linked to Lean's decoder through
+  lane `lext`'s `utf8CharN_eq`: non-ASCII is handled, no deviation. A character's literal is
+  `rom_lit(c)`. `abortStubs` lose `str_lit_ctor`, `str_lit_supported` (`Checker/Prog.lean`
+  regenerated: 1574 functions, 26 stubs).
+* **Proofs**: `strLitCtor_core : StrLitProg p → StrLitCtorOK p` (`StrLitCtor.lean`),
+  `strLitSupported_core : StrLitProg p → StrLitSupportedOK p` (`StrLitSup.lean`),
+  `supKeep_of : ∀ fe, SupKeep fe` (`StrLitKeep.lean`: `VMono`, a twin-side "every stored view is
+  kept" predicate closed under bind/if/match). No new hypotheses. `WhnfBase.lean`'s
+  `supKeep_twin` (a `sorry`) is now redundant: its users should take `supKeep_of` (a Whnf file:
+  lane `whnf3`'s). `KnotCallees.strLitSupported`/`strLitCtor`/`supKeep` can be plugged with
+  these three (`KnotAllProg` needs `StrLitProg`'s lookups; `KnotWF`'s closure list still stubs
+  `str_lit_*`).
+* **New leaves under `CoreS`** (`StrLitBase.lean`): `CoreS.of_ls` (a level-list interning: the
+  list tables only grow, `LsStore.view_intern_mono`), `internParam_core`, `internZero_core`,
+  `internW_core`/`romLitW_core` (a `lit` interning from a pool slice), and `callW` wrappers
+  `param_call`, `succ_call`, `zero_call`, `sort_call`, `bvar_call`, `const_call`,
+  `constE_call`, `app_call`, `romLit_call`, `ls1_call`, all in the `CoreRef` shape for
+  `coreRef_bind` chains. `StrLitCv.lean`: `cv_call`. `StrLitTy.lean`: the `∀`-type tail
+  `faEqT`/`faEqW_ok`, `cref_run`.
+* **Finding**: `str_lit_ctor` reads the literal's record *after* the prefix interning, so the
+  record and the bytes are read at the memory the spine runs on and the twin-side view of `h`
+  carries over by `VMono` alone; reading it first would have needed pool/record frames through
+  every `CoreRef` (which keeps only `CoreS`).
+* Deviation D21 (performance): `str_ls1` and `rom_lit` leave their pushed word at the pool top
+  even when the node exists.
+* Numbers: 389 L lines, 3524 proof lines (`StrLitList` 954, `StrLitChar` 478, `StrLitCtor` 467,
+  `StrLitSup` 455, `StrLitBase` 437, `StrLitCv` 247, `StrLitTy` 213, `StrLitKeep` 147,
+  `StrLitUtf8` 126); user CPU per module ≤ 10 s except `StrLitChar` (~28 s, the
+  `string_of_list_ty_ok` spec at `maxHeartbeats 2000000`). 12:04–12:56, sub-helpers
+  `-keep`, `-utf8`, `-list`, `-sup`.
+
+### Landing 4: string literals plugged (helper `defeq2-str`, section above)
+* `KnotCallees.strLitSupported`, `strLitCtor`, `supKeep` removed: `strLitSupported_core`,
+  `strLitCtor_core` (program field `KnotAllProg.str : StrLitProg p`) and `supKeep_of`.
+  Lane `whnf`'s `supKeep_twin` (`WhnfBase.lean`, a `sorry`) can now be `supKeep_of` (lane
+  `whnf3`'s file). `StrLitBase` adapted to the `StackKept` structure (helper `defeq2-strfix`).
+* `KnotCallees` left (11), all lane `whnf3`'s: `whnfCoreStep`, `whnfStep`, `findProj`,
+  `projFound`, `proofIrrel`, `towerSlots`, `reduceProjCore`, `unfold`, `constTy`, `instLP`, `den`.
+
+
+### Landing 8: helpers `parts` and `rec2` done
+* Helper `parts` (3.2 h): `blockSplitRecs`, `blockSplitCtors`, `blockSplit` (sorry-free),
+  `ctorMember?`, `blockGroups`, `blockRecNameSetOk`, `blockMemberCounts?`, `blockShape?`,
+  `blockParts?`, `piDomsMentionAny`, `blockRawRec`, `BlockShape.nestCtx`, `blockNestCtx` (through
+  stubs). L: capacity guards, `block_shape_nest_ctx` read its inputs after writing the new
+  record — moved before the allocation (a latent bug, harmless while the allocation was fresh
+  memory); D18 (`sl_cons`-built slices, quadratic) added to docs/deviations.md. Open:
+  `blockLargeElimAllowed` (needs `lv_nz`/`readLevelM` under `StageR`, the `CoreS` bridge again),
+  `checkBlock*`, `consBlock*`, `checkAbsCtorSorts*`, `blockCapsAt` (needs a `RelAM` for
+  `lv_zero_caps`). ~6.75k proof lines.
+* Helper `rec2` (3.4 h): `classFieldsOf` (the `nest_occ` memo carried across stubs by
+  `stubM_memoFrame`), `ClassGen.major/motiveTy/minorTy/prefixBinders`, `classGenRecTy`,
+  `classRecTyOk`, `classRecTysOk`, `classGenRule` (through stubs). Open: `classRulesOk`,
+  `classRecsRulesOk` (loops), `classFeR`, `targetAbs(Go)`. Its overflow guards (`d + bl < d`,
+  `rP + nF`, …) are capacity aborts (word arithmetic the twin does in `Nat`), not rows of
+  docs/deviations.md. ~5.4k proof lines.
+* `ConAgua/Checker/Prog.lean` (lane `integrate`'s generated whole program) gained the 29 helper
+  functions the two helpers' rewrites introduced, by hand: `scripts/checker_prog.py` currently
+  stops on an import clash between `PropReadW` and `PromoteCI` (`L.Arena.armK.eq_1`, not this
+  lane's). `checkerProg_wf` holds.
+* Census: phase 8 **72 proven, 79 sorry, 64 written, 8 todo**; totals 670 proven / 124 sorry of 1352.
+
+### Landing 3: the helpers' walks and the projection lookups (helpers `whnf3-walks`, `whnf3-proj`)
+* **`wscoped_bfast`, `leaf_guard`** (helper `whnf3-walks`; `WalkScope`, `WalkLeaves`,
+  `WalkScopeRefine`, `WalkLeavesRefine`, `WalkCore`, 2.4k lines): `wscopedBGo`+arms,
+  `wscopedBFast`, `fvarLeavesGo`+arms, `fvarLeavesFast`, `leafMem`, `leavesSubGo`+arms,
+  `leafGuard` refined sorry-free, exact `coreWalkFuel` counters; `WscopedBFastOK`/`LeafGuardOK`
+  proved under `CoreS` (`wscoped_core`, `leafGuard_core`, from `WsProg`/`LgProg`). The walk-local
+  maps are epoch-cleared memo-library tables: arrays 151 (`wscopedB`, key `(h, d)`), 152
+  (`fvarLeaves`' `seen`), 153 (`leavesSub`), stamp/count `CTL` 152‥157; the leaf list is array 154
+  (`LVS`, newest first, `LeafR`). `CoreMemos` carries their well-formedness (`WalkMemos`), so
+  `CoreMemos.frame`/`frame_hi`, `CoreS.frame` and `arena_frame` gained avoidance auto-params;
+  `CoreS.frameSM`/`frameS`/`frameM`/`frame` (memos given / derived; spine stack written / kept).
+  `finish (instances := 5000) (gen := 12)` was needed on the memo-miss paths.
+* L code only (refinements open): `instantiate1_lift_fast` + arms (`WalkLift.lean`, memo
+  `inst1LC` = array 51, `CTL` 52/53), `inst_pis_at_lift`, `fvar_type_d`, `fvar_type_ds`
+  (`TeleLift.lean`, lane induct's conventions). The `instantiate1Lift` proof will need an exact
+  counter in lane exprops' `lift_entry` and array 51's memo well-formedness in `CoreS`/`StageR`.
+* **`proj_table_name`, `find_proj`, `fire_ok`** (L by this lane, proofs helper `whnf3-proj`;
+  `WhnfProj.lean`, `WhnfProjRefine{,2,3}.lean`, ~1200 proof lines): `projTableName`,
+  `IFEnv.findProj?`, `IProjEntry.fireOk` refined. `CoreS.of_name` carries `CoreS` across name
+  interning (twin step `NameStep`, `NStoreWF` from con-ron's `NStore.intern_spec`, the `ViewOK`
+  from L's validity check of `t`: D22); the nine pool bytes are a `Grows` (D21);
+  `FindProjOK`, `ProjFound` and the `find_proj` half of `ErecKept` proved. `fire_ok`: on master
+  `FieldSortZeroOK` (lane defeq2) now asks for the readbacks, so `fireOk_refines` proves
+  `FireOkOKD` (`FireOkOK` with `us` reading back) from two named hypotheses, `ProjSortDen`
+  (structure sort, zero level) and `FireDen` (name cache, level parameters, guards); both follow
+  from lane defeq2's `StoreDen` once `CoreS` carries it, and `FireOkOKD`'s `us` from
+  `StoreDen.constLs` at the callers.
+* Clashes fixed for `scripts/checker_prog.py`: `PropReadW`'s `armK` → `propArmK` (vs
+  `PromoteCI`), `WhnfProjRefine2`'s `projA` → `projWA` (vs `Promote`). `Checker/Prog.lean`
+  regenerated: 13 stubs; `coreFns` regenerated (498 functions).
+* Not in this landing: helper `whnf3-lp`'s `instLP` family (branch `whnf3-lp`, on `whnf3-next`):
+  its `lv_lookup`/`lv_spw` bindings (keys on the spine stack, `lvLookupG SPN POOL`,
+  `lvSpwG EREC`) clash with lane defeq2's (`lvLookupG EREC POOL`, `lvSpwG LH`): one name, two
+  bodies. To be unified on defeq2's convention first.
+* Census at landing 3: phase 4 **81 proven / 0 sorry / 11 written / 21 todo** (lane start 65 / 0 /
+  0 / 48); phase 5 80 / 19 / 20 / 23 (start 79 / 19 / 20 / 24).
+
+### Landing 5: `find_proj` facts from lane `whnf3`
+* `KnotCallees.findProj`/`projFound` removed: `findProj_refines`, `projFound` (program field
+  `KnotAllProg.projp : ProjProg p`). `towerSlots` still a field: lane `whnf3`'s
+  `towerSlotsAll_refines'` takes all of `CoreCallees` but uses only `findProj` (`tsW_ok`).
+* **Bindings for lane `whnf3`'s `instLP` family**: this lane binds `lv_lookup` to
+  `lvLookupG EREC POOL` (keys an `EREC` name slice, values a `POOL` level slice: `field_sort_zero`,
+  `PropRead`) and `lv_spw` to `PropRead`'s heap variant; one name, one body project-wide, so a
+  different instance needs its own name.
+* `KnotCallees` left (8, after lane `whnf3` landing 4 gave `towerSlots`): `whnfCoreStep`, `whnfStep`, `proofIrrel`,
+  `reduceProjCore`, `unfold`, `constTy`, `instLP`, `den`.
+
+### Landing 4: `tower_slots_all` on the real `find_proj`; the plan for `CoreS.den`
+* `tsW_ok`/`towerSlotsAll_refines'` take `FindProjOK`/`ProjFound` instead of all of
+  `CoreCallees` (lane defeq2's request); the tagged `towerSlotsAll_refines`
+  (`WhnfProjRefine3.lean`) uses `findProj_refines`/`projFound` and is sorry-free given `ProjProg p`.
+* **`CoreS.den : StoreDen m a fe`** (lane defeq2's invariant; it closes `CoreS.lvl_den`,
+  `LvlsEqDen`, `ProjSortDen`, `FireDen`, `CoreDen`) is not added yet. What it takes:
+  memory-only frames keep it when `EREC` is kept (`frameSM`/`frameS`/`frameM`/`frame_stk`: all
+  avoid 136); cache-only steps (`setMemo`, the slots' memo writes, `lvl_eq_c`) when `readNC`,
+  `pins` and the store are unchanged; store steps (`arena_frame`, `of_walk`, `of_app`, …, about 70
+  call sites) need the sort/const views of the new state: for a frame avoiding the `sort` and
+  `const` tables (`SOREC`/`SOSLOT`, `CREC`/`CSLOT`, `CTL` 16‥19) with `cpl` kept, the views are
+  determined by those arrays under `ArenaR` (`view_sort`/`view_const` and their converse, to be
+  written), so `StoreDen` transfers; the interning of a `sort` or `const` node (`of_const`, the
+  inference's `Sort`/`imax` results, `nat_op_result`'s `Bool` constants at the pinned empty list)
+  needs the new level or list to read back, which the callers know from where it came (a stored
+  view, or con-ron's `LStore.intern_spec`/`LsStore.intern_spec` on reading-back children).
+* Helper `whnf3-lp`'s `instLP` family (branch `whnf3-next`): the L code and the level-substitution
+  proofs (`capsNeverZero`, `substLevelsAt`, `substParamLevels`, `recFireLevels`, `internLevel`, at
+  `ArenaD`, on `StoreWF a.store` and the readback caches) keep the keys on the spine stack
+  (`lvLookupG SPN POOL`) and the `PropWhen` names in `EREC` (`lvSpwG EREC`), which clash by name
+  with lane defeq2's `lv_lookup`/`lv_spw`; they need their own names (and so their own copies of
+  `lv_substl`/`lv_substpw`, which call those names) before they can land. D23 (no `lp` cutoff in
+  L's derived words) blocks `InstLPOK`: either an `lp` bit in `DerR` or `StoreWF` in `CoreS`.
+
+## The whnf side of the knot finished (2026-10-22, lane `whnf4`)
+
+### Landing 1: helper `whnf3-lp`'s `instLP` family (branch `whnf3-next`)
+* The family's level substitution gets its own names (`LevelSubstLP.lean`): `lp_lookup`
+  (`lvLookupG SPN POOL`'s body), `lp_substl`, `lp_spw` (names in `EREC`), `lp_substpw`, each
+  calling the family's names; the models (`lookupW SPN POOL`, `substLW SPN POOL`,
+  `spwW SPN POOL EREC`, `substPWW …`) and their refinements are lane `levels`' generic ones, only
+  the four call specs are restated (copies of `LevelSubstL`'s). Lane `defeq2`'s `lv_lookup`/
+  `lv_spw` bindings are untouched. Not unified into one parametric function: L calls name their
+  callee literally (`call f(…)`), so a parametric body would need a renaming of statements and
+  specs proved through it; four 10-line copies are cheaper.
+* L code of the walk (`lp_go` and its arms, the three memos, `inst_lp`, `inst_lp_fast`,
+  `rec_fire_levels`, `caps_never_zero`) now in `checkerProg` (`Checker/Prog.lean`: 1690
+  functions, 9 stubs, was 13); `coreFns` 533 functions (was 498), `checkerProg_coreErec` holds.
+  Refinements as landed by the helper: `recFireLevels`, `capsNeverZero`, `substLevelsAt`,
+  `substParamLevels`, `internLevel`, `internLsNode` (ArenaD level). Open: the walk itself
+  (`InstLPOK`), blocked by D23.
+
+### Helper `whnf4-knot`: `KnotCallees` down to leaves
+* **No slot steps in lane `whnf`'s bundles.** `WhnfCallees` lost `inferStep`/`inferIOStep`/
+  `defeqStep` (no proof used them); it is now `instList`, `instLP`, `strLitCtor`,
+  `strLitSupported`, all built in `DefEqKnot.lean` (`KnotCallees.whnfC`). Narrowed further:
+  `constTyAt_refines'`, `ruleRhsAt_refines'`, the `unfoldDefinition_refines'` chain and
+  `whnfStep_refines'` take `InstLPOK`; `projLitToCtor_refines'`, `reduceProjCore_refines'`,
+  `whnfCoreStepProj_refines'` take the two string-literal facts, `ProjCallees` and `ProjSmall`.
+  **`ProjCallees`** (`findProj`, `fireOk`, `erec`, `projFound`; `CoreCallees` extends it) is what
+  `major_to_ctor`/`and_rescue_slots` take, so `CoreCallees.iota` (from `iotaRecAt_refines'`, which
+  calls `majorToCtor_refines'`) is not circular.
+* **Primed `whnf_core` chain** over `(WhnfCallees, CoreCallees, ∀ fe, SupKeep fe)`:
+  `whnfApp_refines'`, `coreApp(2)_refines`, `whnfCoreStep_refines'`, `coreLoopW_ok`,
+  `whnfCoreLoop_refines'`, `whnfCoreBody_refines'`, `whnfCoreSlot_step`; the tagged statements
+  are unchanged and instantiate the stubs. `proofIrrel_refines'` takes `LvlDen` (`CoreS.lvl_den`'s
+  statement as a hypothesis; `LvlDen.of_den : CoreDen → LvlDen`); the tagged `proofIrrel_refines`
+  still uses the `CoreS.lvl_den` stub.
+* **`KnotCallees` fields gone** (now theorems in `DefEqKnot.lean`): `whnfCoreStep`, `whnfStep`,
+  `proofIrrel`, `reduceProjCore`, `unfold`, `constTy`. New bundles there: `whnfC`, `projC`,
+  `iotaC` (walks `iotaInst1OK`, `lbbOK`, `wscoped_core`, `leafGuard_core`, `findProj_refines`,
+  `litToCtorIfNat_refines`), `iota`, `coreC`; `supKeep_of` for `SupKeep`. `KnotAllProg` gains
+  `core`, `iotaRec`, `m2c`, `ws`, `lg` (lookups).
+* **`KnotCallees` now** (8, all leaves without a proof under `CoreS`): `den`, `instLP`, `fireOk`
+  (lane `whnf3`'s `fireOk_refines` gives `FireOkOKD`: needs the universe list to read back and
+  `FireDen`'s guards past `numFields`, which `StoreDen.proj` does not give), `projSmall`,
+  `capsNeverZero`, `recFireLevels` (proved at `ArenaD` on `StoreWF`, D23), `lvlsEqDen`,
+  `recShape`. `knot_all` and the derived fields use only `propext`, `Classical.choice`,
+  `Quot.sound`.
+* Numbers: 22 files, +323/−172 lines; `DefEqKnot.lean` 313 lines. Rebuild of the touched cone up
+  to `DefEqKnot` + `KnotWF`: ~5 min wall, ~12 CPU-min (`WhnfBase` changed, so every whnf/defeq/infer
+  module elaborates once); per module: `WhnfDeltaRefine2` 10 s, `WhnfCoreLoop` 8 s,
+  `WhnfIotaRefine4` 5 s, `WhnfCoreProj` 4 s, `DefEqKnot` 1.2 s.
+
+### Helper `whnf4-leaves`: `projSmall` and `fireOk` discharged
+* **`projSmall` gone, by an L change with no deviation.** `reduce_proj_fire` tested the twin's
+  `args.length = numParams + numFields` (`Nat`) as `an == np + nf` (`u64`), equal only if the sum
+  does not wrap, hence `ProjSmall` (counts below `2^32`, a loader invariant `CoreS` cannot give: it
+  quantified over every record that decodes). It now tests `nf <= an && an - nf == np`, which is
+  the `Nat` equation for any words; then `np + i < an` (from `i < nf`), so the argument index does
+  not wrap either. `fire_cond_iff`, `rpFire_refines` adjusted; `ProjSmall`, `CoreCallees.projSmall`
+  and the `hps` parameters of the `reduce_proj_*` chain removed. `Checker/Prog.lean`/`coreFns`
+  unchanged (same names; the body is looked up by name).
+* **`fireOk` from `CoreDen`** (`fireOk_core`, `WhnfProjRefine3.lean`; `KnotCallees.fireOk` in
+  `DefEqKnot.lean`; new program field `KnotAllProg.fire : FireProg p`). **`FireOkOK` restated**
+  with two hypotheses its callers can supply, and `FireDen`'s guard clause narrowed to match:
+  - `i.toNat < tbl.numFields`: the twin's `findProj?` only answers an entry below `numFields`
+    (`findProj?_lt`), and both callers (`reduce_proj_core`, `and_rescue_slots`) call `fire_ok` on
+    `find_proj`'s answer. So `FireDen` no longer asks for the guards past `numFields` (the old
+    gap to `StoreDen.proj`): at `i ≥ numFields` the twin would read the `default` level handle,
+    which reads back only under con-ron's `StoreWF` (and a non-empty persistent level tier).
+  - `us` is a stored `const` node's list (`∃ h c, a₀.store.view h = some (.const c (decI us))`),
+    as for `LvlsEqCH`; `StoreDen.constLs` then gives `FireOkOKD`'s readback. `reduce_proj_head`
+    has the node (`view_const_words`); `m2c_and` has it from its prefix (`PreRun.cview`), and
+    `and_rescue_slots`' loop carries it from slot to slot: neither the twin's `findProj?` (it
+    interns names only) nor `fireOk` (it writes the readback and verdict caches only) changes an
+    expression node's view (`ProjView.lean`: `findProj?_eview`, `fireOk_store`, and the readers'
+    `readLevelM_store` … `lvlEq?_store'`, unconditional). `AndRescueSlotsOK` gained the same
+    hypothesis.
+  - `ProjSortDen`/`FireDen` are now theorems over `CoreDen` (`projSortDen_of`, `fireDen_of`).
+  `InferProj2`'s copy of `findProj?_lt` removed (one lemma, in `ProjView.lean`).
+* **Left in `KnotCallees` (6)**: `den`, `instLP` (not this helper's), and:
+  - `capsNeverZero`: the twin reads back the inductive's level parameters and the universe
+    arguments (`capsNeverZero`), so a provable statement needs both readbacks, as
+    `FieldSortZeroOK` has them, plus the `PropWhen` datum's names related by the name store
+    (`PWR (nameN ns)`, what `capsNeverZeroW_run` takes) rather than by `dn` (`decPWw`): nothing in
+    `CoreS` ties `dn` to `denoteN`. The callers cannot supply the `us` readback: in `iota_case3`
+    `us` is the recursor head's list, viewed many core calls earlier, and `CoreAfter` does not
+    say that the twin's store only grew (`Ext`), so no view or readback survives those calls.
+    Needed: `Ext a a'` in `CoreAfter` (or `CoreS.den` plus `StoreWF`), and `dn` agreeing with
+    `denoteN` on the record pool's names.
+  - `recFireLevels`: `recFireLevelsW_ok` needs `StoreWF a.store` (it interns the substituted
+    levels and the list; `slpW_ok`/`sleW_ok`), which `CoreS` does not carry (D23), plus the same
+    readbacks as above.
+  - `lvlsEqDen`: its second list `cmpL` is `rec_fire_levels`' freshly interned result; that it
+    reads back is again `StoreWF` (the interning keeps readbacks), or a `RecFireLevelsOK` whose
+    post says so (a `CoreSpec` post speaks of result words only). The first list `usj` is a
+    stored `const` node's (`StoreDen.constLs`).
+  - `recShape`: an invariant of the installed environment (`rP ≤ mI + 1`, plain rules'
+    `ctorParams ≤ rP`), not of the store: `EnvR` decodes records but bounds nothing. It could
+    go by an L change instead: the twin uses `args.take rP` (`recFireArgs_take`), so L could
+    clamp the prefix to the spine (`min rP sn`) where it now reads `rP` words of the stack;
+    that touches lane `whnf`'s `iota_rec_*` proofs (`WhnfIotaRecRefine2/3`), not done here.
+* Numbers: 12 files, +~400/−~95 lines; new `ProjView.lean` 250 lines. After merging master: the touched cone plus `Checker/Prog`, `Checker/CoreErec` 5.2 min wall, 24 CPU-min. Rebuild of the cone
+  up to `DefEqKnot` + `KnotWF` after the `WhnfCore.lean` change: 5.2 min wall, 14.8 CPU-min
+  (everything downstream of `WhnfCore` elaborates once); `WhnfCoreProj` ~5 s.
+
+### Landing 9: helper `pos2`; vacuous memo hypotheses untagged
+* Helper `pos2` (3 h): word models, specs and relational lemmas for the rest of `IndPos2`
+  (`nestGrowGroup`, `nestAcceptGroup`, the `nestPos` block `nestFields`/`nestCtors`/`nestFrame`/
+  `nestContNew`/`nestContKey`/`nestCont`/`nestPos`, `nestRoot`, `nestSeeds`; L: `nest_root`,
+  `nest_seeds` to self-recursion, `nest_seeds_fuel` split out and added to `checkerProg`).
+* **Finding (lead's review): a family of vacuous hypotheses.** Its census theorems take
+  `PosMemo dn vis fe`, which says *every* memory in the stage relation carries well-formed memos
+  (`∀ m a, StageR dn vis fe m a → ∃ mp, noMR m mp`, likewise `dp`, `hb`, `rp`, `RfInv`). `StageR`
+  says nothing about arrays 201‥208, so this is false (a memory with garbage in a memo array is
+  still in `StageR`), and a theorem assuming it proves nothing. Helper `pos`'s landing-4 theorems
+  had the same pattern (`hMstage`, `hMra`, `hMno`): `nestCanonCrest`, `nestRootCanon`,
+  `nestUniformOk`, `nestUniform`, `nestInstType`, `nestGrowGroup`, `nestCrest`, `nestSeedOf`.
+  **All of them are untagged** (kept as lemmas, with a comment; the census shows them `written`),
+  25 tags in all. The fix is to thread the memo relation of the *current* memory through the posts
+  (as `hasLooseBVarBGo_refines` and the `mentionsAnyGo` walks do: the memo relation in the pre,
+  `∃ mp', …MR m' mp'` in the post, `stubM_memoFrame` across stubs) instead of quantifying over all
+  stage states; or to add "the memos are well formed" (a memory-only `∃ mp` form, plus a weak
+  form that holds for zeroed memory and gives `MemoRV` after a clear) to `StageR` and `LoopR`.
+* Census (master `e49af3c`+ this lane): phase 8 **73 proven, 72 sorry, 70 written, 8 todo**
+  (the untagging moved ~8 targets from `sorry` back to `written`); totals 703 proven / 116 sorry.
 ### What discharging `CvCanonSpec`/`CiCanonSpec` needs (lane `decls3`, open)
 
 Canon's theorems (`cvCanonEq_refines`, `ciCanonEq_refines`) take, beyond `StageR` and the records'
@@ -7138,3 +7659,43 @@ twin's `FoldOK` has it) and kept across the arms' earlier callees (`find_pinned`
 state; `rom_ci`'s interns need con-ron's `intern*` well-formedness lemmas, or a `StateOK` clause in
 the ROM stubs' `KeepPost`). This is the same gap as `lvlEqStub_spec`'s `TwinOK`: the stage
 relation should carry the twin's well-formedness (`StateOK`, which gives `NStoreWF` too).
+
+### Landing 9 (lane `decls3`): `all_level_params_defined` refines the twin (helper `decls3-apd`)
+
+`DeclApdSpec.lean` (word models, `vcgen` specs), `DeclApdRef.lean` (relational):
+`allLevelParamsDefined_refines` (`@[refines]`, `RefAM … (KeepPost dn vis fe decW0B)`, through
+`ApdProg p`) and `alpdGo_refines` (twin fuel `f.toNat`), sorry-free. Extra premises the stub
+spec does not have, which the callers (`DeclCvg`, `DeclHeader`, `DeclReduceSpec`, `RecGenSpec3/4`)
+must supply before the `stubM "all_level_params_defined"` uses can go: `ApdEnv a`
+(`NStoreWF` and `StoreDen`'s level fields — again the twin's well-formedness the stage relation
+lacks, as for `LitInj`/`TwinOK`), the parameter names read back, and some memo in `APDM` on
+entry. The memo-hit bug (the probe depth returned as the value) was found by this spec.
+
+### Landing 10: helper `rec3`
+* Helper `rec3` (73 min): sorry-free `targetAbsGo`/`targetAbs` (the `ta` memo of the current
+  memory threaded through pre and post), `classFeR`, `ClassRead.classes`; through stubs
+  `classRulesOk`, `classRecsRulesOk`, `auxRuleFire` (with `PoolSmall`, lane decls3's), and
+  `classStreamRecs`. The hypotheses `RecsOK` (class_stream_recs) and `SlotsExt`
+  (class_read_classes) are now derived from `DecB` inputs plus the caller's slice bound
+  (`rec3RecsOK_of_decB`, `rec3SlotsExt_of_decB`); `CVExt`/`CKExt` accept an empty slice at any
+  offset (and `decCV_copy`/`cvNew_stage`/`decCVp_grow`'s matching hypothesis likewise). L: loops
+  to self-recursion, `target_abs_node`'s arms inlined, a capacity abort on `nP + |slots| + nF`, a
+  name-handle guard in `class_fe_r_rec`; D18 extended. ~2.6k proof lines for ~170 L lines.
+* Census: phase 8 **78 proven, 75 sorry, 64 written, 6 todo**; totals 718 proven / 119 sorry.
+
+### Landing 10 (lane `decls3`): the definition arm through its gates
+
+* **L**: `check_decl_defn` now calls two gate functions, `defn_nat_gate(vis, w, n)` (the
+  structural-`Nat` gate, `checkDecl`'s lines 104-119) and `defn_div_gate(vis, w, n)` (the
+  `Nat.div`-family pin gate, lines 123-124); the code is unchanged, only split.
+* **Twin**: `natGateT`, `divGateT` (`DeclArmDefn.lean`) and `checkDecl_defn_eq`: the arm is
+  `checkConstantVal; let fe2 ← checkDefnVal; natGateT; divGateT; pure fe2` (the twin's `do` join
+  points distributed: `bind_assoc`, case splits, `fail_bindAM`).
+* **Proof**: `cdfW_ok`/`checkDeclDefn_loop'` at the loop's relation through `DefnProg p pins`:
+  `NatGateSpec`, `DivGateSpec` (`RefAM` of the gate against the twin fragment, pre `StageR ∧
+  PinSetsR m pins`, post `KeepPost ∧ PinSetsR ∧ MemFrame stepA stepC`), for helpers
+  `decls3-nat`/`decls3-divmod`. `PinSetsR.grow`/`.step`: the variant list survives the step
+  (`stepC` now excludes `CTL[150]`, `CTL[151]`; every closed text still checks).
+* **Open**: `checkDeclDefn_loop` stays `sorry` until the loop's relation carries the variant list
+  (`PinSetsR m pins`: `LoopR` gains `pins`, or the chain `CheckDeclSpec` → `installStepGo_spec`
+  → `Checker.lean` threads it) and the two gate specs are proved.

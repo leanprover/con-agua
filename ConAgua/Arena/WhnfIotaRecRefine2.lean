@@ -204,8 +204,8 @@ theorem iotaRecFam_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
     (rv.headD 0) sn lps rule cvj args margs hS2 hm4 hebm hus husj hr1
   simp only [e2] at hvk
   obtain ⟨ok3, ⟨M3, hS3, hK3, hSt3⟩, res3, hr3⟩ := CoreSpec.of_callW (hvk hlps hrule hcv
-    (hsa.keep hSt12.2.1 hSt12.2.2 hsat hspn) (by rw [hSt12.1]; exact hsat) hmI hrP hplain
-    (hsm.keep hSt12.2.1 hSt12.2.2 (by rw [← hsmt]; omega) hspn) (by rw [hSt12.1]; exact hsmt)
+    (hsa.keep hSt12.size hSt12.below hsat hspn) (by rw [hSt12.1]; exact hsat) hmI hrP hplain
+    (hsm.keep hSt12.size hSt12.below (by rw [← hsmt]; omega) hspn) (by rw [hSt12.1]; exact hsmt)
     hcpm) c3
   have hrun3 := AM.run_of_ok _ _ ok3
   rw [res3] at hrun3
@@ -538,7 +538,7 @@ theorem iotaRecFire2_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees
   rw [c2] at hW
   simp only at hW
   obtain ⟨ok2, ⟨M2, hS2, hK2, hSt2⟩, res2, hr2⟩ := CoreSpec.of_callW
-    (ruleRhsAt_refines' p hp.toIotaProg' hw (N + 1) ⟨m1, Locals.init []⟩ _ dn vis fe M1 eb c (rdW E rl)
+    (ruleRhsAt_refines' p hp.toIotaProg' hw.instLP (N + 1) ⟨m1, Locals.init []⟩ _ dn vis fe M1 eb c (rdW E rl)
       (rdW E (recP + 2)) (rdW E (recP + 3)) (rdW E (rl + 8)) us lps hS1 hcw hctw hrhsw hus
       (by rw [e1]; exact hlps)) c2
   have hrhs' : (decE (rdW E (rl + 8)) : EIdx) = rule.rhs := hrhs.symm
@@ -548,7 +548,7 @@ theorem iotaRecFire2_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees
   simp only [decH] at hrun2'
   have hSt12 := hSt1.trans hSt2
   -- the leading arguments
-  have hsa2 : SpineR m2 so sn args := hsa.keep hSt12.2.1 hSt12.2.2 hsat hspn
+  have hsa2 : SpineR m2 so sn args := hsa.keep hSt12.size hSt12.below hsat hspn
   have hxa := SpineR.take hsa2 (rdW E (recP + 6)) hrP
   cases c3 : callW p (N + 1) "mk_app_n" [rr.headD 0, so, rdW E (recP + 6)] m2 with
   | none => rw [c3] at hW; cases hW
@@ -563,7 +563,7 @@ theorem iotaRecFire2_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees
   have hSt3 := StackKept.of_app_frame hf3
   -- the fields
   have hSt13 := hSt12.trans hSt3
-  have hsm3 : SpineR m3 mo mn margs := hsm.keep hSt13.2.1 hSt13.2.2 (by rw [← hsmt]; omega) hspn
+  have hsm3 : SpineR m3 mo mn margs := hsm.keep hSt13.size hSt13.below (by rw [← hsmt]; omega) hspn
   cases c4 : callW p (N + 1) "mk_app_n_from" [rx.headD 0, mo, mn, rdW E (rl + 2)] m3 with
   | none => rw [c4] at hW; cases hW
   | some q =>
@@ -685,7 +685,7 @@ theorem iotaRecFire_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees 
     (ra.tail.headD 0) sn lps rule cvj np nf args xs.toArray hS1 hm4 hebm hcw hus husj
   simp only [e1] at hf2
   obtain ⟨ok2, ⟨M2, hS2, hK2, hSt2⟩, res2, hr2⟩ := CoreSpec.of_callW (hf2 hlps hrule hci
-    (hsa.keep gr1.2.1 gr1.2.2 hsat hspn)
+    (hsa.keep gr1.size gr1.below hsat hspn)
     (by
       show so.toNat + sn.toNat ≤ (spTop m1).toNat
       have := UInt64.le_iff_toNat_le.mp gr1.1
@@ -713,7 +713,7 @@ theorem iotaRecFire_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees 
   have hgr := gr1.trans hSt2.toGrew
   refine ⟨hokF, ⟨M2, ?_, hK2, ?_⟩, ?_, ?_⟩
   · rw [hstF, ← hm]; exact hS2.frame_stk (MemFrame.setCtl m2 136 _) (by simp) (by simp)
-  · rw [← hm]; exact StackKept.restore hgr.2.2 hgr.2.1 (Classical.not_not.mp h136)
+  · rw [← hm]; exact StackKept.restoreG hgr (Classical.not_not.mp h136)
   · rw [hresF]; simp only [decOptR, h0, h1]
   · unfold ResW at hr2 ⊢; rw [← h0, ← h1]; exact hr2
 
@@ -762,7 +762,7 @@ theorem irCallW_internBVar (p : Prog) (hp : IotaRecProg' p) (n : Nat)
     hfr.1 SPN (by simp [BREC, BSLOT, SPN]) (by decide)⟩
   have hspn : s'.mem.arr64 SPN = m.arr64 SPN := hfr.1 SPN (by simp [BREC, BSLOT, SPN]) (by decide)
   have h136 : rdW (s'.mem.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hfr.2.1 136 (by simp)
-  exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
+  exact StackKept.of_frame hfr
 
 /-! ## `iota_rec_major(mode, vis, d, c, us, recP, so, sn)` -/
 
@@ -1183,7 +1183,7 @@ theorem iotaRecMajor_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees
     hcw hus husjw hr1
   simp only [e2] at hfi
   obtain ⟨ok6, ⟨M6, hS6, hK6, hSt6⟩, res6, hr6⟩ := CoreSpec.of_callW (hfi hlps hdr hci
-    (hsa.keep hSt12.2.1 hSt12.2.2 hsat hspn) (by rw [hSt12.1]; exact hsat) hmI hrP
+    (hsa.keep hSt12.size hSt12.below hsat hspn) (by rw [hSt12.1]; exact hsat) hmI hrP
     (hshape rule hmem)) c6
   have hrun6 := AM.run_of_ok _ _ ok6
   rw [res6] at hrun6

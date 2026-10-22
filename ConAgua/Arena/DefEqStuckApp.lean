@@ -181,8 +181,8 @@ theorem appCong_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n :
   have hS₂ := hS₁.frame_stk hf2 (by simp) (by simp)
   have hla : aa.length = (r₁.tail.headD 0).toNat := by simpa using hsp1.size
   have hlb : bb.length = (r₂.tail.headD 0).toNat := by simpa using hsp2.size
-  have hspn₁ : (m₁.arr64 SPN).size < 2 ^ 63 := hg1.2.1 ▸ hspn
-  have hspn₂ : (m₂.arr64 SPN).size < 2 ^ 63 := hg2.2.1 ▸ hspn₁
+  have hspn₁ : (m₁.arr64 SPN).size < 2 ^ 63 := hg1.size ▸ hspn
+  have hspn₂ : (m₂.arr64 SPN).size < 2 ^ 63 := hg2.size ▸ hspn₁
   refine growRef_preG (hg1.trans hg2) ?_
   simp only [apK2] at hW2
   rcases (Classical.em (r₁.tail.headD 0 = r₂.tail.headD 0)).symm with heq | heq
@@ -223,13 +223,13 @@ theorem appCong_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n :
   have e1 : (spTop m₁).toNat = (r₁.headD 0).toNat + (r₁.tail.headD 0).toNat := by
     rw [htop1, ← hr10, addW_toNat (by omega)]
   have e2 : (spTop m₄).toNat = (r₂.headD 0).toNat + (r₂.tail.headD 0).toNat := by
-    rw [htop2, ← hr20, addW_toNat (by have := hg1.2.1; omega)]
+    rw [htop2, ← hr20, addW_toNat (by have := hg1.size; omega)]
   have hle12 : (spTop m₁).toNat ≤ (spTop m₄).toNat := UInt64.le_iff_toNat_le.mp hg2.1
   have h5top : spTop m₅ = spTop m₄ := hst₅.1
   have hA : SpineR m₅ (r₁.headD 0) (r₁.tail.headD 0) aa.toArray :=
-    (hsp1.grew hg2 (by omega) hspn₁).keep hst₅.2.1 hst₅.2.2 (by omega) hspn₂
+    (hsp1.grew hg2 (by omega) hspn₁).keep hst₅.size hst₅.below (by omega) hspn₂
   have hB : SpineR m₅ (r₂.headD 0) (r₂.tail.headD 0) bb.toArray :=
-    hsp2.keep hst₅.2.1 hst₅.2.2 (by omega) hspn₂
+    hsp2.keep hst₅.size hst₅.below (by omega) hspn₂
   have h₆ := CoreSpec.of_call1W (s₀ := ⟨m₅, Locals.init []⟩)
     (defeqLst_at p hc n hk F hF hn ⟨m₅, Locals.init []⟩ _ dn vis fe M₅ eb mode d (r₁.headD 0)
       (r₂.tail.headD 0) (r₂.headD 0) (r₂.tail.headD 0) aa.toArray bb.toArray

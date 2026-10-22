@@ -21,32 +21,39 @@ attribute [local simp] Reg64s.set64_rax Reg64s.set64_rcx Reg64s.set64_rdx Reg64s
   Reg64s.set64_rsp Reg64s.set64_r14
 
 /-- `d'` has every byte of `d`, and the same bytes outside the stack below `top`, outside the
-arrays and outside the result area. -/
+arrays, the result area and the global variables. -/
 structure Pres (G : Layout) (top : Nat) (d d' : DataMem) : Prop where
   grows : ∀ y, (d.get? y).isSome → (d'.get? y).isSome
-  same : ∀ x < 2 ^ 64, ¬ (G.lo ≤ x ∧ x < top) → ¬ G.InArr x → ¬ G.InRes x → d'.get? (A x) = d.get? (A x)
+  same : ∀ x < 2 ^ 64, ¬ (G.lo ≤ x ∧ x < top) → ¬ G.InArr x → ¬ G.InRes x → ¬ G.InGlob x →
+    d'.get? (A x) = d.get? (A x)
 
 namespace Pres
 variable {G : Layout}
 
-theorem refl (top : Nat) (d : DataMem) : Pres G top d d := ⟨fun _ h => h, fun _ _ _ _ _ => rfl⟩
+theorem refl (top : Nat) (d : DataMem) : Pres G top d d := ⟨fun _ h => h, fun _ _ _ _ _ _ => rfl⟩
 
 theorem trans {top : Nat} {d d' d'' : DataMem} (h : Pres G top d d') (h' : Pres G top d' d'') :
     Pres G top d d'' :=
-  ⟨fun y hy => h'.grows y (h.grows y hy), fun x hx h1 h2 h3 => by rw [h'.same x hx h1 h2 h3, h.same x hx h1 h2 h3]⟩
+  ⟨fun y hy => h'.grows y (h.grows y hy), fun x hx h1 h2 h3 h4 => by
+    rw [h'.same x hx h1 h2 h3 h4, h.same x hx h1 h2 h3 h4]⟩
 
 theorem mono {top top' : Nat} {d d' : DataMem} (h : Pres G top d d') (ht : top ≤ top') :
     Pres G top' d d' :=
-  ⟨h.grows, fun x hx h1 h2 h3 => h.same x hx (fun ⟨a, b⟩ => h1 ⟨a, by omega⟩) h2 h3⟩
+  ⟨h.grows, fun x hx h1 h2 h3 h4 => h.same x hx (fun ⟨a, b⟩ => h1 ⟨a, by omega⟩) h2 h3 h4⟩
 
 theorem of_only {a b top : Nat} {d d' : DataMem} (h : Only a b d d') (ha : G.lo ≤ a) (hb : b ≤ top) :
     Pres G top d d' :=
-  ⟨h.grows, fun x hx h1 _ _ => h.same x hx (by omega)⟩
+  ⟨h.grows, fun x hx h1 _ _ _ => h.same x hx (by omega)⟩
 
 /-- A change inside the result area. -/
 theorem of_res {a b top : Nat} {d d' : DataMem} (h : Only a b d d') (hab : ∀ x, a ≤ x → x < b → G.InRes x) :
     Pres G top d d' :=
-  ⟨h.grows, fun x hx _ _ h3 => h.same x hx (Classical.byContradiction fun hc => h3 (hab x (by omega) (by omega)))⟩
+  ⟨h.grows, fun x hx _ _ h3 _ => h.same x hx (Classical.byContradiction fun hc => h3 (hab x (by omega) (by omega)))⟩
+
+/-- A change inside the global variables. -/
+theorem of_glob {a b top : Nat} {d d' : DataMem} (h : Only a b d d') (hab : ∀ x, a ≤ x → x < b → G.InGlob x) :
+    Pres G top d d' :=
+  ⟨h.grows, fun x hx _ _ _ h4 => h.same x hx (Classical.byContradiction fun hc => h4 (hab x (by omega) (by omega)))⟩
 
 end Pres
 
@@ -164,7 +171,7 @@ theorem Inv.setLoc {nl F : Nat} {σ : St} {d : MachineData} (hI : Inv G nl F σ 
 end
 
 section
-variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres < maxOff)
+variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
   (p : Prog) (K : Stmt → M Sig) (P : Nat → Prop)
 include hG hTab
 

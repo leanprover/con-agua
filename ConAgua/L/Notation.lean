@@ -24,9 +24,14 @@ lfn (b_dummy, j) locals (c) {
   local indices in declaration order (parameters first).
 * `A.u8[i]` / `A.u64[i]` read byte / word array `A`, where `A` is a Lean constant of type
   `L.ArrId`; `len(A.u8)` / `len(A.u64)` are the lengths. Stores are `A.u8[i] := e`.
+* `R[i].f` reads field `f` of record `i` of the record layout `R : L.Record` (a Lean constant;
+  the field is the constant `R.f : L.Field`), `R[i].f := e` writes it: the word
+  `i * stride + f.off` of the word array `R.arr` (`L/Records.lean`).
 * `D.c8[i]` reads byte `i` of the constant byte string `D : List UInt8` (a Lean constant);
   `len(D.c8)` is its length (a constant).
 * Literals: numbers, characters (`'{'` is `123`), and `⟪t⟫` for any Lean term of type `Word`.
+* An identifier that is not a local names a global variable: a Lean constant `g : L.GVar`
+  (`abbrev HTOP : L.GVar := ⟨3⟩`). `g` reads it, `g := e`, `g += e`, `g -= e` write it.
 * Operators `+ - * & | ^ << >>` (wrapping, as in Rust's `wrapping_*`), `mulhi(a, b)` (the high
   word of the 128-bit product), `u64(a < b)` (a comparison as `1`/`0`, Rust's `(a < b) as u64`),
   comparisons
@@ -58,6 +63,7 @@ syntax char : lexpr
 syntax "⟪" term "⟫" : lexpr
 syntax ident : lexpr
 syntax ident noWs "[" lexpr "]" : lexpr
+syntax ident noWs "[" lexpr "]" noWs "." noWs ident : lexpr
 syntax "len" "(" ident ")" : lexpr
 syntax "mulhi" "(" lexpr ", " lexpr ")" : lexpr
 syntax "u64" "(" lcond ")" : lexpr
@@ -92,6 +98,7 @@ syntax ident " := " lexpr : lstmt
 syntax ident " += " lexpr : lstmt
 syntax ident " -= " lexpr : lstmt
 syntax ident noWs "[" lexpr "]" " := " lexpr : lstmt
+syntax ident noWs "[" lexpr "]" noWs "." noWs ident " := " lexpr : lstmt
 syntax "if " lcond lblock : lstmt
 syntax "if " lcond lblock " else " lblock : lstmt
 syntax "if " lcond lblock " else " lstmt : lstmt
@@ -118,6 +125,15 @@ meta def lookupVar (env : Array Name) (id : Ident) : MacroM Term := do
   | some k => return Syntax.mkNumLit (toString k)
   | none => Macro.throwErrorAt id s!"unknown L variable {id.getId}"
 
+/-- A local (its index) or, if no local has this name, a global variable (the Lean constant of
+type `L.GVar` of that name). -/
+meta def localOrGlobal (env : Array Name) (id : Ident) : Option Term :=
+  (env.idxOf? id.getId).map fun k => Syntax.mkNumLit (toString k)
+
+/-- `R[i].f`: the record layout `R : L.Record` and its field, the constant `R.f : L.Field`. -/
+meta def recField (r f : Ident) : Term × Term :=
+  ((r : Term), (mkIdentFrom f (r.getId ++ f.getId) : Term))
+
 /-- A single comparison: the operator and the operands (`a > b` is `b < a`). -/
 meta def cmpSplit : TSyntax `lcond → MacroM (Term × TSyntax `lexpr × TSyntax `lexpr)
   | `(lcond| $a:lexpr == $b:lexpr) => return (← `(L.Cmp.eq), a, b)
@@ -137,7 +153,13 @@ meta partial def transExpr (env : Array Name) : TSyntax `lexpr → MacroM Term
     let v := Syntax.mkNumLit (toString c.getChar.toNat)
     `(L.Expr.const $v)
   | `(lexpr| ⟪$t⟫) => `(L.Expr.const $t)
-  | `(lexpr| $x:ident) => do `(L.Expr.var $(← lookupVar env x))
+  | `(lexpr| $x:ident) => do
+    match localOrGlobal env x with
+    | some k => `(L.Expr.var $k)
+    | none => `(L.Expr.glob ($x : L.GVar))
+  | `(lexpr| $r:ident[$i:lexpr].$f:ident) => do
+    let (R, F) := recField r f
+    `(L.Expr.ld64 (L.Record.arr $R) (L.Record.at $R $(← transExpr env i) $F))
   | `(lexpr| $a:ident[$i:lexpr]) => do
     let (arr, k) ← splitArr a
     let i ← transExpr env i
@@ -190,13 +212,15 @@ meta partial def transStmt (env : Array Name) : TSyntax `lstmt → MacroM Term
     let xs ← (#[x] ++ xs.getElems).mapM (lookupVar env)
     let fname := Syntax.mkStrLit f.getId.toString
     `(L.Stmt.call [$xs,*] $fname [$args,*])
-  | `(lstmt| $x:ident := $e:lexpr) => do `(L.Stmt.set $(← lookupVar env x) $(← transExpr env e))
-  | `(lstmt| $x:ident += $e:lexpr) => do
-    let v ← lookupVar env x
-    `(L.Stmt.set $v (L.Expr.bin .add (L.Expr.var $v) $(← transExpr env e)))
-  | `(lstmt| $x:ident -= $e:lexpr) => do
-    let v ← lookupVar env x
-    `(L.Stmt.set $v (L.Expr.bin .sub (L.Expr.var $v) $(← transExpr env e)))
+  | `(lstmt| $x:ident := $e:lexpr) => do
+    match localOrGlobal env x with
+    | some k => `(L.Stmt.set $k $(← transExpr env e))
+    | none => `(L.Stmt.gset ($x : L.GVar) $(← transExpr env e))
+  | `(lstmt| $x:ident += $e:lexpr) => assignOp x `(L.BinOp.add) e
+  | `(lstmt| $x:ident -= $e:lexpr) => assignOp x `(L.BinOp.sub) e
+  | `(lstmt| $r:ident[$i:lexpr].$f:ident := $e:lexpr) => do
+    let (R, F) := recField r f
+    `(L.Stmt.st64 (L.Record.arr $R) (L.Record.at $R $(← transExpr env i) $F) $(← transExpr env e))
   | `(lstmt| $a:ident[$i:lexpr] := $e:lexpr) => do
     let (arr, b) ← splitArr a
     let i ← transExpr env i
@@ -222,6 +246,13 @@ meta partial def transStmt (env : Array Name) : TSyntax `lstmt → MacroM Term
     let names := env.map fun n => Syntax.mkStrLit n.toString
     `(lsplice% [$names,*] $t)
   | s => Macro.throwErrorAt s "unsupported L statement"
+where
+  /-- `x op= e`, for a local or a global `x`. -/
+  assignOp (x : Ident) (op : MacroM Term) (e : TSyntax `lexpr) : MacroM Term := do
+    let e ← transExpr env e
+    match localOrGlobal env x with
+    | some k => `(L.Stmt.set $k (L.Expr.bin $(← op) (L.Expr.var $k) $e))
+    | none => `(L.Stmt.gset ($x : L.GVar) (L.Expr.bin $(← op) (L.Expr.glob ($x : L.GVar)) $e))
 
 /-- A block is a right-nested `seq`; the empty block is `skip`. -/
 meta partial def transBlock (env : Array Name) : TSyntax `lblock → MacroM Term

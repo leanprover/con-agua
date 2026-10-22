@@ -193,6 +193,14 @@ def ErecKeptRec (p : Prog) : Prop :=
       "iota_certs_full"] →
     callW p n f vs m = some (r, m') → m'.arr64 EREC = m.arr64 EREC
 
+set_option maxRecDepth 8192 in
+/-- `ErecKeptRec` from the core's write set (`CoreErec.lean`). -/
+theorem ErecKeptRec.of_closed {p : Prog} (hcl : closedA p coreErecA coreErecC coreFns = true) :
+    ErecKeptRec p :=
+  fun _ _ _ _ _ _ hf h => callW_erec_closed hcl (by
+    simp only [List.mem_cons, List.mem_nil_iff, or_false] at hf
+    rcases hf with rfl | rfl | rfl | rfl | rfl | rfl <;> decide) h
+
 /-- **A level-list comparison that runs compares lists that read back** (new stub assumption):
 `lvls_eq_c`'s refinement (`lvlsEqC_refines`) asks that both handles denote, which `CoreS` does
 not carry (as `CoreS.lvl_den` for single levels); the twin's store is well formed, and a cached
@@ -398,9 +406,9 @@ theorem epW_ok (E : Array Word) (hE : E.size < 2 ^ 63) (o c so : Word) (pins : L
     rw [e1, hdrop]
     rw [e2, hj1] at hys
     have hsize' : (m'.arr64 SPN).size = (m.arr64 SPN).size := by
-      rw [hgr4.2.1, hsz3]
+      rw [hgr4.size, hsz3]
     refine SpineR.cons_slot m' (so + j) (c - (j + 1)) w _ hw32 ?_ hys ?_ (by rw [hsize']; exact hspn)
-    · have := hgr4.2.2 (so + j) (by rw [hsp3, UInt64.lt_iff_toNat_lt, hsjp1]; omega)
+    · have := hgr4.below (so + j) (by rw [hsp3, UInt64.lt_iff_toNat_lt, hsjp1]; omega)
       rw [this, hslot]
     · rw [hsize', UInt64.toNat_sub_of_le _ _ (by simp [UInt64.le_iff_toNat_le]; omega), hsoj]
       omega
@@ -660,7 +668,9 @@ theorem callW_stackCover (p : Prog) (hp : p.lookup "stack_cover" = some stackCov
         Mem.arr64_set64_ne _ _ _ _ _ (by decide)
       have htop : spTop (m.set64 CTL 136 x) = x := by
         unfold spTop; rw [rdW_set64, if_pos ⟨rfl, rfl, h136⟩]
-      refine ⟨MemFrame.setCtl m 136 x, ⟨?_, by rw [hspn], fun i _ => by simp only [spW, hspn]⟩,
+      refine ⟨MemFrame.setCtl m 136 x, ⟨?_, by rw [hspn], fun i _ => by simp only [spW, hspn],
+          BKept.of_frame (MemFrame.setCtl m 136 x) (by decide) (by decide),
+          PoolGrew.of_frame (MemFrame.setCtl m 136 x) (by decide) (by decide)⟩,
         by rw [htop]; exact UInt64.le_refl _⟩
       rw [htop]; exact UInt64.le_of_lt hlt
     · rw [if_neg h136] at hW; cases hW
@@ -773,7 +783,7 @@ theorem iotaRecCmp_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
   have e1 : m1.arr64 EREC = E := by rw [← hE0]; exact fr1.1 EREC (by simp [SPN, EREC]) (by decide)
   rw [e1] at hW
   -- the comparands
-  have hsa1 : SpineR m1 so sn args := hsa.keep gr1.2.1 gr1.2.2 hsat hspn
+  have hsa1 : SpineR m1 so sn args := hsa.keep gr1.size gr1.below hsat hspn
   have hrP1 := SpineR.take hsa1 (rdW E (recP + 6)) hrP
   generalize hargs' : (args.toList.take (rdW E (recP + 6)).toNat).toArray = args' at hrP1
   cases c2 : callW p (N + 1) "rec_fire_args" [rdW E (rl + 3), rp.headD 0, rdW E (rl + 7),
@@ -809,7 +819,7 @@ theorem iotaRecCmp_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
   have hxs3 : SpineR m3 (ra.headD 0) (ra.tail.headD 0) xs.toArray := SpineR.of_spn_core hxs
     (by rw [fr3.1 SPN (by simp) (by decide)])
   have hxb := hxs.bound
-  have hsz2 : (m2.arr64 SPN).size = (s.mem.arr64 SPN).size := gr2.2.1.trans gr1.2.1
+  have hsz2 : (m2.arr64 SPN).size = (s.mem.arr64 SPN).size := gr2.size.trans gr1.size
   have hxt : (ra.headD 0).toNat + (ra.tail.headD 0).toNat ≤ (spTop m3).toNat := by
     have h1 : (ra.headD 0 + ra.tail.headD 0).toNat = (ra.headD 0).toNat + (ra.tail.headD 0).toNat := by
       rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
@@ -817,7 +827,7 @@ theorem iotaRecCmp_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
     omega
   -- the comparison
   have hgr13 : StackGrew s.mem m3 := gr1.trans (gr2.trans gr3)
-  have hsm3 : SpineR m3 mo mn margs := hsm.keep hgr13.2.1 hgr13.2.2 hsmt hspn
+  have hsm3 : SpineR m3 mo mn margs := hsm.keep hgr13.size hgr13.below hsmt hspn
   have hcpm' : (rdW E (rl + 2)).toNat ≤ mn.toNat := by rw [← hcpw]; exact hcpm
   have hmt3 : mo.toNat + mn.toNat ≤ (spTop m3).toNat := by
     have := UInt64.le_iff_toNat_le.mp hgr13.1; omega
@@ -863,7 +873,7 @@ theorem iotaRecCmp_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
   have hgr14 : StackGrew s.mem m4 := hgr13.trans hSt4.toGrew
   refine ⟨hokF, ⟨M4, ?_, hK2.trans hK4, ?_⟩, ?_, ?_⟩
   · rw [hstF, ← hm]; exact hS4.frame_stk (MemFrame.setCtl m4 136 _) (by simp) (by simp)
-  · rw [← hm]; exact StackKept.restore hgr14.2.2 hgr14.2.1 (Classical.not_not.mp g136)
+  · rw [← hm]; exact StackKept.restoreG hgr14 (Classical.not_not.mp g136)
   · rw [hresF]; simp only [decBool, hr]
   · unfold ResH; rw [← hr]; exact hr4
 
@@ -1190,8 +1200,8 @@ theorem iotaRecVck_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
   have hdo : decO (rq.headD 0) = some true := by unfold decO; rw [if_neg q0, if_neg q1]
   rw [hdo] at hrun1
   -- the parameters
-  have hsa1 : SpineR m1 so sn args := hsa.keep hSt1.2.1 hSt1.2.2 hsat hspn
-  have hsm1 : SpineR m1 mo mn margs := hsm.keep hSt1.2.1 hSt1.2.2 (by rw [← hsmt]; omega) hspn
+  have hsa1 : SpineR m1 so sn args := hsa.keep hSt1.size hSt1.below hsat hspn
+  have hsm1 : SpineR m1 mo mn margs := hsm.keep hSt1.size hSt1.below (by rw [← hsmt]; omega) hspn
   cases c2 : callW p (N + 2) "iota_rec_cmp" [mode, vis, d, us, recP, so, rl, mo] m1 with
   | none => rw [c2] at hW; cases hW
   | some q =>
@@ -1234,7 +1244,7 @@ theorem iotaRecVck_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
   rw [c3] at hW
   simp only at hW
   obtain ⟨ok3, ⟨M3, hS3, hK3, hSt3⟩, res3, hr3⟩ := CoreSpec.of_callW
-    (constTyAt_refines' p hp.toIotaProg' hw (N + 2) ⟨m2, Locals.init []⟩ _ dn vis fe M2 eb
+    (constTyAt_refines' p hp.toIotaProg' hw.instLP (N + 2) ⟨m2, Locals.init []⟩ _ dn vis fe M2 eb
       (rdW E (ctorP + 1)) (rdW E (ctorP + 2)) (rdW E (ctorP + 3)) (rdW E (ctorP + 4)) usj
       cvj.levelParams hS2 hnn hty husj (by rw [e2]; exact hlpsj)) c3
   have hcvj : (⟨decI (rdW E (ctorP + 1)), cvj.levelParams, decE (rdW E (ctorP + 4))⟩ : IConstantVal) =
@@ -1247,7 +1257,7 @@ theorem iotaRecVck_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
   have hSt13 := hSt12.trans hSt3
   -- the telescope
   simp only [irVckTail] at hW
-  have hsm3 : SpineR m3 mo mn margs := hsm.keep hSt13.2.1 hSt13.2.2 (by rw [← hsmt]; omega) hspn
+  have hsm3 : SpineR m3 mo mn margs := hsm.keep hSt13.size hSt13.below (by rw [← hsmt]; omega) hspn
   cases c4 : callW p (N + 2) "iota_certs_full" [mode, vis, d, rt.headD 0, mo, mn] m3 with
   | none => rw [c4] at hW; cases hW
   | some q =>
@@ -1280,11 +1290,11 @@ theorem iotaRecVck_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
   rw [hb4] at hrun4
   -- the indices
   rw [e4] at hW
-  have hsa4 : SpineR m4 so sn args := hsa.keep hSt14.2.1 hSt14.2.2 hsat hspn
-  have hsm4 : SpineR m4 mo mn margs := hsm.keep hSt14.2.1 hSt14.2.2 (by rw [← hsmt]; omega) hspn
+  have hsa4 : SpineR m4 so sn args := hsa.keep hSt14.size hSt14.below hsat hspn
+  have hsm4 : SpineR m4 mo mn margs := hsm.keep hSt14.size hSt14.below (by rw [← hsmt]; omega) hspn
   have hmIs : (rdW E (recP + 5)).toNat ≤ sn.toNat := by omega
   have hidx := SpineR.slice hsa4 (rdW E (recP + 6)) (rdW E (recP + 5)) hrP hmIs (by
-    rw [hSt14.2.1]; exact hspn)
+    rw [hSt14.size]; exact hspn)
   rw [← ixLen_eq] at hidx
   have hsat' := hsa.bound
   have hxo : (so + rdW E (recP + 6)).toNat + (ixLen (rdW E (recP + 5)) (rdW E (recP + 6))).toNat ≤

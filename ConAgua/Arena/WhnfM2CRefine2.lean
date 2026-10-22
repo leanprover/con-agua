@@ -76,7 +76,7 @@ theorem StackKept.of_constF {m m' : Mem} (hf : MemFrame [CREC, CSLOT] [18, 19] m
   have hspn : m'.arr64 SPN = m.arr64 SPN :=
     hf.1 SPN (by simp [CREC, CSLOT, SPN]) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp)
-  exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
+  exact StackKept.of_frame hf
 
 theorem ceinternW_hw' (m : Mem) (a : AState) (hR : ConstR m a) (f x : Word) (hf : f.toNat < 2 ^ 32)
     (hx : x.toNat < 2 ^ 32) (w : Word) (m' : Mem) (hI : ceinternW m f x = some (w, m')) :
@@ -493,6 +493,15 @@ theorem CoreAfterG.of_stk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a :
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb)
     (hf : MemFrame [SPN] [136] m m') (hg : StackGrew m m') : CoreAfterG dn m m' a vis fe M eb :=
   ⟨M, hS.frame_stk hf (by simp) (by simp), KeptAll.refl _ _, hg⟩
+
+/-- A successful prefix's universe arguments are a stored `const` node's list (the scrutinee's
+type's head). -/
+theorem PreRun.cview {R : CoreFnsA} {d : Nat} {major : EIdx} {a a' : AState} {L : List Word}
+    (h : PreRun R d major a L a') (h0 : L.headD 0 ≠ 0) :
+    ∃ (hh : EIdx) (c : NIdx), a'.store.view hh = some (.const c (decI (L.tail.tail.tail.headD 0))) := by
+  obtain ⟨ta, tmaj, hh, a₁, -, -, -, -, hs⟩ := h
+  obtain ⟨-, -, hv, -⟩ := hs h0
+  exact ⟨hh, _, hv⟩
 
 /-- The facts a successful prefix hands the arms. -/
 theorem PreRun.view {R : CoreFnsA} {d : Nat} {major : EIdx} {a a' : AState} {L : List Word}

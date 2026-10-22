@@ -67,6 +67,7 @@ def evalE (fr : Frame) : Expr → TM Word
   | .ldc d i => do
     let j ← evalE fr i
     if h : j.toNat < d.length then return d[j.toNat].toUInt64 else stop .oob
+  | .glob g => do return (← get).mem.glob g
 
 def evalC (fr : Frame) : Cond → TM Bool
   | .cmp c a b => do
@@ -130,6 +131,10 @@ partial def exec (P : Std.HashMap String FunDecl) (fr : Frame) (base : Nat) : St
     let fr := (xs.zipIdx).foldl (fun fr (x, i) => setV fr x (rs.getD i 0)) fr
     return (.normal, fr)
   | .abort => stop (.abort base)
+  | .gset g e => do
+    let v ← evalE fr e
+    modify fun s => { s with mem := s.mem.setG g v }
+    return (.normal, fr)
 
 partial def invoke (P : Std.HashMap String FunDecl) (f : String) (vs : List Word) : TM (List Word) := do
   let some d := P[f]? | stop (.noFun f)

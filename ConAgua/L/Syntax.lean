@@ -8,7 +8,8 @@ public section
 L is the small first-order language the checker is written in (see `DESIGN.md`, "The language L").
 Values are 64-bit words with wrapping arithmetic. A function has numbered locals, the first
 `nparams` of which are its parameters. Memory is a fixed set of arrays: byte arrays (the input
-buffer) and word arrays, each named by a static index. Expressions have no side effects and
+buffer) and word arrays, each named by a static index, and a store of global word variables
+(`GVar`), also named by static indices. Expressions have no side effects and
 make no calls; a call is a statement. Conditions are a separate type, with short-circuit `&&`/`||`
 so that a guard such as `i < len && b[i] == c` cannot read out of bounds.
 -/
@@ -26,6 +27,17 @@ abbrev ArrId := Nat
 
 /-- A function name. -/
 abbrev FnName := String
+
+/-- A global variable: a word in the global store (`Mem.glob`), named by a static number.
+Declare one as a Lean constant, `abbrev HTOP : L.GVar := ⟨3⟩`, and use it in L code as `HTOP`
+(read) and `HTOP := e` (write). Distinct globals need distinct numbers. -/
+structure GVar where
+  id : Nat
+  deriving Repr, Inhabited
+
+/-- Equality of globals is equality of their numbers (reduces under `decide`). -/
+instance : DecidableEq GVar := fun a b =>
+  decidable_of_iff (a.id = b.id) (by cases a; cases b; simp)
 
 /-- Binary word operators. All wrap; shift counts are taken mod 64 (as on x64). `mulhi` is the
 high word of the unsigned 128-bit product (`mul` is the low word). -/
@@ -55,6 +67,8 @@ inductive Expr where
   | cmpw (c : Cmp) (a b : Expr)
   /-- Byte `i` of the constant byte string `d` (read-only data, part of the program). -/
   | ldc (d : List UInt8) (i : Expr)
+  /-- The global variable `g`. -/
+  | glob (g : GVar)
   deriving Repr, DecidableEq, Inhabited
 
 /-- Conditions. `and`/`or` short-circuit. -/
@@ -87,6 +101,8 @@ inductive Stmt where
   | call (xs : List Var) (f : FnName) (args : List Expr)
   /-- Stop the whole program with an error (Rust's `panic!`, an overflow check, …). -/
   | abort
+  /-- `g := e` for a global variable `g`. -/
+  | gset (g : GVar) (e : Expr)
   deriving Repr, Inhabited
 
 /-- A function: `nparams` parameters, `nlocals ≥ nparams` locals (params first, the rest start
@@ -100,5 +116,33 @@ structure FunDecl where
 
 /-- A program: its functions, by name. The first binding of a name wins. -/
 abbrev Prog := List (FnName × FunDecl)
+
+/-! ## Records (surface syntax)
+
+A record layout lives in a word array: record `i` is the words `i * stride + f` for its fields'
+offsets `f < stride`. `R[i].f` and `R[i].f := e` (`Notation.lean`) are ordinary word-array
+accesses `R.arr.u64[R.at i f]`: nothing new in the semantics or the compiler. The address is
+built by the named function `Record.at`, so a verification condition shows the named word
+`Record.ad R j f` (`L/Records.lean`), and the lemmas there decide aliasing once and for all. -/
+
+/-- A record layout: word array `arr`, `stride` words per record. Declare one as
+`abbrev NODE : L.Record := ⟨5, 3⟩` and its fields as `abbrev NODE.tag : L.Field := ⟨0⟩`, … (offsets
+below the stride, distinct). -/
+structure Record where
+  arr : ArrId
+  stride : Nat
+  deriving Repr, DecidableEq, Inhabited
+
+/-- A field: its offset in the record. -/
+structure Field where
+  off : Nat
+  deriving Repr, DecidableEq, Inhabited
+
+/-- The word address of field `f` of record `j`. -/
+@[expose] def Record.ad (R : Record) (j : Word) (f : Field) : Word := j * R.stride.toUInt64 + f.off.toUInt64
+
+/-- The address expression of field `f` of record `i`: `i * stride + off`. -/
+@[expose] def Record.at (R : Record) (i : Expr) (f : Field) : Expr :=
+  .bin .add (.bin .mul i (.const R.stride.toUInt64)) (.const f.off.toUInt64)
 
 end L
