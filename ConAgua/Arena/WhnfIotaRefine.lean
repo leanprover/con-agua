@@ -809,11 +809,6 @@ theorem constTyAt_refines' (p : Prog) (hp : IotaProg' p) (hlp : InstLPOK p) :
   · rw [hres2]; simp only [decH]; rw [← hr]
   · unfold ResH HW; rw [← hr]; exact hwv
 
-@[refines ConRon.Arena.constTyAt]
-theorem constTyAt_refines (p : Prog) (hp : IotaProg' p) :
-    ConstTyAtOK p :=
-  constTyAt_refines' (p := p) (hlp := (whnfCallees_stub p).instLP)  (hp := hp)
-
 theorem ruleRhsAt_run_hit (rec ctor : NIdx) (lps : List NIdx) (rhs : EIdx) (us : LsIdx) (a : AState)
     (r : EIdx) (h : a.caches.ruleRhsC[(rec, ctor, us)]? = some r) :
     (ruleRhsAt rec ctor lps rhs us).run a = .ok (r, a) := by
@@ -896,11 +891,6 @@ theorem ruleRhsAt_refines' (p : Prog) (hp : IotaProg' p) (hlp : InstLPOK p) :
   · rw [hst2, ← hm]; exact hS₂
   · rw [hres2]; simp only [decH]; rw [← hr]
   · unfold ResH HW; rw [← hr]; exact hwv
-
-@[refines ConRon.Arena.ruleRhsAt]
-theorem ruleRhsAt_refines (p : Prog) (hp : IotaProg' p) :
-    RuleRhsAtOK p :=
-  ruleRhsAt_refines' (p := p) (hlp := (whnfCallees_stub p).instLP)  (hp := hp)
 
 /-! ## `pi_residual(e, ao, an)` -/
 

@@ -408,15 +408,4 @@ theorem iotaRecAt_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   · rw [hresF]; simp only [decOptR, h0, h1]
   · unfold ResW at hr2 ⊢; rw [← h0, ← h1]; exact hr2
 
-/-- **`iota_rec_at` refines `iotaRecAt`** (the statement is `WhnfCore.lean`'s `IotaRecAtOK`, what
-`whnf_app` assumes), at the stub bundles. -/
-@[refines ConRon.Arena.iotaRecAt]
-theorem iotaRecAt_refines (p : Prog) (hp : IotaRecProg' p) (hm : M2CProg' p)
-    (hcl : closedA p coreErecA coreErecC coreFns = true)
-    (n : Nat) (hk : KnotUpTo p n) :
-    IotaRecAtOK p (n + 1) :=
-  iotaRecAt_refines' p hp (iotaCallees_stub p) (whnfCallees_stub p) supKeep_twin
-    (majorToCtor_refines p hm hcl) (ErecKeptInst.of_closed hcl) (ErecKeptRec.of_closed hcl)
-    (ErecKeptKnot.of_closed hcl) n hk
-
 end L.Arena

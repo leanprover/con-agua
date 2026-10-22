@@ -7,13 +7,13 @@ out = root / "_tmp" / "dash"; out.mkdir(parents=True, exist_ok=True)
 md = (root / "docs/progress.md").read_text()
 rows = []
 for line in md.splitlines():
-    m = re.match(r"\| (\d+) ([^|]+?) \| (\d+) \| (\d+) \| (\d+) \| (\d+) \| (\d+) \| (\d+) / (\d+) / (\d+) [^|]*\| (\d+) / (\d+) / (\d+) ", line)
+    m = re.match(r"\| (\d+[a-z]?) ([^|]+?) \| (\d+) \| (\d+) \| (\d+) \| (\d+) \| (\d+) \| (\d+) \| (\d+) / (\d+) / (\d+) [^|]*\| (\d+) / (\d+) / (\d+) ", line)
     if m:
         g = m.groups()
-        rows.append({"phase": int(g[0]), "name": g[1].strip(), "targets": int(g[2]), "proven": int(g[3]),
-                     "sorry": int(g[4]), "written": int(g[5]), "todo": int(g[6]),
-                     "lean_proven": int(g[7]), "lean_with_l": int(g[8]), "lean_all": int(g[9]),
-                     "rust_proven": int(g[10]), "rust_with_l": int(g[11]), "rust_all": int(g[12])})
+        rows.append({"phase": g[0], "name": g[1].strip(), "targets": int(g[2]), "proven": int(g[3]),
+                     "sorry": int(g[4]), "local": int(g[5]), "written": int(g[6]), "todo": int(g[7]),
+                     "lean_proven": int(g[8]), "lean_with_l": int(g[9]), "lean_all": int(g[10]),
+                     "rust_proven": int(g[11]), "rust_with_l": int(g[12]), "rust_all": int(g[13])})
 (out / "phases.json").write_text(json.dumps(rows, indent=1))
 # upstream changes: the CHANGED markers `scripts/provenance.py check` lists as its queue
 stale = []
