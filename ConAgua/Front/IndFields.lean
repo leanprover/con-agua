@@ -202,7 +202,7 @@ def iflIds : FunDecl := lfn (v) locals (i, o, cnt, c, e, x) {
   o := call ifl_alloc(0);
   i := v + 1;
   ⟪iflIdsLoop⟫;
-  return (o, cnt)
+  return (0, 0)
 }
 
 /-- `ind_num(kind, p, ks, v, h, s)`: a number value at `v` (key quote at `ks`) into slot `s` of the
