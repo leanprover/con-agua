@@ -545,7 +545,9 @@ Both are thin memo wrappers around `inst_lp` (a `WhnfCallees` stub), over the al
 caches `ruleRhsC` (array 104, `rrSch`) and `constTyC` (array 102, `ctSch`): `CoreCaches.lean`,
 `CoreRefine.lean`'s `rrKey`/`memoRG_findR`/`memoRG_findP`. -/
 
-/-- con-leche: none — `ruleRhsAt`'s cache probe, `rrSch`'s key `(rec, ctor ||| us << 32)`. -/
+/-- con-leche: none — `ruleRhsAt`'s cache probe, `rrSch`'s key `(rec, ctor ||| us << 32)`. The probe
+is repeated after `inst_lp` (as `const_val_at` does): the slot found before the call is stale if the
+callee wrote the memo. -/
 -- con-ron: ConRon/Arena/Core.lean:209-224 ConRon.Arena.ruleRhsAt
 @[l_impl ConRon.Arena.ruleRhsAt]
 def ruleRhsAtL : FunDecl := lfn (rec, ctor, po, pl, rhs, us)
@@ -554,17 +556,20 @@ def ruleRhsAtL : FunDecl := lfn (rec, ctor, po, pl, rhs, us)
   (fd, j, dd) := call rr_find(rec, k2);
   if fd != 0 { return rrSch.arr.u64[j * 4 + 3] };
   r := call inst_lp(po, pl, us, rhs);
+  (fd, j, dd) := call rr_find(rec, k2);
   dum := call rr_put(rec, k2, r, fd, j);
   return r
 }
 
-/-- con-leche: none — `constTyAt`'s cache probe, `ctSch`'s key `(n, us)`. -/
+/-- con-leche: none — `constTyAt`'s cache probe, `ctSch`'s key `(n, us)`. The probe is repeated
+after `inst_lp` (as `const_val_at` does). -/
 -- con-ron: ConRon/Arena/Core.lean:178-191 ConRon.Arena.constTyAt
 @[l_impl ConRon.Arena.constTyAt]
 def constTyAtL : FunDecl := lfn (n, po, pl, ty, us) locals (fd, j, dd, r, dum) {
   (fd, j, dd) := call ct_find(n, us);
   if fd != 0 { return ctSch.arr.u64[j * 4 + 3] };
   r := call inst_lp(po, pl, us, ty);
+  (fd, j, dd) := call ct_find(n, us);
   dum := call ct_put(n, us, r, fd, j);
   return r
 }
