@@ -4,6 +4,7 @@ import ConAgua.Arena.DeclStep
 import ConAgua.Arena.DeclStepSpec
 import ConAgua.Arena.DeclStepGo
 import ConAgua.Arena.PromoteRecRef
+import ConAgua.Arena.DeclCheckLoop
 
 /-!
 # The declaration loop in L, top down: `installFold`, `checkPendingList`, `installThenCheck`
@@ -53,6 +54,8 @@ structure DeclCallees (p : Prog) : Prop where
   /-- `install_step_go`'s body and `install_value`'s text (`DeclStepGo.lean`). -/
   istg : IstgProg p
   iv : IvProg p
+  /-- `check_decl`, its arms and their texts (`DeclCheckLoop.lean`). -/
+  cd : CheckDeclProg p
 
 section stubs
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
@@ -736,7 +739,7 @@ theorem installStep_pieces (hm : mode = .verified) (hdc : DeclCallees p) (hb : B
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         (flush_loop dn ds p hb n · a₀ vis fe pend),
         (enter_loop dn ds p hb n · (AM.st flushCaches a₀) vis fe pend),
-        (installStepGo_spec mode pins dn ds p hm hdc.istg hdc.iv hdc.cvg n · (AM.st enterScratch (AM.st flushCaches a₀)) · fe pend · ·),
+        (installStepGo_spec mode pins dn ds p hm (hm ▸ checkDecl_loop hdc.cd pins dn ds) hdc.istg hdc.iv hdc.cvg n · (AM.st enterScratch (AM.st flushCaches a₀)) · fe pend · ·),
         (isNone_refines dn ds p hb hpn n · (AM.st (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))) · · (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).1 pend),
         (isSome_refines dn ds p hb hpp hps n · (AM.st (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))) · · · · (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).1 pend ((AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).2.getD default))] <;>
       -- the view `vis` is read after three calls: four `LocEq` hops (depth, not search)
