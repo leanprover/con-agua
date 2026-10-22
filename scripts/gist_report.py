@@ -194,15 +194,6 @@ _loc = _last.get("lean_local") or _last.get("lean_sorry")
 sorry_share = int(_loc) / int(_last["lean_all"]) if _loc else None
 w(f"| **{pct(lean_share)}** | {pct(lean_share + sorry_share) if sorry_share is not None else '—'} | {pct(lean_l)} | **{eta_s}** | {len(running)} | {pct(over / max(1, work + over))} |\n")
 w("_The three shares are cumulative: proven ⊆ proven locally (own proof complete; `sorry` only in callees' stub specs) ⊆ L code written._\n")
-# the safety net under the shared Lake cache (DESIGN.md, "Cache incident"), written by scripts/buildstats.py
-bcf = root / "_tmp" / "buildcheck.json"
-if bcf.exists():
-    bc = json.loads(bcf.read_text())
-    behind = git("rev-list", "--count", f"{bc['commit']}..HEAD") if bc.get("commit", "?") != "?" else "?"
-    w(f"Last cache-free build of master: `{bc['commit'][:10]}` ({behind} commits behind HEAD, {bc['date']}, "
-      f"{bc['mode']}): " + ("**OK**" if bc["ok"] else f"**FAILED** ({bc['detail']})") + "\n")
-else:
-    w("Last cache-free build of master: **none recorded** (run `scripts/buildstats.py`).\n")
 if eta_rate:
     w(f"_Projected completion: at the least-squares rate of the last 3 days of census runs, {eta_rate:,.0f} Lean lines proven per day; "
       "a straight-line extrapolation, so treat it as a trend, not a promise._\n")
