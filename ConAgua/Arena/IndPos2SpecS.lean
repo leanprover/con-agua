@@ -453,6 +453,157 @@ theorem ctorsOK_step (n : Nat) (ih : NbOK dn vis fe n) : CtorsOK dn vis fe (n + 
   rw [nestCtors_cons, hK1]
   exact hrun
 
+include hcs in
+theorem frameOK_step (n : Nat) (ih : NbOK dn vis fe n) : FrameOK dn vis fe (n + 1) := by
+  obtain ⟨-, -, -, -, -, -, -, hCtors, -, -, -⟩ := ih
+  intro m m' a ctx fu po pl hi us dO dL nPc gO gL ns c prog ds grp NS r h hS hW hhi hus hds hdsb hgl hgb hgrp hns
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  rw [nbFrameW_succ] at h
+  -- the group's head name
+  have hhn : (if gL = 0 then stubM "intern_nanon" m [] else some ([rdW (m.arr64 IW) (rdW (m.arr64 IW) gO)], m)) =
+        none ∨ ∃ (rn : List Word) (m1 : Mem) (a1 : AState),
+      (if gL = 0 then stubM "intern_nanon" m [] else some ([rdW (m.arr64 IW) (rdW (m.arr64 IW) gO)], m)) =
+        some (rn, m1) ∧ StageR dn vis fe m1 a1 ∧ IWGrow m m1 ∧ H (rn.headD 0) ∧
+      (match grp with
+        | [] => internNNode .anonymous
+        | (c, _) :: _ => pure c : AM NIdx).run a = .ok (decI (rn.headD 0), a1) := by
+    by_cases h0 : gL = 0
+    · rw [if_pos h0]
+      have : grp = [] := List.eq_nil_of_length_eq_zero (by rw [← hgl, h0]; rfl)
+      subst this
+      cases hst : stubM "intern_nanon" m [] with
+      | none => exact Or.inl rfl
+      | some pr =>
+      obtain ⟨rn, m1⟩ := pr
+      obtain ⟨x, a1, hrun, hS1, hg1, hxH, hxd⟩ := internNanonStub_spec dn vis fe m m1 a rn hst hS
+      exact Or.inr ⟨rn, m1, a1, rfl, hS1, hg1, hxH, by rw [hxd]; exact hrun⟩
+    · rw [if_neg h0]
+      obtain ⟨⟨cg, tg⟩, grp', rfl⟩ : ∃ x grp', grp = x :: grp' := by
+        cases grp with
+        | nil => exact absurd (UInt64.toNat_inj.mp (by simpa using hgl)) h0
+        | cons x grp' => exact ⟨x, grp', rfl⟩
+      simp only [List.length_cons] at hgb
+      obtain ⟨w, cw, tw, hrw, hw1, hrc, hcH, hcd, -, -, -⟩ := hgrp.head (by omega) htop
+      rw [UInt64.ofNat_toNat] at hrw
+      rw [hrw, hrc]
+      exact Or.inr ⟨[cw], m, a, rfl, hS, IWGrow.refl _, hcH, by simp only [List.headD_cons]; rw [hcd]; rfl⟩
+  rcases hhn with hnone | ⟨rn, m1, a1, hrn, hS1, hg1, hrnH, hrun1⟩
+  · rw [hnone] at h; simp [nbFrameK1] at h
+  rw [hrn, nbFrameK1_some] at h
+  have hrnb : ¬ 4294967296 ≤ rn.headD 0 := by
+    have : ¬ (4294967296 : Word).toNat ≤ (rn.headD 0).toNat := by simpa using hrnH
+    exact fun e => this (UInt64.le_iff_toNat_le.mp e)
+  rw [if_neg hrnb] at h
+  -- the instantiation `hn.{us} ds`, typed
+  cases hic : ceinternW m1 (rn.headD 0) us with
+  | none => rw [hic] at h; simp [nbFrameK2] at h
+  | some pr2 =>
+  obtain ⟨hc, m2⟩ := pr2
+  rw [hic, nbFrameK2_some] at h
+  by_cases hcb : 4294967296 ≤ hc
+  · rw [if_pos hcb] at h; cases h
+  rw [if_neg hcb] at h
+  have hcH : H hc := by
+    have : ¬ (4294967296 : Word).toNat ≤ hc.toNat := fun e => hcb (UInt64.le_iff_toNat_le.mpr e)
+    simp only [H]; simpa using this
+  obtain ⟨a2, hrun2, hS2, hg2⟩ := internConst_stage hS1 (rn.headD 0) us hrnH hus hic
+  have hg12 := hg1.trans hg2
+  cases hma : stubM "mk_app_n_f" m2 [hc, dO, dL] with
+  | none => rw [hma] at h; simp [nbFrameK3] at h
+  | some pr3 =>
+  obtain ⟨ra, m3⟩ := pr3
+  rw [hma, nbFrameK3_some] at h
+  obtain ⟨app, a3, hrun3, hS3, hg3, happH, happd⟩ := mkAppN_spec dn vis fe hc dO dL hcH ds m2 m3 a2 ra hma
+    ⟨hS2, (hds.grow (OMono.decHL _ _) hg12).get (OMono.decHL _ _)⟩
+  cases hit : stubM "infer_type_core" m3 [vis, hi, ra.headD 0] with
+  | none => rw [hit] at h; simp [nbFrameK4] at h
+  | some pr4 =>
+  obtain ⟨rt, m4⟩ := pr4
+  rw [hit, nbFrameK4_some] at h
+  obtain ⟨ty, a4, hrun4, hS4, hg4, -⟩ := inferTypeCore_spec dn vis fe hi _ happH m3 m4 a3 rt hit hS3
+  have hg14 := (hg12.trans hg3).trans hg4
+  -- the stack grown and the names
+  cases hfg : fgW n m4 hi us dO dL gO gL po pl 0 0 with
+  | none => rw [hfg] at h; simp [nbFrameK5] at h
+  | some pr5 =>
+  obtain ⟨rp, m5⟩ := pr5
+  rw [hfg, nbFrameK5_some] at h
+  obtain ⟨hS5, hg5, hP5, hN5, hNb5⟩ := fgW_ok dn vis fe hi us dO dL ds hus n m4 m5 a4 gO gL po pl 0 0 grp prog [] rp
+    hfg hS4 (hds.grow (OMono.decHL _ _) hg14) hgl (by have := hg14.1; omega) (hgrp.grow hgb hg14)
+    (hW.hs.grow hg14) (by simp [decHL, hslice?]) (by simp)
+  simp only [List.nil_append] at hP5 hN5
+  -- the group's constructors
+  cases hgc : gcW n m5 vis nPc (rp.tail.tail.headD 0) (rp.tail.tail.tail.headD 0) 0 0 with
+  | none => rw [hgc] at h; simp [nbFrameK6] at h
+  | some pr6 =>
+  obtain ⟨rc, m6⟩ := pr6
+  rw [hgc, nbFrameK6_some] at h
+  obtain ⟨ctors, a6, hrun6, hS6, hg6, hcl6, hcb6, hcs6⟩ := gcW_ok dn fe vis nPc hcs n m5 m6 a4 _ _ 0 0 (grp.map (·.1)) []
+    rc hgc hS5 hN5 (fun j hj => by omega) (by simp) (by simp) (fun i hi => by simp at hi)
+  -- the holes
+  have hg46 := hg5.trans hg6
+  cases hfh : fhW n m6 hi gO gL 0 0 with
+  | none => rw [hfh] at h; simp [nbFrameK7] at h
+  | some pr7 =>
+  obtain ⟨rh, m7⟩ := pr7
+  rw [hfh, nbFrameK7_some] at h
+  obtain ⟨holes, a7, hrun7, hS7, hg7, hH7, hHb7⟩ := fhW_ok dn vis fe n m6 m7 a6 hi gO gL 0 0 grp [] rh hfh hS6 hgl
+    (by have := (hg14.trans hg46).1; omega) (hgrp.grow hgb (hg14.trans hg46)) (by simp [decHL, hslice?]) (by simp)
+  simp only [List.nil_append] at hH7
+  by_cases hov : hi + gL < hi
+  · rw [if_pos hov] at h; cases h
+  rw [if_neg hov] at h
+  by_cases hov2 : dL + gL < dL
+  · rw [if_pos hov2] at h; cases h
+  rw [if_neg hov2] at h
+  have hhg : (hi + gL).toNat = hi.toNat + gL.toNat := pos2_word_add hov
+  have hdg : (dL + gL).toNat = dL.toNat + gL.toNat := pos2_word_add hov2
+  have hg47 := (hg5.trans hg6).trans hg7
+  have hg17 := (hg14.trans hg47)
+  have htop7 : iwTop m7 < 2 ^ 64 := Nat.lt_of_le_of_lt hS7.2.1 hS7.2.2.2.1
+  cases hct : nbCtorsW n m7 vis ctx 0 fu (rp.headD 0) (rp.tail.headD 0) (hi + gL) us dO dL (rp.tail.tail.headD 0)
+      (rp.tail.tail.tail.headD 0) (rh.headD 0) (rh.tail.headD 0) (rc.headD 0) (rc.tail.headD 0) ns 0 0 with
+  | none => rw [hct] at h; simp [nbFrameK8] at h
+  | some pr8 =>
+  obtain ⟨r8, m8⟩ := pr8
+  rw [hct, nbFrameK8_some] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  have hP7 := hP5.grow (hg6.trans hg7)
+  have hpl2 : (rp.tail.headD 0).toNat = pl.toNat + gL.toNat := by rw [← hP7.1, List.length_append, hW.len]; simp [hgl]
+  obtain ⟨x, a8, hrun8, hS8, hg8, -, -, hns8⟩ := hCtors m7 m8 a7 ctx 0 fu _ _ (hi + gL) us dO dL _ _ _ _ _ _ ns 0 0
+    c (prog ++ grp.map fun x => (⟨⟨x.1, decI us, ds⟩, hi.toNat⟩ : NestHole)) ds (grp.map (·.1)) holes ctors NS [] r8
+    hct hS7 ⟨hW.u.grow hg17, hP7, by
+      have := hW.hb; rw [hW.len] at hhi; simp only [NestCtx.hiAt] at this hhi ⊢; rw [hpl2]
+      have := (hi + gL).toNat_lt; omega⟩
+    ⟨hus, hds.grow (OMono.decHL _ _) hg17, by have := hg17.1; omega,
+      by rw [decHL_agree (RdS.of_grow (hg6.trans hg7)) (fun j hj => by omega)]; exact hN5,
+      by have := (hg6.trans hg7).1; omega, by simp only [List.length_map]; rw [← hgl, ← hdg]; exact (dL + gL).toNat_lt,
+      hH7, hHb7⟩
+    hcl6 (by have := hg7.1; omega) (hcs6.grow hcb6 hg7) (hns.grow hg17 htop) (OutsB.nil _ _) (by simp)
+  refine ⟨x.2, a8, ?_, hS8, hg17.trans hg8, by simpa using hns8⟩
+  rw [ConRon.Arena.nestFrame.eq_def]
+  have hz : (grp.zipIdx.mapM fun ((_, ty), i) => internFVarE (hi.toNat + i) ty) = pos2FhT hi.toNat grp := by
+    simpa using pos2_zipIdx_holes hi.toNat grp 0
+  have e2 : (internConstE (decI (rn.headD 0)) (decI us)).run a1 = .ok (decI hc, a2) := hrun2
+  rw [happd] at hrun4
+  have e8 : (ConRon.Arena.nestCtors V fe c false fu.toNat
+      (prog ++ grp.map fun (c, _) => { key := ⟨c, decI us, ds⟩, base := hi.toNat }) (hi.toNat + grp.length)
+      (decI us) ds (grp.map (·.1)) holes ctors NS []).run a7 = .ok (x, a8) := by
+    rw [hhg, hgl] at hrun8; simpa using hrun8
+  cases grp with
+  | nil =>
+    simp only at hrun1
+    simp only [StateT.run_bind, hrun1, except_ok_bind, e2, hrun3, hrun4, hrun6, hz, hrun7, e8]
+    rfl
+  | cons xg grp' =>
+    obtain ⟨cg, tg⟩ := xg
+    simp only at hrun1
+    simp only [StateT.run_bind, hrun1, except_ok_bind, e2, hrun3, hrun4, hrun6, hz, hrun7, e8]
+    rfl
+
+
+
 end steps
 
 end L.Ind

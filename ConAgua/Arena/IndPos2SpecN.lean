@@ -225,6 +225,7 @@ def nbFrameK7 (ctorsF : MW19) (vis ctx fu hi us dO dL gL ns p2O p2L nO nL cO cL 
   | none => none
   | some (rh, m7) =>
     if hi + gL < hi then none
+    else if dL + gL < dL then none
     else nbFrameK8 (ctorsF m7 vis ctx 0 fu p2O p2L (hi + gL) us dO dL nO nL (rh.headD 0) (rh.tail.headD 0)
       cO cL ns 0 0)
 def nbFrameK6 (k : Nat) (ctorsF : MW19) (vis ctx fu hi us dO dL gO gL ns p2O p2L nO nL : Word) :
@@ -542,6 +543,7 @@ theorem nbFrameK8_some (r : List Word) (m8 : Mem) :
 theorem nbFrameK7_some (ctorsF : MW19) (vis ctx fu hi us dO dL gL ns p2O p2L nO nL cO cL : Word) (rh : List Word) (m7 : Mem) :
     nbFrameK7 ctorsF vis ctx fu hi us dO dL gL ns p2O p2L nO nL cO cL (some (rh, m7)) =
     if hi + gL < hi then none
+    else if dL + gL < dL then none
     else nbFrameK8 (ctorsF m7 vis ctx 0 fu p2O p2L (hi + gL) us dO dL nO nL (rh.headD 0) (rh.tail.headD 0)
       cO cL ns 0 0) := rfl
 theorem nbFrameK6_some (k : Nat) (ctorsF : MW19) (vis ctx fu hi us dO dL gO gL ns p2O p2L nO nL : Word) (rc : List Word) (m6 : Mem) :

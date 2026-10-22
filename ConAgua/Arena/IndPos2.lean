@@ -451,6 +451,7 @@ def nestFrameL : FunDecl :=
   (holesOff, holesLen) := call nest_frame_holes(hi, grpOff, grpLen, 0, 0);
   hiTot := hi + grpLen;
   if hiTot < hi { abort };
+  if dsLen + grpLen < dsLen { abort };
   (outsOff, outsLen, nsOut2) := call nest_ctors(vis, ctx, 0, fuel, prog2Off, prog2Len, hiTot, us,
     dsOff, dsLen, namesOff, namesLen, holesOff, holesLen, ctorsOff, ctorsLen, ns, 0, 0);
   return nsOut2
