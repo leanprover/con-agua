@@ -6,6 +6,7 @@ import ConAgua.Arena.CoreWalks
 import ConAgua.Arena.WhnfM2CRefine
 import ConAgua.Arena.InferFieldSort
 import ConAgua.Arena.InferFieldSortNat
+import ConAgua.Arena.WhnfIotaRecRefine
 
 /-!
 # The knot tied (lane `defeq`)
@@ -75,6 +76,7 @@ structure KnotAllProg (p : Prog) : Prop where
   rc : p.lookup "reserved_contains_w" = some reservedContainsL
   fsz : FieldSortZeroProg p
   natPred : NatPredProg p
+  lvc : LvlCacheProg p
 
 /-- **Every assumption the knot still makes.** -/
 structure KnotCallees (p : Prog) : Prop where
@@ -88,7 +90,6 @@ structure KnotCallees (p : Prog) : Prop where
   /-- Lane `whnf`'s `proofIrrel_refines` rests on `CoreS.lvl_den` (`proofIrrelOK_of`). -/
   proofIrrel : ProofIrrelOK p
   towerSlots : TowerSlotsAllOK p
-  lvlsEqC : LvlsEqCH p
   strLitSupported : StrLitSupportedOK p
   strLitCtor : StrLitCtorOK p
   supKeep : ∀ fe, SupKeep fe
@@ -116,6 +117,16 @@ theorem reservedContainsOK_of (p : Prog) (hp : p.lookup "reserved_contains_w" = 
   obtain ⟨rfl, -⟩ := Prod.mk.inj (Except.ok.inj hl)
   exact coreRef_pure hS (reservedContainsT_run hS.pins _) (by rw [hcont]; rfl) hres
 
+/-- `LvlsEqCH` from lane `whnf`'s `lvlsEqC_refines` (fuel below two: no run). -/
+theorem lvlsEqCH_of (p : Prog) (hp : LvlCacheProg p) : LvlsEqCH p := by
+  intro n s₀ a₀ dn vis fe M eb us vs hS hu hv ⟨lu, hlu⟩ ⟨lv, hlv⟩
+  rcases Nat.lt_or_ge n 2 with h | h
+  · apply CoreSpec.of_call
+    intro r m' hc
+    rw [lvlsEqC_small p hp.cs n h] at hc; cases hc
+  · obtain ⟨k, rfl⟩ : ∃ k, n = k + 2 := ⟨n - 2, by omega⟩
+    exact lvlsEqC_refines p hp k s₀ a₀ dn vis fe M eb hS us vs hu hv lu lv hlu hlv
+
 /-- `BStkCap` is `CoreS.bstk` (lane `whnf2`'s landing 1). -/
 theorem bstkCap_of : BStkCap := fun _ _ _ _ _ _ _ hS => hS.bstk
 
@@ -137,7 +148,7 @@ include hq hc in
 theorem KnotCallees.stuck : StuckCallees p :=
   ⟨hc.defeq hq, hc.proofIrrel, hq.walks.inst1OK, defeqLstOK_of p hq.lst,
     reservedContainsOK_of p hq.rc, hc.towerSlots,
-    hc.lvlsEqC, hc.strLitSupported, hc.strLitCtor, hc.supKeep,
+    lvlsEqCH_of p hq.lvc, hc.den, hc.strLitSupported, hc.strLitCtor, hc.supKeep,
     lazyDeltaStepH_of p hq.body.lazy (hc.lazy hq), hc.reduceProjCore⟩
 
 include hq hc in

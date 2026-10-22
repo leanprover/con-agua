@@ -302,7 +302,9 @@ theorem stuckRest_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc :
     · rw [if_pos e] at hW
       rw [if_pos (by rw [e])]
       obtain ⟨r₁, m₁, hc1, hW1⟩ := callW_cases rfl hW
-      have h₁ := CoreSpec.of_callW (hc.lvlsEqC n s a₀ dn vis fe M eb a2 b2 hS hw2 hw2') hc1
+      have h₁ := CoreSpec.of_callW (hc.lvlsEqC n s a₀ dn vis fe M eb a2 b2 hS hw2 hw2'
+        (by rw [hd2]; exact (hc.den _ _ _ _ _ _ _ hS).constLs _ _ _ hva)
+        (by rw [hd2']; exact (hc.den _ _ _ _ _ _ _ hS).constLs _ _ _ hvb)) hc1
       refine coreRef_bind h₁ (fun M₁ hS₁ => ?_)
       simp only [dsLv] at hW1
       by_cases z0 : r₁.headD 0 = 0
