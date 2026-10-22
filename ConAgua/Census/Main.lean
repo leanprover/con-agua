@@ -15,7 +15,8 @@ theorem. Prints tab-separated lines for the Python report:
     T   name  module  startLine  endLine  kind      a target (kind: def | partial)
     E   from  to                                    target `from` calls target `to`
     X   name  module  why                           a reached def that is not a target (verbose)
-    L   kind  decl  target  label  module  status   a link (status: ok | sorry | axioms:a,b | n/a)
+    L   kind  decl  target  label  module  status   a link (status: ok | sorry | local:a,b |
+                                                    axioms:a,b | n/a)
 
 What is reached: the VALUE of a definition (not its type), through definitions only (theorems,
 types and proofs are not walked into), plus `@[implemented_by]` of an opaque (`partial def`).
@@ -174,8 +175,53 @@ def kindStr : LinkKind → String
 
 instance : MonadEnv (StateM Environment) := ⟨get, modify⟩
 
+/-- The owner of an auxiliary declaration (`proof_N`, `match_N`, `eq_N`, `_unary`, ...): the
+declaration it was generated for. Other constants are their own owner. -/
+partial def owner (env : Environment) (c : Name) : Name :=
+  match c with
+  | .str p s =>
+    if (s.startsWith "proof_" || s.startsWith "match_" || s.startsWith "eq_" || s.startsWith "_" ||
+        c.hasMacroScopes) && env.contains p then owner env p
+    else c
+  | _ => c
+
+/-- Library constants are assumed free of `sorryAx` (not walked). -/
+def isLibrary (env : Environment) (c : Name) : Bool :=
+  match env.getModuleIdxFor? c with
+  | none => false
+  | some i =>
+    let m := env.header.moduleNames[i.toNat]!
+    (`Init).isPrefixOf m || (`Std).isPrefixOf m || (`Lean).isPrefixOf m
+
+/-- The nearest sources of `sorryAx` below `c`, memoized per constant: the owners of the constants
+whose own value (not a reference) mentions `sorryAx`, found by walking references and stopping at
+the first such constant on each path. Each constant's value is scanned once
+(`Expr.getUsedConstants`), each constant is walked once. -/
+partial def sorrySources (env : Environment) (memo : IO.Ref (NameMap (Array Name))) (c : Name) :
+    IO (Array Name) := do
+  if let some r := (← memo.get).find? c then return r
+  memo.modify (·.insert c #[])  -- in progress (only inductive types and constructors loop)
+  let r ← if isLibrary env c then pure #[] else
+    match env.find? c with
+    | some (.thmInfo v) => walk v.value
+    | some (.defnInfo v) => walk v.value
+    | some (.opaqueInfo v) => walk v.value
+    | _ => pure #[]
+  memo.modify (·.insert c r)
+  return r
+where
+  walk (e : Expr) : IO (Array Name) := do
+    let used := e.getUsedConstants
+    if used.contains ``sorryAx then return #[owner env c]
+    let mut out : Array Name := #[]
+    for u in used do
+      for s in ← sorrySources env memo u do
+        unless out.contains s do out := out.push s
+    return out
+
 /-- The links of every module in `env`, with the axioms of linked theorems. -/
 def links (env : Environment) (printed : IO.Ref NameSet) : IO Unit := do
+  let memo ← IO.mkRef ({} : NameMap (Array Name))
   for i in [:env.header.moduleNames.size] do
     let m := env.header.moduleNames[i]!
     if (← printed.get).contains m then continue
@@ -193,7 +239,12 @@ def links (env : Environment) (printed : IO.Ref NameSet) : IO Unit := do
             continue
           let axs := ((collectAxioms l.decl : StateM Environment (Array Name)).run' env)
           let bad := axs.filter fun a => !(a == ``propext || a == ``Classical.choice || a == ``Quot.sound)
-          pure <| if bad.contains ``sorryAx then "sorry"
+          -- `sorry`: `sorryAx` in the theorem's own term (or its auxiliaries); `local:`
+          -- sources: only through the named constants that carry it directly
+          let srcs ← if bad.contains ``sorryAx then sorrySources env memo l.decl else pure #[]
+          pure <| if bad.contains ``sorryAx then
+              (if srcs.contains l.decl || srcs.isEmpty then "sorry"
+               else "local:" ++ ",".intercalate (srcs.toList.map toString))
             else if bad.isEmpty then "ok"
             else "axioms:" ++ ",".intercalate (bad.toList.map toString)
       IO.println s!"L\t{kindStr l.kind}\t{l.decl}\t{l.target}\t{l.label}\t{m}\t{status}"

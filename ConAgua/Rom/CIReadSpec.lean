@@ -96,8 +96,6 @@ structure RomRefs : Prop where
 
 end specs
 
-/-- **The readers refine the twin**, for a program reading a buffer that starts with `romData`.
-(Helper `decls4-rom`: `sorry` until its proofs land.) -/
-theorem romRefs_of (p : Prog) (h : RomReady p) : RomRefs p := sorry
+/- `romRefs_of` (the readers refine the twin) is in `CIReadRefs.lean`, above the proofs. -/
 
 end L.Rom

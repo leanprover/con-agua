@@ -1,4 +1,5 @@
 import ConAgua.Arena.StoreLib
+import ConAgua.Arena.SimLib
 import ConAgua.Arena.ZeroStore
 import ConAgua.Arena.LpColRel
 
@@ -174,11 +175,7 @@ theorem internZero_refines (p : Prog) (hpf : p.lookup "zero_find" = some zeroFin
     invoke p (exec p n) "intern_zero" []
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internLNode .zero) a₀ ∧
       ZeroR s'.mem (AM.st (internLNode .zero) a₀) ∧
-      AM.res (internLNode .zero) a₀ = decI (r.headD 0); ⊤⦄ := by
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun (internZero_spec p hpf hpp hp n s₀)
-  subst hs
-  exact ⟨hloc, zintern_correct s.mem a₀ hR _ _ hI⟩
+      AM.res (internLNode .zero) a₀ = decI (r.headD 0); ⊤⦄ :=
+  Sim.tripleD (internZero_spec p hpf hpp hp n s₀) (Sim.ofOkD (zintern_correct s₀.mem a₀ hR))
 
 end L.Arena

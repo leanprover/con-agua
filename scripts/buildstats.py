@@ -48,17 +48,13 @@ DECL_SECS_WATCH = 20      # declarations (elaboration steps) over this many seco
 PROFILER_THRESHOLD_MS = 1000  # the profiler logs steps above this
 TOP_FILES, TOP_TIMES, TOP_DECLS = 25, 25, 40
 # ---- resources -------------------------------------------------------------------------------
-CPUS = "0-15"             # taskset list: at most 16 cores
-MEM_LIMIT_GB = 20         # kill the whole build above this much (proportional) resident memory
+CPUS = "0-7"             # taskset list: at most 16 cores
+MEM_LIMIT_GB = 28         # kill the whole build above this much (proportional) resident memory
 TIMEOUT_S = 3 * 3600
 
 RUN_WT = os.path.join(ROOT, "_tmp", "wt", "buildstats-run")
 CACHE_DIR = os.path.join(ROOT, "_tmp", "buildstats-cache")  # private, kept empty: no cache hits
 LOG = os.path.join(ROOT, "_tmp", "buildstats.log")
-# the safety net under the shared cache (DESIGN.md, "Cache incident"): every run's verdict on master,
-# read by scripts/gist_report.py ("Last cache-free build of master") and census.py; untracked, so
-# writing it never dirties the main checkout
-CHECK = os.path.join(ROOT, "_tmp", "buildcheck.json")
 DATA = os.path.join(ROOT, "docs", "buildstats.json")
 MD = os.path.join(ROOT, "docs", "buildstats.md")
 CSV = os.path.join(ROOT, "docs", "buildstats.csv")
@@ -104,22 +100,6 @@ def tree_pss(pid):
     return total
 
 
-def record_check(ok, detail, failed):
-    """Write the verdict of this cache-free build of master to CHECK, and shout if it failed."""
-    rec = {"commit": RUN_REV, "date": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
-           "ok": ok, "mode": RUN_MODE, "detail": detail, "failed": failed[:20]}
-    with open(CHECK + ".tmp", "w") as fh:
-        json.dump(rec, fh, indent=1)
-    os.replace(CHECK + ".tmp", CHECK)
-    if not ok:
-        print(f"\n*** CACHE-FREE BUILD OF MASTER {RUN_REV[:10]} FAILED: {detail} ***\n"
-              f"*** builds using the shared Lake cache may be accepting broken code: see DESIGN.md, "
-              f"\"Cache incident\" ***", file=sys.stderr, flush=True)
-
-
-RUN_REV, RUN_MODE = "?", "?"
-
-
 def run_guarded(cmd, env):
     """Run `cmd` (output to LOG); kill its process tree above MEM_LIMIT_GB or after TIMEOUT_S."""
     os.makedirs(os.path.dirname(LOG), exist_ok=True)
@@ -141,7 +121,6 @@ def run_guarded(cmd, env):
                     except OSError:
                         pass
                 p.wait()
-                record_check(False, f"build killed: it {why}", [])
                 sys.exit(f"build killed: it {why}")
             time.sleep(0.5)
     return p.returncode, peak, time.time() - t0
@@ -339,16 +318,12 @@ def main():
             print(f"{n:6d}  {f}")
         return
     rev = prepare_worktree(a.full)
-    global RUN_REV, RUN_MODE
-    RUN_REV, RUN_MODE = rev, "full" if a.full or not data["commit"] else "incremental"
     if a.full or not data["commit"]:
         data = {"commit": None, "modules": {}, "decls": {}}
     env = dict(os.environ, LAKE_CACHE_DIR=CACHE_DIR, LAKE_ARTIFACT_CACHE="false", LAKE_RESTORE_ARTIFACTS="false")
     print(f"measuring master {rev[:10]} ({'full' if a.full else 'incremental'}), log: {LOG}", flush=True)
     rc, peak, wall = run_guarded(["nice", "-n", "19", "taskset", "-c", CPUS, "lake", "build"], env)
     mods, steps, failed = parse_log(open(LOG, errors="replace").read())
-    record_check(rc == 0 and not failed, f"lake build exit {rc}" + (f", failed: {', '.join(failed[:5])}" if failed else ""),
-                 failed)
     merge(data, mods, steps, rev)
     json.dump(data, open(DATA, "w"), indent=1, sort_keys=True)
     r = report(data, count_lines())

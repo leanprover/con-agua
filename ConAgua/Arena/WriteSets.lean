@@ -161,12 +161,7 @@ def bvbFns : List FnName := ["bvar_b", "loose_bvars_bounded_fast", "der_b"] ++ w
 theorem bvbProg_closed : closedA bvbProg walkA walkC bvbFns = true := by decide +kernel
 
 theorem bvb_closed {p : Prog} (hp : BvbProg p) : closedA p walkA walkC bvbFns = true :=
-  closedW_of_agree bvbProg_closed (by
-    simp only [bvbFns, walkFns, List.cons_append, List.nil_append, List.forall_mem_cons,
-      List.not_mem_nil, false_imp_iff, implies_true, and_true]
-    exact ⟨hp.bvb.trans rfl, hp.lbb.trans rfl, hp.derb.trans rfl, hp.bmf.trans rfl,
-      hp.bmp.trans rfl, hp.bmc.trans rfl, hp.bbgo.trans rfl, hp.bbnode.trans rfl,
-      hp.bbmemo.trans rfl⟩)
+  closedW_of_agree bvbProg_closed (hp.agree bvbFns)
 
 /-- **Every run of `bvar_b` changes only the `bvarBound` memo.** -/
 theorem bvarB_frame {p : Prog} (hp : BvbProg p) {n : Nat} {vs : List Word} {m : Mem}
@@ -199,20 +194,9 @@ def absWalkFns : List FnName :=
   ["ab_find", "ab_put", "ab_clear", "ab_fvb", "abs_go", "ab_node", "abs_app", "abs_lam",
     "abs_forall", "abs_let", "abs_proj"] ++ frFns ++ mkFns
 
-theorem AbsProg.agree {p : Prog} (hp : AbsProg p) : ∀ f ∈ absWalkFns, p.lookup f = absProg.lookup f := by
-  simp only [absWalkFns, frFns, mkFns, List.cons_append, List.nil_append, List.forall_mem_cons,
-    List.not_mem_nil, false_imp_iff, implies_true, and_true]
-  exact ⟨hp.abf.trans rfl, hp.abp.trans rfl, hp.abc.trans rfl, hp.fvb.trans rfl, hp.go.trans rfl,
-    hp.node.trans rfl, hp.app.trans rfl, hp.lam.trans rfl, hp.fa.trans rfl, hp.le.trans rfl,
-    hp.pj.trans rfl, hp.fmf.trans rfl, hp.fmp.trans rfl, hp.fmc.trans rfl, hp.frgo.trans rfl,
-    hp.frnode.trans rfl, hp.frmemo.trans rfl, hp.base.derb.trans rfl, hp.base.mkapp.trans rfl,
-    hp.base.mklam.trans rfl, hp.base.mkfa.trans rfl, hp.base.mklet.trans rfl,
-    hp.base.mkpj.trans rfl, hp.base.bvf.trans rfl, hp.base.bvp.trans rfl, hp.base.bvi.trans rfl,
-    hp.base.appf.trans rfl, hp.base.appp.trans rfl, hp.base.appi.trans rfl,
-    hp.base.lamf.trans rfl, hp.base.lamp.trans rfl, hp.base.lami.trans rfl,
-    hp.base.faf.trans rfl, hp.base.fap.trans rfl, hp.base.fai.trans rfl, hp.base.lef.trans rfl,
-    hp.base.lep.trans rfl, hp.base.lei.trans rfl, hp.base.pjf.trans rfl, hp.base.pjp.trans rfl,
-    hp.base.pji.trans rfl⟩
+theorem AbsProg.agree {p : Prog} (hp : AbsProg p) :
+    ∀ f ∈ absWalkFns, p.lookup f = absProg.lookup f :=
+  ProgHas.agreeWith hp absProg_ok absWalkFns
 
 /-- The `abstract1` memo `ABMEMO` (49), the `fvarRange` memo, and `mkA`. -/
 def absA : List ArrId := 49 :: frA ++ mkA
@@ -235,8 +219,8 @@ theorem absEntry_frame {p : Prog} (hp : AbsProg p) (he : p.lookup "abs_entry" = 
     (h : run p n "abs_entry" vs m = .ok (rs, m')) : MemFrame absA absC m m' :=
   (run_memFrame (hp.closed he) (by decide) h).1
 
-/-- `has_fvar`, `has_fvar_fast` over `absProg`. -/
-def hasFvarProg : Prog := [("has_fvar", hasFvarL), ("has_fvar_fast", hasFvarFastL)] ++ absProg
+/-- `has_fvar`, `has_fvar_fast` over the `abstract1` walk. -/
+def hasFvarProg : Prog := [("has_fvar", hasFvarL), ("has_fvar_fast", hasFvarFastL)] ++ absWalkProg
 
 def hasFvarFns : List FnName := ["has_fvar", "has_fvar_fast", "ab_fvb", "der_b"] ++ frFns
 
@@ -244,12 +228,8 @@ theorem hasFvarProg_closed : closedA hasFvarProg frA frC hasFvarFns = true := by
 
 theorem hasFvar_closed {p : Prog} (hp : AbsProg p) (h1 : p.lookup "has_fvar" = some hasFvarL)
     (h2 : p.lookup "has_fvar_fast" = some hasFvarFastL) : closedA p frA frC hasFvarFns = true :=
-  closedW_of_agree hasFvarProg_closed (by
-    simp only [hasFvarFns, frFns, List.cons_append, List.nil_append, List.forall_mem_cons,
-      List.not_mem_nil, false_imp_iff, implies_true, and_true]
-    exact ⟨h1.trans rfl, h2.trans rfl, hp.fvb.trans rfl, hp.base.derb.trans rfl,
-      hp.fmf.trans rfl, hp.fmp.trans rfl, hp.fmc.trans rfl, hp.frgo.trans rfl, hp.frnode.trans rfl,
-      hp.frmemo.trans rfl⟩)
+  closedW_of_agree hasFvarProg_closed
+    (ProgHas.agreeWith (ProgHas.cons h1 (ProgHas.cons h2 hp)) (ProgHas.refl hasFvarProg) hasFvarFns)
 
 /-- **Every run of `has_fvar` changes only the `fvarRange` memo.** -/
 theorem hasFvar_frame {p : Prog} (hp : AbsProg p) (h1 : p.lookup "has_fvar" = some hasFvarL)
@@ -273,19 +253,11 @@ def arFns : List FnName :=
 
 theorem arProg_closed : closedA arProg absA absC arFns = true := by decide +kernel
 
-theorem absProg_arProg : ∀ f ∈ absWalkFns, absProg.lookup f = arProg.lookup f := by
-  simp only [absWalkFns, frFns, mkFns, List.cons_append, List.nil_append, List.forall_mem_cons,
-    List.not_mem_nil, false_imp_iff, implies_true, and_true]
-  repeat' apply And.intro
-  all_goals rfl
-
 theorem ArProg.closed {p : Prog} (hp : ArProg p) (he : p.lookup "ar_entry" = some arEntry) :
     closedA p absA absC arFns = true :=
-  closedW_of_agree arProg_closed (by
-    simp only [arFns, List.cons_append, List.nil_append, List.forall_mem_cons]
-    exact ⟨hp.go.trans rfl, hp.node.trans rfl, hp.app.trans rfl, hp.lam.trans rfl,
-      hp.fa.trans rfl, hp.le.trans rfl, hp.pj.trans rfl, he.trans rfl,
-      fun f hf => (hp.base.agree f hf).trans (absProg_arProg f hf)⟩)
+  closedW_of_agree arProg_closed
+    (ProgHas.agreeWith (ProgHas.append hp (ProgHas.cons he ProgHas.nil))
+      (ProgHas.refl arProg).left arFns)
 
 /-- **Every run of `ar_entry` changes only `absA` and `absC`** (the `abstract1` memo is shared). -/
 theorem arEntry_frame {p : Prog} (hp : ArProg p) (he : p.lookup "ar_entry" = some arEntry)
@@ -311,21 +283,9 @@ theorem instListProg_closed : closedA instListProg instListA instListC instListF
 
 theorem InstListProg.closed {p : Prog} (hp : InstListProg p)
     (he : p.lookup "inst_list" = some instListL) : closedA p instListA instListC instListFns = true :=
-  closedW_of_agree instListProg_closed (by
-    simp only [instListFns, mkFns, List.cons_append, List.nil_append, List.forall_mem_cons,
-      List.not_mem_nil, false_imp_iff, implies_true, and_true]
-    exact ⟨hp.ilf.trans rfl, hp.ilp.trans rfl, hp.ilc.trans rfl, hp.go.trans rfl,
-      hp.app.trans rfl, hp.lam.trans rfl, hp.fa.trans rfl, hp.le.trans rfl, hp.pj.trans rfl,
-      hp.bv.trans rfl, hp.ggo.trans rfl, hp.gapp.trans rfl, hp.glam.trans rfl, hp.gfa.trans rfl,
-      hp.gle.trans rfl, hp.gpj.trans rfl, he.trans rfl, hp.base.derb.trans rfl,
-      hp.base.mkapp.trans rfl, hp.base.mklam.trans rfl, hp.base.mkfa.trans rfl,
-      hp.base.mklet.trans rfl, hp.base.mkpj.trans rfl, hp.base.bvf.trans rfl,
-      hp.base.bvp.trans rfl, hp.base.bvi.trans rfl, hp.base.appf.trans rfl,
-      hp.base.appp.trans rfl, hp.base.appi.trans rfl, hp.base.lamf.trans rfl,
-      hp.base.lamp.trans rfl, hp.base.lami.trans rfl, hp.base.faf.trans rfl,
-      hp.base.fap.trans rfl, hp.base.fai.trans rfl, hp.base.lef.trans rfl,
-      hp.base.lep.trans rfl, hp.base.lei.trans rfl, hp.base.pjf.trans rfl,
-      hp.base.pjp.trans rfl, hp.base.pji.trans rfl⟩)
+  closedW_of_agree instListProg_closed
+    (ProgHas.agreeWith (ProgHas.append hp (ProgHas.cons he ProgHas.nil))
+      (ProgHas.refl instListProg) instListFns)
 
 /-- **Every run of `inst_list` changes only `instListA` and `instListC`.** -/
 theorem instList_frame {p : Prog} (hp : InstListProg p) (he : p.lookup "inst_list" = some instListL)

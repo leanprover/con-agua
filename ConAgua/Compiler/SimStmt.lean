@@ -113,7 +113,7 @@ structure Conts [Host] (G : Layout) (ctx : Ctx) (F : Nat) (d : MachineData) (R :
 counter. -/
 def SimS [Host] (p : Prog) (G : Layout) (run : Stmt → St → Except Err (Sig × St)) (P : Nat → Prop)
     (s : Stmt) : Prop :=
-  ∀ (ctx : Ctx) (F : Nat) (path : String) (k : Nat), ctx.tab = G.tab → 8 * F + 8 < maxOff →
+  ∀ (ctx : Ctx) (F : Nat) (path : Path) (k : Nat), ctx.tab = G.tab → 8 * F + 8 < maxOff →
     Code (compileS ctx path s) k → Stmt.wf p ctx.nl G.tab s = true → ctx.nl + tempsS s ≤ F →
     ∀ (σ : St) (d : MachineData) (Q : MachineState → Prop), Inv G ctx.nl F σ d → P d.regs.r14.toNat →
     Conts G ctx F d (run s σ) (k + (compileS ctx path s).length) Q → Ev Q d (at_ k)
