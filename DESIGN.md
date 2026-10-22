@@ -4366,8 +4366,9 @@ be asymptotically slower. con-ron at `_tmp/ref/con-ron` origin/HEAD (`proof/ConR
   writing the stack slice after the fuel-chase loop in one function: `finish` did not close the
   two-stage split; the word models `gaaLoopW`/`gaaFillW` are there).
 * `WhnfCore.lean`: `coreCallees_stub` (`inst1` at `coreWalkFuel`, `find_proj`, `fire_ok`,
-  `iota_rec_at`, and `ErecKept`: `find_proj`/`fire_ok` leave the record pool alone) and the spec
-  of `whnf_app` (a sub-lane on it; `beta_peel` is proved, `WhnfCoreApp.lean`).
+  `iota_rec_at`, and `ErecKept`: `find_proj`/`fire_ok` leave the record pool alone). `whnf_app`
+  and `beta_peel` are proved (`WhnfCoreApp.lean`, sub-lanes: the loop as named blocks, one small
+  spec each, fuel induction).
 * `WhnfBase.lean` `supKeep_twin`: `strLitSupported` keeps every stored node's view (twin-side
   store monotonicity, true, unproved).
 * `WhnfCoreProj.lean`: `reduceProjCore_refines'` (a sub-lane on it; the L function is split into
@@ -4831,6 +4832,52 @@ Next, in order (designs settled, not written):
   (`closedW` over a concrete `declProg`). `check_value_group` likewise.
 * Stale: `installStep`, `installDeclStep`, `checkPending(List)` wait for lane `whnf`'s `CoreR`;
   `checkDecl`/`checkShapelessFormers` are lane `induct`'s L code. Not reviewed (census paused).
+
+### The ROM interner, complete (`RomLevels`, `RomExpr`, `RomExprRef`, `RomItems`, `RomCI`, `Prelude`)
+
+* **Level lists** (`rom_levels` refines `internLevels`, `rom_lvls_go` refines `internLevelList`):
+  the handles go to a stack `RSTK` (138, top `CTL[131]`, a ROM-interner scratch) because a
+  parameter's name writes the pool between two levels; then `stk_pool` copies them to the pool
+  top and `intern_ls` interns the slice.
+* **Expressions with the twin's memo mirrored exactly** (`rom_expr` refines `internExprGo`): the
+  encoder `encExprM seen` threads the list of compound subterms the twin's `EMemo` holds and emits
+  a back reference (tag `9`, index in `seen`) exactly where the memo hits; L keeps the handles in
+  `RMEMO` (139, count `CTL[132]`). `MemoR` (count = `seen.length`, `RMEMO[k]` is `m[seen[k]]`,
+  every key in `seen`) and `encExprM_seen` (the encoder adds only subterms, so a node is never in
+  its own children's `seen`) are the whole argument. No tree comparison in L, no kernel evaluation.
+* **Item streams** (`rom_items` refines `runItems`): every constant interner's store effect is a
+  sequence of primitive interns (name, level, level list, expression, memo reset), so the ROM holds
+  `encItems` of the twin's items and one L function runs any of them. `RomCI.lean`: `Sim x m is
+  proj` (the twin's `x` runs to the state `runItems m is` reaches, `proj` of its result is the
+  memo), compositional (`Sim.bind`), proved for `internNameList`, `internLevelList`,
+  `internExprList`, `internCV`, `internCaps`, `internFire`, `internRule(s)`, `internCI`,
+  `internCIList`; `SimZ` for fresh-memo blocks; `simZ_internAllPins`. The interned *values*
+  (`IConstantInfo`s, pin variants) are not built: their consumers will read `EREC` records.
+* **`intern_all_pins` refines `internAllPins`' store effect** (`refines_part … "the store effect"`),
+  from `ArenaD` at a filled pin table (the pin reads in the walk need it; `PinsReadyP`, kept by
+  every intern: `keeps_runItems` on `cp`).
+* **The program's ROM** (`Prelude.lean`): `romData` = the pin names, then the walk's items
+  (9542 bytes); `romData_len`, `allPins_fits`, `allPins_noProj` by `decide +kernel` (seconds).
+  `internReservedPins_rom`, `internAllPins_rom`: the two startup stages for the program's ROM.
+  **The ROM carries no `Nat`-operation pin variant** (`romPins = []`): the final theorem holds at
+  every pin list, so this costs completeness (pinned `Nat.div`-family definitions are declined),
+  never soundness. A real variant (con-leche's `natOpPinSets`, ~650 KB of proof terms per dump)
+  needs a ROM loader that does not evaluate the data in the kernel.
+* Finding: chained callee posts of the form `s' = s₀` (whole state) made `finish` take ~80 s and
+  its proof term overflow the kernel's stack ("deep recursion"); `LocEq s' s₀ ∧ s'.mem = s₀.mem`
+  is instant. Also a function with many arms is better split (`rom_expr` → `rom_ex_leaf`,
+  `rom_ex_ref`, `rom_ex_one`, `rom_ex_two`, mutual by fuel, one step lemma each).
+
+### Phase A's step and phase B's check in L (`DeclStep.lean`)
+
+`install_step_go`, `check_decl` (an inductive block, kind `6`, is copied from the front's `DIND`
+into `EREC` and checked by lane `induct`'s `check_ind_decl`; every other kind goes to the stub
+`check_decl_const`), `install_header`, `install_value_guards`, `erec_ci`/`erec_vg` (records from
+the front's), `check_value_group`, on lane `induct`'s conventions (`IW`, `EREC`, the view word, the
+stub names of `IndStubs.lean`); `declStepProg_wf` (`Prog.wf` with lane `induct`'s whole stage).
+The two Checker stubs are gone; their specs stay `sorry` until the callees' specs are in. To
+prove them: `LoopR` gets `IWOK`, and the frame on `PEND`/`DECL`/`DLP` comes from the text
+(`closedW` over `declStepProg`).
 
 ### `sorry`s
 
