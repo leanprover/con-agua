@@ -354,7 +354,114 @@ theorem validateW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st :
           ((u2.trans (l2.trans v2)).keep _ (by omega) (by omega))]
       rw [hnn, htt, ← Nat.add_assoc]
       exact w2
-  sorry
+  -- the type records' first constructor count
+  have hR4 : rdW (m₅.arr64 IFR) (to + 4) = wd m IFR (to.toNat + 4) := by
+    rw [wd_eq, widx2 _ _ (by simp; omega)]; simp only [wd, e15.ifr]; rfl
+  have hc0 : ∀ h0 : 0 < tys.length, (wd m IFR (to.toNat + 4)).toNat = tys[0].ctors.length := fun h0 => by
+    have := (hTy.2.2 0 h0).2.1; simpa using this
+  have hLS0 : ∀ hd, LS = [[hd]] → tys.length = 1 ∧ ∃ h0 : 0 < tys.length, tys[0].ctors.length = 1 := by
+    intro hd hL
+    have h1 : tys.length = 1 := by rw [← hLSl, hL]; rfl
+    refine ⟨h1, by omega, ?_⟩
+    have := congrArg (fun l => l[0]?) l9
+    rw [hL] at this
+    simp only [List.map_cons, List.map_nil, List.getElem?_cons_zero, List.length_cons, List.length_nil,
+      List.getElem?_map, List.getElem?_eq_getElem (show 0 < tys.length by omega), Option.map_some,
+      Option.some.injEq] at this
+    rw [← this]
+  -- the first ordered constructor's pointer
+  have hfirst : ∀ (h0 : 0 < tys.length) (hc : 0 < cntF m₄ to 0), ∃ kk, ∃ hk : kk < cts.length,
+      wd m₅ IFL oo.toNat = co + 10 * UInt64.ofNat kk ∧
+      ∀ hp : 0 < (ordList m₅ oo.toNat co.toNat cts cts.length).length,
+        (ordList m₅ oo.toNat co.toNat cts cts.length)[0] = cts[kk] := by
+    intro h0 hc
+    obtain ⟨kk, w1, w2⟩ := o5 0 (by omega) 0 hc
+    simp only [show psum m₄ to 0 = 0 from rfl, Nat.add_zero] at w1
+    refine ⟨kk, w2.1, w1, fun hp => ?_⟩
+    rw [ordList_get, Nat.add_zero, ptr_rec cts co kk w2.1 hco _ w1]
+  -- the facts
+  have hV : VFacts st a tys cts rcs (islice m₁ tyn.toNat tys.length) (islice m₂ tyt.toNat tys.length) LS
+      (islice m₄ cno.toNat cts.length) fuel.toNat np.toNat (ordList m₅ oo.toNat co.toNat cts cts.length)
+      (keOf ke) := by
+    refine ⟨?_, np1, np2, by simpa using t1, by simpa using u1, l1, by simpa using v1, hnd, hflen,
+      hfuel.symm, islice_length _ _ _, islice_length _ _ _, hLSl, ordList_length _ _ _ _ _, hordf,
+      ?_, ?_, hrecs⟩
+    · rw [List.any_eq_false]
+      intro x hx
+      obtain ⟨k, hk, rfl⟩ := List.getElem_of_mem hx
+      simp [hu k hk (Nat.zero_le _)]
+    · intro hnot
+      by_cases hc : tn = 1 ∧ rdW (m₅.arr64 IFR) (to + 4) = 1
+      · exfalso; apply hnot
+        have h1 : tys.length = 1 := by rw [← hTn, hc.1]; rfl
+        refine ⟨by rw [islice_length]; exact h1, ?_⟩
+        rw [l9]
+        cases htys : tys with
+        | nil => rw [htys] at h1; simp at h1
+        | cons t ts =>
+          cases ts with
+          | cons _ _ => rw [htys] at h1; simp at h1
+          | nil =>
+            have := hc0 (by omega)
+            rw [← hR4, hc.2] at this
+            simp only [htys, List.getElem_cons_zero] at this
+            simp [← this]
+      · have := k2 (by
+          rcases Classical.not_and_iff_not_or_not.mp hc with h | h
+          · exact .inl h
+          · exact .inr h)
+        rw [this]; rfl
+    · intro ty hd c hTT hLS hord
+      obtain ⟨h1, h0, hlen1⟩ := hLS0 hd hLS
+      have htn : tn = 1 := UInt64.toNat_inj.mp (by rw [hTn, h1]; rfl)
+      have h4 : rdW (m₅.arr64 IFR) (to + 4) = 1 := by
+        rw [hR4]; apply UInt64.toNat_inj.mp; rw [hc0 h0, hlen1]; rfl
+      obtain ⟨r, v, hr, hv, hn, hs⟩ := k3 htn h4
+      have hty : ty = decE (rdW (m₅.arr64 IFL) tyt) := by
+        have := congrArg (fun l => l[0]?) hTT
+        simp only [List.getElem?_cons_zero, List.getElem?_eq_getElem (show 0 < (islice (k := .expr) m₂ tyt.toNat tys.length).length by rw [islice_length]; omega),
+          Option.some.injEq, islice_get, Nat.add_zero] at this
+        rw [← this, decE_eq, wd_eq, (l2.trans (v2.trans o2)).keep _ (by omega) (by omega)]
+      obtain ⟨kk, hk, hw, hget⟩ := hfirst h0 (by rw [hcnt 0 h0, hlen1]; decide)
+      have hc' : c = cts[kk] := by
+        have := hget (by rw [hord]; exact Nat.zero_lt_one)
+        simp only [hord, List.getElem_cons_zero] at this
+        exact this
+      refine ⟨r, v, by rw [hty]; exact hr, hv, fun hns => by rw [hn hns]; rfl, fun s hvs => ?_⟩
+      obtain ⟨L, hL, hke'⟩ := hs s hvs
+      refine ⟨L, hL, ?_⟩
+      have hkw : (UInt64.ofNat kk).toNat = kk :=
+        UInt64.toNat_ofNat_of_lt' (by simp only [UInt64.size]; omega)
+      have hnf : rdW (m₅.arr64 IFR) (rdW (m₅.arr64 IFL) oo + 4) = wd m IFR (co.toNat + 10 * kk + 4) := by
+        rw [wd_eq (A := IFL), hw, wd_eq, widx _ _ _ _ (by rw [hkw]; simp; omega), hkw]
+        simp only [wd, e15.ifr]; rfl
+      obtain ⟨-, c4, -⟩ := hCt.2.2 kk hk
+      rw [hnf] at hke'
+      rw [hke', hc']
+      by_cases hz : cts[kk].numFields = 0
+      · have hz' : wd m IFR (co.toNat + 10 * kk + 4) = 0 := UInt64.toNat_inj.mp (by rw [c4.1, hz]; rfl)
+        by_cases he : L.isEquiv .zero = some true
+        · simp [hz', he, hz, keOf]
+        · simp [hz', he, hz, keOf]
+      · have hz' : wd m IFR (co.toNat + 10 * kk + 4) ≠ 0 := fun e => hz (by rw [← c4.1, e]; rfl)
+        simp [hz', hz, keOf]
+  have hsz5 : (m'.arr64 IFL).size = (m₅.arr64 IFL).size := k1.2.2.1 IFL
+  have htop56 : topN m' IFL = topN m₅ IFL := by simp only [topN, wd, hIFL56]
+  refine ⟨_, validateIndD_ok hV, e16, ⟨by rw [hsz5]; exact o3.1, by rw [hsz5, htop56]; exact o3.2⟩,
+    ordList_length _ _ _ _ _, by omega, by rw [htop56, o4, o1]; omega, fun p hp => ?_, np3⟩
+  rw [ordList_length] at hp
+  obtain ⟨i, c, hi, hc, hpe⟩ := flat_pos LS p (by rw [hflen]; exact hp)
+  have hi' : i < tys.length := by omega
+  have hcn' : c < cntF m₄ to i := by
+    rw [hcnt i hi']
+    have := congrArg (fun l => l[i]?) l9
+    simp only [List.getElem?_map, List.getElem?_eq_getElem hi, List.getElem?_eq_getElem hi',
+      Option.map_some, Option.some.injEq] at this
+    rw [← this]; exact hc
+  obtain ⟨kk, w1, w2⟩ := o5 i (by omega) c hcn'
+  rw [hps4 i (by omega), Nat.add_assoc, hpe] at w1
+  refine ⟨kk, w2.1, by simp only [wd, hIFL56] at w1 ⊢; exact w1, ?_⟩
+  rw [ordList_get, ptr_rec cts co kk w2.1 hco _ w1]
 
 
 end L.Front.Ind
