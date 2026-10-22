@@ -2,6 +2,7 @@ import ConAgua.Arena.WhnfIota
 import ConAgua.Arena.PinsNatOp
 import ConAgua.Arena.WhnfCoreRefine
 import ConAgua.Arena.WhnfCoreProj
+import ConAgua.Arena.RomExprRef
 
 /-!
 # ι-reduction: proofs of `WhnfIota.lean`'s specs (primed)
@@ -379,6 +380,10 @@ structure IotaProg' (p : Prog) : Prop extends IotaProg p where
   rrf : p.lookup "rr_find" = some (memoFindG rrSch)
   rrp : p.lookup "rr_put" = some (memoPutG rrSch)
   pinat : p.lookup "pin_at" = some pinAtL
+  projf : p.lookup "proj_find" = some projFind
+  projp : p.lookup "proj_push" = some projPush
+  proji : p.lookup "intern_proj" = some internProj
+  mkproj : p.lookup "mk_proj" = some mkProj
 
 /-! ## `is_ctor_app(vis, e)` -/
 
@@ -3207,5 +3212,83 @@ theorem litMajorToCtor_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees 
     · rw [← hm]; exact hca
     · rw [hres]; simp only [decH]; rw [hr1]
     · unfold ResH HW at hr₁ ⊢; rw [hr1]; exact hr₁
+
+/-! ## `mk_proj` as a run under `CoreS` -/
+
+theorem pjinternW_hw (m : Mem) (a : AState) (hR : ProjR m a) (n u e : Word) (w : Word) (m' : Mem)
+    (hI : pjinternW m n u e = some (w, m')) : w.toNat < 2 ^ 32 := by
+  rw [pjinternW_eq] at hI
+  exact internM_hw projSch PJRecRel pjhash projSch_wf m _ _ _ hR (pjMt m n u e) _ _ _ _
+    (probe_homeG projSch m 0 _ _ (pjprobeW_arm m n u e 0) _)
+    (probe_homeG projSch m 1 _ _ (pjprobeW_arm m n u e 1) _) _ (pjpushOK_room m) _ _ w m' hI
+
+theorem mkProjW_hw (m : Mem) (a : AState) (hA : ArenaD m a) (n i e r : Word) (m' : Mem)
+    (hI : mkProjW m n i e = some (r, m')) : r.toNat < 2 ^ 32 := by
+  unfold mkProjW at hI
+  split at hI
+  · cases hI
+  cases hI₁ : pjinternW m n i e with
+  | none => simp [hI₁, mkK] at hI
+  | some p =>
+  obtain ⟨r₁, m₁⟩ := p
+  simp only [hI₁, mkK_some] at hI
+  cases hP : derPutW PJDER 32 m₁ (cnt2 m 32) r₁ (packBF (derBW m e) (derFW m e)) with
+  | none => simp [hP] at hI
+  | some m₂ =>
+  simp only [hP, Option.some.injEq, Prod.mk.injEq] at hI
+  obtain ⟨rfl, rfl⟩ := hI
+  exact pjinternW_hw m a hA.1.proj n i e _ m₁ hI₁
+
+theorem keeps_cpl_internProj (n : NIdx) (i : Nat) (e : EIdx) :
+    Keeps cpl (internE (.proj n i e)) := by
+  simp only [internE]; exact keeps_cpl_internNodeE _
+
+/-- **`mk_proj` as a run.** -/
+theorem callW_mkProj (p : Prog) (hp : IotaProg' p) (n : Nat) (s₀ : St) (a₀ : AState)
+    (hD : ArenaD s₀.mem a₀) (nm i e : Word) (r : List Word) (m' : Mem)
+    (h : callW p n "mk_proj" [nm, i, e] s₀.mem = some (r, m')) :
+    AM.ok (internE (.proj (decI nm) i.toNat (decE e))) a₀ ∧
+    ArenaD m' (AM.st (internE (.proj (decI nm) i.toNat (decE e))) a₀) ∧
+    AM.res (internE (.proj (decI nm) i.toNat (decE e))) a₀ = decE (r.headD 0) ∧
+    MemFrame L.Rom.StoreA L.Rom.StoreC s₀.mem m' ∧ HW (r.headD 0) := by
+  obtain ⟨s', rfl, hm⟩ := triple_of_callW (mkProj_spec p hp.spine.derb hp.projf hp.projp hp.proji
+    hp.mkproj n s₀ nm i e) h
+  obtain ⟨-, hm⟩ := hm
+  obtain ⟨h1, h2, h3⟩ := mkProj_ok s₀.mem a₀ hD nm i e _ _ hm
+  exact ⟨h1, h2, h3, L.Rom.mkProjW_store hm, mkProjW_hw _ a₀ hD nm i e _ _ hm⟩
+
+/-- **`CoreS` across a `proj` interning step.** -/
+theorem CoreS.of_proj {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) (hD : ArenaD m' a')
+    (hcpl : cpl a' = cpl a) (hf : MemFrame L.Rom.StoreA L.Rom.StoreC m m') :
+    CoreS dn m' a' vis fe M eb :=
+  hS.arena_frame hD hcpl hf
+    (fun b hb => by
+      have : b < 64 := by unfold L.Rom.StoreA at hb; exact List.mem_range.mp hb
+      exact Or.inl (Nat.lt_of_lt_of_le this (by decide)))
+    (by unfold L.Rom.StoreA; simp [PINS])
+    (fun b hb => by
+      have : b < 64 := by unfold L.Rom.StoreA at hb; exact List.mem_range.mp hb
+      exact Or.inl (Nat.lt_of_lt_of_le this (by decide)))
+    (fun x hx => by
+      obtain ⟨k, hk, rfl⟩ := List.mem_map.mp (show x ∈ (List.range 64).map UInt64.ofNat by unfold L.Rom.StoreC at hx; exact hx)
+      have := List.mem_range.mp hk
+      left; simp [UInt64.toNat_ofNat]; omega)
+    (fun x hx => by
+      obtain ⟨k, hk, rfl⟩ := List.mem_map.mp (show x ∈ (List.range 64).map UInt64.ofNat by unfold L.Rom.StoreC at hx; exact hx)
+      have := List.mem_range.mp hk
+      left; simp [UInt64.toNat_ofNat]; omega)
+
+theorem StackKept.of_store {m m' : Mem} (hf : MemFrame L.Rom.StoreA L.Rom.StoreC m m') : StackKept m m' := by
+  have hspn : m'.arr64 SPN = m.arr64 SPN :=
+    hf.1 SPN (fun h => by have : SPN < 64 := by unfold L.Rom.StoreA at h; exact List.mem_range.mp h
+                          simp [SPN] at this) (by decide)
+  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 :=
+    hf.2.1 136 (fun h => by
+      obtain ⟨k, hk, hkk⟩ := List.mem_map.mp (show (136 : Word) ∈ (List.range 64).map UInt64.ofNat by unfold L.Rom.StoreC at h; exact h)
+      have := List.mem_range.mp hk
+      have h' := congrArg UInt64.toNat hkk
+      simp [UInt64.toNat_ofNat] at h'; omega)
+  exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
 
 end L.Arena
