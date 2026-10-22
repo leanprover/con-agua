@@ -193,6 +193,15 @@ def towerSlotsAllL : FunDecl := lfn (vis, T, nF) locals (j, flag, q) {
   return 1
 }
 
+/-- The projection walk of `eta_projs` (a named block, for the proofs). -/
+def etaProjsLoop : Stmt := lblk (T, b, nF, o, j, pr) {
+  while j < nF {
+    pr := call mk_proj(T, j, b);
+    SPN.u64[o + j] := pr;
+    j += 1
+  }
+}
+
 /-- con-leche: `CoreDefs.lean:730-735`/`Cached/CoreC.lean:310-317` `etaProjs`/`projNodesGo` — the
 `.proj T j b` spine, `j = 0, …, nF - 1`, pushed in order. -/
 -- con-ron: ConRon/Arena/Core.lean:1444-1449 ConRon.Arena.etaProjs
@@ -203,11 +212,7 @@ def etaProjsL : FunDecl := lfn (T, b, nF) locals (o, j, pr) {
   if len(SPN.u64) < o { abort };
   if len(SPN.u64) - o < nF { abort };
   j := 0;
-  while j < nF {
-    pr := call mk_proj(T, j, b);
-    SPN.u64[o + j] := pr;
-    j += 1
-  };
+  ⟪etaProjsLoop⟫;
   CTL.u64[136] := o + nF;
   return (o, nF)
 }

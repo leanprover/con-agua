@@ -3291,4 +3291,309 @@ theorem StackKept.of_store {m m' : Mem} (hf : MemFrame L.Rom.StoreA L.Rom.StoreC
       simp [UInt64.toNat_ofNat] at h'; omega)
   exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
 
+/-! ## `eta_projs(T, b, nF)` -/
+
+/-- Model of the `eta_projs` loop at L fuel `k`: the memory after the stores. -/
+def etpW (p : Prog) (T b nF o : Word) : Nat → Mem → Word → Option Mem
+  | 0, _, _ => none
+  | k + 1, m, j =>
+    if j < nF then
+      match callW p k "mk_proj" [T, j, b] m with
+      | none => none
+      | some (r, m₁) =>
+        if (o + j).toNat < (m₁.arr64 SPN).size then
+          etpW p T b nF o k (m₁.set64 SPN (o + j) (r.headD 0)) (j + 1)
+        else none
+    else some m
+
+theorem etpW_end (p : Prog) (T b nF o : Word) (k : Nat) (m : Mem) (j : Word) (h : ¬ j < nF) :
+    etpW p T b nF o (k + 1) m j = some m := by
+  simp only [etpW, h, ↓reduceIte]
+
+theorem etpW_cont (p : Prog) (T b nF o : Word) (k : Nat) (m m₁ : Mem) (j : Word) (r : List Word)
+    (h : j < nF) (hc : callW p k "mk_proj" [T, j, b] m = some (r, m₁))
+    (hg : (o + j).toNat < (m₁.arr64 SPN).size) :
+    etpW p T b nF o (k + 1) m j = etpW p T b nF o k (m₁.set64 SPN (o + j) (r.headD 0)) (j + 1) := by
+  simp only [etpW, h, ↓reduceIte, hc, hg]
+
+theorem etpW_bad (p : Prog) (T b nF o : Word) (k : Nat) (m m₁ : Mem) (j : Word) (r : List Word)
+    (h : j < nF) (hc : callW p k "mk_proj" [T, j, b] m = some (r, m₁))
+    (hg : ¬ (o + j).toNat < (m₁.arr64 SPN).size) :
+    etpW p T b nF o (k + 1) m j = none := by
+  simp only [etpW, h, ↓reduceIte, hc, hg]
+
+theorem etaProjsLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    exec p k etaProjsLoop
+    ⦃fun r s' => r = .normal ∧ s'.loc 2 = s₀.loc 2 ∧ s'.loc 3 = s₀.loc 3 ∧
+      etpW p (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) k s₀.mem (s₀.loc 4) = some s'.mem; ⊤⦄ := by
+  induction k generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ k ih =>
+    rw [exec, step_while (w := etaProjsLoop) rfl]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        callW_spec p k "mk_proj", ih] <;>
+      finish (gen := 20) [etpW_end, etpW_cont, etpW_bad]
+
+theorem etaProjsLoop_step_spec (p : Prog) (k : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    step p (exec p k) etaProjsLoop
+    ⦃fun r s' => r = .normal ∧ s'.loc 2 = s₀.loc 2 ∧ s'.loc 3 = s₀.loc 3 ∧
+      etpW p (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (k + 1) s₀.mem (s₀.loc 4) =
+        some s'.mem; ⊤⦄ :=
+  Triple.step_exec (etaProjsLoop_spec p (k + 1) s₀)
+
+/-- Model of `eta_projs`. -/
+def etpTop (p : Prog) (k : Nat) (m : Mem) (T b nF : Word) : Option (List Word × Mem) :=
+  if (136 : Word).toNat < (m.arr64 CTL).size then
+    if UInt64.ofNat (m.arr64 SPN).size < rdW (m.arr64 CTL) 136 then none
+    else if UInt64.ofNat (m.arr64 SPN).size - rdW (m.arr64 CTL) 136 < nF then none
+    else match etpW p T b nF (rdW (m.arr64 CTL) 136) (k + 1) m 0 with
+      | none => none
+      | some m' =>
+        if (136 : Word).toNat < (m'.arr64 CTL).size then
+          some ([rdW (m.arr64 CTL) 136, nF], m'.set64 CTL 136 (rdW (m.arr64 CTL) 136 + nF))
+        else none
+  else none
+
+theorem etaProjs_spec (p : Prog) (hp : p.lookup "eta_projs" = some etaProjsL) (k : Nat)
+    (s₀ : St) (T b nF : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p (k + 1)) "eta_projs" [T, b, nF]
+    ⦃fun r s' => LocEq s' s₀ ∧ etpTop p k s₀.mem T b nF = some ([r.headD 0, r.tail.headD 0], s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, etaProjsL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      etaProjsLoop_step_spec p k] <;>
+    finish (gen := 20) [etpTop, rdW, Mem.len64]
+
+theorem projNodesGo_nil_run (T : NIdx) (b : EIdx) (j : Nat) (a : AState) :
+    (projNodesGo T b 0 j).run a = .ok ([], a) := by
+  simp [projNodesGo]; rfl
+
+theorem projNodesGo_cons_run (T : NIdx) (b : EIdx) (n j : Nat) (a a₁ a₂ : AState) (pn : EIdx)
+    (ys : List EIdx) (h1 : (internE (.proj T j b)).run a = .ok (pn, a₁))
+    (h2 : (projNodesGo T b n (j + 1)).run a₁ = .ok (ys, a₂)) :
+    (projNodesGo T b (n + 1) j).run a = .ok (pn :: ys, a₂) := by
+  simp only [projNodesGo, StateT.run_bind, h1, except_ok_bind, h2]; rfl
+
+/-- **The `eta_projs` loop refines `projNodesGo`**, by induction on the remaining count. -/
+theorem etpW_ok (p : Prog) (hp : IotaProg' p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+    (fe : IFEnv) (eb T b nF o : Word) (hT : HW T) (hb : HW b) :
+    ∀ (K k : Nat) (m : Mem) (a : AState) (M : ModeMaps) (j : Word) (m' : Mem),
+      nF.toNat - j.toNat = K → j.toNat ≤ nF.toNat → CoreS dn m a vis fe M eb →
+      o.toNat + nF.toNat ≤ (m.arr64 SPN).size →
+      etpW p T b nF o k m j = some m' →
+      ∃ ys, AM.ok (projNodesGo (decI T) (decE b) K j.toNat) a ∧
+        CoreS dn m' (AM.st (projNodesGo (decI T) (decE b) K j.toNat) a) vis fe M eb ∧
+        AM.res (projNodesGo (decI T) (decE b) K j.toNat) a = ys ∧
+        (∀ i : Word, i < o + j → spW m' i = spW m i) ∧ (m'.arr64 SPN).size = (m.arr64 SPN).size ∧
+        spTop m' = spTop m ∧ SpineR m' (o + j) (nF - j) ys.toArray := by
+  intro K
+  induction K with
+  | zero =>
+    intro k m a M j m' hK hj hS hso hL
+    have hn : ¬ j < nF := fun h => by
+      have : j.toNat < nF.toNat := h
+      omega
+    cases k with
+    | zero => simp [etpW] at hL
+    | succ k =>
+    rw [etpW_end p T b nF o k m j hn] at hL
+    cases hL
+    obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ (projNodesGo_nil_run (decI T) (decE b) j.toNat a)
+    refine ⟨[], hok, ?_, hres, fun i _ => rfl, rfl, rfl, ?_⟩
+    · rw [hst]; exact hS
+    · have hjp : nF - j = 0 := by
+        apply UInt64.toNat_inj.mp
+        rw [UInt64.toNat_sub_of_le _ _ (by simp [UInt64.le_iff_toNat_le]; omega)]
+        simp; omega
+      rw [hjp]
+      have hlen : (o + j).toNat ≤ (m.arr64 SPN).size := by
+        have := hS.spn
+        rw [UInt64.toNat_add]; simp; omega
+      exact SpineR.nil_at m _ hlen
+  | succ K ih =>
+    intro k m a M j m' hK hj hS hso hL
+    have hlt : j < nF := by
+      have : j.toNat < nF.toNat := by omega
+      exact this
+    cases k with
+    | zero => simp [etpW] at hL
+    | succ k =>
+    have hspn := hS.spn
+    have hoj : (o + j).toNat = o.toNat + j.toNat := by
+      rw [UInt64.toNat_add]; simp; omega
+    cases hc1 : callW p k "mk_proj" [T, j, b] m with
+    | none => simp only [etpW, hlt, ↓reduceIte, hc1] at hL; cases hL
+    | some q =>
+    obtain ⟨r₁, m₁⟩ := q
+    by_cases hgn : ¬ (o + j).toNat < (m₁.arr64 SPN).size
+    · rw [etpW_bad p T b nF o k m m₁ j r₁ hlt hc1 hgn] at hL; cases hL
+    have hg := Classical.not_not.mp hgn
+    rw [etpW_cont p T b nF o k m m₁ j r₁ hlt hc1 hg] at hL
+    obtain ⟨hok1, hD1, hres1, hfr1, hw1⟩ := callW_mkProj p hp k ⟨m, Locals.init []⟩ a hS.arena T j b
+      r₁ m₁ hc1
+    have hfr1 : MemFrame L.Rom.StoreA L.Rom.StoreC m m₁ := hfr1
+    have hrun1 := AM.run_of_ok _ _ hok1
+    have hspn1 : m₁.arr64 SPN = m.arr64 SPN :=
+      hfr1.1 SPN (fun h => by
+        have : SPN < 64 := by unfold L.Rom.StoreA at h; exact List.mem_range.mp h
+        simp [SPN] at this) (by decide)
+    have hcpl := Keeps.run (keeps_cpl_internProj (decI T) j.toNat (decE b)) hrun1
+    have hS1 : CoreS dn m₁ (AM.st (internE (.proj (decI T) j.toNat (decE b))) a) vis fe M eb :=
+      hS.of_proj hD1 hcpl hfr1
+    have hsz1 : (m₁.arr64 SPN).size = (m.arr64 SPN).size := by rw [hspn1]
+    have hfrS : MemFrame [SPN] [] m₁ (m₁.set64 SPN (o + j) (r₁.headD 0)) :=
+      MemFrame.set64 m₁ SPN (by decide) _ _
+    have hS2 : CoreS dn (m₁.set64 SPN (o + j) (r₁.headD 0)) (AM.st (internE (.proj (decI T) j.toNat (decE b))) a)
+        vis fe M eb := hS1.frame_stk hfrS (fun b hb => by simpa using hb) (fun x hx => by simp at hx)
+    have hsz2 : ((m₁.set64 SPN (o + j) (r₁.headD 0)).arr64 SPN).size = (m.arr64 SPN).size := by
+      rw [size_set64, hsz1]
+    have h1 : (j + 1).toNat = j.toNat + 1 := uint64_succ_toNat nF j hlt
+    obtain ⟨ys, hok3, hS3, hres3, hbelow, hsz3, htop3, hys⟩ := ih k _ _ M (j + 1) m' (by omega)
+      (by omega) hS2 (by rw [hsz2]; exact hso) hL
+    have hrunI := AM.run_of_ok _ _ hok1
+    rw [hres1] at hrunI
+    have hrunR := AM.run_of_ok _ _ hok3
+    rw [h1] at hrunR hS3 hres3
+    rw [hres3] at hrunR
+    have hrun := projNodesGo_cons_run (decI T) (decE b) K j.toNat a _ _ _ ys hrunI hrunR
+    obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ hrun
+    have hbelow' : ∀ i : Word, i < o + j → spW m' i = spW m i := by
+      intro i hi
+      have hi' : i < o + (j + 1) := by
+        rw [UInt64.lt_iff_toNat_lt] at hi ⊢
+        have : (o + (j + 1)).toNat = o.toNat + j.toNat + 1 := by
+          rw [UInt64.toNat_add, h1]; simp; omega
+        omega
+      rw [hbelow i hi']
+      have hne : o + j ≠ i := by
+        intro h; rw [← h] at hi
+        exact absurd (UInt64.lt_iff_toNat_lt.mp hi) (Nat.lt_irrefl _)
+      rw [spW_set64_ne _ _ _ _ hne]
+      simp only [spW, hspn1]
+    refine ⟨decE (r₁.headD 0) :: ys, hokF, ?_, ?_, hbelow', ?_, ?_, ?_⟩
+    · rw [hstF]; exact hS3
+    · rw [hresF]
+    · rw [hsz3, hsz2]
+    · rw [htop3]
+      unfold spTop
+      rw [Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ SPN by decide)]
+      exact hfr1.2.1 136 (fun h => by
+        unfold L.Rom.StoreC at h
+        obtain ⟨k', hk', hkk⟩ := List.mem_map.mp h
+        have := List.mem_range.mp hk'
+        have h' := congrArg UInt64.toNat hkk
+        simp [UInt64.toNat_ofNat] at h'; omega)
+    · have e1 : nF - j = (nF - (j + 1)) + 1 := by
+        apply UInt64.toNat_inj.mp
+        rw [UInt64.toNat_add, UInt64.toNat_sub_of_le _ _ (by simp [UInt64.le_iff_toNat_le]; omega),
+          UInt64.toNat_sub_of_le _ _ (by simp [UInt64.le_iff_toNat_le]; omega), h1]
+        simp; omega
+      have e2 : o + (j + 1) = o + j + 1 := by rw [UInt64.add_assoc]
+      rw [e1]
+      rw [e2] at hys
+      have hsizeM : (m'.arr64 SPN).size = (m.arr64 SPN).size := by rw [hsz3, hsz2]
+      refine SpineR.cons_slot m' (o + j) (nF - (j + 1)) (r₁.headD 0) ys hw1 ?_ hys ?_
+        (by rw [hsizeM]; exact hspn)
+      · have := hbelow (o + j) (by
+          rw [UInt64.lt_iff_toNat_lt, e2, UInt64.toNat_add]
+          have : (o + j + 1).toNat = o.toNat + j.toNat + 1 := by
+            rw [UInt64.toNat_add]; simp; omega
+          rw [← e2]
+          rw [UInt64.toNat_add, h1]; simp; omega)
+        rw [this, spW_set64_eq _ _ _ hg]
+      · rw [hsizeM, UInt64.toNat_sub_of_le _ _ (by simp [UInt64.le_iff_toNat_le]; omega), hoj]
+        omega
+
+/-- **`eta_projs` refines `etaProjs`.** Statement change: `CoreAfterG` (the result slice is left on
+the stack: the top grows) in place of `CoreAfter`. -/
+theorem etaProjs_refines' (p : Prog) (hp : IotaProg' p) :
+    ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (MM : ModeMaps) (eb T b nF : Word), CoreS dn s₀.mem a₀ vis fe MM eb → HW T → HW b →
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "eta_projs" [T, b, nF]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (etaProjs (decI T) (decE b) nF.toNat) a₀ ∧
+      CoreAfterG dn s₀.mem s'.mem (AM.st (etaProjs (decI T) (decE b) nF.toNat) a₀) vis fe MM eb ∧
+      ∃ xs, AM.res (etaProjs (decI T) (decE b) nF.toNat) a₀ = xs ∧
+        SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄ := by
+  intro n s₀ a₀ dn vis fe MM eb T b nF hS hT hb
+  cases n with
+  | zero =>
+    apply L.M.triple_of_run
+    intro s r s' _ hrun
+    exact (invoke_zero_run _ _ _ _ _ _ hrun).elim
+  | succ n =>
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
+    (etaProjs_spec p hp.etaProjs n s₀ T b nF)
+  subst hs0
+  refine ⟨hloc, ?_⟩
+  simp only [etpTop] at hW
+  by_cases h136n : ¬ (136 : Word).toNat < (s.mem.arr64 CTL).size
+  · rw [if_neg h136n] at hW; cases hW
+  have h136 : (136 : Word).toNat < (s.mem.arr64 CTL).size := Classical.not_not.mp h136n
+  rw [if_pos h136] at hW
+  by_cases hg1 : UInt64.ofNat (s.mem.arr64 SPN).size < rdW (s.mem.arr64 CTL) 136
+  · rw [if_pos hg1] at hW; cases hW
+  rw [if_neg hg1] at hW
+  by_cases hg2 : UInt64.ofNat (s.mem.arr64 SPN).size - rdW (s.mem.arr64 CTL) 136 < nF
+  · rw [if_pos hg2] at hW; cases hW
+  rw [if_neg hg2] at hW
+  cases hm : etpW p T b nF (rdW (s.mem.arr64 CTL) 136) (n + 1) s.mem 0 with
+  | none => rw [hm] at hW; cases hW
+  | some m' =>
+  rw [hm] at hW
+  dsimp only at hW
+  by_cases hg3n : ¬ (136 : Word).toNat < (m'.arr64 CTL).size
+  · rw [if_neg hg3n] at hW; cases hW
+  have hg3 : (136 : Word).toNat < (m'.arr64 CTL).size := Classical.not_not.mp hg3n
+  rw [if_pos hg3] at hW
+  simp only [Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨hr, hmm⟩ := hW
+  have hspn := hS.spn
+  have h64 : (s.mem.arr64 SPN).size < 2 ^ 64 := by omega
+  have hsolt : (rdW (s.mem.arr64 CTL) 136).toNat ≤ (s.mem.arr64 SPN).size := by
+    have : ¬ (s.mem.arr64 SPN).size < (rdW (s.mem.arr64 CTL) 136).toNat := by
+      intro h
+      apply hg1
+      rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_ofNat_of_lt' h64]; exact h
+    omega
+  have hso : (rdW (s.mem.arr64 CTL) 136).toNat + nF.toNat ≤ (s.mem.arr64 SPN).size := by
+    have h2 : ¬ UInt64.ofNat (s.mem.arr64 SPN).size - rdW (s.mem.arr64 CTL) 136 < nF := hg2
+    rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_sub_of_le _ _ (by
+      rw [UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' h64]; exact hsolt),
+      UInt64.toNat_ofNat_of_lt' h64] at h2
+    omega
+  obtain ⟨ys, hok, hS', hres, hbelow, hsz, htop, hys⟩ := etpW_ok p hp dn vis fe eb T b nF
+    (rdW (s.mem.arr64 CTL) 136) hT hb (nF.toNat - (0 : Word).toNat) (n + 1) s.mem a₀ MM 0 m' rfl
+    (by simp) hS hso hm
+  have hr1 : r.headD 0 = rdW (s.mem.arr64 CTL) 136 := by
+    have := congrArg (fun l => l.headD 0) hr.symm; simpa using this
+  have hr2 : r.tail.headD 0 = nF := by
+    have := congrArg (fun l => l.tail.headD 0) hr.symm; simpa using this
+  have hfS : MemFrame [] [136] m' (m'.set64 CTL 136 (rdW (s.mem.arr64 CTL) 136 + nF)) :=
+    MemFrame.setCtl _ _ _
+  have hS'' := hS'.frame_stk hfS (fun b hb => by simpa using hb) (fun x hx => by simpa using hx)
+  have hoo : (rdW (s.mem.arr64 CTL) 136 + nF).toNat = (rdW (s.mem.arr64 CTL) 136).toNat + nF.toNat := by
+    rw [UInt64.toNat_add]; simp; omega
+  simp only [etaProjs]
+  refine ⟨hok, ⟨MM, ?_, KeptAll.refl _ _, ?_⟩, ys, hres, ?_⟩
+  · rw [← hmm]; simpa using hS''
+  · rw [← hmm]
+    refine ⟨?_, ?_, fun i hi => ?_⟩
+    · unfold spTop
+      rw [rdW_set64, if_pos ⟨rfl, rfl, hg3⟩, UInt64.le_iff_toNat_le, hoo]
+      omega
+    · rw [size_set64L, hsz]
+    · rw [spW_setCtl]
+      exact hbelow i (by rw [UInt64.add_zero]; exact hi)
+  · rw [← hmm, hr1, hr2]
+    have := hys.setCtl 136 (rdW (s.mem.arr64 CTL) 136 + nF)
+    simpa using this
+
 end L.Arena
