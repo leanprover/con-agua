@@ -20,7 +20,7 @@ local notation "V" => ConLeche.CheckMode.verified
 /-! ## Constants below the record top -/
 
 theorem rec2DecCV_agree {a b : Array Word} {q T : Nat} (hag : ∀ i, i < T → b[i]? = a[i]?) (hq4 : q + 4 ≤ T)
-    (hl : ∀ o l, nat? a (q + 1) = some o → nat? a (q + 2) = some l → o + l ≤ T) :
+    (hl : ∀ o l, nat? a (q + 1) = some o → nat? a (q + 2) = some l → o + l ≤ T ∨ l = 0) :
     decCV b q = decCV a q := by
   have hn : ∀ i, i < T → nat? b i = nat? a i := fun i hi => by simp only [nat?, hag i hi]
   have hh : ∀ {k : IdxKind} i, i < T → (hd? b i : Option (Idx k)) = hd? a i :=
@@ -359,7 +359,7 @@ theorem rtoW_sim (n : Nat) (m : Mem) (a : AState) (g k rc cvRi c : Word) (G : Cl
   obtain ⟨hS3, hg3, hq, htop3, hsl3, hdec3⟩ := cvNew_stage (cq := UInt64.ofNat q0) h3 hS2
     (by rw [trc]; exact hcv2) (by rw [trc]; exact hext2.1) (by rw [trc]; exact hext2.2) hgH
   rw [rtoK3_some]
-  have hext3 : CVExt m3 q.toNat := ⟨by omega, fun o l ho hl => Nat.le_trans (hsl3 o l ho hl) hg3.2.1⟩
+  have hext3 : CVExt m3 q.toNat := ⟨by omega, fun o l ho hl => (hsl3 o l ho hl).imp_left fun h => Nat.le_trans h hg3.2.1⟩
   have hqb : q.toNat + 3 < 2 ^ 64 := by
     obtain ⟨-, hE1, -, hEs, -⟩ := hS3.2
     omega
