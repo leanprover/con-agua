@@ -447,6 +447,42 @@ theorem recF_stab (t : Nat) (x : IndRecRec) (m m' : Mem) (x0 x1 : Nat) (h : RecF
   · rw [hw 10 (by decide)]; exact r10
   · rw [hw 9 (by decide)]; exact r9
 
+theorem recList_shape : IListLoop b (scanIndRecListLoop b) (scanIndRec b) := by
+  ilist_shape scanIndRecListLoop
+
+/-- The recursors of a block: a run of recursor records in `IFR`. -/
+theorem recs_link (v : USize) (m : Mem) (l : List IndRecRec) (e : USize) (r : Word × Word × Word)
+    (m' : Mem) (h : scanIndRecs b v = .ok l e) (hR : Room m)
+    (hm : listW b.data m v.toUInt64 2 = some (r, m')) :
+    r.2.2 = e.toUInt64 ∧ r.2.1.toNat = l.length ∧
+      RunR (fun t x m => RecF b m t x) IFR 11 m' r.1.toNat l ∧ Grow m m' ∧ Room m' ∧
+      r.1.toNat = topN m IFR + 1 ∧ r.1.toNat + 11 * l.length = topN m' IFR + 1 := by
+  refine (fun H => ⟨H.1, H.2.1, H.2.2.1, H.2.2.2.1, H.2.2.2.2.1, H.2.2.2.2.2.1,
+    H.2.2.2.2.2.2.1⟩) (ilistW_link b h64 hsize (scanIndRecListLoop b)
+    (scanIndRec b) (recList_shape b h64 hsize) (scanIndRecs b) (fun v l e h => by
+      unfold scanIndRecs at h; split at h
+      · rename_i h91; exact ⟨by simpa using h91, h⟩
+      · cases h) 2 IFR (.inl rfl) 11 (by decide) rfl
+    (fun m n => by simp [fldAllocW]) (fun t x m => RecF b m t x)
+    (fun t x m m' x0 x1 h1 h2 h3 hg h4 => recF_stab b t x m m' x0 x1 h1 h2 h3 hg (.inl h4))
+    (fun _ _ => True) (fun _ => trivial) (fun _ _ _ _ _ => trivial) (fun _ _ _ _ _ => trivial) ?_
+    v m l e r m' h hR hm)
+  · intro i m m₁ q x e e₂ m₂ hi h123 hS hR hal hob
+    rw [show flagsW m₁ 2 q = m₁ by simp [flagsW]] at hob
+    have hI := recInv_alloc IFR (.inl rfl) 11 _ q m m₁ hR rfl hal
+    obtain ⟨t1, ⟨t2, t3⟩, t4⟩ := item_gen b h64 hsize
+      (fun i w seen (st : RecSt) => scanIndRecLoop b i w seen st.isUns st.kf st.lps st.nm
+        st.nIdx st.nMin st.nMot st.nP st.rules st.ty) 2 IFR 11
+      (fun m₁ q d m => (RecInv IFR 11 q m₁ m ∧ topN m IFR = topN m₁ IFR) ∧ RecF b m q.toNat d)
+      (RecLR b) ⟨false, false, [], 0, 0, 0, 0, 0, [], 0⟩ (scanIndRec b) (fun i x e h => by
+        unfold scanIndRec at h; split at h
+        · exact h
+        · cases h) (rec_loop b h64 hsize)
+      (fun m₁ q hI => ⟨hI, rfl, seenR_zero _ _, seenR_zero _ _, seenR_zero _ _, seenR_zero _ _,
+        seenR_zero _ _, seenR_zero _ _, seenR_zero _ _, seenR_zero _ _, seenR_zero _ _⟩)
+      i m₁ q x e e₂ m₂ hS hI hob
+    exact ⟨t1, t4, t2.1, t2.2.1, t3, trivial⟩
+
 end kinds
 
 end L.Front.Ind
