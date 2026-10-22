@@ -144,7 +144,7 @@ end
 theorem consW_room {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word}
     (h : consW n m x o l = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64)
     (hc : 200 < (m.arr64 CTL).size) (hsrc : o.toNat + l.toNat ≤ iwTop m)
-    (hx : x.toNat < 2 ^ 32) {xs : List EIdx} (hxs : decHL m o.toNat l.toNat = some xs) :
+    (hx : x.toNat < 2 ^ 32) {k : IdxKind} {xs : List (Idx k)} (hxs : decHL m o.toNat l.toNat = some xs) :
     iwTop m' ≤ (m'.arr64 IW).size := by
   obtain ⟨-, -, -, hf, -, ht⟩ := consW_dec h hsz hc hsrc hx hxs
   rw [← ht, hf.2.2.1 IW]
@@ -166,7 +166,7 @@ theorem consW_room {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word}
 /-- **`sl_cons` keeps the stage relation**: the pool grew by the new slice, which decodes to
 `x :: xs`. -/
 theorem consW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
-    {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} {xs : List EIdx}
+    {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} {k : IdxKind} {xs : List (Idx k)}
     (h : consW n m x o l = some (r, m')) (hS : StageR dn vis fe m a)
     (hsrc : o.toNat + l.toNat ≤ iwTop m) (hx : x.toNat < 2 ^ 32)
     (hxs : decHL m o.toNat l.toNat = some xs) :

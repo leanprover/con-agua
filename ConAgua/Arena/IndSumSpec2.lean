@@ -1067,3 +1067,249 @@ theorem whnfTelescope_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAllo
   exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hd, ht, hs32, by rw [hres]; exact hs⟩
 
 end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+/-! ## `param_levels_go`: `lps.map .param`, interned -/
+
+/-- After the empty allocation. -/
+def plK0 : Option (Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (q, m') => some ([q, 0], m')
+/-- After `sl_cons`. -/
+def plK3 : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m3) => some ([r.headD 0, r.tail.headD 0], m3)
+/-- After the recursion. -/
+def plK2 (k : Nat) (u : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m2) => plK3 (consW k m2 u (r.headD 0) (r.tail.headD 0))
+
+mutual
+/-- **The model of `param_levels_go`.** -/
+def plgW : Nat → Mem → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _ => none
+  | k + 1, m, o, l =>
+    if l = 0 then plK0 (allocW m 0)
+    else plK1 k o l (pinternW m (rdW (m.arr64 IW) o))
+/-- After `intern_param`. -/
+def plK1 (k : Nat) (o l : Word) : Option (Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (u, m1) => if 4294967296 ≤ u then none else plK2 k u (plgW k m1 (o + 1) (l - 1))
+end
+
+section arms
+variable (k : Nat) (m m1 m2 m3 : Mem) (o l u q : Word) (r : List Word)
+theorem plgW_nil (hl : l = 0) : plgW (k + 1) m o l = plK0 (allocW m 0) := by simp [plgW, hl]
+theorem plgW_cons (hl : l ≠ 0) : plgW (k + 1) m o l = plK1 k o l (pinternW m (rdW (m.arr64 IW) o)) := by
+  simp [plgW, hl]
+theorem plK0_some : plK0 (some (q, m1)) = some ([q, 0], m1) := rfl
+theorem plK1_big (h : 4294967296 ≤ u) : plK1 k o l (some (u, m1)) = none := by simp [plK1, h]
+theorem plK1_ok (h : ¬ 4294967296 ≤ u) :
+    plK1 k o l (some (u, m1)) = plK2 k u (plgW k m1 (o + 1) (l - 1)) := by simp only [plK1, if_neg h]
+theorem plK2_some : plK2 k u (some (r, m2)) = plK3 (consW k m2 u (r.headD 0) (r.tail.headD 0)) := rfl
+theorem plK3_some : plK3 (some (r, m3)) = some ([r.headD 0, r.tail.headD 0], m3) := rfl
+end arms
+
+grind_pattern [ind_grind] plgW_nil => plgW (k + 1) m o l
+grind_pattern [ind_grind] plgW_cons => plgW (k + 1) m o l
+grind_pattern [ind_grind] plK0_some => plK0 (some (q, m1))
+grind_pattern [ind_grind] plK1_big => plK1 k o l (some (u, m1))
+grind_pattern [ind_grind] plK1_ok => plK1 k o l (some (u, m1))
+grind_pattern [ind_grind] plK2_some => plK2 k u (some (r, m2))
+grind_pattern [ind_grind] plK3_some => plK3 (some (r, m3))
+
+section spec
+variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+  (hc : p.lookup "iw_copy" = some iwCopy) (hsc : p.lookup "sl_cons" = some slCons)
+  (hg : p.lookup "sl_get" = some slGet)
+  (hpf : p.lookup "param_find" = some paramFind) (hpp : p.lookup "param_push" = some paramPush)
+  (hip : p.lookup "intern_param" = some internParam)
+  (hp : p.lookup "param_levels_go" = some paramLevelsGoL)
+include ha hc hsc hg hpf hpp hip hp
+
+theorem plgW_spec (k : Nat) : ∀ (s₀ : St) (o l : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p k) "param_levels_go" [o, l]
+    ⦃fun r s' => LocEq s' s₀ ∧ plgW k s₀.mem o l = some (r, s'.mem); ⊤⦄ := by
+  induction k with
+  | zero =>
+    intro s₀ o l; rw [invoke_eq _ hp]; simp only [callFn, paramLevelsGoL]
+    vcgen [exec] <;> grind
+  | succ k ih =>
+    intro s₀ o l
+    rw [invoke_eq _ hp]
+    simp only [callFn, paramLevelsGoL]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+        iwAlloc_specW p ha k, slGet_specW p hg k, internParam_spec p hpf hpp hip k,
+        slCons_specW p ha hc hsc k, ih] <;>
+      finish (gen := 20) [getW]
+
+end spec
+
+theorem plgW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k : Nat) :
+    ∀ (m m' : Mem) (a : AState) (o l : Word) (lps : List NIdx) (r : List Word),
+    plgW k m o l = some (r, m') → StageR dn vis fe m a → decHL m o.toNat l.toNat = some lps →
+    o.toNat + l.toNat < 2 ^ 64 → o.toNat + l.toNat ≤ iwTop m →
+    ∃ us a', (paramLevels.go lps).run a = .ok (us, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+      decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some us ∧
+      (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
+  induction k with
+  | zero => intro m m' a o l lps r h; simp [plgW] at h
+  | succ k ih =>
+    intro m m' a o l lps r h hS hd hb ht
+    by_cases hl : l = 0
+    · subst hl
+      rw [plgW_nil k m o 0 rfl] at h
+      cases h0 : allocW m 0 with
+      | none => rw [h0] at h; cases h
+      | some x =>
+      obtain ⟨q, m1⟩ := x
+      rw [h0, plK0_some] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨hS1, hg1, hq, htop⟩ := allocW_stage h0 hS
+      have : lps = [] := by simpa [decHL, hslice?] using hd.symm
+      subst this
+      exact ⟨[], a, rfl, hS1, hg1, by simp [decHL, hslice?], by simp [htop, hq]⟩
+    · obtain ⟨w, lps', rfl, hw, hw32, hd'⟩ := decHL_cons hd hl hb
+      obtain ⟨hsum, -⟩ := toNat_succ_of_lt hb hl
+      rw [plgW_cons k m o l hl, hw] at h
+      cases h1 : pinternW m w with
+      | none => rw [h1] at h; simp [plK1] at h
+      | some x1 =>
+      obtain ⟨u, m1⟩ := x1
+      rw [h1] at h
+      by_cases hu : 4294967296 ≤ u
+      · rw [plK1_big k m1 o l u hu] at h; cases h
+      rw [plK1_ok k m1 o l u hu] at h
+      have hu32 : u.toNat < 2 ^ 32 := by have : ¬ (4294967296 : Nat) ≤ u.toNat := hu; omega
+      obtain ⟨a1, hrun1, hS1, hg1⟩ := internParam_stage hS w hw32 h1
+      cases h2 : plgW k m1 (o + 1) (l - 1) with
+      | none => rw [h2] at h; simp [plK2] at h
+      | some x2 =>
+      obtain ⟨r2, m2⟩ := x2
+      rw [h2, plK2_some] at h
+      obtain ⟨us, a2, hrun2, hS2, hg2, hd2, ht2⟩ := ih m1 m2 a1 (o + 1) (l - 1) lps' r2 h2 hS1
+        (by rw [decHL_grow hg1 (by omega)]; exact hd') (by omega) (by have := hg1.1; omega)
+      cases h3 : consW k m2 u (r2.headD 0) (r2.tail.headD 0) with
+      | none => rw [h3] at h; simp [plK3] at h
+      | some x3 =>
+      obtain ⟨r3, m3⟩ := x3
+      rw [h3, plK3_some] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage h3 hS2 (Nat.le_of_eq ht2) hu32 hd2
+      refine ⟨decI u :: us, a2, ?_, hS3, (hg1.trans hg2).trans hg3, by simpa using hd3, by simpa using ht3⟩
+      simp only [paramLevels.go, StateT.run_bind, hrun1]
+      simp only [bind, Except.bind, StateT.run_bind, hrun2]
+      rfl
+
+section census
+variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+  (hc : p.lookup "iw_copy" = some iwCopy) (hsc : p.lookup "sl_cons" = some slCons)
+  (hg : p.lookup "sl_get" = some slGet)
+  (hpf : p.lookup "param_find" = some paramFind) (hpp : p.lookup "param_push" = some paramPush)
+  (hip : p.lookup "intern_param" = some internParam)
+  (hp : p.lookup "param_levels_go" = some paramLevelsGoL)
+include ha hc hsc hg hpf hpp hip hp
+
+/-- **`param_levels_go` refines `paramLevels.go`** under the stage relation. -/
+@[refines ConRon.Arena.paramLevels.go]
+theorem paramLevelsGo_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+    (vis : Word) (fe : IFEnv) (o l : Word) (lps : List NIdx) (hS : StageR dn vis fe s₀.mem a₀)
+    (hd : decHL s₀.mem o.toNat l.toNat = some lps) (hb : o.toNat + l.toNat < 2 ^ 64)
+    (ht : o.toNat + l.toNat ≤ iwTop s₀.mem) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p k) "param_levels_go" [o, l]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (paramLevels.go lps) a₀ ∧
+      StageR dn vis fe s'.mem (AM.st (paramLevels.go lps) a₀) ∧ IWGrow s₀.mem s'.mem ∧
+      decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat = some (AM.res (paramLevels.go lps) a₀) ∧
+      (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop s'.mem; ⊤⦄ := by
+  refine triple_post (plgW_spec p ha hc hsc hg hpf hpp hip hp k s₀ o l) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨us, a', hrun, hS', hg', hd', ht'⟩ := plgW_ok dn vis fe k _ _ _ _ _ _ _ hm hS hd hb ht
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hst]; exact hS', hg', by rw [hres]; exact hd', ht'⟩
+
+/-- The model of `param_levels`. -/
+def plW : Nat → Mem → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _ => none
+  | k + 1, m, o, l => plK4 (plgW k m o l)
+where
+  /-- After `param_levels_go`. -/
+  plK4 : Option (List Word × Mem) → Option (List Word × Mem)
+    | none => none
+    | some (r, m1) => plK5 (stubM "intern_ls_iw" m1 [r.headD 0, r.tail.headD 0])
+  /-- After `intern_ls_iw`. -/
+  plK5 : Option (List Word × Mem) → Option (List Word × Mem)
+    | none => none
+    | some (r, m2) => some ([r.headD 0], m2)
+
+omit ha hc hsc hg hpf hpp hip hp in
+theorem plW_succ (k : Nat) (m : Mem) (o l : Word) : plW (k + 1) m o l = plW.plK4 (plgW k m o l) := rfl
+omit ha hc hsc hg hpf hpp hip hp in
+theorem plK4_some (r : List Word) (m1 : Mem) :
+    plW.plK4 (some (r, m1)) = plW.plK5 (stubM "intern_ls_iw" m1 [r.headD 0, r.tail.headD 0]) := rfl
+omit ha hc hsc hg hpf hpp hip hp in
+theorem plK5_some (r : List Word) (m2 : Mem) : plW.plK5 (some (r, m2)) = some ([r.headD 0], m2) := rfl
+grind_pattern [ind_grind] plW_succ => plW (k + 1) m o l
+grind_pattern [ind_grind] plK4_some => plW.plK4 (some (r, m1))
+grind_pattern [ind_grind] plK5_some => plW.plK5 (some (r, m2))
+
+theorem plW_spec (hq : p.lookup "param_levels" = some paramLevelsL) (k : Nat) (s₀ : St) (o l : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p k) "param_levels" [o, l]
+    ⦃fun r s' => LocEq s' s₀ ∧ plW k s₀.mem o l = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hq]
+  simp only [callFn, paramLevelsL]
+  cases k with
+  | zero => vcgen [exec] <;> grind
+  | succ k =>
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+        plgW_spec p ha hc hsc hg hpf hpp hip hp k, stubM_spec p "intern_ls_iw" k] <;>
+      finish
+
+/-- **`param_levels` refines `paramLevels`** under the stage relation (through the stub
+`intern_ls_iw`). -/
+@[refines ConRon.Arena.paramLevels]
+theorem paramLevels_refines (hq : p.lookup "param_levels" = some paramLevelsL) (k : Nat) (s₀ : St)
+    (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o l : Word)
+    (lps : List NIdx) (hS : StageR dn vis fe s₀.mem a₀)
+    (hd : decHL s₀.mem o.toNat l.toNat = some lps) (hb : o.toNat + l.toNat < 2 ^ 64)
+    (ht : o.toNat + l.toNat ≤ iwTop s₀.mem) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p k) "param_levels" [o, l]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (paramLevels lps) a₀ ∧
+      StageR dn vis fe s'.mem (AM.st (paramLevels lps) a₀) ∧ IWGrow s₀.mem s'.mem ∧
+      H (r.headD 0) ∧ decI (r.headD 0) = AM.res (paramLevels lps) a₀; ⊤⦄ := by
+  refine triple_post (plW_spec p ha hc hsc hg hpf hpp hip hp hq k s₀ o l) ?_
+  rintro r s' ⟨hl, hm⟩
+  cases k with
+  | zero => cases hm
+  | succ k =>
+  rw [plW_succ] at hm
+  cases h1 : plgW k s₀.mem o l with
+  | none => rw [h1] at hm; cases hm
+  | some x =>
+  obtain ⟨r1, m1⟩ := x
+  rw [h1, plK4_some] at hm
+  cases h2 : stubM "intern_ls_iw" m1 [r1.headD 0, r1.tail.headD 0] with
+  | none => rw [h2] at hm; cases hm
+  | some y =>
+  obtain ⟨r2, m2⟩ := y
+  rw [h2, plK5_some] at hm
+  simp only [Option.some.injEq, Prod.mk.injEq] at hm
+  obtain ⟨rfl, rfl⟩ := hm
+  obtain ⟨us, a1, hrun1, hS1, hg1, hd1, -⟩ := plgW_ok dn vis fe k _ _ _ _ _ _ _ h1 hS hd hb ht
+  obtain ⟨x, a2, hrun2, hS2, hg2, hH, hx⟩ :=
+    internLsIw_spec dn vis fe (r1.headD 0) (r1.tail.headD 0) us m1 _ a1 r2 h2 ⟨hS1, hd1⟩
+  have hrun : (paramLevels lps).run a₀ = .ok (x, a2) := by
+    simp only [paramLevels, StateT.run_bind, hrun1]
+    exact hrun2
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hst]; exact hS2, hg1.trans hg2, by simpa using hH, by rw [hres]; simpa using hx⟩
+
+end census
+
+end L.Ind

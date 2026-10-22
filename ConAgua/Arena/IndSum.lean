@@ -390,6 +390,7 @@ def paramLevelsGoL : FunDecl := lfn (off, n) locals (res, nm, u, ro, rl, res2, l
   if n == 0 { res := call iw_alloc(0); return (res, 0) };
   nm := call sl_get(off, n, 0);
   u := call intern_param(nm);
+  if 4294967296 <= u { abort };
   (ro, rl) := call param_levels_go(off + 1, n - 1);
   (res2, len2) := call sl_cons(u, ro, rl);
   return (res2, len2)
