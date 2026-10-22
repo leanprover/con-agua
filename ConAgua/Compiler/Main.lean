@@ -74,7 +74,7 @@ theorem compile_correct [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.
         st.data.regs.rbp = d.regs.rbp ∧ st.data.regs.r14 = d.regs.r14 ∧ st.data.regs.r15 = d.regs.r15 ∧
         (st.data.regs.rdx = 1 ∨ OutcomeRel G (run p N entry args m) st.data))
       d (label enterL) := by
-  simp only [Prog.wf, Bool.and_eq_true, List.all_eq_true, decide_eq_true_eq] at hwf
+  simp only [Prog.wf_eq, Prog.wfSpec, Bool.and_eq_true, List.all_eq_true, decide_eq_true_eq] at hwf
   obtain ⟨⟨hfds, _⟩, hTab⟩ := hwf
   have hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd = true :=
     fun f fd hl => hfds (f, fd) (mem_of_lookup hl)

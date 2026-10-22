@@ -101,9 +101,13 @@ def Stmt.roms : Stmt → List (List UInt8)
   | .call _ _ args => args.flatMap Expr.roms
   | .gset _ e => Expr.roms e
 
-/-- The constant data of a program: its byte strings, each once. -/
+/-- The constant data of a program: its byte strings, each once, shortest first (so that finding
+a short string, `romIdx`, does not scan a long one: this keeps the static check of a program
+with a large ROM cheap, `WFSplit.lean`). -/
 def Prog.rom (p : Prog) : List UInt8 :=
-  ((p.flatMap fun (_, fd) => Stmt.roms fd.body).foldl (fun acc d => if acc.contains d then acc else acc ++ [d]) []).flatten
+  (((p.flatMap fun (_, fd) => Stmt.roms fd.body).foldl
+    (fun acc d => if acc.contains d then acc else acc ++ [d]) []).mergeSort
+    (fun a b => decide (a.length ≤ b.length))).flatten
 
 /-- The most results a statement returns or reads from a call. -/
 def Stmt.nres : Stmt → Nat
