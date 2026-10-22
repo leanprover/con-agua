@@ -1,4 +1,5 @@
 import ConAgua.Arena.InstLPWalk
+import ConAgua.L.PureEval
 
 /-!
 # The `instLP` walk: the spec of `lp_let`
@@ -33,9 +34,7 @@ theorem lpLet_spec (n : Nat) (s₀ : St) (h ko kc vo vc fu : Word) :
     vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs,
       memoFindG_spec lpSch p _ hp.ilpf n, memoPutG_spec lpSch p _ hp.ilpp n,
       callW_spec p n "lp_go", callW_spec p n "mk_let"] <;>
-    simp only [Cond.pval, Expr.pval, rd64_rdW, Locals.init, List.getD_cons_zero, List.getD_cons_succ,
-      Cmp.eval, BinOp.eval, Bool.and_eq_true, decide_eq_true_eq, beq_iff_eq] at * <;>
-    finish (gen := 20) [ilwLetW, ilwProbe, msetG, tierW, idxW]
+    finish (gen := 20) [ilwLetW, ilwProbe, msetG, tierW, idxW, Cond.pval, Expr.pval, rd64_rdW]
 end specs
 
 end L.Arena
