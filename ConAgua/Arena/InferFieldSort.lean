@@ -166,7 +166,7 @@ theorem hslice?_succ {k : IdxKind} (a : Array Word) (o n : Nat) :
     Function.comp_def, Nat.succ_eq_add_one, ← Nat.add_assoc, Nat.add_right_comm o]
 
 /-- A decoded slice is in bounds. -/
-theorem hslice?_bound {k : IdxKind} (a : Array Word) : ∀ (n o : Nat) (l : List (Idx k)),
+theorem hslice?_bound_fsz {k : IdxKind} (a : Array Word) : ∀ (n o : Nat) (l : List (Idx k)),
     hslice? a o n = some l → n = 0 ∨ o + n ≤ a.size
   | 0, _, _, _ => Or.inl rfl
   | n + 1, o, l, h => by
@@ -177,7 +177,7 @@ theorem hslice?_bound {k : IdxKind} (a : Array Word) : ∀ (n o : Nat) (l : List
     simp only [hd?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hx
     obtain ⟨w, hw, -⟩ := hx
     have := (Array.getElem?_eq_some_iff.mp hw).1
-    rcases hslice?_bound a n (o + 1) xs hxs with h0 | h0 <;> right <;> omega
+    rcases hslice?_bound_fsz a n (o + 1) xs hxs with h0 | h0 <;> right <;> omega
 
 /-- A decoded `EREC` name slice is related to the names' readbacks (`NmsR`). -/
 theorem nmsR_of_hslice (m : Mem) (ns : NStore) : ∀ (k : Nat) (lps : List NIdx) (ks : List Name)
@@ -250,7 +250,7 @@ theorem fszW_ok {dn : NIdx → Option Name} {m m' : Mem} {a : AState} {vis : Wor
   -- the keys
   have hbound : po.toNat + pl.toNat < 2 ^ 64 := by
     have := hS.erec
-    rcases hslice?_bound _ _ _ _ hsl with h0 | h0
+    rcases hslice?_bound_fsz _ _ _ _ hsl with h0 | h0
     · have := po.toNat_lt; omega
     · omega
   have hks : NmsR (nameN a.store.lss.ls.ns) (m.set64 CTL 192 0) EREC po pl ks :=
