@@ -349,7 +349,7 @@ def naWf : Nat → Mem → Word → Word → Option (List Word × Mem)
   | 0, _, _, _ => none
   | k + 1, m, vis, c => naW k m vis c
 
-def pfK3 (k : Nat) (ctx kb i aL dL2 : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def p2pfK3 (k : Nat) (ctx kb i aL dL2 : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m3) =>
     if aL + dL2 < aL then none
@@ -357,34 +357,34 @@ def pfK3 (k : Nat) (ctx kb i aL dL2 : Word) : Option (List Word × Mem) → Opti
     else match hkWf k m3 ctx kb i with
       | none => none
       | some w => some ([w], m3)
-def pfK2 (k : Nat) (vis ctx kb i aL hp : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def p2pfK2 (k : Nat) (vis ctx kb i aL hp : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m2) =>
     if r.headD 0 ≠ 0 then none
-    else pfK3 k ctx kb i aL (rdW (m2.arr64 IW) (rdW (m2.arr64 IW) hp + 3))
+    else p2pfK3 k ctx kb i aL (rdW (m2.arr64 IW) (rdW (m2.arr64 IW) hp + 3))
       (naWf k m2 vis (rdW (m2.arr64 IW) (rdW (m2.arr64 IW) hp)))
-def pfK1 (k : Nat) (vis ctx kb hi i aO aL : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def p2pfK1 (k : Nat) (vis ctx kb hi i aO aL : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m1) =>
     if r.headD 0 = 0 then none
-    else pfK2 k vis ctx kb i aL (r.tail.headD 0) (noaW k m1 (rdW (m1.arr64 IW) ctx) (rdW (m1.arr64 IW) (ctx + 1))
+    else p2pfK2 k vis ctx kb i aL (r.tail.headD 0) (noaW k m1 (rdW (m1.arr64 IW) ctx) (rdW (m1.arr64 IW) (ctx + 1))
       (rdW (m1.arr64 IW) (ctx + 4)) hi aO aL)
 /-- The model of `nest_pos_fvar(vis, ctx, progOff, progLen, kb, hi, i, argsOff, argsLen)`. -/
 def pfW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _, _, _, _ => none
-  | k + 1, m, vis, ctx, po, pl, kb, hi, i, aO, aL => pfK1 k vis ctx kb hi i aO aL (haWf k m ctx po pl i)
+  | k + 1, m, vis, ctx, po, pl, kb, hi, i, aO, aL => p2pfK1 k vis ctx kb hi i aO aL (haWf k m ctx po pl i)
 
 section arms
 variable (k : Nat) (m1 m2 m3 : Mem) (vis ctx kb hi i aO aL hp dL2 : Word) (r : List Word)
-theorem pfK1_eq : pfK1 k vis ctx kb hi i aO aL (some (r, m1)) =
+theorem p2pfK1_eq : p2pfK1 k vis ctx kb hi i aO aL (some (r, m1)) =
     if r.headD 0 = 0 then none
-    else pfK2 k vis ctx kb i aL (r.tail.headD 0) (noaW k m1 (rdW (m1.arr64 IW) ctx) (rdW (m1.arr64 IW) (ctx + 1))
+    else p2pfK2 k vis ctx kb i aL (r.tail.headD 0) (noaW k m1 (rdW (m1.arr64 IW) ctx) (rdW (m1.arr64 IW) (ctx + 1))
       (rdW (m1.arr64 IW) (ctx + 4)) hi aO aL) := rfl
-theorem pfK2_eq : pfK2 k vis ctx kb i aL hp (some (r, m2)) =
+theorem p2pfK2_eq : p2pfK2 k vis ctx kb i aL hp (some (r, m2)) =
     if r.headD 0 ≠ 0 then none
-    else pfK3 k ctx kb i aL (rdW (m2.arr64 IW) (rdW (m2.arr64 IW) hp + 3))
+    else p2pfK3 k ctx kb i aL (rdW (m2.arr64 IW) (rdW (m2.arr64 IW) hp + 3))
       (naWf k m2 vis (rdW (m2.arr64 IW) (rdW (m2.arr64 IW) hp))) := rfl
-theorem pfK3_eq : pfK3 k ctx kb i aL dL2 (some (r, m3)) =
+theorem p2pfK3_eq : p2pfK3 k ctx kb i aL dL2 (some (r, m3)) =
     if aL + dL2 < aL then none
     else if aL + dL2 ≠ r.headD 0 then none
     else match hkWf k m3 ctx kb i with
@@ -435,7 +435,7 @@ theorem nestPosFvar_spec (p : Prog) (L : PfLook p) (n : Nat) (s₀ : St) (vis ct
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         nestHoleAt_spec' p L n, nestOccAny_spec p L.no L.hoa n, nestArity_spec' p L.na n,
         nestPosHoleKind_spec p L.hh L.hk n] <;>
-      finish (gen := 20) (instances := 5000) [pfW, pfK1_eq, pfK2_eq, pfK3_eq, rdW_eq]
+      finish (gen := 20) (instances := 5000) [pfW, p2pfK1_eq, p2pfK2_eq, p2pfK3_eq, rdW_eq]
 
 end L.Ind
 
@@ -494,13 +494,13 @@ theorem pfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (h
   simp only [pfW] at h
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
   cases k with
-  | zero => simp [haWf, pfK1] at h
+  | zero => simp [haWf, p2pfK1] at h
   | succ k =>
   cases hha : haWf (k + 1) m ctx po pl i with
-  | none => rw [hha] at h; simp [pfK1] at h
+  | none => rw [hha] at h; simp [p2pfK1] at h
   | some pr =>
   obtain ⟨r1, m1⟩ := pr
-  rw [hha, pfK1_eq] at h
+  rw [hha, p2pfK1_eq] at h
   obtain ⟨hS1, hg1, hon⟩ := haW_ok k dn fe vis a m m1 ctx po pl i r1 c prog (by simpa [haWf] using hha) hS hU.dec
     hU.inn hpr
   cases hnh : ConRon.Arena.nestHoleAt c prog i.toNat with
@@ -517,10 +517,10 @@ theorem pfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (h
   have hne1 := ctx_names_end hU1.dec hU1.inn hU1.sl htop1
   cases hoa : noaW (k + 1) m1 (rdW (m1.arr64 IW) ctx) (rdW (m1.arr64 IW) (ctx + 1)) (rdW (m1.arr64 IW) (ctx + 4))
       hi aO aL with
-  | none => rw [hoa] at h; simp [pfK2] at h
+  | none => rw [hoa] at h; simp [p2pfK2] at h
   | some pr2 =>
   obtain ⟨r2, m2⟩ := pr2
-  rw [hoa, pfK2_eq] at h
+  rw [hoa, p2pfK2_eq] at h
   obtain ⟨b, hrunoa, hS2, hg2, hr2⟩ := noaW_ok dn fe vis _ _ _ _ c.names hM.no (k + 1) m1 m2 a _ _ args r2 hoa hS1
     hn1 hne1 (by rw [decHL_agree (RdS.of_grow hg1) (fun j hj => by omega)]; exact hargs)
     (fun j hj => by have := hg1.1; omega)
@@ -534,10 +534,10 @@ theorem pfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (h
   rw [← hd2] at hdec
   obtain ⟨hcH, hcd, hdl⟩ := nh_key_words hdec hnin2 htop2
   cases hna : naWf (k + 1) m2 vis (rdW (m2.arr64 IW) (rdW (m2.arr64 IW) (r1.tail.headD 0))) with
-  | none => rw [hna] at h; simp [pfK3] at h
+  | none => rw [hna] at h; simp [p2pfK3] at h
   | some pr3 =>
   obtain ⟨r3, m3⟩ := pr3
-  rw [hna, pfK3_eq] at h
+  rw [hna, p2pfK3_eq] at h
   obtain ⟨ar, a3, hrun3, hS3, hg3, hr3⟩ := naW_ok dn fe vis _ hcH k m2 m3 a r3 (by simpa [naWf] using hna) hS2
   rw [hcd] at hrun3
   have hal := decHL_length m hargs
