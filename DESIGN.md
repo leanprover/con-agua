@@ -4369,6 +4369,20 @@ be asymptotically slower. con-ron at `_tmp/ref/con-ron` origin/HEAD (`proof/ConR
 * `WhnfIota.lean`: `iotaCallees_stub` and every spec (28).
 * `WhnfDelta.lean`: the δ/Nat specs (`whnf_step`, `reduce_nat`, `delta_step`, …; 14).
 
+### Lane `induct`'s stubs of this phase (reconciliation, planned)
+
+Lane `induct` calls `whnf(vis, dep, e)`, `get_app_fn(fuel, e)`, `get_app_args(fuel, e)` (an `IW`
+slice), `mk_app_n(f, off, len)` (an `IW` slice), `pi_result(fuel, e)` with the specs of
+`IndStubs.lean` (`RelAM` over `StageR`). This lane's functions of the same names differ: `whnf`
+takes the mode word first, the spine walks count `coreWalkFuel` internally (no fuel argument; the
+induct call sites pass `⟪CWF⟫` = `coreWalkFuel`), and slices are on the spine stack `SPN`. Plan,
+after the running proof sub-lanes land (they use the names): this lane renames its functions
+(`whnf_m`, `app_fn_c`, `app_args_c`, `mk_app_n_c`, `pi_result_c`; the fuel stays a counter) and
+adds `induct`'s names as adapters with `induct`'s conventions (`whnf` = `whnf_m` at the verified
+mode word; the slice adapters copy between `SPN` and `IW`; the fuel adapters run the counted walk
+when `fuel = coreWalkFuel`, the only fuel `induct` passes, and abort otherwise), with the
+`IndStubs` specs as their refinements at that fuel.
+
 ### Numbers (2026-10-21)
 
 * Rust (con-ron's `whnf`/core, census phase 5): 1500 lines; L written for 720 of them, proved for
