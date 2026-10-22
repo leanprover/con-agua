@@ -56,11 +56,11 @@ theorem isEagerReduceH_of (p : Prog) (hp : DefEqLeafProg p) : IsEagerReduceH p
 `sorry`). -/
 theorem proofIrrelOK_of (p : Prog) (hp : IotaProg4 p) : ProofIrrelOK p := proofIrrel_refines p hp
 
-/-- `LazyCallees.reduceNat` from lane `whnf`'s `reduceNat_refines'` and its two assumptions. -/
-theorem reduceNat_of (p : Prog) (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p)
-    (hg : ∀ n, WhnfGrowsUpTo p n) : ∀ n, n ≤ 2 ^ 62 → ReduceNatSpec p n :=
+/-- `LazyCallees.reduceNat` from lane `whnf`'s `reduceNat_refines'`. -/
+theorem reduceNat_of (p : Prog) (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) :
+    ∀ n, n ≤ 2 ^ 62 → ReduceNatSpec p n :=
   fun n hn F s₀ a₀ dn vis fe MM eb mode d e hF hs he hk =>
-    reduceNat_refines' p hp hno n (hg n) F s₀ a₀ dn vis fe MM eb mode d e hF hn hs he hk
+    reduceNat_refines' p hp hno n F s₀ a₀ dn vis fe MM eb mode d e hF hn hs he hk
 
 /-! ## The knot -/
 
@@ -98,7 +98,6 @@ structure KnotCallees (p : Prog) : Prop where
   reduceProjCore : ReduceProjCoreH p
   /-- Lane `whnf`'s `unfoldDefinition_refines'` takes all of `WhnfCallees` (it uses `instLP`). -/
   unfold : UnfoldDefOK p
-  whnfGrows : ∀ n, WhnfGrowsUpTo p n
   /-- Stored levels read back under `CoreS` (`StoreDen.lean`; to become a field of `CoreS`). -/
   den : CoreDen
   constTy : ConstTyAtOK p
@@ -142,7 +141,7 @@ theorem KnotCallees.defeq : DefeqCallees p :=
 include hq hc in
 theorem KnotCallees.lazy : LazyCallees p :=
   ⟨hq.walks.instListOK, hq.walks.inst1OK, (hc.defeq hq).hasFvar, natPredW_of p hq.natPred, hc.unfold,
-    reduceNat_of p hq.delta (natOpResultOK_of_agree hq.delta.natAgree) hc.whnfGrows, StoreDenotes.of_den hc.den⟩
+    reduceNat_of p hq.delta (natOpResultOK_of_agree hq.delta.natAgree), StoreDenotes.of_den hc.den⟩
 
 include hq hc in
 theorem KnotCallees.stuck : StuckCallees p :=

@@ -761,17 +761,7 @@ theorem natAddArm_run_internE {a₁ a₂ : AState} {x : EIdx} {u v : Nat}
     simp only at h1 h2
     rw [h1, h2]
 
-/-- **`whnf` keeps the pool**: a call of the L `whnf` at fuel `n` from a related state only
-appends to the limb pool (`Grows`). The twin's `whnf` returns numbers (`rawNatLit?`), so a slice
-held across a `whnf` call must survive it; `WhnfSlot` says nothing about the pool. -/
-def WhnfGrowsPool (p : Prog) (n : Nat) : Prop :=
-  ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb mode d e : Word) (r : List Word) (m' : Mem),
-    SlotPre s₀ a₀ dn vis fe MM eb mode → HW e →
-    callW p n "whnf" [mode, vis, d, e] s₀.mem = some (r, m') → Grows s₀.mem m'
 
-/-- `WhnfGrowsPool` at every L fuel up to `n`. -/
-def WhnfGrowsUpTo (p : Prog) (n : Nat) : Prop := ∀ k, k ≤ n → WhnfGrowsPool p k
 
 
 theorem pinW_const_frame {m m' : Mem} (hf : MemFrame [CREC, CSLOT] [18, 19] m m') (k : Nat) :
@@ -930,6 +920,19 @@ end refs18
 
 /-- **A slice below the old top survives a growth of the pool**: the slice, its value and its
 normalisation. -/
+theorem PoolGrew.slice {m m' : Mem} (hg : PoolGrew m m') {o l : Word} (hs : SliceOK m o l)
+    (hn : Norm (m.arr64 POOL) o.toNat l.toNat) :
+    SliceOK m' o l ∧ pv (m'.arr64 POOL) o.toNat l.toNat = pv (m.arr64 POOL) o.toNat l.toNat ∧
+      Norm (m'.arr64 POOL) o.toNat l.toNat := by
+  refine ⟨?_, Agree.pv _ _ _ _ _ hg.below (by unfold SliceOK at hs; exact hs), ?_⟩
+  · have := hg.top; unfold SliceOK at hs ⊢; omega
+  · intro hpos
+    have := hn hpos
+    have hlt : o.toNat + (l.toNat - 1) < m.top.toNat := by unfold SliceOK at hs; omega
+    rw [show (m'.arr64 POOL)[o.toNat + (l.toNat - 1)]? = (m.arr64 POOL)[o.toNat + (l.toNat - 1)]? from
+      hg.below _ hlt]
+    exact this
+
 theorem Grows.slice {m m' : Mem} (hg : Grows m m') {o l : Word} (hs : SliceOK m o l)
     (hn : Norm (m.arr64 POOL) o.toNat l.toNat) :
     SliceOK m' o l ∧ pv (m'.arr64 POOL) o.toNat l.toNat = pv (m.arr64 POOL) o.toNat l.toNat ∧
@@ -973,7 +976,7 @@ section refs19
 variable (p : Prog)
 
 theorem callW_reduceNatOp (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (n F : Nat) (hF : n ≤ F)
-    (hn2 : n ≤ 2 ^ 62) (hk : KnotUpTo p n) (hgr : WhnfGrowsUpTo p n) (s₀ : St) (a₀ : AState)
+    (hn2 : n ≤ 2 ^ 62) (hk : KnotUpTo p n) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
     (eb mode d c a b : Word) (hS : SlotPre s₀ a₀ dn vis fe MM eb mode) (hc : HW c) (ha : HW a)
     (hb : HW b) (r : List Word) (m' : Mem)
@@ -1037,7 +1040,7 @@ theorem callW_reduceNatOp (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) (n F :
   have hSP₂ : SlotPre ⟨m₁, Locals.init []⟩ a₁ dn vis fe M₁ eb mode := ⟨hS₁, hS.mode4, hS.eb_mode⟩
   obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hrw3⟩ := CoreSpec.of_callW
     (hkn.whnf F ⟨m₁, Locals.init []⟩ a₁ dn vis fe M₁ eb mode d b (by omega) (by omega) hSP₂ hb) h3
-  have hgrow : Grows m₁ m₃ := hgr n (by omega) ⟨m₁, Locals.init []⟩ a₁ dn vis fe M₁ eb mode d b r₃ m₃ hSP₂ hb h3
+  have hgrow : PoolGrew m₁ m₃ := hSt₃.pool
   have hrun3 := AM.run_of_ok _ _ hok3
   rw [hres3] at hrun3
   generalize AM.st ((coreKnot (decMode mode) fe id F).whnf d.toNat (decE b)) a₁ = a₂ at hrun3 hS₃
