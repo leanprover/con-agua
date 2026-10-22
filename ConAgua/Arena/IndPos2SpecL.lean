@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndPos2SpecK
 import ConAgua.Arena.IndSumSpec7
+import ConAgua.Arena.IndPosSpec7
 
 /-! # `IndPos2`, the `nestPos` block's leaves (lane `indproofs2`, helper `pos2`): word models and
 specs of the block's non-recursive helpers (`nest_frame_mates` with the stage relation,
@@ -948,5 +949,83 @@ theorem nestContChecks_spec (p : Prog) (hl : NoLook p) (hoa : p.lookup "nest_occ
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         nestOccAny_spec p hl hoa n, pos2Pin_spec p hpa n, nestContParamsClosed_spec p hb hpc n] <;>
       finish (gen := 20) [p2ccW, p2ccK1, rdW_eq]
+
+end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+/-- **The per-call memos' well-formedness, as hypotheses on the stage** (helper `pos`'s `hMno`,
+`hMstage`, …, bundled): in every memory the stage relation holds of, each walk memo of the
+positivity check is well formed (`nest_occ`, `depth`, `has_loose_bvar_b`, `replace_apps`), and the
+banked `replace_fvars` memo has its invariant. The stage relation does not constrain the memo arrays
+(`201‥208`), so these are not consequences of `StageR` (DESIGN.md, lane `indproofs2`, helper
+`pos2`): they are discharged by adding the memos' well-formedness to the stage relation. -/
+structure PosMemo (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) : Prop where
+  no : ∀ (m : Mem) (a : AState), StageR dn vis fe m a → ∃ mp0, noMR m mp0
+  dp : ∀ (m : Mem) (a : AState), StageR dn vis fe m a → ∃ mp0, dpMR m mp0
+  hb : ∀ (m : Mem) (a : AState), StageR dn vis fe m a → ∃ mp0, hbMR m mp0
+  rp : ∀ (m : Mem) (a : AState), StageR dn vis fe m a → ∃ mp0, rpMR m mp0
+  rf : ∀ (m : Mem) (a : AState), StageR dn vis fe m a → ∃ M G g, RfInv m M G g
+
+/-- **`nest_cont_checks`**: the twin's three checks of `nestCont` pass. -/
+theorem p2ccW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (hM : PosMemo dn vis fe)
+    {k : Nat} (hk : k ≤ coreWalkFuel) {m m' : Mem} {a : AState} {ctx hp nn dO dL iO iL : Word}
+    {c : NestCtx} {ds idx : List EIdx} {r : List Word}
+    (h : p2ccW k m ctx hp nn dO dL iO iL = some (r, m')) (hS : StageR dn vis fe m a)
+    (hU : UCtx dn vis fe m ctx c) (hds : decHL m dO.toNat dL.toNat = some ds)
+    (hdsb : ∀ j < dL.toNat, dO.toNat + j < iwTop m) (hidx : decHL m iO.toNat iL.toNat = some idx)
+    (hidxb : ∀ j < iL.toNat, iO.toNat + j < iwTop m) (hnH : H nn) :
+    ∃ a1 q a2, (idx.anyM (fun x => ConRon.Arena.nestOcc c.names c.nP hp.toNat x)).run a = .ok (false, a) ∧
+      pinQuot.run a = .ok (q, a) ∧ (decI nn == q) = false ∧
+      (ds.allM (pcF hp.toNat)).run a = .ok (true, a2) ∧ a1 = a ∧ StageR dn vis fe m' a2 ∧ IWGrow m m' := by
+  cases k with
+  | zero => simp [p2ccW] at h
+  | succ k =>
+  simp only [p2ccW] at h
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  obtain ⟨hn, -, -, -, hnP, -⟩ := ctx_fields hU.dec hU.inn htop
+  have hne := ctx_names_end hU.dec hU.inn hU.sl htop
+  cases hoa : noaW k m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) (rdW (m.arr64 IW) (ctx + 4)) hp iO iL with
+  | none => rw [hoa] at h; simp [p2ccK1] at h
+  | some pr =>
+  obtain ⟨r1, m1⟩ := pr
+  rw [hoa, p2ccK1_eq] at h
+  obtain ⟨b, hrunoa, hS1, hg1, hr1⟩ := noaW_ok dn fe vis _ _ _ _ c.names hM.no k m m1 a _ _ idx r1 hoa hS
+    hn hne hidx hidxb
+  rw [hnP] at hrunoa
+  cases b with
+  | true => rw [if_pos (by rw [hr1]; decide)] at h; cases h
+  | false =>
+  rw [if_neg (by rw [hr1]; decide)] at h
+  cases hq : pos2PinW m1 47 with
+  | none => rw [hq] at h; cases h
+  | some pr2 =>
+  obtain ⟨rq, m2⟩ := pr2
+  rw [hq] at h
+  simp only at h
+  obtain ⟨hm2, hqH, hqrun⟩ := pos2PinW_ok hq hS1.1.pins
+  subst m2
+  by_cases hnq : nn = rq.headD 0
+  · rw [if_pos hnq] at h; cases h
+  rw [if_neg hnq] at h
+  cases hcp : cpW k m1 hp dO dL with
+  | none => rw [hcp] at h; simp [p2ccK2] at h
+  | some pr3 =>
+  obtain ⟨r3, m3⟩ := pr3
+  rw [hcp] at h
+  obtain ⟨b3, a3, hrun3, hS3, hg3, hr3⟩ := cpW_ok dn fe vis hp k (by omega) m1 m3 a dO dL ds r3 hcp hS1
+    (by rw [decHL_agree (RdS.of_grow hg1) (fun j hj => hdsb j hj)]; exact hds)
+    (fun j hj => by have := hdsb j hj; have := hg1.1; omega)
+  cases b3 with
+  | false => rw [p2ccK2_z (h := by rw [hr3]; rfl)] at h; cases h
+  | true =>
+  rw [p2ccK2_nz (h := by rw [hr3]; decide)] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  have hpq : pinQuot = pinAt 47 := rfl
+  refine ⟨a, decI (rq.headD 0), a3, hrunoa, by rw [hpq]; simpa using hqrun, ?_, hrun3, rfl, hS3, hg1.trans hg3⟩
+  rw [decI_beq' _ _ hnH hqH]; simpa using hnq
 
 end L.Ind
