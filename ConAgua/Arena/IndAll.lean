@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndSumSpec4
+import ConAgua.Arena.IndSumSpec6
 import ConAgua.Arena.IndInstallSpec
 import ConAgua.Arena.IndLibSpec
 import ConAgua.Arena.IndMaster
