@@ -169,14 +169,13 @@ section rel
 variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 
 theorem tcpF_ok (n : Nat) {m m' : Mem} {a : AState} {pfo pfl e : Word} {pfvs : List EIdx} {r : List Word}
-    (h : tcpF n m pfo pfl e = some (r, m')) (hS : StageR dn vis fe m a)
-    (hpf : decHL m pfo.toNat pfl.toNat = some pfvs) (hpb : pfo.toNat + pfl.toNat ≤ iwTop m)
+    (h : tcpF n m pfo pfl e = some (r, m')) (hS : StageR dn vis fe m a) (hpf : HSl0 m pfo pfl pfvs)
     (he : H e) (hP : RcMR m) :
     ∃ a', (ConRon.Arena.targetCanonParams pfvs (decE e)).run a = .ok (decE (r.headD 0), a') ∧
       H (r.headD 0) ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧ RcMR m' := by
   cases n with
   | zero => cases h
-  | succ n => exact tcpW_ok dn fe vis n h hS hpf hpb he hP
+  | succ n => exact tcpW_ok dn fe vis n h hS hpf he hP
 
 theorem taF_ok (n : Nat) {m m' : Mem} {a : AState} {no nl lvls ho hl e r : Word} {names : List NIdx}
     {holes : List EIdx} (h : taF n m no nl lvls ho hl e = some (r, m')) (hS : StageR dn vis fe m a)

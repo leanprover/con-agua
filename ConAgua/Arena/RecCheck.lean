@@ -178,11 +178,14 @@ def eraseFVarTys : FunDecl := lfn (e) locals (f, r) {
   return r
 }
 
-/-- **`target_canon_params`**: `replaceFVars (.canon pfvs) e`, `f = [3, pfvs.off, pfvs.len]`. -/
+/-- **`target_canon_params`**: `replaceFVars (.canon pfvs) e`, `f = [3, pfvs.off, pfvs.len]` (an
+empty `pfvs` recorded at offset `0`: its offset is whatever the caller's record holds). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:175-179 ConRon.Arena.targetCanonParams
 @[l_impl ConRon.Arena.targetCanonParams]
-def targetCanonParams : FunDecl := lfn (pfo, pfl, e) locals (f, r) {
-  f := call rec3(3, pfo, pfl);
+def targetCanonParams : FunDecl := lfn (pfo, pfl, e) locals (po, f, r) {
+  po := pfo;
+  if pfl == 0 { po := 0 };
+  f := call rec3(3, po, pfl);
   r := call replace_fvars(f, e);
   return r
 }

@@ -260,10 +260,7 @@ theorem tcmW_ok (n : Nat) {m m' : Mem} {a : AState} {q fto ftl pfo pfl us dso ds
     (h : tcmW n m vis q fto ftl pfo pfl us dso dsl lvls edso edsl = some (r, m'))
     (hS : StageR dn vis fe m a) (hbs : BSOK m q.toNat bs) (hus : H us) (hlv : H lvls)
     (hft : decHL m fto.toNat ftl.toNat = some formerTys) (hftb : fto.toNat + ftl.toNat ≤ iwTop m)
-    (hpf : decHL m pfo.toNat pfl.toNat = some pfvs) (hpfb : pfo.toNat + pfl.toNat ≤ iwTop m)
-    (hds : decHL m dso.toNat dsl.toNat = some ds) (hdsb : dso.toNat + dsl.toNat ≤ iwTop m)
-    (heds : decHL m edso.toNat edsl.toNat = some eds) (hedsb : edso.toNat + edsl.toNat ≤ iwTop m)
-    (hP : RcMR m) :
+    (hpf : HSl0 m pfo pfl pfvs) (hds : HSl0 m dso dsl ds) (heds : HSl0 m edso edsl eds) (hP : RcMR m) :
     ∃ c a', (ConRon.Arena.targetClassMatch V fe bs formerTys pfvs (decI us) ds (decI lvls) eds).run a =
       .ok (c, a') ∧ (r.headD 0 != 0) = c ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧ RcMR m' := by
   unfold tcmW at h
@@ -344,11 +341,9 @@ theorem tcmW_ok (n : Nat) {m m' : Mem} {a : AState} {q fto ftl pfo pfl us dso ds
   have hg25 := (hg3.trans hg4).trans hg5
   obtain ⟨c, a6, run6, hc, hS6, hg6, hP6⟩ := pdeW_ok dn fe vis n h6 hS5 hH4
     (by rw [decHL_grow hg25 (by omega)]; exact hdn) (by have := hg25.1; omega) hdh hbh
-    (by rw [decHL_grow hg05 hpfb]; exact hpf) (by have := hg05.1; omega)
-    (by rw [decHL_grow hg05 hdsb]; exact hds) (by have := hg05.1; omega)
-    (by rw [decHL_grow hg05 hedsb]; exact heds) (by have := hg05.1; omega) hP5
+    (hpf.grow hg05) (hds.grow hg05) (heds.grow hg05) hP5
   refine ⟨c, a6, ?_, by simpa using hc, hS6, hg05.trans hg6, hP6⟩
-  have hlen : pfvs.length = pfl.toNat := decHL_length _ hpf
+  have hlen : pfvs.length = pfl.toNat := hpf.len
   have hlenf : formerTys.length = ftl.toNat := decHL_length _ hft
   rw [hd, ← hlen, ← hlenf, hdb] at run6
   rw [← hlen] at run5
@@ -359,7 +354,8 @@ end rel
 
 /-- **`target_class_match` refines `targetClassMatch`** (through `lvls_eq_c`'s stub contract and the
 stubs under `target_params_def_eq`): the shape record as `BSOK` (decoded below the tops, its member
-slice and records below the top), the four slices decoded below the top, the walk memos well
+slice and records below the top), the former types decoded below the top, the other three slices decoded (below the top
+unless empty), the walk memos well
 formed; the verdict as `r[0] ≠ 0`. -/
 @[refines ConRon.Arena.targetClassMatch]
 theorem targetClassMatch_refines (p : Prog) (L : TcmLook p) (n : Nat) (s₀ : St) (a₀ : AState)
@@ -367,9 +363,7 @@ theorem targetClassMatch_refines (p : Prog) (L : TcmLook p) (n : Nat) (s₀ : St
     (bs : BlockShape) (formerTys pfvs ds eds : List EIdx) (hS : StageR dn vis fe s₀.mem a₀)
     (hbs : BSOK s₀.mem q.toNat bs) (hus : H us) (hlv : H lvls)
     (hft : decHL s₀.mem fto.toNat ftl.toNat = some formerTys) (hftb : fto.toNat + ftl.toNat ≤ iwTop s₀.mem)
-    (hpf : decHL s₀.mem pfo.toNat pfl.toNat = some pfvs) (hpfb : pfo.toNat + pfl.toNat ≤ iwTop s₀.mem)
-    (hds : decHL s₀.mem dso.toNat dsl.toNat = some ds) (hdsb : dso.toNat + dsl.toNat ≤ iwTop s₀.mem)
-    (heds : decHL s₀.mem edso.toNat edsl.toNat = some eds) (hedsb : edso.toNat + edsl.toNat ≤ iwTop s₀.mem)
+    (hpf : HSl0 s₀.mem pfo pfl pfvs) (hds : HSl0 s₀.mem dso dsl ds) (heds : HSl0 s₀.mem edso edsl eds)
     (hP : RcMR s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "target_class_match"
       [vis, q, fto, ftl, pfo, pfl, us, dso, dsl, lvls, edso, edsl]
@@ -380,8 +374,7 @@ theorem targetClassMatch_refines (p : Prog) (L : TcmLook p) (n : Nat) (s₀ : St
       IWGrow s₀.mem s'.mem ∧ RcMR s'.mem; ⊤⦄ := by
   refine triple_post (targetClassMatch_spec p L n s₀ vis q fto ftl pfo pfl us dso dsl lvls edso edsl) ?_
   rintro r s' ⟨hl', hm⟩
-  obtain ⟨c, a', run, hc, hS', hg, hP'⟩ := tcmW_ok dn fe vis n hm hS hbs hus hlv hft hftb hpf hpfb hds hdsb
-    heds hedsb hP
+  obtain ⟨c, a', run, hc, hS', hg, hP'⟩ := tcmW_ok dn fe vis n hm hS hbs hus hlv hft hftb hpf hds heds hP
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ run
   exact ⟨hl', hok, by rw [hres]; exact hc, by rw [hst]; exact hS', hg, hP'⟩
 

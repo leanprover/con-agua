@@ -130,6 +130,28 @@ theorem eftW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (
     hS1 hfm he (hR.frame (RfFr.of_iw hf1))
   exact ⟨a', hrun, hH, hS', hg1.trans hg', (hP.fr (MFr.of_iw hf1)).setRf (rxW_mfr hr) ⟨M', G', g, hR'⟩⟩
 
+/-! ## Slices decoded below the top unless empty -/
+
+/-- A handle slice decoded at `(o, l)`, below the pool's top unless empty (an empty slice's offset
+is whatever its record holds: a decoding below the tops says no more). -/
+def HSl0 {k : IdxKind} (m : Mem) (o l : Word) (xs : List (Idx k)) : Prop :=
+  decHL m o.toNat l.toNat = some xs ∧ (l = 0 ∨ o.toNat + l.toNat ≤ iwTop m)
+
+theorem HSl0.grow {k : IdxKind} {m m' : Mem} {o l : Word} {xs : List (Idx k)} (h : HSl0 m o l xs)
+    (hg : IWGrow m m') : HSl0 m' o l xs := by
+  obtain ⟨hd, hb⟩ := h
+  rcases hb with rfl | hb
+  · have hx : xs = [] := by have := decHL_length _ hd; simpa using this
+    subst hx
+    exact ⟨by simp [decHL, hslice?], .inl rfl⟩
+  · exact ⟨by rw [decHL_grow hg hb]; exact hd, .inr (Nat.le_trans hb hg.1)⟩
+
+theorem HSl0.of {k : IdxKind} {m : Mem} {o l : Word} {xs : List (Idx k)} (hd : decHL m o.toNat l.toNat = some xs)
+    (hb : o.toNat + l.toNat ≤ iwTop m) : HSl0 m o l xs := ⟨hd, .inr hb⟩
+
+theorem HSl0.len {k : IdxKind} {m : Mem} {o l : Word} {xs : List (Idx k)} (h : HSl0 m o l xs) :
+    xs.length = l.toNat := decHL_length _ h.1
+
 /-! ## `target_canon_params` -/
 
 def tcpK1 (n : Nat) (e : Word) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -138,7 +160,7 @@ def tcpK1 (n : Nat) (e : Word) : Option (List Word × Mem) → Option (List Word
 
 /-- **The model of `target_canon_params`** (body fuel `n`). -/
 def tcpW (n : Nat) (m : Mem) (pfo pfl e : Word) : Option (List Word × Mem) :=
-  tcpK1 n e (recW m 3 [3, pfo, pfl])
+  tcpK1 n e (recW m 3 [3, if pfl = 0 then 0 else pfo, pfl])
 
 theorem tcpK1_some (n : Nat) (e : Word) (r1 : List Word) (m1 : Mem) :
     tcpK1 n e (some (r1, m1)) = eftK2 (rxW n m1 (r1.headD 0) e) := rfl
@@ -158,13 +180,24 @@ theorem targetCanonParams_spec (p : Prog) (L : RxLook p) (h3 : p.lookup "rec3" =
 /-- `target_canon_params` simulates `targetCanonParams`, from the openers decoded below the top. -/
 theorem tcpW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (n : Nat) {m m' : Mem}
     {a : AState} {pfo pfl e : Word} {pfvs : List EIdx} {r : List Word}
-    (h : tcpW n m pfo pfl e = some (r, m')) (hS : StageR dn vis fe m a)
-    (hpf : decHL m pfo.toNat pfl.toNat = some pfvs) (hpb : pfo.toNat + pfl.toNat ≤ iwTop m)
+    (h : tcpW n m pfo pfl e = some (r, m')) (hS : StageR dn vis fe m a) (hpf : HSl0 m pfo pfl pfvs)
     (he : H e) (hP : RcMR m) :
     ∃ a', (ConRon.Arena.targetCanonParams pfvs (decE e)).run a = .ok (decE (r.headD 0), a') ∧
       H (r.headD 0) ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧ RcMR m' := by
   unfold tcpW at h
-  cases hrec : recW m 3 [3, pfo, pfl] with
+  -- the openers' offset as recorded: `0` for an empty slice
+  obtain ⟨po, hpo, hpd, hpb⟩ : ∃ po : Word, po = (if pfl = 0 then 0 else pfo) ∧
+      decHL m po.toNat pfl.toNat = some pfvs ∧ po.toNat + pfl.toNat ≤ iwTop m := by
+    by_cases h0 : pfl = 0
+    · subst h0
+      have hx : pfvs = [] := by have := hpf.len; simpa using this
+      subst hx
+      exact ⟨0, by simp, by simp [decHL, hslice?], by simp⟩
+    · rcases hpf.2 with h1 | h1
+      · exact absurd h1 h0
+      · exact ⟨pfo, by simp [h0], hpf.1, h1⟩
+  rw [← hpo] at h
+  cases hrec : recW m 3 [3, po, pfl] with
   | none => rw [hrec] at h; cases h
   | some x =>
   obtain ⟨r1, m1⟩ := x
@@ -186,8 +219,8 @@ theorem tcpW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (
   simp only [Nat.add_zero, List.getElem?_cons_zero, List.getElem?_cons_succ] at g0 g1 g2
   have hfm : FMOk m1 (rdW (m.arr64 CTL) 200).toNat (.canon pfvs) := by
     rw [hq]
-    refine ⟨iwN_of_get g0, by omega, pfo.toNat, pfl.toNat, iwN_of_get g1, iwN_of_get g2, ?_, by omega⟩
-    rw [decHL_grow hg1 hpb]; exact hpf
+    refine ⟨iwN_of_get g0, by omega, po.toNat, pfl.toNat, iwN_of_get g1, iwN_of_get g2, ?_, by omega⟩
+    rw [decHL_grow hg1 hpb]; exact hpd
   obtain ⟨M, G, g, hR⟩ := hP.pos.rf
   obtain ⟨a', hrun, hH, M', G', hS', hg', hR', -, -⟩ := (rxOK_all dn fe vis n).2.2.2.2.2.2 _ _ a _ e _ z M G g hr
     hS1 hfm he (hR.frame (RfFr.of_iw hf1))
@@ -228,8 +261,7 @@ theorem eraseFVarTys_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx �
 @[refines ConRon.Arena.targetCanonParams]
 theorem targetCanonParams_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis pfo pfl e : Word) (pfvs : List EIdx) (he : H e) (hS : StageR dn vis fe s₀.mem a₀)
-    (hpf : decHL s₀.mem pfo.toNat pfl.toNat = some pfvs) (hpb : pfo.toNat + pfl.toNat ≤ iwTop s₀.mem)
-    (hP : RcMR s₀.mem) :
+    (hpf : HSl0 s₀.mem pfo pfl pfvs) (hP : RcMR s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "target_canon_params" [pfo, pfl, e]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.targetCanonParams pfvs (decE e)) a₀ ∧
       decE (r.headD 0) = AM.res (ConRon.Arena.targetCanonParams pfvs (decE e)) a₀ ∧ H (r.headD 0) ∧
@@ -237,7 +269,7 @@ theorem targetCanonParams_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NI
       IWGrow s₀.mem s'.mem ∧ RcMR s'.mem; ⊤⦄ := by
   refine triple_post (targetCanonParams_spec p L.rx L.r3 L.tcp n s₀ pfo pfl e) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨a', hrun, hH, hS', hg, hP'⟩ := tcpW_ok dn fe vis n hm hS hpf hpb he hP
+  obtain ⟨a', hrun, hH, hS', hg, hP'⟩ := tcpW_ok dn fe vis n hm hS hpf he hP
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, hres.symm, hH, by rw [hst]; exact hS', hg, hP'⟩
 
