@@ -31,7 +31,7 @@ def tmpK2 (vis rP M : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (hd, m2) =>
     if 4294967296 ≤ hd then none
-    else tmpK3 vis rP (stubM "mk_app_n" m2
+    else tmpK3 vis rP (stubM "mk_app_n_f" m2
       [hd, rdW (m2.arr64 IW) (M + 2), rdW (m2.arr64 IW) (M + 3)])
 
 def tmpK1 (vis rP M : Word) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -56,7 +56,7 @@ theorem tmpK1_some : tmpK1 vis rP M (some (r1, m1)) =
     tmpK2 vis rP M (ceinternW m1 (rdW (m1.arr64 IW) M) (rdW (m1.arr64 IW) (M + 1))) := rfl
 theorem tmpK2_some : tmpK2 vis rP M (some (hd, m2)) =
     if 4294967296 ≤ hd then none
-    else tmpK3 vis rP (stubM "mk_app_n" m2 [hd, rdW (m2.arr64 IW) (M + 2), rdW (m2.arr64 IW) (M + 3)]) := rfl
+    else tmpK3 vis rP (stubM "mk_app_n_f" m2 [hd, rdW (m2.arr64 IW) (M + 2), rdW (m2.arr64 IW) (M + 3)]) := rfl
 theorem tmpK3_some : tmpK3 vis rP (some (r3, m3)) =
     tmpK4 (stubM "infer_type_core" m3 [vis, rP, r3.headD 0]) := rfl
 theorem tmpK4_some : tmpK4 (some (r4, m4)) = some ([], m4) := rfl
@@ -88,7 +88,7 @@ theorem targetMajorPins_spec (p : Prog) (h : TmpProg p) (N : Nat) (s₀ : St) (v
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         targetPinTys_spec p h.tpt N, internConst_spec p h.cf h.cp h.ic N,
-        stubM_spec p "mk_app_n" N, stubM_spec p "infer_type_core" N] <;>
+        stubM_spec p "mk_app_n_f" N, stubM_spec p "infer_type_core" N] <;>
       finish (gen := 20) [rdW_eq]
 
 end L.Ind

@@ -430,8 +430,8 @@ OUTSIDE stored inductive (a nested block's container). -/
 @[l_impl ConRon.Arena.targetMajorOf]
 def targetMajorOf : FunDecl := lfn (vis, p, cao, cal, pfo, pfl, fvo, fvl, mty)
     locals (args_o, args_l, hd, tag, g, x, y, z, mno, mnl, ok2, t, r) {
-  (args_o, args_l) := call get_app_args(⟪CWF⟫, mty);
-  hd := call get_app_fn(⟪CWF⟫, mty);
+  (args_o, args_l) := call get_app_args_f(⟪CWF⟫, mty);
+  hd := call get_app_fn_f(⟪CWF⟫, mty);
   tag := hd >> 28;
   if tag != 3 { abort };
   (g, x, y, z) := call e_view(hd);
@@ -469,7 +469,7 @@ def targetMajorPins : FunDecl := lfn (vis, rP, M) locals (mem, hd, app, u) {
     u := call target_pin_tys(vis, rP, IW.u64[M + 2], IW.u64[M + 3]);
     hd := call intern_const(IW.u64[M], IW.u64[M + 1]);
     if 4294967296 <= hd { abort };
-    app := call mk_app_n(hd, IW.u64[M + 2], IW.u64[M + 3]);
+    app := call mk_app_n_f(hd, IW.u64[M + 2], IW.u64[M + 3]);
     u := call infer_type_core(vis, rP, app)
   }
 }
@@ -638,8 +638,8 @@ head, of equal arity. -/
 @[l_impl ConRon.Arena.targetK53]
 def targetK53Heads : FunDecl := lfn (vis, p, fto, ftl, Mc, leafW, majDom)
     locals (lh, mh, ltag, mtag, g, x, y, z, ip, usp, ii, lao, lal, mao, mal, r) {
-  lh := call get_app_fn(⟪CWF⟫, leafW);
-  mh := call get_app_fn(⟪CWF⟫, majDom);
+  lh := call get_app_fn_f(⟪CWF⟫, leafW);
+  mh := call get_app_fn_f(⟪CWF⟫, majDom);
   ltag := lh >> 28;
   mtag := mh >> 28;
   if ltag != 3 { return 0 };
@@ -649,8 +649,8 @@ def targetK53Heads : FunDecl := lfn (vis, p, fto, ftl, Mc, leafW, majDom)
   usp := y;
   (g, x, y, z) := call e_view(mh);
   ii := x;
-  (lao, lal) := call get_app_args(⟪CWF⟫, leafW);
-  (mao, mal) := call get_app_args(⟪CWF⟫, majDom);
+  (lao, lal) := call get_app_args_f(⟪CWF⟫, leafW);
+  (mao, mal) := call get_app_args_f(⟪CWF⟫, majDom);
   if ip != ii { return 0 };
   if lal != mal { return 0 };
   r := call target_k53_args(vis, p, fto, ftl, Mc, ip, usp, lao, lal, mao, mal);
@@ -672,7 +672,7 @@ def targetK53Args : FunDecl := lfn (vis, p, fto, ftl, Mc, ip, usp, lao, lal, mao
   if r == 0 { return 0 };
   if lal < nPc { lpl := lal } else { lpl := nPc };
   hd := call intern_const(ip, usp);
-  app := call mk_app_n(hd, lao, lpl);
+  app := call mk_app_n_f(hd, lao, lpl);
   (mno, mnl) := call block_shape_member_names(p);
   occ := call nest_occ(mno, mnl, 0, 0, app);
   if occ == 0 { return 0 };
