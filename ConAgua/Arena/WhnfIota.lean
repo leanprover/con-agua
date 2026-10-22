@@ -89,16 +89,21 @@ def isStrLitL : FunDecl := lfn (h) locals (t, i) {
 
 Both read only the 11-word rule records at `(ro, rc)` in `EREC`; neither touches `AM`. -/
 
+/-- The scan of `find_rule` (a named block, for the proofs). -/
+def findRuleLoop : Stmt := lblk (ro, rc, c, i) {
+  while i < rc {
+    if EREC.u64[ro + 11 * i] == c { return (1, ro + 11 * i) };
+    i += 1
+  }
+}
+
 /-- con-leche: `Core.lean:777-876` (`iotaRec`'s own lookup) `findRule` — the rule whose
 constructor is `c`, as a linear scan of the rule-record slice. -/
 -- con-ron: ConRon/Arena/Core.lean:2005-2010 ConRon.Arena.findRule
 @[l_impl ConRon.Arena.findRule]
 def findRuleL : FunDecl := lfn (ro, rc, c) locals (i) {
   i := 0;
-  while i < rc {
-    if EREC.u64[ro + 11 * i] == c { return (1, ro + 11 * i) };
-    i += 1
-  };
+  ⟪findRuleLoop⟫;
   return (0, 0)
 }
 
@@ -169,18 +174,32 @@ def iotaCase3L : FunDecl := lfn (rlk, vis, ctorP, us) locals (np) {
 
 /-! ## `tower_slots_all(vis, T, nF)`, `eta_projs(T, b, nF)`, `eta_fab_args(…)` -/
 
+/-- The slot walk of `tower_slots_all` (a named block, for the proofs). -/
+def towerSlotsAllLoop : Stmt := lblk (vis, T, nF, j, flag, q) {
+  while j < nF {
+    (flag, q) := call find_proj(vis, T, j);
+    if flag == 0 { return 0 };
+    j += 1
+  }
+}
+
 /-- con-leche: `CoreDefs.lean:723-728`/`FEnv.lean:195-197` `towerSlotsAll` — are all `nF`
 projection slots of `T` table entries? -/
 -- con-ron: ConRon/Arena/Core.lean:1429-1433 ConRon.Arena.towerSlotsAll
 @[l_impl ConRon.Arena.towerSlotsAll]
 def towerSlotsAllL : FunDecl := lfn (vis, T, nF) locals (j, flag, q) {
   j := 0;
-  while j < nF {
-    (flag, q) := call find_proj(vis, T, j);
-    if flag == 0 { return 0 };
-    j += 1
-  };
+  ⟪towerSlotsAllLoop⟫;
   return 1
+}
+
+/-- The projection walk of `eta_projs` (a named block, for the proofs). -/
+def etaProjsLoop : Stmt := lblk (T, b, nF, o, j, pr) {
+  while j < nF {
+    pr := call mk_proj(T, j, b);
+    SPN.u64[o + j] := pr;
+    j += 1
+  }
 }
 
 /-- con-leche: `CoreDefs.lean:730-735`/`Cached/CoreC.lean:310-317` `etaProjs`/`projNodesGo` — the
@@ -193,11 +212,7 @@ def etaProjsL : FunDecl := lfn (T, b, nF) locals (o, j, pr) {
   if len(SPN.u64) < o { abort };
   if len(SPN.u64) - o < nF { abort };
   j := 0;
-  while j < nF {
-    pr := call mk_proj(T, j, b);
-    SPN.u64[o + j] := pr;
-    j += 1
-  };
+  ⟪etaProjsLoop⟫;
   CTL.u64[136] := o + nF;
   return (o, nF)
 }
@@ -214,6 +229,22 @@ def etaFabArgsL : FunDecl := lfn (T, to, tn, major, nF) locals (o2, n2) {
 
 /-! ## `and_rescue_slots(vis, ctor, nP, us)` -/
 
+/-- The two-slot walk of `and_rescue_slots` (a named block, for the proofs). `fire_ok` is called
+before the shape checks: the twin's `(← e.fireOk ust)` is lifted out of the `if` and runs
+regardless, with its cache effects. -/
+def andRescueLoop : Stmt := lblk (vis, ctor, nP, us, an, j, flag, q, ok) {
+  while j < 2 {
+    (flag, q) := call find_proj(vis, an, j);
+    if flag == 0 { return 0 };
+    ok := call fire_ok(q, j, us);
+    if EREC.u64[q + 6] != ctor { return 0 };
+    if EREC.u64[q + 5] != nP { return 0 };
+    if EREC.u64[q + 7] != 2 { return 0 };
+    if ok == 0 { return 0 };
+    j += 1
+  }
+}
+
 /-- con-leche: `CoreDefs.lean:793-806`/`:808-810`/`FEnv.lean:199-201` `andRescueSlotsGo` /
 `andRescueSlots` / `FEnv.andRescueSlotsF` — the pinned `And`'s two projection slots, ready to
 fire. `q`, the table pointer `find_proj` hands back, has `ctor` at `q + 6`, `numParams` at `q + 5`,
@@ -224,16 +255,7 @@ fire. `q`, the table pointer `find_proj` hands back, has `ctor` at `q + 6`, `num
 def andRescueSlotsL : FunDecl := lfn (vis, ctor, nP, us) locals (an, j, flag, q, ok) {
   an := call pin_at(11);
   j := 0;
-  while j < 2 {
-    (flag, q) := call find_proj(vis, an, j);
-    if flag == 0 { return 0 };
-    if EREC.u64[q + 6] != ctor { return 0 };
-    if EREC.u64[q + 5] != nP { return 0 };
-    if EREC.u64[q + 7] != 2 { return 0 };
-    ok := call fire_ok(q, j, us);
-    if ok == 0 { return 0 };
-    j += 1
-  };
+  ⟪andRescueLoop⟫;
   return 1
 }
 
@@ -444,12 +466,8 @@ def prepareMajorL : FunDecl := lfn (mode, vis, d, rec, ro, rc, major)
 
 /-! ## `pi_residual(e, ao, an)` -/
 
-/-- con-leche: `CoreDefs.lean:716-721` `piResidual` — peel a ∀-telescope along an argument
-spine `(ao, an)`. -/
--- con-ron: ConRon/Arena/Core.lean:1326-1337 ConRon.Arena.piResidual
-@[l_impl ConRon.Arena.piResidual]
-def piResidualL : FunDecl := lfn (e, ao, an) locals (i, t, x, body, b2) {
-  i := 0;
+/-- The telescope walk of `pi_residual` (a named block, for the proofs). -/
+def piResidualLoop : Stmt := lblk (e, ao, an, i, t, x, body, b2) {
   while i < an {
     if e >> 28 != 6 { return (0, 0) };
     t := (e >> 27) & 1;
@@ -460,40 +478,58 @@ def piResidualL : FunDecl := lfn (e, ao, an) locals (i, t, x, body, b2) {
     b2 := call inst_entry(body, SPN.u64[ao + i], 0);
     e := b2;
     i += 1
-  };
+  }
+}
+
+/-- con-leche: `CoreDefs.lean:716-721` `piResidual` — peel a ∀-telescope along an argument
+spine `(ao, an)`. -/
+-- con-ron: ConRon/Arena/Core.lean:1326-1337 ConRon.Arena.piResidual
+@[l_impl ConRon.Arena.piResidual]
+def piResidualL : FunDecl := lfn (e, ao, an) locals (i, t, x, body, b2) {
+  i := 0;
+  ⟪piResidualLoop⟫;
   return (1, e)
 }
 
 /-! ## `defeq_list(mode, vis, d, ao, an, bo, bn)` -/
 
-/-- con-leche: `Core.lean:269-278` `defEqList` — pairwise definitional equality of two spines. -/
--- con-ron: ConRon/Arena/Core.lean:1339-1346 ConRon.Arena.defEqList
-@[l_impl ConRon.Arena.defEqList]
-def defeqListL : FunDecl := lfn (mode, vis, d, ao, an, bo, bn) locals (i, ok) {
-  if an != bn { return 0 };
-  i := 0;
-  while i < an {
+/-- The pairwise walk of `defeq_list` (a named block, for the proofs). -/
+def defeqListLoop : Stmt := lblk (mode, vis, d, ao, an, bo, bn, i, ok) {
+  while i < an && i < bn {
     ok := call defeq(mode, vis, d, SPN.u64[ao + i], SPN.u64[bo + i]);
     if ok == 0 { return 0 };
     i += 1
-  };
-  return 1
+  }
+}
+
+/-- con-leche: `Core.lean:269-278` `defEqList` — pairwise definitional equality of two spines. As the
+twin, it compares the common prefix pairwise (stopping at the first `false`) and only then the
+lengths: an early length test would skip the twin's `defeq` calls and their cache writes. -/
+-- con-ron: ConRon/Arena/Core.lean:1339-1346 ConRon.Arena.defEqList
+@[l_impl ConRon.Arena.defEqList]
+def defeqListL : FunDecl := lfn (mode, vis, d, ao, an, bo, bn) locals (i, ok) {
+  i := 0;
+  ⟪defeqListLoop⟫;
+  return u64(an == bn)
 }
 
 /-! ## `iota_index_ok(mode, vis, d, mI, rP, cnP, tyCtor, mo, mn, xo, xn)` -/
 
 /-- con-leche: `Core.lean:280-296` `iotaIndexOk` — the canonical-index comparison of a firing
-ι redex. -/
+ι redex. The stack top is restored after the `get_app_args` slice (the twin's list is a value; the
+refinement specs promise `StackKept`). -/
 -- con-ron: ConRon/Arena/Core.lean:1348-1358 ConRon.Arena.iotaIndexOk
 @[l_impl ConRon.Arena.iotaIndexOk]
 def iotaIndexOkL : FunDecl := lfn (mode, vis, d, mI, rP, cnP, tyCtor, mo, mn, xo, xn)
-    locals (flag, res, ao2, an2, an3) {
+    locals (flag, res, top, ao2, an2, an3) {
   if mI == rP { return 1 };
   (flag, res) := call pi_residual(tyCtor, mo, mn);
   if flag == 0 { return 0 };
+  top := CTL.u64[136];
   (ao2, an2) := call get_app_args(res);
   an3 := (an2 - cnP) * u64(cnP <= an2);
   res := call defeq_list(mode, vis, d, ao2 + cnP, an3, xo, xn);
+  CTL.u64[136] := top;
   return res
 }
 
@@ -540,7 +576,9 @@ Both are thin memo wrappers around `inst_lp` (a `WhnfCallees` stub), over the al
 caches `ruleRhsC` (array 104, `rrSch`) and `constTyC` (array 102, `ctSch`): `CoreCaches.lean`,
 `CoreRefine.lean`'s `rrKey`/`memoRG_findR`/`memoRG_findP`. -/
 
-/-- con-leche: none — `ruleRhsAt`'s cache probe, `rrSch`'s key `(rec, ctor ||| us << 32)`. -/
+/-- con-leche: none — `ruleRhsAt`'s cache probe, `rrSch`'s key `(rec, ctor ||| us << 32)`. The probe
+is repeated after `inst_lp` (as `const_val_at` does): the slot found before the call is stale if the
+callee wrote the memo. -/
 -- con-ron: ConRon/Arena/Core.lean:209-224 ConRon.Arena.ruleRhsAt
 @[l_impl ConRon.Arena.ruleRhsAt]
 def ruleRhsAtL : FunDecl := lfn (rec, ctor, po, pl, rhs, us)
@@ -549,22 +587,34 @@ def ruleRhsAtL : FunDecl := lfn (rec, ctor, po, pl, rhs, us)
   (fd, j, dd) := call rr_find(rec, k2);
   if fd != 0 { return rrSch.arr.u64[j * 4 + 3] };
   r := call inst_lp(po, pl, us, rhs);
+  (fd, j, dd) := call rr_find(rec, k2);
   dum := call rr_put(rec, k2, r, fd, j);
   return r
 }
 
-/-- con-leche: none — `constTyAt`'s cache probe, `ctSch`'s key `(n, us)`. -/
+/-- con-leche: none — `constTyAt`'s cache probe, `ctSch`'s key `(n, us)`. The probe is repeated
+after `inst_lp` (as `const_val_at` does). -/
 -- con-ron: ConRon/Arena/Core.lean:178-191 ConRon.Arena.constTyAt
 @[l_impl ConRon.Arena.constTyAt]
 def constTyAtL : FunDecl := lfn (n, po, pl, ty, us) locals (fd, j, dd, r, dum) {
   (fd, j, dd) := call ct_find(n, us);
   if fd != 0 { return ctSch.arr.u64[j * 4 + 3] };
   r := call inst_lp(po, pl, us, ty);
+  (fd, j, dd) := call ct_find(n, us);
   dum := call ct_put(n, us, r, fd, j);
   return r
 }
 
 /-! ## `rec_fire_args(…)`: `instSpine`, `inst_spine_pins`, `rec_fire_args` -/
+
+/-- The instantiation walk of `inst_spine` (a named block, for the proofs). -/
+def instSpineLoop : Stmt := lblk (ao, an, t, e, i) {
+  while i < an {
+    e := call inst_entry(e, SPN.u64[ao + i], t);
+    t := t - 1;
+    i += 1
+  }
+}
 
 /-- con-leche: `ExprOps.lean:1305-1313` `instSpine` — instantiate a telescope-context expression
 at an argument spine `(ao, an)`, the fuel-like index `t` decreasing by one per argument. -/
@@ -572,12 +622,21 @@ at an argument spine `(ao, an)`, the fuel-like index `t` decreasing by one per a
 @[l_impl ConRon.Arena.instSpine]
 def instSpineL : FunDecl := lfn (ao, an, t, e) locals (i) {
   i := 0;
-  while i < an {
-    e := call inst_entry(e, SPN.u64[ao + i], t);
-    t := t - 1;
-    i += 1
-  };
+  ⟪instSpineLoop⟫;
   return e
+}
+
+/-- The pin walk of `inst_spine_pins` (a named block, for the proofs). Each result is pushed (the top
+is raised) as soon as it is stored: the next iteration's callees may use the stack above the top,
+and the earlier results must lie below it. -/
+def instSpinePinsLoop : Stmt := lblk (po, pl, us, ao, rP, pvo, pvc, so, j, q, s) {
+  while j < pvc {
+    q := call inst_lp(po, pl, us, SPN.u64[pvo + j]);
+    s := call inst_spine(ao, rP, rP - 1, q);
+    SPN.u64[so + j] := s;
+    CTL.u64[136] := so + j + 1;
+    j += 1
+  }
 }
 
 /-- con-leche: `CoreDefs.lean:908-927` `recFireComparands` (the nested rule's stored parameter
@@ -590,13 +649,7 @@ def instSpinePinsL : FunDecl := lfn (po, pl, us, ao, rP, pvo, pvc) locals (so, j
   if len(SPN.u64) < so { abort };
   if len(SPN.u64) - so < pvc { abort };
   j := 0;
-  while j < pvc {
-    q := call inst_lp(po, pl, us, SPN.u64[pvo + j]);
-    s := call inst_spine(ao, rP, rP - 1, q);
-    SPN.u64[so + j] := s;
-    j += 1
-  };
-  CTL.u64[136] := so + pvc;
+  ⟪instSpinePinsLoop⟫;
   return (so, pvc)
 }
 
@@ -659,12 +712,14 @@ def iotaCertsFullAuxL : FunDecl := lfn (mode, vis, d, h, aco, acn, ao, an, i)
 }
 
 /-- con-leche: `Kernel/Core.lean:252-267`/`Cached/CoreC.lean:178-181` `iotaCertsFull`/
-`iotaCertsFullI` — the empty-accumulator entry. -/
+`iotaCertsFullI` — the empty-accumulator entry. The stack top is restored after the walk (the
+accumulator is scratch; the refinement specs promise `StackKept`). -/
 -- con-ron: ConRon/Arena/Core.lean:1319-1324 ConRon.Arena.iotaCertsFull
 @[l_impl ConRon.Arena.iotaCertsFull]
 def iotaCertsFullL : FunDecl := lfn (mode, vis, d, h, ao, an) locals (top, res) {
   top := CTL.u64[136];
   res := call iota_certs_full_aux(mode, vis, d, h, top, 0, ao, an, 0);
+  CTL.u64[136] := top;
   return res
 }
 
