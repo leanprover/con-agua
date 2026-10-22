@@ -5206,6 +5206,41 @@ the model's arithmetic; the latter costs a case split per comparison, per goal.
 | `Abs1.lean` (models, L, go/node steps) | | 140 (L code) | 708 (file) | | 2.8 s |
 | `Abs1Spec.lean` (arm steps, entry) | | | 174 | | 57 s |
 | `Abs1Refine.lean` | | | | 1100 | 2.7 s |
+
+### `instantiateList`/`instantiateListGo`/`instantiateListFast` (`InstList{,Spec,Refine}.lean`)
+
+`inst_list(e, o, l, d)` refines `instantiateListFast F (decE e) vs d` under `ArenaL`
+(`instList_refines`; axioms `propext`, `Classical.choice`, `Quot.sound`, **no `sorry`**), for any
+`vs` with `SpineR m o l vs` (`WhnfBase.lean`'s stack-slice relation) and `o + l < 2^64`; the post
+also says the stack array is unchanged. Both twins in L: the pure walk `il_go` + six arms
+(`instantiateList`, `instListArm*`) and the memo walk `ilg_go` + five arms (`instantiateListGo`,
+`instListGoArm*`), `Inst1*.lean`'s shape.
+
+* **The pool-slice reader is the spine stack**, not the Nat-limb pool: the interface was already
+  fixed by lane `whnf` (`InstListOK`, `inst_list(e, off, cnt, d)` over `SPN`, array 144, which
+  `CoreS` sizes below `2^63`), and the callers in `WhnfCore`/`Infer`/`DefEq` already pass stack
+  slices. L names array 144 `ILSPN` (a `module` file cannot import `WhnfBase.lean`).
+* **The shrinking suffix** (`lastEidx vs q`) is the slice `(o + (l - q), q)`: `spineR_last`
+  (from `lastEidx_toList`: `eidxCopyUpto` from `xs.size - k` is `drop`), `spineR_entry` for
+  `vs[size - 1 - q]`, `slice_word` for the offset arithmetic. No copy, `O(1)`, as the twin's
+  comment wants.
+* **The slice survives the walk** because nothing the walk writes is array 144: every
+  statement's post carries `m'.arr64 ILSPN = m.arr64 ILSPN` (from the `mk*W_frameA` frames of
+  `Abs1Refine.lean`, the memo's frames), and `SpineR.of_spn` moves the slice across.
+* **The memo tier `ArenaL := ArenaD ∧ ILR`** (`instLC` on array 50 `ILMEMO`, `CTL[50]`/`[51]`),
+  `ArenaA`'s pattern; the pure walk carries it too (the memo walk calls it).
+* **Hand-off to lane `whnf`** (`InstListOK`, a stub in `whnfCallees_stub`): what is left is the
+  bridge from `CoreS` to `ArenaL` and back. `CoreS` has `ArenaD`; it lacks `ILR` (`instLC` is not
+  in `MemosR`), so either `CoreS` gains an `ILR` conjunct (kept by every other writer's frame: array
+  50 and `CTL[50]` are written by `inst_list` alone) or a variant of the entry lemma starts from
+  any memory (the entry clears the memo first; `memoRG_clear` currently assumes a prior `MemoRG`).
+  Census tag on `instList_refines`; `instantiateListFast` is phase 4.
+
+| `instantiateList` | L lines (code) | file lines | `lean` user |
+|---|---:|---:|---:|
+| `InstList.lean` (models, L, dispatcher steps) | 230 | 935 | 4.5 s |
+| `InstListSpec.lean` (arm steps, entry) | | 273 | 34 s |
+| `InstListRefine.lean` | | 979 | 2.7 s |
 ## Definitional equality, inference, the knot: L code top down (2026-10-22, lane `defeq`)
 
 Phases 6 and 7 (ROADMAP §1): con-ron's `Arena/Core.lean:2439-3675` and the helpers it reaches
