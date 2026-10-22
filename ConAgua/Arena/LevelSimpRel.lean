@@ -68,17 +68,17 @@ theorem combW_ok (n : Nat) : ∀ (m m' : Mem) (l r x : Word) (L R : Level),
   | succ n ih =>
     intro m m' l r x L R hl hr h
     by_cases hz : lvG m l = 0
-    · rw [combW_zl n m l r hz] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
+    · rw [combW.arm1 n m l r hz] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
       have : L = .zero := by cases hl <;> simp_all [lvG]
       subst this; exact ⟨HeapExt.refl _, by simpa [Level.combining] using hr⟩
     have hL : L ≠ .zero := by rintro rfl; exact hz hl.tag_zero
     by_cases hz' : lvG m r = 0
-    · rw [combW_zr n m l r hz hz'] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
+    · rw [combW.arm2 n m l r hz hz'] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
       have : R = .zero := by cases hr <;> simp_all [lvG]
       subst this; exact ⟨HeapExt.refl _, by rw [combining_zero_right]; exact hl⟩
     have hR : R ≠ .zero := by rintro rfl; exact hz' hr.tag_zero
     by_cases hs : lvG m l = 1 ∧ lvG m r = 1
-    · rw [combW_ss n m l r hs.1 hs.2] at h
+    · rw [combW.arm3 n m l r hz hz' hs] at h
       obtain ⟨y, m₁, hy, hm⟩ := succK_inv h
       cases hl with
       | succ hv hl₁ =>
@@ -90,7 +90,7 @@ theorem combW_ok (n : Nat) : ∀ (m m' : Mem) (l r x : Word) (L R : Level),
           exact ⟨he₁.trans he₂, by simpa [Level.combining] using hx⟩
         | _ => simp_all [lvG]
       | _ => simp_all [lvG]
-    · rw [combW_mx n m l r hz hz' hs] at h
+    · rw [combW.arm4 n m l r hz hz' hs] at h
       obtain ⟨he, hx⟩ := mk_max h hl hr
       refine ⟨he, ?_⟩
       rw [combining_max L R hL hR]
@@ -117,16 +117,16 @@ theorem simplify_imax (l r : Level) :
   · cases Level.simplify r <;> rfl
 
 theorem imaxW_ok (n : Nat) (m m' : Mem) (x y z : Word) (S T : Level)
-    (hx : LvR N m x S) (hy : LvR N m y T) (h : imaxW n m x y = some (z, m')) :
+    (hx : LvR N m x S) (hy : LvR N m y T) (h : simpW.k2 n 3 x (some (y, m)) = some (z, m')) :
     HeapExt m m' ∧ LvR N m' z (simpImax S T) := by
   -- the left test: `S = zero` or `S = succ zero`
   by_cases h0 : lvG m x = 0
-  · rw [imaxW_z n m x y h0] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
+  · rw [simpW.k2.arm2 n 3 x y m (by decide) h0] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
     have : S = .zero := by cases hx <;> simp_all [lvG]
     subst this; exact ⟨HeapExt.refl _, by simpa [simpImax] using hy⟩
   have hS0 : S ≠ .zero := by rintro rfl; exact h0 hx.tag_zero
   by_cases h1 : lvG m x = 1 ∧ lvG m (lvA m x) = 0
-  · rw [imaxW_one n m x y h1.1 h1.2] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
+  · rw [simpW.k2.arm3 n 3 x y m (by decide) h0 h1.1 h1.2] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
     cases hx with
     | succ hv hc =>
       rw [(lv_fields hv).2.1] at h1
@@ -141,17 +141,22 @@ theorem imaxW_ok (n : Nat) (m m' : Mem) (x y z : Word) (S T : Level)
     | succ hv hc =>
       rw [(lv_fields hv).2.1]; exact ⟨by simp [lvG, hv], hc.tag_zero⟩
   have hif : (S = .zero || S = .succ .zero) = false := by simp [hS0, hS1]
+  have hj : simpW.k2 n 3 x (some (y, m)) = simpW.k1 n x y m := by
+    by_cases hx1 : lvG m x = 1
+    · exact simpW.k2.arm4 n 3 x y m (by decide) h0 hx1 (fun e => h1 ⟨hx1, e⟩)
+    · exact simpW.k2.arm5 n 3 x y m (by decide) h0 hx1
+  rw [hj] at h
   by_cases h2 : lvG m y = 0
-  · rw [imaxW_rz n m x y h0 h1 h2] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
+  · rw [simpW.k1.arm1 n x y m h2] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
     have : T = .zero := by cases hy <;> simp_all [lvG]
     subst this; exact ⟨HeapExt.refl _, by simpa [simpImax, hif] using hy⟩
   by_cases h3 : lvG m y = 1
-  · rw [imaxW_rs n m x y h0 h1 h2 h3] at h
+  · rw [simpW.k1.arm2 n x y m h2 h3] at h
     obtain ⟨he, hz⟩ := combW_ok n m m' x y z S T hx hy h
     cases hy with
     | succ hv _ => exact ⟨he, by simpa [simpImax, hif] using hz⟩
     | _ => simp_all [lvG]
-  · rw [imaxW_mk n m x y h0 h1 h2 h3] at h
+  · rw [simpW.k1.arm3 n x y m h2 h3] at h
     obtain ⟨he, hz⟩ := mk_imax h hx hy
     refine ⟨he, ?_⟩
     cases hy with
@@ -171,50 +176,53 @@ theorem simpW_ok (n : Nat) : ∀ (m m' : Mem) (p x : Word) (L : Level),
     intro m m' p x L hp h
     cases hp with
     | zero hv =>
-      rw [simpW_leaf n m p (Or.inl (by simp [lvG, hv]))] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
+      rw [simpW.arm1 n m p (Or.inl (by simp [lvG, hv]))] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
       exact ⟨HeapExt.refl _, by simpa [Level.simplify] using LvR.zero hv⟩
     | param hv hn =>
-      rw [simpW_leaf n m p (Or.inr (by simp [lvG, hv]))] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
+      rw [simpW.arm1 n m p (Or.inr (by simp [lvG, hv]))] at h; simp at h; obtain ⟨rfl, rfl⟩ := h
       exact ⟨HeapExt.refl _, by simpa [Level.simplify] using LvR.param hv hn⟩
     | succ hv ha =>
-      rw [simpW_succ n m p (by simp [lvG, hv]), (lv_fields hv).2.1] at h
-      obtain ⟨y, m₁, hy, hm⟩ := succK_inv h
-      obtain ⟨he₁, hy'⟩ := ih _ _ _ _ _ ha hy
-      obtain ⟨he₂, hx⟩ := mk_succ hm hy'
-      exact ⟨he₁.trans he₂, by simpa [Level.simplify] using hx⟩
+      rw [simpW.arm2 n m p (by simp [lvG, hv]), (lv_fields hv).2.1,
+        show lvG m p = 1 by simp [lvG, hv]] at h
+      cases e₁ : simpW n m _ with
+      | none => rw [e₁] at h; simp [simpW.k3] at h
+      | some v₁ =>
+        obtain ⟨y, m₁⟩ := v₁
+        rw [e₁, simpW.k3.arm1 n 1 _ y m₁ rfl] at h
+        obtain ⟨he₁, hy'⟩ := ih _ _ _ _ _ ha e₁
+        obtain ⟨he₂, hx⟩ := mk_succ h hy'
+        exact ⟨he₁.trans he₂, by simpa [Level.simplify] using hx⟩
     | max hv ha hb =>
-      rw [simpW_bin n m p (by simp [lvG, hv]) (by simp [lvG, hv]) (by simp [lvG, hv]),
-        (lv_fields hv).2.1, (lv_fields hv).2.2,
+      rw [simpW.arm2 n m p (by simp [lvG, hv]), (lv_fields hv).2.1, (lv_fields hv).2.2,
         show lvG m p = 2 by simp [lvG, hv]] at h
       cases e₁ : simpW n m _ with
-      | none => rw [e₁] at h; simp [simpK₁] at h
+      | none => rw [e₁] at h; simp [simpW.k3] at h
       | some v₁ =>
         obtain ⟨x₁, m₁⟩ := v₁
-        rw [e₁, simpK₁_some] at h
+        rw [e₁, simpW.k3.arm2 n 2 _ x₁ m₁ (by decide)] at h
         obtain ⟨he₁, hx₁⟩ := ih _ _ _ _ _ ha e₁
         cases e₂ : simpW n m₁ _ with
-        | none => rw [e₂] at h; simp [simpK₂] at h
+        | none => rw [e₂] at h; simp [simpW.k2] at h
         | some v₂ =>
           obtain ⟨y, m₂⟩ := v₂
-          rw [e₂, simpK₂_max n m₂ 2 x₁ y rfl] at h
+          rw [e₂, simpW.k2.arm1 n 2 x₁ y m₂ rfl] at h
           obtain ⟨he₂, hy⟩ := ih _ _ _ _ _ (hb.mono he₁) e₂
           obtain ⟨he₃, hz⟩ := combW_ok n _ _ _ _ _ _ _ (hx₁.mono he₂) hy h
           exact ⟨(he₁.trans he₂).trans he₃, by simpa [Level.simplify] using hz⟩
     | imax hv ha hb =>
-      rw [simpW_bin n m p (by simp [lvG, hv]) (by simp [lvG, hv]) (by simp [lvG, hv]),
-        (lv_fields hv).2.1, (lv_fields hv).2.2,
+      rw [simpW.arm2 n m p (by simp [lvG, hv]), (lv_fields hv).2.1, (lv_fields hv).2.2,
         show lvG m p = 3 by simp [lvG, hv]] at h
       cases e₁ : simpW n m _ with
-      | none => rw [e₁] at h; simp [simpK₁] at h
+      | none => rw [e₁] at h; simp [simpW.k3] at h
       | some v₁ =>
         obtain ⟨x₁, m₁⟩ := v₁
-        rw [e₁, simpK₁_some] at h
+        rw [e₁, simpW.k3.arm2 n 3 _ x₁ m₁ (by decide)] at h
         obtain ⟨he₁, hx₁⟩ := ih _ _ _ _ _ ha e₁
         cases e₂ : simpW n m₁ _ with
-        | none => rw [e₂] at h; simp [simpK₂] at h
+        | none => rw [e₂] at h; simp [simpW.k2] at h
         | some v₂ =>
           obtain ⟨y, m₂⟩ := v₂
-          rw [e₂, simpK₂_imax n m₂ 3 x₁ y (by decide)] at h
+          rw [e₂] at h
           obtain ⟨he₂, hy⟩ := ih _ _ _ _ _ (hb.mono he₁) e₂
           obtain ⟨he₃, hz⟩ := imaxW_ok n _ _ _ _ _ _ _ (hx₁.mono he₂) hy h
           exact ⟨(he₁.trans he₂).trans he₃, by rw [simplify_imax]; exact hz⟩
@@ -231,32 +239,33 @@ theorem nzW_ok (n : Nat) : ∀ (m : Mem) (p x : Word) (L : Level),
     intro m p x L hp h
     cases hp with
     | zero hv =>
-      rw [nzW_leaf n m p (by simp [lvG, hv]) (by simp [lvG, hv]) (by simp [lvG, hv])] at h
+      rw [nzW.arm4 n m p (by simp [lvG, hv]) (by simp [lvG, hv]) (by simp [lvG, hv])] at h
       simp at h; simp [Level.isNeverZero, h]
     | param hv _ =>
-      rw [nzW_leaf n m p (by simp [lvG, hv]) (by simp [lvG, hv]) (by simp [lvG, hv])] at h
+      rw [nzW.arm4 n m p (by simp [lvG, hv]) (by simp [lvG, hv]) (by simp [lvG, hv])] at h
       simp at h; simp [Level.isNeverZero, h]
     | succ hv _ =>
-      rw [nzW_succ n m p (by simp [lvG, hv])] at h; simp at h; simp [Level.isNeverZero, h]
+      rw [nzW.arm1 n m p (by simp [lvG, hv])] at h; simp at h; simp [Level.isNeverZero, h]
     | imax hv _ hb =>
-      rw [nzW_imax n m p (by simp [lvG, hv]), (lv_fields hv).2.2] at h
+      rw [nzW.arm3 n m p (by simp [lvG, hv]) (by simp [lvG, hv]) (by simp [lvG, hv]),
+        (lv_fields hv).2.2] at h
       rw [ih _ _ _ _ hb h]
       rfl
     | @max _ a b l r hv ha hb =>
-      rw [nzW_max n m p (by simp [lvG, hv]), (lv_fields hv).2.1,
+      rw [nzW.arm2 n m p (by simp [lvG, hv]) (by simp [lvG, hv]), (lv_fields hv).2.1,
         (lv_fields hv).2.2] at h
       cases e : nzW n m _ with
-      | none => rw [e] at h; simp [nzW.nzK] at h
+      | none => rw [e] at h; simp [nzW.k1] at h
       | some y =>
         rw [e] at h
         have hy := ih _ _ _ _ ha e
         by_cases hy0 : y = 0
-        · subst hy0; rw [nzK_zero] at h
+        · subst hy0; rw [nzW.k1.arm2 _ _ _ _ (by simp)] at h
           rw [ih _ _ _ _ hb h]
           have hl : Level.isNeverZero l = false := by
             revert hy; cases Level.isNeverZero l <;> simp
           simp [Level.isNeverZero, hl]
-        · rw [nzK_one _ _ _ _ hy0] at h; simp at h
+        · rw [nzW.k1.arm1 _ _ _ _ hy0] at h; simp at h
           have hl : Level.isNeverZero l = true := by
             revert hy; cases Level.isNeverZero l <;> simp_all
           simp [Level.isNeverZero, hl, ← h]
