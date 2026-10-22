@@ -39,6 +39,9 @@ namespace L.Arena
 def LvlAll (a : AState) : Prop :=
   ∀ u : LIdx, (a.store.ls.view u).isSome → ∃ l, denoteL a.store.ls u = some l
 
+theorem LvlAll.congr {a a' : AState} (h : LvlAll a) (e : a'.store.ls = a.store.ls) : LvlAll a' := by
+  intro u hu; rw [e] at hu ⊢; exact h u hu
+
 /-- **Stored levels read back** (see the module note). -/
 structure StoreDen (m : Mem) (a : AState) (fe : IFEnv) : Prop where
   sort : ∀ (h : EIdx) (u : LIdx), a.store.view h = some (.sort u) →
@@ -59,6 +62,8 @@ structure StoreDen (m : Mem) (a : AState) (fe : IFEnv) : Prop where
     (∃ l, denoteL a.store.ls tbl.structSort = some l) ∧
     (∀ i, i < tbl.numFields → ∃ l, denoteL a.store.ls (tbl.guards.getD i default) = some l) ∧
     (∃ ks, tbl.levelParams.mapM (denoteN a.store.ns) = some ks)
+  /-- Every valid level handle reads back (what a level interning's cons hit needs). -/
+  lvlAll : LvlAll a
 
 /-! ## Keeping `StoreDen` -/
 
@@ -195,7 +200,8 @@ theorem StoreDen.mono {m m' : Mem} {a a' : AState} {fe : IFEnv} (h : StoreDen m 
       a.caches.readNC[k]? = some x ∨ denoteN a'.store.ns k = some x)
     (he : m'.arr64 EREC = m.arr64 EREC)
     (hs : ∀ x u, a'.store.view x = some (.sort u) → a.store.view x = some (.sort u))
-    (hc : ∀ x c us, a'.store.view x = some (.const c us) → a.store.view x = some (.const c us)) :
+    (hc : ∀ x c us, a'.store.view x = some (.const c us) → a.store.view x = some (.const c us))
+    (hlv : LvlAll a') :
     StoreDen m' a' fe := by
   have hN : ∀ i n, denoteN a.store.ns i = some n → denoteN a'.store.ns i = some n := hx.ls.ns
   have hNs : ∀ (l : List NIdx) ks, l.mapM (denoteN a.store.ns) = some ks →
@@ -209,7 +215,7 @@ theorem StoreDen.mono {m m' : Mem} {a a' : AState} {fe : IFEnv} (h : StoreDen m 
       obtain ⟨y, hy, ys, hys, rfl⟩ := h
       exact ⟨y, hN _ _ hy, ys, ih _ hys, rfl⟩
   refine ⟨fun x u hv => ?_, fun x c us hv => ?_, ?_, ?_, fun k x hk => ?_,
-    fun c ci cv hf ht hcv => ?_, fun q tbl ht => ?_⟩
+    fun c ci cv hf ht hcv => ?_, fun q tbl ht => ?_, hlv⟩
   · obtain ⟨l, hl⟩ := h.sort x u (hs x u hv); exact ⟨l, hx.ls.lvl _ _ hl⟩
   · obtain ⟨l, hl⟩ := h.constLs x c us (hc x c us hv); exact ⟨l, hx.lst _ _ hl⟩
   · obtain ⟨l, hl⟩ := h.zero; exact ⟨l, by rw [hz]; exact hx.ls.lvl _ _ hl⟩
@@ -237,12 +243,13 @@ theorem StoreDen.of_arena {m m' : Mem} {a a' : AState} {fe : IFEnv} {A : List Ar
         first | exact hscC.1 | exact hscC.2.1 | exact hscC.2.2.1 | exact hscC.2.2.2.1 | exact hscC.2.2.2.2))
   exact h.mono (by rw [hl]; exact LsExt.refl _) (by rw [hp]) (by rw [hp]) (fun _ _ hk => .inl (hc ▸ hk))
     (hf.1 EREC heA (by decide)) (fun _ _ hv => view_sort_keep hsc hv)
-    (fun _ _ _ hv => view_const_keep hsc hv)
+    (fun _ _ _ hv => view_const_keep hsc hv) (h.lvlAll.congr (by simp only [EStore.ls, hl]))
 
 /-- `StoreDen` across a memory step that keeps `EREC` (the twin unchanged). -/
 theorem StoreDen.frameE {m m' : Mem} {a : AState} {fe : IFEnv} (h : StoreDen m a fe)
     (he : m'.arr64 EREC = m.arr64 EREC) : StoreDen m' a fe :=
   h.mono (LsExt.refl _) rfl rfl (fun _ _ hk => .inl hk) he (fun _ _ hv => hv) (fun _ _ _ hv => hv)
+    h.lvlAll
 
 /-- `StoreDen` across a step that changes only the twin's caches other than `readNC`. -/
 theorem StoreDen.caches {m : Mem} {a a' : AState} {fe : IFEnv} (h : StoreDen m a fe)
@@ -251,5 +258,6 @@ theorem StoreDen.caches {m : Mem} {a a' : AState} {fe : IFEnv} (h : StoreDen m a
   h.mono (by rw [hst]; exact LsExt.refl _) (by rw [hp]) (by rw [hp]) (fun _ _ hk => .inl (hn ▸ hk))
     rfl
     (fun _ _ hv => hst ▸ hv) (fun _ _ _ hv => hst ▸ hv)
+    (h.lvlAll.congr (by simp only [EStore.ls, hst]))
 
 end L.Arena

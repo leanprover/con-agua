@@ -301,6 +301,44 @@ theorem keeps_noLss_andRescueSlots (fe : IFEnv) (c : NIdx) (nP : Nat) (us : LsId
       · exact Keeps.pure _
     · exact Keeps.pure _
 
+/-- **`StoreDen` across a step that keeps the caches, the pins and the level stores** and creates
+no new `sort`/`const` view (`hv`). -/
+theorem StoreDen.of_views {m m' : Mem} {a a' : AState} {fe : IFEnv} (h : StoreDen m a fe)
+    (hc : a'.caches = a.caches) (hp : a'.pins = a.pins) (hl : a'.store.lss = a.store.lss)
+    (he : m'.arr64 EREC = m.arr64 EREC)
+    (hv : ∀ x w, IsSC w → a'.store.view x = some w → a.store.view x = some w) :
+    StoreDen m' a' fe :=
+  h.mono (by rw [hl]; exact LsExt.refl _) (by rw [hp]) (by rw [hp]) (fun _ _ hk => .inl (hc ▸ hk))
+    he (fun x u hx => hv x _ (.inl ⟨_, rfl⟩) hx) (fun x c us hx => hv x _ (.inr ⟨_, _, rfl⟩) hx)
+    (h.lvlAll.congr (by simp only [EStore.ls, hl]))
+
+/-- Interning a node that is neither a `sort` nor a `const` creates no such view. -/
+theorem internNodeE_views {v : ENodeView} (hv : ¬ IsSC v) {a a' : AState} {r : EIdx}
+    (hrun : (internNodeE v).run a = .ok (r, a')) :
+    ∀ x w, IsSC w → a'.store.view x = some w → a.store.view x = some w := by
+  obtain ⟨-, -, -, h⟩ := internNodeE_sc hrun
+  intro x w hw hx
+  rcases h x w hw hx with h' | rfl
+  · exact h'
+  · exact absurd hw hv
+
+/-- `internE v`, then a pure answer: no new `sort`/`const` view when `v` is neither (and not a
+binder, `hn`). -/
+theorem internE_pure_views {β : Type} {v : ENodeView} (hv : ¬ IsSC v)
+    (hn : internE v = internNodeE v) (f : EIdx → β) {a a' : AState}
+    {r : β} (hrun : (internE v >>= fun x => pure (f x)).run a = .ok (r, a')) :
+    ∀ x w, IsSC w → a'.store.view x = some w → a.store.view x = some w := by
+  simp only [StateT.run_bind] at hrun
+  cases hq : (internE v).run a with
+  | error e => rw [hq] at hrun; cases hrun
+  | ok q =>
+    obtain ⟨y, a1⟩ := q
+    rw [hq] at hrun
+    change (Except.ok (f y, a1) : Except CheckError _) = _ at hrun
+    cases hrun
+    rw [hn] at hq
+    exact internNodeE_views hv hq
+
 /-- **`StoreDen` across interning `sort u`**, `u` reading back. -/
 theorem StoreDen.of_internSort {m m' : Mem} {a a' : AState} {fe : IFEnv} {u : LIdx} {r : EIdx}
     (h : StoreDen m a fe) (hu : ∃ l, denoteL a.store.ls u = some l)
@@ -308,7 +346,7 @@ theorem StoreDen.of_internSort {m m' : Mem} {a a' : AState} {fe : IFEnv} {u : LI
     StoreDen m' a' fe := by
   obtain ⟨hc, hp, hl, hv⟩ := internNodeE_sc (v := .sort u) (by simpa [internE] using hrun)
   have hls : a'.store.ls = a.store.ls := by simp only [EStore.ls, hl]
-  refine ⟨fun x u' hx => ?_, fun x c us hx => ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨fun x u' hx => ?_, fun x c us hx => ?_, ?_, ?_, ?_, ?_, ?_, h.lvlAll.congr hls⟩
   · rcases hv x _ (.inl ⟨_, rfl⟩) hx with h' | h'
     · rw [hls]; exact h.sort x u' h'
     · cases h'; rw [hls]; exact hu
@@ -331,7 +369,7 @@ theorem StoreDen.of_internConst {m m' : Mem} {a a' : AState} {fe : IFEnv} {c : N
     StoreDen m' a' fe := by
   obtain ⟨hc, hp, hl, hv⟩ := internNodeE_sc (v := .const c us) (by simpa [internE] using hrun)
   have hls : a'.store.ls = a.store.ls := by simp only [EStore.ls, hl]
-  refine ⟨fun x u' hx => ?_, fun x c' us' hx => ?_, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨fun x u' hx => ?_, fun x c' us' hx => ?_, ?_, ?_, ?_, ?_, ?_, h.lvlAll.congr hls⟩
   · rcases hv x _ (.inl ⟨_, rfl⟩) hx with h' | h'
     · rw [hls]; exact h.sort x u' h'
     · cases h'
