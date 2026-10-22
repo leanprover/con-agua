@@ -4381,6 +4381,18 @@ be asymptotically slower. con-ron at `_tmp/ref/con-ron` origin/HEAD (`proof/ConR
 * `WhnfIota.lean`: `iotaCallees_stub` and every spec (28).
 * `WhnfDelta.lean`: the δ/Nat specs (`whnf_step`, `reduce_nat`, `delta_step`, …; 14).
 
+### Lane `exprops4`'s walks as this lane's callees (open)
+
+Lane `exprops4` refined `instantiateList` (on the spine stack, `InstListOK`), `abstract1`,
+`hasFvar`, `bvarB`, `looseBVarsBounded`. To discharge this lane's stubs with them (`inst_list` in
+`WhnfCallees`, `inst1` in `CoreCallees`): (1) `CoreS` must carry the `instLC` memo relation
+(`MemosR`'s array 49), a new field and one more conjunct in every `CoreS` frame lemma; (2) their
+refinements hold for twin fuel `≥` the L fuel, while the core calls them at exactly
+`coreWalkFuel` with an L fuel up to `2^62`: the stub specs must gain `n ≤ coreWalkFuel`, which
+the knot's fuels do not give, or the walks a `coreWalkFuel` counter (finding (1) above); (3) a
+caller crossing `scratch_enter` re-establishes the `abs1C` relation (not cleared there; whnf does
+not cross it). Not done yet.
+
 ### Lane `induct`'s stubs of this phase (adapters, `WhnfEntry.lean`)
 
 Lane `induct` calls `whnf(vis, dep, e)`, `get_app_fn(fuel, e)`, `get_app_args(fuel, e)` (an `IW`
