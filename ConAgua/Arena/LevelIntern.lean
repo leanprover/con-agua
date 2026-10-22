@@ -44,14 +44,16 @@ namespace L.Arena
 
 /-- `lv_lookup` with the keys on the spine stack (a declaration's level parameters, copied there
 from the record pool or lane `induct`'s `IW` by `keys_push`) and the values in the limb pool (a
-level list's handles). -/
+level list's handles).
+con-leche: ConLeche/Kernel/Level.lean:31-42 ConLeche.Level.subst -/
 abbrev lvLookupLP : FunDecl := lvLookupG SPN POOL
-/-- `lv_spw` with the datum's names in the record pool. -/
+/-- `lv_spw` with the datum's names in the record pool.
+con-leche: ConLeche/Kernel/Level.lean:199-205 ConLeche.Level.substPW -/
 abbrev lvSpwLP : FunDecl := lvSpwG EREC
 
 /-! ## `lv_intern(p)` -/
 
-/-- con-ron: ConRon/Arena/Monad.lean:472-490 ConRon.Arena.internLevel -/
+/-- con-ron: ConRon/Arena/Monad.lean:470-487 ConRon.Arena.internLevel -/
 @[l_impl ConRon.Arena.internLevel]
 def lvIntern : FunDecl := lfn (p) locals (g, a, b, x, y, h) {
   (g, a, b) := call lv_node(p);
@@ -190,8 +192,8 @@ end spec
 
 /-! ## `lv_sub_int(u, ko, kc, vo, vc)`: substitute, then intern -/
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:2079-2087 ConRon.Arena.substLMemoAt
-con-ron: ConRon/Arena/Core.lean:1942-1950 ConRon.Arena.substLevelsAt -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:2071-2086 ConRon.Arena.substLMemoAt
+con-ron: ConRon/Arena/Core.lean:1939-1949 ConRon.Arena.substLevelsAt -/
 def lvSubInt : FunDecl := lfn (u, ko, kc, vo, vc) locals (x, h) {
   CTL.u64[192] := 0;
   x := call lv_substl(u, ko, kc, vo, vc);
