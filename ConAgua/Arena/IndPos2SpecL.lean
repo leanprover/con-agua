@@ -718,7 +718,7 @@ mutual
 def cpW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _ => none
   | n + 1, m, hp, dO, dL =>
-    if dL = 0 then some ([1], m) else cpK1 n hp dO dL (bvbW n m (rdW (m.arr64 IW) dO))
+    if dL = 0 then some ([1], m) else cpK1 n hp dO dL (bvbW n m (rdW (m.arr64 IW) dO) CWF)
 def cpK1 (n : Nat) (hp dO dL : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (bb, m1) =>
@@ -731,7 +731,7 @@ end
 section arms
 variable (n : Nat) (m m1 : Mem) (hp dO dL bb : Word) (r : List Word)
 theorem cpW_nil (h : dL = 0) : cpW (n + 1) m hp dO dL = some ([1], m) := by simp [cpW, h]
-theorem cpW_cons (h : ¬ dL = 0) : cpW (n + 1) m hp dO dL = cpK1 n hp dO dL (bvbW n m (rdW (m.arr64 IW) dO)) := by
+theorem cpW_cons (h : ¬ dL = 0) : cpW (n + 1) m hp dO dL = cpK1 n hp dO dL (bvbW n m (rdW (m.arr64 IW) dO) CWF) := by
   simp [cpW, h]
 theorem cpK1_b (h : bb ≠ 0) : cpK1 n hp dO dL (some (bb, m1)) = some ([0], m1) := by simp [cpK1, h]
 theorem cpK1_ok (h : ¬ bb ≠ 0) : cpK1 n hp dO dL (some (bb, m1)) =
@@ -803,7 +803,7 @@ theorem cpW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hp : Word)
     have hl1 : (dL - 1).toNat = l' := by
       rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
     rw [List.allM_cons]
-    cases hb : bvbW n m (rdW (m.arr64 IW) dO) with
+    cases hb : bvbW n m (rdW (m.arr64 IW) dO) CWF with
     | none => rw [hb] at h; simp [cpK1] at h
     | some pr =>
     obtain ⟨bb, m1⟩ := pr
