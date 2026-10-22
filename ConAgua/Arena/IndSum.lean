@@ -751,8 +751,8 @@ i, body) → e` (`ConLeche/Kernel/Inductives/Positivity.lean`'s, translated in m
 def indSumForeign : Prog := [("close_telescope", stub 4)]
 
 theorem indSum_wf :
-    L.Compiler.Prog.wf indTab (indSumFns ++ libFns ++ stubFns ++ masterFns ++ indSumForeign) = true := by
-  decide +kernel
+    L.Compiler.Prog.wf indTab (indSumFns ++ libFns ++ stubFns ++ masterFns ++ indSumForeign) = true :=
+  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
 
 /-! ## A few `#guard`s, where a function is pure enough to run without hitting a stub -/
 

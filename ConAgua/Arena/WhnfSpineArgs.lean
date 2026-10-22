@@ -19,7 +19,8 @@ namespace L.Arena
 
 /-! ## `app_count(e)`: the number of `.app` nodes on the spine -/
 
-/-- `app_count(e)`: `get_app_fn`'s loop; the count is the fuel spent. -/
+/-- `app_count(e)`: `get_app_fn`'s loop; the count is the fuel spent.
+con-ron: ConRon/Arena/ExprOps.lean:1292-1303 ConRon.Arena.getAppArgs -/
 def appCountL : FunDecl := lfn (e) locals (f, t, x) {
   f := 4000000000;
   ⟪getAppFnLoop⟫;
@@ -59,7 +60,8 @@ def appFillLoop : Stmt := lblk (e, o, n, t, x) {
   }
 }
 
-/-- `app_fill(e, o, n)`. -/
+/-- `app_fill(e, o, n)`.
+con-ron: ConRon/Arena/ExprOps.lean:1292-1303 ConRon.Arena.getAppArgs -/
 def appFillL : FunDecl := lfn (e, o, n) locals (t, x) {
   ⟪appFillLoop⟫;
   return 0
@@ -225,7 +227,8 @@ def appFillNLoop : Stmt := lblk (e, o, n, t, x) {
   }
 }
 
-/-- `app_fill_n(e, o, n)`. -/
+/-- `app_fill_n(e, o, n)`.
+con-ron: ConRon/Arena/Core.lean:2109-2123 ConRon.Arena.getAppSpineGo -/
 def appFillNL : FunDecl := lfn (e, o, n) locals (t, x) {
   ⟪appFillNLoop⟫;
   return 0

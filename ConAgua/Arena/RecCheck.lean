@@ -924,8 +924,8 @@ def recCheckForeign : Prog :=
 /-- The module closes over the library, the stubs and its foreign callees. -/
 theorem recCheck_wf :
     L.Compiler.Prog.wf indTab
-      (recCheckFns ++ libFns ++ stubFns ++ masterFns ++ recCheckForeign) = true := by
-  decide +kernel
+      (recCheckFns ++ libFns ++ stubFns ++ masterFns ++ recCheckForeign) = true :=
+  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
 
 -- `abstract_prefix` at `k = 0`: the identity.
 #guard

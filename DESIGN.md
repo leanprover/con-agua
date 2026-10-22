@@ -4381,6 +4381,18 @@ be asymptotically slower. con-ron at `_tmp/ref/con-ron` origin/HEAD (`proof/ConR
 * `WhnfIota.lean`: `iotaCallees_stub` and every spec (28).
 * `WhnfDelta.lean`: the δ/Nat specs (`whnf_step`, `reduce_nat`, `delta_step`, …; 14).
 
+### Lane `exprops4`'s walks as this lane's callees (open)
+
+Lane `exprops4` refined `instantiateList` (on the spine stack, `InstListOK`), `abstract1`,
+`hasFvar`, `bvarB`, `looseBVarsBounded`. To discharge this lane's stubs with them (`inst_list` in
+`WhnfCallees`, `inst1` in `CoreCallees`): (1) `CoreS` must carry the `instLC` memo relation
+(`MemosR`'s array 49), a new field and one more conjunct in every `CoreS` frame lemma; (2) their
+refinements hold for twin fuel `≥` the L fuel, while the core calls them at exactly
+`coreWalkFuel` with an L fuel up to `2^62`: the stub specs must gain `n ≤ coreWalkFuel`, which
+the knot's fuels do not give, or the walks a `coreWalkFuel` counter (finding (1) above); (3) a
+caller crossing `scratch_enter` re-establishes the `abs1C` relation (not cleared there; whnf does
+not cross it). Not done yet.
+
 ### Lane `induct`'s stubs of this phase (adapters, `WhnfEntry.lean`)
 
 Lane `induct` calls `whnf(vis, dep, e)`, `get_app_fn(fuel, e)`, `get_app_args(fuel, e)` (an `IW`
@@ -5206,6 +5218,80 @@ the model's arithmetic; the latter costs a case split per comparison, per goal.
 | `Abs1.lean` (models, L, go/node steps) | | 140 (L code) | 708 (file) | | 2.8 s |
 | `Abs1Spec.lean` (arm steps, entry) | | | 174 | | 57 s |
 | `Abs1Refine.lean` | | | | 1100 | 2.7 s |
+
+### `instantiateList`/`instantiateListGo`/`instantiateListFast` (`InstList{,Spec,Refine}.lean`)
+
+`inst_list(e, o, l, d)` refines `instantiateListFast F (decE e) vs d` under `ArenaL`
+(`instList_refines`; axioms `propext`, `Classical.choice`, `Quot.sound`, **no `sorry`**), for any
+`vs` with `SpineR m o l vs` (`WhnfBase.lean`'s stack-slice relation) and `o + l < 2^64`; the post
+also says the stack array is unchanged. Both twins in L: the pure walk `il_go` + six arms
+(`instantiateList`, `instListArm*`) and the memo walk `ilg_go` + five arms (`instantiateListGo`,
+`instListGoArm*`), `Inst1*.lean`'s shape.
+
+* **The pool-slice reader is the spine stack**, not the Nat-limb pool: the interface was already
+  fixed by lane `whnf` (`InstListOK`, `inst_list(e, off, cnt, d)` over `SPN`, array 144, which
+  `CoreS` sizes below `2^63`), and the callers in `WhnfCore`/`Infer`/`DefEq` already pass stack
+  slices. L names array 144 `ILSPN` (a `module` file cannot import `WhnfBase.lean`).
+* **The shrinking suffix** (`lastEidx vs q`) is the slice `(o + (l - q), q)`: `spineR_last`
+  (from `lastEidx_toList`: `eidxCopyUpto` from `xs.size - k` is `drop`), `spineR_entry` for
+  `vs[size - 1 - q]`, `slice_word` for the offset arithmetic. No copy, `O(1)`, as the twin's
+  comment wants.
+* **The slice survives the walk** because nothing the walk writes is array 144: every
+  statement's post carries `m'.arr64 ILSPN = m.arr64 ILSPN` (from the `mk*W_frameA` frames of
+  `Abs1Refine.lean`, the memo's frames), and `SpineR.of_spn` moves the slice across.
+* **The memo tier `ArenaL := ArenaD ∧ ILR`** (`instLC` on array 50 `ILMEMO`, `CTL[50]`/`[51]`),
+  `ArenaA`'s pattern; the pure walk carries it too (the memo walk calls it).
+* **Hand-off to lane `whnf`** (`InstListOK`, a stub in `whnfCallees_stub`): what is left is the
+  bridge from `CoreS` to `ArenaL` and back. `CoreS` has `ArenaD`; it lacks `ILR` (`instLC` is not
+  in `MemosR`), so either `CoreS` gains an `ILR` conjunct (kept by every other writer's frame: array
+  50 and `CTL[50]` are written by `inst_list` alone) or a variant of the entry lemma starts from
+  any memory (the entry clears the memo first; `memoRG_clear` currently assumes a prior `MemoRG`).
+  Census tag on `instList_refines`; `instantiateListFast` is phase 4.
+
+| `instantiateList` | L lines (code) | file lines | `lean` user |
+|---|---:|---:|---:|
+| `InstList.lean` (models, L, dispatcher steps) | 230 | 935 | 4.5 s |
+| `InstListSpec.lean` (arm steps, entry) | | 273 | 34 s |
+| `InstListRefine.lean` | | 979 | 2.7 s |
+
+**The L fuel against `coreWalkFuel`.** All three refinements here are "at every twin fuel `F ≥`
+the L fuel `n`". The stub interfaces of lanes `whnf`/`defeq` (`InstListOK`, `HasFvarOK`) state the
+twin at `coreWalkFuel` (4·10⁹) with no bound on `n`; the bridge needs `n ≤ coreWalkFuel` (the L
+fuel of the top-level run bounds every nested call's), as the whnf slots already assume `n ≤ F`.
+
+### `abstractRangeGo`/`abstractRangeFast` (`ArRange{,Spec,Refine}.lean`), `hasFvarFast` (`HasFvar{,Refine}.lean`)
+
+* `ar_entry(e, d, k, c)` refines `abstractRangeFast F e d k c` under `ArenaA`
+  (`arEntry_refines`, **no `sorry`**). `abstract1`'s files with the range `(d, k)` and the cursor
+  `c` (memo key `(h, c)`, the same `abs1C`, `ab_fvb`, rebuild, `ArenaA`, probe/tail lemmas reused).
+  Generated from the `Abs1*` files by a renaming script (`k ↦ c`, `k` appended after `d`), then the
+  `fvar` arm and the entry by hand. The `fvar` arm checks `d + k` and `c + (d + k - 1 - i)` for
+  wrap (capacities: the twin is over `Nat`; `dk_toNat`, `rng_iff`, `rng_word`). Entry: `k = 0` is
+  `e` (no clear), else clear, walk, clear.
+* `has_fvar_fast(f, e)` and `has_fvar(e)` (the two stub interfaces' names) refine `hasFvarFast F e`
+  (`hasFvarFast_refines`, `hasFvar_refines`): `ab_fvb` and `u64(x != 0)`; `f` is unused.
+
+| | file lines | `lean` user |
+|---|---:|---:|
+| `ArRange.lean` | 581 | 3.9 s |
+| `ArRangeSpec.lean` | 173 | 64 s |
+| `ArRangeRefine.lean` | 480 | 1.2 s |
+| `HasFvar.lean` + `HasFvarRefine.lean` | 149 | < 2 s |
+
+### `bvarB`, `looseBVarsBoundedFast` (`BvarB{,Refine}.lean`)
+
+`bvar_b(f, e)` refines `bvarB F e`, `loose_bvars_bounded_fast(f, k, e)` refines
+`looseBVarsBoundedFast F k e`, both under `ArenaD` (**no `sorry`**; the stub interfaces' names and
+arities of lanes `decls`/`indproofs`, `f` unused). `fvarB`'s proof for the bvar range: `der_b`, on
+`32767` `bb_memo` (`bbMemoW_correct`, `ArenaR`); `DerR` across `bb_memo` by `bbW_frame` (the
+`frW_frame` induction renamed: `BMEMO`, `CTL[24‥25]`) and `keeps_bvarBoundMemo`.
+
+Census, phase 4, after this lane: 62 proven / 1 sorry / 1 written / 49 todo (before `abstract1`
+landed: 36 proven / 74 todo, counted after it). Left in phase 4 (todo): `instantiate1LiftGo`/`Fast`,
+`instLPGo`/`Fast`, `leavesSubGo`, `wscopedBGo`/`Fast`, `fvarLeavesGo`/`Fast`, `stripLams`/`stripPis`,
+`substLevelList`/`substLMemoAt`/`substLsMemoAt`, `leafGuard`/`leafMem`, `fvarTypeD`, `takeEidx`
+(the twin's own helpers `internRebuilt*`, `eidxCopyUpto`, `lastEidx` stay todo: inlined in L, reached
+from walks not yet ported).
 ## Definitional equality, inference, the knot: L code top down (2026-10-22, lane `defeq`)
 
 Phases 6 and 7 (ROADMAP §1): con-ron's `Arena/Core.lean:2439-3675` and the helpers it reaches
@@ -5450,3 +5536,48 @@ Translated in full, 109 L functions, 90 tagged `@[l_impl]` (no proofs yet):
 Census (`--no-build`, this lane before landing 2, against master's last `docs/progress.md`): phase 2
 **130 proven, 8 sorry, 82 written, 111 todo** (was 130 / 5 / 5 / 191); Rust lines with L code
 4341 of 6512 (was 1001).
+
+## Slow declarations (2026-10-22, lane `perf1`)
+
+The build-statistics watch list (`docs/buildstats.md`) names every step over 20 s; this lane takes
+the ones no other lane owns. Times are single-threaded `lake env lean` runs on an idle core unless
+said otherwise.
+
+### `Prog.wf` by `decide +kernel`: string comparisons (`ConAgua/Compiler/WFFast.lean`)
+
+- **Cause.** `Prog.wf` looks every call target up by `p.lookup f` and checks
+  `decide (p.map (·.1)).Nodup`, both on `String`s. In the kernel a `String` comparison unfolds
+  `String.decEq` down to the UTF-8 byte lists of both literals, and `Nodup`'s `Decidable` instance
+  is itself costly (even `(List.range 477).Nodup` takes 9.5 s). `declStepProg` has 477 functions and
+  1305 calls: `Nodup` 28 s plus the lookups 27 s; `indProg` the same minus 14 functions. Both grow
+  quadratically with the program.
+- **Fix.** `Prog.wfFast`: each name becomes a `Nat` once (`nameCode`, bijective base-257 over the
+  UTF-8 bytes, injective), the names go into a binary search tree keyed by that code (`progTree`;
+  `NTree.insert` fails on a duplicate, which gives `Nodup`), and `Stmt.wfT` looks targets up in
+  the tree. Key comparisons are `Nat.decLt`/`Nat.decEq`, which the kernel does on literals with
+  GMP. `Prog.wf_of_wfFast : wfFast tab p = true → wf tab p = true` (no ordering invariant needed:
+  `find` follows the same path as `insert`). Every `_wf` theorem keeps its statement and becomes
+  `Prog.wf_of_wfFast (by decide +kernel)`: `indProg_wf`, `declStepProg_wf`, `frontAllProg_wf`,
+  the per-module `indParts_wf` … `recCheck_wf`, `libFns_wf`, `indApply_wf`, `indFields_wf`.
+- **Before/after.** `declStepProg_wf` 54.1 s → 4.3 s (module 55 s → 4.4 s), `indProg_wf` 53.8 s →
+  ~4 s (module 54 s → 4.2 s), `indPos2_wf` 11 s, `recCheck_wf` 9.7 s, `frontAllProg_wf` 8.7 s, the
+  other per-module checks 5–8 s: each module now builds in under 2 s (Capstone 6.8 s in all).
+  Of the remaining 4.3 s, about half is `progTree` (mostly the UTF-8 expansion of the literals).
+- Not done: `KnotWF.defeqInferFns_wf` (4.5 s) states `FunDecl.wf`/`Nodup` directly rather than
+  `Prog.wf`; `closedA` (write sets) also looks names up by string and could use the same tree.
+
+### `natShr_spec` (`ConAgua/Arena/NatShr.lean:241`): a loose multi-pattern
+
+- **Cause.** Of the 168 goals vcgen leaves, one (`lb = 1`, `w < la`: the quotient) took 52 s and
+  one (`lb = 0`, the same) 5 s; the other 166 together 20 s. Grind diagnostics on the slow goal:
+  600 instances of `shr_val`, 626 of `pv_succ`, 842 case splits. `shr_val`'s pattern
+  `pv P oa la / (S * wt w), pv P o l, R * S` binds `o`, `l`, `R` by any `pv P _ _` and any product,
+  and every instance adds case splits on its hypotheses.
+- **Fix.** `shr_small`, the quotient in the shape the loop's post (`ShrPost`) and the amount give:
+  `pv P oa la / 2 ^ pv Q ob lb = pv R t r` from `pv Q ob lb = k.toNat`, the skip `w = k >> 6 < la`
+  and `pv R t r * sh s + lowb (lv P o l 0) s = pv P o l` (`s = k &&& 63`). Its pattern
+  `pv P oa la / 2 ^ pv Q ob lb, pv R t r * sh (k &&& 63).toNat, lowb (lv P o l 0) (k &&& 63).toNat`
+  binds every variable by a term of the post, so it fires about once; `shr_val` is now only its
+  proof step (no pattern). No statement changed.
+- **Before/after.** `natShr_spec` 60.9 s → no profiler step over 1 s; the slow goal 52 s → < 2 s;
+  module 111 s → 25 s (Lake, contended); grind in the whole file 7.9 s.

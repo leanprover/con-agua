@@ -309,7 +309,7 @@ master functions lane `induct`'s program lacks), lane `induct`'s stage (with its
 the two the arms provide: `L.Ind.armsReplaced`). -/
 def declStepProg : Prog := declStepFns ++ declStepStubs ++ L.Ind.declArmsAll ++ L.Ind.indProgArms
 
-theorem declStepProg_wf : L.Compiler.Prog.wf L.Ind.indTab declStepProg = true := by
-  decide +kernel
+theorem declStepProg_wf : L.Compiler.Prog.wf L.Ind.indTab declStepProg = true :=
+  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
 
 end L.Arena
