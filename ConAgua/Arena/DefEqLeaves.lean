@@ -38,6 +38,7 @@ structure DefEqLeafProg (p : Prog) : Prop where
   eager : p.lookup "is_eager_reduce" = some isEagerReduceL
   natzero : p.lookup "is_nat_zero" = some isNatZeroL
   hhint : p.lookup "head_hint" = some headHintL
+  hlt : p.lookup "hint_lt" = some hintLtL
 
 /-! ## Shared lemmas -/
 
@@ -753,12 +754,12 @@ theorem hhEnv_zero (h : q = some (r, m)) (h0 : r.headD 0 = 0) : hhEnv q = some (
   subst h; simp only [hhEnv, h0, ↓reduceIte]
 theorem hhEnv_kind (h : q = some (r, m)) (h0 : ¬ r.headD 0 = 0)
     (h1 : ¬ rdW (m.arr64 EREC) (r.tail.headD 0) = 1) : hhEnv q = some (0, 0, m) := by
-  subst h; simp only [hhEnv, h0, h1, ne_eq, not_true_eq_false, not_false_eq_true, ↓reduceIte]
+  subst h; simp only [hhEnv, h0, h1, ne_eq, ↓reduceIte] <;> simp
 theorem hhEnv_defn (h : q = some (r, m)) (h0 : ¬ r.headD 0 = 0)
     (h1 : rdW (m.arr64 EREC) (r.tail.headD 0) = 1) :
     hhEnv q = some (rdW (m.arr64 EREC) (r.tail.headD 0 + 6), rdW (m.arr64 EREC) (r.tail.headD 0 + 7),
       m) := by
-  subst h; simp only [hhEnv, h0, h1, ne_eq, not_true_eq_false, not_false_eq_true, ↓reduceIte]
+  subst h; simp only [hhEnv, h0, h1, ne_eq, ↓reduceIte] <;> simp
 
 end hhArms
 
@@ -876,5 +877,48 @@ theorem headHint_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St)
   · rw [hhEnv_kind (h := hc2) (h0 := h0) (h1 := h1)] at hW
     rw [hintOf_none _ (fun cv v hint e => hdefn.2 h1 cv v hint (Option.some.inj e))] at hrun1
     exact hres 0 0 hW hw0 _ hrun1 rfl
+
+/-! ## `hint_lt` -/
+
+/-- The model of `hint_lt`: a pure word function. -/
+def hintLtW (k1 h1 k2 h2 : Word) : Word :=
+  if k2 = 0 then 0 else if k1 = 1 then 0 else if k1 = 0 then 1 else if k2 = 1 then 1
+  else if h1 < h2 then 1 else 0
+
+theorem hintLt_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St) (k1 h1 k2 h2 : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "hint_lt" [k1, h1, k2, h2]
+    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ r.headD 0 = hintLtW k1 h1 k2 h2; ⊤⦄ := by
+  rw [invoke_eq _ hp.hlt]
+  simp only [callFn, hintLtL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs] <;>
+    finish [hintLtW]
+
+theorem ite_bne (c : Prop) [Decidable c] : ((if c then (1 : Word) else 0) != 0) = decide c := by
+  by_cases hc : c <;> simp [hc]
+
+/-- `hint_lt`'s word function is `ReducibilityHint.lt` on the decoded hints. -/
+theorem hintLtW_lt (k1 h1 k2 h2 : Word) :
+    (hintLtW k1 h1 k2 h2 != 0) = (decHintW k1 h1).lt (decHintW k2 h2) := by
+  unfold hintLtW decHintW
+  by_cases a2 : k2 = 0 <;> by_cases a1 : k1 = 1 <;> by_cases b1 : k1 = 0 <;> by_cases b2 : k2 = 1 <;>
+    simp_all [ConLeche.ReducibilityHint.lt] <;>
+  simp only [ite_bne, UInt64.lt_iff_toNat_lt]
+
+/-- **`hint_lt` refines `ReducibilityHint.lt`** on the decoded hints (a pure function: the memory
+and the locals unchanged). -/
+@[refines ConLeche.ReducibilityHint.lt]
+theorem hintLt_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St) (k1 h1 k2 h2 : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "hint_lt" [k1, h1, k2, h2]
+    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧
+      decBool r = (decHintW k1 h1).lt (decHintW k2 h2) ∧ ResH r; ⊤⦄ := by
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hm, hloc, hr⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
+    (hintLt_spec p hp n s₀ k1 h1 k2 h2)
+  refine ⟨hm, hloc, by rw [decBool, hr, hintLtW_lt], ?_⟩
+  unfold ResH; rw [hr]; unfold hintLtW
+  repeat' split
+  all_goals first | exact hw0 | exact hw1
 
 end L.Arena
