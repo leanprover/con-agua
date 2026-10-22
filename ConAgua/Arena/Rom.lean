@@ -195,13 +195,44 @@ theorem rputW_step (m m' : Mem) (top i l j j' : Word) (hj : j < l) (hj' : j' = j
   subst hj' hm'
   rw [rputW]; simp only [hj, ↓reduceIte]
 
-end put
-
 grind_pattern [arena_grind] rputW_end => rputW rom m top i l j
 grind_pattern [arena_grind] rputW_step => rputW rom m top i l j, rputW rom m' top i l j'
 
+/-- Every ROM byte in `[i + j, i + l)` is ASCII (below `128`). -/
+def asciiW (i l j : Word) : Bool :=
+  if j < l then decide (romB rom (i + j) < 128) && asciiW i l (j + 1) else true
+termination_by l.toNat - j.toNat
+decreasing_by
+  have : j.toNat < l.toNat := by simpa [UInt64.lt_iff_toNat_lt] using ‹j < l›
+  have := l.toNat_lt
+  have : (j + 1).toNat = j.toNat + 1 := by
+    rw [UInt64.toNat_add]; simp; omega
+  omega
+
+theorem asciiW_end (i l j : Word) (hj : ¬ j < l) : asciiW rom i l j = true := by
+  rw [asciiW]; simp only [hj, ↓reduceIte]
+
+theorem asciiW_step (i l j j' : Word) (hj : j < l) (hj' : j' = j + 1) (hb : romB rom (i + j) < 128) :
+    asciiW rom i l j = asciiW rom i l j' := by
+  subst hj'
+  rw [asciiW]; simp [hj, hb]
+
+end put
+
+grind_pattern [arena_grind] asciiW_end => asciiW rom i l j
+grind_pattern [arena_grind] asciiW_step => asciiW rom i l j, asciiW rom i l j'
+
 section putProg
 variable (rom : List UInt8)
+
+/-- The names' strings must be ASCII: then the bytes are some `String`'s UTF-8 (the pin data is
+untrusted, DESIGN.md "The pin data as an input"). -/
+def asciiLoop : Stmt := lblk (i, l, top, j) {
+  while j < l {
+    if rom.c8[i + j] >= 128 { abort };
+    j += 1
+  }
+}
 
 def rputLoop : Stmt := lblk (i, l, top, j) {
   while j < l {
@@ -213,6 +244,8 @@ def rputLoop : Stmt := lblk (i, l, top, j) {
 /-- con-ron: none — the ROM reader (L has constant bytes where the twin has con-leche values) -/
 def romPut : FunDecl := lfn (i, l) locals (top, j) {
   if len(rom.c8) < i + l || i + l < i { abort };
+  ⟪asciiLoop rom⟫;
+  j := 0;
   top := CTL.u64[0];
   if len(POOL.u64) < top { abort };
   if len(POOL.u64) - top < l { abort };
@@ -235,6 +268,25 @@ theorem rputLoop_spec (n : Nat) (s₀ : St) :
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, ldc, st64, ih] <;> finish [romB]
 
+theorem asciiLoop_spec (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    exec p n (asciiLoop rom)
+    ⦃fun r s' => r = .normal ∧ s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧
+      s'.mem = s₀.mem ∧ asciiW rom (s₀.loc 0) (s₀.loc 1) (s₀.loc 3) = true; ⊤⦄ := by
+  induction n generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ n ih =>
+    rw [exec, step_while (w := asciiLoop rom) rfl]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [step, evalE, evalC, evalArgs, setLoc, ldc, ih] <;> finish [romB]
+
+theorem asciiLoop_step_spec (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    step p (exec p n) (asciiLoop rom)
+    ⦃fun r s' => r = .normal ∧ s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧
+      s'.mem = s₀.mem ∧ asciiW rom (s₀.loc 0) (s₀.loc 1) (s₀.loc 3) = true; ⊤⦄ :=
+  Triple.step_exec (asciiLoop_spec rom p (n + 1) s₀)
+
 theorem rputLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) (rputLoop rom)
@@ -242,9 +294,10 @@ theorem rputLoop_step_spec (n : Nat) (s₀ : St) :
       s'.mem = rputW rom s₀.mem (s₀.loc 2) (s₀.loc 0) (s₀.loc 1) (s₀.loc 3); ⊤⦄ :=
   Triple.step_exec (rputLoop_spec rom p (n + 1) s₀)
 
-/-- `rom_put`'s checks: a range of the ROM that fits above the pool top. -/
+/-- `rom_put`'s checks: an ASCII range of the ROM that fits above the pool top. -/
 def romPutOK (m : Mem) (i l : Word) : Prop :=
-  i + l ≤ UInt64.ofNat rom.length ∧ i ≤ i + l ∧ m.top ≤ m.len64 POOL ∧ l ≤ m.len64 POOL - m.top
+  i + l ≤ UInt64.ofNat rom.length ∧ i ≤ i + l ∧ m.top ≤ m.len64 POOL ∧ l ≤ m.len64 POOL - m.top ∧
+    asciiW rom i l 0 = true
 
 instance (m : Mem) (i l : Word) : Decidable (romPutOK rom m i l) := by
   unfold romPutOK; infer_instance
@@ -269,7 +322,7 @@ theorem rputW_size (top i l : Word) (b : ArrId) :
 
 theorem romPutOK_room (m : Mem) (i l : Word) (h : romPutOK rom m i l) (hs : (m.arr64 POOL).size < 2 ^ 63) :
     m.top.toNat + l.toNat ≤ (m.arr64 POOL).size := by
-  obtain ⟨-, -, h3, h4⟩ := h
+  obtain ⟨-, -, h3, h4, -⟩ := h
   have hlen : (m.len64 POOL).toNat = (m.arr64 POOL).size := by
     simp only [Mem.len64]; exact L.Front.toNat_ofNat_size _ hs
   have := UInt64.le_iff_toNat_le.mp h4
@@ -290,7 +343,8 @@ theorem romPut_specW (hp : p.lookup "rom_put" = some (romPut rom)) (n : Nat) (s�
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, rputLoop_step_spec rom p n] <;>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, asciiLoop_step_spec rom p n,
+        rputLoop_step_spec rom p n] <;>
       finish [romPutOK]
 
 end putProg
@@ -356,7 +410,7 @@ theorem romPutW_facts (m : Mem) (i l : Word) (hpool : PoolOK m) (hok : romPutOK 
       ((rom.drop i.toNat).take l.toNat).map UInt8.toUInt64 ∧
     i.toNat + l.toNat ≤ rom.length := by
   obtain ⟨hw, hc, hps, htop⟩ := hpool
-  obtain ⟨h1, h1', h3, h4⟩ := hok
+  obtain ⟨h1, h1', h3, h4, -⟩ := hok
   simp only [RomOK] at hr
   have hil : (i + l).toNat = i.toNat + l.toNat := by
     have := UInt64.le_iff_toNat_le.mp h1'

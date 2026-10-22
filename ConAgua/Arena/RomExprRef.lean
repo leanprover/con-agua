@@ -23,12 +23,12 @@ open L.Arena
 
 /-! ## Frames of the expression constructors -/
 
-/-- The expression interner's frame: the store tier, the stack, the memo. -/
-def ExprA : List ArrId := RMEMO :: RomA
-def ExprC : List Word := 132 :: RomC
+/-- The expression interner's frame: the store tier, the stack, the memo and its handle set. -/
+def ExprA : List ArrId := RMEMO :: RSET :: RomA
+def ExprC : List Word := 132 :: 148 :: 149 :: RomC
 
 theorem frame_exprA {m m' : Mem} (h : MemFrame RomA RomC m m') : MemFrame ExprA ExprC m m' :=
-  h.mono (fun b hb => List.mem_cons_of_mem _ hb) (fun x hx => List.mem_cons_of_mem _ hx)
+  h.mono (fun b hb => by simp [ExprA, hb]) (fun x hx => by simp [ExprC, hx])
 
 theorem frame_storeE {m m' : Mem} (h : MemFrame StoreA StoreC m m') : MemFrame ExprA ExprC m m' :=
   frame_exprA (frame_romA h)
@@ -128,10 +128,19 @@ theorem MemoR.hit {mem : Mem} {seen : List ConLeche.Expr} {m : EMemo} (h : MemoR
   rw [List.getElem_idxOf hk] at h2
   exact ⟨h1, h2⟩
 
-theorem MemoR.push {mem : Mem} {seen : List ConLeche.Expr} {m : EMemo} (h : MemoR mem seen m)
+/-- `memo_push`'s memory without the handle set. -/
+def mpushOld (m : Mem) (h : Word) : Mem := (m.set64 RMEMO (memoCnt m) h).set64 CTL 132 (memoCnt m + 1)
+
+theorem MemoR.of_eq {mem mem' : Mem} {seen : List ConLeche.Expr} {m : EMemo} (h : MemoR mem seen m)
+    (hR : mem'.arr64 RMEMO = mem.arr64 RMEMO) (hc : memoCnt mem' = memoCnt mem)
+    (hs : (mem'.arr64 CTL).size = (mem.arr64 CTL).size) : MemoR mem' seen m :=
+  ⟨by rw [hc]; exact h.cnt, fun k hk => by rw [hR]; exact h.ent k hk, h.keys, h.room,
+    by rw [hs]; exact h.csz⟩
+
+theorem MemoR.push0 {mem : Mem} {seen : List ConLeche.Expr} {m : EMemo} (h : MemoR mem seen m)
     {e : ConLeche.Expr} (he : e ∉ seen) (x : Word)
     (hx : x.toNat < 2 ^ 32) (hsz' : memoCnt mem < mem.len64 RMEMO) :
-    MemoR (mpushMem mem x) (seen ++ [e]) (m.insert e (decI x)) := by
+    MemoR (mpushOld mem x) (seen ++ [e]) (m.insert e (decI x)) := by
   have hcn := h.cnt
   have hl := UInt64.lt_iff_toNat_lt.mp hsz'
   simp only [Mem.len64, UInt64.toNat_ofNat'] at hl
@@ -139,20 +148,20 @@ theorem MemoR.push {mem : Mem} {seen : List ConLeche.Expr} {m : EMemo} (h : Memo
     Nat.lt_of_lt_of_le hl (Nat.mod_le _ _)
   have hroom : (memoCnt mem).toNat + 1 < 2 ^ 64 := by
     have := Nat.mod_lt (mem.arr64 RMEMO).size (show 2 ^ 64 > 0 by decide); omega
-  have hR : ∀ k : Word, rdW ((mpushMem mem x).arr64 RMEMO) k =
+  have hR : ∀ k : Word, rdW ((mpushOld mem x).arr64 RMEMO) k =
       if k = memoCnt mem then x else rdW (mem.arr64 RMEMO) k := by
     intro k
-    simp only [mpushMem, Mem.arr64_set64_ne _ _ _ _ _ (show RMEMO ≠ CTL by decide), Mem.arr64_set64_same,
+    simp only [mpushOld, Mem.arr64_set64_ne _ _ _ _ _ (show RMEMO ≠ CTL by decide), Mem.arr64_set64_same,
       rdW_set!]
     by_cases e' : k = memoCnt mem
     · subst e'; simp [hsz]
     · have : ¬ (memoCnt mem).toNat = k.toNat := fun h' => e' (UInt64.toNat_inj.mp h'.symm)
       simp [e', this]
-  have hcnt' : memoCnt (mpushMem mem x) = memoCnt mem + 1 := by
+  have hcnt' : memoCnt (mpushOld mem x) = memoCnt mem + 1 := by
     have hs : 132 < ((mem.set64 RMEMO (memoCnt mem) x).arr64 CTL).size := by
       rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact h.csz
     simp only [memoCnt] at hs ⊢
-    simp only [mpushMem, memoCnt, Mem.arr64_set64_same, rdW_set!]
+    simp only [mpushOld, memoCnt, Mem.arr64_set64_same, rdW_set!]
     simp [hs]
   refine ⟨?_, fun k hk => ?_, fun e' he' => ?_, by simp; omega, ?_⟩
   · rw [hcnt', UInt64.toNat_add]; simp; omega
@@ -180,8 +189,18 @@ theorem MemoR.push {mem : Mem} {seen : List ConLeche.Expr} {m : EMemo} (h : Memo
     split at he'
     · rename_i heq; right; exact (by simpa using heq : e = e').symm
     · left; exact h.keys e' he'
-  · simp only [mpushMem, Mem.size_arr64_set64, Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ RMEMO by decide)]
+  · simp only [mpushOld, Mem.size_arr64_set64, Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ RMEMO by decide)]
     exact h.csz
+
+theorem MemoR.push {mem : Mem} {seen : List ConLeche.Expr} {m : EMemo} (h : MemoR mem seen m)
+    {e : ConLeche.Expr} (he : e ∉ seen) (x : Word)
+    (hx : x.toNat < 2 ^ 32) (hsz' : memoCnt mem < mem.len64 RMEMO) :
+    MemoR (mpushMem mem x) (seen ++ [e]) (m.insert e (decI x)) := by
+  have hf := mputMem_frame rsetSch ⟨by decide, by decide⟩ mem 0 ((mfindG rsetSch mem x 0).tail.headD 0) x 0 1
+  obtain ⟨hc, hl⟩ := mputMem_memo mem ((mfindG rsetSch mem x 0).tail.headD 0) x
+  have h1 := h.of_eq (hf.1 RMEMO (by simp [rsetSch, RSET, RMEMO]) (by decide)) hc (hf.2.2.1 CTL)
+  have := h1.push0 he x hx (by rw [hc, hl]; exact hsz')
+  simpa only [mpushOld, mpushMem, hc] using this
 
 end L.Rom
 
@@ -309,11 +328,12 @@ theorem exNodeK_inv {q h q' : Word} {mem' : Mem} {x : Option (Word × Mem)}
     · simp at hW
     rename_i hlt
     split at hW
-    · rename_i hsz
-      simp only [Option.some.injEq, Prod.mk.injEq] at hW
-      obtain ⟨rfl, rfl, rfl⟩ := hW
-      exact ⟨m₃, rfl, by simp at hlt; exact UInt64.lt_iff_toNat_lt.mp hlt, rfl, hsz, rfl⟩
     · simp at hW
+    rename_i m'' hp
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, rfl, rfl⟩ := hW
+    obtain ⟨hsz, -, rfl⟩ := mpushW_eq hp
+    exact ⟨m₃, rfl, by simp at hlt; exact UInt64.lt_iff_toNat_lt.mp hlt, rfl, hsz, rfl⟩
 
 theorem exLeafK_inv {q h q' : Word} {mem' : Mem} {x : Option (Word × Mem)}
     (hW : exLeafK q x = some (h, q', mem')) : x = some (h, mem') ∧ h.toNat < 2 ^ 32 ∧ q' = q := by
@@ -327,9 +347,10 @@ theorem exLeafK_inv {q h q' : Word} {mem' : Mem} {x : Option (Word × Mem)}
     obtain ⟨rfl, rfl, rfl⟩ := hW
     exact ⟨rfl, by simp at hlt; exact UInt64.lt_iff_toNat_lt.mp hlt, rfl⟩
 
-theorem mpushMem_frame1 (m : Mem) (h : Word) : MemFrame [RMEMO] [132] m (mpushMem m h) := by
+theorem mpushMem_frame1 (m : Mem) (h : Word) : MemFrame [RMEMO, RSET] [132, 149] m (mpushMem m h) := by
   simp only [mpushMem]
-  exact ((MemFrame.set64 _ RMEMO (by decide) _ _).mono (by simp) (by simp)).trans
+  exact (((mputMem_frame rsetSch ⟨by decide, by decide⟩ _ _ _ _ _ _).mono (by simp [rsetSch])
+    (by simp [rsetSch])).trans ((MemFrame.set64 _ RMEMO (by decide) _ _).mono (by simp) (by simp))).trans
     ((MemFrame.setCtl _ 132 _).mono (by simp) (by simp))
 
 theorem mpushMem_frame (m : Mem) (h : Word) : MemFrame ExprA ExprC m (mpushMem m h) :=
@@ -647,7 +668,7 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     have hM3 := (hM2.frame (frame_romA hf3)).push hfresh h hlt hsz
     refine ⟨_, _, iEG_app m mf mx a a₁ a₂ _ (decI hf) (decI hx) (decI h) f x (hM.miss hin) r1 r2
       (by rw [show (decI h : EIdx) = _ from res3.symm]; exact AM.run_of_ok _ _ ok3),
-      ArenaD.frameHi (mpushMem_frame1 m₃ h) (by simp [RMEMO]) (by simp) hR3, hM3, hlt, ?_, ?_, ?_⟩
+      ArenaD.frameHi (mpushMem_frame1 m₃ h) (by simp [RMEMO, RSET]) (by simp) hR3, hM3, hlt, ?_, ?_, ?_⟩
     · have hp1 := drop_pos rom hr pos _ rest hd 1 (by simp)
       simp only [UInt64.ofNat_one] at hp1
       rw [hq2, hq1, hp1]; simp; omega
@@ -704,7 +725,7 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     have hM3 := (hM2.frame (frame_romA hf3)).push hfresh h hlt hsz
     refine ⟨_, _, iEG_lam m mf mx a a₁ a₂ _ (decI hf) (decI hx) (decI h) f x (hM.miss hin) r1 r2
       (by rw [show (decI h : EIdx) = _ from res3.symm]; exact AM.run_of_ok _ _ ok3),
-      ArenaD.frameHi (mpushMem_frame1 m₃ h) (by simp [RMEMO]) (by simp) hR3, hM3, hlt, ?_, ?_, ?_⟩
+      ArenaD.frameHi (mpushMem_frame1 m₃ h) (by simp [RMEMO, RSET]) (by simp) hR3, hM3, hlt, ?_, ?_, ?_⟩
     · have hp1 := drop_pos rom hr pos _ rest hd 1 (by simp)
       simp only [UInt64.ofNat_one] at hp1
       rw [hq2, hq1, hp1]; simp; omega
@@ -761,7 +782,7 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     have hM3 := (hM2.frame (frame_romA hf3)).push hfresh h hlt hsz
     refine ⟨_, _, iEG_forall m mf mx a a₁ a₂ _ (decI hf) (decI hx) (decI h) f x (hM.miss hin) r1 r2
       (by rw [show (decI h : EIdx) = _ from res3.symm]; exact AM.run_of_ok _ _ ok3),
-      ArenaD.frameHi (mpushMem_frame1 m₃ h) (by simp [RMEMO]) (by simp) hR3, hM3, hlt, ?_, ?_, ?_⟩
+      ArenaD.frameHi (mpushMem_frame1 m₃ h) (by simp [RMEMO, RSET]) (by simp) hR3, hM3, hlt, ?_, ?_, ?_⟩
     · have hp1 := drop_pos rom hr pos _ rest hd 1 (by simp)
       simp only [UInt64.ofNat_one] at hp1
       rw [hq2, hq1, hp1]; simp; omega
@@ -833,7 +854,7 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     have hM4 := (hM3.frame (frame_romA hf4)).push hfresh h hlt hsz
     refine ⟨_, _, iEG_let m mt mv mx a a₁ a₂ a₃ _ (decI ht) (decI hv) (decI hx) (decI h) t v x (hM.miss hin)
       r1 r2 r3 (by rw [show (decI h : EIdx) = _ from res4.symm]; exact AM.run_of_ok _ _ ok4),
-      ArenaD.frameHi (mpushMem_frame1 m₄ h) (by simp [RMEMO]) (by simp) hR4, hM4, hlt, ?_, ?_, ?_⟩
+      ArenaD.frameHi (mpushMem_frame1 m₄ h) (by simp [RMEMO, RSET]) (by simp) hR4, hM4, hlt, ?_, ?_, ?_⟩
     · have hp1 := drop_pos rom hr pos _ rest hd 1 (by simp)
       simp only [UInt64.ofNat_one] at hp1
       rw [hq3, hq2, hq1, hp1]; simp; omega
@@ -888,7 +909,7 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     have hM2 := (hM1.frame (frame_romA hf2)).push hfresh h hlt hsz
     refine ⟨_, _, iEG_fvar m mt a a₁ _ (decI ht) (decI h) i ty (hM.miss hin) r1
       (by rw [show (decI h : EIdx) = _ from res2.symm]; exact AM.run_of_ok _ _ ok2),
-      ArenaD.frameHi (mpushMem_frame1 m₂ h) (by simp [RMEMO]) (by simp) hR2, hM2, hlt, ?_, ?_, ?_⟩
+      ArenaD.frameHi (mpushMem_frame1 m₂ h) (by simp [RMEMO, RSET]) (by simp) hR2, hM2, hlt, ?_, ?_, ?_⟩
     · rw [hq1, hp9]; simp [u64B]; omega
     · exact hf1.trans ((frame_storeE hf2).trans (mpushMem_frame m₂ h))
     · rw [mpushMem_stk, frame_exprA_stk hf2, hs1]
@@ -951,7 +972,7 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     refine ⟨_, _, iEG_proj m ms a _ a₂ _ (decI hs) (decI h) nm i sub (decI hn) (hM.miss hin)
       (by rw [← res1]; exact AM.run_of_ok _ _ ok1) r2
       (by rw [show (decI h : EIdx) = _ from res3.symm]; exact AM.run_of_ok _ _ ok3),
-      ArenaD.frameHi (mpushMem_frame1 m₃ h) (by simp [RMEMO]) (by simp) hR3, hM3, hlt, ?_, ?_, ?_⟩
+      ArenaD.frameHi (mpushMem_frame1 m₃ h) (by simp [RMEMO, RSET]) (by simp) hR3, hM3, hlt, ?_, ?_, ?_⟩
     · have hp1 := drop_pos rom (by simpa [RomOK] using hr) pos _ rest hd 1 (by simp)
       simp only [UInt64.ofNat_one] at hp1
       rw [hq2, hq8, hq1, hp1]; simp [u64B]; omega

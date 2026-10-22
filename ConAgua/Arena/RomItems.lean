@@ -79,6 +79,7 @@ def romItems : FunDecl := lfn (pos) locals (t, h, q, r) {
   if t == 5 { return pos + 1 };
   if t == 4 {
     CTL.u64[132] := 0;
+    h := call rset_clear();
     r := call rom_items(pos + 1);
     return r
   };
@@ -89,8 +90,13 @@ def romItems : FunDecl := lfn (pos) locals (t, h, q, r) {
   return r
 }
 
-/-- The memory after a memo reset. -/
-def resetMem (m : Mem) : Mem := m.set64 CTL 132 0
+/-- The memory after a memo reset: the memo and its handle set empty. -/
+def resetMem (m : Mem) : Mem := mclearG rsetSch (m.set64 CTL 132 0)
+
+/-- The handle set can be cleared (its stamp does not wrap). -/
+def rclearOK (m : Mem) : Prop := rdW ((m.set64 CTL 132 0).arr64 CTL) rsetSch.cs + 2 ≠ 0
+
+instance (m : Mem) : Decidable (rclearOK m) := by unfold rclearOK; infer_instance
 
 /-- After one item: continue at its end. -/
 def itK (_n : Nat) (romItemsW : Mem → Word → Option (Word × Mem)) :
@@ -103,7 +109,7 @@ def romItemsW : Nat → Mem → Word → Option (Word × Mem)
   | 0, _, _ => none
   | n + 1, m, pos =>
     if romB rom pos = 5 then some (pos + 1, m)
-    else if romB rom pos = 4 then romItemsW n (resetMem m) (pos + 1)
+    else if romB rom pos = 4 then (if rclearOK m then romItemsW n (resetMem m) (pos + 1) else none)
     else if romB rom pos = 0 then itK n (romItemsW n) (romNameW rom n m (pos + 1))
     else if romB rom pos = 1 then itK n (romItemsW n) (romLevelW rom n m (pos + 1))
     else if romB rom pos = 2 then itK n (romItemsW n) (romLevelsW rom n m (pos + 1))
@@ -118,7 +124,11 @@ theorem itK_some (F : Mem → Word → Option (Word × Mem)) : itK n F (some (h,
 theorem romItemsW_end (h5 : romB rom pos = 5) : romItemsW rom (n + 1) m pos = some (pos + 1, m) := by
   simp [romItemsW, h5]
 theorem romItemsW_reset (h5 : romB rom pos ≠ 5) (h4 : romB rom pos = 4) :
-    romItemsW rom (n + 1) m pos = romItemsW rom n (resetMem m) (pos + 1) := by simp [romItemsW, h5, h4]
+    romItemsW rom (n + 1) m pos = if rclearOK m then romItemsW rom n (resetMem m) (pos + 1) else none := by
+  simp [romItemsW, h5, h4]
+theorem romItemsW_reset_ok (h5 : romB rom pos ≠ 5) (h4 : romB rom pos = 4) (hok : rclearOK m) :
+    romItemsW rom (n + 1) m pos = romItemsW rom n (resetMem m) (pos + 1) := by
+  simp [romItemsW, h5, h4, hok]
 theorem romItemsW_nm (h5 : romB rom pos ≠ 5) (h4 : romB rom pos ≠ 4) (h0 : romB rom pos = 0) :
     romItemsW rom (n + 1) m pos = itK n (romItemsW rom n) (romNameW rom n m (pos + 1)) := by
   simp [romItemsW, h5, h4, h0]
@@ -138,7 +148,7 @@ end arms
 
 attribute [arena_grind =] itK_some
 grind_pattern [arena_grind] romItemsW_end => romItemsW rom (n + 1) m pos
-grind_pattern [arena_grind] romItemsW_reset => romItemsW rom (n + 1) m pos
+grind_pattern [arena_grind] romItemsW_reset_ok => romItemsW rom (n + 1) m pos
 grind_pattern [arena_grind] romItemsW_nm => romItemsW rom (n + 1) m pos
 grind_pattern [arena_grind] romItemsW_lv => romItemsW rom (n + 1) m pos
 grind_pattern [arena_grind] romItemsW_lvs => romItemsW rom (n + 1) m pos
@@ -147,6 +157,7 @@ grind_pattern [arena_grind] romItemsW_ex => romItemsW rom (n + 1) m pos
 /-- The functions `rom_items` calls. -/
 structure ItemsProg (rom : List UInt8) (p : Prog) : Prop extends ExprProg rom p where
   rom_items : p.lookup "rom_items" = some (romItems rom)
+  rset_clear : p.lookup "rset_clear" = some (memoClearG rsetSch)
 
 section spec
 variable (rom : List UInt8) (p : Prog) (hL : ItemsProg rom p)
@@ -172,24 +183,32 @@ theorem romItems_specW (n : Nat) : ∀ (s₀ : St) (pos : Word), (s₀.mem.arr64
     rw [invoke_eq _ hL.rom_items]
     simp only [callFn, romItems]
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ldc, st64, hn', hl', hls', he', ih'] <;>
-      finish [Keep.size, resetMem]
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ldc, st64, hn', hl', hls', he', ih',
+        memoClearG_spec rsetSch p "rset_clear" hL.rset_clear n] <;>
+      finish [Keep.size, resetMem, rclearOK, mclearG]
 
 end spec
 
 /-! ## `rom_items` refines `runItems` -/
 
+theorem resetMem_frame1 (m : Mem) : MemFrame [] [132, 148, 149] m (resetMem m) :=
+  ((MemFrame.setCtl m 132 0).mono (by simp) (by simp)).trans
+    ((mclearG_frame rsetSch _).mono (by simp) (by simp [rsetSch]))
+
 theorem MemoR.reset {mem : Mem} {seen : List ConLeche.Expr} {m : EMemo} (h : MemoR mem seen m) :
     MemoR (resetMem mem) [] (∅ : EMemo) := by
-  refine ⟨?_, fun k hk => by simp at hk, fun e he => by simp at he, by simp, ?_⟩
-  · simp only [memoCnt, resetMem, Mem.arr64_set64_same, rdW_set!]; simp [h.csz]
-  · simp only [resetMem, Mem.size_arr64_set64]; exact h.csz
+  have hf := resetMem_frame1 mem
+  have hc0 : memoCnt (resetMem mem) = 0 := by
+    simp only [memoCnt, resetMem, mclearG, rsetSch, rdW_set64]
+    simp [h.csz]
+  refine ⟨by rw [hc0]; rfl, fun k hk => by simp at hk, fun e he => by simp at he, by simp, ?_⟩
+  rw [hf.2.2.1]; exact h.csz
 
 theorem resetMem_frame (m : Mem) : MemFrame ExprA ExprC m (resetMem m) :=
-  (MemFrame.setCtl m 132 0).mono (by simp) (by simp [ExprC])
+  (resetMem_frame1 m).mono (by simp) (by simp [ExprC])
 
 theorem resetMem_stk (m : Mem) : stkTop (resetMem m) = stkTop m :=
-  (MemFrame.setCtl m 132 0).2.1 131 (by simp)
+  (resetMem_frame1 m).2.1 131 (by simp)
 
 theorem run_bind_of {α β : Type} (x : AM α) (f : α → AM β) (a a' : AState) (v : α)
     (h : x.run a = .ok (v, a')) : (x >>= f).run a = (f v).run a' := by
@@ -235,13 +254,15 @@ theorem romItemsW_ok (is : List Item) (hfit : is.all itemFits = true) :
       | zero => simp [romItemsW] at hW
       | succ n =>
       rw [romItemsW_reset rom n mem pos (by simp [h0]) h0] at hW
+      split at hW
+      case isFalse => simp at hW
       have hd1 : rom.drop (pos + 1).toNat = encItems [] is ++ rest := by
         have := drop_shift rom hr pos [4] (encItems [] is) rest (by simpa using hd)
           (pos + 1) (drop_pos rom hr pos _ rest hd 1 (by simp))
         simpa using this
       obtain ⟨m', a', seen', r, hR, hM', hq, hf, hs⟩ := ih hfit.2 n (resetMem mem) a (pos + 1) rest [] ∅ q mem'
-        (ArenaD.frameHi (MemFrame.setCtl mem 132 0) (by simp) (by simp) hA) hM.reset hd1
-        (by rw [resetMem_stk]; exact hst) (by simp only [resetMem, Mem.size_arr64_set64]; exact hc) hW
+        (ArenaD.frameHi (resetMem_frame1 mem) (by simp) (by simp) hA) hM.reset hd1
+        (by rw [resetMem_stk]; exact hst) (by rw [(resetMem_frame1 mem).2.2.1]; exact hc) hW
       refine ⟨m', a', seen', by simp only [runItems, runItem]; rw [run_bind_of _ _ _ _ _ rfl]; exact r,
         hR, hM', ?_, (resetMem_frame mem).trans hf, by rw [hs, resetMem_stk]⟩
       have hp1 := drop_pos rom hr pos _ rest hd 1 (by simp)
