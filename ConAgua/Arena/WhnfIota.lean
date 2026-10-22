@@ -669,6 +669,87 @@ def recFireArgsL : FunDecl := lfn (fireKind, pvo, pvc, po, pc, us, ao, rP, ctorP
 
 /-! ## `iota_certs_full(mode, vis, d, h, ao, an)` -/
 
+/-- The domain check of `iota_certs_full_forall`: the argument's FULL-grade inferred type is defeq
+to the domain `ty` opened by the accumulator `(aco, acn)`. -/
+-- con-ron: ConRon/Arena/Core.lean:1285-1317 ConRon.Arena.iotaCertsFullAux
+def iotaCertsFullCheckL : FunDecl := lfn (mode, vis, d, ty, aco, acn, arg) locals (ty2, ta, ok) {
+  ty2 := call inst_list(ty, aco, acn, 0);
+  ta := call infer(mode, vis, d, arg);
+  ok := call defeq(mode, vis, d, ta, ty2);
+  return ok
+}
+
+/-- The view checks of a handle, by tag (`ViewL.lean`'s `viewOK`): the scratch tier open for a
+scratch handle, the index below the tier's count. Aborts on a dangling handle (the twin's `view`
+fails there); returns `0`. -/
+-- con-ron: ConRon/Arena/Core.lean:1285-1317 ConRon.Arena.iotaCertsFullAux
+def exprViewOkL : FunDecl := lfn (h) locals (t, x, g, c) {
+  t := (h >> 27) & 1;
+  x := h & 134217727;
+  g := h >> 28;
+  if t != 0 && CTL.u64[1] == 0 { abort };
+  c := 0;
+  if g == 0 { c := 22 } else {
+    if g == 1 { c := 26 } else {
+      if g == 2 { c := 16 } else {
+        if g == 3 { c := 18 } else {
+          if g == 4 { c := 4 } else {
+            if g == 5 { c := 28 } else {
+              if g == 6 { c := 30 } else {
+                if g == 7 { c := 20 } else {
+                  if g == 8 { c := 2 } else {
+                    if g == 9 { c := 32 } else { abort } } } } } } } } } };
+  if CTL.u64[c + t] <= x { abort };
+  return 0
+}
+
+/-- A control word (a one-line reader, so that callers' proofs read it through a call). -/
+-- con-ron: ConRon/Arena/Core.lean:1319-1324 ConRon.Arena.iotaCertsFull
+def ctlGetL : FunDecl := lfn (k) locals () { return CTL.u64[k] }
+
+/-- A stack word (a one-line reader, so that callers' proofs read it through a call). -/
+-- con-ron: ConRon/Arena/Core.lean:1285-1317 ConRon.Arena.iotaCertsFullAux
+def spnGetL : FunDecl := lfn (k) locals () { return SPN.u64[k] }
+
+/-- The record of a `forallE` handle: its domain and body (the guards of a stored-node read). -/
+-- con-ron: ConRon/Arena/Core.lean:1285-1317 ConRon.Arena.iotaCertsFullAux
+def iotaCertsFullPartsL : FunDecl := lfn (h) locals (t, x) {
+  t := (h >> 27) & 1;
+  x := h & 134217727;
+  if t != 0 && CTL.u64[1] == 0 { abort };
+  if CTL.u64[30 + t] <= x { abort };
+  return (FAREC.u64[x * 4 + t * 2], FAREC.u64[x * 4 + t * 2 + 1])
+}
+
+/-- The `forallE` arm of `iota_certs_full_aux` (split off: the function was too long for `vcgen`):
+`h` a `forallE`; certify the argument `SPN[ao + i]` against its instantiated domain, push it on the
+accumulator, and continue with the body. -/
+-- con-ron: ConRon/Arena/Core.lean:1285-1317 ConRon.Arena.iotaCertsFullAux
+def iotaCertsFullForallL : FunDecl := lfn (mode, vis, d, h, aco, acn, ao, an, i)
+    locals (ty, body, arg, ok, dum) {
+  (ty, body) := call iota_certs_full_parts(h);
+  arg := call spn_get(ao + i);
+  ok := call iota_certs_full_check(mode, vis, d, ty, aco, acn, arg);
+  if ok == 0 { return 0 };
+  if len(SPN.u64) <= aco + acn { abort };
+  SPN.u64[aco + acn] := arg;
+  CTL.u64[136] := aco + acn + 1;
+  dum := call iota_certs_full_aux(mode, vis, d, body, aco, acn + 1, ao, an, i + 1);
+  return dum
+}
+
+/-- The `bvar` arm of `iota_certs_full_aux`: the telescope ran out of syntactic binders with a
+pending substitution; flush the accumulator into `h` and look again (with an empty accumulator at
+the stack top). -/
+-- con-ron: ConRon/Arena/Core.lean:1285-1317 ConRon.Arena.iotaCertsFullAux
+def iotaCertsFullFlushL : FunDecl := lfn (mode, vis, d, h, aco, acn, ao, an, i) locals (ty2, dum) {
+  dum := call expr_view_ok(h);
+  if acn == 0 { return 0 };
+  ty2 := call inst_list(h, aco, acn, 0);
+  dum := call iota_certs_full_aux(mode, vis, d, ty2, aco + acn, 0, ao, an, i);
+  return dum
+}
+
 /-- con-leche: `Kernel/Core.lean:252-267`/`Cached/CoreC.lean:149-181` `iotaCertsFullAux`/
 `iotaCertsFull`/`iotaCertsFullI` — certify a spine against a constructor telescope: every
 argument's FULL-grade inferred type is defeq to the corresponding (instantiated) domain, the
@@ -677,35 +758,17 @@ is the stack slice `(aco, acn)`, pushed directly above the fixed spine `(ao, an)
 intervenes between a growth and the next read, so it stays contiguous. -/
 -- con-ron: ConRon/Arena/Core.lean:1285-1317 ConRon.Arena.iotaCertsFullAux
 @[l_impl ConRon.Arena.iotaCertsFullAux]
-def iotaCertsFullAuxL : FunDecl := lfn (mode, vis, d, h, aco, acn, ao, an, i)
-    locals (t, x, ty, body, arg, ty2, ta, ok, top, dum) {
+def iotaCertsFullAuxL : FunDecl := lfn (mode, vis, d, h, aco, acn, ao, an, i) locals (dum) {
   if i < an {
     if h >> 28 == 6 {
-      t := (h >> 27) & 1;
-      x := h & 134217727;
-      if t != 0 && CTL.u64[1] == 0 { abort };
-      if CTL.u64[30 + t] <= x { abort };
-      ty := FAREC.u64[x * 4 + t * 2];
-      body := FAREC.u64[x * 4 + t * 2 + 1];
-      arg := SPN.u64[ao + i];
-      ty2 := call inst_list(ty, aco, acn, 0);
-      ta := call infer(mode, vis, d, arg);
-      ok := call defeq(mode, vis, d, ta, ty2);
-      if ok == 0 { return 0 };
-      if len(SPN.u64) <= aco + acn { abort };
-      SPN.u64[aco + acn] := arg;
-      CTL.u64[136] := aco + acn + 1;
-      acn := acn + 1;
-      dum := call iota_certs_full_aux(mode, vis, d, body, aco, acn, ao, an, i + 1);
+      dum := call iota_certs_full_forall(mode, vis, d, h, aco, acn, ao, an, i);
       return dum
     };
     if h >> 28 == 0 {
-      if acn == 0 { return 0 };
-      ty2 := call inst_list(h, aco, acn, 0);
-      top := aco + acn;
-      dum := call iota_certs_full_aux(mode, vis, d, ty2, top, 0, ao, an, i);
+      dum := call iota_certs_full_flush(mode, vis, d, h, aco, acn, ao, an, i);
       return dum
     };
+    dum := call expr_view_ok(h);
     return 0
   };
   return 1
@@ -717,7 +780,7 @@ accumulator is scratch; the refinement specs promise `StackKept`). -/
 -- con-ron: ConRon/Arena/Core.lean:1319-1324 ConRon.Arena.iotaCertsFull
 @[l_impl ConRon.Arena.iotaCertsFull]
 def iotaCertsFullL : FunDecl := lfn (mode, vis, d, h, ao, an) locals (top, res) {
-  top := CTL.u64[136];
+  top := call ctl_get(136);
   res := call iota_certs_full_aux(mode, vis, d, h, top, 0, ao, an, 0);
   CTL.u64[136] := top;
   return res
@@ -826,6 +889,10 @@ def iotaProg : Prog :=
    ("proof_irrel", proofIrrelL), ("proof_irrel_half", proofIrrelHalfL), ("rule_rhs_at", ruleRhsAtL), ("const_ty_at", constTyAtL),
    ("inst_spine", instSpineL), ("inst_spine_pins", instSpinePinsL),
    ("rec_fire_args", recFireArgsL), ("iota_certs_full_aux", iotaCertsFullAuxL),
+   ("iota_certs_full_forall", iotaCertsFullForallL),
+   ("iota_certs_full_check", iotaCertsFullCheckL),
+   ("iota_certs_full_parts", iotaCertsFullPartsL), ("expr_view_ok", exprViewOkL), ("ctl_get", ctlGetL), ("spn_get", spnGetL),
+   ("iota_certs_full_flush", iotaCertsFullFlushL),
    ("iota_certs_full", iotaCertsFullL), ("iota_rec_at", iotaRecAtL)]
 
 /-- What this file's specs need of a program: its own functions, at their names. -/
@@ -856,6 +923,13 @@ structure IotaProg (p : Prog) : Prop where
   instSpinePins : p.lookup "inst_spine_pins" = some instSpinePinsL
   recFireArgs : p.lookup "rec_fire_args" = some recFireArgsL
   iotaCertsFullAux : p.lookup "iota_certs_full_aux" = some iotaCertsFullAuxL
+  iotaCertsFullForall : p.lookup "iota_certs_full_forall" = some iotaCertsFullForallL
+  iotaCertsFullCheck : p.lookup "iota_certs_full_check" = some iotaCertsFullCheckL
+  iotaCertsFullParts : p.lookup "iota_certs_full_parts" = some iotaCertsFullPartsL
+  exprViewOk : p.lookup "expr_view_ok" = some exprViewOkL
+  ctlGet : p.lookup "ctl_get" = some ctlGetL
+  spnGet : p.lookup "spn_get" = some spnGetL
+  iotaCertsFullFlush : p.lookup "iota_certs_full_flush" = some iotaCertsFullFlushL
   iotaCertsFull : p.lookup "iota_certs_full" = some iotaCertsFullL
   iotaRecAt : p.lookup "iota_rec_at" = some iotaRecAtL
 
@@ -1154,34 +1228,6 @@ def RecFireArgsOK (p : Prog) : Prop :=
       ∃ xs, AM.res (recFireArgs rl lps (decI us) args.toList rP.toNat) a₀ = xs ∧
         SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄
 
-
-/-- con-leche: `ConLeche/Cached/CoreC.lean:149-176` `iotaCertsFullAux`. -/
-def IotaCertsFullAuxOK (p : Prog) : Prop :=
-  ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F →
-  ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb mode d h aco acn ao an i : Word) (acc args : Array EIdx),
-    CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → HW h → SpineR s₀.mem aco acn acc →
-    SpineR s₀.mem ao an args → aco + acn = spTop s₀.mem →
-    CoreSpec p (n + 1) "iota_certs_full_aux" [mode, vis, d, h, aco, acn, ao, an, i]
-      (iotaCertsFullAux (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) acc args i.toNat)
-      decBool s₀ a₀ dn vis fe MM eb
-
-@[refines ConRon.Arena.iotaCertsFullAux]
-theorem iotaCertsFullAux_refines : IotaCertsFullAuxOK p := sorry
-
-/-- con-leche: `Kernel/Core.lean:252-267`/`Cached/CoreC.lean:178-181` `iotaCertsFull`. -/
-def IotaCertsFullOK (p : Prog) : Prop :=
-  ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F →
-  ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb mode d h ao an : Word) (args : Array EIdx),
-    CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → HW h → SpineR s₀.mem ao an args →
-    ao + an = spTop s₀.mem →
-    CoreSpec p (n + 1) "iota_certs_full" [mode, vis, d, h, ao, an]
-      (iotaCertsFull (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) args.toList) decBool s₀
-      a₀ dn vis fe MM eb
-
-@[refines ConRon.Arena.iotaCertsFull]
-theorem iotaCertsFull_refines : IotaCertsFullOK p := sorry
 
 /-- **`iota_rec_at` refines `iotaRecAt`** (the statement is `WhnfCore.lean`'s `IotaRecAtOK`, what
 `whnf_app` assumes). -/
