@@ -7858,3 +7858,20 @@ child dangled when it was interned (no `StoreWF` needed).
   on `CheckDeclProg`'s spec fields (`CvCanonSpec`, `CiCanonSpec`, `DefnProg`) and the callees' stub
   specs. Whoever establishes `LoopR` at the loop's entry (the pipeline) supplies `PinSetsR` from
   `internAllPins_PB`'s post.
+
+
+### Landing 7: the level tables only grow (`LvlCnt` in `PoolGrew`); D25 fixed
+* **`PoolGrew` gained `lvl : LvlCnt m m'`** (`WhnfBase.lean`): the scratch flag `CTL[1]` is kept
+  and the level tables' counts (`CTL` 6‥15) do not drop. Being a field of `PoolGrew`, it rides on
+  every `StackKept`/`StackGrew`/`TelPost`/`CoreAfter` lane `whnf3` already threads; the only new
+  obligations are at writers of those words: frames get it by an auto-param `LvlFree C`
+  (`lvl_free`, `LvlFree.of_ge` for generic frames above 16); a level interning
+  (`CoreS.of_level`, now taking `hlc`) by `lvlCnt_of_arena` (`LvlGrow.lean`: the counts are the
+  twin tables' sizes under `ArenaR`, and `LStore.intern` only pushes, `LTGrow.internLNode`).
+* **Why a memory fact suffices.** A level stays stored: `lv_node` accepts it after a run if it did
+  before (`lvNodeW_mono`), so `lview_of_lvNodeW` and `StoreDen.lvlAll` read it back at the later
+  state (`lvl_den_later`, `lvNodeW_of_den`). The twin side needs no `Ext` in `CoreAfter`.
+* **D25 fixed**: `lvl_live` is gone; `infer_forall_io` carries the domain sort across its four calls
+  (`lvl_den_later`), `infer_pis`'s loop carries "every binder sort on `BSTK` is stored"
+  (`lvNodeW m ws[i] ≠ []`, a new hypothesis of `pisFull_ref`/`inferPisLeaf_refines`/
+  `pisOut_ref`), and `ensure_sort`'s answer is a stored sort's level (`ensureSort_view`).

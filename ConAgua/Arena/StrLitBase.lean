@@ -59,7 +59,8 @@ theorem CoreS.of_ls {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AS
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List ArrId} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hL : LsStep a a') (hR : ArenaR m' a')
     (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b < 42 ∨ (54 < b ∧ b < 64)) (hC : ∀ x ∈ C, x.toNat < 42)
-    (hP : POOL ∉ A := by decide) (hP0 : (0 : Word) ∉ C := by decide) :
+    (hP : POOL ∉ A := by decide) (hP0 : (0 : Word) ∉ C := by decide)
+    (hLv : LvlFree C := by lvl_free) :
     CoreS dn m' a' vis fe M eb ∧ StackKept m m' := by
   have hD : DerR m' a' := DerR.of_tiers m' a a'
     (DerR.frameM A C m m' hf (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega) a
@@ -88,7 +89,7 @@ theorem CoreS.of_ls {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AS
     StackKept.of_frame hf
       ⟨fun h => by have := hA _ h; simp only [SPN, ArrId] at this; omega,
        fun h => by have := hA _ h; simp only [BSTK, ArrId] at this; omega, hP⟩
-      ⟨fun h => by have := hC _ h; simp at this, fun h => by have := hC _ h; simp at this, hP0⟩⟩
+      ⟨fun h => by have := hC _ h; simp at this, fun h => by have := hC _ h; simp at this, hP0⟩ hLv⟩
   · rw [hL.caches]
     exact CoreRM.frame (A := A) (C := C) (fun b hb => .inl (by have := hA b hb; simp only [ArrId] at this ⊢; omega))
       (fun x hx => .inl (by have := hC x hx; omega)) hf hS.core
@@ -187,6 +188,8 @@ theorem internParam_core (hS : CoreS dn m a vis fe M eb) (u : Word) (hu : HW u)
       (fun n hn => by
         simp only [LNodeView.nchildren, List.mem_cons, List.mem_nil_iff, or_false] at hn
         subst hn; exact hdn) (AM.run_of_ok _ _ hok)).1
+    (lvlCnt_of_arena hS.arena.1 hR' (hf.2.1 1 (by decide))
+      (LTGrow.internLNode (AM.run_of_ok _ _ hok)).1 (LTGrow.internLNode (AM.run_of_ok _ _ hok)).2)
   have hw := internM_hw paramSch PRecRel phash paramSch_wf m _ _ _ hS.arena.1.param (pMt m u) _ _ _ _
     (probe_homeG paramSch m 0 _ _ (pprobeW_arm m u 0) _)
     (probe_homeG paramSch m 1 _ _ (pprobeW_arm m u 1) _) _ (ppushOK_room m) _ _ _ m' hI₂
@@ -211,6 +214,8 @@ theorem internZero_core (hS : CoreS dn m a vis fe M eb)
     (lvlAll_internLNode hS.arena.1 hS.den.lvlAll
       (fun c hc => by simp [LNodeView.lchildren] at hc)
       (fun n hn => by simp [LNodeView.nchildren] at hn) (AM.run_of_ok _ _ hok)).1
+    (lvlCnt_of_arena hS.arena.1 hR' (hf.2.1 1 (by decide))
+      (LTGrow.internLNode (AM.run_of_ok _ _ hok)).1 (LTGrow.internLNode (AM.run_of_ok _ _ hok)).2)
   have hw := internM_hw zeroSch ZRecRel zhash zeroSch_wf m _ _ _ hS.arena.1.zero (zMt m) _ _ _ _
     (probe_homeG zeroSch m 0 _ _ (zprobeW_arm m 0) _)
     (probe_homeG zeroSch m 1 _ _ (zprobeW_arm m 1) _) _ (zpushOK_room m) _ _ _ m' hI₂

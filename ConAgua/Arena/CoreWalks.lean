@@ -201,7 +201,7 @@ theorem CoreS.of_walk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
     (hmem : CoreMemos m') (hP : POOL ∉ A := by decide) (hP0 : (0 : Word) ∉ C := by decide)
     (hscA : SOREC ∉ A ∧ CREC ∉ A := by decide)
     (hscC : (1 : Word) ∉ C ∧ (16 : Word) ∉ C ∧ (17 : Word) ∉ C ∧ (18 : Word) ∉ C ∧ (19 : Word) ∉ C :=
-      by decide) :
+      by decide) (hLv : LvlFree C := by lvl_free) :
     CoreS dn m' a' vis fe M eb ∧ StackKept m m' := by
   simp only [cpl, Prod.mk.injEq] at hk
   obtain ⟨hc, hp, hl⟩ := hk
@@ -214,7 +214,7 @@ theorem CoreS.of_walk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
     hS.den.of_arena hS.arena.1 hD.1 hc hp hl hf (fun h => absurd (hA _ h) (by decide)) hscA hscC⟩,
     StackKept.of_frame hf
       ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide), hP⟩
-      ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide), hP0⟩⟩
+      ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide), hP0⟩ hLv⟩
   · rw [hc]; exact hS.core.frame (.of_lt hA (by decide)) (.of_lt hC (by decide)) hf
   · rw [hp]; exact hS.pins.congr (hf.1 PINS (fun h => absurd (hA _ h) (by decide)) (by decide))
   · intro h l e; rw [hc] at e; have := hS.readL h l e; simp only [EStore.ls] at this ⊢; rw [hl]
