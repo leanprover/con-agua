@@ -244,11 +244,12 @@ theorem projTypeAt_refines (p : Prog) (hp : InferProjProg p) (hlp : InstLPOK p) 
   have g3' : (136 : Word).toNat < (m₁.arr64 CTL).size := Classical.not_not.mp g3
   have htn1 : (tn + 1).toNat = tn.toNat + 1 := addW _ _ (by have h1 := hsp.bound; have h2 := hS.spn; simp only [UInt64.toNat_one]; omega)
   have htopv : to.toNat + tn.toNat ≤ (spTop s.mem).toNat := by rw [htop, hadd]; exact Nat.le_refl _
-  have hsp₁ : SpineR m₁ to tn xs.toArray := hsp.keep hSt₁.2.1 hSt₁.2.2 htopv hspn
-  obtain ⟨hspR, htop₂, -, -, -⟩ := spPush_step (m₀ := m₁) hS₁.spn hsp₁ (fun _ _ => rfl) rfl g3' g2' hpe
+  have hsp₁ : SpineR m₁ to tn xs.toArray := hsp.keep hSt₁.size hSt₁.below htopv hspn
+  obtain ⟨hspR, htop₂, -, -, -, -, -⟩ := spPush_step (m₀ := m₁) hS₁.spn hsp₁ (fun _ _ => rfl) rfl
+    (BKept.refl _) (PoolGrew.refl _) g3' g2' hpe
   have hS₂ := hS₁.frame_stk (spnCtl_frame m₁ (to + tn) pe (to + (tn + 1))) (by simp) (by simp)
   obtain ⟨r₂, m₂, hc2, hW⟩ := callW_cases rfl hW
-  have hsz₁ : (m₁.arr64 SPN).size = (s.mem.arr64 SPN).size := hSt₁.2.1
+  have hsz₁ : (m₁.arr64 SPN).size = (s.mem.arr64 SPN).size := hSt₁.size
   have hadd1 : (to + (tn + 1)).toNat = to.toNat + (tn + 1).toNat := addW _ _ (by omega)
   have h₂ := CoreSpec.of_callW (hil n ⟨spPush m₁ to tn pe, Locals.init []⟩ (AM.st _ a₀) dn vis fe M₁ eb
     (r₁.headD 0) to (tn + 1) 0 _ hS₂ hrw1 hspR (by rw [htop₂, hadd1]; exact Nat.le_refl _)) hc2
@@ -273,18 +274,22 @@ theorem projTypeAt_refines (p : Prog) (hp : InferProjProg p) (hlp : InstLPOK p) 
     exact hrun2
   · exact hS₂'.frame_stk (MemFrame.setCtl m₂ 136 _) (by simp) (by simp)
   · rw [hfin]
-    refine StackKept.restore ?_ ?_ (Classical.not_not.mp g4)
+    have hfp : MemFrame [SPN] [136] m₁ (spPush m₁ to tn pe) := spnCtl_frame m₁ (to + tn) pe (to + (tn + 1))
+    refine StackKept.restore ?_ ?_
+      (hSt₁.bstk.trans ((BKept.of_frame hfp (by decide) (by decide)).trans hSt₂.bstk))
+      (hSt₁.pool.trans ((PoolGrew.of_frame hfp (by decide) (by decide)).trans hSt₂.pool))
+      (Classical.not_not.mp g4)
     · intro j hj
       have hj' : j.toNat < to.toNat + tn.toNat := by
         have := UInt64.lt_iff_toNat_lt.mp hj; rw [htop, hadd] at this; exact this
       have hj2 : j < spTop (spPush m₁ to tn pe) := by
         rw [htop₂]; apply UInt64.lt_iff_toNat_lt.mpr; rw [hadd1]; omega
-      rw [hSt₂.2.2 j hj2]
+      rw [hSt₂.below j hj2]
       simp only [spPush]
       rw [spW_setCtl, spW_set64_ne _ _ _ _ (fun h => by
         have := congrArg UInt64.toNat h; rw [hadd] at this; omega)]
-      exact hSt₁.2.2 j hj
-    · rw [hSt₂.2.1]; simp only [spPush, size_set64]; exact hsz₁
+      exact hSt₁.below j hj
+    · rw [hSt₂.size]; simp only [spPush, size_set64]; exact hsz₁
 
 /-! ## The twin past the table lookup -/
 
@@ -501,11 +506,6 @@ theorem projAtT_run (sn T : NIdx) (us : LsIdx) (entry : IProjEntry) (te pe : EId
   simp only [projAtT, StateT.run_bind, hxs, except_ok_bind, bne_self_eq_false, hlen,
     Bool.false_eq_true, ↓reduceIte, ip_viewLsLen_run, hvl, hz, hlv]
 
-/-- The stack after `get_app_args` and runs that keep it. -/
-theorem ipa_stack {m m₁ m₅ : Mem} (hg : StackGrew m m₁) (hk : StackKept m₁ m₅) :
-    (∀ j : Word, j < spTop m → spW m₅ j = spW m j) ∧ (m₅.arr64 SPN).size = (m.arr64 SPN).size :=
-  ⟨fun j hj => (hk.2.2 j (UInt64.lt_of_lt_of_le hj hg.1)).trans (hg.2.2 j hj), hk.2.1.trans hg.2.1⟩
-
 /-- **`infer_proj_at` refines `projAtT`** (`inferProj` past the table lookup) at the table record
 `q` of field `i`, the subject type `te` headed by `T.{us}`. -/
 @[refines_part ConRon.Arena.inferProj "past the table lookup (projAtT)"]
@@ -636,7 +636,7 @@ theorem inferProjAt_refines (p : Prog) (hp : InferProjProg p) (hc : InferProjCal
     -- `proj_type_at`
     have hSt14 := (hSt₃.trans hSt₄)
     have hsp₄ : SpineR m₄ (r₁.headD 0) (r₁.tail.headD 0) xs.toArray :=
-      hsp₁.keep hSt14.2.1 hSt14.2.2 htopv hspn₁
+      hsp₁.keep hSt14.size hSt14.below htopv hspn₁
     obtain ⟨r₅, m₅, hc5, hW⟩ := callW_cases rfl hW
     have h₅ := CoreSpec.of_callW (projTypeAt_refines p hp hc.instLP (N + 1) ⟨m₄, Locals.init []⟩ _ dn
       vis fe M₄ eb q i us _ _ pe tbl xs hS₄ hq₄ hus hpe hsp₄ (by rw [hSt14.1, htop₂])) hc5
@@ -649,17 +649,17 @@ theorem inferProjAt_refines (p : Prog) (hp : InferProjProg p) (hc : InferProjCal
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     rw [← hm]
-    obtain ⟨hk, hsz⟩ := ipa_stack hg₁ (hSt14.trans hSt₅)
+    have hgK := hg₁.trans (hSt14.trans hSt₅).toGrew
     refine ipRef_of_run (M' := M₅) (v := decH r₅)
       (by rw [hT1, hT2]; simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte]; exact hrun5)
       (by simp only [decH, hr]) ?_ ((hK₃.trans hK₄).trans hK₅) ?_
       (by unfold ResH; rw [← hr]; exact hrw5)
     · exact hS₅.frame_stk (MemFrame.setCtl m₅ 136 _) (by simp) (by simp)
-    · exact StackKept.restore hk hsz (Classical.not_not.mp g6)
+    · exact StackKept.restoreG hgK (Classical.not_not.mp g6)
   · rw [if_neg g4] at hW
     rw [if_neg (by simpa using g4)] at hT1
     have hsp₃ : SpineR m₃ (r₁.headD 0) (r₁.tail.headD 0) xs.toArray :=
-      hsp₁.keep hSt₃.2.1 hSt₃.2.2 htopv hspn₁
+      hsp₁.keep hSt₃.size hSt₃.below htopv hspn₁
     obtain ⟨r₅, m₅, hc5, hW⟩ := callW_cases rfl hW
     have h₅ := CoreSpec.of_callW (projTypeAt_refines p hp hc.instLP (N + 1) ⟨m₃, Locals.init []⟩ _ dn
       vis fe M₃ eb q i us _ _ pe tbl xs hS₃ hq₃ hus hpe hsp₃ (by rw [hSt₃.1, htop₂])) hc5
@@ -672,10 +672,10 @@ theorem inferProjAt_refines (p : Prog) (hp : InferProjProg p) (hc : InferProjCal
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     rw [← hm]
-    obtain ⟨hk, hsz⟩ := ipa_stack hg₁ (hSt₃.trans hSt₅)
+    have hgK := hg₁.trans (hSt₃.trans hSt₅).toGrew
     refine ipRef_of_run (M' := M₅) (v := decH r₅) (by rw [hT1]; exact hrun5)
       (by simp only [decH, hr]) ?_ (hK₃.trans hK₅) ?_ (by unfold ResH; rw [← hr]; exact hrw5)
     · exact hS₅.frame_stk (MemFrame.setCtl m₅ 136 _) (by simp) (by simp)
-    · exact StackKept.restore hk hsz (Classical.not_not.mp g6)
+    · exact StackKept.restoreG hgK (Classical.not_not.mp g6)
 
 end L.Arena

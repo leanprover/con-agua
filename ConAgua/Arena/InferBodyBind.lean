@@ -8,13 +8,10 @@ The telescopes keep two stacks growing in step: the free variables `fvs` on the 
 (array 145, top `CTL[137]`; `BStkR`, a slice of words). `CoreS` survives writes to both
 (`CoreS.frame_stk`, `CoreS.frame`).
 
-**What the callees must keep.** `CoreAfter` (lane `whnf`'s `StackKept`) says nothing about
-`BSTK`: a knot slot run inside the telescope could, as far as its spec goes, overwrite the binder
-stack below its top. The telescopes assume it of the callees they call while the stack holds
-entries (`BStkCallees`: `infer`, `whnf`, `inst_list`, `ar_entry`, `ensure_sort` keep `BSTK` below
-`CTL[137]`, and `CTL[137]`); the interning callees are proved to (their frames, `BKept.of_frame`).
-Discharging `BStkCallees` needs `StackKept` (or `CoreAfter`) to carry the binder stack, which every
-core body would then prove (DESIGN.md).
+**What the callees must keep.** The callees a telescope calls while its stack holds entries
+(`infer`, `whnf`, `inst_list`, `ar_entry`, `ensure_sort`) keep `BSTK` below `CTL[137]` and
+`CTL[137]`: `CoreAfter`'s `StackKept.bstk` (lane `whnf3`; `CoreAfter.bkept`); the interning
+callees by their frames (`BKept.of_frame`).
 -/
 
 open ConRon.Arena
@@ -26,37 +23,18 @@ set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
-/-! ## The binder stack -/
+/-- A core run keeps the binder stack (`StackKept.bstk`, lane `whnf3`). -/
+theorem CoreAfter.bkept {dn : NIdx → Option ConLeche.Name} {m₀ m : Mem} {a : AState} {vis : Word}
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} (h : CoreAfter dn m₀ m a vis fe M eb) : BKept m₀ m := by
+  obtain ⟨_, _, _, hSt⟩ := h; exact hSt.bstk
 
-/-- The binder stack's top. -/
-def bTop (m : Mem) : Word := rdW (m.arr64 CTL) 137
+/-! ## The binder stack -/
 
 /-- **A slice of the binder stack**, as words. -/
 structure BStkR (m : Mem) (lo k : Word) (ws : Array Word) : Prop where
   size : ws.size = k.toNat
   bound : lo.toNat + k.toNat ≤ (m.arr64 BSTK).size
   get : ∀ (i : Nat) (h : i < ws.size), ws[i] = rdW (m.arr64 BSTK) (lo + i.toUInt64)
-
-/-- The binder stack below its top is kept, and so is the top. -/
-def BKept (m m' : Mem) : Prop :=
-  bTop m' = bTop m ∧ (m'.arr64 BSTK).size = (m.arr64 BSTK).size ∧
-    ∀ j : Word, j < bTop m → rdW (m'.arr64 BSTK) j = rdW (m.arr64 BSTK) j
-
-theorem BKept.refl (m : Mem) : BKept m m := ⟨rfl, rfl, fun _ _ => rfl⟩
-
-theorem BKept.trans {m₁ m₂ m₃ : Mem} (h₁ : BKept m₁ m₂) (h₂ : BKept m₂ m₃) : BKept m₁ m₃ :=
-  ⟨h₂.1.trans h₁.1, h₂.2.1.trans h₁.2.1, fun j hj => (h₂.2.2 j (h₁.1 ▸ hj)).trans (h₁.2.2 j hj)⟩
-
-theorem BKept.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
-    (hA : BSTK ∉ A) (hC : (137 : Word) ∉ C) : BKept m m' := by
-  have hb : m'.arr64 BSTK = m.arr64 BSTK := hf.1 BSTK hA (by decide)
-  exact ⟨hf.2.1 137 hC, by rw [hb], fun j _ => by rw [hb]⟩
-
-/-- **The callees a telescope calls while its binder stack holds entries keep it.** -/
-def BStkCallees (p : Prog) : Prop :=
-  ∀ (n : Nat) (f : FnName) (vs : List Word) (m : Mem) (r : List Word) (m' : Mem),
-    (f = "infer" ∨ f = "whnf" ∨ f = "inst_list" ∨ f = "ar_entry" ∨ f = "ensure_sort") →
-    callW p n f vs m = some (r, m') → BKept m m'
 
 theorem BStkR.keep {m m' : Mem} {lo k : Word} {ws : Array Word} (h : BStkR m lo k ws)
     (hK : BKept m m') (htop : lo.toNat + k.toNat ≤ (bTop m).toNat)
@@ -209,7 +187,7 @@ theorem sub1_toNat {n : Word} (h : n ≠ 0) : (n - 1).toNat = n.toNat - 1 := by
 /-- **The outward rebuild refines `inferLamsOut`** (by induction on the loop fuel), and keeps the
 binder stack. -/
 theorem lamsOut_ref (p : Prog) (hp : InferLeafProg p) (hab : AbstractRangeOK p)
-    (hbc : BStkCallees p) (hcap : BStkCap) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+    (hcap : BStkCap) (dn : NIdx → Option ConLeche.Name) (vis : Word)
     (fe : IFEnv) (eb d lo K : Word) (ws : Array Word) (hws : ∀ (i : Nat) (h : i < ws.size), HW ws[i]) :
     ∀ k (m : Mem) (a : AState) (M : ModeMaps) (n cur : Word),
       CoreS dn m a vis fe M eb → HW cur → BStkR m lo K ws → n.toNat ≤ K.toNat →
@@ -249,7 +227,7 @@ theorem lamsOut_ref (p : Prog) (hp : InferLeafProg p) (hab : AbstractRangeOK p)
     rw [h2] at h; dsimp only at h
     have hwj : HW (rdW (m.arr64 BSTK) (lo + (n - 1))) := hwsj ▸ hws _ hjK
     have h₁ := CoreSpec.of_callW (hab k ⟨m, Locals.init []⟩ a dn vis fe M eb _ d (n - 1) 0 hS hwj) h1
-    have hK₁ := hbc k "ar_entry" _ m r₁ m₁ (by simp) h1
+    have hK₁ := h₁.2.1.bkept
     obtain ⟨s₂, hs₂, -, hmk⟩ := triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩)
       (mkForall_spec p hp.derb hp.faf hp.fap hp.fai hp.mkfa k _ (r₁.headD 0) cur) h2
     rw [hs₂] at hmk
@@ -284,7 +262,7 @@ theorem lamsOut_ref (p : Prog) (hp : InferLeafProg p) (hab : AbstractRangeOK p)
 the top, `stk` the binder-stack slice `(lo, k)` below the binder top. -/
 @[refines ConRon.Arena.inferLamsLeaf ConRon.Arena.inferLamsOut]
 theorem inferLamsLeaf_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p)
-    (hil : InstListOK p) (hab : AbstractRangeOK p) (hbc : BStkCallees p) (hcap : BStkCap) (n : Nat)
+    (hil : InstListOK p) (hab : AbstractRangeOK p) (hcap : BStkCap) (n : Nat)
     (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb mode d t k fo lo : Word) (fvs : Array EIdx) (ws : Array Word)
@@ -320,7 +298,7 @@ theorem inferLamsLeaf_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p
   rw [h3] at hW; dsimp only at hW
   have hsz := hcap _ _ _ _ _ _ _ hS
   have h₁ := CoreSpec.of_callW (hil n s a₀ dn vis fe M eb t fo k 0 fvs hS ht hf hftop) h1
-  have hK₁ := hbc n "inst_list" _ _ _ _ (by simp) h1
+  have hK₁ := h₁.2.1.bkept
   have hdk' : (d + k).toNat = d.toNat + k.toNat := addW _ _ hdk
   have h0 : (0 : Word).toNat = 0 := rfl
   have hT : inferLamsLeaf (coreKnot (decMode mode) fe id F) d.toNat (decE t) k.toNat fvs (ws.map decE) =
@@ -333,17 +311,17 @@ theorem inferLamsLeaf_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p
   refine coreRef_bind h₁ (fun M₁ hS₁ => ?_)
   have h₂ := CoreSpec.of_callW ((hk n (Nat.le_refl _)).infer F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb
     mode (d + k) (r₁.headD 0) hF hn ⟨hS₁, hs.mode4, hs.eb_mode⟩ h₁.2.2.2) h2
-  have hK₂ := hbc n "infer" _ _ _ _ (by simp) h2
+  have hK₂ := h₂.2.1.bkept
   refine coreRef_bind h₂ (fun M₂ hS₂ => ?_)
   have h₃ := CoreSpec.of_callW (hab n ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb (r₂.headD 0) d k 0 hS₂
     h₂.2.2.2) h3
-  have hK₃ := hbc n "ar_entry" _ _ _ _ (by simp) h3
+  have hK₃ := h₃.2.1.bkept
   refine coreRef_bind h₃ (fun M₃ hS₃ => ?_)
   have hB₁ := hB.keep hK₁ hbtop hsz
   have hB₂ := hB₁.keep hK₂ (by rw [hK₁.1]; exact hbtop) (by rw [hK₁.2.1]; exact hsz)
   have hB₃ := hB₂.keep hK₃ (by rw [hK₂.1, hK₁.1]; exact hbtop)
     (by rw [hK₂.2.1, hK₁.2.1]; exact hsz)
-  exact (lamsOut_ref p hp hab hbc hcap dn vis fe eb d lo k ws hws (n + 1) m₃ _ M₃ k (r₃.headD 0) hS₃
+  exact (lamsOut_ref p hp hab hcap dn vis fe eb d lo k ws hws (n + 1) m₃ _ M₃ k (r₃.headD 0) hS₃
     h₃.2.2.2 hB₃ (Nat.le_refl _) (by rw [hK₃.1, hK₂.1, hK₁.1]; exact hbtop) _ _ hW).1
 
 /-! ## `infer_lams`: the peel loop as a named block -/
@@ -478,7 +456,9 @@ theorem tPush_step {dn : NIdx → Option ConLeche.Name} {m m₀ : Mem} {a : ASta
       bTop (tPush m fo lo k fv x) = lo + (k + 1) ∧
       (∀ j, j < fo → spW (tPush m fo lo k fv x) j = spW m₀ j) ∧
       ((tPush m fo lo k fv x).arr64 SPN).size = (m₀.arr64 SPN).size ∧
-      ((tPush m fo lo k fv x).arr64 BSTK).size = (m.arr64 BSTK).size := by
+      ((tPush m fo lo k fv x).arr64 BSTK).size = (m.arr64 BSTK).size ∧
+      (∀ j, j < lo → rdW ((tPush m fo lo k fv x).arr64 BSTK) j = rdW (m.arr64 BSTK) j) ∧
+      PoolGrew m (tPush m fo lo k fv x) := by
   obtain ⟨-, -, h1, h2, h3⟩ := hok
   have hspn := hS.spn
   have hco := hf.bound
@@ -498,12 +478,12 @@ theorem tPush_step {dn : NIdx → Option ConLeche.Name} {m m₀ : Mem} {a : ASta
     rw [hm₁]
     exact hS.frame_stk (MemFrame.set64 m SPN (by decide) _ fv) (by simp) (by simp)
   have hS₂ : CoreS dn m₂ a vis fe M eb := by
-    rw [hm₂]; exact (hS₁.frame (MemFrame.set64 m₁ BSTK (by decide) _ x) (by simp [BSTK]) (by simp)).1
+    rw [hm₂]; exact hS₁.frameS (MemFrame.set64 m₁ BSTK (by decide) _ x) (by simp [BSTK]) (by simp)
   have hS₃ : CoreS dn m₃ a vis fe M eb := by
     rw [hm₃]
     exact hS₂.frame_stk (MemFrame.setCtl m₂ 136 _) (by simp) (by simp)
   have hS₄ : CoreS dn (tPush m fo lo k fv x) a vis fe M eb := by
-    rw [htp]; exact (hS₃.frame (MemFrame.setCtl m₃ 137 _) (by simp) (by simp)).1
+    rw [htp]; exact hS₃.frameS (MemFrame.setCtl m₃ 137 _) (by simp) (by simp)
   have h136 : (136 : Word).toNat < (m.arr64 CTL).size := Nat.lt_trans (by decide) h3
   have h137 : (137 : Word).toNat < (m.arr64 CTL).size := by simpa using h3
   have hfv' := (hf.push hspn (by rw [← hadd]; exact h1) fv hfv)
@@ -513,7 +493,7 @@ theorem tPush_step {dn : NIdx → Option ConLeche.Name} {m m₀ : Mem} {a : ASta
     Mem.arr64_set64_ne _ _ _ _ _ (by decide)
   refine ⟨hS₄, ⟨hfv'.size, by rw [eS]; exact hfv'.bound, fun i hi => by simp only [spW, eS]; exact hfv'.lt i hi,
     fun i hi => by simp only [spW, eS]; exact hfv'.get i hi⟩, ?_, ?_, ?_, ?_, by rw [eS, hsz1, hsz],
-    by rw [eB, hm₂, size_set64, e2]⟩
+    by rw [eB, hm₂, size_set64, e2], ?_, ?_⟩
   · simp only [spTop]
     rw [htp, rdW_set64, if_neg (fun h => absurd h.2.1 (by decide)), hm₃, rdW_set64, if_pos ⟨rfl, rfl, by
       rw [hm₂, hm₁, size_set64, size_set64]; exact h136⟩]
@@ -528,18 +508,32 @@ theorem tPush_step {dn : NIdx → Option ConLeche.Name} {m m₀ : Mem} {a : ASta
     rw [show rdW (m₁.arr64 SPN) j = spW m₁ j from rfl, hm₁, spW_set64_ne _ _ _ _ (fun h => by
       have := UInt64.lt_iff_toNat_lt.mp hj; rw [← h, hadd] at this; omega)]
     exact hb j hj
+  · intro j hj
+    have hBb := hB.bound
+    have haddl : (lo + k).toNat = lo.toNat + k.toNat := addW _ _ (by omega)
+    rw [eB, hm₂, rdW_set64, if_neg (fun h => by
+      have := UInt64.lt_iff_toNat_lt.mp hj; rw [← h.2.1, haddl] at this; omega), e2]
+  · have hfr : MemFrame [SPN, BSTK] [136, 137] m (tPush m fo lo k fv x) := by
+      rw [htp, hm₃, hm₂, hm₁]
+      exact ((((MemFrame.set64 m SPN (by decide) _ fv).mono (by simp) (by simp)).trans
+        ((MemFrame.set64 _ BSTK (by decide) _ x).mono (by simp) (by simp))).trans
+        ((MemFrame.setCtl _ 136 _).mono (by simp) (by simp))).trans
+        ((MemFrame.setCtl _ 137 _).mono (by simp) (by simp))
+    exact PoolGrew.of_frame hfr (by decide) (by decide)
 
 /-- The conclusion of a telescope run from an inner memory: the twin's run, the result, the
 relation, the spine stack below the telescope's `fvs` slice kept from the entry memory `m₀`. -/
 def TelPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb : Word)
-    (m₀ : Mem) (fo : Word) (a : AState) (T : AM EIdx) (w : Word) (mF : Mem) : Prop :=
+    (m₀ : Mem) (fo lo : Word) (a : AState) (T : AM EIdx) (w : Word) (mF : Mem) : Prop :=
   ∃ x a', T.run a = .ok (x, a') ∧ x = decE w ∧ HW w ∧
     ∃ M', CoreS dn mF a' vis fe M' eb ∧ KeptAll M M' eb ∧
-      (∀ j, j < fo → spW mF j = spW m₀ j) ∧ (mF.arr64 SPN).size = (m₀.arr64 SPN).size
+      (∀ j, j < fo → spW mF j = spW m₀ j) ∧ (mF.arr64 SPN).size = (m₀.arr64 SPN).size ∧
+      (∀ j, j < lo → rdW (mF.arr64 BSTK) j = rdW (m₀.arr64 BSTK) j) ∧
+      (mF.arr64 BSTK).size = (m₀.arr64 BSTK).size ∧ PoolGrew m₀ mF
 
 /-- `infer_lams_leaf` at every L fuel up to `n + 1`. -/
 theorem inferLamsLeaf_any (p : Prog) (hp : InferLeafProg p) (hq : BindProg p)
-    (hil : InstListOK p) (hab : AbstractRangeOK p) (hbc : BStkCallees p) (hcap : BStkCap) :
+    (hil : InstListOK p) (hab : AbstractRangeOK p) (hcap : BStkCap) :
     ∀ n, KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 → ∀ (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb mode d t k fo lo : Word) (fvs : Array EIdx) (ws : Array Word),
@@ -554,12 +548,12 @@ theorem inferLamsLeaf_any (p : Prog) (hp : InferLeafProg p) (hq : BindProg p)
       CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
   | n + 1, hk, F, hF, hn, s₀, a₀, dn, vis, fe, M, eb, mode, d, t, k, fo, lo, fvs, ws, hs, ht, hf,
       hftop, hB, hbtop, hws, hdk =>
-      inferLamsLeaf_refines p hp hq hil hab hbc hcap n (hk.mono (by omega)) F (by omega) (by omega)
+      inferLamsLeaf_refines p hp hq hil hab hcap n (hk.mono (by omega)) F (by omega) (by omega)
         s₀ a₀ dn vis fe M eb mode d t k fo lo fvs ws hs ht hf hftop hB hbtop hws hdk
 
 /-- **The λ peel loop with its leaf refines `inferLams`** by induction on the loop fuel. -/
 theorem lamsFull_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : InferBodyProg p)
-    (hil : InstListOK p) (hab : AbstractRangeOK p) (hbc : BStkCallees p) (hcap : BStkCap)
+    (hil : InstListOK p) (hab : AbstractRangeOK p) (hcap : BStkCap)
     (N : Nat) (hk : KnotUpTo p N) (F : Nat) (hFN : N ≤ F) (hN : N ≤ 2 ^ 62)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (mode d fo lo eb : Word)
     (hmode : mode < 4) (heb : eb = (mode >>> 1) &&& 1) (m₀ : Mem) :
@@ -569,15 +563,17 @@ theorem lamsFull_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
       BStkR m lo k ws → bTop m = lo + k → (∀ (i : Nat) (h : i < ws.size), HW ws[i]) →
       d.toNat + k.toNat + peel.toNat < 2 ^ 64 →
       (∀ j, j < fo → spW m j = spW m₀ j) → (m.arr64 SPN).size = (m₀.arr64 SPN).size →
+      (∀ j, j < lo → rdW (m.arr64 BSTK) j = rdW (m₀.arr64 BSTK) j) →
+      (m.arr64 BSTK).size = (m₀.arr64 BSTK).size → PoolGrew m₀ m →
       ∀ w mF, lamsFull p N j m mode vis d peel t k fo lo = some (w, mF) →
-      TelPost dn vis fe M eb m₀ fo a
+      TelPost dn vis fe M eb m₀ fo lo a
         (inferLams (coreKnot (decMode mode) fe id F) d.toNat peel.toNat (decE t) k.toNat fvs
           (ws.map decE)) w mF := by
   intro j
   induction j with
-  | zero => intro _ m a M peel t k fvs ws _ _ _ _ _ _ _ _ _ _ w mF hF; simp [lamsFull, lamsLoop] at hF
+  | zero => intro _ m a M peel t k fvs ws _ _ _ _ _ _ _ _ _ _ _ _ _ w mF hF; simp [lamsFull, lamsLoop] at hF
   | succ j ih =>
-    intro hjN m a M peel t k fvs ws hS ht hf htop hB hbt hws hdk hb0 hsz w mF hF
+    intro hjN m a M peel t k fvs ws hS ht hf htop hB hbt hws hdk hb0 hsz hbb0 hbsz0 hpg0 w mF hF
     have hspn := hS.spn
     have hcp := hcap _ _ _ _ _ _ _ hS
     have hfb := hf.bound
@@ -592,19 +588,22 @@ theorem lamsFull_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
           k.toNat fvs (ws.map decE)).run a = (inferLamsLeaf (coreKnot (decMode mode) fe id F)
           d.toNat (decE t) k.toNat fvs (ws.map decE)).run a),
         call1W p N "infer_lams_leaf" [mode, vis, d, t, k, fo, lo] m = some (w, mF) →
-        TelPost dn vis fe M eb m₀ fo a (inferLams (coreKnot (decMode mode) fe id F) d.toNat
+        TelPost dn vis fe M eb m₀ fo lo a (inferLams (coreKnot (decMode mode) fe id F) d.toNat
           peel.toNat (decE t) k.toNat fvs (ws.map decE)) w mF := by
       intro hT hc
       have hl := CoreSpec.of_call1W (r := [w]) (s₀ := ⟨m, Locals.init []⟩)
-        (inferLamsLeaf_any p hp hq hil hab hbc hcap N hk F hFN hN ⟨m, Locals.init []⟩ a dn vis fe M eb
+        (inferLamsLeaf_any p hp hq hil hab hcap N hk F hFN hN ⟨m, Locals.init []⟩ a dn vis fe M eb
           mode d t k fo lo fvs ws ⟨hS, hmode, heb⟩ ht hf hftop hB hbtop hws (by omega))
         (fun r r' h => by simp only [decH, h]) hc
       obtain ⟨hok, ⟨M', hS', hK', hSt'⟩, hres, hrw⟩ := hl
       refine ⟨_, _, hT.trans (AM.run_of_ok _ _ hok), hres, hrw, M', hS', hK', fun i hi => ?_,
-        hSt'.2.1.trans hsz⟩
-      have hi' : i < spTop m := by
-        rw [htop, UInt64.lt_iff_toNat_lt, haddf]; have := UInt64.lt_iff_toNat_lt.mp hi; omega
-      exact (hSt'.2.2 i hi').trans (hb0 i hi)
+        hSt'.size.trans hsz, fun i hi => ?_, hSt'.bstk.2.1.trans hbsz0, hpg0.trans hSt'.pool⟩
+      · have hi' : i < spTop m := by
+          rw [htop, UInt64.lt_iff_toNat_lt, haddf]; have := UInt64.lt_iff_toNat_lt.mp hi; omega
+        exact (hSt'.below i hi').trans (hb0 i hi)
+      · have hi' : i < bTop m := by
+          rw [hbt, UInt64.lt_iff_toNat_lt, haddl]; have := UInt64.lt_iff_toNat_lt.mp hi; omega
+        exact (hSt'.bstk.2.2 i hi').trans (hbb0 i hi)
     by_cases hc : peel ≠ 0 ∧ t >>> 28 = 5
     · obtain ⟨hp0, ht5⟩ := hc
       have hc1 : ¬ (tierW t ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun g => by
@@ -642,16 +641,16 @@ theorem lamsFull_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
       have hinst := hil j ⟨m, Locals.init []⟩ a dn vis fe M eb _ fo k 0 fvs hS hty hf hftop
       obtain ⟨hok1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres1, hrw1⟩ := CoreSpec.of_callW hinst h1
       rw [h0] at hok1 hres1 hS₁
-      have hB₁ := hbc j "inst_list" _ _ _ _ (by simp) h1
+      have hB₁ := hSt₁.bstk
       -- its type, a sort
       have hi := CoreSpec.of_callW ((hk j (by omega)).infer F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb
         mode (d + k) (r₁.headD 0) (by omega) (by omega) ⟨hS₁, hmode, heb⟩ hrw1) h2
       obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hrw2⟩ := hi
-      have hB₂ := hbc j "infer" _ _ _ _ (by simp) h2
+      have hB₂ := hSt₂.bstk
       have hw := CoreSpec.of_callW ((hk j (by omega)).whnf F ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb
         mode (d + k) (r₂.headD 0) (by omega) (by omega) ⟨hS₂, hmode, heb⟩ hrw2) h3
       obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hrw3⟩ := hw
-      have hB₃ := hbc j "whnf" _ _ _ _ (by simp) h3
+      have hB₃ := hSt₃.bstk
       -- the binder's free variable
       obtain ⟨s₄, hs₄, -, hfv⟩ := triple_of_callW (s₀ := ⟨m₃, Locals.init []⟩)
         (internFVar_spec p hb.fvf hb.fvp hb.fvi j _ (d + k) (r₁.headD 0)) h4
@@ -665,14 +664,18 @@ theorem lamsFull_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
       -- the stacks kept across the four calls
       have hSt14 := hSt₁.trans (hSt₂.trans (hSt₃.trans hSt₄))
       have hBK := hB₁.trans (hB₂.trans (hB₃.trans hB₄))
-      have hf₄ : SpineR m₄ fo k fvs := hf.keep hSt14.2.1 hSt14.2.2 hftop hspn
+      have hf₄ : SpineR m₄ fo k fvs := hf.keep hSt14.size hSt14.below hftop hspn
       have hB4 : BStkR m₄ lo k ws := hB.keep hBK hbtop hcp
       have hb₄ : ∀ i, i < fo → spW m₄ i = spW m₀ i := fun i hi => by
         have hi' : i < spTop m := by
           rw [htop, UInt64.lt_iff_toNat_lt, haddf]; have := UInt64.lt_iff_toNat_lt.mp hi; omega
-        exact (hSt14.2.2 i hi').trans (hb0 i hi)
-      obtain ⟨hS', hf', htop', hB', hbt', hb', hsz', -⟩ := tPush_step (m₀ := m₀) hS₄
-        (by rw [hBK.2.1]; exact hcp) hf₄ hB4 hb₄ (hSt14.2.1.trans hsz) g2 hrw4
+        exact (hSt14.below i hi').trans (hb0 i hi)
+      have hbb₄ : ∀ i, i < lo → rdW (m₄.arr64 BSTK) i = rdW (m₀.arr64 BSTK) i := fun i hi => by
+        have hi' : i < bTop m := by
+          rw [hbt, UInt64.lt_iff_toNat_lt, haddl]; have := UInt64.lt_iff_toNat_lt.mp hi; omega
+        exact (hBK.2.2 i hi').trans (hbb0 i hi)
+      obtain ⟨hS', hf', htop', hB', hbt', hb', hsz', hbszT, hbbT, hpgT⟩ := tPush_step (m₀ := m₀) hS₄
+        (by rw [hBK.2.1]; exact hcp) hf₄ hB4 hb₄ (hSt14.size.trans hsz) g2 hrw4
       have hws' : ∀ (i : Nat) (h : i < (ws.push (r₁.headD 0)).size), HW (ws.push (r₁.headD 0))[i] := by
         intro i hi
         rw [Array.getElem_push]
@@ -685,9 +688,12 @@ theorem lamsFull_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
         have : peel.toNat ≠ 0 := fun h' => hp0 (UInt64.toNat_inj.mp (by simpa using h')); omega
       have hk1 : (k + 1).toNat = k.toNat + 1 := addW _ _ (by simp; omega)
       have hp0' : peel.toNat ≠ 0 := fun h' => hp0 (UInt64.toNat_inj.mp (by simpa using h'))
-      obtain ⟨x, a', hrun', hx, hrw, M', hS'', hK, hb'', hsz''⟩ := ih (by omega) _ _ M₄ (peel - 1)
-        _ (k + 1) _ _ hS' hbody hf' htop' hB' hbt' hws' (by rw [hk1, hpeel1]; omega) hb' hsz' w mF hF'
-      refine ⟨x, a', ?_, hx, hrw, M', hS'', hK₁.trans (hK₂.trans (hK₃.trans (hK₄.trans hK))), hb'', hsz''⟩
+      obtain ⟨x, a', hrun', hx, hrw, M', hS'', hK, hb'', hsz'', hbb'', hbsz'', hpg''⟩ := ih (by omega)
+        _ _ M₄ (peel - 1) _ (k + 1) _ _ hS' hbody hf' htop' hB' hbt' hws' (by rw [hk1, hpeel1]; omega)
+        hb' hsz' (fun i hi => (hbbT i hi).trans (hbb₄ i hi)) (hbszT.trans (hBK.2.1.trans hbsz0))
+        ((hpg0.trans hSt14.pool).trans hpgT) w mF hF'
+      refine ⟨x, a', ?_, hx, hrw, M', hS'', hK₁.trans (hK₂.trans (hK₃.trans (hK₄.trans hK))), hb'',
+        hsz'', hbb'', hbsz'', hpg''⟩
       rw [← hrun']
       obtain ⟨p', hp'⟩ : ∃ p', peel.toNat = p' + 1 := ⟨peel.toNat - 1, by omega⟩
       have hlam : ((decE t).tag != ETag.lam) = false := by
@@ -723,16 +729,18 @@ theorem lamsFull_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
 the binder top), up to the tops it leaves raised (`TelPost`). -/
 @[refines ConRon.Arena.inferLams]
 theorem inferLams_tel (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : InferBodyProg p)
-    (hil : InstListOK p) (hab : AbstractRangeOK p) (hbc : BStkCallees p) (hcap : BStkCap)
+    (hil : InstListOK p) (hab : AbstractRangeOK p) (hcap : BStkCap)
     (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb mode d peel t k fo lo : Word) (fvs : Array EIdx) (ws : Array Word) (m₀ : Mem)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ht : HW t) (hf : SpineR s₀.mem fo k fvs)
     (htop : spTop s₀.mem = fo + k) (hB : BStkR s₀.mem lo k ws) (hbt : bTop s₀.mem = lo + k)
     (hws : ∀ (i : Nat) (h : i < ws.size), HW ws[i]) (hdk : d.toNat + k.toNat + peel.toNat < 2 ^ 64)
-    (hb0 : ∀ j, j < fo → spW s₀.mem j = spW m₀ j) (hsz : (s₀.mem.arr64 SPN).size = (m₀.arr64 SPN).size) :
+    (hb0 : ∀ j, j < fo → spW s₀.mem j = spW m₀ j) (hsz : (s₀.mem.arr64 SPN).size = (m₀.arr64 SPN).size)
+    (hbb0 : ∀ j, j < lo → rdW (s₀.mem.arr64 BSTK) j = rdW (m₀.arr64 BSTK) j)
+    (hbsz0 : (s₀.mem.arr64 BSTK).size = (m₀.arr64 BSTK).size) (hpg0 : PoolGrew m₀ s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "infer_lams" [mode, vis, d, peel, t, k, fo, lo]
-    ⦃fun r s' => LocEq s' s₀ ∧ TelPost dn vis fe M eb m₀ fo a₀
+    ⦃fun r s' => LocEq s' s₀ ∧ TelPost dn vis fe M eb m₀ fo lo a₀
       (inferLams (coreKnot (decMode mode) fe id F) d.toNat peel.toNat (decE t) k.toNat fvs
         (ws.map decE)) (r.headD 0) s'.mem; ⊤⦄ := by
   apply L.M.triple_of_run
@@ -740,9 +748,9 @@ theorem inferLams_tel (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : 
   obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
     (inferLams_spec p hq n s₀ mode vis d peel t k fo lo)
   subst hs0
-  exact ⟨hloc, lamsFull_ref p hp hq hb hil hab hbc hcap n hk F hF hn dn vis fe mode d fo lo eb hs.mode4
+  exact ⟨hloc, lamsFull_ref p hp hq hb hil hab hcap n hk F hF hn dn vis fe mode d fo lo eb hs.mode4
     hs.eb_mode m₀ (n + 1) (Nat.le_refl _) s.mem a₀ M peel t k fvs ws hs.rel ht hf htop hB hbt hws hdk
-    hb0 hsz _ _ hW⟩
+    hb0 hsz hbb0 hbsz0 hpg0 _ _ hW⟩
 
 /-! ## `infer_lam` -/
 
@@ -794,19 +802,35 @@ theorem inferBody_lam (r : CoreFnsA) (fe : IFEnv) (d : Nat) (e : EIdx) (a : ASta
 theorem tops_restore {dn : NIdx → Option ConLeche.Name} {m₀ m₃ m₄ : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m₄ a vis fe M eb)
     (hk3 : StackKept m₀ m₃) (hb : ∀ j, j < spTop m₃ → spW m₄ j = spW m₃ j)
-    (hsz : (m₄.arr64 SPN).size = (m₃.arr64 SPN).size) (h137 : 137 < (m₄.arr64 CTL).size) :
+    (hsz : (m₄.arr64 SPN).size = (m₃.arr64 SPN).size)
+    (hbb : ∀ j, j < bTop m₃ → rdW (m₄.arr64 BSTK) j = rdW (m₃.arr64 BSTK) j)
+    (hbsz : (m₄.arr64 BSTK).size = (m₃.arr64 BSTK).size) (hpg : PoolGrew m₃ m₄)
+    (h137 : 137 < (m₄.arr64 CTL).size) :
     CoreS dn ((m₄.set64 CTL 136 (rdW (m₃.arr64 CTL) 136)).set64 CTL 137 (rdW (m₃.arr64 CTL) 137)) a
       vis fe M eb ∧
     StackKept m₀ ((m₄.set64 CTL 136 (rdW (m₃.arr64 CTL) 136)).set64 CTL 137 (rdW (m₃.arr64 CTL) 137)) := by
   have h136 : (136 : Word).toNat < (m₄.arr64 CTL).size := Nat.lt_trans (by decide) h137
   have hS₁ := hS.frame_stk (MemFrame.setCtl m₄ 136 (rdW (m₃.arr64 CTL) 136)) (by simp) (by simp)
-  obtain ⟨hS₂, hk⟩ := hS₁.frame (MemFrame.setCtl _ 137 (rdW (m₃.arr64 CTL) 137)) (by simp) (by simp)
-  refine ⟨hS₂, hk3.trans ((StackKept.restore (m := m₃) (m₁ := m₄) hb hsz h136).trans hk)⟩
+  have hS₂ := hS₁.frameS (MemFrame.setCtl _ 137 (rdW (m₃.arr64 CTL) 137)) (by simp) (by simp)
+  refine ⟨hS₂, hk3.trans ?_⟩
+  have hfr : MemFrame [] [136, 137] m₄
+      ((m₄.set64 CTL 136 (rdW (m₃.arr64 CTL) 136)).set64 CTL 137 (rdW (m₃.arr64 CTL) 137)) :=
+    ((MemFrame.setCtl m₄ 136 _).mono (by simp) (by simp)).trans
+      ((MemFrame.setCtl _ 137 _).mono (by simp) (by simp))
+  have eS := hfr.1 SPN (by simp) (by decide)
+  have eB := hfr.1 BSTK (by simp) (by decide)
+  refine ⟨?_, by rw [eS, hsz], fun j hj => by simp only [spW, eS]; exact hb j hj,
+    ⟨?_, by rw [eB, hbsz], fun j hj => by rw [eB]; exact hbb j hj⟩,
+    hpg.trans (PoolGrew.of_frame hfr (by decide) (by decide))⟩
+  · unfold spTop
+    rw [rdW_set64, if_neg (fun h => absurd h.2.1 (by decide)), rdW_set64, if_pos ⟨rfl, rfl, h136⟩]
+  · unfold bTop
+    rw [rdW_set64, if_pos ⟨rfl, rfl, by rw [size_set64]; exact h137⟩]
 
 /-- **`infer_lam` refines `inferLam`** at the knot (the `.lam` clause of `inferBody`). -/
 @[refines ConRon.Arena.inferLam]
 theorem inferLam_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : InferBodyProg p)
-    (hil : InstListOK p) (hab : AbstractRangeOK p) (hbc : BStkCallees p) (hcap : BStkCap)
+    (hil : InstListOK p) (hab : AbstractRangeOK p) (hcap : BStkCap)
     (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb mode d ty body : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hty : HW ty) (hbody : HW body) :
@@ -866,11 +890,11 @@ theorem inferLam_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb
   -- the domain's type, a sort
   have h₁ := CoreSpec.of_callW (hK.infer F s a₀ dn vis fe M eb mode d ty hF hn hs hty) h1
   obtain ⟨hok1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres1, hrw1⟩ := h₁
-  have hB₁ := hbc n "infer" _ _ _ _ (by simp) h1
+  have hB₁ := hSt₁.bstk
   have h₂ := CoreSpec.of_callW (hK.whnf F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d (r₁.headD 0) hF hn
     ⟨hS₁, hs.mode4, hs.eb_mode⟩ hrw1) h2
   obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hrw2⟩ := h₂
-  have hB₂ := hbc n "whnf" _ _ _ _ (by simp) h2
+  have hB₂ := hSt₂.bstk
   obtain ⟨s₃, hs₃, -, hfv⟩ := triple_of_callW (s₀ := ⟨m₂, Locals.init []⟩)
     (internFVar_spec p hb.fvf hb.fvp hb.fvi n _ d ty) h3
   rw [hs₃] at hfv
@@ -886,7 +910,7 @@ theorem inferLam_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb
   have hloS : lo.toNat ≤ (m₃.arr64 BSTK).size := by
     have := g2.2.2.2.1; simp at this; omega
   have g2' : tPushOK m₃ so lo 0 := g2
-  obtain ⟨hS', hf', htop', hB', hbt', hb', hsz', -⟩ := tPush_step (m₀ := m₃) (fvs := #[]) (ws := #[])
+  obtain ⟨hS', hf', htop', hB', hbt', hb', hsz', hbszT, hbbT, hpgT⟩ := tPush_step (m₀ := m₃) (fvs := #[]) (ws := #[])
     hS₃ hcp (SpineR.empty _ _ hsoS) (BStkR.empty _ _ hloS) (fun _ _ => rfl) rfl g2' hrw3
   have e01 : (0 : Word) + 1 = 1 := rfl
   rw [e01] at hf' htop' hB' hbt'
@@ -894,11 +918,12 @@ theorem inferLam_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb
   | zero => rw [callW_zero] at h4; cases h4
   | succ n' =>
   obtain ⟨t₄, ht₄, -, hTel⟩ := triple_of_callW (s₀ := ⟨_, Locals.init []⟩)
-    (inferLams_tel p hp hq hb hil hab hbc hcap n' (hk.mono (by omega)) F (by omega) (by omega) _ _ dn
+    (inferLams_tel p hp hq hb hil hab hcap n' (hk.mono (by omega)) F (by omega) (by omega) _ _ dn
       vis fe M₃ eb mode d 16777216 body 1 so lo _ _ m₃ ⟨hS', hs.mode4, hs.eb_mode⟩ hbody hf' htop' hB'
-      hbt' (by intro i hi; simp at hi; subst hi; simpa using hty) (by simp; omega) hb' hsz') h4
+      hbt' (by intro i hi; simp at hi; subst hi; simpa using hty) (by simp; omega) hb' hsz' hbbT hbszT
+      hpgT) h4
   rw [ht₄] at hTel
-  obtain ⟨x, a', hrun4, hx, hrw4, M', hS₄, hK₄, hb₄, hsz₄⟩ := hTel
+  obtain ⟨x, a', hrun4, hx, hrw4, M', hS₄, hK₄, hb₄, hsz₄, hbb₄, hbsz₄, hpg₄⟩ := hTel
   -- the twin's run
   have hsort : ((decE (r₂.headD 0)).tag == ETag.sort) = true := tag_sort_beq _ hrw2 (by simpa using g1)
   have hrun : (inferLam (coreKnot (decMode mode) fe id F) d.toNat (decE ty) (decE body)).run a₀ =
@@ -920,7 +945,7 @@ theorem inferLam_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb
   rw [hst, ← hm, hso, hlo]
   have htop3 : spTop m₃ = so := hso.symm
   obtain ⟨hSF, hkF⟩ := tops_restore (m₀ := s.mem) hS₄ hSt13
-    (fun j hj => hb₄ j (htop3 ▸ hj)) hsz₄ g3
+    (fun j hj => hb₄ j (htop3 ▸ hj)) hsz₄ (fun j hj => hbb₄ j (by rw [hlo]; exact hj)) hbsz₄ hpg₄ g3
   exact ⟨M', hSF, hK₁.trans (hK₂.trans (hK₃.trans hK₄)), hkF⟩
 
 end L.Arena

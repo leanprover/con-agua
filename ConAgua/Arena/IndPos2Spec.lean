@@ -1221,7 +1221,8 @@ include ha hl hk hng hnp hip hf hput hgo hnode hcl hra hp
 
 /-- **`nest_canon_crest` refines `nestCanonCrest`**: instantiate the pis with the canonical parameter
 variables, then rewrite the applications (result `[1, e]`, or `[0, 0]` for `none`). -/
-@[refines ConRon.Arena.nestCanonCrest]
+-- untagged (lane indproofs2): assumes a memo relation in every stage state (`∀ m a, StageR … → ∃ mp, …MR m mp`), not satisfiable (DESIGN.md, landing 9)
+-- @[refines ConRon.Arena.nestCanonCrest]
 theorem nestCanonCrest_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis no nl us nn cty : Word) (names : List NIdx) (hS : StageR dn vis fe s₀.mem a₀)
     (hcty : H cty) (hus : H us) (hdec : decHL s₀.mem no.toNat nl.toNat = some names)

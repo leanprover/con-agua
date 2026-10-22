@@ -110,7 +110,7 @@ theorem m2cEta2_ok (N : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (
   rw [c3] at hW
   simp only at hW
   obtain ⟨ok3, ⟨M3, hS3, hK3, hSt3⟩, res3, -⟩ := CoreSpec.of_callW
-    (towerSlotsAll_refines' p hp.toIotaProg' hcc N ⟨m, Locals.init []⟩ a dn vis fe M eb T ef hS hT) c3
+    (towerSlotsAll_refines' p hp.toIotaProg' hcc.findProj hcc.projFound N ⟨m, Locals.init []⟩ a dn vis fe M eb T ef hS hT) c3
   have hrun3 := AM.run_of_ok _ _ ok3
   rw [res3] at hrun3
   by_cases g3 : r3.headD 0 = 0
