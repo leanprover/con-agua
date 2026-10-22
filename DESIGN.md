@@ -6177,3 +6177,14 @@ start 136 / 11 / 93 / 91); totals 558 proven / 71 sorry of 1352.
   `pb_check()` first in `check()`; `e2e-ref --pins=1` is then the reference.
 * Next: `internPinSetsW_dec` (the variant list in the decoder direction, `PinSetsR` the records'
   relation; helper `romload-sets`), then the stage theorem for the real program via `triple_subPB`.
+
+### Landing 3 (interim: helpers `rec`, `pos` merged at their current heads)
+* Helper `rec`: `classNPcOf`, `blockNestedBit` (proven), `classReadMinor`, `classReadSlot(s)`,
+  `classRead`, `targetMajorAt` (`sorry` through stubs); its own composition helper `RSim`
+  (`RecSim.lean`) and `RecStab.lean`. Helper `pos`: `NestCtx.rootHoles`, `nestHoleAt` (proven),
+  `fvMapAt`, `nestHoleImg`, `replaceFVars(Go)`, `nestContainer` (through `mk_app_n`'s stub),
+  `nestUniform`/`nestOccAny` pieces. L changes by both: loops to self-recursion, handle guards.
+* Lemma-name clashes between the two helpers' files (`rec2/4/5_specW`, `frK*`, `rowPW_eq`,
+  `iwN_grow`) were renamed on `pos`'s side at the merge (`posRec*_specW`, `pfrK*`, …); `IndAll`
+  caught them.
+* Census: phase 8 **65 proven, 47 sorry, 103 written, 8 todo**.
