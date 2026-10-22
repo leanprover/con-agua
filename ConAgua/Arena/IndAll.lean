@@ -14,6 +14,9 @@ import ConAgua.Arena.IndInstallSpec
 import ConAgua.Arena.IndInstallSpec2
 import ConAgua.Arena.IndInstallSpec3
 import ConAgua.Arena.IndInstallSpec4
+import ConAgua.Arena.IndInstallSpec5
+import ConAgua.Arena.IndInstallSpec6
+import ConAgua.Arena.IndInstallSpec7
 import ConAgua.Arena.IndLibSpec
 import ConAgua.Arena.IndMaster
 import ConAgua.Arena.IndPartsSpec2
@@ -21,6 +24,15 @@ import ConAgua.Arena.IndPartsSpec3
 import ConAgua.Arena.IndPartsSpec4
 import ConAgua.Arena.IndPartsSpec5
 import ConAgua.Arena.IndPartsSpec6
+import ConAgua.Arena.IndPartsSpec7
+import ConAgua.Arena.IndPartsSpec8
+import ConAgua.Arena.IndPartsSpec9
+import ConAgua.Arena.IndPartsSpec10
+import ConAgua.Arena.IndPartsSpec11
+import ConAgua.Arena.IndPartsSpec12
+import ConAgua.Arena.IndPartsSpec13
+import ConAgua.Arena.IndPartsSpec14
+import ConAgua.Arena.IndPartsSpec15
 import ConAgua.Arena.IndPartsSpec
 import ConAgua.Arena.IndPos2Spec
 import ConAgua.Arena.IndPosSpec
