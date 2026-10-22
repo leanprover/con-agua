@@ -1,3 +1,4 @@
 _tmp
 .lake/
 _scratch/
+__pycache__/
