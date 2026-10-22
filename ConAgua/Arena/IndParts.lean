@@ -714,26 +714,14 @@ def blockShapePack : FunDecl := lfn (mo, ml, ro, rl, nP, elim, s, large, isProp)
   return q
 }
 
-/-- `block_shape_build`: `blockShape?` from its split, non-empty components — the counts, the
-pins, the sort, the groups, the members and recursors, and which eliminator. -/
+/-- `block_shape_fin`: `blockShape?`'s last stretch — the constructors, the levels, the groups,
+the members and recursors, which eliminator, the record (lane `indproofs2`: split off
+`block_shape_build`). -/
 -- con-ron: ConRon/Arena/Inductives/BlockParts.lean:327-384 ConRon.Arena.blockShape?
 @[l_impl ConRon.Arena.blockShape?]
-def blockShapeBuild : FunDecl := lfn (nPd, cto, ctl, cso, csl, rso, rsl)
-    locals (cvT0, rs0, cvR0, no, nl, mcOk, io, il, lo, ll, pinsOk, s, z, eq, isProp,
-            cof, cl2, lvls, go, gl, mo, ml, ro2, rl2, largeOk, elim, q) {
-  cvT0 := IW.u64[cto];
-  rs0 := IW.u64[rso];
-  cvR0 := IW.u64[rs0];
-  (no, nl) := call block_shape_names_of(cto, ctl);
-  (mcOk, io, il) := call block_member_counts(nPd, ctl, csl, no, nl, rso, rsl, cto, ctl);
-  if mcOk == 0 { return (0, 0) };
-  (lo, ll) := call er_to_iw(EREC.u64[cvT0 + 1], EREC.u64[cvT0 + 2]);
-  pinsOk := call block_shape_pins_ok(nPd, cto, ctl, lo, ll, rso, rsl, cso, csl);
-  if pinsOk == 0 { return (0, 0) };
-  s := call block_shape_result_sort(nPd, io, il, EREC.u64[cvT0 + 3]);
-  z := call pin_word(53);
-  eq := call lvl_eq_c(s, z);
-  isProp := u64(eq == 2);
+def blockShapeFin : FunDecl := lfn (nPd, cto, ctl, cso, csl, rso, rsl, no, nl, io, lo, ll, s, isProp)
+    locals (cvR0, cof, cl2, lvls, go, gl, mo, ml, ro2, rl2, largeOk, elim, q) {
+  cvR0 := IW.u64[IW.u64[rso]];
   (cof, cl2) := call block_shape_ctors_of(cso, csl);
   lvls := call param_levels(lo, ll);
   (go, gl) := call block_groups(no, nl, lvls, nPd, ctl, cof, cl2);
@@ -747,6 +735,37 @@ def blockShapeBuild : FunDecl := lfn (nPd, cto, ctl, cso, csl, rso, rsl)
   elim := call intern_nanon();
   q := call block_shape_pack(mo, ml, ro2, rl2, nPd, elim, s, 0, isProp);
   return (1, q)
+}
+
+/-- `block_shape_tail`: the result sort and `isProp`, then `block_shape_fin` (split off
+`block_shape_build`). -/
+-- con-ron: ConRon/Arena/Inductives/BlockParts.lean:327-384 ConRon.Arena.blockShape?
+@[l_impl ConRon.Arena.blockShape?]
+def blockShapeTail : FunDecl := lfn (nPd, cto, ctl, cso, csl, rso, rsl, no, nl, io, il, lo, ll)
+    locals (s, z, eq, isProp, ok, q) {
+  s := call block_shape_result_sort(nPd, io, il, EREC.u64[IW.u64[cto] + 3]);
+  z := call pin_word(53);
+  eq := call lvl_eq_c(s, z);
+  isProp := u64(eq == 2);
+  (ok, q) := call block_shape_fin(nPd, cto, ctl, cso, csl, rso, rsl, no, nl, io, lo, ll, s, isProp);
+  return (ok, q)
+}
+
+/-- `block_shape_build`: `blockShape?` from its split, non-empty components — the names, the
+counts, the level parameters and the pins; then `block_shape_tail`. -/
+-- con-ron: ConRon/Arena/Inductives/BlockParts.lean:327-384 ConRon.Arena.blockShape?
+@[l_impl ConRon.Arena.blockShape?]
+def blockShapeBuild : FunDecl := lfn (nPd, cto, ctl, cso, csl, rso, rsl)
+    locals (cvT0, no, nl, mcOk, io, il, lo, ll, pinsOk, ok, q) {
+  cvT0 := IW.u64[cto];
+  (no, nl) := call block_shape_names_of(cto, ctl);
+  (mcOk, io, il) := call block_member_counts(nPd, ctl, csl, no, nl, rso, rsl, cto, ctl);
+  if mcOk == 0 { return (0, 0) };
+  (lo, ll) := call er_to_iw(EREC.u64[cvT0 + 1], EREC.u64[cvT0 + 2]);
+  pinsOk := call block_shape_pins_ok(nPd, cto, ctl, lo, ll, rso, rsl, cso, csl);
+  if pinsOk == 0 { return (0, 0) };
+  (ok, q) := call block_shape_tail(nPd, cto, ctl, cso, csl, rso, rsl, no, nl, io, il, lo, ll);
+  return (ok, q)
 }
 
 /-- `block_shape(nPd, off, l)`: `blockShape?`: split the block; decline with no formers or no
@@ -866,7 +885,7 @@ def indPartsFns : Prog :=
    ("block_shape_ctors_of", blockShapeCtorsOf), ("block_shape_members_of", blockShapeMembersOf),
    ("block_shape_rhss_of", blockShapeRhssOf), ("block_shape_recs_of", blockShapeRecsOf),
    ("block_shape_large", blockShapeLarge), ("block_shape_pack", blockShapePack),
-   ("block_shape_build", blockShapeBuild), ("block_shape", blockShape), ("block_parts", blockParts),
+   ("block_shape_fin", blockShapeFin), ("block_shape_tail", blockShapeTail), ("block_shape_build", blockShapeBuild), ("block_shape", blockShape), ("block_parts", blockParts),
    ("block_large_elim_allowed", blockLargeElimAllowed),
    ("check_shapeless_formers", checkShapelessFormers), ("check_shapeless", checkShapeless),
    ("check_ind_decl", checkIndDecl)]
