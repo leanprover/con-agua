@@ -344,7 +344,7 @@
 {
 "lane": "defeq2",
 "model": "opus",
-"status": "running",
+"status": "done",
 "focus": "Phases 6-7: discharge KnotCallees (infer_proj, level-list invariant, PropRead, real walks, bstk)"
 },
 {
@@ -380,7 +380,7 @@
 {
 "lane": "proofreview",
 "model": "opus",
-"status": "running",
+"status": "done",
 "focus": "Fresh review of proof cost on 3\u20134 representative functions"
 }
 ]
