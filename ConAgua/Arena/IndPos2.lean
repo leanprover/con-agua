@@ -151,17 +151,9 @@ record, read back through `FvMap.holeImg ctx prog prog.length`. -/
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:752-762 ConRon.Arena.nestCtorNf
 @[l_impl ConRon.Arena.nestCtorNf]
 def nestCtorNfL : FunDecl := lfn (ctx, progOff, progLen, us, dsOff, dsLen, cv, closed) locals
-    (f, ds2Off, ds2Len, j, x, y, ty, nf) {
+    (f, ds2Off, ds2Len, ty, nf) {
   f := call rec5(0, ctx, progOff, progLen, progLen);
-  ds2Off := 0;
-  ds2Len := 0;
-  j := 0;
-  while j < dsLen {
-    x := IW.u64[dsOff + j];
-    y := call replace_fvars(f, x);
-    (ds2Off, ds2Len) := call sl_snoc(ds2Off, ds2Len, y);
-    j += 1
-  };
+  (ds2Off, ds2Len) := call nest_hole_img_ds(f, dsOff, dsLen);
   ty := call replace_fvars(f, closed);
   nf := call rec5(EREC.u64[cv], us, ds2Off, ds2Len, ty);
   return nf
@@ -242,17 +234,15 @@ group grown by the named containers, each at the frame's instantiation. -/
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:809-817 ConRon.Arena.nestGrowGroup
 @[l_impl ConRon.Arena.nestGrowGroup]
 def nestGrowGroupL : FunDecl := lfn (vis, ctx, hi, us, dsOff, dsLen, csOff, csLen, grpOff, grpLen)
-    locals (j, c, key, nI, cty, pr) {
-  j := 0;
-  while j < csLen {
-    c := IW.u64[csOff + j];
-    key := call rec4(c, us, dsOff, dsLen);
-    (nI, cty) := call nest_inst_type(vis, ctx, hi, key);
-    pr := call rec2(c, cty);
-    (grpOff, grpLen) := call sl_snoc(grpOff, grpLen, pr);
-    j += 1
-  };
-  return (grpOff, grpLen)
+    locals (c, key, nI, cty, pr, r1, r2) {
+  if csLen == 0 { return (grpOff, grpLen) };
+  c := IW.u64[csOff];
+  key := call rec4(c, us, dsOff, dsLen);
+  (nI, cty) := call nest_inst_type(vis, ctx, hi, key);
+  pr := call rec2(c, cty);
+  (grpOff, grpLen) := call sl_snoc(grpOff, grpLen, pr);
+  (r1, r2) := call nest_grow_group(vis, ctx, hi, us, dsOff, dsLen, csOff + 1, csLen - 1, grpOff, grpLen);
+  return (r1, r2)
 }
 
 /-- `nest_accept_group(us, dsOff, dsLen, grpOff, grpLen, keysOff, keysLen)`: a frame's group
@@ -841,25 +831,29 @@ def nestRootL : FunDecl :=
   return (outsOff, outsLen, ns)
 }
 
+/-- `nest_seed_of_go(ctx, f, dsOff, dsLen, q, j)`: the rest of the class's parameters read back,
+written at `q + j`, … (the loop of `nest_seed_of`, as a recursion). -/
+-- con-ron: none — the loop of nest_seed_of as a self-recursive function (proof shape)
+def nestSeedOfGoL : FunDecl := lfn (ctx, f, dsOff, dsLen, q, j) locals (y, z, u) {
+  if j >= dsLen { return 0 };
+  y := call replace_apps(IW.u64[ctx], IW.u64[ctx + 1], IW.u64[ctx + 10], 0, IW.u64[ctx + 4], IW.u64[dsOff + j]);
+  if 4294967296 <= y { abort };
+  z := call replace_fvars(f, y);
+  IW.u64[q + j] := z;
+  u := call nest_seed_of_go(ctx, f, dsOff, dsLen, q, j + 1);
+  return 0
+}
+
 /-- `nest_seed_of(ctx, holesOff, holesLen, ind, us, dsOff, dsLen, nPc)`: a resolved class as a
 seed, its parameters read back through the walk's representation. -/
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:1184-1194 ConRon.Arena.nestSeedOf
 @[l_impl ConRon.Arena.nestSeedOf]
 def nestSeedOfL :=
-    lfn (ctx, holesOff, holesLen, ind, us, dsOff, dsLen, nPc) locals
-      (f, ds2Off, ds2Len, j, x, y, z, key) {
+    lfn (ctx, holesOff, holesLen, ind, us, dsOff, dsLen, nPc) locals (f, q, u, key) {
   f := call rec5(1, IW.u64[ctx + 7], IW.u64[ctx + 8], holesOff, holesLen);
-  ds2Off := 0;
-  ds2Len := 0;
-  j := 0;
-  while j < dsLen {
-    x := IW.u64[dsOff + j];
-    y := call replace_apps(IW.u64[ctx], IW.u64[ctx + 1], IW.u64[ctx + 10], 0, IW.u64[ctx + 4], x);
-    z := call replace_fvars(f, y);
-    (ds2Off, ds2Len) := call sl_snoc(ds2Off, ds2Len, z);
-    j += 1
-  };
-  key := call rec4(ind, us, ds2Off, ds2Len);
+  q := call iw_alloc(dsLen);
+  u := call nest_seed_of_go(ctx, f, dsOff, dsLen, q, 0);
+  key := call rec4(ind, us, q, dsLen);
   return (key, nPc)
 }
 
@@ -919,7 +913,7 @@ def indPos2Fns : Prog :=
    ("nest_root_canon", nestRootCanonL), ("pi_doms_occ", piDomsOccL),
    ("nest_uniform_ok", nestUniformOkL), ("nest_uniform_cs", nestUniformCsL),
    ("nest_uniform", nestUniformL),
-   ("nest_root", nestRootL), ("nest_seed_of", nestSeedOfL), ("nest_seeds", nestSeedsL)]
+   ("nest_root", nestRootL), ("nest_seed_of_go", nestSeedOfGoL), ("nest_seed_of", nestSeedOfL), ("nest_seeds", nestSeedsL)]
 
 /-- Stubs for the functions of OTHER modules this module calls: `nest_occ`, `nest_container`,
 `nest_crest`, `nest_canon_crest`, `replace_fvars`, `replace_apps`, `inst_pis_with`,
@@ -930,7 +924,7 @@ def indPos2Foreign : Prog :=
    ("nest_canon_crest", stub 5), ("replace_fvars", stub 2), ("replace_apps", stub 6),
    ("inst_pis_with", stub 3), ("close_telescope", stub 4), ("whnf_walk_fuel", stub 1),
    ("nest_ctx_hi_at", stub 2), ("nest_hole_at", stub 4), ("pi_binders", stub 2),
-   ("struct_used_later", stub 3)]
+   ("struct_used_later", stub 3), ("nest_hole_img_ds", stub 3)]
 
 theorem indPos2_wf :
     L.Compiler.Prog.wf indTab
