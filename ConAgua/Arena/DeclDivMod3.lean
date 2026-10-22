@@ -90,7 +90,7 @@ theorem certGuard_specW (p : Prog) (hp : p.lookup "cert_guard" = some certGuardL
     finish (gen := 30) (instances := 10000) [certGuardW, bW, rdW_eq]
 
 theorem certGuard_ref (hD : DmProg2 p) (cx a b rv : Word) (cc : CertCtxA) :
-    CallRef p "cert_guard" [cx, a, b, rv] (fun m s => StageR dn vis fe m s ∧ CtxR m cx cc ∧ H a ∧ H b ∧ H rv)
+    CallRef p "cert_guard" [cx, a, b, rv] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H a ∧ H b ∧ H rv)
       (certGuard cc (decE a) (decE b) (decE rv)) (KeepPost dn vis fe decW0E) := by
   refine CallRef.of_succ fun k m s rr mm ⟨hS, hC, ha, hb, hrv⟩ hcall => ?_
   have hw := callW_model (M := fun mm => certGuardW p k mm cx a b rv) (certGuard_specW p hD.lCertGuard k · cx a b rv) hcall
@@ -127,7 +127,7 @@ theorem certEq_specW (p : Prog) (hp : p.lookup "cert_eq" = some certEqL) (n : Na
     finish (gen := 30) (instances := 10000) [certEqW, bW, rdW_eq]
 
 theorem certEq_ref (hD : DmProg2 p) (cx c rhs : Word) (cc : CertCtxA) :
-    CallRef p "cert_eq" [cx, c, rhs] (fun m s => StageR dn vis fe m s ∧ CtxR m cx cc ∧ H c ∧ H rhs)
+    CallRef p "cert_eq" [cx, c, rhs] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c ∧ H rhs)
       (certEq cc (decI c) (decE rhs)) (KeepPost dn vis fe decW0E) := by
   refine CallRef.of_succ fun k m s rr mm ⟨hS, hC, hc, hrhs⟩ hcall => ?_
   have hw := callW_model (M := fun mm => certEqW p k mm cx c rhs) (certEq_specW p hD.lCertEq k · cx c rhs) hcall
@@ -166,7 +166,7 @@ theorem certHalves_specW (p : Prog) (hp : p.lookup "cert_halves" = some certHalv
     finish (gen := 30) (instances := 10000) [certHalvesW, bW, rdW_eq]
 
 theorem certHalves_ref (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
-    CallRef p "cert_halves" [cx, c] (fun m s => StageR dn vis fe m s ∧ CtxR m cx cc ∧ H c)
+    CallRef p "cert_halves" [cx, c] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c)
       (certHalves cc (decI c)) (KeepPost dn vis fe decW0E) := by
   refine CallRef.of_succ fun k m s rr mm ⟨hS, hC, hc⟩ hcall => ?_
   have hw := callW_model (M := fun mm => certHalvesW p k mm cx c) (certHalves_specW p hD.lCertHalves k · cx c) hcall
@@ -328,7 +328,7 @@ theorem certTwoEqs_specW (p : Prog) (hp : p.lookup "cert_two_eqs" = some certTwo
 
 theorem certTwoEqs_ref (hD : DmProg2 p) (cx c h1 h2 r1 r2 : Word) (cc : CertCtxA) :
     CallRef p "cert_two_eqs" [cx, c, h1, h2, r1, r2]
-      (fun m s => StageR dn vis fe m s ∧ CtxR m cx cc ∧ H c ∧ H h1 ∧ H h2 ∧ H r1 ∧ H r2)
+      (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c ∧ H h1 ∧ H h2 ∧ H r1 ∧ H r2)
       (certTwoEqs cc (decI c) (decE h1) (decE h2) (decE r1) (decE r2))
       (KeepPost dn vis fe decStmtL) := by
   refine CallRef.of_succ fun k m s rr mm ⟨hS, hC, hc, hh1, hh2, hr1, hr2⟩ hcall => ?_
@@ -361,26 +361,26 @@ theorem certTwoEqs_ref (hD : DmProg2 p) (cx c h1 h2 r1 r2 : Word) (cc : CertCtxA
 
 @[refines ConRon.Arena.certGuard]
 theorem certGuard_refines (hD : DmProg2 p) (cx a b rv : Word) (cc : CertCtxA) :
-    RefAM p "cert_guard" [cx, a, b, rv] (fun m s => StageR dn vis fe m s ∧ CtxR m cx cc ∧ H a ∧ H b ∧ H rv)
+    RefAM p "cert_guard" [cx, a, b, rv] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H a ∧ H b ∧ H rv)
       (certGuard cc (decE a) (decE b) (decE rv)) (KeepPost dn vis fe decW0E) :=
   (certGuard_ref hD cx a b rv cc).refAM
 
 @[refines ConRon.Arena.certEq]
 theorem certEq_refines (hD : DmProg2 p) (cx c rhs : Word) (cc : CertCtxA) :
-    RefAM p "cert_eq" [cx, c, rhs] (fun m s => StageR dn vis fe m s ∧ CtxR m cx cc ∧ H c ∧ H rhs)
+    RefAM p "cert_eq" [cx, c, rhs] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c ∧ H rhs)
       (certEq cc (decI c) (decE rhs)) (KeepPost dn vis fe decW0E) :=
   (certEq_ref hD cx c rhs cc).refAM
 
 @[refines ConRon.Arena.certHalves]
 theorem certHalves_refines (hD : DmProg2 p) (cx c : Word) (cc : CertCtxA) :
-    RefAM p "cert_halves" [cx, c] (fun m s => StageR dn vis fe m s ∧ CtxR m cx cc ∧ H c)
+    RefAM p "cert_halves" [cx, c] (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c)
       (certHalves cc (decI c)) (KeepPost dn vis fe decW0E) :=
   (certHalves_ref hD cx c cc).refAM
 
 @[refines ConRon.Arena.certTwoEqs]
 theorem certTwoEqs_refines (hD : DmProg2 p) (cx c h1 h2 r1 r2 : Word) (cc : CertCtxA) :
     RefAM p "cert_two_eqs" [cx, c, h1, h2, r1, r2]
-      (fun m s => StageR dn vis fe m s ∧ CtxR m cx cc ∧ H c ∧ H h1 ∧ H h2 ∧ H r1 ∧ H r2)
+      (fun m s => StageR dn vis fe m s ∧ CertCtxR m cx cc ∧ H c ∧ H h1 ∧ H h2 ∧ H r1 ∧ H r2)
       (certTwoEqs cc (decI c) (decE h1) (decE h2) (decE r1) (decE r2))
       (KeepPost dn vis fe decStmtL) :=
   (certTwoEqs_ref hD cx c h1 h2 r1 r2 cc).refAM

@@ -9,7 +9,7 @@ import ConAgua.Arena.IndStubs
 Part 2: `nat_var`, `nat_one`, `eq_at1`, `cert_ctx` (with `cert_ctx_pins`, `cert_ctx_main`) against
 the twin's `natVar`, `natOne`, `eqAt1`, `certCtx`.
 
-* `CtxR m cx c`: the 21-word `IW` record at `cx` holds the twin's `CertCtxA` `c` (the word of each
+* `CertCtxR m cx c`: the 21-word `IW` record at `cx` holds the twin's `CertCtxA` `c` (the word of each
   field, in the layout of `cert_ctx`).
 * `StmtAt m p (hyps, e)`: the statement record `[hyps.off, hyps.len, e]` at `p`;
   `StmtL m o l ss`: the slice `(o, l)` of pointers to such records.
@@ -267,18 +267,18 @@ def ctxWords (c : CertCtxA) : List Word :=
    c.xorN.word.toUInt64]
 
 /-- **The context record**: `IW[cx ‥ cx + 20]` holds the context's words, below the pool's top. -/
-def CtxR (m : Mem) (cx : Word) (c : CertCtxA) : Prop :=
+def CertCtxR (m : Mem) (cx : Word) (c : CertCtxA) : Prop :=
   cx.toNat + 21 ≤ iwTop m ∧ ∀ j < 21, (iwA m)[cx.toNat + j]? = (ctxWords c)[j]?
 
-theorem CtxR.grow {m m' : Mem} {cx : Word} {c : CertCtxA} (h : CtxR m cx c) (hg : IWGrow m m') :
-    CtxR m' cx c := by
+theorem CertCtxR.grow {m m' : Mem} {cx : Word} {c : CertCtxA} (h : CertCtxR m cx c) (hg : IWGrow m m') :
+    CertCtxR m' cx c := by
   refine ⟨Nat.le_trans h.1 hg.1, fun j hj => ?_⟩
   simp only [iwA]
   rw [hg.2.2.1 _ (by have := h.1; omega)]
   exact h.2 j hj
 
 /-- A field of the context, as the word `cert_*` reads. -/
-theorem CtxR.rd {m : Mem} {cx : Word} {c : CertCtxA} (h : CtxR m cx c) (k : Word)
+theorem CertCtxR.rd {m : Mem} {cx : Word} {c : CertCtxA} (h : CertCtxR m cx c) (k : Word)
     (hk : k.toNat < 21) : rdW (m.arr64 IW) (cx + k) = (ctxWords c).getD k.toNat 0 := by
   have hb := h.1
   have ht : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
@@ -301,8 +301,8 @@ theorem RecPost.rd {m m' : Mem} {r ws : List Word} (h : RecPost m m' r ws) (k : 
   simp only [rdW, hx, this]
   simp [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem hk]
 
-theorem CtxR.of_rec {m m' : Mem} {r : List Word} {c : CertCtxA} (h : RecPost m m' r (ctxWords c)) :
-    CtxR m' (r.headD 0) c := by
+theorem CertCtxR.of_rec {m m' : Mem} {r : List Word} {c : CertCtxA} (h : RecPost m m' r (ctxWords c)) :
+    CertCtxR m' (r.headD 0) c := by
   obtain ⟨hq, -, -, htop, hget⟩ := h
   have hq' : (r.headD 0).toNat = iwTop m := by rw [hq]; rfl
   refine ⟨by rw [hq', htop]; simp [ctxWords], fun j hj => ?_⟩
@@ -517,7 +517,7 @@ theorem chain10_eq (mp : Mem) (q v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 : Word) :
 
 theorem certCtx_ref (hD : DmProg2 p) :
     CallRef p "cert_ctx" [] (StageR dn vis fe) certCtx
-      (KeepPost dn vis fe (fun m r (c : CertCtxA) => CtxR m (r.headD 0) c)) := by
+      (KeepPost dn vis fe (fun m r (c : CertCtxA) => CertCtxR m (r.headD 0) c)) := by
   refine CallRef.of_succ fun k m a r m' hS hc => ?_
   have hw := callW_model (M := fun mm => certCtxW p k mm) (certCtx_specW p hD.lCertCtx k ·) hc
   unfold certCtxW at hw
@@ -675,74 +675,74 @@ theorem certCtx_ref (hD : DmProg2 p) :
   · exact hrp'.2.1.stage hS9
   · exact hg0.trans (hg09.trans hrp'.2.1.1)
   · rw [← hr]
-    show CtxR m' (rq.headD 0) _
+    show CertCtxR m' (rq.headD 0) _
     rw [hq0]
-    exact CtxR.of_rec (by rw [hws]; exact hrp')
+    exact CertCtxR.of_rec (by rw [hws]; exact hrp')
 
 
 /-! ### The context's fields -/
 
-theorem CtxR.f0 {m : Mem} {cx : Word} {c : CertCtxA} (h : CtxR m cx c) :
+theorem CertCtxR.f0 {m : Mem} {cx : Word} {c : CertCtxA} (h : CertCtxR m cx c) :
     rdW (m.arr64 IW) (cx + 0) = c.natTy.word.toUInt64 := h.rd 0 (by decide)
 
-theorem CtxR.f1 {m : Mem} {cx : Word} {c : CertCtxA} (h : CtxR m cx c) :
+theorem CertCtxR.f1 {m : Mem} {cx : Word} {c : CertCtxA} (h : CertCtxR m cx c) :
     rdW (m.arr64 IW) (cx + 1) = c.x.word.toUInt64 := h.rd 1 (by decide)
 
-theorem CtxR.f2 {m : Mem} {cx : Word} {c : CertCtxA} (h : CtxR m cx c) :
+theorem CertCtxR.f2 {m : Mem} {cx : Word} {c : CertCtxA} (h : CertCtxR m cx c) :
     rdW (m.arr64 IW) (cx + 2) = c.y.word.toUInt64 := h.rd 2 (by decide)
 
-theorem CtxR.f3 {m : Mem} {cx : Word} {c : CertCtxA} (h : CtxR m cx c) :
+theorem CertCtxR.f3 {m : Mem} {cx : Word} {c : CertCtxA} (h : CertCtxR m cx c) :
     rdW (m.arr64 IW) (cx + 3) = c.one.word.toUInt64 := h.rd 3 (by decide)
 
-theorem CtxR.f4 {m : Mem} {cx : Word} {c : CertCtxA} (h : CtxR m cx c) :
+theorem CertCtxR.f4 {m : Mem} {cx : Word} {c : CertCtxA} (h : CertCtxR m cx c) :
     rdW (m.arr64 IW) (cx + 4) = c.bleN.word.toUInt64 := h.rd 4 (by decide)
 
-theorem CtxR.f5 {m : Mem} {cx : Word} {c : CertCtxA} (h : CtxR m cx c) :
+theorem CertCtxR.f5 {m : Mem} {cx : Word} {c : CertCtxA} (h : CertCtxR m cx c) :
     rdW (m.arr64 IW) (cx + 5) = c.boolTy.word.toUInt64 := h.rd 5 (by decide)
 
-theorem CtxR.f6 {m : Mem} {cx : Word} {c : CertCtxA} (h : CtxR m cx c) :
+theorem CertCtxR.f6 {m : Mem} {cx : Word} {c : CertCtxA} (h : CertCtxR m cx c) :
     rdW (m.arr64 IW) (cx + 6) = c.bT.word.toUInt64 := h.rd 6 (by decide)
 
-theorem CtxR.f7 {m : Mem} {cx : Word} {c : CertCtxA} (h : CtxR m cx c) :
+theorem CertCtxR.f7 {m : Mem} {cx : Word} {c : CertCtxA} (h : CertCtxR m cx c) :
     rdW (m.arr64 IW) (cx + 7) = c.bF.word.toUInt64 := h.rd 7 (by decide)
 
-theorem CtxR.f8 {m : Mem} {cx : Word} {c : CertCtxA} (h : CtxR m cx c) :
+theorem CertCtxR.f8 {m : Mem} {cx : Word} {c : CertCtxA} (h : CertCtxR m cx c) :
     rdW (m.arr64 IW) (cx + 8) = c.z.word.toUInt64 := h.rd 8 (by decide)
 
-theorem CtxR.f9 {m : Mem} {cx : Word} {c : CertCtxA} (h : CtxR m cx c) :
+theorem CertCtxR.f9 {m : Mem} {cx : Word} {c : CertCtxA} (h : CertCtxR m cx c) :
     rdW (m.arr64 IW) (cx + 9) = c.two.word.toUInt64 := h.rd 9 (by decide)
 
-theorem CtxR.f10 {m : Mem} {cx : Word} {c : CertCtxA} (h : CtxR m cx c) :
+theorem CertCtxR.f10 {m : Mem} {cx : Word} {c : CertCtxA} (h : CertCtxR m cx c) :
     rdW (m.arr64 IW) (cx + 10) = c.modN.word.toUInt64 := h.rd 10 (by decide)
 
-theorem CtxR.f11 {m : Mem} {cx : Word} {c : CertCtxA} (h : CtxR m cx c) :
+theorem CertCtxR.f11 {m : Mem} {cx : Word} {c : CertCtxA} (h : CertCtxR m cx c) :
     rdW (m.arr64 IW) (cx + 11) = c.divN.word.toUInt64 := h.rd 11 (by decide)
 
-theorem CtxR.f12 {m : Mem} {cx : Word} {c : CertCtxA} (h : CtxR m cx c) :
+theorem CertCtxR.f12 {m : Mem} {cx : Word} {c : CertCtxA} (h : CertCtxR m cx c) :
     rdW (m.arr64 IW) (cx + 12) = c.addN.word.toUInt64 := h.rd 12 (by decide)
 
-theorem CtxR.f13 {m : Mem} {cx : Word} {c : CertCtxA} (h : CtxR m cx c) :
+theorem CertCtxR.f13 {m : Mem} {cx : Word} {c : CertCtxA} (h : CertCtxR m cx c) :
     rdW (m.arr64 IW) (cx + 13) = c.mulN.word.toUInt64 := h.rd 13 (by decide)
 
-theorem CtxR.f14 {m : Mem} {cx : Word} {c : CertCtxA} (h : CtxR m cx c) :
+theorem CertCtxR.f14 {m : Mem} {cx : Word} {c : CertCtxA} (h : CertCtxR m cx c) :
     rdW (m.arr64 IW) (cx + 14) = c.subN.word.toUInt64 := h.rd 14 (by decide)
 
-theorem CtxR.f15 {m : Mem} {cx : Word} {c : CertCtxA} (h : CtxR m cx c) :
+theorem CertCtxR.f15 {m : Mem} {cx : Word} {c : CertCtxA} (h : CertCtxR m cx c) :
     rdW (m.arr64 IW) (cx + 15) = c.gcdN.word.toUInt64 := h.rd 15 (by decide)
 
-theorem CtxR.f16 {m : Mem} {cx : Word} {c : CertCtxA} (h : CtxR m cx c) :
+theorem CertCtxR.f16 {m : Mem} {cx : Word} {c : CertCtxA} (h : CertCtxR m cx c) :
     rdW (m.arr64 IW) (cx + 16) = c.slN.word.toUInt64 := h.rd 16 (by decide)
 
-theorem CtxR.f17 {m : Mem} {cx : Word} {c : CertCtxA} (h : CtxR m cx c) :
+theorem CertCtxR.f17 {m : Mem} {cx : Word} {c : CertCtxA} (h : CertCtxR m cx c) :
     rdW (m.arr64 IW) (cx + 17) = c.srN.word.toUInt64 := h.rd 17 (by decide)
 
-theorem CtxR.f18 {m : Mem} {cx : Word} {c : CertCtxA} (h : CtxR m cx c) :
+theorem CertCtxR.f18 {m : Mem} {cx : Word} {c : CertCtxA} (h : CertCtxR m cx c) :
     rdW (m.arr64 IW) (cx + 18) = c.landN.word.toUInt64 := h.rd 18 (by decide)
 
-theorem CtxR.f19 {m : Mem} {cx : Word} {c : CertCtxA} (h : CtxR m cx c) :
+theorem CertCtxR.f19 {m : Mem} {cx : Word} {c : CertCtxA} (h : CertCtxR m cx c) :
     rdW (m.arr64 IW) (cx + 19) = c.lorN.word.toUInt64 := h.rd 19 (by decide)
 
-theorem CtxR.f20 {m : Mem} {cx : Word} {c : CertCtxA} (h : CtxR m cx c) :
+theorem CertCtxR.f20 {m : Mem} {cx : Word} {c : CertCtxA} (h : CertCtxR m cx c) :
     rdW (m.arr64 IW) (cx + 20) = c.xorN.word.toUInt64 := h.rd 20 (by decide)
 
 theorem decE_word (x : EIdx) : decE x.word.toUInt64 = x := decI_word x
@@ -774,7 +774,7 @@ instance : Inhabited CertCtxA :=
 @[refines ConRon.Arena.certCtx]
 theorem certCtx_refines (hD : DmProg2 p) :
     RefAM p "cert_ctx" [] (StageR dn vis fe) certCtx
-      (KeepPost dn vis fe (fun m r (c : CertCtxA) => CtxR m (r.headD 0) c)) :=
+      (KeepPost dn vis fe (fun m r (c : CertCtxA) => CertCtxR m (r.headD 0) c)) :=
   (certCtx_ref hD ).refAM
 
 end nat
