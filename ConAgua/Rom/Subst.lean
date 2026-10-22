@@ -50,6 +50,7 @@ def Stmt.subPB (bs : List UInt8) : Stmt → Stmt
   | .call xs f args => .call xs f (args.map (Expr.subPB bs))
   | .abort => .abort
 
+-- con-ron: none — a proof device (the pin data as constant data), no twin
 def FunDecl.subPB (bs : List UInt8) (fd : FunDecl) : FunDecl := { fd with body := fd.body.subPB bs }
 
 def Prog.subPB (bs : List UInt8) (p : Prog) : Prog := p.map fun d => (d.1, d.2.subPB bs)
