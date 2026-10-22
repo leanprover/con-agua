@@ -480,6 +480,7 @@ theorem call1_spec (n : Nat) (s₀ : St) (g t tele wso wsl fvso fvsl pvo pvl rlv
       finish (gen := 20) (instances := 5000) [loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9,
         loc_init10, loc_init11, loc_init12, loc_init13, loc_init14, loc_init15]
 
+set_option maxHeartbeats 2000000 in
 theorem callsGo_spec (n : Nat) : ∀ (s₀ : St) (g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e nn i : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_rule_calls_go"
       [g, x, wso, wsl, fvso, fvsl, pvo, pvl, rlvls, rco, rcl, cgo, cgl, e, nn, i]
