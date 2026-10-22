@@ -118,29 +118,25 @@ theorem rule_loop (m₁ : Mem) (q : Word) :
 
 /-- **One record of a list**: `ind_obj` on the record at `q`, from its loop instance. -/
 theorem item_gen {σ α : Type} (F : USize → Bool → UInt32 → σ → ScanRes α) (kind : Word) (A : ArrId)
-    (sz : Nat) (Rec : Nat → α → Mem → Prop) (R : Mem → Word → UInt32 → σ → Mem → Prop) (st0 : σ)
+    (sz : Nat) (Fn : Mem → Word → α → Mem → Prop) (R : Mem → Word → UInt32 → σ → Mem → Prop)
+    (st0 : σ)
     (S : USize → ScanRes α) (hS : ∀ i x e, S i = .ok x e → F (i + 1) true 0 st0 = .ok x e)
-    (H : ∀ m₁ q, IObjLoop b F kind q (R m₁ q) (fun d m => RecInv A sz q m₁ m ∧ Rec q.toNat d m))
+    (H : ∀ m₁ q, IObjLoop b F kind q (R m₁ q) (Fn m₁ q))
     (h0 : ∀ m₁ q, RecInv A sz q m₁ m₁ → R m₁ q 0 st0 m₁)
-    (i : USize) (m₁ : Mem) (q : Word) (x : α) (e : USize) (e₂ : Word) (m₂ : Mem) (hi : i < b.usize)
+    (i : USize) (m₁ : Mem) (q : Word) (x : α) (e : USize) (e₂ : Word) (m₂ : Mem)
     (hS' : S i = .ok x e) (hI : RecInv A sz q m₁ m₁)
     (hob : objW b.data m₁ i.toUInt64 kind q = some (e₂, m₂)) :
-    e₂ = e.toUInt64 ∧ RecInv A sz q m₁ m₂ ∧ Rec q.toNat x m₂ := by
+    e₂ = e.toUInt64 ∧ Fn m₁ q x m₂ := by
   rw [objW_eq, ← succ_toUInt64 b h64 hsize, show (1 : Word) = bw true from rfl] at hob
-  obtain ⟨h1, h2, h3⟩ := iobj_link b h64 hsize F kind q (R m₁ q) _ (H m₁ q) (i + 1) true 0 st0 m₁ x e
+  exact iobj_link b h64 hsize F kind q (R m₁ q) _ (H m₁ q) (i + 1) true 0 st0 m₁ x e
     e₂ m₂ (hS i x e hS') (h0 m₁ q hI) hob
-  exact ⟨h1, h2, h3⟩
 
+omit h64 hsize in
 /-- A freshly allocated record is being read. -/
 theorem recInv_alloc (A : ArrId) (hA : A = IFR ∨ A = IFL) (sz : Nat) (n q : Word) (m m₁ : Mem)
     (hR : Room m) (hn : n.toNat = sz) (hal : allocW m A n = some (q, m₁)) : RecInv A sz q m₁ m₁ := by
   obtain ⟨a1, a2, a3, -, -, -, -⟩ := allocW_facts m m₁ A hA n q hR hal
   exact ⟨IGrow.refl _ _ _ _, a3, by omega, by omega⟩
-
-theorem IGrow.wd_keep {m m' : Mem} {xa : ArrId} {x0 x1 : Nat} (h : IGrow m m' xa x0 x1)
-    (a : ArrId) (ha : a = IFR ∨ a = IFL) (j : Nat) (h1 : 1 ≤ j) (h2 : j ≤ topN m a)
-    (h3 : a = xa → j < x0) : wd m' a j = wd m a j :=
-  h.keep a ha j h1 h2 (by rintro ⟨h4, h5, -⟩; have := h3 h4; omega)
 
 set_option hygiene false in
 macro "ilist_shape " G:ident : tactic => `(tactic| (
@@ -176,6 +172,44 @@ macro "ilist_shape " G:ident : tactic => `(tactic| (
 
 theorem ruleList_shape : IListLoop b (scanRuleListLoop b) (scanRule b) := by
   ilist_shape scanRuleListLoop
+
+omit h64 hsize in
+/-- Stability of a rule record under growth that leaves it alone. -/
+theorem ruleF_stab (t : Nat) (x : RuleRec) (m m' : Mem) (x0 x1 : Nat) (h : RuleF m t x)
+    (h1 : 1 ≤ t) (h2 : t + 3 ≤ topN m IFL + 1) (hg : IGrow m m' IFL x0 x1) (h3 : t + 3 ≤ x0) :
+    RuleF m' t x := by
+  obtain ⟨r1, r2, r3⟩ := h
+  refine ⟨?_, ?_, ?_⟩
+  · rw [hg.wd_keep IFL (.inr rfl) t (by omega) (by omega) (fun _ => by omega)]; exact r1
+  · rw [hg.wd_keep IFL (.inr rfl) (t + 1) (by omega) (by omega) (fun _ => by omega)]; exact r2
+  · rw [hg.wd_keep IFL (.inr rfl) (t + 2) (by omega) (by omega) (fun _ => by omega)]; exact r3
+
+/-- The rules of a recursor: a run of rule records in `IFL`. -/
+theorem rules_link (v : USize) (m : Mem) (l : List RuleRec) (e : USize) (r : Word × Word × Word)
+    (m' : Mem) (h : scanRules b v = .ok l e) (hR : Room m)
+    (hm : listW b.data m v.toUInt64 3 = some (r, m')) :
+    r.2.2 = e.toUInt64 ∧ r.2.1.toNat = l.length ∧
+      RunR (fun t x m => RuleF m t x) IFL 3 m' r.1.toNat l ∧ Grow m m' ∧ Room m' ∧
+      r.1.toNat = topN m IFL + 1 ∧ r.1.toNat + 3 * l.length = topN m' IFL + 1 := by
+  refine ilistW_link b h64 hsize (scanRuleListLoop b) (scanRule b) (ruleList_shape b h64 hsize)
+    (scanRules b) (fun v l e h => ?_) 3 IFL (.inr rfl) 3 (by decide) rfl
+    (fun m n => by simp [fldAllocW]) (fun t x m => RuleF m t x) ruleF_stab ?_ v m l e r m' h hR hm
+  · unfold scanRules at h; split at h
+    · rename_i h91; exact ⟨by simpa using h91, h⟩
+    · cases h
+  · intro i m m₁ q x e e₂ m₂ hi h123 hS hR hal hob
+    rw [show flagsW m₁ 3 q = m₁ by simp [flagsW]] at hob
+    have hI := recInv_alloc IFL (.inr rfl) 3 _ q m m₁ hR rfl hal
+    obtain ⟨t1, ⟨t2, t3⟩, t4⟩ := item_gen b h64 hsize
+      (fun i w seen (st : Nat × Nat × Nat) => scanRuleLoop b i w seen st.1 st.2.1 st.2.2) 3 IFL 3
+      (fun m₁ q d m => (RecInv IFL 3 q m₁ m ∧ topN m IFL = topN m₁ IFL) ∧ RuleF m q.toNat d) RuleLR
+      ((0 : Nat), (0 : Nat), (0 : Nat)) (scanRule b) (fun i x e h => by
+        unfold scanRule at h; split at h
+        · exact h
+        · cases h) (rule_loop b h64 hsize)
+      (fun m₁ q hI => ⟨hI, rfl, seenR_zero _ _, seenR_zero _ _, seenR_zero _ _⟩)
+      i m₁ q x e e₂ m₂ hS hI hob
+    exact ⟨t1, t4, t2.1, t2.2.1, t3⟩
 
 end kinds
 

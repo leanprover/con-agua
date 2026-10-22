@@ -927,4 +927,9 @@ theorem seenR_close {seen bit M : UInt32} {P : Prop} (h : SeenR seen bit P) (hM 
   · exfalso; apply hb
     rw [← hbM, ← hM, UInt32.and_assoc, hbM, h]
 
+theorem IGrow.wd_keep {m m' : Mem} {xa : ArrId} {x0 x1 : Nat} (h : IGrow m m' xa x0 x1)
+    (a : ArrId) (ha : a = IFR ∨ a = IFL) (j : Nat) (h1 : 1 ≤ j) (h2 : j ≤ topN m a)
+    (h3 : a = xa → j < x0) : wd m' a j = wd m a j :=
+  h.keep a ha j h1 h2 (by rintro ⟨h4, h5, -⟩; have := h3 h4; omega)
+
 end L.Front.Ind
