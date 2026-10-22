@@ -300,24 +300,39 @@ def recTargetOf : FunDecl := lfn (no, nl, mI, ty) locals (ok, bo, bl, body, g, x
   return idx
 }
 
-/-- `block_counts(nPd, k, nC, nR, cvT, rOk, rMI, rRP)`: `blockCounts?`. `r : Option (Nat × Nat)`
-(`rOk, rMI, rRP`) is a bare argument, not nested in a list or record, so it is flattened rather
-than boxed (by analogy with the result convention). -/
+/-- `block_counts_pure(nPd, k, nC, nR, bl, g, rOk, rMI, rRP)`: the arithmetic tail of `blockCounts?`
+(from the binder count `bl` and the result's view tag `g`), as `(ok, a, b)`. -/
 @[l_impl ConRon.Arena.blockCounts?]
-def blockCounts : FunDecl := lfn (nPd, k, nC, nR, cvT, rOk, rMI, rRP) locals (ty, bo, bl, res, g, x, y, z, n) {
-  ty := EREC.u64[cvT + 3];
-  (bo, bl, res) := call pi_binders(⟪CWF⟫, ty);
-  (g, x, y, z) := call e_view(res);
+def blockCountsPure : FunDecl := lfn (nPd, k, nC, nR, bl, g, rOk, rMI, rRP) locals () {
   if g == 2 {
-    n := bl;
-    if n < nPd { return (0, 0, 0) };
-    return (1, nPd, n - nPd)
+    if bl < nPd { return (0, 0, 0) };
+    return (1, nPd, bl - nPd)
   };
   if rOk == 0 { return (0, 0, 0) };
   if rRP < nC + k || rMI < rRP { return (0, 0, 0) };
   if rRP - (nC + k) == nPd { return (1, nPd, rMI - rRP) };
   if k < nR && nPd + nR + nC <= rRP { return (1, nPd, rMI - rRP) };
   return (0, 0, 0)
+}
+
+/-- `block_counts_head(cvT)`: the binder count of the former's type and the tag of its result
+(`piBinders`, then `view`). -/
+@[l_impl ConRon.Arena.blockCounts?]
+def blockCountsHead : FunDecl := lfn (cvT) locals (ty, bo, bl, res, g, x, y, z) {
+  ty := EREC.u64[cvT + 3];
+  (bo, bl, res) := call pi_binders(⟪CWF⟫, ty);
+  (g, x, y, z) := call e_view(res);
+  return (bl, g)
+}
+
+/-- `block_counts(nPd, k, nC, nR, cvT, rOk, rMI, rRP)`: `blockCounts?`. `r : Option (Nat × Nat)`
+(`rOk, rMI, rRP`) is a bare argument, not nested in a list or record, so it is flattened rather
+than boxed (by analogy with the result convention). -/
+@[l_impl ConRon.Arena.blockCounts?]
+def blockCounts : FunDecl := lfn (nPd, k, nC, nR, cvT, rOk, rMI, rRP) locals (bl, g, a, b, c) {
+  (bl, g) := call block_counts_head(cvT);
+  (a, b, c) := call block_counts_pure(nPd, k, nC, nR, bl, g, rOk, rMI, rRP);
+  return (a, b, c)
 }
 
 /-- `ctor_member(no, nl, lvls, nP, c)`: `ctorMember?`, `c` a `[cv, nF]` pointer: strip `nP + nF`
@@ -795,7 +810,7 @@ def indPartsFns : Prog :=
    ("block_shape_major_idx_at", blockShapeMajorIdxAt), ("block_shape_with_sort", blockShapeWithSort),
    ("block_parts_complete", blockPartsComplete), ("block_split_recs", blockSplitRecs),
    ("block_split_ctors", blockSplitCtors), ("block_split", blockSplit), ("rec_target_of", recTargetOf),
-   ("block_counts", blockCounts), ("ctor_member", ctorMember), ("block_groups_one", blockGroupsOne),
+   ("block_counts_head", blockCountsHead), ("block_counts_pure", blockCountsPure), ("block_counts", blockCounts), ("ctor_member", ctorMember), ("block_groups_one", blockGroupsOne),
    ("block_groups", blockGroups), ("block_rec_lps_ok", blockRecLpsOk),
    ("block_rec_name_set_ok", blockRecNameSetOk), ("block_rec_names_unreserved", blockRecNamesUnreserved),
    ("block_member_counts_find", blockMemberCountsFind), ("block_member_counts", blockMemberCounts),
