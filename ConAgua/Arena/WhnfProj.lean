@@ -20,7 +20,7 @@ prefix without a check, but its store is well formed (`NStoreWF`), so every name
 valid; the check gives L the twin's `NStore.ViewOK` for the new `str` node. Then it puts the nine bytes of `"projTable"` at the pool top and raises the top before
 `intern_nstr` (whose refinement needs the slice below the top, `SliceOK`), as the `Nat` arms put
 their constant limbs (`nat_pred_lit`, `nat_succ_lit`). The twin's string interning allocates
-nothing when the name exists; L leaves nine pool words per call (docs/deviations.md, D18).
+nothing when the name exists; L leaves nine pool words per call (docs/deviations.md, D21).
 
 `fire_ok` is `inferProj`'s propositional-structure test (`Infer.lean`'s `infer_proj`) with the
 answer inverted: the twin reads `lvlEq? structSort zeroLevel` and, at `some true` only, the

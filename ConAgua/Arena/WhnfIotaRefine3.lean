@@ -277,10 +277,11 @@ theorem addW13 (q c : Word) (a : Array Word) (hq : q.toNat + 13 < a.size)
   rw [UInt64.toNat_add]; simp; omega
 
 /-- **The `and_rescue_slots` loop refines `andRescueSlotsGo`**. -/
-theorem arW_ok (p : Prog) (hcc : CoreCallees p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
     (fe : IFEnv) (eb ctor nP us anW : Word) (hctor : HW ctor) (hus : HW us) (hanW : HW anW) :
     ∀ (K k : Nat) (m : Mem) (a : AState) (M : ModeMaps) (j : Word) (L : List Word) (m' : Mem),
       j.toNat + K = 2 → CoreS dn m a vis fe M eb →
+      (∃ (h : EIdx) (c : NIdx), a.store.view h = some (.const c (decI us))) →
       iotaArW p vis ctor nP us anW k m j = some (L, m') →
       AM.ok (andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat (decI us) K j.toNat) a ∧
       CoreAfter dn m m' (AM.st (andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat (decI us) K
@@ -290,7 +291,7 @@ theorem arW_ok (p : Prog) (hcc : CoreCallees p) (dn : NIdx → Option ConLeche.N
   intro K
   induction K with
   | zero =>
-    intro k m a M j L m' hK hS hL
+    intro k m a M j L m' hK hS hV hL
     have hn : ¬ j < 2 := fun h => by
       have : j.toNat < 2 := h
       omega
@@ -305,7 +306,7 @@ theorem arW_ok (p : Prog) (hcc : CoreCallees p) (dn : NIdx → Option ConLeche.N
     · rw [hst]; exact ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩
     · rw [hres]; simp [decBool]
   | succ K ih =>
-    intro k m a M j L m' hK hS hL
+    intro k m a M j L m' hK hS hV hL
     have hlt : j < 2 := by
       have : j.toNat < 2 := by omega
       exact this
@@ -346,7 +347,8 @@ theorem arW_ok (p : Prog) (hcc : CoreCallees p) (dn : NIdx → Option ConLeche.N
     obtain ⟨r₂, m₂⟩ := q
     obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hr₂⟩ := CoreSpec.of_callW
       (hcc.fireOk k ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb (r₁.tail.headD 0) j us tbl hS₁ hus
-        (by rw [hEr1]; exact htbl)) hc2
+        (by rw [hEr1]; exact htbl) (by simpa [IProjTable.entry] using findProj?_lt hrunF)
+        (by obtain ⟨h, c, hv⟩ := hV; exact ⟨h, c, by rw [findProj?_eview hrunF]; exact hv⟩)) hc2
     have hSt₂ : StackKept m₁ m₂ := hSt₂
     have hEr2 : m₂.arr64 EREC = m₁.arr64 EREC := hcc.erec k "fire_ok" _ m₁ r₂ m₂ (Or.inr rfl) hc2
     have hrunB := AM.run_of_ok _ _ hok2
@@ -412,7 +414,9 @@ theorem arW_ok (p : Prog) (hcc : CoreCallees p) (dn : NIdx → Option ConLeche.N
           · rw [if_neg hr20] at hL'
             have h1 : (j + 1).toNat = j.toNat + 1 := uint64_succ_toNat 2 j hlt
             obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hL1⟩ := ih k m₂ _ M₂ (j + 1) L m'
-              (by omega) hS₂ hL'
+              (by omega) hS₂ (by
+                obtain ⟨h, c, hv⟩ := hV
+                exact ⟨h, c, by rw [fireOk_store hb, findProj?_eview hrunF]; exact hv⟩) hL'
             rw [h1] at hok3 hS₃ hres3
             have hrunR := AM.run_of_ok _ _ hok3
             have hcond : ((tbl.entry j.toNat).ctor == decI ctor && (tbl.entry j.toNat).numParams == nP.toNat &&
@@ -469,10 +473,10 @@ theorem andRescueSlots_run (fe : IFEnv) (ctor : NIdx) (nP : Nat) (ust : LsIdx) (
   simp only [andRescueSlots, pinAnd, StateT.run_bind, hp, except_ok_bind, hr]
 
 /-- **`and_rescue_slots` refines `andRescueSlots`** (`find_proj`, `fire_ok` and their facts as
-`CoreCallees`). -/
-theorem andRescueSlots_refines' (p : Prog) (hp : IotaProg' p) (hcc : CoreCallees p) :
+`ProjCallees`). -/
+theorem andRescueSlots_refines' (p : Prog) (hp : IotaProg' p) (hcc : ProjCallees p) :
     AndRescueSlotsOK p := by
-  intro n s₀ a₀ dn vis fe MM eb ctor nP us hS hctor hus
+  intro n s₀ a₀ dn vis fe MM eb ctor nP us hS hctor hus hV
   cases n with
   | zero =>
     apply L.M.triple_of_run
@@ -498,7 +502,7 @@ theorem andRescueSlots_refines' (p : Prog) (hp : IotaProg' p) (hcc : CoreCallees
   subst hmm
   have hanW : HW (r₀.headD 0) := hanHW
   obtain ⟨hok, hca, hres, hL1⟩ := arW_ok p hcc dn vis fe eb ctor nP us (r₀.headD 0) hctor hus hanW 2
-    (n + 1) s.mem a₀ MM 0 r s'.mem (by simp) hS hW
+    (n + 1) s.mem a₀ MM 0 r s'.mem (by simp) hS hV hW
   have hrunA := andRescueSlots_run fe (decI ctor) nP.toNat (decI us) (decI (r₀.headD 0)) a₀ _ _
     (by simpa [PIN_AND] using hpin) (AM.run_of_ok _ _ hok)
   obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ hrunA
@@ -509,7 +513,7 @@ theorem andRescueSlots_refines' (p : Prog) (hp : IotaProg' p) (hcc : CoreCallees
 @[refines ConRon.Arena.andRescueSlots]
 theorem andRescueSlots_refines (p : Prog) (hp : IotaProg' p) :
     AndRescueSlotsOK p :=
-  andRescueSlots_refines' (p := p) (hcc := coreCallees_stub p)  (hp := hp)
+  andRescueSlots_refines' (p := p) (hcc := (coreCallees_stub p).toProjCallees)  (hp := hp)
 
 /-! ## `fab_scope_ok(d, fab, major)` -/
 

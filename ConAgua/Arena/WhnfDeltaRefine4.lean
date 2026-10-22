@@ -648,7 +648,7 @@ def WhnfStepSpec' (p : Prog) (n : Nat) : Prop :=
 section refs25
 variable (p : Prog)
 
-theorem whnfStep_refines' (hp : WhnfDeltaProg' p) (hwc : WhnfCallees p) (n : Nat)
+theorem whnfStep_refines' (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : Nat)
     (hrn : ∀ k, k ≤ n → ReduceNatSpec' p k) : WhnfStepSpec' p n := by
   intro F s₀ a₀ dn vis fe MM eb mode d e hF hn2 hS he hk
   have hC := hS.rel
@@ -710,7 +710,7 @@ theorem whnfStep_refines' (hp : WhnfDeltaProg' p) (hwc : WhnfCallees p) (n : Nat
   rw [h3] at hW
   dsimp only at hW
   obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hrw3⟩ := CoreSpec.of_callW
-    (unfoldDefinition_refines' p hp n ⟨m₂, Locals.init []⟩ a₂ dn vis fe M₂ eb (r₁.headD 0) hS₂ hrw1 hwc) h3
+    (unfoldDefinition_refines' p hp n ⟨m₂, Locals.init []⟩ a₂ dn vis fe M₂ eb (r₁.headD 0) hS₂ hrw1 hlp) h3
   have hrun3 := AM.run_of_ok _ _ hok3
   rw [hres3] at hrun3
   generalize AM.st (unfoldDefinition fe (decE (r₁.headD 0))) a₂ = a₃ at hrun3 hS₃
@@ -758,7 +758,7 @@ theorem constValAt_refines (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (a₀ : 
     CoreSpec p n "const_val_at" [nm, po, pl, value, us]
       (constValAt (decI nm) lps (decE value) (decI us)) decH s₀ a₀ dn vis fe MM eb :=
   constValAt_refines' p hp n s₀ a₀ dn vis fe MM eb nm po pl value us lps hC hnm hv hu
-    (whnfCallees_stub p) hlps
+    (whnfCallees_stub p).instLP hlps
 
 @[refines ConRon.Arena.unfoldDefinition]
 theorem unfoldDefinition_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AState)
@@ -766,7 +766,7 @@ theorem unfoldDefinition_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (
     (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (he : HW e) :
     CoreSpec p n "unfold_definition" [vis, e] (unfoldDefinition fe (decE e)) decOptR s₀ a₀ dn vis fe
       MM eb ResW :=
-  unfoldDefinition_refines' p hp n s₀ a₀ dn vis fe MM eb e hC he (whnfCallees_stub p)
+  unfoldDefinition_refines' p hp n s₀ a₀ dn vis fe MM eb e hC he (whnfCallees_stub p).instLP
 
 @[refines ConRon.Arena.reduceNat]
 theorem reduceNat_refines (hp : WhnfDeltaProg' p) (n : Nat) : ReduceNatSpec' p n :=
@@ -774,7 +774,7 @@ theorem reduceNat_refines (hp : WhnfDeltaProg' p) (n : Nat) : ReduceNatSpec' p n
 
 @[refines ConRon.Arena.whnfStep]
 theorem whnfStep_refines (hp : WhnfDeltaProg' p) (n : Nat) : WhnfStepSpec' p n :=
-  whnfStep_refines' p hp (whnfCallees_stub p) n (fun k _ => reduceNat_refines p hp k)
+  whnfStep_refines' p hp (whnfCallees_stub p).instLP n (fun k _ => reduceNat_refines p hp k)
 
 end tagged
 

@@ -555,8 +555,8 @@ def armsMasterFns : Prog :=
 
 theorem declArmsCanon_wf :
     L.Compiler.Prog.wf indTab (declArmsCanonFns ++ libFns ++ stubFns ++ masterFns ++ armsMasterFns) =
-      true := by
-  decide +kernel
+      true :=
+  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
 
 /-! ## Runs on stub-free paths -/
 

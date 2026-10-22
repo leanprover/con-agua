@@ -180,11 +180,6 @@ def AbstractRangeOK (p : Prog) : Prop :=
     CoreSpec p n "ar_entry" [e, d, k, c]
       (abstractRangeFast coreWalkFuel (decE e) d.toNat k.toNat c.toNat) decH s₀ a₀ dn vis fe M eb
 
-/-- The twin's name readback cache holds readbacks (as `ReadLCOK` for levels; `CoreS` has no
-such field yet: `readNameM` answers a cached row without looking at the store). -/
-def ReadNCOK (a : AState) : Prop :=
-  ∀ (h : NIdx) (x : ConLeche.Name), a.caches.readNC[h]? = some x → denoteN a.store.ns h = some x
-
 /-- `field_sort_zero(po, pl, us, fs)` refines `fieldSortZeroT` (the level parameters an `EREC`
 slice; `InferFieldSort.lean`). The twin's three readbacks fail on a dangling handle, which L
 cannot see: the caller supplies that they succeed (and that the name cache holds readbacks). -/

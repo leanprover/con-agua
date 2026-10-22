@@ -25,9 +25,9 @@ rest of what `CoreS` reads kept by `keeps_cpl_mkAppNFrom`). `inst_list` is used 
 `callW_mkApp`/`callW_mkAppNFrom` re-derive it from the store (`internM_hw`: a hit's index is below
 the tier's node count, a push's below `2^27`).
 
-**Proved here: `whnfApp_refines`** (with `hp : WhnfCoreProg p`; it depends on the stubs'
-`sorry`s: `hil` through `betaPeel_refines`, and
-`(coreCallees_stub p).iota` for `iota_rec_at`). The loop of `whnfAppL` is spliced from named blocks
+**Proved in `WhnfCoreAppLoop.lean`: `whnfApp_refines'`** (with `hp : WhnfCoreProg p`, over
+`WhnfCallees` (`instList` through `betaPeel_refines'`) and `CoreCallees` (`iota` for
+`iota_rec_at`); the tagged `whnfApp_refines` instantiates the stub bundles). The loop of `whnfAppL` is spliced from named blocks
 (`whnfAppW` is `while i < an { ⟪whnfAppBodyW⟫ }`, the body is `a := ..; node := ..; ⟪whnfAppLamW⟫;
 ⟪whnfAppRestW⟫`, the rest contains the ι arm `⟪whnfAppIotaW⟫`; `whnfAppL_eq := rfl`; a spliced block
 must be a single statement unless it is the last of its sequence, which is why the push is not a
@@ -101,13 +101,15 @@ theorem CoreS.arena_frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a
     (henv : ∀ b ∈ A, b < 132 ∨ 144 ≤ b)
     (hC128 : ∀ x ∈ C, x.toNat < 96 ∨ 128 ≤ x.toNat)
     (hCenv : ∀ x ∈ C, x.toNat < 128 ∨ 136 ≤ x.toNat)
-    (hmA : (50 : ArrId) ∉ A ∧ (49 : ArrId) ∉ A := by decide) (hmC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C := by decide) :
+    (hmA : (50 : ArrId) ∉ A ∧ (49 : ArrId) ∉ A := by decide) (hmC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C := by decide)
+    (hmWA : (151 : ArrId) ∉ A ∧ (152 : ArrId) ∉ A ∧ (153 : ArrId) ∉ A := by decide)
+    (hmWC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C := by decide) :
     CoreS dn m' a' vis fe M eb := by
   simp only [cpl, Prod.mk.injEq] at hcpl
   obtain ⟨hc, hp, hl⟩ := hcpl
   refine ⟨hD, ?_, ?_, hS.env.frame (fun b hb => (henv b hb).elim (fun h => .inl h) (fun h => .inr h))
       (fun x hx => (hCenv x hx).elim (fun h => .inl h) (fun h => .inr h)) hf, ?_, ?_, ?_,
-      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf hmA hmC,
+      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf hmA hmC hmWA hmWC,
       hf.2.2.1 145 ▸ hS.bstk⟩
   · rw [hc]
     exact CoreRM.frame (A := A) (C := C)

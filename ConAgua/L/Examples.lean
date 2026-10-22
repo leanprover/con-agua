@@ -3,6 +3,7 @@ module
 public import ConAgua.L.Notation
 public import ConAgua.L.Logic
 public import ConAgua.L.WriteSet
+public import ConAgua.L.Records
 meta import ConAgua.L.Semantics
 import ConAgua.Census.Attr
 
@@ -468,5 +469,44 @@ theorem bumpUser_spec (n : Nat) (s₀ : St) (i : Word) :
   | succ n =>
     sym only [lang_grind] => vcgen [exec, step, evalE, evalArgs, setLocs, setLoc, setG,
       Triple.gframe bump_closed (by decide) (bump_spec bumpProg rfl n _ _)] <;> finish
+
+/-! ## Records
+
+A node table of three-word records `[tag, a, b]` in word array 1. `node_mk(i, j, t, x)` writes
+node `i`, reads field `a` of another node `j` and three fields of `i` back. The spec is about
+`Mem.fld`, with no address arithmetic; `vcgen` gets `evalE_at` for the field addresses, and
+`finish` decides the aliasing from `fld_set64` (different record, or different field: the old
+value). Written with raw addresses (`NODES.u64[i * 3 + 1]`, the models over `rdW … (j * 3 + 1)`),
+the same proof fails in `finish`: `grind` cannot refute `i * 3 + 1 = j * 3 + 1` in `UInt64`
+without the injectivity lemma and bounds a store library proves by hand (`Schema.ad_inj`). -/
+
+/-- The node table. -/
+abbrev NODE : Record := ⟨1, 3⟩
+abbrev NODE.tag : Field := ⟨0⟩
+abbrev NODE.a : Field := ⟨1⟩
+abbrev NODE.b : Field := ⟨2⟩
+
+/-- con-ron: none — an example program of L -/
+def nodeMk : FunDecl := lfn (i, j, t, x) locals (r) {
+  NODE[i].tag := t;
+  NODE[i].a := x;
+  NODE[i].b := x + 1;
+  r := NODE[j].a;
+  return (NODE[i].tag, r, NODE[i].b)
+}
+
+theorem nodeMk_spec (p : Prog) (hp : p.lookup "node_mk" = some nodeMk) (n : Nat) (s₀ : St)
+    (i j t x : Word) (hn : j ≠ i) (hi : i.toNat < 2 ^ 32) (hj : j.toNat < 2 ^ 32) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "node_mk" [i, j, t, x]
+    ⦃fun r s' => LocEq s' s₀ ∧ r = [t, s₀.mem.fld NODE j NODE.a, x + 1] ∧
+      s'.mem.fld NODE i NODE.a = x ∧ s'.mem.fld NODE j NODE.b = s₀.mem.fld NODE j NODE.b; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, nodeMk]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind] => vcgen [exec, step, evalE, evalE_at, evalArgs, setLoc, st64, ld64] <;> finish
+
+def nodeProg : Prog := [("node_mk", nodeMk)]
 
 end L.Examples
