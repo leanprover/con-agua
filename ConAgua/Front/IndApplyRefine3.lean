@@ -98,7 +98,7 @@ theorem listedGoW_twin : ∀ (n : Nat) (m m' : Mem) (j : Word), listedGoW n m to
       rw [islice_get]
       have hn := n3 c hc
       rw [← hn.1]
-      exact (lkW_name hD a (by rw [← lkW_congr (hE.other NID (by decide) (by decide) (by decide))]; exact this)).1
+      exact (lkW_name hD a (by rw [← lkW_congr (hE.tbl NID (.inl rfl))]; exact this)).1
     refine ⟨islice m₁ (topN m IFL + 1) tys[j.toNat].ctors.length :: L, ?_, i1.trans le, lt, ?_, ?_, ?_, ?_⟩
     · rw [hj1] at lr
       rw [List.drop_eq_getElem_cons hk, List.mapM_cons, run_bind _ _ a _ hl0, run_bind _ _ a _ lr]
@@ -115,7 +115,7 @@ theorem listedGoW_twin : ∀ (n : Nat) (m m' : Mem) (j : Word), listedGoW n m to
       by_cases hc' : c < tys[j.toNat].ctors.length
       · rw [le.keep _ (by omega) (by rw [i3]; omega)]
         have := i4 c (Nat.zero_le _) hc'
-        have hw := (lkW_name hD a (by rw [← lkW_congr (hE.other NID (by decide) (by decide) (by decide))]; exact this)).2
+        have hw := (lkW_name hD a (by rw [← lkW_congr (hE.tbl NID (.inl rfl))]; exact this)).2
         exact hw
       · have := lb (c - tys[j.toNat].ctors.length) (by omega)
         rw [i3] at this

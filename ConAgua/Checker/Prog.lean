@@ -94,6 +94,7 @@ import ConAgua.Front.Driver
 import ConAgua.Front.Fields
 import ConAgua.Front.FieldsDecl
 import ConAgua.Front.FieldsExpr
+import ConAgua.Front.IdTable
 import ConAgua.Front.IndApply
 import ConAgua.Front.IndFields
 import ConAgua.Front.Line
@@ -120,7 +121,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1460 functions, 37 of them stubs.
+1478 functions, 37 of them stubs.
 -/
 
 namespace L.Checker
@@ -130,7 +131,7 @@ open L L.Compiler
 /-- The called functions with no L code yet (each aborts). -/
 def checkerStubs : List String := ["all_level_params_defined", "and_block_named", "caps_never_zero", "consts_resolve_ffast", "field_sort_zero", "find_proj", "fire_ok", "fvar_b", "fvar_type_d", "fvar_type_ds", "ind_params_ok", "inst_lp", "inst_lp_fast", "inst_pis_at_lift", "instantiate1_lift_fast", "intern_ls_iw", "is_proof_fast", "leaf_guard", "lv_zero_caps", "name_rec", "name_rec_i", "not_proof_fast", "open_pis_at_fvars_f", "proj_table_name", "rec_fire_levels", "rec_rule_bits", "reserved_rec_name", "rom_and_pin", "rom_basis_decls", "rom_basis_decls_a", "rom_ci", "rom_cv", "str_lit_ctor", "str_lit_supported", "strip_lams", "strip_pis", "wscoped_bfast"]
 
-/-- The frontend functions `builtin_prelude` runs on the prelude's arrays (140; `preFn`,
+/-- The frontend functions `builtin_prelude` runs on the prelude's arrays (149; `preFn`,
 `ConAgua/Checker/Prelude.lean`), each bound as `pre_<name>`. -/
 def preNames : List String := [
   "apply_any",
@@ -150,9 +151,12 @@ def preNames : List String := [
   "decl_val",
   "esc_one",
   "esc_sur",
+  "esp_find",
+  "esp_put",
   "expr_fresh",
   "expr_get",
   "expr_node",
+  "expr_put",
   "expr_val",
   "front_init",
   "front_line",
@@ -191,13 +195,17 @@ def preNames : List String := [
   "key_end",
   "level_fresh",
   "level_get",
+  "level_put",
   "lp_put",
   "ls_put",
+  "lsp_find",
+  "lsp_put",
   "match_dlit",
   "match_lit",
   "match_word",
   "name_fresh",
   "name_get",
+  "name_put",
   "nat_dec",
   "next_member",
   "node_bin",
@@ -206,6 +214,8 @@ def preNames : List String := [
   "node_lit",
   "node_lit_str",
   "node_proj",
+  "nsp_find",
+  "nsp_put",
   "num_end",
   "obj_val",
   "parse_rule_d",
@@ -676,6 +686,8 @@ def checkerProg : Prog := [
   ("erec_vg", L.Arena.erecVg),
   ("esc_one", L.Front.Unescape.escOne),
   ("esc_sur", L.Front.Unescape.escSur),
+  ("esp_find", L.Arena.memoFindG (L.Front.spS L.Front.EID)),
+  ("esp_put", L.Arena.memoPutG (L.Front.spS L.Front.EID)),
   ("eta_cert", L.Arena.etaCertL),
   ("eta_ctor_shape", L.Arena.etaCtorShapeL),
   ("eta_fab_args", L.Arena.etaFabArgsL),
@@ -684,6 +696,7 @@ def checkerProg : Prog := [
   ("expr_get", L.Front.exprGet),
   ("expr_get_d", L.Ind.exprGetD),
   ("expr_node", L.Front.exprNode),
+  ("expr_put", L.Front.exprPut),
   ("expr_val", L.Front.Fields.exprVal),
   ("expr_view_ok", L.Arena.exprViewOkL),
   ("fab_scope_ok", L.Arena.fabScopeOkL),
@@ -930,6 +943,7 @@ def checkerProg : Prog := [
   ("letE_push", L.Arena.letPush),
   ("level_fresh", L.Front.levelFresh),
   ("level_get", L.Front.levelGet),
+  ("level_put", L.Front.levelPut),
   ("lf_clear", L.Arena.memoClearG L.Arena.lfSch),
   ("lh_mk", L.Arena.lhMk),
   ("limbs_eq", L.Arena.limbsEq),
@@ -953,6 +967,8 @@ def checkerProg : Prog := [
   ("ls_node", L.Arena.lsNode),
   ("ls_push", L.Arena.lsPush),
   ("ls_put", L.Front.lsPut),
+  ("lsp_find", L.Arena.memoFindG (L.Front.spS L.Front.LID)),
+  ("lsp_put", L.Arena.memoPutG (L.Front.spS L.Front.LID)),
   ("lsq_clear", L.Arena.memoClearG L.Arena.lsqSch),
   ("lsq_find", L.Arena.memoFindG L.Arena.lsqSch),
   ("lsq_put", L.Arena.memoPutG L.Arena.lsqSch),
@@ -1013,6 +1029,7 @@ def checkerProg : Prog := [
   ("n_idxs_copy", L.Ind.nIdxsCopy),
   ("name_fresh", L.Front.nameFresh),
   ("name_get", L.Front.nameGet),
+  ("name_put", L.Front.namePut),
   ("name_rec_pre", L.Front.Ind.nameRecPre),
   ("nanon_find", L.Arena.nanonFind),
   ("nanon_push", L.Arena.nanonPush),
@@ -1162,6 +1179,8 @@ def checkerProg : Prog := [
   ("node_lit", L.Front.nodeLit),
   ("node_lit_str", L.Front.nodeLitStr),
   ("node_proj", L.Front.nodeProj),
+  ("nsp_find", L.Arena.memoFindG (L.Front.spS L.Front.NID)),
+  ("nsp_put", L.Arena.memoPutG (L.Front.spS L.Front.NID)),
   ("nstr_find", L.Arena.nsFind),
   ("nstr_match", L.Arena.nsMatch),
   ("nstr_push", L.Arena.nsPush),
@@ -1578,9 +1597,12 @@ def checkerProg : Prog := [
   ("pre_decl_val", preFn preTree L.Front.Fields.declVal),
   ("pre_esc_one", preFn preTree L.Front.Unescape.escOne),
   ("pre_esc_sur", preFn preTree L.Front.Unescape.escSur),
+  ("pre_esp_find", preFn preTree L.Arena.memoFindG (L.Front.spS L.Front.EID)),
+  ("pre_esp_put", preFn preTree L.Arena.memoPutG (L.Front.spS L.Front.EID)),
   ("pre_expr_fresh", preFn preTree L.Front.exprFresh),
   ("pre_expr_get", preFn preTree L.Front.exprGet),
   ("pre_expr_node", preFn preTree L.Front.exprNode),
+  ("pre_expr_put", preFn preTree L.Front.exprPut),
   ("pre_expr_val", preFn preTree L.Front.Fields.exprVal),
   ("pre_front_init", preFn preTree L.Front.frontInit),
   ("pre_front_line", preFn preTree L.Front.frontLine),
@@ -1619,13 +1641,17 @@ def checkerProg : Prog := [
   ("pre_key_end", preFn preTree L.Scan.Leaves.keyEnd),
   ("pre_level_fresh", preFn preTree L.Front.levelFresh),
   ("pre_level_get", preFn preTree L.Front.levelGet),
+  ("pre_level_put", preFn preTree L.Front.levelPut),
   ("pre_lp_put", preFn preTree L.Front.lpPut),
   ("pre_ls_put", preFn preTree L.Front.lsPut),
+  ("pre_lsp_find", preFn preTree L.Arena.memoFindG (L.Front.spS L.Front.LID)),
+  ("pre_lsp_put", preFn preTree L.Arena.memoPutG (L.Front.spS L.Front.LID)),
   ("pre_match_dlit", preFn preTree L.Front.Fields.matchDlit),
   ("pre_match_lit", preFn preTree L.Scan.Lit.matchLit),
   ("pre_match_word", preFn preTree L.Scan.Values.matchWord),
   ("pre_name_fresh", preFn preTree L.Front.nameFresh),
   ("pre_name_get", preFn preTree L.Front.nameGet),
+  ("pre_name_put", preFn preTree L.Front.namePut),
   ("pre_nat_dec", preFn preTree L.Front.natDec),
   ("pre_next_member", preFn preTree L.Scan.Member.nextMember),
   ("pre_node_bin", preFn preTree L.Front.nodeBin),
@@ -1634,6 +1660,8 @@ def checkerProg : Prog := [
   ("pre_node_lit", preFn preTree L.Front.nodeLit),
   ("pre_node_lit_str", preFn preTree L.Front.nodeLitStr),
   ("pre_node_proj", preFn preTree L.Front.nodeProj),
+  ("pre_nsp_find", preFn preTree L.Arena.memoFindG (L.Front.spS L.Front.NID)),
+  ("pre_nsp_put", preFn preTree L.Arena.memoPutG (L.Front.spS L.Front.NID)),
   ("pre_num_end", preFn preTree L.Scan.Leaves.numEnd),
   ("pre_obj_val", preFn preTree L.Front.Fields.objVal),
   ("pre_parse_rule_d", preFn preTree L.Front.Ind.parseRuleD),

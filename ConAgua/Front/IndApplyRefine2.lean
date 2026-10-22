@@ -195,13 +195,19 @@ theorem allocW_ok {m m' : Mem} {k o : Word} (hT : TopOK m) (h : allocW m IFL k =
   obtain ⟨e1, e2, e3, e4⟩ := allocW_ext hT.1 ht h
   exact ⟨e1, ⟨by rw [e1.size]; exact hT.1, by rw [e1.size, e3]; omega⟩, e2, e3⟩
 
-theorem lkW_congr {m m' : Mem} {B : ArrId} (h : m'.arr64 B = m.arr64 B) (x : Word) :
+/-- `IExt` leaves the id tables alone. -/
+theorem IExt.tbl {m m' : Mem} (h : IExt m m') (b : ArrId) (hb : TblIx b) : TblSame m m' b :=
+  TblSame.of_frameD h.frame hb (by rcases hb with rfl | rfl | rfl <;> decide)
+    (by rcases hb with rfl | rfl | rfl <;> decide) (by rcases hb with rfl | rfl | rfl <;> simp [szC])
+    (by rcases hb with rfl | rfl | rfl <;> simp [spS])
+
+theorem lkW_congr {m m' : Mem} {B : ArrId} (h : TblSame m m' B) (x : Word) :
     lkW m' B x = lkW m B x := by
-  unfold lkW tblOK tblW Mem.len64; rw [h]
+  unfold lkW; rw [tblOK_congr h, tblW_congr h]
 
 theorem mapLk_ext {m m' : Mem} (h : IExt m m') (f x : Word) : mapLk m' f x = mapLk m f x := by
-  simp only [mapLk, lkW_congr (h.other NID (by decide) (by decide) (by decide)),
-    lkW_congr (h.other EID (by decide) (by decide) (by decide))]
+  simp only [mapLk, lkW_congr (h.tbl NID (.inl rfl)),
+    lkW_congr (h.tbl EID (.inr (.inr rfl)))]
 
 theorem ofNat_toNat' (j : Word) : UInt64.ofNat j.toNat = j := UInt64.ofNat_toNat
 
@@ -302,7 +308,7 @@ theorem idsGoW_facts : ∀ (n : Nat) (m m' : Mem) (o l k : Word),
       rw [wd_eq, hok] at hk
       rw [hk, Nat.sub_self, Nat.add_zero, ← x4, y1.keep _ (by omega) (by omega)]
     · have := y4 c (by rw [hk1]; omega) h2
-      rw [lkW_congr (x1.other NID (by decide) (by decide) (by decide)),
+      rw [lkW_congr (x1.tbl NID (.inl rfl)),
         x1.keep _ (by omega) (by omega), x3, hk1] at this
       rw [this]
       congr 2; omega

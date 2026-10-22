@@ -942,6 +942,18 @@ theorem callW_mkProj (p : Prog) (hp : IotaProg' p) (n : Nat) (s₀ : St) (a₀ :
   obtain ⟨h1, h2, h3⟩ := mkProj_ok s₀.mem a₀ hD nm i e _ _ hm
   exact ⟨h1, h2, h3, mkProjW_frameA _ _ _ _ _ _ hm, mkProjW_hw _ a₀ hD nm i e _ _ hm⟩
 
+/-- `mk_proj`'s fine frame is within the store's. -/
+theorem MemFrame.pjStore {m m' : Mem} (h : MemFrame [PJREC, PJSLOT, PJDER] [32, 33] m m') :
+    MemFrame L.Rom.StoreA L.Rom.StoreC m m' := h.mono
+  (fun b hb => by
+    simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
+    unfold L.Rom.StoreA; rcases hb with rfl | rfl | rfl <;> simp [PJREC, PJSLOT, PJDER])
+  (fun x hx => by
+    simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
+    unfold L.Rom.StoreC; rcases hx with rfl | rfl
+    · exact List.mem_map.mpr ⟨32, by simp, rfl⟩
+    · exact List.mem_map.mpr ⟨33, by simp, rfl⟩)
+
 /-- **`CoreS` across a `proj` interning step.** -/
 theorem CoreS.of_proj {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) (hD : ArenaD m' a')
@@ -1116,15 +1128,7 @@ theorem etpW_ok (p : Prog) (hp : IotaProg' p) (dn : NIdx → Option ConLeche.Nam
     rw [etpW_cont p T b nF o k m m₁ j r₁ hlt hc1 hg] at hL
     obtain ⟨hok1, hD1, hres1, hfr1, hw1⟩ := callW_mkProj p hp k ⟨m, Locals.init []⟩ a hS.arena T j b
       r₁ m₁ hc1
-    have hfr1c : MemFrame L.Rom.StoreA L.Rom.StoreC m m₁ := hfr1.mono
-      (fun b hb => by
-        simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
-        unfold L.Rom.StoreA; rcases hb with rfl | rfl | rfl <;> simp [PJREC, PJSLOT, PJDER])
-      (fun x hx => by
-        simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
-        unfold L.Rom.StoreC; rcases hx with rfl | rfl
-        · exact List.mem_map.mpr ⟨32, by simp, rfl⟩
-        · exact List.mem_map.mpr ⟨33, by simp, rfl⟩)
+    have hfr1c : MemFrame L.Rom.StoreA L.Rom.StoreC m m₁ := hfr1.pjStore
     have hrun1 := AM.run_of_ok _ _ hok1
     have hspn1 : m₁.arr64 SPN = m.arr64 SPN :=
       hfr1c.1 SPN (fun h => by

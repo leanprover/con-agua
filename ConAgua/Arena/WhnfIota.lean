@@ -38,7 +38,8 @@ everything it calls that is not already owned by another file (`WhnfSpine.lean`'
   its level-algorithm leaf. `rec_fire_args`/`inst_spine_pins`/`inst_spine` are NOT stubs: they only
   need `inst_lp` (already a `WhnfCallees` stub) and `inst_entry` (real), so they are written out in
   full.
-* `wscoped_bfast(d, e)`, `loose_bvars_bounded_fast(4000000000, c, e)` (lane exprops4's `(fuel, k, e)`), `leaf_guard(fab, major)`: the task's own
+* `wscoped_bfast(d, e)`, `loose_bvars_bounded_fast(f, c, e)` (now real: lane `exprops4`'s, `f` the
+  counter, `CoreWalks.lean`), `leaf_guard(fab, major)`: the task's own
   "phase 4 walks, stubs too".
 * `lit_to_ctor_if_nat(vis, h)`: "written by another agent in `WhnfDelta.lean`" (which does not
   exist yet); called by name.
@@ -322,7 +323,10 @@ def litMajorToCtorL : FunDecl := lfn (mode, vis, d, h) locals (t, i, kind, sup, 
 /-! ## `major_to_ctor(mode, vis, d, rec, ro, rc, major)`
 
 `rec` (the recursor's own name) is unused by the twin (`_recName`) and so by this code too: it is
-accepted only to match the twin's argument list. -/
+accepted only to match the twin's argument list. The body is split into small functions
+(`WhnfM2C.lean`, `m2c_head` and its callees); this one saves the stack top and puts it back (the
+K and `And` arms leave slices on the spine stack; the twin has no stack, so restoring is always
+faithful). -/
 
 /-- con-leche: `Core.lean:502-663`/`Cached/CoreC.lean:428-453` `majorToCtor`/`majorToCtorI` — the
 stuck-major rescue: K-flagged, η-capable, or the pinned `And`. No certificate on a fabricated
@@ -330,130 +334,11 @@ spine; the K and `And` fabrications keep the type check, and the proof-irrelevan
 certificate family (off at `.trusted`). -/
 -- con-ron: ConRon/Arena/Core.lean:1705-1820 ConRon.Arena.majorToCtor
 @[l_impl ConRon.Arena.majorToCtor]
-def majorToCtorL : FunDecl := lfn (mode, vis, d, rec, ro, rc, major)
-    locals (ok, cvjFlag, cvjP, cvjTy, cnP, piRes, hh, t, i, T,
-            indFlag, indP, rlK, rlEta, vck,
-            ioa, tmaj, hh2, t2, i2, T2, ust, usto, ustl, to, tn, hd, fab,
-            scopeOk, ioa2, defOk, irOk,
-            nz, resT, resEC, slotsOk, fo, fn,
-            an2, p0, p1, ars) {
-  ok := call is_ctor_app(vis, major);
-  if ok != 0 { return major };
-  if rc != 1 { return major };
-  (cvjFlag, cvjP) := call env_find(EREC.u64[ro], vis);
-  if cvjFlag == 0 { return major };
-  if EREC.u64[cvjP] != 4 { return major };
-  cvjTy := EREC.u64[cvjP + 4];
-  cnP := EREC.u64[cvjP + 5];
-  piRes := call pi_result(cvjTy);
-  hh := call get_app_fn(piRes);
-  if hh >> 28 != 3 { return major };
-  t := (hh >> 27) & 1;
-  i := hh & 134217727;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[18 + t] <= i { abort };
-  T := CREC.u64[i * 4 + t * 2];
-  (indFlag, indP) := call env_find(T, vis);
-  if indFlag == 0 { return major };
-  if EREC.u64[indP] != 3 { return major };
-  rlK := EREC.u64[ro + 9];
-  rlEta := EREC.u64[ro + 10];
-  vck := u64(mode & 1 == 0);
-  if rlK != 0 {
-    ioa := call infer_io(mode, vis, d, major);
-    tmaj := call whnf(mode, vis, d, ioa);
-    hh2 := call get_app_fn(tmaj);
-    if hh2 >> 28 != 3 { return major };
-    t2 := (hh2 >> 27) & 1;
-    i2 := hh2 & 134217727;
-    if t2 != 0 && CTL.u64[1] == 0 { abort };
-    if CTL.u64[18 + t2] <= i2 { abort };
-    T2 := CREC.u64[i2 * 4 + t2 * 2];
-    ust := CREC.u64[i2 * 4 + t2 * 2 + 1];
-    (usto, ustl) := call ls_node(ust);
-    if T2 != T { return major };
-    if EREC.u64[cvjP + 3] != ustl { return major };
-    (to, tn) := call get_app_args(tmaj);
-    if tn < cnP { return major };
-    hd := call intern_const(EREC.u64[ro], ust);
-    fab := call mk_app_n(hd, to, cnP);
-    scopeOk := call fab_scope_ok(d, fab, major);
-    if scopeOk == 0 { return major };
-    ioa2 := call infer_io(mode, vis, d, fab);
-    defOk := call defeq(mode, vis, d, tmaj, ioa2);
-    if defOk == 0 { return major };
-    if vck != 0 { irOk := call proof_irrel(mode, vis, d, fab, major) } else { irOk := 1 };
-    if irOk != 0 { return fab } else { return major }
-  } else {
-    if rlEta != 0 {
-      ioa := call infer_io(mode, vis, d, major);
-      tmaj := call whnf(mode, vis, d, ioa);
-      hh2 := call get_app_fn(tmaj);
-      if hh2 >> 28 != 3 { return major };
-      t2 := (hh2 >> 27) & 1;
-      i2 := hh2 & 134217727;
-      if t2 != 0 && CTL.u64[1] == 0 { abort };
-      if CTL.u64[18 + t2] <= i2 { abort };
-      T2 := CREC.u64[i2 * 4 + t2 * 2];
-      ust := CREC.u64[i2 * 4 + t2 * 2 + 1];
-      (usto, ustl) := call ls_node(ust);
-      (to, tn) := call get_app_args(tmaj);
-      nz := call caps_never_zero(EREC.u64[indP + 2], EREC.u64[indP + 3], ust,
-        EREC.u64[indP + 12], EREC.u64[indP + 13], EREC.u64[indP + 14]);
-      if T2 != T { return major };
-      if tn != EREC.u64[indP + 7] { return major };
-      if ustl != EREC.u64[indP + 3] { return major };
-      if nz == 0 { return major };
-      resT := call reserved_contains_w(T);
-      if resT != 0 { return major };
-      resEC := call reserved_contains_w(EREC.u64[indP + 6]);
-      if resEC != 0 { return major };
-      slotsOk := call tower_slots_all(vis, T, EREC.u64[indP + 8]);
-      if slotsOk == 0 { return major };
-      (fo, fn) := call eta_fab_args(T, to, tn, major, EREC.u64[indP + 8]);
-      hd := call intern_const(EREC.u64[indP + 6], ust);
-      fab := call mk_app_n(hd, fo, fn);
-      scopeOk := call fab_scope_ok(d, fab, major);
-      if scopeOk == 0 { return major };
-      return fab
-    } else {
-      an2 := call pin_at(11);
-      if T != an2 { return major };
-      ioa := call infer_io(mode, vis, d, major);
-      tmaj := call whnf(mode, vis, d, ioa);
-      hh2 := call get_app_fn(tmaj);
-      if hh2 >> 28 != 3 { return major };
-      t2 := (hh2 >> 27) & 1;
-      i2 := hh2 & 134217727;
-      if t2 != 0 && CTL.u64[1] == 0 { abort };
-      if CTL.u64[18 + t2] <= i2 { abort };
-      T2 := CREC.u64[i2 * 4 + t2 * 2];
-      ust := CREC.u64[i2 * 4 + t2 * 2 + 1];
-      (usto, ustl) := call ls_node(ust);
-      (to, tn) := call get_app_args(tmaj);
-      ars := call and_rescue_slots(vis, EREC.u64[ro], cnP, ust);
-      if T2 != T { return major };
-      if tn != cnP { return major };
-      if EREC.u64[cvjP + 3] != ustl { return major };
-      if ars == 0 { return major };
-      p0 := call mk_proj(T, 0, major);
-      p1 := call mk_proj(T, 1, major);
-      if len(SPN.u64) <= to + tn { abort };
-      SPN.u64[to + tn] := p0;
-      if len(SPN.u64) <= to + tn + 1 { abort };
-      SPN.u64[to + tn + 1] := p1;
-      CTL.u64[136] := to + tn + 2;
-      hd := call intern_const(EREC.u64[ro], ust);
-      fab := call mk_app_n(hd, to, tn + 2);
-      scopeOk := call fab_scope_ok(d, fab, major);
-      if scopeOk == 0 { return major };
-      ioa2 := call infer_io(mode, vis, d, fab);
-      defOk := call defeq(mode, vis, d, tmaj, ioa2);
-      if defOk == 0 { return major };
-      if vck != 0 { irOk := call proof_irrel(mode, vis, d, fab, major) } else { irOk := 1 };
-      if irOk != 0 { return fab } else { return major }
-    }
-  }
+def majorToCtorL : FunDecl := lfn (mode, vis, d, rec, ro, rc, major) locals (top, r) {
+  top := CTL.u64[136];
+  r := call m2c_head(mode, vis, d, ro, rc, major);
+  CTL.u64[136] := top;
+  return r
 }
 
 /-! ## `prepare_major(mode, vis, d, rec, ro, rc, major)` -/
@@ -813,86 +698,16 @@ def iotaCertsFullL : FunDecl := lfn (mode, vis, d, h, ao, an) locals (top, res) 
 
 /-- con-leche: `Core.lean:777-876` `iotaRec`/`iotaRecAt` — one ι step at a spine the caller
 already holds: `hd` the head, `(so, sn)` the stack slice of arguments, `sn` the spine's length
-(`whnfApp`'s only call site passes `va.size` for both `n` and the slice length). -/
+(`whnfApp`'s only call site passes `va.size` for both `n` and the slice length). The head's
+`const` view (`iota_rec_head`), then the rest, split into small functions (`WhnfIotaRec.lean`,
+from `iota_rec_c` on). -/
 -- con-ron: ConRon/Arena/Core.lean:2012-2097 ConRon.Arena.iotaRecAt
 @[l_impl ConRon.Arena.iotaRecAt]
-def iotaRecAtL : FunDecl := lfn (mode, vis, d, hd, so, sn)
-    locals (t, i, c, flag, recP, mI, rP, ro, rc, uso, usl, peelFlag, peelRes,
-            b0, major, hh, t2, i2, cj, ctorFlag, ctorP, rflag, rl, margs, margCnt,
-            fam, usj2, t3, vck, cmpL, lok, cmpAo, cmpAc, deqOk, tyC, certOk, idxOk,
-            rhs, xo, xn, x) {
-  if hd >> 28 != 3 { return (0, 0) };
-  t := (hd >> 27) & 1;
-  i := hd & 134217727;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[18 + t] <= i { abort };
-  c := CREC.u64[i * 4 + t * 2];
-  usj2 := CREC.u64[i * 4 + t * 2 + 1];
-  (flag, recP) := call env_find(c, vis);
-  if flag == 0 { return (0, 0) };
-  if EREC.u64[recP] != 5 { return (0, 0) };
-  mI := EREC.u64[recP + 5];
-  rP := EREC.u64[recP + 6];
-  ro := EREC.u64[recP + 7];
-  rc := EREC.u64[recP + 8];
-  if sn != mI + 1 { return (0, 0) };
-  (uso, usl) := call ls_node(usj2);
-  if usl != EREC.u64[recP + 3] { return (0, 0) };
-  (peelFlag, peelRes) := call peel_pis(mI + 1, EREC.u64[recP + 4]);
-  if peelFlag == 0 { return (0, 0) };
-  b0 := call intern_bvar(0);
-  if mI < sn { major := SPN.u64[so + mI] } else { major := b0 };
-  major := call prepare_major(mode, vis, d, c, ro, rc, major);
-  hh := call get_app_fn(major);
-  if hh >> 28 != 3 { return (0, 0) };
-  t2 := (hh >> 27) & 1;
-  i2 := hh & 134217727;
-  if t2 != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[18 + t2] <= i2 { abort };
-  cj := CREC.u64[i2 * 4 + t2 * 2];
-  (ctorFlag, ctorP) := call env_find(cj, vis);
-  if ctorFlag == 0 { return (0, 0) };
-  if EREC.u64[ctorP] != 4 { return (0, 0) };
-  (rflag, rl) := call find_rule(ro, rc, cj);
-  if rflag == 0 { return (0, 0) };
-  (margs, margCnt) := call get_app_args(major);
-  if margCnt != EREC.u64[rl + 2] + EREC.u64[rl + 1] { return (0, 0) };
-  vck := u64(mode & 1 == 0);
-  if vck != 0 {
-    cmpL := call rec_fire_levels(EREC.u64[rl + 3], EREC.u64[rl + 4], EREC.u64[rl + 5],
-      EREC.u64[recP + 2], EREC.u64[recP + 3], usj2, EREC.u64[ctorP + 2], EREC.u64[ctorP + 3]);
-    fam := call iota_case3(EREC.u64[rl + 9], vis, ctorP, cmpL);
-    if fam != 0 {
-      t3 := CREC.u64[i2 * 4 + t2 * 2 + 1];
-      lok := call lvls_eq(t3, cmpL);
-      if lok == 0 { abort };
-      if lok == 2 {
-        (cmpAo, cmpAc) := call rec_fire_args(EREC.u64[rl + 3], EREC.u64[rl + 6], EREC.u64[rl + 7],
-          EREC.u64[recP + 2], EREC.u64[recP + 3], usj2, so, rP, EREC.u64[rl + 2]);
-        deqOk := call defeq_list(mode, vis, d, margs, EREC.u64[rl + 2], cmpAo, cmpAc);
-        if deqOk != 0 {
-          tyC := call const_ty_at(cj, EREC.u64[ctorP + 2], EREC.u64[ctorP + 3],
-            EREC.u64[ctorP + 4], t3);
-          certOk := call iota_certs_full(mode, vis, d, tyC, margs, margCnt);
-          if certOk != 0 {
-            idxOk := call iota_index_ok(mode, vis, d, mI, rP, EREC.u64[rl + 2], tyC,
-              margs, margCnt, so + rP, (mI - rP) * u64(rP <= mI));
-            fam := idxOk
-          } else { fam := 0 }
-        } else { fam := 0 }
-      } else { fam := 0 }
-    } else { fam := 1 }
-  } else {
-    fam := 1
-  };
-  if fam == 0 { return (0, 0) };
-  rhs := call rule_rhs_at(c, cj, EREC.u64[recP + 2], EREC.u64[recP + 3], EREC.u64[rl + 8], usj2);
-  if len(SPN.u64) < so + rP { abort };
-  xo := so;
-  xn := rP;
-  x := call mk_app_n(rhs, xo, xn);
-  x := call mk_app_n_from(x, margs, margCnt, EREC.u64[rl + 2]);
-  return (1, x)
+def iotaRecAtL : FunDecl := lfn (mode, vis, d, hd, so, sn) locals (hf, c, us, r1, r2) {
+  (hf, c, us) := call iota_rec_head(hd);
+  if hf == 0 { return (0, 0) };
+  (r1, r2) := call iota_rec_c(mode, vis, d, c, us, so, sn);
+  return (r1, r2)
 }
 
 /-! ## The program -/
@@ -1156,9 +971,6 @@ def MajorToCtorOK (p : Prog) : Prop :=
       (majorToCtor (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI rec) rules
         (decE major)) decH s₀ a₀ dn vis fe MM eb
 
-@[refines ConRon.Arena.majorToCtor]
-theorem majorToCtor_refines : MajorToCtorOK p := sorry
-
 /-- con-leche: `CoreDefs.lean:716-721` `piResidual`. -/
 def PiResidualOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -1250,11 +1062,6 @@ def RecFireArgsOK (p : Prog) : Prop :=
       ∃ xs, AM.res (recFireArgs rl lps (decI us) args.toList rP.toNat) a₀ = xs ∧
         SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄
 
-
-/-- **`iota_rec_at` refines `iotaRecAt`** (the statement is `WhnfCore.lean`'s `IotaRecAtOK`, what
-`whnf_app` assumes). -/
-@[refines ConRon.Arena.iotaRecAt]
-theorem iotaRecAt_refines (n : Nat) (hk : KnotUpTo p n) : IotaRecAtOK p (n + 1) := sorry
 
 end specs
 

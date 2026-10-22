@@ -30,10 +30,10 @@ open L L.Arena L.Ind
 /-! ## Capacities at entry (ROADMAP §3, the driver lane's requirement) -/
 
 /-- The word arrays the checker names (`0‥wordArrays - 1`; `checkerProg_arrs` checks it). -/
-def wordArrays : Nat := 211
+def wordArrays : Nat := 214
 
 /-- The least `CTL` length `check` runs with: every fixed `CTL` slot the lanes use is below it
-(the largest is `219`), and `arenaR_init`'s `64 ≤ |CTL|`. -/
+(the largest is `249`, the prelude parse's id tables), and `arenaR_init`'s `64 ≤ |CTL|`. -/
 def ctlMin : Nat := 256
 
 /-- The body of `cap_check()`: every word array shorter than `2^63` words (handles, offsets and

@@ -803,16 +803,4 @@ theorem prepareMajor_refines' (p : Prog) (hp : IotaProg4 p) (hc : IotaCallees p)
       · rw [hstF]; exact hS'
       · rw [hresF]; rfl
 
-@[refines ConRon.Arena.prepareMajor]
-theorem prepareMajor_refines (p : Prog) (hp : IotaProg4 p) :
-    ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
-    ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb mode d rec ro rc major : Word) (rules : List IRecRule),
-    CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → eb = (mode >>> 1) &&& 1 → HW major →
-    decRules (s₀.mem.arr64 EREC) ro.toNat rc.toNat = some rules →
-    CoreSpec p (n + 1) "prepare_major" [mode, vis, d, rec, ro, rc, major]
-      (prepareMajor (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI rec) rules
-        (decE major)) decH s₀ a₀ dn vis fe MM eb :=
-  prepareMajor_refines' (p := p) (hc := iotaCallees_stub p) (hw := whnfCallees_stub p) (hsup := supKeep_twin) (hmtc := majorToCtor_refines p) (hE := erecKeptKnot_stub p)  (hp := hp)
-
 end L.Arena
