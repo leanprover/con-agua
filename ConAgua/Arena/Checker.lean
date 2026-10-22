@@ -3,6 +3,7 @@ import ConAgua.Arena.DeclAndPin
 import ConAgua.Arena.DeclStep
 import ConAgua.Arena.DeclStepSpec
 import ConAgua.Arena.DeclStepGo
+import ConAgua.Arena.PromoteRecRef
 
 /-!
 # The declaration loop in L, top down: `installFold`, `checkPendingList`, `installThenCheck`
@@ -61,16 +62,11 @@ variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → O
 
 Each stub is a not-yet-translated callee; the spec is what the real code will have to prove. -/
 
-/-- Stub: `promoteVG PMemo.empty coreWalkFuel` on the value group record `g`; returns the
-promoted record. -/
--- con-ron: ConRon/Arena/Promote.lean:327-335 ConRon.Arena.promoteVG
-def promoteVGL : FunDecl := lfn (g, vis) locals () { abort }
-/-- Stub: `promoteNew pm coreWalkFuel k` at view `vis` (`fresh ≠ 0`: `pm = PMemo.empty`, else
-the memo `promote_vg` left). -/
--- con-ron: ConRon/Arena/Promote.lean:358-378 ConRon.Arena.promoteNew
-def promoteNewL : FunDecl := lfn (k, vis, fresh) locals () { abort }
-
-theorem promoteVG_spec :
+/-- The promotion's two entries are `Promote.lean`'s `promote_vg(g, vis)` and
+`promote_new(k, vis, fresh)` (program: `PromoteProg`). `promote_vg` refines `promoteVG
+PMemo.empty coreWalkFuel` under the loop's relation (`PromoteRecRef.lean`'s `vg_rel`). -/
+@[refines ConRon.Arena.promoteVG]
+theorem promoteVG_spec (hpr : PromoteProg p) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
       (g : Word) (vg : ValueGroup), decVG (erecP s₀.mem) g.toNat = some vg →
       LoopR dn s₀.mem a₀ vis fe pend ds →
@@ -79,9 +75,45 @@ theorem promoteVG_spec :
       LoopR dn s'.mem (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀) vis fe pend ds ∧
       PMemoR s'.mem (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1 ∧
       decVG (erecP s'.mem) (r.headD 0).toNat =
-        some (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2; ⊤⦄ := sorry
+        some (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2; ⊤⦄ := by
+  intro n s₀ a₀ vis fe pend g vg hvg hR
+  refine triple_post (callW_spec p n "promote_vg" [g, vis] s₀) fun r s' ⟨hl, hc⟩ => ?_
+  obtain ⟨pm₀, hP⟩ := hR.pmemo
+  obtain ⟨hiw1, hiw2, hiw3, hiw4, hiw5⟩ := hR.iw
+  obtain ⟨a', pm', vg', hrun, hD, hP', hdec, hg, hts, hcp, hf⟩ :=
+    vg_rel p hpr n s₀.mem a₀ pm₀ g vis vg r s'.mem hR.check.arena hP hvg hiw4 hc
+  have hok : AM.ok (promoteVG PMemo.empty coreWalkFuel vg) a₀ := by simp [AM.ok, hrun]
+  have hst : AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀ = a' := by simp [AM.st, hrun]
+  have hres : AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀ = (pm', vg') := by
+    simp [AM.res, hrun]
+  rw [hst, hres]
+  have hcA : a'.caches = a₀.caches := congrArg Prod.fst hcp
+  have hpA : a'.pins = a₀.pins := congrArg Prod.snd hcp
+  have hA := vg_arrs
+  have hC := vg_ctl
+  have hIW : s'.mem.arr64 L.Ind.IW = s₀.mem.arr64 L.Ind.IW :=
+    hf.1 _ (fun h => by have := hA _ h; revert this; decide) (by decide)
+  refine ⟨hl, hok, ⟨⟨hD, ?_, ?_, ?_⟩, ?_, ?_, ?_, ⟨pm', hP'⟩⟩, hP', hdec⟩
+  · rw [hcA]
+    exact hR.check.core.frame (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega)
+      (fun x hx => by have := hC x hx; omega) hf
+  · rw [hpA]
+    exact hR.check.pins.frame (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega) hf
+  · exact hR.check.env.grow (fun b h1 h2 => hf.1 b (fun h => by
+        have := hA b h; simp only [ArrId] at this; omega)
+      (by simp only [CTL, ArrId]; omega)) (hf.2.1 128 (fun h => by have := hC _ h; simp at this))
+      hg
+  · exact hR.pend.ext (hf.1 _ (fun h => by have := hA _ h; revert this; decide) (by decide))
+      (hf.2.1 130 (fun h => by have := hC _ h; simp at this)) hg.ext
+  · rw [hf.1 DECL (fun h => by have := hA _ h; revert this; decide) (by decide),
+      hf.1 DLP (fun h => by have := hA _ h; revert this; decide) (by decide)]
+    exact hR.decls
+  · refine ⟨?_, hts, ?_, by rw [hf.2.2.1]; exact hiw4, by rw [hf.2.2.1]; exact hiw5⟩
+    · simp only [L.Ind.iwTop, hIW]
+      rw [hf.2.1 200 (fun h => by have := hC _ h; simp at this)]; exact hiw1
+    · rw [hIW]; exact hiw3
 
-theorem promoteNew_spec :
+theorem promoteNew_spec (hpr : PromoteProg p) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
       (k fresh : Word) (pm : PMemo), (if fresh = 0 then PMemoR s₀.mem pm else pm = PMemo.empty) →
       LoopR dn s₀.mem a₀ vis fe pend ds →
@@ -108,6 +140,8 @@ structure BracketProg (p : Prog) : Prop where
   lf : p.lookup "lf_clear" = some (memoClearG lfSch)
   im : p.lookup "if_clear" = some (memoClearG imSch)
   fm : p.lookup "fm_clear" = some (memoClearG frSch)
+  /-- The promotion (`promote_vg`, `promote_new` and their callees). -/
+  pr : PromoteProg p
 
 theorem PendR.frameLo {m m' : Mem} {pend : Array PendingCheck} {C : List Word}
     (hf : MemFrame [] C m m') (hC : ∀ x ∈ C, x.toNat < 128) (h : PendR m pend) : PendR m' pend := by
@@ -127,7 +161,8 @@ theorem LoopR.of_lo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AS
   have h2 : m'.arr64 DLP = m.arr64 DLP := hf.1 _ (by simp) (by decide)
   exact ⟨hC', h.pend.frameLo hf hC, by rw [h1, h2]; exact h.decls,
     IWOK.frame hf (by simp) (by simp) (fun h' => by have := hC _ h'; simp at this)
-      (fun h' => by have := hC _ h'; simp at this) h.iw⟩
+      (fun h' => by have := hC _ h'; simp at this) h.iw,
+    h.pmemo.imp fun _ hp => hp.frame (by simp) (fun x hx => .inl (by have := hC x hx; omega)) hf⟩
 
 section bracket
 variable (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration) (p : Prog)
@@ -188,7 +223,8 @@ end bracket
 theorem LoopR.restrict {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {pend : Array PendingCheck} {ds : Array IDeclaration}
     (h : LoopR dn m a vis fe pend ds) (v : Word) : LoopR dn m a v (fe.restrictTo v.toNat) pend ds :=
-  ⟨⟨h.check.arena, h.check.core, h.check.pins, h.check.env.restrictTo v⟩, h.pend, h.decls, h.iw⟩
+  ⟨⟨h.check.arena, h.check.core, h.check.pins, h.check.env.restrictTo v⟩, h.pend, h.decls, h.iw,
+    h.pmemo⟩
 
 theorem LoopR.unrestrict {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {v vis : Word}
     {fe : IFEnv} {k : Nat} {pend : Array PendingCheck} {ds : Array IDeclaration}
@@ -207,6 +243,19 @@ def pendPushMem (m : Mem) (g i vis : Word) : Mem :=
   let c := rdW (m.arr64 CTL) 130
   (((m.set64 PEND (3 * c) g).set64 PEND (3 * c + 1) i).set64 PEND (3 * c + 2) vis).set64 CTL 130
     (c + 1)
+
+theorem pendPushMem_frame (m : Mem) (g i v : Word) : MemFrame [PEND] [130] m (pendPushMem m g i v) := by
+  simp only [pendPushMem]
+  have fP : ∀ (m₁ : Mem) (k x : Word), MemFrame [PEND] [130] m₁ (m₁.set64 PEND k x) :=
+    fun m₁ k x => MemFrame.mono (MemFrame.set64 m₁ PEND (by decide) k x) (by simp) (by simp)
+  have fC : ∀ (m₁ : Mem) (x : Word), MemFrame [PEND] [130] m₁ (m₁.set64 CTL 130 x) :=
+    fun m₁ x => MemFrame.mono (MemFrame.setCtl m₁ 130 x) (by simp) (by simp)
+  exact (((fP _ _ _).trans (fP _ _ _)).trans (fP _ _ _)).trans (fC _ _)
+
+/-- Pushing a pending check keeps the promotion memo (`PEND`, `CTL[130]` are not its). -/
+theorem PMemoR.pendPush {m : Mem} {pm : PMemo} (h : PMemoR m pm) (g i v : Word) :
+    PMemoR (pendPushMem m g i v) pm :=
+  h.frame (by simp; decide) (by simp) (pendPushMem_frame m g i v)
 
 theorem LoopR.vis {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {v : Word}
     {fe : IFEnv} {pend : Array PendingCheck} {ds : Array IDeclaration}
@@ -250,7 +299,8 @@ theorem LoopR.pendPush {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AStat
       Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ PEND by decide)]
     rfl
   refine ⟨h.check.frame_hi (by simp) (by simp) hf, ⟨?_, ?_⟩, by rw [hD1, hD2]; exact h.decls,
-    IWOK.frame hf (by decide) (by decide) (by decide) (by decide) h.iw⟩
+    IWOK.frame hf (by decide) (by decide) (by decide) (by decide) h.iw,
+    h.pmemo.imp fun _ hp => hp.pendPush g i v⟩
   · simp only [pendCount, hC, rdW_set!]
     simp [hc, hc1, hc']
   · intro j hj
@@ -604,7 +654,7 @@ theorem isNone_refines (hb : BracketProg p) (hp : p.lookup "is_none" = some isNo
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        (promoteNew_spec dn ds p n · a₀ · fe' pend · · PMemo.empty),
+        (promoteNew_spec dn ds p hb.pr n · a₀ · fe' pend · · PMemo.empty),
         (drop_loop dn ds p hb n · (AM.st (promoteNew PMemo.empty coreWalkFuel
           (fe'.visibleBelow - vis.toNat) fe') a₀) v2
           (AM.res (promoteNew PMemo.empty coreWalkFuel (fe'.visibleBelow - vis.toNat) fe') a₀).2
@@ -614,11 +664,12 @@ theorem isNone_refines (hb : BracketProg p) (hp : p.lookup "is_none" = some isNo
 theorem pendPush_spec (hp : p.lookup "pend_push" = some pendPushL) (n : Nat) (s₀ : St)
     (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck) (g i v : Word)
     (vg : ValueGroup) (hg : decVG (erecP s₀.mem) g.toNat = some vg)
-    (hR : LoopR dn s₀.mem a₀ vis fe pend ds) :
+    (hR : LoopR dn s₀.mem a₀ vis fe pend ds) (pm : PMemo) (hPM : PMemoR s₀.mem pm) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "pend_push" [g, i, v]
     ⦃fun _ s' => LocEq s' s₀ ∧
-      LoopR dn s'.mem a₀ vis fe (pend.push ⟨vg, i.toNat, v.toNat⟩) ds; ⊤⦄ := by
+      LoopR dn s'.mem a₀ vis fe (pend.push ⟨vg, i.toNat, v.toNat⟩) ds ∧ PMemoR s'.mem pm; ⊤⦄ := by
   have key := hR.pendPush g i v vg hg
+  have key2 := hPM.pendPush g i v
   have hrd : ∀ (h : 130 < (s₀.mem.arr64 CTL).size),
       rdW (s₀.mem.arr64 CTL) 130 = (s₀.mem.arr64 CTL)[130] := fun h => rdW_eq _ _ 130 rfl h
   rw [invoke_eq _ hp]
@@ -640,9 +691,6 @@ theorem isSome_refines (hb : BracketProg p) (hpp : p.lookup "pend_push" = some p
       LoopR dn s'.mem (AM.st (isSomeT i.toNat vis.toNat fe' pend vg) a₀) v2
         (AM.res (isSomeT i.toNat vis.toNat fe' pend vg) a₀).1
         (AM.res (isSomeT i.toNat vis.toNat fe' pend vg) a₀).2 ds; ⊤⦄ := by
-  -- `PEND` is not the promotion memo's (arrays 144‥191): `pend_push` keeps `PMemoR` (a stub
-  -- with no fields today; with fields, by its group frame)
-  have hPM : ∀ m pm, PMemoR m pm := fun _ _ => ⟨⟩
   have hv := hR.vis
   rw [invoke_eq _ hp]
   simp only [callFn, isSomeL]
@@ -651,10 +699,10 @@ theorem isSome_refines (hb : BracketProg p) (hpp : p.lookup "pend_push" = some p
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        (promoteVG_spec dn ds p n · a₀ · fe' pend · vg),
+        (promoteVG_spec dn ds p hb.pr n · a₀ · fe' pend · vg),
         (pendPush_spec dn ds p hpp n · (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀) v2 fe' pend ·
-          · · (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2),
-        (promoteNew_spec dn ds p n · (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀) · fe' (pend.push ⟨(AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2, i.toNat, vis.toNat⟩) · · (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1),
+          · · (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2 · · (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1),
+        (promoteNew_spec dn ds p hb.pr n · (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀) · fe' (pend.push ⟨(AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2, i.toNat, vis.toNat⟩) · · (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1),
         (drop_loop dn ds p hb n · (AM.st (promoteNew (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1 coreWalkFuel (fe'.visibleBelow - vis.toNat) fe') (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀)) v2 (AM.res (promoteNew (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1 coreWalkFuel (fe'.visibleBelow - vis.toNat) fe') (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀)).2 (pend.push ⟨(AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2, i.toNat, vis.toNat⟩))] <;>
       finish [isSomeT]
 

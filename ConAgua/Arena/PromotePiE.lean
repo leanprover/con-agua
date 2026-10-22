@@ -1,0 +1,478 @@
+import ConAgua.Arena.PromotePi
+import ConAgua.Arena.Keeps
+
+/-!
+# The expression interners `pi_*` under `ArenaD`
+
+As `PromotePi.lean`, for the eleven expression constructors: the callee's own `_D`/`_ok`
+lemma (`DerRel.lean`) at the cleared flags gives `ArenaD`, the model gives the persistent handle
+word (`internM_pw`; through `mkK` for the `mk_*`), `PromoteTwin.lean` the twin's equation.
+-/
+
+open ConRon.Arena
+open Std.WP
+open scoped Lean.Order
+
+set_option linter.unusedSimpArgs false
+
+namespace L.Arena
+
+/-- **The bracket around an expression interning**: from the callee's facts at the cleared
+flags and the twin's equation `heq`. -/
+theorem pi_E {op opP : AM EIdx} {m m₁ : Mem} {a : AState} {r : Word} (hD : ArenaD m a)
+    (hok : AM.ok op (onA false a)) (hD₁ : ArenaD m₁ (AM.st op (onA false a)))
+    (hres : AM.res op (onA false a) = decE r) (hk : Keeps cp op)
+    (heq : opP.run a = (op.run (onA false a)).map (fun r => (r.1, onA a.store.scratchOn r.2))) :
+    ∃ a', opP.run a = .ok (decE r, a') ∧
+      ArenaD (m₁.set64 CTL 1 (rdW (m.arr64 CTL) 1)) a' ∧ cp a' = cp a := by
+  have hfl : (rdW (m.arr64 CTL) 1 != 0) = a.store.scratchOn := hD.1.flag_eq
+  have hrun := AM.run_of_ok op _ hok
+  refine ⟨onA a.store.scratchOn (AM.st op (onA false a)), ?_, ?_, ?_⟩
+  · rw [heq, hrun, hres]; rfl
+  · have h2 := ArenaD.flag hD₁ (rdW (m.arr64 CTL) 1)
+    rw [hfl] at h2; exact h2
+  · exact (hk.run hrun : cp (AM.st op (onA false a)) = cp (onA false a))
+
+/-- A `mk_*`'s result is its interning's, after the derived range: the word and the frame. -/
+theorem mkK_pw {A : ArrId} (hA : A ≠ CTL) {c s d : Word} {x : Option (Word × Mem)} {m m' : Mem}
+    {r : Word} {A₀ : List ArrId} {C₀ : List Word}
+    (hx : ∀ r₁ m₁, x = some (r₁, m₁) → PW r₁ ∧ MemFrame A₀ C₀ m m₁)
+    (h : mkK A c s d x = some (r, m')) : PW r ∧ MemFrame (A :: A₀) C₀ m m' := by
+  match x, hx, h with
+  | some (r₁, m₁), hx, h =>
+    rw [mkK_some] at h
+    split at h
+    · cases h
+    · rename_i m₂ hP
+      cases h
+      obtain ⟨h1, h2⟩ := hx _ _ rfl
+      exact ⟨h1, (h2.mono (fun b hb => by simp [hb]) (by simp)).trans
+        ((derPutW_frame A hA _ _ _ _ _ _ hP).mono (by simp) (by simp))⟩
+
+/-- `intern_lit_str`'s model refines `internE (.lit (.strVal s))` under `ArenaD`
+(`DerRel.lean`'s `internLit_D` at the `strVal` arm). -/
+theorem internLitStr_D (m : Mem) (a : AState) (hA : ArenaD m a) (o l r : Word)
+    (hq : SliceOK m o l) (s : String) (hk : sliceL (m.arr64 POOL) o.toNat l.toNat = strWords s)
+    (m' : Mem) (hI : internWStr m o l = some (r, m')) :
+    AM.ok (internE (.lit (.strVal s))) a ∧ ArenaD m' (AM.st (internE (.lit (.strVal s))) a) ∧
+    AM.res (internE (.lit (.strVal s))) a = decE r := by
+  obtain ⟨hR, hD⟩ := hA
+  obtain ⟨hok, hX, hres⟩ := internStr_correct m a hR.lit o l hq s hk _ _ hI
+  have hI₂ := hI; rw [internWStr_eq] at hI₂
+  have hfr := internM_frame _ litS_wf _ _ _ _ _ _ _ _ hI₂
+  have hcs := AM.proto_cases litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok
+  have hR₁ := hR.lift_lit _ _ _ _ hX hfr
+    (AM.st_proto litLens _ _ _ _ _ _ a (internE_lit_run _ a) hok)
+  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [litSch, REC, SLOT]) a hD
+  refine ⟨hok, ⟨hR₁, ?_⟩, hres⟩
+  rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
+  · exact hD₁
+  · exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, hD₁.const,
+      ⟨derT_push hD₁.lit.1 _ _ _ ⟨bvar_derLit _ _, fvar_derLit _ _⟩, hD₁.lit.2⟩, hD₁.app, hD₁.lam,
+      hD₁.forallE, hD₁.letE, hD₁.proj⟩
+  · exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, hD₁.const,
+      ⟨hD₁.lit.1, derT_push hD₁.lit.2 _ _ _ ⟨bvar_derLit _ _, fvar_derLit _ _⟩⟩, hD₁.app, hD₁.lam,
+      hD₁.forallE, hD₁.letE, hD₁.proj⟩
+
+section exprs
+variable (p : Prog) (hp : PromoteProg p) (n : Nat)
+include hp
+
+/-- **`pi_bvar` refines `internPersistentE (.bvar u.toNat)`.** -/
+theorem piBVar_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u : Word) (r : Word) (m' : Mem)
+    (h : piW p n "intern_bvar" [u] m = some (r, m')) :
+    ∃ a', (internPersistentE (.bvar u.toNat)).run a = .ok (decE r, a') ∧ ArenaD m' a' ∧ PW r ∧
+      cp a' = cp a ∧ MemFrame [BREC, BSLOT] [1, 22, 23] m m' := by
+  have hc := ctl_size hD.1
+  rw [piW_eq _ _ _ _ _ hc] at h
+  cases hcall : callW p n "intern_bvar" [u] (m.set64 CTL 1 0) with
+  | none => rw [hcall] at h; cases h
+  | some x =>
+  obtain ⟨rr, m₁⟩ := x
+  rw [hcall] at h
+  obtain ⟨s', rfl, -, hI⟩ := callW_triple (internBVar_spec p hp.bvar_find hp.bvar_push
+    hp.intern_bvar n ⟨m.set64 CTL 1 0, Locals.init []⟩ u) hcall
+  have hD₀ := hD.flag 0
+  obtain ⟨hok, hD₁, hres⟩ := internBVar_D _ (onA false a) hD₀ u _ _ hI
+  rw [binternW_eq] at hI
+  have hf := internM_frame _ bvarSch_wf _ _ _ _ _ _ _ _ hI
+  have hpw := internM_pw bvarSch BRecRel bhash bvarSch_wf _ _ _ _ hD₀.1.bvar
+    (by rw [rdW_set64]; simp [hc]) (fun τ => bMt _ u τ) _ _ _
+    (probe_homeG bvarSch _ 0 _ _ (bprobeW_arm _ u 0) _) _ (bpushOK_room _) _ _ _ _ hI
+  have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.2.2.1]; simpa [size_set64] using hc
+  rw [piK_some _ _ _ hsz] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  obtain ⟨a', h1, h2, h3⟩ := pi_E hD hok hD₁ hres (keeps_internE _)
+    (internPersistentE_eq _ a hD.1.flagsEq trivial)
+  refine ⟨a', h1, h2, hpw, h3, ?_⟩
+  exact (((MemFrame.setCtl m 1 0).mono (by simp) (by simp)).trans
+    (hf.mono (by simp [bvarSch]) (by simp [bvarSch]))).trans
+    ((MemFrame.setCtl _ 1 _).mono (by simp) (by simp))
+
+/-- **`pi_fvar` refines `internPersistentE (.fvar u.toNat (decE ty))`.** -/
+theorem piFVar_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u ty : Word) (hty : PW ty) (r : Word) (m' : Mem)
+    (h : piW p n "intern_fvar" [u, ty] m = some (r, m')) :
+    ∃ a', (internPersistentE (.fvar u.toNat (decE ty))).run a = .ok (decE r, a') ∧ ArenaD m' a' ∧ PW r ∧
+      cp a' = cp a ∧ MemFrame [FVREC, FVSLOT] [1, 26, 27] m m' := by
+  have hc := ctl_size hD.1
+  rw [piW_eq _ _ _ _ _ hc] at h
+  cases hcall : callW p n "intern_fvar" [u, ty] (m.set64 CTL 1 0) with
+  | none => rw [hcall] at h; cases h
+  | some x =>
+  obtain ⟨rr, m₁⟩ := x
+  rw [hcall] at h
+  obtain ⟨s', rfl, -, hI⟩ := callW_triple (internFVar_spec p hp.fvar_find hp.fvar_push
+    hp.intern_fvar n ⟨m.set64 CTL 1 0, Locals.init []⟩ u ty) hcall
+  have hD₀ := hD.flag 0
+  obtain ⟨hok, hD₁, hres⟩ := internFVar_D _ (onA false a) hD₀ u ty _ hty.1 _ hI
+  rw [fvinternW_eq] at hI
+  have hf := internM_frame _ fvarSch_wf _ _ _ _ _ _ _ _ hI
+  have hpw := internM_pw fvarSch FVRecRel fvhash fvarSch_wf _ _ _ _ hD₀.1.fvar
+    (by rw [rdW_set64]; simp [hc]) (fun τ => fvMt _ u ty τ) _ _ _
+    (probe_homeG fvarSch _ 0 _ _ (fvprobeW_arm _ u ty 0) _) _ (fvpushOK_room _) _ _ _ _ hI
+  have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.2.2.1]; simpa [size_set64] using hc
+  rw [piK_some _ _ _ hsz] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  obtain ⟨a', h1, h2, h3⟩ := pi_E hD hok hD₁ hres (keeps_internE _)
+    (internPersistentE_eq _ a hD.1.flagsEq hty.pers)
+  refine ⟨a', h1, h2, hpw, h3, ?_⟩
+  exact (((MemFrame.setCtl m 1 0).mono (by simp) (by simp)).trans
+    (hf.mono (by simp [fvarSch]) (by simp [fvarSch]))).trans
+    ((MemFrame.setCtl _ 1 _).mono (by simp) (by simp))
+
+/-- **`pi_sort` refines `internPersistentE (.sort (decI u))`.** -/
+theorem piSort_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u : Word) (hu : PW u) (r : Word) (m' : Mem)
+    (h : piW p n "intern_sort" [u] m = some (r, m')) :
+    ∃ a', (internPersistentE (.sort (decI u))).run a = .ok (decE r, a') ∧ ArenaD m' a' ∧ PW r ∧
+      cp a' = cp a ∧ MemFrame [SOREC, SOSLOT] [1, 16, 17] m m' := by
+  have hc := ctl_size hD.1
+  rw [piW_eq _ _ _ _ _ hc] at h
+  cases hcall : callW p n "intern_sort" [u] (m.set64 CTL 1 0) with
+  | none => rw [hcall] at h; cases h
+  | some x =>
+  obtain ⟨rr, m₁⟩ := x
+  rw [hcall] at h
+  obtain ⟨s', rfl, -, hI⟩ := callW_triple (internSort_spec p hp.sort_find hp.sort_push
+    hp.intern_sort n ⟨m.set64 CTL 1 0, Locals.init []⟩ u) hcall
+  have hD₀ := hD.flag 0
+  obtain ⟨hok, hD₁, hres⟩ := internSort_D _ (onA false a) hD₀ u _ hu.1 _ hI
+  rw [sointernW_eq] at hI
+  have hf := internM_frame _ sortSch_wf _ _ _ _ _ _ _ _ hI
+  have hpw := internM_pw sortSch SoRecRel sohash sortSch_wf _ _ _ _ hD₀.1.sort
+    (by rw [rdW_set64]; simp [hc]) (fun τ => soMt _ u τ) _ _ _
+    (probe_homeG sortSch _ 0 _ _ (soprobeW_arm _ u 0) _) _ (sopushOK_room _) _ _ _ _ hI
+  have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.2.2.1]; simpa [size_set64] using hc
+  rw [piK_some _ _ _ hsz] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  obtain ⟨a', h1, h2, h3⟩ := pi_E hD hok hD₁ hres (keeps_internE _)
+    (internPersistentE_eq _ a hD.1.flagsEq hu.pers)
+  refine ⟨a', h1, h2, hpw, h3, ?_⟩
+  exact (((MemFrame.setCtl m 1 0).mono (by simp) (by simp)).trans
+    (hf.mono (by simp [sortSch]) (by simp [sortSch]))).trans
+    ((MemFrame.setCtl _ 1 _).mono (by simp) (by simp))
+
+/-- **`pi_const` refines `internPersistentE (.const (decI (k := .name) x) (decI (k := .levels) us))`.** -/
+theorem piConst_rel (m : Mem) (a : AState) (hD : ArenaD m a) (x us : Word) (hx : PW x) (hus : PW us) (r : Word) (m' : Mem)
+    (h : piW p n "intern_const" [x, us] m = some (r, m')) :
+    ∃ a', (internPersistentE (.const (decI (k := .name) x) (decI (k := .levels) us))).run a = .ok (decE r, a') ∧ ArenaD m' a' ∧ PW r ∧
+      cp a' = cp a ∧ MemFrame [CREC, CSLOT] [1, 18, 19] m m' := by
+  have hc := ctl_size hD.1
+  rw [piW_eq _ _ _ _ _ hc] at h
+  cases hcall : callW p n "intern_const" [x, us] (m.set64 CTL 1 0) with
+  | none => rw [hcall] at h; cases h
+  | some x =>
+  obtain ⟨rr, m₁⟩ := x
+  rw [hcall] at h
+  obtain ⟨s', rfl, -, hI⟩ := callW_triple (internConst_spec p hp.const_find hp.const_push
+    hp.intern_const n ⟨m.set64 CTL 1 0, Locals.init []⟩ x us) hcall
+  have hD₀ := hD.flag 0
+  obtain ⟨hok, hD₁, hres⟩ := internConst_D _ (onA false a) hD₀ x us _ hx.1 hus.1 _ hI
+  rw [ceinternW_eq] at hI
+  have hf := internM_frame _ constSch_wf _ _ _ _ _ _ _ _ hI
+  have hpw := internM_pw constSch CeRecRel cehash constSch_wf _ _ _ _ hD₀.1.const
+    (by rw [rdW_set64]; simp [hc]) (fun τ => ceMt _ x us τ) _ _ _
+    (probe_homeG constSch _ 0 _ _ (ceprobeW_arm _ x us 0) _) _ (cepushOK_room _) _ _ _ _ hI
+  have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.2.2.1]; simpa [size_set64] using hc
+  rw [piK_some _ _ _ hsz] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  obtain ⟨a', h1, h2, h3⟩ := pi_E hD hok hD₁ hres (keeps_internE _)
+    (internPersistentE_eq _ a hD.1.flagsEq ⟨hx.pers, hus.pers⟩)
+  refine ⟨a', h1, h2, hpw, h3, ?_⟩
+  exact (((MemFrame.setCtl m 1 0).mono (by simp) (by simp)).trans
+    (hf.mono (by simp [constSch]) (by simp [constSch]))).trans
+    ((MemFrame.setCtl _ 1 _).mono (by simp) (by simp))
+
+/-- **`pi_app` refines `internPersistentE (.app (decE f) (decE x))`.** -/
+theorem piApp_rel (m : Mem) (a : AState) (hD : ArenaD m a) (f x : Word) (hf : PW f) (hx : PW x) (r : Word) (m' : Mem)
+    (h : piW p n "mk_app" [f, x] m = some (r, m')) :
+    ∃ a', (internPersistentE (.app (decE f) (decE x))).run a = .ok (decE r, a') ∧ ArenaD m' a' ∧ PW r ∧
+      cp a' = cp a ∧ MemFrame [ADER, AREC, ASLOT] [1, 4, 5] m m' := by
+  have hc := ctl_size hD.1
+  rw [piW_eq _ _ _ _ _ hc] at h
+  cases hcall : callW p n "mk_app" [f, x] (m.set64 CTL 1 0) with
+  | none => rw [hcall] at h; cases h
+  | some x =>
+  obtain ⟨rr, m₁⟩ := x
+  rw [hcall] at h
+  obtain ⟨s', rfl, -, hI⟩ := callW_triple (mkApp_spec p hp.der_b hp.app_find hp.app_push
+    hp.intern_app hp.mk_app n ⟨m.set64 CTL 1 0, Locals.init []⟩ f x) hcall
+  have hD₀ := hD.flag 0
+  obtain ⟨hok, hD₁, hres⟩ := mkApp_ok _ (onA false a) hD₀ f x _ _ hI
+  have hfl0 : rdW ((m.set64 CTL 1 0).arr64 CTL) 1 = 0 := by rw [rdW_set64]; simp [hc]
+  have hpf : PW (rr.headD 0) ∧ MemFrame [ADER, AREC, ASLOT] [4, 4 + 1] (m.set64 CTL 1 0) s'.mem := by
+    unfold mkAppW at hI
+    split at hI
+    · cases hI
+    refine mkK_pw (by decide) (fun r₁ m₁ hx => ?_) hI
+    have hx' := hx
+    rw [ainternW_eq] at hx'
+    exact ⟨internM_pw appSch ARecRel ahash appSch_wf _ _ _ _ hD₀.1.app hfl0
+      (fun τ => aMt _ f x τ) _ _ _ (probe_homeG appSch _ 0 _ _ (aprobeW_arm _ f x 0) _) _
+      (apushOK_room _) _ _ _ _ hx', internM_frame _ appSch_wf _ _ _ _ _ _ _ _ hx'⟩
+  obtain ⟨hpw, hfr⟩ := hpf
+  have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hfr.2.2.1]; simpa [size_set64] using hc
+  rw [piK_some _ _ _ hsz] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  obtain ⟨a', h1, h2, h3⟩ := pi_E hD hok hD₁ hres (keeps_internE _)
+    (internPersistentE_eq _ a hD.1.flagsEq ⟨hf.pers, hx.pers⟩)
+  refine ⟨a', h1, h2, hpw, h3, ?_⟩
+  exact (((MemFrame.setCtl m 1 0).mono (by simp) (by simp)).trans
+    (hfr.mono (by simp) (by simp))).trans
+    ((MemFrame.setCtl _ 1 _).mono (by simp) (by simp))
+
+/-- **`pi_lam` refines `internPersistentE (.lam (decE t) (decE b))`.** -/
+theorem piLam_rel (m : Mem) (a : AState) (hD : ArenaD m a) (t b : Word) (ht : PW t) (hb : PW b) (r : Word) (m' : Mem)
+    (h : piW p n "mk_lam" [t, b] m = some (r, m')) :
+    ∃ a', (internPersistentE (.lam (decE t) (decE b))).run a = .ok (decE r, a') ∧ ArenaD m' a' ∧ PW r ∧
+      cp a' = cp a ∧ MemFrame [LADER, LAREC, LASLOT] [1, 28, 29] m m' := by
+  have hc := ctl_size hD.1
+  rw [piW_eq _ _ _ _ _ hc] at h
+  cases hcall : callW p n "mk_lam" [t, b] (m.set64 CTL 1 0) with
+  | none => rw [hcall] at h; cases h
+  | some x =>
+  obtain ⟨rr, m₁⟩ := x
+  rw [hcall] at h
+  obtain ⟨s', rfl, -, hI⟩ := callW_triple (mkLam_spec p hp.der_b hp.lam_find hp.lam_push
+    hp.intern_lam hp.mk_lam n ⟨m.set64 CTL 1 0, Locals.init []⟩ t b) hcall
+  have hD₀ := hD.flag 0
+  obtain ⟨hok, hD₁, hres⟩ := mkLam_ok _ (onA false a) hD₀ t b _ _ hI
+  have hfl0 : rdW ((m.set64 CTL 1 0).arr64 CTL) 1 = 0 := by rw [rdW_set64]; simp [hc]
+  have hpf : PW (rr.headD 0) ∧ MemFrame [LADER, LAREC, LASLOT] [28, 28 + 1] (m.set64 CTL 1 0) s'.mem := by
+    unfold mkLamW at hI
+    split at hI
+    · cases hI
+    refine mkK_pw (by decide) (fun r₁ m₁ hx => ?_) hI
+    have hx' := hx
+    rw [lainternW_eq] at hx'
+    exact ⟨internM_pw lamSch LaRecRel lahash lamSch_wf _ _ _ _ hD₀.1.lam hfl0
+      (fun τ => laMt _ t b τ) _ _ _ (probe_homeG lamSch _ 0 _ _ (laprobeW_arm _ t b 0) _) _
+      (lapushOK_room _) _ _ _ _ hx', internM_frame _ lamSch_wf _ _ _ _ _ _ _ _ hx'⟩
+  obtain ⟨hpw, hfr⟩ := hpf
+  have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hfr.2.2.1]; simpa [size_set64] using hc
+  rw [piK_some _ _ _ hsz] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  obtain ⟨a', h1, h2, h3⟩ := pi_E hD hok hD₁ hres (keeps_internE _)
+    (internPersistentE_eq _ a hD.1.flagsEq ⟨ht.pers, hb.pers⟩)
+  refine ⟨a', h1, h2, hpw, h3, ?_⟩
+  exact (((MemFrame.setCtl m 1 0).mono (by simp) (by simp)).trans
+    (hfr.mono (by simp) (by simp))).trans
+    ((MemFrame.setCtl _ 1 _).mono (by simp) (by simp))
+
+/-- **`pi_forall` refines `internPersistentE (.forallE (decE t) (decE b))`.** -/
+theorem piForall_rel (m : Mem) (a : AState) (hD : ArenaD m a) (t b : Word) (ht : PW t) (hb : PW b) (r : Word) (m' : Mem)
+    (h : piW p n "mk_forall" [t, b] m = some (r, m')) :
+    ∃ a', (internPersistentE (.forallE (decE t) (decE b))).run a = .ok (decE r, a') ∧ ArenaD m' a' ∧ PW r ∧
+      cp a' = cp a ∧ MemFrame [FADER, FAREC, FASLOT] [1, 30, 31] m m' := by
+  have hc := ctl_size hD.1
+  rw [piW_eq _ _ _ _ _ hc] at h
+  cases hcall : callW p n "mk_forall" [t, b] (m.set64 CTL 1 0) with
+  | none => rw [hcall] at h; cases h
+  | some x =>
+  obtain ⟨rr, m₁⟩ := x
+  rw [hcall] at h
+  obtain ⟨s', rfl, -, hI⟩ := callW_triple (mkForall_spec p hp.der_b hp.forall_find hp.forall_push
+    hp.intern_forall hp.mk_forall n ⟨m.set64 CTL 1 0, Locals.init []⟩ t b) hcall
+  have hD₀ := hD.flag 0
+  obtain ⟨hok, hD₁, hres⟩ := mkForall_ok _ (onA false a) hD₀ t b _ _ hI
+  have hfl0 : rdW ((m.set64 CTL 1 0).arr64 CTL) 1 = 0 := by rw [rdW_set64]; simp [hc]
+  have hpf : PW (rr.headD 0) ∧ MemFrame [FADER, FAREC, FASLOT] [30, 30 + 1] (m.set64 CTL 1 0) s'.mem := by
+    unfold mkForallW at hI
+    split at hI
+    · cases hI
+    refine mkK_pw (by decide) (fun r₁ m₁ hx => ?_) hI
+    have hx' := hx
+    rw [fainternW_eq] at hx'
+    exact ⟨internM_pw forallSch FaRecRel fahash forallSch_wf _ _ _ _ hD₀.1.forallE hfl0
+      (fun τ => faMt _ t b τ) _ _ _ (probe_homeG forallSch _ 0 _ _ (faprobeW_arm _ t b 0) _) _
+      (fapushOK_room _) _ _ _ _ hx', internM_frame _ forallSch_wf _ _ _ _ _ _ _ _ hx'⟩
+  obtain ⟨hpw, hfr⟩ := hpf
+  have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hfr.2.2.1]; simpa [size_set64] using hc
+  rw [piK_some _ _ _ hsz] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  obtain ⟨a', h1, h2, h3⟩ := pi_E hD hok hD₁ hres (keeps_internE _)
+    (internPersistentE_eq _ a hD.1.flagsEq ⟨ht.pers, hb.pers⟩)
+  refine ⟨a', h1, h2, hpw, h3, ?_⟩
+  exact (((MemFrame.setCtl m 1 0).mono (by simp) (by simp)).trans
+    (hfr.mono (by simp) (by simp))).trans
+    ((MemFrame.setCtl _ 1 _).mono (by simp) (by simp))
+
+/-- **`pi_let` refines `internPersistentE (.letE (decE t) (decE v) (decE b))`.** -/
+theorem piLet_rel (m : Mem) (a : AState) (hD : ArenaD m a) (t v b : Word) (ht : PW t) (hv : PW v) (hb : PW b) (r : Word) (m' : Mem)
+    (h : piW p n "mk_let" [t, v, b] m = some (r, m')) :
+    ∃ a', (internPersistentE (.letE (decE t) (decE v) (decE b))).run a = .ok (decE r, a') ∧ ArenaD m' a' ∧ PW r ∧
+      cp a' = cp a ∧ MemFrame [LEDER, LEREC, LESLOT] [1, 20, 21] m m' := by
+  have hc := ctl_size hD.1
+  rw [piW_eq _ _ _ _ _ hc] at h
+  cases hcall : callW p n "mk_let" [t, v, b] (m.set64 CTL 1 0) with
+  | none => rw [hcall] at h; cases h
+  | some x =>
+  obtain ⟨rr, m₁⟩ := x
+  rw [hcall] at h
+  obtain ⟨s', rfl, -, hI⟩ := callW_triple (mkLet_spec p hp.der_b hp.letE_find hp.letE_push
+    hp.intern_letE hp.mk_let n ⟨m.set64 CTL 1 0, Locals.init []⟩ t v b) hcall
+  have hD₀ := hD.flag 0
+  obtain ⟨hok, hD₁, hres⟩ := mkLet_ok _ (onA false a) hD₀ t v b _ _ hI
+  have hfl0 : rdW ((m.set64 CTL 1 0).arr64 CTL) 1 = 0 := by rw [rdW_set64]; simp [hc]
+  have hpf : PW (rr.headD 0) ∧ MemFrame [LEDER, LEREC, LESLOT] [20, 20 + 1] (m.set64 CTL 1 0) s'.mem := by
+    unfold mkLetW at hI
+    split at hI
+    · cases hI
+    refine mkK_pw (by decide) (fun r₁ m₁ hx => ?_) hI
+    have hx' := hx
+    rw [leinternW_eq] at hx'
+    exact ⟨internM_pw letSch LeRecRel lehash letSch_wf _ _ _ _ hD₀.1.letE hfl0
+      (fun τ => leMt _ t v b τ) _ _ _ (probe_homeG letSch _ 0 _ _ (leprobeW_arm _ t v b 0) _) _
+      (lepushOK_room _) _ _ _ _ hx', internM_frame _ letSch_wf _ _ _ _ _ _ _ _ hx'⟩
+  obtain ⟨hpw, hfr⟩ := hpf
+  have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hfr.2.2.1]; simpa [size_set64] using hc
+  rw [piK_some _ _ _ hsz] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  obtain ⟨a', h1, h2, h3⟩ := pi_E hD hok hD₁ hres (keeps_internE _)
+    (internPersistentE_eq _ a hD.1.flagsEq ⟨ht.pers, hv.pers, hb.pers⟩)
+  refine ⟨a', h1, h2, hpw, h3, ?_⟩
+  exact (((MemFrame.setCtl m 1 0).mono (by simp) (by simp)).trans
+    (hfr.mono (by simp) (by simp))).trans
+    ((MemFrame.setCtl _ 1 _).mono (by simp) (by simp))
+
+/-- **`pi_proj` refines `internPersistentE (.proj (decI x) i.toNat (decE e))`.** -/
+theorem piProj_rel (m : Mem) (a : AState) (hD : ArenaD m a) (x i e : Word) (hx : PW x) (he : PW e) (r : Word) (m' : Mem)
+    (h : piW p n "mk_proj" [x, i, e] m = some (r, m')) :
+    ∃ a', (internPersistentE (.proj (decI x) i.toNat (decE e))).run a = .ok (decE r, a') ∧ ArenaD m' a' ∧ PW r ∧
+      cp a' = cp a ∧ MemFrame [PJDER, PJREC, PJSLOT] [1, 32, 33] m m' := by
+  have hc := ctl_size hD.1
+  rw [piW_eq _ _ _ _ _ hc] at h
+  cases hcall : callW p n "mk_proj" [x, i, e] (m.set64 CTL 1 0) with
+  | none => rw [hcall] at h; cases h
+  | some x =>
+  obtain ⟨rr, m₁⟩ := x
+  rw [hcall] at h
+  obtain ⟨s', rfl, -, hI⟩ := callW_triple (mkProj_spec p hp.der_b hp.proj_find hp.proj_push
+    hp.intern_proj hp.mk_proj n ⟨m.set64 CTL 1 0, Locals.init []⟩ x i e) hcall
+  have hD₀ := hD.flag 0
+  obtain ⟨hok, hD₁, hres⟩ := mkProj_ok _ (onA false a) hD₀ x i e _ _ hI
+  have hfl0 : rdW ((m.set64 CTL 1 0).arr64 CTL) 1 = 0 := by rw [rdW_set64]; simp [hc]
+  have hpf : PW (rr.headD 0) ∧ MemFrame [PJDER, PJREC, PJSLOT] [32, 32 + 1] (m.set64 CTL 1 0) s'.mem := by
+    unfold mkProjW at hI
+    split at hI
+    · cases hI
+    refine mkK_pw (by decide) (fun r₁ m₁ hx => ?_) hI
+    have hx' := hx
+    rw [pjinternW_eq] at hx'
+    exact ⟨internM_pw projSch PJRecRel pjhash projSch_wf _ _ _ _ hD₀.1.proj hfl0
+      (fun τ => pjMt _ x i e τ) _ _ _ (probe_homeG projSch _ 0 _ _ (pjprobeW_arm _ x i e 0) _) _
+      (pjpushOK_room _) _ _ _ _ hx', internM_frame _ projSch_wf _ _ _ _ _ _ _ _ hx'⟩
+  obtain ⟨hpw, hfr⟩ := hpf
+  have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hfr.2.2.1]; simpa [size_set64] using hc
+  rw [piK_some _ _ _ hsz] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  obtain ⟨a', h1, h2, h3⟩ := pi_E hD hok hD₁ hres (keeps_internE _)
+    (internPersistentE_eq _ a hD.1.flagsEq ⟨hx.pers, he.pers⟩)
+  refine ⟨a', h1, h2, hpw, h3, ?_⟩
+  exact (((MemFrame.setCtl m 1 0).mono (by simp) (by simp)).trans
+    (hfr.mono (by simp) (by simp))).trans
+    ((MemFrame.setCtl _ 1 _).mono (by simp) (by simp))
+
+/-- **`pi_lit` refines `internPersistentE (.lit (.natVal _))`**, the number the pool slice
+holds. -/
+theorem piLit_rel (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl : SliceOK m o l)
+    (hn : Norm (m.arr64 POOL) o.toNat l.toNat) (r : Word) (m' : Mem)
+    (h : piW p n "intern_lit" [o, l] m = some (r, m')) :
+    ∃ a', (internPersistentE (.lit (.natVal (pv (m.arr64 POOL) o.toNat l.toNat)))).run a =
+      .ok (decE r, a') ∧ ArenaD m' a' ∧ PW r ∧ cp a' = cp a ∧ MemFrame [REC, SLOT] [1, 2, 3] m m' := by
+  have hc := ctl_size hD.1
+  rw [piW_eq _ _ _ _ _ hc] at h
+  cases hcall : callW p n "intern_lit" [o, l] (m.set64 CTL 1 0) with
+  | none => rw [hcall] at h; cases h
+  | some x =>
+  obtain ⟨rr, m₁⟩ := x
+  rw [hcall] at h
+  have hD₀ := hD.flag 0
+  have ⟨_, _, hps, htop⟩ := hD₀.1.lit.1
+  have hpool : (m.set64 CTL 1 0).arr64 POOL = m.arr64 POOL :=
+    Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  have htop' : (m.set64 CTL 1 0).top = m.top := by simp only [top_rdW, rdW_set64]; simp
+  have hsl₀ : SliceOK (m.set64 CTL 1 0) o l := by simp only [SliceOK, htop'] at hsl ⊢; exact hsl
+  obtain ⟨s', rfl, -, hI⟩ := callW_triple (internLit_spec p hp.lit_hash hp.limbs_eq hp.lit_match
+    hp.lit_find hp.lit_push hp.intern_lit n ⟨m.set64 CTL 1 0, Locals.init []⟩ o l
+    (by dsimp only; omega) (by simp only [SliceOK] at hsl₀; dsimp only; omega)) hcall
+  obtain ⟨hok, hD₁, hres⟩ := internLit_D _ (onA false a) hD₀ o l _ hsl₀ (by rw [hpool]; exact hn) _ hI
+  rw [hpool] at hok hD₁ hres
+  rw [internW_eq] at hI
+  have hf := internM_frame _ litS_wf _ _ _ _ _ _ _ _ hI
+  have hpw := internM_pw litSch RecRel litH litS_wf _ _ _ _ hD₀.1.lit.2
+    (by rw [rdW_set64]; simp [hc]) (fun τ => litMt _ o l _ τ) _ _ _
+    (probe_homeG litSch _ 0 _ _ (probeW_arm _ o l _ 0) _) _ (pushOK_room _) _ _ _ _ hI
+  have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.2.2.1]; simpa [size_set64] using hc
+  rw [piK_some _ _ _ hsz] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  obtain ⟨a', h1, h2, h3⟩ := pi_E hD hok hD₁ hres (keeps_internE _)
+    (internPersistentE_eq _ a hD.1.flagsEq trivial)
+  refine ⟨a', h1, h2, hpw, h3, ?_⟩
+  exact (((MemFrame.setCtl m 1 0).mono (by simp) (by simp)).trans
+    (hf.mono (by simp [litSch]) (by simp [litSch]))).trans
+    ((MemFrame.setCtl _ 1 _).mono (by simp) (by simp))
+
+/-- **`pi_lit_str` refines `internPersistentE (.lit (.strVal s))`**, `s` the string the pool
+slice holds. -/
+theorem piLitStr_rel (m : Mem) (a : AState) (hD : ArenaD m a) (o l : Word) (hsl : SliceOK m o l)
+    (s : String) (hk : sliceL (m.arr64 POOL) o.toNat l.toNat = strWords s) (r : Word) (m' : Mem)
+    (h : piW p n "intern_lit_str" [o, l] m = some (r, m')) :
+    ∃ a', (internPersistentE (.lit (.strVal s))).run a = .ok (decE r, a') ∧ ArenaD m' a' ∧
+      PW r ∧ cp a' = cp a ∧ MemFrame [REC, SLOT] [1, 2, 3] m m' := by
+  have hc := ctl_size hD.1
+  rw [piW_eq _ _ _ _ _ hc] at h
+  cases hcall : callW p n "intern_lit_str" [o, l] (m.set64 CTL 1 0) with
+  | none => rw [hcall] at h; cases h
+  | some x =>
+  obtain ⟨rr, m₁⟩ := x
+  rw [hcall] at h
+  have hD₀ := hD.flag 0
+  have ⟨_, _, hps, htop⟩ := hD₀.1.lit.1
+  have hpool : (m.set64 CTL 1 0).arr64 POOL = m.arr64 POOL :=
+    Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  have htop' : (m.set64 CTL 1 0).top = m.top := by simp only [top_rdW, rdW_set64]; simp
+  have hsl₀ : SliceOK (m.set64 CTL 1 0) o l := by simp only [SliceOK, htop'] at hsl ⊢; exact hsl
+  obtain ⟨s', rfl, -, hI⟩ := callW_triple (internLitStr_spec p hp.lit_hash hp.limbs_eq
+    hp.lit_match_str hp.lit_find_str hp.lit_push_str hp.intern_lit_str n
+    ⟨m.set64 CTL 1 0, Locals.init []⟩ o l
+    (by dsimp only; omega) (by simp only [SliceOK] at hsl₀; dsimp only; omega)) hcall
+  obtain ⟨hok, hD₁, hres⟩ := internLitStr_D _ (onA false a) hD₀ o l _ hsl₀ s
+    (by rw [hpool]; exact hk) _ hI
+  rw [internWStr_eq] at hI
+  have hf := internM_frame _ litS_wf _ _ _ _ _ _ _ _ hI
+  have hpw := internM_pw litSch RecRel litH litS_wf _ _ _ _ hD₀.1.lit.2
+    (by rw [rdW_set64]; simp [hc]) (fun τ => litMtStr _ o l _ τ) _ _ _
+    (probe_homeG litSch _ 0 _ _ (probeWStr_arm _ o l _ 0) _) _ (pushOK_room _) _ _ _ _ hI
+  have hsz : 1 < (s'.mem.arr64 CTL).size := by rw [hf.2.2.1]; simpa [size_set64] using hc
+  rw [piK_some _ _ _ hsz] at h
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+  obtain ⟨a', h1, h2, h3⟩ := pi_E hD hok hD₁ hres (keeps_internE _)
+    (internPersistentE_eq _ a hD.1.flagsEq trivial)
+  refine ⟨a', h1, h2, hpw, h3, ?_⟩
+  exact (((MemFrame.setCtl m 1 0).mono (by simp) (by simp)).trans
+    (hf.mono (by simp [litSch]) (by simp [litSch]))).trans
+    ((MemFrame.setCtl _ 1 _).mono (by simp) (by simp))
+
+end exprs
+
+end L.Arena
