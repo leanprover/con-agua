@@ -261,4 +261,187 @@ theorem sleW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo
       simp [this]
     · exact (hf₁.mono (by simp) (by simp)).trans ((hf₂.mono (by simp) (by simp)).trans hf')
 
+theorem ReadNCOK.ext {a a' : AState} (hc : ReadNCOK a) (hx : Ext a.store a'.store)
+    (hca : a'.caches.readNC = a.caches.readNC) : ReadNCOK a' := by
+  intro h l e
+  rw [hca] at e
+  exact hx.lss.ls.ns _ _ (hc h l e)
+
+/-- One parameter's substitute, interned: `lookup` found a value (`lv_intern` of it) or not (the
+parameter node, its name re-interned to itself). -/
+theorem slpOne_ok (ks : List Name) (vs : List Level) (n : Nat) (m m₁ : Mem) (a : AState)
+    (ko kc vo vc w h : Word) (nm : Name) (hA : ArenaD m a) (hwf : NStoreWF a.store.lss.ls.ns)
+    (hk : NmsR (nameN a.store.lss.ls.ns) m SPN ko kc ks)
+    (hv : LvsR (nameN a.store.lss.ls.ns) m vo vc vs) (hn : nameN a.store.lss.ls.ns w nm)
+    (hW : slpOne n m w (lookupW SPN POOL n m ko kc vo vc w) = some (h, m₁)) :
+    ∃ a₁, (internLevel (Level.subst ks vs (.param nm))).run a = .ok (decI h, a₁) ∧ ArenaD m₁ a₁ ∧
+      MemFrame lvArrs lvCtl m m₁ ∧ LKeep a a₁ := by
+  cases e : lookupW SPN POOL n m ko kc vo vc w with
+  | none => rw [e] at hW; simp [slpOne] at hW
+  | some fv =>
+  obtain ⟨f, v⟩ := fv
+  rw [e] at hW
+  rcases lookupW_ok (nameN_rel _ hwf) n _ _ _ _ _ _ _ _ _ _ _ hk hv.toAR hn e with ⟨hf, hvl⟩ | ⟨rfl, hgo⟩
+  · rw [slpOne_hit n m w f v hf] at hW
+    obtain ⟨a₁, hrun, hA₁, hlt, hfr, hkp, -⟩ := lvInternW_ok _ n m a v h m₁ hA hwf hvl hW
+    exact ⟨a₁, by simpa [Level.subst] using hrun, hA₁, hfr, hkp⟩
+  · rw [slpOne_miss] at hW
+    obtain ⟨ok, hR, res, hfr⟩ := L.Front.param_A m a hA h m₁ w hn.1 hW
+    have hrun := node_run ok
+    rw [res] at hrun
+    have hk' := internLNode_keep _ _ _ _ hrun
+    refine ⟨_, ?_, hR, hfr.mono lvSch_sub.2.2.2.2.2.2.2.2.1 lvSch_sub.2.2.2.2.2.2.2.2.2, hk'⟩
+    · simp only [Level.subst, hgo]
+      show (internName nm >>= fun hn => internLNode (.param hn)).run a = _
+      rw [StateT.run_bind, internName_nameN_run a hwf hn]; exact hrun
+
+/-- **The model of `slp_go` refines `substParamLevels`** over the record-pool name slice `(o, l)`:
+the results land at `SPN[b ‥ b + l)`. -/
+theorem slpW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo vc : Word) :
+    ∀ (ids : List NIdx) (n : Nat) (m m' : Mem) (a : AState) (o l b : Word),
+    ArenaD m a → StoreWF a.store → ReadNCOK a →
+    hslice? (m.arr64 EREC) o.toNat l.toNat = some ids → o.toNat + l.toNat < 2 ^ 64 →
+    (∀ u ∈ ids, ∃ nm, denoteN a.store.lss.ls.ns u = some nm) →
+    NmsR (nameN a.store.lss.ls.ns) m SPN ko kc ks → ko.toNat + kc.toNat ≤ b.toNat →
+    sliceL (m.arr64 POOL) vo.toNat vc.toNat = lsWords usIds → vo.toNat + vc.toNat ≤ m.top.toNat →
+    denoteLList a.store.ls usIds = some vs →
+    b.toNat + l.toNat ≤ (m.arr64 SPN).size → (m.arr64 SPN).size < 2 ^ 63 →
+    slpW n m o l b ko kc vo vc = some m' →
+    ∃ hs a', (substParamLevels ks vs ids).run a = .ok (hs, a') ∧ ArenaD m' a' ∧ StoreWF a'.store ∧
+      ReadNCOK a' ∧ Ext a.store a'.store ∧ a'.pins = a.pins ∧ a'.memos = a.memos ∧
+      sliceL (m'.arr64 SPN) b.toNat l.toNat = lsWords hs ∧
+      (∀ i : Word, i.toNat < b.toNat → rdW (m'.arr64 SPN) i = rdW (m.arr64 SPN) i) ∧
+      MemFrame (SPN :: lvArrs) lvCtl m m' := by
+  intro ids
+  induction ids with
+  | nil =>
+    intro n m m' a o l b hA hwf hrc hs hb hd hk hkb hvs hvb hdv hbs hsz hW
+    have hl : l.toNat = 0 := by
+      rcases hk' : l.toNat with _ | j
+      · rfl
+      · rw [hk', lp_hslice_succ] at hs
+        simp only [Option.bind_eq_bind] at hs
+        cases e : (hd? (m.arr64 EREC) o.toNat : Option NIdx) with
+        | none => simp [e] at hs
+        | some x =>
+          cases e' : (hslice? (m.arr64 EREC) (o.toNat + 1) j : Option (List NIdx)) with
+          | none => simp [e, e'] at hs
+          | some xs => simp [e, e'] at hs
+    have hl0 : l = 0 := UInt64.toNat_inj.mp (by simpa using hl)
+    subst hl0
+    cases n with
+    | zero => simp [slpW] at hW
+    | succ n =>
+    rw [slpW_nil n m o 0 b ko kc vo vc rfl] at hW; cases hW
+    exact ⟨[], a, rfl, hA, hwf, hrc, Ext.refl _, rfl, rfl, by simp [sliceL, lsWords], fun _ _ => rfl,
+      MemFrame.refl _ _ _⟩
+  | cons u us ih =>
+    intro n m m' a o l b hA hwf hrc hs hb hd hk hkb hvs hvb hdv hbs hsz hW
+    rcases hk' : l.toNat with _ | j
+    · rw [hk'] at hs; simp [hslice?] at hs
+    rw [hk', lp_hslice_succ] at hs
+    simp only [Option.bind_eq_bind] at hs
+    cases e : (hd? (m.arr64 EREC) o.toNat : Option NIdx) with
+    | none => simp [e] at hs
+    | some x' =>
+    cases e' : (hslice? (m.arr64 EREC) (o.toNat + 1) j : Option (List NIdx)) with
+    | none => simp [e, e'] at hs
+    | some xs' =>
+    simp only [e, e', Option.bind_some, Option.pure_def, Option.some.injEq, List.cons.injEq] at hs
+    obtain ⟨rfl, rfl⟩ := hs
+    -- the word at `o`
+    simp only [hd?] at e
+    cases ew : (m.arr64 EREC)[o.toNat]? with
+    | none => simp [ew] at e
+    | some w =>
+    simp only [ew] at e
+    have hw : w.toNat < 2 ^ 32 := Classical.byContradiction fun hw => by simp [hw] at e
+    simp [hw] at e
+    subst e
+    have hrd : rdW (m.arr64 EREC) o = w := by simp [rdW, ew]
+    have hl0 : l ≠ 0 := fun h0 => by subst h0; simp at hk'
+    obtain ⟨nm, hdu⟩ := hd _ (List.mem_cons_self ..)
+    cases n with
+    | zero => simp [slpW] at hW
+    | succ n =>
+    rw [slpW_cons n m o l b ko kc vo vc hl0, hrd] at hW
+    cases hS : slpOne n m w (lookupW SPN POOL n m ko kc vo vc w) with
+    | none => rw [hS] at hW; simp [slpK] at hW
+    | some r =>
+    obtain ⟨h, m₁⟩ := r
+    rw [hS, slpK_some] at hW
+    by_cases hh : 4294967296 ≤ h
+    · simp [hh] at hW
+    simp only [hh, ↓reduceIte] at hW
+    -- the twin's readback
+    obtain ⟨c, hrl, hrc', -, -⟩ := readNameM_run a (decI w) nm hdu hrc
+    generalize hac : ({ a with caches := c } : AState) = ac at hrl hrc'
+    have hAc : ArenaD m ac := by rw [← hac]; exact hA.with_caches _
+    have hstc : ac.store = a.store := by rw [← hac]
+    have htop := m.top.toNat_lt
+    have hv₀ := lvsR_of_slice hAc.1 usIds vs _ _ hvs (by omega) (by rw [hstc]; exact hdv)
+    obtain ⟨a₁, hrun₁, hA₁, hf₁, hkp₁⟩ := slpOne_ok ks vs n m m₁ ac ko kc vo vc w h nm hAc
+      (by rw [hstc]; exact StoreWF.nwf hwf) (by rw [hstc]; exact hk) hv₀
+      ⟨hw, by rw [hstc]; exact hdu⟩ hS
+    obtain ⟨hwf₁, hx₁, hca₁, hpi₁, hme₁, -⟩ := internLevel_facts (by rw [hstc]; exact hwf) hrun₁
+    rw [hstc] at hx₁
+    have hlt₁ : h.toNat < 2 ^ 32 := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hh)
+    -- the store on the stack
+    have hf₂ : MemFrame [SPN] [] m₁ (m₁.set64 SPN b h) := MemFrame.set64 _ _ (by decide) _ _
+    have hA₂ : ArenaD (m₁.set64 SPN b h) a₁ := arenaD_frame_hi hA₁ hf₂ (by simp [SPN]) (by simp)
+    have hspn₁ : m₁.arr64 SPN = m.arr64 SPN := hf₁.1 SPN (by simp [lvArrs, SPN, ZREC, ZSLOT, SREC, SSLOT,
+      MREC, MSLOT, IREC, ISLOT, PREC, PSLOT]) (by decide)
+    have herec₂ : (m₁.set64 SPN b h).arr64 EREC = m.arr64 EREC := by
+      rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+      exact hf₁.1 EREC (by simp [lvArrs, EREC, ZREC, ZSLOT, SREC, SSLOT, MREC, MSLOT, IREC, ISLOT,
+        PREC, PSLOT]) (by decide)
+    have hpool₂ : (m₁.set64 SPN b h).arr64 POOL = m.arr64 POOL := by
+      rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+      exact hf₁.1 POOL (by simp [lvArrs, POOL, ZREC, ZSLOT, SREC, SSLOT, MREC, MSLOT, IREC, ISLOT,
+        PREC, PSLOT]) (by decide)
+    have htop₂ : (m₁.set64 SPN b h).top = m.top := by
+      simp only [Mem.top]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+      have := hf₁.2.1 0 (by simp [lvCtl])
+      simpa [rdW] using this
+    have hsz₂ : ((m₁.set64 SPN b h).arr64 SPN).size = (m.arr64 SPN).size := by
+      rw [Mem.size_arr64_set64, hspn₁]
+    have hb1 : (b + 1).toNat = b.toNat + 1 := toNat_succ_lt (by omega)
+    have ho1 : (o + 1).toNat = o.toNat + 1 := toNat_succ_lt (by omega)
+    have hl1 : (l - 1).toNat = j := by
+      rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
+    have hns₁ : a₁.store.lss.ls.ns = a.store.lss.ls.ns := by rw [hkp₁.2, hstc]
+    obtain ⟨hs', a', hrun', hA', hwf', hrc'', hx', hpi', hme', hsl', hbl', hf'⟩ :=
+      ih n (m₁.set64 SPN b h) m' a₁ (o + 1) (l - 1) (b + 1) hA₂ hwf₁
+        (hrc'.ext (by rw [hstc]; exact hx₁) (by rw [hca₁]))
+        (by rw [herec₂, ho1, hl1]; exact e')
+        (by rw [ho1, hl1]; omega)
+        (fun u hu => by
+          obtain ⟨L', hL'⟩ := hd u (List.mem_cons_of_mem _ hu)
+          exact ⟨L', hx₁.lss.ls.ns _ _ hL'⟩)
+        (by rw [hns₁]; exact NmsR.set_past (NmsR.of_arr (m := m) (m' := m₁) hspn₁ hk) (by omega))
+        (by rw [hb1]; omega)
+        (by rw [hpool₂]; exact hvs) (by rw [htop₂]; exact hvb)
+        (hx₁.lss.ls.lvl |> fun hl => denoteLList_mono_of_lext hx₁.lss.ls _ _ hdv)
+        (by rw [hsz₂, hb1, hl1]; omega) (by rw [hsz₂]; exact hsz) hW
+    refine ⟨decI h :: hs', a', ?_, hA', hwf', hrc'', hx₁.trans hx', ?_, ?_, ?_, ?_, ?_⟩
+    · simp only [substParamLevels, StateT.run_bind, hrl, except_ok_bind, hrun₁, hrun']; rfl
+    · rw [hpi', hpi₁, ← hac]
+    · rw [hme', hme₁, ← hac]
+    · rw [sliceL_succ]
+      have hbb : rdW (m'.arr64 SPN) b = h := by
+        rw [hbl' b (by rw [hb1]; omega), rdW_set64]
+        simp [show b.toNat < (m₁.arr64 SPN).size by rw [hspn₁]; omega]
+      simp only [lsWords, List.map_cons, List.cons.injEq]
+      refine ⟨?_, ?_⟩
+      · have : (m'.arr64 SPN)[b.toNat]?.getD 0 = rdW (m'.arr64 SPN) b := rfl
+        rw [this, hbb]
+        exact ((word_decI _ h (by omega)).mpr rfl).symm
+      · rw [hb1, hl1] at hsl'; simpa [lsWords] using hsl'
+    · intro i hi
+      rw [hbl' i (by rw [hb1]; omega), rdW_set64, hspn₁]
+      have : ¬ b = i := fun e => by subst e; omega
+      simp [this]
+    · exact (hf₁.mono (by simp) (by simp)).trans ((hf₂.mono (by simp) (by simp)).trans hf')
+
+
 end L.Arena
