@@ -516,7 +516,7 @@ theorem classGenMinorTyConcl_spec (n : Nat) (s₀ : St) (g c x d lvls ds0 dl0 nP
         stubM_spec p "get_app_args_f" n, internConst_spec p h.cf h.cp h.ic n,
         slAppend_specW p h.alloc h.copy h.app n, stubM_spec p "mk_app_n_f" n,
         classGenMinorTyConcl2_spec p h n] <;>
-      finish (gen := 80) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9,
+      finish (gen := 20) (instances := 5000) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8, loc_init9,
         loc_init10, loc_init11, loc_init12]
 
 theorem classGenMinorTyBody_spec (n : Nat) (s₀ : St) (g c x d lvls ds0 dl0 nPc : Word) :
