@@ -140,6 +140,71 @@ theorem frameTail (n : Nat) (hDs : DsOK dn fe vis n) (mh m' : Mem) (a : AState) 
   · exact ⟨M3, G3, hS5, ((hg2.trans hg3).trans hg4).trans hg5,
       (hR3.frame (RfFr.of_low (ceinternW_low hci))).frame (RfFr.stub (by decide) hst), hk3, hG3⟩
 
+theorem default_hole : (default : NestHole) = ⟨⟨decI 0, decI 0, []⟩, 0⟩ := rfl
+
+theorem frOK_step (n : Nat) (hDs : DsOK dn fe vis n) : FrOK dn fe vis (n + 1) := by
+  intro m m' a ctx po pl n1 i c prog r0 r1 M G g h hS hc hin hs hb hR
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  obtain ⟨hpl, hpb, hH⟩ := hs
+  unfold frameTwin
+  by_cases hn : n1 < pl
+  · rw [rxFrameW_in (hn := hn), frK1_some] at h
+    have hn' : n1.toNat < pl.toNat := UInt64.lt_iff_toNat_lt.mp hn
+    obtain ⟨w, hw, hd, hni⟩ := hH n1.toNat hn'
+    have hrw : rdW (m.arr64 IW) (po + n1) = w := by
+      simp [rdW, word_add_toNat (show po.toNat + n1.toNat < 2 ^ 64 by omega), hw]
+    rw [hrw] at h
+    rw [List.getElem?_eq_getElem (by omega)] at hd
+    have hgd : prog.getD n1.toNat default = prog[n1.toNat]'(by omega) := by
+      rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem (by omega)]; rfl
+    simp only [hgd]
+    exact frameTail dn fe vis n hDs m m' a ctx po pl n1 w c prog _ r0 r1 M G g h hS hc hin ⟨hpl, hpb, hH⟩ hb hd
+      hni hR
+  · rw [rxFrameW_def (hn := hn)] at h
+    have hn' : ¬ n1.toNat < pl.toNat := fun e => hn (UInt64.lt_iff_toNat_lt.mpr e)
+    have hgd : prog.getD n1.toNat default = default := by
+      rw [List.getD_eq_getElem?_getD, List.getElem?_eq_none (by omega)]; rfl
+    simp only [hgd]
+    cases hr1 : posRecW m [0, 0, 0, 0] with
+    | none => rw [hr1] at h; simp [frK0] at h
+    | some p1 =>
+    obtain ⟨k, m1⟩ := p1
+    rw [hr1, frK0_some] at h
+    obtain ⟨hS1, hg1, hk1, ht1, hget1⟩ := posRecW_stage hr1 hS (by simp)
+    cases hr2 : posRecW m1 [k, 0] with
+    | none => rw [hr2] at h; simp [frK1] at h
+    | some p2 =>
+    obtain ⟨hh, m2⟩ := p2
+    rw [hr2, frK1_some] at h
+    obtain ⟨hS2, hg2, hk2, ht2, hget2⟩ := posRecW_stage hr2 hS1 (by simp)
+    simp only [List.length_cons, List.length_nil] at ht1 ht2
+    have hkw : ∀ j < 4, (m2.arr64 IW)[k.toNat + j]? = some 0 := fun j hj => by
+      rw [hg2.2.2.1 _ (by omega), hget1 j (by simpa using hj)]
+      rcases (show j = 0 ∨ j = 1 ∨ j = 2 ∨ j = 3 by omega) with rfl | rfl | rfl | rfl <;> rfl
+    have hdk : decNK m2 k.toNat = some ⟨decI 0, decI 0, []⟩ := by
+      have := decNK_of_words (m := m2) (k := k.toNat) (c := 0) (u := 0) (o := 0) (l := 0) (ds := [])
+        (by simpa using hkw 0 (by decide)) (by decide) (hkw 1 (by decide)) (by decide) (hkw 2 (by decide))
+        (hkw 3 (by decide)) (by simp [decHL, hslice?])
+      exact this
+    have hdh : decNH m2 hh.toNat = some default := by
+      rw [default_hole]
+      exact decNH_of_words (by simpa using hget2 0 (by simp)) (hget2 1 (by simp)) hdk
+    have hin2 : NHIn m2 hh.toNat (· < iwTop m2) := by
+      refine ⟨by omega, by omega, fun k' hk' => ?_⟩
+      have : k' = k.toNat := by
+        have h0 := iwN_of_get (m := m2) (by simpa using hget2 0 (by simp)); rw [h0] at hk'; exact (Option.some.inj hk').symm
+      subst this
+      refine ⟨fun j hj => by omega, fun o l ho hl j hj => ?_⟩
+      have : l = 0 := by
+        have := iwN_of_get (m := m2) (hkw 3 (by decide)); rw [this] at hl; exact (Option.some.inj hl).symm
+      omega
+    have hg12 := hg1.trans hg2
+    obtain ⟨ec, hci2⟩ := hin.grow hg12
+    obtain ⟨x, a', hrun, hout, hpost⟩ := frameTail dn fe vis n hDs m2 m' a ctx po pl n1 hh c prog default r0 r1 M G g h
+      hS2 (by rw [ec]; exact hc) hci2 (HSl.grow ⟨hpl, hpb, hH⟩ hg12) hb hdh hin2
+      ((hR.frame (posRecW_fr hr1)).frame (posRecW_fr hr2))
+    exact ⟨x, a', hrun, hout, RxPost.of_fr hR ((posRecW_fr hr1).trans (posRecW_fr hr2)) hg12 hpost⟩
+
 end steps
 
 end L.Ind
