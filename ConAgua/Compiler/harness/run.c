@@ -15,7 +15,7 @@
 typedef struct { uint64_t rax, rdx; } ca_res;
 extern ca_res ca_enter(uint64_t *T, uint64_t fuel);
 extern const uint8_t ca_rom[];
-extern const uint64_t ca_rom_len;
+extern const uint64_t ca_rom_len, ca_ng;
 
 static uint64_t T[4096];
 static uint64_t argw; /* the word index of the entry arguments in T */
@@ -48,7 +48,7 @@ int main(int argc, char **argv) {
   uint8_t *buf = load(argv[1 + lines], &len);
   T[0] = (uint64_t)(st + stack); T[1] = (uint64_t)st;
   T[2] = (uint64_t)buf; T[3] = len;
-  argw = 4 + (ca_rom_len + 7) / 8;
+  argw = 4 + (ca_rom_len + 7) / 8 + ca_ng; /* the global variables (zero) sit before the arguments */
   if (argw + 8 > sizeof T / sizeof T[0]) { fprintf(stderr, "constant data too large\n"); return 2; }
   memcpy(&T[4], ca_rom, ca_rom_len);
   if (!lines) {

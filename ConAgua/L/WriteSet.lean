@@ -17,6 +17,11 @@ of the text, so a concrete program's write set is `by decide +kernel`.
 The frame itself is abstract here (`WFrame`): any reflexive relation on memories closed under
 the allowed stores. `Arena/Frame.lean` instantiates it with `MemFrame` (the arena's layout:
 `CTL` is array 1). Lane `scale`'s spike, made layout-agnostic (DESIGN.md, "The relation's architecture").
+
+Global variables (`GVar`) are not restricted by `closedW` (a `WFrame` is closed under every global
+write). Their write sets are lists of names, `closedG p G fs` (section "Global variables" below):
+every run of `f ∈ fs` keeps the globals outside `G` (`GFrame`), and `Triple.gframe` adds that to a
+callee's spec for its caller's `vcgen`.
 -/
 
 set_option experimental.vcgen true
@@ -33,7 +38,7 @@ def ctlIdx : Expr → Option (List Word)
   | _ => none
 
 /-- Stores only into word arrays of `A` (never `ctl`) and into `ctl` words of `C`, no byte
-stores; calls only into `fs`. -/
+stores; calls only into `fs` (global variables: any). -/
 def Stmt.okW (ctl : ArrId) (A : List ArrId) (C : List Word) (fs : List FnName) : Stmt → Bool
   | .st8 .. => false
   | .st64 a i _ =>
@@ -43,7 +48,6 @@ def Stmt.okW (ctl : ArrId) (A : List ArrId) (C : List Word) (fs : List FnName) :
   | .ite _ s t => s.okW ctl A C fs && t.okW ctl A C fs
   | .while _ s => s.okW ctl A C fs
   | .call _ f _ => f ∈ fs
-  | .gset .. => false
   | _ => true
 
 /-- **The write set of a call-closed function set**: every function of `fs` that `p` defines
@@ -77,6 +81,9 @@ every word store the check allows. -/
 structure WFrame (ctl : ArrId) (A : List ArrId) (C : List Word) (Fr : Mem → Mem → Prop) : Prop where
   refl : ∀ m, Fr m m
   st64 : ∀ m₀ m a i v, Fr m₀ m → (a ≠ ctl ∧ a ∈ A) ∨ (a = ctl ∧ i ∈ C) → Fr m₀ (m.set64 a i v)
+  /-- A frame over the arrays does not look at the global variables (their write sets are
+  `closedG`'s). -/
+  setG : ∀ m₀ m g v, Fr m₀ m → Fr m₀ (m.setG g v)
 
 theorem and_one_cases (x : Word) : x &&& 1 = 0 ∨ x &&& 1 = 1 := by
   have h : (x &&& 1).toNat < 2 := by
@@ -164,7 +171,9 @@ theorem step_fr (p : Prog) (hp : closedW ctl p A C fs = true) (hW : WFrame ctl A
     vcgen [step, setLocs, evalArgs_same args, invoke_fr p hp k hk f hst m₀] <;>
       grind [St.setLocs_mem']
   | «abort» => vcgen [step] <;> grind
-  | gset g e => simp [Stmt.okW] at hst
+  | gset g e =>
+    have := hW.setG
+    vcgen [step, setG, evalE_same e] <;> grind [St.setG_mem]
 
 theorem exec_fr (p : Prog) (hp : closedW ctl p A C fs = true) (hW : WFrame ctl A C Fr) (n : Nat) :
     FrK ctl A C fs Fr (exec p n) := by
@@ -220,6 +229,20 @@ def closedG (p : Prog) (G : List GVar) (fs : List FnName) : Bool :=
   fs.all fun f => match p.lookup f with
     | some fd => fd.body.okG G fs
     | none => true
+
+/-- Membership in a literal list of globals, by their numbers (for `grind`). -/
+@[lang_grind =] theorem GVar.mem_cons (g h : GVar) (G : List GVar) :
+    (g ∈ h :: G) = (g.id = h.id ∨ g ∈ G) := by
+  simp only [List.mem_cons, eq_iff_iff]
+  constructor
+  · rintro (e | e)
+    · exact Or.inl (congrArg GVar.id e)
+    · exact Or.inr e
+  · rintro (e | e)
+    · left; cases g; cases h; simp_all
+    · exact Or.inr e
+
+@[lang_grind =] theorem GVar.mem_nil (g : GVar) : (g ∈ ([] : List GVar)) = False := by simp
 
 /-- The globals outside `G` are those of `m`. -/
 def GFrame (G : List GVar) (m m' : Mem) : Prop := ∀ g, g ∉ G → m'.glob g = m.glob g
@@ -332,6 +355,18 @@ theorem run_gframe (p : Prog) (hp : closedG p G fs = true) (f : FnName) (hf : f 
     obtain ⟨-, rfl⟩ := h
     exact M.of_run (P := fun s => GFrame G m s.mem) (GFrame.refl _ m) hr
       (invoke_g p hp _ (exec_g p hp n) f hf m vs)
+
+/-- **A callee spec, with the global frame**: a triple about `invoke p (exec p n) f vs` also
+keeps every global outside `G`. Pass it to the caller's `vcgen` in place of the plain spec;
+`grind` then reads the untouched globals through `GFrame.glob` (with `GVar.mem_cons`). -/
+theorem Triple.gframe {p : Prog} (hp : closedG p G fs = true) {f : FnName} (hf : f ∈ fs) {n : Nat}
+    {vs : List Word} {s₀ : St} {Q : List Word → St → Prop}
+    (h : ⦃fun s => s = s₀⦄ invoke p (exec p n) f vs ⦃fun r s => Q r s; ⊤⦄) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) f vs ⦃fun r s => Q r s ∧ GFrame G s₀.mem s.mem; ⊤⦄ := by
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  exact ⟨M.of_run (P := fun s => s = s₀) hs hrun h,
+    M.of_run (P := fun s => s = s₀) hs hrun (invoke_gframe p hp n f hf vs s₀)⟩
 
 end gframe
 
