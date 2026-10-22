@@ -118,6 +118,17 @@ def ReduceProjCoreH (p : Prog) : Prop :=
       (reduceProjCore (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat
         (decE c)) decOptR s₀ a₀ dn vis fe MM eb ResW
 
+/-- `proof_irrel` refines `proofIrrel` (lane `whnf`'s `proofIrrel_refines`, `WhnfIotaRefine4.lean`,
+proves it with `n ≤ 2^62` and the eager-bit hypothesis as well; this is the shape this file uses). -/
+def ProofIrrelOK (p : Prog) : Prop :=
+  ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F →
+  ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (MM : ModeMaps) (eb mode d a b : Word), CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → HW a →
+    HW b →
+    CoreSpec p (n + 1) "proof_irrel" [mode, vis, d, a, b]
+      (proofIrrel (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decBool s₀ a₀ dn
+      vis fe MM eb
+
 /-- The callees the stuck side assumes. -/
 structure StuckCallees (p : Prog) : Prop where
   defeq : DefeqCallees p
@@ -144,7 +155,7 @@ theorem proofIrrel_at (p : Prog) (hc : StuckCallees p) :
         (proofIrrel (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decBool s₀ a₀
         dn vis fe MM eb
   | 0, _, _, _, s₀, a₀, dn, vis, fe, MM, eb, _, _, _, _, _, _, _, _ =>
-      CoreSpec.zero p _ _ _ _ s₀ a₀ dn vis fe MM eb _
+      CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe MM eb _
   | n + 1, hk, F, hF, s₀, a₀, dn, vis, fe, MM, eb, mode, d, a, b, hS, hm, ha, hb =>
       hc.proofIrrel n (hk.mono (by omega)) F (by omega) s₀ a₀ dn vis fe MM eb mode d a b hS hm ha hb
 

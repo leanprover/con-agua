@@ -183,7 +183,7 @@ theorem suTail_at (p : Prog) (hq : StuckProg p) :
         (suTailT (coreKnot (decMode mode) fe id F) d.toNat (decE b) (decE wta)) decBool
         s₀ a₀ dn vis fe M eb
   | 0, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _ =>
-      CoreSpec.zero p _ _ _ _ s₀ a₀ dn vis fe M eb _
+      CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
   | n + 1, hk, F, s₀, a₀, dn, vis, fe, M, eb, mode, d, b, wta, hF, hn, hs, h1, h2 =>
       suTail_refines p hq n (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d b wta
         (by omega) (by omega) hs h1 h2
@@ -413,7 +413,7 @@ theorem suHead_at (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) :
         (suHeadT (coreKnot (decMode mode) fe id F) fe d.toNat (decE b) (decE wta)) decBool
         s₀ a₀ dn vis fe M eb
   | 0, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _ =>
-      CoreSpec.zero p _ _ _ _ s₀ a₀ dn vis fe M eb _
+      CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
   | n + 1, hk, F, s₀, a₀, dn, vis, fe, M, eb, mode, d, b, wta, hF, hn, hs, h1, h2 =>
       suHead_refines p hq hc n (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d b wta
         (by omega) (by omega) hs h1 h2

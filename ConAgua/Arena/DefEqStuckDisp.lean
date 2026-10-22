@@ -177,7 +177,7 @@ theorem etaCert_at (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) :
         (etaCert (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE ty1) (decE body1)
           (decE b)) decBool s₀ a₀ dn vis fe M eb
   | 0, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _, _, _ =>
-      CoreSpec.zero p _ _ _ _ s₀ a₀ dn vis fe M eb _
+      CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
   | n + 1, hk, F, s₀, a₀, dn, vis, fe, M, eb, mode, d, t, bd, b, hF, hn, hs, h1, h2, h3 =>
       etaCert_refines p hq hc n (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d t bd b
         (by omega) (by omega) hs h1 h2 h3
@@ -191,7 +191,7 @@ theorem stuckApp_at (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : Stuck
         (stuckAppT (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decBool
         s₀ a₀ dn vis fe M eb
   | 0, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _ =>
-      CoreSpec.zero p _ _ _ _ s₀ a₀ dn vis fe M eb _
+      CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
   | n + 1, hk, F, s₀, a₀, dn, vis, fe, M, eb, mode, d, a, b, hF, hn, hs, h1, h2 =>
       stuckApp_refines p hq hi hc n (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d a b
         (by omega) (by omega) hs h1 h2
@@ -206,7 +206,7 @@ theorem stuckStr_at (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : Stuck
         (stuckStrT (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b) (side != 0) l
           (decE fo)) decBool s₀ a₀ dn vis fe M eb
   | 0, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ =>
-      CoreSpec.zero p _ _ _ _ s₀ a₀ dn vis fe M eb _
+      CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
   | n + 1, hk, F, s₀, a₀, dn, vis, fe, M, eb, mode, d, a, b, side, lt, fo, l, hF, hn, hs, h1, h2, h3,
       h4, h5, h6 =>
       stuckStr_refines p hq hi hc n (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d a b side lt fo
@@ -377,7 +377,7 @@ theorem stuckRest_at (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : Stuc
         decBool s₀ a₀ dn vis fe M eb
   | 0, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
       _, _, _, _ =>
-      CoreSpec.zero p _ _ _ _ s₀ a₀ dn vis fe M eb _
+      CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
   | n + 1, hk, F, s₀, a₀, dn, vis, fe, M, eb, mode, d, a, b, ga, a1, a2, gb, b1, b2, va, vb, hF, hn,
       hs, ha, hb, hva, hvb, hwa, hwb, h1, h2, h3 =>
       stuckRest_refines p hq hi hc n (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d a b ga a1 a2

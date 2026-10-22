@@ -22,7 +22,7 @@ theorem ioNeutral_at (p : Prog) (hp : DefEqLeafProg p) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
       (fe : IFEnv) (MM : ModeMaps) (eb e : Word), CoreS dn s₀.mem a₀ vis fe MM eb → HW e →
       CoreSpec p n "io_neutral" [e] (ioNeutral (decE e)) decBool s₀ a₀ dn vis fe MM eb
-  | 0, s₀, a₀, dn, vis, fe, MM, eb, _, _, _ => CoreSpec.zero p _ _ _ _ s₀ a₀ dn vis fe MM eb _
+  | 0, s₀, a₀, dn, vis, fe, MM, eb, _, _, _ => CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe MM eb _
   | n + 1, s₀, a₀, dn, vis, fe, MM, eb, e, hS, he => ioNeutral_refines p hp n s₀ a₀ dn vis fe MM eb e hS he
 
 /-- **`mk_app` refines `internE (.app …)` under `CoreS`** (a run). -/
@@ -307,7 +307,7 @@ theorem etaCertTy_at (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) :
         (etaTyT (coreKnot (decMode mode) fe id F) d.toNat (decE lhs) (decE cod2) (decE fv)) decBool
         s₀ a₀ dn vis fe M eb
   | 0, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _, _, _, _ =>
-      CoreSpec.zero p _ _ _ _ s₀ a₀ dn vis fe M eb _
+      CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
   | n + 1, hk, F, s₀, a₀, dn, vis, fe, M, eb, mode, d, lhs, cod2, fv, hF, hn, hs, hd, hl, hcod, hfv =>
       etaCertTy_refines p hq hc n (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d lhs cod2 fv
         (by omega) (by omega) hs hd hl hcod hfv
@@ -392,7 +392,7 @@ theorem etaCertBody_at (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) :
         (etaBodyT (decMode mode) (coreKnot (decMode mode) fe id F) d.toNat (decE ty1) (decE body1)
           (decE b) (decE cod2)) decBool s₀ a₀ dn vis fe M eb
   | 0, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _, _, _, _, _ =>
-      CoreSpec.zero p _ _ _ _ s₀ a₀ dn vis fe M eb _
+      CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
   | n + 1, hk, F, s₀, a₀, dn, vis, fe, M, eb, mode, d, ty1, body1, b, cod2, hF, hn, hs, h1, h2, h3, h4 =>
       etaCertBody_refines p hq hc n (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d ty1 body1 b
         cod2 (by omega) (by omega) hs h1 h2 h3 h4

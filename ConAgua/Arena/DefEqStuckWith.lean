@@ -181,7 +181,7 @@ theorem defeqLst_at (p : Prog) (hc : StuckCallees p) :
         (defEqList (coreKnot (decMode mode) fe id F) fe d.toNat xs.toList ys.toList) decBool s₀ a₀
         dn vis fe M eb
   | 0, _, _, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _, _, _, _, _ =>
-      CoreSpec.zero p _ _ _ _ s₀ a₀ dn vis fe M eb _
+      CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
   | n + 1, hk, F, hF, hn, s₀, a₀, dn, vis, fe, M, eb, mode, d, ao, an, bo, bn, xs, ys, hs, h1, h2,
       h3, h4 =>
       hc.defeqLst n (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe M eb mode d ao an

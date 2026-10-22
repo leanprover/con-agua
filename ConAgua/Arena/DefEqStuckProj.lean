@@ -200,7 +200,7 @@ theorem ldprExit_at (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) :
         (ldprExitT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat
           (decE a) (decE b) (decDS [k])) decBool s₀ a₀ dn vis fe M eb
   | 0, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _, _, _, _, _, _ =>
-      CoreSpec.zero p _ _ _ _ s₀ a₀ dn vis fe M eb _
+      CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
   | n + 1, hk, F, s₀, a₀, dn, vis, fe, M, eb, mode, d, sn, i, a, b, k, hF, hn, hs, h1, h2, h3, h4 =>
       ldprExit_refines p hq hc n (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d sn i a b k
         (by omega) (by omega) hs h1 h2 h3 h4
@@ -403,7 +403,7 @@ theorem ldpr_at (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) :
         (lazyDeltaProjReduction (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn)
           i.toNat K (decE a) (decE b)) decBool s₀ a₀ dn vis fe M eb
   | 0, _, _, _, _, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _, _ =>
-      CoreSpec.zero p _ _ _ _ s₀ a₀ dn vis fe M eb _
+      CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
   | n + 1, hk, F, K, hF, hK, hn, s₀, a₀, dn, vis, fe, M, eb, mode, d, sn, i, a, b, hs, h1, h2, h3 =>
       ldpr_refines p hq hc n (hk.mono (by omega)) F K (by omega) (by omega) (by omega) s₀ a₀ dn vis fe
         M eb mode d sn i a b hs h1 h2 h3

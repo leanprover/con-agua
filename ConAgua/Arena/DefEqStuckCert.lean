@@ -514,7 +514,7 @@ theorem setWith_at (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckC
         (structEtaCertWith (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b) (decE wtb))
         decBool s₀ a₀ dn vis fe M eb
   | 0, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _, _, _ =>
-      CoreSpec.zero p _ _ _ _ s₀ a₀ dn vis fe M eb _
+      CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
   | n + 1, hk, F, s₀, a₀, dn, vis, fe, M, eb, mode, d, a, b, wtb, hF, hn, hs, h1, h2, h3 =>
       setWith_refines p hq hi hc n (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d a b wtb
         (by omega) (by omega) hs h1 h2 h3
@@ -523,7 +523,7 @@ theorem etaCtorShape_at (p : Prog) (hq : StuckProg p) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
       (fe : IFEnv) (MM : ModeMaps) (eb e : Word), CoreS dn s₀.mem a₀ vis fe MM eb → HW e →
       CoreSpec p n "eta_ctor_shape" [vis, e] (etaCtorShape fe (decE e)) decBool s₀ a₀ dn vis fe MM eb
-  | 0, s₀, a₀, dn, vis, fe, MM, eb, _, _, _ => CoreSpec.zero p _ _ _ _ s₀ a₀ dn vis fe MM eb _
+  | 0, s₀, a₀, dn, vis, fe, MM, eb, _, _, _ => CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe MM eb _
   | n + 1, s₀, a₀, dn, vis, fe, MM, eb, e, hS, he =>
       etaCtorShape_refines p hq n s₀ a₀ dn vis fe MM eb e hS he
 

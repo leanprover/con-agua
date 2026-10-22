@@ -40,7 +40,7 @@ theorem projPair_at (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) :
         (defeqProjPair (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b))
         decBool s₀ a₀ dn vis fe M eb
   | 0, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _ =>
-      CoreSpec.zero p _ _ _ _ s₀ a₀ dn vis fe M eb _
+      CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
   | n + 1, hk, F, s₀, a₀, dn, vis, fe, M, eb, mode, d, a, b, hF, hn, hs, h1, h2 =>
       projPair_refines p hq hc n (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d a b
         (by omega) (by omega) hs h1 h2
@@ -54,7 +54,7 @@ theorem defeqStuck_at (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : Stu
         (defeqStuck (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b))
         decBool s₀ a₀ dn vis fe M eb
   | 0, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _ =>
-      CoreSpec.zero p _ _ _ _ s₀ a₀ dn vis fe M eb _
+      CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
   | n + 1, hk, F, s₀, a₀, dn, vis, fe, M, eb, mode, d, a, b, hF, hn, hs, h1, h2 =>
       defeqStuck_refines p hq hi hc n (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d a b
         (by omega) (by omega) hs h1 h2
@@ -63,7 +63,7 @@ theorem headIsProj_at (p : Prog) (hq : StuckProg p) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
       (fe : IFEnv) (MM : ModeMaps) (eb e : Word), CoreS dn s₀.mem a₀ vis fe MM eb → HW e →
       CoreSpec p n "head_is_proj" [e] (headIsProj (decE e)) decBool s₀ a₀ dn vis fe MM eb
-  | 0, s₀, a₀, dn, vis, fe, MM, eb, _, _, _ => CoreSpec.zero p _ _ _ _ s₀ a₀ dn vis fe MM eb _
+  | 0, s₀, a₀, dn, vis, fe, MM, eb, _, _, _ => CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe MM eb _
   | n + 1, s₀, a₀, dn, vis, fe, MM, eb, e, hS, he =>
       headIsProj_refines p hq.leaf n s₀ a₀ dn vis fe MM eb e hS he
 
