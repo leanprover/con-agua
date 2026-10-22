@@ -14,7 +14,11 @@ caches and pins: `StageR.of_walk`) and the pool only grown. A refinement through
 uses the master spec inside `vcgen` and the `_stage` lemma afterwards, as for a stub's `RelAM`.
 -/
 
+set_option experimental.vcgen true
+
 open ConRon.Arena
+open Std.WP
+open scoped Lean.Order
 
 namespace L.Ind
 
@@ -283,5 +287,295 @@ theorem allocW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
   · rw [hE]; exact hEs
   · rw [hf.2.2.1 CTL]; exact hc
   · exact allocMem_grow m k (by simp only [iwTop]; omega) hc
+
+/-! ## `erec_alloc` and the constant records, under the stage relation -/
+
+/-- The memory after `erec_alloc(k)`. -/
+def erAllocMem (m : Mem) (k : Word) : Mem := m.set64 CTL 129 (rdW (m.arr64 CTL) 129 + k)
+
+/-- The model of `erec_alloc(k)`. -/
+def erAllocW (m : Mem) (k : Word) : Option (Word × Mem) :=
+  let o := rdW (m.arr64 CTL) 129
+  if m.len64 EREC < o then none
+  else if m.len64 EREC - o < k then none
+  else some (o, erAllocMem m k)
+
+theorem erecAlloc_specW (p : Prog) (hp : p.lookup "erec_alloc" = some erecAlloc) (n : Nat) (s₀ : St)
+    (k : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "erec_alloc" [k]
+    ⦃fun r s' => LocEq s' s₀ ∧ erAllocW s₀.mem k = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, erecAlloc]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64] <;>
+      finish [erAllocW, erAllocMem]
+
+/-- Write `ws` into `EREC` at `q, q + 1, …`. -/
+def wrER (m : Mem) (q : Word) : List Word → Mem
+  | [] => m
+  | x :: xs => wrER (m.set64 EREC q x) (q + 1) xs
+
+theorem wrER_frame : ∀ (ws : List Word) (m : Mem) (q : Word), MemFrame [EREC] [] m (wrER m q ws)
+  | [], m, q => MemFrame.refl _ _ _
+  | x :: ws, m, q =>
+    (MemFrame.mono (MemFrame.set64 m EREC (by decide) q x) (by simp) (by simp)).trans
+      (wrER_frame ws _ _)
+
+theorem wrER_get : ∀ (ws : List Word) (m : Mem) (q : Word) (i : Nat),
+    q.toNat + ws.length ≤ (m.arr64 EREC).size → (m.arr64 EREC).size < 2 ^ 64 →
+    ((wrER m q ws).arr64 EREC)[i]? =
+      if q.toNat ≤ i ∧ i < q.toNat + ws.length then ws[i - q.toNat]? else (m.arr64 EREC)[i]?
+  | [], m, q, i, _, _ => by simp [wrER]; intro h1 h2; omega
+  | x :: ws, m, q, i, h, hsz => by
+    simp only [wrER, List.length_cons] at h ⊢
+    have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+    have hqlt : q.toNat < (m.arr64 EREC).size := by omega
+    have hsz1 : ((m.set64 EREC q x).arr64 EREC).size = (m.arr64 EREC).size := size_set64 _ _ _ _ _
+    rw [wrER_get ws _ _ i (by rw [hq1, hsz1]; omega) (by rw [hsz1]; exact hsz), hq1]
+    have hg : (m.set64 EREC q x).arr64 EREC = (m.arr64 EREC).set! q.toNat x :=
+      Mem.arr64_set64_same _ _ _ _
+    by_cases h1 : q.toNat + 1 ≤ i ∧ i < q.toNat + 1 + ws.length
+    · rw [if_pos h1, if_pos (by omega)]
+      have : i - q.toNat = (i - (q.toNat + 1)) + 1 := by omega
+      rw [this]; simp
+    · rw [if_neg h1]
+      by_cases hiq : i = q.toNat
+      · subst hiq
+        rw [if_pos (by omega), hg, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+        simp [hqlt]
+      · rw [if_neg (by omega), hg, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+        simp [Ne.symm hiq]
+
+/-- **A writer of `EREC` above its top and of `CTL[129]` keeps the stage relation** (lane
+`decls`' `EnvR.grow`), given the records below the old top unchanged and the new top in range. -/
+theorem StageR.erec {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+    {m m' : Mem} (hS : StageR dn vis fe m a) (hf : MemFrame [EREC] [129] m m')
+    (hlow : ∀ i < erTop m, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?)
+    (htop : erTop m ≤ erTop m') (hroom : erTop m' ≤ (m'.arr64 EREC).size) :
+    StageR dn vis fe m' a ∧ IWGrow m m' := by
+  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
+  have hI : m'.arr64 IW = m.arr64 IW := hf.1 IW (by simp [EREC, IW]) (by decide)
+  have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 := hf.2.1 200 (by simp)
+  have hg : ErecGrow m m' := ⟨htop, hlow, hf.2.2.1 EREC⟩
+  have hC : CheckR dn m' a vis fe :=
+    ⟨⟨ArenaR.frame (fun b hb => by simp at hb; subst hb; simp [arenaArrs, storeArrs, memoArrs, EREC])
+        (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hf hS.1.arena.1,
+      DerR.frameM _ _ m m' hf (by decide) a hS.1.arena.2⟩,
+     hS.1.core.frame (fun b hb => by simp at hb; subst hb; decide)
+       (fun x hx => by simp at hx; subst hx; decide) hf,
+     hS.1.pins.frame (fun b hb => by simp at hb; subst hb; decide) hf,
+     EnvR.grow (fun b h1 h2 => hf.1 b (fun hm => by simp at hm; subst hm; simp [EREC] at h2)
+         (fun hm => by subst hm; simp [CTL] at h1))
+       (hf.2.1 128 (by simp)) hg hS.1.env⟩
+  refine ⟨⟨hC, ?_, hroom, ?_, ?_, ?_⟩, ?_⟩
+  · simp only [iwTop, h200, hI]; exact hI1
+  · rw [hI]; exact hsz
+  · rw [hf.2.2.1 EREC]; exact hEs
+  · rw [hf.2.2.1 CTL]; exact hc
+  · refine ⟨by simp only [iwTop, h200]; exact Nat.le_refl _, htop, fun i _ => by rw [hI], hlow⟩
+
+/-- **A record allocated in `EREC` and written**: `erec_alloc(ws.length)` then `ws` at the
+returned pointer keeps the stage relation; the words are readable there, the top moved by the
+record's length. -/
+theorem erRec_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+    {m m1 : Mem} {k q : Word} (h : erAllocW m k = some (q, m1)) (hS : StageR dn vis fe m a)
+    (ws : List Word) (hk : k.toNat = ws.length) :
+    StageR dn vis fe (wrER m1 q ws) a ∧ IWGrow m (wrER m1 q ws) ∧ q.toNat = erTop m ∧
+      erTop (wrER m1 q ws) = erTop m + ws.length ∧
+      (∀ j < ws.length, ((wrER m1 q ws).arr64 EREC)[q.toNat + j]? = ws[j]?) := by
+  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
+  simp only [erAllocW] at h
+  by_cases h1 : m.len64 EREC < rdW (m.arr64 CTL) 129
+  · simp [h1] at h
+  by_cases h2 : m.len64 EREC - rdW (m.arr64 CTL) 129 < k
+  · simp [h1, h2] at h
+  simp only [h1, h2, if_false, Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  have hlen : (m.len64 EREC).toNat = (m.arr64 EREC).size := by simp [Mem.len64]; omega
+  have hq : (rdW (m.arr64 CTL) 129).toNat ≤ (m.arr64 EREC).size := by
+    have : ¬ (m.len64 EREC).toNat < (rdW (m.arr64 CTL) 129).toNat := h1
+    omega
+  have hroom : (rdW (m.arr64 CTL) 129).toNat + k.toNat ≤ (m.arr64 EREC).size := by
+    have : ¬ (m.len64 EREC - rdW (m.arr64 CTL) 129).toNat < k.toNat := h2
+    rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; omega)] at this
+    omega
+  have hE : (erAllocMem m k).arr64 EREC = m.arr64 EREC := by
+    simp only [erAllocMem]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  have hf : MemFrame [EREC] [129] m (wrER (erAllocMem m k) (rdW (m.arr64 CTL) 129) ws) :=
+    (MemFrame.mono (MemFrame.setCtl m 129 _) (by simp) (by simp)).trans
+      ((wrER_frame _ _ _).mono (by simp) (by simp))
+  have h129 : (129 : Word).toNat < (m.arr64 CTL).size := by simp; omega
+  have htop : erTop (wrER (erAllocMem m k) (rdW (m.arr64 CTL) 129) ws) = erTop m + ws.length := by
+    simp only [erTop]
+    rw [(wrER_frame ws (erAllocMem m k) (rdW (m.arr64 CTL) 129)).2.1 129 (by simp)]
+    simp only [erAllocMem, rdW_set64]
+    rw [if_pos ⟨trivial, trivial, h129⟩, UInt64.toNat_add]
+    omega
+  have hget := fun i => wrER_get ws (erAllocMem m k) (rdW (m.arr64 CTL) 129) i
+    (by rw [hE]; omega) (by rw [hE]; exact hEs)
+  have hsize : ((wrER (erAllocMem m k) (rdW (m.arr64 CTL) 129) ws).arr64 EREC).size =
+      (m.arr64 EREC).size := hf.2.2.1 EREC
+  obtain ⟨hS', hg'⟩ := StageR.erec hS hf
+    (fun i hi => by rw [hget, if_neg (by simp only [erTop] at hi; omega), hE])
+    (by rw [htop]; omega) (by rw [htop, hsize]; simp only [erTop]; omega)
+  refine ⟨hS', hg', rfl, htop, fun j hj => ?_⟩
+  rw [hget, if_pos (by omega)]
+  congr 1; omega
+
+theorem mapM_congr_of {α β : Type} (f g : α → Option β) :
+    ∀ (xs : List α), (∀ x ∈ xs, f x = g x) → xs.mapM f = xs.mapM g
+  | [], _ => rfl
+  | x :: xs, h => by
+    simp only [List.mapM_cons]
+    rw [h x (List.mem_cons_self ..), mapM_congr_of f g xs (fun y hy => h y (List.mem_cons_of_mem _ hy))]
+
+/-- **A copied constant value with a new type** decodes as `{cv with type := ty}`: the name and
+the level-parameter slice words copied from `cv`'s record, the slice itself unchanged. -/
+theorem decCV_copy {a a' : Array Word} {cq q : Nat} {cv : IConstantVal} {ty : Word} (N : Nat)
+    (h : decCV a cq = some cv) (h0 : a'[q]? = a[cq]?) (h1 : a'[q + 1]? = a[cq + 1]?)
+    (h2 : a'[q + 2]? = a[cq + 2]?) (h3 : a'[q + 3]? = some ty) (hty : ty.toNat < 2 ^ 32)
+    (hlow : ∀ i < N, a'[i]? = a[i]?)
+    (hsl : ∀ lo ll, nat? a (cq + 1) = some lo → nat? a (cq + 2) = some ll → lo + ll ≤ N) :
+    decCV a' q = some { cv with type := decI ty } := by
+  simp only [decCV, bind, Option.bind, pure] at h ⊢
+  have hn : (hd? a' q : Option NIdx) = hd? a cq := by simp only [hd?, h0]
+  rw [hn]
+  cases e0 : (hd? a cq : Option NIdx) with
+  | none => rw [e0] at h; simp at h
+  | some nm =>
+  rw [e0] at h; simp only at h ⊢
+  simp only [hlist?, bind, Option.bind] at h ⊢
+  have hl1 : nat? a' (q + 1) = nat? a (cq + 1) := by simp only [nat?, h1]
+  have hl2 : nat? a' (q + 1 + 1) = nat? a (cq + 1 + 1) := by simp only [nat?, show q + 1 + 1 = q + 2 by omega, h2]
+  rw [hl1, hl2]
+  cases e1 : nat? a (cq + 1) with
+  | none => rw [e1] at h; simp at h
+  | some lo =>
+  cases e2 : nat? a (cq + 1 + 1) with
+  | none => rw [e1, e2] at h; simp at h
+  | some ll =>
+  rw [e1, e2] at h; simp only at h ⊢
+  have hN := hsl lo ll e1 (by simpa using e2)
+  have hs : (hslice? a' lo ll : Option (List NIdx)) = hslice? a lo ll := by
+    simp only [hslice?]
+    exact mapM_congr_of _ _ _ (fun j hj => by
+      have := List.mem_range.mp hj
+      simp only [hd?, hlow (lo + j) (by omega)])
+  rw [hs]
+  cases e3 : (hslice? a lo ll : Option (List NIdx)) with
+  | none => rw [e3] at h; simp at h
+  | some lps =>
+  rw [e3] at h; simp only at h ⊢
+  cases e4 : (hd? a (cq + 3) : Option EIdx) with
+  | none => rw [e4] at h; simp at h
+  | some t =>
+  rw [e4] at h
+  simp only [Option.some.injEq] at h
+  subst h
+  simp [hd?, h3, hty]
+
+/-! ## `cv_new`: a fresh constant-value record -/
+
+/-- The memory after the four writes of `cv_new`. -/
+def cvNewMem (m1 : Mem) (q nm lo ll ty : Word) : Mem :=
+  (((m1.set64 EREC q nm).set64 EREC (q + 1) lo).set64 EREC (q + 2) ll).set64 EREC (q + 3) ty
+
+/-- The model of `cv_new(nm, lo, ll, ty)`. -/
+def cvNewW (m : Mem) (nm lo ll ty : Word) : Option (Word × Mem) :=
+  match erAllocW m 4 with
+  | none => none
+  | some (q, m1) => some (q, cvNewMem m1 q nm lo ll ty)
+
+theorem cvNewMem_eq (m1 : Mem) (q nm lo ll ty : Word) :
+    cvNewMem m1 q nm lo ll ty = wrER m1 q [nm, lo, ll, ty] := by
+  simp only [cvNewMem, wrER]
+  rw [show q + 1 + 1 = q + 2 by ac_rfl, show q + 2 + 1 = q + 3 by ac_rfl]
+
+theorem cvNew_specW (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
+    (hp : p.lookup "cv_new" = some cvNew) (n : Nat) (s₀ : St) (nm lo ll ty : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "cv_new" [nm, lo, ll, ty]
+    ⦃fun r s' => LocEq s' s₀ ∧ cvNewW s₀.mem nm lo ll ty = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, cvNew]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        erecAlloc_specW p ha n] <;>
+      finish [cvNewW, cvNewMem]
+
+theorem getElem?_of_rdW {a : Array Word} {i : Nat} {w : Word} (hi : i < a.size)
+    (hw : rdW a (UInt64.ofNat i) = w) (h64 : i < 2 ^ 64) : a[i]? = some w := by
+  simp only [rdW, UInt64.toNat_ofNat_of_lt' h64] at hw
+  rw [Array.getElem?_eq_getElem hi] at hw ⊢
+  simpa using hw
+
+/-- **`cv_new` with the name and level parameters of the record at `cq`** keeps the stage
+relation and decodes as `{cv with type := ty}`. -/
+theorem cvNew_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+    {m m' : Mem} {cq ty q : Word} {cv : IConstantVal}
+    (h : cvNewW m (rdW (m.arr64 EREC) cq) (rdW (m.arr64 EREC) (cq + 1)) (rdW (m.arr64 EREC) (cq + 2)) ty
+      = some (q, m'))
+    (hS : StageR dn vis fe m a) (hcv : decCVp m cq.toNat = some cv) (hcq : cq.toNat + 4 ≤ erTop m)
+    (hsl : ∀ lo ll, nat? (erA m) (cq.toNat + 1) = some lo → nat? (erA m) (cq.toNat + 2) = some ll →
+      lo + ll ≤ erTop m)
+    (hty : ty.toNat < 2 ^ 32) :
+    StageR dn vis fe m' a ∧ IWGrow m m' ∧ q.toNat = erTop m ∧ erTop m' = erTop m + 4 ∧
+      (∀ lo ll, nat? (erA m') (q.toNat + 1) = some lo → nat? (erA m') (q.toNat + 2) = some ll →
+        lo + ll ≤ erTop m) ∧
+      decCVp m' q.toNat = some { cv with type := decI ty } := by
+  simp only [cvNewW] at h
+  cases h1 : erAllocW m 4 with
+  | none => rw [h1] at h; cases h
+  | some x =>
+  obtain ⟨q1, m1⟩ := x
+  rw [h1] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  rw [cvNewMem_eq]
+  obtain ⟨hS', hg, hq, htop, hget⟩ := erRec_stage h1 hS [rdW (m.arr64 EREC) cq,
+    rdW (m.arr64 EREC) (cq + 1), rdW (m.arr64 EREC) (cq + 2), ty] (by simp)
+  refine ⟨hS', hg, hq, htop, ?_, ?_⟩
+  rotate_left
+  obtain ⟨-, hE1, -, hEs, -⟩ := hS.2
+  have hlt : ∀ j, j < 4 → cq.toNat + j < (m.arr64 EREC).size := fun j hj => by
+    simp only [erTop] at hcq hE1; omega
+  have hw : ∀ (j : Nat) (x : Word), j < 3 → x.toNat = cq.toNat + j →
+      (m.arr64 EREC)[cq.toNat + j]? = some (rdW (m.arr64 EREC) x) := by
+    intro j x hj hx
+    simp only [rdW, hx, Array.getElem?_eq_getElem (hlt j (by omega))]; rfl
+  have hc1 : (cq + 1).toNat = cq.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  have hc2 : (cq + 2).toNat = cq.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
+  have hlow : ∀ i < erTop m, ((wrER m1 q1 [rdW (m.arr64 EREC) cq,
+      rdW (m.arr64 EREC) (cq + 1), rdW (m.arr64 EREC) (cq + 2), ty]).arr64 EREC)[i]? =
+      (m.arr64 EREC)[i]? := fun i hi => hg.2.2.2 i hi
+  refine decCV_copy (erTop m) hcv ?_ ?_ ?_ ?_ hty hlow hsl
+  · have := hget 0 (by simp); simp only [Nat.add_zero] at this
+    simp only [erA]; rw [this]; have := hw 0 cq (by decide) (by simp); simp only [Nat.add_zero] at this
+    rw [this]; simp
+  · simp only [erA]; rw [hget 1 (by simp), hw 1 (cq + 1) (by decide) hc1]; simp
+  · simp only [erA]; rw [hget 2 (by simp), hw 2 (cq + 2) (by decide) hc2]; simp
+  · simp only [erA]; rw [hget 3 (by simp)]; simp
+  · intro lo ll e1 e2
+    obtain ⟨-, hE1, -, hEs, -⟩ := hS.2
+    have hlt : ∀ j, j < 4 → cq.toNat + j < (m.arr64 EREC).size := fun j hj => by
+      simp only [erTop] at hcq hE1; omega
+    simp only [nat?, erA] at e1 e2
+    rw [hget 1 (by simp)] at e1
+    rw [hget 2 (by simp)] at e2
+    simp only [List.getElem?_cons_succ, List.getElem?_cons_zero, Option.map_some, Option.some.injEq] at e1 e2
+    apply hsl
+    · simp only [nat?, erA, rdW]
+      have : (cq + 1).toNat = cq.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      rw [← e1]; simp only [rdW, this, Array.getElem?_eq_getElem (hlt 1 (by decide)), Option.map_some,
+        Option.getD_some]
+    · simp only [nat?, erA, rdW]
+      have : (cq + 2).toNat = cq.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
+      rw [← e2]; simp only [rdW, this, Array.getElem?_eq_getElem (hlt 2 (by decide)), Option.map_some,
+        Option.getD_some]
 
 end L.Ind
