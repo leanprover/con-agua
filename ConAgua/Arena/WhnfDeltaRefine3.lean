@@ -165,6 +165,28 @@ theorem natSuccLit_inst (hp : WhnfDeltaProg' p) :
   fun a₀ n s₀ o l hA hq hn => internLit_refinesD_hw p hp.litHash' hp.limbsEq' hp.litMatch' hp.litFind'
     hp.litPush' hp.internLit a₀ n s₀ o l hA hq hn
 
+/-- `natSuccLit_inst` with "the pool only grew since `m₀`" carried along. -/
+theorem natSuccLit_instP (hp : WhnfDeltaProg' p) (m₀ : Mem) :
+    ∀ (a₀ : AState) (n : Nat) (s₀ : St) (o l : Word), (ArenaD s₀.mem a₀ ∧ PoolGrew m₀ s₀.mem) →
+    SliceOK s₀.mem o l → Norm (s₀.mem.arr64 POOL) o.toNat l.toNat →
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "intern_lit" [o, l]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀ ∧
+      (ArenaD s'.mem (AM.st (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀) ∧
+        PoolGrew m₀ s'.mem) ∧
+      AM.res (internE (.lit (.natVal (pv (s₀.mem.arr64 POOL) o.toNat l.toNat)))) a₀ = decE (r.headD 0) ∧
+      HW (r.headD 0); ⊤⦄ := by
+  intro a₀ n s₀ o l ⟨hA, hP⟩ hq hn
+  apply L.M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, hok, hD, hres, hhw⟩ := L.M.of_run (P := fun s => s = s₀) hs hrun
+    (natSuccLit_inst p hp a₀ n s₀ o l hA hq hn)
+  obtain ⟨hfr, -⟩ := L.M.of_run (P := fun s => s = s₀) hs hrun
+    (invoke_memFrame hp.litClosed n (f := "intern_lit") (by decide) [o, l] s₀)
+  subst hs
+  exact ⟨hloc, hok, ⟨hD, hP.trans (PoolGrew.of_frame hfr (by decide) (by decide))⟩, hres, hhw⟩
+
 /-- **`nat_succ_lit` as a run.** -/
 theorem callW_natSuccLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb o cnt : Word)
@@ -173,14 +195,16 @@ theorem callW_natSuccLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : A
     AM.ok (natAddArm (pv (s₀.mem.arr64 POOL) o.toNat cnt.toNat) 1) a₀ ∧
     CoreS dn m' (AM.st (natAddArm (pv (s₀.mem.arr64 POOL) o.toNat cnt.toNat) 1) a₀) vis fe MM eb ∧
     AM.res (natAddArm (pv (s₀.mem.arr64 POOL) o.toNat cnt.toNat) 1) a₀ = some (decE (r.headD 0)) ∧
-    MemFrame natA natC s₀.mem m' ∧ HW (r.headD 0) := by
-  obtain ⟨s', rfl, -, hok, hD, hres, hhw⟩ := triple_of_callW
-    (natSuccLit_refines_hw p hp.natLimb' hp.addCarry' hp.natTrim' hp.natAdd' hp.natAddLit ArenaD
-      (fun _ _ h => h.1.lit.1) (fun m m' a hA hg => ArenaD.grow m m' hg a hA)
-      (natSuccLit_inst p hp) hp.natSuccLit n s₀ a₀ hC.arena o cnt hs) h
+    MemFrame natA natC s₀.mem m' ∧ HW (r.headD 0) ∧ PoolGrew s₀.mem m' := by
+  obtain ⟨s', rfl, -, hok, ⟨hD, hP⟩, hres, hhw⟩ := triple_of_callW
+    (natSuccLit_refines_hw p hp.natLimb' hp.addCarry' hp.natTrim' hp.natAdd' hp.natAddLit
+      (fun m a => ArenaD m a ∧ PoolGrew s₀.mem m)
+      (fun _ _ h => h.1.1.lit.1)
+      (fun m m' a hA hg => ⟨ArenaD.grow m m' hg a hA.1, hA.2.trans (PoolGrew.of_grows hg)⟩)
+      (natSuccLit_instP p hp s₀.mem) hp.natSuccLit n s₀ a₀ ⟨hC.arena, PoolGrew.refl _⟩ o cnt hs) h
   have hfr := callW_natFrame p hp.natClosed "nat_succ_lit" (by decide +kernel) n _ _ _ _ h
   exact ⟨hok, hC.of_nat hD (Keeps.run (keeps_cpl_natAddArm _ _) (AM.run_of_ok _ _ hok)) hfr, hres,
-    hfr, hhw⟩
+    hfr, hhw, hP⟩
 
 end refs17
 
@@ -886,7 +910,7 @@ theorem callW_reduceNatSucc (hp : WhnfDeltaProg' p) (n F : Nat) (hF : n ≤ F) (
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr0, hr1, hm⟩ := hW
   rw [← hm]
-  obtain ⟨hok5, hS5, hres5, hfr5, hhw5⟩ := callW_natSuccLit p hp n ⟨m₃, Locals.init []⟩ a₂ dn vis fe M' eb _ _
+  obtain ⟨hok5, hS5, hres5, hfr5, hhw5, hP5⟩ := callW_natSuccLit p hp n ⟨m₃, Locals.init []⟩ a₂ dn vis fe M' eb _ _
     hS3 hsl r₅ m₅ h5
   have hsome : rawDec m₃ r₄ = some (pv (m₃.arr64 POOL) (r₄.tail.headD 0).toNat
       (r₄.tail.tail.headD 0).toNat) := by unfold rawDec; rw [if_neg hf]
@@ -897,7 +921,7 @@ theorem callW_reduceNatSucc (hp : WhnfDeltaProg' p) (n F : Nat) (hF : n ≤ F) (
     s₀.mem hC.pins (decBool r₁) hsup hcond (decE (r₃.headD 0)) (by rw [hrun3]; rfl) _ hrun4 _ hi
   obtain ⟨hok', hst', hres'⟩ := AM.of_run_ok _ _ _ _ hz
   refine ⟨hok', ?_, ?_, ?_⟩
-  · rw [hst']; exact ⟨M', hS5, hK3, (hStK1.trans hSt3).trans (StackKept.of_nat_frame hfr5)⟩
+  · rw [hst']; exact ⟨M', hS5, hK3, (hStK1.trans hSt3).trans (StackKept.of_nat_frame hfr5 hP5)⟩
   · rw [hres']; simp only [decOptR, decOpt, ← hr0, ← hr1]; simp
   · unfold ResW HW; rw [← hr0, ← hr1]; exact ⟨by decide, hhw5⟩
 

@@ -525,10 +525,7 @@ theorem iotaIndexOk_refines' (p : Prog) (hp : IotaProg' p) (hi1 : IotaInst1OK p)
   · rw [← hm]
     have t1 : spTop m₁ = spTop s.mem := hSt₁.1
     refine hSt₁.trans ?_
-    apply StackKept.restore _ (by rw [hSt₃.size, hgrew.size]) h136₃
-    intro i hi
-    have hi2 : i < spTop m₂ := UInt64.lt_of_lt_of_le hi hgrew.1
-    rw [hSt₃.below i hi2, hgrew.below i hi]
+    exact StackKept.restoreG (hgrew.trans hSt₃.toGrew) h136₃
   · rw [hresF]; simp only [decBool]; rw [← hr3]
   · unfold ResH HW; rw [← hr3]; exact hr₃
 
@@ -1002,7 +999,8 @@ theorem push_step (m : Mem) (q v : Word) (hq : q.toNat < (m.arr64 SPN).size)
     rw [rdW_set64, if_pos ⟨rfl, rfl, by rw [size_set64]; exact h136⟩]
   have hq1' : (q + 1).toNat = q.toNat + 1 := by
     rw [UInt64.toNat_add]; simp; omega
-  refine ⟨f1.trans f2, htop', ⟨?_, hsz, fun i hi => ?_⟩, ?_, hsz⟩
+  refine ⟨f1.trans f2, htop', ⟨?_, hsz, fun i hi => ?_, BKept.of_frame (f1.trans f2) (by decide) (by decide),
+    PoolGrew.of_frame (f1.trans f2) (by decide) (by decide)⟩, ?_, hsz⟩
   · rw [htop', htop, UInt64.le_iff_toNat_le, hq1']; omega
   · rw [spW_setCtl]
     have : q ≠ i := by
