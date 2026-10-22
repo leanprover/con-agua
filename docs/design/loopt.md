@@ -39,7 +39,8 @@ reduced to `LoopT.of_fold`'s hypotheses (open end 5 below); the promotion, `drop
 * **A core call keeps `LoopT`**: `CoreLoopClosed p` (no function the core entry points reach
   writes the pools, the pins, the pending checks, the declaration records, the promotion memos or
   `CTL` 130, 140‥147, 150, 151) is decided for `checkerProg` (`ConAgua/Checker/LoopCore.lean`,
-  `decide +kernel`, ~100 s). `LoopT.of_core`: `CoreS` after the call and the write set give
+  per-chunk kernel checks in lane `erecfix`'s scheme, `WriteSetSplit`: 11 s, ~4 GB; a
+  first version by one `decide +kernel` over the closure was killed at 16 GB). `LoopT.of_core`: `CoreS` after the call and the write set give
   `LoopT` after (through `LoopR.of_step`); `LoopT.sim_core`; and the entry points as `Sim` facts
   under `LoopT`: `whnfTop_simL`, `inferTypeCore_simL`, `isDefEqCore_simL`, `ensureSortCore_simL`,
   `lvlEqC_simL` (the `LoopT` twins of `IndTwin`'s `_simT`).
