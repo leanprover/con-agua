@@ -45,6 +45,7 @@ abbrev WCM : ArrId := 96
 /-! ## The L code -/
 
 /-- The knot's `whnfCore` slot. -/
+-- con-ron: ConRon/Arena/Core.lean:2140-2152 ConRon.Arena.whnfCoreStuckTag
 @[l_impl ConRon.Arena.whnfCoreStuckTag]
 def whnfCoreL : FunDecl := lfn (mode, cheap, vis, d, e) locals (g, fd, j, dd, x, u) {
   g := e >> 28;
@@ -74,6 +75,8 @@ def whnfCoreLoopB : Stmt := lblk (mode, cheap, vis, d, e, st, r) {
   }
 }
 
+/-- con-ron: ConRon/Arena/Core.lean:2386-2394 ConRon.Arena.whnfCoreBody
+con-ron: ConRon/Arena/Core.lean:2373-2384 ConRon.Arena.whnfCoreLoop -/
 @[l_impl ConRon.Arena.whnfCoreBody ConRon.Arena.whnfCoreLoop]
 def whnfCoreLoopL : FunDecl := lfn (mode, cheap, vis, d, e) locals (st, r) {
   ⟪whnfCoreLoopB⟫;
@@ -82,6 +85,7 @@ def whnfCoreLoopL : FunDecl := lfn (mode, cheap, vis, d, e) locals (st, r) {
 
 /-- The `app` arm of `whnf_core_step` (its own function: the arms' chains of calls are proved
 apart). -/
+-- con-ron: ConRon/Arena/Core.lean:2344-2371 ConRon.Arena.whnfCoreStep
 @[l_impl ConRon.Arena.whnfCoreStep]
 def whnfCoreAppL : FunDecl :=
     lfn (mode, cheap, vis, d, e) locals (top, h, so, sn, v, st, r) {
@@ -94,6 +98,7 @@ def whnfCoreAppL : FunDecl :=
 }
 
 /-- The second half of the `app` arm: the reduct's spine, then the β/ι walk. -/
+-- con-ron: ConRon/Arena/Core.lean:2344-2371 ConRon.Arena.whnfCoreStep
 @[l_impl ConRon.Arena.whnfCoreStep]
 def whnfCoreApp2L : FunDecl := lfn (mode, vis, d, v, h, so, sn) locals (top, hd, ho, hn, st, r) {
   top := CTL.u64[136];
@@ -103,6 +108,7 @@ def whnfCoreApp2L : FunDecl := lfn (mode, vis, d, v, h, so, sn) locals (top, hd,
   return (st, r)
 }
 
+/-- con-ron: ConRon/Arena/Core.lean:2344-2371 ConRon.Arena.whnfCoreStep -/
 @[l_impl ConRon.Arena.whnfCoreStep]
 def whnfCoreStepL : FunDecl :=
     lfn (mode, cheap, vis, d, e) locals (g, t, i, st, r) {
@@ -136,6 +142,8 @@ def whnfCoreStepL : FunDecl :=
   abort
 }
 
+/-- con-ron: ConRon/Arena/Core.lean:2222-2253 ConRon.Arena.whnfApp
+con-ron: ConRon/Arena/Core.lean:2103-2107 ConRon.Arena.internAppRebuilt -/
 @[l_impl ConRon.Arena.whnfApp ConRon.Arena.internAppRebuilt]
 def whnfAppL : FunDecl :=
     lfn (mode, vis, d, v, hd, vo, vn, same, ao, an, i) locals (top, a, node, ap, st, e2, e3, t, x) {
@@ -173,6 +181,7 @@ def whnfAppL : FunDecl :=
   return (0, v)
 }
 
+/-- con-ron: ConRon/Arena/Core.lean:2201-2220 ConRon.Arena.betaPeel -/
 @[l_impl ConRon.Arena.betaPeel]
 def betaPeelL : FunDecl := lfn (t, a, ao, an, i) locals (co, cn, tt, x, e2, e3) {
   co := CTL.u64[136];
@@ -203,6 +212,7 @@ def betaPeelL : FunDecl := lfn (t, a, ao, an, i) locals (co, cn, tt, x, e2, e3) 
   return (1, e2)
 }
 
+/-- con-ron: ConRon/Arena/Core.lean:2331-2342 ConRon.Arena.whnfCoreStepProj -/
 @[l_impl ConRon.Arena.whnfCoreStepProj]
 def whnfCoreStepProjL : FunDecl := lfn (mode, cheap, vis, d, e, sn, i, pe) locals (c, f, r) {
   if cheap != 0 { c := call whnf_core(mode, 1, vis, d, pe) } else { c := call whnf(mode, vis, d, pe) };
@@ -211,6 +221,7 @@ def whnfCoreStepProjL : FunDecl := lfn (mode, cheap, vis, d, e, sn, i, pe) local
   return (0, e)
 }
 
+/-- con-ron: ConRon/Arena/Core.lean:2296-2329 ConRon.Arena.reduceProjCore -/
 @[l_impl ConRon.Arena.reduceProjCore]
 def reduceProjCoreL : FunDecl :=
     lfn (mode, vis, d, sn, i, c) locals (top, e1, f, q, hh, t, x, k, us, ao, an, lo, usl, fok, np,
@@ -245,6 +256,9 @@ def reduceProjCoreL : FunDecl :=
   return (0, 0)
 }
 
+/-- con-ron: ConRon/Arena/Core.lean:2279-2286 ConRon.Arena.projCert
+con-ron: ConRon/Arena/Core.lean:2288-2294 ConRon.Arena.projCertAt
+con-ron: ConRon/Arena/Core.lean:2272-2277 ConRon.Arena.teleArityOk -/
 @[l_impl ConRon.Arena.projCert ConRon.Arena.projCertAt ConRon.Arena.teleArityOk]
 def projCertL : FunDecl := lfn (vis, k, ao, an) locals (f, q, ok, r) {
   (f, q) := call env_find(k, vis);
@@ -254,6 +268,7 @@ def projCertL : FunDecl := lfn (vis, k, ao, an) locals (f, q, ok, r) {
   return u64(ok != 0)
 }
 
+/-- con-ron: ConRon/Arena/Core.lean:1837-1849 ConRon.Arena.projLitToCtor -/
 @[l_impl ConRon.Arena.projLitToCtor]
 def projLitToCtorL : FunDecl := lfn (mode, vis, d, h) locals (t, x, s, c) {
   if h >> 28 != 8 { return h };

@@ -1,0 +1,273 @@
+import ConAgua.Arena.DeclBase
+import ConAgua.Arena.IndProg
+import ConAgua.Front.IndApply
+import ConAgua.Census.Attr
+
+/-!
+# Phase A's step body in L: `install_step_go`, `check_decl`, the header and value guards
+
+The twin's `installStepGo` (`vendor/con-ron/ConRon/Arena/Checker.lean`) and `checkDecl`'s dispatch
+(`CheckDecl.lean`), `installHeader`/`installValueGuards` (`CheckerSplit.lean`), on lane
+`induct`'s conventions (`IndIface.lean`: the work pool `IW`, constants as `EREC` records, the view
+word for the environment, the callee names and argument orders of its `stubFns`).
+
+* `install_step_go(i, vis)` → `(vis', flag, g)`: record `i` of `DECL`. A definition (kind `2`),
+  theorem (`3`) or opaque (`4`) not among the pinned names is guarded and installed here: its
+  constant record is built in `EREC` (`erec_ci`: kind `1` `defnInfo`, `2` `thmInfo`, `0`
+  `axiomInfo`), `install_header` and (but for a theorem) `install_value_guards` run on it, it is
+  pushed (`env_push`), and its value group is a 6-word `EREC` record (`erec_vg`). Everything else
+  goes to `check_decl`. A definition is pinned when its name is one of `PINS[15‥29]`
+  (`natOpNames ++ natDivModNames`), an opaque when it is `PINS[44]`/`PINS[45]` (`reduceOpNames`).
+* `check_decl(i, vis)` → `vis'`: an inductive block (kind `6`, lane `induct`'s front records in
+  `DIND`) is copied into `EREC` (`ind_block_to_erec`: every record, its universe parameters and
+  its recursor rules relocated) and checked by lane `induct`'s `check_ind_decl(vis, boff, blen,
+  nP)`; every one-constant record goes to `check_decl_const(i, vis)` (a stub: the axiom, quotient
+  and pinned-value arms of `checkDecl`, lane `decls`' next work).
+* `install_header(vis, q)`, `install_value_guards(vis, q, v)`: `q` is a constant value in `EREC`
+  (`decCV`: name, universe parameters, type). The checks in the twin's order; every `fail` is
+  `abort`.
+
+The refinement of `install_step_go` is `Checker.lean`'s `installStepGo_spec` (still `sorry`): it
+needs the front's `DeclAt` arm for kind `6` (lane `front`), the stub specs of `IndStubs.lean`, and
+the callees' frame on `PEND`/`DECL`/`DLP` from the program text.
+-/
+
+open ConRon.Arena
+
+namespace L.Arena
+
+open L.Front (DECL DLP)
+open L.Front.Ind (DIND)
+open L.Ind (IW)
+
+/-! ## Pinned names -/
+
+/-- `pin_in(x, k, hi)`: `1` if `x` is one of `PINS[k‥hi)`. -/
+-- con-ron: ConRon/Arena/Checker.lean:113-151 ConRon.Arena.installStepGo
+def pinIn : FunDecl := lfn (x, k, hi) locals (r) {
+  if hi <= k { return 0 };
+  if PINS.u64[k] == x { return 1 };
+  r := call pin_in(x, k + 1, hi);
+  return r
+}
+
+/-! ## Constant records from the front's records -/
+
+/-- `dlp_copy(d, s, l)`: `EREC[d + j] := DLP[s + j]` cut to 32 bits, for `j < l`. -/
+-- con-ron: none — copies the front's records into `EREC` (the twin's `checkDecl` takes the front's values as they are)
+def dlpCopy : FunDecl := lfn (d, s, l) locals (u) {
+  if l == 0 { return 0 };
+  EREC.u64[d] := DLP.u64[s] & 4294967295;
+  u := call dlp_copy(d + 1, s + 1, l - 1);
+  return 0
+}
+
+/-- `erec_ci(i, kind)`: the constant record of `DECL` record `i` with kind word `kind`
+(`decCI`'s layout: kind, the constant value, the value, the hint (`0` opaque, `1` abbrev, `2`
+regular), the height); its universe parameters a fresh `EREC` slice. -/
+-- con-ron: ConRon/Arena/Checker.lean:113-151 ConRon.Arena.installStepGo
+def erecCi : FunDecl := lfn (i, kind) locals (lo, ll, s, z, p, hq) {
+  lo := DECL.u64[3 + 8 * i];
+  ll := DECL.u64[4 + 8 * i];
+  s := call erec_alloc(ll);
+  z := call dlp_copy(s, 1 + lo, ll);
+  p := call erec_alloc(8);
+  EREC.u64[p] := kind;
+  EREC.u64[p + 1] := DECL.u64[2 + 8 * i] & 4294967295;
+  EREC.u64[p + 2] := s;
+  EREC.u64[p + 3] := ll;
+  EREC.u64[p + 4] := DECL.u64[5 + 8 * i] & 4294967295;
+  EREC.u64[p + 5] := DECL.u64[6 + 8 * i] & 4294967295;
+  hq := DECL.u64[7 + 8 * i];
+  if hq == 1 { EREC.u64[p + 6] := 1 } else if hq == 2 { EREC.u64[p + 6] := 0 } else {
+    EREC.u64[p + 6] := 2 };
+  EREC.u64[p + 7] := DECL.u64[8 + 8 * i];
+  return p
+}
+
+/-- `erec_vg(p, vk)`: the value group of the constant record `p` with value kind `vk` (`0`
+defn, `1` thm, `2` opaque): kind, the constant value, the value (`p + 5`). -/
+-- con-ron: ConRon/Arena/Checker.lean:113-151 ConRon.Arena.installStepGo
+def erecVg : FunDecl := lfn (p, vk) locals (g) {
+  g := call erec_alloc(6);
+  EREC.u64[g] := vk;
+  EREC.u64[g + 1] := EREC.u64[p + 1];
+  EREC.u64[g + 2] := EREC.u64[p + 2];
+  EREC.u64[g + 3] := EREC.u64[p + 3];
+  EREC.u64[g + 4] := EREC.u64[p + 4];
+  EREC.u64[g + 5] := EREC.u64[p + 5];
+  return g
+}
+
+/-! ## The guards -/
+
+/-- `install_header(vis, q)`: `installHeader fe cv`, `q` the constant value in `EREC`. -/
+-- con-ron: ConRon/Arena/CheckerSplit.lean:59-79 ConRon.Arena.installHeader
+@[l_impl ConRon.Arena.installHeader]
+def installHeaderL : FunDecl := lfn (vis, q) locals (n, t, f, r, c, s, o, l, d, b, h, a) {
+  n := EREC.u64[q];
+  t := EREC.u64[q + 3];
+  (f, r) := call env_find(n, vis);
+  if f != 0 { abort };
+  c := call reserved_contains(n);
+  if c != 0 { abort };
+  s := call is_proj_fn_shape(n);
+  if s != 0 { abort };
+  (o, l) := call cv_lps(q);
+  d := call sl_nodup(o, l);
+  if d == 0 { abort };
+  b := call loose_bvars_bounded_fast(4000000000, 0, t);
+  if b == 0 { abort };
+  h := call has_fvar_fast(4000000000, t);
+  if h != 0 { abort };
+  a := call all_level_params_defined(o, l, t);
+  if a == 0 { abort };
+  c := call consts_resolve_ffast(vis, t);
+  if c == 0 { abort };
+  return 0
+}
+
+/-- `install_value_guards(vis, q, v)`: `installValueGuards fe cv v`. -/
+-- con-ron: ConRon/Arena/CheckerSplit.lean:81-93 ConRon.Arena.installValueGuards
+@[l_impl ConRon.Arena.installValueGuards]
+def installValueGuardsL : FunDecl := lfn (vis, q, v) locals (o, l, b, h, a, c) {
+  (o, l) := call cv_lps(q);
+  b := call loose_bvars_bounded_fast(4000000000, 0, v);
+  if b == 0 { abort };
+  h := call has_fvar_fast(4000000000, v);
+  if h != 0 { abort };
+  a := call all_level_params_defined(o, l, v);
+  if a == 0 { abort };
+  c := call consts_resolve_ffast(vis, v);
+  if c == 0 { abort };
+  return 0
+}
+
+/-! ## An inductive block from the front's `DIND` into `EREC` -/
+
+/-- `dind_copy(d, s, l)`: `EREC[d + j] := DIND[s + j]` for `j < l`. -/
+-- con-ron: none — copies the front's records into `EREC` (the twin's `checkDecl` takes the front's values as they are)
+def dindCopy : FunDecl := lfn (d, s, l) locals (u) {
+  if l == 0 { return 0 };
+  EREC.u64[d] := DIND.u64[s];
+  u := call dind_copy(d + 1, s + 1, l - 1);
+  return 0
+}
+
+/-- `ind_rec_copy(s)`: the constant record at `DIND[s]` (kind `3` inductive, 20 words; `4`
+constructor, 7; `5` recursor, 9 and its 11-word rules) copied into `EREC`, its slices too. -/
+-- con-ron: none — copies the front's records into `EREC` (the twin's `checkDecl` takes the front's values as they are)
+def indRecCopy : FunDecl := lfn (s) locals (k, q, z, r, n, p) {
+  k := DIND.u64[s];
+  q := call erec_alloc(DIND.u64[s + 3]);
+  z := call dind_copy(q, DIND.u64[s + 2], DIND.u64[s + 3]);
+  r := 0;
+  if k == 3 { n := 20 } else if k == 4 { n := 7 } else if k == 5 {
+    n := 9;
+    if DIND.u64[s + 8] >= 1152921504606846976 { abort };
+    r := call erec_alloc(11 * DIND.u64[s + 8]);
+    z := call dind_copy(r, DIND.u64[s + 7], 11 * DIND.u64[s + 8])
+  } else { abort };
+  p := call erec_alloc(n);
+  z := call dind_copy(p, s, n);
+  EREC.u64[p + 2] := q;
+  if k == 5 { EREC.u64[p + 7] := r };
+  return p
+}
+
+/-- `ind_copy_go(o, bo, bl)`: the records the pointers `DIND[bo‥bo + bl)` name, copied, their
+`EREC` pointers to `EREC[o‥]`. -/
+-- con-ron: none — copies the front's records into `EREC` (the twin's `checkDecl` takes the front's values as they are)
+def indCopyGo : FunDecl := lfn (o, bo, bl) locals (p, u) {
+  if bl == 0 { return 0 };
+  p := call ind_rec_copy(DIND.u64[bo]);
+  EREC.u64[o] := p;
+  u := call ind_copy_go(o + 1, bo + 1, bl - 1);
+  return 0
+}
+
+/-- `ind_block_to_erec(i)`: the block of `DECL` record `i` (kind `6`) as an `EREC` slice. -/
+-- con-ron: none — copies the front's records into `EREC` (the twin's `checkDecl` takes the front's values as they are)
+def indBlockToErec : FunDecl := lfn (i) locals (bo, bl, o, u) {
+  bo := DECL.u64[3 + 8 * i];
+  bl := DECL.u64[4 + 8 * i];
+  o := call erec_alloc(bl);
+  u := call ind_copy_go(o, bo, bl);
+  return (o, bl)
+}
+
+/-! ## `check_decl`, `install_step_go` -/
+
+/-- `check_decl(i, vis)`: `checkDecl` on record `i`. -/
+-- con-ron: ConRon/Arena/CheckDecl.lean:82-214 ConRon.Arena.checkDecl
+@[l_impl ConRon.Arena.checkDecl]
+def checkDeclL : FunDecl := lfn (i, vis) locals (k, bo, bl, v) {
+  k := DECL.u64[1 + 8 * i];
+  if k == 6 {
+    (bo, bl) := call ind_block_to_erec(i);
+    v := call check_ind_decl(vis, bo, bl, DECL.u64[5 + 8 * i]);
+    return v
+  };
+  v := call check_decl_const(i, vis);
+  return v
+}
+
+/-- `install_step_go(i, vis)`: `installStepGo` on record `i` → the new view, the value group's
+flag and record. -/
+-- con-ron: ConRon/Arena/Checker.lean:113-151 ConRon.Arena.installStepGo
+@[l_impl ConRon.Arena.installStepGo]
+def installStepGoL : FunDecl := lfn (i, vis) locals (k, x, c, v, p, z, g) {
+  z := call iw_reset();
+  k := DECL.u64[1 + 8 * i];
+  x := DECL.u64[2 + 8 * i] & 4294967295;
+  if k == 2 {
+    c := call pin_in(x, 15, 30);
+    if c != 0 { v := call check_decl(i, vis); return (v, 0, 0) };
+    p := call erec_ci(i, 1);
+    z := call install_header(vis, p + 1);
+    z := call install_value_guards(vis, p + 1, EREC.u64[p + 5]);
+    v := call env_push(vis, p);
+    g := call erec_vg(p, 0);
+    return (v, 1, g)
+  };
+  if k == 3 {
+    p := call erec_ci(i, 2);
+    z := call install_header(vis, p + 1);
+    v := call env_push(vis, p);
+    g := call erec_vg(p, 1);
+    return (v, 1, g)
+  };
+  if k == 4 {
+    c := call pin_in(x, 44, 46);
+    if c != 0 { v := call check_decl(i, vis); return (v, 0, 0) };
+    p := call erec_ci(i, 0);
+    z := call install_header(vis, p + 1);
+    z := call install_value_guards(vis, p + 1, EREC.u64[p + 5]);
+    v := call env_push(vis, p);
+    g := call erec_vg(p, 2);
+    return (v, 1, g)
+  };
+  v := call check_decl(i, vis);
+  return (v, 0, 0)
+}
+
+/-! ## The program -/
+
+/-- This module's functions. -/
+def declStepFns : Prog :=
+  [("pin_in", pinIn), ("dlp_copy", dlpCopy), ("erec_ci", erecCi), ("erec_vg", erecVg),
+   ("install_header", installHeaderL), ("install_value_guards", installValueGuardsL),
+   ("dind_copy", dindCopy), ("ind_rec_copy", indRecCopy), ("ind_copy_go", indCopyGo),
+   ("ind_block_to_erec", indBlockToErec), ("check_decl", checkDeclL),
+   ("install_step_go", installStepGoL)]
+
+/-- Stubs of this module's callees not written yet. -/
+def declStepStubs : Prog := [("check_decl_const", L.Ind.stub 2)]
+
+/-- The step's program: this module, lane `induct`'s stage (with its stubs), the stubs. -/
+def declStepProg : Prog := declStepFns ++ declStepStubs ++ L.Ind.indProg
+
+theorem declStepProg_wf : L.Compiler.Prog.wf L.Ind.indTab declStepProg = true := by
+  decide +kernel
+
+end L.Arena

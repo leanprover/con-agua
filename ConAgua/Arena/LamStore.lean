@@ -110,6 +110,7 @@ def lafindLoop : Stmt := lblk (t, ty, body, h, n, j, d, v, b) {
   }
 }
 
+/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def lamFind : FunDecl := lfn (t, ty, body, h) locals (n, j, d, v, b) {
   n := len(LASLOT.u64) >> 1;
   b := CTL.u64[62] * t;
@@ -182,6 +183,7 @@ def lapushMem (m : Mem) (t ty body j c : Word) : Mem :=
   ((((m.set64 LAREC (c * 4 + t * 2) ty).set64 LAREC (c * 4 + t * 2 + 1) body).set64 LASLOT
     (j * 2 + t) (baseW m t + c + 1)).set64 CTL (28 + (t &&& 1)) (c + 1))
 
+/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def lamPush : FunDecl := lfn (t, ty, body, j) locals (c, k) {
   c := CTL.u64[28 + t];
   if c >= 134217728 { abort };
@@ -251,6 +253,8 @@ def lainternW (m : Mem) (ty body : Word) : Option (Word × Mem) :=
 /-- The L FunDecl for `intern_lam`. Named `internLamL`, not `internLam`: con-ron's
 `EStore.internLam` (`ConRon/Arena/Store.lean`) is a sibling name in a different namespace, but the
 `L`-suffix keeps the two visually apart in this file, which `open`s `ConRon.Arena`. -/
+-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
+-- con-ron: ConRon/Arena/Monad.lean:169-197 ConRon.Arena.internLamE
 @[l_impl ConRon.Arena.internE ConRon.Arena.internLamE]
 def internLamL : FunDecl := lfn (ty, body) locals (h, sk, fd, i, j, d) {
   h := ((⟪fnvBasis⟫ ^ ty) * ⟪fnvPrime⟫ ^ body) * ⟪fnvPrime⟫;

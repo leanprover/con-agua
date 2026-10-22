@@ -19,6 +19,7 @@ of `intern_app` and the two extra arguments. `LiftEmit.lean` compiles `liftBench
 
 namespace L.Arena
 
+/-- con-ron: none — a benchmark driver -/
 def liftBench : FunDecl := lfn (n, k, shift, cutoff) locals (b, x, i, r) {
   b := call intern_bvar(k & 9223372036854775807);
   x := b;

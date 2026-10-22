@@ -42,6 +42,7 @@ def findLoop : Stmt := lblk (i, c) {
   }
 }
 
+/-- con-ron: none — an example program of L -/
 def findByte : FunDecl := lfn (i, c) {
   ⟪findLoop⟫;
   return len(IN.u8)
@@ -143,6 +144,7 @@ def strCloseLoop : Stmt := lblk (j, c) {
   }
 }
 
+/-- con-leche: ConLeche/Frontend/Scan/Fast.lean:499-520 ConLeche.Frontend.strClose -/
 @[l_impl ConLeche.Frontend.strClose]
 def strClose : FunDecl := lfn (j) locals (c) {
   ⟪strCloseLoop⟫;
@@ -171,6 +173,7 @@ def skipBracedLoop : Stmt := lblk (i, depth, c, e) {
   }
 }
 
+/-- con-leche: ConLeche/Frontend/Scan/Fast.lean:737-761 ConLeche.Frontend.skipBraced -/
 @[l_impl ConLeche.Frontend.skipBraced]
 def skipBraced : FunDecl := lfn (i, depth) locals (c, e) {
   ⟪skipBracedLoop⟫;
@@ -187,6 +190,7 @@ def scanProg : Prog := [("str_close", strClose), ("skip_braced", skipBraced)]
 /-- The histogram (a word array of length 256). -/
 abbrev HIST : ArrId := 0
 
+/-- con-ron: none — an example program of L -/
 def histogram : FunDecl := lfn () locals (i, c) {
   while i < len(IN.u8) {
     c := IN.u8[i];
@@ -417,7 +421,9 @@ locals are the caller's), and the caller still reads its own `i` after the call.
 
 abbrev W : ArrId := 0
 
+/-- con-ron: none — an example program of L -/
 def bump : FunDecl := lfn (i) { W.u64[0] := i; return 0 }
+/-- con-ron: none — an example program of L -/
 def bumpUser : FunDecl := lfn (i) locals (z) { z := call bump(i + 1); return i + z }
 
 section bump

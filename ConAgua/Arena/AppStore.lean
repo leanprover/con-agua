@@ -103,6 +103,7 @@ def afindLoop : Stmt := lblk (t, f, a, h, n, j, d, v, b) {
   }
 }
 
+/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def appFind : FunDecl := lfn (t, f, a, h) locals (n, j, d, v, b) {
   n := len(ASLOT.u64) >> 1;
   b := CTL.u64[62] * t;
@@ -175,6 +176,7 @@ def apushMem (m : Mem) (t f a j c : Word) : Mem :=
   ((((m.set64 AREC (c * 4 + t * 2) f).set64 AREC (c * 4 + t * 2 + 1) a).set64 ASLOT (j * 2 + t)
     (baseW m t + c + 1)).set64 CTL (4 + (t &&& 1)) (c + 1))
 
+/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def appPush : FunDecl := lfn (t, f, a, j) locals (c, k) {
   c := CTL.u64[4 + t];
   if c >= 134217728 { abort };
@@ -240,6 +242,8 @@ def ainternW (m : Mem) (f a : Word) : Option (Word × Mem) :=
     some (appP + acnt m 0, apushMem m 0 f a (rs₀.tail.tail.headD 0) (acnt m 0))
   else none
 
+/-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
+con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
 @[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internApp : FunDecl := lfn (f, a) locals (h, sk, fd, i, j, d) {
   h := ((⟪fnvBasis⟫ ^ f) * ⟪fnvPrime⟫ ^ a) * ⟪fnvPrime⟫;

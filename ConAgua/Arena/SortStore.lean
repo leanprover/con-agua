@@ -96,6 +96,7 @@ def sofindLoop : Stmt := lblk (t, u, h, n, j, d, v, b) {
   }
 }
 
+/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def sortFind : FunDecl := lfn (t, u, h) locals (n, j, d, v, b) {
   n := len(SOSLOT.u64) >> 1;
   b := CTL.u64[62] * t;
@@ -167,6 +168,7 @@ def sopushOK (m : Mem) (t : Word) : Bool :=
 def sopushMem (m : Mem) (t u j c : Word) : Mem :=
   (((m.set64 SOREC (c * 2 + t) u).set64 SOSLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (16 + (t &&& 1)) (c + 1))
 
+/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def sortPush : FunDecl := lfn (t, u, j) locals (c) {
   c := CTL.u64[16 + t];
   if c >= 134217728 { abort };
@@ -230,6 +232,8 @@ def sointernW (m : Mem) (u : Word) : Option (Word × Mem) :=
     some (sortP + socnt m 0, sopushMem m 0 u (rs₀.tail.tail.headD 0) (socnt m 0))
   else none
 
+/-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
+con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
 @[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internSort : FunDecl := lfn (u) locals (h, sk, fd, i, j, d) {
   h := (⟪fnvBasis⟫ ^ u) * ⟪fnvPrime⟫;

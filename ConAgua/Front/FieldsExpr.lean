@@ -43,6 +43,7 @@ open L.Scan.Records (boolEndN)
 
 /-! ## `obj_val`: the end of a sub-object member's value -/
 
+/-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2427-2574 ConLeche.Frontend.scanLineLoop -/
 def objVal : FunDecl := lfn (ks, k, v) locals (e, ok, x) {
   if k == 5 {  -- `binderInfo`
     e := call scan_binder_info(v);
@@ -106,6 +107,7 @@ def objLoop : Stmt := lblk (i, w, x0, x1, x2, x3, tag, ks, k, v, e, x) {
   }
 }
 
+/-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2427-2574 ConLeche.Frontend.scanLineLoop -/
 def recObj : FunDecl := lfn (i) locals (w, x0, x1, x2, x3, tag, ks, k, v, e, x) {
   i += 1;
   w := 1;
@@ -184,6 +186,7 @@ grind_pattern [lang_grind] objRecN_key => objRecN b i w o, nextMemberN b i w
 
 /-! ## `expr_val`: one member of an expression line -/
 
+/-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2427-2574 ConLeche.Frontend.scanLineLoop -/
 def exprVal : FunDecl := lfn (k, ks, v) locals (e, x, x0, x1, x2, x3, q) {
   if k == 21 || k == 19 || k == 18 {  -- `in`, `il`, `ie`
     e := call slot_nat(ks, v);
@@ -260,6 +263,7 @@ def exprLoop : Stmt := lblk (i, w, pl, idx, a, c, d, tag, ks, k, v, e, q, x, y, 
   }
 }
 
+/-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2427-2574 ConLeche.Frontend.scanLineLoop -/
 @[l_impl ConLeche.Frontend.scanLineLoop]
 def recExprLoop : FunDecl := lfn (i) locals (w, pl, idx, a, c, d, tag, ks, k, v, e, q, x, y, z) {
   w := 1;

@@ -36,6 +36,7 @@ open L.Arena
 section namesTo
 variable (rom : List UInt8)
 
+/-- con-ron: none — the ROM reader (L has constant bytes where the twin has con-leche values) -/
 def romNamesTo : FunDecl := lfn (q, k, d) locals (h, r) {
   if k == 0 { return q };
   (h, q) := call rom_name(q);
@@ -99,14 +100,6 @@ theorem romNamesTo_specW (n : Nat) : ∀ (s₀ : St) (q k d : Word), (s₀.mem.a
 end namesToSpec
 
 /-! ## `rom_names_to` refines `internNameList` -/
-
-theorem ArenaD.frameHi {A : List ArrId} {C : List Word} {m m' : Mem} {a : AState}
-    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, 64 ≤ b) (hC : ∀ x ∈ C, 64 ≤ x.toNat) (h : ArenaD m a) :
-    ArenaD m' a :=
-  ⟨ArenaR.frame_ext A C hA hC m m' hf a h.1,
-   DerR.frame m m' a h.2 (fun B hB => hf.1 B (fun hm => by
-      have := hA B hm; rcases hB with rfl | rfl | rfl | rfl | rfl <;> revert this <;> decide)
-      (by rcases hB with rfl | rfl | rfl | rfl | rfl <;> decide))⟩
 
 theorem pinW_set (m : Mem) (d h : Word) (i : Nat) (hd : d.toNat < (m.arr64 PINS).size) :
     pinW (m.set64 PINS d h) i = if i = d.toNat then h else pinW m i := by
@@ -219,6 +212,7 @@ end namesToRef
 
 /-- `intern_reserved_pins()` for the ROM offset `off` of `encNames pinNames ++ encNames
 reservedBasisNameValues`. -/
+-- con-ron: ConRon/Arena/Pins.lean:228-242 ConRon.Arena.internReservedPins
 def internReservedPinsAt (off : Word) : FunDecl := lfn () locals (q, us, z, o, s1) {
   if len(PINS.u64) < 71 { abort };
   q := call rom_names_to(⟪off⟫, 51, 1);
@@ -239,6 +233,7 @@ def internReservedPinsAt (off : Word) : FunDecl := lfn () locals (q, us, z, o, s
 }
 
 /-- `intern_reserved_pins()` as the program has it: the ROM starts with the two name lists. -/
+-- con-ron: ConRon/Arena/Pins.lean:228-242 ConRon.Arena.internReservedPins
 @[l_impl ConRon.Arena.internReservedPins]
 def internReservedPinsL : FunDecl := internReservedPinsAt 0
 
