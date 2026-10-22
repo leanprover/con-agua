@@ -96,6 +96,7 @@ def closeTelescope : FunDecl := lfn (dsOff, dsLen, i, body) locals (inner, close
   inner := call close_telescope(dsOff + 1, dsLen - 1, i + 1, body);
   closed := call abstract1_fast(⟪CWF⟫, inner, i, 0);
   r := call mk_forall(IW.u64[dsOff], closed);
+  if 4294967296 <= r { abort };
   return r
 }
 
