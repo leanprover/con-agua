@@ -106,7 +106,6 @@ structure KnotCallees (p : Prog) : Prop where
   /-- Stored levels read back under `CoreS` (`StoreDen.lean`; to become a field of `CoreS`). -/
   den : CoreDen
   constTy : ConstTyAtOK p
-  bstk : BStkCallees p
   /-- `inst_lp` (lane `whnf3`'s `instLPFast` walk). -/
   instLP : InstLPOK p
   /-- `lvl_eq_c` and `field_sort_zero` keep `EREC` (helper `defeq2-proj`, `InferProj.lean`). -/
@@ -174,7 +173,7 @@ theorem KnotCallees.lit : InferLitCallees p :=
 include hq hc in
 theorem KnotCallees.infer : InferCallees p :=
   ⟨hq.walks.inst1OK, hq.walks.instListOK, (hc.defeq hq).abstract1, (hc.defeq hq).abstractRange,
-    hc.constTy, hc.lit hq, isEagerReduceH_of p hq.body.stuck.leaf, hc.bstk, bstkCap_of,
+    hc.constTy, hc.lit hq, isEagerReduceH_of p hq.body.stuck.leaf, bstkCap_of,
     inferProj_refines p hq.proj ⟨hc.den, hc.findProj, hc.projFound, hc.erecKept, hc.instLP, hc.erecProj⟩⟩
 
 /-- **The knot at fuel `0`**: every L call at fuel `0` fails. -/
