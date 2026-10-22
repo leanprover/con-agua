@@ -87,20 +87,6 @@ theorem ictlK1_some : ictlK1 p n bO bL q pp env1 (some (r, m)) =
 end arms
 attribute [ind_grind] ictlK7_some ictlK6_some ictlK5_some ictlK4_some ictlK3_some ictlK2_some ictlK1_some
 
-set_option maxHeartbeats 4000000 in
-theorem ictl_spec (p : Prog) (hp : p.lookup "check_block_tail" = some checkBlockTail) (n : Nat) (s₀ : St)
-    (bO bL q : Word) :
-    ⦃fun st => st = s₀⦄ invoke p (exec p (n + 1)) "check_block_tail" [bO, bL, q]
-    ⦃fun r s' => LocEq s' s₀ ∧ ictlW p n s₀.mem bO bL q = some (r, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, checkBlockTail]
-  sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "check_block_idx_sorts", callW_spec p n "cons_block_ctors",
-      callW_spec p n "flush_caches", callW_spec p n "block_nested_bit", callW_spec p n "check_block_rec",
-      callW_spec p n "cons_block_recs_tf", callW_spec p n "check_block_tables"] <;>
-    finish (gen := 40) (instances := 20000) [ictlW, rdW_eq]
-
 /-! ## `check_block` -/
 
 def icbK9 : Option (List Word × Mem) → Option (List Word × Mem)
