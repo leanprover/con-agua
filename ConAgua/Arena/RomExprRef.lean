@@ -1,4 +1,5 @@
 import ConAgua.Arena.RomExpr
+import ConAgua.Arena.NatArms
 import ConAgua.Census.Attr
 
 /-!
@@ -282,6 +283,10 @@ theorem iEG_proj (nm : ConLeche.Name) (i : Nat) (sub : ConLeche.Expr) (hn : NIdx
   rw [r1]; simp only
   rw [r2]; rfl
 
+theorem iEG_lit (l : ConLeche.Literal) (r : (internE (.lit l)).run a₀ = .ok (h, a₁)) :
+    (internExprGo m (.lit l)).run a₀ = .ok ((m, h), a₁) := by
+  simp only [internExprGo, StateT.run_bind, r]; rfl
+
 theorem iEG_bvar (i : Nat) (r : (internE (.bvar i)).run a₀ = .ok (h, a₁)) :
     (internExprGo m (.bvar i)).run a₀ = .ok ((m, h), a₁) := by
   simp only [internExprGo, StateT.run_bind, r]; rfl
@@ -306,12 +311,13 @@ end twin
 
 /-! ## The refinement -/
 
-/-- Every datum of the expression fits its encoding; no literal. -/
+/-- Every datum of the expression fits its encoding; no string literal. -/
 def exprFits : ConLeche.Expr → Bool
   | .bvar i => decide (i < 2 ^ 64)
   | .sort u => levelFits u
   | .const n us => nameFits n && us.all levelFits && decide (us.length < 2 ^ 60)
-  | .lit _ => false
+  | .lit (.natVal n) => decide (n < 2 ^ 64)
+  | .lit (.strVal _) => false
   | .fvar i ty => decide (i < 2 ^ 64) && exprFits ty
   | .app f a | .lam f a | .forallE f a => exprFits f && exprFits a
   | .letE t v b => exprFits t && exprFits v && exprFits b
@@ -616,7 +622,75 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
       rw [hq2, hq1, hp1]; simp; omega
     · exact (frame_storeE hf1).trans ((frame_exprA hf2).trans (frame_storeE hf3'))
     · rw [frame_exprA_stk hf3', hst2, hst1]
-  | lit l => intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _; simp [exprFits] at he
+  | lit l =>
+    intro n mem a pos rest seen m h q mem' hA hM hd hst hc hW
+    cases l with
+    | strVal _ => simp [exprFits] at he
+    | natVal k =>
+    simp only [exprFits, decide_eq_true_eq] at he
+    unfold ExprPost
+    simp only [encExprM] at hd ⊢
+    have h0 : romB rom pos = 3 := romB_head rom hr pos 3 _ rest hd
+    cases n with
+    | zero => simp [romExprW] at hW
+    | succ n =>
+    rw [romExprW_leaf rom n mem pos (by simp [h0]) (by simp [h0]), h0] at hW
+    cases n with
+    | zero => simp [romLeafW] at hW
+    | succ n =>
+    rw [romLeafW_lit rom n mem pos 3 (by simp) (by simp) (by simp) rfl] at hW
+    have hd1 : rom.drop (pos + 1).toNat = u64B k ++ rest := by
+      have := drop_shift rom hr pos [3] (u64B k) rest (by simpa using hd)
+        (pos + 1) (drop_pos rom hr pos _ rest hd 1 (by simp))
+      simpa using this
+    rw [u64W_of_drop rom (pos + 1) _ _ hd1 he hr] at hW
+    obtain ⟨hI, hlt, rfl⟩ := exLeafK_inv hW
+    have hkN : (UInt64.ofNat k).toNat = k := by rw [UInt64.toNat_ofNat']; exact Nat.mod_eq_of_lt he
+    have hpool : PoolOK mem := hA.1.lit.1
+    have hq9 : (pos + 9).toNat = pos.toNat + (3 :: u64B k).length := by
+      have hp := drop_pos rom hr pos _ rest hd 9 (by simp [u64B])
+      simp only [show UInt64.ofNat 9 = (9 : Word) from rfl] at hp
+      rw [hp]; simp [u64B]
+    simp only [romLitW] at hI
+    split at hI
+    · cases hI
+    rename_i hroom
+    have hroom' : mem.top.toNat < (mem.arr64 POOL).size := by
+      have := hpool.2.2.1
+      simp only [Mem.len64, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat'] at hroom
+      rw [Nat.mod_eq_of_lt (by omega)] at hroom; omega
+    split at hI
+    · rename_i hk0
+      have hk : k = 0 := by have := congrArg UInt64.toNat hk0; rw [hkN] at this; simpa using this
+      subst hk
+      obtain ⟨ok, hR, res, hf⟩ := L.Front.internLit_D mem a hA h mem' mem.top 0
+        (by simp [SliceOK]) (by simp [Norm]) hI
+      simp only [UInt64.toNat_zero, pv] at ok hR res
+      have hf' := frame_store hf (by simp [litSch, REC, SLOT]) (by simp [litSch])
+      refine ⟨m, _, iEG_lit m a _ (decE h) _ (by rw [← res]; exact AM.run_of_ok _ _ ok), hR,
+        hM.frame (frame_romA hf'), hlt, hq9, frame_storeE hf', frame_exprA_stk hf'⟩
+    · rename_i hk0
+      have hg : Grows mem (litWordMem mem (UInt64.ofNat k)) := Grows.push1 mem mem.top (UInt64.ofNat k) rfl hpool hroom'
+      have hA1 := ArenaD.grow _ _ hg _ hA
+      have hc1 : 0 < ((mem.set64 POOL mem.top (UInt64.ofNat k)).arr64 CTL).size := by
+        rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact hpool.2.1
+      have htop1 := Mem.top_set64 (mem.set64 POOL mem.top (UInt64.ofNat k)) (mem.top + 1) hc1
+      have hn1 : (mem.top + 1).toNat = mem.top.toNat + 1 := by
+        have := hpool.2.2.1; rw [UInt64.toNat_add]; simp; omega
+      have hP1 : ((litWordMem mem (UInt64.ofNat k)).arr64 POOL)[mem.top.toNat]? = some (UInt64.ofNat k) := by
+        simp only [litWordMem, Mem.arr64_set64_ne _ _ _ _ _ (show POOL ≠ CTL by decide), Mem.arr64_set64_same]
+        simp [Array.set!_eq_setIfInBounds, hroom']
+      obtain ⟨ok, hR, res, hf⟩ := L.Front.internLit_D (litWordMem mem (UInt64.ofNat k)) a hA1 h mem' mem.top 1
+        (by simp only [SliceOK, litWordMem, htop1, hn1]; simp)
+        (by intro _; simp [hP1]; exact hk0) hI
+      have hpv : pv ((litWordMem mem (UInt64.ofNat k)).arr64 POOL) mem.top.toNat (UInt64.toNat 1) = k := by
+        simp [pv, hP1, wt, hkN]
+      rw [hpv] at ok hR res
+      have hf' := frame_store hf (by simp [litSch, REC, SLOT]) (by simp [litSch])
+      have hg' := frame_grows hg
+      refine ⟨m, _, iEG_lit m a _ (decE h) _ (by rw [← res]; exact AM.run_of_ok _ _ ok), hR,
+        (hM.frame (frame_romA hg')).frame (frame_romA hf'), hlt, hq9,
+        (frame_storeE hg').trans (frame_storeE hf'), by rw [frame_exprA_stk hf', frame_exprA_stk hg']⟩
   | app f x ihf ihx =>
     intro n mem a pos rest seen m h q mem' hA hM hd hst hc hW
     simp only [exprFits, Bool.and_eq_true] at he

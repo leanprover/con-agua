@@ -69,8 +69,8 @@ def nameFits : ConLeche.Name → Bool
 section rd
 variable (rom : List UInt8)
 
-/-- Byte `k` of the ROM, as a word (`0` past the end). -/
-def romB (k : Word) : Word := (rom[k.toNat]?.getD 0).toUInt64
+/-- Byte `k` of the ROM, as a word (`255`, no tag of any encoding, past the end). -/
+def romB (k : Word) : Word := (rom[k.toNat]?.getD 255).toUInt64
 
 theorem romB_eq (k : Word) (j : Nat) (hj : j = k.toNat) (h : j < rom.length) :
     romB rom k = rom[j].toUInt64 := by subst hj; simp [romB, h]
@@ -355,7 +355,7 @@ section putFacts
 variable (rom : List UInt8)
 
 /-- ROM byte `k`, as a word (`0` past the end), by a natural-number position. -/
-def romN (k : Nat) : Word := (rom[k]?.getD 0).toUInt64
+def romN (k : Nat) : Word := (rom[k]?.getD 255).toUInt64
 
 theorem rputW_facts (top i n : Word) (hv : i.toNat + n.toNat < 2 ^ 64) :
     ∀ (d : Nat) (m : Mem) (j : Word), n.toNat - j.toNat = d → j ≤ n →
@@ -396,7 +396,7 @@ theorem rputW_facts (top i n : Word) (hv : i.toNat + n.toNat < 2 ^ 64) :
     · by_cases h2 : top.toNat + j.toNat = x
       · subst h2
         simp [show top.toNat + j.toNat < (m.arr64 POOL).size by omega, romB, romN, hvj]
-        intro h; omega
+        try (intro h; omega)
       · simp only [h1, ↓reduceIte, h2, false_and, ↓reduceIte]
         have : ¬ (top.toNat + j.toNat ≤ x ∧ x < top.toNat + n.toNat) := by omega
         simp [this]
