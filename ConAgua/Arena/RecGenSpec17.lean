@@ -1,6 +1,7 @@
 import ConAgua.Arena.RecGenSpec16
 import ConAgua.Arena.RecCheckSpec6
 import ConAgua.Arena.RecCheckSpec5
+import ConAgua.Arena.DeclBasisSpec
 
 /-!
 # `targetMajorOf`'s outside branch (lane `indproofs3`, helper `indproofs3-pos-cls`)
@@ -222,5 +223,109 @@ theorem csAt_decB {m : Mem} {o : Nat} {xs : List (IConstantVal × Nat)} (h : CsA
   refine ⟨w.toNat, by rw [iwN_truncM (by omega)]; simp [iwN, nat?, iwA, hw], ?_⟩
   simp only [decCN, decCVp, bind, Option.bind, iwN_truncM h0, iwN_truncM h1, hq, hn, hE.decCV hcv]
   rfl
+
+/-! ## `target_major_of_outside` -/
+
+def tmtK3 : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m) => some ([r.headD 0], m)
+def tmtK2 (p : Prog) (n : Nat) (I us dso dsl cso csl pfo pfl : Word) (r1 : List Word) :
+    Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m) => if r.headD 0 ≠ 2 then none
+      else tmtK3 (callW p n "mk_target_major" [I, us, dso, dsl, dsl, r1.headD 0, cso, csl, 0, 0, 0, pfo, pfl] m)
+def tmtK1 (p : Prog) (n : Nat) (pp I us dso dsl cso csl pfo pfl : Word) :
+    Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m) => tmtK2 p n I us dso dsl cso csl pfo pfl r
+      (callW p n "lvl_eq_c" [r.tail.headD 0, rdW (m.arr64 IW) (pp + 6)] m)
+
+/-- **The model of `target_major_of_outside_tail`** at exec fuel `n + 1`. -/
+def tmtW (p : Prog) (n : Nat) (m : Mem) (vis pp pfo pfl I us dso dsl cso csl : Word) : Option (List Word × Mem) :=
+  tmtK1 p n pp I us dso dsl cso csl pfo pfl (callW p n "target_outside_inst" [vis, I, us, dso, dsl] m)
+
+section arms
+variable (p : Prog) (n : Nat) (m : Mem) (pp I us dso dsl cso csl pfo pfl : Word) (r r1 : List Word)
+theorem tmtK1_some : tmtK1 p n pp I us dso dsl cso csl pfo pfl (some (r, m)) =
+    tmtK2 p n I us dso dsl cso csl pfo pfl r (callW p n "lvl_eq_c" [r.tail.headD 0, rdW (m.arr64 IW) (pp + 6)] m) := rfl
+theorem tmtK2_some : tmtK2 p n I us dso dsl cso csl pfo pfl r1 (some (r, m)) =
+    if r.headD 0 ≠ 2 then none
+      else tmtK3 (callW p n "mk_target_major" [I, us, dso, dsl, dsl, r1.headD 0, cso, csl, 0, 0, 0, pfo, pfl] m) := rfl
+theorem tmtK3_some : tmtK3 (some (r, m)) = some ([r.headD 0], m) := rfl
+end arms
+attribute [ind_grind] tmtK1_some tmtK2_some tmtK3_some
+
+theorem tmt_spec (p : Prog) (hp : p.lookup "target_major_of_outside_tail" = some targetMajorOfOutsideTail)
+    (n : Nat) (s₀ : St) (vis pp pfo pfl I us dso dsl cso csl : Word) :
+    ⦃fun st => st = s₀⦄ invoke p (exec p (n + 1)) "target_major_of_outside_tail" [vis, pp, pfo, pfl, I, us, dso, dsl, cso, csl]
+    ⦃fun r s' => LocEq s' s₀ ∧ tmtW p n s₀.mem vis pp pfo pfl I us dso dsl cso csl = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, targetMajorOfOutsideTail]
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      callW_spec p n "target_outside_inst", callW_spec p n "lvl_eq_c", callW_spec p n "mk_target_major"] <;>
+    finish (gen := 40) (instances := 20000) [tmtW, rdW_eq]
+
+def tmoK4 : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m) => some ([r.headD 0], m)
+def tmoK3 (p : Prog) (n : Nat) (vis pp I us ao pfo pfl : Word) (r2 : List Word) :
+    Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m) => if r.headD 0 = 0 then none
+      else tmoK4 (callW p n "target_major_of_outside_tail" [vis, pp, pfo, pfl, I, us, ao, r2.tail.headD 0,
+        r2.tail.tail.headD 0, r2.tail.tail.tail.headD 0] m)
+def tmoK2b (p : Prog) (n : Nat) (vis pp I us ao pfo pfl mno mnl : Word) (r2 : List Word) :
+    Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m) => if r.headD 0 = 0 then none
+      else tmoK3 p n vis pp I us ao pfo pfl r2 (callW p n "target_major_of_outside_occ" [mno, mnl, ao, r2.tail.headD 0] m)
+def tmoK2 (p : Prog) (n : Nat) (vis pp I us ao al pfo pfl mno mnl : Word) :
+    Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m) => if r.headD 0 = 0 then none else if al < r.tail.headD 0 then none
+      else tmoK2b p n vis pp I us ao pfo pfl mno mnl r (callW p n "target_major_of_outside_closed"
+        [ao, r.tail.headD 0, rdW (m.arr64 IW) (pp + 4)] m)
+def tmoK1 (p : Prog) (n : Nat) (vis pp I us ao al pfo pfl mno mnl : Word) :
+    Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m) => if I = r.headD 0 then none
+      else tmoK2 p n vis pp I us ao al pfo pfl mno mnl (callW p n "target_ctors_of" [vis, I] m)
+
+/-- **The model of `target_major_of_outside`** at exec fuel `n + 1`. -/
+def tmoW (p : Prog) (n : Nat) (m : Mem) (vis pp pfo pfl I us ao al mno mnl : Word) : Option (List Word × Mem) :=
+  tmoK1 p n vis pp I us ao al pfo pfl mno mnl (callW p n "pin_at" [47] m)
+
+section arms
+variable (p : Prog) (n : Nat) (m : Mem) (vis pp I us ao al pfo pfl mno mnl : Word) (r r2 : List Word)
+theorem tmoK1_some : tmoK1 p n vis pp I us ao al pfo pfl mno mnl (some (r, m)) =
+    if I = r.headD 0 then none
+      else tmoK2 p n vis pp I us ao al pfo pfl mno mnl (callW p n "target_ctors_of" [vis, I] m) := rfl
+theorem tmoK2_some : tmoK2 p n vis pp I us ao al pfo pfl mno mnl (some (r, m)) =
+    if r.headD 0 = 0 then none else if al < r.tail.headD 0 then none
+      else tmoK2b p n vis pp I us ao pfo pfl mno mnl r (callW p n "target_major_of_outside_closed"
+        [ao, r.tail.headD 0, rdW (m.arr64 IW) (pp + 4)] m) := rfl
+theorem tmoK2b_some : tmoK2b p n vis pp I us ao pfo pfl mno mnl r2 (some (r, m)) =
+    if r.headD 0 = 0 then none
+      else tmoK3 p n vis pp I us ao pfo pfl r2 (callW p n "target_major_of_outside_occ" [mno, mnl, ao, r2.tail.headD 0] m) := rfl
+theorem tmoK3_some : tmoK3 p n vis pp I us ao pfo pfl r2 (some (r, m)) =
+    if r.headD 0 = 0 then none
+      else tmoK4 (callW p n "target_major_of_outside_tail" [vis, pp, pfo, pfl, I, us, ao, r2.tail.headD 0,
+        r2.tail.tail.headD 0, r2.tail.tail.tail.headD 0] m) := rfl
+theorem tmoK4_some : tmoK4 (some (r, m)) = some ([r.headD 0], m) := rfl
+end arms
+attribute [ind_grind] tmoK1_some tmoK2_some tmoK2b_some tmoK3_some tmoK4_some
+
+theorem tmo_spec (p : Prog) (hp : p.lookup "target_major_of_outside" = some targetMajorOfOutside) (n : Nat)
+    (s₀ : St) (vis pp pfo pfl I us ao al mno mnl : Word) :
+    ⦃fun st => st = s₀⦄ invoke p (exec p (n + 1)) "target_major_of_outside" [vis, pp, pfo, pfl, I, us, ao, al, mno, mnl]
+    ⦃fun r s' => LocEq s' s₀ ∧ tmoW p n s₀.mem vis pp pfo pfl I us ao al mno mnl = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, targetMajorOfOutside]
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      callW_spec p n "pin_at", callW_spec p n "target_ctors_of", callW_spec p n "target_major_of_outside_closed",
+      callW_spec p n "target_major_of_outside_occ", callW_spec p n "target_major_of_outside_tail"] <;>
+    finish (gen := 40) (instances := 20000) [tmoW, rdW_eq]
 
 end L.Ind
