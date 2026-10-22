@@ -112,6 +112,11 @@ per-function separation logic.
   watch list (over 1500 lines or 60 s) get split by a lane; a split keeps statements and names stable.
   Declarations on it (a step over 20 s) are investigated by a separate lane off the critical path.
   **No lane adds time gates to merging**; this report is advisory.
+- **It is also the safety net under the shared Lake cache** (DESIGN.md, "Cache incident"): each run records
+  its verdict on master in `_tmp/buildcheck.json`, and `census.py` and `gist_report.py` print "last cache-free
+  build of master: <commit>, OK/FAILED". A FAILED there means some cached build accepted code that does not
+  build: stop landing, find the module, purge the cache (`rm -rf _tmp/lake-cache-v2`, then reseed it from a cache-free build). Run it (at least
+  incrementally) after every few landings; `--full` once a day.
 
 ## Bumping the twin (con-ron, and the con-leche it pins)
 - **State.** `vendor/UPSTREAM` names the two vendored revisions; `vendor/` is exactly those upstream
@@ -148,7 +153,7 @@ per-function separation logic.
   plain `lake`**: the wrapper points `LAKE_CACHE_DIR` at the shared cache; plain `lake` falls back to the
   toolchain's own cache directory, a different mount in the sandbox that copies instead of hard-linking. Start
   a fresh worktree with no `.lake/build` and let the cache restore it (seconds, ~0 bytes of disk) — do not copy
-  a built `.lake/build` in by hand, that was last resort before the cache existed. The wrapper also WRITES every build to the cache (default since 2026-10-22), so each module elaborates once for the whole project; no separate reseeding step is needed. Remove your worktree when done.
+  a built `.lake/build` in by hand, that was last resort before the cache existed. The wrapper also WRITES every build to the cache (default since 2026-10-22), so each module elaborates once for the whole project; no separate reseeding step is needed. **Do not edit, check out, merge or regenerate `.lean` files in a worktree while a build runs in it** (DESIGN.md, "Cache incident"): Lake hashes a source when the build starts and compiles it later, so the result can be an olean of a different text. The wrapper detects it, publishes nothing, deletes the affected modules' build state and exits non-zero (3 if Lake itself succeeded) — then just rerun. It also serialises builds within one worktree. To keep a build out of the cache use `LAKE_ARTIFACT_CACHE=false scripts/lake`, not plain `lake`. Remove your worktree when done.
 - Every checker run gets a `timeout`. Never use `ulimit -v`. Never wait on or kill processes by name pattern.
 - Never push. Commits end with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - This is the full project now, built top-down: `sorry` on master is fine (e.g. stubs for callees not yet

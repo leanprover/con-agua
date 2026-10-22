@@ -3093,6 +3093,7 @@ cron job, and no lane having to remember a second command. Do not turn `LAKE_ART
 for routine edit-loop builds — every agent writing to the same cache concurrently is unnecessary
 contention for no benefit (reading is already free), and the merge/landing point is the one place
 a "master is up to date and worth caching" check is naturally already happening.
+(Superseded 2026-10-22: every `scripts/lake` build writes, guarded — see "Cache incident".)
 
 **GC**: the cache pins every artifact ever written to it, so it only grows (toolchain bumps,
 renamed modules, abandoned lanes all leave orphans behind). There is no automatic eviction.
@@ -3116,6 +3117,72 @@ from the main tree) lets GNU `du` deduplicate by inode across them, same as the 
 itself does: the combined total is **3.3G — identical to the main tree's `.lake/build` alone**.
 The cache and the fresh worktree's entire 1800-module build directory cost ~0 bytes of *marginal*
 disk; `stat -c %h` on a sample olean shows `links=3` (main tree, cache, worktree, same inode).
+
+## Cache incident (2026-10-22, lane `cachebug`)
+
+**What happened.** Lane `integrate` (landing 3) found that `scripts/lake build` "completed" while
+`ConAgua.Checker.Entry`'s olean lacked `L.Checker.indParamsOkL`, which its source defines; the trace
+was a *synthetic* one (`inputs: []`), i.e. restored from the shared cache. Building without the cache
+fixed it.
+
+**Mechanism: a time-of-check/time-of-use gap in Lake, which the shared cache turns from a local glitch
+into a project-wide one.** Lake (`nightly-2026-10-20`, `Lake/Build/Module.lean`) reads and hashes each
+module's source in the `input` facet (`recFetchInput`) when the build *starts*; the input hash (source,
+import olean hashes, options, toolchain) is fixed then. Lean reads the file again when the module is
+actually compiled (`compileLeanModule`), after all its imports are built — in this project often
+minutes later. If the file changes in between (an agent editing while a background build runs, a
+`git checkout`/`stash`/`merge` in the worktree, `checker_prog.py` regenerating `Prog.lean`), Lake records
+"input hash of text A -> olean of text B": in the local `.trace`, and with cache writes on
+(`fetchCore`, `writeOutputs … (overwrite := true)`) in `_tmp/lake-cache/outputs/<pkg>/<hash>.json`.
+Every later build of text A, in any worktree, then restores B's olean with a synthetic trace and no
+elaboration — exactly the reported symptom. Reproduced in `_tmp/cachebug/repro` (two-module project,
+`Slow` sleeps 6 s): start the build with `B.lean` defining `indParamsOkL`, revert it 3 s in, restore it;
+`lake build` then says "completed", `#check indParamsOkL` fails, and a fresh copy of the project with
+the same cache gets the stale olean with `synthetic: true, inputs: []`. If B's text had a broken proof
+and A's a correct one, the broken proof would build green — in every worktree, and at `land.sh`.
+Ruled out: in-place mutation of hard-linked files (every one of the 13147 artifacts in the cache hashes
+to its own name — `_tmp/cachebug/HashCheck.lean`; Lake deletes outputs before compiling and never
+rewrites an artifact; no worktree has hard-linked `.trace`/`.hash` files), and `restoreAllArtifacts`
+(it only decides whether the files land in `.lake/build`). Writes being on by default since this
+morning made the exposure much larger: before, only `land.sh`'s build in the (lock-protected) main tree
+seeded the cache.
+
+**Fix (`scripts/lake`, now Python).** A build through the wrapper
+1. takes a per-worktree lock (`.lake/scripts-lake.lock`): one Lake build per worktree at a time (two
+   builds in one `.lake/build` race on the same files);
+2. snapshots `(mtime, size)` of every `*.lean` (plus lakefile, toolchain) in the worktree before and
+   after; any difference means the build may have compiled something other than what it hashed;
+3. writes the cache through a private *staging* cache: `artifacts/` is a symlink to the shared one
+   (content-addressed, never rewritten, so sharing it cannot go wrong; hard-link restores stay
+   instant), `outputs/` — the input-hash -> artifact mappings, the only part that can be wrong — is a
+   copy (`cp -rp`, ~0.3 s for 12k mappings). Only when the sources did not change are the new mappings
+   published into the shared `outputs/`, each atomically and never overwriting (`os.link`);
+4. on a change: publishes nothing, deletes the changed modules' local state (trace, olean, `.hash`) so
+   the next build cannot trust it either, and exits non-zero (3 when Lake itself succeeded) with the
+   list of files. `LAKE_ARTIFACT_CACHE=false` builds get 1, 2 and 4 too (a poisoned local trace would
+   otherwise be published later by `getArtifactsUsingTrace?`); `env`/`serve` pass straight through,
+   read-only. Residual hole: plain `lake` in a worktree bypasses all of this (PLAN.md forbids it).
+`land.sh` needs no change: it already treats any non-zero exit as a failed landing.
+
+**Safety net.** `scripts/buildstats.py` (a cache-free build of master in `_tmp/wt/buildstats-run`) now
+records its verdict in `_tmp/buildcheck.json` and shouts on failure; `census.py` and `gist_report.py`
+show "last cache-free build of master: <commit>, OK/FAILED".
+
+**Did anything bad land? No evidence of it, and nothing broken is on master.** A cache-free build of
+master `163e687` (plain `lake`, empty private cache, 2474 jobs, 9 min) succeeds. Its 905 input-hash ->
+output mappings that the old shared cache also had were compared: 879 identical, 26 differing only in
+olean bytes (ilean, IR and C identical; the constants, their types and their `sorry` use, read back
+from both oleans with `_tmp/cachebug/OleanCmp.lean`, identical) — Lean's olean output is not
+bit-for-bit deterministic, not poisoning. So no module of current master was served a stale olean, and
+every landed proof elaborates. What cannot be checked after the fact: an intermediate master state that
+landed green through a poisoned entry and was fixed by a later landing, and census numbers taken from
+such a state; the Entry case itself was caught (`checker_prog.py` saw a stub). The old cache was purged
+anyway (entries for lane-only texts cannot be validated). The wrapper now uses a NEW directory,
+`_tmp/lake-cache-v2`, seeded from that cache-free build: worktrees still on a branch with the old
+wrapper keep writing unguarded into `_tmp/lake-cache` until they merge master, and must not pollute
+the new one. Coordinator: `rm -rf _tmp/lake-cache` again once every lane has merged master.
+Nondeterministic oleans mean a publish may find "same input, different bytes" mappings; the wrapper
+keeps the first and notes the count.
 
 ## Does the relation scale? (2026-10-21, lane `scale`)
 
