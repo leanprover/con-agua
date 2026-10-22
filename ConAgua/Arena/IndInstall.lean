@@ -636,12 +636,14 @@ def consBlockCtors : FunDecl := lfn (nP, caOff, caLen, vis) locals (mp, v1, v2) 
 }
 
 /-- `check_block_pass(vis, p0, is_rec)`: one pass over the formers, the constructors and the
-classes — returns a pointer to the 19-word `BlockPass` record (layout in `IndIface`). -/
+classes — returns a pointer to the 19-word `BlockPass` record (layout in `IndIface`; the words
+copied from the context and the positivity state are read before the allocation, so every write
+stores a value read before it). -/
 -- con-ron: ConRon/Arena/Inductives/BlockTail.lean:53-74 ConRon.Arena.checkBlockPass
 @[l_impl ConRon.Arena.checkBlockPass]
 def checkBlockPass : FunDecl := lfn (vis, p0, isRec) locals
     (fe1, cvTasO, cvTasL, p1, u, ctorsAsO, ctorsAsL, sortsssO, sortsssL, ctx, holesO, holesL,
-     rd, msO, msL, kindsO, kindsL, nfsO, nfsL, nsPtr, seedsO, seedsL, ns2, q) {
+     rd, msO, msL, kindsO, kindsL, nfsO, nfsL, nsPtr, seedsO, seedsL, ns2, q, pO, pL, tO, tL) {
   (fe1, cvTasO, cvTasL, p1) := call check_block_inds(vis, p0, isRec);
   u := call flush_caches();
   (ctorsAsO, ctorsAsL, sortsssO, sortsssL) :=
@@ -651,6 +653,8 @@ def checkBlockPass : FunDecl := lfn (vis, p0, isRec) locals
   (kindsO, kindsL, nfsO, nfsL, nsPtr) := call check_block_positivity(fe1, p1, cvTasO, cvTasL, ctorsAsO, ctorsAsL);
   (seedsO, seedsL) := call class_seeds(ctx, holesO, holesL, msO, msL);
   ns2 := call nest_seeds(fe1, ctx, seedsO, seedsL, nsPtr);
+  pO := IW.u64[ctx + 7]; pL := IW.u64[ctx + 8];
+  tO := IW.u64[ns2 + 4]; tL := IW.u64[ns2 + 5];
   q := call iw_alloc(19);
   IW.u64[q] := fe1;
   IW.u64[q + 1] := cvTasO; IW.u64[q + 2] := cvTasL;
@@ -659,10 +663,10 @@ def checkBlockPass : FunDecl := lfn (vis, p0, isRec) locals
   IW.u64[q + 6] := sortsssO; IW.u64[q + 7] := sortsssL;
   IW.u64[q + 8] := kindsO; IW.u64[q + 9] := kindsL;
   IW.u64[q + 10] := nfsO; IW.u64[q + 11] := nfsL;
-  IW.u64[q + 12] := IW.u64[ctx + 7]; IW.u64[q + 13] := IW.u64[ctx + 8];
+  IW.u64[q + 12] := pO; IW.u64[q + 13] := pL;
   IW.u64[q + 14] := rd;
   IW.u64[q + 15] := msO; IW.u64[q + 16] := msL;
-  IW.u64[q + 17] := IW.u64[ns2 + 4]; IW.u64[q + 18] := IW.u64[ns2 + 5];
+  IW.u64[q + 17] := tO; IW.u64[q + 18] := tL;
   return q
 }
 
