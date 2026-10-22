@@ -434,14 +434,11 @@ def natEqBl : FunDecl := lfn (c, x, y, z, sx, sy, bT, bF) locals (l1, l2, l3, r3
   return (q, 3)
 }
 
-/-- `nat_op_equations(d, c)`: `natOpEquations d c`, the equations of the seven structural
-operations over `x := fvar d`, `y := fvar (d + 1)` (every pin read first, as the twin does). -/
+/-- `nat_eq_ctx(pi, d)`: the terms `natOpEquations` builds before it dispatches, in its order: `x :=
+fvar d`, `y := fvar (d + 1)` at `Nat`, `Nat.zero`, `Nat.succ`'s name, `succ x`, `succ y`,
+`Bool.true`, `Bool.false`, as an 8-word `IW` record `[x, y, z, sN, sx, sy, bT, bF]`. -/
 -- con-ron: ConRon/Arena/Core.lean:929-992 ConRon.Arena.natOpEquations
-@[l_impl ConRon.Arena.natOpEquations]
-def natOpEquationsL : FunDecl :=
-    lfn (d, c) locals (pi, nN, natTy, x, y, zN, z, sN, sx, sy, bT, bF, pr, ad, su, mu, po, be, bl, u,
-      q, l) {
-  pi := call nat_op_pins();
+def natEqCtx : FunDecl := lfn (pi, d) locals (nN, natTy, x, y, zN, z, sN, sx, sy, u, bT, bF, q) {
   nN := IW.u64[pi + 15];
   natTy := call const_e(nN);
   x := call intern_fvar(d, natTy);
@@ -455,6 +452,22 @@ def natOpEquationsL : FunDecl :=
   bT := call const_e(u);
   u := IW.u64[pi + 19];
   bF := call const_e(u);
+  q := call iw_alloc(8);
+  IW.u64[q] := x; IW.u64[q + 1] := y; IW.u64[q + 2] := z; IW.u64[q + 3] := sN;
+  IW.u64[q + 4] := sx; IW.u64[q + 5] := sy; IW.u64[q + 6] := bT; IW.u64[q + 7] := bF;
+  return q
+}
+
+/-- `nat_op_equations(d, c)`: `natOpEquations d c`, the equations of the seven structural
+operations over `x := fvar d`, `y := fvar (d + 1)` (every pin read first, as the twin does). -/
+-- con-ron: ConRon/Arena/Core.lean:929-992 ConRon.Arena.natOpEquations
+@[l_impl ConRon.Arena.natOpEquations]
+def natOpEquationsL : FunDecl :=
+    lfn (d, c) locals (pi, cx, x, y, z, sN, sx, sy, bT, bF, pr, ad, su, mu, po, be, bl, q, l) {
+  pi := call nat_op_pins();
+  cx := call nat_eq_ctx(pi, d);
+  x := IW.u64[cx]; y := IW.u64[cx + 1]; z := IW.u64[cx + 2]; sN := IW.u64[cx + 3];
+  sx := IW.u64[cx + 4]; sy := IW.u64[cx + 5]; bT := IW.u64[cx + 6]; bF := IW.u64[cx + 7];
   pr := IW.u64[pi]; ad := IW.u64[pi + 1]; su := IW.u64[pi + 2];
   mu := IW.u64[pi + 3]; po := IW.u64[pi + 4]; be := IW.u64[pi + 5];
   bl := IW.u64[pi + 6];
@@ -1133,7 +1146,7 @@ def declArmsNatFns : Prog :=
    ("nat_op_stored_ok_all", natOpStoredOkAllL), ("nat_ap1", natAp1L), ("nat_ap2", natAp2L),
    ("nat_eq_list2", natEqList2), ("nat_eq_list3", natEqList3), ("nat_eq_list4", natEqList4),
    ("nat_eq_pr", natEqPr), ("nat_eq_un", natEqUn), ("nat_eq_mu", natEqMu), ("nat_eq_po", natEqPo),
-   ("nat_eq_be", natEqBe), ("nat_eq_bl", natEqBl), ("nat_op_equations", natOpEquationsL),
+   ("nat_eq_be", natEqBe), ("nat_eq_bl", natEqBl), ("nat_eq_ctx", natEqCtx), ("nat_op_equations", natOpEquationsL),
    ("subst_const0", substConst0L), ("subst_const_all", substConstAllL),
    ("subst_const0_pairs", substConst0PairsL), ("certify_nat_eqs", certifyNatEqsL),
    ("div_mod_slot", divModSlot), ("div_mod_decl_pin", divModDeclPinL),
