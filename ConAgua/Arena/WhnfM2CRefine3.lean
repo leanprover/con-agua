@@ -94,7 +94,7 @@ theorem viewLsLen_some {a : AState} {h : LsIdx} {k : Nat} (hv : a.store.lss.view
   rw [viewLsLen_run, hv]
 
 section andarm
-variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hpi : ProofIrrelOK p)
+variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hpi : ProofIrrelOKM p)
   (hE : ErecKeptKnot p) (hcc : CoreCallees p)
 include hp hc hpi
 

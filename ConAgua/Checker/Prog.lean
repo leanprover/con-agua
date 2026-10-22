@@ -84,6 +84,8 @@ import ConAgua.Arena.WhnfCore
 import ConAgua.Arena.WhnfDelta
 import ConAgua.Arena.WhnfEntry
 import ConAgua.Arena.WhnfIota
+import ConAgua.Arena.WhnfIotaRec
+import ConAgua.Arena.WhnfM2C
 import ConAgua.Arena.WhnfSpineArgs
 import ConAgua.Arena.WhnfSpineRefine
 import ConAgua.Arena.ZeroStore
@@ -120,7 +122,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1467 functions, 35 of them stubs.
+1489 functions, 35 of them stubs.
 -/
 
 namespace L.Checker
@@ -673,6 +675,7 @@ def checkerProg : Prog := [
   ("erase_installed", L.Arena.eraseInstalledL),
   ("erec_alloc", L.Ind.erecAlloc),
   ("erec_ci", L.Arena.erecCi),
+  ("erec_push", L.Arena.erecPushL),
   ("erec_vg", L.Arena.erecVg),
   ("esc_one", L.Front.Unescape.escOne),
   ("esc_sur", L.Front.Unescape.escSur),
@@ -891,6 +894,14 @@ def checkerProg : Prog := [
   ("iota_ctor_never_prop", L.Arena.iotaCtorNeverPropL),
   ("iota_index_ok", L.Arena.iotaIndexOkL),
   ("iota_rec_at", L.Arena.iotaRecAtL),
+  ("iota_rec_c", L.Arena.iotaRecCL),
+  ("iota_rec_cmp", L.Arena.iotaRecCmpL),
+  ("iota_rec_fam", L.Arena.iotaRecFamL),
+  ("iota_rec_fire", L.Arena.iotaRecFireL),
+  ("iota_rec_fire2", L.Arena.iotaRecFire2L),
+  ("iota_rec_head", L.Arena.iotaRecHeadL),
+  ("iota_rec_major", L.Arena.iotaRecMajorL),
+  ("iota_rec_vck", L.Arena.iotaRecVckL),
   ("is_bool_true", L.Arena.isBoolTrueL),
   ("is_ctor_app", L.Arena.isCtorAppL),
   ("is_def_eq_core", L.Arena.isDefEqCoreL),
@@ -986,6 +997,18 @@ def checkerProg : Prog := [
   ("lvls_eq", L.Arena.lvlsEqL),
   ("lvls_eq_c", L.Arena.lvlsEqCL),
   ("lvls_eq_rec", L.Arena.lvlsEqRecL),
+  ("m2c_and", L.Arena.m2cAndL),
+  ("m2c_and2", L.Arena.m2cAnd2L),
+  ("m2c_arms", L.Arena.m2cArmsL),
+  ("m2c_check", L.Arena.m2cCheckL),
+  ("m2c_const_view", L.Arena.m2cConstViewL),
+  ("m2c_ctor", L.Arena.m2cCtorL),
+  ("m2c_eta", L.Arena.m2cEtaL),
+  ("m2c_eta2", L.Arena.m2cEta2L),
+  ("m2c_head", L.Arena.m2cHeadL),
+  ("m2c_k", L.Arena.m2cKL),
+  ("m2c_k2", L.Arena.m2cK2L),
+  ("m2c_pre", L.Arena.m2cPreL),
   ("ma_clear", L.Arena.memoClearG L.Ind.maSch),
   ("ma_find", L.Arena.memoFindG L.Ind.maSch),
   ("ma_put", L.Arena.memoPutG L.Ind.maSch),
@@ -1424,6 +1447,7 @@ def checkerProg : Prog := [
   ("spine_head", L.Arena.spineHeadL),
   ("spn_get", L.Arena.spnGetL),
   ("spn_to_iw", L.Arena.spnToIwL),
+  ("stack_cover", L.Arena.stackCoverL),
   ("std_ax_family", L.Ind.stdAxFamily),
   ("std_axiom_ok", L.Ind.stdAxiomOkL),
   ("stk_pool", L.Rom.stkPool),
