@@ -47,7 +47,7 @@ namespace L.Arena
 open L.Front (DECL DLP DeclsR)
 
 /-- The translated callees of the loop (`Decl*.lean`), as program lookups. -/
-structure DeclCallees (p : Prog) : Prop where
+structure DeclCallees (dn : NIdx → Option ConLeche.Name) (p : Prog) : Prop where
   and_pin_ok : p.lookup "and_pin_ok" = some andPinOkL
   /-- `check_value_group`'s text (its write set, `DeclCvg.lean`). -/
   cvg : CvgProg p
@@ -56,6 +56,9 @@ structure DeclCallees (p : Prog) : Prop where
   iv : IvProg p
   /-- `check_decl`, its arms and their texts (`DeclCheckLoop.lean`). -/
   cd : CheckDeclProg p
+  /-- The name decoding is injective (the comparisons of constant records read `PropWhen`'s names
+  through it); the top level's `dn` is the store's `denoteN`. -/
+  dninj : L.Ind.DnInj dn
 
 section stubs
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
@@ -710,7 +713,7 @@ theorem isSome_refines (hb : BracketProg p) (hpp : p.lookup "pend_push" = some p
       finish [isSomeT]
 
 /-- `install_step`, stated over the pieces of `installStep` (`installStep_ok` assembles them). -/
-theorem installStep_pieces (hm : mode = .verified) (hdc : DeclCallees p) (hb : BracketProg p) (hpp : p.lookup "pend_push" = some pendPushL)
+theorem installStep_pieces (hm : mode = .verified) (hdc : DeclCallees dn p) (hb : BracketProg p) (hpp : p.lookup "pend_push" = some pendPushL)
     (hpn : p.lookup "is_none" = some isNoneL) (hps : p.lookup "is_some" = some isSomeL)
     (hp : p.lookup "install_step" = some installStepL) (n : Nat) (s₀ : St) (a₀ : AState)
     (i vis : Word) (fe : IFEnv) (pend : Array PendingCheck) (hi : i.toNat < ds.size)
@@ -739,7 +742,7 @@ theorem installStep_pieces (hm : mode = .verified) (hdc : DeclCallees p) (hb : B
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         (flush_loop dn ds p hb n · a₀ vis fe pend),
         (enter_loop dn ds p hb n · (AM.st flushCaches a₀) vis fe pend),
-        (installStepGo_spec mode pins dn ds p hm (hm ▸ checkDecl_loop hdc.cd pins dn ds) hdc.istg hdc.iv hdc.cvg n · (AM.st enterScratch (AM.st flushCaches a₀)) · fe pend · ·),
+        (installStepGo_spec mode pins dn ds p hm (hm ▸ checkDecl_loop hdc.cd pins dn hdc.dninj ds) hdc.istg hdc.iv hdc.cvg n · (AM.st enterScratch (AM.st flushCaches a₀)) · fe pend · ·),
         (isNone_refines dn ds p hb hpn n · (AM.st (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))) · · (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).1 pend),
         (isSome_refines dn ds p hb hpp hps n · (AM.st (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))) · · · · (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).1 pend ((AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).2.getD default))] <;>
       -- the view `vis` is read after three calls: four `LocEq` hops (depth, not search)
@@ -747,7 +750,7 @@ theorem installStep_pieces (hm : mode = .verified) (hdc : DeclCallees p) (hb : B
 
 /-- **`install_step` refines `installStep`** (from the stub specs). -/
 @[refines ConRon.Arena.installStep]
-theorem installStep_refines (hm : mode = .verified) (hdc : DeclCallees p) (hb : BracketProg p) (hpp : p.lookup "pend_push" = some pendPushL)
+theorem installStep_refines (hm : mode = .verified) (hdc : DeclCallees dn p) (hb : BracketProg p) (hpp : p.lookup "pend_push" = some pendPushL)
     (hpn : p.lookup "is_none" = some isNoneL) (hps : p.lookup "is_some" = some isSomeL)
     (hp : p.lookup "install_step" = some installStepL) (n : Nat) (s₀ : St) (a₀ : AState)
     (i vis : Word) (fe : IFEnv) (pend : Array PendingCheck) (hi : i.toNat < ds.size)
@@ -765,7 +768,7 @@ theorem installStep_refines (hm : mode = .verified) (hdc : DeclCallees p) (hb : 
 /-- **`install_decl_step` refines `installDeclStep`**: a returning run is the twin's `.ok` with
 the position advanced. -/
 @[refines ConRon.Arena.installDeclStep]
-theorem installDeclStep_refines (hm : mode = .verified) (hb : BracketProg p) (hdc : DeclCallees p)
+theorem installDeclStep_refines (hm : mode = .verified) (hb : BracketProg p) (hdc : DeclCallees dn p)
     (hpp : p.lookup "pend_push" = some pendPushL)
     (hpn : p.lookup "is_none" = some isNoneL) (hps : p.lookup "is_some" = some isSomeL)
     (hpi : p.lookup "install_step" = some installStepL)
@@ -824,7 +827,7 @@ variable (hpp : p.lookup "pend_push" = some pendPushL)
     (hpd : p.lookup "install_decl_step" = some installDeclStepL)
     (hpg : p.lookup "install_fold_go" = some installFoldGoL)
     (hpx : p.lookup "install_fold_next" = some installFoldNextL) (hsz : ds.size < 2 ^ 63)
-    (hb : BracketProg p) (hdc : DeclCallees p) (hm : mode = .verified)
+    (hb : BracketProg p) (hdc : DeclCallees dn p) (hm : mode = .verified)
 include hpp hpn hps hpi hpd hpg hpx hsz hb hdc hm
 
 theorem foldGo_step (n : Nat) (ih : FoldNextSpec mode pins dn ds p n) :
@@ -1081,7 +1084,7 @@ end phaseB
 
 /-- **`install_then_check` refines `installThenCheck`** (from the stub specs): a returning run
 is the twin's accepting fold, its environment related at the returned view. -/
-theorem installThenCheck_refines (hm : mode = .verified) (hb : BracketProg p) (hdc : DeclCallees p)
+theorem installThenCheck_refines (hm : mode = .verified) (hb : BracketProg p) (hdc : DeclCallees dn p)
     (hpp : p.lookup "pend_push" = some pendPushL)
     (hpn : p.lookup "is_none" = some isNoneL) (hps : p.lookup "is_some" = some isSomeL)
     (hpi : p.lookup "install_step" = some installStepL)

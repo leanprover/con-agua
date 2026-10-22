@@ -6562,6 +6562,42 @@ Merge master and adapt new uses:
   `$CON_RON` overrides), run as `con-ron --jobs=1 --pins P` with `P` the same single pin variant
   in its `con-ron-pins/1` format (written by `ConRon.Dump.dumpPins`, now built as a root of
   `ConRonArena`); and `instructions:u` of compiled `check` vs con-ron on fixtures both accept.
+### Landing 3: the opaque arm, the axiom tests (`DeclBasisSpec2`, `DeclReduceSpec2`, `DeclReducePin`, `DeclArmOpaque`, `DeclAxiomSpec*`)
+
+* **Refined** (through the ROM stubs and, for `checkReducePin`, the core's and the walks' stubs):
+  `checkBasisDecl`, `reduceStoredOk`, `reduceElemOk`, `checkReducePin`, `ofReduceAxOk`,
+  `trustCompilerOk`, `stdAxiomOk`; **sorry-free**: `IConstantVal.matchesPin` (helper
+  `decls3-canon`'s `cv_eq`: word equality is the derived `decide (cv = pin)`, `matchesPin_eq`).
+* **The opaque arm at the loop's relation is proved** (`checkDeclOpaque_loop'`): the pushed view
+  `vis2` for `check_reduce_pin`, which runs its gate at the pre-insertion view: `StageR.restrict`
+  (the stage relation at another view of the same index, `EnvR.restrictTo`) and back, no frame
+  argument needed. `CheckDeclProg` gains `crp`; `checkDecl_loop` and the skeleton's
+  `DeclCallees` take **`DnInj dn`** (the name decoding injective: comparing constant records reads
+  `PropWhen`'s names through it; the top level's `dn` is the store's `denoteN`).
+* **The twin's nested matches, flattened.** `trustCompilerOk`/`stdAxiomOk` nest `match fe.find? (←
+  name) with | some (.ctorInfo cv 2 2) => … | _ => pure false` three deep. A relational lemma
+  cannot rewrite with a lemma about such a `match` (the auxiliary matcher of the lemma is not the
+  definition's), so: the shape test as a partial function (`fpShape k a b ci : Option
+  IConstantVal`), one clause `clausePT fe n k a b T` (match on `(fe.find? n).bind (fpShape …)`),
+  and one equation per twin function proving it equals the chain of clauses
+  (`trustCompilerOk_eq`, `stdAxiomOk_eq`: `congr`/`funext` through the binds, `cases` on the
+  stored constant at each clause; generated, ~100 lines). The L clause (`find_pinned`) is then
+  proved once against `clausePT` (`fpW_ok`: the kind and count words against the shape,
+  `fp_fail`/`fp_pass`).
+* L changes: `std_axiom_ok`'s two families are one function `std_ax_family(vis, q, s1, s2, s3, i1,
+  i2, i3, c2, c3, cvid)` (one model; the inline version ran `finish` out of instances); a handle
+  guard after `reduce_cert_var` (`is_def_eq_core`'s spec); words loaded into locals before calls
+  in `of_reduce_ax_ok`. Note on `finish`: `(instances := 5000)` is a valid config item (the default
+  `1000` ran out on an 11-parameter function).
+* Helper `decls3-canon` merged in interim (record equalities `cv_eq`/`ci_eq`/`find_is`, `ci_to_cv`,
+  stage lemmas for `intern_nanon`/`intern_nnum`/`intern_succ`); its `rdW_grow` renamed
+  `cnRdW_grow` (clash with `IndPos2SpecA`).
+
+`sorry`s now (lane `decls3`): `checkDeclAxiom_loop`, `checkDeclDefn_loop`, `checkDeclQuot_loop`
+(the opaque arm's is proved), the five ROM stub specs, `lvlEqStub_spec` (lane `induct`'s, now on
+`lvl_eq_c`), `promoteNew_spec` (helper running).
+
+Census at landing 3 (`--no-build`): phase 2 **145 proven, 26 sorry, 71 written, 89 todo**.
 
 ### Landing 2: exact walk counters, the walks and `nat_op_result` under `CoreS`, `major_to_ctor`
 * **Exact `coreWalkFuel` counters** (helper `whnf2-walks`, ROADMAP §3 (b)): `fr_go`/`fr_memo`,
