@@ -5086,4 +5086,66 @@ Files: `ViewL.lean` (`packBF`, `packBF_bvar`, `packBF_fvar`), `ExprMk.lean` (`de
   built, then lost in the machine restart; `Inst1*.lean` with `d ↦ k`, `v ↦ d` is the template.
 * `instantiateListGo`/`instantiateList`: untouched (pool-slice reader; `PoolSlice.lean` already has
   the word-slice lemmas).
+
+## Definitional equality, inference, the knot: L code top down (2026-10-22, lane `defeq`)
+
+Phases 6 and 7 (ROADMAP §1): con-ron's `Arena/Core.lean:2439-3675` and the helpers it reaches
+(`:240-460`, `:838-875`, `:1360-1640`) in L, written top down against stubs. Files:
+`DefEq.lean` (46 functions, 825 lines in `lfn` bodies), `Infer.lean` (24, 432), `Knot.lean` (7,
+43; the stub specs), `KnotWF.lean` (the closure check). 1300 L lines for ~4400 Rust lines of the
+infer/defeq/knot part (census phases 6–7), ~0.3 L per Rust line (the twin's arm structure is
+denser than the Rust).
+
+### Shape
+* **Slots.** `infer`, `infer_io`, `defeq` are the knot's slots (memos `in`/`io`/`de`, arrays 99‥101,
+  key bit = the mode's eager bit, probe → body → re-probe → put, as lane `whnf`'s `whnf`/`whnf_core`);
+  their specs are `InferSlot`/`InferIOSlot`/`DefeqSlot` (`WhnfBase.lean`), unchanged.
+  **`defeq_e(mode, …)` is `defeq(mode | 2, …)`**: the twin's `defeqE` at level `F + 1` is the `defeq`
+  slot of `coreKnot mode.toEager` at `F + 1` on the eager memo set, and with lane `whnf`'s bank bit
+  in the key nothing moves (`enterEager`/`leaveEager` have no L code).
+* **The io view.** `infer_body_io` calls `infer_io` wherever the twin's io body calls `r.infer`
+  (`CoreFnsA.ioView`); `infer_proj(mode, io, …)` is shared and takes the grade as a word.
+* **Entry points** at the verified mode, with lane `induct`'s/`decls`' conventions:
+  `infer_type_core(vis, dep, e)`, `is_def_eq_core(vis, dep, a, b)`, `ensure_sort_core(vis, dep,
+  t)` (one call each to the slot at mode `0`). In a whole program they replace `IndIface.lean`'s
+  `stub`s of the same names; `IndStubs.lean`'s `RelAM` statements stay the spec they must meet
+  (their `stubM` becomes these functions' models when proved).
+* **Stacks.** Lists are `SPN` slices (lane `whnf`). The telescopes (`infer_lams`, `infer_pis`) keep
+  a second list growing in step with `fvs` while knot calls run in between: **the binder stack
+  `BSTK` = array 145, top `CTL[137]`** (claimed here; outside every tier of `CoreS`, which
+  `CoreS.frame` already allows). Memory map: add array 145 / `CTL[137]`.
+* **Fuels.** `defeqLoopFuel` and `lamsFuel` (`2^62`) are uncounted `while` loops; `peelFuel`
+  (`2^24`) is the exact counter `peel` in `defeq_peel`, `infer_lams`, `infer_pis` (ROADMAP §3 (b)).
+* **Lifted binds.** Lean's `do` runs every `(← …)` of a statement before the statement, also
+  under `&&`/`||`: `defeqBody`'s `isBoolTrue b`/`hasFvarFast a`, `defeqOffset`'s two `isNatZero`,
+  `propIrrel`'s four readers, `defeqStuck`'s `strLitSupported`, `lazyDeltaStep`'s two unfolds. L calls
+  all of them unconditionally, in the twin's order.
+* **Literal equality** (`quickDefEq`'s `l₁ == l₂`) is `lit_eq`: kind, length, `limbs_eq` on the pool
+  slices (not handle equality: the twin's store is not known to be duplicate-free across tiers).
+* Splits for the proofs: `lazy_delta_step` = dispatcher + `lds_left`/`lds_right`/`lds_both`;
+  `defeq_body` + `defeq_tail`; `defeq_stuck` + `stuck_str`/`stuck_app`; `struct_eta_cert_with` +
+  `struct_eta_cert_go`; `infer_proj` + `infer_proj_at` + `proj_type_at`; `infer_spine_arg`.
+
+### Findings (for lane `whnf`)
+* `defeq_list` (`WhnfIota.lean`) returns `0` at once on a length mismatch; the twin's `defEqList`
+  compares the common prefix first (`defeq` calls with effects, and possibly a throw). Not a
+  refinement of `defEqList` when lengths differ (`iota_index_ok` can pass different lengths). This
+  lane uses its own `defeq_lst` (the twin's recursion) and `defeq_list_rev` (`defeqSpine`).
+* `proof_irrel` (`WhnfIota.lean`) calls `lvl_eq`, not the cached `lvl_eq_c`: the twin's `lvlEq?`
+  writes `lvlEqC`, so `CoreRM`'s `lq` relation breaks across it. This lane calls `proof_irrel`
+  (`propIrrel`'s slow arm is `proofIrrel` verbatim), so the fix is one word there.
+* `reduce_proj_fire` tests `an == np + nf` on words (wraps for huge `np + nf`); `eta_ctor_shape`
+  here uses `nf ≤ an ∧ an - nf = np`.
+* `reserved_contains` is defined twice (`IndIface.lean`'s `reservedContains`, `WhnfIota.lean`'s
+  `reservedContainsL`): a whole program must pick one.
+* Master was broken at `WhnfSpineRefine.lean:769` since lane `exprops3`'s packed derived word
+  (`mkAppW` posts `packBF … …`): fixed by lane `indproofs` and here at the same time (the
+  `derPutW` argument), one line.
+
+### `sorry`s
+* `Knot.lean` `defeqCallees_stub`: `has_fvar`, `not_proof_fast`, `is_proof_fast` (phase 2
+  `PropRead`), `abstract1`, `abstract_range` (phase 4), `field_sort_zero` (levels:
+  `Level.isEquiv (Level.subst ks vs fs) .zero` on the heap). The slots' induction steps
+  (`WhnfCallees.inferStep`/`inferIOStep`/`defeqStep`, lane `whnf`'s stub) are this lane's to prove
+  next; nothing is proved yet.
 None but stubs': `IndStubs.lean`'s stub specs, plus the two master callees above (listed there).
