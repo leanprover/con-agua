@@ -8154,6 +8154,64 @@ frontend function".
   `FrontBlock` of the front's blocks is not proved yet (lane front: a `DeclsF` clause, or from
   `installIndD`'s constants). `StateOK` after `andPinDecls`: con-ron's `internCIList_sstep`.
 
+### Landing 3: `StageT`, the core's write set, the entry points under `StageT`
+Coordinated with the coordinator (and lane `decls4`'s note: `decls4` does not change `StageR`):
+`StageR` keeps its shape; **`StageT`** (`ConAgua/Arena/IndTwin.lean`) is a separate relation by
+named components — `stage : StageR`, `twin : TwinOK` (lane `decls4`'s `DeclLvlStage.lean`: the
+readback caches, `NStoreWF`, `StoreDen` incl. lane `defeq2`'s new `recRules`, the walk memos, three
+capacities), `flag : pinW m 0 ≠ 0` — and a file migrates to it only where a core callee is reached.
+* `StageT.core`: `StageT` is `CoreS` (eager bit `0`), so every `CoreS`-level refinement applies.
+* **The core's write set from the text**: `CoreStageClosed p` (no function the stage's core entry
+  points reach writes `IW`, `EREC`, `PINS`, `CTL[129]`, `CTL[200]`), decided for `checkerProg` in
+  `ConAgua/Checker/IndCore.lean` (`decide +kernel`, as lane `whnf3`'s `CoreErec`). With it
+  `StageT.of_core`: a core run's `CoreAfter` is `StageT` after and the pools are unchanged
+  (`IWGrow`); `StageT.sim_core` turns any `CoreSpec` into a `Sim` on the call's run.
+* **The entry points as `Sim` facts under `StageT`** (the "whnf adapters"; each replaces the
+  `IndStubs` contract of the same name for a caller carrying `StageT`), sorry-free:
+  `whnfTop_simT` (`whnf_top`, from the knot's `whnf` slot; the adapter `whnfTopL` had no spec
+  before), `inferTypeCore_simT`, `isDefEqCore_simT`, `ensureSortCore_simT` (from `KnotSlot`'s and
+  `InferLeaves`' entry refinements), `lvlEqC_simT` (lane `whnf`'s `lvlEqC_refines`). Program
+  hypotheses: `KnotEntryProg p`, `p.lookup "whnf_top"`, `∀ n, KnotOK p n` (lanes `whnf4`/`defeq2`'s
+  `knot_all`), `CoreStageClosed p`; L fuel `n ≤ 2^62` (the twin's `checkFuel`). `lvlEqC_simT` takes
+  the two handles' readbacks, which a caller gets from `StoreDen.lvlAll`/`.sort`/`.zero`.
+* **Frames by component**: `TwinOK.frame_iw` (no part of `TwinOK` reads `IW`/`CTL[200]`, so every
+  pool writer keeps it), `StageT.of_iw` (a pool writer's `StageR` lemma + its frame), and
+  `StageT.of_coreRef` (a master callee's `StageR` lemma + its `CoreS` refinement `CoreRef`, at a
+  frame that leaves `PINS` alone); instances `internSort_stageT`, `internFVar_stageT` (from
+  `IndMaster`'s `_stage` and `InferBodyIntern`'s `_core`).
+* **Not done, and why** (the migration's open ends, in the order a successor meets them):
+  1. *The stage's entry.* `StageT` at `check_ind_decl` must come from the declaration loop: `LoopR`
+     carries neither `TwinOK` nor the flag. `decls4`'s `TwinFold` gives `StateOK` at the arm, but
+     `TwinOK`'s caches/`StoreDen`/memos are `CoreS` facts after the previous declaration's core
+     calls; the loop's arms run their core callees through stubs with `KeepPost` posts, so nothing
+     carries them yet. Until the loop does, every stage theorem stated under `StageT` has a
+     hypothesis its top caller cannot discharge (not vacuous: true in every state the checker
+     reaches, by the twin's own invariants).
+  2. *Stubs under `StageT`.* A stage function with a stub callee (`fvar_type_d`, `strip_pis`,
+     `open_pis_at_fvars_f`, …) cannot move to `StageT` while the stub's contract only gives `StageR`
+     after. Either the stubs get L code (9 of them still abort in `checkerProg`: `lv_zero_caps`,
+     `name_rec`, `name_rec_i`, `rec_rule_bits`, `reserved_rec_name`, `open_pis_at_fvars_f`,
+     `intern_ls_iw`, `fvar_b`, `consts_resolve_ffast`) or one generic `sorry`'d contract "a stub
+     keeps `TwinOK`" in the style of `stubM_memoFrame`.
+  3. *Record-pool writers.* `StoreDen.proj` quantifies over every `EREC` offset that decodes as a
+     projection table (`decTbl (m.arr64 EREC) q`), so appending a record can break it;
+     `StoreDen.frameE` needs `EREC` unchanged. `erec_alloc`/`cv_new`/`env_push` need `proj`
+     restricted to records below `CTL[129]` (owner: lane `defeq2`, `StoreDen.lean`) or a per-writer
+     argument.
+  4. *`lv_leq_top`, `lv_zero_caps`, `blockLargeElimAllowed`.* `lv_leq_top` has a heap-level relation
+     (`leqTopW_ok`, `LvR`); under `StageT` it needs `denoteL_lvR` at the two handles and the
+     `readLevelM` runs (`readLevelM_run'`, `CoreS.withReadLC`) — the same pattern as `lvlEqC_simT`,
+     not done. `lv_zero_caps` has no L code (an `abortStub` in `checkerProg`). `blockLargeElimAllowed`
+     (`lv_nz` on the result sort) would follow the same pattern; its readback of `resSort` needs
+     the shape's result sort to be a `sort` view's level (`StoreDen.sort`), which
+     `blockShape?`'s refinement does not record yet.
+* **A hypothesis no caller could discharge, removed.** `numCtorsOf_refines`,
+  `blockShapeNumCtors_refines` and `blockShapeAllCtors_refines` (lane `indproofs`' helper `parts`)
+  took `hsmall : ∀ i v, iwN m i = some v → v + 3 < 2^64`, a statement about *every* `IW` word that
+  `StageR` does not give. It is only needed at the decoded member pointers, where `decMS` already
+  reads `IW[v + 3]`, so `v + 3 < size < 2^64`: `numCtorsOfW_ok` now takes the pool's size bound
+  (`IWOK`) instead, and the three census theorems follow.
+
 ## Kernel-checked compiler output (2026-10-22, lane `kernelasm`)
 
 Goal: take the Lean compiler and runtime out of the trusted base. `compile_correct` is about the
@@ -8264,3 +8322,54 @@ compiled Lean code over a literal (no compiler logic in it except printing).
 ### `sorry`s
 
 None.
+### The ROM constant readers refine the twin (helper `decls4-rom`)
+
+`romRefs_of` (moved from `CIReadSpec.lean` to `ConAgua/Rom/CIReadRefs.lean`, above the proofs)
+is proved except for the quotient blocks: `rom_ci`, `rom_cv`, `rom_expr_pin`, `rom_and_pin`
+(`@[refines]` of `eqA` … `ofReduceBoolA`, the reduce pins, `andPinDecls`) and `rom_basis_decls(_a)`
+for kinds `0‥3` sorry-free (axioms `propext`, `Classical.choice`, `Quot.sound`).
+* **Shape.** Word models through `callW` (`CIReadRefW.lean`, no model recursive, every spec one
+  `vcgen`; `finish (gen := 30)`). The invariant `RInv m₀ a₀ T m a` (`CIReadRefBase.lean`):
+  `ArenaD`, the twin keeping `cp`, writes only to `ExprA`/`ExprC`, `EREC`, `IW` and their tops,
+  `IWGrow` from the entry, `IWOK`, the pool top `T`; `RInv.stage` gives `StageR` back at the
+  entry's environment. A record is decoded by **`Holds SE SI f m x`** ("`f` gives `x` in every
+  memory agreeing with `m` on the `EREC` words `SE` and the `IW` words `SI`"): it survives every
+  later write outside its words (`Holds.keep`, `EKeep`), and at the end is `DecB` (`Holds.decB`).
+  The ROM side reuses `romNameW_ok`, `romExprW_ok` (`MemoR` at a fresh memo); the region's layout
+  is `slot_pos` (`ciTable`, `flatten_drop`), the values' fit is `decide +kernel` (< 1 s).
+* **L changes.** `rci_fresh` also resets the level stack top `CTL[131]` (`rom_levels` needs
+  `stkTop < 2^61`, which nothing in `StageR` bounds; nothing holds the stack between two ROM
+  reads). `rci_ci`'s kind arms return instead of falling through (the merged paths made its
+  `vcgen` spec run out of simp steps). `Checker/Prog.lean` unchanged (same names), `checkerProg_wf`
+  builds. `scripts/checker_prog.py` stops at an unrelated, pre-existing problem
+  (`builtin_prelude` calls `pre_front_run`).
+* **Open (`sorry`): `romBasisRef_quot`, `romBasisARef_quot`** (kind `4`). `Quot`'s `sortZ` is
+  `.ifAllZero [u]`: `decCaps` reads `u`'s handle back through `dn`, and nothing in `StageR`
+  relates `dn` to the store, so the statement is false at `dn := fun _ => none`. It needs a
+  hypothesis such as "`dn` reads back the store's names" (and the reader interns `u` where the twin
+  keeps it as a value: a no-op on the store only because `u` is already a level parameter, which
+  the proof would have to show). Every other pinned constant has `sortZ = .never` or
+  `.ifAllZero []` (`capsFits`).
+* `CIReadRefCaps.lean` elaborates in ~70 s (one 200-line proof, many `omega`s in a large context).
+
+### Landing 3 (lane `decls4`): helpers `rom` and `andpin` merged; numbers
+
+* **ROM readers** (helper `decls4-rom`, 84 min, `ConAgua/Rom/CIReadRef*.lean`, ~3.3k lines):
+  `romCiRef_of`, `romCvRef_of`, `romExprPinRef_of`, `romAndPinRef_of` sorry-free (`@[refines]`),
+  `rom_basis_decls(_a)` for kinds 0–3. **Open** (`romBasisRef_quot`, `romBasisARef_quot`, `sorry`):
+  kind 4 (`quotK`), whose `Quot` carries `sortZ = .ifAllZero [u]`, read back through `dn`; false at an
+  arbitrary `dn` under `StageR`. It needs "`dn` is the store's name readback" (`StoreDen.dnN`), which
+  lane `indproofs3`'s `StageT := StageR ∧ TwinOK` will carry: restate the kind-4 refinement at
+  `StageT` then. L changes: `rci_fresh` also resets the level stack `CTL[131]` (nothing lives on it
+  between two ROM reads), `rci_ci`'s kind arms return directly (vcgen step limit).
+  `CIReadRefCaps` elaborates in 67–88 s (watch list).
+* **`and_pin_ok`'s inductive arm** (helper `decls4-andpin`, 53 min, `DeclAndPinInd*.lean`, ~1.9k
+  lines, sorry-free): `and_block_named`, `ind_block_to_erec` (first spec), `andPinOkInd_refines`,
+  `andPinOkF_refines` (every front record kind, `DeclAtF`), `refines_part`: they assume
+  `FrontBlock` (the front's blocks have the shape the twin's `installIndD` pushes), not yet proved
+  of the front; and the loop's relation does not carry `DeclsF` yet. Deliberate deviation D27
+  (`dind_copy`'s word-0 guard).
+* Census: phase 2 **237 proven, 40 sorry, 14 written, 40 todo** (lane start 206 / 50 / 35 / 40);
+  totals 789 proven / 165 sorry of 1352. The phase-2 `sorry`s left go through the core's stub specs
+  (`isDefEqCore_spec`, `inferTypeCore_spec`, `ensureSortCore_spec`, `whnf_spec`; the knot) and
+  `lvl_eq_c`'s `TwinOK` gap (lane `indproofs3`).

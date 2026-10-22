@@ -315,7 +315,7 @@ theorem numCtorsOf_spec (hp : p.lookup "num_ctors_of" = some numCtorsOf) (n : Na
 end specs
 
 theorem numCtorsOfW_ok (n : Nat) : ∀ (m : Mem) (off l r : Word) (ms : List MemberShape),
-    (∀ i v, iwN m i = some v → v + 3 < 2 ^ 64) →
+    (m.arr64 IW).size < 2 ^ 64 →
     off.toNat + l.toNat < 2 ^ 64 → decPL m (decMS m) off.toNat l.toNat = some ms →
     numCtorsOfW n m off l = some r → r = UInt64.ofNat (ConRon.Arena.numCtorsOf ms) := by
   induction n with
@@ -355,7 +355,13 @@ theorem numCtorsOfW_ok (n : Nat) : ∀ (m : Mem) (off l r : Word) (ms : List Mem
         rw [numCtorsOfW_cons n m off l hl, hcons, numCtorsOfW_cons_some] at h
         have hr' : r' = UInt64.ofNat (ConRon.Arena.numCtorsOf mrest) :=
           ih m (off + 1) (l - 1) r' mrest hsmall hbnd1 hd1 hcons
-        have hv3 := hsmall off.toNat v hv
+        have hv3 : v + 3 < 2 ^ 64 := by
+          obtain ⟨_, _, _, hl3, _⟩ := decAt_some (decMS_some hms0).2.2
+          have : v + 2 + 1 < (m.arr64 IW).size := by
+            simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at hl3
+            obtain ⟨w, hw, -⟩ := hl3
+            exact (Array.getElem?_eq_some_iff.mp hw).1
+          omega
         have hv' := (iwN_rdW hv (by omega)).1
         rw [ofNat_toNat_word] at hv'
         have hdm := decMS_some hms0
@@ -377,7 +383,7 @@ theorem numCtorsOfW_ok (n : Nat) : ∀ (m : Mem) (off l r : Word) (ms : List Mem
 @[refines ConRon.Arena.numCtorsOf]
 theorem numCtorsOf_refines (p : Prog) (hp : p.lookup "num_ctors_of" = some numCtorsOf) (n : Nat)
     (s₀ : St) (off l : Word) (ms : List MemberShape)
-    (hsmall : ∀ i v, iwN s₀.mem i = some v → v + 3 < 2 ^ 64)
+    (hsmall : (s₀.mem.arr64 IW).size < 2 ^ 64)
     (hd : decPL s₀.mem (decMS s₀.mem) off.toNat l.toNat = some ms)
     (hbnd : off.toNat + l.toNat < 2 ^ 64) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "num_ctors_of" [off, l]
@@ -411,7 +417,7 @@ theorem blockShapeNumCtorsW_spec (p : Prog) (hc : p.lookup "num_ctors_of" = some
 theorem blockShapeNumCtorsW_ok (n : Nat) (m : Mem) (q r : Word) (bs : BlockShape)
     (hq : decBS m q.toNat = some bs) (hb : q.toNat + 9 < 2 ^ 64)
     (hol : ∀ o l, iwN m q.toNat = some o → iwN m (q.toNat + 1) = some l → o + l < 2 ^ 64)
-    (hsmall : ∀ i v, iwN m i = some v → v + 3 < 2 ^ 64)
+    (hsmall : (m.arr64 IW).size < 2 ^ 64)
     (h : numCtorsOfW n m (rdW (m.arr64 IW) q) (rdW (m.arr64 IW) (q + 1)) = some r) :
     r = UInt64.ofNat bs.numCtors := by
   obtain ⟨o, l, ho, hl, hg⟩ := decAt_some (decBS_some hq).1
@@ -439,7 +445,7 @@ theorem blockShapeNumCtors_refines (p : Prog) (hc : p.lookup "num_ctors_of" = so
     (hb : q.toNat + 9 < 2 ^ 64)
     (hol : ∀ o l, iwN s₀.mem q.toNat = some o → iwN s₀.mem (q.toNat + 1) = some l →
       o + l < 2 ^ 64)
-    (hsmall : ∀ i v, iwN s₀.mem i = some v → v + 3 < 2 ^ 64) :
+    (hsmall : (s₀.mem.arr64 IW).size < 2 ^ 64) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_shape_num_ctors" [q]
     ⦃fun r s' => s' = s₀ ∧ r.headD 0 = UInt64.ofNat bs.numCtors; ⊤⦄ := by
   cases n with

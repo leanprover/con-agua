@@ -4,3 +4,4 @@ _scratch/
 __pycache__/
 docs/progress.md
 docs/progress.csv
+docs/lanes.json
