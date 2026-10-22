@@ -11,3 +11,6 @@ import ConAgua.Arena.DeclRomStubs
 import ConAgua.Arena.DeclReduceSpec
 import ConAgua.Arena.DeclArmLoop
 import ConAgua.Arena.DeclCheckLoop
+import ConAgua.Arena.DeclMasterStage
+import ConAgua.Arena.DeclCanonSpec
+import ConAgua.Arena.DeclCanonEq
