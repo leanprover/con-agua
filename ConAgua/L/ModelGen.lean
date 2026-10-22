@@ -11,41 +11,50 @@ public section
 
 `l_model` reads the `lfn` text of a group of L functions and generates, for each function `f`,
 
-* its **word model** `fW : Nat → Mem → Word → … → Option (Word × Mem)` (or `Option Word` for a
-  read-only function, `ro`): the L code with every local inlined, `abort` as `none`, a call to a
+* its **word model** `fW : Nat → Mem → Word → … → Option (Word × Mem)` (`Option Word` for a
+  read-only function, `ro`; no fuel argument for a single function that needs none): the L code
+  with every local inlined, `abort` as `none`, a load as `rdW`, a store as `Mem.set64`, a call to a
   group member as that member's model at fuel `n`, a call to another function as the model its
-  spec states, and the code after an effectful call as a first-order continuation `fW.kᵢ`
-  (`| none => none | some (x, m₁) => …`), named so that `grind` matches its equations;
-* one **guarded equation** `fW.armᵢ` per non-`none` leaf of the model's `if` tree (the path's
-  conditions as hypotheses), and the same for every continuation, each with a `grind_pattern` in
-  the given attribute;
-* the **spec** of the whole group, `⦃s = s₀⦄ invoke p (exec p n) "f" args ⦃LocEq s' s₀ ∧
-  fW n s₀.mem args = some (r.headD 0, s'.mem); ⊤⦄` for every member, as one conjunction, proved
-  by induction on the fuel with one `vcgen` + `finish` per member.
+  spec states (`specs`), and the code after an effectful call as a first-order continuation
+  `fW.kᵢ` (`| none => none | some (x, m₁) => …`) over the locals it reads. The code after an `if`
+  whose branches both fall through is a join point `fW.kᵢ` over the locals and the memory (no
+  copy of it). Equal continuations of the group are shared. A group whose continuations call its
+  models is defined by well-founded recursion on `(n, depth)`, as `LevelLeq.lean` does by hand;
+* one **guarded equation** `fW.armᵢ` per non-`none` leaf of the `if` tree of each model and
+  continuation (the path's conditions as hypotheses, in order), each with a `grind_pattern` in the
+  `grind` attributes;
+* the **spec** `⦃s = s₀⦄ invoke p (exec p n) "f" args ⦃LocEq s' s₀ ∧
+  fW n s₀.mem args = some (r.headD 0, s'.mem); ⊤⦄` of every member, as one conjunction over the
+  group (`name`), a step theorem per member (`name.stepᵢ`: `vcgen` with the specs of the callees
+  that member calls, then `finish`) and the induction on the fuel.
 
 ```
 l_model liftGo_spec (p : Prog) (hp : LiftProg p)
   fns [hp.go ↦ liftW, hp.app ↦ liftAppW]
   specs [derB_spec p hp.derb n, memoFindG_spec lfSch p _ hp.lff n]
-  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW] gen 20
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW] gen 20 heartbeats 1000000
 ```
 
-* `fns`: each entry is a proof of `p.lookup "f" = some F` (`F` an `lfn` defined in this file:
-  its text is read back for the names of the locals) and the name of the model to define.
-  `ro` after the name makes a read-only model (`Option Word`, memory unchanged).
-* `specs`: the specs of the callees, as terms over the binders and the fuel `n`. Each callee's
-  model is read off its spec's post: `F = some (r.headD 0, s'.mem)` (effectful),
-  `r.headD 0 = F₀ ∧ r.tail.headD 0 = F₁ …` with the memory unchanged (pure),
-  `r ≠ [] ∧ r = F` (a list of results; `F = []` becomes `none`), `F = some s'.mem`
-  (memory only), `G ∧ s'.mem = F` (memory only, total, `¬ G` becomes `none`),
-  `F = some (r.headD 0)` with the memory unchanged (read-only).
-* `fold`: named functions of one or more words (`tierW h = (h >>> 27) &&& 1`) whose bodies are
-  folded back into the model.
-* `finish`, `gen`: the hints and depth of the spec's `finish`; `vcgen` gets
-  `exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ld8, st64` plus `unfold [...]`.
+* `fns`: each entry is a proof of `p.lookup "f" = some F` (`F` a `def F : FunDecl := lfn …` of
+  this file: its text is read back for the names of the locals and the leaf terms) and the name
+  of the model. `ro` after the name: a read-only model (`Option Word`, memory unchanged).
+* `specs`: the callees' specs, as terms over the binders and the fuel `n`. A callee's model is read
+  off its post: `F = some (r.headD 0, s'.mem)` (effectful), `r.headD 0 = F₀ ∧ r.tail.headD 0 = F₁ …`
+  with the memory unchanged (pure), `r ≠ [] ∧ r = F` (a list of results; `F = []` becomes `none`
+  unless the callee is listed in `noguard`), `F = some s'.mem` (memory only),
+  `G ∧ s'.mem = F` (memory only, total; `¬ G` becomes `none`), `F = some (r.headD 0)` with the
+  memory unchanged (read-only).
+* `fold`: named functions whose bodies are folded back into the model: word arithmetic
+  (`tierW h = (h >>> 27) &&& 1`) or a result of a list callee (`lvG m p = (lvNodeW m p).headD 0`).
+* `extra`: more lemmas for `vcgen` (the default is `exec, step, evalE, evalC, evalArgs, setLoc,
+  setLocs, ld64`); `finish`, `gen`: the hints and depth of `finish`; `heartbeats`: per step theorem;
+  `trace`: log the generated commands.
 
-Not supported (an error names the statement): `while`/`break`, calls returning several words
-into an effectful model, `return (a, b)`, byte stores, and splices of named blocks.
+Not supported (an error names the statement or the callee): `while`/`break` and splices of named
+blocks, `return (a, b)` and callees with several results into an effectful model, byte stores,
+`FunDecl`s with parameters (`memoFindG S`) and models with Lean parameters, members that only
+change the memory. Array bounds are not modelled: a load is `rdW` (`0` out of bounds), a store is
+`Mem.set64` (no change out of bounds); where L aborts, the spec says nothing.
 -/
 
 namespace L.ModelGen
