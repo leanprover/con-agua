@@ -1054,28 +1054,14 @@ def MajorToCtorOK (p : Prog) : Prop :=
   ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F →
   ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode d rec ro rc major : Word) (rules : List IRecRule),
-    CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → HW major →
-    decRules (s₀.mem.arr64 EREC) ro.toNat rc.toNat = some rules →
+    n ≤ 2 ^ 62 → CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → eb = (mode >>> 1) &&& 1 →
+    HW major → decRules (s₀.mem.arr64 EREC) ro.toNat rc.toNat = some rules →
     CoreSpec p (n + 1) "major_to_ctor" [mode, vis, d, rec, ro, rc, major]
       (majorToCtor (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI rec) rules
         (decE major)) decH s₀ a₀ dn vis fe MM eb
 
 @[refines ConRon.Arena.majorToCtor]
 theorem majorToCtor_refines : MajorToCtorOK p := sorry
-
-/-- con-leche: `Core.lean:701-775`/`Cached/CoreC.lean:553-575` `prepareMajor`. -/
-def PrepareMajorOK (p : Prog) : Prop :=
-  ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F →
-  ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb mode d rec ro rc major : Word) (rules : List IRecRule),
-    CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → HW major →
-    decRules (s₀.mem.arr64 EREC) ro.toNat rc.toNat = some rules →
-    CoreSpec p (n + 1) "prepare_major" [mode, vis, d, rec, ro, rc, major]
-      (prepareMajor (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI rec) rules
-        (decE major)) decH s₀ a₀ dn vis fe MM eb
-
-@[refines ConRon.Arena.prepareMajor]
-theorem prepareMajor_refines : PrepareMajorOK p := sorry
 
 /-- con-leche: `CoreDefs.lean:716-721` `piResidual`. -/
 def PiResidualOK (p : Prog) : Prop :=
