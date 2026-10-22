@@ -2363,4 +2363,124 @@ theorem instSpinePins_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p
   · rw [hr1, hr2, ← hmm]
     simpa using hys
 
+/-! ## `rec_fire_args(fireKind, pvo, pvc, po, pc, us, ao, rP, ctorParams)` -/
+
+/-- Model of `rec_fire_args`. -/
+def rfaW (p : Prog) (k : Nat) (m : Mem) (fireKind pvo pvc po pc us ao rP cp : Word) :
+    Option (List Word × Mem) :=
+  if fireKind = 1 then
+    match callW p k "inst_spine_pins" [po, pc, us, ao, rP, pvo, pvc] m with
+    | none => none
+    | some (r, m₁) => some ([r.headD 0, r.tail.headD 0], m₁)
+  else some ([ao, cp], m)
+
+theorem recFireArgs_spec (p : Prog) (hp : p.lookup "rec_fire_args" = some recFireArgsL) (k : Nat)
+    (s₀ : St) (fireKind pvo pvc po pc us ao rP cp : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p (k + 1)) "rec_fire_args" [fireKind, pvo, pvc, po, pc, us, ao, rP, cp]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      rfaW p k s₀.mem fireKind pvo pvc po pc us ao rP cp = some ([r.headD 0, r.tail.headD 0], s'.mem);
+      ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, recFireArgsL]
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+    callW_spec p k "inst_spine_pins"] <;>
+  simp_all [rfaW, Cmp.eval, BinOp.eval, LocEq, St.setLocs_cons, St.setLoc_loc,
+    St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal,
+    Sig.retOr]
+
+/-- A leading part of a spine slice. -/
+theorem SpineR.take {m : Mem} {off cnt : Word} {xs : Array EIdx} (h : SpineR m off cnt xs)
+    (c : Word) (hc : c.toNat ≤ cnt.toNat) :
+    SpineR m off c (xs.toList.take c.toNat).toArray := by
+  have hb := h.bound
+  refine ⟨by simp [h.size]; omega, by omega, fun i hi => h.lt i (by omega), fun i hi => ?_⟩
+  have hi' : i < xs.size := by
+    simp only [List.size_toArray, List.length_take, Array.length_toList] at hi
+    omega
+  have := h.get i hi'
+  simpa [List.getElem_take] using this
+
+theorem recFireArgs_nested_eq (rl : IRecRule) (lps : List NIdx) (us : LsIdx) (args : List EIdx)
+    (rP : Nat) (lv : List LIdx) (pins : List EIdx) (h : rl.fire = .nested lv pins) :
+    recFireArgs rl lps us args rP = instSpinePins lps us args rP pins := by
+  simp [recFireArgs, h]
+
+theorem recFireArgs_plain_run (rl : IRecRule) (lps : List NIdx) (us : LsIdx) (args : List EIdx)
+    (rP : Nat) (h : rl.fire = .plain) (a : AState) :
+    (recFireArgs rl lps us args rP).run a = .ok (args.take rl.ctorParams, a) := by
+  simp [recFireArgs, h]; rfl
+
+/-- **`rec_fire_args` refines `recFireArgs`.** Statement changes: `CoreAfterG` (the nested arm leaves a
+slice on the stack), both input slices below the stack top, and `ctorParams ≤ rP` in the plain arm
+(the returned slice is a prefix of the arguments). -/
+theorem recFireArgs_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) (hw : WhnfCallees p)
+    (hE : ErecKeptInst p) :
+    ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (MM : ModeMaps) (eb fireKind pvo pvc po pc us ao rP ctorParams : Word) (rl : IRecRule)
+    (lps : List NIdx) (args : Array EIdx), CoreS dn s₀.mem a₀ vis fe MM eb → HW us →
+    hslice? (s₀.mem.arr64 EREC) po.toNat pc.toNat = some lps → SpineR s₀.mem ao rP args →
+    (fireKind = 1 → ∃ lvls pins, rl.fire = .nested lvls pins ∧ SpineR s₀.mem pvo pvc pins.toArray) →
+    (fireKind ≠ 1 → rl.fire = .plain ∧ ctorParams.toNat ≤ rP.toNat) → rl.ctorParams = ctorParams.toNat →
+    ao.toNat + rP.toNat ≤ (spTop s₀.mem).toNat →
+    (fireKind = 1 → pvo.toNat + pvc.toNat ≤ (spTop s₀.mem).toNat) →
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "rec_fire_args" [fireKind, pvo, pvc, po, pc, us, ao, rP, ctorParams]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (recFireArgs rl lps (decI us) args.toList rP.toNat) a₀ ∧
+      CoreAfterG dn s₀.mem s'.mem (AM.st (recFireArgs rl lps (decI us) args.toList rP.toNat) a₀) vis
+        fe MM eb ∧
+      ∃ xs, AM.res (recFireArgs rl lps (decI us) args.toList rP.toNat) a₀ = xs ∧
+        SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄ := by
+  intro n s₀ a₀ dn vis fe MM eb fireKind pvo pvc po pc us ao rP cp rl lps args hS hus hlps hsa hnest
+    hplain hcp hat hpt
+  cases n with
+  | zero =>
+    apply L.M.triple_of_run
+    intro s r s' _ hrun
+    exact (invoke_zero_run _ _ _ _ _ _ hrun).elim
+  | succ n =>
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
+    (recFireArgs_spec p hp.recFireArgs n s₀ fireKind pvo pvc po pc us ao rP cp)
+  subst hs0
+  refine ⟨hloc, ?_⟩
+  simp only [rfaW] at hW
+  by_cases h1 : fireKind = 1
+  · rw [if_pos h1] at hW
+    obtain ⟨lv, pins, hfire, hsp⟩ := hnest h1
+    cases hc1 : callW p n "inst_spine_pins" [po, pc, us, ao, rP, pvo, pvc] s.mem with
+    | none => rw [hc1] at hW; cases hW
+    | some q =>
+    obtain ⟨r₁, m₁⟩ := q
+    rw [hc1] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨hr, hm⟩ := hW
+    obtain ⟨t₁, ht₁, hloc1, hok, hca, xs, hres, hxs⟩ := triple_of_callW
+      (instSpinePins_refines' p hp hc hw hE n ⟨s.mem, Locals.init []⟩ a₀ dn vis fe MM eb po pc us ao rP
+        pvo pvc lps args pins.toArray hS hus hlps hsa hsp hat (hpt h1)) hc1
+    rw [recFireArgs_nested_eq rl lps (decI us) args.toList rP.toNat lv pins hfire]
+    simp only [List.toList_toArray] at hok hca hres
+    simp only [ht₁] at hxs hca
+    rw [← hm]
+    have hr1 : r.headD 0 = r₁.headD 0 := by
+      have := congrArg (fun l => l.headD 0) hr; simpa using this.symm
+    have hr2 : r.tail.headD 0 = r₁.tail.headD 0 := by
+      have := congrArg (fun l => l.tail.headD 0) hr; simpa using this.symm
+    exact ⟨hok, hca, xs, hres, by rw [hr1, hr2]; exact hxs⟩
+  · rw [if_neg h1] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨hr, hm⟩ := hW
+    obtain ⟨hfire, hle⟩ := hplain h1
+    obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ (recFireArgs_plain_run rl lps (decI us) args.toList
+      rP.toNat hfire a₀)
+    have hr1 : r.headD 0 = ao := by
+      have := congrArg (fun l => l.headD 0) hr.symm; simpa using this
+    have hr2 : r.tail.headD 0 = cp := by
+      have := congrArg (fun l => l.tail.headD 0) hr.symm; simpa using this
+    refine ⟨hok, ?_, _, hres, ?_⟩
+    · rw [hst, ← hm]; exact ⟨MM, hS, KeptAll.refl _ _, (StackKept.refl _).toGrew⟩
+    · rw [hr1, hr2, ← hm, hcp]
+      exact hsa.take cp hle |> fun h => by simpa [hcp] using h
+
 end L.Arena
