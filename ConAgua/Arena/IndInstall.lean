@@ -587,36 +587,36 @@ def checkBlockPositivity : FunDecl := lfn (vis, p, cvO, cvL, caOff, caLen) local
 /-! ## Stage 2: the tail -/
 
 /-- `check_block_idx_sorts_one(vis, p, ms, cvTa)`: one member's index binders' universes, as a
-pointer `[off, len]`. -/
+pointer `[off, len]` (`nP + nIdx` past `2^64` a capacity abort; the index binders the telescope's
+tail past `nP`, the empty slice at offset `0` when there is none). -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:306-320 ConRon.Arena.checkBlockIdxSorts
 @[l_impl ConRon.Arena.checkBlockIdxSorts]
 def checkBlockIdxSortsOne : FunDecl := lfn (vis, p, ms, cvTa) locals
-    (ok, tqO, tqL, body, dOff, dLen, isO, isL, hp) {
-  (ok, tqO, tqL, body) := call open_pis_at_fvars_f(IW.u64[p + 4] + IW.u64[ms + 1], EREC.u64[cvTa + 3], 0);
+    (nP, ni, srt, k, ok, tqO, tqL, body, dOff, dLen, isO, isL, hp) {
+  nP := IW.u64[p + 4]; ni := IW.u64[ms + 1]; srt := IW.u64[p + 6];
+  k := nP + ni;
+  if k < nP { abort };
+  (ok, tqO, tqL, body) := call open_pis_at_fvars_f(k, EREC.u64[cvTa + 3], 0);
   if ok == 0 { abort };
-  dOff := tqO + IW.u64[p + 4];
-  dLen := 0;
-  if IW.u64[p + 4] < tqL { dLen := tqL - IW.u64[p + 4] };
-  (isO, isL) := call check_struct_field_sorts_i(vis, 1, 0, IW.u64[p + 6], IW.u64[p + 4], dOff, dLen, 0, 0, IW.u64[ms + 1]);
+  dOff := 0; dLen := 0;
+  if nP < tqL { dOff := tqO + nP; dLen := tqL - nP };
+  (isO, isL) := call check_struct_field_sorts_i(vis, 1, 0, srt, nP, dOff, dLen, 0, 0, ni);
   hp := call rec2(isO, isL);
   return hp
 }
 
 /-- `check_block_idx_sorts(vis, p, ms.off, ms.len, cvTa.off, cvTa.len)`: every member's index
-binders' universes (beside its checked former), stopping at the shorter list. -/
+binders' universes (beside its checked former), stopping at the shorter list; recursion as the
+twin's, each member's pointer consed onto the rest's slice (`sl_cons`, D18). -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:306-320 ConRon.Arena.checkBlockIdxSorts
 @[l_impl ConRon.Arena.checkBlockIdxSorts]
-def checkBlockIdxSorts : FunDecl := lfn (vis, p, msO, msL, cvO, cvL) locals (n, q, j, hp) {
-  n := msL;
-  if cvL < n { n := cvL };
-  q := call iw_alloc(n);
-  j := 0;
-  while j < n {
-    hp := call check_block_idx_sorts_one(vis, p, IW.u64[msO + j], IW.u64[cvO + j]);
-    IW.u64[q + j] := hp;
-    j += 1
-  };
-  return (q, n)
+def checkBlockIdxSorts : FunDecl := lfn (vis, p, msO, msL, cvO, cvL) locals (hp, ro, rl, o, l) {
+  if msL == 0 { return (0, 0) };
+  if cvL == 0 { return (0, 0) };
+  hp := call check_block_idx_sorts_one(vis, p, IW.u64[msO], IW.u64[cvO]);
+  (ro, rl) := call check_block_idx_sorts(vis, p, msO + 1, msL - 1, cvO + 1, cvL - 1);
+  (o, l) := call sl_cons(hp, ro, rl);
+  return (o, l)
 }
 
 /-- `cons_block_ctors(nP, ctorsAs.off, ctorsAs.len, vis)`: the members' constructors consed,
