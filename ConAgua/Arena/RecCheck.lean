@@ -362,15 +362,12 @@ def targetMajorOfOutsideClosed : FunDecl := lfn (dso, dsl, nP) locals (x, bb, fb
 (`ds.anyM`, stopping at the first hit). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:271-334 ConRon.Arena.targetMajorOf
 @[l_impl ConRon.Arena.targetMajorOf]
-def targetMajorOfOutsideOcc : FunDecl := lfn (mno, mnl, dso, dsl) locals (j, x, b) {
-  j := 0;
-  while j < dsl {
-    x := IW.u64[dso + j];
-    b := call nest_occ(mno, mnl, 0, 0, x);
-    if b != 0 { return 1 };
-    j += 1
-  };
-  return 0
+def targetMajorOfOutsideOcc : FunDecl := lfn (mno, mnl, dso, dsl) locals (b, r) {
+  if dsl == 0 { return 0 };
+  b := call nest_occ(mno, mnl, 0, 0, IW.u64[dso]);
+  if b != 0 { return 1 };
+  r := call target_major_of_outside_occ(mno, mnl, dso + 1, dsl - 1);
+  return r
 }
 
 /-- `target_major_of`'s OUTSIDE branch: not `Quot`, a stored inductive, parameters closed and
