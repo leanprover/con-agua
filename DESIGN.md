@@ -5072,3 +5072,26 @@ Files: `ViewL.lean` (`packBF`, `packBF_bvar`, `packBF_fvar`), `ExprMk.lean` (`de
   built, then lost in the machine restart; `Inst1*.lean` with `d ↦ k`, `v ↦ d` is the template.
 * `instantiateListGo`/`instantiateList`: untouched (pool-slice reader; `PoolSlice.lean` already has
   the word-slice lemmas).
+
+## `ExprMk` fast again; `abstract1`; `instantiateList` (2026-10-22, lane `exprops4`)
+
+### `ExprMk.lean` build time
+
+The packed `mk_*` stores (`x + (y - x) * u64(x < y) + (… ) * 32768`, lane `exprops3`) made
+`finish` unfold `maxW`/`satPredW`/`packBF` and case-split on their comparisons inside every spec,
+on top of the three-deep `der_b` result chain through `setLocs`: `mkLet_spec` alone ran > 10 min.
+Fix: three equations naming the *evaluated L expressions* (`maxW_L`: `BinOp.add.eval x
+(BinOp.mul.eval (BinOp.sub.eval y x) (Cmp.ult.evalW x y)) = maxW x y`; `satPredW_L`; `packBF_L`,
+`rfl`), passed to `finish` in place of the unfolds. `finish` then matches the store word against
+the model's `packBF (maxW …) …` with no arithmetic. `(gen := 20)` is still needed (default 8
+fails on all five: depth of the `setLocs` chain); `maxHeartbeats 0` removed. Statements unchanged.
+
+| `lake env lean ConAgua/Arena/ExprMk.lean` | real | user |
+|---|---:|---:|
+| before (gen 40, unfolded arithmetic; machine loaded) | 14 min 33 s | 14 min 58 s |
+| after (named store arithmetic, gen 20) | 10.8 s | 20.6 s |
+| (default gen 8: fails, 2 min 53 s user) | | |
+
+Lesson (adds to PLAN.md's proof-style list): a value an L expression computes inline should be
+matched by an equation on its *evaluated* form (`BinOp.*.eval`, `Cmp.*.evalW`), not by unfolding
+the model's arithmetic; the latter costs a case split per comparison, per goal.
