@@ -628,16 +628,20 @@ theorem simZ_internAllPins (pins : List ConLeche.NatOpPinSet) (h : AllPinsNoProj
 
 /-- `intern_all_pins()` for the ROM offset `off` of the startup walk's item stream.
 con-ron: none — the offset-generic body of `internAllPinsL` (`Prelude.lean`, which cites the twin). -/
-def internAllPinsAt (off : Word) : FunDecl := lfn () locals (q) {
+def internAllPinsAt (off : Word) : FunDecl := lfn () locals (q, z) {
   CTL.u64[132] := 0;
+  z := call rset_clear();
   q := call rom_items(⟪off⟫);
   return 0
 }
 
 theorem MemoR.fresh (mem : Mem) (hc : 132 < (mem.arr64 CTL).size) : MemoR (resetMem mem) [] (∅ : EMemo) := by
-  refine ⟨?_, fun k hk => by simp at hk, fun e he => by simp at he, by simp, ?_⟩
-  · simp only [memoCnt, resetMem, Mem.arr64_set64_same, rdW_set!]; simp [hc]
-  · simp only [resetMem, Mem.size_arr64_set64]; exact hc
+  have hf := resetMem_frame1 mem
+  have hc0 : memoCnt (resetMem mem) = 0 := by
+    simp only [memoCnt, resetMem, mclearG, rsetSch, rdW_set64]
+    simp [hc]
+  refine ⟨by rw [hc0]; rfl, fun k hk => by simp at hk, fun e he => by simp at he, by simp, ?_⟩
+  rw [hf.2.2.1]; exact hc
 
 set_option experimental.vcgen true in
 theorem internAllPins_specW (rom : List UInt8) (off : Word) (p : Prog) (hL : ItemsProg rom p)
@@ -646,7 +650,7 @@ theorem internAllPins_specW (rom : List UInt8) (off : Word) (p : Prog) (hL : Ite
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "intern_all_pins" []
     ⦃fun _ s' => LocEq s' s₀ ∧ 132 < (s₀.mem.arr64 CTL).size ∧
-      ∃ n' q, romItemsW rom n' (resetMem s₀.mem) off = some (q, s'.mem); ⊤⦄ := by
+      ∃ n' q, rclearOK s₀.mem ∧ romItemsW rom n' (resetMem s₀.mem) off = some (q, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, internAllPinsAt]
   cases n with
@@ -654,8 +658,9 @@ theorem internAllPins_specW (rom : List UInt8) (off : Word) (p : Prog) (hL : Ite
   | succ n =>
     have hi := fun s₁ pos₁ h₁ => romItems_specW rom p hL n s₁ pos₁ h₁
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, hi] <;>
-      finish [resetMem]
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, hi,
+        memoClearG_spec rsetSch p "rset_clear" hL.rset_clear n] <;>
+      finish [resetMem, rclearOK, mclearG]
 
 /-- **`intern_all_pins` refines `internAllPins`'s store effect**: with the item stream at `off`,
 from `ArenaD` at a filled pin table, the twin's walk succeeds (at the same pin list) and `ArenaD`
@@ -674,13 +679,13 @@ theorem internAllPins_refines (rom : List UInt8) (off : Word) (p : Prog) (hL : I
       MemFrame ExprA ExprC s₀.mem s'.mem; ⊤⦄ := by
   apply M.triple_of_run
   intro s r s' hs hrun
-  obtain ⟨hloc, hc, n', q, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+  obtain ⟨hloc, hc, n', q, -, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
     (internAllPins_specW rom off p hL hp n s₀ hA.1.lit.1.2.2.1)
   subst hs
-  have hA' : ArenaD (resetMem s.mem) a₀ := ArenaD.frameHi (MemFrame.setCtl _ 132 0) (by simp) (by simp) hA
+  have hA' : ArenaD (resetMem s.mem) a₀ := ArenaD.frameHi (resetMem_frame1 _) (by simp) (by simp) hA
   obtain ⟨m', a', -, hrunI, hR, -, -, hf, -⟩ := romItemsW_ok rom hr _ hfit n' (resetMem s.mem) a₀ off rest []
     ∅ q s'.mem hA' (MemoR.fresh s.mem hc) hd (by rw [resetMem_stk]; exact hst)
-    (by simp only [resetMem, Mem.size_arr64_set64]; omega) hW
+    (by rw [(resetMem_frame1 _).2.2.1]; omega) hW
   obtain ⟨v, hv⟩ := simZ_internAllPins pins hnp ∅ a₀ m' a' hP (by rw [runItems_reset]; exact hrunI)
   exact ⟨hloc, v, a', hv, hR, (resetMem_frame _).trans hf⟩
 
