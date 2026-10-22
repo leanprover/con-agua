@@ -104,6 +104,7 @@ def lefindLoop : Stmt := lblk (t, ty, val, body, h, n, j, d, w, b) {
   }
 }
 
+/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def letFind : FunDecl := lfn (t, ty, val, body, h) locals (n, j, d, w, b) {
   n := len(LESLOT.u64) >> 1;
   b := CTL.u64[62] * t;
@@ -179,6 +180,7 @@ def lepushMem (m : Mem) (t ty val body j c : Word) : Mem :=
   ((((m.set64 LEREC (c * 6 + t * 3) ty).set64 LEREC (c * 6 + t * 3 + 1) val).set64 LEREC
     (c * 6 + t * 3 + 2) body).set64 LESLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (20 + (t &&& 1)) (c + 1)
 
+/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def letPush : FunDecl := lfn (t, ty, val, body, j) locals (c, k) {
   c := CTL.u64[20 + t];
   if c >= 134217728 { abort };
@@ -245,6 +247,8 @@ def leinternW (m : Mem) (ty val body : Word) : Option (Word × Mem) :=
     some (letP + lecnt m 0, lepushMem m 0 ty val body (rs₀.tail.tail.headD 0) (lecnt m 0))
   else none
 
+/-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
+con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
 @[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internLet : FunDecl := lfn (ty, val, body) locals (h, sk, fd, i, j, d) {
   h := (((⟪fnvBasis⟫ ^ ty) * ⟪fnvPrime⟫ ^ val) * ⟪fnvPrime⟫ ^ body) * ⟪fnvPrime⟫;

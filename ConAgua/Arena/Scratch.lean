@@ -52,6 +52,8 @@ theorem resetMem_eq (m : Mem) (f : Word) :
       zeroCtl ((m.set64 CTL SCB (rdW (m.arr64 CTL) SCB + 4294967296)).set64 CTL 1 f) scratchCnts :=
   rfl
 
+/-- con-ron: ConRon/Arena/Store.lean:1413-1416 ConRon.Arena.EStore.enableScratch
+con-ron: ConRon/Arena/Store.lean:1418-1422 ConRon.Arena.EStore.dropScratch -/
 @[l_impl ConRon.Arena.EStore.enableScratch ConRon.Arena.EStore.dropScratch]
 def scratchReset : FunDecl := lfn (f) locals (b) {
   b := CTL.u64[62];
@@ -85,6 +87,7 @@ theorem scratchReset_spec (n : Nat) (s₀ : St) (f : Word) :
 
 end reset
 
+/-- con-ron: ConRon/Arena/Core.lean:3700-3707 ConRon.Arena.enterScratch -/
 @[l_impl ConRon.Arena.enterScratch]
 def scratchEnter : FunDecl := lfn () locals (r) {
   r := call scratch_reset(1);
@@ -95,6 +98,7 @@ def scratchEnter : FunDecl := lfn () locals (r) {
   return 0
 }
 
+/-- con-ron: ConRon/Arena/Core.lean:3690-3698 ConRon.Arena.dropScratch -/
 @[l_impl ConRon.Arena.dropScratch]
 def scratchDrop : FunDecl := lfn () locals (r) {
   r := call flush_caches();

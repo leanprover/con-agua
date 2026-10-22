@@ -48,6 +48,7 @@ def chunkLoop : Stmt := lblk (i, k, ch, pw, j) {
   }
 }
 
+/-- con-leche: ConLeche/Frontend/Scan/Fast.lean:466-478 ConLeche.Frontend.readNat64 -/
 def decChunk : FunDecl := lfn (i, k) locals (ch, pw, j) {
   pw := 1;
   ⟪chunkLoop⟫;
@@ -88,6 +89,7 @@ def madLoop : Stmt := lblk (o, n, w, y, i, x, lo) {
   }
 }
 
+/-- con-leche: ConLeche/Frontend/Scan/Fast.lean:466-478 ConLeche.Frontend.readNat64 -/
 def natMad : FunDecl := lfn (o, n, w, y) locals (i, x, lo) {
   ⟪madLoop⟫;
   return y
@@ -160,6 +162,7 @@ def decLoop : Stmt := lblk (c, d, top, n, i, k, ch, pw, cy) {
   }
 }
 
+/-- con-leche: ConLeche/Frontend/Scan/Fast.lean:466-478 ConLeche.Frontend.readNat64 -/
 @[l_impl ConLeche.Frontend.readNat64]
 def natDec : FunDecl := lfn (c, d) locals (top, n, i, k, ch, pw, cy) {
   top := CTL.u64[0];

@@ -108,6 +108,7 @@ def pjfindLoop : Stmt := lblk (t, n, u, e, h, nn, j, d, w, b) {
   }
 }
 
+/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def projFind : FunDecl := lfn (t, n, u, e, h) locals (nn, j, d, w, b) {
   nn := len(PJSLOT.u64) >> 1;
   b := CTL.u64[62] * t;
@@ -183,6 +184,7 @@ def pjpushMem (m : Mem) (t n u e j c : Word) : Mem :=
   ((((m.set64 PJREC (c * 6 + t * 3) n).set64 PJREC (c * 6 + t * 3 + 1) u).set64 PJREC
     (c * 6 + t * 3 + 2) e).set64 PJSLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (32 + (t &&& 1)) (c + 1)
 
+/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def projPush : FunDecl := lfn (t, n, u, e, j) locals (c, k) {
   c := CTL.u64[32 + t];
   if c >= 134217728 { abort };
@@ -250,6 +252,8 @@ def pjinternW (m : Mem) (n u e : Word) : Option (Word × Mem) :=
     some (projP + pjcnt m 0, pjpushMem m 0 n u e (rs₀.tail.tail.headD 0) (pjcnt m 0))
   else none
 
+/-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
+con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
 @[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internProj : FunDecl := lfn (n, u, e) locals (h, sk, fd, i, j, d) {
   h := (((⟪fnvBasis⟫ ^ n) * ⟪fnvPrime⟫ ^ u) * ⟪fnvPrime⟫ ^ e) * ⟪fnvPrime⟫;

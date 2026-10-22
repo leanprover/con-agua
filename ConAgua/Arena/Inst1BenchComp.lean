@@ -20,6 +20,7 @@ spine's handle (`k ≥ 2^63`: the build only) or `inst_entry(x, val', d)` of it.
 
 namespace L.Arena
 
+/-- con-ron: none — a benchmark driver -/
 def inst1Bench : FunDecl := lfn (n, k, val, d) locals (b, x, i, v, r) {
   b := call intern_bvar(k & 9223372036854775807);
   x := b;

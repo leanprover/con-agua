@@ -77,6 +77,7 @@ def lvNodeW (m : Mem) (p : Word) : List Word :=
     else [4, rdW (m.arr64 PREC) (idxW p * 2 + tierW p), 0]
   else []
 
+/-- con-ron: none — the level scratch heap (the twin reads `ConLeche.Level` trees back, `readLevelM`) -/
 def lvNode : FunDecl := lfn (p) locals (o, g, t, i) {
   if p >> 32 != 0 {
     o := p - 4294967296;
@@ -129,6 +130,7 @@ def lhMkW (m : Mem) (g a b : Word) : Option (Word × Mem) :=
   if htop m >>> 40 ≠ 0 ∨ m.len64 LH ≤ htop m + 2 ∨ (m.arr64 CTL).size ≤ 192 then none
   else some (htop m + 4294967296, lhMem m (htop m) g a b)
 
+/-- con-ron: none — the level scratch heap (the twin reads `ConLeche.Level` trees back, `readLevelM`) -/
 def lhMk : FunDecl := lfn (g, a, b) locals (o) {
   o := CTL.u64[192];
   if o >> 40 != 0 || len(LH.u64) <= o + 2 { abort };
@@ -207,6 +209,7 @@ grind_pattern [level_grind] lvEqW_rec => lvEqW (n + 1) m p q
 grind_pattern [level_grind] eqK_zero => eqK n m b d (some 0)
 grind_pattern [level_grind] eqK_ne => eqK n m b d (some x)
 
+/-- con-leche: ConLeche/Kernel/Expr.lean:75-78 ConLeche.Level.beq -/
 @[l_impl ConLeche.Level.beq]
 def lvEq : FunDecl := lfn (p, q) locals (g, a, b, h, c, d, x) {
   if p == q { return 1 };

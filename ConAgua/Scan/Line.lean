@@ -128,6 +128,7 @@ def lineLoop : Stmt := lblk (i, w, idx, pl, tag, ks, k, v, e, ok, x) {
   }
 }
 
+/-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2427-2574 ConLeche.Frontend.scanLineLoop -/
 @[l_impl ConLeche.Frontend.scanLineLoop]
 def scanLineLoop : FunDecl := lfn (i) locals (w, idx, pl, tag, ks, k, v, e, ok, x) {
   w := 1;
@@ -260,6 +261,7 @@ def lineLoopN (b : Array UInt8) (i : Word) : Word := lineN b i 1 0 0
 
 /-! ## `scan_line` -/
 
+/-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2576-2599 ConLeche.Frontend.scanLineFwd -/
 @[l_impl ConLeche.Frontend.scanLineFwd]
 def scanLine : FunDecl := lfn (i) locals (s, j, q) {
   s := call skip_ws(i);
@@ -304,6 +306,7 @@ def validateLoop : Stmt := lblk (i, ln, ok, j) {
   }
 }
 
+/-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2576-2599 ConLeche.Frontend.scanLineFwd -/
 def validate : FunDecl := lfn () locals (i, ln, ok, j) {
   ⟪validateLoop⟫;
   return 0
