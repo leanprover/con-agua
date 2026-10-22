@@ -33,6 +33,8 @@ structure InferLeafProg (p : Prog) : Prop where
   fap : p.lookup "forall_push" = some forallPush
   fai : p.lookup "intern_forall" = some internForallL
   mkfa : p.lookup "mk_forall" = some mkForall
+  inferLit : p.lookup "infer_lit" = some inferLitL
+  pinAt : p.lookup "pin_at" = some pinAtL
 
 /-! ## `ensure_sort` -/
 
@@ -395,5 +397,215 @@ theorem inferLamResult_refines (n : Nat) (ha : Abstract1OK p) (s₀ : St) (a₀ 
   exact coreRef_then h₁ (fun M' hS' => mkForall_core hS' ty (r₁.headD 0) r hmk) hT
 
 end lr
+
+/-! ## `infer_lit`: the `.lit` clauses -/
+
+/-- **The `.lit` clauses of `inferBody`** (and `inferBodyIO`), copied: the twin fragment
+`infer_lit` refines. -/
+def inferLitT (fe : IFEnv) (l : ConLeche.Literal) : AM EIdx :=
+  match l with
+  | .natVal _ => do
+      if ← natLitSupported fe then do
+        let nn ← pinNat
+        constE nn
+      else fail (.invalid "Nat literal without the Nat basis declarations")
+  | .strVal _ => do
+      if ← strLitSupported fe then do
+        let sn ← pinString
+        constE sn
+      else fail (.notImplemented
+        "string literals before the String support declarations")
+
+/-- `inferBody`'s `.lit` arm is `inferLitT`. -/
+@[refines_part ConRon.Arena.inferBody "lit"]
+theorem inferBody_lit (r : CoreFnsA) (fe : IFEnv) (d : Nat) (e : EIdx) (a : AState)
+    (l : ConLeche.Literal) (hv : a.store.view e = some (.lit l)) :
+    (inferBody r fe d e).run a = (inferLitT fe l).run a := by
+  simp only [inferBody, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]
+  cases l <;> rfl
+
+/-- `inferBodyIO`'s `.lit` arm is `inferLitT`. -/
+@[refines_part ConRon.Arena.inferBodyIO "lit"]
+theorem inferBodyIO_lit (r : CoreFnsA) (fe : IFEnv) (d : Nat) (e : EIdx) (a : AState)
+    (l : ConLeche.Literal) (hv : a.store.view e = some (.lit l)) :
+    (inferBodyIO r fe d e).run a = (inferLitT fe l).run a := by
+  simp only [inferBodyIO, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]
+  cases l <;> rfl
+
+/-- The callees of `infer_lit` with no proof yet (lane `whnf`'s `sorry`s and stubs): their specs. -/
+structure InferLitCallees (p : Prog) : Prop where
+  natLitSup : ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+    (fe : IFEnv) (M : ModeMaps) (eb : Word), CoreS dn s₀.mem a₀ vis fe M eb →
+    CoreSpec p n "nat_lit_supported" [vis] (natLitSupported fe) decBool s₀ a₀ dn vis fe M eb
+  strLitSup : StrLitSupportedOK p
+  constE : ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+    (fe : IFEnv) (M : ModeMaps) (eb nm : Word), CoreS dn s₀.mem a₀ vis fe M eb → HW nm →
+    CoreSpec p n "const_e" [nm] (constE (decI nm)) decH s₀ a₀ dn vis fe M eb
+
+/-- The pin read and `const_e` after a support test's run `res`. -/
+def pinArmK (p : Prog) (n : Nat) (res : Option (List Word × Mem)) : Option (Word × Mem) :=
+  match res with
+  | none => none
+  | some (r, m₂) => call1W p n "const_e" [r.headD 0] m₂
+
+/-- A support test's run `res`, then the pin `k` and its constant. -/
+def litArmK (p : Prog) (n : Nat) (k : Word) (res : Option (List Word × Mem)) : Option (Word × Mem) :=
+  match res with
+  | none => none
+  | some (r, m₁) => if r.headD 0 = 0 then none else pinArmK p n (callW p n "pin_at" [k] m₁)
+
+/-- **The model of `infer_lit`.** -/
+def inferLitK (p : Prog) (n : Nat) (m : Mem) (vis e : Word) : Option (Word × Mem) :=
+  if tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
+  else if rdW (m.arr64 CTL) (2 + tierW e) ≤ idxW e then none
+  else if rdW (m.arr64 REC) (idxW e * 8 + tierW e * 4) = 0 then
+    litArmK p n 1 (callW p n "nat_lit_supported" [vis] m)
+  else litArmK p n 5 (callW p n "str_lit_supported" [vis] m)
+
+section litK
+variable (p : Prog) (n : Nat) (m m₁ : Mem) (vis e k : Word) (r : List Word)
+
+theorem pinArmK_some : pinArmK p n (some (r, m₁)) = call1W p n "const_e" [r.headD 0] m₁ := rfl
+
+theorem litArmK_ok (h : r.headD 0 ≠ 0) :
+    litArmK p n k (some (r, m₁)) = pinArmK p n (callW p n "pin_at" [k] m₁) := by
+  simp only [litArmK, h, ↓reduceIte]
+
+theorem inferLitK_nat (h1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
+    (h2 : idxW e < rdW (m.arr64 CTL) (2 + tierW e))
+    (h3 : rdW (m.arr64 REC) (idxW e * 8 + tierW e * 4) = 0) :
+    inferLitK p n m vis e = litArmK p n 1 (callW p n "nat_lit_supported" [vis] m) := by
+  have h2' : ¬ rdW (m.arr64 CTL) (2 + tierW e) ≤ idxW e := by simpa using h2
+  simp only [inferLitK, h1, h2', h3, ↓reduceIte]
+
+theorem inferLitK_str (h1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
+    (h2 : idxW e < rdW (m.arr64 CTL) (2 + tierW e))
+    (h3 : rdW (m.arr64 REC) (idxW e * 8 + tierW e * 4) ≠ 0) :
+    inferLitK p n m vis e = litArmK p n 5 (callW p n "str_lit_supported" [vis] m) := by
+  have h2' : ¬ rdW (m.arr64 CTL) (2 + tierW e) ≤ idxW e := by simpa using h2
+  simp only [inferLitK, h1, h2', h3, ↓reduceIte]
+
+end litK
+
+section il
+variable (p : Prog) (hp : InferLeafProg p)
+
+include hp in
+theorem inferLit_spec (n : Nat) (s₀ : St) (vis e : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "infer_lit" [vis, e]
+    ⦃fun r s' => LocEq s' s₀ ∧ inferLitK p n s₀.mem vis e = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp.inferLit]
+  simp only [callFn, inferLitL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      callW_spec p n "nat_lit_supported", callW_spec p n "str_lit_supported",
+      callW_spec p n "pin_at", callW_spec p n "const_e"] <;>
+    finish [inferLitK_nat, inferLitK_str, litArmK_ok, pinArmK_some, call1W_some, tierW, idxW]
+
+end il
+
+theorem view_lit_f (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
+    (hv : viewOK m h 2) (hg : h >>> 28 = 8) :
+    ∃ k : LitNode, a.store.view (decE h) = some (.lit k.l) ∧ RecRel m (tierW h) (idxW h) k := by
+  obtain ⟨k, hk, hu⟩ := node_of m a h litSch RecRel litH (·.lits) _ hR.lit.2 hv.2
+  exact ⟨k, by rw [view_tier m a hR h hh hv.1, get_lit _ h hh hg, Tbl.node?, hk]; rfl, hu⟩
+
+theorem inferLitT_nat_run (fe : IFEnv) (N : Nat) (a a₁ : AState) (nn : NIdx)
+    (h1 : (natLitSupported fe).run a = .ok (true, a₁)) (h2 : pinNat.run a₁ = .ok (nn, a₁)) :
+    (inferLitT fe (.natVal N)).run a = (constE nn).run a₁ := by
+  simp only [inferLitT, StateT.run_bind, h1, except_ok_bind, ↓reduceIte, h2]
+
+theorem inferLitT_str_run (fe : IFEnv) (s : String) (a a₁ : AState) (sn : NIdx)
+    (h1 : (strLitSupported fe).run a = .ok (true, a₁)) (h2 : pinString.run a₁ = .ok (sn, a₁)) :
+    (inferLitT fe (.strVal s)).run a = (constE sn).run a₁ := by
+  simp only [inferLitT, StateT.run_bind, h1, except_ok_bind, ↓reduceIte, h2]
+
+/-- One `.lit` clause after its support test: the test's run, the pin, `const_e`. -/
+theorem litArm_ref (p : Prog) (hp : InferLeafProg p) (hc : InferLitCallees p) (n : Nat) (k : Nat)
+    (hk : k < 51) {T₁ : AM Bool} {T : AM EIdx} {s : St} {a₀ : AState}
+    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word}
+    {r r₁ : List Word} {m₁ m' : Mem}
+    (h₁ : CoreRef T₁ a₀ decBool dn s.mem vis fe M eb r₁ m₁)
+    (h0 : r₁.headD 0 ≠ 0)
+    (hW : pinArmK p n (callW p n "pin_at" [k.toUInt64] m₁) = some (r.headD 0, m'))
+    (hT : ∀ nn, (pinAt k).run (AM.st T₁ a₀) = .ok (nn, AM.st T₁ a₀) →
+      T.run a₀ = (constE nn).run (AM.st T₁ a₀)) :
+    CoreRef T a₀ decH dn s.mem vis fe M eb r m' := by
+  cases hc2 : callW p n "pin_at" [k.toUInt64] m₁ with
+  | none => rw [hc2] at hW; cases hW
+  | some q =>
+  obtain ⟨r₂, m₂⟩ := q
+  rw [hc2, pinArmK_some] at hW
+  obtain ⟨M', hS', -, -⟩ := h₁.2.1
+  obtain ⟨s₂, hs₂, hm₂, -, hlt, hpin⟩ := triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩)
+    (pinAt_refines p hp.pinAt n _ (AM.st T₁ a₀) ⟨fun _ => hS'.pins⟩ k.toUInt64) hc2
+  have hm : m₂ = m₁ := hs₂.symm.trans hm₂
+  subst hm
+  have hkk : k.toUInt64.toNat = k := by simp; omega
+  rw [hkk] at hpin
+  exact coreRef_then h₁ (fun M'' hS'' => CoreSpec.of_call1W (s₀ := ⟨m₂, Locals.init []⟩)
+    (hc.constE n _ _ dn vis fe M'' eb (r₂.headD 0) hS'' hlt) (fun r r' h => by simp only [decH, h])
+    hW) (hT _ hpin)
+
+/-- **`infer_lit(vis, e)` refines the `.lit` clauses** (`inferLitT`) at the literal the handle
+views, from the support tests' and `const_e`'s specs (`InferLitCallees`). -/
+@[refines_part ConRon.Arena.inferBody "lit (inferLitT)"]
+theorem inferLit_refines (p : Prog) (hp : InferLeafProg p) (hc : InferLitCallees p) (n : Nat)
+    (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (M : ModeMaps) (eb e : Word) (l : ConLeche.Literal) (hS : CoreS dn s₀.mem a₀ vis fe M eb)
+    (he : HW e) (hg : e >>> 28 = 8) (hv : a₀.store.view (decE e) = some (.lit l)) :
+    CoreSpec p (n + 1) "infer_lit" [vis, e] (inferLitT fe l) decH s₀ a₀ dn vis fe M eb := by
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (inferLit_spec p hp n s₀ vis e)
+  subst hs0
+  refine ⟨hloc, ?_⟩
+  unfold inferLitK at hW
+  by_cases h1 : tierW e ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0
+  · rw [if_pos h1] at hW; cases hW
+  rw [if_neg h1] at hW
+  by_cases h2 : rdW (s.mem.arr64 CTL) (2 + tierW e) ≤ idxW e
+  · rw [if_pos h2] at hW; cases hW
+  rw [if_neg h2] at hW
+  obtain ⟨k, hk, hrel⟩ := view_lit_f s.mem a₀ hS.arena.1 e he ⟨h1, by simpa using h2⟩ hg
+  rw [hv] at hk
+  have hl : l = k.l := by simpa using hk
+  subst hl
+  obtain ⟨l⟩ := k
+  by_cases h3 : rdW (s.mem.arr64 REC) (idxW e * 8 + tierW e * 4) = 0
+  · rw [if_pos h3] at hW
+    cases l with
+    | strVal str => simp [RecRel, StrRec, h3] at hrel
+    | natVal N =>
+    cases hc1 : callW p n "nat_lit_supported" [vis] s.mem with
+    | none => rw [hc1] at hW; cases hW
+    | some q =>
+    obtain ⟨r₁, m₁⟩ := q
+    rw [hc1] at hW
+    by_cases h0 : r₁.headD 0 = 0
+    · simp only [litArmK, h0, ↓reduceIte] at hW; cases hW
+    rw [litArmK_ok (h := h0)] at hW
+    have h₁ := CoreSpec.of_callW (hc.natLitSup n s a₀ dn vis fe M eb hS) hc1
+    have hrun₁ := AM.run_of_ok _ _ h₁.1
+    rw [h₁.2.2.1, show decBool r₁ = true by simp only [decBool, bne_iff_ne]; exact h0] at hrun₁
+    exact litArm_ref p hp hc n 1 (by decide) h₁ h0 hW
+      (fun nn hpin => inferLitT_nat_run fe N a₀ _ nn hrun₁ hpin)
+  · rw [if_neg h3] at hW
+    cases l with
+    | natVal N => simp [RecRel, NatRec, h3] at hrel
+    | strVal str =>
+    cases hc1 : callW p n "str_lit_supported" [vis] s.mem with
+    | none => rw [hc1] at hW; cases hW
+    | some q =>
+    obtain ⟨r₁, m₁⟩ := q
+    rw [hc1] at hW
+    by_cases h0 : r₁.headD 0 = 0
+    · simp only [litArmK, h0, ↓reduceIte] at hW; cases hW
+    rw [litArmK_ok (h := h0)] at hW
+    have h₁ := CoreSpec.of_callW (hc.strLitSup n s a₀ dn vis fe M eb hS) hc1
+    have hrun₁ := AM.run_of_ok _ _ h₁.1
+    rw [h₁.2.2.1, show decBool r₁ = true by simp only [decBool, bne_iff_ne]; exact h0] at hrun₁
+    exact litArm_ref p hp hc n 5 (by decide) h₁ h0 hW
+      (fun nn hpin => inferLitT_str_run fe str a₀ _ nn hrun₁ hpin)
 
 end L.Arena
