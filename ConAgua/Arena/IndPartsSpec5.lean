@@ -531,7 +531,7 @@ theorem iwB_rdW {m : Mem} {i : Nat} {b : Bool} (h : iwB m i = some b) (hi : i < 
   have : (UInt64.ofNat i).toNat = i := UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; exact hi)
   simp only [rdW, this, hw, Option.getD_some]
 
-theorem iwN_lt {m : Mem} {i v : Nat} (h : iwN m i = some v) : i < (m.arr64 IW).size := by
+theorem iwN_lt_p {m : Mem} {i v : Nat} (h : iwN m i = some v) : i < (m.arr64 IW).size := by
   simp only [iwN, nat?, iwA, Option.map_eq_some_iff] at h
   obtain ⟨w, hw, -⟩ := h
   exact (Array.getElem?_eq_some_iff.mp hw).1
@@ -575,7 +575,7 @@ theorem lokKey (n : Nat) (m m2 m' : Mem) (p wo wl : Word) (r : List Word) (bs : 
     by_cases hl0 : l = 0
     · subst hl0; omega
     · obtain ⟨v, y, hv, -, -⟩ := decPL_get l o bs.recs hrecs (l - 1) (by omega)
-      have hlt := iwN_lt hv
+      have hlt := iwN_lt_p hv
       omega
   refine lpsGoW_ok n m2 m2 m' _ _ wo wl r bs.recs ns hgo (IWGrow.refl _) rfl hsz2 hc2
     (by rw [hE2]; exact hE64) ?_ ?_ hwb (by rw [hoo, hll]; exact hrecs_len) ?_

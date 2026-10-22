@@ -328,7 +328,7 @@ theorem aplW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
         · omega
       obtain ⟨c1, hc1⟩ : ∃ c1, dsl.toNat = c1 + 1 := ⟨dsl.toNat - 1, by omega⟩
       rw [hc1] at hds
-      obtain ⟨d, ds', rfl, hds', hd⟩ := decHL_cons hds
+      obtain ⟨d, ds', rfl, hds', hd⟩ := decHL_cons_r hds
       obtain ⟨w, hw1, hw2, hw3⟩ := iwH_rdW hd (by omega)
       rw [UInt64.ofNat_toNat] at hw1
       have hdsl1 : (dsl - 1).toNat = c1 := by
@@ -494,7 +494,7 @@ theorem thW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
         · omega
       obtain ⟨c1, hc1⟩ : ∃ c1, tyl.toNat = c1 + 1 := ⟨tyl.toNat - 1, by omega⟩
       rw [hc1] at htys
-      obtain ⟨ty, tys', rfl, htys', hty⟩ := decHL_cons htys
+      obtain ⟨ty, tys', rfl, htys', hty⟩ := decHL_cons_r htys
       obtain ⟨w, hw1, hw2, hw3⟩ := iwH_rdW hty (by omega)
       rw [UInt64.ofNat_toNat] at hw1
       have htyl1 : (tyl - 1).toNat = c1 := by
@@ -650,7 +650,7 @@ theorem tptW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
         · omega
       obtain ⟨c1, hc1⟩ : ∃ c1, xl.toNat = c1 + 1 := ⟨xl.toNat - 1, by omega⟩
       rw [hc1] at hxs
-      obtain ⟨x, xs', rfl, hxs', hx⟩ := decHL_cons hxs
+      obtain ⟨x, xs', rfl, hxs', hx⟩ := decHL_cons_r hxs
       obtain ⟨w, hw1, hw2, hw3⟩ := iwH_rdW hx (by omega)
       rw [UInt64.ofNat_toNat] at hw1
       have hxl1 : (xl - 1).toNat = c1 := by
@@ -834,7 +834,7 @@ theorem pdW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
         · omega
       obtain ⟨c1, hc1⟩ : ∃ c1, xl.toNat = c1 + 1 := ⟨xl.toNat - 1, by omega⟩
       rw [hc1] at hxs
-      obtain ⟨x, xs', rfl, hxs', hx⟩ := decHL_cons hxs
+      obtain ⟨x, xs', rfl, hxs', hx⟩ := decHL_cons_r hxs
       have hftag : (decE e).tag = ETag.forallE ↔ e >>> 28 = 6 := ctag_iff e he 6 (by decide)
       by_cases hf : e >>> 28 ≠ 6
       · rw [pdW_nf n m xo xl e hxl hf] at h
