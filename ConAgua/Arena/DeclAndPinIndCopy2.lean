@@ -682,4 +682,31 @@ theorem ibeW_ok {n : Nat} {m m' : Mem} {i : Word} {r : List Word} {block : List 
   simp only [List.headD_cons, List.tail_cons]
   exact hB2 (erecP m2) (fun j _ hj => erecP_get_lt hj)
 
+/-- `ind_block_to_erec`'s lookups. -/
+structure IbeProg (p : Prog) : Prop where
+  erec_alloc : p.lookup "erec_alloc" = some erecAlloc
+  dind_copy : p.lookup "dind_copy" = some dindCopy
+  ind_rec_copy : p.lookup "ind_rec_copy" = some indRecCopy
+  ind_copy_go : p.lookup "ind_copy_go" = some indCopyGo
+  ind_block_to_erec : p.lookup "ind_block_to_erec" = some indBlockToErec
+
+/-- **`ind_block_to_erec(i)` copies the front's inductive record `i` into `EREC`** (`IndDeclAt`,
+a block of the front's shape `FrontBlock`): the stage relation kept at the same twin state, the
+pools grown, only `EREC` and its top written, and the result `[o, l]` an `EREC` slice of record
+pointers below the top that decodes (`decCIs`, in `erecP`) to the block. -/
+theorem indBlockToErec_ok {p : Prog} (hp : IbeProg p) {n : Nat} {m m' : Mem} {i : Word}
+    {r : List Word} {block : List IConstantInfo} {nP : Nat} {dn : NIdx → Option ConLeche.Name}
+    {vis : Word} {fe : IFEnv} {a : AState}
+    (hc : callW p n "ind_block_to_erec" [i] m = some (r, m')) (hS : L.Ind.StageR dn vis fe m a)
+    (hdecl : IndDeclAt (m.arr64 DECL) (m.arr64 DLP) i.toNat block nP) (hFB : FrontBlock block)
+    (hD : (m.arr64 DECL).size < 2 ^ 63) (hP : (m.arr64 DLP).size < 2 ^ 63) :
+    L.Ind.StageR dn vis fe m' a ∧ L.Ind.IWGrow m m' ∧ MemFrame [EREC] [129] m m' ∧
+      r = [r.headD 0, r.tail.headD 0] ∧ (r.tail.headD 0).toNat = block.length ∧
+      decCIs (erecP m') dn (r.headD 0).toNat (r.tail.headD 0).toNat = some block ∧
+      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ erTop m' := by
+  obtain ⟨s', rfl, -, n', hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (indBlockToErec_specW p hp.erec_alloc hp.dind_copy hp.ind_rec_copy hp.ind_copy_go
+      hp.ind_block_to_erec n ⟨m, Locals.init []⟩ i) hc
+  exact ibeW_ok hW hS hdecl hFB hD hP
+
 end L.Arena
