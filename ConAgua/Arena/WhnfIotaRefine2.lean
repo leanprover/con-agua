@@ -1371,23 +1371,4 @@ theorem instSpinePins_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p
   · rw [hr1, hr2, ← hmm]
     simpa using hys
 
-@[refines ConRon.Arena.instSpinePins]
-theorem instSpinePins_refines (p : Prog) (hp : IotaProg' p)
-    (hcl : closedA p coreErecA coreErecC coreFns = true) :
-    ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb po pl us ao an rP pvo pvc : Word) (lps : List NIdx) (args pins : Array EIdx),
-    CoreS dn s₀.mem a₀ vis fe MM eb → HW us →
-    hslice? (s₀.mem.arr64 EREC) po.toNat pl.toNat = some lps → SpineR s₀.mem ao an args →
-    SpineR s₀.mem pvo pvc pins → ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat →
-    pvo.toNat + pvc.toNat ≤ (spTop s₀.mem).toNat →
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "inst_spine_pins" [po, pl, us, ao, an, rP, pvo, pvc]
-    ⦃fun r s' => LocEq s' s₀ ∧
-      AM.ok (instSpinePins lps (decI us) args.toList rP.toNat pins.toList) a₀ ∧
-      CoreAfterG dn s₀.mem s'.mem
-        (AM.st (instSpinePins lps (decI us) args.toList rP.toNat pins.toList) a₀) vis fe MM eb ∧
-      ∃ xs, AM.res (instSpinePins lps (decI us) args.toList rP.toNat pins.toList) a₀ = xs ∧
-        SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄ :=
-  instSpinePins_refines' (p := p) (hc := iotaCallees_stub p) (hw := whnfCallees_stub p) (hE := ErecKeptInst.of_closed hcl)  (hp := hp)
-
 end L.Arena

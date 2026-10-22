@@ -219,9 +219,53 @@ where
         unless out.contains s do out := out.push s
     return out
 
+/-- The axioms `c` depends on (what `collectAxioms` returns), memoized per constant: every
+constant's type and value is scanned once (`Expr.getUsedConstants`, itself memoized per subterm
+pointer), and the result is a small sorted array that its users merge. `collectAxioms` called once
+per linked theorem walked the whole dependency cone of each (hundreds of thousands of constants,
+several hundred times over).
+
+The only cycles are inductive types (type <-> constructors, mutual blocks): a block's result is
+computed once for the whole block (types of its members and of all their constructors), and a
+constructor's result is its block's. -/
+partial def axiomsOf (env : Environment) (memo : IO.Ref (NameMap (Array Name))) (c : Name) :
+    IO (Array Name) := do
+  if let some r := (← memo.get).find? c then return r
+  let r ← match env.find? c with
+    | none => pure #[]
+    | some (.axiomInfo _) => pure #[c]
+    | some (.defnInfo v) => merge (v.type.getUsedConstants ++ v.value.getUsedConstants) #[]
+    | some (.thmInfo v) => merge (v.type.getUsedConstants ++ v.value.getUsedConstants) #[]
+    | some (.opaqueInfo v) => merge (v.type.getUsedConstants ++ v.value.getUsedConstants) #[]
+    | some (.quotInfo v) => merge v.type.getUsedConstants #[]
+    | some (.recInfo v) => merge v.type.getUsedConstants #[]
+    | some (.ctorInfo v) => axiomsOf env memo v.induct
+    | some (.inductInfo v) =>
+      let mut block : Array Name := #[]
+      for n in v.all do
+        block := block.push n
+        if let some (.inductInfo w) := env.find? n then block := block ++ w.ctors.toArray
+      let mut used : Array Name := #[]
+      for n in block do
+        if let some ci := env.find? n then used := used ++ ci.type.getUsedConstants
+      let r ← merge used block
+      memo.modify fun m => v.all.foldl (fun m n => m.insert n r) m
+      pure r
+  memo.modify (·.insert c r)
+  return r
+where
+  merge (used : Array Name) (skip : Array Name) : IO (Array Name) := do
+    let mut out : Array Name := #[]
+    for u in used do
+      if skip.contains u then continue
+      for a in ← axiomsOf env memo u do
+        unless out.contains a do out := out.push a
+    return out
+
 /-- The links of every module in `env`, with the axioms of linked theorems. -/
 def links (env : Environment) (printed : IO.Ref NameSet) : IO Unit := do
   let memo ← IO.mkRef ({} : NameMap (Array Name))
+  let axMemo ← IO.mkRef ({} : NameMap (Array Name))
   for i in [:env.header.moduleNames.size] do
     let m := env.header.moduleNames[i]!
     if (← printed.get).contains m then continue
@@ -237,7 +281,7 @@ def links (env : Environment) (printed : IO.Ref NameSet) : IO Unit := do
           unless ci? matches some (.thmInfo _) do
             IO.println s!"L\t{kindStr l.kind}\t{l.decl}\t{l.target}\t{l.label}\t{m}\terror: not a theorem"
             continue
-          let axs := ((collectAxioms l.decl : StateM Environment (Array Name)).run' env)
+          let axs ← axiomsOf env axMemo l.decl
           let bad := axs.filter fun a => !(a == ``propext || a == ``Classical.choice || a == ``Quot.sound)
           -- `sorry`: `sorryAx` in the theorem's own term (or its auxiliaries); `local:`
           -- sources: only through the named constants that carry it directly
@@ -263,6 +307,7 @@ def mainTargets (root : Name) (verbose : Bool) : IO UInt32 := do
 child imports once: an environment is never freed, and a failed `importModules` leaks what it
 read, so importing group after group in one process grew by about 2 GB per attempt. -/
 def mainLinks (grp : Array Name) : IO UInt32 := do
+  let t0 ← IO.monoMsNow
   let env ← try importModules (grp.map fun m => ({ module := m } : Import)) {}
     catch e =>
       let msg := toString e
@@ -275,13 +320,23 @@ def mainLinks (grp : Array Name) : IO UInt32 := do
       IO.println s!"C\t{bad}\t{msg.replace "\n" " "}"
       for m in defer do IO.println s!"D\t{m}"
       return 3
+  let t1 ← IO.monoMsNow
   links env (← IO.mkRef {})
+  let t2 ← IO.monoMsNow
+  IO.eprintln s!"census:   links child: import {t1 - t0} ms, links {t2 - t1} ms"
   return 0
 
 /-- Run this executable on `args`; forward its stderr, return its exit code and stdout. -/
 def child (args : Array String) : IO (UInt32 × String) := do
+  let t0 ← IO.monoMsNow
   let out ← IO.Process.output { cmd := (← IO.appPath).toString, args }
   IO.eprint out.stderr
+  let t1 ← IO.monoMsNow
+  let what := match args.toList with
+    | "--targets" :: _ => "targets"
+    | "--links" :: g => s!"links ({g.length} modules)"
+    | _ => "?"
+  IO.eprintln s!"census: stage {what}: {t1 - t0} ms (exit {out.exitCode})"
   return (out.exitCode, out.stdout)
 
 /-- The driver: the target pass and every link group each run in a child process (see

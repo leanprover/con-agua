@@ -78,7 +78,9 @@ STATUS_ORDER = ["proven", "local", "sorry", "written", "todo"]
 
 PHASES = [
     ("0", "stores, handles, monad"),
-    ("1", "frontend (scanner, records)"),
+    ("1a", "scanner (lexing)"),
+    ("1b", "records (line to record)"),
+    ("1c", "frontend: intern, prelude, export"),
     ("2", "env, pins, declarations"),
     ("3", "levels"),
     ("4", "expr ops"),
@@ -94,11 +96,29 @@ PHASE9_NAMES = {"natOpResult", "natLitToConstructor", "natPred?", "isNatZero", "
                 "strLitToConstructor"}
 
 
+# The lexing half of con-leche's NDJSON scanner (ConLeche.Frontend.Scan.Fast): byte classes, number,
+# string and name tokens, literal matching, bracket skipping. What is left of the scan modules turns
+# tokens into records: `scanXxxExpr`, `scanXxxDecl`, `scanInd*`, `scanRule(s)`, `scanHints`,
+# `scanLineFwd`/`scanLineLoop`, and the error and id-table types.
+SCANNER_NAMES = re.compile(
+    r"^(byteAt|isWs|isDigit|skipWs|skipDigits|readNat\w*|numEnd|matchLit|lit\d+|keyEnd|keyAt|valueAt|"
+    r"newlineFrom|scanBool|strClose|hasEscape|hex\w*|utf8Of|replacementChar|unescape|scanString|"
+    r"scanQuotedNat|scanBinderInfo|scanNatList\w*|skipBraced|scanStrName\w*|scanNumName\w*)$")
+
+
+def phase_key(ph):
+    """Sort key of a phase id (`"7"`, `"1b"`): numeric part, then suffix."""
+    m = re.fullmatch(r"(\d+)([a-z]*)", ph)
+    return (int(m.group(1)), m.group(2))
+
+
 def phase_of(name, module, line):
     m = module
     short = name.rsplit(".", 1)[-1]
+    if m.startswith("ConLeche.Frontend.Scan"):
+        return "1a" if m == "ConLeche.Frontend.Scan.Fast" and SCANNER_NAMES.match(short) else "1b"
     if m.startswith("ConRon.Arena.Frontend") or m.startswith("ConLeche.Frontend"):
-        return "1"
+        return "1c"
     if m.startswith("ConRon.Arena.Inductives") or m == "ConLeche.Kernel.PropWhen":
         return "8"
     if m == "ConRon.Arena.Core":
@@ -310,7 +330,7 @@ def tree_rss(pid):
     return total
 
 
-def run_guarded(cmd, limit_gb=MEM_LIMIT_GB, timeout=600):
+def run_guarded(cmd, limit_gb=MEM_LIMIT_GB, timeout=int(os.environ.get("CENSUS_TIMEOUT", "600"))):
     """Run `cmd` with its output in temporary files; poll the resident memory of its process
     tree every 0.2 s and kill that tree (by pid) above `limit_gb` GB or after `timeout` s, so a
     runaway census can never exhaust the session's memory (it took the machine down twice)."""
@@ -340,11 +360,23 @@ def run_guarded(cmd, limit_gb=MEM_LIMIT_GB, timeout=600):
         return p.returncode, out.read(), err.read(), peak
 
 
+def stage_done(name, t0):
+    """Timing line for the census log (stderr, like the exe's own `census: stage ...` lines)."""
+    import time
+    sys.stderr.write(f"census: stage {name}: {time.time() - t0:.1f} s\n")
+    sys.stderr.flush()
+
+
 def run_census(build):
+    import time
     if build:
+        t0 = time.time()
         subprocess.run(lake() + ["build", "census"] + modules_to_scan(), cwd=ROOT, check=True,
                        stdout=subprocess.DEVNULL)
+        stage_done("lake build (census exe and all scanned modules)", t0)
+    t0 = time.time()
     rc, out, err, peak = run_guarded(lake() + ["exe", "census", "ConAgua.Final.Twin"] + modules_to_scan())
+    stage_done("census exe (targets + links, total)", t0)
     if rc != 0:
         sys.stderr.write(err)
         sys.exit(f"census exe failed ({rc})")
@@ -566,7 +598,7 @@ def write_md(targets, links, dangling, rows, path):
     o.append("Every target with an L function or a theorem linked to it.\n")
     o.append("| target | phase | lean | rust | status | links |")
     o.append("|---|---|---:|---:|---|---|")
-    for t in sorted(targets.values(), key=lambda t: (int(t["phase"]), t["name"])):
+    for t in sorted(targets.values(), key=lambda t: (phase_key(t["phase"]), t["name"])):
         if t["impl"] or t["refs"] or t["parts"]:
             o.append(f"| `{t['name']}` | {t['phase']} | {t['lean']} | {t['rust']} | {t['status']} | {describe(t)} |")
     o.append("")
@@ -648,11 +680,14 @@ def main():
     if a.rust:
         regen_rust(a.rust)
         return
+    import time
     out = run_census(not a.no_build)
+    t0 = time.time()
     targets, links, dangling, rust_unmatched, edges = analyse(out)
+    stage_done("analyse (weights, statuses, coverage)", t0)
     if a.list:
         rx = re.compile(a.list)
-        for t in sorted(targets.values(), key=lambda t: (int(t["phase"]), t["module"], t["start"])):
+        for t in sorted(targets.values(), key=lambda t: (phase_key(t["phase"]), t["module"], t["start"])):
             if rx.search(t["name"]):
                 print(f"{t['phase']}\t{t['status']}\t{t['lean']}\t{t['rust']}\t{t['name']}\t{describe(t)}")
         return
@@ -672,9 +707,11 @@ def main():
         print(f"  bad link: {l['decl']} ({l['kind']}) -> {l['target']}"
               + (f": {l['status']}" if l["status"].startswith("error") else ": not a target"))
     if a.write:
+        t0 = time.time()
         write_md(targets, links, dangling, rows, os.path.join(ROOT, "docs", "progress.md"))
         append_csv(targets, os.path.join(ROOT, "docs", "progress.csv"))
         print("wrote docs/progress.md, appended docs/progress.csv")
+        stage_done("write report", t0)
 
 
 if __name__ == "__main__":

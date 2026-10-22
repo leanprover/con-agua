@@ -457,29 +457,4 @@ theorem majorToCtor_refines' : MajorToCtorOK p := by
 
 end top
 
-/-! ## The census-tagged statements
-
-They instantiate the stub bundles (`iotaCallees_stub`, `coreCallees_stub`,
-`proofIrrel_refines` (on the `CoreS.lvl_den` stub),
-and for `prepare_major` also `whnfCallees_stub`, `supKeep_twin`), as the other ι refinements do. -/
-
-@[refines ConRon.Arena.majorToCtor]
-theorem majorToCtor_refines (p : Prog) (hp : M2CProg' p) (hcl : closedA p coreErecA coreErecC coreFns = true) : MajorToCtorOK p :=
-  majorToCtor_refines' p hp (iotaCallees_stub p) (proofIrrel_refines p hp.toIotaProg4)
-    (ErecKeptKnot.of_closed hcl) (coreCallees_stub p).toProjCallees
-
-@[refines ConRon.Arena.prepareMajor]
-theorem prepareMajor_refines (p : Prog) (hp : M2CProg' p) (hcl : closedA p coreErecA coreErecC coreFns = true) :
-    ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
-    ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb mode d rec ro rc major : Word) (rules : List IRecRule),
-    CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → eb = (mode >>> 1) &&& 1 → HW major →
-    decRules (s₀.mem.arr64 EREC) ro.toNat rc.toNat = some rules →
-    CoreSpec p (n + 1) "prepare_major" [mode, vis, d, rec, ro, rc, major]
-      (prepareMajor (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI rec) rules
-        (decE major)) decH s₀ a₀ dn vis fe MM eb :=
-  prepareMajor_refines' (p := p) (hc := iotaCallees_stub p) (hw := whnfCallees_stub p)
-    (hsup := supKeep_twin) (hmtc := majorToCtor_refines p hp hcl) (hE := ErecKeptKnot.of_closed hcl)
-    (hp := hp.toIotaProg4)
-
 end L.Arena

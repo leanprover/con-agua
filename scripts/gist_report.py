@@ -31,7 +31,7 @@ def raw_url(name):
 
 def phases_svg():
     """Horizontal stacked bars, one per phase, length = the phase's Lean lines."""
-    W, bh, gap, lw, rw = 900, 22, 10, 230, 150
+    W, bh, gap, lw, rw = 940, 22, 10, 270, 150
     H = len(phases) * (bh + gap) + 50
     mx = max(p["lean_all"] for p in phases)
     sc = (W - lw - rw) / mx
