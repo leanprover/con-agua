@@ -48,11 +48,7 @@ structure DmProg5 (p : Prog) : Prop extends DmProg2 p where
   lSubstConstAll : p.lookup "subst_const_all" = some substConstAllL
   lSubstConst0List : p.lookup "subst_const0_list" = some substConst0ListL
   lConstsResolveAll : p.lookup "consts_resolve_all" = some constsResolveAllL
-  lConstsResolveFFast : p.lookup "consts_resolve_ffast" = some (stub 2)
   lDivModCertGuard : p.lookup "div_mod_cert_guard" = some divModCertGuardL
-  lLooseBvars : p.lookup "loose_bvars_bounded_fast" = some (stub 3)
-  lHasFvar : p.lookup "has_fvar_fast" = some (stub 2)
-  lAllLevelParams : p.lookup "all_level_params_defined" = some (stub 3)
 
 section applied
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
@@ -189,6 +185,228 @@ theorem applied_ref (hD : DmProg5 p) (pr ho hl : Word) (hyps : List EIdx) :
     simp only [divModCertApplied, StateT.run_bind, exc_ok_bind', decE_eq_decI, hrun1, hrun2, hrun3,
       hrun4]
     rfl
+
+@[refines ConRon.Arena.divModCertApplied]
+theorem divModCertApplied_refines (hD : DmProg5 p) (pr ho hl : Word) (hyps : List EIdx) :
+    RefAM p "div_mod_cert_applied" [pr, ho, hl]
+      (fun m s => StageR dn vis fe m s ∧ H pr ∧ decHL m ho.toNat hl.toNat = some hyps ∧
+        ho.toNat + hl.toNat ≤ iwTop m)
+      (divModCertApplied (decE pr) hyps) (KeepPost dn vis fe decW0E) :=
+  (applied_ref hD pr ho hl hyps).refAM
+
+/-! ## `subst_const0_list` -/
+
+def sc0ListW (p : Prog) (n : Nat) (m : Mem) (nm r o l : Word) : Option (List Word × Mem) :=
+  if l = 0 then some ([0, 0], m) else
+  bW (callW p n "subst_const0" [nm, r, 4000000000, rdW (m.arr64 IW) o] m) fun r1 m1 =>
+  bW (callW p n "subst_const0_list" [nm, r, o + 1, l - 1] m1) fun r2 m2 =>
+  bW (callW p n "sl_cons" [r1.headD 0, r2.headD 0, r2.tail.headD 0] m2) fun r3 m3 =>
+  some ([r3.headD 0, r3.tail.headD 0], m3)
+
+set_option maxHeartbeats 1600000 in
+theorem sc0List_specW (p : Prog) (hp : p.lookup "subst_const0_list" = some substConst0ListL)
+    (n : Nat) (s₀ : St) (nm r o l : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "subst_const0_list" [nm, r, o, l]
+    ⦃fun res s' => LocEq s' s₀ ∧ sc0ListW p n s₀.mem nm r o l = some (res, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, substConst0ListL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      callW_spec p n "subst_const0", callW_spec p n "subst_const0_list",
+      callW_spec p n "sl_cons"] <;>
+    finish (gen := 30) (instances := 10000) [sc0ListW, bW, rdW_eq]
+
+theorem sc0List_ref (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (nm r : Word) (hn : H nm) (hr : H r) :
+    ∀ (hyps : List EIdx) (o l : Word) (k : Nat) (m : Mem) (a : AState) (res : List Word) (m' : Mem),
+      StageR dn vis fe m a → decHL m o.toNat l.toNat = some hyps → o.toNat + l.toNat ≤ iwTop m →
+      callW p k "subst_const0_list" [nm, r, o, l] m = some (res, m') →
+      ∃ x a', (substConst0List (decI nm) (decE r) hyps).run a = .ok (x, a') ∧
+        KeepPost dn vis fe (decRL (fun m => decHL m) 0) m m' a' res x := by
+  intro hyps
+  induction hyps with
+  | nil =>
+    intro o l k m a res m' hS hd hb hc
+    have hl0 : l = 0 := by
+      have := decHL_length m hd
+      exact UInt64.toNat_inj.mp (by simp at this ⊢; omega)
+    cases k with
+    | zero => rw [callW_zero] at hc; cases hc
+    | succ k =>
+    have hw := callW_model (M := fun mm => sc0ListW p k mm nm r o l)
+      (sc0List_specW p hD.lSubstConst0List k · nm r o l) hc
+    simp only [sc0ListW, hl0, if_true, Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    refine ⟨[], a, rfl, hS, IWGrow.refl _, ?_⟩
+    simp only [decRL, List.getD_cons_zero, List.getD_cons_succ, List.getD_nil]
+    exact ⟨by simp [decHL, hslice?], by simp⟩
+  | cons h hs ih =>
+    intro o l k m a res m' hS hd hb hc
+    cases k with
+    | zero => rw [callW_zero] at hc; cases hc
+    | succ k =>
+    obtain ⟨hl0, hwlt, hh, hrest⟩ := decHL_cons_iw hS.2.2.2.1 hd
+    subst hh
+    have hw := callW_model (M := fun mm => sc0ListW p k mm nm r o l)
+      (sc0List_specW p hD.lSubstConst0List k · nm r o l) hc
+    unfold sc0ListW at hw
+    rw [if_neg hl0] at hw
+    cases h1 : callW p k "subst_const0" [nm, r, 4000000000, rdW (m.arr64 IW) o] m with
+    | none => rw [h1] at hw; simp at hw
+    | some q1 =>
+    obtain ⟨r1, m1⟩ := q1
+    rw [h1, bW_some] at hw
+    obtain ⟨x1, a1, hrun1, hS1, hg1, hl1, hx1⟩ := hs0 nm r _ hn hr hwlt k m a r1 m1 hS h1
+    cases h2 : callW p k "subst_const0_list" [nm, r, o + 1, l - 1] m1 with
+    | none => rw [h2] at hw; simp at hw
+    | some q2 =>
+    obtain ⟨r2, m2⟩ := q2
+    rw [h2, bW_some] at hw
+    have hlpos : 0 < l.toNat := Nat.pos_of_ne_zero (fun e => hl0 (UInt64.toNat_inj.mp (by simpa using e)))
+    have hsz := hS.2.2.2.1
+    have hI1 := hS.2.1
+    have ho1 : (o + 1).toNat = o.toNat + 1 := by
+      rw [UInt64.toNat_add]; simp; omega
+    have hl1' : (l - 1).toNat = l.toNat - 1 := by
+      rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
+    have hrest1 : decHL m1 (o + 1).toNat (l - 1).toNat = some hs := by
+      rw [ho1, hl1']
+      rw [ho1, hl1'] at hrest
+      rw [decHL_grow hg1 (by omega)]; exact hrest
+    obtain ⟨x2, a2, hrun2, hS2, hg2, hd2⟩ := ih (o + 1) (l - 1) k m1 a1 r2 m2 hS1 hrest1
+      (by rw [ho1, hl1']; have := hg1.1; omega) h2
+    cases h3 : callW p k "sl_cons" [r1.headD 0, r2.headD 0, r2.tail.headD 0] m2 with
+    | none => rw [h3] at hw; simp at hw
+    | some q3 =>
+    obtain ⟨r3, m3⟩ := q3
+    rw [h3, bW_some] at hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    obtain ⟨s', hs', -, hcons⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
+      (slCons_specW p hD.lIwAlloc hD.lIwCopy hD.lSlCons k _ (r1.headD 0) (r2.headD 0) (r2.tail.headD 0)) h3
+    have hcons' : consW k m2 (r1.headD 0) (r2.headD 0) (r2.tail.headD 0) = some (r3, m3) := by
+      rw [← hs']; exact hcons
+    simp only [decRL, Nat.zero_add, getD0, getD1] at hd2
+    obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage hcons' hS2 hd2.2 hl1 hd2.1
+    refine ⟨x1 :: x2, a2, ?_, hS3, hg1.trans (hg2.trans hg3), ?_⟩
+    · simp only [substConst0List, StateT.run_bind, hrun1, exc_ok_bind', hrun2, StateT.run_pure]
+      have hrun1' : (substConst0 (decI nm) (decE r) coreWalkFuel (decI (rdW (m.arr64 IW) o))).run a =
+          .ok (x1, a1) := hrun1
+      simp only [hrun1', exc_ok_bind', hrun2, StateT.run_pure]
+      rfl
+    · simp only [decRL, Nat.zero_add, getD0, getD1, List.headD_cons, List.tail_cons]
+      rw [← hx1]
+      exact ⟨hd3, by omega⟩
+
+@[refines ConRon.Arena.substConst0List]
+theorem substConst0List_refines (hD : DmProg5 p) (hs0 : SubstC0 p dn vis fe) (nm r o l : Word)
+    (hn : H nm) (hr : H r) (hyps : List EIdx) :
+    RefAM p "subst_const0_list" [nm, r, o, l]
+      (fun m s => StageR dn vis fe m s ∧ decHL m o.toNat l.toNat = some hyps ∧
+        o.toNat + l.toNat ≤ iwTop m)
+      (substConst0List (decI nm) (decE r) hyps)
+      (KeepPost dn vis fe (decRL (fun m => decHL m) 0)) :=
+  CallRef.refAM (fun k m a res m' ⟨hS, hd, hb⟩ hc =>
+    sc0List_ref hD hs0 nm r hn hr hyps o l k m a res m' hS hd hb hc)
+
+/-! ## `consts_resolve_all` -/
+
+def craW (p : Prog) (n : Nat) (m : Mem) (vs o l : Word) : Option (List Word × Mem) :=
+  if l = 0 then some ([1], m) else
+  bW (stubM "consts_resolve_ffast" m [vs, rdW (m.arr64 IW) o]) fun r1 m1 =>
+  if r1.headD 0 = 0 then some ([0], m1) else
+  bW (callW p n "consts_resolve_all" [vs, o + 1, l - 1] m1) fun r2 m2 => some ([r2.headD 0], m2)
+
+set_option maxHeartbeats 1600000 in
+theorem cra_specW (p : Prog) (hp : p.lookup "consts_resolve_all" = some constsResolveAllL)
+    (n : Nat) (s₀ : St) (vs o l : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "consts_resolve_all" [vs, o, l]
+    ⦃fun res s' => LocEq s' s₀ ∧ craW p n s₀.mem vs o l = some (res, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, constsResolveAllL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      stubM_spec p "consts_resolve_ffast" n, callW_spec p n "consts_resolve_all"] <;>
+    finish (gen := 30) (instances := 10000) [craW, bW, rdW_eq]
+
+theorem cra_ref (hD : DmProg5 p) (vs : Word) (hvs : vs = vis) :
+    ∀ (hyps : List EIdx) (o l : Word) (k : Nat) (m : Mem) (a : AState) (res : List Word) (m' : Mem),
+      StageR dn vis fe m a → decHL m o.toNat l.toNat = some hyps → o.toNat + l.toNat ≤ iwTop m →
+      callW p k "consts_resolve_all" [vs, o, l] m = some (res, m') →
+      ∃ x a', (constsResolveAll fe hyps).run a = .ok (x, a') ∧
+        KeepPost dn vis fe decW0B m m' a' res x := by
+  subst hvs
+  intro hyps
+  induction hyps with
+  | nil =>
+    intro o l k m a res m' hS hd hb hc
+    have hl0 : l = 0 := by
+      have := decHL_length m hd
+      exact UInt64.toNat_inj.mp (by simp at this ⊢; omega)
+    cases k with
+    | zero => rw [callW_zero] at hc; cases hc
+    | succ k =>
+    have hw := callW_model (M := fun mm => craW p k mm vs o l)
+      (cra_specW p hD.lConstsResolveAll k · vs o l) hc
+    simp only [craW, hl0, if_true, Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    exact ⟨true, a, rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
+  | cons h hs ih =>
+    intro o l k m a res m' hS hd hb hc
+    cases k with
+    | zero => rw [callW_zero] at hc; cases hc
+    | succ k =>
+    obtain ⟨hl0, hwlt, hh, hrest⟩ := decHL_cons_iw hS.2.2.2.1 hd
+    subst hh
+    have hw := callW_model (M := fun mm => craW p k mm vs o l)
+      (cra_specW p hD.lConstsResolveAll k · vs o l) hc
+    unfold craW at hw
+    rw [if_neg hl0] at hw
+    cases h1 : stubM "consts_resolve_ffast" m [vs, rdW (m.arr64 IW) o] with
+    | none => rw [h1] at hw; simp at hw
+    | some q1 =>
+    obtain ⟨r1, m1⟩ := q1
+    rw [h1, bW_some] at hw
+    obtain ⟨x1, a1, hrun1, hS1, hg1, hd1⟩ :=
+      constsResolveFFast_spec dn vs fe _ hwlt m m1 a r1 h1 hS
+    by_cases hz : r1.headD 0 = 0
+    · rw [if_pos hz] at hw
+      simp only [Option.some.injEq, Prod.mk.injEq] at hw
+      obtain ⟨rfl, rfl⟩ := hw
+      have hx1 : x1 = false := by
+        have := hd1.1; rw [hz] at this; simpa using this.symm
+      refine ⟨false, a1, ?_, hS1, hg1, by simp [decW0B]⟩
+      simp only [constsResolveAll, StateT.run_bind, hrun1, exc_ok_bind', hx1, Bool.false_eq_true,
+        if_false, StateT.run_pure]
+      rfl
+    · rw [if_neg hz] at hw
+      have hx1 : x1 = true := by
+        have := hd1.1
+        have e : (r1.headD 0 != 0) = true := by simpa using hz
+        rw [e] at this; exact this.symm
+      cases h2 : callW p k "consts_resolve_all" [vs, o + 1, l - 1] m1 with
+      | none => rw [h2] at hw; simp at hw
+      | some q2 =>
+      obtain ⟨r2, m2⟩ := q2
+      rw [h2, bW_some] at hw
+      simp only [Option.some.injEq, Prod.mk.injEq] at hw
+      obtain ⟨rfl, rfl⟩ := hw
+      have hsz := hS.2.2.2.1
+      have hI1 := hS.2.1
+      have hlpos : 0 < l.toNat := Nat.pos_of_ne_zero (fun e => hl0 (UInt64.toNat_inj.mp (by simpa using e)))
+      have ho1 : (o + 1).toNat = o.toNat + 1 := by
+        have hb := decHL_bnd m o l hd hsz
+        rw [UInt64.toNat_add]; simp; omega
+      have hl1' : (l - 1).toNat = l.toNat - 1 := by
+        rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
+      have hrest1 : decHL m1 (o + 1).toNat (l - 1).toNat = some hs := by
+        rw [ho1, hl1']
+        rw [ho1, hl1'] at hrest
+        rw [decHL_grow hg1 (by omega)]; exact hrest
+      obtain ⟨x2, a2, hrun2, hS2, hg2, hd2⟩ := ih (o + 1) (l - 1) k m1 a1 r2 m2 hS1 hrest1
+        (by rw [ho1, hl1']; have := hg1.1; omega) h2
+      refine ⟨x2, a2, ?_, hS2, hg1.trans hg2, hd2⟩
+      simp only [constsResolveAll, StateT.run_bind, hrun1, exc_ok_bind', hx1, if_true]
+      exact hrun2
 
 end applied
 
