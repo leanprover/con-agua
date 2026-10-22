@@ -657,7 +657,7 @@ theorem motVarW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     (hg : iwN m g.toNat = some G.nP) (hgt : g.toNat < iwTop m)
     (hsl : decAt m (decPL m (decCS m)) (g.toNat + 7) = some G.slots)
     (hns : G.nP + G.slots.length < 2 ^ 64) (hgb : g.toNat + 9 < 2 ^ 64)
-    (hsz : (m.arr64 IW).size + 5 < 2 ^ 64) (h : motVarW n m g c = some (r, m')) :
+    (hsz : (m.arr64 IW).size < 2 ^ 64) (h : motVarW n m g c = some (r, m')) :
     ∃ x a', (ConRon.Arena.ClassGen.motVar G c.toNat).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' ∧ (r.headD 0).toNat < 2 ^ 32 ∧ decE (r.headD 0) = x := by
   obtain ⟨o, l, ho, hl, hdec⟩ := decAt_some hsl
@@ -738,7 +738,7 @@ theorem classGenMotVar_refines (p : Prog) (hpin : p.lookup "pin_word" = some pin
       decE (r.headD 0) = AM.res (ConRon.Arena.ClassGen.motVar G c.toNat) a₀; ⊤⦄ := by
   refine triple_post (motVar_spec p hpin hsf hsp his hff hfp hif hsv hms hp n s₀ g c) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨x, a', hrun, hS', hgr, h1, h2⟩ := motVarW_ok dn vis fe n _ _ a₀ g c G r hS hg hgt hsl hns hgb hsz hm
+  obtain ⟨x, a', hrun, hS', hgr, h1, h2⟩ := motVarW_ok dn vis fe n _ _ a₀ g c G r hS hg hgt hsl hns hgb (by omega) hm
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok (ConRon.Arena.ClassGen.motVar G c.toNat) a₀ a' x hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hgr, h1, by rw [hres]; exact h2⟩
 

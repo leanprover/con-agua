@@ -613,12 +613,23 @@ def classGenPrefixBinders : FunDecl := lfn (g) locals (pbo, pbl, ok, so, sl, all
 /-- `class_gen_rec_ty(g, c)`: the generated recursor type at class `c`. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:241-255 ConRon.Arena.classGenRecTy
 @[l_impl ConRon.Arena.classGenRecTy]
-def classGenRecTy : FunDecl := lfn (g, c) locals
-    (rP, ok, fo, fl, maj, t, ibo, ibl, b1o, b1l, b2o, b2l, mv, a1o, a1l, body, r) {
+def classGenRecTy : FunDecl := lfn (g, c) locals (rP, ok, fo, fl, maj, t, r0, r1) {
   rP := IW.u64[g + 13];
   (ok, fo, fl, maj) := call class_gen_major(g, c, rP);
   if ok == 0 { return (0, 0) };
+  if rP + fl < rP { abort };
   t := call intern_fvar(rP + fl, maj);
+  if 4294967296 <= t { abort };
+  (r0, r1) := call class_gen_rec_ty_tail(g, c, rP, fo, fl, maj, t);
+  return (r0, r1)
+}
+
+/-- `class_gen_rec_ty_tail(g, c, rP, ifs.off, ifs.len, maj, t)`: `classGenRecTy` after the major
+variable `t` is interned: the binders, the motive applied, closed. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:241-255 ConRon.Arena.classGenRecTy
+@[l_impl ConRon.Arena.classGenRecTy]
+def classGenRecTyTail : FunDecl := lfn (g, c, rP, fo, fl, maj, t)
+    locals (ibo, ibl, b1o, b1l, b2o, b2l, mv, a1o, a1l, body, r) {
   (ibo, ibl) := call fvar_type_ds(fo, fl);
   (b1o, b1l) := call sl_append(IW.u64[g + 12], rP, ibo, ibl);
   (b2o, b2l) := call sl_snoc(b1o, b1l, maj);
@@ -781,6 +792,7 @@ def recClassFns : Prog :=
    ("class_gen_prefix_binders_find_ctor", classGenPrefixBindersFindCtor),
    ("class_gen_prefix_binders_slots_go", classGenPrefixBindersSlotsGo),
    ("class_gen_prefix_binders", classGenPrefixBinders), ("class_gen_rec_ty", classGenRecTy),
+   ("class_gen_rec_ty_tail", classGenRecTyTail),
    ("class_rec_of", classRecOf), ("class_gen_rule_find_slot", classGenRuleFindSlot),
    ("class_gen_rule_pvars_go", classGenRulePvarsGo), ("class_gen_rule_call1", classGenRuleCall1),
    ("class_gen_rule_calls_go", classGenRuleCallsGo), ("class_gen_rule", classGenRule)]
