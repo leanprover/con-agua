@@ -84,6 +84,7 @@ theorem wFr_wframe (A : List ArrId) (C : List Word) : WFrame CTL A C (WFr A C) w
     rcases ha with ⟨hc, ha⟩ | ⟨rfl, hi⟩
     · exact MemFrame.trans h.1 (MemFrame.mono (MemFrame.set64 m a hc i v) (by simpa using ha) (by simp))
     · exact MemFrame.trans h.1 (MemFrame.mono (MemFrame.setCtl m i v) (by simp) (by simpa using hi))
+  setG _ _ _ _ h := h
 
 /-- **Every run of a function of a closed set is a frame of its write set** (and keeps the byte
 arrays). -/

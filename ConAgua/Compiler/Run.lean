@@ -19,7 +19,8 @@ public import Kraken.X64.PrintATT
 namespace L.Compiler
 
 /-- The assembler file for `compileProg tab p entry`. The constant data `tab.rom` is emitted as
-`ca_rom` (`ca_rom_len` bytes) in `.rodata`; the driver copies it into the table.
+`ca_rom` (`ca_rom_len` bytes) in `.rodata`; the driver copies it into the table. `ca_ng` is the
+number of global variables: the driver zeroes that many words after the result area.
 
 Kraken's AT&T printer always prints the two-destination-operand form of `imul` (`.imul (some d)
 a b`) in three-operand syntax, `imul{s} b, a, d`, which binutils accepts only as the APX "new
@@ -33,7 +34,8 @@ separate `Directive`-level rewrite needed before printing. -/
 def asmText (tab : Tab) (p : Prog) (entry : FnName) : String :=
   ".text\n.globl " ++ enterL ++ "\n" ++
     Kraken.X64.toATT (compileProg tab p entry) ++ "\n" ++
-    ".section .rodata\n.globl ca_rom\n.globl ca_rom_len\nca_rom_len: .quad " ++ toString tab.rom.length ++
+    ".section .rodata\n.globl ca_rom\n.globl ca_rom_len\n.globl ca_ng\nca_ng: .quad " ++ toString tab.ng ++
+    "\nca_rom_len: .quad " ++ toString tab.rom.length ++
     "\nca_rom:" ++ (if tab.rom.isEmpty then "" else " .byte " ++ ", ".intercalate (tab.rom.map toString)) ++
     "\n.section .note.GNU-stack,\"\",@progbits\n"
 
@@ -105,6 +107,8 @@ def runKraken (p : Prog) (entry : FnName) (args : List Word) (m : Mem) (fuel : W
     d := kStoreBytes d bases64[a]! ((m.arr64 a).toList.flatMap kWordBytes)
   d := kStoreBytes d (T + tab.romBase.toNat) tab.rom
   d := kStoreBytes d (T + tab.resBase.toNat) (List.replicate (8 * tab.nxres) 0)
+  for g in [0:tab.ng] do
+    d := kStoreWord d (T + (tab.globOff ⟨g⟩).toNat) (m.glob ⟨g⟩)
   for (v, i) in args.zipIdx do
     d := kStoreWord d (T + tab.args.toNat + 8 * i) v
   let exe := Program.fakeLayout (compileProg tab p entry)

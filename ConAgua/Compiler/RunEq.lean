@@ -150,6 +150,12 @@ theorem step_ret_run (es : List Expr) :
 
 theorem step_abort_run : stepRun p K .abort σ = .error .abort := rfl
 
+theorem step_gset_run (g : GVar) (e : Expr) :
+    stepRun p K (.gset g e) σ = (evalP σ e).map fun v => (.normal, σ.setG g v) := by
+  unfold stepRun
+  simp only [step, StateT.run_bind, evalE_run]
+  cases evalP σ e <;> rfl
+
 theorem step_call_run (xs : List Var) (f : FnName) (args : List Expr) :
     stepRun p K (.call xs f args) σ =
       match evalArgsP σ args with
@@ -167,7 +173,7 @@ theorem step_call_run (xs : List Var) (f : FnName) (args : List Expr) :
 
 theorem evalP_error {σ : St} {e : Expr} {x : Err} (h : evalP σ e = .error x) : x = .oob := by
   induction e generalizing x with
-  | const | var | len8 | len64 => simp [evalP] at h
+  | const | var | len8 | len64 | glob => simp [evalP] at h
   | bin _ a b iha ihb | cmpw _ a b iha ihb =>
     simp only [evalP, bind, Except.bind] at h
     split at h

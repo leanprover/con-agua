@@ -39,6 +39,7 @@ def evalP (σ : St) : Expr → Except Err Word
   | .ldc d i => do
     let j ← evalP σ i
     if h : j.toNat < d.length then .ok d[j.toNat].toUInt64 else .error .oob
+  | .glob g => .ok (σ.mem.glob g)
 
 theorem evalE_run (σ : St) (e : Expr) : (evalE e).run σ = (evalP σ e).map (·, σ) := by
   induction e with
@@ -69,6 +70,7 @@ theorem evalE_run (σ : St) (e : Expr) : (evalE e).run σ = (evalP σ e).map (·
       · simp [StateT.bind, StateT.run, get, getThe, MonadStateOf.get, StateT.get, hj]; rfl
   | len8 => rfl
   | len64 => rfl
+  | glob => rfl
   | cmpw op a b iha ihb =>
     simp only [evalE, evalP, StateT.run_bind] at *
     rw [iha]
@@ -161,7 +163,7 @@ section
 variable [Host] {G : Layout} (hG : G.Ok)
 include hG
 
-theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres < maxOff)
+theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
     (F : Nat) (hF : 8 * F + 8 < maxOff) :
     ∀ (e : Expr) (t k : Nat), Code (compileE ctx e t) k → Expr.wf ctx.nl G.tab e = true →
     ctx.nl + t + tempsE e ≤ F →
@@ -199,6 +201,14 @@ theorem sim_expr (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb 
       (hok _ _ rfl ?_ (EPost.regs' (by simp) _))
     · rw [Reg64s.get64_r15, UInt64.toNat_toBitVec, hI.r15, hT]; exact hI.mem.len64 a hwf
     · simp [evalP, Mem.len64, hI.mem.size64 a hwf]
+  | glob g =>
+    intro t k hc hwf _ σ s Q hI hok _
+    simp only [Expr.wf, decide_eq_true_eq] at hwf
+    refine ev_movRM hc.head ⟨by simp [Tab.globOff, Tab.globBase]; lomega,
+        by simp [hT, Tab.globOff, Tab.globBase]; lomega⟩
+      (v := σ.mem.glob g) ?_ (hok _ _ rfl (by simp) (EPost.regs' (by simp) _))
+    rw [Reg64s.get64_r15, UInt64.toNat_toBitVec, hI.r15, hT, Layout.globAddr_toNat]
+    exact hI.mem.glob g hwf
   | bin op a b iha ihb =>
     intro t k hc hwf htmp σ s Q hI hok herr
     simp only [Expr.wf, Bool.and_eq_true] at hwf
@@ -489,7 +499,7 @@ section
 variable [Host] {G : Layout} (hG : G.Ok)
 include hG
 
-theorem sim_cond (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres < maxOff)
+theorem sim_cond (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
     (F : Nat) (hF : 8 * F + 8 < maxOff) :
     ∀ (c : Cond) (path : String) (pol : Bool) (l : Label) (t k : Nat),
     Code (compileC ctx path c pol l t) k → Cond.wf ctx.nl G.tab c = true →
