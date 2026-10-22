@@ -179,4 +179,56 @@ theorem partsPack {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     show decPL (truncM m') (decRS (truncM m')) ro.toNat rl.toNat = some recs from hr2, he', hs', if_true,
     Option.bind_some]
 
+/-- **`block_shape_seal`'s model refines the twin's last `match large?`.** -/
+theorem bsealW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem}
+    {a : AState} {mo ml ro2 rl2 nPd s ip lgw elimw : Word} {ms : List MemberShape} {recs : List RecShape}
+    {sv : LIdx} {isProp : Bool} {lg : Option NIdx} (hS : StageR dn vis fe m a)
+    (hms : PSlR decMS ms mo ml m) (hrs : PSlR decRS recs ro2 rl2 m) (hs : H s) (hsv : decI s = sv)
+    (hip : (ip != 0) = isProp) (hlg : LargeR lg [lgw, elimw]) :
+    Sim (bsealW n m mo ml ro2 rl2 nPd s ip lgw elimw)
+      (match lg with
+        | some elim => pure (some ⟨ms, recs, nPd.toNat, elim, sv, true, isProp⟩)
+        | none => do
+          let anon ← internNNode .anonymous
+          pure (some ⟨ms, recs, nPd.toNat, anon, sv, false, isProp⟩)) a
+      (fun r x m' a' => ShapeR x r m' ∧ StageR dn vis fe m' a' ∧ IWGrow m m') := by
+  intro r m' e
+  unfold bsealW at e
+  cases lg with
+  | some el =>
+    obtain ⟨h1, he, hee⟩ := hlg
+    simp only [List.headD_cons] at h1
+    simp only [List.tail_cons, List.headD_cons] at he hee
+    rw [if_pos (by rw [h1]; decide)] at e
+    cases h2 : posRecW m [mo, ml, ro2, rl2, nPd, elimw, s, 1, ip] with
+    | none => rw [h2] at e; cases e
+    | some x =>
+    obtain ⟨q, m2⟩ := x
+    rw [h2, bbPack_some] at e
+    simp only [Option.some.injEq, Prod.mk.injEq] at e
+    obtain ⟨rfl, rfl⟩ := e
+    obtain ⟨hS2, hg2, hd2⟩ := partsPack h2 hS hms hrs he hs
+    refine ⟨_, a, rfl, ⟨rfl, ?_⟩, hS2, hg2⟩
+    rw [← hee, ← hsv, ← hip]; exact hd2
+  | none =>
+    have h1 : lgw = 0 := hlg
+    rw [if_neg (by rw [h1]; decide)] at e
+    cases h3 : stubM "intern_nanon" m [] with
+    | none => rw [h3] at e; cases e
+    | some x =>
+    obtain ⟨r3, m3⟩ := x
+    rw [h3, bbK14_some] at e
+    obtain ⟨an, a3, hrun3, hS3, hg3, hal, hae⟩ := internNanonStub_spec dn vis fe m m3 a r3 h3 hS
+    cases h2 : posRecW m3 [mo, ml, ro2, rl2, nPd, r3.headD 0, s, 0, ip] with
+    | none => rw [h2] at e; cases e
+    | some x =>
+    obtain ⟨q, m2⟩ := x
+    rw [h2, bbPack_some] at e
+    simp only [Option.some.injEq, Prod.mk.injEq] at e
+    obtain ⟨rfl, rfl⟩ := e
+    obtain ⟨hS2, hg2, hd2⟩ := partsPack h2 hS3 (hms.grow decMS_mono hg3) (hrs.grow decRS_mono hg3) hal hs
+    refine ⟨some ⟨ms, recs, nPd.toNat, an, sv, false, isProp⟩, a3,
+      by simp only [StateT.run_bind, hrun3]; rfl, ⟨rfl, ?_⟩, hS2, hg3.trans hg2⟩
+    rw [← hae, ← hsv, ← hip]; exact hd2
+
 end L.Ind
