@@ -587,8 +587,8 @@ def indApplyForeign : Prog :=
 
 theorem indApply_wf :
     L.Compiler.Prog.wf frontIndTab
-      (indApplyFns ++ indFieldsFns ++ indFieldsForeign ++ indApplyForeign) = true := by
-  decide +kernel
+      (indApplyFns ++ indFieldsFns ++ indFieldsForeign ++ indApplyForeign) = true :=
+  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
 
 /-! ## The relation: `IndDeclAt` -/
 

@@ -805,8 +805,8 @@ def indInstallForeign : Prog :=
 
 theorem indInstall_wf :
     L.Compiler.Prog.wf indTab
-      (indInstallFns ++ libFns ++ stubFns ++ masterFns ++ indInstallForeign) = true := by
-  decide +kernel
+      (indInstallFns ++ libFns ++ stubFns ++ masterFns ++ indInstallForeign) = true :=
+  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
 
 -- `check_block_doms_at` at `j = 0`: no binders to compare, no callee touched.
 #guard

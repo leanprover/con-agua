@@ -874,8 +874,8 @@ def recGenForeign : Prog :=
 foreign callees of other `induct` modules. -/
 theorem recGen_wf :
     L.Compiler.Prog.wf indTab (recGenFns ++ libFns ++ stubFns ++ masterFns ++ recGenForeign)
-      = true := by
-  decide +kernel
+      = true :=
+  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
 
 /-! ## A pure-enough slice, exercised -/
 

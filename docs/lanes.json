@@ -272,7 +272,19 @@
 {
 "lane": "exprops4",
 "model": "opus",
-"status": "running",
+"status": "done",
 "focus": "ExprMk build time; abstract1, instantiateList"
+},
+{
+"lane": "buildstats",
+"model": "sonnet",
+"status": "done",
+"focus": "File size + elaboration time monitor (scripts/buildstats.py)"
+},
+{
+"lane": "perf1",
+"model": "opus",
+"status": "running",
+"focus": "Slow declarations (grind, Prog.wf checks); split Scan/Records"
 }
 ]
