@@ -8036,3 +8036,20 @@ calls only if the core stubs' posts say so. Suggested single sweep (lane `indpro
 every core stub spec's `KeepPost` carrying it (from `CoreS` via `StageR.coreS`/`CoreS.checkR`).
 `StateOK` need not be in it (the callers get it from `TwinFold`). The only `decls4` files involved
 are `DeclCvg.lean`'s `lvl_eq_c` call sites; `indproofs3` may edit them.
+
+
+### Landing 11 (defeq2): `KnotCallees.recFireLevels` discharged (`recFireLevelsOK_of`)
+* **Statement**: `RecFireLevelsOK` now asks that what `rec_fire_levels` reads back does so:
+  the recursor's level parameters, and the fire datum at its words (`FireCore`: a plain rule's
+  constructor parameters, a nested rule's stored levels). `us` needs nothing (`ls_node` aborts).
+* **Where the facts come from**: `FireEnv fe lps rule cvj` (the recursor and the constructor are
+  environment constants, the rule one of the recursor's) is state-free, so it threads from
+  `iota_rec_c` (`fe.find?`) through `iota_rec_major`, `iota_rec_fire`, `iota_rec_fire2` to
+  `iota_rec_fam`, where `lpsDen_of`/`fireCore_of` (`RecFireEnv.lean`) turn it into readbacks at the
+  current state through `StoreDen.constLps` and the new field **`StoreDen.recRules`** (a stored
+  recursor's nested rules' levels read back; kept by `mono`, an obligation where `TwinOK` is built).
+* **Proof** (`RecFireCore.lean`): `recFireLevelsW_ok`'s steps under `CoreS` with lane `whnf4`'s level
+  arms: `sleElemW_core` (`lvSubIntW_core` per stored level), `slpElemW_core`/`slpOne_core`
+  (`lvInternW_core` on a hit, the parameter node by `liNode_core` on a miss), `spnLs_core`, the top
+  put back (`StackKept.restoreG`). `CoreS.ctl136` (the walk memos' counters lie above `CTL[136]`).
+  `KnotAllProg.caps` became `ls : LsProg p`. **`KnotCallees` has one field left: `instLP`.**

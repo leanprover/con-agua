@@ -16,6 +16,7 @@ import ConAgua.Arena.WhnfProjRefine3
 import ConAgua.Arena.WhnfIotaRecRefine3
 import ConAgua.Arena.WalkCore
 import ConAgua.Arena.CapsNeverZeroCore
+import ConAgua.Arena.RecFireCore
 
 /-!
 # The knot tied (lane `defeq`)
@@ -96,8 +97,9 @@ structure KnotAllProg (p : Prog) : Prop where
   projp : ProjProg p
   /-- `fire_ok` and its callees (`pin_word`, the level cache, `lvl_eq_c`'s text). -/
   fire : FireProg p
-  /-- `caps_never_zero` and its callees (`capsNeverZeroOK_of`). -/
-  caps : LvSubProg p
+  /-- `caps_never_zero`, `rec_fire_levels` and their callees (`capsNeverZeroOK_of`,
+  `recFireLevelsOK_of`). -/
+  ls : LsProg p
   /-- The core's write set leaves `EREC` alone (lane `whnf3`'s `CoreErec.lean`). -/
   hcl : closedA p coreErecA coreErecC coreFns = true
   /-- Lane `whnf`'s `whnf_core` family, the ι side (`iota_rec_at`, `major_to_ctor`) and the two
@@ -113,10 +115,6 @@ structure KnotAllProg (p : Prog) : Prop where
 structure KnotCallees (p : Prog) : Prop where
   /-- `inst_lp` (lane `whnf3`'s `instLPFast` walk). -/
   instLP : InstLPOK p
-  /-- `rec_fire_levels` under `CoreS` (helper `whnf3-lp` proved it at `ArenaD`, on `StoreWF`
-  and the readback caches, which `CoreS` does not carry: D23; DESIGN.md, helper
-  `whnf4-leaves`). -/
-  recFireLevels : RecFireLevelsOK p
 
 /-- `reserved_contains_w` refines `reservedContainsT` under `CoreS` (lane `whnf2`'s
 `callW_reservedContains`: memory unchanged, the pins' reserved list). -/
@@ -177,10 +175,10 @@ theorem KnotCallees.projC : ProjCallees p :=
 
 include hq hc in
 /-- Lane `whnf`'s `IotaCallees`: the walks, `find_proj`, `lit_to_ctor_if_nat` proved; `fire_ok`,
-`caps_never_zero` (`capsNeverZeroOK_of`), `rec_fire_levels` from `KnotCallees`. -/
+`caps_never_zero` (`capsNeverZeroOK_of`), `rec_fire_levels` (`recFireLevelsOK_of`). -/
 theorem KnotCallees.iotaC : IotaCallees p :=
-  ⟨hq.walks.iotaInst1OK, findProj_refines p hq.projp, hc.fireOk hq, capsNeverZeroOK_of p hq.caps,
-    hc.recFireLevels,
+  ⟨hq.walks.iotaInst1OK, findProj_refines p hq.projp, hc.fireOk hq, capsNeverZeroOK_of p hq.ls.toLvSubProg,
+    recFireLevelsOK_of p hq.ls,
     wscoped_core hq.ws, hq.walks.lbbOK, leafGuard_core hq.lg,
     fun n s₀ a₀ dn vis fe MM eb h hS hh => litToCtorIfNat_refines p hq.delta n s₀ a₀ dn vis fe MM eb h hS hh⟩
 
