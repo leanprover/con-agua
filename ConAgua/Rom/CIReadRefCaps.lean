@@ -345,7 +345,53 @@ theorem caps_rel {m₀ : Mem} {a₀ : AState} (dn : NIdx → Option ConLeche.Nam
   have hW7 := hword (c + 7) (UInt64.ofNat (szTag caps.sortZ)) 7 (by rw [← hws]; simp) hc7 (by omega) (by omega) (by omega) (by omega)
   have hW12 := hword (c + 12) (UInt64.ofNat caps.nparams) 12 (by rw [← hws]; simp) hc12 (by omega) (by omega) (by omega) (by omega)
   simp only [Nat.add_zero] at hW0
-  sorry
+  have hsz9 : erTop m ≤ (m8.arr64 EREC).size := by rw [hE8, hsz1]; exact hsz
+  have hW1 : (erA m12)[c.toNat + 1]? = some (r1.headD 0) := by
+    rw [hk12 _ (by omega) (by omega) (by omega), ← hc1]
+    exact er_set_get m8 _ _ (by rw [hc1]; omega)
+  rw [hc8] at hH12; rw [hc10] at hH10; rw [hc13] at hH11
+  rw [hzw] at hH12
+  have hA' := (hH10.ekeep hek11 (fun i hi => ⟨by omega, by omega⟩) hIW11).ekeep hek12
+    (fun i hi => ⟨by omega, by omega⟩) hIW12
+  have hC' := hH11.ekeep hek12 (fun i hi => ⟨by omega, by omega⟩) hIW12
+  have hlenC := congrArg List.length (hd.symm.trans hd')
+  simp only [List.length_append, u64B, List.length_cons, List.length_nil] at hlenC
+  refine ⟨⟨caps.eta, decI (r1.headD 0), caps.etaParams, caps.etaFields, caps.unitlike, caps.unitParams,
+    caps.ruleK, caps.sortZ, wsA.map decI, caps.nparams, wsC.map decI⟩, a4, ?_, hI12, hM12,
+    by rw [hs12, hs11, hs10, hs9, hs8, hs1, hst], ?_, ⟨by omega, fun i hi hR => ?_⟩, by omega,
+    by rw [hIW12, hIW11, hIW10, hIW9, hIW8, hIW1], ?_⟩
+  · simp only [Frontend.internCaps]
+    rw [run_bind_of _ _ _ _ _ hrun1, run_bind_of _ _ _ _ _ hrun2, run_bind_of _ _ _ _ _ hrun3]
+    rfl
+  · simp only [List.headD_cons]; rw [hq4, hq3, hq2, hq1, hq64]; simp [encNameL, u64B] at hlenC ⊢; omega
+  · rw [hk12 _ (by omega) (by omega) (by omega), er_set_ne _ _ _ _ (by rw [hc1]; omega), hE8',
+      setERs_ne ws m i (by
+        intro jw hjw; rw [← hws] at hjw
+        simp only [List.mem_cons, List.mem_nil_iff, or_false] at hjw
+        rcases hjw with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+          simp only [hc2, hc3, hc4, hc5, hc6, hc7, hc12] <;> omega)]
+  · have hH := holds_decCaps (dn := dn) (c := c.toNat)
+      ⟨caps.eta, decI (r1.headD 0), caps.etaParams, caps.etaFields, caps.unitlike, caps.unitParams,
+        caps.ruleK, caps.sortZ, wsA.map decI, caps.nparams, wsC.map decI⟩
+      v0 (r1.headD 0) _ _ v3 _ v5 _ _ hW0 hW1 hW2 hW3 hW4 hW5 hW6 hW7 hW12 hlt1
+      (by rw [← hv0]; exact (bw_ne _).symm) rfl (ofNat_toNat_lt hep).symm (ofNat_toNat_lt hef).symm
+      (by rw [← hv3]; exact (bw_ne _).symm) (ofNat_toNat_lt hup).symm
+      (by rw [← hv5]; exact (bw_ne _).symm) (ofNat_toNat_lt hnp).symm
+      (by rw [ofNat_toNat_lt htag]; rcases hz with h | h <;> simp [h, szTag])
+      (fun _ => hH12) hA' hC'
+    refine hH.mono (fun i hi => ?_) (fun _ h => h)
+    rcases hi with hi | hi | hi | hi | ⟨-, hi⟩
+    · left; omega
+    · left; omega
+    · rcases hi with hi | hi
+      · left; omega
+      · right; omega
+    · rcases hi with hi | hi
+      · left; omega
+      · right; omega
+    · rcases hi with hi | hi
+      · left; omega
+      · right; omega
 
 end caps
 
