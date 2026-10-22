@@ -3720,3 +3720,4 @@ theorem etaFabArgs_refines' (p : Prog) (hp : IotaProg' p) :
     rw [e]; simpa using happ
 
 end L.Arena
+

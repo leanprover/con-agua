@@ -712,12 +712,14 @@ def iotaCertsFullAuxL : FunDecl := lfn (mode, vis, d, h, aco, acn, ao, an, i)
 }
 
 /-- con-leche: `Kernel/Core.lean:252-267`/`Cached/CoreC.lean:178-181` `iotaCertsFull`/
-`iotaCertsFullI` — the empty-accumulator entry. -/
+`iotaCertsFullI` — the empty-accumulator entry. The stack top is restored after the walk (the
+accumulator is scratch; the refinement specs promise `StackKept`). -/
 -- con-ron: ConRon/Arena/Core.lean:1319-1324 ConRon.Arena.iotaCertsFull
 @[l_impl ConRon.Arena.iotaCertsFull]
 def iotaCertsFullL : FunDecl := lfn (mode, vis, d, h, ao, an) locals (top, res) {
   top := CTL.u64[136];
   res := call iota_certs_full_aux(mode, vis, d, h, top, 0, ao, an, 0);
+  CTL.u64[136] := top;
   return res
 }
 
