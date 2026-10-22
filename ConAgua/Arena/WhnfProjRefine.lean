@@ -171,4 +171,61 @@ theorem CoreS.of_name {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
     rw [hN.caches] at e
     exact hN.lsext.lst h l (hS.readLs h l e)
 
+/-! ## The programs -/
+
+/-- **The lookups the projection functions need.** -/
+structure ProjProg (p : Prog) : Prop where
+  ptn : p.lookup "proj_table_name" = some projTableNameL
+  findProj : p.lookup "find_proj" = some findProjL
+  fireOk : p.lookup "fire_ok" = some fireOkL
+  litHash : p.lookup "lit_hash" = some litHash
+  limbsEq : p.lookup "limbs_eq" = some limbsEq
+  nsMatch : p.lookup "nstr_match" = some nsMatch
+  nsFind : p.lookup "nstr_find" = some nsFind
+  nsPush : p.lookup "nstr_push" = some nsPush
+  nstr : p.lookup "intern_nstr" = some internNStr
+  nnFind : p.lookup "nnum_find" = some nnumFind
+  nnPush : p.lookup "nnum_push" = some nnumPush
+  nnum : p.lookup "intern_nnum" = some internNNum
+  envix : p.lookup "env_ix" = some envIxL
+  envrow : p.lookup "env_row_get" = some envRowGetL
+  envfind : p.lookup "env_find" = some envFindL
+
+/-! ## `proj_table_name`: the word model -/
+
+/-- The nine bytes of `"projTable"` written at `o`. -/
+def ptBytes (m : Mem) (o : Word) : Mem :=
+  (((((((((m.set64 POOL o 112).set64 POOL (o + 1) 114).set64 POOL (o + 2) 111).set64 POOL (o + 3) 106).set64
+    POOL (o + 4) 84).set64 POOL (o + 5) 97).set64 POOL (o + 6) 98).set64 POOL (o + 7) 108).set64 POOL
+    (o + 8) 101)
+
+/-- The memory `intern_nstr` sees: the bytes, the top raised past them. -/
+def ptMem (m : Mem) (o : Word) : Mem := (ptBytes m o).set64 CTL 0 (o + 9)
+
+/-- The model of `proj_table_name`. -/
+def ptnW (p : Prog) (n : Nat) (m : Mem) (t : Word) : Option (Word × Mem) :=
+  if 4294967295 < t then none
+  else if (2 : Word) < (t >>> 28) then none
+  else if ((t >>> 27) &&& 1) ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
+  else if rdW (m.arr64 CTL) ((34 : Word) + (t >>> (28 : Word)) * (2 : Word) + ((t >>> (27 : Word)) &&& 1)) ≤ (t &&& 134217727) then none
+  else if rdW (m.arr64 CTL) 0 + 9 < rdW (m.arr64 CTL) 0 then none
+  else if m.len64 POOL < rdW (m.arr64 CTL) 0 + 9 then none
+  else match callW p n "intern_nstr" [t, rdW (m.arr64 CTL) 0, 9] (ptMem m (rdW (m.arr64 CTL) 0)) with
+    | none => none
+    | some (r₁, m₁) =>
+      if 4294967296 ≤ r₁.headD 0 then none
+      else match callW p n "intern_nnum" [r₁.headD 0, 0] m₁ with
+        | none => none
+        | some (r₂, m₂) => some (r₂.headD 0, m₂)
+
+theorem projTableName_spec (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St) (t : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "proj_table_name" [t]
+    ⦃fun r s' => LocEq s' s₀ ∧ ptnW p n s₀.mem t = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp.ptn]
+  simp only [callFn, projTableNameL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      callW_spec p n "intern_nstr", callW_spec p n "intern_nnum"] <;>
+    finish [ptnW, ptMem, ptBytes]
+
 end L.Arena
