@@ -6519,6 +6519,11 @@ Merge master and adapt new uses:
   `instEntry_refines`/`absEntry_refines`.
 * **The inductive line hook**: lane indproofs2 landed it in `Line.lean` (with its proofs) while
   this lane worked; the checker takes `L.Front.applyDLine`, and e2e's patch is gone.
+* **`rom_expr_pin(id)`** (landing 2): lane decls' stub `rom_expr(id)` (the reduce pins,
+  `DeclArms.lean`'s two calls, `DeclRomStubs.romExpr_spec`, `DeclReduceSpec`, `romStubs`) had
+  the same name and arity as romload's ROM expression reader `rom_expr(pos)`, so the assembled
+  checker silently called the reader at position 0/1. Renamed; the generator cannot see such a
+  clash (stubs are not bindings), so a stub's name must not be an existing function's.
 * **New rule: one name, one body, project-wide.** `scripts/checker_prog.py` fails if two non-stub
   bindings of a name (any `Prog` constant, any `p.lookup "f" = some d` in a type) differ, or a
   call's argument count differs from the callee's; it also needs every module importable together.
@@ -6813,6 +6818,60 @@ introduces it; the coordinator reviews the list at each batch of landings.
   not), `erecKeptKnot_stub` and the knot steps (lane `defeq`). The new named hypotheses of the iota
   proofs (`ErecKeptRec`, `LvlsEqDen`, `RecShape`, `ProofIrrelOKM`) are listed above.
 
+### The knot tied (`DefEqBody.lean`, `DefEqKnot.lean`, helper `defeq-knot`)
+* `defeqBody_refines`: `DefeqBodySpec p n` is a theorem (from `DefeqBodyCallees` = `StuckCallees` +
+  `LazyCallees`); `defeqSlot_step` = `defeq_refines` on it. The twin side is split once
+  (`defeqBodyRestT`, `defeqBody_eq` by `rfl`); the proof is the `callW` chain of ten calls, 356
+  lines, ~8 s CPU. `DefeqBodySpec` gains `n ≤ 2^62` (`defeq_refines` has it).
+* L changes in `defeq_body`: it aborts at `d ≥ 2^63` (as `infer_lam`: `quick_defeq` and the lazy
+  loop need the bound, the slots do not carry it); `if lk != 2 { return lk }` became two tests
+  `lk == 0`/`lk == 1` (`decLR` reads any other word as `.unknown`; `Res3` does not bound `lk`).
+* Hypothesis shapes adjusted to the proved theorems: `ProofIrrelOK` (and `proofIrrel_at`) take
+  `n ≤ 2^62` and the eager bit, `propIrrel_refines` takes `n ≤ 2^62`; `LazyDeltaStepH` takes
+  `d < 2^63`, threaded through `ldprW_ok`/`ldpr_refines`/`ldpr_at`/`projPair_refines`/`projPair_at`/
+  `defeqTail_refines`; `LazyCallees.reduceNat` is `∀ n, n ≤ 2^62 → ReduceNatSpec p n`.
+* Plugged (`DefEqKnot.lean`, one wrapper each): `lazyDeltaStepH_of`, `defeqLstOK_of`,
+  `isEagerReduceH_of`, `reduceNat_of` (lane `whnf`'s `reduceNat_refines'`, over its
+  `NatOpResultOK`/`WhnfGrowsUpTo`), `proofIrrelOK_of` (lane `whnf`'s `proofIrrel_refines`; it uses
+  `CoreS.lvl_den`, a `sorry`, so `ProofIrrelOK` stays a field).
+* **The knot**: `knot_step : KnotUpTo p n → KnotOK p (n + 1)`, `knot_all : ∀ n, KnotOK p n`
+  (fuel `0` by `CoreSpec.zeroLet`), both over `KnotAllProg p` (lookups) and ONE structure
+  `KnotCallees p`; no `sorry` (axioms: `propext`, `Classical.choice`, `Quot.sound`).
+  `whnfCallees_of` gives lane `whnf`'s `WhnfCallees` (its `inferStep`/`inferIOStep`/`defeqStep`
+  are the slot steps; `instLP` an argument). No circularity: no lane `whnf` proof uses those three
+  fields.
+* `KnotCallees`' fields, and why each is left: `whnfCoreStep`, `whnfStep` (lane `whnf`'s
+  `whnfCoreSlot_step` and `whnf_refines` chain are proved over `whnfCallees_stub`/
+  `coreCallees_stub` instantiated inline: `knotWhnfCore_twin`/`knotWhnf_twin` give them modulo
+  those `sorry`s; taking the bundles as hypotheses there would make them plain fields here);
+  `defeq` (`DefeqCallees`: `has_fvar` and the phase-4 walks need the `CoreS` bridge,
+  `not/is_proof_fast`, `field_sort_zero`); `proofIrrel` (above); `inst1`, `instList`
+  (stubs); `reservedContains`, `towerSlots`, `strLitSupported`, `strLitCtor`, `supKeep`, `store`
+  (no proofs yet); `lvlsEqC` (the "stored level lists denote" invariant); `reduceProjCore` and
+  `unfold` (lane `whnf`'s proofs take all of `WhnfCallees`, which holds the steps proved here:
+  generalize them to the fields they use, `instLP`, to plug); `natPred` (`natPred_refines` posts
+  `ResH`, the hypothesis `ResW`); `natOpResult`, `whnfGrows` (lane `whnf`'s); `constTy`, `lit`,
+  `bstk`, `bcap`, `proj` (the inference side, landing 4).
+### `field_sort_zero`, `NatPredW` (`InferFieldSort*.lean`, helper `defeq2-fsz`)
+* **`field_sort_zero(po, pl, us, fs)` has L code** (`fieldSortZeroL`): `ls_node(us)`, heap reset
+  (`CTL[192] := 0`, as `lvl_eq`), `lv_substl(fs, po, pl, o, k)` with `lv_lookup` at `KA = EREC`,
+  `VA = POOL` (the binding `lvLookupG EREC POOL`; `inst_lp`/`caps_never_zero` can share it),
+  `lh_mk(0, 0, 0)` for `zero`, `lv_equiv`, answer `u64(r == 2)`. Model `fszW`, spec
+  `fieldSortZero_spec` (`vcgen` + `finish`), refinement `fszW_ok`, and
+  **`fieldSortZero_core : FieldSortZeroProg p → FieldSortZeroOK p`** (`refines_part inferProj`;
+  axioms `propext`, `Classical.choice`, `Quot.sound`). No deviation (aborts: `ls_node` on a
+  dangling list, which the twin also fails on; the heap's capacity).
+* **`FieldSortZeroOK` strengthened** (`Knot.lean`): the caller supplies `ReadNCOK a₀` (new: the
+  twin's `readNC` rows are readbacks; `CoreS` has `readL`/`readLs` but no name counterpart, and
+  `readNameM` answers a cached row unchecked), `∃ ks, lps.mapM (denoteN a₀.store.ns) = some ks`,
+  `∃ ls, denoteLs a₀.store.lss (decI us) = some ls`, `∃ l, denoteL a₀.store.ls (decI fs) = some l`.
+  Proposed: a `readN : ReadNCOK a` field in `CoreS` (kept by every core body as `readL` is); the
+  same hypothesis will be needed by `caps_never_zero` (`capsNeverZeroPW` reads names too).
+* **`NatPredW p` is a theorem**: `natPredW_of : NatPredProg p → NatPredW p`
+  (`InferFieldSortNat.lean`). `natPred_refines` now posts `ResW` (new arguments: `LitInternHW`,
+  discharged by `WhnfDeltaRefine3`'s `internW_hw` as `litInternHW`); `internLit_core` gives the
+  handle word bound (`InternSpecW`), `natPredLit_refines_hw` is `natPredLit_refines` with it.
+
 ### Landing 4: the quotient and axiom arms; `and_pin_ok`'s inductive arm in L
 
 * **`checkDecl_loop`: every arm's spec is proved but the definition arm's** (`DeclArmQuot.lean`,
@@ -6841,6 +6900,92 @@ introduces it; the coordinator reviews the list at each batch of landings.
 `lvlEqStub_spec`; `promoteNew_spec` (helper running). Census at landing 4: phase 2 **146 proven,
 26 sorry, 73 written, 86 todo**.
 
+
+### Landing 2: the ROM constant records (helper `integrate-romci`)
+
+`ConAgua/Rom/CIEnc.lean` (encoder), `CIRead.lean` (L readers), `CIReadTest.lean`: the con-leche
+constants the `checkDecl` arms intern at the point of use (the basis blocks in both forms, the
+eight `rom_ci` constants, the ten `rom_cv` values, the two reduce pins) are a structured region of
+`romData` (`ciOff`, between the reserved names and the item stream: a table of 30 offsets, then
+the entries; numbers as 8 bytes, names/levels/expressions with romload's encoders, each part in the
+twin's intern order). `rom_basis_decls(kind)`, `rom_basis_decls_a(kind)`, `rom_ci(id)`,
+`rom_cv(id)`, `rom_expr_pin(id)` read it from `PB` (after `pb_check`) and write `decCI`/`decCV`
+records (`L.Rom.romCIProg`). `romData` grows from 9542 to 20649 bytes (regenerate `romgen`
+buffers). Test: an `#eval` (3 s) decodes every entry to the twin's value, handle for handle. The
+five `RelAM` specs of `DeclRomStubs.lean` stay `sorry` (now about real code). Small difference:
+the reader interns the `sortZ` names the twin keeps as values (only `Quot`'s `u`, already
+interned as a level parameter).
+
+### Landing 2 also: `ind_params_ok`; e2e results on `checkerProg` (675 fixtures)
+
+* `ind_params_ok(nP, off, len)` (`indParamsOk`) in L (`Checker/Entry.lean`). `basis_pin_hit`
+  reads the block as `check_decl` builds it: an `EREC` slice (`ind_block_to_erec`), not the
+  `IW` slice `IndIface.lean`'s interface note says; copied to `IW` (`er_to_iw`) for
+  `canon_eq_list`. (Lane indproofs2: the note and `IndStubs`' specs say `IW`.)
+* **`check`** (the real pipeline, prelude included): 3 agree-reject, 40 agree-reject (L aborts),
+  630 stop at a stub — all at **`strip_pis`** (lane induct's interface stub, the next blocker;
+  then `all_level_params_defined` on 129 in `check_np`) — and 2 l-error, both `hoist_ok`'s
+  decline (`natop_order`, `natop_before_ble`: deviation D18). No disagreement. Every fixture's
+  prelude now parses, prepares and passes `basis_pin_hit` (the five basis blocks match the ROM's).
+  `rounds_huge_gaps` passes the front (lane twinaudit's id tables).
+* **Three references:** con-ron's Rust binary and `e2e-ref` agree on all 675 fixtures (405
+  accept, 206 reject, 55 decline, 4 error; 2 time out in both; one is a con-ron abort `-6` where
+  `e2e-ref` runs out of memory). `instructions:u` (L vs con-ron) needs fixtures L accepts: none
+  yet (the measurement is in `e2e.py`, `docs/e2e.md` shows it once there are).
+* `e2e-diff` unchanged (stores agree on 22/22; `whnf`/`whnf_core` agree on 4318 of 4408 handles,
+  no disagreement).
+
+### `sorry`s and open obligations (lane `integrate`)
+No new `sorry`. Open: the refinements of `builtin_prelude` (through `preFn`), `prepare_prelude`
+(`frontOf`, `hoist_ok`), `cap_check`'s use in `PipelineRefines` (and its missing size premise for
+arrays of `2^64` words or more), `basis_pin_hit`, `ind_params_ok`, `is_proj_fn_shape` (specs
+already stated with `sorry` in `IndStubs.lean` for the last three), the adapters (from
+`instEntry_refines`/`absEntry_refines`), the ROM readers (`DeclRomStubs.lean`'s five `RelAM`s).
+
+### Landing 3: `rom_and_pin`; a stale shared-cache artifact
+
+* `rom_and_pin()` (lane decls3's new stub for `and_pin_ok`'s inductive arm, which made every
+  fixture's prelude `And` block decline) reads ROM slot 30 (`encBlock andPin`; `CIReadTest` checks
+  it against `andPinDecls`). `check` is back at `strip_pis` on every fixture that reaches the fold.
+* **The shared Lake cache restored a stale `ConAgua.Checker.Entry` olean** (a `synthetic` trace,
+  `inputs: []`, built from an older `Entry.lean` without `indParamsOkL`): `scripts/lake build`
+  said "completed" while `#check L.Checker.indParamsOkL` failed, and `checker_prog.py` then saw
+  `ind_params_ok` as a stub. Plain `lake` with `LAKE_CACHE_DIR=` rebuilt it correctly. Not
+  investigated further (coordinator: the cache key of a module restored with an empty `inputs` list).
+
+## Phases 6–7: discharging `KnotCallees` (2026-10-22, lane `defeq2`)
+
+### Landing 1: the real walks, the plain plugs, `StoreDen`
+* **`KnotCallees` lost twelve fields** (`DefEqKnot.lean`): `inst1`, `instList` and `DefeqCallees`'
+  `hasFvar`/`abstract1`/`abstractRange` are lane `whnf2`'s `CoreWalks` bridges (new program field
+  `KnotAllProg.walks : CoreWalkProg p`); `fieldSortZero` is `fieldSortZero_core`, `natPred` is
+  `natPredW_of` (helper `defeq2-fsz`, above); `natOpResult` is `natOpResultOK_of_agree`;
+  `reservedContains` is `reservedContainsOK_of` (from `callW_reservedContains`); `bcap` is
+  `CoreS.bstk`; `lit`'s `natLitSup`/`constE` are lane `whnf`'s proofs; `lvlsEqC` is
+  `lvlsEqCH_of` (below). `defeqCallees_stub` (a `sorry`) is gone. `KnotWF`'s closure list uses the
+  real `field_sort_zero` and `inst1`; `Checker/Prog.lean` regenerated.
+* **`StoreDen m a`** (`StoreDen.lean`): the one store invariant the level readers need, because the
+  twin compares levels on their readbacks and L on handles: a `sort` node's level, a `const`
+  node's level list, the zero pin, the `readNC` cache's rows, and a projection table record's
+  structure sort, field sorts and level-parameter names read back. `CoreDen` (`CoreDen.lean`) is
+  "`CoreS` implies `StoreDen`": a `KnotCallees` field now (`den`), replacing `StoreDenotes`
+  (`StoreDenotes.of_den`). **Proposal (for lane `whnf3`, after its `StackKept` sweep): a field
+  `den : StoreDen m a` in `CoreS`**, which also closes `CoreS.lvl_den` (`⟨hS.den.sort,
+  hS.den.zero⟩`), `LvlsEqDen` (the iota lists are stored constants' or the rule's), and
+  `ReadNCOK` (helper `defeq2-fsz`'s proposal). Maintenance: the store only grows inside the core,
+  so old handles keep their readbacks; the view clauses need a proof only where a `sort`/`const`
+  node is interned, `readN` where `readNameM` caches, `proj` where `EREC` is written (outside the
+  core). Until then `CoreDen` stays a named hypothesis.
+* **`LvlsEqCH` restated with the two readbacks** and proved (`lvlsEqCH_of`): its two callers
+  compare stored constants' lists. `struct_eta_cert_go`/`_tail`/`_wtb` take "some `const` node at
+  the call's state has this list" (`∃ x c, a.store.view x = some (.const c us)`); across
+  `tower_slots_all` (which interns name nodes) the node is still there: `towerSlotsAll` keeps the
+  store minus its level/name part (`noLss`, `keeps_noLss_towerSlotsAll`, `constLs_after_tower`).
+* `KnotCallees` now: `whnfCoreStep`, `whnfStep` (lane `whnf`'s steps over its stubs),
+  `notProofFast`, `isProofFast` (helper `defeq2-prop` writing `PropRead` in L), `proofIrrel`
+  (`CoreS.lvl_den`), `towerSlots`, `strLitSupported`, `strLitCtor`, `supKeep`, `reduceProjCore`,
+  `unfold`, `whnfGrows` (lane `whnf`'s/`whnf3`'s), `den`, `constTy` (`inst_lp`), `bstk` (after
+  `whnf3`'s `StackKept` structure), `proj` (helper `defeq2-proj`: `infer_proj`).
 ## Global variables (2026-10-22, lane `lfeat`)
 
 Counters, tops, epochs and flags have lived in the `CTL` word array (`CTL[62]`, `CTL[192]`,

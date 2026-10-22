@@ -3,3 +3,9 @@ date,rev,entry,fixtures,functions,stubs,agree_accept,agree_reject,missing,l_erro
 2026-10-22T08:29,119a47c,check_np,675,1176,48,1,38,635,1,0,0,basis_pin_hit
 2026-10-22T09:52,3b96365,check,675,1209,47,0,0,675,0,0,0,builtin_prelude
 2026-10-22T09:52,3b96365,check_np,675,1209,47,1,38,635,1,0,0,basis_pin_hit
+2026-10-22T10:38,ead941b,check,675,1430,31,0,72,481,122,0,0,ind_params_ok
+2026-10-22T10:38,ead941b,check_np,675,1430,31,1,41,632,1,0,0,ind_params_ok
+2026-10-22T11:08,23fabbb,check,675,1431,30,0,43,629,3,0,0,strip_pis
+2026-10-22T11:08,23fabbb,check_np,675,1431,30,1,44,629,1,0,0,strip_pis
+2026-10-22T11:31,42875b1,check,675,1492,30,0,43,630,2,0,0,strip_pis
+2026-10-22T11:31,42875b1,check_np,675,1492,30,1,44,630,0,0,0,strip_pis

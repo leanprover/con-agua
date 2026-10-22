@@ -130,26 +130,28 @@ def isProjFnShapeL : FunDecl := lfn (n) locals (t, i, p, o, l) {
 
 /-! ## `basis_pin_hit(off, len)` -/
 
-/-- `basis_pin_hit(off, len)` → `(ok, kind)`: `basisPinHit block` for the block's `IW` slice of
-`EREC` constant records — the kinds `eqK`, `natK`, `emptyK`, `falseK` (`0`‥`3`) in order, each
-pinned block interned first (`rom_basis_decls(kind)`); the first kind whose member names equal the
-block's (the name pre-filter) decides by `canon_eq_list`; no such kind is `(0, 0)`. A constant
-record's name is its word `1` (`decCI`). -/
+/-- `basis_pin_hit(off, len)` → `(ok, kind)`: `basisPinHit block` for the block `check_decl` built
+(`ind_block_to_erec`: an `EREC` slice of `EREC` constant records) — the kinds `eqK`, `natK`,
+`emptyK`, `falseK` (`0`‥`3`) in order, each pinned block interned first (`rom_basis_decls(kind)`, an
+`IW` slice); the first kind whose member names equal the block's (the name pre-filter; a constant
+record's name is its word `1`, `decCI`) decides by `canon_eq_list` (over `IW` slices: the block is
+copied there, `er_to_iw`); no such kind is `(0, 0)`. -/
 -- con-ron: ConRon/Arena/Basis.lean:53-69 ConRon.Arena.basisPinHitGo
 -- con-ron: ConRon/Arena/Basis.lean:71-79 ConRon.Arena.basisPinHit
 @[l_impl ConRon.Arena.basisPinHit]
-def basisPinHitL : FunDecl := lfn (bo, bl) locals (k, o, l, j, e) {
+def basisPinHitL : FunDecl := lfn (bo, bl) locals (k, o, l, j, e, q, ql) {
   k := 0;
   while k < 4 {
     (o, l) := call rom_basis_decls(k);
     if l == bl {
       j := 0;
       while j < l {
-        if EREC.u64[IW.u64[o + j] + 1] != EREC.u64[IW.u64[bo + j] + 1] { break };
+        if EREC.u64[IW.u64[o + j] + 1] != EREC.u64[EREC.u64[bo + j] + 1] { break };
         j += 1
       };
       if j == l {
-        e := call canon_eq_list(bo, bl, o, l);
+        (q, ql) := call er_to_iw(bo, bl);
+        e := call canon_eq_list(q, ql, o, l);
         if e != 0 { return (1, k) };
         return (0, 0)
       }
@@ -157,6 +159,31 @@ def basisPinHitL : FunDecl := lfn (bo, bl) locals (k, o, l, j, e) {
     k += 1
   };
   return (0, 0)
+}
+
+/-! ## `ind_params_ok(nP, off, len)` -/
+
+/-- `ind_params_ok(nP, off, len)`: `indParamsOk nP block` over the block's `EREC` slice of
+constant records (`decCI`: an `indInfo` is `3, name, lps.off, lps.len, type, …`, a `ctorInfo`
+`4, name, lps.off, lps.len, type, nP, nF`): a type former's telescope to a sort has at least `nP`
+binders (no such telescope: fine), a constructor declares exactly `nP` parameters. -/
+-- con-ron: ConRon/Arena/CheckerBase.lean:425-438 ConRon.Arena.indParamsOk
+@[l_impl ConRon.Arena.indParamsOk]
+def indParamsOkL : FunDecl := lfn (np, o, l) locals (j, p, k, ok, n) {
+  j := 0;
+  while j < l {
+    p := EREC.u64[o + j];
+    k := EREC.u64[p];
+    if k == 3 {
+      (ok, n) := call pi_sort_tele_len(⟪CWF⟫, EREC.u64[p + 4]);
+      if ok != 0 && n < np { return 0 }
+    };
+    if k == 4 {
+      if EREC.u64[p + 5] != np { return 0 }
+    };
+    j += 1
+  };
+  return 1
 }
 
 /-- A function with no L code yet: it aborts (the checker declines). -/
@@ -172,6 +199,7 @@ def entryProg : Prog :=
    ("intern_all_pins", L.Rom.internAllPinsPB),
    ("abstract1_fast", abstract1FastA), ("instantiate1_fast", instantiate1FastA),
    ("inst1", inst1A),
-   ("is_proj_fn_shape", isProjFnShapeL), ("basis_pin_hit", basisPinHitL)]
+   ("is_proj_fn_shape", isProjFnShapeL), ("basis_pin_hit", basisPinHitL),
+   ("ind_params_ok", indParamsOkL)]
 
 end L.Checker
