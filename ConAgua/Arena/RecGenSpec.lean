@@ -572,7 +572,7 @@ theorem leafAtW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
         rw [show (m1.arr64 IW)[Mp.toNat]? = (m.arr64 IW)[Mp.toNat]? from this]; exact hwi1
       rw [ht1, hwi1']
       generalize hnI : (eViewW m1 w).getD 1 0 = nI at hnlt hnd ⊢
-      have hvc := EStore.viewConst_of_view _ _ _ _ hv
+      have hvc := EStore.viewConst_of_view_r _ _ _ _ hv
       have hct := ctag_iff w hd1 3 (by decide)
       have htag0 : (decE w).tag = ETag.const := hct.mpr hf3
       have htag : ((decE w).tag == ETag.const) = true := by simpa using htag0

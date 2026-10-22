@@ -744,7 +744,7 @@ theorem closeLams_spec (p : Prog) (hd : p.lookup "der_b" = some derB)
       finish (gen := 20)
 
 
-theorem decHL_cons {k : IdxKind} {m : Mem} {o l : Nat} {xs : List (Idx k)}
+theorem decHL_cons_r {k : IdxKind} {m : Mem} {o l : Nat} {xs : List (Idx k)}
     (h : decHL m o (l + 1) = some xs) :
     ∃ x ys, xs = x :: ys ∧ decHL m (o + 1) l = some ys ∧ iwH m o = some x := by
   simp only [decHL, hslice?_succ] at h
@@ -784,7 +784,7 @@ theorem closeLamsW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IF
         · omega
       obtain ⟨l1, hl1⟩ : ∃ l1, bl.toNat = l1 + 1 := ⟨bl.toNat - 1, by omega⟩
       rw [hl1] at hbs
-      obtain ⟨dom, rest, rfl, hrest, hdom⟩ := decHL_cons hbs
+      obtain ⟨dom, rest, rfl, hrest, hdom⟩ := decHL_cons_r hbs
       have hbl1 : (bl - 1).toNat = l1 := by
         rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hlpos))]; simp; omega
       have hbo1 : (bo + 1).toNat = bo.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
@@ -1655,7 +1655,7 @@ theorem ctag_iff (w : Word) (hw : w.toNat < 2 ^ 32) (k : Nat) (hk : k < 16) :
     rw [h]; apply UInt32.toNat_inj.mp
     simp [UInt64.toNat_toUInt32]
 
-theorem ETables.getConst_of_get (t : ETables) (i : EIdx) (n : NIdx) (us : LsIdx)
+theorem ETables.getConst_of_get_r (t : ETables) (i : EIdx) (n : NIdx) (us : LsIdx)
     (h : t.get i = some (.const n us)) : t.getConst i = some (n, us) := by
   unfold ETables.get at h
   unfold ETables.getConst
@@ -1663,14 +1663,14 @@ theorem ETables.getConst_of_get (t : ETables) (i : EIdx) (n : NIdx) (us : LsIdx)
   cases hn : t.consts.node? i.idxNat <;> simp [hn] at h ⊢
   exact h
 
-theorem EStore.viewConst_of_view (st : EStore) (i : EIdx) (n : NIdx) (us : LsIdx)
+theorem EStore.viewConst_of_view_r (st : EStore) (i : EIdx) (n : NIdx) (us : LsIdx)
     (h : st.view i = some (.const n us)) : st.viewConst i = some (n, us) := by
   unfold EStore.view at h
   unfold EStore.viewConst EStore.persGetConst
   split at h
-  · simp only [*, ite_true]; exact ETables.getConst_of_get _ _ _ _ h
+  · simp only [*, ite_true]; exact ETables.getConst_of_get_r _ _ _ _ h
   · split at h
-    · simp only [*, ite_true]; split <;> simp_all [ETables.getConst_of_get _ _ _ _ h]
+    · simp only [*, ite_true]; split <;> simp_all [ETables.getConst_of_get_r _ _ _ _ h]
     · simp at h
 
 
@@ -1770,7 +1770,7 @@ theorem decHL_drop {k' : IdxKind} {m : Mem} : ∀ (k : Nat) {o l : Nat} {xs : Li
   | succ k ih =>
     intro o l xs h hk
     obtain ⟨l', rfl⟩ : ∃ l', l = l' + 1 := ⟨l - 1, by omega⟩
-    obtain ⟨x, ys, rfl, hys, -⟩ := decHL_cons h
+    obtain ⟨x, ys, rfl, hys, -⟩ := decHL_cons_r h
     have := ih hys (by omega)
     have e1 : o + 1 + k = o + (k + 1) := by omega
     have e2 : l' - k = l' + 1 - (k + 1) := by omega
@@ -1833,7 +1833,7 @@ theorem decHL_le {k : IdxKind} {m : Mem} : ∀ {o l : Nat} {xs : List (Idx k)},
   | zero => intro xs _; exact Or.inl rfl
   | succ l ih =>
     intro xs h
-    obtain ⟨x, ys, -, hys, hx⟩ := decHL_cons h
+    obtain ⟨x, ys, -, hys, hx⟩ := decHL_cons_r h
     have h1 := iwH_lt hx
     rcases ih hys with h0 | h0
     · right; omega

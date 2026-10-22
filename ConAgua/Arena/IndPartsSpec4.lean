@@ -83,7 +83,7 @@ theorem blockRecNamesUnreserved_spec (n : Nat) : ∀ (s₀ : St) (ro rl : Word),
 end spec
 
 
-theorem decCVp_name {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp m q = some cv)
+theorem decCVp_name_p {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp m q = some cv)
     (hb : q < 2 ^ 64) :
     (rdW (m.arr64 EREC) (UInt64.ofNat q)).toNat < 2 ^ 32 ∧
       decI (rdW (m.arr64 EREC) (UInt64.ofNat q)) = cv.name := by
@@ -157,7 +157,7 @@ theorem recUW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
       rw [recUW_cons n m ro rl hl] at h
       obtain ⟨hv', hvb⟩ := iwN_rdW hv (by omega)
       obtain ⟨hva', hab⟩ := iwN_rdW hva (by omega)
-      obtain ⟨hn32, hnI⟩ := decCVp_name hcvR hab
+      obtain ⟨hn32, hnI⟩ := decCVp_name_p hcvR hab
       rw [ofNat_toNat_word] at hv'
       have hrd : rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) ro)) =
           rdW (m.arr64 EREC) (UInt64.ofNat a0) := by rw [hv', hva']
@@ -328,7 +328,7 @@ theorem decCI_kind {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Na
       | simp at h
 
 
-theorem erN_rdW {m : Mem} {x : Word} {v : Nat} (h : nat? (erA m) x.toNat = some v) :
+theorem erN_rdW_p {m : Mem} {x : Word} {v : Nat} (h : nat? (erA m) x.toNat = some v) :
     rdW (m.arr64 EREC) x = UInt64.ofNat v ∧ v < 2 ^ 64 := by
   simp only [nat?, erA, Option.map_eq_some_iff] at h
   obtain ⟨w, hw, rfl⟩ := h
@@ -374,7 +374,7 @@ theorem sfW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
       simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hd
       obtain ⟨q, hq, ci, hci, rest, hrest, hblk⟩ := hd
       subst hblk
-      obtain ⟨hqw, hqb⟩ := erN_rdW (x := off) hq
+      obtain ⟨hqw, hqb⟩ := erN_rdW_p (x := off) hq
       obtain ⟨kd, hkd, hk3, hkn3⟩ := decCI_kind hci
       have hoff1 : (off + 1).toNat = off.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
       have hcnt1 : (cnt - 1).toNat = k := by
@@ -387,7 +387,7 @@ theorem sfW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
         obtain ⟨q', hq', ci', hci', rest', hrest', -, rfl⟩ := this
         rw [hoff1, hcnt1]; exact hrest'
       obtain ⟨hkd', hkb⟩ : rdW (m.arr64 EREC) (rdW (m.arr64 EREC) off) = UInt64.ofNat kd ∧ kd < 2 ^ 64 := by
-        rw [hqw]; exact (erN_rdW (x := UInt64.ofNat q) (by
+        rw [hqw]; exact (erN_rdW_p (x := UInt64.ofNat q) (by
           have : (UInt64.ofNat q).toNat = q := UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)
           rw [this]; exact hkd))
       by_cases h3 : kd = 3
