@@ -122,20 +122,14 @@ def checkStructFieldSortsIL : FunDecl :=
   return (res, n)
 }
 
-/-- `check_struct_field_sorts_i_go(vis, isProp, large, s, nP, fvsOff, fvsLen, idxOff, idxLen, res,
-j)`: the twin's recursion at `j`: field `j - 1` first (its sort written at `res + (j - 1)`), then
-the fields below it. Self-recursive, as the twin is (lane `indproofs2`: split off
-`check_struct_field_sorts_i`'s `while` loop for the proof). -/
+/-- `check_field_sort_bound(isProp, large, s, idxOff, idxLen, fv, u)`: one field's universe bound
+in `check_struct_field_sorts_i_go`: `u ≤ s` unless the family is propositional, else (large
+elimination) `u` is zero or `fv` is an index argument; aborts otherwise (lane `indproofs2`: split
+off for the proof). -/
 -- con-ron: ConRon/Arena/Inductives/SumInstall.lean:89-113 ConRon.Arena.checkStructFieldSortsI
 @[l_impl ConRon.Arena.checkStructFieldSortsI]
-def checkStructFieldSortsIGoL : FunDecl :=
-  lfn (vis, isProp, large, s, nP, fvsOff, fvsLen, idxOff, idxLen, res, j)
-  locals (fv, t, ty, u, r, z, eq, ct, w) {
-  if j == 0 { return 0 };
-  fv := call sl_get(fvsOff, fvsLen, j - 1);
-  t := call fvar_type_d(fv);
-  ty := call infer_type_core(vis, nP + (j - 1), t);
-  u := call ensure_sort_core(vis, nP + (j - 1), ty);
+def checkFieldSortBoundL : FunDecl :=
+  lfn (isProp, large, s, idxOff, idxLen, fv, u) locals (r, z, eq, ct) {
   if isProp == 0 {
     r := call lv_leq_top(u, s);
     if r != 2 { abort }
@@ -145,6 +139,24 @@ def checkStructFieldSortsIGoL : FunDecl :=
     ct := call sl_contains(idxOff, idxLen, fv);
     if eq == 0 && ct == 0 { abort }
   };
+  return 0
+}
+
+/-- `check_struct_field_sorts_i_go(vis, isProp, large, s, nP, fvsOff, fvsLen, idxOff, idxLen, res,
+j)`: the twin's recursion at `j`: field `j - 1` first (its sort written at `res + (j - 1)`), then
+the fields below it. Self-recursive, as the twin is (lane `indproofs2`: split off
+`check_struct_field_sorts_i`'s `while` loop for the proof). -/
+-- con-ron: ConRon/Arena/Inductives/SumInstall.lean:89-113 ConRon.Arena.checkStructFieldSortsI
+@[l_impl ConRon.Arena.checkStructFieldSortsI]
+def checkStructFieldSortsIGoL : FunDecl :=
+  lfn (vis, isProp, large, s, nP, fvsOff, fvsLen, idxOff, idxLen, res, j)
+  locals (fv, t, ty, u, z, w) {
+  if j == 0 { return 0 };
+  fv := call sl_get(fvsOff, fvsLen, j - 1);
+  t := call fvar_type_d(fv);
+  ty := call infer_type_core(vis, nP + (j - 1), t);
+  u := call ensure_sort_core(vis, nP + (j - 1), ty);
+  z := call check_field_sort_bound(isProp, large, s, idxOff, idxLen, fv, u);
   IW.u64[res + (j - 1)] := u;
   w := call check_struct_field_sorts_i_go(vis, isProp, large, s, nP, fvsOff, fvsLen, idxOff, idxLen,
     res, j - 1);
@@ -774,6 +786,7 @@ def indSumFns : Prog :=
    ("whnf_telescope", whnfTelescopeL), ("check_sum_tele_slow", checkSumTeleSlowL),
    ("check_sum_tele", checkSumTeleL), ("check_struct_field_sorts_i", checkStructFieldSortsIL),
    ("check_struct_field_sorts_i_go", checkStructFieldSortsIGoL),
+   ("check_field_sort_bound", checkFieldSortBoundL),
    ("field_doms_resolve", fieldDomsResolveL), ("idx_args_resolve", idxArgsResolveL),
    ("check_sum_ctor_tail", checkSumCtorTailL), ("check_sum_ctor", checkSumCtorL),
    ("check_sum_ctors", checkSumCtorsL), ("check_sum_ctors_go", checkSumCtorsGoL), ("ctor_info_rec", ctorInfoRecL),

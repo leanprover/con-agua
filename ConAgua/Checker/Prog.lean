@@ -537,6 +537,7 @@ def checkerProg : Prog := [
   ("check_struct_doms_at", L.Ind.checkStructDomsAtL),
   ("check_struct_field_sorts_i", L.Ind.checkStructFieldSortsIL),
   ("check_struct_field_sorts_i_go", L.Ind.checkStructFieldSortsIGoL),
+  ("check_field_sort_bound", L.Ind.checkFieldSortBoundL),
   ("check_struct_proj_table", L.Ind.checkStructProjTableL),
   ("check_struct_proj_table_scoped", L.Ind.checkStructProjTableScopedL),
   ("check_sum_ctor", L.Ind.checkSumCtorL),

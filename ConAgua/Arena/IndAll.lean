@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndSumSpec9
 import ConAgua.Arena.IndSumSpec10
+import ConAgua.Arena.IndSumSpec11
 import ConAgua.Arena.IndSumSpec8
 import ConAgua.Arena.IndDecStab
 import ConAgua.Arena.IndSumSpec4
