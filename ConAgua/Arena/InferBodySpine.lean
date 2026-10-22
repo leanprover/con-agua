@@ -74,6 +74,7 @@ def inferSpineIOW : Stmt := lblk (mode, vis, d, ty, ao, an, co, cn, i, a, t, x, 
 }
 
 /-- `inferSpineIOL`, with its loop spliced from `inferSpineIOW`. -/
+-- con-ron: none — `inferSpineIOL` itself (`rfl`), its loop a named block for the proof
 def inferSpineIOL' : FunDecl :=
     lfn (mode, vis, d, ty, ao, an) locals (co, cn, i, a, t, x, ty2, w, r) {
   co := CTL.u64[136];
