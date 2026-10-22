@@ -7,6 +7,7 @@ public import ConAgua.Scan.Leaves
 public import ConAgua.Scan.Utf8
 meta import ConAgua.L.Semantics
 import ConAgua.Census.Attr
+public import ConAgua.L.PureEval
 
 @[expose] public section
 
@@ -648,6 +649,9 @@ grind_pattern [lang_grind] skipWsN_le => skipWsN b i
 
 /-! ## Specs -/
 
+/-- `rd8` (`L.PureEval`) on the input is `byteW`. -/
+theorem rd8_byteW (m : Mem) (a : ArrId) (k : Word) : L.rd8 m a k = byteW (m.arr8 a) k := rfl
+
 section keyAtGroups
 variable (p : Prog) (b : Array UInt8)
 
@@ -674,7 +678,6 @@ variable (hp : p.lookup "key_at_g2" = some keyAtG2)
 include hp
 
 attribute [local lang_grind] keyAtG2N in
-set_option maxHeartbeats 4000000 in
 theorem keyAtG2_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl c : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "key_at_g2" [i, kl, c]
@@ -684,7 +687,13 @@ theorem keyAtG2_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (i kl c :
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind] => vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld8] <;> finish
+    -- `evalC_spec`: one path per `if`, not one per exit of the 8-byte `&&` chains, whose
+    -- `return 0` tails multiplied (DESIGN.md, "Slow declarations").
+    vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc]
+    all_goals simp only [Cond.pval, Expr.pval, rd8_byteW, hm, Locals.init,
+      List.getD_cons_zero, List.getD_cons_succ, Cmp.eval, BinOp.eval, Bool.and_eq_true,
+      beq_iff_eq] at *
+    all_goals grind (splits := 40) [lang_grind, keyAtG2N]
 
 end keyAtG2
 

@@ -5682,6 +5682,23 @@ links 0 (`@[l_impl]` moved off the ROM readers, which are functions of the ROM, 
   with `dite_eq_left`/`dite_eq_right`. Same statement.
 - **Before/after.** `decE` 6 s → under 0.1 s; module 38 s (contended) → 2.3 s.
 
+### `keyAtG2_spec` (`ConAgua/Scan/Key.lean:678`): short-circuit chains multiply the paths (`L/PureEval.lean`)
+
+- **Cause.** `step` evaluates `if c then S else T` by `evalC c`, and `evalC (.and p q)` is
+  `if (← evalC p) then evalC q else return false`: `vcgen` follows `T` once per exit of the chain.
+  `keyAtG2`'s `kl == 9` arm is four 8-byte `&&` chains in a row (`if A₁ {return}; …; return 0`), so
+  the last tail is reached on ~9⁴ paths. `vcgen` took 26 s uncontended (47.6 s in the build).
+- **Fix.** `L/PureEval.lean`: `Expr.pval`/`Cond.pval`, the value of an expression/condition in a
+  state with reads past the end as `0`, and `evalE_spec`/`evalC_spec`
+  (`⦃s = s₀⦄ evalC c ⦃b s' => s' = s₀ ∧ b = Cond.pval s₀ c; ⊤⦄`, by induction; a throwing run meets
+  `⊤`). With them in `vcgen`'s list instead of `evalE`/`evalC`, each `if` is one split. The VCs then
+  hold `Cond.pval` of concrete conditions; `finish` unfolds them one E-matching generation per level
+  and fails even at `gen := 32`, so the proof is `vcgen`; `simp only [Cond.pval, Expr.pval, …] at *`;
+  `grind (splits := 40)` (recipe in the module doc). Same statement.
+- **Before/after.** File prefix through `keyAtG2_spec`, uncontended: 54 s → 15 s; `keyAtG2_spec`'s
+  `vcgen` 26 s → 1.4 s, largest `grind` 7.8 s; module 100 s (contended) → 17 s (Lake).
+- The same cause is behind `Scan.Line` (`lineLoop_spec`, `||` chains over the key code).
+
 ### `Scan/Records.lean` split (2270 lines)
 
 Pure move, as in `Front/FieldsDecl*`: `Records.lean` keeps the L code and the models (1357
