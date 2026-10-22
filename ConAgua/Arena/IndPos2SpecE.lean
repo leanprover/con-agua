@@ -539,7 +539,7 @@ theorem noConstWf_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
     (hn : decHL m no.toNat nl.toNat = some names) (hnb : no.toNat + nl.toNat < 2 ^ 64)
     (hM : noMR m mp0) :
     ∃ b, (ConRon.Arena.nestOcc names lo.toNat hi.toNat (decE e)).run a = .ok (b, a) ∧ (r != 0) = b ∧
-      noMR m' ∅ ∧ StageR dn vis fe m' a ∧ IWGrow m m' := by
+      noMR m' ∅ ∧ StageR dn vis fe m' a ∧ IWGrow m m' ∧ MFr [NOM] [204, 205] m m' := by
   cases n with
   | zero => simp [noConstWf] at hb
   | succ n =>
@@ -603,7 +603,8 @@ theorem pdoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
     decHL m no.toNat nl.toNat = some names → (∀ j < nl.toNat, no.toNat + j < iwTop m) →
     noMR m mp →
     ∃ b a' mp', (ConRon.Arena.piDomsOcc names lo.toNat hi.toNat n.toNat (decE e)).run a = .ok (b, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) ∧ noMR m' mp' := by
+      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) ∧ noMR m' mp' ∧
+      MFr [NOM] [204, 205] m m' := by
   induction k with
   | zero => intro m m' a n e r mp h; simp [pdoW] at h
   | succ k ih =>
@@ -613,14 +614,14 @@ theorem pdoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       subst h0
-      exact ⟨false, a, mp, rfl, hS, IWGrow.refl _, rfl, hM⟩
+      exact ⟨false, a, mp, rfl, hS, IWGrow.refl _, rfl, hM, MFr.refl _ _ _⟩
     have hn0 : n.toNat ≠ 0 := fun e' => h0 (UInt64.toNat_inj.mp (by simpa using e'))
     have hsucc : n.toNat = (n.toNat - 1) + 1 := by omega
     by_cases h6 : e >>> 28 ≠ 6
     · rw [pdoW_notpi (h := h0) (h6 := h6)] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
-      refine ⟨false, a, mp, ?_, hS, IWGrow.refl _, rfl, hM⟩
+      refine ⟨false, a, mp, ?_, hS, IWGrow.refl _, rfl, hM, MFr.refl _ _ _⟩
       have htag : ¬ (decE e).tag = ETag.forallE := fun h' => h6 ((decE_tag_forall e he).mp h')
       rw [hsucc, ConRon.Arena.piDomsOcc.eq_2]
       simp [htag]; rfl
@@ -645,7 +646,7 @@ theorem pdoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
       rcases Nat.eq_zero_or_pos nl.toNat with hz | hz
       · rw [hz]; simpa using no.toNat_lt
       · have := hnb (nl.toNat - 1) (by omega); have := hS.2.1; have := hS.2.2.2.1; omega
-    obtain ⟨c, hrun1, hc, hM1, hS1, hg1⟩ := noConstWf_ok k dn fe vis m m1 a no nl lo hi d r1 names mp hnc
+    obtain ⟨c, hrun1, hc, hM1, hS1, hg1, hf1⟩ := noConstWf_ok k dn fe vis m m1 a no nl lo hi d r1 names mp hnc
       hS hty hn hnb' hM
     have hpre : (ConRon.Arena.piDomsOcc names lo.toNat hi.toNat n.toNat (decE e)).run a =
         (do let x ← ConRon.Arena.nestOcc names lo.toNat hi.toNat (decE d)
@@ -661,7 +662,7 @@ theorem pdoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
       obtain ⟨rfl, rfl⟩ := h
       have hcT : c = true := by rw [← hc]; simpa using hr1
       subst hcT
-      refine ⟨true, a, ∅, ?_, hS1, hg1, rfl, hM1⟩
+      refine ⟨true, a, ∅, ?_, hS1, hg1, rfl, hM1, hf1⟩
       rw [hpre]; simp only [StateT.run_bind, hrun1, except_ok_bind]; rfl
     · rw [pdoK1_miss (h := hr1)] at h
       simp only [List.tail_cons, List.headD_cons] at h
@@ -669,10 +670,10 @@ theorem pdoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo 
       subst hcF
       have hn1 : (n - 1).toNat = n.toNat - 1 :=
         UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))
-      obtain ⟨b', a', mp', hrun, hS', hg', hr', hM'⟩ := ih m1 m' a (n - 1) b r ∅ h hS1 hb
+      obtain ⟨b', a', mp', hrun, hS', hg', hr', hM', hf'⟩ := ih m1 m' a (n - 1) b r ∅ h hS1 hb
         (by rw [decHL_agree (RdS.of_grow hg1) hnb]; exact hn)
         (fun j hj => Nat.lt_of_lt_of_le (hnb j hj) hg1.1) hM1
-      refine ⟨b', a', mp', ?_, hS', hg1.trans hg', hr', hM'⟩
+      refine ⟨b', a', mp', ?_, hS', hg1.trans hg', hr', hM', hf1.trans hf'⟩
       rw [hpre]; simp only [StateT.run_bind, hrun1, except_ok_bind]
       rw [← hn1]; exact hrun
 
@@ -695,7 +696,7 @@ theorem piDomsOcc_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → O
         then 1 else 0) ∧ ∃ mp', noMR s'.mem mp'; ⊤⦄ := by
   refine triple_post (piDomsOcc_spec p hl hp k s₀ no nl lo hi n e) ?_
   rintro r s' ⟨hlc, hm⟩
-  obtain ⟨b, a', mp', hrun, hS', hg, hr, hM'⟩ := pdoW_ok dn fe vis no nl lo hi names k _ _ a₀ n e _ mp hm hS
+  obtain ⟨b, a', mp', hrun, hS', hg, hr, hM', -⟩ := pdoW_ok dn fe vis no nl lo hi names k _ _ a₀ n e _ mp hm hS
     he hn hnb hM
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hlc, hok, by rw [hst]; exact hS', hg, by rw [hres]; simpa using hr, mp', hM'⟩
