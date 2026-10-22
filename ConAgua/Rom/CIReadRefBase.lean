@@ -100,6 +100,180 @@ theorem Inv.setER (h : Inv m₀ a₀ m a) (i w : Word) (hi : erTop m₀ ≤ i.to
     exact ⟨by rw [h200, hI]; exact o1, by rw [h129, hf.2.2.1 EREC]; exact o2, by rw [hI]; exact o3,
       by rw [hf.2.2.1 EREC]; exact o4, by rw [hC]; exact o5⟩
 
+/-- `erec_alloc(k)`: the records' top raised by `k`. -/
+theorem Inv.erAlloc (h : Inv m₀ a₀ m a) {k o : Word} (hw : erAllocW m k = some (o, m')) :
+    Inv m₀ a₀ m' a ∧ o.toNat = erTop m ∧ erTop m' = erTop m + k.toNat ∧
+      m'.arr64 EREC = m.arr64 EREC ∧ m'.arr64 IW = m.arr64 IW ∧ iwTop m' = iwTop m := by
+  obtain ⟨o1, o2, o3, o4, o5⟩ := h.ok
+  simp only [erAllocW] at hw
+  by_cases h1 : m.len64 EREC < rdW (m.arr64 CTL) 129
+  · simp [h1] at hw
+  by_cases h2 : m.len64 EREC - rdW (m.arr64 CTL) 129 < k
+  · simp [h1, h2] at hw
+  simp only [h1, h2, if_false, Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨rfl, rfl⟩ := hw
+  have hlen : (m.len64 EREC).toNat = (m.arr64 EREC).size := by simp [Mem.len64]; omega
+  have hq : (rdW (m.arr64 CTL) 129).toNat ≤ (m.arr64 EREC).size := by
+    have : ¬ (m.len64 EREC).toNat < (rdW (m.arr64 CTL) 129).toNat := h1
+    omega
+  have hroom : (rdW (m.arr64 CTL) 129).toNat + k.toNat ≤ (m.arr64 EREC).size := by
+    have : ¬ (m.len64 EREC - rdW (m.arr64 CTL) 129).toNat < k.toNat := h2
+    rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; omega)] at this
+    omega
+  have hf : MemFrame [] [129] m (erAllocMem m k) := MemFrame.setCtl m 129 _
+  have hE : (erAllocMem m k).arr64 EREC = m.arr64 EREC := hf.1 EREC (by simp) (by decide)
+  have hI : (erAllocMem m k).arr64 IW = m.arr64 IW := hf.1 IW (by simp) (by decide)
+  have htop : erTop (erAllocMem m k) = erTop m + k.toNat := by
+    simp only [erTop, erAllocMem, rdW_set64]
+    rw [if_pos ⟨trivial, trivial, by simp; omega⟩, UInt64.toNat_add]
+    omega
+  have h200 : iwTop (erAllocMem m k) = iwTop m := by simp only [iwTop]; rw [hf.2.1 200 (by simp)]
+  refine ⟨⟨ArenaD.frameHi hf (by simp) (by simp) h.arena, h.cp,
+    h.frame.trans (hf.mono (by simp) (by simp [RciC])), ?_, ?_⟩, rfl, htop, hE, hI, h200⟩
+  · obtain ⟨g1, g2, g3, g4⟩ := h.grow
+    exact ⟨h200 ▸ g1, by rw [htop]; omega, fun j hj => by rw [hI]; exact g3 j hj,
+      fun j hj => by rw [hE]; exact g4 j hj⟩
+  · exact ⟨by rw [h200, hI]; exact o1, by rw [htop, hE]; simp only [erTop]; omega, by rw [hI]; exact o3,
+      by rw [hE]; exact o4, by rw [hf.2.2.1 CTL]; exact o5⟩
+
+/-- `iw_alloc(k)`: the pool's top raised by `k`. -/
+theorem Inv.iwAlloc (h : Inv m₀ a₀ m a) {k o : Word} (hw : allocW m k = some (o, m')) :
+    Inv m₀ a₀ m' a ∧ o.toNat = iwTop m ∧ iwTop m' = iwTop m + k.toNat ∧
+      m'.arr64 EREC = m.arr64 EREC ∧ m'.arr64 IW = m.arr64 IW ∧ erTop m' = erTop m := by
+  obtain ⟨o1, o2, o3, o4, o5⟩ := h.ok
+  obtain ⟨hq, rfl, hroom⟩ := allocW_facts hw o3
+  have hf := allocMem_frame m k
+  have hE : (allocMem m k).arr64 EREC = m.arr64 EREC := hf.1 EREC (by simp [EREC, IW]) (by decide)
+  have hI : (allocMem m k).arr64 IW = m.arr64 IW := by
+    simp only [allocMem]; exact Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  have htop : iwTop (allocMem m k) = iwTop m + k.toNat := by
+    simp only [iwTop, allocMem_top m k o5, ← hq]
+    rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
+  have h129 : erTop (allocMem m k) = erTop m := by simp only [erTop]; rw [hf.2.1 129 (by simp)]
+  have hqi : o.toNat = iwTop m := by simp only [iwTop, hq]
+  refine ⟨⟨ArenaD.frameHi hf (by simp) (by simp) h.arena, h.cp,
+    h.frame.trans (hf.mono (by simp [RciA]) (by simp [RciC])), ?_, ?_⟩, hqi, htop, hE, hI, h129⟩
+  · obtain ⟨g1, g2, g3, g4⟩ := h.grow
+    exact ⟨by rw [htop]; omega, h129 ▸ g2, fun j hj => by rw [hI]; exact g3 j hj,
+      fun j hj => by rw [hE]; exact g4 j hj⟩
+  · exact ⟨by rw [htop, hI]; omega, by rw [h129, hE]; exact o2, by rw [hI]; exact o3,
+      by rw [hE]; exact o4, by rw [hf.2.2.1 CTL]; exact o5⟩
+
+/-- A word written in `IW` at an allocated index above the entry's pool top. -/
+theorem Inv.setIW (h : Inv m₀ a₀ m a) (i w : Word) (hi : iwTop m₀ ≤ i.toNat) :
+    Inv m₀ a₀ (m.set64 IW i w) a := by
+  have hf := MemFrame.set64 m IW (by decide) i w
+  have hI : ∀ j, j ≠ i.toNat → ((m.set64 IW i w).arr64 IW)[j]? = (m.arr64 IW)[j]? := by
+    intro j hj
+    rw [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+    simp [Ne.symm hj]
+  have hE : (m.set64 IW i w).arr64 EREC = m.arr64 EREC := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  have hC : (m.set64 IW i w).arr64 CTL = m.arr64 CTL := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  have h129 : erTop (m.set64 IW i w) = erTop m := by simp only [erTop, hC]
+  have h200 : iwTop (m.set64 IW i w) = iwTop m := by simp only [iwTop, hC]
+  refine ⟨ArenaD.frameHi hf (by simp) (by simp) h.arena, h.cp,
+    h.frame.trans (hf.mono (by simp [RciA]) (by simp)), ?_, ?_⟩
+  · obtain ⟨g1, g2, g3, g4⟩ := h.grow
+    exact ⟨h200 ▸ g1, h129 ▸ g2, fun j hj => by rw [hI j (by omega)]; exact g3 j hj,
+      fun j hj => by rw [hE]; exact g4 j hj⟩
+  · obtain ⟨o1, o2, o3, o4, o5⟩ := h.ok
+    exact ⟨by rw [h200, hf.2.2.1 IW]; exact o1, by rw [h129, hE]; exact o2,
+      by rw [hf.2.2.1 IW]; exact o3, by rw [hE]; exact o4, by rw [hC]; exact o5⟩
+
 end steps
+
+end L.Rom
+
+/-! ## Decodings that depend on given words -/
+
+namespace L.Rom
+
+open L.Arena L.Ind
+
+/-- The decoder `f` gives `x` in every memory agreeing with `m` on the `EREC` words `SE` and the
+`IW` words `SI`. -/
+def Holds {α : Type} (SE SI : Nat → Prop) (f : Mem → Option α) (m : Mem) (x : α) : Prop :=
+  ∀ m', (∀ i, SE i → (erA m')[i]? = (erA m)[i]?) → (∀ i, SI i → (iwA m')[i]? = (iwA m)[i]?) →
+    f m' = some x
+
+section holds
+variable {α β γ δ : Type} {SE SI SE' SI' : Nat → Prop} {m m' : Mem}
+
+theorem Holds.get {f : Mem → Option α} {x : α} (h : Holds SE SI f m x) : f m = some x :=
+  h m (fun _ _ => rfl) (fun _ _ => rfl)
+
+theorem Holds.keep {f : Mem → Option α} {x : α} (h : Holds SE SI f m x)
+    (hE : ∀ i, SE i → (erA m')[i]? = (erA m)[i]?) (hI : ∀ i, SI i → (iwA m')[i]? = (iwA m)[i]?) :
+    Holds SE SI f m' x :=
+  fun m'' h1 h2 => h m'' (fun i hi => (h1 i hi).trans (hE i hi)) (fun i hi => (h2 i hi).trans (hI i hi))
+
+theorem Holds.mono {f : Mem → Option α} {x : α} (h : Holds SE SI f m x) (hE : ∀ i, SE i → SE' i)
+    (hI : ∀ i, SI i → SI' i) : Holds SE' SI' f m x :=
+  fun m'' h1 h2 => h m'' (fun i hi => h1 i (hE i hi)) (fun i hi => h2 i (hI i hi))
+
+theorem Holds.congr {f g : Mem → Option α} {x : α} (h : Holds SE SI f m x)
+    (hfg : ∀ m, f m = some x → g m = some x) : Holds SE SI g m x :=
+  fun m'' h1 h2 => hfg m'' (h m'' h1 h2)
+
+/-- Two decodings give a third. -/
+theorem Holds.comb {f : Mem → Option α} {g : Mem → Option β} {h : Mem → Option γ} {x : α} {y : β}
+    {z : γ} {SE₂ SI₂ : Nat → Prop} (hf : Holds SE SI f m x) (hg : Holds SE₂ SI₂ g m y)
+    (hc : ∀ m, f m = some x → g m = some y → h m = some z) :
+    Holds (fun i => SE i ∨ SE₂ i) (fun i => SI i ∨ SI₂ i) h m z :=
+  fun m'' h1 h2 => hc m'' (hf m'' (fun i hi => h1 i (.inl hi)) (fun i hi => h2 i (.inl hi)))
+    (hg m'' (fun i hi => h1 i (.inr hi)) (fun i hi => h2 i (.inr hi)))
+
+/-- Nothing read. -/
+theorem Holds.const (x : α) : Holds (fun _ => False) (fun _ => False) (fun _ => some x) m x :=
+  fun _ _ _ => rfl
+
+/-- One `EREC` word. -/
+theorem Holds.er {i : Nat} {w : Word} (h : (erA m)[i]? = some w) :
+    Holds (fun j => j = i) (fun _ => False) (fun m => (erA m)[i]?) m w :=
+  fun m'' h1 _ => (h1 i rfl).trans h
+
+/-- One `IW` word. -/
+theorem Holds.iw {i : Nat} {w : Word} (h : (iwA m)[i]? = some w) :
+    Holds (fun _ => False) (fun j => j = i) (fun m => (iwA m)[i]?) m w :=
+  fun m'' _ h2 => (h2 i rfl).trans h
+
+/-- **At the end**: every word read below the tops, the decoding is `DecB`. -/
+theorem Holds.decB {f : Mem → Option α} {x : α} (h : Holds SE SI f m x)
+    (hE : ∀ i, SE i → i < erTop m) (hI : ∀ i, SI i → i < iwTop m) : DecB f m x :=
+  h (truncM m) (fun i hi => truncM_er_eq (hE i hi)) (fun i hi => truncM_iw_eq (hI i hi))
+
+end holds
+
+/-! ## Region keeping -/
+
+/-- `EREC` below `m`'s top unchanged outside `R`. -/
+def EKeep (R : Nat → Prop) (m m' : Mem) : Prop :=
+  erTop m ≤ erTop m' ∧ ∀ i, i < erTop m → ¬ R i → (erA m')[i]? = (erA m)[i]?
+
+theorem EKeep.refl (R : Nat → Prop) (m : Mem) : EKeep R m m := ⟨Nat.le_refl _, fun _ _ _ => rfl⟩
+
+theorem EKeep.trans {R : Nat → Prop} {m₁ m₂ m₃ : Mem} (h₁ : EKeep R m₁ m₂) (h₂ : EKeep R m₂ m₃) :
+    EKeep R m₁ m₃ :=
+  ⟨Nat.le_trans h₁.1 h₂.1, fun i hi hr => (h₂.2 i (Nat.lt_of_lt_of_le hi h₁.1) hr).trans (h₁.2 i hi hr)⟩
+
+theorem EKeep.mono {R R' : Nat → Prop} {m m' : Mem} (h : EKeep R m m') (hR : ∀ i, R i → R' i) :
+    EKeep R' m m' := ⟨h.1, fun i hi hr => h.2 i hi (fun h' => hr (hR i h'))⟩
+
+theorem EKeep.of_eq {R : Nat → Prop} {m m' : Mem} (hE : m'.arr64 EREC = m.arr64 EREC)
+    (ht : erTop m ≤ erTop m') : EKeep R m m' := ⟨ht, fun i _ _ => by simp only [erA, hE]⟩
+
+theorem EKeep.set {R : Nat → Prop} (m : Mem) (i : Word) (w : Word) (hi : R i.toNat) :
+    EKeep R m (m.set64 EREC i w) := by
+  refine ⟨by simp only [erTop]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)], fun j _ hj => ?_⟩
+  simp only [erA]
+  rw [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+  have : i.toNat ≠ j := fun e => hj (e ▸ hi)
+  simp [this]
+
+/-- A decoding reading words below the top and outside `R` survives. -/
+theorem Holds.ekeep {α : Type} {SE SI R : Nat → Prop} {f : Mem → Option α} {x : α} {m m' : Mem}
+    (h : Holds SE SI f m x) (hk : EKeep R m m') (hS : ∀ i, SE i → i < erTop m ∧ ¬ R i)
+    (hI : m'.arr64 IW = m.arr64 IW) : Holds SE SI f m' x :=
+  h.keep (fun i hi => hk.2 i (hS i hi).1 (hS i hi).2) (fun i _ => by simp only [iwA, hI])
 
 end L.Rom

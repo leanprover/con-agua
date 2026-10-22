@@ -169,13 +169,14 @@ def rciRulesTo : FunDecl := lfn (q, o, k) locals (r) {
 }
 
 /-- `rci_ci(q)`: a constant at the current memo, as a fresh `EREC` record (`decCI`); the record's
-pointer and the position after. A projection table (kind `6`) is refused. -/
+pointer and the position after. A projection table (kind `6`) is refused. Each kind's arm
+returns (no paths merge after it). -/
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:324-349 ConRon.Arena.Frontend.internCI
 @[l_impl ConRon.Arena.Frontend.internCI]
 def rciCi : FunDecl := lfn (q) locals (k, n, p, h, x, l, o) {
   k := call rom_u64(q);
   q := q + 8;
-  if k == 0 || k == 2 { n := 5 } else if k == 1 { n := 8 } else if k == 3 { n := 20 }
+  if k == 0 { n := 5 } else if k == 2 { n := 5 } else if k == 1 { n := 8 } else if k == 3 { n := 20 }
   else if k == 4 { n := 7 } else if k == 5 { n := 9 } else { abort };
   p := call erec_alloc(n);
   EREC.u64[p] := k;
@@ -187,15 +188,18 @@ def rciCi : FunDecl := lfn (q) locals (k, n, p, h, x, l, o) {
     EREC.u64[p + 6] := x;
     x := call rom_u64(q + 8);
     EREC.u64[p + 7] := x;
-    q := q + 16
+    return (p, q + 16)
   };
-  if k == 3 { q := call rci_caps(q, p + 5) };
+  if k == 3 {
+    q := call rci_caps(q, p + 5);
+    return (p, q)
+  };
   if k == 4 {
     x := call rom_u64(q);
     EREC.u64[p + 5] := x;
     x := call rom_u64(q + 8);
     EREC.u64[p + 6] := x;
-    q := q + 16
+    return (p, q + 16)
   };
   if k == 5 {
     x := call rom_u64(q);
@@ -206,7 +210,8 @@ def rciCi : FunDecl := lfn (q) locals (k, n, p, h, x, l, o) {
     o := call erec_alloc(11 * l);
     EREC.u64[p + 7] := o;
     EREC.u64[p + 8] := l;
-    q := call rci_rules_to(q + 24, o, l)
+    q := call rci_rules_to(q + 24, o, l);
+    return (p, q)
   };
   return (p, q)
 }

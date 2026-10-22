@@ -24,11 +24,16 @@ namespace L.Rom
 open L.Arena L.Ind
 
 section models
-variable (rom : List UInt8) (p : Prog) (n : Nat)
+variable (p : Prog) (n : Nat)
+
+/-- A `rom_u64` read through `callW`. -/
+abbrev rdU (m : Mem) (i : Word) (k : Word → Mem → Option (List Word × Mem)) :
+    Option (List Word × Mem) :=
+  ntBW (callW p n "rom_u64" [i] m) fun r m' => k (r.headD 0) m'
 
 /-- `rci_slot(s)`. -/
 def slotW (m : Mem) (s : Word) : Option (List Word × Mem) :=
-  some ([ciOff + u64W rom (ciOff + 8 * s)], m)
+  rdU p n m (ciOff + 8 * s) fun x m1 => some ([ciOff + x], m1)
 
 /-- `rci_fresh()`. -/
 def freshW (m : Mem) : Option (List Word × Mem) :=
@@ -50,9 +55,10 @@ def lvlsToW (m : Mem) (q o k : Word) : Option (List Word × Mem) :=
 
 /-- `rci_name_sl(q, d)`. -/
 def nameSlW (m : Mem) (q d : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "erec_alloc" [u64W rom q] m) fun r1 m1 =>
-  ntBW (callW p n "rci_names_to" [q + 8, r1.headD 0, u64W rom q]
-    ((m1.set64 EREC d (r1.headD 0)).set64 EREC (d + 1) (u64W rom q))) fun r2 m2 =>
+  rdU p n m q fun c m0 =>
+  ntBW (callW p n "erec_alloc" [c] m0) fun r1 m1 =>
+  ntBW (callW p n "rci_names_to" [q + 8, r1.headD 0, c]
+    ((m1.set64 EREC d (r1.headD 0)).set64 EREC (d + 1) c)) fun r2 m2 =>
   some ([r2.headD 0], m2)
 
 /-- `rci_cv(q, p)`. -/
@@ -62,47 +68,55 @@ def cvW (m : Mem) (q pp : Word) : Option (List Word × Mem) :=
   ntBW (callW p n "rom_expr" [r2.headD 0] m2) fun r3 m3 =>
   some ([r3.tail.headD 0], m3.set64 EREC (pp + 3) (r3.headD 0))
 
-/-- The eight number words of an inductive's capabilities. -/
-def capsNums (m : Mem) (q c : Word) : Mem :=
-  (((((((m.set64 EREC c (u64W rom q)).set64 EREC (c + 2) (u64W rom (q + 8))).set64 EREC (c + 3)
-    (u64W rom (q + 16))).set64 EREC (c + 4) (u64W rom (q + 24))).set64 EREC (c + 5)
-    (u64W rom (q + 32))).set64 EREC (c + 6) (u64W rom (q + 40))).set64 EREC (c + 12)
-    (u64W rom (q + 48))).set64 EREC (c + 7) (u64W rom (q + 56))
-
-/-- `rci_caps(q, c)`. -/
+/-- `rci_caps(q, c)`: the eight numbers. -/
 def capsW (m : Mem) (q c : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "rom_name" [q + 64] (capsNums rom m q c)) fun r1 m1 =>
-  ntBW (callW p n "rci_name_sl" [r1.tail.headD 0, c + 10] (m1.set64 EREC (c + 1) (r1.headD 0)))
-    fun r2 m2 =>
-  ntBW (callW p n "rci_name_sl" [r2.headD 0, c + 13] m2) fun r3 m3 =>
-  ntBW (callW p n "rci_name_sl" [r3.headD 0, c + 8] m3) fun r4 m4 =>
-  some ([r4.headD 0], m4)
-
-/-- A rule's head words (after its constructor name). -/
-def ruleHead (m : Mem) (h q r : Word) : Mem :=
-  (((((((((m.set64 EREC r h).set64 EREC (r + 1) (u64W rom q)).set64 EREC (r + 2)
-    (u64W rom (q + 8))).set64 EREC (r + 9) (u64W rom (q + 16))).set64 EREC (r + 10)
-    (u64W rom (q + 24))).set64 EREC (r + 3) (u64W rom (q + 32))).set64 EREC (r + 4) 0).set64 EREC
-    (r + 5) 0).set64 EREC (r + 6) 0).set64 EREC (r + 7) 0
+  rdU p n m q fun x0 m0 =>
+  rdU p n (m0.set64 EREC c x0) (q + 8) fun x1 m1 =>
+  rdU p n (m1.set64 EREC (c + 2) x1) (q + 16) fun x2 m2 =>
+  rdU p n (m2.set64 EREC (c + 3) x2) (q + 24) fun x3 m3 =>
+  rdU p n (m3.set64 EREC (c + 4) x3) (q + 32) fun x4 m4 =>
+  rdU p n (m4.set64 EREC (c + 5) x4) (q + 40) fun x5 m5 =>
+  rdU p n (m5.set64 EREC (c + 6) x5) (q + 48) fun x6 m6 =>
+  rdU p n (m6.set64 EREC (c + 12) x6) (q + 56) fun x7 m7 =>
+  capsTailW p n (m7.set64 EREC (c + 7) x7) q c
+where
+  /-- The names. -/
+  capsTailW (p : Prog) (n : Nat) (m : Mem) (q c : Word) : Option (List Word × Mem) :=
+    ntBW (callW p n "rom_name" [q + 64] m) fun r1 m1 =>
+    ntBW (callW p n "rci_name_sl" [r1.tail.headD 0, c + 10] (m1.set64 EREC (c + 1) (r1.headD 0)))
+      fun r2 m2 =>
+    ntBW (callW p n "rci_name_sl" [r2.headD 0, c + 13] m2) fun r3 m3 =>
+    ntBW (callW p n "rci_name_sl" [r3.headD 0, c + 8] m3) fun r4 m4 =>
+    some ([r4.headD 0], m4)
 
 /-- A rule's nested fire: the level slice, then the pin slice; the position after. -/
 def ruleNestW (m : Mem) (q r : Word) : Option (List Word × Mem) :=
-  ntBW (callW p n "erec_alloc" [u64W rom q] m) fun r1 m1 =>
-  ntBW (callW p n "rci_lvls_to" [q + 8, r1.headD 0, u64W rom q]
-    ((m1.set64 EREC (r + 4) (r1.headD 0)).set64 EREC (r + 5) (u64W rom q))) fun r2 m2 =>
-  ntBW (callW p n "erec_alloc" [u64W rom (r2.headD 0)] m2) fun r3 m3 =>
-  ntBW (callW p n "rom_exprs_to" [r2.headD 0 + 8, r3.headD 0, u64W rom (r2.headD 0)]
-    ((m3.set64 EREC (r + 6) (r3.headD 0)).set64 EREC (r + 7) (u64W rom (r2.headD 0)))) fun r4 m4 =>
+  rdU p n m q fun l1 m0 =>
+  ntBW (callW p n "erec_alloc" [l1] m0) fun r1 m1 =>
+  ntBW (callW p n "rci_lvls_to" [q + 8, r1.headD 0, l1]
+    ((m1.set64 EREC (r + 4) (r1.headD 0)).set64 EREC (r + 5) l1)) fun r2 m2 =>
+  rdU p n m2 (r2.headD 0) fun l2 m2' =>
+  ntBW (callW p n "erec_alloc" [l2] m2') fun r3 m3 =>
+  ntBW (callW p n "rom_exprs_to" [r2.headD 0 + 8, r3.headD 0, l2]
+    ((m3.set64 EREC (r + 6) (r3.headD 0)).set64 EREC (r + 7) l2)) fun r4 m4 =>
   some ([r4.headD 0], m4)
 
 /-- `rci_rule(q, r)`. -/
 def ruleW (m : Mem) (q r : Word) : Option (List Word × Mem) :=
   ntBW (callW p n "rom_name" [q] m) fun r1 m1 =>
-  ntBW (if u64W rom (r1.tail.headD 0 + 32) = 1 then
-      ruleNestW rom p n (ruleHead rom m1 (r1.headD 0) (r1.tail.headD 0) r) (r1.tail.headD 0 + 40) r
-    else some ([r1.tail.headD 0 + 40], ruleHead rom m1 (r1.headD 0) (r1.tail.headD 0) r)) fun r2 m2 =>
-  ntBW (callW p n "rom_expr" [r2.headD 0] m2) fun r3 m3 =>
-  some ([r3.tail.headD 0], m3.set64 EREC (r + 8) (r3.headD 0))
+  rdU p n (m1.set64 EREC r (r1.headD 0)) (r1.tail.headD 0) fun x1 m2 =>
+  rdU p n (m2.set64 EREC (r + 1) x1) (r1.tail.headD 0 + 8) fun x2 m3 =>
+  rdU p n (m3.set64 EREC (r + 2) x2) (r1.tail.headD 0 + 16) fun x3 m4 =>
+  rdU p n (m4.set64 EREC (r + 9) x3) (r1.tail.headD 0 + 24) fun x4 m5 =>
+  rdU p n (m5.set64 EREC (r + 10) x4) (r1.tail.headD 0 + 32) fun f m6 =>
+  ruleTailW p n ((((((m6.set64 EREC (r + 3) f).set64 EREC (r + 4) 0).set64 EREC (r + 5) 0).set64 EREC
+    (r + 6) 0).set64 EREC (r + 7) 0)) (r1.tail.headD 0 + 40) r f
+where
+  /-- The fire's slices (nested), then the right-hand side. -/
+  ruleTailW (p : Prog) (n : Nat) (m : Mem) (q r f : Word) : Option (List Word × Mem) :=
+    ntBW (if f = 1 then ruleNestW p n m q r else some ([q], m)) fun r2 m2 =>
+    ntBW (callW p n "rom_expr" [r2.headD 0] m2) fun r3 m3 =>
+    some ([r3.tail.headD 0], m3.set64 EREC (r + 8) (r3.headD 0))
 
 /-- `rci_rules_to(q, o, k)`. -/
 def rulesToW (m : Mem) (q o k : Word) : Option (List Word × Mem) :=
@@ -113,34 +127,49 @@ def rulesToW (m : Mem) (q o k : Word) : Option (List Word × Mem) :=
 
 /-- A constant record's size by its kind word. -/
 def ciSize (k : Word) : Option Word :=
-  if k = 0 ∨ k = 2 then some 5 else if k = 1 then some 8 else if k = 3 then some 20
+  if k = 0 then some 5 else if k = 2 then some 5 else if k = 1 then some 8 else if k = 3 then some 20
   else if k = 4 then some 7 else if k = 5 then some 9 else none
+
+/-- The definition's parts. -/
+def ciDefnW (m : Mem) (pp q : Word) : Option (List Word × Mem) :=
+  ntBW (callW p n "rom_expr" [q] m) fun r1 m1 =>
+  rdU p n (m1.set64 EREC (pp + 5) (r1.headD 0)) (r1.tail.headD 0) fun x1 m2 =>
+  rdU p n (m2.set64 EREC (pp + 6) x1) (r1.tail.headD 0 + 8) fun x2 m3 =>
+  some ([r1.tail.headD 0 + 16], m3.set64 EREC (pp + 7) x2)
+
+/-- The constructor's numbers. -/
+def ciCtorW (m : Mem) (pp q : Word) : Option (List Word × Mem) :=
+  rdU p n m q fun x1 m1 =>
+  rdU p n (m1.set64 EREC (pp + 5) x1) (q + 8) fun x2 m2 =>
+  some ([q + 16], m2.set64 EREC (pp + 6) x2)
+
+/-- The recursor's numbers and rules. -/
+def ciRecW (m : Mem) (pp q : Word) : Option (List Word × Mem) :=
+  rdU p n m q fun x1 m1 =>
+  rdU p n (m1.set64 EREC (pp + 5) x1) (q + 8) fun x2 m2 =>
+  rdU p n (m2.set64 EREC (pp + 6) x2) (q + 16) fun l m3 =>
+  ntBW (callW p n "erec_alloc" [11 * l] m3) fun r1 m4 =>
+  callW p n "rci_rules_to" [q + 24, r1.headD 0, l]
+    ((m4.set64 EREC (pp + 7) (r1.headD 0)).set64 EREC (pp + 8) l)
 
 /-- The kind's parts after the constant value (at `q`, record `pp`). -/
 def ciTailW (m : Mem) (k pp q : Word) : Option (List Word × Mem) :=
-  if k = 1 then
-    ntBW (callW p n "rom_expr" [q] m) fun r1 m1 =>
-    some ([r1.tail.headD 0 + 16], ((m1.set64 EREC (pp + 5) (r1.headD 0)).set64 EREC (pp + 6)
-      (u64W rom (r1.tail.headD 0))).set64 EREC (pp + 7) (u64W rom (r1.tail.headD 0 + 8)))
+  if k = 1 then ciDefnW p n m pp q
   else if k = 3 then callW p n "rci_caps" [q, pp + 5] m
-  else if k = 4 then
-    some ([q + 16], (m.set64 EREC (pp + 5) (u64W rom q)).set64 EREC (pp + 6) (u64W rom (q + 8)))
-  else if k = 5 then
-    ntBW (callW p n "erec_alloc" [11 * u64W rom (q + 16)]
-      ((m.set64 EREC (pp + 5) (u64W rom q)).set64 EREC (pp + 6) (u64W rom (q + 8)))) fun r1 m1 =>
-    callW p n "rci_rules_to" [q + 24, r1.headD 0, u64W rom (q + 16)]
-      ((m1.set64 EREC (pp + 7) (r1.headD 0)).set64 EREC (pp + 8) (u64W rom (q + 16)))
+  else if k = 4 then ciCtorW p n m pp q
+  else if k = 5 then ciRecW p n m pp q
   else some ([q], m)
 
 /-- `rci_ci(q)`. -/
 def ciW (m : Mem) (q : Word) : Option (List Word × Mem) :=
-  match ciSize (u64W rom q) with
+  rdU p n m q fun k m0 =>
+  match ciSize k with
   | none => none
   | some sz =>
-  ntBW (callW p n "erec_alloc" [sz] m) fun r1 m1 =>
-  ntBW (callW p n "rci_cv" [q + 8, r1.headD 0 + 1] (m1.set64 EREC (r1.headD 0) (u64W rom q)))
+  ntBW (callW p n "erec_alloc" [sz] m0) fun r1 m1 =>
+  ntBW (callW p n "rci_cv" [q + 8, r1.headD 0 + 1] (m1.set64 EREC (r1.headD 0) k))
     fun r2 m2 =>
-  ntBW (ciTailW rom p n m2 (u64W rom q) (r1.headD 0) (r2.headD 0)) fun r3 m3 =>
+  ntBW (ciTailW p n m2 k (r1.headD 0) (r2.headD 0)) fun r3 m3 =>
   some ([r1.headD 0, r3.headD 0], m3)
 
 /-- `rci_block_to(q, o, k)`. -/
@@ -153,10 +182,11 @@ def blockToW (m : Mem) (q o k : Word) : Option (List Word × Mem) :=
 /-- `rci_block(s)`. -/
 def blockW (m : Mem) (s : Word) : Option (List Word × Mem) :=
   ntBW (callW p n "rci_slot" [s] m) fun r1 m1 =>
-  ntBW (callW p n "rci_fresh" [] m1) fun _ m2 =>
-  ntBW (callW p n "iw_alloc" [u64W rom (r1.headD 0)] m2) fun r3 m3 =>
-  ntBW (callW p n "rci_block_to" [r1.headD 0 + 8, r3.headD 0, u64W rom (r1.headD 0)] m3) fun _ m4 =>
-  some ([r3.headD 0, u64W rom (r1.headD 0)], m4)
+  rdU p n m1 (r1.headD 0) fun c m1' =>
+  ntBW (callW p n "rci_fresh" [] m1') fun _ m2 =>
+  ntBW (callW p n "iw_alloc" [c] m2) fun r3 m3 =>
+  ntBW (callW p n "rci_block_to" [r1.headD 0 + 8, r3.headD 0, c] m3) fun _ m4 =>
+  some ([r3.headD 0, c], m4)
 
 /-- `rom_basis_decls(kind)` and `rom_basis_decls_a(kind)` (slot `kind + off`). -/
 def basisW (m : Mem) (k off : Word) : Option (List Word × Mem) :=
@@ -206,12 +236,12 @@ local macro "rci_pre " fd:term : tactic => `(tactic| (
 
 theorem slot_specW (s : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rci_slot" [s]
-    ⦃fun r s' => LocEq s' s₀ ∧ slotW rom s₀.mem s = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ slotW p n s₀.mem s = some (r, s'.mem); ⊤⦄ := by
   rci_pre hL.rci_slot
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      romU64_spec rom p hL.rom_u64 n] <;>
-    finish [slotW, ntBW]
+      callW_spec p n "rom_u64"] <;>
+    finish (gen := 30) (instances := 10000) [slotW, ntBW]
 
 theorem fresh_specW :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rci_fresh" []
@@ -219,8 +249,8 @@ theorem fresh_specW :
   rci_pre hL.rci_fresh
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      romU64_spec rom p hL.rom_u64 n, callW_spec p n "rset_clear"] <;>
-    finish [freshW, ntBW]
+      callW_spec p n "rom_u64", callW_spec p n "rset_clear"] <;>
+    finish (gen := 30) (instances := 10000) [freshW, ntBW]
 
 theorem namesTo_specW (q o k : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rci_names_to" [q, o, k]
@@ -228,8 +258,8 @@ theorem namesTo_specW (q o k : Word) :
   rci_pre hL.rci_names_to
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      romU64_spec rom p hL.rom_u64 n, callW_spec p n "rom_name", callW_spec p n "rci_names_to"] <;>
-    finish [namesToW, ntBW]
+      callW_spec p n "rom_u64", callW_spec p n "rom_name", callW_spec p n "rci_names_to"] <;>
+    finish (gen := 30) (instances := 10000) [namesToW, ntBW]
 
 theorem lvlsTo_specW (q o k : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rci_lvls_to" [q, o, k]
@@ -237,17 +267,17 @@ theorem lvlsTo_specW (q o k : Word) :
   rci_pre hL.rci_lvls_to
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      romU64_spec rom p hL.rom_u64 n, callW_spec p n "rom_level", callW_spec p n "rci_lvls_to"] <;>
-    finish [lvlsToW, ntBW]
+      callW_spec p n "rom_u64", callW_spec p n "rom_level", callW_spec p n "rci_lvls_to"] <;>
+    finish (gen := 30) (instances := 10000) [lvlsToW, ntBW]
 
 theorem nameSl_specW (q d : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rci_name_sl" [q, d]
-    ⦃fun r s' => LocEq s' s₀ ∧ nameSlW rom p n s₀.mem q d = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ nameSlW p n s₀.mem q d = some (r, s'.mem); ⊤⦄ := by
   rci_pre hL.rci_name_sl
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      romU64_spec rom p hL.rom_u64 n, callW_spec p n "erec_alloc", callW_spec p n "rci_names_to"] <;>
-    finish [nameSlW, ntBW]
+      callW_spec p n "rom_u64", callW_spec p n "erec_alloc", callW_spec p n "rci_names_to"] <;>
+    finish (gen := 30) (instances := 10000) [nameSlW, ntBW]
 
 theorem cv_specW (q pp : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rci_cv" [q, pp]
@@ -255,26 +285,27 @@ theorem cv_specW (q pp : Word) :
   rci_pre hL.rci_cv
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      romU64_spec rom p hL.rom_u64 n, callW_spec p n "rom_name", callW_spec p n "rci_name_sl", callW_spec p n "rom_expr"] <;>
-    finish [cvW, ntBW]
+      callW_spec p n "rom_u64", callW_spec p n "rom_name", callW_spec p n "rci_name_sl", callW_spec p n "rom_expr"] <;>
+    finish (gen := 30) (instances := 10000) [cvW, ntBW]
 
 theorem caps_specW (q c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rci_caps" [q, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ capsW rom p n s₀.mem q c = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ capsW p n s₀.mem q c = some (r, s'.mem); ⊤⦄ := by
   rci_pre hL.rci_caps
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      romU64_spec rom p hL.rom_u64 n, callW_spec p n "rom_name", callW_spec p n "rci_name_sl"] <;>
-    finish [capsW, ntBW]
+      callW_spec p n "rom_u64", callW_spec p n "rom_name", callW_spec p n "rci_name_sl"] <;>
+    finish (gen := 30) (instances := 10000) [capsW, capsW.capsTailW, ntBW]
 
-theorem rule_specW (q r : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rci_rule" [q, r]
-    ⦃fun r s' => LocEq s' s₀ ∧ ruleW rom p n s₀.mem q r = some (r, s'.mem); ⊤⦄ := by
+set_option maxHeartbeats 4000000 in
+theorem rule_specW (q rr : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rci_rule" [q, rr]
+    ⦃fun r s' => LocEq s' s₀ ∧ ruleW p n s₀.mem q rr = some (r, s'.mem); ⊤⦄ := by
   rci_pre hL.rci_rule
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      romU64_spec rom p hL.rom_u64 n, callW_spec p n "rom_name", callW_spec p n "erec_alloc", callW_spec p n "rci_lvls_to", callW_spec p n "rom_exprs_to", callW_spec p n "rom_expr"] <;>
-    finish [ruleW, ntBW]
+      callW_spec p n "rom_u64", callW_spec p n "rom_name", callW_spec p n "erec_alloc", callW_spec p n "rci_lvls_to", callW_spec p n "rom_exprs_to", callW_spec p n "rom_expr"] <;>
+    finish (gen := 30) (instances := 10000) [ruleW, ruleW.ruleTailW, ruleNestW, ntBW]
 
 theorem rulesTo_specW (q o k : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rci_rules_to" [q, o, k]
@@ -282,17 +313,18 @@ theorem rulesTo_specW (q o k : Word) :
   rci_pre hL.rci_rules_to
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      romU64_spec rom p hL.rom_u64 n, callW_spec p n "rci_rule", callW_spec p n "rci_rules_to"] <;>
-    finish [rulesToW, ntBW]
+      callW_spec p n "rom_u64", callW_spec p n "rci_rule", callW_spec p n "rci_rules_to"] <;>
+    finish (gen := 30) (instances := 10000) [rulesToW, ntBW]
 
+set_option maxHeartbeats 4000000 in
 theorem ci_specW (q : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rci_ci" [q]
-    ⦃fun r s' => LocEq s' s₀ ∧ ciW rom p n s₀.mem q = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ ciW p n s₀.mem q = some (r, s'.mem); ⊤⦄ := by
   rci_pre hL.rci_ci
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      romU64_spec rom p hL.rom_u64 n, callW_spec p n "erec_alloc", callW_spec p n "rci_cv", callW_spec p n "rom_expr", callW_spec p n "rci_caps", callW_spec p n "rci_rules_to"] <;>
-    finish [ciW, ntBW]
+      callW_spec p n "rom_u64", callW_spec p n "erec_alloc", callW_spec p n "rci_cv", callW_spec p n "rom_expr", callW_spec p n "rci_caps", callW_spec p n "rci_rules_to"] <;>
+    finish (gen := 30) (instances := 10000) [ciW, ciTailW, ciDefnW, ciCtorW, ciRecW, ciSize, ntBW]
 
 theorem blockTo_specW (q o k : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rci_block_to" [q, o, k]
@@ -300,17 +332,17 @@ theorem blockTo_specW (q o k : Word) :
   rci_pre hL.rci_block_to
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      romU64_spec rom p hL.rom_u64 n, callW_spec p n "rci_ci", callW_spec p n "rci_block_to"] <;>
-    finish [blockToW, ntBW]
+      callW_spec p n "rom_u64", callW_spec p n "rci_ci", callW_spec p n "rci_block_to"] <;>
+    finish (gen := 30) (instances := 10000) [blockToW, ntBW]
 
 theorem block_specW (s : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rci_block" [s]
-    ⦃fun r s' => LocEq s' s₀ ∧ blockW rom p n s₀.mem s = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ blockW p n s₀.mem s = some (r, s'.mem); ⊤⦄ := by
   rci_pre hL.rci_block
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      romU64_spec rom p hL.rom_u64 n, callW_spec p n "rci_slot", callW_spec p n "rci_fresh", callW_spec p n "iw_alloc", callW_spec p n "rci_block_to"] <;>
-    finish [blockW, ntBW]
+      callW_spec p n "rom_u64", callW_spec p n "rci_slot", callW_spec p n "rci_fresh", callW_spec p n "iw_alloc", callW_spec p n "rci_block_to"] <;>
+    finish (gen := 30) (instances := 10000) [blockW, ntBW]
 
 theorem basis_specW (k : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rom_basis_decls" [k]
@@ -318,8 +350,8 @@ theorem basis_specW (k : Word) :
   rci_pre hL.rom_basis_decls
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      romU64_spec rom p hL.rom_u64 n, callW_spec p n "rci_block"] <;>
-    finish [basisW, ntBW]
+      callW_spec p n "rom_u64", callW_spec p n "rci_block"] <;>
+    finish (gen := 30) (instances := 10000) [basisW, ntBW]
 
 theorem basisA_specW (k : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rom_basis_decls_a" [k]
@@ -327,8 +359,8 @@ theorem basisA_specW (k : Word) :
   rci_pre hL.rom_basis_decls_a
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      romU64_spec rom p hL.rom_u64 n, callW_spec p n "rci_block"] <;>
-    finish [basisW, ntBW]
+      callW_spec p n "rom_u64", callW_spec p n "rci_block"] <;>
+    finish (gen := 30) (instances := 10000) [basisW, ntBW]
 
 theorem andPin_specW  :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rom_and_pin" []
@@ -336,8 +368,8 @@ theorem andPin_specW  :
   rci_pre hL.rom_and_pin
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      romU64_spec rom p hL.rom_u64 n, callW_spec p n "rci_block"] <;>
-    finish [andPinW, ntBW]
+      callW_spec p n "rom_u64", callW_spec p n "rci_block"] <;>
+    finish (gen := 30) (instances := 10000) [andPinW, ntBW]
 
 theorem ciEntry_specW (id : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rom_ci" [id]
@@ -345,8 +377,8 @@ theorem ciEntry_specW (id : Word) :
   rci_pre hL.rom_ci
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      romU64_spec rom p hL.rom_u64 n, callW_spec p n "rci_slot", callW_spec p n "rci_fresh", callW_spec p n "rci_ci"] <;>
-    finish [ciEntryW, ntBW]
+      callW_spec p n "rom_u64", callW_spec p n "rci_slot", callW_spec p n "rci_fresh", callW_spec p n "rci_ci"] <;>
+    finish (gen := 30) (instances := 10000) [ciEntryW, ntBW]
 
 theorem cvEntry_specW (id : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rom_cv" [id]
@@ -354,8 +386,8 @@ theorem cvEntry_specW (id : Word) :
   rci_pre hL.rom_cv
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      romU64_spec rom p hL.rom_u64 n, callW_spec p n "rci_slot", callW_spec p n "erec_alloc", callW_spec p n "rci_fresh", callW_spec p n "rci_cv"] <;>
-    finish [cvEntryW, ntBW]
+      callW_spec p n "rom_u64", callW_spec p n "rci_slot", callW_spec p n "erec_alloc", callW_spec p n "rci_fresh", callW_spec p n "rci_cv"] <;>
+    finish (gen := 30) (instances := 10000) [cvEntryW, ntBW]
 
 theorem exprPin_specW (id : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rom_expr_pin" [id]
@@ -363,8 +395,8 @@ theorem exprPin_specW (id : Word) :
   rci_pre hL.rom_expr_pin
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-      romU64_spec rom p hL.rom_u64 n, callW_spec p n "rci_slot", callW_spec p n "rci_fresh", callW_spec p n "rom_expr"] <;>
-    finish [exprPinW, ntBW]
+      callW_spec p n "rom_u64", callW_spec p n "rci_slot", callW_spec p n "rci_fresh", callW_spec p n "rom_expr"] <;>
+    finish (gen := 30) (instances := 10000) [exprPinW, ntBW]
 
 end specs
 
