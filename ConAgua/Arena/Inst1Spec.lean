@@ -26,9 +26,9 @@ section specs
 variable (p : Prog) (hp : InstProg p)
 
 include hp in
-theorem instApp_step (n : Nat) (ih : InstGoSpec p n) (s₀ : St) (h d v : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "inst_app" [h, d, v]
-    ⦃fun r s' => LocEq s' s₀ ∧ instAppW (n + 1) s₀.mem h d v = some (r.headD 0, s'.mem); ⊤⦄ := by
+theorem instApp_step (n : Nat) (ih : InstGoSpec p n) (s₀ : St) (h d v fu : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "inst_app" [h, d, v, fu]
+    ⦃fun r s' => LocEq s' s₀ ∧ instAppW (n + 1) s₀.mem h d v fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold InstGoSpec at ih
   rw [invoke_eq _ hp.app]
   simp only [callFn, instApp]
@@ -39,9 +39,9 @@ theorem instApp_step (n : Nat) (ih : InstGoSpec p n) (s₀ : St) (h d v : Word) 
     finish (gen := 20) [viewOK, tierW, idxW]
 
 include hp in
-theorem instLam_step (n : Nat) (ih : InstGoSpec p n) (s₀ : St) (h d v : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "inst_lam" [h, d, v]
-    ⦃fun r s' => LocEq s' s₀ ∧ instLamW (n + 1) s₀.mem h d v = some (r.headD 0, s'.mem); ⊤⦄ := by
+theorem instLam_step (n : Nat) (ih : InstGoSpec p n) (s₀ : St) (h d v fu : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "inst_lam" [h, d, v, fu]
+    ⦃fun r s' => LocEq s' s₀ ∧ instLamW (n + 1) s₀.mem h d v fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold InstGoSpec at ih
   rw [invoke_eq _ hp.lam]
   simp only [callFn, instLam]
@@ -52,9 +52,9 @@ theorem instLam_step (n : Nat) (ih : InstGoSpec p n) (s₀ : St) (h d v : Word) 
     finish (gen := 20) [viewOK, tierW, idxW]
 
 include hp in
-theorem instForall_step (n : Nat) (ih : InstGoSpec p n) (s₀ : St) (h d v : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "inst_forall" [h, d, v]
-    ⦃fun r s' => LocEq s' s₀ ∧ instForallW (n + 1) s₀.mem h d v = some (r.headD 0, s'.mem); ⊤⦄ := by
+theorem instForall_step (n : Nat) (ih : InstGoSpec p n) (s₀ : St) (h d v fu : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "inst_forall" [h, d, v, fu]
+    ⦃fun r s' => LocEq s' s₀ ∧ instForallW (n + 1) s₀.mem h d v fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold InstGoSpec at ih
   rw [invoke_eq _ hp.fa]
   simp only [callFn, instForall]
@@ -65,9 +65,9 @@ theorem instForall_step (n : Nat) (ih : InstGoSpec p n) (s₀ : St) (h d v : Wor
     finish (gen := 20) [viewOK, tierW, idxW]
 
 include hp in
-theorem instLet_step (n : Nat) (ih : InstGoSpec p n) (s₀ : St) (h d v : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "inst_let" [h, d, v]
-    ⦃fun r s' => LocEq s' s₀ ∧ instLetW (n + 1) s₀.mem h d v = some (r.headD 0, s'.mem); ⊤⦄ := by
+theorem instLet_step (n : Nat) (ih : InstGoSpec p n) (s₀ : St) (h d v fu : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "inst_let" [h, d, v, fu]
+    ⦃fun r s' => LocEq s' s₀ ∧ instLetW (n + 1) s₀.mem h d v fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold InstGoSpec at ih
   rw [invoke_eq _ hp.le]
   simp only [callFn, instLet]
@@ -78,9 +78,9 @@ theorem instLet_step (n : Nat) (ih : InstGoSpec p n) (s₀ : St) (h d v : Word) 
     finish (gen := 20) [viewOK, tierW, idxW]
 
 include hp in
-theorem instProj_step (n : Nat) (ih : InstGoSpec p n) (s₀ : St) (h d v : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "inst_proj" [h, d, v]
-    ⦃fun r s' => LocEq s' s₀ ∧ instProjW (n + 1) s₀.mem h d v = some (r.headD 0, s'.mem); ⊤⦄ := by
+theorem instProj_step (n : Nat) (ih : InstGoSpec p n) (s₀ : St) (h d v fu : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "inst_proj" [h, d, v, fu]
+    ⦃fun r s' => LocEq s' s₀ ∧ instProjW (n + 1) s₀.mem h d v fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold InstGoSpec at ih
   rw [invoke_eq _ hp.pj]
   simp only [callFn, instProj]
@@ -95,7 +95,7 @@ include hp in
 theorem instGo_spec (n : Nat) : InstGoSpec p n ∧ InstArmSpec p n := by
   induction n with
   | zero =>
-    refine ⟨fun s₀ h d v => ?_, fun s₀ h d v => ⟨?_, ?_, ?_, ?_, ?_⟩⟩ <;>
+    refine ⟨fun s₀ h d v fu => ?_, fun s₀ h d v fu => ⟨?_, ?_, ?_, ?_, ?_⟩⟩ <;>
     first
     | (rw [invoke_eq _ hp.go]; simp only [callFn, instGo]; vcgen [exec] <;> grind)
     | (rw [invoke_eq _ hp.app]; simp only [callFn, instApp]; vcgen [exec] <;> grind)
@@ -104,14 +104,16 @@ theorem instGo_spec (n : Nat) : InstGoSpec p n ∧ InstArmSpec p n := by
     | (rw [invoke_eq _ hp.le]; simp only [callFn, instLet]; vcgen [exec] <;> grind)
     | (rw [invoke_eq _ hp.pj]; simp only [callFn, instProj]; vcgen [exec] <;> grind)
   | succ n ih =>
-    exact ⟨instGo_step p hp n ih.2, fun s₀ h d v =>
-      ⟨instApp_step p hp n ih.1 s₀ h d v, instLam_step p hp n ih.1 s₀ h d v,
-        instForall_step p hp n ih.1 s₀ h d v, instLet_step p hp n ih.1 s₀ h d v,
-        instProj_step p hp n ih.1 s₀ h d v⟩⟩
+    exact ⟨instGo_step p hp n ih.2, fun s₀ h d v fu =>
+      ⟨instApp_step p hp n ih.1 s₀ h d v fu, instLam_step p hp n ih.1 s₀ h d v fu,
+        instForall_step p hp n ih.1 s₀ h d v fu, instLet_step p hp n ih.1 s₀ h d v fu,
+        instProj_step p hp n ih.1 s₀ h d v fu⟩⟩
 
 end specs
 
-/-! ## `inst_entry(e, v, d)`: `instantiate1Fast`, between two clears -/
+/-! ## `inst_entry(e, v, d)`: `instantiate1Fast`, between two clears
+
+The walk's depth counter starts at `coreWalkFuel` (`4000000000`, ROADMAP §3 (b)). -/
 
 /-- After the walk: clear the memo again. -/
 def iclrK : Option (Word × Mem) → Option (Word × Mem)
@@ -120,10 +122,10 @@ def iclrK : Option (Word × Mem) → Option (Word × Mem)
 
 /-- **The model of `inst_entry`.** -/
 def instEntryW (n : Nat) (m : Mem) (e v d : Word) : Option (Word × Mem) :=
-  if rdW (m.arr64 CTL) 44 + 2 = 0 then none else iclrK (instW n (mclearG imSch m) e d v)
+  if rdW (m.arr64 CTL) 44 + 2 = 0 then none else iclrK (instW n (mclearG imSch m) e d v 4000000000)
 
 theorem instEntryW_eq (n : Nat) (m : Mem) (e v d : Word) (h0 : rdW (m.arr64 CTL) 44 + 2 ≠ 0) :
-    instEntryW n m e v d = iclrK (instW n (mclearG imSch m) e d v) := by
+    instEntryW n m e v d = iclrK (instW n (mclearG imSch m) e d v 4000000000) := by
   simp [instEntryW, h0]
 
 theorem iclrK_some (r : Word) (m₁ : Mem) (h0 : rdW (m₁.arr64 CTL) 44 + 2 ≠ 0) :
@@ -136,7 +138,7 @@ grind_pattern [arena_grind] iclrK_some => iclrK (some (r, m₁))
 @[l_impl ConRon.Arena.instantiate1Fast]
 def instEntry : FunDecl := lfn (e, v, d) locals (r, u) {
   u := call if_clear();
-  r := call inst_go(e, d, v);
+  r := call inst_go(e, d, v, 4000000000);
   u := call if_clear();
   return r
 }
