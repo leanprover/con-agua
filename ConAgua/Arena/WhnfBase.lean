@@ -304,22 +304,18 @@ structure CoreS (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis
   its offsets do not wrap. -/
   bstk : (m.arr64 145).size < 2 ^ 63
 
-/-- **The relation across a writer outside every tier and the stacks**: arrays `≥ 146` (or the
-front's 64‥95), `CTL` words `≥ 138` (or 64‥95): the level heap (`LH`, `CTL[192]`), say. -/
-theorem CoreS.frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
+/-- **The relation across a writer outside every tier and the spine stack**: arrays `≥ 145` (or
+the front's 64‥95), `CTL` words `≥ 137` (or 64‥95): the binder stack, the level heap. -/
+theorem CoreS.frameS {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List ArrId} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, 64 ≤ b ∧ (b < 96 ∨ 146 ≤ b)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 138 ≤ x.toNat)) :
-    CoreS dn m' a vis fe M eb ∧ StackKept m m' := by
+    (hA : ∀ b ∈ A, 64 ≤ b ∧ (b < 96 ∨ 145 ≤ b)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 137 ≤ x.toNat)) :
+    CoreS dn m' a vis fe M eb := by
   have aA : ∀ lo hi : Nat, 96 ≤ lo → hi ≤ 145 → AvoidA lo hi A := fun lo hi h1 h2 b hb => by
     have := hA b hb; simp only [ArrId] at this ⊢; omega
   have aC : ∀ lo hi : Nat, 96 ≤ lo → hi ≤ 137 → AvoidC lo hi C := fun lo hi h1 h2 x hx => by
     have := hC x hx; omega
-  have hspn : m'.arr64 SPN = m.arr64 SPN :=
-    hf.1 SPN (fun h => by have := hA _ h; simp only [SPN, ArrId] at this; omega) (by decide)
-  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 :=
-    hf.2.1 136 (fun h => by have := hC _ h; simp at this)
-  refine ⟨⟨⟨ArenaR.frame_ext A C (fun b hb => (hA b hb).1) (fun x hx => (hC x hx).1) m m' hf a hS.arena.1,
+  exact ⟨⟨ArenaR.frame_ext A C (fun b hb => (hA b hb).1) (fun x hx => (hC x hx).1) m m' hf a hS.arena.1,
       DerR.frameM A C m m' hf (fun b hb => .inr (by have := (hA b hb).1; simp only [ArrId] at this ⊢; omega))
         a hS.arena.2⟩,
     hS.core.frame (aA 96 128 (by decide) (by decide)) (aC 96 128 (by decide) (by decide)) hf,
@@ -328,7 +324,17 @@ theorem CoreS.frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AStat
     hS.env.frame (aA 132 144 (by decide) (by decide)) (aC 128 136 (by decide) (by decide)) hf,
     hS.readL, hS.readLs, hS.nwf, hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn,
     hS.memos.frame_hi hf (fun b hb => (hA b hb).1) (fun x hx => (hC x hx).1),
-    hf.2.2.1 145 ▸ hS.bstk⟩, ?_⟩
+    hf.2.2.1 145 ▸ hS.bstk⟩
+
+/-- **The relation across a writer outside every tier and the stacks**: arrays `≥ 146` (or the
+front's 64‥95), `CTL` words `≥ 138` (or 64‥95): the level heap (`LH`, `CTL[192]`), say. The stacks
+and the pool are kept. -/
+theorem CoreS.frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List ArrId} {C : List Word}
+    (hS : CoreS dn m a vis fe M eb) (hf : MemFrame A C m m')
+    (hA : ∀ b ∈ A, 64 ≤ b ∧ (b < 96 ∨ 146 ≤ b)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 138 ≤ x.toNat)) :
+    CoreS dn m' a vis fe M eb ∧ StackKept m m' := by
+  refine ⟨hS.frameS hf (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega) (fun x hx => by have := hC x hx; omega), ?_⟩
   exact StackKept.of_frame hf
     ⟨fun h => by have := hA _ h; simp only [SPN, ArrId] at this; omega,
      fun h => by have := hA _ h; simp only [BSTK, ArrId] at this; omega,
