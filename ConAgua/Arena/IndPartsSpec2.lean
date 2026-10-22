@@ -376,6 +376,36 @@ theorem hslice?_bound {k : IdxKind} (a : Array Word) : ∀ (c o : Nat) (xs : Lis
       have h1 := hslice?_bound a (c + 1) (o + 1) ys hys (by omega)
       omega
 
+/-- Copying zero words reads no source: the source offset is irrelevant. -/
+theorem erToIwW_src0 {n : Nat} {m : Mem} {o l : Word} (hl : l = 0) :
+    erToIwW n m o l = erToIwW n m 0 l := by
+  subst hl
+  have : ∀ k m1 q, erCopyW k m1 q o 0 = erCopyW k m1 q 0 0 := by
+    intro k m1 q; cases k <;> simp [erCopyW]
+  simp only [erToIwW, this]
+
+/-- **`erToIwW_dec` when the slice decodes**: a successful `hslice?` of the source already bounds it
+(a nonempty slice lies in `EREC`; an empty one reads nothing). -/
+theorem erToIwW_decS {k : IdxKind} {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
+    {xs : List (Idx k)}
+    (h : erToIwW n m o l = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64)
+    (hc : 200 < (m.arr64 CTL).size) (hE : (m.arr64 EREC).size < 2 ^ 64)
+    (hsl : hslice? (erA m) o.toNat l.toNat = some xs) :
+    r = [rdW (m.arr64 CTL) 200, l] ∧
+    (decHL m' (rdW (m.arr64 CTL) 200).toNat l.toNat : Option (List (Idx k))) =
+      hslice? (erA m) o.toNat l.toNat ∧
+    IWGrow m m' ∧ MemFrame [IW] [200] m m' ∧ m'.arr64 EREC = m.arr64 EREC ∧
+    (rdW (m.arr64 CTL) 200).toNat + l.toNat = iwTop m' := by
+  by_cases hl : l = 0
+  · rw [erToIwW_src0 hl] at h
+    have := erToIwW_dec (k := k) h hsz hc hE (by subst hl; simp)
+    subst hl
+    simpa [hslice?] using this
+  · have hl0 : 0 < l.toNat := by
+      have : l.toNat ≠ 0 := fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
+      omega
+    exact erToIwW_dec h hsz hc hE (hslice?_bound _ _ _ _ hsl hl0)
+
 
 theorem erToIwW_two {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
     (h : erToIwW n m o l = some (r, m')) : r = [r.headD 0, r.tail.headD 0] := by
@@ -443,9 +473,7 @@ theorem blockShapeLps_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
 theorem lpsW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : BlockShape}
     (h : lpsW n m p = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64)
     (hc : 200 < (m.arr64 CTL).size) (hE : (m.arr64 EREC).size < 2 ^ 64)
-    (hq : decBS m p.toNat = some bs) (hb : p.toNat + 9 < 2 ^ 64)
-    (hlpb : ∀ a o' l', nat? (erA m) (a + 1) = some o' → nat? (erA m) (a + 2) = some l' →
-      o' + l' ≤ (m.arr64 EREC).size) :
+    (hq : decBS m p.toNat = some bs) (hb : p.toNat + 9 < 2 ^ 64) :
     r = [r.headD 0, r.tail.headD 0] ∧
     decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some bs.lps ∧
     IWGrow m m' ∧ MemFrame [IW] [200] m m' ∧
@@ -516,8 +544,7 @@ theorem lpsW_dec {n : Nat} {m m' : Mem} {p : Word} {r : List Word} {bs : BlockSh
     have hv'' : rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) p)) = UInt64.ofNat a := by
       rw [ho', hv']; exact hva'
     rw [hv'', e3, e4, hrd1, hrd2] at h
-    have hlpb' := hlpb a w1.toNat w2.toNat (by simp [nat?, erA, hw1]) (by simp [nat?, erA, hw2])
-    obtain ⟨hr, hdec, hgrow, hfr, -, htp⟩ := erToIwW_dec (k := IdxKind.name) h hsz hc hE hlpb'
+    obtain ⟨hr, hdec, hgrow, hfr, -, htp⟩ := erToIwW_decS (k := IdxKind.name) h hsz hc hE hsl
     have hh := erToIwW_two h
     refine ⟨hh, ?_, hgrow, hfr, ?_⟩
     · rw [hr] at hh ⊢
@@ -533,9 +560,7 @@ theorem blockShapeLps_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAllo
     (hp : p.lookup "block_shape_lps" = some blockShapeLps) (n : Nat) (s₀ : St) (q : Word)
     (bs : BlockShape) (hq : decBS s₀.mem q.toNat = some bs) (hb : q.toNat + 9 < 2 ^ 64)
     (hsz : (s₀.mem.arr64 IW).size < 2 ^ 64) (hcl : 200 < (s₀.mem.arr64 CTL).size)
-    (hE : (s₀.mem.arr64 EREC).size < 2 ^ 64)
-    (hlpb : ∀ a o' l', nat? (erA s₀.mem) (a + 1) = some o' → nat? (erA s₀.mem) (a + 2) = some l' →
-      o' + l' ≤ (s₀.mem.arr64 EREC).size) :
+    (hE : (s₀.mem.arr64 EREC).size < 2 ^ 64) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_shape_lps" [q]
     ⦃fun r s' => r = [r.headD 0, r.tail.headD 0] ∧
       decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat = some bs.lps ∧
@@ -543,6 +568,6 @@ theorem blockShapeLps_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAllo
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop s'.mem; ⊤⦄ := by
   refine triple_post (blockShapeLps_spec p ha hc he hp n s₀ q) ?_
   intro r s' ⟨_, h⟩
-  exact lpsW_dec h hsz hcl hE hq hb hlpb
+  exact lpsW_dec h hsz hcl hE hq hb
 
 end L.Ind
