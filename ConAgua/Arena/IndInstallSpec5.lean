@@ -344,20 +344,24 @@ def RawR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (m : Mem
 theorem brmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {no nl : Word}
     {names : List NIdx} (n : Nat) : ∀ (m : Mem) (a : AState) (coff clen : Word) (cs : List (IConstantVal × Nat))
     (mp : Std.HashMap EIdx Bool),
-    StageR dn vis fe m a → PSlR decCN cs coff clen m → DecB (fun m => decHL m no.toNat nl.toNat) m names →
+    StageR dn vis fe m a → DecB (fun m => decPL m (decCN m) coff.toNat clen.toNat) m cs →
+    (clen = 0 ∨ coff.toNat + clen.toNat ≤ iwTop m) → DecB (fun m => decHL m no.toNat nl.toNat) m names →
     no.toNat + nl.toNat ≤ iwTop m → maMR m mp →
     Sim (brmW n m no nl coff clen)
       (cs.anyM fun c => ConRon.Arena.piDomsMentionAny names coreWalkFuel c.1.type) a
       (RawR (dn := dn) (vis := vis) (fe := fe) m a) := by
   induction n with
-  | zero => intro m a coff clen cs mp _ _ _ _ _ r m' h; simp [brmW] at h
+  | zero => intro m a coff clen cs mp _ _ _ _ _ _ r m' h; simp [brmW] at h
   | succ n ih =>
-    intro m a coff clen cs mp hS hcs hns hnb hM
+    intro m a coff clen cs mp hS hcs0 hcb hns hnb hM
     by_cases hl : clen = 0
     · rw [brmW_nil n m no nl coff clen hl]
-      subst hl; rw [partsPSl_nil hcs]
+      subst hl
+      have : cs = [] := by have := decPL_length _ hcs0; simpa using this
+      subst this
       exact Sim.ret ⟨rfl, rfl, ⟨mp, hM⟩, hS, IWGrow.refl _⟩
     rw [brmW_cons n m no nl coff clen hl]
+    have hcs : PSlR decCN cs coff clen m := ⟨hcs0, hcb.resolve_left hl⟩
     obtain ⟨pc, ⟨cv, nF⟩, cs', rfl, hw, hpb, hc0, hcs'⟩ := partsPSl_cons hcs hl
     obtain ⟨⟨cvp, hcvp, hcv⟩, -⟩ := decCN_some (show decCN (truncM m) pc = some (cv, nF) from hc0)
     obtain ⟨hcw, hcvb, -⟩ := partsIwRd hcvp (UInt64.toNat_ofNat_of_lt' hpb)
@@ -378,7 +382,8 @@ theorem brmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       refine Sim.congr (op := List.anyM (fun c => ConRon.Arena.piDomsMentionAny names coreWalkFuel c.1.type) cs' >>= pure)
         ?_ (bind_pure _)
       refine Sim.bindK (K := pdmK3) (body := fun r m => some ([r.headD 0], m)) rfl (fun _ _ => rfl)
-        (ih m1 a1 (coff + 1) (clen - 1) cs' mp1 hS1 (hcs'.grow decCN_mono hg1) (hns.grow (OMono.decHL _ _) hg1)
+        (ih m1 a1 (coff + 1) (clen - 1) cs' mp1 hS1 (hcs'.grow decCN_mono hg1).1
+          (Or.inr (hcs'.grow decCN_mono hg1).2) (hns.grow (OMono.decHL _ _) hg1)
           (Nat.le_trans hnb hg1.1) hM1) ?_
       rintro r2 b2 m2 a2 ⟨rfl, rfl, hM2, hS2, hg2⟩
       exact Sim.ret ⟨rfl, rfl, hM2, hS2, hg1.trans hg2⟩
