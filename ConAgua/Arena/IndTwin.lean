@@ -2,6 +2,9 @@ import ConAgua.Arena.DeclLvlStage
 import ConAgua.Arena.CoreErec
 import ConAgua.Arena.KnotSlot
 import ConAgua.Arena.WhnfEntry
+import ConAgua.Arena.InferLeaves
+import ConAgua.Arena.CoreLevels
+import ConAgua.Arena.WhnfIotaRefine4
 import ConAgua.Arena.IndInstallSpec8
 
 /-!
@@ -67,7 +70,7 @@ def coreStageC : List Word := ((List.range 256).filter fun x => x ≠ 129 ∧ x 
 
 /-- The entry points the stage calls, and everything the core reaches. -/
 def stageCoreFns : List FnName :=
-  ["whnf_top", "infer_type_core", "is_def_eq_core", "ensure_sort_core"] ++ coreFns
+  ["whnf_top", "infer_type_core", "is_def_eq_core", "ensure_sort_core", "lvl_eq_c"] ++ coreFns
 
 /-- **The program hypothesis**: no function the stage's core entry points reach writes the pools,
 their tops or the pins (decided for the checker's program, `ConAgua/Checker/IndCore.lean`). -/
@@ -206,6 +209,42 @@ theorem isDefEqCore_simT (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
     exact this
   rintro r b m' a' ⟨hT, hg, hd, -⟩
   exact ⟨hT, hg, hd⟩
+
+include hp hK hcl in
+/-- **`ensure_sort_core` under `StageT`** (replaces `IndStubs.ensureSortCore_spec`), from
+`InferLeaves`' `ensureSortCore_refines` (the knot below the call). -/
+theorem ensureSortCore_simT (hl : InferLeafProg p) (n : Nat) (hn : n ≤ 2 ^ 62) {m : Mem} {a : AState}
+    (hS : StageT dn vis fe m a) (dep t : Word) (ht : H t) :
+    Sim (callW p n "ensure_sort_core" [vis, dep, t] m) (ensureSortCore V fe checkFuel dep.toNat (decI t)) a
+      (fun r x m' a' => StageT dn vis fe m' a' ∧ IWGrow m m' ∧ decW0L m' r x) := by
+  rcases n with _ | _ | k
+  · intro r m' h; rw [callW_zero] at h; cases h
+  · intro r m' h
+    obtain ⟨s', -, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+      (L.Arena.ensureSortCore_spec p hp 0 _ vis dep t) h
+    simp [call1W, callW_zero] at hW
+  refine Sim.mono (StageT.sim_core hcl (by simp [stageCoreFns]) hS
+    (fun s₀ M hC => ensureSortCore_refines p hl hp k (fun j _ => hK j) checkFuel s₀ a dn vis fe M dep t
+      (stage_fuel (by omega)) (by omega) hC (hw_of_h ht))) ?_
+  rintro r x m' a' ⟨hT, hg, hd, hr⟩
+  exact ⟨hT, hg, hr, by rw [← hd]; rfl⟩
+
+include hcl in
+/-- **`lvl_eq_c` under `StageT`** (replaces `IndStubs.lvlEqStub_spec`), from lane `whnf`'s
+`lvlEqC_refines`: the two handles' readbacks are the caller's (`StoreDen.lvlAll` gives them for a
+handle the twin's level store holds; `StoreDen.zero` for the pinned zero). -/
+theorem lvlEqC_simT (hL : LvlCacheProg p) (hpc : p.lookup "lvl_eq_c" = some lvlEqCL) (n : Nat)
+    {m : Mem} {a : AState} (hS : StageT dn vis fe m a) (u v : Word) (hu : H u) (hv : H v)
+    (lu lv : ConLeche.Level) (hdu : denoteL a.store.ls (decI u) = some lu)
+    (hdv : denoteL a.store.ls (decI v) = some lv) :
+    Sim (callW p n "lvl_eq_c" [u, v] m) (lvlEq? (decI u) (decI v)) a
+      (fun r x m' a' => StageT dn vis fe m' a' ∧ IWGrow m m' ∧ decO (r.headD 0) = x ∧ H (r.headD 0)) := by
+  rcases Nat.lt_or_ge n 2 with hn | hn
+  · intro r m' h; rw [lvlEqC_small p hpc n hn] at h; cases h
+  obtain ⟨k, rfl⟩ : ∃ k, n = k + 2 := ⟨n - 2, by omega⟩
+  exact Sim.mono (StageT.sim_core hcl (by simp [stageCoreFns]) hS
+    (fun s₀ M hC => lvlEqC_refines p hL k s₀ a dn vis fe M 0 hC u v hu hv lu lv hdu hdv))
+    fun r x m' a' ⟨hT, hg, hd, hr⟩ => ⟨hT, hg, hd, hr⟩
 
 end entry
 
