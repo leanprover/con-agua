@@ -204,8 +204,10 @@ def targetParamsDefEqStep : FunDecl := lfn (vis, d, no, nl, lvls, ho, hl, pfo, p
   if pfl < fb { return 0 };
   ac := call target_canon_params(pfo, pfl, a);
   av := call target_abs(no, nl, lvls, ho, hl, ac);
+  if 4294967296 <= av { abort };
   bc := call target_canon_params(pfo, pfl, b);
   bv := call target_abs(no, nl, lvls, ho, hl, bc);
+  if 4294967296 <= bv { abort };
   if av == bv { return 1 };
   u := call infer_type_core(vis, d, av);
   u := call infer_type_core(vis, d, bv);
@@ -213,21 +215,19 @@ def targetParamsDefEqStep : FunDecl := lfn (vis, d, no, nl, lvls, ho, hl, pfo, p
   return deq
 }
 
-/-- **`target_params_def_eq`**: per-component parameter defeq, stopping at the first mismatch. -/
+/-- **`target_params_def_eq`**: per-component parameter defeq, stopping at the first mismatch; a
+self-recursion on both slices, as the twin's list recursion (lists of different lengths are
+compared up to the shorter one's end, then `false`). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:181-208 ConRon.Arena.targetParamsDefEq
 @[l_impl ConRon.Arena.targetParamsDefEq]
 def targetParamsDefEq : FunDecl := lfn (vis, d, no, nl, lvls, ho, hl, pfo, pfl, ao, al, bo, bl)
-    locals (i, a, b, r) {
-  if al != bl { return 0 };
-  i := 0;
-  while i < al {
-    a := IW.u64[ao + i];
-    b := IW.u64[bo + i];
-    r := call target_params_def_eq_step(vis, d, no, nl, lvls, ho, hl, pfo, pfl, a, b);
-    if r == 0 { return 0 };
-    i += 1
-  };
-  return 1
+    locals (r) {
+  if al == 0 { return u64(bl == 0) };
+  if bl == 0 { return 0 };
+  r := call target_params_def_eq_step(vis, d, no, nl, lvls, ho, hl, pfo, pfl, IW.u64[ao], IW.u64[bo]);
+  if r == 0 { return 0 };
+  r := call target_params_def_eq(vis, d, no, nl, lvls, ho, hl, pfo, pfl, ao + 1, al - 1, bo + 1, bl - 1);
+  return r
 }
 
 /-- **`target_class_match`**: levels up to `lvls_eq_c` (the cached `lvlsEq?`, as the twin), then
@@ -246,6 +246,7 @@ def targetClassMatch : FunDecl := lfn (vis, p, fto, ftl, pfo, pfl, us, dso, dsl,
   blvls := call param_levels(lpso, lpsl);
   (ho, hl) := call target_holes(fto, ftl, pfl);
   d := pfl + ftl;
+  if d < pfl { abort };
   r := call target_params_def_eq(vis, d, mno, mnl, blvls, ho, hl, pfo, pfl, dso, dsl, edso, edsl);
   return r
 }
