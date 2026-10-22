@@ -502,6 +502,38 @@ theorem ls_den {α : Type} [Inhabited α] {op op' : AM α} {a : AState} {x : LId
   show ∃ l, denoteL (AM.st op a).store.lss.ls x = some l
   rw [lss_st hk hc.1]; exact h
 
+/-- A list readback carried across a pin read, which keeps the state. -/
+theorem lss_pin {op : AM NIdx} {m : Mem} {a : AState} {x : LsIdx} {i : Nat}
+    (h : ∃ ls, denoteLs a.store.lss x = some ls) (hpins : PinsFull m a.pins) (hi : i < 51)
+    (hop : op = pinAt i) : ∃ ls, denoteLs (AM.st op a).store.lss x = some ls := by
+  subst hop
+  have hst : AM.st (pinAt i) a = a := by unfold AM.st; rw [pinAt_run hpins i hi]
+  rw [hst]; exact h
+
+/-- An interned level reads back (`internLNode_res_den`), the caller's view `v` stated apart from
+the refinement's `v'` (as `lss_den`). -/
+theorem lnode_den {v v' : LNodeView} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState}
+    {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} {r : List Word} {ok : List Word → Prop}
+    (hS : CoreS dn m a vis fe M eb)
+    (hch : ∀ c ∈ v.lchildren, ∃ l, denoteL a.store.ls c = some l)
+    (hnch : ∀ n ∈ v.nchildren, ∃ x, denoteN a.store.ls.ns n = some x)
+    (hc : CoreRef (internLNode v') a decLv dn m vis fe M eb r m' ok) (hv : v = v') :
+    ∃ l, denoteL (AM.st (internLNode v) a).store.ls (decI (r.headD 0)) = some l := by
+  subst hv
+  have h := internLNode_res_den hS hch hnch hc.1
+  rw [hc.2.2.1] at h; exact h
+
+/-- A level readback carried across a level interning (`internLNode_lext`). -/
+theorem lnode_lvl {v v' : LNodeView} {a : AState} {x : LIdx} {dec : List Word → LIdx}
+    {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps}
+    {eb : Word} {r : List Word} {ok : List Word → Prop}
+    (h : ∃ l, denoteL a.store.ls x = some l)
+    (hc : CoreRef (internLNode v') a dec dn m vis fe M eb r m' ok) (hv : v = v') :
+    ∃ l, denoteL (AM.st (internLNode v) a).store.ls x = some l := by
+  subst hv
+  obtain ⟨l, hl⟩ := h
+  exact ⟨l, (internLNode_lext (AM.run_of_ok _ _ hc.1)).lvl _ _ hl⟩
+
 theorem keeps_cpl_pinAt (i : Nat) : Keeps cpl (pinAt i) := by prim_keeps pinAt
 
 theorem keeps_cpl_constE (x : NIdx) : Keeps cpl (constE x) :=
