@@ -114,7 +114,7 @@ theorem nestBlockOf_key {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {c : W
     (found q : Word) (hfound : fe.find? (decI c) = decFound dn m found q)
     (hwf : rdW (m.arr64 EREC) q = (3 : Word) →
       ∃ cv caps, decCI (erecP m) dn q.toNat = some (.indInfo cv caps))
-    (hqb : q.toNat + 16 < 2 ^ 64) :
+    (hqb : rdW (m.arr64 EREC) q = (3 : Word) → q.toNat + 16 < 2 ^ 64) :
     hslice? (erA m)
         (if found = 0 then (0 : Word) else if rdW (m.arr64 EREC) q = 3 then
           rdW (m.arr64 EREC) (q + 15) else 0).toNat
@@ -131,6 +131,7 @@ theorem nestBlockOf_key {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {c : W
     have hsize : UInt64.size = 2 ^ 64 := rfl
     by_cases hk3 : rdW (m.arr64 EREC) q = (3 : Word)
     · obtain ⟨cv, caps, hci0⟩ := hwf hk3
+      have hqb := hqb hk3
       rw [hci0] at hfound
       have hci := (erecP_ext m).decCI hci0
       rw [hfound]
@@ -197,18 +198,142 @@ theorem nestBlockOf_key {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {c : W
         | recInfo _ _ _ _ => simp [hslice?]
         | projInfo _ => simp [hslice?]
 
-/-! ## `nest_block_of` refines `nestBlockOf`: not closed this round
+/-- `nat?` reads inside the array. -/
+theorem nat?_idx {a : Array Word} {i k : Nat} (h : nat? a i = some k) : i < a.size := by
+  simp only [nat?, Option.map_eq_some_iff] at h
+  obtain ⟨w, hw, -⟩ := h
+  exact (Array.getElem?_eq_some_iff.mp hw).1
 
-`nestBlockOf_key` above is the mathematical content (what `nest_block_of` computes, as a pure
-fact about `Mem`); threading it through the L execution (`invoke p (exec p n) "nest_block_of"
-[vis, c]`, composing `envFind_refines` as a callee spec) built far enough that `vcgen` locates
-`envFind_refines` as the callee spec for the `env_find` call (citing it as `envFind_refines p hx
-hg hf n`, *not* applying its further arguments — vis/w/hE/hw are then unified and discharged by
-`finish` itself, as `Env.lean`'s own `envPush_refines` does for `envRowSet_spec`; supplying them
-explicitly made `vcgen` fail to find the spec at all, for reasons not tracked down this round),
-but the final `finish (gen := 20) [nestBlockOf_key]` leaves one verification condition open (its
-context has an unexplained extra `a✝ : Idx IdxKind.name` and reduces to `⊢ False`, with `grind`'s
-diagnostics showing `hwf`/`hqb`/`nestBlockOf_key` all E-matched — not a missing fact so much as a
-pattern the automation doesn't close). Left for the next round; see the report. -/
+/-- An `indInfo` record is fully inside the array it decodes from. -/
+theorem decCI_indInfo_bound {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat}
+    {cv : IConstantVal} {caps : IIndCaps} (h : decCI a dn p = some (.indInfo cv caps)) :
+    p + 16 < a.size := by
+  obtain ⟨cv', caps', he, hcaps⟩ := decCI_kind3 h (decCI_indInfo_kind h)
+  rw [decCaps] at hcaps
+  simp only [Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hcaps
+  obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, vall, hvall, _, _, hcapseq⟩ := hcaps
+  obtain ⟨o, l, ho, hl, hs⟩ := hlist?_some hvall
+  have := nat?_idx hl
+  omega
+
+theorem EnvR.row_dec {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {fe : IFEnv}
+    (h : EnvR dn m vis fe) (w : Word) (hw : w.toNat < 2 ^ 32) :
+    rowTag w ≤ 2 → rowC m w ≠ 0 → ∃ ci, decCI (erecP m) dn (rowP m w).toNat = some ci := by
+  intro ht h0
+  have hk := h.keys (decI w) (by rwa [decI_word_self w hw])
+  have hv := h.vals (decI w) (by rwa [decI_word_self w hw])
+  rw [decI_word_self w hw] at hk hv
+  have hv := hv h0
+  simp only [rowW, h0, ite_false, Option.map_some] at hk
+  cases e : fe.idx[(decI w : NIdx)]? with
+  | none => simp [e] at hk
+  | some r =>
+    simp only [e, Option.map_some] at hv
+    exact ⟨r.2, hv.symm⟩
+
+/-- `env_find`, with: a found row decodes. -/
+theorem envFind_refines' (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
+    (hg : p.lookup "env_row_get" = some envRowGetL) (hp : p.lookup "env_find" = some envFindL)
+    (n : Nat) (s₀ : St) {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} (vis w : Word)
+    (hE : EnvR dn s₀.mem vis fe) (hw : w.toNat < 2 ^ 32) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "env_find" [w, vis]
+    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧
+      fe.find? (decI w) = decFound dn s₀.mem (r.headD 0) (r.tail.headD 0) ∧
+      (r.headD 0 ≠ 0 → ∃ ci, decCI (erecP s₀.mem) dn (r.tail.headD 0).toNat = some ci); ⊤⦄ := by
+  have key := EnvR.find?_eq hE w hw
+  have key2 := EnvR.row_dec hE w hw
+  rw [invoke_eq _ hp]
+  simp only [callFn, envFindL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, envRowGet_spec p hx hg n] <;>
+      finish [decFound]
+
+
+/-- A found `indInfo` row, seen through `erecP`, gives the pointer bound. -/
+theorem erecP_size_lt (m : Mem) : (erecP m).size < 2 ^ 64 := by
+  have h : (erecP m).size ≤ erecTop m := by simp [erecP]; exact Nat.min_le_left _ _
+  have := (rdW (m.arr64 CTL) 129).toNat_lt
+  simp only [erecTop] at h
+  omega
+
+theorem blk_none {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {c : Word} {m : Mem}
+    (found q : Word) (hfound : fe.find? (decI c) = decFound dn m found q) (h0 : found = 0) :
+    hslice? (erA m) (0 : Word).toNat (0 : Word).toNat = some (nestBlockOf fe (decI c)) := by
+  have : fe.find? (decI c) = none := by rw [hfound]; simp [decFound, h0]
+  simp [nestBlockOf, this, hslice?]
+
+theorem blk_nok3 {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {c : Word} {m : Mem}
+    (found q : Word) (hfound : fe.find? (decI c) = decFound dn m found q) (h0 : found ≠ 0)
+    (hk : rdW (m.arr64 EREC) q ≠ 3) :
+    hslice? (erA m) (0 : Word).toNat (0 : Word).toNat = some (nestBlockOf fe (decI c)) := by
+  have := nestBlockOf_key found q hfound (fun h => absurd h hk) (fun h => absurd h hk)
+  simpa [h0, hk] using this
+
+theorem blk_k3 {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {c : Word} {m : Mem}
+    (found q : Word) (hfound : fe.find? (decI c) = decFound dn m found q) (h0 : found ≠ 0)
+    (hex : ∃ ci, decCI (erecP m) dn q.toNat = some ci) (hk : rdW (m.arr64 EREC) q = 3) :
+    hslice? (erA m) (rdW (m.arr64 EREC) (q + 15)).toNat (rdW (m.arr64 EREC) (q + 16)).toNat =
+      some (nestBlockOf fe (decI c)) := by
+  obtain ⟨ci, hci⟩ := hex
+  obtain ⟨k, hkn⟩ : ∃ k, nat? (erecP m) q.toNat = some k := by
+    simp only [decCI, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hci
+    obtain ⟨k, hk, -⟩ := hci
+    exact ⟨k, hk⟩
+  have hkn' : nat? (erA m) q.toNat = some k := by
+    simp only [nat?, Option.map_eq_some_iff] at hkn ⊢
+    obtain ⟨w, hw, rfl⟩ := hkn
+    exact ⟨w, erecP_get hw, rfl⟩
+  have hrd := erN_rdW hkn' q.toNat_lt
+  rw [UInt64.ofNat_toNat] at hrd
+  have hk3 : k = 3 := by
+    have h1 : UInt64.ofNat k = 3 := by rw [← hrd]; exact hk
+    have h2 := congrArg UInt64.toNat h1
+    rw [UInt64.toNat_ofNat_of_lt' (nat?_lt hkn')] at h2
+    simpa using h2
+  subst hk3
+  obtain ⟨cv, caps, hI, -⟩ := decCI_kind3 hci hkn
+  subst hI
+  have hb := decCI_indInfo_bound hci
+  have hsz := erecP_size_lt m
+  have := nestBlockOf_key found q hfound (fun _ => ⟨cv, caps, hci⟩) (fun _ => by omega)
+  simpa [h0, hk] using this
+
+theorem blk_k3' {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {c : Word} {m : Mem}
+    (found q : Word) (hfound : fe.find? (decI c) = decFound dn m found q) (h0 : found ≠ 0)
+    (hex : ∃ ci, decCI (erecP m) dn q.toNat = some ci) (hk : rdW (m.arr64 EREC) q = 3)
+    (h15 : (q + 15).toNat < (m.arr64 EREC).size) (h16 : (q + 16).toNat < (m.arr64 EREC).size) :
+    hslice? (erA m) ((m.arr64 EREC)[(q + 15).toNat]'h15).toNat ((m.arr64 EREC)[(q + 16).toNat]'h16).toNat =
+      some (nestBlockOf fe (decI c)) := by
+  have := blk_k3 found q hfound h0 hex hk
+  rwa [rdW_eq _ _ _ rfl h15, rdW_eq _ _ _ rfl h16] at this
+
+section blockof
+variable (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
+    (hg : p.lookup "env_row_get" = some envRowGetL) (hf : p.lookup "env_find" = some envFindL)
+    (hp : p.lookup "nest_block_of" = some nestBlockOfL)
+include hx hg hf hp
+
+/-- **`nest_block_of` refines `nestBlockOf`**: the result is the `IndCaps.all` slice of `EREC`. -/
+@[refines ConRon.Arena.nestBlockOf]
+theorem nestBlockOf_refines (n : Nat) (s₀ : St) {dn : NIdx → Option ConLeche.Name} {fe : IFEnv}
+    (vis c : Word) (hE : EnvR dn s₀.mem vis fe) (hc : c.toNat < 2 ^ 32) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_block_of" [vis, c]
+    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧
+      hslice? (erA s₀.mem) (r.headD 0).toNat (r.tail.headD 0).toNat = some (nestBlockOf fe (decI c));
+      ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, nestBlockOfL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        envFind_refines' p hx hg hf n (dn := dn) (fe := fe)] <;> finish (gen := 20) [blk_none, blk_nok3, blk_k3', rdW_eq]
+
+end blockof
 
 end L.Ind
