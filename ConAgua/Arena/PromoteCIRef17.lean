@@ -12,6 +12,9 @@ set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
+theorem toNat_add5 (x : Word) (h : x.toNat + 5 < 2 ^ 64) : (x + 5).toNat = x.toNat + 5 := by
+  rw [UInt64.toNat_add, show (5 : Word).toNat = 5 from rfl]; exact Nat.mod_eq_of_lt h
+
 theorem decHint_move {a b : Array Word} {i j : Nat} {h : ConLeche.ReducibilityHint}
     (hw0 : b[j]? = a[i]?) (hw1 : b[j + 1]? = a[i + 1]?) (hd : decHint a i = some h) :
     decHint b j = some h := by
@@ -56,7 +59,7 @@ theorem ctor_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D :
   | zero => simp only [callW_zero', Option.bind_none] at hW; cases hW
   | succ n =>
   have e1 : (q + 1).toNat = q.toNat + 1 := toNat_add1 _ (by omega)
-  have e5 : (q + 5).toNat = q.toNat + 5 := by rw [UInt64.toNat_add]; simp; omega
+  have e5 : (q + 5).toNat = q.toNat + 5 := toNat_add5 _ (by omega)
   cases hrd : callW p (n + 1) "erec_rd2" [q + 5] m with
   | none => rw [hrd] at hW; cases hW
   | some x =>
@@ -91,7 +94,7 @@ theorem ctor_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D :
   simp only [show ((7 : Word)).toNat = 7 from rfl] at b2
   have hsz2 : (m₂.arr64 EREC).size < 2 ^ 64 := by rw [b3.2.2]; exact hsz1
   have e5d : (dl.headD 0 + 5).toNat = erecTop m₁ + 5 := by
-    rw [UInt64.toNat_add]; simp; omega
+    rw [toNat_add5 _ (by omega)]; omega
   cases hwr : callW p (n + 1) "erec_wr2" [dl.headD 0 + 5, w5, w6] m₂ with
   | none => rw [hwr] at hW; cases hW
   | some x =>
