@@ -5669,6 +5669,13 @@ Census at landing 3 (`--no-build`): phase 2 **130 proven, 11 sorry, 79 written**
 links 0 (`@[l_impl]` moved off the ROM readers, which are functions of the ROM, onto
 `romExprL`/`internAllPinsL` at the program's ROM).
 
+### `Scan/Records.lean` split (2270 lines)
+
+Pure move, as in `Front/FieldsDecl*`: `Records.lean` keeps the L code and the models (1357
+lines), `RecordsSpec.lean` the `specs` section (941 lines, same namespace, names and statements;
+it repeats the local `attribute [local lang_grind] boolEndN`). `Scan/Line.lean` and the root
+import `RecordsSpec`.
+
 ### Landing 2 (lane `defeq`)
 * Merged helpers `defeq-slots` (KnotSlot, InferLeaves). The phase-4 callees landed by lane
   `exprops4` replace three stub names: `abstract1` → `abs_entry`, `abstract_range` → `ar_entry`;
@@ -5678,9 +5685,3 @@ links 0 (`@[l_impl]` moved off the ROM readers, which are functions of the ROM, 
 * `infer_const` passes the record's own name `EREC[p + 1]` to `const_ty_at` (the twin keys
   `constTyC` by `cv.name`; `EnvR` does not promise `cv.name = n`). Lane `whnf`: the same gap at
   `WhnfIota.lean`'s `const_ty_at(cj, …)` call.
-### `Scan/Records.lean` split (2270 lines)
-
-Pure move, as in `Front/FieldsDecl*`: `Records.lean` keeps the L code and the models (1357
-lines), `RecordsSpec.lean` the `specs` section (941 lines, same namespace, names and statements;
-it repeats the local `attribute [local lang_grind] boolEndN`). `Scan/Line.lean` and the root
-import `RecordsSpec`.
