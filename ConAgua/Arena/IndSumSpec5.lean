@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndSumSpec4
 import ConAgua.Arena.IndPos2Spec
+import ConAgua.Arena.BvarBRefine
 
 /-!
 # Refinements of `IndSum`, fifth file (lane `indproofs`, helper `memo`)
@@ -604,26 +605,49 @@ end mcCensus2
 
 /-! ## The `hb` memo walks: callees outside this lane
 
-Two statements about the stubs that run inside the `hb`-memo walks (appended here, not to `IndStubs.lean`,
-to keep that file's dependants from rebuilding; both `sorry`, listed in the lane report): `bvar_b` at
-the twin's nested fuel, and that `bvar_b`/`strip_pis` leave the `hb` memo alone. -/
+`bvar_b` is lane `exprops4`'s real function (`bvarBL`, `BvarBRefine.lean`), run under the stage relation
+(`bvbW_stage`, lane `indproofs2`); `strip_pis` is a stub, and leaves the `hb` memo alone by the stubs'
+write set `stubM_memoFrame`. -/
 
 section hbStubs
 variable (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
 
-/-- `bvar_b(CWF, e)` at the twin's fuel `F` of a nested walk (the walk's `fuel` is counted down from
-`coreWalkFuel` by its depth; `bvarB`'s answer does not depend on the fuel while it is plentiful, so a
-call at `CWF` is a call of the twin at any such `F`). -/
-theorem bvarBCwf_spec (F : Nat) (hF : 2 ^ 31 ≤ F) (hF2 : F ≤ coreWalkFuel) (e : Word) (he : H e) :
-    RelAM "bvar_b" [CWF, e] (StageR dn vis fe)
-      (bvarB F (decI e)) (KeepPost dn vis fe decW0Nat) := sorry
+/-- **`bvar_b` (lane `exprops4`'s, no longer a stub here) under the stage relation**: its model
+refines `bvarB` at every twin fuel `F + 1 ≥ n`; it writes only the `bvarB` memo (array `BMEMO` = 24,
+`CTL[24]`, `CTL[25]`), so the stage relation holds after and the pool did not change. -/
+theorem bvbW_stage {m m' : Mem} {a : AState} (hS : StageR dn vis fe m a) (n F : Nat) (hF : n ≤ F + 1)
+    (h x : Word) (hh : H h) (hb : bvbW n m h = some (x, m')) :
+    ∃ a', (bvarB F (decE h)).run a = .ok (x.toNat, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+      BbFrame m m' := by
+  obtain ⟨a', hrun, hD⟩ := bvbW_ok n F hF m m' a hS.1.arena h x hh hb
+  have hfr : BbFrame m m' := by
+    match n, hb with
+    | n + 1, hb =>
+      by_cases hs : derBW m h = 32767
+      · rw [bvbW_sat (n := n) (m := m) (h := h) hs] at hb
+        match n, hb with
+        | k + 1, hb => rw [bbN_succ] at hb; exact bbMemoW_frame k m m' h x hb
+      · rw [bvbW_pk (n := n) (m := m) (h := h) hs] at hb
+        simp only [Option.some.injEq, Prod.mk.injEq] at hb
+        obtain ⟨-, rfl⟩ := hb
+        exact MemFrame.refl _ _ _
+  have hk : sp a' = sp a := by
+    rw [bvarB_run] at hrun
+    split at hrun
+    · exact (keeps_bvarBoundMemo F (decE h)).run hrun
+    · simp only [Except.ok.injEq, Prod.mk.injEq] at hrun; rw [hrun.2]
+  have hcp : cp a' = cp a := by simp only [sp, Prod.mk.injEq] at hk; simp [cp, hk.2.1, hk.2.2]
+  obtain ⟨hS', hg⟩ := StageR.of_walk hS hD hfr (by simp [BMEMO]) (by
+    intro c hc; simp only [List.mem_cons, List.not_mem_nil, or_false] at hc
+    rcases hc with rfl | rfl <;> decide) hcp
+  exact ⟨a', hrun, hS', hg, hfr⟩
 
-/-- The stubs that run inside the `hb`-memo walks (`bvar_b`, `strip_pis`) leave the `hb` memo (array
+/-- The stub that runs around the `hb`-memo walks (`strip_pis`) leaves the `hb` memo (array
 `HBM`, epoch word `CTL[214]`) alone: an instance of the stubs' write set `stubM_memoFrame`. -/
-theorem stubHbFrame (f : FnName) (hf : f = "bvar_b" ∨ f = "strip_pis") (m m' : Mem) (args r : List Word)
+theorem stubHbFrame (f : FnName) (hf : f = "strip_pis") (m m' : Mem) (args r : List Word)
     (h : stubM f m args = some (r, m')) :
     ∃ (A : List ArrId) (C : List Word), HBM ∉ A ∧ (214 : Word) ∉ C ∧ MemFrame A C m m' := by
-  have hn : f ∈ stubNames := by rcases hf with rfl | rfl <;> decide
+  have hn : f ∈ stubNames := by subst hf; decide
   obtain ⟨A, C, hA, hC, hfr⟩ := stubM_memoFrame f hn m m' args r h
   refine ⟨A, C, fun hm => ?_, fun hm => ?_, hfr⟩
   · have := hA _ hm; simp [HBM] at this
@@ -639,10 +663,10 @@ def hbInsW (m : Mem) (e i r : Word) : Option (Word × Mem) :=
 mutual
 def hbGoW : Nat → Mem → Word → Word → Option (Word × Mem)
   | 0, _, _, _ => none
-  | n + 1, m, i, h => hbK1 n i h (stubM "bvar_b" m [CWF, h])
-def hbK1 (n : Nat) (i h : Word) : Option (List Word × Mem) → Option (Word × Mem)
+  | n + 1, m, i, h => hbK1 n i h (bvbW n m h)
+def hbK1 (n : Nat) (i h : Word) : Option (Word × Mem) → Option (Word × Mem)
   | none => none
-  | some (rs, m1) => if rs.headD 0 ≤ i then some (0, m1) else hbK2 n m1 i h (eViewW m1 h)
+  | some (x, m1) => if x ≤ i then some (0, m1) else hbK2 n m1 i h (eViewW m1 h)
 def hbK2 (n : Nat) (m : Mem) (i h : Word) (v : List Word) : Option (Word × Mem) :=
   if v = [] then none
   else if v.headD 0 = 0 then some (if i = v.tail.headD 0 then 1 else 0, m)
@@ -674,12 +698,12 @@ def hbL2 (n : Nat) (i z : Word) : Option (Word × Mem) → Option (Word × Mem)
 end
 
 section hbArms
-variable (n : Nat) (m m1 m2 : Mem) (i i2 h g x y z r r1 r2 : Word) (v fr rs : List Word)
-theorem hbGoW_succ : hbGoW (n + 1) m i h = hbK1 n i h (stubM "bvar_b" m [CWF, h]) := by simp [hbGoW]
-theorem hbK1_some_le (hle : rs.headD 0 ≤ i) : hbK1 n i h (some (rs, m1)) = some (0, m1) := by
+variable (n : Nat) (m m1 m2 : Mem) (i i2 h g x y z r r1 r2 w : Word) (v fr rs : List Word)
+theorem hbGoW_succ : hbGoW (n + 1) m i h = hbK1 n i h (bvbW n m h) := by simp [hbGoW]
+theorem hbK1_some_le (hle : w ≤ i) : hbK1 n i h (some (w, m1)) = some (0, m1) := by
   simp only [hbK1]; rw [if_pos hle]
-theorem hbK1_some_gt (hle : ¬ rs.headD 0 ≤ i) :
-    hbK1 n i h (some (rs, m1)) = hbK2 n m1 i h (eViewW m1 h) := by
+theorem hbK1_some_gt (hle : ¬ w ≤ i) :
+    hbK1 n i h (some (w, m1)) = hbK2 n m1 i h (eViewW m1 h) := by
   simp only [hbK1]; rw [if_neg hle]
 theorem hbK2_abort (hv : v = []) : hbK2 n m i h v = none := by simp [hbK2, hv]
 theorem hbK2_bvar (hv : v ≠ []) (hg : v.headD 0 = 0) :
@@ -735,7 +759,7 @@ section hbspec
 variable (p : Prog) (hv : p.lookup "e_view" = some eView)
   (hf : p.lookup "hb_find" = some (memoFindG hbSch)) (hput : p.lookup "hb_put" = some (memoPutG hbSch))
   (hins : p.lookup "has_loose_b_var_b_ins" = some hasLooseBVarBInsL)
-  (hgo : p.lookup "has_loose_b_var_b_go" = some hasLooseBVarBGoL)
+  (hgo : p.lookup "has_loose_b_var_b_go" = some hasLooseBVarBGoL) (hbp : BvbProg p)
 
 include hf hput in
 theorem hbIns_spec_raw (hp : p.lookup "has_loose_b_var_b_ins" = some hasLooseBVarBInsL) (n : Nat) (s₀ : St)
@@ -766,7 +790,7 @@ def HbGoSpec (n : Nat) : Prop := ∀ (s₀ : St) (i h : Word),
     ⦃fun r s' => LocEq s' s₀ ∧ hbGoW n s₀.mem i h = some (r.headD 0, s'.mem); ⊤⦄
 
 set_option maxHeartbeats 4000000 in
-include hv hf hput hins hgo in
+include hv hf hput hins hgo hbp in
 theorem hbGo_step (n : Nat) (ih : HbGoSpec p n) : HbGoSpec p (n + 1) := by
   unfold HbGoSpec at ih
   intro s₀ i h
@@ -774,15 +798,15 @@ theorem hbGo_step (n : Nat) (ih : HbGoSpec p n) : HbGoSpec p (n + 1) := by
   simp only [callFn, hasLooseBVarBGoL]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      stubM_spec p "bvar_b" n, eView_spec p hv n, memoFindG_spec hbSch p _ hf n,
+      bvarBL_spec p hbp n, eView_spec p hv n, memoFindG_spec hbSch p _ hf n,
       hbIns_spec p hf hput hins n, ih] <;> finish (gen := 20)
 
-include hv hf hput hins hgo in
+include hv hf hput hins hgo hbp in
 theorem hbGo_spec (n : Nat) : HbGoSpec p n := by
   induction n with
   | zero =>
     intro s₀ i h; rw [invoke_eq _ hgo]; simp only [callFn, hasLooseBVarBGoL]; vcgen [exec] <;> grind
-  | succ n ih => exact hbGo_step p hv hf hput hins hgo n ih
+  | succ n ih => exact hbGo_step p hv hf hput hins hgo hbp n ih
 
 end hbspec
 
@@ -1118,29 +1142,27 @@ theorem hbGo_step_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
   intro m m' a i h r mp F hFn hFc hb hS hh hM
   rw [hbGoW_succ] at hb
   obtain ⟨F, rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
-  cases hst : stubM "bvar_b" m [CWF, h] with
+  cases hst : bvbW j m h with
   | none => rw [hst] at hb; simp [hbK1] at hb
   | some pr =>
-    obtain ⟨rs, m1⟩ := pr
+    obtain ⟨w, m1⟩ := pr
     rw [hst] at hb
-    obtain ⟨x, a1, hbv, hS1, hg1, hx⟩ :=
-      bvarBCwf_spec dn vis fe F (by omega) (by omega) h hh m m1 a rs hst hS
-    obtain ⟨A, C, hA, hC, hfr⟩ := stubHbFrame "bvar_b" (Or.inl rfl) m m1 _ rs hst
-    have hM1 : hbMR m1 mp := memoRV_frame hbSch hbSch_wf lfKey hbVR A C hA hC m m1 hfr (fun _ _ h => h) mp hM
-    have hbv' : StateT.run (bvarB F (decE h)) a = .ok (x, a1) := hbv
+    obtain ⟨a1, hbv', hS1, hg1, hfr⟩ := bvbW_stage dn vis fe hS j F (by omega) h w hh hst
+    have hM1 : hbMR m1 mp := memoRV_frame hbSch hbSch_wf lfKey hbVR _ _ (by simp [hbSch, HBM, BMEMO])
+      (by simp [hbSch]) m m1 hfr (fun _ _ h => h) mp hM
     rw [hasLooseBVarBGo_succ']
     simp only [StateT.run_bind]
     rw [hbv']
     simp only [except_ok_bind]
-    by_cases hle : rs.headD 0 ≤ i
+    by_cases hle : w ≤ i
     · rw [hbK1_some_le (hle := hle)] at hb
       simp only [Option.some.injEq, Prod.mk.injEq] at hb
       obtain ⟨rfl, rfl⟩ := hb
-      have : x ≤ i.toNat := by rw [← hx]; exact UInt64.le_iff_toNat_le.mp hle
+      have : w.toNat ≤ i.toNat := UInt64.le_iff_toNat_le.mp hle
       rw [if_pos this]
       exact ⟨false, mp, a1, rfl, rfl, hM1, hS1, hg1⟩
     · rw [hbK1_some_gt (hle := hle)] at hb
-      have : ¬ x ≤ i.toNat := by rw [← hx]; exact fun c => hle (UInt64.le_iff_toNat_le.mpr c)
+      have : ¬ w.toNat ≤ i.toNat := fun c => hle (UInt64.le_iff_toNat_le.mpr c)
       rw [if_neg this]
       cases hvl : eViewW m1 h with
       | nil => rw [hvl] at hb; simp [hbK2] at hb
@@ -1230,7 +1252,7 @@ section hbCensus
 variable (p : Prog) (hv : p.lookup "e_view" = some eView)
   (hf : p.lookup "hb_find" = some (memoFindG hbSch)) (hput : p.lookup "hb_put" = some (memoPutG hbSch))
   (hins : p.lookup "has_loose_b_var_b_ins" = some hasLooseBVarBInsL)
-  (hgo : p.lookup "has_loose_b_var_b_go" = some hasLooseBVarBGoL)
+  (hgo : p.lookup "has_loose_b_var_b_go" = some hasLooseBVarBGoL) (hbp : BvbProg p)
 
 include hf hput hins in
 /-- **`has_loose_b_var_b_ins` refines `hasLooseBVarBIns`**: the answer's word is recorded in the memo. -/
@@ -1249,10 +1271,9 @@ theorem hasLooseBVarBIns_refines (n : Nat) (s₀ : St) (dn : NIdx → Option Con
     (by intro x hx; simp at hx; subst hx; decide) (by decide) (by decide)
   exact ⟨hl, hr', hM', hS', hg⟩
 
-include hv hf hput hins hgo in
+include hv hf hput hins hgo hbp in
 /-- **`has_loose_b_var_b_go` refines `hasLooseBVarBGo`** from a related memo, at twin fuel `F` with
-`2^31 + n ≤ F ≤ coreWalkFuel` (`n` the exec depth; `bvar_b` is a stub, `sorry` through
-`bvarBCwf_spec` and `stubHbFrame`). -/
+`2^31 + n ≤ F ≤ coreWalkFuel` (`n` the exec depth; `bvar_b` is lane `exprops4`'s, `bvbW_stage`). -/
 @[refines ConRon.Arena.hasLooseBVarBGo]
 theorem hasLooseBVarBGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis i h : Word) (mp : Std.HashMap (EIdx × Nat) Bool) (F : Nat)
@@ -1265,7 +1286,7 @@ theorem hasLooseBVarBGo_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx
       hbMR s'.mem (AM.res (ConRon.Arena.hasLooseBVarBGo mp i.toNat F (decE h)) a₀).2 ∧
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.hasLooseBVarBGo mp i.toNat F (decE h)) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (hbGo_spec p hv hf hput hins hgo n s₀ i h) ?_
+  refine triple_post (hbGo_spec p hv hf hput hins hgo hbp n s₀ i h) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨b, mp', a', hrun, hb, hM', hS', hg⟩ := hbGoOK n _ _ a₀ i h _ mp F hFn hFc hm hS hh hM
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
@@ -1285,12 +1306,12 @@ attribute [ind_grind] hbFastW_eq
 theorem hbFast_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
     (hf : p.lookup "hb_find" = some (memoFindG hbSch)) (hput : p.lookup "hb_put" = some (memoPutG hbSch))
     (hins : p.lookup "has_loose_b_var_b_ins" = some hasLooseBVarBInsL)
-    (hgo : p.lookup "has_loose_b_var_b_go" = some hasLooseBVarBGoL)
+    (hgo : p.lookup "has_loose_b_var_b_go" = some hasLooseBVarBGoL) (hbp : BvbProg p)
     (hcl : p.lookup "hb_clear" = some (memoClearG hbSch))
     (hp : p.lookup "has_loose_b_var_b_fast" = some hasLooseBVarBFastL) (n : Nat) (s₀ : St) (i e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "has_loose_b_var_b_fast" [i, e]
     ⦃fun r s' => LocEq s' s₀ ∧ hbFastW n s₀.mem i e = some (r.headD 0, s'.mem); ⊤⦄ := by
-  have ih := hbGo_spec p hv hf hput hins hgo n
+  have ih := hbGo_spec p hv hf hput hins hgo hbp n
   unfold HbGoSpec at ih
   rw [invoke_eq _ hp]
   simp only [callFn, hasLooseBVarBFastL]
@@ -1322,10 +1343,10 @@ section hbCensus2
 variable (p : Prog) (hv : p.lookup "e_view" = some eView)
   (hf : p.lookup "hb_find" = some (memoFindG hbSch)) (hput : p.lookup "hb_put" = some (memoPutG hbSch))
   (hins : p.lookup "has_loose_b_var_b_ins" = some hasLooseBVarBInsL)
-  (hgo : p.lookup "has_loose_b_var_b_go" = some hasLooseBVarBGoL)
+  (hgo : p.lookup "has_loose_b_var_b_go" = some hasLooseBVarBGoL) (hbp : BvbProg p)
   (hcl : p.lookup "hb_clear" = some (memoClearG hbSch))
   (hp : p.lookup "has_loose_b_var_b_fast" = some hasLooseBVarBFastL)
-include hv hf hput hins hgo hcl hp
+include hv hf hput hins hgo hbp hcl hp
 
 /-- **`has_loose_b_var_b_fast` refines `hasLooseBVarBFast`**: clear the `hb` memo (any well-formed one
 on entry), one memoised walk from `coreWalkFuel`. -/
@@ -1340,7 +1361,7 @@ theorem hasLooseBVarBFast_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NI
       (∃ mp1, hbMR s'.mem mp1) ∧
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.hasLooseBVarBFast i.toNat (decE e)) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (hbFast_spec p hv hf hput hins hgo hcl hp n s₀ i e) ?_
+  refine triple_post (hbFast_spec p hv hf hput hins hgo hbp hcl hp n s₀ i e) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨b, a', hrun', hb, hM1, hS1, hg⟩ := hbFastW_ok n _ _ a₀ i e _ mp0 hn hh hS hM hm
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'

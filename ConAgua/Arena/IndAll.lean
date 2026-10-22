@@ -1,3 +1,4 @@
+import ConAgua.Arena.IndDecStab
 import ConAgua.Arena.IndSumSpec4
 import ConAgua.Arena.RecClassSpecB
 import ConAgua.Arena.RecClassSpecA

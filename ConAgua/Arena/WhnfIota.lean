@@ -89,16 +89,21 @@ def isStrLitL : FunDecl := lfn (h) locals (t, i) {
 
 Both read only the 11-word rule records at `(ro, rc)` in `EREC`; neither touches `AM`. -/
 
+/-- The scan of `find_rule` (a named block, for the proofs). -/
+def findRuleLoop : Stmt := lblk (ro, rc, c, i) {
+  while i < rc {
+    if EREC.u64[ro + 11 * i] == c { return (1, ro + 11 * i) };
+    i += 1
+  }
+}
+
 /-- con-leche: `Core.lean:777-876` (`iotaRec`'s own lookup) `findRule` — the rule whose
 constructor is `c`, as a linear scan of the rule-record slice. -/
 -- con-ron: ConRon/Arena/Core.lean:2005-2010 ConRon.Arena.findRule
 @[l_impl ConRon.Arena.findRule]
 def findRuleL : FunDecl := lfn (ro, rc, c) locals (i) {
   i := 0;
-  while i < rc {
-    if EREC.u64[ro + 11 * i] == c { return (1, ro + 11 * i) };
-    i += 1
-  };
+  ⟪findRuleLoop⟫;
   return (0, 0)
 }
 
@@ -169,18 +174,32 @@ def iotaCase3L : FunDecl := lfn (rlk, vis, ctorP, us) locals (np) {
 
 /-! ## `tower_slots_all(vis, T, nF)`, `eta_projs(T, b, nF)`, `eta_fab_args(…)` -/
 
+/-- The slot walk of `tower_slots_all` (a named block, for the proofs). -/
+def towerSlotsAllLoop : Stmt := lblk (vis, T, nF, j, flag, q) {
+  while j < nF {
+    (flag, q) := call find_proj(vis, T, j);
+    if flag == 0 { return 0 };
+    j += 1
+  }
+}
+
 /-- con-leche: `CoreDefs.lean:723-728`/`FEnv.lean:195-197` `towerSlotsAll` — are all `nF`
 projection slots of `T` table entries? -/
 -- con-ron: ConRon/Arena/Core.lean:1429-1433 ConRon.Arena.towerSlotsAll
 @[l_impl ConRon.Arena.towerSlotsAll]
 def towerSlotsAllL : FunDecl := lfn (vis, T, nF) locals (j, flag, q) {
   j := 0;
-  while j < nF {
-    (flag, q) := call find_proj(vis, T, j);
-    if flag == 0 { return 0 };
-    j += 1
-  };
+  ⟪towerSlotsAllLoop⟫;
   return 1
+}
+
+/-- The projection walk of `eta_projs` (a named block, for the proofs). -/
+def etaProjsLoop : Stmt := lblk (T, b, nF, o, j, pr) {
+  while j < nF {
+    pr := call mk_proj(T, j, b);
+    SPN.u64[o + j] := pr;
+    j += 1
+  }
 }
 
 /-- con-leche: `CoreDefs.lean:730-735`/`Cached/CoreC.lean:310-317` `etaProjs`/`projNodesGo` — the
@@ -193,11 +212,7 @@ def etaProjsL : FunDecl := lfn (T, b, nF) locals (o, j, pr) {
   if len(SPN.u64) < o { abort };
   if len(SPN.u64) - o < nF { abort };
   j := 0;
-  while j < nF {
-    pr := call mk_proj(T, j, b);
-    SPN.u64[o + j] := pr;
-    j += 1
-  };
+  ⟪etaProjsLoop⟫;
   CTL.u64[136] := o + nF;
   return (o, nF)
 }
@@ -214,6 +229,22 @@ def etaFabArgsL : FunDecl := lfn (T, to, tn, major, nF) locals (o2, n2) {
 
 /-! ## `and_rescue_slots(vis, ctor, nP, us)` -/
 
+/-- The two-slot walk of `and_rescue_slots` (a named block, for the proofs). `fire_ok` is called
+before the shape checks: the twin's `(← e.fireOk ust)` is lifted out of the `if` and runs
+regardless, with its cache effects. -/
+def andRescueLoop : Stmt := lblk (vis, ctor, nP, us, an, j, flag, q, ok) {
+  while j < 2 {
+    (flag, q) := call find_proj(vis, an, j);
+    if flag == 0 { return 0 };
+    ok := call fire_ok(q, j, us);
+    if EREC.u64[q + 6] != ctor { return 0 };
+    if EREC.u64[q + 5] != nP { return 0 };
+    if EREC.u64[q + 7] != 2 { return 0 };
+    if ok == 0 { return 0 };
+    j += 1
+  }
+}
+
 /-- con-leche: `CoreDefs.lean:793-806`/`:808-810`/`FEnv.lean:199-201` `andRescueSlotsGo` /
 `andRescueSlots` / `FEnv.andRescueSlotsF` — the pinned `And`'s two projection slots, ready to
 fire. `q`, the table pointer `find_proj` hands back, has `ctor` at `q + 6`, `numParams` at `q + 5`,
@@ -224,16 +255,7 @@ fire. `q`, the table pointer `find_proj` hands back, has `ctor` at `q + 6`, `num
 def andRescueSlotsL : FunDecl := lfn (vis, ctor, nP, us) locals (an, j, flag, q, ok) {
   an := call pin_at(11);
   j := 0;
-  while j < 2 {
-    (flag, q) := call find_proj(vis, an, j);
-    if flag == 0 { return 0 };
-    if EREC.u64[q + 6] != ctor { return 0 };
-    if EREC.u64[q + 5] != nP { return 0 };
-    if EREC.u64[q + 7] != 2 { return 0 };
-    ok := call fire_ok(q, j, us);
-    if ok == 0 { return 0 };
-    j += 1
-  };
+  ⟪andRescueLoop⟫;
   return 1
 }
 
@@ -444,12 +466,8 @@ def prepareMajorL : FunDecl := lfn (mode, vis, d, rec, ro, rc, major)
 
 /-! ## `pi_residual(e, ao, an)` -/
 
-/-- con-leche: `CoreDefs.lean:716-721` `piResidual` — peel a ∀-telescope along an argument
-spine `(ao, an)`. -/
--- con-ron: ConRon/Arena/Core.lean:1326-1337 ConRon.Arena.piResidual
-@[l_impl ConRon.Arena.piResidual]
-def piResidualL : FunDecl := lfn (e, ao, an) locals (i, t, x, body, b2) {
-  i := 0;
+/-- The telescope walk of `pi_residual` (a named block, for the proofs). -/
+def piResidualLoop : Stmt := lblk (e, ao, an, i, t, x, body, b2) {
   while i < an {
     if e >> 28 != 6 { return (0, 0) };
     t := (e >> 27) & 1;
@@ -460,40 +478,58 @@ def piResidualL : FunDecl := lfn (e, ao, an) locals (i, t, x, body, b2) {
     b2 := call inst_entry(body, SPN.u64[ao + i], 0);
     e := b2;
     i += 1
-  };
+  }
+}
+
+/-- con-leche: `CoreDefs.lean:716-721` `piResidual` — peel a ∀-telescope along an argument
+spine `(ao, an)`. -/
+-- con-ron: ConRon/Arena/Core.lean:1326-1337 ConRon.Arena.piResidual
+@[l_impl ConRon.Arena.piResidual]
+def piResidualL : FunDecl := lfn (e, ao, an) locals (i, t, x, body, b2) {
+  i := 0;
+  ⟪piResidualLoop⟫;
   return (1, e)
 }
 
 /-! ## `defeq_list(mode, vis, d, ao, an, bo, bn)` -/
 
-/-- con-leche: `Core.lean:269-278` `defEqList` — pairwise definitional equality of two spines. -/
--- con-ron: ConRon/Arena/Core.lean:1339-1346 ConRon.Arena.defEqList
-@[l_impl ConRon.Arena.defEqList]
-def defeqListL : FunDecl := lfn (mode, vis, d, ao, an, bo, bn) locals (i, ok) {
-  if an != bn { return 0 };
-  i := 0;
-  while i < an {
+/-- The pairwise walk of `defeq_list` (a named block, for the proofs). -/
+def defeqListLoop : Stmt := lblk (mode, vis, d, ao, an, bo, bn, i, ok) {
+  while i < an && i < bn {
     ok := call defeq(mode, vis, d, SPN.u64[ao + i], SPN.u64[bo + i]);
     if ok == 0 { return 0 };
     i += 1
-  };
-  return 1
+  }
+}
+
+/-- con-leche: `Core.lean:269-278` `defEqList` — pairwise definitional equality of two spines. As the
+twin, it compares the common prefix pairwise (stopping at the first `false`) and only then the
+lengths: an early length test would skip the twin's `defeq` calls and their cache writes. -/
+-- con-ron: ConRon/Arena/Core.lean:1339-1346 ConRon.Arena.defEqList
+@[l_impl ConRon.Arena.defEqList]
+def defeqListL : FunDecl := lfn (mode, vis, d, ao, an, bo, bn) locals (i, ok) {
+  i := 0;
+  ⟪defeqListLoop⟫;
+  return u64(an == bn)
 }
 
 /-! ## `iota_index_ok(mode, vis, d, mI, rP, cnP, tyCtor, mo, mn, xo, xn)` -/
 
 /-- con-leche: `Core.lean:280-296` `iotaIndexOk` — the canonical-index comparison of a firing
-ι redex. -/
+ι redex. The stack top is restored after the `get_app_args` slice (the twin's list is a value; the
+refinement specs promise `StackKept`). -/
 -- con-ron: ConRon/Arena/Core.lean:1348-1358 ConRon.Arena.iotaIndexOk
 @[l_impl ConRon.Arena.iotaIndexOk]
 def iotaIndexOkL : FunDecl := lfn (mode, vis, d, mI, rP, cnP, tyCtor, mo, mn, xo, xn)
-    locals (flag, res, ao2, an2, an3) {
+    locals (flag, res, top, ao2, an2, an3) {
   if mI == rP { return 1 };
   (flag, res) := call pi_residual(tyCtor, mo, mn);
   if flag == 0 { return 0 };
+  top := CTL.u64[136];
   (ao2, an2) := call get_app_args(res);
   an3 := (an2 - cnP) * u64(cnP <= an2);
   res := call defeq_list(mode, vis, d, ao2 + cnP, an3, xo, xn);
+  CTL.u64[136] := top;
   return res
 }
 
@@ -540,7 +576,9 @@ Both are thin memo wrappers around `inst_lp` (a `WhnfCallees` stub), over the al
 caches `ruleRhsC` (array 104, `rrSch`) and `constTyC` (array 102, `ctSch`): `CoreCaches.lean`,
 `CoreRefine.lean`'s `rrKey`/`memoRG_findR`/`memoRG_findP`. -/
 
-/-- con-leche: none — `ruleRhsAt`'s cache probe, `rrSch`'s key `(rec, ctor ||| us << 32)`. -/
+/-- con-leche: none — `ruleRhsAt`'s cache probe, `rrSch`'s key `(rec, ctor ||| us << 32)`. The probe
+is repeated after `inst_lp` (as `const_val_at` does): the slot found before the call is stale if the
+callee wrote the memo. -/
 -- con-ron: ConRon/Arena/Core.lean:209-224 ConRon.Arena.ruleRhsAt
 @[l_impl ConRon.Arena.ruleRhsAt]
 def ruleRhsAtL : FunDecl := lfn (rec, ctor, po, pl, rhs, us)
@@ -549,22 +587,34 @@ def ruleRhsAtL : FunDecl := lfn (rec, ctor, po, pl, rhs, us)
   (fd, j, dd) := call rr_find(rec, k2);
   if fd != 0 { return rrSch.arr.u64[j * 4 + 3] };
   r := call inst_lp(po, pl, us, rhs);
+  (fd, j, dd) := call rr_find(rec, k2);
   dum := call rr_put(rec, k2, r, fd, j);
   return r
 }
 
-/-- con-leche: none — `constTyAt`'s cache probe, `ctSch`'s key `(n, us)`. -/
+/-- con-leche: none — `constTyAt`'s cache probe, `ctSch`'s key `(n, us)`. The probe is repeated
+after `inst_lp` (as `const_val_at` does). -/
 -- con-ron: ConRon/Arena/Core.lean:178-191 ConRon.Arena.constTyAt
 @[l_impl ConRon.Arena.constTyAt]
 def constTyAtL : FunDecl := lfn (n, po, pl, ty, us) locals (fd, j, dd, r, dum) {
   (fd, j, dd) := call ct_find(n, us);
   if fd != 0 { return ctSch.arr.u64[j * 4 + 3] };
   r := call inst_lp(po, pl, us, ty);
+  (fd, j, dd) := call ct_find(n, us);
   dum := call ct_put(n, us, r, fd, j);
   return r
 }
 
 /-! ## `rec_fire_args(…)`: `instSpine`, `inst_spine_pins`, `rec_fire_args` -/
+
+/-- The instantiation walk of `inst_spine` (a named block, for the proofs). -/
+def instSpineLoop : Stmt := lblk (ao, an, t, e, i) {
+  while i < an {
+    e := call inst_entry(e, SPN.u64[ao + i], t);
+    t := t - 1;
+    i += 1
+  }
+}
 
 /-- con-leche: `ExprOps.lean:1305-1313` `instSpine` — instantiate a telescope-context expression
 at an argument spine `(ao, an)`, the fuel-like index `t` decreasing by one per argument. -/
@@ -572,12 +622,21 @@ at an argument spine `(ao, an)`, the fuel-like index `t` decreasing by one per a
 @[l_impl ConRon.Arena.instSpine]
 def instSpineL : FunDecl := lfn (ao, an, t, e) locals (i) {
   i := 0;
-  while i < an {
-    e := call inst_entry(e, SPN.u64[ao + i], t);
-    t := t - 1;
-    i += 1
-  };
+  ⟪instSpineLoop⟫;
   return e
+}
+
+/-- The pin walk of `inst_spine_pins` (a named block, for the proofs). Each result is pushed (the top
+is raised) as soon as it is stored: the next iteration's callees may use the stack above the top,
+and the earlier results must lie below it. -/
+def instSpinePinsLoop : Stmt := lblk (po, pl, us, ao, rP, pvo, pvc, so, j, q, s) {
+  while j < pvc {
+    q := call inst_lp(po, pl, us, SPN.u64[pvo + j]);
+    s := call inst_spine(ao, rP, rP - 1, q);
+    SPN.u64[so + j] := s;
+    CTL.u64[136] := so + j + 1;
+    j += 1
+  }
 }
 
 /-- con-leche: `CoreDefs.lean:908-927` `recFireComparands` (the nested rule's stored parameter
@@ -590,13 +649,7 @@ def instSpinePinsL : FunDecl := lfn (po, pl, us, ao, rP, pvo, pvc) locals (so, j
   if len(SPN.u64) < so { abort };
   if len(SPN.u64) - so < pvc { abort };
   j := 0;
-  while j < pvc {
-    q := call inst_lp(po, pl, us, SPN.u64[pvo + j]);
-    s := call inst_spine(ao, rP, rP - 1, q);
-    SPN.u64[so + j] := s;
-    j += 1
-  };
-  CTL.u64[136] := so + pvc;
+  ⟪instSpinePinsLoop⟫;
   return (so, pvc)
 }
 
@@ -659,12 +712,14 @@ def iotaCertsFullAuxL : FunDecl := lfn (mode, vis, d, h, aco, acn, ao, an, i)
 }
 
 /-- con-leche: `Kernel/Core.lean:252-267`/`Cached/CoreC.lean:178-181` `iotaCertsFull`/
-`iotaCertsFullI` — the empty-accumulator entry. -/
+`iotaCertsFullI` — the empty-accumulator entry. The stack top is restored after the walk (the
+accumulator is scratch; the refinement specs promise `StackKept`). -/
 -- con-ron: ConRon/Arena/Core.lean:1319-1324 ConRon.Arena.iotaCertsFull
 @[l_impl ConRon.Arena.iotaCertsFull]
 def iotaCertsFullL : FunDecl := lfn (mode, vis, d, h, ao, an) locals (top, res) {
   top := CTL.u64[136];
   res := call iota_certs_full_aux(mode, vis, d, h, top, 0, ao, an, 0);
+  CTL.u64[136] := top;
   return res
 }
 
@@ -901,8 +956,6 @@ def IsCtorAppOK (p : Prog) : Prop :=
     (MM : ModeMaps) (eb e : Word), CoreS dn s₀.mem a₀ vis fe MM eb → HW e →
     CoreSpec p n "is_ctor_app" [vis, e] (isCtorApp fe (decE e)) decBool s₀ a₀ dn vis fe MM eb
 
-@[refines ConRon.Arena.isCtorApp]
-theorem isCtorApp_refines : IsCtorAppOK p := sorry
 
 /-- con-leche: `Core.lean:695-699` `isStrLit`. -/
 def IsStrLitOK (p : Prog) : Prop :=
@@ -941,8 +994,6 @@ def TowerSlotsAllOK (p : Prog) : Prop :=
     CoreSpec p n "tower_slots_all" [vis, T, nF] (towerSlotsAll fe (decI T) nF.toNat) decBool s₀ a₀
       dn vis fe MM eb
 
-@[refines ConRon.Arena.towerSlotsAll]
-theorem towerSlotsAll_refines : TowerSlotsAllOK p := sorry
 
 /-- con-leche: `CoreDefs.lean:730-735`/`Cached/CoreC.lean:310-317` `etaProjs`. -/
 def EtaProjsOK (p : Prog) : Prop :=
@@ -955,8 +1006,6 @@ def EtaProjsOK (p : Prog) : Prop :=
       ∃ xs, AM.res (etaProjs (decI T) (decE b) nF.toNat) a₀ = xs ∧
         SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄
 
-@[refines ConRon.Arena.etaProjs]
-theorem etaProjs_refines : EtaProjsOK p := sorry
 
 /-- con-leche: `CoreDefs.lean:750-754` `etaFabArgsE`. -/
 def EtaFabArgsOK (p : Prog) : Prop :=
@@ -972,8 +1021,6 @@ def EtaFabArgsOK (p : Prog) : Prop :=
       ∃ xs, AM.res (etaFabArgsE (decI T) targs.toList (decE major) nF.toNat) a₀ = xs ∧
         SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄
 
-@[refines ConRon.Arena.etaFabArgsE]
-theorem etaFabArgs_refines : EtaFabArgsOK p := sorry
 
 /-- con-leche: `CoreDefs.lean:793-806`/`:808-810`/`FEnv.lean:199-201` `andRescueSlots`. -/
 def AndRescueSlotsOK (p : Prog) : Prop :=
@@ -982,8 +1029,6 @@ def AndRescueSlotsOK (p : Prog) : Prop :=
     CoreSpec p n "and_rescue_slots" [vis, ctor, nP, us]
       (andRescueSlots fe (decI ctor) nP.toNat (decI us)) decBool s₀ a₀ dn vis fe MM eb
 
-@[refines ConRon.Arena.andRescueSlots]
-theorem andRescueSlots_refines : AndRescueSlotsOK p := sorry
 
 /-- con-leche: `Core.lean:502-663` (the shared scope guard) `fabScopeOk`. -/
 def FabScopeOkOK (p : Prog) : Prop :=
@@ -992,8 +1037,6 @@ def FabScopeOkOK (p : Prog) : Prop :=
     CoreSpec p n "fab_scope_ok" [d, fab, major] (fabScopeOk d.toNat (decE fab) (decE major)) decBool
       s₀ a₀ dn vis fe MM eb
 
-@[refines ConRon.Arena.fabScopeOk]
-theorem fabScopeOk_refines : FabScopeOkOK p := sorry
 
 /-- con-leche: `Core.lean:665-677` `litMajorToCtor`. -/
 def LitMajorToCtorOK (p : Prog) : Prop :=
@@ -1004,8 +1047,6 @@ def LitMajorToCtorOK (p : Prog) : Prop :=
       (litMajorToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h)) decH s₀ a₀ dn vis fe MM
       eb
 
-@[refines ConRon.Arena.litMajorToCtor]
-theorem litMajorToCtor_refines : LitMajorToCtorOK p := sorry
 
 /-- con-leche: `Core.lean:502-663`/`Cached/CoreC.lean:428-453` `majorToCtor`. -/
 def MajorToCtorOK (p : Prog) : Prop :=
@@ -1064,8 +1105,6 @@ def IotaIndexOkOK (p : Prog) : Prop :=
       (iotaIndexOk (coreKnot (decMode mode) fe id F) fe d.toNat mI.toNat rP.toNat cnP.toNat
         (decE tyCtor) margs.toList idx.toList) decBool s₀ a₀ dn vis fe MM eb
 
-@[refines ConRon.Arena.iotaIndexOk]
-theorem iotaIndexOk_refines : IotaIndexOkOK p := sorry
 
 /-- con-leche: `Core.lean:298-320` `proofIrrel`. -/
 def ProofIrrelOK (p : Prog) : Prop :=
@@ -1089,8 +1128,6 @@ def RuleRhsAtOK (p : Prog) : Prop :=
     CoreSpec p n "rule_rhs_at" [rec, ctor, po, pl, rhs, us]
       (ruleRhsAt (decI rec) (decI ctor) lps (decE rhs) (decI us)) decH s₀ a₀ dn vis fe MM eb
 
-@[refines ConRon.Arena.ruleRhsAt]
-theorem ruleRhsAt_refines : RuleRhsAtOK p := sorry
 
 /-- con-leche: none (`constTyAt`'s cache probe). -/
 def ConstTyAtOK (p : Prog) : Prop :=
@@ -1100,8 +1137,6 @@ def ConstTyAtOK (p : Prog) : Prop :=
     CoreSpec p n "const_ty_at" [nn, po, pl, ty, us]
       (constTyAt ⟨decI nn, lps, decE ty⟩ (decI us)) decH s₀ a₀ dn vis fe MM eb
 
-@[refines ConRon.Arena.constTyAt]
-theorem constTyAt_refines : ConstTyAtOK p := sorry
 
 /-- con-leche: `ExprOps.lean:1305-1313` `instSpine`. -/
 def InstSpineOK (p : Prog) : Prop :=
@@ -1111,8 +1146,6 @@ def InstSpineOK (p : Prog) : Prop :=
     CoreSpec p n "inst_spine" [ao, an, t, e] (instSpine coreWalkFuel args.toList t.toNat (decE e))
       decH s₀ a₀ dn vis fe MM eb
 
-@[refines ConRon.Arena.instSpine]
-theorem instSpine_refines : InstSpineOK p := sorry
 
 /-- con-leche: `CoreDefs.lean:908-927` `instSpinePins`. -/
 def InstSpinePinsOK (p : Prog) : Prop :=
@@ -1130,8 +1163,6 @@ def InstSpinePinsOK (p : Prog) : Prop :=
       ∃ xs, AM.res (instSpinePins lps (decI us) args.toList rP.toNat pins.toList) a₀ = xs ∧
         SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄
 
-@[refines ConRon.Arena.instSpinePins]
-theorem instSpinePins_refines : InstSpinePinsOK p := sorry
 
 /-- con-leche: `CoreDefs.lean:908-927` `recFireComparands` (its `.2`, `recFireArgs`). -/
 def RecFireArgsOK (p : Prog) : Prop :=
@@ -1149,8 +1180,6 @@ def RecFireArgsOK (p : Prog) : Prop :=
       ∃ xs, AM.res (recFireArgs rl lps (decI us) args.toList rP.toNat) a₀ = xs ∧
         SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄
 
-@[refines ConRon.Arena.recFireArgs]
-theorem recFireArgs_refines : RecFireArgsOK p := sorry
 
 /-- con-leche: `ConLeche/Cached/CoreC.lean:149-176` `iotaCertsFullAux`. -/
 def IotaCertsFullAuxOK (p : Prog) : Prop :=
@@ -1195,32 +1224,9 @@ Pure/read-only, over `EREC` alone (no `CoreS` needed): `find_rule`, `rec_rule_k`
 def decRuleAt (m : Mem) (f q : Word) : Option IRecRule :=
   if f = 0 then none else decRule (m.arr64 EREC) q.toNat
 
-/-- **`find_rule` refines `findRule`.** -/
-@[refines ConRon.Arena.findRule]
-theorem findRule_refines (p : Prog) (hp : p.lookup "find_rule" = some findRuleL) (n : Nat)
-    (s₀ : St) (ro rc c : Word) (rules : List IRecRule)
-    (hr : decRules (s₀.mem.arr64 EREC) ro.toNat rc.toNat = some rules) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "find_rule" [ro, rc, c]
-    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧
-      findRule rules (decI c) = decRuleAt s₀.mem (r.headD 0) (r.tail.headD 0); ⊤⦄ := sorry
 
-/-- **`rec_rule_k` refines `recRuleK`.** -/
-@[refines ConRon.Arena.recRuleK]
-theorem recRuleK_refines (p : Prog) (hp : p.lookup "rec_rule_k" = some recRuleKL) (n : Nat)
-    (s₀ : St) (ro rc : Word) (rules : List IRecRule)
-    (hr : decRules (s₀.mem.arr64 EREC) ro.toNat rc.toNat = some rules) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "rec_rule_k" [ro, rc]
-    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ (r.headD 0 != 0) = recRuleK rules; ⊤⦄ := sorry
 
-@[refines ConRon.Arena.isStrLit]
-theorem isStrLit_refines (p : Prog) (hp : IotaProg p) : IsStrLitOK p := sorry
 
-theorem defeqList_refines (p : Prog) (hp : IotaProg p) (hw : WhnfCallees p) (hc : IotaCallees p) :
-    DefeqListOK p := sorry
 
-theorem piResidual_refines (p : Prog) (hp : IotaProg p) (hw : WhnfCallees p) (hc : IotaCallees p) :
-    PiResidualOK p := sorry
 
 end L.Arena
