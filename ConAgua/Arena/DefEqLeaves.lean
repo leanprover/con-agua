@@ -40,8 +40,10 @@ structure DefEqLeafProg (p : Prog) : Prop where
   hhint : p.lookup "head_hint" = some headHintL
   hlt : p.lookup "hint_lt" = some hintLtL
   ufh : p.lookup "unfoldable_head" = some unfoldableHeadL
+  sch : p.lookup "same_const_heads" = some sameConstHeadsL
 
 /-! ## Shared lemmas -/
+
 
 theorem decE_tag_beq (e : Word) (hh : e.toNat < 2 ^ 32) (k : Nat) (hk : k < 16) :
     ((decE e).tag == UInt32.ofNat k) = decide (e >>> 28 = UInt64.ofNat k) := by
@@ -374,6 +376,7 @@ theorem eagerW_go (h4 : h >>> 28 = 4) (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 C
 
 end eagerArms
 
+-- Three views: the paths cost ~20 s of `grind` (the default budget runs out).
 set_option maxHeartbeats 2000000 in
 theorem isEagerReduce_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St) (h : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "is_eager_reduce" [h]
@@ -1127,5 +1130,175 @@ theorem unfoldableHead_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀
   have hrun := unfoldableHead_run_defn fe _ a₀ _ _ _ hgaf hct hv cv v _ (by rw [hfind', hci_eq]) _ hvl
   refine hres _ hW (by split <;> first | exact hw0 | exact hw1) _ hrun ?_
   rw [hlen, ite_bne, toNat_beq]
+
+/-! ## `same_const_heads` -/
+
+/-- After the second `get_app_fn`: the second head's name against `n1`. -/
+def scB2 (n1 : Word) (x : List Word × Mem) : Option (Word × Mem) :=
+  if x.1.headD 0 >>> 28 ≠ 3 then some (0, x.2)
+  else if tierW (x.1.headD 0) ≠ 0 ∧ rdW (x.2.arr64 CTL) 1 = 0 then none
+  else if rdW (x.2.arr64 CTL) (18 + tierW (x.1.headD 0)) ≤ idxW (x.1.headD 0) then none
+  else some (if n1 = rdW (x.2.arr64 CREC) (idxW (x.1.headD 0) * 4 + tierW (x.1.headD 0) * 2) then 1
+    else 0, x.2)
+
+/-- After the first `get_app_fn`: the first head's name, then the second head. -/
+def scB1 (p : Prog) (n : Nat) (f2 : Word) (x : List Word × Mem) : Option (Word × Mem) :=
+  if x.1.headD 0 >>> 28 ≠ 3 then some (0, x.2)
+  else if tierW (x.1.headD 0) ≠ 0 ∧ rdW (x.2.arr64 CTL) 1 = 0 then none
+  else if rdW (x.2.arr64 CTL) (18 + tierW (x.1.headD 0)) ≤ idxW (x.1.headD 0) then none
+  else (callW p n "get_app_fn" [f2] x.2).bind
+    (scB2 (rdW (x.2.arr64 CREC) (idxW (x.1.headD 0) * 4 + tierW (x.1.headD 0) * 2)))
+
+/-- The model of `same_const_heads`. -/
+def sameConstHeadsW (p : Prog) (n : Nat) (m : Mem) (a b : Word) : Option (Word × Mem) :=
+  if a >>> 28 ≠ 4 then some (0, m)
+  else if tierW a ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
+  else if rdW (m.arr64 CTL) (4 + tierW a) ≤ idxW a then none
+  else if b >>> 28 ≠ 4 then some (0, m)
+  else if tierW b ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
+  else if rdW (m.arr64 CTL) (4 + tierW b) ≤ idxW b then none
+  else (callW p n "get_app_fn" [rdW (m.arr64 AREC) (idxW a * 4 + tierW a * 2)] m).bind
+    (scB1 p n (rdW (m.arr64 AREC) (idxW b * 4 + tierW b * 2)))
+
+-- Four views and two calls: the paths cost ~2 min of `grind` (the default budget runs out).
+set_option maxHeartbeats 2000000 in
+theorem sameConstHeads_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St) (a b : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "same_const_heads" [a, b]
+    ⦃fun r s' => LocEq s' s₀ ∧ sameConstHeadsW p n s₀.mem a b = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp.sch]
+  simp only [callFn, sameConstHeadsL]
+  sym only [lang_grind, arena_grind, defeq_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      callW_spec p n "get_app_fn"] <;>
+    finish [sameConstHeadsW, scB1, scB2, Option.bind_some, tierW, idxW]
+
+/-- **`same_const_heads` refines `sameConstHeads`.** -/
+@[refines ConRon.Arena.sameConstHeads]
+theorem sameConstHeads_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb a b : Word)
+    (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (ha : HW a) (hb : HW b) :
+    CoreSpec p (n + 1) "same_const_heads" [a, b] (sameConstHeads (decE a) (decE b)) decBool s₀ a₀ dn
+      vis fe MM eb := by
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
+    (sameConstHeads_spec p hp n s₀ a b)
+  subst hs0
+  refine ⟨hloc, ?_⟩
+  have hR := hS.arena.1
+  have hres : ∀ x : Word, some (x, s.mem) = some (r.headD 0, s'.mem) → HW x →
+      (sameConstHeads (decE a) (decE b)).run a₀ = .ok (x != 0, a₀) →
+      CoreRef (sameConstHeads (decE a) (decE b)) a₀ decBool dn s.mem vis fe MM eb r s'.mem := by
+    intro x hxy hx hv
+    simp only [Option.some.injEq, Prod.mk.injEq] at hxy
+    obtain ⟨h1, h3⟩ := hxy
+    rw [← h3]
+    refine coreRef_pure hS hv ?_ ?_
+    · rw [decBool, ← h1]
+    · unfold ResH; rw [← h1]; exact hx
+  unfold sameConstHeadsW at hW
+  rcases (Classical.em (a >>> 28 = 4)).symm with a4 | a4
+  · simp only [ne_eq, a4, not_false_eq_true, ↓reduceIte] at hW
+    refine hres 0 hW hw0 ?_
+    simp only [sameConstHeads, tag_beq_app a ha, a4, decide_false, Bool.false_eq_true, ↓reduceIte]
+    rfl
+  by_cases as : tierW a ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0
+  · simp [a4, as] at hW
+  by_cases ac : rdW (s.mem.arr64 CTL) (4 + tierW a) ≤ idxW a
+  · simp [a4, as, ac] at hW
+  simp only [a4, as, ac, ne_eq, not_true_eq_false, ↓reduceIte] at hW
+  have avo : viewOK s.mem a 4 := ⟨as, by simpa using ac⟩
+  obtain ⟨hva, hf1, -⟩ := view_app s.mem a₀ hR a ha avo a4
+  have hpre : ∀ T : AM Bool, (sameConstHeads (decE a) (decE b)).run a₀ = (do
+      if (decE b).tag == ETag.app then
+        match ← view (decE b) with
+        | .app f₂ _ => do
+          let hh ← getAppFn coreWalkFuel (decE (rdW (s.mem.arr64 AREC) (idxW a * 4 + tierW a * 2)))
+          if hh.tag == ETag.const then
+            match ← view hh with
+            | .const n₁ _ =>
+              let hh ← getAppFn coreWalkFuel f₂
+              if hh.tag == ETag.const then
+                match ← view hh with
+                | .const n₂ _ => pure (n₁ == n₂)
+                | _ => pure false
+              else pure false
+            | _ => pure false
+          else pure false
+        | _ => pure false
+      else pure false : AM Bool).run a₀ := by
+    intro _
+    simp only [sameConstHeads, tag_beq_app a ha, a4, decide_true, ↓reduceIte, StateT.run_bind,
+      view_run _ _ _ hva, except_ok_bind]
+    rfl
+  rw [hpre (pure false)] at hres
+  rcases (Classical.em (b >>> 28 = 4)).symm with b4 | b4
+  · simp only [b4, not_false_eq_true, ↓reduceIte] at hW
+    refine hres 0 hW hw0 ?_
+    simp only [tag_beq_app b hb, b4, decide_false, Bool.false_eq_true, ↓reduceIte]
+    rfl
+  by_cases bs : tierW b ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0
+  · simp [b4, bs] at hW
+  by_cases bc : rdW (s.mem.arr64 CTL) (4 + tierW b) ≤ idxW b
+  · simp [b4, bs, bc] at hW
+  simp only [b4, bs, bc, not_true_eq_false, ↓reduceIte] at hW
+  have bvo : viewOK s.mem b 4 := ⟨bs, by simpa using bc⟩
+  obtain ⟨hvb, hf2, -⟩ := view_app s.mem a₀ hR b hb bvo b4
+  simp only [tag_beq_app b hb, b4, decide_true, ↓reduceIte, StateT.run_bind, view_run _ _ _ hvb,
+    except_ok_bind] at hres
+  generalize rdW (s.mem.arr64 AREC) (idxW a * 4 + tierW a * 2) = f1 at hf1 hW hres
+  generalize rdW (s.mem.arr64 AREC) (idxW b * 4 + tierW b * 2) = f2 at hf2 hW hres
+  cases hc : callW p n "get_app_fn" [f1] s.mem with
+  | none => simp [hc] at hW
+  | some q =>
+  obtain ⟨r₁, m₁⟩ := q
+  rw [hc, Option.bind_some] at hW
+  obtain ⟨rfl, hh1, hgaf1⟩ := getAppFn_callW hp hR hf1 hc
+  simp only [hgaf1, except_ok_bind] at hres
+  unfold scB1 at hW
+  simp only at hW
+  generalize r₁.headD 0 = g1 at hh1 hW hres
+  rcases (Classical.em (g1 >>> 28 = 3)).symm with g3 | g3
+  · simp only [ne_eq, g3, not_false_eq_true, ↓reduceIte] at hW
+    refine hres 0 hW hw0 ?_
+    simp only [tag_beq_const g1 hh1, g3, decide_false, Bool.false_eq_true, ↓reduceIte]
+    rfl
+  by_cases gs : tierW g1 ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0
+  · simp [g3, gs] at hW
+  by_cases gc : rdW (s.mem.arr64 CTL) (18 + tierW g1) ≤ idxW g1
+  · simp [g3, gs, gc] at hW
+  simp only [g3, gs, gc, ne_eq, not_true_eq_false, ↓reduceIte] at hW
+  have gvo : viewOK s.mem g1 18 := ⟨gs, by simpa using gc⟩
+  obtain ⟨hvg, hn1, -⟩ := L.Ind.view_const_f s.mem a₀ hR g1 hh1 gvo g3
+  simp only [tag_beq_const g1 hh1, g3, decide_true, ↓reduceIte, StateT.run_bind, view_run _ _ _ hvg,
+    except_ok_bind] at hres
+  generalize rdW (s.mem.arr64 CREC) (idxW g1 * 4 + tierW g1 * 2) = n1 at hn1 hW hres
+  cases hc2 : callW p n "get_app_fn" [f2] s.mem with
+  | none => simp [hc2] at hW
+  | some q =>
+  obtain ⟨r₂, m₂⟩ := q
+  rw [hc2, Option.bind_some] at hW
+  obtain ⟨rfl, hh2, hgaf2⟩ := getAppFn_callW hp hR hf2 hc2
+  simp only [hgaf2, except_ok_bind] at hres
+  unfold scB2 at hW
+  simp only at hW
+  generalize r₂.headD 0 = g2 at hh2 hW hres
+  rcases (Classical.em (g2 >>> 28 = 3)).symm with k3 | k3
+  · simp only [ne_eq, k3, not_false_eq_true, ↓reduceIte] at hW
+    refine hres 0 hW hw0 ?_
+    simp only [tag_beq_const g2 hh2, k3, decide_false, Bool.false_eq_true, ↓reduceIte]
+    rfl
+  by_cases ks : tierW g2 ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0
+  · simp [k3, ks] at hW
+  by_cases kc : rdW (s.mem.arr64 CTL) (18 + tierW g2) ≤ idxW g2
+  · simp [k3, ks, kc] at hW
+  simp only [k3, ks, kc, ne_eq, not_true_eq_false, ↓reduceIte] at hW
+  have kvo : viewOK s.mem g2 18 := ⟨ks, by simpa using kc⟩
+  obtain ⟨hvk, hn2, -⟩ := L.Ind.view_const_f s.mem a₀ hR g2 hh2 kvo k3
+  refine hres _ hW (by split <;> first | exact hw0 | exact hw1) ?_
+  simp only [tag_beq_const g2 hh2, k3, decide_true, ↓reduceIte, StateT.run_bind, view_run _ _ _ hvk,
+    except_ok_bind, StateT.run_pure]
+  rw [decI_beq _ _ hn1 hn2, ite_bne]
+  rfl
 
 end L.Arena
