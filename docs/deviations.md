@@ -35,6 +35,7 @@ refinements, the L code's comments, `docs/e2e.md`). Fixed rows move to the end.
 | D18 | `Checker/Prelude.lean` `hoist_ok` (`prepare_prelude`) | `hoistNatOpGround` reorders the stream when a pinned `Nat` operation precedes its ground | checks that the hoist is the identity and aborts otherwise (`e2e/natop_order`, `natop_before_ble`) | completeness | integrate | `hoistClosure` + `applyHoist` in L (a stable sort of record indices by `hoistKey`) |
 | D19 | `Rom/CIRead.lean` (the ROM constant readers) | `internCI` keeps a `sortZ` name as a value | interns it (only `Quot`'s `u`, already interned as a level parameter) | none | integrate | – |
 | D20 | `Checker/Entry.lean` adapters `abstract1_fast`, `instantiate1_fast`, `inst1` | the walks take `coreWalkFuel` | the fuel argument is dropped; lane exprops4's walks count their own | none (the twin's fuel is never exhausted below `2^62`; ROADMAP §3(b)) | integrate | – |
+| D21 | `Arena/StrLit.lean` `str_ls1`, `str_cons_spine` (via `rom_lit`) | `internLsNode [u]`, `internE (.lit (.natVal c))` take the key as a value | the one-element list / one-limb literal is pushed at the pool top first and stays there even when the node already exists (one word per call) | performance (memory: two pool words per string-literal unfolding, a few per `List` test) | defeq2 | intern from a scratch word, or pop the top on a hit |
 
 ## Fixed
 
