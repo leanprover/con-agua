@@ -6603,6 +6603,84 @@ Merge master and adapt new uses:
 
 Census at landing 3 (`--no-build`): phase 2 **145 proven, 26 sorry, 71 written, 89 todo**.
 
+### Landing 6: the stuck/irrelevance side (`DefEqStuck*.lean`, helper `defeq-top`)
+* Refined (no `sorry`, ~4.9k lines, 81 s CPU): `prop_irrel`, `eta_cert`, `eta_ctor_shape`, the
+  structure-η certificate (`struct_eta_cert*`), `struct_unit_cert`, `stuck_irrel`, `stuck_str`,
+  `stuck_app`, `defeq_stuck`, `defeq_proj_pair`, `lazy_delta_proj_reduction`, `defeq_tail`.
+  Hypotheses (`StuckCallees`): `DefeqLstOK`, `LazyDeltaStepH` (both proved by `defeq-mid`: to be
+  plugged in), `ProofIrrelOK` (lane whnf's `proofIrrel_refines` has two more premises, `n ≤ 2^62`
+  and the eager bit: add them here when plugging), `ReduceProjCoreH`, `Inst1OK`,
+  `TowerSlotsAllOK`, `StrLit*`, `SupKeep`, `ReservedContainsOK`, `LvlsEqCH` (needs the "stored
+  level lists denote" invariant, as `InferProjOK`).
+* L: `eta_cert_body` aborts on depth wrap; `defeq_stuck`'s constant arm reads a level verdict
+  `≠ 1` as true (`decO`); proof splits as listed in the helper's commits; one test per `if` took
+  `defeq_stuck`'s spec from ~2 min to 3 s.
+* Merge with lane `integrate`: duplicate top-level names between helper files clash in
+  `scripts/checker_prog.py` (`decDS`, `decOptR_*`, `growRef_*`, the `Inhabited DeltaStepA`
+  instance, now in `DefEq.lean`): the stuck files' copies are suffixed `S`. `Checker/Prog.lean`
+  regenerated (1467 functions).
+* Left for the lane: `defeq_body` itself, plugging the proved specs into the hypotheses, the knot
+  induction (`KnotUpTo p n → KnotOK p (n + 1)`), `infer_proj`, and the `CoreS` invariants above.
+
+### Landing 2: exact walk counters, the walks and `nat_op_result` under `CoreS`, `major_to_ctor`
+* **Exact `coreWalkFuel` counters** (helper `whnf2-walks`, ROADMAP §3 (b)): `fr_go`/`fr_memo`,
+  `bb_go`/`bb_memo`, `inst_go`, `il_go`/`ilg_go`, `abs_go`/`ab_node`, `ar_*` take the twin's depth
+  counter as an L argument (`if f == 0 { abort }`, children at `f - 1`; `abstract1`'s cut-off
+  `ab_fvb(h, f - 1)`, as the twin's `fvarB fuel h` at the decremented fuel). The entries keep their
+  arity and start at `4000000000` (`coreWalkFuel_toNat`); `bvar_b`/`loose_bvars_bounded_fast`/
+  `has_fvar_fast` use their (formerly unused) `f`. Statements: twin at exactly `c.toNat`, any L
+  fuel; the bb/fr walks also at any `F` with `c.toNat ≤ F ∨ n ≤ F` (`*_correctF`, `bvbW_okF`), which
+  lane `indproofs2`'s counter-less `has_loose_b_var_b_go` needs (its `bvbW_stage`; `IndSumSpec5`
+  adapted minimally; that walk itself still has no exact counter: lane `indproofs2`'s).
+* **Result words.** `CoreSpec`'s default post wants the result *word* below `2^32` (callers compute
+  with it; `decE` truncates). The four entries (`inst_entry`, `inst_list`, `abs_entry`,
+  `ar_entry`) return `r & 4294967295` and post `(r.headD 0).toNat < 2^32`; the Boolean ones post
+  `≤ 1`; `reduce_nat_op` normalises `nat_op_result`'s pair (`u64(rf != 0)`, `rh & 4294967295`):
+  the same values under `decE`/`decOpt`, one `and` each.
+* **`CoreWalks.lean`**: `CoreS.of_walk` (an L frame below 64, `cpl` kept, the walk memos given),
+  `Keeps cpl` for every core walk (`keepsL_auto`, `cpl`'s primitives; the memo probes under
+  `with_reducible`, else unification unfolds `instLGet` against `inst1Get` and times out), and the
+  bridges `instListOK_core` (`WhnfCallees.instList`), `inst1_core` (`CoreCallees.inst1`: one
+  `FunDecl`, `instEntry`, at the two names `inst_entry`/`inst1`), `lbb_core` (`IotaCallees`;
+  `fab_scope_ok` now passes the counter), and lane `defeq`'s `abs1_core`, `absRange_core`,
+  `hasFvar_core` (`Knot.lean`'s `Abstract1OK`, `AbstractRangeOK`, `HasFvarOK`, same statements).
+  The walk-memo trick: the twin's run from `a₀` *is* its run from `a₀` with `instLC`/`abs1C`
+  replaced by `CoreMemos`' map (the entry clears it first: `rfl`), and `ArenaD` does not read those
+  memos (`ArenaD.memo_irrel`); `ar_entry` at `k = 0` changes nothing and is a separate case.
+  The stub bundles still carry these fields (`whnfCallees_stub` …): replacing them needs program
+  hypotheses (`InstListProg p`, …) on every census-tagged theorem; done together with the knot.
+* **`nat_op_result` under `CoreS`** (first assumed fact, gone): `CoreAgree.lean`'s
+  `exec_agree`/`invoke_agree` (programs agreeing on a call-closed set run it alike; `closedW` is the
+  closure witness) move lane `pinsenv`'s `natOpResultL_refines` from `natArmProg` to any `p` with
+  `WhnfDeltaProg'.natAgree` (new field; `natClosed` now a theorem); `CoreNatOp.lean`'s `LeafOp`
+  (a twin step interning only `lit`/`const` leaves keeps `cpl` and carries `DerR` at any memory)
+  gives the rest. `natOpResultOK_stub` deleted.
+* **`major_to_ctor`** (helper `whnf2-m2c`): split into 12 L functions (`WhnfM2C.lean`: head,
+  constructor, the constant view, the three arms and their halves, a shared type check), proved
+  (`WhnfM2CRefine{,2..5}.lean`, `majorToCtor_refines'`, axioms `propext`/`Classical.choice`/
+  `Quot.sound`; new hypothesis `ProofIrrelOK`, the statement of `proofIrrel_refines`, which rests
+  on `CoreS.lvl_den`). `major_to_ctor` puts `CTL[136]` back. The tagged `majorToCtor_refines` and
+  `prepareMajor_refines` now live in `WhnfM2CRefine5` (import order). ~150 L lines, 2634 proof
+  lines; `WhnfM2CRefine` 33 s user, the rest 1–3 s.
+* **`iota_rec_at`** (helper `whnf2-rec`): split into nine L functions (`WhnfIotaRec.lean`:
+  head, constructor/rule lookup, major, the verified-checks block and its comparison, the result),
+  proved (`WhnfIotaRecRefine{,2,3}.lean`, `iotaRecAt_refines'`, three standard axioms). New named
+  hypotheses (not `sorry`): `ErecKeptRec` (the iota callees leave the record pool alone),
+  `LvlsEqDen` (a successful `lvls_eq_c` under `CoreS` reads both lists back), `RecShape` (a stored
+  recursor has `rP ≤ mI + 1` and plain rules `ctorParams ≤ rP`: an environment invariant, like
+  `CoreS.lvl_den`). L fixes against the twin: a nested rule's pins are copied from `EREC` to the
+  stack before `rec_fire_args`; `lvls_eq` → the cached `lvls_eq_c` read as `liftFueled` (`0` aborts);
+  `const_ty_at` keyed on the stored constructor name; `peel_pis` before the level-count test;
+  word-overflow-free arity tests; the spurious `len(SPN) < so + rP` abort removed; the stack top
+  restored. ~116 L lines, ~2940 proof lines, 26 s user.
+* Merging: lane `integrate` renamed `reserved_contains` → `reserved_contains_w` (one body per name),
+  the m2c pieces follow; lemma-name clashes with lane `defeq`'s files renamed on this side
+  (`*_m2c`, `*_rec`, `exec_agreeOn`); `ConAgua/Checker/Prog.lean` regenerated
+  (`scripts/checker_prog.py`, `--check` clean).
+* Census, phase 5: **67 proven / 23 sorry / 28 written / 24 todo** (start: 62 / 26 / 29 / 25);
+  phase 4: 63 proven (+1). The `iota` targets stay "sorry": the tagged statements instantiate the
+  stub bundles (`iotaCallees_stub`, `whnfCallees_stub`, `coreCallees_stub`, the knot).
+
 ## The id tables as the twin's `IdTable`; the deviations list (2026-10-22, lane `twinaudit`)
 
 ### Landing 1: dense array plus sparse overflow (`Front/IdTable.lean`)

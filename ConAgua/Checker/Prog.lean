@@ -120,7 +120,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1458 functions, 35 of them stubs.
+1467 functions, 35 of them stubs.
 -/
 
 namespace L.Checker
@@ -686,6 +686,8 @@ def checkerProg : Prog := [
   ("esc_one", L.Front.Unescape.escOne),
   ("esc_sur", L.Front.Unescape.escSur),
   ("eta_cert", L.Arena.etaCertL),
+  ("eta_cert_body", L.Arena.etaCertBodyL),
+  ("eta_cert_ty", L.Arena.etaCertTyL),
   ("eta_ctor_shape", L.Arena.etaCtorShapeL),
   ("eta_fab_args", L.Arena.etaFabArgsL),
   ("eta_projs", L.Arena.etaProjsL),
@@ -930,6 +932,7 @@ def checkerProg : Prog := [
   ("lazy_fold_ok", L.Arena.lazyFoldOkL),
   ("lazy_iter", L.Arena.lazyIterL),
   ("lazy_nat", L.Arena.lazyNatL),
+  ("ldpr_exit", L.Arena.ldprExitL),
   ("lds_both", L.Arena.ldsBothL),
   ("lds_left", L.Arena.ldsLeftL),
   ("lds_right", L.Arena.ldsRightL),
@@ -1461,7 +1464,9 @@ def checkerProg : Prog := [
   ("struct_elim_level", L.Ind.structElimLevelL),
   ("struct_eta_cert", L.Arena.structEtaCertL),
   ("struct_eta_cert_go", L.Arena.structEtaCertGoL),
+  ("struct_eta_cert_tail", L.Arena.structEtaCertTailL),
   ("struct_eta_cert_with", L.Arena.structEtaCertWithL),
+  ("struct_eta_cert_wtb", L.Arena.structEtaCertWtbL),
   ("struct_proj_arg_p", L.Ind.structProjArgPL),
   ("struct_proj_bodies", L.Ind.structProjBodiesL),
   ("struct_proj_bodies_go", L.Ind.structProjBodiesGoL),
@@ -1472,11 +1477,15 @@ def checkerProg : Prog := [
   ("struct_ps_at", L.Ind.structPsAtL),
   ("struct_ps_at_go", L.Ind.structPsAtGoL),
   ("struct_unit_cert", L.Arena.structUnitCertL),
+  ("struct_unit_head", L.Arena.structUnitHeadL),
+  ("struct_unit_tail", L.Arena.structUnitTailL),
   ("struct_used_later", L.Ind.structUsedLaterL),
   ("struct_used_later_go", L.Ind.structUsedLaterGoL),
   ("struct_used_later_list", L.Ind.structUsedLaterListL),
   ("stuck_app", L.Arena.stuckAppL),
+  ("stuck_app_cong", L.Arena.stuckAppCongL),
   ("stuck_irrel", L.Arena.stuckIrrelL),
+  ("stuck_rest", L.Arena.stuckRestL),
   ("stuck_str", L.Arena.stuckStrL),
   ("sub_borrow", L.Arena.subBorrow),
   ("subst_const0", L.Ind.substConst0L),
