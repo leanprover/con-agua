@@ -219,7 +219,7 @@ theorem cnW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {n
   obtain ⟨hs, a', hrun, hS', hg, hd, hv, hP'⟩ := gnW_ok n _ _ a 0 k r0 hg0 hS
     (by have := UInt64.toNat_lt k; simpa using this) hP
   refine ⟨hs, a', hrun, hS', hg, ?_, hv, hP'⟩
-  simpa only [decRL, getD0, getD1, List.getD_cons_zero, List.getD_cons_succ] using hd
+  simpa only [decRL, getD0, cnGetD1, List.getD_cons_zero, List.getD_cons_succ] using hd
 
 /-- **`canon_names` refines `canonNames`.** -/
 @[refines ConRon.Arena.canonNames]

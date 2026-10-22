@@ -595,7 +595,7 @@ theorem canonLevelsEq_spec (p : Prog) (hp : CanonProg p) (n : Nat) (s₀ : St)
 
 
 theorem getD0 (r : List Word) : r.getD 0 0 = r.headD 0 := by cases r <;> rfl
-theorem getD1 (r : List Word) : r.getD (0 + 1) 0 = r.tail.headD 0 := by
+theorem cnGetD1 (r : List Word) : r.getD (0 + 1) 0 = r.tail.headD 0 := by
   cases r with
   | nil => rfl
   | cons x xs => cases xs <;> rfl
@@ -604,7 +604,7 @@ theorem decRL_unpack {k : IdxKind} {m : Mem} {r : List Word} {ids : List (Idx k)
     (h : decRL (fun m => decHL m) 0 m r ids) :
     decHL m (r.headD 0).toNat (r.tail.headD 0).toNat = some ids ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m := by
-  simpa only [decRL, getD0, getD1] using h
+  simpa only [decRL, getD0, cnGetD1] using h
 
 theorem lsEqW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat)
     {m m' : Mem} {a : AState} {po pl qo ql co cl fuel us vs r : Word} {ps qs cs : List NIdx}

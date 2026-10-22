@@ -15,7 +15,7 @@ namespace L.Ind
 
 open L.Arena
 
-theorem getD1' (r : List Word) : r.getD 1 0 = r.tail.headD 0 := by
+theorem cnGetD1' (r : List Word) : r.getD 1 0 = r.tail.headD 0 := by
   rcases r with _ | ⟨x, _ | ⟨y, z⟩⟩ <;> rfl
 theorem getD2' (r : List Word) : r.getD 2 0 = r.tail.tail.headD 0 := by
   rcases r with _ | ⟨x, _ | ⟨y, _ | ⟨z, w⟩⟩⟩ <;> rfl
@@ -71,7 +71,7 @@ theorem ceW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n
       StateT.run_bind, view_run' hvy, exc_ok_bind']
     generalize eViewW m x = ru at *
     generalize eViewW m y = rv at *
-    cases vx <;> cases vy <;> simp only [ViewR, getD1', getD2', getD3'] at hrx hry
+    cases vx <;> cases vy <;> simp only [ViewR, cnGetD1', getD2', getD3'] at hrx hry
     all_goals first
       | simp only [hrx.1, hry.1] at h
       | simp only [hrx.1, hry] at h

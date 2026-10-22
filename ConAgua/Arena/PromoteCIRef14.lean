@@ -47,7 +47,7 @@ theorem proj_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D :
   cases n with
   | zero => simp only [callW_zero', Option.bind_none] at hW; cases hW
   | succ n =>
-  obtain ⟨htn, hsn, hlp, hct, hss, hbs, hgs⟩ := decTbl_words htbl
+  obtain ⟨htn, hsn, hlp, hct, hss, hbs, hgs⟩ := pmDecTbl_words htbl
   have hqb : q.toNat + 14 ≤ (m.arr64 EREC).size := by omega
   -- the allocation
   cases hal : callW p (n + 1) "erec_alloc" [14] m with

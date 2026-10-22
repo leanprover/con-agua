@@ -21,7 +21,7 @@ theorem decRL_two {k : IdxKind} {m : Mem} {r : List Word} {xs : List (Idx k)}
     (hd : decHL m (r.headD 0).toNat (r.tail.headD 0).toNat = some xs)
     (hb : (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m) :
     decRL (fun m => decHL m) 0 m r xs := by
-  simpa only [decRL, getD0, getD1] using (⟨hd, hb⟩ : _ ∧ _)
+  simpa only [decRL, getD0, cnGetD1] using (⟨hd, hb⟩ : _ ∧ _)
 
 theorem allocW_mem' {m m1 : Mem} {q k : Word} (h : allocW m k = some (q, m1)) :
     m1 = allocMem m k := by
@@ -75,7 +75,7 @@ theorem cvLpsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
   | succ n =>
   rw [L.Arena.cvLpsW_step] at h
   have hq0 : decCV (erA m) q.toNat = some cv := ArrExt.decCV (erecP_ext m) hq
-  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_words hq0
+  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice hq0
   have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.2.2.2.2.1
   have e1 : rdW (m.arr64 EREC) (q + 1) = w1 := by
     have := rdW_off (a := erA m) (q := q) (k := 1) hsz (w := w1) (by simpa using hw1)
@@ -168,7 +168,7 @@ theorem ctxW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   | succ k =>
   rw [ctxW_succ] at h
   have hcv0 : decCV (erA m) cp.toNat = some cv := ArrExt.decCV (erecP_ext m) hcv
-  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_words hcv0
+  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice hcv0
   have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.2.2.2.2.1
   have e2 : rdW (m.arr64 EREC) (cp + 2) = w2 := by
     have := rdW_off (a := erA m) (q := cp) (k := 2) hsz (w := w2) (by simpa using hw2)
@@ -269,7 +269,7 @@ theorem cvWords {m : Mem} {q : Word} {cv : IConstantVal} (hsz : (m.arr64 EREC).s
       cv.name = decI wn ∧ cv.type = decI wt ∧ w2.toNat = cv.levelParams.length := by
   obtain ⟨wn, hn, hn32, hnm⟩ := decCV_name h
   obtain ⟨wt, ht, ht32, htm⟩ := decCV_typeW h
-  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_words h
+  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice h
   refine ⟨wn, w2, wt, ?_, ?_, ?_, hn32, ht32, hnm, htm, (hslice_len hsl).symm⟩
   · simpa [erA] using rdW_zero' (a := erA m) hn
   · simpa [erA] using rdW_off (a := erA m) (q := q) (k := 2) hsz (w := w2) (by simpa using hw2)

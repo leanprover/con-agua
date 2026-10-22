@@ -28,7 +28,7 @@ theorem decTbl_move {a b : Array Word} {q d : Nat} {tbl : IProjTable} {tn sn c :
   exact ⟨tn, htn, sn, hsn, lp, hlp, e4, nat?_move hw5 h4, c, hc, e6, nat?_move hw7 h6, ss, hss,
     bs, hbs, gs, hgs, e10, nat?_move hw13 h10, rfl⟩
 
-theorem decTbl_words {a : Array Word} {q : Nat} {tbl : IProjTable} (h : decTbl a q = some tbl) :
+theorem pmDecTbl_words {a : Array Word} {q : Nat} {tbl : IProjTable} (h : decTbl a q = some tbl) :
     hd? a (q + 1) = some tbl.tableName ∧ hd? a (q + 2) = some tbl.structName ∧
     hlist? a (q + 3) = some tbl.levelParams ∧ hd? a (q + 6) = some tbl.ctor ∧
     hd? a (q + 8) = some tbl.structSort ∧ hlist? a (q + 9) = some tbl.bodies.toList ∧
