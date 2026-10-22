@@ -23,7 +23,7 @@ theorem LoopR.of_frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
     {vis : Word} {fe fe' : IFEnv} {pend : Array PendingCheck} {ds : Array IDeclaration}
     {A : List ArrId} {C : List Word} {pm' : PMemo}
     (hR : LoopR dn m a vis fe pend ds) (hD : ArenaD m' a') (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b < 50 ∨ (132 ≤ b ∧ b ≤ 136) ∨ (146 ≤ b ∧ b ≤ 149))
+    (hA : ∀ b ∈ A, (b < 50 ∨ (54 < b ∧ b < 64)) ∨ (132 ≤ b ∧ b ≤ 136) ∨ (146 ≤ b ∧ b ≤ 149))
     (hC : ∀ x ∈ C, x.toNat < 64 ∨ x.toNat = 129 ∨ (140 ≤ x.toNat ∧ x.toNat ≤ 147))
     (hcp : cp a' = cp a) (hg : ErecGrow m m') (hts : erecTop m' ≤ (m'.arr64 EREC).size)
     (hP : PMemoR m' pm') (hE : EnvR dn m' vis fe') : LoopR dn m' a' vis fe' pend ds := by

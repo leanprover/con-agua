@@ -551,7 +551,7 @@ theorem spnLsW_ok (n : Nat) (m m' : Mem) (a : AState) (b l r : Word) (hs : List 
     (hA : ArenaD m a) (hsl : sliceL (m.arr64 SPN) b.toNat l.toNat = lsWords hs)
     (hb : b.toNat + l.toNat < 2 ^ 64) (hW : spnLsW n m b l = some (r, m')) :
     ∃ a', (internLsNode hs).run a = .ok (decI r, a') ∧ ArenaD m' a' ∧ r.toNat < 2 ^ 32 ∧
-      MemFrame [POOL, LSREC, LSSLOT] [0, 40, 41] m m' ∧
+      MemFrame [POOL, LSREC, LSSLOT, LSHP] [0, 40, 41] m m' ∧
       (∀ i : Word, i.toNat < m.top.toNat → rdW (m'.arr64 POOL) i = rdW (m.arr64 POOL) i) ∧
       m.top.toNat ≤ m'.top.toNat ∧ (m'.arr64 POOL).size = (m.arr64 POOL).size ∧
       a'.caches = a.caches ∧ a'.pins = a.pins ∧ a'.memos = a.memos := by
