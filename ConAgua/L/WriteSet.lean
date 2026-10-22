@@ -43,6 +43,7 @@ def Stmt.okW (ctl : ArrId) (A : List ArrId) (C : List Word) (fs : List FnName) :
   | .ite _ s t => s.okW ctl A C fs && t.okW ctl A C fs
   | .while _ s => s.okW ctl A C fs
   | .call _ f _ => f ∈ fs
+  | .gset .. => false
   | _ => true
 
 /-- **The write set of a call-closed function set**: every function of `fs` that `p` defines
@@ -163,6 +164,7 @@ theorem step_fr (p : Prog) (hp : closedW ctl p A C fs = true) (hW : WFrame ctl A
     vcgen [step, setLocs, evalArgs_same args, invoke_fr p hp k hk f hst m₀] <;>
       grind [St.setLocs_mem']
   | «abort» => vcgen [step] <;> grind
+  | gset g e => simp [Stmt.okW] at hst
 
 theorem exec_fr (p : Prog) (hp : closedW ctl p A C fs = true) (hW : WFrame ctl A C Fr) (n : Nat) :
     FrK ctl A C fs Fr (exec p n) := by
@@ -196,5 +198,141 @@ theorem run_frame (p : Prog) (hp : closedW ctl p A C fs = true) (hW : WFrame ctl
       (invoke_fr p hp _ (exec_fr p hp hW n) f hf m vs)
 
 end frame
+
+/-! ## Global variables: write sets by name
+
+A global's write set is a list of names. `closedG p G fs`: every function of the call-closed set
+`fs` writes only the globals in `G` (array stores are not restricted here; `closedW` is about
+those). Every run of `f ∈ fs` then keeps every other global (`GFrame`): the frame of a global is
+by construction, with no arithmetic on indices. -/
+
+/-- Writes only globals in `G`; calls only into `fs`. -/
+def Stmt.okG (G : List GVar) (fs : List FnName) : Stmt → Bool
+  | .gset g _ => g ∈ G
+  | .seq s t => s.okG G fs && t.okG G fs
+  | .ite _ s t => s.okG G fs && t.okG G fs
+  | .while _ s => s.okG G fs
+  | .call _ f _ => f ∈ fs
+  | _ => true
+
+/-- **The global write set of a call-closed function set.** -/
+def closedG (p : Prog) (G : List GVar) (fs : List FnName) : Bool :=
+  fs.all fun f => match p.lookup f with
+    | some fd => fd.body.okG G fs
+    | none => true
+
+/-- The globals outside `G` are those of `m`. -/
+def GFrame (G : List GVar) (m m' : Mem) : Prop := ∀ g, g ∉ G → m'.glob g = m.glob g
+
+theorem GFrame.glob {G : List GVar} {m m' : Mem} (h : GFrame G m m') {g : GVar} (hg : g ∉ G) :
+    m'.glob g = m.glob g := h g hg
+
+grind_pattern [lang_grind] GFrame.glob => GFrame G m m', m'.glob g
+
+theorem GFrame.refl (G : List GVar) (m : Mem) : GFrame G m m := fun _ _ => rfl
+
+theorem GFrame.set64 {G : List GVar} {m₀ m : Mem} (h : GFrame G m₀ m) (a : ArrId) (i v : Word) :
+    GFrame G m₀ (m.set64 a i v) := h
+
+theorem GFrame.set8 {G : List GVar} {m₀ m : Mem} (h : GFrame G m₀ m) (a : ArrId) (i v : Word) :
+    GFrame G m₀ (m.set8 a i v) := h
+
+theorem GFrame.setG {G : List GVar} {m₀ m : Mem} (h : GFrame G m₀ m) {g : GVar} (hg : g ∈ G)
+    (v : Word) : GFrame G m₀ (m.setG g v) := fun g' hg' => by
+  simp only [Mem.setG]
+  rw [if_neg (fun (e : g' = g) => hg' (e ▸ hg))]
+  exact h g' hg'
+
+theorem closedG_lookup {p : Prog} {G : List GVar} {fs : List FnName} (hp : closedG p G fs = true)
+    {f : FnName} (hf : f ∈ fs) {fd : FunDecl} (h : p.lookup f = some fd) : fd.body.okG G fs = true := by
+  simp only [closedG, List.all_eq_true] at hp
+  have := hp f hf
+  simp only [h] at this
+  exact this
+
+/-- `closedG` reads only the lookups of `fs` (as `closedW_of_agree`). -/
+theorem closedG_of_agree {p q : Prog} {G : List GVar} {fs : List FnName}
+    (hq : closedG q G fs = true) (hpq : ∀ f ∈ fs, p.lookup f = q.lookup f) :
+    closedG p G fs = true := by
+  simp only [closedG, List.all_eq_true] at hq ⊢
+  intro f hf
+  rw [hpq f hf]
+  exact hq f hf
+
+section gframe
+variable {G : List GVar} {fs : List FnName}
+
+/-- A continuation that keeps the globals outside `G` on `okG` statements. -/
+def GK (G : List GVar) (fs : List FnName) (k : Stmt → M Sig) : Prop :=
+  ∀ st, st.okG G fs = true → ∀ m₀, ⦃fun s => GFrame G m₀ s.mem⦄ k st ⦃fun _ s => GFrame G m₀ s.mem; ⊤⦄
+
+theorem invoke_g (p : Prog) (hp : closedG p G fs = true) (k : Stmt → M Sig) (hk : GK G fs k)
+    (f : FnName) (hf : f ∈ fs) (m₀ : Mem) (vs : List Word) :
+    ⦃fun s => GFrame G m₀ s.mem⦄ invoke p k f vs ⦃fun _ s => GFrame G m₀ s.mem; ⊤⦄ := by
+  cases h : p.lookup f with
+  | none => simp only [invoke, lookupFn, h]; vcgen <;> grind
+  | some fd =>
+    rw [invoke_eq _ h]
+    have hb := closedG_lookup hp hf h
+    simp only [callFn]
+    vcgen [hk fd.body hb m₀] <;> grind
+
+theorem step_g (p : Prog) (hp : closedG p G fs = true) (k : Stmt → M Sig) (hk : GK G fs k) :
+    GK G fs (step p k) := by
+  intro st hst m₀
+  induction st with
+  | «skip» => vcgen [step] <;> grind
+  | set x e => vcgen [step, setLoc, evalE_same e] <;> grind [St.setLoc_mem]
+  | st8 a i e => vcgen [step, L.st8, evalE_same i, evalE_same e] <;> grind [GFrame.set8]
+  | st64 a i e => vcgen [step, L.st64, evalE_same i, evalE_same e] <;> grind [GFrame.set64]
+  | seq s t ihs iht =>
+    simp only [Stmt.okG, Bool.and_eq_true] at hst
+    vcgen [step, ihs hst.1, iht hst.2] <;> grind
+  | ite c s t ihs iht =>
+    simp only [Stmt.okG, Bool.and_eq_true] at hst
+    vcgen [step, evalC_same c, ihs hst.1, iht hst.2] <;> grind
+  | «while» c s ih =>
+    vcgen [step, evalC_same c, ih hst, hk (.while c s) hst m₀] <;> grind
+  | brk => vcgen [step] <;> grind
+  | ret es => vcgen [step, evalArgs_same es] <;> grind
+  | «call» xs f args =>
+    simp only [Stmt.okG, decide_eq_true_eq] at hst
+    vcgen [step, setLocs, evalArgs_same args, invoke_g p hp k hk f hst m₀] <;>
+      grind [St.setLocs_mem']
+  | «abort» => vcgen [step] <;> grind
+  | gset g e =>
+    simp only [Stmt.okG, decide_eq_true_eq] at hst
+    vcgen [step, setG, evalE_same e] <;> grind [GFrame.setG, St.setG_mem]
+
+theorem exec_g (p : Prog) (hp : closedG p G fs = true) (n : Nat) : GK G fs (exec p n) := by
+  induction n with
+  | zero => intro st _ m₀; vcgen [exec] <;> grind
+  | succ n ih => exact step_g p hp (exec p n) ih
+
+/-- **The global frame of a call**: a call of `f ∈ fs` keeps every global outside `G`. -/
+theorem invoke_gframe (p : Prog) (hp : closedG p G fs = true) (n : Nat) (f : FnName) (hf : f ∈ fs)
+    (vs : List Word) (s₀ : St) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) f vs ⦃fun _ s => GFrame G s₀.mem s.mem; ⊤⦄ := by
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  subst hs
+  exact M.of_run (P := fun t => GFrame G s.mem t.mem) (GFrame.refl _ _) hrun
+    (invoke_g p hp _ (exec_g p hp n) f hf s.mem vs)
+
+/-- **The global frame of a run**: a run of `f ∈ fs` keeps every global outside `G`. -/
+theorem run_gframe (p : Prog) (hp : closedG p G fs = true) (f : FnName) (hf : f ∈ fs) (n : Nat)
+    (vs : List Word) (m : Mem) (rs : List Word) (m' : Mem) (h : run p n f vs m = .ok (rs, m')) :
+    GFrame G m m' := by
+  simp only [run] at h
+  cases hr : (invoke p (exec p n) f vs).run { mem := m, loc := Locals.init [] } with
+  | error e => simp [hr, Except.map] at h
+  | ok r =>
+    obtain ⟨r, s'⟩ := r
+    simp only [hr, Except.map, Except.ok.injEq, Prod.mk.injEq] at h
+    obtain ⟨-, rfl⟩ := h
+    exact M.of_run (P := fun s => GFrame G m s.mem) (GFrame.refl _ m) hr
+      (invoke_g p hp _ (exec_g p hp n) f hf m vs)
+
+end gframe
 
 end L

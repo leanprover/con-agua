@@ -145,11 +145,12 @@ def Stmt.wfT (t : NTree) (nl : Nat) (tab : Tab) : Stmt → Bool
       match t.find (nameCode f) with
       | some n => args.length == n
       | none => false
+  | .gset g e => g.id < tab.ng && Expr.wf nl tab e
 
 theorem Stmt.wfT_eq {t : NTree} {p : Prog}
     (h : ∀ f, t.find (nameCode f) = (p.lookup f).map (·.nparams)) (nl : Nat) (tab : Tab) :
     ∀ s, Stmt.wfT t nl tab s = Stmt.wf p nl tab s
-  | .skip | .brk | .abort | .set .. | .st8 .. | .st64 .. | .ret .. => rfl
+  | .skip | .brk | .abort | .set .. | .st8 .. | .st64 .. | .ret .. | .gset .. => rfl
   | .seq s u => by simp only [Stmt.wfT, Stmt.wf, Stmt.wfT_eq h nl tab s, Stmt.wfT_eq h nl tab u]
   | .ite c s u => by simp only [Stmt.wfT, Stmt.wf, Stmt.wfT_eq h nl tab s, Stmt.wfT_eq h nl tab u]
   | .while c s => by simp only [Stmt.wfT, Stmt.wf, Stmt.wfT_eq h nl tab s]
@@ -164,7 +165,7 @@ def FunDecl.wfT (t : NTree) (tab : Tab) (fd : FunDecl) : Bool :=
 def Prog.wfFast (tab : Tab) (p : Prog) : Bool :=
   match progTree p with
   | some t => p.all (fun (_, fd) => FunDecl.wfT t tab fd) &&
-      16 + 16 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres < maxOff
+      16 + 16 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng < maxOff
   | none => false
 
 theorem Prog.wf_of_wfFast {tab : Tab} {p : Prog} (h : Prog.wfFast tab p = true) :
