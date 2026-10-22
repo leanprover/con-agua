@@ -464,4 +464,171 @@ theorem natPred_refines (p : Prog) (hp : NatPredProg p) (n : Nat) (s₀ : St) (a
   · simp only [hc2, ↓reduceIte] at hW hrun2
     exact hres 0 0 hW hw0 (by rw [hrun2]; rfl)
 
+/-! ## `lit_eq`: the literal comparison of `quickDefEq` -/
+
+/-- The model of `lit_eq` (`none` where it aborts). -/
+def litEqW (m : Mem) (a b : Word) : Option Word :=
+  if tierW a ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
+  else if rdW (m.arr64 CTL) (2 + tierW a) ≤ idxW a then none
+  else if tierW b ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
+  else if rdW (m.arr64 CTL) (2 + tierW b) ≤ idxW b then none
+  else if rdW (m.arr64 REC) (idxW a * 8 + tierW a * 4) ≠ rdW (m.arr64 REC) (idxW b * 8 + tierW b * 4)
+    then some 0
+  else if rdW (m.arr64 REC) (idxW a * 8 + tierW a * 4 + 2) ≠
+      rdW (m.arr64 REC) (idxW b * 8 + tierW b * 4 + 2) then some 0
+  else some (if eqW (m.arr64 POOL) (rdW (m.arr64 REC) (idxW a * 8 + tierW a * 4 + 1))
+      (rdW (m.arr64 REC) (idxW b * 8 + tierW b * 4 + 1))
+      (rdW (m.arr64 REC) (idxW a * 8 + tierW a * 4 + 2)) 0 then 1 else 0)
+
+-- Two views: the paths cost more than the default budget.
+set_option maxHeartbeats 2000000 in
+theorem litEq_spec (p : Prog) (hle : p.lookup "lit_eq" = some litEqL)
+    (hlq : p.lookup "limbs_eq" = some limbsEq) (n : Nat) (s₀ : St) (a b : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "lit_eq" [a, b]
+    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ litEqW s₀.mem a b = some (r.headD 0); ⊤⦄ := by
+  rw [invoke_eq _ hle]
+  simp only [callFn, litEqL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, limbsEq_spec p hlq n] <;>
+    finish [litEqW, tierW, idxW]
+
+/-- **A `lit` node's record**, past the view checks: a `natVal` is a normalised slice of its value,
+a `strVal` a slice of its bytes; kind word `0`/`1`; the slice below the pool top. -/
+theorem lit_rec (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : HW h)
+    (hv : viewOK m h 2) (hg : h >>> 28 = 8) (l : ConLeche.Literal)
+    (hl : a.store.view (decE h) = some (.lit l)) :
+    (rdW (m.arr64 REC) (idxW h * 8 + tierW h * 4 + 1)).toNat +
+      (rdW (m.arr64 REC) (idxW h * 8 + tierW h * 4 + 2)).toNat ≤ m.top.toNat ∧
+    (∀ N, l = .natVal N → rdW (m.arr64 REC) (idxW h * 8 + tierW h * 4) = 0 ∧
+      Norm (m.arr64 POOL) (rdW (m.arr64 REC) (idxW h * 8 + tierW h * 4 + 1)).toNat
+        (rdW (m.arr64 REC) (idxW h * 8 + tierW h * 4 + 2)).toNat ∧
+      pv (m.arr64 POOL) (rdW (m.arr64 REC) (idxW h * 8 + tierW h * 4 + 1)).toNat
+        (rdW (m.arr64 REC) (idxW h * 8 + tierW h * 4 + 2)).toNat = N) ∧
+    (∀ s, l = .strVal s → rdW (m.arr64 REC) (idxW h * 8 + tierW h * 4) = 1 ∧
+      sliceL (m.arr64 POOL) (rdW (m.arr64 REC) (idxW h * 8 + tierW h * 4 + 1)).toNat
+        (rdW (m.arr64 REC) (idxW h * 8 + tierW h * 4 + 2)).toNat = strWords s) := by
+  obtain ⟨k, hk, hkr⟩ := node_of m a h litSch RecRel litH (·.lits) _ hR.lit.2 hv.2
+  have hview : a.store.view (decE h) = some (.lit k.l) := by
+    rw [view_tier m a hR h hh hv.1, get_lit _ h hh hg, Tbl.node?, hk]; rfl
+  rw [hl] at hview
+  have hkl : l = k.l := by simpa using hview
+  subst hkl
+  obtain ⟨⟨N⟩ | ⟨s⟩⟩ := k
+  · simp only [RecRel_natVal, NatRec] at hkr
+    obtain ⟨h0, hsl, hn, hpv, -⟩ := hkr
+    refine ⟨hsl, fun N' e => ?_, fun s e => by cases e⟩
+    cases e; exact ⟨h0, hn, hpv⟩
+  · simp only [RecRel_strVal, StrRec] at hkr
+    obtain ⟨h1, hsl, hs, -⟩ := hkr
+    refine ⟨hsl, fun N e => (by cases e), fun s' e => ?_⟩
+    cases e; exact ⟨h1, hs⟩
+
+/-- **`lit_eq` decides `l₁ == l₂`** on two `lit` handles (`quickDefEq`'s `.lit l₁, .lit l₂` arm). -/
+@[refines_part ConRon.Arena.quickDefEq "literal comparison"]
+theorem litEq_refines (p : Prog) (hle : p.lookup "lit_eq" = some litEqL)
+    (hlq : p.lookup "limbs_eq" = some limbsEq) (n : Nat) (s₀ : St) (a₀ : AState)
+    (hR : ArenaR s₀.mem a₀) (a b : Word) (ha : HW a) (hb : HW b) (ha8 : a >>> 28 = 8)
+    (hb8 : b >>> 28 = 8) (l₁ l₂ : ConLeche.Literal)
+    (hv₁ : a₀.store.view (decE a) = some (.lit l₁)) (hv₂ : a₀.store.view (decE b) = some (.lit l₂)) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "lit_eq" [a, b]
+    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ decBool r = (l₁ == l₂) ∧ ResH r; ⊤⦄ := by
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hm, hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
+    (litEq_spec p hle hlq n s₀ a b)
+  subst hs0
+  refine ⟨hm, hloc, ?_⟩
+  unfold litEqW at hW
+  by_cases as : tierW a ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0
+  · simp [as] at hW
+  by_cases ac : rdW (s.mem.arr64 CTL) (2 + tierW a) ≤ idxW a
+  · simp [as, ac] at hW
+  by_cases bs : tierW b ≠ 0 ∧ rdW (s.mem.arr64 CTL) 1 = 0
+  · simp [as, ac, bs] at hW
+  by_cases bc : rdW (s.mem.arr64 CTL) (2 + tierW b) ≤ idxW b
+  · simp [as, ac, bs, bc] at hW
+  simp only [as, ac, bs, bc, ↓reduceIte] at hW
+  obtain ⟨sl₁, hn₁, hs₁⟩ := lit_rec s.mem a₀ hR a ha ⟨as, by simpa using ac⟩ ha8 l₁ hv₁
+  obtain ⟨sl₂, hn₂, hs₂⟩ := lit_rec s.mem a₀ hR b hb ⟨bs, by simpa using bc⟩ hb8 l₂ hv₂
+  have ⟨_, _, hps, htop⟩ := hR.lit.1
+  generalize rdW (s.mem.arr64 REC) (idxW a * 8 + tierW a * 4) = k₁ at hW hn₁ hs₁
+  generalize rdW (s.mem.arr64 REC) (idxW b * 8 + tierW b * 4) = k₂ at hW hn₂ hs₂
+  generalize rdW (s.mem.arr64 REC) (idxW a * 8 + tierW a * 4 + 1) = o₁ at hW hn₁ hs₁ sl₁
+  generalize rdW (s.mem.arr64 REC) (idxW b * 8 + tierW b * 4 + 1) = o₂ at hW hn₂ hs₂ sl₂
+  generalize rdW (s.mem.arr64 REC) (idxW a * 8 + tierW a * 4 + 2) = c₁ at hW hn₁ hs₁ sl₁
+  generalize rdW (s.mem.arr64 REC) (idxW b * 8 + tierW b * 4 + 2) = c₂ at hW hn₂ hs₂ sl₂
+  have hb₁ : o₁.toNat + c₁.toNat < 2 ^ 64 := by omega
+  have hb₂ : o₂.toNat + c₂.toNat < 2 ^ 64 := by omega
+  have hres : ∀ c : Prop, [Decidable c] → some (if c then (1 : Word) else 0) = some (r.headD 0) →
+      decide c = (l₁ == l₂) → decBool r = (l₁ == l₂) ∧ ResH r := by
+    intro c _ h hc
+    simp only [Option.some.injEq] at h
+    exact ⟨by rw [decBool_of h, hc], resH_of hw1 hw0 h⟩
+  have h0 : some (0 : Word) = some (r.headD 0) → (l₁ == l₂) = false →
+      decBool r = (l₁ == l₂) ∧ ResH r := by
+    intro h hc
+    simp only [Option.some.injEq] at h
+    refine ⟨by rw [hc, decBool, ← h]; rfl, by unfold ResH; rw [← h]; exact hw0⟩
+  cases l₁ with
+  | natVal N₁ =>
+    obtain ⟨hk₁, hN₁, hp₁⟩ := hn₁ N₁ rfl
+    cases l₂ with
+    | natVal N₂ =>
+      obtain ⟨hk₂, hN₂, hp₂⟩ := hn₂ N₂ rfl
+      subst hk₁ hk₂
+      simp only [ne_eq, eq_self_iff_true, not_true_eq_false, ↓reduceIte] at hW
+      by_cases hc : c₁ = c₂
+      · subst hc
+        simp only [not_true_eq_false, ↓reduceIte] at hW
+        refine hres _ hW ?_
+        have : (ConLeche.Literal.natVal N₁ == .natVal N₂) = decide (N₁ = N₂) := by
+          rw [Bool.eq_iff_iff]; simp
+        rw [this]
+        apply decide_eq_decide.mpr
+        constructor
+        · intro h; rw [← hp₁, ← hp₂]; exact pv_of_eqW _ _ _ _ hb₁ hb₂ h
+        · intro h; rw [← hp₁, ← hp₂] at h; exact (slice_eq _ _ _ _ _ hN₁ hN₂ hb₁ hb₂ h).2.1
+      · simp only [hc, not_false_eq_true, ↓reduceIte] at hW
+        refine h0 hW ?_
+        simp only [beq_eq_false_iff_ne, ne_eq, ConLeche.Literal.natVal.injEq]
+        intro h; subst h; rw [← hp₁] at hp₂
+        exact hc (UInt64.toNat_inj.mp (pv_len _ _ _ _ _ _ hN₁ hN₂ hp₂.symm))
+    | strVal s₂ =>
+      obtain ⟨hk₂, -⟩ := hs₂ s₂ rfl
+      subst hk₁ hk₂
+      simp only [show (0 : Word) ≠ 1 by decide, ne_eq, not_false_eq_true, ↓reduceIte] at hW
+      exact h0 hW (by simp)
+  | strVal s₁ =>
+    obtain ⟨hk₁, hS₁⟩ := hs₁ s₁ rfl
+    cases l₂ with
+    | natVal N₂ =>
+      obtain ⟨hk₂, -⟩ := hn₂ N₂ rfl
+      subst hk₁ hk₂
+      simp only [show (1 : Word) ≠ 0 by decide, ne_eq, not_false_eq_true, ↓reduceIte] at hW
+      exact h0 hW (by simp)
+    | strVal s₂ =>
+      obtain ⟨hk₂, hS₂⟩ := hs₂ s₂ rfl
+      subst hk₁ hk₂
+      simp only [ne_eq, eq_self_iff_true, not_true_eq_false, ↓reduceIte] at hW
+      have hkey := slice_key (s.mem.arr64 POOL) o₁ c₁ o₂ c₂ hb₁ hb₂
+      rw [hS₁, hS₂] at hkey
+      by_cases hc : c₁ = c₂
+      · subst hc
+        simp only [not_true_eq_false, ↓reduceIte] at hW
+        refine hres _ hW ?_
+        have : (ConLeche.Literal.strVal s₁ == .strVal s₂) = decide (s₁ = s₂) := by
+          rw [Bool.eq_iff_iff]; simp
+        rw [this]
+        apply decide_eq_decide.mpr
+        simp only [beq_self_eq_true, Bool.true_and] at hkey
+        rw [hkey]
+        exact ⟨strWords_inj _ _, fun h => by rw [h]⟩
+      · simp only [hc, not_false_eq_true, ↓reduceIte] at hW
+        refine h0 hW ?_
+        simp only [beq_eq_false_iff_ne, ne_eq, ConLeche.Literal.strVal.injEq]
+        intro h; subst h
+        have := hkey.mpr rfl
+        simp only [Bool.and_eq_true, beq_iff_eq] at this
+        exact hc this.1
+
 end L.Arena
