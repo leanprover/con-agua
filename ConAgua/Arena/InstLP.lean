@@ -282,7 +282,7 @@ def lpForall : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (fd, j, e0, t, i, f
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:2191-2204 ConRon.Arena.instLPArmLet -/
 @[l_impl ConRon.Arena.instLPArmLet]
-def lpLet : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (fd, j, e0, t, i, f, a, b, x, y, z, r, u) {
+def lpLet : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (fd, j, e0, t, i, f, a, b, x, y, r, u) {
   (fd, j, e0) := call ilp_find(h, 0);
   if fd != 0 { return LPMEMO.u64[j * 4 + 3] };
   t := (h >> 27) & 1;
@@ -292,15 +292,22 @@ def lpLet : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (fd, j, e0, t, i, f, a
   b := LEREC.u64[i * 6 + t * 3 + 2];
   x := call lp_go(f, ko, kc, vo, vc, fu);
   y := call lp_go(a, ko, kc, vo, vc, fu);
-  z := call lp_go(b, ko, kc, vo, vc, fu);
-  r := call lp_rb_let(h, f, a, b, x, y, z);
+  r := call lp_let_tail(h, f, a, b, x, y, ko, kc, vo, vc, fu);
   (fd, j, e0) := call ilp_find(h, 0);
   u := call ilp_put(h, 0, r, fd, j);
   return r
 }
 
+/-- `lp_let`'s third child and rebuild (split out so that each function's spec stays small).
+con-ron: none — the tail of `instLPArmLet` (ExprOps.lean:2191-2204), split out of `lp_let` -/
+def lpLetTail : FunDecl := lfn (h, f, a, b, x, y, ko, kc, vo, vc, fu) locals (z, r) {
+  z := call lp_go(b, ko, kc, vo, vc, fu);
+  r := call lp_rb_let(h, f, a, b, x, y, z);
+  return r
+}
+
 /-- `lp_let`'s rebuild: `h` when the three children came back equal, else `mk_let`.
-con-ron: ConRon/Arena/ExprOps.lean:154-155 ConRon.Arena.internRebuiltLetE -/
+con-ron: ConRon/Arena/ExprOps.lean:153-155 ConRon.Arena.internRebuiltLetE -/
 def lpRbLet : FunDecl := lfn (h, f, a, b, x, y, z) locals (r) {
   if x == f && y == a { if z == b { return h } };
   r := call mk_let(x, y, z);
@@ -412,7 +419,7 @@ def instLPProg : Prog :=
    ("sls_go", slsGo), ("sle_go", sleGo), ("slp_go", slpGo), ("spn_pool", spnPool), ("spn_ls", spnLs),
    ("sl_memo", slMemo), ("sls_memo", slsMemo),
    ("lp_go", lpGo), ("lp_fvar", lpFVar), ("lp_app", lpApp), ("lp_lam", lpLam),
-   ("lp_forall", lpForall), ("lp_let", lpLet), ("lp_rb_let", lpRbLet), ("lp_proj", lpProj),
+   ("lp_forall", lpForall), ("lp_let", lpLet), ("lp_let_tail", lpLetTail), ("lp_rb_let", lpRbLet), ("lp_proj", lpProj),
    ("ilp_find", memoFindG lpSch), ("ilp_put", memoPutG lpSch), ("ilp_clear", memoClearG lpSch),
    ("ilpl_find", memoFindG lplSch), ("ilpl_put", memoPutG lplSch), ("ilpl_clear", memoClearG lplSch),
    ("ilpls_find", memoFindG lplsSch), ("ilpls_put", memoPutG lplsSch),
