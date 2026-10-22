@@ -246,4 +246,242 @@ theorem cArm_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a :
 
 end arm
 
+/-! ## `head_type_pw`, `type_sort_pw` -/
+
+theorem pr_getD1 (l : List Word) : l.getD 1 0 = l.tail.headD 0 := by
+  rcases l with _ | ⟨x, _ | ⟨y, l⟩⟩ <;> rfl
+theorem pr_getD2 (l : List Word) : l.getD 2 0 = l.tail.tail.headD 0 := by
+  rcases l with _ | ⟨x, _ | ⟨y, _ | ⟨z, l⟩⟩⟩ <;> rfl
+
+/-- `headTypePW`'s `.const` arm is `cArmT` at `htResT`. -/
+theorem headTypePW_const (fe : IFEnv) (f : Nat) (root : EIdx) (d : Nat) (h : EIdx) (k : Nat)
+    (a : AState) (I : NIdx) (us : LsIdx) (hv : a.store.view h = some (.const I us)) :
+    (headTypePW fe f root d h k).run a = (cArmT fe (htResT fe f k) I us).run a := by
+  simp only [headTypePW, StateT.run_bind, view_run _ _ _ hv, except_ok_bind, cArmT, htResT,
+    bind_assoc]
+  rfl
+
+section htp
+variable {p : Prog} (hp : PropReadProg p) (hden : CoreDen) (hlps : ConstLpsDen)
+include hp hden hlps
+
+/-- **`head_type_pw` refines `headTypePW`.** -/
+theorem htp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) {f root d h k : Word}
+    (hf : f.toNat ≤ coreWalkFuel) (hroot : HW root) (hh : HW h) {r : List Word}
+    (hc : callW p n "head_type_pw" [vis, f, root, d, h, k] m = some (r, m')) :
+    ∃ res a', (headTypePW fe f.toNat (decE root) d.toNat (decE h) k.toNat).run a = .ok (res, a') ∧
+      RdAfter dn m m' a a' vis fe M eb ∧
+      PWD (nameN a.store.lss.ls.ns) m' (r.headD 0) (r.tail.headD 0) (r.tail.tail.headD 0) res := by
+  cases n with
+  | zero => rw [callW_zero] at hc; cases hc
+  | succ n =>
+  obtain ⟨t, ht, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (headTypePW_spec p hp n ⟨m, Locals.init []⟩ vis f root d h k) hc
+  rw [ht] at hW
+  generalize r.headD 0 = x₀ at hW ⊢
+  generalize r.tail.headD 0 = x₁ at hW ⊢
+  generalize r.tail.tail.headD 0 = x₂ at hW ⊢
+  have hR := hS.arena.1
+  unfold htpW at hW
+  by_cases hne : L.Ind.eViewW m h = []
+  · simp [hne] at hW
+  simp only [hne, ↓reduceIte] at hW
+  obtain ⟨v, hv, hVR⟩ := L.Ind.eViewW_ok m a hR h hne
+  generalize L.Ind.eViewW m h = w at hW hVR
+  have hpre : (headTypePW fe f.toNat (decE root) d.toNat (decE h) k.toNat).run a =
+      (match v with
+        | .const I us =>
+          (match fe.find? I with
+          | some ci =>
+            if ci.isTowerEntry then pure none else do
+              let cv ← ci.toConstantVal
+              match ← viewLsLen us with
+              | none => failDanglingLs
+              | some usl =>
+              if usl = cv.levelParams.length then do
+                let res ← ConRon.Arena.peelPisW fe f.toNat k.toNat cv.type
+                match ← ConRon.Arena.residualPW res with
+                | some pw => substPWAt cv.levelParams us pw
+                | none => pure none
+              else pure none
+          | none => pure none)
+        | .fvar _ ty => htResT fe f.toNat k.toNat ty
+        | .bvar i =>
+          if i < d.toNat then do
+            match ← binderDom (d.toNat - 1 - i) (decE root) with
+            | some D => htResT fe f.toNat k.toNat D
+            | none => pure none
+          else pure none
+        | _ => pure none).run a := by
+    simp only [headTypePW, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]
+    rcases v <;> rfl
+  rcases v with i | ⟨i, ty⟩ | u | ⟨I, us⟩ | ⟨g, x⟩ | ⟨ty, b⟩ | ⟨ty, b⟩ | ⟨ty, vv, b⟩ | l | ⟨sn, i, pe⟩
+  -- bvar
+  · obtain ⟨hg, hi⟩ := hVR
+    simp only [vG, vX, hg, show (0 : Word) ≠ 3 by decide, show (0 : Word) ≠ 1 by decide,
+      ↓reduceIte, true_and] at hW
+    rw [pr_getD1] at hi
+    by_cases hlt : w.tail.headD 0 < d
+    · simp only [hlt, ↓reduceIte] at hW
+      have hlt' : i < d.toNat := by rw [← hi]; exact UInt64.lt_iff_toNat_lt.mp hlt
+      have hdi : (d - 1 - w.tail.headD 0).toNat = d.toNat - 1 - i := by
+        have h1 : (d - 1).toNat = d.toNat - 1 := pr_word_sub1 d (by intro e; subst e; simp at hlt')
+        rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le, h1]; omega), h1, hi]
+      rcases hb : bdW m (d - 1 - w.tail.headD 0) root with _ | ⟨bf, bd⟩
+      · rw [hb] at hW; cases hW
+      rw [hb] at hW
+      obtain ⟨hbrun, hbb⟩ := bdW_ok m a hR _ _ _ bf bd (Nat.le_refl _) hroot hb
+      rw [hdi] at hbrun
+      simp only [htpK] at hW
+      by_cases hb0 : bf = 0
+      · simp only [hb0, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
+        obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
+        refine ⟨none, a, ?_, RdAfter.refl hS, rfl⟩
+        rw [hpre]; simp only [hlt', ↓reduceIte, StateT.run_bind, hbrun, except_ok_bind, hb0,
+          decOpt]; rfl
+      simp only [hb0, ↓reduceIte] at hW
+      rcases hc2 : callW p n "head_type_res" [vis, f, k, bd] m with _ | ⟨r₂, m₂⟩
+      · rw [hc2] at hW; cases hW
+      rw [hc2] at hW
+      simp only [t3W, Option.some.injEq, Prod.mk.injEq] at hW
+      obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
+      obtain ⟨res, hrun₂, hRd₂, hd₂⟩ := htr_call hp hden hS hf (hbb hb0) hc2
+      refine ⟨res, a, ?_, hRd₂, hd₂⟩
+      rw [hpre]; simp only [hlt', ↓reduceIte, StateT.run_bind, hbrun, except_ok_bind, decOpt, hb0]
+      exact hrun₂
+    · simp only [hlt, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
+      obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
+      have hlt' : ¬ i < d.toNat := by
+        rw [← hi]; exact fun h => hlt (UInt64.lt_iff_toNat_lt.mpr h)
+      exact ⟨none, a, by rw [hpre]; simp only [hlt', ↓reduceIte]; rfl, RdAfter.refl hS, rfl⟩
+  -- fvar
+  · obtain ⟨hg, -, hty, hty'⟩ := hVR
+    rw [pr_getD2] at hty hty'
+    simp only [vG, vY, hg, show (1 : Word) ≠ 3 by decide, ↓reduceIte] at hW
+    rcases hc2 : callW p n "head_type_res" [vis, f, k, w.tail.tail.headD 0] m with _ | ⟨r₂, m₂⟩
+    · rw [hc2] at hW; cases hW
+    rw [hc2] at hW
+    simp only [t3W, Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
+    obtain ⟨res, hrun₂, hRd₂, hd₂⟩ := htr_call hp hden hS hf hty hc2
+    refine ⟨res, a, ?_, hRd₂, hd₂⟩
+    rw [hpre, ← hty']; exact hrun₂
+  -- sort
+  · obtain ⟨hg, -⟩ := hVR
+    simp only [vG, hg, show (2 : Word) ≠ 3 by decide, show (2 : Word) ≠ 1 by decide,
+      show (2 : Word) ≠ 0 by decide, false_and, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
+    exact ⟨none, a, by rw [hpre]; rfl, RdAfter.refl hS, rfl⟩
+  -- const
+  · obtain ⟨hg, hn, hn', husw, hus'⟩ := hVR
+    rw [pr_getD1] at hn hn'
+    rw [pr_getD2] at husw hus'
+    simp only [vG, vX, vY, hg, ↓reduceIte, eq_self_iff_true, if_true] at hW
+    rcases hc2 : callW p n "head_type_const" [vis, f, k, w.tail.headD 0, w.tail.tail.headD 0] m
+      with _ | ⟨r₂, m₂⟩
+    · rw [hc2] at hW; cases hW
+    rw [hc2] at hW
+    simp only [t3W, Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
+    cases n with
+    | zero => rw [callW_zero] at hc2; cases hc2
+    | succ n =>
+    obtain ⟨t₂, ht₂, -, hW₂⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+      (headTypeConst_spec p hp n ⟨m, Locals.init []⟩ vis f k _ _) hc2
+    rw [ht₂] at hW₂
+    have hls := (hden dn m a vis fe M eb hS).constLs _ _ _ hv
+    rw [← hus'] at hls
+    obtain ⟨res, a', hrun, hRd, hd⟩ := cArm_ok hp hden hlps
+      (sub := fun ty m => callW p n "head_type_res" [vis, f, k, ty] m) (T := htResT fe f.toNat k.toNat)
+      (fun hS₁ hty hc => by
+        obtain ⟨res, h1, h2, h3⟩ := htr_call hp hden hS₁ hf hty hc
+        exact ⟨res, _, h1, h2, h3⟩) hS hn husw hls hW₂
+    refine ⟨res, a', ?_, hRd, hd⟩
+    rw [headTypePW_const fe _ _ _ _ _ a I us hv, ← hn', ← hus']; exact hrun
+  -- the other tags
+  all_goals
+    have hg : w.headD 0 ≠ 3 ∧ w.headD 0 ≠ 1 ∧ w.headD 0 ≠ 0 := by
+      first
+      | (rw [hVR.1]; decide)
+      | (rw [hVR]; decide)
+    simp only [vG, hg.1, hg.2.1, hg.2.2, false_and, ↓reduceIte, Option.some.injEq,
+      Prod.mk.injEq, if_false] at hW
+    obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
+    exact ⟨none, a, by rw [hpre]; rfl, RdAfter.refl hS, rfl⟩
+
+/-- **`type_sort_pw` refines `typeSortPW`.** -/
+theorem tsp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) {f rt : Word}
+    (hf : f.toNat ≤ coreWalkFuel) (hrt : HW rt) {r : List Word}
+    (hc : callW p n "type_sort_pw" [vis, f, rt] m = some (r, m')) :
+    ∃ res a', (typeSortPW fe f.toNat (decE rt)).run a = .ok (res, a') ∧
+      RdAfter dn m m' a a' vis fe M eb ∧
+      PWD (nameN a.store.lss.ls.ns) m' (r.headD 0) (r.tail.headD 0) (r.tail.tail.headD 0) res := by
+  cases n with
+  | zero => rw [callW_zero] at hc; cases hc
+  | succ n =>
+  obtain ⟨t, ht, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (typeSortPW_spec p hp n ⟨m, Locals.init []⟩ vis f rt) hc
+  rw [ht] at hW
+  generalize r.headD 0 = x₀ at hW ⊢
+  generalize r.tail.headD 0 = x₁ at hW ⊢
+  generalize r.tail.tail.headD 0 = x₂ at hW ⊢
+  have hR := hS.arena.1
+  unfold tspW at hW
+  rcases hL : tsLoopW m f rt 0 with _ | ⟨f', rr, d⟩
+  · rw [hL] at hW; cases hW
+  rw [hL] at hW
+  simp only at hW
+  have hcwf : coreWalkFuel < 2 ^ 64 := by simp [coreWalkFuel]
+  obtain ⟨hrun, hrr, -, hn6⟩ := tsLoopW_ok m a hR fe (decE rt) _ f rt 0 f' rr d (Nat.le_refl _) hrt
+    (by simp; omega) hL
+  simp only [UInt64.toNat_zero] at hrun
+  by_cases hf0 : f' = 0
+  · simp [hf0] at hW
+  simp only [hf0, ↓reduceIte] at hW
+  obtain ⟨j, hj⟩ := Nat.exists_eq_succ_of_ne_zero (pr_word_ne0 f' hf0)
+  have hfm := pr_word_sub1 f' hf0
+  have hj' : j = (f' - 1).toNat := by omega
+  have hnf : ((decE rr).tag == ETag.forallE) = false := by
+    rw [tag_beq_w rr hrr 6 (by decide) ETag.forallE rfl 6 rfl]; simp [hn6]
+  have hpre : (typeSortPW fe f.toNat (decE rt)).run a =
+      (if (decE rr).tag == ETag.sort then pure (some .never) else do
+        let fn ← getAppFn (f' - 1).toNat (decE rr)
+        let n ← numArgs (f' - 1).toNat (decE rr)
+        headTypePW fe (f' - 1).toNat (decE rt) d.toNat fn n : AM (Option PropWhen)).run a := by
+    rw [typeSortPW, hrun, hj, typeSortPWGo, ← hj']
+    simp only [hnf, Bool.false_eq_true, ↓reduceIte]
+  by_cases h2 : rr >>> 28 = 2
+  · simp only [h2, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
+    have hs : ((decE rr).tag == ETag.sort) = true := by
+      rw [tag_beq_w rr hrr 2 (by decide) ETag.sort rfl 2 rfl]; simp [h2]
+    exact ⟨some .never, a, by rw [hpre]; simp only [hs, ↓reduceIte]; rfl, RdAfter.refl hS, rfl⟩
+  simp only [h2, ↓reduceIte] at hW
+  have hs : ((decE rr).tag == ETag.sort) = false := by
+    rw [tag_beq_w rr hrr 2 (by decide) ETag.sort rfl 2 rfl]; simp [h2]
+  rcases hA : acaW m rr (f' - 1) with _ | ⟨cnt, fn⟩
+  · rw [hA] at hW; cases hW
+  rw [hA] at hW
+  simp only at hW
+  obtain ⟨hgaf, hna, hfn, -⟩ := acaW_ok hR hrr hA
+  rcases hc2 : callW p n "head_type_pw" [vis, f' - 1, rt, d, fn, cnt] m with _ | ⟨r₂, m₂⟩
+  · rw [hc2] at hW; cases hW
+  rw [hc2] at hW
+  simp only [t3W, Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
+  have hf' : (f' - 1).toNat ≤ coreWalkFuel := by
+    obtain ⟨-, -, hsum, -⟩ := tsLoopW_ok m a hR fe (decE rt) _ f rt 0 f' rr d (Nat.le_refl _) hrt
+      (by simp; omega) hL
+    simp only [UInt64.toNat_zero] at hsum
+    omega
+  obtain ⟨res, a', hrun₂, hRd₂, hd₂⟩ := htp_call hp hden hlps hS hf' hrt hfn hc2
+  refine ⟨res, a', ?_, hRd₂, hd₂⟩
+  rw [hpre]
+  simp only [hs, Bool.false_eq_true, ↓reduceIte, StateT.run_bind, hgaf, except_ok_bind, hna]
+  exact hrun₂
+
+end htp
+
 end L.Arena
