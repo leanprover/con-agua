@@ -138,26 +138,62 @@ abbrev coreIlSch : MemoSch := ⟨50, 50⟩
 /-- `Abs1.lean`'s `abSch` (array 49, `CTL[48]`), restated here. -/
 abbrev coreAbSch : MemoSch := ⟨49, 48⟩
 
-/-- Both walk memos are well formed (`MemoRG` at some map). -/
+/-- The walk-local memos of `wscopedBFast` (array 151, `CTL[152]`) and of `leafGuard`'s two walks
+(`fvarLeavesGo`'s `seen`, array 152, `CTL[154]`; `leavesSubGo`'s memo, array 153, `CTL[156]`),
+restated here (`WalkScope.lean`'s `wsSch`, `WalkLeaves.lean`'s `flSch`/`lsbSch` unfold to them). Each
+walk clears its memo on entry (the twin starts from `∅`), so only well-formedness is carried. -/
+abbrev coreWsSch : MemoSch := ⟨151, 152⟩
+abbrev coreFlSch : MemoSch := ⟨152, 154⟩
+abbrev coreLsbSch : MemoSch := ⟨153, 156⟩
+
+/-- The three walk-local memos are well formed (lane `whnf3`). -/
+def WalkMemos (m : Mem) : Prop :=
+  (∃ mp : Std.HashMap (EIdx × Nat) Bool, MemoRG coreWsSch lfKey (fun w => w != 0) m mp) ∧
+    (∃ mp : Std.HashMap EIdx Unit, MemoRG coreFlSch bmKey (fun _ => ()) m mp) ∧
+    (∃ mp : Std.HashMap EIdx Bool, MemoRG coreLsbSch bmKey (fun w => w != 0) m mp)
+
+/-- The walk memos are well formed (`MemoRG` at some map). -/
 def CoreMemos (m : Mem) : Prop :=
   (∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRG coreIlSch lfKey decE m mp) ∧
-    (∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRG coreAbSch lfKey decE m mp)
+    (∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRG coreAbSch lfKey decE m mp) ∧ WalkMemos m
 
 theorem coreIlSch_wf : coreIlSch.WF := ⟨by decide, by decide⟩
 theorem coreAbSch_wf : coreAbSch.WF := ⟨by decide, by decide⟩
+theorem coreWsSch_wf : coreWsSch.WF := ⟨by decide, by decide⟩
+theorem coreFlSch_wf : coreFlSch.WF := ⟨by decide, by decide⟩
+theorem coreLsbSch_wf : coreLsbSch.WF := ⟨by decide, by decide⟩
 
-/-- **`CoreMemos` across a writer** that avoids arrays 49, 50 and `CTL` words 48, 50. -/
+/-- **`WalkMemos` across a writer** that avoids arrays 151‥153 and `CTL` words 152, 154, 156. -/
+theorem WalkMemos.frame {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+    (hA : (151 : ArrId) ∉ A ∧ (152 : ArrId) ∉ A ∧ (153 : ArrId) ∉ A)
+    (hC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C) (h : WalkMemos m) : WalkMemos m' :=
+  ⟨let ⟨mp, hm⟩ := h.1; ⟨mp, memoRG_frame coreWsSch coreWsSch_wf lfKey _ A C hA.1 hC.1 m m' hf mp hm⟩,
+    let ⟨mp, hm⟩ := h.2.1; ⟨mp, memoRG_frame coreFlSch coreFlSch_wf bmKey _ A C hA.2.1 hC.2.1 m m' hf mp hm⟩,
+    let ⟨mp, hm⟩ := h.2.2; ⟨mp, memoRG_frame coreLsbSch coreLsbSch_wf bmKey _ A C hA.2.2 hC.2.2 m m' hf mp hm⟩⟩
+
+/-- **`CoreMemos` across a writer** that avoids arrays 49, 50, 151‥153 and `CTL` words 48, 50, 152,
+154, 156 (the last two avoidances are auto-params: `decide` on concrete lists). -/
 theorem CoreMemos.frame {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
-    (hA : (50 : ArrId) ∉ A ∧ (49 : ArrId) ∉ A) (hC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C) (h : CoreMemos m) :
+    (hA : (50 : ArrId) ∉ A ∧ (49 : ArrId) ∉ A) (hC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C) (h : CoreMemos m)
+    (hWA : (151 : ArrId) ∉ A ∧ (152 : ArrId) ∉ A ∧ (153 : ArrId) ∉ A := by decide)
+    (hWC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C := by decide) :
     CoreMemos m' :=
   ⟨let ⟨mp, hm⟩ := h.1; ⟨mp, memoRG_frame coreIlSch coreIlSch_wf lfKey decE A C hA.1 hC.1 m m' hf mp hm⟩,
-    let ⟨mp, hm⟩ := h.2; ⟨mp, memoRG_frame coreAbSch coreAbSch_wf lfKey decE A C hA.2 hC.2 m m' hf mp hm⟩⟩
+    let ⟨mp, hm⟩ := h.2.1; ⟨mp, memoRG_frame coreAbSch coreAbSch_wf lfKey decE A C hA.2 hC.2 m m' hf mp hm⟩,
+    h.2.2.frame hf hWA hWC⟩
 
-/-- **`CoreMemos` across a writer at or above array 64** (and `CTL` word 64). -/
+/-- **`CoreMemos` across a writer at or above array 64** (and `CTL` word 64), away from the walk
+memos (arrays 151‥153, `CTL` 152‥157). -/
 theorem CoreMemos.frame_hi {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, 64 ≤ b) (hC : ∀ x ∈ C, 64 ≤ x.toNat) (h : CoreMemos m) : CoreMemos m' :=
+    (hA : ∀ b ∈ A, 64 ≤ b) (hC : ∀ x ∈ C, 64 ≤ x.toNat) (h : CoreMemos m)
+    (hWA : ∀ b ∈ A, b < 151 ∨ 153 < b := by decide)
+    (hWC : ∀ x ∈ C, x.toNat < 152 ∨ 157 < x.toNat := by simp) : CoreMemos m' :=
   h.frame hf ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide)⟩
     ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide)⟩
+    ⟨fun h => absurd (hWA _ h) (by decide), fun h => absurd (hWA _ h) (by decide),
+      fun h => absurd (hWA _ h) (by decide)⟩
+    ⟨fun h => absurd (hWC _ h) (by decide), fun h => absurd (hWC _ h) (by decide),
+      fun h => absurd (hWC _ h) (by decide)⟩
 
 /-- **The core's relation** at explicit cache maps. -/
 structure CoreS (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis : Word) (fe : IFEnv)
@@ -186,7 +222,9 @@ front's 64‥95), `CTL` words `≥ 137` (or 64‥95): the level heap (`LH`, `CTL
 theorem CoreS.frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List ArrId} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, 64 ≤ b ∧ (b < 96 ∨ 145 ≤ b)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 137 ≤ x.toNat)) :
+    (hA : ∀ b ∈ A, 64 ≤ b ∧ (b < 96 ∨ 145 ≤ b)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 137 ≤ x.toNat))
+    (hWA : ∀ b ∈ A, b < 151 ∨ 153 < b := by decide)
+    (hWC : ∀ x ∈ C, x.toNat < 152 ∨ 157 < x.toNat := by simp) :
     CoreS dn m' a vis fe M eb ∧ StackKept m m' := by
   have aA : ∀ lo hi : Nat, 96 ≤ lo → hi ≤ 145 → AvoidA lo hi A := fun lo hi h1 h2 b hb => by
     have := hA b hb; simp only [ArrId] at this ⊢; omega
@@ -204,7 +242,7 @@ theorem CoreS.frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AStat
       (by decide)),
     hS.env.frame (aA 132 144 (by decide) (by decide)) (aC 128 136 (by decide) (by decide)) hf,
     hS.readL, hS.readLs, hS.nwf, hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn,
-    hS.memos.frame_hi hf (fun b hb => (hA b hb).1) (fun x hx => (hC x hx).1),
+    hS.memos.frame_hi hf (fun b hb => (hA b hb).1) (fun x hx => (hC x hx).1) hWA hWC,
     hf.2.2.1 145 ▸ hS.bstk⟩, ?_⟩
   refine ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
 

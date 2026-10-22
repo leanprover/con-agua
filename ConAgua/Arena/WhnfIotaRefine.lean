@@ -585,6 +585,12 @@ theorem CoreS.setMemo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
         have : (S.cs + 1).toNat = S.cs.toNat + 1 := by
           rw [UInt64.toNat_add]; simp; omega
         omega)
+      (fun b hb => by simp at hb; subst hb; rw [← har]; simp only [ArrId]; omega)
+      (fun x hx => by
+        simp at hx; subst hx
+        have : (S.cs + 1).toNat = S.cs.toNat + 1 := by
+          rw [UInt64.toNat_add]; simp; omega
+        omega)
   · exact hf.2.2.1 145 ▸ hS.bstk
   · refine ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
 
