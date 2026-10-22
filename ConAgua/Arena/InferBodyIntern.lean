@@ -268,30 +268,4 @@ theorem internImax_core (hS : CoreS dn m a vis fe M eb) (u v : Word) (hu : HW u)
 
 end leaves
 
-/-! ## `lvl_live`: a level handle that L checked reads back -/
-
-theorem lvlLive_spec (p : Prog) (hp : p.lookup "lvl_live" = some lvlLiveL)
-    (hn : p.lookup "lv_node" = some lvNode) (k : Nat) (s₀ : St) (u : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "lvl_live" [u]
-    ⦃fun r s' => s'.mem = s₀.mem ∧ lvNodeW s₀.mem u ≠ []; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, lvlLiveL]
-  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, lvNode_spec p hn k] <;>
-    simp_all [St.setLocs_cons, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero]
-
-/-- **A checked level reads back**: a `lvl_live` run keeps the memory, and under `CoreS` the
-level is a stored one (`lview_of_lvNodeW`), so it reads back (`StoreDen.lvlAll`). -/
-theorem lvlLive_call {p : Prog} (hp : p.lookup "lvl_live" = some lvlLiveL)
-    (hn : p.lookup "lv_node" = some lvNode) {n : Nat} {u : Word} {r : List Word} {m m' : Mem}
-    {dn : NIdx → Option ConLeche.Name} {a : AState} {vis : Word} {fe : IFEnv} {M : ModeMaps}
-    {eb : Word} (hS : CoreS dn m a vis fe M eb) (hu : HW u) (h : callW p n "lvl_live" [u] m = some (r, m')) :
-    m' = m ∧ ∃ l, denoteL a.store.ls (decI u) = some l := by
-  cases n with
-  | zero => rw [callW_zero] at h; cases h
-  | succ k =>
-  obtain ⟨s', hs', hm, hne⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (lvlLive_spec p hp hn k _ u) h
-  refine ⟨hs' ▸ hm, ?_⟩
-  obtain ⟨v, hv⟩ := L.Ind.lview_of_lvNodeW hS.arena.1 hu hne
-  exact hS.den.lvlAll _ (by show (a.store.lss.ls.view (decI u)).isSome = true; rw [hv]; rfl)
-
 end L.Arena

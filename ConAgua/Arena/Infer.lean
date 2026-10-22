@@ -35,18 +35,6 @@ namespace L.Arena
 
 /-! ## Sorts, constants, literals -/
 
-/-- **A level handle is live** (aborts on a dangling one): the twin interns `imax u v` without
-reading `u`, `v`; L checks that they are stored levels (`lv_node`), so that the new `sort` node's
-level reads back (`CoreS.den`). A dangling level cannot arise in a well-formed store
-(deviation D25). -/
--- con-ron: none — a liveness check of a level handle (`lv_node`), see the docstring
-def lvlLiveL : FunDecl := lfn (u) locals (g, x, y) {
-  (g, x, y) := call lv_node(u);
-  return 0
-}
-
-
-
 /-- con-ron: ConRon/Arena/Core.lean:2437-2446 ConRon.Arena.ensureSort -/
 @[l_impl ConRon.Arena.ensureSort]
 def ensureSortL : FunDecl := lfn (mode, vis, d, e) locals (hh, t, i) {
@@ -166,15 +154,13 @@ def inferLamsL : FunDecl :=
 -- con-ron: ConRon/Arena/Core.lean:2540-2550 ConRon.Arena.inferPisLeaf
 -- con-ron: ConRon/Arena/Core.lean:2529-2538 ConRon.Arena.inferPisOut
 @[l_impl ConRon.Arena.inferPisLeaf ConRon.Arena.inferPisOut]
-def inferPisLeafL : FunDecl := lfn (mode, vis, d, t, k, fo, lo) locals (ob, bt, v, n, r, z) {
+def inferPisLeafL : FunDecl := lfn (mode, vis, d, t, k, fo, lo) locals (ob, bt, v, n, r) {
   ob := call inst_list(t, fo, k, 0);
   bt := call infer(mode, vis, d + k, ob);
   v := call ensure_sort(mode, vis, d + k, bt);
-  z := call lvl_live(v);
   n := k;
   while n != 0 {
     n -= 1;
-    z := call lvl_live(BSTK.u64[lo + n]);
     v := call intern_imax(BSTK.u64[lo + n], v)
   };
   r := call intern_sort(v);
@@ -532,7 +518,7 @@ def inferBodyL : FunDecl := lfn (mode, vis, d, e) locals (g, x1, x2, x3, su, r) 
 `d + 1`, which must not wrap (the twin's depth is a `Nat`). -/
 -- con-ron: ConRon/Arena/Core.lean:2802-2874 ConRon.Arena.inferBodyIO
 @[l_impl ConRon.Arena.inferBodyIO]
-def inferForallIOL : FunDecl := lfn (mode, vis, d, ty, body) locals (tt, hh, t, i, u, fv, ob, bt, v, iu, r, z) {
+def inferForallIOL : FunDecl := lfn (mode, vis, d, ty, body) locals (tt, hh, t, i, u, fv, ob, bt, v, iu, r) {
   if d + 1 == 0 { abort };
   tt := call infer_io(mode, vis, d, ty);
   hh := call whnf(mode, vis, d, tt);
@@ -546,8 +532,6 @@ def inferForallIOL : FunDecl := lfn (mode, vis, d, ty, body) locals (tt, hh, t, 
   ob := call inst1(body, fv, 0);
   bt := call infer_io(mode, vis, d + 1, ob);
   v := call ensure_sort(mode, vis, d + 1, bt);
-  z := call lvl_live(u);
-  z := call lvl_live(v);
   iu := call intern_imax(u, v);
   r := call intern_sort(iu);
   return r
@@ -612,7 +596,7 @@ def inferBodyIOL : FunDecl := lfn (mode, vis, d, e) locals (g, x1, x2, x3, su, o
 
 /-- The functions of this file. -/
 def inferFns : Prog :=
-  [("lvl_live", lvlLiveL), ("ensure_sort", ensureSortL), ("infer_const", inferConstL), ("infer_lit", inferLitL),
+  [("ensure_sort", ensureSortL), ("infer_const", inferConstL), ("infer_lit", inferLitL),
    ("infer_lam_result", inferLamResultL), ("infer_lams_leaf", inferLamsLeafL),
    ("infer_lams", inferLamsL), ("infer_pis_leaf", inferPisLeafL), ("infer_pis", inferPisL),
    ("infer_lam", inferLamL), ("infer_forall", inferForallL), ("defeq_arg", defeqArgL),
