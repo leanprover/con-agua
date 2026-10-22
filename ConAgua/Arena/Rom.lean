@@ -82,6 +82,7 @@ def u64W (i : Word) : Word :=
     romB rom (i + 4) * 4294967296 + romB rom (i + 5) * 1099511627776 +
     romB rom (i + 6) * 281474976710656 + romB rom (i + 7) * 72057594037927936
 
+/-- con-ron: none — the ROM reader (L has constant bytes where the twin has con-leche values) -/
 def romU64 : FunDecl := lfn (i) locals (x) {
   if len(rom.c8) < i + 8 { abort };
   x := rom.c8[i] + rom.c8[i + 1] * 256 + rom.c8[i + 2] * 65536 + rom.c8[i + 3] * 16777216 +
@@ -209,6 +210,7 @@ def rputLoop : Stmt := lblk (i, l, top, j) {
   }
 }
 
+/-- con-ron: none — the ROM reader (L has constant bytes where the twin has con-leche values) -/
 def romPut : FunDecl := lfn (i, l) locals (top, j) {
   if len(rom.c8) < i + l || i + l < i { abort };
   top := CTL.u64[0];
@@ -448,6 +450,7 @@ theorem romNameW_rec (n : Nat) (m : Mem) (pos : Word) (h0 : romB rom pos ≠ 0) 
     romNameW rom (n + 1) m pos = nmRecK rom (romB rom pos) (romNameW rom n m (pos + 1)) := by
   simp [romNameW, h0]
 
+/-- con-ron: none — the ROM reader (L has constant bytes where the twin has con-leche values) -/
 def romName : FunDecl := lfn (pos) locals (t, h, q, l, o) {
   t := rom.c8[pos];
   if t == 0 {
@@ -752,5 +755,14 @@ theorem romName_refines (rom : List UInt8) (p : Prog) (hL : NameProg rom p) (hr 
     (romName_specW rom p hL n s₀ pos hA.1.lit.1.2.2.1)
   subst hs
   exact ⟨hloc, romNameW_ok rom hr x hx n _ a₀ pos rest _ _ _ hA hd hW⟩
+
+/-- `ArenaD` across writes at or above array 64 and `CTL` word 64. -/
+theorem ArenaD.frameHi {A : List ArrId} {C : List Word} {m m' : Mem} {a : AState}
+    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, 64 ≤ b) (hC : ∀ x ∈ C, 64 ≤ x.toNat) (h : ArenaD m a) :
+    ArenaD m' a :=
+  ⟨ArenaR.frame_ext A C hA hC m m' hf a h.1,
+   DerR.frame m m' a h.2 (fun B hB => hf.1 B (fun hm => by
+      have := hA B hm; rcases hB with rfl | rfl | rfl | rfl | rfl <;> revert this <;> decide)
+      (by rcases hB with rfl | rfl | rfl | rfl | rfl <;> decide))⟩
 
 end L.Rom

@@ -48,6 +48,7 @@ def runLoop : Stmt := lblk (i, ok, nx, ln) {
   }
 }
 
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:561-574 ConRon.Arena.Frontend.parseBytes -/
 @[l_impl ConRon.Arena.Frontend.parseBytes]
 def frontRun : FunDecl := lfn () locals (i, ok, nx, ln) {
   ok := call front_init();

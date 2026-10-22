@@ -15,16 +15,17 @@ for line in md.splitlines():
                      "lean_proven": int(g[7]), "lean_with_l": int(g[8]), "lean_all": int(g[9]),
                      "rust_proven": int(g[10]), "rust_with_l": int(g[11]), "rust_all": int(g[12])})
 (out / "phases.json").write_text(json.dumps(rows, indent=1))
-# stale targets
+# upstream changes: the CHANGED markers `scripts/provenance.py check` lists as its queue
 stale = []
-sec = md.split("## Stale targets", 1)
-if len(sec) == 2:
-    for line in sec[1].split("\n## ", 1)[0].splitlines():
-        m = re.match(r"\* `([^`]+)` \((\w+), phase (\d+)\): (.*)", line)
-        if m:
-            thms = re.findall(r"`(L\.[^`]+|ConAgua\.[^`]+)`", m.group(4))
-            owner = {2: "decls", 3: "whnf", 4: "exprops3", 5: "whnf", 6: "whnf", 7: "whnf", 8: "induct"}.get(int(m.group(3)), "")
-            stale.append({"target": m.group(1), "status": m.group(2), "phase": int(m.group(3)), "owner": owner, "theorems": ", ".join(thms)})
+chk = subprocess.run(["python3", str(root / "scripts/provenance.py"), "check"], cwd=root, capture_output=True, text=True).stdout
+owners = [("Ind", "indproofs"), ("Whnf", "whnf"), ("Core", "whnf"), ("Level", "whnf"), ("Checker", "decls"), ("Decl", "decls"),
+          ("Rom", "decls"), ("Env", "decls"), ("Pins", "decls"), ("Front", "front"), ("Scan", "front")]
+for line in chk.splitlines():
+    m = re.match(r"queue: (\S+):(\d+) — (.*)", line)
+    if m:
+        f = m.group(1)
+        owner = next((o for k, o in owners if k in f), "")
+        stale.append({"target": f"{f}:{m.group(2)}", "status": "CHANGED", "phase": "", "owner": owner, "theorems": m.group(3)})
 (out / "stale.json").write_text(json.dumps(stale, indent=1))
 # lanes with helper worktrees and last-commit age
 lanes = json.loads((root / "docs/lanes.json").read_text())

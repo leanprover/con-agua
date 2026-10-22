@@ -1,4 +1,4 @@
-import ConAgua.Arena.IndCopy
+import ConAgua.Arena.IndCopy2
 import ConAgua.Arena.DerRel
 import ConAgua.Arena.ExprMk
 
@@ -144,7 +144,7 @@ end
 theorem consW_room {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word}
     (h : consW n m x o l = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64)
     (hc : 200 < (m.arr64 CTL).size) (hsrc : o.toNat + l.toNat ≤ iwTop m)
-    (hx : x.toNat < 2 ^ 32) {xs : List EIdx} (hxs : decHL m o.toNat l.toNat = some xs) :
+    (hx : x.toNat < 2 ^ 32) {k : IdxKind} {xs : List (Idx k)} (hxs : decHL m o.toNat l.toNat = some xs) :
     iwTop m' ≤ (m'.arr64 IW).size := by
   obtain ⟨-, -, -, hf, -, ht⟩ := consW_dec h hsz hc hsrc hx hxs
   rw [← ht, hf.2.2.1 IW]
@@ -166,7 +166,7 @@ theorem consW_room {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word}
 /-- **`sl_cons` keeps the stage relation**: the pool grew by the new slice, which decodes to
 `x :: xs`. -/
 theorem consW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
-    {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} {xs : List EIdx}
+    {n : Nat} {m m' : Mem} {x o l : Word} {r : List Word} {k : IdxKind} {xs : List (Idx k)}
     (h : consW n m x o l = some (r, m')) (hS : StageR dn vis fe m a)
     (hsrc : o.toNat + l.toNat ≤ iwTop m) (hx : x.toNat < 2 ^ 32)
     (hxs : decHL m o.toNat l.toNat = some xs) :
@@ -260,5 +260,28 @@ theorem internMax_stage (hS : StageR dn vis fe m a) (u v : Word) (hu : u.toNat <
     (fun _ => ⟨DerR.lvl, rfl⟩)
 
 end levels
+
+/-! ## `iw_alloc` under the stage relation -/
+
+theorem allocW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+    {m m1 : Mem} {k q : Word} (h : allocW m k = some (q, m1)) (hS : StageR dn vis fe m a) :
+    StageR dn vis fe m1 a ∧ IWGrow m m1 ∧ q.toNat = iwTop m ∧ iwTop m1 = iwTop m + k.toNat := by
+  obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
+  obtain ⟨rfl, rfl, hroom⟩ := allocW_facts h hsz
+  have hf := allocMem_frame m k
+  have htop : iwTop (allocMem m k) = iwTop m + k.toNat := by
+    simp only [iwTop, allocMem, rdW_set64]
+    have h200 : UInt64.toNat 200 < (m.arr64 CTL).size := by simpa using hc
+    rw [if_pos ⟨trivial, trivial, h200⟩, UInt64.toNat_add]
+    omega
+  have h129 : rdW ((allocMem m k).arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.2.1 129 (by simp)
+  have hE : (allocMem m k).arr64 EREC = m.arr64 EREC := hf.1 EREC (by simp [EREC, IW]) (by decide)
+  refine ⟨⟨CheckR.frame_iw hf hS.1, ?_, ?_, ?_, ?_, ?_⟩, ?_, rfl, htop⟩
+  · rw [htop, hf.2.2.1 IW]; simp only [iwTop]; omega
+  · simp only [erTop, h129, hE]; exact hE1
+  · rw [hf.2.2.1 IW]; exact hsz
+  · rw [hE]; exact hEs
+  · rw [hf.2.2.1 CTL]; exact hc
+  · exact allocMem_grow m k (by simp only [iwTop]; omega) hc
 
 end L.Ind
