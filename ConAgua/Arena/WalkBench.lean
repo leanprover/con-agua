@@ -54,7 +54,8 @@ def walkMem (c : Nat) : Mem :=
         Array.replicate (4 * c) 0, Array.replicate (8 * c) 0] ++
       #[Array.replicate (4 * c) 0, Array.replicate (4 * c) 0, Array.replicate (4 * c) 0,
         Array.replicate (4 * c) 0, Array.replicate (4 * c) 0, Array.replicate (4 * c) 0,
-        Array.replicate (6 * c) 0, Array.replicate (4 * c) 0] ++ Array.replicate 8 #[] }
+        Array.replicate (6 * c) 0, Array.replicate (4 * c) 0] ++ Array.replicate 14 #[] ++
+      Array.replicate 7 (Array.replicate (2 * c) 0) }
 
 /-- Run `f` from the memory `m`; the first result. -/
 def walkRun (fuel : Nat) (f : FnName) (args : List Word) (m : Mem) : Option (Word × Mem) :=
