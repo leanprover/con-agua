@@ -2835,4 +2835,141 @@ theorem andRescueSlots_refines' (p : Prog) (hp : IotaProg' p) (hcc : CoreCallees
   · rw [hstF]; simpa using hca
   · rw [hresF]; simpa using hres
 
+/-! ## `fab_scope_ok(d, fab, major)` -/
+
+/-- Model of `fab_scope_ok`. -/
+def fsW (p : Prog) (k : Nat) (m : Mem) (d fab major : Word) : Option (List Word × Mem) :=
+  match callW p k "wscoped_bfast" [d, fab] m with
+  | none => none
+  | some (r₁, m₁) =>
+    if r₁.headD 0 = 0 then some ([0], m₁)
+    else match callW p k "loose_bvars_bounded_fast" [0, fab] m₁ with
+      | none => none
+      | some (r₂, m₂) =>
+        if r₂.headD 0 = 0 then some ([0], m₂)
+        else match callW p k "leaf_guard" [fab, major] m₂ with
+          | none => none
+          | some (r₃, m₃) => some ([r₃.headD 0], m₃)
+
+theorem fabScopeOk_spec (p : Prog) (hp : p.lookup "fab_scope_ok" = some fabScopeOkL) (k : Nat)
+    (s₀ : St) (d fab major : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p (k + 1)) "fab_scope_ok" [d, fab, major]
+    ⦃fun r s' => LocEq s' s₀ ∧ fsW p k s₀.mem d fab major = some ([r.headD 0], s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, fabScopeOkL]
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+    callW_spec p k "wscoped_bfast", callW_spec p k "loose_bvars_bounded_fast",
+    callW_spec p k "leaf_guard"] <;>
+  simp_all [fsW, Cmp.eval, BinOp.eval, LocEq, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem,
+    St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr]
+
+theorem fabScopeOk_stop1 (d : Nat) (fab major : EIdx) (a a₁ : AState)
+    (h : (wscopedBFast coreWalkFuel d fab).run a = .ok (false, a₁)) :
+    (fabScopeOk d fab major).run a = .ok (false, a₁) := by
+  simp only [fabScopeOk, StateT.run_bind, h, except_ok_bind]; rfl
+
+theorem fabScopeOk_stop2 (d : Nat) (fab major : EIdx) (a a₁ a₂ : AState)
+    (h : (wscopedBFast coreWalkFuel d fab).run a = .ok (true, a₁))
+    (h2 : (looseBVarsBoundedFast coreWalkFuel 0 fab).run a₁ = .ok (false, a₂)) :
+    (fabScopeOk d fab major).run a = .ok (false, a₂) := by
+  simp only [fabScopeOk, StateT.run_bind, h, except_ok_bind, Bool.not_true, Bool.false_eq_true,
+    ↓reduceIte, h2, Bool.not_false]; rfl
+
+theorem fabScopeOk_go (d : Nat) (fab major : EIdx) (a a₁ a₂ a₃ : AState) (b : Bool)
+    (h : (wscopedBFast coreWalkFuel d fab).run a = .ok (true, a₁))
+    (h2 : (looseBVarsBoundedFast coreWalkFuel 0 fab).run a₁ = .ok (true, a₂))
+    (h3 : (leafGuard coreWalkFuel fab major).run a₂ = .ok (b, a₃)) :
+    (fabScopeOk d fab major).run a = .ok (b, a₃) := by
+  simp only [fabScopeOk, StateT.run_bind, h, except_ok_bind, Bool.not_true, Bool.false_eq_true,
+    ↓reduceIte, h2, Bool.not_false, h3]
+
+/-- **`fab_scope_ok` refines `fabScopeOk`** (the three walks as `IotaCallees`' stubs). -/
+theorem fabScopeOk_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) : FabScopeOkOK p := by
+  intro n s₀ a₀ dn vis fe MM eb d fab major hS hfab hmaj
+  cases n with
+  | zero =>
+    apply L.M.triple_of_run
+    intro s r s' _ hrun
+    exact (invoke_zero_run _ _ _ _ _ _ hrun).elim
+  | succ n =>
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
+    (fabScopeOk_spec p hp.fabScopeOk n s₀ d fab major)
+  subst hs0
+  refine ⟨hloc, ?_⟩
+  simp only [fsW] at hW
+  cases hc1 : callW p n "wscoped_bfast" [d, fab] s.mem with
+  | none => rw [hc1] at hW; cases hW
+  | some q =>
+  obtain ⟨r₁, m₁⟩ := q
+  rw [hc1] at hW
+  simp only at hW
+  obtain ⟨hok1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres1, hr₁⟩ := CoreSpec.of_callW
+    (hc.wscopedBFast n ⟨s.mem, Locals.init []⟩ a₀ dn vis fe MM eb d fab hS hfab) hc1
+  have hrun1 := AM.run_of_ok _ _ hok1
+  rw [hres1] at hrun1
+  by_cases h0 : r₁.headD 0 = 0
+  · rw [if_pos h0] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨hr, hm⟩ := hW
+    have hb : decBool r₁ = false := by simp only [decBool]; rw [h0]; rfl
+    rw [hb] at hrun1
+    obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _
+      (fabScopeOk_stop1 d.toNat (decE fab) (decE major) a₀ _ hrun1)
+    have hr0 : r.headD 0 = 0 := by simpa using hr.symm
+    refine ⟨hokF, ⟨M₁, ?_, hK₁, hm ▸ hSt₁⟩, ?_, ?_⟩
+    · rw [hstF, ← hm]; exact hS₁
+    · rw [hresF]; simp only [decBool]; rw [hr0]; rfl
+    · unfold ResH HW; rw [hr0]; decide
+  rw [if_neg h0] at hW
+  have hb : decBool r₁ = true := by simp only [decBool]; simpa using h0
+  rw [hb] at hrun1
+  cases hc2 : callW p n "loose_bvars_bounded_fast" [0, fab] m₁ with
+  | none => rw [hc2] at hW; cases hW
+  | some q =>
+  obtain ⟨r₂, m₂⟩ := q
+  rw [hc2] at hW
+  simp only at hW
+  obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hr₂⟩ := CoreSpec.of_callW
+    (hc.looseBVarsBoundedFast n ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb 0 fab hS₁ hfab) hc2
+  have hrun2 := AM.run_of_ok _ _ hok2
+  rw [hres2] at hrun2
+  have h00 : (0 : Word).toNat = 0 := rfl
+  rw [h00] at hrun2
+  by_cases h20 : r₂.headD 0 = 0
+  · rw [if_pos h20] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨hr, hm⟩ := hW
+    have hb2 : decBool r₂ = false := by simp only [decBool]; rw [h20]; rfl
+    rw [hb2] at hrun2
+    obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _
+      (fabScopeOk_stop2 d.toNat (decE fab) (decE major) a₀ _ _ hrun1 hrun2)
+    have hr0 : r.headD 0 = 0 := by simpa using hr.symm
+    refine ⟨hokF, ⟨M₂, ?_, hK₁.trans hK₂, hm ▸ hSt₁.trans hSt₂⟩, ?_, ?_⟩
+    · rw [hstF, ← hm]; exact hS₂
+    · rw [hresF]; simp only [decBool]; rw [hr0]; rfl
+    · unfold ResH HW; rw [hr0]; decide
+  rw [if_neg h20] at hW
+  have hb2 : decBool r₂ = true := by simp only [decBool]; simpa using h20
+  rw [hb2] at hrun2
+  cases hc3 : callW p n "leaf_guard" [fab, major] m₂ with
+  | none => rw [hc3] at hW; cases hW
+  | some q =>
+  obtain ⟨r₃, m₃⟩ := q
+  rw [hc3] at hW
+  simp only [Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨hr, hm⟩ := hW
+  obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hr₃⟩ := CoreSpec.of_callW
+    (hc.leafGuard n ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb fab major hS₂ hfab hmaj) hc3
+  have hrun3 := AM.run_of_ok _ _ hok3
+  obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _
+    (fabScopeOk_go d.toNat (decE fab) (decE major) a₀ _ _ _ _ hrun1 hrun2 hrun3)
+  have hr3 : r₃.headD 0 = r.headD 0 := by simpa using hr
+  refine ⟨hokF, ⟨M₃, ?_, hK₁.trans (hK₂.trans hK₃), hm ▸ hSt₁.trans (hSt₂.trans hSt₃)⟩, ?_, ?_⟩
+  · rw [hstF, ← hm]; exact hS₃
+  · rw [hresF, hres3]; simp only [decBool]; rw [hr3]
+  · unfold ResH HW; rw [← hr3]; exact hr₃
+
 end L.Arena
