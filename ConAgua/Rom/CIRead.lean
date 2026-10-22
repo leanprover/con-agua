@@ -33,9 +33,11 @@ def rciSlot : FunDecl := lfn (s) locals (x) {
   return ⟪ciOff⟫ + x
 }
 
-/-- `rci_fresh()`: a fresh expression memo. -/
+/-- `rci_fresh()`: a fresh expression memo, and the level stack `RSTK` at its base (`rom_levels`
+needs room above `CTL[131]`; nothing else holds the stack between two ROM reads). -/
 -- con-ron: none — the expression memo's reset (the twin starts each intern at `∅`)
 def rciFresh : FunDecl := lfn () locals (z) {
+  CTL.u64[131] := 0;
   CTL.u64[132] := 0;
   z := call rset_clear();
   return 0
