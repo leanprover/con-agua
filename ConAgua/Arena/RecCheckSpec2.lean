@@ -3,6 +3,8 @@ import ConAgua.Arena.RecCheckSpec
 import ConAgua.Arena.IndSumSpec2
 import ConAgua.Arena.RecGenSpec2
 import ConAgua.Arena.IndPartsSpec2
+import ConAgua.Arena.IndPos2Spec
+import ConAgua.Arena.IndPartsSpec4
 
 /-!
 # More refinements of `RecCheck` (lane `indproofs`, helper `recb`)
@@ -330,5 +332,290 @@ theorem ptrListNames_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc
   refine ⟨hl, h1, ?_, h3, h4, h5⟩
   rw [List.map_map] at h2
   exact h2
+
+
+/-! ## `mk_target_major`: a fresh 13-word record -/
+
+/-- The thirteen stores of `mk_target_major` at `q`. -/
+def tmWr (m1 : Mem) (q a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 : Word) : Mem :=
+  ((((((((((((m1.set64 IW q a0).set64 IW (q + 1) a1).set64 IW (q + 2) a2).set64 IW
+    (q + 3) a3).set64 IW (q + 4) a4).set64 IW (q + 5) a5).set64 IW (q + 6) a6).set64 IW (q + 7) a7).set64
+    IW (q + 8) a8).set64 IW (q + 9) a9).set64 IW (q + 10) a10).set64 IW (q + 11) a11).set64 IW
+    (q + 12) a12
+
+/-- The memory after `mk_target_major(...)`. -/
+def tmMem (m : Mem) (a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 : Word) : Mem :=
+  tmWr (allocMem m 13) (rdW (m.arr64 CTL) 200) a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12
+
+/-- **The model of `mk_target_major`.** -/
+def mkTMW (m : Mem) (a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 : Word) : Option (List Word × Mem) :=
+  match allocW m 13 with
+  | none => none
+  | some (q, m1) => some ([q], tmWr m1 q a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12)
+
+theorem mkTargetMajor_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hp : p.lookup "mk_target_major" = some mkTargetMajor) (n : Nat) (s₀ : St)
+    (a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "mk_target_major"
+      [a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      mkTMW s₀.mem a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, mkTargetMajor]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        iwAlloc_specW p ha n] <;>
+      finish (gen := 20) [mkTMW, tmWr]
+
+theorem tmMem_eq (m : Mem) (a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 : Word) :
+    tmMem m a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 =
+      wrIW (allocMem m 13) (rdW (m.arr64 CTL) 200) [a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12] := by
+  simp [tmMem, tmWr, wrIW, UInt64.add_assoc]
+
+/-- **What `mk_target_major` leaves**: the pool grew, the thirteen words are readable at the old top,
+and (given the slices' decodings at the new memory, which the caller gets by pool growth) the new
+record decodes as the `TargetMajor` of its arguments. -/
+theorem tmMem_dec (m : Mem) (a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 : Word)
+    (hc : 200 < (m.arr64 CTL).size)
+    (hroom : (rdW (m.arr64 CTL) 200).toNat + 13 ≤ (m.arr64 IW).size) (hsz : (m.arr64 IW).size < 2 ^ 64)
+    (ds : List EIdx) (ctors : List (IConstantVal × Nat)) (nfs : List NestCtorNf) (pfvs : List EIdx)
+    (h0 : a0.toNat < 2 ^ 32) (h1 : a1.toNat < 2 ^ 32)
+    (hds : decHL (tmMem m a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12) a2.toNat a3.toNat = some ds)
+    (hct : decPL (tmMem m a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12)
+      (decCN (tmMem m a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12)) a6.toNat a7.toNat = some ctors)
+    (hnf : decPL (tmMem m a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12)
+      (decNCN (tmMem m a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12)) a9.toNat a10.toNat = some nfs)
+    (hpf : decHL (tmMem m a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12) a11.toNat a12.toNat = some pfvs) :
+    IWGrow m (tmMem m a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12) ∧
+    decTM (tmMem m a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12) (rdW (m.arr64 CTL) 200).toNat =
+      some { ind := decI a0, lvls := decI a1, ds := ds, nPc := a4.toNat, nIdx := a5.toNat,
+             ctors := ctors, member := decON a8.toNat, nfs := nfs, pfvs := pfvs } := by
+  have hpost := recMem_post m [a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12] 13 rfl hc
+    (by simpa using hroom) hsz
+  rw [← tmMem_eq] at hpost
+  obtain ⟨hrd, hgrow, -, -⟩ := hpost
+  refine ⟨hgrow, ?_⟩
+  generalize hq : rdW (m.arr64 CTL) 200 = q at *
+  have r0 := hrd 0 (by simp)
+  have r1 := hrd 1 (by simp)
+  have r2 := hrd 2 (by simp)
+  have r3 := hrd 3 (by simp)
+  have r4 := hrd 4 (by simp)
+  have r5 := hrd 5 (by simp)
+  have r6 := hrd 6 (by simp)
+  have r7 := hrd 7 (by simp)
+  have r8 := hrd 8 (by simp)
+  have r9 := hrd 9 (by simp)
+  have r10 := hrd 10 (by simp)
+  have r11 := hrd 11 (by simp)
+  have r12 := hrd 12 (by simp)
+  simp only [List.getElem?_cons_zero, List.getElem?_cons_succ] at r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12
+  simp only [decTM, bind, pure, iwH, hd?, iwN, nat?, decAt, iwA, Nat.add_zero] at *
+  simp [r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, h0, h1, hds, hct, hnf, hpf]
+
+
+/-- **`mk_target_major` builds the `TargetMajor` of its arguments** (a fresh record; the slices'
+decodings at the grown memory are the caller's, by pool growth). Not a twin function of its own
+(`targetMajorDefault` and `targetMajorOf*` build the structure inline). -/
+theorem mkTargetMajor_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hp : p.lookup "mk_target_major" = some mkTargetMajor) (n : Nat) (s₀ : St)
+    (a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 : Word)
+    (hsz : (s₀.mem.arr64 IW).size < 2 ^ 64) (hc : 200 < (s₀.mem.arr64 CTL).size)
+    (ds : List EIdx) (ctors : List (IConstantVal × Nat)) (nfs : List NestCtorNf) (pfvs : List EIdx)
+    (h0 : a0.toNat < 2 ^ 32) (h1 : a1.toNat < 2 ^ 32)
+    (hds : decHL (tmMem s₀.mem a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12) a2.toNat a3.toNat = some ds)
+    (hct : decPL (tmMem s₀.mem a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12)
+      (decCN (tmMem s₀.mem a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12)) a6.toNat a7.toNat = some ctors)
+    (hnf : decPL (tmMem s₀.mem a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12)
+      (decNCN (tmMem s₀.mem a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12)) a9.toNat a10.toNat = some nfs)
+    (hpf : decHL (tmMem s₀.mem a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12) a11.toNat a12.toNat = some pfvs) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "mk_target_major"
+      [a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12]
+    ⦃fun r s' => LocEq s' s₀ ∧ IWGrow s₀.mem s'.mem ∧
+      decTM s'.mem (r.headD 0).toNat =
+        some { ind := decI a0, lvls := decI a1, ds := ds, nPc := a4.toNat, nIdx := a5.toNat,
+               ctors := ctors, member := decON a8.toNat, nfs := nfs, pfvs := pfvs }; ⊤⦄ := by
+  refine triple_post (mkTargetMajor_spec p ha hp n s₀ a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12) ?_
+  rintro r s' ⟨hl, hm⟩
+  simp only [mkTMW] at hm
+  cases hal : allocW s₀.mem 13 with
+  | none => rw [hal] at hm; simp at hm
+  | some qm =>
+  obtain ⟨q, m1⟩ := qm
+  rw [hal] at hm
+  simp only [Option.some.injEq, Prod.mk.injEq] at hm
+  obtain ⟨rfl, hm2⟩ := hm
+  rw [← hm2]
+  obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal hsz
+  subst hm1
+  have hroom' : (rdW (s₀.mem.arr64 CTL) 200).toNat + 13 ≤ (s₀.mem.arr64 IW).size := by
+    rw [← hq]; simpa using hroom
+  obtain ⟨hg, hd⟩ := tmMem_dec s₀.mem a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 hc hroom' hsz ds ctors
+    nfs pfvs h0 h1 hds hct hnf hpf
+  have hmem : tmWr (allocMem s₀.mem 13) q a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 =
+      tmMem s₀.mem a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 := by rw [tmMem, hq]
+  simp only [List.headD_cons]
+  rw [hmem, hq]
+  exact ⟨hl, hg, hd⟩
+
+
+/-! ## `target_major_default` -/
+
+mutual
+/-- **The model of `target_major_default`.** -/
+def tmdW (m : Mem) : Option (List Word × Mem) := tmdK1 (stubM "intern_nanon" m [])
+/-- After `intern_nanon`. -/
+def tmdK1 : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (ra, m1) => tmdK2 m1 (ra.headD 0) (pinWordV m1 52)
+/-- After `pin_word(52)`. -/
+def tmdK2 (m1 : Mem) (anon : Word) : Option Word → Option (List Word × Mem)
+  | none => none
+  | some ls => tmdK3 (mkTMW m1 anon ls 0 0 0 0 0 0 0 0 0 0 0)
+/-- After `mk_target_major`. -/
+def tmdK3 : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m2) => some ([r.headD 0], m2)
+end
+
+theorem tmdW_eq (m : Mem) : tmdW m = tmdK1 (stubM "intern_nanon" m []) := rfl
+theorem tmdK1_some (ra : List Word) (m1 : Mem) :
+    tmdK1 (some (ra, m1)) = tmdK2 m1 (ra.headD 0) (pinWordV m1 52) := rfl
+theorem tmdK2_some (m1 : Mem) (anon ls : Word) :
+    tmdK2 m1 anon (some ls) = tmdK3 (mkTMW m1 anon ls 0 0 0 0 0 0 0 0 0 0 0) := rfl
+theorem tmdK3_some (r : List Word) (m2 : Mem) : tmdK3 (some (r, m2)) = some ([r.headD 0], m2) := rfl
+
+grind_pattern [ind_grind] tmdW_eq => tmdW m
+grind_pattern [ind_grind] tmdK1_some => tmdK1 (some (ra, m1))
+grind_pattern [ind_grind] tmdK2_some => tmdK2 m1 anon (some ls)
+grind_pattern [ind_grind] tmdK3_some => tmdK3 (some (r, m2))
+
+theorem targetMajorDefault_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hpw : p.lookup "pin_word" = some pinWordL) (hm : p.lookup "mk_target_major" = some mkTargetMajor)
+    (hp : p.lookup "target_major_default" = some targetMajorDefault) (n : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "target_major_default" []
+    ⦃fun r s' => LocEq s' s₀ ∧ tmdW s₀.mem = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, targetMajorDefault]
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      stubM_spec p "intern_nanon" n, pinWord_specV p hpw n, mkTargetMajor_spec p ha hm n] <;>
+    finish (gen := 20) [rdW_eq, List.getD_cons_zero, List.getD_cons_succ, List.headD_cons, List.tail_cons]
+
+
+/-- **`mkTMW` leaves** (model level): the pointer, the growth, the frame, the new top, and the record
+decoded (given the slices' decodes at the new memory). -/
+theorem mkTMW_dec {m m' : Mem} {r : List Word} (a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 : Word)
+    (h : mkTMW m a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 = some (r, m'))
+    (hsz : (m.arr64 IW).size < 2 ^ 64) (hc : 200 < (m.arr64 CTL).size)
+    (ds : List EIdx) (ctors : List (IConstantVal × Nat)) (nfs : List NestCtorNf) (pfvs : List EIdx)
+    (h0 : a0.toNat < 2 ^ 32) (h1 : a1.toNat < 2 ^ 32)
+    (hds : decHL (tmMem m a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12) a2.toNat a3.toNat = some ds)
+    (hct : decPL (tmMem m a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12)
+      (decCN (tmMem m a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12)) a6.toNat a7.toNat = some ctors)
+    (hnf : decPL (tmMem m a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12)
+      (decNCN (tmMem m a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12)) a9.toNat a10.toNat = some nfs)
+    (hpf : decHL (tmMem m a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12) a11.toNat a12.toNat = some pfvs) :
+    IWGrow m m' ∧ MemFrame [IW] [200] m m' ∧ iwTop m' ≤ (m.arr64 IW).size ∧
+    decTM m' (r.headD 0).toNat =
+      some { ind := decI a0, lvls := decI a1, ds := ds, nPc := a4.toNat, nIdx := a5.toNat,
+             ctors := ctors, member := decON a8.toNat, nfs := nfs, pfvs := pfvs } := by
+  simp only [mkTMW] at h
+  cases hal : allocW m 13 with
+  | none => rw [hal] at h; simp at h
+  | some qm =>
+  obtain ⟨q, m1⟩ := qm
+  rw [hal] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, hm2⟩ := h
+  rw [← hm2]
+  obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal hsz
+  subst hm1
+  have hroom' : (rdW (m.arr64 CTL) 200).toNat + 13 ≤ (m.arr64 IW).size := by
+    rw [← hq]; simpa using hroom
+  obtain ⟨hg, hd⟩ := tmMem_dec m a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 hc hroom' hsz ds ctors
+    nfs pfvs h0 h1 hds hct hnf hpf
+  have hmem : tmWr (allocMem m 13) q a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 =
+      tmMem m a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11 a12 := by rw [tmMem, hq]
+  have hpost := recMem_post m [a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12] 13 rfl hc
+    (by simpa using hroom') hsz
+  rw [← tmMem_eq] at hpost
+  obtain ⟨-, -, hfr, htop⟩ := hpost
+  rw [hmem]
+  refine ⟨hg, hfr, ?_, by simpa [hq] using hd⟩
+  simp only [iwTop, htop]
+  rw [UInt64.toNat_add]
+  simp only [UInt64.reduceToNat]
+  omega
+
+
+theorem tmdW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem) (a : AState)
+    (r : List Word) (h : tmdW m = some (r, m')) (hS : StageR dn vis fe m a) :
+    ∃ tm a', ConRon.Arena.targetMajorDefault.run a = .ok (tm, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+      decTM m' (r.headD 0).toNat = some tm := by
+  rw [tmdW_eq] at h
+  cases h1 : stubM "intern_nanon" m [] with
+  | none => rw [h1] at h; simp [tmdK1] at h
+  | some x1 =>
+  obtain ⟨ra, m1⟩ := x1
+  rw [h1, tmdK1_some] at h
+  obtain ⟨anon, a1, hrun1, hS1, hg1, hw1, hl1⟩ := internNanonStub_spec dn vis fe m m1 a ra h1 hS
+  cases hp : pinWordV m1 52 with
+  | none => rw [hp] at h; simp [tmdK2] at h
+  | some ls =>
+  rw [hp, tmdK2_some] at h
+  have hpne : rdW (m1.arr64 PINS) 0 ≠ 0 := by
+    intro h0; simp [pinWordV, h0] at hp
+  have hz : ls = pinW m1 52 := by
+    simp only [pinWordV, hpne, if_false, Option.some.injEq] at hp
+    rw [← hp]; rfl
+  have hfull := hS1.1.pins.full hpne
+  have hlslt : ls.toNat < 2 ^ 32 := by rw [hz]; exact hfull.lv_lt.1
+  have hrunP : pinEmptyLevels.run a1 = .ok (decI ls, a1) := by rw [hz]; exact pinEmptyLevels_run hfull
+  cases hmk : mkTMW m1 (ra.headD 0) ls 0 0 0 0 0 0 0 0 0 0 0 with
+  | none => rw [hmk] at h; simp [tmdK3] at h
+  | some x3 =>
+  obtain ⟨r3, m2⟩ := x3
+  rw [hmk, tmdK3_some] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨hI, hE, hIsz, hEsz, hCsz⟩ := hS1.2
+  have hdec0 : ∀ {k : IdxKind} (mm : Mem), (decHL mm (0 : Word).toNat (0 : Word).toNat : Option (List (Idx k))) = some [] := by
+    intro k mm; simp [decHL, hslice?]
+  have hdecP : ∀ {α : Type} (mm : Mem) (f : Nat → Option α), decPL mm f (0 : Word).toNat (0 : Word).toNat = some [] := by
+    intro α mm f; simp [decPL]
+  obtain ⟨hg2, hfr, htop, hdec⟩ := mkTMW_dec (m := m1) (m' := m2) (r := r3) (ra.headD 0) ls 0 0 0 0 0 0 0 0 0 0 0
+    hmk hIsz hCsz [] [] [] [] hw1 hlslt (hdec0 _) (hdecP _ _) (hdecP _ _) (hdec0 _)
+  refine ⟨{ ind := decI (ra.headD 0), lvls := decI ls, ds := [], nPc := (0 : Word).toNat,
+            nIdx := (0 : Word).toNat, ctors := [], member := decON (0 : Word).toNat, nfs := [],
+            pfvs := [] }, a1, ?_, stage_frame_iw hS1 hfr htop, hg1.trans hg2, ?_⟩
+  · simp only [ConRon.Arena.targetMajorDefault, StateT.run_bind]
+    rw [hrun1]
+    simp only [bind, Except.bind]
+    rw [hrunP]
+    subst hl1
+    simp [StateT.run, decON]
+    rfl
+  · simpa using hdec
+
+/-- **`target_major_default` refines `targetMajorDefault`** (through the stub `intern_nanon`, `pin_word`
+and `mk_target_major`). -/
+@[refines ConRon.Arena.targetMajorDefault]
+theorem targetMajorDefault_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hpw : p.lookup "pin_word" = some pinWordL) (hm : p.lookup "mk_target_major" = some mkTargetMajor)
+    (hp : p.lookup "target_major_default" = some targetMajorDefault) (n : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (hS : StageR dn vis fe s₀.mem a₀) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "target_major_default" []
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok ConRon.Arena.targetMajorDefault a₀ ∧
+      StageR dn vis fe s'.mem (AM.st ConRon.Arena.targetMajorDefault a₀) ∧ IWGrow s₀.mem s'.mem ∧
+      decTM s'.mem (r.headD 0).toNat = some (AM.res ConRon.Arena.targetMajorDefault a₀); ⊤⦄ := by
+  refine triple_post (targetMajorDefault_spec p ha hpw hm hp n s₀) ?_
+  rintro r s' ⟨hl, hw⟩
+  obtain ⟨tm, a', hrun, hS', hg, hd⟩ := tmdW_ok dn vis fe _ _ a₀ r hw hS
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hd⟩
 
 end L.Ind
