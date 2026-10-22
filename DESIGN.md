@@ -7272,3 +7272,15 @@ grows (the memo library's capacity rule, as every L memo). Refinement: not yet (
   `majorToCtor_refines`, `prepareMajor_refines`, `iotaRecAt_refines` take `hcl` instead (and
   `iotaRecAt_refines` no longer takes `ErecKeptRec`). When a stub of the closure gets code that
   calls new functions, regenerate `coreFns`.
+
+### Landing 3: the binder stack and `EREC` from lane `whnf3`'s sweep
+* **`BStkCallees` is gone**: the telescopes (`InferBodyBind`, `InferBodyBindPi`) read the binder
+  stack's preservation off each callee's `CoreAfter` (`StackKept.bstk`, `CoreAfter.bkept`);
+  `BStkCap` is `CoreS.bstk`. `KnotCallees.bstk` removed.
+* **`ErecKept`, `ErecKeptProj` from the core's write set** (`erecKept_of`, `erecKeptProj_of`:
+  `callW_erec_closed`), the program hypothesis `KnotAllProg.hcl : closedA p coreErecA coreErecC
+  coreFns`. `KnotCallees.erecKept`/`erecProj` removed.
+* `KnotCallees` left (14): `whnfCoreStep`, `whnfStep`, `findProj`, `projFound`, `proofIrrel`,
+  `towerSlots`, `reduceProjCore`, `unfold`, `constTy`, `instLP`, `den` (lane `whnf3`'s next
+  landings: `find_proj`/`fire_ok`, the `instLP` family, `CoreS.den`); `strLitSupported`,
+  `strLitCtor`, `supKeep` (helper `defeq2-str`).
