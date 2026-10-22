@@ -974,7 +974,7 @@ theorem ixOff_toNat (mI rP : Word) : (rP - ixLen rP mI).toNat = min rP.toNat mI.
   rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le, hl]; omega), hl]
   omega
 
-theorem take_drop_min (xs : List EIdx) (a b : Nat) :
+theorem take_drop_min_le (xs : List EIdx) (a b : Nat) :
     (xs.take b).drop (min a b) = (xs.take b).drop a := by
   rcases Nat.le_total a b with h | h
   · rw [Nat.min_eq_left h]
@@ -1286,7 +1286,7 @@ theorem iotaRecVck_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
       (rdW E (recP + 6) - ixLen (rdW E (recP + 6)) (rdW E (recP + 5))).toNat) =
       ixLen (rdW E (recP + 5)) (rdW E (recP + 6)) := by
     rw [hoff, ixLen_eq]; congr 1; omega
-  rw [hl, hoff, take_drop_min] at hidx
+  rw [hl, hoff, take_drop_min_le] at hidx
   have hsat' := hsa.bound
   have hxo : (so + (rdW E (recP + 6) - ixLen (rdW E (recP + 6)) (rdW E (recP + 5)))).toNat +
       (ixLen (rdW E (recP + 5)) (rdW E (recP + 6))).toNat ≤ (spTop m4).toNat := by

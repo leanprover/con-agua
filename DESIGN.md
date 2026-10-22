@@ -7627,6 +7627,32 @@ grows (the memo library's capacity rule, as every L memo). Refinement: not yet (
   up to `DefEqKnot` + `KnotWF` after the `WhnfCore.lean` change: 5.2 min wall, 14.8 CPU-min
   (everything downstream of `WhnfCore` elaborates once); `WhnfCoreProj` ~5 s.
 
+### Helper `whnf4-rs`: `recShape` removed by an L change
+* **The L change (no deviation; it now matches the twin for any recursor).** The twin reads the
+  spine `args` (`mI + 1` words) only through `List.take`/`drop`, which clamp. L read a fixed `rP`
+  or `ctorParams` words, which was right only under `RecShape` (`rP ≤ mI + 1`, plain rules'
+  `ctorParams ≤ rP`). Now:
+  - `inst_spine_pins(po, pl, us, ao, an, rP, pvo, pvc)` takes the spine length `an`, reads
+    `min an rP` words and starts the index at `rP - 1` (the twin's `instSpine (args.take rP)
+    (rP - 1)`). It refines `instSpinePins lps us args rP` for any `args` (`ispLen`, `ispLen_take`).
+  - `rec_fire_args(…, ao, an, rP, ctorParams)`: the nested arm passes `an` on. The plain arm
+    returns `(ao, min ctorParams an)`, the twin's `args.take ctorParams` of the whole spine, not of
+    its `rP` prefix (that was the second half of `RecShape`). The `ctorParams ≤ rP` hypothesis of
+    `recFireArgs_refines'` is gone.
+  - `iota_rec_cmp` passes `an = mI + 1` (`EREC[recP + 5] + 1`). `iota_rec_fire2` caps `rP` at `mI + 1`
+    before `mk_app_n` (`rpLen`, written as arithmetic, `rP - (rP - mI - 1) * u64(mI < rP)`: an L
+    `if` here left `decide` hypotheses that `simp_all` did not use in the spec). `iota_rec_vck`'s index
+    slice starts at `so + min rP mI` (`rP - ixLen rP mI`; it was `so + rP`, past the spine when
+    `rP > mI`). Its length `ixLen mI rP` was already the twin's `(args.take mI).drop rP`.
+* **Proofs.** `SpineR.take` and `instSpinePins_take` moved to `WhnfIotaRefine2.lean`.
+  `recFireArgs_take` is no longer used and was deleted. The `rP ≤ sn` and plain-rule hypotheses
+  are dropped from `iotaRecCmp/Vck/Fam/Fire2/Fire/Major_refines'`. The pieces get `mI + 1 = sn`,
+  which they already had. `RecShape` is gone from `iotaRecC/At_refines'` and from `KnotCallees`,
+  which now has 5 fields: `den`, `instLP`, `capsNeverZero`, `recFireLevels`, `lvlsEqDen`.
+  `Checker/Prog.lean` is unchanged (same names and the same callees, so `coreFns` is unchanged too).
+* Numbers: 8 files, +263/−205 lines. `scripts/lake build ConAgua` after the change took 4.8 min
+  wall (the cone from `WhnfIota` up).
+
 ### Landing 9: helper `pos2`; vacuous memo hypotheses untagged
 * Helper `pos2` (3 h): word models, specs and relational lemmas for the rest of `IndPos2`
   (`nestGrowGroup`, `nestAcceptGroup`, the `nestPos` block `nestFields`/`nestCtors`/`nestFrame`/
