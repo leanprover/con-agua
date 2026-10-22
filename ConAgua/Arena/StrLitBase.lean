@@ -59,8 +59,8 @@ theorem CoreS.of_ls {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AS
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List ArrId} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hL : LsStep a a') (hR : ArenaR m' a')
     (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b < 42 ∨ (54 < b ∧ b < 64)) (hC : ∀ x ∈ C, x.toNat < 42)
-    (hP : POOL ∉ A := by decide) (hP0 : (0 : Word) ∉ C := by decide)
-    (hLv : LvlFree C := by lvl_free) :
+    (hlsa : LsAll a') (hlc : LvlCnt m m')
+    (hP : POOL ∉ A := by decide) (hP0 : (0 : Word) ∉ C := by decide) :
     CoreS dn m' a' vis fe M eb ∧ StackKept m m' := by
   have hD : DerR m' a' := DerR.of_tiers m' a a'
     (DerR.frameM A C m m' hf (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega) a
@@ -85,11 +85,11 @@ theorem CoreS.of_ls {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AS
         (hf.1 EREC (fun h => by have := hA _ h; simp only [EREC, ArrId] at this; omega) (by decide))
         (fun x u hv => by simpa only [EStore.view, hL.pers, hL.scr, hL.son] using hv)
         (fun x c us hv => .inl (by simpa only [EStore.view, hL.pers, hL.scr, hL.son] using hv))
-        (hS.den.lvlAll.congr (by simp only [EStore.ls, hL.ls]))⟩,
-    StackKept.of_frame hf
+        (hS.den.lvlAll.congr (by simp only [EStore.ls, hL.ls])) hlsa⟩,
+    StackKept.of_frameL hf
       ⟨fun h => by have := hA _ h; simp only [SPN, ArrId] at this; omega,
        fun h => by have := hA _ h; simp only [BSTK, ArrId] at this; omega, hP⟩
-      ⟨fun h => by have := hC _ h; simp at this, fun h => by have := hC _ h; simp at this, hP0⟩ hLv⟩
+      ⟨fun h => by have := hC _ h; simp at this, fun h => by have := hC _ h; simp at this, hP0⟩ hlc⟩
   · rw [hL.caches]
     exact CoreRM.frame (A := A) (C := C) (fun b hb => .inl (by have := hA b hb; simp only [ArrId] at this ⊢; omega))
       (fun x hx => .inl (by have := hC x hx; omega)) hf hS.core
@@ -402,6 +402,7 @@ theorem romLit_call (hS : CoreS dn m a vis fe M eb) {c : Word}
   exact ⟨h.1, h.2.1, h.2.2.1, h.2.2.2⟩
 
 theorem ls1_call (hS : CoreS dn m a vis fe M eb) {u : Word} (hu : HW u)
+    (hd : ∃ l, denoteL a.store.ls (decI u) = some l)
     (h : callW p n "str_ls1" [u] m = some (r, m')) :
     CoreRef (internLsNode [decI u]) a decLs dn m vis fe M eb r m' := by
   cases n with
@@ -467,6 +468,9 @@ theorem ls1_call (hS : CoreS dn m a vis fe M eb) {u : Word} (hu : HW u)
                     rcases hb with rfl | rfl | rfl <;> decide)
     (fun x hx => by simp only [lsSch, List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
+    (lsAll_internLsNode hK.1.arena.1 hK.1.den.lsAll
+      (fun c hc => by rw [List.mem_singleton] at hc; subst hc; exact hd) (AM.run_of_ok _ _ hok)).1
+    (lvlCnt_internLsNode hK.1.arena.1 hR' (hf.2.1 1 (by decide)) (AM.run_of_ok _ _ hok))
   have hw := internM_hw lsSch LsRecRel lshash lsSch_wf m₀ _ _ _ hK.1.arena.1.ls
     (lsMt m₀ m.top 1 (hashN (m₀.arr64 POOL) m.top.toNat (1 : Word).toNat)) _ _ _ _
     (probe_homeG lsSch m₀ 0 _ _ (lsprobeW_arm m₀ m.top 1 _ 0) _)
@@ -479,7 +483,7 @@ theorem ls1_den (hS : CoreS dn m a vis fe M eb) {u : Word} (hu : HW u)
     (h : callW p n "str_ls1" [u] m = some (r, m'))
     (hd : ∃ l, denoteL a.store.ls (decI u) = some l) :
     ∃ ls, denoteLs (AM.st (internLsNode [decI u]) a).store.lss (decI (r.headD 0)) = some ls := by
-  have R := ls1_call p hp hS hu h
+  have R := ls1_call p hp hS hu hd h
   have hrun := AM.run_of_ok _ _ R.1
   rw [R.2.2.1] at hrun
   exact (denoteLs_internLsNode hS.arena.1

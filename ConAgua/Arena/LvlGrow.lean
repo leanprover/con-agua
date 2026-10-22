@@ -286,4 +286,24 @@ theorem lsAll_internLsNode {m : Mem} {a a' : AState} {v : LsNodeView} {h : LsIdx
           rw [hss]; exact LsStore.ls_intern _ _
         rw [hls']; exact hls
 
+/-- **A level-list interning grows the list tables and keeps the level store.** -/
+theorem lsGrow_internLsNode {a a' : AState} {v : LsNodeView} {h : LsIdx}
+    (hrun : (internLsNode v).run a = .ok (h, a')) :
+    a.store.lss.pers.lists.nodes.size ≤ a'.store.lss.pers.lists.nodes.size ∧
+      a.store.lss.scr.lists.nodes.size ≤ a'.store.lss.scr.lists.nodes.size ∧
+      a'.store.lss.ls = a.store.lss.ls := by
+  rcases internLsNode_run_cases hrun with ⟨-, rfl⟩ | ⟨-, -, hss, -⟩
+  · exact ⟨Nat.le_refl _, Nat.le_refl _, rfl⟩
+  · rw [hss]
+    refine ⟨?_, ?_, LsStore.ls_intern _ _⟩ <;> unfold LsStore.intern <;> split <;>
+      (try split) <;> (try split) <;> simp [LsTables.push, Tbl.push]
+
+/-- `LvlCnt` across a level-list interning (under `ArenaR` at both ends). -/
+theorem lvlCnt_internLsNode {m m' : Mem} {a a' : AState} {v : LsNodeView} {h : LsIdx}
+    (hR : ArenaR m a) (hR' : ArenaR m' a') (hflag : rdW (m'.arr64 CTL) 1 = rdW (m.arr64 CTL) 1)
+    (hrun : (internLsNode v).run a = .ok (h, a')) : LvlCnt m m' := by
+  obtain ⟨h1, h2, h3⟩ := lsGrow_internLsNode hrun
+  exact lvlCnt_of_arena hR hR' hflag (by rw [h3]; exact LTGrow.refl _) (by rw [h3]; exact LTGrow.refl _)
+    h1 h2
+
 end L.Arena

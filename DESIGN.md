@@ -7875,3 +7875,14 @@ child dangled when it was interned (no `StoreWF` needed).
   (`lvl_den_later`), `infer_pis`'s loop carries "every binder sort on `BSTK` is stored"
   (`lvNodeW m ws[i] ≠ []`, a new hypothesis of `pisFull_ref`/`inferPisLeaf_refines`/
   `pisOut_ref`), and `ensure_sort`'s answer is a stored sort's level (`ensureSort_view`).
+
+### Landing 8: level lists too (`StoreDen.lsAll`, list counts in `LvlCnt`)
+* **`StoreDen.lsAll : LsAll a`**: every valid level-list handle reads back (the list twin of
+  `lvlAll`); `StoreDen.mono` takes it as its last argument. Kept by name/level steps (`LsAll.congr`,
+  `LsAll.of_ext`) and by list interning (`lsAll_internLsNode`: given the elements read back, the
+  new store has `LsAll` and the new handle reads back).
+* **`LvlCnt` covers the list table counts** (`CTL` 40, 41; `lvlCtlW`), so `LvlFree.of_ge` now needs
+  `42 ≤ x`. A list interning gets it from `lvlCnt_internLsNode` (`LsTables` only push); `CoreS.of_ls`
+  takes `hlsa`/`hlc` and uses `StackKept.of_frameL`; `ls1_call` now needs its element to read back.
+* **Why**: a list stays stored after a run (`lsNodeW_mono`), so `ls_den_later`/`lsNodeW_of_den`
+  read it back later — what whnf4's `instLP`/`LvlsEqDen` need for constants' level lists.

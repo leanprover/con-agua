@@ -173,7 +173,11 @@ theorem CoreS.of_name {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
           have e : a'.store.ls.view u = a.store.ls.view u := by
             show a'.store.lss.ls.view u = a.store.lss.ls.view u
             unfold LStore.view; rw [hN.lp, hN.ls, hN.lon2]
-          rw [← e]; exact hu) hN.lext)⟩
+          rw [← e]; exact hu) hN.lext)
+        (hS.den.lsAll.of_ext (fun u hu => by
+          have e : a'.store.lss.view u = a.store.lss.view u := by
+            unfold LsStore.view; rw [hN.lsp, hN.lss, hN.lon]
+          rw [← e]; exact hu) hN.lsext)⟩
   · rw [hN.caches]
     exact CoreRM.frame (A := A) (C := C) (fun b hb => .inl (by have := hA b hb; simp only [ArrId] at this ⊢; omega))
       (fun x hx => .inl (by have := hC x hx; omega)) hf hS.core

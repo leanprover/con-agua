@@ -46,6 +46,11 @@ def LsAll (a : AState) : Prop :=
 theorem LsAll.congr {a a' : AState} (h : LsAll a) (e : a'.store.lss = a.store.lss) : LsAll a' := by
   intro u hu; rw [e] at hu ⊢; exact h u hu
 
+theorem LsAll.of_ext {a a' : AState} (h : LsAll a)
+    (hv : ∀ u, (a'.store.lss.view u).isSome → (a.store.lss.view u).isSome)
+    (hx : LsExt a.store.lss a'.store.lss) : LsAll a' := by
+  intro u hu; obtain ⟨l, hl⟩ := h u (hv u hu); exact ⟨l, hx.lst _ _ hl⟩
+
 theorem LvlAll.congr {a a' : AState} (h : LvlAll a) (e : a'.store.ls = a.store.ls) : LvlAll a' := by
   intro u hu; rw [e] at hu ⊢; exact h u hu
 
