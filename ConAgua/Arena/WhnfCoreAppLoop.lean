@@ -537,7 +537,7 @@ theorem appFull_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
         have hvw : viewOK m v 28 := ⟨c1, UInt64.not_le.mp c2⟩
         obtain ⟨-, -, hbody1⟩ := view_lam m a hS.arena.1 v hv hvw hlam
         have hvb := viewBind_lam m a hS.arena.1 v hv hvw hlam
-        have hbeta := betaPeel_refines p hp k' ⟨m, Locals.init []⟩ a dn vis fe MM eb _
+        have hbeta := betaPeel_refines' p hp (whnfCallees_stub p).instList k' ⟨m, Locals.init []⟩ a dn vis fe MM eb _
           (rdW (m.arr64 SPN) (ao + i)) ao an (i + 1) args hS hbody1 hvv har
           (by rw [htop, hadd]; omega)
         obtain ⟨hok, ⟨M', hS', hK', hSt'⟩, hres, hrw⟩ := CoreSpec.of_callW hbeta hcall

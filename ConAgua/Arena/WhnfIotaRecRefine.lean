@@ -1255,7 +1255,7 @@ theorem iotaRecVck_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
   rw [c4] at hW
   simp only at hW
   obtain ⟨ok4, ⟨M4, hS4, hK4, hSt4⟩, res4, hr4⟩ := CoreSpec.of_callW
-    (iotaCertsFull_refines' p hp.toIotaProg4 hw (N + 1) (hk.mono (by omega)) F (by omega) (by omega)
+    (iotaCertsFull_refines' p hp.toIotaProg4 hw.instList (N + 1) (hk.mono (by omega)) F (by omega) (by omega)
       ⟨m3, Locals.init []⟩ _ dn vis fe M3 eb mode d (rt.headD 0) mo mn margs hS3 hm4 hebm hr3 hsm3
       (by rw [hSt13.1]; exact hsmt)) c4
   have hrun4 := AM.run_of_ok _ _ ok4
@@ -1304,7 +1304,7 @@ theorem iotaRecVck_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, hm⟩ := hW
   obtain ⟨ok5, ⟨M5, hS5, hK5, hSt5⟩, res5, hr5⟩ := CoreSpec.of_callW
-    (iotaIndexOk_refines' p hp.toIotaProg' hc (N + 1) (hk.mono (by omega)) F (by omega) (by omega)
+    (iotaIndexOk_refines' p hp.toIotaProg' hc.inst1 (N + 1) (hk.mono (by omega)) F (by omega) (by omega)
       ⟨m4, Locals.init []⟩ _ dn vis fe M4 eb mode d (rdW E (recP + 5)) (rdW E (recP + 6))
       (rdW E (rl + 2)) (rt.headD 0) mo mn (so + rdW E (recP + 6))
       (ixLen (rdW E (recP + 5)) (rdW E (recP + 6))) margs _ hS4 hm4 hebm hr3 hsm4 hidx
