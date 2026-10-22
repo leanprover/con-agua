@@ -187,21 +187,6 @@ theorem romU64_spec (n : Nat) (s₀ : St) (i : Word) :
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ldc] <;>
       finish [u64W, u64OK]
 
-include hp in
-/-- `rom_u64` with its bounds check (the decoder direction needs the bytes inside the ROM). -/
-theorem romU64_specB (n : Nat) (s₀ : St) (i : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "rom_u64" [i]
-    ⦃fun r s' => s' = s₀ ∧ r = [u64W rom i] ∧ ¬ UInt64.ofNat rom.length < i + 8 ∧ i.toNat < rom.length; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, romU64]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ldc] <;>
-      finish [u64W]
-
 end u64Spec
 
 /-! ## `rom_put(i, l)`: ROM bytes to the pool top -/
