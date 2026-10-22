@@ -646,3 +646,125 @@ theorem nestCtorsU4_spec (p : Prog) (L : UslLook p) (hp : p.lookup "nest_ctors_u
       finish (gen := 20) [rdW_eq]
 
 end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+/-- The twin's U4 test at field `i`. -/
+def u4F (ks : List NestFieldKind) (closed : EIdx) (i : Nat) : AM Bool :=
+  if (ks[i]?.map (· == .ordinary)).getD true then pure false else structUsedLater closed 0 i
+
+theorem decKL_get {m : Mem} {o l : Nat} {ks : List NestFieldKind} (h : decKL m o l = some ks) :
+    ks.length = l ∧ ∀ j (hj : j < l), ∃ w, (iwA m)[o + j]? = some w ∧ decNFK w = ks[j]? := by
+  induction l generalizing o ks with
+  | zero => simp [decKL] at h; subst h; simp
+  | succ l ih =>
+    rw [decKL_succ] at h
+    simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at h
+    obtain ⟨w, hw, x, hx, xs, hxs, rfl⟩ := h
+    obtain ⟨h1, h2⟩ := ih hxs
+    refine ⟨by simp [h1], fun j hj => ?_⟩
+    cases j with
+    | zero => exact ⟨w, by simpa using hw, by simpa using hx⟩
+    | succ j =>
+      obtain ⟨w', hw', hx'⟩ := h2 j (by omega)
+      exact ⟨w', by rw [show o + (j + 1) = o + 1 + j by omega]; exact hw', by simpa using hx'⟩
+
+theorem decNFK_ordinary {w : Word} {x : NestFieldKind} (h : decNFK w = some x) :
+    (x == .ordinary) = (w == 0) := by
+  by_cases hw : w = 0
+  · subst hw; simp [decNFK] at h; subst h; rfl
+  · have hw' : (w == 0) = false := by simpa using hw
+    rw [hw']
+    simp only [decNFK] at h
+    split at h <;> rename_i ht
+    · split at h
+      · exfalso; apply hw; apply UInt64.toNat_inj.mp; simp; omega
+      · cases h
+    all_goals first
+      | (simp only [Option.some.injEq] at h; subst h; exact beq_eq_false_iff_ne.mpr (by intro e; cases e))
+      | (split at h
+         · simp only [Option.some.injEq] at h; subst h; exact beq_eq_false_iff_ne.mpr (by intro e; cases e)
+         · cases h)
+      | (cases h; done)
+
+theorem u4W_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (hM : PosMemo dn vis fe)
+    {m0 : Mem} (ko nF cl : Word) (ks : List NestFieldKind) (hcl : H cl)
+    (hks : decKL (truncM m0) ko.toNat nF.toNat = some ks) :
+    ∀ (n : Nat) (m m' : Mem) (a : AState) (i : Word) (r : List Word), 2 ^ 31 + n ≤ coreWalkFuel →
+    u4W n m ko nF cl i = some (r, m') → StageR dn vis fe m a → IWGrow m0 m → i.toNat ≤ nF.toNat →
+    ∃ b a', ((List.range' i.toNat (nF.toNat - i.toNat)).anyM (u4F ks (decI cl))).run a = .ok (b, a') ∧
+      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) := by
+  intro n
+  obtain ⟨hkl, hkw⟩ := decKL_get hks
+  induction n with
+  | zero => intro m m' a i r _ h; simp [u4W] at h
+  | succ n ih =>
+    intro m m' a i r hn h hS hg0 hi
+    by_cases hd : nF ≤ i
+    · rw [u4W_done (h := hd)] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      have : nF.toNat - i.toNat = 0 := by have := UInt64.le_iff_toNat_le.mp hd; omega
+      rw [this]; exact ⟨false, a, rfl, hS, IWGrow.refl _, rfl⟩
+    have hlt : i.toNat < nF.toNat := by
+      have : ¬ nF.toNat ≤ i.toNat := fun e => hd (UInt64.le_iff_toNat_le.mpr e); omega
+    obtain ⟨w, hw, hx⟩ := hkw i.toNat hlt
+    obtain ⟨hwi, hw'⟩ := truncM_iw_get hw
+    have hrd : rdW (m.arr64 IW) (ko + i) = w := by
+      have e : (ko + i).toNat = ko.toNat + i.toNat := word_add_toNat (by
+        have := hS.2.1; have := hS.2.2.2.1; have := hg0.1; omega)
+      simp only [rdW, e]; simp only [iwA] at hw'; rw [hg0.2.2.1 _ hwi, hw']; rfl
+    have hi1 : (i + 1).toNat = i.toNat + 1 := word_add_toNat (by have := nF.toNat_lt; simp; omega)
+    have hrange : List.range' i.toNat (nF.toNat - i.toNat) =
+        i.toNat :: List.range' (i + 1).toNat (nF.toNat - (i + 1).toNat) := by
+      rw [hi1, show nF.toNat - i.toNat = (nF.toNat - (i.toNat + 1)) + 1 by omega, List.range'_succ]
+    rw [hrange, List.anyM_cons]
+    have hord : ((ks[i.toNat]?.map (· == .ordinary)).getD true) = (w == 0) := by
+      rw [List.getElem?_eq_getElem (by omega)] at hx ⊢
+      simp only [Option.map_some, Option.getD_some]
+      exact decNFK_ordinary hx
+    by_cases hk : rdW (m.arr64 IW) (ko + i) ≠ 0
+    · rw [u4W_kind (h := hd) (hk := hk)] at h
+      have hw0 : (w == 0) = false := by rw [← hrd]; simpa using hk
+      cases n with
+      | zero => simp [ustWf, u4K] at h
+      | succ n =>
+      cases n with
+      | zero => simp [ustWf, u4K] at h
+      | succ n =>
+      cases hu : ustW n m cl 0 i with
+      | none => simp only [ustWf] at h; rw [hu] at h; simp [u4K] at h
+      | some pr =>
+      obtain ⟨su, m1⟩ := pr
+      simp only [ustWf] at h; rw [hu] at h
+      obtain ⟨mp, hmp⟩ := hM.hb m a hS
+      obtain ⟨b1, a1, hrun1, hsu, -, hS1, hg1⟩ := ustW_ok n m m1 a cl 0 i su mp (by omega)
+        (by have := nF.toNat_lt; simp; omega) hcl hS hmp hu
+      by_cases hs : su ≠ 0
+      · rw [u4K_hit (h := hs)] at h
+        simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        have hb1 : b1 = true := by cases b1 <;> simp_all
+        subst hb1
+        refine ⟨true, a1, ?_, hS1, hg1, rfl⟩
+        simp only [u4F, hord, hw0, Bool.false_eq_true, ite_false, StateT.run_bind]
+        simp only [UInt64.toNat_zero] at hrun1
+        rw [hrun1]; rfl
+      · rw [u4K_miss (h := hs)] at h
+        have hb1 : b1 = false := by cases b1 <;> simp_all
+        subst hb1
+        obtain ⟨b, a', hrun, hS', hg', hr⟩ := ih m1 m' a1 (i + 1) r (by omega) h hS1 (hg0.trans hg1) (by rw [hi1]; omega)
+        refine ⟨b, a', ?_, hS', hg1.trans hg', hr⟩
+        simp only [u4F, hord, hw0, Bool.false_eq_true, ite_false, StateT.run_bind]
+        simp only [UInt64.toNat_zero] at hrun1
+        rw [hrun1, except_ok_bind]; simpa using hrun
+    · rw [u4W_ord (h := hd) (hk := hk)] at h
+      have hw0 : (w == 0) = true := by rw [← hrd]; simpa using hk
+      obtain ⟨b, a', hrun, hS', hg', hr⟩ := ih m m' a (i + 1) r (by omega) h hS hg0 (by rw [hi1]; omega)
+      refine ⟨b, a', ?_, hS', hg', hr⟩
+      simp only [u4F, hord, hw0, ite_true, StateT.run_bind]
+      simpa using hrun
+
+end L.Ind
