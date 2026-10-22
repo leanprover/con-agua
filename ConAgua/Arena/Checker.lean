@@ -55,16 +55,10 @@ variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → O
 
 Each stub is a not-yet-translated callee; the spec is what the real code will have to prove. -/
 
-/-- Stub: `promoteVG PMemo.empty coreWalkFuel` on the value group record `g`; returns the
-promoted record. -/
--- con-ron: ConRon/Arena/Promote.lean:327-335 ConRon.Arena.promoteVG
-def promoteVGL : FunDecl := lfn (g, vis) locals () { abort }
-/-- Stub: `promoteNew pm coreWalkFuel k` at view `vis` (`fresh ≠ 0`: `pm = PMemo.empty`, else
-the memo `promote_vg` left). -/
--- con-ron: ConRon/Arena/Promote.lean:358-378 ConRon.Arena.promoteNew
-def promoteNewL : FunDecl := lfn (k, vis, fresh) locals () { abort }
+/-- The promotion's two entries are `Promote.lean`'s `promote_vg(g, vis)` and
+`promote_new(k, vis, fresh)` (program: `PromoteProg`). -/
 
-theorem promoteVG_spec :
+theorem promoteVG_spec (hpr : PromoteProg p) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
       (g : Word) (vg : ValueGroup), decVG (erecP s₀.mem) g.toNat = some vg →
       LoopR dn s₀.mem a₀ vis fe pend ds →
@@ -75,7 +69,7 @@ theorem promoteVG_spec :
       decVG (erecP s'.mem) (r.headD 0).toNat =
         some (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2; ⊤⦄ := sorry
 
-theorem promoteNew_spec :
+theorem promoteNew_spec (hpr : PromoteProg p) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
       (k fresh : Word) (pm : PMemo), (if fresh = 0 then PMemoR s₀.mem pm else pm = PMemo.empty) →
       LoopR dn s₀.mem a₀ vis fe pend ds →
@@ -102,6 +96,8 @@ structure BracketProg (p : Prog) : Prop where
   lf : p.lookup "lf_clear" = some (memoClearG lfSch)
   im : p.lookup "if_clear" = some (memoClearG imSch)
   fm : p.lookup "fm_clear" = some (memoClearG frSch)
+  /-- The promotion (`promote_vg`, `promote_new` and their callees). -/
+  pr : PromoteProg p
 
 theorem PendR.frameLo {m m' : Mem} {pend : Array PendingCheck} {C : List Word}
     (hf : MemFrame [] C m m') (hC : ∀ x ∈ C, x.toNat < 128) (h : PendR m pend) : PendR m' pend := by
@@ -201,6 +197,19 @@ def pendPushMem (m : Mem) (g i vis : Word) : Mem :=
   let c := rdW (m.arr64 CTL) 130
   (((m.set64 PEND (3 * c) g).set64 PEND (3 * c + 1) i).set64 PEND (3 * c + 2) vis).set64 CTL 130
     (c + 1)
+
+theorem pendPushMem_frame (m : Mem) (g i v : Word) : MemFrame [PEND] [130] m (pendPushMem m g i v) := by
+  simp only [pendPushMem]
+  have fP : ∀ (m₁ : Mem) (k x : Word), MemFrame [PEND] [130] m₁ (m₁.set64 PEND k x) :=
+    fun m₁ k x => MemFrame.mono (MemFrame.set64 m₁ PEND (by decide) k x) (by simp) (by simp)
+  have fC : ∀ (m₁ : Mem) (x : Word), MemFrame [PEND] [130] m₁ (m₁.set64 CTL 130 x) :=
+    fun m₁ x => MemFrame.mono (MemFrame.setCtl m₁ 130 x) (by simp) (by simp)
+  exact (((fP _ _ _).trans (fP _ _ _)).trans (fP _ _ _)).trans (fC _ _)
+
+/-- Pushing a pending check keeps the promotion memo (`PEND`, `CTL[130]` are not its). -/
+theorem PMemoR.pendPush {m : Mem} {pm : PMemo} (h : PMemoR m pm) (g i v : Word) :
+    PMemoR (pendPushMem m g i v) pm :=
+  h.frame (by simp; decide) (by simp) (pendPushMem_frame m g i v)
 
 theorem LoopR.vis {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {v : Word}
     {fe : IFEnv} {pend : Array PendingCheck} {ds : Array IDeclaration}
@@ -598,7 +607,7 @@ theorem isNone_refines (hb : BracketProg p) (hp : p.lookup "is_none" = some isNo
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        (promoteNew_spec dn ds p n · a₀ · fe' pend · · PMemo.empty),
+        (promoteNew_spec dn ds p hb.pr n · a₀ · fe' pend · · PMemo.empty),
         (drop_loop dn ds p hb n · (AM.st (promoteNew PMemo.empty coreWalkFuel
           (fe'.visibleBelow - vis.toNat) fe') a₀) v2
           (AM.res (promoteNew PMemo.empty coreWalkFuel (fe'.visibleBelow - vis.toNat) fe') a₀).2
@@ -608,11 +617,12 @@ theorem isNone_refines (hb : BracketProg p) (hp : p.lookup "is_none" = some isNo
 theorem pendPush_spec (hp : p.lookup "pend_push" = some pendPushL) (n : Nat) (s₀ : St)
     (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck) (g i v : Word)
     (vg : ValueGroup) (hg : decVG (erecP s₀.mem) g.toNat = some vg)
-    (hR : LoopR dn s₀.mem a₀ vis fe pend ds) :
+    (hR : LoopR dn s₀.mem a₀ vis fe pend ds) (pm : PMemo) (hPM : PMemoR s₀.mem pm) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "pend_push" [g, i, v]
     ⦃fun _ s' => LocEq s' s₀ ∧
-      LoopR dn s'.mem a₀ vis fe (pend.push ⟨vg, i.toNat, v.toNat⟩) ds; ⊤⦄ := by
+      LoopR dn s'.mem a₀ vis fe (pend.push ⟨vg, i.toNat, v.toNat⟩) ds ∧ PMemoR s'.mem pm; ⊤⦄ := by
   have key := hR.pendPush g i v vg hg
+  have key2 := hPM.pendPush g i v
   have hrd : ∀ (h : 130 < (s₀.mem.arr64 CTL).size),
       rdW (s₀.mem.arr64 CTL) 130 = (s₀.mem.arr64 CTL)[130] := fun h => rdW_eq _ _ 130 rfl h
   rw [invoke_eq _ hp]
@@ -634,9 +644,6 @@ theorem isSome_refines (hb : BracketProg p) (hpp : p.lookup "pend_push" = some p
       LoopR dn s'.mem (AM.st (isSomeT i.toNat vis.toNat fe' pend vg) a₀) v2
         (AM.res (isSomeT i.toNat vis.toNat fe' pend vg) a₀).1
         (AM.res (isSomeT i.toNat vis.toNat fe' pend vg) a₀).2 ds; ⊤⦄ := by
-  -- `PEND` is not the promotion memo's (arrays 144‥191): `pend_push` keeps `PMemoR` (a stub
-  -- with no fields today; with fields, by its group frame)
-  have hPM : ∀ m pm, PMemoR m pm := fun _ _ => ⟨⟩
   have hv := hR.vis
   rw [invoke_eq _ hp]
   simp only [callFn, isSomeL]
@@ -645,10 +652,10 @@ theorem isSome_refines (hb : BracketProg p) (hpp : p.lookup "pend_push" = some p
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        (promoteVG_spec dn ds p n · a₀ · fe' pend · vg),
+        (promoteVG_spec dn ds p hb.pr n · a₀ · fe' pend · vg),
         (pendPush_spec dn ds p hpp n · (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀) v2 fe' pend ·
-          · · (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2),
-        (promoteNew_spec dn ds p n · (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀) · fe' (pend.push ⟨(AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2, i.toNat, vis.toNat⟩) · · (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1),
+          · · (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2 · · (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1),
+        (promoteNew_spec dn ds p hb.pr n · (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀) · fe' (pend.push ⟨(AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2, i.toNat, vis.toNat⟩) · · (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1),
         (drop_loop dn ds p hb n · (AM.st (promoteNew (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1 coreWalkFuel (fe'.visibleBelow - vis.toNat) fe') (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀)) v2 (AM.res (promoteNew (AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).1 coreWalkFuel (fe'.visibleBelow - vis.toNat) fe') (AM.st (promoteVG PMemo.empty coreWalkFuel vg) a₀)).2 (pend.push ⟨(AM.res (promoteVG PMemo.empty coreWalkFuel vg) a₀).2, i.toNat, vis.toNat⟩))] <;>
       finish [isSomeT]
 
