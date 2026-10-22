@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndInstallSpec
+import ConAgua.Arena.IndMaster
 
 /-!
 # Refinements of `IndSum`, second file (lane `indproofs`)
@@ -543,5 +544,228 @@ theorem idxArgsResolve_refines (p : Prog)
   obtain ⟨b, a', hrun, hpost⟩ := iarW_ok dn fe₀ n _ _ a₀ vis0 o l xs r hm hS hd hb ht
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst, hres]; exact hpost⟩
+
+end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+/-! ## `struct_proj_arg_p`: `t.j` -/
+
+/-- After `mk_proj`. -/
+def spaK2 : Option (Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (e, m2) => some ([e], m2)
+/-- After `intern_bvar`. -/
+def spaK (T j : Word) : Option (Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (b, m1) => spaK2 (mkProjW m1 T j b)
+/-- **The model of `struct_proj_arg_p`.** -/
+def spaW (m : Mem) (T j : Word) : Option (List Word × Mem) := spaK T j (binternW m 0)
+
+theorem spaK_some (T j b : Word) (m1 : Mem) : spaK T j (some (b, m1)) = spaK2 (mkProjW m1 T j b) := rfl
+theorem spaK2_some (e : Word) (m2 : Mem) : spaK2 (some (e, m2)) = some ([e], m2) := rfl
+grind_pattern [ind_grind] spaK_some => spaK T j (some (b, m1))
+grind_pattern [ind_grind] spaK2_some => spaK2 (some (e, m2))
+
+theorem spaW_spec (p : Prog) (hd : p.lookup "der_b" = some derB)
+    (hpf : p.lookup "bvar_find" = some bvarFind) (hpp : p.lookup "bvar_push" = some bvarPush)
+    (hib : p.lookup "intern_bvar" = some internBVar)
+    (hjf : p.lookup "proj_find" = some projFind) (hjp : p.lookup "proj_push" = some projPush)
+    (hji : p.lookup "intern_proj" = some internProj) (hmp : p.lookup "mk_proj" = some mkProj)
+    (hp : p.lookup "struct_proj_arg_p" = some structProjArgPL) (n : Nat) (s₀ : St) (T j : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_proj_arg_p" [T, j]
+    ⦃fun r s' => LocEq s' s₀ ∧ spaW s₀.mem T j = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, structProjArgPL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+        internBVar_spec p hpf hpp hib n, mkProj_spec p hd hjf hjp hji hmp n] <;>
+      finish [spaW]
+
+/-- **`struct_proj_arg_p` refines `structProjArgP`** under the stage relation. -/
+@[refines ConRon.Arena.structProjArgP]
+theorem structProjArgP_refines (p : Prog) (hd : p.lookup "der_b" = some derB)
+    (hpf : p.lookup "bvar_find" = some bvarFind) (hpp : p.lookup "bvar_push" = some bvarPush)
+    (hib : p.lookup "intern_bvar" = some internBVar)
+    (hjf : p.lookup "proj_find" = some projFind) (hjp : p.lookup "proj_push" = some projPush)
+    (hji : p.lookup "intern_proj" = some internProj) (hmp : p.lookup "mk_proj" = some mkProj)
+    (hp : p.lookup "struct_proj_arg_p" = some structProjArgPL) (n : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (T j : Word)
+    (hS : StageR dn vis fe s₀.mem a₀) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_proj_arg_p" [T, j]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (structProjArgP (decI T) j.toNat) a₀ ∧
+      StageR dn vis fe s'.mem (AM.st (structProjArgP (decI T) j.toNat) a₀) ∧ IWGrow s₀.mem s'.mem ∧
+      AM.res (structProjArgP (decI T) j.toNat) a₀ = decE (r.headD 0); ⊤⦄ := by
+  refine triple_post (spaW_spec p hd hpf hpp hib hjf hjp hji hmp hp n s₀ T j) ?_
+  rintro r s' ⟨hl, hm⟩
+  simp only [spaW] at hm
+  cases h1 : binternW s₀.mem 0 with
+  | none => rw [h1] at hm; cases hm
+  | some x =>
+  obtain ⟨b, m1⟩ := x
+  rw [h1, spaK_some] at hm
+  cases h2 : mkProjW m1 T j b with
+  | none => rw [h2] at hm; cases hm
+  | some y =>
+  obtain ⟨e, m2⟩ := y
+  rw [h2, spaK2_some] at hm
+  simp only [Option.some.injEq, Prod.mk.injEq] at hm
+  obtain ⟨rfl, rfl⟩ := hm
+  obtain ⟨a1, hr1, hS1, hg1⟩ := internBVar_stage hS 0 h1
+  obtain ⟨a2, hr2, hS2, hg2⟩ := mkProj_stage hS1 T j b h2
+  have hrun : (structProjArgP (decI T) j.toNat).run a₀ = .ok (decE e, a2) := by
+    simp only [structProjArgP, StateT.run_bind]
+    rw [show (0 : Word).toNat = 0 from rfl] at hr1
+    rw [hr1]
+    exact hr2
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hst]; exact hS2, hg1.trans hg2, by rw [hres]; rfl⟩
+
+end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+/-! ## `struct_ps_at`, `struct_proj_ps`: the spine wrappers -/
+
+/-- **The model of `struct_ps_at`** (the callee runs at the caller's fuel less one). -/
+def psAtW : Nat → Mem → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _ => none
+  | n + 1, m, o, nP => psK3 (psGoW n m o nP nP 0)
+
+theorem psAtW_succ (n : Nat) (m : Mem) (o nP : Word) :
+    psAtW (n + 1) m o nP = psK3 (psGoW n m o nP nP 0) := rfl
+grind_pattern [ind_grind] psAtW_succ => psAtW (n + 1) m o nP
+
+/-- **The model of `struct_proj_ps`.** -/
+def projPsW : Nat → Mem → Word → Option (List Word × Mem)
+  | 0, _, _ => none
+  | n + 1, m, nP => psK3 (psAtW n m 1 nP)
+
+theorem projPsW_succ (n : Nat) (m : Mem) (nP : Word) :
+    projPsW (n + 1) m nP = psK3 (psAtW n m 1 nP) := rfl
+grind_pattern [ind_grind] projPsW_succ => projPsW (n + 1) m nP
+
+section
+variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+  (hc : p.lookup "iw_copy" = some iwCopy) (hsc : p.lookup "sl_cons" = some slCons)
+  (hpf : p.lookup "bvar_find" = some bvarFind) (hpp : p.lookup "bvar_push" = some bvarPush)
+  (hib : p.lookup "intern_bvar" = some internBVar)
+  (hg : p.lookup "struct_ps_at_go" = some structPsAtGoL)
+  (hp : p.lookup "struct_ps_at" = some structPsAtL)
+include ha hc hsc hpf hpp hib hg hp
+
+theorem psAtW_spec (n : Nat) (s₀ : St) (o nP : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_ps_at" [o, nP]
+    ⦃fun r s' => LocEq s' s₀ ∧ psAtW n s₀.mem o nP = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, structPsAtL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+        structPsAtGo_spec p ha hc hsc hpf hpp hib hg n] <;>
+      finish
+
+theorem projPsW_spec (hq : p.lookup "struct_proj_ps" = some structProjPsL) (n : Nat) (s₀ : St)
+    (nP : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_proj_ps" [nP]
+    ⦃fun r s' => LocEq s' s₀ ∧ projPsW n s₀.mem nP = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hq]
+  simp only [callFn, structProjPsL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+        psAtW_spec p ha hc hsc hpf hpp hib hg hp n] <;>
+      finish
+
+end
+
+/-- The model of `struct_ps_at` refines `structPsAt`. -/
+theorem psAtW_ok (n : Nat) (m m' : Mem) (a : AState) (o nP : Word) (r : List Word)
+    (h : psAtW n m o nP = some (r, m')) (hR : ArenaR m a) (hsz : (m.arr64 IW).size < 2 ^ 64)
+    (hc : 200 < (m.arr64 CTL).size) (hon : o.toNat + nP.toNat < 2 ^ 64) :
+    ∃ xs a', (structPsAt o.toNat nP.toNat).run a = .ok (xs, a') ∧
+      ArenaR m' a' ∧ IWGrow m m' ∧ (∀ b, (m'.arr64 b).size = (m.arr64 b).size) ∧
+      decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some xs ∧
+      (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
+  cases n with
+  | zero => cases h
+  | succ n =>
+    rw [psAtW_succ] at h
+    cases hg : psGoW n m o nP nP 0 with
+    | none => rw [hg] at h; cases h
+    | some x =>
+    obtain ⟨r0, m0⟩ := x
+    rw [hg, psK3_some] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨xs, a', hrun, hR', hgr, hs, hd, ht⟩ :=
+      psGoW_ok n m m0 a o nP nP 0 r0 hg hR hsz hc hon (by simp)
+    exact ⟨xs, a', by simpa [structPsAt] using hrun, hR', hgr, hs, by simpa using hd, by simpa using ht⟩
+
+/-- **`struct_ps_at` refines `structPsAt`** under `ArenaR`. -/
+@[refines ConRon.Arena.structPsAt]
+theorem structPsAt_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hc : p.lookup "iw_copy" = some iwCopy) (hsc : p.lookup "sl_cons" = some slCons)
+    (hpf : p.lookup "bvar_find" = some bvarFind) (hpp : p.lookup "bvar_push" = some bvarPush)
+    (hib : p.lookup "intern_bvar" = some internBVar)
+    (hg : p.lookup "struct_ps_at_go" = some structPsAtGoL)
+    (hp : p.lookup "struct_ps_at" = some structPsAtL) (n : Nat) (s₀ : St) (a₀ : AState)
+    (o nP : Word) (hR : ArenaR s₀.mem a₀) (hsz : (s₀.mem.arr64 IW).size < 2 ^ 64)
+    (hc2 : 200 < (s₀.mem.arr64 CTL).size) (hon : o.toNat + nP.toNat < 2 ^ 64) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_ps_at" [o, nP]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (structPsAt o.toNat nP.toNat) a₀ ∧
+      ArenaR s'.mem (AM.st (structPsAt o.toNat nP.toNat) a₀) ∧ IWGrow s₀.mem s'.mem ∧
+      decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat =
+        some (AM.res (structPsAt o.toNat nP.toNat) a₀); ⊤⦄ := by
+  refine triple_post (psAtW_spec p ha hc hsc hpf hpp hib hg hp n s₀ o nP) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨xs, a', hrun, hR', hgr, -, hd, -⟩ := psAtW_ok n _ _ _ _ _ _ hm hR hsz hc2 hon
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hst]; exact hR', hgr, by rw [hres]; exact hd⟩
+
+/-- **`struct_proj_ps` refines `structProjPs`** under `ArenaR`. -/
+@[refines ConRon.Arena.structProjPs]
+theorem structProjPs_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hc : p.lookup "iw_copy" = some iwCopy) (hsc : p.lookup "sl_cons" = some slCons)
+    (hpf : p.lookup "bvar_find" = some bvarFind) (hpp : p.lookup "bvar_push" = some bvarPush)
+    (hib : p.lookup "intern_bvar" = some internBVar)
+    (hg : p.lookup "struct_ps_at_go" = some structPsAtGoL)
+    (hp : p.lookup "struct_ps_at" = some structPsAtL)
+    (hq : p.lookup "struct_proj_ps" = some structProjPsL) (n : Nat) (s₀ : St) (a₀ : AState)
+    (nP : Word) (hR : ArenaR s₀.mem a₀) (hsz : (s₀.mem.arr64 IW).size < 2 ^ 64)
+    (hc2 : 200 < (s₀.mem.arr64 CTL).size) (hon : 1 + nP.toNat < 2 ^ 64) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_proj_ps" [nP]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (structProjPs nP.toNat) a₀ ∧
+      ArenaR s'.mem (AM.st (structProjPs nP.toNat) a₀) ∧ IWGrow s₀.mem s'.mem ∧
+      decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat =
+        some (AM.res (structProjPs nP.toNat) a₀); ⊤⦄ := by
+  refine triple_post (projPsW_spec p ha hc hsc hpf hpp hib hg hp hq n s₀ nP) ?_
+  rintro r s' ⟨hl, hm⟩
+  cases n with
+  | zero => cases hm
+  | succ n =>
+  rw [projPsW_succ] at hm
+  cases h1 : psAtW n s₀.mem 1 nP with
+  | none => rw [h1] at hm; cases hm
+  | some x =>
+  obtain ⟨r0, m0⟩ := x
+  rw [h1, psK3_some] at hm
+  simp only [Option.some.injEq, Prod.mk.injEq] at hm
+  obtain ⟨rfl, rfl⟩ := hm
+  obtain ⟨xs, a', hrun, hR', hgr, -, hd, -⟩ := psAtW_ok n _ _ _ _ _ _ h1 hR hsz hc2 (by simpa using hon)
+  have hrun' : (structProjPs nP.toNat).run a₀ = .ok (xs, a') := by simpa [structProjPs] using hrun
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
+  exact ⟨hl, hok, by rw [hst]; exact hR', hgr, by rw [hres]; simpa using hd⟩
 
 end L.Ind

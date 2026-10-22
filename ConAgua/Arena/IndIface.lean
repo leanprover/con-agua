@@ -290,8 +290,10 @@ def iwTop (m : Mem) : Nat := (rdW (m.arr64 CTL) 200).toNat
 /-- The constant records' top `CTL[129]`. -/
 def erTop (m : Mem) : Nat := (rdW (m.arr64 CTL) 129).toNat
 
-/-- The pool is in bounds. -/
-def IWOK (m : Mem) : Prop := iwTop m ≤ (m.arr64 IW).size ∧ erTop m ≤ (m.arr64 EREC).size
+/-- The pool is in bounds, and the arrays an allocation computes with have word-sized lengths
+(lane `indproofs`: a stub's post carries these, so a caller's allocation after a stub works). -/
+def IWOK (m : Mem) : Prop := iwTop m ≤ (m.arr64 IW).size ∧ erTop m ≤ (m.arr64 EREC).size ∧
+  (m.arr64 IW).size < 2 ^ 64 ∧ (m.arr64 EREC).size < 2 ^ 64 ∧ 200 < (m.arr64 CTL).size
 
 /-- The pool and the constant records only grew. -/
 def IWGrow (m m' : Mem) : Prop :=
