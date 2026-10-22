@@ -159,7 +159,7 @@ def piLs : FunDecl := lfn (o, l) locals (sc, r) {
 persistently (`promoteN`'s three view arms). -/
 -- con-ron: ConRon/Arena/Promote.lean:80-101 ConRon.Arena.promoteN
 @[l_impl ConRon.Arena.promoteN]
-def pnArm : FunDecl := lfn (f, h) locals (g, t, i, k, q, r) {
+def pnArm : FunDecl := lfn (f, h) locals (g, t, i, k, q, o, l, r) {
   g := h >> 28;
   t := (h >> 27) & 1;
   i := h & 134217727;
@@ -173,15 +173,20 @@ def pnArm : FunDecl := lfn (f, h) locals (g, t, i, k, q, r) {
   if g == 1 {
     if CTL.u64[36 + t] <= i { abort };
     k := i * 8 + t * 4;
-    q := call promote_n(f, NSREC.u64[k]);
-    r := call pi_nstr(q, NSREC.u64[k + 1], NSREC.u64[k + 2]);
+    q := NSREC.u64[k];
+    o := NSREC.u64[k + 1];
+    l := NSREC.u64[k + 2];
+    q := call promote_n(f, q);
+    r := call pi_nstr(q, o, l);
     return r
   };
   if g == 2 {
     if CTL.u64[38 + t] <= i { abort };
     k := i * 4 + t * 2;
-    q := call promote_n(f, NNREC.u64[k]);
-    r := call pi_nnum(q, NNREC.u64[k + 1]);
+    q := NNREC.u64[k];
+    o := NNREC.u64[k + 1];
+    q := call promote_n(f, q);
+    r := call pi_nnum(q, o);
     return r
   };
   abort

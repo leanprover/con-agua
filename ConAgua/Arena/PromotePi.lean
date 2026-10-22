@@ -1,4 +1,4 @@
-import ConAgua.Arena.PromoteProg
+import ConAgua.Arena.PromoteMemo
 import ConAgua.Arena.PromoteFlag
 import ConAgua.Arena.WhnfBase
 
@@ -37,6 +37,13 @@ theorem callW_triple {p : Prog} {n : Nat} {f : FnName} {args : List Word} {s₀ 
     have hrun : (invoke p (exec p n) f args).run s₀ = .ok (q.1, { q.2 with loc := s₀.loc }) := by
       rw [invoke_run_loc, hr]; rfl
     exact ⟨{ q.2 with loc := s₀.loc }, rfl, L.M.of_run (P := fun s => s = s₀) rfl hrun h⟩
+
+/-- A run at L fuel `0` fails (`WhnfCoreSlot.lean`'s `callW_zero`, restated for the same reason). -/
+theorem callW_zero' (p : Prog) (f : FnName) (vs : List Word) (m : Mem) : callW p 0 f vs m = none := by
+  simp only [callW, invoke, lookupFn]
+  cases p.lookup f with
+  | none => rfl
+  | some fd => rfl
 
 /-! ## The model -/
 
