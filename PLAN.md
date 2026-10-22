@@ -66,6 +66,9 @@ per-function separation logic.
 - Every variable of a `grind_pattern` is bound by a term specific to the goal. A multi-pattern with a
   generic piece (`pv P o l`, `R * S`) instantiates once per matching term and splits on each instance's
   hypotheses (600 instances, 52 s in `natShr_spec`); state the lemma in the shape of the callee's post.
+- Do not `simp` the condition of a `dite` whose branches hold proofs that use the hypothesis (a
+  `Char`'s validity, a `Fin` bound): the casts it leaves cost the kernel seconds. Step through it with
+  `dite_eq_left`/`dite_eq_right` and an `iff` for the condition.
 - Known vcgen gaps: no `eq_def` fallback; `ite` equations are ignored; an over-applied `ite` doesn't split; specs
   aren't found through projections; precondition-only arguments stay metavariables; pattern lambdas from another
   module don't match; equation generation fails for structural recursion that matches under a bind. Kraken's

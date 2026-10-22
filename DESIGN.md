@@ -5669,6 +5669,19 @@ Census at landing 3 (`--no-build`): phase 2 **130 proven, 11 sorry, 79 written**
 links 0 (`@[l_impl]` moved off the ROM readers, which are functions of the ROM, onto
 `romExprL`/`internAllPinsL` at the program's ROM).
 
+### `decE` (`ConAgua/Scan/Utf8Link.lean:239`): `simp` under a `dite` with proof-carrying branches
+
+- **Cause.** `assemble₄` is `if h₁ : r < 0x10000 then none else if h₂ : 0x10ffff < r then none else
+  some ⟨r, proof(h₁, h₂)⟩`. `simp only [UInt32.lt_iff_toNat_lt, hv, UInt32.reduceToNat]` rewrote both
+  conditions under the binders, so the `Char.valid` proof became `Eq.mpr_not (… hv …) h` casts; any
+  leaf proof that then rewrote with `hr`/`hs` made the kernel spend 6 s (uncontended; 21.9 s in the
+  contended build) checking them. Each of the three leaves alone costs the full 6 s; with all three
+  `sorry`ed, nothing. `decD` (same shape, smaller numbers) is cheap.
+- **Fix.** Leave the `dite`s alone: two `iff`s (`e1`, `e2`: the `UInt32` condition iff its `Nat`
+  form, by `UInt32.lt_iff_toNat_lt` and `v4L`), case on the `Nat` form and step through the `dite`s
+  with `dite_eq_left`/`dite_eq_right`. Same statement.
+- **Before/after.** `decE` 6 s → under 0.1 s; module 38 s (contended) → 2.3 s.
+
 ### `Scan/Records.lean` split (2270 lines)
 
 Pure move, as in `Front/FieldsDecl*`: `Records.lean` keeps the L code and the models (1357
