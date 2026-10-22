@@ -481,7 +481,7 @@ def absGo : FunDecl := lfn (h, k, d) locals (x, r) {
 }
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:1608-1628 ConRon.Arena.abstract1Go
-con-ron: ConRon/Arena/ExprOps.lean:1599-1605 ConRon.Arena.abstract1ArmFVar -/
+con-ron: ConRon/Arena/ExprOps.lean:1599-1604 ConRon.Arena.abstract1ArmFVar -/
 @[l_impl ConRon.Arena.abstract1ArmFVar]
 def absNode : FunDecl := lfn (h, k, d) locals (x, g, t, i, r) {
   g := h >> 28;

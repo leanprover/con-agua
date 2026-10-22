@@ -137,7 +137,7 @@ theorem aclrK_some (r : Word) (m₁ : Mem) (h0 : rdW (m₁.arr64 CTL) 48 + 2 ≠
 grind_pattern [arena_grind] absEntryW_eq => absEntryW n m e d k
 grind_pattern [arena_grind] aclrK_some => aclrK (some (r, m₁))
 
-/-- con-ron: ConRon/Arena/ExprOps.lean:1718-1724 ConRon.Arena.abstract1Fast -/
+/-- con-ron: ConRon/Arena/ExprOps.lean:1719-1725 ConRon.Arena.abstract1Fast -/
 @[l_impl ConRon.Arena.abstract1Fast]
 def absEntry : FunDecl := lfn (e, d, k) locals (r, u) {
   u := call ab_clear();
