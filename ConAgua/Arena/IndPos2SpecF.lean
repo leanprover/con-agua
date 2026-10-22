@@ -713,3 +713,5 @@ theorem nestUniformOk_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx �
   exact ⟨hlc, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hout⟩
 
 end census
+
+end L.Ind

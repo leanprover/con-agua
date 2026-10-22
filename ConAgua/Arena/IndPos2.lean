@@ -794,26 +794,28 @@ def nestUniformOkL : FunDecl := lfn (ctx, cv) locals (hi0, occ1, ok, e, occ2) {
   return u64(occ2 == 0)
 }
 
+/-- `nest_uniform_cs(ctx, csOff, csLen)`: `cs.allM (fun c => nestUniformOk ctx c.1)` over a slice of
+`[cv, nF]` pointers, short-circuiting (the inner loop of `nest_uniform`, as a recursion). -/
+-- con-ron: none — the inner loop of nest_uniform as a self-recursive function (proof shape)
+def nestUniformCsL : FunDecl := lfn (ctx, csOff, csLen) locals (ok, r) {
+  if csLen == 0 { return 1 };
+  ok := call nest_uniform_ok(ctx, IW.u64[IW.u64[csOff]]);
+  if ok == 0 { return 0 };
+  r := call nest_uniform_cs(ctx, csOff + 1, csLen - 1);
+  return r
+}
+
 /-- `nest_uniform(ctx, off, l)`: `nestUniformOk` at every stored constructor of every member,
-stopping at the first failure. -/
+stopping at the first failure (recursively over the members). -/
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:1158-1166 ConRon.Arena.nestUniform
 @[l_impl ConRon.Arena.nestUniform]
-def nestUniformL : FunDecl := lfn (ctx, off, l) locals (j, hdr, csOff, csLen, k, cPtr, cv, ok) {
-  j := 0;
-  while j < l {
-    hdr := IW.u64[off + j];
-    csOff := IW.u64[hdr];
-    csLen := IW.u64[hdr + 1];
-    k := 0;
-    while k < csLen {
-      cPtr := IW.u64[csOff + k];
-      cv := IW.u64[cPtr];
-      ok := call nest_uniform_ok(ctx, cv);
-      if ok == 0 { abort };
-      k += 1
-    };
-    j += 1
-  }
+def nestUniformL : FunDecl := lfn (ctx, off, l) locals (hdr, b, u) {
+  if l == 0 { return 0 };
+  hdr := IW.u64[off];
+  b := call nest_uniform_cs(ctx, IW.u64[hdr], IW.u64[hdr + 1]);
+  if b == 0 { abort };
+  u := call nest_uniform(ctx, off + 1, l - 1);
+  return 0
 }
 
 /-! ## The root frame and the seeds -/
@@ -918,7 +920,8 @@ def indPos2Fns : Prog :=
    ("nest_pos_bind", nestPosBindL), ("nest_pos", nestPosL),
    ("nest_holes_go", nestHolesGoL), ("nest_holes", nestHolesL),
    ("nest_root_canon", nestRootCanonL), ("pi_doms_occ", piDomsOccL),
-   ("nest_uniform_ok", nestUniformOkL), ("nest_uniform", nestUniformL),
+   ("nest_uniform_ok", nestUniformOkL), ("nest_uniform_cs", nestUniformCsL),
+   ("nest_uniform", nestUniformL),
    ("nest_root", nestRootL), ("nest_seed_of", nestSeedOfL), ("nest_seeds", nestSeedsL)]
 
 /-- Stubs for the functions of OTHER modules this module calls: `nest_occ`, `nest_container`,
