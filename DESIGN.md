@@ -4689,7 +4689,13 @@ The census lists 28 phase-8 targets as stale after `4c9eaf7 → 12752ca7`. Every
 unchanged; what changed below them is only `readLevelM`/`readLevelsM` (`Monad.lean`), whose diff is
 doc-comment line references only. False positives: to be cleared with `scripts/census.py
 --reviewed` once the census runs again (lane `censusmem`'s memory guard). Also proved since the
-second landing: `classOfMotiveVar` (through `sl_find`'s model, `findW_ok`).
+second landing: `classOfMotiveVar` (through `sl_find`'s model, `findW_ok`); **`checkBlockDomsAt`
+through the stubs** (`IndInstallSpec.lean`: model `domsW` calling `stubM "fvar_type_d"` and `stubM
+"is_def_eq_core"`, the twin side from their `RelAM` statements — census status `sorry`, inherited
+from the stubs only: the first skeleton function refined end to end through stubs; finding: a
+stub may grow memory, so decoded argument slices are carried by `decHL_grow` and the caller passes
+`off + len ≤ iwTop`); `IndCopy2.lean` (worker): models and `_dec` lemmas for `sl_snoc`,
+`sl_append`, `er_copy`/`er_to_iw`, `rec2`‥`rec6`.
 
 ### `sorry`s
 
