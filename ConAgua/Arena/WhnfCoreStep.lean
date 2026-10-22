@@ -1,4 +1,4 @@
-import ConAgua.Arena.WhnfCoreApp
+import ConAgua.Arena.WhnfCoreAppLoop
 
 /-!
 # `whnf_core_step` and its `app` arm refine `whnfCoreStep`
