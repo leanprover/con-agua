@@ -308,4 +308,59 @@ theorem hslice?_add {k : IdxKind} (a : Array Word) : ∀ (n m off : Nat),
       cases hslice? a (off + 1) n <;> simp <;>
       cases hslice? a (off + (n + 1)) m <;> simp
 
+
+theorem set64IW_get (m : Mem) (p x : Word) (i : Nat) :
+    ((m.set64 IW p x).arr64 IW)[i]? =
+      if i = p.toNat ∧ i < (m.arr64 IW).size then some x else (m.arr64 IW)[i]? := by
+  rw [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+  by_cases hi : p.toNat = i
+  · subst hi; by_cases hl : p.toNat < (m.arr64 IW).size <;> simp [hl]
+  · simp [hi, Ne.symm hi]
+
+/-- A copy into `IW` (touching nothing else) is a frame. -/
+theorem copy_frame {m m' : Mem} (hA : ∀ b, b ≠ IW → m'.arr64 b = m.arr64 b)
+    (hS : (m'.arr64 IW).size = (m.arr64 IW).size) (hW : m'.words.size = m.words.size) :
+    MemFrame [IW] [200] m m' :=
+  MemFrame.mono (memFrame_of_copy hA hS hW) (by simp) (by simp)
+
+theorem set64IW_frame (m : Mem) (p x : Word) : MemFrame [IW] [200] m (m.set64 IW p x) :=
+  MemFrame.mono (MemFrame.set64 m IW (by decide) p x) (by simp) (by simp)
+
+theorem allocMem_IW (m : Mem) (k : Word) : (allocMem m k).arr64 IW = m.arr64 IW := by
+  simp only [allocMem]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+
+theorem allocMem_top (m : Mem) (k : Word) (hc : 200 < (m.arr64 CTL).size) :
+    rdW ((allocMem m k).arr64 CTL) 200 = rdW (m.arr64 CTL) 200 + k := by
+  simp only [allocMem]; rw [rdW_set64]; simp [hc]
+
+/-- The model of `sl_snoc(o, l, x)` at the caller's fuel `n` (the copy runs at `n - 1`). -/
+def snocW (n : Nat) (m : Mem) (o l x : Word) : Option (List Word × Mem) :=
+  if l + 1 = 0 then none
+  else match allocW m (l + 1) with
+    | none => none
+    | some (q, m1) =>
+      match copyW (n - 1) m1 q o l with
+      | none => none
+      | some m2 => some ([q, l + 1], m2.set64 IW (q + l) x)
+
+theorem slSnoc_specW (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hc : p.lookup "iw_copy" = some iwCopy) (hp : p.lookup "sl_snoc" = some slSnoc) (n : Nat)
+    (s₀ : St) (o l x : Word) :
+    ⦃fun st => st = s₀⦄ invoke p (exec p n) "sl_snoc" [o, l, x]
+    ⦃fun r s' => LocEq s' s₀ ∧ snocW n s₀.mem o l x = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, slSnoc]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have hsnoc : ∀ q m1 m2, l + 1 ≠ 0 → allocW s₀.mem (l + 1) = some (q, m1) →
+        copyW n m1 q o l = some m2 →
+        snocW (n + 1) s₀.mem o l x = some ([q, l + 1], m2.set64 IW (q + l) x) := by
+      intro q m1 m2 h0 h1 h2
+      simp [snocW, h0, h1, h2]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        iwAlloc_specW p ha n, iwCopy_spec p hc n] <;>
+      finish (gen := 20)
+
 end L.Ind
