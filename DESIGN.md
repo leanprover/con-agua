@@ -8053,3 +8053,30 @@ are `DeclCvg.lean`'s `lvl_eq_c` call sites; `indproofs3` may edit them.
   (`lvInternW_core` on a hit, the parameter node by `liNode_core` on a miss), `spnLs_core`, the top
   put back (`StackKept.restoreG`). `CoreS.ctl136` (the walk memos' counters lie above `CTL[136]`).
   `KnotAllProg.caps` became `ls : LsProg p`. **`KnotCallees` has one field left: `instLP`.**
+
+## Phase 8 proofs, round 4 (2026-10-22, lane `indproofs3`)
+
+Continues lane `indproofs2` (above): the generated whole program regenerated, the two "pending"
+callee contracts replaced by the proven refinements, the open block functions, the `StageR`→`CoreS`
+bridge (`StageT`), and the `Rec*` targets.
+
+### Landing 1: `Checker/Prog.lean` regenerated
+`scripts/checker_prog.py` runs again (the import clash of indproofs2's landing 8 is gone): the hand
+extension matched the generator up to order. Note: the generator only sees modules with an olean
+in the worktree (`e2e.all_modules`), so a fresh worktree needs `scripts/lake build ConAgua` first —
+otherwise it fails with "`builtin_prelude` calls `pre_front_run`, but `front_run` is not a copied
+frontend function".
+
+### Landing 2: the pending contracts gone
+* `checkStructFieldSortsI_pending` and `checkSumCtors_pending` (both `sorry`) are deleted. Their
+  users (`checkBlockIdxSorts`, `checkAbsCtorSorts(All)`, `checkBlockCtors`) now call
+  `installSimFsorts` (IndInstallSpec17) and `installSimSumCtors` (IndInstallSpec22): `Sim` facts on
+  the callee's run, proved from `IndSumSpec11`'s `fsortsW_ok` and `IndSumSpec13`'s `sctsW_ok`.
+  Program bundles `IdxProg`, `AbsProg` (the `L.Ind` one), `CtorsProg` gain `sum : SumProg p`.
+* **Every hypothesis is discharged by the caller.** `fsortsW_ok` needs `nP + j < 2^64`:
+  `check_block_idx_sorts_one` already aborted on the wrap; `check_abs_ctor_sorts_one` now does too
+  (`if hi + nF < hi { abort }`, a capacity abort). `sctsW_ok` needed `nP + nIdx < 2^64` and
+  `nP + nF < 2^64` for every constructor, which no caller could establish (they are not facts of
+  the decoded records): `check_sum_ctors` now aborts on either wrap, and the two hypotheses are gone
+  from `sctsW_ok`/`checkSumCtors_refines`. The twin's `fe₀` (`fe.restrictTo vis0`) is `fe` at
+  `vis0 = vis` by `EnvR.vis` from the stage relation.
