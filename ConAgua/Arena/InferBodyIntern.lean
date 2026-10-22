@@ -92,7 +92,11 @@ theorem CoreS.of_level {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
       (fun x hx => .inl (by have := hC x hx; omega)) hf, ?_, ?_, ?_,
       hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn,
       hS.memos.frame hf ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide)⟩
-        ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide)⟩,
+        ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide)⟩
+        ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide),
+          fun h => absurd (hA _ h) (by decide)⟩
+        ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide),
+          fun h => absurd (hC _ h) (by decide)⟩,
       hf.2.2.1 145 ▸ hS.bstk⟩,
     by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
   · rw [hL.caches]
