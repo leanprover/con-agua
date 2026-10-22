@@ -302,4 +302,155 @@ theorem fpW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} {
   rw [matchesPin_eq] at hrun4
   exact hrun4
 
+/-! ## `stdAxiomOk`, flattened -/
+
+/-- A clause of `stdAxiomOk`: the stored constant has the pinned shape, its constant value matches
+the pin. -/
+def clausePT (fe : IFEnv) (nm : NIdx) (k a b : Word) (T : AM IConstantVal) : AM Bool :=
+  match (fe.find? nm).bind (fpShape k a b) with
+  | some cvT => do cvT.matchesPin (← T)
+  | none => pure false
+
+theorem stdAxiomOk_eq (fe : IFEnv) (cv : IConstantVal) :
+    stdAxiomOk fe cv = (do
+      let pn ← propextName
+      if cv.name == pn then do
+        let en ← pinEq
+        let ea ← eqA
+        if fe.find? en != some ea then pure false else do
+          let b1 ← clausePT fe (← iffName) 3 0 0 (romPinT 2)
+          if !b1 then pure false else do
+            let b2 ← clausePT fe (← iffIntroName) 4 2 2 (romPinT 3)
+            if !b2 then pure false else do
+              let b3 ← clausePT fe (← iffRecName) 5 4 4 (romPinT 4)
+              if !b3 then pure false else cv.matchesPin (← propextA)
+      else do
+        let cn ← choiceName
+        if cv.name == cn then do
+          let b1 ← clausePT fe (← nonemptyName) 3 0 0 (romPinT 5)
+          if !b1 then pure false else do
+            let b2 ← clausePT fe (← nonemptyIntroName) 4 1 1 (romPinT 6)
+            if !b2 then pure false else do
+              let b3 ← clausePT fe (← nonemptyRecName) 5 3 3 (romPinT 7)
+              if !b3 then pure false else cv.matchesPin (← choiceA)
+        else pure false) := by
+  unfold stdAxiomOk clausePT romPinT
+  simp only [bind_assoc]
+  congr 1; funext pn
+  split
+  · congr 1; funext en; congr 1; funext ea
+    split
+    · rfl
+    · congr 1; funext x1
+      cases h1 : fe.find? x1 with
+      | none => simp [h1]
+      | some c1 =>
+        cases c1 with
+        | indInfo v1 caps1 =>
+          simp only [h1, Option.bind_some, fpShape, ↓reduceIte, bind_assoc, pure_bind]
+          congr 1; funext c; congr 1; funext cv'; congr 1; funext b
+          split
+          · rfl
+          · congr 1; funext x2
+            cases h2 : fe.find? x2 with
+            | none => simp [h2]
+            | some c2 =>
+              cases c2 with
+              | ctorInfo v np nf =>
+                by_cases e : np = 2 ∧ nf = 2
+                · obtain ⟨rfl, rfl⟩ := e
+                  simp only [h2, Option.bind_some, fpShape, bind_assoc, pure_bind, true_and,
+                    show (2 : Word).toNat = 2 from rfl, and_self, ↓reduceIte]
+                  congr 1; funext c; congr 1; funext cv'; congr 1; funext b
+                  split
+                  · rfl
+                  · congr 1; funext x3
+                    cases h3 : fe.find? x3 with
+                    | none => simp [h3]
+                    | some c3 =>
+                      cases c3 with
+                      | recInfo v mi rp rules =>
+                        by_cases e : mi = 4 ∧ rp = 4
+                        · obtain ⟨rfl, rfl⟩ := e
+                          simp only [h3, Option.bind_some, fpShape, bind_assoc, pure_bind, true_and,
+                            show (4 : Word).toNat = 4 from rfl, and_self, ↓reduceIte]
+                          congr 1
+                        · have e' : ¬ (mi = (4 : Word).toNat ∧ rp = (4 : Word).toNat) := e
+                          simp only [h3, Option.bind_some, fpShape, e', and_false, ↓reduceIte]
+                          split
+                          · rename_i heq; simp at heq; omega
+                          · simp
+                      | _ => simp [h3, fpShape]
+                · have e' : ¬ (np = (2 : Word).toNat ∧ nf = (2 : Word).toNat) := e
+                  simp only [h2, Option.bind_some, fpShape, e', and_false, ↓reduceIte]
+                  split
+                  · rename_i heq; simp at heq; omega
+                  · simp
+              | _ => simp [h2, fpShape]
+        | _ => simp [h1, fpShape]
+  · congr 1; funext cn
+    split
+    · congr 1; funext x1
+      cases h1 : fe.find? x1 with
+      | none => simp [h1]
+      | some c1 =>
+        cases c1 with
+        | indInfo v1 caps1 =>
+          simp only [h1, Option.bind_some, fpShape, ↓reduceIte, bind_assoc, pure_bind]
+          congr 1; funext c; congr 1; funext cv'; congr 1; funext b
+          split
+          · rfl
+          · congr 1; funext x2
+            cases h2 : fe.find? x2 with
+            | none => simp [h2]
+            | some c2 =>
+              cases c2 with
+              | ctorInfo v np nf =>
+                by_cases e : np = 1 ∧ nf = 1
+                · obtain ⟨rfl, rfl⟩ := e
+                  simp only [h2, Option.bind_some, fpShape, bind_assoc, pure_bind, true_and,
+                    show (1 : Word).toNat = 1 from rfl, and_self, ↓reduceIte]
+                  congr 1; funext c; congr 1; funext cv'; congr 1; funext b
+                  split
+                  · rfl
+                  · congr 1; funext x3
+                    cases h3 : fe.find? x3 with
+                    | none => simp [h3]
+                    | some c3 =>
+                      cases c3 with
+                      | recInfo v mi rp rules =>
+                        by_cases e : mi = 3 ∧ rp = 3
+                        · obtain ⟨rfl, rfl⟩ := e
+                          simp only [h3, Option.bind_some, fpShape, bind_assoc, pure_bind, true_and,
+                            show (3 : Word).toNat = 3 from rfl, and_self, ↓reduceIte]
+                          congr 1
+                        · have e' : ¬ (mi = (3 : Word).toNat ∧ rp = (3 : Word).toNat) := e
+                          simp only [h3, Option.bind_some, fpShape, e', and_false, ↓reduceIte]
+                          split
+                          · rename_i heq; simp at heq; omega
+                          · simp
+                      | _ => simp [h3, fpShape]
+                · have e' : ¬ (np = (1 : Word).toNat ∧ nf = (1 : Word).toNat) := e
+                  simp only [h2, Option.bind_some, fpShape, e', and_false, ↓reduceIte]
+                  split
+                  · rename_i heq; simp at heq; omega
+                  · simp
+              | _ => simp [h2, fpShape]
+        | _ => simp [h1, fpShape]
+    · rfl
+
+
+theorem clausePT_of_fp {fe : IFEnv} {nm : NIdx} {k ca cb : Word} {T : AM IConstantVal}
+    {a a' : AState} {b : Bool} (h : FpT fe nm k ca cb T a b a') :
+    (clausePT fe nm k ca cb T).run a = .ok (b, a') := by
+  unfold FpT at h
+  unfold clausePT
+  cases hb : (fe.find? nm).bind (fpShape k ca cb) with
+  | none => rw [hb] at h; obtain ⟨rfl, rfl⟩ := h; rfl
+  | some cvT =>
+    rw [hb] at h
+    simp only [Option.elim] at h
+    simp only [matchesPin_eq]
+    exact h
+
 end L.Arena
