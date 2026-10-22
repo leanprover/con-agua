@@ -35,6 +35,8 @@ structure TwinOK (m : Mem) (a : AState) : Prop where
   nwf : NStoreWF a.store.lss.ls.ns
   erec : (m.arr64 EREC).size < 2 ^ 63
   spn : (m.arr64 SPN).size < 2 ^ 63
+  memos : CoreMemos m
+  bstk : (m.arr64 145).size < 2 ^ 63
 
 /-- The stage relation with the twin invariants and a filled pin table is `CoreS` (outside the
 eager tower). -/
@@ -43,14 +45,14 @@ theorem StageR.coreS {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
     ∃ M, CoreS dn m a vis fe M 0 := by
   obtain ⟨M, hM⟩ := hS.1.core
   exact ⟨M, ⟨hS.1.arena, hM, hS.1.pins.full hflag, hS.1.env, hT.readL, hT.readLs, hT.nwf, hT.erec,
-    hT.spn⟩⟩
+    hT.spn, hT.memos, hT.bstk⟩⟩
 
 /-- `CoreS` (outside the eager tower) is `CheckR` and the twin invariants. -/
 theorem CoreS.checkR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
     {a : AState} {M : ModeMaps} (hS : CoreS dn m a vis fe M 0) :
     CheckR dn m a vis fe ∧ TwinOK m a :=
   ⟨⟨hS.arena, ⟨M, hS.core⟩, ⟨fun _ => hS.pins⟩, hS.env⟩,
-    ⟨hS.readL, hS.readLs, hS.nwf, hS.erec, hS.spn⟩⟩
+    ⟨hS.readL, hS.readLs, hS.nwf, hS.erec, hS.spn, hS.memos, hS.bstk⟩⟩
 
 /-! ## `lvl_eq_c`'s write set -/
 

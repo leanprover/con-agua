@@ -6378,3 +6378,25 @@ Census at landing 2 (`--no-build`): phase 2 **142 proven, 19 sorry, 80 written, 
   a hypothesis instead (`lamsW_inner`). (3) `omega` with `2^24` and `2^64` produced a proof the
   kernel rejects (deep recursion), `docs/gaps/omega-kernel-deep-recursion-2pow24.lean`; stated
   with the `@[noinline]` `peelFuel` it is an atom and fine.
+
+## Phase 5 finished: ι, the verified walks in the core, the stubs (2026-10-22, lane `whnf2`)
+
+### Landing 1: `CoreS` carries the walk memos and the binder stack bound
+* **`CoreS.memos : CoreMemos m`**: arrays 49 (`abs1C`) and 50 (`instLC`) hold well-formed memos
+  (`MemoRG` at *some* map). `instantiateListFast`, `abstract1Fast` and `abstractRangeFast` clear
+  their memo on entry and exit, so the twin's map never matters to a caller; what L needs is that
+  its epoch-bump clear starts from a well-formed memo (`memoRG_clear` assumes one). Stated over
+  the memory alone, the invariant survives every writer that avoids arrays 49/50 and `CTL[48]`/
+  `CTL[50]` (`CoreMemos.frame`, `frame_hi`), whatever the twin state does: no twin-side frame
+  needed. A walk call replaces the twin's map by any map (the first clear overwrites it).
+* **`CoreS.bstk`**: lane `defeq`'s binder stack (array 145) below `2^63` (their request, part 1;
+  part 2, `StackKept` keeping `BSTK`, is not done yet).
+* Construction sites (19, also in lane `defeq`'s `KnotSlot`, `DefEqLeaves2`, `InferBodyIntern`):
+  two more terms each; `arena_frame`/`arenaFrame` gain two auto-param avoidance hypotheses
+  (`:= by decide`), so their callers are unchanged; `CoreS.of_proj` now takes `mk_proj`'s fine
+  frame (`mkProjW_frameA`; the ROM's `StoreA` frame is all of arrays 0‥63); `CoreS.of_level`'s
+  counts are below 42 (was 64). `WhnfIotaRefine`'s `frW` is now `findRuleW` (it clashed with
+  `FVarRange.frW` once the walks are imported).
+* Provenance: the nine split functions of `WhnfDelta.lean` had no citation (`check` failed on
+  master); cited.
+
