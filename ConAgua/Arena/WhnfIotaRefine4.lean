@@ -568,8 +568,12 @@ def ErecKeptKnot (p : Prog) : Prop :=
       "prepare_major", "proof_irrel", "defeq_list", "iota_index_ok"] →
     callW p n f vs m = some (r, m') → m'.arr64 EREC = m.arr64 EREC
 
-/-- `ErecKeptKnot`, assumed (the callees' write sets; DESIGN.md, lane `whnf`). -/
-theorem erecKeptKnot_stub (p : Prog) : ErecKeptKnot p := sorry
+/-- `ErecKeptKnot` from the core's write set (`CoreErec.lean`). -/
+theorem ErecKeptKnot.of_closed {p : Prog} (hcl : closedA p coreErecA coreErecC coreFns = true) :
+    ErecKeptKnot p :=
+  fun _ _ _ _ _ _ hf h => callW_erec_closed hcl (by
+    simp only [List.mem_cons, List.mem_nil_iff, or_false] at hf
+    rcases hf with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> decide) h
 
 /-- **The tail of `prepare_major`'s non-K arm.** -/
 theorem pmTail_ok (p : Prog) (hp : IotaProg4 p) (hc : IotaCallees p)

@@ -193,6 +193,13 @@ def ErecKeptRec (p : Prog) : Prop :=
       "iota_certs_full"] →
     callW p n f vs m = some (r, m') → m'.arr64 EREC = m.arr64 EREC
 
+/-- `ErecKeptRec` from the core's write set (`CoreErec.lean`). -/
+theorem ErecKeptRec.of_closed {p : Prog} (hcl : closedA p coreErecA coreErecC coreFns = true) :
+    ErecKeptRec p :=
+  fun _ _ _ _ _ _ hf h => callW_erec_closed hcl (by
+    simp only [List.mem_cons, List.mem_nil_iff, or_false] at hf
+    rcases hf with rfl | rfl | rfl | rfl | rfl | rfl <;> decide) h
+
 /-- **A level-list comparison that runs compares lists that read back** (new stub assumption):
 `lvls_eq_c`'s refinement (`lvlsEqC_refines`) asks that both handles denote, which `CoreS` does
 not carry (as `CoreS.lvl_den` for single levels); the twin's store is well formed, and a cached

@@ -136,7 +136,8 @@ theorem recFireArgs_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) 
       exact hsa.take cp hle |> fun h => by simpa [hcp] using h
 
 @[refines ConRon.Arena.recFireArgs]
-theorem recFireArgs_refines (p : Prog) (hp : IotaProg' p) :
+theorem recFireArgs_refines (p : Prog) (hp : IotaProg' p)
+    (hcl : closedA p coreErecA coreErecC coreFns = true) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb fireKind pvo pvc po pc us ao rP ctorParams : Word) (rl : IRecRule)
     (lps : List NIdx) (args : Array EIdx), CoreS dn s₀.mem a₀ vis fe MM eb → HW us →
@@ -152,7 +153,7 @@ theorem recFireArgs_refines (p : Prog) (hp : IotaProg' p) :
         fe MM eb ∧
       ∃ xs, AM.res (recFireArgs rl lps (decI us) args.toList rP.toNat) a₀ = xs ∧
         SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄ :=
-  recFireArgs_refines' (p := p) (hc := iotaCallees_stub p) (hw := whnfCallees_stub p) (hE := erecKeptInst_stub p)  (hp := hp)
+  recFireArgs_refines' (p := p) (hc := iotaCallees_stub p) (hw := whnfCallees_stub p) (hE := ErecKeptInst.of_closed hcl)  (hp := hp)
 
 /-! ## `and_rescue_slots(vis, ctor, nP, us)` -/
 

@@ -1,3 +1,4 @@
+import ConAgua.Arena.CoreErec
 import ConAgua.Arena.WhnfIotaRefine
 
 /-!
@@ -1060,8 +1061,10 @@ def ErecKeptInst (p : Prog) : Prop :=
     (f = "inst_lp" ∨ f = "inst_spine") → callW p n f vs m = some (r, m') →
     m'.arr64 EREC = m.arr64 EREC
 
-/-- `ErecKeptInst`, assumed (the callees' write sets; DESIGN.md, lane `whnf`). -/
-theorem erecKeptInst_stub (p : Prog) : ErecKeptInst p := sorry
+/-- `ErecKeptInst` from the core's write set (`CoreErec.lean`). -/
+theorem ErecKeptInst.of_closed {p : Prog} (hcl : closedA p coreErecA coreErecC coreFns = true) :
+    ErecKeptInst p :=
+  fun _ _ _ _ _ _ hf h => callW_erec_closed hcl (by rcases hf with rfl | rfl <;> decide) h
 
 theorem SpineR.nil_at (m : Mem) (off : Word) (h : off.toNat ≤ (m.arr64 SPN).size) :
     SpineR m off 0 #[] :=
@@ -1317,7 +1320,8 @@ theorem instSpinePins_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p
     simpa using hys
 
 @[refines ConRon.Arena.instSpinePins]
-theorem instSpinePins_refines (p : Prog) (hp : IotaProg' p) :
+theorem instSpinePins_refines (p : Prog) (hp : IotaProg' p)
+    (hcl : closedA p coreErecA coreErecC coreFns = true) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb po pl us ao rP pvo pvc : Word) (lps : List NIdx) (args pins : Array EIdx),
     CoreS dn s₀.mem a₀ vis fe MM eb → HW us →
@@ -1332,6 +1336,6 @@ theorem instSpinePins_refines (p : Prog) (hp : IotaProg' p) :
         (AM.st (instSpinePins lps (decI us) args.toList rP.toNat pins.toList) a₀) vis fe MM eb ∧
       ∃ xs, AM.res (instSpinePins lps (decI us) args.toList rP.toNat pins.toList) a₀ = xs ∧
         SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄ :=
-  instSpinePins_refines' (p := p) (hc := iotaCallees_stub p) (hw := whnfCallees_stub p) (hE := erecKeptInst_stub p)  (hp := hp)
+  instSpinePins_refines' (p := p) (hc := iotaCallees_stub p) (hw := whnfCallees_stub p) (hE := ErecKeptInst.of_closed hcl)  (hp := hp)
 
 end L.Arena
