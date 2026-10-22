@@ -1073,6 +1073,50 @@ theorem rpHead_refines (p : Prog) (hp : WhnfCoreProg p) (hc : CoreCallees p) (n 
   · rw [hres]; unfold decOptR; rw [← hr0, ← hr1]
   · unfold ResW; rw [← hr0, ← hr1]; exact hrw2
 
+/-! ## `reduce_proj_core` pieces -/
+
+/-- The twin, cut as `projLitToCtor`, the table lookup, then `rpHeadT`. -/
+def rpCoreT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (sn : NIdx)
+    (i : Nat) (c : EIdx) : AM (Option EIdx) := do
+  let e' ← projLitToCtor r fe depth c
+  match ← fe.findProj? sn i with
+  | some entry => rpHeadT mode fe entry i e'
+  | none => pure none
+
+theorem reduceProjCore_eq (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat)
+    (sn : NIdx) (i : Nat) (c : EIdx) :
+    reduceProjCore mode r fe depth sn i c = rpCoreT mode r fe depth sn i c := rfl
+
+/-- The model of `reduce_proj_core`. -/
+def rpCoreW (p : Prog) (n : Nat) (m : Mem) (mode vis d sn i c : Word) :
+    Option (Word × Word × Mem) :=
+  match callW p n "proj_lit_to_ctor" [mode, vis, d, c] m with
+  | none => none
+  | some (r₁, m₁) =>
+    match callW p n "find_proj" [vis, sn, i] m₁ with
+    | none => none
+    | some (r₂, m₂) =>
+      if r₂.headD 0 = 0 then some (0, 0, m₂)
+      else match callW p n "reduce_proj_head" [mode, vis, r₁.headD 0, r₂.tail.headD 0, i] m₂ with
+        | none => none
+        | some (r₃, m₃) =>
+          if 136 < (m₃.arr64 CTL).size then
+            some (r₃.headD 0, r₃.tail.headD 0, m₃.set64 CTL 136 (rdW (m.arr64 CTL) 136))
+          else none
+
+theorem rpCore_spec (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) (mode vis d sn i c : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "reduce_proj_core" [mode, vis, d, sn, i, c]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      rpCoreW p n s₀.mem mode vis d sn i c = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp.rproj]
+  simp only [callFn, reduceProjCoreL]
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+    callW_spec p n "proj_lit_to_ctor", callW_spec p n "find_proj",
+    callW_spec p n "reduce_proj_head"] <;>
+  simp_all [rpCoreW, Cmp.eval, LocEq, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil,
+    Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr, rdW, CTL, size_set64] <;>
+  (congr 1; rw [Array.getElem?_eq_getElem]; rfl)
+
 /-! ## `reduce_proj_core` -/
 
 /-- **`reduce_proj_core` refines `reduceProjCore`.** -/
@@ -1084,7 +1128,102 @@ theorem reduceProjCore_refines' (p : Prog) (hp : WhnfCoreProg p) (hw : WhnfCalle
     (hsup : SupKeep fe) :
     CoreSpec p (n + 1) "reduce_proj_core" [mode, vis, d, sn, i, c]
       (reduceProjCore (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat
-        (decE c)) decOptR s₀ a₀ dn vis fe MM eb ResW := sorry
+        (decE c)) decOptR s₀ a₀ dn vis fe MM eb ResW := by
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
+    (rpCore_spec p hp n s₀ mode vis d sn i c)
+  subst hs0
+  refine ⟨hloc, ?_⟩
+  have hS := hs.rel
+  unfold rpCoreW at hW
+  cases n with
+  | zero => simp [callW_zero] at hW
+  | succ N =>
+  cases hc1 : callW p (N + 1) "proj_lit_to_ctor" [mode, vis, d, c] s.mem with
+  | none => simp only [hc1] at hW; cases hW
+  | some q₁ =>
+  obtain ⟨r₁, m₁⟩ := q₁
+  simp only [hc1] at hW
+  have hplit := projLitToCtor_refines' p hp hw N (hk.mono (by omega)) F (by omega) (by omega) s a₀
+    dn vis fe MM eb mode d c hs hc' hsup
+  obtain ⟨hok1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres1, hrw1⟩ := CoreSpec.of_callW hplit hc1
+  have hrun1 := AM.run_of_ok _ _ hok1
+  rw [hres1] at hrun1
+  cases hc2 : callW p (N + 1) "find_proj" [vis, sn, i] m₁ with
+  | none => simp only [hc2] at hW; cases hW
+  | some q₂ =>
+  obtain ⟨r₂, m₂⟩ := q₂
+  simp only [hc2] at hW
+  have hfp := hc.findProj (N + 1) { s with mem := m₁ } _ dn vis fe M₁ eb sn i hS₁ hsn
+  obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, -⟩ := CoreSpec.of_callW hfp hc2
+  have hE₂ : m₂.arr64 EREC = m₁.arr64 EREC := hE (N + 1) "find_proj" [vis, sn, i] m₁ r₂ m₂ (Or.inl rfl) hc2
+  have hrun2 := AM.run_of_ok _ _ hok2
+  rw [hres2] at hrun2
+  dsimp only at hrun2
+  by_cases hf : r₂.headD 0 = 0
+  · rw [if_pos hf] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨hr0, hr1, hm⟩ := hW
+    have hde : decEntry (m₁.arr64 EREC) (r₂.headD 0) (r₂.tail.headD 0) i.toNat = none := by
+      unfold decEntry; rw [if_pos hf]
+    rw [hde] at hrun2
+    have hT : (reduceProjCore (decMode mode) (coreKnot (decMode mode) fe id F) fe
+        d.toNat (decI sn) i.toNat (decE c)).run a₀ =
+        (pure none : AM (Option EIdx)).run (AM.st (fe.findProj? (decI sn) i.toNat)
+          (AM.st (projLitToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE c)) a₀)) := by
+      rw [reduceProjCore_eq]
+      simp only [rpCoreT, StateT.run_bind, hrun1, except_ok_bind, hrun2]
+    obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ (hT.trans rfl)
+    refine ⟨hok, ?_, ?_, ?_⟩
+    · rw [hst, ← hm]; exact ⟨M₂, hS₂, hK₁.trans hK₂, hSt₁.trans hSt₂⟩
+    · rw [hres]; unfold decOptR; rw [← hr0]; rfl
+    · unfold ResW; rw [← hr0, ← hr1]; exact ⟨by unfold HW; decide, by unfold HW; decide⟩
+  rw [if_neg hf] at hW
+  obtain ⟨tbl, hdt⟩ := hc.projFound (N + 1) m₁ _ dn vis fe M₁ eb sn i r₂ m₂ hS₁ hc2 hf
+  have hde : decEntry (m₁.arr64 EREC) (r₂.headD 0) (r₂.tail.headD 0) i.toNat =
+      some (tbl.entry i.toNat) := by
+    unfold decEntry; rw [if_neg hf, hdt]; rfl
+  rw [hde] at hrun2
+  have hq : decTbl (m₂.arr64 EREC) (r₂.tail.headD 0).toNat = some tbl := by rw [hE₂]; exact hdt
+  cases hc3 : callW p (N + 1) "reduce_proj_head" [mode, vis, r₁.headD 0, r₂.tail.headD 0, i] m₂ with
+  | none => simp only [hc3] at hW; cases hW
+  | some q₃ =>
+  obtain ⟨r₃, m₃⟩ := q₃
+  simp only [hc3] at hW
+  have hhead := rpHead_refines p hp hc N { s with mem := m₂ } _ dn vis fe M₂ eb mode (r₁.headD 0)
+    (r₂.tail.headD 0) i tbl ⟨hS₂, hs.mode4, hs.eb_mode⟩ hrw1 hq
+  obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hrw3⟩ := GrowSpec.of_callW hhead hc3
+  have hrun3 := AM.run_of_ok _ _ hok3
+  rw [hres3] at hrun3
+  by_cases h136 : 136 < (m₃.arr64 CTL).size
+  · rw [if_pos h136] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨hr0, hr1, hm⟩ := hW
+    have hT : (reduceProjCore (decMode mode) (coreKnot (decMode mode) fe id F) fe
+        d.toNat (decI sn) i.toNat (decE c)).run a₀ =
+        .ok (decOptR r₃, AM.st (rpHeadT (decMode mode) fe (tbl.entry i.toNat) i.toNat
+          (decE (r₁.headD 0))) (AM.st (fe.findProj? (decI sn) i.toNat)
+            (AM.st (projLitToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE c)) a₀))) := by
+      rw [reduceProjCore_eq]
+      simp only [rpCoreT, StateT.run_bind, hrun1, except_ok_bind, hrun2, decH]
+      exact hrun3
+    obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hT
+    refine ⟨hok, ?_, ?_, ?_⟩
+    · rw [hst, ← hm]
+      refine ⟨M₃, hS₃.frame_stk (MemFrame.setCtl m₃ 136 _) (by simp) (by simp),
+        hK₁.trans (hK₂.trans hK₃), ?_⟩
+      have t1 : spTop m₁ = spTop s.mem := hSt₁.1
+      have t2 : spTop m₂ = spTop m₁ := hSt₂.1
+      apply StackKept.restore _ (by rw [hSt₃.2.1, hSt₂.2.1, hSt₁.2.1]) h136
+      intro j hj
+      have hj2 : j < spTop m₂ := by rw [t2, t1]; exact hj
+      have hj1 : j < spTop m₁ := by rw [t1]; exact hj
+      rw [hSt₃.2.2 j hj2]
+      exact (hSt₂.2.2 j hj1).trans (hSt₁.2.2 j hj)
+    · rw [hres]; unfold decOptR; rw [← hr0, ← hr1]
+    · unfold ResW; rw [← hr0, ← hr1]; exact hrw3
+  · rw [if_neg h136] at hW; cases hW
 
 /-! ## `whnf_core_step_proj` refines -/
 
