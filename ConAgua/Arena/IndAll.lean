@@ -1,4 +1,11 @@
 import ConAgua.Arena.IndSumSpec4
+import ConAgua.Arena.RecClassSpecB
+import ConAgua.Arena.RecClassSpecA
+import ConAgua.Arena.IndPos2SpecD
+import ConAgua.Arena.IndPos2SpecC
+import ConAgua.Arena.IndPos2SpecB
+import ConAgua.Arena.IndPos2SpecA
+import ConAgua.Arena.IndSumSpec2A
 import ConAgua.Arena.IndSumSpec6
 import ConAgua.Arena.IndInstallSpec
 import ConAgua.Arena.IndLibSpec
