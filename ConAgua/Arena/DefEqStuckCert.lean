@@ -238,7 +238,7 @@ theorem setWtb_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : St
   have hS₃ := hS.frame_stk hf3 (by simp) (by simp)
   have hep : erecP m₃ = erecP s.mem := erecP_frame hf3 (by simp [EREC, SPN]) (by simp)
   rw [wbK3_some] at hW3
-  refine growRef_congr (setWtbT_ind _ fe _ _ _ _ _ _ _ a₀ _ hgaf _ _ hct hv cvT caps
+  refine growRef_congrS (setWtbT_ind _ fe _ _ _ _ _ _ _ a₀ _ hgaf _ _ hct hv cvT caps
     (by rw [hfind', hci_eq]) targs hargs) ?_
   refine growRef_preG hg3 ?_
   have hspn := hS.spn

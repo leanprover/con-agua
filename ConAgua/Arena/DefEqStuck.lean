@@ -87,10 +87,9 @@ def LvlsEqCH (p : Prog) : Prop :=
     CoreSpec p n "lvls_eq_c" [us, vs] (lvlsEq? (decI us) (decI vs)) (fun r => decO (r.headD 0))
       s₀ a₀ dn vis fe M eb
 
-instance : Inhabited DeltaStepA := ⟨.unknown⟩
 
 /-- A `DeltaStepA` result: `(k, a, b)`, `0` `.cont a b`, `1` `.eq`, `2` `.diff`, else `.unknown`. -/
-def decDS (r : List Word) : DeltaStepA :=
+def decDSs (r : List Word) : DeltaStepA :=
   if r.headD 0 = 0 then .cont (decE (r.tail.headD 0)) (decE (r.tail.tail.headD 0))
   else if r.headD 0 = 1 then .eq
   else if r.headD 0 = 2 then .diff
@@ -106,7 +105,7 @@ def LazyDeltaStepH (p : Prog) : Prop :=
     (M : ModeMaps) (eb mode d a b : Word), SlotPre s₀ a₀ dn vis fe M eb mode → HW a → HW b →
     CoreSpec p (n + 1) "lazy_delta_step" [mode, vis, d, a, b]
       (lazyDeltaStep (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b))
-      decDS s₀ a₀ dn vis fe M eb ResW3
+      decDSs s₀ a₀ dn vis fe M eb ResW3
 
 /-- `reduce_proj_core` refines `reduceProjCore` (lane `whnf`'s `reduceProjCore_refines'`, over its
 own stub callees; a hypothesis here). -/

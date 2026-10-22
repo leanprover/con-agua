@@ -201,11 +201,11 @@ theorem appCong_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n :
   obtain ⟨rfl, hh4, hgaf4⟩ := getAppFn_callW hq.leaf hS₂.arena.1 hb hc4
   rw [apK3_some] at hW4
   obtain ⟨r₅, m₅, hc5, hW5⟩ := callW_cases rfl hW4
-  refine growRef_congr (appCongT_eq _ fe _ _ _ a₀ aa bb hargs1 hargs2 heq' _ _ hgaf3 hgaf4) ?_
+  refine growRef_congrS (appCongT_eq _ fe _ _ _ a₀ aa bb hargs1 hargs2 heq' _ _ hgaf3 hgaf4) ?_
   have h₅ := CoreSpec.of_callW (hK.defeq F ⟨m₄, Locals.init []⟩ a₀ dn vis fe M eb mode d (r₃.headD 0)
     (r₄.headD 0) hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩ hh3 hh4) hc5
   obtain ⟨_, _, _, hst₅⟩ := h₅.2.1
-  refine growRef_bind (GrowRef.of_core h₅) (fun M₅ hS₅ => ?_)
+  refine growRef_bindS (GrowRef.of_core h₅) (fun M₅ hS₅ => ?_)
   simp only [apK4] at hW5
   by_cases h0 : r₅.headD 0 = 0
   · simp only [h0, ne_eq, not_true_eq_false, ↓reduceIte] at hW5

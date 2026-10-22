@@ -91,31 +91,31 @@ theorem ldprExit_spec (p : Prog) (hq : StuckProg p) (n : Nat) (s₀ : St) (mode 
     St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
     Locals.init_cons_succ]
 
-theorem decOptR_some {r : List Word} (h : r.headD 0 ≠ 0) : decOptR r = some (decE (r.tail.headD 0)) := by
+theorem decOptR_someS {r : List Word} (h : r.headD 0 ≠ 0) : decOptR r = some (decE (r.tail.headD 0)) := by
   simp only [decOptR, decOpt, h, ↓reduceIte]
-theorem decOptR_none {r : List Word} (h : r.headD 0 = 0) : decOptR r = none := by
+theorem decOptR_noneS {r : List Word} (h : r.headD 0 = 0) : decOptR r = none := by
   simp only [decOptR, decOpt, h, ↓reduceIte]
 
 theorem decDS_zero {r : List Word} (h : r.headD 0 = 0) :
-    decDS r = .cont (decE (r.tail.headD 0)) (decE (r.tail.tail.headD 0)) := by
-  unfold decDS; rw [if_pos h]
+    decDSs r = .cont (decE (r.tail.headD 0)) (decE (r.tail.tail.headD 0)) := by
+  unfold decDSs; rw [if_pos h]
 
-theorem decDS_nz {r : List Word} (h : r.headD 0 ≠ 0) : decDS r = decDS [r.headD 0] := by
-  unfold decDS
+theorem decDS_nz {r : List Word} (h : r.headD 0 ≠ 0) : decDSs r = decDSs [r.headD 0] := by
+  unfold decDSs
   show (if r.headD 0 = 0 then _ else _) = (if r.headD 0 = 0 then _ else _)
   rw [if_neg h, if_neg h]
   rfl
 
-theorem decDS_ne_cont {r : List Word} (h : r.headD 0 ≠ 0) (a b : EIdx) : decDS r ≠ .cont a b := by
-  unfold decDS; rw [if_neg h]
+theorem decDS_ne_cont {r : List Word} (h : r.headD 0 ≠ 0) (a b : EIdx) : decDSs r ≠ .cont a b := by
+  unfold decDSs; rw [if_neg h]
   split
   · exact fun e => by cases e
   split
   · exact fun e => by cases e
   · exact fun e => by cases e
 
-theorem decDS_ne {k : Word} (h : k ≠ 0) (x y : Word) : decDS [k, x, y] = decDS [k] := by
-  unfold decDS; simp [h]
+theorem decDS_ne {k : Word} (h : k ≠ 0) (x y : Word) : decDSs [k, x, y] = decDSs [k] := by
+  unfold decDSs; simp [h]
 
 /-- **`ldpr_exit` refines `ldprExitT`** on a verdict word `k ≠ 0`. -/
 @[refines_part ConRon.Arena.lazyDeltaProjReduction "the exit on a verdict (ldprExitT)"]
@@ -126,7 +126,7 @@ theorem ldprExit_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n 
     (hk0 : k ≠ 0) :
     CoreSpec p (n + 1) "ldpr_exit" [mode, vis, d, sn, i, a, b, k]
       (ldprExitT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat
-        (decE a) (decE b) (decDS [k])) decBool s₀ a₀ dn vis fe M eb := by
+        (decE a) (decE b) (decDSs [k])) decBool s₀ a₀ dn vis fe M eb := by
   apply L.M.triple_of_run
   intro s r s' hs0 hrun
   obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
@@ -145,12 +145,12 @@ theorem ldprExit_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n 
   simp only [exK] at hW
   by_cases h1 : k = 1
   · rw [if_pos h1] at hW
-    have : decDS [k] = .eq := by simp [decDS, h1]
+    have : decDSs [k] = .eq := by simp [decDSs, h1]
     rw [this]
     exact coreRef_true hS hW
   rw [if_neg h1] at hW
-  have hst : decDS [k] = (if k = 2 then .diff else .unknown) := by
-    unfold decDS; simp [hk0, h1]
+  have hst : decDSs [k] = (if k = 2 then .diff else .unknown) := by
+    unfold decDSs; simp [hk0, h1]
   have hbody : ∀ st, (st = DeltaStepA.diff ∨ st = DeltaStepA.unknown) →
       ldprExitT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat
         (decE a) (decE b) st =
@@ -174,7 +174,7 @@ theorem ldprExit_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n 
   simp only [exK1] at hW1
   by_cases f1 : r₁.headD 0 ≠ 0
   · simp only [f1, ne_eq, not_false_eq_true, ↓reduceIte] at hW1
-    rw [decOptR_some f1]
+    rw [decOptR_someS f1]
     obtain ⟨r₂, m₂, hc2, hW2⟩ := callW_cases rfl hW1
     have h₂ := CoreSpec.of_callW (hc.reduceProjCore n' (hk.mono (by omega)) F (by omega) (by omega)
       ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d sn i b ⟨hS₁, hs.mode4, hs.eb_mode⟩ hsn hb) hc2
@@ -182,13 +182,13 @@ theorem ldprExit_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n 
     simp only [exK2] at hW2
     by_cases f2 : r₂.headD 0 ≠ 0
     · simp only [f2, ne_eq, not_false_eq_true, ↓reduceIte] at hW2
-      rw [decOptR_some f2]
+      rw [decOptR_someS f2]
       exact hdef _ m₂ M₂ _ _ hS₂ h₁.2.2.2.2 h₂.2.2.2.2 hW2
     · simp only [f2, ne_eq, not_false_eq_true, ↓reduceIte, Decidable.not_not] at hW2
-      rw [decOptR_none (by simpa using f2)]
+      rw [decOptR_noneS (by simpa using f2)]
       exact hdef _ m₂ M₂ _ _ hS₂ ha hb hW2
   · simp only [f1, ↓reduceIte] at hW1
-    rw [decOptR_none (by simpa using f1)]
+    rw [decOptR_noneS (by simpa using f1)]
     exact hdef _ m₁ M₁ _ _ hS₁ ha hb hW1
 
 theorem ldprExit_at (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) :
@@ -198,7 +198,7 @@ theorem ldprExit_at (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) :
       HW sn → HW a → HW b → k ≠ 0 →
       CoreSpec p n "ldpr_exit" [mode, vis, d, sn, i, a, b, k]
         (ldprExitT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat
-          (decE a) (decE b) (decDS [k])) decBool s₀ a₀ dn vis fe M eb
+          (decE a) (decE b) (decDSs [k])) decBool s₀ a₀ dn vis fe M eb
   | 0, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _, _, _, _, _, _ =>
       CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
   | n + 1, hk, F, s₀, a₀, dn, vis, fe, M, eb, mode, d, sn, i, a, b, k, hF, hn, hs, h1, h2, h3, h4 =>
@@ -304,8 +304,8 @@ theorem ldprW_ok (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat) (
       rw [hst']
       exact CoreAfter.comp hK₁ hSt₁ hA₂
     · rw [if_pos h0] at h
-      have hds : decDS r = decDS [r.headD 0] := decDS_nz h0
-      have hnc : ∀ a' b', decDS r ≠ .cont a' b' := decDS_ne_cont h0
+      have hds : decDSs r = decDSs [r.headD 0] := decDS_nz h0
+      have hnc : ∀ a' b', decDSs r ≠ .cont a' b' := decDS_ne_cont h0
       have hrun := ldpr_exit_run (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn)
         i.toNat K' (decE x) (decE y) _ _ _ hnc hsr
       rw [hds] at hrun

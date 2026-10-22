@@ -45,6 +45,10 @@ set_option linter.unusedVariables false
 
 namespace L.Arena
 
+/-- Defaults for the twin's step results (the refinements' `AM.res`). -/
+instance : Inhabited DeltaStepA := ⟨.unknown⟩
+instance : Inhabited LazyResA := ⟨.verdict false⟩
+
 /-! ## Small readers -/
 
 /-- con-ron: ConRon/Arena/Core.lean:840-852 ConRon.Arena.isBoolTrue -/

@@ -371,8 +371,8 @@ theorem setGo_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : Stu
     hT) hc5
   rw [← hIR.etaFields] at h₅
   obtain ⟨_, _, _, hst₅⟩ := h₅.2.1
-  refine growRef_congr (setGoT_run _ _ _ _ _ _ _ _ _ _ _ _ _ hS.pins _ hvl) ?_
-  refine growRef_bind (GrowRef.of_core h₅) (fun M₅ hS₅ => ?_)
+  refine growRef_congrS (setGoT_run _ _ _ _ _ _ _ _ _ _ _ _ _ hS.pins _ hvl) ?_
+  refine growRef_bindS (GrowRef.of_core h₅) (fun M₅ hS₅ => ?_)
   unfold setGoK
   -- the tests
   have hlenT : targs.toList.length = tn.toNat := by simpa using ht.size

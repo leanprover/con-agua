@@ -6,7 +6,7 @@ import ConAgua.Arena.WhnfIotaRefine3
 
 The level comparison and the two spine comparisons of `structEtaCertWith` (`setTailT`). The
 projections' slice stays on the stack, so the spec is a `GrowSpec` (lane `whnf`'s
-`WhnfCoreProj.lean`); `growRef_bind` threads it. `eta_projs` from lane `whnf`'s `etaProjs_refines`
+`WhnfCoreProj.lean`); `growRef_bindS` threads it. `eta_projs` from lane `whnf`'s `etaProjs_refines`
 and `etaProjs_spec` (the new top), `defeq_lst` from `DefeqLstOK`, `lvls_eq_c` from `LvlsEqCH`.
 -/
 
@@ -41,7 +41,7 @@ theorem growRef_then {α β : Type} [Inhabited α] [Inhabited β] {T₁ : AM α}
   exact ⟨hok, hst ▸ ⟨M'', hS'', hK.trans hK'', hSt.trans hSt''⟩, hres.trans hres2, hrw2⟩
 
 /-- **The refinement of a `>>=`**, the stack possibly grown. -/
-theorem growRef_bind {α β : Type} [Inhabited α] [Inhabited β] {T₁ : AM α} {T₂ : α → AM β}
+theorem growRef_bindS {α β : Type} [Inhabited α] [Inhabited β] {T₁ : AM α} {T₂ : α → AM β}
     {a₀ : AState} {dec₁ : List Word → α} {dec : List Word → β} {dn : NIdx → Option ConLeche.Name}
     {m₀ m₁ m : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} {r₁ r : List Word}
     {ok₁ ok : List Word → Prop}
@@ -187,7 +187,7 @@ theorem defeqLst_at (p : Prog) (hc : StuckCallees p) :
       hc.defeqLst n (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe M eb mode d ao an
         bo bn xs ys hs h1 h2 h3 h4
 
-theorem growRef_congr {α : Type} [Inhabited α] {T T' : AM α} {a₀ : AState} {dec : List Word → α}
+theorem growRef_congrS {α : Type} [Inhabited α] {T T' : AM α} {a₀ : AState} {dec : List Word → α}
     {dn : NIdx → Option ConLeche.Name} {m₀ m : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps}
     {eb : Word} {r : List Word} {ok : List Word → Prop} (h : T.run a₀ = T'.run a₀)
     (h' : GrowRef T' a₀ dec dn m₀ vis fe M eb r m ok) : GrowRef T a₀ dec dn m₀ vis fe M eb r m ok := by
@@ -301,7 +301,7 @@ theorem setTail_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : S
   have h₁ := CoreSpec.of_callW (hc.lvlsEqC n s a₀ dn vis fe M eb us us2 hs.rel hus hus2) hc1
   obtain ⟨_, _, _, hst₁⟩ := h₁.2.1
   unfold setTailT
-  refine growRef_bind (GrowRef.of_core h₁) (fun M₁ hS₁ => ?_)
+  refine growRef_bindS (GrowRef.of_core h₁) (fun M₁ hS₁ => ?_)
   simp only [stK1] at hW
   by_cases h0 : r₁.headD 0 = 0
   · simp only [h0, ↓reduceIte] at hW; cases hW
@@ -316,7 +316,7 @@ theorem setTail_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : S
       (by unfold ResH; rw [← hr]; exact hw0)
   simp only [h0, h1, ↓reduceIte] at hW
   simp only [h1, ↓reduceIte]
-  refine growRef_congr (T' := do
+  refine growRef_congrS (T' := do
       if ← defEqList (coreKnot (decMode mode) fe id F) fe d.toNat (aargs.toList.take ep.toNat)
           targs.toList then do
         let projs ← etaProjs (decI T) (decE b) nf.toNat
@@ -339,7 +339,7 @@ theorem setTail_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : S
   rw [show ((aargs.toList.take tk.toNat).toArray).toList = aargs.toList.take ep.toNat by
     rw [htk]; exact take_min_eq _ _ _ hlen] at h₂
   obtain ⟨_, _, _, hst₂⟩ := h₂.2.1
-  refine growRef_bind (GrowRef.of_core h₂) (fun M₂ hS₂ => ?_)
+  refine growRef_bindS (GrowRef.of_core h₂) (fun M₂ hS₂ => ?_)
   by_cases h20 : r₂.headD 0 = 0
   · rw [stK2_no (h := h20)] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
@@ -353,7 +353,7 @@ theorem setTail_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : S
   obtain ⟨r₃, m₃, hc3, hW⟩ := callW_cases rfl hW
   obtain ⟨h₃, hr30, hr31, htop₃, hroom₃, hsp₃⟩ := etaProjs_callW hi hS₂ hT hb hc3
   obtain ⟨_, _, _, hst₃⟩ := h₃.2.1
-  refine growRef_bind h₃ (fun M₃ hS₃ => ?_)
+  refine growRef_bindS h₃ (fun M₃ hS₃ => ?_)
   rw [stK3_some] at hW
   have hspn₂ : (m₂.arr64 SPN).size < 2 ^ 63 := hS₂.spn
   have htop₂ : spTop m₂ = spTop s.mem := hst₂.1.trans htop₁
