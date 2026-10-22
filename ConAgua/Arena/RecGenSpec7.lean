@@ -49,7 +49,8 @@ theorem rec2DecCV_erecP {m : Mem} {q : Nat} {cv : IConstantVal} (h : decCVp m q 
   rw [rec2DecCV_agree (a := erA m) (T := erTop m) (fun i hi => ?_) hq.1 hq.2]
   · exact h
   · simp only [erecP, erA, Array.getElem?_extract, erecTop, erTop] at hi ⊢
-    simp [hi]
+    simp only [Nat.zero_add, Array.getElem?_eq_none_iff, Array.size_extract]
+    split <;> simp_all <;> omega
 
 /-! ## `class_rec_ty_ok_guards` -/
 
@@ -171,5 +172,149 @@ theorem classRecTyOk_spec (p : Prog) (h : RtoProg p) (n : Nat) (s₀ : St) (vis 
         classRecTyOkGuards_spec p h n, classGenRecTy_spec p h.toGtProg n, cvNew_specW p h.era h.cvn n,
         classConstOk_spec p h.ih h.ccoh h.cco n, stubM_spec p "is_def_eq_core" n] <;>
       finish (gen := 20) [rdW_eq, loc_init4, loc_init5]
+
+/-! ## Relational lemmas -/
+
+theorem rec2DecRS_parts {m : Mem} {p : Nat} {RS : RecShape} (h : decRS m p = some RS) :
+    ∃ q, iwN m p = some q ∧ decCVp m q = some RS.cvR ∧ iwN m (p + 1) = some RS.rP ∧
+      iwN m (p + 2) = some RS.mI ∧ iwN m (p + 3) = some RS.tgt := by
+  simp only [decRS, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  obtain ⟨q, hq, cv, hcv, rP, hrP, mI, hmI, tgt, htgt, rh, hrh, rfl⟩ := h
+  exact ⟨q, hq, hcv, hrP, hmI, htgt⟩
+
+theorem rec2W_inj {a b : Nat} (ha : a < 2 ^ 64) (hb : b < 2 ^ 64)
+    (h : (UInt64.ofNat a : Word) = UInt64.ofNat b) : a = b := by
+  have := congrArg UInt64.toNat h
+  rwa [UInt64.toNat_ofNat_of_lt' ha, UInt64.toNat_ofNat_of_lt' hb] at this
+
+theorem rec2W_add (a b : Nat) (ha : a < 2 ^ 64) (hb : b < 2 ^ 64) :
+    ((UInt64.ofNat a + UInt64.ofNat b : Word)).toNat = (a + b) % 2 ^ 64 := by
+  rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' ha, UInt64.toNat_ofNat_of_lt' hb]; rfl
+
+/-- The twin's guards of `classRecTyOk`. -/
+def rec2RtoGuards (g : ClassGen) (k : Nat) (rc : RecShape) (c : Nat) : AM Unit := do
+  let ci ← ConRon.Arena.targetMajorAt g.cls c
+  unless rc.tgt == ci.member.getD k do
+    fail (.invalid "generated recursor: the recursor record's member is not its class's")
+  unless rc.rP == g.nP + g.slots.length && rc.mI == rc.rP + ci.nIdx do
+    fail (.invalid "generated recursor: the recursor record's rule prefix or major index is \
+      not the generated one")
+
+theorem rec2RecTyOk_eq (fe : IFEnv) (g : ClassGen) (k : Nat) (rc : RecShape) (cvRi : IConstantVal)
+    (c : Nat) : ConRon.Arena.classRecTyOk V fe g k rc cvRi c = (do
+    rec2RtoGuards g k rc c
+    match ← ConRon.Arena.classGenRecTy g c with
+    | none => fail (.internal "generated recursor: recursor type")
+    | some gty => do
+      let cvG : IConstantVal := ⟨rc.cvR.name, rc.cvR.levelParams, gty⟩
+      ConRon.Arena.classConstOk V fe cvG
+      if ← isDefEqCore V fe checkFuel 0 cvRi.type cvG.type then pure cvG
+      else fail (.invalid "generated recursor: the type of  is not the generated one \
+        (official: invalid recursor)")) := rfl
+
+section sims
+variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+
+theorem rgW_sim (n : Nat) (m : Mem) (a : AState) (g k rc c : Word) (G : ClassGen) (RS : RecShape)
+    (hS : StageR dn vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G)
+    (hns : G.nP + G.slots.length < 2 ^ 64) (hrc : DecB (fun m => decRS m rc.toNat) m RS) :
+    RSim (rgW n m g k rc c) (rec2RtoGuards G k.toNat RS c.toNat) a
+      (fun b a' _ => StageR dn vis fe b.2 a' ∧ IWGrow m b.2) := by
+  cases n with
+  | zero => exact RSim.none
+  | succ n =>
+  rw [rgW_eq]
+  have hsz := hS.2.2.2.1
+  have htop := hS.2.1
+  obtain ⟨-, hgt, ⟨o3, l3, h3, h4, hcls⟩, -⟩ := rec2CG_parts hG
+  obtain ⟨e3, t3⟩ := rec2RdN (w := g) (k := 3) h3 hsz
+  obtain ⟨e4, t4⟩ := rec2RdN (w := g) (k := 4) h4 hsz
+  simp only [show UInt64.ofNat 3 = (3 : Word) from rfl, show UInt64.ofNat 4 = (4 : Word) from rfl] at e3 e4
+  rw [e3, e4]
+  have hb3 : o3 + l3 < 2 ^ 64 := by
+    by_cases hl : l3 = 0
+    · have := iwN_rdW h3 (by omega); omega
+    · have := rec2DecB_PL_top hcls hl; omega
+  unfold rec2RtoGuards
+  refine RSim.bind (K := rgK g k rc) rfl (rec2SimTMA dn vis fe n m a _ _ c G.cls hS
+    (by rw [t3, t4]; exact hcls) (by rw [t3, t4]; exact hb3)) ?_
+  rintro ⟨r1, m1⟩ tm a1 - ⟨hS1, hg1, hTM, -⟩
+  dsimp only at hS1 hg1 hTM
+  intro b hb
+  simp only [rgK] at hb
+  split_ifs at hb with c1 c2 c3 c4
+  cases hb
+  have hsz1 := hS1.2.2.2.1
+  obtain ⟨k8, hk8, hmem⟩ := decTM_member hTM
+  obtain ⟨-, -, -, -, hni⟩ := rec2DecTM_parts hTM
+  obtain ⟨e8, -⟩ := rec2RdN (w := r1.headD 0) (k := 8) hk8 hsz1
+  obtain ⟨e5, -⟩ := rec2RdN (w := r1.headD 0) (k := 5) hni hsz1
+  have k8lt := (iwN_rdW_at (w := r1.headD 0) (k := 8) hk8 hsz1).2
+  have nilt := (iwN_rdW_at (w := r1.headD 0) (k := 5) hni hsz1).2
+  simp only [show UInt64.ofNat 8 = (8 : Word) from rfl, show UInt64.ofNat 5 = (5 : Word) from rfl] at e8 e5
+  obtain ⟨-, -, hrP, hmI, htgt⟩ := rec2DecRS_parts (hrc.stab (decRS_mono _) m1 hg1)
+  obtain ⟨eP, -⟩ := rec2RdN (w := rc) (k := 1) hrP hsz1
+  obtain ⟨eI, -⟩ := rec2RdN (w := rc) (k := 2) hmI hsz1
+  obtain ⟨eT, -⟩ := rec2RdN (w := rc) (k := 3) htgt hsz1
+  have rPlt := (iwN_rdW_at (w := rc) (k := 1) hrP hsz1).2
+  have mIlt := (iwN_rdW_at (w := rc) (k := 2) hmI hsz1).2
+  have tglt := (iwN_rdW_at (w := rc) (k := 3) htgt hsz1).2
+  simp only [show UInt64.ofNat 1 = (1 : Word) from rfl, show UInt64.ofNat 2 = (2 : Word) from rfl,
+    show UInt64.ofNat 3 = (3 : Word) from rfl] at eP eI eT
+  obtain ⟨hnP, hsl⟩ := rec2CG_get (hG.stab (decCG_mono _) m1 hg1)
+  obtain ⟨so, sl, hso, hsl', hsls⟩ := decAt_some hsl
+  have hlen := decPL_length m1 hsls
+  obtain ⟨eg, -⟩ := rec2RdN (w := g) (k := 0) (by simpa using hnP) hsz1
+  obtain ⟨eg8, -⟩ := rec2RdN (w := g) (k := 8) (by simpa [Nat.add_assoc] using hsl') hsz1
+  have nPlt := (iwN_rdW_at (w := g) (k := 0) (by simpa using hnP) hsz1).2
+  simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero,
+    show UInt64.ofNat 8 = (8 : Word) from rfl] at eg eg8
+  rw [eT, e8, eP, eg, eg8, e5, eI] at *
+  -- the member guard
+  have g1 : (RS.tgt == tm.member.getD k.toNat) = true := by
+    rw [hmem]; simp only [decON]
+    by_cases hz : k8 = 0
+    · subst hz
+      simp only [show (UInt64.ofNat 0 : Word) = 0 from rfl, ne_eq, not_true_eq_false, if_false] at c1
+      have : RS.tgt = k.toNat := by
+        have := congrArg UInt64.toNat (not_not.mp c1)
+        rwa [UInt64.toNat_ofNat_of_lt' tglt] at this
+      simp [this]
+    · have hz' : (UInt64.ofNat k8 : Word) ≠ 0 := fun e => hz (rec2W_inj k8lt (by decide) e)
+      simp only [hz', ne_eq, not_false_eq_true, if_true] at c1
+      have e1 : (UInt64.ofNat k8 - 1 : Word) = UInt64.ofNat (k8 - 1) := by
+        apply UInt64.toNat_inj.mp
+        rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by
+          rw [UInt64.toNat_ofNat_of_lt' k8lt]; simp; omega)), UInt64.toNat_ofNat_of_lt' k8lt,
+          UInt64.toNat_ofNat_of_lt' (by omega)]; simp
+      rw [e1] at c1
+      have := rec2W_inj tglt (by omega) (not_not.mp c1)
+      simp [hz, this]
+  -- the prefix and major index guards
+  have hsl8 : sl = G.slots.length := hlen.symm
+  have c2' := not_not.mp c2
+  have hrPe : RS.rP = G.nP + G.slots.length := by
+    have := congrArg UInt64.toNat c2'
+    rw [UInt64.toNat_ofNat_of_lt' rPlt, rec2W_add _ _ nPlt (by omega), ← hsl8] at this
+    rw [this, Nat.mod_eq_of_lt (by omega)]
+  have hno : RS.rP + tm.nIdx < 2 ^ 64 := by
+    have : ¬ (UInt64.ofNat RS.rP + UInt64.ofNat tm.nIdx : Word).toNat < (UInt64.ofNat RS.rP : Word).toNat :=
+      fun x => c3 (UInt64.lt_iff_toNat_lt.mpr x)
+    rw [rec2W_add _ _ rPlt nilt, UInt64.toNat_ofNat_of_lt' rPlt] at this
+    by_contra hc
+    have : (RS.rP + tm.nIdx) % 2 ^ 64 = RS.rP + tm.nIdx - 2 ^ 64 := by
+      rw [Nat.mod_eq_sub_mod (by omega), Nat.mod_eq_of_lt (by omega)]
+    omega
+  have hmIe : RS.mI = RS.rP + tm.nIdx := by
+    have := congrArg UInt64.toNat (not_not.mp c4)
+    rw [UInt64.toNat_ofNat_of_lt' mIlt, rec2W_add _ _ rPlt nilt, Nat.mod_eq_of_lt hno] at this
+    exact this
+  have g2 : (RS.rP == G.nP + G.slots.length && RS.mI == RS.rP + tm.nIdx) = true := by
+    simp [hrPe, hmIe]
+  refine ⟨(), a1, ?_, hS1, hg1⟩
+  simp only [g1, g2]
+  rfl
+
+end sims
 
 end L.Ind
