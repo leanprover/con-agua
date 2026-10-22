@@ -766,7 +766,8 @@ theorem mkAppW_frame (m m' : Mem) (f a r : Word) (hI : mkAppW m f a = some (r, m
   | some p =>
     obtain ⟨r₁, m₁⟩ := p
     simp only [hI₁, mkK_some] at hI
-    cases hP : derPutW ADER 4 m₁ (cnt2 m 4) r₁ (maxW (derBW m f) (derBW m a)) with
+    cases hP : derPutW ADER 4 m₁ (cnt2 m 4) r₁
+        (packBF (maxW (derBW m f) (derBW m a)) (maxW (derFW m f) (derFW m a))) with
     | none => simp [hP] at hI
     | some m₂ =>
       simp only [hP, Option.some.injEq, Prod.mk.injEq] at hI

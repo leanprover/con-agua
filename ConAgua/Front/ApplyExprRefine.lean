@@ -75,9 +75,9 @@ theorem internSort_D (u : Word) (hu : u.toNat < 2 ^ 32) (hI : sointernW m u = so
   refine ⟨hok, ⟨hR₁, ?_⟩, hres, hfr⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
   · exact hD₁
-  · exact ⟨hD₁.bvar, hD₁.fvar, ⟨derT_push hD₁.sort.1 _ _ _ (bvar_derSort _ _), hD₁.sort.2⟩,
+  · exact ⟨hD₁.bvar, hD₁.fvar, ⟨derT_push hD₁.sort.1 _ _ _ ⟨bvar_derSort _ _, fvar_derSort _ _⟩, hD₁.sort.2⟩,
       hD₁.const, hD₁.lit, hD₁.app, hD₁.lam, hD₁.forallE, hD₁.letE, hD₁.proj⟩
-  · exact ⟨hD₁.bvar, hD₁.fvar, ⟨hD₁.sort.1, derT_push hD₁.sort.2 _ _ _ (bvar_derSort _ _)⟩,
+  · exact ⟨hD₁.bvar, hD₁.fvar, ⟨hD₁.sort.1, derT_push hD₁.sort.2 _ _ _ ⟨bvar_derSort _ _, fvar_derSort _ _⟩⟩,
       hD₁.const, hD₁.lit, hD₁.app, hD₁.lam, hD₁.forallE, hD₁.letE, hD₁.proj⟩
 
 theorem internConst_D (f x : Word) (hf : f.toNat < 2 ^ 32) (hx : x.toNat < 2 ^ 32)
@@ -97,10 +97,10 @@ theorem internConst_D (f x : Word) (hf : f.toNat < 2 ^ 32) (hx : x.toNat < 2 ^ 3
   refine ⟨hok, ⟨hR₁, ?_⟩, hres, hfr⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
   · exact hD₁
-  · exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, ⟨derT_push hD₁.const.1 _ _ _ (bvar_derConst _ _ _),
+  · exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, ⟨derT_push hD₁.const.1 _ _ _ ⟨bvar_derConst _ _ _, fvar_derConst _ _ _⟩,
       hD₁.const.2⟩, hD₁.lit, hD₁.app, hD₁.lam, hD₁.forallE, hD₁.letE, hD₁.proj⟩
   · exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, ⟨hD₁.const.1, derT_push hD₁.const.2 _ _ _
-      (bvar_derConst _ _ _)⟩, hD₁.lit, hD₁.app, hD₁.lam, hD₁.forallE, hD₁.letE, hD₁.proj⟩
+      ⟨bvar_derConst _ _ _, fvar_derConst _ _ _⟩⟩, hD₁.lit, hD₁.app, hD₁.lam, hD₁.forallE, hD₁.letE, hD₁.proj⟩
 
 theorem internLit_D (o l : Word) (hq : SliceOK m o l) (hn : Norm (m.arr64 POOL) o.toNat l.toNat)
     (hI : internW m o l = some (r, m')) :
@@ -120,10 +120,10 @@ theorem internLit_D (o l : Word) (hq : SliceOK m o l) (hn : Norm (m.arr64 POOL) 
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
   · exact hD₁
   · exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, hD₁.const,
-      ⟨derT_push hD₁.lit.1 _ _ _ (bvar_derLit _ _), hD₁.lit.2⟩, hD₁.app, hD₁.lam, hD₁.forallE,
+      ⟨derT_push hD₁.lit.1 _ _ _ ⟨bvar_derLit _ _, fvar_derLit _ _⟩, hD₁.lit.2⟩, hD₁.app, hD₁.lam, hD₁.forallE,
       hD₁.letE, hD₁.proj⟩
   · exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, hD₁.const,
-      ⟨hD₁.lit.1, derT_push hD₁.lit.2 _ _ _ (bvar_derLit _ _)⟩, hD₁.app, hD₁.lam, hD₁.forallE,
+      ⟨hD₁.lit.1, derT_push hD₁.lit.2 _ _ _ ⟨bvar_derLit _ _, fvar_derLit _ _⟩⟩, hD₁.app, hD₁.lam, hD₁.forallE,
       hD₁.letE, hD₁.proj⟩
 
 theorem internLitStr_D (o l : Word) (hq : SliceOK m o l) (s : String)
@@ -145,10 +145,10 @@ theorem internLitStr_D (o l : Word) (hq : SliceOK m o l) (s : String)
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
   · exact hD₁
   · exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, hD₁.const,
-      ⟨derT_push hD₁.lit.1 _ _ _ (bvar_derLit _ _), hD₁.lit.2⟩, hD₁.app, hD₁.lam, hD₁.forallE,
+      ⟨derT_push hD₁.lit.1 _ _ _ ⟨bvar_derLit _ _, fvar_derLit _ _⟩, hD₁.lit.2⟩, hD₁.app, hD₁.lam, hD₁.forallE,
       hD₁.letE, hD₁.proj⟩
   · exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, hD₁.const,
-      ⟨hD₁.lit.1, derT_push hD₁.lit.2 _ _ _ (bvar_derLit _ _)⟩, hD₁.app, hD₁.lam, hD₁.forallE,
+      ⟨hD₁.lit.1, derT_push hD₁.lit.2 _ _ _ ⟨bvar_derLit _ _, fvar_derLit _ _⟩⟩, hD₁.app, hD₁.lam, hD₁.forallE,
       hD₁.letE, hD₁.proj⟩
 
 theorem internLs_D (o l : Word) (hq : SliceOK m o l) (us : List LIdx)

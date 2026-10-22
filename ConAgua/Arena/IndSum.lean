@@ -73,6 +73,7 @@ name and level parameters carry over (`{cv with type := ty}`). Returns `(cvTa, s
 def checkSumTeleSlowL : FunDecl := lfn (vis, cv, n, cvTa0) locals (bo, bl, s, sortS, ty, cvTaNew, u) {
   (bo, bl, s) := call whnf_telescope(vis, 0, n, EREC.u64[cvTa0 + 3]);
   sortS := call intern_sort(s);
+  if 4294967296 <= sortS { abort };
   ty := call close_telescope(bo, bl, 0, sortS);
   cvTaNew := call cv_new(EREC.u64[cv], EREC.u64[cv + 1], EREC.u64[cv + 2], ty);
   u := call check_constant_val(vis, cvTaNew);
