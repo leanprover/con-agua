@@ -111,3 +111,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-22,whnf2,opus,15,10,"closing: handoffs (whnfGrowsUpTo via PoolGrew in CoreAfter with defeq BSTK request; lvl_den); checker_prog.py preFn parens fix"
 2026-10-22,indproofs2,opus,5,10,"landing 7: D7 fixed (target_class_match calls lvls_eq_c); helpers parts, rec2, pos2 running"
 2026-10-22,defeq,opus,10,25,"landing 7: helper defeq-knot merged: defeq_body refined, defeqSlot_step; knot_step/knot_all (KnotOK at every fuel from KnotCallees), whnfCallees_of discharges WhnfCallees.inferStep/inferIOStep/defeqStep"
+2026-10-22,decls3,opus,55,10,"landing 4: quotient and axiom arms proved at LoopR (only the definition arm left in checkDecl_loop), and_pin_ok inductive arm in L, rom_and_pin stub; phase 2: 146 proven / 26 sorry"
