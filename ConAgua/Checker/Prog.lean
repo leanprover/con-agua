@@ -89,6 +89,7 @@ import ConAgua.Arena.WhnfM2C
 import ConAgua.Arena.WhnfProj
 import ConAgua.Arena.WhnfSpineArgs
 import ConAgua.Arena.WhnfSpineRefine
+import ConAgua.Arena.WhnfStrLit
 import ConAgua.Arena.ZeroStore
 import ConAgua.Front.Apply
 import ConAgua.Front.ApplyDecl
@@ -124,7 +125,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1507 functions, 32 of them stubs.
+1519 functions, 30 of them stubs.
 -/
 
 namespace L.Checker
@@ -132,7 +133,7 @@ namespace L.Checker
 open L L.Compiler
 
 /-- The called functions with no L code yet (each aborts). -/
-def checkerStubs : List String := ["all_level_params_defined", "caps_never_zero", "consts_resolve_ffast", "field_sort_zero", "fvar_b", "fvar_type_d", "fvar_type_ds", "ind_params_ok", "inst_lp", "inst_lp_fast", "inst_pis_at_lift", "instantiate1_lift_fast", "intern_ls_iw", "is_proof_fast", "leaf_guard", "lv_zero_caps", "name_rec", "name_rec_i", "not_proof_fast", "open_pis_at_fvars_f", "rec_fire_levels", "rec_rule_bits", "reserved_rec_name", "rom_basis_decls", "rom_basis_decls_a", "rom_ci", "rom_cv", "str_lit_ctor", "str_lit_supported", "strip_lams", "strip_pis", "wscoped_bfast"]
+def checkerStubs : List String := ["all_level_params_defined", "caps_never_zero", "consts_resolve_ffast", "field_sort_zero", "fvar_b", "fvar_type_d", "fvar_type_ds", "ind_params_ok", "inst_lp", "inst_lp_fast", "inst_pis_at_lift", "instantiate1_lift_fast", "intern_ls_iw", "is_proof_fast", "leaf_guard", "lv_zero_caps", "name_rec", "name_rec_i", "not_proof_fast", "open_pis_at_fvars_f", "rec_fire_levels", "rec_rule_bits", "reserved_rec_name", "rom_basis_decls", "rom_basis_decls_a", "rom_ci", "rom_cv", "strip_lams", "strip_pis", "wscoped_bfast"]
 
 /-- The frontend functions `builtin_prelude` runs on the prelude's arrays (149; `preFn`,
 `ConAgua/Checker/Prelude.lean`), each bound as `pre_<name>`. -/
@@ -440,6 +441,8 @@ def checkerProg : Prog := [
   ("cert_xor", L.Ind.certXorL),
   ("cert_xor_rhs", L.Ind.certXorRhsL),
   ("certify_nat_eqs", L.Ind.certifyNatEqsL),
+  ("char_of_nat_ty_ok", L.Arena.charOfNatTyOkL),
+  ("char_ty_ok", L.Arena.charTyOkL),
   ("check", L.Checker.checkL),
   ("check_abs_ctor_sorts", L.Ind.checkAbsCtorSorts),
   ("check_abs_ctor_sorts_all", L.Ind.checkAbsCtorSortsAll),
@@ -508,6 +511,7 @@ def checkerProg : Prog := [
   ("ci_canon_rec", L.Ind.ciCanonRec),
   ("ci_eq", L.Ind.ciEq),
   ("ci_eq_rest", L.Ind.ciEqRest),
+  ("ci_lp_ty", L.Arena.ciLpTyL),
   ("ci_to_cv", L.Ind.ciToCv),
   ("class_const_ok", L.Ind.classConstOkL),
   ("class_const_ok_header", L.Ind.classConstOkHeader),
@@ -964,6 +968,10 @@ def checkerProg : Prog := [
   ("lf_clear", L.Arena.memoClearG L.Arena.lfSch),
   ("lh_mk", L.Arena.lhMk),
   ("limbs_eq", L.Arena.limbsEq),
+  ("list_cons_ty_ok", L.Arena.listConsTyOkL),
+  ("list_nil_ty_ok", L.Arena.listNilTyOkL),
+  ("list_ty_ok", L.Arena.listTyOkL),
+  ("lit_char", L.Arena.litCharL),
   ("lit_eq", L.Arena.litEqL),
   ("lit_find", L.Arena.litFind),
   ("lit_find_str", L.Arena.litFindStr),
@@ -982,6 +990,7 @@ def checkerProg : Prog := [
   ("ls_find", L.Arena.lsFind),
   ("ls_match", L.Arena.lsMatch),
   ("ls_node", L.Arena.lsNode),
+  ("ls_one", L.Arena.lsOneL),
   ("ls_push", L.Arena.lsPush),
   ("ls_put", L.Front.lsPut),
   ("lsp_find", L.Arena.memoFindG (L.Front.spS L.Front.LID)),
@@ -1479,7 +1488,13 @@ def checkerProg : Prog := [
   ("store_fuel", L.Front.Ind.storeFuel),
   ("str_close", L.Examples.strClose),
   ("str_code", L.Front.Fields.strCode),
+  ("str_cps", L.Arena.strCpsL),
+  ("str_lit_ctor", L.Arena.strLitCtorL),
+  ("str_lit_spine", L.Arena.strLitSpineL),
+  ("str_lit_supported", L.Arena.strLitSupportedL),
   ("str_put_esc", L.Front.Unescape.strPutEsc),
+  ("string_of_list_ty_ok", L.Arena.stringOfListTyOkL),
+  ("string_ty_ok", L.Arena.stringTyOkL),
   ("struct_ctor_resid_ok", L.Ind.structCtorResidOkL),
   ("struct_elim_level", L.Ind.structElimLevelL),
   ("struct_eta_cert", L.Arena.structEtaCertL),
@@ -1793,8 +1808,6 @@ def checkerProg : Prog := [
   ("rom_basis_decls_a", abortStub 1),
   ("rom_ci", abortStub 1),
   ("rom_cv", abortStub 1),
-  ("str_lit_ctor", abortStub 1),
-  ("str_lit_supported", abortStub 1),
   ("strip_lams", abortStub 2),
   ("strip_pis", abortStub 2),
   ("wscoped_bfast", abortStub 2)]
