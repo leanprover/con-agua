@@ -268,9 +268,9 @@ def declProg : Prog := exprProg ++
   [("lp_put", lpPut), ("decl_kind", declKind), ("decl_push", declPush), ("decl_cv", declCv),
    ("apply_decl", applyDecl)]
 
-/-- Every word array 64 words (all zero), the input `[0, 1]`. -/
+/-- Every word array 128 words (all zero), the input `[0, 1]`. -/
 def declMem : Mem :=
-  { bytes := #["[0, 1]".toUTF8.data], words := Array.replicate 69 (Array.replicate 64 0) }
+  { bytes := #["[0, 1]".toUTF8.data], words := Array.replicate 75 (Array.replicate 128 0) }
 
 /-- Run the calls in turn; the results. -/
 def declRuns (m : Mem) : List (FnName × List Word) → Option (List (List Word))
@@ -320,11 +320,7 @@ structure DeclLookups (p : Prog) : Prop where
 
 theorem declProg_lookups : DeclLookups declProg := by
   refine ⟨?_, rfl, rfl, rfl, rfl, rfl⟩
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
-    ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
-    ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · constructor <;> rfl
-  all_goals first | rfl | decide
+  constructor <;> first | rfl | decide | (constructor <;> rfl)
 
 section specs
 variable (p : Prog) (hE : DeclLookups p)

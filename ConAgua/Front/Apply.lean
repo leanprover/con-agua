@@ -1,4 +1,4 @@
-import ConAgua.Arena.ArenaRel
+import ConAgua.Front.IdTable
 import ConAgua.Census.Attr
 
 /-!
@@ -6,17 +6,13 @@ import ConAgua.Census.Attr
 
 con-ron's `StateD` (`vendor/con-ron/ConRon/Arena/Frontend/ExportC.lean:99`) maps the export
 file's name and level ids to the handles the store interned them at (`IdTable`, a dense array with
-a sparse overflow). Here the two tables are dense word arrays:
-
-* `NID` (64): export name id `i` ↦ the name handle word `+ 1`, `0` = unset.
-* `LID` (65): export level id `i` ↦ the level handle word `+ 1`, `0` = unset.
-
-Their sizes are fixed by the harness. An id at or past the array's end aborts where the twin would
-use its sparse overflow (an `abort` is a defined failure; partial correctness claims nothing).
+a sparse overflow). Here they are `IdTable.lean`'s tables `NID` (64) and `LID` (65): a dense word
+array with its size in `CTL`, and a memo-library table for the ids past it.
 
 The functions:
 * `name_get(i)`, `level_get(i)`: the handle of a bound id (`StateD.name`/`level`), abort if unset.
 * `name_fresh(i)`, `level_fresh(i)`: abort if the id is bound (`StateD.freshName`/`freshLevel`).
+* `name_put(i, h)`, `level_put(i, h)`: bind the id (`IdTable.insert`).
 * `front_init()`: id `0` of each table is `Name.anonymous` / `Level.zero` (`StateD.init`).
 * `apply_nstr(i, pre, o, l)`, `apply_nnum(i, pre, x)`: a name entry (`parseNameEntryD`), the string
   given as the pool slice `(o, l)`.
@@ -46,85 +42,45 @@ abbrev EID : ArrId := 66
 /-- The input buffer (byte array 0). -/
 abbrev IN : ArrId := 0
 
-/-! ## Models of the table reads -/
+/-! ## `name_get`, `level_get`, `name_fresh`, `level_fresh`, `name_put`, `level_put` -/
 
-theorem toNat_ofNat_size (n : Nat) (h : n < 2 ^ 63) : (UInt64.ofNat n).toNat = n := by
-  rw [UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)]
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:113-118 ConRon.Arena.Frontend.StateD.name
+con-leche: ConLeche/Frontend/Scan/Types.lean:334-336 ConLeche.Frontend.IdTable.get? -/
+def nameGet : FunDecl := tblGetG NID "nsp_find"
 
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:120-125 ConRon.Arena.Frontend.StateD.level
+con-leche: ConLeche/Frontend/Scan/Types.lean:334-336 ConLeche.Frontend.IdTable.get? -/
+def levelGet : FunDecl := tblGetG LID "lsp_find"
 
-/-- Entry `i` of table `b` is bound: in range and nonzero. -/
-def tblOK (m : Mem) (b : ArrId) (i : Word) : Bool :=
-  decide (i < m.len64 b) && rdW (m.arr64 b) i != 0
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:147-152 ConRon.Arena.Frontend.StateD.freshName
+con-leche: ConLeche/Frontend/Scan/Types.lean:351-360 ConLeche.Frontend.IdTable.bound -/
+def nameFresh : FunDecl := tblFreshG NID "nsp_find"
 
-/-- Entry `i` of table `b` is unbound and in range. -/
-def tblFresh (m : Mem) (b : ArrId) (i : Word) : Bool :=
-  decide (i < m.len64 b) && rdW (m.arr64 b) i == 0
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:154-157 ConRon.Arena.Frontend.StateD.freshLevel
+con-leche: ConLeche/Frontend/Scan/Types.lean:351-360 ConLeche.Frontend.IdTable.bound -/
+def levelFresh : FunDecl := tblFreshG LID "lsp_find"
 
-/-- The handle word entry `i` of table `b` holds. -/
-def tblW (m : Mem) (b : ArrId) (i : Word) : Word := rdW (m.arr64 b) i - 1
+/-- con-leche: ConLeche/Frontend/Scan/Types.lean:338-345 ConLeche.Frontend.IdTable.insert -/
+def namePut : FunDecl := tblPutG NID "nsp_find" "nsp_put"
 
-/-- After an interning returned `(h, m')`: entry `i` of table `b` is `h + 1` (`h` must be a
-32-bit handle, `i` in range). -/
-def putK (b : ArrId) (i : Word) : Option (Word × Mem) → Option Mem
-  | some (h, m') =>
-    if h < 0x100000000 ∧ i.toNat < (m'.arr64 b).size then some (m'.set64 b i (h + 1)) else none
-  | none => none
-
-@[arena_grind =] theorem putK_none (b : ArrId) (i : Word) : putK b i none = none := rfl
-@[arena_grind =] theorem putK_some (b : ArrId) (i h : Word) (m' : Mem) :
-    putK b i (some (h, m')) =
-      if h < 0x100000000 ∧ i.toNat < (m'.arr64 b).size then some (m'.set64 b i (h + 1)) else none :=
-  rfl
-
-/-! ## `name_get`, `level_get`, `name_fresh`, `level_fresh` -/
-
-/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:113-118 ConRon.Arena.Frontend.StateD.name -/
-def nameGet : FunDecl := lfn (i) locals (e) {
-  if len(NID.u64) <= i { abort };
-  e := NID.u64[i];
-  if e == 0 { abort };
-  return e - 1
-}
-
-/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:120-125 ConRon.Arena.Frontend.StateD.level -/
-def levelGet : FunDecl := lfn (i) locals (e) {
-  if len(LID.u64) <= i { abort };
-  e := LID.u64[i];
-  if e == 0 { abort };
-  return e - 1
-}
-
-/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:147-152 ConRon.Arena.Frontend.StateD.freshName -/
-def nameFresh : FunDecl := lfn (i) {
-  if len(NID.u64) <= i { abort };
-  if NID.u64[i] != 0 { abort };
-  return 0
-}
-
-/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:154-157 ConRon.Arena.Frontend.StateD.freshLevel -/
-def levelFresh : FunDecl := lfn (i) {
-  if len(LID.u64) <= i { abort };
-  if LID.u64[i] != 0 { abort };
-  return 0
-}
+/-- con-leche: ConLeche/Frontend/Scan/Types.lean:338-345 ConLeche.Frontend.IdTable.insert -/
+def levelPut : FunDecl := tblPutG LID "lsp_find" "lsp_put"
 
 /-! ## `front_init()` -/
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:490-499 ConRon.Arena.Frontend.StateD.init -/
 @[l_impl ConRon.Arena.Frontend.StateD.init]
-def frontInit : FunDecl := lfn () locals (h) {
+def frontInit : FunDecl := lfn () locals (h, z) {
   h := call intern_nanon();
   if h >= 4294967296 { abort };
-  if len(NID.u64) == 0 { abort };
-  NID.u64[0] := h + 1;
+  z := call name_put(0, h);
   h := call intern_zero();
   if h >= 4294967296 { abort };
-  if len(LID.u64) == 0 { abort };
-  LID.u64[0] := h + 1;
+  z := call level_put(0, h);
   return 0
 }
 
-/-- The second half of `front_init`, after `NID[0]` was written. -/
+/-- The second half of `front_init`, after name id `0` was bound. -/
 def initK : Option Mem → Option Mem
   | some m₁ => putK LID 0 (zinternW m₁)
   | none => none
@@ -144,7 +100,7 @@ def applyNStr : FunDecl := lfn (i, pre, o, l) locals (q, z, h) {
   z := call name_fresh(i);
   h := call intern_nstr(q, o, l);
   if h >= 4294967296 { abort };
-  NID.u64[i] := h + 1;
+  z := call name_put(i, h);
   return 0
 }
 
@@ -161,7 +117,7 @@ def applyNNum : FunDecl := lfn (i, pre, x) locals (q, z, h) {
   z := call name_fresh(i);
   h := call intern_nnum(q, x);
   if h >= 4294967296 { abort };
-  NID.u64[i] := h + 1;
+  z := call name_put(i, h);
   return 0
 }
 
@@ -193,7 +149,7 @@ def applyLevel : FunDecl := lfn (i, k, a, c) locals (u, v, h, z) {
     h := call intern_param(u)
   } else { abort };
   if h >= 4294967296 { abort };
-  LID.u64[i] := h + 1;
+  z := call level_put(i, h);
   return 0
 }
 
@@ -282,13 +238,16 @@ def frontProg : Prog :=
    ("max_find", maxFind), ("max_push", maxPush), ("intern_max", internMax),
    ("imax_find", imaxFind), ("imax_push", imaxPush), ("intern_imax", internImax),
    ("param_find", paramFind), ("param_push", paramPush), ("intern_param", internParam),
+   ("nsp_find", memoFindG (spS NID)), ("nsp_put", memoPutG (spS NID)),
+   ("lsp_find", memoFindG (spS LID)), ("lsp_put", memoPutG (spS LID)),
    ("name_get", nameGet), ("level_get", levelGet), ("name_fresh", nameFresh),
-   ("level_fresh", levelFresh), ("front_init", frontInit), ("apply_nstr", applyNStr),
+   ("level_fresh", levelFresh), ("name_put", namePut), ("level_put", levelPut),
+   ("front_init", frontInit), ("apply_nstr", applyNStr),
    ("apply_nnum", applyNNum), ("apply_level", applyLevel), ("str_put", strPut)]
 
-/-- A memory with every word array 64 words (all zero) and the input `"abcab"`. -/
+/-- A memory with 75 word arrays of 128 words (all zero) and the input `"abcab"`. -/
 def frontMem : Mem :=
-  { bytes := #["abcab".toUTF8.data], words := Array.replicate 66 (Array.replicate 64 0) }
+  { bytes := #["abcab".toUTF8.data], words := Array.replicate 75 (Array.replicate 128 0) }
 
 /-- Run the calls in turn; the results. -/
 def frontRuns (m : Mem) : List (FnName × List Word) → Option (List (List Word))
@@ -314,6 +273,18 @@ handles of names 0‥3 and levels 0‥3 (tag in bits 28‥31, tier bit 27). -/
 #guard (frontRuns frontMem [("front_init", []), ("apply_nnum", [0, 0, 1])]).isNone
 #guard (frontRuns frontMem [("front_init", []), ("apply_nnum", [1, 2, 1])]).isNone
 #guard (frontRuns frontMem [("front_init", []), ("apply_level", [1, 5, 0, 0])]).isNone
+/- Ids past the dense array (128 words) and out of order go to the sparse map (`rounds_huge_gaps`):
+name `3·10^15` = `anon.7`, name `200` = `anon.7.8`, then `130`, `129` below it; a rebound sparse
+id aborts. -/
+#guard frontRuns frontMem
+  [("front_init", []), ("apply_nnum", [3000000000000000, 0, 7]),
+   ("apply_nnum", [200, 3000000000000000, 8]), ("apply_nnum", [130, 200, 9]),
+   ("apply_nnum", [129, 0, 9]), ("name_get", [3000000000000000]), ("name_get", [200]),
+   ("name_get", [130]), ("name_get", [129])] ==
+  some [[0], [0], [0], [0], [0], [0x20000000], [0x20000001], [0x20000002], [0x20000003]]
+#guard (frontRuns frontMem [("front_init", []), ("apply_nnum", [300, 0, 1]),
+  ("apply_nnum", [300, 0, 2])]).isNone
+#guard (frontRuns frontMem [("front_init", []), ("name_get", [300])]).isNone
 /- `str_put` past the input's end aborts. -/
 #guard (frontRuns frontMem [("str_put", [3, 6])]).isNone
 
@@ -352,6 +323,12 @@ structure FrontLookups (p : Prog) : Prop where
   level_get : p.lookup "level_get" = some levelGet
   name_fresh : p.lookup "name_fresh" = some nameFresh
   level_fresh : p.lookup "level_fresh" = some levelFresh
+  nsp_find : p.lookup "nsp_find" = some (memoFindG (spS NID))
+  nsp_put : p.lookup "nsp_put" = some (memoPutG (spS NID))
+  lsp_find : p.lookup "lsp_find" = some (memoFindG (spS LID))
+  lsp_put : p.lookup "lsp_put" = some (memoPutG (spS LID))
+  name_put : p.lookup "name_put" = some namePut
+  level_put : p.lookup "level_put" = some levelPut
 
 theorem frontProg_lookups : FrontLookups frontProg := by
   constructor <;> rfl
@@ -363,50 +340,38 @@ include hL
 theorem nameGet_spec (n : Nat) (s₀ : St) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "name_get" [i]
-    ⦃fun r s' => s' = s₀ ∧ tblOK s₀.mem NID i = true ∧ r = [tblW s₀.mem NID i]; ⊤⦄ := by
-  rw [invoke_eq _ hL.name_get]
-  simp only [callFn, nameGet]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64] <;> finish [tblOK, tblW]
+    ⦃fun r s' => s' = s₀ ∧ tblOK s₀.mem NID i = true ∧ r = [tblW s₀.mem NID i]; ⊤⦄ :=
+  tblGetG_spec p NID "nsp_find" hL.nsp_find _ hL.name_get n s₀ i
 
 theorem levelGet_spec (n : Nat) (s₀ : St) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "level_get" [i]
-    ⦃fun r s' => s' = s₀ ∧ tblOK s₀.mem LID i = true ∧ r = [tblW s₀.mem LID i]; ⊤⦄ := by
-  rw [invoke_eq _ hL.level_get]
-  simp only [callFn, levelGet]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64] <;> finish [tblOK, tblW]
+    ⦃fun r s' => s' = s₀ ∧ tblOK s₀.mem LID i = true ∧ r = [tblW s₀.mem LID i]; ⊤⦄ :=
+  tblGetG_spec p LID "lsp_find" hL.lsp_find _ hL.level_get n s₀ i
 
 theorem nameFresh_spec (n : Nat) (s₀ : St) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "name_fresh" [i]
-    ⦃fun _ s' => s' = s₀ ∧ tblFresh s₀.mem NID i = true; ⊤⦄ := by
-  rw [invoke_eq _ hL.name_fresh]
-  simp only [callFn, nameFresh]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64] <;> finish [tblFresh]
+    ⦃fun _ s' => s' = s₀ ∧ tblFresh s₀.mem NID i = true; ⊤⦄ :=
+  tblFreshG_spec p NID "nsp_find" hL.nsp_find _ hL.name_fresh n s₀ i
 
 theorem levelFresh_spec (n : Nat) (s₀ : St) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "level_fresh" [i]
-    ⦃fun _ s' => s' = s₀ ∧ tblFresh s₀.mem LID i = true; ⊤⦄ := by
-  rw [invoke_eq _ hL.level_fresh]
-  simp only [callFn, levelFresh]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64] <;> finish [tblFresh]
+    ⦃fun _ s' => s' = s₀ ∧ tblFresh s₀.mem LID i = true; ⊤⦄ :=
+  tblFreshG_spec p LID "lsp_find" hL.lsp_find _ hL.level_fresh n s₀ i
+
+theorem namePut_spec (n : Nat) (s₀ : St) (i h : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "name_put" [i, h]
+    ⦃fun _ s' => LocEq s' s₀ ∧ tblPutW s₀.mem NID i h = some s'.mem; ⊤⦄ :=
+  tblPutG_spec p NID "nsp_find" "nsp_put" hL.nsp_find hL.nsp_put _ hL.name_put n s₀ i h
+
+theorem levelPut_spec (n : Nat) (s₀ : St) (i h : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "level_put" [i, h]
+    ⦃fun _ s' => LocEq s' s₀ ∧ tblPutW s₀.mem LID i h = some s'.mem; ⊤⦄ :=
+  tblPutG_spec p LID "lsp_find" "lsp_put" hL.lsp_find hL.lsp_put _ hL.level_put n s₀ i h
 
 theorem frontInit_spec (hp : p.lookup "front_init" = some frontInit) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
@@ -418,9 +383,10 @@ theorem frontInit_spec (hp : p.lookup "front_init" = some frontInit) (n : Nat) (
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64,
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         internNAnon_spec p hL.nanon_find hL.nanon_push hL.intern_nanon n,
-        internZero_spec p hL.zero_find hL.zero_push hL.intern_zero n] <;>
+        internZero_spec p hL.zero_find hL.zero_push hL.intern_zero n,
+        namePut_spec p hL n, levelPut_spec p hL n] <;>
       finish [frontInitW]
 
 theorem applyNStr_spec (hp : p.lookup "apply_nstr" = some applyNStr) (n : Nat) (s₀ : St)
@@ -436,7 +402,7 @@ theorem applyNStr_spec (hp : p.lookup "apply_nstr" = some applyNStr) (n : Nat) (
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64,
-        nameGet_spec p hL n, nameFresh_spec p hL n,
+        nameGet_spec p hL n, nameFresh_spec p hL n, namePut_spec p hL n,
         internNStr_spec p hL.lit_hash hL.limbs_eq hL.nstr_match hL.nstr_find hL.nstr_push
           hL.intern_nstr n] <;>
       finish [applyNStrW]
@@ -453,7 +419,7 @@ theorem applyNNum_spec (hp : p.lookup "apply_nnum" = some applyNNum) (n : Nat) (
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64,
-        nameGet_spec p hL n, nameFresh_spec p hL n,
+        nameGet_spec p hL n, nameFresh_spec p hL n, namePut_spec p hL n,
         internNNum_spec p hL.nnum_find hL.nnum_push hL.intern_nnum n] <;>
       finish [applyNNumW]
 
@@ -469,7 +435,7 @@ theorem applyLevel_spec (hp : p.lookup "apply_level" = some applyLevel) (n : Nat
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64,
-        nameGet_spec p hL n, levelGet_spec p hL n, levelFresh_spec p hL n,
+        nameGet_spec p hL n, levelGet_spec p hL n, levelFresh_spec p hL n, levelPut_spec p hL n,
         internSucc_spec p hL.succ_find hL.succ_push hL.intern_succ n,
         internMax_spec p hL.max_find hL.max_push hL.intern_max n,
         internImax_spec p hL.imax_find hL.imax_push hL.intern_imax n,

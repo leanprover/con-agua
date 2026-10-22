@@ -69,8 +69,8 @@ theorem trunc_get (P : Array Word) (t j : Nat) (h1 : 1 ≤ j) (h2 : j ≤ t) (hs
 /-- What the install reads of the front's state: the name and expression tables, `DLP`'s size and
 top. (Unlike `StateDR` it survives the writes of the block's pointers below the top.) -/
 structure LkR (m : Mem) (st : StateD) : Prop where
-  names : TblR (m.arr64 NID) st.names
-  exprs : TblR (m.arr64 EID) st.exprs
+  names : TblR m NID st.names
+  exprs : TblR m EID st.exprs
   psize : (m.arr64 DLP).size < 2 ^ 63
   ptop : topN m DLP + 1 ≤ (m.arr64 DLP).size
 
@@ -79,8 +79,9 @@ theorem StateDR.lkR {m : Mem} {st : StateD} (h : StateDR m st) : LkR m st :=
 
 theorem LkR.frame {m m' : Mem} {st : StateD} (h : LkR m st) (hf : MemFrame [DLP] [] m m')
     (ht : topN m' DLP + 1 ≤ (m'.arr64 DLP).size) : LkR m' st :=
-  ⟨by rw [hf.1 NID (by decide) (by decide)]; exact h.names,
-    by rw [hf.1 EID (by decide) (by decide)]; exact h.exprs, by rw [hf.2.2.1]; exact h.psize, ht⟩
+  ⟨h.names.frame hf (.inl rfl) (by simp [DLP, idArrs]) (by simp),
+    h.exprs.frame hf (.inr (.inr rfl)) (by simp [DLP, idArrs]) (by simp), by rw [hf.2.2.1]; exact h.psize,
+    ht⟩
 
 theorem lkR_name {m : Mem} {st : StateD} (hD : LkR m st) {x w : Word} (a : AState)
     (h : lkW m NID x = some w) :

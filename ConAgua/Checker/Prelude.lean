@@ -12,8 +12,9 @@ parse state, into the same stores. In L it runs **the frontend itself on the pre
 functions reachable from `front_run` that read the input (byte array `0`) or the parse state's id
 tables (`NID`, `LID`, `EID`) are copied with `preFn` (`pre_<name>`; `scripts/checker_prog.py` lists
 them in `ConAgua/Checker/Prog.lean`), reading the byte array `PRE` (`2`) instead of the input, the
-constant `preludeLen` instead of its length, and the id tables `PNID`, `PLID`, `PEID` instead of
-the stream's (so the stream's parse starts with empty id tables, as the twin's second
+constant `preludeLen` instead of its length, and the id tables `PNID`, `PLID`, `PEID` (dense),
+`PNSP`, `PLSP`, `PESP` (sparse) and `CTL[241‥249]` (`preCtl`) instead of the stream's (so the
+stream's parse starts with empty id tables, as the twin's second
 `parseBytes` does). `builtin_prelude` copies the prelude bytes (`preludeBytes`, a constant of the
 program) into `PRE`, runs `pre_front_run`, aborts if a line did not apply (the twin's
 `.error`), and records the number of prelude records in `CTL[240]`. The declaration arrays
@@ -85,6 +86,13 @@ abbrev PRE : ArrId := 2
 abbrev PNID : ArrId := 208
 abbrev PLID : ArrId := 209
 abbrev PEID : ArrId := 210
+/-- The prelude parse's sparse id tables (the stream's are `72`‥`74`, `Front/IdTable.lean`). -/
+abbrev PNSP : ArrId := 211
+abbrev PLSP : ArrId := 212
+abbrev PESP : ArrId := 213
+
+/-- The prelude parse's id-table `CTL` words: the stream's `64`‥`72` moved to `241`‥`249`. -/
+def preCtl (k : Word) : Word := if 64 ≤ k ∧ k ≤ 72 then k + 177 else k
 
 /-- The prelude's length, as a word. -/
 def preludeLenW : Word := UInt64.ofNat preludeBytes.length
@@ -92,13 +100,19 @@ def preludeLenW : Word := UInt64.ofNat preludeBytes.length
 /-- A word array of the frontend's parse state, renamed. -/
 def preA64 (a : ArrId) : ArrId :=
   if a = L.Front.NID then PNID else if a = L.Front.LID then PLID else if a = L.Front.EID then PEID
+  else if a = 72 then PNSP else if a = 73 then PLSP else if a = 74 then PESP
   else a
+
+/-- An index into array `a`, renamed: `CTL`'s id-table words (`preCtl`). -/
+def preIx (a : ArrId) : Expr → Expr
+  | .const k => if a = CTL then .const (preCtl k) else .const k
+  | e => e
 
 /-- An expression of the frontend, renamed. -/
 def preE : Expr → Expr
   | .ld8 a i => .ld8 (if a = 0 then PRE else a) (preE i)
   | .len8 a => if a = 0 then .const preludeLenW else .len8 a
-  | .ld64 a i => .ld64 (preA64 a) (preE i)
+  | .ld64 a i => .ld64 (preA64 a) (preIx a (preE i))
   | .len64 a => .len64 (preA64 a)
   | .bin op a b => .bin op (preE a) (preE b)
   | .cmpw c a b => .cmpw c (preE a) (preE b)
@@ -120,7 +134,7 @@ def preName (t : NTree) (f : String) : String :=
 def preS (t : NTree) : Stmt → Stmt
   | .set x e => .set x (preE e)
   | .st8 a i e => .st8 (if a = 0 then PRE else a) (preE i) (preE e)
-  | .st64 a i e => .st64 (preA64 a) (preE i) (preE e)
+  | .st64 a i e => .st64 (preA64 a) (preIx a (preE i)) (preE e)
   | .seq s u => .seq (preS t s) (preS t u)
   | .ite c s u => .ite (preC c) (preS t s) (preS t u)
   | .while c s => .while (preC c) (preS t s)

@@ -10,20 +10,21 @@ import ConAgua.Census.Attr
 # Expression lines into the stores: `apply_expr`
 
 con-ron's `parseExprEntryD` (`vendor/con-ron/ConRon/Arena/Frontend/ExportC.lean:211`) interns one
-expression record and binds its export id. Here the expression id table is the dense word array
-`EID` (66, `Apply.lean`: entry `i` is the handle word `+ 1`, `0` unset), and
+expression record and binds its export id. Here the expression id table is `IdTable.lean`'s table
+`EID` (66, its sparse overflow array 74), and
 
-* `expr_get(i)`, `expr_fresh(i)`: `StateD.expr` / `StateD.freshExpr` (abort where the twin fails);
+* `expr_get(i)`, `expr_fresh(i)`, `expr_put(i, h)`: `StateD.expr` / `StateD.freshExpr` (abort where
+  the twin fails) / `IdTable.insert`;
 * `ls_put(v)`: the universe list whose `[` is at `v`, read again from the input (the traversal of
   `itemsN`), each item a level id looked up in `LID`, the handle words appended to the pool; returns
   the slice `(top, count)`;
 * `node_bin(k, a, c)` (`app`/`lam`/`forallE`), `node_let`, `node_proj`, `node_const`, `node_lit`:
   one node from its fields (`ExprIface.lean`'s table), through the derived-range constructors
   `mk_*` (`ConAgua/Arena/ExprMk.lean`) for compound nodes, `intern_*` for leaves;
-* `expr_node(pl, a, c, d)`: the dispatch on the kind `pl`; `strVal` (`17`) aborts (the `lit` store
-  does not represent string contents yet), a `natVal` past 18 digits aborts;
+* `expr_node(pl, a, c, d)`: the dispatch on the kind `pl` (`natVal` through `nat_dec`, `strVal`
+  through `str_put_esc`);
 * `apply_expr(pl, idx, a, c, d)`: `expr_fresh(idx)`, `expr_node`, the handle `< 2^32`,
-  `EID[idx] := h + 1`.
+  `expr_put(idx, h)`.
 
 Each spec is an equation about a named `Option` model, as in `Apply.lean`; the refinement is in
 `ApplyExprRefine.lean`.
@@ -44,22 +45,18 @@ open L.Front.Unescape (strPutEsc strPutEscW strPutEsc_specW)
 
 namespace L.Front
 
-/-! ## `expr_get`, `expr_fresh` -/
+/-! ## `expr_get`, `expr_fresh`, `expr_put` -/
 
-/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:127-132 ConRon.Arena.Frontend.StateD.expr -/
-def exprGet : FunDecl := lfn (i) locals (e) {
-  if len(EID.u64) <= i { abort };
-  e := EID.u64[i];
-  if e == 0 { abort };
-  return e - 1
-}
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:127-132 ConRon.Arena.Frontend.StateD.expr
+con-leche: ConLeche/Frontend/Scan/Types.lean:334-336 ConLeche.Frontend.IdTable.get? -/
+def exprGet : FunDecl := tblGetG EID "esp_find"
 
-/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:159-162 ConRon.Arena.Frontend.StateD.freshExpr -/
-def exprFresh : FunDecl := lfn (i) {
-  if len(EID.u64) <= i { abort };
-  if EID.u64[i] != 0 { abort };
-  return 0
-}
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:159-162 ConRon.Arena.Frontend.StateD.freshExpr
+con-leche: ConLeche/Frontend/Scan/Types.lean:351-360 ConLeche.Frontend.IdTable.bound -/
+def exprFresh : FunDecl := tblFreshG EID "esp_find"
+
+/-- con-leche: ConLeche/Frontend/Scan/Types.lean:338-345 ConLeche.Frontend.IdTable.insert -/
+def exprPut : FunDecl := tblPutG EID "esp_find" "esp_put"
 
 /-! ## `ls_put(v)` -/
 
@@ -201,11 +198,6 @@ def lsPutL (b : Array UInt8) (v : Word) : Word := lsCntN b (v + 1) 0
 
 /-! ## What `ls_put` writes -/
 
-theorem tblOK_congr {m m' : Mem} {b : ArrId} (h : m'.arr64 b = m.arr64 b) (i : Word) :
-    tblOK m' b i = tblOK m b i := by unfold tblOK Mem.len64; rw [h]
-theorem tblW_congr {m m' : Mem} {b : ArrId} (h : m'.arr64 b = m.arr64 b) (i : Word) :
-    tblW m' b i = tblW m b i := by simp only [tblW, h]
-
 /-- **The copy loop of `ls_put`**: it appends the handles of the items to the pool above
 `top + cnt`, leaves the pool below alone, sets the top after them, and changes nothing else. -/
 theorem lsLoopM_facts (b : Array UInt8) (top : Word) : ∀ (m : Mem) (i cnt : Word) (m' : Mem),
@@ -260,13 +252,13 @@ theorem lsLoopM_facts (b : Array UInt8) (top : Word) : ∀ (m : Mem) (i cnt : Wo
       | succ k =>
         simp only [List.getElem_cons_succ]
         have := i6 k (by simpa using hk)
-        rw [hc1, tblW_congr (hP LID (by decide))] at this
+        rw [hc1, tblW_congr (TblSame.of_eq (hP LID (by decide)) (hP _ (by decide)) (hP CTL (by decide)))] at this
         rw [← this]; congr 1; omega
     · intro x hx
       simp only [List.mem_cons] at hx
       rcases hx with rfl | hx
       · exact hok
-      · rw [← tblOK_congr (hP LID (by decide))]; exact i7 x hx
+      · rw [← tblOK_congr (TblSame.of_eq (hP LID (by decide)) (hP _ (by decide)) (hP CTL (by decide)))]; exact i7 x hx
     · obtain ⟨i2, i8⟩ := i8 (by rw [hP CTL (by decide)]; exact hc)
       refine ⟨i2, Frame.trans _ _ _ _ ?_ i8⟩
       exact Frame.set64_both _ _ _ _ _ _ (Frame.set64 _ _ _ _ _ (Frame.refl _ _)) (by decide)
@@ -496,7 +488,7 @@ def applyExpr : FunDecl := lfn (pl, idx, a, c, d) locals (z, h) {
   z := call expr_fresh(idx);
   h := call expr_node(pl, a, c, d);
   if h >= 4294967296 { abort };
-  EID.u64[idx] := h + 1;
+  z := call expr_put(idx, h);
   return 0
 }
 
@@ -524,7 +516,8 @@ def exprProg : Prog := frontProg ++
    ("lit_match", litMatch), ("lit_find", litFind), ("lit_push", litPush), ("intern_lit", internLit),
    ("lit_match_str", litMatchStr), ("lit_find_str", litFindStr), ("lit_push_str", litPushStr),
    ("intern_lit_str", internLitStr),
-   ("expr_get", exprGet), ("expr_fresh", exprFresh), ("ls_put", lsPut), ("node_bin", nodeBin),
+   ("esp_find", memoFindG (spS EID)), ("esp_put", memoPutG (spS EID)),
+   ("expr_get", exprGet), ("expr_fresh", exprFresh), ("expr_put", exprPut), ("ls_put", lsPut), ("node_bin", nodeBin),
    ("node_let", nodeLet), ("node_proj", nodeProj), ("node_const", nodeConst),
    ("node_lit", nodeLit), ("node_lit_str", nodeLitStr), ("expr_node", exprNode),
    ("apply_expr", applyExpr), ("dec_chunk", decChunk), ("nat_mad", natMad), ("nat_dec", natDec),
@@ -533,9 +526,9 @@ def exprProg : Prog := frontProg ++
    ("esc_one", L.Front.Unescape.escOne), ("utf8_put", L.Front.Unescape.utf8Put),
    ("str_put_esc", L.Front.Unescape.strPutEsc)]
 
-/-- Every word array 64 words (all zero), the input `[0, 1]`. -/
+/-- Every word array 128 words (all zero), the input `[0, 1]`. -/
 def exprMem : Mem :=
-  { bytes := #["[0, 1]5".toUTF8.data], words := Array.replicate 67 (Array.replicate 64 0) }
+  { bytes := #["[0, 1]5".toUTF8.data], words := Array.replicate 75 (Array.replicate 128 0) }
 
 /-- Run the calls in turn; the results. -/
 def exprRuns (m : Mem) : List (FnName × List Word) → Option (List (List Word))
@@ -570,7 +563,7 @@ def exprRuns (m : Mem) : List (FnName × List Word) → Option (List (List Word)
 
 /-- Input `"ab""cd"`: two quoted strings, no escapes. -/
 def exprStrMem : Mem :=
-  { bytes := #["\"ab\"\"cd\"".toUTF8.data], words := Array.replicate 67 (Array.replicate 64 0) }
+  { bytes := #["\"ab\"\"cd\"".toUTF8.data], words := Array.replicate 75 (Array.replicate 128 0) }
 
 /- `"ab"` interned twice (the same handle, `0x80000000`), `"cd"` a different one (`0x80000001`). -/
 #guard exprRuns exprStrMem
@@ -631,6 +624,9 @@ structure ExprLookups (p : Prog) : Prop where
   intern_lit_str : p.lookup "intern_lit_str" = some internLitStr
   expr_get : p.lookup "expr_get" = some exprGet
   expr_fresh : p.lookup "expr_fresh" = some exprFresh
+  esp_find : p.lookup "esp_find" = some (memoFindG (spS EID))
+  esp_put : p.lookup "esp_put" = some (memoPutG (spS EID))
+  expr_put : p.lookup "expr_put" = some exprPut
   ls_put : p.lookup "ls_put" = some lsPut
   node_bin : p.lookup "node_bin" = some nodeBin
   node_let : p.lookup "node_let" = some nodeLet
@@ -646,11 +642,7 @@ structure ExprLookups (p : Prog) : Prop where
   no_st8 : p.noSt8 = true
 
 theorem exprProg_lookups : ExprLookups exprProg := by
-  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
-    ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
-    ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-  · constructor <;> rfl
-  all_goals rfl
+  constructor <;> first | rfl | decide | (constructor <;> rfl)
 
 section specs
 variable (p : Prog) (hE : ExprLookups p)
@@ -659,26 +651,20 @@ include hE
 theorem exprGet_spec (n : Nat) (s₀ : St) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "expr_get" [i]
-    ⦃fun r s' => s' = s₀ ∧ tblOK s₀.mem EID i = true ∧ r = [tblW s₀.mem EID i]; ⊤⦄ := by
-  rw [invoke_eq _ hE.expr_get]
-  simp only [callFn, exprGet]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64] <;> finish [tblOK, tblW]
+    ⦃fun r s' => s' = s₀ ∧ tblOK s₀.mem EID i = true ∧ r = [tblW s₀.mem EID i]; ⊤⦄ :=
+  tblGetG_spec p EID "esp_find" hE.esp_find _ hE.expr_get n s₀ i
 
 theorem exprFresh_spec (n : Nat) (s₀ : St) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "expr_fresh" [i]
-    ⦃fun _ s' => s' = s₀ ∧ tblFresh s₀.mem EID i = true; ⊤⦄ := by
-  rw [invoke_eq _ hE.expr_fresh]
-  simp only [callFn, exprFresh]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64] <;> finish [tblFresh]
+    ⦃fun _ s' => s' = s₀ ∧ tblFresh s₀.mem EID i = true; ⊤⦄ :=
+  tblFreshG_spec p EID "esp_find" hE.esp_find _ hE.expr_fresh n s₀ i
+
+theorem exprPut_spec (n : Nat) (s₀ : St) (i h : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "expr_put" [i, h]
+    ⦃fun _ s' => LocEq s' s₀ ∧ tblPutW s₀.mem EID i h = some s'.mem; ⊤⦄ :=
+  tblPutG_spec p EID "esp_find" "esp_put" hE.esp_find hE.esp_put _ hE.expr_put n s₀ i h
 
 theorem lsLoop_spec (b : Array UInt8) (hb : b.size < 2 ^ 63) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄
@@ -875,8 +861,8 @@ theorem applyExpr_spec (b : Array UInt8) (hb : b.size < 2 ^ 63)
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64,
-        exprFresh_spec p hE n, exprNode_spec p hE b hb hpb hph hp4 hp3 hpsu hpo hpu hpe n] <;>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+        exprFresh_spec p hE n, exprPut_spec p hE n, exprNode_spec p hE b hb hpb hph hp4 hp3 hpsu hpo hpu hpe n] <;>
       finish [applyExprW]
 
 end specs
