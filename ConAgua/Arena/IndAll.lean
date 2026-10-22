@@ -56,6 +56,10 @@ import ConAgua.Arena.IndPos2SpecM
 import ConAgua.Arena.IndPos2SpecN
 import ConAgua.Arena.IndPos2SpecO
 import ConAgua.Arena.IndPos2SpecP
+import ConAgua.Arena.IndPos2SpecQ
+import ConAgua.Arena.IndPos2SpecR
+import ConAgua.Arena.IndPos2SpecS
+import ConAgua.Arena.IndPos2SpecT
 
 /-! # Every refinement file of the inductive stage together (lane `indproofs`): an import check that
 the helpers' files do not clash on names. -/
