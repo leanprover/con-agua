@@ -110,14 +110,14 @@ theorem sumDecHL_tail {m : Mem} {o l : Nat} {x : EIdx} {xs : List EIdx}
 /-! ## `sum_rules_go`: the word model -/
 
 /-- The memory after the rule record's eleven writes. -/
-def srMem (m : Mem) (q ctorN nF nP rhs k eta : Word) : Mem :=
+def ruleMem (m : Mem) (q ctorN nF nP rhs k eta : Word) : Mem :=
   ((((((((((m.set64 EREC q ctorN).set64 EREC (q + 1) nF).set64 EREC (q + 2) nP).set64 EREC (q + 3) 0
     ).set64 EREC (q + 4) 0).set64 EREC (q + 5) 0).set64 EREC (q + 6) 0).set64 EREC (q + 7) 0
     ).set64 EREC (q + 8) rhs).set64 EREC (q + 9) k).set64 EREC (q + 10) eta
 
-theorem srMem_eq (m : Mem) (q ctorN nF nP rhs k eta : Word) :
-    srMem m q ctorN nF nP rhs k eta = wrER m q [ctorN, nF, nP, 0, 0, 0, 0, 0, rhs, k, eta] := by
-  simp only [srMem, wrER]
+theorem ruleMem_eq (m : Mem) (q ctorN nF nP rhs k eta : Word) :
+    ruleMem m q ctorN nF nP rhs k eta = wrER m q [ctorN, nF, nP, 0, 0, 0, 0, 0, rhs, k, eta] := by
+  simp only [ruleMem, wrER]
   rw [show q + 1 + 1 = q + 2 by ac_rfl, show q + 2 + 1 = q + 3 by ac_rfl,
     show q + 3 + 1 = q + 4 by ac_rfl, show q + 4 + 1 = q + 5 by ac_rfl,
     show q + 5 + 1 = q + 6 by ac_rfl, show q + 6 + 1 = q + 7 by ac_rfl,
@@ -125,27 +125,27 @@ theorem srMem_eq (m : Mem) (q ctorN nF nP rhs k eta : Word) :
     show q + 9 + 1 = q + 10 by ac_rfl]
 
 /-- After the rest. -/
-def srgK3 : Option (List Word × Mem) → Option (List Word × Mem)
+def rgoK3 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (_, m3) => some ([0], m3)
 /-- After `erec_alloc`: the writes, then the rest (`rest`, at the written memory). -/
-def srgK2 (rest : Mem → Option (List Word × Mem)) (nP o ctorN nF rhs k eta : Word) :
+def rgoK2 (rest : Mem → Option (List Word × Mem)) (nP o ctorN nF rhs k eta : Word) :
     Option (Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (q, m2) => srgK3 (rest ((srMem m2 q ctorN nF nP rhs k eta).set64 IW o q))
+  | some (q, m2) => rgoK3 (rest ((ruleMem m2 q ctorN nF nP rhs k eta).set64 IW o q))
 /-- After `rec_rule_bits`: the record. -/
-def srgK1 (rest : Mem → Option (List Word × Mem)) (nP o ctorN nF rhs : Word) :
+def rgoK1 (rest : Mem → Option (List Word × Mem)) (nP o ctorN nF rhs : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (kr, m1) => srgK2 rest nP o ctorN nF rhs (kr.headD 0) (kr.tail.headD 0) (erAllocW m1 11)
+  | some (kr, m1) => rgoK2 rest nP o ctorN nF rhs (kr.headD 0) (kr.tail.headD 0) (erAllocW m1 11)
 
 /-- **The model of `sum_rules_go(vis, nP, cO, cL, rO, rL, o)`** at exec fuel `n`. -/
-def srgW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
+def rgoW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _, _ => none
   | n + 1, m, vis, nP, cO, cL, rO, rL, o =>
     if cL = 0 ∨ rL = 0 then some ([0], m)
     else
-      srgK1 (fun m' => srgW n m' vis nP (cO + 1) (cL - 1) (rO + 1) (rL - 1) (o + 1)) nP o
+      rgoK1 (fun m' => rgoW n m' vis nP (cO + 1) (cL - 1) (rO + 1) (rL - 1) (o + 1)) nP o
         (rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO)))
         (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO + 1)) (rdW (m.arr64 IW) rO)
         (stubM "rec_rule_bits" m [vis, rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO))])
@@ -153,30 +153,30 @@ def srgW : Nat → Mem → Word → Word → Word → Word → Word → Word →
 section arms
 variable (n : Nat) (m m1 m2 m3 : Mem) (vis nP cO cL rO rL o ctorN nF rhs k eta q : Word)
   (kr r : List Word) (rest : Mem → Option (List Word × Mem))
-theorem srgW_nil (h : cL = 0 ∨ rL = 0) : srgW (n + 1) m vis nP cO cL rO rL o = some ([0], m) := by
-  simp [srgW, h]
-theorem srgW_cons (h : ¬ (cL = 0 ∨ rL = 0)) : srgW (n + 1) m vis nP cO cL rO rL o =
-    srgK1 (fun m' => srgW n m' vis nP (cO + 1) (cL - 1) (rO + 1) (rL - 1) (o + 1)) nP o
+theorem rgoW_nil (h : cL = 0 ∨ rL = 0) : rgoW (n + 1) m vis nP cO cL rO rL o = some ([0], m) := by
+  simp [rgoW, h]
+theorem rgoW_cons (h : ¬ (cL = 0 ∨ rL = 0)) : rgoW (n + 1) m vis nP cO cL rO rL o =
+    rgoK1 (fun m' => rgoW n m' vis nP (cO + 1) (cL - 1) (rO + 1) (rL - 1) (o + 1)) nP o
       (rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO)))
       (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO + 1)) (rdW (m.arr64 IW) rO)
       (stubM "rec_rule_bits" m [vis, rdW (m.arr64 EREC) (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO))]) := by
-  rw [srgW, if_neg h]
-theorem srgK1_some : srgK1 rest nP o ctorN nF rhs (some (kr, m1)) =
-    srgK2 rest nP o ctorN nF rhs (kr.headD 0) (kr.tail.headD 0) (erAllocW m1 11) := rfl
-theorem srgK2_some : srgK2 rest nP o ctorN nF rhs k eta (some (q, m2)) =
-    srgK3 (rest ((srMem m2 q ctorN nF nP rhs k eta).set64 IW o q)) := rfl
-theorem srgK3_some : srgK3 (some (r, m3)) = some ([0], m3) := rfl
+  rw [rgoW, if_neg h]
+theorem rgoK1_some : rgoK1 rest nP o ctorN nF rhs (some (kr, m1)) =
+    rgoK2 rest nP o ctorN nF rhs (kr.headD 0) (kr.tail.headD 0) (erAllocW m1 11) := rfl
+theorem rgoK2_some : rgoK2 rest nP o ctorN nF rhs k eta (some (q, m2)) =
+    rgoK3 (rest ((ruleMem m2 q ctorN nF nP rhs k eta).set64 IW o q)) := rfl
+theorem rgoK3_some : rgoK3 (some (r, m3)) = some ([0], m3) := rfl
 end arms
-attribute [ind_grind] srgW_nil srgW_cons srgK1_some srgK2_some srgK3_some
+attribute [ind_grind] rgoW_nil rgoW_cons rgoK1_some rgoK2_some rgoK3_some
 
 section spec
 variable (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
   (hp : p.lookup "sum_rules_go" = some sumRulesGoL)
 include ha hp
 
-theorem srgW_spec (n : Nat) : ∀ (s₀ : St) (vis nP cO cL rO rL o : Word),
+theorem rgoW_spec (n : Nat) : ∀ (s₀ : St) (vis nP cO cL rO rL o : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "sum_rules_go" [vis, nP, cO, cL, rO, rL, o]
-    ⦃fun r s' => LocEq s' s₀ ∧ srgW n s₀.mem vis nP cO cL rO rL o = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ rgoW n s₀.mem vis nP cO cL rO rL o = some (r, s'.mem); ⊤⦄ := by
   induction n with
   | zero =>
     intro s₀ vis nP cO cL rO rL o; rw [invoke_eq _ hp]; simp only [callFn, sumRulesGoL]
@@ -188,30 +188,30 @@ theorem srgW_spec (n : Nat) : ∀ (s₀ : St) (vis nP cO cL rO rL o : Word),
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         stubM_spec p "rec_rule_bits" n, erecAlloc_specW p ha n, ih] <;>
-      finish (gen := 20) [srMem, rdW_eq]
+      finish (gen := 20) [ruleMem, rdW_eq]
 
 end spec
 
 /-! ## `sum_rules`: the word model -/
 
 /-- After the rules. -/
-def srK2 (o k : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def rulesK2 (o k : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (_, m2) => some ([o, k], m2)
 /-- After the allocation: the rules. -/
-def srK1 (n : Nat) (vis nP cO cL rO rL k : Word) : Option (Word × Mem) → Option (List Word × Mem)
+def rulesK1 (n : Nat) (vis nP cO cL rO rL k : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (o, m1) => srK2 o k (srgW n m1 vis nP cO cL rO rL o)
+  | some (o, m1) => rulesK2 o k (rgoW n m1 vis nP cO cL rO rL o)
 
 /-- **The model of `sum_rules(vis, recName, nP, cO, cL, rO, rL)`** at callee fuel `n`. -/
-def srW (n : Nat) (m : Mem) (vis nP cO cL rO rL : Word) : Option (List Word × Mem) :=
-  srK1 n vis nP cO cL rO rL (if rL < cL then rL else cL) (allocW m (if rL < cL then rL else cL))
+def rulesW (n : Nat) (m : Mem) (vis nP cO cL rO rL : Word) : Option (List Word × Mem) :=
+  rulesK1 n vis nP cO cL rO rL (if rL < cL then rL else cL) (allocW m (if rL < cL then rL else cL))
 
-theorem srK1_some (n : Nat) (vis nP cO cL rO rL k o : Word) (m1 : Mem) :
-    srK1 n vis nP cO cL rO rL k (some (o, m1)) = srK2 o k (srgW n m1 vis nP cO cL rO rL o) := rfl
-theorem srK2_some (o k : Word) (r : List Word) (m2 : Mem) :
-    srK2 o k (some (r, m2)) = some ([o, k], m2) := rfl
-attribute [ind_grind] srK1_some srK2_some
+theorem rulesK1_some (n : Nat) (vis nP cO cL rO rL k o : Word) (m1 : Mem) :
+    rulesK1 n vis nP cO cL rO rL k (some (o, m1)) = rulesK2 o k (rgoW n m1 vis nP cO cL rO rL o) := rfl
+theorem rulesK2_some (o k : Word) (r : List Word) (m2 : Mem) :
+    rulesK2 o k (some (r, m2)) = some ([o, k], m2) := rfl
+attribute [ind_grind] rulesK1_some rulesK2_some
 
 section spec2
 variable (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
@@ -219,15 +219,15 @@ variable (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
   (hp : p.lookup "sum_rules" = some sumRulesL)
 include ha hg hia hp
 
-theorem srW_spec (n : Nat) (s₀ : St) (vis recName nP cO cL rO rL : Word) :
+theorem rulesW_spec (n : Nat) (s₀ : St) (vis recName nP cO cL rO rL : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "sum_rules" [vis, recName, nP, cO, cL, rO, rL]
-    ⦃fun r s' => LocEq s' s₀ ∧ srW n s₀.mem vis nP cO cL rO rL = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ rulesW n s₀.mem vis nP cO cL rO rL = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, sumRulesL]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      iwAlloc_specW p hia n, srgW_spec p ha hg n] <;>
-    finish (gen := 20) [srW]
+      iwAlloc_specW p hia n, rgoW_spec p ha hg n] <;>
+    finish (gen := 20) [rulesW]
 
 end spec2
 
@@ -250,17 +250,17 @@ theorem rlDec_set_iw (m : Mem) (o v : Word) : rlDec (m.set64 IW o v) = rlDec m :
   unfold rlDec erecP erecTop
   rw [hf.1 EREC (by decide) (by decide), hf.2.1 129 (by decide)]
 
-theorem toNat_succ_of_lt {w : Word} (h : w.toNat < 2 ^ 64 - 1) : (w + 1).toNat = w.toNat + 1 := by
+theorem sumToNat_succ {w : Word} (h : w.toNat < 2 ^ 64 - 1) : (w + 1).toNat = w.toNat + 1 := by
   rw [UInt64.toNat_add]; simp; omega
 
-theorem toNat_pred_of_ne {w : Word} (h : w ≠ 0) : (w - 1).toNat = w.toNat - 1 := by
+theorem sumToNat_pred {w : Word} (h : w ≠ 0) : (w - 1).toNat = w.toNat - 1 := by
   have : w.toNat ≠ 0 := fun e => h (UInt64.toNat_inj.mp (by simpa using e))
   rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
 
 /-- **`sum_rules_go`'s model refines `sumRules`**: the rules written after the decoded prefix
 `acc` of the result slice at `q0` (its next slot `o = q0 + j`), the slots allocated above `m0`'s
 top. -/
-theorem srgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (recName : NIdx)
+theorem rgoW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (recName : NIdx)
     (n : Nat) : ∀ (m : Mem) (a : AState) (nP cO cL rO rL o : Word) (m0 : Mem) (q0 : Word) (j : Nat)
     (acc : List IRecRule) (cs : List (IConstantVal × Nat)) (rhss : List EIdx),
     StageR dn vis fe m a → IWGrow m0 m → iwTop m0 ≤ q0.toNat → o.toNat = q0.toNat + j →
@@ -268,7 +268,7 @@ theorem srgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     decPL m (rlDec m) q0.toNat j = some acc →
     DecB (fun m => decPL m (decCN m) cO.toNat cL.toNat) m0 cs →
     DecB (fun m => decHL m rO.toNat rL.toNat) m0 rhss →
-    Sim (srgW n m vis nP cO cL rO rL o) (sumRules fe recName nP.toNat cs rhss) a
+    Sim (rgoW n m vis nP cO cL rO rL o) (sumRules fe recName nP.toNat cs rhss) a
       (fun _ rules m' a' => StageR dn vis fe m' a' ∧ IWGrow m0 m' ∧
         decPL m' (rlDec m') q0.toNat (j + rules.length) = some (acc ++ rules) ∧
         rules.length = min cL.toNat rL.toNat ∧ q0.toNat + j + rules.length ≤ iwTop m') := by
@@ -281,7 +281,7 @@ theorem srgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   have hcl := decPL_length (m := truncM m) hcs
   have hrl := decHL_length (truncM m) hrh
   by_cases hz : cL = 0 ∨ rL = 0
-  · rw [srgW_nil n m vis nP cO cL rO rL o hz]
+  · rw [rgoW_nil n m vis nP cO cL rO rL o hz]
     have e : sumRules fe recName nP.toNat cs rhss = pure [] := by
       rcases hz with h | h
       · subst h; cases cs with | nil => simp [sumRules] | cons _ _ => simp at hcl
@@ -289,7 +289,7 @@ theorem srgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     rw [e]
     refine Sim.ret ⟨hS, hg0, by simpa using hacc, ?_, by simp; omega⟩
     rcases hz with h | h <;> simp [h]
-  rw [srgW_cons n m vis nP cO cL rO rL o hz]
+  rw [rgoW_cons n m vis nP cO cL rO rL o hz]
   have hcL : cL ≠ 0 := fun h => hz (.inl h)
   have hrL : rL ≠ 0 := fun h => hz (.inr h)
   obtain ⟨L, hL⟩ : ∃ L, cL.toNat = L + 1 :=
@@ -330,16 +330,16 @@ theorem srgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   have hrule : ({ ctor := cv.name, nfields := nF, ctorParams := nP.toNat, fire := .plain,
                    rhs := rhs } : IRecRule).ctor = decI wn := hname
   simp only [sumRules]
-  refine Sim.bindK (K := srgK1 _ nP o wn w3 wr) rfl (fun _ _ => rfl)
+  refine Sim.bindK (K := rgoK1 _ nP o wn w3 wr) rfl (fun _ _ => rfl)
     (sumSim_of_relAM (recRuleBits_spec dn vis fe wn hwnl _ hrule) hS) fun kr x m1 a1 hQ => ?_
   obtain ⟨hS1, hg1, hx⟩ := hQ
   subst hx
-  rw [srgK1_some]
+  rw [rgoK1_some]
   cases hal : erAllocW m1 11 with
   | none => exact Sim.of_none
   | some y =>
   obtain ⟨q, m2⟩ := y
-  rw [srgK2_some, srMem_eq]
+  rw [rgoK2_some, ruleMem_eq]
   obtain ⟨hSM, hgM, hqt, htM, hget⟩ := erRec_stage hal hS1 [wn, w3, nP, 0, 0, 0, 0, 0, wr, kr.headD 0, kr.tail.headD 0] rfl
   generalize hM : wrER m2 q _ = M at hSM hgM htM hget
   -- the record decodes
@@ -368,14 +368,14 @@ theorem srgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   have htop' : iwTop (M.set64 IW o q) = iwTop M := by
     simp only [iwTop]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
   have hlt : o.toNat < 2 ^ 64 - 1 := by have := hS.lt64 (x := iwTop m) (Nat.le_refl _); omega
-  have hcO1 : (cO + 1).toNat = cO.toNat + 1 := toNat_succ_of_lt (by have := hS.lt64 (x := iwTop m) (Nat.le_refl _); omega)
-  have hrO1 : (rO + 1).toNat = rO.toNat + 1 := toNat_succ_of_lt (by have := hS.lt64 (x := iwTop m) (Nat.le_refl _); omega)
-  have hcL1 : (cL - 1).toNat = L := by rw [toNat_pred_of_ne hcL]; omega
-  have hrL1 : (rL - 1).toNat = R := by rw [toNat_pred_of_ne hrL]; omega
-  refine Sim.bindK (K := srgK3) rfl (fun _ _ => rfl)
+  have hcO1 : (cO + 1).toNat = cO.toNat + 1 := sumToNat_succ (by have := hS.lt64 (x := iwTop m) (Nat.le_refl _); omega)
+  have hrO1 : (rO + 1).toNat = rO.toNat + 1 := sumToNat_succ (by have := hS.lt64 (x := iwTop m) (Nat.le_refl _); omega)
+  have hcL1 : (cL - 1).toNat = L := by rw [sumToNat_pred hcL]; omega
+  have hrL1 : (rL - 1).toNat = R := by rw [sumToNat_pred hrL]; omega
+  refine Sim.bindK (K := rgoK3) rfl (fun _ _ => rfl)
     (ih (M.set64 IW o q) a1 nP (cO + 1) (cL - 1) (rO + 1) (rL - 1) (o + 1) m0 q0 (j + 1) _ cs rhss hS' hg0'
-      hq0 (by rw [toNat_succ_of_lt hlt]; omega)
-      (by rw [toNat_succ_of_lt hlt, hcL1, hrL1, htop']; have := hgm1M.1; simp only [Nat.min_def] at hroom ⊢
+      hq0 (by rw [sumToNat_succ hlt]; omega)
+      (by rw [sumToNat_succ hlt, hcL1, hrL1, htop']; have := hgm1M.1; simp only [Nat.min_def] at hroom ⊢
           split at hroom <;> split <;> omega)
       hacc'
       (by rw [hcO1, hcL1]; exact htail) (by rw [hrO1, hrL1]; exact hrtail))
@@ -389,16 +389,16 @@ theorem srgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
 
 /-- **`sum_rules`' model refines `sumRules`**: the rules in a fresh `IW` slice of `EREC` rule
 pointers. -/
-theorem srW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (recName : NIdx)
+theorem rulesW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (recName : NIdx)
     (n : Nat) (m : Mem) (a : AState) (nP cO cL rO rL : Word) (cs : List (IConstantVal × Nat))
     (rhss : List EIdx) (hS : StageR dn vis fe m a)
     (hcs : DecB (fun m => decPL m (decCN m) cO.toNat cL.toNat) m cs)
     (hrh : DecB (fun m => decHL m rO.toNat rL.toNat) m rhss) :
-    Sim (srW n m vis nP cO cL rO rL) (sumRules fe recName nP.toNat cs rhss) a
+    Sim (rulesW n m vis nP cO cL rO rL) (sumRules fe recName nP.toNat cs rhss) a
       (fun r rules m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧
         decPL m' (rlDec m') (r.headD 0).toNat (r.tail.headD 0).toNat = some rules ∧
         (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m') := by
-  unfold srW
+  unfold rulesW
   generalize hk : (if rL < cL then rL else cL) = k
   have hkm : k.toNat = min cL.toNat rL.toNat := by
     subst hk; split
@@ -408,10 +408,10 @@ theorem srW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (r
   | none => exact Sim.of_none
   | some y =>
   obtain ⟨o, m1⟩ := y
-  rw [srK1_some]
+  rw [rulesK1_some]
   obtain ⟨hS1, hg1, hot, ht1⟩ := allocW_stage hal hS
-  refine sumSim_map (K := srK2 o k) rfl (fun _ _ => rfl)
-    (srgW_ok recName n m1 a nP cO cL rO rL o m o 0 [] cs rhss hS1 hg1 (by omega) (by simp)
+  refine sumSim_map (K := rulesK2 o k) rfl (fun _ _ => rfl)
+    (rgoW_ok recName n m1 a nP cO cL rO rL o m o 0 [] cs rhss hS1 hg1 (by omega) (by simp)
       (by omega) (by simp [decPL]) hcs hrh) fun _ rules m' a' hQ => ?_
   obtain ⟨hS', hg', hd', hl', ht'⟩ := hQ
   refine ⟨hS', hg', ?_, ?_⟩
@@ -439,9 +439,9 @@ theorem sumRules_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Op
       IWGrow s₀.mem s'.mem ∧
       decPL s'.mem (rlDec s'.mem) (r.headD 0).toNat (r.tail.headD 0).toNat =
         some (AM.res (sumRules fe (decI recName) nP.toNat cs rhss) a₀); ⊤⦄ := by
-  refine triple_post (srW_spec p ha hg hia hp n s₀ vis recName nP cO cL rO rL) ?_
+  refine triple_post (rulesW_spec p ha hg hia hp n s₀ vis recName nP cO cL rO rL) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨hok, hS', hg', hd, -⟩ := (srW_ok (decI recName) n _ a₀ nP cO cL rO rL cs rhss hS hcs hrh).run hm
+  obtain ⟨hok, hS', hg', hd, -⟩ := (rulesW_ok (decI recName) n _ a₀ nP cO cL rO rL cs rhss hS hcs hrh).run hm
   exact ⟨hl, hok, hS', hg', hd⟩
 
 end census

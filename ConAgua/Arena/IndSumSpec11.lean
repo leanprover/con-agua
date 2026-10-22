@@ -401,7 +401,7 @@ theorem csfW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     exact Sim.ret ⟨hS, hg0, by simpa using hacc, hroom⟩
   obtain ⟨J, hjJ⟩ : ∃ J, j.toNat = J + 1 :=
     ⟨j.toNat - 1, by have : j.toNat ≠ 0 := fun e => hj (UInt64.toNat_inj.mp (by simpa using e)); omega⟩
-  have hJ : (j - 1).toNat = J := by rw [toNat_pred_of_ne hj]; omega
+  have hJ : (j - 1).toNat = J := by rw [sumToNat_pred hj]; omega
   by_cases hl : fl ≤ j - 1
   · rw [csfW_oob n m vis isProp large s nP fo fl io il res j hj hl]; exact Sim.of_none
   rw [csfW_step n m vis isProp large s nP fo fl io il res j hj hl]
@@ -469,26 +469,26 @@ theorem csfW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
 /-! ## `check_struct_field_sorts_i` -/
 
 /-- After the fields. -/
-def cfK2 (res nW : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def fsortsK2 (res nW : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (_, m2) => some ([res, nW], m2)
 /-- After the allocation. -/
-def cfK1 (n : Nat) (vis isProp large s nP fo fl io il nW : Word) :
+def fsortsK1 (n : Nat) (vis isProp large s nP fo fl io il nW : Word) :
     Option (Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (res, m1) => cfK2 res nW (csfW n m1 vis isProp large s nP fo fl io il res nW)
+  | some (res, m1) => fsortsK2 res nW (csfW n m1 vis isProp large s nP fo fl io il res nW)
 
 /-- **The model of `check_struct_field_sorts_i(vis, isProp, large, s, nP, fo, fl, io, il, n)`** at
 callee fuel `n`. -/
-def cfW (n : Nat) (m : Mem) (vis isProp large s nP fo fl io il nW : Word) : Option (List Word × Mem) :=
-  cfK1 n vis isProp large s nP fo fl io il nW (allocW m nW)
+def fsortsW (n : Nat) (m : Mem) (vis isProp large s nP fo fl io il nW : Word) : Option (List Word × Mem) :=
+  fsortsK1 n vis isProp large s nP fo fl io il nW (allocW m nW)
 
-theorem cfK1_some (n : Nat) (vis isProp large s nP fo fl io il nW res : Word) (m1 : Mem) :
-    cfK1 n vis isProp large s nP fo fl io il nW (some (res, m1)) =
-      cfK2 res nW (csfW n m1 vis isProp large s nP fo fl io il res nW) := rfl
-theorem cfK2_some (res nW : Word) (r : List Word) (m2 : Mem) :
-    cfK2 res nW (some (r, m2)) = some ([res, nW], m2) := rfl
-attribute [ind_grind] cfK1_some cfK2_some
+theorem fsortsK1_some (n : Nat) (vis isProp large s nP fo fl io il nW res : Word) (m1 : Mem) :
+    fsortsK1 n vis isProp large s nP fo fl io il nW (some (res, m1)) =
+      fsortsK2 res nW (csfW n m1 vis isProp large s nP fo fl io il res nW) := rfl
+theorem fsortsK2_some (res nW : Word) (r : List Word) (m2 : Mem) :
+    fsortsK2 res nW (some (r, m2)) = some ([res, nW], m2) := rfl
+attribute [ind_grind] fsortsK1_some fsortsK2_some
 
 section spec2
 variable (p : Prog) (hg : p.lookup "sl_get" = some slGet) (hpw : p.lookup "pin_word" = some pinWordL)
@@ -499,39 +499,39 @@ variable (p : Prog) (hg : p.lookup "sl_get" = some slGet) (hpw : p.lookup "pin_w
   (hp : p.lookup "check_struct_field_sorts_i" = some checkStructFieldSortsIL)
 include hg hpw het hc hb hgo hia hp
 
-theorem cfW_spec (n : Nat) (s₀ : St) (vis isProp large s nP fo fl io il nW : Word) :
+theorem fsortsW_spec (n : Nat) (s₀ : St) (vis isProp large s nP fo fl io il nW : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "check_struct_field_sorts_i"
       [vis, isProp, large, s, nP, fo, fl, io, il, nW]
-    ⦃fun r s' => LocEq s' s₀ ∧ cfW n s₀.mem vis isProp large s nP fo fl io il nW = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ fsortsW n s₀.mem vis isProp large s nP fo fl io il nW = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, checkStructFieldSortsIL]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       iwAlloc_specW p hia n, csfW_spec p hg hpw het hc hb hgo n] <;>
-    finish (gen := 30) (instances := 5000) [cfW]
+    finish (gen := 30) (instances := 5000) [fsortsW]
 
 end spec2
 
 /-- **`check_struct_field_sorts_i`'s model refines `checkStructFieldSortsI`**: the sorts in a fresh
 `IW` slice. -/
-theorem cfW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) (m : Mem)
+theorem fsortsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) (m : Mem)
     (a : AState) (isProp large s nP fo fl io il nW : Word) (fvs idxArgs : List EIdx)
     (hS : StageR dn vis fe m a) (hfvs : decHL m fo.toNat fl.toNat = some fvs)
     (hfb : fo.toNat + fl.toNat ≤ iwTop m) (hidx : decHL m io.toNat il.toNat = some idxArgs)
     (hib : io.toNat + il.toNat ≤ iwTop m) (hs : H s) (hnj : nP.toNat + nW.toNat < 2 ^ 64) :
-    Sim (cfW n m vis isProp large s nP fo fl io il nW)
+    Sim (fsortsW n m vis isProp large s nP fo fl io il nW)
       (checkStructFieldSortsI V fe (isProp != 0) (large != 0) (decI s) nP.toNat fvs idxArgs nW.toNat) a
       (fun r xs m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧
         decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some xs ∧
         (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m') := by
-  unfold cfW
+  unfold fsortsW
   cases hal : allocW m nW with
   | none => exact Sim.of_none
   | some y =>
   obtain ⟨res, m1⟩ := y
-  rw [cfK1_some]
+  rw [fsortsK1_some]
   obtain ⟨hS1, hg1, hrt, ht1⟩ := allocW_stage hal hS
-  refine sumSim_map (K := cfK2 res nW) rfl (fun _ _ => rfl)
+  refine sumSim_map (K := fsortsK2 res nW) rfl (fun _ _ => rfl)
     (csfW_ok n m1 a isProp large s nP fo fl io il res nW m 0 [] fvs idxArgs hS1 hg1 (by omega)
       (by omega) (by simp [decHL, hslice?]) hfvs hfb hidx hib hs hnj) fun _ xs m' a' hQ => ?_
   obtain ⟨hS', hg', hd', ht'⟩ := hQ
@@ -568,10 +568,10 @@ theorem checkStructFieldSortsI_refines (n : Nat) (s₀ : St) (a₀ : AState)
       decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat =
         some (AM.res (checkStructFieldSortsI V fe (isProp != 0) (large != 0) (decI s) nP.toNat fvs
           idxArgs nW.toNat) a₀); ⊤⦄ := by
-  refine triple_post (cfW_spec p hg hpw het hc hb hgo hia hp n s₀ vis isProp large s nP fo fl io il nW) ?_
+  refine triple_post (fsortsW_spec p hg hpw het hc hb hgo hia hp n s₀ vis isProp large s nP fo fl io il nW) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨hok, hS', hg', hd, -⟩ :=
-    (cfW_ok n _ a₀ isProp large s nP fo fl io il nW fvs idxArgs hS hfvs hfb hidx hib hs hnj).run hm
+    (fsortsW_ok n _ a₀ isProp large s nP fo fl io il nW fvs idxArgs hS hfvs hfb hidx hib hs hnj).run hm
   exact ⟨hl, hok, hS', hg', hd⟩
 
 end census

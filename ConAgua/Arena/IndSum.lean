@@ -204,6 +204,7 @@ def checkSumCtorTailL : FunDecl :=
   if xqOk == 0 { abort };
   us := call param_levels(lpsOff, lpsLen);
   hd := call intern_const(T, us);
+  if 4294967296 <= hd { abort };
   xfn := call get_app_fn_f(⟪CWF⟫, xqBody);
   (xargsOff, xargsLen) := call get_app_args_f(⟪CWF⟫, xqBody);
   eqFn := u64(xfn == hd);
