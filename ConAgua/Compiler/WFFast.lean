@@ -161,6 +161,122 @@ theorem Stmt.wfT_eq {t : NTree} {p : Prog}
 def FunDecl.wfT (t : NTree) (tab : Tab) (fd : FunDecl) : Bool :=
   fd.nparams ≤ fd.nlocals && Stmt.wfT t fd.nlocals tab fd.body && 8 * frameWords fd + 8 < maxOff
 
+/-! ### The check without the constant data
+
+A check of `D.c8[i]` compares the byte string `D` with the table's constant data. For a large
+`D` (the ROM, 37 KB) that dominates a function's check, and checking each function separately
+(`WFSplit.lean`) would repeat it per function. `FunDecl.wfTN` leaves it out; `FunDecl.wfT_of_wfTN`
+adds it back from one `romOk` fact per byte string the function reads (`Stmt.roms`). -/
+
+/-- The byte string `d` is in the table's constant data where the code reads it. -/
+def romOk (tab : Tab) (d : List UInt8) : Bool := d.isPrefixOf (tab.rom.drop (romIdx d tab.rom))
+
+def Expr.wfN (nl : Nat) (tab : Tab) : Expr → Bool
+  | .const _ => true
+  | .var x => x < nl
+  | .bin _ a b => Expr.wfN nl tab a && Expr.wfN nl tab b
+  | .ld8 a i => a < tab.nb && Expr.wfN nl tab i
+  | .ld64 a i => a < tab.nw && Expr.wfN nl tab i
+  | .len8 a => a < tab.nb
+  | .len64 a => a < tab.nw
+  | .cmpw _ a b => Expr.wfN nl tab a && Expr.wfN nl tab b
+  | .ldc _ i => Expr.wfN nl tab i
+  | .glob g => g.id < tab.ng
+
+def Cond.wfN (nl : Nat) (tab : Tab) : Cond → Bool
+  | .cmp _ a b => Expr.wfN nl tab a && Expr.wfN nl tab b
+  | .and p q | .or p q => Cond.wfN nl tab p && Cond.wfN nl tab q
+  | .not p => Cond.wfN nl tab p
+
+def Stmt.wfTN (t : NTree) (nl : Nat) (tab : Tab) : Stmt → Bool
+  | .skip | .brk | .abort => true
+  | .set x e => x < nl && Expr.wfN nl tab e
+  | .st8 a i e => a < tab.nb && Expr.wfN nl tab i && Expr.wfN nl tab e
+  | .st64 a i e => a < tab.nw && Expr.wfN nl tab i && Expr.wfN nl tab e
+  | .seq s u => Stmt.wfTN t nl tab s && Stmt.wfTN t nl tab u
+  | .ite c s u => Cond.wfN nl tab c && Stmt.wfTN t nl tab s && Stmt.wfTN t nl tab u
+  | .while c s => Cond.wfN nl tab c && Stmt.wfTN t nl tab s
+  | .ret es => es.all (Expr.wfN nl tab) && es.length ≤ tab.nres
+  | .call xs f args => xs.all (· < nl) && xs.length ≤ tab.nres &&
+      args.all (Expr.wfN nl tab) &&
+      match t.find (nameCode f) with
+      | some n => args.length == n
+      | none => false
+  | .gset g e => g.id < tab.ng && Expr.wfN nl tab e
+
+def FunDecl.wfTN (t : NTree) (tab : Tab) (fd : FunDecl) : Bool :=
+  fd.nparams ≤ fd.nlocals && Stmt.wfTN t fd.nlocals tab fd.body && 8 * frameWords fd + 8 < maxOff
+
+theorem Expr.wf_of_wfN {nl : Nat} {tab : Tab} : ∀ {e : Expr}, Expr.wfN nl tab e = true →
+    (∀ d ∈ Expr.roms e, romOk tab d = true) → Expr.wf nl tab e = true
+  | .const _, h, _ | .var _, h, _ | .len8 _, h, _ | .len64 _, h, _ | .glob _, h, _ => h
+  | .bin _ a b, h, hr | .cmpw _ a b, h, hr => by
+    simp only [Expr.wfN, Expr.wf, Bool.and_eq_true, Expr.roms, List.mem_append] at h hr ⊢
+    exact ⟨Expr.wf_of_wfN h.1 fun d hd => hr d (.inl hd), Expr.wf_of_wfN h.2 fun d hd => hr d (.inr hd)⟩
+  | .ld8 _ i, h, hr | .ld64 _ i, h, hr => by
+    simp only [Expr.wfN, Expr.wf, Bool.and_eq_true, Expr.roms] at h hr ⊢
+    exact ⟨h.1, Expr.wf_of_wfN h.2 hr⟩
+  | .ldc d i, h, hr => by
+    simp only [Expr.wfN, Expr.wf, Bool.and_eq_true, Expr.roms, List.mem_cons] at h hr ⊢
+    exact ⟨hr d (.inl rfl), Expr.wf_of_wfN h fun d' hd => hr d' (.inr hd)⟩
+
+theorem Cond.wf_of_wfN {nl : Nat} {tab : Tab} : ∀ {c : Cond}, Cond.wfN nl tab c = true →
+    (∀ d ∈ Cond.roms c, romOk tab d = true) → Cond.wf nl tab c = true
+  | .cmp _ a b, h, hr => by
+    simp only [Cond.wfN, Cond.wf, Bool.and_eq_true, Cond.roms, List.mem_append] at h hr ⊢
+    exact ⟨Expr.wf_of_wfN h.1 fun d hd => hr d (.inl hd), Expr.wf_of_wfN h.2 fun d hd => hr d (.inr hd)⟩
+  | .and p q, h, hr | .or p q, h, hr => by
+    simp only [Cond.wfN, Cond.wf, Bool.and_eq_true, Cond.roms, List.mem_append] at h hr ⊢
+    exact ⟨Cond.wf_of_wfN h.1 fun d hd => hr d (.inl hd), Cond.wf_of_wfN h.2 fun d hd => hr d (.inr hd)⟩
+  | .not p, h, hr => Cond.wf_of_wfN (c := p) h hr
+
+theorem Expr.all_wf_of_wfN {nl : Nat} {tab : Tab} {es : List Expr}
+    (h : es.all (Expr.wfN nl tab) = true) (hr : ∀ d ∈ es.flatMap Expr.roms, romOk tab d = true) :
+    es.all (Expr.wf nl tab) = true := by
+  simp only [List.all_eq_true, List.mem_flatMap] at h hr ⊢
+  exact fun e he => Expr.wf_of_wfN (h e he) fun d hd => hr d ⟨e, he, hd⟩
+
+theorem Stmt.wfT_of_wfTN {t : NTree} {nl : Nat} {tab : Tab} : ∀ {s : Stmt}, Stmt.wfTN t nl tab s = true →
+    (∀ d ∈ Stmt.roms s, romOk tab d = true) → Stmt.wfT t nl tab s = true
+  | .skip, _, _ | .brk, _, _ | .abort, _, _ => rfl
+  | .set _ e, h, hr | .gset _ e, h, hr => by
+    simp only [Stmt.wfTN, Stmt.wfT, Bool.and_eq_true, Stmt.roms] at h hr ⊢
+    exact ⟨h.1, Expr.wf_of_wfN h.2 hr⟩
+  | .st8 _ i e, h, hr | .st64 _ i e, h, hr => by
+    simp only [Stmt.wfTN, Stmt.wfT, Bool.and_eq_true, Stmt.roms, List.mem_append] at h hr ⊢
+    exact ⟨⟨h.1.1, Expr.wf_of_wfN h.1.2 fun d hd => hr d (.inl hd)⟩,
+      Expr.wf_of_wfN h.2 fun d hd => hr d (.inr hd)⟩
+  | .seq s u, h, hr => by
+    simp only [Stmt.wfTN, Stmt.wfT, Bool.and_eq_true, Stmt.roms, List.mem_append] at h hr ⊢
+    exact ⟨Stmt.wfT_of_wfTN h.1 fun d hd => hr d (.inl hd), Stmt.wfT_of_wfTN h.2 fun d hd => hr d (.inr hd)⟩
+  | .ite c s u, h, hr => by
+    simp only [Stmt.wfTN, Stmt.wfT, Bool.and_eq_true, Stmt.roms, List.mem_append] at h hr ⊢
+    exact ⟨⟨Cond.wf_of_wfN h.1.1 fun d hd => hr d (.inl (.inl hd)),
+      Stmt.wfT_of_wfTN h.1.2 fun d hd => hr d (.inl (.inr hd))⟩,
+      Stmt.wfT_of_wfTN h.2 fun d hd => hr d (.inr hd)⟩
+  | .while c s, h, hr => by
+    simp only [Stmt.wfTN, Stmt.wfT, Bool.and_eq_true, Stmt.roms, List.mem_append] at h hr ⊢
+    exact ⟨Cond.wf_of_wfN h.1 fun d hd => hr d (.inl hd), Stmt.wfT_of_wfTN h.2 fun d hd => hr d (.inr hd)⟩
+  | .ret es, h, hr => by
+    simp only [Stmt.wfTN, Stmt.wfT, Bool.and_eq_true, Stmt.roms] at h hr ⊢
+    exact ⟨Expr.all_wf_of_wfN h.1 hr, h.2⟩
+  | .call xs f args, h, hr => by
+    simp only [Stmt.wfTN, Stmt.wfT, Bool.and_eq_true, Stmt.roms] at h hr ⊢
+    exact ⟨⟨h.1.1, Expr.all_wf_of_wfN h.1.2 hr⟩, h.2⟩
+
+theorem FunDecl.wfT_of_wfTN {t : NTree} {tab : Tab} {fd : FunDecl} (h : FunDecl.wfTN t tab fd = true)
+    (hr : ∀ d ∈ Stmt.roms fd.body, romOk tab d = true) : FunDecl.wfT t tab fd = true := by
+  simp only [FunDecl.wfTN, FunDecl.wfT, Bool.and_eq_true] at h ⊢
+  exact ⟨⟨h.1.1, Stmt.wfT_of_wfTN h.1.2 hr⟩, h.2⟩
+
+/-- A function's part of `Prog.wf_of_parts'`. -/
+def FunOk (t : NTree) (tab : Tab) (x : FnName × FunDecl) : Prop :=
+  FunDecl.wfTN t tab x.2 = true ∧ ∀ d ∈ Stmt.roms x.2.body, romOk tab d = true
+
+theorem forall_funOk {t : NTree} {tab : Tab} {l : Prog}
+    (h : ∀ x ∈ l, FunDecl.wfTN t tab x.2 = true) (hr : ∀ x ∈ l, ∀ d ∈ Stmt.roms x.2.body, romOk tab d = true) :
+    ∀ x ∈ l, FunOk t tab x := fun x hx => ⟨h x hx, hr x hx⟩
+
 /-- `Prog.wf`, kernel-fast (see the module doc). -/
 def Prog.wfFast (tab : Tab) (p : Prog) : Bool :=
   match progTree p with
@@ -175,10 +291,71 @@ theorem Prog.wf_of_wfFast {tab : Tab} {p : Prog} (h : Prog.wfFast tab p = true) 
   · rename_i t ht
     obtain ⟨hnd, hf⟩ := progTree_spec ht
     have hfd : ∀ fd, FunDecl.wfT t tab fd = FunDecl.wf p tab fd := fun fd => by
-      simp only [FunDecl.wfT, FunDecl.wf, Stmt.wfT_eq hf]
-    simp only [Prog.wf, hfd] at h ⊢
+      simp only [FunDecl.wfT, FunDecl.wf_eq, FunDecl.wfSpec, Stmt.wfT_eq hf]
+    simp only [Prog.wf_eq, Prog.wfSpec, hfd] at h ⊢
     simp only [Bool.and_eq_true, decide_eq_true_eq] at h ⊢
     exact ⟨⟨h.1, hnd⟩, h.2⟩
+  · simp at h
+
+/-! ## Per-function checks composed (`WFSplit.lean`'s `prog_wf`)
+
+`Prog.wf_of_parts`: the program check from the name tree (`progTree p = some t`, which reads only
+the names), one `FunDecl.wfT t tab fd` per function (each its own kernel check, so no kernel
+evaluation sees every body at once), and the table bound. -/
+
+theorem Prog.wf_of_parts {tab : Tab} {p : Prog} {t : NTree} (ht : progTree p = some t)
+    (hf : ∀ x ∈ p, FunDecl.wfT t tab x.2 = true)
+    (htab : 16 + 16 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng < maxOff) :
+    Prog.wf tab p = true := by
+  obtain ⟨hnd, hfind⟩ := progTree_spec ht
+  have hfd : ∀ fd, FunDecl.wfT t tab fd = FunDecl.wf p tab fd := fun fd => by
+    simp only [FunDecl.wfT, FunDecl.wf_eq, FunDecl.wfSpec, Stmt.wfT_eq hfind]
+  simp only [Prog.wf_eq, Prog.wfSpec, Bool.and_eq_true, List.all_eq_true, decide_eq_true_eq]
+  exact ⟨⟨fun x hx => (hfd x.2) ▸ hf x hx, hnd⟩, htab⟩
+
+theorem Prog.wf_of_parts' {tab : Tab} {p : Prog} {t : NTree} (ht : progTree p = some t)
+    (hf : ∀ x ∈ p, FunOk t tab x)
+    (htab : 16 + 16 * (tab.nb + tab.nw) + 8 * tab.romWords + 8 * tab.nxres + 8 * tab.ng < maxOff) :
+    Prog.wf tab p = true :=
+  Prog.wf_of_parts ht (fun x hx => FunDecl.wfT_of_wfTN (hf x hx).1 (hf x hx).2) htab
+
+theorem forall_mem_cons_of {α : Type} {P : α → Prop} {a : α} {l : List α} (h : P a)
+    (hl : ∀ x ∈ l, P x) : ∀ x ∈ a :: l, P x := by
+  intro x hx
+  rcases List.mem_cons.mp hx with rfl | hx
+  · exact h
+  · exact hl x hx
+
+theorem forall_of_all {α : Type} (f : α → Bool) (l : List α) (h : l.all f = true) :
+    ∀ x ∈ l, f x = true := by
+  simpa [List.all_eq_true] using h
+
+theorem forall_mem_append_of {α : Type} {P : α → Prop} {l₁ l₂ : List α} (h₁ : ∀ x ∈ l₁, P x)
+    (h₂ : ∀ x ∈ l₂, P x) : ∀ x ∈ l₁ ++ l₂, P x := by
+  intro x hx
+  rcases List.mem_append.mp hx with hx | hx
+  · exact h₁ x hx
+  · exact h₂ x hx
+
+theorem forall_mem_nil_of {α : Type} (P : α → Prop) : ∀ x ∈ ([] : List α), P x := by simp
+
+/-- `KnotWF`-style checks of some functions of a program (`fs`, often a prefix of `p`) without
+`Prog.wf`: each function's `FunDecl.wf` and the names' distinctness, from the fast check. -/
+def Prog.funsWfFast (tab : Tab) (p fs : Prog) : Bool :=
+  match progTree p with
+  | some t => fs.all fun (_, fd) => FunDecl.wfT t tab fd
+  | none => false
+
+theorem Prog.funsWf_of_fast {tab : Tab} {p fs : Prog} (h : Prog.funsWfFast tab p fs = true) :
+    (fs.all fun (_, fd) => FunDecl.wf p tab fd) = true ∧ decide (p.map (·.1)).Nodup = true := by
+  unfold Prog.funsWfFast at h
+  split at h
+  · rename_i t ht
+    obtain ⟨hnd, hf⟩ := progTree_spec ht
+    have hfd : ∀ fd, FunDecl.wfT t tab fd = FunDecl.wf p tab fd := fun fd => by
+      simp only [FunDecl.wfT, FunDecl.wf_eq, FunDecl.wfSpec, Stmt.wfT_eq hf]
+    simp only [hfd] at h
+    exact ⟨h, by simpa using hnd⟩
   · simp at h
 
 end L.Compiler

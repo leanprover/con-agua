@@ -73,7 +73,7 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     have hkw0 : kw = 0 := UInt64.toNat_inj.mp (by rw [hkwk, hK]; rfl)
     subst hkw0
     simp only [show ((0:Word) = 0 ∨ (0:Word) = 2) by decide, show ¬((0:Word) = 1) by decide, show ¬((0:Word) = 3) by decide, show ¬((0:Word) = 4) by decide, show ¬((0:Word) = 5) by decide, show ¬((0:Word) = 6) by decide, ↓reduceIte] at hW
-    simp only [armK] at hW
+    simp only [promoteArmK] at hW
     cases hcl : callW p n "pci_plain" [f, q] m with
     | none => rw [hcl] at hW; cases hW
     | some x =>
@@ -98,7 +98,7 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     have hkw0 : kw = 1 := UInt64.toNat_inj.mp (by rw [hkwk, hK]; rfl)
     subst hkw0
     simp only [show ¬((1:Word) = 0 ∨ (1:Word) = 2) by decide, show ((1:Word) = 1) by decide, show ¬((1:Word) = 3) by decide, show ¬((1:Word) = 4) by decide, show ¬((1:Word) = 5) by decide, show ¬((1:Word) = 6) by decide, ↓reduceIte] at hW
-    simp only [armK] at hW
+    simp only [promoteArmK] at hW
     cases hcl : callW p n "pci_defn" [f, q] m with
     | none => rw [hcl] at hW; cases hW
     | some x =>
@@ -135,7 +135,7 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     have hkw0 : kw = 2 := UInt64.toNat_inj.mp (by rw [hkwk, hK]; rfl)
     subst hkw0
     simp only [show ((2:Word) = 0 ∨ (2:Word) = 2) by decide, show ¬((2:Word) = 1) by decide, show ¬((2:Word) = 3) by decide, show ¬((2:Word) = 4) by decide, show ¬((2:Word) = 5) by decide, show ¬((2:Word) = 6) by decide, ↓reduceIte] at hW
-    simp only [armK] at hW
+    simp only [promoteArmK] at hW
     cases hcl : callW p n "pci_plain" [f, q] m with
     | none => rw [hcl] at hW; cases hW
     | some x =>
@@ -160,7 +160,7 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     have hkw0 : kw = 3 := UInt64.toNat_inj.mp (by rw [hkwk, hK]; rfl)
     subst hkw0
     simp only [show ¬((3:Word) = 0 ∨ (3:Word) = 2) by decide, show ¬((3:Word) = 1) by decide, show ((3:Word) = 3) by decide, show ¬((3:Word) = 4) by decide, show ¬((3:Word) = 5) by decide, show ¬((3:Word) = 6) by decide, ↓reduceIte] at hW
-    simp only [armK] at hW
+    simp only [promoteArmK] at hW
     cases hcl : callW p n "pci_ind" [f, q] m with
     | none => rw [hcl] at hW; cases hW
     | some x =>
@@ -186,7 +186,7 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     have hkw0 : kw = 4 := UInt64.toNat_inj.mp (by rw [hkwk, hK]; rfl)
     subst hkw0
     simp only [show ¬((4:Word) = 0 ∨ (4:Word) = 2) by decide, show ¬((4:Word) = 1) by decide, show ¬((4:Word) = 3) by decide, show ((4:Word) = 4) by decide, show ¬((4:Word) = 5) by decide, show ¬((4:Word) = 6) by decide, ↓reduceIte] at hW
-    simp only [armK] at hW
+    simp only [promoteArmK] at hW
     cases hcl : callW p n "pci_ctor" [f, q] m with
     | none => rw [hcl] at hW; cases hW
     | some x =>
@@ -213,7 +213,7 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     have hkw0 : kw = 5 := UInt64.toNat_inj.mp (by rw [hkwk, hK]; rfl)
     subst hkw0
     simp only [show ¬((5:Word) = 0 ∨ (5:Word) = 2) by decide, show ¬((5:Word) = 1) by decide, show ¬((5:Word) = 3) by decide, show ¬((5:Word) = 4) by decide, show ((5:Word) = 5) by decide, show ¬((5:Word) = 6) by decide, ↓reduceIte] at hW
-    simp only [armK] at hW
+    simp only [promoteArmK] at hW
     cases hcl : callW p n "pci_rec" [f, q] m with
     | none => rw [hcl] at hW; cases hW
     | some x =>
@@ -243,7 +243,7 @@ theorem ci_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : N
     have hkw0 : kw = 6 := UInt64.toNat_inj.mp (by rw [hkwk, hK]; rfl)
     subst hkw0
     simp only [show ¬((6:Word) = 0 ∨ (6:Word) = 2) by decide, show ¬((6:Word) = 1) by decide, show ¬((6:Word) = 3) by decide, show ¬((6:Word) = 4) by decide, show ¬((6:Word) = 5) by decide, show ((6:Word) = 6) by decide, ↓reduceIte] at hW
-    simp only [armK] at hW
+    simp only [promoteArmK] at hW
     cases hcl : callW p n "promote_proj_table" [f, q] m with
     | none => rw [hcl] at hW; cases hW
     | some x =>

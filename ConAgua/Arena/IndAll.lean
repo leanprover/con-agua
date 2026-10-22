@@ -64,6 +64,12 @@ import ConAgua.Arena.RecClassSpecL
 import ConAgua.Arena.RecClassSpecM
 import ConAgua.Arena.RecClassSpecN
 import ConAgua.Arena.RecClassSpecO
+import ConAgua.Arena.RecGenSpec9
+import ConAgua.Arena.RecGenSpec10
+import ConAgua.Arena.RecCheckSpec7
+import ConAgua.Arena.RecGenSpec11
+import ConAgua.Arena.RecCheckSpec8
+import ConAgua.Arena.RecGenSpec12
 import ConAgua.Arena.IndPosSpec2
 import ConAgua.Arena.IndPosSpec7
 import ConAgua.Arena.IndPos2SpecE

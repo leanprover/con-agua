@@ -24,7 +24,7 @@ local notation "V" => ConLeche.CheckMode.verified
 
 theorem decCVp_grow {m m' : Mem} (hg : IWGrow m m') {cq : Nat} (hcq : cq + 4 ≤ erTop m)
     (hsl : ∀ lo ll, nat? (erA m) (cq + 1) = some lo → nat? (erA m) (cq + 2) = some ll →
-      lo + ll ≤ erTop m) {cv : IConstantVal} (h : decCVp m cq = some cv) :
+      lo + ll ≤ erTop m ∨ ll = 0) {cv : IConstantVal} (h : decCVp m cq = some cv) :
     decCVp m' cq = some cv := by
   have e : ∀ i, i < erTop m → (erA m')[i]? = (erA m)[i]? := fun i hi => hg.2.2.2 i hi
   simp only [decCVp] at h ⊢
@@ -210,7 +210,7 @@ theorem ctsW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
   rw [h4, ctsK4_some] at h
   have hnat : ∀ j, j < 4 → nat? (erA m3) (cv.toNat + j) = nat? (erA m) (cv.toNat + j) := fun j hj => by
     simp only [nat?, erA]; rw [hg13.2.2.2 _ (by omega)]
-  obtain ⟨hS4, hg4, hq, htop4, hsl4, hdq⟩ := cvNew_stage h4 hS3 (decCVp_grow hg13 hcvb hsl hcv)
+  obtain ⟨hS4, hg4, hq, htop4, hsl4, hdq⟩ := cvNew_stage h4 hS3 (decCVp_grow hg13 hcvb (fun lo ll a b => .inl (hsl lo ll a b)) hcv)
     (by have := hg13.2.1; omega)
     (fun lo ll e1 e2 => by
       rw [show cv.toNat + 1 = cv.toNat + 1 from rfl, hnat 1 (by decide)] at e1
@@ -445,8 +445,8 @@ theorem ctW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k
   obtain ⟨r1, m1⟩ := x1
   rw [h1] at h
   obtain ⟨x, a1, hrun1, hS1, hg1, hdec⟩ := stripPis_spec dn vis fe n w hw32 m m1 a r1 h1 hS
-  have hcv1 := decCVp_grow hg1 hcvb hsl hcv
-  have hta1 := decCVp_grow hg1 hta4 hslTa hta
+  have hcv1 := decCVp_grow hg1 hcvb (fun lo ll a b => .inl (hsl lo ll a b)) hcv
+  have hta1 := decCVp_grow hg1 hta4 (fun lo ll a b => .inl (hslTa lo ll a b)) hta
   have hnat : ∀ q : Word, q.toNat + 4 ≤ erTop m → ∀ j, j < 4 →
       nat? (erA m1) (q.toNat + j) = nat? (erA m) (q.toNat + j) := fun q hq j hj => by
     simp only [nat?, erA]; rw [hg1.2.2.2 _ (by omega)]

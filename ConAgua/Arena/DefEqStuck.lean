@@ -111,8 +111,8 @@ def LazyDeltaStepH (p : Prog) : Prop :=
       (lazyDeltaStep (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b))
       decDSs s₀ a₀ dn vis fe M eb ResW3
 
-/-- `reduce_proj_core` refines `reduceProjCore` (lane `whnf`'s `reduceProjCore_refines'`, over its
-own stub callees; a hypothesis here). -/
+/-- `reduce_proj_core` refines `reduceProjCore` (lane `whnf`'s `reduceProjCore_refines'`; plugged in
+`DefEqKnot.lean`, `KnotCallees.reduceProjCore`). -/
 def ReduceProjCoreH (p : Prog) : Prop :=
   ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
   ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
