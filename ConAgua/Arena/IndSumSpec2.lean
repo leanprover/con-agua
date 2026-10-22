@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndInstallSpec
+import ConAgua.Arena.IndMaster
 
 /-!
 # Refinements of `IndSum`, second file (lane `indproofs`)
@@ -543,5 +544,86 @@ theorem idxArgsResolve_refines (p : Prog)
   obtain ⟨b, a', hrun, hpost⟩ := iarW_ok dn fe₀ n _ _ a₀ vis0 o l xs r hm hS hd hb ht
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst, hres]; exact hpost⟩
+
+end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+/-! ## `struct_proj_arg_p`: `t.j` -/
+
+/-- After `mk_proj`. -/
+def spaK2 : Option (Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (e, m2) => some ([e], m2)
+/-- After `intern_bvar`. -/
+def spaK (T j : Word) : Option (Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (b, m1) => spaK2 (mkProjW m1 T j b)
+/-- **The model of `struct_proj_arg_p`.** -/
+def spaW (m : Mem) (T j : Word) : Option (List Word × Mem) := spaK T j (binternW m 0)
+
+theorem spaK_some (T j b : Word) (m1 : Mem) : spaK T j (some (b, m1)) = spaK2 (mkProjW m1 T j b) := rfl
+theorem spaK2_some (e : Word) (m2 : Mem) : spaK2 (some (e, m2)) = some ([e], m2) := rfl
+grind_pattern [ind_grind] spaK_some => spaK T j (some (b, m1))
+grind_pattern [ind_grind] spaK2_some => spaK2 (some (e, m2))
+
+theorem spaW_spec (p : Prog) (hd : p.lookup "der_b" = some derB)
+    (hpf : p.lookup "bvar_find" = some bvarFind) (hpp : p.lookup "bvar_push" = some bvarPush)
+    (hib : p.lookup "intern_bvar" = some internBVar)
+    (hjf : p.lookup "proj_find" = some projFind) (hjp : p.lookup "proj_push" = some projPush)
+    (hji : p.lookup "intern_proj" = some internProj) (hmp : p.lookup "mk_proj" = some mkProj)
+    (hp : p.lookup "struct_proj_arg_p" = some structProjArgPL) (n : Nat) (s₀ : St) (T j : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_proj_arg_p" [T, j]
+    ⦃fun r s' => LocEq s' s₀ ∧ spaW s₀.mem T j = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, structProjArgPL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+        internBVar_spec p hpf hpp hib n, mkProj_spec p hd hjf hjp hji hmp n] <;>
+      finish [spaW]
+
+/-- **`struct_proj_arg_p` refines `structProjArgP`** under the stage relation. -/
+@[refines ConRon.Arena.structProjArgP]
+theorem structProjArgP_refines (p : Prog) (hd : p.lookup "der_b" = some derB)
+    (hpf : p.lookup "bvar_find" = some bvarFind) (hpp : p.lookup "bvar_push" = some bvarPush)
+    (hib : p.lookup "intern_bvar" = some internBVar)
+    (hjf : p.lookup "proj_find" = some projFind) (hjp : p.lookup "proj_push" = some projPush)
+    (hji : p.lookup "intern_proj" = some internProj) (hmp : p.lookup "mk_proj" = some mkProj)
+    (hp : p.lookup "struct_proj_arg_p" = some structProjArgPL) (n : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (T j : Word)
+    (hS : StageR dn vis fe s₀.mem a₀) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_proj_arg_p" [T, j]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (structProjArgP (decI T) j.toNat) a₀ ∧
+      StageR dn vis fe s'.mem (AM.st (structProjArgP (decI T) j.toNat) a₀) ∧ IWGrow s₀.mem s'.mem ∧
+      AM.res (structProjArgP (decI T) j.toNat) a₀ = decE (r.headD 0); ⊤⦄ := by
+  refine triple_post (spaW_spec p hd hpf hpp hib hjf hjp hji hmp hp n s₀ T j) ?_
+  rintro r s' ⟨hl, hm⟩
+  simp only [spaW] at hm
+  cases h1 : binternW s₀.mem 0 with
+  | none => rw [h1] at hm; cases hm
+  | some x =>
+  obtain ⟨b, m1⟩ := x
+  rw [h1, spaK_some] at hm
+  cases h2 : mkProjW m1 T j b with
+  | none => rw [h2] at hm; cases hm
+  | some y =>
+  obtain ⟨e, m2⟩ := y
+  rw [h2, spaK2_some] at hm
+  simp only [Option.some.injEq, Prod.mk.injEq] at hm
+  obtain ⟨rfl, rfl⟩ := hm
+  obtain ⟨a1, hr1, hS1, hg1⟩ := internBVar_stage hS 0 h1
+  obtain ⟨a2, hr2, hS2, hg2⟩ := mkProj_stage hS1 T j b h2
+  have hrun : (structProjArgP (decI T) j.toNat).run a₀ = .ok (decE e, a2) := by
+    simp only [structProjArgP, StateT.run_bind]
+    rw [show (0 : Word).toNat = 0 from rfl] at hr1
+    rw [hr1]
+    exact hr2
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hst]; exact hS2, hg1.trans hg2, by rw [hres]; rfl⟩
 
 end L.Ind
