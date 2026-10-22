@@ -8006,6 +8006,25 @@ child dangled when it was interned (no `StoreWF` needed).
   through the ROM readers now rest on the hypothesis `RomRefs p` (a program fact, `romRefs_of`,
   `sorry` until the helper lands) instead of `sorry`'d stub specs.
 
+### Landing 13: helper `install`; the lane's close
+* Helper `install` (4.75 h): whole `@[refines]` for `checkBlockTele(s)`, `checkBlockAgree`,
+  `consBlockCtors` (no new stub), `blockCapsAt`, `consBlockInds`, `checkBlockInds` (through the new
+  `lvZeroCaps_spec` contract: `lv_zero_caps(l)` now *returns* the three `PropWhen` words, the caller
+  writes the record), `checkBlockIdxSorts`, `checkAbsCtorSorts(All)`, `checkBlockRec`,
+  `checkBlockCtors` (through "pending" contracts for `check_struct_field_sorts_i`, `gen_rec_check`,
+  `check_sum_ctors` — **follow-up**: the first and third are proven since landing 12; replace those
+  two contracts by the real refinements). **Bugs** (L, fixed): `check_block_agree` opened member 0's
+  telescope once where the twin re-opens per member; `block_caps_at` computed `ruleK` from the raw
+  `isProp` word (wrong for words other than 0/1); `block_caps_at` wrote its record across calls
+  below the record pool's top (now computes all fields, then `ind_info_rec` writes the record).
+  Open: `checkBlockPositivity` (needs `nestRoot_refines`' preconditions `UCtx`, `CssAt`, `NSB`,
+  `PosMR`, fuel), `checkBlockTables`, `checkBlockPass`, `checkBlockTail`, `checkBlock`,
+  `blockLargeElimAllowed`. ~4.3k proof lines for ~230 L lines.
+* `lv_zero_caps`: lane defeq2's `CapsNeverZeroCore.lean` proves it under `CoreS`; using it for the
+  stage needs the `StageR`→`CoreS` bridge (landing 1, "tried and dropped") — the next structural
+  step for this lane's successor, together with `lvl_eq_c`, `lv_leq_top` and the whnf adapters.
+* Census: phase 8 **79 proven, 108 sorry, 30 written, 6 todo** (lane start 58 / 38 / 119 / 8);
+  totals 767 proven / 165 sorry / 149 written of 1352 (lane start 411 / 90).
 ### For the coordinator and lane `indproofs3`: `StageR` is not changed by `decls4`
 
 `decls4` did not put `StateOK` into `StageR` and will not: it is a fact about the twin state alone, kept

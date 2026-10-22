@@ -59,6 +59,66 @@ def phases_svg():
     return "\n".join(o) + "\n"
 
 
+def loc_series(commits):
+    """Lines of L code and of proofs at each census commit (scripts/loc.py), cached by commit."""
+    cache_f = dash / "loc-cache.json"
+    try:
+        cache = json.loads(cache_f.read_text())
+    except Exception:
+        cache = {}
+    todo = [c for c in commits if c not in cache]
+    if todo:
+        r = subprocess.run([sys.executable, str(root / "scripts" / "loc.py"), *todo], capture_output=True, text=True)
+        for line in r.stdout.splitlines():
+            c, l, p = line.split(",")
+            cache[c] = [int(l), int(p)]
+        cache_f.write_text(json.dumps(cache))
+    return [cache.get(c, [0, 0]) for c in commits]
+
+
+def trend_svg(pts):
+    """Proven shares (left axis, %) and lines of L code / proofs (right axis, thousands) per census run."""
+    W, H, ml, mr, mt, mb = 900, 360, 50, 70, 20, 70
+    n = len(pts)
+    xs = [ml + (W - ml - mr) * (i / max(1, n - 1)) for i in range(n)]
+    lean = [100 * int(p["lean_proven"]) / int(p["lean_all"]) for p in pts]
+    cnt = [100 * int(p["proven"]) / int(p["targets"]) for p in pts]
+    wr = [100 * (int(p["lean_proven"]) + int(p["lean_sorry"]) + int(p["lean_written"])) / int(p["lean_all"]) for p in pts]
+    loc = loc_series([p["commit"] for p in pts])
+    lk = [a / 1000 for a, _ in loc]; pk = [b / 1000 for _, b in loc]
+    ytop = 100
+    ktop = max(pk + lk + [1])
+    step = 50 if ktop > 200 else 25 if ktop > 100 else 10
+    ktop = (int(ktop / step) + 1) * step
+    yl = lambda v: mt + (H - mt - mb) * (1 - v / ytop)
+    yr = lambda v: mt + (H - mt - mb) * (1 - v / ktop)
+    o = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" font-family="Helvetica, Arial, sans-serif" font-size="12">',
+         f'<rect width="{W}" height="{H}" fill="#ffffff"/>']
+    for t in range(0, ytop + 1, 10):
+        o.append(f'<line x1="{ml}" x2="{W - mr}" y1="{yl(t):.1f}" y2="{yl(t):.1f}" stroke="#eeeeee"/>')
+        o.append(f'<text x="{ml - 6}" y="{yl(t) + 4:.1f}" text-anchor="end" fill="#666">{t}%</text>')
+    for t in range(0, ktop + 1, step):
+        o.append(f'<text x="{W - mr + 6}" y="{yr(t) + 4:.1f}" fill="#666">{t}k</text>')
+    for i, p in enumerate(pts):
+        if n <= 12 or i % max(1, n // 10) == 0 or i == n - 1:
+            o.append(f'<text x="{xs[i]:.1f}" y="{H - mb + 16}" text-anchor="end" fill="#666" transform="rotate(-35 {xs[i]:.1f} {H - mb + 16})">{p["date"][5:16]}</text>')
+    def line(vals, y, color, dash=""):
+        d = " ".join(f"{'M' if i == 0 else 'L'}{xs[i]:.1f},{y(v):.1f}" for i, v in enumerate(vals))
+        o.append(f'<path d="{d}" fill="none" stroke="{color}" stroke-width="2" stroke-linejoin="round" {dash}/>')
+    series = [("proven, Lean lines", lean, yl, "#2e7d5b", ""), ("proven, targets", cnt, yl, "#7aa6d6", ""),
+              ("L written, Lean lines", wr, yl, "#d9a520", ""),
+              ("proof lines (k)", pk, yr, "#8a5cb8", 'stroke-dasharray="6 4"'), ("L code lines (k)", lk, yr, "#c0504d", 'stroke-dasharray="6 4"')]
+    for name, vals, y, c, dash in series:
+        line(vals, y, c, dash)
+    lx = ml
+    for name, vals, y, c, dash in series:
+        o.append(f'<line x1="{lx}" x2="{lx + 22}" y1="{H - 12}" y2="{H - 12}" stroke="{c}" stroke-width="2" {dash}/>'
+                 f'<text x="{lx + 27}" y="{H - 8}" fill="#333">{name}</text>')
+        lx += 170
+    o.append("</svg>")
+    return "\n".join(o) + "\n"
+
+
 def bar(frac, width=20):
     n = round(frac * width)
     return "█" * n + "░" * (width - n)
@@ -142,16 +202,9 @@ cnt = [round(100 * int(p["proven"]) / int(p["targets"]), 1) for p in pts]
 wr = [round(100 * (int(p["lean_proven"]) + int(p["lean_sorry"]) + int(p["lean_written"])) / int(p["lean_all"]), 1) for p in pts]
 top = max(wr + lean + cnt + [10])
 w("## Proven over time\n")
-w("Share of the twin proven by Lean lines (first line), by target count (second), and with L code written (third), one point per census run.\n")
-w("```mermaid")
-w("xychart-beta")
-w('    title "Proven share (%) per census run"')
-w("    x-axis [" + ", ".join(f'"{l}"' for l in labels) + "]")
-w(f'    y-axis "%" 0 --> {min(100, int(top) + 5)}')
-w("    line [" + ", ".join(map(str, lean)) + "]")
-w("    line [" + ", ".join(map(str, cnt)) + "]")
-w("    line [" + ", ".join(map(str, wr)) + "]")
-w("```\n")
+w("Left axis: share of the twin proven by Lean lines, by target count, and with L code written. "
+  "Right axis: lines of L code and of proofs in `ConAgua/` (thousands), so infrastructure work shows too. One point per census run.\n")
+w(f"![Proven share and lines of code per census run]({raw_url('trend.svg')})\n")
 
 # phases
 w("## By phase\n")
@@ -227,6 +280,7 @@ dev_table("Deliberate: by design", "L differs from the twin on purpose and stays
 
 out.write_text("\n".join(L) + "\n")
 (dash / "phases.svg").write_text(phases_svg())
+(dash / "trend.svg").write_text(trend_svg(progress[-40:]))
 print("wrote", out)
 
 if "--publish" in sys.argv:
@@ -234,7 +288,7 @@ if "--publish" in sys.argv:
     if gf.exists():
         gid = gf.read_text().strip()
         subprocess.run(["gh", "gist", "edit", gid, "-f", out.name, str(out)], check=True)
-        for extra in ("phases.svg", "progress.csv"):  # the chart, and the census history (durable copy)
+        for extra in ("phases.svg", "trend.svg", "progress.csv"):  # the chart, and the census history (durable copy)
             r = subprocess.run(["gh", "gist", "edit", gid, "-f", extra, str(dash / extra)])
             if r.returncode != 0:  # first time: add the file
                 subprocess.run(["gh", "gist", "edit", gid, "-a", str(dash / extra)], check=True)
