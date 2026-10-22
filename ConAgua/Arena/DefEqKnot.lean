@@ -3,6 +3,7 @@ import ConAgua.Arena.WhnfIotaRefine4
 import ConAgua.Arena.WhnfDeltaRefine4
 import ConAgua.Arena.WhnfCoreLoop
 import ConAgua.Arena.CoreWalks
+import ConAgua.Arena.WhnfM2CRefine
 
 /-!
 # The knot tied (lane `defeq`)
