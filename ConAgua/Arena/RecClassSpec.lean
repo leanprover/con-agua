@@ -1418,4 +1418,111 @@ theorem motVar_spec (p : Prog) (hpin : p.lookup "pin_word" = some pinWordL)
       classReadMotiveSlot_spec p hms n, slotVar_spec p hpin hsf hsp his hff hfp hif hsv n] <;>
     finish (gen := 20) [motVarW]
 
+
+theorem motIdx_lt : ∀ (sls : List ClassSlot) (j i : Nat), i ∈ motIdx j sls → j ≤ i ∧ i < j + sls.length := by
+  intro sls
+  induction sls with
+  | nil => intro j i h; simp [motIdx] at h
+  | cons sl sls ih =>
+    intro j i h
+    cases sl with
+    | motive k =>
+      simp only [motIdx, List.mem_cons] at h
+      rcases h with rfl | h
+      · simp
+      · have := ih (j + 1) i h; simp; omega
+    | minor c C ihs =>
+      simp only [motIdx] at h
+      have := ih (j + 1) i h; simp; omega
+
+theorem motVarW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat)
+    (m m' : Mem) (a : AState) (g c : Word) (G : ClassGen) (r : List Word) (hS : StageR dn vis fe m a)
+    (hg : iwN m g.toNat = some G.nP) (hgt : g.toNat < iwTop m)
+    (hsl : decAt m (decPL m (decCS m)) (g.toNat + 7) = some G.slots)
+    (hns : G.nP + G.slots.length < 2 ^ 64) (hgb : g.toNat + 9 < 2 ^ 64)
+    (hsz : (m.arr64 IW).size + 5 < 2 ^ 64) (h : motVarW n m g c = some (r, m')) :
+    ∃ x a', (ConRon.Arena.ClassGen.motVar G c.toNat).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
+      IWGrow m m' ∧ (r.headD 0).toNat < 2 ^ 32 ∧ decE (r.headD 0) = x := by
+  obtain ⟨o, l, ho, hl, hdec⟩ := decAt_some hsl
+  have ho' := iwN_off (k := 7) ho (by omega)
+  have hl' := iwN_off (k := 8) (by simpa [Nat.add_assoc] using hl) (by omega)
+  have e : UInt64.ofNat g.toNat = g := UInt64.ofNat_toNat
+  rw [e] at ho' hl'
+  simp only [show UInt64.ofNat 7 = 7 from rfl, show UInt64.ofNat 8 = 8 from rfl] at ho' hl'
+  simp only [motVarW, ho'.2, hl'.2] at h
+  have hob : o < 2 ^ 64 := (iwN_rdW ho (by omega)).2
+  have hlb : l < 2 ^ 64 := (iwN_rdW (by simpa [Nat.add_assoc] using hl) (by omega)).2
+  have hol : o + l < 2 ^ 64 := by
+    rcases decPL_le hdec with h0 | h0
+    · omega
+    · omega
+  cases hms : msW n m (UInt64.ofNat o) (UInt64.ofNat l) c with
+  | none => rw [hms] at h; simp [mvK] at h
+  | some r1 =>
+    rw [hms] at h
+    have g1 := msW_ok n m _ _ c r1 G.slots hms (by simpa [UInt64.toNat_ofNat_of_lt' hob, UInt64.toNat_ofNat_of_lt' hlb] using hdec)
+      (by simp [UInt64.toNat_ofNat_of_lt' hob, UInt64.toNat_ofNat_of_lt' hlb]; exact hol)
+    have hmot : ConRon.Arena.ClassRead.motiveSlot G.slots c.toNat = (motIdx 0 G.slots)[c.toNat]? := by
+      have := motIdx_eq 0 G.slots
+      simp only [Nat.zero_add, List.map_id'] at this
+      simp only [ConRon.Arena.ClassRead.motiveSlot]
+      erw [this]
+    obtain ⟨sv, hsv1, hsv2⟩ : ∃ sv : Word, sv.toNat = ((motIdx 0 G.slots)[c.toNat]?).getD 0 ∧
+        (if r1.headD 0 = 0 then 0 else r1.tail.headD 0) = sv := by
+      rw [g1]
+      cases ho2 : (motIdx 0 G.slots)[c.toNat]? with
+      | none => exact ⟨0, rfl, by simp [msRes]⟩
+      | some i =>
+        have hi : i ∈ motIdx 0 G.slots := List.mem_of_getElem? ho2
+        have := (motIdx_lt G.slots 0 i hi).2
+        exact ⟨UInt64.ofNat i, by simp; omega, by simp [msRes]⟩
+    simp only [mvK, hsv2] at h
+    cases hsw : slotVarW m g sv with
+    | none => rw [hsw] at h; simp [mvK2] at h
+    | some r2m =>
+      obtain ⟨r2, m2⟩ := r2m
+      rw [hsw] at h
+      simp only [mvK2, Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      have hsvb : G.nP + sv.toNat < 2 ^ 64 := by
+        rw [hsv1]
+        cases ho2 : (motIdx 0 G.slots)[c.toNat]? with
+        | none => simp; omega
+        | some i =>
+          have hi : i ∈ motIdx 0 G.slots := List.mem_of_getElem? ho2
+          have := (motIdx_lt G.slots 0 i hi).2
+          simp; omega
+      obtain ⟨x, a', hrun, hS', hgr, h1, h2⟩ := slotVarW_ok dn vis fe _ _ a g sv G r2 hS hg hgt hsvb hsw
+      refine ⟨x, a', ?_, hS', hgr, by simpa using h1, by simpa using h2⟩
+      simp only [ConRon.Arena.ClassGen.motVar, hmot, ← hsv1]
+      exact hrun
+
+
+/-- **`class_gen_mot_var` refines `ClassGen.motVar`**. -/
+@[refines ConRon.Arena.ClassGen.motVar]
+theorem classGenMotVar_refines (p : Prog) (hpin : p.lookup "pin_word" = some pinWordL)
+    (hsf : p.lookup "sort_find" = some sortFind) (hsp : p.lookup "sort_push" = some sortPush)
+    (his : p.lookup "intern_sort" = some internSort)
+    (hff : p.lookup "fvar_find" = some fvarFind) (hfp : p.lookup "fvar_push" = some fvarPush)
+    (hif : p.lookup "intern_fvar" = some internFVar)
+    (hsv : p.lookup "class_gen_slot_var" = some classGenSlotVar)
+    (hms : p.lookup "class_read_motive_slot" = some classReadMotiveSlot)
+    (hp : p.lookup "class_gen_mot_var" = some classGenMotVar) (n : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (g c : Word) (G : ClassGen)
+    (hS : StageR dn vis fe s₀.mem a₀) (hg : iwN s₀.mem g.toNat = some G.nP)
+    (hgt : g.toNat < iwTop s₀.mem)
+    (hsl : decAt s₀.mem (decPL s₀.mem (decCS s₀.mem)) (g.toNat + 7) = some G.slots)
+    (hns : G.nP + G.slots.length < 2 ^ 64) (hgb : g.toNat + 9 < 2 ^ 64)
+    (hsz : (s₀.mem.arr64 IW).size + 5 < 2 ^ 64) :
+    ⦃fun s_ => s_ = s₀⦄ invoke p (exec p (n + 1)) "class_gen_mot_var" [g, c]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.ClassGen.motVar G c.toNat) a₀ ∧
+      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.ClassGen.motVar G c.toNat) a₀) ∧
+      IWGrow s₀.mem s'.mem ∧ (r.headD 0).toNat < 2 ^ 32 ∧
+      decE (r.headD 0) = AM.res (ConRon.Arena.ClassGen.motVar G c.toNat) a₀; ⊤⦄ := by
+  refine triple_post (motVar_spec p hpin hsf hsp his hff hfp hif hsv hms hp n s₀ g c) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨x, a', hrun, hS', hgr, h1, h2⟩ := motVarW_ok dn vis fe n _ _ a₀ g c G r hS hg hgt hsl hns hgb hsz hm
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok (ConRon.Arena.ClassGen.motVar G c.toNat) a₀ a' x hrun
+  exact ⟨hl, hok, by rw [hst]; exact hS', hgr, h1, by rw [hres]; exact h2⟩
+
 end L.Ind
