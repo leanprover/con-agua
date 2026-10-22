@@ -13,7 +13,7 @@ the twin's only where the handles L compares do read back. Which handles those a
 
 * a `sort` node's level (`quick_sort`, `proof_irrel`, `PropRead`'s `residualPW`);
 * a `const` node's level list (`spine_cmp`, `struct_eta_cert_tail`, `PropRead`'s `substPWAt`);
-* the pinned zero level (`proof_irrel`, `infer_proj`);
+* the pinned zero level (`proof_irrel`, `infer_proj`) and empty level list (`constE`);
 * the names in the twin's name readback cache (`readNC`: `readNameM` answers a hit unchecked;
   `field_sort_zero`, `PropRead`);
 * a stored constant's level-parameter names (`PropRead`'s `substPWAt`);
@@ -42,6 +42,8 @@ structure StoreDen (m : Mem) (a : AState) (fe : IFEnv) : Prop where
   constLs : ∀ (h : EIdx) (c : NIdx) (us : LsIdx), a.store.view h = some (.const c us) →
     ∃ ls, denoteLs a.store.lss us = some ls
   zero : ∃ l, denoteL a.store.ls a.pins.zeroLevel = some l
+  /-- The pinned empty level list (`constE`'s). -/
+  emptyLs : ∃ ls, denoteLs a.store.lss a.pins.emptyLevels = some ls
   readN : ∀ (h : NIdx) (x : ConLeche.Name), a.caches.readNC[h]? = some x →
     denoteN a.store.ns h = some x
   /-- A stored constant's level-parameter names read back (`PropRead`'s `substPWAt`). -/
@@ -161,6 +163,7 @@ theorem scTabs_eq {m m' : Mem} {a a' : AState} (hR : ArenaR m a) (hR' : ArenaR m
 caches only readbacks of names, and creates no new `sort`/`const` views. -/
 theorem StoreDen.mono {m m' : Mem} {a a' : AState} {fe : IFEnv} (h : StoreDen m a fe)
     (hx : LsExt a.store.lss a'.store.lss) (hz : a'.pins.zeroLevel = a.pins.zeroLevel)
+    (hzs : a'.pins.emptyLevels = a.pins.emptyLevels)
     (hr : ∀ (k : NIdx) (x : ConLeche.Name), a'.caches.readNC[k]? = some x →
       a.caches.readNC[k]? = some x ∨ denoteN a'.store.ns k = some x)
     (he : m'.arr64 EREC = m.arr64 EREC)
@@ -178,11 +181,12 @@ theorem StoreDen.mono {m m' : Mem} {a a' : AState} {fe : IFEnv} (h : StoreDen m 
         Option.pure_def, Option.some.injEq] at h ⊢
       obtain ⟨y, hy, ys, hys, rfl⟩ := h
       exact ⟨y, hN _ _ hy, ys, ih _ hys, rfl⟩
-  refine ⟨fun x u hv => ?_, fun x c us hv => ?_, ?_, fun k x hk => ?_,
+  refine ⟨fun x u hv => ?_, fun x c us hv => ?_, ?_, ?_, fun k x hk => ?_,
     fun c ci cv hf ht hcv => ?_, fun q tbl ht => ?_⟩
   · obtain ⟨l, hl⟩ := h.sort x u (hs x u hv); exact ⟨l, hx.ls.lvl _ _ hl⟩
   · obtain ⟨l, hl⟩ := h.constLs x c us (hc x c us hv); exact ⟨l, hx.lst _ _ hl⟩
   · obtain ⟨l, hl⟩ := h.zero; exact ⟨l, by rw [hz]; exact hx.ls.lvl _ _ hl⟩
+  · obtain ⟨l, hl⟩ := h.emptyLs; exact ⟨l, by rw [hzs]; exact hx.lst _ _ hl⟩
   · rcases hr k x hk with h' | h'
     · exact hN _ _ (h.readN k x h')
     · exact h'
@@ -204,20 +208,21 @@ theorem StoreDen.of_arena {m m' : Mem} {a a' : AState} {fe : IFEnv} {A : List Ar
     (hf.1 CREC hscA.2 (by decide)) (fun x hx => hf.2.1 x (by
       rcases hx with rfl | rfl | rfl | rfl | rfl <;>
         first | exact hscC.1 | exact hscC.2.1 | exact hscC.2.2.1 | exact hscC.2.2.2.1 | exact hscC.2.2.2.2))
-  exact h.mono (by rw [hl]; exact LsExt.refl _) (by rw [hp]) (fun _ _ hk => .inl (hc ▸ hk))
+  exact h.mono (by rw [hl]; exact LsExt.refl _) (by rw [hp]) (by rw [hp]) (fun _ _ hk => .inl (hc ▸ hk))
     (hf.1 EREC heA (by decide)) (fun _ _ hv => view_sort_keep hsc hv)
     (fun _ _ _ hv => view_const_keep hsc hv)
 
 /-- `StoreDen` across a memory step that keeps `EREC` (the twin unchanged). -/
 theorem StoreDen.frameE {m m' : Mem} {a : AState} {fe : IFEnv} (h : StoreDen m a fe)
     (he : m'.arr64 EREC = m.arr64 EREC) : StoreDen m' a fe :=
-  h.mono (LsExt.refl _) rfl (fun _ _ hk => .inl hk) he (fun _ _ hv => hv) (fun _ _ _ hv => hv)
+  h.mono (LsExt.refl _) rfl rfl (fun _ _ hk => .inl hk) he (fun _ _ hv => hv) (fun _ _ _ hv => hv)
 
 /-- `StoreDen` across a step that changes only the twin's caches other than `readNC`. -/
 theorem StoreDen.caches {m : Mem} {a a' : AState} {fe : IFEnv} (h : StoreDen m a fe)
     (hst : a'.store = a.store) (hp : a'.pins = a.pins) (hn : a'.caches.readNC = a.caches.readNC) :
     StoreDen m a' fe :=
-  h.mono (by rw [hst]; exact LsExt.refl _) (by rw [hp]) (fun _ _ hk => .inl (hn ▸ hk)) rfl
+  h.mono (by rw [hst]; exact LsExt.refl _) (by rw [hp]) (by rw [hp]) (fun _ _ hk => .inl (hn ▸ hk))
+    rfl
     (fun _ _ hv => hst ▸ hv) (fun _ _ _ hv => hst ▸ hv)
 
 end L.Arena

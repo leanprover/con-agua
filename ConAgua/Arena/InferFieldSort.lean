@@ -296,7 +296,7 @@ theorem fszW_ok {dn : NIdx → Option Name} {m m' : Mem} {a : AState} {vis : Wor
   exact ⟨⟨ArenaR.caches_irrel _ hS₁.arena.1, DerR.of_store _ _ _ hS₁.arena.2 rfl⟩,
     ((hS₁.core.readNC X).readLsC Y).readLC Z, hS₁.pins, hS₁.env, hl₃, hls₃, hS₁.nwf, hS₁.erec,
     hS₁.spn, hS₁.memos, hS₁.bstk,
-    hS₁.den.mono (LsExt.refl _) rfl (fun k x hk => .inr (hnX k x hk)) rfl (fun _ _ hv => hv)
+    hS₁.den.mono (LsExt.refl _) rfl rfl (fun k x hk => .inr (hnX k x hk)) rfl (fun _ _ hv => hv)
       (fun _ _ _ hv => hv)⟩
 
 /-- **`field_sort_zero` refines the twin's propositional-structure test** (`FieldSortZeroOK`). -/
