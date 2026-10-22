@@ -17,8 +17,9 @@ opaque, `5` quotient) to `check_decl_axiom`, `check_decl_defn`, `check_decl_thm`
 `check_decl_opaque`, `check_decl_quot` (each `(i, vis)` → `vis'`).
 
 * Every arm builds the record's constant in `EREC` first (`erec_ci`, `DeclStep.lean`): the value
-  `cv` is at `p + 1`, the value at `p + 5`, a definition's hint at `p + 6`, `p + 7`. A value check
-  pushes a fresh record of its own kind (`ci_new`).
+  `cv` is at `p + 1`, the value at `p + 5`, a definition's hint at `p + 6`, `p + 7`; its kind is
+  the one the twin pushes (`defnInfo`, `thmInfo`, `axiomInfo` for an opaque), so a value check
+  pushes that record itself.
 * A quotient record's kind is `DECL` word 6 (`quotW`: `1` type, `2` ctor, `3` lift, else ind); L
   passes its slot (`QuotKind.slot`: `0`‥`3`, `4` sound) as the `QuotKind` word.
 * The con-leche values (`eqA`, `iffA`, …, the basis blocks, the reduce pins) come from the ROM
@@ -34,98 +35,72 @@ open L.Front (DECL)
 
 /-! ## The constant check -/
 
-/-- `ci_new(k, q)`: a fresh 8-word constant record of kind `k` with the constant value `q` copied
-inline (the value and hint words are the caller's). -/
--- con-ron: none — a constant record in `EREC` (`fe.push (.defnInfo cv …)` builds the value)
-def ciNew : FunDecl := lfn (k, q) locals (r) {
-  r := call erec_alloc(8);
-  EREC.u64[r] := k;
-  EREC.u64[r + 1] := EREC.u64[q];
-  EREC.u64[r + 2] := EREC.u64[q + 1];
-  EREC.u64[r + 3] := EREC.u64[q + 2];
-  EREC.u64[r + 4] := EREC.u64[q + 3];
-  return r
-}
-
-/-- `check_constant_val(vis, q)`: `checkConstantVal fe cv` (`q` the constant value): the fresh
-name, the reserved names, the projection shape, the universe parameters, the type's guards, then
-the type's sort. -/
+/-- `check_constant_val(vis, q)`: `checkConstantVal fe cv` (`q` the constant value): the header's
+checks (`install_header`: the fresh name, the reserved names, the projection shape, the universe
+parameters, the type's guards), then the type's sort. -/
 -- con-ron: ConRon/Arena/CheckerBase.lean:335-363 ConRon.Arena.checkConstantVal
 @[l_impl ConRon.Arena.checkConstantVal]
-def checkConstantValL : FunDecl :=
-    lfn (vis, q) locals (n, t, f, r, c, s, o, l, d, b, h, a, st, u) {
-  n := EREC.u64[q];
+def checkConstantValL : FunDecl := lfn (vis, q) locals (t, z, st, u) {
   t := EREC.u64[q + 3];
-  (f, r) := call env_find(n, vis);
-  if f != 0 { abort };
-  c := call reserved_contains(n);
-  if c != 0 { abort };
-  s := call is_proj_fn_shape(n);
-  if s != 0 { abort };
-  (o, l) := call cv_lps(q);
-  d := call sl_nodup(o, l);
-  if d == 0 { abort };
-  b := call loose_bvars_bounded_fast(4000000000, 0, t);
-  if b == 0 { abort };
-  h := call has_fvar_fast(4000000000, t);
-  if h != 0 { abort };
-  a := call all_level_params_defined(o, l, t);
-  if a == 0 { abort };
-  c := call consts_resolve_ffast(vis, t);
-  if c == 0 { abort };
+  z := call install_header(vis, q);
   st := call infer_type_core(vis, 0, t);
   u := call ensure_sort_core(vis, 0, st);
   return 0
 }
 
-/-! ## The three value kinds -/
+/-! ## The three value kinds
 
-/-- `check_defn_val(vis, q, v, h)`: `checkDefnVal fe cv v hint` (`h` an `EREC` pointer to the hint's
-two words): the value's guards, its type against the declared one, the push. -/
+Each takes the arm's constant record `p` (built by `erec_ci` with the kind the twin pushes:
+`defnInfo cv value hint`, `thmInfo cv`, `axiomInfo cv`; the value at `p + 5` either way) and
+pushes that record itself. -/
+
+/-- `check_defn_val(vis, p)`: `checkDefnVal fe cv v hint`: the value's guards, its type against the
+declared one, the push. -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:711-721 ConRon.Arena.checkDefnVal
 @[l_impl ConRon.Arena.checkDefnVal]
-def checkDefnValL : FunDecl := lfn (vis, q, v, h) locals (z, vt, d, r, w) {
-  z := call install_value_guards(vis, q, v);
+def checkDefnValL : FunDecl := lfn (vis, p) locals (v, t, z, vt, d, w) {
+  v := EREC.u64[p + 5];
+  t := EREC.u64[p + 4];
+  z := call install_value_guards(vis, p + 1, v);
   vt := call infer_type_core(vis, 0, v);
-  d := call is_def_eq_core(vis, 0, vt, EREC.u64[q + 3]);
+  d := call is_def_eq_core(vis, 0, vt, t);
   if d == 0 { abort };
-  r := call ci_new(1, q);
-  EREC.u64[r + 5] := v;
-  EREC.u64[r + 6] := EREC.u64[h];
-  EREC.u64[r + 7] := EREC.u64[h + 1];
-  w := call env_push(vis, r);
+  w := call env_push(vis, p);
   return w
 }
 
-/-- `check_thm_val(vis, q, v)`: `checkThmVal`: the type a proposition, the value's guards and type;
+/-- `check_thm_val(vis, p)`: `checkThmVal`: the type a proposition, the value's guards and type;
 stored by its statement. -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:723-739 ConRon.Arena.checkThmVal
 @[l_impl ConRon.Arena.checkThmVal]
-def checkThmValL : FunDecl := lfn (vis, q, v) locals (st, u, zr, e, z, vt, d, r, w) {
-  st := call infer_type_core(vis, 0, EREC.u64[q + 3]);
+def checkThmValL : FunDecl := lfn (vis, p) locals (v, t, st, u, zr, e, z, vt, d, w) {
+  v := EREC.u64[p + 5];
+  t := EREC.u64[p + 4];
+  st := call infer_type_core(vis, 0, t);
   u := call ensure_sort_core(vis, 0, st);
   zr := call pin_word(53);
   e := call lvl_eq_fueled(u, zr);
   if e == 0 { abort };
-  z := call install_value_guards(vis, q, v);
+  z := call install_value_guards(vis, p + 1, v);
   vt := call infer_type_core(vis, 0, v);
-  d := call is_def_eq_core(vis, 0, vt, EREC.u64[q + 3]);
+  d := call is_def_eq_core(vis, 0, vt, t);
   if d == 0 { abort };
-  r := call ci_new(2, q);
-  w := call env_push(vis, r);
+  w := call env_push(vis, p);
   return w
 }
 
-/-- `check_opaque_val(vis, q, v)`: `checkOpaqueVal`: stored as an `axiomInfo`. -/
+/-- `check_opaque_val(vis, p)`: `checkOpaqueVal`: `check_defn_val`'s text (the record `p` is an
+`axiomInfo`). -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:741-752 ConRon.Arena.checkOpaqueVal
 @[l_impl ConRon.Arena.checkOpaqueVal]
-def checkOpaqueValL : FunDecl := lfn (vis, q, v) locals (z, vt, d, r, w) {
-  z := call install_value_guards(vis, q, v);
+def checkOpaqueValL : FunDecl := lfn (vis, p) locals (v, t, z, vt, d, w) {
+  v := EREC.u64[p + 5];
+  t := EREC.u64[p + 4];
+  z := call install_value_guards(vis, p + 1, v);
   vt := call infer_type_core(vis, 0, v);
-  d := call is_def_eq_core(vis, 0, vt, EREC.u64[q + 3]);
+  d := call is_def_eq_core(vis, 0, vt, t);
   if d == 0 { abort };
-  r := call ci_new(0, q);
-  w := call env_push(vis, r);
+  w := call env_push(vis, p);
   return w
 }
 
@@ -156,44 +131,45 @@ def findPinned : FunDecl := lfn (vis, n, k, a, b, id) locals (f, r, p, q, e) {
   return e
 }
 
+/-- `std_ax_family(vis, q, s1, s2, s3, i1, i2, i3, c2, c3, cvid)`: one family of `stdAxiomOk`: the
+inductive at pin slot `s1` matching `rom_ci(i1)`, its constructor (`s2`, counts `c2`, `rom_ci(i2)`),
+its recursor (`s3`, counts `c3`, `rom_ci(i3)`), then the axiom `q` against `rom_cv(cvid)`. -/
+-- con-ron: ConRon/Arena/DeclCheck.lean:35-82 ConRon.Arena.stdAxiomOk
+def stdAxFamily : FunDecl :=
+    lfn (vis, q, s1, s2, s3, i1, i2, i3, c2, c3, cvid) locals (n, e, pa) {
+  n := call pin_at(s1);
+  e := call find_pinned(vis, n, 3, 0, 0, i1);
+  if e == 0 { return 0 };
+  n := call pin_at(s2);
+  e := call find_pinned(vis, n, 4, c2, c2, i2);
+  if e == 0 { return 0 };
+  n := call pin_at(s3);
+  e := call find_pinned(vis, n, 5, c3, c3, i3);
+  if e == 0 { return 0 };
+  pa := call rom_cv(cvid);
+  e := call matches_pin(q, pa);
+  return e
+}
+
 /-- `std_axiom_ok(vis, q)`: `stdAxiomOk`: `propext` over the pinned `Eq` and a standard `Iff`
 family, or `Classical.choice` over a standard `Nonempty` family (the `choice` name read only past
 the `propext` test). -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:35-82 ConRon.Arena.stdAxiomOk
 @[l_impl ConRon.Arena.stdAxiomOk]
-def stdAxiomOkL : FunDecl := lfn (vis, q) locals (pn, en, ea, e, n, pa, cn) {
+def stdAxiomOkL : FunDecl := lfn (vis, q) locals (pn, nm, en, ea, e, cn) {
   pn := call pin_at(32);
-  if EREC.u64[q] == pn {
+  nm := EREC.u64[q];
+  if nm == pn {
     en := call pin_at(0);
     ea := call rom_ci(0);
     e := call find_is(vis, en, ea);
     if e == 0 { return 0 };
-    n := call pin_at(34);
-    e := call find_pinned(vis, n, 3, 0, 0, 2);
-    if e == 0 { return 0 };
-    n := call pin_at(35);
-    e := call find_pinned(vis, n, 4, 2, 2, 3);
-    if e == 0 { return 0 };
-    n := call pin_at(36);
-    e := call find_pinned(vis, n, 5, 4, 4, 4);
-    if e == 0 { return 0 };
-    pa := call rom_cv(0);
-    e := call matches_pin(q, pa);
+    e := call std_ax_family(vis, q, 34, 35, 36, 2, 3, 4, 2, 4, 0);
     return e
   };
   cn := call pin_at(33);
-  if EREC.u64[q] == cn {
-    n := call pin_at(37);
-    e := call find_pinned(vis, n, 3, 0, 0, 5);
-    if e == 0 { return 0 };
-    n := call pin_at(38);
-    e := call find_pinned(vis, n, 4, 1, 1, 6);
-    if e == 0 { return 0 };
-    n := call pin_at(39);
-    e := call find_pinned(vis, n, 5, 3, 3, 7);
-    if e == 0 { return 0 };
-    pa := call rom_cv(1);
-    e := call matches_pin(q, pa);
+  if nm == cn {
+    e := call std_ax_family(vis, q, 37, 38, 39, 5, 6, 7, 1, 3, 1);
     return e
   };
   return 0
@@ -302,8 +278,9 @@ def ofReducePinAL : FunDecl := lfn (n) locals (orn, p) {
 stored reduce opaque, the pin. -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:124-134 ConRon.Arena.ofReduceAxOk
 @[l_impl ConRon.Arena.ofReduceAxOk]
-def ofReduceAxOkL : FunDecl := lfn (vis, q) locals (c, en, ea, e, p) {
-  c := call of_reduce_op(EREC.u64[q]);
+def ofReduceAxOkL : FunDecl := lfn (vis, q) locals (nm, c, en, ea, e, p) {
+  nm := EREC.u64[q];
+  c := call of_reduce_op(nm);
   en := call pin_at(0);
   ea := call rom_ci(0);
   e := call find_is(vis, en, ea);
@@ -312,7 +289,7 @@ def ofReduceAxOkL : FunDecl := lfn (vis, q) locals (c, en, ea, e, p) {
   if e == 0 { return 0 };
   e := call reduce_stored_ok(vis, c);
   if e == 0 { return 0 };
-  p := call of_reduce_pin_a(EREC.u64[q]);
+  p := call of_reduce_pin_a(nm);
   e := call matches_pin(q, p);
   return e
 }
@@ -338,6 +315,7 @@ def reduceCertVarL : FunDecl := lfn (c) locals (rn, n, t, r) {
   rn := call pin_at(43);
   if c == rn { n := call pin_at(1) } else { n := call pin_at(29) };
   t := call const_e(n);
+  if 4294967296 <= t { abort };
   r := call intern_fvar(0, t);
   return r
 }
@@ -373,6 +351,7 @@ def checkReducePinL : FunDecl := lfn (vis, vis2, c, v) locals (e, pa, x, ax) {
   e := call is_def_eq_core(vis, 0, v, pa);
   if e == 0 { abort };
   x := call reduce_cert_var(c);
+  if 4294967296 <= x { abort };
   ax := call mk_app(v, x);
   e := call is_def_eq_core(vis, 1, ax, x);
   if e == 0 { abort };
@@ -384,8 +363,9 @@ def checkReducePinL : FunDecl := lfn (vis, vis2, c, v) locals (e, pa, x, ax) {
 /-- `install_basis_decl(vis, p)`: the constant record `p` installed, duplicate-checked. -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:754-761 ConRon.Arena.installBasisDecl
 @[l_impl ConRon.Arena.installBasisDecl]
-def installBasisDeclL : FunDecl := lfn (vis, p) locals (f, r, w) {
-  (f, r) := call env_find(EREC.u64[p + 1], vis);
+def installBasisDeclL : FunDecl := lfn (vis, p) locals (n, f, r, w) {
+  n := EREC.u64[p + 1];
+  (f, r) := call env_find(n, vis);
   if f != 0 { abort };
   w := call env_push(vis, p);
   return w
@@ -394,9 +374,10 @@ def installBasisDeclL : FunDecl := lfn (vis, p) locals (f, r, w) {
 /-- `install_basis_decls(vis, o, l)`: an `IW` slice of constant records, in order. -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:763-767 ConRon.Arena.installBasisDecls
 @[l_impl ConRon.Arena.installBasisDecls]
-def installBasisDeclsL : FunDecl := lfn (vis, o, l) locals (w) {
+def installBasisDeclsL : FunDecl := lfn (vis, o, l) locals (c, w) {
   if l == 0 { return vis };
-  w := call install_basis_decl(vis, IW.u64[o]);
+  c := IW.u64[o];
+  w := call install_basis_decl(vis, c);
   w := call install_basis_decls(w, o + 1, l - 1);
   return w
 }
@@ -485,7 +466,7 @@ def checkDeclDefn : FunDecl :=
   p := call erec_ci(i, 1);
   n := EREC.u64[p + 1];
   z := call check_constant_val(vis, p + 1);
-  w := call check_defn_val(vis, p + 1, EREC.u64[p + 5], p + 6);
+  w := call check_defn_val(vis, p);
   (no, nl) := call nat_op_names();
   c := call sl_contains(no, nl, n);
   if c != 0 {
@@ -516,7 +497,7 @@ def checkDeclDefn : FunDecl :=
 def checkDeclThm : FunDecl := lfn (i, vis) locals (p, z, w) {
   p := call erec_ci(i, 2);
   z := call check_constant_val(vis, p + 1);
-  w := call check_thm_val(vis, p + 1, EREC.u64[p + 5]);
+  w := call check_thm_val(vis, p);
   return w
 }
 
@@ -524,15 +505,16 @@ def checkDeclThm : FunDecl := lfn (i, vis) locals (p, z, w) {
 `Lean.reduceNat`/`Lean.reduceBool` the install pin. -/
 -- con-ron: ConRon/Arena/CheckDecl.lean:82-214 ConRon.Arena.checkDecl
 @[l_impl ConRon.Arena.checkDecl]
-def checkDeclOpaque : FunDecl := lfn (i, vis) locals (p, n, z, w, a, b) {
+def checkDeclOpaque : FunDecl := lfn (i, vis) locals (p, n, v, z, w, a, b) {
   p := call erec_ci(i, 0);
   n := EREC.u64[p + 1];
+  v := EREC.u64[p + 5];
   z := call check_constant_val(vis, p + 1);
-  w := call check_opaque_val(vis, p + 1, EREC.u64[p + 5]);
+  w := call check_opaque_val(vis, p);
   a := call pin_at(43);
   b := call pin_at(44);
   if n == a || n == b {
-    z := call check_reduce_pin(vis, w, n, EREC.u64[p + 5])
+    z := call check_reduce_pin(vis, w, n, v)
   };
   return w
 }
@@ -556,10 +538,10 @@ def checkDeclQuot : FunDecl := lfn (i, vis) locals (kw, k, p, e, w) {
 
 /-- This module's functions. -/
 def declArmsFns : Prog :=
-  [("ci_new", ciNew), ("check_constant_val", checkConstantValL),
+  [("check_constant_val", checkConstantValL),
    ("check_defn_val", checkDefnValL), ("check_thm_val", checkThmValL),
    ("check_opaque_val", checkOpaqueValL), ("matches_pin", matchesPinL),
-   ("find_pinned", findPinned), ("std_axiom_ok", stdAxiomOkL),
+   ("find_pinned", findPinned), ("std_ax_family", stdAxFamily), ("std_axiom_ok", stdAxiomOkL),
    ("find_pinned_cv", findPinnedCv), ("trust_compiler_ok", trustCompilerOkL),
    ("reduce_op_cv_a", reduceOpCvAL), ("reduce_stored_ok", reduceStoredOkL),
    ("reduce_elem_ok", reduceElemOkL), ("of_reduce_op", ofReduceOpL),
@@ -586,7 +568,7 @@ def indProgArms : Prog := indProg.filter fun e => !armsReplaced.contains e.1
 
 /-- `DeclStep.lean`'s functions the arms call, as stubs for this module's own closure check. -/
 def armsDeclStepFns : Prog :=
-  [("erec_ci", stub 2), ("install_value_guards", stub 3)]
+  [("erec_ci", stub 2), ("install_value_guards", stub 3), ("install_header", stub 2)]
 
 theorem declArms_wf :
     L.Compiler.Prog.wf indTab (declArmsAll ++ armsDeclStepFns ++ indProgArms) = true := by

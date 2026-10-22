@@ -41,12 +41,12 @@ def srK4 (k : Nat) (nP o nIdx hd fn : Word) : Option (List Word × Mem) → Opti
 /-- After `get_app_fn`. -/
 def srK3 (k : Nat) (nP o nIdx cbody hd : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (rf, m3) => srK4 k nP o nIdx hd (rf.headD 0) (stubM "get_app_args" m3 [CWF, cbody])
+  | some (rf, m3) => srK4 k nP o nIdx hd (rf.headD 0) (stubM "get_app_args_f" m3 [CWF, cbody])
 /-- After `intern_const`. -/
 def srK2 (k : Nat) (nP o nIdx cbody : Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (hd, m2) =>
-    if 4294967296 ≤ hd then none else srK3 k nP o nIdx cbody hd (stubM "get_app_fn" m2 [CWF, cbody])
+    if 4294967296 ≤ hd then none else srK3 k nP o nIdx cbody hd (stubM "get_app_fn_f" m2 [CWF, cbody])
 /-- After `param_levels`. -/
 def srK1 (k : Nat) (T nP o nIdx cbody : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -65,9 +65,9 @@ theorem srK1_some : srK1 k T nP o nIdx cbody (some (r1, m1)) =
 theorem srK2_big (h : 4294967296 ≤ hd) : srK2 k nP o nIdx cbody (some (hd, m2)) = none := by
   simp [srK2, h]
 theorem srK2_ok (h : ¬ 4294967296 ≤ hd) : srK2 k nP o nIdx cbody (some (hd, m2)) =
-    srK3 k nP o nIdx cbody hd (stubM "get_app_fn" m2 [CWF, cbody]) := by simp only [srK2, if_neg h]
+    srK3 k nP o nIdx cbody hd (stubM "get_app_fn_f" m2 [CWF, cbody]) := by simp only [srK2, if_neg h]
 theorem srK3_some : srK3 k nP o nIdx cbody hd (some (rf, m3)) =
-    srK4 k nP o nIdx hd (rf.headD 0) (stubM "get_app_args" m3 [CWF, cbody]) := rfl
+    srK4 k nP o nIdx hd (rf.headD 0) (stubM "get_app_args_f" m3 [CWF, cbody]) := rfl
 theorem srK4_some : srK4 k nP o nIdx hd fn (some (ra, m4)) =
     srK5 k nP nIdx hd fn (ra.headD 0) (ra.tail.headD 0) (psAtW k m4 o nP) := rfl
 theorem srK5_le (h : rp.tail.headD 0 ≤ al) : srK5 k nP nIdx hd fn ao al (some (rp, m5)) =
@@ -116,7 +116,7 @@ theorem srW_spec (k : Nat) (s₀ : St) (T lo ll nP o nIdx cbody : Word) :
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         plW_spec p ha hc hsc hg hpf hpp hip hplg hpl k, internConst_spec p hcf hcp hic k,
-        stubM_spec p "get_app_fn" k, stubM_spec p "get_app_args" k,
+        stubM_spec p "get_app_fn_f" k, stubM_spec p "get_app_args_f" k,
         psAtW_spec p ha hc hsc hbf hbp hib hpg hps k, slEq_spec p heq k] <;>
       finish (gen := 20) [srRes]
 
@@ -220,13 +220,13 @@ theorem srW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k
   rw [srK2_ok k m2 nP o nIdx cbody hd' hbig] at h
   have hd32 : hd'.toNat < 2 ^ 32 := by have : ¬ (4294967296 : Nat) ≤ hd'.toNat := hbig; omega
   obtain ⟨a2, hrun2, hS2, hg2⟩ := internConst_stage hS1 T (r1.headD 0) hT hus h2
-  cases h3 : stubM "get_app_fn" m2 [CWF, cbody] with
+  cases h3 : stubM "get_app_fn_f" m2 [CWF, cbody] with
   | none => rw [h3] at h; cases h
   | some x3 =>
   obtain ⟨rf, m3⟩ := x3
   rw [h3, srK3_some] at h
   obtain ⟨fnv, a3, hrun3, hS3, hg3, hf32, hfd⟩ := getAppFn_spec dn vis fe CWF cbody hcb m2 m3 a2 rf h3 hS2
-  cases h4 : stubM "get_app_args" m3 [CWF, cbody] with
+  cases h4 : stubM "get_app_args_f" m3 [CWF, cbody] with
   | none => rw [h4] at h; cases h
   | some x4 =>
   obtain ⟨ra, m4⟩ := x4

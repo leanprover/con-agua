@@ -573,7 +573,7 @@ def entryK1 (C : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m1) =>
     if r.headD 0 = 0 then some ([0, 0, 0, 0], m1)
-    else entryK2 C r (stubM "get_app_fn" m1 [CWF, r.tail.tail.tail.tail.headD 0])
+    else entryK2 C r (stubM "get_app_fn_f" m1 [CWF, r.tail.tail.tail.tail.headD 0])
 
 def entryW (m : Mem) (C ciq : Word) : Option (List Word × Mem) := entryK1 C (stripW m ciq)
 
@@ -593,7 +593,7 @@ theorem entryK2_const (h : ¬ r2.headD 0 >>> 28 ≠ 3) :
 theorem entryK1_fail (h : r.headD 0 = 0) : entryK1 C (some (r, m1)) = some ([0, 0, 0, 0], m1) := by
   simp only [entryK1]; rw [if_pos h]
 theorem entryK1_ok (h : ¬ r.headD 0 = 0) :
-    entryK1 C (some (r, m1)) = entryK2 C r (stubM "get_app_fn" m1 [CWF, r.tail.tail.tail.tail.headD 0]) := by
+    entryK1 C (some (r, m1)) = entryK2 C r (stubM "get_app_fn_f" m1 [CWF, r.tail.tail.tail.tail.headD 0]) := by
   simp only [entryK1]; rw [if_neg h]
 end arms
 grind_pattern [ind_grind] entryK3_abort => entryK3 C r m2 v
@@ -616,7 +616,7 @@ theorem nestCtorEntry_spec (p : Prog) (hs : p.lookup "nest_ctor_entry_strip" = s
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        nestCtorEntryStrip_spec p hs n, stubM_spec p "get_app_fn" n, eView_spec p hv n] <;>
+        nestCtorEntryStrip_spec p hs n, stubM_spec p "get_app_fn_f" n, eView_spec p hv n] <;>
       finish (gen := 20) [entryW]
 
 
@@ -695,7 +695,7 @@ theorem entryW_ok {dn : NIdx → Option ConLeche.Name} {fe : IFEnv} {vis : Word}
         obtain ⟨w, rfl, hwlt, hwd, hcvm0⟩ := hout
         rw [entryK1_ok _ _ _ (by simp)] at h
         simp only [List.tail_cons, List.headD_cons] at h
-        cases hg : stubM "get_app_fn" m0 [CWF, w] with
+        cases hg : stubM "get_app_fn_f" m0 [CWF, w] with
         | none => rw [hg] at h; simp [entryK2] at h
         | some rm2 =>
           obtain ⟨r2, m2⟩ := rm2
@@ -808,7 +808,7 @@ def resHeadK : Option (List Word × Mem) → Option (List Word × Mem)
   | some (r, m1) => some ([if r.headD 0 >>> 28 = 1 then 1 else 0], m1)
 
 def resHeadW (m : Mem) (e : Word) : Option (List Word × Mem) :=
-  resHeadK (stubM "get_app_fn" m [CWF, e])
+  resHeadK (stubM "get_app_fn_f" m [CWF, e])
 
 theorem resHeadK_some (r : List Word) (m1 : Mem) :
     resHeadK (some (r, m1)) = some ([if r.headD 0 >>> 28 = 1 then 1 else 0], m1) := rfl
@@ -824,14 +824,14 @@ theorem nestResHead_spec (p : Prog) (hg : p.lookup "nest_res_head" = some nestRe
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "get_app_fn" n] <;> finish [resHeadW]
+        stubM_spec p "get_app_fn_f" n] <;> finish [resHeadW]
 
 theorem resHeadW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (m m' : Mem) (a : AState)
     (e : Word) (r : List Word) (he : H e) (h : resHeadW m e = some (r, m')) (hS : StageR dn vis fe m a) :
     ∃ a', (ConRon.Arena.nestResHead (decI e)).run a = .ok (r.headD 0 != 0, a') ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' := by
   unfold resHeadW at h
-  cases hs : stubM "get_app_fn" m [CWF, e] with
+  cases hs : stubM "get_app_fn_f" m [CWF, e] with
   | none => rw [hs] at h; simp [resHeadK] at h
   | some rm =>
     obtain ⟨r1, m1⟩ := rm

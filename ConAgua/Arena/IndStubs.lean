@@ -47,6 +47,20 @@ theorem stubM_spec (p : Prog) (f : FnName) (n : Nat) (s₀ : St) (args : List Wo
     ⦃fun s => s = s₀⦄ invoke p (exec p n) f args
     ⦃fun r s' => LocEq s' s₀ ∧ stubM f s₀.mem args = some (r, s'.mem); ⊤⦄ := sorry
 
+/-- The names `stubM` stands for: the stubs proper and the two master callees without a stage
+model (`lvl_eq`, `intern_nanon`). -/
+def stubNames : List FnName := stubFns.map (·.1) ++ ["lvl_eq", "intern_nanon"]
+
+/-- **The write set of every stub** (lane `indproofs2`): a stub leaves the stage's per-call memos
+alone (arrays `MAM`‥`MCM` = 201‥208, their control words `CTL[202]`‥`CTL[219]`), and keeps every
+array's size. `sorry` until the owning lanes land the functions, like `stubM_spec`; with it a memo
+relation (`maMR`, `hbMR`, …) is carried across a stub call (`MemoRV` reads the memo's array and
+control words only). Replaces helper `memo`'s `stubHbFrame` (lane `indproofs`). -/
+theorem stubM_memoFrame (f : FnName) (hf : f ∈ stubNames) (m m' : Mem) (args r : List Word)
+    (h : stubM f m args = some (r, m')) :
+    ∃ (A : List ArrId) (C : List Word), (∀ b ∈ A, b < 201 ∨ 208 < b) ∧
+      (∀ x ∈ C, x.toNat < 202 ∨ 219 < x.toNat) ∧ MemFrame A C m m' := sorry
+
 /-- **The twin side of a stub**: a model run of `f(args)` from a memory satisfying `pre` against
 `a` is a successful twin run of `op` with `post` after. -/
 def RelAM {α : Type} (f : FnName) (args : List Word) (pre : Mem → AState → Prop) (op : AM α)
@@ -61,7 +75,7 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-- `whnf(vis, dep, e)`. -/
 theorem whnf_spec (dep e : Word) (he : H e) :
-    RelAM "whnf" [vis, dep, e] (StageR dn vis fe)
+    RelAM "whnf_top" [vis, dep, e] (StageR dn vis fe)
       (whnf V fe checkFuel dep.toNat (decI e)) (KeepPost dn vis fe decW0E) := sorry
 
 /-- `infer_type_core(vis, dep, e)`. -/
@@ -107,17 +121,17 @@ theorem openPisAtFvarsF_spec (k e i : Word) (he : H e) :
 
 /-- `get_app_fn(fuel, e)`. -/
 theorem getAppFn_spec (f e : Word) (he : H e) :
-    RelAM "get_app_fn" [f, e] (StageR dn vis fe)
+    RelAM "get_app_fn_f" [f, e] (StageR dn vis fe)
       (getAppFn f.toNat (decI e)) (KeepPost dn vis fe decW0E) := sorry
 
 /-- `get_app_args(fuel, e)`. -/
 theorem getAppArgs_spec (f e : Word) (he : H e) :
-    RelAM "get_app_args" [f, e] (StageR dn vis fe)
+    RelAM "get_app_args_f" [f, e] (StageR dn vis fe)
       (getAppArgs f.toNat (decI e)) (KeepPost dn vis fe (decRL (fun m => decHL m) 0)) := sorry
 
 /-- `mk_app_n(f, off, len)`. -/
 theorem mkAppN_spec (f o l : Word) (hf : H f) (xs : List EIdx) :
-    RelAM "mk_app_n" [f, o, l] (fun m a => StageR dn vis fe m a ∧ decHL m o.toNat l.toNat = some xs)
+    RelAM "mk_app_n_f" [f, o, l] (fun m a => StageR dn vis fe m a ∧ decHL m o.toNat l.toNat = some xs)
       (mkAppN (decI f) xs) (KeepPost dn vis fe decW0E) := sorry
 
 /-- `fvar_type_d(e)`. -/
@@ -132,7 +146,7 @@ theorem fvarTypeDs_spec (o l : Word) (xs : List EIdx) :
 
 /-- `pi_result(fuel, e)`. -/
 theorem piResult_spec (f e : Word) (he : H e) :
-    RelAM "pi_result" [f, e] (StageR dn vis fe)
+    RelAM "pi_result_f" [f, e] (StageR dn vis fe)
       (piResult f.toNat (decI e)) (KeepPost dn vis fe decW0E) := sorry
 
 /-- `inst_lp_fast(fuel, ks.off, ks.len, us, e)`. -/
@@ -245,9 +259,12 @@ variable (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
 def decLvlEq (_m : Mem) (r : List Word) (x : Option Bool) : Prop :=
   r.headD 0 = (match x with | none => 0 | some false => 1 | some true => 2)
 
-/-- `lvl_eq(u, v)`: `lvlEq?` on two level handles. No stage-level (`StageR`) model of `lvl_eq` yet. -/
+/-- `lvl_eq_c(u, v)`: `lvlEq?` on two level handles, through the verdict cache `lvlEqC` as the
+twin's `lvlEq?` (lane `whnf`'s `lvl_eq_c`; the uncached `lvl_eq` leaves the cache behind the
+twin's). No stage-level (`StageR`) model yet: lane `whnf`'s `lvlEqC_refines` holds under `CoreS`,
+which carries invariants `StageR` lacks (DESIGN.md, lane `decls3`). -/
 theorem lvlEqStub_spec (u v : Word) (hu : H u) (hv : H v) :
-    RelAM "lvl_eq" [u, v] (StageR dn vis fe) (lvlEq? (decI u) (decI v))
+    RelAM "lvl_eq_c" [u, v] (StageR dn vis fe) (lvlEq? (decI u) (decI v))
       (KeepPost dn vis fe decLvlEq) := sorry
 
 /-- `intern_nanon()`: `internNNode .anonymous`. No stage-level (`StageR`) model of `intern_nanon` yet

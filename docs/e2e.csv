@@ -1,0 +1,5 @@
+date,rev,entry,fixtures,functions,stubs,agree_accept,agree_reject,missing,l_error,disagree,other,top_missing
+2026-10-22T08:29,119a47c,check,675,1176,48,0,0,675,0,0,0,builtin_prelude
+2026-10-22T08:29,119a47c,check_np,675,1176,48,1,38,635,1,0,0,basis_pin_hit
+2026-10-22T09:52,3b96365,check,675,1209,47,0,0,675,0,0,0,builtin_prelude
+2026-10-22T09:52,3b96365,check_np,675,1209,47,1,38,635,1,0,0,basis_pin_hit

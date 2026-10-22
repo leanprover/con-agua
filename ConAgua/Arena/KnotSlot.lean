@@ -226,7 +226,7 @@ theorem CoreS.set_in {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
       hS.env.frame (fun b hb => by simp at hb; subst hb; decide)
         (fun x hx => by simp at hx; subst hx; decide) hf,
       fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf,
-      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn⟩,
+      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.2.2.1 145 ▸ hS.bstk⟩,
     by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
 
 /-- `inferIOC` gains an entry (copy of `CoreS.set_wh`, at `ioSch`: array 100, `CTL` 104/105). -/
@@ -275,7 +275,7 @@ theorem CoreS.set_io {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
       hS.env.frame (fun b hb => by simp at hb; subst hb; decide)
         (fun x hx => by simp at hx; subst hx; decide) hf,
       fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf,
-      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn⟩,
+      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.2.2.1 145 ▸ hS.bstk⟩,
     by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
 
 /-- `defeqC` gains a verdict (copy of `CoreS.set_wh`, at `deSch`: array 101, `CTL` 106/107, key
@@ -325,7 +325,7 @@ theorem CoreS.set_de {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
       hS.env.frame (fun b hb => by simp at hb; subst hb; decide)
         (fun x hx => by simp at hx; subst hx; decide) hf,
       fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf,
-      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn⟩,
+      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.2.2.1 145 ▸ hS.bstk⟩,
     by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
 
 /-- `KeptAll` across a `infer` memo insert (copy of `KeptAll.wh`). -/
@@ -401,7 +401,7 @@ end twin
 `F ≥ n` (the shape of `WhnfLoopSpec`). -/
 def InferBodySpec (p : Prog) (n : Nat) : Prop :=
   ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb mode d e : Word), n ≤ F → SlotPre s₀ a₀ dn vis fe MM eb mode → HW e →
+    (MM : ModeMaps) (eb mode d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe MM eb mode → HW e →
     KnotUpTo p n →
     CoreSpec p n "infer_body" [mode, vis, d, e]
       (inferBody (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) decH s₀ a₀ dn vis fe MM eb
@@ -410,7 +410,7 @@ def InferBodySpec (p : Prog) (n : Nat) : Prop :=
 down. -/
 def InferIOBodySpec (p : Prog) (n : Nat) : Prop :=
   ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb mode d e : Word), n ≤ F → SlotPre s₀ a₀ dn vis fe MM eb mode → HW e →
+    (MM : ModeMaps) (eb mode d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe MM eb mode → HW e →
     KnotUpTo p n →
     CoreSpec p n "infer_body_io" [mode, vis, d, e]
       (inferBodyIO (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)) fe d.toNat (decE e)) decH
@@ -465,7 +465,7 @@ theorem infer_refines (n : Nat) (hk : KnotUpTo p n) (hb : InferBodySpec p n) :
   | some q =>
   obtain ⟨r₁, m₁⟩ := q
   simp only [hcall] at hW
-  have hbody := hb F' s a₀ dn vis fe MM eb mode d e (by omega) hs he hk
+  have hbody := hb F' s a₀ dn vis fe MM eb mode d e (by omega) (by omega) hs he hk
   obtain ⟨hok, ⟨M', hS₁, hK₁, hSt₁⟩, hres, hrw⟩ := CoreSpec.of_callW hbody hcall
   cases hset : msetG inSch m₁ e (genW 0 eb) (r₁.headD 0) with
   | none => rw [hset] at hW; cases hW
@@ -517,7 +517,7 @@ theorem inferIO_refines (n : Nat) (hk : KnotUpTo p n) (hb : InferIOBodySpec p n)
   | some q =>
   obtain ⟨r₁, m₁⟩ := q
   simp only [hcall] at hW
-  have hbody := hb F' s a₀ dn vis fe MM eb mode d e (by omega) hs he hk
+  have hbody := hb F' s a₀ dn vis fe MM eb mode d e (by omega) (by omega) hs he hk
   obtain ⟨hok, ⟨M', hS₁, hK₁, hSt₁⟩, hres, hrw⟩ := CoreSpec.of_callW hbody hcall
   cases hset : msetG ioSch m₁ e (genW 0 eb) (r₁.headD 0) with
   | none => rw [hset] at hW; cases hW
@@ -692,7 +692,7 @@ theorem CoreS.enter {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} 
     ⟨hS.core.wc.enter, hS.core.wk.enter, hS.core.wh.enter, hS.core.inf.enter, hS.core.io.enter,
       hS.core.de.enter, by decide, hS.core.ct, hS.core.cv, hS.core.rr, hS.core.lq, hS.core.lsq⟩,
     hS.pins, hS.env, fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf, hS.erec,
-    hS.spn⟩
+    hS.spn, hS.memos, hS.bstk⟩
 
 /-- **Leaving the eager tower**: after an eager run that kept the plain banks, the relation at
 `eb = 0` holds on the left caches. -/
@@ -707,7 +707,7 @@ theorem CoreS.leave {dn : NIdx → Option ConLeche.Name} {m m₀ : Mem} {a a₁ 
       hS.core.de.leave h0.de.cur k6, by decide, hS.core.ct, hS.core.cv, hS.core.rr, hS.core.lq,
       hS.core.lsq⟩,
     hS.pins, hS.env, fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf, hS.erec,
-    hS.spn⟩
+    hS.spn, hS.memos, hS.bstk⟩
 
 /-- `defeq_e(mode, vis, d, a, b)` refines the knot's eager slot `defeqE`. -/
 def DefeqESlot (p : Prog) (n : Nat) : Prop :=

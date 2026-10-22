@@ -623,14 +623,14 @@ def reservedFrom : FunDecl := lfn (n, j) locals (r) {
 /-- `lvl_eq_true(u, v)`: `lvlEq? u v == some true` as `0`/`1`. -/
 -- con-ron: ConRon/Arena/Core.lean:132-149 ConRon.Arena.lvlEq?
 def lvlEqTrue : FunDecl := lfn (u, v) locals (r) {
-  r := call lvl_eq(u, v);
+  r := call lvl_eq_c(u, v);
   return u64(r == 2)
 }
 
 /-- `lvl_eq_fueled(u, v)`: `liftFueled (← lvlEq? u v)`: `none` aborts. -/
 -- con-ron: ConRon/Arena/Core.lean:132-149 ConRon.Arena.lvlEq?
 def lvlEqFueled : FunDecl := lfn (u, v) locals (r) {
-  r := call lvl_eq(u, v);
+  r := call lvl_eq_c(u, v);
   if r == 0 { abort };
   return u64(r == 2)
 }
@@ -730,17 +730,17 @@ def stub (k : Nat) : FunDecl := ⟨k, k, .abort⟩
 
 /-- The stubs: name, parameter count, and (in the doc) the twin and the convention.
 
-* `whnf(vis, dep, e)` → `e'`: `whnf .verified fe checkFuel dep e`.
+* `whnf_top(vis, dep, e)` (lane `whnf`'s entry, `WhnfEntry.lean`) → `e'`: `whnf .verified fe checkFuel dep e`.
 * `infer_type_core(vis, dep, e)` → `t`; `ensure_sort_core(vis, dep, t)` → `u` (a level handle);
   `is_def_eq_core(vis, dep, a, b)` → `0`/`1`.
 * `check_constant_val(vis, cv)` → nothing (`cv` an `EREC` pointer).
 * `consts_resolve_ffast(vis, e)` → `0`/`1`.
 * `strip_pis(k, e)` → `(ok, bs.off, bs.len, body)`; `strip_lams(k, e)` the same.
 * `open_pis_at_fvars_f(n, e, i)` → `(ok, fvs.off, fvs.len, body)`.
-* `get_app_fn(fuel, e)` → `hd`; `get_app_args(fuel, e)` → `(off, len)`.
-* `mk_app_n(f, off, len)` → `e`.
+* `get_app_fn_f(fuel, e)` → `hd`; `get_app_args_f(fuel, e)` → `(off, len)` (lane `whnf`'s adapters, `WhnfEntry.lean`).
+* `mk_app_n_f(f, off, len)` → `e`.
 * `fvar_type_d(e)` → `t`; `fvar_type_ds(off, len)` → `(off, len)`.
-* `pi_result(fuel, e)` → `r`.
+* `pi_result_f(fuel, e)` → `r`.
 * `inst_lp_fast(fuel, ks.off, ks.len, us, e)` → `e'`.
 * `inst_pis_at_lift(fuel, off, len, e)` → `(ok, e')`.
 * `instantiate1_fast(fuel, e, v, d)` → `e'`; `instantiate1_lift_fast(fuel, e, v, d)` → `e'`;
@@ -758,13 +758,13 @@ def stub (k : Nat) : FunDecl := ⟨k, k, .abort⟩
 * `lv_zero_caps(l, q)` → nothing: `zeronessOf (← readLevelM l)` written as a `PropWhen` at `EREC`
   word `q` (lane `pinsenv`'s `decPW` layout; `lv_zero` pushes the names on the level heap). -/
 def stubFns : Prog :=
-  [("whnf", stub 3), ("infer_type_core", stub 3), ("ensure_sort_core", stub 3),
+  [("whnf_top", stub 3), ("infer_type_core", stub 3), ("ensure_sort_core", stub 3),
    ("is_def_eq_core", stub 4), ("check_constant_val", stub 2), ("consts_resolve_ffast", stub 2),
    ("strip_pis", stub 2), ("strip_lams", stub 2), ("open_pis_at_fvars_f", stub 3),
-   ("get_app_fn", stub 2), ("get_app_args", stub 2), ("mk_app_n", stub 3),
-   ("fvar_type_d", stub 1), ("fvar_type_ds", stub 2), ("pi_result", stub 2),
+   ("get_app_fn_f", stub 2), ("get_app_args_f", stub 2), ("mk_app_n_f", stub 3),
+   ("fvar_type_d", stub 1), ("fvar_type_ds", stub 2), ("pi_result_f", stub 2),
    ("inst_lp_fast", stub 5), ("inst_pis_at_lift", stub 4), ("instantiate1_fast", stub 4),
-   ("instantiate1_lift_fast", stub 4), ("abstract1_fast", stub 4), ("bvar_b", stub 2),
+   ("instantiate1_lift_fast", stub 4), ("abstract1_fast", stub 4),
    ("fvar_b", stub 2), ("has_fvar_fast", stub 2), ("loose_bvars_bounded_fast", stub 3),
    ("all_level_params_defined", stub 3),
    ("intern_ls_iw", stub 2), ("name_rec", stub 1), ("name_rec_i", stub 2),
@@ -779,16 +779,17 @@ for closure (`Prog.wf`) on its own: `env_find(w, vis)`, `env_push(vis, q)`,
 (`Level.leq`, `Option Bool`), `intern_bvar(i)`, `intern_sort(u)`, `intern_const(n, us)`,
 `intern_fvar(i, ty)`, `mk_app(f, a)`, `mk_lam(t, b)`, `mk_forall(t, b)`, `mk_let(t, v, b)`,
 `mk_proj(n, i, e)`, `intern_param(n)`, `intern_zero()`, `intern_max(u, v)`, `intern_nanon()`,
+`bvar_b(fuel, e)` (lane `exprops4`'s `bvarBL`, a stub until lane `indproofs2`),
 `lv_node(p)` (a level's view: `(tag, a, b)`), `bm_clear()`, …, and the memo functions of the
 schemas above (`X_find`, `X_put`, `X_clear`, `X_bank_enter`, `X_bank_leave`, instantiated by
 `MemoLib`). The whole program uses the real ones. -/
 def masterFns : Prog :=
   [("env_find", stub 2), ("env_push", stub 2), ("env_pop_temp", stub 4), ("env_row_get", stub 1),
-   ("flush_caches", stub 0), ("pin_at", stub 1), ("pin_word", stub 1), ("lvl_eq", stub 2),
+   ("flush_caches", stub 0), ("pin_at", stub 1), ("pin_word", stub 1), ("lvl_eq", stub 2), ("lvl_eq_c", stub 2),
    ("lvls_eq", stub 2), ("lv_nz", stub 1), ("lv_leq_top", stub 2), ("intern_bvar", stub 1),
    ("intern_sort", stub 1), ("intern_const", stub 2), ("intern_fvar", stub 2), ("mk_app", stub 2),
    ("mk_lam", stub 2), ("mk_forall", stub 2), ("mk_let", stub 3), ("mk_proj", stub 3),
-   ("intern_param", stub 1), ("intern_zero", stub 0), ("intern_max", stub 2),
+   ("intern_param", stub 1), ("intern_zero", stub 0), ("intern_max", stub 2), ("bvar_b", stub 2),
    ("intern_nanon", stub 0), ("lv_node", stub 1), ("ls_node", stub 1),
    ("ma_find", memoFindG maSch), ("ma_put", memoPutG maSch), ("ma_clear", memoClearG maSch),
    ("no_find", memoFindG noSch), ("no_put", memoPutG noSch), ("no_clear", memoClearG noSch),

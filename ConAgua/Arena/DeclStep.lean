@@ -204,11 +204,12 @@ def indBlockToErec : FunDecl := lfn (i) locals (bo, bl, o, u) {
 /-- `check_decl(i, vis)`: `checkDecl` on record `i`. -/
 -- con-ron: ConRon/Arena/CheckDecl.lean:82-214 ConRon.Arena.checkDecl
 @[l_impl ConRon.Arena.checkDecl]
-def checkDeclL : FunDecl := lfn (i, vis) locals (k, bo, bl, v) {
+def checkDeclL : FunDecl := lfn (i, vis) locals (k, bo, bl, np, v) {
   k := DECL.u64[1 + 8 * i];
   if k == 6 {
     (bo, bl) := call ind_block_to_erec(i);
-    v := call check_ind_decl(vis, bo, bl, DECL.u64[5 + 8 * i]);
+    np := DECL.u64[5 + 8 * i];
+    v := call check_ind_decl(vis, bo, bl, np);
     return v
   };
   if k == 1 { v := call check_decl_axiom(i, vis); return v };
@@ -300,14 +301,10 @@ def declStepFns : Prog :=
    ("install_value", installValueL), ("install_step_go", installStepGoL),
    ("check_value_group", checkValueGroupL)]
 
-/-- Master callees lane `induct`'s program lacks, as stubs here (the whole program has the real
-ones): lane `whnf`'s cached level comparison. -/
-def declStepStubs : Prog := [("lvl_eq_c", L.Ind.stub 2)]
-
 /-- The step's program: this module, the arms (`DeclArms*.lean`, with their ROM stubs and the
 master functions lane `induct`'s program lacks), lane `induct`'s stage (with its stubs, but for
 the two the arms provide: `L.Ind.armsReplaced`). -/
-def declStepProg : Prog := declStepFns ++ declStepStubs ++ L.Ind.declArmsAll ++ L.Ind.indProgArms
+def declStepProg : Prog := declStepFns ++ L.Ind.declArmsAll ++ L.Ind.indProgArms
 
 theorem declStepProg_wf : L.Compiler.Prog.wf L.Ind.indTab declStepProg = true :=
   L.Compiler.Prog.wf_of_wfFast (by decide +kernel)

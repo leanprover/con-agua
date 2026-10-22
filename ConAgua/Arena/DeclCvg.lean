@@ -400,7 +400,7 @@ theorem erToIwW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
     · rw [hfr.2.2.1 CTL]; exact hc
 
 /-- Destructuring a constant value: its name, its universe-parameter slice, its type. -/
-theorem decCV_words {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV a q = some cv) :
+theorem decCV_slice {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV a q = some cv) :
     ∃ w1 w2, a[q + 1]? = some w1 ∧ a[q + 2]? = some w2 ∧
       hslice? a w1.toNat w2.toNat = some cv.levelParams := by
   simp only [decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
@@ -428,7 +428,7 @@ theorem ivgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     (hq : decCV (erA m) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64) (hv : v.toNat < 2 ^ 32) :
     ∃ a', (installValueGuards fe cv (decI v)).run a = .ok ((), a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' := by
-  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_words hq
+  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice hq
   have e1 : rdW (m.arr64 EREC) (q + 1) = w1 :=
     rdW_of_get? (by rw [UInt64.toNat_add]; simp; omega) hw1
   have e2 : rdW (m.arr64 EREC) (q + 2) = w2 :=
@@ -522,14 +522,6 @@ theorem installValueGuards_refines (p : Prog) (hC : CvgProg p) (n : Nat) (s₀ :
   obtain ⟨a', hrun, hS', hg⟩ := ivgW_ok hm hS hq hqb hv
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hg⟩
-
-/-- **`lvl_eq_c(u, v)` under the stage relation** (`sorry`): lane `whnf`'s `lvlEqC_refines` proves
-it under `CoreS`, which has the readback-cache invariants and `NStoreWF` that `StageR` lacks; the
-stub `lvl_eq` of lane `indproofs` has the same gap (and calls the uncached `lvl_eq`). -/
-theorem lvlEqCStage_spec (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (u v : Word)
-    (hu : H u) (hv : H v) :
-    RelAM "lvl_eq_c" [u, v] (StageR dn vis fe) (lvlEq? (decI u) (decI v))
-      (KeepPost dn vis fe decLvlEq) := sorry
 
 theorem decVG_words {a : Array Word} {g : Nat} {vg : ValueGroup} (h : decVG a g = some vg) :
     (∃ wk, a[g]? = some wk ∧ decVK wk.toNat = some vg.kind) ∧ decCV a (g + 1) = some vg.cv ∧
@@ -694,7 +686,7 @@ theorem cvgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     obtain ⟨r4, m4⟩ := rm4
     rw [h4, cvgK4_some] at h
     obtain ⟨x4, a4, hrun4, hS4, hg4, hx4⟩ :=
-      lvlEqCStage_spec dn vis fe (r2.headD 0) (pinW m2 53) hx2l hF.lv_lt.2.1 m2 m4 a2 r4 h4 hS2
+      lvlEqStub_spec dn vis fe (r2.headD 0) (pinW m2 53) hx2l hF.lv_lt.2.1 m2 m4 a2 r4 h4 hS2
     by_cases hb4 : r4.headD 0 ≠ 2
     · rw [if_pos hb4] at h; simp at h
     rw [if_neg hb4] at h

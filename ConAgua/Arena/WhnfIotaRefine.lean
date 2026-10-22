@@ -72,12 +72,12 @@ theorem rule_idx (a : Array Word) (ro i : Word) (rl : IRecRule)
 /-! ## `find_rule(ro, rc, c)` -/
 
 /-- Model of the `find_rule` scan from index `i` with step bound `K` (`rc - i`). -/
-def frW (E : Array Word) (ro rc c : Word) : Nat → Word → Option (List Word)
+def findRuleW (E : Array Word) (ro rc c : Word) : Nat → Word → Option (List Word)
   | 0, _ => some [0, 0]
   | K + 1, i =>
     if i < rc then
       if h : (ro + 11 * i).toNat < E.size then
-        if E[(ro + 11 * i).toNat] = c then some [1, ro + 11 * i] else frW E ro rc c K (i + 1)
+        if E[(ro + 11 * i).toNat] = c then some [1, ro + 11 * i] else findRuleW E ro rc c K (i + 1)
       else none
     else some [0, 0]
 
@@ -88,28 +88,28 @@ theorem uint64_succ_toNat (n i : Word) (h : i < n) : (i + 1).toNat = i.toNat + 1
   omega
 
 theorem frW_done (E : Array Word) (ro rc c i : Word) (h : ¬ i < rc) :
-    frW E ro rc c (rc.toNat - i.toNat) i = some [0, 0] := by
+    findRuleW E ro rc c (rc.toNat - i.toNat) i = some [0, 0] := by
   cases hK : rc.toNat - i.toNat with
-  | zero => rw [frW]
-  | succ k => rw [frW]; simp [h]
+  | zero => rw [findRuleW]
+  | succ k => rw [findRuleW]; simp [h]
 
 theorem frW_step (E : Array Word) (ro rc c i : Word) (h : i < rc) :
-    frW E ro rc c (rc.toNat - i.toNat) i =
+    findRuleW E ro rc c (rc.toNat - i.toNat) i =
       if h : (ro + 11 * i).toNat < E.size then
         if E[(ro + 11 * i).toNat] = c then some [1, ro + 11 * i]
-        else frW E ro rc c (rc.toNat - (i + 1).toNat) (i + 1)
+        else findRuleW E ro rc c (rc.toNat - (i + 1).toNat) (i + 1)
       else none := by
   have h1 := uint64_succ_toNat rc i h
   have : i.toNat < rc.toNat := h
   have hK : rc.toNat - i.toNat = (rc.toNat - (i + 1).toNat) + 1 := by omega
-  rw [hK, frW]
+  rw [hK, findRuleW]
   simp [h]
 
 theorem findRuleLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     exec p k findRuleLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      frW (s₀.mem.arr64 EREC) (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) ((s₀.loc 1).toNat - (s₀.loc 3).toNat)
+      findRuleW (s₀.mem.arr64 EREC) (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) ((s₀.loc 1).toNat - (s₀.loc 3).toNat)
         (s₀.loc 3) = some (r.retOr [0, 0]); ⊤⦄ := by
   induction k generalizing s₀ with
   | zero => vcgen [exec] <;> grind
@@ -123,7 +123,7 @@ theorem findRuleLoop_step_spec (p : Prog) (k : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p k) findRuleLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      frW (s₀.mem.arr64 EREC) (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) ((s₀.loc 1).toNat - (s₀.loc 3).toNat)
+      findRuleW (s₀.mem.arr64 EREC) (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) ((s₀.loc 1).toNat - (s₀.loc 3).toNat)
         (s₀.loc 3) = some (r.retOr [0, 0]); ⊤⦄ :=
   Triple.step_exec (findRuleLoop_spec p (k + 1) s₀)
 
@@ -132,7 +132,7 @@ theorem findRule_spec (p : Prog) (hp : p.lookup "find_rule" = some findRuleL) (k
     ⦃fun s => s = s₀⦄
     invoke p (exec p k) "find_rule" [ro, rc, c]
     ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧
-      frW (s₀.mem.arr64 EREC) ro rc c rc.toNat 0 = some r; ⊤⦄ := by
+      findRuleW (s₀.mem.arr64 EREC) ro rc c rc.toNat 0 = some r; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, findRuleL]
   cases k with
@@ -147,14 +147,14 @@ theorem frW_rel (E : Array Word) (hsz : E.size < 2 ^ 64) (ro rc c : Word) (hc : 
     (rules : List IRecRule) (hlen : rules.length = rc.toNat)
     (hget : ∀ j, j < rc.toNat → decRule E (ro.toNat + 11 * j) = rules[j]?) :
     ∀ (K : Nat) (i : Word) (L : List Word), rc.toNat - i.toNat = K →
-      frW E ro rc c K i = some L →
+      findRuleW E ro rc c K i = some L →
       findRule (rules.drop i.toNat) (decI c) =
         (if L.headD 0 = 0 then none else decRule E (L.tail.headD 0).toNat) := by
   intro K
   induction K with
   | zero =>
     intro i L hK h
-    rw [frW] at h
+    rw [findRuleW] at h
     cases h
     have : rules.drop i.toNat = [] := List.drop_eq_nil_of_le (by omega)
     simp [this, findRule]
@@ -174,7 +174,7 @@ theorem frW_rel (E : Array Word) (hsz : E.size < 2 ^ 64) (ro rc c : Word) (hc : 
       simp [List.getElem?_eq_some_iff.mp hrl |>.2]
     obtain ⟨⟨w, hwE, hw32, hctor⟩, _⟩ := decRule_fields E _ rl hdr
     have hwE' : E[ro.toNat + 11 * i.toNat] = w := (Array.getElem?_eq_some_iff.mp hwE).2
-    rw [frW] at h
+    rw [findRuleW] at h
     simp only [hi, ite_true, hw, hlt, dite_true] at h
     rw [hdrop, findRule]
     split at h
@@ -562,7 +562,7 @@ theorem CoreS.setMemo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
         rw [UInt64.toNat_add]; simp; omega
       have h' := congrArg UInt64.toNat h
       simp at h'; omega)
-  refine ⟨⟨⟨?_, ?_⟩, hc, ?_, ?_, ?_, ?_, hS.nwf, ?_, ?_⟩, ?_⟩
+  refine ⟨⟨⟨?_, ?_⟩, hc, ?_, ?_, ?_, ?_, hS.nwf, ?_, ?_, ?_, ?_⟩, ?_⟩
   · exact (ArenaR.frame_ext [S.arr] [S.cs + 1] (fun b hb => by simp at hb; subst hb; rw [← har]; exact Nat.le_trans (by decide : 64 ≤ 96) n1)
       (fun x hx => by
         simp at hx; subst hx
@@ -578,6 +578,14 @@ theorem CoreS.setMemo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
   · intro h l e; exact hS.readLs h l (by simpa [hLs] using e)
   · exact hf.2.2.1 EREC ▸ hS.erec
   · exact hf.2.2.1 SPN ▸ hS.spn
+  · exact hS.memos.frame_hi hf
+      (fun b hb => by simp at hb; subst hb; rw [← har]; exact Nat.le_trans (by decide : 64 ≤ 96) n1)
+      (fun x hx => by
+        simp at hx; subst hx
+        have : (S.cs + 1).toNat = S.cs.toNat + 1 := by
+          rw [UInt64.toNat_add]; simp; omega
+        omega)
+  · exact hf.2.2.1 145 ▸ hS.bstk
   · refine ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
 
 /-- **`constTyC`'s `find; put`**: the tier across it. -/
@@ -715,8 +723,7 @@ theorem constTyAt_run_miss (cv : IConstantVal) (us : LsIdx) (a a₁ : AState) (r
   rfl
 
 /-- **`const_ty_at` refines `constTyAt`** (the `inst_lp` stub as `WhnfCallees.instLP`). -/
-@[refines ConRon.Arena.constTyAt]
-theorem constTyAt_refines (p : Prog) (hp : IotaProg' p) (hw : WhnfCallees p) :
+theorem constTyAt_refines' (p : Prog) (hp : IotaProg' p) (hw : WhnfCallees p) :
     ConstTyAtOK p := by
   intro n s₀ a₀ dn vis fe MM eb nn po pl ty us lps hS hnn hty hus hlps
   cases n with
@@ -780,6 +787,11 @@ theorem constTyAt_refines (p : Prog) (hp : IotaProg' p) (hw : WhnfCallees p) :
   · rw [hres2]; simp only [decH]; rw [← hr]
   · unfold ResH HW; rw [← hr]; exact hwv
 
+@[refines ConRon.Arena.constTyAt]
+theorem constTyAt_refines (p : Prog) (hp : IotaProg' p) :
+    ConstTyAtOK p :=
+  constTyAt_refines' (p := p) (hw := whnfCallees_stub p)  (hp := hp)
+
 theorem ruleRhsAt_run_hit (rec ctor : NIdx) (lps : List NIdx) (rhs : EIdx) (us : LsIdx) (a : AState)
     (r : EIdx) (h : a.caches.ruleRhsC[(rec, ctor, us)]? = some r) :
     (ruleRhsAt rec ctor lps rhs us).run a = .ok (r, a) := by
@@ -794,8 +806,7 @@ theorem ruleRhsAt_run_miss (rec ctor : NIdx) (lps : List NIdx) (rhs : EIdx) (us 
   rfl
 
 /-- **`rule_rhs_at` refines `ruleRhsAt`** (the `inst_lp` stub as `WhnfCallees.instLP`). -/
-@[refines ConRon.Arena.ruleRhsAt]
-theorem ruleRhsAt_refines (p : Prog) (hp : IotaProg' p) (hw : WhnfCallees p) :
+theorem ruleRhsAt_refines' (p : Prog) (hp : IotaProg' p) (hw : WhnfCallees p) :
     RuleRhsAtOK p := by
   intro n s₀ a₀ dn vis fe MM eb rec ctor po pl rhs us lps hS hrec hctor hrhs hus hlps
   cases n with
@@ -863,6 +874,11 @@ theorem ruleRhsAt_refines (p : Prog) (hp : IotaProg' p) (hw : WhnfCallees p) :
   · rw [hst2, ← hm]; exact hS₂
   · rw [hres2]; simp only [decH]; rw [← hr]
   · unfold ResH HW; rw [← hr]; exact hwv
+
+@[refines ConRon.Arena.ruleRhsAt]
+theorem ruleRhsAt_refines (p : Prog) (hp : IotaProg' p) :
+    RuleRhsAtOK p :=
+  ruleRhsAt_refines' (p := p) (hw := whnfCallees_stub p)  (hp := hp)
 
 /-! ## `pi_residual(e, ao, an)` -/
 

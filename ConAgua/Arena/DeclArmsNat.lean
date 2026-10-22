@@ -204,10 +204,26 @@ def boolCtorOkL : FunDecl := lfn (p) locals (q, n, b) {
   return u64(EREC.u64[q + 3] == b)
 }
 
+/-- `nat_op_bool_ctors(vis)`: the `Bool` constructors' conjunct of `natOpGuard`: `Bool.true` then
+`Bool.false` stored, level-free, at the type `Bool` (`boolCtorOk`). -/
+-- con-ron: ConRon/Arena/Core.lean:1060-1084 ConRon.Arena.natOpGuard
+def natOpBoolCtorsL : FunDecl := lfn (vis) locals (bt, f, r, ok, bf) {
+  bt := call pin_at(30);
+  (f, r) := call env_find(bt, vis);
+  if f == 0 { return 0 };
+  ok := call bool_ctor_ok(r);
+  if ok == 0 { return 0 };
+  bf := call pin_at(31);
+  (f, r) := call env_find(bf, vis);
+  if f == 0 { return 0 };
+  ok := call bool_ctor_ok(r);
+  return ok
+}
+
 /-- `nat_op_guard(vis, c)`: `natOpGuard fe c`. -/
 -- con-ron: ConRon/Arena/Core.lean:1060-1084 ConRon.Arena.natOpGuard
 @[l_impl ConRon.Arena.natOpGuard]
-def natOpGuardL : FunDecl := lfn (vis, c) locals (s, o, l, d, be, bl, mo, ml, m, bt, f, r, ok, bf) {
+def natOpGuardL : FunDecl := lfn (vis, c) locals (s, o, l, d, be, bl, mo, ml, m, ok) {
   s := call nat_lit_supported(vis);
   if s == 0 { return 0 };
   (o, l) := call nat_op_deps(c);
@@ -218,15 +234,7 @@ def natOpGuardL : FunDecl := lfn (vis, c) locals (s, o, l, d, be, bl, mo, ml, m,
   (mo, ml) := call nat_div_mod_names();
   m := call sl_contains(mo, ml, c);
   if c == be || c == bl || m != 0 {
-    bt := call pin_at(30);
-    (f, r) := call env_find(bt, vis);
-    if f == 0 { return 0 };
-    ok := call bool_ctor_ok(r);
-    if ok == 0 { return 0 };
-    bf := call pin_at(31);
-    (f, r) := call env_find(bf, vis);
-    if f == 0 { return 0 };
-    ok := call bool_ctor_ok(r);
+    ok := call nat_op_bool_ctors(vis);
     return ok
   };
   return 1
@@ -1086,7 +1094,8 @@ def declArmsNatFns : Prog :=
   [("nat_op_names", natOpNamesL), ("nat_div_mod_names", natDivModNamesL),
    ("nat_op_pins_a", natOpPinsAL), ("nat_op_pins_b", natOpPinsBL), ("nat_op_pins_c", natOpPinsCL),
    ("nat_op_pins", natOpPinsL), ("nat_op_deps", natOpDepsL), ("nat_op_deps_stored", natOpDepsStoredL),
-   ("bool_ctor_ok", boolCtorOkL), ("nat_op_guard", natOpGuardL), ("nat_op_cod", natOpCodL),
+   ("bool_ctor_ok", boolCtorOkL), ("nat_op_bool_ctors", natOpBoolCtorsL),
+   ("nat_op_guard", natOpGuardL), ("nat_op_cod", natOpCodL),
    ("nat_op_ty_pinned", natOpTyPinnedL), ("nat_op_stored_ok", natOpStoredOkL),
    ("nat_op_stored_ok_all", natOpStoredOkAllL), ("nat_ap1", natAp1L), ("nat_ap2", natAp2L),
    ("nat_eq_list2", natEqList2), ("nat_op_equations", natOpEquationsL),

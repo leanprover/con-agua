@@ -4380,10 +4380,17 @@ be asymptotically slower. con-ron at `_tmp/ref/con-ron` origin/HEAD (`proof/ConR
 * `WhnfCoreProj.lean`: none of its own. `reduce_proj_core` is proved on its split into
   `_core`/`_head`/`_fire`/`_arg` (sub-lane); the inner two leave the argument slice on the stack, so
   their post is `GrowSpec` (`CoreSpec` with `StackGrew`); the outer one restores the top.
-* `WhnfIota.lean`: `iotaCallees_stub` and eight specs: `iota_ctor_never_prop`, `iota_case3` (need a
-  corrected `caps_never_zero` stub: its twin runs readbacks), `prepare_major`, `major_to_ctor`,
-  `proof_irrel` (calls `lvl_eq_c`), `iota_certs_full(_aux)`, `iota_rec_at`. Eighteen are proved
-  (`WhnfIotaRefine*.lean`, sub-lane); its fixes to the L code: `const_ty_at`/`rule_rhs_at` probe
+* `WhnfIota.lean`: `iotaCallees_stub`, `major_to_ctor`, `iota_rec_at` (both large: they need splitting,
+  and `major_to_ctor`'s K and `And` arms leave a slice on the stack, so `CoreAfterG`). The other 24
+  are proved (`WhnfIotaRefine{,2..6}.lean`, sub-lanes); the census-tagged statements instantiate the
+  stub bundles (`iotaCallees_stub`, `whnfCallees_stub`, `coreCallees_stub`, `supKeep_twin`) and three
+  new assumptions: `erecKeptInst_stub` (`inst_lp`/`inst_spine` leave `EREC` alone),
+  `erecKeptKnot_stub` (the knot's slots and `major_to_ctor` do), `CoreS.lvl_den` (a sort node's level
+  and the pinned zero level denote; a `CoreS` field would be the fix). L changes: `proof_irrel` calls
+  the cached `lvl_eq_c` (the twin's `lvlEq?` fills the cache), `expr_view_ok` aborts on a dangling
+  handle (the twin's `view` fails), `iota_certs_full_aux`/`iota_ctor_never_prop` split;
+  `caps_never_zero`'s stub statement corrected (its twin runs readbacks). The first sub-lane's
+  fixes to the L code: `const_ty_at`/`rule_rhs_at` probe
   the memo again after `inst_lp`, `defeq_list` compares the common prefix before the lengths (the
   twin's order of `defeq` calls), `iota_index_ok`/`iota_certs_full` restore the top,
   `inst_spine_pins` raises the top after each store, `and_rescue_slots` runs `fire_ok` first.
@@ -5452,6 +5459,34 @@ denser than the Rust).
 * Merged master into `defeq-slots` (WhnfCoreApp's `mkAppW_hw` fix). No `sorry`; ~875 lines,
   5.2 s CPU.
 
+### The inference bodies (`InferBody*.lean`, helper `defeq-infer`)
+* **`InferBodySpec p n` and `InferIOBodySpec p n` are theorems** (`inferBody_refines`,
+  `inferBodyIO_refines`, `InferBodyDisp.lean`), hence `inferSlot_step`/`inferIOSlot_step`
+  (`WhnfCallees.inferStep`/`inferIOStep`), from `KnotUpTo p n`, the programs (`InferAllProg`) and
+  `InferCallees`: `inst1`, `inst_list`, `abs_entry`, `ar_entry`, `const_ty_at`, the `infer_lit`
+  callees, `is_eager_reduce`, **`infer_proj` (`InferProjOK`, not proved: the table's `structSort`
+  must denote for `lvl_eq_c`'s refinement, an environment invariant nobody states yet)**, and two
+  binder-stack facts below. Both specs now carry `n ≤ 2^62` (KnotSlot.lean).
+* Every clause is proved: `infer_let`, `infer_lam_io`, `infer_forall_io` (`InferBodyLet`), the
+  spines (`InferBodySpine`, `InferBodySpineF`: loops as named blocks, fuel models, `SpPost`), the
+  telescopes (`InferBodyBind`, `InferBodyBindPi`: `lamsFull_ref`/`pisFull_ref`, `TelPost`), the
+  interning leaves under `CoreS` (`InferBodyIntern`: `CoreS.of_level` for level nodes via
+  `LStore.intern_ext`).
+* **The binder stack is not in `CoreAfter`.** `StackKept` covers `SPN`/`CTL[136]` only, so the
+  telescopes assume `BStkCallees` (`infer`, `whnf`, `inst_list`, `ar_entry`, `ensure_sort` keep
+  `BSTK` below `CTL[137]` and `CTL[137]`) and `BStkCap` (`BSTK` has fewer than `2^63` words under
+  `CoreS`). To discharge them: a field `bstk` in `CoreS` (as `spn`) and `BKept` in `StackKept`,
+  proved by every core body (lane `whnf`'s files construct both about 15 times).
+* **L changes** (Infer.lean): `infer_lam_io`/`infer_forall_io` abort at `d + 1 = 0`;
+  `infer_lam`/`infer_forall` abort at `d ≥ 2^63` (depth capacities: the twin's depth is a `Nat`);
+  `infer_spine`/`infer_spine_io` abort when `CTL[136]` is past the stack (so the empty accumulator
+  is a slice; `head_and_args` at an `app` handle needs no such bound, `headAndArgs_app`).
+* Proof style: `vcgen` + `simp_all` for the specs (`finish` blew up on `List.cons.injEq` with six
+  calls), `ld64_rdW_spec`/`st64_spec` instead of unfolding `ld64`/`st64` (a read's bound proof as
+  an argument blocks `simp_all`). **Kernel deep recursion**: `simp` (`↓reduceIte`) on a goal holding
+  `inferLams …`/`inferPis …` at the literal `peelFuel` made the kernel unfold the structural
+  recursion; `rw [if_pos rfl]` instead. ~4400 lines, ~29 s CPU.
+
 ## Phase 2, round 3: the step's specs, promotion, the pin variants (2026-10-22, lane `decls2`)
 
 ### The stale loop targets (`installStep`, `installDeclStep`, `checkPending`, `checkPendingList`)
@@ -5743,6 +5778,21 @@ links 0 (`@[l_impl]` moved off the ROM readers, which are functions of the ROM, 
   `vcgen` 26 s → 1.4 s, largest `grind` 7.8 s; module 100 s (contended) → 17 s (Lake).
 - The same cause is behind `Scan.Line` (`lineLoop_spec`, `||` chains over the key code).
 
+### `Scan.Line` (117 s): not fixed, diagnosis
+
+- Nearly all of it is `lineLoop_spec` (108 s uncontended): `vcgen` takes 1 s and leaves 89 goals;
+  `finish` on them takes the rest (~1.2 s each, part of it shown as `sym`'s own time). With the
+  `finish`es replaced by `sorry` the theorem takes under 2 s.
+- `L.evalC_spec` does not help here: the `||` chains over the key code `k` become disjunctive
+  hypotheses, and `finish` then needs more case splits than the separate paths cost (85 s with 5
+  goals failing at the default split limit; 139 s with `splits := 24`, one goal 55 s). With
+  `[grind norm]` on the `pval` equations `finish` sees the unfolded conditions, so the remaining
+  cost is the splitting itself.
+- What should work: the PLAN recipe, one named block per arm group of the dispatch (the six
+  `else if k == …` groups), each with its own spec, so that each goal sees one arm's callee posts
+  instead of all of them. That changes the L code's shape (not its behaviour), so it is left to the
+  owner of `Scan/Line.lean`.
+
 ### `Scan/Records.lean` split (2270 lines)
 
 Pure move, as in `Front/FieldsDecl*`: `Records.lean` keeps the L code and the models (1357
@@ -5774,3 +5824,601 @@ import `RecordsSpec`.
   `DefEqLeaves2` (`cplL`, …) from when that file did not build; replace by an import.
 * Lesson: a word model reads memory after a callee returns, where the L code reads it (`callW_spec`
   says nothing about memory kept), else `finish` fails.
+
+## Phase 8 proofs, round 3 (2026-10-22, lane `indproofs2`)
+
+Continues lane `indproofs` (above): the shared pieces its "Next" list named, the two helper-introduced
+`sorry`s, then the parents, with three helpers (`front`: the frontend's inductive lines and their
+hook; `rec`: `RecClass`/`RecGen`/`RecCheck`; `pos`: `IndPos`/`IndPos2`).
+
+### Landing 1
+* **The stubs' write set** (`IndStubs.lean`, `stubM_memoFrame`): every stub (and the two master
+  callees still stubbed, `lvl_eq`, `intern_nanon`) leaves the stage's per-call memos (arrays
+  201‥208, `CTL[202‥219]`) alone and keeps every array's size. One stub-contract statement
+  (`sorry` like `stubM_spec`, for the owning lanes) instead of helper `memo`'s per-use
+  `stubHbFrame`, which is now a corollary; with it a memo relation (`maMR`, `hbMR`, …) is carried
+  across any stub call, so a parent can discharge its callees' memo well-formedness (helper `pos`'s
+  request; memo relations relate memory to a twin map that is not in `AState`, so they cannot live
+  in `StageR`).
+* **`bvar_b` is real** (`IndSumSpec5.lean`, `bvbW_stage`): lane `exprops4`'s `bvarBL` under the stage
+  relation (its model `bvbW` refines `bvarB` at every twin fuel `F + 1 ≥ n`, writes only `BMEMO`
+  and `CTL[24]`, `CTL[25]`, keeps the twin's store, caches and pins). The `hb` walks' model calls
+  `bvbW`, their specs take `BvbProg p`; `bvar_b` moved from `stubFns` to `masterFns`. Helper
+  `memo`'s `bvarBCwf_spec` (`sorry`) is gone. Census: **`hasLooseBVarBGo`, `hasLooseBVarBFast`
+  proven** (were `sorry`). `stubHbFrame` remains for `strip_pis` (a stub). `IndStubs`' `bvarB_spec`
+  (`RelAM` for the stub) still serves `RecGenSpec2`/`RecCheckSpec2`, to be switched.
+* **The generic decoder-stability lemma** (`IndDecStab.lean`): `OMono f` (a reader is monotone under
+  pool extension; one line per decoder from the combinators `OMono.bind`/`mapM`/`decAt`/`decPL`
+  and the readers, by a `repeat' (first | apply … )` over the do-block), `truncM m` (both pools cut
+  at their tops), `DecB f m x := f (truncM m) = some x`, and `DecB.stab : ∀ m', IWGrow m m' →
+  f m' = some x` — exactly lane `indproofs`' `hstab` hypotheses — plus `DecB.grow`, `DecB.get`.
+  `DecB` facts come from bounds: `decHL_decB`, `decNL_decB`, `decRL_decB` (every stub slice post),
+  `iwN/iwH/iwB_truncM` for record words below the top. Every decoder of `IndIface.lean` has its
+  `_mono`; the per-decoder `_grow` lemmas are instances (`decHL_grow'`).
+* **Tried and dropped: the core's invariants inside `StageR`.** A real core callee (`lvl_eq_c`,
+  later `whnf`, `is_def_eq_core`) runs under `CoreS`, which adds to `CheckR` the full pins, the
+  readback caches holding readbacks (`ReadLCOK`, `ReadLsCOK`), `NStoreWF` and two capacities. A
+  `StageX` conjunct in `StageR` was carried through the stage cheaply (level interns: `LsExt` by
+  `EStore.internLevel_ext`; expression interns keep `lss`; IW/EREC writers by frame; 13 call sites
+  patched), but the declaration loop's relation `LoopR` (lane `decls2`'s `DeclBase.lean`) must then
+  carry it too, and `enterScratch` (`Checker.lean`'s `enter_loop`) keeps `ReadLCOK` only if the
+  level stores are well formed (`LsWF`: a cached scratch handle survives `enableScratch` only when
+  the scratch tier was empty) — not provable from `CheckR`. So `StageX` needs `LsWF` (and its
+  preservation by every intern, con-ron's `*_wf` lemmas) in both `StageR` and `LoopR`: a joint
+  step with lanes `decls2`/`whnf`, not done; `lvl_eq` and `lvl_eq_c` stay stubs (lane `decls2`'s
+  `lvlEqCStage_spec` has the same gap). The patch is kept out of the tree (no dead code).
+* Census (`--no-build --list`, this branch on master `1ffa2b1`): phase 8 **60 proven, 36 sorry,
+  119 written, 8 todo** (lane start 58 / 38 / 119 / 8).
+
+### Landing 4: the inference bodies (helper `defeq-infer`); a request to lane `whnf`
+* `inferBody_refines`, `inferBodyIO_refines`: `InferBodySpec p n`/`InferIOBodySpec p n` are
+  theorems from `KnotUpTo p n` and `InferCallees` (callee hypotheses); with `KnotSlot.lean` they give
+  the slot steps `inferSlot_step`/`inferIOSlot_step`. Files `InferBody{Intern,Let,Spine,SpineF,Bind,
+  BindPi,Disp}.lean` (~4.4k lines, 28 s CPU in all). Left in `InferCallees`: the stubs (`Inst1OK`,
+  `InstListOK`, `Abstract1OK`, `AbstractRangeOK`, `ConstTyAtOK`, `InferLitCallees`), `IsEagerReduceH`
+  (now proved in `DefEqLeaves`: to be plugged in), **`InferProjOK`** (`lvl_eq_c` on the table's
+  `structSort` needs a readback of it: an `EnvR` invariant "every level a stored table names has a
+  `denoteL`" is missing), and **`BStkCallees`/`BStkCap`**.
+* **Request to lane `whnf` (owner of `CoreS`/`StackKept`):** the binder stack (array 145, top
+  `CTL[137]`) must be (1) bounded in `CoreS` (a field `bstk : (m.arr64 145).size < 2 ^ 63`, like
+  `spn`) and (2) kept by every core run (`StackKept` gains "`CTL[137]` and `BSTK` below it unchanged").
+  Every core function already keeps it (only `infer_lams`/`infer_pis` write it, and restore the
+  top); the change touches ~15 constructions of `CoreS`/`StackKept` in the whnf files. Until then
+  the two facts are hypotheses here.
+* L changes: depth-capacity aborts (`d + 1 == 0` in the io binder clauses, `d ≥ 2^63` in
+  `infer_lam`/`infer_forall`: the word depth must not wrap where the twin's `Nat` does not); the
+  spines abort when `CTL[136]` is past `SPN`'s end.
+## The pin data as an input (2026-10-22, lane `romload`)
+
+**Decision (user, via the coordinator):** the `Nat`-operation pin variants (con-leche's
+`NatOpPinSet`s) are **an input of the checker, like the export file**: the harness loads a
+pin-data buffer into byte array `1` (`PB`), L decodes it at run time, and the final theorem holds
+at whatever pin list the bytes decode to; bytes that do not decode make `check` abort (decline).
+This replaces lane `decls2`'s "decoder-side ROM loader" and avoids its kernel evaluation of the
+data (≥ 6 h per variant): the kernel never sees the pin data at all, and the program `p` does not
+depend on it.
+
+### Does it compose with the final theorem? (checked)
+
+* `TwinAccepts [b]` already quantifies the pin list (`∃ pins …, internAllPins pins sD = .ok …`),
+  and con-leche's soundness holds at every list: `Model.checkDeclsPure_sound_of` needs only
+  `μ.isVerified = true` (`vendor/con-leche/ConLeche/Model/Fold.lean:221`); the model never reads a
+  pin or a proof blob, the certificate *statements* are hand-pinned in con-leche's checker and
+  shared by every variant (`NatOpPinSet.lean`'s module doc). `twinAccepts_model`/`no_False` take
+  the pins from `TwinAccepts` and pass them through unchanged.
+* **Shape change** (`ConAgua/Final/Statement.lean`): `loadMem b pb s8 s64` puts `pb` in byte array
+  `1`; `PipelineRefines p` quantifies `∀ pb` (with `pb.size < 2^63`), and the three theorems take
+  `pb` and `hpb`. Nothing else changes: `TwinAccepts [b]` is about the input only. The obligation
+  for the pipeline proof is that `check`'s pin stage, run on `pb`, refines `internAllPins P` for
+  the list `P` it decoded (`∃ P` in the stage's post).
+* **What else assumes "the real pins"? Nothing in the theorem.** Places that mention a pin list:
+  (1) the e2e reference `e2e-ref` runs the twin "at the program's pin list" (`romPins = []` so far):
+  it must run at the list the buffer decodes to, i.e. `natOpPinSets.take 1` for the generated
+  buffer (lane `e2e`); (2) ROADMAP §3 (c)'s single-toolchain decision: a buffer may hold several
+  variants; L's "no recovery" (abort where the twin's `orElseAttempt` would try the next variant)
+  stays a completeness loss only; (3) **the prelude is not free in `TwinAccepts`**:
+  `builtinPreludeE` is the twin's fixed function on the twin's fixed prelude bytes, so L's prelude
+  bytes must equal them (a proof obligation of lane `prelude`, not a soundness question; making
+  the prelude an input too would need `TwinAccepts` to quantify the prelude bytes; con-leche's
+  side, `stages_frame`, already holds at any `preC`). Not a soundness subtlety: a pin list only
+  enables a `Nat` operation's literal fast path after the stored definition is defeq to the
+  variant's pin and the variant's certificates check against con-leche's own statements.
+* Trusted base: unchanged in kind. The loader now also loads the pin-data file into byte array
+  `1` (`hmem`'s layout); its contents are untrusted (any `pb`), and so is the generator.
+
+### The buffer (`ConAgua/Rom/PinStream.lean`, `ConAgua/Rom/Gen.lean`)
+
+`pinBuffer pins = romData ++ encPinSets pins`: the startup data the twin interns *exactly*
+(`romData`, `Prelude.lean`: pin names, basis blocks, axiom shapes; 9 542 bytes), then the variant
+count and per variant the eight pins (`encExprM []` each: fresh memo, as `internExpr`) and the eight
+certificate lists (length, then the expressions at one memo, as `internExprList`).
+`lake exe romgen OUT` writes it for `natOpPinSets.take 1` (con-leche's repository-toolchain variant):
+**500 540 bytes** (490 998 of pin data), **1.1 s** natively. Expression literals: tag `3` is now a
+`natVal` below `2^64` (the pins use `0`, `1`, `2`); a string literal is tag `11` (no reader).
+
+Why the startup data is in the buffer too: one reader family. `check` first compares
+`PB[0 ‥ |romData|)` with its own copy (`romData`, the program's constant data) and aborts on a
+difference; after that every reader reads `PB`. The readers' proofs stay the ROM proofs: a
+**substitution lemma** (a program that never stores to byte array `PB` runs exactly as the program
+with every `ld8 PB i` replaced by `ldc bs i`, `bs` the buffer) turns the real program into one whose
+readers are literally `romName bs`, `romExpr bs`, … (`rom := bs`). The startup part keeps its
+encoder-direction proofs (`bs = romData ++ rest` by the prefix check); the pin part needs the
+decoder direction: "the reader returned ⇒ the bytes are `encExprM seen e ++ rest` for some `e`",
+then the existing specs apply. Two run-time checks make that true for every byte string:
+* names: every string byte below `128` (ASCII, so the bytes are some `String`'s UTF-8);
+* canonical back references: the encoder writes a compound subterm out only when the twin's memo
+  misses; on arbitrary bytes L would re-intern a subterm the twin's memo hits. L keeps the handles
+  of the current memo in a hash set (`RSET`, the memo library's schema) and aborts when an
+  explicitly encoded compound node's handle is already in it; con-ron's `denoteE_inj` turns that
+  into "the twin's memo misses". (A linear scan of `RMEMO` instead would cost ≈ 1.3·10^8 steps per
+  run on this buffer: Σ n²/2 over the memo calls.)
+
+Memory map additions: byte array `1` = `PB`; word array `150` = `RSET` (`CTL[148]`, `CTL[149]`
+its stamp and count); `CTL[150]`, `CTL[151]` the variant list (`EREC` offset, count).
+
+For lane `e2e`: the harness loads the pin-data file into byte array `1` (`_tmp/romload/pins.bin`,
+from `lake exe romgen`), and the program has `nb = 2`.
+
+### Landing 2 (lane `indproofs2`)
+* **`IndSim.lean`: composing relational lemmas.** `Sim mo op a Q` (the model's result `mo` is
+  simulated by the twin run `op` from `a`, `Q` after); `Sim.bindK` composes one callee with the
+  twin's `>>=` through the template's continuation defs (`K none = none`, `K (some (r, m₁)) = body`,
+  both `rfl`), `Sim.bind_twin` a twin-only step (a pin read), `Sim.run` gives the census form
+  (`AM.ok`, the post at `AM.res`/`AM.st`). Plus the blocks every wrapper repeated: `pinZero_stage`
+  (`pin_word(53)` is `zeroLevel`, 9 lines at each of 5 sites before) and `StageR.lt64` (a slice end
+  `≤ iwTop` is `< 2^64` by `IWOK`; most lemmas carry both as hypotheses).
+* **`struct_proj_guards` refines `structProjGuards`** (`IndSumSpec8.lean`, the `Sim` pilot; `sorry`
+  status through `strip_pis` in `structUsedLaterList`). **`cons_sum_ctors` refines
+  `consSumCtors`** (`IndSumSpec9.lean`, sorry-free: `ctor_info_rec` + lane `decls2`'s `env_push`;
+  the constructor list taken as `DecB`, so it stays decoded across the pushes and its constants
+  decode in `erecP`, which `env_push` reads). L changes: `cons_sum_ctors` loop → self-recursion;
+  `ctor_info_rec` aborts unless the copied name word is a handle (`env_push`'s spec needs it).
+  `env_push` enters the model as `callW p n "env_push"` (its spec has a precondition, which
+  `vcgen` cannot discharge — the known gap), turned into `envPushW` in the relational lemma by
+  `triple_of_callW`, as lane `decls2` does.
+* **Proof cost, measured.** The pilots: `structProjGuards` 7 L lines / 212 proof lines,
+  `consSumCtors` + `ctor_info_rec` 20 / 328 — still ~20–30 per L line on wrappers. Where the lines
+  go: (1) **program-lookup hypotheses**, 15–20 lines per section, repeated in the spec section
+  and the census section of every file (a bundle `structure XProg (p) : Prop` per module, as lanes
+  `exprops4`/`decls2` have — `BvbProg`, `RecProg`, `CvgProg` — would make them one line; not
+  retrofitted, every existing statement would change); (2) **record writes**: decoding a freshly
+  written `EREC`/`IW` record is ~80 lines per record kind (`ciRec_stage`, `cvNew_stage`), mostly
+  index arithmetic on `wrER`/`set64` reads (a generic "`wrER` at the top decodes as the decoder of
+  the word list" would remove it; `decCV_shift` is a start); (3) **the twin side of each callee**,
+  `cases h : callee … | none | some` plus rewriting the twin bind — what `Sim.bindK` removes (the
+  pilot's relational lemma is 45 lines for 4 callees, against ~15 per callee before); (4) the
+  `vcgen` spec is cheap (5–10 lines) and was never the problem. The generic decoder lemma
+  (landing 1) replaces the per-decoder `_grow` lemmas and `hstab` hypotheses at no cost per use.
+* Census (this branch on master `9c9e5b6`+): phase 8 **61 proven, 37 sorry, 117 written, 8 todo**.
+* Note for lane `whnf`: `scripts/provenance.py check` reports 9 uncited FunDecls in
+  `WhnfDelta.lean` (master).
+
+## End-to-end runs (2026-10-22, lane `e2e`)
+
+Files: `ConAgua/E2E/{Ser,Dump,Check,Trace,Main,Ref}.lean`, `harness/e2e.c`, `scripts/e2e.py`,
+`docs/e2e.{md,csv}`; three executables in `lakefile.toml` (`e2e-l`, `e2e-ref`, `con-ron-lean`).
+The L code is ahead of the proofs; this lane runs it on real inputs to find bugs before the
+proofs do. `scripts/e2e.py` (niced, memory-guarded, every run with a timeout, about 5 minutes
+on 12 jobs; never a merge gate) does everything and writes `docs/e2e.md`; `--csv` appends a line
+per entry to `docs/e2e.csv`.
+
+### The assembly: from the lanes' modules, through text
+
+* **No hand-maintained list.** `ConAgua/E2E/Dump.lean` collects every binding of an L function
+  name to a `FunDecl` in the `ConAgua` modules: each constant of type `Prog` (first binding of a
+  name wins, as in `List.lookup`), and each `p.lookup "f" = some d` with a closed `d` in the type
+  of any constant (the lanes' `…Prog p` structures and lookup hypotheses; this finds functions no
+  `Prog` list contains). Lookups parametric in the ROM (`NameProg rom p`, …) are instantiated at
+  `L.Rom.romData`. A body that is a bare `abort` is a stub.
+* **Through text** (`Ser.lean`), because the modules cannot all be imported into one file: some
+  define the same declaration (below). `e2e.py` imports every module except executables in as few
+  closures as the clashes allow (four dumps today, ~5 s each), merges the dumps, and writes the
+  program reachable from the entries as one file; `e2e-l asm` reads it, checks `Prog.wf`, and
+  prints `asmText`; `harness/e2e.c` is the driver (byte array 0 = the file, every word array
+  `CA_WORDS` words, mapped lazily; prints `accept` only on `rdx = 0 ∧ rax = ACCEPT`).
+* **Missing functions.** A called name with no binding or only `abort` stubs becomes an e2e stub
+  with its own code: compiled, `DIAG.u64[0] := code; abort` (`DIAG` = one word array past every
+  array the program names; the harness reads it after `rdx = 2`); under `L.run`, a call of the
+  undefined `__missing_<name>` (the error `noFun` names it). A call whose argument count differs
+  from the callee's parameters is redirected to a stub `__arity_<callee>_<n>` (so `Prog.wf` holds
+  and a run that reaches it says so). Names bound to different bodies: the most common binding is
+  used and the conflict is reported.
+* **The entry** (`Check.lean`): `check()` is `TwinAccepts`' pipeline: `pb_check` (the pin-data
+  buffer in byte array 1 starts with `romData`; lane `romload`), `intern_reserved_pins`,
+  `builtin_prelude`, `front_run` (`≠ 0`: return `1`, the frontend's reject), `prepare_prelude`,
+  `intern_all_pins` (lane romload's `internAllPinsPB`, bound explicitly: three bodies carry the
+  name on master), `install_then_check`, `return ACCEPT`. The harness loads `lake exe romgen`'s
+  buffer (`natOpPinSets.take 1`, the single latest-toolchain variant) and the reference runs at
+  the same list (`e2e-ref --pins=1`). `builtin_prelude` and
+  `prepare_prelude` have no L code, so every run of `check` stops there; `check_np()` is the same
+  pipeline without the two prelude stages, a test entry whose reference is the twin's pipeline
+  without them (`e2e-ref --no-prelude`). Not in `check` yet: the capacity checks at entry (in L a
+  too-small array aborts on its first out-of-bounds access, so the test runs are sound without
+  them; the proof needs them) and `AState.worker` between the phases (the twin's
+  `installThenCheck` has none either).
+* **E2E patches** (`Check.lean`, listed in the report): a hook a lane has specified but not made
+  yet, so that the code behind it runs now. One today: `apply_dline` with the inductive line's
+  `pl == 25` hook to `apply_ind_line` (`IndApply.lean`'s header; DESIGN.md lane `indproofs`). Its
+  534 lines of unproved L run on every inductive fixture.
+
+### The reference and the classes
+
+* `e2e-ref FILE [--no-prelude]` (`Ref.lean`): the vendored twin compiled by Lean, the stages of
+  `TwinAccepts` on the whole file as one buffer (`parseBytes`), `.verified`, at the empty pin
+  list (the program's ROM carries no pin variant, `L.Rom.romPins = []`). `con-ron-lean` (con-ron's
+  own driver) is built too; `--no-pins` gives the same verdicts on the fixtures tried. Reference
+  verdicts are cached by fixture hash and the vendored revision.
+* Fixtures: con-leche's 493 e2e fixtures (the `.gz` ones decompressed) and the 182 arena tests.
+* Classes (`L` = compiled `check`/`check_np`): `agree-accept`; `agree-reject` (L's frontend says
+  reject, the twin rejects at a line); `agree-reject (L aborts)` (both non-accept; L stopped by an
+  `abort`, which is how every twin error is translated); `agree-reject, stage differs`;
+  `missing` (the run reached a stub; the histogram counts the first stub each fixture reaches);
+  `l-error` (L aborts, the twin accepts: a bug or a capacity); `DISAGREE-accept` (L accepts, the
+  twin does not: **a soundness bug**), `DISAGREE-reject`; `l-exhausted`/`l-timeout`/`l-memout`.
+  An `error` is retried once with every array 8 times larger (`BIG_WORDS`).
+* **Where it stops.** `ConAgua/E2E/Trace.lean` is a second, tracing interpreter (mutable frames,
+  no fuel): on an `abort` it reports the call stack and which `abort` of the function's body it
+  was (`abort #k`, pre-order from 0). `e2e.py` traces every L error on fixtures up to 1 MiB. Verdicts
+  come from the compiled code and from `L.run` (on fixtures up to 20 KB), never from the tracer;
+  a fixture where compiled code and `L.run` differ is listed separately (a compiler or harness
+  bug).
+
+### Per-function differential tests (`e2e-diff`, `Diff.lean`)
+
+From one fixture, the twin's state after `internReservedPins`, `parseBytes`, `internAllPins` and
+L's memory after `e2e_front()` (the same stages): first the stores (node counts of all 19 cons
+tables, both tiers: what `ArenaR` relates), then up to 200 persistent expression handles, evenly
+over the ten expression tags, through `whnf`, `whnf_core` and `infer` on both sides (verified mode,
+the empty environment, depth 0), each from the same two states: agreement is the same handle word
+(`decE`) and equal store counts after. Under `L.run` the pin stage alone takes about 2 minutes (the
+interpreter copies the arrays a callee writes), so `e2e.py` runs `e2e-diff` on 24 fixtures and
+`L.run` on 12, spread over the files up to 20 KB (`--diff-sample`, `--interp-sample`); a full run
+takes about 17 minutes on 12 jobs. The comparison caught the e2e assembly's own mistake on its first
+run (an older `intern_all_pins` body: the stores differed on all 634 fixtures).
+
+### First results (master `3b96365`, 675 fixtures)
+
+1209 functions with L code reachable from the entries, 47 stubs. `check`: all 675 stop at
+`builtin_prelude`. `check_np`: 1 agree-accept (`long_line_5mib`: the frontend and the fold on a
+file without declarations to check), 38 agree-reject (35 by an `abort`; every one at the same
+stage as the twin: the inductive validation `validate_ind_d`/`vi_rec`/`vi_ctor` where the twin
+rejects at the line, `install_decl_step`'s `And` pin where it rejects at the declaration), 635
+missing (`basis_pin_hit` 552, `is_proj_fn_shape` 81, `rom_basis_decls` 2), 1 l-error (below), no
+disagreement. Compiled code and `L.run` agree on every fixture both ran. So far, wherever the
+twin's frontend accepts a file, L's does too (the unproved inductive lines included; the one
+exception is item 5 below), and the fold stops at its first stub on the first inductive or
+projection-shaped declaration. `e2e-diff`: the stores agree on all 22 sampled fixtures; `whnf`
+and `whnf_core` agree on 4317 of 4408 handles, both fail on 88, and 3 reach a stub (`find_proj`,
+`inst1`); `infer` (the empty environment: most terms name constants) agrees on 29 and both fail on
+the rest; no disagreement.
+
+### Bugs found by e2e
+
+Owners as in `docs/lanes.json`; reproducers are `scripts/e2e.py --only <fixture>` and, for the
+assembly items, `docs/e2e.md`'s "Assembly" section (any run).
+
+1. **Modules that cannot be imported together** (one Lean file assembling the checker is
+   impossible until fixed; the e2e assembly works around it through text). At master `3b96365`:
+   `Arena/DeclValRef.lean` (decls2) vs `Arena/DefEqLeaves.lean` (defeq), `decCI_defn`'s
+   auxiliary `_proof_1_6`, and vs `Arena/InferLeaves.lean` (defeq), `L.Arena.toNat_add_small`;
+   `Arena/WhnfCoreProj.lean` (whnf) vs `Arena/InstListRefine.lean` (exprops4),
+   `L.Arena.SpineR.of_spn`, and vs `DefEqLeaves` (defeq), `L.Arena.lsNodeW_viewLen`;
+   `Arena/PromoteRec.lean` (decls2) vs `Arena/Walk.lean` (done), `L.Arena.clrK`. Fixed during the
+   day: `InferLeaves`/`DeclCvg` (`decCV_words`), `WhnfCoreLoop`/`InferLeaves` (`coreRef_congr`),
+   `WhnfDeltaRefine`/`InferBodyLet` (`CoreSpec.zero`), `PromoteERef`/`DefEqLeaves2` (`lit_rec`).
+   (`LiftBench`/`NatBits`, `L.Arena.bv`, is the known benchmark clash.) The current list is in
+   `docs/e2e.md`.
+2. **Arity mismatches between call sites and definitions** (each would fail `Prog.wf`):
+   lane induct's call sites (now indproofs2) still call `get_app_fn(f, e)`, `get_app_args(f, e)`,
+   `pi_result(f, e)`, `whnf(vis, dep, e)` — the whnf lane's functions take `(e)`, `(e)`, `(e)`,
+   `(mode, vis, dep, e)`; the adapters `get_app_fn_f`, `get_app_args_f`, `pi_result_f`,
+   `whnf_top` exist (`WhnfEntry.lean`), the renames at about 25 call sites do not (owner:
+   indproofs2). `fab_scope_ok` (`WhnfIota.lean`, whnf) calls `loose_bvars_bounded_fast` with 2
+   arguments; exprops4's (`BvarB.lean`) takes 3 `(f, k, h)` (owner: whnf).
+3. **One name, several bodies**: `intern_all_pins` has three (`internAllPinsPB` in
+   `L.Rom.romProgPB`, an older one through `PinProg`, and `internAllPins_rom`'s ROM version; owner
+   romload: retire the old lookups). `reserved_contains` is `reservedContains` (`IndIface.lean`, induct;
+   `DeclHeader.lean`'s lookups, decls2) and `reservedContainsL` (`WhnfIota.lean`, whnf; also
+   `KnotWF.lean`). Pick one (owners: whnf, decls2).
+4. **Stub names that look implemented under another name and convention**: `abstract1_fast(4)`
+   and `instantiate1_fast(4)` (decls2's stubs) vs exprops4's `abs_entry(3)`, `inst_entry(3)`;
+   `inst1(3)` (defeq's stub) vs `inst_entry(3)`. The extra argument is the walk fuel of lane
+   induct's convention. Owners: decls2, defeq (rename or adapter). `inst1` is what stops `whnf` on
+   a beta-redex in `e2e-diff` (136 handles over the fixtures in an unsampled run).
+5. **Sparse export ids** (`e2e/rounds_huge_gaps`, ids up to `3·10^15`): the frontend's id tables
+   are dense arrays (`NID`/`LID`/`EID`, lane front's design), so `name_fresh` aborts at its
+   capacity check where the twin's hash maps accept. A completeness loss, not a soundness one;
+   owner front (a hash-mapped id table, or accept the loss and say so).
+## Phase 2, round 4: the `checkDecl` arms' proofs (2026-10-22, lane `decls3`)
+
+### `lvl_eq_c` everywhere in lane `induct`'s code (request of lane `decls2`, done here)
+
+`lvl_eq_fueled`, `lvl_eq_true` (`IndIface.lean`), `block_shape_with_sort` and `block_shape`
+(`IndParts.lean`) and `RecCheck.lean`'s call called the uncached `lvl_eq`, which leaves the twin's
+`lvlEqC` behind. They call lane `whnf`'s `lvl_eq_c` now (one word each); `masterFns` gains a
+`lvl_eq_c` stub (the closure check); the stub spec `lvlEqStub_spec` (`IndStubs.lean`) speaks of
+`lvl_eq_c`, and lane `decls2`'s duplicate `lvlEqCStage_spec` is gone (one `sorry` fewer;
+`DeclCvg.lean` uses the stub spec). Proofs touched: `IndInstallSpec3` (`lveW`), `IndPartsSpec4`
+(`wsW`), names only. **For lane `indproofs2`**: these are your files; the change is mechanical
+(`"lvl_eq"` → `"lvl_eq_c"` in `stubM`), merge it as is. `Front/IndApply.lean` still calls `lvl_eq`
+(the frontend's validation; not checked against the cache).
+
+### The value checks (`DeclValSpec.lean`, `DeclValRef.lean`)
+
+L change: the value checks take the arm's constant record `c` (built by `erec_ci` with the kind
+the twin pushes: `defnInfo`, `thmInfo`, `axiomInfo` for an opaque) and push it; `ci_new` and the
+hint copy are gone. `check_constant_val` is `install_header` (lane `decls2`'s, proved) then the
+type's sort, as the twin's `checkConstantVal` is `installHeader` then `inferTypeCore`/`ensureSortCore`
+(`checkConstantVal_eq`: the twin's `do` duplicates its continuations into every `if` branch, so the
+equation needs `ite_bindAM`/`fail_bindAM`). `check_opaque_val` is `check_defn_val`'s text (one model
+`dvW`, one tail lemma `dvT`). **Refined**: `checkConstantVal`, `checkDefnVal`, `checkThmVal`,
+`checkOpaqueVal` (through the core's stubs and `lvl_eq_c`'s: census `sorry`).
+
+### `erec_ci` for every record kind (`DeclRec.lean`)
+
+`erecCiW_core` is lane `decls2`'s `erecCiW_ok` without the record kind (the kind word, the
+constant value whenever the record has one, the value word, the hint); `erecCiW_ok` follows from it,
+and `erecCiW_okA` gives `axiomInfo cv` for an axiom or quotient record (`erec_ci(i, 0)`), which the
+axiom and quotient arms build.
+
+### Sorry-free leaves (`DeclBasisSpec.lean`)
+
+`pin_at` as a word model (`pinAtW`, `pinAtW_ok`); **`ofReduceOp`**, **`installBasisDecl`**,
+**`installBasisDecls`** refined without `sorry` (the basis list an `IW` slice of record pointers,
+decoded below the tops: lane `indproofs2`'s `DecB`; the recursion through `callW`, the fuel
+induction on the run). L change: words loaded into locals before a call (`install_basis_decl(s)`),
+the finding of lane `decls2`.
+
+Census at landing 1 (`--no-build`): phase 2 **139 proven, 15 sorry, 86 written, 91 todo** (lane
+start 136 / 11 / 93 / 91); totals 558 proven / 71 sorry of 1352.
+
+### Landing 2 (lane `romload`): the readers over `PB`, the decoder direction
+
+* **L code** (`ConAgua/Rom/PinRead.lean`): `pb_check`, the ROM readers over `PB` (`FunDecl.toPB` of
+  the ROM readers; `rom_u64`, `rom_put` written out), `intern_pin_sets` (+ `rom_exprs_to`,
+  `rom_pins_to`, `rom_lists_to`, `rom_sets_to`), `rom_pin_sets`, `intern_all_pins` over `PB`
+  (`internAllPinsPB`); all in `romProgPB`. Changes to the ROM readers (`Rom*.lean`): names' bytes
+  must be ASCII (`rom_put`), `natVal` literals below `2^64` (tag `3`, `rom_lit`), `rom_u64` also
+  checks `i + 8 < i`, the canonical-encoding check in `memo_push` (`RSET`, cleared with the memo).
+* **Models read only bytes that are there**: `romB` reads `255` (no tag) past the end, and every
+  `u64` read records `u64OK` (its range check) in the model. Then "the model returned" implies "the
+  bytes are an encoding", with no end-position bookkeeping.
+* **Proofs**: `Subst.lean` (helper, 350 lines: the substitution lemma, `triple_subPB`,
+  `run_subPB`); `Dec.lean` (helper, 491 lines: names, levels, level lists in the decoder
+  direction; `rom_levels` now aborts on a count ≥ `2^60`); `PinReadSpec.lean` (helper, 513 lines:
+  the new functions compute their models, `pb_check`'s prefix); `DecExpr.lean` (600 lines:
+  `romExprW_dec`, every expression the reader returns from is the canonical `encExprM seen e`;
+  `canon_miss` is the canonicity argument); `RsetR` (RomExprRef.lean: `RSET` holds every memo
+  handle; `ExprPost` now carries it). The encoder-direction proofs were adapted (literal arm,
+  `u64OK`, the set). No `sorry`.
+* **Test** (`lake exe romtest BUF`, `ConAgua/Rom/Test.lean`): runs `pb_check`,
+  `intern_reserved_pins`, `intern_all_pins` over `PB` in the L interpreter on the generated buffer
+  and the twin's `internReservedPins`, `internAllPins (natOpPinSets.take 1)`: **all 26 interned
+  pin/certificate handles agree** (the store numbering is the twin's). 55 s interpreted.
+* For lane `e2e`: to read the pins, bind `romProgPB`'s entries before the ROM readers, and call
+  `pb_check()` first in `check()`; `e2e-ref --pins=1` is then the reference.
+* Next: `internPinSetsW_dec` (the variant list in the decoder direction, `PinSetsR` the records'
+  relation; helper `romload-sets`), then the stage theorem for the real program via `triple_subPB`.
+
+### Landing 3 (interim: helpers `rec`, `pos` merged at their current heads)
+* Helper `rec`: `classNPcOf`, `blockNestedBit` (proven), `classReadMinor`, `classReadSlot(s)`,
+  `classRead`, `targetMajorAt` (`sorry` through stubs); its own composition helper `RSim`
+  (`RecSim.lean`) and `RecStab.lean`. Helper `pos`: `NestCtx.rootHoles`, `nestHoleAt` (proven),
+  `fvMapAt`, `nestHoleImg`, `replaceFVars(Go)`, `nestContainer` (through `mk_app_n`'s stub),
+  `nestUniform`/`nestOccAny` pieces. L changes by both: loops to self-recursion, handle guards.
+* Lemma-name clashes between the two helpers' files (`rec2/4/5_specW`, `frK*`, `rowPW_eq`,
+  `iwN_grow`) were renamed on `pos`'s side at the merge (`posRec*_specW`, `pfrK*`, …); `IndAll`
+  caught them.
+* Census: phase 8 **65 proven, 47 sorry, 103 written, 8 todo**.
+
+### Landing 4: helper `pos` done; lane `whnf`'s entry points
+* Helper `pos` (5 h, with one fork of its own): all of `IndPos` (`NestCtx.rootHoles`, `nestHoleAt`
+  sorry-free; `nestContainer`, `fvMapAt`, `nestHoleImg`, `replaceFVarsGo`/`replaceFVars` — one
+  strong induction on the exec fuel, the banked memo as `RfInv` —, `nestCrest` through stubs), and
+  11 of 23 `IndPos2` targets (`nestArity`, `piDomsOcc` sorry-free; `nestCtorNf`, `nestSeedOf`,
+  `nestHoles`, `nestWalkStack`, `nestGroupCtors`, `nestRootCanon`, `nestUniformOk`, `nestUniform`,
+  `nestInstType` through stubs). Open: `nestGrowGroup` (a WIP outside the tree), `nestAcceptGroup`,
+  the `nestPos` block (`nestFields`, `nestCtors`, `nestFrame`, `nestContNew/Key`, `nestCont`,
+  `nestPos`), `nestRoot`, `nestSeeds`. Hypotheses its parents must discharge: `RfInv` before the
+  banked walk, a well-formed `replace_apps` memo (`hMstage`), record/slice bounds (`CtorSums`,
+  `CtxIn`, `CtxSl`, `HSl`, `FMOk`, `CVSl`). L: ten loops to self-recursion, handle guards after
+  `intern_sort`, `intern_const`, `replace_apps`; no bugs found. ~7.2k proof lines for ~420 L lines.
+* **Lane `whnf`'s hand-off done**: the stage's call sites and stubs use `whnf_top`,
+  `get_app_fn_f`, `get_app_args_f`, `mk_app_n_f`, `pi_result_f` (`WhnfEntry.lean`'s conventions);
+  their specs are still `IndStubs`' `sorry`'d `RelAM` statements (the adapters' `StageR` specs need
+  the `CoreS` bridge, landing 1's "tried and dropped").
+* Helper `parts` started (IndParts/IndInstall, stub-free leaves first).
+* Census: phase 8 **67 proven, 57 sorry, 91 written, 8 todo**.
+### The ROM stubs' specs (`DeclRomStubs.lean`), for lane `romload`
+
+The arms read con-leche values the twin interns at the point of use. Their L readers are the
+stubs `rom_ci(id)`, `rom_cv(id)`, `rom_expr(id)`, `rom_basis_decls(kind)`, `rom_basis_decls_a(kind)`
+(`romStubs`, lane `decls2`'s ids). Their specs are stated in lane `induct`'s stub shape (`stubM` +
+`RelAM`, `sorry`): from `StageR`, the twin's `romCiT id` (`eqA`, `natA`, the `Iff`/`Nonempty`
+families), `romCvT id`, `romExprT id`, `BasisKind.decls`/`declsA (basisOfW kind)` runs, `StageR`
+after at the same environment, the pools grown, and the result **decoded below the tops**
+(`DecB`: a record (`decRCI`, `decRCV`), a handle (`decW0E`), an `IW` slice of record pointers
+(`decRBlk`)). **For lane `romload`**: these are the statements the real readers must prove; the
+values all come from the startup data (`romData`), which `PB`'s prefix check makes the program's
+own. `rom_pin_sets()` (the variants, `CTL[150]`/`CTL[151]`) has no spec yet: see "The definition
+arm and the pins" below.
+
+### Through the stubs: the reduce family (`DeclReduceSpec.lean`)
+
+**Refined**: `reduceOpCvA`, `ofReducePinA`, `reduceDeclPin` (one model `selW` for "read a pin,
+pick one of two ROM ids"; through the ROM stubs), `reducePinGuard` (through `rom_expr`'s and the
+walks' stubs), and **sorry-free** `reduceCertVar` (pin reads, `const_e`, `intern_fvar`; L gained a
+handle guard after `const_e`) with `constE_stage` (`const_e` under `StageR`, from lane `whnf`'s
+`constE_spec`). Name clashes met: `DeclCvg.decCV_words` (renamed `decCV_slice`; lane `whnf`'s
+`WhnfDeltaRefine` has its own), `PromoteRec.clrK` (renamed `pmClrK`; `Walk.lean` has one).
+
+### `checkDecl` at the loop's relation (`DeclArmLoop.lean`, `DeclCheckLoop.lean`)
+
+* **The arms' text.** `armText` (the arms' modules, the real master callees they reach,
+  `cvgProg`, `ivProg`, then the step's program) and `armFns`; `armText_closed :
+  closedA armText stepA stepC armFns` by `decide +kernel`. `ArmProg p` (agreement on `armFns`)
+  gives the frame; the callees' lookup structures (`ValProg`, `RecProg`, …) are separate
+  hypotheses (`CheckDeclProg`), as in `DeclCallees` — deriving them from `ArmProg` needs
+  `rfl` on lookups through a ~600-entry program, which times out in the elaborator.
+* **`check_decl_thm` refines the `.thmDecl` arm** at `LoopR` (`checkDeclThm_loop`: model with
+  `callW` for `check_constant_val`/`check_thm_val`, their census theorems on the runs, the text's
+  frame, `LoopR.of_step`).
+* **`checkDecl_loop` is proved** from the five arms' specs (`ArmSpec`): the dispatcher's model,
+  `DeclAt` fixing the kind word, the inductive branch unreachable under the front's records. The
+  theorem arm's spec is proved; the axiom, definition, opaque and quotient arms' specs are
+  `sorry` (`checkDeclAxiom_loop`, …) until the canonical comparisons (helper `decls3-canon`), the
+  `Nat` gate (helper `decls3-nat`) and the ROM readers are in. `CheckDeclSpec` (the statement)
+  lives in `DeclStepGo.lean` and is threaded into `installStepGo_spec` as a hypothesis (no import
+  cycle); `Checker.lean`'s `DeclCallees` gains `cd : CheckDeclProg p`.
+* **The definition arm and the pins.** `CheckDeclSpec` quantifies the pin list `pins`, and nothing
+  in `LoopR` relates it to the memory: true today only because `rom_pin_sets` is an aborting stub
+  (every `Nat.div`-family install declines in L). Once lane `romload` loads variants from `PB`,
+  the loop's relation needs "the variant records (`CTL[150]`, `CTL[151]`) decode to `pins`", and
+  the definition arm's spec takes it.
+
+### `lvl_eq_c` under the stage relation (`DeclLvlStage.lean`): what is left
+
+`lvlEqC_stage` (sorry-free): from `StageR`, **`TwinOK`** (the readback caches hold readbacks,
+`NStoreWF`, the `EREC`/`SPN` sizes below `2^63`), a filled pin table and the two levels'
+denotations, a `lvl_eq_c` run is an `lvlEq?` run with `StageR` and `TwinOK` after and the pools
+untouched (its write set from the text, `lvlText_closed`). So the stub spec `lvlEqStub_spec`
+(`sorry`) reduces to two missing facts, both cross-lane:
+1. **`StageR` must carry `TwinOK`** (lanes `indproofs2`, `whnf2`): a conjunct about the twin state
+   (and two sizes), kept by every memory-only step for free, by interns through "the store only
+   grows" (`denoteL` stable under extension; `NStoreWF` by the name interns), by `flushCaches`
+   (empty caches) and the scratch bracket (whnf's `CoreS` lemmas). Changing `StageR`'s shape
+   touches every anonymous `⟨CheckR, IWOK⟩` in 35 files; not done here.
+2. **The compared handles denote** (`denoteL a.store.ls (decI u) = some _`): the callers get `u`
+   from `ensure_sort_core` (a stub whose post `decW0L` says nothing about denotation) and the zero
+   level from `PinsFull` — lane `whnf`'s open `CoreS.lvl_den`. A store invariant "every level
+   handle in the store denotes" would serve both.
+`DeclLvlStage` is not in `DeclAll` (own lakefile entry): importing it brings `WhnfIotaRefine`'s
+`frW` and `FVarRange`'s `frW` together (a clash between lanes `whnf2` and `exprops`).
+
+### `sorry`s (lane `decls3`, at landing 2)
+
+* `DeclCheckLoop.lean`: `checkDeclAxiom_loop`, `checkDeclDefn_loop`, `checkDeclOpaque_loop`,
+  `checkDeclQuot_loop` (the four arms' specs; replace lane `decls2`'s single `checkDecl_loop`
+  `sorry`, which is now a proof).
+* `DeclRomStubs.lean`: `romCi_spec`, `romCv_spec`, `romExpr_spec`, `romBasisDecls_spec`,
+  `romBasisDeclsA_spec` (the ROM readers; lane `romload`).
+* `IndStubs.lean` `lvlEqStub_spec` now speaks of `lvl_eq_c`; lane `decls2`'s `lvlEqCStage_spec`
+  is gone (see `DeclLvlStage` above for what is left).
+* Unchanged: `Checker.lean` `promoteNew_spec` (helper `decls3-promote` running).
+
+Census at landing 2 (`--no-build`): phase 2 **142 proven, 19 sorry, 80 written, 90 todo**.
+### Landing 3 (lane `romload`): the pin stage, proved; numbers
+
+* **The stage theorems** (`ConAgua/Rom/Stage.lean`, for the real program `P`, whose pin readers
+  read byte array `PB`; all sorry-free, axioms `propext`, `Classical.choice`, `Quot.sound`):
+  * `pbCheck_PB`: a returning `pb_check()` means the buffer `bs` is `romData ++ rest`.
+  * `internReservedPins_PB`: `intern_reserved_pins()` over `PB` refines `internReservedPins`.
+  * **`internAllPins_PB`**: `intern_all_pins()` over `PB` refines **`internAllPins P` for the pin
+    list `P` the buffer decodes to** (`∃ pins ips a', (internAllPins pins).run a₀ = .ok (ips, a') ∧
+    ArenaD s'.mem a' ∧ PinSetsR s'.mem ips ∧ StateOK a' ∧ RsetR s'.mem`). `PinSetsR`
+    (`ConAgua/Rom/PinSets.lean`, helper `romload-sets`, 802 lines: `internPinSetsW_dec`) says the
+    24-word `EREC` records listed at `CTL[150]`/`CTL[151]` hold `ips`; that is what
+    `rom_pin_sets()` and `check_div_mod_pin_loop` read.
+  * Proof route: `triple_subPB` (the run over `PB` is the run of the substituted program, readers
+    at `rom := bs`), the startup items in the encoder direction (`internAllPinsW_fixed`:
+    `internAllPins = internAllPins [] >>= fun _ => internPinSets pins`), the variant list in the
+    decoder direction.
+* **Obligations this leaves to the pipeline composition** (`PipelineRefines`): the hypotheses of
+  `internAllPins_PB`: `PinProg bs (P.subPB bs)` (the assembled program's lookups; the readers by
+  `romName_subPB` etc., every other function by `lookup_subPB_noPB`, a syntactic check), the twin
+  facts `StateOK`/`PinsOK`/`PersPins`/scratch off at that point (as in `stages_frame`), `RsetR`
+  (true on the loaded all-zero memory, `RsetR_zero`, and kept by every stage that leaves `RSET`,
+  `RMEMO`, `CTL[132]`, `CTL[148]` alone: `RsetR.frame`), `pb_check()` called before the first
+  reader; and downstream, `PinSetsR` kept from `intern_all_pins` to the declaration loop (the
+  records lie below `CTL[129]`; every later `EREC` write is above it, `ErecGrow`).
+* **e2e (the twin, `e2e-ref --pins=N`, on con-leche's 313 accepting e2e fixtures, gz ones
+  unpacked)**: with no pins 292 accept (the 21 declines lane `decls2` counted); with the repository
+  toolchain's variant only (`romgen OUT 1`) **296**; with all three committed variants
+  (`romgen OUT 3`, 1 423 897 bytes) **313/313**. Most of the 21 fixtures were exported by older
+  toolchains (v4.33), so the single-variant decision of ROADMAP §3 (c) keeps 17 of them declined;
+  since the pin data is now an input, the harness can simply load the three-variant buffer
+  (completeness only: with several variants L's "no recovery" in `check_div_mod_pin_loop` aborts
+  where the twin would try the next variant after an *error*; a "not defeq" moves on in both).
+  The L checker itself does not accept any fixture yet (lane `e2e`: missing functions); what is
+  tested end to end in L is the pin stage: `romtest` (L interpreter vs the twin) **26/26** handles
+  equal on the 1-variant buffer (55 s) and **78/78** on the 3-variant buffer (580 s). Buffers:
+  `_tmp/romload/pins.bin`, `_tmp/romload/pins3.bin`.
+* Sizes: `ConAgua/Rom/` 3 336 lines (Subst 351, PinRead 214, PinReadSpec 513, Dec 491, DecExpr
+  600, PinSets 802, Stage ~230, PinStream/Gen/Test 170); edits to `Rom*.lean` ≈ +400 lines.
+  Build: every new file under 10 s; `Rom.lean` 3.4 s.
+* Not done: the census link of `internPinSets` itself (only `internAllPins` gets a
+  `refines_part`); a spec of `rom_pin_sets()` against `PinSetsR` (the consumers' lane will want
+  it: `er_to_iw` of the record list); the e2e program does not bind the `PB` readers yet
+  (lane `e2e`, see landing 2).
+
+
+### Landing 5: helper `rec` done
+* Helper `rec` (5.5 h): 12 whole `@[refines]` — `targetMajorAt`, `blockNestedBit`,
+  `targetMajorPins`, `targetOutsideInst`, `classReadMinor`, `classNPcOf`, `classReadSlot(s)`,
+  `classRead`, `classConstOk`, `classRuleOk`, `classFormerTy` (most through stubs:
+  `inst_lp_fast`, `mk_app_n_f`, `infer_type_core`, `open_pis_at_fvars_f`, `fvar_type_d`). Own
+  helpers `RecSim.lean` (`RSim`), `RecStab.lean` (`RecsDec`, from which `classRead` derives its
+  callee's `hstab`). **Bugs** (L): `class_read` computed `IW[rc0+1] - nP` unguarded (wraps when
+  `rP < nP`; the twin's `Nat` subtraction truncates) — now truncated in `class_read_n_slots`;
+  `class_read_slots` the same on `d - np` (`class_read_slots_snoc`). Handle guards after
+  `intern_fvar`, `intern_bvar`, `intern_const`. ~5.3k proof lines for ~300 L lines.
+* Open in Rec*: `classFieldsOf`, `ClassGen.*`, `classGenRecTy/Rule`, `classRecTy(s)Ok`,
+  `classRulesOk`, `classRecsRulesOk`, `classFeR`, `targetAbs(Go)` (helper `rec2`, running);
+  `auxRuleFire` needs a `view_ls` word model; `targetParamsDefEq`, `targetClassMatch`,
+  `targetCtorsOf`, `targetRecPins`, `targetK53`, `class*Agree`, `classCtor(s)Of`, `classMajors`,
+  `classSeeds`, `checkBlockClasses`, `genRecCheck` wait on other lanes' callees.
+* Census: phase 8 **67 proven, 62 sorry, 86 written, 8 todo**.
+### The middle layer (`DefEqMid*.lean`, helper `defeq-mid`)
+* Refined, no `sorry` (eight files, ~5800 lines, ~98 s CPU): `defeq_no_fvars`, `lazy_fold_ok`,
+  `bool_true_shortcut`, `try_unfold_proj_app`, `delta_quick`, `defeq_offset`, `defeq_lams_inner`
+  (`DefEqMid`); `defeq_lst`, `defeq_list_rev` (`DefEqMidLoops`); `defeq_peel`, `defeq_binders`
+  (`DefEqMidPeel`); `defeq_lams` (`DefEqMidLams`); `quick_defeq` (`DefEqMidQuick`, closes
+  `QuickDefeqSpec`); `defeq_spine` (`DefEqMidSpine`); `lds_left`/`lds_right`/`lds_both`,
+  `lazy_delta_step` (`DefEqMidLazy`); `lazy_delta_reduction` (`DefEqMidLazy2`). Each at L fuel
+  `n + 1` from `KnotUpTo p n`, against `coreKnot (decMode mode) fe id F`, `F ≥ n`.
+* **L split for the proofs** (same semantics, new functions with citations): `peel_leaf`,
+  `peel_dom`, `peel_step(2)`, `peel_push`; `lams_open`, `lams_inst`, `lam_pair`; `quick_sort`,
+  `quick_forall`, `quick_lam`; `spine_head`, `defeq_spine2`, `spine_cmp`; `lds_unfold2`,
+  `lds_same`; `lazy_nat`, `lazy_iter`; the loops of `defeq_lst`, `defeq_list_rev`, `defeq_peel`,
+  `defeq_lams`, `lazy_delta_reduction` as named blocks. `defeq_binders` pushes through
+  `peel_push`. Node reads go through `e_view`.
+* **L fixes** (words the twin reads differently): `spine_cmp` takes any `lvls_eq_c` word `≥ 2` as
+  `some true` and `lds_same` any hint kind `≥ 2` as regular (`decO`/`decHintW`'s readings);
+  `lazy_nat`/`lazy_iter` normalise a verdict word to `0`/`1`, and `lazy_iter` continues only on a
+  step answer `0` (any other word but `1`, `2` is `.unknown`, as `decDS`).
+* **Hypotheses** (`LazyCallees`): `InstListOK`, `Inst1OK`, `HasFvarOK`; `NatPredW` (`nat_pred`
+  with `ResW`: `natPred_refines` proves `ResH` only); `UnfoldDefOK`, `ReduceNatSpec` (lane `whnf`'s
+  theorems are `sorry`); `StoreDenotes` (a stored sort's level and a stored constant's level list
+  read back, which `lvl(s)_eq_c`'s refinements take as hypotheses). Depth `< 2^63` throughout.
+* The twin's `defeqPeel`, `defeqLams`, `lazyDeltaReduction` get no equation lemmas in the
+  heartbeat budget; their one-level unfoldings are stated with the recursion abstracted
+  (`peelLvl`, `lamsLvl`, `lazyLvl`) and proved by `delta` + `rfl`, as con-ron's bridge does.
+* Findings: (1) `finish (gen := N)` did not raise the term-generation limit here (the diagnostics
+  still said `gen := 8`); `sym (gen := 80) (instances := 5000) only [...]` did, and made the
+  specs with three or more calls and 4–5-tuple results pass. (2) A multi-pattern arm lemma whose
+  only binding of a variable is its right side is never instantiated: state the callee's run as
+  a hypothesis instead (`lamsW_inner`). (3) `omega` with `2^24` and `2^64` produced a proof the
+  kernel rejects (deep recursion), `docs/gaps/omega-kernel-deep-recursion-2pow24.lean`; stated
+  with the `@[noinline]` `peelFuel` it is an atom and fine.
+
+## Phase 5 finished: ι, the verified walks in the core, the stubs (2026-10-22, lane `whnf2`)
+
+### Landing 1: `CoreS` carries the walk memos and the binder stack bound
+* **`CoreS.memos : CoreMemos m`**: arrays 49 (`abs1C`) and 50 (`instLC`) hold well-formed memos
+  (`MemoRG` at *some* map). `instantiateListFast`, `abstract1Fast` and `abstractRangeFast` clear
+  their memo on entry and exit, so the twin's map never matters to a caller; what L needs is that
+  its epoch-bump clear starts from a well-formed memo (`memoRG_clear` assumes one). Stated over
+  the memory alone, the invariant survives every writer that avoids arrays 49/50 and `CTL[48]`/
+  `CTL[50]` (`CoreMemos.frame`, `frame_hi`), whatever the twin state does: no twin-side frame
+  needed. A walk call replaces the twin's map by any map (the first clear overwrites it).
+* **`CoreS.bstk`**: lane `defeq`'s binder stack (array 145) below `2^63` (their request, part 1;
+  part 2, `StackKept` keeping `BSTK`, is not done yet).
+* Construction sites (19, also in lane `defeq`'s `KnotSlot`, `DefEqLeaves2`, `InferBodyIntern`):
+  two more terms each; `arena_frame`/`arenaFrame` gain two auto-param avoidance hypotheses
+  (`:= by decide`), so their callers are unchanged; `CoreS.of_proj` now takes `mk_proj`'s fine
+  frame (`mkProjW_frameA`; the ROM's `StoreA` frame is all of arrays 0‥63); `CoreS.of_level`'s
+  counts are below 42 (was 64). `WhnfIotaRefine`'s `frW` is now `findRuleW` (it clashed with
+  `FVarRange.frW` once the walks are imported).
+* Provenance: the nine split functions of `WhnfDelta.lean` had no citation (`check` failed on
+  master); cited.
+

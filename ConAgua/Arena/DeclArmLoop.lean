@@ -1,0 +1,225 @@
+import ConAgua.Arena.DeclReduceSpec
+
+/-!
+# The `checkDecl` arms at the loop's relation: the text, the theorem arm (lane `decls3`)
+
+`check_decl`'s arms run on the stage relation; the loop's relation `LoopR` adds the pending checks
+and the declaration records, which no callee spec mentions, so they come from the program text
+(`closedA`, as `check_value_group`'s and `install_value`'s do, `DeclCvg.lean`, `DeclStepGo.lean`).
+
+* `armText`: the arms' modules, then lane `decls2`'s texts (`cvgProg`, `ivProg`, whose real master
+  callees come before the stage's stubs), then the step's program; `armFns`: every function the
+  five arms reach. A program `p` that agrees with it there (`ArmProg p`) has its write set
+  (`armText_closed`, `decide +kernel`); the arms' specs take their callees' lookup structures
+  (`ValProg`, `RecProg`, …) beside it, as `DeclCallees` does.
+* The theorem arm `check_decl_thm(i, vis)` refines `checkDecl`'s `.thmDecl` arm
+  (`checkDeclThm_loop`).
+-/
+
+open ConRon.Arena
+open Std.WP
+open scoped Lean.Order
+
+set_option experimental.vcgen true
+set_option linter.deprecated false
+set_option linter.unusedSimpArgs false
+
+namespace L.Arena
+
+open L.Ind
+open L.Front (DECL DLP DeclsR DeclAt CVAt dw)
+
+/-! ## The text -/
+
+/-- Master functions the arms reach that the stage's program has only as stubs. -/
+def armMasterFns : Prog :=
+  [("pin_at", pinAtL), ("const_e", constEL), ("const_find", constFind), ("const_push", constPush),
+   ("intern_const", internConst), ("fvar_find", fvarFind), ("fvar_push", fvarPush),
+   ("intern_fvar", internFVar), ("mk_app", mkApp), ("app_find", appFind), ("app_push", appPush),
+   ("intern_app", internApp), ("der_b", derB)]
+
+/-- **The arms' text.** -/
+def armText : Prog :=
+  declArmsFns ++ declArmsNatFns ++ declArmsCanonFns ++ armMasterFns ++ cvgProg ++ ivProg ++
+    declStepProg
+
+/-- The functions the theorem arm reaches. -/
+def thmArmFns : List FnName :=
+  ["check_decl_thm", "erec_ci", "erec_alloc", "dlp_copy", "check_constant_val", "install_header",
+   "env_find", "env_row_get", "env_ix", "reserved_contains", "reserved_from", "is_proj_fn_shape",
+   "cv_lps", "er_to_iw", "iw_alloc", "er_copy", "sl_nodup", "sl_contains",
+   "loose_bvars_bounded_fast", "has_fvar_fast", "all_level_params_defined", "consts_resolve_ffast",
+   "infer_type_core", "ensure_sort_core", "check_thm_val", "pin_word", "lvl_eq_fueled", "lvl_eq_c",
+   "lq_find", "lvl_eq_rec", "lvl_eq", "lv_equiv", "lv_eq", "lv_node", "lv_simp", "lh_mk", "lv_comb",
+   "lv_leq", "lv_rest", "lv_imax", "lv_cases", "lv_cases_at", "lv_subsimp", "lv_subst",
+   "lv_imax_l", "lv_dist1", "lv_dist2", "lv_imax_r", "lq_put", "install_value_guards",
+   "is_def_eq_core", "env_push", "env_row_set"]
+
+/-- The functions the opaque arm reaches beyond the theorem arm's. -/
+def opqArmFns : List FnName :=
+  ["check_decl_opaque", "check_opaque_val", "pin_at", "check_reduce_pin", "reduce_stored_ok",
+   "reduce_op_cv_a", "rom_cv", "matches_pin", "cv_eq", "er_sl_eq", "reduce_elem_ok", "rom_ci", "ci_eq",
+   "tbl_eq", "tbl_eq_a", "er_sl_at", "ci_eq_rest", "hint_eq", "caps_eq", "caps_eq_a", "b_eq",
+   "caps_eq_b", "pw_eq", "caps_eq_c", "rules_eq", "rule_eq_but_rhs", "rule_eq_a", "rule_eq_b",
+   "reduce_pin_guard", "reduce_decl_pin", "rom_expr", "reduce_cert_var", "const_e", "intern_const",
+   "const_find", "const_push", "intern_fvar", "fvar_find", "fvar_push", "mk_app", "der_b",
+   "intern_app", "app_find", "app_push"]
+
+/-- The functions the arms reach. -/
+def armFns : List FnName := thmArmFns ++ opqArmFns
+
+theorem armText_closed : closedA armText stepA stepC armFns = true := by decide +kernel
+
+/-- A program with the arms' text. -/
+def ArmProg (p : Prog) : Prop := ∀ f ∈ armFns, p.lookup f = armText.lookup f
+
+section lookups
+variable {p : Prog} (h : ArmProg p)
+include h
+theorem ArmProg.closed : closedA p stepA stepC armFns = true := closedW_of_agree armText_closed h
+end lookups
+
+/-! ## The theorem arm `check_decl_thm(i, vis)` -/
+
+section thm
+variable (p : Prog)
+
+/-- After `check_thm_val`. -/
+def cdtK3 : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r3, m3) => some ([r3.headD 0], m3)
+
+/-- After `check_constant_val`. -/
+def cdtK2 (n : Nat) (vis c : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (_, m2) => cdtK3 (callW p n "check_thm_val" [vis, c] m2)
+
+/-- After `erec_ci`. -/
+def cdtK1 (n : Nat) (vis : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r1, m1) =>
+    cdtK2 p n vis (r1.headD 0) (callW p n "check_constant_val" [vis, r1.headD 0 + 1] m1)
+
+/-- **The model of `check_decl_thm(i, vis)`.** -/
+def cdtW : Nat → Mem → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _ => none
+  | n + 1, m, i, vis => cdtK1 p n vis (erecCiW n m i 2)
+
+section arms
+variable (n : Nat) (m m1 m2 m3 : Mem) (i vis c : Word) (r1 r2 r3 : List Word)
+theorem cdtW_step : cdtW p (n + 1) m i vis = cdtK1 p n vis (erecCiW n m i 2) := rfl
+theorem cdtK1_some : cdtK1 p n vis (some (r1, m1)) =
+    cdtK2 p n vis (r1.headD 0) (callW p n "check_constant_val" [vis, r1.headD 0 + 1] m1) := rfl
+theorem cdtK2_some : cdtK2 p n vis c (some (r2, m2)) =
+    cdtK3 (callW p n "check_thm_val" [vis, c] m2) := rfl
+theorem cdtK3_some : cdtK3 (some (r3, m3)) = some ([r3.headD 0], m3) := rfl
+end arms
+
+grind_pattern [ind_grind] cdtW_step => cdtW p (n + 1) m i vis
+grind_pattern [ind_grind] cdtK1_some => cdtK1 p n vis (some (r1, m1))
+grind_pattern [ind_grind] cdtK2_some => cdtK2 p n vis c (some (r2, m2))
+grind_pattern [ind_grind] cdtK3_some => cdtK3 (some (r3, m3))
+
+theorem cdt_specW (hp : p.lookup "check_decl_thm" = some checkDeclThm) (hR : RecProg p)
+    (n : Nat) (s₀ : St) (i vis : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_decl_thm" [i, vis]
+    ⦃fun r s' => LocEq s' s₀ ∧ cdtW p n s₀.mem i vis = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, checkDeclThm]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, erecCi_specW p hR n,
+        callW_spec p n "check_constant_val", callW_spec p n "check_thm_val"] <;>
+      finish (gen := 20)
+
+end thm
+
+local notation "V" => ConLeche.CheckMode.verified
+
+/-- **The theorem arm at the stage relation**: a model run of `check_decl_thm` on a theorem record
+is `checkDecl`'s `.thmDecl` arm. -/
+theorem cdtW_ok {p : Prog} (hV : ValProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+    {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {i : Word} {r : List Word}
+    {ds : Array IDeclaration} {pins : List INatOpPinSet} {cv : IConstantVal} {v : EIdx}
+    (h : cdtW p n m i vis = some (r, m')) (hS : StageR dn vis fe m a)
+    (hD : DeclsR (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
+    (hd : ds[i.toNat] = .thmDecl cv v) :
+    ∃ fe' a', (checkDecl V pins fe (.thmDecl cv v)).run a = .ok (fe', a') ∧
+      StageR dn (r.headD 0) fe' m' a' ∧ IWGrow m m' := by
+  cases n with
+  | zero => simp [cdtW] at h
+  | succ n =>
+  rw [cdtW_step] at h
+  cases h1 : erecCiW n m i 2 with
+  | none => rw [h1] at h; cases h
+  | some rm1 =>
+  obtain ⟨r1, m1⟩ := rm1
+  rw [h1, cdtK1_some] at h
+  obtain ⟨hS1, hg1, hci1, hcv1, hval1, htop1⟩ :=
+    erecCiW_ok (ci := .thmInfo cv) h1 hS hD hi (by rw [hd]; rfl)
+  rw [hd] at hcv1 hval1
+  simp only [stepCV, stepVal] at hcv1 hval1
+  generalize hq : r1.headD 0 = q at h hci1 hcv1 hval1 htop1
+  have hqb : q.toNat + 8 < 2 ^ 64 := by
+    have := hS1.2.2.1; have := hS1.2.2.2.2.1; omega
+  have hq1 : (q + 1).toNat = q.toNat + 1 := toNat_add_small q 1 (by omega)
+  -- `check_constant_val`
+  cases h2 : callW p n "check_constant_val" [vis, q + 1] m1 with
+  | none => rw [h2] at h; cases h
+  | some rm2 =>
+  obtain ⟨r2, m2⟩ := rm2
+  rw [h2, cdtK2_some] at h
+  obtain ⟨s2, hs2, -, hok2, hS2, hg2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
+    (checkConstantVal_refines p hV n ⟨m1, Locals.init []⟩ a dn fe vis (q + 1) cv hS1
+      (by rw [hq1]; exact hcv1) (by omega)) h2
+  subst hs2
+  have hrun2 := AM.run_of_ok _ _ hok2
+  -- `check_thm_val`
+  cases h3 : callW p n "check_thm_val" [vis, q] s2.mem with
+  | none => rw [h3] at h; cases h
+  | some rm3 =>
+  obtain ⟨r3, m3⟩ := rm3
+  rw [h3, cdtK3_some] at h
+  have hx2 : ArrExt (erecP m1) (erecP s2.mem) := IWGrow.erecPExt hg2
+  obtain ⟨s3, hs3, -, hok3, hS3, hg3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
+    (checkThmVal_refines p hV n ⟨s2.mem, Locals.init []⟩ _ dn fe vis q cv v hS2
+      (ArrExt.decCI hx2 hci1) (ArrExt.hd? hx2 hval1)) h3
+  subst hs3
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  have hrun3 := AM.run_of_ok _ _ hok3
+  refine ⟨_, _, ?_, by simpa using hS3, hg1.trans (hg2.trans hg3)⟩
+  show (do checkConstantVal V fe cv; checkThmVal V fe cv v).run a = _
+  simp only [StateT.run_bind, hrun2, exc_ok_bind']
+  exact hrun3
+
+/-- **`check_decl_thm` refines `checkDecl`'s `.thmDecl` arm** at the loop's relation (through the
+core's stubs and `lvl_eq_c`'s). -/
+theorem checkDeclThm_loop {p : Prog} (hA : ArmProg p) (hV : ValProg p)
+    (hp : p.lookup "check_decl_thm" = some checkDeclThm) (pins : List INatOpPinSet)
+    (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration) :
+    ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
+      (i : Word) (cv : IConstantVal) (v : EIdx), i.toNat < ds.size → ds[i.toNat]? = some (.thmDecl cv v) →
+      LoopR dn s₀.mem a₀ vis fe pend ds →
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_decl_thm" [i, vis]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkDecl V pins fe (.thmDecl cv v)) a₀ ∧
+      LoopR dn s'.mem (AM.st (checkDecl V pins fe (.thmDecl cv v)) a₀) (r.headD 0)
+        (AM.res (checkDecl V pins fe (.thmDecl cv v)) a₀) pend ds; ⊤⦄ := by
+  intro n s₀ a₀ vis fe pend i cv v hi hd hR
+  apply M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun (cdt_specW p hp hV.rcp n s₀ i vis)
+  obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
+    (invoke_memFrame hA.closed n (f := "check_decl_thm") (by decide) [i, vis] s₀)
+  subst hs
+  have hd' : ds[i.toNat] = .thmDecl cv v := by
+    rw [Array.getElem?_eq_getElem hi] at hd; exact Option.some.inj hd
+  obtain ⟨fe', a', hrun', hS', hg'⟩ := cdtW_ok (pins := pins) hV hW ⟨hR.check, hR.iw⟩ hR.decls hi hd'
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
+  refine ⟨hloc, hok, ?_⟩
+  rw [hst, hres]
+  exact hR.of_step hS' hf (IWGrow.erecPExt hg')
+
+end L.Arena

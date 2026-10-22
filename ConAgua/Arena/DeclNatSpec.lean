@@ -1,4 +1,5 @@
 import ConAgua.Arena.DeclNatBase
+import ConAgua.Arena.DeclCanonSpec2
 
 /-!
 # The structural-`Nat` gate: the name lists and the dependency tables (lane `decls3`, helper `decls3-nat`)

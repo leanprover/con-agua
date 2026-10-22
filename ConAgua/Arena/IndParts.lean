@@ -215,7 +215,7 @@ built) with `resSort := s` and `isProp` recomputed (`lvlEq? s zeroLevel`). -/
 @[l_impl ConRon.Arena.BlockShape.withSort]
 def blockShapeWithSort : FunDecl := lfn (p, s) locals (z, eq, isProp, q) {
   z := call pin_word(53);
-  eq := call lvl_eq(s, z);
+  eq := call lvl_eq_c(s, z);
   isProp := u64(eq == 2);
   q := call iw_alloc(9);
   IW.u64[q] := IW.u64[p];
@@ -324,7 +324,7 @@ def recTargetOf : FunDecl := lfn (no, nl, mI, ty) locals (ok, bo, bl, body, g, x
   if ok == 0 { return nl };
   if body >> 28 != 6 { return nl };
   (g, x, y, z) := call e_view(body);
-  hd := call get_app_fn(⟪CWF⟫, x);
+  hd := call get_app_fn_f(⟪CWF⟫, x);
   if hd >> 28 != 3 { return nl };
   (g, x, y, z) := call e_view(hd);
   (fnd, idx) := call sl_find(no, nl, x);
@@ -379,7 +379,7 @@ def ctorMember : FunDecl := lfn (no, nl, lvls, nP, c) locals (nF, ty, ok, bo, bl
   ty := EREC.u64[IW.u64[c] + 3];
   (ok, bo, bl, body) := call strip_pis(nP + nF, ty);
   if ok == 0 { return (0, 0) };
-  hd := call get_app_fn(⟪CWF⟫, body);
+  hd := call get_app_fn_f(⟪CWF⟫, body);
   (rok, ri) := call member_idx_at(no, nl, lvls, hd);
   return (rok, ri)
 }
@@ -762,7 +762,7 @@ def blockShapeBuild : FunDecl := lfn (nPd, cto, ctl, cso, csl, rso, rsl)
   if pinsOk == 0 { return (0, 0) };
   s := call block_shape_result_sort(nPd, io, il, EREC.u64[cvT0 + 3]);
   z := call pin_word(53);
-  eq := call lvl_eq(s, z);
+  eq := call lvl_eq_c(s, z);
   isProp := u64(eq == 2);
   (cof, cl2) := call block_shape_ctors_of(cso, csl);
   lvls := call param_levels(lo, ll);

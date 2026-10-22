@@ -418,7 +418,7 @@ def targetMajorOfOutside : FunDecl := lfn (vis, p, pfo, pfl, I, us, args_o, args
   cl := call target_major_of_outside_occ(mno, mnl, dso, dsl);
   if cl == 0 { abort };
   (nidx, sI) := call target_outside_inst(vis, I, us, dso, dsl);
-  e := call lvl_eq(sI, IW.u64[p + 6]);
+  e := call lvl_eq_c(sI, IW.u64[p + 6]);
   if e != 2 { abort };
   r := call mk_target_major(I, us, dso, dsl, nPc, nidx, cso, csl, 0, 0, 0, pfo, pfl);
   return r
@@ -430,8 +430,8 @@ OUTSIDE stored inductive (a nested block's container). -/
 @[l_impl ConRon.Arena.targetMajorOf]
 def targetMajorOf : FunDecl := lfn (vis, p, cao, cal, pfo, pfl, fvo, fvl, mty)
     locals (args_o, args_l, hd, tag, g, x, y, z, mno, mnl, ok2, t, r) {
-  (args_o, args_l) := call get_app_args(⟪CWF⟫, mty);
-  hd := call get_app_fn(⟪CWF⟫, mty);
+  (args_o, args_l) := call get_app_args_f(⟪CWF⟫, mty);
+  hd := call get_app_fn_f(⟪CWF⟫, mty);
   tag := hd >> 28;
   if tag != 3 { abort };
   (g, x, y, z) := call e_view(hd);
@@ -468,7 +468,8 @@ def targetMajorPins : FunDecl := lfn (vis, rP, M) locals (mem, hd, app, u) {
   else {
     u := call target_pin_tys(vis, rP, IW.u64[M + 2], IW.u64[M + 3]);
     hd := call intern_const(IW.u64[M], IW.u64[M + 1]);
-    app := call mk_app_n(hd, IW.u64[M + 2], IW.u64[M + 3]);
+    if 4294967296 <= hd { abort };
+    app := call mk_app_n_f(hd, IW.u64[M + 2], IW.u64[M + 3]);
     u := call infer_type_core(vis, rP, app)
   }
 }
@@ -637,8 +638,8 @@ head, of equal arity. -/
 @[l_impl ConRon.Arena.targetK53]
 def targetK53Heads : FunDecl := lfn (vis, p, fto, ftl, Mc, leafW, majDom)
     locals (lh, mh, ltag, mtag, g, x, y, z, ip, usp, ii, lao, lal, mao, mal, r) {
-  lh := call get_app_fn(⟪CWF⟫, leafW);
-  mh := call get_app_fn(⟪CWF⟫, majDom);
+  lh := call get_app_fn_f(⟪CWF⟫, leafW);
+  mh := call get_app_fn_f(⟪CWF⟫, majDom);
   ltag := lh >> 28;
   mtag := mh >> 28;
   if ltag != 3 { return 0 };
@@ -648,8 +649,8 @@ def targetK53Heads : FunDecl := lfn (vis, p, fto, ftl, Mc, leafW, majDom)
   usp := y;
   (g, x, y, z) := call e_view(mh);
   ii := x;
-  (lao, lal) := call get_app_args(⟪CWF⟫, leafW);
-  (mao, mal) := call get_app_args(⟪CWF⟫, majDom);
+  (lao, lal) := call get_app_args_f(⟪CWF⟫, leafW);
+  (mao, mal) := call get_app_args_f(⟪CWF⟫, majDom);
   if ip != ii { return 0 };
   if lal != mal { return 0 };
   r := call target_k53_args(vis, p, fto, ftl, Mc, ip, usp, lao, lal, mao, mal);
@@ -671,7 +672,7 @@ def targetK53Args : FunDecl := lfn (vis, p, fto, ftl, Mc, ip, usp, lao, lal, mao
   if r == 0 { return 0 };
   if lal < nPc { lpl := lal } else { lpl := nPc };
   hd := call intern_const(ip, usp);
-  app := call mk_app_n(hd, lao, lpl);
+  app := call mk_app_n_f(hd, lao, lpl);
   (mno, mnl) := call block_shape_member_names(p);
   occ := call nest_occ(mno, mnl, 0, 0, app);
   if occ == 0 { return 0 };
@@ -783,24 +784,26 @@ def tgtStoredRules : FunDecl := lfn (vis, cv, rP, M, rhso, rhsl)
   return (no, nl)
 }
 
+/-- `block_nested_bit_go(reco, recl, k)`: some recursor's major is not a member
+(`recs.any (fun rc => !(rc.tgt < k))`), a self-recursion. -/
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:511-515 ConRon.Arena.blockNestedBit
+@[l_impl ConRon.Arena.blockNestedBit]
+def blockNestedBitGo : FunDecl := lfn (reco, recl, k) locals (r) {
+  if recl == 0 { return 0 };
+  if k <= IW.u64[IW.u64[reco] + 3] { return 1 };
+  r := call block_nested_bit_go(reco + 1, recl - 1, k);
+  return r
+}
+
 /-- **`block_nested_bit`**: some field kind is not flat, or some recursor's major is not a
 member. -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:511-515 ConRon.Arena.blockNestedBit
 @[l_impl ConRon.Arena.blockNestedBit]
-def blockNestedBit : FunDecl := lfn (p, ko, kl) locals (flat, reco, recl, k, j, rc, tgt) {
+def blockNestedBit : FunDecl := lfn (p, ko, kl) locals (flat, r) {
   flat := call nest_kinds_flat(ko, kl);
   if flat == 0 { return 1 };
-  reco := IW.u64[p + 2];
-  recl := IW.u64[p + 3];
-  k := IW.u64[p + 1];
-  j := 0;
-  while j < recl {
-    rc := IW.u64[reco + j];
-    tgt := IW.u64[rc + 3];
-    if k <= tgt { return 1 };
-    j += 1
-  };
-  return 0
+  r := call block_nested_bit_go(IW.u64[p + 2], IW.u64[p + 3], IW.u64[p + 1]);
+  return r
 }
 
 /-- Copy an `IW` pointer-list of 11-word rule records into one fresh CONSECUTIVE `EREC` run. -/
@@ -899,7 +902,7 @@ def recCheckFns : Prog :=
    ("target_k53", targetK53), ("target_pi_doms_with", targetPiDomsWith),
    ("abstract_prefix", abstractPrefix), ("abstract_prefix_list", abstractPrefixList),
    ("aux_rule_fire", auxRuleFire), ("tgt_stored_rules_remap", tgtStoredRulesRemap),
-   ("tgt_stored_rules", tgtStoredRules), ("block_nested_bit", blockNestedBit),
+   ("tgt_stored_rules", tgtStoredRules), ("block_nested_bit_go", blockNestedBitGo), ("block_nested_bit", blockNestedBit),
    ("rules_to_erec", rulesToErec), ("cons_block_recs_push", consBlockRecsPush),
    ("cons_block_recs_tf", consBlockRecsTF)]
 

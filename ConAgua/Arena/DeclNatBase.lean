@@ -449,7 +449,7 @@ theorem sinternW_hw (m : Mem) (a : AState) (hR : SuccR m a) (u : Word) (w : Word
     (probe_homeG succSch m 1 _ _ (sprobeW_arm m u 1) _) _ (spushOK_room m) _ _ w m' hI
 
 /-- `intern_succ` under the stage relation. -/
-theorem internSucc_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}
+theorem internSuccN_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}
     {a : AState} {r : Word} (hS : StageR dn vis fe m a) (u : Word) (hu : u.toNat < 2 ^ 32)
     (hI : sinternW m u = some (r, m')) :
     ∃ a', (internLNode (.succ (decI u))).run a = .ok (decI r, a') ∧ StageR dn vis fe m' a' ∧
@@ -582,7 +582,7 @@ theorem internSucc_ref (hM : MasterProg p) (u : Word) (hu : H u) :
   refine CallRef.of_triple fun n s₀ a₀ hS => ?_
   refine triple_post (internSucc_spec p hM.lSuccFind hM.lSuccPush hM.lInternSucc n s₀ u) ?_
   rintro r s' ⟨hl, hI⟩
-  obtain ⟨a', hrun, hS', hg⟩ := internSucc_stage hS u hu hI
+  obtain ⟨a', hrun, hS', hg⟩ := internSuccN_stage hS u hu hI
   exact ⟨hl, decI (r.headD 0), a', hrun, hS', hg, sinternW_hw _ _ hS.1.arena.1.succ u _ _ hI, rfl⟩
 
 end interners
@@ -814,5 +814,14 @@ theorem envFind_call {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
 @[simp] theorem pinNatZero_eq : pinNatZero = pinAt 2 := rfl
 @[simp] theorem pinNatSucc_eq : pinNatSucc = pinAt 3 := rfl
 @[simp] theorem pinEq_eq : pinEq = pinAt 0 := rfl
+
+
+/-- A `CallRef` from a `RefAM`. -/
+theorem CallRef.of_refAM {α : Type} [Inhabited α] {p : Prog} {f : FnName} {args : List Word}
+    {pre : Mem → AState → Prop} {op : AM α} {post : Mem → Mem → AState → List Word → α → Prop}
+    (h : RefAM p f args pre op post) : CallRef p f args pre op post := by
+  intro n m a r m' hpre hc
+  obtain ⟨s', rfl, -, hq⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (h n _ a hpre) hc
+  exact ⟨AM.res op a, AM.st op a, AM.run_of_ok op a hq.1, hq.2⟩
 
 end L.Ind

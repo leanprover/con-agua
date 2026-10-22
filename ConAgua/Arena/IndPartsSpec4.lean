@@ -511,7 +511,7 @@ def wsW : Nat → Mem → Word → Word → Option (List Word × Mem)
 
 def wsK1 (p s : Word) (m : Mem) : Option Word → Option (List Word × Mem)
   | none => none
-  | some z => wsK2 p s (stubM "lvl_eq" m [s, z])
+  | some z => wsK2 p s (stubM "lvl_eq_c" m [s, z])
 
 def wsK2 (p s : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -524,7 +524,7 @@ end
 section arms
 variable (n : Nat) (m m1 m2 : Mem) (p s : Word) (r1 r2 : List Word)
 theorem wsW_step : wsW (n + 1) m p s = wsK1 p s m (pinWordV m 53) := rfl
-theorem wsK1_some (z : Word) : wsK1 p s m (some z) = wsK2 p s (stubM "lvl_eq" m [s, z]) := rfl
+theorem wsK1_some (z : Word) : wsK1 p s m (some z) = wsK2 p s (stubM "lvl_eq_c" m [s, z]) := rfl
 theorem wsK2_some : wsK2 p s (some (r2, m2)) = (match allocW m2 9 with
     | none => none
     | some (q, m3) => some ([q], wsWrites m3 q p s (if r2.headD 0 = 2 then 1 else 0))) := rfl
@@ -551,7 +551,7 @@ theorem blockShapeWithSort_spec (n : Nat) (s₀ : St) (q s : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        pinWord_specV p hpw n, stubM_spec p "lvl_eq" n, iwAlloc_specW p ha n] <;>
+        pinWord_specV p hpw n, stubM_spec p "lvl_eq_c" n, iwAlloc_specW p ha n] <;>
       finish (gen := 20) [wsWrites, cpyIW]
 
 end spec
@@ -740,7 +740,7 @@ theorem wsW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
   have hfull := hS.1.pins.full hpin0
   have hzlt : z.toNat < 2 ^ 32 := by rw [hz]; exact hfull.lv_lt.2.1
   have hrun1 : (zeroLevel).run a = .ok (decI z, a) := by rw [hz]; exact pinZeroLevel_run hfull
-  cases hrb : stubM "lvl_eq" m [s, z] with
+  cases hrb : stubM "lvl_eq_c" m [s, z] with
   | none => rw [hrb] at h; simp [wsK2] at h
   | some rm2 =>
   obtain ⟨r2, m2⟩ := rm2

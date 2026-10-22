@@ -200,7 +200,7 @@
 {
 "lane": "whnf",
 "model": "opus",
-"status": "running",
+"status": "done",
 "focus": "Phase 5: CoreR caches, whnf family"
 },
 {
@@ -284,7 +284,7 @@
 {
 "lane": "perf1",
 "model": "opus",
-"status": "running",
+"status": "done",
 "focus": "Slow declarations (grind, Prog.wf checks); split Scan/Records"
 },
 {
@@ -296,13 +296,13 @@
 {
 "lane": "e2e",
 "model": "opus",
-"status": "running",
+"status": "done",
 "focus": "Assemble the whole L checker; differential runs on con-leche/con-ron fixtures"
 },
 {
 "lane": "romload",
 "model": "opus",
-"status": "running",
+"status": "done",
 "focus": "Pin variant without kernel evaluation: untrusted ROM + verified decoder"
 },
 {
@@ -310,5 +310,17 @@
 "model": "opus",
 "status": "running",
 "focus": "Phase 2 proofs: checkDecl arms, promotion, remaining sorries"
+},
+{
+"lane": "whnf2",
+"model": "opus",
+"status": "running",
+"focus": "Phase 5: iota rest, verified walks in whnf (instLC, coreWalkFuel), remaining stubs"
+},
+{
+"lane": "integrate",
+"model": "opus",
+"status": "running",
+"focus": "One buildable checkerProg: name clashes, call sites, prelude stubs, capacity checks; rerun e2e"
 }
 ]
