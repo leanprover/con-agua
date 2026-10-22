@@ -150,3 +150,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-22,defeq2,opus,70,25,"landing 7: LvlCnt (level tables only grow) as a PoolGrew field, kept at every writer (LvlFree auto-param, lvlCnt_of_arena for level interning); lvl_den_later; D25 fixed (lvl_live removed, L mirrors the twin)"
 2026-10-22,defeq2,opus,55,20,"landing 8: level lists (StoreDen.lsAll, list counts CTL 40/41 in LvlCnt, lsAll_internLsNode, lvlCnt_internLsNode, ls_den_later) for whnf4's instLP/LvlsEqDen"
 2026-10-22,defeq2,opus,30,10,"landing 9: lvlsEqDen discharged (lvlsEqC_refines without readback hypotheses: hit reads nothing, miss via ls_node + StoreDen.lsAll; lvlsEqW model aborts like ls_node)"
+2026-10-22,defeq2,opus,60,15,"landing 10: capsNeverZero discharged (StoreDen.dnN with dn param, PWR from decPWw, us readback via ls_node abort + lsAll, lps via constLps at callers; CoreS.frame_lhs)"

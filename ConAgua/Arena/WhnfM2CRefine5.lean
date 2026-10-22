@@ -96,7 +96,8 @@ theorem m2cArms_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
     (cvT : IConstantVal) (caps : IIndCaps) (m : Mem) (a : AState) (M : ModeMaps)
     (hS : CoreS dn m a vis fe M eb) (hrl : decRule (m.arr64 EREC) ro.toNat = some rl)
     (hcj : decCI (m.arr64 EREC) dn cvjP.toNat = some (.ctorInfo cvj cnP cnF))
-    (hci : decCI (m.arr64 EREC) dn indP.toNat = some (.indInfo cvT caps)) (r : List Word) (m' : Mem)
+    (hci : decCI (m.arr64 EREC) dn indP.toNat = some (.indInfo cvT caps))
+    (hfe : ∃ c, fe.find? c = some (.indInfo cvT caps)) (r : List Word) (m' : Mem)
     (h : callW p (N + 1) "m2c_arms" [mode, vis, d, ro, cvjP, T, indP, major] m = some (r, m')) :
     GrowRef (m2cArmsT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat rl cvj cnP (decI T)
       cvT caps (decE major)) a decH dn m vis fe M eb r m' := by
@@ -146,7 +147,7 @@ theorem m2cArms_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
     rw [c1] at hW
     obtain ⟨hr, rfl⟩ := ret_eq hW
     obtain ⟨ok1, hA1, res1, hr1⟩ := m2cEta_ok p hp hc hE hcc N' F (hk.mono (Nat.le_succ _)) (by omega)
-      (by omega) dn vis fe eb mode d T indP major hm4 hebm hT hmaj cvT caps m a M hS hci r1 m1 c1
+      (by omega) dn vis fe eb mode d T indP major hm4 hebm hT hmaj cvT caps m a M hS hci hfe r1 m1 c1
     have he' : rl.eta = true := by rw [heta]; simpa using g10
     have : m2cArmsT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat rl cvj cnP (decI T)
         cvT caps (decE major) = m2cEtaT (coreKnot (decMode mode) fe id F) fe d.toNat (decI T) cvT caps
@@ -293,7 +294,7 @@ theorem m2cCtor_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   | succ N' =>
   obtain ⟨ok5, hA5, res5, hr5⟩ := m2cArms_ok p hp hc hpi hE hcc N' F (hk.mono (Nat.le_succ _)) (by omega)
     (by omega) dn vis fe eb mode d ro cvjP _ _ major hm4 hebm hn32 hmaj rl cvj cnP cnF cvT caps m a M
-    hS hrl hcj hciE r5 m5 c5
+    hS hrl hcj hciE ⟨_, hfind'⟩ r5 m5 c5
   have hrun5 := AM.run_of_ok _ _ ok5
   rw [res5] at hrun5
   refine GrowRef.of_run (v := decH r5) ?_ hA5 (by unfold decH; rw [hr])

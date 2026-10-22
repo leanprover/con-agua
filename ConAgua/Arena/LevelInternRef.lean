@@ -570,7 +570,7 @@ theorem capsNeverZeroW_ok (n : Nat) (m m' : Mem) (a : AState) (po pc us swd so s
   obtain ⟨ids, hv, hdl'⟩ := denoteLs_view a (decI us) vs hdl
   obtain ⟨e₁, t₁, s₁⟩ := lsNodeW_store hA.1 hus hv
   rw [e₁] at hW
-  simp only [List.headD_cons, List.tail_cons] at hW
+  simp only [List.headD_cons, List.tail_cons, reduceCtorEq, ↓reduceIte] at hW
   cases n with
   | zero => simp [keysPushW, capsK1] at hW
   | succ n =>

@@ -814,12 +814,15 @@ def capsNeverZeroPW (lps : List NIdx) (us : LsIdx) (pw : ConLeche.PropWhen) : AM
 own level parameters (`po, pc`, an `EREC` name slice, read back by `readNamesM`), the universe
 arguments `us` (an `LsIdx`, `readLevelsM`), and a `PropWhen` datum `(swd, so, sc)` (`caps.sortZ`).
 **Statement correction**: the stub's `ks`, `vs`, `pw` were arbitrary and its twin a `pure`; the real
-twin runs the two readbacks (`capsNeverZero`), and the datum is linked to the words. -/
+twin runs the two readbacks (`capsNeverZero`), and the datum is linked to the words. The level
+parameters read back (a stored constant's, `StoreDen.constLps`); the list `us` need not: `ls_node`
+aborts on a handle that is not stored (`capsNeverZeroOK_of`). -/
 def CapsNeverZeroOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb po pc us swd so sc : Word) (lps : List NIdx) (pw : ConLeche.PropWhen),
     CoreS dn s₀.mem a₀ vis fe MM eb → HW us →
     hslice? (s₀.mem.arr64 EREC) po.toNat pc.toNat = some lps →
+    (∃ ks, lps.mapM (denoteN a₀.store.ns) = some ks) →
     decPWw (s₀.mem.arr64 EREC) dn swd so sc = some pw →
     CoreSpec p n "caps_never_zero" [po, pc, us, swd, so, sc]
       (capsNeverZeroPW lps (decI us) pw) decBool s₀ a₀ dn vis fe MM eb
