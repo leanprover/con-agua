@@ -188,12 +188,12 @@ theorem lazyFoldOk_refines (p : Prog) (hp : DefEqMidProg p) (hf : HasFvarOK p) (
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb mode a b : Word) (hS : CoreS dn s₀.mem a₀ vis fe M eb) (hm : mode < 4)
     (ha : HW a) (hb : HW b) :
-    CoreSpec p (n + 2) "lazy_fold_ok" [mode, a, b] (lazyFoldOk (decMode mode) (decE a) (decE b))
+    CoreSpec p (n + 1) "lazy_fold_ok" [mode, a, b] (lazyFoldOk (decMode mode) (decE a) (decE b))
       decBool s₀ a₀ dn vis fe M eb := by
   apply L.M.triple_of_run
   intro s r s' hs0 hrun
   obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
-    (lazyFoldOk_spec p hp (n + 1) s₀ mode a b)
+    (lazyFoldOk_spec p hp n s₀ mode a b)
   subst hs0
   refine ⟨hloc, ?_⟩
   have he := mode_eager_bit mode hm
@@ -207,6 +207,7 @@ theorem lazyFoldOk_refines (p : Prog) (hp : DefEqMidProg p) (hf : HasFvarOK p) (
   rw [lazyFoldOkW_p p _ _ mode a b h0'] at hW
   simp only [lazyFoldOk, he, h0', ne_eq, not_true_eq_false, decide_false, Bool.false_eq_true,
     ↓reduceIte]
+  obtain ⟨n, rfl⟩ := call1W_succ hW
   exact CoreSpec.of_call1W (s₀ := ⟨s.mem, Locals.init []⟩)
     (defeqNoFvars_refines p hp hf n _ a₀ dn vis fe M eb a b hS ha hb)
     (fun r r' h => by simp only [decBool, h]) hW

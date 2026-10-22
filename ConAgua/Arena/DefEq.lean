@@ -781,10 +781,10 @@ def lazyIterL : FunDecl := lfn (mode, vis, d, a, b) locals (of, ov, nf, k, x, y)
     if k != 3 { return (k, 0, 0) }
   };
   (k, x, y) := call lazy_delta_step(mode, vis, d, a, b);
+  if k == 0 { return (3, x, y) };
   if k == 1 { return (1, 0, 0) };
   if k == 2 { return (0, 0, 0) };
-  if k == 3 { return (2, a, b) };
-  return (3, x, y)
+  return (2, a, b)
 }
 
 /-- `lazy_delta_reduction`'s loop (named, for its spec). -/
