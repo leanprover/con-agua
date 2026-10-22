@@ -688,4 +688,127 @@ theorem defeqOffset_refines (p : Prog) (hp : DefEqMidProg p) (hnp : NatPredW p) 
   refine coreRef_ret hS₅ ?_ ⟨h1 ▸ hw1, h2 ▸ h₅.2.2.2⟩
   simp only [decOB, decBool, ← h1, ← h2]; rfl
 
+/-! ## `defeq_lams_inner` -/
+
+section liK
+variable (p : Prog) (n : Nat) (mode vis d b₁ b₂ : Word)
+
+/-- After `infer(b₂)`. -/
+def liK3 (t₁ : Word) (res : Option (List Word × Mem)) : Option (Word × Mem) :=
+  match res with
+  | none => none
+  | some (r, m) => call1W p n "defeq" [mode, vis, d + 1, t₁, r.headD 0] m
+
+/-- After `infer(b₁)`. -/
+def liK2 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
+  match res with
+  | none => none
+  | some (r, m) => liK3 p n mode vis d (r.headD 0) (callW p n "infer" [mode, vis, d + 1, b₂] m)
+
+/-- The model of `defeq_lams_inner` past the bodies' `defeq`. -/
+def liK1 (res : Option (List Word × Mem)) : Option (Word × Mem) :=
+  match res with
+  | none => none
+  | some (r, m) =>
+    if r.headD 0 = 0 then some (0, m)
+    else if mode &&& 1 = 0 then liK2 p n mode vis d b₂ (callW p n "infer" [mode, vis, d + 1, b₁] m)
+    else some (1, m)
+
+variable (r : List Word) (m : Mem) (t₁ : Word)
+theorem liK3_s : liK3 p n mode vis d t₁ (some (r, m)) =
+    call1W p n "defeq" [mode, vis, d + 1, t₁, r.headD 0] m := rfl
+theorem liK2_s : liK2 p n mode vis d b₂ (some (r, m)) =
+    liK3 p n mode vis d (r.headD 0) (callW p n "infer" [mode, vis, d + 1, b₂] m) := rfl
+theorem liK1_z (h : r.headD 0 = 0) : liK1 p n mode vis d b₁ b₂ (some (r, m)) = some (0, m) := by
+  simp only [liK1, h, ↓reduceIte]
+theorem liK1_v (h : r.headD 0 ≠ 0) (hv : mode &&& 1 = 0) : liK1 p n mode vis d b₁ b₂ (some (r, m)) =
+    liK2 p n mode vis d b₂ (callW p n "infer" [mode, vis, d + 1, b₁] m) := by
+  simp only [liK1, h, hv, ↓reduceIte]
+theorem liK1_t (h : r.headD 0 ≠ 0) (hv : mode &&& 1 ≠ 0) :
+    liK1 p n mode vis d b₁ b₂ (some (r, m)) = some (1, m) := by
+  simp only [liK1, h, hv, ↓reduceIte]
+
+end liK
+
+theorem defeqLamsInner_spec (p : Prog) (hp : DefEqMidProg p) (n : Nat) (s₀ : St) (mode vis d b₁ b₂ : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "defeq_lams_inner" [mode, vis, d, b₁, b₂]
+    ⦃fun r s' => LocEq s' s₀ ∧ liK1 p n mode vis d b₁ b₂
+      (callW p n "defeq" [mode, vis, d + 1, b₁, b₂] s₀.mem) = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp.lamsInner]
+  simp only [callFn, defeqLamsInnerL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "defeq",
+      callW_spec p n "infer"] <;>
+    finish [liK1_z, liK1_v, liK1_t, liK2_s, liK3_s, call1W_some]
+
+theorem mode_verified (mode : Word) (h : mode < 4) :
+    (decMode mode).verifiedChecks = decide (mode &&& 1 = 0) := by
+  rcases mode_cases mode h with rfl | rfl | rfl | rfl <;> decide
+
+/-- **`defeq_lams_inner` refines `defeqLamsInner`** at the knot (the depth `d + 1` does not wrap). -/
+@[refines ConRon.Arena.defeqLamsInner]
+theorem defeqLamsInner_refines (p : Prog) (hp : DefEqMidProg p) (n : Nat) (hk : KnotUpTo p n)
+    (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (M : ModeMaps) (eb mode d b₁ b₂ : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
+    (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hd : d.toNat + 1 < 2 ^ 64) (h₁ : HW b₁) (h₂ : HW b₂) :
+    CoreSpec p (n + 1) "defeq_lams_inner" [mode, vis, d, b₁, b₂]
+      (defeqLamsInner (decMode mode) (coreKnot (decMode mode) fe id F) d.toNat (decE b₁) (decE b₂))
+      decBool s₀ a₀ dn vis fe M eb := by
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
+    (defeqLamsInner_spec p hp n s₀ mode vis d b₁ b₂)
+  subst hs0
+  refine ⟨hloc, ?_⟩
+  have hd1 : (d + 1).toNat = d.toNat + 1 := by
+    rw [UInt64.toNat_add]; simp only [UInt64.toNat_one]; omega
+  have K := hk n (Nat.le_refl _)
+  unfold defeqLamsInner
+  cases hc1 : callW p n "defeq" [mode, vis, d + 1, b₁, b₂] s.mem with
+  | none => rw [hc1] at hW; cases hW
+  | some q =>
+  obtain ⟨r₁, m₁⟩ := q
+  rw [hc1] at hW
+  have e₁ := CoreSpec.of_callW (K.defeq F s a₀ dn vis fe M eb mode (d + 1) b₁ b₂ hF hn hs h₁ h₂) hc1
+  rw [hd1] at e₁
+  refine coreRef_bind e₁ (fun M₁ hS₁ => ?_)
+  by_cases h0 : r₁.headD 0 = 0
+  · rw [liK1_z (h := h0), Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨hr, hm⟩ := hW
+    rw [decBool_f h0, ← hm]
+    exact coreRef_ret hS₁ (by rw [decBool, ← hr]; rfl) (by unfold ResH; rw [← hr]; exact hw0)
+  rw [decBool_t h0]
+  simp only [Bool.not_true, Bool.false_eq_true, ↓reduceIte, mode_verified mode hs.mode4,
+    decide_eq_true_eq]
+  by_cases hv : mode &&& 1 = 0
+  · rw [liK1_v (h := h0) (hv := hv)] at hW
+    simp only [hv, ↓reduceIte]
+    cases hc2 : callW p n "infer" [mode, vis, d + 1, b₁] m₁ with
+    | none => rw [hc2] at hW; cases hW
+    | some q =>
+    obtain ⟨r₂, m₂⟩ := q
+    rw [hc2, liK2_s] at hW
+    have e₂ := CoreSpec.of_callW (s₀ := ⟨m₁, Locals.init []⟩)
+      (K.infer F _ _ dn vis fe M₁ eb mode (d + 1) b₁ hF hn ⟨hS₁, hs.mode4, hs.eb_mode⟩ h₁) hc2
+    rw [hd1] at e₂
+    refine coreRef_bind e₂ (fun M₂ hS₂ => ?_)
+    cases hc3 : callW p n "infer" [mode, vis, d + 1, b₂] m₂ with
+    | none => rw [hc3] at hW; cases hW
+    | some q =>
+    obtain ⟨r₃, m₃⟩ := q
+    rw [hc3, liK3_s] at hW
+    have e₃ := CoreSpec.of_callW (s₀ := ⟨m₂, Locals.init []⟩)
+      (K.infer F _ _ dn vis fe M₂ eb mode (d + 1) b₂ hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩ h₂) hc3
+    rw [hd1] at e₃
+    refine coreRef_bind e₃ (fun M₃ hS₃ => ?_)
+    have e₄ := CoreSpec.of_call1W (s₀ := ⟨m₃, Locals.init []⟩)
+      (K.defeq F _ _ dn vis fe M₃ eb mode (d + 1) _ _ hF hn ⟨hS₃, hs.mode4, hs.eb_mode⟩
+        e₂.2.2.2 e₃.2.2.2) (fun r r' h => by simp only [decBool, h]) hW
+    rw [hd1] at e₄
+    exact e₄
+  · rw [liK1_t (h := h0) (hv := hv), Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨hr, hm⟩ := hW
+    simp only [hv, ↓reduceIte, ← hm]
+    exact coreRef_ret hS₁ (by rw [decBool, ← hr]; rfl) (by unfold ResH; rw [← hr]; exact hw1)
+
 end L.Arena
