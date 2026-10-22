@@ -344,7 +344,7 @@ theorem ret_eq {w : Word} {m₁ m' : Mem} {r : List Word}
 
 /-- `proof_irrel`'s refinement (`WhnfIotaRefine4.lean`'s `proofIrrel_refines`), a hypothesis here:
 that proof rests on the `CoreS.lvl_den` stub, which the census-tagged statements supply. -/
-def ProofIrrelOK (p : Prog) : Prop :=
+def ProofIrrelOKM (p : Prog) : Prop :=
   ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
     ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode d a b : Word), CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 →
@@ -354,7 +354,7 @@ def ProofIrrelOK (p : Prog) : Prop :=
       vis fe MM eb
 
 section check
-variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hpi : ProofIrrelOK p)
+variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hpi : ProofIrrelOKM p)
 include hp hc hpi
 
 /-- **`m2c_check` refines `m2cCheckT`.** -/
@@ -507,7 +507,7 @@ theorem PreRun.view {R : CoreFnsA} {d : Nat} {major : EIdx} {a a' : AState} {L :
   exact ⟨l, h1, h2, hvl⟩
 
 section karm
-variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hpi : ProofIrrelOK p)
+variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hpi : ProofIrrelOKM p)
   (hE : ErecKeptKnot p)
 include hp hc hpi
 

@@ -84,7 +84,7 @@ theorem rdW_rec {b : Array Word} {q : Word} {k : Nat} {w : Word} (hb : b[q.toNat
   rdW_off' hb (by simp; omega) hsz
 
 section top
-variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hpi : ProofIrrelOK p)
+variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hpi : ProofIrrelOKM p)
   (hE : ErecKeptKnot p) (hcc : CoreCallees p)
 include hp hc hpi hE hcc
 
