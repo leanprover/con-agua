@@ -388,4 +388,87 @@ theorem brmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       rintro r2 b2 m2 a2 ⟨rfl, rfl, hM2, hS2, hg2⟩
       exact Sim.ret ⟨rfl, rfl, hM2, hS2, hg1.trans hg2⟩
 
+/-- A pointer slice decoded below the tops, nonempty, lies below the top. -/
+theorem partsPL_bound {α : Type} {f : Mem → Nat → Option α} {m : Mem} {o l : Nat} {xs : List α}
+    (h : decPL (truncM m) (f (truncM m)) o l = some xs) : l = 0 ∨ o + l ≤ iwTop m := by
+  rcases Nat.eq_zero_or_pos l with h0 | hpos
+  · exact Or.inl h0
+  · right
+    obtain ⟨v, hv, -⟩ := decPL_getH (truncM m) h (l - 1) (by omega)
+    have := partsIwLt hv; omega
+
+/-- A decoded slice-at-a-header, as words and a slice below the tops. -/
+theorem partsAt {α : Type} {f : Mem → Nat → Option α} (hf : ∀ q, OMono (fun m => f m q)) {m : Mem}
+    {i : Nat} {xs : List α} (h : decAt (truncM m) (decPL (truncM m) (f (truncM m))) i = some xs) :
+    ∃ o l : Word, iwN (truncM m) i = some o.toNat ∧ iwN (truncM m) (i + 1) = some l.toNat ∧
+      DecB (fun m => decPL m (f m) o.toNat l.toNat) m xs ∧ (l = 0 ∨ o.toNat + l.toNat ≤ iwTop m) := by
+  simp only [decAt, bind, Option.bind_eq_some_iff] at h
+  obtain ⟨o, ho, l, hl, hd⟩ := h
+  have hv64 : ∀ {i v : Nat}, iwN (truncM m) i = some v → v < 2 ^ 64 := by
+    intro i v h; simp only [iwN, nat?, Option.map_eq_some_iff] at h; obtain ⟨w, -, rfl⟩ := h; exact w.toNat_lt
+  have hob := hv64 ho
+  have hlb := hv64 hl
+  refine ⟨UInt64.ofNat o, UInt64.ofNat l, by rw [UInt64.toNat_ofNat_of_lt' hob]; exact ho,
+    by rw [UInt64.toNat_ofNat_of_lt' hlb]; exact hl, ?_, ?_⟩
+  · show decPL _ _ _ _ = _; rw [UInt64.toNat_ofNat_of_lt' hob, UInt64.toNat_ofNat_of_lt' hlb]; exact hd
+  · rcases partsPL_bound hd with h0 | h0
+    · left; apply UInt64.toNat_inj.mp; rw [UInt64.toNat_ofNat_of_lt' hlb]; simpa using h0
+    · right; rw [UInt64.toNat_ofNat_of_lt' hob, UInt64.toNat_ofNat_of_lt' hlb]; exact h0
+
+/-- **`block_raw_rec_go`'s model refines the members' `anyM`.** -/
+theorem brgoW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {no nl : Word}
+    {names : List NIdx} (n : Nat) : ∀ (m : Mem) (a : AState) (moff mlen : Word) (ms : List MemberShape)
+    (mp : Std.HashMap EIdx Bool),
+    StageR dn vis fe m a → DecB (fun m => decPL m (decMS m) moff.toNat mlen.toNat) m ms →
+    (mlen = 0 ∨ moff.toNat + mlen.toNat ≤ iwTop m) → DecB (fun m => decHL m no.toNat nl.toNat) m names →
+    no.toNat + nl.toNat ≤ iwTop m → maMR m mp →
+    Sim (brgoW n m no nl moff mlen)
+      (ms.anyM fun ms => ms.ctors.anyM fun c => ConRon.Arena.piDomsMentionAny names coreWalkFuel c.1.type) a
+      (RawR (dn := dn) (vis := vis) (fe := fe) m a) := by
+  induction n with
+  | zero => intro m a moff mlen ms mp _ _ _ _ _ _ r m' h; simp [brgoW] at h
+  | succ n ih =>
+    intro m a moff mlen ms mp hS hms0 hmb hns hnb hM
+    by_cases hl : mlen = 0
+    · rw [brgoW_nil n m no nl moff mlen hl]
+      subst hl
+      have : ms = [] := by have := decPL_length _ hms0; simpa using this
+      subst this
+      exact Sim.ret ⟨rfl, rfl, ⟨mp, hM⟩, hS, IWGrow.refl _⟩
+    rw [brgoW_cons n m no nl moff mlen hl]
+    have hms : PSlR decMS ms moff mlen m := ⟨hms0, hmb.resolve_left hl⟩
+    obtain ⟨pc, ms0, ms', rfl, hw, hpb, hm0, hms'⟩ := partsPSl_cons hms hl
+    have hd0 : decMS (truncM m) pc = some ms0 := hm0
+    simp only [decMS, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hd0
+    obtain ⟨cvp, -, cvT, -, nIdx, -, ctors, hct, rfl⟩ := hd0
+    obtain ⟨o, l, ho, hl', hdc, hcb⟩ := partsAt decCN_mono hct
+    have hpw : (UInt64.ofNat pc).toNat = pc := UInt64.toNat_ofNat_of_lt' hpb
+    have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
+    have hp2 : (UInt64.ofNat pc + 2).toNat = pc + 2 := by
+      have := partsIwLt ho; rw [UInt64.toNat_add, hpw]; simp; omega
+    have hp3 : (UInt64.ofNat pc + 3).toNat = pc + 3 := by
+      have := partsIwLt hl'; rw [UInt64.toNat_add, hpw]; simp; omega
+    obtain ⟨how, -, -⟩ := partsIwRd ho hp2
+    obtain ⟨hlw, -, -⟩ := partsIwRd hl' (by rw [hp3])
+    rw [hw, how, hlw, ofNat_toNat_word, ofNat_toNat_word, partsAnyM_cons]
+    refine Sim.bindK (K := brrK n (fun m1 => brgoW n m1 no nl (moff + 1) (mlen - 1)))
+      (body := fun r1 m1 => if r1.headD 0 ≠ 0 then some ([1], m1)
+        else pdmK3 (brgoW n m1 no nl (moff + 1) (mlen - 1))) rfl (fun _ _ => rfl)
+      (brmW_sim n m a o l ctors mp hS hdc hcb hns hnb hM) ?_
+    rintro r1 b m1 a1 ⟨rfl, rfl, ⟨mp1, hM1⟩, hS1, hg1⟩
+    cases b with
+    | true =>
+      simp only [if_true, show (1 : Word) ≠ 0 by decide, List.headD_cons, ne_eq, not_false_eq_true]
+      exact Sim.ret ⟨rfl, rfl, ⟨mp1, hM1⟩, hS1, hg1⟩
+    | false =>
+      simp only [Bool.false_eq_true, if_false, List.headD_cons, ne_eq, not_true_eq_false]
+      refine Sim.congr (op := List.anyM (fun ms => ms.ctors.anyM fun c =>
+        ConRon.Arena.piDomsMentionAny names coreWalkFuel c.1.type) ms' >>= pure) ?_ (bind_pure _)
+      refine Sim.bindK (K := pdmK3) (body := fun r m => some ([r.headD 0], m)) rfl (fun _ _ => rfl)
+        (ih m1 a1 (moff + 1) (mlen - 1) ms' mp1 hS1 (hms'.grow decMS_mono hg1).1
+          (Or.inr (hms'.grow decMS_mono hg1).2) (hns.grow (OMono.decHL _ _) hg1)
+          (Nat.le_trans hnb hg1.1) hM1) ?_
+      rintro r2 b2 m2 a2 ⟨rfl, rfl, hM2, hS2, hg2⟩
+      exact Sim.ret ⟨rfl, rfl, hM2, hS2, hg1.trans hg2⟩
+
 end L.Ind
