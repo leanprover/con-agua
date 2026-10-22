@@ -198,4 +198,86 @@ theorem toNat_add_ofNat {s : Word} {k : Nat} (h : s.toNat + k < 2 ^ 64) :
   rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by rw [show UInt64.size = 2 ^ 64 from rfl]; omega)]
   simp; omega
 
+/-! ## `ind_rec_copy`'s record -/
+
+/-- **The record's copy** (`nn` words from `s`, then word `2` := `q`, and for a recursor word
+`7` := `r`), allocated at the top. -/
+theorem ircT_ok {n : Nat} {mx m' : Mem} {s q r nn kw p : Word}
+    (h : ircT n s q r nn kw (erAllocW mx nn) = some (p, m'))
+    (hc : 129 < (mx.arr64 CTL).size) (hE64 : (mx.arr64 EREC).size < 2 ^ 64)
+    (hr0 : erTop mx ≤ (mx.arr64 EREC).size) (hnn : 3 ≤ nn.toNat) (h5 : kw = 5 → 8 ≤ nn.toNat) :
+    p.toNat = erTop mx ∧ erTop m' = erTop mx + nn.toNat ∧ EW (fun i => erTop mx ≤ i) mx m' ∧
+      s ≠ 0 ∧ ∀ k < nn.toNat, (m'.arr64 EREC)[p.toNat + k]? =
+        some (if k = 2 then q else if k = 7 ∧ kw = 5 then r
+          else rdW (mx.arr64 DLP) (s + UInt64.ofNat k)) := by
+  cases ha : erAllocW mx nn with
+  | none => rw [ha] at h; cases h
+  | some x =>
+  obtain ⟨pp, m5⟩ := x
+  rw [ha, ircT_some] at h
+  obtain ⟨hpp, ht5, hE5, hW5⟩ := erAllocW_facts ha hc hE64
+  have hw5 := hW5 (fun _ => False)
+  cases hd : dindCopyW n m5 pp s nn with
+  | none => rw [hd] at h; cases h
+  | some m6 =>
+  rw [hd, ircT2_some] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  have hr5 := hw5.2.2.1
+  have hs5 : (m5.arr64 EREC).size = (mx.arr64 EREC).size := by rw [hE5]
+  obtain ⟨hF6, hsrc, hG6⟩ := dindCopyW_get n m5 m6 pp s nn hd (by rw [hs5]; omega) (by rw [hs5]; exact hE64)
+  have hW6 := dindCopyW_EW hd (by omega) (by rw [hs5]; omega) (by rw [hs5]; exact hE64)
+  have hP5 : m5.arr64 DLP = mx.arr64 DLP := hw5.dlp
+  have hs6 : (m6.arr64 EREC).size = (mx.arr64 EREC).size := by rw [hW6.esize, hs5]
+  have ht6 : erTop m6 = erTop m5 := by simp only [erTop, hF6.2.1 129 (by simp)]
+  have hp2 : (pp + 2).toNat = pp.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
+  have hp7 : (pp + 7).toNat = pp.toNat + 7 ∨ kw ≠ 5 := by
+    by_cases hk : kw = 5
+    · left; have := h5 hk; rw [UInt64.toNat_add]; simp; omega
+    · right; exact hk
+  have hs0 : s ≠ 0 := hsrc (fun h0 => by subst h0; simp at hnn)
+  -- the two relocating writes
+  have hWa := EW.set (x := pp + 2) (v := q) (m := m6) (by rw [ht6, hs6]; omega)
+  have hta : erTop (m6.set64 EREC (pp + 2) q) = erTop m6 := by
+    simp only [erTop, (MemFrame.set64 m6 EREC (by decide) (pp + 2) q).2.1 129 (by simp)]
+  have hsa : ((m6.set64 EREC (pp + 2) q).arr64 EREC).size = (mx.arr64 EREC).size := by
+    rw [size_set64, hs6]
+  have hfin : EW (fun i => erTop mx ≤ i) mx (if kw = 5 then
+      ((m6.set64 EREC (pp + 2) q).set64 EREC (pp + 7) r) else m6.set64 EREC (pp + 2) q) := by
+    have h1 : EW (fun i => erTop mx ≤ i) mx (m6.set64 EREC (pp + 2) q) :=
+      ((hW5 _).trans hW6 (fun i _ hi => by omega)).trans hWa (fun i _ hi => by omega)
+    split
+    · exact h1.trans (EW.set (by rw [hta, ht6, hsa]; omega)) (fun i _ hi => by
+        rcases hp7 with h7 | h7
+        · omega
+        · contradiction)
+    · exact h1
+  refine ⟨hpp, ?_, hfin, hs0, fun k hk => ?_⟩
+  · have := hfin.2.1
+    split
+    · simp only [erTop, (MemFrame.set64 _ EREC (by decide) (pp + 7) r).2.1 129 (by simp),
+        (MemFrame.set64 m6 EREC (by decide) (pp + 2) q).2.1 129 (by simp)]
+      simp only [erTop] at ht6 ht5; omega
+    · simp only [erTop, (MemFrame.set64 m6 EREC (by decide) (pp + 2) q).2.1 129 (by simp)]
+      simp only [erTop] at ht6 ht5; omega
+  have hlt : pp.toNat + k < (m6.arr64 EREC).size := by rw [hs6]; omega
+  have hcp : (m6.arr64 EREC)[pp.toNat + k]? = some (rdW (mx.arr64 DLP) (s + UInt64.ofNat k)) := by
+    rw [hG6, if_pos (by omega), hP5, Nat.add_sub_cancel_left]
+  have e2 : ((m6.set64 EREC (pp + 2) q).arr64 EREC)[pp.toNat + k]? =
+      if k = 2 then some q else some (rdW (mx.arr64 DLP) (s + UInt64.ofNat k)) := by
+    split
+    · rename_i hk2; subst hk2; rw [← hp2]; exact set64_get_same (by rw [hp2]; omega)
+    · rw [set64_get_ne (by rw [hp2]; omega), hcp]
+  split
+  · rename_i hk5
+    rcases hp7 with h7 | h7
+    · by_cases hk7 : k = 7
+      · subst hk7; rw [← h7, set64_get_same (by rw [h7, hsa, ← hs6]; exact hlt)]; simp [hk5]
+      · rw [set64_get_ne (by rw [h7]; omega), e2]
+        by_cases hk2 : k = 2 <;> simp [hk2, hk7]
+    · exact absurd hk5 h7
+  · rename_i hk5
+    rw [e2]
+    by_cases hk2 : k = 2 <;> simp [hk2, hk5]
+
 end L.Arena
