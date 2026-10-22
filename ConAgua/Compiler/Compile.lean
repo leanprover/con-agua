@@ -101,9 +101,22 @@ def Stmt.roms : Stmt → List (List UInt8)
   | .call _ _ args => args.flatMap Expr.roms
   | .gset _ e => Expr.roms e
 
-/-- The constant data of a program: its byte strings, each once. -/
+/-- Insert `d` before the first longer string (structural, so the kernel evaluates it). -/
+def romInsert (d : List UInt8) : List (List UInt8) → List (List UInt8)
+  | [] => [d]
+  | e :: es => if d.length ≤ e.length then d :: e :: es else e :: romInsert d es
+
+/-- Byte strings by length, shortest first (a stable insertion sort). -/
+def romSort : List (List UInt8) → List (List UInt8)
+  | [] => []
+  | d :: ds => romInsert d (romSort ds)
+
+/-- The constant data of a program: its byte strings, each once, shortest first (so that finding
+a short string, `romIdx`, does not scan a long one: this keeps the static check of a program
+with a large ROM cheap, `WFSplit.lean`). -/
 def Prog.rom (p : Prog) : List UInt8 :=
-  ((p.flatMap fun (_, fd) => Stmt.roms fd.body).foldl (fun acc d => if acc.contains d then acc else acc ++ [d]) []).flatten
+  (romSort ((p.flatMap fun (_, fd) => Stmt.roms fd.body).foldl
+    (fun acc d => if acc.contains d then acc else acc ++ [d]) [])).flatten
 
 /-- The most results a statement returns or reads from a call. -/
 def Stmt.nres : Stmt → Nat

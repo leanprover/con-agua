@@ -132,7 +132,7 @@ theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd 
   intro f fd kf hlk hkf vs σ d ra Q hvl hra hargs hap1 hap2 hlo hhi h15 hmem hfuel hKret hKerr hKexh
   have hap1' := hap1
   have hwf := hwfp f fd hlk
-  simp only [FunDecl.wf, Bool.and_eq_true, decide_eq_true_eq] at hwf
+  simp only [FunDecl.wf_eq, FunDecl.wfSpec, Bool.and_eq_true, decide_eq_true_eq] at hwf
   obtain ⟨⟨hnp, hbody⟩, hFoff⟩ := hwf
   simp only [maxOff] at hFoff
   have hhi2 := hG.hi_le

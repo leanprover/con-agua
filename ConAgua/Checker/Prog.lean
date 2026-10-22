@@ -1,4 +1,4 @@
-import ConAgua.Compiler.WFFast
+import ConAgua.Compiler.WFSplit
 import ConAgua.Checker.Entry
 import ConAgua.Checker.Prelude
 import ConAgua.Arena.Abs1
@@ -2003,15 +2003,18 @@ def checkerProg : Prog := [
   ("rec_rule_bits", abortStub 2),
   ("reserved_rec_name", abortStub 1)]
 
-/-- The table for the arrays the program names (`Prog.wfAuto`'s). -/
-def checkerTab : Tab := Prog.tab checkerProg (Prog.arrs checkerProg).1 (Prog.arrs checkerProg).2
+set_option maxRecDepth 100000 in
+/-- The table for the arrays the program names (`Prog.wfAuto`'s), as a literal (`tab_lit%`: every
+per-chunk check of `checkerProg_wf` unfolds it). -/
+def checkerTab : Tab := tab_lit% (Prog.tab checkerProg (Prog.arrs checkerProg).1 (Prog.arrs checkerProg).2)
+
+#guard checkerTab == Prog.tab checkerProg (Prog.arrs checkerProg).1 (Prog.arrs checkerProg).2
 
 -- the word arrays are the ones `cap_check` checks
 #guard (Prog.arrs checkerProg).2 == wordArrays
 
 /-- **`checkerProg` passes the compiler's static check** (every call resolves, with the callee's
 parameter count; the names are distinct; the frames fit). -/
-theorem checkerProg_wf : Prog.wf checkerTab checkerProg = true :=
-  Prog.wf_of_wfFast (by decide +kernel)
+prog_wf checkerProg_wf : checkerTab checkerProg
 
 end L.Checker
