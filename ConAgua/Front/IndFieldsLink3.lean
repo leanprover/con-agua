@@ -184,6 +184,88 @@ theorem blk_loop (m₁ : Mem) (p : Word) :
         seenR_or h3 (by decide) id⟩
   · dloop_other scanIndDeclLoop
 
+/-- **The fields pass of an `inductive` line, linked**: on con-leche's `ok` path, a successful
+`ind_fields(v)` returns the three lists of the block as runs of records related to con-leche's
+(`IndFR`), and writes only `IFR`/`IFL`. -/
+theorem indFields_link (m m' : Mem)
+    (hsz : (m.arr64 IFR).size < 2 ^ 63 ∧ (m.arr64 IFL).size < 2 ^ 63) (v : USize)
+    (tys : List IndTypeRec) (cts : List IndCtorRec) (rcs : List IndRecRec) (e : USize)
+    (hscan : scanIndDecl b v = .ok (.ind tys cts rcs) e) (r : List Word)
+    (h : indFieldsW b.data m v.toUInt64 = some (r, m')) :
+    ∃ to tn co cn ro rn, r = [to, tn, co, cn, ro, rn] ∧ IndFR b m' to tn co cn ro rn tys cts rcs ∧
+      MemFrame [IFR, IFL] [] m m' := by
+  unfold indFieldsW at h
+  cases hr : ifResetW m with
+  | none => rw [hr, fieldsK0_none] at h; cases h
+  | some m1 =>
+  rw [hr, fieldsK0_some] at h
+  unfold ifResetW at hr
+  split at hr
+  · cases hr
+  rename_i hlen
+  simp only [Option.some.injEq] at hr
+  subst hr
+  -- the reset memory has room
+  have hs1 : ((m.set64 IFR 0 0).set64 IFL 0 0).arr64 IFR = (m.arr64 IFR).set! 0 0 := by
+    rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_same]; rfl
+  have hs2 : ((m.set64 IFR 0 0).set64 IFL 0 0).arr64 IFL = (m.arr64 IFL).set! 0 0 := by
+    rw [Mem.arr64_set64_same, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; rfl
+  have hn1 : (m.arr64 IFR).size ≠ 0 := fun h0 => hlen (.inl (by simp [Mem.len64, h0]))
+  have hn2 : (m.arr64 IFL).size ≠ 0 := fun h0 => hlen (.inr (by simp [Mem.len64, h0]))
+  have hR1 : Room ((m.set64 IFR 0 0).set64 IFL 0 0) := by
+    refine ⟨by rw [hs1]; simpa using hsz.1, by rw [hs2]; simpa using hsz.2, ?_, ?_⟩
+    · simp only [topN, wd, hs1, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+      simp [show 0 < (m.arr64 IFR).size by omega]
+    · simp only [topN, wd, hs2, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+      simp [show 0 < (m.arr64 IFL).size by omega]
+  have hfr1 : MemFrame [IFR, IFL] [] m ((m.set64 IFR 0 0).set64 IFL 0 0) :=
+    ((MemFrame.set64 m IFR (by decide) 0 0).mono (by simp) (by simp)).trans
+      ((MemFrame.set64 _ IFL (by decide) 0 0).mono (by simp) (by simp))
+  generalize (m.set64 IFR 0 0).set64 IFL 0 0 = m1 at h hR1 hfr1
+  cases ha : allocW m1 IFR 6 with
+  | none => rw [ha, fieldsK1_none] at h; cases h
+  | some pm =>
+  obtain ⟨p, m2⟩ := pm
+  rw [ha, fieldsK1_some] at h
+  have hI := recInv_alloc IFR (.inl rfl) 6 6 p m1 m2 hR1 rfl ha
+  obtain ⟨-, -, -, a4, -, -, -⟩ := allocW_facts m1 m2 IFR (.inl rfl) 6 p hR1 ha
+  cases ho : objW b.data m2 v.toUInt64 4 p with
+  | none => rw [ho, fieldsK2_none] at h; cases h
+  | some em =>
+  obtain ⟨e3, m3⟩ := em
+  rw [ho, fieldsK2_some] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨-, hI3, hF⟩ := item_gen b h64 hsize
+    (fun i w seen (st : BlkSt) => scanIndDeclLoop b i w seen st.ctors st.recs st.types) 4 IFR 6
+    (fun m₁ q d m => RecInv IFR 6 q m₁ m ∧ ∀ tys cts rcs, d = .ind tys cts rcs →
+        IndFR b m (wd m IFR (q.toNat + 0)) (wd m IFR (q.toNat + 1)) (wd m IFR (q.toNat + 2))
+          (wd m IFR (q.toNat + 3)) (wd m IFR (q.toNat + 4)) (wd m IFR (q.toNat + 5)) tys cts rcs)
+    (BlkLR b) ⟨[], [], []⟩ (scanIndDecl b) (fun i x e h => by
+      unfold scanIndDecl at h; split at h
+      · exact h
+      · cases h) (blk_loop b h64 hsize) v m2 p _ e e3 m3 hscan
+    ⟨hI, seenR_zero _ _, seenR_zero _ _, seenR_zero _ _⟩ ho
+  have hp : ∀ k : Nat, k < 6 → (p + UInt64.ofNat k).toNat = p.toNat + k := by
+    intro k hk
+    have := hI3.2.1.2.2.1
+    have := hI3.2.1.1
+    have := hI3.2.2.2
+    have := hI3.1.top IFR (.inl rfl)
+    rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by have : UInt64.size = 2 ^ 64 := rfl; omega)]
+    apply Nat.mod_eq_of_lt; omega
+  refine ⟨_, _, _, _, _, _, rfl, ?_, hfr1.trans (a4.fr.trans hI3.1.fr)⟩
+  have h1 := hp 1 (by decide)
+  have h2 := hp 2 (by decide)
+  have h3 := hp 3 (by decide)
+  have h4 := hp 4 (by decide)
+  have h5 := hp 5 (by decide)
+  simp only [show UInt64.ofNat 1 = (1 : Word) from rfl, show UInt64.ofNat 2 = (2 : Word) from rfl,
+    show UInt64.ofNat 3 = (3 : Word) from rfl, show UInt64.ofNat 4 = (4 : Word) from rfl,
+    show UInt64.ofNat 5 = (5 : Word) from rfl] at h1 h2 h3 h4 h5
+  simp only [rdW_wd, h1, h2, h3, h4, h5]
+  exact hF tys cts rcs rfl
+
 end blk
 
 end L.Front.Ind
