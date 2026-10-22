@@ -215,4 +215,100 @@ theorem spnLs_core (p : Prog) (hL : LsProg p) {n : Nat} {m m' : Mem} {a : AState
 
 end lev
 
+/-! ## `sls_memo` -/
+
+/-- **`sls_memo` refines `substLsMemoAt`** under the walk's invariants. -/
+@[refines ConRon.Arena.substLsMemoAt]
+theorem slsMemo_ok (p : Prog) (hp : ILWLevProg p) : SlsMemoOK p := by
+  intro n m m' a dn vis fe M eb w ko kc vo vc ks us vs rs hS hM hE hw hdw' hc
+  obtain ⟨LS, hdls⟩ := hdw'
+  cases n with
+  | zero => rw [callW_zero] at hc; cases hc
+  | succ k =>
+  obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (slsMemo_spec p hp.ilw k _ w ko kc vo vc) hc
+  rw [hs'] at hW
+  change ilwSlsW p k m w ko kc vo vc = some (rs.headD 0, m') at hW
+  unfold ilwSlsW at hW
+  by_cases hr : mfindG lplsSch m w 0 = []
+  · simp [hr] at hW
+  simp only [hr, ↓reduceIte] at hW
+  by_cases hh : (mfindG lplsSch m w 0).headD 0 ≠ 0
+  · -- a hit: the memo's value
+    simp only [ne_eq, hh, not_false_eq_true, ↓reduceIte] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨hw', rfl⟩ := hW
+    obtain ⟨v, hv, hvv, hvl⟩ := memoRV_hit lplsSch ilKey VI m _ hM.lpls w 0 hr hh ⟨hw, rfl⟩
+    have hval : mvG lplsSch m ((mfindG lplsSch m w 0).tail.headD 0) = rs.headD 0 := hw'
+    rw [hval] at hvv hvl
+    have hget : a.memos.instLPLsC[(decI w : LsIdx)]? = some (decI (rs.headD 0)) := by
+      rw [← hvv]; exact hv
+    refine ⟨a, ?_, ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩, hM, ILWGrow.refl a, hvl,
+      hM.lplsDen _ _ hget⟩
+    simp only [substLsMemoAt, StateT.run_bind, instLPLsGet_run, except_ok_bind, hget]; rfl
+  -- a miss: read back, substitute each element onto the stack, intern the list, record
+  have hh0 : (mfindG lplsSch m w 0).headD 0 = 0 := by simpa using hh
+  simp only [hh0, ne_eq, not_true_eq_false, ↓reduceIte] at hW
+  have hmiss : a.memos.instLPLsC[(decI w : LsIdx)]? = none :=
+    memoRV_miss lplsSch ilKey VI m _ hM.lpls w 0 ⟨hw, rfl⟩ hr hh0
+  obtain ⟨ids, hv, hdl⟩ := denoteLs_view a (decI w) LS hdls
+  obtain ⟨e₁, t₁, s₁⟩ := lsNodeW_store hS.arena.1 hw hv
+  rw [e₁] at hW
+  simp only [List.headD_cons, List.tail_cons] at hW
+  generalize lsO m (tierW w) (idxW w) = o at hW t₁ s₁
+  generalize lsL m (tierW w) (idxW w) = l at hW t₁ s₁
+  by_cases u1 : m.len64 SPN < spTop m
+  · simp [u1] at hW
+  by_cases u2 : m.len64 SPN - spTop m < l
+  · simp [u1, u2] at hW
+  simp only [u1, u2, ↓reduceIte] at hW
+  have hspn := hS.spn
+  have hlen : (m.len64 SPN).toNat = (m.arr64 SPN).size := L.Front.toNat_ofNat_size _ hspn
+  have u1' := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp u1)
+  have u2' := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp u2)
+  rw [UInt64.toNat_sub_of_le _ _ (UInt64.not_lt.mp u1), hlen] at u2'
+  rw [hlen] at u1'
+  cases h1 : callW p k "sls_go" [o, l, spTop m, ko, kc, vo, vc] m with
+  | none => rw [h1] at hW; cases hW
+  | some q =>
+  obtain ⟨x, m₁⟩ := q
+  rw [h1, ilwSlsK₁_some] at hW
+  obtain ⟨s₁', hs₁, -, hW₁⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (slsGo_spec p hp.ls k _ o l (spTop m) ko kc vo vc) h1
+  rw [hs₁] at hW₁
+  obtain ⟨X, hrl, hrc⟩ := readLevelsM_run' a (decI w) LS hdls hS.readLs
+  have hSR := hS.withReadLsC X hrc
+  obtain ⟨hs, a₁, hrun₁, hS₁, hM₁, hg₁, hk₁, hme₁, hsl₁, -, hel₁⟩ :=
+    slsElemW_core ids LS k m m₁ _ o l (spTop m) hSR (hM.congr rfl rfl) (hE.congr rfl) hdl s₁ t₁
+      (Nat.le_refl _) (by omega) hW₁
+  cases h2 : callW p k "spn_ls" [spTop m, l] m₁ with
+  | none => rw [h2] at hW; cases hW
+  | some q =>
+  obtain ⟨r₂, m₂⟩ := q
+  rw [h2] at hW
+  obtain ⟨a₂, hrun₂, hS₂, hk₂, hw₂, hden₂, hg₂, hme₂, hf₂⟩ :=
+    spnLs_core p hp.ls hS₁ hsl₁ (by omega) hel₁ h2
+  rw [ilwSlsK₂_some] at hW
+  cases h3 : msetG lplsSch m₂ w 0 (r₂.headD 0) with
+  | none => rw [h3] at hW; cases hW
+  | some m₃ =>
+  rw [h3] at hW
+  simp only [Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨hr₂, rfl⟩ := hW
+  rw [← hr₂]
+  have hM₂ : ILWMemo m₂ a₂ := hM₁.frame hf₂ (by decide) (by decide) hme₂ hg₂
+  have hM₃ := hM₂.setLPLs w (r₂.headD 0) hw hw₂ hden₂ h3
+  have hf₃ := msetG_frame lplsSch lplsSch_wf m₂ m₃ w 0 _ h3
+  have hf₃' : MemFrame [lplsSch.arr] [lplsSch.cs, lplsSch.cs + 1] m₂ m₃ := hf₃.mono (by simp) (by simp)
+  obtain ⟨hS₃, hk₃⟩ := CoreS.frameLP lplsSch (.inr (.inr rfl)) hS₂ hf₃'
+    (hS₂.memos.frame hf₃' (by decide) (by decide) (by decide) (by decide))
+  refine ⟨_, ?_, ⟨M, hS₃.lpMemos a₂.memos.instLPC a₂.memos.instLPLC
+      (a₂.memos.instLPLsC.insert (decI w) (decI (r₂.headD 0))),
+    KeptAll.refl _ _, hk₁.trans (hk₂.trans hk₃)⟩, hM₃, ?_, hw₂, hden₂⟩
+  · simp only [substLsMemoAt, StateT.run_bind, instLPLsGet_run, except_ok_bind, hmiss, hrl,
+      internLevels, hrun₁, hrun₂, instLPLsSet_run]; rfl
+  · exact ILWGrow.trans (a₂ := a₂) (ILWGrow.trans (a₂ := a₁)
+      (ILWGrow.trans (a₂ := { a with caches := { a.caches with readLsC := X } }) (ILWGrow.of_lss rfl) hg₁)
+      hg₂) (ILWGrow.of_lss rfl)
+
 end L.Arena
