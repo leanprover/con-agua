@@ -129,7 +129,7 @@ theorem m2cAnd2_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   have hrun1 := AM.run_of_ok _ _ ok1
   rw [res1, show (0 : Word).toNat = 0 from rfl] at hrun1
   have hS1 := hS.of_proj hD1 (Keeps.run (keeps_cpl_internProj _ _ _) hrun1) hfr1
-  obtain ⟨e1, t1⟩ := store_spn hfr1
+  obtain ⟨e1, t1⟩ := store_spn hfr1.pjStore
   cases c2 : callW p (N' + 1) "mk_proj" [T, 1, major] m1 with
   | none => rw [c2] at hW; cases hW
   | some q =>
@@ -141,7 +141,7 @@ theorem m2cAnd2_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   have hrun2 := AM.run_of_ok _ _ ok2
   rw [res2, show (1 : Word).toNat = 1 from rfl] at hrun2
   have hS2 := hS1.of_proj hD2 (Keeps.run (keeps_cpl_internProj _ _ _) hrun2) hfr2
-  obtain ⟨e2, t2⟩ := store_spn hfr2
+  obtain ⟨e2, t2⟩ := store_spn hfr2.pjStore
   have hsp2 : SpineR m2 to tn targs.toArray := (hsp.of_spn e1).of_spn e2
   cases c3 : and2Push m2 to tn (r1.headD 0) (r2.headD 0) with
   | none => rw [c3] at hW; cases hW
@@ -184,7 +184,7 @@ theorem m2cAnd2_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   have hrun6 := AM.run_of_ok _ _ ok6
   rw [res6] at hrun6
   have hgrow : StackGrew m m6 :=
-    ((StackKept.of_store hfr1).trans (StackKept.of_store hfr2)).toGrew.trans
+    ((StackKept.of_store hfr1.pjStore).trans (StackKept.of_store hfr2.pjStore)).toGrew.trans
       (hg3.trans (((StackKept.of_constF hfr4).trans
         ((StackKept.of_app_frame hfr5).trans hSt6)).toGrew))
   refine GrowRef.of_run (v := decH r6) ?_ ⟨M6, hS6, hK6, hgrow⟩
