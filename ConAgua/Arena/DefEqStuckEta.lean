@@ -37,7 +37,7 @@ theorem mkApp_core {p : Prog} (hp : SpineProg p) {n : Nat} {dn : NIdx → Option
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl <;> decide)
-    (by simp [AREC, ASLOT, ADER, PINS])
+    (by simp [AREC, ASLOT, ADER])
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
       rcases hb with rfl | rfl | rfl <;> decide)
@@ -324,7 +324,7 @@ theorem etaCertBody_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) 
     (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d ty1 body1 b cod2 : Word) (hF : n ≤ F)
     (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hty : HW ty1) (hbody : HW body1)
-    (hb : HW b) (hcod : HW cod2) :
+    (_hb : HW b) (hcod : HW cod2) :
     CoreSpec p (n + 1) "eta_cert_body" [mode, vis, d, ty1, body1, b, cod2]
       (etaBodyT (decMode mode) (coreKnot (decMode mode) fe id F) d.toNat (decE ty1) (decE body1)
         (decE b) (decE cod2)) decBool s₀ a₀ dn vis fe M eb := by

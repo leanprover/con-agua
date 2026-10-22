@@ -32,6 +32,7 @@ structure StuckProg (p : Prog) : Prop where
   etaCert : p.lookup "eta_cert" = some etaCertL
   etaCertBody : p.lookup "eta_cert_body" = some etaCertBodyL
   etaCertTy : p.lookup "eta_cert_ty" = some etaCertTyL
+  etaCtorShape : p.lookup "eta_ctor_shape" = some etaCtorShapeL
 
 /-- The callees the stuck side assumes. -/
 structure StuckCallees (p : Prog) : Prop where
