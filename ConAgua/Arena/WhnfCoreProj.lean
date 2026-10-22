@@ -620,17 +620,16 @@ theorem rpArg_refines (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) (a�
     · rw [hres]; unfold decOptR; rw [← hr0, decOpt_ne _ _ (by decide)]
     · unfold ResW; rw [← hr0, ← hr1]; exact ⟨by unfold HW; decide, hwh⟩
 
-/-- `getAppArgs_refines` (`WhnfSpine.lean`, `sorry` there) behind one adapter: it does not take
-`SpineProg p` yet; when its proof lands it will, and only this line changes. -/
+/-- `getAppArgs_refines` (`WhnfSpine.lean`) behind one adapter. -/
 theorem getAppArgs_spec' (p : Prog) (_hp : SpineProg p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (hR : ArenaR s₀.mem a₀) (e : Word) (he : HW e) :
+    (hR : ArenaR s₀.mem a₀) (e : Word) (he : HW e) (hspn : (s₀.mem.arr64 SPN).size < 2 ^ 63) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "get_app_args" [e]
     ⦃fun r s' => LocEq s' s₀ ∧ MemFrame [SPN] [136] s₀.mem s'.mem ∧ StackGrew s₀.mem s'.mem ∧
       r.headD 0 = spTop s₀.mem ∧ spTop s'.mem = spTop s₀.mem + r.tail.headD 0 ∧
       ∃ xs, (getAppArgs coreWalkFuel (decE e)).run a₀ = .ok (xs, a₀) ∧
         SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄ :=
-  getAppArgs_refines p n s₀ a₀ hR e he
+  getAppArgs_refines p _hp n s₀ a₀ hR e he hspn
 
 /-! ## `reduce_proj_fire` -/
 
@@ -809,7 +808,7 @@ theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (hc : CoreCallees p) (n 
   obtain ⟨r₁, m₁⟩ := q₁
   simp only [hc1] at hW
   obtain ⟨t₁, ht₁, -, hf₁, hg₁, ho₁, htop₁, xs, hxs, hsp₁⟩ := triple_of_callW
-    (getAppArgs_spec' p hp.spine n s a₀ hS.arena.1 e1 he1) hc1
+    (getAppArgs_spec' p hp.spine n s a₀ hS.arena.1 e1 he1 hS.spn) hc1
   rw [ht₁] at hf₁ hg₁ htop₁ hsp₁
   have hS₁ := hS.frame_stk hf₁ (by simp) (by simp)
   have hE₁ : m₁.arr64 EREC = s.mem.arr64 EREC := hf₁.1 EREC (by simp [SPN, EREC]) (by decide)

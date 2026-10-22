@@ -4360,9 +4360,11 @@ be asymptotically slower. con-ron at `_tmp/ref/con-ron` origin/HEAD (`proof/ConR
 
 * `WhnfBase.lean` `whnfCallees_stub`: the specs of the callees not written yet (`inst_list`,
   `inst_lp`, `str_lit_ctor`, `str_lit_supported`, the knot's `infer`/`infer_io`/`defeq` steps).
-* `WhnfSpine.lean`: `getAppArgs_refines`, `getAppSpine_refines`, `headAndArgs_refines` (a loop
-  writing the stack slice after the fuel-chase loop in one function: `finish` did not close the
-  two-stage split; the word models `gaaLoopW`/`gaaFillW` are there).
+* `WhnfSpine.lean`: none. The two-loop walks are split into functions (`WhnfSpineArgs.lean`):
+  `app_count` (the `get_app_fn` loop; the count is the fuel spent, and it returns the head),
+  `app_fill`/`app_fill_n` (write the arguments/nodes without checks), and `get_app_args`/
+  `get_app_spine` call them; each spec is `vcgen` + `finish` on a short chain. They need the
+  stack's size below `2^63` (`CoreS.spn`); `head_and_args` also the top within the stack.
 * `WhnfCore.lean`: `coreCallees_stub` (`inst1` at `coreWalkFuel`, `find_proj`, `fire_ok`,
   `iota_rec_at`; `ErecKept`: `find_proj`/`fire_ok` leave the record pool alone; `ProjSmall`: a
   projection table's counts are below `2^32` (L compares `an == np + nf` in words, the twin in
