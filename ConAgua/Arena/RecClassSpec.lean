@@ -1,6 +1,7 @@
 import ConAgua.Arena.IndSumSpec
 import ConAgua.Arena.RecClass
 import ConAgua.Arena.IndInstallSpec
+import ConAgua.Arena.IndView
 
 /-!
 # Refinements of `RecClass` (lane `induct`)
@@ -99,7 +100,7 @@ theorem classOfMotiveVar_refines (p : Prog) (hf : p.lookup "sl_find" = some slFi
     have hle' : nP.toNat ≤ pv.toNat := UInt64.le_iff_toNat_le.mp hle
     have hsub : (pv - nP).toNat = pv.toNat - nP.toNat := UInt64.toNat_sub_of_le _ _ hle
     rw [findW_ok n _ _ _ _ _ _ hws hr hlen]
-    simp only [ConRon.Arena.classOfMotiveVar, hle', if_true, ← hsub, findIdx_toNat]
+    simp only [ConRon.Arena.classOfMotiveVar, hle', ite_true, ← hsub, findIdx_toNat]
     cases List.findIdx? (fun x => x == pv - nP) ws <;> rfl
   have key2 : pv < nP →
       ConRon.Arena.classOfMotiveVar nP.toNat (ws.map UInt64.toNat) pv.toNat = none := by
@@ -218,7 +219,7 @@ theorem exprGetDW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
       IWGrow m m' ∧ (r.headD 0).toNat < 2 ^ 32 ∧ decI (r.headD 0) = x := by
   simp only [exprGetDW] at h
   by_cases hi : i < l
-  · simp only [hi, if_true] at h
+  · simp only [hi, ite_true] at h
     split at h
     · simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
@@ -231,7 +232,7 @@ theorem exprGetDW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
       · simp only [List.headD_cons]; rw [hoi, hw1]; exact hw2
       · simp only [List.headD_cons]; rw [hoi, hw1]; exact hw3.symm
     · simp at h
-  · simp only [hi, if_false] at h
+  · simp only [hi, ite_false] at h
     cases hs : stubM "intern_bvar" m [0] with
     | none => rw [hs] at h; simp at h
     | some rm =>
@@ -265,5 +266,163 @@ theorem exprGetD_refines (p : Prog) (hp : p.lookup "expr_get_d" = some exprGetD)
   obtain ⟨x, a', hrun, hS', hg, h1, h2⟩ := exprGetDW_ok dn vis fe _ _ a₀ o l i xs r hm hS hxs hb
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok (ConRon.Arena.exprGetD xs i.toNat) a₀ a' x hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hg, h1, by rw [hres]; exact h2⟩
+
+theorem ETables.getFVarIdx_of_get (t : ETables) (i : EIdx) (k : Nat) (ty : EIdx)
+    (h : t.get i = some (.fvar k ty)) : t.getFVarIdx i = some k := by
+  unfold ETables.get at h
+  unfold ETables.getFVarIdx
+  split at h
+  · simp at h
+  split at h
+  · cases hn : t.fvars.node? i.idxNat <;> simp [hn] at h ⊢
+    exact h.1
+  all_goals (repeat' (first | (simp at h; done) | split at h))
+
+theorem EStore.viewFVarIdx_of_view (st : EStore) (i : EIdx) (k : Nat) (ty : EIdx)
+    (h : st.view i = some (.fvar k ty)) : st.viewFVarIdx i = some k := by
+  unfold EStore.view at h
+  unfold EStore.viewFVarIdx EStore.persGetFVarIdx
+  split at h
+  · simp only [*, ite_true]; exact ETables.getFVarIdx_of_get _ _ _ _ h
+  · split at h
+    · simp only [*, ite_true]; split <;> simp_all [ETables.getFVarIdx_of_get _ _ _ _ h]
+    · simp at h
+
+/-! ## `fvar_head` -/
+
+/-- The word model of `fvar_head`. -/
+def fvarHeadW (m : Mem) (e : Word) : Option (List Word × Mem) :=
+  match stubM "get_app_fn" m [CWF, e] with
+  | none => none
+  | some (r, m1) =>
+    if r.headD 0 >>> 28 = 1 then
+      (if eViewW m1 (r.headD 0) = [] then none
+       else some ([1, (eViewW m1 (r.headD 0)).tail.headD 0], m1))
+    else some ([0, 0], m1)
+
+theorem fvarHead_spec (p : Prog) (hp : p.lookup "fvar_head" = some fvarHead)
+    (hv : p.lookup "e_view" = some eView) (n : Nat) (s₀ : St) (e : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "fvar_head" [e]
+    ⦃fun r s' => LocEq s' s₀ ∧ fvarHeadW s₀.mem e = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]; simp only [callFn, fvarHead]
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      stubM_spec p "get_app_fn" n, eView_spec p hv n] <;>
+    finish [fvarHeadW]
+
+
+theorem viewFVarIdx_run' (h : EIdx) (a : AState) :
+    (ConRon.Arena.viewFVarIdx h).run a = .ok (a.store.viewFVarIdx h, a) := rfl
+
+theorem eViewW_head1 (m : Mem) (w : Word) (hne : eViewW m w ≠ []) (hg : w >>> 28 = 1) :
+    (eViewW m w).headD 0 = 1 := by
+  unfold eViewW at hne ⊢
+  simp (config := {decide := true}) only [hg, ite_true, ite_false] at hne ⊢
+  by_cases c1 : 4294967295 < w
+  · simp [c1] at hne
+  by_cases c2 : tierW w ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
+  · simp [c1, c2] at hne
+  by_cases c3 : rdW (m.arr64 CTL) (26 + tierW w) ≤ idxW w
+  · simp [c1, c2, c3] at hne
+  simp [c1, c2, c3]
+
+theorem fvarHeadW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
+    (a : AState) (e : Word) (he : H e) (r : List Word) (h : fvarHeadW m e = some (r, m'))
+    (hS : StageR dn vis fe m a) :
+    ∃ x a', (ConRon.Arena.fvarHead (decI e)).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
+      IWGrow m m' ∧ r = (match x with | some i => [1, UInt64.ofNat i] | none => [0, 0]) := by
+  simp only [fvarHeadW] at h
+  cases hs : stubM "get_app_fn" m [CWF, e] with
+  | none => rw [hs] at h; simp at h
+  | some rm =>
+    obtain ⟨r1, m1⟩ := rm
+    rw [hs] at h
+    simp only at h
+    obtain ⟨t, a1, hrun1, hS1, hg1, hd1, hd2⟩ := getAppFn_spec dn vis fe CWF e he m m1 a r1 hs hS
+    rw [CWF_eq] at hrun1
+    generalize r1.headD 0 = w at hd1 hd2 h
+    by_cases hf : w >>> 28 = 1
+    · rw [if_pos hf] at h
+      by_cases hne : eViewW m1 w = []
+      · rw [if_pos hne] at h; simp at h
+      rw [if_neg hne] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨v, hv, hR⟩ := eViewW_ok m1 a1 hS1.1.arena.1 w hne
+      have htag : (decE w).tag = ETag.fvar := by
+        rw [decE_tag w hd1, hf]; rfl
+      cases v with
+      | fvar k ty =>
+        simp only [ViewR] at hR
+        have hk := EStore.viewFVarIdx_of_view _ _ _ _ hv
+        refine ⟨some k, a1, ?_, hS1, hg1, ?_⟩
+        · simp only [ConRon.Arena.fvarHead]
+          rw [StateT.run_bind, hrun1]
+          simp only [bind, Except.bind]
+          rw [← hd2]
+          have : (decI w : EIdx) = decE w := rfl
+          rw [this]
+          simp only [htag, beq_self_eq_true, ite_true]
+          have e1 : (ConRon.Arena.viewFVarIdx (decE w)).run a1 = .ok (some k, a1) := by
+            rw [viewFVarIdx_run', hk]
+          simp only [StateT.run] at e1 ⊢
+          simp only [StateT.bind, e1, bind, Except.bind]
+          rfl
+        · have e2 : (eViewW m1 w).tail.headD 0 = (eViewW m1 w).getD 1 0 := by
+            cases eViewW m1 w with
+            | nil => simp
+            | cons x xs => cases xs <;> simp
+          simp only [e2, ← hR.2.1, UInt64.ofNat_toNat]
+      | bvar i => have := eViewW_head1 m1 w hne hf; simp only [ViewR] at hR; first | exact absurd (this.symm.trans hR) (by decide) | exact absurd (this.symm.trans hR.1) (by decide)
+      | sort u => have := eViewW_head1 m1 w hne hf; simp only [ViewR] at hR; first | exact absurd (this.symm.trans hR) (by decide) | exact absurd (this.symm.trans hR.1) (by decide)
+      | const n us => have := eViewW_head1 m1 w hne hf; simp only [ViewR] at hR; first | exact absurd (this.symm.trans hR) (by decide) | exact absurd (this.symm.trans hR.1) (by decide)
+      | app f x => have := eViewW_head1 m1 w hne hf; simp only [ViewR] at hR; first | exact absurd (this.symm.trans hR) (by decide) | exact absurd (this.symm.trans hR.1) (by decide)
+      | lam f x => have := eViewW_head1 m1 w hne hf; simp only [ViewR] at hR; first | exact absurd (this.symm.trans hR) (by decide) | exact absurd (this.symm.trans hR.1) (by decide)
+      | forallE f x => have := eViewW_head1 m1 w hne hf; simp only [ViewR] at hR; first | exact absurd (this.symm.trans hR) (by decide) | exact absurd (this.symm.trans hR.1) (by decide)
+      | letE f x y => have := eViewW_head1 m1 w hne hf; simp only [ViewR] at hR; first | exact absurd (this.symm.trans hR) (by decide) | exact absurd (this.symm.trans hR.1) (by decide)
+      | lit l => have := eViewW_head1 m1 w hne hf; simp only [ViewR] at hR; first | exact absurd (this.symm.trans hR) (by decide) | exact absurd (this.symm.trans hR.1) (by decide)
+      | proj f x y => have := eViewW_head1 m1 w hne hf; simp only [ViewR] at hR; first | exact absurd (this.symm.trans hR) (by decide) | exact absurd (this.symm.trans hR.1) (by decide)
+    · rw [if_neg hf] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      have htag : ¬ (decE w).tag = ETag.fvar := by
+        rw [decE_tag w hd1]
+        intro hc
+        apply hf
+        have := congrArg UInt32.toNat hc
+        simp [ETag.fvar] at this
+        apply UInt64.toNat_inj.mp
+        simp only [UInt64.toNat_shiftRight]
+        simp
+        omega
+      refine ⟨none, a1, ?_, hS1, hg1, rfl⟩
+      simp only [ConRon.Arena.fvarHead]
+      rw [StateT.run_bind, hrun1]
+      simp only [bind, Except.bind]
+      rw [← hd2]
+      have : (decI w : EIdx) = decE w := rfl
+      rw [this]
+      have htag' : ((decE w).tag == ETag.fvar) = false := by simpa using htag
+      simp only [htag', Bool.false_eq_true, ite_false]
+      rfl
+
+
+/-- **`fvar_head` refines `fvarHead`** (through the `get_app_fn` stub and `e_view`). -/
+@[refines ConRon.Arena.fvarHead]
+theorem fvarHead_refines (p : Prog) (hp : p.lookup "fvar_head" = some fvarHead)
+    (hv : p.lookup "e_view" = some eView) (n : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (e : Word) (he : H e)
+    (hS : StageR dn vis fe s₀.mem a₀) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "fvar_head" [e]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.fvarHead (decI e)) a₀ ∧
+      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.fvarHead (decI e)) a₀) ∧
+      IWGrow s₀.mem s'.mem ∧
+      r = (match AM.res (ConRon.Arena.fvarHead (decI e)) a₀ with
+        | some i => [1, UInt64.ofNat i] | none => [0, 0]); ⊤⦄ := by
+  refine triple_post (fvarHead_spec p hp hv n s₀ e) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨x, a', hrun, hS', hg, hr⟩ := fvarHeadW_ok dn vis fe _ _ a₀ e he r hm hS
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok (ConRon.Arena.fvarHead (decI e)) a₀ a' x hrun
+  exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hr⟩
 
 end L.Ind
