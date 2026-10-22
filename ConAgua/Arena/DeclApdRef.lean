@@ -655,3 +655,79 @@ theorem apdEntry_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   generalize coreWalkFuel = F at hrun ⊢
   rw [StateT.run_bind, hrn, except_ok_bind, StateT.run_bind, hrun, except_ok_bind]
   rfl
+
+/-- What the refinement needs of a program: the walk's functions and its callees. -/
+structure ApdProg (p : Prog) : Prop where
+  eview : p.lookup "e_view" = some eView
+  lsnode : p.lookup "ls_node" = some lsNode
+  find : p.lookup "apd_find" = some (memoFindG apdSch)
+  put : p.lookup "apd_put" = some (memoPutG apdSch)
+  clear : p.lookup "apd_clear" = some (memoClearG apdSch)
+  lmem : p.lookup "lv_mem" = some (lvMemG IW)
+  lnode : p.lookup "lv_node" = some lvNode
+  lapd : p.lookup "lv_apd" = some lvApd
+  ls : p.lookup "alpd_ls" = some alpdLs
+  go : p.lookup "alpd_go" = some alpdGo
+  entry : p.lookup "all_level_params_defined" = some allLevelParamsDefinedL
+
+/-- **`alpd_go` refines `allLevelParamsDefinedGo`**, from a related memo and the parameter slice,
+at the twin fuel `f.toNat` exactly (the L walk's fuel word is the twin's; the exec fuel only
+bounds the depth). -/
+@[refines ConRon.Arena.allLevelParamsDefinedGo]
+theorem alpdGo_refines (p : Prog) (hp : ApdProg p) (n : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (o l f h : Word)
+    (mp : Std.HashMap EIdx Bool) (ks : List ConLeche.Name) (hh : H h)
+    (hS : StageR dn vis fe s₀.mem a₀) (env : ApdEnv a₀)
+    (hps : NmsR (nameN a₀.store.lss.ls.ns) s₀.mem IW o l ks) (hM : apdMR s₀.mem mp) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "alpd_go" [o, l, f, h]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (ConRon.Arena.allLevelParamsDefinedGo ks mp f.toNat (decE h)) a₀ ∧
+      AM.st (ConRon.Arena.allLevelParamsDefinedGo ks mp f.toNat (decE h)) a₀ = a₀ ∧
+      r.headD 0 = (if (AM.res (ConRon.Arena.allLevelParamsDefinedGo ks mp f.toNat (decE h)) a₀).1
+        then 1 else 0) ∧
+      apdMR s'.mem (AM.res (ConRon.Arena.allLevelParamsDefinedGo ks mp f.toNat (decE h)) a₀).2 ∧
+      StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
+  refine triple_post (apdGo_spec p hp.eview hp.lsnode hp.find hp.put hp.lmem hp.lnode hp.lapd hp.ls
+    hp.go n s₀ o l f h) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨b, mp', hrun, hb, hM', hfr⟩ := apdGoOK env n _ _ o l f h _ mp ks hS.1.arena.1 hps hh hM hm
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  obtain ⟨hS', hg⟩ := StageR.frame_hi hS hfr (by intro b hb; simp at hb; subst hb; decide)
+    (by intro x hx; simp at hx; rcases hx with rfl | rfl <;> decide) (by decide) (by decide)
+  refine ⟨hl, hok, hst, by rw [hres]; exact hb, by rw [hres]; exact hM', hS', hg⟩
+
+/-! ## The census theorem -/
+
+theorem apd_decW0B {m : Mem} {r : List Word} {b : Bool} (h : r.headD 0 = if b then 1 else 0) :
+    decW0B m r b := by
+  cases b <;> (simp only [decW0B]; rw [h]; simp)
+
+/-- **`all_level_params_defined(o, l, e)` refines `allLevelParamsDefined lps e`** under the stage
+relation: `(o, l)` an `IW` slice decoding to the handles `lps`, whose names read back, `e` a handle;
+the twin side must provide `ApdEnv` (the name store well formed, the `sort`/`const` levels of
+`StoreDen` read back) and the walk's memo well formed on entry (it is cleared first, so any
+`MemoRV` memo will do). The result is `0`/`1`; the stage relation and the pool's growth are kept. -/
+@[refines ConRon.Arena.allLevelParamsDefined]
+theorem allLevelParamsDefined_refines (p : Prog) (hp : ApdProg p) (dn : NIdx → Option ConLeche.Name)
+    (vis : Word) (fe : IFEnv) (o l e : Word) (he : H e) (lps : List NIdx) :
+    RefAM p "all_level_params_defined" [o, l, e]
+      (fun m a => StageR dn vis fe m a ∧ decHL m o.toNat l.toNat = some lps ∧ ApdEnv a ∧
+        (∃ ks, lps.mapM (denoteN a.store.lss.ls.ns) = some ks) ∧ ∃ mp0, apdMR m mp0)
+      (ConRon.Arena.allLevelParamsDefined lps (decI e)) (KeepPost dn vis fe decW0B) := by
+  intro n s₀ a₀ ⟨hS, hdec, env, ⟨ks, hks⟩, mp0, hM⟩
+  cases n with
+  | zero =>
+    rw [invoke_eq _ hp.entry]; simp only [callFn, allLevelParamsDefinedL]; vcgen [exec] <;> grind
+  | succ n =>
+    refine triple_post (allLevelParamsDefined_spec_raw p hp.eview hp.lsnode hp.find hp.put hp.clear
+      hp.lmem hp.lnode hp.lapd hp.ls hp.go hp.entry n s₀ o l e) ?_
+    rintro r s' ⟨hloc, hm⟩
+    obtain ⟨b, hrun, hr, hS', hg⟩ := apdEntry_ok n hS env o l e _ lps ks hks hdec he mp0 hM hm
+    obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+    refine ⟨hloc, hok, ?_⟩
+    change KeepPost dn vis fe decW0B _ _ (AM.st (ConRon.Arena.allLevelParamsDefined lps (decE e)) a₀) r
+      (AM.res (ConRon.Arena.allLevelParamsDefined lps (decE e)) a₀)
+    rw [hst, hres]
+    exact ⟨hS', hg, apd_decW0B hr⟩
+
+end L.Ind
