@@ -4364,8 +4364,9 @@ be asymptotically slower. con-ron at `_tmp/ref/con-ron` origin/HEAD (`proof/ConR
   writing the stack slice after the fuel-chase loop in one function: `finish` did not close the
   two-stage split; the word models `gaaLoopW`/`gaaFillW` are there).
 * `WhnfCore.lean`: `coreCallees_stub` (`inst1` at `coreWalkFuel`, `find_proj`, `fire_ok`,
-  `iota_rec_at`, and `ErecKept`: `find_proj`/`fire_ok` leave the record pool alone) and the spec
-  of `whnf_app` (a sub-lane on it; `beta_peel` is proved, `WhnfCoreApp.lean`).
+  `iota_rec_at`, and `ErecKept`: `find_proj`/`fire_ok` leave the record pool alone). `whnf_app`
+  and `beta_peel` are proved (`WhnfCoreApp.lean`, sub-lanes: the loop as named blocks, one small
+  spec each, fuel induction).
 * `WhnfBase.lean` `supKeep_twin`: `strLitSupported` keeps every stored node's view (twin-side
   store monotonicity, true, unproved).
 * `WhnfCoreProj.lean`: `reduceProjCore_refines'` (a sub-lane on it; the L function is split into
