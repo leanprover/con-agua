@@ -880,3 +880,226 @@ theorem roW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (h
 
 end L.Ind
 
+
+namespace L.Ind
+
+open L.Arena
+
+/-! ## Callees at small exec fuel, and their models at any exec fuel -/
+
+theorem canonCrest_exec1 (p : Prog) (hp : p.lookup "nest_canon_crest" = some nestCanonCrest) (s₀ : St)
+    (no nl us nn cty : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p 1) "nest_canon_crest" [no, nl, us, nn, cty] ⦃fun _ _ => False; ⊤⦄ := by
+  rw [invoke_eq _ hp]; simp only [callFn, nestCanonCrest]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, invoke_exec0 p] <;> finish
+
+/-- `nest_crest` at any exec fuel (below `3` it never returns). -/
+def pcrWf : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
+  | k + 3, m, no, nl, us, dO, dL, hO, hL, cty => pcrW k m no nl us dO dL hO hL cty
+  | _, _, _, _, _, _, _, _, _, _ => none
+
+theorem nestCrest_spec' (p : Prog) (L : CrLook p) (k : Nat) (s₀ : St) (no nl us dO dL hO hL cty : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_crest" [no, nl, us, dO, dL, hO, hL, cty]
+    ⦃fun r s' => LocEq s' s₀ ∧ pcrWf k s₀.mem no nl us dO dL hO hL cty = some (r, s'.mem); ⊤⦄ := by
+  match k with
+  | 0 => exact triple_post (invoke_exec0 p _ _ s₀) (fun _ _ h => h.elim)
+  | 1 =>
+    rw [invoke_eq _ L.cr]; simp only [callFn, nestCrest]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, invoke_exec0 p] <;> finish
+  | 2 =>
+    rw [invoke_eq _ L.cr]; simp only [callFn, nestCrest]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, canonCrest_exec1 p L.cc] <;> finish
+  | k + 3 => exact nestCrest_spec p L k s₀ no nl us dO dL hO hL cty
+
+/-! ## `nest_ctors_crest`: the group abstracted, typed at the frame's context -/
+
+def p2ctK4 (vis hi : Word) (crest : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m4) => match stubM "ensure_sort_core" m4 [vis, hi, r.headD 0] with
+    | none => none
+    | some (_, m5) => some ([crest], m5)
+def p2ctK3 (vis hi : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m3) =>
+    if r.headD 0 = 0 then none
+    else p2ctK4 vis hi (r.tail.headD 0) (stubM "infer_type_core" m3 [vis, hi, r.tail.headD 0])
+def p2ctK2 (k : Nat) (vis no nl us dO dL hO hL hi : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m2) => p2ctK3 vis hi (pcrWf k m2 no nl us dO dL hO hL (r.headD 0))
+def p2ctK1 (k : Nat) (vis no nl us dO dL hO hL cv hi : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m1) =>
+    match nodupW k m1 (r.headD 0) (r.tail.headD 0) with
+    | none => none
+    | some b => if b = 0 then none
+      else p2ctK2 k vis no nl us dO dL hO hL hi (stubM "inst_lp_fast" m1 [CWF, r.headD 0, r.tail.headD 0, us,
+        rdW (m1.arr64 EREC) (cv + 3)])
+/-- The model of `nest_ctors_crest(vis, namesOff, namesLen, us, dsOff, dsLen, holesOff, holesLen, cv, hi)`. -/
+def p2ctW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
+    Option (List Word × Mem)
+  | 0, _, _, _, _, _, _, _, _, _, _, _ => none
+  | k + 1, m, vis, no, nl, us, dO, dL, hO, hL, cv, hi => p2ctK1 k vis no nl us dO dL hO hL cv hi (cvLpsW k m cv)
+
+section arms
+variable (k : Nat) (m1 m2 m3 m4 : Mem) (vis no nl us dO dL hO hL cv hi crest : Word) (r : List Word)
+theorem p2ctK4_eq : p2ctK4 vis hi crest (some (r, m4)) = match stubM "ensure_sort_core" m4 [vis, hi, r.headD 0] with
+    | none => none
+    | some (_, m5) => some ([crest], m5) := rfl
+theorem p2ctK3_eq : p2ctK3 vis hi (some (r, m3)) = if r.headD 0 = 0 then none
+    else p2ctK4 vis hi (r.tail.headD 0) (stubM "infer_type_core" m3 [vis, hi, r.tail.headD 0]) := rfl
+theorem p2ctK2_some : p2ctK2 k vis no nl us dO dL hO hL hi (some (r, m2)) =
+    p2ctK3 vis hi (pcrWf k m2 no nl us dO dL hO hL (r.headD 0)) := rfl
+theorem p2ctK1_eq : p2ctK1 k vis no nl us dO dL hO hL cv hi (some (r, m1)) =
+    match nodupW k m1 (r.headD 0) (r.tail.headD 0) with
+    | none => none
+    | some b => if b = 0 then none
+      else p2ctK2 k vis no nl us dO dL hO hL hi (stubM "inst_lp_fast" m1 [CWF, r.headD 0, r.tail.headD 0, us,
+        rdW (m1.arr64 EREC) (cv + 3)]) := rfl
+end arms
+attribute [ind_grind] p2ctK2_some
+
+/-- The lookups of `nest_ctors_crest`. -/
+structure CtLook (p : Prog) : Prop where
+  cr : CrLook p
+  ha : p.lookup "iw_alloc" = some iwAlloc
+  hc : p.lookup "er_copy" = some erCopy
+  he : p.lookup "er_to_iw" = some erToIw
+  hcv : p.lookup "cv_lps" = some cvLps
+  hsc : p.lookup "sl_contains" = some slContains
+  hnd : p.lookup "sl_nodup" = some slNodup
+  hp : p.lookup "nest_ctors_crest" = some nestCtorsCrestL
+
+theorem nestCtorsCrest_spec (p : Prog) (L : CtLook p) (n : Nat) (s₀ : St) (vis no nl us dO dL hO hL cv hi : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_ctors_crest" [vis, no, nl, us, dO, dL, hO, hL, cv, hi]
+    ⦃fun r s' => LocEq s' s₀ ∧ p2ctW n s₀.mem vis no nl us dO dL hO hL cv hi = some ([r.headD 0], s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ L.hp]
+  simp only [callFn, nestCtorsCrestL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        cvLps_spec p L.ha L.hc L.he L.hcv n, slNodup_spec p L.hsc L.hnd n, stubM_spec p "inst_lp_fast" n,
+        nestCrest_spec' p L.cr n, stubM_spec p "infer_type_core" n, stubM_spec p "ensure_sort_core" n] <;>
+      finish (gen := 20) (instances := 5000) [p2ctW, p2ctK1_eq, p2ctK3_eq, p2ctK4_eq, rdW_eq]
+
+end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+theorem p2ctW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (hM : PosMemo dn vis fe)
+    {k : Nat} {m m' : Mem} {a : AState} {no nl us dO dL hO hL cv hi : Word} {names : List NIdx}
+    {ds holes : List EIdx} {cvv : IConstantVal} {r : List Word}
+    (h : p2ctW k m vis no nl us dO dL hO hL cv hi = some (r, m')) (hS : StageR dn vis fe m a)
+    (hus : H us) (hdec : decHL m no.toNat nl.toNat = some names) (hit : no.toNat + nl.toNat ≤ iwTop m)
+    (hnn : dL.toNat + names.length < 2 ^ 64)
+    (hds : decHL m dO.toNat dL.toNat = some ds) (hdsb : dO.toNat + dL.toNat ≤ iwTop m)
+    (hho : decHL m hO.toNat hL.toNat = some holes) (hhob : hO.toNat + hL.toNat ≤ iwTop m)
+    (hcv : decCVp m cv.toNat = some cvv) (hcv3 : cv.toNat + 3 < 2 ^ 64) :
+    ∃ cty a1 crest a2 ty a3 so a4, nameNodup cvv.levelParams = true ∧
+      (instLPFast coreWalkFuel cvv.levelParams (decI us) cvv.type).run a = .ok (cty, a1) ∧
+      (ConRon.Arena.nestCrest names (decI us) ds holes cty).run a1 = .ok (some crest, a2) ∧
+      (inferTypeCore .verified fe checkFuel hi.toNat crest).run a2 = .ok (ty, a3) ∧
+      (ensureSortCore .verified fe checkFuel hi.toNat ty).run a3 = .ok (so, a4) ∧
+      StageR dn vis fe m' a4 ∧ IWGrow m m' ∧ H (r.headD 0) ∧ decI (r.headD 0) = crest := by
+  cases k with
+  | zero => simp [p2ctW] at h
+  | succ k =>
+  simp only [p2ctW] at h
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  -- the level parameters
+  cases hlp : cvLpsW k m cv with
+  | none => rw [hlp] at h; simp [p2ctK1] at h
+  | some pr =>
+  obtain ⟨r1, m1⟩ := pr
+  rw [hlp, p2ctK1_eq] at h
+  obtain ⟨hS1, hg1, hE1, hdec1, ht1⟩ := pos2_cvLpsW_stage hlp hS hcv hcv3
+  have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
+  obtain ⟨ws, hws, hwsd, hwH⟩ := slR_of_decHL m1 _ _ _ hdec1 (by omega)
+  simp only [UInt64.ofNat_toNat] at hws
+  cases hnd : nodupW k m1 (r1.headD 0) (r1.tail.headD 0) with
+  | none => rw [hnd] at h; cases h
+  | some b =>
+  rw [hnd] at h
+  simp only at h
+  by_cases hb0 : b = 0
+  · rw [if_pos hb0] at h; cases h
+  rw [if_neg hb0] at h
+  have hnod : nameNodup cvv.levelParams = true := by
+    have := nodupW_ok k m1 _ _ b ws hws hnd
+    rw [hwsd, nameNodup_map ws hwH]
+    by_cases hn : ws.Nodup
+    · simp [hn]
+    · rw [if_neg hn] at this; exact absurd this hb0
+  -- the instantiated type
+  obtain ⟨-, -, hty⟩ := decCV_some hcv
+  obtain ⟨wt, hwt, hwtH, hwtd⟩ := hd?_some hty
+  have e3 : (cv + 3).toNat = cv.toNat + 3 := word_add_toNat (by simp; omega)
+  have hrdt : rdW (m1.arr64 EREC) (cv + 3) = wt := by
+    rw [hE1]; simp only [erA] at hwt; simp [rdW, e3, hwt]
+  rw [hrdt] at h
+  cases hil : stubM "inst_lp_fast" m1 [CWF, r1.headD 0, r1.tail.headD 0, us, wt] with
+  | none => rw [hil] at h; simp [p2ctK2] at h
+  | some pr2 =>
+  obtain ⟨r2, m2⟩ := pr2
+  rw [hil, p2ctK2_some] at h
+  obtain ⟨cty, a1, hrun1, hS2, hg2, hcH, hcd⟩ :=
+    instLPFast_spec dn vis fe CWF _ _ _ _ hus hwtH cvv.levelParams m1 m2 a r2 hil ⟨hS1, hdec1⟩
+  rw [CWF_eq, ← hwtd] at hrun1
+  -- the crest
+  have hg12 := hg1.trans hg2
+  cases k with
+  | zero => simp [pcrWf, p2ctK3] at h
+  | succ k =>
+  cases k with
+  | zero => simp [pcrWf, p2ctK3] at h
+  | succ k =>
+  cases k with
+  | zero => simp [pcrWf, p2ctK3] at h
+  | succ k =>
+  simp only [pcrWf] at h
+  cases hpc : pcrW k m2 no nl us dO dL hO hL (r2.headD 0) with
+  | none => rw [hpc] at h; simp [p2ctK3] at h
+  | some pr3 =>
+  obtain ⟨r3, m3⟩ := pr3
+  rw [hpc, p2ctK3_eq] at h
+  obtain ⟨M, G, g, hR⟩ := hM.rf m2 a1 hS2
+  obtain ⟨x, a2, hrun2, hx, M', G', hS3, hg3, -⟩ := pcrW_ok dn fe vis k m2 m3 a1 no nl us dO dL hO hL (r2.headD 0)
+    r3 names ds holes M G g hpc hS2 hcH hus
+    (by rw [decHL_agree (RdS.of_grow hg12) (fun j hj => by omega)]; exact hdec) (by omega)
+    (by have := hg12.1; omega) hnn hM.rp
+    (by rw [decHL_agree (RdS.of_grow hg12) (fun j hj => by omega)]; exact hds) (by have := hg12.1; omega)
+    (by rw [decHL_agree (RdS.of_grow hg12) (fun j hj => by omega)]; exact hho) (by have := hg12.1; omega) hR
+  rw [hcd] at hrun2
+  cases x with
+  | none => simp only [decOE] at hx; rw [if_pos hx] at h; cases h
+  | some crest =>
+  obtain ⟨hx1, hxH, hxd⟩ := hx
+  rw [if_neg (by rw [hx1]; decide)] at h
+  cases hit2 : stubM "infer_type_core" m3 [vis, hi, r3.tail.headD 0] with
+  | none => rw [hit2] at h; simp [p2ctK4] at h
+  | some pr4 =>
+  obtain ⟨r4, m4⟩ := pr4
+  rw [hit2, p2ctK4_eq] at h
+  have hxH' : H (r3.tail.headD 0) := by simpa using hxH
+  obtain ⟨ty, a3, hrun3, hS4, hg4, htyH, htyd⟩ := inferTypeCore_spec dn vis fe hi _ hxH' m3 m4 a2 r4 hit2 hS3
+  cases hes : stubM "ensure_sort_core" m4 [vis, hi, r4.headD 0] with
+  | none => rw [hes] at h; cases h
+  | some pr5 =>
+  obtain ⟨r5, m5⟩ := pr5
+  rw [hes] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨so, a4, hrun4, hS5, hg5, -⟩ := ensureSortCore_spec dn vis fe hi _ htyH m4 m5 a3 r5 hes hS4
+  have hxd' : decI (r3.tail.headD 0) = crest := by simpa [decE_eq] using hxd
+  rw [hxd'] at hrun3
+  rw [htyd] at hrun4
+  exact ⟨cty, a1, crest, a2, ty, a3, so, a4, hnod, hrun1, hrun2, hrun3, hrun4, hS5,
+    ((hg12.trans hg3).trans hg4).trans hg5, by simpa using hxH', by simpa using hxd'⟩
+
+end L.Ind
