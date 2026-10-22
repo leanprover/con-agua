@@ -42,5 +42,17 @@ the body). `scripts/core_fns.py --check` is unchanged (it reads `Arena/CoreErec.
 * After: peak 3.0 GB, 12 s wall. Importing the module's dependencies alone peaks at 2.3 GB
   (1 s), so the checks add ~0.7 GB.
 
+## `IndCore` (coordinator's follow-up)
+
+`Checker/IndCore.lean`'s `checkerProg_coreStage : CoreStageClosed checkerProg` was the same
+pattern (`stageCoreFns` = 5 stage entry points ++ `coreFns`, arrays but `EREC`, `IW`, `PINS`,
+`CTL` words but 129, 200). Same fix (`stageCoreTree`, `coreStagePa`/`Pc`). `stageCoreFns` repeats
+names (entry points also in `coreFns`), so `namesTree` keeps a repeated name once instead of
+failing.
+
+* Before: the census-run worktree built the old `IndCore` and `CoreErec` side by side, observed
+  RSS ~22 GB each (49 GB anon in the session cgroup).
+* After: `IndCore` peak 3.2 GB, 11.7 s wall.
+
 `Arena/CoreErec.lean`'s module doc still says the checker's instance is `by decide +kernel`;
 left as is to avoid rebuilding its heavy dependents for a comment.

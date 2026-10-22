@@ -27,10 +27,11 @@ open L
 
 /-! ## The function set as a tree of name codes -/
 
-/-- The tree of a list of names (every value `0`); `none` if a name occurs twice. -/
+/-- The tree of a list of names (every value `0`, a repeated name once). -/
 def namesTree : List FnName → Option NTree
   | [] => some .leaf
-  | f :: fs => (namesTree fs).bind (·.insert (nameCode f) 0)
+  | f :: fs => (namesTree fs).bind fun t =>
+    if (t.find (nameCode f)).isSome then some t else t.insert (nameCode f) 0
 
 theorem namesTree_spec : ∀ {fs : List FnName} {t : NTree}, namesTree fs = some t →
     ∀ f, (t.find (nameCode f)).isSome = decide (f ∈ fs)
@@ -41,12 +42,19 @@ theorem namesTree_spec : ∀ {fs : List FnName} {t : NTree}, namesTree fs = some
     simp only [namesTree, Option.bind_eq_some_iff] at h
     obtain ⟨t₀, h0, hi⟩ := h
     have ih := namesTree_spec h0
-    obtain ⟨-, hf⟩ := NTree.find_insert hi
-    rw [hf]
-    by_cases hc : nameCode f = nameCode g
-    · have := nameCode_inj hc; subst this; simp
-    · have : f ≠ g := fun e => hc (e ▸ rfl)
-      simp [hc, ih, this]
+    split at hi
+    · rename_i hg
+      cases hi
+      rw [ih] at hg ⊢
+      by_cases hfg : f = g
+      · subst hfg; simpa using hg
+      · simp [hfg]
+    · obtain ⟨-, hf⟩ := NTree.find_insert hi
+      rw [hf]
+      by_cases hc : nameCode f = nameCode g
+      · have := nameCode_inj hc; subst this; simp
+      · have : f ≠ g := fun e => hc (e ▸ rfl)
+        simp [hc, ih, this]
 
 /-! ## The per-function check -/
 
@@ -131,7 +139,7 @@ syntax (name := namesTreeCmd) (docComment)? "names_tree " ident " : " term : com
     synthesizeSyntheticMVarsNoPostponing
     let fsE ← instantiateMVars fsE
     let some tree ← evalTree (mkApp (mkConst ``namesTree) fsE)
-      | throwError "names_tree: a name occurs twice"
+      | throwError "names_tree: the tree does not evaluate"
     let treeTy := mkConst ``NTree
     addAndCompile (.defnDecl (mkDefinitionValEx name [] treeTy (ntreeToExpr tree) .abbrev .safe []))
     addDocString' name .missing doc?
