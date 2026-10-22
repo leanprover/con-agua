@@ -1,23 +1,36 @@
 import ConAgua.Arena.WhnfCoreStep
 
 /-!
-# `beta_peel` and `whnf_app`: the batched β spine
+# `beta_peel` (proved) and `whnf_app` (groundwork): the batched β spine
 
-`WhnfCore.lean`'s `betaPeelL`/`whnfAppL`, each a `while` loop over the spine's argument array
+`WhnfCore.lean`'s `betaPeelL` and `whnfAppL`, each a `while` loop over the spine's argument array
 (`get_app_spine`'s slices `(ao, an)`, `(ao + an, an)`), with an accumulator (`beta_peel`) or the
 head's growing argument vector (`whnf_app`) pushed at the top of the spine stack (`SPN` = 144,
 top `CTL[136]`).
 
-The method follows `WhnfCoreSlot.lean`'s loop (`whnfCoreLoopB`/`coreLoopW`/`coreLoopW_ok`): a
-named block, a word-level model by L fuel whose callees are `callW` runs, the block spec by
-induction, the function spec, then the refinement by induction on the model. The extra work here
-(`WhnfCoreSlot.lean`'s loop has none of it): the model's memory changes under stack writes
-(`Mem.set64 SPN _ _`, `Mem.set64 CTL 136 _`), so each step needs that `SpineR` of the growing
-accumulator holds after the push (`SpineR.push`) and that `CoreS` survives a write confined to the
-stack or to a callee's own small write set (`CoreS.small_frame`), given as a `MemFrame` fact for
-that write set via the library's own frame lemmas (`internM_frame`, `derPutW_frame`, …) or
-(`mk_app_n_from`, whose own refinement states only `Grows`) the library's own `Grows` lemmas
-(`ArenaR.grow`, `DerR.grow`, `grows_frame`).
+**Proved here: `betaPeel_refines'`** (the primed `betaPeel_refines`, with the added hypothesis
+`hp : WhnfCoreProg p`). The method follows `WhnfCoreSlot.lean`'s loop: the loop is a named block
+(`betaPeelW`, spliced into `betaPeelL'`, `betaPeelL_eq : betaPeelL = betaPeelL' := rfl`, so
+`WhnfCore.lean` is untouched), its model `peelLoop` is by L fuel (callees through `callW`), the
+block spec `betaPeelW_spec` is by induction on the fuel, `betaPeel_spec` is the function's, and
+`peelFull_ref` is the refinement by induction on the fuel. What `WhnfCoreSlot.lean`'s loop does
+not need: the model's memory changes under stack writes, so each step shows `SpineR` of the
+growing accumulator after the push (`SpineR.push`) and `CoreS` across the write
+(`CoreS.frame_stk`), and across `mk_app_n_from` (`CoreS.of_app`: `ArenaD` from the callee, the
+rest of what `CoreS` reads kept by `keeps_cpl_mkAppNFrom`). `inst_list` is used through
+`(whnfCallees_stub p).instList`, so the theorem depends on that stub's `sorry`.
+
+**Handle words of `mk_app`/`mk_app_n_from` results.** `mkAppNFrom_refines` dropped `HW (r.headD 0)`;
+`callW_mkApp`/`callW_mkAppNFrom` re-derive it from the store (`internM_hw`: a hit's index is below
+the tier's node count, a push's below `2^27`).
+
+**`whnf_app`: not done.** `whnfAppW` (the loop, spliced into `whnfAppL'`, `whnfAppL_eq := rfl`)
+and its model `appLoop` are here. The block spec by `vcgen` + `finish` does not close: the
+two-result `(st, e3) := call beta_peel(..)` followed by a `CTL` write blows the goal up (the same
+loop with a single-result call, or with the call replaced by a load, closes in about a second;
+`simp_all` as in `coreApp2_spec` hits the heartbeat limit). The way on is to name the loop body's
+pieces (`if v >> 28 == 5 {..}`, the `iota_rec_at` step) as blocks of their own and prove each
+with the `simp_all` fallback.
 -/
 
 open ConRon.Arena
@@ -28,65 +41,12 @@ set_option experimental.vcgen true
 
 namespace L.Arena
 
-/-! ## `CoreS` across a small write set
-
-`CoreS` reads: `ArenaD` (arrays `< 64`, via `ArenaR.frame_ext`/`DerR.frameM`), the core tier's
-memos (arrays `96‥128`, `CoreRM.frame`), the pins (`PINS` = 128), the environment (arrays
-`132‥144`, `CTL` words `128‥136`, `EnvR.frame`) and the record pool's size bound (`EREC`). A
-writer whose `MemFrame` avoids all of these keeps `CoreS` (and leaves `a` alone: callers supply
-the same `a`). -/
-
-theorem CoreS.small_frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
-    {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List ArrId} {C : List Word}
-    (hS : CoreS dn m a vis fe M eb) (hf : MemFrame A C m m')
-    (h64 : ∀ b ∈ A, 64 ≤ b) (h46 : ∀ b ∈ A, b < 42 ∨ 46 < b)
-    (h128 : ∀ b ∈ A, b < 96 ∨ 128 ≤ b) (hpins : (128 : ArrId) ∉ A)
-    (henv : ∀ b ∈ A, b < 132 ∨ 144 ≤ b) (hC64 : ∀ x ∈ C, 64 ≤ x.toNat)
-    (hC128 : ∀ x ∈ C, x.toNat < 96 ∨ 128 ≤ x.toNat)
-    (hCenv : ∀ x ∈ C, x.toNat < 128 ∨ 136 ≤ x.toNat) :
-    CoreS dn m' a vis fe M eb :=
-  ⟨⟨ArenaR.frame_ext A C h64 hC64 m m' hf a hS.arena.1, DerR.frameM A C m m' hf h46 a hS.arena.2⟩,
-    CoreRM.frame (A := A) (C := C) (fun b hb => (h128 b hb).elim (fun h => .inl h) (fun h => .inr h))
-      (fun x hx => (hC128 x hx).elim (fun h => .inl h) (fun h => .inr h)) hf hS.core,
-    hS.pins.congr (hf.1 PINS hpins (by decide)),
-    hS.env.frame (fun b hb => (henv b hb).elim (fun h => .inl h) (fun h => .inr h))
-      (fun x hx => (hCenv x hx).elim (fun h => .inl h) (fun h => .inr h)) hf,
-    hS.readL, hS.readLs, hS.nwf, hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn⟩
-
-/-- **The stack is outside everything `CoreS` reads**: a write confined to `SPN` and `CTL[136]`
-keeps `CoreS`. -/
-theorem CoreS.stack_frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
-    {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb)
-    (hf : MemFrame [SPN] [136] m m') : CoreS dn m' a vis fe M eb :=
-  hS.small_frame hf (fun b hb => by simp only [List.mem_singleton] at hb; subst hb; decide)
-    (fun b hb => by simp only [List.mem_singleton] at hb; subst hb; decide)
-    (fun b hb => by simp only [List.mem_singleton] at hb; subst hb; decide) (by simp [SPN])
-    (fun b hb => by simp only [List.mem_singleton] at hb; subst hb; decide)
-    (fun x hx => by simp only [List.mem_singleton] at hx; subst hx; decide)
-    (fun x hx => by simp only [List.mem_singleton] at hx; subst hx; decide)
-    (fun x hx => by simp only [List.mem_singleton] at hx; subst hx; decide)
-
 /-- A write to `SPN` at an index below its size, and (separately or together) to `CTL[136]`, is
 such a frame. -/
 theorem spnCtl_frame (m : Mem) (i v w : Word) :
     MemFrame [SPN] [136] m ((m.set64 SPN i v).set64 CTL 136 w) :=
   ((MemFrame.set64 m SPN (by decide) i v).mono (by simp) (by simp)).trans
     ((MemFrame.setCtl (m.set64 SPN i v) 136 w).mono (by simp) (by simp))
-
-/-- **`CoreS` survives a `Grows` step** (`mk_app_n_from`'s callW run): the pool and `CTL[0]` are
-outside everything `CoreS` reads; `ArenaD` itself survives by the library's own `Grows` lemmas. -/
-theorem CoreS.of_grows {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
-    {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) (hG : Grows m m') :
-    CoreS dn m' a vis fe M eb := by
-  have hf := grows_frame m m' hG
-  exact ⟨⟨ArenaR.grow m m' hG a hS.arena.1, DerR.grow m m' hG a hS.arena.2⟩,
-    CoreRM.frame (A := [POOL]) (C := [0])
-      (fun b hb => by simp only [List.mem_singleton] at hb; subst hb; decide)
-      (fun x hx => by simp only [List.mem_singleton] at hx; subst hx; decide) hf hS.core,
-    hS.pins.congr (hf.1 PINS (by decide) (by decide)),
-    hS.env.frame (fun b hb => by simp only [List.mem_singleton] at hb; subst hb; decide)
-      (fun x hx => by simp only [List.mem_singleton] at hx; subst hx; decide) hf,
-    hS.readL, hS.readLs, hS.nwf, hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn⟩
 
 /-! ## `CoreS` across the arena's interning
 
@@ -674,7 +634,7 @@ theorem peelFull_ref (p : Prog) (hp : SpineProg p) (n : Nat) (ao an : Word) (arg
           simp [peelFull, peelLoop, hlt, ht5, hc1, h] at hF
         have hc3 : ¬ m.len64 SPN ≤ co + cn := fun h => by
           simp [peelFull, peelLoop, hlt, ht5, hc1, hc2, h] at hF
-        rw [peelFull_step _ _ _ _ _ _ _ _ _ _ hlt (not_not.mpr ht5) hc1 hc2 hc3] at hF
+        rw [peelFull_step _ _ _ _ _ _ _ _ _ _ hlt (fun h => h ht5) hc1 hc2 hc3] at hF
         have hv : viewOK m t 28 := ⟨hc1, UInt64.not_le.mp hc2⟩
         obtain ⟨-, -, hbody1⟩ := view_lam m a hS.arena.1 t ht hv ht5
         have hvb := viewBind_lam m a hS.arena.1 t ht hv ht5
@@ -687,7 +647,7 @@ theorem peelFull_ref (p : Prog) (hp : SpineProg p) (n : Nat) (ao an : Word) (arg
         have hvv : (spW m (ao + i)).toNat < 2 ^ 32 := by
           have h := har.lt i.toNat (by rw [← har.size]; exact hlt')
           rwa [hit] at h
-        have hbd : (co + cn).toNat < (m.arr64 SPN).size := by
+        have hbd : co.toNat + cn.toNat < (m.arr64 SPN).size := by
           have h : ¬ UInt64.ofNat (m.arr64 SPN).size ≤ co + cn := hc3
           rw [UInt64.le_iff_toNat_le, UInt64.toNat_ofNat', Nat.mod_eq_of_lt (by omega), hadd] at h
           omega
@@ -696,8 +656,8 @@ theorem peelFull_ref (p : Prog) (hp : SpineProg p) (n : Nat) (ao an : Word) (arg
         have hacc' := (hacc.push hspn hbd (spW m (ao + i)) hvv).setCtl 136 (co + cn + 1)
         have htop' : spTop ((m.set64 SPN (co + cn) (spW m (ao + i))).set64 CTL 136 (co + cn + 1)) =
             co + (cn + 1) := by
-          simp only [spTop, rdW_set64]
-          rw [if_pos ⟨rfl, rfl, by rw [size_set64]; exact h136m⟩, UInt64.add_assoc]
+          unfold spTop
+          rw [rdW_set64, if_pos ⟨rfl, rfl, by rw [size_set64]; exact h136m⟩, UInt64.add_assoc]
         have hb' : ∀ j : Word, j < co →
             spW ((m.set64 SPN (co + cn) (spW m (ao + i))).set64 CTL 136 (co + cn + 1)) j =
               spW m₀ j := by
@@ -708,8 +668,8 @@ theorem peelFull_ref (p : Prog) (hp : SpineProg p) (n : Nat) (ao an : Word) (arg
           exact hb j hj
         have hi1 : (i + 1).toNat = i.toNat + 1 := by
           rw [UInt64.toNat_add]; simp
-          have := an.toNat_lt
           have := UInt64.lt_iff_toNat_lt.mp hlt
+          have := an.toNat_lt
           omega
         obtain ⟨x, a', hrun', hx, hrw, M', hS'', hK, hSt⟩ := ih _ _ (i + 1) (cn + 1)
           (acc.push (decE (spW m (ao + i)))) hS' hbody1 hacc' htop' hb'
@@ -721,7 +681,6 @@ theorem peelFull_ref (p : Prog) (hp : SpineProg p) (n : Nat) (ao an : Word) (arg
         rw [← hrun', betaPeel]
         simp only [hlt', dite_true, hlam, ite_true, StateT.run_bind, viewBind_run', hvb,
           except_ok_bind, hxi, hi1]
-        rfl
       · rw [peelFull_ret _ _ _ _ _ _ _ _ _ _ hlt ht5] at hF
         cases h1 : callW p k "inst_list" [t, co, cn, 0] m with
         | none => rw [h1] at hF; simp at hF
@@ -853,5 +812,105 @@ theorem betaPeel_refines' (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St)
   · rw [hst]; exact ⟨M', hS', hK, hSt⟩
   · rw [hres, hx]; simp [decStep]
   · exact hrw
+
+
+/-! ## `whnf_app`: the loop as a named block -/
+
+/-- The loop of `whnfAppL` (WhnfCore.lean), named for its spec. -/
+def whnfAppW : Stmt := lblk (mode, vis, d, v, hd, vo, vn, same, ao, an, i, top, a, node, ap, st, e2, e3, t, x) {
+  while i < an {
+    a := SPN.u64[ao + i];
+    node := SPN.u64[ao + an + i];
+    if v >> 28 == 5 {
+      t := (v >> 27) & 1;
+      x := v & 134217727;
+      if t != 0 && CTL.u64[1] == 0 { abort };
+      if CTL.u64[28 + t] <= x { abort };
+      (st, e3) := call beta_peel(LAREC.u64[x * 4 + t * 2 + 1], a, ao, an, i + 1);
+      CTL.u64[136] := top;
+      return (st, e3)
+    };
+    if same != 0 { ap := node } else { ap := call mk_app(v, a) };
+    same := u64(ap == node);
+    if len(SPN.u64) <= vo + vn { abort };
+    SPN.u64[vo + vn] := a;
+    vn += 1;
+    CTL.u64[136] := vo + vn;
+    if hd >> 28 == 3 {
+      (st, e2) := call iota_rec_at(mode, vis, d, hd, vo, vn);
+      if st != 0 {
+        e3 := call mk_app_n_from(e2, ao, an, i + 1);
+        CTL.u64[136] := top;
+        return (1, e3)
+      }
+    };
+    v := ap;
+    i += 1
+  }
+}
+
+/-- `whnfAppL`, with its loop spliced from `whnfAppW`. -/
+def whnfAppL' : FunDecl :=
+    lfn (mode, vis, d, v, hd, vo, vn, same, ao, an, i) locals (top, a, node, ap, st, e2, e3, t, x) {
+  top := CTL.u64[136];
+  ⟪whnfAppW⟫;
+  CTL.u64[136] := top;
+  return (0, v)
+}
+
+theorem whnfAppL_eq : whnfAppL = whnfAppL' := rfl
+
+
+/-- The next spine node of the walk: the saved node (`same`), else `mk_app(v, a)`. -/
+def apW (p : Prog) (k : Nat) (m : Mem) (v same a node : Word) : Option (Word × Mem) :=
+  if same ≠ 0 then some (node, m)
+  else match callW p k "mk_app" [v, a] m with
+    | none => none
+    | some (r, m₁) => some (r.headD 0, m₁)
+
+/-- **The model of the `whnf_app` loop** at L fuel `k`. -/
+def appLoop (p : Prog) (mode vis d hd vo ao an top : Word) : Nat → Mem → Word → Word → Word →
+    Word → Option LoopOut
+  | 0, _, _, _, _, _ => none
+  | k + 1, m, v, vn, same, i =>
+    if i < an then
+      if v >>> 28 = 5 then
+        if tierW v ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
+        else if rdW (m.arr64 CTL) (28 + tierW v) ≤ idxW v then none
+        else
+          match callW p k "beta_peel" [rdW (m.arr64 LAREC) (idxW v * 4 + tierW v * 2 + 1),
+              rdW (m.arr64 SPN) (ao + i), ao, an, i + 1] m with
+          | none => none
+          | some (r, m₁) => some (.ret (r.headD 0) (r.tail.headD 0) (m₁.set64 CTL 136 top))
+      else
+        match apW p k m v same (rdW (m.arr64 SPN) (ao + i)) (rdW (m.arr64 SPN) (ao + an + i)) with
+        | none => none
+        | some (ap, m₁) =>
+          if m₁.len64 SPN ≤ vo + vn then none
+          else
+            if hd >>> 28 = 3 then
+              match callW p k "iota_rec_at" [mode, vis, d, hd, vo, vn + 1]
+                  ((m₁.set64 SPN (vo + vn) (rdW (m.arr64 SPN) (ao + i))).set64 CTL 136
+                    (vo + vn + 1)) with
+              | none => none
+              | some (r, m₃) =>
+                if r.headD 0 ≠ 0 then
+                  match callW p k "mk_app_n_from" [r.tail.headD 0, ao, an, i + 1] m₃ with
+                  | none => none
+                  | some (r', m₄) => some (.ret 1 (r'.headD 0) (m₄.set64 CTL 136 top))
+                else
+                  appLoop p mode vis d hd vo ao an top k m₃ ap (vn + 1)
+                    (Cmp.evalW .eq ap (rdW (m.arr64 SPN) (ao + an + i))) (i + 1)
+            else
+              appLoop p mode vis d hd vo ao an top k ((m₁.set64 SPN (vo + vn)
+                (rdW (m.arr64 SPN) (ao + i))).set64 CTL 136 (vo + vn + 1)) ap (vn + 1)
+                (Cmp.evalW .eq ap (rdW (m.arr64 SPN) (ao + an + i))) (i + 1)
+    else some (.exit v 0 m)
+
+/-- The end of the `whnf_app` loop run, as the model's. -/
+def LoopOut.ofSigV (r : Sig) (s' : St) : LoopOut :=
+  match r with
+  | .ret v => .ret (v.headD 0) (v.tail.headD 0) s'.mem
+  | _ => .exit (s'.loc 3) 0 s'.mem
 
 end L.Arena
