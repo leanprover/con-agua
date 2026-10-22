@@ -597,3 +597,178 @@ theorem indNList_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (kind q 
 end specs
 
 end L.Front.Ind
+
+/-! ## The mutual specs -/
+
+namespace L.Front.Ind
+
+section mspecs
+variable (p : Prog) (hL : IndFieldLookups p) (b : Array UInt8) (hb : b.size < 2 ^ 63)
+
+/-- `ind_obj`'s loop at fuel `n`. -/
+def ObjLoopS (n : Nat) : Prop := ∀ s₀ : St,
+  ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄ exec p n indObjLoop
+  ⦃fun r s' => r ≠ .brk ∧ objLoopW b s₀.mem (s₀.loc 1) (s₀.loc 2) (s₀.loc 0) (s₀.loc 3) =
+    some ((r.retOr [0]).headD 0, s'.mem); ⊤⦄
+
+/-- `ind_obj` at fuel `n`. -/
+def ObjS (n : Nat) : Prop := ∀ (s₀ : St) (i kind q : Word), s₀.mem.arr8 IN = b →
+  ⦃fun s => s = s₀⦄ invoke p (exec p n) "ind_obj" [i, kind, q]
+  ⦃fun r s' => LocEq s' s₀ ∧ objW b s₀.mem i kind q = some (r.headD 0, s'.mem); ⊤⦄
+
+/-- `ind_member` at fuel `n`. -/
+def MemberS (n : Nat) : Prop := ∀ (s₀ : St) (kind q ks k v : Word), s₀.mem.arr8 IN = b →
+  v.toNat ≤ b.size →
+  ⦃fun s => s = s₀⦄ invoke p (exec p n) "ind_member" [kind, q, ks, k, v]
+  ⦃fun r s' => LocEq s' s₀ ∧ memberW b s₀.mem kind q ks k v = some (r.headD 0, s'.mem); ⊤⦄
+
+/-- `ind_list` at fuel `n`. -/
+def ListS (n : Nat) : Prop := ∀ (s₀ : St) (v sub : Word), s₀.mem.arr8 IN = b →
+  ⦃fun s => s = s₀⦄ invoke p (exec p n) "ind_list" [v, sub]
+  ⦃fun r s' => LocEq s' s₀ ∧
+    listW b s₀.mem v sub = some ((r.headD 0, r.tail.headD 0, r.tail.tail.headD 0), s'.mem); ⊤⦄
+
+/-- `ind_list`'s loop at fuel `n`. -/
+def ListLoopS (n : Nat) : Prop := ∀ s₀ : St,
+  ⦃fun s => s = s₀ ∧ s.mem.arr8 IN = b⦄ exec p n indListLoop
+  ⦃fun r s' => r ≠ .brk ∧ listLoopW b s₀.mem (s₀.loc 1) (s₀.loc 8) (s₀.loc 3) (s₀.loc 4) (s₀.loc 2) =
+    some (((r.retOr [0, 0, 0]).headD 0, (r.retOr [0, 0, 0]).tail.headD 0,
+      (r.retOr [0, 0, 0]).tail.tail.headD 0), s'.mem); ⊤⦄
+
+include hL hb
+
+theorem objLoop_succ (n : Nat) (hmem : MemberS p b n) (hloop : ObjLoopS p b n) :
+    ObjLoopS p b (n + 1) := by
+  intro s₀
+  rw [exec, step_while (w := indObjLoop) rfl]
+  have hm' := fun s₁ kind q ks k v hm hv => Triple.keep hL.no_st8 (hmem s₁ kind q ks k v hm hv)
+  have ih := hloop
+  unfold ObjLoopS at ih
+  sym (gen := 16) only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ih, hm',
+      nextMember_spec p b hb hL.skip_ws hL.key_end hL.key_at_g1 hL.key_at_g2 hL.key_at_g3
+        hL.key_at_g4 hL.key_at_g5 hL.key_at_g6 hL.key_at hL.value_at hL.next_member n] <;> finish
+
+theorem obj_succ (n : Nat) (hloop : ObjLoopS p b (n + 1)) : ObjS p b (n + 1) := by
+  intro s₀ i kind q hm
+  rw [invoke_eq _ hL.ind_obj]
+  simp only [callFn, indObj]
+  have hstep : ∀ s₁ : St, ⦃fun s => s = s₁ ∧ s.mem.arr8 IN = b⦄ step p (exec p n) indObjLoop
+      ⦃fun r s' => r ≠ .brk ∧ objLoopW b s₁.mem (s₁.loc 1) (s₁.loc 2) (s₁.loc 0) (s₁.loc 3) =
+        some ((r.retOr [0]).headD 0, s'.mem); ⊤⦄ := fun s₁ => Triple.step_exec (hloop s₁)
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, hstep] <;> finish
+
+theorem member_succ (n : Nat) (hlist : ListS p b n) : MemberS p b (n + 1) := by
+  intro s₀ kind q ks k v hm hv
+  unfold ListS at hlist
+  rw [invoke_eq _ hL.ind_member]
+  simp only [callFn, indMember]
+  sym (gen := 16) only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, hlist,
+      indSlot_spec p hL n, indNum_spec p hL b hb n, indBool_spec p hL b hb n,
+      indNList_spec p hL b hb n, fldPut_spec p hL n] <;> finish
+
+theorem listLoop_succ (n : Nat) (hobj : ObjS p b n) (hloop : ListLoopS p b n) :
+    ListLoopS p b (n + 1) := by
+  intro s₀
+  rw [exec, step_while (w := indListLoop) rfl]
+  have ho' := fun s₁ i kind q hm => Triple.keep hL.no_st8 (hobj s₁ i kind q hm)
+  have ha' := fun s₁ kind k => Triple.keep hL.no_st8 (fldAlloc_spec p hL n s₁ kind k)
+  have ih := hloop
+  unfold ListLoopS at ih
+  sym (gen := 16) only [lang_grind, arena_grind] =>
+    vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, st64, ih, ho', ha'] <;>
+    finish [flagsW]
+
+theorem list_succ (n : Nat) (hloop : ListLoopS p b (n + 1)) : ListS p b (n + 1) := by
+  intro s₀ v sub hm
+  rw [invoke_eq _ hL.ind_list]
+  simp only [callFn, indList]
+  have hstep : ∀ s₁ : St, ⦃fun s => s = s₁ ∧ s.mem.arr8 IN = b⦄ step p (exec p n) indListLoop
+      ⦃fun r s' => r ≠ .brk ∧
+        listLoopW b s₁.mem (s₁.loc 1) (s₁.loc 8) (s₁.loc 3) (s₁.loc 4) (s₁.loc 2) =
+        some (((r.retOr [0, 0, 0]).headD 0, (r.retOr [0, 0, 0]).tail.headD 0,
+          (r.retOr [0, 0, 0]).tail.tail.headD 0), s'.mem); ⊤⦄ := fun s₁ => Triple.step_exec (hloop s₁)
+  have ha' := fun s₁ kind k => Triple.keep hL.no_st8 (fldAlloc_spec p hL n s₁ kind k)
+  sym (gen := 16) only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld8, hstep, ha',
+      indSize_spec p hL n] <;> finish
+
+theorem mutual_specs (n : Nat) :
+    ObjLoopS p b n ∧ ObjS p b n ∧ MemberS p b n ∧ ListS p b n ∧ ListLoopS p b n := by
+  induction n with
+  | zero =>
+    refine ⟨fun s₀ => ?_, fun s₀ i kind q _ => ?_, fun s₀ kind q ks k v _ _ => ?_,
+      fun s₀ v sub _ => ?_, fun s₀ => ?_⟩
+    · vcgen [exec] <;> grind
+    · rw [invoke_eq _ hL.ind_obj]; simp only [callFn]; vcgen [exec] <;> grind
+    · rw [invoke_eq _ hL.ind_member]; simp only [callFn]; vcgen [exec] <;> grind
+    · rw [invoke_eq _ hL.ind_list]; simp only [callFn]; vcgen [exec] <;> grind
+    · vcgen [exec] <;> grind
+  | succ n ih =>
+    obtain ⟨h1, h2, h3, h4, h5⟩ := ih
+    have l1 := objLoop_succ p hL b hb n h3 h1
+    have l5 := listLoop_succ p hL b hb n h2 h5
+    exact ⟨l1, obj_succ p hL b hb n l1, member_succ p hL b hb n h4, list_succ p hL b hb n l5, l5⟩
+
+end mspecs
+
+/-! ## `ind_fields` -/
+
+/-- After `ind_obj(v, 4, p)`: the block record's six words. -/
+def fieldsK2 (q : Word) : Option (Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (_, m) => some ([rdW (m.arr64 IFR) q, rdW (m.arr64 IFR) (q + 1), rdW (m.arr64 IFR) (q + 2),
+      rdW (m.arr64 IFR) (q + 3), rdW (m.arr64 IFR) (q + 4), rdW (m.arr64 IFR) (q + 5)], m)
+
+/-- After `ifr_alloc(6)`. -/
+def fieldsK1 (b : Array UInt8) (v : Word) : Option (Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (q, m) => fieldsK2 q (objW b m v 4 q)
+
+/-- After `if_reset`. -/
+def fieldsK0 (b : Array UInt8) (v : Word) : Option Mem → Option (List Word × Mem)
+  | none => none
+  | some m => fieldsK1 b v (allocW m IFR 6)
+
+section fArms
+variable (b : Array UInt8) (v q e : Word) (m : Mem)
+@[arena_grind =] theorem fieldsK2_none : fieldsK2 q none = none := rfl
+@[arena_grind =] theorem fieldsK2_some : fieldsK2 q (some (e, m)) =
+    some ([rdW (m.arr64 IFR) q, rdW (m.arr64 IFR) (q + 1), rdW (m.arr64 IFR) (q + 2),
+      rdW (m.arr64 IFR) (q + 3), rdW (m.arr64 IFR) (q + 4), rdW (m.arr64 IFR) (q + 5)], m) := rfl
+@[arena_grind =] theorem fieldsK1_none : fieldsK1 b v none = none := rfl
+@[arena_grind =] theorem fieldsK1_some : fieldsK1 b v (some (q, m)) = fieldsK2 q (objW b m v 4 q) := rfl
+@[arena_grind =] theorem fieldsK0_none : fieldsK0 b v none = none := rfl
+@[arena_grind =] theorem fieldsK0_some : fieldsK0 b v (some m) = fieldsK1 b v (allocW m IFR 6) := rfl
+end fArms
+
+/-- **The model of `ind_fields(v)`**: the six words and the memory after. -/
+def indFieldsW (b : Array UInt8) (m : Mem) (v : Word) : Option (List Word × Mem) :=
+  fieldsK0 b v (ifResetW m)
+
+section fspec
+variable (p : Prog) (hL : IndFieldLookups p) (b : Array UInt8) (hb : b.size < 2 ^ 63)
+include hL hb
+
+/-- **`ind_fields(v)` is `indFieldsW`.** -/
+theorem indFields_spec (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b) (v : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "ind_fields" [v]
+    ⦃fun r s' => LocEq s' s₀ ∧ indFieldsW b s₀.mem v = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hL.ind_fields]
+  simp only [callFn, indFields]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have ho := (mutual_specs p hL b hb n).2.1
+    unfold ObjS at ho
+    have hr' := fun s₁ => Triple.keep hL.no_st8 (ifReset_spec p hL n s₁)
+    have ha' := fun s₁ k => Triple.keep hL.no_st8 (ifrAlloc_spec p hL.ifr_alloc n s₁ k)
+    sym (gen := 16) only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, ho, hr', ha'] <;>
+      finish [indFieldsW]
+
+end fspec
+
+end L.Front.Ind
