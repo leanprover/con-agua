@@ -404,7 +404,6 @@ theorem acW_ok (n : Nat) (m m2 : Mem) (p : Word) (r : List Word) (bs : BlockShap
     (hstab : ∀ m'', IWGrow m m'' → decBS m'' p.toNat = some bs)
     (hb : p.toNat + 9 ≤ iwTop m) (hsz : (m.arr64 IW).size < 2 ^ 64)
     (hc : 200 < (m.arr64 CTL).size)
-    (hsmall : ∀ i v, iwN m i = some v → v + 3 < 2 ^ 64)
     (hnc : ConRon.Arena.numCtorsOf bs.members < 2 ^ 64)
     (hoff : ∀ o l, iwN m p.toNat = some o → iwN m (p.toNat + 1) = some l → o + l ≤ iwTop m)
     (hbd : ∀ o l j v, iwN m p.toNat = some o → iwN m (p.toNat + 1) = some l → j < l →
@@ -435,7 +434,7 @@ theorem acW_ok (n : Nat) (m m2 : Mem) (p : Word) (r : List Word) (bs : BlockShap
   rw [hn] at h
   dsimp only at h
   have hoff' := hoff o l ho hl
-  have htot := numCtorsOfW_ok n m (UInt64.ofNat o) (UInt64.ofNat l) tot bs.members hsmall
+  have htot := numCtorsOfW_ok n m (UInt64.ofNat o) (UInt64.ofNat l) tot bs.members hsz
     (by rw [hoo, hll]; omega) (by rw [hoo, hll]; exact hg) hn
   cases hal : allocW m tot with
   | none => rw [hal] at h; simp at h
@@ -510,7 +509,6 @@ theorem blockShapeAllCtors_refines (p : Prog) (ha : p.lookup "iw_alloc" = some i
     (hstab : ∀ m'', IWGrow s₀.mem m'' → decBS m'' q.toNat = some bs)
     (hb : q.toNat + 9 ≤ iwTop s₀.mem) (hsz : (s₀.mem.arr64 IW).size < 2 ^ 64)
     (hcl : 200 < (s₀.mem.arr64 CTL).size)
-    (hsmall : ∀ i v, iwN s₀.mem i = some v → v + 3 < 2 ^ 64)
     (hnum : ConRon.Arena.numCtorsOf bs.members < 2 ^ 64)
     (hoff : ∀ o l, iwN s₀.mem q.toNat = some o → iwN s₀.mem (q.toNat + 1) = some l →
       o + l ≤ iwTop s₀.mem)
@@ -526,7 +524,7 @@ theorem blockShapeAllCtors_refines (p : Prog) (ha : p.lookup "iw_alloc" = some i
   refine triple_post (blockShapeAllCtors_spec p ha hcp hnc hcc hg hp n s₀ q) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨q', tot, hr, hdec, hgrow, hfr, -⟩ := acW_ok n s₀.mem s'.mem q r bs hm hq hstab hb hsz hcl
-    hsmall hnum hoff hbd hbd2
+    hnum hoff hbd hbd2
   subst hr
   exact ⟨hl, hdec, hgrow, hfr⟩
 
