@@ -1,6 +1,9 @@
 import ConAgua.Arena.Checker
 import ConAgua.Arena.IndTwin
 import ConRon.Bridge.Promote.Walk
+import ConAgua.Arena.IndPosMemo
+import ConAgua.Arena.IndPos2SpecB
+import ConAgua.Arena.RecCheckSpec7
 
 /-!
 # The declaration loop with the core's invariants: `LoopT` (lane `loopt`)
@@ -35,6 +38,83 @@ namespace L.Arena
 open L.Ind
 open L.Front (DECL DLP DeclsR)
 
+/-! ## The inductive stage's per-call memos (a memory-only clause)
+
+The stage's walks clear their memos on entry by an epoch bump (`mclearG`), whose lemma
+(`memoRV_clear`) needs *some* well-formed memo beforehand and the epoch word below `2^64 − 2`.
+`StageMemos m` says that of the eight stage memos (arrays 201‥208, `CTL` 202‥219): `nest_occ`,
+`depth`, `replace_apps`, `has_loose_bvar_b`, the banked `replace_fvars` (`PosMR`), `mentions_any`
+(`maMR`), `mentions_const` (`mcMR`), `target_abs` (`taMR`), and the epoch bound. Only the stage
+writes these words (request of lane `indproofs3`), so across the loop it is a frame fact
+(`StageMemos.frame`), and it holds of the zeroed memory (`StageMemos.zero`). -/
+
+/-- The stage memos' epoch words. -/
+def stageEpochs : List Word := [202, 204, 206, 208, 210, 212, 214, 216]
+
+/-- **The inductive stage's per-call memos are well formed**, their epochs bounded. -/
+structure StageMemos (m : Mem) : Prop where
+  pos : PosMR m
+  ma : ∃ mp, maMR m mp
+  mc : ∃ mp, mcMR m mp
+  ta : ∃ mp, taMR m mp
+  ep : ∀ x ∈ stageEpochs, rdW (m.arr64 CTL) x + 2 ≠ 0
+
+theorem memoRG_mfr0 {κ : Type} [BEq κ] [Hashable κ] {S : MemoSch} (hS : S.WF) {K : MemoKey κ}
+    {dv : Word → ν} {m m' : Mem} (hf : MFr [] [] m m') (hb : 201 ≤ S.arr ∧ S.arr ≤ 208)
+    (hx : 202 ≤ S.cs.toNat ∧ S.cs.toNat ≤ 219) {mp : Std.HashMap κ ν} (h : MemoRG S K dv m mp) :
+    MemoRG S K dv m' mp := by
+  obtain ⟨A, C, f, hA, hC⟩ := hf.memo S.arr S.cs hb hx (by simp) (by simp)
+  exact memoRG_frame S hS K dv A C hA hC m m' f mp h
+
+/-- **`StageMemos` across a writer outside arrays 201‥208 and `CTL` 202‥219.** -/
+theorem StageMemos.frame {A : List ArrId} {C : List Word} {m m' : Mem} (h : StageMemos m)
+    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b < 201 ∨ 208 < b)
+    (hC : ∀ x ∈ C, x.toNat < 202 ∨ 219 < x.toNat) : StageMemos m' := by
+  have hM : MFr [] [] m m' := MFr.of_frame hf hA hC
+  obtain ⟨hp, ⟨a, ha⟩, ⟨b, hb⟩, ⟨c, hc⟩, he⟩ := h
+  refine ⟨hp.fr hM, ⟨a, memoRG_mfr0 maSch_wf hM (by decide) (by decide) ha⟩,
+    ⟨b, memoRG_mfr0 mcSch_wf hM (by decide) (by decide) hb⟩,
+    ⟨c, memoRG_mfr0 taSch_wf hM (by decide) (by decide) hc⟩, fun x hx => ?_⟩
+  have hx' : x ∉ C := fun h' => by
+    have := hC x h'; simp [stageEpochs] at hx; rcases hx with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;>
+      simp at this
+  rw [hf.2.1 x hx']; exact he x hx
+
+/-- A memo whose stamps are all `0` at epoch word `0` is the empty memo. -/
+theorem memoRV_zero {κ ν : Type} [BEq κ] [Hashable κ] [LawfulBEq κ] [LawfulHashable κ]
+    (S : MemoSch) (K : MemoKey κ) (VR : Mem → Word → ν → Prop) (m : Mem)
+    (hctl : S.cs.toNat + 2 ≤ (m.arr64 CTL).size) (he : rdW (m.arr64 CTL) S.cs = 0)
+    (hz : ∀ j, rdW (m.arr64 S.arr) j = 0) : MemoRV S K VR m (∅ : Std.HashMap κ ν) := by
+  have hep : epG S m = 1 := by simp [epG, he]
+  have hst : ∀ j, mstG S m j = 0 := fun j => hz _
+  refine ⟨hctl, by rw [hep]; decide, fun j _ => by rw [hst, hep]; decide,
+    fun j _ h => by rw [hst, hep] at h; cases h, fun j j' _ _ h => by rw [hst, hep] at h; cases h,
+    fun x v h => by simp at h⟩
+
+/-- **The zeroed memory has well-formed stage memos** (empty, epoch `0`). -/
+theorem StageMemos.zero {m : Mem} (hsz : 220 ≤ (m.arr64 CTL).size)
+    (hA : ∀ b : ArrId, 201 ≤ b → b ≤ 208 → ∀ j, rdW (m.arr64 b) j = 0)
+    (hC : ∀ x : Word, 202 ≤ x.toNat → x.toNat ≤ 219 → rdW (m.arr64 CTL) x = 0) : StageMemos m := by
+  have z : ∀ (S : MemoSch), 201 ≤ S.arr → S.arr ≤ 208 → 202 ≤ S.cs.toNat → S.cs.toNat ≤ 217 →
+      ∀ {κ ν : Type} [BEq κ] [Hashable κ] [LawfulBEq κ] [LawfulHashable κ] (K : MemoKey κ)
+        (VR : Mem → Word → ν → Prop), MemoRV S K VR m (∅ : Std.HashMap κ ν) :=
+    fun S h1 h2 h3 h4 _ _ _ _ _ _ K VR =>
+      memoRV_zero S K VR m (by omega) (hC _ h3 (by omega)) (hA _ h1 h2)
+  refine ⟨⟨⟨_, z noSch (by decide) (by decide) (by decide) (by decide) _ _⟩,
+      ⟨_, z dpSch (by decide) (by decide) (by decide) (by decide) _ _⟩,
+      ⟨_, z raSch (by decide) (by decide) (by decide) (by decide) _ _⟩,
+      ⟨_, z hbSch (by decide) (by decide) (by decide) (by decide) _ _⟩,
+      ⟨∅, 0, 0, z rfSch (by decide) (by decide) (by decide) (by decide) _ _,
+        ⟨hC 218 (by decide) (by decide), hC 219 (by decide) (by decide), by decide, by decide,
+          by simp; omega⟩, fun _ _ _ h => by simp at h⟩⟩,
+    ⟨_, z maSch (by decide) (by decide) (by decide) (by decide) _ _⟩,
+    ⟨_, z mcSch (by decide) (by decide) (by decide) (by decide) _ _⟩,
+    ⟨_, z taSch (by decide) (by decide) (by decide) (by decide) _ _⟩, fun x hx => ?_⟩
+  have : rdW (m.arr64 CTL) x = 0 := by
+    simp [stageEpochs] at hx; rcases hx with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;>
+      exact hC _ (by decide) (by decide)
+  rw [this]; decide
+
 /-! ## The relation -/
 
 /-- **The declaration loop's relation with the core's invariants**: `LoopR`, the twin's invariants
@@ -44,6 +124,8 @@ structure LoopT (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) 
   loop : LoopR pins dn m a vis fe pend ds
   twin : TwinOK dn m a fe
   flag : pinW m 0 ≠ 0
+  /-- The inductive stage's per-call memos (lane `indproofs3`'s request). -/
+  memo : StageMemos m
 
 section rel
 variable {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState}
@@ -64,25 +146,31 @@ end rel
 section frames
 variable {dn : NIdx → Option ConLeche.Name} {fe : IFEnv}
 
-/-- **`TwinOK` across a writer** that leaves `EREC`, the core memos (arrays 49, 50, 151‥153, `CTL`
-48, 50, 152, 154, 156) alone; the twin state unchanged. -/
+/-- **`TwinOK` across a writer** that leaves `EREC` and the core memos (arrays 49, 50, 52‥54,
+151‥153, `CTL` 48, 50, 54, 56, 58, 152, 154, 156) alone; the twin state unchanged. -/
 theorem TwinOK.frame {A : List ArrId} {C : List Word} {m m' : Mem} {a : AState}
     (hf : MemFrame A C m m') (hE : EREC ∉ A) (hA : (50 : ArrId) ∉ A ∧ (49 : ArrId) ∉ A)
     (hC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C)
     (hWA : (151 : ArrId) ∉ A ∧ (152 : ArrId) ∉ A ∧ (153 : ArrId) ∉ A)
     (hWC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C)
+    (hLA : (52 : ArrId) ∉ A ∧ (53 : ArrId) ∉ A ∧ (54 : ArrId) ∉ A)
+    (hLC : (54 : Word) ∉ C ∧ (56 : Word) ∉ C ∧ (58 : Word) ∉ C)
     (h : TwinOK dn m a fe) : TwinOK dn m' a fe :=
   ⟨h.readL, h.readLs, h.nwf, by rw [hf.2.2.1]; exact h.erec, by rw [hf.2.2.1]; exact h.spn,
-    h.memos.frame hf hA hC hWA hWC, by rw [hf.2.2.1]; exact h.bstk,
+    h.memos.frame hf hA hC hWA hWC hLA hLC, by rw [hf.2.2.1]; exact h.bstk,
     h.den.frameE (hf.1 EREC hE (by decide))⟩
 
-/-- `TwinOK` across a writer of `CTL` words below 128 other than 48 and 50 (the bracket's). -/
+/-- `TwinOK` across a writer of `CTL` words below 48 or in 60‥127 only (the bracket's). -/
 theorem TwinOK.frameLo {C : List Word} {m m' : Mem} {a : AState} (hf : MemFrame [] C m m')
-    (hC : ∀ x ∈ C, x.toNat < 128) (h48 : (48 : Word) ∉ C) (h50 : (50 : Word) ∉ C)
-    (h : TwinOK dn m a fe) : TwinOK dn m' a fe :=
-  h.frame hf (by simp) ⟨by simp, by simp⟩ ⟨h50, h48⟩ ⟨by simp, by simp, by simp⟩
-    ⟨fun h' => by have := hC _ h'; simp at this, fun h' => by have := hC _ h'; simp at this,
-      fun h' => by have := hC _ h'; simp at this⟩
+    (hC : ∀ x ∈ C, x.toNat < 48 ∨ (60 ≤ x.toNat ∧ x.toNat < 128))
+    (h : TwinOK dn m a fe) : TwinOK dn m' a fe := by
+  have n : ∀ k : Word, 48 ≤ k.toNat → k.toNat < 60 ∨ 128 ≤ k.toNat → k ∉ C := fun k h1 h2 hk => by
+    have := hC k hk; omega
+  exact h.frame hf (by simp) ⟨by simp, by simp⟩ ⟨n 50 (by decide) (by decide), n 48 (by decide) (by decide)⟩
+    ⟨by simp, by simp, by simp⟩
+    ⟨n 152 (by decide) (by decide), n 154 (by decide) (by decide), n 156 (by decide) (by decide)⟩
+    ⟨by simp, by simp, by simp⟩
+    ⟨n 54 (by decide) (by decide), n 56 (by decide) (by decide), n 58 (by decide) (by decide)⟩
 
 end frames
 
@@ -412,7 +500,7 @@ theorem flush_loopT {pins : List INatOpPinSet} (n : Nat) (s₀ : St) (a₀ : ASt
   have hf : MemFrame [] flushCtl s.mem s'.mem := by rw [hm]; exact flushMem_frame _
   refine ⟨hloc, hok, hL, ?_, by rw [pinW_frame hf (by simp)]; exact hR.flag⟩
   rw [flushCaches_st]
-  exact (hR.twin.frameLo hf flushCtl_lt (by simp [flushCtl]) (by simp [flushCtl])).flush
+  exact (hR.twin.frameLo hf (fun x h => by simp [flushCtl] at h; rcases h with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl <;> decide)).flush
 
 /-- **`scratch_enter` keeps `LoopT`** from a loop head (the store well formed, the scratch tier
 off): the twin's `enterScratch` then changes no denotation. -/
@@ -432,9 +520,10 @@ theorem enter_loopT {pins : List INatOpPinSet} (n : Nat) (s₀ : St) (a₀ : ASt
   have hf : MemFrame [] (resetCtl ++ memoCtl) s.mem s'.mem := by rw [hm]; exact enterMem_frame _
   refine ⟨hloc, hok, hL, ?_, by rw [pinW_frame hf (by simp)]; exact hR.flag⟩
   rw [enterScratch_st]
-  exact (hR.twin.frameLo hf (fun x h => Nat.lt_trans (resetCtl_lt x h) (by decide))
-    (by simp [resetCtl, scratchCnts, memoCtl, SCB]) (by simp [resetCtl, scratchCnts, memoCtl, SCB])).enter
-    hwf hoff
+  exact (hR.twin.frameLo hf (fun x h => by
+    simp [resetCtl, scratchCnts, memoCtl, SCB] at h
+    rcases h with rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl|rfl
+      <;> decide)).enter hwf hoff
 
 end bracket
 
@@ -449,6 +538,7 @@ theorem LoopT.pendPush {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche
   have hf := pendPushMem_frame m g i v
   exact ⟨h.loop.pendPush g i v vg hg hb hc h1,
     h.twin.frame hf (by decide) ⟨by decide, by decide⟩ ⟨by decide, by decide⟩
+      ⟨by decide, by decide, by decide⟩ ⟨by decide, by decide, by decide⟩
       ⟨by decide, by decide, by decide⟩ ⟨by decide, by decide, by decide⟩,
     by rw [pinW_frame hf (by decide)]; exact h.flag⟩
 
