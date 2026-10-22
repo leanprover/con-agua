@@ -5,7 +5,7 @@ import ConAgua.Arena.DeclBasisSpec
 
 The `checkDecl` arms read con-leche values the twin interns at the point of use (`eqA`,
 `propextA`, the basis blocks, the reduce pins: `internCI`/`internCV`/`internExpr` of a constant).
-In L they are the stubs `rom_ci(id)`, `rom_cv(id)`, `rom_expr(id)`, `rom_basis_decls(kind)`,
+In L they are the stubs `rom_ci(id)`, `rom_cv(id)`, `rom_expr_pin(id)`, `rom_basis_decls(kind)`,
 `rom_basis_decls_a(kind)` of `DeclArmsNat.lean` (`romStubs`; lane `decls2`'s conventions: a
 constant record or value in `EREC`, a handle, an `IW` slice of record pointers). This file states
 what the real readers must prove, in lane `induct`'s stub shape (`stubM` + `RelAM`, proved by
@@ -36,7 +36,7 @@ def romCvT : Nat → AM IConstantVal
   | 0 => propextA | 1 => choiceA | 2 => trueCvA | 3 => trueIntroCvA | 4 => trustCompilerA
   | 5 => boolCvA | 6 => reduceNatCvA | 7 => reduceBoolCvA | 8 => ofReduceNatA | _ => ofReduceBoolA
 
-/-- `rom_expr(id)`'s expression. -/
+/-- `rom_expr_pin(id)`'s expression. -/
 def romExprT : Nat → AM EIdx
   | 0 => reduceNatDeclPin | _ => reduceBoolDeclPin
 
@@ -75,9 +75,9 @@ operations' types, the `ofReduce*` axioms (ids `0‥9`). -/
 theorem romCv_spec (id : Word) (hid : id.toNat < 10) :
     RelAM "rom_cv" [id] (StageR dn vis fe) (romCvT id.toNat) (KeepPost dn vis fe decRCV) := sorry
 
-/-- `rom_expr(id)`: the reduce operations' pinned values (ids `0`, `1`). -/
+/-- `rom_expr_pin(id)`: the reduce operations' pinned values (ids `0`, `1`). -/
 theorem romExpr_spec (id : Word) (hid : id.toNat < 2) :
-    RelAM "rom_expr" [id] (StageR dn vis fe) (romExprT id.toNat) (KeepPost dn vis fe decW0E) :=
+    RelAM "rom_expr_pin" [id] (StageR dn vis fe) (romExprT id.toNat) (KeepPost dn vis fe decW0E) :=
   sorry
 
 /-- `rom_basis_decls(kind)`: the raw basis block (`BasisKind.decls`). -/

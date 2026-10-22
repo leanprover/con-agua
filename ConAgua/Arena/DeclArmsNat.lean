@@ -1067,13 +1067,13 @@ value now lives:
 * `rom_cv(id)` → an `EREC` pointer to a constant value (`decCV`, 4 words): `0` `propextA`, `1`
   `choiceA`, `2` `trueCvA`, `3` `trueIntroCvA`, `4` `trustCompilerA`, `5` `boolCvA`, `6`
   `reduceNatCvA`, `7` `reduceBoolCvA`, `8` `ofReduceNatA`, `9` `ofReduceBoolA`.
-* `rom_expr(id)` → an expression handle: `0` `reduceNatDeclPin`, `1` `reduceBoolDeclPin`.
+* `rom_expr_pin(id)` → an expression handle: `0` `reduceNatDeclPin`, `1` `reduceBoolDeclPin`.
 * `rom_pin_sets()` → `(off, len)`: the `Nat`-operation pin variants (`checkDecl`'s `pins`), an
   `IW` slice of `EREC` pointers to 24-word variant records (this module's doc). Empty for the
   program's ROM today (`romPins = []`). -/
 def romStubs : Prog :=
   [("rom_basis_decls", stub 1), ("rom_basis_decls_a", stub 1), ("rom_ci", stub 1),
-   ("rom_cv", stub 1), ("rom_expr", stub 1), ("rom_pin_sets", stub 0), ("rom_and_pin", stub 0)]
+   ("rom_cv", stub 1), ("rom_expr_pin", stub 1), ("rom_pin_sets", stub 0), ("rom_and_pin", stub 0)]
 
 theorem declArmsNat_wf :
     L.Compiler.Prog.wf indTab (declArmsNatFns ++ declArmsCanonFns ++ libFns ++ stubFns ++
