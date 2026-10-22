@@ -2,6 +2,7 @@ import ConAgua.Arena.FVarRange
 import ConAgua.Arena.View
 import ConRon.Arena.ExprOps
 import ConRon.Arena.Core
+import ConAgua.Arena.SimLib
 import ConAgua.Census.Attr
 
 /-!
@@ -151,22 +152,12 @@ theorem frAppArm_ok (n : Nat) (ih : FrGoOK n) (F : Nat) (m m' : Mem) (a : AState
     (hF : c.toNat ≤ F ∨ n ≤ F)
     (hb : frAppK₁ n c aw (frW n m fw c) = some (r, m')) :
     ∃ a', (fvarRangeArmApp F (decE fw) (decE aw)).run a = .ok (r.toNat, a') ∧ ArenaR m' a' := by
-  cases h1 : frW n m fw c with
-  | none => simp only [h1, frAppK₁, reduceCtorEq] at hb
-  | some p =>
-    obtain ⟨x, m₁⟩ := p
-    cases h2 : frW n m₁ aw c with
-    | none => simp only [h1, h2, frAppK₁, frAppK₁.frAppK₂, reduceCtorEq] at hb
-    | some q =>
-      obtain ⟨y, m₂⟩ := q
-      simp only [h1, h2, frAppK₁, frAppK₁.frAppK₂, Option.some.injEq, Prod.mk.injEq] at hb
-      obtain ⟨rfl, rfl⟩ := hb
-      obtain ⟨a₁, ha₁, hR₁⟩ := ih F m m₁ a _ c x hF hR hf h1
-      obtain ⟨a₂, ha₂, hR₂⟩ := ih F m₁ m₂ a₁ _ c y hF hR₁ ha h2
-      refine ⟨a₂, ?_, hR₂⟩
-      rw [maxW_toNat]
-      simp only [fvarRangeArmApp, StateT.run_bind, ha₁, except_ok_bind, ha₂]
-      rfl
+  unfold fvarRangeArmApp
+  refine SimD.exists (Sim.bindD rfl (fun _ _ => rfl)
+    (Sim.ofD fun x m₁ e => ih F m m₁ a _ c x hF hR hf e) fun x m₁ a₁ hR₁ => ?_) hb
+  refine Sim.bindD (K := frAppK₁.frAppK₂ x) rfl (fun _ _ => rfl)
+    (Sim.ofD fun y m₂ e => ih F m₁ m₂ a₁ _ c y hF hR₁ ha e) fun y m₂ a₂ hR₂ => ?_
+  exact Sim.ret ⟨(maxW_toNat x y).symm, hR₂⟩
 
 /-- The binder arm (`lam`, `forallE`): two children, `max x y` (no truncation). -/
 theorem frBindArm_ok (n : Nat) (ih : FrGoOK n) (F : Nat) (m m' : Mem) (a : AState)
@@ -174,22 +165,12 @@ theorem frBindArm_ok (n : Nat) (ih : FrGoOK n) (F : Nat) (m m' : Mem) (a : AStat
     (hF : c.toNat ≤ F ∨ n ≤ F)
     (hb : frBindK₁ n c bw (frW n m tw c) = some (r, m')) :
     ∃ a', (fvarRangeArmBind F (decE tw) (decE bw)).run a = .ok (r.toNat, a') ∧ ArenaR m' a' := by
-  cases h1 : frW n m tw c with
-  | none => simp only [h1, frBindK₁, reduceCtorEq] at hb
-  | some p =>
-    obtain ⟨x, m₁⟩ := p
-    cases h2 : frW n m₁ bw c with
-    | none => simp only [h1, h2, frBindK₁, frBindK₁.frBindK₂, reduceCtorEq] at hb
-    | some q =>
-      obtain ⟨y, m₂⟩ := q
-      simp only [h1, h2, frBindK₁, frBindK₁.frBindK₂, Option.some.injEq, Prod.mk.injEq] at hb
-      obtain ⟨rfl, rfl⟩ := hb
-      obtain ⟨a₁, ha₁, hR₁⟩ := ih F m m₁ a _ c x hF hR ht h1
-      obtain ⟨a₂, ha₂, hR₂⟩ := ih F m₁ m₂ a₁ _ c y hF hR₁ hb' h2
-      refine ⟨a₂, ?_, hR₂⟩
-      rw [maxW_toNat]
-      simp only [fvarRangeArmBind, StateT.run_bind, ha₁, except_ok_bind, ha₂]
-      rfl
+  unfold fvarRangeArmBind
+  refine SimD.exists (Sim.bindD rfl (fun _ _ => rfl)
+    (Sim.ofD fun x m₁ e => ih F m m₁ a _ c x hF hR ht e) fun x m₁ a₁ hR₁ => ?_) hb
+  refine Sim.bindD (K := frBindK₁.frBindK₂ x) rfl (fun _ _ => rfl)
+    (Sim.ofD fun y m₂ e => ih F m₁ m₂ a₁ _ c y hF hR₁ hb' e) fun y m₂ a₂ hR₂ => ?_
+  exact Sim.ret ⟨(maxW_toNat x y).symm, hR₂⟩
 
 /-- The `letE` arm: three children, `max (max x y) z` (no truncation). -/
 theorem frLetArm_ok (n : Nat) (ih : FrGoOK n) (F : Nat) (m m' : Mem) (a : AState)
@@ -198,28 +179,14 @@ theorem frLetArm_ok (n : Nat) (ih : FrGoOK n) (F : Nat) (m m' : Mem) (a : AState
     (hb : frLetK₁ n c vw bw (frW n m tw c) = some (r, m')) :
     ∃ a', (fvarRangeArmLet F (decE tw) (decE vw) (decE bw)).run a = .ok (r.toNat, a') ∧
       ArenaR m' a' := by
-  cases h1 : frW n m tw c with
-  | none => simp only [h1, frLetK₁, reduceCtorEq] at hb
-  | some p =>
-    obtain ⟨x, m₁⟩ := p
-    cases h2 : frW n m₁ vw c with
-    | none => simp only [h1, h2, frLetK₁, frLetK₁.frLetK₂, reduceCtorEq] at hb
-    | some q =>
-      obtain ⟨y, m₂⟩ := q
-      cases h3 : frW n m₂ bw c with
-      | none => simp only [h1, h2, h3, frLetK₁, frLetK₁.frLetK₂, frLetK₁.frLetK₃, reduceCtorEq] at hb
-      | some o =>
-        obtain ⟨z, m₃⟩ := o
-        simp only [h1, h2, h3, frLetK₁, frLetK₁.frLetK₂, frLetK₁.frLetK₃, Option.some.injEq,
-          Prod.mk.injEq] at hb
-        obtain ⟨rfl, rfl⟩ := hb
-        obtain ⟨a₁, ha₁, hR₁⟩ := ih F m m₁ a _ c x hF hR ht h1
-        obtain ⟨a₂, ha₂, hR₂⟩ := ih F m₁ m₂ a₁ _ c y hF hR₁ hv h2
-        obtain ⟨a₃, ha₃, hR₃⟩ := ih F m₂ m₃ a₂ _ c z hF hR₂ hb' h3
-        refine ⟨a₃, ?_, hR₃⟩
-        rw [maxW_toNat, maxW_toNat]
-        simp only [fvarRangeArmLet, StateT.run_bind, ha₁, except_ok_bind, ha₂, ha₃]
-        rfl
+  unfold fvarRangeArmLet
+  refine SimD.exists (Sim.bindD rfl (fun _ _ => rfl)
+    (Sim.ofD fun x m₁ e => ih F m m₁ a _ c x hF hR ht e) fun x m₁ a₁ hR₁ => ?_) hb
+  refine Sim.bindD (K := frLetK₁.frLetK₂ n c bw x) rfl (fun _ _ => rfl)
+    (Sim.ofD fun y m₂ e => ih F m₁ m₂ a₁ _ c y hF hR₁ hv e) fun y m₂ a₂ hR₂ => ?_
+  refine Sim.bindD (K := frLetK₁.frLetK₃ x y) rfl (fun _ _ => rfl)
+    (Sim.ofD fun z m₃ e => ih F m₂ m₃ a₂ _ c z hF hR₂ hb' e) fun z m₃ a₃ hR₃ => ?_
+  exact Sim.ret ⟨by rw [maxW_toNat, maxW_toNat], hR₃⟩
 
 theorem frNodeOK_succ (n : Nat) (ih : FrGoOK n) : FrNodeOK (n + 1) := by
   intro F m m' a h c r hF hR hh hb

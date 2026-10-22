@@ -1,4 +1,5 @@
 import ConAgua.Arena.StoreLib
+import ConAgua.Arena.SimLib
 import ConAgua.Arena.LamStore
 
 /-!
@@ -247,12 +248,8 @@ theorem internLam_refines (p : Prog) (hpf : p.lookup "lam_find" = some lamFind)
     invoke p (exec p n) "intern_lam" [ty, body]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internE (.lam (decE ty) (decE body))) a₀ ∧
       LamR s'.mem (AM.st (internE (.lam (decE ty) (decE body))) a₀) ∧
-      AM.res (internE (.lam (decE ty) (decE body))) a₀ = decE (r.headD 0); ⊤⦄ := by
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (internLamL_spec p hpf hpp hp n s₀ ty body)
-  subst hs
-  exact ⟨hloc, laintern_correct s.mem a₀ hR ty body hty hbody _ _ hI⟩
+      AM.res (internE (.lam (decE ty) (decE body))) a₀ = decE (r.headD 0); ⊤⦄ :=
+  Sim.tripleD (internLamL_spec p hpf hpp hp n s₀ ty body)
+    (Sim.ofOkD (laintern_correct s₀.mem a₀ hR ty body hty hbody))
 
 end L.Arena
