@@ -1,6 +1,7 @@
 import ConAgua.Arena.DeclBase
 import ConAgua.Arena.DeclAndPin
 import ConAgua.Arena.DeclStep
+import ConAgua.Arena.DeclStepSpec
 
 /-!
 # The declaration loop in L, top down: `installFold`, `checkPendingList`, `installThenCheck`
@@ -63,18 +64,6 @@ the memo `promote_vg` left). -/
 -- con-ron: ConRon/Arena/Promote.lean:358-378 ConRon.Arena.promoteNew
 def promoteNewL : FunDecl := lfn (k, vis, fresh) locals () { abort }
 
-theorem installStepGo_spec :
-    ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
-      (i : Word) (hi : i.toNat < ds.size), LoopR dn s₀.mem a₀ vis fe pend ds →
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "install_step_go" [i, vis]
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (installStepGo mode pins fe (dsAt ds i)) a₀ ∧
-      LoopR dn s'.mem (AM.st (installStepGo mode pins fe (dsAt ds i)) a₀) (r.headD 0)
-        (AM.res (installStepGo mode pins fe (dsAt ds i)) a₀).1 pend ds ∧
-      (AM.res (installStepGo mode pins fe (dsAt ds i)) a₀).2 =
-        vgOut s'.mem (r.tail.headD 0) (r.tail.tail.headD 0) ∧
-      (r.tail.headD 0 ≠ 0 → (AM.res (installStepGo mode pins fe (dsAt ds i)) a₀).2 ≠ none); ⊤⦄ :=
-  sorry
-
 theorem promoteVG_spec :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
       (g : Word) (vg : ValueGroup), decVG (erecP s₀.mem) g.toNat = some vg →
@@ -94,14 +83,6 @@ theorem promoteNew_spec :
     ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (promoteNew pm coreWalkFuel k.toNat fe) a₀ ∧
       LoopR dn s'.mem (AM.st (promoteNew pm coreWalkFuel k.toNat fe) a₀) vis
         (AM.res (promoteNew pm coreWalkFuel k.toNat fe) a₀).2 pend ds; ⊤⦄ := sorry
-
-theorem checkValueGroup_spec :
-    ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
-      (g : Word) (vg : ValueGroup), decVG (erecP s₀.mem) g.toNat = some vg →
-      LoopR dn s₀.mem a₀ vis fe pend ds →
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_value_group" [vis, g]
-    ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (checkValueGroup mode fe vg) a₀ ∧
-      LoopR dn s'.mem (AM.st (checkValueGroup mode fe vg) a₀) vis fe pend ds; ⊤⦄ := sorry
 
 end stubs
 
@@ -138,7 +119,9 @@ theorem LoopR.of_lo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AS
     (hC : ∀ x ∈ C, x.toNat < 128) : LoopR dn m' a' vis fe pend ds := by
   have h1 : m'.arr64 DECL = m.arr64 DECL := hf.1 _ (by simp) (by decide)
   have h2 : m'.arr64 DLP = m.arr64 DLP := hf.1 _ (by simp) (by decide)
-  exact ⟨hC', h.pend.frameLo hf hC, by rw [h1, h2]; exact h.decls⟩
+  exact ⟨hC', h.pend.frameLo hf hC, by rw [h1, h2]; exact h.decls,
+    IWOK.frame hf (by simp) (by simp) (fun h' => by have := hC _ h'; simp at this)
+      (fun h' => by have := hC _ h'; simp at this) h.iw⟩
 
 section bracket
 variable (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration) (p : Prog)
@@ -199,7 +182,7 @@ end bracket
 theorem LoopR.restrict {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {pend : Array PendingCheck} {ds : Array IDeclaration}
     (h : LoopR dn m a vis fe pend ds) (v : Word) : LoopR dn m a v (fe.restrictTo v.toNat) pend ds :=
-  ⟨⟨h.check.arena, h.check.core, h.check.pins, h.check.env.restrictTo v⟩, h.pend, h.decls⟩
+  ⟨⟨h.check.arena, h.check.core, h.check.pins, h.check.env.restrictTo v⟩, h.pend, h.decls, h.iw⟩
 
 theorem LoopR.unrestrict {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {v vis : Word}
     {fe : IFEnv} {k : Nat} {pend : Array PendingCheck} {ds : Array IDeclaration}
@@ -260,7 +243,8 @@ theorem LoopR.pendPush {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AStat
     simp only [pendPushMem, hcw, Mem.arr64_set64_same,
       Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ PEND by decide)]
     rfl
-  refine ⟨h.check.frame_hi (by simp) (by simp) hf, ⟨?_, ?_⟩, by rw [hD1, hD2]; exact h.decls⟩
+  refine ⟨h.check.frame_hi (by simp) (by simp) hf, ⟨?_, ?_⟩, by rw [hD1, hD2]; exact h.decls,
+    IWOK.frame hf (by decide) (by decide) (by decide) (by decide) h.iw⟩
   · simp only [pendCount, hC, rdW_set!]
     simp [hc, hc1, hc']
   · intro j hj

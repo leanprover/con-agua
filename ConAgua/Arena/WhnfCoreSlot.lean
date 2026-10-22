@@ -285,12 +285,6 @@ end twin
 
 /-! ## The slot refines the twin's slot -/
 
-theorem callW_zero (p : Prog) (f : FnName) (vs : List Word) (m : Mem) : callW p 0 f vs m = none := by
-  simp only [callW, invoke, lookupFn]
-  cases p.lookup f with
-  | none => rfl
-  | some fd => rfl
-
 
 theorem KeptAll.wk {M M' : ModeMaps} {eb : Word} (h : KeptAll M M' eb) (k : EIdx) (v : EIdx) :
     KeptAll M { M' with wk := M'.wk.insert (k, eb) v } eb := fun h0 => by
