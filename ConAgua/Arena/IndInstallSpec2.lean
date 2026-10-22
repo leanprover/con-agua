@@ -552,4 +552,207 @@ theorem checkBlockIndsCvTas_refines (p : Prog) (ha : p.lookup "iw_alloc" = some 
     obtain ⟨a, ha', hy2⟩ := hy
     exact ⟨v, a, hv, hptr j v hj hv, ha', by rw [hy']; exact hy2⟩)⟩
 
-end L.Ind
+/-! ## `block_caps_at_er_copy` -/
+
+/-- The model of `block_caps_at_er_copy_go`. -/
+def ieCopyW : Nat → Mem → Word → Word → Word → Option Mem
+  | 0, _, _, _, _ => none
+  | n + 1, m, d, s, l =>
+    if l = 0 then some m
+    else ieCopyW n (m.set64 EREC d (rdW (m.arr64 IW) s)) (d + 1) (s + 1) (l - 1)
+
+section arms
+variable (n : Nat) (m : Mem) (d s l : Word)
+theorem ieCopyW_nil (hl : l = 0) : ieCopyW (n + 1) m d s l = some m := by simp [ieCopyW, hl]
+theorem ieCopyW_step (hl : l ≠ 0) :
+    ieCopyW (n + 1) m d s l =
+      ieCopyW n (m.set64 EREC d (rdW (m.arr64 IW) s)) (d + 1) (s + 1) (l - 1) := by
+  simp [ieCopyW, hl]
+end arms
+
+grind_pattern [ind_grind] ieCopyW_nil => ieCopyW (n + 1) m d s l
+grind_pattern [ind_grind] ieCopyW_step => ieCopyW (n + 1) m d s l
+
+theorem ieCopy_spec (p : Prog) (hp : p.lookup "block_caps_at_er_copy_go" = some blockCapsAtErCopyGo) (n : Nat) :
+    ∀ (s₀ : St) (d s l : Word),
+    ⦃fun st => st = s₀⦄ invoke p (exec p n) "block_caps_at_er_copy_go" [d, s, l]
+    ⦃fun _ s' => LocEq s' s₀ ∧ ieCopyW n s₀.mem d s l = some s'.mem; ⊤⦄ := by
+  induction n with
+  | zero => intro s₀ d s l; rw [invoke_eq _ hp]; simp only [callFn, blockCapsAtErCopyGo]; vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ d s l
+    rw [invoke_eq _ hp]
+    simp only [callFn, blockCapsAtErCopyGo]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
+      finish (gen := 20)
+
+
+/-- **What an `IW → EREC` copy leaves**: every array but `EREC` as it was, `EREC` the same size, the
+destination holding the `IW` source, the rest of `EREC` unchanged. -/
+theorem ieCopyW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), ieCopyW n m d s l = some m' →
+    s.toNat + l.toNat ≤ (m.arr64 IW).size → (m.arr64 IW).size < 2 ^ 64 →
+    d.toNat + l.toNat ≤ (m.arr64 EREC).size → (m.arr64 EREC).size < 2 ^ 64 →
+    (∀ b, b ≠ EREC → m'.arr64 b = m.arr64 b) ∧ (m'.arr64 EREC).size = (m.arr64 EREC).size ∧
+    m'.words.size = m.words.size ∧
+    ∀ i, (m'.arr64 EREC)[i]? =
+      if d.toNat ≤ i ∧ i < d.toNat + l.toNat then (m.arr64 IW)[s.toNat + (i - d.toNat)]?
+      else (m.arr64 EREC)[i]? := by
+  induction n with
+  | zero => intro m m' d s l h; simp [ieCopyW] at h
+  | succ n ih =>
+    intro m m' d s l h hs hE hd hsz
+    by_cases hl : l = 0
+    · rw [ieCopyW_nil n m d s l hl] at h
+      cases h
+      subst hl
+      refine ⟨fun _ _ => rfl, rfl, rfl, fun i => ?_⟩
+      have : ¬ (d.toNat ≤ i ∧ i < d.toNat + (0 : Word).toNat) := by
+        simp only [UInt64.toNat_zero]; omega
+      simp only [this, if_false]
+    · rw [ieCopyW_step n m d s l hl] at h
+      have hl0 : 0 < l.toNat := by
+        have : l.toNat ≠ 0 := fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
+        omega
+      have hl1 : (l - 1).toNat = l.toNat - 1 := by
+        rw [UInt64.toNat_sub]; simp; omega
+      have hd1 : (d + 1).toNat = d.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      have hs1 : (s + 1).toNat = s.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      have hslt : s.toNat < (m.arr64 IW).size := by omega
+      have hdlt : d.toNat < (m.arr64 EREC).size := by omega
+      obtain ⟨m1, hm1⟩ : ∃ m1, m1 = m.set64 EREC d (rdW (m.arr64 IW) s) := ⟨_, rfl⟩
+      rw [← hm1] at h
+      have hsz1 : (m1.arr64 EREC).size = (m.arr64 EREC).size := by
+        rw [hm1, Mem.arr64_set64_same]; simp
+      have hE1 : m1.arr64 IW = m.arr64 IW := by
+        rw [hm1, Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+      have hget1 : ∀ i, (m1.arr64 EREC)[i]? = if i = d.toNat then (m.arr64 IW)[s.toNat]?
+          else (m.arr64 EREC)[i]? := by
+        intro i
+        rw [hm1, Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+        by_cases hi : d.toNat = i
+        · subst hi
+          simp only [hdlt, true_and, if_true]
+          simp [rdW, Array.getElem?_eq_getElem hslt]
+        · simp [hi, Ne.symm hi]
+      obtain ⟨hA, hS, hW, hG⟩ := ih m1 m' (d + 1) (s + 1) (l - 1) h
+        (by rw [hs1, hl1, hE1]; omega) (by rw [hE1]; exact hE)
+        (by rw [hd1, hl1, hsz1]; omega) (by rw [hsz1]; exact hsz)
+      rw [hE1] at hG
+      refine ⟨fun b hb => (hA b hb).trans ?_, hS.trans hsz1, hW.trans ?_, fun i => ?_⟩
+      · rw [hm1, Mem.arr64_set64_ne _ _ _ _ _ hb]
+      · rw [hm1]; exact Mem.words_size_set64 _ _ _ _
+      · rw [hG i, hd1, hl1, hs1]
+        by_cases hi : d.toNat ≤ i ∧ i < d.toNat + l.toNat
+        · rw [if_pos hi]
+          by_cases hid : i = d.toNat
+          · subst hid
+            have : ¬ (d.toNat + 1 ≤ d.toNat ∧ d.toNat < d.toNat + 1 + (l.toNat - 1)) := by omega
+            rw [if_neg this, hget1, if_pos rfl]; simp
+          · have h2 : d.toNat + 1 ≤ i ∧ i < d.toNat + 1 + (l.toNat - 1) := by omega
+            rw [if_pos h2]
+            congr 1; omega
+        · rw [if_neg hi, if_neg (by omega), hget1, if_neg (by omega)]
+
+
+/-- The model of `block_caps_at_er_copy(o, l)` at the caller's fuel `n` (the copy runs at `n - 1`). -/
+def capsErCopyW (n : Nat) (m : Mem) (o l : Word) : Option (List Word × Mem) :=
+  match erAllocW m l with
+  | none => none
+  | some (q, m1) =>
+    match ieCopyW (n - 1) m1 q o l with
+    | none => none
+    | some m2 => some ([q, l], m2)
+
+theorem blockCapsAtErCopy_spec (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
+    (hc : p.lookup "block_caps_at_er_copy_go" = some blockCapsAtErCopyGo)
+    (hp : p.lookup "block_caps_at_er_copy" = some blockCapsAtErCopy) (n : Nat) (s₀ : St)
+    (o l : Word) :
+    ⦃fun st => st = s₀⦄ invoke p (exec p n) "block_caps_at_er_copy" [o, l]
+    ⦃fun r s' => LocEq s' s₀ ∧ capsErCopyW n s₀.mem o l = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, blockCapsAtErCopy]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have hmod : ∀ q m1 m2, erAllocW s₀.mem l = some (q, m1) → ieCopyW n m1 q o l = some m2 →
+        capsErCopyW (n + 1) s₀.mem o l = some ([q, l], m2) := by
+      intro q m1 m2 h1 h2
+      simp [capsErCopyW, h1, h2]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        erecAlloc_specW p ha n, ieCopy_spec p hc n] <;>
+      finish (gen := 20)
+
+/-- **What `block_caps_at_er_copy` builds**: a fresh `EREC` slice at the old `EREC` top holding the
+`IW` slice `(o, l)`; the hypotheses `StageR.erec` asks for: `EREC` and `CTL[129]` the only changes,
+the old records unchanged, the top moved by `l`, `IW` untouched. -/
+theorem capsErCopyW_post {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
+    (h : capsErCopyW n m o l = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64)
+    (hEs : (m.arr64 EREC).size < 2 ^ 64) (hc : 129 < (m.arr64 CTL).size)
+    (hsrc : o.toNat + l.toNat ≤ (m.arr64 IW).size) :
+    r = [rdW (m.arr64 CTL) 129, l] ∧ (rdW (m.arr64 CTL) 129).toNat = erTop m ∧
+    (∀ j < l.toNat, (m'.arr64 EREC)[erTop m + j]? = (m.arr64 IW)[o.toNat + j]?) ∧
+    MemFrame [EREC] [129] m m' ∧ (∀ i < erTop m, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?) ∧
+    erTop m' = erTop m + l.toNat ∧ erTop m + l.toNat ≤ (m'.arr64 EREC).size ∧
+    m'.arr64 IW = m.arr64 IW := by
+  simp only [capsErCopyW] at h
+  cases hal : erAllocW m l with
+  | none => simp [hal] at h
+  | some qm =>
+  obtain ⟨q, m1⟩ := qm
+  simp only [hal] at h
+  cases hcp : ieCopyW (n - 1) m1 q o l with
+  | none => simp [hcp] at h
+  | some m2 =>
+  simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  simp only [erAllocW] at hal
+  by_cases h1 : m.len64 EREC < rdW (m.arr64 CTL) 129
+  · simp [h1] at hal
+  by_cases h2 : m.len64 EREC - rdW (m.arr64 CTL) 129 < l
+  · simp [h1, h2] at hal
+  simp only [h1, h2, if_false, Option.some.injEq, Prod.mk.injEq] at hal
+  obtain ⟨rfl, rfl⟩ := hal
+  have hlen : (m.len64 EREC).toNat = (m.arr64 EREC).size := by simp [Mem.len64]; omega
+  have hq : (rdW (m.arr64 CTL) 129).toNat ≤ (m.arr64 EREC).size := by
+    have : ¬ (m.len64 EREC).toNat < (rdW (m.arr64 CTL) 129).toNat := h1
+    omega
+  have hroom : (rdW (m.arr64 CTL) 129).toNat + l.toNat ≤ (m.arr64 EREC).size := by
+    have : ¬ (m.len64 EREC - rdW (m.arr64 CTL) 129).toNat < l.toNat := h2
+    rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; omega)] at this
+    omega
+  generalize hqq : rdW (m.arr64 CTL) 129 = q at *
+  have hE : (erAllocMem m l).arr64 EREC = m.arr64 EREC := by
+    simp only [erAllocMem]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  have hI : (erAllocMem m l).arr64 IW = m.arr64 IW := by
+    simp only [erAllocMem]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  obtain ⟨hA, hS, hW, hG⟩ := ieCopyW_get (n - 1) _ _ _ _ _ hcp
+    (by rw [hI]; exact hsrc) (by rw [hI]; exact hsz) (by rw [hE]; exact hroom) (by rw [hE]; exact hEs)
+  rw [hE] at hS hG
+  rw [hI] at hG
+  have hCTL : m2.arr64 CTL = (erAllocMem m l).arr64 CTL := hA CTL (by decide)
+  have hf : MemFrame [EREC] [129] m m2 := by
+    refine ⟨fun b hb hcb => ?_, fun x hx => ?_, fun b => ?_, ?_⟩
+    · rw [hA b (by simpa using hb), erAllocMem, Mem.arr64_set64_ne _ _ _ _ _ hcb]
+    · rw [hCTL]; simp only [erAllocMem, rdW_set64]
+      have hx' : ¬ (x = 129) := by simpa using hx
+      simp [show (129 : Word) ≠ x from fun e => hx' e.symm]
+    · by_cases hb : b = EREC
+      · subst hb; exact hS
+      · rw [hA b hb]; simp only [erAllocMem]
+        by_cases hbc : b = CTL
+        · subst hbc; exact size_set64 _ _ _ _ _
+        · rw [Mem.arr64_set64_ne _ _ _ _ _ hbc]
+    · rw [hW]; exact Mem.words_size_set64 _ _ _ _
+  have hqe : erTop m = q.toNat := by simp only [erTop, hqq]
+  have h129 : (129 : Word).toNat < (m.arr64 CTL).size := by simp; omega
+  refine ⟨rfl, hqe.symm, fun j hj => ?_, hf, fun i hi => ?_, ?_, ?_, ?_⟩
+  · rw [hG, hqe, if_pos (by omega)]; congr 2; omega
+  · rw [hG, if_neg (by omega)]
+  · simp only [erTop]
+    rw [hCTL]; simp only [erAllocMem, rdW_set64]
+    rw [if_pos ⟨trivial, trivial, h129⟩, hqq, UInt64.toNat_add]
+    simp; omega
+  · rw [hqe, hS]; omega
+  · rw [hA IW (by decide), hI]
