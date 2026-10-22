@@ -67,7 +67,7 @@ theorem ApdEnv.of_den {m : Mem} {a : AState} {fe : IFEnv} (hd : StoreDen m a fe)
 
 /-! ## The parameter slice -/
 
-theorem NmsR.congr {N : Word → ConLeche.Name → Prop} {m m' : Mem} {A : ArrId}
+theorem nmsR_congr {N : Word → ConLeche.Name → Prop} {m m' : Mem} {A : ArrId}
     (h : m'.arr64 A = m.arr64 A) {o k : Word} {ps : List ConLeche.Name} (hp : NmsR N m A o k ps) :
     NmsR N m' A o k ps := by
   induction hp with
@@ -309,3 +309,251 @@ theorem apdTwin_node (ks : List ConLeche.Name) (memo : Std.HashMap EIdx Bool) (f
         AM (Bool × Std.HashMap EIdx Bool)).run a) := by
   rw [allLevelParamsDefinedGo_succ']
   simp only [hmiss, StateT.run_bind, view_run h a v hv, except_ok_bind]
+
+/-! ## The refinement, by induction on the exec fuel -/
+
+/-- A nonzero fuel word is the successor of its decrement. -/
+theorem apd_fuel_pred (f : Word) (hf : f ≠ 0) : ∃ F, f.toNat = F + 1 ∧ (f - 1).toNat = F := by
+  have : f.toNat ≠ 0 := fun h => hf (UInt64.toNat_inj.mp (by simpa using h))
+  refine ⟨(f - 1).toNat, ?_, rfl⟩
+  rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]
+  simp; omega
+
+/-- What the walk's word model says about the twin. -/
+def ApdGoOK (a : AState) (n : Nat) : Prop :=
+  ∀ (m m' : Mem) (o l f h r : Word) (mp : Std.HashMap EIdx Bool) (ks : List ConLeche.Name),
+    ArenaR m a → NmsR (nameN a.store.lss.ls.ns) m IW o l ks → H h → apdMR m mp →
+    apdGoW n m o l f h = some (r, m') →
+    ∃ b mp', (ConRon.Arena.allLevelParamsDefinedGo ks mp f.toNat (decE h)).run a =
+        .ok ((b, mp'), a) ∧ r = (if b then 1 else 0) ∧ apdMR m' mp' ∧ ApdFr m m'
+
+section step
+variable {a : AState} (env : ApdEnv a)
+
+/-- The two-child shape (`app`, `lam`, `forallE`): the first child, then the second unless the
+first answered `false`. -/
+theorem apdBin_ok (n : Nat) (ih : ApdGoOK a n) (m m1 : Mem) (o l f : Word) (F : Nat) (x y r : Word)
+    (mp : Std.HashMap EIdx Bool) (ks : List ConLeche.Name) (hF1 : (f - 1).toNat = F) (hx : H x)
+    (hy : H y) (hA : ArenaR m a) (hps : NmsR (nameN a.store.lss.ls.ns) m IW o l ks)
+    (hM : apdMR m mp) (hn : apdB1 n o l f y (apdGoW n m o l (f - 1) x) = some (r, m1)) :
+    ∃ b₁ mp₁ m₀, (ConRon.Arena.allLevelParamsDefinedGo ks mp F (decE x)).run a =
+        .ok ((b₁, mp₁), a) ∧ apdMR m₀ mp₁ ∧ ApdFr m m₀ ∧
+      ((b₁ = false ∧ r = 0 ∧ m1 = m₀) ∨
+        (b₁ = true ∧ ∃ b₂ mp₂, (ConRon.Arena.allLevelParamsDefinedGo ks mp₁ F (decE y)).run a =
+          .ok ((b₂, mp₂), a) ∧ r = (if b₂ then 1 else 0) ∧ apdMR m1 mp₂ ∧ ApdFr m₀ m1)) := by
+  cases h1 : apdGoW n m o l (f - 1) x with
+  | none => rw [h1] at hn; simp [apdB1] at hn
+  | some p1 =>
+    obtain ⟨r1, m₀⟩ := p1
+    rw [h1, apdB1_some] at hn
+    obtain ⟨b₁, mp₁, hr1, hb1, hM1, hf1⟩ := ih m m₀ o l (f - 1) x r1 mp ks hA hps hx hM h1
+    rw [hF1] at hr1
+    refine ⟨b₁, mp₁, m₀, hr1, hM1, hf1, ?_⟩
+    by_cases hz : r1 ≠ 0
+    · rw [if_pos hz] at hn
+      have hb : b₁ = true := by revert hb1 hz; cases b₁ <;> simp
+      subst hb
+      obtain ⟨b₂, mp₂, hr2, hb2, hM2, hf2⟩ := ih m₀ m1 o l (f - 1) y r mp₁ ks (apdFrame_arena hf1 hA)
+        (nmsR_congr (apdFrame_iw hf1) hps) hy hM1 hn
+      rw [hF1] at hr2
+      exact Or.inr ⟨rfl, b₂, mp₂, hr2, hb2, hM2, hf2⟩
+    · rw [if_neg hz] at hn
+      simp only [ne_eq, Decidable.not_not] at hz
+      subst hz
+      simp only [Option.some.injEq, Prod.mk.injEq] at hn
+      obtain ⟨rfl, rfl⟩ := hn
+      have hb : b₁ = false := by revert hb1; cases b₁ <;> simp
+      exact Or.inl ⟨hb, rfl, rfl⟩
+
+/-- The three-child shape (`letE`). -/
+theorem apdLet_ok (n : Nat) (ih : ApdGoOK a n) (m m1 : Mem) (o l f : Word) (F : Nat)
+    (x y w r : Word) (mp : Std.HashMap EIdx Bool) (ks : List ConLeche.Name)
+    (hF1 : (f - 1).toNat = F) (hx : H x) (hy : H y) (hw : H w) (hA : ArenaR m a)
+    (hps : NmsR (nameN a.store.lss.ls.ns) m IW o l ks) (hM : apdMR m mp)
+    (hn : apdL1 n o l f y w (apdGoW n m o l (f - 1) x) = some (r, m1)) :
+    ∃ b₁ mp₁ m₀, (ConRon.Arena.allLevelParamsDefinedGo ks mp F (decE x)).run a =
+        .ok ((b₁, mp₁), a) ∧ apdMR m₀ mp₁ ∧ ApdFr m m₀ ∧
+      ((b₁ = false ∧ r = 0 ∧ m1 = m₀) ∨
+        (b₁ = true ∧ ∃ b₂ mp₂ m₂, (ConRon.Arena.allLevelParamsDefinedGo ks mp₁ F (decE y)).run a =
+          .ok ((b₂, mp₂), a) ∧ apdMR m₂ mp₂ ∧ ApdFr m₀ m₂ ∧
+          ((b₂ = false ∧ r = 0 ∧ m1 = m₂) ∨
+            (b₂ = true ∧ ∃ b₃ mp₃, (ConRon.Arena.allLevelParamsDefinedGo ks mp₂ F (decE w)).run a =
+              .ok ((b₃, mp₃), a) ∧ r = (if b₃ then 1 else 0) ∧ apdMR m1 mp₃ ∧ ApdFr m₂ m1)))) := by
+  cases h1 : apdGoW n m o l (f - 1) x with
+  | none => rw [h1] at hn; simp [apdL1] at hn
+  | some p1 =>
+    obtain ⟨r1, m₀⟩ := p1
+    rw [h1, apdL1_some] at hn
+    obtain ⟨b₁, mp₁, hr1, hb1, hM1, hf1⟩ := ih m m₀ o l (f - 1) x r1 mp ks hA hps hx hM h1
+    rw [hF1] at hr1
+    refine ⟨b₁, mp₁, m₀, hr1, hM1, hf1, ?_⟩
+    by_cases hz : r1 ≠ 0
+    · rw [if_pos hz] at hn
+      have hb : b₁ = true := by revert hb1 hz; cases b₁ <;> simp
+      subst hb
+      cases h2 : apdGoW n m₀ o l (f - 1) y with
+      | none => rw [h2] at hn; simp [apdL2] at hn
+      | some p2 =>
+        obtain ⟨r2, m₂⟩ := p2
+        rw [h2, apdL2_some] at hn
+        obtain ⟨b₂, mp₂, hr2, hb2, hM2, hf2⟩ := ih m₀ m₂ o l (f - 1) y r2 mp₁ ks
+          (apdFrame_arena hf1 hA) (nmsR_congr (apdFrame_iw hf1) hps) hy hM1 h2
+        rw [hF1] at hr2
+        refine Or.inr ⟨rfl, b₂, mp₂, m₂, hr2, hM2, hf2, ?_⟩
+        by_cases hz2 : r2 ≠ 0
+        · rw [if_pos hz2] at hn
+          have hb : b₂ = true := by revert hb2 hz2; cases b₂ <;> simp
+          subst hb
+          have hf12 := hf1.trans hf2
+          obtain ⟨b₃, mp₃, hr3, hb3, hM3, hf3⟩ := ih m₂ m1 o l (f - 1) w r mp₂ ks
+            (apdFrame_arena hf12 hA) (nmsR_congr (apdFrame_iw hf12) hps) hw hM2 hn
+          rw [hF1] at hr3
+          exact Or.inr ⟨rfl, b₃, mp₃, hr3, hb3, hM3, hf3⟩
+        · rw [if_neg hz2] at hn
+          simp only [ne_eq, Decidable.not_not] at hz2
+          subst hz2
+          simp only [Option.some.injEq, Prod.mk.injEq] at hn
+          obtain ⟨rfl, rfl⟩ := hn
+          have hb : b₂ = false := by revert hb2; cases b₂ <;> simp
+          exact Or.inl ⟨hb, rfl, rfl⟩
+    · rw [if_neg hz] at hn
+      simp only [ne_eq, Decidable.not_not] at hz
+      subst hz
+      simp only [Option.some.injEq, Prod.mk.injEq] at hn
+      obtain ⟨rfl, rfl⟩ := hn
+      have hb : b₁ = false := by revert hb1; cases b₁ <;> simp
+      exact Or.inl ⟨hb, rfl, rfl⟩
+
+/-- The tail of every node: the final `put` records the answer. -/
+theorem apdFinish {m1 m2 : Mem} (h : Word) (hh : H h) (ks : List ConLeche.Name)
+    (mp mp1 : Std.HashMap EIdx Bool) (F : Nat) (v : ENodeView) (b : Bool) (r : Word)
+    (hv : a.store.view (decE h) = some v) (hmiss : mp[decE h]? = none)
+    (harm : (apdArm ks mp F v).run a = .ok ((b, mp1), a)) (hr : r = if b then 1 else 0)
+    (hM1 : apdMR m1 mp1) (hset : msetG apdSch m1 h 0 r = some m2) :
+    (ConRon.Arena.allLevelParamsDefinedGo ks mp (F + 1) (decE h)).run a =
+        .ok ((b, mp1.insert (decE h) b), a) ∧ apdMR m2 (mp1.insert (decE h) b) ∧ ApdFr m1 m2 := by
+  refine ⟨?_, ?_, ?_⟩
+  · rw [apdTwin_node ks mp F (decE h) a v hv hmiss]
+    simp only [StateT.run_bind, harm, except_ok_bind]
+    rfl
+  · exact memoRV_set apdSch apdSch_wf bmKey apdVR apdVR_stable m1 mp1 hM1 h 0 r ⟨hh, rfl⟩ b hr m2 hset
+  · exact (msetG_frame apdSch apdSch_wf m1 m2 h 0 r hset).mono (by simp [apdSch]) (by simp [apdSch])
+
+include env in
+/-- **The node arms**: the model's arms against the twin's. -/
+theorem apdNode_ok (n : Nat) (ih : ApdGoOK a n) (m m1 : Mem) (o l f : Word) (F : Nat) (h : Word)
+    (vl : List Word) (v : ENodeView) (r : Word) (mp : Std.HashMap EIdx Bool)
+    (ks : List ConLeche.Name) (hF1 : (f - 1).toNat = F) (hvr : ViewR vl v)
+    (hv : a.store.view (decE h) = some v) (hA : ArenaR m a)
+    (hps : NmsR (nameN a.store.lss.ls.ns) m IW o l ks) (hM : apdMR m mp)
+    (hn : apdNodeW n m o l f (vl.headD 0) (vl.tail.headD 0) (vl.tail.tail.headD 0)
+      (vl.tail.tail.tail.headD 0) = some (r, m1)) :
+    ∃ b mp1, (apdArm ks mp F v).run a = .ok ((b, mp1), a) ∧ r = (if b then 1 else 0) ∧
+      apdMR m1 mp1 ∧ ApdFr m m1 := by
+  cases v with
+  | bvar i =>
+    simp only [ViewR] at hvr
+    obtain ⟨hg, -⟩ := hvr
+    rw [apdNodeW_leaf n m o l f _ _ _ _ (by rw [hg]; decide) (by rw [hg]; decide)
+      (by rw [hg]; decide) (by rw [hg]; decide) (by rw [hg]; decide) (by rw [hg]; decide)] at hn
+    simp only [Option.some.injEq, Prod.mk.injEq] at hn
+    obtain ⟨rfl, rfl⟩ := hn
+    exact ⟨true, mp, rfl, rfl, hM, MemFrame.refl _ _ _⟩
+  | lit i =>
+    simp only [ViewR] at hvr
+    rw [apdNodeW_leaf n m o l f _ _ _ _ (by rw [hvr]; decide) (by rw [hvr]; decide)
+      (by rw [hvr]; decide) (by rw [hvr]; decide) (by rw [hvr]; decide) (by rw [hvr]; decide)] at hn
+    simp only [Option.some.injEq, Prod.mk.injEq] at hn
+    obtain ⟨rfl, rfl⟩ := hn
+    exact ⟨true, mp, rfl, rfl, hM, MemFrame.refl _ _ _⟩
+  | sort u =>
+    simp only [ViewR, getD1_eq'] at hvr
+    obtain ⟨hg, hx, hdx⟩ := hvr
+    rw [apdNodeW_sort n m o l f _ _ _ _ hg] at hn
+    cases e : apdW IW n m (vl.tail.headD 0) o l with
+    | none => rw [e] at hn; simp [apdR1] at hn
+    | some y =>
+      rw [e, apdR1_some] at hn
+      simp only [Option.some.injEq, Prod.mk.injEq] at hn
+      obtain ⟨rfl, rfl⟩ := hn
+      obtain ⟨L, hL⟩ := env.sort (decE h) u hv
+      have hy := apd_sort_ok hA env n o l _ y ks hps hx L (by rw [hdx]; exact hL) e
+      refine ⟨L.allParamsDefined ks, mp, ?_, hy, hM, MemFrame.refl _ _ _⟩
+      simp only [apdArm, StateT.run_bind, readLevel_run a u L hL, except_ok_bind]
+      rfl
+  | const nn us =>
+    simp only [ViewR, getD1_eq', getD2_eq] at hvr
+    obtain ⟨hg, -, -, hy, hdy⟩ := hvr
+    rw [apdNodeW_const n m o l f _ _ _ _ hg] at hn
+    obtain ⟨Ls, hL⟩ := env.constLs (decE h) nn us hv
+    have hL' : denoteLs a.store.lss (decI (vl.tail.tail.headD 0)) = some Ls := by rw [hdy]; exact hL
+    obtain ⟨rfl, hz⟩ := apd_const_ok hA env n o l _ r ks m1 hps hy Ls hL' hn
+    refine ⟨Ls.all (ConLeche.Level.allParamsDefined ks), mp, ?_, hz, hM, MemFrame.refl _ _ _⟩
+    simp only [apdArm, StateT.run_bind, readLevels_run a us Ls hL, except_ok_bind]
+    rfl
+  | fvar i ty =>
+    simp only [ViewR, getD1_eq', getD2_eq] at hvr
+    obtain ⟨hg, -, hy, hdy⟩ := hvr
+    subst hdy
+    rw [apdNodeW_fvar n m o l f _ _ _ _ hg] at hn
+    obtain ⟨b, mp', hr, hb, hM', hf⟩ := ih m m1 o l (f - 1) _ r mp ks hA hps hy hM hn
+    rw [hF1] at hr
+    exact ⟨b, mp', hr, hb, hM', hf⟩
+  | proj s i e =>
+    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    obtain ⟨hg, -, -, -, hw, hdw⟩ := hvr
+    subst hdw
+    rw [apdNodeW_proj n m o l f _ _ _ _ hg] at hn
+    obtain ⟨b, mp', hr, hb, hM', hf⟩ := ih m m1 o l (f - 1) _ r mp ks hA hps hw hM hn
+    rw [hF1] at hr
+    exact ⟨b, mp', hr, hb, hM', hf⟩
+  | app f' x' =>
+    simp only [ViewR, getD1_eq', getD2_eq] at hvr
+    obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
+    subst hdx hdy
+    rw [apdNodeW_bin n m o l f _ _ _ _ (Or.inl hg)] at hn
+    obtain ⟨b₁, mp₁, m₀, h1, hM₀, hf₀, hc⟩ := apdBin_ok n ih m m1 o l f F _ _ r mp ks hF1 hx hy hA hps hM hn
+    rcases hc with ⟨rfl, rfl, rfl⟩ | ⟨rfl, b₂, mp₂, h2, hr, hM2, hf2⟩
+    · refine ⟨false, mp₁, ?_, rfl, hM₀, hf₀⟩
+      simp only [apdArm, StateT.run_bind, h1, except_ok_bind, Bool.false_eq_true, Bool.not_false, Bool.not_true, ↓reduceIte]; rfl
+    · refine ⟨b₂, mp₂, ?_, hr, hM2, hf₀.trans hf2⟩
+      simp only [apdArm, StateT.run_bind, h1, h2, except_ok_bind, Bool.false_eq_true, Bool.not_false, Bool.not_true, ↓reduceIte]
+  | lam t b' =>
+    simp only [ViewR, getD1_eq', getD2_eq] at hvr
+    obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
+    subst hdx hdy
+    rw [apdNodeW_bin n m o l f _ _ _ _ (Or.inr (Or.inl hg))] at hn
+    obtain ⟨b₁, mp₁, m₀, h1, hM₀, hf₀, hc⟩ := apdBin_ok n ih m m1 o l f F _ _ r mp ks hF1 hx hy hA hps hM hn
+    rcases hc with ⟨rfl, rfl, rfl⟩ | ⟨rfl, b₂, mp₂, h2, hr, hM2, hf2⟩
+    · refine ⟨false, mp₁, ?_, rfl, hM₀, hf₀⟩
+      simp only [apdArm, StateT.run_bind, h1, except_ok_bind, Bool.false_eq_true, Bool.not_false, Bool.not_true, ↓reduceIte]; rfl
+    · refine ⟨b₂, mp₂, ?_, hr, hM2, hf₀.trans hf2⟩
+      simp only [apdArm, StateT.run_bind, h1, h2, except_ok_bind, Bool.false_eq_true, Bool.not_false, Bool.not_true, ↓reduceIte]
+  | forallE t b' =>
+    simp only [ViewR, getD1_eq', getD2_eq] at hvr
+    obtain ⟨hg, hx, hdx, hy, hdy⟩ := hvr
+    subst hdx hdy
+    rw [apdNodeW_bin n m o l f _ _ _ _ (Or.inr (Or.inr hg))] at hn
+    obtain ⟨b₁, mp₁, m₀, h1, hM₀, hf₀, hc⟩ := apdBin_ok n ih m m1 o l f F _ _ r mp ks hF1 hx hy hA hps hM hn
+    rcases hc with ⟨rfl, rfl, rfl⟩ | ⟨rfl, b₂, mp₂, h2, hr, hM2, hf2⟩
+    · refine ⟨false, mp₁, ?_, rfl, hM₀, hf₀⟩
+      simp only [apdArm, StateT.run_bind, h1, except_ok_bind, Bool.false_eq_true, Bool.not_false, Bool.not_true, ↓reduceIte]; rfl
+    · refine ⟨b₂, mp₂, ?_, hr, hM2, hf₀.trans hf2⟩
+      simp only [apdArm, StateT.run_bind, h1, h2, except_ok_bind, Bool.false_eq_true, Bool.not_false, Bool.not_true, ↓reduceIte]
+  | letE t v' b' =>
+    simp only [ViewR, getD1_eq', getD2_eq, getD3_eq] at hvr
+    obtain ⟨hg, hx, hdx, hy, hdy, hw, hdw⟩ := hvr
+    subst hdx hdy hdw
+    rw [apdNodeW_let n m o l f _ _ _ _ hg] at hn
+    obtain ⟨b₁, mp₁, m₀, h1, hM₀, hf₀, hc⟩ :=
+      apdLet_ok n ih m m1 o l f F _ _ _ r mp ks hF1 hx hy hw hA hps hM hn
+    rcases hc with ⟨rfl, rfl, rfl⟩ | ⟨rfl, b₂, mp₂, m₂, h2, hM2, hf2, hc2⟩
+    · refine ⟨false, mp₁, ?_, rfl, hM₀, hf₀⟩
+      simp only [apdArm, StateT.run_bind, h1, except_ok_bind, Bool.false_eq_true, Bool.not_false, Bool.not_true, ↓reduceIte]; rfl
+    · rcases hc2 with ⟨rfl, rfl, rfl⟩ | ⟨rfl, b₃, mp₃, h3, hr, hM3, hf3⟩
+      · refine ⟨false, mp₂, ?_, rfl, hM2, hf₀.trans hf2⟩
+        simp only [apdArm, StateT.run_bind, h1, h2, except_ok_bind, Bool.false_eq_true, Bool.not_false, Bool.not_true, ↓reduceIte]; rfl
+      · refine ⟨b₃, mp₃, ?_, hr, hM3, (hf₀.trans hf2).trans hf3⟩
+        simp only [apdArm, StateT.run_bind, h1, h2, h3, except_ok_bind, Bool.false_eq_true, Bool.not_false, Bool.not_true, ↓reduceIte]
+
+end step
