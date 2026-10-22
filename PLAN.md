@@ -160,6 +160,7 @@ per-function separation logic.
   whose statements are already fixed. Keep it shallow: at most about 3 helpers at a time. Larger independent
   work should become a top-level lane, so the coordinator and the dashboard can see it. Name helper worktrees
   `<lane>-<suffix>`.
+- **Commit work in progress often.** Commit to your own branch at least every ~30 minutes and before every long build, even if it doesn't build yet (WIP commits are fine; squash nothing). Machine restarts and rate limits have lost uncommitted work twice. Landing on master can stay less frequent, but keep landings small: one function family or one fix per landing.
 - **Velocity log.** Every lane, at every landing, appends one line to `docs/velocity.csv`:
   `date,lane,model,work_min,overhead_min,note`. `work_min` is time spent on the actual task (design, code,
   proofs). `overhead_min` is the merge red tape: merging master, waiting on builds, re-running tests, fixing

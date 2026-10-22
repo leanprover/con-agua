@@ -10,7 +10,7 @@ import ConAgua.Census.Attr
 (`pe_app`, `pe_lam`, `pe_forall`, `pe_let`, `pe_proj`) together; `pe_const` (names and level
 lists only) and `pe_lit` (no children) by themselves. The twin side: the arms named
 (`promoteE_succ`), `e_view`'s words denote the twin's view (`IndView.lean`'s `eViewW_ok`), a
-literal's record (`lit_rec`).
+literal's record (`promote_lit_rec`).
 -/
 
 open ConRon.Arena
@@ -152,7 +152,7 @@ theorem eViewW_lit {m : Mem} {h : Word} (h8 : (eViewW m h).headD 0 = 8) :
   simp [g8] at h8
 
 /-- A literal handle's record: kind word, pool slice, the literal it holds. -/
-theorem lit_rec {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h.toNat < 2 ^ 32)
+theorem promote_lit_rec {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h.toNat < 2 ^ 32)
     (hv : viewOK m h 2) (hg : h >>> 28 = 8) :
     ∃ k : LitNode, a.store.view (decE h) = some (.lit k.l) ∧ RecRel m (tierW h) (idxW h) k := by
   obtain ⟨k, hk, hkr⟩ := node_of m a h litSch RecRel litH (·.lits) _ hR.lit.2 hv.2
@@ -206,7 +206,7 @@ theorem peLit_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (h : Word) (r : 
   | succ n =>
   obtain ⟨s', rfl, -, hW⟩ := callW_triple (peLit_spec p hp n ⟨m, Locals.init []⟩ h) hc
   simp only at hW
-  obtain ⟨k, hk, hkr⟩ := lit_rec hD.1 hh hv hg
+  obtain ⟨k, hk, hkr⟩ := promote_lit_rec hD.1 hh hv hg
   rw [hk] at hl
   cases hl
   obtain ⟨⟨N⟩ | ⟨st⟩⟩ := k

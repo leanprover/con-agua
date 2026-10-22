@@ -59,6 +59,12 @@ BIG_WORDS = 1 << 25        # words per array on the retry after an error
 TRACE_MAX_BYTES = 1 << 20  # the tracing interpreter on l-error fixtures up to this size
 TRACE_WORDS = 1 << 18
 
+# the real con-ron binary (the Rust checker, built from the vendored revision: DESIGN.md, lane
+# `integrate`, "A second reference"); `$CON_RON` overrides
+CON_RON = os.environ.get("CON_RON", os.path.join(ROOT, "_tmp", "ref", "con-ron-integrate", "target", "release", "con-ron"))
+T_CONRON = 120      # seconds per con-ron run
+T_PERF = 120        # seconds per `perf stat` run
+
 ENTRIES = ["check", "check_np"]
 # further roots of the assembled program (test entries and the functions `e2e-diff` runs)
 ROOTS = ENTRIES + ["e2e_front", "whnf", "whnf_core", "infer"]
@@ -140,7 +146,13 @@ class Guard:
 
     def run(self, cmd, timeout, env=None):
         """Returns (status, stdout): status is 'ok', 'timeout' or 'memout'."""
-        p = subprocess.Popen(["nice", "-n", "10"] + cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+        st, out, _ = self.run3(cmd, timeout, env)
+        return st, out
+
+    def run3(self, cmd, timeout, env=None, stderr=False):
+        """Returns (status, stdout, exit code)."""
+        p = subprocess.Popen(["nice", "-n", "10"] + cmd, stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT if stderr else subprocess.DEVNULL,
                              text=True, start_new_session=True, env=env)
         with self.lock:
             self.live[p.pid] = True
@@ -155,7 +167,7 @@ class Guard:
             del self.live[p.pid]
         if p.pid in self.killed:
             st = self.killed.pop(p.pid)
-        return st, (out or "").strip()
+        return st, (out or "").strip(), p.returncode
 
 
 # ---------------------------------------------------------------- 1. assemble
@@ -364,6 +376,47 @@ def write_prog(asm, path):
             fh.write(f"stub {g} {np_} {code}\n")
 
 
+def write_checker(path):
+    """The checker `L.Checker.checkerProg` (`ConAgua/Checker/Prog.lean`) and the test entries of
+    `ConAgua/E2E/Check.lean`, as a program file (`L.E2E.writeChecker`)."""
+    src = os.path.join(ROOT, "ConAgua", "E2E", "WriteRun.lean")
+    with open(src, "w") as fh:
+        fh.write(f"import ConAgua.E2E.Check\n#eval L.E2E.writeChecker \"{path}\"\n")
+    r = lake("env", "lean", src, check=False)
+    os.remove(src)
+    if r.returncode != 0:
+        sys.exit(f"writeChecker failed:\n{(r.stdout + r.stderr)[-4000:]}")
+
+
+def write_conron_pins(path, n):
+    """`natOpPinSets.take n` in con-ron's `con-ron-pins/1` format (`ConRon.Dump.dumpPins`), for
+    `con-ron --pins FILE`: the three references run at one pin list."""
+    src = os.path.join(ROOT, "ConAgua", "E2E", "PinsRun.lean")
+    with open(src, "w") as fh:
+        fh.write("import ConRon.Dump.Pins\n"
+                 f"#eval IO.FS.writeFile \"{path}\" (ConRon.Dump.dumpPins (ConLeche.natOpPinSets.take {n}))\n")
+    r = lake("env", "lean", src, check=False)
+    os.remove(src)
+    if r.returncode != 0:
+        sys.exit(f"writing the con-ron pins failed:\n{(r.stdout + r.stderr)[-4000:]}")
+
+
+def asm_of_prog(path):
+    """The report's view of a program file: its functions, its stubs (code, parameters), callers."""
+    fns, stubs, callers = {}, {}, collections.defaultdict(set)
+    for line in open(path, encoding="utf-8"):
+        w = line.rstrip("\n").split(" ", 4)
+        if w[0] == "fn":
+            fns[w[1]] = w[4]
+        elif w[0] == "stub":
+            stubs[w[1]] = (int(w[3]), int(w[2]), [])
+    for f, text in fns.items():
+        for g, _, _ in calls_of(text):
+            callers[g].add(f)
+    return {"reach": set(fns) | set(stubs), "stubs": stubs, "callers": callers, "conflicts": [],
+            "conflicts_unreached": 0, "arity": [], "patched": [], "nbind": len(fns) + len(stubs)}
+
+
 # ---------------------------------------------------------------- 2. compile
 
 def compile_entry(prog, entry):
@@ -503,9 +556,13 @@ def report(res, asm, compiled, clashes, args, t0):
               f"{now}, `{rev}`, {len(res)} fixtures, {time.time() - t0:.0f} s. Never a merge gate. "
               "How it works and how to read it: DESIGN.md, \"End-to-end runs (lane `e2e`)\".", ""]
     lines += ["## Assembly", "",
-              f"* {asm['nbind']} function names bound in the lanes' modules; the program reachable from "
-              f"`check`/`check_np` has {len(asm['reach']) - len(asm['stubs'])} functions with L code and "
-              f"**{len(asm['stubs'])} without** (e2e stubs, below).",
+              (f"* `L.Checker.checkerProg` (`ConAgua/Checker/Prog.lean`, `scripts/checker_prog.py`) and the "
+               f"test entries of `ConAgua/E2E/Check.lean`: {len(asm['reach']) - len(asm['stubs'])} functions "
+               f"with L code, **{len(asm['stubs'])} stubs** (`checkerStubs`: they abort; below)."
+               if not args.text_dump else
+               f"* {asm['nbind']} function names bound in the lanes' modules; the program reachable from "
+               f"`check`/`check_np` has {len(asm['reach']) - len(asm['stubs'])} functions with L code and "
+               f"**{len(asm['stubs'])} without** (e2e stubs, below)."),
               f"* Compiled: " + "; ".join(f"`{e}`: {('ok, ' + c[1]) if c[0] else 'FAILED: ' + c[1][:300]}" for e, c in compiled.items()), ""]
     if asm["patched"]:
         lines += ["* Bound by `ConAgua/E2E/Check.lean` (ROM instances and e2e patches, see there): "
@@ -568,6 +625,7 @@ def report(res, asm, compiled, clashes, args, t0):
                       "| fixture | compiled | `L.run` |", "|---|---|---|"]
             lines += [f"| `{r['id']}` | {r[entry]['l']} | {r[entry]['interp']} |" for r in cmp_bugs[:40]]
         lines += [""]
+    lines += conron_report(res)
     if any("diff" in r for r in res):
         lines += diff_report(res)
     lines += ["## Stubs (called, no L code)", "",
@@ -656,6 +714,50 @@ def diff_report(res):
     return lines + [""]
 
 
+def perf_instr(guard, cmd, env=None):
+    """`instructions:u` of one run (`perf stat`), or None."""
+    st, out, rc = guard.run3(["perf", "stat", "-x,", "-e", "instructions:u", "--"] + cmd, T_PERF, env=env, stderr=True)
+    if st != "ok":
+        return None
+    for line in out.splitlines():
+        w = line.split(",")
+        if len(w) > 2 and w[2].startswith("instructions") and w[0].isdigit():
+            return int(w[0])
+    return None
+
+
+def conron_report(res):
+    """The three references side by side (`check`), and instructions:u where both accept."""
+    rs = [r for r in res if "conron" in r]
+    if not rs:
+        return []
+    lines = ["## `check` against both references: `e2e-ref` (the twin, compiled by Lean) and `con-ron` (the Rust binary)", "",
+             "`con-ron --jobs=1 --pins P FILE` at the vendored revision (exit codes: 0 accept, 1 reject, 2 decline, "
+             "3 error; `P`: the same pin list as the others, `natOpPinSets.take 1` in its `con-ron-pins/1` format), `e2e-ref FILE --pins=1`, and the compiled `check`. Accept is the "
+             "verdict compared.", "",
+             "| con-ron | e2e-ref | L `check` | fixtures |", "|---|---|---|---:|"]
+    def acc(v):
+        return "accept" if v == "accept" else ("–" if v in ("timeout", "memout", "crash") or v.startswith("missing") else "no")
+    cnt = collections.Counter((r["conron"], r["check"]["ref"].split(" ")[0], acc(r["check"]["l"])) for r in rs)
+    lines += [f"| {a} | {b} | {c} | {n} |" for (a, b, c), n in sorted(cnt.items(), key=lambda x: -x[1])]
+    three = sum(1 for r in rs if acc(r["conron"]) == acc(r["check"]["ref"].split(" ")[0]) == acc(r["check"]["l"]) != "–")
+    bad = [r for r in rs if acc(r["conron"]) != acc(r["check"]["ref"].split(" ")[0]) and "–" not in (acc(r["conron"]), acc(r["check"]["ref"].split(" ")[0]))]
+    lines += ["", f"* All three agree on accept/not on **{three}** of {len(rs)} fixtures; con-ron and `e2e-ref` "
+              f"disagree on **{len(bad)}**" + (":" if bad else ".")]
+    lines += [f"  * `{r['id']}`: con-ron {r['conron']}, e2e-ref {r['check']['ref']}" for r in bad[:30]]
+    ps = [r for r in rs if r.get("perf") and r["perf"]["L"] and r["perf"]["con-ron"]]
+    if ps:
+        import math
+        gm = math.exp(sum(math.log(r["perf"]["L"] / r["perf"]["con-ron"]) for r in ps) / len(ps))
+        lines += ["", f"### `instructions:u`, compiled `check` vs `con-ron --jobs=1` (fixtures both accept; one run each)", "",
+                  f"Geometric mean of the ratio L / con-ron over {len(ps)} fixtures: **{gm:.2f}**.", "",
+                  "| fixture | bytes | L | con-ron | ratio |", "|---|---:|---:|---:|---:|"]
+        for r in sorted(ps, key=lambda r: -r["size"])[:40]:
+            lines.append(f"| `{r['id']}` | {r['size']} | {r['perf']['L']:,} | {r['perf']['con-ron']:,} | "
+                         f"{r['perf']['L'] / r['perf']['con-ron']:.2f} |")
+    return lines + [""]
+
+
 def same_outcome(a, b):
     return a == b or (a.startswith("missing") and b.startswith("missing") and a == b)
 
@@ -672,6 +774,10 @@ def main():
     ap.add_argument("--diff-sample", type=int, default=24, help="fixtures for e2e-diff (L.run is slow: ~3 min each)")
     ap.add_argument("--interp-sample", type=int, default=12, help="fixtures for L.run of check_np")
     ap.add_argument("--assemble-only", action="store_true", help="assemble and compile, run nothing")
+    ap.add_argument("--text-dump", action="store_true",
+                    help="assemble from the lanes' modules through text (the fallback; default: checkerProg)")
+    ap.add_argument("--no-conron", action="store_true", help="skip the con-ron binary reference")
+    ap.add_argument("--no-perf", action="store_true", help="skip instructions:u on fixtures both accept")
     ap.add_argument("--write", action="store_true", help="write docs/e2e.md")
     ap.add_argument("--csv", action="store_true", help="append to docs/e2e.csv")
     args = ap.parse_args()
@@ -680,12 +786,18 @@ def main():
     if not args.no_build:
         log("building")
         lake("build")
-        lake("build", "ConAgua.E2E.Check", "ConAgua.E2E.Dump", "e2e-l", "e2e-ref", "e2e-diff")
-    log("dumping")
-    dumps, clashes = dump_sets(all_modules())
-    asm = assemble(dumps)
+        lake("build", "ConAgua.E2E.Check", "ConRon.Dump.Pins", "e2e-l", "e2e-ref", "e2e-diff")
     prog = os.path.join(WORK, "checker.prog")
-    write_prog(asm, prog)
+    if args.text_dump:
+        # the old path: every binding of the lanes' modules, through text (no `checkerProg` needed)
+        log("dumping")
+        dumps, clashes = dump_sets(all_modules())
+        asm = assemble(dumps)
+        write_prog(asm, prog)
+    else:
+        log("writing checkerProg")
+        write_checker(prog)
+        asm, clashes = asm_of_prog(prog), []
     log(f"program: {len(asm['reach'])} functions, {len(asm['stubs'])} stubs")
     compiled = {e: compile_entry(prog, e) for e in ENTRIES}
     for e, (exe, msg) in compiled.items():
@@ -715,6 +827,16 @@ def main():
     def spread(k):
         return set(small[i * len(small) // k] for i in range(k)) if k and small else set()
     diff_set, interp_set = spread(args.diff_sample), spread(args.interp_sample)
+
+    conron_key = None
+    conron_pins = os.path.join(WORK, f"pins{npins}.con-ron-pins")
+    if not args.no_conron and os.path.exists(CON_RON):
+        st_ = os.stat(CON_RON)
+        conron_key = f"{st_.st_size}-{int(st_.st_mtime)}-{npins}"
+        if not os.path.exists(conron_pins):
+            write_conron_pins(conron_pins, npins)
+    elif not args.no_conron:
+        log(f"no con-ron binary at {CON_RON}: skipping that reference")
 
     def one(f):
         fid, path, exp = f
@@ -756,6 +878,19 @@ def main():
                 st, out = guard.run([os.path.join(BIN, "e2e-l"), "run", prog, entry, path, str(INTERP_WORDS)], T_INTERP, env=env)
                 d["interp"] = interp_outcome(out, st)
             r[entry] = d
+        if conron_key:
+            ck = f"conron:{conron_key}:{h}"
+            if ck in cache:
+                cr = cache[ck]
+            else:
+                st, out, rc = guard.run3([CON_RON, "--jobs=1", "--pins", conron_pins, path], T_CONRON)
+                cr = {0: "accept", 1: "reject", 2: "decline", 3: "error"}.get(rc, f"exit {rc}") if st == "ok" else st
+                if st == "ok":
+                    cache[ck] = cr
+            r["conron"] = cr
+            if not args.no_perf and cr == "accept" and r["check"]["l"] == "accept":
+                r["perf"] = {"L": perf_instr(guard, [compiled["check"][0], path], env),
+                             "con-ron": perf_instr(guard, [CON_RON, "--jobs=1", "--pins", conron_pins, path])}
         if not args.no_diff and fid in diff_set:
             st, out = guard.run([os.path.join(BIN, "e2e-diff"), prog, path, str(DIFF_N), str(DIFF_WORDS),
                                  str(min(max_id(path) + 2, DIFF_BIG_WORDS))], T_DIFF, env=env)

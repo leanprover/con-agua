@@ -358,7 +358,7 @@ theorem inferPisLeaf_any (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb
       (inferPisLeaf (coreKnot (decMode mode) fe id F) fe d.toNat (decE t) k.toNat fvs (ws.map decI))
       decH s₀ a₀ dn vis fe M eb
   | 0, _, _, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ =>
-      CoreSpec.zero p _ _ _ _ s₀ a₀ dn vis fe M eb _
+      CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
   | n + 1, hk, F, hF, hn, s₀, a₀, dn, vis, fe, M, eb, mode, d, t, k, fo, lo, fvs, ws, hs, ht, hf,
       hftop, hB, hbtop, hws, hdk =>
       inferPisLeaf_refines p hp hq hb hil hbc hcap n (hk.mono (by omega)) F (by omega) (by omega)

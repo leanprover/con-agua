@@ -322,5 +322,11 @@
 "model": "opus",
 "status": "running",
 "focus": "One buildable checkerProg: name clashes, call sites, prelude stubs, capacity checks; rerun e2e"
+},
+{
+"lane": "twinaudit",
+"model": "opus",
+"status": "running",
+"focus": "Sparse id tables like IdTable; audit of all deviations from the twin (docs/deviations.md)"
 }
 ]

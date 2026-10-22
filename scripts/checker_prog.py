@@ -1,0 +1,244 @@
+#!/usr/bin/env python3
+"""Generate `ConAgua/Checker/Prog.lean`: the whole checker as one `Prog` (lane `integrate`).
+
+DESIGN.md, "The checker as one program (lane `integrate`)". Steps:
+
+1. Dump every binding of an L function name to a `FunDecl` in the `ConAgua` modules
+   (`ConAgua/E2E/Dump.lean`, through `scripts/e2e.py`'s `dump_sets`).
+2. From `check`, follow the calls. A name bound in `L.Checker.entryProg` (`ConAgua/Checker/Entry.lean`)
+   takes that binding; otherwise the name must have exactly one body among its non-stub bindings
+   (closed bindings first, ROM-parametric lookups instantiated at `romData` second) — several
+   bodies, or a call whose argument count differs from the callee's parameters, is an error.
+   A name with no L code becomes `abortStub n` (listed in the file and in DESIGN.md).
+3. Ask `ConAgua/Checker/Sources.lean` for each chosen binding's Lean term and modules, and write
+   the file: the imports, `checkerProg`, `checkerStubs`, and `Prog.wf` by `Prog.wf_of_wfFast`.
+
+Usage: scripts/checker_prog.py [--no-build] [--check]   (`--check`: fail if the file would change)
+"""
+import argparse
+import collections
+import os
+import re
+import subprocess
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import e2e  # noqa: E402
+
+ROOT = e2e.ROOT
+OUT = os.path.join(ROOT, "ConAgua", "Checker", "Prog.lean")
+ENTRY_SOURCES = ["L.Checker.entryProg", "L.Checker.preludeProg"]
+PRE = "pre_"
+# the frontend's input and parse-state id tables (`ConAgua/Checker/Prelude.lean`, `preFn`): the
+# dense arrays 64-66, the sparse arrays 72-74, their `CTL` words 64-72
+TOUCH = re.compile(r"\((?:l8|s8) 0 |\(n8 0\)|\((?:l64|s64) (?:6[4-6]|7[2-4]) |\(n64 (?:6[4-6]|7[2-4])\)"
+                   r"|\((?:l64|s64) 1 \(c (?:6[4-9]|7[0-2])\)")
+ENTRY = "check"
+# modules never imported: the benchmarks (they clash with `NatBits` on `L.Arena.bv`), the generated
+# file itself and what imports it
+SKIP = re.compile(r"^ConAgua\.(Arena\.(LiftBench|Inst1Bench|WalkBench)\w*|Compiler\.WFAllBench|Checker\.(Prog|Wf)|E2E\.Check)$")
+
+
+def assemble(dumps):
+    binds, bodies, data_list, errs = e2e.read_dumps(dumps)
+    chosen, src_of, problems = {}, {}, []
+
+    def choose(name):
+        bs = binds.get(name, [])
+        mine = [(s, k) for s, k, st in bs if s in ENTRY_SOURCES]
+        if mine:
+            return mine[0]
+        real = [(s, k) for s, k, st in bs if not st]
+        if not real:
+            return None
+        closed = [(s, k) for s, k in real if not s.endswith("@rom")]
+        pool = closed or real
+        keys = collections.OrderedDict()
+        for s, k in pool:
+            keys.setdefault(k, []).append(s)
+        if len(keys) > 1:
+            problems.append(f"several bodies for `{name}`: " + "; ".join(
+                f"{k}: {', '.join(sorted(ss)[:3])}" for k, ss in keys.items()))
+        k, ss = next(iter(keys.items()))
+        # prefer a `Prog` constant or a lookup in a plain constant over a structure's recursor
+        ss = sorted(ss, key=lambda s: (bool(re.search(r"\.(rec|recOn|casesOn|mk)$", s)), len(s), s))
+        return ss[0], k
+
+    reach, todo, stubs = [], [ENTRY], {}
+    seen = set()
+    while todo:
+        f = todo.pop()
+        if f in seen:
+            continue
+        seen.add(f)
+        c = choose(f)
+        if c is None:
+            np_ = {n for _, n in stubs.get(f, set())}
+            stubs[f] = None
+            continue
+        src_of[f], chosen[f] = c
+        reach.append(f)
+        for g, nargs, nres in e2e.calls_of(bodies[c[1]][2]):
+            todo.append(g[len(PRE):] if g.startswith(PRE) else g)
+    # the frontend copied onto the prelude's arrays: from `front_run`, every function that touches
+    # the input or the id tables, or calls one that does
+    calls = {f: [g for g, _, _ in e2e.calls_of(bodies[chosen[f]][2])] for f in reach}
+    fr, todo2 = set(), ["front_run"]
+    while todo2:
+        f = todo2.pop()
+        if f in fr or f not in chosen:
+            continue
+        fr.add(f)
+        todo2 += calls[f]
+    pre = {f for f in fr if TOUCH.search(bodies[chosen[f]][2])}
+    while True:
+        more = {f for f in fr if f not in pre and any(g in pre for g in calls[f])}
+        if not more:
+            break
+        pre |= more
+    for f in reach:
+        for g in calls[f]:
+            if g.startswith(PRE) and g[len(PRE):] not in pre:
+                problems.append(f"`{f}` calls `{g}`, but `{g[len(PRE):]}` is not a copied frontend function")
+    # arities
+    want = collections.defaultdict(set)
+    for f in reach:
+        for g, nargs, _ in e2e.calls_of(bodies[chosen[f]][2]):
+            if g.startswith(PRE):
+                g = g[len(PRE):]
+            want[g].add(nargs)
+            if g in chosen and bodies[chosen[g]][0] != nargs:
+                problems.append(f"`{f}` calls `{g}` with {nargs} arguments, `{g}` takes {bodies[chosen[g]][0]}")
+    for g in stubs:
+        if len(want[g]) != 1:
+            problems.append(f"stub `{g}` called with {sorted(want[g])} arguments")
+        stubs[g] = min(want[g])
+    return sorted(reach), src_of, stubs, sorted(pre), problems, errs
+
+
+def sources(src_of):
+    work = os.path.join(e2e.WORK, "checker")
+    os.makedirs(work, exist_ok=True)
+    inp, out = os.path.join(work, "sources.in"), os.path.join(work, "sources.out")
+    with open(inp, "w") as fh:
+        for f, s in sorted(src_of.items()):
+            fh.write(f"{s} {f}\n")
+    mods = [m for m in e2e.all_modules() if not SKIP.match(m)]
+    src = os.path.join(ROOT, "ConAgua", "Checker", "SourcesRun.lean")
+    with open(src, "w") as fh:
+        fh.write("".join(f"import {m}\n" for m in mods))
+        fh.write(f"import ConAgua.Checker.Sources\n#eval L.Checker.writeSources \"{inp}\" \"{out}\"\n")
+    r = e2e.lake("env", "lean", src, check=False)
+    os.remove(src)
+    if r.returncode != 0:
+        sys.exit(f"sources failed:\n{(r.stdout + r.stderr)[-4000:]}")
+    res, errs = {}, []
+    for line in open(out, encoding="utf-8"):
+        w = line.rstrip("\n").split(" ", 3)
+        if w[0] == "ok":
+            res[w[1]] = (w[2].split(",") if w[2] else [], w[3])
+        else:
+            errs.append(line.strip())
+    return res, errs
+
+
+HEADER = '''import ConAgua.Compiler.WFFast
+import ConAgua.Checker.Entry
+import ConAgua.Checker.Prelude
+{imports}
+
+/-!
+# The checker: one program (generated by `scripts/checker_prog.py`; do not edit)
+
+`checkerProg` is every L function reachable from `check` (`ConAgua/Checker/Entry.lean`), each bound
+to the `FunDecl` of the lanes' modules: the one body every non-stub binding of the name agrees on
+(`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
+abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
+
+{nfun} functions, {nstub} of them stubs.
+-/
+
+namespace L.Checker
+
+open L L.Compiler
+
+/-- The called functions with no L code yet (each aborts). -/
+def checkerStubs : List String := [{stub_names}]
+
+/-- The frontend functions `builtin_prelude` runs on the prelude's arrays ({npre}; `preFn`,
+`ConAgua/Checker/Prelude.lean`), each bound as `pre_<name>`. -/
+def preNames : List String := [
+  {pre_names}]
+
+def preTree : NTree := nameTree preNames
+
+/-- **The checker.** -/
+def checkerProg : Prog := [
+{entries}]
+
+/-- The table for the arrays the program names (`Prog.wfAuto`'s). -/
+def checkerTab : Tab := Prog.tab checkerProg (Prog.arrs checkerProg).1 (Prog.arrs checkerProg).2
+
+-- the word arrays are the ones `cap_check` checks
+#guard (Prog.arrs checkerProg).2 == wordArrays
+
+/-- **`checkerProg` passes the compiler's static check** (every call resolves, with the callee's
+parameter count; the names are distinct; the frames fit). -/
+theorem checkerProg_wf : Prog.wf checkerTab checkerProg = true :=
+  Prog.wf_of_wfFast (by decide +kernel)
+
+end L.Checker
+'''
+
+
+def lean_str(s):
+    return '"' + s.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--no-build", action="store_true")
+    ap.add_argument("--check", action="store_true")
+    a = ap.parse_args()
+    if not a.no_build:
+        e2e.log("building")
+        e2e.lake("build", "ConAgua.Checker.Sources", "ConAgua.Checker.Entry", "ConAgua.Checker.Prelude", "ConAgua.E2E.Dump")
+    e2e.log("dumping")
+    mods = [m for m in e2e.all_modules() if not SKIP.match(m)]
+    dumps, clashes = e2e.dump_sets(mods)
+    if clashes:
+        for bad, other, decl in clashes:
+            e2e.log(f"CLASH: {bad} vs {other}: {decl}")
+        sys.exit("modules clash on import (fix them first)")
+    reach, src_of, stubs, pre, problems, derrs = assemble(dumps)
+    if problems:
+        for p in problems:
+            e2e.log("PROBLEM: " + p)
+        sys.exit(f"{len(problems)} problems")
+    e2e.log(f"{len(reach)} functions, {len(stubs)} stubs; asking for the sources")
+    res, serrs = sources(src_of)
+    if serrs:
+        for e in serrs:
+            e2e.log(e)
+        sys.exit("sources failed")
+    imports = sorted({m for f in reach for m in res[f][0]} - {"ConAgua.Checker.Entry", "ConAgua.Checker.Prelude"})
+    imports = [m for m in imports if m.startswith("ConAgua.")]
+    entries = [f"  ({lean_str(f)}, {res[f][1]})" for f in reach]
+    entries += [f"  ({lean_str(PRE + f)}, preFn preTree {res[f][1]})" for f in pre]
+    entries += [f"  ({lean_str(g)}, abortStub {n})" for g, n in sorted(stubs.items())]
+    txt = HEADER.format(imports="\n".join(f"import {m}" for m in imports), nfun=len(entries),
+                        nstub=len(stubs), stub_names=", ".join(lean_str(g) for g in sorted(stubs)),
+                        pre_names=",\n  ".join(lean_str(f) for f in pre), npre=len(pre),
+                        entries=",\n".join(entries))
+    old = open(OUT, encoding="utf-8").read() if os.path.exists(OUT) else None
+    if a.check:
+        if old != txt:
+            sys.exit(f"{OUT} is out of date: run scripts/checker_prog.py")
+        return
+    with open(OUT, "w", encoding="utf-8") as fh:
+        fh.write(txt)
+    e2e.log(f"wrote {OUT}: {len(entries)} functions ({len(stubs)} stubs), {len(imports)} imports")
+
+
+if __name__ == "__main__":
+    main()

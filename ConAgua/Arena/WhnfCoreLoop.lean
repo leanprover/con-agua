@@ -70,7 +70,7 @@ theorem coreStep_spec (p : Prog) (hp : p.lookup "whnf_core_step" = some whnfCore
 
 /-! ## The dispatcher refines `whnfCoreStep` -/
 
-theorem coreRef_congr {α : Type} [Inhabited α] {T T' : AM α} {a₀ : AState} {dec : List Word → α}
+theorem whnf_coreRef_congr {α : Type} [Inhabited α] {T T' : AM α} {a₀ : AState} {dec : List Word → α}
     {dn : NIdx → Option ConLeche.Name} {m₀ : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps}
     {eb : Word} {r : List Word} {m : Mem} {ok : List Word → Prop} (h : T.run a₀ = T'.run a₀)
     (h' : CoreRef T' a₀ dec dn m₀ vis fe M eb r m ok) : CoreRef T a₀ dec dn m₀ vis fe M eb r m ok := by
@@ -179,7 +179,7 @@ theorem whnfCoreStep_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤
     have happ := coreApp_refines p hp N (hk.mono (by omega)) F (by omega) (by omega) s a₀ dn vis fe
       MM eb mode cheap d e hs he
     obtain ⟨hok, hA, hres, hrw⟩ := CoreSpec.of_callW happ hca
-    refine coreRef_congr (step_run_app _ _ hv) ⟨hok, hm ▸ hA, ?_, ?_⟩
+    refine whnf_coreRef_congr (step_run_app _ _ hv) ⟨hok, hm ▸ hA, ?_, ?_⟩
     · rw [hres]; simp only [decStep, h0, h1, ↓reduceIte]
     · unfold ResW; rw [← h0, ← h1]; exact hrw
   rw [if_neg g4] at hW
@@ -207,7 +207,7 @@ theorem whnfCoreStep_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤
       (rdW (s.mem.arr64 PJREC) (idxW e * 6 + tierW e * 3 + 1))
       (rdW (s.mem.arr64 PJREC) (idxW e * 6 + tierW e * 3 + 2)) hs he hsn hpe
     obtain ⟨hok, hA, hres, hrw⟩ := CoreSpec.of_callW hpr hca
-    refine coreRef_congr (step_run_proj _ _ _ hv) ⟨hok, hm ▸ hA, ?_, ?_⟩
+    refine whnf_coreRef_congr (step_run_proj _ _ _ hv) ⟨hok, hm ▸ hA, ?_, ?_⟩
     · rw [hres]; simp only [decStep, h0, h1, ↓reduceIte]
     · unfold ResW; rw [← h0, ← h1]; exact hrw
   rw [if_neg g9] at hW
@@ -228,7 +228,7 @@ theorem whnfCoreStep_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤
     have hi := (coreCallees_stub p).inst1 n s a₀ dn vis fe MM eb _ _ 0 hS hbb hvv
     obtain ⟨hok, hA, hres, hrw⟩ := CoreSpec.of_callW hi hca
     have hrun := AM.run_of_ok _ _ hok
-    refine coreRef_congr (step_run_let _ _ _ hv) ?_
+    refine whnf_coreRef_congr (step_run_let _ _ _ hv) ?_
     have hrun' : (instantiate1Fast coreWalkFuel
         (decE (rdW (s.mem.arr64 LEREC) (idxW e * 6 + tierW e * 3 + 2)))
         (decE (rdW (s.mem.arr64 LEREC) (idxW e * 6 + tierW e * 3 + 1))) 0 >>=

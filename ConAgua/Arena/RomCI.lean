@@ -626,7 +626,7 @@ theorem simZ_internAllPins (pins : List ConLeche.NatOpPinSet) (h : AllPinsNoProj
 
 /-! ## `intern_all_pins()` -/
 
-/-- `intern_all_pins()` for the ROM offset `off` of the startup walk's item stream.
+/-- `intern_all_pins_rom()` (the ROM-only pin stage, superseded by `L.Rom.internAllPinsPB`) for the ROM offset `off` of the startup walk's item stream.
 con-ron: none — the offset-generic body of `internAllPinsL` (`Prelude.lean`, which cites the twin). -/
 def internAllPinsAt (off : Word) : FunDecl := lfn () locals (q, z) {
   CTL.u64[132] := 0;
@@ -645,10 +645,10 @@ theorem MemoR.fresh (mem : Mem) (hc : 132 < (mem.arr64 CTL).size) : MemoR (reset
 
 set_option experimental.vcgen true in
 theorem internAllPins_specW (rom : List UInt8) (off : Word) (p : Prog) (hL : ItemsProg rom p)
-    (hp : p.lookup "intern_all_pins" = some (internAllPinsAt off)) (n : Nat) (s₀ : St)
+    (hp : p.lookup "intern_all_pins_rom" = some (internAllPinsAt off)) (n : Nat) (s₀ : St)
     (hs : (s₀.mem.arr64 POOL).size < 2 ^ 63) :
     ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "intern_all_pins" []
+    invoke p (exec p n) "intern_all_pins_rom" []
     ⦃fun _ s' => LocEq s' s₀ ∧ 132 < (s₀.mem.arr64 CTL).size ∧
       ∃ n' q, rclearOK s₀.mem ∧ romItemsW rom n' (resetMem s₀.mem) off = some (q, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
@@ -667,14 +667,14 @@ from `ArenaD` at a filled pin table, the twin's walk succeeds (at the same pin l
 holds after; the result (the interned pin variants) is not built in L. -/
 @[refines_part ConRon.Arena.internAllPins "the store effect"]
 theorem internAllPins_refines (rom : List UInt8) (off : Word) (p : Prog) (hL : ItemsProg rom p)
-    (hp : p.lookup "intern_all_pins" = some (internAllPinsAt off)) (hr : RomOK rom)
+    (hp : p.lookup "intern_all_pins_rom" = some (internAllPinsAt off)) (hr : RomOK rom)
     (pins : List ConLeche.NatOpPinSet) (hnp : AllPinsNoProj)
     (hfit : (itemsAllPins pins).all itemFits = true) (rest : List UInt8)
     (hd : rom.drop off.toNat = encItems [] (itemsAllPins pins) ++ rest)
     (n : Nat) (s₀ : St) (a₀ : AState) (hA : ArenaD s₀.mem a₀) (hP : PinsReadyP a₀)
     (hst : (stkTop s₀.mem).toNat < 2 ^ 61) :
     ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "intern_all_pins" []
+    invoke p (exec p n) "intern_all_pins_rom" []
     ⦃fun _ s' => LocEq s' s₀ ∧ ∃ v a', (internAllPins pins).run a₀ = .ok (v, a') ∧ ArenaD s'.mem a' ∧
       MemFrame ExprA ExprC s₀.mem s'.mem; ⊤⦄ := by
   apply M.triple_of_run

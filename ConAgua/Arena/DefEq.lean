@@ -930,9 +930,9 @@ def structEtaCertGoL : FunDecl :=
   slots := call tower_slots_all(vis, T, EREC.u64[q + 8]);
   if EREC.u64[q + 5] == 0 { return 0 };
   if EREC.u64[q + 6] != c { return 0 };
-  r1 := call reserved_contains(T);
+  r1 := call reserved_contains_w(T);
   if r1 != 0 { return 0 };
-  r2 := call reserved_contains(c);
+  r2 := call reserved_contains_w(c);
   if r2 != 0 { return 0 };
   ep := EREC.u64[q + 7];
   if tn != ep { return 0 };
@@ -1028,7 +1028,7 @@ def structUnitCertL : FunDecl :=
   (to, tn) := call get_app_args(wta);
   CTL.u64[136] := top;
   (lo, uslen) := call ls_node(us2);
-  rc := call reserved_contains(T);
+  rc := call reserved_contains_w(T);
   if EREC.u64[q + 9] != 0 && rc == 0 && tn == EREC.u64[q + 10] && uslen == EREC.u64[q + 3] {
     tb := call infer_io(mode, vis, d, b);
     wtb := call whnf(mode, vis, d, tb);

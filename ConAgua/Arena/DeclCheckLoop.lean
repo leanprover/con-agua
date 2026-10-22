@@ -1,4 +1,4 @@
-import ConAgua.Arena.DeclArmLoop
+import ConAgua.Arena.DeclArmOpaque
 
 /-!
 # `check_decl` refines `checkDecl` at the loop's relation (lane `decls3`)
@@ -39,6 +39,7 @@ structure CheckDeclProg (p : Prog) : Prop where
   qu : p.lookup "check_decl_quot" = some checkDeclQuot
   arm : ArmProg p
   val : ValProg p
+  crp : CrpProg p
 
 /-! ## The arms not proved yet -/
 
@@ -65,9 +66,11 @@ theorem checkDeclDefn_loop (hP : CheckDeclProg p) (cv : IConstantVal) (v : EIdx)
     (h : ConLeche.ReducibilityHint) :
     ArmSpec pins dn ds p "check_decl_defn" (.defnDecl cv v h) := sorry
 
-/-- `check_decl_opaque` (`sorry`: the reduce pin, `check_reduce_pin`). -/
-theorem checkDeclOpaque_loop (hP : CheckDeclProg p) (cv : IConstantVal) (v : EIdx) :
-    ArmSpec pins dn ds p "check_decl_opaque" (.opaqueDecl cv v) := sorry
+/-- `check_decl_opaque` (`DeclArmOpaque.lean`). -/
+theorem checkDeclOpaque_loop (hP : CheckDeclProg p) (hdn : DnInj dn) (cv : IConstantVal)
+    (v : EIdx) : ArmSpec pins dn ds p "check_decl_opaque" (.opaqueDecl cv v) :=
+  fun n s₀ a₀ vis fe pend i hi hd hR =>
+    checkDeclOpaque_loop' hP.arm hP.val hP.crp hP.op pins dn hdn ds n s₀ a₀ vis fe pend i cv v hi hd hR
 
 /-- `check_decl_quot` (`sorry`: the quotient pin, `quot_pin_hit`, `check_basis_decl`). -/
 theorem checkDeclQuot_loop (hP : CheckDeclProg p) (k : ConLeche.QuotKind) (cv : IConstantVal) :
@@ -160,9 +163,9 @@ theorem arm_callW {p : Prog} {pins : List INatOpPinSet} {dn : NIdx → Option Co
   exact ⟨hok, by simpa using hL⟩
 
 /-- **`check_decl` refines `checkDecl`** at the loop's relation, for the front's record kinds
-(through the arms' specs: the theorem arm's is proved, the other four are `sorry`). -/
+(through the arms' specs: the theorem and opaque arms' are proved, the other three `sorry`). -/
 theorem checkDecl_loop {p : Prog} (hP : CheckDeclProg p) (pins : List INatOpPinSet)
-    (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration) :
+    (dn : NIdx → Option ConLeche.Name) (hdn : DnInj dn) (ds : Array IDeclaration) :
     CheckDeclSpec V pins dn ds p := by
   intro n s₀ a₀ vis fe pend i hi hR
   refine triple_post (cd_specW p hP.cd n s₀ i vis) ?_
@@ -201,7 +204,7 @@ theorem checkDecl_loop {p : Prog} (hP : CheckDeclProg p) (pins : List INatOpPinS
     rw [hdecl.1] at h
     simp only [cdSel, show (4 : Word) ≠ 6 by decide, show (4 : Word) ≠ 1 by decide,
       show (4 : Word) ≠ 2 by decide, show (4 : Word) ≠ 3 by decide, if_false, if_true] at h
-    exact arm_callW (checkDeclOpaque_loop pins dn ds hP cv v) hi hd hR h
+    exact arm_callW (checkDeclOpaque_loop pins dn ds hP hdn cv v) hi hd hR h
   | quotDecl k cv =>
     rw [hdecl.1] at h
     simp only [cdSel, show (5 : Word) ≠ 6 by decide, show (5 : Word) ≠ 1 by decide,
