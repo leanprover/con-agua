@@ -1,4 +1,5 @@
 import ConAgua.Arena.StoreLib
+import ConAgua.Arena.SimLib
 import ConAgua.Arena.ImaxStore
 import ConAgua.Arena.LpColRel
 
@@ -260,11 +261,8 @@ theorem internImax_refines (p : Prog) (hpf : p.lookup "imax_find" = some imaxFin
     invoke p (exec p n) "intern_imax" [u, v]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internLNode (.imax (decI u) (decI v))) a₀ ∧
       ImaxR s'.mem (AM.st (internLNode (.imax (decI u) (decI v))) a₀) ∧
-      AM.res (internLNode (.imax (decI u) (decI v))) a₀ = decI (r.headD 0); ⊤⦄ := by
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun (internImax_spec p hpf hpp hp n s₀ u v)
-  subst hs
-  exact ⟨hloc, imintern_correct s.mem a₀ hR u v hu hv _ _ hI⟩
+      AM.res (internLNode (.imax (decI u) (decI v))) a₀ = decI (r.headD 0); ⊤⦄ :=
+  Sim.tripleD (internImax_spec p hpf hpp hp n s₀ u v)
+    (Sim.ofOkD (imintern_correct s₀.mem a₀ hR u v hu hv))
 
 end L.Arena

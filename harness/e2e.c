@@ -10,6 +10,7 @@
      ok R              rdx = 0, any other rax (R in decimal; 1: the frontend rejected a line)
      exhausted         rdx = 1 (fuel or stack)
      missing CODE      rdx = 2 and the DIAG array's word 0 is CODE != 0: a stub was reached
+                       (`ca_diag` = -1: no DIAG array, as in `ConAgua/Checker/AsmEmit.lean`)
      error             rdx = 2 otherwise (an abort or an out-of-bounds access)
 
    Byte array 1, if the program has it, is the pin-data buffer (DESIGN.md, lane `romload`): the
@@ -81,7 +82,7 @@ int main(int argc, char **argv) {
   if (r.rdx == 0 && r.rax == ACCEPT) printf("accept\n");
   else if (r.rdx == 0) printf("ok %llu\n", (unsigned long long)r.rax);
   else if (r.rdx == 1) printf("exhausted\n");
-  else if (arr[ca_diag][0] != 0) printf("missing %llu\n", (unsigned long long)arr[ca_diag][0]);
+  else if (ca_diag < ca_nw && arr[ca_diag][0] != 0) printf("missing %llu\n", (unsigned long long)arr[ca_diag][0]);
   else printf("error\n");
   fflush(stdout);
   return 0;
