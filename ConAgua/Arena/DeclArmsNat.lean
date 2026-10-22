@@ -484,6 +484,22 @@ def natOpEquationsL : FunDecl :=
   return (q, l)
 }
 
+/-- `defn_nat_cert(vis, w, n)`: the stored value of `n` at the extended view `w` (a definition),
+its recurrences (`nat_op_equations 0 n`) with `n` replaced by the value, certified at the
+pre-insertion view `vis`. Returns `0`. -/
+-- con-ron: ConRon/Arena/CheckDecl.lean:82-214 ConRon.Arena.checkDecl
+def defnNatCert : FunDecl :=
+    lfn (vis, w, n) locals (f, r, eo, el, so, sl, ok) {
+  (f, r) := call env_find(n, w);
+  if f == 0 { abort };
+  if EREC.u64[r] != 1 { abort };
+  (eo, el) := call nat_op_equations(0, n);
+  (so, sl) := call subst_const0_pairs(n, EREC.u64[r + 5], eo, el);
+  ok := call certify_nat_eqs(vis, so, sl);
+  if ok == 0 { abort };
+  return 0
+}
+
 /-- `subst_const0(n, r, fuel, h)`: `Expr.substConst0`: `.const n []` replaced by `r` through an
 application spine. -/
 -- con-ron: ConRon/Arena/Core.lean:1094-1108 ConRon.Arena.substConst0
@@ -1149,7 +1165,7 @@ def declArmsNatFns : Prog :=
    ("nat_op_stored_ok_all", natOpStoredOkAllL), ("nat_ap1", natAp1L), ("nat_ap2", natAp2L),
    ("nat_eq_list2", natEqList2), ("nat_eq_list3", natEqList3), ("nat_eq_list4", natEqList4),
    ("nat_eq_pr", natEqPr), ("nat_eq_un", natEqUn), ("nat_eq_mu", natEqMu), ("nat_eq_po", natEqPo),
-   ("nat_eq_be", natEqBe), ("nat_eq_bl", natEqBl), ("nat_eq_ctx", natEqCtx), ("nat_eq_disp", natEqDisp), ("nat_op_equations", natOpEquationsL),
+   ("nat_eq_be", natEqBe), ("nat_eq_bl", natEqBl), ("nat_eq_ctx", natEqCtx), ("nat_eq_disp", natEqDisp), ("nat_op_equations", natOpEquationsL), ("defn_nat_cert", defnNatCert),
    ("subst_const0", substConst0L), ("subst_const_all", substConstAllL),
    ("subst_const0_pairs", substConst0PairsL), ("certify_nat_eqs", certifyNatEqsL),
    ("div_mod_slot", divModSlot), ("div_mod_decl_pin", divModDeclPinL),
