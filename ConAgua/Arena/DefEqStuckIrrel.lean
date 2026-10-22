@@ -156,7 +156,7 @@ theorem stuckIrrel_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc 
   rw [decBool_false_of (by simpa using h3)]
   simp only [Bool.false_eq_true, ↓reduceIte]
   exact CoreSpec.of_call1W (s₀ := ⟨m₃, Locals.init []⟩)
-    (proofIrrel_at p hc n hk F hF _ _ dn vis fe M₃ eb mode d a b hS₃ hs.mode4 ha hb)
+    (proofIrrel_at p hc n hk F hF hn _ _ dn vis fe M₃ eb mode d a b hS₃ hs.mode4 hs.eb_mode ha hb)
     (fun r r' h => by simp only [decBool, h]) hW3
 
 end L.Arena

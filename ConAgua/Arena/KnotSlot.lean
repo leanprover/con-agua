@@ -419,8 +419,8 @@ def InferIOBodySpec (p : Prog) (n : Nat) : Prop :=
 /-- `defeq_body(mode, vis, d, a, b)` refines `defeqBody` at the knot one level down. -/
 def DefeqBodySpec (p : Prog) (n : Nat) : Prop :=
   ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb mode d x y : Word), n ≤ F → SlotPre s₀ a₀ dn vis fe MM eb mode → HW x →
-    HW y → KnotUpTo p n →
+    (MM : ModeMaps) (eb mode d x y : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe MM eb mode →
+    HW x → HW y → KnotUpTo p n →
     CoreSpec p n "defeq_body" [mode, vis, d, x, y]
       (defeqBody (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE x) (decE y))
       decBool s₀ a₀ dn vis fe MM eb
@@ -577,7 +577,7 @@ theorem defeq_refines (n : Nat) (hk : KnotUpTo p n) (hb : DefeqBodySpec p n) :
   | some q =>
   obtain ⟨r₁, m₁⟩ := q
   simp only [hcall] at hW
-  have hbody := hb F' s a₀ dn vis fe MM eb mode d x y (by omega) hs hx hy hk
+  have hbody := hb F' s a₀ dn vis fe MM eb mode d x y (by omega) (by omega) hs hx hy hk
   obtain ⟨hok, ⟨M', hS₁, hK₁, hSt₁⟩, hres, hrw⟩ := CoreSpec.of_callW hbody hcall
   cases hset : msetG deSch m₁ x (genW y eb) (r₁.headD 0) with
   | none => rw [hset] at hW; cases hW
