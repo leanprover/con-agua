@@ -307,4 +307,134 @@ theorem idsGoW_facts : ∀ (n : Nat) (m m' : Mem) (o l k : Word),
       rw [this]
       congr 2; omega
 
+
+/-! ## The records survive the validation's writes -/
+
+section frame
+variable {b : ByteArray} {m m' : Mem} (hE : IExt m m')
+include hE
+
+theorem IExt.wdR (i : Nat) : wd m' IFR i = wd m IFR i := by simp only [wd, hE.ifr]
+
+theorem IExt.topR : topN m' IFR = topN m IFR := by unfold topN; rw [hE.wdR]
+
+theorem NumsF.ext {off : Nat} {ns : List Nat} (h : NumsF m off ns) : NumsF m' off ns := by
+  obtain ⟨h1, h2, h3⟩ := h
+  refine ⟨h1, by have := hE.top; omega, fun k hk => ?_⟩
+  rw [hE.keep _ (by omega) (by omega)]; exact h3 k hk
+
+theorem CVF.ext {p : Nat} {cv : ConLeche.Frontend.CVRec} (h : CVF b m p cv) : CVF b m' p cv := by
+  simp only [CVF, hE.wdR] at h ⊢; exact h
+
+theorem TyF.ext {t : Nat} {ty : ConLeche.Frontend.IndTypeRec} (h : TyF b m t ty) : TyF b m' t ty := by
+  obtain ⟨h1, h2, h3, h4, h5, h6⟩ := h
+  refine ⟨h1.ext hE, ?_, ?_, ?_, ?_, ?_⟩ <;> simp only [hE.wdR] at * <;> first | assumption | exact h3.ext hE
+
+theorem OptW.ext {i : Nat} {o : Option Nat} (h : OptW m i o) : OptW m' i o := by
+  cases o <;> simp only [OptW, hE.wdR] at h ⊢ <;> exact h
+
+theorem CtF.ext {c : Nat} {ct : ConLeche.Frontend.IndCtorRec} (h : CtF b m c ct) : CtF b m' c ct := by
+  obtain ⟨h1, h2, h3, h4, h5⟩ := h
+  exact ⟨h1.ext hE, by simpa only [hE.wdR] using h2, by simpa only [hE.wdR] using h3, h4.ext hE,
+    h5.ext hE⟩
+
+theorem RecF.ext {r : Nat} {rc : ConLeche.Frontend.IndRecRec} (h : RecF b m r rc) : RecF b m' r rc := by
+  obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9, h10⟩ := h
+  refine ⟨h1.ext hE, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> (try simp only [hE.wdR]) <;> try assumption
+  · have := hE.top; omega
+  · intro j hj
+    obtain ⟨r1, r2, r3⟩ := h10 j hj
+    refine ⟨?_, ?_, ?_⟩
+    · rw [hE.keep _ (by omega) (by omega)]; exact r1
+    · rw [hE.keep _ (by omega) (by omega)]; exact r2
+    · rw [hE.keep _ (by omega) (by omega)]; exact r3
+
+theorem ListF.ext {α : Type} {F F' : Nat → α → Prop} {sz off : Nat} {xs : List α}
+    (hF : ∀ p x, F p x → F' p x) (h : ListF F m sz off xs) : ListF F' m' sz off xs :=
+  ⟨h.1, by rw [hE.topR]; exact h.2.1, fun j hj => hF _ _ (h.2.2 j hj)⟩
+
+/-- **`IndFR` survives the validation's writes.** -/
+theorem IndFR.ext {to tn co cn ro rn : Word} {tys : List ConLeche.Frontend.IndTypeRec}
+    {cts : List ConLeche.Frontend.IndCtorRec} {rcs : List ConLeche.Frontend.IndRecRec}
+    (h : IndFR b m to tn co cn ro rn tys cts rcs) : IndFR b m' to tn co cn ro rn tys cts rcs := by
+  obtain ⟨h1, h2, h3, h4, h5, h6⟩ := h
+  exact ⟨h1, h2.ext hE (fun _ _ x => x.ext hE), h3, h4.ext hE (fun _ _ x => x.ext hE), h5,
+    h6.ext hE (fun _ _ x => x.ext hE)⟩
+
+end frame
+
+/-! ## `mapM` by index -/
+
+theorem mapM_run_idx {α β : Type} (f : α → AM β) (a : AState) :
+    ∀ (xs : List α) (ys : List β) (hl : ys.length = xs.length),
+      (∀ k (hk : k < xs.length), (f xs[k]).run a = .ok (ys[k]'(by rw [hl]; exact hk), a)) →
+      (xs.mapM f).run a = .ok (ys, a)
+  | [], [], _, _ => rfl
+  | x :: xs, y :: ys, hl, h => by
+    simp only [List.mapM_cons]
+    have h0 := h 0 (by simp)
+    simp only [List.getElem_cons_zero] at h0
+    rw [run_bind _ _ a _ h0, run_bind _ _ a _ (mapM_run_idx f a xs ys (by simpa using hl)
+      fun k hk => by have := h (k + 1) (by simp; omega); simpa using this)]
+    rfl
+  | [], _ :: _, hl, _ => by simp at hl
+  | _ :: _, [], hl, _ => by simp at hl
+
+/-- The handles of `IFL[o ‥ o + l)`. -/
+def islice {k : IdxKind} (m : Mem) (o l : Nat) : List (Idx k) :=
+  (List.range l).map fun c => decI (wd m IFL (o + c))
+
+theorem islice_length {k : IdxKind} (m : Mem) (o l : Nat) : (islice (k := k) m o l).length = l := by
+  simp [islice]
+
+theorem islice_get {k : IdxKind} (m : Mem) (o l c : Nat) (hc : c < (islice (k := k) m o l).length) :
+    (islice (k := k) m o l)[c] = decI (wd m IFL (o + c)) := by
+  simp [islice]
+
+/-! ## `vi_map`: the twin's `mapM` of lookups -/
+
+/-- **`vi_map` is a twin `mapM` of lookups**: on a list `xs` whose ids are the records' words, a
+lookup `look` that the model's lookup answers (`hlk`), the twin's `mapM` returns the handles the
+model pushed, the slice `(lo, l)`. -/
+theorem mapW_twin {α : Type} {n : Nat} {m m' : Mem} {o l sz s f lo l' : Word} (hT : TopOK m)
+    (h : mapW n m o l sz s f = some ((lo, l'), m')) (a : AState) (xs : List α) (ids : α → Nat)
+    (look : Nat → AM NIdx) (hlen : l.toNat = xs.length)
+    (hid : ∀ k (hk : k < xs.length), (rdW (m.arr64 IFR) (o + sz * UInt64.ofNat k + s)).toNat = ids xs[k])
+    (hlk : ∀ x w, mapLk m f x = some w → (look x.toNat).run a = .ok (decI w, a) ∧ w.toNat < 2 ^ 32) :
+    (xs.mapM fun x => look (ids x)).run a = .ok (islice m' lo.toNat xs.length, a) ∧
+      IExt m m' ∧ TopOK m' ∧ l' = l ∧ lo.toNat = topN m IFL + 1 ∧ topN m' IFL = topN m IFL + xs.length ∧
+      ∀ c, c < xs.length → (wd m' IFL (lo.toNat + c)).toNat < 2 ^ 32 := by
+  cases n with
+  | zero => simp [mapW] at h
+  | succ n =>
+  simp only [mapW] at h
+  cases ha : allocW m IFL 0 with
+  | none => rw [ha, allocK_none] at h; cases h
+  | some q =>
+  obtain ⟨lo', m₁⟩ := q
+  rw [ha, allocK_some] at h
+  cases hg : mapGoW n m₁ o l sz s f 0 with
+  | none => rw [hg, sliceK_none] at h; cases h
+  | some m₂ =>
+  rw [hg, sliceK_some] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨⟨rfl, rfl⟩, rfl⟩ := h
+  obtain ⟨a1, a2, a3, a4⟩ := allocW_ok hT ha
+  simp only [show (0 : Word).toNat = 0 from rfl, Nat.add_zero] at a4
+  obtain ⟨g1, g2, g3, g4⟩ := mapGoW_facts n m₁ _ o l sz s f 0 hg a2 (UInt64.le_iff_toNat_le.mpr (Nat.zero_le _))
+  simp only [show (0 : Word).toNat = 0 from rfl, Nat.sub_zero] at g3
+  have hw : ∀ c (hc : c < xs.length),
+      (look (ids xs[c])).run a = .ok (decI (wd m₂ IFL (lo'.toNat + c)), a) ∧
+        (wd m₂ IFL (lo'.toNat + c)).toNat < 2 ^ 32 := by
+    intro c hc
+    have := g4 c (Nat.zero_le _) (by rw [hlen]; exact hc)
+    simp only [show (0 : Word).toNat = 0 from rfl, Nat.sub_zero] at this
+    rw [mapLk_ext a1, a1.ifr] at this
+    have hh := hlk _ _ this
+    rw [hid c hc, a4, ← a3] at hh
+    exact hh
+  refine ⟨mapM_run_idx _ a xs _ (islice_length _ _ _) (fun k hk => ?_), a1.trans g1, g2, rfl, a3,
+    by rw [g3, a4, hlen], fun c hc => (hw c hc).2⟩
+  rw [islice_get]; exact (hw k hk).1
+
 end L.Front.Ind
