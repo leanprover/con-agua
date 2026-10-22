@@ -4325,10 +4325,20 @@ be asymptotically slower. con-ron at `_tmp/ref/con-ron` origin/HEAD (`proof/ConR
   refinement then applies each callee's own spec to its run (`CoreSpec.of_callW`) and threads
   `CoreAfter` (`CoreAfter.comp`). Loops get a named block and a model by fuel
   (`whnfCoreLoopB_spec`, `coreLoopW`), refined by induction (`coreLoopW_ok`).
-* **Proved so far** (no `sorry` of their own): the knot's `whnfCore` slot one level up
-  (`whnfCoreSlot_step`: stuck tags, both memos, hit and miss, from the body spec), the loop
-  (`whnfCore_loop`'s spec and `coreLoopW_ok`, from the step spec), `lvl_eq_c`/`lvls_eq_c`
-  completely, the flush.
+* **Proved so far** (no `sorry` of their own; they assume the callees' specs): the knot's
+  `whnfCore` slot one level up (`whnfCoreSlot_step`: stuck tags, both memos, hit and miss), the
+  loop and the body (`whnfCoreLoop_refines`, `whnfCoreBody_refines`, `WhnfCoreLoop.lean`), the
+  dispatcher `whnf_core_step` (`whnfCoreStep_refines`: one view lemma per tag, the app arm, the
+  projection arm through its spec, ζ through `inst1`), the app arm `whnf_core_app` and its second
+  half `whnf_core_app2` (`WhnfCoreStep.lean`), `proj_cert`; the `whnf` slot and loop
+  (`whnf_refines`, `whnfLoop_refines`, `WhnfDeltaSlot.lean`, a sub-lane); five spine walks
+  (`get_app_fn`, `pi_result`, `peel_pis`, `mk_app_n`, `mk_app_n_from`, `WhnfSpineRefine.lean`, a
+  sub-lane); `lvl_eq_c`/`lvls_eq_c` completely, the flush.
+* **Statement changes by the sub-lanes.** `mkAppN_refines`/`mkAppNFrom_refines` post a
+  `MemFrame [AREC, ASLOT, ADER] [4, 5]` instead of `Grows` (the walk never touches the Nat-limb
+  pool) and drop the `HW` of the result (a fresh handle's index bound is not established by the
+  store's relation yet); `whnfLoop_refines` takes the step spec at every fuel up to `n`
+  (`WhnfStepUpTo`), as `KnotUpTo`.
 * **L code written** (sorry'd specs): `whnf_core_step`, `whnf_app`, `beta_peel`,
   `whnf_core_step_proj`, `reduce_proj_core`, `proj_cert`, `proj_lit_to_ctor` (`WhnfCore.lean`,
   177 L lines); the spine walks (`WhnfSpine.lean`, 124, exact `coreWalkFuel` counters); ι
@@ -4350,11 +4360,31 @@ be asymptotically slower. con-ron at `_tmp/ref/con-ron` origin/HEAD (`proof/ConR
 
 * `WhnfBase.lean` `whnfCallees_stub`: the specs of the callees not written yet (`inst_list`,
   `inst_lp`, `str_lit_ctor`, `str_lit_supported`, the knot's `infer`/`infer_io`/`defeq` steps).
-* `WhnfSpine.lean`: the eight spine-walk specs (`getAppFn_refines`, …; a proof lane is on them).
-* `WhnfCore.lean`: `coreCallees_stub` and the specs of `whnf_core_step`, `whnf_core_loop`
-  (through `whnfCoreLoop_refines`), `whnf_app`, `beta_peel`, `whnf_core_step_proj`,
-  `reduce_proj_core`, `proj_cert`, `proj_lit_to_ctor`.
+* `WhnfSpine.lean`: `getAppArgs_refines`, `getAppSpine_refines`, `headAndArgs_refines` (a loop
+  writing the stack slice after the fuel-chase loop in one function: `finish` did not close the
+  two-stage split; the word models `gaaLoopW`/`gaaFillW` are there).
+* `WhnfCore.lean`: `coreCallees_stub` (`inst1` at `coreWalkFuel`, `find_proj`, `fire_ok`,
+  `iota_rec_at`) and the specs of `whnf_app`, `beta_peel`, `whnf_core_step_proj`,
+  `reduce_proj_core`, `proj_lit_to_ctor` (proof sub-lanes on them).
 * `WhnfIota.lean`: `iotaCallees_stub` and every spec (28).
+* `WhnfDelta.lean`: the δ/Nat specs (`whnf_step`, `reduce_nat`, `delta_step`, …; 14).
+
+### Numbers (2026-10-21)
+
+* Rust (con-ron's `whnf`/core, census phase 5): 1500 lines; L written for 720 of them, proved for
+  68 at the last census (the proved bodies call sorry'd callees, so their Rust counts once those
+  close).
+* L: 1101 lines (`CoreCaches` 14, `CoreLevels` 26, spine 94, `WhnfCore` 186, `WhnfIota` 504,
+  `WhnfDelta` 277). Refinement proofs: about 3600 lines for about 240 proved L lines, **15 proof
+  lines per L line** (the callW pattern: model ~1, L spec ~1 (`vcgen` + `finish`), refinement
+  ~10–13; most of the refinement is case splits on the callees' runs and threading `CoreAfter`).
+* CPU (`lake env lean`, user): `WhnfCoreSlot` 10.5 s, `WhnfCoreStep` 8.0 s,
+  `WhnfSpineRefine` 4.6 s, `WhnfDeltaSlot` 3.2 s, `CoreLevels` 3.1 s, the rest ≤ 2 s each: 33 s.
+* Automation: every L spec is `vcgen` + `finish` (or `simp_all`) against `callW_spec`; no L
+  spec needed a hand proof. The refinements are manual. Pattern breaks: a function with two loops
+  in sequence (`get_app_args`) defeated `finish`; a dispatcher with eight arms needed `by_cases`
+  per tag (`split_ifs` is Mathlib); `simp_all` on the dispatcher's VCs ran out of steps, `sym`
+  + `finish` took 7 s.
 
 ## Any number of results (2026-10-21, lane `cresults`)
 
@@ -4687,9 +4717,97 @@ parallel, 20–32 min each (sonnet, 250–320k tokens each); the interface took 
 * Memory map additions: arrays 69‥71 (front, inductive lines), 200‥208 (`IW`, the eight walk
   memos), `CTL` 200‥219.
 
+### Stale flags after the con-ron bump (reviewed by hand, census not run)
+
+The census lists 28 phase-8 targets as stale after `4c9eaf7 → 12752ca7`. Every one has its own code
+unchanged; what changed below them is only `readLevelM`/`readLevelsM` (`Monad.lean`), whose diff is
+doc-comment line references only. False positives: to be cleared with `scripts/census.py
+--reviewed` once the census runs again (lane `censusmem`'s memory guard). Also proved since the
+second landing: `classOfMotiveVar` (through `sl_find`'s model, `findW_ok`).
+
 ### `sorry`s
 
 `IndStubs.lean`: the 34 stub specs (by design, above). No other.
+
+## Phase 2 continued: the ROM, the pins, the declaration loop's callees (2026-10-21, lane `decls`)
+
+### The ROM (`Rom.lean`, `RomPins.lean`)
+
+con-ron interns con-leche **values** (the pinned names, basis blocks, axiom shapes, pin sets) at
+startup and inside some checks. In L they are bytes of the program's constant data: one byte
+string `rom` (`ldc`, `rom.c8[i]`), every ROM reader a function of `rom` (the program fixes it).
+
+* **Encoding, no decoder.** `encName`, … serialise a value prefix first, in the twin's intern
+  order (a node's tag byte, its children as the twin interns them, then its payload; numbers 8
+  bytes little endian, strings their UTF-8 length and bytes). A reader's spec is stated at
+  `rom.drop pos = enc x ++ rest` and proved by induction on `x`; the ROM's contents enter only
+  through that equation, which for the program's ROM (`enc A ++ enc B ++ …`) is `List.drop_append`.
+  No kernel evaluation of a decoder; `RomOK rom` (`length < 2^63`) is the one `decide` (0.8 s
+  for the names).
+* `rom_u64(i)`, `rom_put(i, l)` (ROM bytes to the pool top, `str_put`'s analogue: `Grows`, the
+  slice is `strWords`), `rom_name(pos)`: **refines `internName`** (`romName_refines`, `@[refines]`):
+  `ArenaD` kept, the store tier only written (`MemFrame StoreA StoreC`, arrays and `CTL` words
+  below 64), the position after the encoding returned. Proof shape: the W-model (`romNameW`, one
+  continuation per call, grind arm lemmas) for the L side, then a pure induction on the name
+  over the front's `_A` lemmas (`nanon_A`, `nstr_A`, `nnum_A`).
+* `rom_names_to(q, k, d)` (`internNameList`, the handles to `PINS[d ‥]`) and
+  **`intern_reserved_pins()` refines `internReservedPins`** (`internReservedPins_refines`): from
+  `ArenaD` (any pin table), with `encNames pinNames ++ encNames reservedBasisNameValues` at the
+  offset `off` the program is built with: `PinsFull` for the twin's new table and the flag set,
+  `ArenaD` kept, writes only the store tier and `PINS`. So **`PinsR` is established from the
+  initial state** by one call. The twin's run is assembled from its six pieces
+  (`internReservedPins_run`, `run_bind_ok`); `AM.st`/`AM.res` must be `local irreducible` there or
+  `rfl`/`rw` time out unfolding the stores.
+* Memo: `internExprGo`'s `EMemo` (per call, keyed by `Expr` value) is transparent (a memo hit is
+  a re-intern of a present subtree, which changes nothing), but proving that needs "re-interning
+  a denoted tree is the identity" on the twin side (the stores' `consP`/`consS`); the expression
+  ROM reader is not written yet. Not mirrored, its cost is a re-walk of constant data at startup
+  and in the rare pin checks.
+
+### `EnvR` over the pool below its top (`Tiers.lean`, at lane `induct`'s request)
+
+`EnvR`, `PendR` and `vgOut` decode records in **`erecP m` = `EREC` below `CTL[129]`**, not in
+the whole array. A writer that allocates above the top (`erec_alloc`) and writes there keeps
+every decoding: the decoders are stable under extension (`ArrExt`, `EnvRec.lean`: a successful
+decode read only words that exist), `ErecGrow m m'` (top up, nothing below the old top changed)
+gives `ArrExt (erecP m) (erecP m')`, and `EnvR.grow` carries the environment. `erecP_ext`:
+a decoding in `erecP m` is one in `m.arr64 EREC` (callee specs of lanes `whnf`/`induct` that decode
+in the whole array take it from there). `EnvR.frameN` now also keeps `CTL[129]`.
+
+### The fold's `And` pin (`DeclAndPin.lean`)
+
+`and_pin_ok(i)` **refines `andPinOk`** for every record kind the front produces (`DeclAt`:
+axiom, definition, theorem, opaque, quotient): the name word of record `i` cut to its low 32
+bits (`decI` reads only those, so no bound on the front's word is needed) against `PINS[12]`,
+`PINS[49]`, `PINS[50]`. Tagged `refines_part … "one-constant records"`: the `indDecl` arm
+(`canonEqList` against the interned `andPin`, ROM) waits for the front's inductive records. The
+stub and its `sorry` are gone from `Checker.lean`; the skeleton theorems take `DeclCallees p`
+(the callees' lookups). `LoopR`, `PendR`, `dsAt`, `vgOut` moved to `DeclBase.lean`.
+
+### Levels, and what comes next
+
+`rom_level(pos)` **refines `internLevel`** (`RomLevel.lean`, same shape as `rom_name`; the
+`.max`/`.imax` arms one template). `internReservedPinsL` (the census link) is
+`internReservedPinsAt 0`: the program's ROM starts with the two pin name lists.
+
+Next, in order (designs settled, not written):
+* `rom_levels` (`internLevels`): the level handles on a stack array `RSTK` (138, top `CTL[131]`),
+  copied to the pool top, then `intern_ls`; a parameter's name writes the pool between levels.
+* `rom_expr` with the twin's `EMemo` **mirrored exactly**: the encoder threads the list of
+  compound subterms already interned in the current call and emits a back reference (tag + index)
+  where the twin's memo hits; L keeps the handles in `RMEMO` (139, count `CTL[132]`), reset per
+  call. The relation (memo keys = the encoder's list, `RMEMO[k]` the handle of entry `k`) needs
+  no kernel evaluation of the ROM.
+* constant records into `EREC` (`internCV`/`internCI`/`internCIList`), then `internAllPins`.
+* `install_step_go` on lane `induct`'s conventions (`StageR`, `RefAM`, the stubs of
+  `IndStubs.lean`); `LoopR` gets `IWOK`; the callees' frame for `PEND`/`DECL`/`DLP` from the text
+  (`closedW` over a concrete `declProg`). `check_value_group` likewise.
+* Stale: `installStep`, `installDeclStep`, `checkPending(List)` wait for lane `whnf`'s `CoreR`;
+  `checkDecl`/`checkShapelessFormers` are lane `induct`'s L code. Not reviewed (census paused).
+
+### `sorry`s
+
+None new (the four remaining stub specs of `Checker.lean` are lane `pinsenv`'s).
 
 ## Census memory, and the fingerprints dropped (2026-10-22, lane `censusmem`)
 

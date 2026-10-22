@@ -143,3 +143,189 @@ def decVG (q : Nat) : Option ValueGroup := do
 end dec
 
 end L.Arena
+
+/-! ## Decoding is stable under extension
+
+A decoder reads `a[i]?` only; a successful decoding read only words that exist, so it decodes
+the same in any array that agrees there (`ArrExt`). This is how a record pool that only grows
+above its top (`erecP`, `Tiers.lean`) keeps every decoding below it. -/
+
+namespace L.Arena
+
+open ConRon.Arena
+
+/-- `b` extends `a`: every word of `a` is in `b`. -/
+def ArrExt (a b : Array Word) : Prop := ∀ (i : Nat) (v : Word), a[i]? = some v → b[i]? = some v
+
+section ext
+variable {a b : Array Word} (h : ArrExt a b)
+include h
+
+theorem ArrExt.nat? {i : Nat} {x : Nat} (hx : nat? a i = some x) : nat? b i = some x := by
+  simp only [L.Arena.nat?, Option.map_eq_some_iff] at hx ⊢
+  obtain ⟨v, hv, rfl⟩ := hx; exact ⟨v, h i v hv, rfl⟩
+
+theorem ArrExt.bool? {i : Nat} {x : Bool} (hx : bool? a i = some x) : bool? b i = some x := by
+  simp only [L.Arena.bool?, Option.map_eq_some_iff] at hx ⊢
+  obtain ⟨v, hv, rfl⟩ := hx; exact ⟨v, h i v hv, rfl⟩
+
+theorem ArrExt.hd? {k : IdxKind} {i : Nat} {x : Idx k} (hx : hd? a i = some x) : hd? b i = some x := by
+  simp only [L.Arena.hd?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hx ⊢
+  obtain ⟨v, hv, hx⟩ := hx; exact ⟨v, h i v hv, hx⟩
+
+omit h in
+theorem ArrExt.mapM {α : Type} {f g : Nat → Option α} (hfg : ∀ j x, f j = some x → g j = some x) :
+    ∀ (l : List Nat) (xs : List α), l.mapM f = some xs → l.mapM g = some xs
+  | [], xs, hx => by simpa using hx
+  | j :: js, xs, hx => by
+    simp only [List.mapM_cons, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
+      Option.some.injEq] at hx ⊢
+    obtain ⟨y, hy, ys, hys, rfl⟩ := hx
+    exact ⟨y, hfg j y hy, ys, ArrExt.mapM hfg js ys hys, rfl⟩
+
+theorem ArrExt.hslice? {k : IdxKind} {o c : Nat} {xs : List (Idx k)} (hx : hslice? a o c = some xs) :
+    hslice? b o c = some xs :=
+  ArrExt.mapM (f := fun j => L.Arena.hd? a (o + j)) (g := fun j => L.Arena.hd? b (o + j))
+    (fun _ _ hy => h.hd? hy) _ _ hx
+
+theorem ArrExt.hlist? {k : IdxKind} {i : Nat} {xs : List (Idx k)} (hx : hlist? a i = some xs) :
+    hlist? b i = some xs := by
+  simp only [L.Arena.hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hx ⊢
+  obtain ⟨o, ho, c, hc, hs⟩ := hx
+  exact ⟨o, h.nat? ho, c, h.nat? hc, h.hslice? hs⟩
+
+theorem ArrExt.decCV {q : Nat} {x : IConstantVal} (hx : decCV a q = some x) : decCV b q = some x := by
+  simp only [L.Arena.decCV, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at hx ⊢
+  obtain ⟨n, hn, l, hl, t, ht, e⟩ := hx
+  exact ⟨n, h.hd? hn, l, h.hlist? hl, t, h.hd? ht, e⟩
+
+theorem ArrExt.decHint {q : Nat} {x : ConLeche.ReducibilityHint} (hx : decHint a q = some x) :
+    decHint b q = some x := by
+  simp only [L.Arena.decHint, Option.bind_eq_bind, Option.bind_eq_some_iff] at hx ⊢
+  obtain ⟨k, hk, e⟩ := hx
+  refine ⟨k, h.nat? hk, ?_⟩
+  split at e
+  · exact e
+  · exact e
+  · simp only [Option.bind_eq_some_iff, Option.pure_def] at e ⊢
+    obtain ⟨y, hy, e⟩ := e; exact ⟨y, h.nat? hy, e⟩
+  · exact e
+
+theorem ArrExt.decRule {q : Nat} {x : IRecRule} (hx : decRule a q = some x) : decRule b q = some x := by
+  unfold L.Arena.decRule at hx ⊢
+  cases h3 : L.Arena.nat? a (q + 3) with
+  | none => simp [h3] at hx
+  | some t =>
+    rw [h.nat? h3]; rw [h3] at hx
+    simp only [Option.bind_eq_bind, Option.pure_def, Option.bind_some] at hx ⊢
+    have tail : ∀ (f : IRecRuleFire), (do
+        let ctor ← L.Arena.hd? a q
+        let nfields ← L.Arena.nat? a (q + 1)
+        let ctorParams ← L.Arena.nat? a (q + 2)
+        let rhs ← L.Arena.hd? a (q + 8)
+        let k ← L.Arena.bool? a (q + 9)
+        let eta ← L.Arena.bool? a (q + 10)
+        pure ({ ctor, nfields, ctorParams, fire := f, rhs, k, eta } : IRecRule)) = some x →
+        (do
+        let ctor ← L.Arena.hd? b q
+        let nfields ← L.Arena.nat? b (q + 1)
+        let ctorParams ← L.Arena.nat? b (q + 2)
+        let rhs ← L.Arena.hd? b (q + 8)
+        let k ← L.Arena.bool? b (q + 9)
+        let eta ← L.Arena.bool? b (q + 10)
+        pure ({ ctor, nfields, ctorParams, fire := f, rhs, k, eta } : IRecRule)) = some x := by
+      intro f hf
+      simp only [Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hf ⊢
+      obtain ⟨c, hc, nf, hnf, cp, hcp, r, hr, k, hk, e, he, e'⟩ := hf
+      exact ⟨c, h.hd? hc, nf, h.nat? hnf, cp, h.nat? hcp, r, h.hd? hr, k, h.bool? hk, e, h.bool? he, e'⟩
+    match t, hx with
+    | 0, hx => simp only [Option.bind_some] at hx ⊢; exact tail _ hx
+    | 1, hx =>
+      cases hy : L.Arena.hlist? (k := .level) a (q + 4) with
+      | none => simp [hy] at hx
+      | some y =>
+        cases hz : L.Arena.hlist? (k := .expr) a (q + 6) with
+        | none => simp [hy, hz] at hx
+        | some z =>
+          rw [hy, hz] at hx; rw [h.hlist? hy, h.hlist? hz]
+          simp only [Option.bind_some] at hx ⊢
+          exact tail _ hx
+    | t + 2, hx => simp at hx
+
+theorem ArrExt.decRules {o c : Nat} {xs : List IRecRule} (hx : decRules a o c = some xs) :
+    decRules b o c = some xs :=
+  ArrExt.mapM (f := fun j => L.Arena.decRule a (o + 11 * j)) (g := fun j => L.Arena.decRule b (o + 11 * j))
+    (fun _ _ hy => h.decRule hy) _ _ hx
+
+theorem ArrExt.decPW {dn : NIdx → Option ConLeche.Name} {q : Nat} {x : ConLeche.PropWhen}
+    (hx : decPW a dn q = some x) : decPW b dn q = some x := by
+  simp only [L.Arena.decPW, Option.bind_eq_bind, Option.bind_eq_some_iff] at hx ⊢
+  obtain ⟨k, hk, e⟩ := hx
+  refine ⟨k, h.nat? hk, ?_⟩
+  split at e
+  · exact e
+  · simp only [Option.bind_eq_some_iff, Option.pure_def] at e ⊢
+    obtain ⟨y, hy, z, hz, e⟩ := e; exact ⟨y, h.hlist? hy, z, hz, e⟩
+  · exact e
+
+theorem ArrExt.decCaps {dn : NIdx → Option ConLeche.Name} {q : Nat} {x : IIndCaps}
+    (hx : decCaps a dn q = some x) : decCaps b dn q = some x := by
+  simp only [L.Arena.decCaps, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at hx ⊢
+  obtain ⟨e1, h1, e2, h2, e3, h3, e4, h4, e5, h5, e6, h6, e7, h7, e8, h8, e9, h9, e10, h10, e11, h11, e⟩ := hx
+  exact ⟨e1, h.bool? h1, e2, h.hd? h2, e3, h.nat? h3, e4, h.nat? h4, e5, h.bool? h5, e6, h.nat? h6,
+    e7, h.bool? h7, e8, h.decPW h8, e9, h.hlist? h9, e10, h.nat? h10, e11, h.hlist? h11, e⟩
+
+theorem ArrExt.decTbl {p : Nat} {x : IProjTable} (hx : decTbl a p = some x) : decTbl b p = some x := by
+  simp only [L.Arena.decTbl, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at hx ⊢
+  obtain ⟨e1, h1, e2, h2, e3, h3, e4, h4, e5, h5, e6, h6, e7, h7, e8, h8, e9, h9, e10, h10, e⟩ := hx
+  exact ⟨e1, h.hd? h1, e2, h.hd? h2, e3, h.hlist? h3, e4, h.nat? h4, e5, h.hd? h5, e6, h.nat? h6,
+    e7, h.hd? h7, e8, h.hlist? h8, e9, h.hlist? h9, e10, h.nat? h10, e⟩
+
+theorem ArrExt.decCI {dn : NIdx → Option ConLeche.Name} {p : Nat} {x : IConstantInfo}
+    (hx : decCI a dn p = some x) : decCI b dn p = some x := by
+  unfold L.Arena.decCI at hx ⊢
+  cases hk : L.Arena.nat? a p with
+  | none => simp [hk] at hx
+  | some k =>
+    rw [h.nat? hk]; rw [hk] at hx
+    simp only [Option.bind_eq_bind, Option.pure_def, Option.bind_some] at hx ⊢
+    match k, hx with
+    | 0, hx =>
+      simp only [Option.bind_eq_some_iff] at hx ⊢
+      obtain ⟨y, hy, e⟩ := hx; exact ⟨y, h.decCV hy, e⟩
+    | 1, hx =>
+      simp only [Option.bind_eq_some_iff] at hx ⊢
+      obtain ⟨y, hy, z, hz, w, hw, e⟩ := hx
+      exact ⟨y, h.decCV hy, z, h.hd? hz, w, h.decHint hw, e⟩
+    | 2, hx =>
+      simp only [Option.bind_eq_some_iff] at hx ⊢
+      obtain ⟨y, hy, e⟩ := hx; exact ⟨y, h.decCV hy, e⟩
+    | 3, hx =>
+      simp only [Option.bind_eq_some_iff] at hx ⊢
+      obtain ⟨y, hy, z, hz, e⟩ := hx; exact ⟨y, h.decCV hy, z, h.decCaps hz, e⟩
+    | 4, hx =>
+      simp only [Option.bind_eq_some_iff] at hx ⊢
+      obtain ⟨y, hy, z, hz, w, hw, e⟩ := hx
+      exact ⟨y, h.decCV hy, z, h.nat? hz, w, h.nat? hw, e⟩
+    | 5, hx =>
+      simp only [Option.bind_eq_some_iff] at hx ⊢
+      obtain ⟨y, hy, z, hz, w, hw, o, ho, c, hc, r, hr, e⟩ := hx
+      exact ⟨y, h.decCV hy, z, h.nat? hz, w, h.nat? hw, o, h.nat? ho, c, h.nat? hc, r, h.decRules hr, e⟩
+    | 6, hx =>
+      simp only [Option.bind_eq_some_iff] at hx ⊢
+      obtain ⟨y, hy, e⟩ := hx; exact ⟨y, h.decTbl hy, e⟩
+    | k + 7, hx => simp at hx
+
+theorem ArrExt.decVG {q : Nat} {x : ValueGroup} (hx : decVG a q = some x) : decVG b q = some x := by
+  simp only [L.Arena.decVG, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def] at hx ⊢
+  obtain ⟨n, hn, c, hc, cv, hcv, j, hj, e⟩ := hx
+  exact ⟨n, h.nat? hn, c, hc, cv, h.decCV hcv, j, h.hd? hj, e⟩
+
+end ext
+
+theorem ArrExt.refl (a : Array Word) : ArrExt a a := fun _ _ h => h
+
+theorem ArrExt.trans {a b c : Array Word} (h₁ : ArrExt a b) (h₂ : ArrExt b c) : ArrExt a c :=
+  fun i v h => h₂ i v (h₁ i v h)
+
+end L.Arena
