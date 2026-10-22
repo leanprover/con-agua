@@ -23,3 +23,5 @@ import ConAgua.Arena.DeclCanonSpec2
 import ConAgua.Arena.DeclAxiomSpec2
 import ConAgua.Arena.DeclAxiomSpec3
 import ConAgua.Arena.DeclAxiomSpec4
+import ConAgua.Arena.DeclArmQuot
+import ConAgua.Arena.DeclArmAxiom

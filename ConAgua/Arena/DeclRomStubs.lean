@@ -90,6 +90,10 @@ theorem romBasisDeclsA_spec (k : Word) (hk : k.toNat < 5) :
     RelAM "rom_basis_decls_a" [k] (StageR dn vis fe) (BasisKind.declsA (basisOfW k.toNat))
       (KeepPost dn vis fe (decRBlk dn)) := sorry
 
+/-- `rom_and_pin()`: the pinned `And` block (`andPinDecls`), for `and_pin_ok`'s inductive arm. -/
+theorem romAndPin_spec :
+    RelAM "rom_and_pin" [] (StageR dn vis fe) andPinDecls (KeepPost dn vis fe (decRBlk dn)) := sorry
+
 end specs
 
 end L.Ind

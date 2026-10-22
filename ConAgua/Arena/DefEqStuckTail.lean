@@ -35,15 +35,15 @@ theorem projPair_at (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) :
     ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat) (s₀ : St) (a₀ : AState)
       (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
       (eb mode d a b : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode →
-      HW a → HW b →
+      HW a → HW b → d.toNat < 2 ^ 63 →
       CoreSpec p n "defeq_proj_pair" [mode, vis, d, a, b]
         (defeqProjPair (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b))
         decBool s₀ a₀ dn vis fe M eb
-  | 0, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _ =>
+  | 0, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _, _ =>
       CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
-  | n + 1, hk, F, s₀, a₀, dn, vis, fe, M, eb, mode, d, a, b, hF, hn, hs, h1, h2 =>
+  | n + 1, hk, F, s₀, a₀, dn, vis, fe, M, eb, mode, d, a, b, hF, hn, hs, h1, h2, hd =>
       projPair_refines p hq hc n (hk.mono (by omega)) F s₀ a₀ dn vis fe M eb mode d a b
-        (by omega) (by omega) hs h1 h2
+        (by omega) (by omega) hs h1 h2 hd
 
 theorem defeqStuck_at (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : StuckCallees p) :
     ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat) (s₀ : St) (a₀ : AState)
@@ -134,7 +134,7 @@ theorem defeqTail_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc :
     (n : Nat) (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb mode d a1 b1 : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
-    (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a1) (hb : HW b1) :
+    (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a1) (hb : HW b1) (hd : d.toNat < 2 ^ 63) :
     CoreSpec p (n + 1) "defeq_tail" [mode, vis, d, a1, b1]
       (defeqTailT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a1) (decE b1))
       decBool s₀ a₀ dn vis fe M eb := by
@@ -155,7 +155,7 @@ theorem defeqTail_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc :
   unfold defeqTailT
   obtain ⟨r₁, m₁, hc1, hW1⟩ := callW_cases rfl hW
   have h₁ := CoreSpec.of_callW (projPair_at p hq hc n hk F s a₀ dn vis fe M eb mode d a1 b1 hF hn hs
-    ha hb) hc1
+    ha hb hd) hc1
   refine coreRef_bind h₁ (fun M₁ hS₁ => ?_)
   simp only [dtK1] at hW1
   by_cases h0 : r₁.headD 0 ≠ 0
