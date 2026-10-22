@@ -46,18 +46,17 @@ def classReadClasses : FunDecl := lfn (so, sl) locals (q, cnt, j, sp) {
 /-- `class_read_motive_slot(so, sl, c)`: the prefix position of class `c`'s motive. -/
 -- con-ron: ConRon/Arena/Inductives/ClassRead.lean:74-82 ConRon.Arena.ClassRead.motiveSlot
 @[l_impl ConRon.Arena.ClassRead.motiveSlot]
-def classReadMotiveSlot : FunDecl := lfn (so, sl, c) locals (cnt, j, sp) {
-  cnt := 0;
-  j := 0;
-  while j < sl {
-    sp := IW.u64[so + j];
-    if IW.u64[sp] == 0 {
-      if cnt == c { return (1, j) };
-      cnt += 1
-    };
-    j += 1
+def classReadMotiveSlot : FunDecl := lfn (so, sl, c) locals (sp, ok, j) {
+  if sl == 0 { return (0, 0) };
+  sp := IW.u64[so];
+  if IW.u64[sp] == 0 {
+    if c == 0 { return (1, 0) };
+    (ok, j) := call class_read_motive_slot(so + 1, sl - 1, c - 1)
+  } else {
+    (ok, j) := call class_read_motive_slot(so + 1, sl - 1, c)
   };
-  return (0, 0)
+  if ok == 0 { return (0, 0) };
+  return (1, j + 1)
 }
 
 /-- `class_of_motive_var(nP, mo, ml, p)`: the motive ordinal of prefix variable `p`
@@ -285,6 +284,7 @@ def closeLams : FunDecl := lfn (bo, bl, i, body) locals (inner, closed, e) {
   inner := call close_lams(bo + 1, bl - 1, i + 1, body);
   closed := call abstract1_fast(⟪CWF⟫, inner, i, 0);
   e := call mk_lam(IW.u64[bo], closed);
+  if 4294967296 <= e { abort };
   return e
 }
 
@@ -294,6 +294,7 @@ def closeLams : FunDecl := lfn (bo, bl, i, body) locals (inner, closed, e) {
 def exprGetD : FunDecl := lfn (o, l, i) locals (x) {
   if i < l { return IW.u64[o + i] };
   x := call intern_bvar(0);
+  if 4294967296 <= x { abort };
   return x
 }
 
@@ -318,16 +319,21 @@ def classGenBinder : FunDecl := lfn (g, x) locals (t) {
 @[l_impl ConRon.Arena.ClassGen.slotVar]
 def classGenSlotVar : FunDecl := lfn (g, s) locals (u, z, fv) {
   u := call pin_word(53);
+  if 4294967296 <= u { abort };
   z := call intern_sort(u);
+  if 4294967296 <= z { abort };
   fv := call intern_fvar(IW.u64[g] + s, z);
+  if 4294967296 <= fv { abort };
   return fv
 }
 
 /-- `class_gen_mot_var(g, c)`: class `c`'s motive variable. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:115-118 ConRon.Arena.ClassGen.motVar
 @[l_impl ConRon.Arena.ClassGen.motVar]
-def classGenMotVar : FunDecl := lfn (g, c) locals (ok, s, r) {
-  (ok, s) := call class_read_motive_slot(IW.u64[g + 7], IW.u64[g + 8], c);
+def classGenMotVar : FunDecl := lfn (g, c) locals (ok, s, r, so, sl) {
+  so := IW.u64[g + 7];
+  sl := IW.u64[g + 8];
+  (ok, s) := call class_read_motive_slot(so, sl, c);
   if ok == 0 { s := 0 };
   r := call class_gen_slot_var(g, s);
   return r
@@ -541,15 +547,14 @@ def classGenRecTy : FunDecl := lfn (g, c) locals
 first recursor at that class. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:257-263 ConRon.Arena.classRecOf
 @[l_impl ConRon.Arena.classRecOf]
-def classRecOf : FunDecl := lfn (rco, rcl, cgo, cgl, t) locals (r, v) {
-  r := 0;
-  while r < cgl {
-    v := 0;
-    if r < rcl { v := IW.u64[rco + r] };
-    if v == t { return (1, EREC.u64[IW.u64[cgo + r]]) };
-    r += 1
-  };
-  return (0, 0)
+def classRecOf : FunDecl := lfn (rco, rcl, cgo, cgl, t) locals (v, nr, ok, nm) {
+  if cgl == 0 { return (0, 0) };
+  v := 0;
+  nr := 0;
+  if rcl != 0 { v := IW.u64[rco]; nr := rcl - 1 };
+  if v == t { return (1, EREC.u64[IW.u64[cgo]]) };
+  (ok, nm) := call class_rec_of(rco + 1, nr, cgo + 1, cgl - 1, t);
+  return (ok, nm)
 }
 
 /-- `class_gen_rule_find_slot(g, c, ctorName)`: `classGenRule`'s `hit`, the prefix position of
