@@ -131,4 +131,62 @@ theorem word_add_toNat (c : Nat) (w : Word) (h : c + w.toNat < 2 ^ 64) :
     (UInt64.ofNat c + w).toNat = c + w.toNat := by
   rw [UInt64.toNat_add, UInt64.toNat_ofNat']; simp; omega
 
+/-! ## The entries -/
+
+section entries
+variable {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) (hr : RomOK rom) (rest : List UInt8)
+  (hrom : rom = romData ++ rest)
+include hL hr hrom
+
+/-- **`rom_ci(id)` refines `romCiT id`.** -/
+theorem romCiRef_of (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) :
+    RomCiRef p dn vis fe := by
+  intro id hid n m a r m' hS hc
+  cases n with
+  | zero => rw [callW_zero] at hc; cases hc
+  | succ n =>
+  have hw := callW_model (M := fun mq => ciEntryW p n mq id) (ciEntry_specW rom p hL n · id) hc
+  unfold ciEntryW at hw
+  rw [if_neg (by rw [UInt64.le_iff_toNat_le]; simp; omega)] at hw
+  cases h1 : callW p n "rci_slot" [10 + id] m with
+  | none => rw [h1] at hw; simp at hw
+  | some t1 =>
+  obtain ⟨r1, m1⟩ := t1
+  rw [h1, bW_some] at hw
+  obtain ⟨rfl, rfl⟩ := slotCall hL h1
+  have h10 : (10 + id).toNat = 10 + id.toNat := word_add_toNat 10 id (by omega)
+  obtain ⟨rest', hpos⟩ := slot_pos hr rest hrom (10 + id) (by omega)
+  simp only [h10, ciEntries_ci id.toNat hid] at hpos
+  have hI0 := RInv.refl hS
+  cases h2 : callW p n "rci_fresh" [] m1 with
+  | none => rw [h2] at hw; simp at hw
+  | some t2 =>
+  obtain ⟨r2, m2⟩ := t2
+  rw [h2, bW_some] at hw
+  obtain ⟨hI2, hM2, hs2, -, -, -, -⟩ := freshCall hL hI0 h2
+  cases n with
+  | zero => rw [callW_zero] at hw; simp at hw
+  | succ n =>
+  cases h3 : callW p (n + 1) "rci_ci" [ciOff + u64W rom (ciOff + 8 * (10 + id))] m2 with
+  | none => simp only [List.headD_cons] at hw; rw [h3] at hw; simp at hw
+  | some t3 =>
+  obtain ⟨r3, m3⟩ := t3
+  simp only [List.headD_cons] at hw
+  rw [h3, bW_some] at hw
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨rfl, rfl⟩ := hw
+  have hfit : ciFits (romCiVals[id.toNat]'(by simp [romCiVals]; omega)) = true :=
+    List.all_eq_true.mp romCiVals_fit _ (List.getElem_mem _)
+  obtain ⟨memo', ici, a', hrun, hI3, -, -, -, -, -, -, hH⟩ :=
+    ci_rel hL hr dn [] ∅ _ hfit n m2 a _ rest' r3 m3 hI2 hM2 hs2 hpos h3
+  refine ⟨ici, a', ?_, hI3.stage hS, hI3.grow, ?_⟩
+  · rw [romCiT_eq id.toNat hid]
+    simp only [ConRon.Arena.internCI]
+    rw [run_bind_of _ _ _ _ _ hrun]; rfl
+  · unfold decRCI
+    simp only [List.headD_cons]
+    exact hH.decB (fun i hi => hi.2) (fun _ h => h.elim)
+
+end entries
+
 end L.Rom
