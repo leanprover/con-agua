@@ -4,7 +4,7 @@ import ConAgua.Rom.CIReadRefBase
 # The ROM constant readers: the callees under the invariant, and name slices (helper `decls4-rom`)
 
 `nameCall`, `exprCall`, `u64Call`, `allocCall`, `freshCall`: a returning `callW` of a callee is
-the twin's run, with the invariant `Inv` after. Then `rci_names_to` (`internNameList`, the
+the twin's run, with the invariant `RInv` after. Then `rci_names_to` (`internNameList`, the
 handles to `EREC[o ‥]`) and `rci_name_sl` (a counted name list as a fresh `EREC` slice).
 -/
 
@@ -101,10 +101,10 @@ theorem toNat_add_of_lt (o : Word) (k : Nat) (h : o.toNat + k < 2 ^ 64) :
     (o + UInt64.ofNat k).toNat = o.toNat + k := by
   rw [UInt64.toNat_add, UInt64.toNat_ofNat']; simp; omega
 
-theorem Inv.er_lt {m₀ m : Mem} {a₀ a : AState} (h : Inv m₀ a₀ m a) : erTop m < 2 ^ 64 := by
+theorem RInv.er_lt {m₀ m : Mem} {a₀ a : AState} (h : RInv m₀ a₀ m a) : erTop m < 2 ^ 64 := by
   have := h.ok.2.1; have := h.ok.2.2.2.1; omega
 
-theorem Inv.iw_lt {m₀ m : Mem} {a₀ a : AState} (h : Inv m₀ a₀ m a) : iwTop m < 2 ^ 64 := by
+theorem RInv.iw_lt {m₀ m : Mem} {a₀ a : AState} (h : RInv m₀ a₀ m a) : iwTop m < 2 ^ 64 := by
   have := h.ok.1; have := h.ok.2.2.1; omega
 
 section names
@@ -114,14 +114,14 @@ include hL hr
 /-- **`rci_names_to` refines `internNameList`**, the handles to `EREC[o ‥]`. -/
 theorem namesTo_rel {m₀ : Mem} {a₀ : AState} (seen : List ConLeche.Expr) (memo : EMemo) :
     ∀ (ns : List ConLeche.Name), ns.all nameFits = true → ∀ (k : Nat) (m : Mem) (a : AState)
-      (q o kw : Word) (rest : List UInt8) (r : List Word) (m' : Mem), Inv m₀ a₀ m a →
+      (q o kw : Word) (rest : List UInt8) (r : List Word) (m' : Mem), RInv m₀ a₀ m a →
       MemoR m seen memo → rom.drop q.toNat = encNames ns ++ rest → kw.toNat = ns.length →
       erTop m₀ ≤ o.toNat → o.toNat + ns.length ≤ erTop m →
       callW p k "rci_names_to" [q, o, kw] m = some (r, m') →
       ∃ (ws : List Word) (a' : AState), (Frontend.internNameList ns).run a = .ok (ws.map decI, a') ∧
         ws.length = ns.length ∧ (∀ w ∈ ws, w.toNat < 2 ^ 32) ∧
         (∀ j (hj : j < ws.length), (erA m')[o.toNat + j]? = some ws[j]) ∧
-        Inv m₀ a₀ m' a' ∧ MemoR m' seen memo ∧ stkTop m' = stkTop m ∧
+        RInv m₀ a₀ m' a' ∧ MemoR m' seen memo ∧ stkTop m' = stkTop m ∧
         (r.headD 0).toNat = q.toNat + (encNames ns).length ∧
         EKeep (fun i => o.toNat ≤ i ∧ i < o.toNat + ns.length) m m' ∧ erTop m' = erTop m ∧
         m'.arr64 IW = m.arr64 IW := by
@@ -207,8 +207,8 @@ theorem namesTo_rel {m₀ : Mem} {a₀ : AState} (seen : List ConLeche.Expr) (me
         have := hwd j (by simp at hj; omega)
         rw [ho1, Nat.add_assoc, Nat.add_comm 1 j] at this
         exact this
-    · rw [hq3, hq1]; simp [encNames]; omega
-    · refine ((EKeep.of_eq hE1 (by rw [ht1])).trans (EKeep.set _ o _ ⟨Nat.le_refl _, by omega⟩)).trans
+    · simp only [List.headD_cons]; rw [hq3, hq1]; simp [encNames]; omega
+    · refine ((EKeep.of_eq hE1 (by rw [ht1]; exact Nat.le_refl _)).trans (EKeep.set _ o _ ⟨Nat.le_refl _, by omega⟩)).trans
         (hek3.mono fun i hi => ⟨by rw [ho1] at hi; omega, by rw [ho1] at hi; omega⟩)
 end names
 
