@@ -7725,3 +7725,75 @@ entry. The memo-hit bug (the probe depth returned as the value) was found by thi
 * **Open**: `checkDeclDefn_loop` stays `sorry` until the loop's relation carries the variant list
   (`PinSetsR m pins`: `LoopR` gains `pins`, or the chain `CheckDeclSpec` → `installStepGo_spec`
   → `Checker.lean` threads it) and the two gate specs are proved.
+
+### Helper `whnf4-d23`: the level-parameter bit mirrored (deviation D23 fixed)
+
+The twin's derived records carry a level-parameter bit (`lpOfData` of the expression word,
+`LDer.hasParam` of levels and level lists), and `instLPGo`/`instLPFast` cut off on it before any
+readback. L now keeps the same bit for every node, **stored when the node is pushed** (the twin
+computes `derOfView` before `Tbl.push`), so it is the twin's stored bit even for a node whose
+child dangled when it was interned (no `StoreWF` needed).
+
+* **Layout** (`LpCol.lean`). Compound tables: bit 30 of the existing `XDER` words 42‥46
+  (`packBFL b f l = packBF b f + l * 2^30`; `der_f` now masks `(x >> 15) & 32767`), written by
+  `mk_*` as the `or` of the children's bits. Seven new word arrays, one word per node at
+  `2 i + t` like the records: 55 `SHP` (`succ`), 56 `MHP` (`max`), 57 `IHP` (`imax`), 58 `LSHP`
+  (level lists), 59 `SOLP` (`sort`), 60 `CLP` (`const`), 61 `FVLP` (`fvar`), written by the
+  table's own `*_push` from the children's bits read on the memory before the push (a named block
+  spliced into the push: `hpBlkS`, `hpBlkM1/2`, `lsBlkC`, `lpBlkF`, the loop `hpLoopLs`, each with
+  its spec; push specs stay one `vcgen`). `zero`, `param`, `bvar`, `lit` have constant bits and
+  no column. The pushes check `c < len(COL) >> 1` with the other room checks (fixed capacity).
+  No `CTL` word was added. Record syntax (lane `lfeat`) was not used: the column index `2 i + t`
+  has the tier as a run-time offset, and `R[i].f` needs a constant field; the columns are
+  addressed exactly as the record arrays of the same tables.
+* **Read models.** `lvlHPW m u` (level handle), `lsHPW m us` (level list), `lsOrW m o k` (the
+  `or` over a pool slice, `ls_push`'s loop), `exprLPW m h` (expression; `der_b`'s new third
+  result): tier check, tag, count check, then the column (`0` for a handle that does not view,
+  the twin's `default`).
+* **Models of the interning.** `xinternW` keeps its name and spec; `xinternW_eq` now says
+  `internMD` (`internM` plus the column write, `LpColRel.lean`), `xinternW_eqK` (given the count
+  words, i.e. `StoreR`) says `mkK COL … (internM …)`, `xinternW_frame` is the frame
+  `MemFrame [REC, SLOT, COL] [ca, ca+1]`. The `x*_correct` lemmas kept their statements
+  (proved through `mkK_split` and the store frame); new `x*_hp`/`x*_lp` lemmas carry the column
+  across the interning (`colMk`, the `derMk` of any lens), from a hypothesis `hb` that the bit
+  written is the twin's.
+* **Relation.** Nine new `ArenaR` fields (`ArenaRel.lean`): `zeroHp`, `paramHp`
+  (`ConstT2`: `hpW = 0`/`1` on every node), `succHp`, `maxHp`, `imaxHp`, `lsHp` (`ColT2 … hpW`),
+  `sortLp`, `constLp`, `fvarLp` (`ColT2 … lpW`); `ColT2 L A f m a`: as many derived records as
+  nodes, and `A[2 i + t] = f (derAt i)`. The columns are in `storeArrs`, so `ArenaR.frame` covers
+  them; `arena_build` frames them by `ColT2.frameAp`. `lift_x` takes `XR m' a' ∧ col m' a'`.
+  `DerR`: `bvP` and the new `zlP` (`lit`) add `lpOfData d = false`, `cP` packs the bit
+  (`packBFL … (lpW d)`). `DerRel.lean` was split (`DerRelBase.lean`: the relation and the reads;
+  names unchanged).
+* **The interface** (`DerRelBase.lean`):
+  `theorem derLW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (hD : DerR m a) (h : Word)
+  (hh : h.toNat < 2 ^ 32) : exprLPW m h = lpW (a.store.derived (decE h))`, with
+  `lpW d = b2w (lpOfData d)` (`1`/`0`) and `derB_spec`'s post
+  `r.tail.tail.headD 0 = exprLPW s₀.mem h`. Level side (`ArenaRel.lean`): `lvlHPW_ok`,
+  `lsHPW_ok`, `lsOrW_ok`, `lvlHPW_or`.
+* **The cut-off** (`InstLP.lean`): `lp_go` calls `der_b(h)` after the fuel test and returns `h`
+  when the bit is `0` (`instLPGo_succ`'s `if !(lpOfData der) then pure h`); `inst_lp_core`
+  calls `der_b(e)` first and returns `e & 0xffffffff` before `ls_node(us)` and the memo clears
+  (`instLPFast`). The walk's refinement (`InstLPOK`) is not part of this helper.
+* **Ripple.** 72 files vs master (+2862 / −1040 lines, most of it the new files and the
+  per-table column lemmas). Site changes were mechanical: frames gained the column (`lvArrs`,
+  `lArrs`, `lsArrs`, `eArrs`, `rflArrs`, `natA`, the `MemFrame [CREC, CSLOT, CLP]` of
+  `intern_const`), `b < 42` level/ls frame conditions became `b < 42 ∨ (54 < b ∧ b < 64)`
+  (`stage_of_level`, `CoreS.of_level`, `CoreS.of_ls`), `vg_arrs`/`pnew_arrs`/`LoopR.of_frame`
+  allow 55‥63, `pi_lens` takes `b < 42 ∨ 46 < b`, five anonymous `ArenaR` constructors gained the
+  fields, test memories and the emitted benches have 62 word arrays (`WalkBench`, `*Emit`).
+  Moved, not duplicated: `cnt_tier`, `idxW_hdW`, `derPutW_frame`, `ix_ne`, `cnt2_eq` (to
+  `LpColRel.lean`), `decI_tag`/`decI_idx`/`decI_tag_eq` (from `PromoteNRef.lean`), `sliceL_succ`
+  (to `LitRefine.lean`), `tierW_le` (to `LpCol.lean`), `mkK`/`derPutW`/`cnt2` and the five
+  `XDER` ids (to `LpCol.lean`), the seven `*Local` lemmas (to their `*Refine.lean`).
+  `DefEqMidLams.lean`'s local `lpW` was renamed `lpeelW` (name clash).
+* **Numbers.** New: `LpCol.lean` 427 lines (L: six blocks, 60 L lines; models, block specs,
+  `packBFL` lemmas), `LpColRel.lean` 677 (generic column relation, `internMD`, `colMk`).
+  L changed: the seven pushes (+1 block call, +1 room check, +1 store each), `der_b` (+2 arms,
+  third result), `mk_*` (+1 result, `lp` term), `lp_go`/`inst_lp_core` (+2 lines each).
+  `lake env lean` wall times: `LpCol` 15.9 s (`lpBlkF_spec` needs `maxHeartbeats 1000000`),
+  `ExprMk` 19.9 s (`derB_spec` the same), `LpColRel` 1.2 s, `DerRelBase` 0.8 s, `ArenaRel`
+  4.9 s, `SortStore` 5.4 s, `LsStore` 3.4 s. `Checker/Prog.lean` regenerated (unchanged: 1692
+  functions, 9 stubs), `coreFns` 533. No new `sorry`, no axiom.
+* **Left.** `InstLPOK` (the walk's refinement) on `derLW_ok`; the e2e harness needs no change
+  (all word arrays are allocated alike).
