@@ -928,7 +928,7 @@ theorem hintLt_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St) (
 /-! ## Level-list lengths -/
 
 /-- **`ls_node`'s length word is the twin's `viewLen`** (when `ls_node` returns). -/
-theorem lsNodeW_viewLen {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : HW h)
+theorem lsNodeW_viewLenL {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : HW h)
     (hne : lsNodeW m h ≠ []) :
     a.store.lss.viewLen (decI h) = some ((lsNodeW m h).tail.headD 0).toNat := by
   unfold lsNodeW at hne ⊢
@@ -1123,7 +1123,7 @@ theorem unfoldableHead_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀
   have hm₃ : m₃ = s.mem := by rw [← ht₃, heq]
   subst hm₃
   rw [hr₃] at hne
-  have hvl := lsNodeW_viewLen hR huw hne
+  have hvl := lsNodeW_viewLenL hR huw hne
   rw [← hr₃] at hvl
   unfold ufLsF at hW
   simp only at hW

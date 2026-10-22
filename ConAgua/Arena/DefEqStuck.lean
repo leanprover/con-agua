@@ -33,12 +33,55 @@ structure StuckProg (p : Prog) : Prop where
   etaCertBody : p.lookup "eta_cert_body" = some etaCertBodyL
   etaCertTy : p.lookup "eta_cert_ty" = some etaCertTyL
   etaCtorShape : p.lookup "eta_ctor_shape" = some etaCtorShapeL
+  setTail : p.lookup "struct_eta_cert_tail" = some structEtaCertTailL
+  setGo : p.lookup "struct_eta_cert_go" = some structEtaCertGoL
+  setWith : p.lookup "struct_eta_cert_with" = some structEtaCertWithL
+  setCert : p.lookup "struct_eta_cert" = some structEtaCertL
+  sunit : p.lookup "struct_unit_cert" = some structUnitCertL
+  stuckIrrel : p.lookup "stuck_irrel" = some stuckIrrelL
+
+/-- `defeq_lst(mode, vis, d, ao, an, bo, bn)` refines the twin's `defEqList` on two stack slices
+below the top (helper `defeq-mid` proves it; a hypothesis here). -/
+def DefeqLstOK (p : Prog) : Prop :=
+  ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
+  ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (M : ModeMaps) (eb mode d ao an bo bn : Word) (xs ys : Array EIdx),
+    SlotPre s₀ a₀ dn vis fe M eb mode → SpineR s₀.mem ao an xs → SpineR s₀.mem bo bn ys →
+    ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat → bo.toNat + bn.toNat ≤ (spTop s₀.mem).toNat →
+    CoreSpec p (n + 1) "defeq_lst" [mode, vis, d, ao, an, bo, bn]
+      (defEqList (coreKnot (decMode mode) fe id F) fe d.toNat xs.toList ys.toList) decBool s₀ a₀ dn
+      vis fe M eb
+
+/-- The twin's reserved-name test: `reservedBasisNames`, then `List.contains`. -/
+def reservedContainsT (n : NIdx) : AM Bool := do
+  let rs ← reservedBasisNames
+  pure (rs.contains n)
+
+/-- `reserved_contains(x)` (lane `whnf`'s `WhnfIota.lean`, no spec yet) refines
+`reservedContainsT`. -/
+def ReservedContainsOK (p : Prog) : Prop :=
+  ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (M : ModeMaps) (eb x : Word), CoreS dn s₀.mem a₀ vis fe M eb → HW x →
+    CoreSpec p n "reserved_contains" [x] (reservedContainsT (decI x)) decBool s₀ a₀ dn vis fe M eb
+
+/-- `lvls_eq_c(us, vs)` refines `lvlsEq?` under `CoreS` alone. Lane `whnf`'s `lvlsEqC_refines`
+proves it when both lists denote (`denoteLs`); that a stored level list denotes is an invariant
+`CoreS` does not carry yet (the gap of `InferProjOK`). -/
+def LvlsEqCH (p : Prog) : Prop :=
+  ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (M : ModeMaps) (eb us vs : Word), CoreS dn s₀.mem a₀ vis fe M eb → HW us → HW vs →
+    CoreSpec p n "lvls_eq_c" [us, vs] (lvlsEq? (decI us) (decI vs)) (fun r => decO (r.headD 0))
+      s₀ a₀ dn vis fe M eb
 
 /-- The callees the stuck side assumes. -/
 structure StuckCallees (p : Prog) : Prop where
   defeq : DefeqCallees p
   proofIrrel : ProofIrrelOK p
   inst1 : Inst1OK p
+  defeqLst : DefeqLstOK p
+  reservedContains : ReservedContainsOK p
+  towerSlots : TowerSlotsAllOK p
+  lvlsEqC : LvlsEqCH p
 
 /-- `proof_irrel` at every L fuel up to `n + 1` from the knot up to `n`. -/
 theorem proofIrrel_at (p : Prog) (hc : StuckCallees p) :

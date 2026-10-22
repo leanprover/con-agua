@@ -808,27 +808,12 @@ def etaCtorShapeL : FunDecl := lfn (vis, a) locals (top, hh, t, i, f, p, ao, an,
   return u64(an - nf == EREC.u64[p + 5])
 }
 
-/-- The η certificate's checks after the two heads are found (`c` the constructor's record `p`,
-`T` the type's record `q`, the spines `(ao, an)`, `(to, tn)` on the stack). -/
+/-- The η certificate's level comparison and the two spine comparisons (`ep` the parameters, `nf`
+the fields; split off for the proofs). Leaves the projections' slice on the stack. -/
 -- con-ron: ConRon/Arena/Core.lean:1492-1538 ConRon.Arena.structEtaCertWith
 @[l_impl ConRon.Arena.structEtaCertWith]
-def structEtaCertGoL : FunDecl :=
-    lfn (mode, vis, d, b, us, c, p, T, q, us2, ao, an, to, tn)
-    locals (lo, uslen, slots, r1, r2, lpe, z, ok, ep, tk, po, pn) {
-  (lo, uslen) := call ls_node(us2);
-  slots := call tower_slots_all(vis, T, EREC.u64[q + 8]);
-  if EREC.u64[q + 5] == 0 { return 0 };
-  if EREC.u64[q + 6] != c { return 0 };
-  r1 := call reserved_contains(T);
-  if r1 != 0 { return 0 };
-  r2 := call reserved_contains(c);
-  if r2 != 0 { return 0 };
-  ep := EREC.u64[q + 7];
-  if tn != ep { return 0 };
-  if uslen != EREC.u64[q + 3] { return 0 };
-  lpe := call er_slice_eq(EREC.u64[p + 2], EREC.u64[p + 3], EREC.u64[q + 2], EREC.u64[q + 3]);
-  if lpe == 0 { return 0 };
-  if slots == 0 { return 0 };
+def structEtaCertTailL : FunDecl :=
+    lfn (mode, vis, d, b, us, T, us2, ao, an, to, tn, ep, nf) locals (z, tk, ok, po, pn) {
   z := call lvls_eq_c(us, us2);
   if z == 0 { abort };
   if z == 1 { return 0 };
@@ -836,9 +821,44 @@ def structEtaCertGoL : FunDecl :=
   if an < tk { tk := an };
   ok := call defeq_lst(mode, vis, d, ao, tk, to, tn);
   if ok == 0 { return 0 };
-  (po, pn) := call eta_projs(T, b, EREC.u64[q + 8]);
+  (po, pn) := call eta_projs(T, b, nf);
   ok := call defeq_lst(mode, vis, d, ao + tk, an - tk, po, pn);
   return ok
+}
+
+/-- The η certificate's checks after the two heads are found (`c` the constructor's record `p`,
+`T` the type's record `q`, the spines `(ao, an)`, `(to, tn)` on the stack). Every record word is
+read before the first call, and the twin's pure tests (`er_slice_eq`, `reserved_contains`, the
+level list's length) run before `tower_slots_all`: the twin's condition has no effect, so nothing
+moves across an effect. -/
+-- con-ron: ConRon/Arena/Core.lean:1492-1538 ConRon.Arena.structEtaCertWith
+@[l_impl ConRon.Arena.structEtaCertWith]
+def structEtaCertGoL : FunDecl :=
+    lfn (mode, vis, d, b, us, c, p, T, q, us2, ao, an, to, tn)
+    locals (eta, ec, ep, nf, lpn, lpo, cpo, cpn, lpe, r1, r2, lo, uslen, slots, r) {
+  eta := EREC.u64[q + 5];
+  ec := EREC.u64[q + 6];
+  ep := EREC.u64[q + 7];
+  nf := EREC.u64[q + 8];
+  lpo := EREC.u64[q + 2];
+  lpn := EREC.u64[q + 3];
+  cpo := EREC.u64[p + 2];
+  cpn := EREC.u64[p + 3];
+  lpe := call er_slice_eq(cpo, cpn, lpo, lpn);
+  r1 := call reserved_contains(T);
+  r2 := call reserved_contains(c);
+  (lo, uslen) := call ls_node(us2);
+  slots := call tower_slots_all(vis, T, nf);
+  if eta == 0 { return 0 };
+  if ec != c { return 0 };
+  if r1 != 0 { return 0 };
+  if r2 != 0 { return 0 };
+  if tn != ep { return 0 };
+  if uslen != lpn { return 0 };
+  if lpe == 0 { return 0 };
+  if slots == 0 { return 0 };
+  r := call struct_eta_cert_tail(mode, vis, d, b, us, T, us2, ao, an, to, tn, ep, nf);
+  return r
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:1492-1538 ConRon.Arena.structEtaCertWith -/
@@ -1108,7 +1128,7 @@ def defeqFns : Prog :=
    ("lazy_delta_proj_reduction", lazyDeltaProjReductionL), ("defeq_proj_pair", defeqProjPairL),
    ("prop_irrel", propIrrelL), ("eta_cert_ty", etaCertTyL), ("eta_cert_body", etaCertBodyL),
    ("eta_cert", etaCertL), ("eta_ctor_shape", etaCtorShapeL),
-   ("struct_eta_cert_go", structEtaCertGoL), ("struct_eta_cert_with", structEtaCertWithL),
+   ("struct_eta_cert_tail", structEtaCertTailL), ("struct_eta_cert_go", structEtaCertGoL), ("struct_eta_cert_with", structEtaCertWithL),
    ("struct_eta_cert", structEtaCertL), ("struct_unit_cert", structUnitCertL),
    ("stuck_irrel", stuckIrrelL), ("stuck_str", stuckStrL), ("stuck_app", stuckAppL),
    ("defeq_stuck", defeqStuckL), ("defeq_tail", defeqTailL), ("defeq_body", defeqBodyL)]
