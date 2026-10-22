@@ -87,6 +87,19 @@ per-function separation logic.
   on master after each batch of landings, so the time series has one line per master state and lanes never
   conflict on these files.
 
+## Build statistics (file size, elaboration time)
+- `scripts/buildstats.py` measures lines per `.lean` file under `ConAgua/`, elaboration seconds per module, and
+  every elaboration step above 1 s (Lean profiler, with `file:line`), in its own worktree
+  `_tmp/wt/buildstats-run` built without the shared Lake cache, niced, on at most 16 cores, killed above 20 GB.
+  Default is incremental (only modules changed since the last run are re-measured); `--full` re-measures
+  everything (~20 CPU-minutes); `--lines-only` needs no build; `--write` regenerates `docs/buildstats.md`
+  and appends to `docs/buildstats.csv` (measurements live in `docs/buildstats.json`). Thresholds are
+  constants at the top of the script.
+- **Who runs it.** Only the coordinator, a few times a day in the background, on master. Files on the
+  watch list (over 1500 lines or 60 s) get split by a lane; a split keeps statements and names stable.
+  Declarations on it (a step over 20 s) are investigated by a separate lane off the critical path.
+  **No lane adds time gates to merging**; this report is advisory.
+
 ## Bumping the twin (con-ron, and the con-leche it pins)
 - **State.** `vendor/UPSTREAM` names the two vendored revisions; `vendor/` is exactly those upstream
   files plus the patch series `vendor/patches/{con-leche,con-ron}/NNNN-*.patch`, applied in order
