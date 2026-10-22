@@ -1,5 +1,6 @@
 import ConAgua.Arena.DeclReduceSpec
 import ConAgua.Arena.DeclCanonEq
+import ConAgua.Arena.DeclBasisSpec2
 
 /-!
 # `matchesPin`, `reduceStoredOk`, `reduceElemOk` (lane `decls3`)
@@ -268,6 +269,261 @@ theorem reduceStoredOk_refines (p : Prog) (h : RedProg p) (dn : NIdx → Option 
   refine triple_post (rso_specW p h n s₀ vis c) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨b, a', hrun, hS', hg, hd⟩ := rsoW_ok h hm hS hc
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hst, hres]; exact ⟨hS', hg, hd⟩⟩
+
+/-! ## `reduce_elem_ok(vis, c)` -/
+
+section reo
+variable (p : Prog)
+
+/-- `Bool`: after `rom_cv(5)`, the comparison. -/
+def reoB3 (q : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r4, m4) => mpW m4 (q + 1) (r4.headD 0)
+
+/-- `Bool`: after the lookup. -/
+def reoB2 : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r3, m3) =>
+    if r3.headD 0 = 0 then some ([0], m3)
+    else if rdW (m3.arr64 EREC) (r3.tail.headD 0) ≠ 3 then some ([0], m3)
+    else reoB3 (r3.tail.headD 0) (stubM "rom_cv" m3 [5])
+
+/-- `Bool`: after the pin. -/
+def reoB1 (vis : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r2, m2) => reoB2 (envFindW m2 (r2.headD 0) vis)
+
+/-- `Nat`: after `rom_ci(1)`, the comparison (a miss answers `0`). -/
+def reoN3 (r3 : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r4, m4) =>
+    if r3.headD 0 = 0 then some ([0], m4)
+    else some ([if ciEqB (m4.arr64 EREC) (r3.tail.headD 0) (r4.headD 0) then 1 else 0], m4)
+
+/-- `Nat`: after the lookup. -/
+def reoN2 : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r3, m3) => reoN3 r3 (stubM "rom_ci" m3 [1])
+
+/-- `Nat`: after the pin. -/
+def reoN1 (vis : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r2, m2) => reoN2 (envFindW m2 (r2.headD 0) vis)
+
+/-- After the `reduceNat` pin. -/
+def reoK1 (vis c : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r1, m1) => if c = r1.headD 0 then reoN1 vis (pinAtW m1 1) else reoB1 vis (pinAtW m1 29)
+
+/-- **The model of `reduce_elem_ok(vis, c)`.** -/
+def reoW : Nat → Mem → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _ => none
+  | _ + 1, m, vis, c => reoK1 vis c (pinAtW m 43)
+
+section arms
+variable (n : Nat) (m m1 m2 m3 m4 : Mem) (vis c q : Word) (r1 r2 r3 r4 : List Word)
+theorem reoW_step : reoW (n + 1) m vis c = reoK1 vis c (pinAtW m 43) := rfl
+theorem reoK1_some : reoK1 vis c (some (r1, m1)) =
+    if c = r1.headD 0 then reoN1 vis (pinAtW m1 1) else reoB1 vis (pinAtW m1 29) := rfl
+theorem reoN1_some : reoN1 vis (some (r2, m2)) = reoN2 (envFindW m2 (r2.headD 0) vis) := rfl
+theorem reoN2_some : reoN2 (some (r3, m3)) = reoN3 r3 (stubM "rom_ci" m3 [1]) := rfl
+theorem reoN3_some : reoN3 r3 (some (r4, m4)) =
+    if r3.headD 0 = 0 then some ([0], m4)
+    else some ([if ciEqB (m4.arr64 EREC) (r3.tail.headD 0) (r4.headD 0) then 1 else 0], m4) := rfl
+theorem reoB1_some : reoB1 vis (some (r2, m2)) = reoB2 (envFindW m2 (r2.headD 0) vis) := rfl
+theorem reoB2_some : reoB2 (some (r3, m3)) =
+    if r3.headD 0 = 0 then some ([0], m3)
+    else if rdW (m3.arr64 EREC) (r3.tail.headD 0) ≠ 3 then some ([0], m3)
+    else reoB3 (r3.tail.headD 0) (stubM "rom_cv" m3 [5]) := rfl
+theorem reoB3_some : reoB3 q (some (r4, m4)) = mpW m4 (q + 1) (r4.headD 0) := rfl
+end arms
+
+grind_pattern [ind_grind] reoW_step => reoW (n + 1) m vis c
+grind_pattern [ind_grind] reoK1_some => reoK1 vis c (some (r1, m1))
+grind_pattern [ind_grind] reoN1_some => reoN1 vis (some (r2, m2))
+grind_pattern [ind_grind] reoN2_some => reoN2 (some (r3, m3))
+grind_pattern [ind_grind] reoN3_some => reoN3 r3 (some (r4, m4))
+grind_pattern [ind_grind] reoB1_some => reoB1 vis (some (r2, m2))
+grind_pattern [ind_grind] reoB2_some => reoB2 (some (r3, m3))
+grind_pattern [ind_grind] reoB3_some => reoB3 q (some (r4, m4))
+
+set_option maxHeartbeats 1600000 in
+theorem reo_specW (h : RedProg p) (n : Nat) (s₀ : St) (vis c : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "reduce_elem_ok" [vis, c]
+    ⦃fun r s' => LocEq s' s₀ ∧ reoW n s₀.mem vis c = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ h.reo]
+  simp only [callFn, reduceElemOkL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, pinAt_specW p h.pa n,
+        envFind_specW p h.ih.ix h.ih.rowGet h.ih.find n, stubM_spec p "rom_ci" n,
+        stubM_spec p "rom_cv" n, ciEq_spec' p h.canon n, mp_specW p h.canon h.mp n] <;>
+      finish (gen := 20) [rdW_eq, mpW]
+
+end reo
+
+/-- **`reduce_elem_ok(vis, c)` refines `reduceElemOk`** at the model level. -/
+theorem reoW_ok {dn : NIdx → Option ConLeche.Name} (hdn : DnInj dn) {vis : Word}
+    {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {c : Word} {r : List Word}
+    (hW : reoW n m vis c = some (r, m')) (hS : StageR dn vis fe m a) (hc : c.toNat < 2 ^ 32) :
+    ∃ b a', (reduceElemOk fe (decI c)).run a = .ok (b, a') ∧ StageR dn vis fe m' a' ∧
+      IWGrow m m' ∧ decW0B m' r b := by
+  cases n with
+  | zero => simp [reoW] at hW
+  | succ n =>
+  rw [reoW_step] at hW
+  cases h1 : pinAtW m 43 with
+  | none => rw [h1] at hW; cases hW
+  | some rm1 =>
+  obtain ⟨r1, m1⟩ := rm1
+  rw [h1, reoK1_some] at hW
+  obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok h1 hS.1.pins
+  have e1 : r1.headD 0 = pinW m (1 + (43 : Word).toNat) := by rw [hr1]; rfl
+  have hbeq : ((decI c : NIdx) == decI (pinW m (1 + (43 : Word).toNat))) =
+      decide (c = pinW m (1 + (43 : Word).toNat)) := decI_beq c _ hc hl1
+  have hsz := hS.2.2.2.2.1
+  by_cases he : c = r1.headD 0
+  · -- `reduceNat`: the pinned `Nat` basis
+    rw [if_pos he, hm1] at hW
+    rw [e1] at he
+    cases h2 : pinAtW m 1 with
+    | none => rw [h2] at hW; cases hW
+    | some rm2 =>
+    obtain ⟨r2, m2⟩ := rm2
+    rw [h2, reoN1_some] at hW
+    obtain ⟨hm2, hr2, hl2, hrun2⟩ := pinAtW_ok h2 hS.1.pins
+    rw [hm2, hr2] at hW
+    simp only [List.headD_cons] at hW
+    cases h3 : envFindW m (pinW m (1 + (1 : Word).toNat)) vis with
+    | none => rw [h3] at hW; cases hW
+    | some rm3 =>
+    obtain ⟨r3, m3⟩ := rm3
+    rw [h3, reoN2_some] at hW
+    cases h4 : stubM "rom_ci" m3 [1] with
+    | none => rw [h4] at hW; cases hW
+    | some rm4 =>
+    obtain ⟨r4, m4⟩ := rm4
+    rw [h4, reoN3_some] at hW
+    have hfm3 : m3 = m := by
+      unfold envFindW at h3; split at h3 <;> (try split at h3) <;> (try split at h3) <;>
+        simp_all
+    subst hfm3
+    obtain ⟨na, a4, hrun4, hS4, hg4, hna⟩ := romCi_spec dn vis fe 1 (by decide) _ m4 a r4 h4 hS
+    have hrun4' : ConRon.Arena.natA.run a = .ok (na, a4) := hrun4
+    have htwin : (reduceElemOk fe (decI c)).run a =
+        .ok (fe.find? (decI (pinW m3 (1 + (1 : Word).toNat))) == some na, a4) := by
+      simp only [reduceElemOk, reduceNatName, pinReduceNat, StateT.run_bind,
+        show PIN_REDUCE_NAT = (43 : Word).toNat from rfl, hrun1, exc_ok_bind', hbeq, he,
+        decide_true, if_true, pinNat, show PIN_NAT = (1 : Word).toNat from rfl, hrun2, hrun4',
+        beq_self_eq_true]
+      rfl
+    by_cases hf : r3.headD 0 = 0
+    · rw [if_pos hf] at hW
+      simp only [Option.some.injEq, Prod.mk.injEq] at hW
+      obtain ⟨rfl, rfl⟩ := hW
+      obtain ⟨-, hfind⟩ := envFindW_miss h3 hS.1.env hl2 hf
+      refine ⟨false, a4, by rw [htwin, hfind]; rfl, hS4, hg4, by simp [decW0B]⟩
+    rw [if_neg hf] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, rfl⟩ := hW
+    obtain ⟨-, hptr, hfind, htag, hrc⟩ := envFindW_hit h3 hS.1.env hl2 hf
+    obtain ⟨ci, hci⟩ := envR_row_dec hS.1.env _ hl2 htag hrc
+    have hci4 : decCI (erA m4) dn (r3.tail.headD 0).toNat = some ci := by
+      rw [hptr]; exact ArrExt.decCI (IWGrow.erecExt hg4) hci
+    have hq := ciEqB_ok hdn hS4.2.2.2.2.1 hci4 (decRCI_get hna)
+    rw [hq]
+    refine ⟨decide (ci = na), a4, ?_, hS4, hg4, ?_⟩
+    · rw [htwin, hfind, hci]
+      by_cases e : ci = na <;> simp [e]
+    · by_cases e : ci = na <;> simp [e, decW0B]
+  · -- `reduceBool`: a standard `Bool`
+    rw [if_neg he, hm1] at hW
+    rw [e1] at he
+    cases h2 : pinAtW m 29 with
+    | none => rw [h2] at hW; cases hW
+    | some rm2 =>
+    obtain ⟨r2, m2⟩ := rm2
+    rw [h2, reoB1_some] at hW
+    obtain ⟨hm2, hr2, hl2, hrun2⟩ := pinAtW_ok h2 hS.1.pins
+    rw [hm2, hr2] at hW
+    simp only [List.headD_cons] at hW
+    have hpre : (reduceElemOk fe (decI c)).run a =
+        (match fe.find? (decI (pinW m (1 + (29 : Word).toNat))) with
+          | some (.indInfo cvB _) => do cvB.matchesPin (← boolCvA)
+          | _ => pure false : AM Bool).run a := by
+      simp only [reduceElemOk, reduceNatName, pinReduceNat, StateT.run_bind,
+        show PIN_REDUCE_NAT = (43 : Word).toNat from rfl, hrun1, exc_ok_bind', hbeq, he,
+        decide_false, Bool.false_eq_true, if_false, boolName, pinBool,
+        show PIN_BOOL = (29 : Word).toNat from rfl, hrun2]
+      rfl
+    cases h3 : envFindW m (pinW m (1 + (29 : Word).toNat)) vis with
+    | none => rw [h3] at hW; cases hW
+    | some rm3 =>
+    obtain ⟨r3, m3⟩ := rm3
+    rw [h3, reoB2_some] at hW
+    by_cases hf : r3.headD 0 = 0
+    · rw [if_pos hf] at hW
+      simp only [Option.some.injEq, Prod.mk.injEq] at hW
+      obtain ⟨rfl, rfl⟩ := hW
+      obtain ⟨rfl, hfind⟩ := envFindW_miss h3 hS.1.env hl2 hf
+      refine ⟨false, a, by rw [hpre, hfind]; rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
+    rw [if_neg hf] at hW
+    obtain ⟨rfl, hptr, hfind, htag, hrc⟩ := envFindW_hit h3 hS.1.env hl2 hf
+    obtain ⟨ci, hci⟩ := envR_row_dec hS.1.env _ hl2 htag hrc
+    rw [hptr] at hW
+    generalize hq : rowP m3 (pinW m3 (1 + (29 : Word).toNat)) = q at hW hci hfind
+    obtain ⟨wk, hwk⟩ : ∃ wk, (erecP m3)[q.toNat]? = some wk := by
+      obtain ⟨wk, e, -⟩ := ciD hci; exact ⟨wk, e⟩
+    have ek : rdW (m3.arr64 EREC) q = wk := rdW_of_get? rfl (erecP_get hwk)
+    rw [ek] at hW
+    obtain ⟨hk3, hkn⟩ := decCI_kind3 hci hwk
+    by_cases hk : wk ≠ 3
+    · rw [if_pos hk] at hW
+      simp only [Option.some.injEq, Prod.mk.injEq] at hW
+      obtain ⟨rfl, rfl⟩ := hW
+      refine ⟨false, a, ?_, hS, IWGrow.refl _, by simp [decW0B]⟩
+      rw [hpre, hfind, hci]
+      have hne := hkn hk
+      cases ci with
+      | indInfo cv caps => exact absurd rfl (hne cv caps)
+      | _ => rfl
+    rw [if_neg hk] at hW
+    obtain ⟨cvB, caps, hcvB, rfl⟩ := hk3 (by simpa using hk)
+    cases h4 : stubM "rom_cv" m3 [5] with
+    | none => rw [h4] at hW; cases hW
+    | some rm4 =>
+    obtain ⟨r4, m4⟩ := rm4
+    rw [h4, reoB3_some] at hW
+    obtain ⟨pin, a4, hrun4, hS4, hg4, hpin⟩ := romCv_spec dn vis fe 5 (by decide) _ m4 a r4 h4 hS
+    have hrun4' : boolCvA.run a = .ok (pin, a4) := hrun4
+    have hq1b : q.toNat + 1 < 2 ^ 64 := by
+      obtain ⟨w, hw, -, -⟩ := decCV_typeW hcvB
+      have := erecP_bound hw hS.2; omega
+    have hq1 : (q + 1).toNat = q.toNat + 1 := toNat_add_small q 1 hq1b
+    have hcvB4 : decCV (erA m4) (q + 1).toNat = some cvB := by
+      rw [hq1]; exact ArrExt.decCV (IWGrow.erecExt hg4) hcvB
+    obtain ⟨hm5, hrun5, hd5⟩ := mpW_ok (a := a4) hW hS4.2.2.2.2.1 hcvB4
+      (DecB.get ⟨fun _ _ _ he h => he.2.decCV h⟩ hpin)
+    subst hm5
+    refine ⟨_, _, ?_, hS4, hg4, hd5⟩
+    rw [hpre, hfind, hci]
+    simp only [StateT.run_bind, hrun4', exc_ok_bind']
+    exact hrun5
+
+/-- **`reduce_elem_ok(vis, c)` refines `reduceElemOk`** (through the ROM stubs). -/
+@[refines ConRon.Arena.reduceElemOk]
+theorem reduceElemOk_refines (p : Prog) (h : RedProg p) (dn : NIdx → Option ConLeche.Name)
+    (hdn : DnInj dn) (vis : Word) (fe : IFEnv) (c : Word) (hc : c.toNat < 2 ^ 32) :
+    RefAM p "reduce_elem_ok" [vis, c] (StageR dn vis fe) (reduceElemOk fe (decI c))
+      (KeepPost dn vis fe decW0B) := by
+  intro n s₀ a₀ hS
+  refine triple_post (reo_specW p h n s₀ vis c) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨b, a', hrun, hS', hg, hd⟩ := reoW_ok hdn hm hS hc
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst, hres]; exact ⟨hS', hg, hd⟩⟩
 
