@@ -1,4 +1,5 @@
 import ConAgua.Arena.DeclRomStubs
+import ConAgua.Arena.WhnfDeltaRefine
 
 /-!
 # Pin-selected ROM values: `reduceOpCvA`, `ofReducePinA`, `reduceDeclPin` (lane `decls3`)
@@ -216,5 +217,220 @@ theorem reduceDeclPin_refines (hp : p.lookup "reduce_decl_pin" = some reduceDecl
   exact ⟨hl, hok, by rw [hst, hres]; exact hP⟩
 
 end refines
+
+/-! ## `const_e(n)` under the stage relation -/
+
+/-- **`const_e(n)` refines `constE`** at the run level, under the stage relation. -/
+theorem constE_stage {p : Prog} (hp : p.lookup "const_e" = some constEL)
+    (hpw : p.lookup "pin_word" = some pinWordL) (hcf : p.lookup "const_find" = some constFind)
+    (hcp : p.lookup "const_push" = some constPush) (hic : p.lookup "intern_const" = some internConst)
+    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
+    {m m' : Mem} {nm : Word} {r : List Word}
+    (h : callW p n "const_e" [nm] m = some (r, m')) (hS : StageR dn vis fe m a)
+    (hnm : nm.toNat < 2 ^ 32) :
+    ∃ a', (constE (decI nm)).run a = .ok (decE (r.headD 0), a') ∧ StageR dn vis fe m' a' ∧
+      IWGrow m m' := by
+  cases n with
+  | zero => simp [callW_zero] at h
+  | succ n =>
+  obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (constE_spec p hp n ⟨m, Locals.init []⟩ nm) h
+  subst hs'
+  simp only [constEW] at hW
+  cases h1 : callW p n "pin_word" [52] m with
+  | none => rw [h1] at hW; cases hW
+  | some rm1 =>
+  obtain ⟨r1, m1⟩ := rm1
+  rw [h1] at hW
+  obtain ⟨s1, hs1, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (pinWord_specW p hpw n ⟨m, Locals.init []⟩ 52) h1
+  subst hs1
+  have hflag : pinW m 0 ≠ 0 := by intro h0; simp [pinWordW, h0] at hW1
+  simp only [pinWordW, hflag, if_false, Option.some.injEq, Prod.mk.injEq] at hW1
+  obtain ⟨rfl, hm1⟩ := hW1
+  have hF := hS.1.pins.full hflag
+  have hz : rdW (m.arr64 PINS) 52 = pinW m 52 := by simp [rdW, pinW]
+  simp only [List.headD_cons, hz] at hW
+  cases h2 : callW p n "intern_const" [nm, pinW m 52] s1.mem with
+  | none => rw [h2] at hW; cases hW
+  | some rm2 =>
+  obtain ⟨r2, m2⟩ := rm2
+  rw [h2] at hW
+  simp only [Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨hr, rfl⟩ := hW
+  obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
+    (internConst_spec p hcf hcp hic n ⟨s1.mem, Locals.init []⟩ nm (pinW m 52)) h2
+  rw [hs2, ← hm1] at hW2
+  obtain ⟨a2, hrun2, hS2, hg2⟩ := internConst_stage hS nm (pinW m 52) hnm hF.lv_lt.1 hW2
+  refine ⟨a2, ?_, hS2, hg2⟩
+  rw [constE_run hF, ← hr]
+  exact hrun2
+
+/-! ## `reduce_cert_var(c)` -/
+
+section rcv
+variable (p : Prog)
+
+/-- After `intern_fvar`. -/
+def rcvK4 : Option (Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r4, m4) => some ([r4], m4)
+
+/-- After `const_e`: the handle guard, the variable. -/
+def rcvK3 : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r3, m3) =>
+    if 4294967296 ≤ r3.headD 0 then none else rcvK4 (fvinternW m3 0 (r3.headD 0))
+
+/-- After the element's name. -/
+def rcvK2 (n : Nat) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r2, m2) => rcvK3 (callW p n "const_e" [r2.headD 0] m2)
+
+/-- After the `reduceNat` pin. -/
+def rcvK1 (n : Nat) (c : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r1, m1) => rcvK2 p n (if c = r1.headD 0 then pinAtW m1 1 else pinAtW m1 29)
+
+/-- **The model of `reduce_cert_var(c)`.** -/
+def rcvW : Nat → Mem → Word → Option (List Word × Mem)
+  | 0, _, _ => none
+  | n + 1, m, c => rcvK1 p n c (pinAtW m 43)
+
+section arms
+variable (n : Nat) (m m1 m2 m3 m4 : Mem) (c r4 : Word) (r1 r2 r3 : List Word)
+theorem rcvW_step : rcvW p (n + 1) m c = rcvK1 p n c (pinAtW m 43) := rfl
+theorem rcvK1_some : rcvK1 p n c (some (r1, m1)) =
+    rcvK2 p n (if c = r1.headD 0 then pinAtW m1 1 else pinAtW m1 29) := rfl
+theorem rcvK2_some : rcvK2 p n (some (r2, m2)) = rcvK3 (callW p n "const_e" [r2.headD 0] m2) := rfl
+theorem rcvK3_some : rcvK3 (some (r3, m3)) =
+    if 4294967296 ≤ r3.headD 0 then none else rcvK4 (fvinternW m3 0 (r3.headD 0)) := rfl
+theorem rcvK4_some : rcvK4 (some (r4, m4)) = some ([r4], m4) := rfl
+end arms
+
+grind_pattern [ind_grind] rcvW_step => rcvW p (n + 1) m c
+grind_pattern [ind_grind] rcvK1_some => rcvK1 p n c (some (r1, m1))
+grind_pattern [ind_grind] rcvK2_some => rcvK2 p n (some (r2, m2))
+grind_pattern [ind_grind] rcvK3_some => rcvK3 (some (r3, m3))
+grind_pattern [ind_grind] rcvK4_some => rcvK4 (some (r4, m4))
+
+/-- The lookups of `reduce_cert_var`. -/
+structure RcvProg (p : Prog) : Prop where
+  rcv : p.lookup "reduce_cert_var" = some reduceCertVarL
+  pa : p.lookup "pin_at" = some pinAtL
+  ce : p.lookup "const_e" = some constEL
+  pw : p.lookup "pin_word" = some pinWordL
+  cf : p.lookup "const_find" = some constFind
+  cp : p.lookup "const_push" = some constPush
+  ic : p.lookup "intern_const" = some internConst
+  ff : p.lookup "fvar_find" = some fvarFind
+  fp : p.lookup "fvar_push" = some fvarPush
+  fi : p.lookup "intern_fvar" = some internFVar
+
+theorem rcv_specW (h : RcvProg p) (n : Nat) (s₀ : St) (c : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "reduce_cert_var" [c]
+    ⦃fun r s' => LocEq s' s₀ ∧ rcvW p n s₀.mem c = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ h.rcv]
+  simp only [callFn, reduceCertVarL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, pinAt_specW p h.pa n,
+        callW_spec p n "const_e", internFVar_spec p h.ff h.fp h.fi n] <;>
+      finish (gen := 20)
+
+end rcv
+
+theorem reduceCertVar_eq (c : NIdx) :
+    reduceCertVar c = (do
+      let rn ← pinAt 43
+      let nm ← (if c == rn then pinAt 1 else pinAt 29)
+      let t ← constE nm
+      internE (.fvar 0 t)) := by
+  simp only [reduceCertVar, reduceElemTy, reduceElemName, reduceNatName, pinReduceNat, pinNat,
+    boolName, pinBool, PIN_REDUCE_NAT, PIN_NAT, PIN_BOOL, bind_assoc]
+
+/-- **`reduce_cert_var(c)` refines `reduceCertVar`** (pin reads, `const_e`, `intern_fvar`;
+sorry-free). -/
+@[refines ConRon.Arena.reduceCertVar]
+theorem reduceCertVar_refines (p : Prog) (hp : RcvProg p) (n : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis c : Word)
+    (hS : StageR dn vis fe s₀.mem a₀) (hc : c.toNat < 2 ^ 32) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "reduce_cert_var" [c]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (reduceCertVar (decI c)) a₀ ∧
+      StageR dn vis fe s'.mem (AM.st (reduceCertVar (decI c)) a₀) ∧ IWGrow s₀.mem s'.mem ∧
+      AM.res (reduceCertVar (decI c)) a₀ = decE (r.headD 0); ⊤⦄ := by
+  refine triple_post (rcv_specW p hp n s₀ c) ?_
+  rintro r s' ⟨hl, h⟩
+  cases n with
+  | zero => simp [rcvW] at h
+  | succ n =>
+  rw [rcvW_step] at h
+  cases h1 : pinAtW s₀.mem 43 with
+  | none => rw [h1] at h; cases h
+  | some rm1 =>
+  obtain ⟨r1, m1⟩ := rm1
+  rw [h1, rcvK1_some] at h
+  obtain ⟨hm1, hr1, hl1, hrun1⟩ := pinAtW_ok h1 hS.1.pins
+  subst hm1
+  generalize s₀.mem = m1 at *
+  have e1 : r1.headD 0 = pinW m1 (1 + (43 : Word).toNat) := by rw [hr1]; rfl
+  have hbeq : ((decI c : NIdx) == decI (pinW m1 (1 + (43 : Word).toNat))) =
+      decide (c = pinW m1 (1 + (43 : Word).toNat)) := decI_beq c _ hc hl1
+  -- the element's name: one of two pins
+  generalize hpick : (if c = r1.headD 0 then pinAtW m1 1 else pinAtW m1 29) = pk at h
+  cases pk with
+  | none => cases h
+  | some rm2 =>
+  obtain ⟨r2, m2⟩ := rm2
+  rw [rcvK2_some] at h
+  have hname : m2 = m1 ∧ (r2.headD 0).toNat < 2 ^ 32 ∧
+      ((if (decI c : NIdx) == decI (pinW m1 (1 + (43 : Word).toNat)) then pinAt 1 else pinAt 29) :
+        AM NIdx).run a₀ = .ok (decI (r2.headD 0), a₀) := by
+    by_cases he : c = r1.headD 0
+    · rw [if_pos he] at hpick
+      obtain ⟨hm, hr, hl, hrun⟩ := pinAtW_ok hpick hS.1.pins
+      rw [e1] at he
+      subst hr
+      refine ⟨hm, hl, ?_⟩
+      simp only [hbeq, he, decide_true, if_true, List.headD_cons]
+      simpa using hrun
+    · rw [if_neg he] at hpick
+      obtain ⟨hm, hr, hl, hrun⟩ := pinAtW_ok hpick hS.1.pins
+      rw [e1] at he
+      subst hr
+      refine ⟨hm, hl, ?_⟩
+      simp only [hbeq, he, decide_false, Bool.false_eq_true, if_false, List.headD_cons]
+      simpa using hrun
+  obtain ⟨rfl, hnl, hrun2⟩ := hname
+  -- `const_e`
+  cases h3 : callW p n "const_e" [r2.headD 0] m2 with
+  | none => rw [h3] at h; cases h
+  | some rm3 =>
+  obtain ⟨r3, m3⟩ := rm3
+  rw [h3, rcvK3_some] at h
+  obtain ⟨a3, hrun3, hS3, hg3⟩ := constE_stage hp.ce hp.pw hp.cf hp.cp hp.ic h3 hS hnl
+  by_cases hb : 4294967296 ≤ r3.headD 0
+  · rw [if_pos hb] at h; cases h
+  rw [if_neg hb] at h
+  have ht : (r3.headD 0).toNat < 2 ^ 32 := by
+    have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hb); simpa using this
+  -- `intern_fvar`
+  cases h4 : fvinternW m3 0 (r3.headD 0) with
+  | none => rw [h4] at h; cases h
+  | some rm4 =>
+  obtain ⟨r4, m4⟩ := rm4
+  rw [h4, rcvK4_some] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨a4, hrun4, hS4, hg4⟩ := internFVar_stage hS3 0 (r3.headD 0) ht h4
+  have hrun : (reduceCertVar (decI c)).run a₀ = .ok (decE r4, a4) := by
+    rw [reduceCertVar_eq]
+    rw [show (43 : Nat) = (43 : Word).toNat from rfl, StateT.run_bind, hrun1, exc_ok_bind',
+      StateT.run_bind, hrun2, exc_ok_bind', StateT.run_bind, hrun3, exc_ok_bind']
+    exact hrun4
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hst]; exact hS4, hg3.trans hg4, by rw [hres]; rfl⟩
 
 end L.Arena
