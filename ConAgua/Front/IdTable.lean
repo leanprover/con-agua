@@ -91,7 +91,8 @@ def putK (b : ArrId) (i : Word) : Option (Word × Mem) → Option Mem
 
 /-! ## The L functions -/
 
-/-- `tbl_get(i)` of table `b`, the sparse probe `fnd`. -/
+/-- `tbl_get(i)` of table `b`, the sparse probe `fnd`.
+con-leche: ConLeche/Frontend/Scan/Types.lean:334-336 ConLeche.Frontend.IdTable.get? -/
 def tblGetG (b : ArrId) (fnd : FnName) : FunDecl :=
   let _sa : ArrId := b + 8
   lfn (i) locals (fd, j, d) {
@@ -102,7 +103,8 @@ def tblGetG (b : ArrId) (fnd : FnName) : FunDecl :=
     return _sa.u64[j * 4 + 3]
   }
 
-/-- `tbl_fresh(i)` of table `b`, the sparse probe `fnd`. -/
+/-- `tbl_fresh(i)` of table `b`, the sparse probe `fnd`.
+con-leche: ConLeche/Frontend/Scan/Types.lean:351-360 ConLeche.Frontend.IdTable.bound -/
 def tblFreshG (b : ArrId) (fnd : FnName) : FunDecl := lfn (i) locals (fd, j, d) {
   if i < CTL.u64[⟪szC b⟫] { abort };
   if i == ⟪TOMB⟫ { abort };
@@ -111,7 +113,8 @@ def tblFreshG (b : ArrId) (fnd : FnName) : FunDecl := lfn (i) locals (fd, j, d) 
   return 0
 }
 
-/-- `tbl_put(i, h)` of table `b`, the sparse probe `fnd` and put `pt`. -/
+/-- `tbl_put(i, h)` of table `b`, the sparse probe `fnd` and put `pt`.
+con-leche: ConLeche/Frontend/Scan/Types.lean:338-345 ConLeche.Frontend.IdTable.insert -/
 def tblPutG (b : ArrId) (fnd pt : FnName) : FunDecl := lfn (i, h) locals (s, fd, j, d, z) {
   s := CTL.u64[⟪szC b⟫];
   if i == s && i < len(b.u64) {
@@ -188,6 +191,9 @@ def TblIx (b : ArrId) : Prop := b = 64 ∨ b = 65 ∨ b = 66
 
 /-- The tables' arrays: dense `64‥66`, sparse `72‥74`. -/
 def idArrs : List ArrId := [64, 65, 66, 72, 73, 74]
+
+/-- The tables' `CTL` words: sparse stamps and counts `64‥69`, dense sizes `70‥72`. -/
+def idCtl : List Word := [64, 65, 66, 67, 68, 69, 70, 71, 72]
 
 /-- The sparse maps' keys: the id word, second word `0`. -/
 def idKey : MemoKey Nat where
@@ -289,18 +295,18 @@ theorem TblSame.of_eq {m m' : Mem} {b : ArrId} (h : m'.arr64 b = m.arr64 b)
     TblSame m m' b := ⟨h, h8, by rw [hc], by rw [hc]⟩
 
 /-- Table `b`'s arrays and `CTL` words are outside a frame of arrays outside `idArrs` and `CTL`
-words below `64`. -/
+words outside `idCtl`. -/
 theorem tbl_apart {A : List ArrId} {C : List Word} {b : ArrId} (hb : TblIx b)
-    (hA : ∀ x ∈ A, x ∉ idArrs) (hC : ∀ x ∈ C, x.toNat < 64) :
+    (hA : ∀ x ∈ A, x ∉ idArrs) (hC : ∀ x ∈ C, x ∉ idCtl) :
     b ∉ A ∧ b + 8 ∉ A ∧ szC b ∉ C ∧ (spS b).cs ∉ C :=
   ⟨fun h => by have := hA b h; revert this; rcases hb with rfl | rfl | rfl <;> simp [idArrs],
     fun h => by have := hA _ h; revert this; rcases hb with rfl | rfl | rfl <;> simp [idArrs],
-    fun h => by have := hC _ h; rcases hb with rfl | rfl | rfl <;> simp [szC] at this,
-    fun h => by have := hC _ h; rcases hb with rfl | rfl | rfl <;> simp [spS] at this⟩
+    fun h => by have := hC _ h; rcases hb with rfl | rfl | rfl <;> simp [szC, idCtl] at this,
+    fun h => by have := hC _ h; rcases hb with rfl | rfl | rfl <;> simp [spS, idCtl] at this⟩
 
 theorem TblSame.of_frame {A : List ArrId} {C : List Word} {m m' : Mem} {b : ArrId}
     (hf : MemFrame A C m m') (hb : TblIx b) (hA : ∀ x ∈ A, x ∉ idArrs)
-    (hC : ∀ x ∈ C, x.toNat < 64) : TblSame m m' b :=
+    (hC : ∀ x ∈ C, x ∉ idCtl) : TblSame m m' b :=
   have h := tbl_apart hb hA hC
   TblSame.of_frameD hf hb h.1 h.2.1 h.2.2.1 h.2.2.2
 
@@ -341,10 +347,10 @@ theorem TblR.frameD {A : List ArrId} {C : List Word} {m m' : Mem} {b : ArrId}
   · exact memoRV_frame (spS b) (spS_wf b hb) idKey hVR A C hb8 heC m m' hf (fun _ _ h => h) sp hR
   · intro i hi; exact hg i (hz ▸ hi)
 
-/-- **The relation survives a writer of arrays outside `idArrs` and `CTL` words below `64`.** -/
+/-- **The relation survives a writer of arrays outside `idArrs` and `CTL` words outside `idCtl`.** -/
 theorem TblR.frame {A : List ArrId} {C : List Word} {m m' : Mem} {b : ArrId}
     {t : ConLeche.Frontend.IdTable (Idx k)} (h : TblR m b t) (hf : MemFrame A C m m')
-    (hb : TblIx b) (hA : ∀ x ∈ A, x ∉ idArrs) (hC : ∀ x ∈ C, x.toNat < 64) :
+    (hb : TblIx b) (hA : ∀ x ∈ A, x ∉ idArrs) (hC : ∀ x ∈ C, x ∉ idCtl) :
     TblR m' b t :=
   have ha := tbl_apart hb hA hC
   h.frameD hf hb ha.1 ha.2.1 ha.2.2.1 ha.2.2.2

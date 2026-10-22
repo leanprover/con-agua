@@ -190,7 +190,12 @@ theorem StateDR.above {m m' : Mem} {st : StateD} (h : StateDR m st) (hf : Above6
       simp only [idArrs, List.mem_cons, List.not_mem_nil, or_false] at h
       rcases h with rfl | rfl | rfl | rfl | rfl | rfl <;> revert this <;> decide) (fun x hx => by
       simp only [List.mem_map, List.mem_range] at hx
-      obtain ⟨n, hn, rfl⟩ := hx; simp; omega)
+      obtain ⟨n, hn, rfl⟩ := hx
+      intro h
+      have h2 : (UInt64.ofNat n).toNat < 64 := by
+        rw [UInt64.toNat_ofNat_of_lt' (by simp [UInt64.size]; omega)]; exact hn
+      simp only [idCtl, List.mem_cons, List.not_mem_nil, or_false] at h
+      rcases h with h | h | h | h | h | h | h | h | h <;> rw [h] at h2 <;> simp at h2)
 
 theorem mkK_above (A : ArrId) (hA : A < 64) (hC : A ≠ CTL) (c s d r : Word) (m m' : Mem)
     (x : Option (Word × Mem)) (hx : ∀ r₁ m₁, x = some (r₁, m₁) → Above64 m m₁)

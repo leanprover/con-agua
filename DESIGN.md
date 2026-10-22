@@ -3552,8 +3552,10 @@ Word arrays (byte arrays are a separate id space: `IN` = byte array 0 is the inp
 | 48 | `FRMEMO` | `MemosR.fvar` | `fvarRange` memo (`fvarBC`) |
 | 49‥55 | – | `MemosR` (reserved) | the other six walk memos |
 | 56‥63 | – | reserved (store tier) | (the scratch epoch is `CTL[62]`, no array; lane `libs`) |
-| 64, 65, 66 | `NID`, `LID`, `EID` | `StateDR` (front) | the export's name/level/expression id tables |
-| 67‥95 | – | reserved (front) | declaration records, `pend` |
+| 64, 65, 66 | `NID`, `LID`, `EID` | `StateDR` (front) | the export's name/level/expression id tables, dense part (lane `twinaudit`) |
+| 67‥71 | `DECL`, `DLP`, `DIND`, `IFR`, `IFL` | `StateDR` (front) | declaration records, inductive lines |
+| 72, 73, 74 | – | `StateDR` (`TblR`) | the id tables' sparse overflow (memo-library tables, `IdTable.lean`) |
+| 75‥95 | – | reserved (front) | |
 | 96‥127 | – | `CoreR` (stub) | the 14 caches and the eager-depth banks |
 | 128‥131 | – | `PinsR` (stub) | the pin table |
 | 132‥143 | – | `EnvR` (stub) | the environment index |
@@ -3576,7 +3578,9 @@ Word arrays (byte arrays are a separate id space: `IN` = byte array 0 is the inp
 | 48‥61 | `MemosR` (reserved) | the other six memos |
 | 62 | `ArenaR` (every table, `StoreR`) | scratch slot base `B` (lane `libs`): tier-1 slots hold `B + i + 1`; `scratch_reset` adds `2^32` |
 | 63 | reserved | |
-| 64‥95 | reserved (front) | |
+| 64‥69 | `StateDR` (`TblR`) | stamp − 1, live count of the id tables' sparse maps (`NID`, `LID`, `EID`) |
+| 70, 71, 72 | `StateDR` (`TblR`) | dense size of `NID`, `LID`, `EID` |
+| 73‥95 | reserved (front) | |
 | 96‥127 | `CoreR` (stub) | cache stamps/counts, eager depth |
 | 128‥135 | `EnvR` (stub) | environment counters |
 | 136‥191 | argument relations (reserved) | |
@@ -5166,17 +5170,50 @@ helpers (`parts`: `IndParts`/`IndInstall`; `rec`: `Rec*`; `pos`: `IndPos*`) and 
   well-formedness inside `StageR` (helper `pos`'s suggestion); then the remaining parents
   (`checkSumCtor(s)`, `sumRules`, `checkBlock*`, the `nest*` positivity block, `genRecCheck`).
 
-### The frontend's inductive lines: not hooked yet (decision)
-The hook is two lines of L (`apply_dline`'s `pl == 25` branch calling `apply_ind_line`, and
-`frontAllProg` gaining `indFieldsFns`/`indApplyFns`, which also means moving `indAllProg`'s test
-out of `IndApply.lean`, since it imports `FrontRun`) plus `DeclAt`'s `.indDecl` arm
-(`IndDeclAt`). It is not done: once `apply_dline` calls `apply_ind_line`, `applyDLineW` and the
-front's chain up to `frontRun`'s `refines_part` need `apply_ind_line`'s model and its twin side
-(`processLineCoreD`'s `.ind` arm: `validateIndD`, `installIndD`, 534 L lines, none proved). A
-`sorry`'d spec there would turn the front's proven chain into `sorry` (a census regression), and
-a spec hypothesis would be a dishonest `proven`. Plan: prove `IndFields`/`IndApply` bottom up
-with this template under `StateDR` (the front's relation), then hook in one step with the
-refinement.
+### The frontend's inductive lines: hooked (2026-10-22, lane `front`)
+
+The front's proven chain (`frontRun_refines` → `parseBytes`, `frontLine_refines` → `applyLine`,
+`processLineCoreD` by parts) now covers `inductive` lines, without `sorry` and without a spec
+hypothesis. Decisions:
+
+* **The hook reads the block where the line scanner found it.** `decl_val` (`FieldsDecl.lean`)
+  keeps an `inductive` member's value position in the `nm` field (`dnameN`), and `apply_dline`
+  calls `apply_ind(nm)` at `pl = 25` (not `apply_ind_line`, which re-finds the first member: the
+  link would need `next_member` ↔ `scanLineLoop` for the first member). `DeclR`'s `.ind` arm says
+  the block scans there (`scanIndDecl b v = .ok (.ind …) e`), proved in `declLine_link`.
+* **A fuel-indexed model under a fuel-free one: `runF`** (`RunModel.lean`). The apply step's
+  models (`validateW`, `installW`, … ~40 of them) carry the interpreter's fuel; the line's model
+  (`applyDLineW`, `frontLineW`, the driver's `lineKW`) does not. `applyDLineW p` takes
+  `apply_ind`'s *run* in `p` as the model (`runF p "apply_ind" [nm] m`, `Classical.choose` of a
+  successful run). It is well defined because the interpreter is monotone in its fuel
+  (`exec_mono`, via `step_mono`: `step p k` is monotone in the continuation `k`) and a call's run
+  does not depend on the caller's locals (`invoke_loc`); `runF_spec` is the callee spec, and the
+  refinement goes back to the fuel-indexed model through `applyInd_spec` (`runF_some`). So the
+  line models gained a `Prog` parameter.
+* **`DIND` is `DLP`** (array 68), not a new array 69: one pool for the declarations' universe
+  parameters and the blocks' constant records, so `DeclAt`/`decl_push` stay as they are.
+  `DeclAt` is unchanged (lane `decls`' `DeclsR` relies on `indDecl` being `False` there); the
+  front's relation is `DeclsF`/`DeclAtF` (`StateDR.lean`), whose `.indDecl` arm is `IndDeclAt`:
+  the block decodes (`decCIs`, lane `pinsenv`'s `decCI` layout) in the pool truncated at a top
+  `t` (`trunc`, so later appends keep it).
+* **`vi_k_expected` compares with a heap `zero`** (`lh_mk(0,0,0)`, `lv_equiv`), which agrees with
+  the twin's `Level.isEquiv _ .zero` only on a well-formed name store: the apply step needs
+  `StateOK`. The driver's invariant `FrontInv` now carries con-ron's bridge invariant `TwinOK`
+  (`StateOK`, scratch off, `PinsOK`, `PersStateD`, `StateDRel` to con-leche's state), kept per line
+  by `ConRon.Bridge.Frontend.applyLine_run` and established by `StateD_init_run`; so
+  `frontRun_refines`/`frontAll_refines`/`frontAll_run`/`frontAll_x64` take `StateOK a₀`,
+  `a₀.store.scratchOn = false` and `PinsOK a₀`.
+* **Scratch arrays**: `IFR`/`IFL` (70, 71) below `2^62` words (`StateDR.ifs`), the level heap at
+  192: `frontAllProg_wf` is over 193 word arrays, `frontMemOf` has 224.
+* Census: `frontLine_refines` is `@[refines applyLine]`, `frontRun_refines` `@[refines
+  parseBytes]`; `processLineCoreD` is `COMPLETE_BY_PARTS` ("axiom, def, thm, opaque, quot",
+  "inductive"); new `@[refines]`: `validateIndD`, `installIndD`, `parseRuleD`, `piResultD`,
+  `indPiTeleLen`, `piSortTeleLen?`, `storeFuel`; parts: `parseCVD` (`ind_cv`), `viewN`
+  (`name_rec_pre`), `scanIndDecl` (`ind_fields`).
+
+Files: `IndRel`, `IndAlloc`, `IndApplySpec{,2,3}`, `IndApplyRefine{,2‥9}`, `IndValidTwin`,
+`IndInstallRefine{,2‥5}`, `IndApplyTwin`, `IndFields{Spec,Link,Link2,Link3}`, `RunModel`,
+`IndTest` (the `Unit` block through `front_run` of `frontAllProg`).
 
 ### `sorry`s
 None but stubs': `IndStubs.lean`'s stub specs (now incl. `lvl_eq` and `intern_nanon`, master
@@ -6125,7 +6162,7 @@ assembly items, `docs/e2e.md`'s "Assembly" section (any run).
    `inst1(3)` (defeq's stub) vs `inst_entry(3)`. The extra argument is the walk fuel of lane
    induct's convention. Owners: decls2, defeq (rename or adapter). `inst1` is what stops `whnf` on
    a beta-redex in `e2e-diff` (136 handles over the fixtures in an unsampled run).
-5. **Sparse export ids** (`e2e/rounds_huge_gaps`, ids up to `3·10^15`): the frontend's id tables
+5. *(Fixed by lane `twinaudit`: the id tables are `IdTable`s now.)* **Sparse export ids** (`e2e/rounds_huge_gaps`, ids up to `3·10^15`): the frontend's id tables
    are dense arrays (`NID`/`LID`/`EID`, lane front's design), so `name_fresh` aborts at its
    capacity check where the twin's hash maps accept. A completeness loss, not a soundness one;
    owner front (a hash-mapped id table, or accept the loss and say so).
@@ -6422,3 +6459,65 @@ Census at landing 2 (`--no-build`): phase 2 **142 proven, 19 sorry, 80 written, 
 * Provenance: the nine split functions of `WhnfDelta.lean` had no citation (`check` failed on
   master); cited.
 
+
+### Landing 6: the frontend hook (helper `front`)
+* The front's chain covers `inductive` lines with no `sorry`: `validate_ind_d`/`install_ind_d`
+  refine `validateIndD`/`installIndD`, `apply_ind` the `.ind` arm of `processLineCoreD` (now in
+  `COMPLETE_BY_PARTS`), and `frontLine_refines` is `@[refines applyLine]`, `frontRun_refines`
+  `@[refines parseBytes]` (the "(inductive lines abort)" labels are gone). Details in helper
+  `front`'s own section above (route via `apply_ind` in `decl_val`, `Prog`-indexed line models,
+  `FrontInv` carrying con-ron's `StateOK`/`PinsOK`/scratch-off: new hypotheses of the capstone on
+  `a₀`, `DIND` = `DLP`). ~9.9k lines, 6.25 h.
+* Census: **parseBytes, applyLine, processLineCoreD, validateIndD, installIndD proven**; totals
+  586 proven / 105 sorry / 244 written / 417 todo of 1352 (before this landing 537 / 104 / 279 /
+  432); phase 8 unchanged at 67 / 62.
+
+## The id tables as the twin's `IdTable`; the deviations list (2026-10-22, lane `twinaudit`)
+
+### Landing 1: dense array plus sparse overflow (`Front/IdTable.lean`)
+
+The front's id tables were dense word arrays (`NID`/`LID`/`EID`, entry `h + 1`, `0` unset) that
+aborted on an id at or past the array's end, where con-ron's `StateD` keeps con-leche's `IdTable`
+(`Scan/Types.lean:330`): a dense `Array` grown by `push` at its frontier and a `Std.HashMap Nat`
+for gaps and out-of-order ids. `e2e/rounds_huge_gaps` (ids up to `3·10^15`) was declined (e2e
+item 5). Now each table `b` is
+
+* the dense part: array `b` with its size in `CTL[b + 6]` (`70‥72`), entry `i < size` the handle
+  word itself (no `+ 1`);
+* the sparse part: a memo-library table (`MemoLib.lean`, one-word keys, value = handle word) at
+  array `b + 8` (`72‥74`), stamp/count `CTL[2b − 64]`, `CTL[2b − 63]` (`64‥69`).
+
+`tbl_get`/`tbl_fresh`/`tbl_put` are generic in the table (`tblGetG b fnd`, the memo's `find`/`put`
+spliced in as `⟪.call …⟫`), with one `vcgen` proof each; `name_get`, `level_get`, `expr_get`,
+`*_fresh`, `name_put`, `level_put`, `expr_put` are instances. `tbl_put` is `IdTable.insert`
+arm for arm: at the frontier a push (when below the array's capacity), below it an overwrite,
+past it the sparse map. The `apply_*` functions and `front_init` call `*_put` instead of writing
+`ID[i] := h + 1`; their models are unchanged (`putK` now ends in `tblPutW`).
+
+The relation `TblR m b t` (was `TblR (m.arr64 b) t`): the dense entries below the size are `t`'s
+(handle words below `2^32`), and some `sp` with `MemoRV (spS b) idKey hVR m sp` gives `t.get?` at
+every id word at or above the size. Lemmas: `TblR.read`/`fresh` (same statements as before),
+`TblR.put` (one per `insert` arm: `memoRV_set` for the sparse one), `TblR.frame`/`frameD`,
+`TblR.zero`; `tblOK_congr`/`tblW_congr` take a `TblSame m m' b` (the two arrays and the two `CTL`
+words the reads see; `TblSame.of_eq`, `of_frame`, `of_frameD`). `StateDR.frame`,
+`StateDR.put{Name,Level,Expr}` and `levelFinish` take the frame's arrays outside `idArrs` and
+`CTL` words outside `idCtl` (default tactic `tctl`); `StateDR.putX` takes `tblPutW m₁ X i w =
+some m₂` instead of the bound `i < size`; `ArenaD.setT` is `ArenaD.putT`; `Above64`
+(`ApplyExprRefine.lean`) also fixes the `CTL` words `≥ 64`. Nothing else changed: every
+refinement (`frontAll_refines`, `applyNStr_refines`, …, the inductive lines' `IndApply*`) is
+sorry-free as before, and `#guard`s cover ids past the dense array, out of order, and a rebound
+sparse id. `frontAllProg` runs `rounds_huge_gaps` to `front_run = 0` (`#eval`, 4096-word arrays).
+
+Differences from the twin that remain (listed in `docs/deviations.md`): the id word `NONE =
+TOMB = 2^64 − 1` is refused on the sparse path (ids past 18 digits already were); the dense array
+stops at its capacity (the ids go sparse, up to the memo's 3/4 load); `IdTable.bound`'s
+`sparse.isEmpty` shortcut is not mirrored (the memo's count is not tied to the map's emptiness;
+`tbl_fresh` probes one slot when the map is empty).
+
+`scripts/e2e.py` caps `e2e-diff`'s dense id arrays at `DIFF_BIG_WORDS` (they were sized to the
+largest id). For lane `integrate`: test memories need arrays up to `74` and `CTL` up to word `72`
+(`frontMem`, `exprMem`, `declMem` are 75 × 128 words now).
+
+**For other lanes** (mechanical): `TblR (m.arr64 NID) t` → `TblR m NID t`; a frame proof
+`rw [hf.1 NID …]; exact h.names` → `h.names.frame hf (.inl rfl) (by simp [..., idArrs]) (by simp)`;
+`lkW_congr` takes a `TblSame` (`IExt.tbl`).

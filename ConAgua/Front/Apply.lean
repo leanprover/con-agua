@@ -53,11 +53,11 @@ con-leche: ConLeche/Frontend/Scan/Types.lean:334-336 ConLeche.Frontend.IdTable.g
 def levelGet : FunDecl := tblGetG LID "lsp_find"
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:147-152 ConRon.Arena.Frontend.StateD.freshName
-con-leche: ConLeche/Frontend/Scan/Types.lean:350-360 ConLeche.Frontend.IdTable.bound -/
+con-leche: ConLeche/Frontend/Scan/Types.lean:351-360 ConLeche.Frontend.IdTable.bound -/
 def nameFresh : FunDecl := tblFreshG NID "nsp_find"
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:154-157 ConRon.Arena.Frontend.StateD.freshLevel
-con-leche: ConLeche/Frontend/Scan/Types.lean:350-360 ConLeche.Frontend.IdTable.bound -/
+con-leche: ConLeche/Frontend/Scan/Types.lean:351-360 ConLeche.Frontend.IdTable.bound -/
 def levelFresh : FunDecl := tblFreshG LID "lsp_find"
 
 /-- con-leche: ConLeche/Frontend/Scan/Types.lean:338-345 ConLeche.Frontend.IdTable.insert -/

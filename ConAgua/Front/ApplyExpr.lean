@@ -21,8 +21,8 @@ expression record and binds its export id. Here the expression id table is `IdTa
 * `node_bin(k, a, c)` (`app`/`lam`/`forallE`), `node_let`, `node_proj`, `node_const`, `node_lit`:
   one node from its fields (`ExprIface.lean`'s table), through the derived-range constructors
   `mk_*` (`ConAgua/Arena/ExprMk.lean`) for compound nodes, `intern_*` for leaves;
-* `expr_node(pl, a, c, d)`: the dispatch on the kind `pl`; `strVal` (`17`) aborts (the `lit` store
-  does not represent string contents yet), a `natVal` past 18 digits aborts;
+* `expr_node(pl, a, c, d)`: the dispatch on the kind `pl` (`natVal` through `nat_dec`, `strVal`
+  through `str_put_esc`);
 * `apply_expr(pl, idx, a, c, d)`: `expr_fresh(idx)`, `expr_node`, the handle `< 2^32`,
   `expr_put(idx, h)`.
 
@@ -52,7 +52,7 @@ con-leche: ConLeche/Frontend/Scan/Types.lean:334-336 ConLeche.Frontend.IdTable.g
 def exprGet : FunDecl := tblGetG EID "esp_find"
 
 /-- con-ron: ConRon/Arena/Frontend/ExportC.lean:159-162 ConRon.Arena.Frontend.StateD.freshExpr
-con-leche: ConLeche/Frontend/Scan/Types.lean:350-360 ConLeche.Frontend.IdTable.bound -/
+con-leche: ConLeche/Frontend/Scan/Types.lean:351-360 ConLeche.Frontend.IdTable.bound -/
 def exprFresh : FunDecl := tblFreshG EID "esp_find"
 
 /-- con-leche: ConLeche/Frontend/Scan/Types.lean:338-345 ConLeche.Frontend.IdTable.insert -/
