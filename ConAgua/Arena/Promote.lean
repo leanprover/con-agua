@@ -245,9 +245,10 @@ def promoteLL : FunDecl := lfn (f, h) locals (fd, j, d, r, u) {
 order (`promoteLList` over a pool slice, the results above the pool top `q`). -/
 -- con-ron: ConRon/Arena/Promote.lean:131-138 ConRon.Arena.promoteLList
 @[l_impl ConRon.Arena.promoteLList]
-def promoteLPool : FunDecl := lfn (f, o, l, q) locals (r, u) {
+def promoteLPool : FunDecl := lfn (f, o, l, q) locals (x, r, u) {
   if l == 0 { return 0 };
-  r := call promote_l(f, POOL.u64[o]);
+  x := POOL.u64[o];
+  r := call promote_l(f, x);
   POOL.u64[q] := r;
   u := call promote_l_pool(f, o + 1, l - 1, q + 1);
   return 0
@@ -287,12 +288,14 @@ def promoteLsL : FunDecl := lfn (f, h) locals (fd, j, d, r, u) {
 /-- `pe_lit(h)`: the scratch literal `h` (its pool slice and kind) interned persistently. -/
 -- con-ron: ConRon/Arena/Promote.lean:152-199 ConRon.Arena.promoteE
 @[l_impl ConRon.Arena.promoteE]
-def peLit : FunDecl := lfn (h) locals (t, i, k, r) {
+def peLit : FunDecl := lfn (h) locals (t, i, k, o, l, r) {
   t := (h >> 27) & 1;
   i := h & 134217727;
   k := i * 8 + t * 4;
-  if REC.u64[k] == 1 { r := call pi_lit_str(REC.u64[k + 1], REC.u64[k + 2]); return r };
-  r := call pi_lit(REC.u64[k + 1], REC.u64[k + 2]);
+  o := REC.u64[k + 1];
+  l := REC.u64[k + 2];
+  if REC.u64[k] == 1 { r := call pi_lit_str(o, l); return r };
+  r := call pi_lit(o, l);
   return r
 }
 
