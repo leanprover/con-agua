@@ -5149,3 +5149,24 @@ denser than the Rust).
   (`WhnfCallees.inferStep`/`inferIOStep`/`defeqStep`, lane `whnf`'s stub) are this lane's to prove
   next; nothing is proved yet.
 None but stubs': `IndStubs.lean`'s stub specs, plus the two master callees above (listed there).
+
+### The slots one level up (`KnotSlot.lean`, helper `defeq-slots`)
+* `infer_refines`, `inferIO_refines`, `defeq_refines`: `InferSlot`/`InferIOSlot`/`DefeqSlot p (n + 1)`
+  from `KnotUpTo p n` and the body's spec at L-fuel `n` (`InferBodySpec`, `InferIOBodySpec`,
+  `DefeqBodySpec`: hypotheses, the shape of `WhnfLoopSpec`). Copies of lane `whnf`'s `whnf_refines`;
+  new lemmas `CoreS.set_in`/`set_io`/`set_de`, `ModeR.setD` (the `Bool` memo), `KeptAll.inf`/`io`/`de`,
+  `knot_{infer,inferIO,defeq}_{hit,miss}`, the model `memoSlotD` (a hit answers `u64(v != 0)`).
+* **The eager slot needs no relation change.** `DefeqESlot p (n + 1)` from `DefeqSlot p n`
+  (`defeqE_refines`). From an eager mode `defeqE` is `defeq` (`knot_defeqE_eager`); from a plain
+  mode it is the `defeq` slot of `coreKnot mode.toEager … (F + 1)` on the entered caches `enterC`,
+  then `leaveC` (`knot_defeqE_plain`). `CoreS … M 0` on `a` is `CoreS … M 1` on `enterC a.caches` at
+  the same maps (`ModeR.enter`: the stored eager tables are bank 1, the empty slot is `∅`); after the
+  run, `KeptAll M M' 1` gives the plain banks back, so `CoreS … M' 0` holds on the left state
+  (`ModeR.leave`, `CoreS.leave`). The outer `KeptAll` at `eb = 0` is vacuous. `SlotPre`'s
+  `eb = (mode >>> 1) &&& 1` is met by the inner call at `mode ||| 2`.
+* Entry points from the slots at mode 0: `inferTypeCore_refines`, `isDefEqCore_refines`,
+  `ensureSortCore_refines` (the last from `EnsureSortSpec`, a hypothesis: `ensure_sort` has no proof
+  yet); `call1W`/`CoreSpec.of_call1W` for one-call forwarders. Tagged `refines_part` (they rest on
+  slot hypotheses until the knot induction ties them).
+* What is left for `WhnfCallees.inferStep`/`inferIOStep`/`defeqStep`: the three body specs. No
+  `sorry`; ~880 lines, 5.8 s CPU.

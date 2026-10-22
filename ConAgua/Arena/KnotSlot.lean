@@ -67,16 +67,33 @@ theorem memoSlotD_miss (h0 : mfindG S m e k ≠ []) (h1 : (mfindG S m e k).headD
 
 end arms
 
-/-- **The model of `defeq_e`**: the `defeq` slot's run at the eager mode word. -/
-def defeqEW (p : Prog) (n : Nat) (m : Mem) (mode vis d a b : Word) : Option (Word × Mem) :=
-  match callW p n "defeq" [mode ||| 2, vis, d, a, b] m with
+/-- **The model of a one-call forwarder** (`defeq_e`, the entry points): the callee's run, its
+first result word. -/
+def call1W (p : Prog) (n : Nat) (f : FnName) (vs : List Word) (m : Mem) : Option (Word × Mem) :=
+  match callW p n f vs m with
   | none => none
   | some (r, m') => some (r.headD 0, m')
 
-theorem defeqEW_some (p : Prog) (n : Nat) (m m' : Mem) (mode vis d a b : Word) (r : List Word)
-    (h : callW p n "defeq" [mode ||| 2, vis, d, a, b] m = some (r, m')) :
-    defeqEW p n m mode vis d a b = some (r.headD 0, m') := by
-  simp only [defeqEW, h]
+theorem call1W_some (p : Prog) (n : Nat) (f : FnName) (vs : List Word) (m m' : Mem) (r : List Word)
+    (h : callW p n f vs m = some (r, m')) : call1W p n f vs m = some (r.headD 0, m') := by
+  simp only [call1W, h]
+
+/-- **A refinement spec applies to a forwarded run** whose decoding reads the first word. -/
+theorem CoreSpec.of_call1W {α : Type} [Inhabited α] {p : Prog} {n : Nat} {f : FnName}
+    {args : List Word} {T : AM α} {dec : List Word → α} {s₀ : St} {a₀ : AState}
+    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word}
+    (h : CoreSpec p n f args T dec s₀ a₀ dn vis fe M eb)
+    (hdec : ∀ r r' : List Word, r.headD 0 = r'.headD 0 → dec r = dec r') {r : List Word} {m' : Mem}
+    (hc : call1W p n f args s₀.mem = some (r.headD 0, m')) :
+    CoreRef T a₀ dec dn s₀.mem vis fe M eb r m' := by
+  cases hcall : callW p n f args s₀.mem with
+  | none => simp [call1W, hcall] at hc
+  | some q =>
+  obtain ⟨r₁, m₁⟩ := q
+  simp only [call1W, hcall, Option.some.injEq, Prod.mk.injEq] at hc
+  obtain ⟨hw, rfl⟩ := hc
+  obtain ⟨h1, h2, h3, h4⟩ := CoreSpec.of_callW h hcall
+  exact ⟨h1, h2, h3.trans (hdec _ _ hw), by unfold ResH at h4 ⊢; rw [← hw]; exact h4⟩
 
 /-! ## The L specs -/
 
@@ -125,13 +142,13 @@ theorem defeq_spec (n : Nat) (s₀ : St) (mode vis d a b : Word) :
 include hp in
 theorem defeqE_spec (n : Nat) (s₀ : St) (mode vis d a b : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "defeq_e" [mode, vis, d, a, b]
-    ⦃fun r s' => LocEq s' s₀ ∧ defeqEW p n s₀.mem mode vis d a b = some (r.headD 0, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ call1W p n "defeq" [mode ||| 2, vis, d, a, b] s₀.mem = some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp.defeqE]
   simp only [callFn, defeqESlotL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       callW_spec p n "defeq"] <;>
-    finish [defeqEW_some]
+    finish [call1W_some]
 
 end spec
 
@@ -591,7 +608,9 @@ set is empty), and after the run the plain banks are kept (`KeptAll` at `eb = 1`
 state is related at `eb = 0` again (`CoreS.leave`). No change to `CoreS`/`SlotPre` is needed. -/
 
 theorem mode_cases (mode : Word) (h : mode < 4) : mode = 0 ∨ mode = 1 ∨ mode = 2 ∨ mode = 3 := by
-  bv_decide
+  have h' : mode.toNat < 4 := UInt64.lt_iff_toNat_lt.mp h
+  simp only [← UInt64.toNat_inj, UInt64.reduceToNat]
+  omega
 
 theorem mode_eager (mode : Word) (h : mode < 4) (he : (decMode mode).eager = true) :
     mode ||| 2 = mode := by
@@ -716,10 +735,10 @@ theorem defeqE_refines (n : Nat) (hd : DefeqSlot p n) : DefeqESlot p (n + 1) := 
   subst hs0
   refine ⟨hloc, ?_⟩
   cases hcall : callW p n "defeq" [mode ||| 2, vis, d, x, y] s.mem with
-  | none => simp [defeqEW, hcall] at hW
+  | none => simp [call1W, hcall] at hW
   | some q =>
   obtain ⟨r₁, m₁⟩ := q
-  simp only [defeqEW, hcall, Option.some.injEq, Prod.mk.injEq] at hW
+  simp only [call1W, hcall, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, hm⟩ := hW
   have hdec : decBool r₁ = decBool r := by simp only [decBool, hr]
   have hok₁ : ResH r₁ → ResH r := fun h => by unfold ResH at h ⊢; rw [← hr]; exact h
@@ -747,5 +766,120 @@ theorem defeqE_refines (n : Nat) (hd : DefeqSlot p n) : DefeqESlot p (n + 1) := 
     exact ⟨M', hS'.leave hs.rel.core hK', fun h => absurd rfl h, hSt'⟩
 
 end eager
+
+
+/-! ## The entry points (the verified mode) -/
+
+/-- What the entry points need of a program. -/
+structure KnotEntryProg (p : Prog) : Prop where
+  inferTypeCore : p.lookup "infer_type_core" = some inferTypeCoreL
+  isDefEqCore : p.lookup "is_def_eq_core" = some isDefEqCoreL
+  ensureSortCore : p.lookup "ensure_sort_core" = some ensureSortCoreL
+
+/-- A level handle result word. -/
+def decLv (r : List Word) : LIdx := decI (r.headD 0)
+
+/-- `ensure_sort(mode, vis, d, e)` refines `ensureSort` at the knot (no L proof yet: a hypothesis
+of `ensureSortCore_refines`). -/
+def EnsureSortSpec (p : Prog) (n : Nat) : Prop :=
+  ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (M : ModeMaps) (eb mode d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe M eb mode →
+    HW e →
+    CoreSpec p n "ensure_sort" [mode, vis, d, e]
+      (ensureSort (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) decLv s₀ a₀ dn vis fe M eb
+
+section entry
+variable (p : Prog) (hp : KnotEntryProg p)
+
+include hp in
+theorem inferTypeCore_spec (n : Nat) (s₀ : St) (vis dep e : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "infer_type_core" [vis, dep, e]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      call1W p n "infer" [0, vis, dep, e] s₀.mem = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp.inferTypeCore]
+  simp only [callFn, inferTypeCoreL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "infer"] <;>
+    finish [call1W_some]
+
+include hp in
+theorem isDefEqCore_spec (n : Nat) (s₀ : St) (vis dep a b : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "is_def_eq_core" [vis, dep, a, b]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      call1W p n "defeq" [0, vis, dep, a, b] s₀.mem = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp.isDefEqCore]
+  simp only [callFn, isDefEqCoreL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "defeq"] <;>
+    finish [call1W_some]
+
+include hp in
+theorem ensureSortCore_spec (n : Nat) (s₀ : St) (vis dep t : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ensure_sort_core" [vis, dep, t]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      call1W p n "ensure_sort" [0, vis, dep, t] s₀.mem = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp.ensureSortCore]
+  simp only [callFn, ensureSortCoreL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "ensure_sort"] <;>
+    finish [call1W_some]
+
+theorem decMode_zero : decMode 0 = .verified := rfl
+
+theorem slotPre_zero {s₀ : St} {a₀ : AState} {dn : NIdx → Option ConLeche.Name} {vis : Word}
+    {fe : IFEnv} {M : ModeMaps} (hS : CoreS dn s₀.mem a₀ vis fe M 0) :
+    SlotPre s₀ a₀ dn vis fe M 0 0 := ⟨hS, by decide, by decide⟩
+
+include hp in
+/-- **`infer_type_core` refines `inferTypeCore`** at the verified mode and every fuel `F ≥ n`
+(`checkFuel` among them), from the `infer` slot at L-fuel `n`. -/
+@[refines_part ConRon.Arena.inferTypeCore "from InferSlot"]
+theorem inferTypeCore_refines (n : Nat) (hi : InferSlot p n) (F : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (dep e : Word)
+    (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hS : CoreS dn s₀.mem a₀ vis fe M 0) (he : HW e) :
+    CoreSpec p (n + 1) "infer_type_core" [vis, dep, e]
+      (inferTypeCore .verified fe F dep.toNat (decE e)) decH s₀ a₀ dn vis fe M 0 := by
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
+    (inferTypeCore_spec p hp n s₀ vis dep e)
+  subst hs0
+  exact ⟨hloc, CoreSpec.of_call1W (hi F s a₀ dn vis fe M 0 0 dep e hF hn (slotPre_zero hS) he)
+    (fun r r' h => by simp only [decH, h]) hW⟩
+
+include hp in
+/-- **`is_def_eq_core` refines `isDefEqCore`** at the verified mode, from the `defeq` slot. -/
+@[refines_part ConRon.Arena.isDefEqCore "from DefeqSlot"]
+theorem isDefEqCore_refines (n : Nat) (hd : DefeqSlot p n) (F : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (dep x y : Word)
+    (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hS : CoreS dn s₀.mem a₀ vis fe M 0) (hx : HW x) (hy : HW y) :
+    CoreSpec p (n + 1) "is_def_eq_core" [vis, dep, x, y]
+      (isDefEqCore .verified fe F dep.toNat (decE x) (decE y)) decBool s₀ a₀ dn vis fe M 0 := by
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
+    (isDefEqCore_spec p hp n s₀ vis dep x y)
+  subst hs0
+  exact ⟨hloc, CoreSpec.of_call1W (hd F s a₀ dn vis fe M 0 0 dep x y hF hn (slotPre_zero hS) hx hy)
+    (fun r r' h => by simp only [decBool, h]) hW⟩
+
+include hp in
+/-- **`ensure_sort_core` refines `ensureSortCore`** at the verified mode, from `ensure_sort`'s
+spec (`EnsureSortSpec`, a hypothesis until `ensure_sort` is proved). -/
+@[refines_part ConRon.Arena.ensureSortCore "from EnsureSortSpec"]
+theorem ensureSortCore_refines (n : Nat) (hs : EnsureSortSpec p n) (F : Nat) (s₀ : St)
+    (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
+    (dep t : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hS : CoreS dn s₀.mem a₀ vis fe M 0) (ht : HW t) :
+    CoreSpec p (n + 1) "ensure_sort_core" [vis, dep, t]
+      (ensureSortCore .verified fe F dep.toNat (decE t)) decLv s₀ a₀ dn vis fe M 0 := by
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
+    (ensureSortCore_spec p hp n s₀ vis dep t)
+  subst hs0
+  exact ⟨hloc, CoreSpec.of_call1W (hs F s a₀ dn vis fe M 0 0 dep t hF hn (slotPre_zero hS) ht)
+    (fun r r' h => by simp only [decLv, h]) hW⟩
+
+end entry
 
 end L.Arena
