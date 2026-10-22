@@ -30,8 +30,9 @@ Modes (pure python, no build, a second or so):
 
   check            every FunDecl has a citation; every `@[l_impl T]` target T
                    has one naming T; every citation's range is exactly the
-                   block of the named declaration at the current revision;
-                   no `CHANGED` marker is left.
+                   block of the named declaration at the current revision.
+                   `CHANGED` markers are listed (the bump's work queue);
+                   `--strict` fails on them too.
   update [--old R] after a bump: R is the OLD con-ron revision (default:
                    vendor/UPSTREAM at HEAD, when the working tree's differs);
                    the old con-leche revision is the one con-ron pins at R.
@@ -45,10 +46,13 @@ Modes (pure python, no build, a second or so):
                    twin declaration whose code changed between the two
                    revisions and that no L code cites, reached from a cited
                    declaration through uncited ones (identifiers resolved
-                   textually, namespaces and `open`s respected), puts a
-                   `CHANGED below` marker on the citing items.  Structures
+                   textually, namespaces and `open`s respected) at most
+                   `--depth` calls down (default 1: the helpers an L function
+                   inlines), puts a `CHANGED` marker on the citing items.  Structures
                    and inductives are reported (TYPE) but not followed: a
-                   changed type is a question for the relations.
+                   changed type is a question for the relations.  `--json F`
+                   writes the findings for the dashboard; `--dry-run`
+                   writes no marker.
   annotate         insert the citations `@[l_impl T]` implies, where missing
                    (the doc line for new code, mechanically).
   locate NAME…     print the citation body of each twin declaration.
@@ -243,8 +247,19 @@ def decl_at(lines, i, skip):
     return (m.group("kw"), m.group("name")) if m else None
 
 
+_QD = {}
+
+
 def qualified_decls(lines):
-    """[(0-based line, qualified name, keyword)] for every column-0 declaration."""
+    """[(0-based line, qualified name, keyword)] for every column-0 declaration
+    (memoized per list object: the trees keep their files' lines)."""
+    key = id(lines)
+    if key not in _QD:
+        _QD[key] = (lines, _qualified_decls(lines))
+    return _QD[key][1]
+
+
+def _qualified_decls(lines):
     skip = comment_lines(lines)
     stack, out = [], []
     for i, line in enumerate(lines):
@@ -592,7 +607,10 @@ def cmd_check(args):
         print(s)
 
     for path, ln, text in markers:
-        out("UNRECONCILED %s:%d — %s" % (rel(path), ln, text))
+        if args.strict:
+            out("UNRECONCILED %s:%d — %s" % (rel(path), ln, text))
+        else:
+            print("queue: %s:%d — %s" % (rel(path), ln, text))
     for it in items:
         for ln, body in it.bad:
             out("MALFORMED %s:%d — %s" % (rel(it.file), ln, body))
@@ -614,11 +632,12 @@ def cmd_check(args):
         return 1
     funs = [it for it in items if it.is_fun]
     print("provenance: %d FunDecl(s) (%d cite twin code, %d `none`), %d other cited "
-          "declaration(s), %d citation(s); all exact at con-ron %s, con-leche %s." % (
+          "declaration(s), %d citation(s); all exact at con-ron %s, con-leche %s%s." % (
               len(funs), sum(1 for it in funs if it.cites), sum(1 for it in funs if not it.cites),
               sum(1 for it in items if it.cites and not it.is_fun),
               sum(len(it.cites) for it in items),
-              trees["con-ron"].label(), trees["con-leche"].label()))
+              trees["con-ron"].label(), trees["con-leche"].label(),
+              "; %d CHANGED marker(s) queued" % len(markers) if markers else ""))
     return 0
 
 
@@ -797,6 +816,11 @@ def cmd_update(args):
     rewrites, inserts = {}, {}
     counts = {"moved": 0, "doc": 0, "changed": 0, "gone": 0, "callee": 0}
     cited = {}  # (repo, qualified) -> [items]
+    records = []
+
+    def record(kind, c, it, note=""):
+        records.append({"kind": kind, "where": c.where(), "item": item_label(it),
+                        "cites": c.body(), "note": note})
     for it in items:
         for c in it.cites:
             nt, ot = new[c.repo], old[c.repo]
@@ -828,6 +852,7 @@ def cmd_update(args):
                 inserts.setdefault(c.file, []).append(
                     (c.lineno, marker_line(mi, c.repo, ot.rev, "`%s` is gone upstream" % c.decl)))
                 counts["gone"] += 1
+                record("gone", c, it)
                 continue
             p, a, b = loc
             nlines = nt.read(p)
@@ -854,6 +879,7 @@ def cmd_update(args):
             inserts.setdefault(c.file, []).append(
                 (c.lineno, marker_line(mi, c.repo, ot.rev, "`%s` changed" % c.decl)))
             counts["changed"] += 1
+            record("changed", c, it)
 
     # the callee pass
     changed = changed_decls(old, new)
@@ -862,40 +888,50 @@ def cmd_update(args):
         users = sorted({item_label(it) for it in cited.get((r, q), [])})
         print("TYPE %s %s changed (%s)%s — check the relations that mention it" % (
             r, q, changed[(r, q)][1], "; cited by " + ", ".join(users) if users else ""))
+    # helpers below a cited declaration, `--depth` calls deep, through uncited ones
     for repo in UPSTREAMS:
         calls = Calls(new[repo])
-        seen_report = set()
         for (r, q0), its in sorted(cited.items()):
             if r != repo or q0 not in calls.idx:
                 continue
-            # DFS through uncited, non-type declarations
-            stack, seen, hits = [(q0, [q0])], {q0}, []
-            while stack:
-                q, path = stack.pop()
-                for d in sorted(calls.callees(q)):
-                    if d in seen or (repo, d) in cited:
-                        continue
-                    seen.add(d)
-                    ch = changed.get((repo, d))
-                    if ch and ch[0] in TYPE_KW:
-                        continue
-                    if ch:
-                        hits.append((d, path + [d]))
-                    if not ch or ch[0] not in TYPE_KW:
-                        stack.append((d, path + [d]))
-            for d, path in hits:
-                for it in its:
-                    key = (it.file, it.lineno, d)
-                    if key in seen_report:
-                        continue
-                    seen_report.add(key)
-                    c = next(c for c in it.cites if c.repo == repo)
-                    print("CALLEE %s — %s reaches changed `%s` (%s) via %s" % (
-                        c.where(), item_label(it), d, changed[(repo, d)][1], " → ".join(path)))
-                    inserts.setdefault(c.file, []).append(
-                        (c.lineno, marker_line(c.m.group("indent"), repo, old[repo].rev,
-                                               "`%s` below `%s` changed" % (d, q0))))
-                    counts["callee"] += 1
+            frontier, seen, hits = [(q0, [q0])], {q0}, []
+            for _ in range(args.depth):
+                nxt = []
+                for q, path in frontier:
+                    for d in sorted(calls.callees(q)):
+                        if d in seen or (repo, d) in cited:
+                            continue
+                        seen.add(d)
+                        ch = changed.get((repo, d))
+                        if ch and ch[0] in TYPE_KW:
+                            continue
+                        if ch:
+                            hits.append((d, path + [d]))
+                        nxt.append((d, path + [d]))
+                frontier = nxt
+            if not hits:
+                continue
+            for it in its:
+                c = next(c for c in it.cites if c.repo == repo)
+                print("CALLEE %s — %s: below `%s`, changed: %s" % (
+                    c.where(), item_label(it), q0,
+                    "; ".join("`%s` (%s, via %s)" % (d, changed[(repo, d)][1], " → ".join(pth[1:-1]) or "direct")
+                              for d, pth in hits)))
+                inserts.setdefault(c.file, []).append(
+                    (c.lineno, marker_line(c.m.group("indent"), repo, old[repo].rev,
+                                           "below `%s`, %s changed" % (
+                                               q0, ", ".join("`%s`" % d for d, _ in hits)))))
+                record("callee", c, it, ", ".join(d for d, _ in hits))
+                counts["callee"] += 1
+
+    if args.json:
+        with open(args.json, "w", encoding="utf-8") as f:
+            json.dump({"old": {r: t.rev for r, t in old.items()},
+                       "new": {r: t.rev for r, t in new.items()},
+                       "counts": counts, "findings": records,
+                       "types": [{"repo": r, "decl": q, "file": changed[(r, q)][1]} for r, q in types]},
+                      f, indent=1)
+            f.write("\n")
 
     if not args.dry_run:
         for path in set(rewrites) | set(inserts):
@@ -944,12 +980,17 @@ def cmd_coverage(args):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
-    sub.add_parser("check")
+    ck = sub.add_parser("check")
+    ck.add_argument("--strict", action="store_true",
+                    help="also fail on CHANGED markers (they are only listed otherwise)")
     sub.add_parser("annotate")
     u = sub.add_parser("update")
     u.add_argument("--old", help="the old con-ron revision")
     u.add_argument("--old-leche", help="the old con-leche revision (default: con-ron's pin at --old)")
     u.add_argument("--dry-run", action="store_true")
+    u.add_argument("--depth", type=int, default=1,
+                   help="how many calls deep the callee pass looks below a cited declaration (1)")
+    u.add_argument("--json", metavar="FILE", help="also write the findings as JSON")
     lo = sub.add_parser("locate")
     lo.add_argument("names", nargs="+")
     cv = sub.add_parser("coverage")

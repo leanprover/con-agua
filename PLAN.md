@@ -93,17 +93,25 @@ per-function separation logic.
   (`scripts/bump-con-ron.sh --check`). Never edit a vendored file without putting the edit in a
   patch: edit, then `scripts/bump-con-ron.sh --refresh-patches` (an edit outside every patch lands in
   `NNNN-new.patch`: rename it and give it a description), and commit both.
-- **Staleness** (which L code and proofs a bump invalidated). TODO: tracked by source citations
-  (`con-ron: ConRon/Arena/File.lean:120-200 name` doc lines on our L code and proofs, checked by a
-  pure-Python gate like con-ron's `scripts/provenance.py`), built by a separate lane. The census
-  fingerprints that did this before were dropped (DESIGN.md, "Census memory").
+- **Citations** (DESIGN.md, "Provenance: citations instead of fingerprints"). Every L `FunDecl` carries
+  a line in its declaration block naming the twin code it stands for, at the upstream revision in
+  `vendor/UPSTREAM`: `/-- con-ron: ConRon/Arena/Core.lean:3682-3688 ConRon.Arena.flushCaches -/` (path
+  relative to con-ron's `proof/`, the block's line range, the qualified name; `con-leche:
+  ConLeche/...` for code ported from con-leche; several lines for an L function that merges several
+  twin functions; `con-ron: none — <reason>` for L plumbing with no twin). New code: write
+  `@[l_impl T]`, run `scripts/provenance.py annotate` (inserts the citation of `T`), or `locate T`
+  for the line. `scripts/provenance.py check` (a second, no build) must pass before landing.
 - **The bump.** In a worktree on its own branch: `scripts/bump-con-ron.sh <rev>` (e.g. `origin/HEAD`)
   re-vendors con-ron at `<rev>` and con-leche at the rev con-ron's `proof/lake-manifest.json` pins,
   re-applies the patches with `git apply --3way` (conflicts are reported and left with markers),
-  regenerates `scripts/census-rust.tsv`, builds, runs the census, and lists the changed upstream
-  files. Fix what the build
-  breaks (vendored files: in a patch; our files: small fixes now, otherwise `sorry` + DESIGN.md),
-  land it, and announce it in DESIGN.md: what changed upstream, and which lanes' code it touches.
+  regenerates `scripts/census-rust.tsv`, runs `scripts/provenance.py update --old <old rev>`
+  (relocates moved citations, inserts a `-- con-ron: CHANGED since …` marker under every citation
+  whose twin code, or a helper right below it, changed, and prints the diffs), builds, runs the
+  census, and lists the changed upstream files. Fix what the build breaks (vendored files: in a
+  patch; our files: small fixes now, otherwise `sorry` + DESIGN.md), land it with the markers, and
+  announce it in DESIGN.md: what changed upstream, the marked items, which lanes own them. The
+  owning lane checks (and if needed fixes) the L code and proofs against the new twin and deletes
+  the marker; `check` lists the markers left (the queue; `check --strict` fails on them).
   Never bump the toolchain and the twin in the same step.
 
 ## Process rules
