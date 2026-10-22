@@ -461,20 +461,14 @@ def natEqCtx : FunDecl := lfn (pi, d) locals (nN, natTy, x, y, zN, z, sN, sx, sy
 /-- `nat_eq_disp(c, pi, cx)`: the dispatch of `natOpEquations` over the seven operations, from the
 pin record `pi` and the term record `cx`. -/
 -- con-ron: ConRon/Arena/Core.lean:929-992 ConRon.Arena.natOpEquations
-def natEqDisp : FunDecl :=
-    lfn (c, pi, cx) locals (x, y, z, sN, sx, sy, bT, bF, pr, ad, su, mu, po, be, bl, q, l) {
-  x := IW.u64[cx]; y := IW.u64[cx + 1]; z := IW.u64[cx + 2]; sN := IW.u64[cx + 3];
-  sx := IW.u64[cx + 4]; sy := IW.u64[cx + 5]; bT := IW.u64[cx + 6]; bF := IW.u64[cx + 7];
-  pr := IW.u64[pi]; ad := IW.u64[pi + 1]; su := IW.u64[pi + 2];
-  mu := IW.u64[pi + 3]; po := IW.u64[pi + 4]; be := IW.u64[pi + 5];
-  bl := IW.u64[pi + 6];
-  if c == pr { (q, l) := call nat_eq_pr(c, z, x, sx); return (q, l) };
-  if c == ad { (q, l) := call nat_eq_un(c, x, y, z, sy, sN); return (q, l) };
-  if c == su { (q, l) := call nat_eq_un(c, x, y, z, sy, pr); return (q, l) };
-  if c == mu { (q, l) := call nat_eq_mu(c, x, y, z, sy, ad); return (q, l) };
-  if c == po { (q, l) := call nat_eq_po(c, x, y, z, sy, sN, mu); return (q, l) };
-  if c == be { (q, l) := call nat_eq_be(c, x, y, z, sx, sy, bT, bF); return (q, l) };
-  if c == bl { (q, l) := call nat_eq_bl(c, x, y, z, sx, sy, bT, bF); return (q, l) };
+def natEqDisp : FunDecl := lfn (c, pi, cx) locals (q, l) {
+  if c == IW.u64[pi] { (q, l) := call nat_eq_pr(c, IW.u64[cx + 2], IW.u64[cx], IW.u64[cx + 4]); return (q, l) };
+  if c == IW.u64[pi + 1] { (q, l) := call nat_eq_un(c, IW.u64[cx], IW.u64[cx + 1], IW.u64[cx + 2], IW.u64[cx + 5], IW.u64[cx + 3]); return (q, l) };
+  if c == IW.u64[pi + 2] { (q, l) := call nat_eq_un(c, IW.u64[cx], IW.u64[cx + 1], IW.u64[cx + 2], IW.u64[cx + 5], IW.u64[pi]); return (q, l) };
+  if c == IW.u64[pi + 3] { (q, l) := call nat_eq_mu(c, IW.u64[cx], IW.u64[cx + 1], IW.u64[cx + 2], IW.u64[cx + 5], IW.u64[pi + 1]); return (q, l) };
+  if c == IW.u64[pi + 4] { (q, l) := call nat_eq_po(c, IW.u64[cx], IW.u64[cx + 1], IW.u64[cx + 2], IW.u64[cx + 5], IW.u64[cx + 3], IW.u64[pi + 3]); return (q, l) };
+  if c == IW.u64[pi + 5] { (q, l) := call nat_eq_be(c, IW.u64[cx], IW.u64[cx + 1], IW.u64[cx + 2], IW.u64[cx + 4], IW.u64[cx + 5], IW.u64[cx + 6], IW.u64[cx + 7]); return (q, l) };
+  if c == IW.u64[pi + 6] { (q, l) := call nat_eq_bl(c, IW.u64[cx], IW.u64[cx + 1], IW.u64[cx + 2], IW.u64[cx + 4], IW.u64[cx + 5], IW.u64[cx + 6], IW.u64[cx + 7]); return (q, l) };
   return (0, 0)
 }
 
