@@ -620,19 +620,23 @@ def classGenMinorTyClose : FunDecl := lfn (fo, fl, ihso, ihsl, d, res) locals (f
 `cName`, in `g.ctors[c]`. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:210-239 ConRon.Arena.ClassGen.prefixBinders
 @[l_impl ConRon.Arena.ClassGen.prefixBinders]
-def classGenPrefixBindersFindCtor : FunDecl := lfn (g, c, cName) locals (ctorsLen, lp, io, il, j, cp) {
-  ctorsLen := IW.u64[g + 10];
-  if ctorsLen <= c { return (0, 0) };
+def classGenPrefixBindersFindCtor : FunDecl := lfn (g, c, cName) locals (lp, ok, cp) {
+  if IW.u64[g + 10] <= c { return (0, 0) };
   lp := IW.u64[IW.u64[g + 9] + c];
-  io := IW.u64[lp];
-  il := IW.u64[lp + 1];
-  j := 0;
-  while j < il {
-    cp := IW.u64[io + j];
-    if EREC.u64[IW.u64[cp]] == cName { return (1, cp) };
-    j += 1
-  };
-  return (0, 0)
+  (ok, cp) := call class_gen_prefix_binders_find_ctor_go(IW.u64[lp], IW.u64[lp + 1], cName);
+  return (ok, cp)
+}
+
+/-- `class_gen_prefix_binders_find_ctor_go(io, il, cName)`: the first constructor record of the
+slice `(io, il)` named `cName` (`find?`, as a self-recursion). -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:210-239 ConRon.Arena.ClassGen.prefixBinders
+@[l_impl ConRon.Arena.ClassGen.prefixBinders]
+def classGenPrefixBindersFindCtorGo : FunDecl := lfn (io, il, cName) locals (cp, ok, r) {
+  if il == 0 { return (0, 0) };
+  cp := IW.u64[io];
+  if EREC.u64[IW.u64[cp]] == cName { return (1, cp) };
+  (ok, r) := call class_gen_prefix_binders_find_ctor_go(io + 1, il - 1, cName);
+  return (ok, r)
 }
 
 /-- `class_gen_prefix_binders_slots_go(g, s, mc)`: `ClassGen.prefixBinders`'s `slotsGo`, `mc` the
@@ -865,7 +869,8 @@ def recClassFns : Prog :=
    ("class_gen_minor_ty_close", classGenMinorTyClose),
    ("class_gen_prefix_binders_find_ctor", classGenPrefixBindersFindCtor),
    ("class_gen_prefix_binders_slots_go", classGenPrefixBindersSlotsGo),
-   ("class_gen_prefix_binders", classGenPrefixBinders), ("class_gen_rec_ty", classGenRecTy),
+   ("class_gen_prefix_binders", classGenPrefixBinders),
+   ("class_gen_prefix_binders_find_ctor_go", classGenPrefixBindersFindCtorGo), ("class_gen_rec_ty", classGenRecTy),
    ("class_gen_rec_ty_tail", classGenRecTyTail),
    ("class_rec_of", classRecOf), ("class_gen_rule_find_slot", classGenRuleFindSlot),
    ("class_gen_rule_pvars_go", classGenRulePvarsGo), ("class_gen_rule_call1", classGenRuleCall1),
