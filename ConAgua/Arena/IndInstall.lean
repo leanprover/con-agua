@@ -616,18 +616,15 @@ def checkBlockIdxSorts : FunDecl := lfn (vis, p, msO, msL, cvO, cvL) locals (n, 
 }
 
 /-- `cons_block_ctors(nP, ctorsAs.off, ctorsAs.len, vis)`: the members' constructors consed,
-member by member, in block order. -/
+member by member, in block order (recursion as the twin's). -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:322-328 ConRon.Arena.consBlockCtors
 @[l_impl ConRon.Arena.consBlockCtors]
-def consBlockCtors : FunDecl := lfn (nP, caOff, caLen, vis) locals (i, mp, moff, mlen) {
-  i := 0;
-  while i < caLen {
-    mp := IW.u64[caOff + i];
-    moff := IW.u64[mp]; mlen := IW.u64[mp + 1];
-    vis := call cons_sum_ctors(nP, moff, mlen, vis);
-    i += 1
-  };
-  return vis
+def consBlockCtors : FunDecl := lfn (nP, caOff, caLen, vis) locals (mp, v1, v2) {
+  if caLen == 0 { return vis };
+  mp := IW.u64[caOff];
+  v1 := call cons_sum_ctors(nP, IW.u64[mp], IW.u64[mp + 1], vis);
+  v2 := call cons_block_ctors(nP, caOff + 1, caLen - 1, v1);
+  return v2
 }
 
 /-- `check_block_pass(vis, p0, is_rec)`: one pass over the formers, the constructors and the
