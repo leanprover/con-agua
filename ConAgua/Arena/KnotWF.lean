@@ -5,6 +5,7 @@ import ConAgua.Arena.Abs1Spec
 import ConAgua.Arena.ArRangeSpec
 import ConAgua.Arena.InstListSpec
 import ConAgua.Arena.HasFvar
+import ConAgua.Arena.InferFieldSort
 
 /-!
 # Phases 6–7 close over their callees (lane `defeq`)
@@ -36,8 +37,8 @@ def defeqExtFns : Prog :=
    ("whnf", whnfL), ("whnf_core", whnfCoreL),
    -- no L code yet
    ("abs_entry", absEntry), ("ar_entry", arEntry), ("inst_list", instListL), ("has_fvar", hasFvarL),
-   ("field_sort_zero", stub 4),
-   ("find_proj", stub 3), ("inst1", stub 3), 
+   ("field_sort_zero", fieldSortZeroL),
+   ("find_proj", stub 3), ("inst1", instEntry),
    ("inst_lp", stub 4), ("is_proof_fast", stub 2), ("not_proof_fast", stub 2),
    ("str_lit_ctor", stub 1), ("str_lit_supported", stub 1)]
 

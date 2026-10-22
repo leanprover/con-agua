@@ -2,6 +2,7 @@ import ConAgua.Arena.DeclBase
 import ConAgua.Arena.Pins
 import ConAgua.Arena.Rom
 import ConAgua.Census.Attr
+import ConAgua.Arena.WhnfBase
 
 /-!
 # The fold's `And` pin: `and_pin_ok(i)` refines `andPinOk` (con-leche's ANDPIN)
@@ -30,15 +31,48 @@ namespace L.Arena
 
 open L.Front (DECL DLP DeclsR DeclAt CVAt dw)
 
-/-- `and_pin_ok(i)`: `1` if record `i`'s name is none of the three pinned `And` names. -/
+/-- `and_block_named(bo, bl)`: some member of the inductive block at `DLP[bo ‥ bo + bl)` (record
+pointers into `DLP` (`DIND`), a record's name at `+ 1`) declares one of the three pinned `And` names. -/
+-- con-ron: ConRon/Arena/Basis.lean:109-114 ConRon.Arena.blockAndNamed
+@[l_impl ConRon.Arena.blockAndNamed]
+def andBlockNamed : FunDecl := lfn (bo, bl) locals (s, x, r) {
+  if bl == 0 { return 0 };
+  s := DLP.u64[bo];
+  x := DLP.u64[s + 1] & 4294967295;
+  if x == PINS.u64[12] || x == PINS.u64[49] || x == PINS.u64[50] { return 1 };
+  r := call and_block_named(bo + 1, bl - 1);
+  return r
+}
+
+/-- `and_pin_ok(i)`: `1` if record `i` may stand: a one-constant record whose name is none of the
+three pinned `And` names, or an inductive block that declares none of them, or one that does and
+is the pinned `And` block (two parameters, equal to the ROM's `andPin` up to the canonical form:
+the block copied into `EREC` and an `IW` slice, `canon_eq_list`). -/
 -- con-ron: ConRon/Arena/Basis.lean:123-143 ConRon.Arena.andPinOk
 @[l_impl ConRon.Arena.andPinOk]
-def andPinOkL : FunDecl := lfn (i) locals (x) {
+def andPinOkL : FunDecl := lfn (i) locals (x, k, bo, bl, nmd, np, o, l, io, il, po, pl, e) {
   if PINS.u64[0] == 0 { abort };
+  k := DECL.u64[1 + 8 * i];
+  if k == 6 {
+    bo := DECL.u64[3 + 8 * i];
+    bl := DECL.u64[4 + 8 * i];
+    nmd := call and_block_named(bo, bl);
+    if nmd == 0 { return 1 };
+    np := DECL.u64[5 + 8 * i];
+    if np != 2 { return 0 };
+    (o, l) := call ind_block_to_erec(i);
+    (io, il) := call er_to_iw(o, l);
+    (po, pl) := call rom_and_pin();
+    e := call canon_eq_list(io, il, po, pl);
+    return e
+  };
   x := DECL.u64[2 + 8 * i] & 4294967295;
   if x == PINS.u64[12] || x == PINS.u64[49] || x == PINS.u64[50] { return 0 };
   return 1
 }
+
+/-- This module's functions (the binding `scripts/checker_prog.py` takes for `and_block_named`). -/
+def andPinFns : Prog := [("and_pin_ok", andPinOkL), ("and_block_named", andBlockNamed)]
 
 /-- The low 32 bits of a word: what `decI` reads. -/
 def lo32 (w : Word) : Word := w &&& 4294967295
@@ -53,16 +87,18 @@ theorem andPinOk_specW (p : Prog) (hp : p.lookup "and_pin_ok" = some andPinOkL) 
     (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "and_pin_ok" [i]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ rdW (s₀.mem.arr64 PINS) 0 ≠ 0 ∧
-      r = [andPinW s₀.mem i]; ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ (rdW (s₀.mem.arr64 DECL) (1 + 8 * i) ≠ 6 →
+      s'.mem = s₀.mem ∧ rdW (s₀.mem.arr64 PINS) 0 ≠ 0 ∧ r = [andPinW s₀.mem i]); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, andPinOkL]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
-      finish [andPinW, lo32]
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, callW_spec p n "and_block_named",
+        callW_spec p n "ind_block_to_erec", callW_spec p n "er_to_iw", callW_spec p n "rom_and_pin",
+        callW_spec p n "canon_eq_list"] <;>
+      finish [andPinW, lo32, rdW_eq]
 
 /-! ## The twin side -/
 
@@ -146,12 +182,23 @@ theorem andPinOk_refines (dn : NIdx → Option ConLeche.Name) (ds : Array IDecla
   intro n s₀ a₀ vis fe pend i hi hR
   apply M.triple_of_run
   intro s r s' hs hrun
-  obtain ⟨hloc, hm, hflag, hr⟩ := M.of_run (P := fun s => s = s₀) hs hrun (andPinOk_specW p hp n s₀ i)
+  obtain ⟨hloc, hk⟩ := M.of_run (P := fun s => s = s₀) hs hrun (andPinOk_specW p hp n s₀ i)
   subst hs
-  have hF := hR.check.pins.full (by have e0 : rdW (s.mem.arr64 PINS) 0 = pinW s.mem 0 := rfl; rw [← e0]; exact hflag)
   have hdecl : DeclAt (s.mem.arr64 DECL) (s.mem.arr64 DLP) i.toNat (dsAt ds i) := by
     have := hR.decls.recs i.toNat hi
     simpa [dsAt, Array.getD, hi] using this
+  have hk6 : rdW (s.mem.arr64 DECL) (1 + 8 * i) ≠ 6 := by
+    have h1 := hR.decls.room
+    have h2 := hR.decls.dsize
+    have : rdW (s.mem.arr64 DECL) (1 + 8 * i) = dw (s.mem.arr64 DECL) i.toNat 0 := by
+      have : (1 + 8 * i).toNat = 1 + 8 * i.toNat + 0 := by
+        rw [UInt64.toNat_add, UInt64.toNat_mul]; simp; omega
+      simp [rdW, dw, this]
+    rw [this]
+    generalize dsAt ds i = d at hdecl
+    cases d <;> simp only [DeclAt] at hdecl <;> (try exact hdecl.elim) <;> rw [hdecl.1] <;> decide
+  obtain ⟨hm, hflag, hr⟩ := hk hk6
+  have hF := hR.check.pins.full (by have e0 : rdW (s.mem.arr64 PINS) 0 = pinW s.mem 0 := rfl; rw [← e0]; exact hflag)
   have hrun' := andPinOk_run hdecl hF
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
   have hw : rdW (s.mem.arr64 DECL) (2 + 8 * i) = dw (s.mem.arr64 DECL) i.toNat 1 := by

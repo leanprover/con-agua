@@ -1,5 +1,6 @@
 import ConAgua.Arena.InferBodyDisp
 import ConAgua.Arena.DefEqLeaves2
+import ConAgua.Arena.CoreDen
 
 /-!
 # The stuck and irrelevance side of `DefEq.lean`: `prop_irrel` (lane `defeq`, helper `defeq-top`)
@@ -78,12 +79,14 @@ def ReservedContainsOK (p : Prog) : Prop :=
     (M : ModeMaps) (eb x : Word), CoreS dn s₀.mem a₀ vis fe M eb → HW x →
     CoreSpec p n "reserved_contains_w" [x] (reservedContainsT (decI x)) decBool s₀ a₀ dn vis fe M eb
 
-/-- `lvls_eq_c(us, vs)` refines `lvlsEq?` under `CoreS` alone. Lane `whnf`'s `lvlsEqC_refines`
-proves it when both lists denote (`denoteLs`); that a stored level list denotes is an invariant
-`CoreS` does not carry yet (the gap of `InferProjOK`). -/
+/-- `lvls_eq_c(us, vs)` refines `lvlsEq?` at two level lists that read back (lane `whnf`'s
+`lvlsEqC_refines`; `lvlsEqCH_of`, `DefEqKnot.lean`). The callers' lists are stored constants'
+(`StoreDen.constLs`). -/
 def LvlsEqCH (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb us vs : Word), CoreS dn s₀.mem a₀ vis fe M eb → HW us → HW vs →
+    (∃ lu, denoteLs a₀.store.lss (decI us) = some lu) →
+    (∃ lv, denoteLs a₀.store.lss (decI vs) = some lv) →
     CoreSpec p n "lvls_eq_c" [us, vs] (lvlsEq? (decI us) (decI vs)) (fun r => decO (r.headD 0))
       s₀ a₀ dn vis fe M eb
 
@@ -103,6 +106,7 @@ def LazyDeltaStepH (p : Prog) : Prop :=
   ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
   ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb mode d a b : Word), SlotPre s₀ a₀ dn vis fe M eb mode → HW a → HW b →
+    d.toNat < 2 ^ 63 →
     CoreSpec p (n + 1) "lazy_delta_step" [mode, vis, d, a, b]
       (lazyDeltaStep (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b))
       decDSs s₀ a₀ dn vis fe M eb ResW3
@@ -117,13 +121,13 @@ def ReduceProjCoreH (p : Prog) : Prop :=
       (reduceProjCore (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat
         (decE c)) decOptR s₀ a₀ dn vis fe MM eb ResW
 
-/-- `proof_irrel` refines `proofIrrel` (lane `whnf`'s `proofIrrel_refines`, `WhnfIotaRefine4.lean`,
-proves it with `n ≤ 2^62` and the eager-bit hypothesis as well; this is the shape this file uses). -/
+/-- `proof_irrel` refines `proofIrrel` (the shape of lane `whnf`'s `proofIrrel_refines`,
+`WhnfIotaRefine4.lean`). -/
 def ProofIrrelOK (p : Prog) : Prop :=
-  ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F →
+  ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
   ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb mode d a b : Word), CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → HW a →
-    HW b →
+    (MM : ModeMaps) (eb mode d a b : Word), CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 →
+    eb = (mode >>> 1) &&& 1 → HW a → HW b →
     CoreSpec p (n + 1) "proof_irrel" [mode, vis, d, a, b]
       (proofIrrel (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decBool s₀ a₀ dn
       vis fe MM eb
@@ -137,6 +141,8 @@ structure StuckCallees (p : Prog) : Prop where
   reservedContains : ReservedContainsOK p
   towerSlots : TowerSlotsAllOK p
   lvlsEqC : LvlsEqCH p
+  /-- Stored levels read back (`StoreDen.lean`). -/
+  den : CoreDen
   strLitSupported : StrLitSupportedOK p
   strLitCtor : StrLitCtorOK p
   /-- `strLitSupported` keeps every stored node's view (`supKeep_twin`, a `sorry` in `WhnfBase`). -/
@@ -146,17 +152,18 @@ structure StuckCallees (p : Prog) : Prop where
 
 /-- `proof_irrel` at every L fuel up to `n + 1` from the knot up to `n`. -/
 theorem proofIrrel_at (p : Prog) (hc : StuckCallees p) :
-    ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F →
+    ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
     ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-      (MM : ModeMaps) (eb mode d a b : Word), CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → HW a →
-      HW b →
+      (MM : ModeMaps) (eb mode d a b : Word), CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 →
+      eb = (mode >>> 1) &&& 1 → HW a → HW b →
       CoreSpec p n "proof_irrel" [mode, vis, d, a, b]
         (proofIrrel (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decBool s₀ a₀
         dn vis fe MM eb
-  | 0, _, _, _, s₀, a₀, dn, vis, fe, MM, eb, _, _, _, _, _, _, _, _ =>
+  | 0, _, _, _, _, s₀, a₀, dn, vis, fe, MM, eb, _, _, _, _, _, _, _, _, _ =>
       CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe MM eb _
-  | n + 1, hk, F, hF, s₀, a₀, dn, vis, fe, MM, eb, mode, d, a, b, hS, hm, ha, hb =>
-      hc.proofIrrel n (hk.mono (by omega)) F (by omega) s₀ a₀ dn vis fe MM eb mode d a b hS hm ha hb
+  | n + 1, hk, F, hF, hn, s₀, a₀, dn, vis, fe, MM, eb, mode, d, a, b, hS, hm, heb, ha, hb =>
+      hc.proofIrrel n (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis fe MM eb mode d a b
+        hS hm heb ha hb
 
 /-! ## `prop_irrel` -/
 
@@ -260,7 +267,7 @@ theorem decBool_eq_false {r : List Word} (h : r.headD 0 = 0) : decBool r = false
 @[refines ConRon.Arena.propIrrel]
 theorem propIrrel_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n : Nat)
     (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word) (hF : n ≤ F)
+    (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) :
     CoreSpec p (n + 1) "prop_irrel" [mode, vis, d, a, b]
       (propIrrel (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decBool
@@ -325,7 +332,7 @@ theorem propIrrel_refines (p : Prog) (hq : StuckProg p) (hc : StuckCallees p) (n
   rw [hx]
   simp only [Bool.false_eq_true, ↓reduceIte]
   exact CoreSpec.of_call1W (s₀ := ⟨m₄, Locals.init []⟩)
-    (proofIrrel_at p hc n hk F hF _ _ dn vis fe M₄ eb mode d a b hS₄ hs.mode4 ha hb)
+    (proofIrrel_at p hc n hk F hF hn _ _ dn vis fe M₄ eb mode d a b hS₄ hs.mode4 hs.eb_mode ha hb)
     (fun r r' h => by simp only [decBool, h]) hW
 
 end L.Arena
