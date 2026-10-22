@@ -145,3 +145,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-22,whnf4,opus,15,5,"landing 4 (helper whnf4-rs): RecShape assumption removed by clamping iota_rec spine prefixes as the twin take/drop; KnotCallees 5 fields"
 2026-10-22,defeq2,opus,95,30,"landing 6: CoreS.den (StoreDen as a CoreS field, kept at every construction site; lvlAll; level/list interning readbacks (helper lvl); lvl_live checks before imax (D25); StrLit sites (helper strden)); discharges CoreS.lvl_den sorry, CoreDen, ProjSortDen, proofIrrel"
 2026-10-22,whnf4,opus,88,12,"landing 5 (helper whnf4-d23): D23 fixed: twin lp bit mirrored (XDER bit 30, seven hasParam/lp columns 55-61 written by the pushes, ArenaR/DerR fields, derLW_ok), lp_go/inst_lp_core cut off as the twin"
+2026-10-22,decls3,opus,120,10,"merged helpers nat (NatGateSpec) and divmod (DivGateSpecD); clashes; DeclNatBase ported; checkDeclDefn_loop composed; phase2 206 proven"
