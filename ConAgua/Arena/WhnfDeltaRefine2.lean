@@ -406,7 +406,7 @@ theorem CoreS.of_nat {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : A
     (fun x hx => by
       simp only [natC, List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl | rfl | rfl | rfl <;> decide)
-    (hS.den.of_views hk.1 hk.2.1 hk.2.2 (hf.1 EREC (by simp [natA, POOL, CREC, CSLOT, EREC]) (by decide))
+    (hS.den.of_views hk.1 hk.2.1 hk.2.2 (hf.1 EREC (by simp [natA, POOL, CREC, CSLOT, CLP, EREC]) (by decide))
       hv)
 
 theorem StackKept.of_nat_frame {m m' : Mem} (hf : MemFrame natA natC m m') (hP : PoolGrew m m') :
