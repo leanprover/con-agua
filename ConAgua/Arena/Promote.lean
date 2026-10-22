@@ -540,19 +540,35 @@ def promoteCVL : FunDecl := lfn (f, s) locals (n0, o, l, t0, n, q, t) {
   return (n, q, l, t)
 }
 
-/-- `promote_fire(f, s, d)`: a rule's firing mode (words `3‥8` of the 11-word rule records at
-`s` and `d`). -/
+/-- `promote_fire(f, s)`: a rule's firing mode (words `3‥8` of the 11-word rule record at `s`)
+promoted; returns the five words of the promoted mode (`kind`, level slice offset and length,
+pin slice offset and length). -/
 -- con-ron: ConRon/Arena/Promote.lean:237-244 ConRon.Arena.promoteFire
 @[l_impl ConRon.Arena.promoteFire]
-def promoteFireL : FunDecl := lfn (f, s, d) locals (k, a, b, x, y, q, r, u) {
+def promoteFireL : FunDecl := lfn (f, s) locals (k, a, b, x, y, q, r) {
   (k, a, b, x, y) := call erec_rd5(s + 3);
-  if k != 1 {
-    u := call erec_wr5(d + 3, k, 0, 0, 0, 0);
-    return 0
-  };
+  if k != 1 { return (k, 0, 0, 0, 0) };
   q := call promote_slice(1, f, a, b);
   r := call promote_slice(2, f, x, y);
-  u := call erec_wr5(d + 3, 1, q, b, r, y);
+  return (1, q, b, r, y)
+}
+
+/-- `pe_at(f, a)`: `promote_e` of the expression handle stored at `EREC[a]`. -/
+-- con-ron: none — reads a handle of an `EREC` record (the twin's records are values)
+def peAt : FunDecl := lfn (f, a) locals (w, r) {
+  w := call erec_rd1(a);
+  r := call promote_e(f, w);
+  return r
+}
+
+/-- `rule_wr(d, s, c, r)`: the promoted constructor `c` and right-hand side `r` written into the
+rule record `d`, the other words copied from the rule record `s`. -/
+-- con-ron: none — writes the words of an `EREC` record (the twin's records are values)
+def ruleWr : FunDecl := lfn (d, s, c, r) locals (w1, w2, w9, w10, u) {
+  (w1, w2) := call erec_rd2(s + 1);
+  (w9, w10) := call erec_rd2(s + 9);
+  u := call erec_wr3(d, c, w1, w2);
+  u := call erec_wr3(d + 8, r, w9, w10);
   return 0
 }
 
@@ -560,14 +576,12 @@ def promoteFireL : FunDecl := lfn (f, s, d) locals (k, a, b, x, y, q, r, u) {
 firing mode, right-hand side). -/
 -- con-ron: ConRon/Arena/Promote.lean:246-252 ConRon.Arena.promoteRule
 @[l_impl ConRon.Arena.promoteRule]
-def promoteRuleL : FunDecl := lfn (f, s, d) locals (c0, w1, w2, x, w9, w10, c, u, r) {
-  (c0, w1, w2) := call erec_rd3(s);
-  (x, w9, w10) := call erec_rd3(s + 8);
-  c := call promote_n(f, c0);
-  u := call promote_fire(f, s, d);
-  r := call promote_e(f, x);
-  u := call erec_wr3(d, c, w1, w2);
-  u := call erec_wr3(d + 8, r, w9, w10);
+def promoteRuleL : FunDecl := lfn (f, s, d) locals (c, k, q, b, r2, y, r, u) {
+  c := call pn_at(f, s);
+  (k, q, b, r2, y) := call promote_fire(f, s);
+  r := call pe_at(f, s + 8);
+  u := call rule_wr(d, s, c, r);
+  u := call erec_wr5(d + 3, k, q, b, r2, y);
   return 0
 }
 
@@ -897,7 +911,7 @@ def promoteFns : Prog :=
    ("erec_wr4", erecWr4), ("erec_wr5", erecWr5), ("erec_cp", erecCp), ("promote_slice", promoteSlice), ("cv_rd", cvRd), ("cv_wr", cvWr),
    ("promote_cv", promoteCVL), ("promote_fire", promoteFireL),
    ("promote_rule", promoteRuleL), ("promote_rules", promoteRulesL),
-   ("pn_at", pnAt), ("pl_at", plAt), ("ps_at", psAt), ("caps_wr", capsWr), ("proj_wr", projWr), ("caps_parts", capsParts), ("promote_caps", promoteCapsL), ("proj_a", projA), ("proj_b", projB),
+   ("pn_at", pnAt), ("pl_at", plAt), ("ps_at", psAt), ("pe_at", peAt), ("rule_wr", ruleWr), ("caps_wr", capsWr), ("proj_wr", projWr), ("caps_parts", capsParts), ("promote_caps", promoteCapsL), ("proj_a", projA), ("proj_b", projB),
    ("promote_proj_table", promoteProjTableL),
    ("pci_mk", pciMk), ("pci_plain", pciPlain), ("pci_defn", pciDefn), ("pci_ind", pciInd), ("pci_ctor", pciCtor),
    ("rec_rules", recRules), ("pci_rec", pciRec), ("promote_ci", promoteCIL), ("promote_ci_list", promoteCIListL),

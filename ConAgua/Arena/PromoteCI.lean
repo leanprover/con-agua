@@ -220,38 +220,66 @@ abbrev g2 (r : List Word) : Word := r.tail.tail.headD 0
 abbrev g3 (r : List Word) : Word := r.tail.tail.tail.headD 0
 abbrev g4 (r : List Word) : Word := r.tail.tail.tail.tail.headD 0
 
-/-- **The model of `promote_fire(f, s, d)`.** -/
-def fireW (p : Prog) (n : Nat) (m : Mem) (f s d : Word) : Option Mem :=
+/-- **The model of `promote_fire(f, s)`.** -/
+def fireW (p : Prog) (n : Nat) (m : Mem) (f s : Word) : Option (List Word × Mem) :=
   (callW p n "erec_rd5" [s + 3] m).bind fun r₀ =>
-  if g0 r₀.1 ≠ 1 then
-    memK (callW p n "erec_wr5" [d + 3, g0 r₀.1, 0, 0, 0, 0] r₀.2)
+  if g0 r₀.1 ≠ 1 then some ([g0 r₀.1, 0, 0, 0, 0], r₀.2)
   else
     (callW p n "promote_slice" [1, f, g1 r₀.1, g2 r₀.1] r₀.2).bind fun r₁ =>
     (callW p n "promote_slice" [2, f, g3 r₀.1, g4 r₀.1] r₁.2).bind fun r₂ =>
-    memK (callW p n "erec_wr5" [d + 3, 1, r₁.1.headD 0, g2 r₀.1, r₂.1.headD 0,
-      g4 r₀.1] r₂.2)
+    some ([1, g0 r₁.1, g2 r₀.1, g0 r₂.1, g4 r₀.1], r₂.2)
 
-theorem promoteFire_spec (f s d : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "promote_fire" [f, s, d]
-    ⦃fun _ s' => LocEq s' s₀ ∧ fireW p n s₀.mem f s d = some s'.mem; ⊤⦄ := by
+theorem promoteFire_spec (f s : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "promote_fire" [f, s]
+    ⦃fun r s' => LocEq s' s₀ ∧ fireW p n s₀.mem f s = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp.promote_fire]
   simp only [callFn, promoteFireL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      callW_spec p n "erec_rd5", callW_spec p n "erec_wr5", callW_spec p n "promote_slice"] <;>
-    finish (gen := 20) [fireW, memK_some, Option.bind_some, Option.bind_none, rd5W]
+      callW_spec p n "erec_rd5", callW_spec p n "promote_slice"] <;>
+    finish (gen := 20) [fireW, rd5W, Option.bind_some, Option.bind_none]
 
 /-! ## `promote_rule`, `promote_rules` -/
 
+/-- **The model of `pe_at(f, a)`.** -/
+def peAtW (p : Prog) (n : Nat) (m : Mem) (f a : Word) : Option (Word × Mem) :=
+  (callW p n "erec_rd1" [a] m).bind fun r =>
+  (callW p n "promote_e" [f, g0 r.1] r.2).bind fun x => some (g0 x.1, x.2)
+
+theorem peAt_spec (f a : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "pe_at" [f, a]
+    ⦃fun r s' => LocEq s' s₀ ∧ peAtW p n s₀.mem f a = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp.pe_at]
+  simp only [callFn, peAt]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      callW_spec p n "erec_rd1", callW_spec p n "promote_e"] <;>
+    finish (gen := 20) [peAtW, Option.bind_some, Option.bind_none]
+
+/-- **The model of `rule_wr(d, s, c, r)`.** -/
+def ruleWrW (p : Prog) (n : Nat) (m : Mem) (d s c r : Word) : Option Mem :=
+  (callW p n "erec_rd2" [s + 1] m).bind fun a =>
+  (callW p n "erec_rd2" [s + 9] a.2).bind fun b =>
+  (callW p n "erec_wr3" [d, c, g0 a.1, g1 a.1] b.2).bind fun w =>
+  memK (callW p n "erec_wr3" [d + 8, r, g0 b.1, g1 b.1] w.2)
+
+theorem ruleWr_spec (d s c r : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "rule_wr" [d, s, c, r]
+    ⦃fun _ s' => LocEq s' s₀ ∧ ruleWrW p n s₀.mem d s c r = some s'.mem; ⊤⦄ := by
+  rw [invoke_eq _ hp.rule_wr]
+  simp only [callFn, ruleWr]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      callW_spec p n "erec_rd2", callW_spec p n "erec_wr3"] <;>
+    finish (gen := 20) [ruleWrW, memK_some, Option.bind_some, Option.bind_none]
+
 /-- **The model of `promote_rule(f, s, d)`.** -/
 def ruleW (p : Prog) (n : Nat) (m : Mem) (f s d : Word) : Option Mem :=
-  (callW p n "erec_rd3" [s] m).bind fun a =>
-  (callW p n "erec_rd3" [s + 8] a.2).bind fun b =>
-  (callW p n "promote_n" [f, g0 a.1] b.2).bind fun c =>
-  (callW p n "promote_fire" [f, s, d] c.2).bind fun u =>
-  (callW p n "promote_e" [f, g0 b.1] u.2).bind fun r =>
-  (callW p n "erec_wr3" [d, g0 c.1, g1 a.1, g2 a.1] r.2).bind fun w =>
-  memK (callW p n "erec_wr3" [d + 8, g0 r.1, g1 b.1, g2 b.1] w.2)
+  (callW p n "pn_at" [f, s] m).bind fun c =>
+  (callW p n "promote_fire" [f, s] c.2).bind fun u =>
+  (callW p n "pe_at" [f, s + 8] u.2).bind fun r =>
+  (callW p n "rule_wr" [d, s, g0 c.1, g0 r.1] r.2).bind fun w =>
+  memK (callW p n "erec_wr5" [d + 3, g0 u.1, g1 u.1, g2 u.1, g3 u.1, g4 u.1] w.2)
 
 theorem promoteRule_spec (f s d : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "promote_rule" [f, s, d]
@@ -260,8 +288,8 @@ theorem promoteRule_spec (f s d : Word) :
   simp only [callFn, promoteRuleL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      callW_spec p n "erec_rd3", callW_spec p n "erec_wr3", callW_spec p n "promote_n",
-      callW_spec p n "promote_fire", callW_spec p n "promote_e"] <;>
+      callW_spec p n "pn_at", callW_spec p n "pe_at", callW_spec p n "rule_wr",
+      callW_spec p n "erec_wr5", callW_spec p n "promote_fire"] <;>
     finish (gen := 20) [ruleW, memK_some, Option.bind_some, Option.bind_none]
 
 /-- **The model of `promote_rules(f, s, l, d)`.** -/

@@ -91,6 +91,8 @@ structure PromoteProg (p : Prog) : Prop where
   pn_at : p.lookup "pn_at" = some (pnAt)
   pl_at : p.lookup "pl_at" = some (plAt)
   ps_at : p.lookup "ps_at" = some (psAt)
+  pe_at : p.lookup "pe_at" = some (peAt)
+  rule_wr : p.lookup "rule_wr" = some (ruleWr)
   caps_wr : p.lookup "caps_wr" = some (capsWr)
   proj_wr : p.lookup "proj_wr" = some (projWr)
   caps_parts : p.lookup "caps_parts" = some (capsParts)
@@ -260,6 +262,8 @@ def promoteProg : Prog :=
    ("pn_at", pnAt),
    ("pl_at", plAt),
    ("ps_at", psAt),
+   ("pe_at", peAt),
+   ("rule_wr", ruleWr),
    ("caps_wr", capsWr),
    ("proj_wr", projWr),
    ("caps_parts", capsParts),
