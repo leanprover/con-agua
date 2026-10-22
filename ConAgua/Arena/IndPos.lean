@@ -306,7 +306,7 @@ def nestCtorEntryStrip : FunDecl := lfn (ciq) locals (cv, nPc, nF, ok, bsOff, bs
 def nestCtorEntry : FunDecl := lfn (C, ciq) locals (ok0, cv, nPc, nF, body, hd, g, n, us, z) {
   (ok0, cv, nPc, nF, body) := call nest_ctor_entry_strip(ciq);
   if ok0 == 0 { return (0, 0, 0, 0) };
-  hd := call get_app_fn(⟪CWF⟫, body);
+  hd := call get_app_fn_f(⟪CWF⟫, body);
   if hd >> 28 != 3 { return (0, 0, 0, 0) };
   (g, n, us, z) := call e_view(hd);
   if n != C { return (0, 0, 0, 0) };
@@ -460,7 +460,7 @@ def nestHoleImgRoot : FunDecl := lfn (ctx, i) locals (nP, hi, nm, hd, r) {
     nm := call sl_getd(IW.u64[ctx], IW.u64[ctx + 1], i - nP, 0);
     hd := call intern_const(nm, IW.u64[ctx + 10]);
     if 4294967296 <= hd { abort };
-    r := call mk_app_n(hd, IW.u64[ctx + 7], IW.u64[ctx + 8]);
+    r := call mk_app_n_f(hd, IW.u64[ctx + 7], IW.u64[ctx + 8]);
     return (1, r)
   };
   return (0, 0)
@@ -499,7 +499,7 @@ def nestHoleImgFrame : FunDecl :=
   (dsOff2, dsLen2) := call nest_hole_img_ds(f, IW.u64[keyPtr + 2], IW.u64[keyPtr + 3]);
   hd := call intern_const(IW.u64[keyPtr], IW.u64[keyPtr + 1]);
   if 4294967296 <= hd { abort };
-  r := call mk_app_n(hd, dsOff2, dsLen2);
+  r := call mk_app_n_f(hd, dsOff2, dsLen2);
   return (1, r)
 }
 

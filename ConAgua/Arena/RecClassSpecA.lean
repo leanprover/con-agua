@@ -528,7 +528,7 @@ theorem EStore.viewFVarIdx_of_view (st : EStore) (i : EIdx) (k : Nat) (ty : EIdx
 
 /-- The word model of `fvar_head`. -/
 def fvarHeadW (m : Mem) (e : Word) : Option (List Word × Mem) :=
-  match stubM "get_app_fn" m [CWF, e] with
+  match stubM "get_app_fn_f" m [CWF, e] with
   | none => none
   | some (r, m1) =>
     if r.headD 0 >>> 28 = 1 then
@@ -546,7 +546,7 @@ theorem fvarHead_spec (p : Prog) (hp : p.lookup "fvar_head" = some fvarHead)
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "get_app_fn" n, eView_spec p hv n] <;>
+        stubM_spec p "get_app_fn_f" n, eView_spec p hv n] <;>
       finish [fvarHeadW]
 
 theorem viewFVarIdx_run' (h : EIdx) (a : AState) :
@@ -571,7 +571,7 @@ theorem fvarHeadW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFE
       IWGrow m m' ∧ r = (match x with | some i => [1, UInt64.ofNat i] | none => [0, 0]) ∧
       (∀ i, x = some i → i < 2 ^ 64) := by
   simp only [fvarHeadW] at h
-  cases hs : stubM "get_app_fn" m [CWF, e] with
+  cases hs : stubM "get_app_fn_f" m [CWF, e] with
   | none => rw [hs] at h; simp at h
   | some rm =>
     obtain ⟨r1, m1⟩ := rm

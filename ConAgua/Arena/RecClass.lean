@@ -72,7 +72,7 @@ def classOfMotiveVar : FunDecl := lfn (nP, mo, ml, p) locals (r, i) {
 -- con-ron: ConRon/Arena/Inductives/ClassRead.lean:90-99 ConRon.Arena.fvarHead
 @[l_impl ConRon.Arena.fvarHead]
 def fvarHead : FunDecl := lfn (e) locals (hd, g, x, y, z) {
-  hd := call get_app_fn(⟪CWF⟫, e);
+  hd := call get_app_fn_f(⟪CWF⟫, e);
   if hd >> 28 == 1 {
     (g, x, y, z) := call e_view(hd);
     return (1, x)
@@ -86,12 +86,12 @@ opened binder `x`: its walked type's conclusion's motive, as `(ok, field, cls)`.
 @[l_impl ConRon.Arena.classReadMinor]
 def classReadMinorIh1 : FunDecl := lfn (nP, mo, ml, d, x) locals (r, ok, v, t) {
   r := call fvar_type_d(x);
-  r := call pi_result(⟪CWF⟫, r);
+  r := call pi_result_f(⟪CWF⟫, r);
   (ok, v) := call fvar_head(r);
   if ok == 0 { return (0, 0, 0) };
   (ok, t) := call class_of_motive_var(nP, mo, ml, v);
   if ok == 0 { return (0, 0, 0) };
-  (r, v) := call get_app_args(⟪CWF⟫, r);
+  (r, v) := call get_app_args_f(⟪CWF⟫, r);
   if v == 0 { return (0, 0, 0) };
   v := IW.u64[r + v - 1];
   (ok, v) := call fvar_head(v);
@@ -135,10 +135,10 @@ read off the conclusion: its last argument's head, then `class_read_minor_finish
 @[l_impl ConRon.Arena.classReadMinor]
 def classReadMinorTail : FunDecl := lfn (nP, mo, ml, d, fo, fl, concl, c) locals
     (cao, cal, last, hd, ok, r) {
-  (cao, cal) := call get_app_args(⟪CWF⟫, concl);
+  (cao, cal) := call get_app_args_f(⟪CWF⟫, concl);
   if cal == 0 { return (0, 0) };
   last := IW.u64[cao + cal - 1];
-  hd := call get_app_fn(⟪CWF⟫, last);
+  hd := call get_app_fn_f(⟪CWF⟫, last);
   (ok, r) := call class_read_minor_finish(nP, mo, ml, d, fo, fl, hd, c);
   return (ok, r)
 }
@@ -183,10 +183,10 @@ def classReadSlotMotive : FunDecl := lfn (p, vis, dom) locals
   (bo, bl, body) := call pi_binders(⟪CWF⟫, dom);
   if bl == 0 { return (0, 0) };
   mdom := IW.u64[bo + bl - 1];
-  hd := call get_app_fn(⟪CWF⟫, mdom);
+  hd := call get_app_fn_f(⟪CWF⟫, mdom);
   if hd >> 28 != 3 { return (0, 0) };
   (g, iName, us, z) := call e_view(hd);
-  (ao, al) := call get_app_args(⟪CWF⟫, mdom);
+  (ao, al) := call get_app_args_f(⟪CWF⟫, mdom);
   n := call class_n_pc_of(p, vis, iName);
   cnt := al;
   if n < al { cnt := n };
@@ -200,7 +200,7 @@ def classReadSlotMotive : FunDecl := lfn (p, vis, dom) locals
 -- con-ron: ConRon/Arena/Inductives/ClassRead.lean:158-179 ConRon.Arena.classReadSlot
 @[l_impl ConRon.Arena.classReadSlot]
 def classReadSlot : FunDecl := lfn (p, vis, np, mo, ml, d, dom) locals (r, ok, slot) {
-  r := call pi_result(⟪CWF⟫, dom);
+  r := call pi_result_f(⟪CWF⟫, dom);
   if r >> 28 == 2 {
     (ok, slot) := call class_read_slot_motive(p, vis, dom);
     return (ok, slot)
@@ -406,7 +406,7 @@ def classGenMajor : FunDecl := lfn (g, c, d) locals
   if ok == 0 { return (0, 0, 0, 0) };
   hd := call intern_const(IW.u64[ci], IW.u64[ci + 1]);
   (dso, dsl) := call sl_append(IW.u64[ci + 2], IW.u64[ci + 3], fo, fl);
-  mt := call mk_app_n(hd, dso, dsl);
+  mt := call mk_app_n_f(hd, dso, dsl);
   return (1, fo, fl, mt)
 }
 
@@ -434,7 +434,7 @@ def classGenIhParts : FunDecl := lfn (g, t, tele, w, d) locals
   if t < clsLen { ptr := IW.u64[IW.u64[g + 3] + t]; nPc := IW.u64[ptr + 4] };
   (ok, xo, xl, leaf) := call open_pis_at_fvars_f(tele, w, d);
   if ok == 0 { return (0, 0, 0, 0, 0) };
-  (ao, al) := call get_app_args(⟪CWF⟫, leaf);
+  (ao, al) := call get_app_args_f(⟪CWF⟫, leaf);
   dOff := ao;
   dLen := al;
   if nPc < al { dOff := ao + nPc; dLen := al - nPc } else { dLen := 0 };
@@ -451,10 +451,10 @@ def classGenMinorTyIh1 : FunDecl := lfn (g, t, tele, wso, wsl, fvso, fvsl, i, e)
   (ok, xso, xsl, idxo, idxl) := call class_gen_ih_parts(g, t, tele, w, e);
   if ok == 0 { return (0, 0) };
   f := call expr_get_d(fvso, fvsl, i);
-  fx := call mk_app_n(f, xso, xsl);
+  fx := call mk_app_n_f(f, xso, xsl);
   mt := call class_gen_mot_var(g, t);
   (appo, appl) := call sl_snoc(idxo, idxl, fx);
-  body := call mk_app_n(mt, appo, appl);
+  body := call mk_app_n_f(mt, appo, appl);
   (bso, bsl) := call fvar_type_ds(xso, xsl);
   ih := call close_telescope(bso, bsl, e, body);
   return (1, ih)
@@ -498,17 +498,17 @@ def classGenMinorTy : FunDecl := lfn (g, c, x, d) locals
   if ok == 0 { return (0, 0) };
   (ok, ihso, ihsl) := call class_gen_minor_ty_ihs_go(g, x, d, IW.u64[x + 1], wso, wsl, fo, fl, 0, 0);
   if ok == 0 { return (0, 0) };
-  (rao, ral) := call get_app_args(⟪CWF⟫, res);
+  (rao, ral) := call get_app_args_f(⟪CWF⟫, res);
   cc := call intern_const(EREC.u64[IW.u64[x]], IW.u64[ci + 1]);
   (capo, capl) := call sl_append(IW.u64[ci + 2], IW.u64[ci + 3], fo, fl);
-  cc := call mk_app_n(cc, capo, capl);
+  cc := call mk_app_n_f(cc, capo, capl);
   mc := call class_gen_mot_var(g, c);
   dOff := rao;
   dLen := ral;
   if IW.u64[ci + 4] < ral { dOff := rao + IW.u64[ci + 4]; dLen := ral - IW.u64[ci + 4] }
   else { dLen := 0 };
   (bo, bl) := call sl_snoc(dOff, dLen, cc);
-  res := call mk_app_n(mc, bo, bl);
+  res := call mk_app_n_f(mc, bo, bl);
   (fbso, fbsl) := call fvar_type_ds(fo, fl);
   (allo, alll) := call sl_append(fbso, fbsl, ihso, ihsl);
   r := call close_telescope(allo, alll, d, res);
@@ -592,7 +592,7 @@ def classGenRecTy : FunDecl := lfn (g, c) locals
   (b2o, b2l) := call sl_snoc(b1o, b1l, maj);
   mv := call class_gen_mot_var(g, c);
   (a1o, a1l) := call sl_snoc(fo, fl, t);
-  body := call mk_app_n(mv, a1o, a1l);
+  body := call mk_app_n_f(mv, a1o, a1l);
   r := call close_telescope(b2o, b2l, 0, body);
   return (1, r)
 }
@@ -654,11 +654,11 @@ def classGenRuleCall1 : FunDecl := lfn
   (ok, rc) := call class_rec_of(rco, rcl, cgo, cgl, t);
   if ok == 0 { return (0, 0) };
   f := call expr_get_d(fvso, fvsl, i);
-  fx := call mk_app_n(f, xso, xsl);
+  fx := call mk_app_n_f(f, xso, xsl);
   rc := call intern_const(rc, rlvls);
   (a1o, a1l) := call sl_append(pvo, pvl, idxo, idxl);
   (a2o, a2l) := call sl_snoc(a1o, a1l, fx);
-  rv := call mk_app_n(rc, a2o, a2l);
+  rv := call mk_app_n_f(rc, a2o, a2l);
   (bso, bsl) := call fvar_type_ds(xso, xsl);
   rv := call close_lams(bso, bsl, e, rv);
   return (1, rv)
@@ -713,7 +713,7 @@ def classGenRule : FunDecl := lfn (g, rco, rcl, cgo, cgl, rlvls, c, x) locals
   if ok == 0 { return (0, 0) };
   sv := call class_gen_slot_var(g, s);
   (a1o, a1l) := call sl_append(fo, fl, ihso, ihsl);
-  body := call mk_app_n(sv, a1o, a1l);
+  body := call mk_app_n_f(sv, a1o, a1l);
   (fbso, fbsl) := call fvar_type_ds(fo, fl);
   prefo := IW.u64[g + 12];
   prefl := IW.u64[g + 13];
