@@ -128,8 +128,8 @@ def spnPool : FunDecl := lfn (b, d, l) locals (r) {
   return r
 }
 
-/-- con-ron: ConRon/Arena/Monad.lean:533-537 ConRon.Arena.internLevels -/
-@[l_impl ConRon.Arena.internLevels]
+/-- The stack slice `(b, l)` of level handles, copied to the pool top and interned as a list node.
+con-ron: ConRon/Arena/Monad.lean:533-537 ConRon.Arena.internLevels -/
 def spnLs : FunDecl := lfn (b, l) locals (top, r, h) {
   top := CTL.u64[0];
   if len(POOL.u64) < top { abort };
