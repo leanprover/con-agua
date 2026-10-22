@@ -265,9 +265,11 @@ def checkSumCtorsL : FunDecl :=
   lfn (vis0, vis, T, lpsOff, lpsLen, nP, nIdx, resSort, isProp, large, cvTa, ctorsOff, ctorsLen)
   locals (c, cv, nF, cvCaOut, sOff, sLen, newC, sHead, rO, rL, sO, sL, o1, l1, o2, l2) {
   if ctorsLen == 0 { return (0, 0, 0, 0) };
+  if nP + nIdx < nP { abort };
   c := IW.u64[ctorsOff];
   cv := IW.u64[c];
   nF := IW.u64[c + 1];
+  if nP + nF < nP { abort };
   (cvCaOut, sOff, sLen) := call check_sum_ctor(vis0, vis, T, lpsOff, lpsLen, nP, nIdx, resSort,
     isProp, large, cv, nF, cvTa);
   newC := call rec2(cvCaOut, nF);

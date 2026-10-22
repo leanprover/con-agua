@@ -4,7 +4,8 @@ import ConAgua.Arena.DeclArmQuot
 # The axiom arm `check_decl_axiom(i, vis)` (lane `decls3`)
 
 `checkDecl`'s `.axiomDecl` arm: `Quot.sound` against the pinned quotient block (installing
-nothing; `ci_canon_eq`, taken as the hypothesis `CiCanonSpec` until helper `decls3-canon` lands
+nothing; `ci_canon_eq` (helper `decls3-canon`'s `ciCanonEq_refines`, literals by handle: `LitInj`
+from the twin state's `StateOK`, lane `decls4`)
 it), else the constant check and the five recognised axioms (`std_axiom_ok`, `Lean.trustCompiler`,
 the `ofReduce*` pair), `propext`/`choice` of another shape and every other axiom declining,
 `sorryAx` skipped. Through the ROM stubs and the core's.
@@ -22,15 +23,6 @@ namespace L.Arena
 
 open L.Ind
 open L.Front (DECL DLP DeclsR DeclAt CVAt dw)
-
-/-- What `ci_canon_eq` must refine (helper `decls3-canon`'s statement shape). -/
-def CiCanonSpec (p : Prog) : Prop :=
-  ∀ (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (x y : Word)
-    (c c' : IConstantInfo),
-    RefAM p "ci_canon_eq" [x, y]
-      (fun m a => StageR dn vis fe m a ∧ decCI (erA m) dn x.toNat = some c ∧
-        decCI (erA m) dn y.toNat = some c')
-      (c.canonEq c') (KeepPost dn vis fe decW0B)
 
 section model
 variable (p : Prog) (n : Nat) (vis : Word)
@@ -107,7 +99,7 @@ def cdaQ1 (c : Word) : Option (List Word × Mem) → Option (List Word × Mem)
 def cdaK2 (c nm : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) =>
-    if nm = r.headD 0 then cdaQ1 p n vis c (stubM "rom_basis_decls" m [4])
+    if nm = r.headD 0 then cdaQ1 p n vis c (callW p n "rom_basis_decls" [4] m)
     else cdaK3 p n vis c nm (callW p n "check_constant_val" [vis, c + 1] m)
 
 /-- After `erec_ci`. -/
@@ -129,7 +121,7 @@ theorem cdaW_step : cdaW p (n + 1) m i vis = cdaK1 p n vis (erecCiW n m i 0) := 
 theorem cdaK1_some : cdaK1 p n vis (some (r, m)) =
     cdaK2 p n vis (r.headD 0) (rdW (m.arr64 EREC) (r.headD 0 + 1)) (pinAtW m 4) := rfl
 theorem cdaK2_some : cdaK2 p n vis c nm (some (r, m)) =
-    if nm = r.headD 0 then cdaQ1 p n vis c (stubM "rom_basis_decls" m [4])
+    if nm = r.headD 0 then cdaQ1 p n vis c (callW p n "rom_basis_decls" [4] m)
     else cdaK3 p n vis c nm (callW p n "check_constant_val" [vis, c + 1] m) := rfl
 theorem cdaQ1_some : cdaQ1 p n vis c (some (r, m)) =
     if r.tail.headD 0 ≤ 4 then none
@@ -187,7 +179,7 @@ theorem cda_specW (p : Prog) (hp : p.lookup "check_decl_axiom" = some checkDeclA
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, erecCi_specW p hR n,
-        pinAt_specW p hpa n, stubM_spec p "rom_basis_decls" n, callW_spec p n "ci_canon_eq",
+        pinAt_specW p hpa n, callW_spec p n "rom_basis_decls", callW_spec p n "ci_canon_eq",
         callW_spec p n "check_constant_val", callW_spec p n "std_axiom_ok",
         callW_spec p n "env_push", callW_spec p n "trust_compiler_ok",
         callW_spec p n "of_reduce_ax_ok"] <;>
@@ -214,7 +206,6 @@ theorem push_call {p : Prog} (hRp : RecProg p) {dn : NIdx → Option ConLeche.Na
 /-- The lookups of the axiom arm. -/
 structure AxProg (p : Prog) : Prop where
   quot : QuotProg p
-  cic : CiCanonSpec p
   val : ValProg p
   std : StdProg2 p
   tco : TcoProg p
@@ -227,7 +218,7 @@ theorem cdaW_ok {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name} 
     {ds : Array IDeclaration} {pins : List INatOpPinSet} {cv : IConstantVal}
     (h : cdaW p n m i vis = some (r, m')) (hS : StageR dn vis fe m a)
     (hD : DeclsR (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
-    (hd : ds[i.toNat] = .axiomDecl cv) :
+    (hd : ds[i.toNat] = .axiomDecl cv) (hok : ConRon.Bridge.StateOK a) :
     ∃ fe' a', (checkDecl V pins fe (.axiomDecl cv)).run a = .ok (fe', a') ∧
       StageR dn (r.headD 0) fe' m' a' ∧ IWGrow m m' := by
   have hdecl := hD.recs i.toNat hi
@@ -268,14 +259,15 @@ theorem cdaW_ok {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name} 
     rw [if_pos eq2] at h
     rw [ep2] at eq2
     simp only [eq2, decide_true, if_true]
-    cases e3 : stubM "rom_basis_decls" m1 [4] with
+    cases e3 : callW p n "rom_basis_decls" [4] m1 with
     | none => rw [e3] at h; cases h
     | some rm3 =>
     obtain ⟨r3, m3⟩ := rm3
     rw [e3, cdaQ1_some] at h
     obtain ⟨blk, a3, hrun3, hS3, hg3, hD3, -⟩ :=
-      romBasisDecls_spec dn vis fe 4 (by decide) m1 m3 a r3 e3 hS1
+      hX.quot.rom.basis dn vis fe 4 (by decide) n m1 a r3 m3 hS1 e3
     have hrun3' : (BasisKind.decls .quotK).run a = .ok (blk, a3) := hrun3
+    have hok3 := (ConRon.Bridge.BasisKind.decls_run hok hrun3').1
     generalize r3.headD 0 = o3 at h hD3
     generalize r3.tail.headD 0 = l3 at h hD3
     by_cases hl : l3 ≤ 4
@@ -299,10 +291,10 @@ theorem cdaW_ok {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name} 
     | some rm4 =>
     obtain ⟨r4, m4⟩ := rm4
     rw [e4, cdaQ2_some] at h
-    obtain ⟨s4, hs4, -, hok4, hS4, hg4, hb4, -⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
-      (hX.cic dn vis fe q w (.axiomInfo cv) ci n ⟨m3, Locals.init []⟩ a3
-        ⟨hS3, ArrExt.decCI (IWGrow.erecExt hg3) hci1,
-          ArrExt.decCI (erecP_ext _) (ArrExt.decCI (truncM_erecP m3) hci)⟩) e4
+    obtain ⟨s4, hs4, -, hok4, ⟨⟨hS4, hg4, hb4, -⟩, -⟩, -⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
+      (ciCanonEq_refines p hX.quot.canon dn vis fe q w (.axiomInfo cv) ci n ⟨m3, Locals.init []⟩ a3
+        ⟨hS3, ArrExt.decCI (IWGrow.erecPExt hg3) hci1, ArrExt.decCI (truncM_erecP m3) hci,
+          poolSmall_of_stage hS3, fun x y l hx hy => hok3.view_inj hx hy⟩) e4
     subst hs4
     have hrun4 := AM.run_of_ok _ _ hok4
     by_cases z4 : r4.headD 0 = 0
@@ -516,18 +508,19 @@ theorem cdaW_ok {p : Prog} (hX : AxProg p) {dn : NIdx → Option ConLeche.Name} 
   · rw [if_neg eq12] at h; cases h
 
 /-- **`check_decl_axiom` refines `checkDecl`'s `.axiomDecl` arm** at the loop's relation (through
-`CiCanonSpec`, `CvCanonSpec`, the ROM stubs and the core's). -/
+the ROM stubs and the core's; `StateOK` of the twin state for the canonical comparison). -/
 theorem checkDeclAxiom_loop' {p : Prog} (hA : ArmProg p) (hX : AxProg p)
     (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (hdn : DnInj dn)
     (ds : Array IDeclaration) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
       (i : Word) (cv : IConstantVal), i.toNat < ds.size →
-      ds[i.toNat]? = some (.axiomDecl cv) → LoopR pins dn s₀.mem a₀ vis fe pend ds →
+      ds[i.toNat]? = some (.axiomDecl cv) → ConRon.Bridge.StateOK a₀ →
+      LoopR pins dn s₀.mem a₀ vis fe pend ds →
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_decl_axiom" [i, vis]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkDecl V pins fe (.axiomDecl cv)) a₀ ∧
       LoopR pins dn s'.mem (AM.st (checkDecl V pins fe (.axiomDecl cv)) a₀) (r.headD 0)
         (AM.res (checkDecl V pins fe (.axiomDecl cv)) a₀) pend ds; ⊤⦄ := by
-  intro n s₀ a₀ vis fe pend i cv hi hd hLR
+  intro n s₀ a₀ vis fe pend i cv hi hd hok0 hLR
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun
@@ -538,7 +531,7 @@ theorem checkDeclAxiom_loop' {p : Prog} (hA : ArmProg p) (hX : AxProg p)
   have hd' : ds[i.toNat] = .axiomDecl cv := by
     rw [Array.getElem?_eq_getElem hi] at hd; exact Option.some.inj hd
   obtain ⟨fe', a', hrun', hS', hg'⟩ :=
-    cdaW_ok (pins := pins) hX hdn hW ⟨hLR.check, hLR.iw⟩ hLR.decls hi hd'
+    cdaW_ok (pins := pins) hX hdn hW ⟨hLR.check, hLR.iw⟩ hLR.decls hi hd' hok0
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
   refine ⟨hloc, hok, ?_⟩
   rw [hst, hres]

@@ -1,5 +1,6 @@
 import ConAgua.Arena.IndPartsSpec3
 import ConAgua.Arena.IndPos2Spec
+import ConAgua.Arena.IndDecStab
 
 /-!
 # Refinements of `IndParts`, part 4 (lane `indproofs`, helper `parts`)
@@ -722,7 +723,10 @@ theorem wsW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
     (h : wsW n m p s = some (r, m')) (hS : StageR dn vis fe m a) (hs : s.toNat < 2 ^ 32)
     (hstab : ∀ m'', IWGrow m m'' → decBS m'' p.toNat = some bs) (hp : p.toNat + 9 ≤ iwTop m) :
     ∃ bs' a' q, (BlockShape.withSort bs (decI s)).run a = .ok (bs', a') ∧ r = [q] ∧
-      decBS m' q.toNat = some bs' ∧ StageR dn vis fe m' a' ∧ IWGrow m m' := by
+      decBS m' q.toNat = some bs' ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+      q.toNat + 9 ≤ iwTop m' ∧
+      (∀ j, j < 9 → j ≠ 6 → j ≠ 8 → (m'.arr64 IW)[q.toNat + j]? = (m'.arr64 IW)[p.toNat + j]?) ∧
+      (DecB (fun m => decBS m p.toNat) m bs → DecB (fun m => decBS m q.toNat) m' bs') := by
   cases n with
   | zero => simp [wsW] at h
   | succ n =>
@@ -810,8 +814,35 @@ theorem wsW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
       simp only [iwTop, htop]; rw [UInt64.toNat_add]; simp
       have := hroom; simp at this; simp only [iwTop] at hqtop; omega
     rw [hfr2.2.2.1 IW, e]; have := hroom; simp at this; omega
+  have htopq : q.toNat + 9 ≤ iwTop m' := by
+    simp only [iwTop, htop]; rw [UInt64.toNat_add]; simp
+    have := hroom; simp at this; simp only [iwTop] at hqtop; omega
+  have hpT : ∀ j, j < 9 → p.toNat + j < iwTop m' := fun j hj => by have := hg12.1; have := hg2'.1; omega
+  have hDecB : DecB (fun m => decBS m p.toNat) m bs →
+      DecB (fun m => decBS m q.toNat) m' { bs with resSort := decI s, isProp := f != 0 } := by
+    intro hT
+    have hpd : decBS (truncM m') p.toNat = some bs := hT.grow (decBS_mono _) hgm
+    have cT : ∀ j, j < 9 → j ≠ 6 → j ≠ 8 →
+        ((truncM m').arr64 IW)[q.toNat + j]? = ((truncM m').arr64 IW)[p.toNat + j]? := by
+      intro j hj h6 h8
+      have e1 := truncM_iw_eq (m := m') (i := q.toNat + j) (by omega)
+      have e2 := truncM_iw_eq (m := m') (i := p.toNat + j) (hpT j hj)
+      simp only [iwA] at e1 e2
+      rw [e1, e2]; exact hcell j hj h6 h8
+    have c6T : ((truncM m').arr64 IW)[q.toNat + 6]? = some s := by
+      have e1 := truncM_iw_eq (m := m') (i := q.toNat + 6) (by omega); simp only [iwA] at e1
+      rw [e1]; exact c6
+    have c8T : ((truncM m').arr64 IW)[q.toNat + 8]? = some f := by
+      have e1 := truncM_iw_eq (m := m') (i := q.toNat + 8) (by omega); simp only [iwA] at e1
+      rw [e1]; exact c8
+    show decBS (truncM m') q.toNat = some _
+    have := decBS_ws hpd hs (by simpa using cT 0 (by omega) (by omega) (by omega))
+      (cT 1 (by omega) (by omega) (by omega)) (cT 2 (by omega) (by omega) (by omega))
+      (cT 3 (by omega) (by omega) (by omega)) (cT 4 (by omega) (by omega) (by omega))
+      (cT 5 (by omega) (by omega) (by omega)) (cT 7 (by omega) (by omega) (by omega)) c6T c8T
+    exact this
   refine ⟨{ bs with resSort := decI s, isProp := f != 0 }, a2, q, ?_, rfl, hdecq,
-    stage_frame_iw hS2 hfr2 (by rw [← hfr2.2.2.1 IW]; exact htop'), hgm⟩
+    stage_frame_iw hS2 hfr2 (by rw [← hfr2.2.2.1 IW]; exact htop'), hgm, htopq, hcell, hDecB⟩
   unfold BlockShape.withSort
   simp only [StateT.run_bind, hrun1, except_ok_bind]
   simp only [hrun2, except_ok_bind]
@@ -838,7 +869,7 @@ theorem blockShapeWithSort_refines (p : Prog) (ha : p.lookup "iw_alloc" = some i
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (blockShapeWithSort_spec p ha hpw hp n s₀ q s) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨bs', a', q', hrun, hr, hdec, hS', hg⟩ := wsW_ok n dn fe vis s₀.mem s'.mem a₀ q s r bs hm
+  obtain ⟨bs', a', q', hrun, hr, hdec, hS', hg, -, -, -⟩ := wsW_ok n dn fe vis s₀.mem s'.mem a₀ q s r bs hm
     hS hs hstab hq
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   subst hr

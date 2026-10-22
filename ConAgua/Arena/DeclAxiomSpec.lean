@@ -56,7 +56,7 @@ def oraK3 (n : Nat) (vis q nm c en : Word) : Option (List Word × Mem) → Optio
 /-- After the `Eq` pin. -/
 def oraK2 (n : Nat) (vis q nm c : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r2, m2) => oraK3 p n vis q nm c (r2.headD 0) (stubM "rom_ci" m2 [0])
+  | some (r2, m2) => oraK3 p n vis q nm c (r2.headD 0) (callW p n "rom_ci" [0] m2)
 
 /-- After `of_reduce_op`. -/
 def oraK1 (n : Nat) (vis q nm : Word) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -77,7 +77,7 @@ theorem oraW_step : oraW p (n + 1) m vis q =
 theorem oraK1_some : oraK1 p n vis q nm (some (r1, m1)) =
     oraK2 p n vis q nm (r1.headD 0) (pinAtW m1 0) := rfl
 theorem oraK2_some : oraK2 p n vis q nm c (some (r2, m2)) =
-    oraK3 p n vis q nm c (r2.headD 0) (stubM "rom_ci" m2 [0]) := rfl
+    oraK3 p n vis q nm c (r2.headD 0) (callW p n "rom_ci" [0] m2) := rfl
 theorem oraK3_some : oraK3 p n vis q nm c en (some (r3, m3)) =
     oraK4 p n vis q nm c (callW p n "find_is" [vis, en, r3.headD 0] m3) := rfl
 theorem oraK4_some : oraK4 p n vis q nm c (some (r4, m4)) =
@@ -118,7 +118,7 @@ theorem ora_specW (h : OraProg p) (n : Nat) (s₀ : St) (vis q : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        oro_specW p h.red.pa h.oro n, pinAt_specW p h.red.pa n, stubM_spec p "rom_ci" n,
+        oro_specW p h.red.pa h.oro n, pinAt_specW p h.red.pa n, callW_spec p n "rom_ci",
         callW_spec p n "find_is", callW_spec p n "reduce_elem_ok",
         callW_spec p n "reduce_stored_ok", callW_spec p n "of_reduce_pin_a",
         mp_specW p h.red.canon h.red.mp n] <;>
@@ -156,12 +156,12 @@ theorem oraW_ok {p : Prog} (h : OraProg p) {dn : NIdx → Option ConLeche.Name} 
   obtain ⟨hm2, hr2, hl2, hrun2⟩ := pinAtW_ok h2 hS.1.pins
   rw [hm2, hr2] at hW
   simp only [List.headD_cons] at hW
-  cases h3 : stubM "rom_ci" m1 [0] with
+  cases h3 : callW p n "rom_ci" [0] m1 with
   | none => rw [h3] at hW; cases hW
   | some rm3 =>
   obtain ⟨r3, m3⟩ := rm3
   rw [h3, oraK3_some] at hW
-  obtain ⟨ea, a3, hrun3, hS3, hg3, hea⟩ := romCi_spec dn vis fe 0 (by decide) _ m3 a r3 h3 hS
+  obtain ⟨ea, a3, hrun3, hS3, hg3, hea⟩ := h.red.rom.ci dn vis fe 0 (by decide) n _ a r3 m3 hS h3
   have hrun3' : eqA.run a = .ok (ea, a3) := hrun3
   -- `find_is`
   cases h4 : callW p n "find_is" [vis, pinW m1 (1 + (0 : Word).toNat), r3.headD 0] m3 with
@@ -249,7 +249,7 @@ theorem oraW_ok {p : Prog} (h : OraProg p) {dn : NIdx → Option ConLeche.Name} 
   obtain ⟨r7, m7⟩ := rm7
   rw [h7, oraK7_some] at hW
   obtain ⟨s7, hs7, -, hok7, hS7, hg7, hpin⟩ := triple_of_callW (s₀ := ⟨s6.mem, Locals.init []⟩)
-    (ofReducePinA_refines p h.red.pa n ⟨s6.mem, Locals.init []⟩ a6 dn fe vis wn hS6 hwnl h.orp) h7
+    (ofReducePinA_refines p h.red.pa n ⟨s6.mem, Locals.init []⟩ a6 dn fe vis wn hS6 hwnl h.red.rom h.orp) h7
   subst hs7
   have hrun7 := AM.run_of_ok _ _ hok7
   have hg := hg3.trans (hg4.trans (hg5.trans (hg6.trans hg7)))
