@@ -73,7 +73,7 @@ globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.A
   "ConAgua.Rom.PinStream", "ConAgua.Rom.Subst", "ConAgua.Rom.PinRead",
   "ConAgua.Rom.PinStream", "ConAgua.Rom.Subst", "ConAgua.Rom.PinRead",
   "ConAgua.Rom.Dec", "ConAgua.Rom.PinReadSpec", "ConAgua.Rom.DecExpr", "ConAgua.Rom.PinSets",
-  "ConAgua.Rom.Stage"]
+  "ConAgua.Rom.Stage", "ConAgua.Rom.CIEnc", "ConAgua.Rom.CIRead", "ConAgua.Rom.CIReadTest"]
 
 # Vendored from con-leche and con-ron (proof/ dir) at the revisions in vendor/UPSTREAM, plus the
 # patch series vendor/patches/ (scripts/bump-con-ron.sh; vendor/README.md).
