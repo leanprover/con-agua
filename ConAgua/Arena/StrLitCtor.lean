@@ -208,4 +208,260 @@ theorem pre_call (hS : CoreS dn m a vis fe M eb)
 
 end pre
 
+/-! ## `str_cons_spine` -/
+
+/-- The model of `str_cons_spine`. -/
+def spineW (p : Prog) (n : Nat) (m : Mem) (cons ofNat nilE k e : Word) : Option (Word × Mem) :=
+  if e ≤ k then some (nilE, m)
+  else match callW p n "str_utf8_char" [k, e] m with
+  | none => none
+  | some (cl, m₁) =>
+  if cl.tail.headD 0 = 0 then none
+  else match callW p n "str_cons_spine" [cons, ofNat, nilE, k + cl.tail.headD 0, e] m₁ with
+  | none => none
+  | some (rr, m₂) =>
+  match callW p n "rom_lit" [cl.headD 0] m₂ with
+  | none => none
+  | some (lt, m₃) =>
+  match callW p n "mk_app" [ofNat, lt.headD 0] m₃ with
+  | none => none
+  | some (ch, m₄) =>
+  match callW p n "mk_app" [cons, ch.headD 0] m₄ with
+  | none => none
+  | some (f, m₅) =>
+  match callW p n "mk_app" [f.headD 0, rr.headD 0] m₅ with
+  | none => none
+  | some (r, m₆) => some (r.headD 0, m₆)
+
+theorem strConsSpine_spec (p : Prog) (hp : p.lookup "str_cons_spine" = some strConsSpineL)
+    (n : Nat) (s₀ : St) (cons ofNat nilE k e : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "str_cons_spine" [cons, ofNat, nilE, k, e]
+    ⦃fun r s' => LocEq s' s₀ ∧ spineW p n s₀.mem cons ofNat nilE k e = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, strConsSpineL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      callW_spec p n "str_utf8_char", callW_spec p n "str_cons_spine", callW_spec p n "rom_lit",
+      callW_spec p n "mk_app"] <;>
+    finish (gen := 20) [spineW]
+
+theorem sliceL_drop (q : Array Word) (o a b : Nat) :
+    (sliceL q o (a + b)).drop a = sliceL q (o + a) b := by
+  apply List.ext_getElem
+  · simp [sliceL_length]
+  · intro i h1 h2
+    simp [sliceL, Nat.add_assoc]
+
+theorem charWords_drop (c : Char) (cs : List Char) :
+    (charWords (c :: cs)).drop c.utf8Size = charWords cs := by
+  rw [charWords_cons, List.drop_append_of_le_length (by simp)]
+  simp
+
+section spine
+variable (p : Prog) (hp : StrLitProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+  {fe : IFEnv} {eb : Word}
+include hp
+
+/-- **`str_cons_spine` refines `strLitConsSpine`** on the characters whose bytes are the pool
+words `[k, e)`. -/
+@[refines ConRon.Arena.strLitConsSpine]
+theorem spine_call (cons ofNat nilE : Word) (hn : HW nilE) :
+    ∀ (cs : List Char) (n : Nat) (m m' : Mem) (a : AState) (M : ModeMaps) (k e : Word)
+      (r : List Word), CoreS dn m a vis fe M eb →
+      sliceL (m.arr64 POOL) k.toNat (e.toNat - k.toNat) = charWords cs → k.toNat ≤ e.toNat →
+      e.toNat ≤ (m.arr64 POOL).size → e.toNat + 4 < 2 ^ 64 →
+      callW p n "str_cons_spine" [cons, ofNat, nilE, k, e] m = some (r, m') →
+      CoreRef (strLitConsSpine (decE cons) (decE ofNat) (decE nilE) cs) a decH dn m vis fe M eb
+        r m' := by
+  intro cs
+  induction cs with
+  | nil =>
+    intro n m m' a M k e r hS hs hke he he4 h
+    cases n with
+    | zero => rw [callW_zero] at h; cases h
+    | succ n =>
+    obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+      (strConsSpine_spec p hp.strConsSpine n _ cons ofNat nilE k e) h
+    have hlen := congrArg List.length hs
+    rw [sliceL_length, charWords_nil] at hlen
+    have hle : e ≤ k := UInt64.le_iff_toNat_le.mpr (by simp at hlen; omega)
+    simp only [spineW, hle, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨hr, hm⟩ := hW
+    rw [← hm]
+    exact cref_run (v := decE nilE) rfl (coreAfter_refl hS) (by rw [decH, ← hr])
+      (by unfold ResH; rw [← hr]; exact hn)
+  | cons c cs ih =>
+    intro n m m' a M k e r hS hs hke he he4 h
+    cases n with
+    | zero => rw [callW_zero] at h; cases h
+    | succ n =>
+    obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+      (strConsSpine_spec p hp.strConsSpine n _ cons ofNat nilE k e) h
+    have hlen := congrArg List.length hs
+    rw [sliceL_length, charWords_length_cons] at hlen
+    have hu1 := Char.utf8Size_pos c
+    have hu4 := Char.utf8Size_le_four c
+    have hnle : ¬ e ≤ k := fun h' => by
+      have := UInt64.le_iff_toNat_le.mp h'; omega
+    simp only [spineW, hnle, ↓reduceIte] at hW
+    wstep hW, h1 : callW p n "str_utf8_char" [k, e] m => cl, m₁
+    obtain ⟨hm1, hc0, hc1⟩ := strUtf8Char_callW p hp.strUtf8Char n m k e c cs hs hke he he4 cl m₁ h1
+    rw [hm1] at hW
+    have hne : ¬ cl.tail.headD 0 = 0 := by
+      rw [hc1]; intro h0
+      have := congrArg UInt64.toNat h0
+      simp [UInt64.toNat_ofNat_of_lt' (show c.utf8Size < 2 ^ 64 by omega)] at this; omega
+    simp only [hne, ↓reduceIte] at hW
+    wstep hW, h2 : callW p n "str_cons_spine" [cons, ofNat, nilE, k + cl.tail.headD 0, e] m => rr, m₂
+    wstep hW, h3 : callW p n "rom_lit" [cl.headD 0] m₂ => lt, m₃
+    wstep hW, h4 : callW p n "mk_app" [ofNat, lt.headD 0] m₃ => ch, m₄
+    wstep hW, h5 : callW p n "mk_app" [cons, ch.headD 0] m₄ => fw, m₅
+    wstep hW, h6 : callW p n "mk_app" [fw.headD 0, rr.headD 0] m₅ => r₆, m₆
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨hr, hm⟩ := hW
+    rw [← hm]
+    have hk' : (k + cl.tail.headD 0).toNat = k.toNat + c.utf8Size := by
+      rw [hc1, UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (show c.utf8Size < 2 ^ 64 by omega)]
+      omega
+    have hs' : sliceL (m.arr64 POOL) (k + cl.tail.headD 0).toNat
+        (e.toNat - (k + cl.tail.headD 0).toNat) = charWords cs := by
+      rw [hk', ← charWords_drop, ← hs, ← sliceL_drop]
+      congr 2; omega
+    have c2 := ih n m m₂ a M _ e rr hS hs' (by rw [hk']; omega) he he4 h2
+    have hcn : (cl.headD 0).toNat = c.toNat := by
+      rw [hc0, UInt32.toNat_toUInt64]; rfl
+    rw [strLitConsSpine]
+    refine coreRef_bind c2 fun M₂ hS₂ => ?_
+    have c3 := romLit_call p hp hS₂ h3
+    rw [hcn] at c3
+    refine coreRef_bind c3 fun M₃ hS₃ => ?_
+    have c4 := app_call p hp hS₃ h4
+    refine coreRef_bind c4 fun M₄ hS₄ => ?_
+    have c5 := app_call p hp hS₄ h5
+    refine coreRef_bind c5 fun M₅ hS₅ => ?_
+    have c6 := app_call p hp hS₅ h6
+    refine ⟨c6.1, c6.2.1, ?_, by unfold ResH; rw [← hr]; exact c6.2.2.2⟩
+    have := c6.2.2.1
+    simp only [decH] at this ⊢
+    rw [this, ← hr]
+
+end spine
+
+/-! ## `str_lit_ctor` -/
+
+/-- The model of `str_lit_ctor` (`o`, `cnt`: the literal's record, read after the prefix). -/
+def ctorW (p : Prog) (n : Nat) (m : Mem) (h : Word) : Option (Word × Mem) :=
+  match callW p n "str_ctor_pre" [] m with
+  | none => none
+  | some (t, m₁) =>
+  if h >>> 28 ≠ 8 then none
+  else if tierW h ≠ 0 ∧ rdW (m₁.arr64 CTL) 1 = 0 then none
+  else if rdW (m₁.arr64 CTL) (2 + tierW h) ≤ idxW h then none
+  else if rdW (m₁.arr64 REC) (idxW h * 8 + tierW h * 4) ≠ 1 then none
+  else match callW p n "str_cons_spine" [t.headD 0, t.tail.headD 0, t.tail.tail.headD 0,
+      rdW (m₁.arr64 REC) (idxW h * 8 + tierW h * 4 + 1),
+      rdW (m₁.arr64 REC) (idxW h * 8 + tierW h * 4 + 1) +
+        rdW (m₁.arr64 REC) (idxW h * 8 + tierW h * 4 + 2)] m₁ with
+  | none => none
+  | some (sp, m₂) =>
+  match callW p n "pin_at" [6] m₂ with
+  | none => none
+  | some (q, m₃) =>
+  match callW p n "const_e" [q.headD 0] m₃ with
+  | none => none
+  | some (sl, m₄) =>
+  match callW p n "mk_app" [sl.headD 0, sp.headD 0] m₄ with
+  | none => none
+  | some (r, m₅) => some (r.headD 0, m₅)
+
+theorem strLitCtor_spec (p : Prog) (hp : p.lookup "str_lit_ctor" = some strLitCtorL) (n : Nat)
+    (s₀ : St) (h : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "str_lit_ctor" [h]
+    ⦃fun r s' => LocEq s' s₀ ∧ ctorW p n s₀.mem h = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, strLitCtorL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      callW_spec p n "str_ctor_pre", callW_spec p n "str_cons_spine", callW_spec p n "pin_at",
+      callW_spec p n "const_e", callW_spec p n "mk_app"] <;>
+    finish (gen := 20) [ctorW, tierW, idxW]
+
+section ctor
+variable (p : Prog) (hp : StrLitProg p) {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
+  {a : AState} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} {r : List Word}
+include hp
+
+theorem ctor_call (hS : CoreS dn m a vis fe M eb) {h : Word} (hh : HW h) {s : String}
+    (hv : a.store.view (decE h) = some (.lit (.strVal s)))
+    (hc : callW p n "str_lit_ctor" [h] m = some (r, m')) :
+    CoreRef (strLitToConstructor s) a decH dn m vis fe M eb r m' := by
+  cases n with
+  | zero => rw [callW_zero] at hc; cases hc
+  | succ n =>
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (strLitCtor_spec p hp.strLitCtor n _ h) hc
+  unfold ctorW at hW
+  wstep hW, h1 : callW p n "str_ctor_pre" [] m => t, m₁
+  by_cases g8 : h >>> 28 ≠ 8
+  · rw [if_pos g8] at hW; cases hW
+  rw [if_neg g8] at hW
+  by_cases gs : tierW h ≠ 0 ∧ rdW (m₁.arr64 CTL) 1 = 0
+  · rw [if_pos gs] at hW; cases hW
+  rw [if_neg gs] at hW
+  by_cases gb : rdW (m₁.arr64 CTL) (2 + tierW h) ≤ idxW h
+  · rw [if_pos gb] at hW; cases hW
+  rw [if_neg gb] at hW
+  by_cases gk : rdW (m₁.arr64 REC) (idxW h * 8 + tierW h * 4) ≠ 1
+  · rw [if_pos gk] at hW; cases hW
+  rw [if_neg gk] at hW
+  wstep hW, h2 : callW p n "str_cons_spine" [t.headD 0, t.tail.headD 0, t.tail.tail.headD 0,
+      rdW (m₁.arr64 REC) (idxW h * 8 + tierW h * 4 + 1),
+      rdW (m₁.arr64 REC) (idxW h * 8 + tierW h * 4 + 1) +
+        rdW (m₁.arr64 REC) (idxW h * 8 + tierW h * 4 + 2)] m₁ => sp, m₂
+  wstep hW, h3 : callW p n "pin_at" [6] m₂ => q, m₃
+  wstep hW, h4 : callW p n "const_e" [q.headD 0] m₃ => sl, m₄
+  wstep hW, h5 : callW p n "mk_app" [sl.headD 0, sp.headD 0] m₄ => r₅, m₅
+  simp only [Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨hr, hm⟩ := hW
+  rw [← hm, strLitToConstructor_eq]
+  have c1 := pre_call p hp hS h1
+  refine coreRef_bind c1 fun M₁ hS₁ => ?_
+  -- the literal is still there, and its record gives the bytes
+  have hv₁ : (AM.st ctorPreT a).store.view (decE h) = some (.lit (.strVal s)) :=
+    vmono_ctorPreT.run (AM.run_of_ok _ _ c1.1) hv
+  have g8' : h >>> 28 = 8 := by simpa using g8
+  have hvOK : viewOK m₁ h 2 := ⟨gs, by simpa using gb⟩
+  obtain ⟨htop, -, hstr⟩ := lit_rec m₁ _ hS₁.arena.1 h hh hvOK g8' _ hv₁
+  obtain ⟨-, hsl⟩ := hstr s rfl
+  have hpool := hS₁.arena.1.lit.1
+  have hsize := hpool.2.2.1
+  have htop' := hpool.2.2.2
+  have hoc : (rdW (m₁.arr64 REC) (idxW h * 8 + tierW h * 4 + 1) +
+      rdW (m₁.arr64 REC) (idxW h * 8 + tierW h * 4 + 2)).toNat =
+      (rdW (m₁.arr64 REC) (idxW h * 8 + tierW h * 4 + 1)).toNat +
+      (rdW (m₁.arr64 REC) (idxW h * 8 + tierW h * 4 + 2)).toNat := by
+    rw [UInt64.toNat_add]; omega
+  unfold ctorRestT
+  have c2 := spine_call p hp (t.headD 0) (t.tail.headD 0) (t.tail.tail.headD 0) c1.2.2.2.2.2
+    s.toList n m₁ m₂ _ M₁ _ _ sp hS₁ (by rw [hoc, Nat.add_sub_cancel_left, hsl, strWords_eq])
+    (by rw [hoc]; omega) (by rw [hoc]; omega) (by rw [hoc]; omega) h2
+  refine coreRef_bind c2 fun M₂ hS₂ => ?_
+  have c3 := pinAt_call p hp hS₂ (k := 6) rfl h3
+  refine coreRef_bind c3 fun M₃ hS₃ => ?_
+  have c4 := constE_call p hp hS₃ c3.2.2.2 h4
+  refine coreRef_bind c4 fun M₄ hS₄ => ?_
+  have c5 := app_call p hp hS₄ h5
+  refine ⟨c5.1, c5.2.1, ?_, by unfold ResH; rw [← hr]; exact c5.2.2.2⟩
+  have := c5.2.2.1
+  simp only [decH] at this ⊢
+  rw [this, ← hr]
+
+end ctor
+
+/-- **`str_lit_ctor` refines `strLitToConstructor`** at a string literal, from the program's
+lookups. -/
+@[refines ConRon.Arena.strLitToConstructor]
+theorem strLitCtor_core (p : Prog) (hp : StrLitProg p) : StrLitCtorOK p := by
+  intro n s₀ a₀ dn vis fe M eb h s hS hh hv
+  exact CoreSpec.of_call fun r m' hc => ctor_call p hp hS hh hv hc
+
 end L.Arena
