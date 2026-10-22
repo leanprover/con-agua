@@ -6,6 +6,7 @@ public import ConAgua.Scan.Common
 public import ConAgua.Scan.Values
 public import ConAgua.Scan.Member
 public import ConAgua.Scan.Records
+public import ConAgua.Scan.RecordsSpec
 meta import ConAgua.L.Semantics
 import ConAgua.Census.Attr
 
