@@ -8,6 +8,9 @@ import ConAgua.Arena.IndPos2SpecA
 import ConAgua.Arena.IndSumSpec2A
 import ConAgua.Arena.IndSumSpec6
 import ConAgua.Arena.IndInstallSpec
+import ConAgua.Arena.IndInstallSpec2
+import ConAgua.Arena.IndInstallSpec3
+import ConAgua.Arena.IndInstallSpec4
 import ConAgua.Arena.IndLibSpec
 import ConAgua.Arena.IndMaster
 import ConAgua.Arena.IndPartsSpec2
