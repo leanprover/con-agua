@@ -174,6 +174,9 @@ macro_rules
 
 theorem MFr.ofStub {f : FnName} {m m' : Mem} {args r : List Word} (h : stubM f m args = some (r, m'))
     (hf : f ∈ stubNames := by decide) : MFr [] [] m m' := MFr.stub hf h
+/-- Across `strip_pis`/`strip_lams` (their write set, `stripF_frame`). -/
+theorem MFr.ofStripF {tg : Word} {m m' : Mem} {args r : List Word} (h : stripF tg m args = some (r, m')) :
+    MFr [] [] m m' := MFr.of_iw (stripF_frame h)
 
 theorem mkForallW_mfr {m m' : Mem} {t b r : Word} (h : mkForallW m t b = some (r, m')) : MFr [] [] m m' :=
   MFr.of_low (mkForallW_low h)
@@ -195,7 +198,7 @@ theorem closeW_mfr : ∀ (n : Nat) (m m' : Mem) (dO dl i body : Word) (r : List 
 
 theorem stripW_mfr {m m' : Mem} {ciq : Word} {r : List Word} (h : stripW m ciq = some (r, m')) : MFr [] [] m m' := by
   unfold stripW stripK at h
-  mfr_auto h [MFr.ofStub]
+  mfr_auto h [MFr.ofStripF]
 
 theorem entryW_mfr {m m' : Mem} {C ciq : Word} {r : List Word} (h : entryW m C ciq = some (r, m')) :
     MFr [] [] m m' := by

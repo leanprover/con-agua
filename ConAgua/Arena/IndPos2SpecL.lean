@@ -1023,7 +1023,7 @@ theorem cpW_mfr : ∀ (n : Nat) (m m' : Mem) (hp dO dL : Word) (r : List Word),
 
 theorem ustW_mfr {n : Nat} {m m' : Mem} {cty nP j r : Word} (h : ustW n m cty nP j = some (r, m')) : HbFr m m' := by
   unfold ustW ustK1 at h
-  mfr_auto h [MFr.ofStub, hbFastW_mfr]
+  mfr_auto h [MFr.ofStripF, hbFastW_mfr]
 
 /-- **`nest_cont_checks`**: the twin's three checks of `nestCont` pass. -/
 theorem p2ccW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
