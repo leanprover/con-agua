@@ -397,15 +397,44 @@ def classGenMotVar : FunDecl := lfn (g, c) locals (ok, s, r, so, sl) {
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:120-133 ConRon.Arena.ClassGen.major
 @[l_impl ConRon.Arena.ClassGen.major]
 def classGenMajor : FunDecl := lfn (g, c, d) locals
-    (ci, fty, ok, ty, fo, fl, body, hd, dso, dsl, mt) {
+    (ci, ind, lvls, ds0, dl0, nIdx, fty, ok, ty, r0, r1, r2, r3) {
   ci := call target_major_at(IW.u64[g + 3], IW.u64[g + 4], c);
+  (ind, lvls, ds0, dl0, nIdx) := call class_gen_major_ci(ci);
   fty := call expr_get_d(IW.u64[g + 5], IW.u64[g + 6], c);
-  (ok, ty) := call inst_pis_with(IW.u64[ci + 2], IW.u64[ci + 3], fty);
+  (ok, ty) := call inst_pis_with(ds0, dl0, fty);
   if ok == 0 { return (0, 0, 0, 0) };
-  (ok, fo, fl, body) := call open_pis_at_fvars_f(IW.u64[ci + 5], ty, d);
+  (r0, r1, r2, r3) := call class_gen_major_open(ind, lvls, ds0, dl0, nIdx, ty, d);
+  return (r0, r1, r2, r3)
+}
+
+/-- `class_gen_major_open(ind, lvls, ds.off, ds.len, nIdx, ty, d)`: `ClassGen.major` after the
+parameters are instantiated: the index telescope opened at `d`, then the major domain. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:120-133 ConRon.Arena.ClassGen.major
+@[l_impl ConRon.Arena.ClassGen.major]
+def classGenMajorOpen : FunDecl := lfn (ind, lvls, ds0, dl0, nIdx, ty, d)
+    locals (ok, fo, fl, body, r0, r1, r2, r3) {
+  (ok, fo, fl, body) := call open_pis_at_fvars_f(nIdx, ty, d);
   if ok == 0 { return (0, 0, 0, 0) };
-  hd := call intern_const(IW.u64[ci], IW.u64[ci + 1]);
-  (dso, dsl) := call sl_append(IW.u64[ci + 2], IW.u64[ci + 3], fo, fl);
+  (r0, r1, r2, r3) := call class_gen_major_tail(ind, lvls, ds0, dl0, fo, fl);
+  return (r0, r1, r2, r3)
+}
+
+/-- `class_gen_major_ci(ci)`: the fields of the class's `TargetMajor` record `ClassGen.major` reads
+(read once, before the callees grow the pool). -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:120-133 ConRon.Arena.ClassGen.major
+@[l_impl ConRon.Arena.ClassGen.major]
+def classGenMajorCi : FunDecl := lfn (ci) locals () {
+  return (IW.u64[ci], IW.u64[ci + 1], IW.u64[ci + 2], IW.u64[ci + 3], IW.u64[ci + 5])
+}
+
+/-- `class_gen_major_tail(ind, lvls, ds.off, ds.len, ifs.off, ifs.len)`: `ClassGen.major` after the
+index telescope is opened: the major domain `I D⃗ ı⃗`. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:120-133 ConRon.Arena.ClassGen.major
+@[l_impl ConRon.Arena.ClassGen.major]
+def classGenMajorTail : FunDecl := lfn (ind, lvls, ds0, dl0, fo, fl) locals (hd, dso, dsl, mt) {
+  hd := call intern_const(ind, lvls);
+  if 4294967296 <= hd { abort };
+  (dso, dsl) := call sl_append(ds0, dl0, fo, fl);
   mt := call mk_app_n_f(hd, dso, dsl);
   return (1, fo, fl, mt)
 }
@@ -739,7 +768,10 @@ def recClassFns : Prog :=
    ("class_read_n_slots", classReadNSlots), ("class_read", classRead),
    ("close_lams", closeLams), ("expr_get_d", exprGetD), ("class_binder", classBinder),
    ("class_gen_binder", classGenBinder), ("class_gen_slot_var", classGenSlotVar),
-   ("class_gen_mot_var", classGenMotVar), ("class_gen_major", classGenMajor),
+   ("class_gen_mot_var", classGenMotVar), ("class_gen_major_tail", classGenMajorTail),
+   ("class_gen_major_ci", classGenMajorCi),
+   ("class_gen_major_open", classGenMajorOpen),
+   ("class_gen_major", classGenMajor),
    ("class_gen_motive_ty", classGenMotiveTy), ("class_gen_ih_parts", classGenIhParts),
    ("class_gen_minor_ty_ih1", classGenMinorTyIh1),
    ("class_gen_minor_ty_ihs_go", classGenMinorTyIhsGo), ("class_gen_minor_ty", classGenMinorTy),
