@@ -568,6 +568,9 @@ def ErecKeptKnot (p : Prog) : Prop :=
       "prepare_major", "proof_irrel", "defeq_list", "iota_index_ok"] →
     callW p n f vs m = some (r, m') → m'.arr64 EREC = m.arr64 EREC
 
+/-- `ErecKeptKnot`, assumed (the callees' write sets; DESIGN.md, lane `whnf`). -/
+theorem erecKeptKnot_stub (p : Prog) : ErecKeptKnot p := sorry
+
 /-- **The tail of `prepare_major`'s non-K arm.** -/
 theorem pmTail_ok (p : Prog) (hp : IotaProg4 p) (hc : IotaCallees p)
     (hw : WhnfCallees p) (hsup : ∀ fe : IFEnv, SupKeep fe) (hmtc : MajorToCtorOK p)
@@ -621,7 +624,7 @@ theorem pmTail_ok (p : Prog) (hp : IotaProg4 p) (hc : IotaCallees p)
   rw [c6] at h
   simp only at h
   obtain ⟨ok6, ⟨M6, hS6, hK6, hSt6⟩, res6, hr6⟩ := CoreSpec.of_callW
-    (litMajorToCtor_refines p hp.toIotaProg' hc hw hsup N hk' F (by omega) (by omega)
+    (litMajorToCtor_refines' p hp.toIotaProg' hc hw hsup N hk' F (by omega) (by omega)
       ⟨m5, Locals.init []⟩ _ dn vis fe M5 eb mode d (r5.headD 0) hS5 hm4 hebm hr5) c6
   have hrun6 := AM.run_of_ok _ _ ok6
   rw [res6] at hrun6
@@ -647,8 +650,7 @@ theorem pmTail_ok (p : Prog) (hp : IotaProg4 p) (hc : IotaCallees p)
 
 /-- **`prepare_major` refines `prepareMajor`.** Statement changes: `n ≤ 2 ^ 62`, the eager bit
 `eb = (mode >>> 1) &&& 1`, and the callees' hypotheses (`MajorToCtorOK`, `SupKeep`). -/
-@[refines ConRon.Arena.prepareMajor]
-theorem prepareMajor_refines (p : Prog) (hp : IotaProg4 p) (hc : IotaCallees p)
+theorem prepareMajor_refines' (p : Prog) (hp : IotaProg4 p) (hc : IotaCallees p)
     (hw : WhnfCallees p) (hsup : ∀ fe : IFEnv, SupKeep fe) (hmtc : MajorToCtorOK p)
     (hE : ErecKeptKnot p) :
     ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
@@ -718,7 +720,7 @@ theorem prepareMajor_refines (p : Prog) (hp : IotaProg4 p) (hc : IotaCallees p)
       obtain ⟨hr, hm⟩ := hW
       subst hm
       obtain ⟨ok4, ⟨M4, hS4, hK4, hSt4⟩, res4, hr4⟩ := CoreSpec.of_callW
-        (litMajorToCtor_refines p hp.toIotaProg' hc hw hsup N hk' F (by omega) (by omega)
+        (litMajorToCtor_refines' p hp.toIotaProg' hc hw hsup N hk' F (by omega) (by omega)
           ⟨m3, Locals.init []⟩ _ dn vis fe M3 eb mode d (r2.headD 0) hS3 hm4 hebm hr2) c4
       have hrun4 := AM.run_of_ok _ _ ok4
       rw [res4] at hrun4
@@ -800,5 +802,17 @@ theorem prepareMajor_refines (p : Prog) (hp : IotaProg4 p) (hc : IotaCallees p)
       refine ⟨hokF, ⟨M', ?_, hK2.trans (hK3.trans hK'), hSt2.trans (hSt3.trans hSt')⟩, ?_, hw'⟩
       · rw [hstF]; exact hS'
       · rw [hresF]; rfl
+
+@[refines ConRon.Arena.prepareMajor]
+theorem prepareMajor_refines (p : Prog) (hp : IotaProg4 p) :
+    ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
+    ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (MM : ModeMaps) (eb mode d rec ro rc major : Word) (rules : List IRecRule),
+    CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → eb = (mode >>> 1) &&& 1 → HW major →
+    decRules (s₀.mem.arr64 EREC) ro.toNat rc.toNat = some rules →
+    CoreSpec p (n + 1) "prepare_major" [mode, vis, d, rec, ro, rc, major]
+      (prepareMajor (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI rec) rules
+        (decE major)) decH s₀ a₀ dn vis fe MM eb :=
+  prepareMajor_refines' (p := p) (hc := iotaCallees_stub p) (hw := whnfCallees_stub p) (hsup := supKeep_twin) (hmtc := majorToCtor_refines p) (hE := erecKeptKnot_stub p)  (hp := hp)
 
 end L.Arena

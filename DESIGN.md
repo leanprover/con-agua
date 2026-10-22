@@ -4380,7 +4380,16 @@ be asymptotically slower. con-ron at `_tmp/ref/con-ron` origin/HEAD (`proof/ConR
 * `WhnfCoreProj.lean`: none of its own. `reduce_proj_core` is proved on its split into
   `_core`/`_head`/`_fire`/`_arg` (sub-lane); the inner two leave the argument slice on the stack, so
   their post is `GrowSpec` (`CoreSpec` with `StackGrew`); the outer one restores the top.
-* `WhnfIota.lean`: `iotaCallees_stub` and eight specs: `iota_ctor_never_prop`, `iota_case3` (need a
+* `WhnfIota.lean`: `iotaCallees_stub`, `major_to_ctor`, `iota_rec_at` (both large: they need splitting,
+  and `major_to_ctor`'s K and `And` arms leave a slice on the stack, so `CoreAfterG`). The other 24
+  are proved (`WhnfIotaRefine{,2..6}.lean`, sub-lanes); the census-tagged statements instantiate the
+  stub bundles (`iotaCallees_stub`, `whnfCallees_stub`, `coreCallees_stub`, `supKeep_twin`) and three
+  new assumptions: `erecKeptInst_stub` (`inst_lp`/`inst_spine` leave `EREC` alone),
+  `erecKeptKnot_stub` (the knot's slots and `major_to_ctor` do), `CoreS.lvl_den` (a sort node's level
+  and the pinned zero level denote; a `CoreS` field would be the fix). L changes: `proof_irrel` calls
+  the cached `lvl_eq_c` (the twin's `lvlEq?` fills the cache), `expr_view_ok` aborts on a dangling
+  handle (the twin's `view` fails), `iota_certs_full_aux`/`iota_ctor_never_prop` split;
+  `caps_never_zero`'s stub statement corrected (its twin runs readbacks). Earlier: `iota_ctor_never_prop`, `iota_case3` (need a
   corrected `caps_never_zero` stub: its twin runs readbacks), `prepare_major`, `major_to_ctor`,
   `proof_irrel` (calls `lvl_eq_c`), `iota_certs_full(_aux)`, `iota_rec_at`. Eighteen are proved
   (`WhnfIotaRefine*.lean`, sub-lane); its fixes to the L code: `const_ty_at`/`rule_rhs_at` probe

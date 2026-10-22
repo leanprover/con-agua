@@ -809,9 +809,13 @@ theorem icf_all (p : Prog) (hp : IotaProg4 p) (hw : WhnfCallees p) (N : Nat) :
 `CoreSpec` requires it kept); `n ≤ 2 ^ 62`, the eager bit, `ao + an ≤ aco`. The L function is split
 (`iota_certs_full_forall`/`_flush`/`_check`/`_parts`, `spn_get`, `expr_view_ok`: `vcgen` fuel, and
 the twin's `view` of a handle needs the L side to check it). -/
-@[refines ConRon.Arena.iotaCertsFullAux]
-theorem iotaCertsFullAux_refines (p : Prog) (hp : IotaProg4 p) (hw : WhnfCallees p) (n : Nat) :
+theorem iotaCertsFullAux_refines' (p : Prog) (hp : IotaProg4 p) (hw : WhnfCallees p) (n : Nat) :
     ICFSpec p "iota_certs_full_aux" (fun _ _ _ => True) n := (icf_all p hp hw n).1
+
+@[refines ConRon.Arena.iotaCertsFullAux]
+theorem iotaCertsFullAux_refines (p : Prog) (hp : IotaProg4 p) (n : Nat) :
+    ICFSpec p "iota_certs_full_aux" (fun _ _ _ => True) n :=
+  iotaCertsFullAux_refines' (p := p) (hw := whnfCallees_stub p)  (hp := hp) (n := n)
 
 /-- Model of `ctl_get`. -/
 def ctlGetW (m : Mem) (k : Word) : Option Word :=
@@ -855,8 +859,7 @@ theorem iotaCertsFull_spec (p : Prog) (hp : p.lookup "iota_certs_full" = some io
     Sig.retVal, Sig.retOr, rdW, CTL]
 
 /-- **`iota_certs_full` refines `iotaCertsFull`.** Statement changes: `n ≤ 2 ^ 62`, the eager bit. -/
-@[refines ConRon.Arena.iotaCertsFull]
-theorem iotaCertsFull_refines (p : Prog) (hp : IotaProg4 p) (hw : WhnfCallees p) :
+theorem iotaCertsFull_refines' (p : Prog) (hp : IotaProg4 p) (hw : WhnfCallees p) :
     ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
     ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode d h ao an : Word) (args : Array EIdx),
@@ -932,5 +935,17 @@ theorem iotaCertsFull_refines (p : Prog) (hp : IotaProg4 p) (hw : WhnfCallees p)
     simp only [decBool, hr']
   · have hr' : r1.headD 0 = r.headD 0 := by simpa using hr
     unfold ResH HW at hr1 ⊢; rw [← hr']; exact hr1
+
+@[refines ConRon.Arena.iotaCertsFull]
+theorem iotaCertsFull_refines (p : Prog) (hp : IotaProg4 p) :
+    ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
+    ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (MM : ModeMaps) (eb mode d h ao an : Word) (args : Array EIdx),
+    CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → eb = (mode >>> 1) &&& 1 → HW h →
+    SpineR s₀.mem ao an args → ao + an = spTop s₀.mem →
+    CoreSpec p (n + 1) "iota_certs_full" [mode, vis, d, h, ao, an]
+      (iotaCertsFull (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) args.toList) decBool s₀
+      a₀ dn vis fe MM eb :=
+  iotaCertsFull_refines' (p := p) (hw := whnfCallees_stub p)  (hp := hp)
 
 end L.Arena
