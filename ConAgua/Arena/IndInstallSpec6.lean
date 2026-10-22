@@ -178,4 +178,153 @@ theorem lpsW_ok' {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   refine ⟨hS', hg, ?_, Nat.le_of_eq ht⟩
   rw [hd]; simp [BlockShape.lps, hms]
 
+theorem partsHsrc_grow {m m' : Mem} (hg : IWGrow m m') {q : Word} (hq9 : q.toNat + 9 ≤ iwTop m)
+    (hsrc : ∀ o l, iwN m q.toNat = some o → iwN m (q.toNat + 1) = some l → o + l ≤ iwTop m) :
+    ∀ o l, iwN m' q.toNat = some o → iwN m' (q.toNat + 1) = some l → o + l ≤ iwTop m' := by
+  intro o l h1 h2
+  have e1 : iwN m' q.toNat = iwN m q.toNat := by simp only [iwN, nat?, iwA]; rw [hg.2.2.1 _ (by omega)]
+  have e2 : iwN m' (q.toNat + 1) = iwN m (q.toNat + 1) := by simp only [iwN, nat?, iwA]; rw [hg.2.2.1 _ (by omega)]
+  rw [e1] at h1; rw [e2] at h2
+  exact Nat.le_trans (hsrc o l h1 h2) hg.1
+
+/-- The record's words read off a decoded shape (`nP`, `resSort`), in a grown memory. -/
+theorem partsShapeWords {m m' : Mem} (hg : IWGrow m m') {q : Word} {bs : BlockShape}
+    (hq : DecB (fun m => decBS m q.toNat) m bs) (hq9 : q.toNat + 9 ≤ iwTop m) :
+    rdW (m'.arr64 IW) (q + 4) = UInt64.ofNat bs.nP ∧ bs.nP < 2 ^ 64 ∧
+      H (rdW (m'.arr64 IW) (q + 6)) ∧ decI (rdW (m'.arr64 IW) (q + 6)) = bs.resSort := by
+  have hqt : decBS (truncM m) q.toNat = some bs := hq
+  obtain ⟨-, -, hnp, -, hsort, -, -⟩ := decBS_some hqt
+  have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
+  have h4 : (q + 4).toNat = q.toNat + 4 := by rw [UInt64.toNat_add]; simp; omega
+  have h6 : (q + 6).toNat = q.toNat + 6 := by rw [UInt64.toNat_add]; simp; omega
+  obtain ⟨hw4, hnb, -⟩ := partsIwRd hnp h4
+  rw [partsRdIW_grow hg (by omega)]
+  refine ⟨hw4, hnb, ?_⟩
+  obtain ⟨w, hw, hwl, hwe⟩ := hd?_some (show hd? (iwA (truncM m)) (q.toNat + 6) = some bs.resSort from hsort)
+  obtain ⟨-, hw'⟩ := truncM_iw_get hw
+  simp only [iwA] at hw'
+  rw [partsRdIW_grow hg (by omega), rdW_of_get? h6.symm hw']
+  exact ⟨hwl, hwe.symm⟩
+
+/-- **`block_shape_nest_ctx` refines `BlockShape.nestCtx`** (through `param_levels`' stub
+`intern_ls_iw`): the shape record decoded below the tops, its members' slice below the top
+(`hsrc`), the parameters' free variables a handle slice below the top; the context record decoded
+below the tops. -/
+@[refines ConRon.Arena.BlockShape.nestCtx]
+theorem blockShapeNestCtx_refines (p : Prog) (hP : NckProg p) (n : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (q fo fl : Word) (bs : BlockShape)
+    (fvsP : List EIdx) (hS : StageR dn vis fe s₀.mem a₀) (hq : DecB (fun m => decBS m q.toNat) s₀.mem bs)
+    (hsrc : ∀ o l, iwN s₀.mem q.toNat = some o → iwN s₀.mem (q.toNat + 1) = some l → o + l ≤ iwTop s₀.mem)
+    (hf : decHL s₀.mem fo.toNat fl.toNat = some fvsP) (hfb : fo.toNat + fl.toNat ≤ iwTop s₀.mem) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "block_shape_nest_ctx" [q, fo, fl]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (bs.nestCtx fvsP) a₀ ∧
+      DecB (fun m => decCtx m (r.headD 0).toNat) s'.mem (AM.res (bs.nestCtx fvsP) a₀) ∧
+      StageR dn vis fe s'.mem (AM.st (bs.nestCtx fvsP) a₀) ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
+  refine triple_post (nck_spec p hP n s₀ q fo fl) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨hI1, hE1, hsz, hEs, hcl⟩ := hS.2
+  have hT : iwTop s₀.mem < 2 ^ 64 := (rdW (s₀.mem.arr64 CTL) 200).toNat_lt
+  obtain ⟨hq', hq9, hptr1⟩ := partsShapeFacts hq hsrc
+  have hptr0 : ∀ o l j v, iwN s₀.mem q.toNat = some o → iwN s₀.mem (q.toNat + 1) = some l → j < l →
+      iwN s₀.mem (o + j) = some v → v < iwTop s₀.mem :=
+    fun o l j v h1 h2 h3 h4 => by have := hptr1 o l j v h1 h2 h3 h4; omega
+  have hkw := partsShapeK hq' hq9
+  have hkb : bs.k < 2 ^ 64 := by
+    have : bs.k = (UInt64.ofNat bs.k).toNat := by
+      obtain ⟨o, l, -, hl', hg'⟩ := decAt_some (decBS_some hq').1
+      have := iwN_rdW hl' (by omega); rw [BlockShape.k, decPL_length _ hg']
+      rw [UInt64.toNat_ofNat_of_lt' this.2]
+    rw [this]; exact UInt64.toNat_lt _
+  unfold nckW at hm
+  -- the member names
+  cases h1 : memberNamesW n s₀.mem q with
+  | none => rw [h1] at hm; cases hm
+  | some x1 =>
+  obtain ⟨r1, m1⟩ := x1
+  rw [h1] at hm; simp only at hm
+  obtain ⟨hr1, hd1, hg1, hf1, ht1⟩ := memberNamesW_dec h1 hsz hcl hq' (by omega) hsrc hptr0
+  have hS1 : StageR dn vis fe m1 a₀ := stage_frame_iw hS hf1 (by
+    have := memberNamesW_room h1 hsz; rw [hkw, UInt64.toNat_ofNat_of_lt' hkb] at this
+    simp only [iwTop] at this ht1 ⊢; omega)
+  -- the level parameters
+  cases h2 : lpsW n m1 q with
+  | none => rw [h2] at hm; cases hm
+  | some x2 =>
+  obtain ⟨r2, m2⟩ := x2
+  rw [h2] at hm; simp only at hm
+  obtain ⟨hS2, hg2, hd2, hb2⟩ := lpsW_ok' h2 hS1 (hq.grow (decBS_mono _) hg1)
+  have hg02 := hg1.trans hg2
+  -- the index counts
+  cases h3 : nIdxsW n m2 q with
+  | none => rw [h3] at hm; cases hm
+  | some x3 =>
+  obtain ⟨r3, m3⟩ := x3
+  rw [h3] at hm; simp only at hm
+  have hqg := hq.grow (decBS_mono _) hg02
+  obtain ⟨hq'2, hq92, hptr2⟩ := partsShapeFacts hqg (partsHsrc_grow hg02 hq9 hsrc)
+  obtain ⟨hI2, hE2, hsz2, hEs2, hcl2⟩ := hS2.2
+  obtain ⟨hr3, hd3, hg3, hf3, ht3⟩ := nIdxsW_dec h3 hsz2 hcl2 hq'2 (by have := hg02.1; omega)
+    (partsHsrc_grow hg02 hq9 hsrc) hptr2
+  have hkw2 := partsShapeK hq'2 hq92
+  have hS3 : StageR dn vis fe m3 a₀ := stage_frame_iw hS2 hf3 (by
+    have := nIdxsW_room h3 hsz2; rw [hkw2, UInt64.toNat_ofNat_of_lt' hkb] at this
+    simp only [iwTop] at this ht3 ⊢; omega)
+  have hg03 := hg02.trans hg3
+  -- `param_levels`
+  cases h4 : plW n m3 (r2.headD 0) (r2.tail.headD 0) with
+  | none => rw [h4] at hm; cases hm
+  | some x4 =>
+  obtain ⟨r4, m4⟩ := x4
+  rw [h4] at hm
+  obtain ⟨lv, a4, hrun4, hl4, hle4, hS4, hg4⟩ := plW_sim hS3 (by rw [decHL_grow3 hg3 hb2]; exact hd2)
+    (Nat.le_trans hb2 hg3.1) r4 m4 h4
+  have hg04 := hg03.trans hg4
+  -- the record
+  simp only [nckRec] at hm
+  have hpr := partsNctx_eq m4 (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0)
+    (rdW (m4.arr64 IW) (q + 4)) (r3.headD 0) (r3.tail.headD 0) fo fl (rdW (m4.arr64 IW) (q + 6)) (r4.headD 0)
+  cases h5 : allocW m4 11 with
+  | none => rw [h5] at hm; cases hm
+  | some x5 =>
+  obtain ⟨qq, m5⟩ := x5
+  rw [h5] at hm hpr
+  simp only [Option.some.injEq, Prod.mk.injEq] at hm hpr
+  obtain ⟨rfl, hm5⟩ := hm
+  rw [hm5] at hpr
+  obtain ⟨hS6, hg6, -, hget⟩ := partsFreshGet hpr.symm hS4 (by simp)
+  obtain ⟨hnpw, hnpb, hsl, hse⟩ := partsShapeWords hg04 hq hq9
+  have g : ∀ j (hj : j < 11), (iwA (truncM s'.mem))[qq.toNat + j]? = some ([r1.headD 0, r1.tail.headD 0,
+      r2.headD 0, r2.tail.headD 0, rdW (m4.arr64 IW) (q + 4), r3.headD 0, r3.tail.headD 0, fo, fl,
+      rdW (m4.arr64 IW) (q + 6), r4.headD 0][j]'(by simpa using hj)) := fun j hj => hget j (by simpa using hj)
+  have g0 := g 0 (by omega); have g1 := g 1 (by omega); have g2 := g 2 (by omega); have g3 := g 3 (by omega)
+  have g4 := g 4 (by omega); have g5 := g 5 (by omega); have g6 := g 6 (by omega); have g7 := g 7 (by omega)
+  have g8 := g 8 (by omega); have g9 := g 9 (by omega); have g10 := g 10 (by omega)
+  simp only [Nat.add_zero, List.getElem_cons_zero, List.getElem_cons_succ] at g0 g1 g2 g3 g4 g5 g6 g7 g8 g9 g10
+  have hrun : (bs.nestCtx fvsP).run a₀ = .ok (⟨bs.memberNames, bs.lps, bs.nP, bs.nIdxs, fvsP, bs.resSort, lv⟩, a4) := by
+    simp only [ConRon.Arena.BlockShape.nestCtx, StateT.run_bind, hrun4]; rfl
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  refine ⟨hl, hok, ?_, by rw [hst]; exact hS6, hg04.trans hg6⟩
+  rw [hres]
+  have hg56 := hg6
+  subst hr1 hr3
+  simp only [List.headD_cons, List.tail_cons] at g0 g1 g5 g6 ⊢
+  have hn1 : DecB (fun m => decHL m (rdW (s₀.mem.arr64 CTL) 200).toNat (UInt64.ofNat bs.k).toNat) s'.mem
+      bs.memberNames := by
+    rw [UInt64.toNat_ofNat_of_lt' hkb]
+    exact (decHL_decB hd1 (Nat.le_of_eq ht1)).grow (OMono.decHL _ _) (hg2.trans (hg3.trans (hg4.trans hg6)))
+  have hn2 : DecB (fun m => decHL m (r2.headD 0).toNat (r2.tail.headD 0).toNat) s'.mem bs.lps :=
+    (decHL_decB hd2 hb2).grow (OMono.decHL _ _) (hg3.trans (hg4.trans hg6))
+  have hn3 : DecB (fun m => decNL m (rdW (m2.arr64 CTL) 200).toNat (UInt64.ofNat bs.k).toNat) s'.mem bs.nIdxs := by
+    rw [UInt64.toNat_ofNat_of_lt' hkb]
+    exact (decNL_decB hd3 (Nat.le_of_eq ht3)).grow (OMono.decNL _ _) (hg4.trans hg6)
+  have hn4 : DecB (fun m => decHL m fo.toNat fl.toNat) s'.mem fvsP :=
+    (decHL_decB hf hfb).grow (OMono.decHL _ _) (hg04.trans hg6)
+  have hl4' : (r4.headD 0).toNat < 2 ^ 32 := hl4
+  have hsl' : (rdW (m4.arr64 IW) (q + 6)).toNat < 2 ^ 32 := hsl
+  show decCtx (truncM s'.mem) qq.toNat = _
+  simp only [decCtx, decAt, iwN, iwH, nat?, hd?, g0, g1, g2, g3, g4, g5, g6, g7, g8, g9, g10, Nat.add_assoc,
+    Option.map_some, Option.bind_some, bind, pure, hnpw, UInt64.toNat_ofNat_of_lt' hnpb, hl4', hsl', if_true]
+  simp only [show decHL _ _ _ = _ from hn1, show decHL _ _ _ = _ from hn2, show decNL _ _ _ = _ from hn3,
+    show decHL _ _ _ = _ from hn4, Option.bind_some, hle4, hse]
+
 end L.Ind
