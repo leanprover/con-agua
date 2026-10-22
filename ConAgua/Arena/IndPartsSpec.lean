@@ -274,10 +274,11 @@ def numCtorsOfW : Nat → Mem → Word → Word → Option Word
     if l = 0 then some 0
     else numCtorsOfW.cons m off (numCtorsOfW n m (off + 1) (l - 1))
 where
-  /-- After the recursive call: add this member's own `ctors.len`. -/
+  /-- After the recursive call: add this member's own `ctors.len` (`none` when the sum wraps). -/
   cons (m : Mem) (off : Word) : Option Word → Option Word
     | none => none
-    | some r => some (rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 3) + r)
+    | some r => if rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 3) + r < r then none
+      else some (rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 3) + r)
 
 section arms
 variable (n : Nat) (m : Mem) (off l r : Word)
@@ -286,14 +287,17 @@ theorem numCtorsOfW_nil (hl : l = 0) : numCtorsOfW (n + 1) m off l = some 0 := b
 theorem numCtorsOfW_cons (hl : l ≠ 0) :
     numCtorsOfW (n + 1) m off l = numCtorsOfW.cons m off (numCtorsOfW n m (off + 1) (l - 1)) := by
   simp [numCtorsOfW, hl]
-theorem numCtorsOfW_cons_some :
+theorem numCtorsOfW_cons_some (h : ¬ rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 3) + r < r) :
     numCtorsOfW.cons m off (some r) =
-      some (rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 3) + r) := rfl
+      some (rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 3) + r) := by simp [numCtorsOfW.cons, h]
+theorem numCtorsOfW_cons_wrap (h : rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 3) + r < r) :
+    numCtorsOfW.cons m off (some r) = none := by simp [numCtorsOfW.cons, h]
 end arms
 
 grind_pattern [ind_grind] numCtorsOfW_nil => numCtorsOfW (n + 1) m off l
 grind_pattern [ind_grind] numCtorsOfW_cons => numCtorsOfW (n + 1) m off l
 grind_pattern [ind_grind] numCtorsOfW_cons_some => numCtorsOfW.cons m off (some r)
+grind_pattern [ind_grind] numCtorsOfW_cons_wrap => numCtorsOfW.cons m off (some r)
 
 section specs
 variable (p : Prog)
@@ -314,10 +318,18 @@ theorem numCtorsOf_spec (hp : p.lookup "num_ctors_of" = some numCtorsOf) (n : Na
 
 end specs
 
+/-- A sum of words that does not wrap (`¬ a + b < b`) is the sum of the naturals. -/
+theorem word_add_nowrap {a b : Word} (h : ¬ a + b < b) : a.toNat + b.toNat < 2 ^ 64 := by
+  have h1 := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp h)
+  rw [UInt64.toNat_add] at h1
+  have ha := a.toNat_lt; have hb := b.toNat_lt
+  omega
+
 theorem numCtorsOfW_ok (n : Nat) : ∀ (m : Mem) (off l r : Word) (ms : List MemberShape),
     (m.arr64 IW).size < 2 ^ 64 →
     off.toNat + l.toNat < 2 ^ 64 → decPL m (decMS m) off.toNat l.toNat = some ms →
-    numCtorsOfW n m off l = some r → r = UInt64.ofNat (ConRon.Arena.numCtorsOf ms) := by
+    numCtorsOfW n m off l = some r →
+    r = UInt64.ofNat (ConRon.Arena.numCtorsOf ms) ∧ ConRon.Arena.numCtorsOf ms < 2 ^ 64 := by
   induction n with
   | zero => intro m off l r ms _ _ _ h; simp [numCtorsOfW] at h
   | succ n ih =>
@@ -352,9 +364,8 @@ theorem numCtorsOfW_ok (n : Nat) : ∀ (m : Mem) (off l r : Word) (ms : List Mem
           simp [numCtorsOfW, numCtorsOfW.cons, hl, hcons]
         rw [hcontra] at h; simp at h
       | some r' =>
-        rw [numCtorsOfW_cons n m off l hl, hcons, numCtorsOfW_cons_some] at h
-        have hr' : r' = UInt64.ofNat (ConRon.Arena.numCtorsOf mrest) :=
-          ih m (off + 1) (l - 1) r' mrest hsmall hbnd1 hd1 hcons
+        rw [numCtorsOfW_cons n m off l hl, hcons] at h
+        obtain ⟨hr', hlt'⟩ := ih m (off + 1) (l - 1) r' mrest hsmall hbnd1 hd1 hcons
         have hv3 : v + 3 < 2 ^ 64 := by
           obtain ⟨_, _, _, hl3, _⟩ := decAt_some (decMS_some hms0).2.2
           have : v + 2 + 1 < (m.arr64 IW).size := by
@@ -372,12 +383,21 @@ theorem numCtorsOfW_ok (n : Nat) : ∀ (m : Mem) (off l r : Word) (ms : List Mem
         have e3 : UInt64.ofNat (v + 3) = UInt64.ofNat v + 3 := by
           apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp
         rw [e3, ← hv'] at hl2rd
+        by_cases hw : rdW (m.arr64 IW) (rdW (m.arr64 IW) off + 3) + r' < r'
+        · rw [numCtorsOfW_cons_wrap _ _ _ hw] at h; cases h
+        rw [numCtorsOfW_cons_some _ _ _ hw] at h
+        have hnw := word_add_nowrap hw
         simp only [Option.some.injEq] at h
-        rw [hl2rd, hr'] at h
+        rw [hl2rd, hr'] at h hnw
+        have hl2b : l2 < 2 ^ 64 := by
+          simp only [iwN, nat?, Option.map_eq_some_iff] at hl2
+          obtain ⟨w, -, rfl⟩ := hl2; exact w.toNat_lt
+        rw [UInt64.toNat_ofNat_of_lt' (show l2 < UInt64.size from hl2b),
+          UInt64.toNat_ofNat_of_lt' (show _ < UInt64.size from hlt')] at hnw
         rw [← ofNat_add_word] at h
-        rw [← decPL_length m hg2] at h
+        rw [← decPL_length m hg2] at h hnw
         simp only [ConRon.Arena.numCtorsOf]
-        exact h.symm
+        exact ⟨h.symm, hnw⟩
 
 /-- **`num_ctors_of` is `numCtorsOf`.** -/
 @[refines ConRon.Arena.numCtorsOf]
@@ -387,7 +407,8 @@ theorem numCtorsOf_refines (p : Prog) (hp : p.lookup "num_ctors_of" = some numCt
     (hd : decPL s₀.mem (decMS s₀.mem) off.toNat l.toNat = some ms)
     (hbnd : off.toNat + l.toNat < 2 ^ 64) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "num_ctors_of" [off, l]
-    ⦃fun r s' => s' = s₀ ∧ r.headD 0 = UInt64.ofNat (ConRon.Arena.numCtorsOf ms); ⊤⦄ := by
+    ⦃fun r s' => s' = s₀ ∧ r.headD 0 = UInt64.ofNat (ConRon.Arena.numCtorsOf ms) ∧
+      ConRon.Arena.numCtorsOf ms < 2 ^ 64; ⊤⦄ := by
   have h := numCtorsOf_spec p hp n s₀ off l
   refine triple_post h ?_
   intro r s' ⟨h1, h2⟩
@@ -435,7 +456,7 @@ theorem blockShapeNumCtorsW_ok (n : Nat) (m : Mem) (q r : Word) (bs : BlockShape
     rw [hoo, hll]; exact hol o l ho hl
   rw [ho', hl'] at h
   rw [BlockShape.numCtors]
-  exact numCtorsOfW_ok n m (UInt64.ofNat o) (UInt64.ofNat l) r bs.members hsmall hbnd2 hd2 h
+  exact (numCtorsOfW_ok n m (UInt64.ofNat o) (UInt64.ofNat l) r bs.members hsmall hbnd2 hd2 h).1
 
 /-- **`block_shape_num_ctors` is `BlockShape.numCtors`.** -/
 @[refines ConRon.Arena.BlockShape.numCtors]
