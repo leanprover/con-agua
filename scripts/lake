@@ -1,36 +1,199 @@
-#!/usr/bin/env bash
-# Wrapper around `lake` that points it at the project-wide shared Lake artifact
-# cache (DESIGN.md, "The shared Lake artifact cache"). Use this instead of
-# plain `lake` in every worktree, including the main tree.
-#
-# Mechanism: Lake 5 (this toolchain, nightly-2026-10-20) keys its local
-# artifact cache by content (source bytes, import artifact hashes, toolchain,
-# options, module name -- no absolute path), so one cache serves every
-# worktree and branch. Reading from it is Lake's default whenever
-# LAKE_CACHE_DIR resolves to a real directory; writing needs
-# LAKE_ARTIFACT_CACHE=true (set that yourself before calling this wrapper when
-# seeding). There is no lakefile.toml option for the cache *directory* itself
-# -- only LAKE_ARTIFACT_CACHE / LAKE_RESTORE_ARTIFACTS have lakefile.toml
-# equivalents (`enableArtifactCache`, `restoreAllArtifacts`), and this
-# project's defaults (read-only) already match what we want, so this wrapper
-# only needs to set the directory.
-#
-# The cache directory MUST live under this checkout's own `_tmp/`, not
-# Lake's default ($ELAN_HOME/toolchains/<tc>/lake/cache): that default is a
-# separate bind mount in the agent sandbox, so Lake cannot hard-link out of
-# it and silently copies every restored olean instead (found in con-ron,
-# task #97-CACHE).
-#
-# `git rev-parse --show-toplevel` gives the WORKTREE's own root, not the main
-# tree's. That's fine as long as the worktree has `_tmp` set up as a symlink
-# to the main tree's `_tmp` (see scripts/new-worktree.sh) -- then this
-# resolves to the one shared cache either way.
-set -euo pipefail
-root="$(git rev-parse --show-toplevel)"
-export LAKE_CACHE_DIR="$root/_tmp/lake-cache"
-# Write to the cache by default (coordinator, 2026-10-22): every build, in every worktree, stores what
-# it elaborated, so a module elaborates once for the whole project instead of once per lane. The cache is
-# content-addressed, so concurrent writers are harmless. Opt out with LAKE_ARTIFACT_CACHE=false.
-export LAKE_ARTIFACT_CACHE="${LAKE_ARTIFACT_CACHE:-true}"
-export LAKE_RESTORE_ARTIFACTS="${LAKE_RESTORE_ARTIFACTS:-true}"
-exec lake "$@"
+#!/usr/bin/env python3
+"""Wrapper around `lake` for the project-wide shared Lake artifact cache (DESIGN.md, "The shared Lake
+artifact cache" and "Cache incident"). Use it instead of plain `lake` in every worktree, main tree too.
+
+Reading: `LAKE_CACHE_DIR` points at `_tmp/lake-cache-v2` (shared through the `_tmp` symlink that
+scripts/new-worktree.sh makes), so a build restores what any worktree has built, by hard link.
+
+Writing (default; opt out with LAKE_ARTIFACT_CACHE=false) is GUARDED, because Lake has a time-of-check/
+time-of-use gap (Cache incident, 2026-10-22): it hashes each module's source when the build STARTS but
+Lean reads the file when the module is compiled, minutes later. A source edited, reverted, checked out,
+merged or regenerated in between gets a cache entry "input hash of the old text -> olean of the new
+text" (or the reverse), and every worktree with that text then restores the wrong olean, silently.
+So a writing build here:
+  1. holds a per-worktree lock (`.lake/scripts-lake.lock`): one build at a time in one worktree;
+  2. snapshots (path, mtime, size) of every source file (`*.lean`, lakefile, manifest, toolchain);
+  3. runs Lake against a private STAGING cache: `artifacts/` is a symlink to the shared one (artifacts
+     are content-addressed and never rewritten -- harmless to share), `outputs/` (the input-hash ->
+     artifact mappings, the only part that can be wrong) is a private copy;
+  4. after the build re-snapshots the sources. Unchanged: new mappings are published into the shared
+     `outputs/` (no-clobber, atomic link). Changed: NOTHING is published, the local Lake state of the
+     changed modules is deleted (so the next build cannot trust it either), and the exit code is
+     non-zero (3 if Lake itself succeeded) -- the build's result is not trustworthy, rerun it.
+With LAKE_ARTIFACT_CACHE=false the build still takes the lock and gets the source check (a local trace
+can be just as wrong; a later writing build would publish it), but nothing is staged or published.
+`env` and `serve` are passed through read-only (no lock, no writes). Plain `lake` bypasses all of this:
+do not use it in a worktree (use LAKE_ARTIFACT_CACHE=false scripts/lake to keep the cache out).
+"""
+import os
+import shutil
+import subprocess
+import sys
+import time
+import fcntl
+import secrets
+
+STAGE_MAX_AGE = 12 * 3600  # a staging dir older than this is debris from a killed build
+
+
+def toplevel():
+    return subprocess.run(["git", "rev-parse", "--show-toplevel"], check=True,
+                          capture_output=True, text=True).stdout.strip()
+
+
+def truthy(v):
+    return v.strip().lower() in ("1", "true", "yes", "y", "on")
+
+
+def subcommand(args):
+    for a in args:
+        if not a.startswith("-"):
+            return a
+    return None
+
+
+def snapshot(root):
+    """(mtime_ns, size) of every file that can change a module's input hash or its compilation."""
+    snap = {}
+    for dp, dn, fn in os.walk(root):
+        dn[:] = [d for d in dn if d not in (".lake", "_tmp", ".git")]
+        for f in fn:
+            if f.endswith(".lean") or f in ("lakefile.toml", "lakefile.lean",
+                                            "lean-toolchain"):
+                p = os.path.join(dp, f)
+                try:
+                    st = os.stat(p)
+                except FileNotFoundError:
+                    continue
+                snap[os.path.relpath(p, root)] = (st.st_mtime_ns, st.st_size)
+    return snap
+
+
+def invalidate(root, rel):
+    """Delete Lake's local state (trace, outputs, .hash files) for the module whose source is `rel`."""
+    if not rel.endswith(".lean"):
+        return
+    base = rel[:-len(".lean")]
+    for sub in ("lib/lean", "ir"):
+        d = os.path.join(root, ".lake", "build", sub, os.path.dirname(base))
+        stem = os.path.basename(base) + "."
+        if not os.path.isdir(d):
+            continue
+        for f in os.listdir(d):
+            if f.startswith(stem):
+                try:
+                    os.unlink(os.path.join(d, f))
+                except FileNotFoundError:
+                    pass
+
+
+def publish(stage_out, shared_out, since):
+    """Copy mappings Lake wrote into the staging outputs/ to the shared one, never overwriting."""
+    new = conflicts = 0
+    for dp, dn, fn in os.walk(stage_out):
+        for f in fn:
+            src = os.path.join(dp, f)
+            if os.stat(src).st_mtime_ns < since:
+                continue  # copied in at staging time, untouched by Lake
+            dst = os.path.join(shared_out, os.path.relpath(src, stage_out))
+            data = open(src, "rb").read()
+            if os.path.exists(dst):
+                if open(dst, "rb").read() != data:
+                    conflicts += 1
+                continue
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            tmp = f"{dst}.tmp-{os.getpid()}-{secrets.token_hex(4)}"
+            with open(tmp, "wb") as fh:
+                fh.write(data)
+            try:
+                os.link(tmp, dst)  # atomic, fails if another build published it meanwhile
+                new += 1
+            except FileExistsError:
+                pass
+            finally:
+                os.unlink(tmp)
+    return new, conflicts
+
+
+def main():
+    args = sys.argv[1:]
+    root = toplevel()
+    shared = os.path.realpath(os.path.join(root, "_tmp", "lake-cache-v2"))  # v2: DESIGN.md "Cache incident"
+    env = dict(os.environ)
+    env["LAKE_CACHE_DIR"] = shared
+    env.setdefault("LAKE_RESTORE_ARTIFACTS", "true")
+    writes = truthy(env.get("LAKE_ARTIFACT_CACHE", "true"))
+    sub = subcommand(args)
+    if sub in (None, "env", "serve", "help"):
+        env["LAKE_ARTIFACT_CACHE"] = "false"
+        os.execvpe("lake", ["lake"] + args, env)
+    if not writes:
+        env["LAKE_ARTIFACT_CACHE"] = "false"  # read-only: still locked and checked below, no staging
+
+    os.makedirs(os.path.join(root, ".lake"), exist_ok=True)
+    lockf = open(os.path.join(root, ".lake", "scripts-lake.lock"), "w")
+    try:
+        fcntl.flock(lockf, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        print(f"scripts/lake: waiting for another scripts/lake in {root} to finish...", file=sys.stderr)
+        fcntl.flock(lockf, fcntl.LOCK_EX)
+
+    stage = None
+    if writes:
+        stages = os.path.join(root, "_tmp", "lake-stage")
+        os.makedirs(stages, exist_ok=True)
+        now = time.time()
+        for d in os.listdir(stages):
+            p = os.path.join(stages, d)
+            try:
+                if now - os.stat(p).st_mtime > STAGE_MAX_AGE:
+                    shutil.rmtree(p, ignore_errors=True)
+            except FileNotFoundError:
+                pass
+        stage = os.path.join(stages, f"{os.getpid()}-{secrets.token_hex(4)}")
+        os.makedirs(stage)
+    rc = 1
+    try:
+        if stage:
+            os.makedirs(os.path.join(shared, "artifacts"), exist_ok=True)
+            os.symlink(os.path.join(shared, "artifacts"), os.path.join(stage, "artifacts"))
+            if os.path.isdir(os.path.join(shared, "outputs")):
+                subprocess.run(["cp", "-rp", os.path.join(shared, "outputs"), os.path.join(stage, "outputs")],
+                               check=True)
+            env["LAKE_CACHE_DIR"] = stage
+            env["LAKE_ARTIFACT_CACHE"] = "true"
+        before = snapshot(root)
+        since = time.time_ns()
+        try:
+            rc = subprocess.run(["lake"] + args, env=env).returncode
+        except KeyboardInterrupt:
+            rc = 130
+        after = snapshot(root)
+        changed = sorted(p for p in set(before) | set(after) if before.get(p) != after.get(p))
+        if changed:
+            # even without cache writes: Lake's local trace now vouches for a text it may not have compiled
+            for p in changed:
+                invalidate(root, p)
+            print("\nscripts/lake: ERROR: source files changed WHILE Lake was building -- this build's "
+                  "result is NOT trustworthy\n(Lake hashed one version and may have compiled another; "
+                  "DESIGN.md \"Cache incident\"). Nothing was written to the shared cache; the local "
+                  "build state of these modules was deleted. Rerun the build once nothing is editing "
+                  "the tree:", file=sys.stderr)
+            for p in changed[:30]:
+                print(f"  {p}", file=sys.stderr)
+            if len(changed) > 30:
+                print(f"  ... and {len(changed) - 30} more", file=sys.stderr)
+            if rc == 0:
+                rc = 3
+        elif stage and os.path.isdir(os.path.join(stage, "outputs")):
+            new, conflicts = publish(os.path.join(stage, "outputs"), os.path.join(shared, "outputs"), since)
+            if conflicts:
+                print(f"scripts/lake: note: {conflicts} cache mapping(s) differ from the shared cache's "
+                      f"(kept the shared ones)", file=sys.stderr)
+    finally:
+        if stage:
+            shutil.rmtree(stage, ignore_errors=True)
+    sys.exit(rc)
+
+if __name__ == "__main__":
+    main()
