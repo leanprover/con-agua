@@ -609,3 +609,90 @@ theorem spnLsW_ok (n : Nat) (m m' : Mem) (a : AState) (b l r : Word) (hs : List 
     simp only [rdW]; rw [this]
   · rw [htop₃, htop₂, htl]; omega
   · rw [hpool₃, hpool₂]; exact hf₁.2.2.1 POOL
+
+/-! ## `keys_push`: the keys on the stack -/
+
+/-- **`keys_push` puts an `EREC` name slice on the stack** at the old top `b`, raises the top past
+it, and writes nothing else. -/
+theorem keysPushW_ok {N : Word → Name → Prop} (n : Nat) (m m₁ : Mem) (po pc b : Word) (ks : List Name)
+    (hk : NmsR N m EREC po pc ks) (hsz : (m.arr64 SPN).size < 2 ^ 63)
+    (hctl : 136 < (m.arr64 CTL).size) (hW : keysPushW n m po pc = some (b, m₁)) :
+    b = spTop m ∧ NmsR N m₁ SPN b pc ks ∧ MemFrame [SPN] [136] m m₁ ∧
+      (spTop m₁).toNat = b.toNat + pc.toNat ∧ b.toNat + pc.toNat ≤ (m.arr64 SPN).size ∧
+      ∀ i : Word, i.toNat < b.toNat → rdW (m₁.arr64 SPN) i = rdW (m.arr64 SPN) i := by
+  cases n with
+  | zero => simp [keysPushW] at hW
+  | succ n =>
+  simp only [keysPushW] at hW
+  by_cases t1 : m.len64 SPN < spTop m
+  · simp [t1] at hW
+  by_cases t2 : m.len64 SPN - spTop m < pc
+  · simp [t1, t2] at hW
+  simp only [t1, t2, ↓reduceIte] at hW
+  have hlen : (m.len64 SPN).toNat = (m.arr64 SPN).size := L.Front.toNat_ofNat_size _ hsz
+  have t1' := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp t1)
+  have t2' := UInt64.le_iff_toNat_le.mp (UInt64.not_lt.mp t2)
+  rw [UInt64.toNat_sub_of_le _ _ (UInt64.not_lt.mp t1), hlen] at t2'
+  rw [hlen] at t1'
+  have hroom : (spTop m).toNat + pc.toNat ≤ (m.arr64 SPN).size := by omega
+  cases hc : ekCopyW n m po (spTop m) pc with
+  | none => rw [hc] at hW; simp [kpK] at hW
+  | some mc =>
+  rw [hc, kpK_some] at hW
+  simp only [Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨rfl, rfl⟩ := hW
+  obtain ⟨hk₁, hf₁, hb₁⟩ := ekCopyW_ok ks n m mc po (spTop m) pc hk hroom hsz hc
+  have hspn : (mc.set64 CTL 136 (spTop m + pc)).arr64 SPN = mc.arr64 SPN :=
+    Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  have hctl' : (136 : Word).toNat < (mc.arr64 CTL).size := by rw [hf₁.2.2.1 CTL]; simpa using hctl
+  refine ⟨rfl, hk₁.of_arr hspn, (hf₁.mono (by simp) (by simp)).trans
+    ((MemFrame.setCtl _ _ _).mono (by simp) (by simp)), ?_, hroom, fun i hi => by rw [hspn]; exact hb₁ i hi⟩
+  simp only [spTop]; rw [rdW_set64]; simp only [hctl', and_self, ↓reduceIte, true_and]
+  rw [UInt64.toNat_add]; simp only [spTop] at hroom ⊢; omega
+
+/-! ## The twin's readbacks of the substitution -/
+
+theorem readNamesM_run (a : AState) (hc : ReadNCOK a) : ∀ (lps : List NIdx) (ks : List Name),
+    lps.mapM (denoteN a.store.lss.ls.ns) = some ks →
+    ∃ c, (readNamesM lps).run a = .ok (ks, { a with caches := c }) ∧ ReadNCOK { a with caches := c } ∧
+      c.readLC = a.caches.readLC ∧ c.readLsC = a.caches.readLsC := by
+  intro lps
+  induction lps generalizing a with
+  | nil =>
+    intro ks h; simp only [List.mapM_nil, Option.pure_def, Option.some.injEq] at h; subst h
+    exact ⟨a.caches, rfl, hc, rfl, rfl⟩
+  | cons p ps ih =>
+    intro ks h
+    simp only [List.mapM_cons, Option.pure_def, Option.bind_eq_bind] at h
+    cases d1 : denoteN a.store.lss.ls.ns p with
+    | none => simp [d1] at h
+    | some nm =>
+    cases d2 : ps.mapM (denoteN a.store.lss.ls.ns) with
+    | none => simp [d1, d2] at h
+    | some nms =>
+    simp only [d1, d2, Option.bind_some, Option.some.injEq] at h
+    subst h
+    obtain ⟨c₁, hr₁, hc₁, e₁, f₁⟩ := readNameM_run a p nm d1 hc
+    obtain ⟨c₂, hr₂, hc₂, e₂, f₂⟩ := ih { a with caches := c₁ } hc₁ nms d2
+    refine ⟨c₂, ?_, hc₂, e₂.trans e₁, f₂.trans f₁⟩
+    simp only [readNamesM, StateT.run_bind, hr₁, except_ok_bind, hr₂]; rfl
+
+theorem lp_readLevelsM_run (a : AState) (h : LsIdx) (ls : List Level)
+    (hd : denoteLs a.store.lss h = some ls) (hc : ReadLsCOK a) :
+    ∃ c, (readLevelsM h).run a = .ok (ls, { a with caches := c }) ∧
+      ReadLsCOK { a with caches := c } ∧ c.readLC = a.caches.readLC ∧ c.readNC = a.caches.readNC := by
+  simp only [readLevelsM]
+  cases e : a.caches.readLsC[h]? with
+  | some l' =>
+    have := hc _ _ e; rw [hd] at this; cases this
+    exact ⟨a.caches, by simp [e]; rfl, hc, rfl, rfl⟩
+  | none =>
+    refine ⟨{ a.caches with readLsC := a.caches.readLsC.insert h ls }, ?_, ?_, rfl, rfl⟩
+    · simp [e, hd]; rfl
+    · intro h' l' e'
+      simp only [Std.HashMap.getElem?_insert] at e'
+      split at e'
+      · rename_i hb; cases e'; rw [← eq_of_beq hb]; exact hd
+      · exact hc _ _ e'
+
+end L.Arena
