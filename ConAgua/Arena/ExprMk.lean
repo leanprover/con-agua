@@ -143,6 +143,7 @@ def derFW (m : Mem) (h : Word) : Word :=
     else rdW (m.arr64 PJDER) (idxW h * 2 + tierW h) >>> 15
   else 0
 
+/-- con-ron: none — reads L's derived-range array (the twin's `fvarOfData (derived h)`) -/
 def derF : FunDecl := lfn (h) locals (g, t, i, x) {
   g := h >> 28;
   t := (h >> 27) & 1;
