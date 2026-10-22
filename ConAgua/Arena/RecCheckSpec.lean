@@ -35,19 +35,6 @@ open L.Arena
 
 /-! ## `decPL` read back at one index -/
 
-/-- **A decoded `decPL` slice, read back at index `j`**: the pointer word at `o + j` decodes
-(by `f`) to the twin's `xs[j]`. -/
-theorem decPL_getH {α : Type} (m : Mem) {f : Nat → Option α} {o l : Nat} {xs : List α}
-    (h : decPL m f o l = some xs) (j : Nat) (hj : j < l) :
-    ∃ v, iwN m (o + j) = some v ∧
-      f v = some (xs[j]'(by rw [decPL_length m h]; exact hj)) := by
-  simp only [decPL] at h
-  have hj' : j < (List.range l).length := by rw [List.length_range]; exact hj
-  have hg := mapM_opt_get (fun j => do f (← iwN m (o + j))) (List.range l) xs h j hj'
-  simp only [List.getElem_range, Option.bind_eq_bind, Option.bind_eq_some_iff] at hg
-  obtain ⟨v, hv, hfv⟩ := hg
-  exact ⟨v, hv, hfv⟩
-
 /-- A trivially `True`-postconditioned triple, for the branch this theorem leaves to the default
 arm (round 2's scope is the HIT arm only; the MISS arm interns and is left for a later round). -/
 theorem trivialTriple {α : Type} (prog : M α) (P : St → Prop) :
