@@ -6023,9 +6023,13 @@ per entry to `docs/e2e.csv`.
   from the callee's parameters is redirected to a stub `__arity_<callee>_<n>` (so `Prog.wf` holds
   and a run that reaches it says so). Names bound to different bodies: the most common binding is
   used and the conflict is reported.
-* **The entry** (`Check.lean`): `check()` is `TwinAccepts`' pipeline: `intern_reserved_pins`,
+* **The entry** (`Check.lean`): `check()` is `TwinAccepts`' pipeline: `pb_check` (the pin-data
+  buffer in byte array 1 starts with `romData`; lane `romload`), `intern_reserved_pins`,
   `builtin_prelude`, `front_run` (`≠ 0`: return `1`, the frontend's reject), `prepare_prelude`,
-  `intern_all_pins`, `install_then_check`, `return ACCEPT`. `builtin_prelude` and
+  `intern_all_pins` (lane romload's `internAllPinsPB`, bound explicitly: three bodies carry the
+  name on master), `install_then_check`, `return ACCEPT`. The harness loads `lake exe romgen`'s
+  buffer (`natOpPinSets.take 1`, the single latest-toolchain variant) and the reference runs at
+  the same list (`e2e-ref --pins=1`). `builtin_prelude` and
   `prepare_prelude` have no L code, so every run of `check` stops there; `check_np()` is the same
   pipeline without the two prelude stages, a test entry whose reference is the twin's pipeline
   without them (`e2e-ref --no-prelude`). Not in `check` yet: the capacity checks at entry (in L a
@@ -6059,9 +6063,22 @@ per entry to `docs/e2e.csv`.
   a fixture where compiled code and `L.run` differ is listed separately (a compiler or harness
   bug).
 
-### First results (master `119a47c`, 675 fixtures)
+### Per-function differential tests (`e2e-diff`, `Diff.lean`)
 
-1176 functions with L code reachable from the entries, 48 stubs. `check`: all 675 stop at
+From one fixture, the twin's state after `internReservedPins`, `parseBytes`, `internAllPins` and
+L's memory after `e2e_front()` (the same stages): first the stores (node counts of all 19 cons
+tables, both tiers: what `ArenaR` relates), then up to 200 persistent expression handles, evenly
+over the ten expression tags, through `whnf`, `whnf_core` and `infer` on both sides (verified mode,
+the empty environment, depth 0), each from the same two states: agreement is the same handle word
+(`decE`) and equal store counts after. Under `L.run` the pin stage alone takes about 2 minutes (the
+interpreter copies the arrays a callee writes), so `e2e.py` runs `e2e-diff` on 24 fixtures and
+`L.run` on 12, spread over the files up to 20 KB (`--diff-sample`, `--interp-sample`); a full run
+takes about 17 minutes on 12 jobs. The comparison caught the e2e assembly's own mistake on its first
+run (an older `intern_all_pins` body: the stores differed on all 634 fixtures).
+
+### First results (master `3b96365`, 675 fixtures)
+
+1209 functions with L code reachable from the entries, 47 stubs. `check`: all 675 stop at
 `builtin_prelude`. `check_np`: 1 agree-accept (`long_line_5mib`: the frontend and the fold on a
 file without declarations to check), 38 agree-reject (35 by an `abort`; every one at the same
 stage as the twin: the inductive validation `validate_ind_d`/`vi_rec`/`vi_ctor` where the twin
@@ -6070,7 +6087,10 @@ missing (`basis_pin_hit` 552, `is_proj_fn_shape` 81, `rom_basis_decls` 2), 1 l-e
 disagreement. Compiled code and `L.run` agree on every fixture both ran. So far, wherever the
 twin's frontend accepts a file, L's does too (the unproved inductive lines included; the one
 exception is item 5 below), and the fold stops at its first stub on the first inductive or
-projection-shaped declaration.
+projection-shaped declaration. `e2e-diff`: the stores agree on all 22 sampled fixtures; `whnf`
+and `whnf_core` agree on 4317 of 4408 handles, both fail on 88, and 3 reach a stub (`find_proj`,
+`inst1`); `infer` (the empty environment: most terms name constants) agrees on 29 and both fail on
+the rest; no disagreement.
 
 ### Bugs found by e2e
 
@@ -6078,15 +6098,14 @@ Owners as in `docs/lanes.json`; reproducers are `scripts/e2e.py --only <fixture>
 assembly items, `docs/e2e.md`'s "Assembly" section (any run).
 
 1. **Modules that cannot be imported together** (one Lean file assembling the checker is
-   impossible until fixed; the e2e assembly works around it through text). At master `119a47c`:
-   `Arena/InferLeaves.lean` (defeq) and `Arena/DeclCvg.lean` (decls2) both define
-   `L.Arena.decCV_words`; `Arena/WhnfCoreProj.lean` (whnf) and `Arena/DefEqLeaves.lean` (defeq)
-   both define `L.Arena.lsNodeW_viewLen`; `Arena/WhnfDeltaRefine.lean` (whnf) and
-   `Arena/InferBodyLet.lean` (defeq) both define `L.Arena.CoreSpec.zero`;
-   `Arena/PromoteERef.lean` (decls2) and `Arena/DefEqLeaves2.lean` (defeq) both define
-   `L.Arena.lit_rec`; `Arena/PromoteRec.lean` (decls2) and `Arena/Walk.lean` (walk, done) both
-   define `L.Arena.clrK` (its `eq_1`). Earlier the same day also `WhnfCoreLoop`/`InferLeaves`
-   (`coreRef_congr`) and `WhnfCoreProj`/`InstListRefine` (`SpineR.of_spn`), since fixed.
+   impossible until fixed; the e2e assembly works around it through text). At master `3b96365`:
+   `Arena/DeclValRef.lean` (decls2) vs `Arena/DefEqLeaves.lean` (defeq), `decCI_defn`'s
+   auxiliary `_proof_1_6`, and vs `Arena/InferLeaves.lean` (defeq), `L.Arena.toNat_add_small`;
+   `Arena/WhnfCoreProj.lean` (whnf) vs `Arena/InstListRefine.lean` (exprops4),
+   `L.Arena.SpineR.of_spn`, and vs `DefEqLeaves` (defeq), `L.Arena.lsNodeW_viewLen`;
+   `Arena/PromoteRec.lean` (decls2) vs `Arena/Walk.lean` (done), `L.Arena.clrK`. Fixed during the
+   day: `InferLeaves`/`DeclCvg` (`decCV_words`), `WhnfCoreLoop`/`InferLeaves` (`coreRef_congr`),
+   `WhnfDeltaRefine`/`InferBodyLet` (`CoreSpec.zero`), `PromoteERef`/`DefEqLeaves2` (`lit_rec`).
    (`LiftBench`/`NatBits`, `L.Arena.bv`, is the known benchmark clash.) The current list is in
    `docs/e2e.md`.
 2. **Arity mismatches between call sites and definitions** (each would fail `Prog.wf`):
@@ -6096,13 +6115,16 @@ assembly items, `docs/e2e.md`'s "Assembly" section (any run).
    `whnf_top` exist (`WhnfEntry.lean`), the renames at about 25 call sites do not (owner:
    indproofs2). `fab_scope_ok` (`WhnfIota.lean`, whnf) calls `loose_bvars_bounded_fast` with 2
    arguments; exprops4's (`BvarB.lean`) takes 3 `(f, k, h)` (owner: whnf).
-3. **One name, two bodies**: `reserved_contains` is `reservedContains` (`IndIface.lean`, induct;
+3. **One name, several bodies**: `intern_all_pins` has three (`internAllPinsPB` in
+   `L.Rom.romProgPB`, an older one through `PinProg`, and `internAllPins_rom`'s ROM version; owner
+   romload: retire the old lookups). `reserved_contains` is `reservedContains` (`IndIface.lean`, induct;
    `DeclHeader.lean`'s lookups, decls2) and `reservedContainsL` (`WhnfIota.lean`, whnf; also
    `KnotWF.lean`). Pick one (owners: whnf, decls2).
 4. **Stub names that look implemented under another name and convention**: `abstract1_fast(4)`
    and `instantiate1_fast(4)` (decls2's stubs) vs exprops4's `abs_entry(3)`, `inst_entry(3)`;
    `inst1(3)` (defeq's stub) vs `inst_entry(3)`. The extra argument is the walk fuel of lane
-   induct's convention. Owners: decls2, defeq (rename or adapter).
+   induct's convention. Owners: decls2, defeq (rename or adapter). `inst1` is what stops `whnf` on
+   a beta-redex in `e2e-diff` (136 handles over the fixtures in an unsampled run).
 5. **Sparse export ids** (`e2e/rounds_huge_gaps`, ids up to `3·10^15`): the frontend's id tables
    are dense arrays (`NID`/`LID`/`EID`, lane front's design), so `name_fresh` aborts at its
    capacity check where the twin's hash maps accept. A completeness loss, not a soundness one;
@@ -6346,6 +6368,38 @@ Census at landing 2 (`--no-build`): phase 2 **142 proven, 19 sorry, 80 written, 
   `targetCtorsOf`, `targetRecPins`, `targetK53`, `class*Agree`, `classCtor(s)Of`, `classMajors`,
   `classSeeds`, `checkBlockClasses`, `genRecCheck` wait on other lanes' callees.
 * Census: phase 8 **67 proven, 62 sorry, 86 written, 8 todo**.
+### The middle layer (`DefEqMid*.lean`, helper `defeq-mid`)
+* Refined, no `sorry` (eight files, ~5800 lines, ~98 s CPU): `defeq_no_fvars`, `lazy_fold_ok`,
+  `bool_true_shortcut`, `try_unfold_proj_app`, `delta_quick`, `defeq_offset`, `defeq_lams_inner`
+  (`DefEqMid`); `defeq_lst`, `defeq_list_rev` (`DefEqMidLoops`); `defeq_peel`, `defeq_binders`
+  (`DefEqMidPeel`); `defeq_lams` (`DefEqMidLams`); `quick_defeq` (`DefEqMidQuick`, closes
+  `QuickDefeqSpec`); `defeq_spine` (`DefEqMidSpine`); `lds_left`/`lds_right`/`lds_both`,
+  `lazy_delta_step` (`DefEqMidLazy`); `lazy_delta_reduction` (`DefEqMidLazy2`). Each at L fuel
+  `n + 1` from `KnotUpTo p n`, against `coreKnot (decMode mode) fe id F`, `F ≥ n`.
+* **L split for the proofs** (same semantics, new functions with citations): `peel_leaf`,
+  `peel_dom`, `peel_step(2)`, `peel_push`; `lams_open`, `lams_inst`, `lam_pair`; `quick_sort`,
+  `quick_forall`, `quick_lam`; `spine_head`, `defeq_spine2`, `spine_cmp`; `lds_unfold2`,
+  `lds_same`; `lazy_nat`, `lazy_iter`; the loops of `defeq_lst`, `defeq_list_rev`, `defeq_peel`,
+  `defeq_lams`, `lazy_delta_reduction` as named blocks. `defeq_binders` pushes through
+  `peel_push`. Node reads go through `e_view`.
+* **L fixes** (words the twin reads differently): `spine_cmp` takes any `lvls_eq_c` word `≥ 2` as
+  `some true` and `lds_same` any hint kind `≥ 2` as regular (`decO`/`decHintW`'s readings);
+  `lazy_nat`/`lazy_iter` normalise a verdict word to `0`/`1`, and `lazy_iter` continues only on a
+  step answer `0` (any other word but `1`, `2` is `.unknown`, as `decDS`).
+* **Hypotheses** (`LazyCallees`): `InstListOK`, `Inst1OK`, `HasFvarOK`; `NatPredW` (`nat_pred`
+  with `ResW`: `natPred_refines` proves `ResH` only); `UnfoldDefOK`, `ReduceNatSpec` (lane `whnf`'s
+  theorems are `sorry`); `StoreDenotes` (a stored sort's level and a stored constant's level list
+  read back, which `lvl(s)_eq_c`'s refinements take as hypotheses). Depth `< 2^63` throughout.
+* The twin's `defeqPeel`, `defeqLams`, `lazyDeltaReduction` get no equation lemmas in the
+  heartbeat budget; their one-level unfoldings are stated with the recursion abstracted
+  (`peelLvl`, `lamsLvl`, `lazyLvl`) and proved by `delta` + `rfl`, as con-ron's bridge does.
+* Findings: (1) `finish (gen := N)` did not raise the term-generation limit here (the diagnostics
+  still said `gen := 8`); `sym (gen := 80) (instances := 5000) only [...]` did, and made the
+  specs with three or more calls and 4–5-tuple results pass. (2) A multi-pattern arm lemma whose
+  only binding of a variable is its right side is never instantiated: state the callee's run as
+  a hypothesis instead (`lamsW_inner`). (3) `omega` with `2^24` and `2^64` produced a proof the
+  kernel rejects (deep recursion), `docs/gaps/omega-kernel-deep-recursion-2pow24.lean`; stated
+  with the `@[noinline]` `peelFuel` it is an atom and fine.
 
 ## Phase 5 finished: ι, the verified walks in the core, the stubs (2026-10-22, lane `whnf2`)
 
