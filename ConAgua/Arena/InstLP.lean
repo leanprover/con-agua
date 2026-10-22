@@ -197,9 +197,10 @@ def lpGo : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (g, t, i, x, y, r) {
   if g == 3 {
     if CTL.u64[18 + t] <= i { abort };
     x := CREC.u64[i * 4 + t * 2 + 1];
+    r := CREC.u64[i * 4 + t * 2];
     y := call sls_memo(x, ko, kc, vo, vc);
     if y == x { return h };
-    r := call intern_const(CREC.u64[i * 4 + t * 2], y);
+    r := call intern_const(r, y);
     if r >= 4294967296 { abort };
     return r
   };
@@ -292,7 +293,9 @@ def lpLet : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (fd, j, e0, t, i, f, a
   x := call lp_go(f, ko, kc, vo, vc, fu);
   y := call lp_go(a, ko, kc, vo, vc, fu);
   z := call lp_go(b, ko, kc, vo, vc, fu);
-  if x == f && y == a && z == b { r := h } else { r := call mk_let(x, y, z); if r >= 4294967296 { abort } };
+  if x == f && y == a {
+    if z == b { r := h } else { r := call mk_let(x, y, z); if r >= 4294967296 { abort } }
+  } else { r := call mk_let(x, y, z); if r >= 4294967296 { abort } };
   (fd, j, e0) := call ilp_find(h, 0);
   u := call ilp_put(h, 0, r, fd, j);
   return r

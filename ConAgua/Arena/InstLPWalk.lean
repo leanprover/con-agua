@@ -116,21 +116,20 @@ def ilwSortK (p : Prog) (n : Nat) (h x : Word) : Option (List Word × Mem) → O
   | none => none
   | some (y, m₁) => if y.headD 0 = x then some (h, m₁) else ilwChk (callW p n "intern_sort" [y.headD 0] m₁)
 
-/-- The `const` arm after `sls_memo`: unchanged, or the new constant interned (its name read on
-the memory after the call). -/
-def ilwConstK (p : Prog) (n : Nat) (h x : Word) : Option (List Word × Mem) → Option (Word × Mem)
+/-- The `const` arm after `sls_memo`: unchanged, or the new constant interned (its name `c` read
+before the call). -/
+def ilwConstK (p : Prog) (n : Nat) (h c x : Word) : Option (List Word × Mem) → Option (Word × Mem)
   | none => none
   | some (y, m₁) =>
     if y.headD 0 = x then some (h, m₁)
-    else ilwChk (callW p n "intern_const" [rdW (m₁.arr64 CREC) (idxW h * 4 + tierW h * 2), y.headD 0] m₁)
+    else ilwChk (callW p n "intern_const" [c, y.headD 0] m₁)
 
 @[arena_grind =] theorem ilwSortK_some (p : Prog) (n : Nat) (h x : Word) (y : List Word) (m₁ : Mem) :
     ilwSortK p n h x (some (y, m₁)) =
       if y.headD 0 = x then some (h, m₁) else ilwChk (callW p n "intern_sort" [y.headD 0] m₁) := rfl
-@[arena_grind =] theorem ilwConstK_some (p : Prog) (n : Nat) (h x : Word) (y : List Word) (m₁ : Mem) :
-    ilwConstK p n h x (some (y, m₁)) =
-      if y.headD 0 = x then some (h, m₁)
-      else ilwChk (callW p n "intern_const" [rdW (m₁.arr64 CREC) (idxW h * 4 + tierW h * 2), y.headD 0] m₁) :=
+@[arena_grind =] theorem ilwConstK_some (p : Prog) (n : Nat) (h c x : Word) (y : List Word) (m₁ : Mem) :
+    ilwConstK p n h c x (some (y, m₁)) =
+      if y.headD 0 = x then some (h, m₁) else ilwChk (callW p n "intern_const" [c, y.headD 0] m₁) :=
   rfl
 
 /-- **The dispatch of `lp_go`** past the fuel test and the cut-off: the scratch check, then by the
@@ -146,7 +145,8 @@ def ilwDispW (p : Prog) (n : Nat) (m : Mem) (h ko kc vo vc fu : Word) : Option (
        (callW p n "sl_memo" [rdW (m.arr64 SOREC) (idxW h * 2 + tierW h), ko, kc, vo, vc] m))
   else if h >>> 28 = 3 then
     (if rdW (m.arr64 CTL) (18 + tierW h) ≤ idxW h then none
-     else ilwConstK p n h (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1))
+     else ilwConstK p n h (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2))
+       (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1))
        (callW p n "sls_memo" [rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1), ko, kc, vo, vc] m))
   else if h >>> 28 = 1 then
     (if rdW (m.arr64 CTL) (26 + tierW h) ≤ idxW h then none
@@ -195,7 +195,8 @@ theorem ilwDispW_sort (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) (hg 
 theorem ilwDispW_const (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) (hg : h >>> 28 = 3) :
     ilwDispW p n m h ko kc vo vc fu =
       if rdW (m.arr64 CTL) (18 + tierW h) ≤ idxW h then none
-      else ilwConstK p n h (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1))
+      else ilwConstK p n h (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2))
+       (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1))
         (callW p n "sls_memo" [rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1), ko, kc, vo, vc] m) := by
   rw [ilwDispW]; simp [hs, hg]
 
@@ -307,18 +308,27 @@ theorem ilwRb_new (p : Prog) (n : Nat) (mk : FnName) (m₂ : Mem) (h f a x y : W
 grind_pattern [arena_grind] ilwRb_same => ilwRb p n mk m₂ h f a x y
 grind_pattern [arena_grind] ilwRb_new => ilwRb p n mk m₂ h f a x y
 
-/-- `internRebuiltLetE`. -/
+/-- `internRebuiltLetE`, in the L code's order: the first two children, then the third. -/
+def ilwRbLet2 (p : Prog) (n : Nat) (m₃ : Mem) (h b x y z : Word) : Option (Word × Mem) :=
+  if z = b then some (h, m₃) else ilwChk (callW p n "mk_let" [x, y, z] m₃)
 def ilwRbLet (p : Prog) (n : Nat) (m₃ : Mem) (h f a b x y z : Word) : Option (Word × Mem) :=
-  if x = f ∧ y = a ∧ z = b then some (h, m₃) else ilwChk (callW p n "mk_let" [x, y, z] m₃)
+  if x = f ∧ y = a then ilwRbLet2 p n m₃ h b x y z else ilwChk (callW p n "mk_let" [x, y, z] m₃)
 
-theorem ilwRbLet_same (p : Prog) (n : Nat) (m₃ : Mem) (h f a b x y z : Word) (hx : x = f) (hy : y = a)
-    (hz : z = b) : ilwRbLet p n m₃ h f a b x y z = some (h, m₃) := by simp [ilwRbLet, hx, hy, hz]
-theorem ilwRbLet_new (p : Prog) (n : Nat) (m₃ : Mem) (h f a b x y z : Word) (hn : ¬ (x = f ∧ y = a ∧ z = b)) :
+theorem ilwRbLet_two (p : Prog) (n : Nat) (m₃ : Mem) (h f a b x y z : Word) (hx : x = f) (hy : y = a) :
+    ilwRbLet p n m₃ h f a b x y z = ilwRbLet2 p n m₃ h b x y z := by simp [ilwRbLet, hx, hy]
+theorem ilwRbLet_new (p : Prog) (n : Nat) (m₃ : Mem) (h f a b x y z : Word) (hn : ¬ (x = f ∧ y = a)) :
     ilwRbLet p n m₃ h f a b x y z = ilwChk (callW p n "mk_let" [x, y, z] m₃) := by
   simp only [ilwRbLet, hn, ↓reduceIte]
+theorem ilwRbLet2_same (p : Prog) (n : Nat) (m₃ : Mem) (h b x y z : Word) (hz : z = b) :
+    ilwRbLet2 p n m₃ h b x y z = some (h, m₃) := by simp [ilwRbLet2, hz]
+theorem ilwRbLet2_new (p : Prog) (n : Nat) (m₃ : Mem) (h b x y z : Word) (hz : ¬ z = b) :
+    ilwRbLet2 p n m₃ h b x y z = ilwChk (callW p n "mk_let" [x, y, z] m₃) := by
+  simp only [ilwRbLet2, hz, ↓reduceIte]
 
-grind_pattern [arena_grind] ilwRbLet_same => ilwRbLet p n m₃ h f a b x y z
+grind_pattern [arena_grind] ilwRbLet_two => ilwRbLet p n m₃ h f a b x y z
 grind_pattern [arena_grind] ilwRbLet_new => ilwRbLet p n m₃ h f a b x y z
+grind_pattern [arena_grind] ilwRbLet2_same => ilwRbLet2 p n m₃ h b x y z
+grind_pattern [arena_grind] ilwRbLet2_new => ilwRbLet2 p n m₃ h b x y z
 
 /-- A two-child arm after its second child. -/
 def ilwBinK₂ (p : Prog) (n : Nat) (mk : FnName) (h f a x : Word) :

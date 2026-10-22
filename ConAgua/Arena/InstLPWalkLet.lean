@@ -31,10 +31,10 @@ theorem lpLet_spec (n : Nat) (s₀ : St) (h ko kc vo vc fu : Word) :
   rw [invoke_eq _ hp.le]
   simp only [callFn, lpLet]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, L.evalC_spec, L.evalE_spec, evalArgs, setLoc, setLocs,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       memoFindG_spec lpSch p _ hp.ilpf n, memoPutG_spec lpSch p _ hp.ilpp n,
       callW_spec p n "lp_go", callW_spec p n "mk_let"] <;>
-    finish (gen := 20) [ilwLetW, ilwProbe, msetG, tierW, idxW, Cond.pval, Expr.pval, rd64_rdW]
+    finish (gen := 20) [ilwLetW, ilwProbe, msetG, tierW, idxW]
 end specs
 
 end L.Arena
