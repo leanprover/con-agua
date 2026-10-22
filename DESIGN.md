@@ -7623,7 +7623,7 @@ grows (the memo library's capacity rule, as every L memo). Refinement: not yet (
     go by an L change instead: the twin uses `args.take rP` (`recFireArgs_take`), so L could
     clamp the prefix to the spine (`min rP sn`) where it now reads `rP` words of the stack;
     that touches lane `whnf`'s `iota_rec_*` proofs (`WhnfIotaRecRefine2/3`), not done here.
-* Numbers: 12 files, +~400/−~95 lines; new `ProjView.lean` 250 lines (~10 s). Rebuild of the cone
+* Numbers: 12 files, +~400/−~95 lines; new `ProjView.lean` 250 lines. After merging master: the touched cone plus `Checker/Prog`, `Checker/CoreErec` 5.2 min wall, 24 CPU-min. Rebuild of the cone
   up to `DefEqKnot` + `KnotWF` after the `WhnfCore.lean` change: 5.2 min wall, 14.8 CPU-min
   (everything downstream of `WhnfCore` elaborates once); `WhnfCoreProj` ~5 s.
 
