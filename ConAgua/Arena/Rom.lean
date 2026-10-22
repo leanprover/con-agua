@@ -84,7 +84,7 @@ def u64W (i : Word) : Word :=
 
 /-- con-ron: none — the ROM reader (L has constant bytes where the twin has con-leche values) -/
 def romU64 : FunDecl := lfn (i) locals (x) {
-  if len(rom.c8) < i + 8 { abort };
+  if len(rom.c8) < i + 8 || i + 8 < i { abort };
   x := rom.c8[i] + rom.c8[i + 1] * 256 + rom.c8[i + 2] * 65536 + rom.c8[i + 3] * 16777216 +
     rom.c8[i + 4] * 4294967296 + rom.c8[i + 5] * 1099511627776 +
     rom.c8[i + 6] * 281474976710656 + rom.c8[i + 7] * 72057594037927936;
@@ -96,6 +96,12 @@ end rd
 /-- The ROM is shorter than `2^63` bytes: every position and length is a word, and a sum of two
 never wraps. -/
 def RomOK (rom : List UInt8) : Prop := rom.length < 2 ^ 63
+
+/-- `rom_u64(i)`'s check: the eight bytes from `i` are in the ROM. The models record it, so that a
+model that returns read only bytes that are there (the decoder direction needs that). -/
+def u64OK (rom : List UInt8) (i : Word) : Prop := i + 8 ≤ UInt64.ofNat rom.length ∧ i ≤ i + 8
+
+instance (rom : List UInt8) (i : Word) : Decidable (u64OK rom i) := by unfold u64OK; infer_instance
 
 section u64Val
 variable (rom : List UInt8)
@@ -153,6 +159,15 @@ theorem u64W_of_drop (pos : Word) (n : Nat) (rest : List UInt8)
   simp
   omega
 
+theorem u64OK_of_drop (pos : Word) (n : Nat) (rest : List UInt8)
+    (h : rom.drop pos.toNat = u64B n ++ rest) (hr : RomOK rom) : u64OK rom pos := by
+  have hl := drop_len rom _ _ _ h (by simp [u64B])
+  simp only [u64B, List.length_cons, List.length_nil, RomOK] at hl hr
+  have h8 : (pos + 8).toNat = pos.toNat + 8 := by rw [UInt64.toNat_add]; simp; omega
+  refine ⟨?_, ?_⟩
+  · rw [UInt64.le_iff_toNat_le, h8, UInt64.toNat_ofNat', Nat.mod_eq_of_lt (by omega)]; omega
+  · rw [UInt64.le_iff_toNat_le, h8]; omega
+
 end u64Val
 
 section u64Spec
@@ -162,7 +177,7 @@ include hp in
 theorem romU64_spec (n : Nat) (s₀ : St) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "rom_u64" [i]
-    ⦃fun r s' => s' = s₀ ∧ r = [u64W rom i]; ⊤⦄ := by
+    ⦃fun r s' => s' = s₀ ∧ u64OK rom i ∧ r = [u64W rom i]; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, romU64]
   cases n with
@@ -170,7 +185,7 @@ theorem romU64_spec (n : Nat) (s₀ : St) (i : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ldc] <;>
-      finish [u64W]
+      finish [u64W, u64OK]
 
 include hp in
 /-- `rom_u64` with its bounds check (the decoder direction needs the bytes inside the ROM). -/
@@ -506,7 +521,8 @@ def nmNumK (q : Word) : Option (Word × Mem) → Option (Word × Word × Mem)
 def nmRecK (t : Word) : Option (Word × Word × Mem) → Option (Word × Word × Mem)
   | none => none
   | some (h, q, m₁) =>
-    if t = 1 then nmStrK h q (u64W rom q) (romPutW rom m₁ (q + 8) (u64W rom q))
+    if ¬ u64OK rom q then none
+    else if t = 1 then nmStrK h q (u64W rom q) (romPutW rom m₁ (q + 8) (u64W rom q))
     else if t = 2 then nmNumK q (nninternW m₁ h (u64W rom q))
     else none
 
@@ -556,11 +572,11 @@ theorem nmStr2K_some (hh : ¬ 4294967296 ≤ h') : nmStr2K q l (some (h', m₃))
   simp [nmStr2K, hh]
 theorem nmNumK_some (hh : ¬ 4294967296 ≤ h') : nmNumK q (some (h', m₂)) = some (h', q + 8, m₂) := by
   simp [nmNumK, hh]
-theorem nmRecK_str (ht : t = 1) :
+theorem nmRecK_str (ht : t = 1) (hu : u64OK rom q) :
     nmRecK rom t (some (h, q, m₁)) = nmStrK h q (u64W rom q) (romPutW rom m₁ (q + 8) (u64W rom q)) := by
-  simp [nmRecK, ht]
-theorem nmRecK_num (ht : t = 2) :
-    nmRecK rom t (some (h, q, m₁)) = nmNumK q (nninternW m₁ h (u64W rom q)) := by simp [nmRecK, ht]
+  simp [nmRecK, ht, hu]
+theorem nmRecK_num (ht : t = 2) (hu : u64OK rom q) :
+    nmRecK rom t (some (h, q, m₁)) = nmNumK q (nninternW m₁ h (u64W rom q)) := by simp [nmRecK, ht, hu]
 theorem romPutW_ok (hok : romPutOK rom m (q + 8) l) :
     romPutW rom m (q + 8) l = some (m.top, (rputW rom m m.top (q + 8) l 0).set64 CTL 0 (m.top + l)) := by
   simp only [romPutW]; rw [if_pos hok]
@@ -701,7 +717,7 @@ theorem romNameW_ok (x : ConLeche.Name) (hx : nameFits x = true) :
     | none => rw [hP] at hW; simp [nmRecK] at hW
     | some r =>
     obtain ⟨h₁, q₁, m₁⟩ := r
-    rw [hP, h0, nmRecK_str rom _ _ _ _ rfl] at hW
+    rw [hP, h0] at hW
     obtain ⟨ok1, hR1, res1, hlt1, hq1, hf1⟩ := ih hx.1 n m a (pos + 1) _ h₁ q₁ m₁ hA hd1 hP
     have hp1 := drop_pos rom hr pos _ rest hd 1 (by simp [encName])
     simp only [UInt64.ofNat_one] at hp1
@@ -709,6 +725,7 @@ theorem romNameW_ok (x : ConLeche.Name) (hx : nameFits x = true) :
       have := drop_shift rom hr (pos + 1) (encName pre) (strB str) rest (by rw [hd1, List.append_assoc])
         q₁ hq1
       rw [this, strB, List.append_assoc]
+    rw [nmRecK_str rom _ _ _ _ rfl (u64OK_of_drop rom _ _ _ hdq hr)] at hW
     have hl := u64W_of_drop rom q₁ _ _ hdq (by omega) hr
     have hlen := drop_len rom _ _ _ hd (by simp [encName])
     simp only [encName, strB, List.length_cons, List.length_append] at hlen
@@ -770,10 +787,11 @@ theorem romNameW_ok (x : ConLeche.Name) (hx : nameFits x = true) :
     | none => rw [hP] at hW; simp [nmRecK] at hW
     | some r =>
     obtain ⟨h₁, q₁, m₁⟩ := r
-    rw [hP, h0, nmRecK_num rom _ _ _ _ rfl] at hW
+    rw [hP, h0] at hW
     obtain ⟨ok1, hR1, res1, hlt1, hq1, hf1⟩ := ih hx.1 n m a (pos + 1) _ h₁ q₁ m₁ hA hd1 hP
     have hdq : rom.drop q₁.toNat = u64B k ++ rest :=
       drop_shift rom hr (pos + 1) (encName pre) (u64B k) rest (by rw [hd1, List.append_assoc]) q₁ hq1
+    rw [nmRecK_num rom _ _ _ _ rfl (u64OK_of_drop rom _ _ _ hdq hr)] at hW
     have hl := u64W_of_drop rom q₁ _ _ hdq hx.2 hr
     have hlen := drop_len rom _ _ _ hd (by simp [encName])
     have hp1 := drop_pos rom hr pos _ rest hd 1 (by simp [encName])

@@ -70,7 +70,7 @@ open L.Arena L.Ind
 /-- `rom_u64(i)` over `PB`. -/
 -- con-ron: none — the ROM reader (L has constant bytes where the twin has con-leche values)
 def romU64PB : FunDecl := lfn (i) locals (x) {
-  if len(PB.u8) < i + 8 { abort };
+  if len(PB.u8) < i + 8 || i + 8 < i { abort };
   x := PB.u8[i] + PB.u8[i + 1] * 256 + PB.u8[i + 2] * 65536 + PB.u8[i + 3] * 16777216 +
     PB.u8[i + 4] * 4294967296 + PB.u8[i + 5] * 1099511627776 +
     PB.u8[i + 6] * 281474976710656 + PB.u8[i + 7] * 72057594037927936;
@@ -186,9 +186,7 @@ def romPinSetsL : FunDecl := lfn () locals (o, l, q) {
 }
 
 /-- `intern_all_pins()` over the buffer: the memo reset, the startup walk's items at
-`allPinsOff`, then the variant list right after them, which must end inside the buffer (the
-readers' models read `255` past the end, which is no tag, but a trailing number could lie past
-it). -/
+`allPinsOff`, then the variant list right after them. -/
 -- con-ron: ConRon/Arena/Checker.lean:309-339 ConRon.Arena.internAllPins
 @[l_impl ConRon.Arena.internAllPins]
 def internAllPinsPB : FunDecl := lfn () locals (q, z) {
@@ -196,7 +194,6 @@ def internAllPinsPB : FunDecl := lfn () locals (q, z) {
   z := call rset_clear();
   q := call rom_items(⟪allPinsOff⟫);
   q := call intern_pin_sets(q);
-  if len(PB.u8) < q { abort };
   return 0
 }
 

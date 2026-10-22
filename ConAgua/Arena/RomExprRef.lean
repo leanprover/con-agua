@@ -522,11 +522,11 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     cases n with
     | zero => simp [romLeafW] at hW
     | succ n =>
-    rw [romLeafW_bvar rom n mem pos 0 rfl] at hW
     have hd1 : rom.drop (pos + 1).toNat = u64B i ++ rest := by
       have := drop_shift rom hr pos [0] (u64B i) rest (by simpa using hd)
         (pos + 1) (drop_pos rom hr pos _ rest hd 1 (by simp))
       simpa using this
+    rw [romLeafW_bvar rom n mem pos 0 rfl (u64OK_of_drop rom _ _ _ hd1 hr)] at hW
     rw [u64W_of_drop rom (pos + 1) _ _ hd1 he hr] at hW
     obtain ⟨hI, hlt, rfl⟩ := exLeafK_inv hW
     obtain ⟨ok, hR, res⟩ := internBVar_D mem a hA _ h mem' hI
@@ -638,11 +638,11 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     cases n with
     | zero => simp [romLeafW] at hW
     | succ n =>
-    rw [romLeafW_lit rom n mem pos 3 (by simp) (by simp) (by simp) rfl] at hW
     have hd1 : rom.drop (pos + 1).toNat = u64B k ++ rest := by
       have := drop_shift rom hr pos [3] (u64B k) rest (by simpa using hd)
         (pos + 1) (drop_pos rom hr pos _ rest hd 1 (by simp))
       simpa using this
+    rw [romLeafW_lit rom n mem pos 3 (by simp) (by simp) (by simp) rfl (u64OK_of_drop rom _ _ _ hd1 hr)] at hW
     rw [u64W_of_drop rom (pos + 1) _ _ hd1 he hr] at hW
     obtain ⟨hI, hlt, rfl⟩ := exLeafK_inv hW
     have hkN : (UInt64.ofNat k).toNat = k := by rw [UInt64.toNat_ofNat']; exact Nat.mod_eq_of_lt he
@@ -952,11 +952,11 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     cases n with
     | zero => simp [romOneW] at hW
     | succ n =>
-    rw [romOneW_fvar rom n mem pos 4 rfl] at hW
     have hd1 : rom.drop (pos + 1).toNat = u64B i ++ ((encExprM seen ty).1 ++ rest) := by
       have := drop_shift rom hr pos [4] (u64B i ++ (encExprM seen ty).1) rest (by simpa using hd)
         (pos + 1) (drop_pos rom hr pos _ rest hd 1 (by simp))
       simpa using this
+    rw [romOneW_fvar rom n mem pos 4 rfl (u64OK_of_drop rom _ _ _ hd1 hr)] at hW
     rw [u64W_of_drop rom (pos + 1) _ _ hd1 he.1 hr] at hW
     have hp1 := drop_pos rom hr pos _ rest hd 1 (by simp)
     simp only [UInt64.ofNat_one] at hp1
@@ -1014,10 +1014,11 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     | none => rw [hN] at hW; simp [exProjK] at hW
     | some r =>
     obtain ⟨hn, q₁, m₁⟩ := r
-    rw [hN, exProjK_some] at hW
+    rw [hN] at hW
     obtain ⟨ok1, hR1, res1, hlt1, hq1, hf1⟩ := romNameW_ok rom hr nm he.1.1 n mem a (pos + 1) _ hn q₁ m₁ hA hd1 hN
     have hdq : rom.drop q₁.toNat = u64B i ++ ((encExprM seen sub).1 ++ rest) :=
       drop_shift rom hr (pos + 1) (encName nm) _ _ (by rw [hd1, List.append_assoc]) q₁ hq1
+    rw [exProjK_some (hu := u64OK_of_drop rom _ _ _ hdq hr)] at hW
     rw [u64W_of_drop rom q₁ _ _ hdq he.1.2 hr] at hW
     have hlenq := drop_len rom _ _ _ hdq (by simp [u64B])
     simp only [RomOK] at hr

@@ -212,7 +212,8 @@ def romExRef : FunDecl := lfn (pos) locals (k, h) {
 
 /-- The model of `rom_ex_ref`. -/
 def romRefW (m : Mem) (pos : Word) : Option (Word × Word × Mem) :=
-  if memoOk m (u64W rom (pos + 1)) then some (rdW (m.arr64 RMEMO) (u64W rom (pos + 1)), pos + 9, m)
+  if u64OK rom (pos + 1) ∧ memoOk m (u64W rom (pos + 1)) then
+    some (rdW (m.arr64 RMEMO) (u64W rom (pos + 1)), pos + 9, m)
   else none
 
 /-- The memory after the limb `k` went to the pool top. -/
@@ -398,7 +399,8 @@ def exTwoK (t a : Word) : Option (Word × Word × Mem) → Option (Word × Word 
 def romLeafW : Nat → Mem → Word → Word → Option (Word × Word × Mem)
   | 0, _, _, _ => none
   | n + 1, m, pos, t =>
-    if t = 0 then exLeafK (pos + 9) (binternW m (u64W rom (pos + 1)))
+    if (t = 0 ∨ t = 3) ∧ ¬ u64OK rom (pos + 1) then none
+    else if t = 0 then exLeafK (pos + 9) (binternW m (u64W rom (pos + 1)))
     else if t = 1 then exSortK (romLevelW rom n m (pos + 1))
     else if t = 2 then exConst2KN rom n (romNameW rom n m (pos + 1))
     else if t = 3 then exLeafK (pos + 9) (romLitW m (u64W rom (pos + 1)))
@@ -419,7 +421,7 @@ def romExprW : Nat → Mem → Word → Option (Word × Word × Mem)
 def romOneW : Nat → Mem → Word → Word → Option (Word × Word × Mem)
   | 0, _, _, _ => none
   | n + 1, m, pos, t =>
-    if t = 4 then exFvarK (u64W rom (pos + 1)) (romExprW n m (pos + 9))
+    if t = 4 then (if u64OK rom (pos + 1) then exFvarK (u64W rom (pos + 1)) (romExprW n m (pos + 9)) else none)
     else if t = 10 then exProjK n (romNameW rom n m (pos + 1))
     else none
 
@@ -436,7 +438,7 @@ def exFvarK (k : Word) : Option (Word × Word × Mem) → Option (Word × Word �
 /-- After a projection's name. -/
 def exProjK (n : Nat) : Option (Word × Word × Mem) → Option (Word × Word × Mem)
   | none => none
-  | some (a, q, m₁) => exProj2K a (u64W rom q) (romExprW n m₁ (q + 8))
+  | some (a, q, m₁) => if u64OK rom q then exProj2K a (u64W rom q) (romExprW n m₁ (q + 8)) else none
 
 /-- After a projection's structure. -/
 def exProj2K (a k : Word) : Option (Word × Word × Mem) → Option (Word × Word × Mem)
@@ -480,20 +482,23 @@ theorem exTwoK_forall (ht : t = 7) : exTwoK t a (some (b, q, m)) = exNodeK q (mk
   simp [exTwoK, ht]
 theorem exConst2KN_some : exConst2KN rom n (some (a, q, m)) = exConst2K a (romLevelsW rom n m q) := by
   simp [exConst2KN]
-theorem romLeafW_bvar (ht : t = 0) :
+theorem romLeafW_bvar (ht : t = 0) (hu : u64OK rom (pos + 1)) :
     romLeafW rom (n + 1) m pos t = exLeafK (pos + 9) (binternW m (u64W rom (pos + 1))) := by
-  simp [romLeafW, ht]
+  simp [romLeafW, ht, hu]
 theorem romLeafW_sort (ht0 : t ≠ 0) (ht : t = 1) :
     romLeafW rom (n + 1) m pos t = exSortK (romLevelW rom n m (pos + 1)) := by simp [romLeafW, ht0, ht]
+theorem romLeafW_u64 (ht : t = 0 ∨ t = 3) (hu : ¬ u64OK rom (pos + 1)) :
+    romLeafW rom (n + 1) m pos t = none := by simp [romLeafW, ht, hu]
 theorem romLeafW_const (ht0 : t ≠ 0) (ht1 : t ≠ 1) (ht : t = 2) :
     romLeafW rom (n + 1) m pos t = exConst2KN rom n (romNameW rom n m (pos + 1)) := by
   simp [romLeafW, ht0, ht1, ht]
-theorem romLeafW_lit (ht0 : t ≠ 0) (ht1 : t ≠ 1) (ht2 : t ≠ 2) (ht : t = 3) :
+theorem romLeafW_lit (ht0 : t ≠ 0) (ht1 : t ≠ 1) (ht2 : t ≠ 2) (ht : t = 3) (hu : u64OK rom (pos + 1)) :
     romLeafW rom (n + 1) m pos t = exLeafK (pos + 9) (romLitW m (u64W rom (pos + 1))) := by
-  simp [romLeafW, ht0, ht1, ht2, ht]
+  simp [romLeafW, ht0, ht1, ht2, ht, hu]
 theorem exFvarK_some : exFvarK rom k (some (a, q, m)) = exNodeK q (fvinternW m k a) := by simp [exFvarK]
-theorem exProjK_some : exProjK rom n (some (a, q, m)) = exProj2K rom a (u64W rom q) (romExprW rom n m (q + 8)) := by
-  simp [exProjK]
+theorem exProjK_some (hu : u64OK rom q) :
+    exProjK rom n (some (a, q, m)) = exProj2K rom a (u64W rom q) (romExprW rom n m (q + 8)) := by
+  simp [exProjK, hu]
 theorem exProj2K_some : exProj2K rom a k (some (b, q, m)) = exNodeK q (mkProjW m a k b) := by simp [exProj2K]
 theorem exOneK_let (ht : t = 8) : exOneK rom n t (some (a, q, m)) = exLet2K rom n a (romExprW rom n m q) := by
   simp [exOneK, ht]
@@ -518,9 +523,9 @@ theorem romExprW_two (h9 : romB rom pos ≠ 9) (h2 : ¬ (romB rom pos = 0 ∨ ro
     (h4 : ¬ (romB rom pos = 4 ∨ romB rom pos = 10)) :
     romExprW rom (n + 1) m pos = romTwoW rom n m pos (romB rom pos) := by
   simp only [romExprW, h9, h2, h4, ite_false]
-theorem romOneW_fvar (ht : t = 4) :
+theorem romOneW_fvar (ht : t = 4) (hu : u64OK rom (pos + 1)) :
     romOneW rom (n + 1) m pos t = exFvarK rom (u64W rom (pos + 1)) (romExprW rom n m (pos + 9)) := by
-  simp [romOneW, ht]
+  simp [romOneW, ht, hu]
 theorem romOneW_proj (ht4 : t ≠ 4) (ht : t = 10) :
     romOneW rom (n + 1) m pos t = exProjK rom n (romNameW rom n m (pos + 1)) := by
   simp [romOneW, ht4, ht]
@@ -529,8 +534,9 @@ theorem romTwoW_eq : romTwoW rom (n + 1) m pos t = exOneK rom n t (romExprW rom 
 end arms
 
 attribute [arena_grind =] exLeafK_some exSortK_some exConst2K_some exTwoK_app exTwoK_lam exTwoK_forall
-  exConst2KN_some exFvarK_some exProjK_some exProj2K_some exOneK_let exOneK_two exLet2K_some exLet3K_some
+  exConst2KN_some exFvarK_some exProj2K_some exOneK_let exOneK_two exLet2K_some exLet3K_some
 grind_pattern [arena_grind] exNodeK_some => exNodeK q (some (h, m))
+grind_pattern [arena_grind] exProjK_some => exProjK rom n (some (a, q, m))
 grind_pattern [arena_grind] romExprW_ref => romExprW rom (n + 1) m pos
 grind_pattern [arena_grind] romExprW_leaf => romExprW rom (n + 1) m pos
 grind_pattern [arena_grind] romLeafW_bvar => romLeafW rom (n + 1) m pos t
@@ -638,9 +644,9 @@ theorem romExLeaf_specW (n : Nat) (s₀ : St) (pos t : Word) (hs : (s₀.mem.arr
           hL.rom_lit n] <;>
       finish [Keep.size]
 
-theorem romRefW_ok (m : Mem) (pos : Word) (h : memoOk m (u64W rom (pos + 1))) :
+theorem romRefW_ok (m : Mem) (pos : Word) (hu : u64OK rom (pos + 1)) (h : memoOk m (u64W rom (pos + 1))) :
     romRefW rom m pos = some (rdW (m.arr64 RMEMO) (u64W rom (pos + 1)), pos + 9, m) := by
-  simp only [romRefW]; rw [if_pos h]
+  simp only [romRefW]; rw [if_pos ⟨hu, h⟩]
 
 attribute [local irreducible] u64W memoOk in
 theorem romExRef_specW (n : Nat) (s₀ : St) (pos : Word) :
