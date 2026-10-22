@@ -8,8 +8,8 @@ One structure-like member (`ctoW_sim`) and the walk over the three lists (`ctbW_
 census theorem.
 
 **Hypotheses beyond the stage relation and the decodings** (each is the caller's):
-* `PosMR s₀.mem`: the walk memos well formed in the memory at hand (for `struct_proj_guards`'
-  `hb` memo); returned for the memory after.
+* `HbOK s₀.mem`: the `has_loose_bvar_b` memo well formed in the memory at hand (for
+  `struct_proj_guards`); returned for the memory after.
 * `2 ^ 31 + n ≤ coreWalkFuel` (the exec fuel; `structProjGuards_refines`' own bound).
 -/
 
@@ -72,9 +72,9 @@ theorem ctoW_sim {p : Prog} (hP : TabsProg p) (n : Nat) {dn : NIdx → Option Co
     {cA : IConstantVal} {nF : Nat} {sorts : List LIdx} (hn : 2 ^ 31 + n ≤ coreWalkFuel)
     (hS : StageR dn vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs) (hsrc : ShapeSrc m pp)
     (hms : DecB (fun m => decMS m ms.toNat) m msh) (hcs : PSlR decCN [(cA, nF)] co 1 m)
-    (hss : PSlR decIS [sorts] so 1 m) (hM : PosMR m) :
+    (hss : PSlR decIS [sorts] so 1 m) (hM : HbOK m) :
     Sim (ctoW p n m pp ms co so vis) (tabOne fe bs msh cA nF sorts) a
-      (fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m m' ∧ PosMR m') := by
+      (fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m m' ∧ HbOK m') := by
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   -- the constructor `[cv, nF]`
   obtain ⟨pc, y, ys, hy, hw0, hpcb, hdc, -⟩ := partsPSl_cons hcs (by decide)
@@ -163,7 +163,7 @@ theorem ctoW_sim {p : Prog} (hP : TabsProg p) (n : Nat) {dn : NIdx → Option Co
   obtain ⟨s2, rfl, -, hW2, -⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
     (blockShapeLps_spec2 p hP.tbl.ha hP.erCopy hP.erToIw hP.lps (j + 2) _ pp) h2
   obtain ⟨hS2, hg2, hl2, hlb2⟩ := lpsW_ok' hW2 hS1 (hq.grow (decBS_mono _) hg1)
-  have hM2 : PosMR s2.mem := hM1.fr (lpsW_mfr hW2)
+  have hM2 : HbOK s2.mem := hM1.fr (lpsW_mfr hW2)
   have hg12 := hg1.trans hg2
   -- `check_struct_proj_table`
   rw [ctoK2_some]
@@ -199,9 +199,9 @@ theorem ctbW_sim {p : Prog} (hP : TabsProg p) (dn : NIdx → Option ConLeche.Nam
     ∀ (m : Mem) (a : AState) (vis : Word) (fe : IFEnv) (mo ml co cl so sl : Word) (mss : List MemberShape)
       (css : List (List (IConstantVal × Nat))) (sss : List (List (List LIdx))),
     2 ^ 31 + n ≤ coreWalkFuel → StageR dn vis fe m a → DecB (fun m => decBS m pp.toNat) m bs →
-    ShapeSrc m pp → PSlR decMS mss mo ml m → PSlR decCNS css co cl m → PSlR decISS sss so sl m → PosMR m →
+    ShapeSrc m pp → PSlR decMS mss mo ml m → PSlR decCNS css co cl m → PSlR decISS sss so sl m → HbOK m →
     Sim (ctbW p n m pp mo ml co cl so sl vis) (ConRon.Arena.checkBlockTables bs mss css sss fe) a
-      (fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m m' ∧ PosMR m') := by
+      (fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m m' ∧ HbOK m') := by
   induction n with
   | zero => intros; rw [ctbW_zero]; exact Sim.of_none
   | succ n ih =>
@@ -266,7 +266,7 @@ theorem ctbW_sim {p : Prog} (hP : TabsProg p) (dn : NIdx → Option ConLeche.Nam
       (by rw [hwm, hwn, (hni0).mpr e3]), cbt_one bs msh rest css' sss' fe cA nF sorts e3, hwm, hwc, hws, hwo1, hwo2]
     have hcall : Sim (callW p n "check_block_tables_one" [pp, UInt64.ofNat msp, o1, o2, vis] m)
         (tabOne fe bs msh cA nF sorts) a
-        (fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m m' ∧ PosMR m') := by
+        (fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m m' ∧ HbOK m') := by
       cases n with
       | zero => rw [callW_zero]; exact Sim.of_none
       | succ k =>
@@ -304,12 +304,12 @@ theorem checkBlockTables_refines (p : Prog) (hP : TabsProg p) (n : Nat) (s₀ : 
     (sss : List (List (List LIdx))) (hn : 2 ^ 31 + n ≤ coreWalkFuel) (hS : StageR dn vis fe s₀.mem a₀)
     (hq : DecB (fun m => decBS m pp.toNat) s₀.mem bs) (hsrc : ShapeSrc s₀.mem pp)
     (hmss : PSlR decMS mss mo ml s₀.mem) (hcss : PSlR decCNS css co cl s₀.mem)
-    (hsss : PSlR decISS sss so sl s₀.mem) (hM : PosMR s₀.mem) :
+    (hsss : PSlR decISS sss so sl s₀.mem) (hM : HbOK s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_block_tables" [pp, mo, ml, co, cl, so, sl, vis]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.checkBlockTables bs mss css sss fe) a₀ ∧
       StageR dn (r.headD 0) (AM.res (ConRon.Arena.checkBlockTables bs mss css sss fe) a₀) s'.mem
         (AM.st (ConRon.Arena.checkBlockTables bs mss css sss fe) a₀) ∧
-      IWGrow s₀.mem s'.mem ∧ PosMR s'.mem; ⊤⦄ :=
+      IWGrow s₀.mem s'.mem ∧ HbOK s'.mem; ⊤⦄ :=
   triple_post (ctb_spec p hP.tabs n s₀ pp mo ml co cl so sl vis) fun _ _ ⟨hl, hm⟩ =>
     let ⟨hok, hQ⟩ := Sim.run (ctbW_sim hP dn pp bs n s₀.mem a₀ vis fe mo ml co cl so sl mss css sss hn hS hq
       hsrc hmss hcss hsss hM) hm

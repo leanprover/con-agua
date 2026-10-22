@@ -52,7 +52,7 @@ theorem decBPass_mono (fe : IFEnv) (q : Nat) : OMono (fun m => decBPass fe m q) 
     | apply OMono.iwN
     | apply OMono.decHL
     | apply OMono.decCVp
-    | apply OMono.decKL
+    | apply decKL_mono
     | apply OMono.decAt
     | apply OMono.decPL
     | apply decBS_mono
@@ -75,20 +75,45 @@ def bpMem (m : Mem) (q fe1 cO cL p1 aO aL sO sL kO kL nO nL pO pL rd mO mL tO tL
     ).set64 IW (q + 12) pO).set64 IW (q + 13) pL).set64 IW (q + 14) rd).set64 IW (q + 15) mO
     ).set64 IW (q + 16) mL).set64 IW (q + 17) tO).set64 IW (q + 18) tL
 
-/-- After the allocation: the record. -/
-def icpK9 (r1 r3 r5 r6 : List Word) (pO pL tO tL : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+/-! ### `check_block_pass_rec` -/
+
+def icprK : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (rq, m) => some ([rq.headD 0], bpMem m (rq.headD 0) (r1.headD 0) (r1.tail.headD 0)
-      (r1.tail.tail.headD 0) (r1.tail.tail.tail.headD 0) (r3.headD 0) (r3.tail.headD 0)
-      (r3.tail.tail.headD 0) (r3.tail.tail.tail.headD 0) (r6.headD 0) (r6.tail.headD 0)
-      (r6.tail.tail.headD 0) (r6.tail.tail.tail.headD 0) pO pL (r5.headD 0) (r5.tail.headD 0)
-      (r5.tail.tail.headD 0) tO tL)
-/-- After `nest_seeds`: the allocation. -/
+  | some (r, m) => some ([r.headD 0], m)
+
+/-- **The model of `check_block_pass_rec(…)`** (body fuel `n`): the allocation, then the writes. -/
+def icprW (p : Prog) (n : Nat) (m : Mem) (fe1 cO cL p1 aO aL sO sL kO kL nO nL pO pL rd mO mL tO tL : Word) :
+    Option (List Word × Mem) :=
+  match callW p n "iw_alloc" [19] m with
+  | none => none
+  | some (rq, m1) => some ([rq.headD 0], bpMem m1 (rq.headD 0) fe1 cO cL p1 aO aL sO sL kO kL nO nL pO pL rd
+      mO mL tO tL)
+
+set_option maxHeartbeats 1600000 in
+theorem icpr_spec (p : Prog) (hp : p.lookup "check_block_pass_rec" = some checkBlockPassRec) (n : Nat)
+    (s₀ : St) (fe1 cO cL p1 aO aL sO sL kO kL nO nL pO pL rd mO mL tO tL : Word) :
+    ⦃fun st => st = s₀⦄ invoke p (exec p (n + 1)) "check_block_pass_rec"
+      [fe1, cO, cL, p1, aO, aL, sO, sL, kO, kL, nO, nL, pO, pL, rd, mO, mL, tO, tL]
+    ⦃fun r s' => LocEq s' s₀ ∧ icprW p n s₀.mem fe1 cO cL p1 aO aL sO sL kO kL nO nL pO pL rd mO mL tO tL =
+      some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, checkBlockPassRec]
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, st64, callW_spec p n "iw_alloc"] <;>
+    finish (gen := 20) [icprW, bpMem]
+
+/-! ### `check_block_pass` -/
+
+/-- After `nest_seeds`: the record. -/
 def icpK8 (p : Prog) (n : Nat) (r1 r3 r4 r5 r6 : List Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r8, m) => icpK9 r1 r3 r5 r6 (rdW (m.arr64 IW) (r4.headD 0 + 7)) (rdW (m.arr64 IW) (r4.headD 0 + 8))
-      (rdW (m.arr64 IW) (r8.headD 0 + 4)) (rdW (m.arr64 IW) (r8.headD 0 + 5)) (callW p n "iw_alloc" [19] m)
+  | some (r8, m) => icprK (callW p n "check_block_pass_rec"
+      [r1.headD 0, r1.tail.headD 0, r1.tail.tail.headD 0, r1.tail.tail.tail.headD 0, r3.headD 0,
+        r3.tail.headD 0, r3.tail.tail.headD 0, r3.tail.tail.tail.headD 0, r6.headD 0, r6.tail.headD 0,
+        r6.tail.tail.headD 0, r6.tail.tail.tail.headD 0, rdW (m.arr64 IW) (r4.headD 0 + 7),
+        rdW (m.arr64 IW) (r4.headD 0 + 8), r5.headD 0, r5.tail.headD 0, r5.tail.tail.headD 0,
+        rdW (m.arr64 IW) (r8.headD 0 + 4), rdW (m.arr64 IW) (r8.headD 0 + 5)] m)
 /-- After `class_seeds`: `nest_seeds`. -/
 def icpK7 (p : Prog) (n : Nat) (r1 r3 r4 r5 r6 : List Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
@@ -135,15 +160,14 @@ def icpW (p : Prog) (n : Nat) (m : Mem) (vis p0 isRec : Word) : Option (List Wor
   icpK1 p n (callW p n "check_block_inds" [vis, p0, isRec] m)
 
 section arms
-variable (p : Prog) (n : Nat) (m : Mem) (r r1 r3 r4 r5 r6 r8 : List Word) (pO pL tO tL : Word)
-theorem icpK9_some : icpK9 r1 r3 r5 r6 pO pL tO tL (some (r, m)) = some ([r.headD 0], bpMem m (r.headD 0)
-      (r1.headD 0) (r1.tail.headD 0) (r1.tail.tail.headD 0) (r1.tail.tail.tail.headD 0) (r3.headD 0)
-      (r3.tail.headD 0) (r3.tail.tail.headD 0) (r3.tail.tail.tail.headD 0) (r6.headD 0) (r6.tail.headD 0)
-      (r6.tail.tail.headD 0) (r6.tail.tail.tail.headD 0) pO pL (r5.headD 0) (r5.tail.headD 0)
-      (r5.tail.tail.headD 0) tO tL) := rfl
-theorem icpK8_some : icpK8 p n r1 r3 r4 r5 r6 (some (r, m)) =
-    icpK9 r1 r3 r5 r6 (rdW (m.arr64 IW) (r4.headD 0 + 7)) (rdW (m.arr64 IW) (r4.headD 0 + 8))
-      (rdW (m.arr64 IW) (r.headD 0 + 4)) (rdW (m.arr64 IW) (r.headD 0 + 5)) (callW p n "iw_alloc" [19] m) := rfl
+variable (p : Prog) (n : Nat) (m : Mem) (r r1 r3 r4 r5 r6 r8 : List Word)
+theorem icprK_some : icprK (some (r, m)) = some ([r.headD 0], m) := rfl
+theorem icpK8_some : icpK8 p n r1 r3 r4 r5 r6 (some (r, m)) = icprK (callW p n "check_block_pass_rec"
+      [r1.headD 0, r1.tail.headD 0, r1.tail.tail.headD 0, r1.tail.tail.tail.headD 0, r3.headD 0,
+        r3.tail.headD 0, r3.tail.tail.headD 0, r3.tail.tail.tail.headD 0, r6.headD 0, r6.tail.headD 0,
+        r6.tail.tail.headD 0, r6.tail.tail.tail.headD 0, rdW (m.arr64 IW) (r4.headD 0 + 7),
+        rdW (m.arr64 IW) (r4.headD 0 + 8), r5.headD 0, r5.tail.headD 0, r5.tail.tail.headD 0,
+        rdW (m.arr64 IW) (r.headD 0 + 4), rdW (m.arr64 IW) (r.headD 0 + 5)] m) := rfl
 theorem icpK7_some : icpK7 p n r1 r3 r4 r5 r6 (some (r, m)) = icpK8 p n r1 r3 r4 r5 r6 (callW p n "nest_seeds"
       [r1.headD 0, r4.headD 0, r.headD 0, r.tail.headD 0, r6.tail.tail.tail.tail.headD 0] m) := rfl
 theorem icpK6_some : icpK6 p n r1 r3 r4 r5 (some (r, m)) = icpK7 p n r1 r3 r4 r5 r (callW p n "class_seeds"
@@ -161,10 +185,10 @@ theorem icpK2_some : icpK2 p n r1 (some (r, m)) = icpK3 p n r1 (callW p n "check
         rdW (m.arr64 IW) (r1.tail.tail.tail.headD 0 + 1), r1.tail.headD 0, r1.tail.tail.headD 0] m) := rfl
 theorem icpK1_some : icpK1 p n (some (r, m)) = icpK2 p n r (callW p n "flush_caches" [] m) := rfl
 end arms
-attribute [ind_grind] icpK9_some icpK8_some icpK7_some icpK6_some icpK5_some icpK4_some icpK3_some
+attribute [ind_grind] icprK_some icpK8_some icpK7_some icpK6_some icpK5_some icpK4_some icpK3_some
   icpK2_some icpK1_some
 
-set_option maxHeartbeats 4000000 in
+set_option maxHeartbeats 1600000 in
 theorem icp_spec (p : Prog) (hp : p.lookup "check_block_pass" = some checkBlockPass) (n : Nat) (s₀ : St)
     (vis p0 isRec : Word) :
     ⦃fun st => st = s₀⦄ invoke p (exec p (n + 1)) "check_block_pass" [vis, p0, isRec]
@@ -172,11 +196,11 @@ theorem icp_spec (p : Prog) (hp : p.lookup "check_block_pass" = some checkBlockP
   rw [invoke_eq _ hp]
   simp only [callFn, checkBlockPass]
   sym only [lang_grind, arena_grind, ind_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "check_block_inds", callW_spec p n "flush_caches", callW_spec p n "check_block_ctors",
       callW_spec p n "block_nest_ctx", callW_spec p n "check_block_classes",
       callW_spec p n "check_block_positivity", callW_spec p n "class_seeds", callW_spec p n "nest_seeds",
-      callW_spec p n "iw_alloc"] <;>
-    finish (gen := 40) (instances := 20000) [icpW, bpMem, rdW_eq]
+      callW_spec p n "check_block_pass_rec"] <;>
+    finish (gen := 40) (instances := 20000) [icpW, rdW_eq]
 
 end L.Ind

@@ -5,10 +5,9 @@ import ConAgua.Arena.IndInstallSpec24
 `checkBlockTables`
 
 The table loop calls `struct_proj_guards` once per structure-like member, and each call needs the
-`has_loose_bvar_b` memo well formed in the memory at hand (`spgW_ok`'s `hbMR`). The memos
-(`PosMR`, `IndPosMemo.lean`) are carried across the loop: `struct_proj_guards` writes only the `hb`
-memo (`spgW_hbfr`) and leaves it well formed (`spgW_hb`); the projection table's install writes
-outside the memo region (`tblW_okM`, below in part 26).
+`has_loose_bvar_b` memo well formed in the memory at hand (`spgW_ok`'s `hbMR`). It is carried
+across the loop: `struct_proj_guards` leaves it well formed (`spgW_hb`); the projection table's
+install writes outside the memo region (`tblW_okM`, part 26, from the frames below).
 -/
 
 set_option linter.deprecated false
@@ -47,31 +46,6 @@ theorem rowW_mfr : ∀ (n : Nat) (m m' : Mem) (uo ul so sl z i k : Word) (r : Li
   | n + 1, m, m', uo, ul, so, sl, z, i, k, r, h => by
     simp only [rowW, rowK1.eq_def, rowK2.eq_def, plK0.eq_def, plK3.eq_def] at h
     mfr_auto h [rowW_mfr n _ _ _ _ _ _ _ _ _ _, colW_mfr n _ _ _ _ _ _ _ _ _ _ _, allocW_mfr, consW_mfr]
-
-theorem usg0_hbfr {k : Nat} {m m' : Mem} {cty nP j r : Word} (h : usg0 k m cty nP j = some (r, m')) :
-    HbFr m m' := by
-  cases k with
-  | zero => simp [usg0] at h
-  | succ k =>
-    simp only [usg0, usgW, usgK1.eq_def] at h
-    mfr_auto h [MFr.ofStub, hbGoW_mfr _ _ _ _ _ _]
-
-theorem ulW_hbfr : ∀ (k : Nat) (m m' : Mem) (cty nP n base : Word) (r : List Word),
-    ulW k m cty nP n base = some (r, m') → HbFr m m'
-  | 0, _, _, _, _, _, _, _, h => by simp [ulW] at h
-  | k + 1, m, m', cty, nP, n, base, r, h => by
-    simp only [ulW, ulK0.eq_def, ulK1.eq_def, ulK2.eq_def, ulK3.eq_def] at h
-    mfr_auto h [ulW_hbfr k _ _ _ _ _ _ _, usg0_hbfr, allocW_mfr, consW_mfr]
-
-theorem mclearHb_hbfr (m : Mem) : HbFr m (mclearG hbSch m) :=
-  ⟨[], _, mclearG_frame hbSch m, by simp, by intro x hx; simp [hbSch] at hx; rcases hx with rfl | rfl <;> simp⟩
-
-/-- **`struct_proj_guards` writes only the `hb` memo.** -/
-theorem spgW_hbfr {n : Nat} {m m' : Mem} {cty nP nF so sl : Word} {r : List Word}
-    (h : spgW n m cty nP nF so sl = some (r, m')) : HbFr m m' := by
-  simp only [spgW, spgK1.eq_def, spgK2.eq_def, spgK3.eq_def] at h
-  refine MFr.trans (mclearHb_hbfr m) ?_
-  mfr_auto h [ulW_hbfr _ _ _ _ _ _ _ _, rowW_mfr _ _ _ _ _ _ _ _ _ _ _]
 
 end L.Ind
 

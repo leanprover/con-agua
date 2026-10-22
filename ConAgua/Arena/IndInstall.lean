@@ -635,15 +635,36 @@ def consBlockCtors : FunDecl := lfn (nP, caOff, caLen, vis) locals (mp, v1, v2) 
   return v2
 }
 
+/-- `check_block_pass_rec(fe1, cvTas.off, cvTas.len, p, ctorsAs.off, ctorsAs.len, sortsss.off,
+sortsss.len, kinds.off, kinds.len, nfs.off, nfs.len, params.off, params.len, rd, cls.off, cls.len,
+tbl.off, tbl.len)`: the 19-word `BlockPass` record (layout in `IndIface`) in a fresh `IW` block. -/
+-- con-ron: ConRon/Arena/Inductives/BlockTail.lean:53-74 ConRon.Arena.checkBlockPass
+@[l_impl ConRon.Arena.checkBlockPass]
+def checkBlockPassRec : FunDecl := lfn
+    (fe1, cO, cL, p1, aO, aL, sO, sL, kO, kL, nO, nL, pO, pL, rd, mO, mL, tO, tL) locals (q) {
+  q := call iw_alloc(19);
+  IW.u64[q] := fe1;
+  IW.u64[q + 1] := cO; IW.u64[q + 2] := cL;
+  IW.u64[q + 3] := p1;
+  IW.u64[q + 4] := aO; IW.u64[q + 5] := aL;
+  IW.u64[q + 6] := sO; IW.u64[q + 7] := sL;
+  IW.u64[q + 8] := kO; IW.u64[q + 9] := kL;
+  IW.u64[q + 10] := nO; IW.u64[q + 11] := nL;
+  IW.u64[q + 12] := pO; IW.u64[q + 13] := pL;
+  IW.u64[q + 14] := rd;
+  IW.u64[q + 15] := mO; IW.u64[q + 16] := mL;
+  IW.u64[q + 17] := tO; IW.u64[q + 18] := tL;
+  return q
+}
+
 /-- `check_block_pass(vis, p0, is_rec)`: one pass over the formers, the constructors and the
-classes — returns a pointer to the 19-word `BlockPass` record (layout in `IndIface`; the words
-copied from the context and the positivity state are read before the allocation, so every write
-stores a value read before it). -/
+classes — returns a pointer to the 19-word `BlockPass` record (`check_block_pass_rec`; the words
+copied from the context and the positivity state are read before the record is allocated). -/
 -- con-ron: ConRon/Arena/Inductives/BlockTail.lean:53-74 ConRon.Arena.checkBlockPass
 @[l_impl ConRon.Arena.checkBlockPass]
 def checkBlockPass : FunDecl := lfn (vis, p0, isRec) locals
     (fe1, cvTasO, cvTasL, p1, u, ctorsAsO, ctorsAsL, sortsssO, sortsssL, ctx, holesO, holesL,
-     rd, msO, msL, kindsO, kindsL, nfsO, nfsL, nsPtr, seedsO, seedsL, ns2, q, pO, pL, tO, tL) {
+     rd, msO, msL, kindsO, kindsL, nfsO, nfsL, nsPtr, seedsO, seedsL, ns2, q) {
   (fe1, cvTasO, cvTasL, p1) := call check_block_inds(vis, p0, isRec);
   u := call flush_caches();
   (ctorsAsO, ctorsAsL, sortsssO, sortsssL) :=
@@ -653,20 +674,9 @@ def checkBlockPass : FunDecl := lfn (vis, p0, isRec) locals
   (kindsO, kindsL, nfsO, nfsL, nsPtr) := call check_block_positivity(fe1, p1, cvTasO, cvTasL, ctorsAsO, ctorsAsL);
   (seedsO, seedsL) := call class_seeds(ctx, holesO, holesL, msO, msL);
   ns2 := call nest_seeds(fe1, ctx, seedsO, seedsL, nsPtr);
-  pO := IW.u64[ctx + 7]; pL := IW.u64[ctx + 8];
-  tO := IW.u64[ns2 + 4]; tL := IW.u64[ns2 + 5];
-  q := call iw_alloc(19);
-  IW.u64[q] := fe1;
-  IW.u64[q + 1] := cvTasO; IW.u64[q + 2] := cvTasL;
-  IW.u64[q + 3] := p1;
-  IW.u64[q + 4] := ctorsAsO; IW.u64[q + 5] := ctorsAsL;
-  IW.u64[q + 6] := sortsssO; IW.u64[q + 7] := sortsssL;
-  IW.u64[q + 8] := kindsO; IW.u64[q + 9] := kindsL;
-  IW.u64[q + 10] := nfsO; IW.u64[q + 11] := nfsL;
-  IW.u64[q + 12] := pO; IW.u64[q + 13] := pL;
-  IW.u64[q + 14] := rd;
-  IW.u64[q + 15] := msO; IW.u64[q + 16] := msL;
-  IW.u64[q + 17] := tO; IW.u64[q + 18] := tL;
+  q := call check_block_pass_rec(fe1, cvTasO, cvTasL, p1, ctorsAsO, ctorsAsL, sortsssO, sortsssL,
+    kindsO, kindsL, nfsO, nfsL, IW.u64[ctx + 7], IW.u64[ctx + 8], rd, msO, msL,
+    IW.u64[ns2 + 4], IW.u64[ns2 + 5]);
   return q
 }
 
@@ -797,7 +807,8 @@ def indInstallFns : Prog :=
    ("check_block_positivity_split_go", checkBlockPositivitySplitGo),
    ("check_block_positivity", checkBlockPositivity),
    ("check_block_idx_sorts_one", checkBlockIdxSortsOne), ("check_block_idx_sorts", checkBlockIdxSorts),
-   ("cons_block_ctors", consBlockCtors), ("check_block_pass", checkBlockPass),
+   ("cons_block_ctors", consBlockCtors), ("check_block_pass_rec", checkBlockPassRec),
+   ("check_block_pass", checkBlockPass),
    ("check_block_rec", checkBlockRec), ("check_block_tables_one", checkBlockTablesOne),
    ("check_block_tables", checkBlockTables), ("check_block_tail", checkBlockTail),
    ("check_block", checkBlock)]

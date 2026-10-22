@@ -7,10 +7,10 @@ the relation
 `check_struct_proj_table` as a callee keeping the memos (`tblW_okM`: lane `indproofs2`'s
 `tblW_ok` with the memo frame threaded through; the frame of its last step, `env_push`, needs the
 table name a handle, which only the twin side of the proof provides), `struct_proj_guards` as a
-callee keeping them (`tabSimSpg`), then one member (`ctoW_sim`) and the loop (`ctbW_sim`).
+callee keeping its memo well formed (`tabSimSpg`), then one member (`ctoW_sim`) and the loop (`ctbW_sim`).
 
-**Hypotheses beyond the stage relation and the decodings**: `PosMR m` (the walk memos well formed
-in the memory at hand; `struct_proj_guards` needs its `hb` memo) — returned for the memory after;
+**Hypotheses beyond the stage relation and the decodings**: `HbOK m` (the `has_loose_bvar_b` memo
+well formed in the memory at hand; `struct_proj_guards` needs it) — returned for the memory after;
 the fuel bound `2 ^ 31 + n ≤ coreWalkFuel` (`structProjGuards_refines`' own).
 -/
 
@@ -170,6 +170,16 @@ theorem tblW_okM {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   · exact ((((((hf1.trans hf2).trans hf3).trans (efW_mfr h5)).trans (efW_mfr h6)).trans (efW_mfr h7)).trans
       hfM).trans (envPushW_mfr hW4)
 
+/-! ## The `hb` memo in the memory at hand -/
+
+/-- **The `has_loose_bvar_b` memo is well formed** (at some twin map). -/
+def HbOK (m : Mem) : Prop := ∃ mp, hbMR m mp
+
+theorem HbOK.fr {m m' : Mem} (h : HbOK m) (hf : MFr [] [] m m') : HbOK m' := by
+  obtain ⟨mp, hmp⟩ := h; exact ⟨mp, hbMR_mfr hf (by simp) (by simp) hmp⟩
+
+theorem PosMR.hbOK {m : Mem} (h : PosMR m) : HbOK m := h.hb
+
 /-! ## The program -/
 
 /-- The lookups of `check_block_tables`. -/
@@ -218,23 +228,23 @@ theorem spgW_sl0 (n : Nat) (m : Mem) (cty nP nF so : Word) :
     spgW n m cty nP nF so 0 = spgW n m cty nP nF 0 0 := by
   simp only [spgW, spgK1.eq_def, spgK2.eq_def, rowW_sl0]
 
-/-- **`struct_proj_guards` as a `Sim`, keeping the walk memos.** -/
+/-- **`struct_proj_guards` as a `Sim`, keeping its memo well formed.** -/
 theorem tabSimSpg {p : Prog} (hP : TabsProg p) (k : Nat) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {m : Mem} {a : AState} (cty nP nF so sl : Word) (sorts : List LIdx)
     (hn : 2 ^ 31 + k ≤ coreWalkFuel) (hc' : H cty) (hb : nP.toNat + nF.toNat + 1 < 2 ^ 64)
-    (hS : StageR dn vis fe m a) (hM : PosMR m) (hs : decHL m so.toNat sl.toNat = some sorts)
+    (hS : StageR dn vis fe m a) (hM : HbOK m) (hs : decHL m so.toNat sl.toNat = some sorts)
     (hst : sl = 0 ∨ so.toNat + sl.toNat ≤ iwTop m) :
     Sim (callW p (k + 1) "struct_proj_guards" [cty, nP, nF, so, sl] m)
       (structProjGuards (decI cty) nP.toNat nF.toNat sorts) a
       (fun r gs m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧
         decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some gs ∧
-        (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' ∧ PosMR m') := by
+        (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' ∧ HbOK m') := by
   intro r m' e
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (spg_spec p hP.tbl.hv hP.hf hP.hput hP.hins hP.hgo hP.hbp hP.hsg hP.tbl.ha hP.tbl.hc hP.tbl.hsc hP.hul
       hP.hgd hP.hmf hP.hmp hP.him hP.hcol hP.hrow hP.hpw hP.hcl hP.hspg k _ cty nP nF so sl) e
-  obtain ⟨mp, hmp⟩ := hM.hb
-  have hM' : PosMR s'.mem := hM.setHb (spgW_hbfr hW) (spgW_hb k hn hc' hb hS hmp hW)
+  obtain ⟨mp, hmp⟩ := hM
+  have hM' : HbOK s'.mem := spgW_hb k hn hc' hb hS hmp hW
   rcases hst with h0 | hst
   · subst h0
     rw [spgW_sl0] at hW

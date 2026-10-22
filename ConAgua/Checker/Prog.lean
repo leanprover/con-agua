@@ -505,6 +505,7 @@ def checkerProg : Prog := [
   ("check_block_inds_cv_tas", L.Ind.checkBlockIndsCvTas),
   ("check_block_inds_cv_tas_go", L.Ind.checkBlockIndsCvTasGo),
   ("check_block_pass", L.Ind.checkBlockPass),
+  ("check_block_pass_rec", L.Ind.checkBlockPassRec),
   ("check_block_positivity", L.Ind.checkBlockPositivity),
   ("check_block_positivity_init", L.Ind.checkBlockPositivityInit),
   ("check_block_positivity_member", L.Ind.checkBlockPositivityMember),
