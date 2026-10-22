@@ -238,7 +238,52 @@ theorem natEqCtx_ref (hN : NatSubProg' p) (pi d : Word) :
   have echain : (((((((((allocMem m8 8).set64 IW (rdW (m8.arr64 CTL) 200) (r2.headD 0)).set64 IW (rdW (m8.arr64 CTL) 200 + 1) (r3.headD 0)).set64 IW (rdW (m8.arr64 CTL) 200 + 2) (r4.headD 0)).set64 IW (rdW (m8.arr64 CTL) 200 + 3) (pinW m 4)).set64 IW (rdW (m8.arr64 CTL) 200 + 4) (r5.headD 0)).set64 IW (rdW (m8.arr64 CTL) 200 + 5) (r6.headD 0)).set64 IW (rdW (m8.arr64 CTL) 200 + 6) (r7.headD 0)).set64 IW (rdW (m8.arr64 CTL) 200 + 7) (r8.headD 0)) =
       wrIW (allocMem m8 8) (rdW (m8.arr64 CTL) 200) [r2.headD 0, r3.headD 0, r4.headD 0, pinW m 4, r5.headD 0, r6.headD 0, r7.headD 0, r8.headD 0] := by
     simp [wrIW, UInt64.add_assoc]
-  sorry
+  have hq' : (rdW (m8.arr64 CTL) 200).toNat = iwTop m8 := rfl
+  subst hmq
+  rw [hq0] at hm
+  rw [echain] at hm
+  subst hm
+  have hr' : r = [rdW (m8.arr64 CTL) 200] := by rw [← hr, hq0]
+  subst hr'
+  obtain ⟨hqq, hKp, hroom', htop', hget⟩ := hrec
+  -- the twin run
+  have hF0 : PinsFull m a.pins := hF
+  have F : ∀ b : AState, b.pins = a.pins → PinsFull m b.pins := fun b hb => hb ▸ hF0
+  have rN : pinNat.run a = .ok (decI (pinW m 2), a) := pinAt_run hF0 1 (by decide)
+  have hp3' : a3.pins = a.pins := by rw [hp3, hp2, hp1]
+  have hp4' : a4.pins = a.pins := by rw [hp4, hp3']
+  have hp6' : a6.pins = a.pins := by rw [hp6, hp5, hp4']
+  have hp7' : a7.pins = a.pins := by rw [hp7, hp6']
+  have rZ : pinNatZero.run a3 = .ok (decI (pinW m 3), a3) := pinAt_run (F a3 hp3') 2 (by decide)
+  have rS : pinNatSucc.run a4 = .ok (decI (pinW m 4), a4) := pinAt_run (F a4 hp4') 3 (by decide)
+  have rT : boolTrueName.run a6 = .ok (decI (pinW m 31), a6) := pinAt_run (F a6 hp6') 30 (by decide)
+  have rF : boolFalseName.run a7 = .ok (decI (pinW m 32), a7) := pinAt_run (F a7 hp7') 31 (by decide)
+  have hd1 : (d + 1).toNat = d.toNat + 1 := by
+    have : (1 : Word).toNat = 1 := rfl
+    rw [UInt64.toNat_add, this]; have : d.toNat < 2 ^ 32 := hd
+    rw [Nat.mod_eq_of_lt (by omega)]
+  rw [hd1] at hrun3
+  refine ⟨(x2, x3, x4, decI (pinW m 4), x5, x6, x7, x8), a8, ?_, ?_⟩
+  · have hxe : decE (r1.headD 0) = x1 := hx1
+    rw [hxe] at hrun2 hrun3
+    subst hx2 hx3 hx4 hx5 hx6 hx7 hx8
+    have hrun5' : (natAp1 (decI (pinW m 4)) (decI (r2.headD 0))).run a4 = .ok (decI (r5.headD 0), a5) := hrun5
+    have hrun6' : (natAp1 (decI (pinW m 4)) (decI (r3.headD 0))).run a5 = .ok (decI (r6.headD 0), a6) := hrun6
+    simp only [natEqCtxT, StateT.run_bind, rN, hrun1, hrun2, hrun3, rZ, hrun4, rS, hrun5, hrun6,
+      rT, hrun7, rF, hrun8, StateT.run_pure]
+    simp only [bind, Except.bind, pure, Except.pure]
+    simp only [hrun1, hrun2, hrun3, rZ, hrun4, rS, hrun5', hrun6', rT, hrun7, rF, hrun8]
+  · refine ⟨hKp.stage hS8, g8.trans hKp.1, ?_⟩
+    refine ⟨r2.headD 0, r3.headD 0, r4.headD 0, pinW m 4, r5.headD 0, r6.headD 0, r7.headD 0,
+      r8.headD 0, ?_, hl2, hl3, hl4, hnames 3 (by decide), hl5, hl6, hl7, hl8, ?_, ?_⟩
+    · subst hx2 hx3 hx4 hx5 hx6 hx7 hx8; rfl
+    · simp only [List.headD_cons]; rw [hq', htop']; simp
+    · intro j hj
+      simp only [List.headD_cons, hq', iwA]
+      have := hget j (by simpa using hj)
+      rw [this]
+      have hj8 : j = 0 ∨ j = 1 ∨ j = 2 ∨ j = 3 ∨ j = 4 ∨ j = 5 ∨ j = 6 ∨ j = 7 := by omega
+      rcases hj8 with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> rfl
 
 end opeq
 
