@@ -537,10 +537,10 @@ def instSpineL : FunDecl := lfn (ao, an, t, e) locals (i) {
 /-- The pin walk of `inst_spine_pins` (a named block, for the proofs). Each result is pushed (the top
 is raised) as soon as it is stored: the next iteration's callees may use the stack above the top,
 and the earlier results must lie below it. -/
-def instSpinePinsLoop : Stmt := lblk (po, pl, us, ao, rP, pvo, pvc, so, j, q, s) {
+def instSpinePinsLoop : Stmt := lblk (po, pl, us, ao, an, rP, pvo, pvc, so, j, q, s) {
   while j < pvc {
     q := call inst_lp(po, pl, us, SPN.u64[pvo + j]);
-    s := call inst_spine(ao, rP, rP - 1, q);
+    s := call inst_spine(ao, an, rP - 1, q);
     SPN.u64[so + j] := s;
     CTL.u64[136] := so + j + 1;
     j += 1
@@ -549,10 +549,12 @@ def instSpinePinsLoop : Stmt := lblk (po, pl, us, ao, rP, pvo, pvc, so, j, q, s)
 
 /-- con-leche: `CoreDefs.lean:908-927` `recFireComparands` (the nested rule's stored parameter
 pins, `instSpinePins`) — each pin level-instantiated (`inst_lp`) then spined over the leading
-`rP` arguments (`inst_spine`), pushed in order. -/
+`rP` arguments of the spine `(ao, an)` (`inst_spine`; the twin's `args.take rP`: all `an` of them
+when `an < rP`, the index still starting at `rP - 1`), pushed in order. -/
 -- con-ron: ConRon/Arena/Core.lean:1963-1973 ConRon.Arena.instSpinePins
 @[l_impl ConRon.Arena.instSpinePins]
-def instSpinePinsL : FunDecl := lfn (po, pl, us, ao, rP, pvo, pvc) locals (so, j, q, s) {
+def instSpinePinsL : FunDecl := lfn (po, pl, us, ao, an, rP, pvo, pvc) locals (so, j, q, s) {
+  if rP < an { an := rP };
   so := CTL.u64[136];
   if len(SPN.u64) < so { abort };
   if len(SPN.u64) - so < pvc { abort };
@@ -563,15 +565,17 @@ def instSpinePinsL : FunDecl := lfn (po, pl, us, ao, rP, pvo, pvc) locals (so, j
 
 /-- con-leche: `CoreDefs.lean:908-927` `recFireComparands` (its `.2`) — the constructor-PARAMETER
 comparands of a firing rule: a `.nested` rule's stored pins, instantiated and spined; a `.plain`
-rule's the recursor's own leading `ctorParams` arguments. -/
+rule's the recursor's own leading `ctorParams` arguments (`args.take ctorParams` of the spine
+`(ao, an)`: all `an` of them when `an < ctorParams`). -/
 -- con-ron: ConRon/Arena/Core.lean:1995-2003 ConRon.Arena.recFireArgs
 @[l_impl ConRon.Arena.recFireArgs]
-def recFireArgsL : FunDecl := lfn (fireKind, pvo, pvc, po, pc, us, ao, rP, ctorParams)
+def recFireArgsL : FunDecl := lfn (fireKind, pvo, pvc, po, pc, us, ao, an, rP, ctorParams)
     locals (so, sc) {
   if fireKind == 1 {
-    (so, sc) := call inst_spine_pins(po, pc, us, ao, rP, pvo, pvc);
+    (so, sc) := call inst_spine_pins(po, pc, us, ao, an, rP, pvo, pvc);
     return (so, sc)
   };
+  if an < ctorParams { ctorParams := an };
   return (ao, ctorParams)
 }
 

@@ -221,12 +221,6 @@ def RecShape : Prop :=
     fe.find? c = some (.recInfo cv mI rP rules) →
     rP ≤ mI + 1 ∧ ∀ rl ∈ rules, rl.fire = .plain → rl.ctorParams ≤ rP
 
-theorem instSpinePins_take (lps : List NIdx) (us : LsIdx) (args : List EIdx) (rP : Nat) :
-    ∀ pins : List EIdx, instSpinePins lps us (args.take rP) rP pins = instSpinePins lps us args rP pins
-  | [] => rfl
-  | x :: xs => by
-    simp only [instSpinePins, List.take_take, Nat.min_self, instSpinePins_take lps us args rP xs]
-
 theorem recFireArgs_take (rl : IRecRule) (lps : List NIdx) (us : LsIdx) (args : List EIdx) (rP : Nat)
     (h : rl.fire = .plain → rl.ctorParams ≤ rP) :
     recFireArgs rl lps us (args.take rP) rP = recFireArgs rl lps us args rP := by
