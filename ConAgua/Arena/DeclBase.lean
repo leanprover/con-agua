@@ -10,7 +10,8 @@ import ConRon.Arena.Checker
 
 Split out of `Checker.lean` so that the loop's callees (`Decl*.lean`) can state their specs over
 `LoopR`: the pending checks `PEND` (137, three words each, `CTL[130]` of them), the promotion
-memo's relation (a stub), `LoopR` (`CheckR` + `PendR` + the front's `DeclsR`), `dsAt`, `vgOut`.
+`LoopR` (`CheckR` + `PendR` + the front's `DeclsR` + the work pools + the promotion memo's arrays),
+`dsAt`, `vgOut`.
 -/
 
 open ConRon.Arena
@@ -56,6 +57,9 @@ structure LoopR (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis
   /-- The work pool and the record pool are in bounds (lane `induct`'s `IWOK`): the callees of
   the step run on the stage relation `StageR = CheckR ∧ IWOK`. -/
   iw : L.Ind.IWOK m
+  /-- The promotion memo's arrays hold some memo (`PMemoR`): the promotion clears them at each
+  declaration (an epoch bump), which needs them well formed. -/
+  pmemo : ∃ pm, PMemoR m pm
 
 /-- `IWOK` survives a frame that keeps `IW`, `EREC` and the two tops `CTL[129]`, `CTL[200]`. -/
 theorem IWOK.frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')

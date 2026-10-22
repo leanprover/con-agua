@@ -117,7 +117,8 @@ theorem LoopR.of_lo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AS
   have h2 : m'.arr64 DLP = m.arr64 DLP := hf.1 _ (by simp) (by decide)
   exact ⟨hC', h.pend.frameLo hf hC, by rw [h1, h2]; exact h.decls,
     IWOK.frame hf (by simp) (by simp) (fun h' => by have := hC _ h'; simp at this)
-      (fun h' => by have := hC _ h'; simp at this) h.iw⟩
+      (fun h' => by have := hC _ h'; simp at this) h.iw,
+    h.pmemo.imp fun _ hp => hp.frame (by simp) (fun x hx => .inl (by have := hC x hx; omega)) hf⟩
 
 section bracket
 variable (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration) (p : Prog)
@@ -178,7 +179,8 @@ end bracket
 theorem LoopR.restrict {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {pend : Array PendingCheck} {ds : Array IDeclaration}
     (h : LoopR dn m a vis fe pend ds) (v : Word) : LoopR dn m a v (fe.restrictTo v.toNat) pend ds :=
-  ⟨⟨h.check.arena, h.check.core, h.check.pins, h.check.env.restrictTo v⟩, h.pend, h.decls, h.iw⟩
+  ⟨⟨h.check.arena, h.check.core, h.check.pins, h.check.env.restrictTo v⟩, h.pend, h.decls, h.iw,
+    h.pmemo⟩
 
 theorem LoopR.unrestrict {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {v vis : Word}
     {fe : IFEnv} {k : Nat} {pend : Array PendingCheck} {ds : Array IDeclaration}
@@ -253,7 +255,8 @@ theorem LoopR.pendPush {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AStat
       Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ PEND by decide)]
     rfl
   refine ⟨h.check.frame_hi (by simp) (by simp) hf, ⟨?_, ?_⟩, by rw [hD1, hD2]; exact h.decls,
-    IWOK.frame hf (by decide) (by decide) (by decide) (by decide) h.iw⟩
+    IWOK.frame hf (by decide) (by decide) (by decide) (by decide) h.iw,
+    h.pmemo.imp fun _ hp => hp.pendPush g i v⟩
   · simp only [pendCount, hC, rdW_set!]
     simp [hc, hc1, hc']
   · intro j hj
