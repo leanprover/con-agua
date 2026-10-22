@@ -5054,7 +5054,7 @@ helpers (`parts`: `IndParts`/`IndInstall`; `rec`: `Rec*`; `pos`: `IndPos*`) and 
 * Master callees without a stage lemma yet, `sorry`'d as stubs in `IndStubs.lean` by helpers:
   `pin_word(53)` (`zeroLevel`), `lvl_eq`. Both need `PinsR`/level-relation work, not a stub.
 
-### Landing 3 (03:10): round-1 helpers done
+### Landing 3 (03:00): round-1 helpers done
 * Census phase 8: **55 proven, 30 sorry (through stubs), 130 written** (start of lane: 15 / 1 / 199);
   totals 362 proven / 81 sorry of 1352.
 * Lead since landing 2: `struct_ctor_resid_ok` (`IndSumSpec4.lean`; `hd` guarded below `2^32`).
@@ -5087,6 +5087,14 @@ helpers (`parts`: `IndParts`/`IndInstall`; `rec`: `Rec*`; `pos`: `IndPos*`) and 
   `IndAll.lean` (imports every spec file, in the lakefile) now catches them.
 * Round 2 (running): helpers `memo` (`IndSum`'s memo walks), `install` (`IndInstall`), `recb`
   (rest of `RecGen`/`RecCheck`).
+
+### Landing 4 (03:20)
+* Lead: `struct_proj_bodies_go`, `struct_proj_bodies` (`IndSumSpec6.lean`; the `struct_proj_arg_p`
+  result guarded below `2^32`; `structProjBodiesGo` has its equation lemma, the view's arms by
+  `tag_iff`/`eViewW_head6S`).
+* File sizes (coordinator's build statistics): `IndPos2Spec`, `RecClassSpec`, `IndSumSpec2` split
+  by pure moves into `IndPos2SpecA‥D`, `RecClassSpecA/B`, `IndSumSpec2A` (the old module imports
+  its parts, names unchanged); every spec file is now below 1.4k lines.
 
 ### The frontend's inductive lines: not hooked yet (decision)
 The hook is two lines of L (`apply_dline`'s `pl == 25` branch calling `apply_ind_line`, and

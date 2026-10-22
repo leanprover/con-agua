@@ -65,3 +65,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-22,indproofs,opus,30,12,"landing 3: struct_ctor_resid_ok; round-1 helpers parts/rec/pos merged (2 L bugs fixed, ~20 loops to recursion), name clashes fixed + IndAll check, WhnfSpineRefine build fix after exprops3; census phase 8: 55 proven / 30 sorry (was 46 / 26); 3 sonnet helpers round 1, 3 running round 2"
 2026-10-22,exprops4,opus,38,6,"abstract1: abs_entry refines abstract1Fast, ab_fvb refines fvarB (no sorry): ab_node split, rebuild-on-change, ArenaA = ArenaD + abs1C tier, fr_memo frames (model and Keeps)"
 2026-10-22,buildstats,sonnet,60,10,"scripts/buildstats.py: file sizes + per-module and per-step elaboration time (profiler, no cache, nice, PSS memory guard, incremental); first report docs/buildstats.{md,csv,json}; PLAN section"
+2026-10-22,indproofs,opus,20,8,"landing 4: struct_proj_bodies(_go) refine; oversized spec files split by pure moves (IndPos2Spec, RecClassSpec, IndSumSpec2)"
