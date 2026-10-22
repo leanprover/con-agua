@@ -214,17 +214,40 @@ opened at the parameters, classifying each. -/
 -- con-ron: ConRon/Arena/Inductives/ClassRead.lean:181-205 ConRon.Arena.classReadSlots
 @[l_impl ConRon.Arena.classReadSlots]
 def classReadSlots : FunDecl := lfn (p, vis, np, n, mo, ml, d, e) locals
-    (ok, dom, body, g, z, slot, tag, mo2, ml2, fv, b2, ro, rl, co, cl) {
+    (ok, dom, body, g, z, slot, co, cl) {
   if n == 0 { return (1, 0, 0) };
   if e >> 28 != 6 { return (0, 0, 0) };
   (g, dom, body, z) := call e_view(e);
   (ok, slot) := call class_read_slot(p, vis, np, mo, ml, d, dom);
   if ok == 0 { return (0, 0, 0) };
+  (ok, co, cl) := call class_read_slots_next(p, vis, np, n, mo, ml, d, dom, body, slot);
+  return (ok, co, cl)
+}
+
+/-- `class_read_slots_snoc(mo, ml, np, d)`: `motPos ++ [d - np]` (the truncated difference). -/
+-- con-ron: ConRon/Arena/Inductives/ClassRead.lean:181-205 ConRon.Arena.classReadSlots
+@[l_impl ConRon.Arena.classReadSlots]
+def classReadSlotsSnoc : FunDecl := lfn (mo, ml, np, d) locals (o, l) {
+  if np <= d {
+    (o, l) := call sl_snoc(mo, ml, d - np);
+    return (o, l)
+  };
+  (o, l) := call sl_snoc(mo, ml, 0);
+  return (o, l)
+}
+
+/-- `class_read_slots_next(p, vis, np, n, mo, ml, d, dom, body, slot)`: `classReadSlots` after the
+slot is read: the motive positions, the binder opened at `d`, the rest, then the cons. -/
+-- con-ron: ConRon/Arena/Inductives/ClassRead.lean:181-205 ConRon.Arena.classReadSlots
+@[l_impl ConRon.Arena.classReadSlots]
+def classReadSlotsNext : FunDecl := lfn (p, vis, np, n, mo, ml, d, dom, body, slot) locals
+    (tag, mo2, ml2, fv, b2, ok, ro, rl, co, cl) {
   tag := IW.u64[slot];
   mo2 := mo;
   ml2 := ml;
-  if tag == 0 { (mo2, ml2) := call sl_snoc(mo, ml, d - np) };
+  if tag == 0 { (mo2, ml2) := call class_read_slots_snoc(mo, ml, np, d) };
   fv := call intern_fvar(d, dom);
+  if 4294967296 <= fv { abort };
   b2 := call instantiate1_fast(⟪CWF⟫, body, fv, 0);
   (ok, ro, rl) := call class_read_slots(p, vis, np, n - 1, mo2, ml2, d + 1, b2);
   if ok == 0 { return (0, 0, 0) };
@@ -693,7 +716,8 @@ def recClassFns : Prog :=
    ("class_read_minor", classReadMinor),
    ("class_n_pc_of", classNPcOf), ("class_read_slot_motive", classReadSlotMotive),
    ("class_read_slot", classReadSlot),
-   ("class_read_slots", classReadSlots), ("class_read_rec_cls", classReadRecCls),
+   ("class_read_slots", classReadSlots), ("class_read_slots_next", classReadSlotsNext),
+   ("class_read_slots_snoc", classReadSlotsSnoc), ("class_read_rec_cls", classReadRecCls),
    ("class_read_finish", classReadFinish), ("class_read", classRead),
    ("close_lams", closeLams), ("expr_get_d", exprGetD), ("class_binder", classBinder),
    ("class_gen_binder", classGenBinder), ("class_gen_slot_var", classGenSlotVar),

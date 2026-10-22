@@ -108,4 +108,88 @@ theorem cons {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a :
 
 end SPL
 
+/-! ## `sl_snoc` on a list of numbers -/
+
+theorem decNL_snoc (m : Mem) (o l : Nat) :
+    decNL m o (l + 1) = (decNL m o l).bind fun xs => (iwN m (o + l)).map fun v => xs ++ [v] := by
+  simp only [decNL, List.range_succ, List.mapM_append]
+  cases h : (List.range l).mapM (fun j => iwN m (o + j)) with
+  | none => simp
+  | some xs => cases h2 : iwN m (o + l) <;> simp [h2]
+
+theorem snocW_decN {n : Nat} {m m' : Mem} {o l x : Word} {r : List Word} {xs : List Nat}
+    (h : snocW n m o l x = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64)
+    (hc : 200 < (m.arr64 CTL).size) (hsrc : o.toNat + l.toNat ≤ iwTop m)
+    (hxs : decNL m o.toNat l.toNat = some xs) :
+    r = [rdW (m.arr64 CTL) 200, l + 1] ∧
+    decNL m' (rdW (m.arr64 CTL) 200).toNat (l + 1).toNat = some (xs ++ [x.toNat]) ∧
+    IWGrow m m' ∧ MemFrame [IW] [200] m m' ∧ (l + 1).toNat = l.toNat + 1 ∧
+    (rdW (m.arr64 CTL) 200).toNat + (l + 1).toNat = iwTop m' := by
+  simp only [snocW] at h
+  by_cases h0 : l + 1 = 0
+  · simp [h0] at h
+  simp only [h0, if_false] at h
+  cases hal : allocW m (l + 1) with
+  | none => simp [hal] at h
+  | some qm =>
+  obtain ⟨q, m1⟩ := qm
+  obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal hsz
+  simp only [hal] at h
+  cases hcp : copyW (n - 1) m1 q o l with
+  | none => simp [hcp] at h
+  | some m2 =>
+  simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  subst hq hm1
+  generalize hqq : rdW (m.arr64 CTL) 200 = q at *
+  have hlm : l.toNat ≠ 2 ^ 64 - 1 := fun e => h0 (by
+    apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add]; simp [e])
+  have hl1 : (l + 1).toNat = l.toNat + 1 := by
+    rw [UInt64.toNat_add]; simp; have := l.toNat_lt; omega
+  rw [hl1] at hroom
+  have hql : (q + l).toNat = q.toNat + l.toNat := by
+    rw [UInt64.toNat_add]; simp; omega
+  have hIW := allocMem_IW m (l + 1)
+  obtain ⟨hA, hS, hW, hG⟩ := copyW_get (n - 1) _ _ _ _ _ hcp (by simp only [iwTop, hqq] at hsrc; omega)
+    (by rw [hIW]; omega) (by rw [hIW]; exact hsz)
+  rw [hIW] at hS hG
+  have hfr : MemFrame [IW] [200] m m2 :=
+    (allocMem_frame m (l + 1)).trans (copy_frame hA (by rw [hS, hIW]) (by first | (rw [hW]) | (rw [hW]; simp [allocMem])))
+  have hfr' := hfr.trans (set64IW_frame m2 (q + l) x)
+  have hget : ∀ i, ((m2.set64 IW (q + l) x).arr64 IW)[i]? =
+      if i = q.toNat + l.toNat then some x
+      else if q.toNat ≤ i ∧ i < q.toNat + l.toNat then (m.arr64 IW)[o.toNat + (i - q.toNat)]?
+      else (m.arr64 IW)[i]? := by
+    intro i
+    rw [set64IW_get, hql, hS, hG i]
+    by_cases h1 : i = q.toNat + l.toNat
+    · rw [if_pos ⟨h1, by omega⟩, if_pos h1]
+    · rw [if_neg (by omega), if_neg h1]
+  have hCTL : (m2.set64 IW (q + l) x).arr64 CTL = (allocMem m (l + 1)).arr64 CTL := by
+    rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hA CTL (by decide)]
+  have htop : rdW ((m2.set64 IW (q + l) x).arr64 CTL) 200 = q + (l + 1) := by
+    rw [hCTL, allocMem_top m _ hc, hqq]
+  have hsum : (q + (l + 1)).toNat = q.toNat + (l.toNat + 1) := by
+    rw [UInt64.toNat_add, hl1]; simp; omega
+  refine ⟨rfl, ?_, ?_, hfr', hl1, ?_⟩
+  · rw [hl1, decNL_snoc]
+    have h1 : decNL (m2.set64 IW (q + l) x) q.toNat l.toNat = some xs := by
+      rw [← hxs]; simp only [decNL]
+      apply mapM_opt_congr
+      intro j hj
+      have hj' : j < l.toNat := List.mem_range.mp hj
+      simp only [iwN, nat?, iwA, hget]
+      rw [if_neg (by omega), if_pos (by omega)]
+      congr 2; omega
+    have h2 : iwN (m2.set64 IW (q + l) x) (q.toNat + l.toNat) = some x.toNat := by
+      simp [iwN, nat?, iwA, hget]
+    rw [h1, h2]; rfl
+  · refine iwGrow_of_frame hfr' (N := l + 1) ?_ ?_ hsz ?_
+    · rw [htop, hqq]
+    · simp only [iwTop, hqq]; omega
+    · intro i hi
+      simp only [iwTop, hqq] at hi
+      rw [hget, if_neg (by omega), if_neg (by omega)]
+  · simp only [iwTop, htop, hsum]; omega
+
 end L.Ind
