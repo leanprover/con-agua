@@ -1,4 +1,6 @@
 import ConAgua.Arena.RecGenSpec16
+import ConAgua.Arena.RecCheckSpec6
+import ConAgua.Arena.RecCheckSpec5
 
 /-!
 # `targetMajorOf`'s outside branch (lane `indproofs3`, helper `indproofs3-pos-cls`)
@@ -173,5 +175,52 @@ theorem ocW_sim {p : Prog} (hN : NoProg p) {dn : NIdx → Option ConLeche.Name} 
         (by have := hg1.1; omega) hP1) ?_
     rintro r b' m' a' ⟨h1, h2, h3, h4⟩
     exact ⟨by simpa using h1, h2, hg1.trans h3, h4⟩
+
+/-! ## `target_ctors_of`, `target_outside_inst`'s frame, the constructors' slice -/
+
+/-- After `nest_container`: its four words. -/
+def tcoK : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m) => some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, r.tail.tail.tail.headD 0], m)
+
+theorem tcoK_some (r : List Word) (m : Mem) :
+    tcoK (some (r, m)) = some ([r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, r.tail.tail.tail.headD 0], m) := rfl
+attribute [ind_grind] tcoK_some
+
+theorem tco_spec (p : Prog) (hl : NtLook p) (hp : p.lookup "target_ctors_of" = some targetCtorsOf) (k : Nat)
+    (s₀ : St) (vis I : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "target_ctors_of" [vis, I]
+    ⦃fun r s' => LocEq s' s₀ ∧ tcoK (ntWf k s₀.mem vis I) = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, targetCtorsOf]
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, nt_spec' p hl k] <;>
+    finish (gen := 20)
+
+theorem toiW_mfr {N : Nat} {m m' : Mem} {vis I us dso dsl : Word} {r : List Word}
+    (h : toiW N m vis I us dso dsl = some (r, m')) : MFr [] [] m m' := by
+  cases N with
+  | zero => simp [toiW] at h
+  | succ N =>
+  rw [toiW_eq] at h
+  unfold toiK1 toiK2 toiK3 toiK4 toiK5 at h
+  mfr_auto h [envFindW_mfr, erToIwW_mfr, MFr.ofStub, instW_mfr _ _ _ _ _ _ _, piBW_mfr _ _ _ _ _ _]
+
+/-- **A constructor slice read by `nest_container` is decoded below the tops.** -/
+theorem csAt_decB {m : Mem} {o : Nat} {xs : List (IConstantVal × Nat)} (h : CsAt m o xs (· < iwTop m))
+    (hb : o + xs.length ≤ iwTop m) : DecB (fun m => decPL m (decCN m) o xs.length) m xs := by
+  show decPL (truncM m) (decCN (truncM m)) o xs.length = some xs
+  refine decPL_of_get _ xs o fun j hj => ?_
+  obtain ⟨w, hw, h0, h1, q, hq, hcv, hn⟩ := h j hj
+  have hE : ArrExt (erecP m) (erA (truncM m)) := fun i v hv => by
+    have hi : i < erTop m := by
+      have := (Array.getElem?_eq_some_iff.mp hv).1
+      simp only [erecP, Array.size_extract] at this
+      have : erecTop m = erTop m := rfl
+      omega
+    rw [truncM_er_eq hi]; rw [erecP_getE hi] at hv; exact hv
+  refine ⟨w.toNat, by rw [iwN_truncM (by omega)]; simp [iwN, nat?, iwA, hw], ?_⟩
+  simp only [decCN, decCVp, bind, Option.bind, iwN_truncM h0, iwN_truncM h1, hq, hn, hE.decCV hcv]
+  rfl
 
 end L.Ind
