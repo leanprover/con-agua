@@ -107,4 +107,77 @@ theorem EnvR.row_dec {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word}
     rw [e] at hv
     exact ⟨r.2, by simpa using hv.symm⟩
 
+/-! ## `find_proj` -/
+
+/-- The model of `find_proj`: `(flag, record, memory)`. -/
+def fpW (p : Prog) (n : Nat) (m : Mem) (vis t i : Word) : Option (Word × Word × Mem) :=
+  match callW p n "proj_table_name" [t] m with
+  | none => none
+  | some (r₁, m₁) =>
+    if 4294967296 ≤ r₁.headD 0 then none
+    else match callW p n "env_find" [r₁.headD 0, vis] m₁ with
+      | none => none
+      | some (r₂, m₂) =>
+        if r₂.headD 0 = 0 then some (0, 0, m₂)
+        else if rdW (m₂.arr64 EREC) (r₂.tail.headD 0) ≠ 6 then some (0, 0, m₂)
+        else if i < rdW (m₂.arr64 EREC) (r₂.tail.headD 0 + 7) then some (1, r₂.tail.headD 0, m₂)
+        else some (0, 0, m₂)
+
+theorem findProj_spec (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St) (vis t i : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "find_proj" [vis, t, i]
+    ⦃fun r s' => LocEq s' s₀ ∧ fpW p n s₀.mem vis t i = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp.findProj]
+  simp only [callFn, findProjL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      callW_spec p n "proj_table_name", callW_spec p n "env_find"] <;>
+    finish [fpW]
+
+/-- The twin's answer from the lookup's result. -/
+def fpRes (o : Option IConstantInfo) (i : Nat) : Option IProjEntry :=
+  match o with
+  | some (.projInfo tbl) => if i < tbl.numFields then some (tbl.entry i) else none
+  | _ => none
+
+theorem findProj_run (fe : IFEnv) (T : NIdx) (i : Nat) (a a' : AState) (nm : NIdx)
+    (h : (projTableName T).run a = .ok (nm, a')) :
+    (fe.findProj? T i).run a = .ok (fpRes (fe.find? nm) i, a') := by
+  simp only [IFEnv.findProj?, StateT.run_bind, h]
+  cases e : fe.find? nm with
+  | none => simp [e, fpRes, bind, Except.bind, pure, StateT.pure, Except.pure] <;> rfl
+  | some ci => cases ci <;> simp [e, fpRes, bind, Except.bind, pure, StateT.pure, Except.pure] <;> rfl
+
+/-! ## Decoding a projection table record -/
+
+theorem decTbl_numFields {a : Array Word} {q : Nat} {tbl : IProjTable} (h : decTbl a q = some tbl) :
+    ∃ w, a[q + 7]? = some w ∧ tbl.numFields = w.toNat := by
+  cases h7 : nat? a (q + 7) with
+  | none => simp [decTbl, h7] at h
+  | some k =>
+    simp [decTbl, h7] at h
+    simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
+    obtain ⟨_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, rfl⟩ := h
+    simp only [nat?, Option.map_eq_some_iff] at h7
+    obtain ⟨w, hw, rfl⟩ := h7
+    exact ⟨w, hw, rfl⟩
+
+theorem decCI_six {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat} {ci : IConstantInfo}
+    (h : decCI a dn q = some ci) (h6 : a[q]? = some 6) :
+    ∃ tbl, ci = .projInfo tbl ∧ decTbl a q = some tbl := by
+  have e6 : (6 : Word).toNat = 6 := rfl
+  simp [decCI, nat?, h6, e6] at h
+  simp only [Option.bind_eq_some_iff, Option.some.injEq] at h
+  obtain ⟨tbl, ht, rfl⟩ := h
+  exact ⟨tbl, rfl, ht⟩
+
+theorem decCI_proj {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat} {tbl : IProjTable}
+    (h : decCI a dn q = some (.projInfo tbl)) : a[q]? = some 6 := by
+  cases hq : a[q]? with
+  | none => simp [decCI, nat?, hq] at h
+  | some w =>
+    simp [decCI, nat?, hq] at h
+    split at h <;> simp_all [Option.bind_eq_some_iff]
+    rename_i h6
+    exact UInt64.toNat_inj.mp (by rw [h6]; rfl)
+
 end L.Arena
