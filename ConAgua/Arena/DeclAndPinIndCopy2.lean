@@ -13,7 +13,7 @@ open ConRon.Arena
 namespace L.Arena
 
 open L.Front (DECL DLP trunc decCIs IndDeclAt dw)
-open L.Ind (erAllocW erAllocMem erTop)
+open L.Ind (erAllocW erAllocMem erTop erecAlloc)
 
 /-! ## `EREC` writers -/
 
@@ -627,7 +627,7 @@ theorem erecP_get_lt {m : Mem} {j : Nat} (h : j < erTop m) : (erecP m)[j]? = (m.
     rw [Array.getElem?_eq_none (by omega)]
 
 /-- Word `c + 8 i` of `DECL` is word `c - 1` of record `i` (`dw`), for a record that exists. -/
-theorem rdW_dw {D : Array Word} {i c : Word} {k : Nat} (hD : D.size < 2 ^ 63)
+theorem rdW_dwI {D : Array Word} {i c : Word} {k : Nat} (hD : D.size < 2 ^ 63)
     (h0 : dw D i.toNat 0 ≠ 0) (hc : c.toNat = k + 1) (hk : k < 8) :
     rdW D (c + 8 * i) = dw D i.toNat k := by
   have hi : 1 + 8 * i.toNat < D.size := by
@@ -653,8 +653,8 @@ theorem ibeW_ok {n : Nat} {m m' : Mem} {i : Word} {r : List Word} {block : List 
   obtain ⟨hI1, hE1, hsz, hEs, hc⟩ := hS.2
   obtain ⟨h6, -, t, -, hdec⟩ := hdecl
   have h0 : dw (m.arr64 DECL) i.toNat 0 ≠ 0 := by rw [h6]; decide
-  have e3 : rdW (m.arr64 DECL) (3 + 8 * i) = dw (m.arr64 DECL) i.toNat 2 := rdW_dw hD h0 rfl (by decide)
-  have e4 : rdW (m.arr64 DECL) (4 + 8 * i) = dw (m.arr64 DECL) i.toNat 3 := rdW_dw hD h0 rfl (by decide)
+  have e3 : rdW (m.arr64 DECL) (3 + 8 * i) = dw (m.arr64 DECL) i.toNat 2 := rdW_dwI hD h0 rfl (by decide)
+  have e4 : rdW (m.arr64 DECL) (4 + 8 * i) = dw (m.arr64 DECL) i.toNat 3 := rdW_dwI hD h0 rfl (by decide)
   simp only [ibeW, e3, e4] at h
   cases ha : erAllocW m (dw (m.arr64 DECL) i.toNat 3) with
   | none => rw [ha] at h; cases h
