@@ -509,7 +509,7 @@ def applyExprW (b : Array UInt8) (m : Mem) (pl idx a c d : Word) : Option Mem :=
 /-- The expression functions with everything they call, on top of `frontProg`. -/
 def exprProg : Prog := frontProg ++
   [("skip_digits", L.Scan.Leaves.skipDigits), ("num_end", L.Scan.Leaves.numEnd),
-   ("read_nat", L.Front.Fields.readNat), ("der_b", derB), ("der_f", derF),
+   ("read_nat", L.Front.Fields.readNat), ("der_b", derB),
    ("app_find", appFind), ("app_push", appPush), ("intern_app", internApp), ("mk_app", mkApp),
    ("lam_find", lamFind), ("lam_push", lamPush), ("intern_lam", internLamL), ("mk_lam", mkLam),
    ("forall_find", forallFind), ("forall_push", forallPush), ("intern_forall", internForallL),
@@ -588,7 +588,6 @@ structure ExprLookups (p : Prog) : Prop where
   num_end : p.lookup "num_end" = some L.Scan.Leaves.numEnd
   read_nat : p.lookup "read_nat" = some L.Front.Fields.readNat
   der_b : p.lookup "der_b" = some derB
-  der_f : p.lookup "der_f" = some derF
   app_find : p.lookup "app_find" = some appFind
   app_push : p.lookup "app_push" = some appPush
   intern_app : p.lookup "intern_app" = some internApp
@@ -649,7 +648,7 @@ structure ExprLookups (p : Prog) : Prop where
 theorem exprProg_lookups : ExprLookups exprProg := by
   refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
     ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
-    ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
   · constructor <;> rfl
   all_goals rfl
 
@@ -729,9 +728,9 @@ theorem nodeBin_spec (n : Nat) (s₀ : St) (k a c : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, exprGet_spec p hE n,
-        mkApp_spec p hE.der_b hE.der_f hE.app_find hE.app_push hE.intern_app hE.mk_app n,
-        mkLam_spec p hE.der_b hE.der_f hE.lam_find hE.lam_push hE.intern_lam hE.mk_lam n,
-        mkForall_spec p hE.der_b hE.der_f hE.forall_find hE.forall_push hE.intern_forall hE.mk_forall n] <;>
+        mkApp_spec p hE.der_b hE.app_find hE.app_push hE.intern_app hE.mk_app n,
+        mkLam_spec p hE.der_b hE.lam_find hE.lam_push hE.intern_lam hE.mk_lam n,
+        mkForall_spec p hE.der_b hE.forall_find hE.forall_push hE.intern_forall hE.mk_forall n] <;>
       finish [binW]
 
 theorem nodeLet_spec (n : Nat) (s₀ : St) (a c d : Word) :
@@ -745,7 +744,7 @@ theorem nodeLet_spec (n : Nat) (s₀ : St) (a c d : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, exprGet_spec p hE n,
-        mkLet_spec p hE.der_b hE.der_f hE.letE_find hE.letE_push hE.intern_letE hE.mk_let n] <;>
+        mkLet_spec p hE.der_b hE.letE_find hE.letE_push hE.intern_letE hE.mk_let n] <;>
       finish [letW]
 
 theorem nodeProj_spec (n : Nat) (s₀ : St) (a c d : Word) :
@@ -760,7 +759,7 @@ theorem nodeProj_spec (n : Nat) (s₀ : St) (a c d : Word) :
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, exprGet_spec p hE n,
         nameGet_spec p hE.front n,
-        mkProj_spec p hE.der_b hE.der_f hE.proj_find hE.proj_push hE.intern_proj hE.mk_proj n] <;>
+        mkProj_spec p hE.der_b hE.proj_find hE.proj_push hE.intern_proj hE.mk_proj n] <;>
       finish [projW, NONE]
 
 theorem nodeLit_spec (b : Array UInt8) (n : Nat) (s₀ : St) (hm : s₀.mem.arr8 IN = b)

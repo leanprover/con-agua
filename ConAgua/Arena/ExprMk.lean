@@ -60,7 +60,7 @@ abbrev PJDER : ArrId := 46
 /-! ## `der_b(h)`: the range field of `derived h` -/
 
 /-- **The model of `der_b`.** The five compound arms read a word packed by `packBF` (bvar range
-in bits 0‥14, fvar range in bits 15‥29, `der_f` below): `& 32767` is `packBF_bvar`. -/
+in bits 0‥14, fvar range in bits 15‥29, `derFW` below): `& 32767` is `packBF_bvar`. -/
 def derBW (m : Mem) (h : Word) : Word :=
   if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then 0
   else if h >>> 28 = 0 then
@@ -83,44 +83,10 @@ def derBW (m : Mem) (h : Word) : Word :=
     else rdW (m.arr64 PJDER) (idxW h * 2 + tierW h) &&& 32767
   else 0
 
-/-- con-ron: none — reads L's derived-range array (the twin's `bvarOfData (derived h)`) -/
-def derB : FunDecl := lfn (h) locals (g, t, i, x) {
-  g := h >> 28;
-  t := (h >> 27) & 1;
-  i := h & 134217727;
-  if t != 0 && CTL.u64[1] == 0 { return 0 };
-  if g == 0 {
-    if CTL.u64[22 + t] <= i { return 0 };
-    x := BREC.u64[i * 2 + t];
-    return (x + 1) * u64(x < 32767) + 32767 * u64(32767 <= x)
-  };
-  if g == 4 { if CTL.u64[4 + t] <= i { return 0 }; return ADER.u64[i * 2 + t] & 32767 };
-  if g == 5 { if CTL.u64[28 + t] <= i { return 0 }; return LADER.u64[i * 2 + t] & 32767 };
-  if g == 6 { if CTL.u64[30 + t] <= i { return 0 }; return FADER.u64[i * 2 + t] & 32767 };
-  if g == 7 { if CTL.u64[20 + t] <= i { return 0 }; return LEDER.u64[i * 2 + t] & 32767 };
-  if g == 9 { if CTL.u64[32 + t] <= i { return 0 }; return PJDER.u64[i * 2 + t] & 32767 };
-  return 0
-}
-
-theorem derB_spec (p : Prog) (hp : p.lookup "der_b" = some derB) (n : Nat) (s₀ : St) (h : Word) :
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "der_b" [h]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ r.headD 0 = derBW s₀.mem h; ⊤⦄ := by
-  rw [invoke_eq _ hp]
-  simp only [callFn, derB]
-  cases n with
-  | zero => vcgen [exec] <;> grind
-  | succ n =>
-    sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
-      finish [derBW, tierW, idxW, satSuccW]
-
-/-! ## `der_f(h)`: the fvar-range field of `derived h` -/
-
-/-- **The model of `der_f`.** `bvar`/`sort`/`const`/`lit` have no free variables (`0`); `fvar`'s
-own range is `1 +` its own index (`FVREC`, like `der_b`'s `bvar` arm reads `BREC` directly — no
-table is needed, the record alone determines it); the five compound arms read the SAME packed
-word `der_b` reads, shifted (`>> 15` is `packBF_fvar`). -/
+/-- **The model of the second result of `der_b`: the fvar range** (lane `exprops3`). `bvar`/`sort`/
+`const`/`lit` have no free variables (`0`); `fvar`'s own range is `satSucc` of its own index
+(`FVREC`, as the `bvar` arm reads `BREC`: the record alone determines it); the five compound arms
+read the SAME packed word shifted (`>> 15` is `packBF_fvar`). -/
 def derFW (m : Mem) (h : Word) : Word :=
   if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then 0
   else if h >>> 28 = 1 then
@@ -143,37 +109,44 @@ def derFW (m : Mem) (h : Word) : Word :=
     else rdW (m.arr64 PJDER) (idxW h * 2 + tierW h) >>> 15
   else 0
 
-/-- con-ron: none — reads L's derived-range array (the twin's `fvarOfData (derived h)`) -/
-def derF : FunDecl := lfn (h) locals (g, t, i, x) {
+/-- con-ron: none — reads L's derived-range array (the twin's `bvarOfData (derived h)`); returns the
+bvar range and, as a second result, the fvar range (`derFW`; lane `exprops3`) -/
+def derB : FunDecl := lfn (h) locals (g, t, i, x) {
   g := h >> 28;
   t := (h >> 27) & 1;
   i := h & 134217727;
-  if t != 0 && CTL.u64[1] == 0 { return 0 };
-  if g == 1 {
-    if CTL.u64[26 + t] <= i { return 0 };
-    x := FVREC.u64[i * 4 + t * 2];
-    return (x + 1) * u64(x < 32767) + 32767 * u64(32767 <= x)
+  if t != 0 && CTL.u64[1] == 0 { return (0, 0) };
+  if g == 0 {
+    if CTL.u64[22 + t] <= i { return (0, 0) };
+    x := BREC.u64[i * 2 + t];
+    return ((x + 1) * u64(x < 32767) + 32767 * u64(32767 <= x), 0)
   };
-  if g == 4 { if CTL.u64[4 + t] <= i { return 0 }; return ADER.u64[i * 2 + t] >> 15 };
-  if g == 5 { if CTL.u64[28 + t] <= i { return 0 }; return LADER.u64[i * 2 + t] >> 15 };
-  if g == 6 { if CTL.u64[30 + t] <= i { return 0 }; return FADER.u64[i * 2 + t] >> 15 };
-  if g == 7 { if CTL.u64[20 + t] <= i { return 0 }; return LEDER.u64[i * 2 + t] >> 15 };
-  if g == 9 { if CTL.u64[32 + t] <= i { return 0 }; return PJDER.u64[i * 2 + t] >> 15 };
-  return 0
+  if g == 1 {
+    if CTL.u64[26 + t] <= i { return (0, 0) };
+    x := FVREC.u64[i * 4 + t * 2];
+    return (0, (x + 1) * u64(x < 32767) + 32767 * u64(32767 <= x))
+  };
+  if g == 4 { if CTL.u64[4 + t] <= i { return (0, 0) }; x := ADER.u64[i * 2 + t]; return (x & 32767, x >> 15) };
+  if g == 5 { if CTL.u64[28 + t] <= i { return (0, 0) }; x := LADER.u64[i * 2 + t]; return (x & 32767, x >> 15) };
+  if g == 6 { if CTL.u64[30 + t] <= i { return (0, 0) }; x := FADER.u64[i * 2 + t]; return (x & 32767, x >> 15) };
+  if g == 7 { if CTL.u64[20 + t] <= i { return (0, 0) }; x := LEDER.u64[i * 2 + t]; return (x & 32767, x >> 15) };
+  if g == 9 { if CTL.u64[32 + t] <= i { return (0, 0) }; x := PJDER.u64[i * 2 + t]; return (x & 32767, x >> 15) };
+  return (0, 0)
 }
 
-theorem derF_spec (p : Prog) (hp : p.lookup "der_f" = some derF) (n : Nat) (s₀ : St) (h : Word) :
+theorem derB_spec (p : Prog) (hp : p.lookup "der_b" = some derB) (n : Nat) (s₀ : St) (h : Word) :
     ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "der_f" [h]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ r.headD 0 = derFW s₀.mem h; ⊤⦄ := by
+    invoke p (exec p n) "der_b" [h]
+    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ r.headD 0 = derBW s₀.mem h ∧
+      r.tail.headD 0 = derFW s₀.mem h; ⊤⦄ := by
   rw [invoke_eq _ hp]
-  simp only [callFn, derF]
+  simp only [callFn, derB]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
-      finish [derFW, tierW, idxW, satSuccW]
+      finish [derBW, derFW, tierW, idxW, satSuccW]
 
 /-! ## The tail of every `mk_*` -/
 
@@ -203,8 +176,8 @@ attribute [arena_grind =] mkK_some
 
 /-! ## `mk_app(f, a)` -/
 
-/-- **The model of `mk_app`.** The written word packs both ranges (`packBF`): `der_b`/`der_f`
-read it back apart. -/
+/-- **The model of `mk_app`.** The written word packs both ranges (`packBF`): `der_b` reads it
+back apart. -/
 def mkAppW (m : Mem) (f a : Word) : Option (Word × Mem) :=
   if (f ||| a) >>> 32 ≠ 0 then none
   else mkK ADER 4 (cnt2 m 4)
@@ -213,10 +186,8 @@ def mkAppW (m : Mem) (f a : Word) : Option (Word × Mem) :=
 /-- con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
 def mkApp : FunDecl := lfn (f, a) locals (x, y, s, r, q, xf, yf) {
   if (f | a) >> 32 != 0 { abort };
-  x := call der_b(f);
-  y := call der_b(a);
-  xf := call der_f(f);
-  yf := call der_f(a);
+  (x, xf) := call der_b(f);
+  (y, yf) := call der_b(a);
   s := CTL.u64[4] + CTL.u64[5];
   r := call intern_app(f, a);
   if CTL.u64[4] + CTL.u64[5] != s {
@@ -240,11 +211,9 @@ def mkLamW (m : Mem) (t b : Word) : Option (Word × Mem) :=
 /-- con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
 def mkLam : FunDecl := lfn (t, b) locals (x, y, s, r, q, xf, yf) {
   if (t | b) >> 32 != 0 { abort };
-  x := call der_b(t);
-  y := call der_b(b);
+  (x, xf) := call der_b(t);
+  (y, yf) := call der_b(b);
   y := y - u64(0 < y) + u64(y == 32767);
-  xf := call der_f(t);
-  yf := call der_f(b);
   s := CTL.u64[28] + CTL.u64[29];
   r := call intern_lam(t, b);
   if CTL.u64[28] + CTL.u64[29] != s {
@@ -265,11 +234,9 @@ def mkForallW (m : Mem) (t b : Word) : Option (Word × Mem) :=
 /-- con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
 def mkForall : FunDecl := lfn (t, b) locals (x, y, s, r, q, xf, yf) {
   if (t | b) >> 32 != 0 { abort };
-  x := call der_b(t);
-  y := call der_b(b);
+  (x, xf) := call der_b(t);
+  (y, yf) := call der_b(b);
   y := y - u64(0 < y) + u64(y == 32767);
-  xf := call der_f(t);
-  yf := call der_f(b);
   s := CTL.u64[30] + CTL.u64[31];
   r := call intern_forall(t, b);
   if CTL.u64[30] + CTL.u64[31] != s {
@@ -293,12 +260,9 @@ def mkLetW (m : Mem) (t v b : Word) : Option (Word × Mem) :=
 /-- con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
 def mkLet : FunDecl := lfn (t, v, b) locals (x, y, z, s, r, q, xf, yf, zf) {
   if (t | v | b) >> 32 != 0 { abort };
-  x := call der_b(t);
-  y := call der_b(v);
-  z := call der_b(b);
-  xf := call der_f(t);
-  yf := call der_f(v);
-  zf := call der_f(b);
+  (x, xf) := call der_b(t);
+  (y, yf) := call der_b(v);
+  (z, zf) := call der_b(b);
   s := CTL.u64[20] + CTL.u64[21];
   r := call intern_letE(t, v, b);
   if CTL.u64[20] + CTL.u64[21] != s {
@@ -322,8 +286,7 @@ def mkProjW (m : Mem) (n i e : Word) : Option (Word × Mem) :=
 /-- con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
 def mkProj : FunDecl := lfn (n, i, e) locals (x, s, r, q, xf) {
   if (n | e) >> 32 != 0 { abort };
-  x := call der_b(e);
-  xf := call der_f(e);
+  (x, xf) := call der_b(e);
   s := CTL.u64[32] + CTL.u64[33];
   r := call intern_proj(n, i, e);
   if CTL.u64[32] + CTL.u64[33] != s {
@@ -337,10 +300,10 @@ def mkProj : FunDecl := lfn (n, i, e) locals (x, s, r, q, xf) {
 /-! ## The specs -/
 
 section specs
-variable (p : Prog) (hd : p.lookup "der_b" = some derB) (hdf : p.lookup "der_f" = some derF)
+variable (p : Prog) (hd : p.lookup "der_b" = some derB)
 
 set_option maxHeartbeats 0 in
-include hd hdf in
+include hd in
 theorem mkApp_spec (hpf : p.lookup "app_find" = some appFind)
     (hpp : p.lookup "app_push" = some appPush) (hpi : p.lookup "intern_app" = some internApp)
     (hp : p.lookup "mk_app" = some mkApp) (n : Nat) (s₀ : St) (f a : Word) :
@@ -354,11 +317,11 @@ theorem mkApp_spec (hpf : p.lookup "app_find" = some appFind)
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        derB_spec p hd n, derF_spec p hdf n, internApp_spec p hpf hpp hpi n] <;>
+        derB_spec p hd n, internApp_spec p hpf hpp hpi n] <;>
       finish (gen := 40) [mkAppW, derPutW, cnt2, maxW, packBF, tierW, idxW]
 
 set_option maxHeartbeats 0 in
-include hd hdf in
+include hd in
 theorem mkLam_spec (hpf : p.lookup "lam_find" = some lamFind)
     (hpp : p.lookup "lam_push" = some lamPush) (hpi : p.lookup "intern_lam" = some internLamL)
     (hp : p.lookup "mk_lam" = some mkLam) (n : Nat) (s₀ : St) (t b : Word) :
@@ -372,11 +335,11 @@ theorem mkLam_spec (hpf : p.lookup "lam_find" = some lamFind)
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        derB_spec p hd n, derF_spec p hdf n, internLamL_spec p hpf hpp hpi n] <;>
+        derB_spec p hd n, internLamL_spec p hpf hpp hpi n] <;>
       finish (gen := 40) [mkLamW, derPutW, cnt2, maxW, satPredW, packBF, tierW, idxW]
 
 set_option maxHeartbeats 0 in
-include hd hdf in
+include hd in
 theorem mkForall_spec (hpf : p.lookup "forall_find" = some forallFind)
     (hpp : p.lookup "forall_push" = some forallPush) (hpi : p.lookup "intern_forall" = some internForallL)
     (hp : p.lookup "mk_forall" = some mkForall) (n : Nat) (s₀ : St) (t b : Word) :
@@ -390,11 +353,11 @@ theorem mkForall_spec (hpf : p.lookup "forall_find" = some forallFind)
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        derB_spec p hd n, derF_spec p hdf n, internForallL_spec p hpf hpp hpi n] <;>
+        derB_spec p hd n, internForallL_spec p hpf hpp hpi n] <;>
       finish (gen := 40) [mkForallW, derPutW, cnt2, maxW, satPredW, packBF, tierW, idxW]
 
 set_option maxHeartbeats 0 in
-include hd hdf in
+include hd in
 theorem mkLet_spec (hpf : p.lookup "letE_find" = some letFind)
     (hpp : p.lookup "letE_push" = some letPush) (hpi : p.lookup "intern_letE" = some internLet)
     (hp : p.lookup "mk_let" = some mkLet) (n : Nat) (s₀ : St) (t v b : Word) :
@@ -408,11 +371,11 @@ theorem mkLet_spec (hpf : p.lookup "letE_find" = some letFind)
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        derB_spec p hd n, derF_spec p hdf n, internLet_spec p hpf hpp hpi n] <;>
+        derB_spec p hd n, internLet_spec p hpf hpp hpi n] <;>
       finish (gen := 40) [mkLetW, derPutW, cnt2, maxW, satPredW, packBF, tierW, idxW]
 
 set_option maxHeartbeats 0 in
-include hd hdf in
+include hd in
 theorem mkProj_spec (hpf : p.lookup "proj_find" = some projFind)
     (hpp : p.lookup "proj_push" = some projPush) (hpi : p.lookup "intern_proj" = some internProj)
     (hp : p.lookup "mk_proj" = some mkProj) (n : Nat) (s₀ : St) (nm i e : Word) :
@@ -426,7 +389,7 @@ theorem mkProj_spec (hpf : p.lookup "proj_find" = some projFind)
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        derB_spec p hd n, derF_spec p hdf n, internProj_spec p hpf hpp hpi n] <;>
+        derB_spec p hd n, internProj_spec p hpf hpp hpi n] <;>
       finish (gen := 40) [mkProjW, derPutW, cnt2, maxW, packBF, tierW, idxW]
 
 end specs

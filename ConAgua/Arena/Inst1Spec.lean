@@ -35,7 +35,7 @@ theorem instApp_step (n : Nat) (ih : InstGoSpec p n) (s₀ : St) (h d v : Word) 
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       memoFindG_spec imSch p _ hp.iff n, memoPutG_spec imSch p _ hp.ifp n, ih,
-      mkApp_spec p hp.base.derb hp.base.derf hp.base.appf hp.base.appp hp.base.appi hp.base.mkapp n] <;>
+      mkApp_spec p hp.base.derb hp.base.appf hp.base.appp hp.base.appi hp.base.mkapp n] <;>
     finish (gen := 20) [viewOK, tierW, idxW]
 
 include hp in
@@ -48,7 +48,7 @@ theorem instLam_step (n : Nat) (ih : InstGoSpec p n) (s₀ : St) (h d v : Word) 
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       memoFindG_spec imSch p _ hp.iff n, memoPutG_spec imSch p _ hp.ifp n, ih,
-      mkLam_spec p hp.base.derb hp.base.derf hp.base.lamf hp.base.lamp hp.base.lami hp.base.mklam n] <;>
+      mkLam_spec p hp.base.derb hp.base.lamf hp.base.lamp hp.base.lami hp.base.mklam n] <;>
     finish (gen := 20) [viewOK, tierW, idxW]
 
 include hp in
@@ -61,7 +61,7 @@ theorem instForall_step (n : Nat) (ih : InstGoSpec p n) (s₀ : St) (h d v : Wor
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       memoFindG_spec imSch p _ hp.iff n, memoPutG_spec imSch p _ hp.ifp n, ih,
-      mkForall_spec p hp.base.derb hp.base.derf hp.base.faf hp.base.fap hp.base.fai hp.base.mkfa n] <;>
+      mkForall_spec p hp.base.derb hp.base.faf hp.base.fap hp.base.fai hp.base.mkfa n] <;>
     finish (gen := 20) [viewOK, tierW, idxW]
 
 include hp in
@@ -74,7 +74,7 @@ theorem instLet_step (n : Nat) (ih : InstGoSpec p n) (s₀ : St) (h d v : Word) 
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       memoFindG_spec imSch p _ hp.iff n, memoPutG_spec imSch p _ hp.ifp n, ih,
-      mkLet_spec p hp.base.derb hp.base.derf hp.base.lef hp.base.lep hp.base.lei hp.base.mklet n] <;>
+      mkLet_spec p hp.base.derb hp.base.lef hp.base.lep hp.base.lei hp.base.mklet n] <;>
     finish (gen := 20) [viewOK, tierW, idxW]
 
 include hp in
@@ -87,7 +87,7 @@ theorem instProj_step (n : Nat) (ih : InstGoSpec p n) (s₀ : St) (h d v : Word)
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       memoFindG_spec imSch p _ hp.iff n, memoPutG_spec imSch p _ hp.ifp n, ih,
-      mkProj_spec p hp.base.derb hp.base.derf hp.base.pjf hp.base.pjp hp.base.pji hp.base.mkpj n] <;>
+      mkProj_spec p hp.base.derb hp.base.pjf hp.base.pjp hp.base.pji hp.base.mkpj n] <;>
     finish (gen := 20) [viewOK, tierW, idxW]
 
 include hp in
@@ -163,7 +163,7 @@ def instProg : Prog :=
     ("inst_entry", instEntry)] ++ liftProg
 
 theorem instProg_ok : InstProg instProg :=
-  ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl,
+  ⟨⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl,
     rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩,
     rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 

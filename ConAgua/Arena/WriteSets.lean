@@ -25,7 +25,7 @@ namespace L.Arena
 
 /-- The functions of `liftProg`: the walk, its memo, the `mk_*` and their stores. -/
 def liftFns : List FnName :=
-  ["der_b", "der_f", "lf_find", "lf_put", "lf_clear", "lift_go", "lift_app", "lift_lam", "lift_forall",
+  ["der_b", "lf_find", "lf_put", "lf_clear", "lift_go", "lift_app", "lift_lam", "lift_forall",
     "lift_let", "lift_proj", "lift_entry", "mk_app", "mk_lam", "mk_forall", "mk_let", "mk_proj",
     "bvar_find", "bvar_push", "intern_bvar", "app_find", "app_push", "intern_app",
     "lam_find", "lam_push", "intern_lam", "forall_find", "forall_push", "intern_forall",
@@ -44,7 +44,7 @@ theorem LiftProg.closed {p : Prog} (hp : LiftProg p)
   closedW_of_agree liftProg_closed (by
     simp only [liftFns, List.cons_append, List.nil_append, List.forall_mem_cons,
       List.not_mem_nil, false_imp_iff, implies_true, and_true]
-    exact ⟨hp.derb.trans rfl, hp.derf.trans rfl, hp.lff.trans rfl, hp.lfp.trans rfl, hp.lfc.trans rfl, hp.go.trans
+    exact ⟨hp.derb.trans rfl, hp.lff.trans rfl, hp.lfp.trans rfl, hp.lfc.trans rfl, hp.go.trans
       rfl, hp.app.trans rfl, hp.lam.trans rfl, hp.fa.trans rfl, hp.le.trans rfl, hp.pj.trans
       rfl, he.trans rfl, hp.mkapp.trans rfl, hp.mklam.trans rfl, hp.mkfa.trans rfl,
       hp.mklet.trans rfl, hp.mkpj.trans rfl, hp.bvf.trans rfl, hp.bvp.trans rfl, hp.bvi.trans
@@ -79,7 +79,7 @@ theorem InstProg.closed {p : Prog} (hp : InstProg p) (he : p.lookup "inst_entry"
       List.not_mem_nil, false_imp_iff, implies_true, and_true]
     exact ⟨hp.iff.trans rfl, hp.ifp.trans rfl, hp.ifc.trans rfl, hp.go.trans rfl, hp.app.trans
       rfl, hp.lam.trans rfl, hp.fa.trans rfl, hp.le.trans rfl, hp.pj.trans rfl, he.trans rfl,
-      hp.base.derb.trans rfl, hp.base.derf.trans rfl, hp.base.lff.trans rfl, hp.base.lfp.trans rfl, hp.base.lfc.trans
+      hp.base.derb.trans rfl, hp.base.lff.trans rfl, hp.base.lfp.trans rfl, hp.base.lfc.trans
       rfl, hp.base.go.trans rfl, hp.base.app.trans rfl, hp.base.lam.trans rfl, hp.base.fa.trans
       rfl, hp.base.le.trans rfl, hp.base.pj.trans rfl, hle.trans rfl, hp.base.mkapp.trans rfl,
       hp.base.mklam.trans rfl, hp.base.mkfa.trans rfl, hp.base.mklet.trans rfl,
