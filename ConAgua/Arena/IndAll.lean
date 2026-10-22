@@ -22,6 +22,7 @@ import ConAgua.Arena.IndSumSpec2
 import ConAgua.Arena.IndSumSpec3
 import ConAgua.Arena.IndSumSpec4
 import ConAgua.Arena.IndSumSpec5
+import ConAgua.Arena.IndSumSpec7
 import ConAgua.Arena.IndSumSpec
 import ConAgua.Arena.RecCheckSpec
 import ConAgua.Arena.RecClassSpec
