@@ -663,13 +663,6 @@ def main():
         print("\nsorry sources (blocked proven-locally targets):")
         for src, ts in srcs[:10]:
             print(f"  {len(ts):3d}  {src}")
-    bcf = os.path.join(ROOT, "_tmp", "buildcheck.json")  # scripts/buildstats.py; DESIGN.md "Cache incident"
-    if os.path.exists(bcf):
-        bc = json.load(open(bcf))
-        print(f"\nlast cache-free build of master: {bc['commit'][:10]} ({bc['date']}, {bc['mode']}): "
-              + ("OK" if bc["ok"] else f"FAILED ({bc['detail']})"))
-    else:
-        print("\nlast cache-free build of master: none recorded (run scripts/buildstats.py)")
     nparts = sum(len(t["parts"]) for t in targets.values())
     print(f"\nparts: {nparts} partial refinements "
           f"({sum(1 for t in targets.values() for l in t['parts'] if l['status'] == 'ok')} sorry-free); "
