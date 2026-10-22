@@ -1,0 +1,179 @@
+import ConAgua.Front.IndApplyRefine
+import ConAgua.Front.ApplyDeclRefine
+
+/-!
+# The apply step of an `inductive` line against the twin, II: the scratch pool and the lookups
+
+`IExt m m'`: what the validation does to the memory (`IFL` appended to, the level heap and its
+top `CTL[192]` written, every word of `IFL` up to its old top kept). The allocator's and the push's
+facts (`allocW_facts`, `pushLW_facts`), the table lookups against `StateD.name`/`getDeclD`
+(`lkW_name`, `lkW_expr`), word indices without overflow (`widx`).
+-/
+
+open L.Arena
+open ConRon.Arena
+open ConRon.Arena.Frontend
+
+set_option linter.unusedSimpArgs false
+
+namespace L.Front.Ind
+
+/-! ## Words and indices -/
+
+theorem wd_eq (m : Mem) (A : ArrId) (x : Word) : rdW (m.arr64 A) x = wd m A x.toNat := rfl
+
+theorem wd_set64 (m : Mem) (A B : ArrId) (i v : Word) (j : Nat) :
+    wd (m.set64 A i v) B j =
+      if A = B ∧ i.toNat = j ∧ j < (m.arr64 A).size then v else wd m B j := by
+  by_cases hAB : A = B
+  · subst hAB
+    unfold wd
+    rw [arr_set64]
+    by_cases hc : i.toNat = j ∧ j < (m.arr64 A).size <;> simp [hc]
+  · unfold wd
+    rw [Mem.arr64_set64_ne _ _ _ _ _ (Ne.symm hAB)]
+    simp [hAB]
+
+/-- A word index `o + c * k + s` without overflow. -/
+theorem widx (o c k s : Word) (h : o.toNat + c.toNat * k.toNat + s.toNat < 2 ^ 64) :
+    (o + c * k + s).toNat = o.toNat + c.toNat * k.toNat + s.toNat := by
+  have h1 : c.toNat * k.toNat < 2 ^ 64 := by omega
+  rw [UInt64.toNat_add, UInt64.toNat_add, UInt64.toNat_mul, Nat.mod_eq_of_lt h1]
+  omega
+
+theorem widx2 (o k : Word) (h : o.toNat + k.toNat < 2 ^ 64) : (o + k).toNat = o.toNat + k.toNat := by
+  rw [UInt64.toNat_add]; omega
+
+theorem wsucc (j : Word) (l : Word) (h : j < l) : (j + 1).toNat = j.toNat + 1 := by
+  have := UInt64.lt_iff_toNat_lt.mp h
+  have := UInt64.toNat_lt l
+  rw [UInt64.toNat_add]; simp; omega
+
+theorem len64_toNat (m : Mem) (A : ArrId) (hs : (m.arr64 A).size < 2 ^ 63) :
+    (m.len64 A).toNat = (m.arr64 A).size := by
+  simp only [Mem.len64]; exact toNat_ofNat_size _ hs
+
+/-! ## The scratch pool's growth -/
+
+/-- **What the validation does to the memory**: `IFL` is appended to (its top grows, every word up
+to the old top kept), the level heap and its top are written, nothing else. -/
+structure IExt (m m' : Mem) : Prop where
+  frame : MemFrame [IFL, LH] [192] m m'
+  top : topN m IFL ≤ topN m' IFL
+  keep : ∀ i, 1 ≤ i → i ≤ topN m IFL → wd m' IFL i = wd m IFL i
+
+theorem IExt.refl (m : Mem) : IExt m m := ⟨MemFrame.refl _ _ _, Nat.le_refl _, fun _ _ _ => rfl⟩
+
+theorem IExt.trans {m₁ m₂ m₃ : Mem} (h₁ : IExt m₁ m₂) (h₂ : IExt m₂ m₃) : IExt m₁ m₃ :=
+  ⟨h₁.frame.trans h₂.frame, Nat.le_trans h₁.top h₂.top,
+    fun i h1 h2 => (h₂.keep i h1 (Nat.le_trans h2 h₁.top)).trans (h₁.keep i h1 h2)⟩
+
+theorem IExt.ifr {m m' : Mem} (h : IExt m m') : m'.arr64 IFR = m.arr64 IFR :=
+  h.frame.1 IFR (by decide) (by decide)
+
+theorem IExt.size {m m' : Mem} (h : IExt m m') (A : ArrId) : (m'.arr64 A).size = (m.arr64 A).size :=
+  h.frame.2.2.1 A
+
+theorem IExt.other {m m' : Mem} (h : IExt m m') (A : ArrId) (h1 : A ≠ IFL) (h2 : A ≠ LH) (h3 : A ≠ CTL) :
+    m'.arr64 A = m.arr64 A :=
+  h.frame.1 A (by simp [h1, h2]) h3
+
+/-- The allocator's facts. -/
+theorem allocW_facts {m m' : Mem} {A : ArrId} {k o : Word} (hA : A ≠ CTL)
+    (hs : (m.arr64 A).size < 2 ^ 63) (ht : topN m A < 2 ^ 63) (h : allocW m A k = some (o, m')) :
+    o.toNat = topN m A + 1 ∧ topN m' A = topN m A + k.toNat ∧
+    topN m A + 1 + k.toNat ≤ (m.arr64 A).size ∧ (∀ i, i ≠ 0 → wd m' A i = wd m A i) ∧
+    MemFrame [A] [] m m' := by
+  unfold allocW at h
+  have hl := len64_toNat m A hs
+  have hw0 : rdW (m.arr64 A) 0 = wd m A 0 := rfl
+  have e1 : (rdW (m.arr64 A) 0 + 1).toNat = topN m A + 1 := by
+    rw [widx2 _ _ (by rw [hw0]; simp [topN] at ht ⊢; omega)]; simp [topN, hw0]
+  split at h
+  · cases h
+  split at h
+  · cases h
+  rename_i h1
+  split at h
+  · cases h
+  rename_i h2
+  cases h
+  have h1' := UInt64.not_lt.mp h1
+  rw [UInt64.le_iff_toNat_le, hl, e1] at h1'
+  have h2' := UInt64.not_lt.mp h2
+  rw [UInt64.le_iff_toNat_le, UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le, hl, e1]; exact h1'),
+    hl, e1] at h2'
+  have e2 : (rdW (m.arr64 A) 0 + 1 - 1 + k).toNat = topN m A + k.toNat := by
+    have : rdW (m.arr64 A) 0 + 1 - 1 = rdW (m.arr64 A) 0 := by simp
+    rw [this, widx2 _ _ (by rw [hw0]; simp [topN] at ht ⊢; omega)]
+    simp [topN, hw0]
+  refine ⟨e1, ?_, by omega, fun i hi => ?_, MemFrame.set64 _ _ hA _ _⟩
+  · simp only [topN, wd_set64, show (0 : Word).toNat = 0 from rfl, true_and]
+    rw [if_pos (by omega)]
+    exact e2
+  · rw [wd_set64, if_neg (by simp; omega)]
+
+/-- The push's facts. -/
+theorem pushLW_facts {m m' : Mem} {x o : Word} (hs : (m.arr64 IFL).size < 2 ^ 63)
+    (ht : topN m IFL < 2 ^ 63) (h : pushLW m x = some (o, m')) :
+    o.toNat = topN m IFL + 1 ∧ topN m' IFL = topN m IFL + 1 ∧ o.toNat < (m.arr64 IFL).size ∧
+    wd m' IFL o.toNat = x ∧ (∀ i, i ≠ 0 → i ≠ o.toNat → wd m' IFL i = wd m IFL i) ∧
+    MemFrame [IFL] [] m m' := by
+  unfold pushLW at h
+  cases ha : allocW m IFL 1 with
+  | none => rw [ha] at h; cases h
+  | some q =>
+  obtain ⟨o', m₁⟩ := q
+  rw [ha, pushK_some] at h
+  cases h
+  obtain ⟨a1, a2, a3, a4, a5⟩ := allocW_facts (by decide) hs ht ha
+  have hs1 : (m₁.arr64 IFL).size = (m.arr64 IFL).size := a5.2.2.1 IFL
+  simp only [show (1 : Word).toNat = 1 from rfl] at a2 a3
+  refine ⟨a1, ?_, by omega, ?_, fun i h1 h2 => ?_, a5.trans (MemFrame.set64 _ _ (by decide) _ _)⟩
+  · simp only [topN, wd_set64]
+    rw [if_neg (by simp; omega)]
+    exact a2
+  · rw [wd_set64, if_pos ⟨rfl, rfl, by omega⟩]
+  · rw [wd_set64, if_neg (by simp; omega), a4 i h1]
+
+/-- A push as an `IExt`, with the pushed word on top. -/
+theorem pushLW_ext {m m' : Mem} {x o : Word} (hs : (m.arr64 IFL).size < 2 ^ 63)
+    (ht : topN m IFL < 2 ^ 63) (h : pushLW m x = some (o, m')) :
+    IExt m m' ∧ topN m' IFL = topN m IFL + 1 ∧ wd m' IFL (topN m IFL + 1) = x := by
+  obtain ⟨p1, p2, -, p4, p5, p6⟩ := pushLW_facts hs ht h
+  refine ⟨⟨p6.mono (by simp) (by simp), by omega, fun i h1 h2 => p5 i (by omega) (by omega)⟩, p2, ?_⟩
+  rw [← p1]; exact p4
+
+/-- An allocation in `IFL` as an `IExt`. -/
+theorem allocW_ext {m m' : Mem} {k o : Word} (hs : (m.arr64 IFL).size < 2 ^ 63)
+    (ht : topN m IFL < 2 ^ 63) (h : allocW m IFL k = some (o, m')) :
+    IExt m m' ∧ o.toNat = topN m IFL + 1 ∧ topN m' IFL = topN m IFL + k.toNat ∧
+      topN m IFL + 1 + k.toNat ≤ (m.arr64 IFL).size := by
+  obtain ⟨a1, a2, a3, a4, a5⟩ := allocW_facts (by decide) hs ht h
+  exact ⟨⟨a5.mono (by simp) (by simp), by omega, fun i h1 _ => a4 i (by omega)⟩, a1, a2, a3⟩
+
+/-! ## Lookups -/
+
+theorem lkW_name {m : Mem} {st : StateD} (hD : StateDR m st) {x w : Word} (a : AState)
+    (h : lkW m NID x = some w) :
+    (st.name x.toNat).run a = .ok (decI w, a) ∧ w.toNat < 2 ^ 32 := by
+  unfold lkW at h
+  split at h
+  · rename_i hok
+    cases h
+    obtain ⟨h1, h2⟩ := hD.names.read _ _ _ _ hok
+    exact ⟨by simp [StateD.name, h1]; rfl, h2⟩
+  · cases h
+
+theorem lkW_expr {m : Mem} {st : StateD} (hD : StateDR m st) {x w : Word} (a : AState)
+    (h : lkW m EID x = some w) :
+    (getDeclD st x.toNat).run a = .ok (decE w, a) ∧ w.toNat < 2 ^ 32 := by
+  unfold lkW at h
+  split at h
+  · rename_i hok
+    cases h
+    obtain ⟨h1, h2⟩ := hD.exprs.read _ _ _ _ hok
+    exact ⟨by simp [getDeclD, StateD.expr, h1, decE_eq]; rfl, h2⟩
+  · cases h
+
+end L.Front.Ind
