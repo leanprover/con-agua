@@ -86,7 +86,7 @@ theorem promoteNew_rel (dn : NIdx → Option ConLeche.Name) (n : Nat) (m : Mem) 
           (fun x hx => by
             simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
             rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> right <;> decide) hf1)
-    obtain ⟨a', pm', L', hrun, hLoop⟩ := pnew_main p hp dn n m₁ a PMemo.empty k vis consts idx vb pend ds m'
+    obtain ⟨a', pm', L', hrun, hLoop⟩ := pnew_main p hp dn (n + 1) m₁ a PMemo.empty k vis consts idx vb pend ds m'
       hP1 hR₁ hk hW
     refine ⟨a', pm', _, ?_, ?_⟩
     · simp only [promoteNew, hk0', Bool.false_eq_true, ↓reduceIte]
