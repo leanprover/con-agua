@@ -177,6 +177,23 @@ theorem Sim.mlast {γ α : Type} {mo : Option (γ × Mem)} {op : AM α} {a : ASt
   | none => exact Sim.of_none
   | some x => obtain ⟨r, m₁⟩ := x; exact h r m₁ hmo
 
+/-- A model step that only reshapes the result (the twin does nothing more). -/
+theorem Sim.post {β γ α : Type} {K : Option (β × Mem) → Option (γ × Mem)} {f : β → γ}
+    {mo : Option (β × Mem)} {op : AM α} {a : AState} {Q : β → α → Mem → AState → Prop}
+    {R : γ → α → Mem → AState → Prop}
+    (hn : K Option.none = Option.none) (hs : ∀ r m₁, K (some (r, m₁)) = some (f r, m₁))
+    (h : Sim mo op a Q) (hq : ∀ r x m a', Q r x m a' → R (f r) x m a') : Sim (K mo) op a R := by
+  intro r m' e
+  cases hmo : mo with
+  | none => rw [hmo, hn] at e; cases e
+  | some x =>
+    obtain ⟨r₁, m₁⟩ := x
+    rw [hmo, hs] at e
+    simp only [Option.some.injEq, Prod.mk.injEq] at e
+    obtain ⟨rfl, rfl⟩ := e
+    obtain ⟨y, a', h1, h2⟩ := h r₁ m₁ hmo
+    exact ⟨y, a', h1, hq _ _ _ _ h2⟩
+
 /-- The lookups of this module's parents. -/
 structure InstProg (p : Prog) : Prop extends CstProg p where
   rec2 : p.lookup "rec2" = some rec2
