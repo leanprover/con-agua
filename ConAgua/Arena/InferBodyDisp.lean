@@ -428,7 +428,7 @@ theorem inferBody_refines (p : Prog) (hq : InferAllProg p) (hc : InferCallees p)
       (fun s₀ => internSort_spec p hq.body.sof hq.body.sop hq.body.soi n s₀ (r₁.headD 0)) hW
     exact internSort_core hS₁ (r₁.headD 0) h₁.2.2.2 r hso (by
       have hd := internLNode_res_den (v := .succ u) hS
-        (fun c hc => by simp [LNodeView.lchildren] at hc; subst hc; exact hS.den.sort _ _ hv)
+        (fun c hc => by simp only [LNodeView.lchildren, List.mem_cons, List.mem_nil_iff, or_false] at hc; subst hc; exact hS.den.sort _ _ hv)
         (fun n hn => by simp [LNodeView.nchildren] at hn) h₁.1
       rw [h₁.2.2.1] at hd; exact hd)
   | const nm us =>
@@ -577,7 +577,7 @@ theorem inferBodyIO_refines (p : Prog) (hq : InferAllProg p) (hc : InferCallees 
       (fun s₀ => internSort_spec p hq.body.sof hq.body.sop hq.body.soi n s₀ (r₁.headD 0)) hW
     exact internSort_core hS₁ (r₁.headD 0) h₁.2.2.2 r hso (by
       have hd := internLNode_res_den (v := .succ u) hS
-        (fun c hc => by simp [LNodeView.lchildren] at hc; subst hc; exact hS.den.sort _ _ hv)
+        (fun c hc => by simp only [LNodeView.lchildren, List.mem_cons, List.mem_nil_iff, or_false] at hc; subst hc; exact hS.den.sort _ _ hv)
         (fun n hn => by simp [LNodeView.nchildren] at hn) h₁.1
       rw [h₁.2.2.1] at hd; exact hd)
   | const nm us =>
