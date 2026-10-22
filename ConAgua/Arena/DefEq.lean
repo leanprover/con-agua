@@ -750,19 +750,20 @@ def lazyDeltaStepL : FunDecl := lfn (mode, vis, d, a, b) locals (ua, ub, f, e2, 
 }
 
 /-- The literal acceleration of one lazy-delta iteration: `(v, 0, 0)` when either side reduces
-(the comparison restarted on the reduct), `(3, 0, 0)` when neither does. -/
+(the comparison restarted on the reduct; `v` normalised to `0`/`1`), `(3, 0, 0)` when neither
+does. -/
 -- con-ron: ConRon/Arena/Core.lean:3265-3293 ConRon.Arena.lazyDeltaReduction
 @[l_impl ConRon.Arena.lazyDeltaReduction]
 def lazyNatL : FunDecl := lfn (mode, vis, d, a, b) locals (fa, a2, fb, b2, v) {
   (fa, a2) := call reduce_nat(mode, vis, d, a);
   if fa != 0 {
     v := call defeq(mode, vis, d, a2, b);
-    return (v, 0, 0)
+    return (u64(v != 0), 0, 0)
   };
   (fb, b2) := call reduce_nat(mode, vis, d, b);
   if fb != 0 {
     v := call defeq(mode, vis, d, a, b2);
-    return (v, 0, 0)
+    return (u64(v != 0), 0, 0)
   };
   return (3, 0, 0)
 }
@@ -773,7 +774,7 @@ def lazyNatL : FunDecl := lfn (mode, vis, d, a, b) locals (fa, a2, fb, b2, v) {
 @[l_impl ConRon.Arena.lazyDeltaReduction]
 def lazyIterL : FunDecl := lfn (mode, vis, d, a, b) locals (of, ov, nf, k, x, y) {
   (of, ov) := call defeq_offset(mode, vis, d, a, b);
-  if of != 0 { return (ov, 0, 0) };
+  if of != 0 { return (u64(ov != 0), 0, 0) };
   nf := call lazy_fold_ok(mode, a, b);
   if nf != 0 {
     (k, x, y) := call lazy_nat(mode, vis, d, a, b);
