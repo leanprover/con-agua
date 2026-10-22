@@ -20,7 +20,13 @@ STATUS of a target, best first:
               (or every part named in COMPLETE_BY_PARTS below is), or every path from the
               entry to T passes through a proven target ("covered": e.g. the store helpers
               under `internE`)
-  sorry       T's own `@[refines T]` theorems are proved, some modulo `sorryAx`; covers nothing
+  local       T's `@[refines T]` theorems are proved, their own terms (and generated auxiliaries:
+              `proof_N`, `match_N`, `eq_N`) free of `sorryAx`, but they use other constants that
+              carry it ("proven locally"); covers nothing. The nearest constants carrying
+              `sorryAx` directly are the "sorry sources" (docs/progress.md: a work queue)
+              (the "sorry" columns of the report count local + sorry: everything depending on `sorryAx`)
+  sorry       `sorryAx` occurs directly in T's own `@[refines T]` proof term (or its auxiliaries);
+              covers nothing
   written     an `@[l_impl T]` L function exists
   todo        nothing yet
 Partial refinements (`@[refines_part T "label"]`) are listed separately; they never make T
@@ -68,7 +74,7 @@ COMPLETE_BY_PARTS = {
 ROM_MODULES = re.compile(r"^(ConLeche\.Kernel\.(Basis|BasisA|StdAxioms|TrustAxioms|TrustPins|CoreDefs)(\.|$)"
                          r"|ConRon\.Arena\.Frontend\.PreludeText$)")
 
-STATUS_ORDER = ["proven", "sorry", "written", "todo"]
+STATUS_ORDER = ["proven", "local", "sorry", "written", "todo"]
 
 PHASES = [
     ("0", "stores, handles, monad"),
@@ -383,6 +389,8 @@ def analyse(out):
     def proof_status(ls):
         if any(l["status"] == "sorry" for l in ls):
             return "sorry"
+        if any(l["status"].startswith("local") for l in ls):
+            return "local"
         if all(l["status"] == "ok" for l in ls):
             return "proven"
         return "written"  # non-standard axioms: not counted as proven
@@ -451,9 +459,12 @@ def analyse(out):
 def totals(ts):
     c = collections.Counter()
     for t in ts:
-        c[(t["status"], "n")] += 1
-        c[(t["status"], "lean")] += t["lean"]
-        c[(t["status"], "rust")] += t["rust"]
+        # "sorry" = everything depending on `sorryAx`, own or through callees; "local" = the subset
+        # proven locally (its own term is sorry-free)
+        for k in ([t["status"], "sorry"] if t["status"] == "local" else [t["status"]]):
+            c[(k, "n")] += 1
+            c[(k, "lean")] += t["lean"]
+            c[(k, "rust")] += t["rust"]
         c[("all", "n")] += 1
         c[("all", "lean")] += t["lean"]
         c[("all", "rust")] += t["rust"]
@@ -476,16 +487,16 @@ def summary_rows(targets):
 
 
 def fmt_table(rows):
-    hdr = ("phase", "targets", "proven", "sorry", "written", "todo", "Lean lines: proven / with L / all",
+    hdr = ("phase", "targets", "proven", "sorry", "of which proven locally", "written", "todo", "Lean lines: proven / with L / all",
            "Rust lines: proven / with L / all")
     out = ["| " + " | ".join(hdr) + " |", "|" + "---|" * len(hdr)]
     for ph, title, c in rows:
-        wl = c[("proven", "lean")] + c[("sorry", "lean")] + c[("written", "lean")]
-        wr = c[("proven", "rust")] + c[("sorry", "rust")] + c[("written", "rust")]
+        wl = sum(c[(k, "lean")] for k in ("proven", "sorry", "written"))
+        wr = sum(c[(k, "rust")] for k in ("proven", "sorry", "written"))
         out.append("| " + " | ".join([
             f"{ph} {title}" if ph != "all" else "**total**",
             str(c[("all", "n")]),
-            str(c[("proven", "n")]), str(c[("sorry", "n")]), str(c[("written", "n")]), str(c[("todo", "n")]),
+            str(c[("proven", "n")]), str(c[("sorry", "n")]), str(c[("local", "n")]), str(c[("written", "n")]), str(c[("todo", "n")]),
             f"{c[('proven', 'lean')]} / {wl} / {c[('all', 'lean')]} ({pct(c[('proven', 'lean')], c[('all', 'lean')])})",
             f"{c[('proven', 'rust')]} / {wr} / {c[('all', 'rust')]} ({pct(c[('proven', 'rust')], c[('all', 'rust')])})",
         ]) + " |")
@@ -501,12 +512,28 @@ def describe(t):
     if t["covered"]:
         bits.append("covered")
     for l in t["refs"]:
-        bits.append(f"`{l['decl']}` ({l['status']})")
+        st = l["status"]
+        if st.startswith("local:"):
+            st = "proven locally, sorry via " + ", ".join(f"`{x}`" for x in st.split(":", 1)[1].split(","))
+        bits.append(f"`{l['decl']}` ({st})")
     if not t["refs"] and t["impl"]:
         bits.append("L: " + ", ".join(f"`{l['decl']}`" for l in t["impl"]))
     if t["parts"]:
         bits.append("parts: " + ", ".join(f"{l['label']} ({l['status']})" for l in t["parts"]))
     return "; ".join(bits)
+
+
+def sorry_sources(targets):
+    """[(source, [blocked proven-locally targets])], most blocking first."""
+    by = collections.defaultdict(set)
+    for t in targets.values():
+        if t["status"] != "local":
+            continue
+        for l in t["refs"]:
+            if l["status"].startswith("local:"):
+                for x in l["status"].split(":", 1)[1].split(","):
+                    by[x].add(t["name"])
+    return sorted(by.items(), key=lambda kv: (-len(kv[1]), kv[0]))
 
 
 def write_md(targets, links, dangling, rows, path):
@@ -520,7 +547,8 @@ def write_md(targets, links, dangling, rows, path):
     o.append("Targets: the definitions of con-ron's arena twin and of con-leche that "
              "`ConAgua.Final.TwinAccepts` reaches (no instances, auxiliaries, types, predicates or ROM "
              "data). **proven**: refinement proved without `sorry` (or every path to it goes through "
-             "a proven target); **sorry**: proved modulo `sorry`; **written**: L code exists; "
+             "a proven target); **sorry**: proved modulo `sorry`, of which **proven locally** are those whose own "
+             "proof term has no `sorry` (only constants it uses do); **written**: L code exists; "
              "**todo**: nothing. Weights: Lean code lines of the twin definition, and con-ron Rust "
              "lines citing it.\n")
     o.append("## Summary\n")
@@ -542,6 +570,19 @@ def write_md(targets, links, dangling, rows, path):
         if t["impl"] or t["refs"] or t["parts"]:
             o.append(f"| `{t['name']}` | {t['phase']} | {t['lean']} | {t['rust']} | {t['status']} | {describe(t)} |")
     o.append("")
+    srcs = sorry_sources(targets)
+    if srcs:
+        o.append("## Sorry sources\n")
+        o.append("Constants whose own term contains `sorryAx` and through which proven-locally targets get "
+                 "theirs (nearest ones), by number of targets blocked. A work queue: fill these in. "
+                 "`target?` is the census status of the source when it is a target.\n")
+        o.append("| source | blocks | target? | blocked targets |")
+        o.append("|---|---:|---|---|")
+        for src, ts in srcs:
+            st = targets[src]["status"] if src in targets else "-"
+            names = ", ".join(f"`{x}`" for x in sorted(ts)[:6]) + (", ..." if len(ts) > 6 else "")
+            o.append(f"| `{src}` | {len(ts)} | {st} | {names} |")
+        o.append("")
     cov = [t for t in targets.values() if t["covered"]]
     if cov:
         o.append("## Covered targets\n")
@@ -556,14 +597,14 @@ def write_md(targets, links, dangling, rows, path):
                      + (f" ({l['status']})" if l["status"].startswith("error") else ""))
         o.append("")
     o.append("## Per file\n")
-    o.append("| module | targets | proven | sorry | written | todo | lean lines | rust lines |")
-    o.append("|---|---:|---:|---:|---:|---:|---:|---:|")
+    o.append("| module | targets | proven | sorry | of which proven locally | written | todo | lean lines | rust lines |")
+    o.append("|---|---:|---:|---:|---:|---:|---:|---:|---:|")
     by_mod = collections.defaultdict(list)
     for t in targets.values():
         by_mod[t["module"]].append(t)
     for m in sorted(by_mod):
         c = totals(by_mod[m])
-        o.append(f"| `{m}` | {c[('all', 'n')]} | {c[('proven', 'n')]} | {c[('sorry', 'n')]} | "
+        o.append(f"| `{m}` | {c[('all', 'n')]} | {c[('proven', 'n')]} | {c[('sorry', 'n')]} | {c[('local', 'n')]} | "
                  f"{c[('written', 'n')]} | {c[('todo', 'n')]} | {c[('all', 'lean')]} | {c[('all', 'rust')]} |")
     o.append("")
     open(path, "w").write("\n".join(o))
@@ -571,7 +612,8 @@ def write_md(targets, links, dangling, rows, path):
 
 CSV_FIELDS = ["date", "commit", "targets", "proven", "sorry", "written", "todo",
               "lean_all", "lean_proven", "lean_sorry", "lean_written",
-              "rust_all", "rust_proven", "rust_sorry", "rust_written", "parts_proven"]
+              "rust_all", "rust_proven", "rust_sorry", "rust_written", "parts_proven",
+              "local", "lean_local"]  # appended at the end: older rows lack them
 
 
 def append_csv(targets, path):
@@ -582,8 +624,13 @@ def append_csv(targets, path):
                lean_all=c[("all", "lean")], lean_proven=c[("proven", "lean")], lean_sorry=c[("sorry", "lean")],
                lean_written=c[("written", "lean")], rust_all=c[("all", "rust")], rust_proven=c[("proven", "rust")],
                rust_sorry=c[("sorry", "rust")], rust_written=c[("written", "rust")],
-               parts_proven=sum(1 for t in targets.values() for l in t["parts"] if l["status"] == "ok"))
+               parts_proven=sum(1 for t in targets.values() for l in t["parts"] if l["status"] == "ok"),
+               local=c[("local", "n")], lean_local=c[("local", "lean")])
     new = not os.path.exists(path)
+    if not new:  # an older file lacks the newest columns: extend the header, keep the old rows as they are
+        lines = open(path, newline="").read().split("\n", 1)
+        if lines[0].split(",") != CSV_FIELDS:
+            open(path, "w", newline="").write(",".join(CSV_FIELDS) + "\n" + (lines[1] if len(lines) > 1 else ""))
     with open(path, "a", newline="") as fh:
         w = csv.DictWriter(fh, CSV_FIELDS)
         if new:
@@ -611,6 +658,11 @@ def main():
         return
     rows = summary_rows(targets)
     print(fmt_table(rows))
+    srcs = sorry_sources(targets)
+    if srcs:
+        print("\nsorry sources (blocked proven-locally targets):")
+        for src, ts in srcs[:10]:
+            print(f"  {len(ts):3d}  {src}")
     bcf = os.path.join(ROOT, "_tmp", "buildcheck.json")  # scripts/buildstats.py; DESIGN.md "Cache incident"
     if os.path.exists(bcf):
         bc = json.load(open(bcf))

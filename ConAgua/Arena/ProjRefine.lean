@@ -1,4 +1,5 @@
 import ConAgua.Arena.StoreLib
+import ConAgua.Arena.SimLib
 import ConAgua.Arena.ProjStore
 
 /-!
@@ -243,12 +244,8 @@ theorem internProj_refines (p : Prog) (hpf : p.lookup "proj_find" = some projFin
     invoke p (exec p nn) "intern_proj" [n, u, e]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internE (.proj (decI (k := .name) n) u.toNat (decE e))) a₀ ∧
       ProjR s'.mem (AM.st (internE (.proj (decI (k := .name) n) u.toNat (decE e))) a₀) ∧
-      AM.res (internE (.proj (decI (k := .name) n) u.toNat (decE e))) a₀ = decE (r.headD 0); ⊤⦄ := by
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (internProj_spec p hpf hpp hp nn s₀ n u e)
-  subst hs
-  exact ⟨hloc, pjintern_correct s.mem a₀ hR n u e hn he _ _ hI⟩
+      AM.res (internE (.proj (decI (k := .name) n) u.toNat (decE e))) a₀ = decE (r.headD 0); ⊤⦄ :=
+  Sim.tripleD (internProj_spec p hpf hpp hp nn s₀ n u e)
+    (Sim.ofOkD (pjintern_correct s₀.mem a₀ hR n u e hn he))
 
 end L.Arena

@@ -2,6 +2,7 @@ module
 
 public import ConAgua.Arena.Abs1Spec
 public import ConAgua.Arena.Walk
+public import ConAgua.L.ProgHas
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.Store
 import ConAgua.Census.Attr
@@ -69,17 +70,16 @@ def lbbFastL : FunDecl := lfn (f, k, e) locals (x) {
   return u64(x <= k)
 }
 
-/-- What the specs need of the program. -/
-structure BvbProg (p : Prog) : Prop where
-  derb : p.lookup "der_b" = some derB
-  bmf : p.lookup "bm_find" = some (memoFindG bmSch)
-  bmp : p.lookup "bm_put" = some (memoPutG bmSch)
-  bmc : p.lookup "bm_clear" = some (memoClearG bmSch)
-  bbgo : p.lookup "bb_go" = some bbGo
-  bbnode : p.lookup "bb_node" = some bbNode
-  bbmemo : p.lookup "bb_memo" = some bbMemo
-  bvb : p.lookup "bvar_b" = some bvarBL
-  lbb : p.lookup "loose_bvars_bounded_fast" = some lbbFastL
+/-- The two reads, `der_b` and the bvar-bound walk, as one program. -/
+def bvbProg : Prog :=
+  [("bvar_b", bvarBL), ("loose_bvars_bounded_fast", lbbFastL), ("der_b", derB)] ++ walkProg
+
+/-- What the specs need of the program: `bvbProg`'s functions. -/
+def BvbProg (p : Prog) : Prop := ProgHas p bvbProg
+
+/-- The old field `CoreWalks` reads. -/
+theorem BvbProg.lbb {p : Prog} (hp : BvbProg p) :
+    p.lookup "loose_bvars_bounded_fast" = some lbbFastL := hp.get _
 
 section specs
 variable (p : Prog) (hp : BvbProg p)
@@ -90,21 +90,23 @@ theorem bbN_spec (n : Nat) (s₀ : St) (h f : Word) :
     invoke p (exec p n) "bb_memo" [h, f]
     ⦃fun r s' => LocEq s' s₀ ∧ bbN n s₀.mem h f = some (r.headD 0, s'.mem); ⊤⦄ := by
   cases n with
-  | zero => rw [invoke_eq _ hp.bbmemo]; simp only [callFn, bbMemo]; vcgen [exec] <;> grind
-  | succ n => exact bbMemo_spec p hp.bmf hp.bmp hp.bbgo hp.bbnode hp.bmc hp.bbmemo n s₀ h f
+  | zero => rw [invoke_eq _ (hp.get "bb_memo")]; simp only [callFn, bbMemo]; vcgen [exec] <;> grind
+  | succ n =>
+    exact bbMemo_spec p (hp.get "bm_find") (hp.get "bm_put") (hp.get "bb_go")
+      (hp.get "bb_node") (hp.get "bm_clear") (hp.get "bb_memo") n s₀ h f
 
 include hp in
 theorem bvarBL_spec (n : Nat) (s₀ : St) (f h : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "bvar_b" [f, h]
     ⦃fun r s' => LocEq s' s₀ ∧ bvbW n s₀.mem h f = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.bvb]
+  rw [invoke_eq _ (hp.get "bvar_b")]
   simp only [callFn, bvarBL]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, derB_spec p hp.derb n,
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, derB_spec p (hp.get "der_b") n,
         bbN_spec p hp n] <;>
       finish
 
@@ -113,7 +115,7 @@ theorem lbbFastL_spec (n : Nat) (s₀ : St) (f k h : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p (n + 1)) "loose_bvars_bounded_fast" [f, k, h]
     ⦃fun r s' => LocEq s' s₀ ∧ lbbK k (bvbW n s₀.mem h f) = some (r.headD 0, s'.mem); ⊤⦄ := by
-  rw [invoke_eq _ hp.lbb]
+  rw [invoke_eq _ (hp.get "loose_bvars_bounded_fast")]
   simp only [callFn, lbbFastL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, bvarBL_spec p hp n] <;>
@@ -121,10 +123,6 @@ theorem lbbFastL_spec (n : Nat) (s₀ : St) (f k h : Word) :
 
 end specs
 
-/-- The two reads, `der_b` and the bvar-bound walk, as one program. -/
-def bvbProg : Prog :=
-  [("bvar_b", bvarBL), ("loose_bvars_bounded_fast", lbbFastL), ("der_b", derB)] ++ walkProg
-
-theorem bvbProg_ok : BvbProg bvbProg := ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+theorem bvbProg_ok : BvbProg bvbProg := ProgHas.refl _
 
 end L.Arena

@@ -1,4 +1,5 @@
 import ConAgua.Arena.StoreLib
+import ConAgua.Arena.SimLib
 import ConAgua.Arena.AppStore
 
 /-!
@@ -220,11 +221,8 @@ theorem internApp_refines (p : Prog) (hpf : p.lookup "app_find" = some appFind)
     invoke p (exec p n) "intern_app" [f, x]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internE (.app (decE f) (decE x))) a₀ ∧
       AppR s'.mem (AM.st (internE (.app (decE f) (decE x))) a₀) ∧
-      AM.res (internE (.app (decE f) (decE x))) a₀ = decE (r.headD 0); ⊤⦄ := by
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun (internApp_spec p hpf hpp hp n s₀ f x)
-  subst hs
-  exact ⟨hloc, aintern_correct s.mem a₀ hR f x hf hx _ _ hI⟩
+      AM.res (internE (.app (decE f) (decE x))) a₀ = decE (r.headD 0); ⊤⦄ :=
+  Sim.tripleD (internApp_spec p hpf hpp hp n s₀ f x)
+    (Sim.ofOkD (aintern_correct s₀.mem a₀ hR f x hf hx))
 
 end L.Arena
