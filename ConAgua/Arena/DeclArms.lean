@@ -402,10 +402,11 @@ def checkBasisDeclL : FunDecl := lfn (vis, kind) locals (en, ea, e, o, l, w) {
 `k`, up to the canonical form. -/
 -- con-ron: ConRon/Arena/Basis.lean:81-90 ConRon.Arena.quotPinHit
 @[l_impl ConRon.Arena.quotPinHit]
-def quotPinHitL : FunDecl := lfn (k, q) locals (o, l, p, e) {
+def quotPinHitL : FunDecl := lfn (k, q) locals (o, l, c, p, e) {
   (o, l) := call rom_basis_decls(4);
   if l <= k { return 0 };
-  p := call ci_to_cv(IW.u64[o + k]);
+  c := IW.u64[o + k];
+  p := call ci_to_cv(c);
   e := call cv_canon_eq(q, p);
   return e
 }
