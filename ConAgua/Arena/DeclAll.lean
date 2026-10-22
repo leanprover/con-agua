@@ -11,3 +11,15 @@ import ConAgua.Arena.DeclRomStubs
 import ConAgua.Arena.DeclReduceSpec
 import ConAgua.Arena.DeclArmLoop
 import ConAgua.Arena.DeclCheckLoop
+import ConAgua.Arena.DeclMasterStage
+import ConAgua.Arena.DeclCanonSpec
+import ConAgua.Arena.DeclCanonEq
+import ConAgua.Arena.DeclBasisSpec2
+import ConAgua.Arena.DeclReduceSpec2
+import ConAgua.Arena.DeclReducePin
+import ConAgua.Arena.DeclArmOpaque
+import ConAgua.Arena.DeclAxiomSpec
+import ConAgua.Arena.DeclCanonSpec2
+import ConAgua.Arena.DeclAxiomSpec2
+import ConAgua.Arena.DeclAxiomSpec3
+import ConAgua.Arena.DeclAxiomSpec4

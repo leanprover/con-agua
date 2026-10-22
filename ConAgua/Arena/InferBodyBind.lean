@@ -349,7 +349,7 @@ theorem inferLamsLeaf_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p
 /-! ## `infer_lams`: the peel loop as a named block -/
 
 /-- The peel loop of `inferLamsL` (Infer.lean), named for its spec. -/
-def lamsW : Stmt := lblk (mode, vis, d, peel, t, k, fo, lo, s, i, ty, body, tyo, tty, w, fv, r) {
+def inferLamsW : Stmt := lblk (mode, vis, d, peel, t, k, fo, lo, s, i, ty, body, tyo, tty, w, fv, r) {
   while peel != 0 && t >> 28 == 5 {
     s := (t >> 27) & 1;
     i := t & 134217727;
@@ -374,11 +374,11 @@ def lamsW : Stmt := lblk (mode, vis, d, peel, t, k, fo, lo, s, i, ty, body, tyo,
   }
 }
 
-/-- `inferLamsL`, with its loop spliced from `lamsW`. -/
+/-- `inferLamsL`, with its loop spliced from `inferLamsW`. -/
 -- con-ron: none — `inferLamsL` itself (`rfl`), its loop a named block for the proof
 def inferLamsL' : FunDecl :=
     lfn (mode, vis, d, peel, t, k, fo, lo) locals (s, i, ty, body, tyo, tty, w, fv, r) {
-  ⟪lamsW⟫;
+  ⟪inferLamsW⟫;
   r := call infer_lams_leaf(mode, vis, d, t, k, fo, lo);
   return r
 }
@@ -429,7 +429,7 @@ def lamsLoop (p : Prog) : Nat → Mem → Word → Word → Word → Word → Wo
 
 theorem lamsW_spec (p : Prog) (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
-    exec p n lamsW
+    exec p n inferLamsW
     ⦃fun r s' => r = .normal ∧ s'.loc 0 = s₀.loc 0 ∧ s'.loc 1 = s₀.loc 1 ∧ s'.loc 2 = s₀.loc 2 ∧
       s'.loc 6 = s₀.loc 6 ∧ s'.loc 7 = s₀.loc 7 ∧
       lamsLoop p n s₀.mem (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5)
@@ -437,7 +437,7 @@ theorem lamsW_spec (p : Prog) (n : Nat) (s₀ : St) :
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
-    rw [exec, step_while (w := lamsW) rfl]
+    rw [exec, step_while (w := inferLamsW) rfl]
     vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, st64_spec, ih,
       callW_spec p n "inst_list", callW_spec p n "infer", callW_spec p n "whnf",
       callW_spec p n "intern_fvar"] <;>
@@ -551,7 +551,7 @@ theorem inferLamsLeaf_any (p : Prog) (hp : InferLeafProg p) (hq : BindProg p)
       (inferLamsLeaf (coreKnot (decMode mode) fe id F) d.toNat (decE t) k.toNat fvs (ws.map decE))
       decH s₀ a₀ dn vis fe M eb
   | 0, _, _, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _ =>
-      CoreSpec.zero p _ _ _ _ s₀ a₀ dn vis fe M eb _
+      CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
   | n + 1, hk, F, hF, hn, s₀, a₀, dn, vis, fe, M, eb, mode, d, t, k, fo, lo, fvs, ws, hs, ht, hf,
       hftop, hB, hbtop, hws, hdk =>
       inferLamsLeaf_refines p hp hq hil hab hbc hcap n (hk.mono (by omega)) F (by omega) (by omega)

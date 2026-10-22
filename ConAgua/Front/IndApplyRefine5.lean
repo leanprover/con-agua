@@ -46,7 +46,8 @@ theorem IOnly.arena {B : Nat} {m m' : Mem} {a : AState} (h : IOnly B m m') (hR :
 
 theorem IOnly.stateDR {B : Nat} {m m' : Mem} {st : StateD} (h : IOnly B m m') (hD : StateDR m st) :
     StateDR m' st :=
-  hD.frame h.1 (by decide) (by decide) (by decide) (by decide) (by decide)
+  hD.frame h.1 (by decide) (by decide) (by decide) (by decide) (by decide) (by simp [IFL, idArrs])
+    (by simp)
 
 theorem IOnly.wdR {B : Nat} {m m' : Mem} (h : IOnly B m m') (i : Nat) : wd m' IFR i = wd m IFR i := by
   simp only [wd, h.ifr]

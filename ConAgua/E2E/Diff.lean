@@ -135,7 +135,8 @@ def main (args : List String) : IO UInt32 := do
   let [prog, file] := args.take 2 | IO.eprintln "usage: e2e-diff PROG FILE [N] [WORDS] [IDWORDS]"; return 2
   let n := (args[2]?.bind String.toNat?).getD 200
   let words := (args[3]?.bind String.toNat?).getD 65536
-  -- the export's id tables (`NID`, `LID`, `EID`: word arrays 64-66) sized for the file's ids
+  -- the export's id tables' dense parts (`NID`, `LID`, `EID`: word arrays 64-66) sized for the file's ids
+  -- (`scripts/e2e.py` caps it; larger ids go to the sparse overflow, arrays 72-74)
   let idWords := max words ((args[4]?.bind String.toNat?).getD 0)
   let pf ← match parseProgFile (← IO.FS.readFile prog) with
     | .ok pf => pure pf

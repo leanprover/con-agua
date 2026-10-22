@@ -1,4 +1,5 @@
 import ConAgua.Arena.WhnfDeltaRefine3
+import ConAgua.Arena.CoreNatOp
 
 /-!
 # δ and `Nat` literals: proofs of `WhnfDelta.lean`'s specs, part 4 (`reduce_nat`'s dispatch, `whnf_step`)
@@ -746,10 +747,6 @@ end refs25
 
 /-! ## The census-tagged statements: the stubs instantiated -/
 
-/-- `nat_op_result` refines `natOpResult` under `CoreS` (lane `nat2`'s refinement is over its own
-program and `ArenaR`; assumed until it is lifted). -/
-theorem natOpResultOK_stub (p : Prog) : NatOpResultOK p := sorry
-
 /-- A `whnf` call only grows the limb pool (assumed until the knot's specs say so). -/
 theorem whnfGrowsUpTo_stub (p : Prog) (n : Nat) : WhnfGrowsUpTo p n := sorry
 
@@ -777,7 +774,7 @@ theorem unfoldDefinition_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (
 
 @[refines ConRon.Arena.reduceNat]
 theorem reduceNat_refines (hp : WhnfDeltaProg' p) (n : Nat) : ReduceNatSpec' p n :=
-  reduceNat_refines' p hp (natOpResultOK_stub p) n (whnfGrowsUpTo_stub p n)
+  reduceNat_refines' p hp (natOpResultOK_of_agree hp.natAgree) n (whnfGrowsUpTo_stub p n)
 
 @[refines ConRon.Arena.whnfStep]
 theorem whnfStep_refines (hp : WhnfDeltaProg' p) (n : Nat) : WhnfStepSpec' p n :=

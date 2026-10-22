@@ -53,7 +53,7 @@ theorem coreRef_bind {α β : Type} [Inhabited α] [Inhabited β] {T₁ : AM α}
     rw [StateT.run_bind, AM.run_of_ok _ _ h₁.1, h₁.2.2.1]; rfl)
 
 /-- **Every spec holds at L fuel `0`** (the run fails). -/
-theorem CoreSpec.zero {α : Type} [Inhabited α] (p : Prog) (f : FnName) (args : List Word)
+theorem CoreSpec.zeroLet {α : Type} [Inhabited α] (p : Prog) (f : FnName) (args : List Word)
     (T : AM α) (dec : List Word → α) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb : Word) (ok : List Word → Prop) :
     CoreSpec p 0 f args T dec s₀ a₀ dn vis fe M eb ok := by
@@ -71,7 +71,7 @@ theorem CoreSpec.zero {α : Type} [Inhabited α] (p : Prog) (f : FnName) (args :
 theorem ensureSortSpec_of_knot (p : Prog) (hp : InferLeafProg p) :
     ∀ n, KnotUpTo p n → EnsureSortSpec p n
   | 0, _ => fun F s₀ a₀ dn vis fe M eb mode d e _ _ _ _ =>
-      CoreSpec.zero p _ _ _ _ s₀ a₀ dn vis fe M eb _
+      CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
   | n + 1, hk => ensureSort_refines p hp n (hk.mono (by omega))
 
 /-! ## `infer_let`: the `.letE` clause -/
@@ -305,7 +305,7 @@ theorem inferLamResult_any (p : Prog) (hp : InferLeafProg p) (ha : Abstract1OK p
     CoreSpec p n "infer_lam_result" [ty, bt, d]
       (inferLamResult (decE ty) (decE bt) d.toNat) decH s₀ a₀ dn vis fe M eb := by
   cases n with
-  | zero => exact CoreSpec.zero p _ _ _ _ s₀ a₀ dn vis fe M eb _
+  | zero => exact CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
   | succ n => exact inferLamResult_refines p hp n ha s₀ a₀ dn vis fe M eb ty bt d hS hbt
 
 theorem toNat_succ_of_ne {d : Word} (h : ¬ d + 1 = 0) : (d + 1).toNat = d.toNat + 1 := by

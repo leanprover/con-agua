@@ -446,22 +446,23 @@ theorem natAddLit_x64 [Host] (G : L.Compiler.Layout) (hG : G.Ok)
       rw [hrax]; exact ha'
 
 /-- **The third end-to-end theorem: the first recursive walk.** For a Kraken host holding the
-compiled `walkProg`, run from `ca_enter` with handle `h` on a state related (via the layout `G`
-and the whole arena relation `ArenaR`) to an arena state `a₀`, with machine fuel `N` at most the
-arena fuel `F`: the run returns to the caller, and reports exhausted (`rdx = 1`: fuel, or the
-stack, which the walk uses one frame pair per level), or an `abort` (`rdx = 2`: a dangling
-handle or an unknown tag, a `bvar` index of `2^64 - 1`, a full memo), or `rdx = 0` with `rax` the bound the arena's
-`bvarBoundMemo F (decE h)` returns on `a₀`, in a final state related to the final memory. -/
+compiled `walkProg`, run from `ca_enter` with handle `h` and the walk's depth counter `c` (the
+twin's fuel, ROADMAP §3 (b)) on a state related (via the layout `G` and the whole arena relation
+`ArenaR`) to an arena state `a₀`, with any machine fuel `N`: the run returns to the caller, and reports
+exhausted (`rdx = 1`: fuel, or the stack, which the walk uses one frame pair per level), or an
+`abort` (`rdx = 2`: a dangling handle or an unknown tag, a `bvar` index of `2^64 - 1`, a full memo,
+the counter run out), or `rdx = 0` with `rax` the bound the arena's `bvarBoundMemo c.toNat (decE h)`
+returns on `a₀`, in a final state related to the final memory. -/
 theorem bbMemo_x64 [Host] (G : L.Compiler.Layout) (hG : G.Ok)
     (hwf : Prog.wf G.tab walkProg = true)
     (hnres : 1 ≤ G.tab.nres) (k0 : Nat) (hcode : Code (compileProg G.tab walkProg "bb_memo") k0)
-    (m : Mem) (a₀ : AState) (hR : ArenaR m a₀) (h : Word) (hh : h.toNat < 2 ^ 32)
-    (hnargs : G.nargs = 1) (N F : Nat) (hF : N ≤ F) (dm : MachineData) (ra : Word)
+    (m : Mem) (a₀ : AState) (hR : ArenaR m a₀) (h c : Word) (hh : h.toNat < 2 ^ 32)
+    (hnargs : G.nargs = 2) (N : Nat) (dm : MachineData) (ra : Word)
     (hT : dm.regs.rdi.toNat = G.T) (hN : dm.regs.rsi.toNat = N)
     (hmem : MemRel G m dm.dmem) (hroom : G.lo + 8 ≤ G.hi)
     (htop : L.Compiler.rdW dm.dmem (A G.T) = some (UInt64.ofNat G.hi))
-    (hargv : ∀ j (h' : j < 1), L.Compiler.rdW dm.dmem (A (G.T + G.tab.args.toNat + 8 * j)) =
-      some ([h] : List Word)[j])
+    (hargv : ∀ j (h' : j < 2), L.Compiler.rdW dm.dmem (A (G.T + G.tab.args.toNat + 8 * j)) =
+      some ([h, c] : List Word)[j])
     (hra : L.Compiler.rdW dm.dmem (A dm.regs.rsp.toNat) = some ra)
     (hcs : ∀ x, dm.regs.rsp.toNat - 24 ≤ x → x < dm.regs.rsp.toNat + 8 →
       (dm.dmem.get? (A x)).isSome ∧ ¬ G.InStack x ∧ ¬ G.InArr x ∧ ¬ G.InTab x)
@@ -470,20 +471,20 @@ theorem bbMemo_x64 [Host] (G : L.Compiler.Layout) (hG : G.Ok)
         st.data.regs.rbp = dm.regs.rbp ∧ st.data.regs.r14 = dm.regs.r14 ∧ st.data.regs.r15 = dm.regs.r15 ∧
         (st.data.regs.rdx = 1 ∨ st.data.regs.rdx = 2 ∨
           (st.data.regs.rdx = 0 ∧ ∃ m' a',
-            (bvarBoundMemo F (decE h)).run a₀ = .ok (st.data.regs.rax.toNat, a') ∧
+            (bvarBoundMemo c.toNat (decE h)).run a₀ = .ok (st.data.regs.rax.toNat, a') ∧
             MemRel G m' st.data.dmem ∧ ArenaR m' a')))
       dm (label enterL) := by
-  have hargs : ([h] : List Word).length = bbMemo.nparams := rfl
+  have hargs : ([h, c] : List Word).length = bbMemo.nparams := rfl
   have hentry : walkProg.lookup "bb_memo" = some bbMemo := rfl
   refine eventually_weaken _ _ _ _ ?_
     (compile_correct walkProg "bb_memo" G hG hwf k0 hcode bbMemo hentry
-      [h] hargs hnargs m N dm ra hT hN hmem hroom htop hargv hra hcs hcs24 hcs8)
+      [h, c] hargs hnargs m N dm ra hT hN hmem hroom htop hargv hra hcs hcs24 hcs8)
   intro st hst
   obtain ⟨h1, h2, h3, h4, h5, h6⟩ := hst
   refine ⟨h1, h2, h3, h4, h5, ?_⟩
   rcases h6 with h6 | h6
   · exact Or.inl h6
-  · rcases hrun : run walkProg N "bb_memo" [h] m with e | ⟨r, m'⟩
+  · rcases hrun : run walkProg N "bb_memo" [h, c] m with e | ⟨r, m'⟩
     · rw [hrun] at h6
       rcases e with _ | _ | _ | _ <;> simp_all [OutcomeRel]
     · rw [hrun] at h6
@@ -491,7 +492,7 @@ theorem bbMemo_x64 [Host] (G : L.Compiler.Layout) (hG : G.Ok)
       have hrax : st.data.regs.rax = r.headD 0 := by
         have := hres.1 0 (by omega) (by simp [maxRes]); simp only [rres] at this; rwa [show r.getD 0 0 = r.headD 0 by
           cases r <;> rfl] at this
-      obtain ⟨a', ha', hA⟩ := bbMemo_run N F hF m a₀ hR h hh r m' hrun
+      obtain ⟨a', ha', hA⟩ := bbMemo_run N m a₀ hR h c hh r m' hrun
       refine Or.inr (Or.inr ⟨hrdx, m', a', ?_, hm', hA⟩)
       rw [hrax]; exact ha'
 

@@ -165,7 +165,7 @@ def ldE (a : Array Word) (x : Word) : Option Word :=
   if h : x.toNat < a.size then some a[x.toNat] else none
 
 /-- Model of the `and_rescue_slots` loop at L fuel `k`. -/
-def arW (p : Prog) (vis ctor nP us an : Word) : Nat → Mem → Word → Option (List Word × Mem)
+def iotaArW (p : Prog) (vis ctor nP us an : Word) : Nat → Mem → Word → Option (List Word × Mem)
   | 0, _, _ => none
   | k + 1, m, j =>
     if j < 2 then
@@ -189,14 +189,14 @@ def arW (p : Prog) (vis ctor nP us an : Word) : Nat → Mem → Word → Option 
                     | some w₇ =>
                       if w₇ ≠ 2 then some ([0], m₂)
                       else if r₂.headD 0 = 0 then some ([0], m₂)
-                      else arW p vis ctor nP us an k m₂ (j + 1)
+                      else iotaArW p vis ctor nP us an k m₂ (j + 1)
     else some ([1], m)
 
 theorem andRescueLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     exec p k andRescueLoop
     ⦃fun r s' => r ≠ .brk ∧
-      arW p (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) k s₀.mem (s₀.loc 5) =
+      iotaArW p (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) k s₀.mem (s₀.loc 5) =
         some (r.retOr [1], s'.mem); ⊤⦄ := by
   induction k generalizing s₀ with
   | zero => vcgen [exec] <;> grind
@@ -205,13 +205,13 @@ theorem andRescueLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
     sym only [lang_grind, arena_grind] =>
       vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
         callW_spec p k "find_proj", callW_spec p k "fire_ok", ih] <;>
-      finish (gen := 20) [arW, ldE]
+      finish (gen := 20) [iotaArW, ldE]
 
 theorem andRescueLoop_step_spec (p : Prog) (k : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p k) andRescueLoop
     ⦃fun r s' => r ≠ .brk ∧
-      arW p (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) (k + 1) s₀.mem (s₀.loc 5) =
+      iotaArW p (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) (k + 1) s₀.mem (s₀.loc 5) =
         some (r.retOr [1], s'.mem); ⊤⦄ :=
   Triple.step_exec (andRescueLoop_spec p (k + 1) s₀)
 
@@ -219,7 +219,7 @@ theorem andRescueLoop_step_spec (p : Prog) (k : Nat) (s₀ : St) :
 def arTop (p : Prog) (k : Nat) (m : Mem) (vis ctor nP us : Word) : Option (List Word × Mem) :=
   match callW p k "pin_at" [11] m with
   | none => none
-  | some (r₀, m₀) => arW p vis ctor nP us (r₀.headD 0) (k + 1) m₀ 0
+  | some (r₀, m₀) => iotaArW p vis ctor nP us (r₀.headD 0) (k + 1) m₀ 0
 
 theorem andRescueSlots_spec (p : Prog) (hp : p.lookup "and_rescue_slots" = some andRescueSlotsL)
     (k : Nat) (s₀ : St) (vis ctor nP us : Word) :
@@ -280,7 +280,7 @@ theorem arW_ok (p : Prog) (hcc : CoreCallees p) (dn : NIdx → Option ConLeche.N
     (fe : IFEnv) (eb ctor nP us anW : Word) (hctor : HW ctor) (hus : HW us) (hanW : HW anW) :
     ∀ (K k : Nat) (m : Mem) (a : AState) (M : ModeMaps) (j : Word) (L : List Word) (m' : Mem),
       j.toNat + K = 2 → CoreS dn m a vis fe M eb →
-      arW p vis ctor nP us anW k m j = some (L, m') →
+      iotaArW p vis ctor nP us anW k m j = some (L, m') →
       AM.ok (andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat (decI us) K j.toNat) a ∧
       CoreAfter dn m m' (AM.st (andRescueSlotsGo fe (decI anW) (decI ctor) nP.toNat (decI us) K
         j.toNat) a) vis fe M eb ∧
@@ -294,9 +294,9 @@ theorem arW_ok (p : Prog) (hcc : CoreCallees p) (dn : NIdx → Option ConLeche.N
       have : j.toNat < 2 := h
       omega
     cases k with
-    | zero => simp [arW] at hL
+    | zero => simp [iotaArW] at hL
     | succ k =>
-    simp only [arW, hn, ↓reduceIte] at hL
+    simp only [iotaArW, hn, ↓reduceIte] at hL
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
     obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _
       (andRescueSlotsGo_zero_run fe (decI anW) (decI ctor) nP.toNat (decI us) j.toNat a)
@@ -309,10 +309,10 @@ theorem arW_ok (p : Prog) (hcc : CoreCallees p) (dn : NIdx → Option ConLeche.N
       have : j.toNat < 2 := by omega
       exact this
     cases k with
-    | zero => simp [arW] at hL
+    | zero => simp [iotaArW] at hL
     | succ k =>
     cases hc1 : callW p k "find_proj" [vis, anW, j] m with
-    | none => simp only [arW, hlt, ↓reduceIte, hc1] at hL; cases hL
+    | none => simp only [iotaArW, hlt, ↓reduceIte, hc1] at hL; cases hL
     | some q =>
     obtain ⟨r₁, m₁⟩ := q
     obtain ⟨hok1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres1, hr₁⟩ := CoreSpec.of_callW
@@ -323,7 +323,7 @@ theorem arW_ok (p : Prog) (hcc : CoreCallees p) (dn : NIdx → Option ConLeche.N
     have hrunF := AM.run_of_ok _ _ hok1
     rw [hres1'] at hrunF
     by_cases h0 : r₁.headD 0 = 0
-    · simp only [arW, hlt, ↓reduceIte, hc1, h0] at hL
+    · simp only [iotaArW, hlt, ↓reduceIte, hc1, h0] at hL
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
       have hnone : decEntry (m.arr64 EREC) (r₁.headD 0) (r₁.tail.headD 0) j.toNat = none := by
         simp only [decEntry, h0, ↓reduceIte]
@@ -340,7 +340,7 @@ theorem arW_ok (p : Prog) (hcc : CoreCallees p) (dn : NIdx → Option ConLeche.N
       simp only [decEntry, if_neg h0, htbl, Option.map_some]
     rw [hsome] at hrunF
     cases hc2 : callW p k "fire_ok" [r₁.tail.headD 0, j, us] m₁ with
-    | none => simp only [arW, hlt, ↓reduceIte, hc1, h0, hc2] at hL; cases hL
+    | none => simp only [iotaArW, hlt, ↓reduceIte, hc1, h0, hc2] at hL; cases hL
     | some q =>
     obtain ⟨r₂, m₂⟩ := q
     obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hr₂⟩ := CoreSpec.of_callW
@@ -389,7 +389,7 @@ theorem arW_ok (p : Prog) (hcc : CoreCallees p) (dn : NIdx → Option ConLeche.N
       · rw [hstF]; exact hS₂
       · rw [hresF]; simp [decBool]
     have hL' := hL
-    simp only [arW, hlt, ↓reduceIte, hc1, h0, hc2] at hL'
+    simp only [iotaArW, hlt, ↓reduceIte, hc1, h0, hc2] at hL'
     rw [ldE_eq _ _ hx6] at hL'
     dsimp only at hL'
     by_cases hc6 : rdW (m₂.arr64 EREC) (r₁.tail.headD 0 + 6) = ctor
@@ -518,7 +518,7 @@ def fsW (p : Prog) (k : Nat) (m : Mem) (d fab major : Word) : Option (List Word 
   | none => none
   | some (r₁, m₁) =>
     if r₁.headD 0 = 0 then some ([0], m₁)
-    else match callW p k "loose_bvars_bounded_fast" [0, fab] m₁ with
+    else match callW p k "loose_bvars_bounded_fast" [4000000000, 0, fab] m₁ with
       | none => none
       | some (r₂, m₂) =>
         if r₂.headD 0 = 0 then some ([0], m₂)
@@ -601,7 +601,7 @@ theorem fabScopeOk_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) :
   rw [if_neg h0] at hW
   have hb : decBool r₁ = true := by simp only [decBool]; simpa using h0
   rw [hb] at hrun1
-  cases hc2 : callW p n "loose_bvars_bounded_fast" [0, fab] m₁ with
+  cases hc2 : callW p n "loose_bvars_bounded_fast" [4000000000, 0, fab] m₁ with
   | none => rw [hc2] at hW; cases hW
   | some q =>
   obtain ⟨r₂, m₂⟩ := q
@@ -942,6 +942,18 @@ theorem callW_mkProj (p : Prog) (hp : IotaProg' p) (n : Nat) (s₀ : St) (a₀ :
   obtain ⟨h1, h2, h3⟩ := mkProj_ok s₀.mem a₀ hD nm i e _ _ hm
   exact ⟨h1, h2, h3, mkProjW_frameA _ _ _ _ _ _ hm, mkProjW_hw _ a₀ hD nm i e _ _ hm⟩
 
+/-- `mk_proj`'s fine frame is within the store's. -/
+theorem MemFrame.pjStore {m m' : Mem} (h : MemFrame [PJREC, PJSLOT, PJDER] [32, 33] m m') :
+    MemFrame L.Rom.StoreA L.Rom.StoreC m m' := h.mono
+  (fun b hb => by
+    simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
+    unfold L.Rom.StoreA; rcases hb with rfl | rfl | rfl <;> simp [PJREC, PJSLOT, PJDER])
+  (fun x hx => by
+    simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
+    unfold L.Rom.StoreC; rcases hx with rfl | rfl
+    · exact List.mem_map.mpr ⟨32, by simp, rfl⟩
+    · exact List.mem_map.mpr ⟨33, by simp, rfl⟩)
+
 /-- **`CoreS` across a `proj` interning step.** -/
 theorem CoreS.of_proj {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) (hD : ArenaD m' a')
@@ -1116,15 +1128,7 @@ theorem etpW_ok (p : Prog) (hp : IotaProg' p) (dn : NIdx → Option ConLeche.Nam
     rw [etpW_cont p T b nF o k m m₁ j r₁ hlt hc1 hg] at hL
     obtain ⟨hok1, hD1, hres1, hfr1, hw1⟩ := callW_mkProj p hp k ⟨m, Locals.init []⟩ a hS.arena T j b
       r₁ m₁ hc1
-    have hfr1c : MemFrame L.Rom.StoreA L.Rom.StoreC m m₁ := hfr1.mono
-      (fun b hb => by
-        simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
-        unfold L.Rom.StoreA; rcases hb with rfl | rfl | rfl <;> simp [PJREC, PJSLOT, PJDER])
-      (fun x hx => by
-        simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
-        unfold L.Rom.StoreC; rcases hx with rfl | rfl
-        · exact List.mem_map.mpr ⟨32, by simp, rfl⟩
-        · exact List.mem_map.mpr ⟨33, by simp, rfl⟩)
+    have hfr1c : MemFrame L.Rom.StoreA L.Rom.StoreC m m₁ := hfr1.pjStore
     have hrun1 := AM.run_of_ok _ _ hok1
     have hspn1 : m₁.arr64 SPN = m.arr64 SPN :=
       hfr1c.1 SPN (fun h => by

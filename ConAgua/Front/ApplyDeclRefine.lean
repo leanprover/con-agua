@@ -104,13 +104,13 @@ theorem lpLoopM_facts (b : Array UInt8) (top : Word) : ∀ (m : Mem) (i cnt : Wo
       | succ k =>
         simp only [List.getElem_cons_succ]
         have := i5 k (by simpa using hk)
-        rw [hc1, tblW_congr (hP NID (by decide))] at this
+        rw [hc1, tblW_congr (TblSame.of_eq (hP NID (by decide)) (hP _ (by decide)) (hP CTL (by decide)))] at this
         rw [← this]; congr 1; omega
     · intro x hx
       simp only [List.mem_cons] at hx
       rcases hx with rfl | hx
       · exact hok
-      · rw [← tblOK_congr (hP NID (by decide))]; exact i6 x hx
+      · rw [← tblOK_congr (TblSame.of_eq (hP NID (by decide)) (hP _ (by decide)) (hP CTL (by decide)))]; exact i6 x hx
   | case4 m i cnt h1 h2 h3 h4 h5 h6 => intro m' h; cases h
   | case5 m i cnt h1 h2 h3 h4 =>
     intro m' h hr hs
@@ -275,7 +275,7 @@ theorem DeclsF.push (D P D' P' : Array Word) (ds : Array IDeclaration) (x : IDec
 /-! ## The twin's common data -/
 
 /-- A universe parameter list whose items are bound name ids: `mapM st.name` is pure. -/
-theorem mapM_name (m : Mem) (st : StateD) (hN : TblR (m.arr64 NID) st.names) :
+theorem mapM_name (m : Mem) (st : StateD) (hN : TblR m NID st.names) :
     ∀ (xs : List Word) (us : List Nat), ItemsR xs us → (∀ x ∈ xs, tblOK m NID x = true) →
       us.mapM st.name = pure (xs.map fun x => decI (tblW m NID x))
   | [], [], _, _ => rfl
@@ -348,8 +348,10 @@ theorem cv_core (b : ByteArray) (m m' : Mem) (a₀ : AState) (st : StateD) (hA :
     · rename_i h234
       split at h
       · rename_i hv
-        rw [tblOK_congr (hP1 EID (by decide) (by decide))] at hv
-        exact ⟨_, by rw [tblW_congr (hP1 EID (by decide) (by decide))] at h; exact h, fun _ => ⟨rfl, hv⟩⟩
+        have hT : TblSame m m₁ EID := TblSame.of_frameD F2 (.inr (.inr rfl)) (by simp [DLP, EID])
+          (by simp [DLP, EID]) (by simp) (by simp)
+        rw [tblOK_congr hT] at hv
+        exact ⟨_, by rw [tblW_congr hT] at h; exact h, fun _ => ⟨rfl, hv⟩⟩
       · cases h
     · rename_i h234; exact ⟨0, h, fun h' => absurd h' h234⟩
   obtain ⟨v, hpu, hv⟩ := hpush
@@ -382,9 +384,9 @@ theorem cv_core (b : ByteArray) (m m' : Mem) (a₀ : AState) (st : StateD) (hA :
     have hP0 : (m'.arr64 DLP)[0]?.getD 0 = rdW (m.arr64 DLP) 0 + lsCntN b.data (f.lps + 1) 0 := by
       rw [hm'P, F7]; rfl
     have hD0 : (m'.arr64 DECL)[0]?.getD 0 = rdW (m.arr64 DECL) 0 + 1 := by rw [G4]; rfl
-    refine ⟨by rw [hfr NID (by decide) (by decide) (by decide)]; exact hD.names,
-      by rw [hfr LID (by decide) (by decide) (by decide)]; exact hD.levels,
-      by rw [hfr EID (by decide) (by decide) (by decide)]; exact hD.exprs, ?_,
+    refine ⟨hD.names.frame hf (.inl rfl) (by simp [DLP, DECL, idArrs]) (by simp),
+      hD.levels.frame hf (.inr (.inl rfl)) (by simp [DLP, DECL, idArrs]) (by simp),
+      hD.exprs.frame hf (.inr (.inr rfl)) (by simp [DLP, DECL, idArrs]) (by simp), ?_,
       by rw [hf.2.2.1, hf.2.2.1]; exact hD.ifs⟩
     rw [hcn'] at G3
     refine DeclsF.push _ _ _ _ _ _ hDR (by rw [G1.2.2.1, hm'D]) (by rw [hm'P, F2.2.2.1])

@@ -15,7 +15,7 @@ con-ron's `bvarB fuel e` (`fvarB`'s sibling): the packed bvar range (`der_b`), o
 saturated branch alone, the exact memoized `bvarBoundMemo` (`bb_memo`, `Walk.lean`); and
 `looseBVarsBoundedFast fuel k e = (bvarB fuel e ≤ k)`. `bvar_b(f, e)` and
 `loose_bvars_bounded_fast(f, k, e)` are the stub interfaces' names (lanes `decls`, `indproofs`);
-`f`, the twin's fuel, is unused (L's own fuel bounds the walk).
+`f` is the twin's fuel, passed to `bb_memo` as the walk's depth counter (ROADMAP §3 (b)).
 -/
 
 set_option experimental.vcgen true
@@ -26,14 +26,14 @@ open scoped Lean.Order
 namespace L.Arena
 
 /-- **The model of `bb_memo` at L fuel `n`** (`none` at `0`). -/
-def bbN : Nat → Mem → Word → Option (Word × Mem)
-  | 0, _, _ => none
-  | n + 1, m, h => bbMemoW n m h
+def bbN : Nat → Mem → Word → Word → Option (Word × Mem)
+  | 0, _, _, _ => none
+  | n + 1, m, h, f => bbMemoW n m h f
 
 /-- **The model of `bvar_b`.** -/
-def bvbW : Nat → Mem → Word → Option (Word × Mem)
-  | 0, _, _ => none
-  | n + 1, m, h => if derBW m h = 32767 then bbN n m h else some (derBW m h, m)
+def bvbW : Nat → Mem → Word → Word → Option (Word × Mem)
+  | 0, _, _, _ => none
+  | n + 1, m, h, f => if derBW m h = 32767 then bbN n m h f else some (derBW m h, m)
 
 /-- After `bvar_b`: the bound is at most `k`. -/
 def lbbK (k : Word) : Option (Word × Mem) → Option (Word × Mem)
@@ -41,24 +41,24 @@ def lbbK (k : Word) : Option (Word × Mem) → Option (Word × Mem)
   | some (x, m₁) => some (if x ≤ k then 1 else 0, m₁)
 
 section eqs
-variable (n : Nat) (m m₁ : Mem) (h k x : Word)
-theorem bbN_succ : bbN (n + 1) m h = bbMemoW n m h := rfl
-theorem bvbW_sat (hs : derBW m h = 32767) : bvbW (n + 1) m h = bbN n m h := by simp [bvbW, hs]
-theorem bvbW_pk (hs : derBW m h ≠ 32767) : bvbW (n + 1) m h = some (derBW m h, m) := by
+variable (n : Nat) (m m₁ : Mem) (h k x f : Word)
+theorem bbN_succ : bbN (n + 1) m h f = bbMemoW n m h f := rfl
+theorem bvbW_sat (hs : derBW m h = 32767) : bvbW (n + 1) m h f = bbN n m h f := by simp [bvbW, hs]
+theorem bvbW_pk (hs : derBW m h ≠ 32767) : bvbW (n + 1) m h f = some (derBW m h, m) := by
   simp [bvbW, hs]
 theorem lbbK_some : lbbK k (some (x, m₁)) = some (if x ≤ k then 1 else 0, m₁) := rfl
 end eqs
 
-grind_pattern [arena_grind] bbN_succ => bbN (n + 1) m h
-grind_pattern [arena_grind] bvbW_sat => bvbW (n + 1) m h
-grind_pattern [arena_grind] bvbW_pk => bvbW (n + 1) m h
+grind_pattern [arena_grind] bbN_succ => bbN (n + 1) m h f
+grind_pattern [arena_grind] bvbW_sat => bvbW (n + 1) m h f
+grind_pattern [arena_grind] bvbW_pk => bvbW (n + 1) m h f
 attribute [arena_grind =] lbbK_some
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:1565-1572 ConRon.Arena.bvarB -/
 @[l_impl ConRon.Arena.bvarB]
 def bvarBL : FunDecl := lfn (f, e) locals (x, r) {
   x := call der_b(e);
-  if x == 32767 { r := call bb_memo(e); return r };
+  if x == 32767 { r := call bb_memo(e, f); return r };
   return x
 }
 
@@ -85,19 +85,19 @@ section specs
 variable (p : Prog) (hp : BvbProg p)
 
 include hp in
-theorem bbN_spec (n : Nat) (s₀ : St) (h : Word) :
+theorem bbN_spec (n : Nat) (s₀ : St) (h f : Word) :
     ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "bb_memo" [h]
-    ⦃fun r s' => LocEq s' s₀ ∧ bbN n s₀.mem h = some (r.headD 0, s'.mem); ⊤⦄ := by
+    invoke p (exec p n) "bb_memo" [h, f]
+    ⦃fun r s' => LocEq s' s₀ ∧ bbN n s₀.mem h f = some (r.headD 0, s'.mem); ⊤⦄ := by
   cases n with
   | zero => rw [invoke_eq _ hp.bbmemo]; simp only [callFn, bbMemo]; vcgen [exec] <;> grind
-  | succ n => exact bbMemo_spec p hp.bmf hp.bmp hp.bbgo hp.bbnode hp.bmc hp.bbmemo n s₀ h
+  | succ n => exact bbMemo_spec p hp.bmf hp.bmp hp.bbgo hp.bbnode hp.bmc hp.bbmemo n s₀ h f
 
 include hp in
 theorem bvarBL_spec (n : Nat) (s₀ : St) (f h : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "bvar_b" [f, h]
-    ⦃fun r s' => LocEq s' s₀ ∧ bvbW n s₀.mem h = some (r.headD 0, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ bvbW n s₀.mem h f = some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp.bvb]
   simp only [callFn, bvarBL]
   cases n with
@@ -112,7 +112,7 @@ include hp in
 theorem lbbFastL_spec (n : Nat) (s₀ : St) (f k h : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p (n + 1)) "loose_bvars_bounded_fast" [f, k, h]
-    ⦃fun r s' => LocEq s' s₀ ∧ lbbK k (bvbW n s₀.mem h) = some (r.headD 0, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ lbbK k (bvbW n s₀.mem h f) = some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp.lbb]
   simp only [callFn, lbbFastL]
   sym only [lang_grind, arena_grind] =>
