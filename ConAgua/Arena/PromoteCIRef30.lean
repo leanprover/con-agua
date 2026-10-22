@@ -187,9 +187,10 @@ theorem pnew_main (dn : NIdx → Option ConLeche.Name) (n : Nat) (m₁ : Mem) (a
     rw [hfr₃.2.1 128 (by decide), h128₂]
   have hEC₃rows : ∀ b : Nat, 132 ≤ b → b < 135 → m₃.arr64 b = m₂.arr64 b := by
     intro b h1 h2
-    apply hfr₃.1 b _ (by simp only [CTL]; omega)
+    apply hfr₃.1 b _ (fun h => by rw [h] at h1; simp [CTL] at h1)
     intro hb
-    rcases pnew_arrs' b hb with h | h | h
+    rcases pnew_arrs' b hb with h | h | h | h
+    · omega
     · omega
     · omega
     · omega
@@ -201,7 +202,9 @@ theorem pnew_main (dn : NIdx → Option ConLeche.Name) (n : Nat) (m₁ : Mem) (a
                     · rw [h]; omega), hEC₂]
   have hcons₃' : ConstsAt dn (erecP m₃) (m₃.arr64 ECON) (n0.toNat - c.toNat + Lc'.length - 1) Lc' := by
     rcases hjt with h | h
-    · subst h; simp at hlen₃; have : Lc' = [] := List.length_eq_zero_iff.mpr hlen₃; subst this; trivial
+    · subst h
+      have : Lc' = [] := by simpa using hlen₃
+      subst this; trivial
     · rw [hlen₃, hLlen]
       have : n0.toNat - c.toNat + c.toNat - 1 = n0.toNat - 1 := by omega
       rw [this, ← h]; exact hcons₃
