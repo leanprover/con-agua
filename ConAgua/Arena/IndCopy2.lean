@@ -595,4 +595,40 @@ theorem appendW_dec {n : Nat} {m m' : Mem} {o1 l1 o2 l2 : Word} {r : List Word}
       rw [hget, if_neg (by omega), if_neg (by omega)]
   · simp only [iwTop, htop, hsum]; omega
 
+
+/-! ## `er_copy`, `er_to_iw` -/
+
+/-- The model of `er_copy`. -/
+def erCopyW : Nat → Mem → Word → Word → Word → Option Mem
+  | 0, _, _, _, _ => none
+  | n + 1, m, d, s, l =>
+    if l = 0 then some m
+    else erCopyW n (m.set64 IW d (rdW (m.arr64 EREC) s)) (d + 1) (s + 1) (l - 1)
+
+section arms
+variable (n : Nat) (m : Mem) (d s l : Word)
+theorem erCopyW_nil (hl : l = 0) : erCopyW (n + 1) m d s l = some m := by simp [erCopyW, hl]
+theorem erCopyW_step (hl : l ≠ 0) :
+    erCopyW (n + 1) m d s l =
+      erCopyW n (m.set64 IW d (rdW (m.arr64 EREC) s)) (d + 1) (s + 1) (l - 1) := by
+  simp [erCopyW, hl]
+end arms
+
+grind_pattern [ind_grind] erCopyW_nil => erCopyW (n + 1) m d s l
+grind_pattern [ind_grind] erCopyW_step => erCopyW (n + 1) m d s l
+
+theorem erCopy_spec (p : Prog) (hp : p.lookup "er_copy" = some erCopy) (n : Nat) :
+    ∀ (s₀ : St) (d s l : Word),
+    ⦃fun st => st = s₀⦄ invoke p (exec p n) "er_copy" [d, s, l]
+    ⦃fun _ s' => LocEq s' s₀ ∧ erCopyW n s₀.mem d s l = some s'.mem; ⊤⦄ := by
+  induction n with
+  | zero => intro s₀ d s l; rw [invoke_eq _ hp]; simp only [callFn, erCopy]; vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ d s l
+    rw [invoke_eq _ hp]
+    simp only [callFn, erCopy]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
+      finish (gen := 20)
+
 end L.Ind
