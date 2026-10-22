@@ -108,4 +108,90 @@ theorem ptr_rec (cts : List IndCtorRec) (co : Word) (k : Nat) (hk : k < cts.leng
     Nat.mul_div_cancel_left _ (by decide)]
   simp [List.getD_eq_getElem?_getD, hk]
 
+
+/-! ## `vi_order_in` -/
+
+section order
+variable {b : ByteArray} {m₀ : Mem} {a : AState} {st : StateD} (hR : ArenaR m₀ a)
+  (hD : StateDR m₀ st) {cts : List IndCtorRec} {fo cno co cn fuel np oo : Word}
+  (hCt : ListF (CtF b m₀) m₀ 10 co.toNat cts) (hcn : cn.toNat = cts.length)
+  (hCN : ∀ k, k < cts.length → (wd m₀ IFL (cno.toNat + k)).toNat < 2 ^ 32)
+  (hcnB : cno.toNat + cts.length ≤ oo.toNat) (hnp : np.toNat < 10 ^ 18)
+  (hco : co.toNat + 10 * cts.length < 2 ^ 63) (hsz : oo.toNat + cts.length ≤ (m₀.arr64 IFL).size)
+  (hsz63 : (m₀.arr64 IFL).size < 2 ^ 63)
+include hR hD hCt hcn hCN hcnB hnp hco hsz hsz63
+
+theorem orderInW_twin : ∀ (n : Nat) (m m' : Mem) (t tt jj pos pos' : Word),
+    orderInW n m fo cno co cn fuel np oo t tt jj pos = some (pos', m') → IOnly oo.toNat m₀ m →
+    t.toNat + 4 < 2 ^ 63 → jj.toNat ≤ (wd m₀ IFR (t.toNat + 4)).toNat →
+    pos.toNat + ((wd m₀ IFR (t.toNat + 4)).toNat - jj.toNat) ≤ cts.length →
+    (∀ c, jj.toNat ≤ c → c < (wd m₀ IFR (t.toNat + 4)).toNat →
+      fo.toNat + pos.toNat + (c - jj.toNat) < oo.toNat ∧
+      (wd m₀ IFL (fo.toNat + pos.toNat + (c - jj.toNat))).toNat < 2 ^ 32) →
+    IOnly oo.toNat m₀ m' ∧ pos'.toNat = pos.toNat + ((wd m₀ IFR (t.toNat + 4)).toNat - jj.toNat) ∧
+    (∀ i, i < oo.toNat + pos.toNat → wd m' IFL i = wd m IFL i) ∧
+    ∀ c, jj.toNat ≤ c → c < (wd m₀ IFR (t.toNat + 4)).toNat →
+      ∃ k, wd m' IFL (oo.toNat + pos.toNat + (c - jj.toNat)) = co + 10 * UInt64.ofNat k ∧
+        CtorOK st a cts (islice m₀ cno.toNat cts.length)
+          (decI (wd m₀ IFL (fo.toNat + pos.toNat + (c - jj.toNat)))) c (decI tt) np.toNat fuel.toNat k := by
+  intro n
+  induction n with
+  | zero => intro m m' t tt jj pos pos' h; simp [orderInW] at h
+  | succ n ih =>
+    intro m m' t tt jj pos pos' h hI ht hjj hpos hfo
+    simp only [orderInW] at h
+    have h4 : rdW (m.arr64 IFR) (t + 4) = wd m₀ IFR (t.toNat + 4) := by
+      rw [wd_eq, widx2 _ _ (by simp; omega), hI.wdR]; rfl
+    rw [h4] at h
+    split at h
+    · rename_i hle
+      cases h
+      have := UInt64.le_iff_toNat_le.mp hle
+      exact ⟨hI, by omega, fun _ _ => rfl, fun c h1 h2 => by omega⟩
+    rename_i hlt
+    have hlt' := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hlt)
+    obtain ⟨hf1, hf2⟩ := hfo jj.toNat (Nat.le_refl _) hlt'
+    simp only [Nat.sub_self, Nat.add_zero] at hf1 hf2
+    have hfp : (fo + pos).toNat = fo.toNat + pos.toNat := widx2 _ _ (by omega)
+    have hop : (oo + pos).toNat = oo.toNat + pos.toNat := widx2 _ _ (by omega)
+    have hnn : rdW (m.arr64 IFL) (fo + pos) = wd m₀ IFL (fo.toNat + pos.toNat) := by
+      rw [wd_eq, hfp, hI.2 _ hf1]
+    rw [hnn] at h
+    cases hc : ctorW n m (wd m₀ IFL (fo.toNat + pos.toNat)) jj tt np fuel cno cn co with
+    | none => rw [hc, wK_none] at h; cases h
+    | some c =>
+    rw [hc, wK_some] at h
+    -- the constructor, against the twin
+    have hCN' : ∀ k, k < cts.length → (wd m IFL (cno.toNat + k)).toNat < 2 ^ 32 := fun k hk => by
+      rw [hI.2 _ (by omega)]; exact hCN k hk
+    obtain ⟨k, hk, hck, hfold, hcidx, hind, htele⟩ := ctorW_twin (hI.arena hR) (hI.stateDR hD)
+      (hI.listF hCt) hcn hCN' (by omega) hf2 hnp hco hc
+    rw [hI.islice _ _ hcnB] at hfold
+    -- the rest of the loop
+    have hj1 := wsucc jj _ (UInt64.not_le.mp hlt)
+    have hp1 : (pos + 1).toNat = pos.toNat + 1 := widx2 _ _ (by simp; omega)
+    obtain ⟨y1, y2, y3, y4⟩ := ih (m.set64 IFL (oo + pos) c) m' t tt (jj + 1) (pos + 1) pos' h
+      (hI.set _ _ (by rw [hop]; omega)) ht (by rw [hj1]; omega) (by rw [hj1, hp1]; omega)
+      (fun c' h1 h2 => by
+        rw [hj1] at h1; rw [hp1, hj1]
+        have := hfo c' (by omega) h2
+        rw [show fo.toNat + (pos.toNat + 1) + (c' - (jj.toNat + 1)) = fo.toNat + pos.toNat + (c' - jj.toNat) by omega]
+        exact this)
+    rw [hj1, hp1] at y2 y4
+    rw [hp1] at y3
+    have hwc : wd m' IFL (oo.toNat + pos.toNat) = c := by
+      rw [y3 _ (by omega), wd_set64, if_pos ⟨rfl, hop, by
+        have := hI.1.2.2.1 IFL; rw [this]; omega⟩]
+    refine ⟨y1, by omega, fun i hi => by rw [y3 _ (by omega), wd_set64, if_neg (by omega)], fun c' h1 h2 => ?_⟩
+    by_cases hcj : c' = jj.toNat
+    · subst hcj
+      simp only [Nat.sub_self, Nat.add_zero]
+      exact ⟨k, by rw [hwc, hck], hk, hfold, hcidx, hind, htele⟩
+    · obtain ⟨k', e1, e2⟩ := y4 c' (by omega) h2
+      rw [show oo.toNat + (pos.toNat + 1) + (c' - (jj.toNat + 1)) = oo.toNat + pos.toNat + (c' - jj.toNat) by omega] at e1
+      rw [show fo.toNat + (pos.toNat + 1) + (c' - (jj.toNat + 1)) = fo.toNat + pos.toNat + (c' - jj.toNat) by omega] at e2
+      exact ⟨k', e1, e2⟩
+
+end order
+
 end L.Front.Ind
