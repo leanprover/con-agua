@@ -4,6 +4,8 @@ import ConAgua.Arena.WhnfDeltaRefine4
 import ConAgua.Arena.WhnfCoreLoop
 import ConAgua.Arena.CoreWalks
 import ConAgua.Arena.WhnfM2CRefine
+import ConAgua.Arena.InferFieldSort
+import ConAgua.Arena.InferFieldSortNat
 
 /-!
 # The knot tied (lane `defeq`)
@@ -71,17 +73,18 @@ structure KnotAllProg (p : Prog) : Prop where
   `ar_entry`, `has_fvar` under `CoreS` at exactly `coreWalkFuel`. -/
   walks : CoreWalkProg p
   rc : p.lookup "reserved_contains_w" = some reservedContainsL
+  fsz : FieldSortZeroProg p
+  natPred : NatPredProg p
 
 /-- **Every assumption the knot still makes.** -/
 structure KnotCallees (p : Prog) : Prop where
   /-- Lane `whnf`'s slot steps (proved there over its inline stub bundles). -/
   whnfCoreStep : ∀ n, KnotUpTo p n → WhnfCoreSlot p (n + 1)
   whnfStep : ∀ n, KnotUpTo p n → WhnfSlot p (n + 1)
-  /-- `DefeqCallees` without the walks (`KnotAllProg.walks`): the `PropRead` readers and
-  `field_sort_zero`. -/
+  /-- `DefeqCallees` without the walks (`KnotAllProg.walks`) and `field_sort_zero`: the
+  `PropRead` readers. -/
   notProofFast : NotProofFastOK p
   isProofFast : IsProofFastOK p
-  fieldSortZero : FieldSortZeroOK p
   /-- Lane `whnf`'s `proofIrrel_refines` rests on `CoreS.lvl_den` (`proofIrrelOK_of`). -/
   proofIrrel : ProofIrrelOK p
   towerSlots : TowerSlotsAllOK p
@@ -92,8 +95,6 @@ structure KnotCallees (p : Prog) : Prop where
   /-- Lane `whnf`'s `reduceProjCore_refines'` takes all of `WhnfCallees`, which holds the slot
   steps this file proves. -/
   reduceProjCore : ReduceProjCoreH p
-  /-- `natPred_refines` posts `ResH`, the hypothesis `ResW`. -/
-  natPred : NatPredW p
   /-- Lane `whnf`'s `unfoldDefinition_refines'` takes all of `WhnfCallees` (it uses `instLP`). -/
   unfold : UnfoldDefOK p
   whnfGrows : ∀ n, WhnfGrowsUpTo p n
@@ -124,11 +125,11 @@ include hq hc in
 /-- `DefeqCallees`: the walks from `CoreWalks.lean`, the rest from `KnotCallees`. -/
 theorem KnotCallees.defeq : DefeqCallees p :=
   ⟨hasFvar_core hq.walks.abs hq.walks.hf, hc.notProofFast, hc.isProofFast,
-    abs1_core hq.walks.abs hq.walks.ae, absRange_core hq.walks.ar hq.walks.are, hc.fieldSortZero⟩
+    abs1_core hq.walks.abs hq.walks.ae, absRange_core hq.walks.ar hq.walks.are, fieldSortZero_core p hq.fsz⟩
 
 include hq hc in
 theorem KnotCallees.lazy : LazyCallees p :=
-  ⟨hq.walks.instListOK, hq.walks.inst1OK, (hc.defeq hq).hasFvar, hc.natPred, hc.unfold,
+  ⟨hq.walks.instListOK, hq.walks.inst1OK, (hc.defeq hq).hasFvar, natPredW_of p hq.natPred, hc.unfold,
     reduceNat_of p hq.delta (natOpResultOK_of_agree hq.delta.natAgree) hc.whnfGrows, hc.store⟩
 
 include hq hc in
