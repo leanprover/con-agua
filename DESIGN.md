@@ -7725,7 +7725,6 @@ entry. The memo-hit bug (the probe depth returned as the value) was found by thi
 * **Open**: `checkDeclDefn_loop` stays `sorry` until the loop's relation carries the variant list
   (`PinSetsR m pins`: `LoopR` gains `pins`, or the chain `CheckDeclSpec` → `installStepGo_spec`
   → `Checker.lean` threads it) and the two gate specs are proved.
-
 ### Helper `whnf4-d23`: the level-parameter bit mirrored (deviation D23 fixed)
 
 The twin's derived records carry a level-parameter bit (`lpOfData` of the expression word,
