@@ -97,7 +97,6 @@ structure KnotCallees (p : Prog) : Prop where
   whnfStep : ∀ n, KnotUpTo p n → WhnfSlot p (n + 1)
   /-- Lane `whnf`'s `proofIrrel_refines` rests on `CoreS.lvl_den` (`proofIrrelOK_of`). -/
   proofIrrel : ProofIrrelOK p
-  towerSlots : TowerSlotsAllOK p
   /-- Lane `whnf`'s `reduceProjCore_refines'` takes all of `WhnfCallees`, which holds the slot
   steps this file proves. -/
   reduceProjCore : ReduceProjCoreH p
@@ -168,7 +167,8 @@ theorem KnotCallees.lazy : LazyCallees p :=
 include hq hc in
 theorem KnotCallees.stuck : StuckCallees p :=
   ⟨hc.defeq hq, hc.proofIrrel, hq.walks.inst1OK, defeqLstOK_of p hq.lst,
-    reservedContainsOK_of p hq.rc, hc.towerSlots,
+    reservedContainsOK_of p hq.rc,
+    towerSlotsAll_refines' p hq.body.iota (findProj_refines p hq.projp) (projFound p hq.projp),
     lvlsEqCH_of p hq.lvc, hc.den, strLitSupported_core p hq.str, strLitCtor_core p hq.str, supKeep_of,
     lazyDeltaStepH_of p hq.body.lazy (hc.lazy hq), hc.reduceProjCore⟩
 
