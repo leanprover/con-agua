@@ -26,8 +26,8 @@ open L L.Compiler L.Checker
 
 universe w
 
-theorem checkerProg_lookup_check : checkerProg.lookup "check" = some L.Checker.checkL := by
-  decide +kernel
+set_option maxRecDepth 100000 in
+theorem checkerProg_lookup_check : checkerProg.lookup "check" = some L.Checker.checkL := rfl
 
 /-- `checker_x64_accepts` for the checker's code, `checkerAsm`. -/
 theorem checkerAsm_accepts [Host] (hP : PipelineRefines checkerProg)
