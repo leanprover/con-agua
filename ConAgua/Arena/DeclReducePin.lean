@@ -212,7 +212,7 @@ theorem crpW_ok {p : Prog} (h : CrpProg p) {dn : NIdx → Option ConLeche.Name} 
   obtain ⟨r3, m3⟩ := rm3
   rw [h3, crpK3_some] at hW
   obtain ⟨s3, hs3, -, hok3, hS3, hg3, hb3, -⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
-    (reducePinGuard_refines p h.red.pa h.rdp h.rpg n ⟨s2.mem, Locals.init []⟩ a2 dn fe vis c hS2 hc)
+    (reducePinGuard_refines p h.red.pa h.rdp h.rpg n ⟨s2.mem, Locals.init []⟩ a2 dn fe vis c hS2 hc h.red.rom)
     h3
   subst hs3
   have hrun3 := AM.run_of_ok _ _ hok3
@@ -229,7 +229,7 @@ theorem crpW_ok {p : Prog} (h : CrpProg p) {dn : NIdx → Option ConLeche.Name} 
   obtain ⟨r4, m4⟩ := rm4
   rw [h4, crpK4_some] at hW
   obtain ⟨s4, hs4, -, hok4, hS4, hg4, hpl, hpe⟩ := triple_of_callW (s₀ := ⟨s3.mem, Locals.init []⟩)
-    (reduceDeclPin_refines p h.red.pa n ⟨s3.mem, Locals.init []⟩ a3 dn fe vis c hS3 hc h.rdp) h4
+    (reduceDeclPin_refines p h.red.pa n ⟨s3.mem, Locals.init []⟩ a3 dn fe vis c hS3 hc h.red.rom h.rdp) h4
   subst hs4
   have hrun4 := AM.run_of_ok _ _ hok4
   rw [← hpe] at hrun4

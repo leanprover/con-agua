@@ -8,8 +8,8 @@ The `checkDecl` arms read con-leche values the twin interns at the point of use 
 In L they are the stubs `rom_ci(id)`, `rom_cv(id)`, `rom_expr_pin(id)`, `rom_basis_decls(kind)`,
 `rom_basis_decls_a(kind)` of `DeclArmsNat.lean` (`romStubs`; lane `decls2`'s conventions: a
 constant record or value in `EREC`, a handle, an `IW` slice of record pointers). This file states
-what the real readers must prove, in lane `induct`'s stub shape (`stubM` + `RelAM`, proved by
-`sorry`, listed in DESIGN.md): from the stage relation, the twin's intern of the value runs, the
+what the real readers must prove (now `ConAgua/Rom/CIReadSpec.lean`'s `RomRefs`, in `CallRef`
+shape over the real code): from the stage relation, the twin's intern of the value runs, the
 stage relation holds after it at the same environment, the pools only grew, and the result
 decodes to the twin's value **below the tops** (so it stays decoded as later callees grow the
 pools). The startup data these come from is lane `romload`'s (`romData` in the pin buffer `PB`).
@@ -60,40 +60,8 @@ def decRBlk (dn : NIdx → Option ConLeche.Name) (m : Mem) (r : List Word)
     (cis : List IConstantInfo) : Prop :=
   DecB (basisDec dn (r.headD 0).toNat (r.tail.headD 0).toNat) m cis ∧ r = [r.headD 0, r.tail.headD 0]
 
-/-! ## The specs -/
-
-section specs
-variable (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-
-/-- `rom_ci(id)`: `eqA`, `natA`, the `Iff` and `Nonempty` families (ids `0‥7`). -/
-theorem romCi_spec (id : Word) (hid : id.toNat < 8) :
-    RelAM "rom_ci" [id] (StageR dn vis fe) (romCiT id.toNat) (KeepPost dn vis fe (decRCI dn)) :=
-  sorry
-
-/-- `rom_cv(id)`: `propextA`, `choiceA`, the `True` family, `trustCompilerA`, `boolCvA`, the reduce
-operations' types, the `ofReduce*` axioms (ids `0‥9`). -/
-theorem romCv_spec (id : Word) (hid : id.toNat < 10) :
-    RelAM "rom_cv" [id] (StageR dn vis fe) (romCvT id.toNat) (KeepPost dn vis fe decRCV) := sorry
-
-/-- `rom_expr_pin(id)`: the reduce operations' pinned values (ids `0`, `1`). -/
-theorem romExpr_spec (id : Word) (hid : id.toNat < 2) :
-    RelAM "rom_expr_pin" [id] (StageR dn vis fe) (romExprT id.toNat) (KeepPost dn vis fe decW0E) :=
-  sorry
-
-/-- `rom_basis_decls(kind)`: the raw basis block (`BasisKind.decls`). -/
-theorem romBasisDecls_spec (k : Word) (hk : k.toNat < 5) :
-    RelAM "rom_basis_decls" [k] (StageR dn vis fe) (BasisKind.decls (basisOfW k.toNat))
-      (KeepPost dn vis fe (decRBlk dn)) := sorry
-
-/-- `rom_basis_decls_a(kind)`: the annotated basis block (`BasisKind.declsA`). -/
-theorem romBasisDeclsA_spec (k : Word) (hk : k.toNat < 5) :
-    RelAM "rom_basis_decls_a" [k] (StageR dn vis fe) (BasisKind.declsA (basisOfW k.toNat))
-      (KeepPost dn vis fe (decRBlk dn)) := sorry
-
-/-- `rom_and_pin()`: the pinned `And` block (`andPinDecls`), for `and_pin_ok`'s inductive arm. -/
-theorem romAndPin_spec :
-    RelAM "rom_and_pin" [] (StageR dn vis fe) andPinDecls (KeepPost dn vis fe (decRBlk dn)) := sorry
-
-end specs
+/-! The specs: `ConAgua/Rom/CIReadSpec.lean` (`RomRefs`, about the real readers of
+`CIRead.lean`; lane `decls4`). The arms take them as a field of their program bundles
+(`RedProg.rom`, `QuotProg.rom`, `DmProg7.lRom`). -/
 
 end L.Ind
