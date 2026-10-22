@@ -359,8 +359,9 @@ def checkReducePinL : FunDecl := lfn (vis, vis2, c, v) locals (e, pa, x, ax) {
 /-- `install_basis_decl(vis, p)`: the constant record `p` installed, duplicate-checked. -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:754-761 ConRon.Arena.installBasisDecl
 @[l_impl ConRon.Arena.installBasisDecl]
-def installBasisDeclL : FunDecl := lfn (vis, p) locals (f, r, w) {
-  (f, r) := call env_find(EREC.u64[p + 1], vis);
+def installBasisDeclL : FunDecl := lfn (vis, p) locals (n, f, r, w) {
+  n := EREC.u64[p + 1];
+  (f, r) := call env_find(n, vis);
   if f != 0 { abort };
   w := call env_push(vis, p);
   return w
@@ -369,9 +370,10 @@ def installBasisDeclL : FunDecl := lfn (vis, p) locals (f, r, w) {
 /-- `install_basis_decls(vis, o, l)`: an `IW` slice of constant records, in order. -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:763-767 ConRon.Arena.installBasisDecls
 @[l_impl ConRon.Arena.installBasisDecls]
-def installBasisDeclsL : FunDecl := lfn (vis, o, l) locals (w) {
+def installBasisDeclsL : FunDecl := lfn (vis, o, l) locals (c, w) {
   if l == 0 { return vis };
-  w := call install_basis_decl(vis, IW.u64[o]);
+  c := IW.u64[o];
+  w := call install_basis_decl(vis, c);
   w := call install_basis_decls(w, o + 1, l - 1);
   return w
 }

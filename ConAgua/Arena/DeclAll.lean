@@ -6,3 +6,4 @@ import ConAgua.Arena.DeclArms
 import ConAgua.Arena.DeclCvg
 import ConAgua.Arena.DeclValSpec
 import ConAgua.Arena.DeclValRef
+import ConAgua.Arena.DeclBasisSpec
