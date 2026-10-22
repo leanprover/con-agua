@@ -84,4 +84,5 @@ date,lane,model,work_min,overhead_min,note
 2026-10-22,decls2,opus,25,15,"landing 4: promotion (helper): promote_n/l/ls/e/vg refine sorry-free, PMemoR real, flag-bracket internPersistent; promoteNew_spec sorry; census phase 2 proven 130->136"
 2026-10-22,whnf,opus,25,8,"merged sub-lane: all delta/Nat specs proved (L fixes: nat_zero_ok/reduce_nat effect order, unfold_definition top restore, tag 10-15 aborts), swapped in with nat_op_result/pool-growth stubs; WhnfDeltaRefine split in four; landed"
 2026-10-22,perf1,opus,25,3,"Scan.Line diagnosis (lineLoop_spec: 89 finish goals ~1.2 s each; evalC_spec makes it worse), not fixed; recorded in DESIGN"
-2026-10-22,romload,opus,50,5,"landing 1: design (pin data = harness input, byte array 1; composition checked), Statement.lean loadMem/PipelineRefines take pb, generator romgen (500540 bytes, 1.1 s), lit tag 3"
+2026-10-22,defeq,opus,10,15,"landing 4: helper defeq-infer merged: inference bodies refined (InferBodySpec/InferIOBodySpec theorems from callee hypotheses; infer_proj and the binder-stack facts left as hypotheses; request to whnf for BSTK in CoreS/StackKept)"
+2026-10-22,romload,opus,40,4,"landing 1: design (pin data = harness input, byte array 1; composition checked), Statement.lean loadMem/PipelineRefines take pb, generator romgen (500540 bytes, 1.1 s), lit tag 3"

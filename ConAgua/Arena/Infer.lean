@@ -101,7 +101,8 @@ def inferLamResultL : FunDecl := lfn (ty, bt, d) locals (ab, r) {
 /-! ## The binder telescopes
 
 `fvs` is the stack slice `(fo, k)` (`CTL[136] = fo + k`), `stk` the binder-stack slice `(lo, k)`
-(`CTL[137] = lo + k`); `d + k` is the depth of the next binder. The twin's `peelFuel` (`2^24`)
+(`CTL[137] = lo + k`); `d + k` is the depth of the next binder (the depth capacity: `infer_lam`
+and `infer_forall` abort at `d ≥ 2^63`, so `d + k` does not wrap). The twin's `peelFuel` (`2^24`)
 is the exact counter `peel`. -/
 
 /-- The λ loop's leaf and its outward rebuild. -/
@@ -206,6 +207,7 @@ def inferPisL : FunDecl :=
 /-- con-ron: ConRon/Arena/Core.lean:2575-2585 ConRon.Arena.inferLam -/
 @[l_impl ConRon.Arena.inferLam]
 def inferLamL : FunDecl := lfn (mode, vis, d, ty, body) locals (tty, w, fv, so, lo, r) {
+  if d >> 63 != 0 { abort };
   tty := call infer(mode, vis, d, ty);
   w := call whnf(mode, vis, d, tty);
   if w >> 28 != 2 { abort };
@@ -227,6 +229,7 @@ def inferLamL : FunDecl := lfn (mode, vis, d, ty, body) locals (tty, w, fv, so, 
 /-- con-ron: ConRon/Arena/Core.lean:2587-2599 ConRon.Arena.inferForall -/
 @[l_impl ConRon.Arena.inferForall]
 def inferForallL : FunDecl := lfn (mode, vis, d, ty, body) locals (tty, w, t, i, u, fv, so, lo, r) {
+  if d >> 63 != 0 { abort };
   tty := call infer(mode, vis, d, ty);
   w := call whnf(mode, vis, d, tty);
   if w >> 28 != 2 { abort };
@@ -253,7 +256,8 @@ def inferForallL : FunDecl := lfn (mode, vis, d, ty, body) locals (tty, w, t, i,
 /-! ## The application spine
 
 The arguments are the slice `(ao, an)` `head_and_args` left on the stack; the accumulator is the
-slice `(co, cn)` above it (`co` the top on entry). The `whnf` re-entry resets it to `#[a]`. -/
+slice `(co, cn)` above it (`co` the top on entry; a top past the stack's end is a capacity
+abort, so that the empty accumulator is a slice). The `whnf` re-entry resets it to `#[a]`. -/
 
 /-- con-ron: ConRon/Arena/Core.lean:2615-2621 ConRon.Arena.defeqArg -/
 @[l_impl ConRon.Arena.defeqArg]
@@ -283,6 +287,7 @@ def inferSpineArgL : FunDecl := lfn (mode, vis, d, a, dom2) locals (ta, ok) {
 def inferSpineL : FunDecl :=
     lfn (mode, vis, d, ty, ao, an) locals (co, cn, i, a, t, x, dom, dom2, ty2, w, z, r) {
   co := CTL.u64[136];
+  if len(SPN.u64) < co { abort };
   cn := 0;
   i := 0;
   while i < an {
@@ -339,6 +344,7 @@ def inferAppL : FunDecl := lfn (mode, vis, d, e) locals (top, hd, ao, an, tf, r)
 def inferSpineIOL : FunDecl :=
     lfn (mode, vis, d, ty, ao, an) locals (co, cn, i, a, t, x, ty2, w, r) {
   co := CTL.u64[136];
+  if len(SPN.u64) < co { abort };
   cn := 0;
   i := 0;
   while i < an {
@@ -508,10 +514,12 @@ def inferBodyL : FunDecl := lfn (mode, vis, d, e) locals (g, x1, x2, x3, su, r) 
   abort
 }
 
-/-- The io body's `.forallE` clause (chained, one binder). -/
+/-- The io body's `.forallE` clause (chained, one binder). The depth capacity: the body runs at
+`d + 1`, which must not wrap (the twin's depth is a `Nat`). -/
 -- con-ron: ConRon/Arena/Core.lean:2802-2874 ConRon.Arena.inferBodyIO
 @[l_impl ConRon.Arena.inferBodyIO]
 def inferForallIOL : FunDecl := lfn (mode, vis, d, ty, body) locals (tt, hh, t, i, u, fv, ob, bt, v, iu, r) {
+  if d + 1 == 0 { abort };
   tt := call infer_io(mode, vis, d, ty);
   hh := call whnf(mode, vis, d, tt);
   if hh >> 28 != 2 { abort };
@@ -529,10 +537,11 @@ def inferForallIOL : FunDecl := lfn (mode, vis, d, ty, body) locals (tt, hh, t, 
   return r
 }
 
-/-- The io body's `.lam` clause (no domain-sort run). -/
+/-- The io body's `.lam` clause (no domain-sort run; the depth capacity as `infer_forall_io`'s). -/
 -- con-ron: ConRon/Arena/Core.lean:2802-2874 ConRon.Arena.inferBodyIO
 @[l_impl ConRon.Arena.inferBodyIO]
 def inferLamIOL : FunDecl := lfn (mode, vis, d, ty, body) locals (fv, ob, bt, r) {
+  if d + 1 == 0 { abort };
   fv := call intern_fvar(d, ty);
   ob := call inst1(body, fv, 0);
   bt := call infer_io(mode, vis, d + 1, ob);
