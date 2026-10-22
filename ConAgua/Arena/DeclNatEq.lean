@@ -397,6 +397,515 @@ theorem natEqList4_ref (hN : NatEqProg p) (a1 b1 a2 b2 a3 b3 a4 b4 : Word) :
   have hall := emit_eqL (dn := dn) (vis := vis) (fe := fe) hN.lIwAlloc (k := k) (m' := m') (r := r) (ws := [r1.headD 0, r2.headD 0, r3.headD 0, r4.headD 0]) (ps := [(decE a1, decE b1), (decE a2, decE b2), (decE a3, decE b3), (decE a4, decE b4)]) hS4 rfl rfl hrec hq hr.symm (by rw [← hm]; simp [wrIW, UInt64.add_assoc])
   exact ⟨_, s, rfl, hall.1, ((((hK1.1).trans hK2.1).trans hK3.1).trans hK4.1).trans hall.2.1, hall.2.2⟩
 
+theorem eqL_retag {m : Mem} {rl : List Word} {xl : List (EIdx × EIdx)} {k : Nat}
+    (h : decEqRL m rl xl) (hk : xl.length = k) :
+    EqL m (rl.headD 0).toNat k xl := by
+  obtain ⟨h1, h2, h3⟩ := h
+  simp only [getD0, getD1] at h1 h2 h3
+  exact ⟨by omega, hk.symm, h3⟩
+
+def natEqPrT (c : NIdx) (z : EIdx) (x : EIdx) (sx : EIdx) : AM (List (EIdx × EIdx)) := do
+  let l1 ← natAp1 c z
+  let l2 ← natAp1 c sx
+  pure [(l1, z), (l2, x)]
+
+def natEqPrW (p : Prog) (n : Nat) (m : Mem) (c z x sx : Word) : Option (List Word × Mem) :=
+  bW (callW p n "nat_ap1" [c, z] m) fun r_l1 m_l1 =>
+  bW (callW p n "nat_ap1" [c, sx] m_l1) fun r_l2 m_l2 =>
+  bW (callW p n "nat_eq_list2" [r_l1.headD 0, z, r_l2.headD 0, x] m_l2) fun rl ml =>
+  some ([rl.headD 0, 2], ml)
+
+theorem natEqPr_specW (p : Prog) (hp : p.lookup "nat_eq_pr" = some natEqPr) (n : Nat) (s₀ : St)
+    (c z x sx : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_eq_pr" [c, z, x, sx]
+    ⦃fun r s' => LocEq s' s₀ ∧ natEqPrW p n s₀.mem c z x sx = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, natEqPr]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      callW_spec p n "nat_ap1", callW_spec p n "nat_ap2", callW_spec p n "nat_eq_list2"] <;>
+    finish (gen := 20) (instances := 10000) [natEqPrW, bW]
+
+theorem natEqPr_ref (hN : NatEqProg p) (c z x sx : Word) :
+    CallRef p "nat_eq_pr" [c, z, x, sx] (fun m s => StageR dn vis fe m s ∧ H c ∧ H z ∧ H x ∧ H sx)
+      (natEqPrT (decI c) (decE z) (decE x) (decE sx)) (KeepPost dn vis fe decEqRL) := by
+  refine CallRef.of_succ fun k m s r m' ⟨hS, h_c, h_z, h_x, h_sx⟩ hc => ?_
+  have hw := callW_model (M := fun mm => natEqPrW p k mm c z x sx) (natEqPr_specW p hN.lNatEqPr k · c z x sx) hc
+  unfold natEqPrW at hw
+  cases hc_l1 : callW p k "nat_ap1" [c, z] m with
+  | none => rw [hc_l1] at hw; simp at hw
+  | some q_l1 =>
+  obtain ⟨r_l1, m_l1⟩ := q_l1
+  rw [hc_l1, bW_some] at hw
+  obtain ⟨x_l1, a_l1, hrun_l1, hS_l1, hg_l1, hl_l1, hx_l1⟩ := natAp1_ref (dn := dn) (vis := vis) (fe := fe) hN (c) (z) k m s r_l1 m_l1 ⟨hS, h_c, h_z⟩ hc_l1
+  cases hc_l2 : callW p k "nat_ap1" [c, sx] m_l1 with
+  | none => rw [hc_l2] at hw; simp at hw
+  | some q_l2 =>
+  obtain ⟨r_l2, m_l2⟩ := q_l2
+  rw [hc_l2, bW_some] at hw
+  obtain ⟨x_l2, a_l2, hrun_l2, hS_l2, hg_l2, hl_l2, hx_l2⟩ := natAp1_ref (dn := dn) (vis := vis) (fe := fe) hN (c) (sx) k m_l1 a_l1 r_l2 m_l2 ⟨hS_l1, h_c, h_sx⟩ hc_l2
+  cases hcl : callW p k "nat_eq_list2" [r_l1.headD 0, z, r_l2.headD 0, x] m_l2 with
+  | none => rw [hcl] at hw; simp at hw
+  | some ql =>
+  obtain ⟨rl, ml⟩ := ql
+  rw [hcl, bW_some] at hw
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨hr, hm⟩ := hw
+  obtain ⟨xl, al, hrunl, hSl, hgl, hdl⟩ := natEqList2_ref (dn := dn) (vis := vis) (fe := fe) hN (r_l1.headD 0) (z) (r_l2.headD 0) (x) k m_l2 a_l2 rl ml ⟨hS_l2, hl_l1, h_z, hl_l2, h_x⟩ hcl
+  obtain ⟨hxl, hal⟩ := Prod.mk.inj (Except.ok.inj (show (Except.ok ([(decE (r_l1.headD 0), decE (z)), (decE (r_l2.headD 0), decE (x))], a_l2) : Except CheckError _) = Except.ok (xl, al) from hrunl))
+  subst hal
+  subst hr; subst hm
+  try simp only [decE_eq] at hrun_l1
+  try simp only [decE_eq] at hrun_l2
+  try simp only [decE_eq, hx_l1] at hrun_l2
+  simp only [decE_eq, hx_l1, hx_l2] at hxl
+  refine ⟨xl, a_l2, ?_, hSl, ((hg_l1).trans hg_l2).trans hgl, eqL_retag hdl (by rw [← hxl]; rfl)⟩
+  simp only [natEqPrT, decE_eq, StateT.run_bind, hrun_l1, hrun_l2, exc_ok_bind']
+  rw [← hxl]
+  rfl
+
+def natEqUnT (c : NIdx) (x : EIdx) (y : EIdx) (z : EIdx) (sy : EIdx) (w : NIdx) : AM (List (EIdx × EIdx)) := do
+  let l1 ← natAp2 c x z
+  let l2 ← natAp2 c x sy
+  let r3 ← natAp2 c x y
+  let r2 ← natAp1 w r3
+  pure [(l1, x), (l2, r2)]
+
+def natEqUnW (p : Prog) (n : Nat) (m : Mem) (c x y z sy w : Word) : Option (List Word × Mem) :=
+  bW (callW p n "nat_ap2" [c, x, z] m) fun r_l1 m_l1 =>
+  bW (callW p n "nat_ap2" [c, x, sy] m_l1) fun r_l2 m_l2 =>
+  bW (callW p n "nat_ap2" [c, x, y] m_l2) fun r_r3 m_r3 =>
+  bW (callW p n "nat_ap1" [w, r_r3.headD 0] m_r3) fun r_r2 m_r2 =>
+  bW (callW p n "nat_eq_list2" [r_l1.headD 0, x, r_l2.headD 0, r_r2.headD 0] m_r2) fun rl ml =>
+  some ([rl.headD 0, 2], ml)
+
+theorem natEqUn_specW (p : Prog) (hp : p.lookup "nat_eq_un" = some natEqUn) (n : Nat) (s₀ : St)
+    (c x y z sy w : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_eq_un" [c, x, y, z, sy, w]
+    ⦃fun r s' => LocEq s' s₀ ∧ natEqUnW p n s₀.mem c x y z sy w = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, natEqUn]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      callW_spec p n "nat_ap1", callW_spec p n "nat_ap2", callW_spec p n "nat_eq_list2"] <;>
+    finish (gen := 20) (instances := 10000) [natEqUnW, bW]
+
+theorem natEqUn_ref (hN : NatEqProg p) (c x y z sy w : Word) :
+    CallRef p "nat_eq_un" [c, x, y, z, sy, w] (fun m s => StageR dn vis fe m s ∧ H c ∧ H x ∧ H y ∧ H z ∧ H sy ∧ H w)
+      (natEqUnT (decI c) (decE x) (decE y) (decE z) (decE sy) (decI w)) (KeepPost dn vis fe decEqRL) := by
+  refine CallRef.of_succ fun k m s r m' ⟨hS, h_c, h_x, h_y, h_z, h_sy, h_w⟩ hc => ?_
+  have hw := callW_model (M := fun mm => natEqUnW p k mm c x y z sy w) (natEqUn_specW p hN.lNatEqUn k · c x y z sy w) hc
+  unfold natEqUnW at hw
+  cases hc_l1 : callW p k "nat_ap2" [c, x, z] m with
+  | none => rw [hc_l1] at hw; simp at hw
+  | some q_l1 =>
+  obtain ⟨r_l1, m_l1⟩ := q_l1
+  rw [hc_l1, bW_some] at hw
+  obtain ⟨x_l1, a_l1, hrun_l1, hS_l1, hg_l1, hl_l1, hx_l1⟩ := natAp2_ref (dn := dn) (vis := vis) (fe := fe) hN (c) (x) (z) k m s r_l1 m_l1 ⟨hS, h_c, h_x, h_z⟩ hc_l1
+  cases hc_l2 : callW p k "nat_ap2" [c, x, sy] m_l1 with
+  | none => rw [hc_l2] at hw; simp at hw
+  | some q_l2 =>
+  obtain ⟨r_l2, m_l2⟩ := q_l2
+  rw [hc_l2, bW_some] at hw
+  obtain ⟨x_l2, a_l2, hrun_l2, hS_l2, hg_l2, hl_l2, hx_l2⟩ := natAp2_ref (dn := dn) (vis := vis) (fe := fe) hN (c) (x) (sy) k m_l1 a_l1 r_l2 m_l2 ⟨hS_l1, h_c, h_x, h_sy⟩ hc_l2
+  cases hc_r3 : callW p k "nat_ap2" [c, x, y] m_l2 with
+  | none => rw [hc_r3] at hw; simp at hw
+  | some q_r3 =>
+  obtain ⟨r_r3, m_r3⟩ := q_r3
+  rw [hc_r3, bW_some] at hw
+  obtain ⟨x_r3, a_r3, hrun_r3, hS_r3, hg_r3, hl_r3, hx_r3⟩ := natAp2_ref (dn := dn) (vis := vis) (fe := fe) hN (c) (x) (y) k m_l2 a_l2 r_r3 m_r3 ⟨hS_l2, h_c, h_x, h_y⟩ hc_r3
+  cases hc_r2 : callW p k "nat_ap1" [w, r_r3.headD 0] m_r3 with
+  | none => rw [hc_r2] at hw; simp at hw
+  | some q_r2 =>
+  obtain ⟨r_r2, m_r2⟩ := q_r2
+  rw [hc_r2, bW_some] at hw
+  obtain ⟨x_r2, a_r2, hrun_r2, hS_r2, hg_r2, hl_r2, hx_r2⟩ := natAp1_ref (dn := dn) (vis := vis) (fe := fe) hN (w) (r_r3.headD 0) k m_r3 a_r3 r_r2 m_r2 ⟨hS_r3, h_w, hl_r3⟩ hc_r2
+  cases hcl : callW p k "nat_eq_list2" [r_l1.headD 0, x, r_l2.headD 0, r_r2.headD 0] m_r2 with
+  | none => rw [hcl] at hw; simp at hw
+  | some ql =>
+  obtain ⟨rl, ml⟩ := ql
+  rw [hcl, bW_some] at hw
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨hr, hm⟩ := hw
+  obtain ⟨xl, al, hrunl, hSl, hgl, hdl⟩ := natEqList2_ref (dn := dn) (vis := vis) (fe := fe) hN (r_l1.headD 0) (x) (r_l2.headD 0) (r_r2.headD 0) k m_r2 a_r2 rl ml ⟨hS_r2, hl_l1, h_x, hl_l2, hl_r2⟩ hcl
+  obtain ⟨hxl, hal⟩ := Prod.mk.inj (Except.ok.inj (show (Except.ok ([(decE (r_l1.headD 0), decE (x)), (decE (r_l2.headD 0), decE (r_r2.headD 0))], a_r2) : Except CheckError _) = Except.ok (xl, al) from hrunl))
+  subst hal
+  subst hr; subst hm
+  try simp only [decE_eq] at hrun_l1
+  try simp only [decE_eq] at hrun_l2
+  try simp only [decE_eq, hx_l1] at hrun_l2
+  try simp only [decE_eq] at hrun_r3
+  try simp only [decE_eq, hx_l1] at hrun_r3
+  try simp only [decE_eq, hx_l2] at hrun_r3
+  try simp only [decE_eq] at hrun_r2
+  try simp only [decE_eq, hx_l1] at hrun_r2
+  try simp only [decE_eq, hx_l2] at hrun_r2
+  try simp only [decE_eq, hx_r3] at hrun_r2
+  simp only [decE_eq, hx_l1, hx_l2, hx_r3, hx_r2] at hxl
+  refine ⟨xl, a_r2, ?_, hSl, ((((hg_l1).trans hg_l2).trans hg_r3).trans hg_r2).trans hgl, eqL_retag hdl (by rw [← hxl]; rfl)⟩
+  simp only [natEqUnT, decE_eq, StateT.run_bind, hrun_l1, hrun_l2, hrun_r3, hrun_r2, exc_ok_bind']
+  rw [← hxl]
+  rfl
+
+def natEqMuT (c : NIdx) (x : EIdx) (y : EIdx) (z : EIdx) (sy : EIdx) (ad : NIdx) : AM (List (EIdx × EIdx)) := do
+  let l1 ← natAp2 c x z
+  let l2 ← natAp2 c x sy
+  let r3 ← natAp2 c x y
+  let r2 ← natAp2 ad r3 x
+  pure [(l1, z), (l2, r2)]
+
+def natEqMuW (p : Prog) (n : Nat) (m : Mem) (c x y z sy ad : Word) : Option (List Word × Mem) :=
+  bW (callW p n "nat_ap2" [c, x, z] m) fun r_l1 m_l1 =>
+  bW (callW p n "nat_ap2" [c, x, sy] m_l1) fun r_l2 m_l2 =>
+  bW (callW p n "nat_ap2" [c, x, y] m_l2) fun r_r3 m_r3 =>
+  bW (callW p n "nat_ap2" [ad, r_r3.headD 0, x] m_r3) fun r_r2 m_r2 =>
+  bW (callW p n "nat_eq_list2" [r_l1.headD 0, z, r_l2.headD 0, r_r2.headD 0] m_r2) fun rl ml =>
+  some ([rl.headD 0, 2], ml)
+
+theorem natEqMu_specW (p : Prog) (hp : p.lookup "nat_eq_mu" = some natEqMu) (n : Nat) (s₀ : St)
+    (c x y z sy ad : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_eq_mu" [c, x, y, z, sy, ad]
+    ⦃fun r s' => LocEq s' s₀ ∧ natEqMuW p n s₀.mem c x y z sy ad = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, natEqMu]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      callW_spec p n "nat_ap1", callW_spec p n "nat_ap2", callW_spec p n "nat_eq_list2"] <;>
+    finish (gen := 20) (instances := 10000) [natEqMuW, bW]
+
+theorem natEqMu_ref (hN : NatEqProg p) (c x y z sy ad : Word) :
+    CallRef p "nat_eq_mu" [c, x, y, z, sy, ad] (fun m s => StageR dn vis fe m s ∧ H c ∧ H x ∧ H y ∧ H z ∧ H sy ∧ H ad)
+      (natEqMuT (decI c) (decE x) (decE y) (decE z) (decE sy) (decI ad)) (KeepPost dn vis fe decEqRL) := by
+  refine CallRef.of_succ fun k m s r m' ⟨hS, h_c, h_x, h_y, h_z, h_sy, h_ad⟩ hc => ?_
+  have hw := callW_model (M := fun mm => natEqMuW p k mm c x y z sy ad) (natEqMu_specW p hN.lNatEqMu k · c x y z sy ad) hc
+  unfold natEqMuW at hw
+  cases hc_l1 : callW p k "nat_ap2" [c, x, z] m with
+  | none => rw [hc_l1] at hw; simp at hw
+  | some q_l1 =>
+  obtain ⟨r_l1, m_l1⟩ := q_l1
+  rw [hc_l1, bW_some] at hw
+  obtain ⟨x_l1, a_l1, hrun_l1, hS_l1, hg_l1, hl_l1, hx_l1⟩ := natAp2_ref (dn := dn) (vis := vis) (fe := fe) hN (c) (x) (z) k m s r_l1 m_l1 ⟨hS, h_c, h_x, h_z⟩ hc_l1
+  cases hc_l2 : callW p k "nat_ap2" [c, x, sy] m_l1 with
+  | none => rw [hc_l2] at hw; simp at hw
+  | some q_l2 =>
+  obtain ⟨r_l2, m_l2⟩ := q_l2
+  rw [hc_l2, bW_some] at hw
+  obtain ⟨x_l2, a_l2, hrun_l2, hS_l2, hg_l2, hl_l2, hx_l2⟩ := natAp2_ref (dn := dn) (vis := vis) (fe := fe) hN (c) (x) (sy) k m_l1 a_l1 r_l2 m_l2 ⟨hS_l1, h_c, h_x, h_sy⟩ hc_l2
+  cases hc_r3 : callW p k "nat_ap2" [c, x, y] m_l2 with
+  | none => rw [hc_r3] at hw; simp at hw
+  | some q_r3 =>
+  obtain ⟨r_r3, m_r3⟩ := q_r3
+  rw [hc_r3, bW_some] at hw
+  obtain ⟨x_r3, a_r3, hrun_r3, hS_r3, hg_r3, hl_r3, hx_r3⟩ := natAp2_ref (dn := dn) (vis := vis) (fe := fe) hN (c) (x) (y) k m_l2 a_l2 r_r3 m_r3 ⟨hS_l2, h_c, h_x, h_y⟩ hc_r3
+  cases hc_r2 : callW p k "nat_ap2" [ad, r_r3.headD 0, x] m_r3 with
+  | none => rw [hc_r2] at hw; simp at hw
+  | some q_r2 =>
+  obtain ⟨r_r2, m_r2⟩ := q_r2
+  rw [hc_r2, bW_some] at hw
+  obtain ⟨x_r2, a_r2, hrun_r2, hS_r2, hg_r2, hl_r2, hx_r2⟩ := natAp2_ref (dn := dn) (vis := vis) (fe := fe) hN (ad) (r_r3.headD 0) (x) k m_r3 a_r3 r_r2 m_r2 ⟨hS_r3, h_ad, hl_r3, h_x⟩ hc_r2
+  cases hcl : callW p k "nat_eq_list2" [r_l1.headD 0, z, r_l2.headD 0, r_r2.headD 0] m_r2 with
+  | none => rw [hcl] at hw; simp at hw
+  | some ql =>
+  obtain ⟨rl, ml⟩ := ql
+  rw [hcl, bW_some] at hw
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨hr, hm⟩ := hw
+  obtain ⟨xl, al, hrunl, hSl, hgl, hdl⟩ := natEqList2_ref (dn := dn) (vis := vis) (fe := fe) hN (r_l1.headD 0) (z) (r_l2.headD 0) (r_r2.headD 0) k m_r2 a_r2 rl ml ⟨hS_r2, hl_l1, h_z, hl_l2, hl_r2⟩ hcl
+  obtain ⟨hxl, hal⟩ := Prod.mk.inj (Except.ok.inj (show (Except.ok ([(decE (r_l1.headD 0), decE (z)), (decE (r_l2.headD 0), decE (r_r2.headD 0))], a_r2) : Except CheckError _) = Except.ok (xl, al) from hrunl))
+  subst hal
+  subst hr; subst hm
+  try simp only [decE_eq] at hrun_l1
+  try simp only [decE_eq] at hrun_l2
+  try simp only [decE_eq, hx_l1] at hrun_l2
+  try simp only [decE_eq] at hrun_r3
+  try simp only [decE_eq, hx_l1] at hrun_r3
+  try simp only [decE_eq, hx_l2] at hrun_r3
+  try simp only [decE_eq] at hrun_r2
+  try simp only [decE_eq, hx_l1] at hrun_r2
+  try simp only [decE_eq, hx_l2] at hrun_r2
+  try simp only [decE_eq, hx_r3] at hrun_r2
+  simp only [decE_eq, hx_l1, hx_l2, hx_r3, hx_r2] at hxl
+  refine ⟨xl, a_r2, ?_, hSl, ((((hg_l1).trans hg_l2).trans hg_r3).trans hg_r2).trans hgl, eqL_retag hdl (by rw [← hxl]; rfl)⟩
+  simp only [natEqMuT, decE_eq, StateT.run_bind, hrun_l1, hrun_l2, hrun_r3, hrun_r2, exc_ok_bind']
+  rw [← hxl]
+  rfl
+
+def natEqPoT (c : NIdx) (x : EIdx) (y : EIdx) (z : EIdx) (sy : EIdx) (sN : NIdx) (mu : NIdx) : AM (List (EIdx × EIdx)) := do
+  let l1 ← natAp2 c x z
+  let sz ← natAp1 sN z
+  let l2 ← natAp2 c x sy
+  let r3 ← natAp2 c x y
+  let r2 ← natAp2 mu r3 x
+  pure [(l1, sz), (l2, r2)]
+
+def natEqPoW (p : Prog) (n : Nat) (m : Mem) (c x y z sy sN mu : Word) : Option (List Word × Mem) :=
+  bW (callW p n "nat_ap2" [c, x, z] m) fun r_l1 m_l1 =>
+  bW (callW p n "nat_ap1" [sN, z] m_l1) fun r_sz m_sz =>
+  bW (callW p n "nat_ap2" [c, x, sy] m_sz) fun r_l2 m_l2 =>
+  bW (callW p n "nat_ap2" [c, x, y] m_l2) fun r_r3 m_r3 =>
+  bW (callW p n "nat_ap2" [mu, r_r3.headD 0, x] m_r3) fun r_r2 m_r2 =>
+  bW (callW p n "nat_eq_list2" [r_l1.headD 0, r_sz.headD 0, r_l2.headD 0, r_r2.headD 0] m_r2) fun rl ml =>
+  some ([rl.headD 0, 2], ml)
+
+theorem natEqPo_specW (p : Prog) (hp : p.lookup "nat_eq_po" = some natEqPo) (n : Nat) (s₀ : St)
+    (c x y z sy sN mu : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_eq_po" [c, x, y, z, sy, sN, mu]
+    ⦃fun r s' => LocEq s' s₀ ∧ natEqPoW p n s₀.mem c x y z sy sN mu = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, natEqPo]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      callW_spec p n "nat_ap1", callW_spec p n "nat_ap2", callW_spec p n "nat_eq_list2"] <;>
+    finish (gen := 20) (instances := 10000) [natEqPoW, bW]
+
+theorem natEqPo_ref (hN : NatEqProg p) (c x y z sy sN mu : Word) :
+    CallRef p "nat_eq_po" [c, x, y, z, sy, sN, mu] (fun m s => StageR dn vis fe m s ∧ H c ∧ H x ∧ H y ∧ H z ∧ H sy ∧ H sN ∧ H mu)
+      (natEqPoT (decI c) (decE x) (decE y) (decE z) (decE sy) (decI sN) (decI mu)) (KeepPost dn vis fe decEqRL) := by
+  refine CallRef.of_succ fun k m s r m' ⟨hS, h_c, h_x, h_y, h_z, h_sy, h_sN, h_mu⟩ hc => ?_
+  have hw := callW_model (M := fun mm => natEqPoW p k mm c x y z sy sN mu) (natEqPo_specW p hN.lNatEqPo k · c x y z sy sN mu) hc
+  unfold natEqPoW at hw
+  cases hc_l1 : callW p k "nat_ap2" [c, x, z] m with
+  | none => rw [hc_l1] at hw; simp at hw
+  | some q_l1 =>
+  obtain ⟨r_l1, m_l1⟩ := q_l1
+  rw [hc_l1, bW_some] at hw
+  obtain ⟨x_l1, a_l1, hrun_l1, hS_l1, hg_l1, hl_l1, hx_l1⟩ := natAp2_ref (dn := dn) (vis := vis) (fe := fe) hN (c) (x) (z) k m s r_l1 m_l1 ⟨hS, h_c, h_x, h_z⟩ hc_l1
+  cases hc_sz : callW p k "nat_ap1" [sN, z] m_l1 with
+  | none => rw [hc_sz] at hw; simp at hw
+  | some q_sz =>
+  obtain ⟨r_sz, m_sz⟩ := q_sz
+  rw [hc_sz, bW_some] at hw
+  obtain ⟨x_sz, a_sz, hrun_sz, hS_sz, hg_sz, hl_sz, hx_sz⟩ := natAp1_ref (dn := dn) (vis := vis) (fe := fe) hN (sN) (z) k m_l1 a_l1 r_sz m_sz ⟨hS_l1, h_sN, h_z⟩ hc_sz
+  cases hc_l2 : callW p k "nat_ap2" [c, x, sy] m_sz with
+  | none => rw [hc_l2] at hw; simp at hw
+  | some q_l2 =>
+  obtain ⟨r_l2, m_l2⟩ := q_l2
+  rw [hc_l2, bW_some] at hw
+  obtain ⟨x_l2, a_l2, hrun_l2, hS_l2, hg_l2, hl_l2, hx_l2⟩ := natAp2_ref (dn := dn) (vis := vis) (fe := fe) hN (c) (x) (sy) k m_sz a_sz r_l2 m_l2 ⟨hS_sz, h_c, h_x, h_sy⟩ hc_l2
+  cases hc_r3 : callW p k "nat_ap2" [c, x, y] m_l2 with
+  | none => rw [hc_r3] at hw; simp at hw
+  | some q_r3 =>
+  obtain ⟨r_r3, m_r3⟩ := q_r3
+  rw [hc_r3, bW_some] at hw
+  obtain ⟨x_r3, a_r3, hrun_r3, hS_r3, hg_r3, hl_r3, hx_r3⟩ := natAp2_ref (dn := dn) (vis := vis) (fe := fe) hN (c) (x) (y) k m_l2 a_l2 r_r3 m_r3 ⟨hS_l2, h_c, h_x, h_y⟩ hc_r3
+  cases hc_r2 : callW p k "nat_ap2" [mu, r_r3.headD 0, x] m_r3 with
+  | none => rw [hc_r2] at hw; simp at hw
+  | some q_r2 =>
+  obtain ⟨r_r2, m_r2⟩ := q_r2
+  rw [hc_r2, bW_some] at hw
+  obtain ⟨x_r2, a_r2, hrun_r2, hS_r2, hg_r2, hl_r2, hx_r2⟩ := natAp2_ref (dn := dn) (vis := vis) (fe := fe) hN (mu) (r_r3.headD 0) (x) k m_r3 a_r3 r_r2 m_r2 ⟨hS_r3, h_mu, hl_r3, h_x⟩ hc_r2
+  cases hcl : callW p k "nat_eq_list2" [r_l1.headD 0, r_sz.headD 0, r_l2.headD 0, r_r2.headD 0] m_r2 with
+  | none => rw [hcl] at hw; simp at hw
+  | some ql =>
+  obtain ⟨rl, ml⟩ := ql
+  rw [hcl, bW_some] at hw
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨hr, hm⟩ := hw
+  obtain ⟨xl, al, hrunl, hSl, hgl, hdl⟩ := natEqList2_ref (dn := dn) (vis := vis) (fe := fe) hN (r_l1.headD 0) (r_sz.headD 0) (r_l2.headD 0) (r_r2.headD 0) k m_r2 a_r2 rl ml ⟨hS_r2, hl_l1, hl_sz, hl_l2, hl_r2⟩ hcl
+  obtain ⟨hxl, hal⟩ := Prod.mk.inj (Except.ok.inj (show (Except.ok ([(decE (r_l1.headD 0), decE (r_sz.headD 0)), (decE (r_l2.headD 0), decE (r_r2.headD 0))], a_r2) : Except CheckError _) = Except.ok (xl, al) from hrunl))
+  subst hal
+  subst hr; subst hm
+  try simp only [decE_eq] at hrun_l1
+  try simp only [decE_eq] at hrun_sz
+  try simp only [decE_eq, hx_l1] at hrun_sz
+  try simp only [decE_eq] at hrun_l2
+  try simp only [decE_eq, hx_l1] at hrun_l2
+  try simp only [decE_eq, hx_sz] at hrun_l2
+  try simp only [decE_eq] at hrun_r3
+  try simp only [decE_eq, hx_l1] at hrun_r3
+  try simp only [decE_eq, hx_sz] at hrun_r3
+  try simp only [decE_eq, hx_l2] at hrun_r3
+  try simp only [decE_eq] at hrun_r2
+  try simp only [decE_eq, hx_l1] at hrun_r2
+  try simp only [decE_eq, hx_sz] at hrun_r2
+  try simp only [decE_eq, hx_l2] at hrun_r2
+  try simp only [decE_eq, hx_r3] at hrun_r2
+  simp only [decE_eq, hx_l1, hx_sz, hx_l2, hx_r3, hx_r2] at hxl
+  refine ⟨xl, a_r2, ?_, hSl, (((((hg_l1).trans hg_sz).trans hg_l2).trans hg_r3).trans hg_r2).trans hgl, eqL_retag hdl (by rw [← hxl]; rfl)⟩
+  simp only [natEqPoT, decE_eq, StateT.run_bind, hrun_l1, hrun_sz, hrun_l2, hrun_r3, hrun_r2, exc_ok_bind']
+  rw [← hxl]
+  rfl
+
+def natEqBeT (c : NIdx) (x : EIdx) (y : EIdx) (z : EIdx) (sx : EIdx) (sy : EIdx) (bT : EIdx) (bF : EIdx) : AM (List (EIdx × EIdx)) := do
+  let l1 ← natAp2 c z z
+  let l2 ← natAp2 c z sy
+  let l3 ← natAp2 c sx z
+  let l4 ← natAp2 c sx sy
+  let r4 ← natAp2 c x y
+  pure [(l1, bT), (l2, bF), (l3, bF), (l4, r4)]
+
+def natEqBeW (p : Prog) (n : Nat) (m : Mem) (c x y z sx sy bT bF : Word) : Option (List Word × Mem) :=
+  bW (callW p n "nat_ap2" [c, z, z] m) fun r_l1 m_l1 =>
+  bW (callW p n "nat_ap2" [c, z, sy] m_l1) fun r_l2 m_l2 =>
+  bW (callW p n "nat_ap2" [c, sx, z] m_l2) fun r_l3 m_l3 =>
+  bW (callW p n "nat_ap2" [c, sx, sy] m_l3) fun r_l4 m_l4 =>
+  bW (callW p n "nat_ap2" [c, x, y] m_l4) fun r_r4 m_r4 =>
+  bW (callW p n "nat_eq_list4" [r_l1.headD 0, bT, r_l2.headD 0, bF, r_l3.headD 0, bF, r_l4.headD 0, r_r4.headD 0] m_r4) fun rl ml =>
+  some ([rl.headD 0, 4], ml)
+
+theorem natEqBe_specW (p : Prog) (hp : p.lookup "nat_eq_be" = some natEqBe) (n : Nat) (s₀ : St)
+    (c x y z sx sy bT bF : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_eq_be" [c, x, y, z, sx, sy, bT, bF]
+    ⦃fun r s' => LocEq s' s₀ ∧ natEqBeW p n s₀.mem c x y z sx sy bT bF = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, natEqBe]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      callW_spec p n "nat_ap1", callW_spec p n "nat_ap2", callW_spec p n "nat_eq_list4"] <;>
+    finish (gen := 20) (instances := 10000) [natEqBeW, bW]
+
+theorem natEqBe_ref (hN : NatEqProg p) (c x y z sx sy bT bF : Word) :
+    CallRef p "nat_eq_be" [c, x, y, z, sx, sy, bT, bF] (fun m s => StageR dn vis fe m s ∧ H c ∧ H x ∧ H y ∧ H z ∧ H sx ∧ H sy ∧ H bT ∧ H bF)
+      (natEqBeT (decI c) (decE x) (decE y) (decE z) (decE sx) (decE sy) (decE bT) (decE bF)) (KeepPost dn vis fe decEqRL) := by
+  refine CallRef.of_succ fun k m s r m' ⟨hS, h_c, h_x, h_y, h_z, h_sx, h_sy, h_bT, h_bF⟩ hc => ?_
+  have hw := callW_model (M := fun mm => natEqBeW p k mm c x y z sx sy bT bF) (natEqBe_specW p hN.lNatEqBe k · c x y z sx sy bT bF) hc
+  unfold natEqBeW at hw
+  cases hc_l1 : callW p k "nat_ap2" [c, z, z] m with
+  | none => rw [hc_l1] at hw; simp at hw
+  | some q_l1 =>
+  obtain ⟨r_l1, m_l1⟩ := q_l1
+  rw [hc_l1, bW_some] at hw
+  obtain ⟨x_l1, a_l1, hrun_l1, hS_l1, hg_l1, hl_l1, hx_l1⟩ := natAp2_ref (dn := dn) (vis := vis) (fe := fe) hN (c) (z) (z) k m s r_l1 m_l1 ⟨hS, h_c, h_z, h_z⟩ hc_l1
+  cases hc_l2 : callW p k "nat_ap2" [c, z, sy] m_l1 with
+  | none => rw [hc_l2] at hw; simp at hw
+  | some q_l2 =>
+  obtain ⟨r_l2, m_l2⟩ := q_l2
+  rw [hc_l2, bW_some] at hw
+  obtain ⟨x_l2, a_l2, hrun_l2, hS_l2, hg_l2, hl_l2, hx_l2⟩ := natAp2_ref (dn := dn) (vis := vis) (fe := fe) hN (c) (z) (sy) k m_l1 a_l1 r_l2 m_l2 ⟨hS_l1, h_c, h_z, h_sy⟩ hc_l2
+  cases hc_l3 : callW p k "nat_ap2" [c, sx, z] m_l2 with
+  | none => rw [hc_l3] at hw; simp at hw
+  | some q_l3 =>
+  obtain ⟨r_l3, m_l3⟩ := q_l3
+  rw [hc_l3, bW_some] at hw
+  obtain ⟨x_l3, a_l3, hrun_l3, hS_l3, hg_l3, hl_l3, hx_l3⟩ := natAp2_ref (dn := dn) (vis := vis) (fe := fe) hN (c) (sx) (z) k m_l2 a_l2 r_l3 m_l3 ⟨hS_l2, h_c, h_sx, h_z⟩ hc_l3
+  cases hc_l4 : callW p k "nat_ap2" [c, sx, sy] m_l3 with
+  | none => rw [hc_l4] at hw; simp at hw
+  | some q_l4 =>
+  obtain ⟨r_l4, m_l4⟩ := q_l4
+  rw [hc_l4, bW_some] at hw
+  obtain ⟨x_l4, a_l4, hrun_l4, hS_l4, hg_l4, hl_l4, hx_l4⟩ := natAp2_ref (dn := dn) (vis := vis) (fe := fe) hN (c) (sx) (sy) k m_l3 a_l3 r_l4 m_l4 ⟨hS_l3, h_c, h_sx, h_sy⟩ hc_l4
+  cases hc_r4 : callW p k "nat_ap2" [c, x, y] m_l4 with
+  | none => rw [hc_r4] at hw; simp at hw
+  | some q_r4 =>
+  obtain ⟨r_r4, m_r4⟩ := q_r4
+  rw [hc_r4, bW_some] at hw
+  obtain ⟨x_r4, a_r4, hrun_r4, hS_r4, hg_r4, hl_r4, hx_r4⟩ := natAp2_ref (dn := dn) (vis := vis) (fe := fe) hN (c) (x) (y) k m_l4 a_l4 r_r4 m_r4 ⟨hS_l4, h_c, h_x, h_y⟩ hc_r4
+  cases hcl : callW p k "nat_eq_list4" [r_l1.headD 0, bT, r_l2.headD 0, bF, r_l3.headD 0, bF, r_l4.headD 0, r_r4.headD 0] m_r4 with
+  | none => rw [hcl] at hw; simp at hw
+  | some ql =>
+  obtain ⟨rl, ml⟩ := ql
+  rw [hcl, bW_some] at hw
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨hr, hm⟩ := hw
+  obtain ⟨xl, al, hrunl, hSl, hgl, hdl⟩ := natEqList4_ref (dn := dn) (vis := vis) (fe := fe) hN (r_l1.headD 0) (bT) (r_l2.headD 0) (bF) (r_l3.headD 0) (bF) (r_l4.headD 0) (r_r4.headD 0) k m_r4 a_r4 rl ml ⟨hS_r4, hl_l1, h_bT, hl_l2, h_bF, hl_l3, h_bF, hl_l4, hl_r4⟩ hcl
+  obtain ⟨hxl, hal⟩ := Prod.mk.inj (Except.ok.inj (show (Except.ok ([(decE (r_l1.headD 0), decE (bT)), (decE (r_l2.headD 0), decE (bF)), (decE (r_l3.headD 0), decE (bF)), (decE (r_l4.headD 0), decE (r_r4.headD 0))], a_r4) : Except CheckError _) = Except.ok (xl, al) from hrunl))
+  subst hal
+  subst hr; subst hm
+  try simp only [decE_eq] at hrun_l1
+  try simp only [decE_eq] at hrun_l2
+  try simp only [decE_eq, hx_l1] at hrun_l2
+  try simp only [decE_eq] at hrun_l3
+  try simp only [decE_eq, hx_l1] at hrun_l3
+  try simp only [decE_eq, hx_l2] at hrun_l3
+  try simp only [decE_eq] at hrun_l4
+  try simp only [decE_eq, hx_l1] at hrun_l4
+  try simp only [decE_eq, hx_l2] at hrun_l4
+  try simp only [decE_eq, hx_l3] at hrun_l4
+  try simp only [decE_eq] at hrun_r4
+  try simp only [decE_eq, hx_l1] at hrun_r4
+  try simp only [decE_eq, hx_l2] at hrun_r4
+  try simp only [decE_eq, hx_l3] at hrun_r4
+  try simp only [decE_eq, hx_l4] at hrun_r4
+  simp only [decE_eq, hx_l1, hx_l2, hx_l3, hx_l4, hx_r4] at hxl
+  refine ⟨xl, a_r4, ?_, hSl, (((((hg_l1).trans hg_l2).trans hg_l3).trans hg_l4).trans hg_r4).trans hgl, eqL_retag hdl (by rw [← hxl]; rfl)⟩
+  simp only [natEqBeT, decE_eq, StateT.run_bind, hrun_l1, hrun_l2, hrun_l3, hrun_l4, hrun_r4, exc_ok_bind']
+  rw [← hxl]
+  rfl
+
+def natEqBlT (c : NIdx) (x : EIdx) (y : EIdx) (z : EIdx) (sx : EIdx) (sy : EIdx) (bT : EIdx) (bF : EIdx) : AM (List (EIdx × EIdx)) := do
+  let l1 ← natAp2 c z y
+  let l2 ← natAp2 c sx z
+  let l3 ← natAp2 c sx sy
+  let r3 ← natAp2 c x y
+  pure [(l1, bT), (l2, bF), (l3, r3)]
+
+def natEqBlW (p : Prog) (n : Nat) (m : Mem) (c x y z sx sy bT bF : Word) : Option (List Word × Mem) :=
+  bW (callW p n "nat_ap2" [c, z, y] m) fun r_l1 m_l1 =>
+  bW (callW p n "nat_ap2" [c, sx, z] m_l1) fun r_l2 m_l2 =>
+  bW (callW p n "nat_ap2" [c, sx, sy] m_l2) fun r_l3 m_l3 =>
+  bW (callW p n "nat_ap2" [c, x, y] m_l3) fun r_r3 m_r3 =>
+  bW (callW p n "nat_eq_list3" [r_l1.headD 0, bT, r_l2.headD 0, bF, r_l3.headD 0, r_r3.headD 0] m_r3) fun rl ml =>
+  some ([rl.headD 0, 3], ml)
+
+theorem natEqBl_specW (p : Prog) (hp : p.lookup "nat_eq_bl" = some natEqBl) (n : Nat) (s₀ : St)
+    (c x y z sx sy bT bF : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_eq_bl" [c, x, y, z, sx, sy, bT, bF]
+    ⦃fun r s' => LocEq s' s₀ ∧ natEqBlW p n s₀.mem c x y z sx sy bT bF = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, natEqBl]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      callW_spec p n "nat_ap1", callW_spec p n "nat_ap2", callW_spec p n "nat_eq_list3"] <;>
+    finish (gen := 20) (instances := 10000) [natEqBlW, bW]
+
+theorem natEqBl_ref (hN : NatEqProg p) (c x y z sx sy bT bF : Word) :
+    CallRef p "nat_eq_bl" [c, x, y, z, sx, sy, bT, bF] (fun m s => StageR dn vis fe m s ∧ H c ∧ H x ∧ H y ∧ H z ∧ H sx ∧ H sy ∧ H bT ∧ H bF)
+      (natEqBlT (decI c) (decE x) (decE y) (decE z) (decE sx) (decE sy) (decE bT) (decE bF)) (KeepPost dn vis fe decEqRL) := by
+  refine CallRef.of_succ fun k m s r m' ⟨hS, h_c, h_x, h_y, h_z, h_sx, h_sy, h_bT, h_bF⟩ hc => ?_
+  have hw := callW_model (M := fun mm => natEqBlW p k mm c x y z sx sy bT bF) (natEqBl_specW p hN.lNatEqBl k · c x y z sx sy bT bF) hc
+  unfold natEqBlW at hw
+  cases hc_l1 : callW p k "nat_ap2" [c, z, y] m with
+  | none => rw [hc_l1] at hw; simp at hw
+  | some q_l1 =>
+  obtain ⟨r_l1, m_l1⟩ := q_l1
+  rw [hc_l1, bW_some] at hw
+  obtain ⟨x_l1, a_l1, hrun_l1, hS_l1, hg_l1, hl_l1, hx_l1⟩ := natAp2_ref (dn := dn) (vis := vis) (fe := fe) hN (c) (z) (y) k m s r_l1 m_l1 ⟨hS, h_c, h_z, h_y⟩ hc_l1
+  cases hc_l2 : callW p k "nat_ap2" [c, sx, z] m_l1 with
+  | none => rw [hc_l2] at hw; simp at hw
+  | some q_l2 =>
+  obtain ⟨r_l2, m_l2⟩ := q_l2
+  rw [hc_l2, bW_some] at hw
+  obtain ⟨x_l2, a_l2, hrun_l2, hS_l2, hg_l2, hl_l2, hx_l2⟩ := natAp2_ref (dn := dn) (vis := vis) (fe := fe) hN (c) (sx) (z) k m_l1 a_l1 r_l2 m_l2 ⟨hS_l1, h_c, h_sx, h_z⟩ hc_l2
+  cases hc_l3 : callW p k "nat_ap2" [c, sx, sy] m_l2 with
+  | none => rw [hc_l3] at hw; simp at hw
+  | some q_l3 =>
+  obtain ⟨r_l3, m_l3⟩ := q_l3
+  rw [hc_l3, bW_some] at hw
+  obtain ⟨x_l3, a_l3, hrun_l3, hS_l3, hg_l3, hl_l3, hx_l3⟩ := natAp2_ref (dn := dn) (vis := vis) (fe := fe) hN (c) (sx) (sy) k m_l2 a_l2 r_l3 m_l3 ⟨hS_l2, h_c, h_sx, h_sy⟩ hc_l3
+  cases hc_r3 : callW p k "nat_ap2" [c, x, y] m_l3 with
+  | none => rw [hc_r3] at hw; simp at hw
+  | some q_r3 =>
+  obtain ⟨r_r3, m_r3⟩ := q_r3
+  rw [hc_r3, bW_some] at hw
+  obtain ⟨x_r3, a_r3, hrun_r3, hS_r3, hg_r3, hl_r3, hx_r3⟩ := natAp2_ref (dn := dn) (vis := vis) (fe := fe) hN (c) (x) (y) k m_l3 a_l3 r_r3 m_r3 ⟨hS_l3, h_c, h_x, h_y⟩ hc_r3
+  cases hcl : callW p k "nat_eq_list3" [r_l1.headD 0, bT, r_l2.headD 0, bF, r_l3.headD 0, r_r3.headD 0] m_r3 with
+  | none => rw [hcl] at hw; simp at hw
+  | some ql =>
+  obtain ⟨rl, ml⟩ := ql
+  rw [hcl, bW_some] at hw
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨hr, hm⟩ := hw
+  obtain ⟨xl, al, hrunl, hSl, hgl, hdl⟩ := natEqList3_ref (dn := dn) (vis := vis) (fe := fe) hN (r_l1.headD 0) (bT) (r_l2.headD 0) (bF) (r_l3.headD 0) (r_r3.headD 0) k m_r3 a_r3 rl ml ⟨hS_r3, hl_l1, h_bT, hl_l2, h_bF, hl_l3, hl_r3⟩ hcl
+  obtain ⟨hxl, hal⟩ := Prod.mk.inj (Except.ok.inj (show (Except.ok ([(decE (r_l1.headD 0), decE (bT)), (decE (r_l2.headD 0), decE (bF)), (decE (r_l3.headD 0), decE (r_r3.headD 0))], a_r3) : Except CheckError _) = Except.ok (xl, al) from hrunl))
+  subst hal
+  subst hr; subst hm
+  try simp only [decE_eq] at hrun_l1
+  try simp only [decE_eq] at hrun_l2
+  try simp only [decE_eq, hx_l1] at hrun_l2
+  try simp only [decE_eq] at hrun_l3
+  try simp only [decE_eq, hx_l1] at hrun_l3
+  try simp only [decE_eq, hx_l2] at hrun_l3
+  try simp only [decE_eq] at hrun_r3
+  try simp only [decE_eq, hx_l1] at hrun_r3
+  try simp only [decE_eq, hx_l2] at hrun_r3
+  try simp only [decE_eq, hx_l3] at hrun_r3
+  simp only [decE_eq, hx_l1, hx_l2, hx_l3, hx_r3] at hxl
+  refine ⟨xl, a_r3, ?_, hSl, ((((hg_l1).trans hg_l2).trans hg_l3).trans hg_r3).trans hgl, eqL_retag hdl (by rw [← hxl]; rfl)⟩
+  simp only [natEqBlT, decE_eq, StateT.run_bind, hrun_l1, hrun_l2, hrun_l3, hrun_r3, exc_ok_bind']
+  rw [← hxl]
+  rfl
+
+
 end eq
 
 end L.Ind
