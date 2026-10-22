@@ -104,4 +104,89 @@ theorem c2W_sim (n : Nat) (m : Mem) (a : AState) (g c d nPc fo fl ihso ihsl rao 
 
 end sims
 
+/-- The constructor's name word, read through its record. -/
+theorem rec2CCName {m : Mem} {x : Word} {X : ClassCtor} (hX : decCC m x.toNat = some X)
+    (hsz : (m.arr64 IW).size < 2 ^ 64) :
+    ∃ w, rdW (m.arr64 EREC) (rdW (m.arr64 IW) x) = w ∧ H w ∧ decI w = X.cv.name := by
+  simp only [decCC, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hX
+  obtain ⟨q, hq, cv, hcv, nF, hnF, ks, hks, y4, hy4, y5, hy5, rfl⟩ := hX
+  obtain ⟨eq, tq⟩ := rec2RdN (w := x) (k := 0) (by simpa using hq) hsz
+  simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero] at eq
+  simp only [decCVp, decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hcv
+  obtain ⟨nm, hnm, lps, hlps, ty, hty, rfl⟩ := hcv
+  obtain ⟨w, hw, hwl, hwd⟩ := hd?_some hnm
+  exact ⟨w, by rw [eq]; exact rdW_of_get? tq.symm hw, hwl, hwd.symm⟩
+
+section sims
+variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+
+theorem cW_sim (n : Nat) (m : Mem) (a : AState) (g c x d lvls ds0 dl0 nPc fo fl res ihso ihsl : Word)
+    (G : ClassGen) (X : ClassCtor) (LV : LsIdx) (NPC : Nat) (DS fvs ihs : List EIdx) (hS : StageR dn vis fe m a)
+    (hG : DecB (fun m => decCG m g.toNat) m G) (hns : G.nP + G.slots.length < 2 ^ 64)
+    (hX : DecB (fun m => decCC m x.toNat) m X) (hres : H res) (hlv : H lvls) (hlvd : decI lvls = LV)
+    (hds : DecB (fun m => (decHL m ds0.toNat dl0.toNat : Option (List EIdx))) m DS) (hnpc : nPc.toNat = NPC)
+    (hfvs : decHL m fo.toNat fl.toNat = some fvs) (hfb : fo.toNat + fl.toNat ≤ iwTop m)
+    (hihs : decHL m ihso.toNat ihsl.toNat = some ihs) (hib : ihso.toNat + ihsl.toNat ≤ iwTop m) :
+    RSim (cW (n + 1) m g c x d lvls ds0 dl0 nPc fo fl res ihso ihsl) (do
+      let ra ← getAppArgs coreWalkFuel (decI res)
+      let cc ← internE (.const X.cv.name LV)
+      let capp ← mkAppN cc (DS ++ fvs)
+      let mc ← G.motVar c.toNat
+      let concl ← mkAppN mc (List.drop NPC ra ++ [capp])
+      let fbs ← List.mapM G.binder fvs
+      let r ← ConRon.Arena.closeTelescope (fbs ++ ihs) d.toNat concl
+      pure (some r)) a (KP dn vis fe m decOE) := by
+  rw [cW_eq]
+  refine RSim.bind (K := cK1 n g c x d lvls ds0 dl0 nPc fo fl ihso ihsl) rfl (simGetAppArgs hS hres) ?_
+  rintro ⟨r1, m1⟩ ra a1 - ⟨hS1, hg1, hra, hrb⟩
+  dsimp only at hS1 hg1 hra hrb
+  simp only [getD_zero, Nat.zero_add, getD_one] at hra hrb
+  rw [cK1_some]
+  obtain ⟨nw, enw, hnwH, hnwd⟩ := rec2CCName (hX.stab (decCC_mono _) m1 hg1) hS1.2.2.2.1
+  rw [enw]
+  subst hlvd
+  refine RSim.bind (K := cK2 n g c d ds0 dl0 nPc fo fl ihso ihsl (r1.headD 0) (r1.tail.headD 0)) rfl
+    (Q1 := fun b a' x => StageR dn vis fe b.2 a' ∧ IWGrow m1 b.2 ∧ x = decE b.1) ?_ ?_
+  · rintro ⟨cc, m2⟩ h2
+    obtain ⟨a', hrun, hS', hg⟩ := internConst_stage hS1 nw lvls hnwH hlv h2
+    rw [hnwd] at hrun
+    exact ⟨decE cc, a', hrun, hS', hg, rfl⟩
+  rintro ⟨cc, m2⟩ ccx a2 - ⟨hS2, hg2, rfl⟩
+  dsimp only at hS2 hg2
+  by_cases hbig : 4294967296 ≤ cc
+  · rw [cK2_big (h := hbig)]; exact RSim.none
+  rw [cK2_ok (h := hbig)]
+  have hccH : H cc := by
+    have : ¬ (4294967296 : Word).toNat ≤ cc.toNat := fun x => hbig (UInt64.le_iff_toNat_le.mpr x)
+    simp at this; exact this
+  have hg12 := hg1.trans hg2
+  refine RSim.lstep (K := cK2b n g c d nPc fo fl ihso ihsl (r1.headD 0) (r1.tail.headD 0) cc) rfl
+    fun ⟨r3, m3⟩ h3 => ?_
+  obtain ⟨hS3, hg3, hd3, hb3⟩ := rec2AppendW_dec h3 hS2 (hds.grow (OMono.decHL _ _) hg12)
+    (by rw [decHL_grow hg12 hfb]; exact hfvs) (Nat.le_trans hfb hg12.1)
+  rw [cK2b_some]
+  refine RSim.bind (K := cK3 n g c d nPc fo fl ihso ihsl (r1.headD 0) (r1.tail.headD 0)) rfl
+    ((mkAppN_spec dn vis fe _ _ _ hccH (DS ++ fvs)).sim ⟨hS3, hd3⟩) ?_
+  rintro ⟨r4, m4⟩ capp a4 - ⟨hS4, hg4, hcH, hcd⟩
+  dsimp only at hS4 hg4 hcH hcd
+  subst hcd
+  rw [cK3_some]
+  have hg14 := hg12.trans (hg3.trans hg4)
+  cases n with
+  | zero => intro b hb; simp [c2W, cK4] at hb
+  | succ n =>
+  refine RSim.bindPure (K := cK4) rfl (c2W_sim n m4 a4 g c d nPc fo fl ihso ihsl _ _ _ G NPC fvs ihs ra hS4
+    (hG.grow (decCG_mono _) hg14) hns hnpc (by rw [decHL_grow hg14 hfb]; exact hfvs) (Nat.le_trans hfb hg14.1)
+    (by rw [decHL_grow hg14 hib]; exact hihs) (Nat.le_trans hib hg14.1)
+    (by rw [decHL_grow (hg2.trans (hg3.trans hg4)) hrb]; exact hra) (Nat.le_trans hrb (hg2.trans (hg3.trans hg4)).1)
+    hcH) ?_
+  rintro ⟨r5, m5⟩ o a5 - ⟨hS5, hg5, ho⟩
+  rw [cK4_some]
+  refine RSim.pure_some ⟨hS5, hg14.trans hg5, ?_⟩
+  cases o with
+  | none => exact ho
+  | some e => obtain ⟨h1, h2⟩ := ho; exact ⟨by simpa using h1, by simpa [decW0E] using h2⟩
+
+end sims
+
 end L.Ind
