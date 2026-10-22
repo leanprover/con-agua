@@ -131,3 +131,25 @@ capacities), `flag : pinW m 0 ≠ 0` — and a file migrates to it only where a 
   > 20 min).
 * Open for `check_block`: `blockRawRec` needs `maMR` (the mentions-any memo; part of the same
   `loopt` clause); `class_seeds` has no refinement yet and writes the walk memos.
+
+### Landing 5 also: helper `rec` — nine `RecCheck` targets
+* Helper `indproofs3-rec` (4 h 8 min, ~4.5k proof lines, `RecCheckSpec9‥20`), all `@[refines]`
+  through stubs: `eraseFVarTys`, `targetCanonParams`, `targetCtorsOf`, `targetParamsDefEq`,
+  `targetClassMatch`, `targetMajorNfs`, `targetK53`, `tgtStoredRules`, `consBlockRecsTF`.
+  `bvar_b` enters through its real function (`bvbW_stageC`), `env_push` through lane `decls2`'s.
+* New stub contract (`sorry`) `lvlsEqStub_spec` (`RecCheckSpec12`) for `lvls_eq_c`, shaped like
+  `lvlEqStub_spec`: the real `lvls_eq_c` is refined under `CoreS` only; under `StageT` it would be
+  a `Sim` like `lvlEqC_simT` (follow-up).
+* Preconditions to be supplied at the stage's entry (lane `loopt`): `RcMR m` (`PosMR` plus the
+  `target_abs` memo; every walk theorem takes and returns it, parents carry it by write sets);
+  `CtorSums fe` (`targetCtorsOf`, inherited from `nestContainer_refines`: discharge at the stage
+  entry, or remove by a capacity guard in `nest_container`).
+* **L bugs fixed**: `tgt_stored_rules` rebuilt an outside major's rules with the fire's `IW`
+  offsets, but rule records read their fire slices from `EREC` (`decRule`): now copied with
+  `er_from_iw`. `target_params_def_eq` returned `false` up front on different lengths, skipping
+  the twin's callees: now the twin's list recursion. Nine loops to self-recursion (D18 rows),
+  capacity/handle guards after `target_abs`, `intern_const`, the depth `pfl + ftl`, `rl < 2^32`.
+* Not done: `targetRecPins` (its callee `blockRecLpsOk_refines` takes `hlpb`, a statement over
+  all of `EREC` that no caller can discharge — the same kind as the `hsmall` fixed in landing 3;
+  needs re-proving first), `genRecCheck` (needs `classesNfs`, `classesCtors`,
+  `blockLargeElimAllowed`), `targetMajorOf`. `RecCheckSpec14` takes ~380 s (`tka_spec`).

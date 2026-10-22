@@ -144,7 +144,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1722 functions, 9 of them stubs.
+1726 functions, 9 of them stubs.
 -/
 
 namespace L.Checker
