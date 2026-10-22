@@ -787,4 +787,101 @@ theorem rec2IsTag {m : Mem} {x i : Word} {X : ClassCtor} (hX : decCC m x.toNat =
     simp only [if_neg hilt]
     exact ⟨fun _ => (by decide), fun t tele e => (by cases e)⟩
 
+/-- `class_gen_minor_ty_ihs_go`'s result. -/
+def decIHO (m' : Mem) (r : List Word) : Option (List EIdx) → Prop
+  | none => r.headD 0 = 0
+  | some ihs => r.headD 0 = 1 ∧ decHL m' (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat = some ihs ∧
+      (r.tail.headD 0).toNat + (r.tail.tail.headD 0).toNat ≤ iwTop m'
+
+theorem isW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (G : ClassGen) (X : ClassCtor)
+    (hns : G.nP + G.slots.length < 2 ^ 64) (g x d nF wso wsl fvso fvsl : Word) (ws fvs : List EIdx)
+    (hnF : nF.toNat = X.nF) (n : Nat) :
+    ∀ (m : Mem) (a : AState) (i l : Word), StageR dn vis fe m a → DecB (fun m => decCG m g.toNat) m G →
+    DecB (fun m => decCC m x.toNat) m X →
+    decHL m wso.toNat wsl.toNat = some ws → wso.toNat + wsl.toNat ≤ iwTop m →
+    decHL m fvso.toNat fvsl.toNat = some fvs → fvso.toNat + fvsl.toNat ≤ iwTop m →
+    l.toNat ≤ i.toNat → i.toNat ≤ X.nF →
+    RSim (isW n m g x d nF wso wsl fvso fvsl i l)
+      (ConRon.Arena.ClassGen.minorTy.ihsGo G X d.toNat fvs ws l.toNat (rec2Recs X i.toNat)) a
+      (fun b a' o => StageR dn vis fe b.2 a' ∧ IWGrow m b.2 ∧ decIHO b.2 b.1 o) := by
+  induction n with
+  | zero => intros; intro b hb; simp [isW] at hb
+  | succ n ih =>
+  intro m a i l hS hG hX hws hwb hfvs hfb hli hiX
+  have hsz := hS.2.2.2.1
+  by_cases hend : nF ≤ i
+  · rw [isW_end (h := hend)]
+    have : X.nF ≤ i.toNat := by rw [← hnF]; exact UInt64.le_iff_toNat_le.mp hend
+    rw [rec2Recs_end this, ConRon.Arena.ClassGen.minorTy.ihsGo.eq_1]
+    exact RSim.pure_some ⟨hS, IWGrow.refl m, rfl, by simp [decHL, hslice?], by simp⟩
+  have hlt : i.toNat < X.nF := by
+    rw [← hnF]; exact UInt64.lt_iff_toNat_lt.mp (by simpa using hend)
+  have hi1 : (i + 1).toNat = i.toNat + 1 := by
+    rw [UInt64.toNat_add]; simp; have := nF.toNat_lt; omega
+  rw [rec2Recs_step hlt]
+  obtain ⟨hord, hrec⟩ := rec2IsTag (hX.get (decCC_mono _)) hsz (i := i)
+  cases hk : X.kinds.getD i.toNat .ordinary with
+  | ordinary =>
+    rw [isW_ord (h := hend) (ht := hord hk)]
+    simp only [List.nil_append]
+    have hih := ih m a (i + 1) l hS hG hX hws hwb hfvs hfb (by omega) (by omega)
+    rw [hi1] at hih
+    refine RSim.bindPure (K := isK3) rfl hih ?_
+    rintro ⟨r, m'⟩ o a' - ⟨hS', hg', ho⟩
+    refine RSim.pure_some ⟨hS', hg', ?_⟩
+    cases o with
+    | none => exact ho
+    | some ihs => exact ho
+  | recursive t tele =>
+  obtain ⟨ht, et, tlt, ete, telelt⟩ := hrec t tele hk
+  simp only [List.singleton_append]
+  by_cases ov1 : d + nF < d
+  · rw [isW_ov1 (h := hend) (ht := ht) (h1 := ov1)]; exact RSim.none
+  by_cases ov2 : d + nF + l < d + nF
+  · rw [isW_ov2 (h := hend) (ht := ht) (h1 := ov1) (h2 := ov2)]; exact RSim.none
+  have he : (d + nF + l).toNat = d.toNat + X.nF + l.toNat := by
+    have a1 : ¬ (d + nF).toNat < d.toNat := fun x => ov1 (UInt64.lt_iff_toNat_lt.mpr x)
+    have a2 : ¬ (d + nF + l).toNat < (d + nF).toNat := fun x => ov2 (UInt64.lt_iff_toNat_lt.mpr x)
+    rw [UInt64.toNat_add] at a1
+    rw [UInt64.toNat_add (d + nF)] at a2
+    have b1 := d.toNat_lt; have b2 := nF.toNat_lt; have b3 := l.toNat_lt
+    have c1 : (d + nF).toNat = d.toNat + nF.toNat := by rw [UInt64.toNat_add]; omega
+    rw [UInt64.toNat_add, c1, ← hnF]; rw [c1] at a2; omega
+  have tt : (UInt64.ofNat t : Word).toNat = t := UInt64.toNat_ofNat_of_lt' tlt
+  have tte : (UInt64.ofNat tele : Word).toNat = tele := UInt64.toNat_ofNat_of_lt' telelt
+  rw [ConRon.Arena.ClassGen.minorTy.ihsGo.eq_2, ← he, ← tt, ← tte]
+  rw [isW_rec (h := hend) (ht := ht) (h1 := ov1) (h2 := ov2), et, ete]
+  cases n with
+  | zero => intro b hb; simp [i1W, isK1] at hb
+  | succ n =>
+  refine i1W_sim n m a g _ _ wso wsl fvso fvsl i (d + nF + l) G ws fvs hS hG hns hws hwb hfvs hfb
+    (isK1 (n + 1) g x d nF wso wsl fvso fvsl i l) (by simp [isK1]) _ _ ?_ ?_
+  · intro m' a' hS' hg'
+    rw [isK1_fail (h := rfl)]
+    exact RSim.pure_some ⟨hS', hg', rfl⟩
+  · intro m' a' w hS' hg' hw
+    rw [isK1_ok (h := by simp)]
+    simp only [List.tail_cons, List.headD_cons]
+    have hl1 : (l + 1).toNat = l.toNat + 1 := by
+      rw [UInt64.toNat_add]; simp; have := nF.toNat_lt; omega
+    have hih := ih m' a' (i + 1) (l + 1) hS' (hG.grow (decCG_mono _) hg') (hX.grow (decCC_mono _) hg')
+      (by rw [decHL_grow hg' hwb]; exact hws) (Nat.le_trans hwb hg'.1)
+      (by rw [decHL_grow hg' hfb]; exact hfvs) (Nat.le_trans hfb hg'.1) (by omega) (by omega)
+    rw [hi1, hl1] at hih
+    refine RSim.bind (K := isK2 (n + 1) w) rfl hih ?_
+    rintro ⟨r2, m2⟩ o a2 - ⟨hS2, hg2, ho⟩
+    dsimp only at hS2 hg2 ho
+    cases o with
+    | none =>
+      rw [isK2_fail (h := ho)]
+      exact RSim.pure_some ⟨hS2, hg'.trans hg2, rfl⟩
+    | some ihs =>
+    obtain ⟨h21, hd2, hb2⟩ := ho
+    rw [isK2_ok (h := by rw [h21]; decide)]
+    refine RSim.lstep (K := isK4) rfl fun ⟨r3, m3⟩ h3 => ?_
+    obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage h3 hS2 hb2 hw hd2
+    rw [isK4_some]
+    exact RSim.pure_some ⟨hS3, hg'.trans (hg2.trans hg3), rfl, by simpa using hd3,
+      by simp only [List.tail_cons, List.headD_cons]; exact Nat.le_of_eq ht3⟩
+
 end L.Ind
