@@ -242,76 +242,60 @@ def blockPartsComplete : FunDecl := lfn (p0, p1) locals () {
 
 /-- `block_split_recs(off, l)`: `blockSplitRecs` of the `off, l` slice of `EREC` constant-record
 pointers: `(1, q, l)` if every element is `recInfo` (kind `5`), each folded into a fresh
-`[cvR, mI, rP, rules.off, rules.len]` record; `(0, …)` at the first that is not (pure, so any
-order gives the same answer). -/
+`[cvR, mI, rP, rules.off, rules.len]` record; `(0, …)` at the first that is not. Recursive as the
+twin (the rest first, then `sl_cons`; lane `indproofs2`: was a loop). -/
 -- con-ron: ConRon/Arena/Inductives/BlockParts.lean:166-175 ConRon.Arena.blockSplitRecs
 @[l_impl ConRon.Arena.blockSplitRecs]
-def blockSplitRecs : FunDecl := lfn (off, l) locals (q, j, ci, ro) {
-  q := call iw_alloc(l);
-  j := 0;
-  while j < l {
-    ci := EREC.u64[off + j];
-    if EREC.u64[ci] != 5 { break };
-    ro := call iw_alloc(5);
-    IW.u64[ro] := ci + 1;
-    IW.u64[ro + 1] := EREC.u64[ci + 5];
-    IW.u64[ro + 2] := EREC.u64[ci + 6];
-    IW.u64[ro + 3] := EREC.u64[ci + 7];
-    IW.u64[ro + 4] := EREC.u64[ci + 8];
-    IW.u64[q + j] := ro;
-    j += 1
-  };
-  if j != l { return (0, 0, 0) };
-  return (1, q, l)
+def blockSplitRecs : FunDecl := lfn (off, l) locals (ci, ok, ro, rl, rc, o2, l2) {
+  if l == 0 { return (1, 0, 0) };
+  ci := EREC.u64[off];
+  if EREC.u64[ci] != 5 { return (0, 0, 0) };
+  (ok, ro, rl) := call block_split_recs(off + 1, l - 1);
+  if ok == 0 { return (0, 0, 0) };
+  rc := call rec5(ci + 1, EREC.u64[ci + 5], EREC.u64[ci + 6], EREC.u64[ci + 7], EREC.u64[ci + 8]);
+  (o2, l2) := call sl_cons(rc, ro, rl);
+  return (1, o2, l2)
 }
 
 /-- `block_split_ctors(off, l)`: `blockSplitCtors`: the leading `ctorInfo` (kind `4`) elements, each
-folded into `[cv, nP, nF]`, then `block_split_recs` on the rest. -/
+folded into `[cv, nP, nF]`, then `block_split_recs` on the rest (recursive as the twin). -/
 -- con-ron: ConRon/Arena/Inductives/BlockParts.lean:177-189 ConRon.Arena.blockSplitCtors
 @[l_impl ConRon.Arena.blockSplitCtors]
-def blockSplitCtors : FunDecl := lfn (off, l) locals (q, j, ci, co, ok, ro, rl) {
-  q := call iw_alloc(l);
-  j := 0;
-  while j < l {
-    ci := EREC.u64[off + j];
-    if EREC.u64[ci] != 4 { break };
-    co := call iw_alloc(3);
-    IW.u64[co] := ci + 1;
-    IW.u64[co + 1] := EREC.u64[ci + 5];
-    IW.u64[co + 2] := EREC.u64[ci + 6];
-    IW.u64[q + j] := co;
-    j += 1
+def blockSplitCtors : FunDecl := lfn (off, l) locals (ci, ok, co, cl, ro, rl, c, o2, l2) {
+  if l == 0 { return (1, 0, 0, 0, 0) };
+  ci := EREC.u64[off];
+  if EREC.u64[ci] != 4 {
+    (ok, ro, rl) := call block_split_recs(off, l);
+    if ok == 0 { return (0, 0, 0, 0, 0) };
+    return (1, 0, 0, ro, rl)
   };
-  (ok, ro, rl) := call block_split_recs(off + j, l - j);
+  (ok, co, cl, ro, rl) := call block_split_ctors(off + 1, l - 1);
   if ok == 0 { return (0, 0, 0, 0, 0) };
-  return (1, q, j, ro, rl)
+  c := call rec3(ci + 1, EREC.u64[ci + 5], EREC.u64[ci + 6]);
+  (o2, l2) := call sl_cons(c, co, cl);
+  return (1, o2, l2, ro, rl)
 }
 
 /-- `block_split(off, l)`: `blockSplit`: the leading `indInfo` (kind `3`) elements (their `cv`
-pointers), then `block_split_ctors` on the rest. The twin's 3-list result is 7 words, past the
-6-result cap, so `(ok, q)` with `q` a fresh `[cvTs.off, cvTs.len, cs.off, cs.len, rs.off, rs.len]`
-record. -/
+pointers), then `block_split_ctors` on the rest (recursive as the twin). The twin's 3-list result
+is 7 words, past the 6-result cap, so `(ok, q)` with `q` a fresh `[cvTs.off, cvTs.len, cs.off,
+cs.len, rs.off, rs.len]` record. -/
 -- con-ron: ConRon/Arena/Inductives/BlockParts.lean:191-203 ConRon.Arena.blockSplit
 @[l_impl ConRon.Arena.blockSplit]
-def blockSplit : FunDecl := lfn (off, l) locals (fo, j, ci, ok, co, cl, ro, rl, q) {
-  fo := call iw_alloc(l);
-  j := 0;
-  while j < l {
-    ci := EREC.u64[off + j];
-    if EREC.u64[ci] != 3 { break };
-    IW.u64[fo + j] := ci + 1;
-    j += 1
+def blockSplit : FunDecl := lfn (off, l) locals (ci, ok, q, co, cl, ro, rl, fo, fl, q2) {
+  if l == 0 { q := call rec6(0, 0, 0, 0, 0, 0); return (1, q) };
+  ci := EREC.u64[off];
+  if EREC.u64[ci] != 3 {
+    (ok, co, cl, ro, rl) := call block_split_ctors(off, l);
+    if ok == 0 { return (0, 0) };
+    q := call rec6(0, 0, co, cl, ro, rl);
+    return (1, q)
   };
-  (ok, co, cl, ro, rl) := call block_split_ctors(off + j, l - j);
+  (ok, q) := call block_split(off + 1, l - 1);
   if ok == 0 { return (0, 0) };
-  q := call iw_alloc(6);
-  IW.u64[q] := fo;
-  IW.u64[q + 1] := j;
-  IW.u64[q + 2] := co;
-  IW.u64[q + 3] := cl;
-  IW.u64[q + 4] := ro;
-  IW.u64[q + 5] := rl;
-  return (1, q)
+  (fo, fl) := call sl_cons(ci + 1, IW.u64[q], IW.u64[q + 1]);
+  q2 := call rec6(fo, fl, IW.u64[q + 2], IW.u64[q + 3], IW.u64[q + 4], IW.u64[q + 5]);
+  return (1, q2)
 }
 
 /-- `rec_target_of(no, nl, mI, ty)`: `recTargetOf`: strip `mI` leading `∀`s off `ty`; if the
@@ -376,6 +360,7 @@ leading `∀`s off `c.type`, then `member_idx_at` the head of what remains. -/
 @[l_impl ConRon.Arena.ctorMember?]
 def ctorMember : FunDecl := lfn (no, nl, lvls, nP, c) locals (nF, ty, ok, bo, bl, body, hd, rok, ri) {
   nF := IW.u64[c + 1];
+  if nP + nF < nP { abort };
   ty := EREC.u64[IW.u64[c] + 3];
   (ok, bo, bl, body) := call strip_pis(nP + nF, ty);
   if ok == 0 { return (0, 0) };
@@ -385,42 +370,44 @@ def ctorMember : FunDecl := lfn (no, nl, lvls, nP, c) locals (nF, ty, ok, bo, bl
 }
 
 /-- `block_groups_one(no, nl, lvls, nP, co, cl, m)`: one group of `blockGroups`'s general case,
-member `m`'s constructors (`ctor_member` called once per candidate, in list order). -/
+member `m`'s constructors: `cs.filterM` (`ctor_member` called once per candidate, in list order,
+then the rest; recursive, lane `indproofs2`: was a loop). -/
 -- con-ron: ConRon/Arena/Inductives/BlockParts.lean:261-275 ConRon.Arena.blockGroups
 @[l_impl ConRon.Arena.blockGroups]
-def blockGroupsOne : FunDecl := lfn (no, nl, lvls, nP, co, cl, m) locals (go, gj, j, c, ok, t) {
-  go := call iw_alloc(cl);
-  gj := 0;
-  j := 0;
-  while j < cl {
-    c := IW.u64[co + j];
-    (ok, t) := call ctor_member(no, nl, lvls, nP, c);
-    if ok != 0 && t == m { IW.u64[go + gj] := c; gj += 1 };
-    j += 1
-  };
-  return (go, gj)
+def blockGroupsOne : FunDecl := lfn (no, nl, lvls, nP, co, cl, m) locals (c, ok, t, go, gl) {
+  if cl == 0 { return (0, 0) };
+  c := IW.u64[co];
+  (ok, t) := call ctor_member(no, nl, lvls, nP, c);
+  (go, gl) := call block_groups_one(no, nl, lvls, nP, co + 1, cl - 1, m);
+  if ok != 0 && t == m { (go, gl) := call sl_cons(c, go, gl) };
+  return (go, gl)
+}
+
+/-- `block_groups_go(no, nl, lvls, nP, co, cl, m, k)`: the groups of members `m, …, k - 1`
+(`(List.range' m (k - m)).mapM`, in order: this member's group, then the rest). -/
+-- con-ron: ConRon/Arena/Inductives/BlockParts.lean:261-275 ConRon.Arena.blockGroups
+@[l_impl ConRon.Arena.blockGroups]
+def blockGroupsGo : FunDecl := lfn (no, nl, lvls, nP, co, cl, m, k) locals (go, gl, h0, ho, hl) {
+  if k <= m { return (0, 0) };
+  (go, gl) := call block_groups_one(no, nl, lvls, nP, co, cl, m);
+  h0 := call rec2(go, gl);
+  (ho, hl) := call block_groups_go(no, nl, lvls, nP, co, cl, m + 1, k);
+  (ho, hl) := call sl_cons(h0, ho, hl);
+  return (ho, hl)
 }
 
 /-- `block_groups(no, nl, lvls, nP, k, co, cl)`: `blockGroups`: at one member, `[cs]` with no
 calls at all (the twin's short circuit); else one `block_groups_one` per member `0, …, k - 1`. -/
 -- con-ron: ConRon/Arena/Inductives/BlockParts.lean:261-275 ConRon.Arena.blockGroups
 @[l_impl ConRon.Arena.blockGroups]
-def blockGroups : FunDecl := lfn (no, nl, lvls, nP, k, co, cl) locals (hdrs, h0, m, go, gj) {
+def blockGroups : FunDecl := lfn (no, nl, lvls, nP, k, co, cl) locals (h0, hdrs, hl) {
   if k == 1 {
-    hdrs := call iw_alloc(1);
     h0 := call rec2(co, cl);
-    IW.u64[hdrs] := h0;
-    return (hdrs, 1)
+    (hdrs, hl) := call sl_cons(h0, 0, 0);
+    return (hdrs, hl)
   };
-  hdrs := call iw_alloc(k);
-  m := 0;
-  while m < k {
-    (go, gj) := call block_groups_one(no, nl, lvls, nP, co, cl, m);
-    h0 := call rec2(go, gj);
-    IW.u64[hdrs + m] := h0;
-    m += 1
-  };
-  return (hdrs, k)
+  (hdrs, hl) := call block_groups_go(no, nl, lvls, nP, co, cl, 0, k);
+  return (hdrs, hl)
 }
 
 /-- `block_rec_lps_one(rc, wo, wl)`: whether recursor record `rc`'s `cvR.levelParams` equal the
@@ -461,29 +448,40 @@ def blockRecLpsOk : FunDecl := lfn (p) locals (lo, ll, wo, wl, large, elim, ro, 
   return r
 }
 
-/-- `block_rec_name_set_ok(mo, ml, ro, rl)`: `blockRecNameSetOk`: the recursor names, as a set,
-are exactly `T_m.rec` at every member (`name_rec`, interned in block order; `sl_set_eq`). -/
+/-- `block_rec_want(mo, ml)`: `T_m.rec` at every member (`name_rec`, interned in block order: this
+member's, then the rest's; consed on with `sl_cons`). -/
 -- con-ron: ConRon/Arena/Inductives/BlockParts.lean:287-295 ConRon.Arena.blockRecNameSetOk
 @[l_impl ConRon.Arena.blockRecNameSetOk]
-def blockRecNameSetOk : FunDecl := lfn (mo, ml, ro, rl) locals (wo, j, m, cv, nm, w, go, rc, b) {
-  wo := call iw_alloc(ml);
-  j := 0;
-  while j < ml {
-    m := IW.u64[mo + j];
-    cv := IW.u64[m];
-    nm := EREC.u64[cv];
-    w := call name_rec(nm);
-    IW.u64[wo + j] := w;
-    j += 1
-  };
-  go := call iw_alloc(rl);
-  j := 0;
-  while j < rl {
-    rc := IW.u64[ro + j];
-    IW.u64[go + j] := EREC.u64[IW.u64[rc]];
-    j += 1
-  };
-  b := call sl_set_eq(go, rl, wo, ml);
+def blockRecWant : FunDecl := lfn (mo, ml) locals (m, cv, w, o, l) {
+  if ml == 0 { return (0, 0) };
+  m := IW.u64[mo];
+  cv := IW.u64[m];
+  w := call name_rec(EREC.u64[cv]);
+  (o, l) := call block_rec_want(mo + 1, ml - 1);
+  (o, l) := call sl_cons(w, o, l);
+  return (o, l)
+}
+
+/-- `block_rec_got(ro, rl)`: the recursors' names (`recs.map (·.cvR.name)`), recursively. -/
+-- con-ron: ConRon/Arena/Inductives/BlockParts.lean:287-295 ConRon.Arena.blockRecNameSetOk
+@[l_impl ConRon.Arena.blockRecNameSetOk]
+def blockRecGot : FunDecl := lfn (ro, rl) locals (rc, o, l) {
+  if rl == 0 { return (0, 0) };
+  rc := IW.u64[ro];
+  (o, l) := call block_rec_got(ro + 1, rl - 1);
+  (o, l) := call sl_cons(EREC.u64[IW.u64[rc]], o, l);
+  return (o, l)
+}
+
+/-- `block_rec_name_set_ok(mo, ml, ro, rl)`: `blockRecNameSetOk`: the recursor names, as a set,
+are exactly `T_m.rec` at every member (`sl_set_eq`; lane `indproofs2`: the loops became
+`block_rec_want`/`block_rec_got`). -/
+-- con-ron: ConRon/Arena/Inductives/BlockParts.lean:287-295 ConRon.Arena.blockRecNameSetOk
+@[l_impl ConRon.Arena.blockRecNameSetOk]
+def blockRecNameSetOk : FunDecl := lfn (mo, ml, ro, rl) locals (wo, wl, go, gl, b) {
+  (wo, wl) := call block_rec_want(mo, ml);
+  (go, gl) := call block_rec_got(ro, rl);
+  b := call sl_set_eq(go, gl, wo, wl);
   return b
 }
 
@@ -504,39 +502,48 @@ def blockRecNamesUnreserved : FunDecl := lfn (ro, rl) locals (rc, cv, nm, b, r) 
 }
 
 /-- `block_member_counts_find(no, nl, ro, rl, m)`: the `rs.findM?` inside `blockMemberCounts?`,
-one `rec_target_of` call per candidate, stopping at the first whose target is `m`. -/
+one `rec_target_of` call per candidate, stopping at the first whose target is `m` (recursive,
+lane `indproofs2`: was a loop). -/
 -- con-ron: ConRon/Arena/Inductives/BlockParts.lean:307-325 ConRon.Arena.blockMemberCounts?
 @[l_impl ConRon.Arena.blockMemberCounts?]
-def blockMemberCountsFind : FunDecl := lfn (no, nl, ro, rl, m) locals (j, e, mI, ty, t) {
-  j := 0;
-  while j < rl {
-    e := IW.u64[ro + j];
-    mI := IW.u64[e + 1];
-    ty := EREC.u64[IW.u64[e] + 3];
-    t := call rec_target_of(no, nl, mI, ty);
-    if t == m { return (1, mI, IW.u64[e + 2]) };
-    j += 1
-  };
-  return (0, 0, 0)
+def blockMemberCountsFind : FunDecl := lfn (no, nl, ro, rl, m) locals (e, mI, t, a, b, c) {
+  if rl == 0 { return (0, 0, 0) };
+  e := IW.u64[ro];
+  mI := IW.u64[e + 1];
+  t := call rec_target_of(no, nl, mI, EREC.u64[IW.u64[e] + 3]);
+  if t == m { return (1, mI, IW.u64[e + 2]) };
+  (a, b, c) := call block_member_counts_find(no, nl, ro + 1, rl - 1, m);
+  return (a, b, c)
 }
 
-/-- `block_member_counts(nPd, k, nC, no, nl, ro, rl, cto, ctl)`: `blockMemberCounts?`, one
-`block_member_counts_find` and one `block_counts` per type former, in order; a failure stops the
-walk there (no further calls), as the twin's `match … | none => pure none` does. -/
+/-- `block_member_counts_go(nPd, k, nC, no, nl, ro, rl, cto, ctl, idx)`: `blockMemberCounts?` from
+member `idx` on: one `block_member_counts_find` and one `block_counts` for this former, then the
+rest; a failure stops the walk there (no further calls). The record words past `2^32` are a
+capacity abort (`block_counts`' arithmetic). -/
 -- con-ron: ConRon/Arena/Inductives/BlockParts.lean:307-325 ConRon.Arena.blockMemberCounts?
 @[l_impl ConRon.Arena.blockMemberCounts?]
-def blockMemberCounts : FunDecl := lfn (nPd, k, nC, no, nl, ro, rl, cto, ctl) locals (outo, idx, cv, rok, rmi, rrp, cok, ca, cb) {
-  outo := call iw_alloc(ctl);
-  idx := 0;
-  while idx < ctl {
-    cv := IW.u64[cto + idx];
-    (rok, rmi, rrp) := call block_member_counts_find(no, nl, ro, rl, idx);
-    (cok, ca, cb) := call block_counts(nPd, k, nC, rl, cv, rok, rmi, rrp);
-    if cok == 0 { return (0, 0, 0) };
-    IW.u64[outo + idx] := cb;
-    idx += 1
-  };
-  return (1, outo, ctl)
+def blockMemberCountsGo : FunDecl := lfn (nPd, k, nC, no, nl, ro, rl, cto, ctl, idx)
+    locals (cv, rok, rmi, rrp, cok, ca, cb, ok, o, l) {
+  if ctl == 0 { return (1, 0, 0) };
+  cv := IW.u64[cto];
+  (rok, rmi, rrp) := call block_member_counts_find(no, nl, ro, rl, idx);
+  if 4294967296 <= rmi || 4294967296 <= rrp { abort };
+  (cok, ca, cb) := call block_counts(nPd, k, nC, rl, cv, rok, rmi, rrp);
+  if cok == 0 { return (0, 0, 0) };
+  (ok, o, l) := call block_member_counts_go(nPd, k, nC, no, nl, ro, rl, cto + 1, ctl - 1, idx + 1);
+  if ok == 0 { return (0, 0, 0) };
+  (o, l) := call sl_cons(cb, o, l);
+  return (1, o, l)
+}
+
+/-- `block_member_counts(nPd, k, nC, no, nl, ro, rl, cto, ctl)`: `blockMemberCounts?` from member
+`0` (the counts past `2^32` a capacity abort). -/
+-- con-ron: ConRon/Arena/Inductives/BlockParts.lean:307-325 ConRon.Arena.blockMemberCounts?
+@[l_impl ConRon.Arena.blockMemberCounts?]
+def blockMemberCounts : FunDecl := lfn (nPd, k, nC, no, nl, ro, rl, cto, ctl) locals (ok, o, l) {
+  if 4294967296 <= nPd || 4294967296 <= k || 4294967296 <= nC || 4294967296 <= rl { abort };
+  (ok, o, l) := call block_member_counts_go(nPd, k, nC, no, nl, ro, rl, cto, ctl, 0);
+  return (ok, o, l)
 }
 
 /-! ### `blockShape?`: one helper per phase -/
@@ -544,70 +551,54 @@ def blockMemberCounts : FunDecl := lfn (nPd, k, nC, no, nl, ro, rl, cto, ctl) lo
 /-- `block_shape_names_of(cto, ctl)`: the former `cv` pointers' names (`cvTs.map (·.name)`). -/
 -- con-ron: ConRon/Arena/Inductives/BlockParts.lean:327-384 ConRon.Arena.blockShape?
 @[l_impl ConRon.Arena.blockShape?]
-def blockShapeNamesOf : FunDecl := lfn (cto, ctl) locals (q, j, cv) {
-  q := call iw_alloc(ctl);
-  j := 0;
-  while j < ctl {
-    cv := IW.u64[cto + j];
-    IW.u64[q + j] := EREC.u64[cv];
-    j += 1
-  };
-  return (q, ctl)
+def blockShapeNamesOf : FunDecl := lfn (cto, ctl) locals (o, l) {
+  if ctl == 0 { return (0, 0) };
+  (o, l) := call block_shape_names_of(cto + 1, ctl - 1);
+  (o, l) := call sl_cons(EREC.u64[IW.u64[cto]], o, l);
+  return (o, l)
 }
 
 /-- The formers' pins: unreserved and sharing `lps`. -/
 -- con-ron: ConRon/Arena/Inductives/BlockParts.lean:327-384 ConRon.Arena.blockShape?
 @[l_impl ConRon.Arena.blockShape?]
-def blockShapePinsFormers : FunDecl := lfn (cto, ctl, lo, ll) locals (j, cv, nm, b, plo, pll, eqv) {
-  j := 0;
-  while j < ctl {
-    cv := IW.u64[cto + j];
-    nm := EREC.u64[cv];
-    b := call reserved_contains(nm);
-    if b != 0 { return 0 };
-    (plo, pll) := call er_to_iw(EREC.u64[cv + 1], EREC.u64[cv + 2]);
-    eqv := call sl_eq(plo, pll, lo, ll);
-    if eqv == 0 { return 0 };
-    j += 1
-  };
-  return 1
+def blockShapePinsFormers : FunDecl := lfn (cto, ctl, lo, ll) locals (cv, b, plo, pll, eqv, r) {
+  if ctl == 0 { return 1 };
+  cv := IW.u64[cto];
+  b := call reserved_contains(EREC.u64[cv]);
+  if b != 0 { return 0 };
+  (plo, pll) := call er_to_iw(EREC.u64[cv + 1], EREC.u64[cv + 2]);
+  eqv := call sl_eq(plo, pll, lo, ll);
+  if eqv == 0 { return 0 };
+  r := call block_shape_pins_formers(cto + 1, ctl - 1, lo, ll);
+  return r
 }
 
 /-- The recursors' pins: unreserved. -/
 -- con-ron: ConRon/Arena/Inductives/BlockParts.lean:327-384 ConRon.Arena.blockShape?
 @[l_impl ConRon.Arena.blockShape?]
-def blockShapePinsRecs : FunDecl := lfn (ro, rl) locals (j, e, cv, nm, b) {
-  j := 0;
-  while j < rl {
-    e := IW.u64[ro + j];
-    cv := IW.u64[e];
-    nm := EREC.u64[cv];
-    b := call reserved_contains(nm);
-    if b != 0 { return 0 };
-    j += 1
-  };
-  return 1
+def blockShapePinsRecs : FunDecl := lfn (ro, rl) locals (b, r) {
+  if rl == 0 { return 1 };
+  b := call reserved_contains(EREC.u64[IW.u64[IW.u64[ro]]]);
+  if b != 0 { return 0 };
+  r := call block_shape_pins_recs(ro + 1, rl - 1);
+  return r
 }
 
 /-- The constructors' pins: `nP` matches, unreserved, sharing `lps`. -/
 -- con-ron: ConRon/Arena/Inductives/BlockParts.lean:327-384 ConRon.Arena.blockShape?
 @[l_impl ConRon.Arena.blockShape?]
-def blockShapePinsCtors : FunDecl := lfn (nP, cso, csl, lo, ll) locals (j, c, cv, pnp, nm, b, plo, pll, eqv) {
-  j := 0;
-  while j < csl {
-    c := IW.u64[cso + j];
-    cv := IW.u64[c];
-    pnp := IW.u64[c + 1];
-    if pnp != nP { return 0 };
-    nm := EREC.u64[cv];
-    b := call reserved_contains(nm);
-    if b != 0 { return 0 };
-    (plo, pll) := call er_to_iw(EREC.u64[cv + 1], EREC.u64[cv + 2]);
-    eqv := call sl_eq(plo, pll, lo, ll);
-    if eqv == 0 { return 0 };
-    j += 1
-  };
-  return 1
+def blockShapePinsCtors : FunDecl := lfn (nP, cso, csl, lo, ll) locals (c, cv, b, plo, pll, eqv, r) {
+  if csl == 0 { return 1 };
+  c := IW.u64[cso];
+  cv := IW.u64[c];
+  if IW.u64[c + 1] != nP { return 0 };
+  b := call reserved_contains(EREC.u64[cv]);
+  if b != 0 { return 0 };
+  (plo, pll) := call er_to_iw(EREC.u64[cv + 1], EREC.u64[cv + 2]);
+  eqv := call sl_eq(plo, pll, lo, ll);
+  if eqv == 0 { return 0 };
+  r := call block_shape_pins_ctors(nP, cso + 1, csl - 1, lo, ll);
+  return r
 }
 
 /-- The three pin passes, in the twin's own order (formers, then recursors, then constructors;
@@ -629,6 +620,7 @@ def blockShapePinsOk : FunDecl := lfn (nP, cto, ctl, lo, ll, ro, rl, cso, csl) l
 @[l_impl ConRon.Arena.blockShape?]
 def blockShapeResultSort : FunDecl := lfn (nP, io, il, ty) locals (h0, ok, bo, bl, body, g, x, y, z, s) {
   h0 := call sl_getd(io, il, 0, 0);
+  if nP + h0 < nP { abort };
   (ok, bo, bl, body) := call strip_pis(nP + h0, ty);
   if ok == 0 { s := call pin_word(53); return s };
   (g, x, y, z) := call e_view(body);
@@ -640,74 +632,52 @@ def blockShapeResultSort : FunDecl := lfn (nP, io, il, ty) locals (h0, ok, bo, b
 /-- `cs.map fun c => (c.1, c.2.2)`: the constructors, as `[cv, nF]` (dropping each's own `nP`). -/
 -- con-ron: ConRon/Arena/Inductives/BlockParts.lean:327-384 ConRon.Arena.blockShape?
 @[l_impl ConRon.Arena.blockShape?]
-def blockShapeCtorsOf : FunDecl := lfn (cso, csl) locals (q, j, c, e) {
-  q := call iw_alloc(csl);
-  j := 0;
-  while j < csl {
-    c := IW.u64[cso + j];
-    e := call rec2(IW.u64[c], IW.u64[c + 2]);
-    IW.u64[q + j] := e;
-    j += 1
-  };
-  return (q, csl)
+def blockShapeCtorsOf : FunDecl := lfn (cso, csl) locals (c, o, l, e) {
+  if csl == 0 { return (0, 0) };
+  c := IW.u64[cso];
+  (o, l) := call block_shape_ctors_of(cso + 1, csl - 1);
+  e := call rec2(IW.u64[c], IW.u64[c + 2]);
+  (o, l) := call sl_cons(e, o, l);
+  return (o, l)
 }
 
 /-- The members: `((cvTs.zip nIdxs).zip groups).map`, each a fresh `[cvT, nIdx, ctors.off,
 ctors.len]` (a group is a pointer to a `[off, len]` header; its fields are inlined here). -/
 -- con-ron: ConRon/Arena/Inductives/BlockParts.lean:327-384 ConRon.Arena.blockShape?
 @[l_impl ConRon.Arena.blockShape?]
-def blockShapeMembersOf : FunDecl := lfn (cto, ctl, io, go) locals (q, j, cvT, nIdx, hdr, goff, glen, ms) {
-  q := call iw_alloc(ctl);
-  j := 0;
-  while j < ctl {
-    cvT := IW.u64[cto + j];
-    nIdx := IW.u64[io + j];
-    hdr := IW.u64[go + j];
-    goff := IW.u64[hdr];
-    glen := IW.u64[hdr + 1];
-    ms := call rec4(cvT, nIdx, goff, glen);
-    IW.u64[q + j] := ms;
-    j += 1
-  };
-  return (q, ctl)
+def blockShapeMembersOf : FunDecl := lfn (cto, ctl, io, go) locals (o, l, hdr, ms) {
+  if ctl == 0 { return (0, 0) };
+  (o, l) := call block_shape_members_of(cto + 1, ctl - 1, io + 1, go + 1);
+  hdr := IW.u64[go];
+  ms := call rec4(IW.u64[cto], IW.u64[io], IW.u64[hdr], IW.u64[hdr + 1]);
+  (o, l) := call sl_cons(ms, o, l);
+  return (o, l)
 }
 
 /-- A recursor rule slice's `rhs` fields (word `+8` of each 11-word `decRule` record), copied from
 `EREC` into `IW`. -/
 -- con-ron: ConRon/Arena/Inductives/BlockParts.lean:327-384 ConRon.Arena.blockShape?
 @[l_impl ConRon.Arena.blockShape?]
-def blockShapeRhssOf : FunDecl := lfn (ro, rl) locals (q, j) {
-  q := call iw_alloc(rl);
-  j := 0;
-  while j < rl {
-    IW.u64[q + j] := EREC.u64[ro + 11 * j + 8];
-    j += 1
-  };
-  return (q, rl)
+def blockShapeRhssOf : FunDecl := lfn (ro, rl) locals (o, l) {
+  if rl == 0 { return (0, 0) };
+  (o, l) := call block_shape_rhss_of(ro + 11, rl - 1);
+  (o, l) := call sl_cons(EREC.u64[ro + 8], o, l);
+  return (o, l)
 }
 
 /-- The recursors: `rs.mapM` building a fresh `RecShape` (`[cvR, rP, mI, tgt, rhss.off, rhss.len]`,
 `decRS`'s order) per element, `tgt` by `rec_target_of`. -/
 -- con-ron: ConRon/Arena/Inductives/BlockParts.lean:327-384 ConRon.Arena.blockShape?
 @[l_impl ConRon.Arena.blockShape?]
-def blockShapeRecsOf : FunDecl := lfn (no, nl, ro, rl) locals (q, j, e, cvR, mI, rP, rulesOff, rulesLen, ty, tgt, rhso, rhsl, rc) {
-  q := call iw_alloc(rl);
-  j := 0;
-  while j < rl {
-    e := IW.u64[ro + j];
-    cvR := IW.u64[e];
-    mI := IW.u64[e + 1];
-    rP := IW.u64[e + 2];
-    rulesOff := IW.u64[e + 3];
-    rulesLen := IW.u64[e + 4];
-    ty := EREC.u64[cvR + 3];
-    tgt := call rec_target_of(no, nl, mI, ty);
-    (rhso, rhsl) := call block_shape_rhss_of(rulesOff, rulesLen);
-    rc := call rec6(cvR, rP, mI, tgt, rhso, rhsl);
-    IW.u64[q + j] := rc;
-    j += 1
-  };
-  return (q, rl)
+def blockShapeRecsOf : FunDecl := lfn (no, nl, ro, rl) locals (e, tgt, rhso, rhsl, rc, o, l) {
+  if rl == 0 { return (0, 0) };
+  e := IW.u64[ro];
+  tgt := call rec_target_of(no, nl, IW.u64[e + 1], EREC.u64[IW.u64[e] + 3]);
+  (rhso, rhsl) := call block_shape_rhss_of(IW.u64[e + 3], IW.u64[e + 4]);
+  rc := call rec6(IW.u64[e], IW.u64[e + 2], IW.u64[e + 1], tgt, rhso, rhsl);
+  (o, l) := call block_shape_recs_of(no, nl, ro + 1, rl - 1);
+  (o, l) := call sl_cons(rc, o, l);
+  return (o, l)
 }
 
 /-- `cvR0.levelParams` as `elim :: relps` with `relps == lps` and `elim ∉ lps`: `(1, elim)`;
@@ -744,39 +714,66 @@ def blockShapePack : FunDecl := lfn (mo, ml, ro, rl, nP, elim, s, large, isProp)
   return q
 }
 
-/-- `block_shape_build`: `blockShape?` from its split, non-empty components — the counts, the
-pins, the sort, the groups, the members and recursors, and which eliminator. -/
+/-- `block_shape_seal`: which eliminator, then the record (split off `block_shape_build`). -/
 -- con-ron: ConRon/Arena/Inductives/BlockParts.lean:327-384 ConRon.Arena.blockShape?
 @[l_impl ConRon.Arena.blockShape?]
-def blockShapeBuild : FunDecl := lfn (nPd, cto, ctl, cso, csl, rso, rsl)
-    locals (cvT0, rs0, cvR0, no, nl, mcOk, io, il, lo, ll, pinsOk, s, z, eq, isProp,
-            cof, cl2, lvls, go, gl, mo, ml, ro2, rl2, largeOk, elim, q) {
-  cvT0 := IW.u64[cto];
-  rs0 := IW.u64[rso];
-  cvR0 := IW.u64[rs0];
-  (no, nl) := call block_shape_names_of(cto, ctl);
-  (mcOk, io, il) := call block_member_counts(nPd, ctl, csl, no, nl, rso, rsl, cto, ctl);
-  if mcOk == 0 { return (0, 0) };
-  (lo, ll) := call er_to_iw(EREC.u64[cvT0 + 1], EREC.u64[cvT0 + 2]);
-  pinsOk := call block_shape_pins_ok(nPd, cto, ctl, lo, ll, rso, rsl, cso, csl);
-  if pinsOk == 0 { return (0, 0) };
-  s := call block_shape_result_sort(nPd, io, il, EREC.u64[cvT0 + 3]);
-  z := call pin_word(53);
-  eq := call lvl_eq_c(s, z);
-  isProp := u64(eq == 2);
+def blockShapeSeal : FunDecl := lfn (mo, ml, ro2, rl2, nPd, s, isProp, largeOk, elim) locals (e, q) {
+  if largeOk != 0 {
+    q := call block_shape_pack(mo, ml, ro2, rl2, nPd, elim, s, 1, isProp);
+    return (1, q)
+  };
+  e := call intern_nanon();
+  q := call block_shape_pack(mo, ml, ro2, rl2, nPd, e, s, 0, isProp);
+  return (1, q)
+}
+
+/-- `block_shape_fin`: `blockShape?`'s last stretch — the constructors, the levels, the groups,
+the members and recursors, which eliminator, the record (lane `indproofs2`: split off
+`block_shape_build`). -/
+-- con-ron: ConRon/Arena/Inductives/BlockParts.lean:327-384 ConRon.Arena.blockShape?
+@[l_impl ConRon.Arena.blockShape?]
+def blockShapeFin : FunDecl := lfn (nPd, cto, ctl, cso, csl, rso, rsl, no, nl, io, lo, ll, s, isProp)
+    locals (cvR0, cof, cl2, lvls, go, gl, mo, ml, ro2, rl2, largeOk, elim, ok, q) {
+  cvR0 := IW.u64[IW.u64[rso]];
   (cof, cl2) := call block_shape_ctors_of(cso, csl);
   lvls := call param_levels(lo, ll);
   (go, gl) := call block_groups(no, nl, lvls, nPd, ctl, cof, cl2);
   (mo, ml) := call block_shape_members_of(cto, ctl, io, go);
   (ro2, rl2) := call block_shape_recs_of(no, nl, rso, rsl);
   (largeOk, elim) := call block_shape_large(cvR0, lo, ll);
-  if largeOk != 0 {
-    q := call block_shape_pack(mo, ml, ro2, rl2, nPd, elim, s, 1, isProp);
-    return (1, q)
-  };
-  elim := call intern_nanon();
-  q := call block_shape_pack(mo, ml, ro2, rl2, nPd, elim, s, 0, isProp);
-  return (1, q)
+  (ok, q) := call block_shape_seal(mo, ml, ro2, rl2, nPd, s, isProp, largeOk, elim);
+  return (ok, q)
+}
+
+/-- `block_shape_tail`: the result sort and `isProp`, then `block_shape_fin` (split off
+`block_shape_build`). -/
+-- con-ron: ConRon/Arena/Inductives/BlockParts.lean:327-384 ConRon.Arena.blockShape?
+@[l_impl ConRon.Arena.blockShape?]
+def blockShapeTail : FunDecl := lfn (nPd, cto, ctl, cso, csl, rso, rsl, no, nl, io, il, lo, ll)
+    locals (s, z, eq, isProp, ok, q) {
+  s := call block_shape_result_sort(nPd, io, il, EREC.u64[IW.u64[cto] + 3]);
+  z := call pin_word(53);
+  eq := call lvl_eq_c(s, z);
+  isProp := u64(eq == 2);
+  (ok, q) := call block_shape_fin(nPd, cto, ctl, cso, csl, rso, rsl, no, nl, io, lo, ll, s, isProp);
+  return (ok, q)
+}
+
+/-- `block_shape_build`: `blockShape?` from its split, non-empty components — the names, the
+counts, the level parameters and the pins; then `block_shape_tail`. -/
+-- con-ron: ConRon/Arena/Inductives/BlockParts.lean:327-384 ConRon.Arena.blockShape?
+@[l_impl ConRon.Arena.blockShape?]
+def blockShapeBuild : FunDecl := lfn (nPd, cto, ctl, cso, csl, rso, rsl)
+    locals (cvT0, no, nl, mcOk, io, il, lo, ll, pinsOk, ok, q) {
+  cvT0 := IW.u64[cto];
+  (no, nl) := call block_shape_names_of(cto, ctl);
+  (mcOk, io, il) := call block_member_counts(nPd, ctl, csl, no, nl, rso, rsl, cto, ctl);
+  if mcOk == 0 { return (0, 0) };
+  (lo, ll) := call er_to_iw(EREC.u64[cvT0 + 1], EREC.u64[cvT0 + 2]);
+  pinsOk := call block_shape_pins_ok(nPd, cto, ctl, lo, ll, rso, rsl, cso, csl);
+  if pinsOk == 0 { return (0, 0) };
+  (ok, q) := call block_shape_tail(nPd, cto, ctl, cso, csl, rso, rsl, no, nl, io, il, lo, ll);
+  return (ok, q)
 }
 
 /-- `block_shape(nPd, off, l)`: `blockShape?`: split the block; decline with no formers or no
@@ -886,17 +883,17 @@ def indPartsFns : Prog :=
    ("block_shape_major_idx_at", blockShapeMajorIdxAt), ("block_shape_with_sort", blockShapeWithSort),
    ("block_parts_complete", blockPartsComplete), ("block_split_recs", blockSplitRecs),
    ("block_split_ctors", blockSplitCtors), ("block_split", blockSplit), ("rec_target_of", recTargetOf),
-   ("block_counts_head", blockCountsHead), ("block_counts_pure", blockCountsPure), ("block_counts", blockCounts), ("ctor_member", ctorMember), ("block_groups_one", blockGroupsOne),
+   ("block_counts_head", blockCountsHead), ("block_counts_pure", blockCountsPure), ("block_counts", blockCounts), ("ctor_member", ctorMember), ("block_groups_one", blockGroupsOne), ("block_groups_go", blockGroupsGo),
    ("block_groups", blockGroups), ("block_rec_lps_one", blockRecLpsOne), ("block_rec_lps_ok_go", blockRecLpsOkGo), ("block_rec_lps_ok", blockRecLpsOk),
-   ("block_rec_name_set_ok", blockRecNameSetOk), ("block_rec_names_unreserved", blockRecNamesUnreserved),
-   ("block_member_counts_find", blockMemberCountsFind), ("block_member_counts", blockMemberCounts),
+   ("block_rec_want", blockRecWant), ("block_rec_got", blockRecGot), ("block_rec_name_set_ok", blockRecNameSetOk), ("block_rec_names_unreserved", blockRecNamesUnreserved),
+   ("block_member_counts_find", blockMemberCountsFind), ("block_member_counts_go", blockMemberCountsGo), ("block_member_counts", blockMemberCounts),
    ("block_shape_names_of", blockShapeNamesOf), ("block_shape_pins_formers", blockShapePinsFormers),
    ("block_shape_pins_recs", blockShapePinsRecs), ("block_shape_pins_ctors", blockShapePinsCtors),
    ("block_shape_pins_ok", blockShapePinsOk), ("block_shape_result_sort", blockShapeResultSort),
    ("block_shape_ctors_of", blockShapeCtorsOf), ("block_shape_members_of", blockShapeMembersOf),
    ("block_shape_rhss_of", blockShapeRhssOf), ("block_shape_recs_of", blockShapeRecsOf),
    ("block_shape_large", blockShapeLarge), ("block_shape_pack", blockShapePack),
-   ("block_shape_build", blockShapeBuild), ("block_shape", blockShape), ("block_parts", blockParts),
+   ("block_shape_seal", blockShapeSeal), ("block_shape_fin", blockShapeFin), ("block_shape_tail", blockShapeTail), ("block_shape_build", blockShapeBuild), ("block_shape", blockShape), ("block_parts", blockParts),
    ("block_large_elim_allowed", blockLargeElimAllowed),
    ("check_shapeless_formers", checkShapelessFormers), ("check_shapeless", checkShapeless),
    ("check_ind_decl", checkIndDecl)]

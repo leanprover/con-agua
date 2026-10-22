@@ -161,7 +161,7 @@ theorem pisOut_ref (p : Prog) (hb : InferBodyProg p) (hcap : BStkCap) (dn : NIdx
 /-- **`infer_pis_leaf` refines `inferPisLeaf`** at the knot. -/
 @[refines ConRon.Arena.inferPisLeaf ConRon.Arena.inferPisOut]
 theorem inferPisLeaf_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : InferBodyProg p)
-    (hil : InstListOK p) (hbc : BStkCallees p) (hcap : BStkCap) (n : Nat)
+    (hil : InstListOK p) (hcap : BStkCap) (n : Nat)
     (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb mode d t k fo lo : Word) (fvs : Array EIdx) (ws : Array Word)
@@ -202,7 +202,7 @@ theorem inferPisLeaf_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p)
   rw [h4] at hW; dsimp only at hW
   have hsz := hcap _ _ _ _ _ _ _ hS
   have h₁ := CoreSpec.of_callW (hil n s a₀ dn vis fe M eb t fo k 0 fvs hS ht hf hftop) h1
-  have hK₁ := hbc n "inst_list" _ _ _ _ (by simp) h1
+  have hK₁ := h₁.2.1.bkept
   have hdk' : (d + k).toNat = d.toNat + k.toNat := addW _ _ hdk
   have h0 : (0 : Word).toNat = 0 := rfl
   have hT : inferPisLeaf (coreKnot (decMode mode) fe id F) fe d.toNat (decE t) k.toNat fvs (ws.map decI) =
@@ -215,11 +215,11 @@ theorem inferPisLeaf_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p)
   refine coreRef_bind h₁ (fun M₁ hS₁ => ?_)
   have h₂ := CoreSpec.of_callW ((hk n (Nat.le_refl _)).infer F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb
     mode (d + k) (r₁.headD 0) hF hn ⟨hS₁, hs.mode4, hs.eb_mode⟩ h₁.2.2.2) h2
-  have hK₂ := hbc n "infer" _ _ _ _ (by simp) h2
+  have hK₂ := h₂.2.1.bkept
   refine coreRef_bind h₂ (fun M₂ hS₂ => ?_)
   have h₃ := CoreSpec.of_callW (ensureSortSpec_of_knot p hp n hk F ⟨m₂, Locals.init []⟩ _ dn vis fe M₂
     eb mode (d + k) (r₂.headD 0) hF hn ⟨hS₂, hs.mode4, hs.eb_mode⟩ h₂.2.2.2) h3
-  have hK₃ := hbc n "ensure_sort" _ _ _ _ (by simp) h3
+  have hK₃ := h₃.2.1.bkept
   refine coreRef_bind h₃ (fun M₃ hS₃ => ?_)
   have hB₁ := hB.keep hK₁ hbtop hsz
   have hB₂ := hB₁.keep hK₂ (by rw [hK₁.1]; exact hbtop) (by rw [hK₁.2.1]; exact hsz)
@@ -346,7 +346,7 @@ theorem inferPis_spec (p : Prog) (hq : BindProg p) (n : Nat) (s₀ : St)
 
 /-- `infer_pis_leaf` at every L fuel up to `n + 1`. -/
 theorem inferPisLeaf_any (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : InferBodyProg p)
-    (hil : InstListOK p) (hbc : BStkCallees p) (hcap : BStkCap) :
+    (hil : InstListOK p) (hcap : BStkCap) :
     ∀ n, KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 → ∀ (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb mode d t k fo lo : Word) (fvs : Array EIdx) (ws : Array Word),
@@ -361,12 +361,12 @@ theorem inferPisLeaf_any (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb
       CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
   | n + 1, hk, F, hF, hn, s₀, a₀, dn, vis, fe, M, eb, mode, d, t, k, fo, lo, fvs, ws, hs, ht, hf,
       hftop, hB, hbtop, hws, hdk =>
-      inferPisLeaf_refines p hp hq hb hil hbc hcap n (hk.mono (by omega)) F (by omega) (by omega)
+      inferPisLeaf_refines p hp hq hb hil hcap n (hk.mono (by omega)) F (by omega) (by omega)
         s₀ a₀ dn vis fe M eb mode d t k fo lo fvs ws hs ht hf hftop hB hbtop hws hdk
 
 /-- **The ∀ peel loop with its leaf refines `inferPis`** by induction on the loop fuel. -/
 theorem pisFull_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : InferBodyProg p)
-    (hil : InstListOK p) (hbc : BStkCallees p) (hcap : BStkCap)
+    (hil : InstListOK p) (hcap : BStkCap)
     (N : Nat) (hk : KnotUpTo p N) (F : Nat) (hFN : N ≤ F) (hN : N ≤ 2 ^ 62)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (mode d fo lo eb : Word)
     (hmode : mode < 4) (heb : eb = (mode >>> 1) &&& 1) (m₀ : Mem) :
@@ -405,7 +405,7 @@ theorem pisFull_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : In
           peel.toNat (decE t) k.toNat fvs (ws.map decI)) w mF := by
       intro hT hc
       have hl := CoreSpec.of_call1W (r := [w]) (s₀ := ⟨m, Locals.init []⟩)
-        (inferPisLeaf_any p hp hq hb hil hbc hcap N hk F hFN hN ⟨m, Locals.init []⟩ a dn vis fe M eb
+        (inferPisLeaf_any p hp hq hb hil hcap N hk F hFN hN ⟨m, Locals.init []⟩ a dn vis fe M eb
           mode d t k fo lo fvs ws ⟨hS, hmode, heb⟩ ht hf hftop hB hbtop hws (by omega))
         (fun r r' h => by simp only [decH, h]) hc
       obtain ⟨hok, ⟨M', hS', hK', hSt'⟩, hres, hrw⟩ := hl
@@ -460,16 +460,16 @@ theorem pisFull_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : In
       have hinst := hil j ⟨m, Locals.init []⟩ a dn vis fe M eb _ fo k 0 fvs hS hty hf hftop
       obtain ⟨hok1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres1, hrw1⟩ := CoreSpec.of_callW hinst h1
       rw [h0] at hok1 hres1 hS₁
-      have hB₁ := hbc j "inst_list" _ _ _ _ (by simp) h1
+      have hB₁ := hSt₁.bstk
       -- its type, a sort
       have hi := CoreSpec.of_callW ((hk j (by omega)).infer F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb
         mode (d + k) (r₁.headD 0) (by omega) (by omega) ⟨hS₁, hmode, heb⟩ hrw1) h2
       obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hrw2⟩ := hi
-      have hB₂ := hbc j "infer" _ _ _ _ (by simp) h2
+      have hB₂ := hSt₂.bstk
       have hw := CoreSpec.of_callW ((hk j (by omega)).whnf F ⟨m₂, Locals.init []⟩ _ dn vis fe M₂ eb
         mode (d + k) (r₂.headD 0) (by omega) (by omega) ⟨hS₂, hmode, heb⟩ hrw2) h3
       obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hrw3⟩ := hw
-      have hB₃ := hbc j "whnf" _ _ _ _ (by simp) h3
+      have hB₃ := hSt₃.bstk
       -- the binder's free variable
       obtain ⟨s₄, hs₄, -, hfv⟩ := triple_of_callW (s₀ := ⟨m₃, Locals.init []⟩)
         (internFVar_spec p hb.fvf hb.fvp hb.fvi j _ (d + k) (r₁.headD 0)) h4
@@ -555,7 +555,7 @@ theorem pisFull_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : In
 the binder top), up to the tops it leaves raised (`TelPost`). -/
 @[refines ConRon.Arena.inferPis]
 theorem inferPis_tel (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : InferBodyProg p)
-    (hil : InstListOK p) (hbc : BStkCallees p) (hcap : BStkCap)
+    (hil : InstListOK p) (hcap : BStkCap)
     (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb mode d peel t k fo lo : Word) (fvs : Array EIdx) (ws : Array Word) (m₀ : Mem)
@@ -574,7 +574,7 @@ theorem inferPis_tel (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
   obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
     (inferPis_spec p hq n s₀ mode vis d peel t k fo lo)
   subst hs0
-  exact ⟨hloc, pisFull_ref p hp hq hb hil hbc hcap n hk F hF hn dn vis fe mode d fo lo eb hs.mode4
+  exact ⟨hloc, pisFull_ref p hp hq hb hil hcap n hk F hF hn dn vis fe mode d fo lo eb hs.mode4
     hs.eb_mode m₀ (n + 1) (Nat.le_refl _) s.mem a₀ M peel t k fvs ws hs.rel ht hf htop hB hbt hws hdk
     hb0 hsz hbb0 hbsz0 hpg0 _ _ hW⟩
 
@@ -624,7 +624,7 @@ theorem inferForall_spec (p : Prog) (hq : BindProg p) (n : Nat) (s₀ : St) (mod
 /-- **`infer_forall` refines `inferForall`** at the knot (the `.forallE` clause of `inferBody`). -/
 @[refines ConRon.Arena.inferForall]
 theorem inferForall_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : InferBodyProg p)
-    (hil : InstListOK p) (hbc : BStkCallees p) (hcap : BStkCap)
+    (hil : InstListOK p) (hcap : BStkCap)
     (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
     (eb mode d ty body : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hty : HW ty) (hbody : HW body) :
@@ -691,11 +691,11 @@ theorem inferForall_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) 
   -- the domain's type, a sort
   have h₁ := CoreSpec.of_callW (hK.infer F s a₀ dn vis fe M eb mode d ty hF hn hs hty) h1
   obtain ⟨hok1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres1, hrw1⟩ := h₁
-  have hB₁ := hbc n "infer" _ _ _ _ (by simp) h1
+  have hB₁ := hSt₁.bstk
   have h₂ := CoreSpec.of_callW (hK.whnf F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d (r₁.headD 0) hF hn
     ⟨hS₁, hs.mode4, hs.eb_mode⟩ hrw1) h2
   obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hrw2⟩ := h₂
-  have hB₂ := hbc n "whnf" _ _ _ _ (by simp) h2
+  have hB₂ := hSt₂.bstk
   have hg2 : r₂.headD 0 >>> 28 = 2 := by simpa using g1
   obtain ⟨hvs, hu⟩ := L.Ind.view_sort_f m₂ _ hS₂.arena.1 (r₂.headD 0) hrw2 ⟨gs1, by simpa using gs2⟩ hg2
   obtain ⟨s₃, hs₃, -, hfv⟩ := triple_of_callW (s₀ := ⟨m₂, Locals.init []⟩)
@@ -721,7 +721,7 @@ theorem inferForall_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) 
   | zero => rw [callW_zero] at h4; cases h4
   | succ n' =>
   obtain ⟨t₄, ht₄, -, hTel⟩ := triple_of_callW (s₀ := ⟨_, Locals.init []⟩)
-    (inferPis_tel p hp hq hb hil hbc hcap n' (hk.mono (by omega)) F (by omega) (by omega) _ _ dn
+    (inferPis_tel p hp hq hb hil hcap n' (hk.mono (by omega)) F (by omega) (by omega) _ _ dn
       vis fe M₃ eb mode d 16777216 body 1 so lo _ _ m₃ ⟨hS', hs.mode4, hs.eb_mode⟩ hbody hf' htop' hB'
       hbt' (by intro i hi; simp at hi; subst hi; simpa [HW] using hu) (by simp; omega) hb' hsz' hbbT hbszT hpgT) h4
   rw [ht₄] at hTel
