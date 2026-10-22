@@ -72,7 +72,7 @@ theorem GrowRef.restore {α : Type} [Inhabited α] {T : AM α} {a₀ : AState} {
 theorem SpineR.grew {m m' : Mem} {off cnt : Word} {xs : Array EIdx} (h : SpineR m off cnt xs)
     (hg : StackGrew m m') (htop : off.toNat + cnt.toNat ≤ (spTop m).toNat)
     (hspn : (m.arr64 SPN).size < 2 ^ 63) : SpineR m' off cnt xs :=
-  h.keep hg.2.1 hg.2.2 htop hspn
+  h.keep hg.size hg.below htop hspn
 
 /-- A trailing part of a spine slice. -/
 theorem SpineR.drop {m : Mem} {off cnt : Word} {xs : Array EIdx} (h : SpineR m off cnt xs)
@@ -327,8 +327,8 @@ theorem setTail_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : S
   rw [← htk] at hW
   have hmin : tk.toNat ≤ an.toNat := htk ▸ min_le_an an ep
   have hlen : aargs.toList.length = an.toNat := by simpa using ha.size
-  have hsp₁ : SpineR m₁ ao an aargs := ha.keep hst₁.2.1 hst₁.2.2 hat hspn
-  have htp₁ : SpineR m₁ to tn targs := ht.keep hst₁.2.1 hst₁.2.2 htt hspn
+  have hsp₁ : SpineR m₁ ao an aargs := ha.keep hst₁.size hst₁.below hat hspn
+  have htp₁ : SpineR m₁ to tn targs := ht.keep hst₁.size hst₁.below htt hspn
   have htop₁ : spTop m₁ = spTop s.mem := hst₁.1
   obtain ⟨r₂, m₂, hc2, hW⟩ := callW_cases rfl hW
   have hspn₁ : (m₁.arr64 SPN).size < 2 ^ 63 := hS₁.spn
@@ -365,7 +365,7 @@ theorem setTail_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : S
   have hsum : (ao + tk).toNat + (an - tk).toNat = ao.toNat + an.toNat := by rw [e1, e2]; omega
   have hle3 : (spTop s.mem).toNat ≤ (spTop m₃).toNat := htop₂ ▸ hst₃.1
   have hdrop₃ : SpineR m₃ (ao + tk) (an - tk) (aargs.toList.drop tk.toNat).toArray :=
-    (hdrop.keep hst₂.2.1 hst₂.2.2 (by rw [hsum, htop₁]; exact hat) hspn₁).keep hst₃.2.1 hst₃.2.2
+    (hdrop.keep hst₂.size hst₂.below (by rw [hsum, htop₁]; exact hat) hspn₁).keep hst₃.size hst₃.below
       (by rw [hsum, htop₂]; exact hat) hspn₂
   have hb₃ : (ao + tk).toNat + (an - tk).toNat ≤ (spTop m₃).toNat := by rw [hsum]; omega
   have hp₃ : (r₃.headD 0).toNat + (r₃.tail.headD 0).toNat ≤ (spTop m₃).toNat := by

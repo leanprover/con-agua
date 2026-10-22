@@ -55,7 +55,8 @@ theorem and2Push_ok {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} 
       unfold spTop; rw [rdW_set64, if_pos ⟨rfl, rfl, by simpa using c5⟩]
     have h2 : (to + tn + 2).toNat = to.toNat + tn.toNat + 2 := by
       rw [UInt64.toNat_add, ht, Nat.mod_eq_of_lt (by simp; omega)]; rfl
-    refine ⟨hS.frame_stk hf (by simp) (by simp), ⟨?_, ?_, fun i hi => ?_⟩, sp3⟩
+    refine ⟨hS.frame_stk hf (by simp) (by simp), ⟨?_, ?_, fun i hi => ?_,
+      BKept.of_frame hf (by decide) (by decide), PoolGrew.of_frame hf (by decide) (by decide)⟩, sp3⟩
     · rw [e, ← htop, UInt64.le_iff_toNat_le, h2, ht]; omega
     · rw [size_set64L, size_set64L, size_set64L]
     · rw [← htop, UInt64.lt_iff_toNat_lt, ht] at hi
@@ -87,7 +88,7 @@ theorem app_spn {m m' : Mem} (hf : MemFrame [AREC, ASLOT, ADER] [4, 5] m m') :
 theorem SpineR.ofKept {m m' : Mem} {o n : Word} {xs : Array EIdx} (h : SpineR m o n xs)
     (hk : StackKept m m') (htop : o.toNat + n.toNat ≤ (spTop m).toNat)
     (hspn : (m.arr64 SPN).size < 2 ^ 63) : SpineR m' o n xs :=
-  h.keep hk.2.1 hk.2.2 htop hspn
+  h.keep hk.size hk.below htop hspn
 
 theorem viewLsLen_some {a : AState} {h : LsIdx} {k : Nat} (hv : a.store.lss.viewLen h = some k) :
     (viewLsLen h).run a = .ok (some k, a) := by

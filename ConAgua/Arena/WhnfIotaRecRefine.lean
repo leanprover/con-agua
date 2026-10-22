@@ -405,9 +405,9 @@ theorem epW_ok (E : Array Word) (hE : E.size < 2 ^ 63) (o c so : Word) (pins : L
     rw [e1, hdrop]
     rw [e2, hj1] at hys
     have hsize' : (m'.arr64 SPN).size = (m.arr64 SPN).size := by
-      rw [hgr4.2.1, hsz3]
+      rw [hgr4.size, hsz3]
     refine SpineR.cons_slot m' (so + j) (c - (j + 1)) w _ hw32 ?_ hys ?_ (by rw [hsize']; exact hspn)
-    · have := hgr4.2.2 (so + j) (by rw [hsp3, UInt64.lt_iff_toNat_lt, hsjp1]; omega)
+    · have := hgr4.below (so + j) (by rw [hsp3, UInt64.lt_iff_toNat_lt, hsjp1]; omega)
       rw [this, hslot]
     · rw [hsize', UInt64.toNat_sub_of_le _ _ (by simp [UInt64.le_iff_toNat_le]; omega), hsoj]
       omega
@@ -667,7 +667,9 @@ theorem callW_stackCover (p : Prog) (hp : p.lookup "stack_cover" = some stackCov
         Mem.arr64_set64_ne _ _ _ _ _ (by decide)
       have htop : spTop (m.set64 CTL 136 x) = x := by
         unfold spTop; rw [rdW_set64, if_pos ⟨rfl, rfl, h136⟩]
-      refine ⟨MemFrame.setCtl m 136 x, ⟨?_, by rw [hspn], fun i _ => by simp only [spW, hspn]⟩,
+      refine ⟨MemFrame.setCtl m 136 x, ⟨?_, by rw [hspn], fun i _ => by simp only [spW, hspn],
+          BKept.of_frame (MemFrame.setCtl m 136 x) (by decide) (by decide),
+          PoolGrew.of_frame (MemFrame.setCtl m 136 x) (by decide) (by decide)⟩,
         by rw [htop]; exact UInt64.le_refl _⟩
       rw [htop]; exact UInt64.le_of_lt hlt
     · rw [if_neg h136] at hW; cases hW
@@ -780,7 +782,7 @@ theorem iotaRecCmp_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
   have e1 : m1.arr64 EREC = E := by rw [← hE0]; exact fr1.1 EREC (by simp [SPN, EREC]) (by decide)
   rw [e1] at hW
   -- the comparands
-  have hsa1 : SpineR m1 so sn args := hsa.keep gr1.2.1 gr1.2.2 hsat hspn
+  have hsa1 : SpineR m1 so sn args := hsa.keep gr1.size gr1.below hsat hspn
   have hrP1 := SpineR.take hsa1 (rdW E (recP + 6)) hrP
   generalize hargs' : (args.toList.take (rdW E (recP + 6)).toNat).toArray = args' at hrP1
   cases c2 : callW p (N + 1) "rec_fire_args" [rdW E (rl + 3), rp.headD 0, rdW E (rl + 7),
@@ -816,7 +818,7 @@ theorem iotaRecCmp_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
   have hxs3 : SpineR m3 (ra.headD 0) (ra.tail.headD 0) xs.toArray := SpineR.of_spn_core hxs
     (by rw [fr3.1 SPN (by simp) (by decide)])
   have hxb := hxs.bound
-  have hsz2 : (m2.arr64 SPN).size = (s.mem.arr64 SPN).size := gr2.2.1.trans gr1.2.1
+  have hsz2 : (m2.arr64 SPN).size = (s.mem.arr64 SPN).size := gr2.size.trans gr1.2.1
   have hxt : (ra.headD 0).toNat + (ra.tail.headD 0).toNat ≤ (spTop m3).toNat := by
     have h1 : (ra.headD 0 + ra.tail.headD 0).toNat = (ra.headD 0).toNat + (ra.tail.headD 0).toNat := by
       rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
@@ -824,7 +826,7 @@ theorem iotaRecCmp_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
     omega
   -- the comparison
   have hgr13 : StackGrew s.mem m3 := gr1.trans (gr2.trans gr3)
-  have hsm3 : SpineR m3 mo mn margs := hsm.keep hgr13.2.1 hgr13.2.2 hsmt hspn
+  have hsm3 : SpineR m3 mo mn margs := hsm.keep hgr13.size hgr13.below hsmt hspn
   have hcpm' : (rdW E (rl + 2)).toNat ≤ mn.toNat := by rw [← hcpw]; exact hcpm
   have hmt3 : mo.toNat + mn.toNat ≤ (spTop m3).toNat := by
     have := UInt64.le_iff_toNat_le.mp hgr13.1; omega
@@ -870,7 +872,7 @@ theorem iotaRecCmp_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
   have hgr14 : StackGrew s.mem m4 := hgr13.trans hSt4.toGrew
   refine ⟨hokF, ⟨M4, ?_, hK2.trans hK4, ?_⟩, ?_, ?_⟩
   · rw [hstF, ← hm]; exact hS4.frame_stk (MemFrame.setCtl m4 136 _) (by simp) (by simp)
-  · rw [← hm]; exact StackKept.restore hgr14.2.2 hgr14.2.1 (Classical.not_not.mp g136)
+  · rw [← hm]; exact StackKept.restoreG hgr14 (Classical.not_not.mp g136)
   · rw [hresF]; simp only [decBool, hr]
   · unfold ResH; rw [← hr]; exact hr4
 
