@@ -49,6 +49,7 @@ globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.A
   "ConAgua.Arena.IndParts", "ConAgua.Arena.IndPartsSpec", "ConAgua.Arena.IndInstall", "ConAgua.Arena.IndInstallSpec", "ConAgua.Arena.IndSum", "ConAgua.Arena.IndSumSpec",
   "ConAgua.Arena.IndPos", "ConAgua.Arena.IndPosSpec", "ConAgua.Arena.IndPos2", "ConAgua.Arena.IndPos2Spec", "ConAgua.Arena.RecClass", "ConAgua.Arena.RecClassSpec",
   "ConAgua.Arena.RecGen", "ConAgua.Arena.RecGenSpec", "ConAgua.Arena.RecCheck", "ConAgua.Arena.RecCheckSpec", "ConAgua.Arena.IndProg", "ConAgua.Arena.IndCopy2",
+  "ConAgua.Arena.WhnfSpineRefine", "ConAgua.Arena.WhnfCoreRefine", "ConAgua.Arena.WhnfCoreStep", "ConAgua.Arena.WhnfCoreLoop", "ConAgua.Arena.WhnfDelta", "ConAgua.Arena.WhnfDeltaSlot",
   "ConAgua.Arena.Walk", "ConAgua.Arena.WalkRefine", "ConAgua.Arena.WalkBench", "ConAgua.Arena.WalkEmit",
   "ConAgua.Arena.WalkBenchLean",
   "ConAgua.Capstone", "ConAgua.Compiler.WFAll", "ConAgua.Compiler.WFAllBench",
