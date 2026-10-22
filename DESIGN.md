@@ -5985,3 +5985,46 @@ from `lake exe romgen`), and the program has `nb = 2`.
 * Census (this branch on master `9c9e5b6`+): phase 8 **61 proven, 37 sorry, 117 written, 8 todo**.
 * Note for lane `whnf`: `scripts/provenance.py check` reports 9 uncited FunDecls in
   `WhnfDelta.lean` (master).
+
+## Phase 2, round 4: the `checkDecl` arms' proofs (2026-10-22, lane `decls3`)
+
+### `lvl_eq_c` everywhere in lane `induct`'s code (request of lane `decls2`, done here)
+
+`lvl_eq_fueled`, `lvl_eq_true` (`IndIface.lean`), `block_shape_with_sort` and `block_shape`
+(`IndParts.lean`) and `RecCheck.lean`'s call called the uncached `lvl_eq`, which leaves the twin's
+`lvlEqC` behind. They call lane `whnf`'s `lvl_eq_c` now (one word each); `masterFns` gains a
+`lvl_eq_c` stub (the closure check); the stub spec `lvlEqStub_spec` (`IndStubs.lean`) speaks of
+`lvl_eq_c`, and lane `decls2`'s duplicate `lvlEqCStage_spec` is gone (one `sorry` fewer;
+`DeclCvg.lean` uses the stub spec). Proofs touched: `IndInstallSpec3` (`lveW`), `IndPartsSpec4`
+(`wsW`), names only. **For lane `indproofs2`**: these are your files; the change is mechanical
+(`"lvl_eq"` → `"lvl_eq_c"` in `stubM`), merge it as is. `Front/IndApply.lean` still calls `lvl_eq`
+(the frontend's validation; not checked against the cache).
+
+### The value checks (`DeclValSpec.lean`, `DeclValRef.lean`)
+
+L change: the value checks take the arm's constant record `c` (built by `erec_ci` with the kind
+the twin pushes: `defnInfo`, `thmInfo`, `axiomInfo` for an opaque) and push it; `ci_new` and the
+hint copy are gone. `check_constant_val` is `install_header` (lane `decls2`'s, proved) then the
+type's sort, as the twin's `checkConstantVal` is `installHeader` then `inferTypeCore`/`ensureSortCore`
+(`checkConstantVal_eq`: the twin's `do` duplicates its continuations into every `if` branch, so the
+equation needs `ite_bindAM`/`fail_bindAM`). `check_opaque_val` is `check_defn_val`'s text (one model
+`dvW`, one tail lemma `dvT`). **Refined**: `checkConstantVal`, `checkDefnVal`, `checkThmVal`,
+`checkOpaqueVal` (through the core's stubs and `lvl_eq_c`'s: census `sorry`).
+
+### `erec_ci` for every record kind (`DeclRec.lean`)
+
+`erecCiW_core` is lane `decls2`'s `erecCiW_ok` without the record kind (the kind word, the
+constant value whenever the record has one, the value word, the hint); `erecCiW_ok` follows from it,
+and `erecCiW_okA` gives `axiomInfo cv` for an axiom or quotient record (`erec_ci(i, 0)`), which the
+axiom and quotient arms build.
+
+### Sorry-free leaves (`DeclBasisSpec.lean`)
+
+`pin_at` as a word model (`pinAtW`, `pinAtW_ok`); **`ofReduceOp`**, **`installBasisDecl`**,
+**`installBasisDecls`** refined without `sorry` (the basis list an `IW` slice of record pointers,
+decoded below the tops: lane `indproofs2`'s `DecB`; the recursion through `callW`, the fuel
+induction on the run). L change: words loaded into locals before a call (`install_basis_decl(s)`),
+the finding of lane `decls2`.
+
+Census at landing 1 (`--no-build`): phase 2 **139 proven, 15 sorry, 86 written, 91 todo** (lane
+start 136 / 11 / 93 / 91); totals 558 proven / 71 sorry of 1352.
