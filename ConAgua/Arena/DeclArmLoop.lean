@@ -84,8 +84,11 @@ def qaxArmFns : List FnName :=
    "std_ax_family", "find_pinned", "trust_compiler_ok", "find_pinned_cv", "of_reduce_ax_ok",
    "of_reduce_op", "of_reduce_pin_a"]
 
+/-- The definition check (the definition arm's gates are specified, not closed here). -/
+def defnArmFns : List FnName := ["check_defn_val"]
+
 /-- The functions the arms reach. -/
-def armFns : List FnName := thmArmFns ++ opqArmFns ++ qaxArmFns
+def armFns : List FnName := thmArmFns ++ opqArmFns ++ qaxArmFns ++ defnArmFns
 
 theorem armText_closed : closedA armText stepA stepC armFns = true := by decide +kernel
 
