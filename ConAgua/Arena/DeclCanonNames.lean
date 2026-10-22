@@ -200,6 +200,27 @@ def NamesPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m 
   KeepPost dn vis fe (fun m r (cs : List NIdx) => decRL (fun m => decHL m) 0 m r cs) m m' a r cs ∧
     PoolSmall m' ∧ LitInj a
 
+theorem cnW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {n : Nat}
+    {m m' : Mem} {a : AState} {k : Word} {r : List Word} (hr : cnW n m k = some (r, m'))
+    (hS : StageR dn vis fe m a) (hP : PoolSmall m) :
+    ∃ (hs : List NIdx) (a' : AState), (ConRon.Arena.canonNames k.toNat).run a = .ok (hs, a') ∧
+      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decRL (fun m => decHL m) 0 m' r hs ∧
+      a'.store.view = a.store.view ∧ PoolSmall m' := by
+  cases n with
+  | zero => simp [cnW] at hr
+  | succ n =>
+  simp only [cnW] at hr
+  cases hg0 : gnW n m 0 k with
+  | none => rw [hg0] at hr; simp at hr
+  | some x0 =>
+  obtain ⟨r0, m0⟩ := x0
+  rw [hg0] at hr
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hr)
+  obtain ⟨hs, a', hrun, hS', hg, hd, hv, hP'⟩ := gnW_ok n _ _ a 0 k r0 hg0 hS
+    (by have := UInt64.toNat_lt k; simpa using this) hP
+  refine ⟨hs, a', hrun, hS', hg, ?_, hv, hP'⟩
+  simpa only [decRL, getD0, getD1, List.getD_cons_zero, List.getD_cons_succ] using hd
+
 /-- **`canon_names` refines `canonNames`.** -/
 @[refines ConRon.Arena.canonNames]
 theorem canonNames_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Option ConLeche.Name)
@@ -210,25 +231,11 @@ theorem canonNames_refines (p : Prog) (hp : CanonProg p) (dn : NIdx → Option C
   intro n s₀ a₀ ⟨hS, hP, hL⟩
   refine triple_post (canonNames_spec p hp n s₀ k) ?_
   rintro r s' ⟨hl, hr⟩
-  cases n with
-  | zero => simp [cnW] at hr
-  | succ n =>
-  simp only [cnW] at hr
-  cases hg0 : gnW n s₀.mem 0 k with
-  | none => rw [hg0] at hr; simp at hr
-  | some x0 =>
-  obtain ⟨r0, m0⟩ := x0
-  rw [hg0] at hr
-  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hr)
-  obtain ⟨hs, a', hrun, hS', hg, hd, hv, hP'⟩ := gnW_ok n _ _ a₀ 0 k r0 hg0 hS
-    (by have := UInt64.toNat_lt k; simpa using this) hP
-  have hrun' : (ConRon.Arena.canonNames k.toNat).run a₀ = .ok (hs, a') := hrun
-  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
+  obtain ⟨hs, a', hrun, hS', hg, hd, hv, hP'⟩ := cnW_ok hr hS hP
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   refine ⟨hl, hok, ?_⟩
   rw [hst, hres]
-  refine ⟨⟨hS', hg, ?_⟩, hP', hL.of_view hv⟩
-  simpa only [decRL, getD0, getD1, List.getD_cons_zero, List.getD_cons_succ] using hd
-
+  exact ⟨⟨hS', hg, hd⟩, hP', hL.of_view hv⟩
 
 /-- **`canon_names_go` refines `canonNamesGo`.** -/
 @[refines ConRon.Arena.canonNamesGo]
