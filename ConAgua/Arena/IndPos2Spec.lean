@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndPos2SpecD
+import ConAgua.Arena.StripTeleSpec
 
 /-! Continued from `IndPos2SpecD.lean` (split by size; lane `indproofs`). -/
 
@@ -827,21 +828,6 @@ theorem decHL_write {k : IdxKind} (m : Mem) (q i v : Word) (ws : List (Idx k))
     rw [this]; simp [hslice?]
   rw [h1, h2]; simp
 
-
-theorem StageR.set_iw {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
-    (hS : StageR dn vis fe m a) (p x : Word) : StageR dn vis fe (m.set64 IW p x) a := by
-  have hf := set64IW_frame m p x
-  have hC : (m.set64 IW p x).arr64 CTL = m.arr64 CTL := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-  have hE : (m.set64 IW p x).arr64 EREC = m.arr64 EREC := Mem.arr64_set64_ne _ _ _ _ _ (by decide)
-  refine ⟨CheckR.frame_iw hf hS.1, ?_⟩
-  obtain ⟨h1, h2, h3, h4, h5⟩ := hS.2
-  have hI := hf.2.2.1 IW
-  refine ⟨?_, ?_, ?_, ?_, ?_⟩
-  · simp only [iwTop, hC, hI]; exact h1
-  · simp only [erTop, hC, hE]; exact h2
-  · rw [hI]; exact h3
-  · rw [hE]; exact h4
-  · rw [hC]; exact h5
 
 /-- The pool outside `[q, q + n)`, its top and size, the constant records: unchanged. -/
 def KeepIW (q n : Word) (m m' : Mem) : Prop :=
