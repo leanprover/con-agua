@@ -364,4 +364,169 @@ theorem nestHoles_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → O
 
 end census
 
+/-! ## `nest_root_canon` refines `nestRootCanon` -/
+
+/-- The lookups of `nest_canon_crest`. -/
+structure PccLook (p : Prog) : Prop where
+  ha : p.lookup "iw_alloc" = some iwAlloc
+  hl : AhLook p
+  hk : MkLook p
+  hng : p.lookup "nest_phs_go" = some nestPhsGo
+  hnp : p.lookup "nest_phs" = some nestPhs
+  hip : p.lookup "inst_pis_with" = some instPisWith
+  hf : p.lookup "ra_find" = some (memoFindG raSch)
+  hput : p.lookup "ra_put" = some (memoPutG raSch)
+  hgo : p.lookup "replace_apps_go" = some replaceAppsGo
+  hnode : p.lookup "replace_apps_node" = some replaceAppsNode
+  hcl : p.lookup "ra_clear" = some (memoClearG raSch)
+  hra : p.lookup "replace_apps" = some replaceApps
+  hp : p.lookup "nest_canon_crest" = some nestCanonCrest
+  hp' : p.lookup "nest_root_canon" = some nestRootCanonL
+
+def nrcK3 : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r3, m3) => some ([r3.headD 0, r3.tail.headD 0], m3)
+def nrcK2 (k : Nat) (ctx : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r2, m2) => nrcK3 (pccW k m2 (rdW (m2.arr64 IW) ctx) (rdW (m2.arr64 IW) (ctx + 1))
+      (rdW (m2.arr64 IW) (ctx + 10)) (rdW (m2.arr64 IW) (ctx + 4)) (r2.headD 0))
+def nrcK1 (k : Nat) (ctx cv : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r1, m1) => nrcK2 k ctx (stubM "inst_lp_fast" m1 [CWF, r1.headD 0, r1.tail.headD 0,
+      rdW (m1.arr64 IW) (ctx + 10), rdW (m1.arr64 EREC) (cv + 3)])
+/-- The model of `nest_root_canon(ctx, cv)` at exec fuel `k + 3`. -/
+def nrcW (k : Nat) (m : Mem) (ctx cv : Word) : Option (List Word × Mem) := nrcK1 k ctx cv (cvLpsW (k + 2) m cv)
+
+section arms
+variable (k : Nat) (m1 m2 m3 : Mem) (ctx cv : Word) (r1 r2 r3 : List Word)
+theorem nrcK3_some : nrcK3 (some (r3, m3)) = some ([r3.headD 0, r3.tail.headD 0], m3) := rfl
+theorem nrcK2_some : nrcK2 k ctx (some (r2, m2)) = nrcK3 (pccW k m2 (rdW (m2.arr64 IW) ctx)
+    (rdW (m2.arr64 IW) (ctx + 1)) (rdW (m2.arr64 IW) (ctx + 10)) (rdW (m2.arr64 IW) (ctx + 4)) (r2.headD 0)) := rfl
+theorem nrcK1_some : nrcK1 k ctx cv (some (r1, m1)) = nrcK2 k ctx (stubM "inst_lp_fast" m1 [CWF, r1.headD 0,
+    r1.tail.headD 0, rdW (m1.arr64 IW) (ctx + 10), rdW (m1.arr64 EREC) (cv + 3)]) := rfl
+end arms
+attribute [ind_grind] nrcK3_some nrcK2_some nrcK1_some
+
+theorem nestRootCanon_spec (p : Prog) (hl : PccLook p) (hc : p.lookup "er_copy" = some erCopy)
+    (he : p.lookup "er_to_iw" = some erToIw) (hcv : p.lookup "cv_lps" = some cvLps)
+    (k : Nat) (s₀ : St) (ctx cv : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (k + 3)) "nest_root_canon" [ctx, cv]
+    ⦃fun r s' => LocEq s' s₀ ∧ nrcW k s₀.mem ctx cv = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hl.hp']
+  simp only [callFn, nestRootCanonL]
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      cvLps_spec p hl.ha hc he hcv (k + 2), stubM_spec p "inst_lp_fast" (k + 2),
+      nestCanonCrest_spec p hl.ha hl.hl hl.hk hl.hng hl.hnp hl.hip hl.hf hl.hput hl.hgo hl.hnode hl.hcl
+        hl.hra hl.hp k] <;>
+    finish (gen := 20) [nrcW, rdW_eq]
+
+/-- The names slice's end, as the words L reads. -/
+theorem ctx_names_end {m : Mem} {p : Word} {c : NestCtx} (hc : decCtx m p.toNat = some c)
+    (hin : CtxIn m p.toNat (· < iwTop m)) (hsl : CtxSl m p.toNat) (hsz : iwTop m < 2 ^ 64) :
+    (rdW (m.arr64 IW) p).toNat + (rdW (m.arr64 IW) (p + 1)).toNat ≤ iwTop m := by
+  obtain ⟨hn, -⟩ := decCtx_some hc
+  obtain ⟨o, l, ho, hl, -⟩ := decAt_some hn
+  have h11 := hin.1 10 (by omega)
+  have r0 : (rdW (m.arr64 IW) p).toNat = o := by
+    have := rd_iwN (m := m) (p := p) (i := 0) (by simpa using ho) (by simp; omega); simpa using this
+  have r1 : (rdW (m.arr64 IW) (p + 1)).toNat = l := rd_iwN (by simpa using hl) (by simp; omega)
+  rw [r0, r1]; exact hsl 0 (by omega) o l (by simpa using ho) hl
+
+/-- A constant record's level-parameter slice ends inside `EREC` (`cv_lps` copies it). -/
+def CVSl (m : Mem) (q : Word) : Prop :=
+  (rdW (m.arr64 EREC) (q + 1)).toNat + (rdW (m.arr64 EREC) (q + 2)).toNat ≤ (m.arr64 EREC).size
+
+theorem nrcW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (m m' : Mem)
+    (a : AState) (ctx cv : Word) (c : NestCtx) (cvv : IConstantVal) (r : List Word)
+    (h : nrcW k m ctx cv = some (r, m')) (hS : StageR dn vis fe m a)
+    (hc : decCtx m ctx.toNat = some c) (hin : CtxIn m ctx.toNat (· < iwTop m)) (hsl : CtxSl m ctx.toNat)
+    (hcv : decCV (erecP m) cv.toNat = some cvv) (hcvs : CVSl m cv)
+    (hnn : c.nP + c.names.length < 2 ^ 64)
+    (hMstage : ∀ (m2 : Mem) (a2 : AState), StageR dn vis fe m2 a2 → ∃ mp0, rpMR m2 mp0) :
+    ∃ x a', (ConRon.Arena.nestRootCanon c cvv).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
+      IWGrow m m' ∧ decOE m' r x := by
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  obtain ⟨-, -, hty⟩ := decCV_some hcv
+  obtain ⟨wt, hwt, hwtH, hwtd⟩ := hd?_some hty
+  have hcv3 : cv.toNat + 3 < erTop m := by
+    have := (Array.getElem?_eq_some_iff.mp hwt).1; have := erecP_size_le m; omega
+  have hEb : erTop m ≤ (m.arr64 EREC).size := hS.2.2.1
+  have hEs : (m.arr64 EREC).size < 2 ^ 64 := hS.2.2.2.2.1
+  unfold nrcW at h
+  cases hlp : cvLpsW (k + 2) m cv with
+  | none => rw [hlp] at h; simp [nrcK1] at h
+  | some pr1 =>
+  obtain ⟨r1, m1⟩ := pr1
+  rw [hlp, nrcK1_some] at h
+  obtain ⟨hS1, hg1, hE1, hdec1, -⟩ := cvLpsW_stage hlp hS ((erecP_ext m).decCV hcv) (by omega) hcvs
+  -- the instantiation's arguments
+  obtain ⟨cin1, cin1'⟩ := CtxIn.grow hin hg1
+  rw [hc] at cin1
+  have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
+  obtain ⟨-, -, -, -, -, hlvH, hlvd, -⟩ := ctx_fields cin1 cin1' htop1
+  have e3 : (cv + 3).toNat = cv.toNat + 3 := word_add_toNat (by simp; omega)
+  have hrd3 : rdW (m1.arr64 EREC) (cv + 3) = wt := by
+    rw [hE1]; simp [rdW, e3, erecP_get hwt]
+  rw [hrd3] at h
+  cases hst : stubM "inst_lp_fast" m1 [CWF, r1.headD 0, r1.tail.headD 0, rdW (m1.arr64 IW) (ctx + 10), wt] with
+  | none => rw [hst] at h; simp [nrcK2] at h
+  | some pr2 =>
+  obtain ⟨r2, m2⟩ := pr2
+  rw [hst, nrcK2_some] at h
+  obtain ⟨t, a2, hrun2, hS2, hg2, htH, htd⟩ :=
+    instLPFast_spec dn vis fe CWF _ _ _ _ hlvH hwtH cvv.levelParams _ _ a r2 hst ⟨hS1, hdec1⟩
+  rw [CWF_eq, hlvd, ← hwtd] at hrun2
+  have hg12 := hg1.trans hg2
+  obtain ⟨cin2, cin2'⟩ := CtxIn.grow hin hg12
+  rw [hc] at cin2
+  have hsl2 := hsl.grow hin hg12
+  have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
+  obtain ⟨hn2, -, -, -, hnP2, hlvH2, hlvd2, -⟩ := ctx_fields cin2 cin2' htop2
+  have hne2 := ctx_names_end cin2 cin2' hsl2 htop2
+  cases hpc : pccW k m2 (rdW (m2.arr64 IW) ctx) (rdW (m2.arr64 IW) (ctx + 1)) (rdW (m2.arr64 IW) (ctx + 10))
+      (rdW (m2.arr64 IW) (ctx + 4)) (r2.headD 0) with
+  | none => rw [hpc] at h; simp [nrcK3] at h
+  | some pr3 =>
+  obtain ⟨r3, m3⟩ := pr3
+  rw [hpc, nrcK3_some] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨x, a3, hrun3, hS3, hg3, hx⟩ := pccW_ok k dn fe vis m2 m3 a2 _ _ _ _ _ c.names r3 hpc hS2 htH hlvH2 hn2
+    (by omega) hne2 (by rw [hnP2]; omega) hMstage
+  refine ⟨x, a3, ?_, hS3, hg12.trans hg3, ?_⟩
+  · simp only [ConRon.Arena.nestRootCanon, StateT.run_bind, hrun2, except_ok_bind]
+    rw [hnP2, hlvd2, htd] at hrun3
+    exact hrun3
+  · cases x with
+    | none => exact hx
+    | some e => exact hx
+
+section census
+variable (p : Prog) (hl : PccLook p) (hc : p.lookup "er_copy" = some erCopy)
+  (he : p.lookup "er_to_iw" = some erToIw) (hcv : p.lookup "cv_lps" = some cvLps)
+include hl hc he hcv
+
+/-- **`nest_root_canon` refines `nestRootCanon`** (through `inst_lp_fast`'s and `nest_canon_crest`'s
+stubs; the `replace_apps` memo well-formed in every stage state). -/
+@[refines ConRon.Arena.nestRootCanon]
+theorem nestRootCanon_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+    (fe : IFEnv) (vis ctx cv : Word) (c : NestCtx) (cvv : IConstantVal) (hS : StageR dn vis fe s₀.mem a₀)
+    (hcx : decCtx s₀.mem ctx.toNat = some c) (hin : CtxIn s₀.mem ctx.toNat (· < iwTop s₀.mem))
+    (hsl : CtxSl s₀.mem ctx.toNat) (hcvv : decCV (erecP s₀.mem) cv.toNat = some cvv) (hcvs : CVSl s₀.mem cv)
+    (hnn : c.nP + c.names.length < 2 ^ 64)
+    (hMstage : ∀ (m2 : Mem) (a2 : AState), StageR dn vis fe m2 a2 → ∃ mp0, rpMR m2 mp0) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (k + 3)) "nest_root_canon" [ctx, cv]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.nestRootCanon c cvv) a₀ ∧
+      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.nestRootCanon c cvv) a₀) ∧ IWGrow s₀.mem s'.mem ∧
+      decOE s'.mem r (AM.res (ConRon.Arena.nestRootCanon c cvv) a₀); ⊤⦄ := by
+  refine triple_post (nestRootCanon_spec p hl hc he hcv k s₀ ctx cv) ?_
+  rintro r s' ⟨hlc, hm⟩
+  obtain ⟨x, a', hrun, hS', hg, hout⟩ := nrcW_ok k dn fe vis _ _ a₀ ctx cv c cvv r hm hS hcx hin hsl hcvv hcvs
+    hnn hMstage
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hlc, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hout⟩
+
+end census
+
 end L.Ind
