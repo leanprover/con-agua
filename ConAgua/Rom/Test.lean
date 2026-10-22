@@ -44,14 +44,15 @@ partial def closure (pool : Prog) (todo : List String) (acc : Prog) (miss : List
       | none => closure pool rest acc (f :: miss)
 
 def main (args : List String) : IO UInt32 := do
-  let some file := args.head? | IO.eprintln "usage: romtest BUF"; return 2
+  let some file := args.head? | IO.eprintln "usage: romtest BUF [N]"; return 2
+  let k := ((args.drop 1).head?.bind String.toNat?).getD 1
   let buf ← IO.FS.readBinFile file
   let (prog, miss) := closure romTestPool ["pb_check", "intern_reserved_pins", "intern_all_pins",
     "rom_pin_sets"] [] []
   IO.println s!"program: {prog.length} functions; unbound: {miss}"
   unless miss.isEmpty do return 1
   let sizes := (List.range 210).map fun i =>
-    if i == CTL then 256 else if i == L.Ind.IW then 1 <<< 16 else 1 <<< 17
+    if i == CTL then 256 else if i == L.Ind.IW then 1 <<< 16 else 1 <<< 19
   let m0 : Mem := { initMem sizes with bytes := #[#[], buf.data] }
   let fuel := 100000
   let t0 ← IO.monoMsNow
@@ -65,7 +66,7 @@ def main (args : List String) : IO UInt32 := do
   let t1 ← IO.monoMsNow
   IO.println s!"L: the three stages in {t1 - t0} ms"
   -- the twin
-  let pins := ConLeche.natOpPinSets.take 1
+  let pins := ConLeche.natOpPinSets.take k
   let some (ipins, a) := (do
       let ((), sA) ← (internReservedPins.run (AState.init EStore.empty)).toOption
       (internAllPins pins).run sA |>.toOption) | IO.eprintln "twin failed"; return 1
