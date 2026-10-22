@@ -47,12 +47,12 @@ theorem fvinternW_frame (m : Mem) (u ty w : Word) (m' : Mem) (hI : fvinternW m u
   rw [fvinternW_eq] at hI
   exact internM_frame fvarSch fvarSch_wf _ _ _ _ _ _ _ _ hI
 
-theorem keeps_cpl_internFVar (u : Nat) (ty : EIdx) : Keeps cpl (internE (.fvar u ty)) := by
+theorem peel_keeps_cpl_internFVar (u : Nat) (ty : EIdx) : Keeps cpl (internE (.fvar u ty)) := by
   simp only [internE]; exact keeps_cpl_internNodeE _
 
 /-- **`intern_fvar` as a run under `CoreS`**: the twin's `internE (.fvar u ty)`, the relation at
 the same maps, the stack and `CTL[136]` untouched, a handle word. -/
-theorem internFVar_core {p : Prog} (hp : PeelProg p) {n : Nat} {dn : NIdx → Option ConLeche.Name}
+theorem peel_internFVar_core {p : Prog} (hp : PeelProg p) {n : Nat} {dn : NIdx → Option ConLeche.Name}
     {m m' : Mem} {a : AState} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word}
     (hS : CoreS dn m a vis fe M eb) (u ty : Word) (hty : HW ty) (r : List Word)
     (hc : callW p n "intern_fvar" [u, ty] m = some (r, m')) :
@@ -64,7 +64,7 @@ theorem internFVar_core {p : Prog} (hp : PeelProg p) {n : Nat} {dn : NIdx → Op
   have hf := fvinternW_frame _ _ _ _ _ hI
   have hrun := AM.run_of_ok _ _ hok
   have hS' : CoreS dn s'.mem _ vis fe M eb :=
-    hS.arena_frame hD (Keeps.run (keeps_cpl_internFVar _ _) hrun) hf
+    hS.arena_frame hD (Keeps.run (peel_keeps_cpl_internFVar _ _) hrun) hf
       (fun b hb => by
         simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
         rcases hb with rfl | rfl <;> decide)
@@ -87,7 +87,7 @@ theorem internFVar_core {p : Prog} (hp : PeelProg p) {n : Nat} {dn : NIdx → Op
 /-! ## Growing runs
 
 `WhnfCoreProj.lean`'s `GrowRefP` with its lemmas, restated here (that file and `DefEqLeaves.lean`
-both define `lsNodeW_viewLen`, so they cannot be imported together). -/
+both defined `lsNodeW_viewLen`, so they could not be imported together; DefEqLeaves' copy is now `defeq_lsNodeW_viewLen`). -/
 
 theorem StackGrew.trans' {m₁ m₂ m₃ : Mem} (h₁ : StackGrew m₁ m₂) (h₂ : StackGrew m₂ m₃) :
     StackGrew m₁ m₃ :=
@@ -180,7 +180,7 @@ theorem FvsR.kept {m m' : Mem} {fo k : Word} {fvs : Array EIdx} (h : FvsR m fo k
     (hk : StackKept m m') (hspn : (m.arr64 SPN).size < 2 ^ 63) : FvsR m' fo k fvs :=
   ⟨h.spine.keep hk.2.1 hk.2.2 h.le_top hspn, hk.1.trans h.top, h.fit⟩
 
-theorem word_add_toNat (d k : Word) (h : d.toNat + k.toNat < 2 ^ 64) : (d + k).toNat = d.toNat + k.toNat := by
+theorem peel_word_add_toNat (d k : Word) (h : d.toNat + k.toNat < 2 ^ 64) : (d + k).toNat = d.toNat + k.toNat := by
   rw [UInt64.toNat_add]; omega
 
 theorem toNat_zero_w : (0 : Word).toNat = 0 := rfl
@@ -223,7 +223,7 @@ theorem peelLeaf_refines (p : Prog) (hp : PeelProg p) (hil : InstListOK p) (n : 
   have e₃ := CoreSpec.of_call1W (s₀ := ⟨m₂, Locals.init []⟩)
     ((hk n (Nat.le_refl _)).defeq F _ _ dn vis fe M₂ eb mode (d + k) _ _ hF hn
       ⟨hS₂, hs.mode4, hs.eb_mode⟩ e₁.2.2.2 e₂.2.2.2) (fun r r' h => by simp only [decBool, h]) hW
-  rw [word_add_toNat d k hdk] at e₃
+  rw [peel_word_add_toNat d k hdk] at e₃
   exact e₃
 
 /-! ## `peel_dom` -/
@@ -335,7 +335,7 @@ theorem peelDom_refines (p : Prog) (hp : PeelProg p) (hil : InstListOK p) (n : N
   have e₃ := CoreSpec.of_callW (s₀ := ⟨m₂, Locals.init []⟩)
     ((hk n (Nat.le_refl _)).defeq F _ _ dn vis fe M₂ eb mode (d + k) _ _ hF hn
       ⟨hS₂, hs.mode4, hs.eb_mode⟩ e₁.2.2.2 e₂.2.2.2) hc3
-  rw [word_add_toNat d k hdk] at e₃
+  rw [peel_word_add_toNat d k hdk] at e₃
   refine coreRef_bind e₃ (fun M₃ hS₃ => ?_)
   rw [← hm]
   exact coreRef_ret hS₃ (by simp only [decDom, decBool, decH, ← h1, ← h2])
@@ -583,7 +583,7 @@ theorem SpineR.of_spnP {m m' : Mem} {off cnt : Word} {xs : Array EIdx} (h : Spin
 
 /-- The model of `peel_push` past `intern_fvar`'s run: the word at `fo + k`, the top at
 `fo + k + 1`. -/
-def pushK (fo k : Word) (res : Option (List Word × Mem)) : Option (Word × Mem) :=
+def peelPushK (fo k : Word) (res : Option (List Word × Mem)) : Option (Word × Mem) :=
   match res with
   | none => none
   | some (r, m) =>
@@ -593,12 +593,12 @@ def pushK (fo k : Word) (res : Option (List Word × Mem)) : Option (Word × Mem)
 
 theorem pushK_ok (fo k : Word) (r : List Word) (m : Mem) (h1 : (fo + k).toNat < (m.arr64 144).size)
     (h2 : 136 < (m.arr64 1).size) :
-    pushK fo k (some (r, m)) = some (r.headD 0, (m.set64 144 (fo + k) (r.headD 0)).set64 1 136 (fo + k + 1)) := by
-  simp only [pushK, h1, h2, and_self, ↓reduceIte]
+    peelPushK fo k (some (r, m)) = some (r.headD 0, (m.set64 144 (fo + k) (r.headD 0)).set64 1 136 (fo + k + 1)) := by
+  simp only [peelPushK, h1, h2, and_self, ↓reduceIte]
 
 theorem peelPush_spec (p : Prog) (hp : PeelProg p) (n : Nat) (s₀ : St) (d k fo t2 : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "peel_push" [d, k, fo, t2]
-    ⦃fun r s' => LocEq s' s₀ ∧ pushK fo k (callW p n "intern_fvar" [d + k, t2] s₀.mem) =
+    ⦃fun r s' => LocEq s' s₀ ∧ peelPushK fo k (callW p n "intern_fvar" [d + k, t2] s₀.mem) =
       some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp.push]
   simp only [callFn, peelPushL]
@@ -624,14 +624,14 @@ theorem peelPush_run {p : Prog} (hp : PeelProg p) {n : Nat} {dn : NIdx → Optio
   | some q =>
   obtain ⟨r₁, m₁⟩ := q
   rw [hc1] at hW
-  simp only [pushK] at hW
+  simp only [peelPushK] at hW
   split at hW
   · rename_i hb
     obtain ⟨hb1, hb2⟩ := hb
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
-    obtain ⟨e₁, hf₁⟩ := internFVar_core hp hS (d + k) t2 ht r₁ hc1
-    rw [word_add_toNat d k hdk] at e₁
+    obtain ⟨e₁, hf₁⟩ := peel_internFVar_core hp hS (d + k) t2 ht r₁ hc1
+    rw [peel_word_add_toNat d k hdk] at e₁
     obtain ⟨hok, ⟨M₁, hS₁, hK₁, hst₁⟩, hres, hw⟩ := e₁
     have hfvs₁ := hx.kept hst₁ hS.spn
     have hfoK : (fo + k).toNat = fo.toNat + k.toNat := by
@@ -1058,7 +1058,7 @@ theorem peelPush_bound {p : Prog} (hp : PeelProg p) {n : Nat} {m m' : Mem} (d k 
     (internFVar_spec p hp.fvf hp.fvp hp.fvi n ⟨m, Locals.init []⟩ (d + k) t2) hc1
   have hsz : (s''.mem.arr64 SPN).size = (m.arr64 SPN).size :=
     (fvinternW_frame _ _ _ _ _ hI).2.2.1 SPN
-  simp only [pushK] at hW
+  simp only [peelPushK] at hW
   split at hW
   · rename_i hb; rw [← hsz]; exact hb.1
   · cases hW
