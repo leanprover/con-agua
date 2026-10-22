@@ -71,6 +71,8 @@ structure PromoteProg (p : Prog) : Prop where
   promote_l_list : p.lookup "promote_l_list" = some (promoteLListL)
   promote_e_list : p.lookup "promote_e_list" = some (promoteEListL)
   promote_slice : p.lookup "promote_slice" = some (promoteSlice)
+  cv_rd : p.lookup "cv_rd" = some (cvRd)
+  cv_wr : p.lookup "cv_wr" = some (cvWr)
   promote_cv : p.lookup "promote_cv" = some (promoteCVL)
   promote_fire : p.lookup "promote_fire" = some (promoteFireL)
   promote_rule : p.lookup "promote_rule" = some (promoteRuleL)
@@ -85,6 +87,8 @@ structure PromoteProg (p : Prog) : Prop where
   promote_ci : p.lookup "promote_ci" = some (promoteCIL)
   promote_ci_list : p.lookup "promote_ci_list" = some (promoteCIListL)
   promote_clear : p.lookup "promote_clear" = some (promoteClear)
+  vg_rd : p.lookup "vg_rd" = some (vgRd)
+  vg_wr : p.lookup "vg_wr" = some (vgWr)
   promote_vg : p.lookup "promote_vg" = some (promoteVGL)
   erase_installed : p.lookup "erase_installed" = some (eraseInstalledL)
   index_promoted : p.lookup "index_promoted" = some (indexPromotedL)
@@ -223,6 +227,8 @@ def promoteProg : Prog :=
    ("promote_l_list", promoteLListL),
    ("promote_e_list", promoteEListL),
    ("promote_slice", promoteSlice),
+   ("cv_rd", cvRd),
+   ("cv_wr", cvWr),
    ("promote_cv", promoteCVL),
    ("promote_fire", promoteFireL),
    ("promote_rule", promoteRuleL),
@@ -237,6 +243,8 @@ def promoteProg : Prog :=
    ("promote_ci", promoteCIL),
    ("promote_ci_list", promoteCIListL),
    ("promote_clear", promoteClear),
+   ("vg_rd", vgRd),
+   ("vg_wr", vgWr),
    ("promote_vg", promoteVGL),
    ("erase_installed", eraseInstalledL),
    ("index_promoted", indexPromotedL),

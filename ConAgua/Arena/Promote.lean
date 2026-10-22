@@ -380,9 +380,10 @@ def promoteEL : FunDecl := lfn (f, h) locals (fd, j, d, r, u) {
 /-- `promote_n_list(f, o, l, q)`: `EREC[q + j] := promote_n(f, EREC[o + j])`, in order. -/
 -- con-ron: ConRon/Arena/Promote.lean:203-209 ConRon.Arena.promoteNList
 @[l_impl ConRon.Arena.promoteNList]
-def promoteNListL : FunDecl := lfn (f, o, l, q) locals (r, u) {
+def promoteNListL : FunDecl := lfn (f, o, l, q) locals (x, r, u) {
   if l == 0 { return 0 };
-  r := call promote_n(f, EREC.u64[o]);
+  x := EREC.u64[o];
+  r := call promote_n(f, x);
   EREC.u64[q] := r;
   u := call promote_n_list(f, o + 1, l - 1, q + 1);
   return 0
@@ -391,9 +392,10 @@ def promoteNListL : FunDecl := lfn (f, o, l, q) locals (r, u) {
 /-- `promote_l_list(f, o, l, q)`: the same for level handles (`promoteLList`). -/
 -- con-ron: ConRon/Arena/Promote.lean:131-138 ConRon.Arena.promoteLList
 @[l_impl ConRon.Arena.promoteLList]
-def promoteLListL : FunDecl := lfn (f, o, l, q) locals (r, u) {
+def promoteLListL : FunDecl := lfn (f, o, l, q) locals (x, r, u) {
   if l == 0 { return 0 };
-  r := call promote_l(f, EREC.u64[o]);
+  x := EREC.u64[o];
+  r := call promote_l(f, x);
   EREC.u64[q] := r;
   u := call promote_l_list(f, o + 1, l - 1, q + 1);
   return 0
@@ -402,9 +404,10 @@ def promoteLListL : FunDecl := lfn (f, o, l, q) locals (r, u) {
 /-- `promote_e_list(f, o, l, q)`: the same for expression handles (`promoteEList`). -/
 -- con-ron: ConRon/Arena/Promote.lean:211-218 ConRon.Arena.promoteEList
 @[l_impl ConRon.Arena.promoteEList]
-def promoteEListL : FunDecl := lfn (f, o, l, q) locals (r, u) {
+def promoteEListL : FunDecl := lfn (f, o, l, q) locals (x, r, u) {
   if l == 0 { return 0 };
-  r := call promote_e(f, EREC.u64[o]);
+  x := EREC.u64[o];
+  r := call promote_e(f, x);
   EREC.u64[q] := r;
   u := call promote_e_list(f, o + 1, l - 1, q + 1);
   return 0
@@ -423,19 +426,32 @@ def promoteSlice : FunDecl := lfn (k, f, o, l) locals (q, u) {
 
 /-! ## Records -/
 
-/-- `promote_cv(f, s, d)`: the constant value at `EREC[s‥s+4)` promoted into `EREC[d‥d+4)`
-(name, level parameters, type, in that order). -/
--- con-ron: ConRon/Arena/Promote.lean:229-235 ConRon.Arena.promoteCV
-@[l_impl ConRon.Arena.promoteCV]
-def promoteCVL : FunDecl := lfn (f, s, d) locals (n, l, q, t) {
-  n := call promote_n(f, EREC.u64[s]);
-  l := EREC.u64[s + 2];
-  q := call promote_slice(0, f, EREC.u64[s + 1], l);
-  t := call promote_e(f, EREC.u64[s + 3]);
+/-- `cv_rd(s)`: the four words of the constant value at `EREC[s‥s+4)`. -/
+-- con-ron: none — reads an `EREC` record's words (the twin's `IConstantVal` is a value)
+def cvRd : FunDecl := lfn (s) locals () {
+  return (EREC.u64[s], EREC.u64[s + 1], EREC.u64[s + 2], EREC.u64[s + 3])
+}
+
+/-- `cv_wr(d, n, q, l, t)`: the four words of a constant value written at `EREC[d‥d+4)`. -/
+-- con-ron: none — writes an `EREC` record's words (the twin's `IConstantVal` is a value)
+def cvWr : FunDecl := lfn (d, n, q, l, t) locals () {
   EREC.u64[d] := n;
   EREC.u64[d + 1] := q;
   EREC.u64[d + 2] := l;
   EREC.u64[d + 3] := t;
+  return 0
+}
+
+/-- `promote_cv(f, s, d)`: the constant value at `EREC[s‥s+4)` promoted into `EREC[d‥d+4)`
+(name, level parameters, type, in that order). -/
+-- con-ron: ConRon/Arena/Promote.lean:229-235 ConRon.Arena.promoteCV
+@[l_impl ConRon.Arena.promoteCV]
+def promoteCVL : FunDecl := lfn (f, s, d) locals (n0, o, l, t0, n, q, t, u) {
+  (n0, o, l, t0) := call cv_rd(s);
+  n := call promote_n(f, n0);
+  q := call promote_slice(0, f, o, l);
+  t := call promote_e(f, t0);
+  u := call cv_wr(d, n, q, l, t);
   return 0
 }
 
@@ -637,17 +653,31 @@ def promoteClear : FunDecl := lfn () locals (u) {
   return 0
 }
 
+/-- `vg_rd(g)`: a value group's kind and value words. -/
+-- con-ron: none — reads an `EREC` record's words (the twin's `ValueGroup` is a value)
+def vgRd : FunDecl := lfn (g) locals () {
+  return (EREC.u64[g], EREC.u64[g + 5])
+}
+
+/-- `vg_wr(d, k, x)`: a value group's kind and value words written at `d`. -/
+-- con-ron: none — writes an `EREC` record's words (the twin's `ValueGroup` is a value)
+def vgWr : FunDecl := lfn (d, k, x) locals () {
+  EREC.u64[d] := k;
+  EREC.u64[d + 5] := x;
+  return 0
+}
+
 /-- `promote_vg(g, vis)`: `promoteVG PMemo.empty coreWalkFuel` on the value group record `g`;
 returns the promoted record. -/
 -- con-ron: ConRon/Arena/Promote.lean:327-335 ConRon.Arena.promoteVG
 @[l_impl ConRon.Arena.promoteVG]
-def promoteVGL : FunDecl := lfn (g, vis) locals (d, u, x) {
+def promoteVGL : FunDecl := lfn (g, vis) locals (k, j, d, u, x) {
   u := call promote_clear();
+  (k, j) := call vg_rd(g);
   d := call erec_alloc(6);
-  EREC.u64[d] := EREC.u64[g];
   u := call promote_cv(⟪CWF⟫, g + 1, d + 1);
-  x := call promote_e(⟪CWF⟫, EREC.u64[g + 5]);
-  EREC.u64[d + 5] := x;
+  x := call promote_e(⟪CWF⟫, j);
+  u := call vg_wr(d, k, x);
   return d
 }
 
@@ -706,12 +736,14 @@ def promoteFns : Prog :=
    ("pe_forall", peForall), ("pe_let", peLet), ("pe_proj", peProj), ("pe_arm", peArm),
    ("promote_e", promoteEL), ("promote_n_list", promoteNListL),
    ("promote_l_list", promoteLListL), ("promote_e_list", promoteEListL),
-   ("promote_slice", promoteSlice), ("promote_cv", promoteCVL), ("promote_fire", promoteFireL),
+   ("promote_slice", promoteSlice), ("cv_rd", cvRd), ("cv_wr", cvWr),
+   ("promote_cv", promoteCVL), ("promote_fire", promoteFireL),
    ("promote_rule", promoteRuleL), ("promote_rules", promoteRulesL),
    ("promote_caps", promoteCapsL), ("promote_proj_table", promoteProjTableL),
    ("pci_cv", pciCv), ("pci_defn", pciDefn), ("pci_ind", pciInd), ("pci_ctor", pciCtor),
    ("pci_rec", pciRec), ("promote_ci", promoteCIL), ("promote_ci_list", promoteCIListL),
-   ("promote_clear", promoteClear), ("promote_vg", promoteVGL),
+   ("promote_clear", promoteClear), ("vg_rd", vgRd), ("vg_wr", vgWr),
+   ("promote_vg", promoteVGL),
    ("erase_installed", eraseInstalledL), ("index_promoted", indexPromotedL),
    ("promote_new", promoteNewL),
    ("pn_find", memoFindG pnSch), ("pn_put", memoPutG pnSch), ("pn_clear", memoClearG pnSch),
