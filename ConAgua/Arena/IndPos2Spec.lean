@@ -865,4 +865,238 @@ theorem nestResHead_refines (p : Prog) (hg : p.lookup "nest_res_head" = some nes
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hgr, hres.symm⟩
 
+/-! ## `inst_pis_with` -/
+
+mutual
+def instW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _, _ => none
+  | n + 1, m, ao, al, e =>
+    if al = 0 then some ([1, e], m)
+    else if e >>> 28 ≠ 6 then some ([0, 0], m)
+    else instK1 n m ao al (eViewW m e)
+def instK1 (n : Nat) (m : Mem) (ao al : Word) (v : List Word) : Option (List Word × Mem) :=
+  if v = [] then none
+  else instK2 n ao al
+    (stubM "instantiate1_fast" m [CWF, v.tail.tail.headD 0, rdW (m.arr64 IW) ao, 0])
+def instK2 (n : Nat) (ao al : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rb, m1) => instK3 (instW n m1 (ao + 1) (al - 1) (rb.headD 0))
+def instK3 : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m2) => some ([r.headD 0, r.tail.headD 0], m2)
+end
+
+section arms
+variable (n : Nat) (m m1 m2 : Mem) (ao al e : Word) (v rb r : List Word)
+theorem instW_nil (h : al = 0) : instW (n + 1) m ao al e = some ([1, e], m) := by simp [instW, h]
+theorem instW_nopi (h : al ≠ 0) (h2 : e >>> 28 ≠ 6) : instW (n + 1) m ao al e = some ([0, 0], m) := by
+  simp [instW, h, h2]
+theorem instW_pi (h : al ≠ 0) (h2 : ¬ e >>> 28 ≠ 6) :
+    instW (n + 1) m ao al e = instK1 n m ao al (eViewW m e) := by simp only [instW]; rw [if_neg h, if_neg h2]
+theorem instK1_abort (h : v = []) : instK1 n m ao al v = none := by simp [instK1, h]
+theorem instK1_ok (h : v ≠ []) : instK1 n m ao al v = instK2 n ao al
+    (stubM "instantiate1_fast" m [CWF, v.tail.tail.headD 0, rdW (m.arr64 IW) ao, 0]) := by simp [instK1, h]
+theorem instK2_some : instK2 n ao al (some (rb, m1)) = instK3 (instW n m1 (ao + 1) (al - 1) (rb.headD 0)) := by rw [instK2]
+theorem instK3_some : instK3 (some (r, m2)) = some ([r.headD 0, r.tail.headD 0], m2) := by rw [instK3]
+end arms
+grind_pattern [ind_grind] instW_nil => instW (n + 1) m ao al e
+grind_pattern [ind_grind] instW_nopi => instW (n + 1) m ao al e
+grind_pattern [ind_grind] instW_pi => instW (n + 1) m ao al e
+grind_pattern [ind_grind] instK1_abort => instK1 n m ao al v
+grind_pattern [ind_grind] instK1_ok => instK1 n m ao al v
+grind_pattern [ind_grind] instK2_some => instK2 n ao al (some (rb, m1))
+grind_pattern [ind_grind] instK3_some => instK3 (some (r, m2))
+
+theorem instPisWith_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
+    (hp : p.lookup "inst_pis_with" = some instPisWith) (n : Nat) :
+    ∀ (s₀ : St) (ao al e : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "inst_pis_with" [ao, al, e]
+    ⦃fun r s' => LocEq s' s₀ ∧ instW n s₀.mem ao al e = some (r, s'.mem); ⊤⦄ := by
+  induction n with
+  | zero =>
+    intro s₀ ao al e
+    rw [invoke_eq _ hp]; simp only [callFn, instPisWith]; vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ ao al e
+    rw [invoke_eq _ hp]
+    simp only [callFn, instPisWith]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        eView_spec p hv n, stubM_spec p "instantiate1_fast" n, ih] <;> finish (gen := 20)
+
+
+theorem ETables.get_forall (t : ETables) (i : EIdx) (ht : i.tag = ETag.forallE) (v : ENodeView)
+    (h : t.get i = some v) : ∃ ty b, v = .forallE ty b := by
+  simp only [ETables.get, ht, ETag.bvar, ETag.fvar, ETag.sort, ETag.const, ETag.app, ETag.lam,
+    ETag.forallE] at h
+  cases hn : t.foralls.node? i.idxNat with
+  | none => simp [hn] at h
+  | some x => simp [hn] at h; exact ⟨_, _, h.symm⟩
+
+theorem EStore.view_forall (st : EStore) (i : EIdx) (ht : i.tag = ETag.forallE) (v : ENodeView)
+    (h : st.view i = some v) : ∃ ty b, v = .forallE ty b := by
+  unfold EStore.view at h
+  split at h
+  · exact ETables.get_forall _ _ ht v h
+  · split at h
+    · exact ETables.get_forall _ _ ht v h
+    · simp at h
+
+theorem ETables.getBind_of_get (t : ETables) (i : EIdx) (ht : i.tag = ETag.forallE) (ty b : EIdx)
+    (h : t.get i = some (.forallE ty b)) : t.getBind i = some (ty, b) := by
+  simp only [ETables.get, ht, ETag.bvar, ETag.fvar, ETag.sort, ETag.const, ETag.app, ETag.lam,
+    ETag.forallE] at h
+  simp only [ETables.getBind, ht, ETag.lam, ETag.forallE]
+  cases hn : t.foralls.node? i.idxNat with
+  | none => simp [hn] at h
+  | some x => simp [hn] at h ⊢; simp [ETag.forallE, ETag.lam] at *; exact h
+
+theorem EStore.viewBind_of_view (st : EStore) (i : EIdx) (ht : i.tag = ETag.forallE) (ty b : EIdx)
+    (h : st.view i = some (.forallE ty b)) : st.viewBind i = some (ty, b) := by
+  unfold EStore.view at h
+  unfold EStore.viewBind EStore.persGetBind
+  split at h
+  · rename_i hp; rw [if_pos hp]; exact ETables.getBind_of_get _ _ ht ty b h
+  · rename_i hp; rw [if_neg hp]
+    split at h
+    · rename_i hs; rw [if_pos hs]; exact ETables.getBind_of_get _ _ ht ty b h
+    · simp at h
+
+
+theorem tag_forall_iff (w : Word) (hw : w.toNat < 2 ^ 32) :
+    ((decI w : EIdx).tag == ETag.forallE) = decide (w >>> 28 = 6) := by
+  have := decE_tag_eq w hw 6 (by decide)
+  have e1 : (ETag.forallE : UInt32) = UInt32.ofNat 6 := rfl
+  show ((decE w).tag == ETag.forallE) = _
+  rw [Bool.eq_iff_iff, beq_iff_eq, decide_eq_true_iff, e1, this]
+  exact Iff.rfl
+
+theorem viewBind_run (h : EIdx) (a : AState) :
+    (viewBind h).run a = .ok (a.store.viewBind h, a) := rfl
+
+theorem instW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
+    (m m' : Mem) (a : AState) (ao al e : Word) (args : List EIdx) (r : List Word),
+    instW n m ao al e = some (r, m') → StageR dn vis fe m a → H e →
+    decHL m ao.toNat al.toNat = some args → ao.toNat + al.toNat < 2 ^ 64 →
+    ao.toNat + al.toNat ≤ iwTop m →
+    ∃ x a', (ConRon.Arena.instPisWith args (decI e)).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
+      IWGrow m m' ∧ decOE m' r x := by
+  induction n with
+  | zero => intro dn fe vis m m' a ao al e args r h; simp [instW] at h
+  | succ n ih =>
+    intro dn fe vis m m' a ao al e args r h hS he hdec hb hit
+    by_cases hal : al = 0
+    · rw [instW_nil n m ao al e hal] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      have : args = [] := by
+        have h0 : al.toNat = 0 := by rw [hal]; rfl
+        rw [h0] at hdec; simpa [decHL, hslice?] using hdec.symm
+      subst this
+      exact ⟨some (decI e), a, rfl, hS, IWGrow.refl _, rfl, he, rfl⟩
+    · have hl1 : al.toNat = (al.toNat - 1) + 1 := by have := toNat_ne_zero' hal; omega
+      rw [hl1, decHL, hslice?_succ] at hdec
+      simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hdec
+      obtain ⟨xa, hxa, rest, hrest, rfl⟩ := hdec
+      by_cases hpi : e >>> 28 ≠ 6
+      · rw [instW_nopi n m ao al e hal hpi] at h
+        simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        refine ⟨none, a, ?_, hS, IWGrow.refl _, rfl⟩
+        have ht : ¬ ((decI e : EIdx).tag == ETag.forallE) = true := by
+          rw [tag_forall_iff e he]; simpa using hpi
+        simp only [ConRon.Arena.instPisWith, ht, if_false]; rfl
+      · rw [instW_pi n m ao al e hal hpi] at h
+        have he6 : e >>> 28 = 6 := by simpa using hpi
+        cases hvl : eViewW m e with
+        | nil => rw [hvl] at h; simp [instK1] at h
+        | cons g vt =>
+          have hne : eViewW m e ≠ [] := by rw [hvl]; simp
+          rw [hvl] at h
+          rw [instK1_ok n m ao al _ (by simp)] at h
+          obtain ⟨v, hv, hvr⟩ := eViewW_ok m a hS.1.arena.1 e hne
+          rw [hvl] at hvr
+          have ht : (decE e).tag = ETag.forallE := by
+            have h1 : ((decI e : EIdx).tag == ETag.forallE) = true := by
+              rw [tag_forall_iff e he, he6]; decide
+            exact beq_iff_eq.mp h1
+          obtain ⟨ty, bd, rfl⟩ := EStore.view_forall a.store (decE e) ht v hv
+          simp only [ViewR, getD1_eq] at hvr
+          obtain ⟨-, -, -, hy1, hy2⟩ := hvr
+          have hy2' : (vt.tail.headD 0).toNat < 2 ^ 32 := by simpa using hy1
+          have hy3 : decE (vt.tail.headD 0) = bd := by simpa using hy2
+          have hbind : a.store.viewBind (decE e) = some (ty, bd) :=
+            EStore.viewBind_of_view _ _ ht ty bd hv
+          have hlt0 : ao.toNat < 2 ^ 64 := ao.toNat_lt
+          obtain ⟨wa, hwa_eq, hwa_lt, hwa_dec⟩ := iwH_rdW hxa hlt0
+          rw [UInt64.ofNat_toNat] at hwa_eq
+          rw [hwa_eq] at h
+          simp only [List.tail_cons] at h
+          cases hst : stubM "instantiate1_fast" m [CWF, vt.tail.headD 0, wa, 0] with
+          | none => rw [hst] at h; simp [instK2] at h
+          | some rm =>
+            obtain ⟨rb, m1⟩ := rm
+            rw [hst, instK2_some] at h
+            obtain ⟨x1, a1, hrun1, hS1, hg1, hlt1, hdec1⟩ :=
+              instantiate1Fast_spec dn vis fe CWF (vt.tail.headD 0) wa 0 hy2' hwa_lt m m1 a rb hst hS
+            cases hw : instW n m1 (ao + 1) (al - 1) (rb.headD 0) with
+            | none => rw [hw] at h; simp [instK3] at h
+            | some rm3 =>
+              obtain ⟨r3, m3⟩ := rm3
+              rw [hw, instK3_some] at h
+              simp only [Option.some.injEq, Prod.mk.injEq] at h
+              obtain ⟨rfl, rfl⟩ := h
+              have hao1 : (ao + 1).toNat = ao.toNat + 1 := toNat_add_one' (by omega)
+              have hal1 : (al - 1).toNat = al.toNat - 1 := toNat_sub_one' hal
+              have hdec' : decHL m1 (ao + 1).toNat (al - 1).toNat = some rest := by
+                rw [hao1, hal1, decHL_grow hg1 (by omega)]; exact hrest
+              obtain ⟨x3, a3, hrun3, hS3, hg3, hout3⟩ :=
+                ih dn fe vis m1 m3 a1 (ao + 1) (al - 1) (rb.headD 0) rest r3 hw hS1 hlt1 hdec'
+                  (by rw [hao1, hal1]; omega) (by rw [hao1, hal1]; have := hg1.1; omega)
+              refine ⟨x3, a3, ?_, hS3, hg1.trans hg3, ?_⟩
+              · have htag : ((decI e : EIdx).tag == ETag.forallE) = true := by
+                  rw [tag_forall_iff e he, he6]; decide
+                simp only [ConRon.Arena.instPisWith, htag, if_true, StateT.run_bind]
+                rw [show (decI e : EIdx) = decE e from rfl, viewBind_run, except_ok_bind, hbind]
+                simp only [except_ok_bind, StateT.run_bind]
+                rw [show (decI (vt.tail.headD 0) : EIdx) = bd from hy3, hwa_dec, CWF_eq,
+                  show (0 : Word).toNat = 0 from rfl] at hrun1
+                rw [hrun1]
+                simp only [except_ok_bind]
+                rw [← hdec1]
+                exact hrun3
+              · cases x3 with
+                | none =>
+                  simp only [decOE] at hout3 ⊢
+                  exact hout3
+                | some e3 =>
+                  simp only [decOE, decW0E] at hout3 ⊢
+                  obtain ⟨h1, h2, h3⟩ := hout3
+                  exact ⟨h1, by simpa using h2, by simpa using h3⟩
+
+
+section census
+variable (p : Prog) (hv : p.lookup "e_view" = some eView)
+    (hp : p.lookup "inst_pis_with" = some instPisWith)
+include hv hp
+
+/-- **`inst_pis_with` refines `instPisWith`** (through the `instantiate1_fast` stub). -/
+@[refines ConRon.Arena.instPisWith]
+theorem instPisWith_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+    (fe : IFEnv) (vis ao al e : Word) (args : List EIdx) (he : H e)
+    (hS : StageR dn vis fe s₀.mem a₀) (hdec : decHL s₀.mem ao.toNat al.toNat = some args)
+    (hb : ao.toNat + al.toNat < 2 ^ 64) (hit : ao.toNat + al.toNat ≤ iwTop s₀.mem) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "inst_pis_with" [ao, al, e]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.instPisWith args (decI e)) a₀ ∧
+      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.instPisWith args (decI e)) a₀) ∧
+      IWGrow s₀.mem s'.mem ∧
+      decOE s'.mem r (AM.res (ConRon.Arena.instPisWith args (decI e)) a₀); ⊤⦄ := by
+  refine triple_post (instPisWith_spec p hv hp n s₀ ao al e) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨x, a', hrun, hS', hg, hout⟩ := instW_ok n dn fe vis _ _ a₀ ao al e args r hm hS he hdec hb hit
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hout⟩
+
+end census
+
 end L.Ind

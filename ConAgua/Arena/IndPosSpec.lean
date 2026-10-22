@@ -2,6 +2,7 @@ import ConAgua.Arena.IndPos
 import ConAgua.Arena.IndLibSpec
 import ConAgua.Arena.IndPartsSpec
 import ConAgua.Arena.IndStubs
+import ConAgua.Arena.IndInstallSpec
 import ConAgua.Arena.IndView
 import ConAgua.Arena.WhnfSpineRefine
 import ConAgua.Arena.IndGrindAttr
