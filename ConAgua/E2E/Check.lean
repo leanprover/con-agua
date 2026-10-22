@@ -56,6 +56,16 @@ def checkNpL : FunDecl := lfn () locals (r, z) {
   return 71757147230292
 }
 
+/-- `e2e_front()`: the stages before the fold (`e2e-diff`'s starting state, `ConAgua/E2E/Diff.lean`). -/
+-- con-ron: none — the e2e lane's test entry (the first stages of `e2e-ref --no-prelude`)
+def e2eFrontL : FunDecl := lfn () locals (r, z) {
+  z := call intern_reserved_pins();
+  r := call front_run();
+  if r != 0 { return r };
+  z := call intern_all_pins();
+  return 0
+}
+
 /-! ## E2E patches
 
 Each patch is a hook a lane has specified but not yet made (the lane's proofs are not ready for
@@ -76,7 +86,7 @@ def applyDLineHooked : FunDecl := lfn (j) locals (pl, nm, lps, ty, vl, hk, hn, f
 example : (71757147230292 : Word) = ConAgua.Final.ACCEPT := rfl
 
 /-- The e2e lane's own functions; `scripts/e2e.py` gives them priority over every other binding. -/
-def e2eProg : Prog := [("check", checkL), ("check_np", checkNpL),
+def e2eProg : Prog := [("check", checkL), ("check_np", checkNpL), ("e2e_front", e2eFrontL),
   -- the ROM-instantiated stages (their lanes bind them only parametrically: `IrpProg rom off p`)
   ("intern_reserved_pins", L.Rom.internReservedPinsL), ("intern_all_pins", L.Rom.internAllPinsL),
   -- patches

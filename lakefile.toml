@@ -164,3 +164,8 @@ root = "ConAgua.E2E.Main"
 [[lean_exe]]
 name = "romgen"
 root = "ConAgua.Rom.Gen"
+
+# The e2e lane's per-function differential tests against the twin (`ConAgua/E2E/Diff.lean`).
+[[lean_exe]]
+name = "e2e-diff"
+root = "ConAgua.E2E.Diff"
