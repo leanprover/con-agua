@@ -109,7 +109,8 @@ theorem fire_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s : Word) (D :
       ArenaD m' a' ∧ PMemoR m' pm' ∧ cp a' = cp a ∧
       MemFrame (EREC :: eArrs) (129 :: eCtl) m m' ∧ ErecGrow m m' ∧
       erecTop m' ≤ (m'.arr64 EREC).size ∧
-      FireWords (erecP m') (g0 r) (g1 r) (g2 r) (g3 r) (g4 r) fire' := by
+      FireWords (erecP m') (g0 r) (g1 r) (g2 r) (g3 r) (g4 r) fire' ∧
+      (g0 r = 1 → erecTop m ≤ (g1 r).toNat ∧ erecTop m ≤ (g3 r).toNat) := by
   cases n with
   | zero => rw [callW_zero'] at hc; cases hc
   | succ n =>
@@ -154,9 +155,12 @@ theorem fire_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s : Word) (D :
     rw [if_pos (by simp [g0])] at hW
     obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
     subst hm
-    refine ⟨a, pm, .plain, rfl, hD, hP, rfl, MemFrame.refl _ _ _, ErecGrow.refl _, hts, ?_⟩
-    rw [← hr]
-    exact Or.inl ⟨rfl, rfl⟩
+    refine ⟨a, pm, .plain, rfl, hD, hP, rfl, MemFrame.refl _ _ _, ErecGrow.refl _, hts, ?_, ?_⟩
+    · rw [← hr]
+      exact Or.inl ⟨rfl, rfl⟩
+    · rw [← hr]
+      intro h
+      simp [g0] at h
   | 1, hsrc, hk3 =>
     have hw : w3' = 1 := UInt64.toNat_inj.mp (by simpa using hk3)
     subst hw
@@ -207,7 +211,7 @@ theorem fire_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s : Word) (D :
     have hq1v : (r₁.headD 0).toNat = erecTop m := by rw [hq]; rfl
     have hq2v : (r₂.headD 0).toNat = erecTop m₁ := by rw [hq2]; rfl
     refine ⟨a2, pm2, .nested us1 us2, ?_, hD2, hP2, hcp2.trans hcp1,
-      hfr1.trans hfr2, hg1.trans hg2, hts2, ?_⟩
+      hfr1.trans hfr2, hg1.trans hg2, hts2, ?_, ?_⟩
     · rw [promoteFire, run_bind_ok hrun1]
       simp only
       rw [run_bind_ok hrun2]; rfl
@@ -219,6 +223,10 @@ theorem fire_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s : Word) (D :
           rw [hslice?_erecP hts1 (by omega)]; exact hsl1'
         exact hg2.ext.hslice? h1
       · rw [hq2v, hslice?_erecP hts2 (by omega)]; exact hsl2'
+    · intro _
+      rw [← hr]
+      simp only [g1, g3, List.headD_cons, List.tail_cons]
+      exact ⟨by rw [hq1v]; exact Nat.le_refl _, by rw [hq2v]; omega⟩
   | k + 2, hsrc, _ => cases hsrc
 
 end rel

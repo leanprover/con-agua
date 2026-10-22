@@ -28,13 +28,16 @@ theorem ruleWr_rel {n : Nat} {d s c r w1 w2 w9 w10 : Word} {m m' : Mem} {rr : Li
     (hdb : d.toNat + 11 ≤ (m.arr64 EREC).size)
     (h1 : (m.arr64 EREC)[s.toNat + 1]? = some w1) (h2 : (m.arr64 EREC)[s.toNat + 2]? = some w2)
     (h9 : (m.arr64 EREC)[s.toNat + 9]? = some w9) (h10 : (m.arr64 EREC)[s.toNat + 10]? = some w10)
-    (hc : callW p (n + 1) "rule_wr" [d, s, c, r] m = some (rr, m')) :
+    (hc : callW p n "rule_wr" [d, s, c, r] m = some (rr, m')) :
     (m'.arr64 EREC).size = (m.arr64 EREC).size ∧ MemFrame [EREC] [] m m' ∧
     (∀ i, (i < d.toNat ∨ d.toNat + 11 ≤ i ∨ (d.toNat + 3 ≤ i ∧ i < d.toNat + 8)) →
       (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?) ∧
     (m'.arr64 EREC)[d.toNat]? = some c ∧ (m'.arr64 EREC)[d.toNat + 1]? = some w1 ∧
     (m'.arr64 EREC)[d.toNat + 2]? = some w2 ∧ (m'.arr64 EREC)[d.toNat + 8]? = some r ∧
     (m'.arr64 EREC)[d.toNat + 9]? = some w9 ∧ (m'.arr64 EREC)[d.toNat + 10]? = some w10 := by
+  cases n with
+  | zero => rw [callW_zero'] at hc; cases hc
+  | succ n =>
   obtain ⟨s', hs', -, hW⟩ := callW_triple (ruleWr_spec p hp n ⟨m, Locals.init []⟩ d s c r) hc
   simp only at hW
   rw [hs'] at hW
@@ -62,20 +65,19 @@ theorem ruleWr_rel {n : Nat} {d s c r w1 w2 w9 w10 : Word} {m m' : Mem} {rr : Li
   obtain rfl := hm2.symm
   rw [rd2W_of hsz (by rw [e9]; simpa using h9) (by rw [e9]; simpa using h10)] at hr2
   subst hr2
-  cases hcc : callW p n "erec_wr3" [d, c, g0 [w1, w2], g1 [w1, w2]] m with
+  simp only [g0, g1, List.headD_cons, List.tail_cons] at hW
+  cases hcc : callW p n "erec_wr3" [d, c, w1, w2] m with
   | none => rw [hcc] at hW; cases hW
   | some x =>
   obtain ⟨rc, mc⟩ := x
   rw [hcc] at hW
   simp only [Option.bind_some] at hW
-  simp only [g0, g1, List.headD_cons, List.tail_cons] at hcc hW
   obtain ⟨a1, a2, a3, a4, a5, a6⟩ := wr3_rel p hp (by omega) hsz hcc
-  cases hcd : callW p n "erec_wr3" [d + 8, r, g0 [w9, w10], g1 [w9, w10]] mc with
+  cases hcd : callW p n "erec_wr3" [d + 8, r, w9, w10] mc with
   | none => rw [hcd] at hW; cases hW
   | some x =>
   obtain ⟨rd, md⟩ := x
   rw [hcd, memK_some] at hW
-  simp only [g0, g1, List.headD_cons, List.tail_cons] at hcd
   have hm : md = m' := Option.some.inj hW
   subst hm
   obtain ⟨b1, b2, b3, b4, b5, b6⟩ := wr3_rel p hp (d := d + 8) (by rw [e8, a1]; omega) (by rw [a1]; exact hsz) hcd
