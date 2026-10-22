@@ -409,4 +409,32 @@ theorem bf_spec (p : Prog) (hP : IndPartsProg5 p) (n : Nat) (s₀ : St)
     finish (gen := 20) [bfW, rdW_eq, bbK8_some, bbK9_some, bbK10_some, bbK11_some, bbK12_some,
       bbK13'_some, bgoK3_some]
 
+set_option maxHeartbeats 20000000 in
+theorem bt_spec (p : Prog) (hP : IndPartsProg5 p) (n : Nat) (s₀ : St)
+    (nPd cto ctl cso csl rso rsl no nl io il lo ll : Word) :
+    ⦃fun st => st = s₀⦄ invoke p (exec p (n + 3)) "block_shape_tail"
+      [nPd, cto, ctl, cso, csl, rso, rsl, no, nl, io, il, lo, ll]
+    ⦃fun r s' => LocEq s' s₀ ∧ btW n s₀.mem nPd cto ctl cso csl rso rsl no nl io il lo ll = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hP.tail]
+  simp only [callFn, blockShapeTail]
+  sym (gen := 24) (instances := 30000) only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      bso_spec p hP.view hP.pinWord hP.slGetD hP.sort (n + 1), pinWord_specV p hP.pinWord (n + 2),
+      stubM_spec p "lvl_eq_c" (n + 2), bf_spec p hP n] <;>
+    finish (gen := 20) [btW, rdW_eq, btK1_some, btK2_some, btK3_some, bgoK3_some]
+
+set_option maxHeartbeats 20000000 in
+theorem bb_spec (p : Prog) (hP : IndPartsProg5 p) (n : Nat) (s₀ : St) (nPd cto ctl cso csl rso rsl : Word) :
+    ⦃fun st => st = s₀⦄ invoke p (exec p (n + 4)) "block_shape_build" [nPd, cto, ctl, cso, csl, rso, rsl]
+    ⦃fun r s' => LocEq s' s₀ ∧ bbW n s₀.mem nPd cto ctl cso csl rso rsl = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hP.build]
+  simp only [callFn, blockShapeBuild]
+  sym (gen := 24) (instances := 30000) only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      bsn_spec p hP.toIndPartsProg4 hP.namesOf (n + 3), bmc_spec p hP.toIndPartsProg4 (n + 2),
+      erToIw_specW p hP.alloc hP.erCopy hP.erToIw (n + 3),
+      bpo_spec p hP.toIndPartsProg4 hP.resFrom hP.resCont hP.erCopy hP.erToIw hP.slEq hP.pinsF hP.pinsR
+        hP.pinsC hP.pinsOk (n + 2), bt_spec p hP n] <;>
+    finish (gen := 20) [bbW, rdW_eq, bbH1_some, bbH2_fail, bbH2_ok, bbH3_some, bbH4_fail, bbH4_ok, bgoK3_some]
+
 end L.Ind
