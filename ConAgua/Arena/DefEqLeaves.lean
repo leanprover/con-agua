@@ -35,6 +35,7 @@ structure DefEqLeafProg (p : Prog) : Prop where
   hproj : p.lookup "head_is_proj" = some headIsProjL
   ion : p.lookup "io_neutral" = some ioNeutralL
   eager : p.lookup "is_eager_reduce" = some isEagerReduceL
+  natzero : p.lookup "is_nat_zero" = some isNatZeroL
 
 /-! ## Shared lemmas -/
 
@@ -457,6 +458,153 @@ theorem isEagerReduce_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ 
   have hrun' := isEagerReduce_run _ _ hS.arena.1 hS.pins h hh _ hW
   refine coreRef_pure hS hrun' rfl ?_
   unfold isEagerReduceW eagerF eagerG at hW
+  unfold ResH HW
+  repeat' split at hW
+  all_goals simp only [reduceCtorEq, Option.some.injEq] at hW
+  all_goals (rw [← hW]; decide)
+
+/-! ## Literal nodes -/
+
+theorem pv_eq_zero_iff (p : Array Word) (o l : Nat) (hn : Norm p o l) : pv p o l = 0 ↔ l = 0 := by
+  constructor
+  · intro h
+    rcases Nat.eq_zero_or_pos l with hl | hl
+    · exact hl
+    · have := pv_ge p o l hl hn
+      have : 0 < wt (l - 1) := Nat.two_pow_pos _
+      omega
+  · intro h; subst h; rfl
+
+/-- **A `lit` node past the view checks**: kind word `0` is a `natVal` whose value is `0` iff the
+length word is; another kind word is a `strVal`. -/
+theorem view_lit_nat (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : HW h)
+    (hv : viewOK m h 2) (hg : h >>> 28 = 8) :
+    (rdW (m.arr64 REC) (idxW h * 8 + tierW h * 4) = 0 →
+      ∃ N, a.store.view (decE h) = some (.lit (.natVal N)) ∧
+        (N = 0 ↔ rdW (m.arr64 REC) (idxW h * 8 + tierW h * 4 + 2) = 0)) ∧
+    (rdW (m.arr64 REC) (idxW h * 8 + tierW h * 4) ≠ 0 →
+      ∃ s, a.store.view (decE h) = some (.lit (.strVal s))) := by
+  obtain ⟨k, hk, hkr⟩ := node_of m a h litSch RecRel litH (·.lits) _ hR.lit.2 hv.2
+  have hview : ∀ l, k = ⟨l⟩ → a.store.view (decE h) = some (.lit l) := by
+    intro l hl
+    rw [view_tier m a hR h hh hv.1, get_lit _ h hh hg, Tbl.node?, hk, hl]
+    rfl
+  obtain ⟨⟨N⟩ | ⟨s⟩⟩ := k
+  · simp only [RecRel_natVal, NatRec] at hkr
+    obtain ⟨h0, -, hn, hpv, -⟩ := hkr
+    refine ⟨fun _ => ⟨N, hview _ rfl, ?_⟩, fun hc => absurd h0 hc⟩
+    rw [← hpv, pv_eq_zero_iff _ _ _ hn]
+    constructor
+    · intro e; exact UInt64.toNat_inj.mp (by simpa using e)
+    · intro e; rw [e]; rfl
+  · simp only [RecRel_strVal, StrRec] at hkr
+    exact ⟨fun hc => absurd (hkr.1.symm.trans hc) (by decide), fun _ => ⟨s, hview _ rfl⟩⟩
+
+theorem tag_beq_lit (h : Word) (hh : HW h) :
+    ((decE h).tag == ETag.lit) = decide (h >>> 28 = 8) := tag_beq_w h hh 8 (by decide) _ rfl 8 rfl
+
+/-! ## `is_nat_zero` -/
+
+/-- The model of `is_nat_zero`. -/
+def isNatZeroW (m : Mem) (e : Word) : Option Word :=
+  if e >>> 28 = 8 then
+    if tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
+    else if rdW (m.arr64 CTL) (2 + tierW e) ≤ idxW e then none
+    else if rdW (m.arr64 REC) (idxW e * 8 + tierW e * 4) ≠ 0 then some 0
+    else some (if rdW (m.arr64 REC) (idxW e * 8 + tierW e * 4 + 2) = 0 then 1 else 0)
+  else if e >>> 28 = 3 then
+    if tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
+    else if rdW (m.arr64 CTL) (18 + tierW e) ≤ idxW e then none
+    else some (if rdW (m.arr64 CREC) (idxW e * 4 + tierW e * 2) = rdW (m.arr64 PINS) (1 + 2) ∧
+      rdW (m.arr64 CREC) (idxW e * 4 + tierW e * 2 + 1) = rdW (m.arr64 PINS) 52 then 1 else 0)
+  else some 0
+
+theorem isNatZero_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St) (e : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "is_nat_zero" [e]
+    ⦃fun r s' => s'.mem = s₀.mem ∧ LocEq s' s₀ ∧ isNatZeroW s₀.mem e = some (r.headD 0); ⊤⦄ := by
+  rw [invoke_eq _ hp.natzero]
+  simp only [callFn, isNatZeroL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      pinAt_rd p hp.pinat n, pinWord_rd p hp.pinword n] <;>
+    finish [isNatZeroW, tierW, idxW]
+
+theorem isNatZero_run (m : Mem) (a : AState) (hR : ArenaR m a) (hP : PinsFull m a.pins)
+    (e : Word) (he : HW e) (w : Word) (hW : isNatZeroW m e = some w) :
+    (isNatZero (decE e)).run a = .ok (w != 0, a) := by
+  unfold isNatZeroW at hW
+  by_cases h8 : e >>> 28 = 8
+  · simp only [h8, ↓reduceIte] at hW
+    by_cases hs : tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
+    · simp [hs] at hW
+    by_cases hc : rdW (m.arr64 CTL) (2 + tierW e) ≤ idxW e
+    · simp [hs, hc] at hW
+    simp only [hs, hc, ↓reduceIte] at hW
+    have hvo : viewOK m e 2 := ⟨hs, by simpa using hc⟩
+    obtain ⟨hnat, hstr⟩ := view_lit_nat m a hR e he hvo h8
+    simp only [isNatZero, tag_beq_lit e he, h8, decide_true, ↓reduceIte, StateT.run_bind]
+    by_cases hk : rdW (m.arr64 REC) (idxW e * 8 + tierW e * 4) = 0
+    · obtain ⟨N, hv, hN⟩ := hnat hk
+      simp only [hk, ne_eq, not_true_eq_false, ↓reduceIte, Option.some.injEq] at hW
+      subst hW
+      simp only [view_run _ _ _ hv, except_ok_bind]
+      by_cases hl : rdW (m.arr64 REC) (idxW e * 8 + tierW e * 4 + 2) = 0
+      · simp only [hl, ↓reduceIte, hN.mpr hl] <;> rfl
+      · have : N ≠ 0 := fun h => hl (hN.mp h)
+        simp only [hl, ↓reduceIte]
+        show Except.ok (N == 0, a) = _
+        simp [this]
+    · obtain ⟨s, hv⟩ := hstr hk
+      simp only [hk, ne_eq, not_false_eq_true, ↓reduceIte, Option.some.injEq] at hW
+      subst hW
+      simp only [view_run _ _ _ hv, except_ok_bind]
+      rfl
+  have ht8 : ((decE e).tag == ETag.lit) = false := by rw [tag_beq_lit e he]; simp [h8]
+  rcases (Classical.em (e >>> 28 = 3)).symm with h3 | h3
+  · simp only [h8, ↓reduceIte] at hW
+    simp only [h3, ↓reduceIte, Option.some.injEq] at hW
+    subst hW
+    simp only [isNatZero, ht8, tag_beq_const e he, h3, decide_false, Bool.false_eq_true, ↓reduceIte]
+    rfl
+  simp only [h8, ↓reduceIte] at hW
+  simp only [h3, ↓reduceIte] at hW
+  by_cases hs : tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
+  · simp [hs] at hW
+  by_cases hc : rdW (m.arr64 CTL) (18 + tierW e) ≤ idxW e
+  · simp [hs, hc] at hW
+  simp only [hs, hc, ↓reduceIte, Option.some.injEq] at hW
+  subst hW
+  have hvo : viewOK m e 18 := ⟨hs, by simpa using hc⟩
+  obtain ⟨hv, hn, hu⟩ := L.Ind.view_const_f m a hR e he hvo h3
+  have hel := hP.lv_lt.1
+  rw [pinW_rdW m 52 52 rfl] at hel
+  have hnz := hP.names_lt 2 (by decide)
+  rw [pinW_rdW m (1 + 2) (1 + 2) rfl] at hnz
+  simp only [isNatZero, ht8, tag_beq_const e he, h3, decide_true, Bool.false_eq_true, ↓reduceIte,
+    StateT.run_bind, view_run _ _ _ hv, except_ok_bind, emptyLevels, pinEmptyLevels_run hP,
+    pinNatZero, PIN_NAT_ZERO, pinAt_run hP 2 (by decide), StateT.run_pure,
+    pinW_rdW m 52 52 rfl, pinW_rdW m (1 + 2) (1 + 2) rfl]
+  rw [decI_beq _ _ hn hnz, decI_beq _ _ hu hel]
+  by_cases h1 : rdW (m.arr64 CREC) (idxW e * 4 + tierW e * 2) = rdW (m.arr64 PINS) (1 + 2) <;>
+  by_cases h2 : rdW (m.arr64 CREC) (idxW e * 4 + tierW e * 2 + 1) = rdW (m.arr64 PINS) 52 <;>
+  simp only [h1, h2, decide_true, decide_false, Bool.and_true, Bool.and_false, and_true, and_false,
+    ↓reduceIte] <;> rfl
+
+/-- **`is_nat_zero` refines `isNatZero`.** -/
+@[refines ConRon.Arena.isNatZero]
+theorem isNatZero_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb e : Word)
+    (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (he : HW e) :
+    CoreSpec p (n + 1) "is_nat_zero" [e] (isNatZero (decE e)) decBool s₀ a₀ dn vis fe MM eb := by
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hm, hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (isNatZero_spec p hp n s₀ e)
+  subst hs0
+  refine ⟨hloc, ?_⟩
+  rw [hm]
+  have hrun' := isNatZero_run _ _ hS.arena.1 hS.pins e he _ hW
+  refine coreRef_pure hS hrun' rfl ?_
+  unfold isNatZeroW at hW
   unfold ResH HW
   repeat' split at hW
   all_goals simp only [reduceCtorEq, Option.some.injEq] at hW
