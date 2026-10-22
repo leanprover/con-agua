@@ -182,7 +182,8 @@ theorem pre_call (hS : CoreS dn m a vis fe M eb)
   rw [← hm]
   have c1 := pinZero_call p hp hS h1
   refine coreRef_bind c1 fun M₁ hS₁ => ?_
-  have c2 := ls1_call p hp hS₁ c1.2.2.2 h2
+  obtain ⟨hm1, -, hr1⟩ := callW_pinWord p hp.pinWord n m 53 r₁ m₁ h1
+  have c2 := ls1_call p hp hS₁ c1.2.2.2 (zero_den hS₁ (by rw [hr1, hm1])) h2
   refine coreRef_bind c2 fun M₂ hS₂ => ?_
   have c3 := pinAt_call p hp hS₂ (k := 10) rfl h3
   refine coreRef_bind c3 fun M₃ hS₃ => ?_
@@ -190,7 +191,6 @@ theorem pre_call (hS : CoreS dn m a vis fe M eb)
   refine coreRef_bind c4 fun M₄ hS₄ => ?_
   have c5 := pinAt_call p hp hS₄ (k := 8) rfl h5
   refine coreRef_bind c5 fun M₅ hS₅ => ?_
-  obtain ⟨hm1, -, hr1⟩ := callW_pinWord p hp.pinWord n m 53 r₁ m₁ h1
   have hd2 := ls1_den p hp hS₁ c1.2.2.2 h2 (zero_den hS₁ (by rw [hr1, hm1]))
   have hd5 := lss_den (op := pinListNil) (lss_den (lss_den (op := pinChar) hd2 (keeps_cpl_pinAt _)
     c3 rfl) (keeps_cpl_constE _) c4 rfl) (keeps_cpl_pinAt _) c5 rfl

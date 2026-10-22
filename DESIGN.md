@@ -7859,6 +7859,44 @@ child dangled when it was interned (no `StoreWF` needed).
   specs. Whoever establishes `LoopR` at the loop's entry (the pipeline) supplies `PinSetsR` from
   `internAllPins_PB`'s post.
 
+
+### Landing 7: the level tables only grow (`LvlCnt` in `PoolGrew`); D25 fixed
+* **`PoolGrew` gained `lvl : LvlCnt m m'`** (`WhnfBase.lean`): the scratch flag `CTL[1]` is kept
+  and the level tables' counts (`CTL` 6‥15) do not drop. Being a field of `PoolGrew`, it rides on
+  every `StackKept`/`StackGrew`/`TelPost`/`CoreAfter` lane `whnf3` already threads; the only new
+  obligations are at writers of those words: frames get it by an auto-param `LvlFree C`
+  (`lvl_free`, `LvlFree.of_ge` for generic frames above 16); a level interning
+  (`CoreS.of_level`, now taking `hlc`) by `lvlCnt_of_arena` (`LvlGrow.lean`: the counts are the
+  twin tables' sizes under `ArenaR`, and `LStore.intern` only pushes, `LTGrow.internLNode`).
+* **Why a memory fact suffices.** A level stays stored: `lv_node` accepts it after a run if it did
+  before (`lvNodeW_mono`), so `lview_of_lvNodeW` and `StoreDen.lvlAll` read it back at the later
+  state (`lvl_den_later`, `lvNodeW_of_den`). The twin side needs no `Ext` in `CoreAfter`.
+* **D25 fixed**: `lvl_live` is gone; `infer_forall_io` carries the domain sort across its four calls
+  (`lvl_den_later`), `infer_pis`'s loop carries "every binder sort on `BSTK` is stored"
+  (`lvNodeW m ws[i] ≠ []`, a new hypothesis of `pisFull_ref`/`inferPisLeaf_refines`/
+  `pisOut_ref`), and `ensure_sort`'s answer is a stored sort's level (`ensureSort_view`).
+
+### Landing 12: helper `sum` — `IndSum` complete
+* Helper `sum` (2 h): `sumRules`, `checkStructFieldSortsI`, `checkSumCtor` (precondition: the
+  pre-block environment is `fe.restrictTo vis0`), `checkSumCtors`, `checkStructProjTable` (with
+  its `_scoped` helper and `er_from_iw`; lane decls2's `env_find`/`env_push`), all through stubs.
+  New stub contract `lvLeqTopStub_spec` (`lv_leq_top`: `Level.leq` on the readbacks, `sorry`, like
+  `lvl_eq_c`'s; the real one needs the `CoreS` bridge of landing 1). Program bundles `SumProg`,
+  `TblProg`. L: four loops to self-recursion, `check_field_sort_bound` split off, a handle guard
+  after `intern_const`, D18 extended to `check_sum_ctors`. ~2.9k proof lines for ~205 L lines
+  (**~14 per L line**, down from ~19, with `Sim`, `DecB`, program bundles).
+* Census: phase 8 **78 proven, 97 sorry, 42 written, 6 todo**; totals 719 proven / 140 sorry.
+
+### Landing 8: level lists too (`StoreDen.lsAll`, list counts in `LvlCnt`)
+* **`StoreDen.lsAll : LsAll a`**: every valid level-list handle reads back (the list twin of
+  `lvlAll`); `StoreDen.mono` takes it as its last argument. Kept by name/level steps (`LsAll.congr`,
+  `LsAll.of_ext`) and by list interning (`lsAll_internLsNode`: given the elements read back, the
+  new store has `LsAll` and the new handle reads back).
+* **`LvlCnt` covers the list table counts** (`CTL` 40, 41; `lvlCtlW`), so `LvlFree.of_ge` now needs
+  `42 ≤ x`. A list interning gets it from `lvlCnt_internLsNode` (`LsTables` only push); `CoreS.of_ls`
+  takes `hlsa`/`hlc` and uses `StackKept.of_frameL`; `ls1_call` now needs its element to read back.
+* **Why**: a list stays stored after a run (`lsNodeW_mono`), so `ls_den_later`/`lsNodeW_of_den`
+  read it back later — what whnf4's `instLP`/`LvlsEqDen` need for constants' level lists.
 ### Landing 12 (lane `decls3`): helpers `nat` and `divmod`, the definition arm's gates
 
 * **Structural-`Nat` gate** (helper `decls3-nat`, `DeclNat*.lean`, ~8 h): `natOpNames`,

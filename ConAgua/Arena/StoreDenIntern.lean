@@ -310,7 +310,7 @@ theorem StoreDen.of_views {m m' : Mem} {a a' : AState} {fe : IFEnv} (h : StoreDe
     StoreDen m' a' fe :=
   h.mono (by rw [hl]; exact LsExt.refl _) (by rw [hp]) (by rw [hp]) (fun _ _ hk => .inl (hc ▸ hk))
     he (fun x u hx => hv x _ (.inl ⟨_, rfl⟩) hx) (fun x c us hx => .inl (hv x _ (.inr ⟨_, _, rfl⟩) hx))
-    (h.lvlAll.congr (by simp only [EStore.ls, hl]))
+    (h.lvlAll.congr (by simp only [EStore.ls, hl])) (h.lsAll.congr hl)
 
 /-- Interning a node that is neither a `sort` nor a `const` creates no such view. -/
 theorem internNodeE_views {v : ENodeView} (hv : ¬ IsSC v) {a a' : AState} {r : EIdx}
@@ -346,7 +346,7 @@ theorem StoreDen.of_internSort {m m' : Mem} {a a' : AState} {fe : IFEnv} {u : LI
     StoreDen m' a' fe := by
   obtain ⟨hc, hp, hl, hv⟩ := internNodeE_sc (v := .sort u) (by simpa [internE] using hrun)
   have hls : a'.store.ls = a.store.ls := by simp only [EStore.ls, hl]
-  refine ⟨fun x u' hx => ?_, fun x c us hx => ?_, ?_, ?_, ?_, ?_, ?_, h.lvlAll.congr hls⟩
+  refine ⟨fun x u' hx => ?_, fun x c us hx => ?_, ?_, ?_, ?_, ?_, ?_, h.lvlAll.congr hls, h.lsAll.congr hl⟩
   · rcases hv x _ (.inl ⟨_, rfl⟩) hx with h' | h'
     · rw [hls]; exact h.sort x u' h'
     · cases h'; rw [hls]; exact hu
@@ -369,7 +369,7 @@ theorem StoreDen.of_internConst {m m' : Mem} {a a' : AState} {fe : IFEnv} {c : N
     StoreDen m' a' fe := by
   obtain ⟨hc, hp, hl, hv⟩ := internNodeE_sc (v := .const c us) (by simpa [internE] using hrun)
   have hls : a'.store.ls = a.store.ls := by simp only [EStore.ls, hl]
-  refine ⟨fun x u' hx => ?_, fun x c' us' hx => ?_, ?_, ?_, ?_, ?_, ?_, h.lvlAll.congr hls⟩
+  refine ⟨fun x u' hx => ?_, fun x c' us' hx => ?_, ?_, ?_, ?_, ?_, ?_, h.lvlAll.congr hls, h.lsAll.congr hl⟩
   · rcases hv x _ (.inl ⟨_, rfl⟩) hx with h' | h'
     · rw [hls]; exact h.sort x u' h'
     · cases h'
