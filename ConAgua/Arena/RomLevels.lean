@@ -265,8 +265,7 @@ def lvsK (b k : Word) : Option (Word × Mem) → Option (Word × Word × Mem)
 def romLevelsW : Nat → Mem → Word → Option (Word × Word × Mem)
   | 0, _, _ => none
   | n + 1, m, pos =>
-    if rom.length ≤ pos.toNat then none
-    else if UInt64.ofNat rom.length < pos + 8 then none
+    if ¬ u64OK rom pos then none
     else if 1152921504606846976 ≤ u64W rom pos then none
     else lvsK (stkTop m) (u64W rom pos) (romLvlsW rom n m (pos + 8) (u64W rom pos))
 
@@ -280,10 +279,9 @@ theorem lvsK_some (b k q : Word) (m₁ : Mem) (hok : stkPoolOK m₁ k) :
       lsK q (lsinternW (((sputW m₁ m₁.top b k 0).set64 CTL 0 (m₁.top + k)).set64 CTL 131 b) m₁.top k) := by
   simp only [lvsK]; rw [if_pos hok]
 theorem romLevelsW_eq (rom : List UInt8) (n : Nat) (m : Mem) (pos : Word)
-    (hp : pos.toNat < rom.length) (hb : ¬ UInt64.ofNat rom.length < pos + 8)
-    (hk : ¬ 1152921504606846976 ≤ u64W rom pos) :
+    (hu : u64OK rom pos) (hk : ¬ 1152921504606846976 ≤ u64W rom pos) :
     romLevelsW rom (n + 1) m pos = lvsK (stkTop m) (u64W rom pos) (romLvlsW rom n m (pos + 8) (u64W rom pos)) := by
-  simp only [romLevelsW, hb, hk, if_false, show ¬ rom.length ≤ pos.toNat by omega]
+  simp only [romLevelsW, hu, hk, if_false, not_true_eq_false]
 
 attribute [arena_grind =] lsK_some
 grind_pattern [arena_grind] romLevelsW_eq => romLevelsW rom (n + 1) m pos
@@ -342,7 +340,7 @@ theorem romLevels_specW (n : Nat) (s₀ : St) (pos : Word) (hs : (s₀.mem.arr64
     have hq := fun s₁ b k => Triple.keep hL.no_st8 (stkPool_specW p hL.stk_pool n s₁ b k)
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, hg, hq,
-        romU64_specB rom p hL.rom_u64 n,
+        romU64_spec rom p hL.rom_u64 n,
         internLs_spec p hL.lit_hash hL.limbs_eq hL.ls_match hL.ls_find hL.ls_push hL.intern_ls n] <;>
       finish [Keep.size, stkTop]
 
@@ -592,11 +590,10 @@ theorem romLevelsW_ok (us : List ConLeche.Level) (hus : us.all levelFits = true)
     rw [hd, encLevels, List.append_assoc]
   have hl : u64W rom pos = UInt64.ofNat us.length := u64W_of_drop rom pos _ _ hd0 (by omega) hr
   have hp8 : (pos + 8).toNat = pos.toNat + 8 := by rw [UInt64.toNat_add]; simp; omega
-  have hb : ¬ UInt64.ofNat rom.length < pos + 8 := by
-    rw [UInt64.lt_iff_toNat_lt, hp8, UInt64.toNat_ofNat', Nat.mod_eq_of_lt (by omega)]; omega
+  have hu : u64OK rom pos := u64OK_of_drop rom _ _ _ hd0 hr
   by_cases hk : 1152921504606846976 ≤ u64W rom pos
-  · simp [romLevelsW, hb, hk] at hW
-  rw [romLevelsW_eq rom n m pos (by omega) hb hk] at hW
+  · simp [romLevelsW, hu, hk] at hW
+  rw [romLevelsW_eq rom n m pos hu hk] at hW
   have hd8 : rom.drop (pos + 8).toNat = encLevelList us ++ rest := by
     rw [hp8, ← List.drop_drop, hd0]; simp [u64B]
   have hkN : (UInt64.ofNat us.length).toNat = us.length := by
