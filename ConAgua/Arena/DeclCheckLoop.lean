@@ -2,6 +2,7 @@ import ConAgua.Arena.DeclArmAxiom
 import ConAgua.Arena.DeclArmDefn
 import ConAgua.Arena.DeclNatGateSpec
 import ConAgua.Arena.DeclDivMod10
+import ConAgua.Arena.DeclNatSubAll
 
 /-!
 # `check_decl` refines `checkDecl` at the loop's relation (lane `decls3`)
@@ -55,10 +56,9 @@ structure CheckDeclProg (p : Prog) : Prop where
   natCert : p.lookup "defn_nat_cert" = some defnNatCert
   natText : ∀ f ∈ natGateFns, p.lookup f = armText.lookup f
   /-- The definition arm's `Nat.div`-family pin gate (helper `decls3-divmod`'s `divGateSpecD`
-  proves `DivGateSpec` from these): its program, the substitution walks' specs, its text's write
-  set. -/
+  proves `DivGateSpec` from these, with the walks' refinements `substC0_of`, `substCAll_of`): its
+  program and its text's write set. -/
   dm : DmProg10 p
-  substAll : ∀ dn vis fe, SubstCAll p dn vis fe
   dgClosed : closedA p stepA stepC dgFns = true
 
 /-- `subst_const0` at the walk fuel: helper `decls3-nat`'s `sc0_ref`. -/
@@ -97,7 +97,7 @@ theorem checkDeclDefn_loop (hP : CheckDeclProg p) (hdn : DnInj dn) (cv : IConsta
   fun n s₀ a₀ vis fe pend i hi hd _ hR =>
     checkDeclDefn_loop' hP.arm hP.val pins
       ⟨hP.df, natGateSpec hP.natSub hP.natGate hP.natCert hP.natText pins,
-        divGateSpecD hP.dm pins (substC0_of hP.natSub.toNatSubProg) hP.substAll hP.dgClosed⟩
+        divGateSpecD hP.dm pins (substC0_of hP.natSub.toNatSubProg) (substCAll_of ⟨hP.natSub.toNatSubProg, hP.dm.lSubstConstAll⟩) hP.dgClosed⟩
       dn hdn ds n s₀ a₀ vis fe pend i cv v h hi hd hR
 
 /-- `check_decl_opaque` (`DeclArmOpaque.lean`). -/
