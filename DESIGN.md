@@ -6052,9 +6052,9 @@ per entry to `docs/e2e.csv`.
   a fixture where compiled code and `L.run` differ is listed separately (a compiler or harness
   bug).
 
-### First results (master `dbe63b6`, 675 fixtures)
+### First results (master `119a47c`, 675 fixtures)
 
-1092 functions with L code reachable from the entries, 50 stubs. `check`: all 675 stop at
+1176 functions with L code reachable from the entries, 48 stubs. `check`: all 675 stop at
 `builtin_prelude`. `check_np`: 1 agree-accept (`long_line_5mib`: the frontend and the fold on a
 file without declarations to check), 38 agree-reject (35 by an `abort`; every one at the same
 stage as the twin: the inductive validation `validate_ind_d`/`vi_rec`/`vi_ctor` where the twin
@@ -6071,12 +6071,17 @@ Owners as in `docs/lanes.json`; reproducers are `scripts/e2e.py --only <fixture>
 assembly items, `docs/e2e.md`'s "Assembly" section (any run).
 
 1. **Modules that cannot be imported together** (one Lean file assembling the checker is
-   impossible until fixed; the e2e assembly works around it through text):
+   impossible until fixed; the e2e assembly works around it through text). At master `119a47c`:
    `Arena/InferLeaves.lean` (defeq) and `Arena/DeclCvg.lean` (decls2) both define
-   `L.Arena.decCV_words`; `Arena/WhnfCoreLoop.lean` (whnf) and `InferLeaves` both define
-   `L.Arena.coreRef_congr`; `Arena/WhnfCoreProj.lean` (whnf) and `Arena/InstListRefine.lean`
-   (exprops4) both define `L.Arena.SpineR.of_spn`. (`LiftBench`/`NatBits`, `L.Arena.bv`, is the
-   known benchmark clash.)
+   `L.Arena.decCV_words`; `Arena/WhnfCoreProj.lean` (whnf) and `Arena/DefEqLeaves.lean` (defeq)
+   both define `L.Arena.lsNodeW_viewLen`; `Arena/WhnfDeltaRefine.lean` (whnf) and
+   `Arena/InferBodyLet.lean` (defeq) both define `L.Arena.CoreSpec.zero`;
+   `Arena/PromoteERef.lean` (decls2) and `Arena/DefEqLeaves2.lean` (defeq) both define
+   `L.Arena.lit_rec`; `Arena/PromoteRec.lean` (decls2) and `Arena/Walk.lean` (walk, done) both
+   define `L.Arena.clrK` (its `eq_1`). Earlier the same day also `WhnfCoreLoop`/`InferLeaves`
+   (`coreRef_congr`) and `WhnfCoreProj`/`InstListRefine` (`SpineR.of_spn`), since fixed.
+   (`LiftBench`/`NatBits`, `L.Arena.bv`, is the known benchmark clash.) The current list is in
+   `docs/e2e.md`.
 2. **Arity mismatches between call sites and definitions** (each would fail `Prog.wf`):
    lane induct's call sites (now indproofs2) still call `get_app_fn(f, e)`, `get_app_args(f, e)`,
    `pi_result(f, e)`, `whnf(vis, dep, e)` — the whnf lane's functions take `(e)`, `(e)`, `(e)`,

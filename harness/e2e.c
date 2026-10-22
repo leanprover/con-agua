@@ -12,7 +12,11 @@
      missing CODE      rdx = 2 and the DIAG array's word 0 is CODE != 0: a stub was reached
      error             rdx = 2 otherwise (an abort or an out-of-bounds access)
 
-   env: CA_FUEL (default 2^62), CA_STACK (bytes, default 1 GiB), CA_WORDS (words per array) */
+   Byte array 1, if the program has it, is the pin-data buffer (DESIGN.md, lane `romload`): the
+   file CA_PINS (empty if unset).
+
+   env: CA_FUEL (default 2^62), CA_STACK (bytes, default 1 GiB), CA_WORDS (words per array),
+        CA_PINS (the pin-data file) */
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -52,9 +56,18 @@ int main(int argc, char **argv) {
   T[0] = (uint64_t)(st + stack); T[1] = (uint64_t)st;
   uint64_t *arr[4096];
   if (ca_nw > 4096) { fprintf(stderr, "too many arrays\n"); return 3; }
+  uint8_t *pins = 0; long np = 0;
+  if (ca_nb > 1 && (e = getenv("CA_PINS"))) {
+    FILE *g = fopen(e, "rb");
+    if (!g) { perror(e); return 3; }
+    fseek(g, 0, SEEK_END); np = ftell(g); fseek(g, 0, SEEK_SET);
+    pins = map(np + 1);
+    if (fread(pins, 1, np, g) != (size_t)np) { perror("read"); return 3; }
+    fclose(g);
+  }
   for (uint64_t a = 0; a < ca_nb; a++) {
-    T[2 + 2 * a] = a == 0 ? (uint64_t)buf : (uint64_t)map(8);
-    T[3 + 2 * a] = a == 0 ? (uint64_t)n : 0;
+    T[2 + 2 * a] = a == 0 ? (uint64_t)buf : a == 1 && pins ? (uint64_t)pins : (uint64_t)map(8);
+    T[3 + 2 * a] = a == 0 ? (uint64_t)n : a == 1 ? (uint64_t)np : 0;
   }
   for (uint64_t a = 0; a < ca_nw; a++) {
     arr[a] = map(8 * words);

@@ -502,7 +502,11 @@ def report(res, asm, compiled, clashes, args, t0):
     if clashes:
         lines += ["* **Modules that cannot be imported together** (a declaration defined twice; the "
                   "dump imports them in separate closures, a Lean assembly of the whole program cannot):", ""]
-        lines += [f"  * `{a}` vs `{b}`: both define `{d}`" for a, b, d in clashes]
+        seen = set()
+        for a, b, d in clashes:
+            if (frozenset((a, b)), d) not in seen:
+                seen.add((frozenset((a, b)), d))
+                lines.append(f"  * `{a}` vs `{b}`: both define `{d}`")
         lines += [""]
     if asm["conflicts"]:
         lines += ["* **Names bound to different L code** (the most common binding is used):", ""]
@@ -592,6 +596,16 @@ def main():
     for e, (exe, msg) in compiled.items():
         log(f"compile {e}: {msg[:300] if msg else ''}")
     stubs_by_code = {code: g for g, (code, _, _) in asm["stubs"].items()}
+    # the pin-data buffer (byte array 1, DESIGN.md lane `romload`), once the program reads it
+    reads_pins = any(c[0] and re.search(r"\bnb ([2-9]|\d\d)", c[1]) for c in compiled.values())
+    env = dict(os.environ)
+    npins = 0
+    if reads_pins:
+        pins = os.path.join(WORK, "pins.bin")
+        if not os.path.exists(pins):
+            lake("exe", "romgen", pins)
+        env["CA_PINS"] = pins
+        npins = 1
     fx = fixtures()
     if args.only:
         fx = [f for f in fx if re.search(args.only, f[0])]
@@ -606,22 +620,22 @@ def main():
         r = {"id": fid, "size": size, "expected": exp}
         h = sha(path)
         for entry in ENTRIES:
-            ck = f"{rk}:{h}:{entry}"
+            ck = f"{rk}:{h}:{entry}:{npins}"
             if ck in cache:
                 ref, where = cache[ck]
             else:
-                st, out = guard.run([os.path.join(BIN, "e2e-ref"), path] + (["--no-prelude"] if entry == "check_np" else []), T_REF)
+                st, out = guard.run([os.path.join(BIN, "e2e-ref"), path] + (["--no-prelude"] if entry == "check_np" else []) + [f"--pins={npins}"], T_REF)
                 ref, where = ref_verdict(out, st)
                 if st == "ok":
                     cache[ck] = [ref, where]
             exe = compiled[entry][0]
             cap = None
             if exe:
-                st, out = guard.run([exe, path], T_COMPILED)
+                st, out = guard.run([exe, path], T_COMPILED, env=env)
                 lo = l_outcome(out, st, stubs_by_code)
                 if lo == "error":
                     # capacities: once more with every array 8 times larger
-                    st, out = guard.run([exe, path], T_COMPILED, env=dict(os.environ, CA_WORDS=str(BIG_WORDS)))
+                    st, out = guard.run([exe, path], T_COMPILED, env=dict(env, CA_WORDS=str(BIG_WORDS)))
                     lo2 = l_outcome(out, st, stubs_by_code)
                     if lo2 != lo:
                         cap, lo = lo, lo2
@@ -631,13 +645,13 @@ def main():
             if cap:
                 d["small"] = cap
             if lo == "error" and size <= TRACE_MAX_BYTES:
-                st, out = guard.run([os.path.join(BIN, "e2e-l"), "trace", prog, entry, path, str(TRACE_WORDS)], T_INTERP)
+                st, out = guard.run([os.path.join(BIN, "e2e-l"), "trace", prog, entry, path, str(TRACE_WORDS)], T_INTERP, env=env)
                 ls = out.splitlines()
                 if st == "ok" and len(ls) >= 2:
                     d["trace"] = ls[0] + " in " + ls[1][len("stack "):].split(" > ")[-1] + " (" + ls[1][len("stack "):] + ")"
                     d["stop"] = ls[0] + " in " + ls[1][len("stack "):].split(" > ")[-1]
             if not args.no_interp and size <= INTERP_MAX_BYTES:
-                st, out = guard.run([os.path.join(BIN, "e2e-l"), "run", prog, entry, path, str(INTERP_WORDS)], T_INTERP)
+                st, out = guard.run([os.path.join(BIN, "e2e-l"), "run", prog, entry, path, str(INTERP_WORDS)], T_INTERP, env=env)
                 d["interp"] = interp_outcome(out, st)
             r[entry] = d
         return r
