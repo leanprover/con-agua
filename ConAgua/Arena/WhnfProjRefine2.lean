@@ -317,4 +317,76 @@ theorem findProj_refines (p : Prog) (hp : ProjProg p) : FindProjOK p := by
     have e : (1 : Word).toNat = 1 := rfl
     omega
 
+/-- **`find_proj` leaves the record pool alone** (`ErecKept`'s `find_proj` half). -/
+theorem findProj_erec {p : Prog} (hp : ProjProg p) {n : Nat} {vs : List Word} {m : Mem}
+    {r : List Word} {m' : Mem} (h : callW p n "find_proj" vs m = some (r, m')) :
+    m'.arr64 EREC = m.arr64 EREC :=
+  (proj_frame_erec hp (by decide) h).1
+
+/-- **`find_proj` answers a record that decodes** (`ProjFound`). -/
+theorem projFound (p : Prog) (hp : ProjProg p) : ProjFound p := by
+  intro n m a₀ dn vis fe M eb T i r m' hS hc hr
+  cases n with
+  | zero => rw [callW_zero] at hc; cases hc
+  | succ n =>
+  obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (findProj_spec p hp n _ vis T i) hc
+  simp only at hW
+  unfold fpW at hW
+  cases hc1 : callW p n "proj_table_name" [T] m with
+  | none => rw [hc1] at hW; cases hW
+  | some q1 =>
+  obtain ⟨r₁, m₁⟩ := q1
+  rw [hc1] at hW
+  simp only at hW
+  by_cases c1 : 4294967296 ≤ r₁.headD 0
+  · rw [if_pos c1] at hW; cases hW
+  rw [if_neg c1] at hW
+  obtain ⟨-, ⟨M1, hS1, -, -⟩, -, -⟩ :=
+    CoreSpec.of_callW (s₀ := ⟨m, Locals.init []⟩) (projTableName_refines p hp n _ a₀ dn vis fe M eb T hS) hc1
+  obtain ⟨hE1, -⟩ := proj_frame_erec hp (by decide) hc1
+  have hw : (r₁.headD 0).toNat < 2 ^ 32 := by
+    have := mt UInt64.le_iff_toNat_le.mpr c1
+    have e : (4294967296 : Word).toNat = 4294967296 := rfl
+    rw [e] at this; omega
+  cases hc2 : callW p n "env_find" [r₁.headD 0, vis] m₁ with
+  | none => rw [hc2] at hW; cases hW
+  | some q2 =>
+  obtain ⟨r₂, m₂⟩ := q2
+  rw [hc2] at hW
+  simp only at hW
+  obtain ⟨s₂, hs₂, hmem, -, ht, hf, hq⟩ := triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩)
+    (envFind_specW p hp.envix hp.envrow hp.envfind n _ _ vis hw) hc2
+  have hm2 : m₂ = m₁ := by rw [← hs₂]; exact hmem
+  subst hm2
+  simp only [efW] at hf hq
+  by_cases b0 : r₂.headD 0 = 0
+  · rw [if_pos b0] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    exact absurd hW.1.symm hr
+  rw [if_neg b0] at hW
+  have z : rowC m₂ (r₁.headD 0) ≠ 0 := fun z => by rw [if_pos z] at hf; exact b0 hf
+  rw [if_neg z] at hf hq
+  have lt : rowC m₂ (r₁.headD 0) - 1 < vis := Classical.byContradiction fun lt => by
+    rw [if_neg lt] at hf; exact b0 hf
+  rw [if_pos lt] at hf hq
+  simp only at hq
+  by_cases b6 : rdW (m₂.arr64 EREC) (r₂.tail.headD 0) ≠ 6
+  · rw [if_pos b6] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    exact absurd hW.1.symm hr
+  rw [if_neg b6] at hW
+  have hq2 : r.tail.headD 0 = r₂.tail.headD 0 := by
+    split at hW <;> simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    · exact hW.2.1.symm
+    · exact absurd hW.1.symm hr
+  obtain ⟨ci, hci⟩ := EnvR.row_dec hS1.env (r₁.headD 0) hw ht z
+  rw [← hq] at hci
+  have hciF := ArrExt.decCI (erecP_ext m₂) hci
+  have b6' : rdW (m₂.arr64 EREC) (r₂.tail.headD 0) = 6 := by simpa using b6
+  have h6 : (m₂.arr64 EREC)[(r₂.tail.headD 0).toNat]? = some 6 := by
+    rw [rdW_some (by rw [b6']; decide), b6']
+  obtain ⟨tbl, -, htbl⟩ := decCI_six hciF h6
+  exact ⟨tbl, by rw [hq2, ← hE1]; exact htbl⟩
+
 end L.Arena
