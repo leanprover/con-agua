@@ -608,4 +608,103 @@ theorem bpcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     refine ⟨hS2, hg1.trans hg2, ?_⟩
     rw [hr2]; simp only [List.all_cons, hcn, heq, hnpt, Bool.not_false, Bool.true_and, Bool.and_true]; rfl
 
+/-! ## `block_shape_pins_ok` -/
+
+/-- **The model of `block_shape_pins_ok`** (at exec fuel `n + 1`). -/
+def bpoW (n : Nat) (m : Mem) (nP cto ctl lo ll ro rl cso csl : Word) : Option (List Word × Mem) :=
+  match bpfW n m cto ctl lo ll with
+  | none => none
+  | some (ra, m1) =>
+    if ra.headD 0 = 0 then some ([0], m1)
+    else match bprW n m1 ro rl with
+      | none => none
+      | some (rb, m2) =>
+        if rb.headD 0 = 0 then some ([0], m2)
+        else match bpcW n m2 nP cso csl lo ll with
+          | none => none
+          | some (rc, m3) => some ([rc.headD 0], m3)
+
+theorem bpo_spec (p : Prog) (hP : IndPartsProg4 p) (hrf : p.lookup "reserved_from" = some reservedFrom)
+    (hrc : p.lookup "reserved_contains" = some reservedContains) (hec : p.lookup "er_copy" = some erCopy)
+    (het : p.lookup "er_to_iw" = some erToIw) (hseq : p.lookup "sl_eq" = some slEq)
+    (hf : p.lookup "block_shape_pins_formers" = some blockShapePinsFormers)
+    (hr : p.lookup "block_shape_pins_recs" = some blockShapePinsRecs)
+    (hc : p.lookup "block_shape_pins_ctors" = some blockShapePinsCtors)
+    (hp : p.lookup "block_shape_pins_ok" = some blockShapePinsOk) (n : Nat) (s₀ : St)
+    (nP cto ctl lo ll ro rl cso csl : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "block_shape_pins_ok" [nP, cto, ctl, lo, ll, ro, rl, cso, csl]
+    ⦃fun r s' => LocEq s' s₀ ∧ bpoW n s₀.mem nP cto ctl lo ll ro rl cso csl = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, blockShapePinsOk]
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, bpf_spec p hP hrf hrc hec het hseq hf n,
+      bpr_spec p hP hrf hrc hr n, bpc_spec p hP hrf hrc hec het hseq hc n] <;>
+    finish (gen := 20) [bpoW]
+
+theorem partsW01 {r : List Word} {b : Bool} (h : r = [if b then 1 else 0]) : (r.headD 0 = 0) ↔ b = false := by
+  subst h; cases b <;> simp
+
+/-- **`block_shape_pins_ok`**: the three pins, the twin's conjunction. -/
+theorem bpoW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
+    {m m' : Mem} {nP cto ctl lo ll ro rl cso csl : Word} {r : List Word} {cvTs : List IConstantVal}
+    {rs : List (IConstantVal × Nat × Nat × List IRecRule)} {cs : List (IConstantVal × Nat × Nat)}
+    {lps R : List NIdx} (hR : reservedBasisNames.run a = .ok (R, a))
+    (h : bpoW n m nP cto ctl lo ll ro rl cso csl = some (r, m')) (hS : StageR dn vis fe m a)
+    (hts : PSlR decCVp cvTs cto ctl m) (hrs : PSlR decSR rs ro rl m) (hcs : PSlR decSC cs cso csl m)
+    (hl : decHL m lo.toNat ll.toNat = some lps) (hlb : lo.toNat + ll.toNat ≤ iwTop m) :
+    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+      r = [if ((cvTs.all fun c => !R.contains c.name && c.levelParams == lps) &&
+          (rs.all fun r => !R.contains r.1.name) &&
+          (cs.all fun c => c.2.1 == nP.toNat && c.1.levelParams == lps && !R.contains c.1.name))
+        then 1 else 0] := by
+  unfold bpoW at h
+  cases h1 : bpfW n m cto ctl lo ll with
+  | none => rw [h1] at h; cases h
+  | some x1 =>
+  obtain ⟨ra, m1⟩ := x1
+  rw [h1] at h
+  simp only at h
+  obtain ⟨hS1, hg1, hra⟩ := bpfW_ok hR n m m1 cto ctl cvTs ra h1 hS hts hl hlb
+  by_cases ha : ra.headD 0 = 0
+  · rw [if_pos ha] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    rw [(partsW01 hra).mp ha]
+    exact ⟨hS1, hg1, rfl⟩
+  rw [if_neg ha] at h
+  have hat : (cvTs.all fun c => !R.contains c.name && c.levelParams == lps) = true := by
+    cases hcc : (cvTs.all fun c => !R.contains c.name && c.levelParams == lps)
+    · exact absurd ((partsW01 hra).mpr hcc) ha
+    · rfl
+  cases h2 : bprW n m1 ro rl with
+  | none => rw [h2] at h; cases h
+  | some x2 =>
+  obtain ⟨rb, m2⟩ := x2
+  rw [h2] at h
+  simp only at h
+  obtain ⟨hm2, hrb⟩ := bprW_ok hR n m1 m2 ro rl rs rb h2 hS1 (hrs.grow decSR_mono hg1)
+  rw [hm2] at h
+  by_cases hb : rb.headD 0 = 0
+  · rw [if_pos hb] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    rw [hat, (partsW01 hrb).mp hb]
+    exact ⟨hS1, hg1, rfl⟩
+  rw [if_neg hb] at h
+  have hbt : (rs.all fun r => !R.contains r.1.name) = true := by
+    cases hcc : (rs.all fun r => !R.contains r.1.name)
+    · exact absurd ((partsW01 hrb).mpr hcc) hb
+    · rfl
+  cases h3 : bpcW n m1 nP cso csl lo ll with
+  | none => rw [h3] at h; cases h
+  | some x3 =>
+  obtain ⟨rc, m3⟩ := x3
+  rw [h3] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨hS3, hg3, hrc⟩ := bpcW_ok hR n m1 m3 cso csl cs rc h3 hS1 (hcs.grow decSC_mono hg1)
+    (by rw [decHL_grow3 hg1 hlb]; exact hl) (Nat.le_trans hlb hg1.1)
+  refine ⟨hS3, hg1.trans hg3, ?_⟩
+  rw [hat, hbt, hrc]; simp only [Bool.true_and]; rfl
+
 end L.Ind
