@@ -6847,6 +6847,26 @@ introduces it; the coordinator reviews the list at each batch of landings.
   generalize them to the fields they use, `instLP`, to plug); `natPred` (`natPred_refines` posts
   `ResH`, the hypothesis `ResW`); `natOpResult`, `whnfGrows` (lane `whnf`'s); `constTy`, `lit`,
   `bstk`, `bcap`, `proj` (the inference side, landing 4).
+### `field_sort_zero`, `NatPredW` (`InferFieldSort*.lean`, helper `defeq2-fsz`)
+* **`field_sort_zero(po, pl, us, fs)` has L code** (`fieldSortZeroL`): `ls_node(us)`, heap reset
+  (`CTL[192] := 0`, as `lvl_eq`), `lv_substl(fs, po, pl, o, k)` with `lv_lookup` at `KA = EREC`,
+  `VA = POOL` (the binding `lvLookupG EREC POOL`; `inst_lp`/`caps_never_zero` can share it),
+  `lh_mk(0, 0, 0)` for `zero`, `lv_equiv`, answer `u64(r == 2)`. Model `fszW`, spec
+  `fieldSortZero_spec` (`vcgen` + `finish`), refinement `fszW_ok`, and
+  **`fieldSortZero_core : FieldSortZeroProg p → FieldSortZeroOK p`** (`refines_part inferProj`;
+  axioms `propext`, `Classical.choice`, `Quot.sound`). No deviation (aborts: `ls_node` on a
+  dangling list, which the twin also fails on; the heap's capacity).
+* **`FieldSortZeroOK` strengthened** (`Knot.lean`): the caller supplies `ReadNCOK a₀` (new: the
+  twin's `readNC` rows are readbacks; `CoreS` has `readL`/`readLs` but no name counterpart, and
+  `readNameM` answers a cached row unchecked), `∃ ks, lps.mapM (denoteN a₀.store.ns) = some ks`,
+  `∃ ls, denoteLs a₀.store.lss (decI us) = some ls`, `∃ l, denoteL a₀.store.ls (decI fs) = some l`.
+  Proposed: a `readN : ReadNCOK a` field in `CoreS` (kept by every core body as `readL` is); the
+  same hypothesis will be needed by `caps_never_zero` (`capsNeverZeroPW` reads names too).
+* **`NatPredW p` is a theorem**: `natPredW_of : NatPredProg p → NatPredW p`
+  (`InferFieldSortNat.lean`). `natPred_refines` now posts `ResW` (new arguments: `LitInternHW`,
+  discharged by `WhnfDeltaRefine3`'s `internW_hw` as `litInternHW`); `internLit_core` gives the
+  handle word bound (`InternSpecW`), `natPredLit_refines_hw` is `natPredLit_refines` with it.
+
 ### Landing 4: the quotient and axiom arms; `and_pin_ok`'s inductive arm in L
 
 * **`checkDecl_loop`: every arm's spec is proved but the definition arm's** (`DeclArmQuot.lean`,
