@@ -217,39 +217,44 @@ def checkDeclL : FunDecl := lfn (i, vis) locals (k, bo, bl, v) {
   abort
 }
 
+/-- `install_value(i, vis, ck, vk)`: `installStepGo`'s guard-and-install arm on record `i` (a
+definition, theorem or opaque not among the pinned names): its constant record (kind `ck`, `1`
+`defnInfo`, `2` `thmInfo`, `0` `axiomInfo`), the header's guards, the value's guards but for a
+theorem (`vk = 1`), the push, the value group (kind `vk`) → the new view and the group's record.
+Split out of `install_step_go` so that its call closure is the arm's alone (its write set comes
+from the text, `DeclStepSpec.lean`). -/
+-- con-ron: ConRon/Arena/Checker.lean:113-151 ConRon.Arena.installStepGo
+def installValueL : FunDecl := lfn (i, vis, ck, vk) locals (p, z, v, g) {
+  p := call erec_ci(i, ck);
+  z := call install_header(vis, p + 1);
+  if vk != 1 { z := call install_value_guards(vis, p + 1, EREC.u64[p + 5]) };
+  v := call env_push(vis, p);
+  g := call erec_vg(p, vk);
+  return (v, g)
+}
+
 /-- `install_step_go(i, vis)`: `installStepGo` on record `i` → the new view, the value group's
 flag and record. -/
 -- con-ron: ConRon/Arena/Checker.lean:113-151 ConRon.Arena.installStepGo
 @[l_impl ConRon.Arena.installStepGo]
-def installStepGoL : FunDecl := lfn (i, vis) locals (k, x, c, v, p, z, g) {
+def installStepGoL : FunDecl := lfn (i, vis) locals (k, x, c, v, z, g) {
   z := call iw_reset();
   k := DECL.u64[1 + 8 * i];
   x := DECL.u64[2 + 8 * i] & 4294967295;
   if k == 2 {
     c := call pin_in(x, 15, 30);
     if c != 0 { v := call check_decl(i, vis); return (v, 0, 0) };
-    p := call erec_ci(i, 1);
-    z := call install_header(vis, p + 1);
-    z := call install_value_guards(vis, p + 1, EREC.u64[p + 5]);
-    v := call env_push(vis, p);
-    g := call erec_vg(p, 0);
+    (v, g) := call install_value(i, vis, 1, 0);
     return (v, 1, g)
   };
   if k == 3 {
-    p := call erec_ci(i, 2);
-    z := call install_header(vis, p + 1);
-    v := call env_push(vis, p);
-    g := call erec_vg(p, 1);
+    (v, g) := call install_value(i, vis, 2, 1);
     return (v, 1, g)
   };
   if k == 4 {
     c := call pin_in(x, 44, 46);
     if c != 0 { v := call check_decl(i, vis); return (v, 0, 0) };
-    p := call erec_ci(i, 0);
-    z := call install_header(vis, p + 1);
-    z := call install_value_guards(vis, p + 1, EREC.u64[p + 5]);
-    v := call env_push(vis, p);
-    g := call erec_vg(p, 2);
+    (v, g) := call install_value(i, vis, 0, 2);
     return (v, 1, g)
   };
   v := call check_decl(i, vis);
@@ -290,7 +295,8 @@ def declStepFns : Prog :=
    ("install_header", installHeaderL), ("install_value_guards", installValueGuardsL),
    ("dind_copy", dindCopy), ("ind_rec_copy", indRecCopy), ("ind_copy_go", indCopyGo),
    ("ind_block_to_erec", indBlockToErec), ("check_decl", checkDeclL),
-   ("install_step_go", installStepGoL), ("check_value_group", checkValueGroupL)]
+   ("install_value", installValueL), ("install_step_go", installStepGoL),
+   ("check_value_group", checkValueGroupL)]
 
 /-- Master callees lane `induct`'s program lacks, as stubs here (the whole program has the real
 ones): lane `whnf`'s cached level comparison. -/
