@@ -3,7 +3,7 @@
    Loads FILE into byte array 0, gives every word array CA_WORDS words (default 2^22; zeroed,
    mapped lazily), sets up the descriptor table (L.Compiler.Tab: stack top, stack limit, the
    base/length pairs of the ca_nb byte arrays and the ca_nw word arrays, the constant data ca_rom,
-   the result area, no entry arguments) and calls ca_enter(T, fuel) once.
+   the result area, the global variables, no entry arguments) and calls ca_enter(T, fuel) once.
 
    Prints one line:
      accept            rdx = 0 and rax = ACCEPT (0x414343455054), the only accept
@@ -26,7 +26,7 @@
 typedef struct { uint64_t rax, rdx; } ca_res;
 extern ca_res ca_enter(uint64_t *T, uint64_t fuel);
 extern const uint8_t ca_rom[];
-extern const uint64_t ca_rom_len, ca_nw, ca_nb, ca_diag;
+extern const uint64_t ca_rom_len, ca_nw, ca_nb, ca_diag, ca_ng;
 
 #define ACCEPT 0x414343455054ull
 
@@ -50,8 +50,9 @@ int main(int argc, char **argv) {
   fclose(f);
   uint8_t *st = map(stack);
   uint64_t na = ca_nb + ca_nw;
-  /* table: 2 + 2 na words, the rom, a generous result area, no arguments */
-  size_t tw = 2 + 2 * na + (ca_rom_len + 7) / 8 + 64;
+  /* table: 2 + 2 na words, the rom, a generous result area, the ca_ng global variables (zero, as
+     mmap gives them), no arguments */
+  size_t tw = 2 + 2 * na + (ca_rom_len + 7) / 8 + 64 + ca_ng;
   uint64_t *T = map(8 * tw);
   T[0] = (uint64_t)(st + stack); T[1] = (uint64_t)st;
   uint64_t *arr[4096];

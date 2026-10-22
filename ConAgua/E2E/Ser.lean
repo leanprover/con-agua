@@ -54,6 +54,7 @@ partial def serE : Expr → SerM String
   | .len64 a => pure s!"(n64 {a})"
   | .cmpw c a b => return s!"(w {cmpTok c} {← serE a} {← serE b})"
   | .ldc d i => return s!"(ldc {← dataIdx d} {← serE i})"
+  | .glob g => pure s!"(g {g.id})"
 
 partial def serC : Cond → SerM String
   | .cmp c a b => return s!"(cmp {cmpTok c} {← serE a} {← serE b})"
@@ -74,6 +75,7 @@ partial def serS : Stmt → SerM String
   | .call xs f args =>
     return s!"(call ({" ".intercalate (xs.map toString)}) {f} ({" ".intercalate (← args.mapM serE)}))"
   | .abort => pure "abort"
+  | .gset g e => return s!"(gset {g.id} {← serE e})"
 
 /-! ## Reading it back -/
 
@@ -151,6 +153,7 @@ partial def parseE : P Expr := do
     | "l64" => do let a ← nat; pure (.ld64 a (← parseE))
     | "n8" => do let x ← nat; pure (.len8 x)
     | "n64" => do let x ← nat; pure (.len64 x)
+    | "g" => do let x ← nat; pure (.glob ⟨x⟩)
     | "w" => do let c ← cmpOf (← atom); let a ← parseE; let b ← parseE; pure (.cmpw c a b)
     | "ldc" => do
       let k ← nat
@@ -193,6 +196,7 @@ partial def parseS : P Stmt := do
     let h ← atom
     let s ← match h with
       | "set" => do let x ← nat; pure (.set x (← parseE))
+      | "gset" => do let x ← nat; pure (.gset ⟨x⟩ (← parseE))
       | "s8" => do let a ← nat; let i ← parseE; let e ← parseE; pure (.st8 a i e)
       | "s64" => do let a ← nat; let i ← parseE; let e ← parseE; pure (.st64 a i e)
       | "seq" => do let s ← parseS; let t ← parseS; pure (.seq s t)

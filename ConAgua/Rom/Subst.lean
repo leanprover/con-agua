@@ -30,6 +30,7 @@ def Expr.subPB (bs : List UInt8) : Expr → Expr
   | .len64 a => .len64 a
   | .cmpw c a b => .cmpw c (subPB bs a) (subPB bs b)
   | .ldc d i => .ldc d (subPB bs i)
+  | .glob g => .glob g
 
 def Cond.subPB (bs : List UInt8) : Cond → Cond
   | .cmp c a b => .cmp c (a.subPB bs) (b.subPB bs)
@@ -49,6 +50,7 @@ def Stmt.subPB (bs : List UInt8) : Stmt → Stmt
   | .ret es => .ret (es.map (Expr.subPB bs))
   | .call xs f args => .call xs f (args.map (Expr.subPB bs))
   | .abort => .abort
+  | .gset g e => .gset g (e.subPB bs)
 
 -- con-ron: none — a proof device (the pin data as constant data), no twin
 def FunDecl.subPB (bs : List UInt8) (fd : FunDecl) : FunDecl := { fd with body := fd.body.subPB bs }
@@ -168,6 +170,7 @@ theorem evalE_subPB (e : Expr) : Agree bs (evalE (e.subPB bs)) (evalE e) := by
   | cmpw c a b iha ihb =>
     exact Agree.bind iha fun _ => Agree.bind ihb fun _ => Agree.pure _
   | ldc d i ih => exact Agree.bind ih fun v => Agree.ldc d v
+  | glob g => exact Agree.get_bind fun _ _ => Agree.pure _
 
 theorem evalC_subPB (c : Cond) : Agree bs (evalC (c.subPB bs)) (evalC c) := by
   induction c with
@@ -285,6 +288,9 @@ theorem step_agree {p : Prog} (hp : Prog.noSt8PB p = true) {k k' : Stmt → M Si
         Agree.bind (Agree.modify fun s h => (congrArg (Mem.arr8 · PB)
           (St.setLocs_mem s xs _)).trans h) fun _ => Agree.pure _
   | abort => exact Agree.throw _
+  | gset g e =>
+    exact Agree.bind (evalE_subPB e) fun _ =>
+      Agree.bind (Agree.modify fun _ h => h) fun _ => Agree.pure _
 
 theorem exec_agree {p : Prog} (hp : Prog.noSt8PB p = true) (n : Nat) :
     ∀ st, st.noSt8PB = true →
