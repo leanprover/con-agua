@@ -483,26 +483,65 @@ def classRuleOkL : FunDecl := lfn (visT, visR, cvR, n, gen)
   return gen
 }
 
+/-- `class_rules_ok_one(visT, visR, g, cvR, x, gen)`: `classRulesOk`'s rule check at the telescope
+length `nP + |slots| + nF` (aborts on a word overflow, a capacity). -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:591-605 ConRon.Arena.classRulesOk
+@[l_impl ConRon.Arena.classRulesOk]
+def classRulesOkOne : FunDecl := lfn (visT, visR, g, cvR, x, gen) locals (nn, r) {
+  nn := IW.u64[g] + IW.u64[g + 8];
+  if nn + IW.u64[x + 1] < nn { abort };
+  r := call class_rule_ok(visT, visR, cvR, nn + IW.u64[x + 1], gen);
+  return r
+}
+
 /-- `class_rules_ok(visT, visR, g, recCls.off, recCls.len, cvGs.off, cvGs.len, cvR, c, xs.off,
-xs.len)`: a recursor's generated rules, one per constructor `xs`. -/
+xs.len)`: a recursor's generated rules, one per constructor `xs` (the twin's recursion; the telescope
+length `nP + |slots| + nF` aborts on a word overflow, a capacity). -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:591-605 ConRon.Arena.classRulesOk
 @[l_impl ConRon.Arena.classRulesOk]
 def classRulesOkL : FunDecl := lfn (visT, visR, g, recClsOff, recClsLen, cvGsOff, cvGsLen, cvR, c,
     xsOff, xsLen)
-    locals (q, j, x, rlvls, ok, gen, r, lo, ll) {
-  q := call iw_alloc(xsLen);
-  j := 0;
-  while j < xsLen {
-    x := IW.u64[xsOff + j];
-    (lo, ll) := call cv_lps(cvR);
-    rlvls := call param_levels(lo, ll);
-    (ok, gen) := call class_gen_rule(g, recClsOff, recClsLen, cvGsOff, cvGsLen, rlvls, c, x);
-    if ok == 0 { abort };
-    r := call class_rule_ok(visT, visR, cvR, IW.u64[g] + IW.u64[g + 8] + IW.u64[x + 1], gen);
-    IW.u64[q + j] := r;
-    j += 1
+    locals (x, rlvls, ok, gen, r, lo, ll, ro, rl, qo, ql) {
+  if xsLen == 0 { return (0, 0) };
+  x := IW.u64[xsOff];
+  (lo, ll) := call cv_lps(cvR);
+  rlvls := call param_levels(lo, ll);
+  (ok, gen) := call class_gen_rule(g, recClsOff, recClsLen, cvGsOff, cvGsLen, rlvls, c, x);
+  if ok == 0 { abort };
+  r := call class_rules_ok_one(visT, visR, g, cvR, x, gen);
+  (ro, rl) := call class_rules_ok(visT, visR, g, recClsOff, recClsLen, cvGsOff, cvGsLen, cvR, c,
+    xsOff + 1, xsLen - 1);
+  (qo, ql) := call sl_cons(r, ro, rl);
+  return (qo, ql)
+}
+
+/-- `class_recs_rules_ok_go(visT, visR, g, recCls.off, recCls.len, cvGs.off, cvGs.len, cvs.off,
+cvs.len, cs.off, cs.len)`: the twin's recursion over the walked tails `cvs`, `cs` of the whole
+lists `cvGs`, `recCls`. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:607-620 ConRon.Arena.classRecsRulesOk
+@[l_impl ConRon.Arena.classRecsRulesOk]
+def classRecsRulesOkGo : FunDecl := lfn (visT, visR, g, recClsOff, recClsLen, cvGsOff, cvGsLen,
+    cvsOff, cvsLen, csOff, csLen)
+    locals (cvG, c, hdr, xsOff, xsLen, rhssOff, rhssLen, m, rec, ro, rl, qo, ql) {
+  if cvsLen == 0 { return (0, 0) };
+  if csLen == 0 { return (0, 0) };
+  cvG := IW.u64[cvsOff];
+  c := IW.u64[csOff];
+  xsOff := 0;
+  xsLen := 0;
+  if c < IW.u64[g + 10] {
+    hdr := IW.u64[IW.u64[g + 9] + c];
+    xsOff := IW.u64[hdr];
+    xsLen := IW.u64[hdr + 1]
   };
-  return (q, xsLen)
+  (rhssOff, rhssLen) := call class_rules_ok(visT, visR, g, recClsOff, recClsLen, cvGsOff, cvGsLen,
+    cvG, c, xsOff, xsLen);
+  m := call target_major_at(IW.u64[g + 3], IW.u64[g + 4], c);
+  rec := call rec4(cvG, m, rhssOff, rhssLen);
+  (ro, rl) := call class_recs_rules_ok_go(visT, visR, g, recClsOff, recClsLen, cvGsOff, cvGsLen,
+    cvsOff + 1, cvsLen - 1, csOff + 1, csLen - 1);
+  (qo, ql) := call sl_cons(rec, ro, rl);
+  return (qo, ql)
 }
 
 /-- `class_recs_rules_ok(visT, visR, g, recCls.off, recCls.len, cvGs.off, cvGs.len)`: every
@@ -510,28 +549,10 @@ recursor's generated rules, with its class (the shorter of `cvGs`/`recCls` decid
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:607-620 ConRon.Arena.classRecsRulesOk
 @[l_impl ConRon.Arena.classRecsRulesOk]
 def classRecsRulesOkL : FunDecl := lfn (visT, visR, g, recClsOff, recClsLen, cvGsOff, cvGsLen)
-    locals (n, q, j, cvG, c, ctorsLen, hdr, xsOff, xsLen, rhssOff, rhssLen, m, rec) {
-  n := cvGsLen;
-  if recClsLen < n { n := recClsLen };
-  q := call iw_alloc(n);
-  ctorsLen := IW.u64[g + 10];
-  j := 0;
-  while j < n {
-    cvG := IW.u64[cvGsOff + j];
-    c := IW.u64[recClsOff + j];
-    if c < ctorsLen {
-      hdr := IW.u64[IW.u64[g + 9] + c];
-      xsOff := IW.u64[hdr];
-      xsLen := IW.u64[hdr + 1]
-    } else { xsOff := 0; xsLen := 0 };
-    (rhssOff, rhssLen) := call class_rules_ok(visT, visR, g, recClsOff, recClsLen, cvGsOff, cvGsLen,
-      cvG, c, xsOff, xsLen);
-    m := call target_major_at(IW.u64[g + 3], IW.u64[g + 4], c);
-    rec := call rec4(cvG, m, rhssOff, rhssLen);
-    IW.u64[q + j] := rec;
-    j += 1
-  };
-  return (q, n)
+    locals (qo, ql) {
+  (qo, ql) := call class_recs_rules_ok_go(visT, visR, g, recClsOff, recClsLen, cvGsOff, cvGsLen,
+    cvGsOff, cvGsLen, recClsOff, recClsLen);
+  return (qo, ql)
 }
 
 /-! ## `classStreamRecs`, `classKeyCanon`, `classSeeds`, `classKeyOf` -/
@@ -879,7 +900,9 @@ def recGenFns : Prog :=
    ("class_rec_ty_ok_guards", classRecTyOkGuards),
    ("class_rec_tys_ok", classRecTysOkL), ("class_rule_ok_domains", classRuleOkDomains),
    ("class_rule_ok_guards", classRuleOkGuards), ("class_rule_ok", classRuleOkL), ("class_rules_ok", classRulesOkL),
-   ("class_recs_rules_ok", classRecsRulesOkL), ("class_stream_recs", classStreamRecsL),
+   ("class_rules_ok_one", classRulesOkOne),
+   ("class_recs_rules_ok", classRecsRulesOkL),
+   ("class_recs_rules_ok_go", classRecsRulesOkGo), ("class_stream_recs", classStreamRecsL),
    ("class_key_canon", classKeyCanonL), ("class_seeds", classSeedsL),
    ("class_key_of_closed", classKeyOfClosed), ("class_key_of", classKeyOfL),
    ("check_block_classes_keys", checkBlockClassesKeys),
