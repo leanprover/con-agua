@@ -49,7 +49,8 @@ index `j` (`…_go`), so that its refinement is one induction mirroring the list
 `name_rec_pre(n)` (`viewN n` matched against `.str T "rec"`), `ifl_contains`, `ifl_nodup`,
 `ifl_find_last`; `vi_unsafe`, `vi_np_go`/`vi_nparams`, `vi_map_go`/`vi_map`,
 `vi_ids_go`/`vi_listed_go`/`vi_listed`, `vi_ctor`, `vi_order_in`/`vi_order_go`/`vi_order`,
-`vi_k_expected`, `vi_rec_idx`, `vi_rec`, `vi_nested`/`vi_recs_go`/`vi_recs`, `validate_ind_d`;
+`vi_k_expected`, `vi_rec_idx`, `vi_rec`, `vi_nested`/`vi_recs_go`/`vi_recs`, `vi_tail`,
+`validate_ind_d`;
 `dind_alloc`, `ind_cv`, `ind_caps`, `parse_rule_d`, `ind_rules_go`/`ind_rules`, `ind_type`,
 `ind_ctor`, `ind_rec`, `inst_types`/`inst_ctors`/`inst_recs`, `install_ind_d`; `apply_ind(v)`,
 `apply_ind_line(j)`.
@@ -410,12 +411,25 @@ def viRecs : FunDecl := lfn (to, tn, ro, rn, np, cn, ke, tyn, tyt, fuel) locals 
   return 0
 }
 
+/-- `vi_tail(to, tn, co, cn, ro, rn, nP, tyN, tyT, fo, cno)`: `validateIndD` after the length
+check: the store's fuel, the ordered constructors, `kExpected?`, the recursors; the ordered
+constructors' slice offset. -/
+-- con-ron: ConRon/Arena/Frontend/ExportC.lean:266-376 ConRon.Arena.Frontend.validateIndD
+@[l_impl ConRon.Arena.Frontend.validateIndD]
+def viTail : FunDecl := lfn (to, tn, co, cn, ro, rn, np, tyn, tyt, fo, cno) locals (fuel, oo, ke, u) {
+  fuel := call store_fuel();
+  oo := call vi_order(to, tn, tyn, fo, cno, co, cn, fuel, np);
+  ke := call vi_k_expected(to, tn, tyt, oo, fuel);
+  u := call vi_recs(to, tn, ro, rn, np, cn, ke, tyn, tyt, fuel);
+  return oo
+}
+
 /-- `validate_ind_d(to, tn, co, cn, ro, rn)`: `validateIndD` on the block's three lists (`IFR`
 records); `(ordered.off, nPd)` (the ordered constructors are `cn` record pointers). -/
 -- con-ron: ConRon/Arena/Frontend/ExportC.lean:266-376 ConRon.Arena.Frontend.validateIndD
 @[l_impl ConRon.Arena.Frontend.validateIndD]
 def validateIndD : FunDecl := lfn (to, tn, co, cn, ro, rn)
-    locals (np, tyn, tyt, fo, cno, x, u, fuel, oo, ke) {
+    locals (np, tyn, tyt, fo, cno, x, u, oo) {
   u := call vi_unsafe(to, tn, 0);
   np := call vi_nparams(to, tn);
   (tyn, x) := call vi_map(to, tn, 11, 0, 0);
@@ -425,10 +439,7 @@ def validateIndD : FunDecl := lfn (to, tn, co, cn, ro, rn)
   u := call ifl_nodup(fo, x, 0);
   if u == 0 { abort };
   if x != cn { abort };
-  fuel := call store_fuel();
-  oo := call vi_order(to, tn, tyn, fo, cno, co, cn, fuel, np);
-  ke := call vi_k_expected(to, tn, tyt, oo, fuel);
-  u := call vi_recs(to, tn, ro, rn, np, cn, ke, tyn, tyt, fuel);
+  oo := call vi_tail(to, tn, co, cn, ro, rn, np, tyn, tyt, fo, cno);
   return (oo, np)
 }
 
@@ -634,7 +645,7 @@ def indApplyFns : Prog :=
    ("vi_order_in", viOrderIn), ("vi_order_go", viOrderGo), ("vi_order", viOrder),
    ("vi_k_expected", viKExpected), ("vi_rec_idx", viRecIdx), ("vi_rec", viRec),
    ("vi_nested", viNested), ("vi_recs_go", viRecsGo), ("vi_recs", viRecs),
-   ("validate_ind_d", validateIndD),
+   ("vi_tail", viTail), ("validate_ind_d", validateIndD),
    ("dind_alloc", dindAlloc), ("ind_cv", indCv), ("ind_caps", indCaps),
    ("parse_rule_d", parseRuleD), ("ind_rules_go", indRulesGo), ("ind_rules", indRules),
    ("ind_type", indType), ("ind_ctor", indCtor), ("ind_rec", indRec),
