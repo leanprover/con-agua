@@ -541,7 +541,8 @@ theorem CoreS.setMemo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (S : MemoSch) (c : Caches)
     (hS : CoreS dn m a vis fe M eb) (hf : MemFrame [S.arr] [S.cs + 1] m m')
     (h1 : 96 ≤ S.arr) (h2 : S.arr < 128) (h3 : (96 : Nat) ≤ S.cs.toNat) (h4 : S.cs.toNat + 1 < 128)
-    (hc : CoreRM m' c M eb) (hL : c.readLC = a.caches.readLC) (hLs : c.readLsC = a.caches.readLsC) :
+    (hc : CoreRM m' c M eb) (hL : c.readLC = a.caches.readLC) (hLs : c.readLsC = a.caches.readLsC)
+    (hN : c.readNC = a.caches.readNC := by rfl) :
     CoreS dn m' { a with caches := c } vis fe M eb ∧ StackKept m m' := by
   obtain ⟨ar, har⟩ : ∃ ar : Nat, ar = S.arr := ⟨_, rfl⟩
   have n1 : 96 ≤ ar := by rw [har]; exact h1
@@ -562,7 +563,7 @@ theorem CoreS.setMemo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
         rw [UInt64.toNat_add]; simp; omega
       have h' := congrArg UInt64.toNat h
       simp at h'; omega)
-  refine ⟨⟨⟨?_, ?_⟩, hc, ?_, ?_, ?_, ?_, hS.nwf, ?_, ?_, ?_, ?_⟩, ?_⟩
+  refine ⟨⟨⟨?_, ?_⟩, hc, ?_, ?_, ?_, ?_, hS.nwf, ?_, ?_, ?_, ?_, ?_⟩, ?_⟩
   · exact (ArenaR.frame_ext [S.arr] [S.cs + 1] (fun b hb => by simp at hb; subst hb; rw [← har]; exact Nat.le_trans (by decide : 64 ≤ 96) n1)
       (fun x hx => by
         simp at hx; subst hx
@@ -592,6 +593,10 @@ theorem CoreS.setMemo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
           rw [UInt64.toNat_add]; simp; omega
         omega)
   · exact hf.2.2.1 145 ▸ hS.bstk
+  · exact (hS.den.frameE (hf.1 EREC (fun h => by
+      simp only [List.mem_singleton] at h; have h2' := h2; rw [← h] at h2'
+      exact absurd h2' (by decide))
+      (by decide))).caches rfl rfl hN
   · refine StackKept.of_frame_range hf (fun b hb => by
       simp only [List.mem_singleton] at hb; subst hb; constructor <;> simp only [ArrId] <;> omega)
       (fun x hx => by

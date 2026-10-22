@@ -198,7 +198,10 @@ theorem CoreS.of_walk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List ArrId} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hD : ArenaD m' a') (hk : cpl a' = cpl a)
     (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b < 64) (hC : ∀ x ∈ C, x.toNat < 64)
-    (hmem : CoreMemos m') (hP : POOL ∉ A := by decide) (hP0 : (0 : Word) ∉ C := by decide) :
+    (hmem : CoreMemos m') (hP : POOL ∉ A := by decide) (hP0 : (0 : Word) ∉ C := by decide)
+    (hscA : SOREC ∉ A ∧ CREC ∉ A := by decide)
+    (hscC : (1 : Word) ∉ C ∧ (16 : Word) ∉ C ∧ (17 : Word) ∉ C ∧ (18 : Word) ∉ C ∧ (19 : Word) ∉ C :=
+      by decide) :
     CoreS dn m' a' vis fe M eb ∧ StackKept m m' := by
   simp only [cpl, Prod.mk.injEq] at hk
   obtain ⟨hc, hp, hl⟩ := hk
@@ -207,7 +210,8 @@ theorem CoreS.of_walk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 :=
     hf.2.1 136 (fun h => absurd (hC _ h) (by decide))
   refine ⟨⟨hD, ?_, ?_, hS.env.frame (.of_lt hA (by decide)) (.of_lt hC (by decide)) hf, ?_, ?_, ?_,
-    hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hmem, hf.2.2.1 145 ▸ hS.bstk⟩,
+    hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hmem, hf.2.2.1 145 ▸ hS.bstk,
+    hS.den.of_arena hS.arena.1 hD.1 hc hp hl hf (fun h => absurd (hA _ h) (by decide)) hscA hscC⟩,
     StackKept.of_frame hf
       ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide), hP⟩
       ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide), hP0⟩⟩

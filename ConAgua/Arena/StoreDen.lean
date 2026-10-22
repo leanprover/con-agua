@@ -192,6 +192,22 @@ theorem StoreDen.mono {m m' : Mem} {a a' : AState} {fe : IFEnv} (h : StoreDen m 
     exact ⟨⟨l, hx.ls.lvl _ _ hl⟩, fun i hi => (hg i hi).elim fun l hl => ⟨l, hx.ls.lvl _ _ hl⟩,
       ⟨ks, hNs _ _ hks⟩⟩
 
+/-- **`StoreDen` across an interning step** that keeps the caches, the pins and the level stores
+(`cpl`) and writes neither `EREC` nor the `sort`/`const` tables (`SOREC`, `CREC`, `CTL` 1, 16‥19). -/
+theorem StoreDen.of_arena {m m' : Mem} {a a' : AState} {fe : IFEnv} {A : List ArrId} {C : List Word}
+    (h : StoreDen m a fe) (hR : ArenaR m a) (hR' : ArenaR m' a') (hc : a'.caches = a.caches)
+    (hp : a'.pins = a.pins) (hl : a'.store.lss = a.store.lss) (hf : MemFrame A C m m')
+    (heA : EREC ∉ A) (hscA : SOREC ∉ A ∧ CREC ∉ A)
+    (hscC : (1 : Word) ∉ C ∧ (16 : Word) ∉ C ∧ (17 : Word) ∉ C ∧ (18 : Word) ∉ C ∧ (19 : Word) ∉ C) :
+    StoreDen m' a' fe := by
+  have hsc : scTabs a' = scTabs a := scTabs_eq hR hR' (hf.1 SOREC hscA.1 (by decide))
+    (hf.1 CREC hscA.2 (by decide)) (fun x hx => hf.2.1 x (by
+      rcases hx with rfl | rfl | rfl | rfl | rfl <;>
+        first | exact hscC.1 | exact hscC.2.1 | exact hscC.2.2.1 | exact hscC.2.2.2.1 | exact hscC.2.2.2.2))
+  exact h.mono (by rw [hl]; exact LsExt.refl _) (by rw [hp]) (fun _ _ hk => .inl (hc ▸ hk))
+    (hf.1 EREC heA (by decide)) (fun _ _ hv => view_sort_keep hsc hv)
+    (fun _ _ _ hv => view_const_keep hsc hv)
+
 /-- `StoreDen` across a memory step that keeps `EREC` (the twin unchanged). -/
 theorem StoreDen.frameE {m m' : Mem} {a : AState} {fe : IFEnv} (h : StoreDen m a fe)
     (he : m'.arr64 EREC = m.arr64 EREC) : StoreDen m' a fe :=
