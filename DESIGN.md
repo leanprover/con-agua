@@ -6770,3 +6770,46 @@ pin variant "for now" (lanes `integrate`, `decls3`).
 
 PLAN.md, process rules: a deviation gets its row in `docs/deviations.md` in the commit that
 introduces it; the coordinator reviews the list at each batch of landings.
+
+### Landing 3: six phase-5 targets sorry-free on the real walks (`WhnfTagged.lean`)
+* A dependency scan (each tagged theorem's transitive constants that are `sorry`'d theorems) showed
+  which stub *fields* each tagged statement really used. `beta_peel`, `iota_certs_full(_aux)` used
+  only `WhnfCallees.instList`; `pi_residual`, `inst_spine`, `iota_index_ok` only
+  `IotaCallees.inst1`. Their primed theorems now take `InstListOK p` / `IotaInst1OK p` instead of
+  the bundles, and the tagged ones live in `WhnfTagged.lean` (after `CoreWalks.lean`), given the
+  walks' programs `CoreWalkProg p`: **sorry-free** (`pi_residual` newly tagged).
+* Census, phase 5: **79 proven / 19 sorry / 20 written / 24 todo**; phase 4: 65 proven, 0 sorry.
+* What the remaining phase-5 `sorry`s wait for (scan): `instLP` (`const_ty_at`, `rule_rhs_at`,
+  `inst_spine_pins`, `rec_fire_args`: the phase-4 `instLPFast` walk is not written),
+  `wscoped_bfast`/`leaf_guard` (`fab_scope_ok`), `find_proj`/`fire_ok`/`ProjFound`
+  (`tower_slots_all`, `and_rescue_slots`, the projection arm), the string-literal stubs and
+  `supKeep_twin` (`lit_major_to_ctor`, `proj_lit_to_ctor`), `CoreS.lvl_den` (`proof_irrel`), the
+  knot's `infer`/`defeq` steps (`WhnfCallees.inferStep` …; lane `defeq`), `erecKept*`, and
+  `whnfGrowsUpTo_stub` (`reduce_nat`).
+
+### Open handoffs (lane `whnf2` closing)
+* **`whnfGrowsUpTo_stub`** (the second assumed fact) stays. A `whnf` call must leave the limb pool
+  below its old top alone and the top no lower (`reduce_nat_op` holds the first literal's pool slice
+  across the second `whnf`). Three routes were weighed: (1) a write-set argument (`closedW` with the
+  pool outside the write set) fails because the `Nat` arithmetic does write the pool (above the
+  top), and its frame holds only under argument preconditions a text check cannot see; (2) re-reading
+  the first literal after the second `whnf` needs the twin's store to keep every node's view across
+  `whnf` (a `Keeps`-style induction over the whole knot, ~150 twin definitions); (3) carrying the
+  growth in the core's post: `CoreAfter` (or `StackKept`) gains `PoolGrew m₀ m` (pool below `m₀`'s
+  top unchanged, top no lower, sizes equal), proved at the leaves from frames avoiding `POOL`/
+  `CTL[0]` and from the `Nat` functions' `Grows`, and composed by `CoreAfter.trans`/`comp`. Route
+  (3) is the one; it touches every explicit `StackKept`/`CoreAfter` construction and destructuring
+  (~300 sites, about half in lane `defeq`'s files), so it should be done together with lane
+  `defeq`'s request part 2 (`StackKept` keeps `BSTK`, array 145 / `CTL[137]`), in one sweep when
+  `defeq` is between landings. Suggested shape: `StackKept m m'` becomes a `structure` with named
+  fields (`top`, `size`, `below`, `bstk`, `pool`) so that later additions do not move projections.
+* **`CoreS.lvl_den`** (`proof_irrel`): needs "every stored level handle reads back", a store
+  invariant the twin's WF gives but `CoreS` does not carry; adding it means maintaining it at every
+  level-node and sort-node interning (`CoreS.of_level`, `arena_frame`).
+* Remaining stub fields whose L code does not exist: `instLP` (phase 4 `instLPFast`),
+  `strLitCtor`/`strLitSupported`, `find_proj`/`fire_ok` (+ `ProjFound`, `ProjSmall`),
+  `wscoped_bfast`, `leaf_guard`, `caps_never_zero`, `rec_fire_levels`; `supKeep_twin`,
+  `erecKeptInst_stub` (its `inst_spine` half is provable now from `instEntry_frame`; `inst_lp`'s is
+  not), `erecKeptKnot_stub` and the knot steps (lane `defeq`). The new named hypotheses of the iota
+  proofs (`ErecKeptRec`, `LvlsEqDen`, `RecShape`, `ProofIrrelOKM`) are listed above.
+
