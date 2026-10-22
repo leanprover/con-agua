@@ -1,6 +1,9 @@
 import ConAgua.Arena.Checker
 import ConAgua.Arena.DeclArms
 import ConAgua.Arena.DeclCvg
+import ConAgua.Arena.DeclMasterStage
+import ConAgua.Arena.DeclCanonSpec
+import ConAgua.Arena.DeclCanonEq
 
 /-!
 # Every declaration-loop module (lane `decls3`)
