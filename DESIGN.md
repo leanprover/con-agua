@@ -8383,6 +8383,7 @@ for kinds `0‥3` sorry-free (axioms `propext`, `Classical.choice`, `Quot.sound`
   `coreCallees_stub`, `iotaCallees_stub`); re-stating them through `DefEqKnot`'s bundles is
   the next step for the census (not done here).
 
+
 ## Generated models and specs (2026-10-22, lane `modelgen`)
 
 Recommendation 1 of `docs/proof-review.md`: generate, from an L function's text, the word model
@@ -8500,6 +8501,7 @@ internal (as `LevelSimp`), or when a function is rewritten anyway. Next steps, i
 several results (a list model kind), `while` loops with a generated loop spec, `FunDecl`
 parameters, optional names for arms (`l_model … arms [cut, bvar_lt, …]`) so refinements read
 better, and generating the callee facts in `Sim` form (recommendation 2) from the same arms.
+<<<<<<< HEAD
 
 
 
@@ -8655,3 +8657,5 @@ needs many lookups should `have` them once, or take the bundle.
 4. Lane `whnf4` (owner of the `UpTo` families and `internM_hw`): replace `KnotUpTo`/`WhnfStepUpTo`
    with `invoke_fuel_le`, and move `internM_hw`/`hdW_lt`/`hit_idx_lt` to `StoreLib.lean`; then the
    inductive/decl lanes can drop their `2^32` guards with `Sim.withM`.
+=======
+>>>>>>> master
