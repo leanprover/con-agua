@@ -468,6 +468,7 @@ def targetMajorPins : FunDecl := lfn (vis, rP, M) locals (mem, hd, app, u) {
   else {
     u := call target_pin_tys(vis, rP, IW.u64[M + 2], IW.u64[M + 3]);
     hd := call intern_const(IW.u64[M], IW.u64[M + 1]);
+    if 4294967296 <= hd { abort };
     app := call mk_app_n(hd, IW.u64[M + 2], IW.u64[M + 3]);
     u := call infer_type_core(vis, rP, app)
   }
