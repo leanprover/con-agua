@@ -749,32 +749,9 @@ end refs25
 section tagged
 variable (p : Prog)
 
-@[refines ConRon.Arena.constValAt]
-theorem constValAt_refines (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
-    (eb nm po pl value us : Word) (lps : List NIdx)
-    (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (hnm : HW nm) (hv : HW value) (hu : HW us)
-    (hlps : hslice? (s₀.mem.arr64 EREC) po.toNat pl.toNat = some lps) :
-    CoreSpec p n "const_val_at" [nm, po, pl, value, us]
-      (constValAt (decI nm) lps (decE value) (decI us)) decH s₀ a₀ dn vis fe MM eb :=
-  constValAt_refines' p hp n s₀ a₀ dn vis fe MM eb nm po pl value us lps hC hnm hv hu
-    (whnfCallees_stub p).instLP hlps
-
-@[refines ConRon.Arena.unfoldDefinition]
-theorem unfoldDefinition_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AState)
-    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb e : Word)
-    (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (he : HW e) :
-    CoreSpec p n "unfold_definition" [vis, e] (unfoldDefinition fe (decE e)) decOptR s₀ a₀ dn vis fe
-      MM eb ResW :=
-  unfoldDefinition_refines' p hp n s₀ a₀ dn vis fe MM eb e hC he (whnfCallees_stub p).instLP
-
 @[refines ConRon.Arena.reduceNat]
 theorem reduceNat_refines (hp : WhnfDeltaProg' p) (n : Nat) : ReduceNatSpec' p n :=
   reduceNat_refines' p hp (natOpResultOK_of_agree hp.natAgree) n
-
-@[refines ConRon.Arena.whnfStep]
-theorem whnfStep_refines (hp : WhnfDeltaProg' p) (n : Nat) : WhnfStepSpec' p n :=
-  whnfStep_refines' p hp (whnfCallees_stub p).instLP n (fun k _ => reduceNat_refines p hp k)
 
 end tagged
 

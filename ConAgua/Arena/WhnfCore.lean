@@ -427,10 +427,6 @@ structure CoreCallees (p : Prog) : Prop extends ProjCallees p where
   /-- `iota_rec_at` one level down from the knot at `n` (`WhnfIota.lean`). -/
   iota : ∀ n, KnotUpTo p n → IotaRecAtOK p (n + 1)
 
-/-- The callees' specs, assumed (stubs, phases 4–5; `iota_rec_at` until `WhnfIota.lean`'s
-refinement lands). -/
-theorem coreCallees_stub (p : Prog) : CoreCallees p := sorry
-
 /-! ## The specs
 
 Each body at L fuel `n + 1` refines the twin's body at the knot `coreKnot mode fe id F`, `F ≥ n`,
