@@ -56,6 +56,18 @@ theorem pnew_arrs : ∀ b ∈ EIXA :: EIXS :: EIXN :: ECON :: EREC :: eArrs,
     · right; left; omega
     · exact .inr (.inr h)
 
+theorem pnew_arrs' : ∀ b ∈ ECON :: EREC :: eArrs,
+    b < 50 ∨ b = 135 ∨ b = 136 ∨ (146 ≤ b ∧ b ≤ 149) := by
+  intro b hb
+  simp only [List.mem_cons] at hb
+  rcases hb with rfl | rfl | hb
+  · right; left; simp [ECON]
+  · right; right; left; simp [EREC]
+  · rcases vg_arrs b (List.mem_cons.mpr (Or.inr hb)) with h | h | h
+    · exact .inl h
+    · exact .inr (.inr (.inl h))
+    · exact .inr (.inr (.inr h))
+
 theorem pnew_ctl : ∀ x ∈ (129 :: eCtl : List Word),
     x.toNat < 64 ∨ x.toNat = 129 ∨ (140 ≤ x.toNat ∧ x.toNat ≤ 147) := by
   intro x hx
@@ -91,6 +103,7 @@ theorem pnew_main (dn : NIdx → Option ConLeche.Name) (n : Nat) (m₁ : Mem) (a
         indexPromoted (eraseInstalled idx (consts.take k.toNat)) vb L', vb⟩ pend ds := by
   have hE₁ := hR₁.check.env
   have hvis : vb = vis.toNat := hR₁.vis
+  subst hvis
   obtain ⟨hiw1, hiw2, hiw3, hiw4, hiw5⟩ := hR₁.iw
   have hsz₁ : (m₁.arr64 EREC).size < 2 ^ 64 := hiw4
   have hts₁ : erecTop m₁ ≤ (m₁.arr64 EREC).size := hiw2
@@ -170,7 +183,69 @@ theorem pnew_main (dn : NIdx → Option ConLeche.Name) (n : Nat) (m₁ : Mem) (a
   obtain ⟨a₃, pm₃, L', hrun₃, hD₃, hP₃, hcp₃, hfr₃, hg₂₃, hts₃, hlen₃, hcons₃, hout₃, hszE₃⟩ :=
     ciList_rel p hp dn n m₂ a pm L.Ind.CWF (n0 - 1) c (erecTop m₂) L r₂ m₃ hD₂ hP₂ hsz₂ hts₂ hcL
       hj1 (by rw [← erecP_eq_preE, hP₂e, hEC₂]; exact hCA') (Nat.le_refl _) hcb
-  sorry
+  have hg₁₃ : ErecGrow m₁ m₃ := hg₁₂.trans hg₂₃
+  have hE128₃ : rdW (m₃.arr64 CTL) 128 = rdW (m₁.arr64 CTL) 128 := by
+    rw [hfr₃.2.1 128 (by decide), h128₂]
+  have hEC₃rows : ∀ b : Nat, 132 ≤ b → b < 135 → m₃.arr64 b = m₂.arr64 b := by
+    intro b h1 h2
+    apply hfr₃.1 b _ (by simp only [CTL]; omega)
+    intro hb
+    rcases pnew_arrs' b hb with h | h | h
+    · omega
+    · omega
+    · omega
+  -- the constants after the promotion
+  have hBdec : cdec dn (erecP m₃) (m₃.arr64 ECON) (n0.toNat - c.toNat) = some B := by
+    refine cdec_mono hg₁₃.ext (n0.toNat - c.toNat) B (fun i hi => ?_) hB
+    rw [hout₃ i (by rcases hjt with h | h
+                    · subst h; simp only [List.length_nil]; omega
+                    · rw [h]; omega), hEC₂]
+  have hcons₃' : ConstsAt dn (erecP m₃) (m₃.arr64 ECON) (n0.toNat - c.toNat + L'.length - 1) L' := by
+    rcases hjt with h | h
+    · subst h; simp at hlen₃; have : L' = [] := List.length_eq_zero_iff.mpr hlen₃; subst this; trivial
+    · rw [hlen₃, hLlen]
+      have : n0.toNat - c.toNat + c.toNat - 1 = n0.toNat - 1 := by omega
+      rw [this, ← h]; exact hcons₃
+  have hcdec₃ := cdec_join L' (n0.toNat - c.toNat) B hcons₃' hBdec
+  have hEnv₃c : envConsts dn m₃ = some (L' ++ B) := by
+    rw [envConsts_eq]
+    have : envLen m₃ = n0.toNat := by simp only [envLen, hE128₃, hn0]
+    rw [this]
+    have e : n0.toNat - c.toNat + L'.length = n0.toNat := by rw [hlen₃, hLlen]; omega
+    rw [← e]; exact hcdec₃
+  have hE₃ : EnvR dn m₃ vis ⟨⟨L' ++ B⟩, eraseInstalled idx L, vis.toNat⟩ :=
+    (show EnvR dn m₂ vis ⟨⟨consts⟩, eraseInstalled idx L, vis.toNat⟩ from hE₂).promoted hEC₃rows hg₂₃ (L' ++ B)
+      hEnv₃c
+  have hsz₃ : (m₃.arr64 EREC).size < 2 ^ 64 := by rw [hg₂₃.2.2]; exact hsz₂
+  -- index
+  cases hcd : callW p n "index_promoted" [vis, n0 - 1, c] m₃ with
+  | none => rw [hcd] at hW; cases hW
+  | some x =>
+  obtain ⟨r₃, m₄⟩ := x
+  rw [hcd, memK_some] at hW
+  have hm4 : m₄ = m' := Option.some.inj hW
+  subst hm4
+  have hL'c : L'.length = c.toNat := by rw [hlen₃, hLlen]
+  obtain ⟨hE₄, hfr₄⟩ := index_rel p hp dn n m₃ vis vis (n0 - 1) c _ L' r₃ m₄ hE₃ hsz₃ hL'c.symm
+    (by rw [hL'c]; rcases hjt with h | h
+        · subst h; simp at hLl; omega
+        · rw [h]; omega)
+    (by rw [hL'c]; omega) hcons₃ hcd
+  obtain ⟨hD₄, hP₄⟩ := arenaD_rows hD₃ hP₃ hfr₄
+  have hEE₄ : m₄.arr64 EREC = m₃.arr64 EREC := hfr₄.1 EREC (by decide) (by decide)
+  have hT₄ : erecTop m₄ = erecTop m₃ := by simp only [erecTop]; rw [hfr₄.2.1 129 (by simp)]
+  have hg₁₄ : ErecGrow m₁ m₄ := hg₁₃.trans (ErecGrow.of_eq hEE₄ hT₄)
+  have hts₄ : erecTop m₄ ≤ (m₄.arr64 EREC).size := by rw [hEE₄, hT₄]; exact hts₃
+  have hfA : MemFrame (EIXA :: EIXS :: EIXN :: ECON :: EREC :: eArrs) (129 :: eCtl) m₁ m₄ :=
+    ((hfr₂.mono (fun b hb => by simp only [List.mem_cons] at hb ⊢; tauto) (by simp)).trans
+      (hfr₃.mono (fun b hb => by simp only [List.mem_cons] at hb ⊢; tauto) (by simp))).trans
+      (hfr₄.mono (fun b hb => by simp only [List.mem_cons] at hb ⊢; tauto) (by simp))
+  have hrun₃' : (promoteCIList pm coreWalkFuel (consts.take k.toNat)).run a =
+      .ok ((pm₃, L'), a₃) := by
+    rw [htake, ← L.Ind.CWF_eq]; exact hrun₃
+  refine ⟨a₃, pm₃, L', hrun₃', ?_⟩
+  rw [htake, hdrop]
+  exact LoopR.of_frame hR₁ hD₄ hfA pnew_arrs pnew_ctl hcp₃ hg₁₄ hts₄ hP₄ hE₄
 
 end rel
 
