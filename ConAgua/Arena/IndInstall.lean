@@ -373,18 +373,20 @@ canonical parameter variables `fvsP` (a pointer to the 11-word `NestCtx` record)
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:213-222 ConRon.Arena.BlockShape.nestCtx
 @[l_impl ConRon.Arena.BlockShape.nestCtx]
 def blockShapeNestCtx : FunDecl := lfn (p, fvsPO, fvsPL) locals
-    (namesO, namesL, lpsO, lpsL, nIdxsO, nIdxsL, lvls, q) {
+    (namesO, namesL, lpsO, lpsL, nIdxsO, nIdxsL, lvls, np, srt, q) {
   (namesO, namesL) := call block_shape_member_names(p);
   (lpsO, lpsL) := call block_shape_lps(p);
   (nIdxsO, nIdxsL) := call block_shape_n_idxs(p);
   lvls := call param_levels(lpsO, lpsL);
+  np := IW.u64[p + 4];
+  srt := IW.u64[p + 6];
   q := call iw_alloc(11);
   IW.u64[q] := namesO; IW.u64[q + 1] := namesL;
   IW.u64[q + 2] := lpsO; IW.u64[q + 3] := lpsL;
-  IW.u64[q + 4] := IW.u64[p + 4];
+  IW.u64[q + 4] := np;
   IW.u64[q + 5] := nIdxsO; IW.u64[q + 6] := nIdxsL;
   IW.u64[q + 7] := fvsPO; IW.u64[q + 8] := fvsPL;
-  IW.u64[q + 9] := IW.u64[p + 6];
+  IW.u64[q + 9] := srt;
   IW.u64[q + 10] := lvls;
   return q
 }
