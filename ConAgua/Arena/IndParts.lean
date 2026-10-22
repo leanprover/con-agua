@@ -459,20 +459,19 @@ def blockRecNameSetOk : FunDecl := lfn (mo, ml, ro, rl) locals (wo, j, m, cv, nm
 }
 
 /-- `block_rec_names_unreserved(ro, rl)`: `blockRecNamesUnreserved`, stopping at the first
-recursor whose name is reserved (`reserved_rec_name`), as the twin's recursion does. -/
+recursor whose name is reserved (`reserved_rec_name`), as the twin's recursion does (recursive on
+the slice: `ro + 1`, `rl - 1`). -/
 -- con-ron: ConRon/Arena/Inductives/BlockParts.lean:297-305 ConRon.Arena.blockRecNamesUnreserved
 @[l_impl ConRon.Arena.blockRecNamesUnreserved]
-def blockRecNamesUnreserved : FunDecl := lfn (ro, rl) locals (j, rc, cv, nm, b) {
-  j := 0;
-  while j < rl {
-    rc := IW.u64[ro + j];
-    cv := IW.u64[rc];
-    nm := EREC.u64[cv];
-    b := call reserved_rec_name(nm);
-    if b != 0 { return 0 };
-    j += 1
-  };
-  return 1
+def blockRecNamesUnreserved : FunDecl := lfn (ro, rl) locals (rc, cv, nm, b, r) {
+  if rl == 0 { return 1 };
+  rc := IW.u64[ro];
+  cv := IW.u64[rc];
+  nm := EREC.u64[cv];
+  b := call reserved_rec_name(nm);
+  if b != 0 { return 0 };
+  r := call block_rec_names_unreserved(ro + 1, rl - 1);
+  return r
 }
 
 /-- `block_member_counts_find(no, nl, ro, rl, m)`: the `rs.findM?` inside `blockMemberCounts?`,
