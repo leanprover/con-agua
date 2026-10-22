@@ -127,4 +127,120 @@ theorem ensureSortCore_refines (p : Prog) (hp : InferLeafProg p) (he : KnotEntry
   ensureSortCore_of_spec p he (n + 1) (ensureSort_refines p hp n hk) F s₀ a₀ dn vis fe M dep t hF hn
     hS ht
 
+/-! ## Sequencing two core runs -/
+
+/-- **A core run, then a core run from its state**: when the whole twin run is the second run
+from the first one's state, the refinement composes. -/
+theorem coreRef_then {α β : Type} [Inhabited α] [Inhabited β] {T₁ : AM α} {T₂ T : AM β}
+    {a₀ : AState} {dec₁ : List Word → α} {dec : List Word → β} {dn : NIdx → Option ConLeche.Name}
+    {m₀ m₁ m : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} {r₁ r : List Word}
+    {ok₁ ok : List Word → Prop}
+    (h₁ : CoreRef T₁ a₀ dec₁ dn m₀ vis fe M eb r₁ m₁ ok₁)
+    (h₂ : ∀ M', CoreS dn m₁ (AM.st T₁ a₀) vis fe M' eb →
+      CoreRef T₂ (AM.st T₁ a₀) dec dn m₁ vis fe M' eb r m ok)
+    (hT : T.run a₀ = T₂.run (AM.st T₁ a₀)) : CoreRef T a₀ dec dn m₀ vis fe M eb r m ok := by
+  obtain ⟨M', hS, hK, hSt⟩ := h₁.2.1
+  obtain ⟨hok2, hA2, hres2, hrw2⟩ := h₂ M' hS
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ (hT.trans (AM.run_of_ok _ _ hok2))
+  exact ⟨hok, hst ▸ CoreAfter.comp hK hSt hA2, hres.trans hres2, hrw2⟩
+
+/-! ## `defeq_arg` -/
+
+/-- `is_eager_reduce(h)` refines `isEagerReduce` (its refinement is the other helper's, on
+branch `defeq-leaves`: a hypothesis here). -/
+def IsEagerReduceH (p : Prog) : Prop :=
+  ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (M : ModeMaps) (eb h : Word), CoreS dn s₀.mem a₀ vis fe M eb → HW h →
+    CoreSpec p n "is_eager_reduce" [h] (isEagerReduce (decE h)) decBool s₀ a₀ dn vis fe M eb
+
+/-- The model of `defeq_arg` past `is_eager_reduce`'s run `res`. -/
+def defeqArgK (p : Prog) (n : Nat) (mode vis d ta ty : Word) (res : Option (List Word × Mem)) :
+    Option (Word × Mem) :=
+  match res with
+  | none => none
+  | some (r, m₁) =>
+    if r.headD 0 ≠ 0 then call1W p n "defeq_e" [mode, vis, d, ta, ty] m₁
+    else call1W p n "defeq" [mode, vis, d, ta, ty] m₁
+
+theorem defeqArgK_e (p : Prog) (n : Nat) (mode vis d ta ty : Word) (r : List Word) (m₁ : Mem)
+    (h : r.headD 0 ≠ 0) :
+    defeqArgK p n mode vis d ta ty (some (r, m₁)) = call1W p n "defeq_e" [mode, vis, d, ta, ty] m₁ := by
+  simp only [defeqArgK, h, ne_eq, not_false_eq_true, ↓reduceIte]
+
+theorem defeqArgK_p (p : Prog) (n : Nat) (mode vis d ta ty : Word) (r : List Word) (m₁ : Mem)
+    (h : r.headD 0 = 0) :
+    defeqArgK p n mode vis d ta ty (some (r, m₁)) = call1W p n "defeq" [mode, vis, d, ta, ty] m₁ := by
+  simp only [defeqArgK, h, ne_eq, not_true_eq_false, ↓reduceIte]
+
+section da
+variable (p : Prog) (hp : InferLeafProg p)
+
+include hp in
+theorem defeqArg_spec (n : Nat) (s₀ : St) (mode vis d a ta ty : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "defeq_arg" [mode, vis, d, a, ta, ty]
+    ⦃fun r s' => LocEq s' s₀ ∧ defeqArgK p n mode vis d ta ty
+      (callW p n "is_eager_reduce" [a] s₀.mem) = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp.defeqArg]
+  simp only [callFn, defeqArgL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "is_eager_reduce",
+      callW_spec p n "defeq_e", callW_spec p n "defeq"] <;>
+    finish [defeqArgK_e, defeqArgK_p, call1W_some]
+
+end da
+
+theorem defeqArg_run (r : CoreFnsA) (d : Nat) (a ta ty : EIdx) (a₀ a₁ : AState) (b : Bool)
+    (h : (isEagerReduce a).run a₀ = .ok (b, a₁)) :
+    (defeqArg r d a ta ty).run a₀ = (if b then r.defeqE d ta ty else r.defeq d ta ty).run a₁ := by
+  cases b <;> simp [defeqArg, StateT.run_bind, h, except_ok_bind]
+
+section dar
+variable (p : Prog) (hp : InferLeafProg p)
+
+include hp in
+/-- **`defeq_arg` refines `defeqArg`** at the knot, from the `defeq` and `defeq_e` slots and
+`is_eager_reduce`'s spec. -/
+@[refines ConRon.Arena.defeqArg]
+theorem defeqArg_refines (n : Nat) (he : IsEagerReduceH p) (hd : DefeqSlot p n)
+    (hde : DefeqESlot p n) (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+    (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a ta ty : Word) (hF : n ≤ F)
+    (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hta : HW ta)
+    (hty : HW ty) :
+    CoreSpec p (n + 1) "defeq_arg" [mode, vis, d, a, ta, ty]
+      (defeqArg (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE ta) (decE ty)) decBool
+      s₀ a₀ dn vis fe M eb := by
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
+    (defeqArg_spec p hp n s₀ mode vis d a ta ty)
+  subst hs0
+  refine ⟨hloc, ?_⟩
+  cases hc : callW p n "is_eager_reduce" [a] s.mem with
+  | none => rw [hc] at hW; simp [defeqArgK] at hW
+  | some q =>
+  obtain ⟨r₁, m₁⟩ := q
+  rw [hc] at hW
+  have h₁ := CoreSpec.of_callW (he n s a₀ dn vis fe M eb a hs.rel ha) hc
+  have hrun₁ := AM.run_of_ok _ _ h₁.1
+  rw [h₁.2.2.1] at hrun₁
+  have hT := defeqArg_run (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE ta) (decE ty)
+    a₀ _ _ hrun₁
+  by_cases h0 : r₁.headD 0 ≠ 0
+  · rw [defeqArgK_e p n mode vis d ta ty r₁ m₁ h0] at hW
+    have hb : decBool r₁ = true := by simp only [decBool, bne_iff_ne]; exact h0
+    rw [hb] at hT
+    exact coreRef_then h₁ (fun M' hS' => CoreSpec.of_call1W
+      (s₀ := ⟨m₁, Locals.init []⟩)
+      (hde F _ _ dn vis fe M' eb mode d ta ty hF hn ⟨hS', hs.mode4, hs.eb_mode⟩ hta hty)
+      (fun r r' h => by simp only [decBool, h]) hW) hT
+  · rw [defeqArgK_p p n mode vis d ta ty r₁ m₁ (by simpa using h0)] at hW
+    have hb : decBool r₁ = false := by simp only [decBool, bne_eq_false_iff_eq]; simpa using h0
+    rw [hb] at hT
+    exact coreRef_then h₁ (fun M' hS' => CoreSpec.of_call1W
+      (s₀ := ⟨m₁, Locals.init []⟩)
+      (hd F _ _ dn vis fe M' eb mode d ta ty hF hn ⟨hS', hs.mode4, hs.eb_mode⟩ hta hty)
+      (fun r r' h => by simp only [decBool, h]) hW) hT
+
+end dar
+
 end L.Arena
