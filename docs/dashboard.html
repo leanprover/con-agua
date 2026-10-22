@@ -117,10 +117,10 @@
 <div class="ca-grid ca-more">
   <section class="ca-card" id="recent">
     <h2>Recent landings</h2>
-    <p class="note">The last landings on master, newest first, as each lane logged them.</p>
+    <p class="note">The last 40 merges into master, newest first, from git.</p>
     <div class="ca-tablewrap">
       <table class="ca-lanes" data-source="recent" data-row-key="n">
-        <thead><tr><th data-field="lane">Lane</th><th data-field="minutes">Minutes</th><th data-field="note">What landed</th></tr></thead>
+        <thead><tr><th data-field="at">When (UTC)</th><th data-field="lane">Lane</th><th data-field="what">What landed</th></tr></thead>
         <tbody id="recentBody"></tbody>
       </table>
     </div>
@@ -176,10 +176,10 @@ dash.calc('health', {
   fn: (progress, stale) => [{ sorry: Number(progress[progress.length - 1].sorry), stale: stale.length }],
 });
 dash.calc('recent', {
-  inputs: ['velocity'],
+  inputs: ['landings'],
   title: 'Recent landings',
-  description: 'The last 15 rows of the velocity log, newest first, with work and overhead minutes combined.',
-  fn: (velocity) => velocity.map((r, i) => ({ n: i + 1, lane: r.lane, minutes: `${r.work_min} + ${r.overhead_min}`, note: r.note })).reverse().slice(0, 15),
+  description: 'The last 40 merges into master, newest first, from git.',
+  fn: (landings) => landings.map((r) => ({ n: r.n, at: r.at.slice(5, 16).replace('T', ' '), lane: r.lane, what: r.what })),
 });
 dash.calc('lanecount', {
   inputs: ['lanes'],
@@ -459,6 +459,6 @@ function health() {
   }
 }
 dash.onData(() => { tiles(); health(); trend(); velocity(); phases(); lanes();
-  simpleTable('recentBody', 'recent', ['lane', 'minutes', 'note']);
+  simpleTable('recentBody', 'recent', ['at', 'lane', 'what']);
   simpleTable('staleBody', 'stale', ['target', 'status', 'phase', 'owner', 'theorems']); });
 </script>
