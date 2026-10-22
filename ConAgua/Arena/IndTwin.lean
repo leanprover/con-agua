@@ -3,6 +3,7 @@ import ConAgua.Arena.CoreErec
 import ConAgua.Arena.KnotSlot
 import ConAgua.Arena.WhnfEntry
 import ConAgua.Arena.InferLeaves
+import ConAgua.Arena.InferBodyIntern
 import ConAgua.Arena.CoreLevels
 import ConAgua.Arena.WhnfIotaRefine4
 import ConAgua.Arena.IndInstallSpec8
@@ -121,6 +122,69 @@ theorem StageT.sim_core {α : Type} [Inhabited α] {p : Prog} (hcl : CoreStageCl
     triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (hspec ⟨m, Locals.init []⟩ M hC) e
   obtain ⟨hT', hg⟩ := StageT.of_core hcl hf e hS hC'
   exact ⟨_, _, partsRunOfOk hok, hT', hg, hres.symm, hrh⟩
+
+/-! ## Keeping `StageT` across the stage's own writers -/
+
+/-- **`TwinOK` across a pool writer** (`iw_alloc`, `sl_cons`, `rec*`, `iw_copy`: `MemFrame [IW]
+[200]`): none of its parts reads `IW` or `CTL[200]`. -/
+theorem _root_.L.Arena.TwinOK.frame_iw {m m' : Mem} {a : AState} (hf : MemFrame [IW] [200] m m')
+    (h : TwinOK dn m a fe) : TwinOK dn m' a fe := by
+  have hE : m'.arr64 EREC = m.arr64 EREC := hf.1 EREC (by simp [EREC, IW]) (by decide)
+  have hSp : m'.arr64 SPN = m.arr64 SPN := hf.1 SPN (by simp [SPN, IW]) (by decide)
+  have hB : m'.arr64 145 = m.arr64 145 := hf.1 145 (by simp [IW]) (by decide)
+  exact ⟨h.readL, h.readLs, h.nwf, by rw [hE]; exact h.erec, by rw [hSp]; exact h.spn,
+    h.memos.frame hf (by simp [IW]) (by simp) (by simp [IW]) (by simp), by rw [hB]; exact h.bstk,
+    h.den.frameE hE⟩
+
+/-- **`StageT` across a pool writer**: the writer's `StageR` lemma (`allocW_stage`, `consW_stage`,
+`recW_stage`, …) and its frame. -/
+theorem StageT.of_iw {m m' : Mem} {a : AState} (hT : StageT dn vis fe m a)
+    (hS : StageR dn vis fe m' a) (hf : MemFrame [IW] [200] m m') : StageT dn vis fe m' a :=
+  ⟨hS, hT.twin.frame_iw hf, by
+    have hP : m'.arr64 PINS = m.arr64 PINS := hf.1 PINS (by simp [PINS, IW]) (by decide)
+    simp only [pinW, hP]; exact hT.flag⟩
+
+/-- **`StageT` across a master callee with a `CoreS` refinement** (an interning: `internSort_core`,
+`internFVar_core`, …): its `StageR` lemma (`IndMaster`'s `_stage`) and its `CoreRef`, at a frame
+that leaves the pins alone. -/
+theorem StageT.of_coreRef {α : Type} [Inhabited α] {op : AM α} {dec : List Word → α}
+    {m m' : Mem} {a : AState} {M : ModeMaps} {rs : List Word} (hT : StageT dn vis fe m a)
+    (hS : StageR dn vis fe m' (AM.st op a)) (hC : CoreRef op a dec dn m vis fe M 0 rs m')
+    (hP : m'.arr64 PINS = m.arr64 PINS) : StageT dn vis fe m' (AM.st op a) := by
+  obtain ⟨-, ⟨M', hC', -, -⟩, -, -⟩ := hC
+  exact ⟨hS, hC'.checkR.2, by simp only [pinW, hP]; exact hT.flag⟩
+
+/-- **`intern_sort` keeps `StageT`** (the level reads back: `StoreDen.lvlAll` of a handle the store
+holds, or the caller's). -/
+theorem internSort_stageT {m m' : Mem} {a : AState} {r : Word} (hT : StageT dn vis fe m a)
+    (u : Word) (hu : H u) (hI : sointernW m u = some (r, m'))
+    (hdu : ∃ l, denoteL a.store.ls (decI u) = some l) :
+    ∃ a', (internE (.sort (decI u))).run a = .ok (decE r, a') ∧ StageT dn vis fe m' a' ∧
+      IWGrow m m' := by
+  obtain ⟨a', hrun, hS', hg⟩ := internSort_stage hT.stage u hu hI
+  obtain ⟨M, hC⟩ := hT.core
+  have hR := internSort_core hC u hu [r] hI hdu
+  have hst : AM.st (internE (.sort (decI u))) a = a' := by simp [AM.st, hrun]
+  have hP : m'.arr64 PINS = m.arr64 PINS :=
+    (sointernW_frame m u _ _ hI).1 PINS (by simp [PINS, SOREC, SOSLOT, SOLP]) (by decide)
+  refine ⟨a', hrun, ?_, hg⟩
+  rw [← hst] at hS' ⊢
+  exact StageT.of_coreRef hT hS' hR hP
+
+/-- **`intern_fvar` keeps `StageT`.** -/
+theorem internFVar_stageT {m m' : Mem} {a : AState} {r : Word} (hT : StageT dn vis fe m a)
+    (u ty : Word) (hty : H ty) (hI : fvinternW m u ty = some (r, m')) :
+    ∃ a', (internE (.fvar u.toNat (decE ty))).run a = .ok (decE r, a') ∧ StageT dn vis fe m' a' ∧
+      IWGrow m m' := by
+  obtain ⟨a', hrun, hS', hg⟩ := internFVar_stage hT.stage u ty hty hI
+  obtain ⟨M, hC⟩ := hT.core
+  have hR := internFVar_core hC u ty hty [r] hI
+  have hst : AM.st (internE (.fvar u.toNat (decE ty))) a = a' := by simp [AM.st, hrun]
+  have hP : m'.arr64 PINS = m.arr64 PINS :=
+    (fvinternW_frame m u ty _ _ hI).1 PINS (by simp [PINS, FVREC, FVSLOT, FVLP]) (by decide)
+  refine ⟨a', hrun, ?_, hg⟩
+  rw [← hst] at hS' ⊢
+  exact StageT.of_coreRef hT hS' hR hP
 
 end
 
