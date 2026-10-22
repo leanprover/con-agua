@@ -675,4 +675,288 @@ theorem nestCtxRootHoles_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NId
 
 end census
 
+/-! ## `sl_append` over words, under the stage relation -/
+
+theorem StageR.ofCopyW {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} :
+    ∀ (n : Nat) {m m' : Mem} {d s l : Word}, copyW n m d s l = some m' → StageR dn vis fe m a →
+    StageR dn vis fe m' a
+  | 0, _, _, _, _, _, h, _ => by simp [copyW] at h
+  | n + 1, m, m', d, s, l, h, hS => by
+    by_cases hl : l = 0
+    · rw [copyW_nil n m d s l hl] at h; cases h; exact hS
+    · rw [copyW_step n m d s l hl] at h
+      exact StageR.ofCopyW n h (hS.set_iw d _)
+
+/-- **`sl_append` keeps the stage relation**: the pool grew by the new slice, whose words are the
+two sources' (any words: pointers too). -/
+theorem appendW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+    {n : Nat} {m m' : Mem} {o1 l1 o2 l2 : Word} {r : List Word}
+    (h : appendW n m o1 l1 o2 l2 = some (r, m')) (hS : StageR dn vis fe m a)
+    (hsrc1 : o1.toNat + l1.toNat ≤ iwTop m) (hsrc2 : o2.toNat + l2.toNat ≤ iwTop m) :
+    StageR dn vis fe m' a ∧ IWGrow m m' ∧ (r.headD 0).toNat = iwTop m ∧
+      (r.tail.headD 0).toNat = l1.toNat + l2.toNat ∧ iwTop m' = iwTop m + l1.toNat + l2.toNat ∧
+      (∀ i < l1.toNat, (m'.arr64 IW)[iwTop m + i]? = (m.arr64 IW)[o1.toNat + i]?) ∧
+      (∀ i < l2.toNat, (m'.arr64 IW)[iwTop m + l1.toNat + i]? = (m.arr64 IW)[o2.toNat + i]?) := by
+  have hsz := hS.2.2.2.1
+  have hc := hS.2.2.2.2.2
+  simp only [appendW] at h
+  by_cases h0 : l1 + l2 < l1
+  · simp [h0] at h
+  simp only [h0, if_false] at h
+  cases hal : allocW m (l1 + l2) with
+  | none => simp [hal] at h
+  | some qm =>
+  obtain ⟨q, m1⟩ := qm
+  obtain ⟨hS1, -, -, -, -⟩ := hS.alloc hal
+  obtain ⟨hq, hm1, hroom⟩ := allocW_facts hal hsz
+  simp only [hal] at h
+  cases hcp1 : copyW (n - 1) m1 q o1 l1 with
+  | none => simp [hcp1] at h
+  | some m2 =>
+  simp only [hcp1] at h
+  cases hcp2 : copyW (n - 1) m2 (q + l1) o2 l2 with
+  | none => simp [hcp2] at h
+  | some m3 =>
+  simp only [hcp2, Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  have hS3 := StageR.ofCopyW _ hcp2 (StageR.ofCopyW _ hcp1 hS1)
+  subst hq hm1
+  generalize hqq : rdW (m.arr64 CTL) 200 = q at *
+  have hlt : ¬ (l1 + l2).toNat < l1.toNat := by
+    intro hh; exact h0 (UInt64.lt_iff_toNat_lt.mpr hh)
+  have hs : (l1 + l2).toNat = l1.toNat + l2.toNat := by
+    rw [UInt64.toNat_add] at hlt ⊢
+    have := l1.toNat_lt; have := l2.toNat_lt
+    omega
+  rw [hs] at hroom
+  have hql : (q + l1).toNat = q.toNat + l1.toNat := by
+    rw [UInt64.toNat_add]; simp; omega
+  have hIW := allocMem_IW m (l1 + l2)
+  have hqt : q.toNat = iwTop m := by simp only [iwTop, hqq]
+  obtain ⟨hA1, hS1', hW1, hG1⟩ := copyW_get (n - 1) _ _ _ _ _ hcp1 (by omega)
+    (by rw [hIW]; omega) (by rw [hIW]; exact hsz)
+  obtain ⟨hA2, hS2', hW2, hG2⟩ := copyW_get (n - 1) _ _ _ _ _ hcp2 (by rw [hql]; omega)
+    (by rw [hql, hS1', hIW]; omega) (by rw [hS1', hIW]; exact hsz)
+  rw [hIW] at hS1' hG1
+  have hfr : MemFrame [IW] [200] m m3 :=
+    (allocMem_frame m (l1 + l2)).trans
+      ((copy_frame hA1 (by rw [hS1', hIW]) hW1).trans
+       (copy_frame hA2 hS2' hW2))
+  have hget : ∀ i, (m3.arr64 IW)[i]? =
+      if q.toNat ≤ i ∧ i < q.toNat + l1.toNat then (m.arr64 IW)[o1.toNat + (i - q.toNat)]?
+      else if q.toNat + l1.toNat ≤ i ∧ i < q.toNat + l1.toNat + l2.toNat then
+        (m.arr64 IW)[o2.toNat + (i - (q.toNat + l1.toNat))]?
+      else (m.arr64 IW)[i]? := by
+    intro i
+    rw [hG2 i, hql]
+    by_cases h1 : q.toNat ≤ i ∧ i < q.toNat + l1.toNat
+    · rw [if_neg (by omega), hG1, if_pos h1, if_pos h1]
+    · by_cases h2 : q.toNat + l1.toNat ≤ i ∧ i < q.toNat + l1.toNat + l2.toNat
+      · rw [if_pos h2, hG1, if_neg (by omega), if_neg h1, if_pos h2]
+      · rw [if_neg h2, hG1, if_neg h1, if_neg h1, if_neg h2]
+  have htop : rdW (m3.arr64 CTL) 200 = q + (l1 + l2) := by
+    rw [hA2 CTL (by decide), hA1 CTL (by decide), allocMem_top m _ hc, hqq]
+  have hsum : (q + (l1 + l2)).toNat = q.toNat + (l1.toNat + l2.toNat) := by
+    rw [UInt64.toNat_add, hs]; simp; omega
+  refine ⟨hS3, ?_, by simp [hqt], by simp [hs], ?_, fun i hi => ?_, fun i hi => ?_⟩
+  · refine iwGrow_of_frame hfr (N := l1 + l2) ?_ ?_ hsz ?_
+    · rw [htop, hqq]
+    · simp only [iwTop, hqq]; omega
+    · intro i hi
+      simp only [iwTop, hqq] at hi
+      rw [hget, if_neg (by omega), if_neg (by omega)]
+  · simp only [iwTop, htop, hsum]; simp only [iwTop] at hqt; omega
+  · rw [hget, ← hqt, if_pos (by omega)]; congr 2; omega
+  · rw [hget, ← hqt, if_neg (by omega), if_pos (by omega)]; congr 2; omega
+
+/-! ## `nest_hole_at` refines `nestHoleAt` -/
+
+/-- A slice of `NestHole` pointers below the top, decoding to `hs`. -/
+def HSl (m : Mem) (o l : Nat) (hs : List NestHole) : Prop :=
+  hs.length = l ∧ o + l ≤ iwTop m ∧ HolesAt m o l hs (· < iwTop m)
+
+theorem HSl.grow {m m' : Mem} {o l : Nat} {hs : List NestHole} (h : HSl m o l hs) (hg : IWGrow m m') :
+    HSl m' o l hs := by
+  obtain ⟨h1, h2, h3⟩ := h
+  refine ⟨h1, Nat.le_trans h2 hg.1, fun i hi => ?_⟩
+  obtain ⟨w, hw, hd, hn⟩ := h3 i hi
+  obtain ⟨e, hn'⟩ := hn.grow hg
+  exact ⟨w, by rw [hg.2.2.1 _ (by omega)]; exact hw, by rw [e]; exact hd, hn'⟩
+
+/-- An optional hole: `(0, _)` or `(1, w)` with `w` decoding below the top. -/
+def decONH (m : Mem) (r : List Word) : Option NestHole → Prop
+  | none => r.headD 0 = 0
+  | some h => r.headD 0 = 1 ∧ decNH m (r.tail.headD 0).toNat = some h ∧
+      NHIn m (r.tail.headD 0).toNat (· < iwTop m)
+
+/-- `nest_ctx_root_holes` at any exec fuel. -/
+def rhWf : Nat → Mem → Word → Option (List Word × Mem)
+  | 0, _, _ => none
+  | k + 1, m, ctx => rhW k m ctx
+
+def haK2 (idx : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r2, m2) =>
+    if idx < r2.tail.headD 0 then some ([1, rdW (m2.arr64 IW) (r2.headD 0 + idx)], m2)
+    else some ([0, 0], m2)
+def haK1 (k : Nat) (po pl idx : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m1) => haK2 idx (appendW k m1 (r.headD 0) (r.tail.headD 0) po pl)
+/-- The model of `nest_hole_at(ctx, progOff, progLen, i)` at exec fuel `k + 1`. -/
+def haW (k : Nat) (m : Mem) (ctx po pl i : Word) : Option (List Word × Mem) :=
+  if i < rdW (m.arr64 IW) (ctx + 4) then some ([0, 0], m)
+  else haK1 k po pl (i - rdW (m.arr64 IW) (ctx + 4)) (rhWf k m ctx)
+
+section arms
+variable (k : Nat) (m1 m2 : Mem) (po pl idx : Word) (r r2 : List Word)
+theorem haK2_hit (h : idx < r2.tail.headD 0) :
+    haK2 idx (some (r2, m2)) = some ([1, rdW (m2.arr64 IW) (r2.headD 0 + idx)], m2) := by
+  simp only [haK2]; rw [if_pos h]
+theorem haK2_miss (h : ¬ idx < r2.tail.headD 0) : haK2 idx (some (r2, m2)) = some ([0, 0], m2) := by
+  simp only [haK2]; rw [if_neg h]
+theorem haK1_some : haK1 k po pl idx (some (r, m1)) =
+    haK2 idx (appendW k m1 (r.headD 0) (r.tail.headD 0) po pl) := rfl
+end arms
+attribute [ind_grind] haK2_hit haK2_miss haK1_some
+
+section spec
+variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (h2 : p.lookup "rec2" = some rec2)
+  (h4 : p.lookup "rec4" = some rec4)
+  (hg : p.lookup "nest_ctx_root_holes_go" = some nestCtxRootHolesGo)
+  (hr : p.lookup "nest_ctx_root_holes" = some nestCtxRootHoles)
+  (hc : p.lookup "iw_copy" = some iwCopy) (hap : p.lookup "sl_append" = some slAppend)
+  (hp : p.lookup "nest_hole_at" = some nestHoleAt)
+
+include ha h2 h4 hg hr in
+theorem rootHoles_spec' (k : Nat) (s₀ : St) (ctx : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_ctx_root_holes" [ctx]
+    ⦃fun r s' => LocEq s' s₀ ∧ rhWf k s₀.mem ctx = some (r, s'.mem); ⊤⦄ := by
+  cases k with
+  | zero => rw [invoke_eq _ hr]; simp only [callFn, nestCtxRootHoles]; vcgen [exec] <;> grind
+  | succ k => exact rootHoles_spec p ha h2 h4 hg hr k s₀ ctx
+
+include ha h2 h4 hg hr hc hap hp in
+theorem nestHoleAt_spec (k : Nat) (s₀ : St) (ctx po pl i : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_hole_at" [ctx, po, pl, i]
+    ⦃fun r s' => LocEq s' s₀ ∧ haW k s₀.mem ctx po pl i = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, nestHoleAt]
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      rootHoles_spec' p ha h2 h4 hg hr k, slAppend_specW p ha hc hap k] <;>
+    finish (gen := 20) [haW, rdW_eq]
+
+end spec
+
+theorem rdW_of_get' {a : Array Word} {x : Word} {i : Nat} {w : Word} (hx : x.toNat = i) (h : a[i]? = some w) :
+    rdW a x = w := by simp [rdW, hx, h]
+
+theorem haW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word) (a : AState)
+    (m m' : Mem) (ctx po pl i : Word) (r : List Word) (c : NestCtx) (prog : List NestHole)
+    (h : haW k m ctx po pl i = some (r, m')) (hS : StageR dn vis fe m a)
+    (hc : decCtx m ctx.toNat = some c) (hin : CtxIn m ctx.toNat (· < iwTop m))
+    (hpr : HSl m po.toNat pl.toNat prog) :
+    StageR dn vis fe m' a ∧ IWGrow m m' ∧ decONH m' r (ConRon.Arena.nestHoleAt c prog i.toNat) := by
+  have hsz : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  obtain ⟨-, -, -, -, hnP, -, -, -, -, -⟩ := ctx_fields hc hin hsz
+  unfold haW at h
+  by_cases hlt : i < rdW (m.arr64 IW) (ctx + 4)
+  · rw [if_pos hlt] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    refine ⟨hS, IWGrow.refl _, ?_⟩
+    have : ¬ c.nP ≤ i.toNat := by rw [← hnP]; have := UInt64.lt_iff_toNat_lt.mp hlt; omega
+    simp [ConRon.Arena.nestHoleAt, this, decONH]
+  rw [if_neg hlt] at h
+  have hge : c.nP ≤ i.toNat := by
+    rw [← hnP]
+    have : ¬ (i.toNat < (rdW (m.arr64 IW) (ctx + 4)).toNat) := fun h' => hlt (UInt64.lt_iff_toNat_lt.mpr h')
+    omega
+  have hidx : (i - rdW (m.arr64 IW) (ctx + 4)).toNat = i.toNat - c.nP := by
+    rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; omega), hnP]
+  generalize i - rdW (m.arr64 IW) (ctx + 4) = idx at h hidx
+  cases k with
+  | zero => simp [rhWf, haK1] at h
+  | succ k =>
+  simp only [rhWf] at h
+  cases hrh : rhW k m ctx with
+  | none => rw [hrh] at h; simp [haK1] at h
+  | some pr =>
+  obtain ⟨r1, m1⟩ := pr
+  rw [hrh, haK1_some] at h
+  obtain ⟨hS1, hg1, hl1, hb1, hH1⟩ := rhW_ok k dn fe vis a m m1 ctx r1 c hrh hS hc hin
+  obtain ⟨hplen, hpb, hpH⟩ := hpr
+  cases hap : appendW (k + 1) m1 (r1.headD 0) (r1.tail.headD 0) po pl with
+  | none => rw [hap] at h; simp [haK2] at h
+  | some pr2 =>
+  obtain ⟨r2, m2⟩ := pr2
+  rw [hap] at h
+  obtain ⟨hS2, hg2, hr20, hr21, ht2, hw1, hw2⟩ := appendW_stage hap hS1 (by rw [hl1]; exact hb1)
+    (by have := hg1.1; omega)
+  rw [hl1] at hr21 hw1 ht2 hw2
+  have hsz2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
+  have hlen := c.rootHoles.length
+  by_cases hh : idx < r2.tail.headD 0
+  · rw [haK2_hit (h := hh)] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    have hh' : idx.toNat < c.rootHoles.length + pl.toNat := by
+      have := UInt64.lt_iff_toNat_lt.mp hh; omega
+    have hx : (r2.headD 0 + idx).toNat = iwTop m1 + idx.toNat := by
+      rw [word_add_toNat (by omega), hr20]
+    refine ⟨hS2, hg1.trans hg2, ?_⟩
+    simp only [ConRon.Arena.nestHoleAt, if_pos hge, decONH, List.headD_cons, List.tail_cons, true_and]
+    by_cases hr : idx.toNat < c.rootHoles.length
+    · obtain ⟨w, hw, hd, hni⟩ := hH1 idx.toNat hr
+      have hw' : (m2.arr64 IW)[iwTop m1 + idx.toNat]? = some w := by
+        rw [hw1 _ hr]; exact hw
+      obtain ⟨e, hni'⟩ := hni.grow hg2
+      rw [rdW_of_get' hx hw', ← hidx, List.getElem?_append_left hr, List.getElem?_eq_getElem hr]
+      rw [List.getElem?_eq_getElem hr] at hd
+      exact ⟨by rw [e, hd], hni'⟩
+    · obtain ⟨w, hw, hd, hni⟩ := hpH (idx.toNat - c.rootHoles.length) (by omega)
+      have hw' : (m2.arr64 IW)[iwTop m1 + idx.toNat]? = some w := by
+        have := hw2 (idx.toNat - c.rootHoles.length) (by omega)
+        rw [show iwTop m1 + c.rootHoles.length + (idx.toNat - c.rootHoles.length) = iwTop m1 + idx.toNat by omega]
+          at this
+        rw [this, hg1.2.2.1 _ (by omega)]; exact hw
+      obtain ⟨e, hni'⟩ := hni.grow (hg1.trans hg2)
+      have hr' : idx.toNat - c.rootHoles.length < prog.length := by omega
+      rw [rdW_of_get' hx hw', ← hidx, List.getElem?_append_right (by omega), List.getElem?_eq_getElem hr']
+      rw [List.getElem?_eq_getElem hr'] at hd
+      exact ⟨by rw [e, hd], hni'⟩
+  · rw [haK2_miss (h := hh)] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    refine ⟨hS2, hg1.trans hg2, ?_⟩
+    have hh' : ¬ idx.toNat < c.rootHoles.length + pl.toNat := by
+      intro hc'; exact hh (UInt64.lt_iff_toNat_lt.mpr (by omega))
+    simp only [ConRon.Arena.nestHoleAt, if_pos hge, decONH]
+    rw [List.getElem?_eq_none (by simp; omega)]
+    rfl
+
+section census
+variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (h2 : p.lookup "rec2" = some rec2)
+  (h4 : p.lookup "rec4" = some rec4)
+  (hg : p.lookup "nest_ctx_root_holes_go" = some nestCtxRootHolesGo)
+  (hr : p.lookup "nest_ctx_root_holes" = some nestCtxRootHoles)
+  (hc : p.lookup "iw_copy" = some iwCopy) (hap : p.lookup "sl_append" = some slAppend)
+  (hp : p.lookup "nest_hole_at" = some nestHoleAt)
+include ha h2 h4 hg hr hc hap hp
+
+/-- **`nest_hole_at` refines `nestHoleAt`**: the hole's record pointer, decoded below the top. -/
+@[refines ConRon.Arena.nestHoleAt]
+theorem nestHoleAt_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+    (fe : IFEnv) (vis ctx po pl i : Word) (c : NestCtx) (prog : List NestHole)
+    (hS : StageR dn vis fe s₀.mem a₀) (hcx : decCtx s₀.mem ctx.toNat = some c)
+    (hin : CtxIn s₀.mem ctx.toNat (· < iwTop s₀.mem)) (hpr : HSl s₀.mem po.toNat pl.toNat prog) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "nest_hole_at" [ctx, po, pl, i]
+    ⦃fun r s' => LocEq s' s₀ ∧ StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem ∧
+      decONH s'.mem r (ConRon.Arena.nestHoleAt c prog i.toNat); ⊤⦄ := by
+  refine triple_post (nestHoleAt_spec p ha h2 h4 hg hr hc hap hp k s₀ ctx po pl i) ?_
+  rintro r s' ⟨hl, hm⟩
+  exact ⟨hl, haW_ok k dn fe vis a₀ _ _ ctx po pl i r c prog hm hS hcx hin hpr⟩
+
+end census
+
 end L.Ind
