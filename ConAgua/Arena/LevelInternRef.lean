@@ -202,6 +202,7 @@ def LIOk (L : Level) (m : Mem) (a : AState) (h : Word) (m' : Mem) : Prop :=
 
 set_option linter.constructorNameAsVariable false in
 /-- **The model of `lv_intern` refines `internLevel`** of the level the pointer denotes. -/
+@[refines ConRon.Arena.internLevel]
 theorem lvInternW_ok (L : Level) :
     ∀ (n : Nat) (m : Mem) (a : AState) (q h : Word) (m' : Mem),
     ArenaD m a → NStoreWF a.store.lss.ls.ns → LvR (nameN a.store.lss.ls.ns) m q L →

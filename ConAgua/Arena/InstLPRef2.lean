@@ -154,6 +154,7 @@ theorem rflTail_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m₁ m₂ m₃ : Mem)
 /-- **The model of `rec_fire_levels` refines `recFireLevels`**: the keys an `EREC` name slice
 that reads back, the universe arguments a list that reads back, the fire datum at the rule's
 words (`FireR`), the twin's store invariant and readback caches as hypotheses. -/
+@[refines ConRon.Arena.recFireLevels]
 theorem recFireLevelsW_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m' : Mem) (a : AState)
     (fk fvo fvc po pc us qo qc r : Word) (rl : IRecRule) (lps cvjLps : List NIdx) (ks : List Name)
     (vs : List Level) (hA : ArenaD m a) (hwf : StoreWF a.store) (hnc : ReadNCOK a) (hlc : ReadLCOK a)
@@ -288,5 +289,52 @@ theorem recFireLevelsW_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m' : Mem) (a :
       (by rw [hpi₂, ← hal]) (by rw [hme₂, ← hal]) hsl₂ hbl₂ hf₂ h4
     refine ⟨a₃, ?_, hok⟩
     simp only [recFireLevels, hnest, StateT.run_bind, hrn, except_ok_bind, hrl, hrun₂, hrun₃]
+
+/-! ## `caps_never_zero` refines `capsNeverZero` -/
+
+/-- **The model of `caps_never_zero` refines `capsNeverZero`** at the recursor's level parameters
+(an `EREC` name slice that reads back), the universe arguments (a list that reads back) and the
+family's stored sort datum `caps.sortZ` related at its words. -/
+@[refines ConRon.Arena.capsNeverZero]
+theorem capsNeverZeroW_run (n : Nat) (m m' : Mem) (a : AState) (po pc us swd so sc x : Word)
+    (lps : List NIdx) (ks : List Name) (vs : List Level) (caps : IIndCaps) (hA : ArenaD m a)
+    (hwf : NStoreWF a.store.lss.ls.ns) (hnc : ReadNCOK a) (hlsc : ReadLsCOK a)
+    (hus : us.toNat < 2 ^ 32) (hsz : (m.arr64 SPN).size < 2 ^ 63)
+    (hdl : denoteLs a.store.lss (decI us) = some vs)
+    (hlps : hslice? (m.arr64 EREC) po.toNat pc.toNat = some lps) (hpb : po.toNat + pc.toNat < 2 ^ 64)
+    (hks : lps.mapM (denoteN a.store.lss.ls.ns) = some ks)
+    (hp : PWR (nameN a.store.lss.ls.ns) m EREC swd so sc caps.sortZ)
+    (hW : capsNeverZeroW n m po pc us swd so sc = some (x, m')) :
+    ∃ a', (capsNeverZero lps (decI us) caps).run a = .ok (x != 0, a') ∧ ArenaD m' a' ∧
+      a'.store = a.store ∧ a'.pins = a.pins ∧ a'.memos = a.memos ∧
+      a'.caches = { { a.caches with readNC := a'.caches.readNC } with readLsC := a'.caches.readLsC } ∧
+      ReadNCOK a' ∧ ReadLsCOK a' ∧
+      MemFrame [LH, SPN] [192, 136] m m' ∧ spTop m' = spTop m ∧
+      (∀ i : Word, i < spTop m → spW m' i = spW m i) ∧ x.toNat < 2 ^ 32 := by
+  have hk := nmsR_of_hslice a.store.lss.ls.ns m EREC lps ks po pc hlps hpb hks
+  obtain ⟨hA', hf, htop, hbel, hx, hlt⟩ :=
+    capsNeverZeroW_ok n m m' a po pc us swd so sc x ks vs caps.sortZ hA hwf hus hsz hdl hk hp hW
+  obtain ⟨c₁, hrn, hnc₁, -, els₁, eq₁⟩ := readNamesM_run a hnc lps ks hks
+  have hlsc₁ : ReadLsCOK { a with caches := c₁ } := fun h l e => hlsc h l (by rw [← els₁]; exact e)
+  obtain ⟨c₂, hrl, hlsc₂, -, en₂, eq₂⟩ := lp_readLevelsM_run { a with caches := c₁ } (decI us) vs hdl hlsc₁
+  generalize ha₂ : ({ { a with caches := c₁ } with caches := c₂ } : AState) = a₂ at hrl hlsc₂
+  have hst : a₂.store = a.store := by rw [← ha₂]
+  have hpi : a₂.pins = a.pins := by rw [← ha₂]
+  have hme : a₂.memos = a.memos := by rw [← ha₂]
+  have hca : a₂.caches = c₂ := by rw [← ha₂]
+  have hA₂ : ArenaD m' a₂ := by rw [← ha₂]; exact hA'.with_caches _
+  refine ⟨a₂, ?_, hA₂, hst, hpi, hme, ?_, ?_, hlsc₂, hf, htop, hbel, hlt⟩
+  · have hb : (Level.substPW ks vs caps.sortZ).isNever = (x != 0) := by
+      cases h : (Level.substPW ks vs caps.sortZ).isNever
+      · rw [h] at hx
+        have h0 : x = 0 := Classical.byContradiction fun h0 => by have := Eq.mp hx h0; cases this
+        subst h0; rfl
+      · rw [h] at hx
+        have h0 : x ≠ 0 := Eq.mpr hx rfl
+        exact (bne_iff_ne.mpr h0).symm
+    simp only [ConRon.Arena.capsNeverZero, StateT.run_bind, hrn, except_ok_bind, hrl, hb]; rfl
+  · rw [hca]; conv => lhs; rw [eq₂]
+    rw [en₂]; dsimp only; conv => lhs; rw [eq₁]
+  · intro h l e; rw [hca, en₂] at e; rw [hst]; exact hnc₁ h l e
 
 end L.Arena

@@ -116,6 +116,7 @@ theorem ReadLCOK.ext {a a' : AState} (hc : ReadLCOK a) (hx : Ext a.store a'.stor
 
 /-- **The model of `sle_go` refines `substLevelsAt`** over the record-pool handle slice `(o, l)`:
 the results land at `SPN[b ‥ b + l)`. -/
+@[refines ConRon.Arena.substLevelsAt]
 theorem sleW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo vc : Word) :
     ∀ (ids : List LIdx) (n : Nat) (m m' : Mem) (a : AState) (o l b : Word),
     ArenaD m a → StoreWF a.store → ReadLCOK a →
@@ -304,6 +305,7 @@ theorem slpOne_ok (ks : List Name) (vs : List Level) (n : Nat) (m m₁ : Mem) (a
 
 /-- **The model of `slp_go` refines `substParamLevels`** over the record-pool name slice `(o, l)`:
 the results land at `SPN[b ‥ b + l)`. -/
+@[refines ConRon.Arena.substParamLevels]
 theorem slpW_ok (ks : List Name) (vs : List Level) (usIds : List LIdx) (ko kc vo vc : Word) :
     ∀ (ids : List NIdx) (n : Nat) (m m' : Mem) (a : AState) (o l b : Word),
     ArenaD m a → StoreWF a.store → ReadNCOK a →
