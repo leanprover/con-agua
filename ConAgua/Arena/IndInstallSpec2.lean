@@ -1135,4 +1135,172 @@ theorem checkBlockPositivityMember_spec (p : Prog) (ha : p.lookup "iw_alloc" = s
         iwAlloc_specW p ha n, checkBlockPositivityMemberGo_spec p ha h2 hg n] <;>
       finish (gen := 20) [allocW_size]
 
+/-- A `(kinds, eidx)` record: the kinds list at words `0, 1` and the handle at word `2`. -/
+def decKE (m : Mem) (v : Nat) : Option (List NestFieldKind × EIdx) := do
+  pure (← decAt m (decKL m) v, ← iwH m (v + 2))
+
+theorem decKL_congr {m m' : Mem} {o l : Nat} (h : ∀ i, o ≤ i → i < o + l → (m'.arr64 IW)[i]? = (m.arr64 IW)[i]?) :
+    decKL m' o l = decKL m o l := by
+  simp only [decKL, iwA]
+  apply mapM_opt_congr
+  intro j hj
+  have hj' := List.mem_range.mp hj
+  rw [h (o + j) (by omega) (by omega)]
+
+/-- **What `check_block_positivity_member` builds** from a list of `(kinds, eidx)` records. -/
+theorem posMemberW_dec {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
+    (h : posMemberW n m o l = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64)
+    (hc : 200 < (m.arr64 CTL).size) (hsrc : o.toNat + l.toNat ≤ iwTop m)
+    (pairs : List (List NestFieldKind × EIdx))
+    (hin : decPL m (decKE m) o.toNat l.toNat = some pairs)
+    (hptr : ∀ j v, j < l.toNat → iwN m (o.toNat + j) = some v → v + 3 ≤ iwTop m)
+    (hkl : ∀ j v off ln, j < l.toNat → iwN m (o.toNat + j) = some v → iwN m v = some off →
+      iwN m (v + 1) = some ln → off + ln ≤ iwTop m) :
+    r = [rdW (m.arr64 CTL) 200, l, rdW (m.arr64 CTL) 200 + l, l] ∧
+    decPL m' (decAt m' (decKL m')) (rdW (m.arr64 CTL) 200).toNat l.toNat = some (pairs.map (·.1)) ∧
+    decHL m' (rdW (m.arr64 CTL) 200 + l).toNat l.toNat = some (pairs.map (·.2)) ∧
+    IWGrow m m' ∧ MemFrame [IW] [200] m m' := by
+  have hlen := decPL_length _ hin
+  simp only [posMemberW] at h
+  cases hal1 : allocW m l with
+  | none => simp [hal1] at h
+  | some qm1 =>
+  obtain ⟨kq, m1⟩ := qm1
+  obtain ⟨hkq, hm1, hroom1⟩ := allocW_facts hal1 hsz
+  have hsz1 := allocW_size hal1 hsz
+  simp only [hal1] at h
+  cases hal2 : allocW m1 l with
+  | none => simp [hal2] at h
+  | some qm2 =>
+  obtain ⟨nq, m2⟩ := qm2
+  obtain ⟨hnq, hm2, hroom2⟩ := allocW_facts hal2 hsz1
+  simp only [hal2] at h
+  cases hgo : pmGoW (n - 1) m2 kq nq o l with
+  | none => simp [hgo] at h
+  | some m3 =>
+  simp only [hgo, Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  have hc1 : 200 < (m1.arr64 CTL).size := by rw [hm1, (allocMem_frame m l).2.2.1 CTL]; exact hc
+  have hIW1 : m1.arr64 IW = m.arr64 IW := by rw [hm1]; exact allocMem_IW m l
+  have hIW2 : m2.arr64 IW = m.arr64 IW := by rw [hm2, allocMem_IW, hIW1]
+  have hnq' : nq = kq + l := by rw [hnq, hm1, allocMem_top m l hc, hkq]
+  have hCTL2 : rdW (m2.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 + l + l := by
+    rw [hm2, allocMem_top m1 l hc1, hm1, allocMem_top m l hc]
+  have hlt : l.toNat < 2 ^ 64 := UInt64.toNat_lt _
+  have hroom1' := hroom1
+  rw [hIW1] at hroom2
+  have hkqn : kq.toNat = iwTop m := by rw [hkq]; rfl
+  have hnqn : nq.toNat = kq.toNat + l.toNat := by
+    rw [hnq', UInt64.toNat_add]; simp; omega
+  have hsz2 : (m2.arr64 IW).size < 2 ^ 64 := by rw [hIW2]; exact hsz
+  have hc2 : 200 < (m2.arr64 CTL).size := by
+    rw [hm2, (allocMem_frame m1 l).2.2.1 CTL]; exact hc1
+  have hT2 : iwTop m2 = kq.toNat + 2 * l.toNat := by
+    simp only [iwTop, hCTL2, UInt64.toNat_add]
+    rw [← hkq]; simp; omega
+  have hE : ∀ j < l.toNat, (rdW (m2.arr64 IW) (UInt64.ofNat (o.toNat + j))).toNat + 3 ≤ kq.toNat := by
+    intro j hj
+    obtain ⟨v, y, hv, -, -⟩ := decPL_get l.toNat o.toNat pairs hin j hj
+    obtain ⟨hv', hvb⟩ := iwN_rdW hv (by omega)
+    rw [hIW2, hv', UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; exact hvb)]
+    have := hptr j v hj hv
+    omega
+  obtain ⟨hF, hC, hRm, hP2, hP3, hP4, hP5⟩ := pmGoW_get (n - 1) m2 m3 kq nq o l hgo hsz2 hc2
+    (by omega) (by omega) (by rw [hT2]; omega) (by rw [hT2, hIW2]; omega) hE
+  have hfr : MemFrame [IW] [200] m m3 :=
+    (allocMem_frame m l).trans (hm1 ▸ ((allocMem_frame m1 l).trans (hm2 ▸ hF)))
+  have hex : ∀ j (hj : j < l.toNat), ∃ v off ln, iwN m (o.toNat + j) = some v ∧
+      (rdW (m.arr64 IW) (UInt64.ofNat (o.toNat + j))).toNat = v ∧ iwN m v = some off ∧
+      iwN m (v + 1) = some ln ∧ decKL m off ln = some (pairs[j]'(by omega)).1 ∧
+      iwH m (v + 2) = some (pairs[j]'(by omega)).2 := by
+    intro j hj
+    obtain ⟨v, y, hv, hy, hget⟩ := decPL_get l.toNat o.toNat pairs hin j hj
+    have hy' : pairs[j]'(by omega) = y := by simpa [List.getElem?_eq_getElem (show j < pairs.length by omega)] using hget
+    simp only [decKE, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hy
+    obtain ⟨ks, hks, x, hx, rfl⟩ := hy
+    obtain ⟨off, ln, ho, hl, hg⟩ := decAt_some hks
+    obtain ⟨hv', hvb⟩ := iwN_rdW hv (by omega)
+    exact ⟨v, off, ln, hv, by rw [hv', UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; exact hvb)],
+      ho, hl, by rw [hy']; exact hg, by rw [hy']; exact hx⟩
+  have hlowm : ∀ i, i < iwTop m → (m3.arr64 IW)[i]? = (m.arr64 IW)[i]? := by
+    intro i hi
+    rw [hP5 i (by omega) (by omega) (by omega), hIW2]
+  refine ⟨by rw [hnq', hkq], ?_, ?_, ?_, hfr⟩
+  · have := decPL_of_get (m := m3) (decAt m3 (decKL m3)) (pairs.map (·.1)) kq.toNat (fun j hj => by
+      have hj' : j < l.toNat := by simpa [hlen] using hj
+      obtain ⟨v, off, ln, hv, hrd, ho, hl, hks, hx⟩ := hex j hj'
+      have hRlt : kq.toNat + 2 * l.toNat + 2 * j + 1 < 2 ^ 64 := by omega
+      have hC2 := hP2 j hj'
+      have hC3 := hP3 j hj'
+      rw [hT2] at hC2 hC3
+      rw [hIW2, hrd] at hC3
+      have hvlt : v + 3 ≤ iwTop m := hptr j v hj' hv
+      obtain ⟨hof, -⟩ := iwN_rdW ho (by omega)
+      refine ⟨kq.toNat + 2 * l.toNat + 2 * j, ?_, ?_⟩
+      · simp only [iwN, nat?, iwA, hC2, Option.map_some]
+        congr 1
+        exact UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; exact (by omega))
+      · simp only [decAt, bind, Option.bind]
+        have e0 : iwN m3 (kq.toNat + 2 * l.toNat + 2 * j) = some off := by
+          simp only [iwN, nat?, iwA, hC3.1]
+          have : (m.arr64 IW)[v]? = _ := rfl
+          simpa [iwN, nat?, iwA] using ho
+        have e1 : iwN m3 (kq.toNat + 2 * l.toNat + 2 * j + 1) = some ln := by
+          have := hC3.2
+          simp only [iwN, nat?, iwA, this]
+          simpa [iwN, nat?, iwA] using hl
+        rw [e0, e1]
+        simp only
+        rw [decKL_congr (m := m)]
+        · simpa using hks
+        · intro i hi1 hi2
+          exact hlowm i (by have := hkl j v off ln hj' hv ho hl; omega))
+    rw [← hkq]; simpa [hlen] using this
+  · have := decHL_of_get m3 (pairs.map (·.2)) nq.toNat (fun j hj => by
+      have hj' : j < l.toNat := by simpa [hlen] using hj
+      obtain ⟨v, off, ln, hv, hrd, ho, hl, hks, hx⟩ := hex j hj'
+      have hC4 := hP4 j hj'
+      rw [hIW2, hrd] at hC4
+      have : (iwH m3 (nq.toNat + j) : Option EIdx) = iwH m (v + 2) := by
+        simp only [iwH, hd?, iwA, hC4]
+      rw [this]
+      simpa using hx)
+    rw [← hkq, ← hnq']; simpa [hlen] using this
+  · have htop : rdW (m3.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 + UInt64.ofNat (4 * l.toNat) := by
+      rw [hC, hCTL2]
+      apply UInt64.toNat_inj.mp
+      simp only [UInt64.toNat_add, UInt64.toNat_ofNat]
+      simp
+      omega
+    refine iwGrow_of_frame hfr (N := UInt64.ofNat (4 * l.toNat)) htop ?_ hsz ?_
+    · rw [UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)]
+      rw [hT2] at hRm; rw [hIW2] at hRm; omega
+    · intro i hi; exact hlowm i hi
+
+/-- **`check_block_positivity_member` splits one member's `(kinds, eidx)` list** (the member case of
+`checkBlockPositivity`'s `outs.map (·.map (·.1))` and `outs.map (·.map (·.2))`): the `kq` slice holds
+fresh `[off, len]` pointers decoding as the kinds lists, the `nq` slice the handles. -/
+@[refines_part ConRon.Arena.checkBlockPositivity "one member's kinds and normal forms"]
+theorem checkBlockPositivityMember_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (h2 : p.lookup "rec2" = some rec2)
+    (hg : p.lookup "check_block_positivity_member_go" = some checkBlockPositivityMemberGo)
+    (hp : p.lookup "check_block_positivity_member" = some checkBlockPositivityMember) (n : Nat)
+    (s₀ : St) (o l : Word) (pairs : List (List NestFieldKind × EIdx))
+    (hin : decPL s₀.mem (decKE s₀.mem) o.toNat l.toNat = some pairs)
+    (hsz : (s₀.mem.arr64 IW).size < 2 ^ 64) (hcl : 200 < (s₀.mem.arr64 CTL).size)
+    (hsrc : o.toNat + l.toNat ≤ iwTop s₀.mem)
+    (hptr : ∀ j v, j < l.toNat → iwN s₀.mem (o.toNat + j) = some v → v + 3 ≤ iwTop s₀.mem)
+    (hkl : ∀ j v off ln, j < l.toNat → iwN s₀.mem (o.toNat + j) = some v → iwN s₀.mem v = some off →
+      iwN s₀.mem (v + 1) = some ln → off + ln ≤ iwTop s₀.mem) :
+    ⦃fun st => st = s₀⦄ invoke p (exec p n) "check_block_positivity_member" [o, l]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      r = [rdW (s₀.mem.arr64 CTL) 200, l, rdW (s₀.mem.arr64 CTL) 200 + l, l] ∧
+      decPL s'.mem (decAt s'.mem (decKL s'.mem)) (rdW (s₀.mem.arr64 CTL) 200).toNat l.toNat =
+        some (pairs.map (·.1)) ∧
+      decHL s'.mem (rdW (s₀.mem.arr64 CTL) 200 + l).toNat l.toNat = some (pairs.map (·.2)) ∧
+      IWGrow s₀.mem s'.mem ∧ MemFrame [IW] [200] s₀.mem s'.mem; ⊤⦄ := by
+  refine triple_post (checkBlockPositivityMember_spec p ha h2 hg hp n s₀ o l hsz) ?_
+  rintro r s' ⟨hl, hm⟩
+  exact ⟨hl, posMemberW_dec hm hsz hcl hsrc pairs hin hptr hkl⟩
+
 end L.Ind
