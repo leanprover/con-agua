@@ -3552,8 +3552,10 @@ Word arrays (byte arrays are a separate id space: `IN` = byte array 0 is the inp
 | 48 | `FRMEMO` | `MemosR.fvar` | `fvarRange` memo (`fvarBC`) |
 | 49‥55 | – | `MemosR` (reserved) | the other six walk memos |
 | 56‥63 | – | reserved (store tier) | (the scratch epoch is `CTL[62]`, no array; lane `libs`) |
-| 64, 65, 66 | `NID`, `LID`, `EID` | `StateDR` (front) | the export's name/level/expression id tables |
-| 67‥95 | – | reserved (front) | declaration records, `pend` |
+| 64, 65, 66 | `NID`, `LID`, `EID` | `StateDR` (front) | the export's name/level/expression id tables, dense part (lane `twinaudit`) |
+| 67‥71 | `DECL`, `DLP`, `DIND`, `IFR`, `IFL` | `StateDR` (front) | declaration records, inductive lines |
+| 72, 73, 74 | – | `StateDR` (`TblR`) | the id tables' sparse overflow (memo-library tables, `IdTable.lean`) |
+| 75‥95 | – | reserved (front) | |
 | 96‥127 | – | `CoreR` (stub) | the 14 caches and the eager-depth banks |
 | 128‥131 | – | `PinsR` (stub) | the pin table |
 | 132‥143 | – | `EnvR` (stub) | the environment index |
@@ -3576,7 +3578,9 @@ Word arrays (byte arrays are a separate id space: `IN` = byte array 0 is the inp
 | 48‥61 | `MemosR` (reserved) | the other six memos |
 | 62 | `ArenaR` (every table, `StoreR`) | scratch slot base `B` (lane `libs`): tier-1 slots hold `B + i + 1`; `scratch_reset` adds `2^32` |
 | 63 | reserved | |
-| 64‥95 | reserved (front) | |
+| 64‥69 | `StateDR` (`TblR`) | stamp − 1, live count of the id tables' sparse maps (`NID`, `LID`, `EID`) |
+| 70, 71, 72 | `StateDR` (`TblR`) | dense size of `NID`, `LID`, `EID` |
+| 73‥95 | reserved (front) | |
 | 96‥127 | `CoreR` (stub) | cache stamps/counts, eager depth |
 | 128‥135 | `EnvR` (stub) | environment counters |
 | 136‥191 | argument relations (reserved) | |
@@ -6158,7 +6162,7 @@ assembly items, `docs/e2e.md`'s "Assembly" section (any run).
    `inst1(3)` (defeq's stub) vs `inst_entry(3)`. The extra argument is the walk fuel of lane
    induct's convention. Owners: decls2, defeq (rename or adapter). `inst1` is what stops `whnf` on
    a beta-redex in `e2e-diff` (136 handles over the fixtures in an unsampled run).
-5. **Sparse export ids** (`e2e/rounds_huge_gaps`, ids up to `3·10^15`): the frontend's id tables
+5. *(Fixed by lane `twinaudit`: the id tables are `IdTable`s now.)* **Sparse export ids** (`e2e/rounds_huge_gaps`, ids up to `3·10^15`): the frontend's id tables
    are dense arrays (`NID`/`LID`/`EID`, lane front's design), so `name_fresh` aborts at its
    capacity check where the twin's hash maps accept. A completeness loss, not a soundness one;
    owner front (a hash-mapped id table, or accept the loss and say so).
@@ -6676,6 +6680,96 @@ Census at landing 3 (`--no-build`): phase 2 **145 proven, 26 sorry, 71 written, 
 * Census, phase 5: **67 proven / 23 sorry / 28 written / 24 todo** (start: 62 / 26 / 29 / 25);
   phase 4: 63 proven (+1). The `iota` targets stay "sorry": the tagged statements instantiate the
   stub bundles (`iotaCallees_stub`, `whnfCallees_stub`, `coreCallees_stub`, the knot).
+
+## The id tables as the twin's `IdTable`; the deviations list (2026-10-22, lane `twinaudit`)
+
+### Landing 1: dense array plus sparse overflow (`Front/IdTable.lean`)
+
+The front's id tables were dense word arrays (`NID`/`LID`/`EID`, entry `h + 1`, `0` unset) that
+aborted on an id at or past the array's end, where con-ron's `StateD` keeps con-leche's `IdTable`
+(`Scan/Types.lean:330`): a dense `Array` grown by `push` at its frontier and a `Std.HashMap Nat`
+for gaps and out-of-order ids. `e2e/rounds_huge_gaps` (ids up to `3·10^15`) was declined (e2e
+item 5). Now each table `b` is
+
+* the dense part: array `b` with its size in `CTL[b + 6]` (`70‥72`), entry `i < size` the handle
+  word itself (no `+ 1`);
+* the sparse part: a memo-library table (`MemoLib.lean`, one-word keys, value = handle word) at
+  array `b + 8` (`72‥74`), stamp/count `CTL[2b − 64]`, `CTL[2b − 63]` (`64‥69`).
+
+`tbl_get`/`tbl_fresh`/`tbl_put` are generic in the table (`tblGetG b fnd`, the memo's `find`/`put`
+spliced in as `⟪.call …⟫`), with one `vcgen` proof each; `name_get`, `level_get`, `expr_get`,
+`*_fresh`, `name_put`, `level_put`, `expr_put` are instances. `tbl_put` is `IdTable.insert`
+arm for arm: at the frontier a push (when below the array's capacity), below it an overwrite,
+past it the sparse map. The `apply_*` functions and `front_init` call `*_put` instead of writing
+`ID[i] := h + 1`; their models are unchanged (`putK` now ends in `tblPutW`).
+
+The relation `TblR m b t` (was `TblR (m.arr64 b) t`): the dense entries below the size are `t`'s
+(handle words below `2^32`), and some `sp` with `MemoRV (spS b) idKey hVR m sp` gives `t.get?` at
+every id word at or above the size. Lemmas: `TblR.read`/`fresh` (same statements as before),
+`TblR.put` (one per `insert` arm: `memoRV_set` for the sparse one), `TblR.frame`/`frameD`,
+`TblR.zero`; `tblOK_congr`/`tblW_congr` take a `TblSame m m' b` (the two arrays and the two `CTL`
+words the reads see; `TblSame.of_eq`, `of_frame`, `of_frameD`). `StateDR.frame`,
+`StateDR.put{Name,Level,Expr}` and `levelFinish` take the frame's arrays outside `idArrs` and
+`CTL` words outside `idCtl` (default tactic `tctl`); `StateDR.putX` takes `tblPutW m₁ X i w =
+some m₂` instead of the bound `i < size`; `ArenaD.setT` is `ArenaD.putT`; `Above64`
+(`ApplyExprRefine.lean`) also fixes the `CTL` words `≥ 64`. Nothing else changed: every
+refinement (`frontAll_refines`, `applyNStr_refines`, …, the inductive lines' `IndApply*`) is
+sorry-free as before, and `#guard`s cover ids past the dense array, out of order, and a rebound
+sparse id. `frontAllProg` runs `rounds_huge_gaps` to `front_run = 0` (`#eval`, 4096-word arrays).
+
+Differences from the twin that remain (listed in `docs/deviations.md`): the id word `NONE =
+TOMB = 2^64 − 1` is refused on the sparse path (ids past 18 digits already were); the dense array
+stops at its capacity (the ids go sparse, up to the memo's 3/4 load); `IdTable.bound`'s
+`sparse.isEmpty` shortcut is not mirrored (the memo's count is not tied to the map's emptiness;
+`tbl_fresh` probes one slot when the map is empty).
+
+`scripts/e2e.py` caps `e2e-diff`'s dense id arrays at `DIFF_BIG_WORDS` (they were sized to the
+largest id). For lane `integrate`: test memories need arrays up to `74` and `CTL` up to word `72`
+(`frontMem`, `exprMem`, `declMem` are 75 × 128 words now).
+
+The checker program (lane `integrate`'s `checkerProg`): the prelude parse's copies (`preFn`) rename
+the sparse arrays `72‥74` to `211‥213` and the `CTL` words `64‥72` to `241‥249`
+(`Checker/Prelude.lean`, `preCtl`; `scripts/checker_prog.py`'s `TOUCH` copies every function that
+touches them); `wordArrays` is 214. `checkerProg` was extended by hand (the generator stops at
+import clashes between other lanes' modules on master); a rerun of the generator gives the same
+bindings. `scripts/e2e.py --only huge`: `rounds_huge_gaps` now gets through the front on x64 and
+stops at the stub `rom_basis_decls` (it aborted in `name_fresh` before).
+
+**For other lanes** (mechanical): `TblR (m.arr64 NID) t` → `TblR m NID t`; a frame proof
+`rw [hf.1 NID …]; exact h.names` → `h.names.frame hf (.inl rfl) (by simp [..., idArrs]) (by simp)`;
+`lkW_congr` takes a `TblSame` (`IExt.tbl`).
+
+### Landing 2: the deviations audit (`docs/deviations.md`), and a PLAN.md rule
+
+Every place where L deliberately does something else than its twin (beyond fuel and fixed
+capacities) is now a row of `docs/deviations.md`: where, what the twin does, what L does, the
+effect (completeness / performance / none), the owner, a proposed fix. Sources: this journal
+(grep for "for now", "aborts", "deviat", "simplif", "not represented", …), `docs/progress.md`'s
+partial refinements, the L code's comments, `docs/e2e.md`. First count: 17 open (5
+completeness, 5 performance, 7 none), 13 fixed (among them the id tables, landing 1, and
+`iota_rec_at`'s `lvls_eq`, fixed by lane `whnf2` meanwhile).
+
+The work queue, by priority:
+* **D1 (decls3): `and_pin_ok` has no `indDecl` arm.** The twin's `andPinOk` checks an inductive
+  block that names `And`/`And.intro`/`And.rec` against the pinned block; L reads the record's name
+  word (unset for kind-6 records) and answers "free". Harmless while the declaration loop never
+  sees an inductive record, a soundness gap as soon as it does (the front produces them since
+  indproofs2's landing 6). Must land before the loop accepts kind-6 records.
+* D4 (decls3): `check_div_mod_pin_loop` aborts inside an attempt where `orElseAttempt` recovers;
+  then D5 (integrate): load all three pin variants in the e2e harness.
+* D7 (indproofs2): `target_class_match` calls the uncached `lvls_eq`; call `lvls_eq_c`.
+* D2, D3, D6: exotic inputs (numbers past 18 digits, escaped `safety` strings, unusual pin data).
+* D8 (`tbl_fresh` probes where `IdTable.bound` tests `sparse.isEmpty`), D10‥D12 (append-only
+  pools, byte-per-word strings, no memo compaction): performance.
+
+Trivial fixes made here: stale comments that still described fixed deviations
+(`Front/Line.lean`'s header, `Front/ApplyExpr.lean`'s `strVal`/`natVal` note,
+`Arena/LevelEquiv.lean`'s "`lvlEqC` not represented"). Not touched, for the lanes editing them:
+`Arena/Prelude.lean:12` and `Arena/DeclArmsNat.lean:28,1073` still say the ROM has no `Nat`
+pin variant "for now" (lanes `integrate`, `decls3`).
+
+PLAN.md, process rules: a deviation gets its row in `docs/deviations.md` in the commit that
+introduces it; the coordinator reviews the list at each batch of landings.
 
 ### Landing 3: six phase-5 targets sorry-free on the real walks (`WhnfTagged.lean`)
 * A dependency scan (each tagged theorem's transitive constants that are `sorry`'d theorems) showed

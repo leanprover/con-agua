@@ -326,7 +326,7 @@
 {
 "lane": "twinaudit",
 "model": "opus",
-"status": "running",
+"status": "done",
 "focus": "Sparse id tables like IdTable; audit of all deviations from the twin (docs/deviations.md)"
 }
 ]

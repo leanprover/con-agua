@@ -87,12 +87,6 @@
       <div class="ca-chart" id="trendChart" data-source="progress"></div>
     </section>
 
-    <section class="ca-card" id="velocity">
-      <h2>Work vs merge overhead</h2>
-      <p class="note">Minutes per lane, as each lane logged them at landing. Early entries are estimates.</p>
-      <div class="ca-legend"><span style="--sw: var(--ca-c0)">Work</span><span style="--sw: var(--ca-c3)">Overhead</span></div>
-      <div class="ca-chart" id="veloChart" data-source="velolanes"></div>
-    </section>
   </div>
 
   <section class="ca-card" id="phases">
@@ -186,19 +180,6 @@ dash.calc('lanecount', {
   title: 'Lanes by status',
   description: 'How many lanes are running and how many have finished.',
   fn: (lanes) => [{ running: lanes.filter((l) => l.status === 'running').length, done: lanes.filter((l) => l.status === 'done').length }],
-});
-dash.calc('velolanes', {
-  inputs: ['velocity'],
-  title: 'Minutes per lane',
-  description: 'Work and overhead minutes summed per lane from the velocity log.',
-  fn: (velocity) => {
-    const m = new Map();
-    for (const r of velocity) {
-      const e = m.get(r.lane) || { lane: r.lane, work: 0, overhead: 0 };
-      e.work += Number(r.work_min); e.overhead += Number(r.overhead_min); m.set(r.lane, e);
-    }
-    return [...m.values()];
-  },
 });
 dash.calc('velototal', {
   inputs: ['velocity'],
@@ -337,36 +318,6 @@ function trend() {
     .on('mouseleave', () => { tip.hidden = true; });
 }
 
-function velocity() {
-  const el = document.getElementById('veloChart');
-  const d = dash.data('velolanes');
-  if (d.status === 'error') return failed(el);
-  el.querySelector('svg')?.remove();
-  if (d.status !== 'ok') { el.classList.add('dash-skeleton'); return; }
-  el.classList.remove('dash-skeleton');
-  el.querySelector('div:not(.ca-tip)')?.remove();
-  const rows = d.data.slice();
-  const W = el.clientWidth || 600, bar = 18, gap = 8, H = Math.max(120, rows.length * (bar + gap) + 30);
-  el.style.minHeight = H + 'px';
-  const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
-  const labels = svg.append('g').selectAll('text').data(rows).join('text').text((r) => r.lane)
-    .style('font-size', 'var(--cds-font-size-caption)').attr('fill', 'var(--color-fg)');
-  const lw = d3.max(labels.nodes(), (n) => n.getComputedTextLength()) + 10;
-  const g = svg.append('g');
-  const vals = g.selectAll('text.v').data(rows).join('text').attr('class', 'v')
-    .style('font-size', 'var(--cds-font-size-caption)').attr('fill', 'var(--color-fg-muted)')
-    .text((r) => `${fmt(r.work)} + ${fmt(r.overhead)} min`);
-  const vw = (d3.max(vals.nodes(), (n) => n.getComputedTextLength()) || 0) + 12;
-  const x = d3.scaleLinear([0, d3.max(rows, (r) => r.work + r.overhead) || 1], [lw, Math.max(lw + 20, W - vw)]);
-  const yy = (i) => 6 + i * (bar + gap);
-  labels.attr('x', 0).attr('y', (r, i) => yy(i) + bar / 2).attr('dy', '0.35em');
-  g.selectAll('rect.w').data(rows).join('rect').attr('class', 'w').attr('x', lw).attr('y', (r, i) => yy(i))
-    .attr('height', bar).attr('width', (r) => x(r.work) - lw).attr('rx', 4).attr('fill', dash.colors[0]);
-  g.selectAll('rect.o').data(rows).join('rect').attr('class', 'o').attr('x', (r) => x(r.work)).attr('y', (r, i) => yy(i))
-    .attr('height', bar).attr('width', (r) => Math.max(0, x(r.work + r.overhead) - x(r.work))).attr('rx', 4).attr('fill', dash.colors[3]);
-  vals.raise().attr('x', (r) => x(r.work + r.overhead) + 6).attr('y', (r, i) => yy(i) + bar / 2).attr('dy', '0.35em');
-}
-
 function phases() {
   const el = document.getElementById('phaseChart');
   const d = dash.data('phases');
@@ -458,7 +409,7 @@ function health() {
     setText('[data-source=health][data-field=stale]', fmt(h.data[0].stale));
   }
 }
-dash.onData(() => { tiles(); health(); trend(); velocity(); phases(); lanes();
+dash.onData(() => { tiles(); health(); trend(); phases(); lanes();
   simpleTable('recentBody', 'recent', ['at', 'lane', 'what']);
   simpleTable('staleBody', 'stale', ['target', 'status', 'phase', 'owner', 'theorems']); });
 </script>
