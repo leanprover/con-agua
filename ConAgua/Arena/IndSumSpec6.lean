@@ -158,7 +158,7 @@ theorem tag_iff (b : Word) (hb : b.toNat < 2 ^ 32) (t : Word) (ht : t.toNat < 16
     omega
   · intro h; rw [h]
 
-theorem eViewW_head6 (m : Mem) (h : Word) (hg : h >>> 28 = 6) (hne : eViewW m h ≠ []) :
+theorem eViewW_head6S (m : Mem) (h : Word) (hg : h >>> 28 = 6) (hne : eViewW m h ≠ []) :
     (eViewW m h).headD 0 = 6 := by
   revert hne; unfold eViewW
   simp only [hg, show ((6 : Word) = 0) = False from by decide, show ((6 : Word) = 1) = False from by decide,
@@ -206,7 +206,7 @@ theorem pbW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n
       · rw [pbW_empty n m T k i h hk ht he] at hm; cases hm
       rw [pbW_pi n m T k i h hk ht he] at hm
       obtain ⟨vv, hview, hVR⟩ := eViewW_ok m a hS.1.arena.1 h he
-      have h6 := eViewW_head6 m h ht he
+      have h6 := eViewW_head6S m h ht he
       cases vv with
       | forallE ty body =>
         obtain ⟨-, hx32, hxe, hy32, hye⟩ := hVR
