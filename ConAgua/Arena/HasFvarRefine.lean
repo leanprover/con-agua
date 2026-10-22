@@ -66,6 +66,7 @@ theorem hasFvar_refines (p : Prog) (hp : AbsProg p) (hpf : p.lookup "has_fvar" =
       ArenaA s'.mem (AM.st (hasFvarFast coreWalkFuel (decE e)) a₀) ∧
       AM.res (hasFvarFast coreWalkFuel (decE e)) a₀ = (r.headD 0 != 0) ∧
       r.headD 0 ≤ 1; ⊤⦄ :=
-  Sim.triple (hasFvarL_spec p hp hpf n s₀ e) (coreWalkFuel_toNat ▸ hfK_sim n _ a₀ hA e 4000000000 he)
+  Sim.triple (hasFvarL_spec p hp hpf n s₀ e)
+      (coreWalkFuel_toNat ▸ hfK_sim n _ a₀ hA e 4000000000 he)
 
 end L.Arena

@@ -476,7 +476,8 @@ theorem lappArm_ok (hg : h >>> 28 = 4) :
     (Sim.ofD fun x m₁ e => ih m m₁ a _ d o l fu x vs hA hsl hbd hfw e) fun x m₁ a₁ hR => ?_) hb
   obtain ⟨hA₁, hs₁⟩ := hR
   refine Sim.bindD (K := lappK₁.lappK₂ x) rfl (fun _ _ => rfl)
-    (Sim.ofD fun y m₂ e => ih m₁ m₂ a₁ _ d o l fu y vs hA₁ (hsl.of_spn hs₁) hbd haw e) fun y m₂ a₂ hR => ?_
+    (Sim.ofD fun y m₂ e => ih m₁ m₂ a₁ _ d o l fu y vs hA₁ (hsl.of_spn hs₁) hbd haw e)
+        fun y m₂ a₂ hR => ?_
   obtain ⟨hA₂, hs₂⟩ := hR
   refine Sim.ofOk fun r m' hb => ?_
   obtain ⟨hok, hA₃, hres, hs₃⟩ := mkApp_okL m₂ a₂ hA₂ x y r m' hb
@@ -503,7 +504,8 @@ theorem llamArm_ok (hg : h >>> 28 = 5) :
   obtain ⟨hA₁, hs₁⟩ := hR
   refine Sim.bindD (K := llamK₁.llamK₂ x) rfl (fun _ _ => rfl)
     (Sim.ofD fun y m₂ e => by
-      simpa only [succW_toNat d hd1] using ih m₁ m₂ a₁ _ (d + 1) o l fu y vs hA₁ (hsl.of_spn hs₁) hbd haw e) fun y m₂ a₂ hR => ?_
+      simpa only [succW_toNat d hd1] using ih m₁ m₂ a₁ _ (d + 1) o l fu y vs hA₁
+          (hsl.of_spn hs₁) hbd haw e) fun y m₂ a₂ hR => ?_
   obtain ⟨hA₂, hs₂⟩ := hR
   have hbind : ∀ t b, internBindE (decE h).tag t b = internE (.lam t b) := by
     intro t b; simp [internBindE, decE_tag h hh, hg, ETag.lam, internE]
@@ -532,7 +534,8 @@ theorem lforallArm_ok (hg : h >>> 28 = 6) :
   obtain ⟨hA₁, hs₁⟩ := hR
   refine Sim.bindD (K := lfaK₁.lfaK₂ x) rfl (fun _ _ => rfl)
     (Sim.ofD fun y m₂ e => by
-      simpa only [succW_toNat d hd1] using ih m₁ m₂ a₁ _ (d + 1) o l fu y vs hA₁ (hsl.of_spn hs₁) hbd haw e) fun y m₂ a₂ hR => ?_
+      simpa only [succW_toNat d hd1] using ih m₁ m₂ a₁ _ (d + 1) o l fu y vs hA₁
+          (hsl.of_spn hs₁) hbd haw e) fun y m₂ a₂ hR => ?_
   obtain ⟨hA₂, hs₂⟩ := hR
   have hbind : ∀ t b, internBindE (decE h).tag t b = internE (.forallE t b) := by
     intro t b; simp [internBindE, decE_tag h hh, hg, ETag.lam, internE]
@@ -560,11 +563,13 @@ theorem lletArm_ok (hg : h >>> 28 = 7) :
     (Sim.ofD fun x m₁ e => ih m m₁ a _ d o l fu x vs hA hsl hbd htw e) fun x m₁ a₁ hR => ?_) hb
   obtain ⟨hA₁, hs₁⟩ := hR
   refine Sim.bindD (K := lleK₁.lleK₂ n d o l fu _ x) rfl (fun _ _ => rfl)
-    (Sim.ofD fun y m₂ e => ih m₁ m₂ a₁ _ d o l fu y vs hA₁ (hsl.of_spn hs₁) hbd hvw e) fun y m₂ a₂ hR => ?_
+    (Sim.ofD fun y m₂ e => ih m₁ m₂ a₁ _ d o l fu y vs hA₁ (hsl.of_spn hs₁) hbd hvw e)
+        fun y m₂ a₂ hR => ?_
   obtain ⟨hA₂, hs₂⟩ := hR
   refine Sim.bindD (K := lleK₁.lleK₃ x y) rfl (fun _ _ => rfl)
     (Sim.ofD fun z m₃ e => by
-      simpa only [succW_toNat d hd1] using ih m₂ m₃ a₂ _ (d + 1) o l fu z vs hA₂ ((hsl.of_spn hs₁).of_spn hs₂) hbd hbw e) fun z m₃ a₃ hR => ?_
+      simpa only [succW_toNat d hd1] using ih m₂ m₃ a₂ _ (d + 1) o l fu z vs hA₂
+          ((hsl.of_spn hs₁).of_spn hs₂) hbd hbw e) fun z m₃ a₃ hR => ?_
   obtain ⟨hA₃, hs₃⟩ := hR
   refine Sim.ofOk fun r m' hb => ?_
   obtain ⟨hok, hA₄, hres, hs₄⟩ := mkLet_okL m₃ a₃ hA₃ x y z r m' hb
@@ -732,7 +737,8 @@ theorem gappArm_ok (hg : h >>> 28 = 4) :
     (Sim.ofD fun x m₁ e => ih m m₁ a _ d o l fu x vs hA hsl hbd hfw e) fun x m₁ a₁ hR => ?_) hb
   obtain ⟨hA1, hs1⟩ := hR
   refine Sim.bindD (K := gappK₁.gappK₂ h d x) rfl (fun _ _ => rfl)
-    (Sim.ofD fun y m₂ e => ih m₁ m₂ a₁ _ d o l fu y vs hA1 (hsl.of_spn hs1) hbd haw e) fun y m₂ a₂ hR => ?_
+    (Sim.ofD fun y m₂ e => ih m₁ m₂ a₁ _ d o l fu y vs hA1 (hsl.of_spn hs1) hbd haw e)
+        fun y m₂ a₂ hR => ?_
   obtain ⟨hA2, hs2⟩ := hR
   refine Sim.ofD fun r m' hb => ?_
   obtain ⟨a', h7, h8, h9⟩ := ltail_ok _ _ a₂ h d r m₂ m' hh (fun r₉ m₉ hr₉ => mkApp_okL m₂ a₂ hA2 x y r₉ m₉ hr₉) hb
@@ -760,7 +766,8 @@ theorem glamArm_ok (hg : h >>> 28 = 5) :
   obtain ⟨hA1, hs1⟩ := hR
   refine Sim.bindD (K := glamK₁.glamK₂ h d x) rfl (fun _ _ => rfl)
     (Sim.ofD fun y m₂ e => by
-      simpa only [succW_toNat d hd1] using ih m₁ m₂ a₁ _ (d + 1) o l fu y vs hA1 (hsl.of_spn hs1) hbd haw e) fun y m₂ a₂ hR => ?_
+      simpa only [succW_toNat d hd1] using ih m₁ m₂ a₁ _ (d + 1) o l fu y vs hA1
+          (hsl.of_spn hs1) hbd haw e) fun y m₂ a₂ hR => ?_
   obtain ⟨hA2, hs2⟩ := hR
   have hbind : ∀ t b, internBindE (decE h).tag t b = internE (.lam t b) := by
     intro t b; simp [internBindE, decE_tag h hh, hg, ETag.lam, internE]
@@ -790,7 +797,8 @@ theorem gforallArm_ok (hg : h >>> 28 = 6) :
   obtain ⟨hA1, hs1⟩ := hR
   refine Sim.bindD (K := gfaK₁.gfaK₂ h d x) rfl (fun _ _ => rfl)
     (Sim.ofD fun y m₂ e => by
-      simpa only [succW_toNat d hd1] using ih m₁ m₂ a₁ _ (d + 1) o l fu y vs hA1 (hsl.of_spn hs1) hbd haw e) fun y m₂ a₂ hR => ?_
+      simpa only [succW_toNat d hd1] using ih m₁ m₂ a₁ _ (d + 1) o l fu y vs hA1
+          (hsl.of_spn hs1) hbd haw e) fun y m₂ a₂ hR => ?_
   obtain ⟨hA2, hs2⟩ := hR
   have hbind : ∀ t b, internBindE (decE h).tag t b = internE (.forallE t b) := by
     intro t b; simp [internBindE, decE_tag h hh, hg, ETag.lam, internE]
@@ -819,11 +827,13 @@ theorem gletArm_ok (hg : h >>> 28 = 7) :
     (Sim.ofD fun x m₁ e => ih m m₁ a _ d o l fu x vs hA hsl hbd htw e) fun x m₁ a₁ hR => ?_) hb
   obtain ⟨hA1, hs1⟩ := hR
   refine Sim.bindD (K := gleK₁.gleK₂ n h d o l fu _ x) rfl (fun _ _ => rfl)
-    (Sim.ofD fun y m₂ e => ih m₁ m₂ a₁ _ d o l fu y vs hA1 (hsl.of_spn hs1) hbd hvw e) fun y m₂ a₂ hR => ?_
+    (Sim.ofD fun y m₂ e => ih m₁ m₂ a₁ _ d o l fu y vs hA1 (hsl.of_spn hs1) hbd hvw e)
+        fun y m₂ a₂ hR => ?_
   obtain ⟨hA2, hs2⟩ := hR
   refine Sim.bindD (K := gleK₁.gleK₃ h d x y) rfl (fun _ _ => rfl)
     (Sim.ofD fun z m₃ e => by
-      simpa only [succW_toNat d hd1] using ih m₂ m₃ a₂ _ (d + 1) o l fu z vs hA2 ((hsl.of_spn hs1).of_spn hs2) hbd hbw e) fun z m₃ a₃ hR => ?_
+      simpa only [succW_toNat d hd1] using ih m₂ m₃ a₂ _ (d + 1) o l fu z vs hA2
+          ((hsl.of_spn hs1).of_spn hs2) hbd hbw e) fun z m₃ a₃ hR => ?_
   obtain ⟨hA3, hs3⟩ := hR
   have hbind : ∀ t b, internBindE (decE h).tag t b = internE (.forallE t b) := by
     intro t b; simp [internBindE, decE_tag h hh, hg, ETag.lam, internE]

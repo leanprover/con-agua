@@ -637,7 +637,9 @@ theorem fvbN_spec (n : Nat) (s₀ : St) (h fu : Word) :
     ⦃fun r s' => LocEq s' s₀ ∧ fvbN n s₀.mem h fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   cases n with
   | zero => rw [invoke_eq _ (hp.get "fr_memo")]; simp only [callFn, frMemo]; vcgen [exec] <;> grind
-  | succ n => exact frMemo_spec p (hp.get "fm_find") (hp.get "fm_put") (hp.get "fr_go") (hp.get "fr_node") (hp.get "fm_clear") (hp.get "fr_memo") n s₀ h fu
+  | succ n =>
+    exact frMemo_spec p (hp.get "fm_find") (hp.get "fm_put") (hp.get "fr_go")
+      (hp.get "fr_node") (hp.get "fm_clear") (hp.get "fr_memo") n s₀ h fu
 
 include hp in
 theorem abFvb_spec (n : Nat) (s₀ : St) (h fu : Word) :
@@ -701,7 +703,8 @@ theorem absNode_step (n : Nat) (ih : AbsArmSpec p n) : AbsNodeSpec p (n + 1) := 
   simp only [callFn, absNode]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      internBVar_spec p (hp.get "bvar_find") (hp.get "bvar_push") (hp.get "intern_bvar") n, ihA, ihL, ihF, ihE, ihP] <;>
+      internBVar_spec p (hp.get "bvar_find") (hp.get "bvar_push") (hp.get "intern_bvar") n, ihA,
+          ihL, ihF, ihE, ihP] <;>
     finish [viewOK, tierW, idxW]
 
 end specs

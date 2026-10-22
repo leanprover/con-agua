@@ -310,57 +310,23 @@ theorem frSet_frame (m m' : Mem) (h r r' : Word) (hb : frSet m h r = some (r', m
 def FrOK (m : Mem) (o : Option (Word × Mem)) : Prop := ∀ r m', o = some (r, m') → FrFrame m m'
 
 theorem FrOK.app {n : Nat} {m : Mem} {c y : Word} {o : Option (Word × Mem)} (ho : FrOK m o)
-    (hw : ∀ m₁, FrOK m₁ (frW n m₁ y c)) : FrOK m (frAppK₁ n c y o) := by
-  intro r m' hb
-  cases o with
-  | none => cases hb
-  | some p =>
-    obtain ⟨x, m₁⟩ := p
-    simp only [frAppK₁] at hb
-    cases h2 : frW n m₁ y c with
-    | none => simp [h2, frAppK₁.frAppK₂] at hb
-    | some q =>
-      obtain ⟨y', m₂⟩ := q
-      simp only [h2, frAppK₁.frAppK₂, Option.some.injEq, Prod.mk.injEq] at hb
-      obtain ⟨-, rfl⟩ := hb
-      exact (ho _ _ rfl).trans (hw m₁ _ _ h2)
+    (hw : ∀ m₁, FrOK m₁ (frW n m₁ y c)) : FrOK m (frAppK₁ n c y o) :=
+  MPost.bindK rfl (fun _ _ => rfl) ho fun _ m₁ h1 =>
+    MPost.bindK (K := frAppK₁.frAppK₂ _) rfl (fun _ _ => rfl) (hw m₁)
+      fun _ _ h2 => MPost.ret (h1.trans h2)
 
 theorem FrOK.bind {n : Nat} {m : Mem} {c y : Word} {o : Option (Word × Mem)} (ho : FrOK m o)
-    (hw : ∀ m₁, FrOK m₁ (frW n m₁ y c)) : FrOK m (frBindK₁ n c y o) := by
-  intro r m' hb
-  cases o with
-  | none => cases hb
-  | some p =>
-    obtain ⟨x, m₁⟩ := p
-    simp only [frBindK₁] at hb
-    cases h2 : frW n m₁ y c with
-    | none => simp [h2, frBindK₁.frBindK₂] at hb
-    | some q =>
-      obtain ⟨y', m₂⟩ := q
-      simp only [h2, frBindK₁.frBindK₂, Option.some.injEq, Prod.mk.injEq] at hb
-      obtain ⟨-, rfl⟩ := hb
-      exact (ho _ _ rfl).trans (hw m₁ _ _ h2)
+    (hw : ∀ m₁, FrOK m₁ (frW n m₁ y c)) : FrOK m (frBindK₁ n c y o) :=
+  MPost.bindK rfl (fun _ _ => rfl) ho fun _ m₁ h1 =>
+    MPost.bindK (K := frBindK₁.frBindK₂ _) rfl (fun _ _ => rfl) (hw m₁)
+      fun _ _ h2 => MPost.ret (h1.trans h2)
 
 theorem FrOK.letE {n : Nat} {m : Mem} {c y z : Word} {o : Option (Word × Mem)} (ho : FrOK m o)
-    (hw : ∀ m₁ w, FrOK m₁ (frW n m₁ w c)) : FrOK m (frLetK₁ n c y z o) := by
-  intro r m' hb
-  cases o with
-  | none => cases hb
-  | some p =>
-    obtain ⟨x, m₁⟩ := p
-    simp only [frLetK₁] at hb
-    cases h2 : frW n m₁ y c with
-    | none => simp [h2, frLetK₁.frLetK₂] at hb
-    | some q =>
-      obtain ⟨y', m₂⟩ := q
-      simp only [h2, frLetK₁.frLetK₂] at hb
-      cases h3 : frW n m₂ z c with
-      | none => simp [h3, frLetK₁.frLetK₃] at hb
-      | some o =>
-        obtain ⟨z', m₃⟩ := o
-        simp only [h3, frLetK₁.frLetK₃, Option.some.injEq, Prod.mk.injEq] at hb
-        obtain ⟨-, rfl⟩ := hb
-        exact ((ho _ _ rfl).trans (hw m₁ _ _ _ h2)).trans (hw m₂ _ _ _ h3)
+    (hw : ∀ m₁ w, FrOK m₁ (frW n m₁ w c)) : FrOK m (frLetK₁ n c y z o) :=
+  MPost.bindK rfl (fun _ _ => rfl) ho fun _ m₁ h1 =>
+    MPost.bindK (K := frLetK₁.frLetK₂ _ _ _ _) rfl (fun _ _ => rfl) (hw m₁ _) fun _ m₂ h2 =>
+    MPost.bindK (K := frLetK₁.frLetK₃ _ _) rfl (fun _ _ => rfl) (hw m₂ _) fun _ _ h3 =>
+    MPost.ret ((h1.trans h2).trans h3)
 
 theorem frW_frame (n : Nat) :
     (∀ m h c, FrOK m (frW n m h c)) ∧ (∀ m h c, FrOK m (frNodeW n m h c)) := by
@@ -840,7 +806,8 @@ theorem alamArm_ok (hg : h >>> 28 = 5) :
   refine SimD.exists (Sim.bindD rfl (fun _ _ => rfl)
     (Sim.ofD fun x m₁ e => ih m m₁ a _ k d fu x hA hfw e) fun x m₁ a₁ hA₁ => ?_) hb
   refine Sim.bindD (K := alamK₁.alamK₂ h k _ _ x) rfl (fun _ _ => rfl) (Sim.ofD fun y m₂ e => by
-    simpa only [succW_toNat k hk1] using ih m₁ m₂ a₁ _ (k + 1) d fu y hA₁ haw e) fun y m₂ a₂ hA₂ => ?_
+    simpa only [succW_toNat k hk1] using ih m₁ m₂ a₁ _ (k + 1) d fu y hA₁ haw e)
+        fun y m₂ a₂ hA₂ => ?_
   have hbind : ∀ t b, internBindE (decE h).tag t b = internE (.lam t b) := by
     intro t b; simp [internBindE, decE_tag h hh, hg, ETag.lam, internE]
   refine Sim.ofD fun r m' hb => atail_ok (internRebuiltBind (decE h)
@@ -876,7 +843,8 @@ theorem aforallArm_ok (hg : h >>> 28 = 6) :
   refine SimD.exists (Sim.bindD rfl (fun _ _ => rfl)
     (Sim.ofD fun x m₁ e => ih m m₁ a _ k d fu x hA hfw e) fun x m₁ a₁ hA₁ => ?_) hb
   refine Sim.bindD (K := afaK₁.afaK₂ h k _ _ x) rfl (fun _ _ => rfl) (Sim.ofD fun y m₂ e => by
-    simpa only [succW_toNat k hk1] using ih m₁ m₂ a₁ _ (k + 1) d fu y hA₁ haw e) fun y m₂ a₂ hA₂ => ?_
+    simpa only [succW_toNat k hk1] using ih m₁ m₂ a₁ _ (k + 1) d fu y hA₁ haw e)
+        fun y m₂ a₂ hA₂ => ?_
   have hbind : ∀ t b, internBindE (decE h).tag t b = internE (.forallE t b) := by
     intro t b; simp [internBindE, decE_tag h hh, hg, ETag.lam, internE]
   refine Sim.ofD fun r m' hb => atail_ok (internRebuiltBind (decE h)
@@ -914,7 +882,8 @@ theorem aletArm_ok (hg : h >>> 28 = 7) :
   refine Sim.bindD (K := aleK₁.aleK₂ n h k d fu _ _ _ x) rfl (fun _ _ => rfl)
     (Sim.ofD fun y m₂ e => ih m₁ m₂ a₁ _ k d fu y hA₁ hvw e) fun y m₂ a₂ hA₂ => ?_
   refine Sim.bindD (K := aleK₁.aleK₃ h k _ _ _ x y) rfl (fun _ _ => rfl) (Sim.ofD fun z m₃ e => by
-    simpa only [succW_toNat k hk1] using ih m₂ m₃ a₂ _ (k + 1) d fu z hA₂ hbw e) fun z m₃ a₃ hA₃ => ?_
+    simpa only [succW_toNat k hk1] using ih m₂ m₃ a₂ _ (k + 1) d fu z hA₂ hbw e)
+        fun z m₃ a₃ hA₃ => ?_
   refine Sim.ofD fun r m' hb => atail_ok (internRebuiltLetE (decE h)
       (decE x == decE (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) && decE y == decE (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1)) && decE z == decE (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2)))
       (decE x) (decE y) (decE z)) _ a₃ h k r m' hh (fun r₄ m₄ hr₄ => by
@@ -948,7 +917,8 @@ theorem aprojArm_ok (hg : h >>> 28 = 9) :
   rw [StateT.run_bind, viewProj_run, viewProj_ok m a hA.1.1 h hh hv, except_ok_bind]
   refine SimD.exists (Sim.bindD rfl (fun _ _ => rfl)
     (Sim.ofD fun x m₁ e => ih m m₁ a _ k d fu x hA hew e) fun x m₁ a₁ hA₁ => ?_) hb
-  refine Sim.ofD fun r m' hb => atail_ok (internRebuiltProj (decE h) (decE x == decE (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)))
+  refine Sim.ofD fun r m' hb => atail_ok (internRebuiltProj (decE h) (decE x == decE (rdW
+      (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)))
       (decI (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3))) (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 1)).toNat (decE x)) _ a₁ h k r m' hh (fun r₃ m₃ hr₃ => by
     unfold internRebuiltProj internProjE
     refine rb_ok _ _ _ _ m₁ a₁ hA₁ h r₃ m₃ (fun e1 => by simp [e1]) (fun hn hI => ?_) hr₃

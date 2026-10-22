@@ -87,12 +87,14 @@ theorem Sim.bind_twin {mo : Option (β × Mem)} {op : AM α} {g : α → AM δ} 
   exact ⟨y, a₂, by simp only [StateT.run_bind, hr]; exact h2, hR⟩
 
 /-- Weaken the post. -/
-theorem Sim.mono {mo : Option (β × Mem)} {op : AM α} {a : AState} {Q Q' : β → α → Mem → AState → Prop}
+theorem Sim.mono {mo : Option (β × Mem)} {op : AM α} {a : AState}
+    {Q Q' : β → α → Mem → AState → Prop}
     (h : Sim mo op a Q) (hq : ∀ r x m a', Q r x m a' → Q' r x m a') : Sim mo op a Q' := by
   intro r m' e; obtain ⟨x, a', h1, h2⟩ := h r m' e; exact ⟨x, a', h1, hq _ _ _ _ h2⟩
 
 /-- Rewrite the twin side. -/
-theorem Sim.congr {mo : Option (β × Mem)} {op op' : AM α} {a : AState} {Q : β → α → Mem → AState → Prop}
+theorem Sim.congr {mo : Option (β × Mem)} {op op' : AM α} {a : AState}
+    {Q : β → α → Mem → AState → Prop}
     (h : Sim mo op a Q) (e : op = op') : Sim mo op' a Q := e ▸ h
 
 /-- Rewrite the model side. -/
@@ -121,15 +123,37 @@ theorem Sim.ofOk [Inhabited α] {mo : Option (β × Mem)} {op : AM α} {a : ASta
   obtain ⟨hok, hQ⟩ := h r m' e
   exact ⟨_, _, AM.run_of_ok op a hok, hQ⟩
 
-/-- **The census form**: a model run that returned gives `AM.ok`, and the post at `AM.res`/`AM.st`. -/
+/-- **The census form**: a model run that returned gives `AM.ok`, and the post at
+`AM.res`/`AM.st`. -/
 theorem Sim.run [Inhabited α] {mo : Option (β × Mem)} {op : AM α} {a : AState}
-    {Q : β → α → Mem → AState → Prop} {r : β} {m' : Mem} (h : Sim mo op a Q) (hm : mo = some (r, m')) :
+    {Q : β → α → Mem → AState → Prop} {r : β} {m' : Mem} (h : Sim mo op a Q)
+    (hm : mo = some (r, m')) :
     AM.ok op a ∧ Q r (AM.res op a) m' (AM.st op a) := by
   obtain ⟨x, a', h1, h2⟩ := h r m' hm
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ h1
   exact ⟨hok, by rw [hst, hres]; exact h2⟩
 
 end sim
+
+/-! ## Model-only facts (frames of a model's memory) -/
+
+/-- **Whatever the model `mo` returns satisfies `Q`** (a model-only `Sim`: frames, bounds). -/
+def MPost {β : Type} (mo : Option (β × Mem)) (Q : β → Mem → Prop) : Prop :=
+  ∀ r m', mo = some (r, m') → Q r m'
+
+/-- **One callee, then the rest**, for a model-only fact. -/
+theorem MPost.bindK {β γ : Type} {K : Option (β × Mem) → Option (γ × Mem)}
+    {body : β → Mem → Option (γ × Mem)} {mo : Option (β × Mem)} {Q : β → Mem → Prop}
+    {R : γ → Mem → Prop} (hn : K Option.none = Option.none)
+    (hs : ∀ r m₁, K (some (r, m₁)) = body r m₁) (h1 : MPost mo Q)
+    (h2 : ∀ r m₁, Q r m₁ → MPost (body r m₁) R) : MPost (K mo) R := by
+  intro r m' e
+  cases hmo : mo with
+  | none => rw [hmo, hn] at e; cases e
+  | some p => obtain ⟨r₁, m₁⟩ := p; rw [hmo, hs] at e; exact h2 r₁ m₁ (h1 r₁ m₁ hmo) r m' e
+
+theorem MPost.ret {β : Type} {r : β} {m : Mem} {Q : β → Mem → Prop} (h : Q r m) :
+    MPost (some (r, m)) Q := fun _ _ e => by cases e; exact h
 
 /-- **The decoded census form** (the stores' `…_correct` lemmas) as a `SimD`. -/
 theorem Sim.ofOkD {β α : Type} [Inhabited α] {mo : Option (β × Mem)} {dec : β → α} {op : AM α}
@@ -146,7 +170,8 @@ theorem Sim.triple {α : Type} [Inhabited α] {prog : M (List Word)} {s₀ : St}
     (hspec : ⦃fun s => s = s₀⦄ prog ⦃fun r s' => LocEq s' s₀ ∧ mo = some (r.headD 0, s'.mem); ⊤⦄)
     (hsim : Sim mo op a₀ Q) :
     ⦃fun s => s = s₀⦄ prog
-    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok op a₀ ∧ Q (r.headD 0) (AM.res op a₀) s'.mem (AM.st op a₀); ⊤⦄ :=
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok op a₀ ∧ Q (r.headD 0) (AM.res op a₀) s'.mem
+        (AM.st op a₀); ⊤⦄ :=
   M.triple_of_run fun _ _ _ hs hrun => by
     obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun hspec
     exact ⟨hloc, hsim.run hI⟩

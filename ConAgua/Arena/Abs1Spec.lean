@@ -34,8 +34,10 @@ theorem absApp_step (n : Nat) (ih : AbsGoSpec p n) (s₀ : St) (h k d fu : Word)
   simp only [callFn, absApp]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n, ih,
-      mkApp_spec p (hp.get "der_b") (hp.get "app_find") (hp.get "app_push") (hp.get "intern_app") (hp.get "mk_app") n] <;>
+      memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
+          ih,
+      mkApp_spec p (hp.get "der_b") (hp.get "app_find") (hp.get "app_push") (hp.get "intern_app")
+          (hp.get "mk_app") n] <;>
     finish (gen := 20) [viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
@@ -48,8 +50,10 @@ theorem absLam_step (n : Nat) (ih : AbsGoSpec p n) (s₀ : St) (h k d fu : Word)
   simp only [callFn, absLam]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n, ih,
-      mkLam_spec p (hp.get "der_b") (hp.get "lam_find") (hp.get "lam_push") (hp.get "intern_lam") (hp.get "mk_lam") n] <;>
+      memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
+          ih,
+      mkLam_spec p (hp.get "der_b") (hp.get "lam_find") (hp.get "lam_push") (hp.get "intern_lam")
+          (hp.get "mk_lam") n] <;>
     finish (gen := 20) [viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
@@ -62,8 +66,10 @@ theorem absForall_step (n : Nat) (ih : AbsGoSpec p n) (s₀ : St) (h k d fu : Wo
   simp only [callFn, absForall]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n, ih,
-      mkForall_spec p (hp.get "der_b") (hp.get "forall_find") (hp.get "forall_push") (hp.get "intern_forall") (hp.get "mk_forall") n] <;>
+      memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
+          ih,
+      mkForall_spec p (hp.get "der_b") (hp.get "forall_find") (hp.get "forall_push")
+          (hp.get "intern_forall") (hp.get "mk_forall") n] <;>
     finish (gen := 20) [viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
@@ -76,8 +82,10 @@ theorem absLet_step (n : Nat) (ih : AbsGoSpec p n) (s₀ : St) (h k d fu : Word)
   simp only [callFn, absLet]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n, ih,
-      mkLet_spec p (hp.get "der_b") (hp.get "letE_find") (hp.get "letE_push") (hp.get "intern_letE") (hp.get "mk_let") n] <;>
+      memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
+          ih,
+      mkLet_spec p (hp.get "der_b") (hp.get "letE_find") (hp.get "letE_push")
+          (hp.get "intern_letE") (hp.get "mk_let") n] <;>
     finish (gen := 20) [viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
@@ -90,8 +98,10 @@ theorem absProj_step (n : Nat) (ih : AbsGoSpec p n) (s₀ : St) (h k d fu : Word
   simp only [callFn, absProj]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n, ih,
-      mkProj_spec p (hp.get "der_b") (hp.get "proj_find") (hp.get "proj_push") (hp.get "intern_proj") (hp.get "mk_proj") n] <;>
+      memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
+          ih,
+      mkProj_spec p (hp.get "der_b") (hp.get "proj_find") (hp.get "proj_push")
+          (hp.get "intern_proj") (hp.get "mk_proj") n] <;>
     finish (gen := 20) [viewOK, tierW, idxW]
 
 include hp in
@@ -105,7 +115,8 @@ theorem absGo_spec (n : Nat) : AbsGoSpec p n ∧ AbsNodeSpec p n ∧ AbsArmSpec 
     | (rw [invoke_eq _ (hp.get "ab_node")]; simp only [callFn, absNode]; vcgen [exec] <;> grind)
     | (rw [invoke_eq _ (hp.get "abs_app")]; simp only [callFn, absApp]; vcgen [exec] <;> grind)
     | (rw [invoke_eq _ (hp.get "abs_lam")]; simp only [callFn, absLam]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ (hp.get "abs_forall")]; simp only [callFn, absForall]; vcgen [exec] <;> grind)
+    | (rw [invoke_eq _ (hp.get "abs_forall")]; simp only [callFn,
+        absForall]; vcgen [exec] <;> grind)
     | (rw [invoke_eq _ (hp.get "abs_let")]; simp only [callFn, absLet]; vcgen [exec] <;> grind)
     | (rw [invoke_eq _ (hp.get "abs_proj")]; simp only [callFn, absProj]; vcgen [exec] <;> grind)
   | succ n ih =>
@@ -161,7 +172,8 @@ theorem absEntry_spec (p : Prog) (hp : AbsProg p) (he : p.lookup "abs_entry" = s
   rw [invoke_eq _ he]
   simp only [callFn, absEntry]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec abSch p _ (hp.get "ab_clear") n,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec abSch p _
+        (hp.get "ab_clear") n,
       ih] <;>
     finish
 

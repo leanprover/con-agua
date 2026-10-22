@@ -194,7 +194,8 @@ def absWalkFns : List FnName :=
   ["ab_find", "ab_put", "ab_clear", "ab_fvb", "abs_go", "ab_node", "abs_app", "abs_lam",
     "abs_forall", "abs_let", "abs_proj"] ++ frFns ++ mkFns
 
-theorem AbsProg.agree {p : Prog} (hp : AbsProg p) : ∀ f ∈ absWalkFns, p.lookup f = absProg.lookup f :=
+theorem AbsProg.agree {p : Prog} (hp : AbsProg p) :
+    ∀ f ∈ absWalkFns, p.lookup f = absProg.lookup f :=
   ProgHas.agreeWith hp absProg_ok absWalkFns
 
 /-- The `abstract1` memo `ABMEMO` (49), the `fvarRange` memo, and `mkA`. -/

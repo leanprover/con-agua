@@ -242,7 +242,8 @@ theorem rlamArm_ok (hg : h >>> 28 = 5) :
     (Sim.ofD fun x m₁ e => ih m m₁ a _ c d k fu x hA hfw e) fun x m₁ a₁ hA₁ => ?_) hb
   refine Sim.bindD (K := rlamK₁.rlamK₂ h c _ _ x) rfl (fun _ _ => rfl)
     (Sim.ofD fun y m₂ e => by
-    simpa only [succW_toNat c hk1] using ih m₁ m₂ a₁ _ (c + 1) d k fu y hA₁ haw e) fun y m₂ a₂ hA₂ => ?_
+    simpa only [succW_toNat c hk1] using ih m₁ m₂ a₁ _ (c + 1) d k fu y hA₁ haw e)
+        fun y m₂ a₂ hA₂ => ?_
   have hbind : ∀ t b, internBindE (decE h).tag t b = internE (.lam t b) := by
     intro t b; simp [internBindE, decE_tag h hh, hg, ETag.lam, internE]
   refine Sim.ofD fun r m' hb => atail_ok (internRebuiltBind (decE h)
@@ -279,7 +280,8 @@ theorem rforallArm_ok (hg : h >>> 28 = 6) :
     (Sim.ofD fun x m₁ e => ih m m₁ a _ c d k fu x hA hfw e) fun x m₁ a₁ hA₁ => ?_) hb
   refine Sim.bindD (K := rfaK₁.rfaK₂ h c _ _ x) rfl (fun _ _ => rfl)
     (Sim.ofD fun y m₂ e => by
-    simpa only [succW_toNat c hk1] using ih m₁ m₂ a₁ _ (c + 1) d k fu y hA₁ haw e) fun y m₂ a₂ hA₂ => ?_
+    simpa only [succW_toNat c hk1] using ih m₁ m₂ a₁ _ (c + 1) d k fu y hA₁ haw e)
+        fun y m₂ a₂ hA₂ => ?_
   have hbind : ∀ t b, internBindE (decE h).tag t b = internE (.forallE t b) := by
     intro t b; simp [internBindE, decE_tag h hh, hg, ETag.lam, internE]
   refine Sim.ofD fun r m' hb => atail_ok (internRebuiltBind (decE h)
@@ -318,7 +320,8 @@ theorem rletArm_ok (hg : h >>> 28 = 7) :
     (Sim.ofD fun y m₂ e => ih m₁ m₂ a₁ _ c d k fu y hA₁ hvw e) fun y m₂ a₂ hA₂ => ?_
   refine Sim.bindD (K := rleK₁.rleK₃ h c _ _ _ x y) rfl (fun _ _ => rfl)
     (Sim.ofD fun z m₃ e => by
-    simpa only [succW_toNat c hk1] using ih m₂ m₃ a₂ _ (c + 1) d k fu z hA₂ hbw e) fun z m₃ a₃ hA₃ => ?_
+    simpa only [succW_toNat c hk1] using ih m₂ m₃ a₂ _ (c + 1) d k fu z hA₂ hbw e)
+        fun z m₃ a₃ hA₃ => ?_
   refine Sim.ofD fun r m' hb => atail_ok (internRebuiltLetE (decE h)
       (decE x == decE (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) && decE y == decE (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1)) && decE z == decE (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2)))
       (decE x) (decE y) (decE z)) _ a₃ h c r m' hh (fun r₄ m₄ hr₄ => by
@@ -352,7 +355,8 @@ theorem rprojArm_ok (hg : h >>> 28 = 9) :
   rw [StateT.run_bind, viewProj_run, viewProj_ok m a hA.1.1 h hh hv, except_ok_bind]
   refine SimD.exists (Sim.bindD rfl (fun _ _ => rfl)
     (Sim.ofD fun x m₁ e => ih m m₁ a _ c d k fu x hA hew e) fun x m₁ a₁ hA₁ => ?_) hb
-  refine Sim.ofD fun r m' hb => atail_ok (internRebuiltProj (decE h) (decE x == decE (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)))
+  refine Sim.ofD fun r m' hb => atail_ok (internRebuiltProj (decE h) (decE x == decE (rdW
+      (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)))
       (decI (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3))) (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 1)).toNat (decE x)) _ a₁ h c r m' hh (fun r₃ m₃ hr₃ => by
     unfold internRebuiltProj internProjE
     refine rb_ok _ _ _ _ m₁ a₁ hA₁ h r₃ m₃ (fun e1 => by simp [e1]) (fun hn hI => ?_) hr₃

@@ -91,7 +91,9 @@ theorem bbN_spec (n : Nat) (s₀ : St) (h f : Word) :
     ⦃fun r s' => LocEq s' s₀ ∧ bbN n s₀.mem h f = some (r.headD 0, s'.mem); ⊤⦄ := by
   cases n with
   | zero => rw [invoke_eq _ (hp.get "bb_memo")]; simp only [callFn, bbMemo]; vcgen [exec] <;> grind
-  | succ n => exact bbMemo_spec p (hp.get "bm_find") (hp.get "bm_put") (hp.get "bb_go") (hp.get "bb_node") (hp.get "bm_clear") (hp.get "bb_memo") n s₀ h f
+  | succ n =>
+    exact bbMemo_spec p (hp.get "bm_find") (hp.get "bm_put") (hp.get "bb_go")
+      (hp.get "bb_node") (hp.get "bm_clear") (hp.get "bb_memo") n s₀ h f
 
 include hp in
 theorem bvarBL_spec (n : Nat) (s₀ : St) (f h : Word) :

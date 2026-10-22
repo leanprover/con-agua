@@ -42,7 +42,8 @@ theorem refl (p : Prog) : ProgHas p p := fun _ _ h => h
 
 theorem nil : ProgHas p [] := fun _ _ h => by cases h
 
-theorem trans (h₁ : ProgHas p q) (h₂ : ProgHas q fs) : ProgHas p fs := fun f fd h => h₁ f fd (h₂ f fd h)
+theorem trans (h₁ : ProgHas p q) (h₂ : ProgHas q fs) : ProgHas p fs :=
+  fun f fd h => h₁ f fd (h₂ f fd h)
 
 /-- **One lookup**, its body computed from the list (`rfl` on `fs.lookup f`). -/
 theorem get (h : ProgHas p fs) (f : FnName) {fd : FunDecl} (hf : fs.lookup f = some fd := by rfl) :
