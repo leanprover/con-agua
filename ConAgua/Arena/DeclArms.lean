@@ -349,6 +349,7 @@ def checkReducePinL : FunDecl := lfn (vis, vis2, c, v) locals (e, pa, x, ax) {
   e := call is_def_eq_core(vis, 0, v, pa);
   if e == 0 { abort };
   x := call reduce_cert_var(c);
+  if 4294967296 <= x { abort };
   ax := call mk_app(v, x);
   e := call is_def_eq_core(vis, 1, ax, x);
   if e == 0 { abort };
