@@ -96,8 +96,7 @@ theorem flushCaches_st (a : AState) : AM.st flushCaches a = { a with caches := C
 
 /-- The twin state after `enterScratch`. -/
 theorem enterScratch_st (a : AState) :
-    AM.st enterScratch a = { store := a.store.enableScratch, memos := Memos.empty,
-      caches := a.caches, pins := a.pins } := rfl
+    AM.st enterScratch a = { a with store := a.store.enableScratch, memos := Memos.empty } := rfl
 
 /-- **`TwinOK` after emptying the caches** (`flushCaches`): the readback caches hold nothing. -/
 theorem TwinOK.flush {m : Mem} {a : AState} (h : TwinOK dn m a fe) :
@@ -192,15 +191,17 @@ theorem enable_denote {st : EStore} (hwf : StoreWF st) (hoff : st.scratchOn = fa
 off (the loop head's: `TwinFold.stateOK`, and the last `dropScratch` turned it off). -/
 theorem TwinOK.enter {m : Mem} {a : AState} (h : TwinOK dn m a fe) (hwf : StoreWF a.store)
     (hoff : a.store.scratchOn = false) :
-    TwinOK dn m { store := a.store.enableScratch, memos := Memos.empty, caches := a.caches,
-      pins := a.pins } fe := by
+    TwinOK dn m { a with store := a.store.enableScratch, memos := Memos.empty } fe := by
   obtain ⟨hvE, hvs, hvl, -, -, -⟩ := enable_views hwf hoff
   obtain ⟨hN, hL, hLs⟩ := enable_denote hwf hoff
   have hx : LsExt a.store.lss a.store.enableScratch.lss :=
-    ⟨⟨⟨fun i x hd => by rw [show a.store.enableScratch.lss.ls.ns = a.store.enableScratch.ns from rfl,
-        hN]; exact hd⟩, fun i x hd => by
-        rw [show a.store.enableScratch.lss.ls = a.store.enableScratch.ls from rfl, hL]; exact hd⟩,
-      fun i x hd => by rw [hLs]; exact hd⟩
+    { ls := { ns := fun i x hd => by
+                show denoteN a.store.enableScratch.ns i = some x
+                rw [hN]; exact hd
+              lvl := fun i x hd => by
+                show denoteL a.store.enableScratch.ls i = some x
+                rw [hL]; exact hd }
+      lst := fun i x hd => by rw [hLs]; exact hd }
   refine ⟨fun k l hk => ?_, fun k l hk => ?_, ?_, h.erec, h.spn, h.memos, h.bstk, ?_⟩
   · show denoteL a.store.enableScratch.ls k = some l
     rw [hL]; exact h.readL k l hk
@@ -284,7 +285,7 @@ theorem denoteRules_mem {st : EStore} :
     ∀ {rs : List IRecRule} {xs : List ConLeche.RecRule},
       ConRon.Arena.Frontend.denoteRules st rs = some xs →
       ∀ r ∈ rs, ∀ lvls pins, r.fire = .nested lvls pins → ∀ u ∈ lvls, ∃ L, denoteL st.ls u = some L
-  | [], _, _, r, hr => absurd hr (by simp)
+  | [], _, _, r, hr, _, _, _, _, _ => absurd hr (by simp)
   | q :: qs, xs, h, r, hr, lvls, pins, hf, u, hu => by
     simp only [ConRon.Arena.Frontend.denoteRules] at h
     cases h1 : ConRon.Arena.Frontend.denoteRule st q with
@@ -299,6 +300,46 @@ theorem denoteRules_mem {st : EStore} :
           | none => rw [h3] at h1; split at h1 <;> simp_all
           | some ls => exact denoteLList_mem h3 u hu
         · exact denoteRules_mem h2 r hr lvls pins hf u hu
+
+theorem denoteCI_cv {st : EStore} {ci : IConstantInfo} {d : ConLeche.ConstantInfo}
+    {cv : IConstantVal} {a : AState} (ht : ci.isTowerEntry = false)
+    (hd : ConRon.Arena.Frontend.denoteCI st ci = some d)
+    (hcv : ci.toConstantVal.run a = .ok (cv, a)) :
+    ∃ y, ConRon.Arena.Frontend.denoteCV st cv = some y := by
+  have key : ∀ v : IConstantVal, ci.toConstantVal.run a = .ok (v, a) → cv = v := fun v e => by
+    rw [hcv] at e; cases e; rfl
+  cases ci with
+  | projInfo t => simp [IConstantInfo.isTowerEntry] at ht
+  | axiomInfo v =>
+    obtain rfl := key v rfl
+    simp only [ConRon.Arena.Frontend.denoteCI, Option.map_eq_some_iff] at hd
+    obtain ⟨y, hy, -⟩ := hd; exact ⟨y, hy⟩
+  | thmInfo v =>
+    obtain rfl := key v rfl
+    simp only [ConRon.Arena.Frontend.denoteCI, Option.map_eq_some_iff] at hd
+    obtain ⟨y, hy, -⟩ := hd; exact ⟨y, hy⟩
+  | ctorInfo v _ _ =>
+    obtain rfl := key v rfl
+    simp only [ConRon.Arena.Frontend.denoteCI, Option.map_eq_some_iff] at hd
+    obtain ⟨y, hy, -⟩ := hd; exact ⟨y, hy⟩
+  | defnInfo v _ _ =>
+    obtain rfl := key v rfl
+    simp only [ConRon.Arena.Frontend.denoteCI] at hd
+    split at hd
+    · rename_i y _ hy _; exact ⟨y, hy⟩
+    · cases hd
+  | indInfo v _ =>
+    obtain rfl := key v rfl
+    simp only [ConRon.Arena.Frontend.denoteCI] at hd
+    split at hd
+    · rename_i y _ hy _; exact ⟨y, hy⟩
+    · cases hd
+  | recInfo v _ _ _ =>
+    obtain rfl := key v rfl
+    simp only [ConRon.Arena.Frontend.denoteCI] at hd
+    split at hd
+    · rename_i y _ hy _; exact ⟨y, hy⟩
+    · cases hd
 
 /-- **`TwinOK` from the fold's invariant** and the memory's half. -/
 theorem TwinOK.of_fold {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {fe : IFEnv}
@@ -315,27 +356,18 @@ theorem TwinOK.of_fold {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AStat
   have hi := hok.check.ienv
   refine ⟨hc.readL, hc.readLs, hw.nsWF, hm.erec, hm.spn, hm.memos, hm.bstk, ?_⟩
   refine ⟨fun x u hv => ?_, fun x c us hv => ?_, ⟨_, hp.zeroLevel⟩, ⟨_, hp.emptyLevels⟩, hc.readN,
-    fun c ci cv hf ht hcv => ?_, hm.proj, fun u hu => denoteL_of_view hL hu,
+    fun c ci cv hf ht hcv => ?_, hm.proj, fun u hu => ConRon.Bridge.denoteL_of_view hL hu,
     fun us hus => ?_, hm.dnN, fun c cv mI rP rules hf r hr lvls pins hfi u hu => ?_⟩
-  · exact denoteL_of_view hL (hw.lchildOK x _ hv u (by simp [ENodeView.lchildren])).1
+  · exact ConRon.Bridge.denoteL_of_view hL (hw.lchildOK x _ hv u (by simp [ENodeView.lchildren])).1
   · have hs := (hw.lschildOK x _ hv us (by simp [ENodeView.lschildren])).1
     obtain ⟨vs, hvs⟩ := Option.isSome_iff_exists.mp hs
-    obtain ⟨xs, hxs⟩ := denoteLs_of_view hLs hvs
+    obtain ⟨xs, hxs⟩ := ConRon.Bridge.denoteLs_of_view hLs hvs
     exact ⟨xs, by simp only [denoteLs, hvs]; exact hxs⟩
   · obtain ⟨-, d, -, hd, -⟩ := hi.hit c ci hf
-    cases ci with
-    | projInfo t => simp [IConstantInfo.isTowerEntry] at ht
-    | axiomInfo v | thmInfo v | defnInfo v _ _ | indInfo v _ | ctorInfo v _ _ | recInfo v _ _ _ =>
-      have e := hcv default
-      simp only [IConstantInfo.toConstantVal] at e
-      cases e
-      simp only [ConRon.Arena.Frontend.denoteCI] at hd
-      first
-        | (cases h1 : ConRon.Arena.Frontend.denoteCV a.store v with
-            | none => rw [h1] at hd; first | simp at hd | (split at hd <;> simp_all)
-            | some y => exact denoteCV_lps h1)
+    obtain ⟨y, hy⟩ := denoteCI_cv ht hd (hcv a)
+    exact denoteCV_lps hy
   · obtain ⟨vs, hvs⟩ := Option.isSome_iff_exists.mp hus
-    obtain ⟨xs, hxs⟩ := denoteLs_of_view hLs hvs
+    obtain ⟨xs, hxs⟩ := ConRon.Bridge.denoteLs_of_view hLs hvs
     exact ⟨xs, by simp only [denoteLs, hvs]; exact hxs⟩
   · obtain ⟨-, d, -, hd, -⟩ := hi.hit c _ hf
     simp only [ConRon.Arena.Frontend.denoteCI] at hd
@@ -426,9 +458,9 @@ theorem TwinOK.restrict {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : ASta
     (h : TwinOK dn m a fe) {k : Nat} (hk : k ≤ fe.visibleBelow) : TwinOK dn m a (fe.restrictTo k) :=
   ⟨h.readL, h.readLs, h.nwf, h.erec, h.spn, h.memos, h.bstk,
     { h.den with
-      constLps := fun c ci cv hf => h.den.constLps c ci cv (IFEnv.restrictTo_find?_le hk hf)
+      constLps := fun c ci cv hf => h.den.constLps c ci cv (ConRon.Bridge.IFEnv.restrictTo_find?_le hk hf)
       recRules := fun c cv mI rP rules hf => h.den.recRules c cv mI rP rules
-        (IFEnv.restrictTo_find?_le hk hf) }⟩
+        (ConRon.Bridge.IFEnv.restrictTo_find?_le hk hf) }⟩
 
 /-- **`LoopT` at a smaller view.** -/
 theorem LoopT.restrict {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m : Mem}
