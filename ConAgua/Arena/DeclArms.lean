@@ -463,7 +463,7 @@ computed before either is tested, as the twin's `g && (← …)` does), then the
 stored value certified at the pre-insertion view `vis`. Returns `0`. -/
 -- con-ron: ConRon/Arena/CheckDecl.lean:82-214 ConRon.Arena.checkDecl
 def defnNatGate : FunDecl :=
-    lfn (vis, w, n) locals (no, nl, c, g, dov, dl, s, f, r, eo, el, so, sl, ok) {
+    lfn (vis, w, n) locals (no, nl, c, g, dov, dl, s, ok) {
   (no, nl) := call nat_op_names();
   c := call sl_contains(no, nl, n);
   if c != 0 {
@@ -471,13 +471,7 @@ def defnNatGate : FunDecl :=
     (dov, dl) := call nat_op_deps(n);
     s := call nat_op_stored_ok_all(w, dov, dl);
     if g == 0 || s == 0 { abort };
-    (f, r) := call env_find(n, w);
-    if f == 0 { abort };
-    if EREC.u64[r] != 1 { abort };
-    (eo, el) := call nat_op_equations(0, n);
-    (so, sl) := call subst_const0_pairs(n, EREC.u64[r + 5], eo, el);
-    ok := call certify_nat_eqs(vis, so, sl);
-    if ok == 0 { abort }
+    ok := call defn_nat_cert(vis, w, n)
   };
   return 0
 }

@@ -1,5 +1,7 @@
 import ConAgua.Arena.DeclArmAxiom
 import ConAgua.Arena.DeclArmDefn
+import ConAgua.Arena.DeclNatGateSpec
+import ConAgua.Arena.DeclDivMod10
 
 /-!
 # `check_decl` refines `checkDecl` at the loop's relation (lane `decls3`)
@@ -45,8 +47,24 @@ structure CheckDeclProg (p : Prog) : Prop where
   crp : CrpProg p
   quot : QuotProg p
   axp : AxProg p
-  /-- The definition arm's two gates (`DeclArmDefn.lean`), at every variant list. -/
-  defn : ∀ pins, DefnProg p pins
+  /-- The definition arm's structural-`Nat` gate: its program (`DeclNatGateSpec.lean`'s
+  `natGateSpec` proves `NatGateSpec` from these). -/
+  natSub : NatSubProg' p
+  natGate : p.lookup "defn_nat_gate" = some defnNatGate
+  natCert : p.lookup "defn_nat_cert" = some defnNatCert
+  natText : ∀ f ∈ natGateFns, p.lookup f = armText.lookup f
+  /-- The definition arm's `Nat.div`-family pin gate (helper `decls3-divmod`'s `divGateSpecD`
+  proves `DivGateSpec` from these): its program, the substitution walks' specs, its text's write
+  set. -/
+  dm : DmProg10 p
+  substAll : ∀ dn vis fe, SubstCAll p dn vis fe
+  dgClosed : closedA p stepA stepC dgFns = true
+
+/-- `subst_const0` at the walk fuel: helper `decls3-nat`'s `sc0_ref`. -/
+theorem substC0_of {p : Prog} (hN : NatSubProg p) :
+    ∀ dn vis fe, SubstC0 p dn vis fe :=
+  fun _ _ _ nm r h hn hr hh k m a res m' hS hc =>
+    sc0_ref hN nm r coreWalkFuel 4000000000 rfl h k m a res m' hS hn hr hh hc
 
 /-! ## The arms not proved yet -/
 
@@ -71,11 +89,14 @@ theorem checkDeclAxiom_loop (hP : CheckDeclProg p) (hdn : DnInj dn) (cv : IConst
 
 /-- `check_decl_defn` (`DeclArmDefn.lean`; through the gates' specs, `DefnProg`, a field of
 `CheckDeclProg`). -/
-theorem checkDeclDefn_loop (hP : CheckDeclProg p) (cv : IConstantVal) (v : EIdx)
+theorem checkDeclDefn_loop (hP : CheckDeclProg p) (hdn : DnInj dn) (cv : IConstantVal) (v : EIdx)
     (h : ConLeche.ReducibilityHint) :
     ArmSpec pins dn ds p "check_decl_defn" (.defnDecl cv v h) :=
   fun n s₀ a₀ vis fe pend i hi hd hR =>
-    checkDeclDefn_loop' hP.arm hP.val pins (hP.defn pins) dn ds n s₀ a₀ vis fe pend i cv v h hi hd hR
+    checkDeclDefn_loop' hP.arm hP.val pins
+      ⟨hP.df, natGateSpec hP.natSub hP.natGate hP.natCert hP.natText pins,
+        divGateSpecD hP.dm pins (substC0_of hP.natSub.toNatSubProg) hP.substAll hP.dgClosed⟩
+      dn hdn ds n s₀ a₀ vis fe pend i cv v h hi hd hR
 
 /-- `check_decl_opaque` (`DeclArmOpaque.lean`). -/
 theorem checkDeclOpaque_loop (hP : CheckDeclProg p) (hdn : DnInj dn) (cv : IConstantVal)
@@ -207,7 +228,7 @@ theorem checkDecl_loop {p : Prog} (hP : CheckDeclProg p) (pins : List INatOpPinS
     rw [hdecl.1] at h
     simp only [cdSel, show (2 : Word) ≠ 6 by decide, show (2 : Word) ≠ 1 by decide, if_false,
       if_true] at h
-    exact arm_callW (checkDeclDefn_loop pins dn ds hP cv v hh) hi hd hR h
+    exact arm_callW (checkDeclDefn_loop pins dn ds hP hdn cv v hh) hi hd hR h
   | thmDecl cv v =>
     rw [hdecl.1] at h
     simp only [cdSel, show (3 : Word) ≠ 6 by decide, show (3 : Word) ≠ 1 by decide,

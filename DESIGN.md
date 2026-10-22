@@ -7907,6 +7907,30 @@ child dangled when it was interned (no `StoreWF` needed).
   model used to compare an empty slice).
 * `LvlsEqDen` and its `hden` threading through `WhnfIotaRecRefine*` are removed; `iotaRecAt_refines`
   and `LvlsEqCH`'s callers drop the readback hypotheses' use. `KnotCallees` has 3 fields left.
+### Landing 12 (lane `decls3`): helpers `nat` and `divmod`, the definition arm's gates
+
+* **Structural-`Nat` gate** (helper `decls3-nat`, `DeclNat*.lean`, ~8 h): `natOpNames`,
+  `natDivModNames`, `natOpDeps(Stored)`, `natLitSupported`, `natOpGuard`, `boolCtorOk`, `natOpCod`,
+  `natOpTyPinned`, `natOpStoredOk(All)`, `natAp1/2`, the per-operation equation builders,
+  `natOpEquations`, `substConst0(Pairs)`, `certifyNatEqs`; `natGateSpec : NatGateSpec p pins` from
+  `NatSubProg' p`, the gate's lookups and its text's agreement with `armText` (`natGateFns`,
+  closed by `decide`). L split for tractable `vcgen` (unrolled name loops, `nat_op_pins*`,
+  `nat_op_bool_ctors`, `nat_eq_*`, `defn_nat_cert`).
+* **`Nat.div`-family pin gate** (helper `decls3-divmod`, `DeclDivMod*.lean`, ~3.5 h): every
+  function from `div_mod_slot` to `check_div_mod_pin_at` `@[refines]`; `check_div_mod_pin_loop`,
+  `check_div_mod_pin` `refines_part … (D4)` (a returning L loop is a twin run without recovery);
+  `romPinSets_ref` (`PinSetsR` → the `IW` list); `divGateSpecD`. `DivGateSpec` now takes `DnInj
+  dn` (`div_mod_env_guard`'s `find_is`). L: `cert_ctx` split, `rec2`/`rec3` slices.
+* **`checkDeclDefn_loop`** composes them: `CheckDeclProg` gained the gates' program facts
+  (`natSub`, `natGate`, `natCert`, `natText`, `dm`, `dgClosed`) and two walk specs still open as
+  fields: `subst0` (now discharged: `substC0_of`, from `DeclNatSub`.s `sc0_ref`) and
+  `substAll` (`SubstCAll`, `subst_const_all`, not yet proved).
+* Clashes on merging (helpers vs canon vs master): renamed on the helpers' side (`nt*`, `dm*`,
+  `CertCtxR`); `DeclNatBase`'s interning lemmas ported to master's `*_eqK`/`mkK_split` pushes.
+* Census: phase 2 **206 proven, 50 sorry, 35 written, 40 todo** (the `sorry` count includes
+  functions now proved through upstream stub specs: `isDefEqCore_spec`, `stubM_spec`, the ROM
+  readers).
+
 
 ### Landing 10 (defeq2): `KnotCallees.capsNeverZero` discharged (`capsNeverZeroOK_of`)
 * **`StoreDen dn m a fe`** takes the record decoder `dn` and gains `dnN`: `dn` agrees with the
