@@ -224,6 +224,22 @@ def etaFabArgsL : FunDecl := lfn (T, to, tn, major, nF) locals (o2, n2) {
 
 /-! ## `and_rescue_slots(vis, ctor, nP, us)` -/
 
+/-- The two-slot walk of `and_rescue_slots` (a named block, for the proofs). `fire_ok` is called
+before the shape checks: the twin's `(← e.fireOk ust)` is lifted out of the `if` and runs
+regardless, with its cache effects. -/
+def andRescueLoop : Stmt := lblk (vis, ctor, nP, us, an, j, flag, q, ok) {
+  while j < 2 {
+    (flag, q) := call find_proj(vis, an, j);
+    if flag == 0 { return 0 };
+    ok := call fire_ok(q, j, us);
+    if EREC.u64[q + 6] != ctor { return 0 };
+    if EREC.u64[q + 5] != nP { return 0 };
+    if EREC.u64[q + 7] != 2 { return 0 };
+    if ok == 0 { return 0 };
+    j += 1
+  }
+}
+
 /-- con-leche: `CoreDefs.lean:793-806`/`:808-810`/`FEnv.lean:199-201` `andRescueSlotsGo` /
 `andRescueSlots` / `FEnv.andRescueSlotsF` — the pinned `And`'s two projection slots, ready to
 fire. `q`, the table pointer `find_proj` hands back, has `ctor` at `q + 6`, `numParams` at `q + 5`,
@@ -234,16 +250,7 @@ fire. `q`, the table pointer `find_proj` hands back, has `ctor` at `q + 6`, `num
 def andRescueSlotsL : FunDecl := lfn (vis, ctor, nP, us) locals (an, j, flag, q, ok) {
   an := call pin_at(11);
   j := 0;
-  while j < 2 {
-    (flag, q) := call find_proj(vis, an, j);
-    if flag == 0 { return 0 };
-    if EREC.u64[q + 6] != ctor { return 0 };
-    if EREC.u64[q + 5] != nP { return 0 };
-    if EREC.u64[q + 7] != 2 { return 0 };
-    ok := call fire_ok(q, j, us);
-    if ok == 0 { return 0 };
-    j += 1
-  };
+  ⟪andRescueLoop⟫;
   return 1
 }
 
