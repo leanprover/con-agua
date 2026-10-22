@@ -2,6 +2,7 @@ import ConAgua.Arena.DeclBase
 import ConAgua.Arena.DeclAndPin
 import ConAgua.Arena.DeclStep
 import ConAgua.Arena.DeclStepSpec
+import ConAgua.Arena.DeclStepGo
 
 /-!
 # The declaration loop in L, top down: `installFold`, `checkPendingList`, `installThenCheck`
@@ -48,6 +49,9 @@ structure DeclCallees (p : Prog) : Prop where
   and_pin_ok : p.lookup "and_pin_ok" = some andPinOkL
   /-- `check_value_group`'s text (its write set, `DeclCvg.lean`). -/
   cvg : CvgProg p
+  /-- `install_step_go`'s body and `install_value`'s text (`DeclStepGo.lean`). -/
+  istg : IstgProg p
+  iv : IvProg p
 
 section stubs
 variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name)
@@ -655,7 +659,7 @@ theorem isSome_refines (hb : BracketProg p) (hpp : p.lookup "pend_push" = some p
       finish [isSomeT]
 
 /-- `install_step`, stated over the pieces of `installStep` (`installStep_ok` assembles them). -/
-theorem installStep_pieces (hm : mode = .verified) (hb : BracketProg p) (hpp : p.lookup "pend_push" = some pendPushL)
+theorem installStep_pieces (hm : mode = .verified) (hdc : DeclCallees p) (hb : BracketProg p) (hpp : p.lookup "pend_push" = some pendPushL)
     (hpn : p.lookup "is_none" = some isNoneL) (hps : p.lookup "is_some" = some isSomeL)
     (hp : p.lookup "install_step" = some installStepL) (n : Nat) (s₀ : St) (a₀ : AState)
     (i vis : Word) (fe : IFEnv) (pend : Array PendingCheck) (hi : i.toNat < ds.size)
@@ -684,7 +688,7 @@ theorem installStep_pieces (hm : mode = .verified) (hb : BracketProg p) (hpp : p
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         (flush_loop dn ds p hb n · a₀ vis fe pend),
         (enter_loop dn ds p hb n · (AM.st flushCaches a₀) vis fe pend),
-        (installStepGo_spec mode pins dn ds p hm n · (AM.st enterScratch (AM.st flushCaches a₀)) · fe pend · ·),
+        (installStepGo_spec mode pins dn ds p hm hdc.istg hdc.iv hdc.cvg n · (AM.st enterScratch (AM.st flushCaches a₀)) · fe pend · ·),
         (isNone_refines dn ds p hb hpn n · (AM.st (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))) · · (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).1 pend),
         (isSome_refines dn ds p hb hpp hps n · (AM.st (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))) · · · · (AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).1 pend ((AM.res (installStepGo mode pins fe (dsAt ds i)) (AM.st enterScratch (AM.st flushCaches a₀))).2.getD default))] <;>
       -- the view `vis` is read after three calls: four `LocEq` hops (depth, not search)
@@ -692,7 +696,7 @@ theorem installStep_pieces (hm : mode = .verified) (hb : BracketProg p) (hpp : p
 
 /-- **`install_step` refines `installStep`** (from the stub specs). -/
 @[refines ConRon.Arena.installStep]
-theorem installStep_refines (hm : mode = .verified) (hb : BracketProg p) (hpp : p.lookup "pend_push" = some pendPushL)
+theorem installStep_refines (hm : mode = .verified) (hdc : DeclCallees p) (hb : BracketProg p) (hpp : p.lookup "pend_push" = some pendPushL)
     (hpn : p.lookup "is_none" = some isNoneL) (hps : p.lookup "is_some" = some isSomeL)
     (hp : p.lookup "install_step" = some installStepL) (n : Nat) (s₀ : St) (a₀ : AState)
     (i vis : Word) (fe : IFEnv) (pend : Array PendingCheck) (hi : i.toNat < ds.size)
@@ -701,7 +705,7 @@ theorem installStep_refines (hm : mode = .verified) (hb : BracketProg p) (hpp : 
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (installStep mode pins i.toNat fe pend (dsAt ds i)) a₀ ∧
       LoopR dn s'.mem (AM.st (installStep mode pins i.toNat fe pend (dsAt ds i)) a₀) (r.headD 0) (AM.res (installStep mode pins i.toNat fe pend (dsAt ds i)) a₀).1 (AM.res (installStep mode pins i.toNat fe pend (dsAt ds i)) a₀).2 ds; ⊤⦄ := by
   have hv := hR.vis
-  refine triple_post (installStep_pieces mode pins dn ds p hm hb hpp hpn hps hp n s₀ a₀ i vis fe pend hi hR)
+  refine triple_post (installStep_pieces mode pins dn ds p hm hdc hb hpp hpn hps hp n s₀ a₀ i vis fe pend hi hR)
     fun r s' ⟨hl, h1, h2, h3, h4, h5⟩ => ?_
   rw [← hv] at h4 h5
   obtain ⟨o, st, rs⟩ := installStep_ok mode pins i.toNat fe pend (dsAt ds i) a₀ h1 h2 h3 h4
@@ -730,7 +734,7 @@ theorem installDeclStep_refines (hm : mode = .verified) (hb : BracketProg p) (hd
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
         (andPinOk_refines dn ds p hdc.and_pin_ok n · a₀ vis fe pend · ·),
-        (installStep_refines mode pins dn ds p hm hb hpp hpn hps hpi n · (AM.st (andPinOk (dsAt ds i)) a₀) · · fe pend ·)] <;>
+        (installStep_refines mode pins dn ds p hm hdc hb hpp hpn hps hpi n · (AM.st (andPinOk (dsAt ds i)) a₀) · · fe pend ·)] <;>
       finish
 
 theorem drop_cons_dsAt (ds : Array IDeclaration) (i : Word) (hi : i.toNat < ds.size)

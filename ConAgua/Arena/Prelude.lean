@@ -34,6 +34,11 @@ def allPinsOff : Word := UInt64.ofNat (encNames pinNames ++ encNames reservedBas
 @[l_impl ConRon.Arena.internAllPins]
 def internAllPinsL : FunDecl := internAllPinsAt allPinsOff
 
+/-- `rom_expr(pos)` as the program has it (the expression ROM reader at the program's ROM). -/
+-- con-ron: ConRon/Arena/Frontend/Readback.lean:189-251 ConRon.Arena.Frontend.internExprGo
+@[l_impl ConRon.Arena.Frontend.internExprGo]
+def romExprL : FunDecl := romExpr romData
+
 set_option maxRecDepth 100000 in
 theorem romData_len : romData.length < 2 ^ 63 := by decide +kernel
 
