@@ -489,7 +489,8 @@ def checkAbsCtorSortsAll : FunDecl := lfn (vis, ctx, isProp, csOff, csLen, osOff
 }
 
 /-- `block_nest_ctx(vis, p, cvTas.off, cvTas.len)`: the walk's context — the canonical parameter
-variables are the first former's opened telescope, with the members' holes. -/
+variables are the first former's opened telescope, with the members' holes (the parameters' and
+members' counts summing past `2^64` a capacity abort). -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:270-284 ConRon.Arena.blockNestCtx
 @[l_impl ConRon.Arena.blockNestCtx]
 def blockNestCtx : FunDecl := lfn (vis, p, cvO, cvL) locals
@@ -499,6 +500,7 @@ def blockNestCtx : FunDecl := lfn (vis, p, cvO, cvL) locals
   cvTa0 := IW.u64[cvO];
   (ok, pqO, pqL, body) := call open_pis_at_fvars_f(IW.u64[p + 4], EREC.u64[cvTa0 + 3], 0);
   if ok == 0 { abort };
+  if pqL + IW.u64[p + 1] < pqL { abort };
   ctx := call block_shape_nest_ctx(p, pqO, pqL);
   (ok2, hO, hL) := call nest_holes(vis, ctx);
   if ok2 == 0 { abort };
@@ -515,59 +517,33 @@ def checkBlockPositivityInit : FunDecl := lfn () locals (q) {
   return q
 }
 
-/-- `check_block_positivity_member(o, l)`: one member's `(kinds-ptr, nfs-ptr)` from its `(kinds ×
-eidx)` pointer list `(o, l)` — `kinds` a fresh pointer per ctor (`[k.off, k.len]`), `nfs` the
-`e` words, fresh in `IW`. -/
+/-- `check_block_positivity_nfs_member(o, l)`: one member's normal forms `pairs.map (·.2)` from its
+`(kinds × eidx)` pointer list `(o, l)` (word `2` of each record), a fresh handle slice; recursion as
+the twin's `map`, each handle consed onto the rest's slice (`sl_cons`, D18). -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:286-302 ConRon.Arena.checkBlockPositivity
 @[l_impl ConRon.Arena.checkBlockPositivity]
-def checkBlockPositivityMember : FunDecl := lfn (o, l) locals (kq, nq, u) {
-  kq := call iw_alloc(l);
-  nq := call iw_alloc(l);
-  u := call check_block_positivity_member_go(kq, nq, o, l);
-  return (kq, l, nq, l)
+def checkBlockPositivityNfsMember : FunDecl := lfn (o, l) locals (e, ro, rl, qo, ql) {
+  if l == 0 { return (0, 0) };
+  e := IW.u64[o];
+  (ro, rl) := call check_block_positivity_nfs_member(o + 1, l - 1);
+  (qo, ql) := call sl_cons(IW.u64[e + 2], ro, rl);
+  return (qo, ql)
 }
 
-/-- `check_block_positivity_member_go(kd, nd, s, l)`: for `j < l` and `e = IW[s + j]`:
-`IW[kd + j] := rec2(IW[e], IW[e + 1])`, `IW[nd + j] := IW[e + 2]`, recursively. -/
+/-- `check_block_positivity_nfs(outs.off, outs.len)`: `outs.map (·.map (·.2))`, each member's
+handle slice wrapped as a fresh `[off, len]` pointer (`rec2`), consed onto the rest's slice
+(`sl_cons`, D18). The kinds `outs.map (·.map (·.1))` need no copy: a `(kinds, eidx)` record's
+first two words are its kinds' `[off, len]`, so `outs` itself reads as the kinds. -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:286-302 ConRon.Arena.checkBlockPositivity
 @[l_impl ConRon.Arena.checkBlockPositivity]
-def checkBlockPositivityMemberGo : FunDecl := lfn (kd, nd, s, l) locals (e, k1, u) {
-  if l == 0 { return 0 };
-  e := IW.u64[s];
-  k1 := call rec2(IW.u64[e], IW.u64[e + 1]);
-  IW.u64[kd] := k1;
-  IW.u64[nd] := IW.u64[e + 2];
-  u := call check_block_positivity_member_go(kd + 1, nd + 1, s + 1, l - 1);
-  return 0
-}
-
-/-- `check_block_positivity_split(outs.off, outs.len)`: `(outs.map (·.map (·.1)), outs.map (·.map
-(·.2)))`, each member wrapped as a pointer (`List (List …)`). -/
--- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:286-302 ConRon.Arena.checkBlockPositivity
-@[l_impl ConRon.Arena.checkBlockPositivity]
-def checkBlockPositivitySplit : FunDecl := lfn (outsO, outsL) locals (kOuter, nOuter, u) {
-  kOuter := call iw_alloc(outsL);
-  nOuter := call iw_alloc(outsL);
-  u := call check_block_positivity_split_go(kOuter, nOuter, outsO, outsL);
-  return (kOuter, outsL, nOuter, outsL)
-}
-
-/-- `check_block_positivity_split_go(kd, nd, s, l)`: for each member pointer `mp = IW[s + j]`
-(`[moff, mlen]`), `IW[kd + j]` and `IW[nd + j]` get the pointers wrapping `check_block_positivity_member`'s
-two results (`rec2`), recursively. -/
--- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:286-302 ConRon.Arena.checkBlockPositivity
-@[l_impl ConRon.Arena.checkBlockPositivity]
-def checkBlockPositivitySplitGo : FunDecl := lfn (kd, nd, s, l) locals
-    (mp, kq, kl, nq, nl, kp, np, u) {
-  if l == 0 { return 0 };
+def checkBlockPositivityNfs : FunDecl := lfn (s, l) locals (mp, no, nl, hp, ro, rl, qo, ql) {
+  if l == 0 { return (0, 0) };
   mp := IW.u64[s];
-  (kq, kl, nq, nl) := call check_block_positivity_member(IW.u64[mp], IW.u64[mp + 1]);
-  kp := call rec2(kq, kl);
-  np := call rec2(nq, nl);
-  IW.u64[kd] := kp;
-  IW.u64[nd] := np;
-  u := call check_block_positivity_split_go(kd + 1, nd + 1, s + 1, l - 1);
-  return 0
+  (no, nl) := call check_block_positivity_nfs_member(IW.u64[mp], IW.u64[mp + 1]);
+  hp := call rec2(no, nl);
+  (ro, rl) := call check_block_positivity_nfs(s + 1, l - 1);
+  (qo, ql) := call sl_cons(hp, ro, rl);
+  return (qo, ql)
 }
 
 /-- `check_block_positivity(vis, p, cvTas.off, cvTas.len, ctorsAs.off, ctorsAs.len)`: the block's
@@ -576,7 +552,7 @@ normal forms and its state. -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:286-302 ConRon.Arena.checkBlockPositivity
 @[l_impl ConRon.Arena.checkBlockPositivity]
 def checkBlockPositivity : FunDecl := lfn (vis, p, cvO, cvL, caOff, caLen) locals
-    (ctx, hO, hL, u, nsEmpty, outsO, outsL, nsPtr, z, isProp, u2, kOuterO, kOuterL, nOuterO, nOuterL) {
+    (ctx, hO, hL, u, nsEmpty, outsO, outsL, nsPtr, z, isProp, u2, nOuterO, nOuterL) {
   (ctx, hO, hL) := call block_nest_ctx(vis, p, cvO, cvL);
   u := call nest_uniform(ctx, caOff, caLen);
   nsEmpty := call check_block_positivity_init();
@@ -584,8 +560,8 @@ def checkBlockPositivity : FunDecl := lfn (vis, p, cvO, cvL, caOff, caLen) local
   z := call pin_word(53);
   isProp := call lvl_eq_true(IW.u64[ctx + 9], z);
   u2 := call check_abs_ctor_sorts_all(vis, ctx, isProp, caOff, caLen, outsO, outsL);
-  (kOuterO, kOuterL, nOuterO, nOuterL) := call check_block_positivity_split(outsO, outsL);
-  return (kOuterO, kOuterL, nOuterO, nOuterL, nsPtr)
+  (nOuterO, nOuterL) := call check_block_positivity_nfs(outsO, outsL);
+  return (outsO, outsL, nOuterO, nOuterL, nsPtr)
 }
 
 /-! ## Stage 2: the tail -/
@@ -786,10 +762,8 @@ def indInstallFns : Prog :=
    ("check_abs_ctor_sorts_one", checkAbsCtorSortsOne), ("check_abs_ctor_sorts", checkAbsCtorSorts),
    ("check_abs_ctor_sorts_all", checkAbsCtorSortsAll), ("block_nest_ctx", blockNestCtx),
    ("check_block_positivity_init", checkBlockPositivityInit),
-   ("check_block_positivity_member", checkBlockPositivityMember),
-   ("check_block_positivity_member_go", checkBlockPositivityMemberGo),
-   ("check_block_positivity_split", checkBlockPositivitySplit),
-   ("check_block_positivity_split_go", checkBlockPositivitySplitGo),
+   ("check_block_positivity_nfs_member", checkBlockPositivityNfsMember),
+   ("check_block_positivity_nfs", checkBlockPositivityNfs),
    ("check_block_positivity", checkBlockPositivity),
    ("check_block_idx_sorts_one", checkBlockIdxSortsOne), ("check_block_idx_sorts", checkBlockIdxSorts),
    ("cons_block_ctors", consBlockCtors), ("check_block_pass", checkBlockPass),

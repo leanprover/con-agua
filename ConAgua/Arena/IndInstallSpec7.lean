@@ -5,7 +5,9 @@ import ConAgua.Arena.IndInstallSpec6
 
 The direct-recursion context: member 0's former telescope opened at the parameters
 (`open_pis_at_fvars_f`, a stub), the walk's context (`BlockShape.nestCtx`), its holes
-(`nest_holes`, helper `pos`'s). `nP + k` past `2^64` is a capacity abort.
+(`nest_holes`, helper `pos`'s). `nP + k` past `2^64` is a capacity abort, and so is the opened
+parameters' count plus `k` (it bounds the context's `params.length + names.length`, which
+`nest_root` needs).
 -/
 
 set_option experimental.vcgen true
@@ -52,6 +54,7 @@ def bncK2 (n : Nat) (vis : Word) : Option (List Word × Mem) → Option (List Wo
 def bncK1 (n : Nat) (vis p : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m) => if r.headD 0 = 0 then none
+    else if r.tail.tail.headD 0 + rdW (m.arr64 IW) (p + 1) < r.tail.tail.headD 0 then none
     else bncK2 n vis (nckW n m p (r.tail.headD 0) (r.tail.tail.headD 0))
 
 /-- **The model of `block_nest_ctx`** (at exec fuel `n + 2`). -/
@@ -70,10 +73,15 @@ theorem bncK3_some (h : ¬ r.headD 0 = 0) : bncK3 ctx (some (r, m)) =
 theorem bncK2_some : bncK2 n vis (some (r, m)) = bncK3 (r.headD 0) (nhW n m vis (r.headD 0)) := rfl
 theorem bncK1_none (h : r.headD 0 = 0) : bncK1 n vis p (some (r, m)) = none := by
   simp only [bncK1]; exact if_pos h
-theorem bncK1_some (h : ¬ r.headD 0 = 0) : bncK1 n vis p (some (r, m)) =
-    bncK2 n vis (nckW n m p (r.tail.headD 0) (r.tail.tail.headD 0)) := by simp only [bncK1]; exact if_neg h
+theorem bncK1_ov (h : ¬ r.headD 0 = 0)
+    (ho : r.tail.tail.headD 0 + rdW (m.arr64 IW) (p + 1) < r.tail.tail.headD 0) :
+    bncK1 n vis p (some (r, m)) = none := by simp only [bncK1]; rw [if_neg h, if_pos ho]
+theorem bncK1_some (h : ¬ r.headD 0 = 0)
+    (ho : ¬ r.tail.tail.headD 0 + rdW (m.arr64 IW) (p + 1) < r.tail.tail.headD 0) : bncK1 n vis p (some (r, m)) =
+    bncK2 n vis (nckW n m p (r.tail.headD 0) (r.tail.tail.headD 0)) := by
+  simp only [bncK1]; rw [if_neg h, if_neg ho]
 end arms
-attribute [ind_grind] bncK3_none bncK3_some bncK2_some bncK1_none bncK1_some
+attribute [ind_grind] bncK3_none bncK3_some bncK2_some bncK1_none bncK1_ov bncK1_some
 
 theorem bnc_spec (p : Prog) (hP : NckProg p) (hl : NhLook p)
     (hp : p.lookup "block_nest_ctx" = some blockNestCtx) (n : Nat) (s₀ : St) (vis q cvO cvL : Word) :
@@ -103,7 +111,9 @@ theorem bncW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
       (fun r x m' a' => DecB (fun m => decCtx m (r.headD 0).toNat) m' x.1 ∧
         decHL m' (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat = some x.2 ∧
         (r.tail.headD 0).toNat + (r.tail.tail.headD 0).toNat ≤ iwTop m' ∧
-        StageR dn vis fe m' a' ∧ IWGrow m m') := by
+        StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+        CtxIn m' (r.headD 0).toNat (· < iwTop m') ∧ CtxSl m' (r.headD 0).toNat ∧ x.1.hiAt 0 < 2 ^ 64 ∧
+        x.1.params.length + x.1.names.length < 2 ^ 64) := by
   intro r m' e
   unfold bncW at e
   split at e
@@ -136,6 +146,7 @@ theorem bncW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     show decI (rdW (m.arr64 EREC) (UInt64.ofNat pc + 3)) = cv0.type from htye,
     show (0 : Word).toNat = 0 from rfl] at h1
   refine Sim.bindK (K := bncK1 n vis q) (body := fun r1 m1 => if r1.headD 0 = 0 then none
+      else if r1.tail.tail.headD 0 + rdW (m1.arr64 IW) (q + 1) < r1.tail.tail.headD 0 then none
       else bncK2 n vis (nckW n m1 q (r1.tail.headD 0) (r1.tail.tail.headD 0))) rfl (fun _ _ => rfl) h1 ?_
   rintro r1 x1 m1 a1 ⟨hS1, hg1, hd1⟩
   cases x1 with
@@ -151,6 +162,18 @@ theorem bncW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   have g1 : r1.getD 1 0 = r1.tail.headD 0 := by rcases r1 with _ | ⟨_, _ | ⟨_, _⟩⟩ <;> rfl
   have g2 : r1.getD (1 + 1) 0 = r1.tail.tail.headD 0 := by rcases r1 with _ | ⟨_, _ | ⟨_, _ | ⟨_, _⟩⟩⟩ <;> rfl
   rw [g1, g2] at hfd hfb
+  by_cases hov2 : r1.tail.tail.headD 0 + rdW (m1.arr64 IW) (q + 1) < r1.tail.tail.headD 0
+  · simp only [hov2, if_true]; exact Sim.of_none
+  simp only [hov2, if_false]
+  have hTm : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
+  have hk1 : rdW (m1.arr64 IW) (q + 1) = UInt64.ofNat bs.k := by
+    rw [← hkw]; simp only [rdW]
+    rw [show (q + 1 : Word).toNat = q.toNat + 1 by rw [UInt64.toNat_add]; simp; omega, hg1.2.2.1 _ (by omega)]
+  have hpk : fvs.length + bs.k < 2 ^ 64 := by
+    have := partsAddNoOv hov2
+    rw [hk1, UInt64.toNat_ofNat_of_lt' hkb] at this
+    have := (r1.tail.tail.headD 0 + UInt64.ofNat bs.k).toNat_lt
+    rw [decHL_length _ hfd]; omega
   intro r m' e
   cases h2 : nckW n m1 q (r1.tail.headD 0) (r1.tail.tail.headD 0) with
   | none => rw [h2] at e; cases e
@@ -189,11 +212,15 @@ theorem bncW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
   rw [bncK3_some (h := by rw [h31]; decide)] at e
   simp only [Option.some.injEq, Prod.mk.injEq] at e
   obtain ⟨rfl, rfl⟩ := e
-  refine ⟨(c, hs), a3, ?_, ?_, hd3, hb3, hS3, (hg1.trans hg2).trans hg3⟩
+  refine ⟨(c, hs), a3, ?_, ?_, hd3, hb3, hS3, (hg1.trans hg2).trans hg3, (CtxIn.grow hin2 hg3).2,
+    hsl2.grow hin2 hg3, hhi', ?_⟩
   · simp only [unwrapOr, StateT.run_bind, pure_bind]
     simp only [StateT.run_pure, except_ok_bind, hrun2, hrun3]
     rfl
   · exact hd2.grow (decCtx_mono _) hg3
+  · rw [hnc]; simp only [BlockShape.memberNames, List.length_map]
+    have : bs.k = bs.members.length := rfl
+    omega
 
 /-- **`block_nest_ctx` refines `blockNestCtx`** (through `open_pis_at_fvars_f`'s and
 `intern_ls_iw`'s stubs; `nP + k ≥ 2^64` a capacity abort): the shape record decoded below the tops
@@ -213,7 +240,10 @@ theorem blockNestCtx_refines (p : Prog) (hP : NckProg p) (hl : NhLook p)
         some (AM.res (ConRon.Arena.blockNestCtx fe bs cvTas) a₀).2 ∧
       (r.tail.headD 0).toNat + (r.tail.tail.headD 0).toNat ≤ iwTop s'.mem ∧
       StageR dn vis fe s'.mem (AM.st (ConRon.Arena.blockNestCtx fe bs cvTas) a₀) ∧
-      IWGrow s₀.mem s'.mem; ⊤⦄ :=
+      IWGrow s₀.mem s'.mem ∧ CtxIn s'.mem (r.headD 0).toNat (· < iwTop s'.mem) ∧
+      CtxSl s'.mem (r.headD 0).toNat ∧ (AM.res (ConRon.Arena.blockNestCtx fe bs cvTas) a₀).1.hiAt 0 < 2 ^ 64 ∧
+      (AM.res (ConRon.Arena.blockNestCtx fe bs cvTas) a₀).1.params.length +
+        (AM.res (ConRon.Arena.blockNestCtx fe bs cvTas) a₀).1.names.length < 2 ^ 64; ⊤⦄ :=
   triple_post (bnc_spec p hP hl hp n s₀ vis q cvO cvL) fun _ _ ⟨hl', hm⟩ =>
     let ⟨hok, hQ⟩ := Sim.run (bncW_sim n hS hq hsrc hcv) hm
     ⟨hl', hok, hQ⟩
