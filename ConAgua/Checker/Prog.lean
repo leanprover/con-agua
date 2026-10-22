@@ -543,7 +543,6 @@ def checkerProg : Prog := [
   ("check_sum_ctor", L.Ind.checkSumCtorL),
   ("check_sum_ctor_tail", L.Ind.checkSumCtorTailL),
   ("check_sum_ctors", L.Ind.checkSumCtorsL),
-  ("check_sum_ctors_go", L.Ind.checkSumCtorsGoL),
   ("check_sum_tele", L.Ind.checkSumTeleL),
   ("check_sum_tele_slow", L.Ind.checkSumTeleSlowL),
   ("check_thm_val", L.Ind.checkThmValL),

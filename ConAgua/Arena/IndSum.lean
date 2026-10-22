@@ -255,41 +255,28 @@ def checkSumCtorL : FunDecl :=
 ctorsOff, ctorsLen)`: all constructors' types (stage 2), in order (the twin processes the head
 before recursing on the tail, i.e. list order). Returns `(newCtorsOff, newCtorsLen, sortsListOff,
 sortsListLen)` — `newCtors`/`ctors` are slices of pointers to `[cv, nF]`, `sortsList` a slice of
-pointers to `[off, len]` headers (`List (List LIdx)`). -/
+pointers to `[off, len]` headers (`List (List LIdx)`). Self-recursive on the slice, as the twin is on
+the list; the head's records are consed onto the rest's slices (`sl_cons`, a copy per element: every
+written word lies above the old pool top, docs/deviations.md D18; lane `indproofs2`: rewritten from a
+`while` loop writing into pre-allocated slices). -/
 -- con-ron: ConRon/Arena/Inductives/SumInstall.lean:176-190 ConRon.Arena.checkSumCtors
 @[l_impl ConRon.Arena.checkSumCtors]
 def checkSumCtorsL : FunDecl :=
   lfn (vis0, vis, T, lpsOff, lpsLen, nP, nIdx, resSort, isProp, large, cvTa, ctorsOff, ctorsLen)
-  locals (newCtors, sortsList, z) {
-  newCtors := call iw_alloc(ctorsLen);
-  sortsList := call iw_alloc(ctorsLen);
-  z := call check_sum_ctors_go(vis0, vis, T, lpsOff, lpsLen, nP, nIdx, resSort, isProp, large, cvTa,
-    ctorsOff, ctorsLen, newCtors, sortsList);
-  return (newCtors, ctorsLen, sortsList, ctorsLen)
-}
-
-/-- `check_sum_ctors_go(…, cvTa, cO, cL, nc, sl)`: the constructors of the slice `(cO, cL)` in
-order, constructor `j`'s `[cv, nF]` pointer written at `nc + j` and its sorts header at `sl + j`.
-Self-recursive on the slice, as the twin is on the list (lane `indproofs2`: split off
-`check_sum_ctors`' `while` loop for the proof). -/
--- con-ron: ConRon/Arena/Inductives/SumInstall.lean:176-190 ConRon.Arena.checkSumCtors
-@[l_impl ConRon.Arena.checkSumCtors]
-def checkSumCtorsGoL : FunDecl :=
-  lfn (vis0, vis, T, lpsOff, lpsLen, nP, nIdx, resSort, isProp, large, cvTa, cO, cL, nc, sl)
-  locals (c, cv, nF, cvCaOut, sOff, sLen, newC, sHead, z) {
-  if cL == 0 { return 0 };
-  c := IW.u64[cO];
+  locals (c, cv, nF, cvCaOut, sOff, sLen, newC, sHead, rO, rL, sO, sL, o1, l1, o2, l2) {
+  if ctorsLen == 0 { return (0, 0, 0, 0) };
+  c := IW.u64[ctorsOff];
   cv := IW.u64[c];
   nF := IW.u64[c + 1];
   (cvCaOut, sOff, sLen) := call check_sum_ctor(vis0, vis, T, lpsOff, lpsLen, nP, nIdx, resSort,
     isProp, large, cv, nF, cvTa);
   newC := call rec2(cvCaOut, nF);
-  IW.u64[nc] := newC;
   sHead := call rec2(sOff, sLen);
-  IW.u64[sl] := sHead;
-  z := call check_sum_ctors_go(vis0, vis, T, lpsOff, lpsLen, nP, nIdx, resSort, isProp, large, cvTa,
-    cO + 1, cL - 1, nc + 1, sl + 1);
-  return 0
+  (rO, rL, sO, sL) := call check_sum_ctors(vis0, vis, T, lpsOff, lpsLen, nP, nIdx, resSort, isProp,
+    large, cvTa, ctorsOff + 1, ctorsLen - 1);
+  (o1, l1) := call sl_cons(newC, rO, rL);
+  (o2, l2) := call sl_cons(sHead, sO, sL);
+  return (o1, l1, o2, l2)
 }
 
 /-- `ctor_info_rec(cv, nP, nF)`: the `.ctorInfo cv nP nF` constant record in `EREC` (`decCI` kind
@@ -790,7 +777,7 @@ def indSumFns : Prog :=
    ("check_field_sort_bound", checkFieldSortBoundL),
    ("field_doms_resolve", fieldDomsResolveL), ("idx_args_resolve", idxArgsResolveL),
    ("check_sum_ctor_tail", checkSumCtorTailL), ("check_sum_ctor", checkSumCtorL),
-   ("check_sum_ctors", checkSumCtorsL), ("check_sum_ctors_go", checkSumCtorsGoL), ("ctor_info_rec", ctorInfoRecL),
+   ("check_sum_ctors", checkSumCtorsL), ("ctor_info_rec", ctorInfoRecL),
    ("cons_sum_ctors", consSumCtorsL), ("sum_rules", sumRulesL), ("sum_rules_go", sumRulesGoL),
    ("check_struct_doms_at", checkStructDomsAtL),
    ("check_struct_proj_table_scoped", checkStructProjTableScopedL),

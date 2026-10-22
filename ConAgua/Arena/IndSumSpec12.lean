@@ -66,7 +66,6 @@ structure SumProg (p : Prog) : Prop where
   hsd : p.lookup "check_struct_doms_at" = some checkStructDomsAtL
   hctor : p.lookup "check_sum_ctor" = some checkSumCtorL
   hrec2 : p.lookup "rec2" = some rec2
-  hcsg : p.lookup "check_sum_ctors_go" = some checkSumCtorsGoL
   hcs : p.lookup "check_sum_ctors" = some checkSumCtorsL
 
 /-! ## `check_sum_ctor_tail`: the word model -/
