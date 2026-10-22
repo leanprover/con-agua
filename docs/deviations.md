@@ -34,7 +34,6 @@ refinements, the L code's comments, `docs/e2e.md`). Fixed rows move to the end.
 | D17 | Stage B `validate` / `scan_string` (DESIGN.md, lane `stageb`) | `feed_chunk` asks `newline_from`; con-leche decodes a whole string, then checks UTF-8 | does not ask (same error, same line); checks each raw run between escapes (proved equivalent) | none | – | – |
 | D18 | `Arena/WhnfProj.lean` `proj_table_name` | `projTableName` interns `str T "projTable"`: no allocation when the name exists | writes the nine bytes of `"projTable"` at the pool top and raises the top before `intern_nstr` (whose refinement needs the slice below the top), on every call (`find_proj`) | performance (memory: nine pool words per projection-table lookup; the pool is append-only, D10) | whnf3 | keep one persistent `"projTable"` slice (a `CTL` word holding its offset, an invariant of `CoreS`), or roll the top back when the node existed |
 | D19 | `Arena/WhnfProj.lean` `proj_table_name` | interns the prefix `T` without a check | aborts unless `T` is a name handle of the store (tag, tier, index below its count) | none (the twin's store is well formed: every name it holds is valid) | – | – |
-| D20 | `Arena/WhnfStrLit.lean` `ls_one`, `lit_char` | `internLsNode [x]`, `internE (.lit (.natVal c))`: no allocation when the node exists | write the list's word / the limb at the pool top and raise the top before `intern_ls`/`intern_lit`, on every call (`str_lit_supported`'s `List` checks, `str_lit_ctor`'s spine: one word per character) | performance (memory, as D18) | whnf3 | as D18 |
 
 ## Fixed
 
