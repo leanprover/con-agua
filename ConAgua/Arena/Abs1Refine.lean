@@ -2,6 +2,7 @@ import ConAgua.Arena.Abs1Spec
 import ConAgua.Arena.Inst1Refine
 import ConAgua.Arena.FVarRangeRefine
 import ConAgua.Arena.Keeps
+import ConAgua.Arena.SimLib
 import ConAgua.Census.Attr
 
 /-!
@@ -708,21 +709,14 @@ theorem agoOK_succ (n : Nat) (ih : ANodeOK n) : AGoOK (n + 1) := by
   by_cases hfu : fu = 0
   · rw [absW] at hb; simp [hfu] at hb
   rw [absW_eq n m h k d fu hfu] at hb
-  cases hf : fvbW n m h (fu - 1) with
-  | none => simp [hf, acutK] at hb
-  | some p =>
-  obtain ⟨x, m₁⟩ := p
-  rw [hf, acutK_some] at hb
-  obtain ⟨a₁, ha₁, hA₁⟩ := fvbW_ok n m m₁ a hA h (fu - 1) x hh hf
-  rw [ctrW_toNat fu hfu, abstract1Go_succ', StateT.run_bind, ha₁, except_ok_bind]
+  rw [ctrW_toNat fu hfu, abstract1Go_succ']
+  refine SimD.exists (Sim.bindD rfl (fun _ _ => rfl)
+    (Sim.ofD fun x m₁ e => fvbW_ok n m m₁ a hA h (fu - 1) x hh e) fun x m₁ a₁ hA₁ => ?_) hb
+  rw [acutK_some]
   by_cases hc : x ≤ d
-  · rw [if_pos hc] at hb
-    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
-    rw [if_pos (UInt64.le_iff_toNat_le.mp hc)]
-    exact ⟨a₁, rfl, hA₁⟩
-  · rw [if_neg hc] at hb
-    rw [if_neg (fun e => hc (UInt64.le_iff_toNat_le.mpr e))]
-    exact ih m₁ m' a₁ h k d (fu - 1) r hA₁ hh hb
+  · rw [if_pos hc, if_pos (UInt64.le_iff_toNat_le.mp hc)]; exact Sim.ret ⟨rfl, hA₁⟩
+  · rw [if_neg hc, if_neg (fun e => hc (UInt64.le_iff_toNat_le.mpr e))]
+    exact Sim.ofD fun r m' hb => ih m₁ m' a₁ h k d (fu - 1) r hA₁ hh hb
 
 theorem anodeOK_succ (n : Nat) (ih : AArmOK n) : ANodeOK (n + 1) := by
   intro m m' a h k d fu r hA hh hb
@@ -810,18 +804,11 @@ theorem aappArm_ok (hg : h >>> 28 = 4) :
   obtain ⟨-, hfw, haw⟩ := view_app m a hA.1.1 h hh hv hg
   rw [absAppW_miss n m h k d fu hr hh0 hv] at hb
   rw [StateT.run_bind, viewApp_run, viewApp_ok m a hA.1.1 h hh hv, except_ok_bind]
-  cases h1 : absW n m (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2)) k d fu with
-  | none => simp [h1, aappK₁] at hb
-  | some p =>
-  obtain ⟨x, m₁⟩ := p
-  cases h2 : absW n m₁ (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2 + 1)) k d fu with
-  | none => simp [h1, h2, aappK₁, aappK₁.aappK₂] at hb
-  | some q =>
-  obtain ⟨y, m₂⟩ := q
-  simp only [h1, h2, aappK₁, aappK₁.aappK₂] at hb
-  obtain ⟨a₁, ha₁, hA₁⟩ := ih m m₁ a _ k d fu x hA hfw h1
-  obtain ⟨a₂, ha₂, hA₂⟩ := ih m₁ m₂ a₁ _ k d fu y hA₁ haw h2
-  obtain ⟨a', h3, h4⟩ := atail_ok (internRebuiltApp (decE h)
+  refine SimD.exists (Sim.bindD rfl (fun _ _ => rfl)
+    (Sim.ofD fun x m₁ e => ih m m₁ a _ k d fu x hA hfw e) fun x m₁ a₁ hA₁ => ?_) hb
+  refine Sim.bindD (K := aappK₁.aappK₂ h k _ _ x) rfl (fun _ _ => rfl)
+    (Sim.ofD fun y m₂ e => ih m₁ m₂ a₁ _ k d fu y hA₁ haw e) fun y m₂ a₂ hA₂ => ?_
+  refine Sim.ofD fun r m' hb => atail_ok (internRebuiltApp (decE h)
       (decE x == decE (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2)) && decE y == decE (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2 + 1))) (decE x) (decE y))
       _ a₂ h k r m' hh (fun r₃ m₃ hr₃ => by
     unfold internRebuiltApp
@@ -833,7 +820,6 @@ theorem aappArm_ok (hg : h >>> 28 = 4) :
         fun e2 => hn ⟨decE_inj _ _ hx hfw e1, decE_inj _ _ hy haw e2⟩
       simp [e1, e2]
     · simp [e1]) hb
-  exact ⟨a', by simp only [StateT.run_bind, ha₁, ha₂, except_ok_bind]; exact h3, h4⟩
 
 theorem alamArm_ok (hg : h >>> 28 = 5) :
     AArmRef (n + 1) absLamW (abstract1ArmBind d.toNat fu.toNat (decE h) k.toNat) m m' a h k d fu r := by
@@ -851,21 +837,13 @@ theorem alamArm_ok (hg : h >>> 28 = 5) :
   obtain ⟨-, hfw, haw⟩ := view_lam m a hA.1.1 h hh hv hg
   rw [absLamW_miss n m h k d fu hk1 hr hh0 hv] at hb
   rw [StateT.run_bind, viewBind_run, viewBind_lam m a hA.1.1 h hh hv hg, except_ok_bind]
-  cases h1 : absW n m (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2)) k d fu with
-  | none => simp [h1, alamK₁] at hb
-  | some p =>
-  obtain ⟨x, m₁⟩ := p
-  cases h2 : absW n m₁ (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1)) (k + 1) d fu with
-  | none => simp [h1, h2, alamK₁, alamK₁.alamK₂] at hb
-  | some q =>
-  obtain ⟨y, m₂⟩ := q
-  simp only [h1, h2, alamK₁, alamK₁.alamK₂] at hb
-  obtain ⟨a₁, ha₁, hA₁⟩ := ih m m₁ a _ k d fu x hA hfw h1
-  obtain ⟨a₂, ha₂, hA₂⟩ := ih m₁ m₂ a₁ _ (k + 1) d fu y hA₁ haw h2
-  rw [succW_toNat k hk1] at ha₂
+  refine SimD.exists (Sim.bindD rfl (fun _ _ => rfl)
+    (Sim.ofD fun x m₁ e => ih m m₁ a _ k d fu x hA hfw e) fun x m₁ a₁ hA₁ => ?_) hb
+  refine Sim.bindD (K := alamK₁.alamK₂ h k _ _ x) rfl (fun _ _ => rfl) (Sim.ofD fun y m₂ e => by
+    simpa only [succW_toNat k hk1] using ih m₁ m₂ a₁ _ (k + 1) d fu y hA₁ haw e) fun y m₂ a₂ hA₂ => ?_
   have hbind : ∀ t b, internBindE (decE h).tag t b = internE (.lam t b) := by
     intro t b; simp [internBindE, decE_tag h hh, hg, ETag.lam, internE]
-  obtain ⟨a', h3, h4⟩ := atail_ok (internRebuiltBind (decE h)
+  refine Sim.ofD fun r m' hb => atail_ok (internRebuiltBind (decE h)
       (decE x == decE (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2)) && decE y == decE (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1))) (decE h).tag (decE x) (decE y))
       _ a₂ h k r m' hh (fun r₃ m₃ hr₃ => by
     unfold internRebuiltBind
@@ -878,7 +856,6 @@ theorem alamArm_ok (hg : h >>> 28 = 5) :
         fun e2 => hn ⟨decE_inj _ _ hx hfw e1, decE_inj _ _ hy haw e2⟩
       simp [e1, e2]
     · simp [e1]) hb
-  exact ⟨a', by simp only [StateT.run_bind, ha₁, ha₂, except_ok_bind]; exact h3, h4⟩
 
 theorem aforallArm_ok (hg : h >>> 28 = 6) :
     AArmRef (n + 1) absForallW (abstract1ArmBind d.toNat fu.toNat (decE h) k.toNat) m m' a h k d fu r := by
@@ -896,21 +873,13 @@ theorem aforallArm_ok (hg : h >>> 28 = 6) :
   obtain ⟨-, hfw, haw⟩ := view_forall m a hA.1.1 h hh hv hg
   rw [absForallW_miss n m h k d fu hk1 hr hh0 hv] at hb
   rw [StateT.run_bind, viewBind_run, viewBind_forall m a hA.1.1 h hh hv hg, except_ok_bind]
-  cases h1 : absW n m (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2)) k d fu with
-  | none => simp [h1, afaK₁] at hb
-  | some p =>
-  obtain ⟨x, m₁⟩ := p
-  cases h2 : absW n m₁ (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1)) (k + 1) d fu with
-  | none => simp [h1, h2, afaK₁, afaK₁.afaK₂] at hb
-  | some q =>
-  obtain ⟨y, m₂⟩ := q
-  simp only [h1, h2, afaK₁, afaK₁.afaK₂] at hb
-  obtain ⟨a₁, ha₁, hA₁⟩ := ih m m₁ a _ k d fu x hA hfw h1
-  obtain ⟨a₂, ha₂, hA₂⟩ := ih m₁ m₂ a₁ _ (k + 1) d fu y hA₁ haw h2
-  rw [succW_toNat k hk1] at ha₂
+  refine SimD.exists (Sim.bindD rfl (fun _ _ => rfl)
+    (Sim.ofD fun x m₁ e => ih m m₁ a _ k d fu x hA hfw e) fun x m₁ a₁ hA₁ => ?_) hb
+  refine Sim.bindD (K := afaK₁.afaK₂ h k _ _ x) rfl (fun _ _ => rfl) (Sim.ofD fun y m₂ e => by
+    simpa only [succW_toNat k hk1] using ih m₁ m₂ a₁ _ (k + 1) d fu y hA₁ haw e) fun y m₂ a₂ hA₂ => ?_
   have hbind : ∀ t b, internBindE (decE h).tag t b = internE (.forallE t b) := by
     intro t b; simp [internBindE, decE_tag h hh, hg, ETag.lam, internE]
-  obtain ⟨a', h3, h4⟩ := atail_ok (internRebuiltBind (decE h)
+  refine Sim.ofD fun r m' hb => atail_ok (internRebuiltBind (decE h)
       (decE x == decE (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2)) && decE y == decE (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1))) (decE h).tag (decE x) (decE y))
       _ a₂ h k r m' hh (fun r₃ m₃ hr₃ => by
     unfold internRebuiltBind
@@ -923,7 +892,6 @@ theorem aforallArm_ok (hg : h >>> 28 = 6) :
         fun e2 => hn ⟨decE_inj _ _ hx hfw e1, decE_inj _ _ hy haw e2⟩
       simp [e1, e2]
     · simp [e1]) hb
-  exact ⟨a', by simp only [StateT.run_bind, ha₁, ha₂, except_ok_bind]; exact h3, h4⟩
 
 theorem aletArm_ok (hg : h >>> 28 = 7) :
     AArmRef (n + 1) absLetW (abstract1ArmLet d.toNat fu.toNat (decE h) k.toNat) m m' a h k d fu r := by
@@ -941,24 +909,13 @@ theorem aletArm_ok (hg : h >>> 28 = 7) :
   obtain ⟨-, htw, hvw, hbw⟩ := view_let m a hA.1.1 h hh hv hg
   rw [absLetW_miss n m h k d fu hk1 hr hh0 hv] at hb
   rw [StateT.run_bind, viewLet_run, viewLet_ok m a hA.1.1 h hh hv, except_ok_bind]
-  cases h1 : absW n m (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) k d fu with
-  | none => simp [h1, aleK₁] at hb
-  | some p =>
-  obtain ⟨x, m₁⟩ := p
-  cases h2 : absW n m₁ (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1)) k d fu with
-  | none => simp [h1, h2, aleK₁, aleK₁.aleK₂] at hb
-  | some q =>
-  obtain ⟨y, m₂⟩ := q
-  cases h3 : absW n m₂ (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2)) (k + 1) d fu with
-  | none => simp [h1, h2, h3, aleK₁, aleK₁.aleK₂, aleK₁.aleK₃] at hb
-  | some o =>
-  obtain ⟨z, m₃⟩ := o
-  simp only [h1, h2, h3, aleK₁, aleK₁.aleK₂, aleK₁.aleK₃] at hb
-  obtain ⟨a₁, ha₁, hA₁⟩ := ih m m₁ a _ k d fu x hA htw h1
-  obtain ⟨a₂, ha₂, hA₂⟩ := ih m₁ m₂ a₁ _ k d fu y hA₁ hvw h2
-  obtain ⟨a₃, ha₃, hA₃⟩ := ih m₂ m₃ a₂ _ (k + 1) d fu z hA₂ hbw h3
-  rw [succW_toNat k hk1] at ha₃
-  obtain ⟨a', h4, h5⟩ := atail_ok (internRebuiltLetE (decE h)
+  refine SimD.exists (Sim.bindD rfl (fun _ _ => rfl)
+    (Sim.ofD fun x m₁ e => ih m m₁ a _ k d fu x hA htw e) fun x m₁ a₁ hA₁ => ?_) hb
+  refine Sim.bindD (K := aleK₁.aleK₂ n h k d fu _ _ _ x) rfl (fun _ _ => rfl)
+    (Sim.ofD fun y m₂ e => ih m₁ m₂ a₁ _ k d fu y hA₁ hvw e) fun y m₂ a₂ hA₂ => ?_
+  refine Sim.bindD (K := aleK₁.aleK₃ h k _ _ _ x y) rfl (fun _ _ => rfl) (Sim.ofD fun z m₃ e => by
+    simpa only [succW_toNat k hk1] using ih m₂ m₃ a₂ _ (k + 1) d fu z hA₂ hbw e) fun z m₃ a₃ hA₃ => ?_
+  refine Sim.ofD fun r m' hb => atail_ok (internRebuiltLetE (decE h)
       (decE x == decE (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) && decE y == decE (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1)) && decE z == decE (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2)))
       (decE x) (decE y) (decE z)) _ a₃ h k r m' hh (fun r₄ m₄ hr₄ => by
     unfold internRebuiltLetE internLetEE
@@ -974,7 +931,6 @@ theorem aletArm_ok (hg : h >>> 28 = 7) :
         simp [e1, e2, e3]
       · simp [e1, e2]
     · simp [e1]) hb
-  exact ⟨a', by simp only [StateT.run_bind, ha₁, ha₂, ha₃, except_ok_bind]; exact h4, h5⟩
 
 theorem aprojArm_ok (hg : h >>> 28 = 9) :
     AArmRef (n + 1) absProjW (abstract1ArmProj d.toNat fu.toNat (decE h) k.toNat) m m' a h k d fu r := by
@@ -990,13 +946,9 @@ theorem aprojArm_ok (hg : h >>> 28 = 9) :
   obtain ⟨-, -, hew⟩ := view_proj m a hA.1.1 h hh hv hg
   rw [absProjW_miss n m h k d fu hr hh0 hv] at hb
   rw [StateT.run_bind, viewProj_run, viewProj_ok m a hA.1.1 h hh hv, except_ok_bind]
-  cases h1 : absW n m (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)) k d fu with
-  | none => simp [h1, apjK₁] at hb
-  | some p =>
-  obtain ⟨x, m₁⟩ := p
-  simp only [h1, apjK₁] at hb
-  obtain ⟨a₁, ha₁, hA₁⟩ := ih m m₁ a _ k d fu x hA hew h1
-  obtain ⟨a', h3, h4⟩ := atail_ok (internRebuiltProj (decE h) (decE x == decE (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)))
+  refine SimD.exists (Sim.bindD rfl (fun _ _ => rfl)
+    (Sim.ofD fun x m₁ e => ih m m₁ a _ k d fu x hA hew e) fun x m₁ a₁ hA₁ => ?_) hb
+  refine Sim.ofD fun r m' hb => atail_ok (internRebuiltProj (decE h) (decE x == decE (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)))
       (decI (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3))) (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 1)).toNat (decE x)) _ a₁ h k r m' hh (fun r₃ m₃ hr₃ => by
     unfold internRebuiltProj internProjE
     refine rb_ok _ _ _ _ m₁ a₁ hA₁ h r₃ m₃ (fun e1 => by simp [e1]) (fun hn hI => ?_) hr₃
@@ -1005,7 +957,6 @@ theorem aprojArm_ok (hg : h >>> 28 = 9) :
     have e1 : decE x ≠ decE (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)) :=
       fun e1 => hn (decE_inj _ _ hx hew e1)
     simp [e1]) hb
-  exact ⟨a', by simp only [StateT.run_bind, ha₁, except_ok_bind]; exact h3, h4⟩
 
 end arms
 
