@@ -146,13 +146,7 @@ w("```\n")
 
 # phases
 w("## By phase\n")
-w("Lean lines of con-ron's arena twin per phase. Bar: █ proven, ░ not yet.\n")
-w("| Phase | Proven | | Targets proven / sorry / L only / todo |")
-w("|---|---|---:|---|")
-for p in phases:
-    f = p["lean_proven"] / p["lean_all"] if p["lean_all"] else 0
-    w(f"| {p['phase']} {p['name']} | `{bar(f)}` | {pct(f)} | {p['proven']} / {p['sorry']} / {p['written']} / {p['todo']} of {p['targets']} |")
-w("")
+w("Lean lines of con-ron's arena twin per phase.\n")
 w(f"![Lean lines per phase: proven, proven with sorry, L written, not started]({raw_url('phases.svg')})\n")
 
 # lanes
