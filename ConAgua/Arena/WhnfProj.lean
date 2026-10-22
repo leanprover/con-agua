@@ -38,7 +38,7 @@ set_option experimental.vcgen true
 namespace L.Arena
 
 /-- `proj_table_name(t)`: the reserved name `num (str t "projTable") 0`. -/
--- con-ron: ConRon/Arena/Env.lean:197-199 ConRon.Arena.projTableName
+-- con-ron: ConRon/Arena/Env.lean:195-199 ConRon.Arena.projTableName
 @[l_impl ConRon.Arena.projTableName]
 def projTableNameL : FunDecl := lfn (t) locals (o, s, g, k) {
   if 4294967295 < t { abort };

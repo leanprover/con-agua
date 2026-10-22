@@ -6,9 +6,9 @@ import ConAgua.Arena.WhnfProjRefine
 * **The write set** (`projProgC_closed`, from the text): `proj_table_name`, `find_proj` and their
   callees write the pool and its top, and the name tables `str`/`num` with their counts, nothing
   else: `ErecKept`'s `find_proj` half and the `EREC` reads after the name interning.
-* **`env_find` as a word model** (`efW`, `envFind_specW`): its answer from the rows, so that a found
-  row is known to decode (`EnvR.row_dec`: `EnvR`'s keys and values).
-* **`find_proj`** (`fpW`, `findProj_refines`, `projFound`).
+* **`env_find` as a word model** (`efW`, `envFind_specWP`): its answer from the rows, so that a found
+  row is known to decode (`EnvR.row_decP`: `EnvR`'s keys and values).
+* **`find_proj`** (`findProjW`, `findProj_refines`, `projFound`).
 -/
 
 open ConRon.Arena
@@ -76,7 +76,7 @@ theorem proj_frame_erec {p : Prog} (hp : ProjProg p) {f : FnName} (hf : f ∈ pr
 def efW (m : Mem) (w vis : Word) : Word × Word :=
   if rowC m w = 0 then (0, 0) else if rowC m w - 1 < vis then (1, rowP m w) else (0, 0)
 
-theorem envFind_specW (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
+theorem envFind_specWP (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
     (hg : p.lookup "env_row_get" = some envRowGetL) (hp : p.lookup "env_find" = some envFindL)
     (n : Nat) (s₀ : St) (w vis : Word) (hw : w.toNat < 2 ^ 32) :
     ⦃fun s => s = s₀⦄
@@ -93,7 +93,7 @@ theorem envFind_specW (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
       finish [efW]
 
 /-- **A row that exists decodes** (`EnvR`'s keys and values). -/
-theorem EnvR.row_dec {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {fe : IFEnv}
+theorem EnvR.row_decP {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {fe : IFEnv}
     (h : EnvR dn m vis fe) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : rowTag w ≤ 2)
     (h0 : rowC m w ≠ 0) : ∃ ci, decCI (erecP m) dn (rowP m w).toNat = some ci := by
   have hk := h.keys (decI w) (by rwa [decI_word_self w hw])
@@ -110,7 +110,7 @@ theorem EnvR.row_dec {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word}
 /-! ## `find_proj` -/
 
 /-- The model of `find_proj`: `(flag, record, memory)`. -/
-def fpW (p : Prog) (n : Nat) (m : Mem) (vis t i : Word) : Option (Word × Word × Mem) :=
+def findProjW (p : Prog) (n : Nat) (m : Mem) (vis t i : Word) : Option (Word × Word × Mem) :=
   match callW p n "proj_table_name" [t] m with
   | none => none
   | some (r₁, m₁) =>
@@ -125,13 +125,13 @@ def fpW (p : Prog) (n : Nat) (m : Mem) (vis t i : Word) : Option (Word × Word �
 
 theorem findProj_spec (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St) (vis t i : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "find_proj" [vis, t, i]
-    ⦃fun r s' => LocEq s' s₀ ∧ fpW p n s₀.mem vis t i = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ findProjW p n s₀.mem vis t i = some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp.findProj]
   simp only [callFn, findProjL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "proj_table_name", callW_spec p n "env_find"] <;>
-    finish [fpW]
+    finish [findProjW]
 
 /-- The twin's answer from the lookup's result. -/
 def fpRes (o : Option IConstantInfo) (i : Nat) : Option IProjEntry :=
@@ -205,7 +205,7 @@ theorem findProj_refines (p : Prog) (hp : ProjProg p) : FindProjOK p := by
   obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (findProj_spec p hp n s₀ vis T i)
   subst hs0
   refine ⟨hloc, ?_⟩
-  unfold fpW at hW
+  unfold findProjW at hW
   cases hc1 : callW p n "proj_table_name" [T] s.mem with
   | none => rw [hc1] at hW; cases hW
   | some q1 =>
@@ -229,7 +229,7 @@ theorem findProj_refines (p : Prog) (hp : ProjProg p) : FindProjOK p := by
   rw [hc2] at hW
   simp only at hW
   obtain ⟨s₂, hs₂, hmem, -, ht, hf, hq⟩ := triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩)
-    (envFind_specW p hp.envix hp.envrow hp.envfind n _ _ vis hw) hc2
+    (envFind_specWP p hp.envix hp.envrow hp.envfind n _ _ vis hw) hc2
   have hm2 : m₂ = m₁ := by rw [← hs₂]; exact hmem
   subst hm2
   have hrunT := findProj_run fe (decI T) i.toNat a₀ _ _ (AM.run_of_ok _ _ ok1)
@@ -263,7 +263,7 @@ theorem findProj_refines (p : Prog) (hp : ProjProg p) : FindProjOK p := by
     rw [if_pos lt] at hf hq
     simp only at hq
     rw [hfind, if_neg z, if_pos ((rowC_lt_iff _ _ z).mp lt), ← hq]
-    obtain ⟨ci, hci⟩ := EnvR.row_dec hS1.env (r₁.headD 0) hw ht z
+    obtain ⟨ci, hci⟩ := EnvR.row_decP hS1.env (r₁.headD 0) hw ht z
     rw [← hq] at hci
     rw [hci]
     have hciF := ArrExt.decCI (erecP_ext m₂) hci
@@ -332,7 +332,7 @@ theorem projFound (p : Prog) (hp : ProjProg p) : ProjFound p := by
   obtain ⟨s', hs', -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (findProj_spec p hp n _ vis T i) hc
   simp only at hW
-  unfold fpW at hW
+  unfold findProjW at hW
   cases hc1 : callW p n "proj_table_name" [T] m with
   | none => rw [hc1] at hW; cases hW
   | some q1 =>
@@ -356,7 +356,7 @@ theorem projFound (p : Prog) (hp : ProjProg p) : ProjFound p := by
   rw [hc2] at hW
   simp only at hW
   obtain ⟨s₂, hs₂, hmem, -, ht, hf, hq⟩ := triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩)
-    (envFind_specW p hp.envix hp.envrow hp.envfind n _ _ vis hw) hc2
+    (envFind_specWP p hp.envix hp.envrow hp.envfind n _ _ vis hw) hc2
   have hm2 : m₂ = m₁ := by rw [← hs₂]; exact hmem
   subst hm2
   simp only [efW] at hf hq
@@ -380,7 +380,7 @@ theorem projFound (p : Prog) (hp : ProjProg p) : ProjFound p := by
     split at hW <;> simp only [Option.some.injEq, Prod.mk.injEq] at hW
     · exact hW.2.1.symm
     · exact absurd hW.1.symm hr
-  obtain ⟨ci, hci⟩ := EnvR.row_dec hS1.env (r₁.headD 0) hw ht z
+  obtain ⟨ci, hci⟩ := EnvR.row_decP hS1.env (r₁.headD 0) hw ht z
   rw [← hq] at hci
   have hciF := ArrExt.decCI (erecP_ext m₂) hci
   have b6' : rdW (m₂.arr64 EREC) (r₂.tail.headD 0) = 6 := by simpa using b6

@@ -219,7 +219,7 @@ def ptnW (p : Prog) (n : Nat) (m : Mem) (t : Word) : Option (Word × Mem) :=
         | none => none
         | some (r₂, m₂) => some (r₂.headD 0, m₂)
 
-theorem projTableName_spec (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St) (t : Word) :
+theorem ptnW_spec (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St) (t : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "proj_table_name" [t]
     ⦃fun r s' => LocEq s' s₀ ∧ ptnW p n s₀.mem t = some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp.ptn]
@@ -403,7 +403,7 @@ theorem projTableName_refines (p : Prog) (hp : ProjProg p) (n : Nat) (s₀ : St)
   | succ n =>
   apply L.M.triple_of_run
   intro s r s' hs0 hrun
-  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (projTableName_spec p hp n s₀ t)
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (ptnW_spec p hp n s₀ t)
   subst hs0
   refine ⟨hloc, ?_⟩
   generalize hm : s.mem = m at hW hS

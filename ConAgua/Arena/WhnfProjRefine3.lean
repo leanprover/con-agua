@@ -119,7 +119,7 @@ theorem fireOk_run (e : IProjEntry) (us : LsIdx) (a a₂ : AState) (z : LIdx) (o
 theorem rdW_of_get {a : Array Word} {x : Word} {k : Nat} {w : Word} (hk : x.toNat = k)
     (h : a[k]? = some w) : rdW a x = w := by simp [rdW, hk, h]
 
-theorem toNat_add_small (x : Word) (c : Nat) (h : x.toNat + c < 2 ^ 64) :
+theorem fo_toNat_add_small (x : Word) (c : Nat) (h : x.toNat + c < 2 ^ 64) :
     (x + UInt64.ofNat c).toNat = x.toNat + c := by
   rw [UInt64.toNat_add]
   have e : (UInt64.ofNat c).toNat = c := by simp; omega
@@ -160,7 +160,7 @@ theorem fireOk_refines (p : Prog) (hp : FireProg p) (hfz : FieldSortZeroOK p)
   obtain ⟨w8, h8, h8lt, hss'⟩ := hd?_some hss
   have hq8 : q.toNat + 8 < (s.mem.arr64 EREC).size := (Array.getElem?_eq_some_iff.mp h8).1
   have hrd8 : rdW (s.mem.arr64 EREC) (q + 8) = w8 :=
-    rdW_of_get (toNat_add_small q 8 (by omega)) h8
+    rdW_of_get (fo_toNat_add_small q 8 (by omega)) h8
   rw [hrd8] at hW
   rcases Nat.lt_or_ge n 2 with hsm | hbig
   · rw [lvlEqC_small p hp.lvl.c n hsm] at hW; cases hW
@@ -226,14 +226,14 @@ theorem fireOk_refines (p : Prog) (hp : FireProg p) (hfz : FieldSortZeroOK p)
   have hq12 : q.toNat + 12 < (s.mem.arr64 EREC).size := (Array.getElem?_eq_some_iff.mp (by
     rw [show q.toNat + 12 = q.toNat + 11 + 1 by omega]; exact h12)).1
   have hrd3 : rdW (m₂.arr64 EREC) (q + 3) = w3 := by
-    rw [hE2]; exact rdW_of_get (toNat_add_small q 3 (by omega)) h3
+    rw [hE2]; exact rdW_of_get (fo_toNat_add_small q 3 (by omega)) h3
   have hrd4 : rdW (m₂.arr64 EREC) (q + 4) = w4 := by
-    rw [hE2]; exact rdW_of_get (toNat_add_small q 4 (by omega)) (by
+    rw [hE2]; exact rdW_of_get (fo_toNat_add_small q 4 (by omega)) (by
       rw [show q.toNat + 4 = q.toNat + 3 + 1 by omega]; exact h4)
   have hrd11 : rdW (m₂.arr64 EREC) (q + 11) = w11 := by
-    rw [hE2]; exact rdW_of_get (toNat_add_small q 11 (by omega)) h11
+    rw [hE2]; exact rdW_of_get (fo_toNat_add_small q 11 (by omega)) h11
   have hrd12 : rdW (m₂.arr64 EREC) (q + 12) = w12 := by
-    rw [hE2]; exact rdW_of_get (toNat_add_small q 12 (by omega)) (by
+    rw [hE2]; exact rdW_of_get (fo_toNat_add_small q 12 (by omega)) (by
       rw [show q.toNat + 12 = q.toNat + 11 + 1 by omega]; exact h12)
   -- the guard word
   have hfs : HW (foFs m₂ q i) ∧ decI (foFs m₂ q i) = tbl.guards.getD i.toNat default := by
