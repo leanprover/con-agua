@@ -573,18 +573,25 @@ def classStreamRecsL : FunDecl := lfn (vis, rcsOff, rcsLen) locals (rc, cv, r, r
 /-- `class_key_canon(params.off, params.len, k)`: `k`'s parameters moved to the canonical ones. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:631-636 ConRon.Arena.classKeyCanon
 @[l_impl ConRon.Arena.classKeyCanon]
-def classKeyCanonL : FunDecl := lfn (paramsOff, paramsLen, k) locals (dsOff, dsLen, q, j, e, nk) {
+def classKeyCanonL : FunDecl := lfn (paramsOff, paramsLen, k) locals (dsOff, dsLen, q, u, nk) {
   dsOff := IW.u64[k + 2];
   dsLen := IW.u64[k + 3];
   q := call iw_alloc(dsLen);
-  j := 0;
-  while j < dsLen {
-    e := call target_canon_params(paramsOff, paramsLen, IW.u64[dsOff + j]);
-    IW.u64[q + j] := e;
-    j += 1
-  };
+  u := call class_key_canon_go(paramsOff, paramsLen, dsOff, dsLen, q, 0);
   nk := call rec4(IW.u64[k], IW.u64[k + 1], q, dsLen);
   return nk
+}
+
+/-- `class_key_canon_go(params.off, params.len, ds.off, ds.len, q, j)`: the rest of the key's
+parameters moved to the canonical ones, written at `q + j`, … (the loop of `class_key_canon`, as a
+recursion). -/
+-- con-ron: none — the loop of class_key_canon as a self-recursive function (proof shape)
+def classKeyCanonGo : FunDecl := lfn (paramsOff, paramsLen, dsOff, dsLen, q, j) locals (e, u) {
+  if j >= dsLen { return 0 };
+  e := call target_canon_params(paramsOff, paramsLen, IW.u64[dsOff + j]);
+  IW.u64[q + j] := e;
+  u := call class_key_canon_go(paramsOff, paramsLen, dsOff, dsLen, q, j + 1);
+  return 0
 }
 
 /-- `class_seeds(ctx, holes.off, holes.len, ms.off, ms.len)`: the seeds, every outside class of
@@ -592,23 +599,19 @@ def classKeyCanonL : FunDecl := lfn (paramsOff, paramsLen, k) locals (dsOff, dsL
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:638-649 ConRon.Arena.classSeeds
 @[l_impl ConRon.Arena.classSeeds]
 def classSeedsL : FunDecl := lfn (ctx, holesOff, holesLen, msOff, msLen)
-    locals (q, j, m, mem, key, n, rp2, p2) {
-  q := call iw_alloc(msLen);
-  j := 0;
-  rp2 := 0;
-  while j < msLen {
-    m := IW.u64[msOff + j];
-    mem := IW.u64[m + 8];
-    if mem == 0 {
-      (key, n) := call nest_seed_of(ctx, holesOff, holesLen, IW.u64[m], IW.u64[m + 1],
-        IW.u64[m + 2], IW.u64[m + 3], IW.u64[m + 4]);
-      p2 := call rec2(key, n);
-      IW.u64[q + rp2] := p2;
-      rp2 += 1
-    };
-    j += 1
+    locals (m, key, n, p2, ro, rl, qo, ql) {
+  if msLen == 0 { return (0, 0) };
+  m := IW.u64[msOff];
+  if IW.u64[m + 8] != 0 {
+    (ro, rl) := call class_seeds(ctx, holesOff, holesLen, msOff + 1, msLen - 1);
+    return (ro, rl)
   };
-  return (q, rp2)
+  (key, n) := call nest_seed_of(ctx, holesOff, holesLen, IW.u64[m], IW.u64[m + 1],
+    IW.u64[m + 2], IW.u64[m + 3], IW.u64[m + 4]);
+  p2 := call rec2(key, n);
+  (ro, rl) := call class_seeds(ctx, holesOff, holesLen, msOff + 1, msLen - 1);
+  (qo, ql) := call sl_cons(p2, ro, rl);
+  return (qo, ql)
 }
 
 /-- `classKeyOf` helper: `k2.ds.allM (closed under nP)`, stopping at the first open one. -/
@@ -641,39 +644,35 @@ def classKeyOfL : FunDecl := lfn (nP, paramsOff, paramsLen, k) locals (k2, ok) {
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:665-684 ConRon.Arena.checkBlockClasses
 @[l_impl ConRon.Arena.checkBlockClasses]
 def checkBlockClassesKeys : FunDecl := lfn (nP, paramsOff, paramsLen, ksOff, ksLen)
-    locals (q, j, k2) {
-  q := call iw_alloc(ksLen);
-  j := 0;
-  while j < ksLen {
-    k2 := call class_key_of(nP, paramsOff, paramsLen, IW.u64[ksOff + j]);
-    IW.u64[q + j] := k2;
-    j += 1
-  };
-  return (q, ksLen)
+    locals (k2, ro, rl, qo, ql) {
+  if ksLen == 0 { return (0, 0) };
+  k2 := call class_key_of(nP, paramsOff, paramsLen, IW.u64[ksOff]);
+  (ro, rl) := call check_block_classes_keys(nP, paramsOff, paramsLen, ksOff + 1, ksLen - 1);
+  (qo, ql) := call sl_cons(k2, ro, rl);
+  return (qo, ql)
 }
 
-/-- `checkBlockClasses` helper: exactly one class per member (counting, rather than filtering). -/
+/-- `checkBlockClasses` helper: how many classes of `ms` have the member word `w` (`member ==
+some (w - 1)`), as the twin's `(ms.filter (·.member == some t)).length`. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:665-684 ConRon.Arena.checkBlockClasses
 @[l_impl ConRon.Arena.checkBlockClasses]
-def checkBlockClassesOnePerMember : FunDecl := lfn (k, msOff, msLen)
-    locals (cnts, j, m, mw, t, good) {
-  cnts := call iw_alloc(k);
-  j := 0;
-  while j < k { IW.u64[cnts + j] := 0; j += 1 };
-  j := 0;
-  while j < msLen {
-    m := IW.u64[msOff + j];
-    mw := IW.u64[m + 8];
-    if mw != 0 {
-      t := mw - 1;
-      if t < k { IW.u64[cnts + t] := IW.u64[cnts + t] + 1 }
-    };
-    j += 1
-  };
-  good := 1;
-  j := 0;
-  while j < k { if IW.u64[cnts + j] != 1 { good := 0 }; j += 1 };
-  return good
+def checkBlockClassesCount : FunDecl := lfn (msOff, msLen, w) locals (r) {
+  if msLen == 0 { return 0 };
+  r := call check_block_classes_count(msOff + 1, msLen - 1, w);
+  if IW.u64[IW.u64[msOff] + 8] == w { r := r + 1 };
+  return r
+}
+
+/-- `checkBlockClasses` helper: exactly one class per member `t`, for `t = j, …, k - 1` (the twin's
+`(List.range p.k).all`, as a recursion). -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:665-684 ConRon.Arena.checkBlockClasses
+@[l_impl ConRon.Arena.checkBlockClasses]
+def checkBlockClassesOnePerMember : FunDecl := lfn (j, k, msOff, msLen) locals (c, r) {
+  if k <= j { return 1 };
+  c := call check_block_classes_count(msOff, msLen, j + 1);
+  if c != 1 { return 0 };
+  r := call check_block_classes_one_per_member(j + 1, k, msOff, msLen);
+  return r
 }
 
 /-- `check_block_classes(vis, p, params.off, params.len, ctorsAs.off, ctorsAs.len)`: the classes,
@@ -691,7 +690,7 @@ def checkBlockClassesL : FunDecl := lfn (vis, p, paramsOff, paramsLen, ctorsAsOf
     ksLen);
   (msOff, msLen) := call class_majors(vis, p, ctorsAsOff, ctorsAsLen, paramsOff, paramsLen, keysOff,
     keysLen);
-  good := call check_block_classes_one_per_member(IW.u64[p + 1], msOff, msLen);
+  good := call check_block_classes_one_per_member(0, IW.u64[p + 1], msOff, msLen);
   if good == 0 { abort };
   return (rd, msOff, msLen)
 }
@@ -920,9 +919,11 @@ def recGenFns : Prog :=
    ("class_rules_ok_one", classRulesOkOne),
    ("class_recs_rules_ok", classRecsRulesOkL),
    ("class_recs_rules_ok_go", classRecsRulesOkGo), ("class_stream_recs", classStreamRecsL),
-   ("class_key_canon", classKeyCanonL), ("class_seeds", classSeedsL),
+   ("class_key_canon", classKeyCanonL), ("class_key_canon_go", classKeyCanonGo),
+   ("class_seeds", classSeedsL),
    ("class_key_of_closed", classKeyOfClosed), ("class_key_of", classKeyOfL),
    ("check_block_classes_keys", checkBlockClassesKeys),
+   ("check_block_classes_count", checkBlockClassesCount),
    ("check_block_classes_one_per_member", checkBlockClassesOnePerMember),
    ("check_block_classes", checkBlockClassesL), ("class_fe_r", classFeRL), ("class_fe_r_go", classFeRGo),
    ("class_fe_r_rec", classFeRRec),
