@@ -1,4 +1,5 @@
 import ConAgua.Arena.StoreLib
+import ConAgua.Arena.SimLib
 import ConAgua.Arena.FVarStore
 import ConAgua.Arena.LpColRel
 
@@ -288,11 +289,8 @@ theorem internFVar_refines (p : Prog) (hpf : p.lookup "fvar_find" = some fvarFin
     invoke p (exec p n) "intern_fvar" [u, ty]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internE (.fvar u.toNat (decE ty))) a₀ ∧
       FVarR s'.mem (AM.st (internE (.fvar u.toNat (decE ty))) a₀) ∧
-      AM.res (internE (.fvar u.toNat (decE ty))) a₀ = decE (r.headD 0); ⊤⦄ := by
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun (internFVar_spec p hpf hpp hp n s₀ u ty)
-  subst hs
-  exact ⟨hloc, fvintern_correct s.mem a₀ hR u ty hty _ _ hI⟩
+      AM.res (internE (.fvar u.toNat (decE ty))) a₀ = decE (r.headD 0); ⊤⦄ :=
+  Sim.tripleD (internFVar_spec p hpf hpp hp n s₀ u ty)
+    (Sim.ofOkD (fvintern_correct s₀.mem a₀ hR u ty hty))
 
 end L.Arena

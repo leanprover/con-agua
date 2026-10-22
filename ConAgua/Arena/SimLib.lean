@@ -131,18 +131,39 @@ theorem Sim.run [Inhabited α] {mo : Option (β × Mem)} {op : AM α} {a : AStat
 
 end sim
 
+/-- **The decoded census form** (the stores' `…_correct` lemmas) as a `SimD`. -/
+theorem Sim.ofOkD {β α : Type} [Inhabited α] {mo : Option (β × Mem)} {dec : β → α} {op : AM α}
+    {a : AState} {R : Mem → AState → Prop}
+    (h : ∀ r m', mo = some (r, m') → AM.ok op a ∧ R m' (AM.st op a) ∧ AM.res op a = dec r) :
+    SimD dec mo op a R :=
+  Sim.ofOk fun r m' e => let ⟨h1, h2, h3⟩ := h r m' e; ⟨h1, h3, h2⟩
+
 /-- **From a model spec and a `Sim` to the census triple.** `hspec` is the L spec
-(`⦃s = s₀⦄ prog ⦃LocEq s' s₀ ∧ model s₀.mem = some (r.headD 0, s'.mem)⦄`), `hsim` the model's
-refinement from `s₀.mem`; the post is the usual `LocEq ∧ AM.ok ∧ …` at `AM.res`/`AM.st`. -/
+(`⦃s = s₀⦄ prog ⦃LocEq s' s₀ ∧ mo = some (r.headD 0, s'.mem)⦄`, `mo` the model at `s₀.mem`),
+`hsim` the model's refinement; the post is the usual `LocEq ∧ AM.ok ∧ …` at `AM.res`/`AM.st`. -/
 theorem Sim.triple {α : Type} [Inhabited α] {prog : M (List Word)} {s₀ : St}
-    {mo : Mem → Option (Word × Mem)} {op : AM α} {a₀ : AState} {Q : Word → α → Mem → AState → Prop}
-    (hspec : ⦃fun s => s = s₀⦄ prog
-      ⦃fun r s' => LocEq s' s₀ ∧ mo s₀.mem = some (r.headD 0, s'.mem); ⊤⦄)
-    (hsim : Sim (mo s₀.mem) op a₀ Q) :
+    {mo : Option (Word × Mem)} {op : AM α} {a₀ : AState} {Q : Word → α → Mem → AState → Prop}
+    (hspec : ⦃fun s => s = s₀⦄ prog ⦃fun r s' => LocEq s' s₀ ∧ mo = some (r.headD 0, s'.mem); ⊤⦄)
+    (hsim : Sim mo op a₀ Q) :
     ⦃fun s => s = s₀⦄ prog
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok op a₀ ∧ Q (r.headD 0) (AM.res op a₀) s'.mem (AM.st op a₀); ⊤⦄ :=
   M.triple_of_run fun _ _ _ hs hrun => by
     obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun hspec
     exact ⟨hloc, hsim.run hI⟩
+
+/-- **`Sim.triple` in the decoded form**: the post
+`LocEq ∧ AM.ok op a₀ ∧ R s'.mem (AM.st op a₀) ∧ AM.res op a₀ = dec (r.headD 0)` of the stores'
+and walks' `…_refines`. -/
+theorem Sim.tripleD {α : Type} [Inhabited α] {prog : M (List Word)} {s₀ : St}
+    {mo : Option (Word × Mem)} {dec : Word → α} {op : AM α} {a₀ : AState} {R : Mem → AState → Prop}
+    (hspec : ⦃fun s => s = s₀⦄ prog ⦃fun r s' => LocEq s' s₀ ∧ mo = some (r.headD 0, s'.mem); ⊤⦄)
+    (hsim : SimD dec mo op a₀ R) :
+    ⦃fun s => s = s₀⦄ prog
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok op a₀ ∧ R s'.mem (AM.st op a₀) ∧
+      AM.res op a₀ = dec (r.headD 0); ⊤⦄ :=
+  M.triple_of_run fun _ _ _ hs hrun => by
+    obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun hspec
+    obtain ⟨hok, e, hR⟩ := hsim.run hI
+    exact ⟨hloc, hok, hR, e⟩
 
 end L.Arena
