@@ -66,3 +66,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-22,exprops4,opus,38,6,"abstract1: abs_entry refines abstract1Fast, ab_fvb refines fvarB (no sorry): ab_node split, rebuild-on-change, ArenaA = ArenaD + abs1C tier, fr_memo frames (model and Keeps)"
 2026-10-22,buildstats,sonnet,60,10,"scripts/buildstats.py: file sizes + per-module and per-step elaboration time (profiler, no cache, nice, PSS memory guard, incremental); first report docs/buildstats.{md,csv,json}; PLAN section"
 2026-10-22,decls2,opus,45,15,"landing 2: check_value_group refines checkValueGroup (through stubs; text frame cvgProg, LoopR.of_step); install_value_guards refines installValueGuards; checkDecl one-constant arms in L (helper: 109 fns, 2.2k lines, ROM stubs); install_value split; census phase 2 written 5->82"
+2026-10-22,indproofs,opus,20,8,"landing 4: struct_proj_bodies(_go) refine; oversized spec files split by pure moves (IndPos2Spec, RecClassSpec, IndSumSpec2)"
