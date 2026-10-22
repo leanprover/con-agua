@@ -5475,3 +5475,32 @@ Translated in full, 109 L functions, 90 tagged `@[l_impl]` (no proofs yet):
 Census (`--no-build`, this lane before landing 2, against master's last `docs/progress.md`): phase 2
 **130 proven, 8 sorry, 82 written, 111 todo** (was 130 / 5 / 5 / 191); Rust lines with L code
 4341 of 6512 (was 1001).
+
+## Slow declarations (2026-10-22, lane `perf1`)
+
+The build-statistics watch list (`docs/buildstats.md`) names every step over 20 s; this lane takes
+the ones no other lane owns. Times are single-threaded `lake env lean` runs on an idle core unless
+said otherwise.
+
+### `Prog.wf` by `decide +kernel`: string comparisons (`ConAgua/Compiler/WFFast.lean`)
+
+- **Cause.** `Prog.wf` looks every call target up by `p.lookup f` and checks
+  `decide (p.map (·.1)).Nodup`, both on `String`s. In the kernel a `String` comparison unfolds
+  `String.decEq` down to the UTF-8 byte lists of both literals, and `Nodup`'s `Decidable` instance
+  is itself costly (even `(List.range 477).Nodup` takes 9.5 s). `declStepProg` has 477 functions and
+  1305 calls: `Nodup` 28 s plus the lookups 27 s; `indProg` the same minus 14 functions. Both grow
+  quadratically with the program.
+- **Fix.** `Prog.wfFast`: each name becomes a `Nat` once (`nameCode`, bijective base-257 over the
+  UTF-8 bytes, injective), the names go into a binary search tree keyed by that code (`progTree`;
+  `NTree.insert` fails on a duplicate, which gives `Nodup`), and `Stmt.wfT` looks targets up in
+  the tree. Key comparisons are `Nat.decLt`/`Nat.decEq`, which the kernel does on literals with
+  GMP. `Prog.wf_of_wfFast : wfFast tab p = true → wf tab p = true` (no ordering invariant needed:
+  `find` follows the same path as `insert`). Every `_wf` theorem keeps its statement and becomes
+  `Prog.wf_of_wfFast (by decide +kernel)`: `indProg_wf`, `declStepProg_wf`, `frontAllProg_wf`,
+  the per-module `indParts_wf` … `recCheck_wf`, `libFns_wf`, `indApply_wf`, `indFields_wf`.
+- **Before/after.** `declStepProg_wf` 54.1 s → 4.3 s (module 55 s → 4.4 s), `indProg_wf` 53.8 s →
+  ~4 s (module 54 s → 4.2 s), `indPos2_wf` 11 s, `recCheck_wf` 9.7 s, `frontAllProg_wf` 8.7 s, the
+  other per-module checks 5–8 s: each module now builds in under 2 s (Capstone 6.8 s in all).
+  Of the remaining 4.3 s, about half is `progTree` (mostly the UTF-8 expansion of the literals).
+- Not done: `KnotWF.defeqInferFns_wf` (4.5 s) states `FunDecl.wf`/`Nodup` directly rather than
+  `Prog.wf`; `closedA` (write sets) also looks names up by string and could use the same tree.
