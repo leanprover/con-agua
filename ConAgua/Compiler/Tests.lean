@@ -260,4 +260,13 @@ def globProg : Prog := [("gmain", gmain), ("gbump", gbump)]
 #guard (runKraken globProg "gbump" [1] { glob := fun g => if g = GA then 41 else 0 } 1000).toOption ==
   some (.ok [42, 0, 0, 0, 0, 0, 0, 0, 0])
 
+/-! Records (`R[i].f`, `L/Records.lean`): field stores and reads compile to word-array accesses. -/
+
+#guard agrees L.Examples.nodeProg "node_mk" [2, 0, 7, 9] { words := #[#[], Array.replicate 9 5] }
+#guard (runKraken L.Examples.nodeProg "node_mk" [2, 0, 7, 9] { words := #[#[], Array.replicate 9 5] }
+  1000).toOption == some (.ok [7, 5, 10])
+-- record 3 is past the end: an out-of-bounds store
+#guard (runKraken L.Examples.nodeProg "node_mk" [3, 0, 7, 9] { words := #[#[], Array.replicate 9 5] }
+  1000).toOption == some .error
+
 end L.Compiler.Tests

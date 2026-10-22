@@ -96,7 +96,7 @@ theorem viewLsLen_some {a : AState} {h : LsIdx} {k : Nat} (hv : a.store.lss.view
 
 section andarm
 variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hpi : ProofIrrelOKM p)
-  (hE : ErecKeptKnot p) (hcc : CoreCallees p)
+  (hE : ErecKeptKnot p) (hcc : ProjCallees p)
 include hp hc hpi
 
 /-- **`m2c_and2` refines `m2cAnd2T`** (the slice `(to, tn)` ends at the stack top). -/
@@ -280,7 +280,7 @@ theorem m2cAnd_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
   simp only at hW
   obtain ⟨ok4, ⟨M4, hS4, hK4, hSt4⟩, res4, -⟩ := CoreSpec.of_callW
     (andRescueSlots_refines' p hp.toIotaProg' hcc (N' + 1) ⟨m3, Locals.init []⟩ a2 dn vis fe M2 eb
-      ctor cnP _ hS3 hctor hus) c4
+      ctor cnP _ hS3 hctor hus (hpre.cview g0)) c4
   have hrun4 := AM.run_of_ok _ _ ok4
   rw [res4] at hrun4
   have hA4 : CoreAfterG dn m m4 (AM.st (andRescueSlots fe (decI ctor) cnP.toNat

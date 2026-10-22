@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndPosSpec5
+import ConAgua.Arena.IndDecStab
 
 /-! # `nestCtorNf` (lane `indproofs2`, helper `pos`): a frame constructor's record, read back through
 `FvMap.holeImg ctx prog prog.length` (`nest_hole_img_ds` for the parameters). -/
@@ -55,7 +56,7 @@ theorem ncnW_ok (k : Nat) (m m' : Mem) (a : AState) (ctx po pl us dO dL cv close
     (hds : decHL m dO.toNat dL.toNat = some ds) (hdsb : ∀ j < dL.toNat, dO.toNat + j < iwTop m)
     (hcl : H closed) (hcv : decCV (erecP m) cv.toNat = some cvv) (hR : RfInv m M G g) :
     ∃ x a', (ConRon.Arena.nestCtorNf c prog (decI us) ds cvv (decE closed)).run a = .ok (x, a') ∧
-      decNCN m' nf.toNat = some x ∧ nf.toNat + 5 ≤ iwTop m' ∧ RxPost dn fe vis m m' a' M G g := by
+      DecB (fun m => decNCN m nf.toNat) m' x ∧ nf.toNat + 5 ≤ iwTop m' ∧ RxPost dn fe vis m m' a' M G g := by
   unfold ncnW at h
   have hpl : prog.length = pl.toNat := hs.1
   cases hr1 : posRecW m [0, ctx, po, pl, pl] with
@@ -115,10 +116,19 @@ theorem ncnW_ok (k : Nat) (m m' : Mem) (a : AState) (ctx po pl us dO dL cv close
     have hn4 := hget4 4 (by simp)
     simp only [List.getElem?_cons_zero, List.getElem?_cons_succ, Nat.add_zero] at hn0 hn1 hn2 hn3 hn4
     have hql : decHL m' q.toNat l.toNat = some ys := by rw [decHL_grow (hg3.trans hg4) hq2]; exact hdec2
-    simp only [decNCN, decAt, iwH, iwN, hd?, nat?, iwA, hn0, hn1, hwnH, hus, hty, Option.bind_eq_bind,
+    have hqlT : decHL (truncM m') q.toNat l.toNat = some ys := by
+      rw [decHL_truncM (by have := hg3.1; have := hg4.1; omega)]; exact hql
+    have t : ∀ i < 5, (iwA (truncM m'))[nf.toNat + i]? = (m'.arr64 IW)[nf.toNat + i]? := fun i hi => by
+      rw [truncM_iw_eq (by omega)]; rfl
+    have hn0' := t 0 (by omega); have hn1' := t 1 (by omega); have hn2' := t 2 (by omega)
+    have hn3' := t 3 (by omega); have hn4' := t 4 (by omega)
+    simp only [Nat.add_zero] at hn0'
+    rw [hn0] at hn0'; rw [hn1] at hn1'; rw [hn2] at hn2'; rw [hn3] at hn3'; rw [hn4] at hn4'
+    show decNCN (truncM m') nf.toNat = _
+    simp only [decNCN, decAt, iwH, iwN, hd?, nat?, hn0', hn1', hwnH, hus, hty, Option.bind_eq_bind,
       Option.bind_some, Option.map_some, ite_true, if_true]
-    rw [show nf.toNat + 2 + 1 = nf.toNat + 3 by omega, hn2, hn3, hn4]
-    simp [hql, hwnd, hty, decE_eq]
+    rw [show nf.toNat + 2 + 1 = nf.toNat + 3 by omega, hn2', hn3', hn4']
+    simp [hqlT, hwnd, hty, decE_eq]
 
 end rel
 
@@ -147,7 +157,7 @@ theorem nestCtorNf_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → 
   obtain ⟨x, a', hrun, hdec, hb5, hpost⟩ := ncnW_ok dn fe vis k _ _ a₀ ctx po pl us dO dL cv closed _ c prog ds cvv
     M G g hm hS hc hin hs hb hus hds hdsb hcl hcv hR
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, by rw [hres]; exact hdec, hb5, by rw [hst]; exact hpost⟩
+  exact ⟨hl, hok, by rw [hres]; exact hdec.get (decNCN_mono _), hb5, by rw [hst]; exact hpost⟩
 
 end census
 

@@ -65,24 +65,6 @@ theorem findProj?_lss (fe : IFEnv) (T : NIdx) (i : Nat) (a a' : AState) (o : Opt
   rw [hy]
   exact e2.lss.lst h ls (e1.lss.lst h ls hd)
 
-/-- **A hit is below the table's field count.** -/
-theorem findProj?_lt (fe : IFEnv) (T : NIdx) (i : Nat) (a a' : AState) (e : IProjEntry)
-    (hr : (fe.findProj? T i).run a = .ok (some e, a')) : i < e.numFields := by
-  simp only [IFEnv.findProj?, StateT.run_bind] at hr
-  cases h1 : (projTableName T).run a with
-  | error e => rw [h1] at hr; cases hr
-  | ok x =>
-  rw [h1] at hr
-  simp only [except_ok_bind] at hr
-  split at hr
-  · rename_i tbl _
-    by_cases hi : i < tbl.numFields
-    · simp only [hi, ↓reduceIte] at hr
-      cases hr; exact hi
-    · simp only [hi, ↓reduceIte] at hr
-      cases hr
-  · cases hr
-
 /-! ## The model of `infer_proj` -/
 
 section ipK
@@ -237,7 +219,7 @@ theorem inferProj_grade (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees
     unfold decEntry; rw [if_neg g4, hdt]; rfl
   rw [hde] at hrun4
   have hq₄ : decTbl (m₄.arr64 EREC) (r₄.tail.headD 0).toNat = some tbl := by rw [hE₄]; exact hdt
-  have hi : i.toNat < tbl.numFields := findProj?_lt fe _ _ _ _ _ hrun4
+  have hi : i.toNat < tbl.numFields := findProj?_lt hrun4
   have hdu₄ := findProj?_lss fe _ _ _ _ _ hrun4 _ _ hdu
   -- `infer_proj_at`
   cases n with

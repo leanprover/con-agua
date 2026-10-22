@@ -238,6 +238,9 @@ def dump_sets(mods):
             if r.returncode != 0:
                 sys.exit(f"dump {k} failed:\n{msg[-4000:]}")
             break
+        if not cur:
+            sys.exit(f"dump {k}: no module left to import after dropping clashes {clashes[-3:]}; "
+                     "usually stale oleans: run a full scripts/lake build first")
         dumps.append(out)
         log(f"dump {k}: {len(cur)} modules")
         todo, k = rest, k + 1

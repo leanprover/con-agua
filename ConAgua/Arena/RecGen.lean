@@ -483,26 +483,65 @@ def classRuleOkL : FunDecl := lfn (visT, visR, cvR, n, gen)
   return gen
 }
 
+/-- `class_rules_ok_one(visT, visR, g, cvR, x, gen)`: `classRulesOk`'s rule check at the telescope
+length `nP + |slots| + nF` (aborts on a word overflow, a capacity). -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:591-605 ConRon.Arena.classRulesOk
+@[l_impl ConRon.Arena.classRulesOk]
+def classRulesOkOne : FunDecl := lfn (visT, visR, g, cvR, x, gen) locals (nn, r) {
+  nn := IW.u64[g] + IW.u64[g + 8];
+  if nn + IW.u64[x + 1] < nn { abort };
+  r := call class_rule_ok(visT, visR, cvR, nn + IW.u64[x + 1], gen);
+  return r
+}
+
 /-- `class_rules_ok(visT, visR, g, recCls.off, recCls.len, cvGs.off, cvGs.len, cvR, c, xs.off,
-xs.len)`: a recursor's generated rules, one per constructor `xs`. -/
+xs.len)`: a recursor's generated rules, one per constructor `xs` (the twin's recursion; the telescope
+length `nP + |slots| + nF` aborts on a word overflow, a capacity). -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:591-605 ConRon.Arena.classRulesOk
 @[l_impl ConRon.Arena.classRulesOk]
 def classRulesOkL : FunDecl := lfn (visT, visR, g, recClsOff, recClsLen, cvGsOff, cvGsLen, cvR, c,
     xsOff, xsLen)
-    locals (q, j, x, rlvls, ok, gen, r, lo, ll) {
-  q := call iw_alloc(xsLen);
-  j := 0;
-  while j < xsLen {
-    x := IW.u64[xsOff + j];
-    (lo, ll) := call cv_lps(cvR);
-    rlvls := call param_levels(lo, ll);
-    (ok, gen) := call class_gen_rule(g, recClsOff, recClsLen, cvGsOff, cvGsLen, rlvls, c, x);
-    if ok == 0 { abort };
-    r := call class_rule_ok(visT, visR, cvR, IW.u64[g] + IW.u64[g + 8] + IW.u64[x + 1], gen);
-    IW.u64[q + j] := r;
-    j += 1
+    locals (x, rlvls, ok, gen, r, lo, ll, ro, rl, qo, ql) {
+  if xsLen == 0 { return (0, 0) };
+  x := IW.u64[xsOff];
+  (lo, ll) := call cv_lps(cvR);
+  rlvls := call param_levels(lo, ll);
+  (ok, gen) := call class_gen_rule(g, recClsOff, recClsLen, cvGsOff, cvGsLen, rlvls, c, x);
+  if ok == 0 { abort };
+  r := call class_rules_ok_one(visT, visR, g, cvR, x, gen);
+  (ro, rl) := call class_rules_ok(visT, visR, g, recClsOff, recClsLen, cvGsOff, cvGsLen, cvR, c,
+    xsOff + 1, xsLen - 1);
+  (qo, ql) := call sl_cons(r, ro, rl);
+  return (qo, ql)
+}
+
+/-- `class_recs_rules_ok_go(visT, visR, g, recCls.off, recCls.len, cvGs.off, cvGs.len, cvs.off,
+cvs.len, cs.off, cs.len)`: the twin's recursion over the walked tails `cvs`, `cs` of the whole
+lists `cvGs`, `recCls`. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:607-620 ConRon.Arena.classRecsRulesOk
+@[l_impl ConRon.Arena.classRecsRulesOk]
+def classRecsRulesOkGo : FunDecl := lfn (visT, visR, g, recClsOff, recClsLen, cvGsOff, cvGsLen,
+    cvsOff, cvsLen, csOff, csLen)
+    locals (cvG, c, hdr, xsOff, xsLen, rhssOff, rhssLen, m, rec, ro, rl, qo, ql) {
+  if cvsLen == 0 { return (0, 0) };
+  if csLen == 0 { return (0, 0) };
+  cvG := IW.u64[cvsOff];
+  c := IW.u64[csOff];
+  xsOff := 0;
+  xsLen := 0;
+  if c < IW.u64[g + 10] {
+    hdr := IW.u64[IW.u64[g + 9] + c];
+    xsOff := IW.u64[hdr];
+    xsLen := IW.u64[hdr + 1]
   };
-  return (q, xsLen)
+  (rhssOff, rhssLen) := call class_rules_ok(visT, visR, g, recClsOff, recClsLen, cvGsOff, cvGsLen,
+    cvG, c, xsOff, xsLen);
+  m := call target_major_at(IW.u64[g + 3], IW.u64[g + 4], c);
+  rec := call rec4(cvG, m, rhssOff, rhssLen);
+  (ro, rl) := call class_recs_rules_ok_go(visT, visR, g, recClsOff, recClsLen, cvGsOff, cvGsLen,
+    cvsOff + 1, cvsLen - 1, csOff + 1, csLen - 1);
+  (qo, ql) := call sl_cons(rec, ro, rl);
+  return (qo, ql)
 }
 
 /-- `class_recs_rules_ok(visT, visR, g, recCls.off, recCls.len, cvGs.off, cvGs.len)`: every
@@ -510,28 +549,10 @@ recursor's generated rules, with its class (the shorter of `cvGs`/`recCls` decid
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:607-620 ConRon.Arena.classRecsRulesOk
 @[l_impl ConRon.Arena.classRecsRulesOk]
 def classRecsRulesOkL : FunDecl := lfn (visT, visR, g, recClsOff, recClsLen, cvGsOff, cvGsLen)
-    locals (n, q, j, cvG, c, ctorsLen, hdr, xsOff, xsLen, rhssOff, rhssLen, m, rec) {
-  n := cvGsLen;
-  if recClsLen < n { n := recClsLen };
-  q := call iw_alloc(n);
-  ctorsLen := IW.u64[g + 10];
-  j := 0;
-  while j < n {
-    cvG := IW.u64[cvGsOff + j];
-    c := IW.u64[recClsOff + j];
-    if c < ctorsLen {
-      hdr := IW.u64[IW.u64[g + 9] + c];
-      xsOff := IW.u64[hdr];
-      xsLen := IW.u64[hdr + 1]
-    } else { xsOff := 0; xsLen := 0 };
-    (rhssOff, rhssLen) := call class_rules_ok(visT, visR, g, recClsOff, recClsLen, cvGsOff, cvGsLen,
-      cvG, c, xsOff, xsLen);
-    m := call target_major_at(IW.u64[g + 3], IW.u64[g + 4], c);
-    rec := call rec4(cvG, m, rhssOff, rhssLen);
-    IW.u64[q + j] := rec;
-    j += 1
-  };
-  return (q, n)
+    locals (qo, ql) {
+  (qo, ql) := call class_recs_rules_ok_go(visT, visR, g, recClsOff, recClsLen, cvGsOff, cvGsLen,
+    cvGsOff, cvGsLen, recClsOff, recClsLen);
+  return (qo, ql)
 }
 
 /-! ## `classStreamRecs`, `classKeyCanon`, `classSeeds`, `classKeyOf` -/
@@ -677,42 +698,59 @@ def checkBlockClassesL : FunDecl := lfn (vis, p, paramsOff, paramsLen, ctorsAsOf
 
 /-! ## `classFeR` -/
 
+/-- `class_fe_r_rec(cv, mi, rp3)`: the rule-less `.recInfo` record of the constant at `cv` (aborts
+unless the copied name word is a handle, which `env_push` needs). -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:686-703 ConRon.Arena.classFeR
+@[l_impl ConRon.Arena.classFeR]
+def classFeRRec : FunDecl := lfn (cv, mi, rp3) locals (q) {
+  q := call erec_alloc(9);
+  EREC.u64[q] := 5;
+  EREC.u64[q + 1] := EREC.u64[cv];
+  EREC.u64[q + 2] := EREC.u64[cv + 1];
+  EREC.u64[q + 3] := EREC.u64[cv + 2];
+  EREC.u64[q + 4] := EREC.u64[cv + 3];
+  EREC.u64[q + 5] := mi;
+  EREC.u64[q + 6] := rp3;
+  EREC.u64[q + 7] := 0;
+  EREC.u64[q + 8] := 0;
+  if 4294967296 <= EREC.u64[q + 1] { abort };
+  return q
+}
+
+/-- `class_fe_r_go(cvs.off, cvs.len, rcl, recs.off, recs.len, vis, m)`: the twin's `classFeR.go` at
+recursor `m` (the walked tail `cvs` of `cvGs`, `rcl` entries of `recCls` left), as
+`(vis', prevs.off, prevs.len)`. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:686-703 ConRon.Arena.classFeR
+@[l_impl ConRon.Arena.classFeR]
+def classFeRGo : FunDecl := lfn (cvo, cvl, rcl, recsOff, recsLen, vis, m)
+    locals (cv, nm, c, q, mi, rp3, rc, kindp, cur, entry, vo, ro, rl, qo, ql) {
+  if cvl == 0 { return (vis, 0, 0) };
+  if rcl == 0 { return (vis, 0, 0) };
+  cv := IW.u64[cvo];
+  nm := EREC.u64[cv];
+  (c, q) := call env_row_get(nm);
+  mi := 0;
+  rp3 := 0;
+  if m < recsLen {
+    rc := IW.u64[recsOff + m];
+    mi := IW.u64[rc + 2];
+    rp3 := IW.u64[rc + 1]
+  };
+  kindp := call class_fe_r_rec(cv, mi, rp3);
+  cur := call env_push(vis, kindp);
+  entry := call rec3(nm, c, q);
+  (vo, ro, rl) := call class_fe_r_go(cvo + 1, cvl - 1, rcl - 1, recsOff, recsLen, cur, m + 1);
+  (qo, ql) := call sl_cons(entry, ro, rl);
+  return (vo, qo, ql)
+}
+
 /-- `class_fe_r(p, cvGs.off, cvGs.len, recCls.off, recCls.len, vis)`: the rule-less generated
 recursors consed onto the environment, pushed temporarily, as `(vis', prevs.off, prevs.len)`. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:686-703 ConRon.Arena.classFeR
 @[l_impl ConRon.Arena.classFeR]
-def classFeRL : FunDecl := lfn (p, cvGsOff, cvGsLen, recClsOff, recClsLen, vis)
-    locals (n, recsOff, recsLen, prevsOff, m, cv, nm, c, q, mi, rp3, rc, kindp, j, cur, entry) {
-  n := cvGsLen;
-  if recClsLen < n { n := recClsLen };
-  recsOff := IW.u64[p + 2];
-  recsLen := IW.u64[p + 3];
-  prevsOff := call iw_alloc(n);
-  m := 0;
-  while m < n {
-    cv := IW.u64[cvGsOff + m];
-    nm := EREC.u64[cv];
-    (c, q) := call env_row_get(nm);
-    if m < recsLen {
-      rc := IW.u64[recsOff + m];
-      mi := IW.u64[rc + 2];
-      rp3 := IW.u64[rc + 1]
-    } else { mi := 0; rp3 := 0 };
-    kindp := call erec_alloc(9);
-    EREC.u64[kindp] := 5;
-    j := 0;
-    while j < 4 { EREC.u64[kindp + 1 + j] := EREC.u64[cv + j]; j += 1 };
-    EREC.u64[kindp + 5] := mi;
-    EREC.u64[kindp + 6] := rp3;
-    EREC.u64[kindp + 7] := 0;
-    EREC.u64[kindp + 8] := 0;
-    cur := call env_push(vis, kindp);
-    vis := cur;
-    entry := call rec3(nm, c, q);
-    IW.u64[prevsOff + m] := entry;
-    m += 1
-  };
-  return (vis, prevsOff, n)
+def classFeRL : FunDecl := lfn (p, cvGsOff, cvGsLen, recClsOff, recClsLen, vis) locals (v, o, l) {
+  (v, o, l) := call class_fe_r_go(cvGsOff, cvGsLen, recClsLen, IW.u64[p + 2], IW.u64[p + 3], vis, 0);
+  return (v, o, l)
 }
 
 /-! ## `genRecCheck` -/
@@ -879,12 +917,15 @@ def recGenFns : Prog :=
    ("class_rec_ty_ok_guards", classRecTyOkGuards),
    ("class_rec_tys_ok", classRecTysOkL), ("class_rule_ok_domains", classRuleOkDomains),
    ("class_rule_ok_guards", classRuleOkGuards), ("class_rule_ok", classRuleOkL), ("class_rules_ok", classRulesOkL),
-   ("class_recs_rules_ok", classRecsRulesOkL), ("class_stream_recs", classStreamRecsL),
+   ("class_rules_ok_one", classRulesOkOne),
+   ("class_recs_rules_ok", classRecsRulesOkL),
+   ("class_recs_rules_ok_go", classRecsRulesOkGo), ("class_stream_recs", classStreamRecsL),
    ("class_key_canon", classKeyCanonL), ("class_seeds", classSeedsL),
    ("class_key_of_closed", classKeyOfClosed), ("class_key_of", classKeyOfL),
    ("check_block_classes_keys", checkBlockClassesKeys),
    ("check_block_classes_one_per_member", checkBlockClassesOnePerMember),
-   ("check_block_classes", checkBlockClassesL), ("class_fe_r", classFeRL),
+   ("check_block_classes", checkBlockClassesL), ("class_fe_r", classFeRL), ("class_fe_r_go", classFeRGo),
+   ("class_fe_r_rec", classFeRRec),
    ("gen_rec_check_any_no_member", genRecCheckAnyNoMember),
    ("gen_rec_check_former_tys", genRecCheckFormerTys),
    ("gen_rec_check_former_tys_c", genRecCheckFormerTysC),

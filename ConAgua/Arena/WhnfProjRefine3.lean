@@ -34,20 +34,21 @@ def ProjSortDen : Prop :=
 
 /-- **A projection table's readbacks for `field_sort_zero`** (named hypothesis, as
 `ProjSortDen`; lane `defeq2`'s `StoreDen.proj` and `readN` give it once `CoreS` carries `den`): the
-name readback cache holds readbacks, the table's level parameters and every field guard read back. -/
+name readback cache holds readbacks, the table's level parameters and the field guards below
+`numFields` read back (`fire_ok` is asked only there, `FireOkOK`). -/
 def FireDen : Prop :=
   ∀ (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb q : Word) (tbl : IProjTable), CoreS dn m a vis fe M eb →
     decTbl (m.arr64 EREC) q.toNat = some tbl →
     ReadNCOK a ∧ (∃ ks, tbl.levelParams.mapM (denoteN a.store.ns) = some ks) ∧
-      ∀ i, ∃ l, denoteL a.store.ls (tbl.guards.getD i default) = some l
+      ∀ i, i < tbl.numFields → ∃ l, denoteL a.store.ls (tbl.guards.getD i default) = some l
 
 /-- `FireOkOK` at universe arguments `us` that read back (what `field_sort_zero` needs; the
 callers' `us` is a stored `const` node's list, `StoreDen.constLs`). -/
 def FireOkOKD (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb q i us : Word) (tbl : IProjTable), CoreS dn s₀.mem a₀ vis fe M eb →
-    HW us → decTbl (s₀.mem.arr64 EREC) q.toNat = some tbl →
+    HW us → decTbl (s₀.mem.arr64 EREC) q.toNat = some tbl → i.toNat < tbl.numFields →
     (∃ ls, denoteLs a₀.store.lss (decI us) = some ls) →
     CoreSpec p n "fire_ok" [q, i, us] ((tbl.entry i.toNat).fireOk (decI us)) decBool s₀ a₀ dn vis
       fe M eb
@@ -151,7 +152,7 @@ denotation of the table's sort and the zero level (`ProjSortDen`). -/
 @[refines ConRon.Arena.IProjEntry.fireOk]
 theorem fireOk_refines (p : Prog) (hp : FireProg p) (hfz : FieldSortZeroOK p)
     (hden : ProjSortDen) (hden2 : FireDen) : FireOkOKD p := by
-  intro n s₀ a₀ dn vis fe M eb q i us tbl hS hus htbl husd
+  intro n s₀ a₀ dn vis fe M eb q i us tbl hS hus htbl hlt husd
   cases n with
   | zero => exact CoreSpec.zeroW hp.fireOk _ _ _ _ _ _ _ _ _ _ _
   | succ n =>
@@ -292,7 +293,7 @@ theorem fireOk_refines (p : Prog) (hp : FireProg p) (hfz : FieldSortZeroOK p)
   obtain ⟨ok3, ⟨M3, hS3, hK3, hSt3⟩, res3, hr3⟩ := CoreSpec.of_callW
     (hfz (n' + 2) ⟨m₂, Locals.init []⟩ (AM.st (lvlEq? (decI w8) (decI (r₁.headD 0))) a₀) dn vis fe
       M2 eb w3 w4 us (foFs m₂ q i) tbl.levelParams hS2 hus hfs.1 hlps hRN hks
-      (by rw [hstL]; exact husd) (by rw [hfs.2]; exact hgd' i.toNat)) c3
+      (by rw [hstL]; exact husd) (by rw [hfs.2]; exact hgd' i.toNat hlt)) c3
   have hrun3 := AM.run_of_ok _ _ ok3
   have hT' : ((tbl.entry i.toNat).fireOk (decI us)).run a₀ =
       .ok (AM.res (fieldSortZeroT tbl.levelParams (decI us) (decI (foFs m₂ q i)))
@@ -307,6 +308,28 @@ theorem fireOk_refines (p : Prog) (hp : FireProg p) (hfz : FieldSortZeroOK p)
     by rw [← hm]; exact hSt2.trans hSt3⟩, ?_, ?_⟩
   · rw [resT, res3]; simp only [decBool, hr0]
   · unfold ResH; rw [← hr0]; exact hr3
+
+/-! ## Under `CoreDen` (helper `whnf4-leaves`) -/
+
+/-- `ProjSortDen` is `StoreDen.proj`'s sort and `StoreDen.zero`. -/
+theorem projSortDen_of (hden : CoreDen) : ProjSortDen :=
+  fun dn m a vis fe M eb q tbl hS htbl =>
+    ⟨((hden dn m a vis fe M eb hS).proj _ _ htbl).1, (hden dn m a vis fe M eb hS).zero⟩
+
+/-- `FireDen` is `StoreDen.readN` and `StoreDen.proj`'s guards and level parameters. -/
+theorem fireDen_of (hden : CoreDen) : FireDen :=
+  fun dn m a vis fe M eb q tbl hS htbl =>
+    have hd := hden dn m a vis fe M eb hS
+    ⟨hd.readN, (hd.proj _ _ htbl).2.2, (hd.proj _ _ htbl).2.1⟩
+
+/-- **`fire_ok` refines `IProjEntry.fireOk` under `CoreS`**, `CoreDen` and lane `defeq`'s
+`field_sort_zero`: the universe arguments are a stored `const` node's list, so they read back
+(`StoreDen.constLs`). -/
+theorem fireOk_core (p : Prog) (hp : FireProg p) (hfz : FieldSortZeroOK p) (hden : CoreDen) :
+    FireOkOK p := by
+  intro n s₀ a₀ dn vis fe M eb q i us tbl hS hus htbl hlt ⟨h, c, hv⟩
+  exact fireOk_refines p hp hfz (projSortDen_of hden) (fireDen_of hden) n s₀ a₀ dn vis fe M eb q i
+    us tbl hS hus htbl hlt ((hden dn s₀.mem a₀ vis fe M eb hS).constLs h c _ hv)
 
 /-- **`tower_slots_all` refines `towerSlotsAll`**, on the real `find_proj`. -/
 @[refines ConRon.Arena.towerSlotsAll]

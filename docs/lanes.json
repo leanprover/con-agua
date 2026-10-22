@@ -338,7 +338,7 @@
 {
 "lane": "lfeat",
 "model": "opus",
-"status": "running",
+"status": "done",
 "focus": "L language features: named globals, record declarations (additive; compiler proof)"
 },
 {
