@@ -449,7 +449,7 @@ theorem majorToCtor_refines' : MajorToCtorOK p := by
     rw [majorToCtor_eq]
     refine ⟨ok1, ⟨M1, ?_, hK1, ?_⟩, ?_, ?_⟩
     · rw [← hm]; exact hS1.frame_stk (MemFrame.setCtl m1 136 _) (by simp) (by simp)
-    · rw [← hm]; exact StackKept.restore hg1.2.2 hg1.2.1 h136
+    · rw [← hm]; exact StackKept.restoreG hg1 h136
     · rw [res1]; unfold decH; rw [hr0]
     · unfold ResH at hr1 ⊢; rw [← hr0]; exact hr1
   · rw [if_neg h136] at hW; cases hW

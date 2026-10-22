@@ -1389,7 +1389,7 @@ theorem etaFabArgs_refines (p : Prog) (hp : IotaProg' p) :
   have hspn := hS.spn
   have hsp₁ : SpineR m₁ to tn targs := by
     have hb := hsp.bound
-    refine hsp.keep hSt₁.2.1 hSt₁.2.2 ?_ hspn
+    refine hsp.keep hSt₁.size hSt₁.below ?_ hspn
     have : (to + tn).toNat = to.toNat + tn.toNat := by
       rw [UInt64.toNat_add]; simp; omega
     rw [← this, htop]
@@ -1401,7 +1401,7 @@ theorem etaFabArgs_refines (p : Prog) (hp : IotaProg' p) :
   have hys' : SpineR m₁ (to + tn) (r₁.tail.headD 0) ys.toArray := by
     have : r₁.headD 0 = to + tn := by rw [htop]; exact hhead
     rw [← this]; exact hys
-  have happ := hsp₁.append hys' (by rw [hSt₁.2.1]; exact hspn)
+  have happ := hsp₁.append hys' (by rw [hSt₁.size]; exact hspn)
   obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _
     (etaFabArgsE_run (decI T) targs.toList (decE major) nF.toNat a₀ _ ys
       (by simpa [etaProjs] using AM.run_of_ok _ _ hok |> fun h => by rw [hres] at h; exact h))

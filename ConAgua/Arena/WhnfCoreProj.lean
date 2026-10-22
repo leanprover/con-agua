@@ -896,7 +896,7 @@ theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (hc : CoreCallees p) (n 
       rw [htop₁, UInt64.toNat_add, Nat.mod_eq_of_lt (by rw [← ho₁]; omega), ← ho₁]
       exact Nat.le_refl _
     have hspR : SpineR m₃ (r₁.headD 0) (r₁.tail.headD 0) xs.toArray :=
-      hsp₁.keep hSt₃.2.1 hSt₃.2.2 hao hS₁.spn
+      hsp₁.keep hSt₃.size hSt₃.below hao hS₁.spn
     have hjn : (rdW (m₃.arr64 EREC) (q + 5) + i).toNat = tbl.numParams + i.toNat := by
       have hlt := UInt64.lt_iff_toNat_lt.mp hLc.2.1
       have h1 := hsmall.1
@@ -1214,12 +1214,12 @@ theorem reduceProjCore_refines' (p : Prog) (hp : WhnfCoreProg p) (hw : WhnfCalle
         hK₁.trans (hK₂.trans hK₃), ?_⟩
       have t1 : spTop m₁ = spTop s.mem := hSt₁.1
       have t2 : spTop m₂ = spTop m₁ := hSt₂.1
-      apply StackKept.restore _ (by rw [hSt₃.2.1, hSt₂.2.1, hSt₁.2.1]) h136
+      apply StackKept.restore _ (by rw [hSt₃.size, hSt₂.size, hSt₁.size]) h136
       intro j hj
       have hj2 : j < spTop m₂ := by rw [t2, t1]; exact hj
       have hj1 : j < spTop m₁ := by rw [t1]; exact hj
-      rw [hSt₃.2.2 j hj2]
-      exact (hSt₂.2.2 j hj1).trans (hSt₁.2.2 j hj)
+      rw [hSt₃.below j hj2]
+      exact (hSt₂.below j hj1).trans (hSt₁.below j hj)
     · rw [hres]; unfold decOptR; rw [← hr0, ← hr1]
     · unfold ResW; rw [← hr0, ← hr1]; exact hrw3
   · rw [if_neg h136] at hW; cases hW

@@ -167,9 +167,9 @@ theorem coreApp2_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) 
   refine ⟨hok', ?_, ?_, ?_⟩
   · rw [hst', ← hm]
     refine ⟨M', hS₄.frame_stk (MemFrame.setCtl m₄ 136 _) (by simp) (by simp), hK₄, ?_⟩
-    apply StackKept.restore _ (by rw [hSt₄.2.1, hgsz]) h136'
+    apply StackKept.restore _ (by rw [hSt₄.size, hgsz]) h136'
     intro i hi
-    rw [hSt₄.2.2 i (UInt64.lt_of_lt_of_le hi hgt)]; exact hgk i hi
+    rw [hSt₄.below i (UInt64.lt_of_lt_of_le hi hgt)]; exact hgk i hi
   · rw [hres', hres]; simp only [decStep, hr0, hr1]
   · exact ⟨hr0 ▸ hrw.1, hr1 ▸ hrw.2⟩
 
@@ -254,14 +254,14 @@ theorem coreApp_refines (N : Nat) (hk : KnotUpTo p N) (F : Nat) (hF : N ≤ F) (
   have htopN : (spTop m₁).toNat = (r₁.tail.headD 0).toNat + (r₁.tail.tail.headD 0).toNat +
       (r₁.tail.tail.headD 0).toNat := by
     rw [htop1, ← ho1, addW _ _ (by rw [e1]; omega), e1]
-  have hxs₂ := hxs.keep hSt₂.2.1 hSt₂.2.2 (by omega) hspn₁
-  have hns₂ := hns.keep hSt₂.2.1 hSt₂.2.2 (by rw [e1]; omega) hspn₁
+  have hxs₂ := hxs.keep hSt₂.size hSt₂.below (by omega) hspn₁
+  have hns₂ := hns.keep hSt₂.size hSt₂.below (by rw [e1]; omega) hspn₁
   have happ := coreApp2_refines p hp n' (hk.mono (by omega)) F (by omega) (by omega)
     ⟨m₂, Locals.init []⟩ _ dn vis fe M' eb mode d (r₂.headD 0) (r₁.headD 0) (r₁.tail.headD 0)
     (r₁.tail.tail.headD 0) xs ns ⟨hS₂, hs.mode4, hs.eb_mode⟩ hrw₂ hhw hxs₂ hns₂
     (by have h22 := hSt₂.1; simp only at h22 ⊢; rw [h22]; omega)
     (by show (spTop m₂).toNat ≤ (m₂.arr64 SPN).size
-        have a := hSt₂.1; have b := hSt₂.2.1; simp only at a b; rw [a, b]; omega)
+        have a := hSt₂.1; have b := hSt₂.size; simp only at a b; rw [a, b]; omega)
   obtain ⟨hok₄, ⟨M'', hS₄, hK₄, hSt₄⟩, hres₄, hrw₄⟩ := CoreSpec.of_callW happ h4
   have hrun : (whnfCoreAppT (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat
       (decE e)).run a₀ = .ok (AM.res (whnfCoreApp2T (decMode mode)
@@ -283,10 +283,10 @@ theorem coreApp_refines (N : Nat) (hk : KnotUpTo p N) (F : Nat) (hF : N ≤ F) (
     refine ⟨M'', hS₄.frame_stk (MemFrame.setCtl m₄ 136 _) (by simp) (by simp), hK₂.trans hK₄, ?_⟩
     have h22 := hSt₂.1
     simp only at h22
-    apply StackKept.restore _ (by rw [hSt₄.2.1, hSt₂.2.1, hgsz]) h136'
+    apply StackKept.restore _ (by rw [hSt₄.size, hSt₂.size, hgsz]) h136'
     intro i hi
     have hi1 : i < spTop m₁ := UInt64.lt_of_lt_of_le hi hgt
-    rw [hSt₄.2.2 i (by rw [h22]; exact hi1), hSt₂.2.2 i hi1, hgk i hi]
+    rw [hSt₄.below i (by rw [h22]; exact hi1), hSt₂.below i hi1, hgk i hi]
   · rw [hres', hres₄]; simp only [decStep, hr0, hr1]
   · exact ⟨hr0 ▸ hrw₄.1, hr1 ▸ hrw₄.2⟩
 

@@ -32,8 +32,6 @@ set_option linter.unusedVariables false
 
 namespace L.Arena
 
-/-- The binder stack: the telescopes' second stack (top `CTL[137]`). -/
-abbrev BSTK : ArrId := 145
 
 /-! ## Sorts, constants, literals -/
 

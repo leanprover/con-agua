@@ -1197,8 +1197,8 @@ theorem iotaRecVck_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
   have hdo : decO (rq.headD 0) = some true := by unfold decO; rw [if_neg q0, if_neg q1]
   rw [hdo] at hrun1
   -- the parameters
-  have hsa1 : SpineR m1 so sn args := hsa.keep hSt1.2.1 hSt1.2.2 hsat hspn
-  have hsm1 : SpineR m1 mo mn margs := hsm.keep hSt1.2.1 hSt1.2.2 (by rw [← hsmt]; omega) hspn
+  have hsa1 : SpineR m1 so sn args := hsa.keep hSt1.size hSt1.below hsat hspn
+  have hsm1 : SpineR m1 mo mn margs := hsm.keep hSt1.size hSt1.below (by rw [← hsmt]; omega) hspn
   cases c2 : callW p (N + 2) "iota_rec_cmp" [mode, vis, d, us, recP, so, rl, mo] m1 with
   | none => rw [c2] at hW; cases hW
   | some q =>
@@ -1254,7 +1254,7 @@ theorem iotaRecVck_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
   have hSt13 := hSt12.trans hSt3
   -- the telescope
   simp only [irVckTail] at hW
-  have hsm3 : SpineR m3 mo mn margs := hsm.keep hSt13.2.1 hSt13.2.2 (by rw [← hsmt]; omega) hspn
+  have hsm3 : SpineR m3 mo mn margs := hsm.keep hSt13.size hSt13.below (by rw [← hsmt]; omega) hspn
   cases c4 : callW p (N + 2) "iota_certs_full" [mode, vis, d, rt.headD 0, mo, mn] m3 with
   | none => rw [c4] at hW; cases hW
   | some q =>
@@ -1287,11 +1287,11 @@ theorem iotaRecVck_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
   rw [hb4] at hrun4
   -- the indices
   rw [e4] at hW
-  have hsa4 : SpineR m4 so sn args := hsa.keep hSt14.2.1 hSt14.2.2 hsat hspn
-  have hsm4 : SpineR m4 mo mn margs := hsm.keep hSt14.2.1 hSt14.2.2 (by rw [← hsmt]; omega) hspn
+  have hsa4 : SpineR m4 so sn args := hsa.keep hSt14.size hSt14.below hsat hspn
+  have hsm4 : SpineR m4 mo mn margs := hsm.keep hSt14.size hSt14.below (by rw [← hsmt]; omega) hspn
   have hmIs : (rdW E (recP + 5)).toNat ≤ sn.toNat := by omega
   have hidx := SpineR.slice hsa4 (rdW E (recP + 6)) (rdW E (recP + 5)) hrP hmIs (by
-    rw [hSt14.2.1]; exact hspn)
+    rw [hSt14.size]; exact hspn)
   rw [← ixLen_eq] at hidx
   have hsat' := hsa.bound
   have hxo : (so + rdW E (recP + 6)).toNat + (ixLen (rdW E (recP + 5)) (rdW E (recP + 6))).toNat ≤

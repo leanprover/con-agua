@@ -470,19 +470,19 @@ theorem icfForall_ok (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (N : Nat
     have htop3 : spTop m3 = aco + acn := by rw [hSt3.1, ← htop]
     have hq1 : (aco + acn).toNat + 1 < 2 ^ 64 := by
       have : (aco + acn).toNat < (m3.arr64 SPN).size := hg.1
-      have hsz3 : (m3.arr64 SPN).size = (s.mem.arr64 SPN).size := hSt3.2.1
+      have hsz3 : (m3.arr64 SPN).size = (s.mem.arr64 SPN).size := hSt3.size
       omega
     obtain ⟨hfr, hsp', hgrew, hslot, hsz⟩ := push_step m3 (aco + acn) (ra.headD 0) hg.1 hg.2 htop3 hq1
     have hS3p := hS3.frame_stk hfr (fun b hb => by simpa using hb) (fun x hx => by simpa using hx)
-    have hacc3 : SpineR m3 aco acn acc := hacc.keep hSt3.2.1 hSt3.2.2 htopc hS.spn
+    have hacc3 : SpineR m3 aco acn acc := hacc.keep hSt3.size hSt3.below htopc hS.spn
     have htop3' : aco.toNat + acn.toNat ≤ (spTop m3).toNat := by rw [htop3]; exact (by
       rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]; exact Nat.le_refl _)
     have hsum : (aco + acn).toNat = aco.toNat + acn.toNat := by
       rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega)]
     have hpush := (SpineR.push hacc3 hS3.spn (by rw [← hsum]; exact hg.1) (ra.headD 0) hargw).setCtl 136
       (aco + acn + 1)
-    have hargs3 : SpineR m3 ao an args := hargs.keep hSt3.2.1 hSt3.2.2 (by omega) hS.spn
-    have hargs3p : SpineR _ ao an args := hargs3.keep hgrew.2.1 hgrew.2.2 (by omega) hS3.spn
+    have hargs3 : SpineR m3 ao an args := hargs.keep hSt3.size hSt3.below (by omega) hS.spn
+    have hargs3p : SpineR _ ao an args := hargs3.keep hgrew.size hgrew.below (by omega) hS3.spn
     have htopp : aco + (acn + 1) = spTop ((m3.set64 SPN (aco + acn) (ra.headD 0)).set64 CTL 136 (aco + acn + 1)) := by
       rw [hsp', UInt64.add_assoc]
     generalize (m3.set64 SPN (aco + acn) (ra.headD 0)).set64 CTL 136 (aco + acn + 1) = m3p at *
@@ -665,9 +665,9 @@ theorem icfFlush_ok (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p) (N : Nat)
   obtain ⟨hr, hm⟩ := hW
   subst hm
   have hsp1 : spTop m1 = aco + acn := by rw [hSt1.1, ← htop]
-  have hsz1 : (m1.arr64 SPN).size = (s.mem.arr64 SPN).size := hSt1.2.1
+  have hsz1 : (m1.arr64 SPN).size = (s.mem.arr64 SPN).size := hSt1.size
   have hnil : SpineR m1 (aco + acn) 0 #[] := SpineR.nil_at m1 _ (by rw [hsum]; omega)
-  have hargs1 : SpineR m1 ao an args := hargs.keep hSt1.2.1 hSt1.2.2 (by omega) hS.spn
+  have hargs1 : SpineR m1 ao an args := hargs.keep hSt1.size hSt1.below (by omega) hS.spn
   obtain ⟨t2, ht2, -, hok2, hCAG2, hres2, hr2⟩ := triple_of_callW
     (hA' F (by omega) (by omega) hk' ⟨m1, Locals.init []⟩ _ dn vis fe M1 eb mode d (r1.headD 0)
       (aco + acn) 0 ao an i #[] args hS1 hm4 hebm hr1 trivial hnil hargs1
@@ -921,7 +921,7 @@ theorem iotaCertsFull_refines' (p : Prog) (hp : IotaProg4 p) (hil : InstListOK p
     simp only [iotaCertsFull, Array.toArray_toList]; rfl
   rw [hT, ← hm]
   have hrest : StackKept s.mem (m1.set64 CTL 136 (rdW (s.mem.arr64 CTL) 136)) :=
-    StackKept.restore hGr1.2.2 hGr1.2.1 g136'
+    StackKept.restoreG hGr1 g136'
   rw [← ht] at hrest
   refine ⟨hok1, ⟨M1, ?_, hK1, hrest⟩, ?_, ?_⟩
   · exact hS1.frame_stk (MemFrame.setCtl m1 136 _) (by simp) (by simp)

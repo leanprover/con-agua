@@ -601,10 +601,10 @@ theorem lamsFull_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
         (fun r r' h => by simp only [decH, h]) hc
       obtain ⟨hok, ⟨M', hS', hK', hSt'⟩, hres, hrw⟩ := hl
       refine ⟨_, _, hT.trans (AM.run_of_ok _ _ hok), hres, hrw, M', hS', hK', fun i hi => ?_,
-        hSt'.2.1.trans hsz⟩
+        hSt'.size.trans hsz⟩
       have hi' : i < spTop m := by
         rw [htop, UInt64.lt_iff_toNat_lt, haddf]; have := UInt64.lt_iff_toNat_lt.mp hi; omega
-      exact (hSt'.2.2 i hi').trans (hb0 i hi)
+      exact (hSt'.below i hi').trans (hb0 i hi)
     by_cases hc : peel ≠ 0 ∧ t >>> 28 = 5
     · obtain ⟨hp0, ht5⟩ := hc
       have hc1 : ¬ (tierW t ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun g => by
@@ -665,14 +665,14 @@ theorem lamsFull_ref (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
       -- the stacks kept across the four calls
       have hSt14 := hSt₁.trans (hSt₂.trans (hSt₃.trans hSt₄))
       have hBK := hB₁.trans (hB₂.trans (hB₃.trans hB₄))
-      have hf₄ : SpineR m₄ fo k fvs := hf.keep hSt14.2.1 hSt14.2.2 hftop hspn
+      have hf₄ : SpineR m₄ fo k fvs := hf.keep hSt14.size hSt14.below hftop hspn
       have hB4 : BStkR m₄ lo k ws := hB.keep hBK hbtop hcp
       have hb₄ : ∀ i, i < fo → spW m₄ i = spW m₀ i := fun i hi => by
         have hi' : i < spTop m := by
           rw [htop, UInt64.lt_iff_toNat_lt, haddf]; have := UInt64.lt_iff_toNat_lt.mp hi; omega
-        exact (hSt14.2.2 i hi').trans (hb0 i hi)
+        exact (hSt14.below i hi').trans (hb0 i hi)
       obtain ⟨hS', hf', htop', hB', hbt', hb', hsz', -⟩ := tPush_step (m₀ := m₀) hS₄
-        (by rw [hBK.2.1]; exact hcp) hf₄ hB4 hb₄ (hSt14.2.1.trans hsz) g2 hrw4
+        (by rw [hBK.2.1]; exact hcp) hf₄ hB4 hb₄ (hSt14.size.trans hsz) g2 hrw4
       have hws' : ∀ (i : Nat) (h : i < (ws.push (r₁.headD 0)).size), HW (ws.push (r₁.headD 0))[i] := by
         intro i hi
         rw [Array.getElem_push]

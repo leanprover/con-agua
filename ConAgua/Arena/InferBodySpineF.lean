@@ -336,7 +336,7 @@ theorem spFull_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : Sp
       have hj' : j < spTop m := by
         rw [htop, UInt64.lt_iff_toNat_lt, hadd]
         have := UInt64.lt_iff_toNat_lt.mp hj; omega
-      exact (hSt.2.2 j hj').trans (hb j hj)
+      exact (hSt.below j hj').trans (hb j hj)
     by_cases hlt : i < an
     · have hlt' : i.toNat < args.size := by rw [har₀.size]; exact UInt64.lt_iff_toNat_lt.mp hlt
       have hit : (i.toNat).toUInt64 = i := by simp
@@ -383,9 +383,9 @@ theorem spFull_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : Sp
           ⟨hS₁, hmode, heb⟩ hvv hrw1) h2
         obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, -, -⟩ := harg
         have hSt12 := hSt₁.trans hSt₂
-        have hacc₂ : SpineR m₂ co cn acc := hacc.keep hSt12.2.1 hSt12.2.2 (by rw [hspT]; exact Nat.le_refl _) hspn
+        have hacc₂ : SpineR m₂ co cn acc := hacc.keep hSt12.size hSt12.below (by rw [hspT]; exact Nat.le_refl _) hspn
         obtain ⟨hacc', htop', hb', hsz', h136'⟩ := spPush_step hS₂.spn hacc₂ (hkeep hSt12)
-          (hSt12.2.1.trans hsz) g6 g5 hvv
+          (hSt12.size.trans hsz) g6 g5 hvv
         have hS' := hS₂.frame_stk (spnCtl_frame m₂ (co + cn) (spW m (ao + i)) (co + (cn + 1)))
           (by simp) (by simp)
         obtain ⟨x, a', hrun', hx, hrw, M', hS'', hK, hSt⟩ := ih (by omega) _ _ M₂ _ (i + 1) (cn + 1)
@@ -443,7 +443,7 @@ theorem spFull_ref (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq : Sp
         have hSt13 := hSt₁.trans (hSt₂.trans hSt₃)
         have hacc0 := SpineR.empty m₃ co (by omega)
         obtain ⟨hacc', htop', hb', hsz', h136'⟩ := spPush_step (cn := 0) hS₃.spn hacc0 (hkeep hSt13)
-          (hSt13.2.1.trans hsz) g6 (by simpa using g5) hvv
+          (hSt13.size.trans hsz) g6 (by simpa using g5) hvv
         have hS' := hS₃.frame_stk (spnCtl_frame m₃ (co + 0) (spW m (ao + i)) (co + (0 + 1)))
           (by simp) (by simp)
         obtain ⟨x, a', hrun', hx, hrw, M', hS'', hK, hSt⟩ := ih (by omega) _ _ M₃ _ (i + 1) 1
@@ -601,7 +601,7 @@ theorem inferApp_refines (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (h
     hF hn ⟨hS₁, hs.mode4, hs.eb_mode⟩ hhw) hc2
   obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hrw2⟩ := h₂
   have hxs₂ : SpineR m₂ (r₁.tail.headD 0) (r₁.tail.tail.headD 0) xs :=
-    hxs.keep hSt₂.2.1 hSt₂.2.2 (by rw [htopN]; exact Nat.le_refl _) hspn₁
+    hxs.keep hSt₂.size hSt₂.below (by rw [htopN]; exact Nat.le_refl _) hspn₁
   have h₃ := CoreSpec.of_callW (inferSpine_any p hp hkp hq he hil n hk F hF hn ⟨m₂, Locals.init []⟩ _
     dn vis fe M₂ eb mode d (r₂.headD 0) _ _ xs ⟨hS₂, hs.mode4, hs.eb_mode⟩ hrw2 hxs₂
     (by rw [hSt₂.1, htopN]; exact Nat.le_refl _)) hc3
@@ -620,8 +620,8 @@ theorem inferApp_refines (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (h
   rw [hst, ← hm]
   refine ⟨M₃, hS₃.frame_stk (MemFrame.setCtl m₃ 136 _) (by simp) (by simp), hK₂.trans hK₃, ?_⟩
   have hSt23 := hSt₂.trans hSt₃
-  refine StackKept.restore (fun j hj => ?_) (hSt23.2.1.trans (hg₁.2.1)) h136
-  rw [hSt23.2.2 j (UInt64.lt_of_lt_of_le hj hg₁.1)]
+  refine StackKept.restore (fun j hj => ?_) (hSt23.size.trans (hg₁.2.1)) h136
+  rw [hSt23.below j (UInt64.lt_of_lt_of_le hj hg₁.1)]
   exact hg₁.2.2 j hj
 
 end L.Arena

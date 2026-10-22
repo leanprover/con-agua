@@ -373,8 +373,8 @@ theorem spioFull_ref (p : Prog) (hil : InstListOK p) (N : Nat) (hk : KnotUpTo p 
           have hj' : j < spTop m := by
             rw [htop, UInt64.lt_iff_toNat_lt, hadd]
             have := UInt64.lt_iff_toNat_lt.mp hj; omega
-          exact (hSt12.2.2 j hj').trans (hb j hj)
-        have hsz₂ : (m₂.arr64 SPN).size = (m₀.arr64 SPN).size := hSt12.2.1.trans hsz
+          exact (hSt12.below j hj').trans (hb j hj)
+        have hsz₂ : (m₂.arr64 SPN).size = (m₀.arr64 SPN).size := hSt12.size.trans hsz
         have hv : viewOK m₂ (r₂.headD 0) 30 := ⟨g2, UInt64.not_le.mp g3⟩
         obtain ⟨-, -, hbody⟩ := view_forall m₂ _ hS₂.arena.1 (r₂.headD 0) hrw2 hv g1
         have hvb := viewBind_forall m₂ _ hS₂.arena.1 (r₂.headD 0) hrw2 hv g1
@@ -602,7 +602,7 @@ theorem inferAppIO_refines (p : Prog) (hq : SpineInferProg p) (hsp : SpineProg p
     hF hn ⟨hS₁, hs.mode4, hs.eb_mode⟩ hhw) hc2
   obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hrw2⟩ := h₂
   have hxs₂ : SpineR m₂ (r₁.tail.headD 0) (r₁.tail.tail.headD 0) xs :=
-    hxs.keep hSt₂.2.1 hSt₂.2.2 (by rw [htopN]; exact Nat.le_refl _) hspn₁
+    hxs.keep hSt₂.size hSt₂.below (by rw [htopN]; exact Nat.le_refl _) hspn₁
   -- the spine
   have h₃ := CoreSpec.of_callW (inferSpineIO_any p hq hil n hk F hF hn ⟨m₂, Locals.init []⟩ _ dn vis fe
     M₂ eb mode d (r₂.headD 0) _ _ xs ⟨hS₂, hs.mode4, hs.eb_mode⟩ hrw2 hxs₂
@@ -625,8 +625,8 @@ theorem inferAppIO_refines (p : Prog) (hq : SpineInferProg p) (hsp : SpineProg p
   rw [hst, ← hm]
   refine ⟨M₃, hS₃.frame_stk (MemFrame.setCtl m₃ 136 _) (by simp) (by simp), hK₂.trans hK₃, ?_⟩
   have hSt23 := hSt₂.trans hSt₃
-  refine StackKept.restore (fun j hj => ?_) (hSt23.2.1.trans (hg₁.2.1)) h136
-  rw [hSt23.2.2 j (UInt64.lt_of_lt_of_le hj hg₁.1)]
+  refine StackKept.restore (fun j hj => ?_) (hSt23.size.trans (hg₁.2.1)) h136
+  rw [hSt23.below j (UInt64.lt_of_lt_of_le hj hg₁.1)]
   exact hg₁.2.2 j hj
 
 end L.Arena

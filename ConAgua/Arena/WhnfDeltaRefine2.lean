@@ -1188,10 +1188,10 @@ theorem callW_unfoldDefnAt (hp : WhnfDeltaProg' p) (hwc : WhnfCallees p) (n : Na
     have := h136 (by rw [← hr0]; decide)
     rw [← hm, size_set64] at this; exact this
   have hStK : StackKept m₃ (m₅.set64 CTL 136 (rdW (m₃.arr64 CTL) 136)) := by
-    apply StackKept.restore _ (by rw [hspn5, hgrew.2.1]) h136'
+    apply StackKept.restore _ (by rw [hspn5, hgrew.size]) h136'
     intro i hi
     simp only [spW, hspn5]
-    exact hgrew.2.2 i hi
+    exact hgrew.below i hi
   refine ⟨hok', ?_, ?_, ?_⟩
   · rw [hst', ← hm]
     exact ⟨M', hS₆, hK₃, hSt₃.trans hStK⟩

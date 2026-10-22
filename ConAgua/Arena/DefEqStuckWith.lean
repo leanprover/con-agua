@@ -66,7 +66,7 @@ theorem GrowRef.restore {α : Type} [Inhabited α] {T : AM α} {a₀ : AState} {
     CoreRef T a₀ dec dn m₀ vis fe M eb r (m.set64 CTL 136 (rdW (m₀.arr64 CTL) 136)) ok := by
   obtain ⟨hok, ⟨M', hS, hK, hg⟩, hres, hr⟩ := h
   have hS' := hS.frame_stk (MemFrame.setCtl m 136 (rdW (m₀.arr64 CTL) 136)) (by simp) (by simp)
-  exact ⟨hok, ⟨M', hS', hK, StackKept.restore hg.2.2 hg.2.1 h136⟩, hres, hr⟩
+  exact ⟨hok, ⟨M', hS', hK, StackKept.restoreG hg h136⟩, hres, hr⟩
 
 /-- A slice below the top survives a run that kept the stack below the top. -/
 theorem SpineR.grew {m m' : Mem} {off cnt : Word} {xs : Array EIdx} (h : SpineR m off cnt xs)

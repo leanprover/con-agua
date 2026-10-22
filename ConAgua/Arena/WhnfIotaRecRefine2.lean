@@ -204,8 +204,8 @@ theorem iotaRecFam_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
     (rv.headD 0) sn lps rule cvj args margs hS2 hm4 hebm hus husj hr1
   simp only [e2] at hvk
   obtain ⟨ok3, ⟨M3, hS3, hK3, hSt3⟩, res3, hr3⟩ := CoreSpec.of_callW (hvk hlps hrule hcv
-    (hsa.keep hSt12.2.1 hSt12.2.2 hsat hspn) (by rw [hSt12.1]; exact hsat) hmI hrP hplain
-    (hsm.keep hSt12.2.1 hSt12.2.2 (by rw [← hsmt]; omega) hspn) (by rw [hSt12.1]; exact hsmt)
+    (hsa.keep hSt12.size hSt12.below hsat hspn) (by rw [hSt12.1]; exact hsat) hmI hrP hplain
+    (hsm.keep hSt12.size hSt12.below (by rw [← hsmt]; omega) hspn) (by rw [hSt12.1]; exact hsmt)
     hcpm) c3
   have hrun3 := AM.run_of_ok _ _ ok3
   rw [res3] at hrun3
@@ -548,7 +548,7 @@ theorem iotaRecFire2_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees
   simp only [decH] at hrun2'
   have hSt12 := hSt1.trans hSt2
   -- the leading arguments
-  have hsa2 : SpineR m2 so sn args := hsa.keep hSt12.2.1 hSt12.2.2 hsat hspn
+  have hsa2 : SpineR m2 so sn args := hsa.keep hSt12.size hSt12.below hsat hspn
   have hxa := SpineR.take hsa2 (rdW E (recP + 6)) hrP
   cases c3 : callW p (N + 1) "mk_app_n" [rr.headD 0, so, rdW E (recP + 6)] m2 with
   | none => rw [c3] at hW; cases hW
@@ -563,7 +563,7 @@ theorem iotaRecFire2_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees
   have hSt3 := StackKept.of_app_frame hf3
   -- the fields
   have hSt13 := hSt12.trans hSt3
-  have hsm3 : SpineR m3 mo mn margs := hsm.keep hSt13.2.1 hSt13.2.2 (by rw [← hsmt]; omega) hspn
+  have hsm3 : SpineR m3 mo mn margs := hsm.keep hSt13.size hSt13.below (by rw [← hsmt]; omega) hspn
   cases c4 : callW p (N + 1) "mk_app_n_from" [rx.headD 0, mo, mn, rdW E (rl + 2)] m3 with
   | none => rw [c4] at hW; cases hW
   | some q =>
@@ -1183,7 +1183,7 @@ theorem iotaRecMajor_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees
     hcw hus husjw hr1
   simp only [e2] at hfi
   obtain ⟨ok6, ⟨M6, hS6, hK6, hSt6⟩, res6, hr6⟩ := CoreSpec.of_callW (hfi hlps hdr hci
-    (hsa.keep hSt12.2.1 hSt12.2.2 hsat hspn) (by rw [hSt12.1]; exact hsat) hmI hrP
+    (hsa.keep hSt12.size hSt12.below hsat hspn) (by rw [hSt12.1]; exact hsat) hmI hrP
     (hshape rule hmem)) c6
   have hrun6 := AM.run_of_ok _ _ ok6
   rw [res6] at hrun6
