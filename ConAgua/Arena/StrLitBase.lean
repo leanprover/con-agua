@@ -57,21 +57,21 @@ stores' arrays (below 42) and counts (`CTL` below 42). -/
 theorem CoreS.of_ls {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List ArrId} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hL : LsStep a a') (hR : ArenaR m' a')
-    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b < 42) (hC : ∀ x ∈ C, x.toNat < 42) :
+    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b < 42) (hC : ∀ x ∈ C, x.toNat < 42)
+    (hP : POOL ∉ A := by decide) (hP0 : (0 : Word) ∉ C := by decide) :
     CoreS dn m' a' vis fe M eb ∧ StackKept m m' := by
   have hD : DerR m' a' := DerR.of_tiers m' a a'
     (DerR.frameM A C m m' hf (fun b hb => .inl (hA b hb)) a hS.arena.2) hL.pers hL.scr
-  have hspn : m'.arr64 SPN = m.arr64 SPN :=
-    hf.1 SPN (fun h => by have := hA _ h; simp only [SPN, ArrId] at this; omega) (by decide)
-  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 :=
-    hf.2.1 136 (fun h => by have := hC _ h; simp at this)
   refine ⟨⟨⟨hR, hD⟩, ?_, ?_, hS.env.frame (fun b hb => .inl (by have := hA b hb; simp only [ArrId] at this ⊢; omega))
       (fun x hx => .inl (by have := hC x hx; omega)) hf, ?_, ?_, ?_,
       hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn,
       hS.memos.frame hf ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide)⟩
         ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide)⟩,
       hf.2.2.1 145 ▸ hS.bstk⟩,
-    by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
+    StackKept.of_frame hf
+      ⟨fun h => by have := hA _ h; simp only [SPN, ArrId] at this; omega,
+       fun h => by have := hA _ h; simp only [BSTK, ArrId] at this; omega, hP⟩
+      ⟨fun h => by have := hC _ h; simp at this, fun h => by have := hC _ h; simp at this, hP0⟩⟩
   · rw [hL.caches]
     exact CoreRM.frame (A := A) (C := C) (fun b hb => .inl (by have := hA b hb; simp only [ArrId] at this ⊢; omega))
       (fun x hx => .inl (by have := hC x hx; omega)) hf hS.core
@@ -208,7 +208,7 @@ theorem internW_core (hK : CoreK dn vis fe M eb m₀ m a) (o l : Word) (hq : Sli
   have hcpl := (keeps_cpl_internLit (.natVal (pv (m.arr64 POOL) o.toNat l.toNat))).run
     (AM.run_of_ok _ _ hok)
   refine ⟨hok, ⟨M, hK.1.arena_frame hD hcpl hfr ?_ ?_ ?_ ?_ ?_,
-    KeptAll.refl _ _, hK.2.trans (StackKept.of_frame hfr (by simp [REC, SLOT, SPN]) (by simp))⟩,
+    KeptAll.refl _ _, hK.2.trans (StackKept.of_frame hfr)⟩,
     hres, internW_hw m a hK.1.arena.1.lit o l w m' hI⟩
   · intro b hb; simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
     rcases hb with rfl | rfl <;> decide
