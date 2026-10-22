@@ -10,8 +10,8 @@ and the declaration records, which no callee spec mentions, so they come from th
 
 * `armText`: the arms' modules, then lane `decls2`'s texts (`cvgProg`, `ivProg`, whose real master
   callees come before the stage's stubs), then the step's program; `armFns`: every function the
-  five arms reach. A program `p` that agrees with it there (`ArmProg p`) has its write set
-  (`armText_closed`, `decide +kernel`); the arms' specs take their callees' lookup structures
+  five arms reach. A program `p` with that text (`ArmProg p`, a `TextProg`: agreeing there but
+  on `openFns`) has a step's write set on them (`StepIn`); the arms' specs take their callees' lookup structures
   (`ValProg`, `RecProg`, …) beside it, as `DeclCallees` does.
 * The theorem arm `check_decl_thm(i, vis)` refines `checkDecl`'s `.thmDecl` arm
   (`checkDeclThm_loop`).
@@ -90,16 +90,8 @@ def defnArmFns : List FnName := ["check_defn_val"]
 /-- The functions the arms reach. -/
 def armFns : List FnName := thmArmFns ++ opqArmFns ++ qaxArmFns ++ defnArmFns
 
-theorem armText_closed : closedA armText stepA stepC armFns = true := by decide +kernel
-
 /-- A program with the arms' text. -/
-def ArmProg (p : Prog) : Prop := ∀ f ∈ armFns, p.lookup f = armText.lookup f
-
-section lookups
-variable {p : Prog} (h : ArmProg p)
-include h
-theorem ArmProg.closed : closedA p stepA stepC armFns = true := closedW_of_agree armText_closed h
-end lookups
+structure ArmProg (p : Prog) : Prop extends TextProg p armText armFns
 
 /-! ## The theorem arm `check_decl_thm(i, vis)` -/
 
@@ -234,7 +226,7 @@ theorem checkDeclThm_loop {p : Prog} (hA : ArmProg p) (hV : ValProg p)
   intro s r s' hs hrun
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun (cdt_specW p hp hV.rcp n s₀ i vis)
   obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (invoke_memFrame hA.closed n (f := "check_decl_thm") (by decide) [i, vis] s₀)
+    (hA.closed.memFrame n (f := "check_decl_thm") (by decide) [i, vis] s₀)
   subst hs
   have hd' : ds[i.toNat] = .thmDecl cv v := by
     rw [Array.getElem?_eq_getElem hi] at hd; exact Option.some.inj hd

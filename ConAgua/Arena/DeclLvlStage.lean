@@ -74,6 +74,8 @@ theorem lvlText_closed : closedA cvgProg lvlA lvlC lvlFns = true := by decide +k
 
 theorem lvlFns_sub : ∀ f ∈ lvlFns, f ∈ cvgFns := by decide
 
+theorem lvlFns_open : ∀ f ∈ lvlFns, f ∉ openFns := by decide
+
 theorem lvlA_iw : IW ∉ lvlA := by simp [lvlA]
 theorem lvlA_erec : EREC ∉ lvlA := by simp [lvlA]
 theorem lvlC_129 : (129 : Word) ∉ lvlC := by simp [lvlC]
@@ -97,7 +99,7 @@ theorem lvlEqC_stage {p : Prog} (hC : CvgProg p) (hL : LvlCacheProg p)
     (lvlEqC_refines p hL k ⟨m, Locals.init []⟩ a dn vis fe M 0 hCS u v hu hv lu lv hdu hdv) h
   subst hs'
   obtain ⟨s'', hs'', hf, -⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
-    (invoke_memFrame (closedW_of_agree lvlText_closed (fun f hf => hC f (lvlFns_sub f hf))) (k + 2)
+    (invoke_memFrame (closedW_of_agree lvlText_closed (fun f hf => hC.agree f (lvlFns_sub f hf) (lvlFns_open f hf))) (k + 2)
       (f := "lvl_eq_c") (by decide) [u, v] ⟨m, Locals.init []⟩) h
   rw [hs''] at hf
   have hrun := AM.run_of_ok _ _ hok

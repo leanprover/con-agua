@@ -329,14 +329,12 @@ theorem defnNatGate_ref (hN : NatSubProg' p) (hg : p.lookup "defn_nat_gate" = so
 def natGateFns : List FnName :=
   ["defn_nat_gate", "nat_op_names", "pin_at", "iw_alloc", "sl_contains", "nat_op_guard", "nat_lit_supported", "nat_op_deps", "nat_op_pins", "nat_op_pins_a", "nat_op_pins_b", "nat_op_pins_c", "nat_op_deps_stored", "env_find", "env_row_get", "env_ix", "nat_div_mod_names", "nat_op_bool_ctors", "bool_ctor_ok", "ci_to_cv", "intern_zero", "zero_find", "zero_push", "intern_succ", "succ_find", "succ_push", "intern_sort", "sort_find", "sort_push", "cv_new", "erec_alloc", "const_e", "pin_word", "intern_const", "const_find", "const_push", "nat_op_stored_ok_all", "nat_op_stored_ok", "nat_op_ty_pinned", "e_view", "nat_op_cod", "nat_op_equations", "nat_eq_ctx", "intern_fvar", "fvar_find", "fvar_push", "nat_ap1", "mk_app", "der_b", "intern_app", "app_find", "app_push", "nat_eq_disp", "nat_eq_pr", "nat_eq_list2", "rec2", "nat_eq_un", "nat_ap2", "nat_eq_mu", "nat_eq_po", "nat_eq_be", "nat_eq_list4", "nat_eq_bl", "nat_eq_list3", "subst_const0_pairs", "subst_const0", "sl_cons", "iw_copy", "certify_nat_eqs", "is_def_eq_core", "defn_nat_cert"]
 
-theorem natGate_closed : closedA armText stepA stepC natGateFns = true := by decide +kernel
-
 /-- **`defn_nat_gate` refines `natGateT`** at the extended view: the gate's program (a
-`NatSubProg'` with the two gate functions), its text agreeing with `armText` on the functions it
-reaches (for the write set). -/
+`NatSubProg'` with the two gate functions), the functions it reaches with a step's write set
+(`StepIn`). -/
 theorem natGateSpec (hN : NatSubProg' p) (hg : p.lookup "defn_nat_gate" = some defnNatGate)
     (hc : p.lookup "defn_nat_cert" = some defnNatCert)
-    (hT : ∀ f ∈ natGateFns, p.lookup f = armText.lookup f) (pins : List INatOpPinSet) :
+    (hT : StepIn p natGateFns) (pins : List INatOpPinSet) :
     NatGateSpec p pins := by
   intro dn vis w fe2 n hn n' s₀ a₀ ⟨hS, hPS⟩
   have hR := defnNatGate_ref (dn := dn) hN hg hc (fe2 := fe2) vis w n hn
@@ -344,7 +342,7 @@ theorem natGateSpec (hN : NatSubProg' p) (hg : p.lookup "defn_nat_gate" = some d
   intro s r s' hs hrun
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun (callW_spec p n' "defn_nat_gate" [vis, w, n] s₀)
   obtain ⟨hf, -⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (invoke_memFrame (closedW_of_agree natGate_closed hT) n' (f := "defn_nat_gate") (by decide) [vis, w, n] s₀)
+    (hT.memFrame n' (f := "defn_nat_gate") (by decide) [vis, w, n] s₀)
   subst hs
   obtain ⟨x, a', hrun', hpost⟩ := hR n' s.mem a₀ r s'.mem hS hW
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
