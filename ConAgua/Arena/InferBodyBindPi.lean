@@ -563,4 +563,185 @@ theorem inferPis_tel (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : I
     hb0 hsz _ _ hW⟩
 
 
+/-! ## `infer_forall` -/
+
+/-- **The model of `infer_forall`.** -/
+def faTK (p : Prog) (n : Nat) (m : Mem) (mode vis d ty body : Word) : Option (Word × Mem) :=
+  if d >>> 63 ≠ 0 then none
+  else match callW p n "infer" [mode, vis, d, ty] m with
+  | none => none
+  | some (r₁, m₁) =>
+    match callW p n "whnf" [mode, vis, d, r₁.headD 0] m₁ with
+    | none => none
+    | some (r₂, m₂) =>
+      if r₂.headD 0 >>> 28 ≠ 2 then none
+      else if tierW (r₂.headD 0) ≠ 0 ∧ rdW (m₂.arr64 CTL) 1 = 0 then none
+      else if rdW (m₂.arr64 CTL) (16 + tierW (r₂.headD 0)) ≤ idxW (r₂.headD 0) then none
+      else match callW p n "intern_fvar" [d, ty] m₂ with
+      | none => none
+      | some (r₃, m₃) =>
+        if tPushOK m₃ (rdW (m₃.arr64 CTL) 136) (rdW (m₃.arr64 CTL) 137) 0 then
+          match callW p n "infer_pis" [mode, vis, d, 16777216, body, 1, rdW (m₃.arr64 CTL) 136,
+              rdW (m₃.arr64 CTL) 137]
+              (tPush m₃ (rdW (m₃.arr64 CTL) 136) (rdW (m₃.arr64 CTL) 137) 0 (r₃.headD 0)
+                (rdW (m₂.arr64 SOREC) (idxW (r₂.headD 0) * 2 + tierW (r₂.headD 0)))) with
+          | none => none
+          | some (r₄, m₄) =>
+            if 137 < (m₄.arr64 CTL).size then
+              some (r₄.headD 0, (m₄.set64 CTL 136 (rdW (m₃.arr64 CTL) 136)).set64 CTL 137
+                (rdW (m₃.arr64 CTL) 137))
+            else none
+        else none
+
+theorem inferForall_spec (p : Prog) (hq : BindProg p) (n : Nat) (s₀ : St) (mode vis d ty body : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "infer_forall" [mode, vis, d, ty, body]
+    ⦃fun r s' => LocEq s' s₀ ∧ faTK p n s₀.mem mode vis d ty body = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hq.fa]
+  simp only [callFn, inferForallL]
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64_rdW_spec, st64_spec,
+      callW_spec p n "infer", callW_spec p n "whnf", callW_spec p n "intern_fvar",
+      callW_spec p n "infer_pis"] <;>
+  simp_all [faTK, tPush, tPushOK, tierW, idxW, LocEq, BinOp.eval, St.setLocs_cons, CTL, Cmp.eval,
+    St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr, Locals.init_cons_zero,
+    Locals.init_cons_succ, size_set64]
+
+/-- **`infer_forall` refines `inferForall`** at the knot (the `.forallE` clause of `inferBody`). -/
+@[refines ConRon.Arena.inferForall]
+theorem inferForall_refines (p : Prog) (hp : InferLeafProg p) (hq : BindProg p) (hb : InferBodyProg p)
+    (hil : InstListOK p) (hbc : BStkCallees p) (hcap : BStkCap)
+    (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps)
+    (eb mode d ty body : Word) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hty : HW ty) (hbody : HW body) :
+    CoreSpec p (n + 1) "infer_forall" [mode, vis, d, ty, body]
+      (inferForall (coreKnot (decMode mode) fe id F) fe d.toNat (decE ty) (decE body)) decH s₀ a₀ dn vis fe
+        M eb := by
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (inferForall_spec p hq n s₀ mode vis d ty body)
+  subst hs0
+  refine ⟨hloc, ?_⟩
+  have hS := hs.rel
+  have hK := hk n (Nat.le_refl _)
+  unfold faTK at hW
+  by_cases hd : d >>> 63 ≠ 0
+  · rw [if_pos hd] at hW; cases hW
+  rw [if_neg hd] at hW
+  have hd63 : d.toNat < 2 ^ 63 := by
+    have : d >>> 63 = 0 := by simpa using hd
+    have h2 := congrArg UInt64.toNat this
+    rw [UInt64.toNat_shiftRight] at h2
+    simp [Nat.shiftRight_eq_div_pow] at h2
+    have := d.toNat_lt
+    omega
+  cases h1 : callW p n "infer" [mode, vis, d, ty] s.mem with
+  | none => rw [h1] at hW; cases hW
+  | some q =>
+  obtain ⟨r₁, m₁⟩ := q
+  rw [h1] at hW; dsimp only at hW
+  cases h2 : callW p n "whnf" [mode, vis, d, r₁.headD 0] m₁ with
+  | none => rw [h2] at hW; cases hW
+  | some q =>
+  obtain ⟨r₂, m₂⟩ := q
+  rw [h2] at hW; dsimp only at hW
+  by_cases g1 : r₂.headD 0 >>> 28 ≠ 2
+  · rw [if_pos g1] at hW; cases hW
+  rw [if_neg g1] at hW
+  by_cases gs1 : tierW (r₂.headD 0) ≠ 0 ∧ rdW (m₂.arr64 CTL) 1 = 0
+  · rw [if_pos gs1] at hW; cases hW
+  rw [if_neg gs1] at hW
+  by_cases gs2 : rdW (m₂.arr64 CTL) (16 + tierW (r₂.headD 0)) ≤ idxW (r₂.headD 0)
+  · rw [if_pos gs2] at hW; cases hW
+  rw [if_neg gs2] at hW
+  cases h3 : callW p n "intern_fvar" [d, ty] m₂ with
+  | none => rw [h3] at hW; cases hW
+  | some q =>
+  obtain ⟨r₃, m₃⟩ := q
+  rw [h3] at hW; dsimp only at hW
+  have g2 : tPushOK m₃ (rdW (m₃.arr64 CTL) 136) (rdW (m₃.arr64 CTL) 137) 0 := by
+    refine Classical.byContradiction fun g => ?_; rw [if_neg g] at hW; cases hW
+  rw [if_pos g2] at hW
+  cases h4 : callW p n "infer_pis" [mode, vis, d, 16777216, body, 1, rdW (m₃.arr64 CTL) 136,
+      rdW (m₃.arr64 CTL) 137] (tPush m₃ (rdW (m₃.arr64 CTL) 136) (rdW (m₃.arr64 CTL) 137) 0 (r₃.headD 0)
+        (rdW (m₂.arr64 SOREC) (idxW (r₂.headD 0) * 2 + tierW (r₂.headD 0)))) with
+  | none => rw [h4] at hW; cases hW
+  | some q =>
+  obtain ⟨r₄, m₄⟩ := q
+  rw [h4] at hW; dsimp only at hW
+  have g3 : 137 < (m₄.arr64 CTL).size := by
+    refine Classical.byContradiction fun g => ?_; rw [if_neg g] at hW; cases hW
+  rw [if_pos g3] at hW
+  simp only [Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨hr, hm⟩ := hW
+  -- the domain's type, a sort
+  have h₁ := CoreSpec.of_callW (hK.infer F s a₀ dn vis fe M eb mode d ty hF hn hs hty) h1
+  obtain ⟨hok1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres1, hrw1⟩ := h₁
+  have hB₁ := hbc n "infer" _ _ _ _ (by simp) h1
+  have h₂ := CoreSpec.of_callW (hK.whnf F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d (r₁.headD 0) hF hn
+    ⟨hS₁, hs.mode4, hs.eb_mode⟩ hrw1) h2
+  obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hrw2⟩ := h₂
+  have hB₂ := hbc n "whnf" _ _ _ _ (by simp) h2
+  have hg2 : r₂.headD 0 >>> 28 = 2 := by simpa using g1
+  obtain ⟨hvs, hu⟩ := L.Ind.view_sort_f m₂ _ hS₂.arena.1 (r₂.headD 0) hrw2 ⟨gs1, by simpa using gs2⟩ hg2
+  obtain ⟨s₃, hs₃, -, hfv⟩ := triple_of_callW (s₀ := ⟨m₂, Locals.init []⟩)
+    (internFVar_spec p hb.fvf hb.fvp hb.fvi n _ d ty) h3
+  rw [hs₃] at hfv
+  obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hrw3⟩ := internFVar_core hS₂ d ty hty r₃ hfv
+  -- the pushes
+  have hSt13 := hSt₁.trans (hSt₂.trans hSt₃)
+  obtain ⟨so, hso⟩ : ∃ so, so = rdW (m₃.arr64 CTL) 136 := ⟨_, rfl⟩
+  obtain ⟨lo, hlo⟩ : ∃ lo, lo = rdW (m₃.arr64 CTL) 137 := ⟨_, rfl⟩
+  rw [← hso, ← hlo] at g2 h4 hm
+  have hcp := hcap _ _ _ _ _ _ _ hS₃
+  have hsoS : so.toNat ≤ (m₃.arr64 SPN).size := by
+    have := g2.2.2.1; simp at this; omega
+  have hloS : lo.toNat ≤ (m₃.arr64 BSTK).size := by
+    have := g2.2.2.2.1; simp at this; omega
+  have g2' : tPushOK m₃ so lo 0 := g2
+  obtain ⟨hS', hf', htop', hB', hbt', hb', hsz', -⟩ := tPush_step (m₀ := m₃) (fvs := #[]) (ws := #[])
+    hS₃ hcp (SpineR.empty _ _ hsoS) (BStkR.empty _ _ hloS) (fun _ _ => rfl) rfl g2' hrw3
+  have e01 : (0 : Word) + 1 = 1 := rfl
+  rw [e01] at hf' htop' hB' hbt'
+  cases n with
+  | zero => rw [callW_zero] at h4; cases h4
+  | succ n' =>
+  obtain ⟨t₄, ht₄, -, hTel⟩ := triple_of_callW (s₀ := ⟨_, Locals.init []⟩)
+    (inferPis_tel p hp hq hb hil hbc hcap n' (hk.mono (by omega)) F (by omega) (by omega) _ _ dn
+      vis fe M₃ eb mode d 16777216 body 1 so lo _ _ m₃ ⟨hS', hs.mode4, hs.eb_mode⟩ hbody hf' htop' hB'
+      hbt' (by intro i hi; simp at hi; subst hi; simpa [HW] using hu) (by simp; omega) hb' hsz') h4
+  rw [ht₄] at hTel
+  obtain ⟨x, a', hrun4, hx, hrw4, M', hS₄, hK₄, hb₄, hsz₄⟩ := hTel
+  -- the twin's run
+  have hsort : ((decE (r₂.headD 0)).tag == ETag.sort) = true := tag_sort_beq _ hrw2 (by simpa using g1)
+  have hrun : (inferForall (coreKnot (decMode mode) fe id F) fe d.toNat (decE ty) (decE body)).run a₀ =
+      .ok (x, a') := by
+    simp only [inferForall, StateT.run_bind]
+    have hpf : (16777216 : Word).toNat = peelFuel := rfl
+    rw [hpf] at hrun4
+    generalize peelFuel = P at hrun4 ⊢
+    rw [AM.run_of_ok _ _ hok1, except_ok_bind, hres1]
+    simp only [decH] at hres2 hres3 ⊢
+    rw [AM.run_of_ok _ _ hok2, except_ok_bind, hres2]
+    rw [hsort, if_pos rfl, StateT.run_bind,
+      L.Ind.viewSort_run (L.Ind.viewSort_of_view _ _ _ ((decE_tag_eq _ hrw2 2 (by decide)).mpr hg2) hvs),
+      except_ok_bind, internFVarE, StateT.run_bind]
+    rw [AM.run_of_ok _ _ hok3, except_ok_bind, hres3]
+    have ha2 : ((#[] : Array Word).push (rdW (m₂.arr64 SOREC) (idxW (r₂.headD 0) * 2 + tierW (r₂.headD 0)))).map (decI (k := .level)) = #[decI (rdW (m₂.arr64 SOREC) (idxW (r₂.headD 0) * 2 + tierW (r₂.headD 0)))] := by simp
+    rw [ha2] at hrun4
+    exact hrun4
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  refine ⟨hok, ?_, by rw [hres, hx, decH, hr], by unfold ResH; rw [← hr]; exact hrw4⟩
+  rw [hst, ← hm, hso, hlo]
+  have htop3 : spTop m₃ = so := hso.symm
+  obtain ⟨hSF, hkF⟩ := tops_restore (m₀ := s.mem) hS₄ hSt13
+    (fun j hj => hb₄ j (htop3 ▸ hj)) hsz₄ g3
+  exact ⟨M', hSF, hK₁.trans (hK₂.trans (hK₃.trans hK₄)), hkF⟩
+
+
+/-- `inferBody`'s `.forallE` arm is `inferForall`. -/
+@[refines_part ConRon.Arena.inferBody "forallE"]
+theorem inferBody_forall (r : CoreFnsA) (fe : IFEnv) (d : Nat) (e : EIdx) (a : AState)
+    (ty body : EIdx) (hv : a.store.view e = some (.forallE ty body)) :
+    (inferBody r fe d e).run a = (inferForall r fe d ty body).run a := by
+  simp only [inferBody, StateT.run_bind, view_run _ _ _ hv, except_ok_bind]
+
 end L.Arena
