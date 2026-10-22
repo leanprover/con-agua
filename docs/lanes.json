@@ -242,13 +242,13 @@
 {
 "lane": "censusmem",
 "model": "opus",
-"status": "running",
+"status": "done",
 "focus": "Census memory blowup (18 GB): drop fingerprints, add a memory guard"
 },
 {
 "lane": "provenance",
 "model": "opus",
-"status": "running",
+"status": "done",
 "focus": "con-ron-style source citations + provenance gate for syncing"
 },
 {

@@ -99,6 +99,7 @@ def zfindLoop : Stmt := lblk (t, h, n, j, d, v, b) {
   }
 }
 
+/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def zeroFind : FunDecl := lfn (t, h) locals (n, j, d, v, b) {
   n := len(ZSLOT.u64) >> 1;
   b := CTL.u64[62] * t;
@@ -170,6 +171,7 @@ def zpushOK (m : Mem) (t : Word) : Bool :=
 def zpushMem (m : Mem) (t j c : Word) : Mem :=
   (((m.set64 ZREC (c * 2 + t) 0).set64 ZSLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (8 + (t &&& 1)) (c + 1))
 
+/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def zeroPush : FunDecl := lfn (t, j) locals (c) {
   c := CTL.u64[8 + t];
   if c >= 134217728 { abort };
@@ -228,6 +230,7 @@ def zinternW (m : Mem) : Option (Word × Mem) :=
     some (zeroP + zcnt m 0, zpushMem m 0 (rs₀.tail.tail.headD 0) (zcnt m 0))
   else none
 
+/-- con-ron: ConRon/Arena/Monad.lean:441-457 ConRon.Arena.internLNode -/
 @[l_impl ConRon.Arena.internLNode]
 def internZero : FunDecl := lfn () locals (h, fd, i, j, d) {
   h := ⟪zeroHashW⟫;

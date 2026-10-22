@@ -36,6 +36,7 @@ open L.Front.Unescape (strPutEscW strPutEsc_specW escSur escOne utf8Put strPutEs
 
 namespace L.Front
 
+/-- con-ron: ConRon/Arena/Frontend/ExportC.lean:464-477 ConRon.Arena.Frontend.applyLine -/
 @[l_impl ConRon.Arena.Frontend.applyLine]
 def frontLine : FunDecl := lfn (i) locals (ok, nx, s, pl, idx, a, c, d) {
   (ok, nx) := call scan_line(i);
@@ -48,6 +49,7 @@ def frontLine : FunDecl := lfn (i) locals (ok, nx, s, pl, idx, a, c, d) {
 
 /-- The fields of the record after the line's `{` at `j - 1`, applied: a name or level line, else
 an expression line; a declaration line aborts. -/
+-- con-ron: ConRon/Arena/Frontend/ExportC.lean:464-477 ConRon.Arena.Frontend.applyLine
 def applyAny : FunDecl := lfn (j) locals (pl, idx, a, c, d, z) {
   (pl, idx, a, c, d) := call rec_line_loop(j);
   if pl != 0 {
@@ -64,6 +66,7 @@ def applyAny : FunDecl := lfn (j) locals (pl, idx, a, c, d, z) {
 }
 
 /-- A declaration line: its fields, applied (an inductive block or any other line aborts). -/
+-- con-ron: ConRon/Arena/Frontend/ExportC.lean:464-477 ConRon.Arena.Frontend.applyLine
 def applyDLine : FunDecl := lfn (j) locals (pl, nm, lps, ty, vl, hk, hn, fl, z) {
   (pl, nm, lps, ty, vl, hk, hn, fl) := call rec_decl_line(j);
   if pl == 0 { abort };
@@ -72,6 +75,7 @@ def applyDLine : FunDecl := lfn (j) locals (pl, nm, lps, ty, vl, hk, hn, fl, z) 
 }
 
 /-- A name or level line with fields `(pl, idx, a, c, d)`, applied. -/
+-- con-ron: ConRon/Arena/Frontend/ExportC.lean:464-477 ConRon.Arena.Frontend.applyLine
 def applyRec : FunDecl := lfn (pl, idx, a, c, d) locals (z) {
   if pl == 0 { abort };
   if pl == 7 { return 0 };
@@ -90,6 +94,7 @@ def applyRec : FunDecl := lfn (pl, idx, a, c, d) locals (z) {
 }
 
 /-- A `str` name line: the body `[c, d)`, unescaped into the pool and applied. -/
+-- con-ron: ConRon/Arena/Frontend/ExportC.lean:464-477 ConRon.Arena.Frontend.applyLine
 def applyStr : FunDecl := lfn (idx, a, c, d) locals (z, o, l) {
   if c == 0 { abort };
   (o, l) := call str_put_esc(c, d);

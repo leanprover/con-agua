@@ -44,6 +44,7 @@ def levelFits : ConLeche.Level → Bool
 section prog
 variable (rom : List UInt8)
 
+/-- con-ron: none — the ROM reader (L has constant bytes where the twin has con-leche values) -/
 def romLevel : FunDecl := lfn (pos) locals (t, h, q, u, v) {
   t := rom.c8[pos];
   if t == 0 {

@@ -39,6 +39,7 @@ namespace L.Arena
 `getAppFnL` (`get_app_fn`) is in `WhnfSpineRefine.lean`, with its loop `getAppFnLoop`, its word
 model `gafLoopW`/`gafW` and the proofs behind `getAppFn_refines` below. -/
 
+/-- con-ron: ConRon/Arena/ExprOps.lean:1292-1303 ConRon.Arena.getAppArgs -/
 @[l_impl ConRon.Arena.getAppArgs]
 def getAppArgsL : FunDecl := lfn (e) locals (f, t, x, h, n, o, k) {
   f := 4000000000;
@@ -71,6 +72,8 @@ def getAppArgsL : FunDecl := lfn (e) locals (f, t, x, h, n, o, k) {
   return (o, n)
 }
 
+/-- con-ron: ConRon/Arena/Core.lean:2125-2128 ConRon.Arena.getAppSpine
+con-ron: ConRon/Arena/Core.lean:2109-2123 ConRon.Arena.getAppSpineGo -/
 @[l_impl ConRon.Arena.getAppSpine ConRon.Arena.getAppSpineGo]
 def getAppSpineL : FunDecl := lfn (e) locals (f, t, x, h, n, o, k) {
   f := 4000000000;
@@ -104,6 +107,7 @@ def getAppSpineL : FunDecl := lfn (e) locals (f, t, x, h, n, o, k) {
   return (h, o, n)
 }
 
+/-- con-ron: ConRon/Arena/Core.lean:2130-2138 ConRon.Arena.headAndArgs -/
 @[l_impl ConRon.Arena.headAndArgs]
 def headAndArgsL : FunDecl := lfn (v) locals (h, o, n) {
   if v >> 28 == 4 {

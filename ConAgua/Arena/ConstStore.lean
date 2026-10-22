@@ -105,6 +105,7 @@ def cefindLoop : Stmt := lblk (t, f, a, h, n, j, d, v, b) {
   }
 }
 
+/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def constFind : FunDecl := lfn (t, f, a, h) locals (n, j, d, v, b) {
   n := len(CSLOT.u64) >> 1;
   b := CTL.u64[62] * t;
@@ -177,6 +178,7 @@ def cepushMem (m : Mem) (t f a j c : Word) : Mem :=
   ((((m.set64 CREC (c * 4 + t * 2) f).set64 CREC (c * 4 + t * 2 + 1) a).set64 CSLOT (j * 2 + t)
     (baseW m t + c + 1)).set64 CTL (18 + (t &&& 1)) (c + 1))
 
+/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def constPush : FunDecl := lfn (t, f, a, j) locals (c, k) {
   c := CTL.u64[18 + t];
   if c >= 134217728 { abort };
@@ -242,6 +244,8 @@ def ceinternW (m : Mem) (f a : Word) : Option (Word × Mem) :=
     some (constP + cecnt m 0, cepushMem m 0 f a (rs₀.tail.tail.headD 0) (cecnt m 0))
   else none
 
+/-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
+con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
 @[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internConst : FunDecl := lfn (f, a) locals (h, sk, fd, i, j, d) {
   h := ((⟪fnvBasis⟫ ^ f) * ⟪fnvPrime⟫ ^ a) * ⟪fnvPrime⟫;

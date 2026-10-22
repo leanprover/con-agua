@@ -114,6 +114,7 @@ def cmpLoop : Stmt := lblk (oa, la, ob, lb, k, x, y) {
   }
 }
 
+/-- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult -/
 @[l_impl ConRon.Arena.natOpResult]
 def natCmp : FunDecl := lfn (oa, la, ob, lb) locals (k, x, y) {
   if la < lb { return 0 };
