@@ -95,6 +95,11 @@ per-function separation logic.
   predicates, ROM data). Proven means every `@[refines T]` theorem uses only `propext`, `Classical.choice`,
   `Quot.sound`; a target reached only through proven targets counts as proven (only sorry-free ones
   cover: a refinement proved modulo `sorry` counts as `sorry` itself and covers none of its callees).
+  The `sorry` columns (and `sorry`/`lean_sorry` in the CSV) count every target depending on `sorryAx`;
+  of these, **proven locally** (`local`, CSV `local`/`lean_local`, appended at the end of the row) are those
+  whose own proof term (and generated `proof_N`/`match_N`/`eq_N` auxiliaries) has no `sorryAx`: it comes
+  only through other constants. The report lists the nearest such constants ("sorry sources", by number
+  of targets blocked) as a work queue. Locally proven targets still cover none of their callees.
 - **Who runs it.** Lanes add links and may run the census to check their own numbers; only the coordinator
   runs `scripts/census.py --write` (regenerates `docs/progress.md`, appends a line to `docs/progress.csv`),
   on master after each batch of landings, so the time series has one line per master state and lanes never
