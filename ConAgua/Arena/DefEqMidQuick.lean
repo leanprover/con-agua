@@ -1,4 +1,5 @@
 import ConAgua.Arena.DefEqMidLams
+import ConAgua.Arena.StoreDen
 
 /-!
 # The easy cases: `quick_defeq` (lane `defeq`)
@@ -30,6 +31,16 @@ structure StoreDenotes : Prop where
   constLs : ∀ (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb : Word), CoreS dn m a vis fe M eb → ∀ (h : EIdx) (c : NIdx) (us : LsIdx),
     a.store.view h = some (.const c us) → ∃ ls, denoteLs a.store.lss us = some ls
+
+/-- **Stored levels read back under `CoreS`** (`StoreDen.lean`): the one assumption on the store
+that the knot's level readers make, until it is a field of `CoreS`. -/
+def CoreDen : Prop :=
+  ∀ (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis : Word) (fe : IFEnv)
+    (M : ModeMaps) (eb : Word), CoreS dn m a vis fe M eb → StoreDen m a
+
+theorem StoreDenotes.of_den (h : CoreDen) : StoreDenotes :=
+  ⟨fun dn m a vis fe M eb hS => (h dn m a vis fe M eb hS).sort,
+    fun dn m a vis fe M eb hS => (h dn m a vis fe M eb hS).constLs⟩
 
 /-- The lookups of this file. -/
 structure QuickProg (p : Prog) : Prop where
