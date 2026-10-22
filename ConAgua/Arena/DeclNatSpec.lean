@@ -32,6 +32,10 @@ structure NatGateProg (p : Prog) : Prop extends MasterProg p where
   lEView : p.lookup "e_view" = some eView
   lNatOpNames : p.lookup "nat_op_names" = some natOpNamesL
   lNatDivModNames : p.lookup "nat_div_mod_names" = some natDivModNamesL
+  lNatOpPinsA : p.lookup "nat_op_pins_a" = some natOpPinsAL
+  lNatOpPinsB : p.lookup "nat_op_pins_b" = some natOpPinsBL
+  lNatOpPinsC : p.lookup "nat_op_pins_c" = some natOpPinsCL
+  lNatOpPins : p.lookup "nat_op_pins" = some natOpPinsL
   lNatOpDeps : p.lookup "nat_op_deps" = some natOpDepsL
   lNatOpDepsStored : p.lookup "nat_op_deps_stored" = some natOpDepsStoredL
 
@@ -256,5 +260,239 @@ theorem natDivModNames_refines (hN : NatGateProg p) :
   (natDivModNames_ref hN).refAM
 
 end names
+
+/-! ## `nat_op_deps` -/
+
+theorem decI_beq_word {κ : IdxKind} {x y : Word} (hx : x.toNat < 2 ^ 32) (hy : y.toNat < 2 ^ 32) :
+    ((decI x : Idx κ) == decI y) = decide (x = y) := by
+  by_cases h : x = y
+  · subst h; rw [beq_self_eq_true]; simp
+  · have : (decI x : Idx κ) ≠ decI y := fun e => h (by
+      rw [(decI_eq_iff x hx _).mp e]; exact decI_word_self y hy)
+    rw [beq_false_of_ne this]; simp [h]
+
+theorem decI_beq_pin {κ : IdxKind} {m : Mem} {a : AState} (hF : PinsFull m a.pins) {c : Word}
+    (hc : c.toNat < 2 ^ 32) (j : Nat) (hj : j < 51) :
+    ((decI c : Idx κ) == decI (pinW m (1 + j))) = decide (c = pinW m (1 + j)) :=
+  decI_beq_word hc (hF.names_lt j hj)
+
+/-- A freshly written slice, from the allocation and the words written. -/
+theorem emit_keep {κ : IdxKind} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
+    (hal : p.lookup "iw_alloc" = some iwAlloc) {k : Nat} {m mq m' : Mem} {a : AState}
+    {rq r : List Word} {N : Word} {ws : List Word} (hS : StageR dn vis fe m a)
+    (hN : N.toNat = ws.length) (hlt : ∀ w ∈ ws, w.toNat < 2 ^ 32)
+    (hq : callW p k "iw_alloc" [N] m = some (rq, mq)) (hr : r = [rq.headD 0, N])
+    (hm : m' = wrIW mq (rq.headD 0) ws) :
+    KeepPost dn vis fe (decRL (fun m => (decHL m : Nat → Nat → Option (List (Idx κ)))) 0) m m' a r
+      (ws.map (decI : Word → Idx κ)) := by
+  obtain ⟨hq0, hmq, hKeep, hroom, htop⟩ := iwAlloc_fref p hal N k m rq mq hS.2 hq
+  have hrec := recPost_wr m ws N hN hS.2 (by simpa [iwTop, hN] using hroom)
+  subst hmq; subst hr; rw [hq0]; rw [hq0] at hm; subst hm
+  exact slice_keep hS hrec hlt hN
+
+section pins
+variable {p : Prog}
+
+def natOpPinsAW (m : Mem) (q : Word) : Option (List Word × Mem) :=
+  if pinW m 0 = 0 then none else some ([0], ((((((((m.set64 IW (q) (pinW m 15)).set64 IW (q + 1) (pinW m 16)).set64 IW (q + 2) (pinW m 17)).set64 IW (q + 3) (pinW m 18)).set64 IW (q + 4) (pinW m 19)).set64 IW (q + 5) (pinW m 20)).set64 IW (q + 6) (pinW m 21)).set64 IW (q + 7) (pinW m 22)))
+
+theorem natOpPinsA_specW (p : Prog) (hp : p.lookup "nat_op_pins_a" = some natOpPinsAL)
+    (hpin : p.lookup "pin_at" = some pinAtL) (n : Nat) (s₀ : St) (q : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nat_op_pins_a" [q]
+    ⦃fun r s' => LocEq s' s₀ ∧ natOpPinsAW s₀.mem q = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, natOpPinsAL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      pinAt_pure p hpin n] <;>
+    finish (gen := 20) [natOpPinsAW]
+
+theorem natOpPinsA_fref (hp : p.lookup "nat_op_pins_a" = some natOpPinsAL)
+    (hpin : p.lookup "pin_at" = some pinAtL) (q : Word) :
+    FRef p "nat_op_pins_a" [q] (fun _ => True)
+      (fun m m' r => pinW m 0 ≠ 0 ∧ m' = wrIW m q [pinW m 15, pinW m 16, pinW m 17, pinW m 18, pinW m 19, pinW m 20, pinW m 21, pinW m 22]) := by
+  intro n m r m' _ hc
+  obtain ⟨s', rfl, hl, hw⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (natOpPinsA_specW p hp hpin n _ q) hc
+  change natOpPinsAW m q = some (r, s'.mem) at hw
+  unfold natOpPinsAW at hw
+  by_cases h0 : pinW m 0 = 0
+  · rw [if_pos h0] at hw; cases hw
+  rw [if_neg h0] at hw
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨-, hm⟩ := hw
+  refine ⟨h0, ?_⟩
+  rw [← hm]
+  simp [wrIW, UInt64.add_assoc]
+
+def natOpPinsBW (m : Mem) (q : Word) : Option (List Word × Mem) :=
+  if pinW m 0 = 0 then none else some ([0], (((((((m.set64 IW (q) (pinW m 23)).set64 IW (q + 1) (pinW m 24)).set64 IW (q + 2) (pinW m 25)).set64 IW (q + 3) (pinW m 26)).set64 IW (q + 4) (pinW m 27)).set64 IW (q + 5) (pinW m 28)).set64 IW (q + 6) (pinW m 29)))
+
+theorem natOpPinsB_specW (p : Prog) (hp : p.lookup "nat_op_pins_b" = some natOpPinsBL)
+    (hpin : p.lookup "pin_at" = some pinAtL) (n : Nat) (s₀ : St) (q : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nat_op_pins_b" [q]
+    ⦃fun r s' => LocEq s' s₀ ∧ natOpPinsBW s₀.mem q = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, natOpPinsBL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      pinAt_pure p hpin n] <;>
+    finish (gen := 20) [natOpPinsBW]
+
+theorem natOpPinsB_fref (hp : p.lookup "nat_op_pins_b" = some natOpPinsBL)
+    (hpin : p.lookup "pin_at" = some pinAtL) (q : Word) :
+    FRef p "nat_op_pins_b" [q] (fun _ => True)
+      (fun m m' r => pinW m 0 ≠ 0 ∧ m' = wrIW m q [pinW m 23, pinW m 24, pinW m 25, pinW m 26, pinW m 27, pinW m 28, pinW m 29]) := by
+  intro n m r m' _ hc
+  obtain ⟨s', rfl, hl, hw⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (natOpPinsB_specW p hp hpin n _ q) hc
+  change natOpPinsBW m q = some (r, s'.mem) at hw
+  unfold natOpPinsBW at hw
+  by_cases h0 : pinW m 0 = 0
+  · rw [if_pos h0] at hw; cases hw
+  rw [if_neg h0] at hw
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨-, hm⟩ := hw
+  refine ⟨h0, ?_⟩
+  rw [← hm]
+  simp [wrIW, UInt64.add_assoc]
+
+def natOpPinsCW (m : Mem) (q : Word) : Option (List Word × Mem) :=
+  if pinW m 0 = 0 then none else some ([0], ((((((m.set64 IW (q) (pinW m 2)).set64 IW (q + 1) (pinW m 3)).set64 IW (q + 2) (pinW m 4)).set64 IW (q + 3) (pinW m 31)).set64 IW (q + 4) (pinW m 32)).set64 IW (q + 5) (pinW m 30)))
+
+theorem natOpPinsC_specW (p : Prog) (hp : p.lookup "nat_op_pins_c" = some natOpPinsCL)
+    (hpin : p.lookup "pin_at" = some pinAtL) (n : Nat) (s₀ : St) (q : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nat_op_pins_c" [q]
+    ⦃fun r s' => LocEq s' s₀ ∧ natOpPinsCW s₀.mem q = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, natOpPinsCL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      pinAt_pure p hpin n] <;>
+    finish (gen := 20) [natOpPinsCW]
+
+theorem natOpPinsC_fref (hp : p.lookup "nat_op_pins_c" = some natOpPinsCL)
+    (hpin : p.lookup "pin_at" = some pinAtL) (q : Word) :
+    FRef p "nat_op_pins_c" [q] (fun _ => True)
+      (fun m m' r => pinW m 0 ≠ 0 ∧ m' = wrIW m q [pinW m 2, pinW m 3, pinW m 4, pinW m 31, pinW m 32, pinW m 30]) := by
+  intro n m r m' _ hc
+  obtain ⟨s', rfl, hl, hw⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (natOpPinsC_specW p hp hpin n _ q) hc
+  change natOpPinsCW m q = some (r, s'.mem) at hw
+  unfold natOpPinsCW at hw
+  by_cases h0 : pinW m 0 = 0
+  · rw [if_pos h0] at hw; cases hw
+  rw [if_neg h0] at hw
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨-, hm⟩ := hw
+  refine ⟨h0, ?_⟩
+  rw [← hm]
+  simp [wrIW, UInt64.add_assoc]
+
+/-- The 21 words `nat_op_pins` writes. -/
+def pinRecW (m : Mem) : List Word :=
+  [pinW m 15, pinW m 16, pinW m 17, pinW m 18, pinW m 19, pinW m 20, pinW m 21, pinW m 22,
+   pinW m 23, pinW m 24, pinW m 25, pinW m 26, pinW m 27, pinW m 28, pinW m 29,
+   pinW m 2, pinW m 3, pinW m 4, pinW m 31, pinW m 32, pinW m 30]
+
+def natOpPinsW (p : Prog) (n : Nat) (m : Mem) : Option (List Word × Mem) :=
+  bW (callW p n "iw_alloc" [21] m) fun rq mq =>
+  bW (callW p n "nat_op_pins_a" [rq.headD 0] mq) fun _ ma =>
+  bW (callW p n "nat_op_pins_b" [rq.headD 0 + 8] ma) fun _ mb =>
+  bW (callW p n "nat_op_pins_c" [rq.headD 0 + 15] mb) fun _ mc => some ([rq.headD 0], mc)
+
+theorem natOpPins_specW (p : Prog) (hp : p.lookup "nat_op_pins" = some natOpPinsL) (n : Nat)
+    (s₀ : St) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_op_pins" []
+    ⦃fun r s' => LocEq s' s₀ ∧ natOpPinsW p n s₀.mem = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, natOpPinsL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      callW_spec p n "iw_alloc", callW_spec p n "nat_op_pins_a", callW_spec p n "nat_op_pins_b",
+      callW_spec p n "nat_op_pins_c"] <;>
+    finish (gen := 20) [natOpPinsW, bW]
+
+theorem pinW_wrIW (m : Mem) (q : Word) (ws : List Word) (j : Nat) :
+    pinW (wrIW m q ws) j = pinW m j := by
+  simp only [pinW, wrIW_arr_ne ws m q PINS (by decide)]
+
+theorem pinW_allocMem (m : Mem) (k : Word) (j : Nat) : pinW (allocMem m k) j = pinW m j := by
+  simp only [pinW, allocMem, Mem.arr64_set64_ne _ _ _ _ _ (show PINS ≠ CTL by decide)]
+
+/-- **`nat_op_pins`**: the record of the pin words, a fresh slice of the pool. -/
+theorem natOpPins_fref (hN : NatGateProg p) :
+    FRef p "nat_op_pins" [] (fun m => IWOK m)
+      (fun m m' r => pinW m 0 ≠ 0 ∧ RecPost m m' r (pinRecW m) ∧ m'.arr64 PINS = m.arr64 PINS ∧
+        r = [r.headD 0]) := by
+  refine FRef.of_succ fun k m r m' hI hc => ?_
+  have hw := callW_model (M := fun mm => natOpPinsW p k mm) (natOpPins_specW p hN.lNatOpPins k ·) hc
+  unfold natOpPinsW at hw
+  cases hq : callW p k "iw_alloc" [21] m with
+  | none => rw [hq] at hw; simp at hw
+  | some qq =>
+  obtain ⟨rq, mq⟩ := qq
+  rw [hq, bW_some] at hw
+  cases ha : callW p k "nat_op_pins_a" [rq.headD 0] mq with
+  | none => rw [ha] at hw; simp at hw
+  | some qa =>
+  obtain ⟨ra, ma⟩ := qa
+  rw [ha, bW_some] at hw
+  cases hb : callW p k "nat_op_pins_b" [rq.headD 0 + 8] ma with
+  | none => rw [hb] at hw; simp at hw
+  | some qb =>
+  obtain ⟨rb, mb⟩ := qb
+  rw [hb, bW_some] at hw
+  cases hc' : callW p k "nat_op_pins_c" [rq.headD 0 + 15] mb with
+  | none => rw [hc'] at hw; simp at hw
+  | some qc =>
+  obtain ⟨rc, mc⟩ := qc
+  rw [hc', bW_some] at hw
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨rfl, rfl⟩ := hw
+  obtain ⟨hq0, hmq, hKeep, hroom, htop⟩ := iwAlloc_fref p hN.lIwAlloc 21 k m rq mq hI hq
+  obtain ⟨h0a, hma⟩ := natOpPinsA_fref hN.lNatOpPinsA hN.lPinAt (rq.headD 0) k mq ra ma trivial ha
+  obtain ⟨h0b, hmb⟩ := natOpPinsB_fref hN.lNatOpPinsB hN.lPinAt (rq.headD 0 + 8) k ma rb mb trivial hb
+  obtain ⟨h0c, hmc⟩ := natOpPinsC_fref hN.lNatOpPinsC hN.lPinAt (rq.headD 0 + 15) k mb rc mc trivial hc'
+  have h0 : pinW m 0 ≠ 0 := by
+    rw [← pinW_allocMem m 21 0, ← hmq]; exact h0a
+  subst hmq
+  subst hma
+  subst hmb
+  subst hmc
+  simp only [pinW_wrIW, pinW_allocMem] at *
+  have hroom' : iwTop m + (pinRecW m).length ≤ (m.arr64 IW).size := by
+    simpa [iwTop, pinRecW] using hroom
+  have hrec := recPost_wr m (pinRecW m) 21 rfl hI hroom'
+  have hcomp : wrIW (wrIW (wrIW (allocMem m 21) (rdW (m.arr64 CTL) 200)
+        [pinW m 15, pinW m 16, pinW m 17, pinW m 18, pinW m 19, pinW m 20, pinW m 21, pinW m 22])
+        (rdW (m.arr64 CTL) 200 + 8) [pinW m 23, pinW m 24, pinW m 25, pinW m 26, pinW m 27, pinW m 28, pinW m 29])
+        (rdW (m.arr64 CTL) 200 + 15) [pinW m 2, pinW m 3, pinW m 4, pinW m 31, pinW m 32, pinW m 30] =
+      wrIW (allocMem m 21) (rdW (m.arr64 CTL) 200) (pinRecW m) := by
+    simp [wrIW, UInt64.add_assoc, pinRecW]
+  rw [hq0]
+  rw [hcomp]
+  refine ⟨h0, hrec.1.symm ▸ hrec, ?_, rfl⟩
+  rw [wrIW_arr_ne _ _ _ _ (by decide)]
+  simp only [allocMem, Mem.arr64_set64_ne _ _ _ _ _ (show PINS ≠ CTL by decide)]
+
+end pins
+
+
+/-! ## `nat_op_deps` -/
+
+theorem KeepPost.of_grow {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {α : Type}
+    {dec : Mem → List Word → α → Prop} {m1 m m' : Mem} {a : AState} {r : List Word} {x : α}
+    (h : KeepPost dn vis fe dec m1 m' a r x) (hg : IWGrow m m1) : KeepPost dn vis fe dec m m' a r x :=
+  ⟨h.1, hg.trans h.2.1, h.2.2⟩
 
 end L.Ind
