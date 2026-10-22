@@ -1,4 +1,5 @@
 import ConAgua.Arena.StoreLib
+import ConAgua.Arena.SimLib
 import ConAgua.Arena.ForallStore
 
 /-!
@@ -249,12 +250,8 @@ theorem internForall_refines (p : Prog) (hpf : p.lookup "forall_find" = some for
     invoke p (exec p n) "intern_forall" [ty, body]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internE (.forallE (decE ty) (decE body))) a₀ ∧
       ForallR s'.mem (AM.st (internE (.forallE (decE ty) (decE body))) a₀) ∧
-      AM.res (internE (.forallE (decE ty) (decE body))) a₀ = decE (r.headD 0); ⊤⦄ := by
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (internForallL_spec p hpf hpp hp n s₀ ty body)
-  subst hs
-  exact ⟨hloc, faintern_correct s.mem a₀ hR ty body hty hbody _ _ hI⟩
+      AM.res (internE (.forallE (decE ty) (decE body))) a₀ = decE (r.headD 0); ⊤⦄ :=
+  Sim.tripleD (internForallL_spec p hpf hpp hp n s₀ ty body)
+    (Sim.ofOkD (faintern_correct s₀.mem a₀ hR ty body hty hbody))
 
 end L.Arena

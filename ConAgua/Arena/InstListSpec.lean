@@ -31,12 +31,13 @@ theorem ilApp_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l fu : Word)
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "il_app" [h, d, o, l, fu]
     ⦃fun r s' => LocEq s' s₀ ∧ ilAppW (n + 1) s₀.mem h d o l fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold IlGoSpec at ih
-  rw [invoke_eq _ hp.app]
+  rw [invoke_eq _ (hp.get "il_app")]
   simp only [callFn, ilApp]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       ih,
-      mkApp_spec p hp.base.derb hp.base.appf hp.base.appp hp.base.appi hp.base.mkapp n] <;>
+      mkApp_spec p (hp.get "der_b") (hp.get "app_find") (hp.get "app_push") (hp.get "intern_app")
+          (hp.get "mk_app") n] <;>
     finish (gen := 20) [viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
@@ -45,12 +46,13 @@ theorem ilLam_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l fu : Word)
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "il_lam" [h, d, o, l, fu]
     ⦃fun r s' => LocEq s' s₀ ∧ ilLamW (n + 1) s₀.mem h d o l fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold IlGoSpec at ih
-  rw [invoke_eq _ hp.lam]
+  rw [invoke_eq _ (hp.get "il_lam")]
   simp only [callFn, ilLam]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       ih,
-      mkLam_spec p hp.base.derb hp.base.lamf hp.base.lamp hp.base.lami hp.base.mklam n] <;>
+      mkLam_spec p (hp.get "der_b") (hp.get "lam_find") (hp.get "lam_push") (hp.get "intern_lam")
+          (hp.get "mk_lam") n] <;>
     finish (gen := 20) [viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
@@ -59,12 +61,13 @@ theorem ilForall_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l fu : Wo
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "il_forall" [h, d, o, l, fu]
     ⦃fun r s' => LocEq s' s₀ ∧ ilForallW (n + 1) s₀.mem h d o l fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold IlGoSpec at ih
-  rw [invoke_eq _ hp.fa]
+  rw [invoke_eq _ (hp.get "il_forall")]
   simp only [callFn, ilForall]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       ih,
-      mkForall_spec p hp.base.derb hp.base.faf hp.base.fap hp.base.fai hp.base.mkfa n] <;>
+      mkForall_spec p (hp.get "der_b") (hp.get "forall_find") (hp.get "forall_push")
+          (hp.get "intern_forall") (hp.get "mk_forall") n] <;>
     finish (gen := 20) [viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
@@ -73,12 +76,13 @@ theorem ilLet_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l fu : Word)
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "il_let" [h, d, o, l, fu]
     ⦃fun r s' => LocEq s' s₀ ∧ ilLetW (n + 1) s₀.mem h d o l fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold IlGoSpec at ih
-  rw [invoke_eq _ hp.le]
+  rw [invoke_eq _ (hp.get "il_let")]
   simp only [callFn, ilLet]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       ih,
-      mkLet_spec p hp.base.derb hp.base.lef hp.base.lep hp.base.lei hp.base.mklet n] <;>
+      mkLet_spec p (hp.get "der_b") (hp.get "letE_find") (hp.get "letE_push")
+          (hp.get "intern_letE") (hp.get "mk_let") n] <;>
     finish (gen := 20) [viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
@@ -87,12 +91,13 @@ theorem ilProj_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l fu : Word
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "il_proj" [h, d, o, l, fu]
     ⦃fun r s' => LocEq s' s₀ ∧ ilProjW (n + 1) s₀.mem h d o l fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold IlGoSpec at ih
-  rw [invoke_eq _ hp.pj]
+  rw [invoke_eq _ (hp.get "il_proj")]
   simp only [callFn, ilProj]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       ih,
-      mkProj_spec p hp.base.derb hp.base.pjf hp.base.pjp hp.base.pji hp.base.mkpj n] <;>
+      mkProj_spec p (hp.get "der_b") (hp.get "proj_find") (hp.get "proj_push")
+          (hp.get "intern_proj") (hp.get "mk_proj") n] <;>
     finish (gen := 20) [viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
@@ -101,12 +106,13 @@ theorem ilBVar_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l fu : Word
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "il_bvar" [h, d, o, l, fu]
     ⦃fun r s' => LocEq s' s₀ ∧ ilBVarW (n + 1) s₀.mem h d o l fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold IlGoSpec at ih
-  rw [invoke_eq _ hp.bv]
+  rw [invoke_eq _ (hp.get "il_bvar")]
   simp only [callFn, ilBVar]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       ih,
-      derB_spec p hp.base.derb n, internBVar_spec p hp.base.bvf hp.base.bvp hp.base.bvi n] <;>
+      derB_spec p (hp.get "der_b") n, internBVar_spec p (hp.get "bvar_find") (hp.get "bvar_push")
+          (hp.get "intern_bvar") n] <;>
     finish (gen := 20) [viewOK, tierW, idxW, slW]
 
 set_option maxHeartbeats 1000000 in
@@ -115,12 +121,14 @@ theorem ilgApp_step (n : Nat) (ih : IlgGoSpec p n) (s₀ : St) (h d o l fu : Wor
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ilg_app" [h, d, o, l, fu]
     ⦃fun r s' => LocEq s' s₀ ∧ ilgAppW (n + 1) s₀.mem h d o l fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold IlgGoSpec at ih
-  rw [invoke_eq _ hp.gapp]
+  rw [invoke_eq _ (hp.get "ilg_app")]
   simp only [callFn, ilgApp]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      memoFindG_spec ilSch p _ hp.ilf n, memoPutG_spec ilSch p _ hp.ilp n, ih,
-      mkApp_spec p hp.base.derb hp.base.appf hp.base.appp hp.base.appi hp.base.mkapp n] <;>
+      memoFindG_spec ilSch p _ (hp.get "ilm_find") n, memoPutG_spec ilSch p _ (hp.get "ilm_put") n,
+          ih,
+      mkApp_spec p (hp.get "der_b") (hp.get "app_find") (hp.get "app_push") (hp.get "intern_app")
+          (hp.get "mk_app") n] <;>
     finish (gen := 20) [viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
@@ -129,12 +137,14 @@ theorem ilgLam_step (n : Nat) (ih : IlgGoSpec p n) (s₀ : St) (h d o l fu : Wor
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ilg_lam" [h, d, o, l, fu]
     ⦃fun r s' => LocEq s' s₀ ∧ ilgLamW (n + 1) s₀.mem h d o l fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold IlgGoSpec at ih
-  rw [invoke_eq _ hp.glam]
+  rw [invoke_eq _ (hp.get "ilg_lam")]
   simp only [callFn, ilgLam]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      memoFindG_spec ilSch p _ hp.ilf n, memoPutG_spec ilSch p _ hp.ilp n, ih,
-      mkLam_spec p hp.base.derb hp.base.lamf hp.base.lamp hp.base.lami hp.base.mklam n] <;>
+      memoFindG_spec ilSch p _ (hp.get "ilm_find") n, memoPutG_spec ilSch p _ (hp.get "ilm_put") n,
+          ih,
+      mkLam_spec p (hp.get "der_b") (hp.get "lam_find") (hp.get "lam_push") (hp.get "intern_lam")
+          (hp.get "mk_lam") n] <;>
     finish (gen := 20) [viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
@@ -143,12 +153,14 @@ theorem ilgForall_step (n : Nat) (ih : IlgGoSpec p n) (s₀ : St) (h d o l fu : 
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ilg_forall" [h, d, o, l, fu]
     ⦃fun r s' => LocEq s' s₀ ∧ ilgForallW (n + 1) s₀.mem h d o l fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold IlgGoSpec at ih
-  rw [invoke_eq _ hp.gfa]
+  rw [invoke_eq _ (hp.get "ilg_forall")]
   simp only [callFn, ilgForall]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      memoFindG_spec ilSch p _ hp.ilf n, memoPutG_spec ilSch p _ hp.ilp n, ih,
-      mkForall_spec p hp.base.derb hp.base.faf hp.base.fap hp.base.fai hp.base.mkfa n] <;>
+      memoFindG_spec ilSch p _ (hp.get "ilm_find") n, memoPutG_spec ilSch p _ (hp.get "ilm_put") n,
+          ih,
+      mkForall_spec p (hp.get "der_b") (hp.get "forall_find") (hp.get "forall_push")
+          (hp.get "intern_forall") (hp.get "mk_forall") n] <;>
     finish (gen := 20) [viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
@@ -157,12 +169,14 @@ theorem ilgLet_step (n : Nat) (ih : IlgGoSpec p n) (s₀ : St) (h d o l fu : Wor
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ilg_let" [h, d, o, l, fu]
     ⦃fun r s' => LocEq s' s₀ ∧ ilgLetW (n + 1) s₀.mem h d o l fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold IlgGoSpec at ih
-  rw [invoke_eq _ hp.gle]
+  rw [invoke_eq _ (hp.get "ilg_let")]
   simp only [callFn, ilgLet]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      memoFindG_spec ilSch p _ hp.ilf n, memoPutG_spec ilSch p _ hp.ilp n, ih,
-      mkLet_spec p hp.base.derb hp.base.lef hp.base.lep hp.base.lei hp.base.mklet n] <;>
+      memoFindG_spec ilSch p _ (hp.get "ilm_find") n, memoPutG_spec ilSch p _ (hp.get "ilm_put") n,
+          ih,
+      mkLet_spec p (hp.get "der_b") (hp.get "letE_find") (hp.get "letE_push")
+          (hp.get "intern_letE") (hp.get "mk_let") n] <;>
     finish (gen := 20) [viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
@@ -171,12 +185,14 @@ theorem ilgProj_step (n : Nat) (ih : IlgGoSpec p n) (s₀ : St) (h d o l fu : Wo
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ilg_proj" [h, d, o, l, fu]
     ⦃fun r s' => LocEq s' s₀ ∧ ilgProjW (n + 1) s₀.mem h d o l fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold IlgGoSpec at ih
-  rw [invoke_eq _ hp.gpj]
+  rw [invoke_eq _ (hp.get "ilg_proj")]
   simp only [callFn, ilgProj]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      memoFindG_spec ilSch p _ hp.ilf n, memoPutG_spec ilSch p _ hp.ilp n, ih,
-      mkProj_spec p hp.base.derb hp.base.pjf hp.base.pjp hp.base.pji hp.base.mkpj n] <;>
+      memoFindG_spec ilSch p _ (hp.get "ilm_find") n, memoPutG_spec ilSch p _ (hp.get "ilm_put") n,
+          ih,
+      mkProj_spec p (hp.get "der_b") (hp.get "proj_find") (hp.get "proj_push")
+          (hp.get "intern_proj") (hp.get "mk_proj") n] <;>
     finish (gen := 20) [viewOK, tierW, idxW]
 
 include hp in
@@ -188,19 +204,20 @@ theorem instList_spec (n : Nat) :
     refine ⟨fun s₀ h d o l fu => ?_, fun s₀ h d o l fu => ⟨?_, ?_, ?_, ?_, ?_, ?_⟩,
       fun s₀ h d o l fu => ?_, fun s₀ h d o l fu => ⟨?_, ?_, ?_, ?_, ?_⟩⟩ <;>
     first
-    | (rw [invoke_eq _ hp.go]; simp only [callFn, ilGo]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ hp.app]; simp only [callFn, ilApp]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ hp.lam]; simp only [callFn, ilLam]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ hp.fa]; simp only [callFn, ilForall]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ hp.le]; simp only [callFn, ilLet]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ hp.pj]; simp only [callFn, ilProj]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ hp.bv]; simp only [callFn, ilBVar]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ hp.ggo]; simp only [callFn, ilgGo]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ hp.gapp]; simp only [callFn, ilgApp]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ hp.glam]; simp only [callFn, ilgLam]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ hp.gfa]; simp only [callFn, ilgForall]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ hp.gle]; simp only [callFn, ilgLet]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ hp.gpj]; simp only [callFn, ilgProj]; vcgen [exec] <;> grind)
+    | (rw [invoke_eq _ (hp.get "il_go")]; simp only [callFn, ilGo]; vcgen [exec] <;> grind)
+    | (rw [invoke_eq _ (hp.get "il_app")]; simp only [callFn, ilApp]; vcgen [exec] <;> grind)
+    | (rw [invoke_eq _ (hp.get "il_lam")]; simp only [callFn, ilLam]; vcgen [exec] <;> grind)
+    | (rw [invoke_eq _ (hp.get "il_forall")]; simp only [callFn, ilForall]; vcgen [exec] <;> grind)
+    | (rw [invoke_eq _ (hp.get "il_let")]; simp only [callFn, ilLet]; vcgen [exec] <;> grind)
+    | (rw [invoke_eq _ (hp.get "il_proj")]; simp only [callFn, ilProj]; vcgen [exec] <;> grind)
+    | (rw [invoke_eq _ (hp.get "il_bvar")]; simp only [callFn, ilBVar]; vcgen [exec] <;> grind)
+    | (rw [invoke_eq _ (hp.get "ilg_go")]; simp only [callFn, ilgGo]; vcgen [exec] <;> grind)
+    | (rw [invoke_eq _ (hp.get "ilg_app")]; simp only [callFn, ilgApp]; vcgen [exec] <;> grind)
+    | (rw [invoke_eq _ (hp.get "ilg_lam")]; simp only [callFn, ilgLam]; vcgen [exec] <;> grind)
+    | (rw [invoke_eq _ (hp.get "ilg_forall")]; simp only [callFn,
+        ilgForall]; vcgen [exec] <;> grind)
+    | (rw [invoke_eq _ (hp.get "ilg_let")]; simp only [callFn, ilgLet]; vcgen [exec] <;> grind)
+    | (rw [invoke_eq _ (hp.get "ilg_proj")]; simp only [callFn, ilgProj]; vcgen [exec] <;> grind)
   | succ n ih =>
     obtain ⟨ihG, ihA, ihGG, ihGA⟩ := ih
     exact ⟨ilGo_step p hp n ihA, fun s₀ h d o l fu =>
@@ -257,20 +274,14 @@ theorem instList_spec' (p : Prog) (hp : InstListProg p) (he : p.lookup "inst_lis
   rw [invoke_eq _ he]
   simp only [callFn, instListL]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec ilSch p _ hp.ilc n,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, memoClearG_spec ilSch p _
+        (hp.get "ilm_clear") n,
       ih] <;>
     finish
 
 /-- Both walks, their memo and `liftProg` (the `mk_*`, the stores), as one program. -/
-def instListProg : Prog :=
-  [("ilm_find", memoFindG ilSch), ("ilm_put", memoPutG ilSch), ("ilm_clear", memoClearG ilSch),
-    ("il_go", ilGo), ("il_app", ilApp), ("il_lam", ilLam), ("il_forall", ilForall),
-    ("il_let", ilLet), ("il_proj", ilProj), ("il_bvar", ilBVar), ("ilg_go", ilgGo),
-    ("ilg_app", ilgApp), ("ilg_lam", ilgLam), ("ilg_forall", ilgForall), ("ilg_let", ilgLet),
-    ("ilg_proj", ilgProj), ("inst_list", instListL)] ++ liftProg
+def instListProg : Prog := instListWalkProg ++ [("inst_list", instListL)]
 
-theorem instListProg_ok : InstListProg instListProg := by
-  refine ⟨?_, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
-  constructor <;> rfl
+theorem instListProg_ok : InstListProg instListProg := (ProgHas.refl _).left
 
 end L.Arena

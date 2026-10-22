@@ -95,6 +95,11 @@ per-function separation logic.
   predicates, ROM data). Proven means every `@[refines T]` theorem uses only `propext`, `Classical.choice`,
   `Quot.sound`; a target reached only through proven targets counts as proven (only sorry-free ones
   cover: a refinement proved modulo `sorry` counts as `sorry` itself and covers none of its callees).
+  The `sorry` columns (and `sorry`/`lean_sorry` in the CSV) count every target depending on `sorryAx`;
+  of these, **proven locally** (`local`, CSV `local`/`lean_local`, appended at the end of the row) are those
+  whose own proof term (and generated `proof_N`/`match_N`/`eq_N` auxiliaries) has no `sorryAx`: it comes
+  only through other constants. The report lists the nearest such constants ("sorry sources", by number
+  of targets blocked) as a work queue. Locally proven targets still cover none of their callees.
 - **Who runs it.** Lanes add links and may run the census to check their own numbers; only the coordinator
   runs `scripts/census.py --write` (regenerates `docs/progress.md`, appends a line to `docs/progress.csv`),
   on master after each batch of landings, so the time series has one line per master state and lanes never
@@ -112,11 +117,6 @@ per-function separation logic.
   watch list (over 1500 lines or 60 s) get split by a lane; a split keeps statements and names stable.
   Declarations on it (a step over 20 s) are investigated by a separate lane off the critical path.
   **No lane adds time gates to merging**; this report is advisory.
-- **It is also the safety net under the shared Lake cache** (DESIGN.md, "Cache incident"): each run records
-  its verdict on master in `_tmp/buildcheck.json`, and `census.py` and `gist_report.py` print "last cache-free
-  build of master: <commit>, OK/FAILED". A FAILED there means some cached build accepted code that does not
-  build: stop landing, find the module, purge the cache (`rm -rf _tmp/lake-cache-v2`, then reseed it from a cache-free build). Run it (at least
-  incrementally) after every few landings; `--full` once a day.
 
 ## Bumping the twin (con-ron, and the con-leche it pins)
 - **State.** `vendor/UPSTREAM` names the two vendored revisions; `vendor/` is exactly those upstream
@@ -166,9 +166,10 @@ per-function separation logic.
   work should become a top-level lane, so the coordinator and the dashboard can see it. Name helper worktrees
   `<lane>-<suffix>`.
 - **Commit work in progress often.** Commit to your own branch at least every ~30 minutes and before every long build, even if it doesn't build yet (WIP commits are fine; squash nothing). Machine restarts and rate limits have lost uncommitted work twice. Landing on master can stay less frequent, but keep landings small: one function family or one fix per landing.
-- **Landing is sequential: always land with `scripts/land.sh <branch> [targets]`.** It takes a lock, so only one lane merges into master at a time; it merges, builds the given targets, and on conflict or build failure resets master and exits non-zero (then merge master into your branch in your worktree and retry). Never run `git merge` in the main checkout by hand, and never edit files there. `docs/velocity.csv` uses git's union merge driver (`.gitattributes`), so appended lines never conflict: just append your line, don't reorder or rewrite the file.
+- **Landing is sequential: always land with `scripts/land.sh <branch> [targets]`.** Before calling it, merge master into your branch and build `ConAgua` in your worktree (land.sh refuses a branch that does not contain the current master, exit 4; just merge again and retry): the build under the lock is then a cache hit. It takes a lock, so only one lane merges into master at a time; it merges, builds the given targets, and on conflict or build failure resets master and exits non-zero (then merge master into your branch in your worktree and retry). Never run `git merge` in the main checkout by hand, and never edit files there. `docs/velocity.csv` uses git's union merge driver (`.gitattributes`), so appended lines never conflict: just append your line, don't reorder or rewrite the file.
 - **Program well-formedness:** prove every `Prog.wf … = true` with `L.Compiler.Prog.wf_of_wfFast` (Compiler/WFFast.lean), never with `decide +kernel` on `Prog.wf` directly: on a large program the slow check takes tens of GB of memory.
 - **Globals and records (lane lfeat).** New L code uses named globals (not new `CTL` slots) for counters, tops, flags and epochs, and record syntax `R[i].f` for struct-of-arrays fields. Existing code migrates only opportunistically: when a lane touches `StoreLib`/`MemoLib` anyway, let the schema's count/stamp slot be a global as well as a `CTL` index, then move tables/memos one at a time. The cross-cutting slots (`CTL[0]` pool top, `CTL[1]` scratch flag, `CTL[62]` scratch epoch, `CTL[136]` spine top) stay as they are.
+- **Design journal: one file per lane.** Write your decisions, measurements and findings to `docs/design/<lane>.md` (the coordinator creates it before you branch); never edit other lanes' journal files, and do not extend the top-level `DESIGN.md` (frozen history). Shared tables (`docs/deviations.md`, the memory map) are edited only for your own rows.
 - **Velocity log.** Every lane, at every landing, appends one line to `docs/velocity.csv`:
   `date,lane,model,work_min,overhead_min,note`. `work_min` is time spent on the actual task (design, code,
   proofs). `overhead_min` is the merge red tape: merging master, waiting on builds, re-running tests, fixing
