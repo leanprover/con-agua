@@ -400,6 +400,53 @@ theorem rec_loop (m₁ : Mem) (q : Word) :
       rfields
   · dloop_other scanIndRecLoop
 
+omit h64 hsize in
+/-- An `IFL` run of rules is kept by growth that writes `IFL` only above its top. -/
+theorem rules_stab (o : Nat) (l : List RuleRec) (m m' : Mem) (xa : ArrId) (x0 x1 : Nat)
+    (hg : IGrow m m' xa x0 x1) (hxa : xa = IFR)
+    (h : RunR (fun t x m => RuleF m t x) IFL 3 m o l) :
+    RunR (fun t x m => RuleF m t x) IFL 3 m' o l := by
+  subst hxa
+  obtain ⟨r1, r2, r3⟩ := h
+  have htl := hg.top IFL (.inr rfl)
+  refine ⟨r1, by omega, fun j hj => ?_⟩
+  have hb := run_bound _ _ _ _ _ hj r2
+  obtain ⟨u1, u2, u3⟩ := r3 j hj
+  have hk : ∀ k, 1 ≤ k → k ≤ topN m IFL → wd m' IFL k = wd m IFL k := fun k h1 h2 =>
+    hg.wd_keep IFL (.inr rfl) k h1 h2 (fun h => absurd h (by decide))
+  refine ⟨?_, ?_, ?_⟩
+  · rw [hk _ (by omega) (by omega)]; exact u1
+  · rw [hk _ (by omega) (by omega)]; exact u2
+  · rw [hk _ (by omega) (by omega)]; exact u3
+
+omit h64 hsize in
+/-- An `IFR` record's words are kept by growth that leaves them alone. -/
+theorem irec_keep (t sz : Nat) (m m' : Mem) (x0 x1 : Nat) (hg : IGrow m m' IFR x0 x1) (h1 : 1 ≤ t)
+    (h2 : t + sz ≤ topN m IFR + 1) (hd : t + sz ≤ x0 ∨ x1 ≤ t) (j : Nat) (hj : j < sz) :
+    wd m' IFR (t + j) = wd m IFR (t + j) :=
+  hg.keep IFR (.inl rfl) _ (by omega) (by omega) (by rintro ⟨-, h5, h6⟩; omega)
+
+omit h64 hsize in
+theorem recF_stab (t : Nat) (x : IndRecRec) (m m' : Mem) (x0 x1 : Nat) (h : RecF b m t x)
+    (h1 : 1 ≤ t) (h2 : t + 11 ≤ topN m IFR + 1) (hg : IGrow m m' IFR x0 x1)
+    (hd : t + 11 ≤ x0 ∨ x1 ≤ t) : RecF b m' t x := by
+  have hw := irec_keep t 11 m m' x0 x1 hg h1 h2 hd
+  obtain ⟨⟨c1, c2, c3⟩, k, i5, i6, i7, i8, r10, r9, rb, rr⟩ := h
+  have hrun := rules_stab _ _ m m' IFR x0 x1 hg rfl ⟨r9, rb, rr⟩
+  rw [← hw 9 (by decide)] at hrun
+  obtain ⟨_, rb', rr'⟩ := hrun
+  refine ⟨⟨?_, ?_, ?_⟩, ?_, ?_, ?_, ?_, ?_, ?_, ?_, rb', rr'⟩
+  · rw [show t = t + 0 from rfl, hw 0 (by decide)]; exact c1
+  · rw [hw 1 (by decide)]; exact c2
+  · rw [hw 2 (by decide)]; exact c3
+  · rw [hw 4 (by decide)]; exact k
+  · rw [hw 5 (by decide)]; exact i5
+  · rw [hw 6 (by decide)]; exact i6
+  · rw [hw 7 (by decide)]; exact i7
+  · rw [hw 8 (by decide)]; exact i8
+  · rw [hw 10 (by decide)]; exact r10
+  · rw [hw 9 (by decide)]; exact r9
+
 end kinds
 
 end L.Front.Ind
