@@ -5862,3 +5862,22 @@ hook; `rec`: `RecClass`/`RecGen`/`RecCheck`; `pos`: `IndPos`/`IndPos2`).
   `lvlEqCStage_spec` has the same gap). The patch is kept out of the tree (no dead code).
 * Census (`--no-build --list`, this branch on master `1ffa2b1`): phase 8 **60 proven, 36 sorry,
   119 written, 8 todo** (lane start 58 / 38 / 119 / 8).
+
+### Landing 4: the inference bodies (helper `defeq-infer`); a request to lane `whnf`
+* `inferBody_refines`, `inferBodyIO_refines`: `InferBodySpec p n`/`InferIOBodySpec p n` are
+  theorems from `KnotUpTo p n` and `InferCallees` (callee hypotheses); with `KnotSlot.lean` they give
+  the slot steps `inferSlot_step`/`inferIOSlot_step`. Files `InferBody{Intern,Let,Spine,SpineF,Bind,
+  BindPi,Disp}.lean` (~4.4k lines, 28 s CPU in all). Left in `InferCallees`: the stubs (`Inst1OK`,
+  `InstListOK`, `Abstract1OK`, `AbstractRangeOK`, `ConstTyAtOK`, `InferLitCallees`), `IsEagerReduceH`
+  (now proved in `DefEqLeaves`: to be plugged in), **`InferProjOK`** (`lvl_eq_c` on the table's
+  `structSort` needs a readback of it: an `EnvR` invariant "every level a stored table names has a
+  `denoteL`" is missing), and **`BStkCallees`/`BStkCap`**.
+* **Request to lane `whnf` (owner of `CoreS`/`StackKept`):** the binder stack (array 145, top
+  `CTL[137]`) must be (1) bounded in `CoreS` (a field `bstk : (m.arr64 145).size < 2 ^ 63`, like
+  `spn`) and (2) kept by every core run (`StackKept` gains "`CTL[137]` and `BSTK` below it unchanged").
+  Every core function already keeps it (only `infer_lams`/`infer_pis` write it, and restore the
+  top); the change touches ~15 constructions of `CoreS`/`StackKept` in the whnf files. Until then
+  the two facts are hypotheses here.
+* L changes: depth-capacity aborts (`d + 1 == 0` in the io binder clauses, `d ≥ 2^63` in
+  `infer_lam`/`infer_forall`: the word depth must not wrap where the twin's `Nat` does not); the
+  spines abort when `CTL[136]` is past `SPN`'s end.
