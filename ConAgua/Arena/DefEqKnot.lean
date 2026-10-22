@@ -13,6 +13,8 @@ import ConAgua.Arena.StrLitSup
 import ConAgua.Arena.StrLitCtor
 import ConAgua.Arena.StrLitKeep
 import ConAgua.Arena.WhnfProjRefine2
+import ConAgua.Arena.WhnfIotaRecRefine3
+import ConAgua.Arena.WalkCore
 
 /-!
 # The knot tied (lane `defeq`)
@@ -21,16 +23,17 @@ import ConAgua.Arena.WhnfProjRefine2
    (`LazyDeltaStepH` from `lazyDeltaStep_refines`), `defeqLstOK_of` (`DefeqLstOK` from
    `defeqLst_refines`), `isEagerReduceH_of` (`IsEagerReduceH` from `isEagerReduce_refines`),
    `reduceNat_of` (`LazyCallees.reduceNat` from lane `whnf`'s `reduceNat_refines'`),
-   `proofIrrelOK_of` (`ProofIrrelOK` from lane `whnf`'s `proofIrrel_refines`, which rests on
-   `CoreS.lvl_den`, a `sorry` there: so `ProofIrrelOK` stays a field of `KnotCallees`).
+   `proofIrrelOK_of` (`ProofIrrelOK` from lane `whnf`'s `proofIrrel_refines'` over `CoreDen`).
 2. **The knot.** `KnotCallees p` gathers every assumption left; `knot_step`: `KnotUpTo p n →
    KnotOK p (n + 1)` from the five slot steps; `knot_all`: `KnotOK p n` at every fuel (fuel `0`:
-   every L call at fuel `0` fails, `CoreSpec.zeroLet`). `whnfCallees_of` discharges lane `whnf`'s
-   `WhnfCallees.inferStep`/`inferIOStep`/`defeqStep` (the slot steps themselves, no induction).
-3. Lane `whnf`'s two slot steps enter `KnotCallees` as fields: `whnfCoreSlot_step` and the `whnf`
-   chain are proved over that lane's stub bundles instantiated inline (`whnfCallees_stub`,
-   `coreCallees_stub`, `sorry`s), so `knotWhnfCore_twin`/`knotWhnf_twin` give the fields modulo
-   those `sorry`s.
+   every L call at fuel `0` fails, `CoreSpec.zeroLet`).
+3. **Lane `whnf`'s bundles from real proofs** (helper `whnf4-knot`): `WhnfCallees`
+   (`KnotCallees.whnfC`), `ProjCallees` (`projC`), `IotaCallees` (`iotaC`) and `CoreCallees`
+   (`coreC`, its `iota` field lane `whnf`'s `iotaRecAt_refines'`) are built from the walks, the
+   string-literal and projection proofs and the remaining `KnotCallees` leaves; none of them uses a
+   slot step of this file. Lane `whnf`'s two slot steps then come from its primed proofs over these
+   bundles: `whnfCoreSlot_step` (`KnotCallees.whnfCoreStep`) and the `whnf` chain over
+   `whnfStep_refines'` (`KnotCallees.whnfStep`).
 -/
 
 open ConRon.Arena
@@ -58,9 +61,10 @@ theorem isEagerReduceH_of (p : Prog) (hp : DefEqLeafProg p) : IsEagerReduceH p
   | n + 1, s₀, a₀, dn, vis, fe, M, eb, h, hS, hh =>
       isEagerReduce_refines p hp n s₀ a₀ dn vis fe M eb h hS hh
 
-/-- `ProofIrrelOK` from lane `whnf`'s `proofIrrel_refines` (which uses `CoreS.lvl_den`, a
-`sorry`). -/
-theorem proofIrrelOK_of (p : Prog) (hp : IotaProg4 p) : ProofIrrelOK p := proofIrrel_refines p hp
+/-- `ProofIrrelOK` from lane `whnf`'s `proofIrrel_refines'` (the levels it compares read back:
+`LvlDen.of_den`). -/
+theorem proofIrrelOK_of (p : Prog) (hp : IotaProg4 p) (hden : CoreDen) : ProofIrrelOK p :=
+  proofIrrel_refines' p hp (LvlDen.of_den hden)
 
 /-- `LazyCallees.reduceNat` from lane `whnf`'s `reduceNat_refines'`. -/
 theorem reduceNat_of (p : Prog) (hp : WhnfDeltaProg' p) (hno : NatOpResultOK p) :
@@ -89,24 +93,35 @@ structure KnotAllProg (p : Prog) : Prop where
   projp : ProjProg p
   /-- The core's write set leaves `EREC` alone (lane `whnf3`'s `CoreErec.lean`). -/
   hcl : closedA p coreErecA coreErecC coreFns = true
+  /-- Lane `whnf`'s `whnf_core` family, the ι side (`iota_rec_at`, `major_to_ctor`) and the two
+  walks `wscoped_bfast`, `leaf_guard`. -/
+  core : WhnfCoreProg p
+  iotaRec : IotaRecProg' p
+  m2c : M2CProg' p
+  ws : WsProg p
+  lg : LgProg p
 
-/-- **Every assumption the knot still makes.** -/
+/-- **Every assumption the knot still makes**: leaf facts with no proof yet, plus `den` and
+`instLP`. -/
 structure KnotCallees (p : Prog) : Prop where
-  /-- Lane `whnf`'s slot steps (proved there over its inline stub bundles). -/
-  whnfCoreStep : ∀ n, KnotUpTo p n → WhnfCoreSlot p (n + 1)
-  whnfStep : ∀ n, KnotUpTo p n → WhnfSlot p (n + 1)
-  /-- Lane `whnf`'s `proofIrrel_refines` rests on `CoreS.lvl_den` (`proofIrrelOK_of`). -/
-  proofIrrel : ProofIrrelOK p
-  /-- Lane `whnf`'s `reduceProjCore_refines'` takes all of `WhnfCallees`, which holds the slot
-  steps this file proves. -/
-  reduceProjCore : ReduceProjCoreH p
-  /-- Lane `whnf`'s `unfoldDefinition_refines'` takes all of `WhnfCallees` (it uses `instLP`). -/
-  unfold : UnfoldDefOK p
   /-- Stored levels read back under `CoreS` (`StoreDen.lean`; to become a field of `CoreS`). -/
   den : CoreDen
-  constTy : ConstTyAtOK p
   /-- `inst_lp` (lane `whnf3`'s `instLPFast` walk). -/
   instLP : InstLPOK p
+  /-- `fire_ok` at any universe list (lane `whnf3`'s `fireOk_refines` gives `FireOkOKD`: the list
+  must read back, and its `FireDen` asks for every field guard, past `numFields` too, while
+  `StoreDen.proj` gives those below it). -/
+  fireOk : FireOkOK p
+  /-- Projection tables' counts are below `2^32` (the loader's invariant, `WhnfCore.lean`). -/
+  projSmall : ProjSmall
+  /-- `caps_never_zero`, `rec_fire_levels` under `CoreS` (helper `whnf3-lp` proved them at
+  `ArenaD`, on `StoreWF` and the readback caches, which `CoreS` does not carry: D23). -/
+  capsNeverZero : CapsNeverZeroOK p
+  recFireLevels : RecFireLevelsOK p
+  /-- A level-list comparison that runs compares lists that read back (`WhnfIotaRecRefine.lean`). -/
+  lvlsEqDen : LvlsEqDen p
+  /-- A stored recursor's rule prefix and plain rules fit its major index (`WhnfIotaRecRefine.lean`). -/
+  recShape : RecShape
 
 /-- `reserved_contains_w` refines `reservedContainsT` under `CoreS` (lane `whnf2`'s
 `callW_reservedContains`: memory unchanged, the pins' reserved list). -/
@@ -152,6 +167,78 @@ section knot
 variable {p : Prog} (hq : KnotAllProg p) (hc : KnotCallees p)
 
 include hq hc in
+/-- Lane `whnf`'s `WhnfCallees` (four leaves, all proved). -/
+theorem KnotCallees.whnfC : WhnfCallees p :=
+  ⟨hq.walks.instListOK, hc.instLP, strLitCtor_core p hq.str, strLitSupported_core p hq.str⟩
+
+include hq hc in
+/-- `find_proj`, `fire_ok` and their record-pool facts. -/
+theorem KnotCallees.projC : ProjCallees p :=
+  ⟨findProj_refines p hq.projp, hc.fireOk, erecKept_of hq.hcl, projFound p hq.projp⟩
+
+include hq hc in
+/-- Lane `whnf`'s `IotaCallees`: the walks, `find_proj`, `lit_to_ctor_if_nat` proved; `fire_ok`,
+`caps_never_zero`, `rec_fire_levels` from `KnotCallees`. -/
+theorem KnotCallees.iotaC : IotaCallees p :=
+  ⟨hq.walks.iotaInst1OK, findProj_refines p hq.projp, hc.fireOk, hc.capsNeverZero, hc.recFireLevels,
+    wscoped_core hq.ws, hq.walks.lbbOK, leafGuard_core hq.lg,
+    fun n s₀ a₀ dn vis fe MM eb h hS hh => litToCtorIfNat_refines p hq.delta n s₀ a₀ dn vis fe MM eb h hS hh⟩
+
+include hq hc in
+/-- `proof_irrel` (lane `whnf`'s `proofIrrel_refines'` over `CoreDen`). -/
+theorem KnotCallees.proofIrrel : ProofIrrelOK p := proofIrrelOK_of p hq.m2c.toIotaProg4 hc.den
+
+include hq hc in
+/-- `iota_rec_at` one level up (lane `whnf`'s `iotaRecAt_refines'`, with `major_to_ctor` from
+`majorToCtor_refines'`: neither takes a slot step of this file). -/
+theorem KnotCallees.iota (n : Nat) (hk : KnotUpTo p n) : IotaRecAtOK p (n + 1) :=
+  iotaRecAt_refines' p hq.iotaRec (hc.iotaC hq) (hc.whnfC hq) supKeep_of
+    (majorToCtor_refines' p hq.m2c (hc.iotaC hq) (hc.proofIrrel hq) (ErecKeptKnot.of_closed hq.hcl)
+      (hc.projC hq))
+    (ErecKeptInst.of_closed hq.hcl) (ErecKeptRec.of_closed hq.hcl) (ErecKeptKnot.of_closed hq.hcl)
+    hc.lvlsEqDen hc.recShape n hk
+
+include hq hc in
+/-- Lane `whnf`'s `CoreCallees`. -/
+theorem KnotCallees.coreC : CoreCallees p :=
+  { toProjCallees := hc.projC hq, inst1 := hq.walks.inst1OK, iota := hc.iota hq,
+    projSmall := hc.projSmall }
+
+include hq hc in
+/-- `reduce_proj_core` (lane `whnf`'s `reduceProjCore_refines'`). -/
+theorem KnotCallees.reduceProjCore : ReduceProjCoreH p :=
+  fun n hk F hF hn s₀ a₀ dn vis fe MM eb mode d sn i c hs hsn hc' =>
+    reduceProjCore_refines' p hq.core (strLitSupported_core p hq.str) (strLitCtor_core p hq.str)
+      (hc.projC hq) hc.projSmall hq.core.lsn (erecKept_of hq.hcl) n hk F hF hn s₀ a₀ dn vis fe MM eb
+      mode d sn i c hs hsn hc' (supKeep_of fe)
+
+include hq hc in
+/-- `unfold_definition` (lane `whnf`'s `unfoldDefinition_refines'`, over `inst_lp`). -/
+theorem KnotCallees.unfold : UnfoldDefOK p :=
+  fun n s₀ a₀ dn vis fe M eb e hS he =>
+    unfoldDefinition_refines' p hq.delta n s₀ a₀ dn vis fe M eb e hS he hc.instLP
+
+include hq hc in
+/-- `const_ty_at` (lane `whnf`'s `constTyAt_refines'`, over `inst_lp`). -/
+theorem KnotCallees.constTy : ConstTyAtOK p := constTyAt_refines' p hq.body.iota hc.instLP
+
+include hq hc in
+/-- The knot's `whnfCore` slot one level up (lane `whnf`'s `whnfCoreSlot_step`). -/
+theorem KnotCallees.whnfCoreStep (n : Nat) (hk : KnotUpTo p n) : WhnfCoreSlot p (n + 1) :=
+  whnfCoreSlot_step p hq.core (hc.whnfC hq) (hc.coreC hq) supKeep_of n hk
+
+include hq hc in
+/-- The knot's `whnf` slot one level up: lane `whnf`'s `whnf_refines`, `whnfLoop_refines` and
+`whnfStep_refines'` (over `inst_lp`; `reduce_nat` is `reduceNat_refines`). -/
+theorem KnotCallees.whnfStep (n : Nat) (hk : KnotUpTo p n) : WhnfSlot p (n + 1) := by
+  intro F s₀ a₀ dn vis fe MM eb mode d e hF hn2 hs he
+  have hws : WhnfStepUpTo p n := fun j hj F' s a dn' vis' fe' MM' eb' mode' d' e' hF' hs' he' hk' =>
+    whnfStep_refines' p hq.delta hc.instLP j (fun k _ => reduceNat_refines p hq.delta k) F' s a dn'
+      vis' fe' MM' eb' mode' d' e' hF' (by omega) hs' he' hk'
+  exact whnf_refines p hq.delta.toWhnfDeltaProg n (by omega) hk
+    (whnfLoop_refines p hq.delta.toWhnfDeltaProg n hws) F s₀ a₀ dn vis fe MM eb mode d e hF hn2 hs he
+
+include hq hc in
 /-- `DefeqCallees`: the walks from `CoreWalks.lean`, the rest from `KnotCallees`. -/
 theorem KnotCallees.defeq : DefeqCallees p :=
   ⟨hasFvar_core hq.walks.abs hq.walks.hf,
@@ -161,16 +248,16 @@ theorem KnotCallees.defeq : DefeqCallees p :=
 
 include hq hc in
 theorem KnotCallees.lazy : LazyCallees p :=
-  ⟨hq.walks.instListOK, hq.walks.inst1OK, (hc.defeq hq).hasFvar, natPredW_of p hq.natPred, hc.unfold,
+  ⟨hq.walks.instListOK, hq.walks.inst1OK, (hc.defeq hq).hasFvar, natPredW_of p hq.natPred, hc.unfold hq,
     reduceNat_of p hq.delta (natOpResultOK_of_agree hq.delta.natAgree), StoreDenotes.of_den hc.den⟩
 
 include hq hc in
 theorem KnotCallees.stuck : StuckCallees p :=
-  ⟨hc.defeq hq, hc.proofIrrel, hq.walks.inst1OK, defeqLstOK_of p hq.lst,
+  ⟨hc.defeq hq, hc.proofIrrel hq, hq.walks.inst1OK, defeqLstOK_of p hq.lst,
     reservedContainsOK_of p hq.rc,
     towerSlotsAll_refines' p hq.body.iota (findProj_refines p hq.projp) (projFound p hq.projp),
     lvlsEqCH_of p hq.lvc, hc.den, strLitSupported_core p hq.str, strLitCtor_core p hq.str, supKeep_of,
-    lazyDeltaStepH_of p hq.body.lazy (hc.lazy hq), hc.reduceProjCore⟩
+    lazyDeltaStepH_of p hq.body.lazy (hc.lazy hq), hc.reduceProjCore hq⟩
 
 include hq in
 /-- The literal callees: `nat_lit_supported`, `const_e` (lane `whnf`'s proofs), `str_lit_supported`. -/
@@ -182,7 +269,7 @@ theorem KnotAllProg.lit : InferLitCallees p :=
 include hq hc in
 theorem KnotCallees.infer : InferCallees p :=
   ⟨hq.walks.inst1OK, hq.walks.instListOK, (hc.defeq hq).abstract1, (hc.defeq hq).abstractRange,
-    hc.constTy, hq.lit, isEagerReduceH_of p hq.body.stuck.leaf, bstkCap_of,
+    hc.constTy hq, hq.lit, isEagerReduceH_of p hq.body.stuck.leaf, bstkCap_of,
     inferProj_refines p hq.proj ⟨hc.den, (findProj_refines p hq.projp), (projFound p hq.projp), erecKept_of hq.hcl, hc.instLP, erecKeptProj_of hq.hcl⟩⟩
 
 /-- **The knot at fuel `0`**: every L call at fuel `0` fails. -/
@@ -200,7 +287,7 @@ include hq hc in
 /-- **The knot one level up**: every slot at `n + 1` from the knot up to `n`. -/
 @[refines_part ConRon.Arena.coreKnot "the five slots (step)"]
 theorem knot_step (n : Nat) (hk : KnotUpTo p n) : KnotOK p (n + 1) :=
-  ⟨hc.whnfCoreStep n hk, hc.whnfStep n hk, inferSlot_step p hq.infer (hc.infer hq) n hk,
+  ⟨hc.whnfCoreStep hq n hk, hc.whnfStep hq n hk, inferSlot_step p hq.infer (hc.infer hq) n hk,
     inferIOSlot_step p hq.infer (hc.infer hq) n hk,
     defeqSlot_step p hq.body ⟨hc.stuck hq, hc.lazy hq⟩ n hk⟩
 
@@ -221,33 +308,6 @@ include hq hc in
 @[refines_part ConRon.Arena.coreKnot "the five slots"]
 theorem knot_all (n : Nat) : KnotOK p n := knotUpTo_all hq hc n n (Nat.le_refl _)
 
-include hq hc in
-/-- Lane `whnf`'s `WhnfCallees` from `KnotCallees`: its `inferStep`/`inferIOStep`/`defeqStep` are
-the slot steps (no induction). -/
-theorem whnfCallees_of : WhnfCallees p :=
-  ⟨hq.walks.instListOK, hc.instLP, strLitCtor_core p hq.str, strLitSupported_core p hq.str,
-    fun n hk => inferSlot_step p hq.infer (hc.infer hq) n hk,
-    fun n hk => inferIOSlot_step p hq.infer (hc.infer hq) n hk,
-    fun n hk => defeqSlot_step p hq.body ⟨hc.stuck hq, hc.lazy hq⟩ n hk⟩
-
 end knot
-
-/-! ## Lane `whnf`'s slot steps as `KnotCallees` fields (modulo that lane's stubs) -/
-
-/-- `KnotCallees.whnfCoreStep` from lane `whnf`'s `whnfCoreSlot_step` (proved over
-`whnfCallees_stub`/`coreCallees_stub`). -/
-theorem knotWhnfCore_twin (p : Prog) (hp : WhnfCoreProg p) :
-    ∀ n, KnotUpTo p n → WhnfCoreSlot p (n + 1) :=
-  whnfCoreSlot_step p hp
-
-/-- `KnotCallees.whnfStep` from lane `whnf`'s `whnf_refines`, `whnfLoop_refines` and
-`whnfStep_refines` (the last over `whnfCallees_stub` and that lane's `reduce_nat` stubs). -/
-theorem knotWhnf_twin (p : Prog) (hp : WhnfDeltaProg' p) :
-    ∀ n, KnotUpTo p n → WhnfSlot p (n + 1) := by
-  intro n hk F s₀ a₀ dn vis fe MM eb mode d e hF hn2 hs he
-  have hws : WhnfStepUpTo p n := fun j hj F' s a dn' vis' fe' MM' eb' mode' d' e' hF' hs' he' hk' =>
-    whnfStep_refines p hp j F' s a dn' vis' fe' MM' eb' mode' d' e' hF' (by omega) hs' he' hk'
-  exact whnf_refines p hp.toWhnfDeltaProg n (by omega) hk
-    (whnfLoop_refines p hp.toWhnfDeltaProg n hws) F s₀ a₀ dn vis fe MM eb mode d e hF hn2 hs he
 
 end L.Arena

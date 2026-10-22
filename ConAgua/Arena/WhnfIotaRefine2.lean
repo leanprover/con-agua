@@ -670,7 +670,7 @@ theorem tsW_ok (p : Prog) (hfp : FindProjOK p) (hpf : ProjFound p) (dn : NIdx �
       · rw [hresF]; exact hres2
 
 /-- **`tower_slots_all` refines `towerSlotsAll`** (`find_proj` and its decoding fact as
-`CoreCallees`). -/
+`ProjCallees`'s two fields). -/
 theorem towerSlotsAll_refines' (p : Prog) (hp : IotaProg' p) (hfp : FindProjOK p) (hpf : ProjFound p) :
     TowerSlotsAllOK p := by
   intro n s₀ a₀ dn vis fe MM eb T nF hS hT

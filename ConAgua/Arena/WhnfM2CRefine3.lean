@@ -96,7 +96,7 @@ theorem viewLsLen_some {a : AState} {h : LsIdx} {k : Nat} (hv : a.store.lss.view
 
 section andarm
 variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hpi : ProofIrrelOKM p)
-  (hE : ErecKeptKnot p) (hcc : CoreCallees p)
+  (hE : ErecKeptKnot p) (hcc : ProjCallees p)
 include hp hc hpi
 
 /-- **`m2c_and2` refines `m2cAnd2T`** (the slice `(to, tn)` ends at the stack top). -/

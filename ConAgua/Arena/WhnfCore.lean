@@ -414,16 +414,22 @@ def ProjFound (p : Prog) : Prop :=
     callW p n "find_proj" [vis, T, i] m = some (r, m') → r.headD 0 ≠ 0 →
     ∃ tbl : IProjTable, decTbl (m.arr64 EREC) (r.tail.headD 0).toNat = some tbl
 
-/-- **The callees of this file not written here.** -/
-structure CoreCallees (p : Prog) : Prop where
-  inst1 : Inst1OK p
+/-- **The projection-table callees** (`find_proj`, `fire_ok`) and their record-pool facts: what
+`reduce_proj_core` and the ι side's `and_rescue_slots`/`major_to_ctor` assume of them. A part of
+`CoreCallees` on its own, so that `major_to_ctor` (which `iota_rec_at` calls) does not take
+`CoreCallees.iota` (helper `whnf4-knot`). -/
+structure ProjCallees (p : Prog) : Prop where
   findProj : FindProjOK p
   fireOk : FireOkOK p
+  erec : ErecKept p
+  projFound : ProjFound p
+
+/-- **The callees of this file not written here.** -/
+structure CoreCallees (p : Prog) : Prop extends ProjCallees p where
+  inst1 : Inst1OK p
   /-- `iota_rec_at` one level down from the knot at `n` (`WhnfIota.lean`). -/
   iota : ∀ n, KnotUpTo p n → IotaRecAtOK p (n + 1)
-  erec : ErecKept p
   projSmall : ProjSmall
-  projFound : ProjFound p
 
 /-- The callees' specs, assumed (stubs, phases 4–5; `iota_rec_at` until `WhnfIota.lean`'s
 refinement lands). -/

@@ -135,3 +135,5 @@ date,lane,model,work_min,overhead_min,note
 2026-10-22,indproofs2,opus,30,30,"landing 9: helper pos2 merged (rest of IndPos2, models/specs); 25 census tags removed whose theorems assumed memo WF in every StageR state (vacuous); phase 8: 73 proven / 72 sorry"
 2026-10-22,whnf4,opus,8,4,"landing 1: whnf3-next instLP family landed under its own names (lp_lookup/lp_substl/lp_spw/lp_substpw); Prog 9 stubs, coreFns 533"
 2026-10-22,lfeat,opus,35,10,"landing 3: records as surface syntax (R[i].f, Record/Field, Record.at) + generic lemmas (L/Records.lean: evalE_at, Mem.fld, fld_set64, ad_inj, ad_lt), compiler delta 0; node_mk example 1.8 s vs raw addressing failing"
+2026-10-22,decls3,opus,10,2,"merged helper apd: all_level_params_defined refines the twin (sorry-free)"
+2026-10-22,whnf4,opus,20,8,"landing 2 (helper whnf4-knot): KnotCallees whnfCoreStep/whnfStep/proofIrrel/reduceProjCore/unfold/constTy derived from lane whnf primed proofs; 8 leaf fields left"

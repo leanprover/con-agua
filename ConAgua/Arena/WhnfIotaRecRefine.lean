@@ -1244,7 +1244,7 @@ theorem iotaRecVck_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
   rw [c3] at hW
   simp only at hW
   obtain ⟨ok3, ⟨M3, hS3, hK3, hSt3⟩, res3, hr3⟩ := CoreSpec.of_callW
-    (constTyAt_refines' p hp.toIotaProg' hw (N + 2) ⟨m2, Locals.init []⟩ _ dn vis fe M2 eb
+    (constTyAt_refines' p hp.toIotaProg' hw.instLP (N + 2) ⟨m2, Locals.init []⟩ _ dn vis fe M2 eb
       (rdW E (ctorP + 1)) (rdW E (ctorP + 2)) (rdW E (ctorP + 3)) (rdW E (ctorP + 4)) usj
       cvj.levelParams hS2 hnn hty husj (by rw [e2]; exact hlpsj)) c3
   have hcvj : (⟨decI (rdW E (ctorP + 1)), cvj.levelParams, decE (rdW E (ctorP + 4))⟩ : IConstantVal) =

@@ -646,17 +646,14 @@ def StrLitSupportedOK (p : Prog) : Prop :=
     (M : ModeMaps) (eb : Word), CoreS dn s₀.mem a₀ vis fe M eb →
     CoreSpec p n "str_lit_supported" [vis] (strLitSupported fe) decBool s₀ a₀ dn vis fe M eb
 
-/-- **The stub callees.** -/
+/-- **The stub callees.** (It held the knot's `infer`/`infer_io`/`defeq` slot steps too; no proof
+used them, and lane `defeq`'s knot proves those steps from facts that themselves come from proofs
+over this bundle, so they were dropped: helper `whnf4-knot`.) -/
 structure WhnfCallees (p : Prog) : Prop where
   instList : InstListOK p
   instLP : InstLPOK p
   strLitCtor : StrLitCtorOK p
   strLitSupported : StrLitSupportedOK p
-  /-- The knot's `infer`, `infer_io`, `defeq` slots one level up from the whnf slots: their
-  induction step is phases 6–7. -/
-  inferStep : ∀ n, KnotUpTo p n → InferSlot p (n + 1)
-  inferIOStep : ∀ n, KnotUpTo p n → InferIOSlot p (n + 1)
-  defeqStep : ∀ n, KnotUpTo p n → DefeqSlot p (n + 1)
 
 /-- **The stubs' specs, assumed** until their L code lands (phases 4, 6, 7; string literals). -/
 theorem whnfCallees_stub (p : Prog) : WhnfCallees p := sorry
