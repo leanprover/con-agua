@@ -256,6 +256,24 @@ theorem pdmW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     rw [hf1, ha2, hnm'] at hr2
     exact ⟨b2, a, hr2, by rw [hR2]; rfl, rfl, hM2, hS2, hg1.trans hg2⟩
 
+/-- **`pi_doms_mention_any` refines `piDomsMentionAny`** (through `mentions_any_const`'s walk;
+the names a handle slice below the top; any well-formed `mentions_any` memo on entry). -/
+@[refines ConRon.Arena.piDomsMentionAny]
+theorem piDomsMentionAny_refines (p : Prog) (hM : MaProg p)
+    (hp : p.lookup "pi_doms_mention_any" = some piDomsMentionAny) (n : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (no nl f e : Word) (names : List NIdx)
+    (mp : Std.HashMap EIdx Bool) (hS : StageR dn vis fe s₀.mem a₀) (he : H e)
+    (hns : DecB (fun m => decHL m no.toNat nl.toNat) s₀.mem names) (hnb : no.toNat + nl.toNat ≤ iwTop s₀.mem)
+    (hmp : maMR s₀.mem mp) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "pi_doms_mention_any" [no, nl, f, e]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.piDomsMentionAny names f.toNat (decE e)) a₀ ∧
+      r = [if AM.res (ConRon.Arena.piDomsMentionAny names f.toNat (decE e)) a₀ then 1 else 0] ∧
+      AM.st (ConRon.Arena.piDomsMentionAny names f.toNat (decE e)) a₀ = a₀ ∧
+      (∃ mp', maMR s'.mem mp') ∧ StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ :=
+  triple_post (pdm_spec p hM hp n s₀ no nl f e) fun _ _ ⟨hl, hm⟩ =>
+    let ⟨hok, hr, hst, hM', hS', hg⟩ := Sim.run (pdmW_sim n s₀.mem a₀ f e mp hS he hns hnb hmp) hm
+    ⟨hl, hok, hr, hst, hM', by rw [← hst] at hS'; rw [hst] at hS'; exact hS', hg⟩
+
 /-! ## `block_raw_rec` -/
 
 theorem partsAnyM_cons {m : Type → Type} [Monad m] {α : Type} (f : α → m Bool) (a : α) (l : List α) :
@@ -495,5 +513,104 @@ theorem brr_spec (p : Prog) (hM : MaProg p) (ha : p.lookup "iw_alloc" = some iwA
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       blockShapeMemberNames_spec p ha hc hn n, brgo_spec p hM hpd hm hg n] <;>
     finish (gen := 20) [brrW, rdW_eq]
+
+theorem memberNamesW_room {n : Nat} {m m' : Mem} {p : Word} {r : List Word}
+    (h : memberNamesW n m p = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64) :
+    iwTop m + (rdW (m.arr64 IW) (p + 1)).toNat ≤ (m.arr64 IW).size := by
+  unfold memberNamesW at h
+  cases hal : allocW m (rdW (m.arr64 IW) (p + 1)) with
+  | none => rw [hal] at h; cases h
+  | some x =>
+    obtain ⟨hq, -, hr⟩ := allocW_facts hal hsz
+    simp only [iwTop]; rw [hq] at hr; exact hr
+
+/-- **`block_raw_rec` refines `blockRawRec`** (through `mentions_any_const`'s walk; the members'
+slice of the shape record below the pool's top, `hsrc`; any well-formed `mentions_any` memo on
+entry). -/
+@[refines ConRon.Arena.blockRawRec]
+theorem blockRawRec_refines (p : Prog) (hM : MaProg p) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hc : p.lookup "member_names_copy" = some memberNamesCopy)
+    (hn : p.lookup "block_shape_member_names" = some blockShapeMemberNames)
+    (hpd : p.lookup "pi_doms_mention_any" = some piDomsMentionAny)
+    (hm : p.lookup "block_raw_rec_member" = some blockRawRecMember)
+    (hg : p.lookup "block_raw_rec_go" = some blockRawRecGo)
+    (hp : p.lookup "block_raw_rec" = some blockRawRec) (n : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (q : Word) (bs : BlockShape)
+    (mp : Std.HashMap EIdx Bool) (hS : StageR dn vis fe s₀.mem a₀)
+    (hq : DecB (fun m => decBS m q.toNat) s₀.mem bs)
+    (hsrc : ∀ o l, iwN s₀.mem q.toNat = some o → iwN s₀.mem (q.toNat + 1) = some l → o + l ≤ iwTop s₀.mem)
+    (hmp : maMR s₀.mem mp) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "block_raw_rec" [q]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.blockRawRec ⟨bs⟩) a₀ ∧
+      AM.st (ConRon.Arena.blockRawRec ⟨bs⟩) a₀ = a₀ ∧
+      r = [if AM.res (ConRon.Arena.blockRawRec ⟨bs⟩) a₀ then 1 else 0] ∧
+      (∃ mp', maMR s'.mem mp') ∧ StageR dn vis fe s'.mem a₀ ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
+  refine triple_post (brr_spec p hM ha hc hn hpd hm hg hp n s₀ q) ?_
+  rintro r s' ⟨hl, hm'⟩
+  have hT : iwTop s₀.mem < 2 ^ 64 := (rdW (s₀.mem.arr64 CTL) 200).toNat_lt
+  obtain ⟨hI1, hE1, hsz, hEs, hcl⟩ := hS.2
+  have hqt : decBS (truncM s₀.mem) q.toNat = some bs := hq
+  have hq' : decBS s₀.mem q.toNat = some bs := hq.get (decBS_mono _)
+  obtain ⟨hmem, -, -, -, -, -, hpr⟩ := decBS_some hqt
+  have hq8 : q.toNat + 8 < iwTop s₀.mem := by
+    simp only [iwB, bool?, Option.map_eq_some_iff] at hpr
+    obtain ⟨w, hw, -⟩ := hpr
+    exact (truncM_iw_get hw).1
+  obtain ⟨o, l, ho, hlw, hdm, hob0⟩ := partsAt decMS_mono hmem
+  have hoN : iwN s₀.mem q.toNat = some o.toNat := by rw [← iwN_truncM (by omega)]; exact ho
+  have hlN : iwN s₀.mem (q.toNat + 1) = some l.toNat := by rw [← iwN_truncM (by omega)]; exact hlw
+  have hdm' : decPL (truncM s₀.mem) (decMS (truncM s₀.mem)) o.toNat l.toNat = some bs.members := hdm
+  have hptr : ∀ o' l' j v, iwN s₀.mem q.toNat = some o' → iwN s₀.mem (q.toNat + 1) = some l' → j < l' →
+      iwN s₀.mem (o' + j) = some v → v < iwTop s₀.mem := by
+    intro o' l' j v h1 h2 hj hv
+    rw [hoN] at h1; rw [hlN] at h2
+    simp only [Option.some.injEq] at h1 h2; subst h1 h2
+    obtain ⟨v', hv', hms⟩ := decPL_getH (truncM s₀.mem) hdm' j hj
+    have hlt := partsIwLt hv'
+    rw [iwN_truncM hlt, hv] at hv'
+    simp only [Option.some.injEq] at hv'; subst hv'
+    obtain ⟨⟨c, hc', -⟩, -, -⟩ := decMS_some hms
+    exact partsIwLt hc'
+  unfold brrW at hm'
+  cases h1 : memberNamesW n s₀.mem q with
+  | none => rw [h1] at hm'; cases hm'
+  | some x1 =>
+  obtain ⟨r1, m1⟩ := x1
+  rw [h1] at hm'
+  simp only at hm'
+  obtain ⟨hr1, hd1, hg1, hf1, ht1⟩ := memberNamesW_dec h1 hsz hcl hq' (by omega) hsrc hptr
+  have hroom := memberNamesW_room h1 hsz
+  have hk : bs.k = l.toNat := by rw [BlockShape.k, decPL_length _ hdm']
+  obtain ⟨hlr, -, -⟩ := partsIwRd hlw (show (q + 1).toNat = q.toNat + 1 by rw [UInt64.toNat_add]; simp; omega)
+  have hS1 : StageR dn vis fe m1 a₀ := stage_frame_iw hS hf1 (by
+    rw [← ht1, hk]; rw [hlr, ofNat_toNat_word] at hroom; simp only [iwTop] at hroom ⊢; omega)
+  subst hr1
+  simp only [List.headD_cons, List.tail_cons] at hm'
+  obtain ⟨how, -, -⟩ := partsIwRd ho rfl
+  rw [partsRdIW_grow hg1 (by omega), partsRdIW_grow hg1 (by rw [UInt64.toNat_add]; simp; omega)] at hm'
+  have hoW : rdW (s₀.mem.arr64 IW) q = o := by rw [how, ofNat_toNat_word]
+  rw [hoW, hlr, ofNat_toNat_word] at hm'
+  have hkW : (UInt64.ofNat bs.k).toNat = bs.k := by rw [hk]; simp
+  have hsim := brgoW_sim (no := rdW (s₀.mem.arr64 CTL) 200) (nl := UInt64.ofNat bs.k) (names := bs.memberNames) n m1 a₀ o l bs.members mp hS1
+    ((show DecB (fun m => decPL m (decMS m) o.toNat l.toNat) s₀.mem bs.members from hdm).grow
+      (OMono.decPL decMS_mono _ _) hg1)
+    (hob0.imp_right fun h => Nat.le_trans h hg1.1)
+    (by rw [hkW]; exact decHL_decB hd1 (Nat.le_of_eq ht1)) (by rw [hkW]; omega)
+    (memoRG_frame maSch maSch_wf bmKey (fun w : Word => w != 0) [IW] [200] (by decide) (by simp [maSch])
+      s₀.mem m1 hf1 mp hmp)
+  cases h2 : brgoW n m1 (rdW (s₀.mem.arr64 CTL) 200) (UInt64.ofNat bs.k) o l with
+  | none => rw [h2] at hm'; cases hm'
+  | some x2 =>
+  obtain ⟨r2, m2⟩ := x2
+  rw [h2] at hm'
+  simp only [Option.some.injEq, Prod.mk.injEq] at hm'
+  obtain ⟨rfl, hm2⟩ := hm'
+  obtain ⟨b, a', hrun, hR⟩ := hsim r2 m2 h2
+  obtain ⟨hr2, ha', hM2, hS2, hg2⟩ := hR
+  subst ha'
+  have hrun' : (ConRon.Arena.blockRawRec ⟨bs⟩).run a' = .ok (b, a') := hrun
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
+  rw [hm2] at hM2 hS2 hg2
+  refine ⟨hl, hok, hst, by rw [hres, hr2]; rfl, hM2, hS2, hg1.trans hg2⟩
 
 end L.Ind
