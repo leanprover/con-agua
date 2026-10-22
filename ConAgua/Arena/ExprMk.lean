@@ -332,6 +332,7 @@ def mkProj : FunDecl := lfn (n, i, e) locals (x, s, r, q, xf) {
 section specs
 variable (p : Prog) (hd : p.lookup "der_b" = some derB) (hdf : p.lookup "der_f" = some derF)
 
+set_option maxHeartbeats 0 in
 include hd hdf in
 theorem mkApp_spec (hpf : p.lookup "app_find" = some appFind)
     (hpp : p.lookup "app_push" = some appPush) (hpi : p.lookup "intern_app" = some internApp)
@@ -347,7 +348,7 @@ theorem mkApp_spec (hpf : p.lookup "app_find" = some appFind)
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         derB_spec p hd n, derF_spec p hdf n, internApp_spec p hpf hpp hpi n] <;>
-      finish [mkAppW, derPutW, cnt2, maxW, packBF, tierW, idxW]
+      finish (gen := 40) [mkAppW, derPutW, cnt2, maxW, packBF, tierW, idxW]
 
 set_option maxHeartbeats 0 in
 include hd hdf in
@@ -403,6 +404,7 @@ theorem mkLet_spec (hpf : p.lookup "letE_find" = some letFind)
         derB_spec p hd n, derF_spec p hdf n, internLet_spec p hpf hpp hpi n] <;>
       finish (gen := 40) [mkLetW, derPutW, cnt2, maxW, satPredW, packBF, tierW, idxW]
 
+set_option maxHeartbeats 0 in
 include hd hdf in
 theorem mkProj_spec (hpf : p.lookup "proj_find" = some projFind)
     (hpp : p.lookup "proj_push" = some projPush) (hpi : p.lookup "intern_proj" = some internProj)
@@ -418,7 +420,7 @@ theorem mkProj_spec (hpf : p.lookup "proj_find" = some projFind)
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         derB_spec p hd n, derF_spec p hdf n, internProj_spec p hpf hpp hpi n] <;>
-      finish [mkProjW, derPutW, cnt2, maxW, packBF, tierW, idxW]
+      finish (gen := 40) [mkProjW, derPutW, cnt2, maxW, packBF, tierW, idxW]
 
 end specs
 

@@ -35,7 +35,7 @@ theorem liftApp_step (n : Nat) (ih : LiftGoSpec p n) (s₀ : St) (h c k : Word) 
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       memoFindG_spec lfSch p _ hp.lff n, memoPutG_spec lfSch p _ hp.lfp n, ih,
-      mkApp_spec p hp.derb hp.appf hp.appp hp.appi hp.mkapp n] <;>
+      mkApp_spec p hp.derb hp.derf hp.appf hp.appp hp.appi hp.mkapp n] <;>
     finish (gen := 20) [tierW, idxW]
 
 include hp in
@@ -48,7 +48,7 @@ theorem liftLam_step (n : Nat) (ih : LiftGoSpec p n) (s₀ : St) (h c k : Word) 
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       memoFindG_spec lfSch p _ hp.lff n, memoPutG_spec lfSch p _ hp.lfp n, ih,
-      mkLam_spec p hp.derb hp.lamf hp.lamp hp.lami hp.mklam n] <;>
+      mkLam_spec p hp.derb hp.derf hp.lamf hp.lamp hp.lami hp.mklam n] <;>
     finish (gen := 20) [tierW, idxW]
 
 include hp in
@@ -61,7 +61,7 @@ theorem liftForall_step (n : Nat) (ih : LiftGoSpec p n) (s₀ : St) (h c k : Wor
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       memoFindG_spec lfSch p _ hp.lff n, memoPutG_spec lfSch p _ hp.lfp n, ih,
-      mkForall_spec p hp.derb hp.faf hp.fap hp.fai hp.mkfa n] <;>
+      mkForall_spec p hp.derb hp.derf hp.faf hp.fap hp.fai hp.mkfa n] <;>
     finish (gen := 20) [tierW, idxW]
 
 include hp in
@@ -74,7 +74,7 @@ theorem liftLet_step (n : Nat) (ih : LiftGoSpec p n) (s₀ : St) (h c k : Word) 
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       memoFindG_spec lfSch p _ hp.lff n, memoPutG_spec lfSch p _ hp.lfp n, ih,
-      mkLet_spec p hp.derb hp.lef hp.lep hp.lei hp.mklet n] <;>
+      mkLet_spec p hp.derb hp.derf hp.lef hp.lep hp.lei hp.mklet n] <;>
     finish (gen := 20) [tierW, idxW]
 
 include hp in
@@ -87,7 +87,7 @@ theorem liftProj_step (n : Nat) (ih : LiftGoSpec p n) (s₀ : St) (h c k : Word)
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       memoFindG_spec lfSch p _ hp.lff n, memoPutG_spec lfSch p _ hp.lfp n, ih,
-      mkProj_spec p hp.derb hp.pjf hp.pjp hp.pji hp.mkpj n] <;>
+      mkProj_spec p hp.derb hp.derf hp.pjf hp.pjp hp.pji hp.mkpj n] <;>
     finish (gen := 20) [tierW, idxW]
 
 include hp in
@@ -156,7 +156,7 @@ theorem liftEntry_spec (p : Prog) (hp : LiftProg p) (he : p.lookup "lift_entry" 
 
 /-- The walk, the memo, the `mk_*` and the stores they call, as one program. -/
 def liftProg : Prog :=
-  [("der_b", derB), ("lf_find", memoFindG lfSch), ("lf_put", memoPutG lfSch),
+  [("der_b", derB), ("der_f", derF), ("lf_find", memoFindG lfSch), ("lf_put", memoPutG lfSch),
     ("lf_clear", memoClearG lfSch), ("lift_go", liftGo), ("lift_app", liftApp),
     ("lift_lam", liftLam), ("lift_forall", liftForall), ("lift_let", liftLet),
     ("lift_proj", liftProj), ("lift_entry", liftEntry), ("mk_app", mkApp), ("mk_lam", mkLam),
@@ -165,6 +165,6 @@ def liftProg : Prog :=
 
 theorem liftProg_ok : LiftProg liftProg :=
   ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl,
-    rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+    rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 end L.Arena

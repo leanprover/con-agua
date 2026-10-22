@@ -509,6 +509,7 @@ def liftProj : FunDecl := lfn (h, c, k) locals (fd, j, d, t, i, nm, ix, e, x, r,
 /-- What the specs need of the program: every function the walk calls, by name. -/
 structure LiftProg (p : Prog) : Prop where
   derb : p.lookup "der_b" = some derB
+  derf : p.lookup "der_f" = some derF
   bvf : p.lookup "bvar_find" = some bvarFind
   bvp : p.lookup "bvar_push" = some bvarPush
   bvi : p.lookup "intern_bvar" = some internBVar

@@ -262,7 +262,7 @@ theorem derBW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (hD : DerR m a) (h : W
       rw [derT_out hD' _ (by rw [← hc]; exact hle)]; rfl
     · rename_i hlt
       rw [derC A m _ _ hD' _ (by rw [← hc]; exact UInt64.not_le.mp hlt)]
-      exact packBF_bvar _ _ (bvar_lt _) (fvar_lt _)
+      exact packBF_bvar _ _ (bvarOfData_lt _) (fvarOfData_lt _)
   by_cases g0 : h >>> 28 = 0
   · simp only [g0, ↓reduceIte]
     rw [derAt_bvar _ h hh g0]
@@ -340,7 +340,7 @@ theorem derFW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (hD : DerR m a) (h : W
       rw [derT_out hD' _ (by rw [← hc]; exact hle)]; rfl
     · rename_i hlt
       rw [derC A m _ _ hD' _ (by rw [← hc]; exact UInt64.not_le.mp hlt)]
-      exact packBF_fvar _ _ (bvar_lt _) (fvar_lt _)
+      exact packBF_fvar _ _ (bvarOfData_lt _) (fvarOfData_lt _)
   by_cases g1 : h >>> 28 = 1
   · simp only [g1, ↓reduceIte]
     rw [derAt_fvar _ h hh g1]
