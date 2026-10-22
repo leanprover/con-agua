@@ -215,7 +215,7 @@ theorem cdfW_ok {p : Prog} (hA : ArmProg p) (hV : ValProg p) {pins : List INatOp
       callW p k f args mx = some (rx, my) → MemFrame stepA stepC mx my := by
     intro k f args mx my rx hf hc
     obtain ⟨s', hs', hfr', -⟩ := triple_of_callW (s₀ := ⟨mx, Locals.init []⟩)
-      (invoke_memFrame hA.closed k hf args ⟨mx, Locals.init []⟩) hc
+      (hA.closed.memFrame k hf args ⟨mx, Locals.init []⟩) hc
     rw [← hs']; exact hfr'
   cases n with
   | zero => simp [cdfW] at h
