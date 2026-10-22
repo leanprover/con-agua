@@ -32,6 +32,7 @@ refinements, the L code's comments, `docs/e2e.md`). Fixed rows move to the end.
 | D15 | DESIGN.md (lane `induct`); ROADMAP §3(b) | every `CheckMode`, `checkFuel` | the `.verified` mode only, no `checkFuel` | none | – | – |
 | D16 | ROADMAP §3(c),(h); `ApplyDecl.lean:23`, `IndApply.lean:15` | declines (unsafe, non-`safe`), invalid and `fail` are separate verdicts | all are `abort`; only `ACCEPT` is read | none | – | – |
 | D17 | Stage B `validate` / `scan_string` (DESIGN.md, lane `stageb`) | `feed_chunk` asks `newline_from`; con-leche decodes a whole string, then checks UTF-8 | does not ask (same error, same line); checks each raw run between escapes (proved equivalent) | none | – | – |
+| D18 | `Arena/IndParts.lean` `block_split*`, `block_groups*`, `block_rec_want`/`_got`, `block_member_counts_go`, `block_shape_names_of`/`_ctors_of`/`_members_of`/`_rhss_of`/`_recs_of` | lists built by `::` (constant time per element) | recursion as the twin's, each element consed onto the rest's `IW` slice with `sl_cons` (a copy): quadratic in the list's length (block members, constructors, recursors, rules) | performance (small lists) | indproofs2 (parts) | an in-place slice writer with a frame lemma, if blocks get large |
 
 ## Fixed
 
