@@ -38,6 +38,7 @@ structure LsStep (a a' : AState) : Prop where
   scr : a'.store.scr = a.store.scr
   ls : a'.store.lss.ls = a.store.lss.ls
   view : ∀ i v, a.store.lss.view i = some v → a'.store.lss.view i = some v
+  son : a'.store.scratchOn = a.store.scratchOn
 
 theorem internLsNode_step (v : LsNodeView) (a a' : AState) (h : LsIdx)
     (hrun : (internLsNode v).run a = .ok (h, a')) : LsStep a a' := by
@@ -47,10 +48,10 @@ theorem internLsNode_step (v : LsNodeView) (a a' : AState) (h : LsIdx)
   all_goals simp [ConRon.Arena.fail, throwThe, MonadExceptOf.throw, StateT.run, set, StateT.set,
     StateT.lift, bind, Except.bind, pure, Except.pure, StateT.bind, StateT.pure] at hrun
   all_goals first
-    | (obtain ⟨-, rfl⟩ := hrun; exact ⟨rfl, rfl, rfl, rfl, rfl, fun _ _ h => h⟩)
+    | (obtain ⟨-, rfl⟩ := hrun; exact ⟨rfl, rfl, rfl, rfl, rfl, fun _ _ h => h, rfl⟩)
     | (obtain ⟨-, rfl⟩ := hrun
        exact ⟨rfl, rfl, rfl, rfl, LsStore.ls_intern _ _,
-         fun _ _ h => LsStore.view_intern_mono _ _ h⟩)
+         fun _ _ h => LsStore.view_intern_mono _ _ h, rfl⟩)
 
 /-- **`CoreS` across a level-list interning** whose memory writes are confined to the level
 stores' arrays (below 42) and counts (`CTL` below 42). -/
@@ -71,7 +72,18 @@ theorem CoreS.of_ls {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AS
           fun h => absurd (hA _ h) (by decide)⟩
         ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide),
           fun h => absurd (hC _ h) (by decide)⟩,
-      hf.2.2.1 145 ▸ hS.bstk⟩,
+      hf.2.2.1 145 ▸ hS.bstk,
+      hS.den.mono ⟨by rw [hL.ls]; exact LExt.refl _, fun i us h => by
+          unfold denoteLs at h ⊢
+          revert h
+          cases e : a.store.lss.view i with
+          | none => intro h; cases h
+          | some v => intro h; rw [hL.view i v e, hL.ls]; exact h⟩
+        (by rw [hL.pins]) (by rw [hL.pins]) (fun _ _ hk => .inl (hL.caches ▸ hk))
+        (hf.1 EREC (fun h => by have := hA _ h; simp only [EREC, ArrId] at this; omega) (by decide))
+        (fun x u hv => by simpa only [EStore.view, hL.pers, hL.scr, hL.son] using hv)
+        (fun x c us hv => .inl (by simpa only [EStore.view, hL.pers, hL.scr, hL.son] using hv))
+        (hS.den.lvlAll.congr (by simp only [EStore.ls, hL.ls]))⟩,
     StackKept.of_frame hf
       ⟨fun h => by have := hA _ h; simp only [SPN, ArrId] at this; omega,
        fun h => by have := hA _ h; simp only [BSTK, ArrId] at this; omega, hP⟩
@@ -154,7 +166,8 @@ variable {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : W
 
 /-- **`intern_param` refines `internLNode (.param …)` under `CoreS`.** -/
 theorem internParam_core (hS : CoreS dn m a vis fe M eb) (u : Word) (hu : HW u)
-    (rs : List Word) (hI : pinternW m u = some (rs.headD 0, m')) :
+    (rs : List Word) (hI : pinternW m u = some (rs.headD 0, m'))
+    (hdn : ∃ x, denoteN a.store.ls.ns (decI u) = some x) :
     CoreRef (internLNode (.param (decI u))) a decLv dn m vis fe M eb rs m' := by
   obtain ⟨hok, hX, hres⟩ := pintern_correct m a hS.arena.1.param u hu _ _ hI
   have hI₂ := hI; rw [pinternW_eq] at hI₂
@@ -167,6 +180,11 @@ theorem internParam_core (hS : CoreS dn m a vis fe M eb) (u : Word) (hu : HW u)
                     rcases hb with rfl | rfl <;> decide)
     (fun x hx => by simp only [paramSch, List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
+    (lvlAll_internLNode hS.arena.1 hS.den.lvlAll
+      (fun c hc => by simp [LNodeView.lchildren] at hc)
+      (fun n hn => by
+        simp only [LNodeView.nchildren, List.mem_cons, List.mem_nil_iff, or_false] at hn
+        subst hn; exact hdn) (AM.run_of_ok _ _ hok)).1
   have hw := internM_hw paramSch PRecRel phash paramSch_wf m _ _ _ hS.arena.1.param (pMt m u) _ _ _ _
     (probe_homeG paramSch m 0 _ _ (pprobeW_arm m u 0) _)
     (probe_homeG paramSch m 1 _ _ (pprobeW_arm m u 1) _) _ (ppushOK_room m) _ _ _ m' hI₂
@@ -187,6 +205,9 @@ theorem internZero_core (hS : CoreS dn m a vis fe M eb)
                     rcases hb with rfl | rfl <;> decide)
     (fun x hx => by simp only [zeroSch, List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
+    (lvlAll_internLNode hS.arena.1 hS.den.lvlAll
+      (fun c hc => by simp [LNodeView.lchildren] at hc)
+      (fun n hn => by simp [LNodeView.nchildren] at hn) (AM.run_of_ok _ _ hok)).1
   have hw := internM_hw zeroSch ZRecRel zhash zeroSch_wf m _ _ _ hS.arena.1.zero (zMt m) _ _ _ _
     (probe_homeG zeroSch m 0 _ _ (zprobeW_arm m 0) _)
     (probe_homeG zeroSch m 1 _ _ (zprobeW_arm m 1) _) _ (zpushOK_room m) _ _ _ m' hI₂
@@ -293,20 +314,22 @@ variable (p : Prog) (hp : StrLitProg p) {n : Nat} {dn : NIdx → Option ConLeche
 include hp
 
 theorem param_call (hS : CoreS dn m a vis fe M eb) {u : Word} (hu : HW u)
-    (h : callW p n "intern_param" [u] m = some (r, m')) :
+    (h : callW p n "intern_param" [u] m = some (r, m'))
+    (hdn : ∃ x, denoteN a.store.ls.ns (decI u) = some x) :
     CoreRef (internLNode (.param (decI u))) a decLv dn m vis fe M eb r m' := by
   obtain ⟨s', hs', -, hI⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (internParam_spec p hp.paramFind hp.paramPush hp.internParam n _ u) h
   rw [hs'] at hI
-  exact internParam_core hS u hu r hI
+  exact internParam_core hS u hu r hI hdn
 
 theorem succ_call (hS : CoreS dn m a vis fe M eb) {u : Word} (hu : HW u)
-    (h : callW p n "intern_succ" [u] m = some (r, m')) :
+    (h : callW p n "intern_succ" [u] m = some (r, m'))
+    (hdu : ∃ l, denoteL a.store.ls (decI u) = some l) :
     CoreRef (internLNode (.succ (decI u))) a decLv dn m vis fe M eb r m' := by
   obtain ⟨s', hs', -, hI⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (internSucc_spec p hp.succFind hp.succPush hp.internSucc n _ u) h
   rw [hs'] at hI
-  exact internSucc_core hS u hu r hI
+  exact internSucc_core hS u hu r hI hdu
 
 theorem zero_call (hS : CoreS dn m a vis fe M eb)
     (h : callW p n "intern_zero" [] m = some (r, m')) :
@@ -317,12 +340,13 @@ theorem zero_call (hS : CoreS dn m a vis fe M eb)
   exact internZero_core hS r hI
 
 theorem sort_call (hS : CoreS dn m a vis fe M eb) {u : Word} (hu : HW u)
-    (h : callW p n "intern_sort" [u] m = some (r, m')) :
+    (h : callW p n "intern_sort" [u] m = some (r, m'))
+    (hdu : ∃ l, denoteL a.store.ls (decI u) = some l) :
     CoreRef (internE (.sort (decI u))) a decH dn m vis fe M eb r m' := by
   obtain ⟨s', hs', -, hI⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (internSort_spec p hp.sortFind hp.sortPush hp.internSort n _ u) h
   rw [hs'] at hI
-  exact internSort_core hS u hu r hI
+  exact internSort_core hS u hu r hI hdu
 
 theorem bvar_call (hS : CoreS dn m a vis fe M eb) {u : Word}
     (h : callW p n "intern_bvar" [u] m = some (r, m')) :
@@ -337,12 +361,13 @@ theorem bvar_call (hS : CoreS dn m a vis fe M eb) {u : Word}
     binternW_hw _ a hS.arena.1.bvar _ _ _ hI⟩
 
 theorem const_call (hS : CoreS dn m a vis fe M eb) {f x : Word} (hf : HW f) (hx : HW x)
-    (h : callW p n "intern_const" [f, x] m = some (r, m')) :
+    (h : callW p n "intern_const" [f, x] m = some (r, m'))
+    (hus : ∃ ls, denoteLs a.store.lss (decI x) = some ls) :
     CoreRef (internE (.const (decI f) (decI x))) a decH dn m vis fe M eb r m' := by
   obtain ⟨hok, hD, hres, hfr, hhw⟩ := callW_internConst p hp.constFind' hp.constPush' hp.internConst
     n ⟨m, Locals.init []⟩ a hS.arena f x hf hx r m' h
-  exact ⟨hok, ⟨M, hS.of_const hD (Keeps.run (keeps_cpl_internConst _ _) (AM.run_of_ok _ _ hok)) hfr,
-    KeptAll.refl _ _, StackKept.of_const_frame hfr⟩, hres, hhw⟩
+  exact ⟨hok, ⟨M, hS.of_const hD (Keeps.run (keeps_cpl_internConst _ _) (AM.run_of_ok _ _ hok)) hfr
+    (AM.run_of_ok _ _ hok) hus, KeptAll.refl _ _, StackKept.of_const_frame hfr⟩, hres, hhw⟩
 
 theorem constE_call (hS : CoreS dn m a vis fe M eb) {x : Word} (hx : HW x)
     (h : callW p n "const_e" [x] m = some (r, m')) :
