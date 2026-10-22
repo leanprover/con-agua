@@ -1,4 +1,5 @@
 import ConAgua.Arena.StrLitChar
+import ConAgua.Arena.StrLitList
 
 /-!
 # `str_lit_supported` under `CoreS` (helper `defeq2-str-sup`)
@@ -347,10 +348,7 @@ end stages
 
 section calls
 variable (p : Prog) (hp : StrLitProg p)
-  (hListTy : ∀ {n dn vis fe eb}, TestRef p n dn vis fe eb "list_ty_ok" listTyOk)
-  (hListNilTy : ∀ {n dn vis fe eb}, TestRef p n dn vis fe eb "list_nil_ty_ok" listNilTyOk)
-  (hListConsTy : ∀ {n dn vis fe eb}, TestRef p n dn vis fe eb "list_cons_ty_ok" listConsTyOk)
-include hp hListTy hListNilTy hListConsTy
+include hp
 
 theorem strSup7_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {eb : Word} : StageRef p n dn vis fe eb "str_sup_7" (strSup7T fe) := by
@@ -371,7 +369,7 @@ theorem strSup6_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word}
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (strSup6_spec p hp.strSup6 n _ vis) h
   exact sup_stage p hp (i := 10) (by decide) (fun hS hdec h => charTyOk_call p hp hS hdec h)
-    (strSup7_call p hp hListTy hListNilTy hListConsTy) hS hW rfl
+    (strSup7_call p hp) hS hW rfl
 
 theorem strSup5_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {eb : Word} : StageRef p n dn vis fe eb "str_sup_5" (strSup5T fe) := by
@@ -381,8 +379,8 @@ theorem strSup5_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word}
   | succ n =>
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (strSup5_spec p hp.strSup5 n _ vis) h
-  exact sup_stage p hp (i := 9) (by decide) (fun hS hdec h => hListConsTy hS hdec h)
-    (strSup6_call p hp hListTy hListNilTy hListConsTy) hS hW rfl
+  exact sup_stage p hp (i := 9) (by decide) (fun hS hdec h => listConsTyOk_call p hp hS hdec h)
+    (strSup6_call p hp) hS hW rfl
 
 theorem strSup4_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {eb : Word} : StageRef p n dn vis fe eb "str_sup_4" (strSup4T fe) := by
@@ -392,8 +390,8 @@ theorem strSup4_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word}
   | succ n =>
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (strSup4_spec p hp.strSup4 n _ vis) h
-  exact sup_stage p hp (i := 8) (by decide) (fun hS hdec h => hListNilTy hS hdec h)
-    (strSup5_call p hp hListTy hListNilTy hListConsTy) hS hW rfl
+  exact sup_stage p hp (i := 8) (by decide) (fun hS hdec h => listNilTyOk_call p hp hS hdec h)
+    (strSup5_call p hp) hS hW rfl
 
 theorem strSup3_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {eb : Word} : StageRef p n dn vis fe eb "str_sup_3" (strSup3T fe) := by
@@ -403,8 +401,8 @@ theorem strSup3_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word}
   | succ n =>
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (strSup3_spec p hp.strSup3 n _ vis) h
-  exact sup_stage p hp (i := 7) (by decide) (fun hS hdec h => hListTy hS hdec h)
-    (strSup4_call p hp hListTy hListNilTy hListConsTy) hS hW rfl
+  exact sup_stage p hp (i := 7) (by decide) (fun hS hdec h => listTyOk_call p hp hS hdec h)
+    (strSup4_call p hp) hS hW rfl
 
 theorem strSup2_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {eb : Word} : StageRef p n dn vis fe eb "str_sup_2" (strSup2T fe) := by
@@ -415,7 +413,7 @@ theorem strSup2_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word}
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (strSup2_spec p hp.strSup2 n _ vis) h
   exact sup_stage p hp (i := 6) (by decide) (fun hS hdec h => stringOfListTyOk_call p hp hS hdec h)
-    (strSup3_call p hp hListTy hListNilTy hListConsTy) hS hW rfl
+    (strSup3_call p hp) hS hW rfl
 
 theorem strSup1_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {eb : Word} : StageRef p n dn vis fe eb "str_sup_1" (strSup1T fe) := by
@@ -426,7 +424,7 @@ theorem strSup1_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word}
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (strSup1_spec p hp.strSup1 n _ vis) h
   exact sup_stage p hp (i := 5) (by decide) (fun hS hdec h => stringTyOk_call p hp hS hdec h)
-    (strSup2_call p hp hListTy hListNilTy hListConsTy) hS hW rfl
+    (strSup2_call p hp) hS hW rfl
 
 /-- **`str_lit_supported` as a call.** -/
 theorem strLitSupported_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis : Word}
@@ -445,12 +443,12 @@ theorem strLitSupported_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {vis
   rw [h1] at hW
   rw [strLitSupported_eq]
   exact guard_ref p (callW_natLitSupported p hp.toWhnfDeltaProg' n ⟨m, Locals.init []⟩ a dn vis fe M
-    eb hS rn m₁ h1).core (strSup1_call p hp hListTy hListNilTy hListConsTy) hW rfl
+    eb hS rn m₁ h1).core (strSup1_call p hp) hW rfl
 
 /-- **`str_lit_supported(vis)` refines `strLitSupported fe`.** -/
 @[refines ConRon.Arena.strLitSupported]
 theorem strLitSupported_core : StrLitSupportedOK p := fun _ _ _ _ _ _ _ _ hS =>
-  CoreSpec.of_call fun _ _ h => strLitSupported_call p hp hListTy hListNilTy hListConsTy hS h
+  CoreSpec.of_call fun _ _ h => strLitSupported_call p hp hS h
 
 end calls
 
