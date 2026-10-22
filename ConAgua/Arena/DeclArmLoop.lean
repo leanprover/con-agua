@@ -35,7 +35,8 @@ open L.Front (DECL DLP DeclsR DeclAt CVAt dw)
 def armMasterFns : Prog :=
   [("pin_at", pinAtL), ("const_e", constEL), ("const_find", constFind), ("const_push", constPush),
    ("intern_const", internConst), ("fvar_find", fvarFind), ("fvar_push", fvarPush),
-   ("intern_fvar", internFVar)]
+   ("intern_fvar", internFVar), ("mk_app", mkApp), ("app_find", appFind), ("app_push", appPush),
+   ("intern_app", internApp), ("der_b", derB)]
 
 /-- **The arms' text.** -/
 def armText : Prog :=
@@ -54,8 +55,18 @@ def thmArmFns : List FnName :=
    "lv_imax_l", "lv_dist1", "lv_dist2", "lv_imax_r", "lq_put", "install_value_guards",
    "is_def_eq_core", "env_push", "env_row_set"]
 
+/-- The functions the opaque arm reaches beyond the theorem arm's. -/
+def opqArmFns : List FnName :=
+  ["check_decl_opaque", "check_opaque_val", "pin_at", "check_reduce_pin", "reduce_stored_ok",
+   "reduce_op_cv_a", "rom_cv", "matches_pin", "cv_eq", "er_sl_eq", "reduce_elem_ok", "rom_ci", "ci_eq",
+   "tbl_eq", "tbl_eq_a", "er_sl_at", "ci_eq_rest", "hint_eq", "caps_eq", "caps_eq_a", "b_eq",
+   "caps_eq_b", "pw_eq", "caps_eq_c", "rules_eq", "rule_eq_but_rhs", "rule_eq_a", "rule_eq_b",
+   "reduce_pin_guard", "reduce_decl_pin", "rom_expr", "reduce_cert_var", "const_e", "intern_const",
+   "const_find", "const_push", "intern_fvar", "fvar_find", "fvar_push", "mk_app", "der_b",
+   "intern_app", "app_find", "app_push"]
+
 /-- The functions the arms reach. -/
-def armFns : List FnName := thmArmFns
+def armFns : List FnName := thmArmFns ++ opqArmFns
 
 theorem armText_closed : closedA armText stepA stepC armFns = true := by decide +kernel
 
