@@ -127,10 +127,10 @@
   </section>
   <section class="ca-card" id="stale">
     <h2>Stale after con-ron moved</h2>
-    <p class="note">Targets whose con-ron source changed since their L code or proof was checked. Being rebuilt on source citations (con-ron style); empty until that lands.</p>
+    <p class="note">L code whose cited con-ron source changed in a bump: the <code>CHANGED</code> markers from <code>scripts/provenance.py check</code>. Empty means every citation is exact at the vendored revision.</p>
     <div class="ca-tablewrap">
       <table class="ca-lanes" data-source="stale" data-row-key="target">
-        <thead><tr><th data-field="target">Target</th><th data-field="status">Status</th><th data-field="phase">Phase</th><th data-field="owner">Lane</th><th data-field="theorems">Theorems</th></tr></thead>
+        <thead><tr><th data-field="target">Where</th><th data-field="status">Status</th><th data-field="phase">Phase</th><th data-field="owner">Lane</th><th data-field="theorems">Theorems</th></tr></thead>
         <tbody id="staleBody"></tbody>
       </table>
     </div>

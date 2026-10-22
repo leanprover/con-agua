@@ -4856,3 +4856,76 @@ olean whose fixed mmap address is taken reads it into the heap: about 2 GB more 
   ConRon/Arena/File.lean:120-200 name` doc lines on our L code and proofs, a pure-Python gate like
   con-ron's `scripts/provenance.py`), a separate lane. The dashboard's stale card
   (`docs/dashboard.html`, `scripts/dashboard_data.py`) now reads an empty list.
+
+## Provenance: citations instead of fingerprints (2026-10-22, lane `provenance`)
+
+Which L code must be looked at again when con-ron moves, now that the census fingerprints are gone
+("Census memory"). The answer is con-ron's own (`_tmp/ref/con-ron/scripts/provenance.py`, its
+DESIGN §3.7 and §7): every ported item cites the twin source it stands for, and a pure-Python gate
+diffs the cited text between two upstream revisions. Ours is `scripts/provenance.py` (~1000 lines,
+stdlib only, reads `_tmp/ref/<repo>` with one `git cat-file --batch` per tree). Workflow: PLAN.md,
+"Bumping the twin".
+
+### Decisions
+* **The citation.** A line in the declaration block (doc comment, attributes, `--` lines directly
+  above the `def`): `con-ron: ConRon/Arena/Core.lean:3682-3688 ConRon.Arena.flushCaches` (or
+  `con-leche: ConLeche/Frontend/Scan/Fast.lean:… ConLeche.Frontend.strClose`, or `con-ron: none —
+  <reason>`), optionally followed by ` — <prose>`. The range is the whole block (doc comment and
+  attributes to the next column-0 declaration), the name fully qualified, as in `@[l_impl]`. A
+  line after `con-ron:` that starts with anything but `ConRon/`, `ConLeche/`, `none` is prose
+  (`WhnfIota.lean`'s older `` con-leche: `CoreDefs.lean:51-58` `` notes) and is not checked.
+* **Upstream paths and revisions, not the vendored tree.** The path is the vendored one
+  (`vendor/con-ron/ConRon/…` = upstream `proof/ConRon/…`), the line numbers are upstream's at the
+  revision in `vendor/UPSTREAM`, read from the reference clones. `update --old <rev>` is then a
+  diff of two upstream commits that our patch series never enters, and the old text is always
+  there (any commit the clone has). The patches move no line of cited code today, so `check`
+  falls back to `vendor/` when a clone lacks the revision.
+* **What must cite:** every `def`/`abbrev … : FunDecl :=` under `ConAgua/**` (`ConAgua/Spike/`
+  exempt). Lean models of ours may cite; a citation anywhere is checked. Each `@[l_impl T]` target
+  must have a citation naming `T`, so the attribute and the citation cannot drift; `annotate`
+  writes the citations the attributes imply.
+* **Format of the insertions** (merge friendliness): an item without a doc comment got a new
+  one-line `/-- con-ron: … -/`; an item with one got a `-- con-ron: …` line right after it. Every
+  edit of this lane to `ConAgua/**` is an inserted line.
+* **Helpers below** (the gap a pure range diff has). con-ron needs nothing extra: its Rust and arena
+  port every con-leche declaration one to one, each with its own citation, and `coverage` lists
+  what is not cited. Our L functions inline twin helpers (`flush_caches` has no L function for
+  `Caches.empty`). So `update` also diffs every declaration of the changed upstream files
+  (comment-stripped), builds a textual call graph of the twin (identifiers resolved under the
+  enclosing namespaces and the file's `open`s), and marks a cited item when an UNCITED declaration
+  at most `--depth` calls below its twin (default 1) changed. Cited callees are not looked
+  through: they get their own finding. Changed structures and inductives are reported as `TYPE`
+  (a question for the relations, `CoreR` and friends), not followed: following them flags every
+  function whose signature mentions `Caches`. Depth 3 gives 28 findings on the test below, nearly
+  all through the uncited knot (`inferTypeCore → coreKnot → enterEager`), which is twin code no L
+  function stands for yet.
+* **Markers are a queue, not a red gate.** `update` puts `-- con-ron: CHANGED since <old> — …`
+  under the citation; the owning lane re-checks and deletes it. `check` lists markers and passes;
+  `check --strict` fails on them (con-ron fails; we land bumps with markers and let lanes drain).
+* **Dashboard:** `update … --json FILE` writes `{old, new, counts, findings: [{kind, where, item,
+  cites, note}], types}`; `bump-con-ron.sh` keeps it at `_tmp/bump-<short>/provenance.json`. The
+  markers left on master are `check`'s `queue:` lines (`scripts/provenance.py check | grep
+  '^queue:'`: file:line and the marker text).
+
+### Numbers (master + this lane)
+814 FunDecls: 716 cite twin code (622 citations generated from `@[l_impl]`, 127 FunDecls without the
+attribute assigned by hand, by file: store `*_find`/`*_push` → `Tbl.find?`/`Tbl.push`, stubs and
+pieces → the twin function they are part of), 98 `none` (memo library, limb arithmetic, scratch
+arrays, ROM readers, compiler tests, benchmarks, examples). `check` 1.1 s, `update` 2.4 s.
+
+### Test: `update --old 4c9eaf7` (the bump to `12752ca7`)
+With the citations rewritten to their ranges at `4c9eaf7`: 3 MOVED (`flushCaches`, `enterScratch`,
+`dropScratch`, Core.lean +18 lines), 0 CHANGED, `TYPE Caches`/`CState`/`ModeMemos`, 1 CALLEE:
+`flushCachesL` (`Caches.empty` below `flushCaches`). Against the seven stale targets of the
+fingerprint census: `flushCaches` found; `installStep`, `installDeclStep`, `checkPending(List)`
+reach `Caches.empty` only through `flushCaches`, which is cited and flagged itself (the fix is
+there); `lvlEq?`/`lvlsEq?` changed only by elaboration (`{ s.caches with … }` over the new field)
+— here that is `TYPE Caches`, and their callees `readLevelM`/`readLevelsM` changed in comments
+only (lane `induct` found the same by hand). Afterwards `check` passes at `12752ca7`.
+
+### Migration notes (for every lane)
+* New L code must carry a citation: write `@[l_impl T]` and run `scripts/provenance.py annotate`
+  (or `locate T` and paste), or write `/-- con-ron: none — <why> -/` for plumbing.
+* `scripts/provenance.py check` must pass before landing (a second; no build).
+* A `-- con-ron: CHANGED since …` line on your code: compare your L code and proofs with the
+  printed diff (or `git -C _tmp/ref/con-ron diff <old> <new> -- proof/<path>`), fix, delete the line.

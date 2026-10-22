@@ -77,6 +77,7 @@ def hashLoop : Stmt := lblk (o, l, i, h) {
   }
 }
 
+/-- con-ron: none — the open-addressing table's own key hash/compare (the twin's `Std.HashMap`) -/
 def litHash : FunDecl := lfn (o, l) locals (i, h) {
   h := ⟪fnvBasis⟫;
   ⟪hashLoop⟫;
@@ -176,6 +177,7 @@ def eqLoop : Stmt := lblk (a, b, l, i) {
   }
 }
 
+/-- con-ron: none — the open-addressing table's own key hash/compare (the twin's `Std.HashMap`) -/
 def limbsEq : FunDecl := lfn (a, b, l) locals (i) {
   ⟪eqLoop⟫;
   return 1
@@ -236,6 +238,7 @@ def matchW (r p : Array Word) (t i o l h : Word) : Bool :=
   rdW r (i * 8 + t * 4) == 0 && rdW r (i * 8 + t * 4 + 3) == h &&
     rdW r (i * 8 + t * 4 + 2) == l && eqW p (rdW r (i * 8 + t * 4 + 1)) o l 0
 
+/-- con-ron: none — the open-addressing table's own key hash/compare (the twin's `Std.HashMap`) -/
 def litMatch : FunDecl := lfn (t, i, o, l, h) locals (k, e) {
   k := i * 8 + t * 4;
   if REC.u64[k] != 0 { return 0 };
@@ -357,6 +360,7 @@ def findLoop : Stmt := lblk (t, o, l, h, n, j, d, v, m, b) {
   }
 }
 
+/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def litFind : FunDecl := lfn (t, o, l, h) locals (n, j, d, v, m, b) {
   n := len(SLOT.u64) >> 1;
   b := CTL.u64[62] * t;
@@ -439,6 +443,7 @@ def pushMem (m : Mem) (t o l h j c : Word) : Mem :=
     (baseW m t + c + 1)).set64
     CTL (2 + (t &&& 1)) (c + 1))
 
+/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def litPush : FunDecl := lfn (t, o, l, h, j) locals (c, k) {
   c := CTL.u64[2 + t];
   if c >= 134217728 { abort };
@@ -505,6 +510,8 @@ def internW (m : Mem) (o l : Word) : Option (Word × Mem) :=
     some (litP + cnt m 0, pushMem m 0 o l h (rs₀.tail.tail.headD 0) (cnt m 0))
   else none
 
+/-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
+con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
 @[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internLit : FunDecl := lfn (o, l) locals (h, f, i, j, d, sc) {
   h := call lit_hash(o, l);
@@ -592,6 +599,7 @@ def matchWStr (r p : Array Word) (t i o l h : Word) : Bool :=
   rdW r (i * 8 + t * 4) == 1 && rdW r (i * 8 + t * 4 + 3) == h &&
     rdW r (i * 8 + t * 4 + 2) == l && eqW p (rdW r (i * 8 + t * 4 + 1)) o l 0
 
+/-- con-ron: none — the open-addressing table's own key hash/compare (the twin's `Std.HashMap`) -/
 def litMatchStr : FunDecl := lfn (t, i, o, l, h) locals (k, e) {
   k := i * 8 + t * 4;
   if REC.u64[k] != 1 { return 0 };
@@ -678,6 +686,7 @@ def findLoopStr : Stmt := lblk (t, o, l, h, n, j, d, v, m, b) {
   }
 }
 
+/-- con-ron: ConRon/Arena/Store.lean:90-91 ConRon.Arena.Tbl.find? -/
 def litFindStr : FunDecl := lfn (t, o, l, h) locals (n, j, d, v, m, b) {
   n := len(SLOT.u64) >> 1;
   b := CTL.u64[62] * t;
@@ -744,6 +753,7 @@ def pushMemStr (m : Mem) (t o l h j c : Word) : Mem :=
     (baseW m t + c + 1)).set64
     CTL (2 + (t &&& 1)) (c + 1))
 
+/-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
 def litPushStr : FunDecl := lfn (t, o, l, h, j) locals (c, k) {
   c := CTL.u64[2 + t];
   if c >= 134217728 { abort };
@@ -800,6 +810,8 @@ def internWStr (m : Mem) (o l : Word) : Option (Word × Mem) :=
     some (litP + cnt m 0, pushMemStr m 0 o l h (rs₀.tail.tail.headD 0) (cnt m 0))
   else none
 
+/-- con-ron: ConRon/Arena/Monad.lean:246-264 ConRon.Arena.internE
+con-ron: ConRon/Arena/Monad.lean:218-244 ConRon.Arena.internNodeE -/
 @[l_impl ConRon.Arena.internE ConRon.Arena.internNodeE]
 def internLitStr : FunDecl := lfn (o, l) locals (h, f, i, j, d, sc) {
   h := call lit_hash(o, l);

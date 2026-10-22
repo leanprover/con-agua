@@ -116,6 +116,7 @@ def shl1Loop : Stmt := lblk (r, n, bit, i, c, x) {
 }
 
 /-- `div_shl1(r, n, bit)`: `R := 2 R + bit` in place; returns the carry out. -/
+-- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
 def divShl1 : FunDecl := lfn (r, n, bit) locals (i, c, x) {
   c := bit;
   ⟪shl1Loop⟫;
@@ -133,6 +134,7 @@ def dsubLoop : Stmt := lblk (r, n, ob, lb, i, c, x, y) {
 }
 
 /-- `div_sub(r, n, ob, lb)`: `R := R - b` in place (`b` zero-extended); returns the borrow. -/
+-- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
 def divSub : FunDecl := lfn (r, n, ob, lb) locals (i, c, x, y) {
   ⟪dsubLoop⟫;
   return c
@@ -149,6 +151,7 @@ def daddLoop : Stmt := lblk (r, n, ob, lb, i, c, x, y) {
 }
 
 /-- `div_add(r, n, ob, lb)`: `R := R + b` in place (`b` zero-extended); returns the carry. -/
+-- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
 def divAdd : FunDecl := lfn (r, n, ob, lb) locals (i, c, x, y) {
   ⟪daddLoop⟫;
   return c
@@ -473,6 +476,7 @@ theorem Grows.refl (m : Mem) (h : PoolOK m) : Grows m m := by
 
 /-- One bit of the dividend: `R := 2 R + bit`, then subtract `b`, restoring on a borrow; returns
 the quotient bit (the body of con-ron's `dm_bits`). -/
+-- con-ron: none — limb arithmetic of the bignum (con-ron `ron/nat.rs`); the twin computes on `Nat`
 def divStep : FunDecl := lfn (r, n, ob, lb, bit) locals (c) {
   c := call div_shl1(r, n, bit);
   c := call div_sub(r, n, ob, lb);
@@ -515,6 +519,7 @@ def rzLoop : Stmt := lblk (oa, la, ob, lb, top, n, ro, i, x, q, j, c, pa, pq) {
   }
 }
 
+/-- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult -/
 @[l_impl ConRon.Arena.natOpResult]
 def natDivmod : FunDecl := lfn (oa, la, ob, lb) locals (top, n, ro, i, x, q, j, c, pa, pq) {
   top := CTL.u64[0];

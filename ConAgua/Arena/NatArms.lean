@@ -47,6 +47,7 @@ def litArm (F : Nat → Nat → Nat) (a b : Nat) : AM (Option EIdx) := do
 
 /-- `natAddLit` with `f` for `nat_add`: `o := CTL[0]; l := call f(oa, la, ob, lb);
 h := call intern_lit(o, l); return h`. -/
+-- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult
 def topLit (f : FnName) : FunDecl :=
   ⟨4, 7, .seq (.set 4 (.ld64 CTL (.const 0)))
     (.seq (.call [5] f [.var 0, .var 1, .var 2, .var 3])
@@ -117,6 +118,7 @@ end generic
 /-! ## The arms with a slice result: `/`, `%` -/
 
 /-- `nat_div_lit(oa, la, ob, lb)`: the quotient slice of `nat_divmod`, interned. -/
+-- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult
 @[l_impl ConRon.Arena.natOpResult]
 def natDivLit : FunDecl := lfn (oa, la, ob, lb) locals (o, l, h) {
   (o, l) := call nat_divmod(oa, la, ob, lb);
@@ -125,6 +127,7 @@ def natDivLit : FunDecl := lfn (oa, la, ob, lb) locals (o, l, h) {
 }
 
 /-- `nat_mod_lit(oa, la, ob, lb)`: the remainder slice of `nat_divmod`, interned. -/
+-- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult
 @[l_impl ConRon.Arena.natOpResult]
 def natModLit : FunDecl := lfn (oa, la, ob, lb) locals (q, ql, o, l, h) {
   (q, ql, o, l) := call nat_divmod(oa, la, ob, lb);
@@ -195,6 +198,7 @@ end divmod
 /-! ## `pred`: `-` with a one-limb `1` -/
 
 /-- `nat_pred_lit(oa, la)`: write the limb `1` at the top, subtract it, intern the result. -/
+-- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult
 @[l_impl ConRon.Arena.natOpResult]
 def natPredLit : FunDecl := lfn (oa, la) locals (o, l, h) {
   o := CTL.u64[0];
@@ -267,6 +271,7 @@ end pred
 /-- `nat_pow_lit(oa, la, ob, lb)`: `(0, 0)` (the arm's `none`) for an exponent above `2^24`,
 else `(1, h)` with `h` the interned power. An exponent of two or more limbs is at least `2^64`
 (`b` normalised). -/
+-- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult
 @[l_impl ConRon.Arena.natOpResult]
 def natPowLit : FunDecl := lfn (oa, la, ob, lb) locals (e, o, l, h) {
   if 1 < lb { return (0, 0) };
@@ -338,6 +343,7 @@ end pow
 /-- `nat_beq_lit(oa, la, ob, lb, t, f, us)`: intern the constant `t` (`Bool.true`'s name) if the
 two values are equal, else `f`, at the level list `us` (the empty one). The three handles are
 the pins `boolTrueName`, `boolFalseName`, `emptyLevels`, which the caller reads. -/
+-- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult
 @[l_impl ConRon.Arena.natOpResult]
 def natBeqLit : FunDecl := lfn (oa, la, ob, lb, t, f, us) locals (c, h) {
   c := call nat_cmp(oa, la, ob, lb);
@@ -347,6 +353,7 @@ def natBeqLit : FunDecl := lfn (oa, la, ob, lb, t, f, us) locals (c, h) {
 }
 
 /-- `nat_ble_lit`: as `nat_beq_lit`, `t` unless `a > b`. -/
+-- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult
 @[l_impl ConRon.Arena.natOpResult]
 def natBleLit : FunDecl := lfn (oa, la, ob, lb, t, f, us) locals (c, h) {
   c := call nat_cmp(oa, la, ob, lb);
@@ -370,6 +377,7 @@ def natBleArm (a b : Nat) : AM (Option EIdx) := do
 /-! ## `gcd` -/
 
 /-- `nat_gcd_lit(oa, la, ob, lb)`: `nat_gcd`'s slice, interned. -/
+-- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult
 @[l_impl ConRon.Arena.natOpResult]
 def natGcdLit : FunDecl := lfn (oa, la, ob, lb) locals (o, l, h) {
   (o, l) := call nat_gcd(oa, la, ob, lb);
@@ -445,6 +453,7 @@ def natModArm (a b : Nat) : AM (Option EIdx) := do
 `nat_op_result(c, oa, la, ob, lb)`: `natOpResult` (`Arena/Core.lean:998`) with the fifteen pin
 reads as reads of `PINS` (word `1 + PIN_*`, after the flag) and the arms in the twin's order.
 Returns `(1, h)` for `some h`, `(0, 0)` for `none` (`decOpt`). Refined in `PinsNatOp.lean`. -/
+/-- con-ron: ConRon/Arena/Core.lean:994-1035 ConRon.Arena.natOpResult -/
 @[l_impl ConRon.Arena.natOpResult]
 def natOpResultL : FunDecl := lfn (c, oa, la, ob, lb) locals (f, h) {
   if PINS.u64[0] == 0 { abort };

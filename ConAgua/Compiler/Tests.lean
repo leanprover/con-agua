@@ -58,6 +58,7 @@ def W : ArrId := 0
 def B : ArrId := 0
 
 /-- Sums `W.u64[0..n)` into `W.u64[n]`, doubles every byte of `B`, mixes some arithmetic. -/
+-- con-ron: none — a compiler test program
 def mix : FunDecl := lfn (n) locals (i, s, t) {
   while i < n {
     s := s + W.u64[i];
@@ -82,12 +83,14 @@ def mixMem : Mem := { bytes := #[#[1, 2, 3, 200]], words := #[#[5, 0xfffffffffff
 #guard agrees [("mix", mix)] "mix" [4] mixMem
 #guard (runKraken [("mix", mix)] "mix" [4] mixMem 100000).toOption == some .error
 
+/-- con-ron: none — a compiler test program -/
 def sumTo : FunDecl := lfn (n) locals (r) {
   if n == 0 { return 0 };
   r := call sum_to(n - 1);
   return r + n
 }
 
+/-- con-ron: none — a compiler test program -/
 def boom : FunDecl := lfn (n) {
   if n == 7 { abort };
   return n
@@ -111,6 +114,7 @@ def recProg : Prog := [("sum_to", sumTo), ("boom", boom)]
 def LITS : List UInt8 := "truefalse".toUTF8.toList
 
 /-- `mulhi(x, y)`, the carry of `x + y`, and whether `IN[i..]` starts with `"false"`. -/
+-- con-ron: none — a compiler test program
 def ext : FunDecl := lfn (x, y, i) locals (k, ok) {
   ok := 1;
   while k < 5 {
@@ -129,6 +133,7 @@ def extProg : Prog := [("ext", ext)]
 #guard agrees extProg "ext" [0x123456789abcdef0, 0x0fedcba987654321, 1] (inp " false")
 #guard agrees extProg "ext" [3, 5, 1] (inp " fals")
 #guard agrees extProg "ext" [0x8000000000000000, 5, 0] (inp "falsy")
+/-- con-ron: none — a compiler test program -/
 -- `LITS.c8[9]` is out of bounds.
 def oobC : FunDecl := lfn (i) { return LITS.c8[i] }
 #guard agrees [("c", oobC)] "c" [8] {}
@@ -137,16 +142,20 @@ def oobC : FunDecl := lfn (i) { return LITS.c8[i] }
 /-! Several results. -/
 
 /-- The 128-bit product, the carry of a sum, and a third value. -/
+-- con-ron: none — a compiler test program
 def wide : FunDecl := lfn (x, y) {
   return (x * y, mulhi(x, y), u64(x + y < x))
 }
 
 /-- Returns one value: a caller reading three gets `0` for the other two. -/
+-- con-ron: none — a compiler test program
 def one : FunDecl := lfn (x) { return x + 1 }
 
 /-- Returns nothing (falls off the end). -/
+-- con-ron: none — a compiler test program
 def none' : FunDecl := lfn (x) { skip }
 
+/-- con-ron: none — a compiler test program -/
 def useWide : FunDecl := lfn (x, y) locals (lo, hi, c, a, b, z) {
   (lo, hi, c) := call wide(x, y);
   (a, b, z) := call one(lo);
@@ -171,15 +180,18 @@ def wideProg : Prog := [("use", useWide), ("wide", wide), ("one", one), ("none'"
 /-! More results than registers (lane `cresults`): results 6, 7, 8 go through the table's result
 area. -/
 
+/-- con-ron: none — a compiler test program -/
 def nine : FunDecl := lfn (x) {
   return (x, x + 1, x + 2, x + 3, x + 4, x + 5, x + 6, x + 7, x + 8)
 }
 
 /-- Returns seven of nine: the caller reads `0` for results 7 and 8. -/
+-- con-ron: none — a compiler test program
 def seven : FunDecl := lfn (x) {
   return (x, x * 2, x * 3, x * 4, x * 5, x * 6, x * 7)
 }
 
+/-- con-ron: none — a compiler test program -/
 def useNine : FunDecl := lfn (x) locals (a, b, c, d, e, f, g, h, i, z) {
   (a, b, c, d, e, f, g, h, i) := call nine(x);
   z := a ^ (b << 4) ^ (c << 8) ^ (d << 12) ^ (e << 16) ^ (f << 20) ^ (g << 24) ^ (h << 28) ^ (i << 32);
