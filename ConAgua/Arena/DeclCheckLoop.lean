@@ -1,4 +1,4 @@
-import ConAgua.Arena.DeclArmQuot
+import ConAgua.Arena.DeclArmAxiom
 
 /-!
 # `check_decl` refines `checkDecl` at the loop's relation (lane `decls3`)
@@ -41,6 +41,7 @@ structure CheckDeclProg (p : Prog) : Prop where
   val : ValProg p
   crp : CrpProg p
   quot : QuotProg p
+  axp : AxProg p
 
 /-! ## The arms not proved yet -/
 
@@ -57,9 +58,11 @@ def ArmSpec (p : Prog) (f : FnName) (d : IDeclaration) : Prop :=
     LoopR dn s'.mem (AM.st (checkDecl V pins fe d) a₀) (r.headD 0)
       (AM.res (checkDecl V pins fe d) a₀) pend ds; ⊤⦄
 
-/-- `check_decl_axiom` (`sorry`: the canonical comparisons, the ROM readers). -/
-theorem checkDeclAxiom_loop (hP : CheckDeclProg p) (cv : IConstantVal) :
-    ArmSpec pins dn ds p "check_decl_axiom" (.axiomDecl cv) := sorry
+/-- `check_decl_axiom` (`DeclArmAxiom.lean`; through `CiCanonSpec`, a field of `AxProg`). -/
+theorem checkDeclAxiom_loop (hP : CheckDeclProg p) (hdn : DnInj dn) (cv : IConstantVal) :
+    ArmSpec pins dn ds p "check_decl_axiom" (.axiomDecl cv) :=
+  fun n s₀ a₀ vis fe pend i hi hd hR =>
+    checkDeclAxiom_loop' hP.arm hP.axp pins dn hdn ds n s₀ a₀ vis fe pend i cv hi hd hR
 
 /-- `check_decl_defn` (`sorry`: the structural-`Nat` gate and the `Nat.div`-family pin gate; the
 latter needs a relation between the memory's pin variants and `pins`, lane `romload`'s input). -/
@@ -166,7 +169,7 @@ theorem arm_callW {p : Prog} {pins : List INatOpPinSet} {dn : NIdx → Option Co
   exact ⟨hok, by simpa using hL⟩
 
 /-- **`check_decl` refines `checkDecl`** at the loop's relation, for the front's record kinds
-(through the arms' specs: the theorem, opaque and quotient arms' are proved, the axiom and definition arms' `sorry`). -/
+(through the arms' specs: every arm's but the definition arm's is proved). -/
 theorem checkDecl_loop {p : Prog} (hP : CheckDeclProg p) (pins : List INatOpPinSet)
     (dn : NIdx → Option ConLeche.Name) (hdn : DnInj dn) (ds : Array IDeclaration) :
     CheckDeclSpec V pins dn ds p := by
@@ -191,7 +194,7 @@ theorem checkDecl_loop {p : Prog} (hP : CheckDeclProg p) (pins : List INatOpPinS
   | axiomDecl cv =>
     rw [hdecl.1] at h
     simp only [cdSel, show (1 : Word) ≠ 6 by decide, if_false, if_true] at h
-    exact arm_callW (checkDeclAxiom_loop pins dn ds hP cv) hi hd hR h
+    exact arm_callW (checkDeclAxiom_loop pins dn ds hP hdn cv) hi hd hR h
   | defnDecl cv v hh =>
     rw [hdecl.1] at h
     simp only [cdSel, show (2 : Word) ≠ 6 by decide, show (2 : Word) ≠ 1 by decide, if_false,
