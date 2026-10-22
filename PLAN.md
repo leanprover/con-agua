@@ -167,5 +167,11 @@ per-function separation logic.
   merge fallout, cleanup. Measure with `date` timestamps, not guesses. The note says what landed.
 - Parallel lanes each own explicit files. Before adding a lemma, grep for an existing one. A lane that started
   before others landed merges `master` into itself before landing.
+- **Deviations from the twin.** L is a close twin of con-ron. Any place where L does something else
+  than its twin (aborts where the twin continues, other than fuel and fixed capacities; a
+  simplified algorithm; a missing arm; an unmirrored cache; a "for now") gets a row in
+  `docs/deviations.md` (where, what the twin does, what L does, effect, owner, proposed fix) in the
+  commit that introduces it, and leaves the row when it is fixed (move it to "Fixed"). The
+  coordinator reviews the list at each batch of landings and assigns the open rows.
 - Write in DESIGN.md (a journal: decisions, measurements, findings). Never use "load-bearing" or "licenses" in
   prose.
