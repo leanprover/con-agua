@@ -7392,3 +7392,14 @@ grows (the memo library's capacity rule, as every L memo). Refinement: not yet (
   bodies. To be unified on defeq2's convention first.
 * Census at landing 3: phase 4 **81 proven / 0 sorry / 11 written / 21 todo** (lane start 65 / 0 /
   0 / 48); phase 5 80 / 19 / 20 / 23 (start 79 / 19 / 20 / 24).
+
+### Landing 5: `find_proj` facts from lane `whnf3`
+* `KnotCallees.findProj`/`projFound` removed: `findProj_refines`, `projFound` (program field
+  `KnotAllProg.projp : ProjProg p`). `towerSlots` still a field: lane `whnf3`'s
+  `towerSlotsAll_refines'` takes all of `CoreCallees` but uses only `findProj` (`tsW_ok`).
+* **Bindings for lane `whnf3`'s `instLP` family**: this lane binds `lv_lookup` to
+  `lvLookupG EREC POOL` (keys an `EREC` name slice, values a `POOL` level slice: `field_sort_zero`,
+  `PropRead`) and `lv_spw` to `PropRead`'s heap variant; one name, one body project-wide, so a
+  different instance needs its own name.
+* `KnotCallees` left (9): `whnfCoreStep`, `whnfStep`, `proofIrrel`, `towerSlots`,
+  `reduceProjCore`, `unfold`, `constTy`, `instLP`, `den`.

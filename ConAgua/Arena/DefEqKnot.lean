@@ -12,6 +12,7 @@ import ConAgua.Arena.InferProj2
 import ConAgua.Arena.StrLitSup
 import ConAgua.Arena.StrLitCtor
 import ConAgua.Arena.StrLitKeep
+import ConAgua.Arena.WhnfProjRefine2
 
 /-!
 # The knot tied (lane `defeq`)
@@ -85,6 +86,7 @@ structure KnotAllProg (p : Prog) : Prop where
   prop : PropReadProg p
   proj : InferProjProg p
   str : StrLitProg p
+  projp : ProjProg p
   /-- The core's write set leaves `EREC` alone (lane `whnf3`'s `CoreErec.lean`). -/
   hcl : closedA p coreErecA coreErecC coreFns = true
 
@@ -93,10 +95,6 @@ structure KnotCallees (p : Prog) : Prop where
   /-- Lane `whnf`'s slot steps (proved there over its inline stub bundles). -/
   whnfCoreStep : ∀ n, KnotUpTo p n → WhnfCoreSlot p (n + 1)
   whnfStep : ∀ n, KnotUpTo p n → WhnfSlot p (n + 1)
-  /-- Lane `whnf`'s `find_proj` facts (lane `whnf3`), for `PropRead`'s projection arm and
-  `infer_proj`. -/
-  findProj : FindProjOK p
-  projFound : ProjFound p
   /-- Lane `whnf`'s `proofIrrel_refines` rests on `CoreS.lvl_den` (`proofIrrelOK_of`). -/
   proofIrrel : ProofIrrelOK p
   towerSlots : TowerSlotsAllOK p
@@ -158,8 +156,8 @@ include hq hc in
 /-- `DefeqCallees`: the walks from `CoreWalks.lean`, the rest from `KnotCallees`. -/
 theorem KnotCallees.defeq : DefeqCallees p :=
   ⟨hasFvar_core hq.walks.abs hq.walks.hf,
-    notProofFast_core hq.prop hc.den (constLpsDen_of hc.den) hc.findProj (erecKept_of hq.hcl) hc.projFound,
-    isProofFast_core hq.prop hc.den (constLpsDen_of hc.den) hc.findProj (erecKept_of hq.hcl) hc.projFound,
+    notProofFast_core hq.prop hc.den (constLpsDen_of hc.den) (findProj_refines p hq.projp) (erecKept_of hq.hcl) (projFound p hq.projp),
+    isProofFast_core hq.prop hc.den (constLpsDen_of hc.den) (findProj_refines p hq.projp) (erecKept_of hq.hcl) (projFound p hq.projp),
     abs1_core hq.walks.abs hq.walks.ae, absRange_core hq.walks.ar hq.walks.are, fieldSortZero_core p hq.fsz⟩
 
 include hq hc in
@@ -185,7 +183,7 @@ include hq hc in
 theorem KnotCallees.infer : InferCallees p :=
   ⟨hq.walks.inst1OK, hq.walks.instListOK, (hc.defeq hq).abstract1, (hc.defeq hq).abstractRange,
     hc.constTy, hq.lit, isEagerReduceH_of p hq.body.stuck.leaf, bstkCap_of,
-    inferProj_refines p hq.proj ⟨hc.den, hc.findProj, hc.projFound, erecKept_of hq.hcl, hc.instLP, erecKeptProj_of hq.hcl⟩⟩
+    inferProj_refines p hq.proj ⟨hc.den, (findProj_refines p hq.projp), (projFound p hq.projp), erecKept_of hq.hcl, hc.instLP, erecKeptProj_of hq.hcl⟩⟩
 
 /-- **The knot at fuel `0`**: every L call at fuel `0` fails. -/
 theorem knot_zero (p : Prog) : KnotOK p 0 where

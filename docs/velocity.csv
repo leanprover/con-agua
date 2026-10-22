@@ -127,3 +127,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-22,whnf3,opus,40,40,"landing 3: helpers whnf3-walks (wscoped_bfast, leaf_guard proved; instantiate1Lift/instPisAtLift/fvarTypeD L code) and whnf3-proj (proj_table_name, find_proj, fire_ok proved); clash renames; Prog regenerated (15 stubs)"
 2026-10-22,defeq2,opus,15,10,"landing 3: BStkCallees discharged from StackKept.bstk (telescopes), ErecKept/ErecKeptProj from the core write set (closedA); KnotCallees 14 fields left (whnf3 + helper str)"
 2026-10-22,defeq2,opus,15,15,"landing 4: string literals in L + proved (helper str: strLitSupported, strLitToConstructor, 7 shape tests, SupKeep), adapted to the StackKept sweep (helper strfix), plugged into the knot; KnotCallees 11 fields left, all whnf3"
+2026-10-22,defeq2,opus,10,10,"landing 5: KnotCallees.findProj/projFound from whnf3 proofs; 9 fields left"
