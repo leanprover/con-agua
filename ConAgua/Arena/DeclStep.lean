@@ -251,6 +251,31 @@ def installStepGoL : FunDecl := lfn (i, vis) locals (k, x, c, v, p, z, g) {
   return (v, 0, 0)
 }
 
+/-! ## Phase B: `check_value_group` -/
+
+/-- `check_value_group(vis, g)`: `checkValueGroup` on the value group record `g`: the type's
+sort, for a theorem the proposition test and the value's guards, the value's type against the
+declared one. -/
+-- con-ron: ConRon/Arena/CheckerSplit.lean:95-112 ConRon.Arena.checkValueGroup
+@[l_impl ConRon.Arena.checkValueGroup]
+def checkValueGroupL : FunDecl := lfn (vis, g) locals (z, t, v, st, u, zr, e, vt, d) {
+  z := call iw_reset();
+  t := EREC.u64[g + 4];
+  v := EREC.u64[g + 5];
+  st := call infer_type_core(vis, 0, t);
+  u := call ensure_sort_core(vis, 0, st);
+  if EREC.u64[g] == 1 {
+    zr := call pin_word(53);
+    e := call lvl_eq_fueled(u, zr);
+    if e == 0 { abort };
+    z := call install_value_guards(vis, g + 1, v)
+  };
+  vt := call infer_type_core(vis, 0, v);
+  d := call is_def_eq_core(vis, 0, vt, t);
+  if d == 0 { abort };
+  return 0
+}
+
 /-! ## The program -/
 
 /-- This module's functions. -/
@@ -259,7 +284,7 @@ def declStepFns : Prog :=
    ("install_header", installHeaderL), ("install_value_guards", installValueGuardsL),
    ("dind_copy", dindCopy), ("ind_rec_copy", indRecCopy), ("ind_copy_go", indCopyGo),
    ("ind_block_to_erec", indBlockToErec), ("check_decl", checkDeclL),
-   ("install_step_go", installStepGoL)]
+   ("install_step_go", installStepGoL), ("check_value_group", checkValueGroupL)]
 
 /-- Stubs of this module's callees not written yet. -/
 def declStepStubs : Prog := [("check_decl_const", L.Ind.stub 2)]
