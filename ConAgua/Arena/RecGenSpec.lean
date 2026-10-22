@@ -115,7 +115,7 @@ theorem hit_hit (h : p.toNat < a.size) (h1 : rdW a p = 1) (h2 : (p + 1).toNat < 
     (h3 : rdW a (p + 1) = c) (h4 : (p + 2).toNat < a.size) (h5 : rdW a (p + 2) = cc)
     (h6 : (p + 3).toNat < a.size) (h7 : (p + 4).toNat < a.size) :
     classMinorSlotHit a p c cc = some true := by
-  simp only [classMinorSlotHit, ↓reduceIte, h, h1, h2, h3, h4, h5, h6, h7]
+  simp only [classMinorSlotHit, ↓reduceIte, h, h1, h2, h3, h4, h5, h6, h7, and_self]
 end hitlemmas
 
 grind_pattern [ind_grind] hit_oob0 => classMinorSlotHit a p c cc
