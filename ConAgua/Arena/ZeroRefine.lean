@@ -1,5 +1,6 @@
 import ConAgua.Arena.StoreLib
 import ConAgua.Arena.ZeroStore
+import ConAgua.Arena.LpColRel
 
 /-!
 # The level `zero` store refines the arena's `zero` tables
@@ -154,6 +155,15 @@ theorem zintern_correct (w : Word) (m' : Mem) (hI : zinternW m = some (w, m')) :
     (probe_homeG zeroSch m 1 _ _ (zprobeW_arm m 1) _) _ (zpushOK_room m) _ rfl
     (zeroNewOK m) w m' hI
 
+
+include hR in
+/-- **The `zero` table's constant bit across `intern_zero`**: `hasParam = false`. -/
+theorem zintern_hp (hC : ConstT2 zeroLens (fun d : LDer => hpW d = 0) a) (w : Word) (m' : Mem)
+    (hI : zinternW m = some (w, m')) :
+    ConstT2 zeroLens (fun d : LDer => hpW d = 0) (AM.st (internLNode .zero) a) := by
+  obtain ⟨hok, -, -⟩ := zintern_correct m a hR w m' hI
+  exact constMk zeroLens _ a _ _ _ _ _ hC rfl
+    (AM.proto_casesG zeroLens _ _ _ _ _ _ a (internLNode_zero_run a) hok)
 end intern
 
 /-- `intern_zero` refines `internLNode .zero` under `ZeroR`. -/

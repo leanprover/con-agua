@@ -35,16 +35,16 @@ def pos2FuelF (acc : Nat) (d : EIdx) : AM Nat := do
   let w ← ConRon.Arena.whnfWalkFuel d
   pure (max acc w)
 
-theorem p2sfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (hM : PosMemo dn vis fe)
+theorem p2sfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (dO dL : Word) (ds : List EIdx) (m0 : Mem) (hlen : ds.length = dL.toNat)
     (hel : ∀ j < dL.toNat, ∃ w, (m0.arr64 IW)[dO.toNat + j]? = some w ∧ H w ∧ ds[j]? = some (decI w))
     (hb : dO.toNat + dL.toNat ≤ iwTop m0) :
     ∀ (n : Nat) (m m' : Mem) (a : AState) (k f : Word) (r : List Word),
-    p2sfW n m dO dL k f = some (r, m') → StageR dn vis fe m a → IWGrow m0 m → k.toNat ≤ dL.toNat →
+    p2sfW n m dO dL k f = some (r, m') → StageR dn vis fe m a → IWGrow m0 m → k.toNat ≤ dL.toNat → PosMR m →
     ∃ a', ((ds.drop k.toNat).foldlM pos2FuelF f.toNat).run a = .ok ((r.headD 0).toNat, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m'
-  | 0, m, m', a, k, f, r, h, _, _, _ => by simp [p2sfW] at h
-  | n + 1, m, m', a, k, f, r, h, hS, hg0, hk => by
+      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PosMR m'
+  | 0, m, m', a, k, f, r, h, _, _, _, _ => by simp [p2sfW] at h
+  | n + 1, m, m', a, k, f, r, h, hS, hg0, hk, hP => by
     have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
     by_cases hd : dL ≤ k
     · rw [p2sfW_done (h := hd)] at h
@@ -52,7 +52,7 @@ theorem p2sfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
       obtain ⟨rfl, rfl⟩ := h
       have : k.toNat = dL.toNat := Nat.le_antisymm hk (UInt64.le_iff_toNat_le.mp hd)
       rw [this, ← hlen, List.drop_length]
-      exact ⟨a, rfl, hS, IWGrow.refl _⟩
+      exact ⟨a, rfl, hS, IWGrow.refl _, hP⟩
     rw [p2sfW_step (h := hd)] at h
     have hkl : k.toNat < dL.toNat := by
       have := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hd); omega
@@ -68,12 +68,12 @@ theorem p2sfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
     obtain ⟨rw, m1⟩ := pr
     rw [hwf, p2sfK_some] at h
     obtain ⟨n', wv, hn, hwW, rfl⟩ := pos2_wfWf_some hwf
-    obtain ⟨mp, hmp⟩ := hM.dp m a hS
-    obtain ⟨d, hrunw, hwd, -, hS1, hg1⟩ := wfW_ok n' dn fe vis m m1 a w wv mp hwW hS hH hmp
+    obtain ⟨mp, hmp⟩ := hP.dp
+    obtain ⟨d, hrunw, hwd, hM1, hS1, hg1, hf1⟩ := wfW_ok n' dn fe vis m m1 a w wv mp hwW hS hH hmp
     have hk1 : (k + 1).toNat = k.toNat + 1 := word_add_toNat (by simp; omega)
-    obtain ⟨a', hrun, hS', hg'⟩ := p2sfW_ok dn vis fe hM dO dL ds m0 hlen hel hb n m1 m' a (k + 1) _ r h hS1
-      (hg0.trans hg1) (by omega)
-    refine ⟨a', ?_, hS', hg1.trans hg'⟩
+    obtain ⟨a', hrun, hS', hg', hP'⟩ := p2sfW_ok dn vis fe dO dL ds m0 hlen hel hb n m1 m' a (k + 1) _ r h hS1
+      (hg0.trans hg1) (by omega) (hP.setDp hf1 ⟨∅, hM1⟩)
+    refine ⟨a', ?_, hS', hg1.trans hg', hP'⟩
     have hdk : ds[k.toNat]'(by omega) = decI w := by
       have := hdj; rw [List.getElem?_eq_getElem (by omega)] at this; exact Option.some.inj this
     have hmax : (if f < [wv].headD 0 then [wv].headD 0 else f).toNat = max f.toNat d := by
@@ -116,10 +116,10 @@ theorem pos2_outs_rec {m' : Mem} {q o l : Word} {xs : List (List NestFieldKind �
   exact hx'
 
 section root
-variable (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (hM : PosMemo dn vis fe)
+variable (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   (hcs : CtorSums fe) (ctx hO hL : Word) (c : NestCtx) (holes : List EIdx)
 
-include hM hcs in
+include hcs in
 /-- **`nest_root`** simulated by `nestRoot`. -/
 theorem p2rtW_ok : ∀ (n : Nat), 2 ^ 31 + n ≤ coreWalkFuel → ∀ (m m' : Mem) (a : AState) (cO cL ns oO oL : Word)
     (css : List (List (IConstantVal × Nat))) (NS : NestState) (outss : List (List (List NestFieldKind × EIdx)))
@@ -128,14 +128,14 @@ theorem p2rtW_ok : ∀ (n : Nat), 2 ^ 31 + n ≤ coreWalkFuel → ∀ (m m' : Me
     c.hiAt 0 < 2 ^ 64 → c.params.length + c.names.length < 2 ^ 64 →
     decHL m hO.toNat hL.toNat = some holes → hO.toNat + hL.toNat ≤ iwTop m →
     cL.toNat = css.length → cO.toNat + css.length ≤ iwTop m → CssAt m cO.toNat css → NSB m ns NS →
-    RootOutsB m oO.toNat oL.toNat outss → oO.toNat + oL.toNat ≤ iwTop m →
+    RootOutsB m oO.toNat oL.toNat outss → oO.toNat + oL.toNat ≤ iwTop m → PosMR m →
     ∃ x a', (nestRoot V fe c holes css NS outss).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
       RootOutsB m' (r.headD 0).toNat (r.tail.headD 0).toNat x.1 ∧
-      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ NSB m' (r.tail.tail.headD 0) x.2
-  | 0, _, m, m', a, cO, cL, ns, oO, oL, css, NS, outss, r, h, _, _, _, _, _, _, _, _, _, _, _, _ => by
+      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' ∧ NSB m' (r.tail.tail.headD 0) x.2 ∧ PosMR m'
+  | 0, _, m, m', a, cO, cL, ns, oO, oL, css, NS, outss, r, h, _, _, _, _, _, _, _, _, _, _, _, _, _ => by
     simp [p2rtW] at h
   | n + 1, hn, m, m', a, cO, cL, ns, oO, oL, css, NS, outss, r, h, hS, hU, hhi, hpn, hho, hhob, hcl, hcb, hcss,
-      hns, hout, houtb => by
+      hns, hout, houtb, hP => by
     have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
     rw [p2rtW_succ] at h
     by_cases h0 : cL = 0
@@ -146,7 +146,7 @@ theorem p2rtW_ok : ∀ (n : Nat), 2 ^ 31 + n ≤ coreWalkFuel → ∀ (m m' : Me
       have : css = [] := List.eq_nil_of_length_eq_zero (by simpa using hcl.symm)
       subst this
       exact ⟨(outss, NS), a, by rw [ConRon.Arena.nestRoot.eq_def]; rfl, hS, IWGrow.refl _, by simpa using hout,
-        by simpa using houtb, by simpa using hns⟩
+        by simpa using houtb, by simpa using hns, hP⟩
     rw [if_neg h0] at h
     obtain ⟨cs, css', rfl⟩ : ∃ x css', css = x :: css' := by
       cases css with
@@ -172,7 +172,7 @@ theorem p2rtW_ok : ∀ (n : Nat), 2 ^ 31 + n ≤ coreWalkFuel → ∀ (m m' : Me
         (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) hO hL c.params c.names holes :=
       ⟨hus0, by show decHL (truncM m) _ _ = _; rw [decHL_truncM hpe0]; exact hpa0, hpe0, hn0, hne0,
         by rw [hpl]; exact hpn, hho, hhob⟩
-    have hCt := (nbOK_all dn vis fe hM hcs n (by omega)).2.2.2.2.2.2.2.1
+    have hCt := (nbOK_all dn vis fe hcs n (by omega)).2.2.2.2.2.2.2.1
     cases hc : nbCtorsW n m vis ctx 1 0 0 0 (nhiW m ctx 0) (rdW (m.arr64 IW) (ctx + 10))
         (rdW (m.arr64 IW) (ctx + 7)) (rdW (m.arr64 IW) (ctx + 8)) (rdW (m.arr64 IW) ctx)
         (rdW (m.arr64 IW) (ctx + 1)) hO hL cO' cL' ns 0 0 with
@@ -180,9 +180,9 @@ theorem p2rtW_ok : ∀ (n : Nat), 2 ^ 31 + n ≤ coreWalkFuel → ∀ (m m' : Me
     | some pr =>
     obtain ⟨r1, m1⟩ := pr
     rw [hc, p2rtK1_some] at h
-    obtain ⟨x1, a1, hrun1, hS1, hg1, hO1, hOb1, hns1⟩ := hCt m m1 a ctx 1 0 0 0 (nhiW m ctx 0) _ _ _ _ _ hO hL cO'
+    obtain ⟨x1, a1, hrun1, hS1, hg1, hO1, hOb1, hns1, hP1⟩ := hCt m m1 a ctx 1 0 0 0 (nhiW m ctx 0) _ _ _ _ _ hO hL cO'
       cL' ns 0 0 c [] c.params c.names holes cs NS [] r1 hc hS hW hC hcl' hcb' hcsAt hns (by simpa using OutsB.nil m 0)
-      (by simp)
+      (by simp) hP
     rw [hhi0, husd0] at hrun1
     have hrun1' : (nestCtors V fe c true 0 [] (c.hiAt 0) c.lvls c.params c.names holes cs NS []).run a =
         .ok (x1, a1) := by simpa using hrun1
@@ -211,13 +211,14 @@ theorem p2rtW_ok : ∀ (n : Nat), 2 ^ 31 + n ≤ coreWalkFuel → ∀ (m m' : Me
     have hg13 := hg12.trans hg3
     have hcO1 : (cO + 1).toNat = cO.toNat + 1 := word_add_toNat (by simp; omega)
     have hcL1 : (cL - 1).toNat = css'.length := by rw [pos2_word_pred h0]; omega
-    obtain ⟨x, a', hrun, hS', hg', hO', hOb', hns'⟩ := p2rtW_ok n (by omega) m3 m' a1 (cO + 1) (cL - 1)
+    obtain ⟨x, a', hrun, hS', hg', hO', hOb', hns', hP'⟩ := p2rtW_ok n (by omega) m3 m' a1 (cO + 1) (cL - 1)
       (r1.tail.tail.headD 0) (ro.headD 0) (ro.tail.headD 0) css' x1.2 (outss ++ [x1.1]) r h hS3 (hU.grow hg13) hhi
       hpn (by rw [decHL_agree (RdS.of_grow hg13) (fun j hj => by omega)]; exact hho)
       (by have := hg13.1; omega) hcL1 (by rw [hcO1]; have := hg13.1; omega)
       (by rw [hcO1]; exact (hcss.grow hg13).tail)
       ((hns1.grow hg2 htop1).grow hg3 htop2) hout3 (by rw [h30, h31]; omega)
-    refine ⟨x, a', ?_, hS', hg13.trans hg', hO', hOb', hns'⟩
+      ((hP1.fr (posRecW_mfr hr2)).fr (snocW_mfr hsn))
+    refine ⟨x, a', ?_, hS', hg13.trans hg', hO', hOb', hns', hP'⟩
     simp only [ConRon.Arena.nestRoot, StateT.run_bind]
     rw [hrun1']
     exact hrun
@@ -259,19 +260,19 @@ theorem SeedsAt.tail {m : Mem} {o : Nat} {x : NestKey × Nat} {seeds : List (Nes
   exact ⟨sp, key, nPc, by rw [show o + 1 + i = o + (i + 1) by omega]; exact h1, by omega, by simpa using rest⟩
 
 section seeds
-variable (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (hM : PosMemo dn vis fe)
+variable (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
   (hcs : CtorSums fe) (ctx : Word) (c : NestCtx)
 
-include hM hcs in
+include hcs in
 /-- **`nest_seeds`** simulated by `nestSeeds`. -/
 theorem p2sdW_ok : ∀ (n : Nat), 2 ^ 31 + n ≤ coreWalkFuel → ∀ (m m' : Mem) (a : AState) (sO sL ns : Word)
     (seeds : List (NestKey × Nat)) (NS : NestState) (r : List Word),
     p2sdW n m vis ctx sO sL ns = some (r, m') → StageR dn vis fe m a → UCtx dn vis fe m ctx c →
-    c.hiAt 0 < 2 ^ 64 → sL.toNat = seeds.length → SeedsAt m sO.toNat seeds → NSB m ns NS →
+    c.hiAt 0 < 2 ^ 64 → sL.toNat = seeds.length → SeedsAt m sO.toNat seeds → NSB m ns NS → PosMR m →
     ∃ x a', (nestSeeds V fe c seeds NS).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
-      NSB m' (r.headD 0) x
-  | 0, _, m, m', a, sO, sL, ns, seeds, NS, r, h, _, _, _, _, _, _ => by simp [p2sdW] at h
-  | n + 1, hn, m, m', a, sO, sL, ns, seeds, NS, r, h, hS, hU, hhi, hsl, hsd, hns => by
+      NSB m' (r.headD 0) x ∧ PosMR m'
+  | 0, _, m, m', a, sO, sL, ns, seeds, NS, r, h, _, _, _, _, _, _, _ => by simp [p2sdW] at h
+  | n + 1, hn, m, m', a, sO, sL, ns, seeds, NS, r, h, hS, hU, hhi, hsl, hsd, hns, hP => by
     have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
     rw [p2sdW_succ] at h
     by_cases h0 : sL = 0
@@ -281,7 +282,7 @@ theorem p2sdW_ok : ∀ (n : Nat), 2 ^ 31 + n ≤ coreWalkFuel → ∀ (m m' : Me
       subst h0
       have : seeds = [] := List.eq_nil_of_length_eq_zero (by simpa using hsl.symm)
       subst this
-      exact ⟨NS, a, by rw [ConRon.Arena.nestSeeds.eq_def]; rfl, hS, IWGrow.refl _, by simpa using hns⟩
+      exact ⟨NS, a, by rw [ConRon.Arena.nestSeeds.eq_def]; rfl, hS, IWGrow.refl _, by simpa using hns, hP⟩
     rw [if_neg h0] at h
     obtain ⟨⟨kk, nPcN⟩, seeds', rfl⟩ : ∃ x seeds', seeds = x :: seeds' := by
       cases seeds with
@@ -304,8 +305,8 @@ theorem p2sdW_ok : ∀ (n : Nat), 2 ^ 31 + n ≤ coreWalkFuel → ∀ (m m' : Me
     | some pr =>
     obtain ⟨rf, m1⟩ := pr
     rw [hf, p2sdK1_some] at h
-    obtain ⟨a1, hfold, hS1, hg1⟩ := p2sfW_ok dn vis fe hM _ _ kk.ds m hdl hdel hksl n m m1 a 0 SLACK rf hf hS
-      (IWGrow.refl _) (by simp)
+    obtain ⟨a1, hfold, hS1, hg1, hP1⟩ := p2sfW_ok dn vis fe _ _ kk.ds m hdl hdel hksl n m m1 a 0 SLACK rf hf hS
+      (IWGrow.refl _) (by simp) hP
     have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
     -- the instance's type
     cases n with
@@ -319,7 +320,7 @@ theorem p2sdW_ok : ∀ (n : Nat), 2 ^ 31 + n ≤ coreWalkFuel → ∀ (m m' : Me
     rw [hni, p2sdK2_some] at h
     have hW : WCtx dn vis fe m ctx 0 0 c [] := ⟨hU, by simp [HSl, HolesAt], by simpa using hhi⟩
     have hhi0 : (nhiW m ctx 0).toNat = c.hiAt 0 := by simpa using hW.hi htop
-    obtain ⟨x2, a2, hrun2, hS2, hg2, -, hctyH, hctyd⟩ := nitW_ok n' dn fe vis ctx _ (c.hiAt 0) hhi0 c m1 m2 a1 key kk
+    obtain ⟨x2, a2, hrun2, hS2, hg2, -, hctyH, hctyd, hP2⟩ := nitW_ok n' dn fe vis ctx _ (c.hiAt 0) hhi0 c m1 m2 a1 key kk
       r2 hni hS1 (hU.grow hg1) (hkd.get (decNK_mono _) |>.symm ▸ (hkd.stab (decNK_mono _) m1 hg1))
       (pos2_nk_in (hkd.grow (decNK_mono _) hg1)).2 ((hsd.grow hg1 htop) 0 (by simp) |>.elim fun _ h' => by
         obtain ⟨key', nPc', h0', -, -, h1', -, -, hksl', -⟩ := h'
@@ -327,7 +328,7 @@ theorem p2sdW_ok : ∀ (n : Nat), 2 ^ 31 + n ≤ coreWalkFuel → ∀ (m m' : Me
         simp only [Nat.add_zero] at h0'
         rw [this] at h0'; cases h0'
         rw [hg1.2.2.1 _ (by omega), h1w] at h1'; cases h1'
-        exact hksl') hM.no
+        exact hksl') hP1
     have hg12 := hg1.trans hg2
     have hksl2 : (rdW (m.arr64 IW) (key + 2)).toNat + (rdW (m.arr64 IW) (key + 3)).toNat ≤ iwTop m2 :=
       Nat.le_trans hksl hg12.1
@@ -339,7 +340,7 @@ theorem p2sdW_ok : ∀ (n : Nat), 2 ^ 31 + n ≤ coreWalkFuel → ∀ (m m' : Me
     have e3 := pos2_key_rd hg12 htop hk4 (j := 3) (by omega)
     rw [show (key + 1 : Word) = key + UInt64.ofNat 1 from rfl, show (key + 2 : Word) = key + UInt64.ofNat 2 from rfl,
       show (key + 3 : Word) = key + UInt64.ofNat 3 from rfl, e0, e1, e2, e3] at h
-    have hKey := (nbOK_all dn vis fe hM hcs (n' + 1) (by omega)).2.2.2.2.1
+    have hKey := (nbOK_all dn vis fe hcs (n' + 1) (by omega)).2.2.2.2.1
     cases hk3 : nbKeyW (n' + 1) m2 vis ctx (rf.headD 0) 0 0 0 (rdW (m.arr64 IW) key)
         (rdW (m.arr64 IW) (key + UInt64.ofNat 1)) (rdW (m.arr64 IW) (key + UInt64.ofNat 2))
         (rdW (m.arr64 IW) (key + UInt64.ofNat 3)) nPc (r2.tail.headD 0) ns with
@@ -347,19 +348,19 @@ theorem p2sdW_ok : ∀ (n : Nat), 2 ^ 31 + n ≤ coreWalkFuel → ∀ (m m' : Me
     | some pr3 =>
     obtain ⟨r3, m3⟩ := pr3
     rw [hk3, p2sdK3_some] at h
-    obtain ⟨x3, a3, hrun3, hS3, hg3, -, hns3⟩ := hKey m2 m3 a2 ctx (rf.headD 0) 0 0 0 _ _ _ _ nPc _ ns c [] kk.ds NS r3
+    obtain ⟨x3, a3, hrun3, hS3, hg3, -, hns3, hP3⟩ := hKey m2 m3 a2 ctx (rf.headD 0) 0 0 0 _ _ _ _ nPc _ ns c [] kk.ds NS r3
       hk3 hS2 (hW.grow hg12) hnnH husH
       (by show decHL (truncM m2) _ _ = _; rw [decHL_truncM (by simpa using hksl2)]
           rw [decHL_agree (RdS.of_grow hg12) (fun j hj => by simpa using hdsb j hj)]; simpa using hdsd)
-      (by simpa using hksl2) hctyH (hns.grow hg12 htop)
+      (by simpa using hksl2) hctyH (hns.grow hg12 htop) hP2
     have htop3 : iwTop m3 < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.2.1 hS3.2.2.2.1
     have hg13 := hg12.trans hg3
     have hsO1 : (sO + 1).toNat = sO.toNat + 1 := word_add_toNat (by simp; omega)
     have hsL1 : (sL - 1).toNat = seeds'.length := by rw [pos2_word_pred h0]; omega
-    obtain ⟨x, a', hrun, hS', hg', hns'⟩ := p2sdW_ok (n' + 1) (by omega) m3 m' a3 (sO + 1) (sL - 1)
+    obtain ⟨x, a', hrun, hS', hg', hns', hP'⟩ := p2sdW_ok (n' + 1) (by omega) m3 m' a3 (sO + 1) (sL - 1)
       (r3.tail.headD 0) seeds' x3.2 r h hS3 (hU.grow hg13) hhi hsL1
-      (by rw [hsO1]; exact (hsd.grow hg13 htop).tail) hns3
-    refine ⟨x, a', ?_, hS', hg13.trans hg', hns'⟩
+      (by rw [hsO1]; exact (hsd.grow hg13 htop).tail) hns3 hP3
+    refine ⟨x, a', ?_, hS', hg13.trans hg', hns', hP'⟩
     have hfold' : (kk.ds.foldlM (fun a d => do
         let w ← ConRon.Arena.whnfWalkFuel d
         pure (max a w)) fuelSlack).run a = .ok ((rf.headD 0).toNat, a1) := by
@@ -385,28 +386,25 @@ end seeds
 
 section census
 variable {p : Prog} (L : RsLook p) (n : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-  (hM : PosMemo dn vis fe)
 
-include L hM in
--- untagged (lane indproofs2): its section assumes `PosMemo`, not satisfiable as stated (DESIGN.md, landing 9)
--- @[refines_part ConRon.Arena.nestSeeds "the seed's fuel fold (nest_seeds_fuel)"]
+include L in
+@[refines_part ConRon.Arena.nestSeeds "the seed's fuel fold (nest_seeds_fuel)"]
 theorem nestSeedsFuel_refines (s₀ : St) (a₀ : AState) (dO dL k f : Word) (ds : List EIdx)
     (hS : StageR dn vis fe s₀.mem a₀) (hlen : ds.length = dL.toNat)
     (hel : ∀ j < dL.toNat, ∃ w, (s₀.mem.arr64 IW)[dO.toNat + j]? = some w ∧ H w ∧ ds[j]? = some (decI w))
-    (hb : dO.toNat + dL.toNat ≤ iwTop s₀.mem) (hk : k.toNat ≤ dL.toNat) :
+    (hb : dO.toNat + dL.toNat ≤ iwTop s₀.mem) (hk : k.toNat ≤ dL.toNat) (hP : PosMR s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_seeds_fuel" [dO, dL, k, f]
     ⦃fun r s' => LocEq s' s₀ ∧ ∃ a', ((ds.drop k.toNat).foldlM pos2FuelF f.toNat).run a₀ =
-      .ok ((r.headD 0).toNat, a') ∧ StageR dn vis fe s'.mem a' ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
+      .ok ((r.headD 0).toNat, a') ∧ StageR dn vis fe s'.mem a' ∧ IWGrow s₀.mem s'.mem ∧ PosMR s'.mem; ⊤⦄ := by
   refine triple_post (nestSeedsFuel_spec L n s₀ dO dL k f) ?_
   rintro r s' ⟨hlc, hm⟩
-  have := p2sfW_ok dn vis fe hM dO dL ds s₀.mem hlen hel hb n s₀.mem s'.mem a₀ k f _ hm hS (IWGrow.refl _) hk
+  have := p2sfW_ok dn vis fe dO dL ds s₀.mem hlen hel hb n s₀.mem s'.mem a₀ k f _ hm hS (IWGrow.refl _) hk hP
   exact ⟨hlc, by simpa using this⟩
 
 variable (hcs : CtorSums fe)
-include L hM hcs
+include L hcs
 
--- untagged (lane indproofs2): its section assumes `PosMemo`, not satisfiable as stated (DESIGN.md, landing 9)
--- @[refines ConRon.Arena.nestRoot]
+@[refines ConRon.Arena.nestRoot]
 theorem nestRoot_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx hO hL cO cL ns oO oL : Word)
     (c : NestCtx) (holes : List EIdx) (css : List (List (IConstantVal × Nat))) (NS : NestState)
     (outss : List (List (List NestFieldKind × EIdx))) (hS : StageR dn vis fe s₀.mem a₀)
@@ -414,31 +412,31 @@ theorem nestRoot_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : 
     (hho : decHL s₀.mem hO.toNat hL.toNat = some holes) (hhob : hO.toNat + hL.toNat ≤ iwTop s₀.mem)
     (hcl : cL.toNat = css.length) (hcb : cO.toNat + css.length ≤ iwTop s₀.mem) (hcss : CssAt s₀.mem cO.toNat css)
     (hns : NSB s₀.mem ns NS) (hout : RootOutsB s₀.mem oO.toNat oL.toNat outss)
-    (houtb : oO.toNat + oL.toNat ≤ iwTop s₀.mem) :
+    (houtb : oO.toNat + oL.toNat ≤ iwTop s₀.mem) (hP : PosMR s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_root" [vis, ctx, hO, hL, cO, cL, ns, oO, oL]
     ⦃fun r s' => LocEq s' s₀ ∧
       ∃ x a', (nestRoot V fe c holes css NS outss).run a₀ = .ok (x, a') ∧ StageR dn vis fe s'.mem a' ∧
       IWGrow s₀.mem s'.mem ∧ RootOutsB s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat x.1 ∧
-      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop s'.mem ∧ NSB s'.mem (r.tail.tail.headD 0) x.2; ⊤⦄ := by
+      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop s'.mem ∧ NSB s'.mem (r.tail.tail.headD 0) x.2 ∧
+      PosMR s'.mem; ⊤⦄ := by
   refine triple_post (nestRoot_spec L n s₀ vis ctx hO hL cO cL ns oO oL) ?_
   rintro r s' ⟨hlc, hm⟩
-  have := p2rtW_ok dn vis fe hM hcs ctx hO hL c holes n hn s₀.mem s'.mem a₀ cO cL ns oO oL css NS outss _ hm hS hU
-    hhi hpn hho hhob hcl hcb hcss hns hout houtb
+  have := p2rtW_ok dn vis fe hcs ctx hO hL c holes n hn s₀.mem s'.mem a₀ cO cL ns oO oL css NS outss _ hm hS hU
+    hhi hpn hho hhob hcl hcb hcss hns hout houtb hP
   exact ⟨hlc, by simpa using this⟩
 
--- untagged (lane indproofs2): its section assumes `PosMemo`, not satisfiable as stated (DESIGN.md, landing 9)
--- @[refines ConRon.Arena.nestSeeds]
+@[refines ConRon.Arena.nestSeeds]
 theorem nestSeeds_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx sO sL ns : Word)
     (c : NestCtx) (seeds : List (NestKey × Nat)) (NS : NestState) (hS : StageR dn vis fe s₀.mem a₀)
     (hU : UCtx dn vis fe s₀.mem ctx c) (hhi : c.hiAt 0 < 2 ^ 64) (hsl : sL.toNat = seeds.length)
-    (hsd : SeedsAt s₀.mem sO.toNat seeds) (hns : NSB s₀.mem ns NS) :
+    (hsd : SeedsAt s₀.mem sO.toNat seeds) (hns : NSB s₀.mem ns NS) (hP : PosMR s₀.mem) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_seeds" [vis, ctx, sO, sL, ns]
     ⦃fun r s' => LocEq s' s₀ ∧
       ∃ x a', (nestSeeds V fe c seeds NS).run a₀ = .ok (x, a') ∧ StageR dn vis fe s'.mem a' ∧
-      IWGrow s₀.mem s'.mem ∧ NSB s'.mem (r.headD 0) x; ⊤⦄ := by
+      IWGrow s₀.mem s'.mem ∧ NSB s'.mem (r.headD 0) x ∧ PosMR s'.mem; ⊤⦄ := by
   refine triple_post (nestSeeds_spec L n s₀ vis ctx sO sL ns) ?_
   rintro r s' ⟨hlc, hm⟩
-  have := p2sdW_ok dn vis fe hM hcs ctx c n hn s₀.mem s'.mem a₀ sO sL ns seeds NS _ hm hS hU hhi hsl hsd hns
+  have := p2sdW_ok dn vis fe hcs ctx c n hn s₀.mem s'.mem a₀ sO sL ns seeds NS _ hm hS hU hhi hsl hsd hns hP
   exact ⟨hlc, by simpa using this⟩
 
 end census

@@ -141,7 +141,7 @@ theorem lvNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h
 /-- The arrays and `CTL` words a level promotion writes (the names' and the level tables'). -/
 abbrev lArrs : List ArrId :=
   [NAREC, NASLOT, NSREC, NSSLOT, NNREC, NNSLOT, PNM, ZREC, ZSLOT, SREC, SSLOT, MREC, MSLOT,
-    IREC, ISLOT, PREC, PSLOT, PLM]
+    IREC, ISLOT, PREC, PSLOT, PLM, SHP, MHP, IHP]
 abbrev lCtl : List Word := [1, 34, 35, 36, 37, 38, 39, 141, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 143]
 
 /-- **What a successful run of a level promotion gives** (`PNOk` at the level frame). -/
@@ -293,7 +293,7 @@ theorem pl_rel : ∀ n : Nat,
       rw [hs₂] at hW₂
       obtain ⟨a₂, hrun₂, hD₂, hpw₂, hcp₂, hfr₂⟩ := piSucc_rel p hp n m₁ a₁ hD₁ _ hpw₁ _ _ hW₂
       rw [← hm]
-      refine ⟨a₂, pm₁, ?_, hD₂, hP₁.frameLo (by simp [SREC, SSLOT]) (by simp) hfr₂, hr ▸ hpw₂,
+      refine ⟨a₂, pm₁, ?_, hD₂, hP₁.frameLo (by simp [SREC, SSLOT, SHP]) (by simp) hfr₂, hr ▸ hpw₂,
         hcp₂.trans hcp₁, hfr₁.trans (hfr₂.mono (by simp) (by simp)), he₁, hls₁⟩
       rw [run_bind_ok hv0]
       simp only
@@ -329,7 +329,7 @@ theorem pl_rel : ∀ n : Nat,
       rw [hs₃] at hW₃
       obtain ⟨a₃, hrun₃, hD₃, hpw₃, hcp₃, hfr₃⟩ := piMax_rel p hp n m₂ a₂ hD₂ _ _ hpw₁ hpw₂ _ _ hW₃
       rw [← hm]
-      refine ⟨a₃, pm₂, ?_, hD₃, hP₂.frameLo (by simp [MREC, MSLOT]) (by simp) hfr₃, hr ▸ hpw₃,
+      refine ⟨a₃, pm₂, ?_, hD₃, hP₂.frameLo (by simp [MREC, MSLOT, MHP]) (by simp) hfr₃, hr ▸ hpw₃,
         hcp₃.trans (hcp₂.trans hcp₁), (hfr₁.trans hfr₂).trans (hfr₃.mono (by simp) (by simp)),
         he₂.trans he₁, hls₂.trans hls₁⟩
       rw [run_bind_ok hv0]
@@ -369,7 +369,7 @@ theorem pl_rel : ∀ n : Nat,
       obtain ⟨a₃, hrun₃, hD₃, hpw₃, hcp₃, hfr₃⟩ :=
         piImax_rel p hp n m₂ a₂ hD₂ _ _ hpw₁ hpw₂ _ _ hW₃
       rw [← hm]
-      refine ⟨a₃, pm₂, ?_, hD₃, hP₂.frameLo (by simp [IREC, ISLOT]) (by simp) hfr₃, hr ▸ hpw₃,
+      refine ⟨a₃, pm₂, ?_, hD₃, hP₂.frameLo (by simp [IREC, ISLOT, IHP]) (by simp) hfr₃, hr ▸ hpw₃,
         hcp₃.trans (hcp₂.trans hcp₁), (hfr₁.trans hfr₂).trans (hfr₃.mono (by simp) (by simp)),
         he₂.trans he₁, hls₂.trans hls₁⟩
       rw [run_bind_ok hv0]

@@ -1,5 +1,6 @@
 import ConAgua.Arena.StoreLib
 import ConAgua.Arena.ParamStore
+import ConAgua.Arena.LpColRel
 
 /-!
 # The level `param` store refines the arena's `param` tables
@@ -182,6 +183,15 @@ theorem pintern_correct (w : Word) (m' : Mem) (hI : pinternW m u = some (w, m'))
     (probe_homeG paramSch m 1 _ _ (pprobeW_arm m u 1) _) _ (ppushOK_room m) _ rfl
     (paramNewOK m u hu) w m' hI
 
+
+include hR hu in
+/-- **The `param` table's constant bit across `intern_param`**: `hasParam = true`. -/
+theorem pintern_hp (hC : ConstT2 paramLens (fun d : LDer => hpW d = 1) a) (w : Word) (m' : Mem)
+    (hI : pinternW m u = some (w, m')) :
+    ConstT2 paramLens (fun d : LDer => hpW d = 1) (AM.st (internLNode (.param (decI u))) a) := by
+  obtain ⟨hok, -, -⟩ := pintern_correct m a hR u hu w m' hI
+  exact constMk paramLens _ a _ _ _ _ _ hC rfl
+    (AM.proto_casesG paramLens _ _ _ _ _ _ a (internLNode_param_run _ a) hok)
 end intern
 
 /-- `intern_param` refines `internLNode (.param _)` under `ParamR`. -/

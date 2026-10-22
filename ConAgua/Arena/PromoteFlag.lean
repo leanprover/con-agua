@@ -98,7 +98,8 @@ theorem ArenaR.flag {m : Mem} {a : AState} (hR : ArenaR m a) (w : Word) :
     storeR_flag nanonSch NaRecRel nahash nanonSch_wf naFrame m _ _ _ hR.nanon w,
     storeR_flag nstrSch NsRecRel nshash nstrSch_wf nstrFrame m _ _ _ hR.nstr w,
     storeR_flag nnumSch NnRecRel nnhash nnumSch_wf nnFrame m _ _ _ hR.nnum w,
-    hR.memos.frame (by simp) (by simp [memoCtl]) hf⟩
+    hR.memos.frame (by simp) (by simp [memoCtl]) hf, hR.zeroHp, hR.paramHp,
+    hR.succHp.frame (Mem.arr64_set64_ne _ _ _ _ _ (by decide)), hR.maxHp.frame (Mem.arr64_set64_ne _ _ _ _ _ (by decide)), hR.imaxHp.frame (Mem.arr64_set64_ne _ _ _ _ _ (by decide)), hR.lsHp.frame (Mem.arr64_set64_ne _ _ _ _ _ (by decide)), hR.sortLp.frame (Mem.arr64_set64_ne _ _ _ _ _ (by decide)), hR.constLp.frame (Mem.arr64_set64_ne _ _ _ _ _ (by decide)), hR.fvarLp.frame (Mem.arr64_set64_ne _ _ _ _ _ (by decide))⟩
 
 /-- The derived ranges read the expression tables only. -/
 theorem DerR.onA {m : Mem} {a : AState} (hD : DerR m a) (b : Bool) : DerR m (onA b a) :=

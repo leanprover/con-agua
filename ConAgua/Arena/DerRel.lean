@@ -1,18 +1,10 @@
-import ConAgua.Arena.View
-import ConAgua.Arena.ExprMk
+import ConAgua.Arena.DerRelBase
 
 /-!
-# The derived range relation `DerR`, and the `mk_*` constructors under `ArenaR ∧ DerR`
+# `DerR` across the interning and the `mk_*` constructors
 
-`DerR m a`: for every expression table and tier, one derived word per node (`Tbl.der`), whose
-range field (`bvarOfData`) is `satSucc i` for `bvar i`, `0` for the other leaves, and the word the
-L memory holds at `XDER[2 i + t]` for the five compound tables (`ExprMk.lean`). Under `ArenaR` and
-`DerR`, `der_b(h)` is `bvarOfData (a.store.derived (decE h))` (`derBW_ok`), and each `mk_*` refines
-the arena's `internE` keeping both relations (`mkApp_ok`, …). `ArenaD m a` is the pair.
-
-`DerR` is not a field of `ArenaR`: the compound tables' `intern_*` called directly would add a
-node with no range in L. Walks that read the derived word (`liftLooseBVarsGo`, `instantiate1Go`, …)
-run under `ArenaD` and intern through `mk_*`.
+The relation and the derived-word reads are in `DerRelBase.lean` (split off by helper
+`whnf4-d23`; names unchanged).
 -/
 
 open ConRon.Arena ConLeche
@@ -22,375 +14,6 @@ open scoped Lean.Order
 set_option linter.unusedSimpArgs false
 
 namespace L.Arena
-
-/-! ## The relation -/
-
-/-- The derived words of one tier of one table: one per node, and `P i x (derAt i)` of node `i`. -/
-def DerT {α : Type} [BEq α] [Hashable α] (tb : Tbl α EIdx UInt64) (P : Nat → α → UInt64 → Prop) :
-    Prop :=
-  tb.der.size = tb.nodes.size ∧ ∀ i x, tb.nodes[i]? = some x → P i x (tb.derAt i)
-
-/-- The same for both tiers of a table `g`; `P` gets the tier word. -/
-def DerT2 {α : Type} [BEq α] [Hashable α] (a : AState) (g : ETables → Tbl α EIdx UInt64)
-    (P : Word → Nat → α → UInt64 → Prop) : Prop :=
-  DerT (g a.store.pers) (P 0) ∧ DerT (g a.store.scr) (P 1)
-
-/-- A leaf other than `bvar`/`fvar` (`sort`, `const`, `lit`): both ranges `0` (lane `exprops3`
-added the fvar-range conjunct). -/
-def zP {α : Type} : Word → Nat → α → UInt64 → Prop :=
-  fun _ _ _ d => bvarOfData d = 0 ∧ fvarOfData d = 0
-
-/-- `bvar i`: bvar range `satSucc i`, fvar range `0` (a bound variable is not free). -/
-def bvP : Word → Nat → BVarNode → UInt64 → Prop :=
-  fun _ _ x d => bvarOfData d = satSucc x.i ∧ fvarOfData d = 0
-
-/-- `fvar idx ty`: bvar range `0`, fvar range `satSucc idx` (lane `exprops3`). -/
-def fvP : Word → Nat → FVarNode → UInt64 → Prop :=
-  fun _ _ x d => bvarOfData d = 0 ∧ fvarOfData d = satSucc x.idx
-
-/-- A compound table: both ranges are in L, packed at `A[2 i + t]` (`packBF`, lane `exprops3`
-widened this from the bvar range alone). -/
-def cP {α : Type} (A : ArrId) (m : Mem) : Word → Nat → α → UInt64 → Prop :=
-  fun t i _ d => rdW (m.arr64 A) (UInt64.ofNat i * 2 + t) = packBF (bvarOfData d) (fvarOfData d)
-
-/-- **The derived range relation.** -/
-structure DerR (m : Mem) (a : AState) : Prop where
-  bvar : DerT2 a (·.bvars) bvP
-  fvar : DerT2 a (·.fvars) fvP
-  sort : DerT2 a (·.sorts) zP
-  const : DerT2 a (·.consts) zP
-  lit : DerT2 a (·.lits) zP
-  app : DerT2 a (·.apps) (cP ADER m)
-  lam : DerT2 a (·.lams) (cP LADER m)
-  forallE : DerT2 a (·.foralls) (cP FADER m)
-  letE : DerT2 a (·.lets) (cP LEDER m)
-  proj : DerT2 a (·.projs) (cP PJDER m)
-
-/-- **The arena relation with the derived ranges.** -/
-def ArenaD (m : Mem) (a : AState) : Prop := ArenaR m a ∧ DerR m a
-
-/-! ## Facts of one tier -/
-
-/-- The tier a tier word names. -/
-def tierOf (a : AState) (t : Word) : ETables := if t = 0 then a.store.pers else a.store.scr
-
-theorem derT2_tier {α : Type} [BEq α] [Hashable α] {a : AState} {g : ETables → Tbl α EIdx UInt64}
-    {P : Word → Nat → α → UInt64 → Prop} (hD : DerT2 a g P) (t : Word) (ht : t ≤ 1) :
-    DerT (g (tierOf a t)) (P t) := by
-  rcases word_le_one t ht with rfl | rfl
-  · simpa [tierOf] using hD.1
-  · simpa [tierOf] using hD.2
-
-/-- Past the nodes, the derived word is `0`. -/
-theorem derT_out {α : Type} [BEq α] [Hashable α] {tb : Tbl α EIdx UInt64}
-    {P : Nat → α → UInt64 → Prop} (hD : DerT tb P) (i : Nat) (hi : tb.nodes.size ≤ i) :
-    tb.derAt i = 0 := by
-  simp only [Tbl.derAt, Array.getD_eq_getD_getElem?]
-  rw [Array.getElem?_eq_none (by rw [hD.1]; exact hi)]; rfl
-
-/-- A `sort`/`const`/`lit` table's bvar range is `0` everywhere. -/
-theorem derT_zero_b {α : Type} [BEq α] [Hashable α] {tb : Tbl α EIdx UInt64} {t : Word}
-    (hD : DerT tb (zP t)) (i : Nat) : bvarOfData (tb.derAt i) = 0 := by
-  by_cases hi : i < tb.nodes.size
-  · exact (hD.2 i _ (Array.getElem?_eq_getElem hi)).1
-  · rw [derT_out hD i (by omega)]; rfl
-
-/-- A `sort`/`const`/`lit` table's fvar range is `0` everywhere (lane `exprops3`). -/
-theorem derT_zero_f {α : Type} [BEq α] [Hashable α] {tb : Tbl α EIdx UInt64} {t : Word}
-    (hD : DerT tb (zP t)) (i : Nat) : fvarOfData (tb.derAt i) = 0 := by
-  by_cases hi : i < tb.nodes.size
-  · exact (hD.2 i _ (Array.getElem?_eq_getElem hi)).2
-  · rw [derT_out hD i (by omega)]; rfl
-
-/-- A `bvar` node's fvar range is `0` (lane `exprops3`: a bound variable is not free). -/
-theorem derT_bvar_f {tb : Tbl BVarNode EIdx UInt64} {t : Word}
-    (hD : DerT tb (bvP t)) (i : Nat) : fvarOfData (tb.derAt i) = 0 := by
-  by_cases hi : i < tb.nodes.size
-  · exact (hD.2 i _ (Array.getElem?_eq_getElem hi)).2
-  · rw [derT_out hD i (by omega)]; rfl
-
-/-- A `fvar` node's bvar range is `0` (lane `exprops3`: an `fvar` is not de Bruijn). -/
-theorem derT_fvar_b {tb : Tbl FVarNode EIdx UInt64} {t : Word}
-    (hD : DerT tb (fvP t)) (i : Nat) : bvarOfData (tb.derAt i) = 0 := by
-  by_cases hi : i < tb.nodes.size
-  · exact (hD.2 i _ (Array.getElem?_eq_getElem hi)).1
-  · rw [derT_out hD i (by omega)]; rfl
-
-/-- The count of a tier in L is its node count. -/
-theorem cnt_tier {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] (S : Schema)
-    (R : Mem → Word → Word → α → Prop) (hs : Mem → Word → Word → Word) (m : Mem) (on : Bool)
-    (P Q : Tbl α (Idx k) δ) (hR : StoreR S R hs m on P Q) (t : Word) (ht : t ≤ 1) :
-    (cntW S m t).toNat = (if t = 0 then P else Q).nodes.size := by
-  rcases word_le_one t ht with rfl | rfl
-  · simpa using hR.2.2.1.1
-  · simpa using hR.2.2.2.1
-
-/-! ## `derived` under `ArenaR` -/
-
-theorem decE_tierW (h : Word) : (decE h).isPersistent = (tierW h == 0) := by
-  simp only [decE, Idx.isPersistent, Idx.tier, tierW]
-  have := bit27_toNat h
-  have : (h.toUInt32 / 134217728 % 2).toNat = h.toNat / 2 ^ 27 % 2 := by
-    simp [UInt32.toNat_mod, UInt32.toNat_div, UInt64.toNat_toUInt32]; omega
-  grind
-
-section derived
-variable (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word)
-
-include hR in
-theorem derived_closed (hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) :
-    a.store.derived (decE h) = 0 := by
-  have hfl := hR.app.2.1
-  have hon : a.store.scratchOn = false := by
-    rw [← hfl]; simp [hs.2]
-  simp [EStore.derived, decE_tierW, hs.1, hon]
-
-include hR in
-theorem derived_tier (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) :
-    a.store.derived (decE h) = (tierOf a (tierW h)).derAt (decE h) := by
-  have hfl := hR.app.2.1
-  unfold EStore.derived tierOf
-  rw [decE_tierW]
-  by_cases ht : tierW h = 0
-  · simp [ht]
-  · have hon : a.store.scratchOn = true := by
-      rw [← hfl]; simp only [bne_iff_ne, ne_eq]; exact fun h1 => hs ⟨ht, h1⟩
-    simp [ht, hon]
-
-end derived
-
-section derAt
-variable (tb : ETables) (h : Word) (hh : h.toNat < 2 ^ 32)
-include hh
-
-theorem derAt_bvar (hg : h >>> 28 = 0) : tb.derAt (decE h) = tb.bvars.derAt (idxW h).toNat := by
-  simp [ETables.derAt, decE_tag h hh, hg, decE_idx h, ETag.bvar]
-theorem derAt_fvar (hg : h >>> 28 = 1) : tb.derAt (decE h) = tb.fvars.derAt (idxW h).toNat := by
-  simp [ETables.derAt, decE_tag h hh, hg, decE_idx h, ETag.bvar, ETag.fvar]
-theorem derAt_sort (hg : h >>> 28 = 2) : tb.derAt (decE h) = tb.sorts.derAt (idxW h).toNat := by
-  simp [ETables.derAt, decE_tag h hh, hg, decE_idx h, ETag.bvar, ETag.fvar, ETag.sort]
-theorem derAt_const (hg : h >>> 28 = 3) : tb.derAt (decE h) = tb.consts.derAt (idxW h).toNat := by
-  simp [ETables.derAt, decE_tag h hh, hg, decE_idx h, ETag.bvar, ETag.fvar, ETag.sort, ETag.const]
-theorem derAt_app (hg : h >>> 28 = 4) : tb.derAt (decE h) = tb.apps.derAt (idxW h).toNat := by
-  simp [ETables.derAt, decE_tag h hh, hg, decE_idx h, ETag.bvar, ETag.fvar, ETag.sort, ETag.const,
-    ETag.app]
-theorem derAt_lam (hg : h >>> 28 = 5) : tb.derAt (decE h) = tb.lams.derAt (idxW h).toNat := by
-  simp [ETables.derAt, decE_tag h hh, hg, decE_idx h, ETag.bvar, ETag.fvar, ETag.sort, ETag.const,
-    ETag.app, ETag.lam]
-theorem derAt_forall (hg : h >>> 28 = 6) : tb.derAt (decE h) = tb.foralls.derAt (idxW h).toNat := by
-  simp [ETables.derAt, decE_tag h hh, hg, decE_idx h, ETag.bvar, ETag.fvar, ETag.sort, ETag.const,
-    ETag.app, ETag.lam, ETag.forallE]
-theorem derAt_let (hg : h >>> 28 = 7) : tb.derAt (decE h) = tb.lets.derAt (idxW h).toNat := by
-  simp [ETables.derAt, decE_tag h hh, hg, decE_idx h, ETag.bvar, ETag.fvar, ETag.sort, ETag.const,
-    ETag.app, ETag.lam, ETag.forallE, ETag.letE]
-theorem derAt_lit (hg : h >>> 28 = 8) : tb.derAt (decE h) = tb.lits.derAt (idxW h).toNat := by
-  simp [ETables.derAt, decE_tag h hh, hg, decE_idx h, ETag.bvar, ETag.fvar, ETag.sort, ETag.const,
-    ETag.app, ETag.lam, ETag.forallE, ETag.letE, ETag.lit]
-theorem derAt_proj (hg : h >>> 28 = 9) : tb.derAt (decE h) = tb.projs.derAt (idxW h).toNat := by
-  simp [ETables.derAt, decE_tag h hh, hg, decE_idx h, ETag.bvar, ETag.fvar, ETag.sort, ETag.const,
-    ETag.app, ETag.lam, ETag.forallE, ETag.letE, ETag.lit, ETag.proj]
-theorem derAt_other (h0 : h >>> 28 ≠ 0) (h1 : h >>> 28 ≠ 1) (h2 : h >>> 28 ≠ 2)
-    (h3 : h >>> 28 ≠ 3) (h4 : h >>> 28 ≠ 4) (h5 : h >>> 28 ≠ 5) (h6 : h >>> 28 ≠ 6)
-    (h7 : h >>> 28 ≠ 7) (h8 : h >>> 28 ≠ 8) (h9 : h >>> 28 ≠ 9) : tb.derAt (decE h) = 0 := by
-  have hl : (h >>> 28).toNat < 16 := by
-    simp only [UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]; simp; omega
-  have ne : ∀ k : Nat, h >>> 28 ≠ UInt64.ofNat k → (h >>> 28).toNat ≠ k := by
-    intro k hk e; apply hk; apply UInt64.toNat_inj.mp; simp [e]; omega
-  have := ne 0 h0; have := ne 1 h1; have := ne 2 h2; have := ne 3 h3; have := ne 4 h4
-  have := ne 5 h5; have := ne 6 h6; have := ne 7 h7; have := ne 8 h8; have := ne 9 h9
-  have hT : ((h >>> 28).toUInt32).toNat = (h >>> 28).toNat := by
-    simp only [UInt64.toNat_toUInt32]; omega
-  have hk : ∀ k : UInt32, k.toNat < 10 → (h >>> 28).toUInt32 ≠ k := fun k hk e => by
-    have := congrArg UInt32.toNat e; omega
-  simp only [ETables.derAt, decE_tag h hh, ETag.bvar, ETag.fvar, ETag.sort, ETag.const, ETag.app,
-    ETag.lam, ETag.forallE, ETag.letE, ETag.lit, ETag.proj, beq_iff_eq, hk 0 (by decide),
-    hk 1 (by decide), hk 2 (by decide), hk 3 (by decide), hk 4 (by decide), hk 5 (by decide),
-    hk 6 (by decide), hk 7 (by decide), hk 8 (by decide), hk 9 (by decide), ↓reduceIte]
-
-end derAt
-
-/-! ## `der_b` is the range field of `derived` -/
-
-theorem satSuccW_eq (w : Word) : satSuccW w = satSucc w.toNat := by
-  simp only [satSuccW, satSucc, satRange]
-  by_cases h : w < 32767
-  · have : w.toNat < 32767 := h
-    simp only [h, ↓reduceIte, UInt64.mul_one, show ¬ (32767 : Word) ≤ w from UInt64.not_le.mpr h,
-      UInt64.mul_zero, UInt64.add_zero]
-    apply UInt64.toNat_inj.mp
-    rw [UInt64.toNat_add]; simp; omega
-  · have : ¬ w.toNat < 32767 := h
-    simp only [h, ↓reduceIte, UInt64.mul_zero, UInt64.zero_add,
-      show (32767 : Word) ≤ w from UInt64.not_lt.mp h, UInt64.mul_one]
-    apply UInt64.toNat_inj.mp; simp; omega
-
-theorem ofNat_idxW (h : Word) : UInt64.ofNat (idxW h).toNat = idxW h := by simp
-
-/-- A compound tier's range, from `DerT` and the L count. -/
-theorem derC {α : Type} [BEq α] [Hashable α] (A : ArrId) (m : Mem) (tb : Tbl α EIdx UInt64)
-    (t : Word) (hD : DerT tb (cP A m t)) (i : Word) (hc : (i.toNat < tb.nodes.size)) :
-    rdW (m.arr64 A) (i * 2 + t) =
-      packBF (bvarOfData (tb.derAt i.toNat)) (fvarOfData (tb.derAt i.toNat)) := by
-  obtain ⟨x, hx⟩ : ∃ x, tb.nodes[i.toNat]? = some x := ⟨_, Array.getElem?_eq_getElem hc⟩
-  have := hD.2 _ x hx
-  simpa only [cP, UInt64.ofNat_toNat] using this
-
-/-- **`der_b(h)` is the range field of the arena's derived word.** -/
-theorem derBW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (hD : DerR m a) (h : Word)
-    (hh : h.toNat < 2 ^ 32) : derBW m h = bvarOfData (a.store.derived (decE h)) := by
-  have ht := tierW_le h
-  unfold derBW
-  by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-  · rw [ite_eq_left hs, derived_closed m a hR h hs]; rfl
-  rw [ite_eq_right hs, derived_tier m a hR h hs]
-  -- a compound tag: the count, then the L word
-  have comp : ∀ {α : Type} [BEq α] [Hashable α] (S : Schema) (R : Mem → Word → Word → α → Prop)
-      (hsh : Mem → Word → Word → Word) (g : ETables → Tbl α EIdx UInt64) (A : ArrId)
-      (hT : StoreR S R hsh m a.store.scratchOn (g a.store.pers) (g a.store.scr))
-      (hd : DerT2 a g (cP A m)),
-      (if cntW S m (tierW h) ≤ idxW h then (0 : Word)
-       else rdW (m.arr64 A) (idxW h * 2 + tierW h) &&& 32767) =
-        bvarOfData ((g (tierOf a (tierW h))).derAt (idxW h).toNat) := by
-    intro α _ _ S R hsh g A hT hd
-    have hc := cnt_tier S R hsh m _ _ _ hT (tierW h) ht
-    have hD' := derT2_tier hd (tierW h) ht
-    have hg : (if tierW h = 0 then g a.store.pers else g a.store.scr) = g (tierOf a (tierW h)) := by
-      simp only [tierOf]; split <;> rfl
-    rw [hg] at hc
-    split
-    · rename_i hle
-      rw [derT_out hD' _ (by rw [← hc]; exact hle)]; rfl
-    · rename_i hlt
-      rw [derC A m _ _ hD' _ (by rw [← hc]; exact UInt64.not_le.mp hlt)]
-      exact packBF_bvar _ _ (bvarOfData_lt _) (fvarOfData_lt _)
-  by_cases g0 : h >>> 28 = 0
-  · simp only [g0, ↓reduceIte]
-    rw [derAt_bvar _ h hh g0]
-    have hc := cnt_tier bvarSch BRecRel bhash m _ _ _ hR.bvar (tierW h) ht
-    have hD' := derT2_tier hD.bvar (tierW h) ht
-    have hg : (if tierW h = 0 then a.store.pers.bvars else a.store.scr.bvars) =
-        (tierOf a (tierW h)).bvars := by simp only [tierOf]; split <;> rfl
-    rw [hg] at hc
-    split
-    · rename_i hle
-      rw [derT_out hD' _ (by rw [← hc]; exact hle)]; rfl
-    · rename_i hlt
-      obtain ⟨k, hk, hkr⟩ := node_of m a h bvarSch BRecRel bhash (·.bvars) _ hR.bvar
-        (UInt64.not_le.mp hlt)
-      have hk' : (tierOf a (tierW h)).bvars.nodes[(idxW h).toNat]? = some k := by
-        simpa [tierOf, apply_ite] using hk
-      rw [(hD'.2 _ k hk').1, satSuccW_eq]
-      simp only [BRecRel] at hkr; rw [hkr]
-  simp only [g0, ↓reduceIte]
-  by_cases g4 : h >>> 28 = 4
-  · simp only [g4, ↓reduceIte]; rw [derAt_app _ h hh g4]
-    exact comp appSch ARecRel ahash (·.apps) ADER hR.app hD.app
-  simp only [g4, ↓reduceIte]
-  by_cases g5 : h >>> 28 = 5
-  · simp only [g5, ↓reduceIte]; rw [derAt_lam _ h hh g5]
-    exact comp lamSch LaRecRel lahash (·.lams) LADER hR.lam hD.lam
-  simp only [g5, ↓reduceIte]
-  by_cases g6 : h >>> 28 = 6
-  · simp only [g6, ↓reduceIte]; rw [derAt_forall _ h hh g6]
-    exact comp forallSch FaRecRel fahash (·.foralls) FADER hR.forallE hD.forallE
-  simp only [g6, ↓reduceIte]
-  by_cases g7 : h >>> 28 = 7
-  · simp only [g7, ↓reduceIte]; rw [derAt_let _ h hh g7]
-    exact comp letSch LeRecRel lehash (·.lets) LEDER hR.letE hD.letE
-  simp only [g7, ↓reduceIte]
-  by_cases g9 : h >>> 28 = 9
-  · simp only [g9, ↓reduceIte]; rw [derAt_proj _ h hh g9]
-    exact comp projSch PJRecRel pjhash (·.projs) PJDER hR.proj hD.proj
-  simp only [g9, ↓reduceIte]
-  by_cases g1 : h >>> 28 = 1
-  · rw [derAt_fvar _ h hh g1, derT_fvar_b (derT2_tier hD.fvar (tierW h) ht) (idxW h).toNat]
-  have tz := fun {α : Type} [BEq α] [Hashable α] (g : ETables → Tbl α EIdx UInt64)
-    (hd : DerT2 a g zP) => derT_zero_b (derT2_tier hd (tierW h) ht) (idxW h).toNat
-  by_cases g2 : h >>> 28 = 2
-  · rw [derAt_sort _ h hh g2, tz (·.sorts) hD.sort]
-  by_cases g3 : h >>> 28 = 3
-  · rw [derAt_const _ h hh g3, tz (·.consts) hD.const]
-  by_cases g8 : h >>> 28 = 8
-  · rw [derAt_lit _ h hh g8, tz (·.lits) hD.lit]
-  rw [derAt_other _ h hh g0 g1 g2 g3 g4 g5 g6 g7 g8 g9]; rfl
-
-/-- **`der_f(h)` is the fvar-range field of the arena's derived word** (lane `exprops3`). -/
-theorem derFW_ok (m : Mem) (a : AState) (hR : ArenaR m a) (hD : DerR m a) (h : Word)
-    (hh : h.toNat < 2 ^ 32) : derFW m h = fvarOfData (a.store.derived (decE h)) := by
-  have ht := tierW_le h
-  unfold derFW
-  by_cases hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
-  · rw [ite_eq_left hs, derived_closed m a hR h hs]; rfl
-  rw [ite_eq_right hs, derived_tier m a hR h hs]
-  have comp : ∀ {α : Type} [BEq α] [Hashable α] (S : Schema) (R : Mem → Word → Word → α → Prop)
-      (hsh : Mem → Word → Word → Word) (g : ETables → Tbl α EIdx UInt64) (A : ArrId)
-      (hT : StoreR S R hsh m a.store.scratchOn (g a.store.pers) (g a.store.scr))
-      (hd : DerT2 a g (cP A m)),
-      (if cntW S m (tierW h) ≤ idxW h then (0 : Word)
-       else rdW (m.arr64 A) (idxW h * 2 + tierW h) >>> 15) =
-        fvarOfData ((g (tierOf a (tierW h))).derAt (idxW h).toNat) := by
-    intro α _ _ S R hsh g A hT hd
-    have hc := cnt_tier S R hsh m _ _ _ hT (tierW h) ht
-    have hD' := derT2_tier hd (tierW h) ht
-    have hg : (if tierW h = 0 then g a.store.pers else g a.store.scr) = g (tierOf a (tierW h)) := by
-      simp only [tierOf]; split <;> rfl
-    rw [hg] at hc
-    split
-    · rename_i hle
-      rw [derT_out hD' _ (by rw [← hc]; exact hle)]; rfl
-    · rename_i hlt
-      rw [derC A m _ _ hD' _ (by rw [← hc]; exact UInt64.not_le.mp hlt)]
-      exact packBF_fvar _ _ (bvarOfData_lt _) (fvarOfData_lt _)
-  by_cases g1 : h >>> 28 = 1
-  · simp only [g1, ↓reduceIte]
-    rw [derAt_fvar _ h hh g1]
-    have hc := cnt_tier fvarSch FVRecRel fvhash m _ _ _ hR.fvar (tierW h) ht
-    have hD' := derT2_tier hD.fvar (tierW h) ht
-    have hg : (if tierW h = 0 then a.store.pers.fvars else a.store.scr.fvars) =
-        (tierOf a (tierW h)).fvars := by simp only [tierOf]; split <;> rfl
-    rw [hg] at hc
-    split
-    · rename_i hle
-      rw [derT_out hD' _ (by rw [← hc]; exact hle)]; rfl
-    · rename_i hlt
-      obtain ⟨k, hk, hkr⟩ := node_of m a h fvarSch FVRecRel fvhash (·.fvars) _ hR.fvar
-        (UInt64.not_le.mp hlt)
-      have hk' : (tierOf a (tierW h)).fvars.nodes[(idxW h).toNat]? = some k := by
-        simpa [tierOf, apply_ite] using hk
-      rw [(hD'.2 _ k hk').2, satSuccW_eq]
-      simp only [FVRecRel] at hkr; rw [hkr.1]
-  simp only [g1, ↓reduceIte]
-  by_cases g4 : h >>> 28 = 4
-  · simp only [g4, ↓reduceIte]; rw [derAt_app _ h hh g4]
-    exact comp appSch ARecRel ahash (·.apps) ADER hR.app hD.app
-  simp only [g4, ↓reduceIte]
-  by_cases g5 : h >>> 28 = 5
-  · simp only [g5, ↓reduceIte]; rw [derAt_lam _ h hh g5]
-    exact comp lamSch LaRecRel lahash (·.lams) LADER hR.lam hD.lam
-  simp only [g5, ↓reduceIte]
-  by_cases g6 : h >>> 28 = 6
-  · simp only [g6, ↓reduceIte]; rw [derAt_forall _ h hh g6]
-    exact comp forallSch FaRecRel fahash (·.foralls) FADER hR.forallE hD.forallE
-  simp only [g6, ↓reduceIte]
-  by_cases g7 : h >>> 28 = 7
-  · simp only [g7, ↓reduceIte]; rw [derAt_let _ h hh g7]
-    exact comp letSch LeRecRel lehash (·.lets) LEDER hR.letE hD.letE
-  simp only [g7, ↓reduceIte]
-  by_cases g9 : h >>> 28 = 9
-  · simp only [g9, ↓reduceIte]; rw [derAt_proj _ h hh g9]
-    exact comp projSch PJRecRel pjhash (·.projs) PJDER hR.proj hD.proj
-  simp only [g9, ↓reduceIte]
-  by_cases g0 : h >>> 28 = 0
-  · rw [derAt_bvar _ h hh g0, derT_bvar_f (derT2_tier hD.bvar (tierW h) ht) (idxW h).toNat]
-  have tz := fun {α : Type} [BEq α] [Hashable α] (g : ETables → Tbl α EIdx UInt64)
-    (hd : DerT2 a g zP) => derT_zero_f (derT2_tier hd (tierW h) ht) (idxW h).toNat
-  by_cases g2 : h >>> 28 = 2
-  · rw [derAt_sort _ h hh g2, tz (·.sorts) hD.sort]
-  by_cases g3 : h >>> 28 = 3
-  · rw [derAt_const _ h hh g3, tz (·.consts) hD.const]
-  by_cases g8 : h >>> 28 = 8
-  · rw [derAt_lit _ h hh g8, tz (·.lits) hD.lit]
-  rw [derAt_other _ h hh g0 g1 g2 g3 g4 g5 g6 g7 g8 g9]; rfl
 
 /-! ## The twin's interning, by cases -/
 
@@ -449,20 +72,6 @@ theorem idxW_tierW_of_decE (r w : Word) (h : decE r = decE w) :
     rw [this, Nat.and_two_pow_sub_one_eq_mod, Nat.and_two_pow_sub_one_eq_mod]; omega
   · apply UInt64.toNat_inj.mp
     simp only [tierW, bit27_toNat]; omega
-
-theorem idxW_hdW (g t n : Word) (_hg : g.toNat < 16) (ht : t ≤ 1) (hn : n.toNat < 2 ^ 27) :
-    idxW (hdW g t n) = n ∧ tierW (hdW g t n) = t := by
-  have ht' : t.toNat ≤ 1 := ht
-  constructor
-  · apply UInt64.toNat_inj.mp
-    simp only [idxW, hdW, UInt64.toNat_and]
-    have : (134217727 : Word).toNat = 2 ^ 27 - 1 := rfl
-    rw [this, Nat.and_two_pow_sub_one_eq_mod]
-    simp only [UInt64.toNat_add, UInt64.toNat_mul]
-    simp; omega
-  · apply UInt64.toNat_inj.mp
-    simp only [tierW, bit27_toNat, hdW, UInt64.toNat_add, UInt64.toNat_mul]
-    simp; omega
 
 /-- The handle words of the node an append made: its index and tier. -/
 theorem new_handle (r : Word) (g : UInt32) (t : Word) (n : Nat) (hg : g.toNat < 16) (ht : t ≤ 1)
@@ -683,30 +292,6 @@ theorem or_lt32 (f x : Word) (h : (f ||| x).toNat < 2 ^ 32) : f.toNat < 2 ^ 32 �
 
 /-! ## The tail of a `mk_*`, generically -/
 
-theorem derPutW_frame (A : ArrId) (hA : A ≠ CTL) (c : Word) (m₁ m' : Mem) (s r d : Word)
-    (h : derPutW A c m₁ s r d = some m') : MemFrame [A] [] m₁ m' := by
-  unfold derPutW at h
-  split at h
-  · cases h; exact MemFrame.refl _ _ _
-  split at h
-  · cases h
-  · cases h; exact MemFrame.set64 m₁ A hA _ _
-
-/-- Two record positions `2 i + t` differ when the nodes or the tiers do. -/
-theorem ix_ne (i j : Nat) (t u : Word) (hi : i < 2 ^ 27) (hj : j < 2 ^ 27) (ht : t ≤ 1)
-    (hu : u ≤ 1) (h : i ≠ j ∨ t ≠ u) : UInt64.ofNat i * 2 + t ≠ UInt64.ofNat j * 2 + u := by
-  intro e
-  have e' := congrArg UInt64.toNat e
-  have ht' : t.toNat ≤ 1 := ht
-  have hu' : u.toNat ≤ 1 := hu
-  simp only [UInt64.toNat_add, UInt64.toNat_mul, UInt64.toNat_ofNat'] at e'
-  simp at e'
-  try rw [Nat.mod_eq_of_lt (by omega), Nat.mod_eq_of_lt (by omega), Nat.mod_eq_of_lt (by omega),
-    Nat.mod_eq_of_lt (by omega)] at e'
-  rcases h with h | h
-  · omega
-  · exact h (UInt64.toNat_inj.mp (by omega))
-
 section derMk
 variable {α : Type} [BEq α] [Hashable α] (S : Schema) (hS : S.WF)
   (R : Mem → Word → Word → α → Prop) (hsh : Mem → Word → Word → Word)
@@ -715,9 +300,6 @@ variable {α : Type} [BEq α] [Hashable α] (S : Schema) (hS : S.WF)
   (hPP : ∀ a t, g (L.setP a t).store.pers = t) (hPS : ∀ a t, g (L.setP a t).store.scr = g a.store.scr)
   (hSP : ∀ a t, g (L.setS a t).store.pers = g a.store.pers)
   (hSS : ∀ a t, g (L.setS a t).store.scr = t)
-
-theorem cnt2_eq (m : Mem) : cnt2 m S.ca = cntW S m 0 + cntW S m 1 := by
-  simp [cnt2, cntW]
 
 include hS hgP hgS hPP hPS hSP hSS in
 /-- **The tail of a `mk_*`**: after the interning (`m` to `m₁`, the arena `a` to `a'`, result
@@ -735,7 +317,7 @@ theorem derMk (A : ArrId) (m m₁ m' : Mem) (a a' : AState) (key : α) (d : UInt
       (L.on a = true ∧ (L.getS a).nodes.size < 2 ^ 27 ∧
         y = decI (hdW S.tag.toUInt64 1 (UInt64.ofNat (L.getS a).nodes.size)) ∧
         a' = L.setS a ((L.getS a).push key d y)))
-    (hres : decE r = y) (hdd : dd = packBF (bvarOfData d) (fvarOfData d))
+    (hres : decE r = y) (hdd : dd = packBFL (bvarOfData d) (fvarOfData d) (lpW d))
     (hput : derPutW A S.ca m₁ (cnt2 m S.ca) r dd = some m') :
     DerT2 a' g (cP A m') := by
   have hfrA : ∀ i t, rdW (m₁.arr64 A) (UInt64.ofNat i * 2 + t) = rdW (m.arr64 A) (UInt64.ofNat i * 2 + t) :=
@@ -872,7 +454,8 @@ theorem mkApp_ok (m : Mem) (a : AState) (hA : ArenaD m a) (f x r : Word) (m' : M
   obtain ⟨r₁, m₁⟩ := p
   simp only [hI₁, mkK_some] at hI
   cases hP : derPutW ADER 4 m₁ (cnt2 m 4) r₁
-      (packBF (maxW (derBW m f) (derBW m x)) (maxW (derFW m f) (derFW m x))) with
+      (packBFL (maxW (derBW m f) (derBW m x)) (maxW (derFW m f) (derFW m x))
+        (exprLPW m f ||| exprLPW m x)) with
   | none => simp [hP] at hI
   | some m₂ =>
   simp only [hP, Option.some.injEq, Prod.mk.injEq] at hI
@@ -888,7 +471,8 @@ theorem mkApp_ok (m : Mem) (a : AState) (hA : ArenaD m a) (f x r : Word) (m' : M
     (fun _ _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl) ADER m m₁ m₂ a _ _ _ _ r₁ _
     hR.app hR₁.app hD.app (hfr.1 ADER (by simp [appSch, ADER, AREC, ASLOT]) (by decide)) hcs hres.symm
     (by rw [maxW_eq, maxW_eq, derBW_ok m a hR hD f hf, derBW_ok m a hR hD x hx,
-      derFW_ok m a hR hD f hf, derFW_ok m a hR hD x hx, bvar_derApp, fvar_derApp]) hP
+      derFW_ok m a hR hD f hf, derFW_ok m a hR hD x hx, bvar_derApp, fvar_derApp,
+      derLW_ok m a hR hD f hf, derLW_ok m a hR hD x hx]; simp only [lpW, lp_derApp, b2w_or]) hP
   have o := fun B (hB : B ≠ ADER) (hC : B ≠ CTL) => hfr₂.1 B (by simpa using hB) hC
   refine ⟨hok, ⟨ArenaR.frame_above _ _ (by simp [ADER, LADER, FADER, LEDER, PJDER]) (by simp) _ _ hfr₂ _ hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h] at hnew ⊢ <;>
@@ -914,7 +498,8 @@ theorem mkLam_ok (m : Mem) (a : AState) (hA : ArenaD m a) (t b r : Word) (m' : M
   obtain ⟨r₁, m₁⟩ := p
   simp only [hI₁, mkK_some] at hI
   cases hP : derPutW LADER 28 m₁ (cnt2 m 28) r₁
-      (packBF (maxW (derBW m t) (satPredW (derBW m b))) (maxW (derFW m t) (derFW m b))) with
+      (packBFL (maxW (derBW m t) (satPredW (derBW m b))) (maxW (derFW m t) (derFW m b))
+        (exprLPW m t ||| exprLPW m b)) with
   | none => simp [hP] at hI
   | some m₂ =>
   simp only [hP, Option.some.injEq, Prod.mk.injEq] at hI
@@ -930,7 +515,8 @@ theorem mkLam_ok (m : Mem) (a : AState) (hA : ArenaD m a) (t b r : Word) (m' : M
     (fun _ _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl) LADER m m₁ m₂ a _ _ _ _ r₁ _
     hR.lam hR₁.lam hD.lam (hfr.1 LADER (by simp [lamSch, LADER, LAREC, LASLOT]) (by decide)) hcs
     hres.symm (by rw [maxW_eq, maxW_eq, satPredW_eq, derBW_ok m a hR hD t ht, derBW_ok m a hR hD b hb,
-      derFW_ok m a hR hD t ht, derFW_ok m a hR hD b hb, bvar_derBind, fvar_derBind]) hP
+      derFW_ok m a hR hD t ht, derFW_ok m a hR hD b hb, bvar_derBind, fvar_derBind, derLW_ok m a hR hD t ht, derLW_ok m a hR hD b hb] <;>
+      simp only [lpW, lp_derBind, b2w_or]) hP
   have o := fun B (hB : B ≠ LADER) (hC : B ≠ CTL) => hfr₂.1 B (by simpa using hB) hC
   refine ⟨hok, ⟨ArenaR.frame_above _ _ (by simp [ADER, LADER, FADER, LEDER, PJDER]) (by simp) _ _ hfr₂ _ hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h] at hnew ⊢ <;>
@@ -958,7 +544,8 @@ theorem mkForall_ok (m : Mem) (a : AState) (hA : ArenaD m a) (t b r : Word) (m' 
   obtain ⟨r₁, m₁⟩ := p
   simp only [hI₁, mkK_some] at hI
   cases hP : derPutW FADER 30 m₁ (cnt2 m 30) r₁
-      (packBF (maxW (derBW m t) (satPredW (derBW m b))) (maxW (derFW m t) (derFW m b))) with
+      (packBFL (maxW (derBW m t) (satPredW (derBW m b))) (maxW (derFW m t) (derFW m b))
+        (exprLPW m t ||| exprLPW m b)) with
   | none => simp [hP] at hI
   | some m₂ =>
   simp only [hP, Option.some.injEq, Prod.mk.injEq] at hI
@@ -974,7 +561,8 @@ theorem mkForall_ok (m : Mem) (a : AState) (hA : ArenaD m a) (t b r : Word) (m' 
     (fun _ _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl) FADER m m₁ m₂ a _ _ _ _ r₁ _
     hR.forallE hR₁.forallE hD.forallE (hfr.1 FADER (by simp [forallSch, FADER, FAREC, FASLOT]) (by decide)) hcs
     hres.symm (by rw [maxW_eq, maxW_eq, satPredW_eq, derBW_ok m a hR hD t ht, derBW_ok m a hR hD b hb,
-      derFW_ok m a hR hD t ht, derFW_ok m a hR hD b hb, bvar_derBind, fvar_derBind]) hP
+      derFW_ok m a hR hD t ht, derFW_ok m a hR hD b hb, bvar_derBind, fvar_derBind, derLW_ok m a hR hD t ht, derLW_ok m a hR hD b hb] <;>
+      simp only [lpW, lp_derBind, b2w_or]) hP
   have o := fun B (hB : B ≠ FADER) (hC : B ≠ CTL) => hfr₂.1 B (by simpa using hB) hC
   refine ⟨hok, ⟨ArenaR.frame_above _ _ (by simp [ADER, LADER, FADER, LEDER, PJDER]) (by simp) _ _ hfr₂ _ hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h] at hnew ⊢ <;>
@@ -1003,8 +591,9 @@ theorem mkLet_ok (m : Mem) (a : AState) (hA : ArenaD m a) (t v b r : Word) (m' :
   obtain ⟨r₁, m₁⟩ := p
   simp only [hI₁, mkK_some] at hI
   cases hP : derPutW LEDER 20 m₁ (cnt2 m 20) r₁
-      (packBF (maxW (maxW (derBW m t) (derBW m v)) (satPredW (derBW m b)))
-        (maxW (maxW (derFW m t) (derFW m v)) (derFW m b))) with
+      (packBFL (maxW (maxW (derBW m t) (derBW m v)) (satPredW (derBW m b)))
+        (maxW (maxW (derFW m t) (derFW m v)) (derFW m b))
+        (exprLPW m t ||| exprLPW m v ||| exprLPW m b)) with
   | none => simp [hP] at hI
   | some m₂ =>
   simp only [hP, Option.some.injEq, Prod.mk.injEq] at hI
@@ -1022,7 +611,9 @@ theorem mkLet_ok (m : Mem) (a : AState) (hA : ArenaD m a) (t v b r : Word) (m' :
     hR.letE hR₁.letE hD.letE (hfr.1 LEDER (by simp [letSch, LEDER, LEREC, LESLOT]) (by decide)) hcs
     hres.symm (by rw [maxW_eq, maxW_eq, maxW_eq, maxW_eq, satPredW_eq, derBW_ok m a hR hD t ht,
       derBW_ok m a hR hD v hv, derBW_ok m a hR hD b hb, derFW_ok m a hR hD t ht,
-      derFW_ok m a hR hD v hv, derFW_ok m a hR hD b hb, bvar_derLet, fvar_derLet]) hP
+      derFW_ok m a hR hD v hv, derFW_ok m a hR hD b hb, bvar_derLet, fvar_derLet,
+      derLW_ok m a hR hD t ht, derLW_ok m a hR hD v hv, derLW_ok m a hR hD b hb] <;>
+      simp only [lpW, lp_derLet, b2w_or]) hP
   have o := fun B (hB : B ≠ LEDER) (hC : B ≠ CTL) => hfr₂.1 B (by simpa using hB) hC
   refine ⟨hok, ⟨ArenaR.frame_above _ _ (by simp [ADER, LADER, FADER, LEDER, PJDER]) (by simp) _ _ hfr₂ _ hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h] at hnew ⊢ <;>
@@ -1049,7 +640,7 @@ theorem mkProj_ok (m : Mem) (a : AState) (hA : ArenaD m a) (n i e r : Word) (m' 
   | some p =>
   obtain ⟨r₁, m₁⟩ := p
   simp only [hI₁, mkK_some] at hI
-  cases hP : derPutW PJDER 32 m₁ (cnt2 m 32) r₁ (packBF (derBW m e) (derFW m e)) with
+  cases hP : derPutW PJDER 32 m₁ (cnt2 m 32) r₁ (packBFL (derBW m e) (derFW m e) (exprLPW m e)) with
   | none => simp [hP] at hI
   | some m₂ =>
   simp only [hP, Option.some.injEq, Prod.mk.injEq] at hI
@@ -1067,7 +658,7 @@ theorem mkProj_ok (m : Mem) (a : AState) (hA : ArenaD m a) (n i e r : Word) (m' 
     a _ _ _ _ r₁ _ hR.proj hR₁.proj hD.proj
     (hfr.1 PJDER (by simp [projSch, PJDER, PJREC, PJSLOT]) (by decide)) hcs
     hres.symm (by rw [derBW_ok m a hR hD e he, derFW_ok m a hR hD e he, bvar_derProj,
-      fvar_derProj]) hP
+      fvar_derProj, derLW_ok m a hR hD e he]; simp only [lpW, lp_derProj]) hP
   have o := fun B (hB : B ≠ PJDER) (hC : B ≠ CTL) => hfr₂.1 B (by simpa using hB) hC
   refine ⟨hok, ⟨ArenaR.frame_above _ _ (by simp [ADER, LADER, FADER, LEDER, PJDER]) (by simp) _ _ hfr₂ _ hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h] at hnew ⊢ <;>
@@ -1094,9 +685,9 @@ theorem internBVar_D (m : Mem) (a : AState) (hA : ArenaD m a) (u r : Word) (m' :
   refine ⟨hok, ⟨hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
   · exact hD₁
-  · exact ⟨⟨derT_push hD₁.bvar.1 _ _ _ ⟨bvar_derBVar _ _, fvar_derBVar _ _⟩, hD₁.bvar.2⟩, hD₁.fvar, hD₁.sort,
+  · exact ⟨⟨derT_push hD₁.bvar.1 _ _ _ ⟨bvar_derBVar _ _, fvar_derBVar _ _, lp_derBVar _ _⟩, hD₁.bvar.2⟩, hD₁.fvar, hD₁.sort,
       hD₁.const, hD₁.lit, hD₁.app, hD₁.lam, hD₁.forallE, hD₁.letE, hD₁.proj⟩
-  · exact ⟨⟨hD₁.bvar.1, derT_push hD₁.bvar.2 _ _ _ ⟨bvar_derBVar _ _, fvar_derBVar _ _⟩⟩, hD₁.fvar, hD₁.sort,
+  · exact ⟨⟨hD₁.bvar.1, derT_push hD₁.bvar.2 _ _ _ ⟨bvar_derBVar _ _, fvar_derBVar _ _, lp_derBVar _ _⟩⟩, hD₁.fvar, hD₁.sort,
       hD₁.const, hD₁.lit, hD₁.app, hD₁.lam, hD₁.forallE, hD₁.letE, hD₁.proj⟩
 
 /-- **`intern_fvar` refines `internE (.fvar _ _)` under `ArenaD`** (a leaf: range `0`). -/
@@ -1107,12 +698,12 @@ theorem internFVar_D (m : Mem) (a : AState) (hA : ArenaD m a) (u ty r : Word)
     AM.res (internE (.fvar u.toNat (decE ty))) a = decE r := by
   obtain ⟨hR, hD⟩ := hA
   obtain ⟨hok, hX, hres⟩ := fvintern_correct m a hR.fvar u ty hty _ _ hI
-  have hI₂ := hI; rw [fvinternW_eq] at hI₂
-  have hfr := internM_frame _ fvarSch_wf _ _ _ _ _ _ _ _ hI₂
+  have hfr := fvinternW_frame m u ty _ _ hI
   have hcs := AM.proto_cases fvarLens _ _ _ _ _ _ a (internE_fvar_run _ _ a) hok
-  have hR₁ := hR.lift_fvar _ _ _ _ hX hfr
+  have hR₁ := hR.lift_fvar _ _ _ _
+    ⟨hX, fvintern_lp m a hR.fvar u ty hty hR.fvarLp (derLW_ok m a hR hD ty hty) _ _ hI⟩ hfr
     (AM.st_proto fvarLens _ _ _ _ _ _ a (internE_fvar_run _ _ a) hok)
-  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [fvarSch, FVREC, FVSLOT]) a hD
+  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [FVREC, FVSLOT, FVLP]) a hD
   refine ⟨hok, ⟨hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
   · exact hD₁
@@ -1128,12 +719,12 @@ theorem internSort_D (m : Mem) (a : AState) (hA : ArenaD m a) (u r : Word)
     AM.res (internE (.sort (decI u))) a = decI r := by
   obtain ⟨hR, hD⟩ := hA
   obtain ⟨hok, hX, hres⟩ := sointern_correct m a hR.sort u hu _ _ hI
-  have hI₂ := hI; rw [sointernW_eq] at hI₂
-  have hfr := internM_frame _ sortSch_wf _ _ _ _ _ _ _ _ hI₂
+  have hfr := sointernW_frame m u _ _ hI
   have hcs := AM.proto_cases sortLens _ _ _ _ _ _ a (internE_sort_run _ a) hok
-  have hR₁ := hR.lift_sort _ _ _ _ hX hfr
+  have hR₁ := hR.lift_sort _ _ _ _
+    ⟨hX, sointern_lp m a hR.sort u hu hR.sortLp (lvlHPW_ok m a hR u hu) _ _ hI⟩ hfr
     (AM.st_proto sortLens _ _ _ _ _ _ a (internE_sort_run _ a) hok)
-  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [sortSch, SOREC, SOSLOT]) a hD
+  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [SOREC, SOSLOT, SOLP]) a hD
   refine ⟨hok, ⟨hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
   · exact hD₁
@@ -1151,12 +742,12 @@ theorem internConst_D (m : Mem) (a : AState) (hA : ArenaD m a) (f x r : Word)
     AM.res (internE (.const (decI (k := .name) f) (decI (k := .levels) x))) a = decI r := by
   obtain ⟨hR, hD⟩ := hA
   obtain ⟨hok, hX, hres⟩ := ceintern_correct m a hR.const f x hf hx _ _ hI
-  have hI₂ := hI; rw [ceinternW_eq] at hI₂
-  have hfr := internM_frame _ constSch_wf _ _ _ _ _ _ _ _ hI₂
+  have hfr := ceinternW_frame m f x _ _ hI
   have hcs := AM.proto_cases constLens _ _ _ _ _ _ a (internE_const_run _ _ a) hok
-  have hR₁ := hR.lift_const _ _ _ _ hX hfr
+  have hR₁ := hR.lift_const _ _ _ _
+    ⟨hX, ceintern_lp m a hR.const f x hf hx hR.constLp (lsHPW_ok m a hR x hx) _ _ hI⟩ hfr
     (AM.st_proto constLens _ _ _ _ _ _ a (internE_const_run _ _ a) hok)
-  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [constSch, CREC, CSLOT]) a hD
+  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hfr (by simp [CREC, CSLOT, CLP]) a hD
   refine ⟨hok, ⟨hR₁, ?_⟩, hres⟩
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
   · exact hD₁
@@ -1186,10 +777,10 @@ theorem internLit_D (m : Mem) (a : AState) (hA : ArenaD m a) (o l r : Word)
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
   · exact hD₁
   · exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, hD₁.const,
-      ⟨derT_push hD₁.lit.1 _ _ _ ⟨bvar_derLit _ _, fvar_derLit _ _⟩, hD₁.lit.2⟩, hD₁.app, hD₁.lam, hD₁.forallE,
+      ⟨derT_push hD₁.lit.1 _ _ _ ⟨bvar_derLit _ _, fvar_derLit _ _, lp_derLit _ _⟩, hD₁.lit.2⟩, hD₁.app, hD₁.lam, hD₁.forallE,
       hD₁.letE, hD₁.proj⟩
   · exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, hD₁.const,
-      ⟨hD₁.lit.1, derT_push hD₁.lit.2 _ _ _ ⟨bvar_derLit _ _, fvar_derLit _ _⟩⟩, hD₁.app, hD₁.lam, hD₁.forallE,
+      ⟨hD₁.lit.1, derT_push hD₁.lit.2 _ _ _ ⟨bvar_derLit _ _, fvar_derLit _ _, lp_derLit _ _⟩⟩, hD₁.app, hD₁.lam, hD₁.forallE,
       hD₁.letE, hD₁.proj⟩
 
 /-- `DerR` reads only the store: a state with the same store (other memos, caches) has it too. -/

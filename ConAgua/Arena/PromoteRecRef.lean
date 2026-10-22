@@ -765,13 +765,13 @@ theorem vgStore_facts {m m' : Mem} {d k nm q l t x : Word}
       (fr _ _ _)).trans (fr _ _ _)
 
 /-- The arrays a value-group promotion writes. -/
-theorem vg_arrs : ∀ b ∈ EREC :: eArrs, b < 50 ∨ b = 136 ∨ (146 ≤ b ∧ b ≤ 149) := by
+theorem vg_arrs : ∀ b ∈ EREC :: eArrs, (b < 50 ∨ (54 < b ∧ b < 64)) ∨ b = 136 ∨ (146 ≤ b ∧ b ≤ 149) := by
   simp only [eArrs, lsArrs, lArrs, List.cons_append, List.nil_append, List.forall_mem_cons,
     List.not_mem_nil, false_imp_iff, implies_true, and_true, EREC, POOL, NAREC, NASLOT, NSREC,
     NSSLOT, NNREC, NNSLOT, PNM, ZREC, ZSLOT, SREC, SSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT,
     PLM, LSREC, LSSLOT, PLSM, REC, SLOT, AREC, ASLOT, SOREC, SOSLOT, CREC, CSLOT, LEREC, LESLOT,
     BREC, BSLOT, FVREC, FVSLOT, LAREC, LASLOT, FAREC, FASLOT, PJREC, PJSLOT, ADER, LADER, FADER,
-    LEDER, PJDER, PEM]
+    LEDER, PJDER, PEM, SHP, MHP, IHP, LSHP, SOLP, CLP, FVLP]
   simp
 /-- The `CTL` words a value-group promotion writes. -/
 theorem vg_ctl : ∀ x ∈ (129 :: 140 :: 142 :: 144 :: 146 :: eCtl : List L.Word),

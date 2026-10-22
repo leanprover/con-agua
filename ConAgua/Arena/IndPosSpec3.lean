@@ -596,8 +596,7 @@ theorem RfInv.frame {m m' : Mem} {M : Std.HashMap (EIdx × Word) EIdx} {G g : Wo
       hgG, hGl, by rw [hfr.2.2.1]; exact hsz⟩, hF⟩
 
 theorem ceinternW_low {m m' : Mem} {f x r : Word} (h : ceinternW m f x = some (r, m')) : LowFr m m' := by
-  have h₂ := h; rw [ceinternW_eq] at h₂
-  exact ⟨_, _, internM_frame _ constSch_wf _ _ _ _ _ _ _ _ h₂, by simp [constSch, CREC, CSLOT], by simp [constSch]⟩
+  exact ⟨_, _, (ceinternW_frame (hI := h)), by simp [constSch, CREC, CSLOT, CLP], by simp [constSch]⟩
 
 theorem posRecW_fr {m m' : Mem} {ws : List Word} {q : Word} (h : posRecW m ws = some (q, m')) : RfFr m m' := by
   simp only [posRecW] at h

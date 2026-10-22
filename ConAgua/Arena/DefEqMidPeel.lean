@@ -37,15 +37,11 @@ structure PeelProg (p : Prog) : Prop where
 
 theorem fvinternW_hw (m : Mem) (a : AState) (hR : FVarR m a) (u ty w : Word) (m' : Mem)
     (hI : fvinternW m u ty = some (w, m')) : HW w := by
-  rw [fvinternW_eq] at hI
+  rw [fvinternW_eqK (hctl := hR.1.1)] at hI
+  obtain ⟨_, hI, -⟩ := mkK_split _ _ _ _ _ _ _ hI
   exact internM_hw fvarSch FVRecRel fvhash fvarSch_wf m _ _ _ hR (fvMt m u ty) _ _ _ _
     (probe_homeG fvarSch m 0 _ _ (fvprobeW_arm m u ty 0) _)
-    (probe_homeG fvarSch m 1 _ _ (fvprobeW_arm m u ty 1) _) _ (fvpushOK_room m) _ _ w m' hI
-
-theorem fvinternW_frame (m : Mem) (u ty w : Word) (m' : Mem) (hI : fvinternW m u ty = some (w, m')) :
-    MemFrame [FVREC, FVSLOT] [26, 27] m m' := by
-  rw [fvinternW_eq] at hI
-  exact internM_frame fvarSch fvarSch_wf _ _ _ _ _ _ _ _ hI
+    (probe_homeG fvarSch m 1 _ _ (fvprobeW_arm m u ty 1) _) _ (fvpushOK_room m) _ _ w _ hI
 
 theorem peel_keeps_cpl_internFVar (u : Nat) (ty : EIdx) : Keeps cpl (internE (.fvar u ty)) := by
   simp only [internE]; exact keeps_cpl_internNodeE _
@@ -57,7 +53,7 @@ theorem peel_internFVar_core {p : Prog} (hp : PeelProg p) {n : Nat} {dn : NIdx �
     (hS : CoreS dn m a vis fe M eb) (u ty : Word) (hty : HW ty) (r : List Word)
     (hc : callW p n "intern_fvar" [u, ty] m = some (r, m')) :
     CoreRef (internE (.fvar u.toNat (decE ty))) a decH dn m vis fe M eb r m' ∧
-      MemFrame [FVREC, FVSLOT] [26, 27] m m' := by
+      MemFrame [FVREC, FVSLOT, FVLP] [26, 27] m m' := by
   obtain ⟨s', rfl, -, hI⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (internFVar_spec p hp.fvf hp.fvp hp.fvi n ⟨m, Locals.init []⟩ u ty) hc
   obtain ⟨hok, hD, hres⟩ := internFVar_D m a hS.arena u ty _ hty _ hI
@@ -67,18 +63,18 @@ theorem peel_internFVar_core {p : Prog} (hp : PeelProg p) {n : Nat} {dn : NIdx �
     hS.arena_frame hD (Keeps.run (peel_keeps_cpl_internFVar _ _) hrun) hf
       (fun b hb => by
         simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
-        rcases hb with rfl | rfl <;> decide)
-      (by simp [FVREC, FVSLOT])
+        rcases hb with rfl | rfl | rfl <;> decide)
+      (by simp [FVREC, FVSLOT, FVLP])
       (fun b hb => by
         simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
-        rcases hb with rfl | rfl <;> decide)
+        rcases hb with rfl | rfl | rfl <;> decide)
       (fun x hx => by
         simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
         rcases hx with rfl | rfl <;> decide)
       (fun x hx => by
         simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
         rcases hx with rfl | rfl <;> decide)
-  have hspn : s'.mem.arr64 SPN = m.arr64 SPN := hf.1 SPN (by simp [FVREC, FVSLOT, SPN]) (by decide)
+  have hspn : s'.mem.arr64 SPN = m.arr64 SPN := hf.1 SPN (by simp [FVREC, FVSLOT, FVLP, SPN]) (by decide)
   have h136 : rdW (s'.mem.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp)
   exact ⟨⟨hok, ⟨M, hS', KeptAll.refl _ _,
       StackKept.of_frame hf⟩,

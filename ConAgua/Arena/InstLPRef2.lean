@@ -75,7 +75,7 @@ def FireR (m : Mem) (a : AState) (fk fvo fvc qo qc : Word) (rl : IRecRule) (cvjL
       ∀ u ∈ lvls, ∃ L, denoteL a.store.ls u = some L)
 
 /-- What `rec_fire_levels` writes. -/
-abbrev rflArrs : List ArrId := LH :: SPN :: POOL :: LSREC :: LSSLOT :: lvArrs
+abbrev rflArrs : List ArrId := LH :: SPN :: POOL :: LSREC :: LSSLOT :: LSHP :: lvArrs
 abbrev rflCtl : List Word := 136 :: 192 :: 0 :: 40 :: 41 :: lvCtl
 
 /-- **What a run of `rec_fire_levels` gives**: the twin's state and the memory facts a core
@@ -125,10 +125,10 @@ theorem rflTail_ok (p : Prog) (hL : LsProg p) (n : Nat) (m m₁ m₂ m₃ : Mem)
     rw [Mem.size_arr64_set64] at this; rw [this]; simpa using hctl
   have hspn₃ : (m₃.set64 CTL 136 b).arr64 SPN = m₂.arr64 SPN := by
     rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-    exact hf₃.1 SPN (by simp [SPN, POOL, LSREC, LSSLOT]) (by decide)
+    exact hf₃.1 SPN (by simp [SPN, POOL, LSREC, LSSLOT, LSHP]) (by decide)
   have hpool₁ : m₁.arr64 POOL = m.arr64 POOL := hf₁.1 POOL (by simp [SPN, POOL]) (by decide)
   have hpool₂ : m₂.arr64 POOL = m₁.arr64 POOL := hf₂.1 POOL (by simp [lvArrs, LH, SPN, POOL, ZREC, ZSLOT,
-    SREC, SSLOT, MREC, MSLOT, IREC, ISLOT, PREC, PSLOT]) (by decide)
+    SREC, SSLOT, SHP, MREC, MSLOT, MHP, IREC, ISLOT, IHP, PREC, PSLOT]) (by decide)
   have htop₁ : m₁.top = m.top := by simp only [top_rdW]; exact hf₁.2.1 0 (by simp)
   have htop₂ : m₂.top = m₁.top := by simp only [top_rdW]; exact hf₂.2.1 0 (by simp [lvCtl])
   have hpool' : (m₃.set64 CTL 136 b).arr64 POOL = m₃.arr64 POOL := Mem.arr64_set64_ne _ _ _ _ _ (by decide)

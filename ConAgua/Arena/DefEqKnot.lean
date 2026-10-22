@@ -121,9 +121,6 @@ structure KnotCallees (p : Prog) : Prop where
   /-- A level-list comparison that runs compares lists that read back (`WhnfIotaRecRefine.lean`;
   the second list is `rec_fire_levels`' interned result: `StoreWF` again). -/
   lvlsEqDen : LvlsEqDen p
-  /-- A stored recursor's rule prefix and plain rules fit its major index (`WhnfIotaRecRefine.lean`;
-  an invariant of the installed environment, not of the store). -/
-  recShape : RecShape
 
 /-- `reserved_contains_w` refines `reservedContainsT` under `CoreS` (lane `whnf2`'s
 `callW_reservedContains`: memory unchanged, the pins' reserved list). -/
@@ -202,7 +199,7 @@ theorem KnotCallees.iota (n : Nat) (hk : KnotUpTo p n) : IotaRecAtOK p (n + 1) :
     (majorToCtor_refines' p hq.m2c (hc.iotaC hq) (hc.proofIrrel hq) (ErecKeptKnot.of_closed hq.hcl)
       (hc.projC hq))
     (ErecKeptInst.of_closed hq.hcl) (ErecKeptRec.of_closed hq.hcl) (ErecKeptKnot.of_closed hq.hcl)
-    hc.lvlsEqDen hc.recShape n hk
+    hc.lvlsEqDen n hk
 
 include hq hc in
 /-- Lane `whnf`'s `CoreCallees`. -/

@@ -299,7 +299,7 @@ theorem romLevelW_ok (l : ConLeche.Level) (hl : levelFits l = true) :
     obtain ⟨ok2, hR2, res2, hlt2, rfl, hf2⟩ := lvNode_ok rom hr (internLNode (.succ (decI hu))) (fun m => sinternW m hu)
       (fun m a w m' hA hI => by
         obtain ⟨ok, hR, res, hf⟩ := L.Front.succ_A m a hA w m' hu hlt1 hI
-        exact ⟨ok, hR, res, frame_store hf (by simp [succSch, SREC, SSLOT]) (by simp [succSch])⟩)
+        exact ⟨ok, hR, res, frame_store hf (by simp [succSch, SREC, SSLOT, SHP]) (by simp [succSch])⟩)
       m₁ _ q₁ h q m' hR1 hW
     rw [← res1] at ok2 hR2 res2
     obtain ⟨okX, stX, resX⟩ := AM.bind_facts _ (fun hu => internLNode (.succ hu)) a ok1 ok2
@@ -337,7 +337,7 @@ theorem romLevelW_ok (l : ConLeche.Level) (hl : levelFits l = true) :
     obtain ⟨ok3, hR3, res3, hlt3, rfl, hf3⟩ := lvNode_ok rom hr (internLNode (.max (decI hu) (decI hv))) (fun m => minternW m hu hv)
       (fun m a w m' hA hI => by
         obtain ⟨ok, hR, res, hf⟩ := L.Front.max_A m a hA w m' hu hv hlt1 hlt2 hI
-        exact ⟨ok, hR, res, frame_store hf (by simp [maxSch, MREC, MSLOT]) (by simp [maxSch])⟩)
+        exact ⟨ok, hR, res, frame_store hf (by simp [maxSch, MREC, MSLOT, MHP]) (by simp [maxSch])⟩)
       m₂ _ q₂ h q m' hR2 hW
     rw [← res1] at ok3 hR3 res3
     rw [← res2] at ok3 hR3 res3
@@ -381,7 +381,7 @@ theorem romLevelW_ok (l : ConLeche.Level) (hl : levelFits l = true) :
     obtain ⟨ok3, hR3, res3, hlt3, rfl, hf3⟩ := lvNode_ok rom hr (internLNode (.imax (decI hu) (decI hv))) (fun m => iminternW m hu hv)
       (fun m a w m' hA hI => by
         obtain ⟨ok, hR, res, hf⟩ := L.Front.imax_A m a hA w m' hu hv hlt1 hlt2 hI
-        exact ⟨ok, hR, res, frame_store hf (by simp [imaxSch, IREC, ISLOT]) (by simp [imaxSch])⟩)
+        exact ⟨ok, hR, res, frame_store hf (by simp [imaxSch, IREC, ISLOT, IHP]) (by simp [imaxSch])⟩)
       m₂ _ q₂ h q m' hR2 hW
     rw [← res1] at ok3 hR3 res3
     rw [← res2] at ok3 hR3 res3

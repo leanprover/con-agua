@@ -1,6 +1,8 @@
 module
 
 public import ConAgua.Arena.Store
+public import ConAgua.Arena.LpCol
+meta import ConAgua.Arena.LpCol
 meta import ConAgua.L.Semantics
 import ConAgua.Census.Attr
 
@@ -171,24 +173,29 @@ def fvcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (26 + t)
 /-- `fvar_push`'s room checks: the handle index, the record array, the load limit. -/
 def fvpushOK (m : Mem) (t : Word) : Bool :=
   decide (fvcnt m t < (134217728 : Word)) && decide (fvcnt m t < m.len64 FVREC >>> (2 : Word)) &&
+    decide (fvcnt m t < m.len64 FVLP >>> (1 : Word)) &&
     decide (fvcnt m t + 1 ≤ (nSlotsFv m >>> (2 : Word)) * 3)
 
 /-- The memory after `fvar_push(t, u, ty, j)` appended node `c`. -/
 def fvpushMem (m : Mem) (t u ty j c : Word) : Mem :=
   ((((m.set64 FVREC (c * 4 + t * 2) u).set64 FVREC (c * 4 + t * 2 + 1) ty).set64 FVSLOT
-    (j * 2 + t) (baseW m t + c + 1)).set64 CTL (26 + (t &&& 1)) (c + 1))
+    (j * 2 + t) (baseW m t + c + 1)).set64 CTL (26 + (t &&& 1)) (c + 1)).set64 FVLP (c * 2 + t)
+    (exprLPW m ty)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def fvarPush : FunDecl := lfn (t, u, ty, j) locals (c, k) {
+def fvarPush : FunDecl := lfn (t, u, ty, j) locals (c, k, x, g, ti, ix) {
+  ⟪lpBlkF⟫;
   c := CTL.u64[26 + t];
   if c >= 134217728 { abort };
   if len(FVREC.u64) >> 2 <= c { abort };
+  if len(FVLP.u64) >> 1 <= c { abort };
   if ((len(FVSLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   k := c * 4 + t * 2;
   FVREC.u64[k] := u;
   FVREC.u64[k + 1] := ty;
   FVSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[26 + (t & 1)] := c + 1;
+  FVLP.u64[c * 2 + t] := x;
   return c
 }
 
@@ -207,7 +214,7 @@ theorem fvarPush_spec (n : Nat) (s₀ : St) (t u ty j : Word) :
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, lpBlkF_spec p (exec p n)] <;>
       finish [fvcnt, fvpushOK, fvpushMem, nSlotsFv, baseW]
 
 end push
@@ -274,7 +281,7 @@ def fvarProg : Prog :=
 0‥24 (the other tables') are unused here and left empty. -/
 def fvarMem (scratch : Word) : Mem :=
   { words := (Array.replicate 25 #[]).set! 1 ((Array.replicate 64 0).set! 1 scratch) ++
-      #[Array.replicate 32 0, Array.replicate 32 0] }
+      #[Array.replicate 32 0, Array.replicate 32 0] ++ Array.replicate 62 (Array.replicate 32 0) }
 
 /-- Intern each `(index, ty)` pair in turn; the handles. -/
 def internFVars (m : Mem) : List (Word × Word) → Option (List Word)

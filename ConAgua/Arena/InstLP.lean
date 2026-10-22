@@ -30,10 +30,10 @@ that `inst_lp(po, pl, us, e)` (an `EREC` name slice, lane `whnf`'s callers) and 
 slice (`ls_node`). A list of interned results is built on the stack above its top and copied to
 the pool top for `intern_ls` (`spn_ls`).
 
-**Deviation** (`docs/deviations.md`): con-ron's walk cuts off at a node whose derived word has no
-level parameter (`lpOfData`); L's derived words keep only the two ranges (`ExprMk.lean`), so L
-walks such subterms too (memoized: linear in the DAG, not in the parameter-carrying part), and
-the entry does not skip the readbacks. Same results; more work.
+**The cut-off** (deviation D23, fixed by helper `whnf4-d23`): as the twin, `lp_go` returns `h`
+at once when `h`'s derived word has no level parameter, and `inst_lp_core` returns `e` before any
+readback (`ls_node(us)`) or memo clear when `e`'s has none; the bit is `der_b`'s third result
+(`exprLPW`, `derLW_ok`: `lpOfData (derived h)`, `LpCol.lean`).
 
 The depth counter `fu` is the twin's `fuel` (ROADMAP §3 (b)): `lp_go` aborts at `0` and passes
 `fu - 1` to the arms, which pass it to their children; the entry starts at `4000000000`.
@@ -177,6 +177,8 @@ def slsMemo : FunDecl := lfn (vs, ko, kc, vo, vc) locals (fd, j, e0, o, l, b, r,
 @[l_impl ConRon.Arena.instLPGo]
 def lpGo : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (g, t, i, x, y, r) {
   if fu == 0 { abort };
+  (x, y, r) := call der_b(h);
+  if r == 0 { return h };
   g := h >> 28;
   t := (h >> 27) & 1;
   i := h & 134217727;
@@ -318,6 +320,8 @@ def lpProj : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (fd, j, e0, t, i, nm,
 /-- con-ron: ConRon/Arena/ExprOps.lean:2251-2268 ConRon.Arena.instLPFast -/
 @[l_impl ConRon.Arena.instLPFast]
 def instLPCore : FunDecl := lfn (ko, kc, us, e) locals (vo, vc, r, u) {
+  (vo, vc, r) := call der_b(e);
+  if r == 0 { return e & 4294967295 };
   (vo, vc) := call ls_node(us);
   u := call ilp_clear();
   u := call ilpl_clear();

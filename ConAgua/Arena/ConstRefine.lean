@@ -1,5 +1,6 @@
 import ConAgua.Arena.StoreLib
 import ConAgua.Arena.ConstStore
+import ConAgua.Arena.LpColRel
 
 /-!
 # The `const` store refines the arena's `const` tables
@@ -170,19 +171,42 @@ theorem cepushOK_room (m : Mem) (t : Word) (h : cepushOK m t = true) : PushRoom 
   grind
 
 theorem cepushMem_eq (m : Mem) (t f a j c : Word) :
-    cepushMem m t f a j c = pushG constSch m t [f, a] j c := by
+    cepushMem m t f a j c = (pushG constSch m t [f, a] j c).set64 CLP (c * 2 + t) (lsHPW m a) := by
   simp [cepushMem, pushG, wrRec, Schema.ad, constSch]
 
 theorem ceinternW_eq (m : Mem) (f a : Word) :
-    ceinternW m f a = internM constSch m (ceskipW m f a) (cepushOK m) [f, a]
+    ceinternW m f a = internMD constSch CLP (lsHPW m a) m (ceskipW m f a) (cepushOK m) [f, a]
       (ceprobeW (m.arr64 CSLOT) (m.arr64 CREC) 0 f a (baseW m 0) (nSlotsCe m) (homeW (constHashW f a) (nSlotsCe m)) 0)
       (ceprobeW (m.arr64 CSLOT) (m.arr64 CREC) 1 f a (baseW m 1) (nSlotsCe m) (homeW (constHashW f a) (nSlotsCe m)) 0) := by
   have e0 : ∀ x, hdW constSch.tag.toUInt64 0 x = constP + x := fun x => by
     simp [hdW, constSch, constP, ETag.const]
   have e1 : ∀ x, hdW constSch.tag.toUInt64 1 x = constS + x := fun x => by
     simp [hdW, constSch, constS, ETag.const]
-  simp only [ceinternW, internM, cepushMem_eq, e0, e1]
+  simp only [ceinternW, internMD, cepushMem_eq, e0, e1]
   rfl
+
+/-- **What `intern_const` changes**: the table's arrays, the column, the counts. -/
+theorem ceinternW_frame (m : Mem) (f a : Word) (w : Word) (m' : Mem) (hI : ceinternW m f a = some (w, m')) :
+    MemFrame [CREC, CSLOT, CLP] [18, 19] m m' := by
+  rw [ceinternW_eq] at hI
+  exact internMD_frame constSch constSch_wf CLP (by decide) _ _ _ _ _ _ _ _ _ hI
+
+/-- `intern_const`'s model as the library's interning and the `mk_*` tail (`mkK`), given the count
+words. -/
+theorem ceinternW_eqK (m : Mem) (f a : Word) (hctl : constSch.ca.toNat + 2 ≤ (m.arr64 CTL).size) :
+    ceinternW m f a = mkK CLP constSch.ca (cnt2 m constSch.ca) (lsHPW m a)
+      (internM constSch m (ceskipW m f a) (cepushOK m) [f, a]
+      (ceprobeW (m.arr64 CSLOT) (m.arr64 CREC) 0 f a (baseW m 0) (nSlotsCe m) (homeW (constHashW f a) (nSlotsCe m)) 0)
+      (ceprobeW (m.arr64 CSLOT) (m.arr64 CREC) 1 f a (baseW m 1) (nSlotsCe m) (homeW (constHashW f a) (nSlotsCe m)) 0)) := by
+  rw [ceinternW_eq]
+  refine internMD_mkK constSch constSch_wf _ _ _ _ _ _ _ _ hctl (fun t ht hp => ?_)
+  simp only [cepushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
+  obtain ⟨⟨⟨h1, -⟩, h2⟩, -⟩ := hp
+  exact ⟨h1, col_room _ _ _ ht h1 h2⟩
+
+theorem constLocal : RLocal constSch CeRecRel cehash [] [] := by
+  intro m m' hra _ _; simp only [constSch] at hra
+  exact ⟨fun t i k h => by simpa only [CeRecRel, hra] using h, fun t i => by simp only [cehash, hra]⟩
 
 /-- The L skip test is the arena's. -/
 theorem ceskipW_eq (m : Mem) (a : AState) (f x : Word) (hf : f.toNat < 2 ^ 32)
@@ -199,19 +223,51 @@ variable (m : Mem) (a : AState) (hR : ConstR m a) (f x : Word) (hf : f.toNat < 2
   (hx : x.toNat < 2 ^ 32)
 
 include hR hf hx in
-/-- **`intern_const`'s model refines the arena's `internE` at an `app` node.** -/
-theorem ceintern_correct (w : Word) (m' : Mem) (hI : ceinternW m f x = some (w, m')) :
+/-- The library's half of `intern_const` (before the column). -/
+theorem ceintern_core (w : Word) (m₁ : Mem)
+    (hI : internM constSch m (ceskipW m f x) (cepushOK m) [f, x]
+      (ceprobeW (m.arr64 CSLOT) (m.arr64 CREC) 0 f x (baseW m 0) (nSlotsCe m) (homeW (constHashW f x) (nSlotsCe m)) 0)
+      (ceprobeW (m.arr64 CSLOT) (m.arr64 CREC) 1 f x (baseW m 1) (nSlotsCe m) (homeW (constHashW f x) (nSlotsCe m)) 0) =
+      some (w, m₁)) :
     AM.ok (internE (.const ((decI (k := .name) f)) ((decI (k := .levels) x)))) a ∧
-    ConstR m' (AM.st (internE (.const ((decI (k := .name) f)) ((decI (k := .levels) x)))) a) ∧
-    AM.res (internE (.const ((decI (k := .name) f)) ((decI (k := .levels) x)))) a = decI w := by
-  rw [ceinternW_eq] at hI
-  exact intern_correctG constSch CeRecRel cehash constSch_wf constFrame constLens a m hR _ _ _ _ _
+    ConstR m₁ (AM.st (internE (.const ((decI (k := .name) f)) ((decI (k := .levels) x)))) a) ∧
+    AM.res (internE (.const ((decI (k := .name) f)) ((decI (k := .levels) x)))) a = decI w :=
+  intern_correctG constSch CeRecRel cehash constSch_wf constFrame constLens a m hR _ _ _ _ _
     (internE_const_run _ _ a) (skCe a ((decI (k := .name) f)) ((decI (k := .levels) x))) rfl _ (ceskipW_eq m a f x hf hx hR.2.1)
     (fun h => by simp only [skCe] at h; split at h <;> simp_all [constLens]) _ _
     (constMatchOK m f x hf hx) (constHomeOK m f x) _ _
     (probe_homeG constSch m 0 _ _ (ceprobeW_arm m f x 0) _)
     (probe_homeG constSch m 1 _ _ (ceprobeW_arm m f x 1) _) _ (cepushOK_room m) _ rfl
-    (constNewOK m f x hf hx) w m' hI
+    (constNewOK m f x hf hx) w m₁ hI
+
+include hR hf hx in
+/-- **`intern_const`'s model refines the arena's `internE` at an `app` node.** -/
+theorem ceintern_correct (w : Word) (m' : Mem) (hI : ceinternW m f x = some (w, m')) :
+    AM.ok (internE (.const ((decI (k := .name) f)) ((decI (k := .levels) x)))) a ∧
+    ConstR m' (AM.st (internE (.const ((decI (k := .name) f)) ((decI (k := .levels) x)))) a) ∧
+    AM.res (internE (.const ((decI (k := .name) f)) ((decI (k := .levels) x)))) a = decI w := by
+  rw [ceinternW_eqK m f x hR.1.1] at hI
+  obtain ⟨m₁, h₁, hput⟩ := mkK_split _ _ _ _ _ _ _ hI
+  obtain ⟨hok, hX, hres⟩ := ceintern_core m a hR f x hf hx w m₁ h₁
+  exact ⟨hok, storeR_frame constSch CeRecRel cehash constSch_wf [] [] constLocal [CLP] []
+    (by simp [Apart, constSch, CREC, CSLOT, CLP, SCB, POOL, CTL]) m₁ m'
+    (derPutW_frame CLP (by decide) _ m₁ m' _ _ _ hput) _ _ _ hX, hres⟩
+
+include hR hf hx in
+/-- **The column across `intern_const`**: the new node's word is its record's bit (`hb`). -/
+theorem ceintern_lp (hC : ColT2 constLens CLP lpW m a)
+    (hb : lsHPW m x = b2w (a.store.lsder (decI x)).hasParam) (w : Word) (m' : Mem)
+    (hI : ceinternW m f x = some (w, m')) :
+    ColT2 constLens CLP lpW m' (AM.st (internE (.const ((decI (k := .name) f)) ((decI (k := .levels) x)))) a) := by
+  rw [ceinternW_eqK m f x hR.1.1] at hI
+  obtain ⟨m₁, h₁, hput⟩ := mkK_split _ _ _ _ _ _ _ hI
+  obtain ⟨hok, hX, hres⟩ := ceintern_core m a hR f x hf hx w m₁ h₁
+  have hcs := AM.proto_casesG constLens _ _ _ _ _ _ a (internE_const_run _ _ a) hok
+  have hfr : m₁.arr64 CLP = m.arr64 CLP :=
+    (internM_frame _ constSch_wf _ _ _ _ _ _ _ _ h₁).1 CLP (by simp [constSch, CREC, CSLOT, CLP])
+      (by decide)
+  exact colMk constSch constSch_wf CeRecRel cehash constLens CLP lpW m m₁ m' a _ _ _ _ _ _ hR hX hC hfr
+    hcs hres.symm (by rw [hb]; rw [lpW, lp_derConst]) hput
 
 end intern
 
