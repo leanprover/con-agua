@@ -39,7 +39,7 @@ theorem envFind_found (p : Prog) (hx : p.lookup "env_ix" = some envIxL)
 /-- **Every row of the index decodes.** -/
 theorem EnvR.found_some {dn : NIdx → Option ConLeche.Name} {m : Mem} {vis : Word} {fe : IFEnv}
     (h : EnvR dn m vis fe) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : rowTag w ≤ 2)
-    (hc : rowC m w ≠ 0) : ∃ ci, decCI (m.arr64 EREC) dn (rowP m w).toNat = some ci := by
+    (hc : rowC m w ≠ 0) : ∃ ci, decCI (erecP m) dn (rowP m w).toNat = some ci := by
   have hn : (decI w : NIdx).word.toUInt64 = w := (word_decI _ w hw).mpr rfl
   have hk := h.keys (decI w) (by rw [hn]; exact ht)
   have hv := h.vals (decI w) (by rw [hn]; exact ht) (by rw [hn]; exact hc)
@@ -64,20 +64,22 @@ theorem decCV_type {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV a q
 
 /-- The kind word of a decoded constant record says whether it is a constructor, and a
 constructor's type is the handle at `q + 4`. -/
-theorem decCI_ctor {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
-    {ci : IConstantInfo} (h : decCI a dn q.toNat = some ci) (hsz : a.size < 2 ^ 63) :
-    (rdW a q = 4 → ∃ cv np nf, ci = .ctorInfo cv np nf ∧ cv.type = decI (rdW a (q + 4)) ∧
-      (rdW a (q + 4)).toNat < 2 ^ 32) ∧
-    (rdW a q ≠ 4 → ∀ cv np nf, ci ≠ .ctorInfo cv np nf) := by
+theorem decCI_ctor {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
+    {ci : IConstantInfo} (h : decCI a dn q.toNat = some ci) (hab : ArrExt a b)
+    (hsz : b.size < 2 ^ 63) :
+    (rdW b q = 4 → ∃ cv np nf, ci = .ctorInfo cv np nf ∧ cv.type = decI (rdW b (q + 4)) ∧
+      (rdW b (q + 4)).toNat < 2 ^ 32) ∧
+    (rdW b q ≠ 4 → ∀ cv np nf, ci ≠ .ctorInfo cv np nf) := by
   cases hq : a[q.toNat]? with
   | none => simp [decCI, nat?, hq] at h
   | some w =>
-  have hlt : q.toNat < a.size := by
-    rcases Nat.lt_or_ge q.toNat a.size with h' | h'
+  have hqb := hab _ _ hq
+  have hlt : q.toNat < b.size := by
+    rcases Nat.lt_or_ge q.toNat b.size with h' | h'
     · exact h'
-    · simp [Array.getElem?_eq_none h'] at hq
+    · simp [Array.getElem?_eq_none h'] at hqb
   have h4 : (q + 4).toNat = q.toNat + 4 := by rw [UInt64.toNat_add]; simp; omega
-  have hrd : rdW a q = w := by simp [rdW, hq]
+  have hrd : rdW b q = w := by simp [rdW, hqb]
   rw [hrd]
   simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
   constructor
@@ -86,8 +88,9 @@ theorem decCI_ctor {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Wo
     obtain ⟨cv, hcv, np, -, nf, -, hc⟩ := h
     cases hc
     obtain ⟨tw, htw, htl, hty⟩ := decCV_type hcv
-    have hrd4 : rdW a (q + 4) = tw := by
-      simp only [rdW, h4]; rw [show q.toNat + 4 = q.toNat + 1 + 3 by omega, htw]; rfl
+    have htwb := hab _ _ htw
+    have hrd4 : rdW b (q + 4) = tw := by
+      simp only [rdW, h4]; rw [show q.toNat + 4 = q.toNat + 1 + 3 by omega, htwb]; rfl
     exact ⟨cv, _, _, rfl, by rw [hrd4]; exact hty, by rw [hrd4]; exact htl⟩
   · intro hw cv np nf hc
     subst hc
@@ -219,7 +222,7 @@ theorem projCert_refines (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) 
   have hfind' : fe.find? (decI k) = some ci := by
     rw [hfind]; simp only [decFound, h0, ↓reduceIte, hq]; exact hci
   rw [← hq] at hci
-  have hctor := decCI_ctor hci hS.erec
+  have hctor := decCI_ctor hci (erecP_ext _) hS.erec
   by_cases h4 : rdW (s.mem.arr64 EREC) (r₁.tail.headD 0) ≠ 4
   · rw [if_pos h4] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
