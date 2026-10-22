@@ -448,29 +448,40 @@ def blockRecLpsOk : FunDecl := lfn (p) locals (lo, ll, wo, wl, large, elim, ro, 
   return r
 }
 
-/-- `block_rec_name_set_ok(mo, ml, ro, rl)`: `blockRecNameSetOk`: the recursor names, as a set,
-are exactly `T_m.rec` at every member (`name_rec`, interned in block order; `sl_set_eq`). -/
+/-- `block_rec_want(mo, ml)`: `T_m.rec` at every member (`name_rec`, interned in block order: this
+member's, then the rest's; consed on with `sl_cons`). -/
 -- con-ron: ConRon/Arena/Inductives/BlockParts.lean:287-295 ConRon.Arena.blockRecNameSetOk
 @[l_impl ConRon.Arena.blockRecNameSetOk]
-def blockRecNameSetOk : FunDecl := lfn (mo, ml, ro, rl) locals (wo, j, m, cv, nm, w, go, rc, b) {
-  wo := call iw_alloc(ml);
-  j := 0;
-  while j < ml {
-    m := IW.u64[mo + j];
-    cv := IW.u64[m];
-    nm := EREC.u64[cv];
-    w := call name_rec(nm);
-    IW.u64[wo + j] := w;
-    j += 1
-  };
-  go := call iw_alloc(rl);
-  j := 0;
-  while j < rl {
-    rc := IW.u64[ro + j];
-    IW.u64[go + j] := EREC.u64[IW.u64[rc]];
-    j += 1
-  };
-  b := call sl_set_eq(go, rl, wo, ml);
+def blockRecWant : FunDecl := lfn (mo, ml) locals (m, cv, w, o, l) {
+  if ml == 0 { return (0, 0) };
+  m := IW.u64[mo];
+  cv := IW.u64[m];
+  w := call name_rec(EREC.u64[cv]);
+  (o, l) := call block_rec_want(mo + 1, ml - 1);
+  (o, l) := call sl_cons(w, o, l);
+  return (o, l)
+}
+
+/-- `block_rec_got(ro, rl)`: the recursors' names (`recs.map (·.cvR.name)`), recursively. -/
+-- con-ron: ConRon/Arena/Inductives/BlockParts.lean:287-295 ConRon.Arena.blockRecNameSetOk
+@[l_impl ConRon.Arena.blockRecNameSetOk]
+def blockRecGot : FunDecl := lfn (ro, rl) locals (rc, o, l) {
+  if rl == 0 { return (0, 0) };
+  rc := IW.u64[ro];
+  (o, l) := call block_rec_got(ro + 1, rl - 1);
+  (o, l) := call sl_cons(EREC.u64[IW.u64[rc]], o, l);
+  return (o, l)
+}
+
+/-- `block_rec_name_set_ok(mo, ml, ro, rl)`: `blockRecNameSetOk`: the recursor names, as a set,
+are exactly `T_m.rec` at every member (`sl_set_eq`; lane `indproofs2`: the loops became
+`block_rec_want`/`block_rec_got`). -/
+-- con-ron: ConRon/Arena/Inductives/BlockParts.lean:287-295 ConRon.Arena.blockRecNameSetOk
+@[l_impl ConRon.Arena.blockRecNameSetOk]
+def blockRecNameSetOk : FunDecl := lfn (mo, ml, ro, rl) locals (wo, wl, go, gl, b) {
+  (wo, wl) := call block_rec_want(mo, ml);
+  (go, gl) := call block_rec_got(ro, rl);
+  b := call sl_set_eq(go, gl, wo, wl);
   return b
 }
 
@@ -875,7 +886,7 @@ def indPartsFns : Prog :=
    ("block_split_ctors", blockSplitCtors), ("block_split", blockSplit), ("rec_target_of", recTargetOf),
    ("block_counts_head", blockCountsHead), ("block_counts_pure", blockCountsPure), ("block_counts", blockCounts), ("ctor_member", ctorMember), ("block_groups_one", blockGroupsOne), ("block_groups_go", blockGroupsGo),
    ("block_groups", blockGroups), ("block_rec_lps_one", blockRecLpsOne), ("block_rec_lps_ok_go", blockRecLpsOkGo), ("block_rec_lps_ok", blockRecLpsOk),
-   ("block_rec_name_set_ok", blockRecNameSetOk), ("block_rec_names_unreserved", blockRecNamesUnreserved),
+   ("block_rec_want", blockRecWant), ("block_rec_got", blockRecGot), ("block_rec_name_set_ok", blockRecNameSetOk), ("block_rec_names_unreserved", blockRecNamesUnreserved),
    ("block_member_counts_find", blockMemberCountsFind), ("block_member_counts", blockMemberCounts),
    ("block_shape_names_of", blockShapeNamesOf), ("block_shape_pins_formers", blockShapePinsFormers),
    ("block_shape_pins_recs", blockShapePinsRecs), ("block_shape_pins_ctors", blockShapePinsCtors),
