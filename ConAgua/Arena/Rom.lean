@@ -120,6 +120,10 @@ theorem drop_len (pos : Nat) (bs rest : List UInt8) (h : rom.drop pos = bs ++ re
     simp at h
     omega
 
+theorem drop_lt (pos : Nat) (bs rest : List UInt8) (h : rom.drop pos = bs ++ rest)
+    (hb : 0 < bs.length) : pos < rom.length := by
+  have := drop_len rom _ _ _ h hb; omega
+
 theorem romB_of_drop (pos : Word) (bs rest : List UInt8) (h : rom.drop pos.toNat = bs ++ rest)
     (k : Nat) (hk : k < bs.length) (q : Word) (hq : q.toNat = pos.toNat + k) :
     romB rom q = (bs[k]'hk).toUInt64 := by
@@ -159,6 +163,21 @@ theorem romU64_spec (n : Nat) (s₀ : St) (i : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "rom_u64" [i]
     ⦃fun r s' => s' = s₀ ∧ r = [u64W rom i]; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, romU64]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ldc] <;>
+      finish [u64W]
+
+include hp in
+/-- `rom_u64` with its bounds check (the decoder direction needs the bytes inside the ROM). -/
+theorem romU64_specB (n : Nat) (s₀ : St) (i : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "rom_u64" [i]
+    ⦃fun r s' => s' = s₀ ∧ r = [u64W rom i] ∧ ¬ UInt64.ofNat rom.length < i + 8 ∧ i.toNat < rom.length; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, romU64]
   cases n with
