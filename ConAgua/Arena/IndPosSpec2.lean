@@ -1315,6 +1315,30 @@ theorem CsAt.mono {m : Mem} {o : Nat} {xs : List (IConstantVal × Nat)} {P Q : N
     (h : CsAt m o xs P) (hq : ∀ i, P i → Q i) : CsAt m o xs Q :=
   fun i hi => let ⟨w, h1, h2⟩ := h i hi; ⟨w, h1, h2.mono hq⟩
 
+/-- `nest_container`'s results: `(0, …)` or `(1, nPc, cs.off, cs.len)`, the records below the top. -/
+def NcOut (m : Mem) (r : List Word) : Option (Nat × List (IConstantVal × Nat)) → Prop
+  | none => r.headD 0 = 0
+  | some (nPc, cs) => r.headD 0 = 1 ∧ (r.tail.headD 0).toNat = nPc ∧
+      (r.tail.tail.tail.headD 0).toNat = cs.length ∧
+      (r.tail.tail.headD 0).toNat + cs.length ≤ iwTop m ∧
+      CsAt m (r.tail.tail.headD 0).toNat cs (· < iwTop m)
+
+theorem CsAt.grow {m m' : Mem} {o : Nat} {xs : List (IConstantVal × Nat)}
+    (h : CsAt m o xs (· < iwTop m)) (hb : o + xs.length ≤ iwTop m) (hg : IWGrow m m') :
+    CsAt m' o xs (· < iwTop m') :=
+  (h.agree (RdS.of_grow hg) (GrowX.of_grow (q := 0) (n := 0) hg).erecP
+    (fun i hi => hg.2.2.1 _ (by omega))).mono fun _ hx => Nat.lt_of_lt_of_le hx hg.1
+
+/-- `NcOut` survives the pool's growth. -/
+theorem NcOut.grow {m m' : Mem} {r : List Word} {x : Option (Nat × List (IConstantVal × Nat))}
+    (h : NcOut m r x) (hg : IWGrow m m') : NcOut m' r x := by
+  cases x with
+  | none => exact h
+  | some p =>
+    obtain ⟨n, cs⟩ := p
+    obtain ⟨h1, h2, h3, h4, h5⟩ := h
+    exact ⟨h1, h2, h3, Nat.le_trans h4 hg.1, h5.grow h4 hg⟩
+
 theorem ncGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C cs : Word) (N : Nat)
     (hC : H C) (hcs : CtorSums fe) (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (co cl ol fp : Word) (ns : List NIdx)
@@ -1552,14 +1576,6 @@ theorem ncW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis C : Word) 
   · intro i hi
     obtain ⟨w, hw, hc⟩ := h2 i (by simpa using hi)
     exact ⟨w, by simpa using hw, by simpa using hc.mono fun _ hx => hx.1⟩
-
-/-- `nest_container`'s results: `(0, …)` or `(1, nPc, cs.off, cs.len)`, the records below the top. -/
-def NcOut (m : Mem) (r : List Word) : Option (Nat × List (IConstantVal × Nat)) → Prop
-  | none => r.headD 0 = 0
-  | some (nPc, cs) => r.headD 0 = 1 ∧ (r.tail.headD 0).toNat = nPc ∧
-      (r.tail.tail.tail.headD 0).toNat = cs.length ∧
-      (r.tail.tail.headD 0).toNat + cs.length ≤ iwTop m ∧
-      CsAt m (r.tail.tail.headD 0).toNat cs (· < iwTop m)
 
 theorem decCaps_ctors {a : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Nat} {caps : IIndCaps}
     (h : decCaps a dn q = some caps) :
