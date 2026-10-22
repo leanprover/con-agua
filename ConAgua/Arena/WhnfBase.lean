@@ -256,6 +256,29 @@ theorem callW_spec (p : Prog) (n : Nat) (f : FnName) (vs : List Word) (s₀ : St
     obtain ⟨rfl, rfl⟩ := hrun
     exact ⟨rfl, rfl⟩
 
+theorem callW_zero (p : Prog) (f : FnName) (vs : List Word) (m : Mem) : callW p 0 f vs m = none := by
+  simp only [callW, invoke, lookupFn]
+  cases p.lookup f with
+  | none => rfl
+  | some fd => rfl
+
+/-- **A triple applies to a run**: the post holds of the run's result, at a state with the run's
+memory and the caller's locals. -/
+theorem triple_of_callW {p : Prog} {n : Nat} {f : FnName} {args : List Word} {s₀ : St}
+    {Q : List Word → St → Prop}
+    (h : ⦃fun s => s = s₀⦄ invoke p (exec p n) f args ⦃fun r s' => Q r s'; ⊤⦄)
+    {r : List Word} {m' : Mem} (hc : callW p n f args s₀.mem = some (r, m')) :
+    ∃ s', s'.mem = m' ∧ Q r s' := by
+  simp only [callW] at hc
+  cases hr : (invoke p (exec p n) f args).run { mem := s₀.mem, loc := Locals.init [] } with
+  | error e => simp [hr] at hc
+  | ok q =>
+    simp only [hr, Option.some.injEq] at hc
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj hc
+    have hrun : (invoke p (exec p n) f args).run s₀ = .ok (q.1, { q.2 with loc := s₀.loc }) := by
+      rw [invoke_run_loc, hr]; rfl
+    exact ⟨{ q.2 with loc := s₀.loc }, rfl, L.M.of_run (P := fun s => s = s₀) rfl hrun h⟩
+
 /-- **A refinement spec applies to a run.** -/
 theorem CoreSpec.of_callW {α : Type} [Inhabited α] {p : Prog} {n : Nat} {f : FnName}
     {args : List Word} {T : AM α} {dec : List Word → α} {s₀ : St} {a₀ : AState}

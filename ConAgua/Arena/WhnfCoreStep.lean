@@ -1,4 +1,4 @@
-import ConAgua.Arena.WhnfCoreApp
+import ConAgua.Arena.WhnfCoreAppLoop
 
 /-!
 # `whnf_core_step` and its `app` arm refine `whnfCoreStep`
@@ -115,7 +115,8 @@ theorem coreApp2_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) 
     (MM : ModeMaps) (eb mode d v h so sn : Word) (args nodes : Array EIdx)
     (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (hv : HW v) (hh : HW h)
     (har : SpineR s₀.mem so sn args) (hno : SpineR s₀.mem (so + sn) sn nodes)
-    (hlo : so.toNat + sn.toNat + sn.toNat ≤ (spTop s₀.mem).toNat) :
+    (hlo : so.toNat + sn.toNat + sn.toNat ≤ (spTop s₀.mem).toNat)
+    (htop : (spTop s₀.mem).toNat ≤ (s₀.mem.arr64 SPN).size) :
     CoreSpec p (n + 2) "whnf_core_app2" [mode, vis, d, v, h, so, sn]
       (whnfCoreApp2T (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE v) (decE h)
         args nodes) decStep s₀ a₀ dn vis fe MM eb ResW := by
@@ -140,7 +141,7 @@ theorem coreApp2_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) 
   simp only [h4, Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr0, hr1, hm⟩ := hW
   obtain ⟨t₃, ht₃, -, hf₃, hg₃, hhw, ho3, htop3, xs, hha, hxs⟩ := triple_of_callW
-    (headAndArgs_refines p (n + 1) s a₀ hS.arena.1 v hv) h3
+    (headAndArgs_refines p hp.spine (n + 1) s a₀ hS.arena.1 v hv hS.spn htop) h3
   rw [ht₃] at hf₃ hg₃ htop3 hxs
   have hS₃ := hS.frame_stk hf₃ (by simp) (by simp)
   obtain ⟨hgt, hgsz, hgk⟩ := hg₃
@@ -226,7 +227,7 @@ theorem coreApp_refines (N : Nat) (hk : KnotUpTo p N) (F : Nat) (hF : N ≤ F) (
   obtain ⟨hr0, hr1, hm⟩ := hW
   -- the spine
   obtain ⟨t₁, ht₁, -, hf₁, hg₁, hhw, ho1, htop1, xs, ns, hsp, hxs, hns⟩ := triple_of_callW
-    (getAppSpine_refines p N s a₀ hS.arena.1 e he) h1
+    (getAppSpine_refines p hp.spine N s a₀ hS.arena.1 e he hS.spn) h1
   rw [ht₁] at hf₁ hg₁ htop1 hxs hns
   have hS₁ := hS.frame_stk hf₁ (by simp) (by simp)
   obtain ⟨hgt, hgsz, hgk⟩ := hg₁
@@ -259,6 +260,8 @@ theorem coreApp_refines (N : Nat) (hk : KnotUpTo p N) (F : Nat) (hF : N ≤ F) (
     ⟨m₂, Locals.init []⟩ _ dn vis fe M' eb mode d (r₂.headD 0) (r₁.headD 0) (r₁.tail.headD 0)
     (r₁.tail.tail.headD 0) xs ns ⟨hS₂, hs.mode4, hs.eb_mode⟩ hrw₂ hhw hxs₂ hns₂
     (by have h22 := hSt₂.1; simp only at h22 ⊢; rw [h22]; omega)
+    (by show (spTop m₂).toNat ≤ (m₂.arr64 SPN).size
+        have a := hSt₂.1; have b := hSt₂.2.1; simp only at a b; rw [a, b]; omega)
   obtain ⟨hok₄, ⟨M'', hS₄, hK₄, hSt₄⟩, hres₄, hrw₄⟩ := CoreSpec.of_callW happ h4
   have hrun : (whnfCoreAppT (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat
       (decE e)).run a₀ = .ok (AM.res (whnfCoreApp2T (decMode mode)

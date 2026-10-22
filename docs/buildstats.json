@@ -1,0 +1,2153 @@
+{
+ "commit": "64418af24eefc2fb1eb5f2c6dd508f9ed64ba4d3",
+ "date": "2026-10-22",
+ "decls": {
+  "ConAgua/Arena/AppStore.lean": [
+   {
+    "line": 118,
+    "name": "theorem afindLoop_spec",
+    "secs": 2.05,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.vcgen"
+   },
+   {
+    "line": 295,
+    "name": "theorem internApp_spec",
+    "secs": 1.08,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   }
+  ],
+  "ConAgua/Arena/BVarStore.lean": [
+   {
+    "line": 112,
+    "name": "theorem bfindLoop_spec",
+    "secs": 1.76,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.vcgen"
+   },
+   {
+    "line": 276,
+    "name": "theorem internBVar_spec",
+    "secs": 1.07,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   }
+  ],
+  "ConAgua/Arena/ConstStore.lean": [
+   {
+    "line": 120,
+    "name": "theorem cefindLoop_spec",
+    "secs": 6.76,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.vcgen"
+   },
+   {
+    "line": 149,
+    "name": "theorem constFind_spec",
+    "secs": 1.25,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 199,
+    "name": "theorem constPush_spec",
+    "secs": 1.68,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 299,
+    "name": "theorem internConst_spec",
+    "secs": 2.46,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   }
+  ],
+  "ConAgua/Arena/CoreCaches.lean": [
+   {
+    "line": 123,
+    "name": "theorem cacheProg_flush",
+    "secs": 1.22,
+    "what": "elaboration"
+   },
+   {
+    "line": 148,
+    "name": "theorem flushCaches_spec",
+    "secs": 1.11,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.vcgen"
+   }
+  ],
+  "ConAgua/Arena/DeclStep.lean": [
+   {
+    "line": 295,
+    "name": "theorem declStepProg_wf",
+    "secs": 54.1,
+    "what": "type checking"
+   }
+  ],
+  "ConAgua/Arena/ExprMk.lean": [
+   {
+    "line": 323,
+    "name": "theorem mkApp_spec",
+    "secs": 1.68,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 341,
+    "name": "theorem mkLam_spec",
+    "secs": 2.61,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 359,
+    "name": "theorem mkForall_spec",
+    "secs": 2.74,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 377,
+    "name": "theorem mkLet_spec",
+    "secs": 4.25,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   }
+  ],
+  "ConAgua/Arena/FVarRange.lean": [
+   {
+    "line": 377,
+    "name": "theorem frNode_step",
+    "secs": 1.36,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   }
+  ],
+  "ConAgua/Arena/FVarStore.lean": [
+   {
+    "line": 120,
+    "name": "theorem fvfindLoop_spec",
+    "secs": 7.07,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.vcgen"
+   },
+   {
+    "line": 149,
+    "name": "theorem fvarFind_spec",
+    "secs": 1.12,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 199,
+    "name": "theorem fvarPush_spec",
+    "secs": 2.35,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 301,
+    "name": "theorem internFVar_spec",
+    "secs": 2.3,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   }
+  ],
+  "ConAgua/Arena/ForallStore.lean": [
+   {
+    "line": 125,
+    "name": "theorem fafindLoop_spec",
+    "secs": 2.46,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.vcgen"
+   },
+   {
+    "line": 315,
+    "name": "theorem internForallL_spec",
+    "secs": 1.04,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   }
+  ],
+  "ConAgua/Arena/ImaxStore.lean": [
+   {
+    "line": 114,
+    "name": "theorem imfindLoop_spec",
+    "secs": 8.42,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.vcgen"
+   },
+   {
+    "line": 143,
+    "name": "theorem imaxFind_spec",
+    "secs": 1.39,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 193,
+    "name": "theorem imaxPush_spec",
+    "secs": 1.34,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.vcgen"
+   },
+   {
+    "line": 279,
+    "name": "theorem internImax_spec",
+    "secs": 1.84,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   }
+  ],
+  "ConAgua/Arena/IndIface.lean": [
+   {
+    "line": 810,
+    "name": "theorem libFns_wf",
+    "secs": 2.5,
+    "what": "type checking"
+   }
+  ],
+  "ConAgua/Arena/IndInstall.lean": [
+   {
+    "line": 771,
+    "name": "theorem indInstall_wf",
+    "secs": 8.39,
+    "what": "type checking"
+   }
+  ],
+  "ConAgua/Arena/IndParts.lean": [
+   {
+    "line": 908,
+    "name": "theorem indParts_wf",
+    "secs": 5.5,
+    "what": "type checking"
+   }
+  ],
+  "ConAgua/Arena/IndPartsSpec3.lean": [
+   {
+    "line": 456,
+    "name": "theorem recTargetOf_spec",
+    "secs": 1.35,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   }
+  ],
+  "ConAgua/Arena/IndPartsSpec4.lean": [
+   {
+    "line": 544,
+    "name": "theorem blockShapeWithSort_spec",
+    "secs": 10.3,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   }
+  ],
+  "ConAgua/Arena/IndPos.lean": [
+   {
+    "line": 776,
+    "name": "theorem indPos_wf",
+    "secs": 5.55,
+    "what": "type checking"
+   }
+  ],
+  "ConAgua/Arena/IndPos2.lean": [
+   {
+    "line": 942,
+    "name": "theorem indPos2_wf",
+    "secs": 11.0,
+    "what": "type checking"
+   }
+  ],
+  "ConAgua/Arena/IndProg.lean": [
+   {
+    "line": 25,
+    "name": "theorem indProg_wf",
+    "secs": 53.8,
+    "what": "type checking"
+   }
+  ],
+  "ConAgua/Arena/IndSum.lean": [
+   {
+    "line": 752,
+    "name": "theorem indSum_wf",
+    "secs": 5.19,
+    "what": "type checking"
+   }
+  ],
+  "ConAgua/Arena/IndSumSpec2.lean": [
+   {
+    "line": 863,
+    "name": "theorem wtW_spec",
+    "secs": 1.32,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   }
+  ],
+  "ConAgua/Arena/IndSumSpec4.lean": [
+   {
+    "line": 108,
+    "name": "theorem srW_spec",
+    "secs": 1.83,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   }
+  ],
+  "ConAgua/Arena/Inst1Spec.lean": [
+   {
+    "line": 29,
+    "name": "theorem instApp_step",
+    "secs": 1.62,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 42,
+    "name": "theorem instLam_step",
+    "secs": 1.58,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 55,
+    "name": "theorem instForall_step",
+    "secs": 1.66,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 68,
+    "name": "theorem instLet_step",
+    "secs": 2.49,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 81,
+    "name": "theorem instProj_step",
+    "secs": 1.91,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   }
+  ],
+  "ConAgua/Arena/KnotWF.lean": [
+   {
+    "line": 39,
+    "name": "theorem defeqInferFns_wf",
+    "secs": 4.49,
+    "what": "type checking"
+   }
+  ],
+  "ConAgua/Arena/LamStore.lean": [
+   {
+    "line": 125,
+    "name": "theorem lafindLoop_spec",
+    "secs": 5.95,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.vcgen"
+   },
+   {
+    "line": 154,
+    "name": "theorem lamFind_spec",
+    "secs": 1.08,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 204,
+    "name": "theorem lamPush_spec",
+    "secs": 1.55,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 311,
+    "name": "theorem internLamL_spec",
+    "secs": 2.15,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   }
+  ],
+  "ConAgua/Arena/LetStore.lean": [
+   {
+    "line": 119,
+    "name": "theorem lefindLoop_spec",
+    "secs": 9.1,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.vcgen"
+   },
+   {
+    "line": 148,
+    "name": "theorem letFind_spec",
+    "secs": 1.15,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 202,
+    "name": "theorem letPush_spec",
+    "secs": 2.73,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 302,
+    "name": "theorem internLet_spec",
+    "secs": 1.33,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   }
+  ],
+  "ConAgua/Arena/LevelLeq.lean": [
+   {
+    "line": 42,
+    "name": "def leqW",
+    "secs": 2.18,
+    "what": "type checking"
+   }
+  ],
+  "ConAgua/Arena/LevelLeqSpec.lean": [
+   {
+    "line": 62,
+    "name": "theorem rest_step",
+    "secs": 1.06,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 73,
+    "name": "theorem imax_step",
+    "secs": 1.15,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   }
+  ],
+  "ConAgua/Arena/LevelStore.lean": [
+   {
+    "line": 111,
+    "name": "theorem sfindLoop_spec",
+    "secs": 4.21,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.vcgen"
+   },
+   {
+    "line": 140,
+    "name": "theorem succFind_spec",
+    "secs": 1.36,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 187,
+    "name": "theorem succPush_spec",
+    "secs": 1.38,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   }
+  ],
+  "ConAgua/Arena/Lift.lean": [
+   {
+    "line": 575,
+    "name": "theorem liftGo_step",
+    "secs": 1.43,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.vcgen"
+   }
+  ],
+  "ConAgua/Arena/LiftSpec.lean": [
+   {
+    "line": 29,
+    "name": "theorem liftApp_step",
+    "secs": 1.39,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 42,
+    "name": "theorem liftLam_step",
+    "secs": 1.6,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 55,
+    "name": "theorem liftForall_step",
+    "secs": 1.64,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 68,
+    "name": "theorem liftLet_step",
+    "secs": 1.51,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 81,
+    "name": "theorem liftProj_step",
+    "secs": 1.66,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   }
+  ],
+  "ConAgua/Arena/LsStore.lean": [
+   {
+    "line": 152,
+    "name": "theorem lsfindLoop_spec",
+    "secs": 1.43,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 329,
+    "name": "theorem internLs_spec",
+    "secs": 1.33,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   }
+  ],
+  "ConAgua/Arena/MaxStore.lean": [
+   {
+    "line": 114,
+    "name": "theorem mfindLoop_spec",
+    "secs": 2.2,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.vcgen"
+   }
+  ],
+  "ConAgua/Arena/MemoLib.lean": [
+   {
+    "line": 139,
+    "name": "theorem mfindLoopG_spec",
+    "secs": 2.57,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   }
+  ],
+  "ConAgua/Arena/NNumStore.lean": [
+   {
+    "line": 117,
+    "name": "theorem nnfindLoop_spec",
+    "secs": 6.26,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.vcgen"
+   },
+   {
+    "line": 146,
+    "name": "theorem nnumFind_spec",
+    "secs": 1.43,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 196,
+    "name": "theorem nnumPush_spec",
+    "secs": 1.73,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 283,
+    "name": "theorem internNNum_spec",
+    "secs": 1.63,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   }
+  ],
+  "ConAgua/Arena/NStrStore.lean": [
+   {
+    "line": 156,
+    "name": "theorem nsfindLoop_spec",
+    "secs": 1.35,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 241,
+    "name": "theorem nsPush_spec",
+    "secs": 1.06,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 340,
+    "name": "theorem internNStr_spec",
+    "secs": 1.15,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   }
+  ],
+  "ConAgua/Arena/NatAdd.lean": [
+   {
+    "line": 195,
+    "name": "theorem addLoop_spec",
+    "secs": 3.13,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 212,
+    "name": "theorem addLoop_step_spec",
+    "secs": 1.76,
+    "what": "type checking"
+   },
+   {
+    "line": 255,
+    "name": "?",
+    "secs": 2.04,
+    "what": "type checking"
+   }
+  ],
+  "ConAgua/Arena/NatBits.lean": [
+   {
+    "line": 180,
+    "name": "theorem andLoop_spec",
+    "secs": 1.32,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 197,
+    "name": "theorem orLoop_spec",
+    "secs": 1.64,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 214,
+    "name": "theorem xorLoop_spec",
+    "secs": 2.04,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 256,
+    "name": "?",
+    "secs": 1.12,
+    "what": "type checking"
+   },
+   {
+    "line": 281,
+    "name": "?",
+    "secs": 1.04,
+    "what": "type checking"
+   }
+  ],
+  "ConAgua/Arena/NatCmp.lean": [
+   {
+    "line": 151,
+    "name": "theorem cmpLoop_spec",
+    "secs": 2.39,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 162,
+    "name": "theorem cmpLoop_step_spec",
+    "secs": 1.08,
+    "what": "type checking"
+   }
+  ],
+  "ConAgua/Arena/NatDiv.lean": [
+   {
+    "line": 676,
+    "name": "theorem limbLoop_spec",
+    "secs": 2.3,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   }
+  ],
+  "ConAgua/Arena/NatMul.lean": [
+   {
+    "line": 55,
+    "name": "?",
+    "secs": 1.0,
+    "what": "type checking"
+   },
+   {
+    "line": 173,
+    "name": "theorem colLoop_spec",
+    "secs": 7.34,
+    "what": "grind"
+   },
+   {
+    "line": 200,
+    "name": "theorem colLoop_step_spec",
+    "secs": 2.26,
+    "what": "type checking"
+   },
+   {
+    "line": 218,
+    "name": "theorem rowLoop_spec",
+    "secs": 1.56,
+    "what": "grind"
+   },
+   {
+    "line": 270,
+    "name": "theorem natMul_spec",
+    "secs": 7.87,
+    "what": "grind"
+   },
+   {
+    "line": 297,
+    "name": "?",
+    "secs": 1.45,
+    "what": "type checking"
+   }
+  ],
+  "ConAgua/Arena/NatShl.lean": [
+   {
+    "line": 221,
+    "name": "theorem shlLoop_spec",
+    "secs": 1.0,
+    "what": "grind"
+   },
+   {
+    "line": 249,
+    "name": "theorem natShl_spec",
+    "secs": 1.58,
+    "what": "grind"
+   }
+  ],
+  "ConAgua/Arena/NatShr.lean": [
+   {
+    "line": 241,
+    "name": "theorem natShr_spec",
+    "secs": 60.9,
+    "what": "grind"
+   },
+   {
+    "line": 269,
+    "name": "?",
+    "secs": 1.5,
+    "what": "type checking"
+   }
+  ],
+  "ConAgua/Arena/NatSub.lean": [
+   {
+    "line": 136,
+    "name": "theorem subLoop_spec",
+    "secs": 3.38,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   }
+  ],
+  "ConAgua/Arena/ParamStore.lean": [
+   {
+    "line": 111,
+    "name": "theorem pfindLoop_spec",
+    "secs": 4.44,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.vcgen"
+   },
+   {
+    "line": 140,
+    "name": "theorem paramFind_spec",
+    "secs": 1.15,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 187,
+    "name": "theorem paramPush_spec",
+    "secs": 1.4,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 274,
+    "name": "theorem internParam_spec",
+    "secs": 1.17,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   }
+  ],
+  "ConAgua/Arena/Prelude.lean": [
+   {
+    "line": 38,
+    "name": "theorem romData_len",
+    "secs": 1.85,
+    "what": "type checking"
+   }
+  ],
+  "ConAgua/Arena/ProjStore.lean": [
+   {
+    "line": 123,
+    "name": "theorem pjfindLoop_spec",
+    "secs": 2.16,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.vcgen"
+   },
+   {
+    "line": 206,
+    "name": "theorem projPush_spec",
+    "secs": 1.28,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   }
+  ],
+  "ConAgua/Arena/RecCheck.lean": [
+   {
+    "line": 924,
+    "name": "theorem recCheck_wf",
+    "secs": 9.66,
+    "what": "type checking"
+   }
+  ],
+  "ConAgua/Arena/RecClass.lean": [
+   {
+    "line": 701,
+    "name": "theorem recClass_wf",
+    "secs": 5.28,
+    "what": "type checking"
+   }
+  ],
+  "ConAgua/Arena/RecClassSpec.lean": [
+   {
+    "line": 1747,
+    "name": "theorem classGenIhParts_spec",
+    "secs": 2.09,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 2309,
+    "name": "theorem classReadRecCls_spec",
+    "secs": 1.54,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   }
+  ],
+  "ConAgua/Arena/RecGen.lean": [
+   {
+    "line": 883,
+    "name": "theorem recGen_wf",
+    "secs": 6.77,
+    "what": "type checking"
+   }
+  ],
+  "ConAgua/Arena/SortStore.lean": [
+   {
+    "line": 111,
+    "name": "theorem sofindLoop_spec",
+    "secs": 4.44,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.vcgen"
+   },
+   {
+    "line": 140,
+    "name": "theorem sortFind_spec",
+    "secs": 1.34,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 187,
+    "name": "theorem sortPush_spec",
+    "secs": 1.4,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 287,
+    "name": "theorem internSort_spec",
+    "secs": 1.35,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   }
+  ],
+  "ConAgua/Arena/Walk.lean": [
+   {
+    "line": 384,
+    "name": "theorem bbNode_step",
+    "secs": 1.36,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.vcgen"
+   }
+  ],
+  "ConAgua/Arena/WhnfCoreProj.lean": [
+   {
+    "line": 985,
+    "name": "theorem rpHead_spec",
+    "secs": 1.3,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   }
+  ],
+  "ConAgua/Arena/ZeroStore.lean": [
+   {
+    "line": 143,
+    "name": "theorem zeroFind_spec",
+    "secs": 1.08,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 190,
+    "name": "theorem zeroPush_spec",
+    "secs": 1.12,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.vcgen"
+   },
+   {
+    "line": 276,
+    "name": "theorem internZero_spec",
+    "secs": 1.04,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   }
+  ],
+  "ConAgua/Capstone.lean": [
+   {
+    "line": 504,
+    "name": "theorem frontAllProg_wf",
+    "secs": 8.68,
+    "what": "type checking"
+   }
+  ],
+  "ConAgua/Front/ApplyDecl.lean": [
+   {
+    "line": 321,
+    "name": "theorem declProg_lookups",
+    "secs": 1.1,
+    "what": "type checking"
+   }
+  ],
+  "ConAgua/Front/ApplyExpr.lean": [
+   {
+    "line": 648,
+    "name": "theorem exprProg_lookups",
+    "secs": 1.04,
+    "what": "type checking"
+   }
+  ],
+  "ConAgua/Front/FieldsDeclLink.lean": [
+   {
+    "line": 232,
+    "name": "theorem str_lit",
+    "secs": 1.32,
+    "what": "tactic execution of Lean.Parser.Tactic.congr"
+   }
+  ],
+  "ConAgua/Front/FieldsDeclSpec.lean": [
+   {
+    "line": 206,
+    "name": "theorem dobjLoop_spec",
+    "secs": 1.59,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 261,
+    "name": "theorem declVal_spec",
+    "secs": 3.03,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 290,
+    "name": "theorem dlineLoop_spec",
+    "secs": 1.92,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   }
+  ],
+  "ConAgua/Front/FieldsExpr.lean": [
+   {
+    "line": 382,
+    "name": "theorem objLoop_spec",
+    "secs": 1.0,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   }
+  ],
+  "ConAgua/Front/FieldsExprLink.lean": [
+   {
+    "line": 769,
+    "name": "theorem exprLine_link",
+    "secs": 1.17,
+    "what": "process pre-definitions"
+   }
+  ],
+  "ConAgua/Front/FieldsLink.lean": [
+   {
+    "line": 645,
+    "name": "theorem recLine_link",
+    "secs": 1.15,
+    "what": "process pre-definitions"
+   }
+  ],
+  "ConAgua/Front/FrontRun.lean": [
+   {
+    "line": 200,
+    "name": "theorem frontAllProg_expr",
+    "secs": 1.41,
+    "what": "type checking"
+   }
+  ],
+  "ConAgua/L/Examples.lean": [
+   {
+    "line": 369,
+    "name": "theorem skipBracedLoop_step_spec",
+    "secs": 5.54,
+    "what": "type checking"
+   }
+  ],
+  "ConAgua/Scan/Key.lean": [
+   {
+    "line": 659,
+    "name": "theorem keyAtG1_spec",
+    "secs": 2.42,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.vcgen"
+   },
+   {
+    "line": 678,
+    "name": "theorem keyAtG2_spec",
+    "secs": 47.6,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.vcgen"
+   },
+   {
+    "line": 687,
+    "name": "?",
+    "secs": 2.73,
+    "what": "type checking"
+   },
+   {
+    "line": 696,
+    "name": "theorem keyAtG3_spec",
+    "secs": 4.82,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.vcgen"
+   },
+   {
+    "line": 714,
+    "name": "theorem keyAtG4_spec",
+    "secs": 1.68,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.vcgen"
+   },
+   {
+    "line": 732,
+    "name": "theorem keyAtG5_spec",
+    "secs": 4.15,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.vcgen"
+   },
+   {
+    "line": 750,
+    "name": "theorem keyAtG6_spec",
+    "secs": 2.21,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.vcgen"
+   }
+  ],
+  "ConAgua/Scan/Line.lean": [
+   {
+    "line": 413,
+    "name": "theorem lineLoop_spec",
+    "secs": 1.08,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   }
+  ],
+  "ConAgua/Scan/Records.lean": [
+   {
+    "line": 1778,
+    "name": "theorem indRecLoop_spec",
+    "secs": 1.67,
+    "what": "tactic execution of Lean.Parser.Tactic.sym"
+   },
+   {
+    "line": 1861,
+    "name": "theorem indTypeLoop_spec",
+    "secs": 1.76,
+    "what": "tactic execution of Lean.Parser.Tactic.sym"
+   },
+   {
+    "line": 1941,
+    "name": "theorem indCtorLoop_spec",
+    "secs": 1.13,
+    "what": "tactic execution of Lean.Parser.Tactic.sym"
+   }
+  ],
+  "ConAgua/Scan/Str.lean": [
+   {
+    "line": 530,
+    "name": "theorem hex4_spec",
+    "secs": 1.3,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   },
+   {
+    "line": 579,
+    "name": "theorem unescapeLoop_spec",
+    "secs": 1.2,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   }
+  ],
+  "ConAgua/Scan/Utf8.lean": [
+   {
+    "line": 121,
+    "name": "theorem utf8Char_spec",
+    "secs": 1.29,
+    "what": "grind tactic execution of Lean.Parser.Tactic.Grind.finish"
+   }
+  ],
+  "ConAgua/Scan/Utf8Link.lean": [
+   {
+    "line": 239,
+    "name": "theorem decE",
+    "secs": 21.9,
+    "what": "type checking"
+   },
+   {
+    "line": 629,
+    "name": "theorem utf8Decode_run",
+    "secs": 6.69,
+    "what": "tactic execution of Lean.Parser.Tactic.injection"
+   }
+  ],
+  "ConAgua/Scan/Validator.lean": [
+   {
+    "line": 119,
+    "name": "theorem valProg_wf",
+    "secs": 1.54,
+    "what": "type checking"
+   }
+  ],
+  "ConAgua/Scan/Values.lean": [
+   {
+    "line": 572,
+    "name": "theorem hintsObj_spec",
+    "secs": 1.81,
+    "what": "grind ematch"
+   }
+  ],
+  "vendor/con-leche/ConLeche/Complete/ProgActive.lean": [
+   {
+    "line": 308,
+    "name": "theorem nestCtors_eq",
+    "secs": 4.32,
+    "what": "type checking"
+   }
+  ],
+  "vendor/con-leche/ConLeche/Frontend/RoundsWork.lean": [
+   {
+    "line": 278,
+    "name": "?",
+    "secs": 1.34,
+    "what": "type checking"
+   }
+  ],
+  "vendor/con-leche/ConLeche/Frontend/Scan/Equiv.lean": [
+   {
+    "line": 726,
+    "name": "theorem scanLineLoop_aux",
+    "secs": 1.09,
+    "what": "tactic execution of Lean.Parser.Tactic.funInduction"
+   }
+  ],
+  "vendor/con-leche/ConLeche/Frontend/Scan/Equiv/Keys.lean": [
+   {
+    "line": 250,
+    "name": "theorem keyOf_97",
+    "secs": 1.11,
+    "what": "simp"
+   },
+   {
+    "line": 290,
+    "name": "theorem keyOf_98",
+    "secs": 1.1,
+    "what": "simp"
+   },
+   {
+    "line": 364,
+    "name": "theorem keyOf_100",
+    "secs": 1.07,
+    "what": "simp"
+   }
+  ],
+  "vendor/con-leche/ConLeche/Kernel/NatOpPins.lean": [
+   {
+    "line": 75,
+    "name": "#load_natop_pins",
+    "secs": 2.58,
+    "what": "compilation (LCNF base)"
+   }
+  ],
+  "vendor/con-leche/ConLeche/Model/Inductives/GenClsFrame.lean": [
+   {
+    "line": 938,
+    "name": "theorem genArgs_graded",
+    "secs": 4.46,
+    "what": "tactic execution of Lean.Parser.Tactic.obtain"
+   },
+   {
+    "line": 1070,
+    "name": "theorem genIhFrame",
+    "secs": 3.86,
+    "what": "tactic execution of Lean.Parser.Tactic.obtain"
+   },
+   {
+    "line": 1381,
+    "name": "theorem genRowParams",
+    "secs": 4.3,
+    "what": "tactic execution of Lean.Parser.Tactic.obtain"
+   }
+  ],
+  "vendor/con-leche/ConLeche/Model/Inductives/GenRecRules.lean": [
+   {
+    "line": 1612,
+    "name": "theorem genIhFree_run",
+    "secs": 1.47,
+    "what": "simp"
+   }
+  ],
+  "vendor/con-leche/ConLeche/Model/Rules/Sound.lean": [
+   {
+    "line": 47,
+    "name": "theorem red_sound",
+    "secs": 2.71,
+    "what": "process pre-definitions"
+   }
+  ],
+  "vendor/con-leche/ConLeche/Verify/Frontend/FalseLines.lean": [
+   {
+    "line": 168,
+    "name": "theorem naiveStrName_False",
+    "secs": 1.05,
+    "what": "type checking"
+   }
+  ],
+  "vendor/con-ron/ConRon/Arena/WFProofs.lean": [
+   {
+    "line": 1346,
+    "name": "theorem ETables.get_inv",
+    "secs": 1.26,
+    "what": "simp"
+   },
+   {
+    "line": 1461,
+    "name": "theorem ETables.derAt_congr",
+    "secs": 2.13,
+    "what": "simp"
+   }
+  ],
+  "vendor/con-ron/ConRon/Bridge/Inductives/BlockParts.lean": [
+   {
+    "line": 1501,
+    "name": "theorem shapeTail_run",
+    "secs": 1.27,
+    "what": "tactic execution of Lean.Parser.Tactic.obtain"
+   }
+  ]
+ },
+ "modules": {
+  "ConAgua": 0.294,
+  "ConAgua.Arena.AppRefine": 2.6,
+  "ConAgua.Arena.AppStore": 34.0,
+  "ConAgua.Arena.ArenaRel": 8.4,
+  "ConAgua.Arena.BVarRefine": 2.9,
+  "ConAgua.Arena.BVarStore": 12.0,
+  "ConAgua.Arena.Checker": 2.4,
+  "ConAgua.Arena.ConstRefine": 1.4,
+  "ConAgua.Arena.ConstStore": 44.0,
+  "ConAgua.Arena.CoreCaches": 8.2,
+  "ConAgua.Arena.CoreLevels": 1.4,
+  "ConAgua.Arena.CoreRefine": 1.1,
+  "ConAgua.Arena.DeclAndPin": 1.2,
+  "ConAgua.Arena.DeclBase": 0.986,
+  "ConAgua.Arena.DeclStep": 55.0,
+  "ConAgua.Arena.DeclStepSpec": 0.47000000000000003,
+  "ConAgua.Arena.DefEq": 0.841,
+  "ConAgua.Arena.DerRel": 2.1,
+  "ConAgua.Arena.Env": 8.2,
+  "ConAgua.Arena.EnvRec": 2.0,
+  "ConAgua.Arena.ExprMk": 21.0,
+  "ConAgua.Arena.FVarRange": 24.0,
+  "ConAgua.Arena.FVarRangeRefine": 1.6,
+  "ConAgua.Arena.FVarRefine": 0.99,
+  "ConAgua.Arena.FVarStore": 44.0,
+  "ConAgua.Arena.ForallRefine": 3.0,
+  "ConAgua.Arena.ForallStore": 27.0,
+  "ConAgua.Arena.Frame": 3.2,
+  "ConAgua.Arena.GrindAttr": 0.209,
+  "ConAgua.Arena.HasLooseBVar": 1.2,
+  "ConAgua.Arena.ImaxRefine": 1.0,
+  "ConAgua.Arena.ImaxStore": 40.0,
+  "ConAgua.Arena.IndAll": 0.458,
+  "ConAgua.Arena.IndCopy": 3.5,
+  "ConAgua.Arena.IndCopy2": 3.6,
+  "ConAgua.Arena.IndGrindAttr": 0.23600000000000002,
+  "ConAgua.Arena.IndIface": 3.6,
+  "ConAgua.Arena.IndInstall": 9.5,
+  "ConAgua.Arena.IndInstallSpec": 4.2,
+  "ConAgua.Arena.IndLibSpec": 5.5,
+  "ConAgua.Arena.IndMaster": 2.9,
+  "ConAgua.Arena.IndParts": 6.6,
+  "ConAgua.Arena.IndPartsSpec": 3.4,
+  "ConAgua.Arena.IndPartsSpec2": 1.7,
+  "ConAgua.Arena.IndPartsSpec3": 11.0,
+  "ConAgua.Arena.IndPartsSpec4": 16.0,
+  "ConAgua.Arena.IndPartsSpec5": 3.8,
+  "ConAgua.Arena.IndPartsSpec6": 2.7,
+  "ConAgua.Arena.IndPos": 6.7,
+  "ConAgua.Arena.IndPos2": 13.0,
+  "ConAgua.Arena.IndPos2Spec": 29.0,
+  "ConAgua.Arena.IndPosSpec": 3.7,
+  "ConAgua.Arena.IndProg": 54.0,
+  "ConAgua.Arena.IndStubs": 0.897,
+  "ConAgua.Arena.IndSum": 6.2,
+  "ConAgua.Arena.IndSumSpec": 2.3,
+  "ConAgua.Arena.IndSumSpec2": 19.0,
+  "ConAgua.Arena.IndSumSpec3": 2.1,
+  "ConAgua.Arena.IndSumSpec4": 5.3,
+  "ConAgua.Arena.IndView": 15.0,
+  "ConAgua.Arena.Infer": 0.6970000000000001,
+  "ConAgua.Arena.Inst1": 10.0,
+  "ConAgua.Arena.Inst1Bench": 1.5,
+  "ConAgua.Arena.Inst1BenchComp": 0.7010000000000001,
+  "ConAgua.Arena.Inst1Emit": 0.988,
+  "ConAgua.Arena.Inst1Refine": 3.4,
+  "ConAgua.Arena.Inst1Spec": 12.0,
+  "ConAgua.Arena.Keeps": 9.9,
+  "ConAgua.Arena.Knot": 0.5670000000000001,
+  "ConAgua.Arena.KnotWF": 5.0,
+  "ConAgua.Arena.LamRefine": 3.7,
+  "ConAgua.Arena.LamStore": 45.0,
+  "ConAgua.Arena.LetRefine": 1.3,
+  "ConAgua.Arena.LetStore": 52.0,
+  "ConAgua.Arena.LevelApd": 3.8,
+  "ConAgua.Arena.LevelArena": 2.1,
+  "ConAgua.Arena.LevelEquiv": 1.0,
+  "ConAgua.Arena.LevelEquivRel": 0.521,
+  "ConAgua.Arena.LevelGrindAttr": 0.227,
+  "ConAgua.Arena.LevelHeap": 7.7,
+  "ConAgua.Arena.LevelHeapRel": 1.2,
+  "ConAgua.Arena.LevelLeq": 8.9,
+  "ConAgua.Arena.LevelLeqRel": 3.2,
+  "ConAgua.Arena.LevelLeqSpec": 41.0,
+  "ConAgua.Arena.LevelRefine": 1.4,
+  "ConAgua.Arena.LevelSimp": 9.3,
+  "ConAgua.Arena.LevelSimpRel": 2.5,
+  "ConAgua.Arena.LevelStore": 27.0,
+  "ConAgua.Arena.LevelSubst": 4.0,
+  "ConAgua.Arena.LevelSubstL": 12.0,
+  "ConAgua.Arena.LevelZero": 6.4,
+  "ConAgua.Arena.Lift": 41.0,
+  "ConAgua.Arena.LiftBench": 0.752,
+  "ConAgua.Arena.LiftBenchComp": 0.682,
+  "ConAgua.Arena.LiftEmit": 1.1,
+  "ConAgua.Arena.LiftRefine": 2.1,
+  "ConAgua.Arena.LiftSpec": 4.0,
+  "ConAgua.Arena.LitRefine": 6.7,
+  "ConAgua.Arena.LsRefine": 1.4,
+  "ConAgua.Arena.LsStore": 12.0,
+  "ConAgua.Arena.MaxRefine": 3.6,
+  "ConAgua.Arena.MaxStore": 21.0,
+  "ConAgua.Arena.MemoBank": 2.4,
+  "ConAgua.Arena.MemoLib": 9.8,
+  "ConAgua.Arena.MemoLibRel": 2.3,
+  "ConAgua.Arena.MemoTree": 0.769,
+  "ConAgua.Arena.NAnonRefine": 4.5,
+  "ConAgua.Arena.NAnonStore": 4.8,
+  "ConAgua.Arena.NNumRefine": 1.2,
+  "ConAgua.Arena.NNumStore": 40.0,
+  "ConAgua.Arena.NStrRefine": 1.4,
+  "ConAgua.Arena.NStrStore": 17.0,
+  "ConAgua.Arena.NatAdd": 15.0,
+  "ConAgua.Arena.NatArms": 4.5,
+  "ConAgua.Arena.NatBits": 14.0,
+  "ConAgua.Arena.NatBitsNat": 0.483,
+  "ConAgua.Arena.NatCmp": 19.0,
+  "ConAgua.Arena.NatDiv": 16.0,
+  "ConAgua.Arena.NatGcd": 0.986,
+  "ConAgua.Arena.NatGrindAttr": 0.401,
+  "ConAgua.Arena.NatMul": 32.0,
+  "ConAgua.Arena.NatPow": 6.7,
+  "ConAgua.Arena.NatShl": 51.0,
+  "ConAgua.Arena.NatShr": 111.0,
+  "ConAgua.Arena.NatSub": 10.0,
+  "ConAgua.Arena.ParamRefine": 4.6,
+  "ConAgua.Arena.ParamStore": 28.0,
+  "ConAgua.Arena.Pins": 1.6,
+  "ConAgua.Arena.PinsNatOp": 14.0,
+  "ConAgua.Arena.Pool": 0.6930000000000001,
+  "ConAgua.Arena.PoolSlice": 0.485,
+  "ConAgua.Arena.Prelude": 2.5,
+  "ConAgua.Arena.ProjRefine": 4.7,
+  "ConAgua.Arena.ProjStore": 32.0,
+  "ConAgua.Arena.RecCheck": 11.0,
+  "ConAgua.Arena.RecCheckSpec": 6.8,
+  "ConAgua.Arena.RecClass": 6.4,
+  "ConAgua.Arena.RecClassSpec": 28.0,
+  "ConAgua.Arena.RecGen": 7.9,
+  "ConAgua.Arena.RecGenSpec": 7.5,
+  "ConAgua.Arena.Refine": 4.9,
+  "ConAgua.Arena.Rom": 3.5,
+  "ConAgua.Arena.RomCI": 1.2,
+  "ConAgua.Arena.RomExpr": 3.2,
+  "ConAgua.Arena.RomExprRef": 1.8,
+  "ConAgua.Arena.RomItems": 2.6,
+  "ConAgua.Arena.RomLevel": 2.2,
+  "ConAgua.Arena.RomLevels": 2.3,
+  "ConAgua.Arena.RomPins": 2.4,
+  "ConAgua.Arena.Scratch": 3.1,
+  "ConAgua.Arena.ScratchRefine": 2.4,
+  "ConAgua.Arena.SortRefine": 1.2,
+  "ConAgua.Arena.SortStore": 40.0,
+  "ConAgua.Arena.Store": 7.3,
+  "ConAgua.Arena.StoreLib": 8.6,
+  "ConAgua.Arena.StoreRel": 0.9500000000000001,
+  "ConAgua.Arena.TierWalks": 0.78,
+  "ConAgua.Arena.Tiers": 3.5,
+  "ConAgua.Arena.View": 1.4,
+  "ConAgua.Arena.ViewL": 0.802,
+  "ConAgua.Arena.Walk": 32.0,
+  "ConAgua.Arena.WalkBench": 0.487,
+  "ConAgua.Arena.WalkBenchLean": 0.364,
+  "ConAgua.Arena.WalkEmit": 1.9,
+  "ConAgua.Arena.WalkRefine": 1.2,
+  "ConAgua.Arena.WhnfBase": 0.995,
+  "ConAgua.Arena.WhnfCore": 0.671,
+  "ConAgua.Arena.WhnfCoreApp": 7.1,
+  "ConAgua.Arena.WhnfCoreLoop": 7.5,
+  "ConAgua.Arena.WhnfCoreProj": 4.8,
+  "ConAgua.Arena.WhnfCoreRefine": 1.7,
+  "ConAgua.Arena.WhnfCoreSlot": 9.6,
+  "ConAgua.Arena.WhnfCoreStep": 0.995,
+  "ConAgua.Arena.WhnfDelta": 2.4,
+  "ConAgua.Arena.WhnfDeltaSlot": 2.5,
+  "ConAgua.Arena.WhnfEntry": 0.61,
+  "ConAgua.Arena.WhnfIota": 1.0,
+  "ConAgua.Arena.WhnfSpine": 0.621,
+  "ConAgua.Arena.WhnfSpineArgs": 2.1,
+  "ConAgua.Arena.WhnfSpineRefine": 2.3,
+  "ConAgua.Arena.Word": 0.40900000000000003,
+  "ConAgua.Arena.WriteSets": 2.9,
+  "ConAgua.Arena.ZeroRefine": 3.5,
+  "ConAgua.Arena.ZeroStore": 21.0,
+  "ConAgua.Capstone": 13.0,
+  "ConAgua.Census.Attr": 0.322,
+  "ConAgua.Compiler.Compile": 0.451,
+  "ConAgua.Compiler.Correct": 0.866,
+  "ConAgua.Compiler.Main": 11.0,
+  "ConAgua.Compiler.Mem": 0.319,
+  "ConAgua.Compiler.Rel": 2.1,
+  "ConAgua.Compiler.Run": 0.368,
+  "ConAgua.Compiler.RunEq": 0.595,
+  "ConAgua.Compiler.SimCall": 7.2,
+  "ConAgua.Compiler.SimExpr": 5.8,
+  "ConAgua.Compiler.SimFun": 16.0,
+  "ConAgua.Compiler.SimStmt": 1.1,
+  "ConAgua.Compiler.SimStore": 3.0,
+  "ConAgua.Compiler.Step": 1.8,
+  "ConAgua.Compiler.Tests": 7.2,
+  "ConAgua.Compiler.WF": 0.28800000000000003,
+  "ConAgua.Compiler.WFAll": 0.742,
+  "ConAgua.Compiler.WFAllBench": 1.9,
+  "ConAgua.Final.Statement": 0.677,
+  "ConAgua.Final.Twin": 0.593,
+  "ConAgua.Front.Apply": 3.9,
+  "ConAgua.Front.ApplyDecl": 3.5,
+  "ConAgua.Front.ApplyDeclRefine": 1.4,
+  "ConAgua.Front.ApplyExpr": 4.6,
+  "ConAgua.Front.ApplyExprRefine": 0.806,
+  "ConAgua.Front.DeclIface": 0.378,
+  "ConAgua.Front.Driver": 2.3,
+  "ConAgua.Front.DriverRefine": 0.628,
+  "ConAgua.Front.ExprIface": 0.367,
+  "ConAgua.Front.Fields": 18.0,
+  "ConAgua.Front.FieldsDecl": 0.561,
+  "ConAgua.Front.FieldsDeclLink": 6.4,
+  "ConAgua.Front.FieldsDeclSpec": 44.0,
+  "ConAgua.Front.FieldsExpr": 25.0,
+  "ConAgua.Front.FieldsExprLink": 5.9,
+  "ConAgua.Front.FieldsLink": 4.9,
+  "ConAgua.Front.FrontRun": 5.0,
+  "ConAgua.Front.IndApply": 1.7,
+  "ConAgua.Front.IndFields": 0.748,
+  "ConAgua.Front.Line": 1.7,
+  "ConAgua.Front.LineRefine": 0.858,
+  "ConAgua.Front.NatDec": 3.3,
+  "ConAgua.Front.NatDecLink": 1.5,
+  "ConAgua.Front.Preserve": 0.881,
+  "ConAgua.Front.StateDR": 1.4,
+  "ConAgua.Front.Unescape": 7.1,
+  "ConAgua.Front.UnescapeLink": 2.4,
+  "ConAgua.L.Examples": 19.0,
+  "ConAgua.L.GrindAttr": 0.291,
+  "ConAgua.L.Logic": 0.267,
+  "ConAgua.L.Notation": 1.1,
+  "ConAgua.L.Semantics": 0.34,
+  "ConAgua.L.Syntax": 0.5,
+  "ConAgua.L.WriteSet": 1.2,
+  "ConAgua.Scan.Common": 0.214,
+  "ConAgua.Scan.DriverLink": 0.442,
+  "ConAgua.Scan.Key": 100.0,
+  "ConAgua.Scan.KeyLink": 3.9,
+  "ConAgua.Scan.LeafLink": 0.9540000000000001,
+  "ConAgua.Scan.Leaves": 3.6,
+  "ConAgua.Scan.Line": 117.0,
+  "ConAgua.Scan.LineLink": 6.1,
+  "ConAgua.Scan.Link": 1.6,
+  "ConAgua.Scan.Lit": 6.4,
+  "ConAgua.Scan.LitLink": 4.0,
+  "ConAgua.Scan.Member": 3.7,
+  "ConAgua.Scan.Records": 33.0,
+  "ConAgua.Scan.RecordsLink": 30.0,
+  "ConAgua.Scan.Str": 22.0,
+  "ConAgua.Scan.StrLink": 3.1,
+  "ConAgua.Scan.Utf8": 13.0,
+  "ConAgua.Scan.Utf8Link": 38.0,
+  "ConAgua.Scan.Validator": 3.1,
+  "ConAgua.Scan.ValidatorLink": 1.4,
+  "ConAgua.Scan.Values": 9.4,
+  "ConAgua.Scan.ValuesLink": 3.7,
+  "ConAgua.Scan.WordLink": 0.849,
+  "ConLeche": 0.366,
+  "ConLeche.Accepts": 0.36,
+  "ConLeche.Cached.CheckerC": 2.0,
+  "ConLeche.Cached.CoreC": 2.8,
+  "ConLeche.Cached.ExprNodes": 0.23500000000000001,
+  "ConLeche.Cached.ExprOpsC": 7.0,
+  "ConLeche.Cached.InstallSkel": 1.3,
+  "ConLeche.Cached.Installed": 1.0,
+  "ConLeche.Cached.ParsedC": 1.8,
+  "ConLeche.Cached.StateC": 2.3,
+  "ConLeche.Challenge": 1.1,
+  "ConLeche.Complete": 0.203,
+  "ConLeche.Complete.OfficialNested": 0.5640000000000001,
+  "ConLeche.Complete.PosDerivComplete": 1.6,
+  "ConLeche.Complete.ProgActive": 6.5,
+  "ConLeche.Denotes": 1.1,
+  "ConLeche.Driver.CheckPool": 1.6,
+  "ConLeche.Driver.OwnerParse": 1.4,
+  "ConLeche.Driver.ParInstall": 2.9,
+  "ConLeche.Driver.Run": 1.1,
+  "ConLeche.Driver.Stats": 0.379,
+  "ConLeche.Frontend.Export": 0.34700000000000003,
+  "ConLeche.Frontend.ExportC": 2.1,
+  "ConLeche.Frontend.NatOpGround": 0.589,
+  "ConLeche.Frontend.Prelude": 0.28500000000000003,
+  "ConLeche.Frontend.Prepare": 0.384,
+  "ConLeche.Frontend.Rounds": 1.4,
+  "ConLeche.Frontend.RoundsWork": 7.1,
+  "ConLeche.Frontend.Scan.Equiv": 20.0,
+  "ConLeche.Frontend.Scan.Equiv.Keys": 16.0,
+  "ConLeche.Frontend.Scan.Equiv.Kit": 0.966,
+  "ConLeche.Frontend.Scan.Equiv.Objects": 16.0,
+  "ConLeche.Frontend.Scan.Equiv.Scalars": 1.6,
+  "ConLeche.Frontend.Scan.Fast": 8.7,
+  "ConLeche.Frontend.Scan.Naive": 4.1,
+  "ConLeche.Frontend.Scan.Types": 0.636,
+  "ConLeche.Frontend.Stream": 0.648,
+  "ConLeche.Kernel.Basis": 0.28800000000000003,
+  "ConLeche.Kernel.Basis.And": 0.23800000000000002,
+  "ConLeche.Kernel.Basis.Builder": 0.188,
+  "ConLeche.Kernel.Basis.Empty": 0.213,
+  "ConLeche.Kernel.Basis.Eq": 0.42,
+  "ConLeche.Kernel.Basis.False": 0.259,
+  "ConLeche.Kernel.Basis.Names": 0.634,
+  "ConLeche.Kernel.Basis.Nat": 0.292,
+  "ConLeche.Kernel.Basis.Quot": 0.368,
+  "ConLeche.Kernel.BasisA": 0.977,
+  "ConLeche.Kernel.BasisGen": 1.7,
+  "ConLeche.Kernel.Canon": 1.9,
+  "ConLeche.Kernel.CheckDecl": 1.0,
+  "ConLeche.Kernel.Checker": 0.634,
+  "ConLeche.Kernel.CheckerBase": 0.519,
+  "ConLeche.Kernel.CheckerSplit": 0.54,
+  "ConLeche.Kernel.Core": 1.7,
+  "ConLeche.Kernel.CoreDefs": 0.93,
+  "ConLeche.Kernel.CoreIO": 1.6,
+  "ConLeche.Kernel.DeclCheck": 1.2,
+  "ConLeche.Kernel.Env": 1.2,
+  "ConLeche.Kernel.Exclusive": 0.126,
+  "ConLeche.Kernel.Expr": 0.93,
+  "ConLeche.Kernel.ExprOps": 3.0,
+  "ConLeche.Kernel.FEnv": 0.894,
+  "ConLeche.Kernel.Inductives.BlockInstall": 0.5650000000000001,
+  "ConLeche.Kernel.Inductives.BlockInstallF": 0.6950000000000001,
+  "ConLeche.Kernel.Inductives.BlockParts": 0.983,
+  "ConLeche.Kernel.Inductives.BlockRec": 0.203,
+  "ConLeche.Kernel.Inductives.BlockTail": 0.557,
+  "ConLeche.Kernel.Inductives.ClassRead": 0.446,
+  "ConLeche.Kernel.Inductives.FieldTele": 1.7,
+  "ConLeche.Kernel.Inductives.GenRec": 1.3,
+  "ConLeche.Kernel.Inductives.Positivity": 1.3,
+  "ConLeche.Kernel.Inductives.RecCheck": 1.7,
+  "ConLeche.Kernel.Inductives.StructInstall": 0.36,
+  "ConLeche.Kernel.Inductives.StructInstallF": 0.662,
+  "ConLeche.Kernel.Inductives.StructParts": 2.5,
+  "ConLeche.Kernel.Inductives.SumInstall": 1.1,
+  "ConLeche.Kernel.Inductives.SumInstallF": 0.597,
+  "ConLeche.Kernel.Inductives.SumParts": 0.381,
+  "ConLeche.Kernel.Level": 5.1,
+  "ConLeche.Kernel.Name": 0.202,
+  "ConLeche.Kernel.NatOpPinSet": 0.292,
+  "ConLeche.Kernel.NatOpPins": 49.0,
+  "ConLeche.Kernel.PropRead": 1.3,
+  "ConLeche.Kernel.PropWhen": 0.20400000000000001,
+  "ConLeche.Kernel.StdAxioms": 4.3,
+  "ConLeche.Kernel.TrustAxioms": 0.899,
+  "ConLeche.Kernel.TrustPins": 0.229,
+  "ConLeche.Kernel.TypeChecker": 0.871,
+  "ConLeche.MainTheorem": 0.36,
+  "ConLeche.Model": 0.333,
+  "ConLeche.Model.AxiomMem": 2.1,
+  "ConLeche.Model.AxiomPin": 0.602,
+  "ConLeche.Model.AxiomReduce": 0.59,
+  "ConLeche.Model.BasisBlocks": 1.1,
+  "ConLeche.Model.BasisCons": 0.733,
+  "ConLeche.Model.BasisEmpty": 0.852,
+  "ConLeche.Model.BasisEq": 1.4,
+  "ConLeche.Model.BasisFalse": 0.585,
+  "ConLeche.Model.BasisLfp": 0.887,
+  "ConLeche.Model.BasisQuot": 1.8,
+  "ConLeche.Model.BasisStep": 0.657,
+  "ConLeche.Model.BasisTypeOk": 14.0,
+  "ConLeche.Model.Caps": 0.811,
+  "ConLeche.Model.Capstone": 0.782,
+  "ConLeche.Model.Claims": 0.637,
+  "ConLeche.Model.ClaimsIO": 0.38,
+  "ConLeche.Model.Cover": 1.1,
+  "ConLeche.Model.CtxOkKit": 1.4,
+  "ConLeche.Model.CtxOkP": 1.4,
+  "ConLeche.Model.Currency": 0.434,
+  "ConLeche.Model.Denotes": 0.865,
+  "ConLeche.Model.DivMod": 2.3,
+  "ConLeche.Model.DivModCert": 2.5,
+  "ConLeche.Model.Env.BlockLfp": 2.0,
+  "ConLeche.Model.Env.BlockLfpMono": 1.4,
+  "ConLeche.Model.Env.BlockLfpTup": 1.4,
+  "ConLeche.Model.Env.CanonCrest": 0.618,
+  "ConLeche.Model.Env.EnvModel": 1.1,
+  "ConLeche.Model.Env.EnvModelM": 1.0,
+  "ConLeche.Model.Env.Laws": 0.885,
+  "ConLeche.Model.Env.LfpAcc": 2.2,
+  "ConLeche.Model.Env.LfpFormer": 1.2,
+  "ConLeche.Model.Env.LfpHoleOp": 2.1,
+  "ConLeche.Model.EqTower": 0.588,
+  "ConLeche.Model.Fold": 0.396,
+  "ConLeche.Model.Harvest": 2.8,
+  "ConLeche.Model.IndCons": 0.835,
+  "ConLeche.Model.IndDomGrade": 1.3,
+  "ConLeche.Model.IndFrame": 1.3,
+  "ConLeche.Model.IndOpenRev": 0.9450000000000001,
+  "ConLeche.Model.IndPinGrade": 1.3,
+  "ConLeche.Model.IndPointKit": 0.456,
+  "ConLeche.Model.IndReduct": 0.34700000000000003,
+  "ConLeche.Model.IndStageKit": 0.906,
+  "ConLeche.Model.IndSubst": 1.9,
+  "ConLeche.Model.IndTele": 0.543,
+  "ConLeche.Model.IndTowerRead": 0.561,
+  "ConLeche.Model.Inductives.BlockAbsRead": 1.3,
+  "ConLeche.Model.Inductives.BlockAccRun": 0.661,
+  "ConLeche.Model.Inductives.BlockAccRunCont": 0.916,
+  "ConLeche.Model.Inductives.BlockAssembly": 1.4,
+  "ConLeche.Model.Inductives.BlockCaps": 0.77,
+  "ConLeche.Model.Inductives.BlockCover": 1.5,
+  "ConLeche.Model.Inductives.BlockCtorFuns": 0.432,
+  "ConLeche.Model.Inductives.BlockCtorReads": 1.2,
+  "ConLeche.Model.Inductives.BlockCtorsLoop": 0.793,
+  "ConLeche.Model.Inductives.BlockData": 0.516,
+  "ConLeche.Model.Inductives.BlockDatum": 6.0,
+  "ConLeche.Model.Inductives.BlockDeclRun": 1.5,
+  "ConLeche.Model.Inductives.BlockGradeRowsRun": 0.9460000000000001,
+  "ConLeche.Model.Inductives.BlockHoleFold": 1.5,
+  "ConLeche.Model.Inductives.BlockHoleGrade": 0.972,
+  "ConLeche.Model.Inductives.BlockHoleRead": 0.775,
+  "ConLeche.Model.Inductives.BlockLeafOk": 0.885,
+  "ConLeche.Model.Inductives.BlockLfpHoles": 1.3,
+  "ConLeche.Model.Inductives.BlockModel": 1.6,
+  "ConLeche.Model.Inductives.BlockModelRecords": 1.5,
+  "ConLeche.Model.Inductives.BlockPosRun": 1.7,
+  "ConLeche.Model.Inductives.BlockRecAssembly": 0.9450000000000001,
+  "ConLeche.Model.Inductives.BlockRecData": 1.0,
+  "ConLeche.Model.Inductives.BlockRecGraph": 0.633,
+  "ConLeche.Model.Inductives.BlockRecIdxConv": 0.751,
+  "ConLeche.Model.Inductives.BlockRecLaw": 1.3,
+  "ConLeche.Model.Inductives.BlockRecMem": 0.505,
+  "ConLeche.Model.Inductives.BlockRecOpenerRead": 0.807,
+  "ConLeche.Model.Inductives.BlockRecPreHpre": 0.657,
+  "ConLeche.Model.Inductives.BlockRecPreRun": 1.0,
+  "ConLeche.Model.Inductives.BlockRecRead": 1.0,
+  "ConLeche.Model.Inductives.BlockRecRule": 1.2,
+  "ConLeche.Model.Inductives.BlockRecTyShapeRun": 0.87,
+  "ConLeche.Model.Inductives.BlockRecTyping": 1.4,
+  "ConLeche.Model.Inductives.BlockRep": 1.0,
+  "ConLeche.Model.Inductives.BlockRuleFit": 1.1,
+  "ConLeche.Model.Inductives.BlockRuleGrading": 0.739,
+  "ConLeche.Model.Inductives.BlockRuleParams": 0.925,
+  "ConLeche.Model.Inductives.BlockRuleRun": 0.834,
+  "ConLeche.Model.Inductives.BlockStageCtors": 1.3,
+  "ConLeche.Model.Inductives.BlockStageFormer": 1.1,
+  "ConLeche.Model.Inductives.BlockStageRec": 0.634,
+  "ConLeche.Model.Inductives.BlockStageTables": 1.0,
+  "ConLeche.Model.Inductives.ClassGenMinor": 0.63,
+  "ConLeche.Model.Inductives.ClassGenRead": 2.0,
+  "ConLeche.Model.Inductives.ClassGenStep": 1.3,
+  "ConLeche.Model.Inductives.ClassGenUniq": 0.998,
+  "ConLeche.Model.Inductives.ClassRecKit": 1.0,
+  "ConLeche.Model.Inductives.ContAcc": 0.611,
+  "ConLeche.Model.Inductives.ContAccFrame": 1.5,
+  "ConLeche.Model.Inductives.ContAccRel": 1.3,
+  "ConLeche.Model.Inductives.ContCtor": 0.771,
+  "ConLeche.Model.Inductives.ContFrame": 0.999,
+  "ConLeche.Model.Inductives.ContInst": 1.2,
+  "ConLeche.Model.Inductives.ContInstRule": 0.923,
+  "ConLeche.Model.Inductives.ContLeaf": 2.1,
+  "ConLeche.Model.Inductives.ContN2": 0.708,
+  "ConLeche.Model.Inductives.ContSem": 0.525,
+  "ConLeche.Model.Inductives.ContSubst": 0.97,
+  "ConLeche.Model.Inductives.ContWalk": 1.6,
+  "ConLeche.Model.Inductives.DeclBlock": 0.9520000000000001,
+  "ConLeche.Model.Inductives.DeclBlockStep": 1.9,
+  "ConLeche.Model.Inductives.DeclNative": 0.64,
+  "ConLeche.Model.Inductives.FixKit": 1.8,
+  "ConLeche.Model.Inductives.GenCallData": 0.856,
+  "ConLeche.Model.Inductives.GenCallKit": 2.1,
+  "ConLeche.Model.Inductives.GenClassNodes": 0.555,
+  "ConLeche.Model.Inductives.GenClsCall": 0.933,
+  "ConLeche.Model.Inductives.GenClsData": 0.709,
+  "ConLeche.Model.Inductives.GenClsFrame": 6.5,
+  "ConLeche.Model.Inductives.GenClsMinor": 2.8,
+  "ConLeche.Model.Inductives.GenClsRhs": 1.5,
+  "ConLeche.Model.Inductives.GenClsRows": 1.0,
+  "ConLeche.Model.Inductives.GenClsSem": 2.6,
+  "ConLeche.Model.Inductives.GenFrameTie": 0.799,
+  "ConLeche.Model.Inductives.GenNodeCalls": 4.9,
+  "ConLeche.Model.Inductives.GenNodeList": 2.1,
+  "ConLeche.Model.Inductives.GenOutFacts": 0.6980000000000001,
+  "ConLeche.Model.Inductives.GenRecAssembly": 0.676,
+  "ConLeche.Model.Inductives.GenRecClasses": 0.756,
+  "ConLeche.Model.Inductives.GenRecExtra": 2.2,
+  "ConLeche.Model.Inductives.GenRecFinal": 0.607,
+  "ConLeche.Model.Inductives.GenRecParams": 2.7,
+  "ConLeche.Model.Inductives.GenRecPins": 1.3,
+  "ConLeche.Model.Inductives.GenRecPre": 4.1,
+  "ConLeche.Model.Inductives.GenRecPreRun": 1.4,
+  "ConLeche.Model.Inductives.GenRecRules": 10.0,
+  "ConLeche.Model.Inductives.GenRecStage": 1.4,
+  "ConLeche.Model.Inductives.GenRuleFree": 1.1,
+  "ConLeche.Model.Inductives.GenRuleSyn": 1.5,
+  "ConLeche.Model.Inductives.GenSynKit": 1.1,
+  "ConLeche.Model.Inductives.HoleOverride": 1.4,
+  "ConLeche.Model.Inductives.LfpCover": 0.5650000000000001,
+  "ConLeche.Model.Inductives.NestPosAcc": 0.81,
+  "ConLeche.Model.Inductives.NestPosAccKit": 0.753,
+  "ConLeche.Model.Inductives.NestPosMono": 0.9580000000000001,
+  "ConLeche.Model.Inductives.NestPosOut": 20.0,
+  "ConLeche.Model.Inductives.NestPosRed": 1.7,
+  "ConLeche.Model.Inductives.NestedRecPins": 0.734,
+  "ConLeche.Model.Inductives.NestedRecRest": 0.881,
+  "ConLeche.Model.Inductives.PosDerivAcc": 0.9460000000000001,
+  "ConLeche.Model.Inductives.PosDerivMono": 2.2,
+  "ConLeche.Model.Inductives.PosDerivNodes": 0.966,
+  "ConLeche.Model.Inductives.PosDerivShape": 0.7020000000000001,
+  "ConLeche.Model.Inductives.PosDerivTie": 0.8250000000000001,
+  "ConLeche.Model.Inductives.PosFieldLeaf": 0.792,
+  "ConLeche.Model.Inductives.StoredShapes": 2.3,
+  "ConLeche.Model.Inductives.StructEntryKit": 2.1,
+  "ConLeche.Model.Inductives.StructFrameKit": 2.1,
+  "ConLeche.Model.Inductives.StructRecKit": 0.868,
+  "ConLeche.Model.Inductives.SumKit": 1.6,
+  "ConLeche.Model.Inductives.TargetCallAdm": 0.752,
+  "ConLeche.Model.Inductives.TargetCallCarrier": 0.577,
+  "ConLeche.Model.Inductives.TargetCallCore": 1.4,
+  "ConLeche.Model.Inductives.TargetCallEntry": 0.516,
+  "ConLeche.Model.Inductives.TargetCallEval": 0.8190000000000001,
+  "ConLeche.Model.Inductives.TargetCallFrame": 1.0,
+  "ConLeche.Model.Inductives.TargetCallKid": 1.6,
+  "ConLeche.Model.Inductives.TargetCallKit": 1.7,
+  "ConLeche.Model.Inductives.TargetCallLand": 0.8320000000000001,
+  "ConLeche.Model.Inductives.TargetCallMaj": 0.492,
+  "ConLeche.Model.Inductives.TargetCallPatch": 0.8240000000000001,
+  "ConLeche.Model.Inductives.TargetCallRead": 1.1,
+  "ConLeche.Model.Inductives.TargetCallTie": 1.4,
+  "ConLeche.Model.Inductives.TargetCallWalk": 1.0,
+  "ConLeche.Model.Inductives.TargetClass": 1.3,
+  "ConLeche.Model.Inductives.TargetClassRows": 0.497,
+  "ConLeche.Model.Inductives.TargetClasses": 0.611,
+  "ConLeche.Model.Inductives.TargetDefeqTie": 0.92,
+  "ConLeche.Model.Inductives.TargetFrame": 0.665,
+  "ConLeche.Model.Inductives.TargetGraph": 0.857,
+  "ConLeche.Model.Inductives.TargetIhData": 0.6,
+  "ConLeche.Model.Inductives.TargetIhSlot": 0.88,
+  "ConLeche.Model.Inductives.TargetNestKit": 1.0,
+  "ConLeche.Model.Inductives.TargetNodeAdm": 1.2,
+  "ConLeche.Model.Inductives.TargetNodeCalls": 0.889,
+  "ConLeche.Model.Inductives.TargetNodeCover": 0.855,
+  "ConLeche.Model.Inductives.TargetNodeDyn": 0.672,
+  "ConLeche.Model.Inductives.TargetNodeDynOf": 2.1,
+  "ConLeche.Model.Inductives.TargetNodeList": 1.1,
+  "ConLeche.Model.Inductives.TargetNodePres": 1.1,
+  "ConLeche.Model.Inductives.TargetNodeRb": 0.552,
+  "ConLeche.Model.Inductives.TargetNodeRead": 0.859,
+  "ConLeche.Model.Inductives.TargetNodeSem": 0.979,
+  "ConLeche.Model.Inductives.TargetNodeTie": 0.66,
+  "ConLeche.Model.Inductives.TargetOutChain": 1.0,
+  "ConLeche.Model.Inductives.TargetOutIdx": 0.639,
+  "ConLeche.Model.Inductives.TargetOutRow": 0.8220000000000001,
+  "ConLeche.Model.Inductives.TargetOutRows": 0.6890000000000001,
+  "ConLeche.Model.Inductives.TargetOutSat": 0.653,
+  "ConLeche.Model.Inductives.TargetRecRead": 1.7,
+  "ConLeche.Model.Inductives.TargetResidue": 0.8180000000000001,
+  "ConLeche.Model.Inductives.TargetRuleData": 0.499,
+  "ConLeche.Model.Inductives.TowerCons": 2.0,
+  "ConLeche.Model.Inductives.TypeStep": 0.836,
+  "ConLeche.Model.Install": 0.749,
+  "ConLeche.Model.InstallRun": 0.66,
+  "ConLeche.Model.Levels": 2.2,
+  "ConLeche.Model.NatEqs": 2.1,
+  "ConLeche.Model.NatSem": 1.3,
+  "ConLeche.Model.NatStep": 1.1,
+  "ConLeche.Model.NatWf": 1.4,
+  "ConLeche.Model.Reading.Levels": 1.2,
+  "ConLeche.Model.Reading.LpDefF": 0.84,
+  "ConLeche.Model.Reading.SubstFvars": 1.5,
+  "ConLeche.Model.RecRulesCons": 1.8,
+  "ConLeche.Model.ReduceOps": 0.654,
+  "ConLeche.Model.Rules.CertsSound": 1.8,
+  "ConLeche.Model.Rules.DefEqSound": 1.1,
+  "ConLeche.Model.Rules.DefEqSoundKit": 1.2,
+  "ConLeche.Model.Rules.EtaSoundKit": 2.1,
+  "ConLeche.Model.Rules.IORel": 0.936,
+  "ConLeche.Model.Rules.InferSound": 1.0,
+  "ConLeche.Model.Rules.InferSoundKit": 2.6,
+  "ConLeche.Model.Rules.Inputs": 0.664,
+  "ConLeche.Model.Rules.IotaSound": 1.6,
+  "ConLeche.Model.Rules.IotaSoundKit": 1.5,
+  "ConLeche.Model.Rules.Motive": 0.663,
+  "ConLeche.Model.Rules.ProofFastSound": 2.3,
+  "ConLeche.Model.Rules.Recompose": 0.637,
+  "ConLeche.Model.Rules.RedSound": 0.676,
+  "ConLeche.Model.Rules.RedSoundKit": 1.0,
+  "ConLeche.Model.Rules.Sound": 4.1,
+  "ConLeche.Model.StreamConsts": 0.449,
+  "ConLeche.Model.Swap": 0.8,
+  "ConLeche.Model.Tiers": 1.1,
+  "ConLeche.Model.WellDenotedTransport": 0.546,
+  "ConLeche.PinGen": 1.7,
+  "ConLeche.PinGen.Certs": 0.311,
+  "ConLeche.PinGen.Dump": 1.3,
+  "ConLeche.PinGen.Prelude": 2.3,
+  "ConLeche.Rules.Derived": 1.7,
+  "ConLeche.Rules.Rel": 2.0,
+  "ConLeche.Rules.Rigid": 1.3,
+  "ConLeche.Semantics": 0.519,
+  "ConLeche.Semantics.BasisOk": 1.3,
+  "ConLeche.Semantics.BasisRules": 1.1,
+  "ConLeche.Semantics.BasisType": 0.7030000000000001,
+  "ConLeche.Semantics.Bridge.Decl": 1.2,
+  "ConLeche.Semantics.Bridge.DeclRun": 4.2,
+  "ConLeche.Semantics.Bridge.Sound": 0.619,
+  "ConLeche.Semantics.Decl": 0.805,
+  "ConLeche.Semantics.DeclEta": 0.47600000000000003,
+  "ConLeche.Semantics.DeclRun": 0.533,
+  "ConLeche.Semantics.DefEqList": 0.329,
+  "ConLeche.Semantics.DefEqStep": 0.202,
+  "ConLeche.Semantics.DivModEval": 0.791,
+  "ConLeche.Semantics.EnvFacts": 0.543,
+  "ConLeche.Semantics.EqTower": 1.8,
+  "ConLeche.Semantics.Frame": 0.279,
+  "ConLeche.Semantics.Hoist": 0.155,
+  "ConLeche.Semantics.IndBlockFacts": 0.369,
+  "ConLeche.Semantics.Inductives.DeclBlock": 1.3,
+  "ConLeche.Semantics.Inductives.DeclBlockEta": 0.93,
+  "ConLeche.Semantics.Inductives.FieldsEqOn": 0.808,
+  "ConLeche.Semantics.Inductives.HoleAcc": 0.765,
+  "ConLeche.Semantics.Inductives.HoleMono": 0.544,
+  "ConLeche.Semantics.Inductives.TeleAcc": 0.734,
+  "ConLeche.Semantics.Interp": 0.299,
+  "ConLeche.Semantics.Kit": 0.314,
+  "ConLeche.Semantics.LitParams": 0.462,
+  "ConLeche.Semantics.LitStep": 0.5650000000000001,
+  "ConLeche.Semantics.NatFrag": 0.733,
+  "ConLeche.Semantics.NoBVar": 0.188,
+  "ConLeche.Semantics.Sat": 0.182,
+  "ConLeche.Semantics.Skeleton": 0.679,
+  "ConLeche.Semantics.SubstAV": 0.962,
+  "ConLeche.Semantics.Tower.BlockRecTower": 2.1,
+  "ConLeche.Semantics.Tower.BlockTower": 3.2,
+  "ConLeche.Semantics.Tower.FixTower": 1.2,
+  "ConLeche.Semantics.Tower.SumTower": 2.4,
+  "ConLeche.Semantics.Tower.TowerKit": 1.6,
+  "ConLeche.Semantics.Univ": 0.312,
+  "ConLeche.Semantics.WellDenoted": 0.398,
+  "ConLeche.SetModel": 0.127,
+  "ConLeche.SetModel.Access": 0.598,
+  "ConLeche.SetModel.GraphRec": 1.0,
+  "ConLeche.SetModel.HoleClose": 0.34,
+  "ConLeche.SetModel.Iter": 0.519,
+  "ConLeche.SetModel.NestRec": 0.555,
+  "ConLeche.SetModel.NestRecCls": 0.299,
+  "ConLeche.SetModel.Ops": 0.493,
+  "ConLeche.SetModel.TaggedSum": 0.493,
+  "ConLeche.SetModel.TupleTower": 0.7010000000000001,
+  "ConLeche.SetModel.UnionRec": 0.386,
+  "ConLeche.SetModel.Value": 0.709,
+  "ConLeche.SetTheory.Basic": 0.257,
+  "ConLeche.SetTheory.Core": 0.378,
+  "ConLeche.SetTheory.Derive.Choice": 0.155,
+  "ConLeche.SetTheory.Derive.Empty": 0.134,
+  "ConLeche.SetTheory.Derive.Graphs": 0.322,
+  "ConLeche.SetTheory.Derive.Lfp": 0.265,
+  "ConLeche.SetTheory.Derive.LfpFam": 0.403,
+  "ConLeche.SetTheory.Derive.LfpTuple": 0.886,
+  "ConLeche.SetTheory.Derive.Natrec": 0.256,
+  "ConLeche.SetTheory.Derive.Omega": 0.191,
+  "ConLeche.SetTheory.Derive.Pair": 0.166,
+  "ConLeche.SetTheory.Derive.Pt": 0.2,
+  "ConLeche.SetTheory.Derive.Quot": 0.515,
+  "ConLeche.SetTheory.Derive.Sep": 0.169,
+  "ConLeche.SetTheory.Derive.Sigma": 0.657,
+  "ConLeche.SetTheory.Derive.Tg": 0.203,
+  "ConLeche.SetTheory.Derive.TypeU": 0.34,
+  "ConLeche.SetTheory.Derive.Univ": 0.23,
+  "ConLeche.SetTheory.Derive.Universe": 0.162,
+  "ConLeche.Term": 0.11900000000000001,
+  "ConLeche.Term.Const": 0.14400000000000002,
+  "ConLeche.Term.Subst": 0.181,
+  "ConLeche.Term.Syntax": 0.418,
+  "ConLeche.Util.PtrEq": 0.25,
+  "ConLeche.Verify.Abstract": 1.0,
+  "ConLeche.Verify.AbstractRange": 0.963,
+  "ConLeche.Verify.BetaSpine": 1.6,
+  "ConLeche.Verify.BinderLoop": 0.587,
+  "ConLeche.Verify.BridgeDecl": 24.0,
+  "ConLeche.Verify.BridgeWfImp": 1.9,
+  "ConLeche.Verify.Cached": 0.315,
+  "ConLeche.Verify.Cached.AgreeFloor": 5.7,
+  "ConLeche.Verify.Cached.BinderLoopC": 0.872,
+  "ConLeche.Verify.Cached.BlockOverlay": 0.614,
+  "ConLeche.Verify.Cached.BlockRunC": 1.5,
+  "ConLeche.Verify.Cached.BridgeC": 1.4,
+  "ConLeche.Verify.Cached.BridgeCS1": 1.2,
+  "ConLeche.Verify.Cached.BridgeCS3": 1.2,
+  "ConLeche.Verify.Cached.BridgeCS4": 0.354,
+  "ConLeche.Verify.Cached.BridgeCSDecl": 0.628,
+  "ConLeche.Verify.Cached.DiscC1": 3.4,
+  "ConLeche.Verify.Cached.DiscC2": 1.9,
+  "ConLeche.Verify.Cached.DiscC3": 1.7,
+  "ConLeche.Verify.Cached.DiscC4": 1.2,
+  "ConLeche.Verify.Cached.DiscC5": 1.0,
+  "ConLeche.Verify.Cached.Erase": 0.33,
+  "ConLeche.Verify.Cached.GenRecC": 2.2,
+  "ConLeche.Verify.Cached.Grind": 0.8230000000000001,
+  "ConLeche.Verify.Cached.GrindAttr": 0.341,
+  "ConLeche.Verify.Cached.GuardsC": 3.2,
+  "ConLeche.Verify.Cached.InstalledC": 0.802,
+  "ConLeche.Verify.Cached.KnotC": 0.9570000000000001,
+  "ConLeche.Verify.Cached.KnotCongr": 2.9,
+  "ConLeche.Verify.Cached.MainC": 0.37,
+  "ConLeche.Verify.Cached.NestPosC": 4.7,
+  "ConLeche.Verify.Cached.OpsC": 3.7,
+  "ConLeche.Verify.Cached.ParInstall": 0.989,
+  "ConLeche.Verify.Cached.PinOverlay": 0.511,
+  "ConLeche.Verify.Cached.PushChain": 6.2,
+  "ConLeche.Verify.Cached.SimC": 0.712,
+  "ConLeche.Verify.Cached.SimCEff": 1.4,
+  "ConLeche.Verify.Cached.SimCS": 0.436,
+  "ConLeche.Verify.Cached.StreamThm": 0.373,
+  "ConLeche.Verify.Cached.TargetRecC": 1.2,
+  "ConLeche.Verify.Cached.ViewCongr": 2.9,
+  "ConLeche.Verify.Cached.WalkersC": 1.1,
+  "ConLeche.Verify.CheckerF": 1.2,
+  "ConLeche.Verify.CheckerSplit": 2.2,
+  "ConLeche.Verify.Close": 0.5710000000000001,
+  "ConLeche.Verify.Deep": 3.7,
+  "ConLeche.Verify.Denote": 0.613,
+  "ConLeche.Verify.Denote.AcvalCongr": 0.773,
+  "ConLeche.Verify.Denote.Closed": 0.499,
+  "ConLeche.Verify.Denote.ConsCross": 0.862,
+  "ConLeche.Verify.Denote.ConstsBound": 1.1,
+  "ConLeche.Verify.Denote.Depth": 0.759,
+  "ConLeche.Verify.Denote.EnvExt": 0.33,
+  "ConLeche.Verify.Denote.EnvExtend": 0.538,
+  "ConLeche.Verify.Denote.ErasedEq": 0.869,
+  "ConLeche.Verify.Denote.IndFrame": 0.734,
+  "ConLeche.Verify.Denote.Inst": 1.2,
+  "ConLeche.Verify.Denote.Install": 1.2,
+  "ConLeche.Verify.Denote.Lemmas": 0.869,
+  "ConLeche.Verify.Denote.OpenRevDenote": 2.5,
+  "ConLeche.Verify.Denote.OpenVars": 0.487,
+  "ConLeche.Verify.Denote.Pinned": 0.712,
+  "ConLeche.Verify.Denote.Shift": 0.858,
+  "ConLeche.Verify.Denote.StrLit": 0.663,
+  "ConLeche.Verify.Denote.SubstConst": 0.483,
+  "ConLeche.Verify.Denote.TeleOpen": 0.975,
+  "ConLeche.Verify.Denote.TowerExtend": 0.515,
+  "ConLeche.Verify.Denote.VClosed": 0.217,
+  "ConLeche.Verify.DivModInv": 0.802,
+  "ConLeche.Verify.EnvBound": 0.6900000000000001,
+  "ConLeche.Verify.EnvGuards": 0.834,
+  "ConLeche.Verify.EnvPreds": 4.8,
+  "ConLeche.Verify.EnvWF": 0.923,
+  "ConLeche.Verify.ExceptBind": 0.14,
+  "ConLeche.Verify.Extend.Inversions": 0.731,
+  "ConLeche.Verify.Extend.Recs": 0.923,
+  "ConLeche.Verify.Extend.Sibs": 1.6,
+  "ConLeche.Verify.FastOps": 0.552,
+  "ConLeche.Verify.Frontend.ApplyLine": 0.6990000000000001,
+  "ConLeche.Verify.Frontend.Chunks": 0.47800000000000004,
+  "ConLeche.Verify.Frontend.Dense": 0.522,
+  "ConLeche.Verify.Frontend.Digits": 0.845,
+  "ConLeche.Verify.Frontend.FalseLines": 14.0,
+  "ConLeche.Verify.Frontend.FileFalse": 0.743,
+  "ConLeche.Verify.Frontend.Good": 1.2,
+  "ConLeche.Verify.Frontend.Lines": 0.884,
+  "ConLeche.Verify.Frontend.Local": 6.5,
+  "ConLeche.Verify.Frontend.Prepare": 1.5,
+  "ConLeche.Verify.Frontend.Rounds": 3.5,
+  "ConLeche.Verify.Frontend.RoundsWork": 2.8,
+  "ConLeche.Verify.Frontend.StateEquiv": 1.0,
+  "ConLeche.Verify.Frontend.ThmLine": 0.28,
+  "ConLeche.Verify.Fueled": 5.6,
+  "ConLeche.Verify.Inductives.BlockInv": 0.9470000000000001,
+  "ConLeche.Verify.Inductives.BlockPartsInv": 0.772,
+  "ConLeche.Verify.Inductives.BlockRecRun": 0.519,
+  "ConLeche.Verify.Inductives.BlockWF": 0.856,
+  "ConLeche.Verify.Inductives.ClassGenMinorSyn": 0.47700000000000004,
+  "ConLeche.Verify.Inductives.ClassGenScope": 1.3,
+  "ConLeche.Verify.Inductives.ClassGenSyntax": 0.686,
+  "ConLeche.Verify.Inductives.ClassMatchRun": 0.925,
+  "ConLeche.Verify.Inductives.DirectGen": 1.5,
+  "ConLeche.Verify.Inductives.DirectInv": 2.2,
+  "ConLeche.Verify.Inductives.GenDepth": 0.8220000000000001,
+  "ConLeche.Verify.Inductives.GenK53Rename": 1.4,
+  "ConLeche.Verify.Inductives.GenRecRun": 2.5,
+  "ConLeche.Verify.Inductives.GenRecScoped": 1.1,
+  "ConLeche.Verify.Inductives.HoleBack": 0.294,
+  "ConLeche.Verify.Inductives.HoleImg": 0.526,
+  "ConLeche.Verify.Inductives.NestCallSyn": 2.6,
+  "ConLeche.Verify.Inductives.NestContInv": 1.2,
+  "ConLeche.Verify.Inductives.NestNfScope": 1.1,
+  "ConLeche.Verify.Inductives.NestScope": 0.682,
+  "ConLeche.Verify.Inductives.NestedRead": 0.584,
+  "ConLeche.Verify.Inductives.NfMemberFree": 1.7,
+  "ConLeche.Verify.Inductives.PosAnn": 0.975,
+  "ConLeche.Verify.Inductives.PosDeriv": 0.671,
+  "ConLeche.Verify.Inductives.PosDerivFun": 1.0,
+  "ConLeche.Verify.Inductives.PosDerivInv": 3.1,
+  "ConLeche.Verify.Inductives.PosNodes": 0.544,
+  "ConLeche.Verify.Inductives.PositivityInv": 1.1,
+  "ConLeche.Verify.Inductives.RecCheckRun": 1.1,
+  "ConLeche.Verify.Inductives.RecCheckScope": 1.3,
+  "ConLeche.Verify.Inductives.RecStage": 1.0,
+  "ConLeche.Verify.Inductives.ReplaceApps": 0.936,
+  "ConLeche.Verify.Inductives.TargetAuxFire": 1.3,
+  "ConLeche.Verify.Inductives.UniformOcc": 0.219,
+  "ConLeche.Verify.InferIOLeaves": 1.2,
+  "ConLeche.Verify.InferIOLemmas": 1.2,
+  "ConLeche.Verify.InferLeaves": 1.4,
+  "ConLeche.Verify.InferLemmas": 4.1,
+  "ConLeche.Verify.InferProjSlots": 0.844,
+  "ConLeche.Verify.InstLevels": 0.622,
+  "ConLeche.Verify.InstList": 0.541,
+  "ConLeche.Verify.InstSpine": 2.3,
+  "ConLeche.Verify.Knot": 0.587,
+  "ConLeche.Verify.Leaves": 2.6,
+  "ConLeche.Verify.Level": 1.1,
+  "ConLeche.Verify.Modes": 0.40900000000000003,
+  "ConLeche.Verify.Mono": 0.354,
+  "ConLeche.Verify.NatOpFrag": 1.7,
+  "ConLeche.Verify.OfReducePin": 0.63,
+  "ConLeche.Verify.PairM": 15.0,
+  "ConLeche.Verify.ProjSlots": 1.7,
+  "ConLeche.Verify.ProjTele": 0.47200000000000003,
+  "ConLeche.Verify.PropRead": 1.2,
+  "ConLeche.Verify.PropReadInst": 3.1,
+  "ConLeche.Verify.PropWhen": 0.302,
+  "ConLeche.Verify.ReducePinInv": 0.704,
+  "ConLeche.Verify.Rules.Bridge": 0.435,
+  "ConLeche.Verify.Rules.Certs": 0.436,
+  "ConLeche.Verify.Rules.DefEqBridge": 1.2,
+  "ConLeche.Verify.Rules.DefEqStepInv": 1.5,
+  "ConLeche.Verify.Rules.Defs": 1.4,
+  "ConLeche.Verify.Rules.InferBridge": 0.382,
+  "ConLeche.Verify.Rules.RedBridge": 2.3,
+  "ConLeche.Verify.Shift": 4.8,
+  "ConLeche.Verify.StdAxiomPin": 0.727,
+  "ConLeche.Verify.StrLitExpr": 0.41400000000000003,
+  "ConLeche.Verify.Subst": 5.5,
+  "ConLeche.Verify.SubstFvars": 1.4,
+  "ConRon.Arena": 0.682,
+  "ConRon.Arena.Basis": 1.8,
+  "ConRon.Arena.Canon": 1.2,
+  "ConRon.Arena.CheckDecl": 1.6,
+  "ConRon.Arena.Checker": 1.9,
+  "ConRon.Arena.CheckerBase": 0.835,
+  "ConRon.Arena.CheckerSplit": 0.73,
+  "ConRon.Arena.CheckerTest": 3.7,
+  "ConRon.Arena.Core": 7.2,
+  "ConRon.Arena.CoreIO": 0.846,
+  "ConRon.Arena.CoreState": 0.316,
+  "ConRon.Arena.CoreTest": 4.4,
+  "ConRon.Arena.DeclCheck": 2.5,
+  "ConRon.Arena.Denote": 0.709,
+  "ConRon.Arena.Env": 3.3,
+  "ConRon.Arena.ExprOps": 9.2,
+  "ConRon.Arena.ExprOpsTest": 3.0,
+  "ConRon.Arena.Frontend.ExportC": 1.1,
+  "ConRon.Arena.Frontend.NatOpGround": 1.4,
+  "ConRon.Arena.Frontend.Prelude": 0.544,
+  "ConRon.Arena.Frontend.PreludeText": 4.3,
+  "ConRon.Arena.Frontend.Prepare": 2.2,
+  "ConRon.Arena.Frontend.Readback": 0.602,
+  "ConRon.Arena.Frontend.Types": 0.974,
+  "ConRon.Arena.Handle": 0.467,
+  "ConRon.Arena.Inductives.BlockInstall": 0.868,
+  "ConRon.Arena.Inductives.BlockParts": 1.6,
+  "ConRon.Arena.Inductives.BlockRec": 1.3,
+  "ConRon.Arena.Inductives.BlockTail": 1.1,
+  "ConRon.Arena.Inductives.ClassRead": 1.0,
+  "ConRon.Arena.Inductives.FieldTele": 0.608,
+  "ConRon.Arena.Inductives.GenRec": 1.9,
+  "ConRon.Arena.Inductives.Positivity": 3.9,
+  "ConRon.Arena.Inductives.RecCheck": 1.5,
+  "ConRon.Arena.Inductives.StructInstall": 0.601,
+  "ConRon.Arena.Inductives.StructParts": 1.3,
+  "ConRon.Arena.Inductives.SumInstall": 1.5,
+  "ConRon.Arena.InductivesTest": 4.4,
+  "ConRon.Arena.Intern": 0.23500000000000001,
+  "ConRon.Arena.Main": 0.787,
+  "ConRon.Arena.Monad": 5.3,
+  "ConRon.Arena.NatOpPinSet": 0.51,
+  "ConRon.Arena.PersistentRun": 1.2,
+  "ConRon.Arena.Phased": 1.6,
+  "ConRon.Arena.Pins": 1.0,
+  "ConRon.Arena.Pooled": 0.65,
+  "ConRon.Arena.Promote": 1.2,
+  "ConRon.Arena.PromoteExt": 1.3,
+  "ConRon.Arena.PropRead": 0.623,
+  "ConRon.Arena.StdAxioms": 0.664,
+  "ConRon.Arena.Store": 4.8,
+  "ConRon.Arena.StoreTest": 0.684,
+  "ConRon.Arena.TrustAxioms": 1.1,
+  "ConRon.Arena.WF": 0.679,
+  "ConRon.Arena.WFProofs": 14.0,
+  "ConRon.Arena.WFSkip": 0.513,
+  "ConRon.Bridge.Axioms": 2.2,
+  "ConRon.Bridge.Checker": 0.505,
+  "ConRon.Bridge.Checker.Arms": 2.7,
+  "ConRon.Bridge.Checker.Axioms": 0.594,
+  "ConRon.Bridge.Checker.Base": 1.5,
+  "ConRon.Bridge.Checker.Basis": 2.3,
+  "ConRon.Bridge.Checker.Canon": 4.0,
+  "ConRon.Bridge.Checker.Decl": 1.2,
+  "ConRon.Bridge.Checker.DeclVal": 4.9,
+  "ConRon.Bridge.Checker.DeclWF": 1.1,
+  "ConRon.Bridge.Checker.DivMod": 3.6,
+  "ConRon.Bridge.Checker.Fold": 0.654,
+  "ConRon.Bridge.Checker.Hyp": 1.2,
+  "ConRon.Bridge.Checker.Inv": 1.3,
+  "ConRon.Bridge.Checker.Mono": 1.5,
+  "ConRon.Bridge.Checker.Names": 2.1,
+  "ConRon.Bridge.Checker.Nodup": 1.1,
+  "ConRon.Bridge.Checker.Phased": 0.553,
+  "ConRon.Bridge.Checker.Pins": 1.0,
+  "ConRon.Bridge.Checker.Split": 1.2,
+  "ConRon.Bridge.Core": 1.7,
+  "ConRon.Bridge.Core.Arms.Defeq": 1.2,
+  "ConRon.Bridge.Core.Arms.DefeqBase": 0.745,
+  "ConRon.Bridge.Core.Arms.DefeqLazy": 1.8,
+  "ConRon.Bridge.Core.Arms.DefeqPeel": 1.9,
+  "ConRon.Bridge.Core.Arms.DefeqStuck": 1.5,
+  "ConRon.Bridge.Core.Arms.Infer": 2.2,
+  "ConRon.Bridge.Core.Arms.InferIO": 1.6,
+  "ConRon.Bridge.Core.Arms.Whnf": 1.0,
+  "ConRon.Bridge.Core.Arms.WhnfCore": 1.1,
+  "ConRon.Bridge.Core.EnsureSort": 2.0,
+  "ConRon.Bridge.Core.Induction": 0.562,
+  "ConRon.Bridge.Core.Knot": 1.7,
+  "ConRon.Bridge.Core.Memo": 3.4,
+  "ConRon.Bridge.Core.Walks": 0.14,
+  "ConRon.Bridge.Core.Walks.BetaSpine": 1.7,
+  "ConRon.Bridge.Core.Walks.BinderLoop": 2.1,
+  "ConRon.Bridge.Core.Walks.Cached": 1.8,
+  "ConRon.Bridge.Core.Walks.Eta": 1.2,
+  "ConRon.Bridge.Core.Walks.Frame": 1.0,
+  "ConRon.Bridge.Core.Walks.FvarB": 0.6940000000000001,
+  "ConRon.Bridge.Core.Walks.Guards": 0.929,
+  "ConRon.Bridge.Core.Walks.InferSpine": 1.5,
+  "ConRon.Bridge.Core.Walks.Iota": 3.4,
+  "ConRon.Bridge.Core.Walks.IotaLeaves": 1.1,
+  "ConRon.Bridge.Core.Walks.IotaMajor": 11.0,
+  "ConRon.Bridge.Core.Walks.Mono": 1.8,
+  "ConRon.Bridge.Core.Walks.Nat": 5.0,
+  "ConRon.Bridge.Core.Walks.Owed": 1.7,
+  "ConRon.Bridge.Core.Walks.Proj": 1.7,
+  "ConRon.Bridge.Core.Walks.ProjCore": 1.5,
+  "ConRon.Bridge.Core.Walks.ProjLit": 2.1,
+  "ConRon.Bridge.Core.Walks.PropRead": 3.4,
+  "ConRon.Bridge.Core.Walks.Reserved": 1.3,
+  "ConRon.Bridge.Core.Walks.Spec": 1.0,
+  "ConRon.Bridge.Core.Walks.Spine": 1.8,
+  "ConRon.Bridge.Core.Walks.StrCtor": 1.2,
+  "ConRon.Bridge.Core.Walks.StrLit": 3.7,
+  "ConRon.Bridge.Core.Walks.Stuck": 3.3,
+  "ConRon.Bridge.ExprOps": 0.9440000000000001,
+  "ConRon.Bridge.ExprOps.Abs": 2.3,
+  "ConRon.Bridge.ExprOps.Guards": 3.6,
+  "ConRon.Bridge.ExprOps.Inst1": 3.8,
+  "ConRon.Bridge.ExprOps.InstLP": 0.804,
+  "ConRon.Bridge.ExprOps.Leaves": 2.0,
+  "ConRon.Bridge.ExprOps.MemoSpecs": 1.2,
+  "ConRon.Bridge.ExprOps.Owed": 12.0,
+  "ConRon.Bridge.ExprOps.Ranges": 3.3,
+  "ConRon.Bridge.ExprOps.Spine": 1.0,
+  "ConRon.Bridge.ExprOps.Subst": 12.0,
+  "ConRon.Bridge.ExprOps.Walks": 2.9,
+  "ConRon.Bridge.Frontend": 0.506,
+  "ConRon.Bridge.Frontend.Axioms": 0.5630000000000001,
+  "ConRon.Bridge.Frontend.Capstone": 0.5650000000000001,
+  "ConRon.Bridge.Frontend.Chunks": 0.878,
+  "ConRon.Bridge.Frontend.Lines": 12.0,
+  "ConRon.Bridge.Frontend.Prepare": 2.5,
+  "ConRon.Bridge.Frontend.Rel": 1.3,
+  "ConRon.Bridge.Frontend.Shared": 1.4,
+  "ConRon.Bridge.Grind": 2.1,
+  "ConRon.Bridge.GrindAttr": 0.6960000000000001,
+  "ConRon.Bridge.Inductives": 0.498,
+  "ConRon.Bridge.Inductives.Axioms": 0.506,
+  "ConRon.Bridge.Inductives.BlockInstall": 1.2,
+  "ConRon.Bridge.Inductives.BlockParts": 7.1,
+  "ConRon.Bridge.Inductives.BlockRec": 0.607,
+  "ConRon.Bridge.Inductives.BlockTail": 1.0,
+  "ConRon.Bridge.Inductives.BlockWF": 0.785,
+  "ConRon.Bridge.Inductives.ClassRead": 2.1,
+  "ConRon.Bridge.Inductives.Decl": 0.743,
+  "ConRon.Bridge.Inductives.FieldTele": 0.923,
+  "ConRon.Bridge.Inductives.GenRec": 2.1,
+  "ConRon.Bridge.Inductives.PosWalks": 2.5,
+  "ConRon.Bridge.Inductives.Positivity": 4.4,
+  "ConRon.Bridge.Inductives.RecCheck": 1.7,
+  "ConRon.Bridge.Inductives.Records": 2.1,
+  "ConRon.Bridge.Inductives.Rel": 1.9,
+  "ConRon.Bridge.Inductives.Run": 1.4,
+  "ConRon.Bridge.Inductives.StructInstall": 1.3,
+  "ConRon.Bridge.Inductives.StructParts": 1.8,
+  "ConRon.Bridge.Inductives.SumInstall": 3.6,
+  "ConRon.Bridge.Promote": 0.724,
+  "ConRon.Bridge.Promote.Coh": 0.963,
+  "ConRon.Bridge.Promote.Exact": 0.716,
+  "ConRon.Bridge.Promote.Memo": 1.2,
+  "ConRon.Bridge.Promote.Pers": 0.896,
+  "ConRon.Bridge.Promote.Walk": 1.8,
+  "ConRon.Bridge.Promote.WalkDecl": 3.2,
+  "ConRon.Bridge.Promote.Weak": 1.0,
+  "ConRon.Bridge.Rel": 5.1,
+  "ConRon.Bridge.Specs": 2.3,
+  "ConRon.Bridge.SpecsL": 3.7,
+  "ConRon.Bridge.StateOK": 1.2,
+  "ConRon.Bridge.StoreBind": 0.79,
+  "ConRon.Bridge.StoreNested": 1.0
+ }
+}
