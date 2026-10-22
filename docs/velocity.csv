@@ -86,3 +86,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-22,perf1,opus,25,3,"Scan.Line diagnosis (lineLoop_spec: 89 finish goals ~1.2 s each; evalC_spec makes it worse), not fixed; recorded in DESIGN"
 2026-10-22,defeq,opus,10,15,landing 4: helper defeq-infer merged: inference bodies refined (InferBodySpec/InferIOBodySpec theorems from callee hypotheses; infer_proj and the binder-stack facts left as hypotheses; request to whnf for BSTK in CoreS/StackKept)
 2026-10-22,romload,opus,40,4,"landing 1: design (pin data = harness input, byte array 1; composition checked), Statement.lean loadMem/PipelineRefines take pb, generator romgen (500540 bytes, 1.1 s), lit tag 3"
+2026-10-22,indproofs2,opus,45,10,"landing 2: IndSim (Sim/Sim.bindK composition, pinZero_stage, StageR.lt64), struct_proj_guards and cons_sum_ctors (sorry-free) refined; proof-cost analysis in DESIGN; helpers front/rec/pos still running; phase 8: 61 proven / 37 sorry"

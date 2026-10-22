@@ -5951,3 +5951,37 @@ its stamp and count); `CTL[150]`, `CTL[151]` the variant list (`EREC` offset, co
 
 For lane `e2e`: the harness loads the pin-data file into byte array `1` (`_tmp/romload/pins.bin`,
 from `lake exe romgen`), and the program has `nb = 2`.
+
+### Landing 2 (lane `indproofs2`)
+* **`IndSim.lean`: composing relational lemmas.** `Sim mo op a Q` (the model's result `mo` is
+  simulated by the twin run `op` from `a`, `Q` after); `Sim.bindK` composes one callee with the
+  twin's `>>=` through the template's continuation defs (`K none = none`, `K (some (r, m₁)) = body`,
+  both `rfl`), `Sim.bind_twin` a twin-only step (a pin read), `Sim.run` gives the census form
+  (`AM.ok`, the post at `AM.res`/`AM.st`). Plus the blocks every wrapper repeated: `pinZero_stage`
+  (`pin_word(53)` is `zeroLevel`, 9 lines at each of 5 sites before) and `StageR.lt64` (a slice end
+  `≤ iwTop` is `< 2^64` by `IWOK`; most lemmas carry both as hypotheses).
+* **`struct_proj_guards` refines `structProjGuards`** (`IndSumSpec8.lean`, the `Sim` pilot; `sorry`
+  status through `strip_pis` in `structUsedLaterList`). **`cons_sum_ctors` refines
+  `consSumCtors`** (`IndSumSpec9.lean`, sorry-free: `ctor_info_rec` + lane `decls2`'s `env_push`;
+  the constructor list taken as `DecB`, so it stays decoded across the pushes and its constants
+  decode in `erecP`, which `env_push` reads). L changes: `cons_sum_ctors` loop → self-recursion;
+  `ctor_info_rec` aborts unless the copied name word is a handle (`env_push`'s spec needs it).
+  `env_push` enters the model as `callW p n "env_push"` (its spec has a precondition, which
+  `vcgen` cannot discharge — the known gap), turned into `envPushW` in the relational lemma by
+  `triple_of_callW`, as lane `decls2` does.
+* **Proof cost, measured.** The pilots: `structProjGuards` 7 L lines / 212 proof lines,
+  `consSumCtors` + `ctor_info_rec` 20 / 328 — still ~20–30 per L line on wrappers. Where the lines
+  go: (1) **program-lookup hypotheses**, 15–20 lines per section, repeated in the spec section
+  and the census section of every file (a bundle `structure XProg (p) : Prop` per module, as lanes
+  `exprops4`/`decls2` have — `BvbProg`, `RecProg`, `CvgProg` — would make them one line; not
+  retrofitted, every existing statement would change); (2) **record writes**: decoding a freshly
+  written `EREC`/`IW` record is ~80 lines per record kind (`ciRec_stage`, `cvNew_stage`), mostly
+  index arithmetic on `wrER`/`set64` reads (a generic "`wrER` at the top decodes as the decoder of
+  the word list" would remove it; `decCV_shift` is a start); (3) **the twin side of each callee**,
+  `cases h : callee … | none | some` plus rewriting the twin bind — what `Sim.bindK` removes (the
+  pilot's relational lemma is 45 lines for 4 callees, against ~15 per callee before); (4) the
+  `vcgen` spec is cheap (5–10 lines) and was never the problem. The generic decoder lemma
+  (landing 1) replaces the per-decoder `_grow` lemmas and `hstab` hypotheses at no cost per use.
+* Census (this branch on master `9c9e5b6`+): phase 8 **61 proven, 37 sorry, 117 written, 8 todo**.
+* Note for lane `whnf`: `scripts/provenance.py check` reports 9 uncited FunDecls in
+  `WhnfDelta.lean` (master).
