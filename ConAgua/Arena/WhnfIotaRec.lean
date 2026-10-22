@@ -20,8 +20,8 @@ the head and calls the pieces below, one per block of the twin's nest:
   the parameter comparison (`iota_rec_cmp`), the constructor telescope, the indices;
 * `iota_rec_cmp(…)`: the parameter comparands (`rec_fire_args`) against the major's leading
   arguments (`defeq_list`), the top put back;
-* `erec_push(o, c)`: a nested rule's stored pins (an `EREC` slice) copied to the stack top, where
-  `rec_fire_args` reads them.
+* `erec_push(o, c, k)`: a nested rule's stored pins (an `EREC` slice) copied to the stack top,
+  where `rec_fire_args` reads them; `stack_cover(x)`: the top raised to `x`.
 
 The slices: the recursor's arguments `(so, sn)` below the top; the major's arguments `(mo, mn)`
 exactly at the top while `iota_rec_fire2` runs (`iota_certs_full` asks for it).
@@ -35,7 +35,7 @@ namespace L.Arena
 
 /-- The copy loop of `erec_push` (a named block, for the proofs): each word stored at the top,
 the top raised past it. -/
-def erecPushLoop : Stmt := lblk (o, c, so, j) {
+def erecPushLoop : Stmt := lblk (o, c, k, so, j) {
   while j < c {
     SPN.u64[so + j] := EREC.u64[o + j];
     CTL.u64[136] := so + j + 1;
@@ -43,10 +43,12 @@ def erecPushLoop : Stmt := lblk (o, c, so, j) {
   }
 }
 
-/-- A nested rule's stored pins (the `EREC` slice `(o, c)`) pushed on the stack: the slice's
-offset is the old top, the top is raised past it. -/
+/-- A nested rule's stored pins (the `EREC` slice `(o, c)`, `k = 1` the rule's fire kind) pushed
+on the stack: the slice's offset is the old top, the top is raised past it. Nothing for `k ≠ 1` (a
+plain rule has no pins). -/
 -- con-ron: ConRon/Arena/Core.lean:2012-2097 ConRon.Arena.iotaRecAt
-def erecPushL : FunDecl := lfn (o, c) locals (so, j) {
+def erecPushL : FunDecl := lfn (o, c, k) locals (so, j) {
+  if k != 1 { return 0 };
   so := CTL.u64[136];
   if len(SPN.u64) < so { abort };
   if len(SPN.u64) - so < c { abort };
@@ -55,18 +57,24 @@ def erecPushL : FunDecl := lfn (o, c) locals (so, j) {
   return so
 }
 
+/-- The stack top raised to `x` if it is below. -/
+-- con-ron: none — the stack top, L plumbing for the twin's list values
+def stackCoverL : FunDecl := lfn (x) locals () {
+  if CTL.u64[136] < x { CTL.u64[136] := x };
+  return 0
+}
+
 /-- The parameter comparands of a firing rule (`recFireArgs`) against the major's leading
 `ctorParams` arguments (`defEqList`). A nested rule's pins are copied to the stack first; the
 top is raised over the comparand slice (it lies below it already) and put back at the end. -/
 -- con-ron: ConRon/Arena/Core.lean:2012-2097 ConRon.Arena.iotaRecAt
 def iotaRecCmpL : FunDecl := lfn (mode, vis, d, us, recP, so, rl, mo)
-    locals (top, pvo, ao, an, ok) {
+    locals (top, pvo, ao, an, x, ok) {
   top := CTL.u64[136];
-  pvo := 0;
-  if EREC.u64[rl + 3] == 1 { pvo := call erec_push(EREC.u64[rl + 6], EREC.u64[rl + 7]) };
+  pvo := call erec_push(EREC.u64[rl + 6], EREC.u64[rl + 7], EREC.u64[rl + 3]);
   (ao, an) := call rec_fire_args(EREC.u64[rl + 3], pvo, EREC.u64[rl + 7], EREC.u64[recP + 2],
     EREC.u64[recP + 3], us, so, EREC.u64[recP + 6], EREC.u64[rl + 2]);
-  if CTL.u64[136] < ao + an { CTL.u64[136] := ao + an };
+  x := call stack_cover(ao + an);
   ok := call defeq_list(mode, vis, d, mo, EREC.u64[rl + 2], ao, an);
   CTL.u64[136] := top;
   return ok
@@ -181,13 +189,14 @@ def iotaRecCL : FunDecl := lfn (mode, vis, d, c, us, so, sn)
 
 /-- The pieces of `iota_rec_at`. -/
 def iotaRecProg : Prog :=
-  [("erec_push", erecPushL), ("iota_rec_cmp", iotaRecCmpL), ("iota_rec_vck", iotaRecVckL),
+  [("erec_push", erecPushL), ("stack_cover", stackCoverL), ("iota_rec_cmp", iotaRecCmpL), ("iota_rec_vck", iotaRecVckL),
    ("iota_rec_fam", iotaRecFamL), ("iota_rec_fire2", iotaRecFire2L),
    ("iota_rec_fire", iotaRecFireL), ("iota_rec_major", iotaRecMajorL), ("iota_rec_c", iotaRecCL)]
 
 /-- What the pieces' specs need of a program: the pieces, at their names. -/
 structure IotaRecProg (p : Prog) : Prop where
   erecPush : p.lookup "erec_push" = some erecPushL
+  stackCover : p.lookup "stack_cover" = some stackCoverL
   cmp : p.lookup "iota_rec_cmp" = some iotaRecCmpL
   vck : p.lookup "iota_rec_vck" = some iotaRecVckL
   fam : p.lookup "iota_rec_fam" = some iotaRecFamL
