@@ -626,6 +626,8 @@ def checkerProg : Prog := [
   ("close_lams", L.Ind.closeLams),
   ("close_telescope", L.Ind.closeTelescope),
   ("cons_block_ctors", L.Ind.consBlockCtors),
+  ("ind_info_rec", L.Ind.indInfoRec),
+  ("er_put5", L.Ind.erPut5),
   ("cons_block_inds", L.Ind.consBlockInds),
   ("cons_block_recs_push", L.Ind.consBlockRecsPush),
   ("cons_block_recs_tf", L.Ind.consBlockRecsTF),

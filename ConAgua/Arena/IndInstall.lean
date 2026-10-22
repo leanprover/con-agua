@@ -294,32 +294,39 @@ twin's; the `.indInfo` record (kind `3`, the constant's four words, the capabili
 written right after its allocation. Returns the new view. -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:181-190 ConRon.Arena.consBlockInds
 @[l_impl ConRon.Arena.consBlockInds]
-def consBlockInds : FunDecl := lfn (p1, isRec, cvO, cvL, vis, i) locals (cv, caps, rec, v1, v2) {
+def consBlockInds : FunDecl := lfn (p1, isRec, cvO, cvL, vis, i) locals (caps, rec, v1, v2) {
   if cvL == 0 { return vis };
-  cv := IW.u64[cvO];
   caps := call block_caps_at(p1, i, isRec);
-  rec := call erec_alloc(20);
-  EREC.u64[rec] := 3;
-  EREC.u64[rec + 1] := EREC.u64[cv]; EREC.u64[rec + 2] := EREC.u64[cv + 1];
-  EREC.u64[rec + 3] := EREC.u64[cv + 2]; EREC.u64[rec + 4] := EREC.u64[cv + 3];
-  EREC.u64[rec + 5] := IW.u64[caps + 0];
-  EREC.u64[rec + 6] := IW.u64[caps + 1];
-  EREC.u64[rec + 7] := IW.u64[caps + 2];
-  EREC.u64[rec + 8] := IW.u64[caps + 3];
-  EREC.u64[rec + 9] := IW.u64[caps + 4];
-  EREC.u64[rec + 10] := IW.u64[caps + 5];
-  EREC.u64[rec + 11] := IW.u64[caps + 6];
-  EREC.u64[rec + 12] := IW.u64[caps + 7];
-  EREC.u64[rec + 13] := IW.u64[caps + 8];
-  EREC.u64[rec + 14] := IW.u64[caps + 9];
-  EREC.u64[rec + 15] := IW.u64[caps + 10];
-  EREC.u64[rec + 16] := IW.u64[caps + 11];
-  EREC.u64[rec + 17] := IW.u64[caps + 12];
-  EREC.u64[rec + 18] := IW.u64[caps + 13];
-  EREC.u64[rec + 19] := IW.u64[caps + 14];
+  rec := call ind_info_rec(IW.u64[cvO], caps);
   v1 := call env_push(vis, rec);
   v2 := call cons_block_inds(p1, isRec, cvO + 1, cvL - 1, v1, i + 1);
   return v2
+}
+
+/-- `ind_info_rec(cv, caps)`: a fresh `.indInfo` record — kind `3`, the constant's four `EREC`
+words at `cv`, the capability record's 15 `IW` words at `caps` — written right after its
+allocation, five words at a time. -/
+-- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:181-190 ConRon.Arena.consBlockInds
+@[l_impl ConRon.Arena.consBlockInds]
+def indInfoRec : FunDecl := lfn (cv, caps) locals (q, u) {
+  q := call erec_alloc(20);
+  u := call er_put5(q, 3, EREC.u64[cv], EREC.u64[cv + 1], EREC.u64[cv + 2], EREC.u64[cv + 3]);
+  u := call er_put5(q + 5, IW.u64[caps], IW.u64[caps + 1], IW.u64[caps + 2], IW.u64[caps + 3],
+    IW.u64[caps + 4]);
+  u := call er_put5(q + 10, IW.u64[caps + 5], IW.u64[caps + 6], IW.u64[caps + 7], IW.u64[caps + 8],
+    IW.u64[caps + 9]);
+  u := call er_put5(q + 15, IW.u64[caps + 10], IW.u64[caps + 11], IW.u64[caps + 12],
+    IW.u64[caps + 13], IW.u64[caps + 14]);
+  return q
+}
+
+/-- `er_put5(d, a, b, c, e, f)`: `EREC[d‥d+5) := [a, b, c, e, f]`. -/
+-- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:181-190 ConRon.Arena.consBlockInds
+@[l_impl ConRon.Arena.consBlockInds]
+def erPut5 : FunDecl := lfn (d, a, b, c, e, f) locals () {
+  EREC.u64[d] := a; EREC.u64[d + 1] := b; EREC.u64[d + 2] := c; EREC.u64[d + 3] := e;
+  EREC.u64[d + 4] := f;
+  return 0
 }
 
 /-- `check_block_inds_cv_tas(cvTa0, rest.off, rest.len)`: `cvTa0 :: rest.map (·.1)`, the
@@ -771,7 +778,7 @@ def indInstallFns : Prog :=
    ("block_raw_rec", blockRawRec), ("check_block_tele", checkBlockTele),
    ("check_block_teles", checkBlockTeles), ("check_block_doms_at", checkBlockDomsAt),
    ("check_block_agree_one", checkBlockAgreeOne), ("check_block_agree", checkBlockAgree),
-   ("cons_block_inds", consBlockInds), ("check_block_inds_cv_tas", checkBlockIndsCvTas), ("check_block_inds_cv_tas_go", checkBlockIndsCvTasGo),
+   ("cons_block_inds", consBlockInds), ("ind_info_rec", indInfoRec), ("er_put5", erPut5), ("check_block_inds_cv_tas", checkBlockIndsCvTas), ("check_block_inds_cv_tas_go", checkBlockIndsCvTasGo),
    ("check_block_inds", checkBlockInds), ("block_shape_nest_ctx", blockShapeNestCtx),
    ("check_block_ctors_one", checkBlockCtorsOne), ("check_block_ctors", checkBlockCtors),
    ("check_abs_ctor_sorts_one", checkAbsCtorSortsOne), ("check_abs_ctor_sorts", checkAbsCtorSorts),
