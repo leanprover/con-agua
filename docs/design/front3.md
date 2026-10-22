@@ -279,3 +279,25 @@ Findings:
 | `ConRon.Arena.Frontend.internCaps` | 1 | written | 6 | w | already linked (`l_impl`, mostly validity parts); full refinement proof missing |
 | `ConRon.Arena.Frontend.internCI` | 1 | written | 25 | w | already linked (`l_impl`, mostly validity parts); full refinement proof missing |
 | `ConRon.Arena.Frontend.internCIList` | 1 | written | 6 | w | already linked (`l_impl`, mostly validity parts); full refinement proof missing |
+
+## Landing 1 (links and the chunk bridge)
+
+* Links (class a): the 23 scanner loops onto their wrappers' L functions; `readNat` → `nat_dec`;
+  `LinePayload.isAbsent` → `scan_line_loop`; `utf8Of` → `utf8_put`; `replacementChar` → `esc_one`;
+  `isWs`/`isDigit` → `skip_ws`/`skip_digits`; `pick`/`frontOf`/`prepareD` → `prepare_prelude`;
+  `feedChunk`/`applyFinalLine` → `front_run`; `internExpr`/`internExprList` (both namespaces)
+  and `internPinSet` → `rom_pins_to`/`rom_exprs_to`/`rom_lists_to`. `provenance.py annotate`
+  cited `ConRon.Arena.internExprList` at a `private def` of the same name in `CoreTest.lean`
+  (fixed by hand: `Intern.lean:50-52`); `locate` should skip private declarations.
+* `Front/ChunkBridge.lean`: `parseChunks_single : b.size < USize.size → parseChunks [b] =
+  parseBytes b` (as functions of the arena state), by `applyFinalLine_tail` (the final line
+  reads only `tailAt b i`: con-leche's `scanLineFwd_eq` and `scanLineSpec`, error offsets
+  relative to the line start) and `bytes_extract_tail`. `frontAll_refines_chunks`
+  (`@[refines parseChunks]`) is `frontAll_refines` rewritten with it. With the root
+  `parseChunks` proven, everything below it that only `parseBytes` and `parseChunks` reach is
+  covered: phase 1a (scanner) and 1b (records) are 100 % proven.
+* `Arena/InitLink.lean`: `estoreEmpty_refines` (`@[refines EStore.empty]`) = `arenaD_init`.
+* Census (in the worktree, after merging master `fd3650c9`): phase 0 177 proven / 5 written /
+  114 todo (976 / 988 / 1305 Lean lines); phase 1 (1a+1b+1c) 128 / 18 / 20 (2662 / 2774 / 2907).
+  Before (master `f960919b`, docs/progress.md): phase 0 173 / 3 / 120 (972 / 981 / 1305), phase 1
+  53 / 47 / 66 (696 / 1164 / 2907).
