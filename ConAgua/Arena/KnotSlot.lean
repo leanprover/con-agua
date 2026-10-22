@@ -401,7 +401,7 @@ end twin
 `F ≥ n` (the shape of `WhnfLoopSpec`). -/
 def InferBodySpec (p : Prog) (n : Nat) : Prop :=
   ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb mode d e : Word), n ≤ F → SlotPre s₀ a₀ dn vis fe MM eb mode → HW e →
+    (MM : ModeMaps) (eb mode d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe MM eb mode → HW e →
     KnotUpTo p n →
     CoreSpec p n "infer_body" [mode, vis, d, e]
       (inferBody (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) decH s₀ a₀ dn vis fe MM eb
@@ -410,7 +410,7 @@ def InferBodySpec (p : Prog) (n : Nat) : Prop :=
 down. -/
 def InferIOBodySpec (p : Prog) (n : Nat) : Prop :=
   ∀ (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb mode d e : Word), n ≤ F → SlotPre s₀ a₀ dn vis fe MM eb mode → HW e →
+    (MM : ModeMaps) (eb mode d e : Word), n ≤ F → n ≤ 2 ^ 62 → SlotPre s₀ a₀ dn vis fe MM eb mode → HW e →
     KnotUpTo p n →
     CoreSpec p n "infer_body_io" [mode, vis, d, e]
       (inferBodyIO (CoreFnsA.ioView (coreKnot (decMode mode) fe id F)) fe d.toNat (decE e)) decH
@@ -465,7 +465,7 @@ theorem infer_refines (n : Nat) (hk : KnotUpTo p n) (hb : InferBodySpec p n) :
   | some q =>
   obtain ⟨r₁, m₁⟩ := q
   simp only [hcall] at hW
-  have hbody := hb F' s a₀ dn vis fe MM eb mode d e (by omega) hs he hk
+  have hbody := hb F' s a₀ dn vis fe MM eb mode d e (by omega) (by omega) hs he hk
   obtain ⟨hok, ⟨M', hS₁, hK₁, hSt₁⟩, hres, hrw⟩ := CoreSpec.of_callW hbody hcall
   cases hset : msetG inSch m₁ e (genW 0 eb) (r₁.headD 0) with
   | none => rw [hset] at hW; cases hW
@@ -517,7 +517,7 @@ theorem inferIO_refines (n : Nat) (hk : KnotUpTo p n) (hb : InferIOBodySpec p n)
   | some q =>
   obtain ⟨r₁, m₁⟩ := q
   simp only [hcall] at hW
-  have hbody := hb F' s a₀ dn vis fe MM eb mode d e (by omega) hs he hk
+  have hbody := hb F' s a₀ dn vis fe MM eb mode d e (by omega) (by omega) hs he hk
   obtain ⟨hok, ⟨M', hS₁, hK₁, hSt₁⟩, hres, hrw⟩ := CoreSpec.of_callW hbody hcall
   cases hset : msetG ioSch m₁ e (genW 0 eb) (r₁.headD 0) with
   | none => rw [hset] at hW; cases hW

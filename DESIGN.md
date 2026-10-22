@@ -5452,6 +5452,34 @@ denser than the Rust).
 * Merged master into `defeq-slots` (WhnfCoreApp's `mkAppW_hw` fix). No `sorry`; ~875 lines,
   5.2 s CPU.
 
+### The inference bodies (`InferBody*.lean`, helper `defeq-infer`)
+* **`InferBodySpec p n` and `InferIOBodySpec p n` are theorems** (`inferBody_refines`,
+  `inferBodyIO_refines`, `InferBodyDisp.lean`), hence `inferSlot_step`/`inferIOSlot_step`
+  (`WhnfCallees.inferStep`/`inferIOStep`), from `KnotUpTo p n`, the programs (`InferAllProg`) and
+  `InferCallees`: `inst1`, `inst_list`, `abs_entry`, `ar_entry`, `const_ty_at`, the `infer_lit`
+  callees, `is_eager_reduce`, **`infer_proj` (`InferProjOK`, not proved: the table's `structSort`
+  must denote for `lvl_eq_c`'s refinement, an environment invariant nobody states yet)**, and two
+  binder-stack facts below. Both specs now carry `n ≤ 2^62` (KnotSlot.lean).
+* Every clause is proved: `infer_let`, `infer_lam_io`, `infer_forall_io` (`InferBodyLet`), the
+  spines (`InferBodySpine`, `InferBodySpineF`: loops as named blocks, fuel models, `SpPost`), the
+  telescopes (`InferBodyBind`, `InferBodyBindPi`: `lamsFull_ref`/`pisFull_ref`, `TelPost`), the
+  interning leaves under `CoreS` (`InferBodyIntern`: `CoreS.of_level` for level nodes via
+  `LStore.intern_ext`).
+* **The binder stack is not in `CoreAfter`.** `StackKept` covers `SPN`/`CTL[136]` only, so the
+  telescopes assume `BStkCallees` (`infer`, `whnf`, `inst_list`, `ar_entry`, `ensure_sort` keep
+  `BSTK` below `CTL[137]` and `CTL[137]`) and `BStkCap` (`BSTK` has fewer than `2^63` words under
+  `CoreS`). To discharge them: a field `bstk` in `CoreS` (as `spn`) and `BKept` in `StackKept`,
+  proved by every core body (lane `whnf`'s files construct both about 15 times).
+* **L changes** (Infer.lean): `infer_lam_io`/`infer_forall_io` abort at `d + 1 = 0`;
+  `infer_lam`/`infer_forall` abort at `d ≥ 2^63` (depth capacities: the twin's depth is a `Nat`);
+  `infer_spine`/`infer_spine_io` abort when `CTL[136]` is past the stack (so the empty accumulator
+  is a slice; `head_and_args` at an `app` handle needs no such bound, `headAndArgs_app`).
+* Proof style: `vcgen` + `simp_all` for the specs (`finish` blew up on `List.cons.injEq` with six
+  calls), `ld64_rdW_spec`/`st64_spec` instead of unfolding `ld64`/`st64` (a read's bound proof as
+  an argument blocks `simp_all`). **Kernel deep recursion**: `simp` (`↓reduceIte`) on a goal holding
+  `inferLams …`/`inferPis …` at the literal `peelFuel` made the kernel unfold the structural
+  recursion; `rw [if_pos rfl]` instead. ~4400 lines, ~29 s CPU.
+
 ## Phase 2, round 3: the step's specs, promotion, the pin variants (2026-10-22, lane `decls2`)
 
 ### The stale loop targets (`installStep`, `installDeclStep`, `checkPending`, `checkPendingList`)
@@ -5834,3 +5862,22 @@ hook; `rec`: `RecClass`/`RecGen`/`RecCheck`; `pos`: `IndPos`/`IndPos2`).
   `lvlEqCStage_spec` has the same gap). The patch is kept out of the tree (no dead code).
 * Census (`--no-build --list`, this branch on master `1ffa2b1`): phase 8 **60 proven, 36 sorry,
   119 written, 8 todo** (lane start 58 / 38 / 119 / 8).
+
+### Landing 4: the inference bodies (helper `defeq-infer`); a request to lane `whnf`
+* `inferBody_refines`, `inferBodyIO_refines`: `InferBodySpec p n`/`InferIOBodySpec p n` are
+  theorems from `KnotUpTo p n` and `InferCallees` (callee hypotheses); with `KnotSlot.lean` they give
+  the slot steps `inferSlot_step`/`inferIOSlot_step`. Files `InferBody{Intern,Let,Spine,SpineF,Bind,
+  BindPi,Disp}.lean` (~4.4k lines, 28 s CPU in all). Left in `InferCallees`: the stubs (`Inst1OK`,
+  `InstListOK`, `Abstract1OK`, `AbstractRangeOK`, `ConstTyAtOK`, `InferLitCallees`), `IsEagerReduceH`
+  (now proved in `DefEqLeaves`: to be plugged in), **`InferProjOK`** (`lvl_eq_c` on the table's
+  `structSort` needs a readback of it: an `EnvR` invariant "every level a stored table names has a
+  `denoteL`" is missing), and **`BStkCallees`/`BStkCap`**.
+* **Request to lane `whnf` (owner of `CoreS`/`StackKept`):** the binder stack (array 145, top
+  `CTL[137]`) must be (1) bounded in `CoreS` (a field `bstk : (m.arr64 145).size < 2 ^ 63`, like
+  `spn`) and (2) kept by every core run (`StackKept` gains "`CTL[137]` and `BSTK` below it unchanged").
+  Every core function already keeps it (only `infer_lams`/`infer_pis` write it, and restore the
+  top); the change touches ~15 constructions of `CoreS`/`StackKept` in the whnf files. Until then
+  the two facts are hypotheses here.
+* L changes: depth-capacity aborts (`d + 1 == 0` in the io binder clauses, `d ≥ 2^63` in
+  `infer_lam`/`infer_forall`: the word depth must not wrap where the twin's `Nat` does not); the
+  spines abort when `CTL[136]` is past `SPN`'s end.
