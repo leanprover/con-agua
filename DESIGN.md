@@ -4683,6 +4683,14 @@ parallel, 20–32 min each (sonnet, 250–320k tokens each); the interface took 
 * Memory map additions: arrays 69‥71 (front, inductive lines), 200‥208 (`IW`, the eight walk
   memos), `CTL` 200‥219.
 
+### Stale flags after the con-ron bump (reviewed by hand, census not run)
+
+The census lists 28 phase-8 targets as stale after `4c9eaf7 → 12752ca7`. Every one has its own code
+unchanged; what changed below them is only `readLevelM`/`readLevelsM` (`Monad.lean`), whose diff is
+doc-comment line references only. False positives: to be cleared with `scripts/census.py
+--reviewed` once the census runs again (lane `censusmem`'s memory guard). Also proved since the
+second landing: `classOfMotiveVar` (through `sl_find`'s model, `findW_ok`).
+
 ### `sorry`s
 
 `IndStubs.lean`: the 34 stub specs (by design, above). No other.
