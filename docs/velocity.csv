@@ -114,3 +114,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-22,decls3,opus,55,10,"landing 4: quotient and axiom arms proved at LoopR (only the definition arm left in checkDecl_loop), and_pin_ok inductive arm in L, rom_and_pin stub; phase 2: 146 proven / 26 sorry"
 2026-10-22,integrate,opus,45,40,"landing 2: ROM constant readers (helper romci), rom_expr_pin clash, basis_pin_hit on EREC blocks, ind_params_ok, deviations D5/D18-D20, master merge (id tables); e2e on checkerProg: check 630 at strip_pis, 0 disagreements, con-ron = e2e-ref on 675/675"
 2026-10-22,integrate,opus,15,35,"landing 3: rom_and_pin from the ROM; master merges (decls3 landing 4: rom_and_pin, D1); stale shared-cache artifact found (Checker.Entry)"
+2026-10-22,whnf3,opus,20,10,"landing 1: strip_pis/strip_lams in L (helper whnf3-walks, lane induct IW convention, no refinement yet); Checker/Prog regenerated (e2e blocker)"
