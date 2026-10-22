@@ -4848,7 +4848,7 @@ olean whose fixed mmap address is taken reads it into the heap: about 2 GB more 
 Which L code must be looked at again when con-ron moves, now that the census fingerprints are gone
 ("Census memory"). The answer is con-ron's own (`_tmp/ref/con-ron/scripts/provenance.py`, its
 DESIGN §3.7 and §7): every ported item cites the twin source it stands for, and a pure-Python gate
-diffs the cited text between two upstream revisions. Ours is `scripts/provenance.py` (~960 lines,
+diffs the cited text between two upstream revisions. Ours is `scripts/provenance.py` (~1000 lines,
 stdlib only, reads `_tmp/ref/<repo>` with one `git cat-file --batch` per tree). Workflow: PLAN.md,
 "Bumping the twin".
 
