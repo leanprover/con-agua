@@ -57,7 +57,7 @@ theorem m2cEta2_ok (N : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (
   dsimp only at hW
   rw [hs'] at hW
   simp only [m2cEta2W] at hW
-  cases c1 : callW p N "reserved_contains" [T] m with
+  cases c1 : callW p N "reserved_contains_w" [T] m with
   | none => rw [c1] at hW; cases hW
   | some q =>
   obtain ⟨r1, m1⟩ := q
@@ -76,7 +76,7 @@ theorem m2cEta2_ok (N : Nat) (dn : NIdx → Option ConLeche.Name) (vis : Word) (
     simp only [m2cEta2T, StateT.run_bind, hl, except_ok_bind]
     rw [if_neg hn]; rfl
   rw [if_neg g1] at hW
-  cases c2 : callW p N "reserved_contains" [ec] m with
+  cases c2 : callW p N "reserved_contains_w" [ec] m with
   | none => rw [c2] at hW; cases hW
   | some q =>
   obtain ⟨r2, m2⟩ := q

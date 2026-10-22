@@ -1,5 +1,7 @@
 import ConAgua.Front.ApplyDecl
 import ConAgua.Arena.DerRel
+import ConAgua.Arena.EnvRec
+import ConAgua.Front.IndFields
 import ConRon.Arena.Frontend.ExportC
 import ConAgua.Census.Attr
 
@@ -60,6 +62,36 @@ structure TblR {k : IdxKind} (arr : Array Word) (t : IdTable (Idx k)) : Prop whe
 /-- Word `k` of declaration record `i`. -/
 def dw (D : Array Word) (i k : Nat) : Word := D[1 + 8 * i + k]?.getD 0
 
+/-- The pool `P` up to its word `t`, with word `0` (the top) cleared: what an inductive block's
+records may read (`IndDeclAt`), so that later appends above `t` and a moved top leave it alone. -/
+def trunc (P : Array Word) (t : Nat) : Array Word := (P.extract 0 (t + 1)).set! 0 0
+
+theorem trunc_congr (P P' : Array Word) (t : Nat) (hs : P'.size = P.size)
+    (h : ∀ j, 0 < j → j ≤ t → P'[j]? = P[j]?) : trunc P' t = trunc P t := by
+  apply Array.ext_getElem?
+  intro j
+  simp only [trunc, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds, Array.getElem?_extract,
+    Array.size_extract, hs, Nat.sub_zero, Nat.zero_add]
+  by_cases hj : j = 0
+  · subst hj; simp
+  · simp only [Ne.symm hj, false_and, if_false]
+    by_cases ht : j < min (t + 1) P.size
+    · rw [if_pos ht, if_pos ht, h j (by omega) (by omega)]
+    · rw [if_neg ht, if_neg ht]
+
+/-- The constants of a slice of record pointers (lane `pinsenv`'s layout, `decCI`). -/
+def decCIs (a : Array Word) (dn : NIdx → Option ConLeche.Name) (off cnt : Nat) :
+    Option (List IConstantInfo) :=
+  (List.range cnt).mapM fun j => do L.Arena.decCI a dn (← L.Arena.nat? a (off + j))
+
+/-- **`DECL` record `i` is the inductive block `block` with `nP` parameters** (`IndApply.lean`):
+kind `6`, its block a slice of the pool `P` (`DLP`) of pointers to `decCI` constant records in
+`P`, all of it below some `t` at most `P`'s top. A block's constants carry no `PropWhen` names
+(`sortZ := ifAllZero []`), so the name decoder is irrelevant (`fun _ => none`). -/
+def IndDeclAt (D P : Array Word) (i : Nat) (block : List IConstantInfo) (nP : Nat) : Prop :=
+  dw D i 0 = 6 ∧ (dw D i 4).toNat = nP ∧ ∃ t, t ≤ (P[0]?.getD 0).toNat ∧
+    decCIs (trunc P t) (fun _ => none) (dw D i 2).toNat (dw D i 3).toNat = some block
+
 /-- The hint of a definition record: kind `q` (`1` abbrev, `2` opaque, else regular), height `h`. -/
 def hintW (q h : Word) : ConLeche.ReducibilityHint :=
   if q = 1 then .abbrev else if q = 2 then .opaque else .regular h.toNat
@@ -93,13 +125,32 @@ structure DeclsR (D P : Array Word) (ds : Array IDeclaration) : Prop where
   ptop : (P[0]?.getD 0).toNat + 1 ≤ P.size
   recs : ∀ i (h : i < ds.size), DeclAt D P i ds[i]
 
+/-- Record `i` represents the declaration, inductive blocks included (`IndDeclAt`): the
+front's records. (`DeclAt` is the one-constant kinds, the records lane `decls`' loop reads so far,
+`DeclsR`.) -/
+def DeclAtF (D P : Array Word) (i : Nat) : IDeclaration → Prop
+  | .indDecl b nP => IndDeclAt D P i b nP
+  | d => DeclAt D P i d
+
+/-- **The front's declarations** `ds` are the records of `D` (`DeclAtF`), the universe parameters
+and inductive blocks' constants in `P`. -/
+structure DeclsF (D P : Array Word) (ds : Array IDeclaration) : Prop where
+  dsize : D.size < 2 ^ 63
+  psize : P.size < 2 ^ 63
+  count : (D[0]?.getD 0).toNat = ds.size
+  room : 1 + 8 * ds.size ≤ D.size
+  ptop : (P[0]?.getD 0).toNat + 1 ≤ P.size
+  recs : ∀ i (h : i < ds.size), DeclAtF D P i ds[i]
+
 /-- **The parse state relation**: `NID` represents the name table, `LID` the level table, `EID`
-the expression table, `DECL`/`DLP` the declarations. -/
+the expression table, `DECL`/`DLP` the declarations; the inductive lines' scratch arrays `IFR`,
+`IFL` are below `2^63` words. -/
 structure StateDR (m : Mem) (st : StateD) : Prop where
   names : TblR (m.arr64 NID) st.names
   levels : TblR (m.arr64 LID) st.levels
   exprs : TblR (m.arr64 EID) st.exprs
-  decls : DeclsR (m.arr64 DECL) (m.arr64 DLP) st.decls
+  decls : DeclsF (m.arr64 DECL) (m.arr64 DLP) st.decls
+  ifs : (m.arr64 L.Front.Ind.IFR).size < 2 ^ 62 ∧ (m.arr64 L.Front.Ind.IFL).size < 2 ^ 62
 
 /-! ## Reads and writes of a table -/
 
@@ -181,7 +232,8 @@ theorem StateDR.frame {A : List ArrId} {C : List Word} {m m' : Mem} {st : StateD
     (h : StateDR m st) : StateDR m' st :=
   ⟨by rw [hf.1 NID hn (by decide)]; exact h.names, by rw [hf.1 LID hl (by decide)]; exact h.levels,
     by rw [hf.1 EID he (by decide)]; exact h.exprs,
-    by rw [hf.1 DECL hd (by decide), hf.1 DLP hq (by decide)]; exact h.decls⟩
+    by rw [hf.1 DECL hd (by decide), hf.1 DLP hq (by decide)]; exact h.decls,
+    by rw [hf.2.2.1, hf.2.2.1]; exact h.ifs⟩
 
 /-- `ArenaR` does not read `NID`, `LID` and `EID`. -/
 theorem ArenaR.frameT (m m' : Mem) (a : AState) (hR : ArenaR m a) (hf : MemFrame [64, 65, 66] [] m m') :
@@ -225,7 +277,7 @@ theorem StateDR.putName {A : List ArrId} {C : List Word} {m m₁ : Mem} {st : St
     (hdc : st'.decls = st.decls := by rfl) (hd : DECL ∉ A := by tapart) (hq : DLP ∉ A := by tapart) :
     StateDR (m₁.set64 NID i (w + 1)) st' := by
   have h₁ := h.frame hf hn hl he hd hq
-  refine ⟨?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, by rw [size_set64, size_set64]; exact h₁.ifs⟩
   · rw [Mem.arr64_set64_same]; exact TblR.put _ _ h₁.names i w hi hw _ hst
   · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hlv]; exact h₁.levels
   · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hex]; exact h₁.exprs
@@ -241,7 +293,7 @@ theorem StateDR.putLevel {A : List ArrId} {C : List Word} {m m₁ : Mem} {st : S
     (hdc : st'.decls = st.decls := by rfl) (hd : DECL ∉ A := by tapart) (hq : DLP ∉ A := by tapart) :
     StateDR (m₁.set64 LID i (w + 1)) st' := by
   have h₁ := h.frame hf hn hl he hd hq
-  refine ⟨?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, by rw [size_set64, size_set64]; exact h₁.ifs⟩
   · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hnm]; exact h₁.names
   · rw [Mem.arr64_set64_same]; exact TblR.put _ _ h₁.levels i w hi hw _ hst
   · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hex]; exact h₁.exprs
@@ -257,7 +309,7 @@ theorem StateDR.putExpr {A : List ArrId} {C : List Word} {m m₁ : Mem} {st : St
     (hdc : st'.decls = st.decls := by rfl) (hd : DECL ∉ A := by tapart) (hq : DLP ∉ A := by tapart) :
     StateDR (m₁.set64 EID i (w + 1)) st' := by
   have h₁ := h.frame hf hn hl he hd hq
-  refine ⟨?_, ?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_, by rw [size_set64, size_set64]; exact h₁.ifs⟩
   · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hnm]; exact h₁.names
   · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), hlv]; exact h₁.levels
   · rw [Mem.arr64_set64_same]; exact TblR.put _ _ h₁.exprs i w hi hw _ hst
@@ -813,7 +865,8 @@ theorem frontInit_refines (p : Prog) (hL : FrontLookups p)
 theorem stateDR_initMem (sizes : List Nat) (hn : sizes[64]?.getD 0 < 2 ^ 63)
     (hl : sizes[65]?.getD 0 < 2 ^ 63) (he : sizes[66]?.getD 0 < 2 ^ 63)
     (hd : 1 ≤ sizes[67]?.getD 0 ∧ sizes[67]?.getD 0 < 2 ^ 63)
-    (hq : 1 ≤ sizes[68]?.getD 0 ∧ sizes[68]?.getD 0 < 2 ^ 63) :
+    (hq : 1 ≤ sizes[68]?.getD 0 ∧ sizes[68]?.getD 0 < 2 ^ 63)
+    (hf : sizes[70]?.getD 0 < 2 ^ 62 ∧ sizes[71]?.getD 0 < 2 ^ 62) :
     StateDR (initMem sizes) StateD.blank := by
   have hT : ∀ (b : ArrId) {k : IdxKind}, sizes[b]?.getD 0 < 2 ^ 63 →
       TblR ((initMem sizes).arr64 b) ({} : IdTable (Idx k)) := by
@@ -824,7 +877,8 @@ theorem stateDR_initMem (sizes : List Nat) (hn : sizes[64]?.getD 0 < 2 ^ 63)
       by_cases h : i < sizes[b]?.getD 0 <;> simp [h]
     · rw [Array.getElem?_replicate] at he
       split at he <;> simp at he; subst he; simp
-  refine ⟨hT NID hn, hT LID hl, hT EID he, ?_⟩
+  refine ⟨hT NID hn, hT LID hl, hT EID he, ?_, by
+    rw [initMem_arr, initMem_arr]; simpa using hf⟩
   rw [initMem_arr, initMem_arr]
   refine ⟨by simpa using hd.2, by simpa using hq.2, ?_, ?_, ?_, fun i h => by
     simp [StateD.blank] at h⟩

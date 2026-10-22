@@ -163,9 +163,9 @@ def m2cEtaL : FunDecl := lfn (mode, vis, d, T, indP, major)
 con-ron: ConRon/Arena/Core.lean:1705-1820 ConRon.Arena.majorToCtor -/
 def m2cEta2L : FunDecl := lfn (vis, d, T, ec, ef, to, tn, ust, major)
     locals (res, ok, fo, fn, hd, fab) {
-  res := call reserved_contains(T);
+  res := call reserved_contains_w(T);
   if res != 0 { return major };
-  res := call reserved_contains(ec);
+  res := call reserved_contains_w(ec);
   if res != 0 { return major };
   ok := call tower_slots_all(vis, T, ef);
   if ok == 0 { return major };

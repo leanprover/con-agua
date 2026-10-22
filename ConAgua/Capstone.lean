@@ -503,16 +503,17 @@ namespace L.Front
 open L ConRon.Arena L.Arena
 open L.Compiler hiding rdW
 
-/-- The compiler's static check passes for the whole frontend (one byte array, 69 word arrays), so
-`compile_correct` applies to it. (`frontAllProg` returns up to 9 words; see DESIGN.md, lane
-`cresults`.) -/
-theorem frontAllProg_wf : Prog.wf (Prog.tab frontAllProg 1 69) frontAllProg = true :=
+/-- The compiler's static check passes for the whole frontend (one byte array, 193 word arrays:
+the inductive lines' level heap is array 192), so `compile_correct` applies to it.
+(`frontAllProg` returns up to 9 words; see DESIGN.md, lane `cresults`.) -/
+theorem frontAllProg_wf : Prog.wf (Prog.tab frontAllProg 1 193) frontAllProg = true :=
   L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
 
 /-- `frontAll_refines` for a run of `L.run`. -/
 theorem frontAll_run (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
     (N : Nat) (m : Mem) (hm : m.arr8 IN = b.data) (hpool : (m.arr64 POOL).size < 2 ^ 63) (a₀ : AState)
-    (hA : ArenaD m a₀) (hD : StateDR m L.Front.StateD.blank) (r : List Word) (m' : Mem)
+    (hA : ArenaD m a₀) (hD : StateDR m L.Front.StateD.blank) (hok : ConRon.Bridge.StateOK a₀)
+    (hoff : a₀.store.scratchOn = false) (hpins : ConRon.Bridge.PinsOK a₀) (r : List Word) (m' : Mem)
     (hrun : run frontAllProg N "front_run" [] m = .ok (r, m')) :
     r.headD 0 = 0 → ∃ st' a', (ConRon.Arena.Frontend.parseBytes b).run a₀ = .ok (.ok (.ofState st'), a') ∧
       ArenaD m' a' ∧ StateDR m' st' := by
@@ -525,7 +526,7 @@ theorem frontAll_run (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize
     injection hrun with hrun
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj hrun
     exact M.of_run (P := fun s => s = { mem := m, loc := Locals.init [] }) rfl hr
-      (frontAll_refines b h64 hsize N _ hm hpool a₀ hA hD)
+      (frontAll_refines b h64 hsize N _ hm hpool a₀ hA hD hok hoff hpins)
 
 /-- **Bytes → stores, on the machine.** For a Kraken host holding the compiled `frontAllProg`, run
 from `ca_enter` (`front_run()`, no arguments) on a state whose memory `m` holds the buffer `b` in
@@ -538,7 +539,8 @@ theorem frontAll_x64 [Host] (G : L.Compiler.Layout) (hG : G.Ok) (hwf : Prog.wf G
     (hnres : 1 ≤ G.tab.nres) (k0 : Nat) (hcode : Code (compileProg G.tab frontAllProg "front_run") k0)
     (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
     (m : Mem) (hm : m.arr8 IN = b.data) (hpool : (m.arr64 POOL).size < 2 ^ 63) (a₀ : AState)
-    (hA : ArenaD m a₀) (hD : StateDR m L.Front.StateD.blank) (hnargs : G.nargs = 0)
+    (hA : ArenaD m a₀) (hD : StateDR m L.Front.StateD.blank) (hok : ConRon.Bridge.StateOK a₀)
+    (hoff : a₀.store.scratchOn = false) (hpins : ConRon.Bridge.PinsOK a₀) (hnargs : G.nargs = 0)
     (N : Nat) (dm : MachineData) (ra : Word)
     (hT : dm.regs.rdi.toNat = G.T) (hN : dm.regs.rsi.toNat = N)
     (hmem : MemRel G m dm.dmem) (hroom : G.lo + 8 ≤ G.hi)
@@ -574,7 +576,7 @@ theorem frontAll_x64 [Host] (G : L.Compiler.Layout) (hG : G.Ok) (hwf : Prog.wf G
         have := hres.1 0 (by omega) (by simp [maxRes]); simp only [rres] at this
         rwa [show r.getD 0 0 = r.headD 0 by cases r <;> rfl] at this
       refine Or.inr (Or.inr ⟨hrdx, fun h0 => ?_⟩)
-      obtain ⟨st', a', hp, hA', hD'⟩ := frontAll_run b h64 hsize N m hm hpool a₀ hA hD r m' hrun (hrax ▸ h0)
+      obtain ⟨st', a', hp, hA', hD'⟩ := frontAll_run b h64 hsize N m hm hpool a₀ hA hD hok hoff hpins r m' hrun (hrax ▸ h0)
       exact ⟨m', st', a', hp, hm', hA', hD'⟩
 
 end L.Front

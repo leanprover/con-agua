@@ -457,11 +457,11 @@ theorem m2cEta_spec (p : Prog) (hp : p.lookup "m2c_eta" = some m2cEtaL) (n : Nat
 /-- Model of `m2c_eta2`. -/
 def m2cEta2W (p : Prog) (n : Nat) (m : Mem) (vis d T ec ef to tn ust major : Word) :
     Option (Word × Mem) :=
-  match callW p n "reserved_contains" [T] m with
+  match callW p n "reserved_contains_w" [T] m with
   | none => none
   | some (r₁, m₁) =>
   if r₁.headD 0 ≠ 0 then some (major, m₁) else
-  match callW p n "reserved_contains" [ec] m₁ with
+  match callW p n "reserved_contains_w" [ec] m₁ with
   | none => none
   | some (r₂, m₂) =>
   if r₂.headD 0 ≠ 0 then some (major, m₂) else
@@ -490,7 +490,7 @@ theorem m2cEta2_spec (p : Prog) (hp : p.lookup "m2c_eta2" = some m2cEta2L) (n : 
   rw [invoke_eq _ hp]
   simp only [callFn, m2cEta2L]
   vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-    callW_spec p n "reserved_contains", callW_spec p n "tower_slots_all",
+    callW_spec p n "reserved_contains_w", callW_spec p n "tower_slots_all",
     callW_spec p n "eta_fab_args", callW_spec p n "intern_const", callW_spec p n "mk_app_n",
     callW_spec p n "fab_scope_ok"] <;>
   simp_all [-UInt64.toNat_add, m2cEta2W, EREC, BinOp.eval, getElem_rdW', Cmp.eval, LocEq,
@@ -645,10 +645,10 @@ theorem resContLoop_step_spec (p : Prog) (k : Nat) (s₀ : St) :
 def rcW (k : Nat) (m : Mem) (x : Word) : Option (List Word × Mem) :=
   if rdW (m.arr64 PINS) 0 = 0 then none else rcLoopW m x (k + 1) 0
 
-theorem reservedContains_spec (p : Prog) (hp : p.lookup "reserved_contains" = some reservedContainsL)
+theorem reservedContains_spec (p : Prog) (hp : p.lookup "reserved_contains_w" = some reservedContainsL)
     (k : Nat) (s₀ : St) (x : Word) :
     ⦃fun s => s = s₀⦄
-    invoke p (exec p (k + 1)) "reserved_contains" [x]
+    invoke p (exec p (k + 1)) "reserved_contains_w" [x]
     ⦃fun r s' => LocEq s' s₀ ∧ rcW k s₀.mem x = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp, reservedContainsL_eq]
   simp only [callFn]
@@ -709,9 +709,9 @@ theorem rcLoopW_ok (m : Mem) (x : Word) :
 
 /-- **`reserved_contains` as a run**: memory unchanged, and the answer is `reservedBasisNames`'
 membership test. -/
-theorem callW_reservedContains (p : Prog) (hp : p.lookup "reserved_contains" = some reservedContainsL)
+theorem callW_reservedContains (p : Prog) (hp : p.lookup "reserved_contains_w" = some reservedContainsL)
     (n : Nat) (m : Mem) (a : AState) (hP : PinsFull m a.pins) (x : Word) (hx : HW x) (r : List Word)
-    (m' : Mem) (h : callW p n "reserved_contains" [x] m = some (r, m')) :
+    (m' : Mem) (h : callW p n "reserved_contains_w" [x] m = some (r, m')) :
     m' = m ∧ ∃ l, reservedBasisNames.run a = .ok (l, a) ∧ l.contains (decI x) = (r.headD 0 != 0) ∧
       ResH r := by
   cases n with

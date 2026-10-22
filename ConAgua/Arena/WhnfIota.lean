@@ -787,7 +787,7 @@ def iotaRecAtL : FunDecl := lfn (mode, vis, d, hd, so, sn)
 `loose_bvars_bounded_fast`/`leaf_guard`/`lit_to_ctor_if_nat` have none yet). -/
 def iotaProg : Prog :=
   [("is_ctor_app", isCtorAppL), ("is_str_lit", isStrLitL), ("find_rule", findRuleL),
-   ("rec_rule_k", recRuleKL), ("reserved_contains", reservedContainsL),
+   ("rec_rule_k", recRuleKL), ("reserved_contains_w", reservedContainsL),
    ("iota_ctor_never_prop", iotaCtorNeverPropL), ("e_rec_get", eRecGetL),
    ("const_name_of", constNameOfL), ("ind_caps_check", indCapsCheckL), ("iota_case3", iotaCase3L),
    ("tower_slots_all", towerSlotsAllL), ("eta_projs", etaProjsL),
@@ -810,7 +810,7 @@ structure IotaProg (p : Prog) : Prop where
   isStrLit : p.lookup "is_str_lit" = some isStrLitL
   findRule : p.lookup "find_rule" = some findRuleL
   recRuleK : p.lookup "rec_rule_k" = some recRuleKL
-  reservedContains : p.lookup "reserved_contains" = some reservedContainsL
+  reservedContains : p.lookup "reserved_contains_w" = some reservedContainsL
   iotaCtorNeverProp : p.lookup "iota_ctor_never_prop" = some iotaCtorNeverPropL
   eRecGet : p.lookup "e_rec_get" = some eRecGetL
   constNameOf : p.lookup "const_name_of" = some constNameOfL
@@ -907,8 +907,8 @@ def WscopedBFastOK (p : Prog) : Prop :=
     CoreSpec p n "wscoped_bfast" [d, e] (wscopedBFast coreWalkFuel d.toNat (decE e)) decBool s₀ a₀
       dn vis fe MM eb
 
-/-- `loose_bvars_bounded_fast(c, e)` refines `looseBVarsBoundedFast coreWalkFuel c.toNat e` (a
-phase-4 walk stub). -/
+/-- `loose_bvars_bounded_fast(4000000000, c, e)` refines `looseBVarsBoundedFast coreWalkFuel c.toNat e`
+(a phase-4 walk stub; the first argument is the L walk fuel of lane exprops4's `(f, k, e)`). -/
 def LooseBVarsBoundedFastOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb c e : Word), CoreS dn s₀.mem a₀ vis fe MM eb → HW e →
