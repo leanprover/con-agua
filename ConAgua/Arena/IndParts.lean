@@ -620,6 +620,7 @@ def blockShapePinsOk : FunDecl := lfn (nP, cto, ctl, lo, ll, ro, rl, cso, csl) l
 @[l_impl ConRon.Arena.blockShape?]
 def blockShapeResultSort : FunDecl := lfn (nP, io, il, ty) locals (h0, ok, bo, bl, body, g, x, y, z, s) {
   h0 := call sl_getd(io, il, 0, 0);
+  if nP + h0 < nP { abort };
   (ok, bo, bl, body) := call strip_pis(nP + h0, ty);
   if ok == 0 { s := call pin_word(53); return s };
   (g, x, y, z) := call e_view(body);
