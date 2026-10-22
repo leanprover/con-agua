@@ -190,13 +190,20 @@ theorem pre_call (hS : CoreS dn m a vis fe M eb)
   refine coreRef_bind c4 fun M₄ hS₄ => ?_
   have c5 := pinAt_call p hp hS₄ (k := 8) rfl h5
   refine coreRef_bind c5 fun M₅ hS₅ => ?_
-  have c6 := const_call p hp hS₅ c5.2.2.2 c2.2.2.2 h6
+  obtain ⟨hm1, -, hr1⟩ := callW_pinWord p hp.pinWord n m 53 r₁ m₁ h1
+  have hd2 := ls1_den p hp hS₁ c1.2.2.2 h2 (zero_den hS₁ (by rw [hr1, hm1]))
+  have hd5 := lss_den (op := pinListNil) (lss_den (lss_den (op := pinChar) hd2 (keeps_cpl_pinAt _)
+    c3 rfl) (keeps_cpl_constE _) c4 rfl) (keeps_cpl_pinAt _) c5 rfl
+  have c6 := const_call p hp hS₅ c5.2.2.2 c2.2.2.2 h6 hd5
   refine coreRef_bind c6 fun M₆ hS₆ => ?_
   have c7 := app_call p hp hS₆ h7
   refine coreRef_bind c7 fun M₇ hS₇ => ?_
   have c8 := pinAt_call p hp hS₇ (k := 9) rfl h8
   refine coreRef_bind c8 fun M₈ hS₈ => ?_
-  have c9 := const_call p hp hS₈ c8.2.2.2 c2.2.2.2 h9
+  have t8 := lss_den (op := pinListCons) (lss_den (op := internE (.app (decH r₆) (decH r₄)))
+    (lss_den (op := internE (.const (decI (r₅.headD 0)) (decLs r₂))) hd5 (keeps_cpl_internConst _ _)
+      c6 rfl) (keeps_cpl_internApp _ _) c7 rfl) (keeps_cpl_pinAt _) c8 rfl
+  have c9 := const_call p hp hS₈ c8.2.2.2 c2.2.2.2 h9 t8
   refine coreRef_bind c9 fun M₉ hS₉ => ?_
   have c10 := app_call p hp hS₉ h10
   refine coreRef_bind c10 fun M₁₀ hS₁₀ => ?_

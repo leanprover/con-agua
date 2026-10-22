@@ -461,6 +461,56 @@ theorem ls1_call (hS : CoreS dn m a vis fe M eb) {u : Word} (hu : HW u)
   exact ⟨hok, ⟨M, hS', KeptAll.refl _ _, hK.2.trans hst⟩, by rw [hres, decLs, hr], by
     unfold ResH; rw [← hr]; exact hw⟩
 
+/-- **`str_ls1` on a readable level makes a readable list** (at the state after it). -/
+theorem ls1_den (hS : CoreS dn m a vis fe M eb) {u : Word} (hu : HW u)
+    (h : callW p n "str_ls1" [u] m = some (r, m'))
+    (hd : ∃ l, denoteL a.store.ls (decI u) = some l) :
+    ∃ ls, denoteLs (AM.st (internLsNode [decI u]) a).store.lss (decI (r.headD 0)) = some ls := by
+  have R := ls1_call p hp hS hu h
+  have hrun := AM.run_of_ok _ _ R.1
+  rw [R.2.2.1] at hrun
+  exact (denoteLs_internLsNode hS.arena.1
+    (fun c hc => by rw [List.mem_singleton] at hc; subst hc; exact hd) hrun).1
+
 end calls
+
+/-! ## Readbacks across steps that keep the level stores -/
+
+theorem lss_st {α : Type} [Inhabited α] {op : AM α} {a : AState} (hk : Keeps cpl op)
+    (hok : AM.ok op a) : (AM.st op a).store.lss = a.store.lss :=
+  congrArg (fun x => x.2.2) (Keeps.run hk (AM.run_of_ok _ _ hok))
+
+/-- A list readback carried across a step that keeps the level stores. The step's refinement `hc`
+may name the step `op'` differently from the caller's `op` (`hop`, by `rfl`): stating the two apart
+keeps the unifier from running the step to compare them. -/
+theorem lss_den {α : Type} [Inhabited α] {op op' : AM α} {a : AState} {x : LsIdx}
+    {dec : List Word → α} {dn : NIdx → Option ConLeche.Name} {m₀ m : Mem} {vis : Word} {fe : IFEnv}
+    {M : ModeMaps} {eb : Word} {r : List Word} {ok : List Word → Prop}
+    (h : ∃ ls, denoteLs a.store.lss x = some ls) (hk : Keeps cpl op)
+    (hc : CoreRef op' a dec dn m₀ vis fe M eb r m ok) (hop : op = op') :
+    ∃ ls, denoteLs (AM.st op a).store.lss x = some ls := by
+  subst hop; rw [lss_st hk hc.1]; exact h
+
+/-- A level readback carried across a step that keeps the level stores (as `lss_den`). -/
+theorem ls_den {α : Type} [Inhabited α] {op op' : AM α} {a : AState} {x : LIdx}
+    {dec : List Word → α} {dn : NIdx → Option ConLeche.Name} {m₀ m : Mem} {vis : Word} {fe : IFEnv}
+    {M : ModeMaps} {eb : Word} {r : List Word} {ok : List Word → Prop}
+    (h : ∃ l, denoteL a.store.ls x = some l) (hk : Keeps cpl op)
+    (hc : CoreRef op' a dec dn m₀ vis fe M eb r m ok) (hop : op = op') :
+    ∃ l, denoteL (AM.st op a).store.ls x = some l := by
+  subst hop
+  show ∃ l, denoteL (AM.st op a).store.lss.ls x = some l
+  rw [lss_st hk hc.1]; exact h
+
+theorem keeps_cpl_pinAt (i : Nat) : Keeps cpl (pinAt i) := by prim_keeps pinAt
+
+theorem keeps_cpl_constE (x : NIdx) : Keeps cpl (constE x) :=
+  Keeps.bind (by unfold emptyLevels; prim_keeps pinEmptyLevels) fun _ => keeps_cpl_internConst _ _
+
+/-- The pinned zero level reads back. -/
+theorem zero_den {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {vis : Word}
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) {w : Word}
+    (hw : w = pinW m (53 : Word).toNat) : ∃ l, denoteL a.store.ls (decI w) = some l := by
+  subst hw; have := hS.den.zero; rw [hS.pins.zeroLevel] at this; exact this
 
 end L.Arena
