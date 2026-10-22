@@ -564,16 +564,19 @@ theorem natOpGuard_ref (hN : NatGuardProg p) (c : Word) :
   rw [h7, ngK7_some] at hw
   obtain ⟨x7, a7, hrun7, hS7, hg7, hx7⟩ := slContains_ref (dn := dn) (vis := vis) (fe := fe)
     hN.lSlContains (r6.headD 0) (r6.tail.headD 0) c dm hc k m6 a6 r7 m7 ⟨hS6, hd6⟩ h7
-  have hx7' : x7 = dm.contains (decI c) := by
-    have := hrun7
-    simp only [StateT.run_pure, Except.ok.injEq, Prod.mk.injEq] at this
-    exact this.1.symm
-  have hcond : (decI c == decI (r4.headD 0) || decI c == decI (r5.headD 0) || dm.contains (decI c)) =
+  have hx7a : (Except.ok (dm.contains (decI c), a6) : Except CheckError _) = Except.ok (x7, a7) := hrun7
+  have hx7' : x7 = dm.contains (decI c) := (Prod.mk.inj (Except.ok.inj hx7a)).1.symm
+  have ha7 : a7 = a6 := (Prod.mk.inj (Except.ok.inj hx7a)).2.symm
+  subst ha7
+  have hcond : ((decI c : NIdx) == decI (r4.headD 0) || (decI c : NIdx) == decI (r5.headD 0) || dm.contains (decI c)) =
       decide (c = r4.headD 0 ∨ c = r5.headD 0 ∨ r7.headD 0 ≠ 0) := by
     rw [decI_beq_word hc hp4, decI_beq_word hc hp5, ← hx7']
     have := hx7.1
     rw [← this]
-    by_cases h : r7.headD 0 = 0 <;> simp [h]
+    have hb : (r7.headD 0 != 0) = decide (r7.headD 0 ≠ 0) := by
+      rw [Bool.eq_iff_iff]; simp
+    rw [hb]
+    simp only [Bool.decide_or, Bool.or_assoc]
   have hg67 : IWGrow m m7 := hg1.trans (hg2.trans (hg3.trans (hg6.trans hg7)))
   by_cases hP : c = r4.headD 0 ∨ c = r5.headD 0 ∨ r7.headD 0 ≠ 0
   · rw [if_pos hP] at hw
@@ -590,7 +593,7 @@ theorem natOpGuard_ref (hN : NatGuardProg p) (c : Word) :
     simp only [StateT.run_bind, hrun1, exc_ok_bind', hx, Bool.not_true, Bool.false_eq_true,
       if_false, hrun2, hrun3, hx', natBeqName_eq, natBleName_eq, e4, e5, hrun6, hrun7, hcond,
       decide_eq_true hP, Bool.not_false, if_true]
-    sorry
+    exact hrun8
   · rw [if_neg hP] at hw
     simp only [Option.some.injEq, Prod.mk.injEq] at hw
     obtain ⟨rfl, rfl⟩ := hw
@@ -598,8 +601,14 @@ theorem natOpGuard_ref (hN : NatGuardProg p) (c : Word) :
     simp only [StateT.run_bind, hrun1, exc_ok_bind', hx, Bool.not_true, Bool.false_eq_true,
       if_false, hrun2, hrun3, hx', natBeqName_eq, natBleName_eq, e4, e5, hrun6, hrun7, hcond,
       decide_eq_false hP]
-    sorry
+    rfl
 
+
+@[refines ConRon.Arena.natOpGuard]
+theorem natOpGuard_refines (hN : NatGuardProg p) (c : Word) :
+    RefAM p "nat_op_guard" [vis, c] (fun m a => StageR dn vis fe m a ∧ H c)
+      (natOpGuard fe (decI c)) (KeepPost dn vis fe decW0B) :=
+  (natOpGuard_ref hN c).refAM
 
 end guard
 
