@@ -443,16 +443,16 @@ namespace L.Ind
 
 open L.Arena
 
-/-- The twin's `.fvar` arm of `nestPos`, up to the field kind. -/
-def pfT (fe : IFEnv) (c : NestCtx) (prog : List NestHole) (kb hi i : Nat) (args : List EIdx) :
-    AM NestFieldKind :=
-  match ConRon.Arena.nestHoleAt c prog i with
+/-- The `.fvar` arm of `nestPos`, its result kind to `K` (the twin's text). -/
+def pfK {β : Type} (fe : IFEnv) (ctx : NestCtx) (prog : List NestHole) (kb hi i : Nat) (args : List EIdx)
+    (K : NestFieldKind → AM β) : AM β :=
+  match ConRon.Arena.nestHoleAt ctx prog i with
   | none => fail nestNonValid
   | some h => do
-    if ← args.anyM (fun x => ConRon.Arena.nestOcc c.names c.nP hi x) then fail nestNonValid
+    if ← args.anyM (fun x => ConRon.Arena.nestOcc ctx.names ctx.nP hi x) then fail nestNonValid
     else do
       let ar ← ConRon.Arena.nestArity fe h.key.cname
-      if args.length + h.key.ds.length == ar then pure (holeKind c kb i) else fail nestNonValid
+      if args.length + h.key.ds.length == ar then K (holeKind ctx kb i) else fail nestNonValid
 
 theorem nestHoleAt_nP {c : NestCtx} {prog : List NestHole} {i : Nat} {h : NestHole}
     (e : ConRon.Arena.nestHoleAt c prog i = some h) : c.nP ≤ i := by
@@ -485,7 +485,8 @@ theorem pfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (h
     (h : pfW k m vis ctx po pl kb hi i aO aL = some (r, m')) (hS : StageR dn vis fe m a)
     (hU : UCtx dn vis fe m ctx c) (hpr : HSl m po.toNat pl.toNat prog) (hhi : c.hiAt 0 < 2 ^ 64)
     (hargs : decHL m aO.toNat aL.toNat = some args) (hab : aO.toNat + aL.toNat ≤ iwTop m) :
-    ∃ x a', (pfT fe c prog kb.toNat hi.toNat i.toNat args).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
+    ∃ x a', (∀ {β : Type} (K : NestFieldKind → AM β),
+      (pfK fe c prog kb.toNat hi.toNat i.toNat args K).run a = (K x).run a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' ∧ decNFK (r.headD 0) = some x := by
   cases k with
   | zero => simp [pfW] at h
@@ -565,10 +566,9 @@ theorem pfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (h
   have hU3 := (hU1.grow hg2).grow hg3
   have htop3 : iwTop m3 < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.2.1 hS3.2.2.2.1
   have hw := hkW_ok (by simpa [hkWf] using hk) hU3.dec hU3.inn htop3 hhi (nestHoleAt_nP hnh)
-  refine ⟨holeKind c kb.toNat i.toNat, a3, ?_, hS3, (hg1.trans hg2).trans hg3, by simpa using hw⟩
-  simp only [pfT, hnh, StateT.run_bind, hrunoa, except_ok_bind, Bool.false_eq_true, ite_false, hrun3, heq,
+  refine ⟨holeKind c kb.toNat i.toNat, a3, fun K => ?_, hS3, (hg1.trans hg2).trans hg3, by simpa using hw⟩
+  simp only [pfK, hnh, StateT.run_bind, hrunoa, except_ok_bind, Bool.false_eq_true, ite_false, hrun3, heq,
     beq_self_eq_true, ite_true]
-  rfl
 
 end L.Ind
 
@@ -815,20 +815,22 @@ theorem nestCtorsResOk_spec (p : Prog) (hl : NoLook p) (hoa : p.lookup "nest_occ
         nestResHead_spec p hrh n, stubM_spec p "get_app_args_f" n, nestOccAny_spec p hl hoa n] <;>
       finish (gen := 20) [roW, roK0_eq, rdW_eq]
 
-/-- The twin's result check of `nestCtors`. -/
-def roT (c : NestCtx) (hi : Nat) (cur : EIdx) : AM Bool := do
-  if ← nestResHead cur then do
-    let args ← getAppArgs coreWalkFuel cur
-    let occ ← args.anyM fun x => ConRon.Arena.nestOcc c.names c.nP hi x
-    pure !occ
-  else pure false
+/-- The twin's result check of `nestCtors`, the rest to `K` (the twin's text). -/
+def roK {β : Type} (c : NestCtx) (hi : Nat) (cur : EIdx) (K : Bool → AM β) : AM β := do
+  let resOk ← do
+    if ← nestResHead cur then do
+      let args ← getAppArgs coreWalkFuel cur
+      let occ ← args.anyM fun x => ConRon.Arena.nestOcc c.names c.nP hi x
+      pure !occ
+    else pure false
+  K resOk
 
 theorem roW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (hM : PosMemo dn vis fe)
     {k : Nat} {m m' : Mem} {a : AState} {ctx hi cur : Word} {c : NestCtx} {r : List Word}
     (h : roW k m ctx hi cur = some (r, m')) (hS : StageR dn vis fe m a) (hU : UCtx dn vis fe m ctx c)
     (hcur : H cur) :
-    ∃ b a', (roT c hi.toNat (decI cur)).run a = .ok (b, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
-      r.headD 0 = (if b then 1 else 0) := by
+    ∃ b a', (∀ {β : Type} (K : Bool → AM β), (roK c hi.toNat (decI cur) K).run a = (K b).run a') ∧
+      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) := by
   cases k with
   | zero => simp [roW] at h
   | succ k =>
@@ -843,8 +845,8 @@ theorem roW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (h
   · rw [if_pos h0] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
-    refine ⟨false, a1, ?_, hS1, hg1, rfl⟩
-    simp only [roT, StateT.run_bind, hrun1, except_ok_bind, h0, bne_self_eq_false, Bool.false_eq_true, ite_false]
+    refine ⟨false, a1, fun K => ?_, hS1, hg1, rfl⟩
+    simp only [roK, StateT.run_bind, hrun1, except_ok_bind, h0, bne_self_eq_false, Bool.false_eq_true, ite_false]
     rfl
   rw [if_neg h0] at h
   have hne : (r1.headD 0 != 0) = true := by simpa using h0
@@ -875,7 +877,7 @@ theorem roW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (h
     hn2 hne2 hdA (fun j hj => by omega)
   rw [hnP2] at hrunoa
   refine ⟨!b, a2, ?_, hS3, (hg1.trans hg2).trans hg3, ?_⟩
-  · simp only [roT, StateT.run_bind, hrun1, except_ok_bind, hne, ite_true, hrun2, hrunoa]; rfl
+  · intro β K; simp only [roK, StateT.run_bind, hrun1, except_ok_bind, hne, ite_true, hrun2, hrunoa]; rfl
   · rw [hr3]; cases b <;> rfl
 
 end L.Ind
