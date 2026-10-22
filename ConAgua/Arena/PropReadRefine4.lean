@@ -285,4 +285,226 @@ theorem hpw_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
 
 end hpw
 
+/-- The loop only spends fuel. -/
+theorem ppLoopW_le (m : Mem) : ∀ (N : Nat) (f e f' e' : Word), f.toNat ≤ N →
+    ppLoopW m f e = some (f', e') → f'.toNat ≤ f.toNat := by
+  intro N
+  induction N with
+  | zero =>
+    intro f e f' e' hN hL
+    rw [ppLoopW] at hL
+    split at hL
+    · have : f = 0 := UInt64.toNat_inj.mp (by simp; omega)
+      simp [this] at hL
+    · cases hL; exact Nat.le_refl _
+  | succ N ih =>
+    intro f e f' e' hN hL
+    rw [ppLoopW] at hL
+    split at hL
+    · split at hL
+      · cases hL
+      · rename_i hc0
+        have h1 := pr_word_sub1 f hc0
+        have h2 := pr_word_ne0 f hc0
+        split at hL
+        · cases hL
+        split at hL
+        · split at hL
+          · cases hL
+          · have := ih _ _ _ _ (by omega) hL; omega
+        split at hL
+        · split at hL
+          · cases hL
+          · have := ih _ _ _ _ (by omega) hL; omega
+        split at hL
+        · cases hL
+        · have := ih _ _ _ _ (by omega) hL; omega
+    · cases hL; exact Nat.le_refl _
+
+theorem coreWalkFuel_word : (4000000000 : Word).toNat = coreWalkFuel := by
+  simp [coreWalkFuel]
+
+section prf
+variable {p : Prog} (hp : PropReadProg p) (hden : CoreDen) (hlps : ConstLpsDen)
+  (hfp : FindProjOK p) (hek : ErecKept p) (hpf : ProjFound p)
+include hp hden hlps hfp hek hpf
+
+/-- **`proof_pw` refines `proofPW`.** -/
+@[refines ConRon.Arena.proofPW]
+theorem prf_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) {f e : Word}
+    (hf : f.toNat ≤ coreWalkFuel) (he : HW e) {r : List Word}
+    (hc : callW p n "proof_pw" [vis, f, e] m = some (r, m')) :
+    ∃ res a', (proofPW fe f.toNat (decE e)).run a = .ok (res, a') ∧
+      CoreAfter dn m m' a' vis fe M eb ∧
+      PWD (nameN a'.store.lss.ls.ns) m' (r.headD 0) (r.tail.headD 0) (r.tail.tail.headD 0) res := by
+  cases n with
+  | zero => rw [callW_zero] at hc; cases hc
+  | succ n =>
+  obtain ⟨t, ht, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (proofPW_spec p hp n ⟨m, Locals.init []⟩ vis f e) hc
+  rw [ht] at hW
+  generalize r.headD 0 = x₀ at hW ⊢
+  generalize r.tail.headD 0 = x₁ at hW ⊢
+  generalize r.tail.tail.headD 0 = x₂ at hW ⊢
+  have hR := hS.arena.1
+  unfold prfW at hW
+  rcases hL : ppLoopW m f e with _ | ⟨f', e'⟩
+  · rw [hL] at hW; cases hW
+  rw [hL] at hW
+  simp only at hW
+  obtain ⟨hrun, he', h5, h7, h4⟩ := ppLoopW_ok m a hR fe _ f e f' e' (Nat.le_refl _) he hL
+  by_cases hf0 : f' = 0
+  · simp [hf0] at hW
+  simp only [hf0, ↓reduceIte] at hW
+  rcases hc2 : callW p n "head_proof_pw" [vis, f' - 1, e'] m with _ | ⟨r₂, m₂⟩
+  · rw [hc2] at hW; cases hW
+  rw [hc2] at hW
+  simp only [t3W, Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨rfl, rfl, rfl, rfl⟩ := hW
+  have hfm := pr_word_sub1 f' hf0
+  have hle : f'.toNat ≤ f.toNat := ppLoopW_le m _ f e f' e' (Nat.le_refl _) hL
+  obtain ⟨res, a', hrun₂, hA, hd⟩ := hpw_call hp hden hlps hfp hek hpf hS (by omega) he' hc2
+  refine ⟨res, a', ?_, hA, hd⟩
+  obtain ⟨j, hj⟩ := Nat.exists_eq_succ_of_ne_zero (pr_word_ne0 f' hf0)
+  have hj' : j = (f' - 1).toNat := by omega
+  have t5 : ((decE e').tag == ETag.lam) = false := by
+    rw [tag_beq_w e' he' 5 (by decide) ETag.lam rfl 5 rfl]; simp [h5]
+  have t7 : ((decE e').tag == ETag.letE) = false := by
+    rw [tag_beq_w e' he' 7 (by decide) ETag.letE rfl 7 rfl]; simp [h7]
+  have t4 : ((decE e').tag == ETag.app) = false := by
+    rw [tag_beq_w e' he' 4 (by decide) ETag.app rfl 4 rfl]; simp [h4]
+  rw [hrun, hj, proofPW, hj']
+  simp only [t5, t7, t4, Bool.false_eq_true, ↓reduceIte]
+  exact hrun₂
+
+end prf
+
+/-! ## The two arms -/
+
+/-- `notProofFast`'s answer on a datum. -/
+def npfB : Option PropWhen → Bool
+  | some pw => !pw.isProp
+  | none => false
+
+/-- `isProofFast`'s answer on a datum. -/
+def ipfB : Option PropWhen → Bool
+  | some pw => pw.isProp
+  | none => false
+
+/-- The twin's verdicts on a datum, as the L words decide them. -/
+theorem npfV_ok {N : Word → Name → Prop} {m : Mem} {k o c : Word} {res : Option PropWhen}
+    (h : PWD N m k o c res) :
+    decBool [npfV k c] = npfB res ∧ decBool [ipfV k c] = ipfB res ∧
+      ResH [npfV k c] ∧ ResH [ipfV k c] := by
+  have r01 : ∀ w : Word, w = 0 ∨ w = 1 → ResH [w] := by
+    rintro w (rfl | rfl) <;> (unfold ResH HW; decide)
+  rcases res with _ | _ | ps
+  · simp only [PWD] at h; subst h
+    refine ⟨rfl, rfl, r01 _ (Or.inl rfl), r01 _ (Or.inl rfl)⟩
+  · simp only [PWD] at h; subst h
+    refine ⟨rfl, rfl, r01 _ (Or.inr rfl), r01 _ (Or.inl rfl)⟩
+  · obtain ⟨rfl, hn, -⟩ := h
+    have hc := hn.nil_iff
+    by_cases c0 : c = 0
+    · have := hc.mp c0; subst this
+      simp only [npfV, ipfV, npfB, ipfB, c0, and_self, ↓reduceIte, show (2 : Word) ≠ 0 by decide]
+      exact ⟨rfl, rfl, r01 _ (Or.inl rfl), r01 _ (Or.inr rfl)⟩
+    · have hne : ps ≠ [] := fun e => c0 (hc.mpr e)
+      have hip : (PropWhen.ifAllZero ps).isProp = false := by
+        rcases ps with _ | ⟨x, xs⟩
+        · exact absurd rfl hne
+        · rfl
+      simp only [npfV, ipfV, npfB, ipfB, c0, and_false, ↓reduceIte, show (2 : Word) ≠ 0 by decide, hip]
+      exact ⟨rfl, rfl, r01 _ (Or.inr rfl), r01 _ (Or.inl rfl)⟩
+
+section arms
+variable {p : Prog} (hp : PropReadProg p) (hden : CoreDen) (hlps : ConstLpsDen)
+  (hfp : FindProjOK p) (hek : ErecKept p) (hpf : ProjFound p)
+include hp hden hlps hfp hek hpf
+
+/-- The common part of the two arms: after the heap reset, `proof_pw` at `coreWalkFuel`. -/
+theorem arm_run {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) {x : Word} (hx : HW x)
+    {r : List Word} (hc : callW p n "proof_pw" [vis, 4000000000, x] (m.set64 CTL 192 0) = some (r, m')) :
+    ∃ res a', (proofPW fe coreWalkFuel (decE x)).run a = .ok (res, a') ∧
+      CoreAfter dn m m' a' vis fe M eb ∧
+      PWD (nameN a'.store.lss.ls.ns) m' (r.headD 0) (r.tail.headD 0) (r.tail.tail.headD 0) res := by
+  obtain ⟨hS₀, hK₀⟩ := hS.frame (reset_frame m) (by simp) (fun x hx => by simp at hx; subst hx; decide)
+  obtain ⟨res, a', hrun, hA, hd⟩ := prf_call hp hden hlps hfp hek hpf hS₀
+    (Nat.le_of_eq coreWalkFuel_word) hx hc
+  rw [coreWalkFuel_word] at hrun
+  exact ⟨res, a', hrun, CoreAfter.comp (KeptAll.refl _ _) hK₀ hA, hd⟩
+
+/-- **`not_proof_fast(vis, a)` refines `notProofFast fe coreWalkFuel a`**, from the program, the
+stored levels' readbacks (`CoreDen`), the constants' level-parameter names (`ConstLpsDen`), and
+lane `whnf3`'s `find_proj` (`FindProjOK`, `ErecKept`, `ProjFound`). -/
+@[refines ConRon.Arena.notProofFast]
+theorem notProofFast_core : NotProofFastOK p := by
+  intro n s₀ a₀ dn vis fe M eb x hS hx
+  cases n with
+  | zero =>
+    unfold CoreSpec
+    rw [invoke_eq _ hp.npf]
+    simp only [callFn]
+    vcgen [exec] <;> grind
+  | succ n =>
+  apply L.M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, -, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs hrun
+    (notProofFast_spec p hp n s₀ vis x)
+  subst hs
+  refine ⟨hloc, ?_⟩
+  rcases hc : callW p n "proof_pw" [vis, 4000000000, x] (s.mem.set64 CTL 192 0) with _ | ⟨r₁, m₁⟩
+  · rw [hc] at hW; cases hW
+  rw [hc] at hW
+  simp only [armK, Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨hr, rfl⟩ := hW
+  obtain ⟨res, a', hrun', hA, hd⟩ := arm_run hp hden hlps hfp hek hpf hS hx hc
+  obtain ⟨hv, -, hok', -⟩ := npfV_ok hd
+  have hT : (notProofFast fe coreWalkFuel (decE x)).run a₀ =
+      .ok (npfB res, a') := by
+    simp only [notProofFast, StateT.run_bind, hrun', except_ok_bind]
+    cases res <;> rfl
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hT
+  refine ⟨hok, by rw [hst]; exact hA, ?_, ?_⟩
+  · rw [hres, ← hv]; simp only [decBool, hr]; rfl
+  · unfold ResH; rw [← hr]; exact hok'
+
+/-- **`is_proof_fast(vis, a)` refines `isProofFast fe coreWalkFuel a`** (hypotheses as
+`notProofFast_core`). -/
+@[refines ConRon.Arena.isProofFast]
+theorem isProofFast_core : IsProofFastOK p := by
+  intro n s₀ a₀ dn vis fe M eb x hS hx
+  cases n with
+  | zero =>
+    unfold CoreSpec
+    rw [invoke_eq _ hp.ipf]
+    simp only [callFn]
+    vcgen [exec] <;> grind
+  | succ n =>
+  apply L.M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, -, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs hrun
+    (isProofFast_spec p hp n s₀ vis x)
+  subst hs
+  refine ⟨hloc, ?_⟩
+  rcases hc : callW p n "proof_pw" [vis, 4000000000, x] (s.mem.set64 CTL 192 0) with _ | ⟨r₁, m₁⟩
+  · rw [hc] at hW; cases hW
+  rw [hc] at hW
+  simp only [armK, Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨hr, rfl⟩ := hW
+  obtain ⟨res, a', hrun', hA, hd⟩ := arm_run hp hden hlps hfp hek hpf hS hx hc
+  obtain ⟨-, hv, -, hok'⟩ := npfV_ok hd
+  have hT : (isProofFast fe coreWalkFuel (decE x)).run a₀ =
+      .ok (ipfB res, a') := by
+    simp only [isProofFast, StateT.run_bind, hrun', except_ok_bind]
+    cases res <;> rfl
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hT
+  refine ⟨hok, by rw [hst]; exact hA, ?_, ?_⟩
+  · rw [hres, ← hv]; simp only [decBool, hr]; rfl
+  · unfold ResH; rw [← hr]; exact hok'
+
+end arms
+
 end L.Arena

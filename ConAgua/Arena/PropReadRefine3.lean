@@ -61,6 +61,7 @@ section calls
 variable {p : Prog} (hp : PropReadProg p) (hden : CoreDen)
 include hp hden
 
+@[refines ConRon.Arena.residualPW]
 theorem rpw_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) {fl h : Word}
     (hh : fl ≠ 0 → HW h) {r : List Word} (hc : callW p n "residual_pw" [fl, h] m = some (r, m')) :
@@ -75,6 +76,7 @@ theorem rpw_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
   rw [ht] at hW
   exact rpw_ok hp hden hS hh hW
 
+@[refines ConRon.Arena.substPWAt]
 theorem spa_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb)
     {lo lc us k o c : Word} {lps : List NIdx} {pw : PropWhen}
@@ -266,6 +268,7 @@ variable {p : Prog} (hp : PropReadProg p) (hden : CoreDen) (hlps : ConstLpsDen)
 include hp hden hlps
 
 /-- **`head_type_pw` refines `headTypePW`.** -/
+@[refines ConRon.Arena.headTypePW]
 theorem htp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) {f root d h k : Word}
     (hf : f.toNat ≤ coreWalkFuel) (hroot : HW root) (hh : HW h) {r : List Word}
@@ -411,6 +414,7 @@ theorem htp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a 
     exact ⟨none, a, by rw [hpre]; rfl, RdAfter.refl hS, rfl⟩
 
 /-- **`type_sort_pw` refines `typeSortPW`.** -/
+@[refines ConRon.Arena.typeSortPW ConRon.Arena.typeSortPWGo]
 theorem tsp_call {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) {f rt : Word}
     (hf : f.toNat ≤ coreWalkFuel) (hrt : HW rt) {r : List Word}

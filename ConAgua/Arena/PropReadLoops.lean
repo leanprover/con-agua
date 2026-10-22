@@ -103,6 +103,7 @@ theorem binderDomL_spec (hp : p.lookup "binder_dom" = some binderDomL) (n : Nat)
 end bdLoop
 
 /-- **The model of `binder_dom` refines `binderDom`** (structural on `k`). -/
+@[refines ConRon.Arena.binderDom]
 theorem bdW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
     ∀ (N : Nat) (k e fl v : Word), k.toNat ≤ N → HW e → bdW m k e = some (fl, v) →
       (binderDom k.toNat (decE e)).run a = .ok (decOpt fl v, a) ∧ (fl ≠ 0 → HW v) := by
@@ -261,6 +262,7 @@ theorem gafLoopW_numArgs (m : Mem) (a : AState) (hR : ArenaR m a) :
       rfl
 
 /-- **A run of `app_count_at` model refines `getAppFn` and `numArgs`** at the counter. -/
+@[refines ConRon.Arena.numArgs]
 theorem acaW_ok {m : Mem} {a : AState} (hR : ArenaR m a) {e f c h : Word} (he : HW e)
     (hW : acaW m e f = some (c, h)) :
     (getAppFn f.toNat (decE e)).run a = .ok (decE h, a) ∧
@@ -464,6 +466,7 @@ theorem lpLoopW_ok (m : Mem) (a : AState) (hR : ArenaR m a) :
       exact ⟨rfl, he, rfl, hc⟩
 
 /-- **`lam_proj`'s model refines `lamProj?`.** -/
+@[refines ConRon.Arena.lamProj?]
 theorem lamProjW_ok {m : Mem} {a : AState} (hR : ArenaR m a) {f k e r0 r1 r2 : Word} (he : HW e)
     (hkf : k.toNat + f.toNat < 2 ^ 64) (hW : lamProjW m f k e = some (r0, r1, r2)) :
     (lamProj? f.toNat k.toNat (decE e)).run a =

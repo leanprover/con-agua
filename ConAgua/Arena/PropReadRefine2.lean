@@ -290,6 +290,7 @@ variable {p : Prog} (hp : PropReadProg p)
 include hp
 
 /-- **`unwrap_id_defs` refines `unwrapIdDefs`.** -/
+@[refines ConRon.Arena.unwrapIdDefs]
 theorem uid_ok : ∀ (n : Nat) {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState}
     {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb)
     {f k e : Word} (hf : f.toNat ≤ coreWalkFuel) (he : HW e) {r : List Word}
@@ -336,6 +337,7 @@ theorem uid_ok : ∀ (n : Nat) {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
   exact hrun₂
 
 /-- **`peel_pis_w` refines `peelPisW`.** -/
+@[refines ConRon.Arena.peelPisW]
 theorem ppw_ok : ∀ (n : Nat) {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState}
     {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb)
     {f k e : Word} (hf : f.toNat ≤ coreWalkFuel) (he : HW e) {r : List Word}
