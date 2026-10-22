@@ -390,15 +390,6 @@ theorem whnfApp_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (
       (whnfApp (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE v) (decE hd) vargs
         (same != 0) args nodes i.toNat) decStep s₀ a₀ dn vis fe MM eb ResW := sorry
 
-/-- **`beta_peel` refines `betaPeel t #[a] args i`.** -/
-@[refines ConRon.Arena.betaPeel]
-theorem betaPeel_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb t a ao an i : Word) (args : Array EIdx)
-    (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (ht : HW t) (ha : HW a) (har : SpineR s₀.mem ao an args)
-    (hlo : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat) :
-    CoreSpec p (n + 1) "beta_peel" [t, a, ao, an, i]
-      (betaPeel (decE t) #[decE a] args i.toNat) decStep s₀ a₀ dn vis fe MM eb ResW := sorry
-
 /-- **`whnf_core_step_proj` refines `whnfCoreStepProj`.** -/
 @[refines ConRon.Arena.whnfCoreStepProj]
 theorem whnfCoreStepProj_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F)
