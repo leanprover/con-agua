@@ -173,7 +173,7 @@ variable (p : Prog) (n : Nat) (m : Mem) (h ko kc vo vc fu : Word)
 
 theorem ilwDispW_sc (hs : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) :
     ilwDispW p n m h ko kc vo vc fu = none := by
-  rw [ilwDispW]; simp only [hs, and_self, ↓reduceIte]
+  rw [ilwDispW, if_pos hs]
 
 theorem ilwDispW_bvar (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) (hg : h >>> 28 = 0) :
     ilwDispW p n m h ko kc vo vc fu =
@@ -221,31 +221,31 @@ theorem ilwDispW_app (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) (hg :
     ilwDispW p n m h ko kc vo vc fu =
       if rdW (m.arr64 CTL) (4 + tierW h) ≤ idxW h then none
       else ilwHd (callW p n "lp_app" [h, ko, kc, vo, vc, fu - 1] m) :=
-  ilwDispW_arm p n m h ko kc vo vc fu 4 4 "lp_app" hs hg (.inr (.inl ⟨rfl, rfl, rfl⟩))
+  ilwDispW_arm p n m h ko kc vo vc fu 4 4 "lp_app" hs hg (.inr ((.inl ⟨rfl, rfl, rfl⟩)))
 
 theorem ilwDispW_lam (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) (hg : h >>> 28 = 5) :
     ilwDispW p n m h ko kc vo vc fu =
       if rdW (m.arr64 CTL) (28 + tierW h) ≤ idxW h then none
       else ilwHd (callW p n "lp_lam" [h, ko, kc, vo, vc, fu - 1] m) :=
-  ilwDispW_arm p n m h ko kc vo vc fu 5 28 "lp_lam" hs hg (.inr .inr (.inl ⟨rfl, rfl, rfl⟩))
+  ilwDispW_arm p n m h ko kc vo vc fu 5 28 "lp_lam" hs hg (.inr (.inr ((.inl ⟨rfl, rfl, rfl⟩))))
 
 theorem ilwDispW_forall (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) (hg : h >>> 28 = 6) :
     ilwDispW p n m h ko kc vo vc fu =
       if rdW (m.arr64 CTL) (30 + tierW h) ≤ idxW h then none
       else ilwHd (callW p n "lp_forall" [h, ko, kc, vo, vc, fu - 1] m) :=
-  ilwDispW_arm p n m h ko kc vo vc fu 6 30 "lp_forall" hs hg (.inr .inr .inr (.inl ⟨rfl, rfl, rfl⟩))
+  ilwDispW_arm p n m h ko kc vo vc fu 6 30 "lp_forall" hs hg (.inr (.inr (.inr ((.inl ⟨rfl, rfl, rfl⟩)))))
 
 theorem ilwDispW_let (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) (hg : h >>> 28 = 7) :
     ilwDispW p n m h ko kc vo vc fu =
       if rdW (m.arr64 CTL) (20 + tierW h) ≤ idxW h then none
       else ilwHd (callW p n "lp_let" [h, ko, kc, vo, vc, fu - 1] m) :=
-  ilwDispW_arm p n m h ko kc vo vc fu 7 20 "lp_let" hs hg (.inr .inr .inr .inr (.inl ⟨rfl, rfl, rfl⟩))
+  ilwDispW_arm p n m h ko kc vo vc fu 7 20 "lp_let" hs hg (.inr (.inr (.inr (.inr ((.inl ⟨rfl, rfl, rfl⟩))))))
 
 theorem ilwDispW_proj (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) (hg : h >>> 28 = 9) :
     ilwDispW p n m h ko kc vo vc fu =
       if rdW (m.arr64 CTL) (32 + tierW h) ≤ idxW h then none
       else ilwHd (callW p n "lp_proj" [h, ko, kc, vo, vc, fu - 1] m) :=
-  ilwDispW_arm p n m h ko kc vo vc fu 9 32 "lp_proj" hs hg (.inr .inr .inr .inr .inr ⟨rfl, rfl, rfl⟩)
+  ilwDispW_arm p n m h ko kc vo vc fu 9 32 "lp_proj" hs hg (.inr (.inr (.inr (.inr (.inr (⟨rfl, rfl, rfl⟩))))))
 
 theorem ilwDispW_other (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) (h0 : h >>> 28 ≠ 0)
     (h1 : h >>> 28 ≠ 1) (h2 : h >>> 28 ≠ 2) (h3 : h >>> 28 ≠ 3) (h4 : h >>> 28 ≠ 4)
@@ -380,16 +380,26 @@ def ilwLetW (p : Prog) (n : Nat) (m : Mem) (h ko kc vo vc fu : Word) : Option (W
     ko kc vo vc fu
     (callW p n "lp_go" [rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3), ko, kc, vo, vc, fu] m))
 
+/-- `internRebuiltProj`. -/
+def ilwRbProj (p : Prog) (n : Nat) (m₁ : Mem) (h nm ix e x : Word) : Option (Word × Mem) :=
+  if x = e then some (h, m₁) else ilwChk (callW p n "mk_proj" [nm, ix, x] m₁)
+
+theorem ilwRbProj_same (p : Prog) (n : Nat) (m₁ : Mem) (h nm ix e x : Word) (hx : x = e) :
+    ilwRbProj p n m₁ h nm ix e x = some (h, m₁) := by simp [ilwRbProj, hx]
+theorem ilwRbProj_new (p : Prog) (n : Nat) (m₁ : Mem) (h nm ix e x : Word) (hx : ¬ x = e) :
+    ilwRbProj p n m₁ h nm ix e x = ilwChk (callW p n "mk_proj" [nm, ix, x] m₁) := by
+  simp only [ilwRbProj, hx, ↓reduceIte]
+
+grind_pattern [arena_grind] ilwRbProj_same => ilwRbProj p n m₁ h nm ix e x
+grind_pattern [arena_grind] ilwRbProj_new => ilwRbProj p n m₁ h nm ix e x
+
 /-- `lp_proj` after its child. -/
 def ilwProjK (p : Prog) (n : Nat) (h nm ix e : Word) : Option (List Word × Mem) → Option (Word × Mem)
   | none => none
-  | some (x, m₁) =>
-    ilwSetK h (if x.headD 0 = e then some (h, m₁) else ilwChk (callW p n "mk_proj" [nm, ix, x.headD 0] m₁))
+  | some (x, m₁) => ilwSetK h (ilwRbProj p n m₁ h nm ix e (x.headD 0))
 
 @[arena_grind =] theorem ilwProjK_some (p : Prog) (n : Nat) (h nm ix e : Word) (x : List Word) (m₁ : Mem) :
-    ilwProjK p n h nm ix e (some (x, m₁)) =
-      ilwSetK h (if x.headD 0 = e then some (h, m₁) else ilwChk (callW p n "mk_proj" [nm, ix, x.headD 0] m₁)) :=
-  rfl
+    ilwProjK p n h nm ix e (some (x, m₁)) = ilwSetK h (ilwRbProj p n m₁ h nm ix e (x.headD 0)) := rfl
 
 /-- **The model of `lp_proj`** at L fuel `n + 1`. -/
 def ilwProjW (p : Prog) (n : Nat) (m : Mem) (h ko kc vo vc fu : Word) : Option (Word × Mem) :=
@@ -399,43 +409,62 @@ def ilwProjW (p : Prog) (n : Nat) (m : Mem) (h ko kc vo vc fu : Word) : Option (
 
 /-! ## The entries -/
 
-/-- The three memo clears (`ilp_clear`, `ilpl_clear`, `ilpls_clear`): each aborts where its stamp
-would wrap. -/
-def ilwClr (m : Mem) : Option Mem :=
-  if rdW (m.arr64 CTL) lpSch.cs + 2 = 0 then none
-  else if rdW ((mclearG lpSch m).arr64 CTL) lplSch.cs + 2 = 0 then none
-  else if rdW ((mclearG lplSch (mclearG lpSch m)).arr64 CTL) lplsSch.cs + 2 = 0 then none
-  else some (mclearG lplsSch (mclearG lplSch (mclearG lpSch m)))
-
-/-- `inst_lp_core` after the walk: the memos cleared again, the handle masked to 32 bits. -/
-def ilwCoreK : Option (List Word × Mem) → Option (Word × Mem)
+/-- `inst_lp_core` after the walk: the three clears, the handle masked to 32 bits. -/
+def ilwE3 (r : Word) : Option (List Word × Mem) → Option (Word × Mem)
   | none => none
-  | some (r, m₁) =>
-    match ilwClr m₁ with
-    | none => none
-    | some m₂ => some (r.headD 0 &&& 4294967295, m₂)
+  | some (_, m) => some (r &&& 4294967295, m)
+def ilwE2 (p : Prog) (n : Nat) (r : Word) : Option (List Word × Mem) → Option (Word × Mem)
+  | none => none
+  | some (_, m) => ilwE3 r (callW p n "ilpls_clear" [] m)
+def ilwE1 (p : Prog) (n : Nat) (r : Word) : Option (List Word × Mem) → Option (Word × Mem)
+  | none => none
+  | some (_, m) => ilwE2 p n r (callW p n "ilpl_clear" [] m)
+
+/-- After the walk. -/
+def ilwCoreK (p : Prog) (n : Nat) : Option (List Word × Mem) → Option (Word × Mem)
+  | none => none
+  | some (r, m₁) => ilwE1 p n (r.headD 0) (callW p n "ilp_clear" [] m₁)
+
+/-- The three clears before the walk, then the walk at `coreWalkFuel`. -/
+def ilwC3 (p : Prog) (n : Nat) (ko kc e vo vc : Word) : Option (List Word × Mem) → Option (Word × Mem)
+  | none => none
+  | some (_, m) => ilwCoreK p n (callW p n "lp_go" [e, ko, kc, vo, vc, 4000000000] m)
+def ilwC2 (p : Prog) (n : Nat) (ko kc e vo vc : Word) : Option (List Word × Mem) → Option (Word × Mem)
+  | none => none
+  | some (_, m) => ilwC3 p n ko kc e vo vc (callW p n "ilpls_clear" [] m)
+def ilwC1 (p : Prog) (n : Nat) (ko kc e vo vc : Word) : Option (List Word × Mem) → Option (Word × Mem)
+  | none => none
+  | some (_, m) => ilwC2 p n ko kc e vo vc (callW p n "ilpl_clear" [] m)
 
 /-- `inst_lp_core` after `der_b`: the cut-off, else the values' slice (`ls_node(us)`), the clears,
-the walk at `coreWalkFuel`. -/
+the walk. -/
 def ilwCoreD (p : Prog) (n : Nat) (ko kc us e : Word) : Option (List Word × Mem) → Option (Word × Mem)
   | none => none
   | some (d, m₁) =>
     if d.tail.tail.headD 0 = 0 then some (e &&& 4294967295, m₁)
-    else match ilwClr m₁ with
-      | none => none
-      | some m₂ => ilwCoreK (callW p n "lp_go"
-          [e, ko, kc, (lsNodeW m₁ us).headD 0, (lsNodeW m₁ us).tail.headD 0, 4000000000] m₂)
+    else ilwC1 p n ko kc e ((lsNodeW m₁ us).headD 0) ((lsNodeW m₁ us).tail.headD 0)
+      (callW p n "ilp_clear" [] m₁)
 
-@[arena_grind =] theorem ilwCoreK_some (r : List Word) (m₁ : Mem) :
-    ilwCoreK (some (r, m₁)) =
-      (match ilwClr m₁ with | none => none | some m₂ => some (r.headD 0 &&& 4294967295, m₂)) := rfl
-@[arena_grind =] theorem ilwCoreD_some (p : Prog) (n : Nat) (ko kc us e : Word) (d : List Word) (m₁ : Mem) :
-    ilwCoreD p n ko kc us e (some (d, m₁)) =
-      if d.tail.tail.headD 0 = 0 then some (e &&& 4294967295, m₁)
-      else (match ilwClr m₁ with
-        | none => none
-        | some m₂ => ilwCoreK (callW p n "lp_go"
-            [e, ko, kc, (lsNodeW m₁ us).headD 0, (lsNodeW m₁ us).tail.headD 0, 4000000000] m₂)) := rfl
+section entryK
+variable (p : Prog) (n : Nat) (ko kc us e vo vc r : Word) (x : List Word) (m : Mem)
+@[arena_grind =] theorem ilwE3_some : ilwE3 r (some (x, m)) = some (r &&& 4294967295, m) := rfl
+@[arena_grind =] theorem ilwE2_some : ilwE2 p n r (some (x, m)) = ilwE3 r (callW p n "ilpls_clear" [] m) := rfl
+@[arena_grind =] theorem ilwE1_some : ilwE1 p n r (some (x, m)) = ilwE2 p n r (callW p n "ilpl_clear" [] m) := rfl
+@[arena_grind =] theorem ilwCoreK_some :
+    ilwCoreK p n (some (x, m)) = ilwE1 p n (x.headD 0) (callW p n "ilp_clear" [] m) := rfl
+@[arena_grind =] theorem ilwC3_some :
+    ilwC3 p n ko kc e vo vc (some (x, m)) = ilwCoreK p n (callW p n "lp_go" [e, ko, kc, vo, vc, 4000000000] m) :=
+  rfl
+@[arena_grind =] theorem ilwC2_some :
+    ilwC2 p n ko kc e vo vc (some (x, m)) = ilwC3 p n ko kc e vo vc (callW p n "ilpls_clear" [] m) := rfl
+@[arena_grind =] theorem ilwC1_some :
+    ilwC1 p n ko kc e vo vc (some (x, m)) = ilwC2 p n ko kc e vo vc (callW p n "ilpl_clear" [] m) := rfl
+@[arena_grind =] theorem ilwCoreD_some :
+    ilwCoreD p n ko kc us e (some (x, m)) =
+      if x.tail.tail.headD 0 = 0 then some (e &&& 4294967295, m)
+      else ilwC1 p n ko kc e ((lsNodeW m us).headD 0) ((lsNodeW m us).tail.headD 0) (callW p n "ilp_clear" [] m) :=
+  rfl
+end entryK
 
 /-- **The model of `inst_lp_core`** at L fuel `n + 1`. -/
 def ilwCoreW (p : Prog) (n : Nat) (m : Mem) (ko kc us e : Word) : Option (Word × Mem) :=
@@ -526,6 +555,7 @@ theorem lpFVar_spec (n : Nat) (s₀ : St) (h ko kc vo vc fu : Word) :
       callW_spec p n "lp_go", callW_spec p n "intern_fvar"] <;>
     finish [ilwFVarW, ilwProbe, msetG, tierW, idxW]
 
+set_option maxHeartbeats 1000000 in
 theorem lpProj_spec (n : Nat) (s₀ : St) (h ko kc vo vc fu : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "lp_proj" [h, ko, kc, vo, vc, fu]
     ⦃fun r s' => LocEq s' s₀ ∧ ilwProjW p n s₀.mem h ko kc vo vc fu = some (r.headD 0, s'.mem); ⊤⦄ := by
@@ -535,8 +565,9 @@ theorem lpProj_spec (n : Nat) (s₀ : St) (h ko kc vo vc fu : Word) :
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       memoFindG_spec lpSch p _ hp.ilpf n, memoPutG_spec lpSch p _ hp.ilpp n,
       callW_spec p n "lp_go", callW_spec p n "mk_proj"] <;>
-    finish [ilwProjW, ilwProbe, msetG, tierW, idxW]
+    finish (gen := 20) [ilwProjW, ilwProbe, msetG, tierW, idxW]
 
+set_option maxHeartbeats 1000000 in
 theorem instLPCore_spec (n : Nat) (s₀ : St) (ko kc us e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "inst_lp_core" [ko, kc, us, e]
     ⦃fun r s' => LocEq s' s₀ ∧ ilwCoreW p n s₀.mem ko kc us e = some (r.headD 0, s'.mem); ⊤⦄ := by
@@ -544,10 +575,9 @@ theorem instLPCore_spec (n : Nat) (s₀ : St) (ko kc us e : Word) :
   simp only [callFn, instLPCore]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      memoClearG_spec lpSch p _ hp.ilpc n, memoClearG_spec lplSch p _ hp.ilplc n,
-      memoClearG_spec lplsSch p _ hp.ilplsc n,
+      callW_spec p n "ilp_clear", callW_spec p n "ilpl_clear", callW_spec p n "ilpls_clear",
       callW_spec p n "der_b", lsNode_spec p hp.lsn n, callW_spec p n "lp_go"] <;>
-    finish [ilwCoreW, ilwClr]
+    finish (gen := 20) [ilwCoreW]
 
 theorem instLP_spec (n : Nat) (s₀ : St) (po pl us e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "inst_lp" [po, pl, us, e]
