@@ -244,7 +244,7 @@ theorem setWtb_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : St
   refine growRef_preG hg3 ?_
   have hspn := hS.spn
   have hb3 := hsp.bound
-  have hsz3 : (m₃.arr64 SPN).size < 2 ^ 63 := hg3.2.1 ▸ hspn
+  have hsz3 : (m₃.arr64 SPN).size < 2 ^ 63 := hg3.size ▸ hspn
   have htt : (r₃.headD 0).toNat + (r₃.tail.headD 0).toNat ≤ (spTop m₃).toNat := by
     have e := addW_toNat (x := r₃.headD 0) (y := r₃.tail.headD 0) (by omega)
     rw [htop3, ← hr30]; omega
@@ -458,7 +458,7 @@ theorem setWith_refines (p : Prog) (hq : StuckProg p) (hi : IotaProg' p) (hc : S
   have hlen : aargs.length = (r₃.tail.headD 0).toNat := by simpa using hsp.size
   simp only [swK2, herec] at hW3
   have hspn := hS.spn
-  have hsz3 : (m₃.arr64 SPN).size < 2 ^ 63 := hg3.2.1 ▸ hspn
+  have hsz3 : (m₃.arr64 SPN).size < 2 ^ 63 := hg3.size ▸ hspn
   by_cases hcnt : ¬ r₃.tail.headD 0 < rdW (s.mem.arr64 EREC) (r₂.tail.headD 0 + 6) ∧
       r₃.tail.headD 0 - rdW (s.mem.arr64 EREC) (r₂.tail.headD 0 + 6) =
         rdW (s.mem.arr64 EREC) (r₂.tail.headD 0 + 5)

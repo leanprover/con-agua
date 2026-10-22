@@ -85,7 +85,7 @@ theorem rdW_rec {b : Array Word} {q : Word} {k : Nat} {w : Word} (hb : b[q.toNat
 
 section top
 variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hpi : ProofIrrelOKM p)
-  (hE : ErecKeptKnot p) (hcc : CoreCallees p)
+  (hE : ErecKeptKnot p) (hcc : ProjCallees p)
 include hp hc hpi hE hcc
 
 /-- **`m2c_arms` refines `m2cArmsT`.** -/
@@ -449,7 +449,7 @@ theorem majorToCtor_refines' : MajorToCtorOK p := by
     rw [majorToCtor_eq]
     refine ⟨ok1, ⟨M1, ?_, hK1, ?_⟩, ?_, ?_⟩
     · rw [← hm]; exact hS1.frame_stk (MemFrame.setCtl m1 136 _) (by simp) (by simp)
-    · rw [← hm]; exact StackKept.restore hg1.2.2 hg1.2.1 h136
+    · rw [← hm]; exact StackKept.restoreG hg1 h136
     · rw [res1]; unfold decH; rw [hr0]
     · unfold ResH at hr1 ⊢; rw [← hr0]; exact hr1
   · rw [if_neg h136] at hW; cases hW
@@ -458,17 +458,17 @@ end top
 
 /-! ## The census-tagged statements
 
-They instantiate the stub bundles (`iotaCallees_stub`, `erecKeptKnot_stub`, `coreCallees_stub`,
+They instantiate the stub bundles (`iotaCallees_stub`, `coreCallees_stub`,
 `proofIrrel_refines` (on the `CoreS.lvl_den` stub),
 and for `prepare_major` also `whnfCallees_stub`, `supKeep_twin`), as the other ι refinements do. -/
 
 @[refines ConRon.Arena.majorToCtor]
-theorem majorToCtor_refines (p : Prog) (hp : M2CProg' p) : MajorToCtorOK p :=
+theorem majorToCtor_refines (p : Prog) (hp : M2CProg' p) (hcl : closedA p coreErecA coreErecC coreFns = true) : MajorToCtorOK p :=
   majorToCtor_refines' p hp (iotaCallees_stub p) (proofIrrel_refines p hp.toIotaProg4)
-    (erecKeptKnot_stub p) (coreCallees_stub p)
+    (ErecKeptKnot.of_closed hcl) (coreCallees_stub p).toProjCallees
 
 @[refines ConRon.Arena.prepareMajor]
-theorem prepareMajor_refines (p : Prog) (hp : M2CProg' p) :
+theorem prepareMajor_refines (p : Prog) (hp : M2CProg' p) (hcl : closedA p coreErecA coreErecC coreFns = true) :
     ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
     ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode d rec ro rc major : Word) (rules : List IRecRule),
@@ -478,7 +478,7 @@ theorem prepareMajor_refines (p : Prog) (hp : M2CProg' p) :
       (prepareMajor (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI rec) rules
         (decE major)) decH s₀ a₀ dn vis fe MM eb :=
   prepareMajor_refines' (p := p) (hc := iotaCallees_stub p) (hw := whnfCallees_stub p)
-    (hsup := supKeep_twin) (hmtc := majorToCtor_refines p hp) (hE := erecKeptKnot_stub p)
+    (hsup := supKeep_twin) (hmtc := majorToCtor_refines p hp hcl) (hE := ErecKeptKnot.of_closed hcl)
     (hp := hp.toIotaProg4)
 
 end L.Arena

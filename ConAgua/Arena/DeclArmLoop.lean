@@ -84,8 +84,11 @@ def qaxArmFns : List FnName :=
    "std_ax_family", "find_pinned", "trust_compiler_ok", "find_pinned_cv", "of_reduce_ax_ok",
    "of_reduce_op", "of_reduce_pin_a"]
 
+/-- The definition check (the definition arm's gates are specified, not closed here). -/
+def defnArmFns : List FnName := ["check_defn_val"]
+
 /-- The functions the arms reach. -/
-def armFns : List FnName := thmArmFns ++ opqArmFns ++ qaxArmFns
+def armFns : List FnName := thmArmFns ++ opqArmFns ++ qaxArmFns ++ defnArmFns
 
 theorem armText_closed : closedA armText stepA stepC armFns = true := by decide +kernel
 
@@ -221,10 +224,10 @@ theorem checkDeclThm_loop {p : Prog} (hA : ArmProg p) (hV : ValProg p)
     (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
       (i : Word) (cv : IConstantVal) (v : EIdx), i.toNat < ds.size → ds[i.toNat]? = some (.thmDecl cv v) →
-      LoopR dn s₀.mem a₀ vis fe pend ds →
+      LoopR pins dn s₀.mem a₀ vis fe pend ds →
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_decl_thm" [i, vis]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkDecl V pins fe (.thmDecl cv v)) a₀ ∧
-      LoopR dn s'.mem (AM.st (checkDecl V pins fe (.thmDecl cv v)) a₀) (r.headD 0)
+      LoopR pins dn s'.mem (AM.st (checkDecl V pins fe (.thmDecl cv v)) a₀) (r.headD 0)
         (AM.res (checkDecl V pins fe (.thmDecl cv v)) a₀) pend ds; ⊤⦄ := by
   intro n s₀ a₀ vis fe pend i cv v hi hd hR
   apply M.triple_of_run

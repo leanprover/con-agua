@@ -654,7 +654,7 @@ theorem getAppArgs_refines' (p : Prog) (hg : p.lookup "get_app_args" = some getA
   have hadd : (rdW (s.mem.arr64 CTL) 136 + r₁.headD 0).toNat =
       (rdW (s.mem.arr64 CTL) 136).toNat + (r₁.headD 0).toNat := by
     rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
-  refine ⟨?_, ⟨?_, hszs, ?_⟩, ?_, ?_, ?_⟩
+  refine ⟨?hf, StackGrew.of_spnFrame ?hf ?_ ?_, ?_, ?_, ?_⟩
   · rw [← hm]
     exact (hfr.mono (fun b hb => hb) (fun x hx => by simp at hx)).trans
       ((MemFrame.setCtl m₂ 136 _).mono (fun b hb => by simp at hb) (fun x hx => hx))
@@ -876,7 +876,7 @@ theorem getAppSpine_refines' (p : Prog) (hg : p.lookup "get_app_spine" = some ge
         (nodesW s.mem e (coreWalkFuel - f'.toNat)).getD i 0 := by
     intro i hi
     rw [hsp, hget3 i hi, nodesW_congr harec]
-  refine ⟨?_, ⟨?_, hszs, ?_⟩, ?_, ?_, ?_, ?_⟩
+  refine ⟨?hf, StackGrew.of_spnFrame ?hf ?_ ?_, ?_, ?_, ?_, ?_⟩
   · rw [← hm]
     exact ((hfr.mono (fun b hb => hb) (fun x hx => by simp at hx)).trans
       (hfr3.mono (fun b hb => hb) (fun x hx => by simp at hx))).trans
@@ -1015,7 +1015,7 @@ theorem headAndArgs_refines' (p : Prog) (hh : p.lookup "head_and_args" = some he
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr0, hr1, hr2, hm⟩ := hW
     rw [← hm]
-    refine ⟨MemFrame.refl _ _ _, ⟨UInt64.le_refl _, rfl, fun _ _ => rfl⟩,
+    refine ⟨MemFrame.refl _ _ _, StackGrew.refl _,
       by rw [← hr0]; exact hv, by rw [← hr1]; rfl, by rw [← hr2]; simp, #[], ?_, ?_⟩
     · have htag : (decE v).tag ≠ ETag.app := fun h => h4 ((decE_tag_app v hv).mp h)
       rw [← hr0]; simp [headAndArgs, htag]; rfl

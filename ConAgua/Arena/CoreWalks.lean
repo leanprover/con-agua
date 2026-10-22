@@ -198,7 +198,11 @@ theorem CoreS.of_walk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List ArrId} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hD : ArenaD m' a') (hk : cpl a' = cpl a)
     (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b < 64) (hC : ∀ x ∈ C, x.toNat < 64)
-    (hmem : CoreMemos m') : CoreS dn m' a' vis fe M eb ∧ StackKept m m' := by
+    (hmem : CoreMemos m') (hP : POOL ∉ A := by decide) (hP0 : (0 : Word) ∉ C := by decide)
+    (hscA : SOREC ∉ A ∧ CREC ∉ A := by decide)
+    (hscC : (1 : Word) ∉ C ∧ (16 : Word) ∉ C ∧ (17 : Word) ∉ C ∧ (18 : Word) ∉ C ∧ (19 : Word) ∉ C :=
+      by decide) :
+    CoreS dn m' a' vis fe M eb ∧ StackKept m m' := by
   simp only [cpl, Prod.mk.injEq] at hk
   obtain ⟨hc, hp, hl⟩ := hk
   have hspn : m'.arr64 SPN = m.arr64 SPN :=
@@ -206,8 +210,11 @@ theorem CoreS.of_walk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 :=
     hf.2.1 136 (fun h => absurd (hC _ h) (by decide))
   refine ⟨⟨hD, ?_, ?_, hS.env.frame (.of_lt hA (by decide)) (.of_lt hC (by decide)) hf, ?_, ?_, ?_,
-    hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hmem, hf.2.2.1 145 ▸ hS.bstk⟩,
-    by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
+    hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hmem, hf.2.2.1 145 ▸ hS.bstk,
+    hS.den.of_arena hS.arena.1 hD.1 hc hp hl hf (fun h => absurd (hA _ h) (by decide)) hscA hscC⟩,
+    StackKept.of_frame hf
+      ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide), hP⟩
+      ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide), hP0⟩⟩
   · rw [hc]; exact hS.core.frame (.of_lt hA (by decide)) (.of_lt hC (by decide)) hf
   · rw [hp]; exact hS.pins.congr (hf.1 PINS (fun h => absurd (hA _ h) (by decide)) (by decide))
   · intro h l e; rw [hc] at e; have := hS.readL h l e; simp only [EStore.ls] at this ⊢; rw [hl]
@@ -239,13 +246,15 @@ theorem ArenaD.memo_irrel {m : Mem} {a : AState} (h : ArenaD m a) (X Y : Std.Has
   obtain ⟨hR, hD⟩ := h
   exact ⟨⟨hR.lit, hR.app, hR.sort, hR.const, hR.letE, hR.bvar, hR.fvar, hR.lam, hR.forallE, hR.proj,
     hR.zero, hR.succ, hR.max, hR.imax, hR.param, hR.ls, hR.nanon, hR.nstr, hR.nnum,
-    ⟨hR.memos.bvar, hR.memos.lift, hR.memos.inst1, hR.memos.fvar⟩⟩, DerR.of_store _ _ _ hD rfl⟩
+    ⟨hR.memos.bvar, hR.memos.lift, hR.memos.inst1, hR.memos.fvar⟩, hR.zeroHp, hR.paramHp,
+    hR.succHp, hR.maxHp, hR.imaxHp, hR.lsHp, hR.sortLp, hR.constLp, hR.fvarLp⟩,
+    DerR.of_store _ _ _ hD rfl⟩
 
 /-- The abstraction memo's well-formedness across a writer that avoids it. -/
 theorem coreAb_frame {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
     (hA : (49 : ArrId) ∉ A) (hC : (48 : Word) ∉ C) (h : CoreMemos m) :
     ∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRG coreAbSch lfKey decE m' mp :=
-  let ⟨mp, hm⟩ := h.2; ⟨mp, memoRG_frame coreAbSch coreAbSch_wf lfKey decE A C hA hC m m' hf mp hm⟩
+  let ⟨mp, hm⟩ := h.2.1; ⟨mp, memoRG_frame coreAbSch coreAbSch_wf lfKey decE A C hA hC m m' hf mp hm⟩
 
 theorem coreIl_frame {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
     (hA : (50 : ArrId) ∉ A) (hC : (50 : Word) ∉ C) (h : CoreMemos m) :
@@ -292,7 +301,7 @@ theorem instListOK_core (hp : InstListProg p) (he : p.lookup "inst_list" = some 
   rw [← e2] at hA'; rw [← e3] at hres
   have hk := Keeps.run (keepsW_instListFast coreWalkFuel (decE e) xs d.toNat) (AM.run_of_ok _ _ hok)
   obtain ⟨hS', hSt⟩ := hS.of_walk hA'.1 hk hf (lt64A_of_all rfl) (lt64_of_all rfl)
-    ⟨⟨_, hA'.2⟩, coreAb_frame hf (by decide) (by decide) hS.memos⟩
+    ⟨⟨_, hA'.2⟩, coreAb_frame hf (by decide) (by decide) hS.memos, hS.memos.2.2.frame hf (by decide) (by decide)⟩
   exact ⟨hloc, hok, ⟨M, hS', KeptAll.refl _ _, hSt⟩, hres, hw⟩
 
 /-- **`inst_entry` refines `instantiate1Fast coreWalkFuel` under `CoreS`** at either of its names
@@ -333,7 +342,7 @@ theorem abs1_core (hp : AbsProg p) (he : p.lookup "abs_entry" = some absEntry) :
   cases n with
   | zero => exact CoreSpec.zeroW he _ _ _ _ _ _ _ _ _ _ _
   | succ n =>
-  obtain ⟨mp, hmp⟩ := hS.memos.2
+  obtain ⟨mp, hmp⟩ := hS.memos.2.1
   have hrun : (abstract1Fast coreWalkFuel (decE e) d.toNat k.toNat).run a₀ =
       (abstract1Fast coreWalkFuel (decE e) d.toNat k.toNat).run
         { a₀ with memos := { a₀.memos with abs1C := mp } } := rfl
@@ -351,7 +360,7 @@ theorem abs1_core (hp : AbsProg p) (he : p.lookup "abs_entry" = some absEntry) :
   rw [← e2] at hA'; rw [← e3] at hres
   have hk := Keeps.run (keepsW_abs1Fast coreWalkFuel (decE e) d.toNat k.toNat) (AM.run_of_ok _ _ hok)
   obtain ⟨hS', hSt⟩ := hS.of_walk hA'.1 hk hf (lt64A_of_all rfl) (lt64_of_all rfl)
-    ⟨coreIl_frame hf (by decide) (by decide) hS.memos, ⟨_, hA'.2⟩⟩
+    ⟨coreIl_frame hf (by decide) (by decide) hS.memos, ⟨_, hA'.2⟩, hS.memos.2.2.frame hf (by decide) (by decide)⟩
   exact ⟨hloc, hok, ⟨M, hS', KeptAll.refl _ _, hSt⟩, hres, hw⟩
 
 /-- `ar_entry` under `CoreS` (lane `defeq`'s `AbstractRangeOK`). -/
@@ -364,7 +373,7 @@ theorem absRange_core (hp : ArProg p) (he : p.lookup "ar_entry" = some arEntry) 
   cases n with
   | zero => exact CoreSpec.zeroW he _ _ _ _ _ _ _ _ _ _ _
   | succ n =>
-  obtain ⟨mp, hmp⟩ := hS.memos.2
+  obtain ⟨mp, hmp⟩ := hS.memos.2.1
   by_cases hk0 : k.toNat = 0
   · -- `k = 0`: the twin returns `e` and changes nothing
     have hA : ArenaA s₀.mem { a₀ with memos := { a₀.memos with abs1C := mp } } :=
@@ -388,7 +397,7 @@ theorem absRange_core (hp : ArProg p) (he : p.lookup "ar_entry" = some arEntry) 
     rw [st1] at hA'; rw [res1] at hres
     have hD0 : ArenaD s'.mem a₀ := hA'.1.memo_irrel a₀.memos.instLC a₀.memos.abs1C
     obtain ⟨hS', hSt⟩ := hS.of_walk hD0 rfl hf (lt64A_of_all rfl) (lt64_of_all rfl)
-      ⟨coreIl_frame hf (by decide) (by decide) hS.memos, ⟨_, hA'.2⟩⟩
+      ⟨coreIl_frame hf (by decide) (by decide) hS.memos, ⟨_, hA'.2⟩, hS.memos.2.2.frame hf (by decide) (by decide)⟩
     refine ⟨hloc, ok0, ⟨M, ?_, KeptAll.refl _ _, hSt⟩, by rw [res0]; exact hres, hw⟩
     rw [st0]; exact hS'
   have hrun : (abstractRangeFast coreWalkFuel (decE e) d.toNat k.toNat c.toNat).run a₀ =
@@ -410,7 +419,7 @@ theorem absRange_core (hp : ArProg p) (he : p.lookup "ar_entry" = some arEntry) 
   have hk := Keeps.run (keepsW_arFast coreWalkFuel (decE e) d.toNat k.toNat c.toNat)
     (AM.run_of_ok _ _ hok)
   obtain ⟨hS', hSt⟩ := hS.of_walk hA'.1 hk hf (lt64A_of_all rfl) (lt64_of_all rfl)
-    ⟨coreIl_frame hf (by decide) (by decide) hS.memos, ⟨_, hA'.2⟩⟩
+    ⟨coreIl_frame hf (by decide) (by decide) hS.memos, ⟨_, hA'.2⟩, hS.memos.2.2.frame hf (by decide) (by decide)⟩
   exact ⟨hloc, hok, ⟨M, hS', KeptAll.refl _ _, hSt⟩, hres, hw⟩
 
 /-- `loose_bvars_bounded_fast(4·10⁹, c, e)` under `CoreS` (`IotaCallees`' `LooseBVarsBoundedFastOK`). -/

@@ -93,11 +93,11 @@ theorem internSucc_stage (hS : StageR dn vis fe m a) (u : Word) (hu : u.toNat < 
       IWGrow m m' := by
   have hR := hS.1.arena.1
   obtain ⟨hok, hX, hres⟩ := sintern_correct m a hR.succ u hu _ _ hI
-  have hI₂ := hI; rw [sinternW_eq] at hI₂
-  have hfr := internM_frame _ succSch_wf _ _ _ _ _ _ _ _ hI₂
+  have hfr := sinternW_frame m u _ _ hI
   exact stage_of_level hS (internLNode_succ_run _ a) hok
-    (hR.lift_succ _ _ _ _ hX hfr (AM.st_proto succLens _ _ _ _ _ _ a (internLNode_succ_run _ a) hok))
-    hres hfr (by simp [succSch, SREC, SSLOT]) (by simp [succSch]) (fun _ => ⟨DerR.lvl, rfl⟩)
+    (hR.lift_succ _ _ _ _ ⟨hX, sintern_hp m a hR.succ u hu hR.succHp (lvlHPW_ok m a hR u hu) _ _ hI⟩
+      hfr (AM.st_proto succLens _ _ _ _ _ _ a (internLNode_succ_run _ a) hok))
+    hres hfr (by simp [SREC, SSLOT, SHP]) (by simp [succSch]) (fun _ => ⟨DerR.lvl, rfl⟩)
     (fun _ => ⟨DerR.lvl, rfl⟩)
 
 end succ

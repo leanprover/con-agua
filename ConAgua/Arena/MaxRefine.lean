@@ -1,5 +1,6 @@
 import ConAgua.Arena.StoreLib
 import ConAgua.Arena.MaxStore
+import ConAgua.Arena.LpColRel
 
 /-!
 # The level `max` store refines the arena's `max` tables
@@ -160,19 +161,42 @@ theorem mpushOK_room (m : Mem) (t : Word) (h : mpushOK m t = true) : PushRoom ma
   grind
 
 theorem mpushMem_eq (m : Mem) (t u v j c : Word) :
-    mpushMem m t u v j c = pushG maxSch m t [u, v] j c := by
+    mpushMem m t u v j c = (pushG maxSch m t [u, v] j c).set64 MHP (c * 2 + t) (lvlHPW m u ||| lvlHPW m v) := by
   simp [mpushMem, pushG, wrRec, Schema.ad, maxSch]
 
 theorem minternW_eq (m : Mem) (u v : Word) :
-    minternW m u v = internM maxSch m 0 (mpushOK m) [u, v]
+    minternW m u v = internMD maxSch MHP (lvlHPW m u ||| lvlHPW m v) m 0 (mpushOK m) [u, v]
       (mprobeW (m.arr64 MSLOT) (m.arr64 MREC) 0 u v (baseW m 0) (nSlotsM m) (homeW (maxHashW u v) (nSlotsM m)) 0)
       (mprobeW (m.arr64 MSLOT) (m.arr64 MREC) 1 u v (baseW m 1) (nSlotsM m) (homeW (maxHashW u v) (nSlotsM m)) 0) := by
   have e0 : ∀ x, hdW maxSch.tag.toUInt64 0 x = maxP + x := fun x => by
     simp [hdW, maxSch, maxP, LTag.max]
   have e1 : ∀ x, hdW maxSch.tag.toUInt64 1 x = maxS + x := fun x => by
     simp [hdW, maxSch, maxS, LTag.max]
-  simp only [minternW, internM, mpushMem_eq, e0, e1, true_and]
+  simp only [minternW, internMD, mpushMem_eq, e0, e1, true_and]
   rfl
+
+/-- **What `intern_max` changes**: the table's arrays, the column, the counts. -/
+theorem minternW_frame (m : Mem) (u v : Word) (w : Word) (m' : Mem) (hI : minternW m u v = some (w, m')) :
+    MemFrame [MREC, MSLOT, MHP] [10, 11] m m' := by
+  rw [minternW_eq] at hI
+  exact internMD_frame maxSch maxSch_wf MHP (by decide) _ _ _ _ _ _ _ _ _ hI
+
+/-- `intern_max`'s model as the library's interning and the `mk_*` tail (`mkK`), given the count
+words. -/
+theorem minternW_eqK (m : Mem) (u v : Word) (hctl : maxSch.ca.toNat + 2 ≤ (m.arr64 CTL).size) :
+    minternW m u v = mkK MHP maxSch.ca (cnt2 m maxSch.ca) (lvlHPW m u ||| lvlHPW m v)
+      (internM maxSch m 0 (mpushOK m) [u, v]
+      (mprobeW (m.arr64 MSLOT) (m.arr64 MREC) 0 u v (baseW m 0) (nSlotsM m) (homeW (maxHashW u v) (nSlotsM m)) 0)
+      (mprobeW (m.arr64 MSLOT) (m.arr64 MREC) 1 u v (baseW m 1) (nSlotsM m) (homeW (maxHashW u v) (nSlotsM m)) 0)) := by
+  rw [minternW_eq]
+  refine internMD_mkK maxSch maxSch_wf _ _ _ _ _ _ _ _ hctl (fun t ht hp => ?_)
+  simp only [mpushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
+  obtain ⟨⟨⟨h1, -⟩, h2⟩, -⟩ := hp
+  exact ⟨h1, col_room _ _ _ ht h1 h2⟩
+
+theorem maxLocal : RLocal maxSch MRecRel mhash [] [] := by
+  intro m m' hra _ _; simp only [maxSch] at hra
+  exact ⟨fun t i k h => by simpa only [MRecRel, hra] using h, fun t i => by simp only [mhash, hra]⟩
 
 /-! ## `intern_max` refines `internLNode (.max _ _)` -/
 
@@ -181,17 +205,49 @@ variable (m : Mem) (a : AState) (hR : MaxR m a) (u v : Word) (hu : u.toNat < 2 ^
   (hv : v.toNat < 2 ^ 32)
 
 include hR hu hv in
+/-- The library's half of `intern_max` (before the column). -/
+theorem mintern_core (w : Word) (m₁ : Mem)
+    (hI : internM maxSch m 0 (mpushOK m) [u, v]
+      (mprobeW (m.arr64 MSLOT) (m.arr64 MREC) 0 u v (baseW m 0) (nSlotsM m) (homeW (maxHashW u v) (nSlotsM m)) 0)
+      (mprobeW (m.arr64 MSLOT) (m.arr64 MREC) 1 u v (baseW m 1) (nSlotsM m) (homeW (maxHashW u v) (nSlotsM m)) 0) =
+      some (w, m₁)) :
+    AM.ok (internLNode (.max (decI u) (decI v))) a ∧
+    MaxR m₁ (AM.st (internLNode (.max (decI u) (decI v))) a) ∧
+    AM.res (internLNode (.max (decI u) (decI v))) a = decI w :=
+  intern_correctG maxSch MRecRel mhash maxSch_wf maxFrame maxLens a m hR _ _ _ _ _
+    (internLNode_max_run _ _ a) false rfl 0 (by simp) (by simp) _ _ (maxMatchOK m u v hu hv)
+    (maxHomeOK m u v) _ _ (probe_homeG maxSch m 0 _ _ (mprobeW_arm m u v 0) _)
+    (probe_homeG maxSch m 1 _ _ (mprobeW_arm m u v 1) _) _ (mpushOK_room m) _ rfl
+    (maxNewOK m u v hu hv) w m₁ hI
+
+include hR hu hv in
 /-- **`intern_max`'s model refines the arena's `internLNode` at a `max` node.** -/
 theorem mintern_correct (w : Word) (m' : Mem) (hI : minternW m u v = some (w, m')) :
     AM.ok (internLNode (.max (decI u) (decI v))) a ∧
     MaxR m' (AM.st (internLNode (.max (decI u) (decI v))) a) ∧
     AM.res (internLNode (.max (decI u) (decI v))) a = decI w := by
-  rw [minternW_eq] at hI
-  exact intern_correctG maxSch MRecRel mhash maxSch_wf maxFrame maxLens a m hR _ _ _ _ _
-    (internLNode_max_run _ _ a) false rfl 0 (by simp) (by simp) _ _ (maxMatchOK m u v hu hv)
-    (maxHomeOK m u v) _ _ (probe_homeG maxSch m 0 _ _ (mprobeW_arm m u v 0) _)
-    (probe_homeG maxSch m 1 _ _ (mprobeW_arm m u v 1) _) _ (mpushOK_room m) _ rfl
-    (maxNewOK m u v hu hv) w m' hI
+  rw [minternW_eqK m u v hR.1.1] at hI
+  obtain ⟨m₁, h₁, hput⟩ := mkK_split _ _ _ _ _ _ _ hI
+  obtain ⟨hok, hX, hres⟩ := mintern_core m a hR u v hu hv w m₁ h₁
+  exact ⟨hok, storeR_frame maxSch MRecRel mhash maxSch_wf [] [] maxLocal [MHP] []
+    (by simp [Apart, maxSch, MREC, MSLOT, MHP, SCB, POOL, CTL]) m₁ m'
+    (derPutW_frame MHP (by decide) _ m₁ m' _ _ _ hput) _ _ _ hX, hres⟩
+
+include hR hu hv in
+/-- **The column across `intern_max`**: the new node's word is its record's bit (`hb`). -/
+theorem mintern_hp (hC : ColT2 maxLens MHP hpW m a)
+    (hb : lvlHPW m u ||| lvlHPW m v = b2w ((a.store.lss.ls.derived (decI u)).hasParam || (a.store.lss.ls.derived (decI v)).hasParam)) (w : Word) (m' : Mem)
+    (hI : minternW m u v = some (w, m')) :
+    ColT2 maxLens MHP hpW m' (AM.st (internLNode (.max (decI u) (decI v))) a) := by
+  rw [minternW_eqK m u v hR.1.1] at hI
+  obtain ⟨m₁, h₁, hput⟩ := mkK_split _ _ _ _ _ _ _ hI
+  obtain ⟨hok, hX, hres⟩ := mintern_core m a hR u v hu hv w m₁ h₁
+  have hcs := AM.proto_casesG maxLens _ _ _ _ _ _ a (internLNode_max_run _ _ a) hok
+  have hfr : m₁.arr64 MHP = m.arr64 MHP :=
+    (internM_frame _ maxSch_wf _ _ _ _ _ _ _ _ h₁).1 MHP (by simp [maxSch, MREC, MSLOT, MHP])
+      (by decide)
+  exact colMk maxSch maxSch_wf MRecRel mhash maxLens MHP hpW m m₁ m' a _ _ _ _ _ _ hR hX hC hfr
+    hcs hres.symm (by rw [hb]; rfl) hput
 
 end intern
 

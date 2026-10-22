@@ -965,6 +965,19 @@ def bcTail (nPd k nC nR : Nat) : Option (Nat × Nat) → Option (Nat × Nat)
     else if k < nR && nPd + nR + nC ≤ rP then some (nPd, mI - rP)
     else none
 
+theorem bcTail_snd {nPd k nC nR p q : Nat} {rr : Option (Nat × Nat)}
+    (e : bcTail nPd k nC nR rr = some (p, q)) (hb : ∀ x y, rr = some (x, y) → x < 2 ^ 64) :
+    q < 2 ^ 64 := by
+  cases rr with
+  | none => cases e
+  | some xy =>
+    obtain ⟨x, y⟩ := xy
+    have := hb x y rfl
+    simp only [bcTail] at e
+    repeat' (split at e)
+    all_goals (try simp only [Option.some.injEq, Prod.mk.injEq, reduceCtorEq] at e)
+    all_goals omega
+
 theorem bcTail_run (nPd k nC nR : Nat) (rr : Option (Nat × Nat)) (a : AState) :
     (match rr with
       | none => (pure none : AM (Option (Nat × Nat)))
@@ -1060,7 +1073,8 @@ theorem bcW_ok (n : Nat) (m m' : Mem) (a : AState) (nPd k nC nR cvT rOk rMI rRP 
     (h4 : nR.toNat < 2 ^ 32) (h5 : rMI.toNat < 2 ^ 32) (h6 : rRP.toNat < 2 ^ 32)
     (hsz : (m.arr64 IW).size < 2 ^ 64) (hc : 200 < (m.arr64 CTL).size) :
     ∃ x, (ConRon.Arena.blockCounts? nPd.toNat k.toNat nC.toNat nR.toNat cv rr).run a = .ok (x, a) ∧
-      r = encONN x ∧ IWGrow m m' ∧ MemFrame [IW] [200] m m' := by
+      r = encONN x ∧ (∀ p q, x = some (p, q) → q < 2 ^ 64) ∧ IWGrow m m' ∧
+      MemFrame [IW] [200] m m' := by
   cases n with
   | zero => simp [bcW] at h
   | succ n =>
@@ -1083,7 +1097,7 @@ theorem bcW_ok (n : Nat) (m m' : Mem) (a : AState) (nPd k nC nR cvT rOk rMI rRP 
     by_cases hl : r1.headD 0 < nPd
     · have hlt : ¬ nPd.toNat ≤ bs.length := by
         have := UInt64.lt_iff_toNat_lt.mp hl; omega
-      refine ⟨none, ?_, ?_, hg, hf⟩
+      refine ⟨none, ?_, ?_, by simp, hg, hf⟩
       · unfold ConRon.Arena.blockCounts?
         rw [← hty]
         simp only [StateT.run_bind, hrun, except_ok_bind, hvr]
@@ -1091,7 +1105,8 @@ theorem bcW_ok (n : Nat) (m m' : Mem) (a : AState) (nPd k nC nR cvT rOk rMI rRP 
       · rw [bcPure_sort_lt _ _ _ _ _ _ _ _ _ hs hl]; rfl
     · have hge : nPd.toNat ≤ bs.length := by
         have := (not_congr UInt64.lt_iff_toNat_lt).mp hl; omega
-      refine ⟨some (nPd.toNat, bs.length - nPd.toNat), ?_, ?_, hg, hf⟩
+      refine ⟨some (nPd.toNat, bs.length - nPd.toNat), ?_, ?_, fun p q e => by
+        simp only [Option.some.injEq, Prod.mk.injEq] at e; have := (r1.headD 0).toNat_lt; omega, hg, hf⟩
       · unfold ConRon.Arena.blockCounts?
         rw [← hty]
         simp only [StateT.run_bind, hrun, except_ok_bind, hvr]
@@ -1106,7 +1121,13 @@ theorem bcW_ok (n : Nat) (m m' : Mem) (a : AState) (nPd k nC nR cvT rOk rMI rRP 
           rw [UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)]; omega
         rw [e1, e2]
   · have hns : ∀ u, v ≠ ENodeView.sort u := fun u hu => hs (hiff.mpr ⟨u, hu⟩)
-    refine ⟨bcTail nPd.toNat k.toNat nC.toNat nR.toNat rr, ?_, ?_, hg, hf⟩
+    refine ⟨bcTail nPd.toNat k.toNat nC.toNat nR.toNat rr, ?_, ?_, fun p q e => ?_, hg, hf⟩
+    rotate_left 2
+    · subst hrr
+      split at e
+      · cases e
+      · refine bcTail_snd e fun x y hxy => ?_
+        simp only [Option.some.injEq, Prod.mk.injEq] at hxy; omega
     · unfold ConRon.Arena.blockCounts?
       rw [← hty]
       simp only [StateT.run_bind, hrun, except_ok_bind, hvr]
@@ -1138,7 +1159,7 @@ theorem blockCounts_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
       IWGrow s₀.mem s'.mem ∧ MemFrame [IW] [200] s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (blockCounts_spec p ha hc hv hs hpb hh hpp hp n s₀ nPd k nC nR cvT rOk rMI rRP) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨x, hrun, hr, hg, hf⟩ := bcW_ok n s₀.mem s'.mem a₀ nPd k nC nR cvT rOk rMI rRP r cv rr
+  obtain ⟨x, hrun, hr, -, hg, hf⟩ := bcW_ok n s₀.mem s'.mem a₀ nPd k nC nR cvT rOk rMI rRP r cv rr
     hR hm hcv hb hrr h1 h2 h3 h4 h5 h6 hsz hcl
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, hst, by rw [hres]; exact hr, hg, hf⟩

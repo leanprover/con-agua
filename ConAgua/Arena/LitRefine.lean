@@ -237,6 +237,11 @@ def sliceL (p : Array Word) (o l : Nat) : List Word := List.ofFn fun k : Fin l =
 theorem sliceL_length (p : Array Word) (o l : Nat) : (sliceL p o l).length = l := by
   simp [sliceL]
 
+theorem sliceL_succ (p : Array Word) (o l : Nat) :
+    sliceL p o (l + 1) = (p[o]?.getD 0) :: sliceL p (o + 1) l := by
+  simp only [sliceL, List.ofFn_succ, Fin.val_zero, Nat.add_zero, Fin.val_succ]
+  congr 1; congr; funext k; congr 2; omega
+
 theorem sliceL_eq_iff (p q : Array Word) (a b l : Nat) :
     sliceL p a l = sliceL q b l ↔ ∀ k < l, p[a + k]?.getD 0 = q[b + k]?.getD 0 := by
   rw [sliceL, sliceL, List.ext_getElem_iff]

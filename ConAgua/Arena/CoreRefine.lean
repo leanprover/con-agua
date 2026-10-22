@@ -33,7 +33,8 @@ namespace L.Arena
 theorem ArenaR.caches_irrel {m : Mem} {a : AState} (c : Caches) (hR : ArenaR m a) :
     ArenaR m { a with caches := c } :=
   ⟨hR.lit, hR.app, hR.sort, hR.const, hR.letE, hR.bvar, hR.fvar, hR.lam, hR.forallE, hR.proj,
-    hR.zero, hR.succ, hR.max, hR.imax, hR.param, hR.ls, hR.nanon, hR.nstr, hR.nnum, hR.memos⟩
+    hR.zero, hR.succ, hR.max, hR.imax, hR.param, hR.ls, hR.nanon, hR.nstr, hR.nnum, hR.memos,
+    hR.zeroHp, hR.paramHp, hR.succHp, hR.maxHp, hR.imaxHp, hR.lsHp, hR.sortLp, hR.constLp, hR.fvarLp⟩
 
 theorem ArenaD.caches_irrel {m : Mem} {a : AState} (c : Caches) (hD : ArenaD m a) :
     ArenaD m { a with caches := c } :=

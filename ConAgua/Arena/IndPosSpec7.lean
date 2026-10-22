@@ -124,21 +124,21 @@ def sgF (c : NestCtx) (holes : List EIdx) (x : EIdx) : AM EIdx := do
 section rel
 variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 
-theorem sgGoW_ok (k : Nat) (hMstage : ∀ (m2 : Mem) (a2 : AState), StageR dn vis fe m2 a2 → ∃ mp0, rpMR m2 mp0) :
+theorem sgGoW_ok (k : Nat) :
     ∀ (m0 m m' : Mem) (a : AState) (ctx f dO dL q j : Word) (c : NestCtx) (holes ds acc : List EIdx)
       (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word),
     sgGoW k m ctx f dO dL q j = some m' → StageR dn vis fe m a → IWGrow m0 m → iwTop m0 ≤ q.toNat →
     q.toNat + dL.toNat ≤ iwTop m → decCtx m0 ctx.toNat = some c → CtxIn m0 ctx.toNat (· < iwTop m0) →
     CtxSl m0 ctx.toNat → c.nP + c.names.length < 2 ^ 64 → FMOk m0 f.toNat (.keyMap c.params holes) →
     decHL m0 dO.toNat dL.toNat = some ds → (∀ j < dL.toNat, dO.toNat + j < iwTop m0) → j.toNat ≤ dL.toNat →
-    decHL m q.toNat j.toNat = some acc → RfInv m M G g →
+    decHL m q.toNat j.toNat = some acc → RfInv m M G g → PosMR m →
     ∃ ys a', ((ds.drop j.toNat).mapM (sgF c holes)).run a = .ok (ys, a') ∧
       decHL m' q.toNat dL.toNat = some (acc ++ ys) ∧ StageR dn vis fe m' a' ∧ IWGrow m0 m' ∧
-      iwTop m ≤ iwTop m' ∧ ∃ M' G', RfInv m' M' G' g ∧ GKeep M M' G ∧ G ≤ G' := by
+      iwTop m ≤ iwTop m' ∧ (∃ M' G', RfInv m' M' G' g ∧ GKeep M M' G ∧ G ≤ G') ∧ PosMR m' := by
   induction k with
   | zero => intro m0 m m' a ctx f dO dL q j c holes ds acc M G g h; simp [sgGoW] at h
   | succ k ih =>
-  intro m0 m m' a ctx f dO dL q j c holes ds acc M G g h hS hg0 hq0 hql hc hin hsl hb hfm hds hdsb hj hacc hR
+  intro m0 m m' a ctx f dO dL q j c holes ds acc M G g h hS hg0 hq0 hql hc hin hsl hb hfm hds hdsb hj hacc hR hP
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
   have hxl := decHL_length m0 hds
   have hal := decHL_length m hacc
@@ -146,8 +146,8 @@ theorem sgGoW_ok (k : Nat) (hMstage : ∀ (m2 : Mem) (a2 : AState), StageR dn vi
   · rw [sgGoW_done (h := hd)] at h
     cases h
     have hjl : j.toNat = dL.toNat := by have := UInt64.le_iff_toNat_le.mp hd; omega
-    refine ⟨[], a, ?_, by rw [← hjl]; simpa using hacc, hS, hg0, Nat.le_refl _, M, G, hR, GKeep.refl _ _,
-      UInt64.le_refl _⟩
+    refine ⟨[], a, ?_, by rw [← hjl]; simpa using hacc, hS, hg0, Nat.le_refl _, ⟨M, G, hR, GKeep.refl _ _,
+      UInt64.le_refl _⟩, hP⟩
     rw [List.drop_eq_nil_of_le (by omega)]; rfl
   rw [sgGoW_step (h := hd)] at h
   have hjl : j.toNat < dL.toNat := by
@@ -180,8 +180,8 @@ theorem sgGoW_ok (k : Nat) (hMstage : ∀ (m2 : Mem) (a2 : AState), StageR dn vi
   | some p1 =>
   obtain ⟨y, m1⟩ := p1
   rw [hra] at h
-  obtain ⟨mp0, hM⟩ := hMstage m a hS
-  obtain ⟨a1, hr1, -, hS1, hg1⟩ := rpConstW_ok k' dn fe vis m m1 a _ _ _ 0 _ x y c.nP c.names mp0 hra hS hxH hlvH hn
+  obtain ⟨mp0, hM⟩ := hP.rp
+  obtain ⟨a1, hr1, hM1, hS1, hg1⟩ := rpConstW_ok k' dn fe vis m m1 a _ _ _ 0 _ x y c.nP c.names mp0 hra hS hxH hlvH hn
     (by omega) hnsum hnP (by rw [hnP]; omega) (by simp; omega) hM
   have hR1 := hR.frame (rpConstW_fr hra)
   by_cases hyb : 4294967296 ≤ y
@@ -204,11 +204,13 @@ theorem sgGoW_ok (k : Nat) (hMstage : ∀ (m2 : Mem) (a2 : AState), StageR dn vi
   have hg03 : IWGrow m0 (m2.set64 IW (q + j) z) := (hg0.trans hg12).set_iw (q + j) z (by omega)
   have ht3 : iwTop (m2.set64 IW (q + j) z) = iwTop m2 := by
     simp only [iwTop]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
-  obtain ⟨ys, a', hrun, hdec', hS', hg', ht', M', G', hR', hk', hG'⟩ := ih m0 _ m' a2 ctx f dO dL q (j + 1) c holes ds
-    (acc ++ [decE z]) M2 G2 g h hS3 hg03 hq0 (by rw [ht3]; have := hg12.1; omega) hc hin hsl hb hfm hds hdsb
-    (by rw [hj1]; omega) (by rw [hj1]; exact hdec3) (hR2.frame (RfFr.set_iw _ _ _))
-  refine ⟨decE z :: ys, a', ?_, by simpa using hdec', hS', hg', by have := hg12.1; omega, M', G', hR',
-    hk2.trans hk' hG2, UInt64.le_trans hG2 hG'⟩
+  have hP3 : PosMR (m2.set64 IW (q + j) z) :=
+    ((hP.setRp (rpConstW_mfr hra) ⟨∅, hM1⟩).setRf (rxW_mfr hrf) ⟨M2, G2, g, hR2⟩).fr (MFr.set_iw _ _ _)
+  obtain ⟨ys, a', hrun, hdec', hS', hg', ht', ⟨M', G', hR', hk', hG'⟩, hP'⟩ := ih m0 _ m' a2 ctx f dO dL q (j + 1) c
+    holes ds (acc ++ [decE z]) M2 G2 g h hS3 hg03 hq0 (by rw [ht3]; have := hg12.1; omega) hc hin hsl hb hfm hds hdsb
+    (by rw [hj1]; omega) (by rw [hj1]; exact hdec3) (hR2.frame (RfFr.set_iw _ _ _)) hP3
+  refine ⟨decE z :: ys, a', ?_, by simpa using hdec', hS', hg', by have := hg12.1; omega, ⟨M', G', hR',
+    hk2.trans hk' hG2, UInt64.le_trans hG2 hG'⟩, hP'⟩
   rw [List.drop_eq_getElem_cons (show j.toNat < ds.length by omega), List.mapM_cons]
   simp only [StateT.run_bind, sgF]
   rw [← hxd, show (decI x : EIdx) = decE x from rfl, ← hlv]
@@ -221,17 +223,18 @@ theorem sgGoW_ok (k : Nat) (hMstage : ∀ (m2 : Mem) (a2 : AState), StageR dn vi
   rw [hrun]
   rfl
 
-theorem sgW_ok (k : Nat) (hMstage : ∀ (m2 : Mem) (a2 : AState), StageR dn vis fe m2 a2 → ∃ mp0, rpMR m2 mp0)
+theorem sgW_ok (k : Nat)
     (m m' : Mem) (a : AState) (ctx hO hL ind us dO dL nPc : Word) (r : List Word) (c : NestCtx)
     (holes ds : List EIdx) (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word)
     (h : sgW k m ctx hO hL ind us dO dL nPc = some (r, m')) (hS : StageR dn vis fe m a)
     (hc : decCtx m ctx.toNat = some c) (hin : CtxIn m ctx.toNat (· < iwTop m)) (hsl : CtxSl m ctx.toNat)
     (hb : c.nP + c.names.length < 2 ^ 64) (hho : decHL m hO.toNat hL.toNat = some holes)
     (hhob : hO.toNat + hL.toNat ≤ iwTop m) (hds : decHL m dO.toNat dL.toNat = some ds)
-    (hdsb : ∀ j < dL.toNat, dO.toNat + j < iwTop m) (hind : H ind) (hus : H us) (hR : RfInv m M G g) :
+    (hdsb : ∀ j < dL.toNat, dO.toNat + j < iwTop m) (hind : H ind) (hus : H us) (hR : RfInv m M G g)
+    (hP : PosMR m) :
     ∃ x a', (ConRon.Arena.nestSeedOf c holes (decI ind) (decI us) ds nPc.toNat).run a = .ok (x, a') ∧
       decNK m' (r.headD 0).toNat = some x.1 ∧ (r.tail.headD 0).toNat = x.2 ∧
-      NKIn m' (r.headD 0).toNat (· < iwTop m') ∧ RxPost dn fe vis m m' a' M G g := by
+      NKIn m' (r.headD 0).toNat (· < iwTop m') ∧ RxPost dn fe vis m m' a' M G g ∧ PosMR m' := by
   have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
   obtain ⟨-, -, hpa, hpa', -, -, -, -, -, h11⟩ := ctx_fields hc hin htop
   have hpsum : (rdW (m.arr64 IW) (ctx + 7)).toNat + (rdW (m.arr64 IW) (ctx + 8)).toNat ≤ iwTop m := by
@@ -273,10 +276,11 @@ theorem sgW_ok (k : Nat) (hMstage : ∀ (m2 : Mem) (a2 : AState), StageR dn vis 
   | some m3 =>
   rw [hgo] at h
   simp only at h
-  obtain ⟨ys, a3, hrun, hdec3, hS3, hg13, ht3, M3, G3, hR3, hk3, hG3⟩ := sgGoW_ok dn fe vis k hMstage m1 m2 m3 a ctx f
+  obtain ⟨ys, a3, hrun, hdec3, hS3, hg13, ht3, ⟨M3, G3, hR3, hk3, hG3⟩, hP3⟩ := sgGoW_ok dn fe vis k m1 m2 m3 a ctx f
     dO dL q 0 c holes ds [] M G g hgo hS2 hg2 (by omega) (by omega) (by rw [ec1]; exact hc) hci1 hsl1 hb hfm
     (by rw [decHL_agree (RdS.of_grow hg1) hdsb]; exact hds) (fun j hj => Nat.lt_of_lt_of_le (hdsb j hj) hg1.1)
     (by simp) (by simp [decHL, hslice?]) (hR1.frame (allocW_fr hal))
+    ((hP.fr (posRecW_mfr hr1)).fr (allocW_mfr hal))
   cases hr4 : posRecW m3 [ind, us, q, dL] with
   | none => rw [hr4] at h; simp [sgC] at h
   | some p4 =>
@@ -290,7 +294,7 @@ theorem sgW_ok (k : Nat) (hMstage : ∀ (m2 : Mem) (a2 : AState), StageR dn vis 
   have hdk : decNK m4 key.toNat = some ⟨decI ind, decI us, ys⟩ :=
     decNK_of_words (by simpa using hget4 0 (by simp)) hind (hget4 1 (by simp)) hus (hget4 2 (by simp))
       (hget4 3 (by simp)) (by rw [decHL_grow hg4 hqb]; simpa using hdec3)
-  refine ⟨(⟨decI ind, decI us, ys⟩, nPc.toNat), a3, ?_, hdk, rfl, ?_, ?_⟩
+  refine ⟨(⟨decI ind, decI us, ys⟩, nPc.toNat), a3, ?_, hdk, rfl, ?_, ?_, hP3.fr (posRecW_mfr hr4)⟩
   · simp only [ConRon.Arena.nestSeedOf, StateT.run_bind]
     have : (ds.mapM fun x => do
         let y ← ConRon.Arena.replaceApps c.names c.lvls 0 c.nP x
@@ -314,12 +318,11 @@ variable (p : Prog) (L : SgLook p)
 include L
 
 /-- **`nest_seed_of` refines `nestSeedOf`** (through the stubs below `replace_apps` and `replace_fvars`;
-`replace_apps`' memo well-formed at every stage memory). -/
+the walk memos well formed in the memory at hand, `PosMR`, and again after). -/
 @[refines ConRon.Arena.nestSeedOf]
 theorem nestSeedOf_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
     (vis ctx hO hL ind us dO dL nPc : Word) (c : NestCtx) (holes ds : List EIdx)
-    (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word)
-    (hMstage : ∀ (m2 : Mem) (a2 : AState), StageR dn vis fe m2 a2 → ∃ mp0, rpMR m2 mp0)
+    (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word) (hP : PosMR s₀.mem)
     (hS : StageR dn vis fe s₀.mem a₀) (hc : decCtx s₀.mem ctx.toNat = some c)
     (hin : CtxIn s₀.mem ctx.toNat (· < iwTop s₀.mem)) (hsl : CtxSl s₀.mem ctx.toNat)
     (hb : c.nP + c.names.length < 2 ^ 64) (hho : decHL s₀.mem hO.toNat hL.toNat = some holes)
@@ -333,13 +336,13 @@ theorem nestSeedOf_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → 
       (r.tail.headD 0).toNat = (AM.res (ConRon.Arena.nestSeedOf c holes (decI ind) (decI us) ds nPc.toNat) a₀).2 ∧
       NKIn s'.mem (r.headD 0).toNat (· < iwTop s'.mem) ∧
       RxPost dn fe vis s₀.mem s'.mem (AM.st (ConRon.Arena.nestSeedOf c holes (decI ind) (decI us) ds nPc.toNat) a₀)
-        M G g; ⊤⦄ := by
+        M G g ∧ PosMR s'.mem; ⊤⦄ := by
   refine triple_post (nestSeedOf_spec p L k s₀ ctx hO hL ind us dO dL nPc) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨x, a', hrun, h1, h2, h3, h4⟩ := sgW_ok dn fe vis k hMstage _ _ a₀ ctx hO hL ind us dO dL nPc r c holes ds
-    M G g hm hS hc hin hsl hb hho hhob hds hdsb hind hus hR
+  obtain ⟨x, a', hrun, h1, h2, h3, h4, hP'⟩ := sgW_ok dn fe vis k _ _ a₀ ctx hO hL ind us dO dL nPc r c holes ds
+    M G g hm hS hc hin hsl hb hho hhob hds hdsb hind hus hR hP
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  exact ⟨hl, hok, by rw [hres]; exact h1, by rw [hres]; exact h2, h3, by rw [hst]; exact h4⟩
+  exact ⟨hl, hok, by rw [hres]; exact h1, by rw [hres]; exact h2, h3, by rw [hst]; exact h4, hP'⟩
 
 end census
 end L.Ind

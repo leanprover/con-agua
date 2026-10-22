@@ -170,12 +170,10 @@ theorem LowFr.trans {m₁ m₂ m₃ : Mem} (h₁ : LowFr m₁ m₂) (h₂ : LowF
   · intro x hx; rcases List.mem_append.mp hx with h | h; exact c₁ x h; exact c₂ x h
 
 theorem sointernW_low {m m' : Mem} {u r : Word} (h : sointernW m u = some (r, m')) : LowFr m m' := by
-  have h₂ := h; rw [sointernW_eq] at h₂
-  exact ⟨_, _, internM_frame _ sortSch_wf _ _ _ _ _ _ _ _ h₂, by simp [sortSch, SOREC, SOSLOT], by simp [sortSch]⟩
+  exact ⟨_, _, (sointernW_frame (hI := h)), by simp [sortSch, SOREC, SOSLOT, SOLP], by simp [sortSch]⟩
 
 theorem fvinternW_low {m m' : Mem} {u ty r : Word} (h : fvinternW m u ty = some (r, m')) : LowFr m m' := by
-  have h₂ := h; rw [fvinternW_eq] at h₂
-  exact ⟨_, _, internM_frame _ fvarSch_wf _ _ _ _ _ _ _ _ h₂, by simp [fvarSch, FVREC, FVSLOT], by simp [fvarSch]⟩
+  exact ⟨_, _, (fvinternW_frame (hI := h)), by simp [fvarSch, FVREC, FVSLOT, FVLP], by simp [fvarSch]⟩
 
 theorem mkAppW_low {m m' : Mem} {f x r : Word} (hI : mkAppW m f x = some (r, m')) : LowFr m m' := by
   have hf : MemFrame [ADER, AREC, ASLOT] [4, 5] m m' := by
@@ -615,6 +613,22 @@ theorem rpMR_low {m m' : Mem} (hf : LowFr m m') {mp : Std.HashMap EIdx EIdx} (h 
   exact memoRG_frame raSch raSch_wf bmKey (fun w : Word => decE w) A C
     (fun hmem => by have := hA _ hmem; simp [raSch, RAM] at this)
     (fun hmem => by have := hC _ hmem; simp [raSch] at this) m m' hf mp h
+
+theorem MFr.of_low {m m' : Mem} (h : LowFr m m') : MFr [] [] m m' := by
+  obtain ⟨A, C, hf, hA, hC⟩ := h
+  refine MFr.of_frame hf (fun b hb => ?_) (fun x hx => ?_)
+  · exact .inl (Nat.lt_of_lt_of_le (hA b hb) (by decide))
+  · have := hC x hx; left; omega
+
+theorem rpMR_mfr {S0 : List ArrId} {T0 : List Word} {m m' : Mem} (hf : MFr S0 T0 m m') (hS : RAM ∉ S0)
+    (hT : (210 : Word) ∉ T0) {mp : Std.HashMap EIdx EIdx} (h : rpMR m mp) : rpMR m' mp := by
+  obtain ⟨A, C, f, hA, hC⟩ := hf.memo RAM 210 (by decide) (by decide) hS hT
+  exact memoRG_frame raSch raSch_wf bmKey (fun w : Word => decE w) A C hA hC m m' f mp h
+
+theorem noMR_mfr {S0 : List ArrId} {T0 : List Word} {m m' : Mem} (hf : MFr S0 T0 m m') (hS : NOM ∉ S0)
+    (hT : (204 : Word) ∉ T0) {mp : Std.HashMap EIdx Bool} (h : noMR m mp) : noMR m' mp := by
+  obtain ⟨A, C, f, hA, hC⟩ := hf.memo NOM 204 (by decide) (by decide) hS hT
+  exact memoRG_frame noSch noSch_wf bmKey (fun w : Word => w != 0) A C hA hC m m' f mp h
 
 theorem ahW_low {n : Nat} {m m' : Mem} {no nl us b nn e : Word} {r : List Word}
     (h : ahW n m no nl us b nn e = some (r, m')) : LowFr m m' := by

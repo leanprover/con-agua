@@ -457,18 +457,13 @@ def checkDeclAxiom : FunDecl := lfn (i, vis) locals (p, n, s, o, l, c, e, z, w, 
   abort
 }
 
-/-- `check_decl_defn(i, vis)`: the `.defnDecl` arm: the constant check, the definition check,
-then the structural-`Nat` gate (the guard and the stored dependencies, both computed before
-either is tested, as the twin's `g && (← …)` does; the recurrences certified at the
-pre-insertion view `vis`), then the `Nat.div`-family pin gate over the ROM's variants. -/
+/-- `defn_nat_gate(vis, w, n)`: the definition arm's structural-`Nat` gate for the constant `n` at
+the extended view `w`: for a `natOpNames` member, the guard and the stored dependencies (both
+computed before either is tested, as the twin's `g && (← …)` does), then the recurrences of the
+stored value certified at the pre-insertion view `vis`. Returns `0`. -/
 -- con-ron: ConRon/Arena/CheckDecl.lean:82-214 ConRon.Arena.checkDecl
-@[l_impl ConRon.Arena.checkDecl]
-def checkDeclDefn : FunDecl :=
-    lfn (i, vis) locals (p, n, z, w, no, nl, c, g, dov, dl, s, f, r, eo, el, so, sl, ok, po, pl) {
-  p := call erec_ci(i, 1);
-  n := EREC.u64[p + 1];
-  z := call check_constant_val(vis, p + 1);
-  w := call check_defn_val(vis, p);
+def defnNatGate : FunDecl :=
+    lfn (vis, w, n) locals (no, nl, c, g, dov, dl, s, f, r, eo, el, so, sl, ok) {
   (no, nl) := call nat_op_names();
   c := call sl_contains(no, nl, n);
   if c != 0 {
@@ -484,12 +479,35 @@ def checkDeclDefn : FunDecl :=
     ok := call certify_nat_eqs(vis, so, sl);
     if ok == 0 { abort }
   };
+  return 0
+}
+
+/-- `defn_div_gate(vis, w, n)`: the definition arm's `Nat.div`-family pin gate for the constant `n`
+over the ROM's variants (`rom_pin_sets()`), at the extended view `w` and the pre-insertion view
+`vis`. Returns `0`. -/
+-- con-ron: ConRon/Arena/CheckDecl.lean:82-214 ConRon.Arena.checkDecl
+def defnDivGate : FunDecl := lfn (vis, w, n) locals (no, nl, c, po, pl, z) {
   (no, nl) := call nat_div_mod_names();
   c := call sl_contains(no, nl, n);
   if c != 0 {
     (po, pl) := call rom_pin_sets();
     z := call check_div_mod_pin(po, pl, vis, w, n)
   };
+  return 0
+}
+
+/-- `check_decl_defn(i, vis)`: the `.defnDecl` arm: the constant check, the definition check,
+then the structural-`Nat` gate (`defn_nat_gate`) and the `Nat.div`-family pin gate
+(`defn_div_gate`). -/
+-- con-ron: ConRon/Arena/CheckDecl.lean:82-214 ConRon.Arena.checkDecl
+@[l_impl ConRon.Arena.checkDecl]
+def checkDeclDefn : FunDecl := lfn (i, vis) locals (p, n, z, w) {
+  p := call erec_ci(i, 1);
+  n := EREC.u64[p + 1];
+  z := call check_constant_val(vis, p + 1);
+  w := call check_defn_val(vis, p);
+  z := call defn_nat_gate(vis, w, n);
+  z := call defn_div_gate(vis, w, n);
   return w
 }
 
@@ -553,6 +571,7 @@ def declArmsFns : Prog :=
    ("install_basis_decl", installBasisDeclL), ("install_basis_decls", installBasisDeclsL),
    ("check_basis_decl", checkBasisDeclL), ("quot_pin_hit", quotPinHitL),
    ("check_decl_axiom", checkDeclAxiom), ("check_decl_defn", checkDeclDefn),
+   ("defn_nat_gate", defnNatGate), ("defn_div_gate", defnDivGate),
    ("check_decl_thm", checkDeclThm), ("check_decl_opaque", checkDeclOpaque),
    ("check_decl_quot", checkDeclQuot)]
 

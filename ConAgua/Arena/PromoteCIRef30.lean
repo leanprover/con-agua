@@ -43,7 +43,7 @@ theorem newW_eq (p : Prog) (n : Nat) (m : Mem) (k vis fresh : Word) :
         (newRest p n k vis) := rfl
 
 theorem pnew_arrs : ∀ b ∈ EIXA :: EIXS :: EIXN :: ECON :: EREC :: eArrs,
-    b < 50 ∨ (132 ≤ b ∧ b ≤ 136) ∨ (146 ≤ b ∧ b ≤ 149) := by
+    (b < 50 ∨ (54 < b ∧ b < 64)) ∨ (132 ≤ b ∧ b ≤ 136) ∨ (146 ≤ b ∧ b ≤ 149) := by
   intro b hb
   simp only [List.mem_cons] at hb
   rcases hb with rfl | rfl | rfl | rfl | hb
@@ -57,7 +57,7 @@ theorem pnew_arrs : ∀ b ∈ EIXA :: EIXS :: EIXN :: ECON :: EREC :: eArrs,
     · exact .inr (.inr h)
 
 theorem pnew_arrs' : ∀ b ∈ ECON :: EREC :: eArrs,
-    b < 50 ∨ b = 135 ∨ b = 136 ∨ (146 ≤ b ∧ b ≤ 149) := by
+    (b < 50 ∨ (54 < b ∧ b < 64)) ∨ b = 135 ∨ b = 136 ∨ (146 ≤ b ∧ b ≤ 149) := by
   intro b hb
   simp only [List.mem_cons] at hb
   rcases hb with rfl | rfl | hb
@@ -90,15 +90,15 @@ section rel
 variable (p : Prog) (hp : PromoteProg p)
 include hp
 
-theorem pnew_main (dn : NIdx → Option ConLeche.Name) (n : Nat) (m₁ : Mem) (a : AState)
+theorem pnew_main {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Name) (n : Nat) (m₁ : Mem) (a : AState)
     (pm : PMemo) (k vis : Word) (consts : List IConstantInfo)
     (idx : Std.HashMap NIdx (Nat × IConstantInfo)) (vb : Nat) (pend : Array PendingCheck)
     (ds : Array IDeclaration) (m' : Mem) (hP₁ : PMemoR m₁ pm)
-    (hR₁ : LoopR dn m₁ a vis ⟨⟨consts⟩, idx, vb⟩ pend ds) (hk : k.toNat ≤ vis.toNat)
+    (hR₁ : LoopR pins dn m₁ a vis ⟨⟨consts⟩, idx, vb⟩ pend ds) (hk : k.toNat ≤ vis.toNat)
     (hW : newRest p n k vis m₁ = some m') :
     ∃ a' pm' Lc', (promoteCIList pm coreWalkFuel (consts.take k.toNat)).run a =
         .ok ((pm', Lc'), a') ∧
-      LoopR dn m' a' vis ⟨⟨Lc' ++ consts.drop k.toNat⟩,
+      LoopR pins dn m' a' vis ⟨⟨Lc' ++ consts.drop k.toNat⟩,
         indexPromoted (eraseInstalled idx (consts.take k.toNat)) vb Lc', vb⟩ pend ds := by
   have hE₁ := hR₁.check.env
   have hvis : vb = vis.toNat := hR₁.check.env.vis

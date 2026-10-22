@@ -180,14 +180,21 @@ theorem CoreS.arenaFrame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a'
     (henv : ∀ b ∈ A, b < 132 ∨ 144 ≤ b)
     (hC128 : ∀ x ∈ C, x.toNat < 96 ∨ 128 ≤ x.toNat)
     (hCenv : ∀ x ∈ C, x.toNat < 128 ∨ 136 ≤ x.toNat)
-    (hmA : (50 : ArrId) ∉ A ∧ (49 : ArrId) ∉ A := by decide) (hmC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C := by decide) :
+    (hmA : (50 : ArrId) ∉ A ∧ (49 : ArrId) ∉ A := by decide) (hmC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C := by decide)
+    (hmWA : (151 : ArrId) ∉ A ∧ (152 : ArrId) ∉ A ∧ (153 : ArrId) ∉ A := by decide)
+    (hmWC : (152 : Word) ∉ C ∧ (154 : Word) ∉ C ∧ (156 : Word) ∉ C := by decide)
+    (hscA : SOREC ∉ A ∧ CREC ∉ A := by decide)
+    (hscC : (1 : Word) ∉ C ∧ (16 : Word) ∉ C ∧ (17 : Word) ∉ C ∧ (18 : Word) ∉ C ∧ (19 : Word) ∉ C :=
+      by decide) :
     CoreS dn m' a' vis fe M eb := by
   simp only [cplL, Prod.mk.injEq] at hcpl
   obtain ⟨hc, hp, hl⟩ := hcpl
   refine ⟨hD, ?_, ?_, hS.env.frame (fun b hb => (henv b hb).elim (fun h => .inl h) (fun h => .inr h))
       (fun x hx => (hCenv x hx).elim (fun h => .inl h) (fun h => .inr h)) hf, ?_, ?_, ?_,
-      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf hmA hmC,
-      hf.2.2.1 145 ▸ hS.bstk⟩
+      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf hmA hmC hmWA hmWC,
+      hf.2.2.1 145 ▸ hS.bstk,
+      hS.den.of_arena hS.arena.1 hD.1 hc hp hl hf (fun h => by have := henv _ h; simp [EREC] at this)
+        hscA hscC⟩
   · rw [hc]
     exact CoreRM.frame (A := A) (C := C)
       (fun b hb => (h128 b hb).elim (fun h => .inl h) (fun h => .inr h))
@@ -202,11 +209,6 @@ def CoreK (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : Mo
     (m₀ : Mem) (m : Mem) (a : AState) : Prop :=
   CoreS dn m a vis fe M eb ∧ StackKept m₀ m
 
-theorem StackKept.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
-    (hA : SPN ∉ A) (hC : (136 : Word) ∉ C) : StackKept m m' := by
-  have hspn : m'.arr64 SPN = m.arr64 SPN := hf.1 SPN hA (by decide)
-  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 hC
-  exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
 
 theorem CoreK.grow {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {M : ModeMaps}
     {eb : Word} {m₀ m m' : Mem} {a : AState} (h : CoreK dn vis fe M eb m₀ m a) (hg : Grows m m') :
@@ -214,7 +216,7 @@ theorem CoreK.grow {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
   have hf := grows_frame m m' hg
   refine ⟨h.1.arenaFrame (ArenaD.grow m m' hg a h.1.arena) rfl hf (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN])
     (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN]),
-    h.2.trans (StackKept.of_frame hf (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN]))⟩
+    h.2.trans (StackKept.of_grows hg)⟩
 
 /-- An interned `lit` handle word is below `2^32`: `WhnfDeltaRefine3.lean`'s `internW_hw`, which
 this file does not import (it would pull in the whnf walks); `natPredW_of` discharges it. -/
@@ -258,8 +260,7 @@ theorem internLit_core (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
     have := AM.run_of_ok _ _ hok
     exact (keeps_cplL_internNodeE _).run (by simpa only [internE] using this)
   refine ⟨hloc, hok, ⟨hK.1.arenaFrame hD hcpl hfr (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN])
-    (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN]), hK.2.trans (StackKept.of_frame hfr (by simp [POOL, REC, SLOT, PINS, SPN])
-    (by simp [POOL, REC, SLOT, PINS, SPN]))⟩, hres, hlw s.mem a₀ o l _ _ hK.1.arena.1.lit hI⟩
+    (by simp [POOL, REC, SLOT, PINS, SPN]) (by simp [POOL, REC, SLOT, PINS, SPN]), hK.2.trans (StackKept.of_frame hfr)⟩, hres, hlw s.mem a₀ o l _ _ hK.1.arena.1.lit hI⟩
 
 /-! ## `nat_pred` -/
 

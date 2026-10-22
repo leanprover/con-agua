@@ -327,7 +327,7 @@ theorem sim_storeRes {G : Layout} (hG : G.Ok) (nl F : Nat) (Q : MachineState →
 
 end
 section
-variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres < maxOff) (p : Prog)
+variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff) (p : Prog)
 include hG hTab
 
 theorem sim_args (ctx : Ctx) (hT : ctx.tab = G.tab) (F : Nat) (hF : 8 * F + 8 < maxOff) :
@@ -394,7 +394,8 @@ theorem rdW_of_pres {t x : Nat} {d d' : DataMem} (hP : Pres G t d d') (hlo : G.l
     have := hG.hi_le
     rw [A_add]
     exact hP.same _ (by omega) (by omega) (hG.notStack_of_arr' ⟨by omega, by omega⟩)
-      fun hr => hG.notStack_of_res hr ⟨by omega, by omega⟩
+      (fun hr => hG.notStack_of_res hr ⟨by omega, by omega⟩)
+      fun hg => hG.notStack_of_tab hg.tab ⟨by omega, by omega⟩
 
 theorem sim_ret (K : Stmt → M Sig) (P : Nat → Prop) (es : List Expr) :
     SimS p G (stepRun p K) P (.ret es) := by

@@ -319,8 +319,9 @@ theorem CoreS.set_lq {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
       hS.env.frame (fun b hb => by simp at hb; subst hb; decide)
         (fun x hx => by simp at hx; subst hx; decide) hf,
       fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf,
-      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.2.2.1 145 ▸ hS.bstk⟩,
-    by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
+      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.2.2.1 145 ▸ hS.bstk,
+      (hS.den.frameE (hf.1 EREC (by simp [EREC]) (by decide))).caches rfl rfl rfl⟩,
+    StackKept.of_frame hf⟩
 
 end L.Arena
 
@@ -394,7 +395,8 @@ theorem lvlEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState
   have hS₂ : CoreS dn m₁ { a with caches := { a.caches with readLC := X } } vis fe M eb :=
     ⟨⟨ArenaR.caches_irrel _ hS₁.arena.1, DerR.of_store _ _ _ hS₁.arena.2 rfl⟩, hS₁.core.readLC X,
       hS₁.pins,
-      hS₁.env, hrl, fun h l e => hS₁.readLs h l e, hS₁.nwf, hS₁.erec, hS₁.spn, hS₁.memos, hS₁.bstk⟩
+      hS₁.env, hrl, fun h l e => hS₁.readLs h l e, hS₁.nwf, hS₁.erec, hS₁.spn, hS₁.memos, hS₁.bstk,
+      hS₁.den.caches rfl rfl rfl⟩
   by_cases hz0 : z₁ = 0
   · rw [rcdK_zero _ _ _ _ _ hz0] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h
@@ -539,8 +541,9 @@ theorem CoreS.set_lsq {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
       hS.env.frame (fun b hb => by simp at hb; subst hb; decide)
         (fun x hx => by simp at hx; subst hx; decide) hf,
       fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf,
-      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.2.2.1 145 ▸ hS.bstk⟩,
-    by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
+      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.2.2.1 145 ▸ hS.bstk,
+      (hS.den.frameE (hf.1 EREC (by simp [EREC]) (by decide))).caches rfl rfl rfl⟩,
+    StackKept.of_frame hf⟩
 
 /-- **The model of `lvls_eq_c` refines `lvlsEq?`** under `CoreS`. -/
 theorem lvlsEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
@@ -596,7 +599,8 @@ theorem lvlsEqCW_ok {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AStat
   have hS₂ : CoreS dn m₁ { a with caches := { a.caches with readLsC := X } } vis fe M eb :=
     ⟨⟨ArenaR.caches_irrel _ hS₁.arena.1, DerR.of_store _ _ _ hS₁.arena.2 rfl⟩,
       hS₁.core.readLsC X, hS₁.pins, hS₁.env, fun h l e => hS₁.readL h l e, hrl, hS₁.nwf,
-      hS₁.erec, hS₁.spn, hS₁.memos, hS₁.bstk⟩
+      hS₁.erec, hS₁.spn, hS₁.memos, hS₁.bstk,
+      hS₁.den.caches rfl rfl rfl⟩
   by_cases hz0 : z₁ = 0
   · rw [rcdK_zero _ _ _ _ _ hz0] at h
     simp only [Option.some.injEq, Prod.mk.injEq] at h

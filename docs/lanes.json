@@ -332,13 +332,13 @@
 {
 "lane": "whnf3",
 "model": "opus",
-"status": "running",
+"status": "done",
 "focus": "Phase 4/5: missing walks (instLP, wscoped, leaves, ...), pool growth in CoreAfter"
 },
 {
 "lane": "lfeat",
 "model": "opus",
-"status": "running",
+"status": "done",
 "focus": "L language features: named globals, record declarations (additive; compiler proof)"
 },
 {
@@ -352,5 +352,11 @@
 "model": "opus",
 "status": "done",
 "focus": "Stale artifact from the shared Lake cache: mechanism, fix, cache-free verification"
+},
+{
+"lane": "whnf4",
+"model": "opus",
+"status": "running",
+"focus": "instLP family (D23), constTy, reduceProjCore/unfold, whnf steps for the knot"
 }
 ]

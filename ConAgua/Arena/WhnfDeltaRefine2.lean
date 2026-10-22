@@ -387,28 +387,35 @@ theorem natLitToCtor_spec (p : Prog) (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St
 
 theorem CoreS.of_nat {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
     {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb)
-    (hD : ArenaD m' a') (hcpl : cpl a' = cpl a) (hf : MemFrame natA natC m m') :
+    (hD : ArenaD m' a') (hcpl : cpl a' = cpl a) (hf : MemFrame natA natC m m')
+    (hv : ∀ x w, IsSC w → a'.store.view x = some w → a.store.view x = some w) :
     CoreS dn m' a' vis fe M eb :=
-  hS.arena_frame hD hcpl hf
+  have hk : a'.caches = a.caches ∧ a'.pins = a.pins ∧ a'.store.lss = a.store.lss := by
+    simpa only [cpl, Prod.mk.injEq] using hcpl
+  hS.arena_frameD hD hcpl hf
     (fun b hb => by
       simp only [natA, List.mem_cons, List.mem_nil_iff, or_false] at hb
-      rcases hb with rfl | rfl | rfl | rfl | rfl <;> decide)
-    (by simp [natA, POOL, CREC, CSLOT])
+      rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
+    (by simp [natA, POOL, CREC, CSLOT, CLP])
     (fun b hb => by
       simp only [natA, List.mem_cons, List.mem_nil_iff, or_false] at hb
-      rcases hb with rfl | rfl | rfl | rfl | rfl <;> decide)
+      rcases hb with rfl | rfl | rfl | rfl | rfl | rfl <;> decide)
     (fun x hx => by
       simp only [natC, List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl | rfl | rfl | rfl <;> decide)
     (fun x hx => by
       simp only [natC, List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl | rfl | rfl | rfl <;> decide)
+    (hS.den.of_views hk.1 hk.2.1 hk.2.2 (hf.1 EREC (by simp [natA, POOL, CREC, CSLOT, CLP, EREC]) (by decide))
+      hv)
 
-theorem StackKept.of_nat_frame {m m' : Mem} (hf : MemFrame natA natC m m') : StackKept m m' := by
+theorem StackKept.of_nat_frame {m m' : Mem} (hf : MemFrame natA natC m m') (hP : PoolGrew m m') :
+    StackKept m m' := by
   have hspn : m'.arr64 SPN = m.arr64 SPN :=
-    hf.1 SPN (by simp [natA, POOL, CREC, CSLOT, SPN]) (by decide)
+    hf.1 SPN (by simp [natA, POOL, CREC, CSLOT, CLP, SPN]) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp [natC])
-  exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
+  exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn],
+    BKept.of_frame hf (by decide) (by decide), hP⟩
 
 theorem keeps_cpl_natPredArm (a : Nat) : Keeps cpl (natPredArm a) := by
   unfold natPredArm
@@ -428,6 +435,35 @@ theorem natPredLit_inst (hp : WhnfDeltaProg' p) : InternSpec p ArenaD :=
   fun a₀ n s₀ o l hA hq hn => internLit_refinesD p hp.litHash' hp.limbsEq' hp.litMatch' hp.litFind'
     hp.litPush' hp.internLit a₀ n s₀ o l hA hq hn
 
+/-- The functions of `intern_lit`: they write the `lit` table only, never the pool. -/
+def litFns : List FnName := ["intern_lit", "lit_hash", "limbs_eq", "lit_match", "lit_find", "lit_push"]
+
+theorem litFns_closed : closedA storeProg [REC, SLOT] [2, 3] litFns = true := by decide +kernel
+
+theorem WhnfDeltaProg'.litClosed (hp : WhnfDeltaProg' p) : closedA p [REC, SLOT] [2, 3] litFns = true :=
+  closedW_of_agree litFns_closed (by
+    intro f hf
+    simp only [litFns, List.mem_cons, List.mem_nil_iff, or_false] at hf
+    rcases hf with rfl | rfl | rfl | rfl | rfl | rfl
+    · rw [hp.internLit]; rfl
+    · rw [hp.litHash']; rfl
+    · rw [hp.limbsEq']; rfl
+    · rw [hp.litMatch']; rfl
+    · rw [hp.litFind']; rfl
+    · rw [hp.litPush']; rfl)
+
+/-- `intern_lit` under `ArenaD` and "the pool only grew since `m₀`". -/
+theorem natPredLit_instP (hp : WhnfDeltaProg' p) (m₀ : Mem) :
+    InternSpec p (fun m a => ArenaD m a ∧ PoolGrew m₀ m) := by
+  intro a₀ n s₀ o l ⟨hA, hP⟩ hq hn
+  apply L.M.triple_of_run
+  intro s r s' hs hrun
+  obtain ⟨hloc, hok, hD, hres⟩ := L.M.of_run (P := fun s => s = s₀) hs hrun (natPredLit_inst p hp a₀ n s₀ o l hA hq hn)
+  obtain ⟨hfr, -⟩ := L.M.of_run (P := fun s => s = s₀) hs hrun
+    (invoke_memFrame hp.litClosed n (f := "intern_lit") (by decide) [o, l] s₀)
+  subst hs
+  exact ⟨hloc, hok, ⟨hD, hP.trans (PoolGrew.of_frame hfr (by decide) (by decide))⟩, hres⟩
+
 theorem callW_natPredLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb o cnt : Word)
     (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (hs : SliceOK s₀.mem o cnt) (r : List Word) (m' : Mem)
@@ -435,13 +471,17 @@ theorem callW_natPredLit (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : A
     AM.ok (natPredArm (pv (s₀.mem.arr64 POOL) o.toNat cnt.toNat)) a₀ ∧
     CoreS dn m' (AM.st (natPredArm (pv (s₀.mem.arr64 POOL) o.toNat cnt.toNat)) a₀) vis fe MM eb ∧
     AM.res (natPredArm (pv (s₀.mem.arr64 POOL) o.toNat cnt.toNat)) a₀ = some (decE (r.headD 0)) ∧
-    MemFrame natA natC s₀.mem m' := by
-  obtain ⟨s', rfl, -, hok, hD, hres⟩ := triple_of_callW
-    (natPredLit_refines p ArenaD (fun _ _ h => h.1.lit.1)
-      (fun m m' a hA hg => ArenaD.grow m m' hg a hA) (natPredLit_inst p hp) hp.natLimb' hp.subBorrow'
-      hp.natTrim' hp.natSub hp.predLit n s₀ a₀ hC.arena o cnt hs) h
+    MemFrame natA natC s₀.mem m' ∧ PoolGrew s₀.mem m' := by
+  obtain ⟨s', rfl, -, hok, ⟨hD, hP⟩, hres⟩ := triple_of_callW
+    (natPredLit_refines p (fun m a => ArenaD m a ∧ PoolGrew s₀.mem m) (fun _ _ h => h.1.1.lit.1)
+      (fun m m' a hA hg => ⟨ArenaD.grow m m' hg a hA.1, hA.2.trans (PoolGrew.of_grows hg)⟩)
+      (natPredLit_instP p hp s₀.mem) hp.natLimb' hp.subBorrow'
+      hp.natTrim' hp.natSub hp.predLit n s₀ a₀ ⟨hC.arena, PoolGrew.refl _⟩ o cnt hs) h
   have hfr := callW_natFrame p hp.natClosed "nat_pred_lit" (by decide +kernel) n _ _ _ _ h
-  exact ⟨hok, hC.of_nat hD (Keeps.run (keeps_cpl_natPredArm _) (AM.run_of_ok _ _ hok)) hfr, hres, hfr⟩
+  exact ⟨hok, hC.of_nat hD (Keeps.run (keeps_cpl_natPredArm _) (AM.run_of_ok _ _ hok)) hfr
+    (internE_pure_views (by rintro (⟨_, h⟩ | ⟨_, _, h⟩) <;> cases h) rfl _ (AM.run_of_ok _ _ hok)),
+    hres, hfr,
+    hP⟩
 
 end refs10
 
@@ -557,7 +597,7 @@ theorem natLitToCtor_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀
     simp only [show (3 : Word).toNat = 3 from rfl] at hr₁; exact hr₁
   rw [hr₁'] at hok hS hres
   have hPool : m₂.arr64 POOL = s₀.mem.arr64 POOL :=
-    hfr.arr_eq POOL (by simp [CREC, CSLOT, POOL]) (by decide)
+    hfr.arr_eq POOL (by simp [CREC, CSLOT, CLP, POOL]) (by decide)
   have hTop : m₂.top = s₀.mem.top := by
     rw [← rdW_ctl_top', ← rdW_ctl_top']; exact hfr.2.1 0 (by simp)
   have hs₂ : SliceOK m₂ o cnt := by unfold SliceOK; rw [hTop]; exact hs
@@ -567,7 +607,7 @@ theorem natLitToCtor_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀
   obtain ⟨r₃, m₃⟩ := q₃
   rw [h3] at hW
   dsimp only at hW
-  obtain ⟨hok3, hS3, hres3, hfr3⟩ := callW_natPredLit p hp n ⟨m₂, Locals.init []⟩ _ dn vis fe MM eb o cnt
+  obtain ⟨hok3, hS3, hres3, hfr3, hP3⟩ := callW_natPredLit p hp n ⟨m₂, Locals.init []⟩ _ dn vis fe MM eb o cnt
     hS hs₂ r₃ m₃ h3
   rw [hPool, hk] at hok3 hS3 hres3
   cases h4 : callW p n "mk_app" [r₂.headD 0, r₃.headD 0] m₃ with
@@ -598,7 +638,7 @@ theorem natLitToCtor_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀
   · rw [hst', ← hm]
     refine ⟨MM, hS3.of_app hD4 (Keeps.run (keeps_cpl_internApp _ _) (AM.run_of_ok _ _ hok4)) hfr4,
       KeptAll.refl _ _, ?_⟩
-    exact ((StackKept.of_const_frame hfr).trans (StackKept.of_nat_frame hfr3)).trans
+    exact ((StackKept.of_const_frame hfr).trans (StackKept.of_nat_frame hfr3 hP3)).trans
       (StackKept.of_app_frame hfr4)
   · rw [hres', decH, ← hr]
   · unfold ResH; rw [← hr]; exact hhw4
@@ -737,9 +777,9 @@ theorem litToCtorIfNat_refines (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a�
     have hdb : decBool r₁ = true := by simp only [decBool, bne_iff_ne, ne_eq]; exact hs0
     rwa [hdb] at this
   have hE : m₁.arr64 REC = s₀.mem.arr64 REC :=
-    hfr1.arr_eq REC (by simp [CREC, CSLOT, REC, POOL]) (by decide)
+    hfr1.arr_eq REC (by simp [CREC, CSLOT, CLP, REC, POOL]) (by decide)
   have hPool : m₁.arr64 POOL = s₀.mem.arr64 POOL :=
-    hfr1.arr_eq POOL (by simp [CREC, CSLOT, POOL]) (by decide)
+    hfr1.arr_eq POOL (by simp [CREC, CSLOT, CLP, POOL]) (by decide)
   have hTop : m₁.top = s₀.mem.top := by
     rw [← rdW_ctl_top', ← rdW_ctl_top']; exact hfr1.2.1 0 (by simp)
   rw [hE] at hW
@@ -825,8 +865,9 @@ theorem CoreS.set_cv {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
       hS.env.frame (fun b hb => by simp at hb; subst hb; decide)
         (fun x hx => by simp at hx; subst hx; decide) hf,
       fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf,
-      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.2.2.1 145 ▸ hS.bstk⟩,
-    by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
+      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.2.2.1 145 ▸ hS.bstk,
+      (hS.den.frameE (hf.1 EREC (by simp [EREC]) (by decide))).caches rfl rfl rfl⟩,
+    StackKept.of_frame hf⟩
 
 
 /-- The model of `const_val_at`. -/
@@ -862,7 +903,7 @@ theorem constValAt_run_miss (a a₁ : AState) (n : NIdx) (lps : List NIdx) (valu
 section refs13
 variable (p : Prog)
 
-theorem callW_constValAt (hp : WhnfDeltaProg p) (hwc : WhnfCallees p) (n : Nat) (s₀ : St)
+theorem callW_constValAt (hp : WhnfDeltaProg p) (hlp : InstLPOK p) (n : Nat) (s₀ : St)
     (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
     (eb nm po pl value us : Word) (lps : List NIdx) (hC : CoreS dn s₀.mem a₀ vis fe MM eb)
     (hnm : HW nm) (hv : HW value) (hu : HW us)
@@ -897,7 +938,7 @@ theorem callW_constValAt (hp : WhnfDeltaProg p) (hwc : WhnfCallees p) (n : Nat) 
   rw [hcall] at hW
   dsimp only at hW
   obtain ⟨hok, ⟨M', hS₁, hK₁, hSt₁⟩, hres, hrw⟩ :=
-    CoreSpec.of_callW (hwc.instLP n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb po pl us value lps hC hv
+    CoreSpec.of_callW (hlp n ⟨s₀.mem, Locals.init []⟩ a₀ dn vis fe MM eb po pl us value lps hC hv
       hu hlps) hcall
   cases hset : msetG cvSch m₁ nm us (r₁.headD 0) with
   | none => rw [hset] at hW; cases hW
@@ -920,10 +961,10 @@ theorem constValAt_refines' (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (a₀ :
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
     (eb nm po pl value us : Word) (lps : List NIdx)
     (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (hnm : HW nm) (hv : HW value) (hu : HW us)
-    (hwc : WhnfCallees p) (hlps : hslice? (s₀.mem.arr64 EREC) po.toNat pl.toNat = some lps) :
+    (hlp : InstLPOK p) (hlps : hslice? (s₀.mem.arr64 EREC) po.toNat pl.toNat = some lps) :
     CoreSpec p n "const_val_at" [nm, po, pl, value, us]
       (constValAt (decI nm) lps (decE value) (decI us)) decH s₀ a₀ dn vis fe MM eb :=
-  CoreSpec.of_call fun r m' h => callW_constValAt p hp hwc n s₀ a₀ dn vis fe MM eb nm po pl value us lps
+  CoreSpec.of_call fun r m' h => callW_constValAt p hp hlp n s₀ a₀ dn vis fe MM eb nm po pl value us lps
     hC hnm hv hu hlps r m' h
 
 end refs13
@@ -1064,7 +1105,7 @@ end refs14
 section refs15
 variable (p : Prog)
 
-theorem callW_unfoldDefnAt (hp : WhnfDeltaProg' p) (hwc : WhnfCallees p) (n : Nat) (s₀ : St)
+theorem callW_unfoldDefnAt (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : Nat) (s₀ : St)
     (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
     (eb e nw usw q : Word) (cv : IConstantVal) (value : EIdx) (hint : ConLeche.ReducibilityHint)
     (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (he : HW e) (hnw : HW nw) (hus : HW usw)
@@ -1130,7 +1171,7 @@ theorem callW_unfoldDefnAt (hp : WhnfDeltaProg' p) (hwc : WhnfCallees p) (n : Na
   obtain ⟨r₃, m₃⟩ := q₁
   rw [h1] at hW
   dsimp only at hW
-  obtain ⟨hok1, ⟨M', hS₃, hK₃, hSt₃⟩, hres1, hrh1⟩ := callW_constValAt p hp.toWhnfDeltaProg hwc n s₀ a₀ dn vis
+  obtain ⟨hok1, ⟨M', hS₃, hK₃, hSt₃⟩, hres1, hrh1⟩ := callW_constValAt p hp.toWhnfDeltaProg hlp n s₀ a₀ dn vis
     fe MM eb nw _ _ _ usw cv.levelParams hC hnw hvl hus hslice r₃ m₃ h1
   have hv'' : value = decE (rdW (s₀.mem.arr64 EREC) (q + 5)) := hv'
   rw [← hv''] at hok1 hS₃ hres1
@@ -1188,10 +1229,12 @@ theorem callW_unfoldDefnAt (hp : WhnfDeltaProg' p) (hwc : WhnfCallees p) (n : Na
     have := h136 (by rw [← hr0]; decide)
     rw [← hm, size_set64] at this; exact this
   have hStK : StackKept m₃ (m₅.set64 CTL 136 (rdW (m₃.arr64 CTL) 136)) := by
-    apply StackKept.restore _ (by rw [hspn5, hgrew.2.1]) h136'
+    apply StackKept.restore _ (by rw [hspn5, hgrew.size])
+      (hgrew.bstk.trans (BKept.of_frame hfr3 (by decide) (by decide)))
+      (hgrew.pool.trans (PoolGrew.of_frame hfr3 (by decide) (by decide))) h136'
     intro i hi
     simp only [spW, hspn5]
-    exact hgrew.2.2 i hi
+    exact hgrew.below i hi
   refine ⟨hok', ?_, ?_, ?_⟩
   · rw [hst', ← hm]
     exact ⟨M', hS₆, hK₃, hSt₃.trans hStK⟩
@@ -1233,7 +1276,7 @@ theorem unfoldDef_run_tail (fe : IFEnv) (e hh : EIdx) (a : AState) (n : NIdx) (u
 section refs16
 variable (p : Prog)
 
-theorem callW_unfoldDefinition (hp : WhnfDeltaProg' p) (hwc : WhnfCallees p) (n : Nat) (s₀ : St)
+theorem callW_unfoldDefinition (hp : WhnfDeltaProg' p) (hlp : InstLPOK p) (n : Nat) (s₀ : St)
     (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
     (eb e : Word) (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (he : HW e) (r : List Word) (m' : Mem)
     (h : callW p n "unfold_definition" [vis, e] s₀.mem = some (r, m')) :
@@ -1324,7 +1367,7 @@ theorem callW_unfoldDefinition (hp : WhnfDeltaProg' p) (hwc : WhnfCallees p) (n 
   obtain ⟨hr0, hr1, hm⟩ := hW
   rw [← hm]
   have hci' : decCI (erecP s₀.mem) dn (r₂.tail.headD 0).toNat = some (.defnInfo cv value hint) := hci
-  have hcore := callW_unfoldDefnAt p hp hwc n s₀ a₀ dn vis fe MM eb e _ _ (r₂.tail.headD 0) cv value hint
+  have hcore := callW_unfoldDefnAt p hp hlp n s₀ a₀ dn vis fe MM eb e _ _ (r₂.tail.headD 0) cv value hint
     hC he hnl hul hci' g4' r₃ m₃ h3
   have hrun := unfoldDef_run_tail fe (decE e) (decE (r₁.headD 0)) a₀ n_ us_ cv value hint hgf ht hview
     hfind'
@@ -1340,10 +1383,10 @@ theorem callW_unfoldDefinition (hp : WhnfDeltaProg' p) (hwc : WhnfCallees p) (n 
 /-- **`unfold_definition` refines `unfoldDefinition`**, given the stub `inst_lp`'s spec. -/
 theorem unfoldDefinition_refines' (hp : WhnfDeltaProg' p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb e : Word)
-    (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (he : HW e) (hwc : WhnfCallees p) :
+    (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (he : HW e) (hlp : InstLPOK p) :
     CoreSpec p n "unfold_definition" [vis, e] (unfoldDefinition fe (decE e)) decOptR s₀ a₀ dn vis fe
       MM eb ResW :=
-  CoreSpec.of_call fun r m' h => callW_unfoldDefinition p hp hwc n s₀ a₀ dn vis fe MM eb e hC he r m' h
+  CoreSpec.of_call fun r m' h => callW_unfoldDefinition p hp hlp n s₀ a₀ dn vis fe MM eb e hC he r m' h
 
 end refs16
 

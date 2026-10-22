@@ -54,37 +54,41 @@ theorem keeps_cpl_internConst' (n : NIdx) (us : LsIdx) : Keeps cpl (internE (.co
 
 theorem CoreS.of_const' {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
     {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb)
-    (hD : ArenaD m' a') (hcpl : cpl a' = cpl a) (hf : MemFrame [CREC, CSLOT] [18, 19] m m') :
+    (hD : ArenaD m' a') (hcpl : cpl a' = cpl a) (hf : MemFrame [CREC, CSLOT, CLP] [18, 19] m m')
+    {n : NIdx} {us : LsIdx} {r : EIdx} (hrun : (internE (.const n us)).run a = .ok (r, a'))
+    (hus : ∃ ls, denoteLs a.store.lss us = some ls) :
     CoreS dn m' a' vis fe M eb :=
-  hS.arena_frame hD hcpl hf
+  hS.arena_frameD hD hcpl hf
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
-      rcases hb with rfl | rfl <;> decide)
-    (by simp [CREC, CSLOT, PINS])
+      rcases hb with rfl | rfl | rfl <;> decide)
+    (by simp [CREC, CSLOT, CLP, PINS])
     (fun b hb => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hb
-      rcases hb with rfl | rfl <;> decide)
+      rcases hb with rfl | rfl | rfl <;> decide)
     (fun x hx => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl <;> decide)
     (fun x hx => by
       simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
       rcases hx with rfl | rfl <;> decide)
+    (hS.den.of_internConst hus hrun (hf.1 EREC (by simp [CREC, CSLOT, CLP, EREC]) (by decide)))
 
-theorem StackKept.of_constF {m m' : Mem} (hf : MemFrame [CREC, CSLOT] [18, 19] m m') :
+theorem StackKept.of_constF {m m' : Mem} (hf : MemFrame [CREC, CSLOT, CLP] [18, 19] m m') :
     StackKept m m' := by
   have hspn : m'.arr64 SPN = m.arr64 SPN :=
-    hf.1 SPN (by simp [CREC, CSLOT, SPN]) (by decide)
+    hf.1 SPN (by simp [CREC, CSLOT, CLP, SPN]) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp)
-  exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
+  exact StackKept.of_frame hf
 
 theorem ceinternW_hw' (m : Mem) (a : AState) (hR : ConstR m a) (f x : Word) (hf : f.toNat < 2 ^ 32)
     (hx : x.toNat < 2 ^ 32) (w : Word) (m' : Mem) (hI : ceinternW m f x = some (w, m')) :
     w.toNat < 2 ^ 32 := by
-  rw [ceinternW_eq] at hI
+  rw [ceinternW_eqK (hctl := hR.1.1)] at hI
+  obtain ⟨_, hI, -⟩ := mkK_split _ _ _ _ _ _ _ hI
   exact internM_hw constSch CeRecRel cehash constSch_wf m _ _ _ hR (ceMt m f x) _ _ _ _
     (probe_homeG constSch m 0 _ _ (ceprobeW_arm m f x 0) _)
-    (probe_homeG constSch m 1 _ _ (ceprobeW_arm m f x 1) _) _ (cepushOK_room m) _ _ w m' hI
+    (probe_homeG constSch m 1 _ _ (ceprobeW_arm m f x 1) _) _ (cepushOK_room m) _ _ w _ hI
 
 section progs
 variable (p : Prog)
@@ -97,14 +101,13 @@ theorem callW_internConst' (hpf : p.lookup "const_find" = some constFind)
     AM.ok (internE (.const (decI f) (decI x))) a₀ ∧
     ArenaD m' (AM.st (internE (.const (decI f) (decI x))) a₀) ∧
     AM.res (internE (.const (decI f) (decI x))) a₀ = decI (r.headD 0) ∧
-    MemFrame [CREC, CSLOT] [18, 19] m m' ∧ HW (r.headD 0) := by
+    MemFrame [CREC, CSLOT, CLP] [18, 19] m m' ∧ HW (r.headD 0) := by
   obtain ⟨s', rfl, hm⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
     (internConst_spec p hpf hpp hp n _ f x) h
   obtain ⟨-, hm⟩ := hm
   obtain ⟨h1, h2, h3⟩ := internConst_D m a₀ hD f x _ hf hx _ hm
   refine ⟨h1, h2, h3, ?_, ceinternW_hw' m a₀ ?_ f x hf hx _ _ hm⟩
-  · have := internM_frame constSch constSch_wf _ _ _ _ _ _ _ _ (ceinternW_eq _ _ _ ▸ hm)
-    simpa [constSch] using this
+  · exact ceinternW_frame (hI := hm)
   · exact hD.1.const
 
 /-- **`mk_app_n` as a run**, with the result a handle word. -/
@@ -494,6 +497,15 @@ theorem CoreAfterG.of_stk {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a :
     (hf : MemFrame [SPN] [136] m m') (hg : StackGrew m m') : CoreAfterG dn m m' a vis fe M eb :=
   ⟨M, hS.frame_stk hf (by simp) (by simp), KeptAll.refl _ _, hg⟩
 
+/-- A successful prefix's universe arguments are a stored `const` node's list (the scrutinee's
+type's head). -/
+theorem PreRun.cview {R : CoreFnsA} {d : Nat} {major : EIdx} {a a' : AState} {L : List Word}
+    (h : PreRun R d major a L a') (h0 : L.headD 0 ≠ 0) :
+    ∃ (hh : EIdx) (c : NIdx), a'.store.view hh = some (.const c (decI (L.tail.tail.tail.headD 0))) := by
+  obtain ⟨ta, tmaj, hh, a₁, -, -, -, -, hs⟩ := h
+  obtain ⟨-, -, hv, -⟩ := hs h0
+  exact ⟨hh, _, hv⟩
+
 /-- The facts a successful prefix hands the arms. -/
 theorem PreRun.view {R : CoreFnsA} {d : Nat} {major : EIdx} {a a' : AState} {L : List Word}
     (h : PreRun R d major a L a') (h0 : L.headD 0 ≠ 0) :
@@ -517,6 +529,7 @@ theorem m2cK2_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2
     (eb mode d ctor cnP tmaj ust major : Word) (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1)
     (hctor : HW ctor) (htm : HW tmaj) (hus : HW ust) (hmaj : HW major) (m : Mem) (a : AState)
     (M : ModeMaps) (hS : CoreS dn m a vis fe M eb) (r : List Word) (m' : Mem)
+    (hdus : ∃ ls, denoteLs a.store.lss (decI ust) = some ls)
     (h : callW p (N + 1) "m2c_k2" [mode, vis, d, ctor, cnP, tmaj, ust, major] m = some (r, m')) :
     GrowRef (m2cK2T (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI ctor)
       cnP.toNat (decE tmaj) (decI ust) (decE major)) a decH dn m vis fe M eb r m' := by
@@ -559,10 +572,10 @@ theorem m2cK2_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2
     hp.internConst' (N' + 1) m1 a hS1.arena ctor ust hctor hus r2 m2 c2
   have hrun2 := AM.run_of_ok _ _ ok2
   rw [res2] at hrun2
-  have hS2 := hS1.of_const' hD2 (Keeps.run (keeps_cpl_internConst' _ _) hrun2) hfr2
+  have hS2 := hS1.of_const' hD2 (Keeps.run (keeps_cpl_internConst' _ _) hrun2) hfr2 hrun2 hdus
   have hsp2 : SpineR m2 (r1.headD 0) cnP (xs.take cnP.toNat).toArray :=
     (hsp1.take' (by rw [← hlen]; exact hle)).of_spn_core
-      (hfr2.1 SPN (by simp [CREC, CSLOT, SPN]) (by decide))
+      (hfr2.1 SPN (by simp [CREC, CSLOT, CLP, SPN]) (by decide))
   cases c3 : callW p (N' + 1) "mk_app_n" [r2.headD 0, r1.headD 0, cnP] m2 with
   | none => rw [c3] at hW; cases hW
   | some q =>
@@ -661,7 +674,9 @@ theorem m2cK_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 2 
   rw [c2] at hW
   obtain ⟨hr, rfl⟩ := ret_eq hW
   obtain ⟨ok2, hA2, res2, hr2⟩ := m2cK2_ok p hp hc hpi N' F (hk.mono (Nat.le_succ _)) (by omega)
-    (by omega) dn vis fe eb mode d ctor cnP _ _ major hm4 hebm hctor htm hus hmaj m1 a1 M1 hS1 r2 m2 c2
+    (by omega) dn vis fe eb mode d ctor cnP _ _ major hm4 hebm hctor htm hus hmaj m1 a1 M1 hS1 r2 m2
+    (by obtain ⟨_, _, _, _, _, _, _, _, hp5⟩ := hpre
+        exact hS1.den.constLs _ _ _ (hp5 g0).2.2.1) c2
   have hrun2 := AM.run_of_ok _ _ ok2
   rw [res2] at hrun2
   have hc : ((decI (L.tail.tail.headD 0) : NIdx) = decI T ∧ lpl.toNat = l.length) :=

@@ -19,20 +19,20 @@ open L.Front (DECL DLP DeclsR)
 /-- **The loop's relation across a promotion-like step**: the writes land in the arrays below 50,
 `132‥136` and `146‥149` and in the `CTL` words below 64, `129`, `140‥147`; the arena side is
 given, the environment is given; the rest is a frame. -/
-theorem LoopR.of_frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
+theorem LoopR.of_frame {pins : List INatOpPinSet} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState}
     {vis : Word} {fe fe' : IFEnv} {pend : Array PendingCheck} {ds : Array IDeclaration}
     {A : List ArrId} {C : List Word} {pm' : PMemo}
-    (hR : LoopR dn m a vis fe pend ds) (hD : ArenaD m' a') (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b < 50 ∨ (132 ≤ b ∧ b ≤ 136) ∨ (146 ≤ b ∧ b ≤ 149))
+    (hR : LoopR pins dn m a vis fe pend ds) (hD : ArenaD m' a') (hf : MemFrame A C m m')
+    (hA : ∀ b ∈ A, (b < 50 ∨ (54 < b ∧ b < 64)) ∨ (132 ≤ b ∧ b ≤ 136) ∨ (146 ≤ b ∧ b ≤ 149))
     (hC : ∀ x ∈ C, x.toNat < 64 ∨ x.toNat = 129 ∨ (140 ≤ x.toNat ∧ x.toNat ≤ 147))
     (hcp : cp a' = cp a) (hg : ErecGrow m m') (hts : erecTop m' ≤ (m'.arr64 EREC).size)
-    (hP : PMemoR m' pm') (hE : EnvR dn m' vis fe') : LoopR dn m' a' vis fe' pend ds := by
+    (hP : PMemoR m' pm') (hE : EnvR dn m' vis fe') : LoopR pins dn m' a' vis fe' pend ds := by
   obtain ⟨hiw1, hiw2, hiw3, hiw4, hiw5⟩ := hR.iw
   have hcA : a'.caches = a.caches := congrArg Prod.fst hcp
   have hpA : a'.pins = a.pins := congrArg Prod.snd hcp
   have hIW : m'.arr64 L.Ind.IW = m.arr64 L.Ind.IW :=
     hf.1 _ (fun h => by have := hA _ h; revert this; decide) (by decide)
-  refine ⟨⟨hD, ?_, ?_, hE⟩, ?_, ?_, ?_, ⟨pm', hP⟩⟩
+  refine ⟨⟨hD, ?_, ?_, hE⟩, ?_, ?_, ?_, ⟨pm', hP⟩, ?_⟩
   · rw [hcA]
     exact hR.check.core.frame (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega)
       (fun x hx => by have := hC x hx; omega) hf
@@ -47,5 +47,8 @@ theorem LoopR.of_frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
     · simp only [L.Ind.iwTop, hIW]
       rw [hf.2.1 200 (fun h => by have := hC _ h; simp at this)]; exact hiw1
     · rw [hIW]; exact hiw3
+  · exact PinSetsR.grow hR.pinsets ⟨hg.1, hg.2.1⟩
+      (hf.2.1 150 (fun h => by have := hC _ h; simp at this))
+      (hf.2.1 151 (fun h => by have := hC _ h; simp at this))
 
 end L.Arena

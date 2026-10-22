@@ -541,7 +541,8 @@ theorem CoreS.setMemo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (S : MemoSch) (c : Caches)
     (hS : CoreS dn m a vis fe M eb) (hf : MemFrame [S.arr] [S.cs + 1] m m')
     (h1 : 96 ≤ S.arr) (h2 : S.arr < 128) (h3 : (96 : Nat) ≤ S.cs.toNat) (h4 : S.cs.toNat + 1 < 128)
-    (hc : CoreRM m' c M eb) (hL : c.readLC = a.caches.readLC) (hLs : c.readLsC = a.caches.readLsC) :
+    (hc : CoreRM m' c M eb) (hL : c.readLC = a.caches.readLC) (hLs : c.readLsC = a.caches.readLsC)
+    (hN : c.readNC = a.caches.readNC := by rfl) :
     CoreS dn m' { a with caches := c } vis fe M eb ∧ StackKept m m' := by
   obtain ⟨ar, har⟩ : ∃ ar : Nat, ar = S.arr := ⟨_, rfl⟩
   have n1 : 96 ≤ ar := by rw [har]; exact h1
@@ -562,7 +563,7 @@ theorem CoreS.setMemo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
         rw [UInt64.toNat_add]; simp; omega
       have h' := congrArg UInt64.toNat h
       simp at h'; omega)
-  refine ⟨⟨⟨?_, ?_⟩, hc, ?_, ?_, ?_, ?_, hS.nwf, ?_, ?_, ?_, ?_⟩, ?_⟩
+  refine ⟨⟨⟨?_, ?_⟩, hc, ?_, ?_, ?_, ?_, hS.nwf, ?_, ?_, ?_, ?_, ?_⟩, ?_⟩
   · exact (ArenaR.frame_ext [S.arr] [S.cs + 1] (fun b hb => by simp at hb; subst hb; rw [← har]; exact Nat.le_trans (by decide : 64 ≤ 96) n1)
       (fun x hx => by
         simp at hx; subst hx
@@ -585,8 +586,24 @@ theorem CoreS.setMemo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
         have : (S.cs + 1).toNat = S.cs.toNat + 1 := by
           rw [UInt64.toNat_add]; simp; omega
         omega)
+      (fun b hb => by simp at hb; subst hb; rw [← har]; simp only [ArrId]; omega)
+      (fun x hx => by
+        simp at hx; subst hx
+        have : (S.cs + 1).toNat = S.cs.toNat + 1 := by
+          rw [UInt64.toNat_add]; simp; omega
+        omega)
   · exact hf.2.2.1 145 ▸ hS.bstk
-  · refine ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
+  · exact (hS.den.frameE (hf.1 EREC (fun h => by
+      simp only [List.mem_singleton] at h; have h2' := h2; rw [← h] at h2'
+      exact absurd h2' (by decide))
+      (by decide))).caches rfl rfl hN
+  · refine StackKept.of_frame_range hf (fun b hb => by
+      simp only [List.mem_singleton] at hb; subst hb; constructor <;> simp only [ArrId] <;> omega)
+      (fun x hx => by
+      simp at hx; subst hx
+      have : (S.cs + 1).toNat = S.cs.toNat + 1 := by
+        rw [UInt64.toNat_add]; simp; omega
+      omega)
 
 /-- **`constTyC`'s `find; put`**: the tier across it. -/
 theorem CoreRM.setCt {m m' : Mem} {c : Caches} {M : ModeMaps} {eb : Word} (h : CoreRM m c M eb)
@@ -722,8 +739,8 @@ theorem constTyAt_run_miss (cv : IConstantVal) (us : LsIdx) (a a₁ : AState) (r
   simp [constTyAt, h, StateT.run_bind, StateT.run_get, hi]
   rfl
 
-/-- **`const_ty_at` refines `constTyAt`** (the `inst_lp` stub as `WhnfCallees.instLP`). -/
-theorem constTyAt_refines' (p : Prog) (hp : IotaProg' p) (hw : WhnfCallees p) :
+/-- **`const_ty_at` refines `constTyAt`** (`inst_lp` as the hypothesis `InstLPOK`). -/
+theorem constTyAt_refines' (p : Prog) (hp : IotaProg' p) (hlp : InstLPOK p) :
     ConstTyAtOK p := by
   intro n s₀ a₀ dn vis fe MM eb nn po pl ty us lps hS hnn hty hus hlps
   cases n with
@@ -761,7 +778,7 @@ theorem constTyAt_refines' (p : Prog) (hp : IotaProg' p) (hw : WhnfCallees p) :
   rw [hc] at hW
   simp only at hW
   obtain ⟨hok, ⟨M', hS₁, hK, hSt⟩, hres, hr₁⟩ :=
-    CoreSpec.of_callW (hw.instLP n s a₀ dn vis fe MM eb po pl us ty lps hS hty hus hlps) hc
+    CoreSpec.of_callW (hlp n s a₀ dn vis fe MM eb po pl us ty lps hS hty hus hlps) hc
   have hrunI := AM.run_of_ok _ _ hok
   have hrun2 := constTyAt_run_miss ⟨decI nn, lps, decE ty⟩ (decI us) a₀ _ _ hmiss hrunI
   rw [hres] at hrun2
@@ -790,7 +807,7 @@ theorem constTyAt_refines' (p : Prog) (hp : IotaProg' p) (hw : WhnfCallees p) :
 @[refines ConRon.Arena.constTyAt]
 theorem constTyAt_refines (p : Prog) (hp : IotaProg' p) :
     ConstTyAtOK p :=
-  constTyAt_refines' (p := p) (hw := whnfCallees_stub p)  (hp := hp)
+  constTyAt_refines' (p := p) (hlp := (whnfCallees_stub p).instLP)  (hp := hp)
 
 theorem ruleRhsAt_run_hit (rec ctor : NIdx) (lps : List NIdx) (rhs : EIdx) (us : LsIdx) (a : AState)
     (r : EIdx) (h : a.caches.ruleRhsC[(rec, ctor, us)]? = some r) :
@@ -805,8 +822,8 @@ theorem ruleRhsAt_run_miss (rec ctor : NIdx) (lps : List NIdx) (rhs : EIdx) (us 
   simp [ruleRhsAt, h, StateT.run_bind, StateT.run_get, hi]
   rfl
 
-/-- **`rule_rhs_at` refines `ruleRhsAt`** (the `inst_lp` stub as `WhnfCallees.instLP`). -/
-theorem ruleRhsAt_refines' (p : Prog) (hp : IotaProg' p) (hw : WhnfCallees p) :
+/-- **`rule_rhs_at` refines `ruleRhsAt`** (`inst_lp` as the hypothesis `InstLPOK`). -/
+theorem ruleRhsAt_refines' (p : Prog) (hp : IotaProg' p) (hlp : InstLPOK p) :
     RuleRhsAtOK p := by
   intro n s₀ a₀ dn vis fe MM eb rec ctor po pl rhs us lps hS hrec hctor hrhs hus hlps
   cases n with
@@ -846,7 +863,7 @@ theorem ruleRhsAt_refines' (p : Prog) (hp : IotaProg' p) (hw : WhnfCallees p) :
   rw [hc] at hW
   simp only at hW
   obtain ⟨hok, ⟨M', hS₁, hK, hSt⟩, hres, hr₁⟩ :=
-    CoreSpec.of_callW (hw.instLP n s a₀ dn vis fe MM eb po pl us rhs lps hS hrhs hus hlps) hc
+    CoreSpec.of_callW (hlp n s a₀ dn vis fe MM eb po pl us rhs lps hS hrhs hus hlps) hc
   have hrunI := AM.run_of_ok _ _ hok
   have hrun2 := ruleRhsAt_run_miss (decI rec) (decI ctor) lps (decE rhs) (decI us) a₀ _ _ hmiss hrunI
   rw [hres] at hrun2
@@ -878,7 +895,7 @@ theorem ruleRhsAt_refines' (p : Prog) (hp : IotaProg' p) (hw : WhnfCallees p) :
 @[refines ConRon.Arena.ruleRhsAt]
 theorem ruleRhsAt_refines (p : Prog) (hp : IotaProg' p) :
     RuleRhsAtOK p :=
-  ruleRhsAt_refines' (p := p) (hw := whnfCallees_stub p)  (hp := hp)
+  ruleRhsAt_refines' (p := p) (hlp := (whnfCallees_stub p).instLP)  (hp := hp)
 
 /-! ## `pi_residual(e, ao, an)` -/
 
@@ -1045,7 +1062,7 @@ theorem pirW_ok (p : Prog) (hinst : IotaInst1OK p) (dn : NIdx → Option ConLech
       (hinst k ⟨m, Locals.init []⟩ a dn vis fe M eb _ (rdW (m.arr64 SPN) (ao + i)) 0 hS (by
         have := (view_forall m a hS.arena.1 e he ⟨hv1, UInt64.not_le.mp hv2⟩ h6').2.2
         exact this)) hc
-    have hsp₁ : SpineR m₁ ao an args := hsp.keep hSt₁.2.1 hSt₁.2.2 htop hS.spn
+    have hsp₁ : SpineR m₁ ao an args := hsp.keep hSt₁.size hSt₁.below htop hS.spn
     have htop₁ : ao.toNat + an.toNat ≤ (spTop m₁).toNat := by rw [hSt₁.1]; exact htop
     have h1 : (i + 1).toNat = i.toNat + 1 := uint64_succ_toNat an i hlt
     obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hL1, hL2⟩ :=

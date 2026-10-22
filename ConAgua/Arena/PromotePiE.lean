@@ -68,10 +68,10 @@ theorem internLitStr_D (m : Mem) (a : AState) (hA : ArenaD m a) (o l r : Word)
   rcases hcs with h | ⟨-, -, -, h⟩ | ⟨-, -, -, h⟩ <;> rw [h]
   · exact hD₁
   · exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, hD₁.const,
-      ⟨derT_push hD₁.lit.1 _ _ _ ⟨bvar_derLit _ _, fvar_derLit _ _⟩, hD₁.lit.2⟩, hD₁.app, hD₁.lam,
+      ⟨derT_push hD₁.lit.1 _ _ _ ⟨bvar_derLit _ _, fvar_derLit _ _, lp_derLit _ _⟩, hD₁.lit.2⟩, hD₁.app, hD₁.lam,
       hD₁.forallE, hD₁.letE, hD₁.proj⟩
   · exact ⟨hD₁.bvar, hD₁.fvar, hD₁.sort, hD₁.const,
-      ⟨hD₁.lit.1, derT_push hD₁.lit.2 _ _ _ ⟨bvar_derLit _ _, fvar_derLit _ _⟩⟩, hD₁.app, hD₁.lam,
+      ⟨hD₁.lit.1, derT_push hD₁.lit.2 _ _ _ ⟨bvar_derLit _ _, fvar_derLit _ _, lp_derLit _ _⟩⟩, hD₁.app, hD₁.lam,
       hD₁.forallE, hD₁.letE, hD₁.proj⟩
 
 section exprs
@@ -113,7 +113,7 @@ theorem piBVar_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u : Word) (r : Word
 theorem piFVar_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u ty : Word) (hty : PW ty) (r : Word) (m' : Mem)
     (h : piW p n "intern_fvar" [u, ty] m = some (r, m')) :
     ∃ a', (internPersistentE (.fvar u.toNat (decE ty))).run a = .ok (decE r, a') ∧ ArenaD m' a' ∧ PW r ∧
-      cp a' = cp a ∧ MemFrame [FVREC, FVSLOT] [1, 26, 27] m m' := by
+      cp a' = cp a ∧ MemFrame [FVREC, FVSLOT, FVLP] [1, 26, 27] m m' := by
   have hc := ctl_size hD.1
   rw [piW_eq _ _ _ _ _ hc] at h
   cases hcall : callW p n "intern_fvar" [u, ty] (m.set64 CTL 1 0) with
@@ -125,8 +125,9 @@ theorem piFVar_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u ty : Word) (hty :
     hp.intern_fvar n ⟨m.set64 CTL 1 0, Locals.init []⟩ u ty) hcall
   have hD₀ := hD.flag 0
   obtain ⟨hok, hD₁, hres⟩ := internFVar_D _ (onA false a) hD₀ u ty _ hty.1 _ hI
-  rw [fvinternW_eq] at hI
-  have hf := internM_frame _ fvarSch_wf _ _ _ _ _ _ _ _ hI
+  have hf := (fvinternW_frame (hI := hI))
+  rw [fvinternW_eqK (hctl := hD₀.1.fvar.1.1)] at hI
+  obtain ⟨_, hI, -⟩ := mkK_split _ _ _ _ _ _ _ hI
   have hpw := internM_pw fvarSch FVRecRel fvhash fvarSch_wf _ _ _ _ hD₀.1.fvar
     (by rw [rdW_set64]; simp [hc]) (fun τ => fvMt _ u ty τ) _ _ _
     (probe_homeG fvarSch _ 0 _ _ (fvprobeW_arm _ u ty 0) _) _ (fvpushOK_room _) _ _ _ _ hI
@@ -144,7 +145,7 @@ theorem piFVar_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u ty : Word) (hty :
 theorem piSort_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u : Word) (hu : PW u) (r : Word) (m' : Mem)
     (h : piW p n "intern_sort" [u] m = some (r, m')) :
     ∃ a', (internPersistentE (.sort (decI u))).run a = .ok (decE r, a') ∧ ArenaD m' a' ∧ PW r ∧
-      cp a' = cp a ∧ MemFrame [SOREC, SOSLOT] [1, 16, 17] m m' := by
+      cp a' = cp a ∧ MemFrame [SOREC, SOSLOT, SOLP] [1, 16, 17] m m' := by
   have hc := ctl_size hD.1
   rw [piW_eq _ _ _ _ _ hc] at h
   cases hcall : callW p n "intern_sort" [u] (m.set64 CTL 1 0) with
@@ -156,8 +157,9 @@ theorem piSort_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u : Word) (hu : PW 
     hp.intern_sort n ⟨m.set64 CTL 1 0, Locals.init []⟩ u) hcall
   have hD₀ := hD.flag 0
   obtain ⟨hok, hD₁, hres⟩ := internSort_D _ (onA false a) hD₀ u _ hu.1 _ hI
-  rw [sointernW_eq] at hI
-  have hf := internM_frame _ sortSch_wf _ _ _ _ _ _ _ _ hI
+  have hf := (sointernW_frame (hI := hI))
+  rw [sointernW_eqK (hctl := hD₀.1.sort.1.1)] at hI
+  obtain ⟨_, hI, -⟩ := mkK_split _ _ _ _ _ _ _ hI
   have hpw := internM_pw sortSch SoRecRel sohash sortSch_wf _ _ _ _ hD₀.1.sort
     (by rw [rdW_set64]; simp [hc]) (fun τ => soMt _ u τ) _ _ _
     (probe_homeG sortSch _ 0 _ _ (soprobeW_arm _ u 0) _) _ (sopushOK_room _) _ _ _ _ hI
@@ -175,7 +177,7 @@ theorem piSort_rel (m : Mem) (a : AState) (hD : ArenaD m a) (u : Word) (hu : PW 
 theorem piConst_rel (m : Mem) (a : AState) (hD : ArenaD m a) (x us : Word) (hx : PW x) (hus : PW us) (r : Word) (m' : Mem)
     (h : piW p n "intern_const" [x, us] m = some (r, m')) :
     ∃ a', (internPersistentE (.const (decI (k := .name) x) (decI (k := .levels) us))).run a = .ok (decE r, a') ∧ ArenaD m' a' ∧ PW r ∧
-      cp a' = cp a ∧ MemFrame [CREC, CSLOT] [1, 18, 19] m m' := by
+      cp a' = cp a ∧ MemFrame [CREC, CSLOT, CLP] [1, 18, 19] m m' := by
   have hc := ctl_size hD.1
   rw [piW_eq _ _ _ _ _ hc] at h
   cases hcall : callW p n "intern_const" [x, us] (m.set64 CTL 1 0) with
@@ -187,8 +189,9 @@ theorem piConst_rel (m : Mem) (a : AState) (hD : ArenaD m a) (x us : Word) (hx :
     hp.intern_const n ⟨m.set64 CTL 1 0, Locals.init []⟩ x us) hcall
   have hD₀ := hD.flag 0
   obtain ⟨hok, hD₁, hres⟩ := internConst_D _ (onA false a) hD₀ x us _ hx.1 hus.1 _ hI
-  rw [ceinternW_eq] at hI
-  have hf := internM_frame _ constSch_wf _ _ _ _ _ _ _ _ hI
+  have hf := (ceinternW_frame (hI := hI))
+  rw [ceinternW_eqK (hctl := hD₀.1.const.1.1)] at hI
+  obtain ⟨_, hI, -⟩ := mkK_split _ _ _ _ _ _ _ hI
   have hpw := internM_pw constSch CeRecRel cehash constSch_wf _ _ _ _ hD₀.1.const
     (by rw [rdW_set64]; simp [hc]) (fun τ => ceMt _ x us τ) _ _ _
     (probe_homeG constSch _ 0 _ _ (ceprobeW_arm _ x us 0) _) _ (cepushOK_room _) _ _ _ _ hI

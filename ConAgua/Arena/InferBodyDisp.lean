@@ -129,7 +129,6 @@ structure InferCallees (p : Prog) : Prop where
   constTy : ConstTyAtOK p
   lit : InferLitCallees p
   eager : IsEagerReduceH p
-  bstk : BStkCallees p
   bcap : BStkCap
   proj : InferProjOK p
 
@@ -422,12 +421,16 @@ theorem inferBody_refines (p : Prog) (hq : InferAllProg p) (hc : InferCallees p)
     obtain ⟨s₁, hs₁, -, hsu⟩ := triple_of_callW (s₀ := ⟨s.mem, Locals.init []⟩)
       (internSucc_spec p hq.body.suf hq.body.sup hq.body.sui n _ _) h1
     rw [hs₁] at hsu
-    have h₁ := internSucc_core hS _ hu r₁ hsu
+    have h₁ := internSucc_core hS _ hu r₁ hsu (by rw [hdec]; exact hS.den.sort _ _ hv)
     rw [hdec] at h₁
     refine coreRef_congr (inferBody_sort _ fe d.toNat (decE e) a₀ u hv) (coreRef_bind h₁ (fun M₁ hS₁ => ?_))
     have hso := of_call1W (X := fun m w m' => sointernW m (r₁.headD 0) = some (w, m'))
       (fun s₀ => internSort_spec p hq.body.sof hq.body.sop hq.body.soi n s₀ (r₁.headD 0)) hW
-    exact internSort_core hS₁ (r₁.headD 0) h₁.2.2.2 r hso
+    exact internSort_core hS₁ (r₁.headD 0) h₁.2.2.2 r hso (by
+      have hd := internLNode_res_den (v := .succ u) hS
+        (fun c hc => by simp only [LNodeView.lchildren, List.mem_cons, List.mem_nil_iff, or_false] at hc; subst hc; exact hS.den.sort _ _ hv)
+        (fun n hn => by simp [LNodeView.nchildren] at hn) h₁.1
+      rw [h₁.2.2.1] at hd; exact hd)
   | const nm us =>
     obtain ⟨hg, hn1, hdn, hu2, hdu⟩ := hvr
     rw [getD1] at hn1 hdn; rw [getD2] at hu2 hdu
@@ -456,7 +459,7 @@ theorem inferBody_refines (p : Prog) (hq : InferAllProg p) (hc : InferCallees p)
     | succ k =>
     rw [← hd1, ← hd2] at hv
     exact coreRef_congr (inferBody_forall _ fe d.toNat (decE e) a₀ _ _ hv)
-      (fin (inferForall_refines p hq.leaf hq.bind hq.body hc.instList hc.bstk hc.bcap k (hk.mono (by omega))
+      (fin (inferForall_refines p hq.leaf hq.bind hq.body hc.instList hc.bcap k (hk.mono (by omega))
         F (by omega) (by omega) _ a₀ dn vis fe MM eb mode d _ _ hsl h1 h2) hW)
   | lam ty b =>
     obtain ⟨hg, h1, hd1, h2, hd2⟩ := hvr
@@ -467,7 +470,7 @@ theorem inferBody_refines (p : Prog) (hq : InferAllProg p) (hc : InferCallees p)
     | succ k =>
     rw [← hd1, ← hd2] at hv
     exact coreRef_congr (inferBody_lam _ fe d.toNat (decE e) a₀ _ _ hv)
-      (fin (inferLam_refines p hq.leaf hq.bind hq.body hc.instList hc.absRange hc.bstk hc.bcap k
+      (fin (inferLam_refines p hq.leaf hq.bind hq.body hc.instList hc.absRange hc.bcap k
         (hk.mono (by omega)) F (by omega) (by omega) _ a₀ dn vis fe MM eb mode d _ _ hsl h1 h2) hW)
   | app f x =>
     obtain ⟨hg, -⟩ := hvr
@@ -567,12 +570,16 @@ theorem inferBodyIO_refines (p : Prog) (hq : InferAllProg p) (hc : InferCallees 
     obtain ⟨s₁, hs₁, -, hsu⟩ := triple_of_callW (s₀ := ⟨s.mem, Locals.init []⟩)
       (internSucc_spec p hq.body.suf hq.body.sup hq.body.sui n _ _) h1
     rw [hs₁] at hsu
-    have h₁ := internSucc_core hS _ hu r₁ hsu
+    have h₁ := internSucc_core hS _ hu r₁ hsu (by rw [hdec]; exact hS.den.sort _ _ hv)
     rw [hdec] at h₁
     refine coreRef_congr (inferBodyIO_sort _ fe d.toNat (decE e) a₀ u hv) (coreRef_bind h₁ (fun M₁ hS₁ => ?_))
     have hso := of_call1W (X := fun m w m' => sointernW m (r₁.headD 0) = some (w, m'))
       (fun s₀ => internSort_spec p hq.body.sof hq.body.sop hq.body.soi n s₀ (r₁.headD 0)) hW
-    exact internSort_core hS₁ (r₁.headD 0) h₁.2.2.2 r hso
+    exact internSort_core hS₁ (r₁.headD 0) h₁.2.2.2 r hso (by
+      have hd := internLNode_res_den (v := .succ u) hS
+        (fun c hc => by simp only [LNodeView.lchildren, List.mem_cons, List.mem_nil_iff, or_false] at hc; subst hc; exact hS.den.sort _ _ hv)
+        (fun n hn => by simp [LNodeView.nchildren] at hn) h₁.1
+      rw [h₁.2.2.1] at hd; exact hd)
   | const nm us =>
     obtain ⟨hg, hn1, hdn, hu2, hdu⟩ := hvr
     rw [getD1] at hn1 hdn; rw [getD2] at hu2 hdu
@@ -658,13 +665,13 @@ end L.Arena
 
 namespace L.Arena
 
-/-- **The knot's `infer` slot one level up** (`WhnfCallees.inferStep`), from the body. -/
+/-- **The knot's `infer` slot one level up**, from the body. -/
 @[refines_part ConRon.Arena.coreKnot "infer (step)"]
 theorem inferSlot_step (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat)
     (hk : KnotUpTo p n) : InferSlot p (n + 1) :=
   infer_refines p hq.knot n hk (inferBody_refines p hq hc n)
 
-/-- **The knot's `inferIO` slot one level up** (`WhnfCallees.inferIOStep`), from the io body. -/
+/-- **The knot's `inferIO` slot one level up**, from the io body. -/
 @[refines_part ConRon.Arena.coreKnot "inferIO (step)"]
 theorem inferIOSlot_step (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat)
     (hk : KnotUpTo p n) : InferIOSlot p (n + 1) :=

@@ -2,6 +2,8 @@ module
 
 public import ConAgua.L.Notation
 public import ConAgua.L.Logic
+public import ConAgua.L.WriteSet
+public import ConAgua.L.Records
 meta import ConAgua.L.Semantics
 import ConAgua.Census.Attr
 
@@ -414,41 +416,97 @@ theorem skipBraced_run (b : Array UInt8) (hb : b.size < 2 ^ 64) (fuel : Nat) (i 
       (skipBraced_spec scanProg rfl rfl b hb fuel _ rfl i d hi hd)
     grind
 
-/-! ## A callee that writes memory: the frame condition `LocEq`
+/-! ## A callee that writes memory: the frame condition `LocEq`; global variables
 
-`bump` stores into a word array, so its spec cannot post `s' = s₀`; it posts `LocEq s' s₀` (the
-locals are the caller's), and the caller still reads its own `i` after the call. -/
+`bump` writes memory (two global variables), so its spec cannot post `s' = s₀`; it posts
+`LocEq s' s₀` (the locals are the caller's), and the caller still reads its own `i` after the
+call. The caller also keeps a global of its own, `MARK`, across the call: that frame comes from
+the program text (`closedG`, `Triple.gframe`), not from `bump`'s spec.
 
-abbrev W : ArrId := 0
+This was the first demonstration of global variables (lane `lfeat`): before, the three words were
+`CTL.u64[0]`, `CTL.u64[1]`, `CTL.u64[2]` of a control array, and the specs needed a size
+precondition, a hand-stated frame over `CTL` indices with `getElem` and `rdW` patterns, and array
+lemmas in `finish` (DESIGN.md, "Global variables and records"). -/
+
+/-- The last argument of `bump`. -/
+abbrev LAST : GVar := ⟨0⟩
+/-- The number of calls of `bump`. -/
+abbrev CALLS : GVar := ⟨1⟩
+/-- A global of `bump_user`'s. -/
+abbrev MARK : GVar := ⟨2⟩
 
 /-- con-ron: none — an example program of L -/
-def bump : FunDecl := lfn (i) { W.u64[0] := i; return 0 }
+def bump : FunDecl := lfn (i) { LAST := i; CALLS += 1; return 0 }
 /-- con-ron: none — an example program of L -/
-def bumpUser : FunDecl := lfn (i) locals (z) { z := call bump(i + 1); return i + z }
+def bumpUser : FunDecl := lfn (i) locals (z) {
+  MARK := i;
+  z := call bump(i + 1);
+  return MARK + LAST + z
+}
 
-section bump
-variable (p : Prog) (hp : p.lookup "bump" = some bump)
-include hp
+def bumpProg : Prog := [("bump", bump), ("bump_user", bumpUser)]
 
-theorem bump_spec (n : Nat) (s₀ : St) (i : Word) :
+/-- `bump`'s global write set, from the text. -/
+theorem bump_closed : closedG bumpProg [LAST, CALLS] ["bump"] = true := by decide
+
+theorem bump_spec (p : Prog) (hp : p.lookup "bump" = some bump) (n : Nat) (s₀ : St) (i : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "bump" [i]
-    ⦃fun r s' => LocEq s' s₀ ∧ r = [0]; ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ r = [0] ∧ s'.mem.glob LAST = i ∧
+      s'.mem.glob CALLS = s₀.mem.glob CALLS + 1; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, bump]
   cases n with
   | zero => vcgen [exec] <;> grind
-  | succ n => sym only [lang_grind] => vcgen [exec, step, evalE, evalArgs, st64] <;> finish
+  | succ n => sym only [lang_grind] => vcgen [exec, step, evalE, evalArgs, setG] <;> finish
 
-theorem bumpUser_spec (hp2 : p.lookup "bump_user" = some bumpUser) (n : Nat) (s₀ : St) (i : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "bump_user" [i]
-    ⦃fun r s' => LocEq s' s₀ ∧ r = [i]; ⊤⦄ := by
-  rw [invoke_eq _ hp2]
+theorem bumpUser_spec (n : Nat) (s₀ : St) (i : Word) :
+    ⦃fun s => s = s₀⦄ invoke bumpProg (exec bumpProg n) "bump_user" [i]
+    ⦃fun r s' => LocEq s' s₀ ∧ r = [i + (i + 1)] ∧ s'.mem.glob CALLS = s₀.mem.glob CALLS + 1; ⊤⦄ := by
+  rw [invoke_eq _ rfl]
   simp only [callFn, bumpUser]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
-    sym only [lang_grind] => vcgen [exec, step, evalE, evalArgs, setLocs, setLoc, bump_spec p hp n] <;> finish
+    sym only [lang_grind] => vcgen [exec, step, evalE, evalArgs, setLocs, setLoc, setG,
+      Triple.gframe bump_closed (by decide) (bump_spec bumpProg rfl n _ _)] <;> finish
 
-end bump
+/-! ## Records
+
+A node table of three-word records `[tag, a, b]` in word array 1. `node_mk(i, j, t, x)` writes
+node `i`, reads field `a` of another node `j` and three fields of `i` back. The spec is about
+`Mem.fld`, with no address arithmetic; `vcgen` gets `evalE_at` for the field addresses, and
+`finish` decides the aliasing from `fld_set64` (different record, or different field: the old
+value). Written with raw addresses (`NODES.u64[i * 3 + 1]`, the models over `rdW … (j * 3 + 1)`),
+the same proof fails in `finish`: `grind` cannot refute `i * 3 + 1 = j * 3 + 1` in `UInt64`
+without the injectivity lemma and bounds a store library proves by hand (`Schema.ad_inj`). -/
+
+/-- The node table. -/
+abbrev NODE : Record := ⟨1, 3⟩
+abbrev NODE.tag : Field := ⟨0⟩
+abbrev NODE.a : Field := ⟨1⟩
+abbrev NODE.b : Field := ⟨2⟩
+
+/-- con-ron: none — an example program of L -/
+def nodeMk : FunDecl := lfn (i, j, t, x) locals (r) {
+  NODE[i].tag := t;
+  NODE[i].a := x;
+  NODE[i].b := x + 1;
+  r := NODE[j].a;
+  return (NODE[i].tag, r, NODE[i].b)
+}
+
+theorem nodeMk_spec (p : Prog) (hp : p.lookup "node_mk" = some nodeMk) (n : Nat) (s₀ : St)
+    (i j t x : Word) (hn : j ≠ i) (hi : i.toNat < 2 ^ 32) (hj : j.toNat < 2 ^ 32) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "node_mk" [i, j, t, x]
+    ⦃fun r s' => LocEq s' s₀ ∧ r = [t, s₀.mem.fld NODE j NODE.a, x + 1] ∧
+      s'.mem.fld NODE i NODE.a = x ∧ s'.mem.fld NODE j NODE.b = s₀.mem.fld NODE j NODE.b; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, nodeMk]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind] => vcgen [exec, step, evalE, evalE_at, evalArgs, setLoc, st64, ld64] <;> finish
+
+def nodeProg : Prog := [("node_mk", nodeMk)]
 
 end L.Examples

@@ -253,7 +253,8 @@ def reduceProjHeadL : FunDecl :=
 }
 
 /-- `reduceProjCore` at a constant head `k.{us}`: the arguments (pushed on the stack), the
-level count, the entry's fire check, the shape conditions.
+level count, the entry's fire check, the shape conditions. The twin's `args.length = numParams +
+numFields` (`Nat`) is tested as `nf <= an && an - nf == np`, which does not wrap; then `np + i < an`.
 con-ron: ConRon/Arena/Core.lean:2296-2329 ConRon.Arena.reduceProjCore -/
 def reduceProjFireL : FunDecl :=
     lfn (mode, vis, e1, q, i, k, us) locals (ao, an, lo, usl, fok, np, nf, st, r) {
@@ -262,7 +263,7 @@ def reduceProjFireL : FunDecl :=
   fok := call fire_ok(q, i, us);
   np := EREC.u64[q + 5];
   nf := EREC.u64[q + 7];
-  if k == EREC.u64[q + 6] && i < nf && an == np + nf && usl == EREC.u64[q + 4] && fok != 0 {
+  if k == EREC.u64[q + 6] && i < nf && nf <= an && an - nf == np && usl == EREC.u64[q + 4] && fok != 0 {
     (st, r) := call reduce_proj_arg(mode, vis, k, ao, an, np + i);
     return (st, r)
   };
@@ -369,11 +370,16 @@ def FindProjOK (p : Prog) : Prop :=
       (fun r => decEntry (s₀.mem.arr64 EREC) (r.headD 0) (r.tail.headD 0) i.toNat) s₀ a₀ dn vis fe
       M eb
 
-/-- `fire_ok(q, i, us)` refines `IProjEntry.fireOk` at the entry of table record `q`. -/
+/-- `fire_ok(q, i, us)` refines `IProjEntry.fireOk` at the entry of table record `q`. **Statement
+correction** (helper `whnf4-leaves`): at a field `i` below the table's `numFields` (the twin's
+`findProj?` answers no other entry) and universe arguments that are a stored `const` node's list
+(the callers' `us` is; the twin reads them back when the structure is a proposition, and a
+stored `const` node's list reads back, `StoreDen.constLs`). -/
 def FireOkOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb q i us : Word) (tbl : IProjTable), CoreS dn s₀.mem a₀ vis fe M eb →
-    HW us → decTbl (s₀.mem.arr64 EREC) q.toNat = some tbl →
+    HW us → decTbl (s₀.mem.arr64 EREC) q.toNat = some tbl → i.toNat < tbl.numFields →
+    (∃ (h : EIdx) (c : NIdx), a₀.store.view h = some (.const c (decI us))) →
     CoreSpec p n "fire_ok" [q, i, us] ((tbl.entry i.toNat).fireOk (decI us)) decBool s₀ a₀ dn vis
       fe M eb
 
@@ -394,15 +400,6 @@ def ErecKept (p : Prog) : Prop :=
     (f = "find_proj" ∨ f = "fire_ok") → callW p n f vs m = some (r, m') →
     m'.arr64 EREC = m.arr64 EREC
 
-/-- **Projection tables hold small counts** (added for `reduce_proj_fire`): the L code compares
-`an == np + nf` and indexes `np + i` as `u64` words, the twin as `Nat`s; the two agree only if the
-sum does not wrap. A table's parameter and field counts (the environment loader's invariant, as
-every record pool's capacities) are below `2^32`. -/
-def ProjSmall : Prop :=
-  ∀ (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis : Word) (fe : IFEnv)
-    (M : ModeMaps) (eb q : Word) (tbl : IProjTable), CoreS dn m a vis fe M eb →
-    decTbl (m.arr64 EREC) q.toNat = some tbl → tbl.numParams < 2 ^ 32 ∧ tbl.numFields < 2 ^ 32
-
 /-- **`find_proj` answers a table record that decodes** (added for `reduce_proj_core`):
 `FindProjOK` equates the twin's lookup with `decEntry`, which is `none` for a record that does not
 decode, so it does not exclude `find_proj` answering `(1, q)` for a `q` that fails to decode (then
@@ -414,16 +411,21 @@ def ProjFound (p : Prog) : Prop :=
     callW p n "find_proj" [vis, T, i] m = some (r, m') → r.headD 0 ≠ 0 →
     ∃ tbl : IProjTable, decTbl (m.arr64 EREC) (r.tail.headD 0).toNat = some tbl
 
-/-- **The callees of this file not written here.** -/
-structure CoreCallees (p : Prog) : Prop where
-  inst1 : Inst1OK p
+/-- **The projection-table callees** (`find_proj`, `fire_ok`) and their record-pool facts: what
+`reduce_proj_core` and the ι side's `and_rescue_slots`/`major_to_ctor` assume of them. A part of
+`CoreCallees` on its own, so that `major_to_ctor` (which `iota_rec_at` calls) does not take
+`CoreCallees.iota` (helper `whnf4-knot`). -/
+structure ProjCallees (p : Prog) : Prop where
   findProj : FindProjOK p
   fireOk : FireOkOK p
+  erec : ErecKept p
+  projFound : ProjFound p
+
+/-- **The callees of this file not written here.** -/
+structure CoreCallees (p : Prog) : Prop extends ProjCallees p where
+  inst1 : Inst1OK p
   /-- `iota_rec_at` one level down from the knot at `n` (`WhnfIota.lean`). -/
   iota : ∀ n, KnotUpTo p n → IotaRecAtOK p (n + 1)
-  erec : ErecKept p
-  projSmall : ProjSmall
-  projFound : ProjFound p
 
 /-- The callees' specs, assumed (stubs, phases 4–5; `iota_rec_at` until `WhnfIota.lean`'s
 refinement lands). -/

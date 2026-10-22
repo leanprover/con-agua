@@ -1,3 +1,4 @@
+import ConAgua.Arena.ProjView
 import ConAgua.Arena.WhnfCoreApp
 
 /-!
@@ -118,7 +119,8 @@ theorem projLitToCtor_run_ctor (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (h : Wo
   simp [projLitToCtor, ht, StateT.run_bind, view_run _ _ _ hv, except_ok_bind, hsup, hc, hres]
 
 /-- **`proj_lit_to_ctor` refines `projLitToCtor`.** -/
-theorem projLitToCtor_refines' (p : Prog) (hp : WhnfCoreProg p) (hw : WhnfCallees p) (n : Nat)
+theorem projLitToCtor_refines' (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLitSupportedOK p)
+    (hStrCtor : StrLitCtorOK p) (n : Nat)
     (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb mode d h : Word)
     (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (hh : HW h)
@@ -173,7 +175,7 @@ theorem projLitToCtor_refines' (p : Prog) (hp : WhnfCoreProg p) (hw : WhnfCallee
   obtain ⟨r₁, m₁⟩ := q₁
   simp only [hcall1] at hW
   obtain ⟨hok1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres1, -⟩ :=
-    CoreSpec.of_callW (hw.strLitSupported n s a₀ dn vis fe MM eb hS) hcall1
+    CoreSpec.of_callW (hStrSup n s a₀ dn vis fe MM eb hS) hcall1
   by_cases hsup0 : r₁.headD 0 = 0
   · rw [if_pos hsup0] at hW
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
@@ -207,7 +209,7 @@ theorem projLitToCtor_refines' (p : Prog) (hp : WhnfCoreProg p) (hw : WhnfCallee
   obtain ⟨r₂, m₂⟩ := q₂
   simp only [hcall2] at hW
   obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hrw2⟩ :=
-    CoreSpec.of_callW (hw.strLitCtor n { s with mem := m₁ } a₁ dn vis fe M₁ eb h s' hS₁ hh hv₁)
+    CoreSpec.of_callW (hStrCtor n { s with mem := m₁ } a₁ dn vis fe M₁ eb h s' hS₁ hh hv₁)
       hcall2
   cases hcall3 : callW p n "whnf" [mode, vis, d, r₂.headD 0] m₂ with
   | none => rw [hcall3] at hW; simp at hW
@@ -445,7 +447,7 @@ theorem StackKept.of_bvar_frame {m m' : Mem} (hf : MemFrame [BREC, BSLOT] [22, 2
   have hspn : m'.arr64 SPN = m.arr64 SPN :=
     hf.1 SPN (by simp [BREC, BSLOT, SPN]) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp)
-  exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
+  exact StackKept.of_frame hf
 
 /-- A slice survives a change that leaves the stack array alone. -/
 theorem SpineR.of_spn_core {m m' : Mem} {off cnt : Word} {xs : Array EIdx} (h : SpineR m off cnt xs)
@@ -660,7 +662,8 @@ def rpFireW (p : Prog) (n : Nat) (m : Mem) (mode vis e1 q i k us : Word) :
       | none => none
       | some (r₃, m₃) =>
         if k = rdW (m₃.arr64 EREC) (q + 6) ∧ i < rdW (m₃.arr64 EREC) (q + 7) ∧
-            r₁.tail.headD 0 = rdW (m₃.arr64 EREC) (q + 5) + rdW (m₃.arr64 EREC) (q + 7) ∧
+            rdW (m₃.arr64 EREC) (q + 7) ≤ r₁.tail.headD 0 ∧
+            r₁.tail.headD 0 - rdW (m₃.arr64 EREC) (q + 7) = rdW (m₃.arr64 EREC) (q + 5) ∧
             r₂.tail.headD 0 = rdW (m₃.arr64 EREC) (q + 4) ∧ r₃.headD 0 ≠ 0 then
           match callW p n "reduce_proj_arg" [mode, vis, k, r₁.headD 0, r₁.tail.headD 0,
               rdW (m₃.arr64 EREC) (q + 5) + i] m₃ with
@@ -684,17 +687,9 @@ theorem rpFire_spec (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St)
   simp_all [-UInt64.toNat_add, rpFireW, EREC, BinOp.eval, getElem_rdW', Cmp.eval, LocEq, St.setLocs_cons, St.setLoc_loc,
     St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal,
     Sig.retOr] <;>
-  (intro h1; exact absurd h1 (UInt64.not_lt.mpr ‹_›))
+  (intro h1; first | exact absurd h1 (UInt64.not_lt.mpr ‹_›) | exact absurd h1 (UInt64.not_le.mpr ‹_›))
 
 /-! ## Runs that leave their pushed slice on the stack -/
-
-theorem StackGrew.trans {m₁ m₂ m₃ : Mem} (h₁ : StackGrew m₁ m₂) (h₂ : StackGrew m₂ m₃) :
-    StackGrew m₁ m₃ :=
-  ⟨UInt64.le_trans h₁.1 h₂.1, h₂.2.1.trans h₁.2.1,
-    fun i hi => (h₂.2.2 i (UInt64.lt_of_lt_of_le hi h₁.1)).trans (h₁.2.2 i hi)⟩
-
-theorem StackKept.toGrew {m₁ m₂ : Mem} (h : StackKept m₁ m₂) : StackGrew m₁ m₂ :=
-  ⟨h.1 ▸ UInt64.le_refl _, h.2.1, h.2.2⟩
 
 /-- **After a core run that left a slice on the stack**: as `CoreAfter`, the stack below the old top
 kept, the top possibly grown. -/
@@ -761,32 +756,38 @@ theorem lsNodeW_cases (m : Mem) (h : Word) :
 /-- The twin's shape conditions of `reduceProjCore`, against L's word tests. -/
 theorem fire_cond_iff (tbl : IProjTable) (i k w6 np nf an usl l4 w3 : Word) (ln : Nat)
     (hk : HW k) (hw6 : HW w6) (hctor : tbl.ctor = decI w6) (hnp : tbl.numParams = np.toNat)
-    (hnf : tbl.numFields = nf.toNat) (hsum : np.toNat + nf.toNat < 2 ^ 64)
+    (hnf : tbl.numFields = nf.toNat)
     (hln : ln = an.toNat) (hlp : tbl.levelParams.length = l4.toNat) :
     (decI k = (tbl.entry i.toNat).ctor ∧ i.toNat < (tbl.entry i.toNat).numFields ∧
       ln = (tbl.entry i.toNat).numParams + (tbl.entry i.toNat).numFields ∧
       usl.toNat = (tbl.entry i.toNat).levelParams.length ∧ (w3 != 0) = true) ↔
-    (k = w6 ∧ i < nf ∧ an = np + nf ∧ usl = l4 ∧ w3 ≠ 0) := by
+    (k = w6 ∧ i < nf ∧ nf ≤ an ∧ an - nf = np ∧ usl = l4 ∧ w3 ≠ 0) := by
   simp only [IProjTable.entry]
   have e1 : (decI k = tbl.ctor) ↔ k = w6 := by
     rw [hctor]; exact ⟨fun h => decI_inj hk hw6 h, fun h => by rw [h]⟩
   have e2 : i.toNat < tbl.numFields ↔ i < nf := by
     rw [hnf]; exact (UInt64.lt_iff_toNat_lt).symm
-  have e3 : ln = tbl.numParams + tbl.numFields ↔ an = np + nf := by
-    rw [hln, hnp, hnf]
+  have e3 : ln = tbl.numParams + tbl.numFields ↔ (nf ≤ an ∧ an - nf = np) := by
+    rw [hln, hnp, hnf, UInt64.le_iff_toNat_le]
     constructor
-    · intro h; apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add, Nat.mod_eq_of_lt hsum]; exact h
-    · intro h; have := congrArg UInt64.toNat h; rw [UInt64.toNat_add, Nat.mod_eq_of_lt hsum] at this; exact this
+    · intro h
+      refine ⟨by omega, UInt64.toNat_inj.mp ?_⟩
+      rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by omega))]; omega
+    · intro ⟨h1, h2⟩
+      have := congrArg UInt64.toNat h2
+      rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr h1)] at this; omega
   have e4 : usl.toNat = tbl.levelParams.length ↔ usl = l4 := by
     rw [hlp]; exact ⟨fun h => UInt64.toNat_inj.mp h, fun h => by rw [h]⟩
   have e5 : (w3 != 0) = true ↔ w3 ≠ 0 := by simp
-  rw [e1, e2, e3, e4, e5]
+  rw [e1, e2, e3, e4, e5, and_assoc]
 
-theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (hc : CoreCallees p) (n : Nat)
+theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (hc : ProjCallees p)
+    (n : Nat)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode e1 q i k us : Word) (tbl : IProjTable)
     (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he1 : HW e1) (hk : HW k) (hus : HW us)
-    (hq : decTbl (s₀.mem.arr64 EREC) q.toNat = some tbl) :
+    (hq : decTbl (s₀.mem.arr64 EREC) q.toNat = some tbl) (hlt : i.toNat < tbl.numFields)
+    (hvus : ∃ (h : EIdx) (c : NIdx), a₀.store.view h = some (.const c (decI us))) :
     GrowSpec p (n + 1) "reduce_proj_fire" [mode, vis, e1, q, i, k, us]
       (rpFireT (decMode mode) fe (tbl.entry i.toNat) i.toNat (decE e1) (decI k) (decI us))
       decOptR s₀ a₀ dn vis fe MM eb ResW := by
@@ -797,7 +798,6 @@ theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (hc : CoreCallees p) (n 
   subst hs0
   refine ⟨hloc, ?_⟩
   have hS := hs.rel
-  have hsmall := hc.projSmall dn s.mem a₀ vis fe MM eb q tbl hS hq
   have hwords := decTbl_words hq hS.erec
   obtain ⟨hlp, hnp, hw6, hctor, hnf⟩ := hwords
   unfold rpFireW at hW
@@ -836,7 +836,7 @@ theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (hc : CoreCallees p) (n 
   obtain ⟨r₃, m₃⟩ := q₃
   simp only [hc3] at hW
   have hq₂ : decTbl (m₂.arr64 EREC) q.toNat = some tbl := by rw [hE₁]; exact hq
-  have hfok := hc.fireOk n { s with mem := m₂ } a₀ dn vis fe MM eb q i us tbl hS₁ hus hq₂
+  have hfok := hc.fireOk n { s with mem := m₂ } a₀ dn vis fe MM eb q i us tbl hS₁ hus hq₂ hlt hvus
   obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, -⟩ := CoreSpec.of_callW hfok hc3
   have hE₃ : m₃.arr64 EREC = m₂.arr64 EREC := by
     have := (hc.erec n "fire_ok" [q, i, us] m₂ r₃ m₃ (Or.inr rfl) hc3); exact this
@@ -851,11 +851,9 @@ theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (hc : CoreCallees p) (n 
   have hbnd := hsp₁.bound
   have hlen : xs.length = (r₁.tail.headD 0).toNat := by
     have := hsp₁.size; simpa using this
-  have hsum : (rdW (m₃.arr64 EREC) (q + 5)).toNat + (rdW (m₃.arr64 EREC) (q + 7)).toNat < 2 ^ 64 := by
-    rw [← hnp', ← hnf']; have := hsmall.1; have := hsmall.2; omega
   have hcond := fire_cond_iff tbl i k (rdW (m₃.arr64 EREC) (q + 6)) (rdW (m₃.arr64 EREC) (q + 5))
     (rdW (m₃.arr64 EREC) (q + 7)) (r₁.tail.headD 0) l₂ (rdW (m₃.arr64 EREC) (q + 4)) (r₃.headD 0)
-    xs.length hk hw6' hctor' hnp' hnf' hsum hlen hlp'
+    xs.length hk hw6' hctor' hnp' hnf' hlen hlp'
   have hdb : decBool r₃ = (r₃.headD 0 != 0) := rfl
   have hpreP : (decI k = (tbl.entry i.toNat).ctor ∧ i.toNat < (tbl.entry i.toNat).numFields ∧
           xs.length = (tbl.entry i.toNat).numParams + (tbl.entry i.toNat).numFields ∧
@@ -875,7 +873,8 @@ theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (hc : CoreCallees p) (n 
     simp only [rpFireT, StateT.run_bind, hxs, except_ok_bind, viewLsLen_run, hvl, hrunF, hdb]
     rw [if_neg h]
   by_cases hLc : k = rdW (m₃.arr64 EREC) (q + 6) ∧ i < rdW (m₃.arr64 EREC) (q + 7) ∧
-      r₁.tail.headD 0 = rdW (m₃.arr64 EREC) (q + 5) + rdW (m₃.arr64 EREC) (q + 7) ∧
+      rdW (m₃.arr64 EREC) (q + 7) ≤ r₁.tail.headD 0 ∧
+      r₁.tail.headD 0 - rdW (m₃.arr64 EREC) (q + 7) = rdW (m₃.arr64 EREC) (q + 5) ∧
       ([o₂, l₂] : List Word).tail.headD 0 = rdW (m₃.arr64 EREC) (q + 4) ∧ r₃.headD 0 ≠ 0
   · rw [if_pos hLc] at hW
     have hTc := hcond.mpr hLc
@@ -896,14 +895,14 @@ theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (hc : CoreCallees p) (n 
       rw [htop₁, UInt64.toNat_add, Nat.mod_eq_of_lt (by rw [← ho₁]; omega), ← ho₁]
       exact Nat.le_refl _
     have hspR : SpineR m₃ (r₁.headD 0) (r₁.tail.headD 0) xs.toArray :=
-      hsp₁.keep hSt₃.2.1 hSt₃.2.2 hao hS₁.spn
+      hsp₁.keep hSt₃.size hSt₃.below hao hS₁.spn
     have hjn : (rdW (m₃.arr64 EREC) (q + 5) + i).toNat = tbl.numParams + i.toNat := by
       have hlt := UInt64.lt_iff_toNat_lt.mp hLc.2.1
-      have h1 := hsmall.1
-      have h2 := hsmall.2
-      rw [UInt64.toNat_add, Nat.mod_eq_of_lt, ← hnp']
-      rw [← hnp']
-      omega
+      have hle := UInt64.le_iff_toNat_le.mp hLc.2.2.1
+      have heq := congrArg UInt64.toNat hLc.2.2.2.1
+      rw [UInt64.toNat_sub_of_le _ _ hLc.2.2.1] at heq
+      have han := (r₁.tail.headD 0).toNat_lt
+      rw [UInt64.toNat_add, Nat.mod_eq_of_lt (by omega), ← hnp']
     have harg := rpArg_refines p hp N { s with mem := m₃ }
       (AM.st ((tbl.entry i.toNat).fireOk (decI us)) a₀)
       dn vis fe M₃ eb mode k (r₁.headD 0) (r₁.tail.headD 0) (rdW (m₃.arr64 EREC) (q + 5) + i)
@@ -993,11 +992,12 @@ theorem rpHead_spec (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) (mode
       callW_spec p n "get_app_fn", callW_spec p n "reduce_proj_fire"] <;>
     finish [rpHeadW, tierW, idxW]
 
-theorem rpHead_refines (p : Prog) (hp : WhnfCoreProg p) (hc : CoreCallees p) (n : Nat)
+theorem rpHead_refines (p : Prog) (hp : WhnfCoreProg p) (hc : ProjCallees p)
+    (n : Nat)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode e1 q i : Word) (tbl : IProjTable)
     (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he1 : HW e1)
-    (hq : decTbl (s₀.mem.arr64 EREC) q.toNat = some tbl) :
+    (hq : decTbl (s₀.mem.arr64 EREC) q.toNat = some tbl) (hlt : i.toNat < tbl.numFields) :
     GrowSpec p (n + 1) "reduce_proj_head" [mode, vis, e1, q, i]
       (rpHeadT (decMode mode) fe (tbl.entry i.toNat) i.toNat (decE e1))
       decOptR s₀ a₀ dn vis fe MM eb ResW := by
@@ -1054,7 +1054,8 @@ theorem rpHead_refines (p : Prog) (hp : WhnfCoreProg p) (hc : CoreCallees p) (n 
   cases n with
   | zero => simp [callW_zero] at hc2
   | succ N =>
-  have hfire := rpFire_refines p hp hc N s a₀ dn vis fe MM eb mode e1 q i _ _ tbl hs he1 hhn hhus hq
+  have hfire := rpFire_refines p hp hc N s a₀ dn vis fe MM eb mode e1 q i _ _ tbl hs he1 hhn hhus hq hlt
+    ⟨_, n', by rw [hv, hus]⟩
   obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hrw2⟩ := GrowSpec.of_callW hfire hc2
   have hrun2 := AM.run_of_ok _ _ hok2
   rw [hres2] at hrun2
@@ -1119,8 +1120,9 @@ theorem rpCore_spec (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) (mode
 /-! ## `reduce_proj_core` -/
 
 /-- **`reduce_proj_core` refines `reduceProjCore`.** -/
-theorem reduceProjCore_refines' (p : Prog) (hp : WhnfCoreProg p) (hw : WhnfCallees p)
-    (hc : CoreCallees p) (hl : p.lookup "ls_node" = some lsNode) (hE : ErecKept p) (n : Nat)
+theorem reduceProjCore_refines' (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLitSupportedOK p)
+    (hStrCtor : StrLitCtorOK p) (hc : ProjCallees p)
+    (hl : p.lookup "ls_node" = some lsNode) (hE : ErecKept p) (n : Nat)
     (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
     (eb mode d sn i c : Word) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (hsn : HW sn) (hc' : HW c)
@@ -1144,7 +1146,7 @@ theorem reduceProjCore_refines' (p : Prog) (hp : WhnfCoreProg p) (hw : WhnfCalle
   | some q₁ =>
   obtain ⟨r₁, m₁⟩ := q₁
   simp only [hc1] at hW
-  have hplit := projLitToCtor_refines' p hp hw N (hk.mono (by omega)) F (by omega) (by omega) s a₀
+  have hplit := projLitToCtor_refines' p hp hStrSup hStrCtor N (hk.mono (by omega)) F (by omega) (by omega) s a₀
     dn vis fe MM eb mode d c hs hc' hsup
   obtain ⟨hok1, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres1, hrw1⟩ := CoreSpec.of_callW hplit hc1
   have hrun1 := AM.run_of_ok _ _ hok1
@@ -1192,6 +1194,7 @@ theorem reduceProjCore_refines' (p : Prog) (hp : WhnfCoreProg p) (hw : WhnfCalle
   simp only [hc3] at hW
   have hhead := rpHead_refines p hp hc N { s with mem := m₂ } _ dn vis fe M₂ eb mode (r₁.headD 0)
     (r₂.tail.headD 0) i tbl ⟨hS₂, hs.mode4, hs.eb_mode⟩ hrw1 hq
+    (by simpa [IProjTable.entry] using findProj?_lt hrun2)
   obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hrw3⟩ := GrowSpec.of_callW hhead hc3
   have hrun3 := AM.run_of_ok _ _ hok3
   rw [hres3] at hrun3
@@ -1214,12 +1217,13 @@ theorem reduceProjCore_refines' (p : Prog) (hp : WhnfCoreProg p) (hw : WhnfCalle
         hK₁.trans (hK₂.trans hK₃), ?_⟩
       have t1 : spTop m₁ = spTop s.mem := hSt₁.1
       have t2 : spTop m₂ = spTop m₁ := hSt₂.1
-      apply StackKept.restore _ (by rw [hSt₃.2.1, hSt₂.2.1, hSt₁.2.1]) h136
+      apply StackKept.restore _ (by rw [hSt₃.size, hSt₂.size, hSt₁.size])
+        (hSt₁.bstk.trans (hSt₂.bstk.trans hSt₃.bstk)) (hSt₁.pool.trans (hSt₂.pool.trans hSt₃.pool)) h136
       intro j hj
       have hj2 : j < spTop m₂ := by rw [t2, t1]; exact hj
       have hj1 : j < spTop m₁ := by rw [t1]; exact hj
-      rw [hSt₃.2.2 j hj2]
-      exact (hSt₂.2.2 j hj1).trans (hSt₁.2.2 j hj)
+      rw [hSt₃.below j hj2]
+      exact (hSt₂.below j hj1).trans (hSt₁.below j hj)
     · rw [hres]; unfold decOptR; rw [← hr0, ← hr1]
     · unfold ResW; rw [← hr0, ← hr1]; exact hrw3
   · rw [if_neg h136] at hW; cases hW
@@ -1241,8 +1245,9 @@ theorem stepProj_run (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (ch
     simp_all [whnfCoreStepProj, optStep, StateT.run_bind, except_ok_bind] <;> rfl
 
 /-- **`whnf_core_step_proj` refines `whnfCoreStepProj`.** -/
-theorem whnfCoreStepProj_refines' (p : Prog) (hp : WhnfCoreProg p) (hw : WhnfCallees p)
-    (hc : CoreCallees p) (hl : p.lookup "ls_node" = some lsNode) (hE : ErecKept p) (n : Nat)
+theorem whnfCoreStepProj_refines' (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrLitSupportedOK p)
+    (hStrCtor : StrLitCtorOK p) (hc : ProjCallees p)
+    (hl : p.lookup "ls_node" = some lsNode) (hE : ErecKept p) (n : Nat)
     (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
     (eb mode cheap d e sn i pe : Word) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e)
@@ -1300,7 +1305,7 @@ theorem whnfCoreStepProj_refines' (p : Prog) (hp : WhnfCoreProg p) (hw : WhnfCal
   cases n with
   | zero => simp [callW_zero] at hcall2
   | succ N =>
-  have hred := reduceProjCore_refines' p hp hw hc hl hE N (hk.mono (by omega)) F (by omega)
+  have hred := reduceProjCore_refines' p hp hStrSup hStrCtor hc hl hE N (hk.mono (by omega)) F (by omega)
     (by omega) { s with mem := m₁ } a₁ dn vis fe M₁ eb mode d sn i (r₁.headD 0)
     ⟨hS₁, hs.mode4, hs.eb_mode⟩ hsn hr₁ hsup
   obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hrw2⟩ := CoreSpec.of_callW hred hcall2
@@ -1352,7 +1357,8 @@ theorem whnfCoreStepProj_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n
     CoreSpec p (n + 1) "whnf_core_step_proj" [mode, cheap, vis, d, e, sn, i, pe]
       (whnfCoreStepProj (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat
         (decE e) (decI sn) i.toNat (decE pe)) decStep s₀ a₀ dn vis fe MM eb ResW :=
-  whnfCoreStepProj_refines' p hp (whnfCallees_stub p) (coreCallees_stub p) hp.lsn
+  whnfCoreStepProj_refines' p hp (whnfCallees_stub p).strLitSupported
+    (whnfCallees_stub p).strLitCtor (coreCallees_stub p).toProjCallees hp.lsn
     (coreCallees_stub p).erec n hk F hF hn s₀ a₀ dn vis fe MM eb mode cheap d e sn i pe hs he hsn hpe
     (supKeep_twin fe)
 
@@ -1366,7 +1372,8 @@ theorem reduceProjCore_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n �
     CoreSpec p (n + 1) "reduce_proj_core" [mode, vis, d, sn, i, c]
       (reduceProjCore (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat
         (decE c)) decOptR s₀ a₀ dn vis fe MM eb ResW :=
-  reduceProjCore_refines' p hp (whnfCallees_stub p) (coreCallees_stub p) hp.lsn
+  reduceProjCore_refines' p hp (whnfCallees_stub p).strLitSupported
+    (whnfCallees_stub p).strLitCtor (coreCallees_stub p).toProjCallees hp.lsn
     (coreCallees_stub p).erec n hk F hF hn s₀ a₀ dn vis fe MM eb mode d sn i c hs hsn hc'
     (supKeep_twin fe)
 
@@ -1380,7 +1387,8 @@ theorem projLitToCtor_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n �
     CoreSpec p (n + 1) "proj_lit_to_ctor" [mode, vis, d, h]
       (projLitToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h)) decH s₀ a₀ dn vis fe
       MM eb :=
-  projLitToCtor_refines' p hp (whnfCallees_stub p) n hk F hF hn s₀ a₀ dn vis fe MM eb mode d h hs hh
+  projLitToCtor_refines' p hp (whnfCallees_stub p).strLitSupported
+    (whnfCallees_stub p).strLitCtor n hk F hF hn s₀ a₀ dn vis fe MM eb mode d h hs hh
     (supKeep_twin fe)
 
 end wrap

@@ -1,5 +1,6 @@
 import ConAgua.Arena.StoreLib
 import ConAgua.Arena.SortStore
+import ConAgua.Arena.LpColRel
 
 /-!
 # The `sort` store refines the arena's `sort` tables
@@ -154,19 +155,42 @@ theorem sopushOK_room (m : Mem) (t : Word) (h : sopushOK m t = true) : PushRoom 
   grind
 
 theorem sopushMem_eq (m : Mem) (t u j c : Word) :
-    sopushMem m t u j c = pushG sortSch m t [u] j c := by
+    sopushMem m t u j c = (pushG sortSch m t [u] j c).set64 SOLP (c * 2 + t) (lvlHPW m u) := by
   simp [sopushMem, pushG, wrRec, Schema.ad, sortSch]
 
 theorem sointernW_eq (m : Mem) (u : Word) :
-    sointernW m u = internM sortSch m (soskipW m u) (sopushOK m) [u]
+    sointernW m u = internMD sortSch SOLP (lvlHPW m u) m (soskipW m u) (sopushOK m) [u]
       (soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) 0 u (baseW m 0) (nSlotsSo m) (homeW (sortHashW u) (nSlotsSo m)) 0)
       (soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) 1 u (baseW m 1) (nSlotsSo m) (homeW (sortHashW u) (nSlotsSo m)) 0) := by
   have e0 : ∀ x, hdW sortSch.tag.toUInt64 0 x = sortP + x := fun x => by
     simp [hdW, sortSch, sortP, ETag.sort]
   have e1 : ∀ x, hdW sortSch.tag.toUInt64 1 x = sortS + x := fun x => by
     simp [hdW, sortSch, sortS, ETag.sort]
-  simp only [sointernW, internM, sopushMem_eq, e0, e1]
+  simp only [sointernW, internMD, sopushMem_eq, e0, e1]
   rfl
+
+/-- **What `intern_sort` changes**: the table's arrays, the `lp` column, the counts. -/
+theorem sointernW_frame (m : Mem) (u w : Word) (m' : Mem) (hI : sointernW m u = some (w, m')) :
+    MemFrame [SOREC, SOSLOT, SOLP] [16, 17] m m' := by
+  rw [sointernW_eq] at hI
+  exact internMD_frame sortSch sortSch_wf SOLP (by decide) _ _ _ _ _ _ _ _ _ hI
+
+/-- `intern_sort`'s model as the library's interning and the `mk_*` tail (`mkK`), given the
+count words. -/
+theorem sointernW_eqK (m : Mem) (u : Word) (hctl : sortSch.ca.toNat + 2 ≤ (m.arr64 CTL).size) :
+    sointernW m u = mkK SOLP sortSch.ca (cnt2 m sortSch.ca) (lvlHPW m u)
+      (internM sortSch m (soskipW m u) (sopushOK m) [u]
+        (soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) 0 u (baseW m 0) (nSlotsSo m) (homeW (sortHashW u) (nSlotsSo m)) 0)
+        (soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) 1 u (baseW m 1) (nSlotsSo m) (homeW (sortHashW u) (nSlotsSo m)) 0)) := by
+  rw [sointernW_eq]
+  refine internMD_mkK sortSch sortSch_wf _ _ _ _ _ _ _ _ hctl (fun t ht hp => ?_)
+  simp only [sopushOK, Bool.and_eq_true, decide_eq_true_eq] at hp
+  obtain ⟨⟨⟨h1, -⟩, h2⟩, -⟩ := hp
+  exact ⟨h1, col_room _ _ _ ht h1 h2⟩
+
+theorem sortLocal : RLocal sortSch SoRecRel sohash [] [] := by
+  intro m m' hra _ _; simp only [sortSch] at hra
+  exact ⟨fun t i k h => by simpa only [SoRecRel, hra] using h, fun t i => by simp only [sohash, hra]⟩
 
 /-- The L skip test is the arena's. -/
 theorem soskipW_eq (m : Mem) (a : AState) (u : Word) (hu : u.toNat < 2 ^ 32)
@@ -181,19 +205,52 @@ section intern
 variable (m : Mem) (a : AState) (hR : SortR m a) (u : Word) (hu : u.toNat < 2 ^ 32)
 
 include hR hu in
-/-- **`intern_sort`'s model refines the arena's `internE` at a `sort` node.** -/
-theorem sointern_correct (w : Word) (m' : Mem) (hI : sointernW m u = some (w, m')) :
+/-- The library's half of `intern_sort` (before the `lp` column). -/
+theorem sointern_core (w : Word) (m₁ : Mem)
+    (hI : internM sortSch m (soskipW m u) (sopushOK m) [u]
+        (soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) 0 u (baseW m 0) (nSlotsSo m) (homeW (sortHashW u) (nSlotsSo m)) 0)
+        (soprobeW (m.arr64 SOSLOT) (m.arr64 SOREC) 1 u (baseW m 1) (nSlotsSo m) (homeW (sortHashW u) (nSlotsSo m)) 0) =
+      some (w, m₁)) :
     AM.ok (internE (.sort (decI u))) a ∧
-    SortR m' (AM.st (internE (.sort (decI u))) a) ∧
-    AM.res (internE (.sort (decI u))) a = decI w := by
-  rw [sointernW_eq] at hI
-  exact intern_correctG sortSch SoRecRel sohash sortSch_wf sortFrame sortLens a m hR _ _ _ _ _
+    SortR m₁ (AM.st (internE (.sort (decI u))) a) ∧
+    AM.res (internE (.sort (decI u))) a = decI w :=
+  intern_correctG sortSch SoRecRel sohash sortSch_wf sortFrame sortLens a m hR _ _ _ _ _
     (internE_sort_run _ a) (skSo a (decI u)) rfl _ (soskipW_eq m a u hu hR.2.1)
     (fun h => by simp only [skSo] at h; split at h <;> simp_all [sortLens]) _ _
     (sortMatchOK m u hu) (sortHomeOK m u) _ _
     (probe_homeG sortSch m 0 _ _ (soprobeW_arm m u 0) _)
     (probe_homeG sortSch m 1 _ _ (soprobeW_arm m u 1) _) _ (sopushOK_room m) _ rfl
-    (sortNewOK m u hu) w m' hI
+    (sortNewOK m u hu) w m₁ hI
+
+include hR hu in
+/-- **`intern_sort`'s model refines the arena's `internE` at a `sort` node.** -/
+theorem sointern_correct (w : Word) (m' : Mem) (hI : sointernW m u = some (w, m')) :
+    AM.ok (internE (.sort (decI u))) a ∧
+    SortR m' (AM.st (internE (.sort (decI u))) a) ∧
+    AM.res (internE (.sort (decI u))) a = decI w := by
+  rw [sointernW_eqK m u hR.1.1] at hI
+  obtain ⟨m₁, h₁, hput⟩ := mkK_split _ _ _ _ _ _ _ hI
+  obtain ⟨hok, hX, hres⟩ := sointern_core m a hR u hu w m₁ h₁
+  exact ⟨hok, storeR_frame sortSch SoRecRel sohash sortSch_wf [] [] sortLocal [SOLP] []
+    (by simp [Apart, sortSch, SOREC, SOSLOT, SOLP, SCB]) m₁ m'
+    (derPutW_frame SOLP (by decide) _ m₁ m' _ _ _ hput) _ _ _ hX, hres⟩
+
+include hR hu in
+/-- **The `lp` column across `intern_sort`**: the new node's word is the level's `hasParam` bit
+(`hb`, `lvlHPW_ok` under `ArenaR`). -/
+theorem sointern_lp (hC : ColT2 sortLens SOLP lpW m a)
+    (hb : lvlHPW m u = b2w (a.store.lder (decI u)).hasParam) (w : Word) (m' : Mem)
+    (hI : sointernW m u = some (w, m')) :
+    ColT2 sortLens SOLP lpW m' (AM.st (internE (.sort (decI u))) a) := by
+  rw [sointernW_eqK m u hR.1.1] at hI
+  obtain ⟨m₁, h₁, hput⟩ := mkK_split _ _ _ _ _ _ _ hI
+  obtain ⟨hok, hX, hres⟩ := sointern_core m a hR u hu w m₁ h₁
+  have hcs := AM.proto_casesG sortLens _ _ _ _ _ _ a (internE_sort_run _ a) hok
+  have hfr : m₁.arr64 SOLP = m.arr64 SOLP :=
+    (internM_frame _ sortSch_wf _ _ _ _ _ _ _ _ h₁).1 SOLP (by simp [sortSch, SOREC, SOSLOT, SOLP])
+      (by decide)
+  exact colMk sortSch sortSch_wf SoRecRel sohash sortLens SOLP lpW m m₁ m' a _ _ _ _ _ _ hR hX hC hfr
+    hcs hres.symm (by rw [hb, lpW, lp_derSort]) hput
 
 end intern
 

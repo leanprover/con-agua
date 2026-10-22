@@ -52,6 +52,9 @@ import ConAgua.Arena.DeclDivMod9
 -- Every module of the declaration loop's proofs (lane decls3): one build checks them together and
 -- lemma-name clashes between files surface here, as IndAll.lean does for the inductive stage.
 -- Imports only: append new modules at the end.
+import ConAgua.Arena.DeclApdSpec
+import ConAgua.Arena.DeclApdRef
+import ConAgua.Arena.DeclArmDefn
 
 /-!
 # Every declaration-loop module (lane `decls3`)

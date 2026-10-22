@@ -100,12 +100,90 @@ theorem natAddLit_arms : ArmRefinesA "nat_add_lit" natAddArm :=
     natAddLit_refines natArmProg rfl rfl rfl rfl rfl ArenaR (fun _ _ h => h.lit.1)
       (fun m m' a hR hg => ArenaR.grow m m' hg a hR) internLit_arms n s₀ a₀ hR oa la ob lb ha hb
 
+/-- The arm refinement for `natArmProg` under a relation `R`, with the operands' slices given
+(`ArmRefinesA` at `R`). -/
+abbrev ArmRefinesR (R : Mem → AState → Prop) (g : FnName) (arm : Nat → Nat → AM (Option EIdx)) : Prop :=
+  ∀ (n : Nat) (s₀ : St) (a₀ : AState), R s₀.mem a₀ → ∀ (oa la ob lb : Word),
+    SliceOK s₀.mem oa la → SliceOK s₀.mem ob lb →
+    Norm (s₀.mem.arr64 POOL) oa.toNat la.toNat → Norm (s₀.mem.arr64 POOL) ob.toNat lb.toNat →
+    ⦃fun s => s = s₀⦄
+    invoke natArmProg (exec natArmProg n) g [oa, la, ob, lb]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (arm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
+        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀ ∧
+      R s'.mem (AM.st (arm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
+        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀) ∧
+      AM.res (arm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
+        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀ = some (decE (r.headD 0)); ⊤⦄
+
+/-- The `beq`/`ble` arm refinement under `R`, given the three pin reads. -/
+abbrev CmpArmR (R : Mem → AState → Prop) (g : FnName) (arm : Nat → Nat → AM (Option EIdx)) : Prop :=
+  ∀ (n : Nat) (s₀ : St) (a₀ : AState), R s₀.mem a₀ → ∀ (oa la ob lb t f us : Word),
+    SliceOK s₀.mem oa la → SliceOK s₀.mem ob lb →
+    Norm (s₀.mem.arr64 POOL) oa.toNat la.toNat → Norm (s₀.mem.arr64 POOL) ob.toNat lb.toNat →
+    t.toNat < 2 ^ 32 → f.toNat < 2 ^ 32 → us.toNat < 2 ^ 32 →
+    boolTrueName.run a₀ = .ok (decI t, a₀) → boolFalseName.run a₀ = .ok (decI f, a₀) →
+    emptyLevels.run a₀ = .ok (decI us, a₀) →
+    ⦃fun s => s = s₀⦄
+    invoke natArmProg (exec natArmProg n) g [oa, la, ob, lb, t, f, us]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (arm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
+        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀ ∧
+      R s'.mem (AM.st (arm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
+        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀) ∧
+      AM.res (arm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
+        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀ = some (decE (r.headD 0)); ⊤⦄
+
+/-- **The sixteen arms under a relation `R`** (what `nat_op_result`'s refinement needs of them). -/
+structure NatArmsR (R : Mem → AState → Prop) : Prop where
+  pred : ∀ (n : Nat) (s₀ : St) (a₀ : AState), R s₀.mem a₀ → ∀ (oa la : Word),
+    SliceOK s₀.mem oa la →
+    ⦃fun s => s = s₀⦄
+    invoke natArmProg (exec natArmProg n) "nat_pred_lit" [oa, la]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (natPredArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)) a₀ ∧
+      R s'.mem (AM.st (natPredArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)) a₀) ∧
+      AM.res (natPredArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)) a₀ =
+        some (decE (r.headD 0)); ⊤⦄
+  pow : ∀ (n : Nat) (s₀ : St) (a₀ : AState), R s₀.mem a₀ → ∀ (oa la ob lb : Word),
+    SliceOK s₀.mem oa la → Norm (s₀.mem.arr64 POOL) ob.toNat lb.toNat →
+    ⦃fun s => s = s₀⦄
+    invoke natArmProg (exec natArmProg n) "nat_pow_lit" [oa, la, ob, lb]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (natPowArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
+        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀ ∧
+      R s'.mem (AM.st (natPowArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
+        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀) ∧
+      AM.res (natPowArm (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
+        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀ = decOpt (r.headD 0) (r.tail.headD 0); ⊤⦄
+  add : ArmRefinesR R "nat_add_lit" natAddArm
+  sub : ArmRefinesR R "nat_sub_lit" natSubArm
+  mul : ArmRefinesR R "nat_mul_lit" natMulArm
+  div : ArmRefinesR R "nat_div_lit" natDivArm
+  mod : ArmRefinesR R "nat_mod_lit" natModArm
+  gcd : ArmRefinesR R "nat_gcd_lit" natGcdArm
+  land : ArmRefinesR R "nat_land_lit" natLandArm
+  lor : ArmRefinesR R "nat_lor_lit" natLorArm
+  xor : ArmRefinesR R "nat_xor_lit" natXorArm
+  shl : ArmRefinesR R "nat_shl_lit" natShlArm
+  shr : ArmRefinesR R "nat_shr_lit" natShrArm
+  beq : CmpArmR R "nat_beq_lit" natBeqArm
+  ble : CmpArmR R "nat_ble_lit" natBleArm
+
+/-- The arms under `ArenaR`. -/
+theorem natArmsR_arena : NatArmsR ArenaR :=
+  ⟨natPredLit_refinesA, natPowLit_refinesA, natAddLit_arms, natSubLit_refinesA, natMulLit_refinesA,
+    natDivLit_refinesA, natModLit_refinesA, natGcdLit_refinesA, natLandLit_refinesA,
+    natLorLit_refinesA, natXorLit_refinesA, natShlLit_refinesA, natShrLit_refinesA,
+    natBeqLit_refinesA, natBleLit_refinesA⟩
+
 -- the sixteen arms in one `vcgen`, about 17 s
 set_option maxHeartbeats 2000000 in
-/-- **`nat_op_result` refines `natOpResult`** under `ArenaR` and `PinsR`: the pin reads, the
-dispatch and every arm. The operands are normalised slices (every `lit` record's is). -/
-@[refines ConRon.Arena.natOpResult]
-theorem natOpResultL_refines (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s₀.mem a₀)
+/-- **`nat_op_result` refines `natOpResult`** under any relation `R` its arms keep (`NatArmsR`),
+and `PinsR`: the pin reads, the dispatch and every arm. The operands are normalised slices (every
+`lit` record's is). -/
+theorem natOpResultL_refinesR (R : Mem → AState → Prop) (harms : NatArmsR R) (n : Nat) (s₀ : St)
+    (a₀ : AState) (hR : R s₀.mem a₀)
     (hP : PinsR s₀.mem a₀.pins) (c oa la ob lb : Word) (hc : c.toNat < 2 ^ 32)
     (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb)
     (hna : Norm (s₀.mem.arr64 POOL) oa.toNat la.toNat)
@@ -115,7 +193,7 @@ theorem natOpResultL_refines (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR 
     ⦃fun r s' => LocEq s' s₀ ∧
       AM.ok (natOpResult (decI c) (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
         (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀ ∧
-      ArenaR s'.mem (AM.st (natOpResult (decI c) (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
+      R s'.mem (AM.st (natOpResult (decI c) (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
         (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀) ∧
       AM.res (natOpResult (decI c) (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
         (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀ = decOpt (r.headD 0) (r.tail.headD 0); ⊤⦄ := by
@@ -148,11 +226,30 @@ theorem natOpResultL_refines (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR 
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        (natPredLit_refinesA n · a₀), (natAddLit_arms n · a₀), (natSubLit_refinesA n · a₀),
-        (natMulLit_refinesA n · a₀), (natPowLit_refinesA n · a₀), (natDivLit_refinesA n · a₀),
-        (natModLit_refinesA n · a₀), (natGcdLit_refinesA n · a₀), (natLandLit_refinesA n · a₀),
-        (natLorLit_refinesA n · a₀), (natXorLit_refinesA n · a₀), (natShlLit_refinesA n · a₀),
-        (natShrLit_refinesA n · a₀), (natBeqLit_refinesA n · a₀), (natBleLit_refinesA n · a₀)] <;>
+        (harms.pred n · a₀), (harms.add n · a₀), (harms.sub n · a₀),
+        (harms.mul n · a₀), (harms.pow n · a₀), (harms.div n · a₀),
+        (harms.mod n · a₀), (harms.gcd n · a₀), (harms.land n · a₀),
+        (harms.lor n · a₀), (harms.xor n · a₀), (harms.shl n · a₀),
+        (harms.shr n · a₀), (harms.beq n · a₀), (harms.ble n · a₀)] <;>
       finish [natOpSel, pinW_eq, PinsFull.size, PinsFull.names_lt, PinsFull.lv_lt]
+
+
+/-- **`nat_op_result` refines `natOpResult`** under `ArenaR` and `PinsR`. -/
+@[refines ConRon.Arena.natOpResult]
+theorem natOpResultL_refines (n : Nat) (s₀ : St) (a₀ : AState) (hR : ArenaR s₀.mem a₀)
+    (hP : PinsR s₀.mem a₀.pins) (c oa la ob lb : Word) (hc : c.toNat < 2 ^ 32)
+    (ha : SliceOK s₀.mem oa la) (hb : SliceOK s₀.mem ob lb)
+    (hna : Norm (s₀.mem.arr64 POOL) oa.toNat la.toNat)
+    (hnb : Norm (s₀.mem.arr64 POOL) ob.toNat lb.toNat) :
+    ⦃fun s => s = s₀⦄
+    invoke natArmProg (exec natArmProg n) "nat_op_result" [c, oa, la, ob, lb]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (natOpResult (decI c) (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
+        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀ ∧
+      ArenaR s'.mem (AM.st (natOpResult (decI c) (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
+        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀) ∧
+      AM.res (natOpResult (decI c) (pv (s₀.mem.arr64 POOL) oa.toNat la.toNat)
+        (pv (s₀.mem.arr64 POOL) ob.toNat lb.toNat)) a₀ = decOpt (r.headD 0) (r.tail.headD 0); ⊤⦄ :=
+  natOpResultL_refinesR ArenaR natArmsR_arena n s₀ a₀ hR hP c oa la ob lb hc ha hb hna hnb
 
 end L.Arena

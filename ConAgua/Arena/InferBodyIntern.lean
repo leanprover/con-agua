@@ -1,4 +1,6 @@
 import ConAgua.Arena.InferLeaves
+import ConAgua.Arena.StoreDenLvl
+import ConAgua.Arena.LevelView
 
 /-!
 # Interning under `CoreS`: the leaves the inference bodies build (lane `defeq`)
@@ -50,9 +52,10 @@ structure LvlStep (a a' : AState) : Prop where
   lon : a'.store.lss.scratchOn = a.store.lss.scratchOn
   ns : a'.store.lss.ls.ns = a.store.lss.ls.ns
   ext : LExt a.store.lss.ls a'.store.lss.ls
+  son : a'.store.scratchOn = a.store.scratchOn
 
 theorem LvlStep.refl (a : AState) : LvlStep a a :=
-  ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, LExt.refl _⟩
+  ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, LExt.refl _, rfl⟩
 
 theorem internLNode_step (v : LNodeView) (a a' : AState) (h : LIdx)
     (hrun : (internLNode v).run a = .ok (h, a')) : LvlStep a a' := by
@@ -64,7 +67,7 @@ theorem internLNode_step (v : LNodeView) (a a' : AState) (h : LIdx)
   all_goals first
     | (obtain ⟨-, rfl⟩ := hrun; exact LvlStep.refl _)
     | (obtain ⟨-, rfl⟩ := hrun
-       exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, LStore.ns_intern _ _, LStore.intern_ext _ _⟩)
+       exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, LStore.ns_intern _ _, LStore.intern_ext _ _, rfl⟩)
 
 /-- `DerR` reads only the expression tiers. -/
 theorem DerR.of_tiers (m : Mem) (a a' : AState) (hD : DerR m a) (hp : a'.store.pers = a.store.pers)
@@ -80,10 +83,11 @@ store's arrays (below 42) and counts (`CTL` below 42). -/
 theorem CoreS.of_level {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List ArrId} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hL : LvlStep a a') (hR : ArenaR m' a')
-    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b < 42) (hC : ∀ x ∈ C, x.toNat < 42) :
+    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, b < 42 ∨ (54 < b ∧ b < 64)) (hC : ∀ x ∈ C, x.toNat < 42)
+    (hlv : LvlAll a') (hP : POOL ∉ A := by decide) (hP0 : (0 : Word) ∉ C := by decide) :
     CoreS dn m' a' vis fe M eb ∧ StackKept m m' := by
   have hD : DerR m' a' := DerR.of_tiers m' a a'
-    (DerR.frameM A C m m' hf (fun b hb => .inl (hA b hb)) a hS.arena.2) hL.pers hL.scr
+    (DerR.frameM A C m m' hf (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega) a hS.arena.2) hL.pers hL.scr
   have hspn : m'.arr64 SPN = m.arr64 SPN :=
     hf.1 SPN (fun h => by have := hA _ h; simp only [SPN, ArrId] at this; omega) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 :=
@@ -91,10 +95,22 @@ theorem CoreS.of_level {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' :
   refine ⟨⟨⟨hR, hD⟩, ?_, ?_, hS.env.frame (fun b hb => .inl (by have := hA b hb; simp only [ArrId] at this ⊢; omega))
       (fun x hx => .inl (by have := hC x hx; omega)) hf, ?_, ?_, ?_,
       hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn,
-      hS.memos.frame hf ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide)⟩
-        ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide)⟩,
-      hf.2.2.1 145 ▸ hS.bstk⟩,
-    by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
+      hS.memos.frame hf ⟨fun h => absurd (hA _ h) (by simp), fun h => absurd (hA _ h) (by simp)⟩
+        ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide)⟩
+        ⟨fun h => absurd (hA _ h) (by simp), fun h => absurd (hA _ h) (by simp),
+          fun h => absurd (hA _ h) (by simp)⟩
+        ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide),
+          fun h => absurd (hC _ h) (by decide)⟩,
+      hf.2.2.1 145 ▸ hS.bstk,
+      hS.den.mono (lsExt_of_tables hL.lsp hL.lss hL.lon hL.ext) (by rw [hL.pins])
+        (by rw [hL.pins]) (fun _ _ hk => .inl (hL.caches ▸ hk))
+        (hf.1 EREC (fun h => by have := hA _ h; simp only [EREC, ArrId] at this; omega) (by decide))
+        (fun x u hv => by simpa only [EStore.view, hL.pers, hL.scr, hL.son] using hv)
+        (fun x c us hv => .inl (by simpa only [EStore.view, hL.pers, hL.scr, hL.son] using hv)) hlv⟩,
+    StackKept.of_frame hf
+      ⟨fun h => by have := hA _ h; simp only [SPN, ArrId] at this; omega,
+       fun h => by have := hA _ h; simp only [BSTK, ArrId] at this; omega, hP⟩
+      ⟨fun h => by have := hC _ h; simp at this, fun h => by have := hC _ h; simp at this, hP0⟩⟩
   · rw [hL.caches]
     exact CoreRM.frame (A := A) (C := C) (fun b hb => .inl (by have := hA b hb; simp only [ArrId] at this ⊢; omega))
       (fun x hx => .inl (by have := hC x hx; omega)) hf hS.core
@@ -124,12 +140,6 @@ theorem keeps_cpl_internFVar (i : Nat) (ty : EIdx) : Keeps cpl (internE (.fvar i
 theorem keeps_cpl_internSort (u : LIdx) : Keeps cpl (internE (.sort u)) := by
   simp only [internE]; exact keeps_cpl_internNodeE _
 
-/-- A frame of arrays other than the stack and `CTL` words other than its top keeps the stack. -/
-theorem StackKept.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
-    (hA : SPN ∉ A) (hC : (136 : Word) ∉ C) : StackKept m m' := by
-  have hspn : m'.arr64 SPN = m.arr64 SPN := hf.1 SPN hA (by decide)
-  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 hC
-  exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
 
 section leaves
 variable {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
@@ -140,88 +150,142 @@ theorem internFVar_core (hS : CoreS dn m a vis fe M eb) (u ty : Word) (hty : HW 
     (rs : List Word) (hI : fvinternW m u ty = some (rs.headD 0, m')) :
     CoreRef (internE (.fvar u.toNat (decE ty))) a decH dn m vis fe M eb rs m' := by
   obtain ⟨hok, hD, hres⟩ := internFVar_D m a hS.arena u ty _ hty m' hI
-  have hI₂ := hI; rw [fvinternW_eq] at hI₂
-  have hf := internM_frame _ fvarSch_wf _ _ _ _ _ _ _ _ hI₂
+  have hf := (fvinternW_frame (hI := hI))
+  have hI₂ := hI; rw [fvinternW_eqK (hctl := hS.arena.1.fvar.1.1)] at hI₂
+  obtain ⟨_, hI₂, -⟩ := mkK_split _ _ _ _ _ _ _ hI₂
   have hw := internM_hw fvarSch FVRecRel fvhash fvarSch_wf m _ _ _ hS.arena.1.fvar (fvMt m u ty) _ _ _ _
     (probe_homeG fvarSch m 0 _ _ (fvprobeW_arm m u ty 0) _)
-    (probe_homeG fvarSch m 1 _ _ (fvprobeW_arm m u ty 1) _) _ (fvpushOK_room m) _ _ _ m' hI₂
+    (probe_homeG fvarSch m 1 _ _ (fvprobeW_arm m u ty 1) _) _ (fvpushOK_room m) _ _ _ _ hI₂
   have hS' := hS.arena_frame hD (Keeps.run (keeps_cpl_internFVar _ _)
       (AM.run_of_ok _ _ hok)) hf
     (fun b hb => by simp only [fvarSch, List.mem_cons, List.mem_nil_iff, or_false] at hb
-                    rcases hb with rfl | rfl <;> decide)
-    (by simp [fvarSch, FVREC, FVSLOT])
+                    rcases hb with rfl | rfl | rfl <;> decide)
+    (by simp [fvarSch, FVREC, FVSLOT, FVLP])
     (fun b hb => by simp only [fvarSch, List.mem_cons, List.mem_nil_iff, or_false] at hb
-                    rcases hb with rfl | rfl <;> decide)
+                    rcases hb with rfl | rfl | rfl <;> decide)
     (fun x hx => by simp only [fvarSch, List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
     (fun x hx => by simp only [fvarSch, List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
-  have hst := StackKept.of_frame hf (by simp [fvarSch, FVREC, FVSLOT, SPN]) (by simp [fvarSch])
+  have hst := StackKept.of_frame hf
   exact ⟨hok, ⟨M, hS', KeptAll.refl _ _, hst⟩, by rw [hres]; rfl, hw⟩
 
 /-- **`intern_sort` refines `internE (.sort …)` under `CoreS`.** -/
 theorem internSort_core (hS : CoreS dn m a vis fe M eb) (u : Word) (hu : HW u)
-    (rs : List Word) (hI : sointernW m u = some (rs.headD 0, m')) :
+    (rs : List Word) (hI : sointernW m u = some (rs.headD 0, m'))
+    (hdu : ∃ l, denoteL a.store.ls (decI u) = some l) :
     CoreRef (internE (.sort (decI u))) a decH dn m vis fe M eb rs m' := by
   obtain ⟨hok, hD, hres⟩ := internSort_D m a hS.arena u _ hu m' hI
-  have hI₂ := hI; rw [sointernW_eq] at hI₂
-  have hf := internM_frame _ sortSch_wf _ _ _ _ _ _ _ _ hI₂
+  have hf := (sointernW_frame (hI := hI))
+  have hI₂ := hI; rw [sointernW_eqK (hctl := hS.arena.1.sort.1.1)] at hI₂
+  obtain ⟨_, hI₂, -⟩ := mkK_split _ _ _ _ _ _ _ hI₂
   have hw := internM_hw sortSch SoRecRel sohash sortSch_wf m _ _ _ hS.arena.1.sort (soMt m u) _ _ _ _
     (probe_homeG sortSch m 0 _ _ (soprobeW_arm m u 0) _)
-    (probe_homeG sortSch m 1 _ _ (soprobeW_arm m u 1) _) _ (sopushOK_room m) _ _ _ m' hI₂
-  have hS' := hS.arena_frame hD (Keeps.run (keeps_cpl_internSort _) (AM.run_of_ok _ _ hok)) hf
+    (probe_homeG sortSch m 1 _ _ (soprobeW_arm m u 1) _) _ (sopushOK_room m) _ _ _ _ hI₂
+  have hS' := hS.arena_frameD hD (Keeps.run (keeps_cpl_internSort _) (AM.run_of_ok _ _ hok)) hf
     (fun b hb => by simp only [sortSch, List.mem_cons, List.mem_nil_iff, or_false] at hb
-                    rcases hb with rfl | rfl <;> decide)
-    (by simp [sortSch, SOREC, SOSLOT])
+                    rcases hb with rfl | rfl | rfl <;> decide)
+    (by simp [sortSch, SOREC, SOSLOT, SOLP])
     (fun b hb => by simp only [sortSch, List.mem_cons, List.mem_nil_iff, or_false] at hb
-                    rcases hb with rfl | rfl <;> decide)
+                    rcases hb with rfl | rfl | rfl <;> decide)
     (fun x hx => by simp only [sortSch, List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
     (fun x hx => by simp only [sortSch, List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
-  have hst := StackKept.of_frame hf (by simp [sortSch, SOREC, SOSLOT, SPN]) (by simp [sortSch])
+    (hS.den.of_internSort hdu (AM.run_of_ok _ _ hok) (hf.1 EREC (by simp [sortSch, SOREC, SOSLOT, SOLP, EREC]) (by decide)))
+  have hst := StackKept.of_frame hf
   exact ⟨hok, ⟨M, hS', KeptAll.refl _ _, hst⟩, by rw [hres]; rfl, hw⟩
+
+/-- The level an interning returns reads back (`lvlAll_internLNode`), at the state after it. -/
+theorem internLNode_res_den {v : LNodeView} (hS : CoreS dn m a vis fe M eb)
+    (hch : ∀ c ∈ v.lchildren, ∃ l, denoteL a.store.ls c = some l)
+    (hnch : ∀ n ∈ v.nchildren, ∃ x, denoteN a.store.ls.ns n = some x)
+    (hok : AM.ok (internLNode v) a) :
+    ∃ l, denoteL (AM.st (internLNode v) a).store.ls (AM.res (internLNode v) a) = some l := by
+  have hr := AM.run_of_ok _ _ hok
+  exact (lvlAll_internLNode hS.arena.1 hS.den.lvlAll hch hnch hr).2
 
 /-- **`intern_succ` refines `internLNode (.succ …)` under `CoreS`.** -/
 theorem internSucc_core (hS : CoreS dn m a vis fe M eb) (u : Word) (hu : HW u)
-    (rs : List Word) (hI : sinternW m u = some (rs.headD 0, m')) :
+    (rs : List Word) (hI : sinternW m u = some (rs.headD 0, m'))
+    (hdu : ∃ l, denoteL a.store.ls (decI u) = some l) :
     CoreRef (internLNode (.succ (decI u))) a decLv dn m vis fe M eb rs m' := by
   obtain ⟨hok, hX, hres⟩ := sintern_correct m a hS.arena.1.succ u hu _ _ hI
-  have hI₂ := hI; rw [sinternW_eq] at hI₂
-  have hf := internM_frame _ succSch_wf _ _ _ _ _ _ _ _ hI₂
-  have hR' := hS.arena.1.lift_succ _ _ _ _ hX hf
+  have hf := (sinternW_frame (hI := hI))
+  have hI₂ := hI; rw [sinternW_eqK (hctl := hS.arena.1.succ.1.1)] at hI₂
+  obtain ⟨_, hI₂, -⟩ := mkK_split _ _ _ _ _ _ _ hI₂
+  have hR' := hS.arena.1.lift_succ _ _ _ _
+    ⟨hX, sintern_hp m a hS.arena.1.succ u hu hS.arena.1.succHp (lvlHPW_ok m a hS.arena.1 u hu) _ _ hI⟩ hf
     (AM.st_proto succLens _ _ _ _ _ _ a (internLNode_succ_run _ a) hok)
   have hL := internLNode_step _ a _ _ (AM.run_of_ok _ _ hok)
   obtain ⟨hS', hst⟩ := hS.of_level hL hR' hf
     (fun b hb => by simp only [succSch, List.mem_cons, List.mem_nil_iff, or_false] at hb
-                    rcases hb with rfl | rfl <;> decide)
+                    rcases hb with rfl | rfl | rfl <;> decide)
     (fun x hx => by simp only [succSch, List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
+    (lvlAll_internLNode hS.arena.1 hS.den.lvlAll
+      (fun c hc => by simp only [LNodeView.lchildren, List.mem_cons, List.mem_nil_iff, or_false] at hc; subst hc; exact hdu)
+      (fun n hn => by simp [LNodeView.nchildren] at hn) (AM.run_of_ok _ _ hok)).1
   have hw := internM_hw succSch SRecRel shash succSch_wf m _ _ _ hS.arena.1.succ (sMt m u) _ _ _ _
     (probe_homeG succSch m 0 _ _ (sprobeW_arm m u 0) _)
-    (probe_homeG succSch m 1 _ _ (sprobeW_arm m u 1) _) _ (spushOK_room m) _ _ _ m' hI₂
+    (probe_homeG succSch m 1 _ _ (sprobeW_arm m u 1) _) _ (spushOK_room m) _ _ _ _ hI₂
   exact ⟨hok, ⟨M, hS', KeptAll.refl _ _, hst⟩, by rw [hres]; rfl, hw⟩
 
 /-- **`intern_imax` refines `internLNode (.imax …)` under `CoreS`.** -/
 theorem internImax_core (hS : CoreS dn m a vis fe M eb) (u v : Word) (hu : HW u) (hv : HW v)
-    (rs : List Word) (hI : iminternW m u v = some (rs.headD 0, m')) :
+    (rs : List Word) (hI : iminternW m u v = some (rs.headD 0, m'))
+    (hdu : ∃ l, denoteL a.store.ls (decI u) = some l) (hdv : ∃ l, denoteL a.store.ls (decI v) = some l) :
     CoreRef (internLNode (.imax (decI u) (decI v))) a decLv dn m vis fe M eb rs m' := by
   obtain ⟨hok, hX, hres⟩ := imintern_correct m a hS.arena.1.imax u v hu hv _ _ hI
-  have hI₂ := hI; rw [iiminternW_eq] at hI₂
-  have hf := internM_frame _ iimaxSch_wf _ _ _ _ _ _ _ _ hI₂
-  have hR' := hS.arena.1.lift_imax _ _ _ _ hX hf
+  have hf := (iminternW_frame (hI := hI))
+  have hI₂ := hI; rw [iminternW_eqK (hctl := hS.arena.1.imax.1.1)] at hI₂
+  obtain ⟨_, hI₂, -⟩ := mkK_split _ _ _ _ _ _ _ hI₂
+  have hR' := hS.arena.1.lift_imax _ _ _ _
+    ⟨hX, imintern_hp m a hS.arena.1.imax u v hu hv hS.arena.1.imaxHp (lvlHPW_or m a hS.arena.1 u v hu hv) _ _ hI⟩ hf
     (AM.st_proto imaxLens _ _ _ _ _ _ a (internLNode_imax_run _ _ a) hok)
   have hL := internLNode_step _ a _ _ (AM.run_of_ok _ _ hok)
   obtain ⟨hS', hst⟩ := hS.of_level hL hR' hf
     (fun b hb => by simp only [imaxSch, List.mem_cons, List.mem_nil_iff, or_false] at hb
-                    rcases hb with rfl | rfl <;> decide)
+                    rcases hb with rfl | rfl | rfl <;> decide)
     (fun x hx => by simp only [imaxSch, List.mem_cons, List.mem_nil_iff, or_false] at hx
                     rcases hx with rfl | rfl <;> decide)
+    (lvlAll_internLNode hS.arena.1 hS.den.lvlAll
+      (fun c hc => by
+        simp only [LNodeView.lchildren, List.mem_cons, List.mem_nil_iff, or_false] at hc; rcases hc with rfl | rfl
+        · exact hdu
+        · exact hdv)
+      (fun n hn => by simp [LNodeView.nchildren] at hn) (AM.run_of_ok _ _ hok)).1
   have hw := internM_hw imaxSch IRecRel imhash iimaxSch_wf m _ _ _ hS.arena.1.imax (imMt m u v) _ _ _ _
     (probe_homeG imaxSch m 0 _ _ (iimprobeW_arm m u v 0) _)
-    (probe_homeG imaxSch m 1 _ _ (iimprobeW_arm m u v 1) _) _ (iimpushOK_room m) _ _ _ m' hI₂
+    (probe_homeG imaxSch m 1 _ _ (iimprobeW_arm m u v 1) _) _ (iimpushOK_room m) _ _ _ _ hI₂
   exact ⟨hok, ⟨M, hS', KeptAll.refl _ _, hst⟩, by rw [hres]; rfl, hw⟩
 
 end leaves
+
+/-! ## `lvl_live`: a level handle that L checked reads back -/
+
+theorem lvlLive_spec (p : Prog) (hp : p.lookup "lvl_live" = some lvlLiveL)
+    (hn : p.lookup "lv_node" = some lvNode) (k : Nat) (s₀ : St) (u : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (k + 1)) "lvl_live" [u]
+    ⦃fun r s' => s'.mem = s₀.mem ∧ lvNodeW s₀.mem u ≠ []; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, lvlLiveL]
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, lvNode_spec p hn k] <;>
+    simp_all [St.setLocs_cons, St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero]
+
+/-- **A checked level reads back**: a `lvl_live` run keeps the memory, and under `CoreS` the
+level is a stored one (`lview_of_lvNodeW`), so it reads back (`StoreDen.lvlAll`). -/
+theorem lvlLive_call {p : Prog} (hp : p.lookup "lvl_live" = some lvlLiveL)
+    (hn : p.lookup "lv_node" = some lvNode) {n : Nat} {u : Word} {r : List Word} {m m' : Mem}
+    {dn : NIdx → Option ConLeche.Name} {a : AState} {vis : Word} {fe : IFEnv} {M : ModeMaps}
+    {eb : Word} (hS : CoreS dn m a vis fe M eb) (hu : HW u) (h : callW p n "lvl_live" [u] m = some (r, m')) :
+    m' = m ∧ ∃ l, denoteL a.store.ls (decI u) = some l := by
+  cases n with
+  | zero => rw [callW_zero] at h; cases h
+  | succ k =>
+  obtain ⟨s', hs', hm, hne⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (lvlLive_spec p hp hn k _ u) h
+  refine ⟨hs' ▸ hm, ?_⟩
+  obtain ⟨v, hv⟩ := L.Ind.lview_of_lvNodeW hS.arena.1 hu hne
+  exact hS.den.lvlAll _ (by show (a.store.lss.ls.view (decI u)).isSome = true; rw [hv]; rfl)
 
 end L.Arena

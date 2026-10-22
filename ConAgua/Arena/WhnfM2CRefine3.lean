@@ -55,7 +55,8 @@ theorem and2Push_ok {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} 
       unfold spTop; rw [rdW_set64, if_pos ⟨rfl, rfl, by simpa using c5⟩]
     have h2 : (to + tn + 2).toNat = to.toNat + tn.toNat + 2 := by
       rw [UInt64.toNat_add, ht, Nat.mod_eq_of_lt (by simp; omega)]; rfl
-    refine ⟨hS.frame_stk hf (by simp) (by simp), ⟨?_, ?_, fun i hi => ?_⟩, sp3⟩
+    refine ⟨hS.frame_stk hf (by simp) (by simp), ⟨?_, ?_, fun i hi => ?_,
+      BKept.of_frame hf (by decide) (by decide), PoolGrew.of_frame hf (by decide) (by decide)⟩, sp3⟩
     · rw [e, ← htop, UInt64.le_iff_toNat_le, h2, ht]; omega
     · rw [size_set64L, size_set64L, size_set64L]
     · rw [← htop, UInt64.lt_iff_toNat_lt, ht] at hi
@@ -77,8 +78,8 @@ theorem store_spn {m m' : Mem} (hf : MemFrame L.Rom.StoreA L.Rom.StoreC m m') :
     have h' := congrArg UInt64.toNat hkk
     simp [UInt64.toNat_ofNat] at h'; omega)
 
-theorem const_spn {m m' : Mem} (hf : MemFrame [CREC, CSLOT] [18, 19] m m') :
-    m'.arr64 SPN = m.arr64 SPN := hf.1 SPN (by simp [CREC, CSLOT, SPN]) (by decide)
+theorem const_spn {m m' : Mem} (hf : MemFrame [CREC, CSLOT, CLP] [18, 19] m m') :
+    m'.arr64 SPN = m.arr64 SPN := hf.1 SPN (by simp [CREC, CSLOT, CLP, SPN]) (by decide)
 
 theorem app_spn {m m' : Mem} (hf : MemFrame [AREC, ASLOT, ADER] [4, 5] m m') :
     m'.arr64 SPN = m.arr64 SPN := hf.1 SPN (by simp [AREC, ASLOT, ADER, SPN]) (by decide)
@@ -87,7 +88,7 @@ theorem app_spn {m m' : Mem} (hf : MemFrame [AREC, ASLOT, ADER] [4, 5] m m') :
 theorem SpineR.ofKept {m m' : Mem} {o n : Word} {xs : Array EIdx} (h : SpineR m o n xs)
     (hk : StackKept m m') (htop : o.toNat + n.toNat ≤ (spTop m).toNat)
     (hspn : (m.arr64 SPN).size < 2 ^ 63) : SpineR m' o n xs :=
-  h.keep hk.2.1 hk.2.2 htop hspn
+  h.keep hk.size hk.below htop hspn
 
 theorem viewLsLen_some {a : AState} {h : LsIdx} {k : Nat} (hv : a.store.lss.viewLen h = some k) :
     (viewLsLen h).run a = .ok (some k, a) := by
@@ -95,7 +96,7 @@ theorem viewLsLen_some {a : AState} {h : LsIdx} {k : Nat} (hv : a.store.lss.view
 
 section andarm
 variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hpi : ProofIrrelOKM p)
-  (hE : ErecKeptKnot p) (hcc : CoreCallees p)
+  (hE : ErecKeptKnot p) (hcc : ProjCallees p)
 include hp hc hpi
 
 /-- **`m2c_and2` refines `m2cAnd2T`** (the slice `(to, tn)` ends at the stack top). -/
@@ -105,7 +106,7 @@ theorem m2cAnd2_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
     (hebm : eb = (mode >>> 1) &&& 1) (hctor : HW ctor) (hT : HW T) (htm : HW tmaj) (hus : HW ust)
     (hmaj : HW major) (targs : List EIdx) (m : Mem) (a : AState) (M : ModeMaps)
     (hS : CoreS dn m a vis fe M eb) (hsp : SpineR m to tn targs.toArray) (htop : to + tn = spTop m)
-    (r : List Word) (m' : Mem)
+    (r : List Word) (m' : Mem) (hvus : ∃ x c, a.store.view x = some (.const c (decI ust)))
     (h : callW p (N + 1) "m2c_and2" [mode, vis, d, ctor, T, tmaj, to, tn, ust, major] m =
       some (r, m')) :
     GrowRef (m2cAnd2T (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI ctor)
@@ -159,7 +160,13 @@ theorem m2cAnd2_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
     hp.internConst' (N' + 1) m3 _ hS3.arena ctor ust hctor hus r4 m4 c4
   have hrun4 := AM.run_of_ok _ _ ok4
   rw [res4] at hrun4
-  have hS4 := hS3.of_const' hD4 (Keeps.run (keeps_cpl_internConst' _ _) hrun4) hfr4
+  have hS4 := hS3.of_const' hD4 (Keeps.run (keeps_cpl_internConst' _ _) hrun4) hfr4 hrun4 (by
+    obtain ⟨x, c, hx⟩ := hvus
+    have hx1 := internNodeE_fwd (v := .proj _ _ _) (by simpa [internE] using hrun1) x _
+      (.inr ⟨_, _, rfl⟩) hx
+    have hx2 := internNodeE_fwd (v := .proj _ _ _) (by simpa [internE] using hrun2) x _
+      (.inr ⟨_, _, rfl⟩) hx1
+    exact hS3.den.constLs _ _ _ hx2)
   have hsp4 := hsp3.of_spn_core (const_spn hfr4)
   cases c5 : callW p (N' + 1) "mk_app_n" [r4.headD 0, to, tn + 2] m4 with
   | none => rw [c5] at hW; cases hW
@@ -184,7 +191,7 @@ theorem m2cAnd2_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤
   have hrun6 := AM.run_of_ok _ _ ok6
   rw [res6] at hrun6
   have hgrow : StackGrew m m6 :=
-    ((StackKept.of_store hfr1.pjStore).trans (StackKept.of_store hfr2.pjStore)).toGrew.trans
+    ((StackKept.of_frame hfr1).trans (StackKept.of_frame hfr2)).toGrew.trans
       (hg3.trans (((StackKept.of_constF hfr4).trans
         ((StackKept.of_app_frame hfr5).trans hSt6)).toGrew))
   refine GrowRef.of_run (v := decH r6) ?_ ⟨M6, hS6, hK6, hgrow⟩
@@ -279,7 +286,7 @@ theorem m2cAnd_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
   simp only at hW
   obtain ⟨ok4, ⟨M4, hS4, hK4, hSt4⟩, res4, -⟩ := CoreSpec.of_callW
     (andRescueSlots_refines' p hp.toIotaProg' hcc (N' + 1) ⟨m3, Locals.init []⟩ a2 dn vis fe M2 eb
-      ctor cnP _ hS3 hctor hus) c4
+      ctor cnP _ hS3 hctor hus (hpre.cview g0)) c4
   have hrun4 := AM.run_of_ok _ _ ok4
   rw [res4] at hrun4
   have hA4 : CoreAfterG dn m m4 (AM.st (andRescueSlots fe (decI ctor) cnP.toNat
@@ -348,7 +355,9 @@ theorem m2cAnd_ok (N F : Nat) (hk : KnotUpTo p N) (hnF : N ≤ F) (hn62 : N ≤ 
       exact Nat.le_refl _) hspn3
   obtain ⟨ok5, hA5, res5, hr5⟩ := m2cAnd2_ok p hp hc hpi N' F (hk.mono (Nat.le_succ _)) (by omega)
     (by omega) dn vis fe eb mode d ctor T _ _ _ _ major hm4 hebm hctor hT htm hus hmaj xs m4 _ M4
-    hS4 hsp4 htop4 r5 m5 c5
+    hS4 hsp4 htop4 r5 m5
+    (by obtain ⟨_, _, _, _, _, _, _, _, hp5⟩ := hpre
+        exact ⟨_, _, view_after_noLss (keeps_noLss_andRescueSlots _ _ _ _) (hp5 g0).2.2.1⟩) c5
   have hrun5 := AM.run_of_ok _ _ ok5
   rw [res5] at hrun5
   refine GrowRef.of_run (v := decH r5) ?_ (CoreAfterG.compK (hK2.trans hK4)

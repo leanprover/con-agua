@@ -1,6 +1,8 @@
 module
 
 public import ConAgua.Arena.Store
+public import ConAgua.Arena.LpCol
+meta import ConAgua.Arena.LpCol
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.Store
 import ConAgua.Census.Attr
@@ -206,18 +208,24 @@ def lscnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (40 + t)
 as `letE`'s), the load limit. -/
 def lspushOK (m : Mem) (t : Word) : Bool :=
   decide (lscnt m t < (134217728 : Word)) && decide ((lscnt m t + 1) * 6 ≤ m.len64 LSREC) &&
+    decide (lscnt m t < m.len64 LSHP >>> (1 : Word)) &&
     decide (lscnt m t + 1 ≤ (nSlotsLs m >>> (2 : Word)) * 3)
 
 /-- The memory after `ls_push(t, o, l, h, j)` appended node `c`. -/
 def lspushMem (m : Mem) (t o l h j c : Word) : Mem :=
   ((((m.set64 LSREC (c * 6 + t * 3) o).set64 LSREC (c * 6 + t * 3 + 1) l).set64 LSREC
     (c * 6 + t * 3 + 2) h).set64 LSSLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (40 + (t &&& 1)) (c + 1)
+    |>.set64 LSHP (c * 2 + t) (lsOrW m o l.toNat)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def lsPush : FunDecl := lfn (t, o, l, h, j) locals (c, k) {
+def lsPush : FunDecl := lfn (t, o, l, h, j) locals (c, k, x, g, ti, ix, u, q, y) {
+  x := 0;
+  q := 0;
+  ⟪hpLoopLs⟫;
   c := CTL.u64[40 + t];
   if c >= 134217728 { abort };
   if len(LSREC.u64) < (c + 1) * 6 { abort };
+  if len(LSHP.u64) >> 1 <= c { abort };
   if ((len(LSSLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   k := c * 6 + t * 3;
   LSREC.u64[k] := o;
@@ -225,6 +233,7 @@ def lsPush : FunDecl := lfn (t, o, l, h, j) locals (c, k) {
   LSREC.u64[k + 2] := h;
   LSSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[40 + (t & 1)] := c + 1;
+  LSHP.u64[c * 2 + t] := x;
   return c
 }
 
@@ -243,8 +252,8 @@ theorem lsPush_spec (n : Nat) (s₀ : St) (t o l h j : Word) :
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
-      finish [lscnt, lspushOK, lspushMem, nSlotsLs, baseW]
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, hpLoopLs_step_spec p n] <;>
+      finish [lscnt, lspushOK, lspushMem, nSlotsLs, baseW, lsOrW_zero]
 
 end push
 
@@ -303,7 +312,8 @@ def lsProg : Prog :=
 16 slots per tier, the scratch tier closed or open. -/
 def lsMem (scratch : Word) : Mem :=
   { words := #[#[5, 7, 5, 5, 7, 0, 0, 0], (Array.replicate 64 0).set! 1 scratch |>.set! 0 5] ++
-      Array.replicate 37 #[] ++ #[Array.replicate 48 0, Array.replicate 32 0] }
+      Array.replicate 37 #[] ++ #[Array.replicate 48 0, Array.replicate 32 0] ++
+      Array.replicate 62 (Array.replicate 32 0) }
 
 /-- Intern each slice in turn; the handles. -/
 def internLss (m : Mem) : List (Word × Word) → Option (List Word)

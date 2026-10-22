@@ -171,13 +171,13 @@ theorem andPinOk_run {D P : Array Word} {i : Nat} {d : IDeclaration} (hd : DeclA
 
 /-- **`and_pin_ok` refines `andPinOk`** on record `i` of the loop's declarations. -/
 @[refines_part ConRon.Arena.andPinOk "one-constant records (the front's record kinds)"]
-theorem andPinOk_refines (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration) (p : Prog)
+theorem andPinOk_refines {pins : List INatOpPinSet} (dn : NIdx → Option ConLeche.Name) (ds : Array IDeclaration) (p : Prog)
     (hp : p.lookup "and_pin_ok" = some andPinOkL) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
-      (i : Word) (hi : i.toNat < ds.size), LoopR dn s₀.mem a₀ vis fe pend ds →
+      (i : Word) (hi : i.toNat < ds.size), LoopR pins dn s₀.mem a₀ vis fe pend ds →
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "and_pin_ok" [i]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (andPinOk (dsAt ds i)) a₀ ∧
-      LoopR dn s'.mem (AM.st (andPinOk (dsAt ds i)) a₀) vis fe pend ds ∧
+      LoopR pins dn s'.mem (AM.st (andPinOk (dsAt ds i)) a₀) vis fe pend ds ∧
       AM.res (andPinOk (dsAt ds i)) a₀ = (r.headD 0 != 0); ⊤⦄ := by
   intro n s₀ a₀ vis fe pend i hi hR
   apply M.triple_of_run

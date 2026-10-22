@@ -275,7 +275,8 @@ theorem lvlEq?_run (a : AState) (u v : LIdx) (lu lv : Level) (hu : denoteL a.sto
 theorem ArenaR.with_caches {m : Mem} {a : AState} (c : Caches) (hR : ArenaR m a) :
     ArenaR m { a with caches := c } :=
   ⟨hR.lit, hR.app, hR.sort, hR.const, hR.letE, hR.bvar, hR.fvar, hR.lam, hR.forallE, hR.proj,
-    hR.zero, hR.succ, hR.max, hR.imax, hR.param, hR.ls, hR.nanon, hR.nstr, hR.nnum, hR.memos⟩
+    hR.zero, hR.succ, hR.max, hR.imax, hR.param, hR.ls, hR.nanon, hR.nstr, hR.nnum, hR.memos,
+    hR.zeroHp, hR.paramHp, hR.succHp, hR.maxHp, hR.imaxHp, hR.lsHp, hR.sortLp, hR.constLp, hR.fvarLp⟩
 
 theorem HeapExt.memFrame {m m' : Mem} (h : HeapExt m m') : MemFrame [LH] [192] m m' :=
   ⟨fun b hb hc => h.arr b (by simpa using hb) hc, fun x hx => h.ctl x (by simpa using hx), h.size,
@@ -343,10 +344,6 @@ theorem lvlEq_run {m m' : Mem} {a : AState} (hR : ArenaR m a) (hwf : NStoreWF a.
 
 /-! ## Level lists -/
 
-theorem sliceL_succ (p : Array Word) (o l : Nat) :
-    sliceL p o (l + 1) = (p[o]?.getD 0) :: sliceL p (o + 1) l := by
-  simp only [sliceL, List.ofFn_succ, Fin.val_zero, Nat.add_zero, Fin.val_succ]
-  congr 1; congr; funext k; congr 2; omega
 
 /-- **A slice of handle words is related to the readbacks** (`LvsR`), element by element. -/
 theorem lvsR_of_slice {m : Mem} {a : AState} (hR : ArenaR m a) :
