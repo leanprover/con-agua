@@ -316,50 +316,82 @@ def lazyFoldOkL : FunDecl := lfn (mode, a, b) locals (r) {
 
 /-! ## The binder descents -/
 
-/-- The batched ∀ descent: `fvs` is the stack slice `(fo, k)` (`CTL[136] = fo + k`). -/
--- con-ron: ConRon/Arena/Core.lean:2952-3017 ConRon.Arena.defeqPeel
+/-- The batched descent's leaf: both residuals opened against the slice `(fo, k)`, compared at
+depth `d + k`. -/
 -- con-ron: ConRon/Arena/Core.lean:2943-2950 ConRon.Arena.defeqPeelLeaf
-@[l_impl ConRon.Arena.defeqPeel ConRon.Arena.defeqPeelLeaf]
-def defeqPeelL : FunDecl :=
-    lfn (mode, vis, d, peel, a, b, k, fo) locals (o1, o2, t, i, da, ba, db, bb, t1, t2, dq, fv) {
+@[l_impl ConRon.Arena.defeqPeelLeaf]
+def peelLeafL : FunDecl := lfn (mode, vis, d, a, b, k, fo) locals (o1, o2, dq) {
+  o1 := call inst_list(a, fo, k, 0);
+  o2 := call inst_list(b, fo, k, 0);
+  dq := call defeq(mode, vis, d + k, o1, o2);
+  return dq
+}
+
+/-- One peeled level's domains: `(dq, t2)`, the verdict and the opened second domain (the first,
+when the raw domains are the same handle). -/
+-- con-ron: ConRon/Arena/Core.lean:2952-3017 ConRon.Arena.defeqPeel
+@[l_impl ConRon.Arena.defeqPeel]
+def peelDomL : FunDecl := lfn (mode, vis, d, da, db, k, fo) locals (t1, t2, dq) {
+  t1 := call inst_list(da, fo, k, 0);
+  if da == db { return (1, t1) };
+  t2 := call inst_list(db, fo, k, 0);
+  dq := call defeq(mode, vis, d + k, t1, t2);
+  return (dq, t2)
+}
+
+/-- One peeled level, the second binder's view and the domains: `(dq, t2, bb)`. -/
+-- con-ron: ConRon/Arena/Core.lean:2952-3017 ConRon.Arena.defeqPeel
+@[l_impl ConRon.Arena.defeqPeel]
+def peelStep2L : FunDecl := lfn (mode, vis, d, da, b, k, fo) locals (g, db, bb, x, dq, t2) {
+  (g, db, bb, x) := call e_view(b);
+  (dq, t2) := call peel_dom(mode, vis, d, da, db, k, fo);
+  return (dq, t2, bb)
+}
+
+/-- One peeled level: the two binders' views, then the domains: `(dq, t2, ba, bb)`. -/
+-- con-ron: ConRon/Arena/Core.lean:2952-3017 ConRon.Arena.defeqPeel
+@[l_impl ConRon.Arena.defeqPeel]
+def peelStepL : FunDecl := lfn (mode, vis, d, a, b, k, fo) locals (g, da, ba, x, dq, t2, bb) {
+  (g, da, ba, x) := call e_view(a);
+  (dq, t2, bb) := call peel_step2(mode, vis, d, da, b, k, fo);
+  return (dq, t2, ba, bb)
+}
+
+/-- The fresh free variable of a peeled level, pushed on the stack at `fo + k` (the top). -/
+-- con-ron: ConRon/Arena/Core.lean:2952-3017 ConRon.Arena.defeqPeel
+@[l_impl ConRon.Arena.defeqPeel]
+def peelPushL : FunDecl := lfn (d, k, fo, t2) locals (fv) {
+  fv := call intern_fvar(d + k, t2);
+  if len(SPN.u64) <= fo + k { abort };
+  SPN.u64[fo + k] := fv;
+  CTL.u64[136] := fo + k + 1;
+  return fv
+}
+
+/-- `defeq_peel`'s loop (named, for its spec). -/
+def defeqPeelLoop : Stmt := lblk (mode, vis, d, peel, a, b, k, fo, dq, t2, ba, bb, fv) {
   while 0 == 0 {
     if a == b { return 1 };
     if peel == 0 || a >> 28 != 6 || b >> 28 != 6 {
-      o1 := call inst_list(a, fo, k, 0);
-      o2 := call inst_list(b, fo, k, 0);
-      dq := call defeq(mode, vis, d + k, o1, o2);
+      dq := call peel_leaf(mode, vis, d, a, b, k, fo);
       return dq
     };
-    t := (a >> 27) & 1;
-    i := a & 134217727;
-    if t != 0 && CTL.u64[1] == 0 { abort };
-    if CTL.u64[30 + t] <= i { abort };
-    da := FAREC.u64[i * 4 + t * 2];
-    ba := FAREC.u64[i * 4 + t * 2 + 1];
-    t := (b >> 27) & 1;
-    i := b & 134217727;
-    if t != 0 && CTL.u64[1] == 0 { abort };
-    if CTL.u64[30 + t] <= i { abort };
-    db := FAREC.u64[i * 4 + t * 2];
-    bb := FAREC.u64[i * 4 + t * 2 + 1];
-    t1 := call inst_list(da, fo, k, 0);
-    if da == db {
-      t2 := t1;
-      dq := 1
-    } else {
-      t2 := call inst_list(db, fo, k, 0);
-      dq := call defeq(mode, vis, d + k, t1, t2)
-    };
+    (dq, t2, ba, bb) := call peel_step(mode, vis, d, a, b, k, fo);
     if dq == 0 { return 0 };
-    fv := call intern_fvar(d + k, t2);
-    if len(SPN.u64) <= fo + k { abort };
-    SPN.u64[fo + k] := fv;
+    fv := call peel_push(d, k, fo, t2);
     k += 1;
-    CTL.u64[136] := fo + k;
     peel -= 1;
     a := ba;
     b := bb
-  };
+  }
+}
+
+/-- The batched ∀ descent: `fvs` is the stack slice `(fo, k)` (`CTL[136] = fo + k`). -/
+-- con-ron: ConRon/Arena/Core.lean:2952-3017 ConRon.Arena.defeqPeel
+@[l_impl ConRon.Arena.defeqPeel]
+def defeqPeelL : FunDecl :=
+    lfn (mode, vis, d, peel, a, b, k, fo) locals (dq, t2, ba, bb, fv) {
+  ⟪defeqPeelLoop⟫;
   abort
 }
 
@@ -368,11 +400,8 @@ def defeqPeelL : FunDecl :=
 def defeqBindersL : FunDecl := lfn (mode, vis, d, ty1, body1, ty2, body2) locals (ok, fv, so, r) {
   ok := call defeq(mode, vis, d, ty1, ty2);
   if ok == 0 { return 0 };
-  fv := call intern_fvar(d, ty2);
   so := CTL.u64[136];
-  if len(SPN.u64) <= so { abort };
-  SPN.u64[so] := fv;
-  CTL.u64[136] := so + 1;
+  fv := call peel_push(d, 0, so, ty2);
   r := call defeq_peel(mode, vis, d, 16777216, body1, body2, 1, so);
   CTL.u64[136] := so;
   return r
@@ -392,38 +421,59 @@ def defeqLamsInnerL : FunDecl := lfn (mode, vis, d, b1, b2) locals (ok, t1, t2, 
   return 1
 }
 
-/-- The λ-telescope congruence; the twin's `lamsFuel` (`2^62`) is not counted (ROADMAP §3 (b)):
-an uncounted loop over the λ pairs. `lamPair?` is the tag test and the two binder reads. -/
+/-- One λ level opened: the domains compared, the fresh free variable, both bodies instantiated:
+`(ok, b1, b2)` (`(0, 0, 0)` when the domains differ). -/
 -- con-ron: ConRon/Arena/Core.lean:3049-3070 ConRon.Arena.defeqLams
+@[l_impl ConRon.Arena.defeqLams]
+def lamsOpenL : FunDecl := lfn (mode, vis, d, ty1, body1, ty2, body2) locals (ok, b1, b2) {
+  ok := call defeq(mode, vis, d, ty1, ty2);
+  if ok == 0 { return (0, 0, 0) };
+  (b1, b2) := call lams_inst(d, ty2, body1, body2);
+  return (1, b1, b2)
+}
+
+/-- The fresh free variable `fvar d ty2`, both bodies instantiated with it: `(b1, b2)`. -/
+-- con-ron: ConRon/Arena/Core.lean:3049-3070 ConRon.Arena.defeqLams
+@[l_impl ConRon.Arena.defeqLams]
+def lamsInstL : FunDecl := lfn (d, ty2, body1, body2) locals (fv, b1, b2) {
+  fv := call intern_fvar(d, ty2);
+  b1 := call inst1(body1, fv, 0);
+  b2 := call inst1(body2, fv, 0);
+  return (b1, b2)
+}
+
+/-- `lamPair?`: `(1, ty1, body1, ty2, body2)` when both handles are λs, else `(0, 0, 0, 0, 0)`. -/
 -- con-ron: ConRon/Arena/ExprOps.lean:1266-1277 ConRon.Arena.lamPair?
-@[l_impl ConRon.Arena.defeqLams ConRon.Arena.lamPair?]
-def defeqLamsL : FunDecl :=
-    lfn (mode, vis, d, ty1, body1, ty2, body2) locals (ok, fv, b1, b2, t, i, r) {
+@[l_impl ConRon.Arena.lamPair?]
+def lamPairL : FunDecl := lfn (a, b) locals (g, x1, y1, x2, y2, z) {
+  if a >> 28 != 5 || b >> 28 != 5 { return (0, 0, 0, 0, 0) };
+  (g, x1, y1, z) := call e_view(a);
+  (g, x2, y2, z) := call e_view(b);
+  return (1, x1, y1, x2, y2)
+}
+
+/-- `defeq_lams`'s loop (named, for its spec). -/
+def defeqLamsLoop : Stmt := lblk (mode, vis, d, ty1, body1, ty2, body2, ok, b1, b2, f, r) {
   while 0 == 0 {
-    ok := call defeq(mode, vis, d, ty1, ty2);
+    (ok, b1, b2) := call lams_open(mode, vis, d, ty1, body1, ty2, body2);
     if ok == 0 { return 0 };
-    fv := call intern_fvar(d, ty2);
-    b1 := call inst1(body1, fv, 0);
-    b2 := call inst1(body2, fv, 0);
-    if b1 >> 28 != 5 || b2 >> 28 != 5 {
+    (f, ty1, body1, ty2, body2) := call lam_pair(b1, b2);
+    if f == 0 {
       r := call defeq_lams_inner(mode, vis, d, b1, b2);
       return r
     };
-    t := (b1 >> 27) & 1;
-    i := b1 & 134217727;
-    if t != 0 && CTL.u64[1] == 0 { abort };
-    if CTL.u64[28 + t] <= i { abort };
-    ty1 := LAREC.u64[i * 4 + t * 2];
-    body1 := LAREC.u64[i * 4 + t * 2 + 1];
-    t := (b2 >> 27) & 1;
-    i := b2 & 134217727;
-    if t != 0 && CTL.u64[1] == 0 { abort };
-    if CTL.u64[28 + t] <= i { abort };
-    ty2 := LAREC.u64[i * 4 + t * 2];
-    body2 := LAREC.u64[i * 4 + t * 2 + 1];
     if b1 == b2 { return 1 };
     d += 1
-  };
+  }
+}
+
+/-- The λ-telescope congruence; the twin's `lamsFuel` (`2^62`) is not counted (ROADMAP §3 (b)):
+an uncounted loop over the λ pairs. -/
+-- con-ron: ConRon/Arena/Core.lean:3049-3070 ConRon.Arena.defeqLams
+@[l_impl ConRon.Arena.defeqLams]
+def defeqLamsL : FunDecl :=
+    lfn (mode, vis, d, ty1, body1, ty2, body2) locals (ok, b1, b2, f, r) {
+  ⟪defeqLamsLoop⟫;
   abort
 }
 
@@ -1092,8 +1142,12 @@ def defeqFns : Prog :=
    ("defeq_lst", defeqLstL), ("defeq_list_rev", defeqListRevL),
    ("bool_true_shortcut", boolTrueShortcutL), ("defeq_spine", defeqSpineL),
    ("defeq_no_fvars", defeqNoFvarsL), ("lazy_fold_ok", lazyFoldOkL), ("defeq_peel", defeqPeelL),
+   ("peel_leaf", peelLeafL), ("peel_dom", peelDomL), ("peel_step", peelStepL),
+   ("peel_step2", peelStep2L),
+   ("peel_push", peelPushL),
    ("defeq_binders", defeqBindersL), ("defeq_lams_inner", defeqLamsInnerL),
-   ("defeq_lams", defeqLamsL), ("quick_defeq", quickDefeqL), ("is_nat_zero", isNatZeroL),
+   ("defeq_lams", defeqLamsL), ("lams_open", lamsOpenL), ("lams_inst", lamsInstL),
+   ("lam_pair", lamPairL), ("quick_defeq", quickDefeqL), ("is_nat_zero", isNatZeroL),
    ("nat_pred", natPredL), ("defeq_offset", defeqOffsetL), ("head_is_proj", headIsProjL),
    ("try_unfold_proj_app", tryUnfoldProjAppL), ("delta_quick", deltaQuickL),
    ("lds_left", ldsLeftL), ("lds_right", ldsRightL), ("lds_both", ldsBothL),
