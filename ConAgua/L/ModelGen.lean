@@ -152,6 +152,8 @@ meta structure Fold where
   name : Name
   arity : Nat
   pat : MT
+  /-- `f x₁ … xₖ = (g x₁ … xₖ).tail….headD 0` (`j` tails): a result of a list callee `g` -/
+  listProj : Option (Name × Nat) := none
 
 /-- The pattern of a fold function's body (its parameters are holes). -/
 meta partial def exprPat (e : Lean.Expr) : MetaM MT := do
@@ -173,6 +175,12 @@ meta partial def exprPat (e : Lean.Expr) : MetaM MT := do
   | (``HShiftRight.hShiftRight, #[_, _, _, _, a, b]) => return .op ">>>" (← exprPat a) (← exprPat b)
   | _ => throwError "l_model: fold pattern: unsupported term {e}"
 
+/-- `l = g.tail.….tail` (`j` tails): `(g, j)`. -/
+meta partial def listTails (l : Lean.Expr) (j : Nat) : Lean.Expr × Nat :=
+  match l.getAppFnArgs with
+  | (``List.tail, #[_, l']) => listTails l' (j + 1)
+  | _ => (l, j)
+
 meta def mkFold (c : Name) : MetaM Fold := do
   let some v := ((← getEnv).find? c).bind (·.value?) | throwError "l_model: {c} has no body"
   let rec strip (e : Lean.Expr) (k : Nat) : Lean.Expr × Nat :=
@@ -180,6 +188,14 @@ meta def mkFold (c : Name) : MetaM Fold := do
     | Lean.Expr.lam _ _ b _ => strip b (k + 1)
     | _ => (e, k)
   let (body, k) := strip v 0
+  -- `(g x₁ … xₖ).tail….headD 0`
+  if let (``List.headD, #[_, l, d]) := body.getAppFnArgs then
+    if d.isAppOf ``OfNat.ofNat || d.rawNatLit?.isSome then
+      let (g, j) := listTails l 0
+      let args := g.getAppArgs
+      if let some gc := g.getAppFn.constName? then
+        if args.size == k && (List.range k).all (fun i => args[i]! == .bvar (k - 1 - i)) then
+          return { name := c, arity := k, pat := .lit 0, listProj := some (gc, j) }
   -- de Bruijn: the last parameter is `bvar 0`; number the holes by parameter position
   let pat ← exprPat body
   let rec renum : MT → MT
@@ -214,6 +230,7 @@ meta partial def MT.matchPat (pat t : MT) (σ : Array (Option MT)) : Option (Arr
 /-- Fold `t` at its root with the first rule that matches. -/
 meta def foldRoot (rules : Array Fold) (t : MT) : MT := Id.run do
   for r in rules do
+    if r.listProj.isSome then continue
     if let some σ := MT.matchPat r.pat t (Array.replicate r.arity none) then
       if σ.all (·.isSome) then
         return .app r.name (σ.map (·.get!))
@@ -470,6 +487,8 @@ meta structure Env where
   group : Array (String × Name × Bool)
   callees : Array (String × Callee)
   folds : Array Fold
+  /-- list callees whose `r ≠ []` does not become a `none` branch -/
+  noguard : Array String := #[]
 
 /-- L names that would clash with the model's own binders get a prime. -/
 meta def sanitize (n : Name) : Name :=
@@ -671,12 +690,24 @@ meta partial def transCall (E : Env) (ctx : Ctx) (xs : Array Ident) (f : Ident)
     transS E (assign ctx vs) rest
   | .list t guard =>
     let l ← substT t memT argsT
+    -- the template `g __m __a0 …` of a list callee, for the fold rules of its results
+    let gName? : Option Name := match t.raw with
+      | .node _ _ args =>
+        if args.size == 2 && args[0]!.isIdent && args[1]!.getArgs.size == argsT.size + 1 &&
+            args[1]!.getArgs.toList.map (·.getId) == (`__m :: (List.range argsT.size).map fun i =>
+              Name.mkSimple s!"__a{i}") then
+          some args[0]!.getId else none
+      | _ => none
     let vs ← (List.range xk.size).toArray.mapM fun i => do
+      if let some g := gName? then
+        if let some r := E.folds.find? (·.listProj == some (g, i)) then
+          return MT.app r.name (#[ctx.mem] ++ (← args.mapM (transE E ctx)))
       let mut e ← `($l)
       for _ in [0:i] do e ← `(List.tail $e)
       return MT.raw (← `(List.headD $e 0))
     let body ← transS E (assign ctx vs) rest
-    if guard then return .ite (.cmp "=" (.raw l) (.raw (← `([])))) .none body
+    if guard && !E.noguard.contains fname then
+      return .ite (.cmp "=" (.raw l) (.raw (← `([])))) .none body
     return body
   | .memOpt t =>
     if ctx.ro then throwErrorAt f "l_model: a read-only model cannot write"
@@ -761,6 +792,7 @@ syntax (name := lmodel) (docComment)? "l_model " ident bracketedBinder*
   (&" finish " "[" term,* "]")?
   (&" gen " num)?
   (&" heartbeats " num)?
+  (&" noguard " "[" str,* "]")?
   (&" trace")? : command
 
 meta structure FnInfo where
@@ -795,7 +827,8 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let hintTs : Array Term := (optList 11).map (⟨·⟩)
   let genN : Option Nat := if stx[12].getNumArgs == 0 then none else stx[12][1].isNatLit?
   let hbN : Option Nat := if stx[13].getNumArgs == 0 then none else stx[13][1].isNatLit?
-  let doTrace := stx[14].getNumArgs != 0
+  let noguard : Array String := (optList 14).filterMap (·.isStrLit?)
+  let doTrace := stx[15].getNumArgs != 0
   let stx := stx'
   let (infos, callees, foldRules) ← runTermElabM fun _ => do
     Term.elabBinders bs fun _ => do
@@ -829,7 +862,8 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     let params := ps.getElems.map (sanitize ·.getId)
     let locals' := ((ls.map (·.getElems.map (sanitize ·.getId))).getD #[])
     fis := fis.push { lname, decl, model, ro, lookup, params, lcls := locals', body }
-  let E : Env := { group := fis.map fun fi => (fi.lname, fi.model, fi.ro), callees, folds := foldRules }
+  let grp := fis.map fun fi => (fi.lname, fi.model, fi.ro)
+  let E : Env := { group := grp, callees := callees, folds := foldRules, noguard := noguard }
   -- translate
   let (bodies, st) ← runTermElabM fun _ => do
     let go : GenM (Array (MR × Array String)) := fis.mapM fun fi => do
