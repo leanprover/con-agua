@@ -18,7 +18,7 @@ work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
 echo "+ lake build (the three Emit* drivers)"
-lake build ConAgua.Compiler.EmitScan ConAgua.Arena.EmitStore ConAgua.Arena.WalkEmit
+"$root/scripts/lake" build ConAgua.Compiler.EmitScan ConAgua.Arena.EmitStore ConAgua.Arena.WalkEmit
 
 declare -A progs=(
   [scan]="ConAgua/Compiler/EmitScan.lean"
@@ -30,7 +30,7 @@ status=0
 for name in scan store walk; do
   s="$work/$name.s"
   echo "+ lake env lean --run ${progs[$name]} $s"
-  lake env lean --run "${progs[$name]}" "$s"
+  "$root/scripts/lake" env lean --run "${progs[$name]}" "$s"
   if ! python3 "$root/harness/check_asm.py" "$s" "$name"; then
     status=1
   fi

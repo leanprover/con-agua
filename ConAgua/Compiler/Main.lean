@@ -336,7 +336,7 @@ theorem compile_correct [Host] (p : Prog) (entry : FnName) (G : Layout) (hG : G.
           by_cases h : G.lo ≤ x
           · exact Or.inr (hx.2.1 h)
           · exact Or.inl (by omega)
-        rw [hP.same x (by omega) (by omega) hx.2.2.1 (fun hr => hx.2.2.2 hr.tab), get?_wrW_A (by omega) (by omega) (by omega), h8m]
+        rw [hP.same x (by omega) (by omega) hx.2.2.1 (fun hr => hx.2.2.2 hr.tab) (fun hg => hx.2.2.2 hg.tab), get?_wrW_A (by omega) (by omega) (by omega), h8m]
     · -- the entry function returned
       intro r σ' d' hinv hm' hloc hrsp' hrbp' hr15' hr14' hrax' hpres'
       simp only [UInt64.toBitVec_ofBitVec, Int64.ofBitVec_toBitVec]

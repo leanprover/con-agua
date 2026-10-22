@@ -57,6 +57,7 @@ theorem step_mono (p : Prog) {k k' : Stmt → M Sig} (hk : KExt k k') :
   | brk => intro s r h; exact h
   | ret es => intro s r h; exact h
   | abort => intro s r h; exact h
+  | gset g e => intro s r h; exact h
   | seq c₁ c₂ ih₁ ih₂ =>
     intro s r h
     obtain ⟨a, s', h1, h2⟩ := run_bind_ok h

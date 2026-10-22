@@ -8,7 +8,8 @@ public section
 L is the small first-order language the checker is written in (see `DESIGN.md`, "The language L").
 Values are 64-bit words with wrapping arithmetic. A function has numbered locals, the first
 `nparams` of which are its parameters. Memory is a fixed set of arrays: byte arrays (the input
-buffer) and word arrays, each named by a static index. Expressions have no side effects and
+buffer) and word arrays, each named by a static index, and a store of global word variables
+(`GVar`), also named by static indices. Expressions have no side effects and
 make no calls; a call is a statement. Conditions are a separate type, with short-circuit `&&`/`||`
 so that a guard such as `i < len && b[i] == c` cannot read out of bounds.
 -/
@@ -26,6 +27,17 @@ abbrev ArrId := Nat
 
 /-- A function name. -/
 abbrev FnName := String
+
+/-- A global variable: a word in the global store (`Mem.glob`), named by a static number.
+Declare one as a Lean constant, `abbrev HTOP : L.GVar := ⟨3⟩`, and use it in L code as `HTOP`
+(read) and `HTOP := e` (write). Distinct globals need distinct numbers. -/
+structure GVar where
+  id : Nat
+  deriving Repr, Inhabited
+
+/-- Equality of globals is equality of their numbers (reduces under `decide`). -/
+instance : DecidableEq GVar := fun a b =>
+  decidable_of_iff (a.id = b.id) (by cases a; cases b; simp)
 
 /-- Binary word operators. All wrap; shift counts are taken mod 64 (as on x64). `mulhi` is the
 high word of the unsigned 128-bit product (`mul` is the low word). -/
@@ -55,6 +67,8 @@ inductive Expr where
   | cmpw (c : Cmp) (a b : Expr)
   /-- Byte `i` of the constant byte string `d` (read-only data, part of the program). -/
   | ldc (d : List UInt8) (i : Expr)
+  /-- The global variable `g`. -/
+  | glob (g : GVar)
   deriving Repr, DecidableEq, Inhabited
 
 /-- Conditions. `and`/`or` short-circuit. -/
@@ -87,6 +101,8 @@ inductive Stmt where
   | call (xs : List Var) (f : FnName) (args : List Expr)
   /-- Stop the whole program with an error (Rust's `panic!`, an overflow check, …). -/
   | abort
+  /-- `g := e` for a global variable `g`. -/
+  | gset (g : GVar) (e : Expr)
   deriving Repr, Inhabited
 
 /-- A function: `nparams` parameters, `nlocals ≥ nparams` locals (params first, the rest start

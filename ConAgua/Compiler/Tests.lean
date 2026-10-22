@@ -233,4 +233,31 @@ open L.Scan.Utf8 in
 #guard (runKraken utf8Prog "utf8_decode" [0, 5] { bytes := #["hello".toUTF8.data], words := #[#[0, 0]] }
   100000).toOption == some .error
 
+/-! Global variables (`GVar`): reads, writes, `+=`, across calls and in conditions, next to
+arrays, the result area (nine results) and entry arguments. -/
+
+abbrev GA : GVar := ⟨0⟩
+abbrev GB : GVar := ⟨2⟩
+
+/-- con-ron: none — a compiler test program -/
+def gbump : FunDecl := lfn (x) { GA += x; GB := GB + 1; return GA }
+/-- con-ron: none — a compiler test program -/
+def gmain : FunDecl := lfn (n) locals (i, r) {
+  GA := 10;
+  while i < n { r := call gbump(i); i += 1 };
+  if GB == n { W.u64[0] := GA };
+  return (GA, GB, r, W.u64[0], n, 0, GA + GB, GB, GA)
+}
+def globProg : Prog := [("gmain", gmain), ("gbump", gbump)]
+
+#guard (Prog.tab globProg 0 1).ng == 3
+#guard Prog.wf (Prog.tab globProg 0 1) globProg
+#guard agrees globProg "gmain" [5] { words := #[#[0]] }
+#guard agrees globProg "gmain" [0] { words := #[#[0]] }
+#guard (runKraken globProg "gmain" [4] { words := #[#[0]] } 1000).toOption ==
+  some (.ok [16, 4, 16, 16, 4, 0, 20, 4, 16])
+-- Initial values of the globals come from the memory.
+#guard (runKraken globProg "gbump" [1] { glob := fun g => if g = GA then 41 else 0 } 1000).toOption ==
+  some (.ok [42, 0, 0, 0, 0, 0, 0, 0, 0])
+
 end L.Compiler.Tests

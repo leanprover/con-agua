@@ -36,7 +36,7 @@ theorem code_of_lookup [Host] {tab : Tab} {f : FnName} {fd : FunDecl} :
     · exact ih _ hc.right hl
 
 section
-variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres < maxOff) (p : Prog)
+variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff) (p : Prog)
 include hG hTab
 
 theorem stepSim (hProg : ∀ f fd, p.lookup f = some fd → ∃ kf, Code (compileFn G.tab f fd) kf)
@@ -55,6 +55,7 @@ theorem stepSim (hProg : ∀ f fd, p.lookup f = some fd → ∃ kf, Code (compil
   | ret e => exact sim_ret hG hTab p _ _ e
   | call x f args => exact sim_call hG hTab p n hF hProg x f args
   | abort => exact sim_abort p _ _
+  | gset g e => exact sim_gset hG hTab p _ _ g e
 
 theorem execSim_all (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd = true)
     (hProg : ∀ f fd, p.lookup f = some fd → ∃ kf, Code (compileFn G.tab f fd) kf) :
