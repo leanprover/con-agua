@@ -350,7 +350,7 @@
 {
 "lane": "cachebug",
 "model": "opus",
-"status": "running",
+"status": "done",
 "focus": "Stale artifact from the shared Lake cache: mechanism, fix, cache-free verification"
 }
 ]
