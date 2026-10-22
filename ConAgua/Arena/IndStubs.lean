@@ -251,6 +251,11 @@ theorem recInternBVar_spec (k : Word) :
     RelAM "intern_bvar" [k] (StageR dn vis fe)
       (internE (.bvar k.toNat)) (KeepPost dn vis fe decW0E) := sorry
 
+/-- `mk_lam(t, b)`: interning `.lam t b`. -/
+theorem recMkLam_spec (t b : Word) (ht : H t) (hb : H b) :
+    RelAM "mk_lam" [t, b] (StageR dn vis fe)
+      (internE (.lam (decI t) (decI b))) (KeepPost dn vis fe decW0E) := sorry
+
 end masterstubs
 
 end L.Ind
