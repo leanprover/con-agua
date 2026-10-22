@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndInstallSpec5
+import ConAgua.Arena.IndPos2SpecF
 
 /-!
 # Refinements of `IndInstall`, part 6 (lane `indproofs2`, helper `parts`): `BlockShape.nestCtx`
@@ -219,7 +220,8 @@ theorem blockShapeNestCtx_refines (p : Prog) (hP : NckProg p) (n : Nat) (s₀ : 
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "block_shape_nest_ctx" [q, fo, fl]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (bs.nestCtx fvsP) a₀ ∧
       DecB (fun m => decCtx m (r.headD 0).toNat) s'.mem (AM.res (bs.nestCtx fvsP) a₀) ∧
-      StageR dn vis fe s'.mem (AM.st (bs.nestCtx fvsP) a₀) ∧ IWGrow s₀.mem s'.mem; ⊤⦄ := by
+      StageR dn vis fe s'.mem (AM.st (bs.nestCtx fvsP) a₀) ∧ IWGrow s₀.mem s'.mem ∧
+      CtxIn s'.mem (r.headD 0).toNat (· < iwTop s'.mem) ∧ CtxSl s'.mem (r.headD 0).toNat; ⊤⦄ := by
   refine triple_post (nck_spec p hP n s₀ q fo fl) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨hI1, hE1, hsz, hEs, hcl⟩ := hS.2
@@ -291,7 +293,7 @@ theorem blockShapeNestCtx_refines (p : Prog) (hP : NckProg p) (n : Nat) (s₀ : 
   simp only [Option.some.injEq, Prod.mk.injEq] at hm hpr
   obtain ⟨rfl, hm5⟩ := hm
   rw [hm5] at hpr
-  obtain ⟨hS6, hg6, -, hget⟩ := partsFreshGet hpr.symm hS4 (by simp)
+  obtain ⟨hS6, hg6, htop6, hget⟩ := partsFreshGet hpr.symm hS4 (by simp)
   obtain ⟨hnpw, hnpb, hsl, hse⟩ := partsShapeWords hg04 hq hq9
   have g : ∀ j (hj : j < 11), (iwA (truncM s'.mem))[qq.toNat + j]? = some ([r1.headD 0, r1.tail.headD 0,
       r2.headD 0, r2.tail.headD 0, rdW (m4.arr64 IW) (q + 4), r3.headD 0, r3.tail.headD 0, fo, fl,
@@ -303,10 +305,41 @@ theorem blockShapeNestCtx_refines (p : Prog) (hP : NckProg p) (n : Nat) (s₀ : 
   have hrun : (bs.nestCtx fvsP).run a₀ = .ok (⟨bs.memberNames, bs.lps, bs.nP, bs.nIdxs, fvsP, bs.resSort, lv⟩, a4) := by
     simp only [ConRon.Arena.BlockShape.nestCtx, StateT.run_bind, hrun4]; rfl
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
-  refine ⟨hl, hok, ?_, by rw [hst]; exact hS6, hg04.trans hg6⟩
-  rw [hres]
-  have hg56 := hg6
   subst hr1 hr3
+  simp only [List.length_cons, List.length_nil] at htop6
+  have gi : ∀ j (hj : j < 11), iwN s'.mem (qq.toNat + j) = some ([rdW (s₀.mem.arr64 CTL) 200,
+      UInt64.ofNat bs.k, r2.headD 0, r2.tail.headD 0, rdW (m4.arr64 IW) (q + 4), rdW (m2.arr64 CTL) 200,
+      UInt64.ofNat bs.k, fo, fl, rdW (m4.arr64 IW) (q + 6), r4.headD 0][j]'(by simpa using hj)).toNat := by
+    intro j hj
+    rw [← iwN_truncM (by omega)]
+    simp only [iwN, nat?]; rw [g j hj]; simp
+  have hT' : iwTop s'.mem < 2 ^ 64 := (rdW (s'.mem.arr64 CTL) 200).toNat_lt
+  have hsl4 : CtxSl s'.mem qq.toNat := by
+    intro i hi o l ho hl'
+    have hg6' := hg04.trans hg6
+    rcases hi with rfl | rfl | rfl | rfl
+    · rw [gi 0 (by omega)] at ho; rw [gi 1 (by omega)] at hl'
+      simp only [Option.some.injEq, List.getElem_cons_zero, List.getElem_cons_succ] at ho hl'
+      subst ho hl'
+      rw [UInt64.toNat_ofNat_of_lt' hkb]
+      have := (hg2.trans (hg3.trans (hg4.trans hg6))).1; omega
+    · rw [gi 2 (by omega)] at ho; rw [gi 3 (by omega)] at hl'
+      simp only [Option.some.injEq, List.getElem_cons_zero, List.getElem_cons_succ] at ho hl'
+      subst ho hl'
+      have := (hg3.trans (hg4.trans hg6)).1; omega
+    · rw [gi 5 (by omega)] at ho; rw [gi 6 (by omega)] at hl'
+      simp only [Option.some.injEq, List.getElem_cons_zero, List.getElem_cons_succ] at ho hl'
+      subst ho hl'
+      rw [UInt64.toNat_ofNat_of_lt' hkb]
+      have := (hg4.trans hg6).1; omega
+    · rw [gi 7 (by omega)] at ho; rw [gi 8 (by omega)] at hl'
+      simp only [Option.some.injEq, List.getElem_cons_zero, List.getElem_cons_succ] at ho hl'
+      subst ho hl'
+      have := hg6'.1; omega
+  have hin4 : CtxIn s'.mem qq.toNat (· < iwTop s'.mem) :=
+    ⟨fun j hj => by omega, fun i hi o l ho hl' j hj => by have := hsl4 i hi o l ho hl'; omega⟩
+  refine ⟨hl, hok, ?_, by rw [hst]; exact hS6, hg04.trans hg6, hin4, hsl4⟩
+  rw [hres]
   simp only [List.headD_cons, List.tail_cons] at g0 g1 g5 g6 ⊢
   have hn1 : DecB (fun m => decHL m (rdW (s₀.mem.arr64 CTL) 200).toNat (UInt64.ofNat bs.k).toNat) s'.mem
       bs.memberNames := by
