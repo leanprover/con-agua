@@ -6142,3 +6142,31 @@ the finding of lane `decls2`.
 
 Census at landing 1 (`--no-build`): phase 2 **139 proven, 15 sorry, 86 written, 91 todo** (lane
 start 136 / 11 / 93 / 91); totals 558 proven / 71 sorry of 1352.
+
+### Landing 2 (lane `romload`): the readers over `PB`, the decoder direction
+
+* **L code** (`ConAgua/Rom/PinRead.lean`): `pb_check`, the ROM readers over `PB` (`FunDecl.toPB` of
+  the ROM readers; `rom_u64`, `rom_put` written out), `intern_pin_sets` (+ `rom_exprs_to`,
+  `rom_pins_to`, `rom_lists_to`, `rom_sets_to`), `rom_pin_sets`, `intern_all_pins` over `PB`
+  (`internAllPinsPB`); all in `romProgPB`. Changes to the ROM readers (`Rom*.lean`): names' bytes
+  must be ASCII (`rom_put`), `natVal` literals below `2^64` (tag `3`, `rom_lit`), `rom_u64` also
+  checks `i + 8 < i`, the canonical-encoding check in `memo_push` (`RSET`, cleared with the memo).
+* **Models read only bytes that are there**: `romB` reads `255` (no tag) past the end, and every
+  `u64` read records `u64OK` (its range check) in the model. Then "the model returned" implies "the
+  bytes are an encoding", with no end-position bookkeeping.
+* **Proofs**: `Subst.lean` (helper, 350 lines: the substitution lemma, `triple_subPB`,
+  `run_subPB`); `Dec.lean` (helper, 491 lines: names, levels, level lists in the decoder
+  direction; `rom_levels` now aborts on a count ≥ `2^60`); `PinReadSpec.lean` (helper, 513 lines:
+  the new functions compute their models, `pb_check`'s prefix); `DecExpr.lean` (600 lines:
+  `romExprW_dec`, every expression the reader returns from is the canonical `encExprM seen e`;
+  `canon_miss` is the canonicity argument); `RsetR` (RomExprRef.lean: `RSET` holds every memo
+  handle; `ExprPost` now carries it). The encoder-direction proofs were adapted (literal arm,
+  `u64OK`, the set). No `sorry`.
+* **Test** (`lake exe romtest BUF`, `ConAgua/Rom/Test.lean`): runs `pb_check`,
+  `intern_reserved_pins`, `intern_all_pins` over `PB` in the L interpreter on the generated buffer
+  and the twin's `internReservedPins`, `internAllPins (natOpPinSets.take 1)`: **all 26 interned
+  pin/certificate handles agree** (the store numbering is the twin's). 55 s interpreted.
+* For lane `e2e`: to read the pins, bind `romProgPB`'s entries before the ROM readers, and call
+  `pb_check()` first in `check()`; `e2e-ref --pins=1` is then the reference.
+* Next: `internPinSetsW_dec` (the variant list in the decoder direction, `PinSetsR` the records'
+  relation; helper `romload-sets`), then the stage theorem for the real program via `triple_subPB`.
