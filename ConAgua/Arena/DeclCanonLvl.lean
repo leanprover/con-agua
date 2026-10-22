@@ -600,7 +600,7 @@ theorem getD1 (r : List Word) : r.getD (0 + 1) 0 = r.tail.headD 0 := by
   | nil => rfl
   | cons x xs => cases xs <;> rfl
 
-theorem decRL_unpack {m : Mem} {r : List Word} {ids : List LIdx}
+theorem decRL_unpack {k : IdxKind} {m : Mem} {r : List Word} {ids : List (Idx k)}
     (h : decRL (fun m => decHL m) 0 m r ids) :
     decHL m (r.headD 0).toNat (r.tail.headD 0).toNat = some ids ∧
       (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m := by
