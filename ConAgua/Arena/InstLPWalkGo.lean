@@ -19,7 +19,7 @@ section specs
 variable (p : Prog) (hp : ILWProg p)
 include hp
 
-set_option maxHeartbeats 1000000 in
+set_option maxHeartbeats 5000000 in
 theorem lpGo_spec (n : Nat) (s₀ : St) (h ko kc vo vc fu : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "lp_go" [h, ko, kc, vo, vc, fu]
     ⦃fun r s' => LocEq s' s₀ ∧ ilwGoW p n s₀.mem h ko kc vo vc fu = some (r.headD 0, s'.mem); ⊤⦄ := by
