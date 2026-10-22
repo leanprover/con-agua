@@ -105,4 +105,57 @@ theorem slot_pos {rom : List UInt8} (hr : RomOK rom) (rest : List UInt8) (hrom :
     List.drop_left' (by rw [hT])]
   rw [List.drop_append_of_le_length hsum, hfr, List.append_assoc]
 
+/-! ## `rci_slot`, `rci_fresh` -/
+
+section calls
+variable {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p)
+include hL
+
+theorem slotCall {n : Nat} {m m' : Mem} {s : Word} {r : List Word}
+    (hc : callW p n "rci_slot" [s] m = some (r, m')) :
+    m' = m ∧ r = [ciOff + u64W rom (ciOff + 8 * s)] := by
+  cases n with
+  | zero => rw [callW_zero] at hc; cases hc
+  | succ n =>
+  have hw := callW_model (M := fun mq => slotW p n mq s) (slot_specW rom p hL n · s) hc
+  unfold slotW at hw
+  replace hw := rdU_some hL hw
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  exact ⟨hw.2.symm, hw.1.symm⟩
+
+theorem freshCall {m₀ : Mem} {a₀ : AState} {n : Nat} {m m' : Mem} {a : AState} {r : List Word}
+    (hI : RInv m₀ a₀ m a) (hc : callW p n "rci_fresh" [] m = some (r, m')) :
+    RInv m₀ a₀ m' a ∧ MemoR m' [] (∅ : EMemo) ∧ stkTop m' = 0 ∧ m'.arr64 EREC = m.arr64 EREC ∧
+      m'.arr64 IW = m.arr64 IW ∧ erTop m' = erTop m ∧ iwTop m' = iwTop m := by
+  cases n with
+  | zero => rw [callW_zero] at hc; cases hc
+  | succ n =>
+  have hw := callW_model (M := fun mq => freshW p n mq) (fresh_specW rom p hL n ·) hc
+  unfold freshW at hw
+  cases h1 : callW p n "rset_clear" [] ((m.set64 CTL 131 0).set64 CTL 132 0) with
+  | none => rw [h1] at hw; simp at hw
+  | some t1 =>
+  obtain ⟨r1, m1⟩ := t1
+  rw [h1, bW_some] at hw
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨rfl, rfl⟩ := hw
+  obtain ⟨s', rfl, -, -, hm⟩ := triple_of_callW (s₀ := ⟨_, Locals.init []⟩)
+    (memoClearG_spec rsetSch p "rset_clear" hL.rset_clear n _) h1
+  have hR : s'.mem = resetMem (m.set64 CTL 131 0) := hm
+  rw [hR]
+  have hcs : 200 < (m.arr64 CTL).size := hI.ok.2.2.2.2
+  have hf : MemFrame [] [131, 132, 148, 149] m (resetMem (m.set64 CTL 131 0)) :=
+    ((MemFrame.setCtl m 131 0).mono (by simp) (by simp)).trans ((resetMem_frame1 _).mono (by simp)
+      (by simp))
+  obtain ⟨hI1, hE, hIW, ht, hi⟩ := hI.expr (ArenaD.frameHi hf (by simp) (by
+      intro x hx; simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
+      rcases hx with rfl | rfl | rfl | rfl <;> decide) hI.arena)
+    (hf.mono (by simp) (by
+      intro x hx; simp only [List.mem_cons, List.mem_nil_iff, or_false] at hx
+      rcases hx with rfl | rfl | rfl | rfl <;> simp [ExprC, RomC])) rfl
+  refine ⟨hI1, MemoR.fresh _ (by rw [size_set64]; omega), ?_, hE, hIW, ht, hi⟩
+  rw [resetMem_stk]; simp only [stkTop, rdW_set64]; simp; omega
+
+end calls
+
 end L.Rom
