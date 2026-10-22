@@ -523,14 +523,6 @@ theorem installValueGuards_refines (p : Prog) (hC : CvgProg p) (n : Nat) (s₀ :
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hg⟩
 
-/-- **`lvl_eq_c(u, v)` under the stage relation** (`sorry`): lane `whnf`'s `lvlEqC_refines` proves
-it under `CoreS`, which has the readback-cache invariants and `NStoreWF` that `StageR` lacks; the
-stub `lvl_eq` of lane `indproofs` has the same gap (and calls the uncached `lvl_eq`). -/
-theorem lvlEqCStage_spec (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (u v : Word)
-    (hu : H u) (hv : H v) :
-    RelAM "lvl_eq_c" [u, v] (StageR dn vis fe) (lvlEq? (decI u) (decI v))
-      (KeepPost dn vis fe decLvlEq) := sorry
-
 theorem decVG_words {a : Array Word} {g : Nat} {vg : ValueGroup} (h : decVG a g = some vg) :
     (∃ wk, a[g]? = some wk ∧ decVK wk.toNat = some vg.kind) ∧ decCV a (g + 1) = some vg.cv ∧
     ∃ wj, a[g + 5]? = some wj ∧ wj.toNat < 2 ^ 32 ∧ vg.jv = decI wj := by
@@ -694,7 +686,7 @@ theorem cvgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     obtain ⟨r4, m4⟩ := rm4
     rw [h4, cvgK4_some] at h
     obtain ⟨x4, a4, hrun4, hS4, hg4, hx4⟩ :=
-      lvlEqCStage_spec dn vis fe (r2.headD 0) (pinW m2 53) hx2l hF.lv_lt.2.1 m2 m4 a2 r4 h4 hS2
+      lvlEqStub_spec dn vis fe (r2.headD 0) (pinW m2 53) hx2l hF.lv_lt.2.1 m2 m4 a2 r4 h4 hS2
     by_cases hb4 : r4.headD 0 ≠ 2
     · rw [if_pos hb4] at h; simp at h
     rw [if_neg hb4] at h

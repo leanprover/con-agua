@@ -539,18 +539,20 @@ theorem sliceL_map_decI {k : IdxKind} (P : Array Word) (o l : Nat) :
     (List.range l).map (fun j => (decI (P[o + j]?.getD 0) : Idx k)) = (sliceL P o l).map decI := by
   apply List.ext_getElem <;> simp [sliceL]
 
-/-- **`erec_ci(i, ck)` builds the constant record of declaration `i`**: the stage relation kept,
-the pool grown, the record decoding as the constant `installStepGo` pushes (`stepCI`), its
-constant value at `q + 1`, its value at `q + 5`, all of it below the top. -/
-theorem erecCiW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+/-- **What `erec_ci(i, ck)` builds**, for any record kind: the stage relation kept, the pool
+grown, the kind word `ck`, the record's constant value (whenever the declaration's record has
+one, `CVAt`), its value word, its hint, all of it below the top. -/
+theorem erecCiW_core {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
     {n : Nat} {m m' : Mem} {i ck : Word} {r : List Word} {ds : Array IDeclaration}
-    {ci : IConstantInfo}
     (h : erecCiW n m i ck = some (r, m')) (hS : StageR dn vis fe m a)
-    (hD : DeclsR (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
-    (hci : stepCI ck.toNat ds[i.toNat] = some ci) :
-    StageR dn vis fe m' a ∧ IWGrow m m' ∧ decCI (erecP m') dn (r.headD 0).toNat = some ci ∧
-      decCV (erecP m') ((r.headD 0).toNat + 1) = some (stepCV ds[i.toNat]) ∧
-      hd? (erecP m') ((r.headD 0).toNat + 5) = some (stepVal ds[i.toNat]) ∧
+    (hD : DeclsR (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size) :
+    StageR dn vis fe m' a ∧ IWGrow m m' ∧ nat? (erecP m') (r.headD 0).toNat = some ck.toNat ∧
+      (∀ cv, CVAt (m.arr64 DECL) (m.arr64 DLP) i.toNat cv →
+        decCV (erecP m') ((r.headD 0).toNat + 1) = some cv) ∧
+      (hd? (erecP m') ((r.headD 0).toNat + 5) : Option EIdx) =
+        some (decI (dw (m.arr64 DECL) i.toNat 5)) ∧
+      decHint (erecP m') ((r.headD 0).toNat + 6) =
+        some (hintW (dw (m.arr64 DECL) i.toNat 6) (dw (m.arr64 DECL) i.toNat 7)) ∧
       (r.headD 0).toNat + 8 ≤ erTop m' := by
   cases n with
   | zero => simp [erecCiW] at h
@@ -650,11 +652,28 @@ theorem erecCiW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
     · simp [e2]
     · simp [e1, e2]
   have hk : nat? (erecP M) p.toNat = some ck.toNat := by simp [nat?, w0]
+  simp only [List.headD_cons]
+  exact ⟨hS', hG2.trans hG', hk, hcvG, hvM, hhint, by omega⟩
+
+/-- **`erec_ci(i, ck)` builds the constant record of declaration `i`**: the stage relation kept,
+the pool grown, the record decoding as the constant `installStepGo` pushes (`stepCI`), its
+constant value at `q + 1`, its value at `q + 5`, all of it below the top. -/
+theorem erecCiW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+    {n : Nat} {m m' : Mem} {i ck : Word} {r : List Word} {ds : Array IDeclaration}
+    {ci : IConstantInfo}
+    (h : erecCiW n m i ck = some (r, m')) (hS : StageR dn vis fe m a)
+    (hD : DeclsR (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
+    (hci : stepCI ck.toNat ds[i.toNat] = some ci) :
+    StageR dn vis fe m' a ∧ IWGrow m m' ∧ decCI (erecP m') dn (r.headD 0).toNat = some ci ∧
+      decCV (erecP m') ((r.headD 0).toNat + 1) = some (stepCV ds[i.toNat]) ∧
+      hd? (erecP m') ((r.headD 0).toNat + 5) = some (stepVal ds[i.toNat]) ∧
+      (r.headD 0).toNat + 8 ≤ erTop m' := by
+  obtain ⟨hS', hG', hk, hcvG, hvM, hhint, htop⟩ := erecCiW_core h hS hD hi
   have hdecl := hD.recs i.toNat hi
+  generalize (r.headD 0).toNat = p at hk hcvG hvM hhint htop ⊢
   generalize ds[i.toNat] = d at hci hdecl ⊢
   generalize ck.toNat = c at hci hk
-  simp only [List.headD_cons]
-  refine ⟨hS', hG2.trans hG', ?_, ?_, ?_, by omega⟩ <;>
+  refine ⟨hS', hG', ?_, ?_, ?_, htop⟩ <;>
     cases d <;> rcases c with _ | _ | _ | c <;> simp [stepCI] at hci <;> subst hci
   · obtain ⟨-, hcv, hv5, hh⟩ := hdecl
     simp [decCI, hk, hcvG _ hcv, hvM, hv5, hhint, hh]
@@ -668,5 +687,24 @@ theorem erecCiW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
   · rw [hvM, hdecl.2.2.1]; rfl
   · rw [hvM, hdecl.2.2]; rfl
   · rw [hvM, hdecl.2.2]; rfl
+
+/-- **`erec_ci(i, 0)` on an axiom or a quotient record** builds `axiomInfo cv` (the checkDecl
+arms' constant record of those kinds). -/
+theorem erecCiW_okA {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+    {n : Nat} {m m' : Mem} {i : Word} {r : List Word} {ds : Array IDeclaration}
+    {cv : IConstantVal}
+    (h : erecCiW n m i 0 = some (r, m')) (hS : StageR dn vis fe m a)
+    (hD : DeclsR (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
+    (hcv : CVAt (m.arr64 DECL) (m.arr64 DLP) i.toNat cv) :
+    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+      decCI (erecP m') dn (r.headD 0).toNat = some (.axiomInfo cv) ∧
+      decCV (erecP m') ((r.headD 0).toNat + 1) = some cv ∧
+      (r.headD 0).toNat + 8 ≤ erTop m' := by
+  obtain ⟨hS', hG', hk, hcvG, -, -, htop⟩ := erecCiW_core h hS hD hi
+  refine ⟨hS', hG', ?_, hcvG _ hcv, htop⟩
+  have hk0 : nat? (erecP m') (r.headD 0).toNat = some 0 := by simpa using hk
+  have hc1 := hcvG _ hcv
+  generalize (r.headD 0).toNat = q at hk0 hc1 ⊢
+  simp [decCI, hk0, hc1]
 
 end L.Arena
