@@ -165,4 +165,80 @@ theorem recW_twin {b : ByteArray} {n : Nat} {m : Mem} {a : AState} {st : StateD}
       (Nat.zero_le _) hj hw
     exact ⟨o, ho1, fun x hx => by rw [← ho2 x hx, c3.1]⟩
 
+
+theorem recsGoW_twin {b : ByteArray} {m : Mem} {a : AState} {st : StateD} (hR : ArenaR m a)
+    (hD : StateDR m st) {rcs : List IndRecRec} {ro rn np tn cn ke tyn tyt fuel : Word}
+    (hL : ListF (RecF b m) m 11 ro.toNat rcs) (hrn : rn.toNat = rcs.length)
+    (hro : ro.toNat + 11 * rcs.length < 2 ^ 63) (hnp : np.toNat < 10 ^ 18)
+    (hke : ke = 0 ∨ ke = 1 ∨ ke = 2) (hb : tyn.toNat + tn.toNat < 2 ^ 63)
+    (hb' : tyt.toNat + tn.toNat < 2 ^ 63)
+    (hTN : ∀ k, k < tn.toNat → (wd m IFL (tyn.toNat + k)).toNat < 2 ^ 32) :
+    ∀ n j, recsGoW n m ro rn np tn cn ke tyn tyt fuel j = some () →
+      ∀ k (hk : k < rcs.length), j.toNat ≤ k →
+        RecOK st a (islice m tyn.toNat tn.toNat) (islice m tyt.toNat tn.toNat) np.toNat tn.toNat
+          cn.toNat (keOf ke) fuel.toNat rcs[k] := by
+  intro n
+  induction n with
+  | zero => intro j h; simp [recsGoW] at h
+  | succ n ih =>
+    intro j h k hk hjk
+    simp only [recsGoW] at h
+    split at h
+    · rename_i hle; have := UInt64.le_iff_toNat_le.mp hle; omega
+    rename_i hlt
+    have hj1 := wsucc j rn (UInt64.not_le.mp hlt)
+    have hjn := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hlt)
+    cases hr : recW n m (ro + 11 * j) np tn cn ke tyn tyt fuel with
+    | none => rw [hr, uK_none] at h; cases h
+    | some u =>
+    rw [hr, uK_some] at h
+    by_cases hkj : k = j.toNat
+    · subst hkj
+      have hix : (ro + 11 * j).toNat = ro.toNat + 11 * j.toNat := by
+        have := widx ro 11 j 0 (by simp; omega); simpa using this
+      have hrec := hL.2.2 j.toNat hk
+      rw [← hix] at hrec
+      exact recW_twin hR hD hrec (by rw [hix]; omega) hnp hke hb hb' hTN hr
+    · exact ih (j + 1) h k hk (by rw [hj1]; omega)
+
+theorem nestedW_twin {b : ByteArray} {m : Mem} {tys : List IndTypeRec} {to tn : Word}
+    (hL : ListF (TyF b m) m 11 to.toNat tys) (htn : tn.toNat = tys.length)
+    (hto : to.toNat + 11 * tys.length < 2 ^ 63) :
+    ∀ n j u, nestedW n m to tn j = some u →
+      (u = 0 → ∀ k (hk : k < tys.length), j.toNat ≤ k → tys[k].numNested = 0) ∧
+      (u ≠ 0 → ∃ k, ∃ hk : k < tys.length, tys[k].numNested ≠ 0) := by
+  intro n
+  induction n with
+  | zero => intro j u h; simp [nestedW] at h
+  | succ n ih =>
+    intro j u h
+    simp only [nestedW] at h
+    split at h
+    · rename_i hle
+      cases h
+      have := UInt64.le_iff_toNat_le.mp hle
+      exact ⟨fun _ k hk h1 => by omega, fun h => absurd rfl h⟩
+    rename_i hlt
+    have hj1 := wsucc j tn (UInt64.not_le.mp hlt)
+    have hjn := UInt64.lt_iff_toNat_lt.mp (UInt64.not_le.mp hlt)
+    have hix : (to + 11 * j + 9).toNat = to.toNat + 11 * j.toNat + 9 := widx _ _ _ _ (by simp; omega)
+    have hty := hL.2.2 j.toNat (by omega)
+    obtain ⟨-, -, -, -, h9, -⟩ := hty
+    split at h
+    · rename_i hne
+      cases h
+      refine ⟨fun h => absurd h (by decide), fun _ => ⟨j.toNat, by omega, fun h0 => hne ?_⟩⟩
+      rw [wd_eq, hix, show to.toNat + 11 * j.toNat + 9 = to.toNat + 11 * j.toNat + 9 from rfl]
+      apply UInt64.toNat_inj.mp; rw [h9.1, h0]; rfl
+    · rename_i h0
+      obtain ⟨i1, i2⟩ := ih (j + 1) u h
+      rw [hj1] at i1
+      refine ⟨fun hu k hk hjk => ?_, i2⟩
+      by_cases hkj : k = j.toNat
+      · subst hkj
+        have : rdW (m.arr64 IFR) (to + 11 * j + 9) = 0 := Classical.byContradiction h0
+        rw [wd_eq, hix] at this
+        rw [← h9.1, this]; rfl
+      · exact i1 hu k hk (by omega)
+
 end L.Front.Ind
