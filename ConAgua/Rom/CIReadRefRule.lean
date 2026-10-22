@@ -79,15 +79,15 @@ include hL hr
 
 set_option maxHeartbeats 8000000 in
 /-- **`rci_rule` refines `Frontend.internRule`** for a plain rule, into the 11 words at `rr`. -/
-theorem rule_rel {m₀ : Mem} {a₀ : AState} (seen : List ConLeche.Expr) (memo : EMemo)
+theorem rule_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr) (memo : EMemo)
     (rl : ConLeche.RecRule) (hfit : ruleFits rl = true) (k : Nat) (m : Mem) (a : AState)
-    (q rr : Word) (rest : List UInt8) (r : List Word) (m' : Mem) (hI : RInv m₀ a₀ m a)
+    (q rr : Word) (rest : List UInt8) (r : List Word) (m' : Mem) (hI : RInv m₀ a₀ T m a)
     (hM : MemoR m seen memo) (hst : stkTop m = 0) (hd : rom.drop q.toNat = (encRule seen rl).1 ++ rest)
     (hc0 : erTop m₀ ≤ rr.toNat) (hc11 : rr.toNat + 11 ≤ erTop m)
     (hc : callW p (k + 1) "rci_rule" [q, rr] m = some (r, m')) :
     ∃ (memo' : EMemo) (irl : IRecRule) (a' : AState),
       (Frontend.internRule memo rl).run a = .ok ((memo', irl), a') ∧
-      RInv m₀ a₀ m' a' ∧ MemoR m' (encRule seen rl).2 memo' ∧ stkTop m' = 0 ∧
+      RInv m₀ a₀ T m' a' ∧ MemoR m' (encRule seen rl).2 memo' ∧ stkTop m' = 0 ∧
       (r.headD 0).toNat = q.toNat + (encRule seen rl).1.length ∧
       EKeep (fun i => rr.toNat ≤ i ∧ i < rr.toNat + 11) m m' ∧ erTop m' = erTop m ∧
       m'.arr64 IW = m.arr64 IW ∧
@@ -231,16 +231,16 @@ variable {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) (hr : RomOK rom)
 include hL hr
 
 /-- **`rci_rules_to` refines `Frontend.internRules`**, into the 11-word records at `o`, `o + 11`, …. -/
-theorem rulesTo_rel {m₀ : Mem} {a₀ : AState} :
+theorem rulesTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} :
     ∀ (rs : List ConLeche.RecRule), rs.all ruleFits = true → ∀ (seen : List ConLeche.Expr) (memo : EMemo)
       (k : Nat) (m : Mem) (a : AState) (q o kw : Word) (rest : List UInt8) (r : List Word) (m' : Mem),
-      RInv m₀ a₀ m a → MemoR m seen memo → stkTop m = 0 →
+      RInv m₀ a₀ T m a → MemoR m seen memo → stkTop m = 0 →
       rom.drop q.toNat = (encRules seen rs).1 ++ rest → kw.toNat = rs.length →
       erTop m₀ ≤ o.toNat → o.toNat + 11 * rs.length ≤ erTop m →
       callW p k "rci_rules_to" [q, o, kw] m = some (r, m') →
       ∃ (memo' : EMemo) (irs : List IRecRule) (a' : AState),
         (Frontend.internRules memo rs).run a = .ok ((memo', irs), a') ∧ irs.length = rs.length ∧
-        RInv m₀ a₀ m' a' ∧ MemoR m' (encRules seen rs).2 memo' ∧ stkTop m' = 0 ∧
+        RInv m₀ a₀ T m' a' ∧ MemoR m' (encRules seen rs).2 memo' ∧ stkTop m' = 0 ∧
         (r.headD 0).toNat = q.toNat + (encRules seen rs).1.length ∧
         EKeep (fun i => o.toNat ≤ i ∧ i < o.toNat + 11 * rs.length) m m' ∧ erTop m' = erTop m ∧
         m'.arr64 IW = m.arr64 IW ∧

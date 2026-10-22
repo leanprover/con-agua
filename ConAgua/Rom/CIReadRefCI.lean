@@ -47,17 +47,17 @@ include hL hr
 
 set_option maxHeartbeats 4000000 in
 /-- **`rci_ci`'s common part**: the kind word, the record allocated, its constant value. -/
-theorem ciPre {m₀ : Mem} {a₀ : AState} (seen : List ConLeche.Expr) (memo : EMemo)
+theorem ciPre {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr) (memo : EMemo)
     (v : ConLeche.ConstantVal) (hv : cvFits v = true) (kn : Nat) (sz : Word)
     (hsz : ciSize (UInt64.ofNat kn) = some sz) (h5 : 5 ≤ sz.toNat) (hkn : kn < 2 ^ 64)
     (tail : List UInt8) (k : Nat) (m : Mem) (a : AState) (q : Word) (rest : List UInt8)
-    (r : List Word) (m' : Mem) (hI : RInv m₀ a₀ m a) (hM : MemoR m seen memo) (hst : stkTop m = 0)
+    (r : List Word) (m' : Mem) (hI : RInv m₀ a₀ T m a) (hM : MemoR m seen memo) (hst : stkTop m = 0)
     (hd : rom.drop q.toNat = u64B kn ++ ((encCV seen v).1 ++ (tail ++ rest)))
     (hc : callW p (k + 1) "rci_ci" [q] m = some (r, m')) :
     ∃ (pp : Word) (memo1 : EMemo) (icv : IConstantVal) (a1 : AState) (m2 : Mem) (q2 : Word) (k' : Nat),
       k = k' + 1 ∧ pp.toNat = erTop m ∧ erTop m + sz.toNat ≤ erTop m2 ∧
       (Frontend.internCV memo v).run a = .ok ((memo1, icv), a1) ∧
-      RInv m₀ a₀ m2 a1 ∧ MemoR m2 (encCV seen v).2 memo1 ∧ stkTop m2 = 0 ∧
+      RInv m₀ a₀ T m2 a1 ∧ MemoR m2 (encCV seen v).2 memo1 ∧ stkTop m2 = 0 ∧
       rom.drop q2.toNat = tail ++ rest ∧ q2.toNat = q.toNat + 8 + (encCV seen v).1.length ∧
       EKeep (fun _ => False) m m2 ∧ m2.arr64 IW = m.arr64 IW ∧
       (erA m2)[pp.toNat]? = some (UInt64.ofNat kn) ∧
@@ -122,12 +122,12 @@ theorem ciPre {m₀ : Mem} {a₀ : AState} (seen : List ConLeche.Expr) (memo : E
 end ci
 
 /-- What `rci_ci` gives, for the constant `c` at the memo `memo` (`seen`). -/
-def CIPost (dn : NIdx → Option ConLeche.Name) (m₀ : Mem) (a₀ : AState) (seen : List ConLeche.Expr)
+def CIPost (dn : NIdx → Option ConLeche.Name) (m₀ : Mem) (a₀ : AState) (T : Nat) (seen : List ConLeche.Expr)
     (memo : EMemo) (c : ConLeche.ConstantInfo) (m : Mem) (a : AState) (q : Word) (r : List Word)
     (m' : Mem) : Prop :=
   ∃ (memo' : EMemo) (ici : IConstantInfo) (a' : AState),
     (Frontend.internCI memo c).run a = .ok ((memo', ici), a') ∧
-    RInv m₀ a₀ m' a' ∧ MemoR m' (encCI seen c).2 memo' ∧ stkTop m' = 0 ∧
+    RInv m₀ a₀ T m' a' ∧ MemoR m' (encCI seen c).2 memo' ∧ stkTop m' = 0 ∧
     (r.tail.headD 0).toNat = q.toNat + (encCI seen c).1.length ∧
     EKeep (fun _ => False) m m' ∧ (r.headD 0).toNat = erTop m ∧ m'.arr64 IW = m.arr64 IW ∧
     Holds (fun i => erTop m ≤ i ∧ i < erTop m') (fun _ => False)
@@ -138,16 +138,16 @@ variable {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) (hr : RomOK rom)
 include hL hr
 
 /-- An axiom or a theorem: the constant value only. -/
-theorem ci_cvOnly {m₀ : Mem} {a₀ : AState} (dn : NIdx → Option ConLeche.Name)
+theorem ci_cvOnly {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConLeche.Name)
     (seen : List ConLeche.Expr) (memo : EMemo) (v : ConLeche.ConstantVal) (hv : cvFits v = true)
     (kn : Nat) (hkn : kn = 0 ∨ kn = 2) (c : ConLeche.ConstantInfo)
     (hcE : encCI seen c = (u64B kn ++ (encCV seen v).1, (encCV seen v).2))
     (k : Nat) (m : Mem) (a : AState) (q : Word) (rest : List UInt8) (r : List Word) (m' : Mem)
     (hrun : ∀ memo1 icv a1, (Frontend.internCV memo v).run a = .ok ((memo1, icv), a1) →
       (Frontend.internCI memo c).run a = .ok ((memo1, if kn = 0 then .axiomInfo icv else .thmInfo icv), a1))
-    (hI : RInv m₀ a₀ m a) (hM : MemoR m seen memo) (hst : stkTop m = 0)
+    (hI : RInv m₀ a₀ T m a) (hM : MemoR m seen memo) (hst : stkTop m = 0)
     (hd : rom.drop q.toNat = (encCI seen c).1 ++ rest)
-    (hc : callW p (k + 1) "rci_ci" [q] m = some (r, m')) : CIPost dn m₀ a₀ seen memo c m a q r m' := by
+    (hc : callW p (k + 1) "rci_ci" [q] m = some (r, m')) : CIPost dn m₀ a₀ T seen memo c m a q r m' := by
   unfold CIPost; rw [hcE] at hd ⊢; simp only at hd ⊢
   have hsz : ciSize (UInt64.ofNat kn) = some 5 := by rcases hkn with rfl | rfl <;> rfl
   obtain ⟨pp, memo1, icv, a1, m2, q2, k', rfl, hpp, ht2, hrun2, hI2, hM2, hs2, -, hq2, hek2, hIW2,
@@ -172,14 +172,14 @@ theorem ci_cvOnly {m₀ : Mem} {a₀ : AState} (dn : NIdx → Option ConLeche.Na
   · simp [decCI, nat?_of e0, ecv]
 
 /-- A constructor. -/
-theorem ci_ctor {m₀ : Mem} {a₀ : AState} (dn : NIdx → Option ConLeche.Name)
+theorem ci_ctor {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConLeche.Name)
     (seen : List ConLeche.Expr) (memo : EMemo) (v : ConLeche.ConstantVal) (hv : cvFits v = true)
     (nP nF : Nat) (hnP : nP < 2 ^ 64) (hnF : nF < 2 ^ 64)
     (k : Nat) (m : Mem) (a : AState) (q : Word) (rest : List UInt8) (r : List Word) (m' : Mem)
-    (hI : RInv m₀ a₀ m a) (hM : MemoR m seen memo) (hst : stkTop m = 0)
+    (hI : RInv m₀ a₀ T m a) (hM : MemoR m seen memo) (hst : stkTop m = 0)
     (hd : rom.drop q.toNat = (encCI seen (.ctorInfo v nP nF)).1 ++ rest)
     (hc : callW p (k + 1) "rci_ci" [q] m = some (r, m')) :
-    CIPost dn m₀ a₀ seen memo (.ctorInfo v nP nF) m a q r m' := by
+    CIPost dn m₀ a₀ T seen memo (.ctorInfo v nP nF) m a q r m' := by
   unfold CIPost
   simp only [encCI] at hd ⊢
   obtain ⟨pp, memo1, icv, a1, m2, q2, k', rfl, hpp, ht2, hrun2, hI2, hM2, hs2, hd2, hq2, hek2, hIW2,
@@ -238,14 +238,14 @@ theorem ci_ctor {m₀ : Mem} {a₀ : AState} (dn : NIdx → Option ConLeche.Name
     simp [decCI, nat?_of e0, ecv, nat?_of e5, nat?_of e6, ofNat_toNat_lt hnP, ofNat_toNat_lt hnF]
 
 /-- An inductive (its `sortZ` without names). -/
-theorem ci_ind {m₀ : Mem} {a₀ : AState} (dn : NIdx → Option ConLeche.Name)
+theorem ci_ind {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConLeche.Name)
     (seen : List ConLeche.Expr) (memo : EMemo) (v : ConLeche.ConstantVal) (hv : cvFits v = true)
     (caps : ConLeche.IndCaps) (hcaps : capsFits caps = true)
     (k : Nat) (m : Mem) (a : AState) (q : Word) (rest : List UInt8) (r : List Word) (m' : Mem)
-    (hI : RInv m₀ a₀ m a) (hM : MemoR m seen memo) (hst : stkTop m = 0)
+    (hI : RInv m₀ a₀ T m a) (hM : MemoR m seen memo) (hst : stkTop m = 0)
     (hd : rom.drop q.toNat = (encCI seen (.indInfo v caps)).1 ++ rest)
     (hc : callW p (k + 1) "rci_ci" [q] m = some (r, m')) :
-    CIPost dn m₀ a₀ seen memo (.indInfo v caps) m a q r m' := by
+    CIPost dn m₀ a₀ T seen memo (.indInfo v caps) m a q r m' := by
   unfold CIPost
   simp only [encCI] at hd ⊢
   obtain ⟨pp, memo1, icv, a1, m2, q2, k', rfl, hpp, ht2, hrun2, hI2, hM2, hs2, hd2, hq2, hek2, hIW2,
@@ -288,15 +288,15 @@ theorem ci_ind {m₀ : Mem} {a₀ : AState} (dn : NIdx → Option ConLeche.Name)
 
 set_option maxHeartbeats 4000000 in
 /-- A recursor (plain rules). -/
-theorem ci_rec {m₀ : Mem} {a₀ : AState} (dn : NIdx → Option ConLeche.Name)
+theorem ci_rec {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConLeche.Name)
     (seen : List ConLeche.Expr) (memo : EMemo) (v : ConLeche.ConstantVal) (hv : cvFits v = true)
     (mI rP : Nat) (rs : List ConLeche.RecRule) (hmI : mI < 2 ^ 64) (hrP : rP < 2 ^ 64)
     (hlen : rs.length < 2 ^ 59) (hrs : rs.all ruleFits = true)
     (k : Nat) (m : Mem) (a : AState) (q : Word) (rest : List UInt8) (r : List Word) (m' : Mem)
-    (hI : RInv m₀ a₀ m a) (hM : MemoR m seen memo) (hst : stkTop m = 0)
+    (hI : RInv m₀ a₀ T m a) (hM : MemoR m seen memo) (hst : stkTop m = 0)
     (hd : rom.drop q.toNat = (encCI seen (.recInfo v mI rP rs)).1 ++ rest)
     (hc : callW p (k + 1) "rci_ci" [q] m = some (r, m')) :
-    CIPost dn m₀ a₀ seen memo (.recInfo v mI rP rs) m a q r m' := by
+    CIPost dn m₀ a₀ T seen memo (.recInfo v mI rP rs) m a q r m' := by
   unfold CIPost
   simp only [encCI] at hd ⊢
   obtain ⟨pp, memo1, icv, a1, m2, q2, k', rfl, hpp, ht2, hrun2, hI2, hM2, hs2, hd2, hq2, hek2, hIW2,
@@ -426,13 +426,13 @@ theorem ci_rec {m₀ : Mem} {a₀ : AState} (dn : NIdx → Option ConLeche.Name)
     simp at erules; simp [erules]
 
 /-- **`rci_ci` refines `Frontend.internCI`** for the constants `ciFits` admits. -/
-theorem ci_rel {m₀ : Mem} {a₀ : AState} (dn : NIdx → Option ConLeche.Name)
+theorem ci_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConLeche.Name)
     (seen : List ConLeche.Expr) (memo : EMemo) (c : ConLeche.ConstantInfo) (hfit : ciFits c = true)
     (k : Nat) (m : Mem) (a : AState) (q : Word) (rest : List UInt8) (r : List Word) (m' : Mem)
-    (hI : RInv m₀ a₀ m a) (hM : MemoR m seen memo) (hst : stkTop m = 0)
+    (hI : RInv m₀ a₀ T m a) (hM : MemoR m seen memo) (hst : stkTop m = 0)
     (hd : rom.drop q.toNat = (encCI seen c).1 ++ rest)
     (hc : callW p (k + 1) "rci_ci" [q] m = some (r, m')) :
-    CIPost dn m₀ a₀ seen memo c m a q r m' := by
+    CIPost dn m₀ a₀ T seen memo c m a q r m' := by
   cases c with
   | axiomInfo v =>
     exact ci_cvOnly hL hr dn seen memo v hfit 0 (.inl rfl) _ rfl k m a q rest r m'

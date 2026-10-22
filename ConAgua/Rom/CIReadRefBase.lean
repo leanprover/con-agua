@@ -4,7 +4,7 @@ import ConAgua.Arena.RomCI
 /-!
 # The ROM constant readers' refinements: the invariant and the decoding frame (helper `decls4-rom`)
 
-* **`RInv m₀ a₀ m a`**: what holds between the entry (`m₀`, `a₀`, at `StageR`) and every point of a
+* **`RInv m₀ a₀ T m a`**: what holds between the entry (`m₀`, `a₀`, at `StageR`) and every point of a
   reader's run: `ArenaD`, the twin keeping its caches and pins, writes only to the ROM interner's
   arrays (`ExprA`/`ExprC`), `EREC`, `IW` and their tops, the pools only grown from `m₀` (`IWGrow`),
   and `IWOK`. It gives `StageR` back at every environment (`RInv.stage`).
@@ -60,22 +60,22 @@ theorem rciC_core : AvoidC 96 128 RciC := by
   all_goals first | decide | (left; omega)
 
 /-- **The readers' invariant**, from the entry `m₀`, `a₀`. -/
-structure RInv (m₀ : Mem) (a₀ : AState) (m : Mem) (a : AState) : Prop where
+structure RInv (m₀ : Mem) (a₀ : AState) (T : Nat) (m : Mem) (a : AState) : Prop where
   arena : ArenaD m a
   hcp : cp a = cp a₀
   frame : MemFrame RciA RciC m₀ m
   grow : IWGrow m₀ m
   ok : IWOK m
-  /-- The pool's top is the entry's (no reader below `rci_block` allocates in `IW`). -/
-  top : iwTop m = iwTop m₀
+  /-- The pool's top is `T` (no reader below `rci_block` allocates in `IW`). -/
+  top : iwTop m = T
 
 theorem RInv.refl {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
-    (hS : StageR dn vis fe m a) : RInv m a m a :=
+    (hS : StageR dn vis fe m a) : RInv m a (iwTop m) m a :=
   ⟨hS.1.arena, rfl, MemFrame.refl _ _ _, IWGrow.refl m, hS.2, rfl⟩
 
 /-- **`StageR` back** from the entry's. -/
 theorem RInv.stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m₀ m : Mem}
-    {a₀ a : AState} (hS : StageR dn vis fe m₀ a₀) (h : RInv m₀ a₀ m a) : StageR dn vis fe m a := by
+    {a₀ a : AState} {T : Nat} (hS : StageR dn vis fe m₀ a₀) (h : RInv m₀ a₀ T m a) : StageR dn vis fe m a := by
   have hc : a.caches = a₀.caches := congrArg Prod.fst h.hcp
   have hp : a.pins = a₀.pins := congrArg Prod.snd h.hcp
   have hf := h.frame
@@ -91,10 +91,10 @@ theorem RInv.stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
 /-! ## The steps -/
 
 section steps
-variable {m₀ m m' : Mem} {a₀ a a' : AState}
+variable {m₀ m m' : Mem} {a₀ a a' : AState} {T : Nat}
 
-theorem RInv.expr (h : RInv m₀ a₀ m a) (hA : ArenaD m' a') (hf : MemFrame ExprA ExprC m m')
-    (hk : cp a' = cp a) : RInv m₀ a₀ m' a' ∧ m'.arr64 EREC = m.arr64 EREC ∧ m'.arr64 IW = m.arr64 IW ∧
+theorem RInv.expr (h : RInv m₀ a₀ T m a) (hA : ArenaD m' a') (hf : MemFrame ExprA ExprC m m')
+    (hk : cp a' = cp a) : RInv m₀ a₀ T m' a' ∧ m'.arr64 EREC = m.arr64 EREC ∧ m'.arr64 IW = m.arr64 IW ∧
       erTop m' = erTop m ∧ iwTop m' = iwTop m := by
   have hE : m'.arr64 EREC = m.arr64 EREC := hf.1 EREC (by decide) (by decide)
   have hI : m'.arr64 IW = m.arr64 IW := hf.1 IW (by decide) (by decide)
@@ -110,8 +110,8 @@ theorem RInv.expr (h : RInv m₀ a₀ m a) (hA : ArenaD m' a') (hf : MemFrame Ex
       by rw [hE]; exact o4, by rw [hf.2.2.1 CTL]; exact o5⟩
 
 /-- A word written in `EREC` at an allocated index above the entry's top. -/
-theorem RInv.setER (h : RInv m₀ a₀ m a) (i w : Word) (hi : erTop m₀ ≤ i.toNat) :
-    RInv m₀ a₀ (m.set64 EREC i w) a := by
+theorem RInv.setER (h : RInv m₀ a₀ T m a) (i w : Word) (hi : erTop m₀ ≤ i.toNat) :
+    RInv m₀ a₀ T (m.set64 EREC i w) a := by
   have hf := MemFrame.set64 m EREC (by decide) i w
   have hE : ∀ j, j ≠ i.toNat → ((m.set64 EREC i w).arr64 EREC)[j]? = (m.arr64 EREC)[j]? := by
     intro j hj
@@ -131,8 +131,8 @@ theorem RInv.setER (h : RInv m₀ a₀ m a) (i w : Word) (hi : erTop m₀ ≤ i.
       by rw [hf.2.2.1 EREC]; exact o4, by rw [hC]; exact o5⟩
 
 /-- `erec_alloc(k)`: the records' top raised by `k`. -/
-theorem RInv.erAlloc (h : RInv m₀ a₀ m a) {k o : Word} (hw : erAllocW m k = some (o, m')) :
-    RInv m₀ a₀ m' a ∧ o.toNat = erTop m ∧ erTop m' = erTop m + k.toNat ∧
+theorem RInv.erAlloc (h : RInv m₀ a₀ T m a) {k o : Word} (hw : erAllocW m k = some (o, m')) :
+    RInv m₀ a₀ T m' a ∧ o.toNat = erTop m ∧ erTop m' = erTop m + k.toNat ∧
       m'.arr64 EREC = m.arr64 EREC ∧ m'.arr64 IW = m.arr64 IW ∧ iwTop m' = iwTop m := by
   obtain ⟨o1, o2, o3, o4, o5⟩ := h.ok
   simp only [erAllocW] at hw
@@ -167,9 +167,33 @@ theorem RInv.erAlloc (h : RInv m₀ a₀ m a) {k o : Word} (hw : erAllocW m k = 
   · exact ⟨by rw [h200, hI]; exact o1, by rw [htop, hE]; simp only [erTop]; omega, by rw [hI]; exact o3,
       by rw [hE]; exact o4, by rw [hf.2.2.1 CTL]; exact o5⟩
 
+/-- `iw_alloc(k)`: the pool's top raised by `k`. -/
+theorem RInv.iwAlloc (h : RInv m₀ a₀ T m a) {k o : Word} (hw : allocW m k = some (o, m')) :
+    RInv m₀ a₀ (T + k.toNat) m' a ∧ o.toNat = iwTop m ∧ iwTop m' = iwTop m + k.toNat ∧
+      m'.arr64 EREC = m.arr64 EREC ∧ m'.arr64 IW = m.arr64 IW ∧ erTop m' = erTop m := by
+  obtain ⟨o1, o2, o3, o4, o5⟩ := h.ok
+  obtain ⟨hq, rfl, hroom⟩ := allocW_facts hw o3
+  have hf := allocMem_frame m k
+  have hE : (allocMem m k).arr64 EREC = m.arr64 EREC := hf.1 EREC (by simp [EREC, IW]) (by decide)
+  have hI : (allocMem m k).arr64 IW = m.arr64 IW := by
+    simp only [allocMem]; exact Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  have htop : iwTop (allocMem m k) = iwTop m + k.toNat := by
+    simp only [iwTop, allocMem_top m k o5, ← hq]
+    rw [UInt64.toNat_add]; exact Nat.mod_eq_of_lt (by omega)
+  have h129 : erTop (allocMem m k) = erTop m := by simp only [erTop]; rw [hf.2.1 129 (by simp)]
+  have hqi : o.toNat = iwTop m := by simp only [iwTop, hq]
+  refine ⟨⟨ArenaD.frameHi hf (by intro b hb; simp at hb; subst hb; decide) (by simp) h.arena, h.hcp,
+    h.frame.trans (hf.mono (by simp [RciA]) (by simp [RciC])), ?_, ?_, by rw [htop, h.top]⟩, hqi, htop,
+    hE, hI, h129⟩
+  · obtain ⟨g1, g2, g3, g4⟩ := h.grow
+    exact ⟨by rw [htop]; omega, h129 ▸ g2, fun j hj => by rw [hI]; exact g3 j hj,
+      fun j hj => by rw [hE]; exact g4 j hj⟩
+  · exact ⟨by rw [htop, hI]; omega, by rw [h129, hE]; exact o2, by rw [hI]; exact o3,
+      by rw [hE]; exact o4, by rw [hf.2.2.1 CTL]; exact o5⟩
+
 /-- A word written in `IW` at an allocated index above the entry's pool top. -/
-theorem RInv.setIW (h : RInv m₀ a₀ m a) (i w : Word) (hi : iwTop m₀ ≤ i.toNat) :
-    RInv m₀ a₀ (m.set64 IW i w) a := by
+theorem RInv.setIW (h : RInv m₀ a₀ T m a) (i w : Word) (hi : iwTop m₀ ≤ i.toNat) :
+    RInv m₀ a₀ T (m.set64 IW i w) a := by
   have hf := MemFrame.set64 m IW (by decide) i w
   have hI : ∀ j, j ≠ i.toNat → ((m.set64 IW i w).arr64 IW)[j]? = (m.arr64 IW)[j]? := by
     intro j hj

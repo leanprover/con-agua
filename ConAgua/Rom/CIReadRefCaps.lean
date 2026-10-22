@@ -52,10 +52,10 @@ def setERs (m : Mem) : List (Word × Word) → Mem
   | [] => m
   | (j, w) :: t => setERs (m.set64 EREC j w) t
 
-theorem setERs_facts {m₀ : Mem} {a₀ a : AState} {seen : List ConLeche.Expr} {memo : EMemo} :
-    ∀ (ws : List (Word × Word)) (m : Mem), RInv m₀ a₀ m a → MemoR m seen memo →
+theorem setERs_facts {m₀ : Mem} {a₀ a : AState} {T : Nat} {seen : List ConLeche.Expr} {memo : EMemo} :
+    ∀ (ws : List (Word × Word)) (m : Mem), RInv m₀ a₀ T m a → MemoR m seen memo →
       (∀ jw ∈ ws, erTop m₀ ≤ jw.1.toNat) →
-      RInv m₀ a₀ (setERs m ws) a ∧ MemoR (setERs m ws) seen memo ∧ stkTop (setERs m ws) = stkTop m ∧
+      RInv m₀ a₀ T (setERs m ws) a ∧ MemoR (setERs m ws) seen memo ∧ stkTop (setERs m ws) = stkTop m ∧
         erTop (setERs m ws) = erTop m ∧ (setERs m ws).arr64 IW = m.arr64 IW ∧
         (setERs m ws).arr64 CTL = m.arr64 CTL ∧
         ((setERs m ws).arr64 EREC).size = (m.arr64 EREC).size
@@ -172,15 +172,15 @@ include hL hr
 
 set_option maxHeartbeats 8000000 in
 /-- **`rci_caps` refines `Frontend.internCaps`**, into the 15 words at `c`. -/
-theorem caps_rel {m₀ : Mem} {a₀ : AState} (dn : NIdx → Option ConLeche.Name)
+theorem caps_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConLeche.Name)
     (seen : List ConLeche.Expr) (memo : EMemo)
     (caps : ConLeche.IndCaps) (hfit : capsFits caps = true) (k : Nat) (m : Mem) (a : AState)
-    (q c : Word) (rest : List UInt8) (r : List Word) (m' : Mem) (hI : RInv m₀ a₀ m a)
+    (q c : Word) (rest : List UInt8) (r : List Word) (m' : Mem) (hI : RInv m₀ a₀ T m a)
     (hM : MemoR m seen memo) (hst : stkTop m = 0) (hd : rom.drop q.toNat = encCaps caps ++ rest)
     (hc0 : erTop m₀ ≤ c.toNat) (hc15 : c.toNat + 15 ≤ erTop m)
     (hc : callW p (k + 1) "rci_caps" [q, c] m = some (r, m')) :
     ∃ (ic : IIndCaps) (a' : AState), (Frontend.internCaps caps).run a = .ok (ic, a') ∧
-      RInv m₀ a₀ m' a' ∧ MemoR m' seen memo ∧ stkTop m' = 0 ∧
+      RInv m₀ a₀ T m' a' ∧ MemoR m' seen memo ∧ stkTop m' = 0 ∧
       (r.headD 0).toNat = q.toNat + (encCaps caps).length ∧
       EKeep (fun i => c.toNat ≤ i ∧ i < c.toNat + 15) m m' ∧ erTop m ≤ erTop m' ∧
       m'.arr64 IW = m.arr64 IW ∧

@@ -27,9 +27,9 @@ theorem er_set_ne (m : Mem) (j w : Word) (i : Nat) (hi : i ≠ j.toNat) :
   simp [Ne.symm hi]
 
 /-- Everything a reader carries, across one `EREC` word written above the entry's top. -/
-theorem setER_facts {m₀ m : Mem} {a₀ a : AState} {seen : List ConLeche.Expr} {memo : EMemo}
-    (hI : RInv m₀ a₀ m a) (hM : MemoR m seen memo) (j w : Word) (hj : erTop m₀ ≤ j.toNat) :
-    RInv m₀ a₀ (m.set64 EREC j w) a ∧ MemoR (m.set64 EREC j w) seen memo ∧
+theorem setER_facts {m₀ m : Mem} {a₀ a : AState} {T : Nat} {seen : List ConLeche.Expr} {memo : EMemo}
+    (hI : RInv m₀ a₀ T m a) (hM : MemoR m seen memo) (j w : Word) (hj : erTop m₀ ≤ j.toNat) :
+    RInv m₀ a₀ T (m.set64 EREC j w) a ∧ MemoR (m.set64 EREC j w) seen memo ∧
       stkTop (m.set64 EREC j w) = stkTop m ∧ erTop (m.set64 EREC j w) = erTop m ∧
       (m.set64 EREC j w).arr64 IW = m.arr64 IW := by
   have hf := MemFrame.set64 m EREC (by decide) j w
@@ -72,15 +72,15 @@ include hL hr
 
 /-- **`rci_cv` refines `Frontend.internCV`** at the memo `memo` (`seen`), into the 4-word record
 at `pp` (allocated above the entry's top). -/
-theorem cv_rel {m₀ : Mem} {a₀ : AState} (seen : List ConLeche.Expr) (memo : EMemo)
+theorem cv_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr) (memo : EMemo)
     (cv : ConLeche.ConstantVal) (hfit : cvFits cv = true) (k : Nat) (m : Mem) (a : AState)
-    (q pp : Word) (rest : List UInt8) (r : List Word) (m' : Mem) (hI : RInv m₀ a₀ m a)
+    (q pp : Word) (rest : List UInt8) (r : List Word) (m' : Mem) (hI : RInv m₀ a₀ T m a)
     (hM : MemoR m seen memo) (hst : stkTop m = 0) (hd : rom.drop q.toNat = (encCV seen cv).1 ++ rest)
     (hp0 : erTop m₀ ≤ pp.toNat) (hp4 : pp.toNat + 4 ≤ erTop m)
     (hc : callW p (k + 1) "rci_cv" [q, pp] m = some (r, m')) :
     ∃ (memo' : EMemo) (icv : IConstantVal) (a' : AState),
       (Frontend.internCV memo cv).run a = .ok ((memo', icv), a') ∧
-      RInv m₀ a₀ m' a' ∧ MemoR m' (encCV seen cv).2 memo' ∧ stkTop m' = 0 ∧
+      RInv m₀ a₀ T m' a' ∧ MemoR m' (encCV seen cv).2 memo' ∧ stkTop m' = 0 ∧
       (r.headD 0).toNat = q.toNat + (encCV seen cv).1.length ∧
       EKeep (fun i => pp.toNat ≤ i ∧ i < pp.toNat + 4) m m' ∧ erTop m ≤ erTop m' ∧
       m'.arr64 IW = m.arr64 IW ∧

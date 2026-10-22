@@ -123,9 +123,9 @@ theorem slotCall {n : Nat} {m m' : Mem} {s : Word} {r : List Word}
   simp only [Option.some.injEq, Prod.mk.injEq] at hw
   exact ⟨hw.2.symm, hw.1.symm⟩
 
-theorem freshCall {m₀ : Mem} {a₀ : AState} {n : Nat} {m m' : Mem} {a : AState} {r : List Word}
-    (hI : RInv m₀ a₀ m a) (hc : callW p n "rci_fresh" [] m = some (r, m')) :
-    RInv m₀ a₀ m' a ∧ MemoR m' [] (∅ : EMemo) ∧ stkTop m' = 0 ∧ m'.arr64 EREC = m.arr64 EREC ∧
+theorem freshCall {m₀ : Mem} {a₀ : AState} {T : Nat} {n : Nat} {m m' : Mem} {a : AState} {r : List Word}
+    (hI : RInv m₀ a₀ T m a) (hc : callW p n "rci_fresh" [] m = some (r, m')) :
+    RInv m₀ a₀ T m' a ∧ MemoR m' [] (∅ : EMemo) ∧ stkTop m' = 0 ∧ m'.arr64 EREC = m.arr64 EREC ∧
       m'.arr64 IW = m.arr64 IW ∧ erTop m' = erTop m ∧ iwTop m' = iwTop m := by
   cases n with
   | zero => rw [callW_zero] at hc; cases hc

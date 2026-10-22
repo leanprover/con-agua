@@ -101,10 +101,10 @@ theorem toNat_add_of_lt (o : Word) (k : Nat) (h : o.toNat + k < 2 ^ 64) :
     (o + UInt64.ofNat k).toNat = o.toNat + k := by
   rw [UInt64.toNat_add, UInt64.toNat_ofNat']; simp; omega
 
-theorem RInv.er_lt {m₀ m : Mem} {a₀ a : AState} (h : RInv m₀ a₀ m a) : erTop m < 2 ^ 64 := by
+theorem RInv.er_lt {m₀ m : Mem} {a₀ a : AState} {T : Nat} (h : RInv m₀ a₀ T m a) : erTop m < 2 ^ 64 := by
   have := h.ok.2.1; have := h.ok.2.2.2.1; omega
 
-theorem RInv.iw_lt {m₀ m : Mem} {a₀ a : AState} (h : RInv m₀ a₀ m a) : iwTop m < 2 ^ 64 := by
+theorem RInv.iw_lt {m₀ m : Mem} {a₀ a : AState} {T : Nat} (h : RInv m₀ a₀ T m a) : iwTop m < 2 ^ 64 := by
   have := h.ok.1; have := h.ok.2.2.1; omega
 
 section names
@@ -112,16 +112,16 @@ variable {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) (hr : RomOK rom)
 include hL hr
 
 /-- **`rci_names_to` refines `internNameList`**, the handles to `EREC[o ‥]`. -/
-theorem namesTo_rel {m₀ : Mem} {a₀ : AState} (seen : List ConLeche.Expr) (memo : EMemo) :
+theorem namesTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr) (memo : EMemo) :
     ∀ (ns : List ConLeche.Name), ns.all nameFits = true → ∀ (k : Nat) (m : Mem) (a : AState)
-      (q o kw : Word) (rest : List UInt8) (r : List Word) (m' : Mem), RInv m₀ a₀ m a →
+      (q o kw : Word) (rest : List UInt8) (r : List Word) (m' : Mem), RInv m₀ a₀ T m a →
       MemoR m seen memo → rom.drop q.toNat = encNames ns ++ rest → kw.toNat = ns.length →
       erTop m₀ ≤ o.toNat → o.toNat + ns.length ≤ erTop m →
       callW p k "rci_names_to" [q, o, kw] m = some (r, m') →
       ∃ (ws : List Word) (a' : AState), (Frontend.internNameList ns).run a = .ok (ws.map decI, a') ∧
         ws.length = ns.length ∧ (∀ w ∈ ws, w.toNat < 2 ^ 32) ∧
         (∀ j (hj : j < ws.length), (erA m')[o.toNat + j]? = some ws[j]) ∧
-        RInv m₀ a₀ m' a' ∧ MemoR m' seen memo ∧ stkTop m' = stkTop m ∧
+        RInv m₀ a₀ T m' a' ∧ MemoR m' seen memo ∧ stkTop m' = stkTop m ∧
         (r.headD 0).toNat = q.toNat + (encNames ns).length ∧
         EKeep (fun i => o.toNat ≤ i ∧ i < o.toNat + ns.length) m m' ∧ erTop m' = erTop m ∧
         m'.arr64 IW = m.arr64 IW := by
@@ -261,15 +261,15 @@ include hL hr
 
 /-- **`rci_name_sl` refines `internNameList`** of a counted name list, the slice allocated fresh
 and its `(offset, count)` written to `EREC[d]`, `EREC[d + 1]`. -/
-theorem nameSl_rel {m₀ : Mem} {a₀ : AState} (seen : List ConLeche.Expr) (memo : EMemo)
+theorem nameSl_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (seen : List ConLeche.Expr) (memo : EMemo)
     (ns : List ConLeche.Name) (hfit : ns.all nameFits = true) (k : Nat) (m : Mem) (a : AState)
-    (q d : Word) (rest : List UInt8) (r : List Word) (m' : Mem) (hI : RInv m₀ a₀ m a)
+    (q d : Word) (rest : List UInt8) (r : List Word) (m' : Mem) (hI : RInv m₀ a₀ T m a)
     (hM : MemoR m seen memo) (hd : rom.drop q.toNat = encNameL ns ++ rest)
     (hd0 : erTop m₀ ≤ d.toNat) (hd2 : d.toNat + 2 ≤ erTop m)
     (hc : callW p (k + 1) "rci_name_sl" [q, d] m = some (r, m')) :
     ∃ (ws : List Word) (a' : AState), (Frontend.internNameList ns).run a = .ok (ws.map decI, a') ∧
       (∀ w ∈ ws, w.toNat < 2 ^ 32) ∧
-      RInv m₀ a₀ m' a' ∧ MemoR m' seen memo ∧ stkTop m' = stkTop m ∧
+      RInv m₀ a₀ T m' a' ∧ MemoR m' seen memo ∧ stkTop m' = stkTop m ∧
       (r.headD 0).toNat = q.toNat + (encNameL ns).length ∧
       EKeep (fun i => d.toNat ≤ i ∧ i < d.toNat + 2) m m' ∧ erTop m ≤ erTop m' ∧
       m'.arr64 IW = m.arr64 IW ∧

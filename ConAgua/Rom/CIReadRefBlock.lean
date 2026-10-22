@@ -39,17 +39,17 @@ variable {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) (hr : RomOK rom)
 include hL hr
 
 /-- **`rci_block_to` refines `Frontend.internCIList`** at one memo. -/
-theorem blockTo_rel {m₀ : Mem} {a₀ : AState} (dn : NIdx → Option ConLeche.Name) :
+theorem blockTo_rel {m₀ : Mem} {a₀ : AState} {T : Nat} (dn : NIdx → Option ConLeche.Name) :
     ∀ (cs : List ConLeche.ConstantInfo), cs.all ciFits = true → ∀ (seen : List ConLeche.Expr)
       (memo : EMemo) (k : Nat) (m : Mem) (a : AState) (q o kw : Word) (rest : List UInt8)
       (r : List Word) (m' : Mem),
-      RInv m₀ a₀ m a → MemoR m seen memo → stkTop m = 0 →
+      RInv m₀ a₀ T m a → MemoR m seen memo → stkTop m = 0 →
       rom.drop q.toNat = (encCIsM seen cs).1 ++ rest → kw.toNat = cs.length →
       iwTop m₀ ≤ o.toNat → o.toNat + cs.length ≤ iwTop m →
       callW p k "rci_block_to" [q, o, kw] m = some (r, m') →
       ∃ (memo' : EMemo) (ics : List IConstantInfo) (a' : AState),
         (Frontend.internCIList memo cs).run a = .ok ((memo', ics), a') ∧ ics.length = cs.length ∧
-        RInv m₀ a₀ m' a' ∧ MemoR m' (encCIsM seen cs).2 memo' ∧ stkTop m' = 0 ∧
+        RInv m₀ a₀ T m' a' ∧ MemoR m' (encCIsM seen cs).2 memo' ∧ stkTop m' = 0 ∧
         (r.headD 0).toNat = q.toNat + (encCIsM seen cs).1.length ∧
         EKeep (fun _ => False) m m' ∧ erTop m ≤ erTop m' ∧
         IKeep (fun i => o.toNat ≤ i ∧ i < o.toNat + cs.length) m m' ∧
