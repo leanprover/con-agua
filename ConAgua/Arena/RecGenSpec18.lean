@@ -54,6 +54,7 @@ theorem tmfK6_some : tmfK6 (some (r, m)) = some ([r.headD 0], m) := rfl
 end arms
 attribute [ind_grind] tmcK1_some tmcK2_some tmfK6_some
 
+set_option maxHeartbeats 1600000 in
 theorem tmc_spec (p : Prog) (hp : p.lookup "target_major_of_const" = some targetMajorOfConst) (n : Nat)
     (s₀ : St) (vis pp cao cal pfo pfl fvo fvl ao al x y : Word) :
     ⦃fun st => st = s₀⦄ invoke p (exec p (n + 1)) "target_major_of_const" [vis, pp, cao, cal, pfo, pfl, fvo, fvl, ao, al, x, y]
@@ -98,6 +99,7 @@ theorem tmfK3_some : tmfK3 p n vis pp cao cal pfo pfl fvo fvl r1 (some (r, m)) =
 end arms
 attribute [ind_grind] tmfK1_some tmfK2_some tmfK3_some
 
+set_option maxHeartbeats 1600000 in
 theorem tmf_spec (p : Prog) (hp : p.lookup "target_major_of" = some targetMajorOf) (n : Nat)
     (s₀ : St) (vis pp cao cal pfo pfl fvo fvl mty : Word) :
     ⦃fun st => st = s₀⦄ invoke p (exec p (n + 1)) "target_major_of" [vis, pp, cao, cal, pfo, pfl, fvo, fvl, mty]
