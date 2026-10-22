@@ -152,4 +152,178 @@ theorem piBW_mfr : ∀ (n : Nat) (m m' : Mem) (fuel h : Word) (r : List Word), p
     obtain ⟨-, rfl⟩ := hh
     exact (piBW_mfr n _ _ _ _ _ h1).trans (consW_mfr h2)
 
+/-! ## Frames of the models, by `mfr_auto`
+
+`mfr_auto h [f₁, …]` proves `MFr S T m m'` from `h : model = some (r, m')` once the model's
+continuations are unfolded at `h`: it splits `h`'s `match`es and `if`s in evaluation order, and at
+each callee hypothesis `callee … = some (x, m₁)` steps the frame by the first `fᵢ` that applies
+to it (an `MFr [] []` frame is weakened to any `S T`). -/
+
+syntax "mfr_auto" ident "[" term,* "]" : tactic
+macro_rules
+  | `(tactic| mfr_auto $h [$ts,*]) => `(tactic|
+    repeat' (first
+      | with_reducible exact MFr.refl _ _ _
+      | (simp only [Option.some.injEq, Prod.mk.injEq] at $h:ident; rw [← ($h).2]; exact MFr.refl _ _ _)
+      | (simp only [Option.some.injEq] at $h:ident; subst $h:ident; exact MFr.refl _ _ _)
+      | (simp only [reduceCtorEq] at $h:ident; done)
+      | (first $[| refine MFr.trans ($ts (by with_reducible assumption)) ?_]*)
+      | (first $[| refine MFr.trans (MFr.up ($ts (by with_reducible assumption))) ?_]*)
+      | split at $h:ident))
+
+theorem MFr.ofStub {f : FnName} {m m' : Mem} {args r : List Word} (h : stubM f m args = some (r, m'))
+    (hf : f ∈ stubNames := by decide) : MFr [] [] m m' := MFr.stub hf h
+
+theorem mkForallW_mfr {m m' : Mem} {t b r : Word} (h : mkForallW m t b = some (r, m')) : MFr [] [] m m' :=
+  MFr.of_low (mkForallW_low h)
+theorem fvinternW_mfr {m m' : Mem} {u ty r : Word} (h : fvinternW m u ty = some (r, m')) : MFr [] [] m m' :=
+  MFr.of_low (fvinternW_low h)
+theorem sointernW_mfr {m m' : Mem} {u r : Word} (h : sointernW m u = some (r, m')) : MFr [] [] m m' :=
+  MFr.of_low (sointernW_low h)
+theorem ceinternW_mfr {m m' : Mem} {f x r : Word} (h : ceinternW m f x = some (r, m')) : MFr [] [] m m' :=
+  MFr.of_low (ceinternW_low h)
+theorem envFindW_mfr {m m' : Mem} {w vis : Word} {r : List Word} (h : envFindW m w vis = some (r, m')) :
+    MFr [] [] m m' := by rw [envFindW_mem h]; exact MFr.refl _ _ _
+
+theorem closeW_mfr : ∀ (n : Nat) (m m' : Mem) (dO dl i body : Word) (r : List Word),
+    closeW n m dO dl i body = some (r, m') → MFr [] [] m m'
+  | 0, _, _, _, _, _, _, _, h => by simp [closeW] at h
+  | n + 1, m, m', dO, dl, i, body, r, h => by
+    unfold closeW closeK1 closeK2 closeK3 at h
+    mfr_auto h [closeW_mfr n _ _ _ _ _ _ _, MFr.ofStub, mkForallW_mfr]
+
+theorem stripW_mfr {m m' : Mem} {ciq : Word} {r : List Word} (h : stripW m ciq = some (r, m')) : MFr [] [] m m' := by
+  unfold stripW stripK at h
+  mfr_auto h [MFr.ofStub]
+
+theorem entryW_mfr {m m' : Mem} {C ciq : Word} {r : List Word} (h : entryW m C ciq = some (r, m')) :
+    MFr [] [] m m' := by
+  unfold entryW entryK1 entryK2 entryK3 at h
+  mfr_auto h [stripW_mfr, MFr.ofStub]
+
+theorem ncGoW_mfr : ∀ (k : Nat) (m m' : Mem) (vis C co cl cs ol fp : Word) (r : List Word),
+    ncGoW k m vis C co cl cs ol fp = some (r, m') → MFr [] [] m m'
+  | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [ncGoW] at h
+  | k + 1, m, m', vis, C, co, cl, cs, ol, fp, r, h => by
+    unfold ncGoW ncK1 ncK2 ncK3 at h
+    mfr_auto h [ncGoW_mfr k _ _ _ _ _ _ _ _ _ _, envFindW_mfr, entryW_mfr, posRecW_mfr,
+      fun h => (MFr.set_iw _ _ _).trans (ncGoW_mfr k _ _ _ _ _ _ _ _ _ _ h)]
+
+theorem ncWf_mfr {k : Nat} {m m' : Mem} {vis C co cl : Word} {r : List Word} (h : ncWf k m vis C co cl = some (r, m')) :
+    MFr [] [] m m' := by
+  cases k with
+  | zero => simp [ncWf] at h
+  | succ k =>
+  simp only [ncWf] at h
+  unfold ncW ncB at h
+  mfr_auto h [allocW_mfr, ncGoW_mfr _ _ _ _ _ _ _ _ _ _ _]
+
+theorem ntWf_mfr {k : Nat} {m m' : Mem} {vis C : Word} {r : List Word} (h : ntWf k m vis C = some (r, m')) :
+    MFr [] [] m m' := by
+  cases k with
+  | zero => simp [ntWf] at h
+  | succ k =>
+  simp only [ntWf] at h
+  unfold ntW ntK1 ntK2 at h
+  mfr_auto h [envFindW_mfr, ncWf_mfr]
+
+theorem dcGoW_mfr : ∀ (n : Nat) (m m' : Mem) (hi off l : Word) (r : List Word),
+    dcGoW n m hi off l = some (r, m') → MFr [] [] m m'
+  | 0, _, _, _, _, _, _, h => by simp [dcGoW] at h
+  | n + 1, m, m', hi, off, l, r, h => by
+    unfold dcGoW dcK at h
+    mfr_auto h [MFr.ofStub, dcGoW_mfr n _ _ _ _ _ _]
+
+theorem dcWf_mfr {n : Nat} {m m' : Mem} {ctx off l : Word} {r : List Word} (h : dcWf n m ctx off l = some (r, m')) :
+    MFr [] [] m m' := by
+  cases n with
+  | zero => simp [dcWf] at h
+  | succ n => exact dcGoW_mfr _ _ _ _ _ _ _ h
+
+theorem nwsW_mfr {n : Nat} {m m' : Mem} {ctx off l po pl : Word} {r : List Word}
+    (h : nwsW n m ctx off l po pl = some (r, m')) : MFr [] [] m m' := by
+  unfold nwsW nwsK at h
+  mfr_auto h [dcWf_mfr]
+
+theorem gcW_mfr : ∀ (k : Nat) (m m' : Mem) (vis nPc off l oo ol : Word) (r : List Word),
+    gcW k m vis nPc off l oo ol = some (r, m') → MFr [] [] m m'
+  | 0, _, _, _, _, _, _, _, _, _, h => by simp [gcW] at h
+  | k + 1, m, m', vis, nPc, off, l, oo, ol, r, h => by
+    unfold gcW gcK1 gcK2 at h
+    mfr_auto h [ntWf_mfr, appendW_mfr, gcW_mfr k _ _ _ _ _ _ _ _ _]
+
+theorem rhGoW_mfr : ∀ (k : Nat) (m m' : Mem) (no nl lv po pl nP q j : Word),
+    rhGoW k m no nl lv po pl nP q j = some m' → MFr [] [] m m'
+  | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [rhGoW] at h
+  | k + 1, m, m', no, nl, lv, po, pl, nP, q, j, h => by
+    unfold rhGoW rhK1 rhK2 at h
+    mfr_auto h [posRecW_mfr, fun h => (MFr.set_iw _ _ _).trans (rhGoW_mfr k _ _ _ _ _ _ _ _ _ _ h)]
+
+theorem haW_mfr {k : Nat} {m m' : Mem} {ctx po pl i : Word} {r : List Word}
+    (h : haW k m ctx po pl i = some (r, m')) : MFr [] [] m m' := by
+  have rh : ∀ {m m' : Mem} {ctx : Word} {r : List Word}, rhWf k m ctx = some (r, m') → MFr [] [] m m' := by
+    intro m m' ctx r h
+    cases k with
+    | zero => simp [rhWf] at h
+    | succ k =>
+    simp only [rhWf] at h
+    unfold rhW rhA rhB at h
+    mfr_auto h [allocW_mfr, rhGoW_mfr _ _ _ _ _ _ _ _ _ _ _]
+  unfold haW haK1 haK2 at h
+  mfr_auto h [rh, appendW_mfr]
+
+theorem naW_mfr {k : Nat} {m m' : Mem} {vis c : Word} {r : List Word} (h : naW k m vis c = some (r, m')) :
+    MFr [] [] m m' := by
+  unfold naW naK1 naK2 at h
+  mfr_auto h [envFindW_mfr, piBW_mfr _ _ _ _ _ _]
+
+theorem resHeadW_mfr {m m' : Mem} {e : Word} {r : List Word} (h : resHeadW m e = some (r, m')) : MFr [] [] m m' := by
+  unfold resHeadW resHeadK at h
+  mfr_auto h [MFr.ofStub]
+
+theorem bvbW_mfr {n : Nat} {m m' : Mem} {h x : Word} (hb : bvbW n m h CWF = some (x, m')) : MFr [] [] m m' := by
+  have hfr : BbFrame m m' := by
+    match n, hb with
+    | n + 1, hb =>
+      by_cases hs : derBW m h = 32767
+      · rw [bvbW_sat (n := n) (m := m) (h := h) (f := CWF) hs] at hb
+        match n, hb with
+        | k + 1, hb => rw [bbN_succ] at hb; exact bbMemoW_frame k m m' h CWF x hb
+      · rw [bvbW_pk (n := n) (m := m) (h := h) (f := CWF) hs] at hb
+        simp only [Option.some.injEq, Prod.mk.injEq] at hb
+        obtain ⟨-, rfl⟩ := hb
+        exact MemFrame.refl _ _ _
+  exact MFr.of_frame hfr (by simp [BMEMO]) (fun x hx => by
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hx
+    rcases hx with rfl | rfl <;> decide)
+
+/-- The `has_loose_bvar_b` walk's write set among the memos. -/
+abbrev HbFr (m m' : Mem) : Prop := MFr [HBM] [214, 215] m m'
+
+theorem hbInsW_mfr {m m' : Mem} {e i r x : Word} (h : hbInsW m e i r = some (x, m')) : HbFr m m' := by
+  unfold hbInsW at h
+  cases hs : msetG hbSch m e i r with
+  | none => rw [hs] at h; simp at h
+  | some m2 =>
+  rw [hs] at h
+  simp only [Option.map_some, Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨-, rfl⟩ := h
+  exact ⟨_, _, msetG_frame hbSch hbSch_wf m m2 e i r hs, by simp [hbSch], by simp [hbSch]⟩
+
+theorem hbGoW_mfr : ∀ (n : Nat) (m m' : Mem) (i h r : Word), hbGoW n m i h = some (r, m') → HbFr m m'
+  | 0, _, _, _, _, _, hh => by simp [hbGoW] at hh
+  | n + 1, m, m', i, h, r, hh => by
+    have node : ∀ {m m' : Mem} {i g x y z r : Word}, hbNodeW n m i g x y z = some (r, m') → HbFr m m' := by
+      intro m m' i g x y z r h
+      unfold hbNodeW hbO1 hbL1 hbL2 at h
+      mfr_auto h [hbGoW_mfr n _ _ _ _ _]
+    unfold hbGoW hbK1 hbK2 hbK3 hbK4 at hh
+    mfr_auto hh [bvbW_mfr, node, hbInsW_mfr]
+
+theorem hbFastW_mfr {n : Nat} {m m' : Mem} {i e r : Word} (h : hbFastW n m i e = some (r, m')) : HbFr m m' := by
+  unfold hbFastW at h
+  split at h
+  · simp at h
+  exact MFr.trans ⟨_, _, mclearG_frame hbSch m, by simp, by simp [hbSch]⟩ (hbGoW_mfr _ _ _ _ _ _ h)
+
 end L.Ind
