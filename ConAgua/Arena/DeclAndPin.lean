@@ -73,7 +73,7 @@ theorem decI_lo32 {k : IdxKind} (w : Word) : (decI (lo32 w) : Idx k) = decI w :=
   rw [show (UInt64.toNat 4294967295) = 2 ^ 32 - 1 from rfl, Nat.and_two_pow_sub_one_eq_mod]
   simp
 
-theorem decI_inj {k : IdxKind} (x y : Word) (hx : x.toNat < 2 ^ 32) (hy : y.toNat < 2 ^ 32) :
+theorem decI_iff {k : IdxKind} (x y : Word) (hx : x.toNat < 2 ^ 32) (hy : y.toNat < 2 ^ 32) :
     (decI x : Idx k) = decI y ↔ x = y := by
   constructor
   · intro h
@@ -112,9 +112,9 @@ theorem andPinNameFree_run {m : Mem} {a : AState} (hF : PinsFull m a.pins) (w : 
     rw [e3]; rfl
   rw [e]
   congr
-  have k1 := decI_inj (k := .name) _ _ hl l1
-  have k2 := decI_inj (k := .name) _ _ hl l2
-  have k3 := decI_inj (k := .name) _ _ hl l3
+  have k1 := decI_iff (k := .name) _ _ hl l1
+  have k2 := decI_iff (k := .name) _ _ hl l2
+  have k3 := decI_iff (k := .name) _ _ hl l3
   by_cases h1 : lo32 w = pinW m 12 <;> by_cases h2 : lo32 w = pinW m 49 <;>
     by_cases h3 : lo32 w = pinW m 50 <;> simp_all [List.contains_cons, eq_comm]
 
