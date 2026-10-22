@@ -215,6 +215,191 @@ theorem rules_link (v : USize) (m : Mem) (l : List RuleRec) (e : USize) (r : Wor
       i m₁ q x e e₂ m₂ hS hI hob
     exact ⟨t1, t4, t2.1, t2.2.1, t3, t5⟩
 
+set_option hygiene false in
+/-- A value read by a `ScanRes` scanner: `xv`, `ev`, `hx`, `hie` and the loop's `ok` after it. -/
+macro "ikey_res" : tactic => `(tactic| (
+  simp only at hok
+  split at hok
+  rotate_left
+  · cases hok
+  split at hok
+  · cases hok
+  rename_i xv ev hx
+  split at hok
+  rotate_left
+  · cases hok
+  rename_i hie))
+
+
+set_option hygiene false in
+/-- Close the relation's fields after a write: the new field by `hx` (or `rfl`), the others
+carried. -/
+macro "rfields" : tactic => `(tactic| (
+  repeat' (first
+    | exact .inl hx
+    | exact .inl rfl
+    | exact seenR_or ‹_› (by decide) id
+    | refine ⟨?_, ?_⟩)))
+
+set_option hygiene false in
+/-- A write of `xw` to slot `s` of an `IFR` record of size `sz`, the loop going on at `en` with the
+state `st'`. -/
+macro "rput " s:term "," sz:term "," xw:term "," st':term "," en:term : tactic => `(tactic| (
+  rw [fldPutW_R _ _ _ _ _ (by decide)]
+  obtain ⟨p1, -, -, p4, p5⟩ := slot_put IFR (.inl rfl) $sz (by decide) q $s $xw m₁ m hI (by decide)
+  have e1 := slot_view IFR (.inl rfl) $sz (by decide) q $s $xw m₁ m hI (by decide)
+  have p6 := runR_rule_eq (Mem.arr64_set64_ne m IFR IFL (q + $s) $xw (by decide))
+  refine ⟨$en, _, $st', rfl, hok, p1, by rw [p5, ht], ?_⟩
+  simp (config := {decide := true}) only [e1, p5, p6, ↓reduceIte]
+  rfields))
+
+set_option hygiene false in
+/-- A number key of an `IFR` record (size `sz`, kind `kd`): key `kn` into slot `s`, the state
+after `st'`. -/
+macro "rnum_arm " kn:term "," kd:term "," s:term "," sz:term "," st':term : tactic => `(tactic| (
+  ikey_num
+  obtain ⟨he, x, rfl, hx⟩ := num_arm b h64 hsize m m' $kd q $kn $s 0 i v e' rfl hne hie hvle hmem
+  subst he
+  rput $s, $sz, x, $st', numEnd b v))
+
+set_option hygiene false in
+/-- A Boolean key into slot `s`. -/
+macro "rbool_arm " kn:term "," kd:term "," s:term "," sz:term "," st':term : tactic => `(tactic| (
+  ikey_res
+  obtain ⟨he, rfl⟩ := bool_arm b h64 hsize m m' $kd q _ $kn $s 0 v xv ev e' rfl hx hmem
+  subst he
+  rput $s, $sz, (if xv then 1 else 0), $st', ev))
+
+omit h64 hsize in
+theorem fldPutW_R (m : Mem) (k q s x : Word) (hk : k ≠ 3) : fldPutW m k q s x = m.set64 IFR (q + s) x := by
+  simp [fldPutW, hk]
+
+omit h64 hsize in
+/-- The record's slots after a write to slot `s`. -/
+theorem slot_view (A : ArrId) (hA : A = IFR ∨ A = IFL) (sz : Nat) (hsz : sz ≤ 16) (q s x : Word)
+    (m₁ m : Mem) (hI : RecInv A sz q m₁ m) (hs : s.toNat < sz) (j : Nat) :
+    wd (m.set64 A (q + s) x) A (q.toNat + j) = if s.toNat = j then x else wd m A (q.toNat + j) := by
+  obtain ⟨-, p2, p3, -, -⟩ := slot_put A hA sz hsz q s x m₁ m hI hs
+  split
+  · rename_i h; subst h; exact p2
+  · exact p3 _ (by omega)
+
+omit h64 hsize in
+theorem runR_rule_eq {m m' : Mem} (h : m'.arr64 IFL = m.arr64 IFL) (o : Nat) (l : List RuleRec) :
+    RunR (fun t x m => RuleF m t x) IFL 3 m' o l = RunR (fun t x m => RuleF m t x) IFL 3 m o l := by
+  simp only [RunR, RuleF, topN, wd, h]
+
+/-- con-leche's recursor loop state. -/
+structure RecSt where
+  isUns : Bool
+  kf : Bool
+  lps : List Nat
+  nm : Nat
+  nIdx : Nat
+  nMin : Nat
+  nMot : Nat
+  nP : Nat
+  rules : List RuleRec
+  ty : Nat
+
+/-- The recursor record read so far. -/
+def RecLR (m₁ : Mem) (q : Word) (seen : UInt32) (st : RecSt) (m : Mem) : Prop :=
+  RecInv IFR 11 q m₁ m ∧ topN m IFR = topN m₁ IFR ∧
+    SeenR seen 16 (NumW (wd m IFR (q.toNat + 0)) st.nm) ∧
+    SeenR seen 8 (ItemsR (listN b.data (wd m IFR (q.toNat + 1))) st.lps) ∧
+    SeenR seen 1024 (NumW (wd m IFR (q.toNat + 2)) st.ty) ∧
+    SeenR seen 4 (BoolW (wd m IFR (q.toNat + 4)) st.kf) ∧
+    SeenR seen 32 (NumW (wd m IFR (q.toNat + 5)) st.nIdx) ∧
+    SeenR seen 64 (NumW (wd m IFR (q.toNat + 6)) st.nMin) ∧
+    SeenR seen 128 (NumW (wd m IFR (q.toNat + 7)) st.nMot) ∧
+    SeenR seen 256 (NumW (wd m IFR (q.toNat + 8)) st.nP) ∧
+    SeenR seen 512 ((wd m IFR (q.toNat + 10)).toNat = st.rules.length ∧
+      RunR (fun t x m => RuleF m t x) IFL 3 m (wd m IFR (q.toNat + 9)).toNat st.rules)
+
+set_option maxHeartbeats 2000000 in
+theorem rec_loop (m₁ : Mem) (q : Word) :
+    IObjLoop b (fun i w seen (st : RecSt) => scanIndRecLoop b i w seen st.isUns st.kf st.lps st.nm
+        st.nIdx st.nMin st.nMot st.nP st.rules st.ty) 2 q (RecLR b m₁ q)
+      (fun d m => (RecInv IFR 11 q m₁ m ∧ topN m IFR = topN m₁ IFR) ∧ RecF b m q.toNat d) := by
+  constructor
+  · dloop_stop scanIndRecLoop
+  · dloop_ws scanIndRecLoop
+  · dloop_close scanIndRecLoop
+    obtain ⟨hI, ht, h1, h2, h3, h4, h5, h6, h7, h8, h9⟩ := hR
+    have c9 := seenR_close h9 hM (by decide) (by decide)
+    exact ⟨⟨hI, ht⟩, ⟨seenR_close h1 hM (by decide) (by decide), seenR_close h2 hM (by decide) (by decide),
+      seenR_close h3 hM (by decide) (by decide)⟩, seenR_close h4 hM (by decide) (by decide),
+      seenR_close h5 hM (by decide) (by decide), seenR_close h6 hM (by decide) (by decide),
+      seenR_close h7 hM (by decide) (by decide), seenR_close h8 hM (by decide) (by decide),
+      c9.1, c9.2.1, c9.2.2.1, c9.2.2.2⟩
+  · dloop_comma scanIndRecLoop
+  · dloop_quote scanIndRecLoop
+  · iloop_key scanIndRecLoop
+    all_goals obtain ⟨hI, ht, h1, h2, h3, h4, h5, h6, h7, h8, h9⟩ := hR
+    case kName =>
+      rw [show UInt64.ofNat Key.kName.ctorIdx = (34 : Word) from rfl] at hmem
+      rnum_arm 34, 2, 0, 11, { st with nm := readNatAt b v (numEnd b v) }
+    case kType =>
+      rw [show UInt64.ofNat Key.kType.ctorIdx = (61 : Word) from rfl] at hmem
+      rnum_arm 61, 2, 2, 11, { st with ty := readNatAt b v (numEnd b v) }
+    case kNumIndices =>
+      rw [show UInt64.ofNat Key.kNumIndices.ctorIdx = (40 : Word) from rfl] at hmem
+      rnum_arm 40, 2, 5, 11, { st with nIdx := readNatAt b v (numEnd b v) }
+    case kNumMinors =>
+      rw [show UInt64.ofNat Key.kNumMinors.ctorIdx = (41 : Word) from rfl] at hmem
+      rnum_arm 41, 2, 6, 11, { st with nMin := readNatAt b v (numEnd b v) }
+    case kNumMotives =>
+      rw [show UInt64.ofNat Key.kNumMotives.ctorIdx = (42 : Word) from rfl] at hmem
+      rnum_arm 42, 2, 7, 11, { st with nMot := readNatAt b v (numEnd b v) }
+    case kNumParams =>
+      rw [show UInt64.ofNat Key.kNumParams.ctorIdx = (44 : Word) from rfl] at hmem
+      rnum_arm 44, 2, 8, 11, { st with nP := readNatAt b v (numEnd b v) }
+    case kK =>
+      rw [show UInt64.ofNat Key.kK.ctorIdx = (27 : Word) from rfl] at hmem
+      rbool_arm 27, 2, 4, 11, { st with kf := xv }
+    case kIsUnsafe =>
+      rw [show UInt64.ofNat Key.kIsUnsafe.ctorIdx = (26 : Word) from rfl] at hmem
+      rbool_arm 26, 2, 3, 11, { st with isUns := xv }
+    case kLevelParams =>
+      rw [show UInt64.ofNat Key.kLevelParams.ctorIdx = (31 : Word) from rfl] at hmem
+      ikey_res
+      obtain ⟨he, rfl, hx⟩ := lps_arm b h64 hsize m m' 2 q _ 31 1 0 v xv ev e' rfl hx hmem
+      subst he
+      rput 1, 11, v.toUInt64, { st with lps := xv }, ev
+    case kAll =>
+      rw [show UInt64.ofNat Key.kAll.ctorIdx = (1 : Word) from rfl] at hmem
+      ikey_res
+      obtain ⟨he, rfl⟩ := all_arm b h64 hsize m m' 2 q _ 1 0 0 v xv ev e' rfl hx hmem
+      subst he
+      refine ⟨ev, _, st, rfl, hok, hI, ht, ?_⟩
+      rfields
+    case kRules =>
+      rw [show UInt64.ofNat Key.kRules.ctorIdx = (53 : Word) from rfl] at hmem
+      ikey_res
+      obtain ⟨o, c, mL, hl, rfl⟩ := list_arm b h64 hsize m m' 2 q 53 9 3 i v e' rfl hiv hmem
+      obtain ⟨l1, l2, l3, l4, l5, -, -, l8⟩ :=
+        rules_link b h64 hsize v m xv ev (o, c, e') mL hx hI.2.1 hl
+      simp only at l1 l2 l3
+      subst l1
+      rw [fldPutW_R _ _ _ _ _ (by decide), fldPutW_R _ _ _ _ _ (by decide),
+        show (9 : Word) + 1 = 10 from rfl]
+      have hI1 := hI.grow l4 l5
+      have hw : ∀ j, wd mL IFR j = wd m IFR j := fun j => by simp only [wd, l8]
+      have ht1 : topN mL IFR = topN m IFR := congrArg UInt64.toNat (hw 0)
+      obtain ⟨p1, -, -, p4, p5⟩ := slot_put IFR (.inl rfl) 11 (by decide) q 9 o m₁ mL hI1 (by decide)
+      have e1 := slot_view IFR (.inl rfl) 11 (by decide) q 9 o m₁ mL hI1 (by decide)
+      obtain ⟨p1', -, -, p4', p5'⟩ :=
+        slot_put IFR (.inl rfl) 11 (by decide) q 10 c m₁ _ p1 (by decide)
+      have e1' := slot_view IFR (.inl rfl) 11 (by decide) q 10 c m₁ _ p1 (by decide)
+      have p6 := runR_rule_eq (Mem.arr64_set64_ne (mL.set64 IFR (q + 9) o) IFR IFL (q + 10) c
+        (by decide))
+      have p7 := runR_rule_eq (Mem.arr64_set64_ne mL IFR IFL (q + 9) o (by decide))
+      refine ⟨ev, _, { st with rules := xv }, rfl, hok, p1', by rw [p5', p5, ht1, ht], ?_⟩
+      have hx : c.toNat = xv.length ∧ RunR (fun t x m => RuleF m t x) IFL 3 mL o.toNat xv := ⟨l2, l3⟩
+      simp (config := {decide := true}) only [e1', e1, p6, p7, hw, ↓reduceIte]
+      rfields
+  · dloop_other scanIndRecLoop
+
 end kinds
 
 end L.Front.Ind
