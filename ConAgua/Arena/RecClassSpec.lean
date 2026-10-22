@@ -1525,4 +1525,41 @@ theorem classGenMotVar_refines (p : Prog) (hpin : p.lookup "pin_word" = some pin
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok (ConRon.Arena.ClassGen.motVar G c.toNat) a₀ a' x hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hgr, h1, by rw [hres]; exact h2⟩
 
+
+theorem tag_iff (w : Word) (hw : w.toNat < 2 ^ 32) (k : Nat) (hk : k < 16) :
+    (decE w).tag = UInt32.ofNat k ↔ w >>> 28 = UInt64.ofNat k := by
+  rw [decE_tag w hw]
+  have h28 : (w >>> 28).toNat < 16 := by
+    rw [UInt64.toNat_shiftRight]; simp; omega
+  constructor
+  · intro h
+    have := congrArg UInt32.toNat h
+    simp [UInt64.toNat_toUInt32] at this
+    apply UInt64.toNat_inj.mp
+    simp [UInt64.toNat_ofNat_of_lt' (by omega : k < 2 ^ 64)]
+    rw [UInt64.toNat_shiftRight] at *
+    simp at *
+    omega
+  · intro h
+    rw [h]; apply UInt32.toNat_inj.mp
+    simp [UInt64.toNat_toUInt32]
+
+theorem ETables.getConst_of_get (t : ETables) (i : EIdx) (n : NIdx) (us : LsIdx)
+    (h : t.get i = some (.const n us)) : t.getConst i = some (n, us) := by
+  unfold ETables.get at h
+  unfold ETables.getConst
+  repeat' (first | (simp at h; done) | split at h)
+  cases hn : t.consts.node? i.idxNat <;> simp [hn] at h ⊢
+  exact h
+
+theorem EStore.viewConst_of_view (st : EStore) (i : EIdx) (n : NIdx) (us : LsIdx)
+    (h : st.view i = some (.const n us)) : st.viewConst i = some (n, us) := by
+  unfold EStore.view at h
+  unfold EStore.viewConst EStore.persGetConst
+  split at h
+  · simp only [*, ite_true]; exact ETables.getConst_of_get _ _ _ _ h
+  · split at h
+    · simp only [*, ite_true]; split <;> simp_all [ETables.getConst_of_get _ _ _ _ h]
+    · simp at h
+
 end L.Ind
