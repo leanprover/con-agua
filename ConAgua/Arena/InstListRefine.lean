@@ -260,4 +260,188 @@ theorem spineR_entry {m : Mem} {o l q : Word} {vs : Array EIdx} (hx : SpineR m o
   · rw [hx.get, slW, hw]; rfl
   · rw [slW, hw]; exact hx.lt _ (by omega)
 
+/-! ## The cut-off -/
+
+theorem instListCutoff_run (h : EIdx) (d : Nat) (a : AState) :
+    (instListCutoff h d).run a =
+      .ok ((decide ((bvarOfData (a.store.derived h)).toNat < satRange) &&
+        decide ((bvarOfData (a.store.derived h)).toNat ≤ d)), a) := rfl
+
+theorem ilcut_iff (m : Mem) (a : AState) (hA : ArenaL m a) (h d : Word) (hh : h.toNat < 2 ^ 32) :
+    ilCut m h d ↔ (decide ((bvarOfData (a.store.derived (decE h))).toNat < satRange) &&
+        decide ((bvarOfData (a.store.derived (decE h))).toNat ≤ d.toNat)) = true := by
+  rw [← derBW_ok m a hA.1.1 hA.1.2 h hh]; exact cut_iff _ _
+
+/-! ## The statements, by fuel -/
+
+/-- What `il_go`'s model at fuel `n` says about `instantiateList vs` at any fuel `F ≥ n`. -/
+def ILGoOK (n : Nat) : Prop :=
+  ∀ (F : Nat) (m m' : Mem) (a : AState) (h d o l r : Word) (vs : Array EIdx), n ≤ F →
+    ArenaL m a → SpineR m o l vs → o.toNat + l.toNat < 2 ^ 64 → h.toNat < 2 ^ 32 →
+    ilW n m h d o l = some (r, m') →
+    ∃ a', (instantiateList vs F (decE h) d.toNat).run a = .ok (decE r, a') ∧ ArenaL m' a' ∧
+      m'.arr64 ILSPN = m.arr64 ILSPN
+
+/-- The same for `ilg_go`'s model and `instantiateListGo vs`. -/
+def ILGGoOK (n : Nat) : Prop :=
+  ∀ (F : Nat) (m m' : Mem) (a : AState) (h d o l r : Word) (vs : Array EIdx), n ≤ F →
+    ArenaL m a → SpineR m o l vs → o.toNat + l.toNat < 2 ^ 64 → h.toNat < 2 ^ 32 →
+    ilgW n m h d o l = some (r, m') →
+    ∃ a', (instantiateListGo vs F (decE h) d.toNat).run a = .ok (decE r, a') ∧ ArenaL m' a' ∧
+      m'.arr64 ILSPN = m.arr64 ILSPN
+
+/-- The arena arm `arm` refines the L arm `armW` at `h`, under `ArenaL`, keeping the stack. -/
+def LArmRef (n : Nat) (armW : Nat → Mem → Word → Word → Word → Word → Option (Word × Mem))
+    (arm : AM EIdx) (m m' : Mem) (a : AState) (h d o l r : Word) : Prop :=
+  armW n m h d o l = some (r, m') →
+    ∃ a', arm.run a = .ok (decE r, a') ∧ ArenaL m' a' ∧ m'.arr64 ILSPN = m.arr64 ILSPN
+
+/-- The pure walk's six arms, each at its tag. -/
+def ILArmOK (n : Nat) : Prop :=
+  ∀ (F : Nat) (m m' : Mem) (a : AState) (h d o l r : Word) (vs : Array EIdx), n ≤ F + 1 →
+    ArenaL m a → SpineR m o l vs → o.toNat + l.toNat < 2 ^ 64 → h.toNat < 2 ^ 32 →
+    (h >>> 28 = 4 → LArmRef n ilAppW (instListArmApp vs F (decE h) d.toNat) m m' a h d o l r) ∧
+    (h >>> 28 = 5 → LArmRef n ilLamW (instListArmBind vs F (decE h) d.toNat) m m' a h d o l r) ∧
+    (h >>> 28 = 6 → LArmRef n ilForallW (instListArmBind vs F (decE h) d.toNat) m m' a h d o l r) ∧
+    (h >>> 28 = 7 → LArmRef n ilLetW (instListArmLet vs F (decE h) d.toNat) m m' a h d o l r) ∧
+    (h >>> 28 = 9 → LArmRef n ilProjW (instListArmProj vs F (decE h) d.toNat) m m' a h d o l r) ∧
+    (h >>> 28 = 0 → LArmRef n ilBVarW (instListArmBVar vs F (decE h) d.toNat) m m' a h d o l r)
+
+/-- The memo walk's five arms, each at its tag. -/
+def ILGArmOK (n : Nat) : Prop :=
+  ∀ (F : Nat) (m m' : Mem) (a : AState) (h d o l r : Word) (vs : Array EIdx), n ≤ F + 1 →
+    ArenaL m a → SpineR m o l vs → o.toNat + l.toNat < 2 ^ 64 → h.toNat < 2 ^ 32 →
+    (h >>> 28 = 4 → LArmRef n ilgAppW (instListGoArmApp vs F (decE h) d.toNat) m m' a h d o l r) ∧
+    (h >>> 28 = 5 → LArmRef n ilgLamW (instListGoArmBind vs F (decE h) d.toNat) m m' a h d o l r) ∧
+    (h >>> 28 = 6 →
+      LArmRef n ilgForallW (instListGoArmBind vs F (decE h) d.toNat) m m' a h d o l r) ∧
+    (h >>> 28 = 7 → LArmRef n ilgLetW (instListGoArmLet vs F (decE h) d.toNat) m m' a h d o l r) ∧
+    (h >>> 28 = 9 → LArmRef n ilgProjW (instListGoArmProj vs F (decE h) d.toNat) m m' a h d o l r)
+
+/-! ## The dispatchers -/
+
+theorem ilgoOK_succ (n : Nat) (ih : ILArmOK n) : ILGoOK (n + 1) := by
+  intro F m m' a h d o l r vs hF hA hsl hbd hh hb
+  obtain ⟨F, rfl⟩ : ∃ G, F = G + 1 := ⟨F - 1, by omega⟩
+  rw [instantiateList_succ, StateT.run_bind, instListCutoff_run]
+  simp only [except_ok_bind]
+  by_cases hcut : ilCut m h d
+  · rw [ilW_cut n m h d o l hcut] at hb
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
+    rw [ilcut_iff m a hA h d hh] at hcut
+    simp only [hcut, ↓reduceIte]
+    exact ⟨a, rfl, hA, by simp⟩
+  have hcut' := hcut
+  rw [ilcut_iff m a hA h d hh] at hcut'
+  simp only [Bool.not_eq_true] at hcut'
+  simp only [hcut', Bool.false_eq_true, ↓reduceIte, decE_tag h hh]
+  have arm := ih F m m' a h d o l r vs (by omega) hA hsl hbd hh
+  have t4 : h >>> 28 = 4 ↔ (h >>> 28).toUInt32 = 4 := by simpa using tag_iff h 4 hh (by decide)
+  have t5 : h >>> 28 = 5 ↔ (h >>> 28).toUInt32 = 5 := by simpa using tag_iff h 5 hh (by decide)
+  have t6 : h >>> 28 = 6 ↔ (h >>> 28).toUInt32 = 6 := by simpa using tag_iff h 6 hh (by decide)
+  have t0 : h >>> 28 = 0 ↔ (h >>> 28).toUInt32 = 0 := by simpa using tag_iff h 0 hh (by decide)
+  have t7 : h >>> 28 = 7 ↔ (h >>> 28).toUInt32 = 7 := by simpa using tag_iff h 7 hh (by decide)
+  have t9 : h >>> 28 = 9 ↔ (h >>> 28).toUInt32 = 9 := by simpa using tag_iff h 9 hh (by decide)
+  simp only [ETag.app, ETag.isBind, ETag.lam, ETag.forallE, ETag.bvar, ETag.letE, ETag.proj,
+    beq_iff_eq, Bool.or_eq_true] at *
+  by_cases g4 : h >>> 28 = 4
+  · rw [ilW_app n m h d o l hcut g4] at hb
+    simp only [show (h >>> 28).toUInt32 = 4 from (t4.mp g4), ↓reduceIte]
+    exact arm.1 g4 hb
+  have g4' : ¬ (h >>> 28).toUInt32 = 4 := fun e => g4 (t4.mpr e)
+  by_cases g5 : h >>> 28 = 5
+  · rw [ilW_lam n m h d o l hcut g5] at hb
+    simp only [g4', show (h >>> 28).toUInt32 = 5 from (t5.mp g5), true_or, ↓reduceIte]
+    exact arm.2.1 g5 hb
+  have g5' : ¬ (h >>> 28).toUInt32 = 5 := fun e => g5 (t5.mpr e)
+  by_cases g6 : h >>> 28 = 6
+  · rw [ilW_forall n m h d o l hcut g6] at hb
+    simp only [g4', g5', show (h >>> 28).toUInt32 = 6 from (t6.mp g6), or_true, ↓reduceIte]
+    exact arm.2.2.1 g6 hb
+  have g6' : ¬ (h >>> 28).toUInt32 = 6 := fun e => g6 (t6.mpr e)
+  simp only [g4', g5', g6', or_self, ↓reduceIte]
+  by_cases g7 : h >>> 28 = 7
+  · rw [ilW_let n m h d o l hcut g7] at hb
+    simp only [show (h >>> 28).toUInt32 = 7 from (t7.mp g7), ↓reduceIte]
+    exact arm.2.2.2.1 g7 hb
+  have g7' : ¬ (h >>> 28).toUInt32 = 7 := fun e => g7 (t7.mpr e)
+  simp only [g7', ↓reduceIte]
+  by_cases g9 : h >>> 28 = 9
+  · rw [ilW_proj n m h d o l hcut g9] at hb
+    simp only [show (h >>> 28).toUInt32 = 9 from (t9.mp g9), ↓reduceIte]
+    exact arm.2.2.2.2.1 g9 hb
+  have g9' : ¬ (h >>> 28).toUInt32 = 9 := fun e => g9 (t9.mpr e)
+  simp only [g9', ↓reduceIte]
+  by_cases g0 : h >>> 28 = 0
+  · rw [ilW_bvar n m h d o l hcut g0] at hb
+    simp only [show (h >>> 28).toUInt32 = 0 from (t0.mp g0), ↓reduceIte]
+    exact arm.2.2.2.2.2 g0 hb
+  have g0' : ¬ (h >>> 28).toUInt32 = 0 := fun e => g0 (t0.mpr e)
+  simp only [g0', ↓reduceIte]
+  rw [ilW_leaf n m h d o l hcut g0 g4 g5 g6 g7 g9] at hb
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
+  exact ⟨a, rfl, hA, by simp⟩
+
+theorem ilggoOK_succ (n : Nat) (ih : ILGArmOK n) (ihl : ILGoOK n) : ILGGoOK (n + 1) := by
+  intro F m m' a h d o l r vs hF hA hsl hbd hh hb
+  obtain ⟨F, rfl⟩ : ∃ G, F = G + 1 := ⟨F - 1, by omega⟩
+  rw [instantiateListGo_succ, StateT.run_bind, instListCutoff_run]
+  simp only [except_ok_bind]
+  by_cases hcut : ilCut m h d
+  · rw [ilgW_cut n m h d o l hcut] at hb
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
+    rw [ilcut_iff m a hA h d hh] at hcut
+    simp only [hcut, ↓reduceIte]
+    exact ⟨a, rfl, hA, by simp⟩
+  have hcut' := hcut
+  rw [ilcut_iff m a hA h d hh] at hcut'
+  simp only [Bool.not_eq_true] at hcut'
+  simp only [hcut', Bool.false_eq_true, ↓reduceIte, decE_tag h hh]
+  have arm := ih F m m' a h d o l r vs (by omega) hA hsl hbd hh
+  have t4 : h >>> 28 = 4 ↔ (h >>> 28).toUInt32 = 4 := by simpa using tag_iff h 4 hh (by decide)
+  have t5 : h >>> 28 = 5 ↔ (h >>> 28).toUInt32 = 5 := by simpa using tag_iff h 5 hh (by decide)
+  have t6 : h >>> 28 = 6 ↔ (h >>> 28).toUInt32 = 6 := by simpa using tag_iff h 6 hh (by decide)
+  have t0 : h >>> 28 = 0 ↔ (h >>> 28).toUInt32 = 0 := by simpa using tag_iff h 0 hh (by decide)
+  have t7 : h >>> 28 = 7 ↔ (h >>> 28).toUInt32 = 7 := by simpa using tag_iff h 7 hh (by decide)
+  have t9 : h >>> 28 = 9 ↔ (h >>> 28).toUInt32 = 9 := by simpa using tag_iff h 9 hh (by decide)
+  simp only [ETag.app, ETag.isBind, ETag.lam, ETag.forallE, ETag.bvar, ETag.letE, ETag.proj,
+    beq_iff_eq, Bool.or_eq_true] at *
+  by_cases g4 : h >>> 28 = 4
+  · rw [ilgW_app n m h d o l hcut g4] at hb
+    simp only [show (h >>> 28).toUInt32 = 4 from (t4.mp g4), ↓reduceIte]
+    exact arm.1 g4 hb
+  have g4' : ¬ (h >>> 28).toUInt32 = 4 := fun e => g4 (t4.mpr e)
+  by_cases g5 : h >>> 28 = 5
+  · rw [ilgW_lam n m h d o l hcut g5] at hb
+    simp only [g4', show (h >>> 28).toUInt32 = 5 from (t5.mp g5), true_or, ↓reduceIte]
+    exact arm.2.1 g5 hb
+  have g5' : ¬ (h >>> 28).toUInt32 = 5 := fun e => g5 (t5.mpr e)
+  by_cases g6 : h >>> 28 = 6
+  · rw [ilgW_forall n m h d o l hcut g6] at hb
+    simp only [g4', g5', show (h >>> 28).toUInt32 = 6 from (t6.mp g6), or_true, ↓reduceIte]
+    exact arm.2.2.1 g6 hb
+  have g6' : ¬ (h >>> 28).toUInt32 = 6 := fun e => g6 (t6.mpr e)
+  simp only [g4', g5', g6', or_self, ↓reduceIte]
+  by_cases g7 : h >>> 28 = 7
+  · rw [ilgW_let n m h d o l hcut g7] at hb
+    simp only [show (h >>> 28).toUInt32 = 7 from (t7.mp g7), ↓reduceIte]
+    exact arm.2.2.2.1 g7 hb
+  have g7' : ¬ (h >>> 28).toUInt32 = 7 := fun e => g7 (t7.mpr e)
+  simp only [g7', ↓reduceIte]
+  by_cases g9 : h >>> 28 = 9
+  · rw [ilgW_proj n m h d o l hcut g9] at hb
+    simp only [show (h >>> 28).toUInt32 = 9 from (t9.mp g9), ↓reduceIte]
+    exact arm.2.2.2.2 g9 hb
+  have g9' : ¬ (h >>> 28).toUInt32 = 9 := fun e => g9 (t9.mpr e)
+  simp only [g9', ↓reduceIte]
+  by_cases g0 : h >>> 28 = 0
+  · rw [ilgW_bvar n m h d o l hcut g0] at hb
+    simp only [show (h >>> 28).toUInt32 = 0 from (t0.mp g0), ↓reduceIte]
+    exact ihl F m m' a h d o l r vs (by omega) hA hsl hbd hh hb
+  have g0' : ¬ (h >>> 28).toUInt32 = 0 := fun e => g0 (t0.mpr e)
+  simp only [g0', ↓reduceIte]
+  rw [ilgW_leaf n m h d o l hcut g0 g4 g5 g6 g7 g9] at hb
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
+  exact ⟨a, rfl, hA, by simp⟩
+
 end L.Arena
