@@ -380,6 +380,66 @@ theorem divModCertsGuardGo_refines (hD : DmProg6 p) (hs0 : SubstC0 p dn vis fe)
   CallRef.refAM (fun k m a res m' ⟨hS, hs, hd, hb⟩ hcall =>
     cggo_ref hD hs0 hsA c annVal hc hann ss proofs so sl po pl k m a res m' hS hs hd hb hcall)
 
+/-! ## `div_mod_certs_guard` -/
+
+def cgsW (p : Prog) (n : Nat) (m : Mem) (ps vs c annVal : Word) : Option (List Word × Mem) :=
+  bW (callW p n "div_mod_cert_stmts" [c] m) fun r1 m1 =>
+  bW (callW p n "div_mod_cert_proofs" [ps, c] m1) fun r2 m2 =>
+  bW (callW p n "div_mod_certs_guard_go" [vs, c, annVal, r1.headD 0, r1.tail.headD 0, r2.headD 0,
+    r2.tail.headD 0] m2) fun r3 m3 => some ([r3.headD 0], m3)
+
+set_option maxHeartbeats 1600000 in
+theorem cgs_specW (p : Prog) (hp : p.lookup "div_mod_certs_guard" = some divModCertsGuardL)
+    (n : Nat) (s₀ : St) (ps vs c annVal : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "div_mod_certs_guard" [ps, vs, c, annVal]
+    ⦃fun r s' => LocEq s' s₀ ∧ cgsW p n s₀.mem ps vs c annVal = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, divModCertsGuardL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      callW_spec p n "div_mod_cert_stmts", callW_spec p n "div_mod_cert_proofs",
+      callW_spec p n "div_mod_certs_guard_go"] <;>
+    finish (gen := 20) [cgsW, bW]
+
+theorem cgs_ref (hD : DmProg6 p) (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p dn vis fe)
+    (ps c annVal : Word) (ip : INatOpPinSet) :
+    CallRef p "div_mod_certs_guard" [ps, vis, c, annVal]
+      (fun m s => StageR dn vis fe m s ∧ H c ∧ H annVal ∧ PinSetR m ps ip)
+      (divModCertsGuard ip fe (decI c) (decE annVal)) (KeepPost dn vis fe decW0B) := by
+  refine CallRef.of_succ fun k m s rr mm ⟨hS, hc, hann, hP⟩ hcall => ?_
+  have hw := callW_model (M := fun mq => cgsW p k mq ps vis c annVal)
+    (cgs_specW p hD.lCertsGuard k · ps vis c annVal) hcall
+  unfold cgsW at hw
+  obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hg1, hd1⟩, hw⟩ :=
+    (divModCertStmts_ref hD.toDmProg5.toDmProg2 c).bind_ ⟨hS, hc⟩ hw
+  obtain ⟨r2, m2, x2, a2, hrun2, ⟨hS2, hg2, hd2⟩, hw⟩ :=
+    (divModCertProofs_ref hD.toDmProg5.toDmProg2.toDmProg1 ps c ip).bind_ ⟨hS1, hc, PinSetR.grow hP hg1⟩ hw
+  cases h3 : callW p k "div_mod_certs_guard_go" [vis, c, annVal, r1.headD 0, r1.tail.headD 0,
+      r2.headD 0, r2.tail.headD 0] m2 with
+  | none => rw [h3] at hw; simp at hw
+  | some q3 =>
+  obtain ⟨r3, m3⟩ := q3
+  rw [h3, bW_some] at hw
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨rfl, rfl⟩ := hw
+  simp only [decStmtL, getD0, getD1] at hd1
+  unfold decRL at hd2
+  simp only [Nat.zero_add, getD0, getD1] at hd2
+  obtain ⟨x3, a3, hrun3, hS3, hg3, hd3⟩ := cggo_ref hD hs0 hsA c annVal hc hann x1 x2
+    (r1.headD 0) (r1.tail.headD 0) (r2.headD 0) (r2.tail.headD 0) k m2 a2 r3 m3 hS2
+    (hd1.grow hg2) hd2.1 hd2.2 h3
+  refine ⟨x3, a3, ?_, hS3, hg1.trans (hg2.trans hg3), hd3⟩
+  simp only [divModCertsGuard, StateT.run_bind, hrun1, exc_ok_bind', hrun2]
+  exact hrun3
+
+@[refines ConRon.Arena.divModCertsGuard]
+theorem divModCertsGuard_refines (hD : DmProg6 p) (hs0 : SubstC0 p dn vis fe)
+    (hsA : SubstCAll p dn vis fe) (ps c annVal : Word) (ip : INatOpPinSet) :
+    RefAM p "div_mod_certs_guard" [ps, vis, c, annVal]
+      (fun m s => StageR dn vis fe m s ∧ H c ∧ H annVal ∧ PinSetR m ps ip)
+      (divModCertsGuard ip fe (decI c) (decE annVal)) (KeepPost dn vis fe decW0B) :=
+  (cgs_ref hD hs0 hsA ps c annVal ip).refAM
+
 end guards
 
 end L.Ind
