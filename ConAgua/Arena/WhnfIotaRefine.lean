@@ -3518,6 +3518,7 @@ theorem etaProjs_refines' (p : Prog) (hp : IotaProg' p) :
     invoke p (exec p n) "eta_projs" [T, b, nF]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (etaProjs (decI T) (decE b) nF.toNat) a₀ ∧
       CoreAfterG dn s₀.mem s'.mem (AM.st (etaProjs (decI T) (decE b) nF.toNat) a₀) vis fe MM eb ∧
+      r.headD 0 = spTop s₀.mem ∧ r.tail.headD 0 = nF ∧
       ∃ xs, AM.res (etaProjs (decI T) (decE b) nF.toNat) a₀ = xs ∧
         SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄ := by
   intro n s₀ a₀ dn vis fe MM eb T b nF hS hT hb
@@ -3582,7 +3583,7 @@ theorem etaProjs_refines' (p : Prog) (hp : IotaProg' p) :
   have hoo : (rdW (s.mem.arr64 CTL) 136 + nF).toNat = (rdW (s.mem.arr64 CTL) 136).toNat + nF.toNat := by
     rw [UInt64.toNat_add]; simp; omega
   simp only [etaProjs]
-  refine ⟨hok, ⟨MM, ?_, KeptAll.refl _ _, ?_⟩, ys, hres, ?_⟩
+  refine ⟨hok, ⟨MM, ?_, KeptAll.refl _ _, ?_⟩, hr1, hr2, ys, hres, ?_⟩
   · rw [← hmm]; simpa using hS''
   · rw [← hmm]
     refine ⟨?_, ?_, fun i hi => ?_⟩
@@ -3595,5 +3596,127 @@ theorem etaProjs_refines' (p : Prog) (hp : IotaProg' p) :
   · rw [← hmm, hr1, hr2]
     have := hys.setCtl 136 (rdW (s.mem.arr64 CTL) 136 + nF)
     simpa using this
+
+/-! ## `eta_fab_args(T, to, tn, major, nF)` -/
+
+theorem word_add_split (off a : Word) (i : Nat) (h : a.toNat ≤ i) :
+    off + i.toUInt64 = (off + a) + (i - a.toNat).toUInt64 := by
+  obtain ⟨d, hd⟩ := Nat.exists_eq_add_of_le h
+  have : i - a.toNat = d := by omega
+  rw [this, hd]
+  simp [Nat.toUInt64, UInt64.ofNat_add, UInt64.add_assoc]
+
+theorem SpineR.append {m : Mem} {off a b : Word} {xs ys : Array EIdx} (hx : SpineR m off a xs)
+    (hy : SpineR m (off + a) b ys) (hspn : (m.arr64 SPN).size < 2 ^ 63) :
+    SpineR m off (a + b) (xs ++ ys) := by
+  have hxb := hx.bound
+  have hyb := hy.bound
+  have hoa : (off + a).toNat = off.toNat + a.toNat := by
+    rw [UInt64.toNat_add]; simp; omega
+  have hab : (a + b).toNat = a.toNat + b.toNat := by
+    rw [UInt64.toNat_add]; simp; omega
+  refine ⟨by simp [hx.size, hy.size, hab], by rw [hab]; omega, fun i hi => ?_, fun i hi => ?_⟩
+  · rw [hab] at hi
+    by_cases hia : i < a.toNat
+    · exact hx.lt i hia
+    · rw [word_add_split off a i (by omega)]
+      exact hy.lt (i - a.toNat) (by omega)
+  · simp only [Array.size_append, hx.size, hy.size] at hi
+    by_cases hia : i < a.toNat
+    · rw [Array.getElem_append_left (by rw [hx.size]; exact hia)]
+      exact hx.get i (by rw [hx.size]; exact hia)
+    · rw [Array.getElem_append_right (by rw [hx.size]; omega), word_add_split off a i (by omega)]
+      have := hy.get (i - a.toNat) (by rw [hy.size]; omega)
+      simpa [hx.size] using this
+
+/-- Model of `eta_fab_args`. -/
+def efaW (p : Prog) (k : Nat) (m : Mem) (T to tn major nF : Word) : Option (List Word × Mem) :=
+  match callW p k "eta_projs" [T, major, nF] m with
+  | none => none
+  | some (r, m₁) => some ([to, tn + r.tail.headD 0], m₁)
+
+theorem etaFabArgs_spec (p : Prog) (hp : p.lookup "eta_fab_args" = some etaFabArgsL) (k : Nat)
+    (s₀ : St) (T to tn major nF : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p (k + 1)) "eta_fab_args" [T, to, tn, major, nF]
+    ⦃fun r s' => LocEq s' s₀ ∧ efaW p k s₀.mem T to tn major nF = some ([r.headD 0, r.tail.headD 0], s'.mem);
+      ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, etaFabArgsL]
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p k "eta_projs"] <;>
+  simp_all [efaW, Cmp.eval, BinOp.eval, LocEq, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem,
+    St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr]
+
+theorem etaFabArgsE_run (T : NIdx) (targs : List EIdx) (major : EIdx) (nF : Nat) (a a₁ : AState)
+    (ps : List EIdx) (h : (etaProjs T major nF).run a = .ok (ps, a₁)) :
+    (etaFabArgsE T targs major nF).run a = .ok (targs ++ ps, a₁) := by
+  simp only [etaFabArgsE, StateT.run_bind, h, except_ok_bind]; rfl
+
+/-- **`eta_fab_args` refines `etaFabArgsE`.** Statement change: `CoreAfterG`. -/
+theorem etaFabArgs_refines' (p : Prog) (hp : IotaProg' p) :
+    ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (MM : ModeMaps) (eb T to tn major nF : Word) (targs : Array EIdx),
+    CoreS dn s₀.mem a₀ vis fe MM eb → HW T → HW major → SpineR s₀.mem to tn targs →
+    to + tn = spTop s₀.mem →
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "eta_fab_args" [T, to, tn, major, nF]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (etaFabArgsE (decI T) targs.toList (decE major) nF.toNat) a₀ ∧
+      CoreAfterG dn s₀.mem s'.mem (AM.st (etaFabArgsE (decI T) targs.toList (decE major) nF.toNat) a₀)
+        vis fe MM eb ∧
+      ∃ xs, AM.res (etaFabArgsE (decI T) targs.toList (decE major) nF.toNat) a₀ = xs ∧
+        SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄ := by
+  intro n s₀ a₀ dn vis fe MM eb T to tn major nF targs hS hT hmaj hsp htop
+  cases n with
+  | zero =>
+    apply L.M.triple_of_run
+    intro s r s' _ hrun
+    exact (invoke_zero_run _ _ _ _ _ _ hrun).elim
+  | succ n =>
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
+    (etaFabArgs_spec p hp.etaFabArgs n s₀ T to tn major nF)
+  subst hs0
+  refine ⟨hloc, ?_⟩
+  simp only [efaW] at hW
+  cases hc1 : callW p n "eta_projs" [T, major, nF] s.mem with
+  | none => rw [hc1] at hW; cases hW
+  | some q =>
+  obtain ⟨r₁, m₁⟩ := q
+  rw [hc1] at hW
+  simp only [Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨hr, hm⟩ := hW
+  obtain ⟨t₁, ht₁, hloc1, hok, hca, hhead, htail, ys, hres, hys⟩ := triple_of_callW
+    (etaProjs_refines' p hp n ⟨s.mem, Locals.init []⟩ a₀ dn vis fe MM eb T major nF hS hT hmaj) hc1
+  rw [ht₁] at hca hys
+  obtain ⟨M₁, hS₁, hK₁, hSt₁⟩ := hca
+  have hSt₁ : StackGrew s.mem m₁ := hSt₁
+  have hspn := hS.spn
+  have hsp₁ : SpineR m₁ to tn targs := by
+    have hb := hsp.bound
+    refine hsp.keep hSt₁.2.1 hSt₁.2.2 ?_ hspn
+    have : (to + tn).toNat = to.toNat + tn.toNat := by
+      rw [UInt64.toNat_add]; simp; omega
+    rw [← this, htop]
+    exact Nat.le_refl _
+  have hr1 : r.headD 0 = to := by
+    have := congrArg (fun l => l.headD 0) hr.symm; simpa using this
+  have hr2 : r.tail.headD 0 = tn + r₁.tail.headD 0 := by
+    have := congrArg (fun l => l.tail.headD 0) hr.symm; simpa using this
+  have hys' : SpineR m₁ (to + tn) (r₁.tail.headD 0) ys.toArray := by
+    have : r₁.headD 0 = to + tn := by rw [htop]; exact hhead
+    rw [← this]; exact hys
+  have happ := hsp₁.append hys' (by rw [hSt₁.2.1]; exact hspn)
+  obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _
+    (etaFabArgsE_run (decI T) targs.toList (decE major) nF.toNat a₀ _ ys
+      (by simpa [etaProjs] using AM.run_of_ok _ _ hok |> fun h => by rw [hres] at h; exact h))
+  refine ⟨hokF, ⟨M₁, ?_, hK₁, ?_⟩, targs.toList ++ ys, hresF, ?_⟩
+  · rw [hstF, ← hm]; exact hS₁
+  · rw [← hm]; exact hSt₁
+  · rw [hr1, hr2, ← hm]
+    have e : (targs.toList ++ ys).toArray = targs ++ ys.toArray := by
+      apply Array.ext'
+      simp
+    rw [e]; simpa using happ
 
 end L.Arena
