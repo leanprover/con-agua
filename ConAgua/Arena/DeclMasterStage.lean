@@ -38,7 +38,7 @@ theorem stage_of_name {β δ : Type} [BEq β] [Hashable β] {L : Lens β δ .nam
     (hsetS : ∀ t, (DerR m' a → DerR m' (L.setS a t)) ∧ cp (L.setS a t) = cp a)
     (hv : ∀ t, (L.setP a t).store.view = a.store.view ∧ (L.setS a t).store.view = a.store.view) :
     ∃ a', op.run a = .ok (decI r, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
-      a'.store.view = a.store.view := by
+      a'.store.view = a.store.view ∧ (∀ b, (m'.arr64 b).size = (m.arr64 b).size) := by
   have hD₁ : DerR m' a := DerR.frameM _ _ m m' hf (fun b hb => .inl (hA b hb)) a hS.1.arena.2
   have hcs := AM.st_proto L op key tag pf d err a hrun hok
   have hDk : DerR m' (AM.st op a) ∧ cp (AM.st op a) = cp a := by
@@ -53,11 +53,11 @@ theorem stage_of_name {β δ : Type} [BEq β] [Hashable β] {L : Lens β δ .nam
     rcases hcs with h | ⟨t, h⟩ | ⟨t, h⟩ <;> rw [h]
     · exact (hv t).1
     · exact (hv t).2
-  exact ⟨_, hrun', h1, h2, hvw⟩
+  exact ⟨_, hrun', h1, h2, hvw, hf.2.2.1⟩
 
 theorem internNAnon_stage (hS : StageR dn vis fe m a) (hI : nainternW m = some (r, m')) :
     ∃ a', (internNNode .anonymous).run a = .ok (decI r, a') ∧ StageR dn vis fe m' a' ∧
-      IWGrow m m' ∧ a'.store.view = a.store.view := by
+      IWGrow m m' ∧ a'.store.view = a.store.view ∧ (∀ b, (m'.arr64 b).size = (m.arr64 b).size) := by
   have hR := hS.1.arena.1
   obtain ⟨hok, hX, hres⟩ := naintern_correct m a hR.nanon _ _ hI
   have hI₂ := hI; rw [nainternW_eq] at hI₂
@@ -70,7 +70,8 @@ theorem internNAnon_stage (hS : StageR dn vis fe m a) (hI : nainternW m = some (
 theorem internNNum_stage (hS : StageR dn vis fe m a) (pre u : Word) (hpre : pre.toNat < 2 ^ 32)
     (hI : nninternW m pre u = some (r, m')) :
     ∃ a', (internNNode (.num (decI pre) u.toNat)).run a = .ok (decI r, a') ∧
-      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ a'.store.view = a.store.view := by
+      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ a'.store.view = a.store.view ∧
+      (∀ b, (m'.arr64 b).size = (m.arr64 b).size) := by
   have hR := hS.1.arena.1
   obtain ⟨hok, hX, hres⟩ := nnintern_correct m a hR.nnum pre u hpre _ _ hI
   have hI₂ := hI; rw [nninternW_eq] at hI₂

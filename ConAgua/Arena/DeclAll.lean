@@ -10,6 +10,7 @@ import ConAgua.Arena.DeclCanonView2
 import ConAgua.Arena.DeclCanonLvl
 import ConAgua.Arena.DeclCanonExpr
 import ConAgua.Arena.DeclCanonExpr2
+import ConAgua.Arena.DeclCanonNames
 
 /-!
 # Every declaration-loop module (lane `decls3`)
