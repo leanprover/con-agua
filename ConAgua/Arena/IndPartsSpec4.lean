@@ -671,4 +671,168 @@ theorem decBS_ws {m : Mem} {q p : Nat} {s f : Word} {bs : BlockShape}
   rw [e8]
   rfl
 
+
+theorem wsWrites_frame (m : Mem) (q p s f : Word) : MemFrame [IW] [] m (wsWrites m q p s f) := by
+  have fr : ∀ (m : Mem) (d x : Word), MemFrame [IW] [] m (m.set64 IW d x) :=
+    fun m d x => MemFrame.set64 m IW (by decide) d x
+  unfold wsWrites cpyIW
+  exact ((((((((fr _ _ _).trans (fr _ _ _)).trans (fr _ _ _)).trans (fr _ _ _)).trans (fr _ _ _)).trans
+    (fr _ _ _)).trans (fr _ _ _)).trans (fr _ _ _)).trans (fr _ _ _)
+
+/-- Writing a fresh record above the top (given the pool's sizes) keeps the stage relation. -/
+theorem stage_frame_iw {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}
+    {a : AState} (hS : StageR dn vis fe m a) (hf : MemFrame [IW] [200] m m')
+    (htop : iwTop m' ≤ (m.arr64 IW).size) : StageR dn vis fe m' a := by
+  obtain ⟨h1, h2, h3, h4, h5⟩ := hS.2
+  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 := hf.2.1 129 (by simp)
+  have hE : m'.arr64 EREC = m.arr64 EREC := hf.1 EREC (by simp [EREC, IW]) (by decide)
+  refine ⟨CheckR.frame_iw hf hS.1, by rw [hf.2.2.1 IW]; exact htop, ?_, ?_, ?_, ?_⟩
+  · simp only [erTop, h129]; rw [hf.2.2.1 EREC]; exact h2
+  · rw [hf.2.2.1 IW]; exact h3
+  · rw [hf.2.2.1 EREC]; exact h4
+  · rw [hf.2.2.1 CTL]; exact h5
+
+
+/-- The flag `withSort` computes from the verdict. -/
+def isPropOf (x : Option Bool) : Bool :=
+  match x with
+  | some true => true
+  | some false => false
+  | none => false
+
+theorem match_isPropOf (x : Option Bool) :
+    (match x with | some true => true | some false => false | none => false) = isPropOf x := by
+  cases x with
+  | none => rfl
+  | some b => cases b <;> rfl
+
+theorem lvlEq_prop {m : Mem} {r2 : List Word} {f : Word} {x2 : Option Bool}
+    (hf : (if r2.headD 0 = 2 then (1 : Word) else 0) = f) (h : decLvlEq m r2 x2) :
+    (f != 0) = isPropOf x2 := by
+  unfold decLvlEq at h
+  revert h hf
+  cases x2 with
+  | none => intro hf h; simp only at h; rw [← hf, h]; decide
+  | some b => cases b <;> (intro hf h; simp only at h; rw [← hf, h]; decide)
+
+theorem wsW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
+    (m m' : Mem) (a : AState) (p s : Word) (r : List Word) (bs : BlockShape)
+    (h : wsW n m p s = some (r, m')) (hS : StageR dn vis fe m a) (hs : s.toNat < 2 ^ 32)
+    (hstab : ∀ m'', IWGrow m m'' → decBS m'' p.toNat = some bs) (hp : p.toNat + 9 ≤ iwTop m) :
+    ∃ bs' a' q, (BlockShape.withSort bs (decI s)).run a = .ok (bs', a') ∧ r = [q] ∧
+      decBS m' q.toNat = some bs' ∧ StageR dn vis fe m' a' ∧ IWGrow m m' := by
+  cases n with
+  | zero => simp [wsW] at h
+  | succ n =>
+  rw [wsW_step] at h
+  cases hra : stubM "pin_word" m [53] with
+  | none => rw [hra] at h; simp [wsK1] at h
+  | some rm1 =>
+  obtain ⟨r1, m1⟩ := rm1
+  rw [hra, wsK1_some] at h
+  obtain ⟨x1, a1, hrun1, hS1, hg1, hdl1, hdI1⟩ := pinWordZero_spec dn vis fe m m1 a r1 hra hS
+  cases hrb : stubM "lvl_eq" m1 [s, r1.headD 0] with
+  | none => rw [hrb] at h; simp [wsK2] at h
+  | some rm2 =>
+  obtain ⟨r2, m2⟩ := rm2
+  rw [hrb, wsK2_some] at h
+  obtain ⟨x2, a2, hrun2, hS2, hg2, hdec2⟩ :=
+    lvlEqStub_spec dn vis fe s (r1.headD 0) hs hdl1 m1 m2 a1 r2 hrb hS1
+  cases hal : allocW m2 9 with
+  | none => rw [hal] at h; simp at h
+  | some qm =>
+  obtain ⟨q, m3⟩ := qm
+  rw [hal] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  have hg12 : IWGrow m m2 := hg1.trans hg2
+  obtain ⟨hI2, hE2, hIsz2, hEsz2, hCsz2⟩ := hS2.2
+  obtain ⟨hq, hm3, hroom⟩ := allocW_facts hal hIsz2
+  subst hm3
+  have hIW3 : (allocMem m2 9).arr64 IW = m2.arr64 IW := allocMem_IW m2 9
+  have hqtop : q.toNat = iwTop m2 := by rw [hq]; rfl
+  have hpq : p.toNat + 9 ≤ q.toNat := by
+    have := hg12.1; omega
+  have hqs : q.toNat + 9 ≤ ((allocMem m2 9).arr64 IW).size := by
+    rw [hIW3]; simpa using hroom
+  have hsz3 : ((allocMem m2 9).arr64 IW).size < 2 ^ 64 := by rw [hIW3]; exact hIsz2
+  generalize hf : (if r2.headD 0 = 2 then (1 : Word) else 0) = f
+  have hWs := wsWrites_get (allocMem m2 9) q p s f hpq hqs hsz3
+  have hfr : MemFrame [IW] [] (allocMem m2 9) (wsWrites (allocMem m2 9) q p s f) :=
+    wsWrites_frame _ _ _ _ _
+  generalize hm' : wsWrites (allocMem m2 9) q p s f = m' at hWs hfr
+  have hfr2 : MemFrame [IW] [200] m2 m' :=
+    ((allocMem_frame m2 9).trans (hfr.mono (by simp) (by simp)))
+  -- the pool grew
+  have htop : rdW (m'.arr64 CTL) 200 = rdW (m2.arr64 CTL) 200 + 9 := by
+    rw [hfr.2.1 200 (by simp), allocMem_top m2 9 hCsz2]
+  have hlow : ∀ i < iwTop m2, (m'.arr64 IW)[i]? = (m2.arr64 IW)[i]? := by
+    intro i hi
+    rw [hWs.2 i, if_neg (by omega), hIW3]
+  have hg2' : IWGrow m2 m' := iwGrow_of_frame hfr2 (N := 9) htop (by have := hroom; simp at this; omega) hIsz2 hlow
+  have hgm : IWGrow m m' := hg12.trans hg2'
+  have hdecp := hstab m' hgm
+  have hcell : ∀ j, j < 9 → j ≠ 6 → j ≠ 8 → (m'.arr64 IW)[q.toNat + j]? = (m'.arr64 IW)[p.toNat + j]? := by
+    intro j hj h6 h8
+    rw [hWs.2, if_pos (by omega)]
+    have e : q.toNat + j - q.toNat = j := by omega
+    rw [e]
+    have hpj : (m'.arr64 IW)[p.toNat + j]? = (m2.arr64 IW)[p.toNat + j]? := by
+      rw [hWs.2, if_neg (by omega), hIW3]
+    rw [hpj]
+    simp only [wsWd, h6, h8, if_false, rdW]
+    have hx : (p + UInt64.ofNat j).toNat = p.toNat + j := by
+      rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)]
+      exact Nat.mod_eq_of_lt (by omega)
+    rw [hx, hIW3]
+    have hlt : p.toNat + j < (m2.arr64 IW).size := by have := hg12.1; omega
+    rw [Array.getElem?_eq_getElem hlt]; rfl
+  have c6 : (m'.arr64 IW)[q.toNat + 6]? = some s := by
+    rw [hWs.2, if_pos (by omega)]; simp [wsWd]
+  have c8 : (m'.arr64 IW)[q.toNat + 8]? = some f := by
+    rw [hWs.2, if_pos (by omega)]; simp [wsWd]
+  have hdecq := decBS_ws hdecp hs (hcell 0 (by omega) (by omega) (by omega))
+    (hcell 1 (by omega) (by omega) (by omega)) (hcell 2 (by omega) (by omega) (by omega))
+    (hcell 3 (by omega) (by omega) (by omega)) (hcell 4 (by omega) (by omega) (by omega))
+    (hcell 5 (by omega) (by omega) (by omega)) (hcell 7 (by omega) (by omega) (by omega)) c6 c8
+  have hprop := lvlEq_prop (m := m2) hf hdec2
+  have htop' : iwTop m' ≤ (m'.arr64 IW).size := by
+    have e : iwTop m' = iwTop m2 + 9 := by
+      simp only [iwTop, htop]; rw [UInt64.toNat_add]; simp
+      have := hroom; simp at this; simp only [iwTop] at hqtop; omega
+    rw [hfr2.2.2.1 IW, e]; have := hroom; simp at this; omega
+  refine ⟨{ bs with resSort := decI s, isProp := f != 0 }, a2, q, ?_, rfl, hdecq,
+    stage_frame_iw hS2 hfr2 (by rw [← hfr2.2.2.1 IW]; exact htop'), hgm⟩
+  unfold BlockShape.withSort
+  simp only [StateT.run_bind, hrun1, except_ok_bind]
+  rw [hdI1] at hrun2
+  simp only [hrun2, except_ok_bind]
+  rw [hprop]
+  rfl
+
+
+/-- **`block_shape_with_sort` refines `BlockShape.withSort`** (through the master callees
+`pin_word`, `lvl_eq`, as stubs for now): a fresh record decoding as the shape with the new sort
+and flag. The old record must keep decoding as the pool grows (`hstab`). -/
+@[refines ConRon.Arena.BlockShape.withSort]
+theorem blockShapeWithSort_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hp : p.lookup "block_shape_with_sort" = some blockShapeWithSort)
+    (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
+    (vis q s : Word) (bs : BlockShape) (hS : StageR dn vis fe s₀.mem a₀) (hs : s.toNat < 2 ^ 32)
+    (hstab : ∀ m'', IWGrow s₀.mem m'' → decBS m'' q.toNat = some bs)
+    (hq : q.toNat + 9 ≤ iwTop s₀.mem) :
+    ⦃fun st => st = s₀⦄ invoke p (exec p n) "block_shape_with_sort" [q, s]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (BlockShape.withSort bs (decI s)) a₀ ∧
+      decBS s'.mem (r.headD 0).toNat = some (AM.res (BlockShape.withSort bs (decI s)) a₀) ∧
+      StageR dn vis fe s'.mem (AM.st (BlockShape.withSort bs (decI s)) a₀) ∧
+      IWGrow s₀.mem s'.mem; ⊤⦄ := by
+  refine triple_post (blockShapeWithSort_spec p ha hp n s₀ q s) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨bs', a', q', hrun, hr, hdec, hS', hg⟩ := wsW_ok n dn fe vis s₀.mem s'.mem a₀ q s r bs hm
+    hS hs hstab hq
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  subst hr
+  exact ⟨hl, hok, by rw [hres]; exact hdec, by rw [hst]; exact hS', hg⟩
+
 end L.Ind
