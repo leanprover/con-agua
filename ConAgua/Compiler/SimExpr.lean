@@ -501,7 +501,7 @@ include hG
 
 theorem sim_cond (ctx : Ctx) (hT : ctx.tab = G.tab) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff)
     (F : Nat) (hF : 8 * F + 8 < maxOff) :
-    ∀ (c : Cond) (path : String) (pol : Bool) (l : Label) (t k : Nat),
+    ∀ (c : Cond) (path : Path) (pol : Bool) (l : Label) (t k : Nat),
     Code (compileC ctx path c pol l t) k → Cond.wf ctx.nl G.tab c = true →
     ctx.nl + t + tempsC c ≤ F →
     ∀ (σ : St) (s : MachineData) (Q : MachineState → Prop), Inv G ctx.nl F σ s →

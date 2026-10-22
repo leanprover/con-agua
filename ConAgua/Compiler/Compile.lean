@@ -230,18 +230,28 @@ structure Ctx where
   brk : Label
   deriving Repr
 
-/-- A local label of function `f`; `path` is lowercase (the node's position), `m` an uppercase
-marker, so that distinct nodes and markers give distinct labels. -/
-def lbl (f : FnName) (path : String) (m : String) : Label :=
-  ".Lca_" ++ f ++ "_" ++ path ++ m
+/-- A node's position in a function body, as a number: the root is `0`, and child `d` (a digit
+`1 … 9`) of `path` is `Path.ch path d = 10 * path + d`, so a position prints as its sequence of
+digits. Numbers rather than strings, so that the kernel can evaluate the code generator cheaply
+(`Nat` literals; DESIGN.md, "Kernel-checked compiler output"). -/
+abbrev Path := Nat
 
-def Ctx.lbl (ctx : Ctx) (path : String) (m : String) : Label := L.Compiler.lbl ctx.fn path m
+/-- Child `d` of `path`. -/
+def Path.ch (path : Path) (d : Nat) : Path := 10 * path + d
+
+/-- A local label of function `f`; `path` is the node's position (decimal, its digits never `0`
+except for the root), `m` an uppercase marker, so that distinct nodes and markers give distinct
+labels. -/
+def lbl (f : FnName) (path : Path) (m : String) : Label :=
+  ".Lca_" ++ f ++ "_" ++ toString path ++ m
+
+def Ctx.lbl (ctx : Ctx) (path : Path) (m : String) : Label := L.Compiler.lbl ctx.fn path m
 
 /-- Where `return` jumps (with the result in `rax`). -/
-def Ctx.retL (ctx : Ctx) : Label := ctx.lbl "" "R"
+def Ctx.retL (ctx : Ctx) : Label := ctx.lbl 0 "R"
 
 /-- Where a function body that falls off its end (or breaks outside a loop) goes: `rax := 0`. -/
-def Ctx.endL (ctx : Ctx) : Label := ctx.lbl "" "Z"
+def Ctx.endL (ctx : Ctx) : Label := ctx.lbl 0 "Z"
 
 def Ctx.tmp (ctx : Ctx) (t : Nat) : AddrExpr := mb .rsp (8 * (ctx.nl + t))
 
@@ -307,20 +317,20 @@ def CondCode.neg : CondCode → CondCode
   | .s => .ns | .ns => .s | .p => .np | .np => .p | .l => .ge | .ge => .l | .le => .g | .g => .le
 
 /-- Jump to `l` if `c` evaluates to `b`; fall through otherwise. -/
-def compileC (ctx : Ctx) (path : String) : Cond → Bool → Label → Nat → Program
+def compileC (ctx : Ctx) (path : Path) : Cond → Bool → Label → Nat → Program
   | .cmp op a b, pol, l, t =>
     compileE ctx a t ++ [movMR (ctx.tmp t) .rax] ++ compileE ctx b (t + 1) ++
       [movRR .rcx .rax, movRM .rax (ctx.tmp t), i64 (.cmp (.reg (rr .rax)) (oR .rcx)),
        jccL (if pol then cmpCC op else CondCode.neg (cmpCC op)) l]
-  | .and p q, false, l, t => compileC ctx (path ++ "p") p false l t ++ compileC ctx (path ++ "q") q false l t
+  | .and p q, false, l, t => compileC ctx (path.ch 7) p false l t ++ compileC ctx (path.ch 8) q false l t
   | .and p q, true, l, t =>
-    compileC ctx (path ++ "p") p false (ctx.lbl path "S") t ++ compileC ctx (path ++ "q") q true l t ++
+    compileC ctx (path.ch 7) p false (ctx.lbl path "S") t ++ compileC ctx (path.ch 8) q true l t ++
       [.label (ctx.lbl path "S")]
-  | .or p q, true, l, t => compileC ctx (path ++ "p") p true l t ++ compileC ctx (path ++ "q") q true l t
+  | .or p q, true, l, t => compileC ctx (path.ch 7) p true l t ++ compileC ctx (path.ch 8) q true l t
   | .or p q, false, l, t =>
-    compileC ctx (path ++ "p") p true (ctx.lbl path "S") t ++ compileC ctx (path ++ "q") q false l t ++
+    compileC ctx (path.ch 7) p true (ctx.lbl path "S") t ++ compileC ctx (path.ch 8) q false l t ++
       [.label (ctx.lbl path "S")]
-  | .not p, pol, l, t => compileC ctx (path ++ "n") p (!pol) l t
+  | .not p, pol, l, t => compileC ctx (path.ch 9) p (!pol) l t
 
 /-- Evaluate the arguments into temporaries `i, i+1, …`. -/
 def compileArgs (ctx : Ctx) : Nat → List Expr → Program
@@ -348,7 +358,7 @@ def storeRes (tab : Tab) : List Var → Nat → Program
     (if i < maxRes then [movMR (mb .rsp (8 * x)) (resReg i)]
      else [movRM .rcx (mb .r15 (tab.resOff i)), movMR (mb .rsp (8 * x)) .rcx]) ++ storeRes tab xs (i + 1)
 
-def compileS (ctx : Ctx) (path : String) : Stmt → Program
+def compileS (ctx : Ctx) (path : Path) : Stmt → Program
   | .skip => []
   | .set x e => compileE ctx e 0 ++ [movMR (mb .rsp (8 * x)) .rax]
   | .st8 a i e =>
@@ -363,14 +373,14 @@ def compileS (ctx : Ctx) (path : String) : Stmt → Program
        i64 (.cmp (.reg (rr .rax)) (oM (mb .r15 (ctx.tab.len64 a)))), jccL .nc errorL,
        movRM .rcx (mb .r15 (ctx.tab.base64 a)),
        movMR (mbi .rcx .rax .W64) .rdx]
-  | .seq s t => compileS ctx (path ++ "l") s ++ compileS ctx (path ++ "r") t
+  | .seq s t => compileS ctx (path.ch 1) s ++ compileS ctx (path.ch 2) t
   | .ite c s t =>
-    compileC ctx (path ++ "c") c false (ctx.lbl path "E") 0 ++ compileS ctx (path ++ "t") s ++
-      [jmpL (ctx.lbl path "X"), .label (ctx.lbl path "E")] ++ compileS ctx (path ++ "e") t ++
+    compileC ctx (path.ch 3) c false (ctx.lbl path "E") 0 ++ compileS ctx (path.ch 4) s ++
+      [jmpL (ctx.lbl path "X"), .label (ctx.lbl path "E")] ++ compileS ctx (path.ch 5) t ++
       [.label (ctx.lbl path "X")]
   | .while c s =>
-    [.label (ctx.lbl path "H")] ++ compileC ctx (path ++ "c") c false (ctx.lbl path "X") 0 ++
-      compileS { ctx with brk := ctx.lbl path "X" } (path ++ "b") s ++ burnFuel ++
+    [.label (ctx.lbl path "H")] ++ compileC ctx (path.ch 3) c false (ctx.lbl path "X") 0 ++
+      compileS { ctx with brk := ctx.lbl path "X" } (path.ch 6) s ++ burnFuel ++
       [jmpL (ctx.lbl path "H"), .label (ctx.lbl path "X")]
   | .brk => [jmpL ctx.brk]
   | .ret es => compileArgs ctx 0 es ++ loadRes ctx es.length 0 ctx.tab.nres ++ [jmpL ctx.retL]
@@ -395,13 +405,13 @@ def zeroLocals : Nat → Nat → Program
 return address and `rsi` at the arguments. -/
 def compileFn (tab : Tab) (f : FnName) (fd : FunDecl) : Program :=
   let F := frameWords fd
-  let ctx : Ctx := { tab, fn := f, nl := fd.nlocals, brk := lbl f "" "Z" }
+  let ctx : Ctx := { tab, fn := f, nl := fd.nlocals, brk := lbl f 0 "Z" }
   [.label (fnL f),
    movRR .rax .rsp, i64 (.sub (.reg (rr .rax)) (oM (mb .r15 Tab.stackLimit))),
    i64 (.cmp (.reg (rr .rax)) (oI (8 * F + 8))), jccL .c exhaustedL,
    i64 (.sub (.reg (rr .rsp)) (oI (8 * F)))] ++
   copyParams 0 fd.nparams ++ zeroLocals fd.nparams (fd.nlocals - fd.nparams) ++
-  compileS ctx "" fd.body ++
+  compileS ctx 0 fd.body ++
   [.label ctx.endL] ++ loadRes ctx 0 0 tab.nres ++ [.label ctx.retL,
    i64 (.add (.reg (rr .rsp)) (oI (8 * F))), i64 .ret]
 
