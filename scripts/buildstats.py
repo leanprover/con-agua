@@ -48,8 +48,8 @@ DECL_SECS_WATCH = 20      # declarations (elaboration steps) over this many seco
 PROFILER_THRESHOLD_MS = 1000  # the profiler logs steps above this
 TOP_FILES, TOP_TIMES, TOP_DECLS = 25, 25, 40
 # ---- resources -------------------------------------------------------------------------------
-CPUS = "0-15"             # taskset list: at most 16 cores
-MEM_LIMIT_GB = 20         # kill the whole build above this much (proportional) resident memory
+CPUS = "0-7"             # taskset list: at most 16 cores
+MEM_LIMIT_GB = 28         # kill the whole build above this much (proportional) resident memory
 TIMEOUT_S = 3 * 3600
 
 RUN_WT = os.path.join(ROOT, "_tmp", "wt", "buildstats-run")
