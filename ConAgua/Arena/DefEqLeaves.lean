@@ -32,6 +32,8 @@ structure DefEqLeafProg (p : Prog) : Prop where
   pinat : p.lookup "pin_at" = some pinAtL
   pinword : p.lookup "pin_word" = some pinWordL
   bt : p.lookup "is_bool_true" = some isBoolTrueL
+  hproj : p.lookup "head_is_proj" = some headIsProjL
+  ion : p.lookup "io_neutral" = some ioNeutralL
 
 /-! ## Shared lemmas -/
 
@@ -89,6 +91,23 @@ theorem resH_bool (c : Prop) [Decidable c] : ResH [if c then 1 else 0] := by
 
 theorem decBool_ite (c : Prop) [Decidable c] : decBool [if c then 1 else 0] = decide c := by
   unfold decBool; split <;> simp_all
+
+theorem decBool_of {c : Prop} [Decidable c] {r : List Word} (hr : (if c then 1 else 0) = r.headD 0) :
+    decBool r = decide c := by
+  unfold decBool; rw [← hr]
+  by_cases hc : c <;> simp only [hc, ↓reduceIte, decide_true, decide_false] <;> decide
+
+theorem decBool_of' {c : Prop} [Decidable c] {r : List Word} (hr : (if c then 0 else 1) = r.headD 0) :
+    decBool r = !decide c := by
+  unfold decBool; rw [← hr]
+  by_cases hc : c <;> simp only [hc, ↓reduceIte, decide_true, decide_false] <;> decide
+
+theorem hw0 : HW 0 := by unfold HW; decide
+theorem hw1 : HW 1 := by unfold HW; decide
+
+theorem resH_of {c : Prop} [Decidable c] {r : List Word} {x y : Word} (hx : HW x) (hy : HW y)
+    (hr : (if c then x else y) = r.headD 0) : ResH r := by
+  unfold ResH; rw [← hr]; split <;> assumption
 
 /-! ## `is_bool_true` -/
 
@@ -177,5 +196,121 @@ theorem isBoolTrue_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : S
   repeat' split at hW
   all_goals simp only [reduceCtorEq, Option.some.injEq] at hW
   all_goals (rw [← hW]; decide)
+
+/-! ## `get_app_fn` runs -/
+
+/-- **A run of `get_app_fn`**: the memory unchanged, the twin's `getAppFn` at the result. -/
+theorem getAppFn_callW {p : Prog} (hp : DefEqLeafProg p) {n : Nat} {m m' : Mem} {a : AState}
+    (hR : ArenaR m a) {e : Word} (he : HW e) {r : List Word}
+    (hc : callW p n "get_app_fn" [e] m = some (r, m')) :
+    m' = m ∧ HW (r.headD 0) ∧
+      (getAppFn coreWalkFuel (decE e)).run a = .ok (decE (r.headD 0), a) := by
+  obtain ⟨t, ht, hm, -, hh, hrun⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (getAppFn_refines p hp.core.spine n ⟨m, Locals.init []⟩ a hR e he) hc
+  exact ⟨ht ▸ hm, hh, hrun⟩
+
+theorem tag_beq_w (h : Word) (hh : HW h) (k : Nat) (hk : k < 16) (t : UInt32) (ht : t = UInt32.ofNat k)
+    (w : Word) (hw : UInt64.ofNat k = w) : ((decE h).tag == t) = decide (h >>> 28 = w) := by
+  rw [ht, decE_tag_beq h hh k hk, hw]
+
+/-! ## `head_is_proj` -/
+
+def headIsProjW (p : Prog) (n : Nat) (m : Mem) (e : Word) : Option (Word × Mem) :=
+  match callW p n "get_app_fn" [e] m with
+  | none => none
+  | some (r, m₁) => some (if r.headD 0 >>> 28 = 9 then 1 else 0, m₁)
+
+theorem headIsProjW_eq (p : Prog) (n : Nat) (m m₁ : Mem) (e : Word) (r : List Word)
+    (h : callW p n "get_app_fn" [e] m = some (r, m₁)) :
+    headIsProjW p n m e = some (if r.headD 0 >>> 28 = 9 then 1 else 0, m₁) := by
+  simp only [headIsProjW, h]
+
+theorem headIsProj_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St) (e : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "head_is_proj" [e]
+    ⦃fun r s' => LocEq s' s₀ ∧ headIsProjW p n s₀.mem e = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp.hproj]
+  simp only [callFn, headIsProjL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "get_app_fn"] <;>
+    finish [headIsProjW_eq]
+
+/-- **`head_is_proj` refines `headIsProj`.** -/
+@[refines ConRon.Arena.headIsProj]
+theorem headIsProj_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb e : Word)
+    (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (he : HW e) :
+    CoreSpec p (n + 1) "head_is_proj" [e] (headIsProj (decE e)) decBool s₀ a₀ dn vis fe MM eb := by
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (headIsProj_spec p hp n s₀ e)
+  subst hs0
+  refine ⟨hloc, ?_⟩
+  cases hc : callW p n "get_app_fn" [e] s.mem with
+  | none => simp [headIsProjW, hc] at hW
+  | some q =>
+  obtain ⟨r₁, m₁⟩ := q
+  rw [headIsProjW_eq p n _ _ e r₁ hc, Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨hr, hm⟩ := hW
+  obtain ⟨rfl, hh, hgaf⟩ := getAppFn_callW hp hS.arena.1 he hc
+  rw [← hm]
+  refine coreRef_pure hS (v := decide (r₁.headD 0 >>> 28 = 9)) ?_ ?_ ?_
+  · simp only [headIsProj, StateT.run_bind, hgaf, except_ok_bind]
+    rw [tag_beq_w _ hh 9 (by decide) ETag.proj rfl 9 rfl]; rfl
+  · exact (decBool_of hr).symm
+  · exact resH_of hw1 hw0 hr
+
+/-! ## `io_neutral` -/
+
+def ioNeutralW (p : Prog) (n : Nat) (m : Mem) (e : Word) : Option (Word × Mem) :=
+  match callW p n "get_app_fn" [e] m with
+  | none => none
+  | some (r, m₁) =>
+    some (if r.headD 0 >>> 28 = 5 ∨ r.headD 0 >>> 28 = 7 ∨ r.headD 0 >>> 28 = 0 then 0 else 1, m₁)
+
+theorem ioNeutralW_eq (p : Prog) (n : Nat) (m m₁ : Mem) (e : Word) (r : List Word)
+    (h : callW p n "get_app_fn" [e] m = some (r, m₁)) :
+    ioNeutralW p n m e = some (if r.headD 0 >>> 28 = 5 ∨ r.headD 0 >>> 28 = 7 ∨ r.headD 0 >>> 28 = 0
+      then 0 else 1, m₁) := by
+  simp only [ioNeutralW, h]
+
+theorem ioNeutral_spec (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St) (e : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "io_neutral" [e]
+    ⦃fun r s' => LocEq s' s₀ ∧ ioNeutralW p n s₀.mem e = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp.ion]
+  simp only [callFn, ioNeutralL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "get_app_fn"] <;>
+    finish [ioNeutralW_eq]
+
+/-- **`io_neutral` refines `ioNeutral`.** -/
+@[refines ConRon.Arena.ioNeutral]
+theorem ioNeutral_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb e : Word)
+    (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (he : HW e) :
+    CoreSpec p (n + 1) "io_neutral" [e] (ioNeutral (decE e)) decBool s₀ a₀ dn vis fe MM eb := by
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (ioNeutral_spec p hp n s₀ e)
+  subst hs0
+  refine ⟨hloc, ?_⟩
+  cases hc : callW p n "get_app_fn" [e] s.mem with
+  | none => simp [ioNeutralW, hc] at hW
+  | some q =>
+  obtain ⟨r₁, m₁⟩ := q
+  rw [ioNeutralW_eq p n _ _ e r₁ hc, Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨hr, hm⟩ := hW
+  obtain ⟨rfl, hh, hgaf⟩ := getAppFn_callW hp hS.arena.1 he hc
+  rw [← hm]
+  refine coreRef_pure hS (v := !decide (r₁.headD 0 >>> 28 = 5 ∨ r₁.headD 0 >>> 28 = 7 ∨
+    r₁.headD 0 >>> 28 = 0)) ?_ ?_ ?_
+  · simp only [ioNeutral, StateT.run_bind, hgaf, except_ok_bind]
+    rw [tag_beq_w _ hh 5 (by decide) ETag.lam rfl 5 rfl, tag_beq_w _ hh 7 (by decide) ETag.letE rfl 7 rfl,
+      tag_beq_w _ hh 0 (by decide) ETag.bvar rfl 0 rfl]
+    by_cases h5 : r₁.headD 0 >>> 28 = 5 <;> by_cases h7 : r₁.headD 0 >>> 28 = 7 <;>
+      by_cases h0 : r₁.headD 0 >>> 28 = 0 <;>
+      simp only [h5, h7, h0, decide_true, decide_false, ↓reduceIte, Bool.not_true, Bool.not_false,
+        true_or, or_true, or_false] <;> rfl
+  · exact (decBool_of' hr).symm
+  · exact resH_of hw0 hw1 hr
 
 end L.Arena
