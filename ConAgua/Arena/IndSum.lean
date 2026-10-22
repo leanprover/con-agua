@@ -37,11 +37,20 @@ open L.Arena
 /-- `er_from_iw(o, l)`: an `IW` slice copied into a fresh `EREC` allocation, so that a list built
 while processing (in `IW`) can be stored in a persistent record (in `EREC`). -/
 -- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
-def erFromIw : FunDecl := lfn (o, l) locals (q, j) {
+def erFromIw : FunDecl := lfn (o, l) locals (q, z) {
   q := call erec_alloc(l);
-  j := 0;
-  while j < l { EREC.u64[q + j] := IW.u64[o + j]; j += 1 };
+  z := call er_from_iw_go(q, o, l);
   return (q, l)
+}
+
+/-- `er_from_iw_go(q, o, l)`: copy the `IW` slice `(o, l)` to `EREC[q ‥]`, word by word, first to
+last. Self-recursive (lane `indproofs2`: split off `er_from_iw`'s `while` loop for the proof). -/
+-- con-ron: none — L scratch-array plumbing (the twin builds `List`s/`Array`s)
+def erFromIwGo : FunDecl := lfn (q, o, l) locals (z) {
+  if l == 0 { return 0 };
+  EREC.u64[q] := IW.u64[o];
+  z := call er_from_iw_go(q + 1, o + 1, l - 1);
+  return 0
 }
 
 /-! ## `SumInstall.lean`: the type former's telescope -/
@@ -100,32 +109,58 @@ def checkSumTeleL : FunDecl := lfn (vis, cv, n, cvTa0) locals (ok, bso, bsl, bod
 the fields' sorts over the opened constructor telescope (official's per-field universe bound
 unless the family is propositional). The twin walks the fields from the last to the first
 (effects in that order) and returns the sorts in field order; both happen naturally by writing
-field `j`'s sort at position `j` of a pre-sized result while the loop counts down. -/
+field `j`'s sort at position `j` of a pre-sized result while the recursion counts down
+(`check_struct_field_sorts_i_go`). -/
 -- con-ron: ConRon/Arena/Inductives/SumInstall.lean:89-113 ConRon.Arena.checkStructFieldSortsI
 @[l_impl ConRon.Arena.checkStructFieldSortsI]
 def checkStructFieldSortsIL : FunDecl :=
   lfn (vis, isProp, large, s, nP, fvsOff, fvsLen, idxOff, idxLen, n)
-  locals (res, j, fv, t, ty, u, r, z, eq, ct) {
+  locals (res, z) {
   res := call iw_alloc(n);
-  j := n;
-  while j != 0 {
-    j := j - 1;
-    fv := call sl_get(fvsOff, fvsLen, j);
-    t := call fvar_type_d(fv);
-    ty := call infer_type_core(vis, nP + j, t);
-    u := call ensure_sort_core(vis, nP + j, ty);
-    if isProp == 0 {
-      r := call lv_leq_top(u, s);
-      if r != 2 { abort }
-    } else if large != 0 {
-      z := call pin_word(53);
-      eq := call lvl_eq_true(u, z);
-      ct := call sl_contains(idxOff, idxLen, fv);
-      if eq == 0 && ct == 0 { abort }
-    };
-    IW.u64[res + j] := u
-  };
+  z := call check_struct_field_sorts_i_go(vis, isProp, large, s, nP, fvsOff, fvsLen, idxOff, idxLen,
+    res, n);
   return (res, n)
+}
+
+/-- `check_field_sort_bound(isProp, large, s, idxOff, idxLen, fv, u)`: one field's universe bound
+in `check_struct_field_sorts_i_go`: `u ≤ s` unless the family is propositional, else (large
+elimination) `u` is zero or `fv` is an index argument; aborts otherwise (lane `indproofs2`: split
+off for the proof). -/
+-- con-ron: ConRon/Arena/Inductives/SumInstall.lean:89-113 ConRon.Arena.checkStructFieldSortsI
+@[l_impl ConRon.Arena.checkStructFieldSortsI]
+def checkFieldSortBoundL : FunDecl :=
+  lfn (isProp, large, s, idxOff, idxLen, fv, u) locals (r, z, eq, ct) {
+  if isProp == 0 {
+    r := call lv_leq_top(u, s);
+    if r != 2 { abort }
+  } else if large != 0 {
+    z := call pin_word(53);
+    eq := call lvl_eq_true(u, z);
+    ct := call sl_contains(idxOff, idxLen, fv);
+    if eq == 0 && ct == 0 { abort }
+  };
+  return 0
+}
+
+/-- `check_struct_field_sorts_i_go(vis, isProp, large, s, nP, fvsOff, fvsLen, idxOff, idxLen, res,
+j)`: the twin's recursion at `j`: field `j - 1` first (its sort written at `res + (j - 1)`), then
+the fields below it. Self-recursive, as the twin is (lane `indproofs2`: split off
+`check_struct_field_sorts_i`'s `while` loop for the proof). -/
+-- con-ron: ConRon/Arena/Inductives/SumInstall.lean:89-113 ConRon.Arena.checkStructFieldSortsI
+@[l_impl ConRon.Arena.checkStructFieldSortsI]
+def checkStructFieldSortsIGoL : FunDecl :=
+  lfn (vis, isProp, large, s, nP, fvsOff, fvsLen, idxOff, idxLen, res, j)
+  locals (fv, t, ty, u, z, w) {
+  if j == 0 { return 0 };
+  fv := call sl_get(fvsOff, fvsLen, j - 1);
+  t := call fvar_type_d(fv);
+  ty := call infer_type_core(vis, nP + (j - 1), t);
+  u := call ensure_sort_core(vis, nP + (j - 1), ty);
+  z := call check_field_sort_bound(isProp, large, s, idxOff, idxLen, fv, u);
+  IW.u64[res + (j - 1)] := u;
+  w := call check_struct_field_sorts_i_go(vis, isProp, large, s, nP, fvsOff, fvsLen, idxOff, idxLen,
+    res, j - 1);
+  return 0
 }
 
 /-- `field_doms_resolve(vis0, off, len)`: every field domain resolves at the pre-block
@@ -169,6 +204,7 @@ def checkSumCtorTailL : FunDecl :=
   if xqOk == 0 { abort };
   us := call param_levels(lpsOff, lpsLen);
   hd := call intern_const(T, us);
+  if 4294967296 <= hd { abort };
   xfn := call get_app_fn_f(⟪CWF⟫, xqBody);
   (xargsOff, xargsLen) := call get_app_args_f(⟪CWF⟫, xqBody);
   eqFn := u64(xfn == hd);
@@ -219,28 +255,28 @@ def checkSumCtorL : FunDecl :=
 ctorsOff, ctorsLen)`: all constructors' types (stage 2), in order (the twin processes the head
 before recursing on the tail, i.e. list order). Returns `(newCtorsOff, newCtorsLen, sortsListOff,
 sortsListLen)` — `newCtors`/`ctors` are slices of pointers to `[cv, nF]`, `sortsList` a slice of
-pointers to `[off, len]` headers (`List (List LIdx)`). -/
+pointers to `[off, len]` headers (`List (List LIdx)`). Self-recursive on the slice, as the twin is on
+the list; the head's records are consed onto the rest's slices (`sl_cons`, a copy per element: every
+written word lies above the old pool top, docs/deviations.md D18; lane `indproofs2`: rewritten from a
+`while` loop writing into pre-allocated slices). -/
 -- con-ron: ConRon/Arena/Inductives/SumInstall.lean:176-190 ConRon.Arena.checkSumCtors
 @[l_impl ConRon.Arena.checkSumCtors]
 def checkSumCtorsL : FunDecl :=
   lfn (vis0, vis, T, lpsOff, lpsLen, nP, nIdx, resSort, isProp, large, cvTa, ctorsOff, ctorsLen)
-  locals (newCtors, sortsList, j, c, cv, nF, cvCaOut, sOff, sLen, newC, sHead) {
-  newCtors := call iw_alloc(ctorsLen);
-  sortsList := call iw_alloc(ctorsLen);
-  j := 0;
-  while j < ctorsLen {
-    c := call sl_get(ctorsOff, ctorsLen, j);
-    cv := IW.u64[c];
-    nF := IW.u64[c + 1];
-    (cvCaOut, sOff, sLen) := call check_sum_ctor(vis0, vis, T, lpsOff, lpsLen, nP, nIdx, resSort,
-      isProp, large, cv, nF, cvTa);
-    newC := call rec2(cvCaOut, nF);
-    IW.u64[newCtors + j] := newC;
-    sHead := call rec2(sOff, sLen);
-    IW.u64[sortsList + j] := sHead;
-    j += 1
-  };
-  return (newCtors, ctorsLen, sortsList, ctorsLen)
+  locals (c, cv, nF, cvCaOut, sOff, sLen, newC, sHead, rO, rL, sO, sL, o1, l1, o2, l2) {
+  if ctorsLen == 0 { return (0, 0, 0, 0) };
+  c := IW.u64[ctorsOff];
+  cv := IW.u64[c];
+  nF := IW.u64[c + 1];
+  (cvCaOut, sOff, sLen) := call check_sum_ctor(vis0, vis, T, lpsOff, lpsLen, nP, nIdx, resSort,
+    isProp, large, cv, nF, cvTa);
+  newC := call rec2(cvCaOut, nF);
+  sHead := call rec2(sOff, sLen);
+  (rO, rL, sO, sL) := call check_sum_ctors(vis0, vis, T, lpsOff, lpsLen, nP, nIdx, resSort, isProp,
+    large, cvTa, ctorsOff + 1, ctorsLen - 1);
+  (o1, l1) := call sl_cons(newC, rO, rL);
+  (o2, l2) := call sl_cons(sHead, sO, sL);
+  return (o1, l1, o2, l2)
 }
 
 /-- `ctor_info_rec(cv, nP, nF)`: the `.ctorInfo cv nP nF` constant record in `EREC` (`decCI` kind
@@ -287,34 +323,43 @@ shorter of the two lists, as the twin's paired match does. Returns the `EREC` ru
 @[l_impl ConRon.Arena.sumRules]
 def sumRulesL : FunDecl :=
   lfn (vis, recName, nP, ctorsOff, ctorsLen, rhssOff, rhssLen)
-  locals (n, o, j, c, cv, nF, ctorN, rhs, k, eta, rec) {
+  locals (n, o, z) {
   n := ctorsLen;
   if rhssLen < n { n := rhssLen };
   o := call iw_alloc(n);
-  j := 0;
-  while j < n {
-    c := call sl_get(ctorsOff, ctorsLen, j);
-    cv := IW.u64[c];
-    nF := IW.u64[c + 1];
-    ctorN := EREC.u64[cv];
-    rhs := call sl_get(rhssOff, rhssLen, j);
-    (k, eta) := call rec_rule_bits(vis, ctorN);
-    rec := call erec_alloc(11);
-    EREC.u64[rec] := ctorN;
-    EREC.u64[rec + 1] := nF;
-    EREC.u64[rec + 2] := nP;
-    EREC.u64[rec + 3] := 0;
-    EREC.u64[rec + 4] := 0;
-    EREC.u64[rec + 5] := 0;
-    EREC.u64[rec + 6] := 0;
-    EREC.u64[rec + 7] := 0;
-    EREC.u64[rec + 8] := rhs;
-    EREC.u64[rec + 9] := k;
-    EREC.u64[rec + 10] := eta;
-    IW.u64[o + j] := rec;
-    j += 1
-  };
+  z := call sum_rules_go(vis, nP, ctorsOff, ctorsLen, rhssOff, rhssLen, o);
   return (o, n)
+}
+
+/-- `sum_rules_go(vis, nP, cO, cL, rO, rL, o)`: the rules of the paired slices `(cO, cL)`,
+`(rO, rL)`, their pointers written at `o, o + 1, …`; stops at the shorter. Self-recursive, as the
+twin is (lane `indproofs2`: split off `sum_rules`' `while` loop for the proof). -/
+-- con-ron: ConRon/Arena/Inductives/SumInstall.lean:200-211 ConRon.Arena.sumRules
+@[l_impl ConRon.Arena.sumRules]
+def sumRulesGoL : FunDecl :=
+  lfn (vis, nP, cO, cL, rO, rL, o) locals (c, cv, nF, ctorN, rhs, k, eta, rec, z) {
+  if cL == 0 || rL == 0 { return 0 };
+  c := IW.u64[cO];
+  cv := IW.u64[c];
+  nF := IW.u64[c + 1];
+  ctorN := EREC.u64[cv];
+  rhs := IW.u64[rO];
+  (k, eta) := call rec_rule_bits(vis, ctorN);
+  rec := call erec_alloc(11);
+  EREC.u64[rec] := ctorN;
+  EREC.u64[rec + 1] := nF;
+  EREC.u64[rec + 2] := nP;
+  EREC.u64[rec + 3] := 0;
+  EREC.u64[rec + 4] := 0;
+  EREC.u64[rec + 5] := 0;
+  EREC.u64[rec + 6] := 0;
+  EREC.u64[rec + 7] := 0;
+  EREC.u64[rec + 8] := rhs;
+  EREC.u64[rec + 9] := k;
+  EREC.u64[rec + 10] := eta;
+  IW.u64[o] := rec;
+  z := call sum_rules_go(vis, nP, cO + 1, cL - 1, rO + 1, rL - 1, o + 1);
+  return 0
 }
 
 /-! ## `StructInstall.lean` -/
@@ -341,21 +386,23 @@ def checkStructDomsAtL : FunDecl := lfn (vis, off, fvsOff, fvsLen, domsOff, doms
 /-- `check_struct_proj_table_scoped(vis, nP, lpsOff, lpsLen, bodiesOff, bodiesLen)`: the bodies'
 scoping check split off `check_struct_proj_table` (the twin's `bodies.toList.allM`): for each
 body, all four checks run (`&&` on already-fetched values), and the scan stops at the first body
-that fails any of them. -/
+that fails any of them. Self-recursive on the slice, as `List.allM` is on the list (lane
+`indproofs2`: rewritten from a `while` loop for the proof). -/
 -- con-ron: ConRon/Arena/Inductives/StructInstall.lean:39-64 ConRon.Arena.checkStructProjTable
 @[l_impl ConRon.Arena.checkStructProjTable]
 def checkStructProjTableScopedL : FunDecl :=
-  lfn (vis, nP, lpsOff, lpsLen, bodiesOff, bodiesLen) locals (j, b, r1, r2, r3, r4) {
-  j := 0;
-  while j < bodiesLen {
-    b := call sl_get(bodiesOff, bodiesLen, j);
-    r1 := call has_fvar_fast(⟪CWF⟫, b);
-    r2 := call all_level_params_defined(lpsOff, lpsLen, b);
-    r3 := call consts_resolve_ffast(vis, b);
-    r4 := call loose_bvars_bounded_fast(⟪CWF⟫, nP + 1, b);
-    if r1 == 0 && r2 == 1 && r3 == 1 && r4 == 1 { j += 1 } else { return 0 }
+  lfn (vis, nP, lpsOff, lpsLen, bodiesOff, bodiesLen) locals (b, r1, r2, r3, r4, r) {
+  if bodiesLen == 0 { return 1 };
+  b := IW.u64[bodiesOff];
+  r1 := call has_fvar_fast(⟪CWF⟫, b);
+  r2 := call all_level_params_defined(lpsOff, lpsLen, b);
+  r3 := call consts_resolve_ffast(vis, b);
+  r4 := call loose_bvars_bounded_fast(⟪CWF⟫, nP + 1, b);
+  if r1 == 0 && r2 == 1 && r3 == 1 && r4 == 1 {
+    r := call check_struct_proj_table_scoped(vis, nP, lpsOff, lpsLen, bodiesOff + 1, bodiesLen - 1);
+    return r
   };
-  return 1
+  return 0
 }
 
 /-- `check_struct_proj_table(T, C, lpsOff, lpsLen, nP, nF, resSort, guardsOff, guardsLen, off,
@@ -723,13 +770,15 @@ def mentionsConstL : FunDecl := lfn (T, e) locals (u, r) {
 
 /-- This module's functions. -/
 def indSumFns : Prog :=
-  [("er_from_iw", erFromIw),
+  [("er_from_iw", erFromIw), ("er_from_iw_go", erFromIwGo),
    ("whnf_telescope", whnfTelescopeL), ("check_sum_tele_slow", checkSumTeleSlowL),
    ("check_sum_tele", checkSumTeleL), ("check_struct_field_sorts_i", checkStructFieldSortsIL),
+   ("check_struct_field_sorts_i_go", checkStructFieldSortsIGoL),
+   ("check_field_sort_bound", checkFieldSortBoundL),
    ("field_doms_resolve", fieldDomsResolveL), ("idx_args_resolve", idxArgsResolveL),
    ("check_sum_ctor_tail", checkSumCtorTailL), ("check_sum_ctor", checkSumCtorL),
    ("check_sum_ctors", checkSumCtorsL), ("ctor_info_rec", ctorInfoRecL),
-   ("cons_sum_ctors", consSumCtorsL), ("sum_rules", sumRulesL),
+   ("cons_sum_ctors", consSumCtorsL), ("sum_rules", sumRulesL), ("sum_rules_go", sumRulesGoL),
    ("check_struct_doms_at", checkStructDomsAtL),
    ("check_struct_proj_table_scoped", checkStructProjTableScopedL),
    ("check_struct_proj_table", checkStructProjTableL),
