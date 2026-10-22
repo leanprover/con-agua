@@ -66,6 +66,44 @@ theorem trunc_get (P : Array Word) (t j : Nat) (h1 : 1 ≤ j) (h2 : j ≤ t) (hs
   rw [if_neg (by omega), if_pos (by omega)]
 
 
+/-- What the install reads of the front's state: the name and expression tables, `DLP`'s size and
+top. (Unlike `StateDR` it survives the writes of the block's pointers below the top.) -/
+structure LkR (m : Mem) (st : StateD) : Prop where
+  names : TblR (m.arr64 NID) st.names
+  exprs : TblR (m.arr64 EID) st.exprs
+  psize : (m.arr64 DLP).size < 2 ^ 63
+  ptop : topN m DLP + 1 ≤ (m.arr64 DLP).size
+
+theorem StateDR.lkR {m : Mem} {st : StateD} (h : StateDR m st) : LkR m st :=
+  ⟨h.names, h.exprs, h.decls.psize, h.decls.ptop⟩
+
+theorem LkR.frame {m m' : Mem} {st : StateD} (h : LkR m st) (hf : MemFrame [DLP] [] m m')
+    (ht : topN m' DLP + 1 ≤ (m'.arr64 DLP).size) : LkR m' st :=
+  ⟨by rw [hf.1 NID (by decide) (by decide)]; exact h.names,
+    by rw [hf.1 EID (by decide) (by decide)]; exact h.exprs, by rw [hf.2.2.1]; exact h.psize, ht⟩
+
+theorem lkR_name {m : Mem} {st : StateD} (hD : LkR m st) {x w : Word} (a : AState)
+    (h : lkW m NID x = some w) :
+    (st.name x.toNat).run a = .ok (decI w, a) ∧ w.toNat < 2 ^ 32 := by
+  unfold lkW at h
+  split at h
+  · rename_i hok
+    cases h
+    obtain ⟨h1, h2⟩ := hD.names.read _ _ _ _ hok
+    exact ⟨by simp [StateD.name, h1]; rfl, h2⟩
+  · cases h
+
+theorem lkR_expr {m : Mem} {st : StateD} (hD : LkR m st) {x w : Word} (a : AState)
+    (h : lkW m EID x = some w) :
+    (getDeclD st x.toNat).run a = .ok (decE w, a) ∧ w.toNat < 2 ^ 32 := by
+  unfold lkW at h
+  split at h
+  · rename_i hok
+    cases h
+    obtain ⟨h1, h2⟩ := hD.exprs.read _ _ _ _ hok
+    exact ⟨by simp [getDeclD, StateD.expr, h1, decE_eq]; rfl, h2⟩
+  · cases h
+
 /-- The pool `P` holds `m`'s `DLP` words from `lo` up to `m`'s top. -/
 def AgreesFrom (P : Array Word) (m : Mem) (lo : Nat) : Prop :=
   ∀ i, lo ≤ i → i ≤ topN m DLP → P[i]? = some (wd m DLP i)
@@ -131,19 +169,19 @@ theorem cvM_wd (m : Mem) (q n o l t : Word) (j : Nat) (hq : q.toNat + 3 < (m.arr
 
 /-- **`ind_cv` against `parseCVD`**: the constant value's four words at `q`, its universe
 parameters appended by `lp_put`; they decode as the twin's constant value. -/
-theorem cvW_facts {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD : StateDR m st)
+theorem cvW_facts {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD : LkR m st)
     {q nm lps ty : Word} {cv : CVRec}
     (hnm : nm.toNat = cv.name) (hty : ty.toNat = cv.type) (hlps : ItemsR (listN b.data lps) cv.levelParams)
     (hq1 : 1 ≤ q.toNat) (hq : q.toNat + 4 ≤ topN m DLP + 1)
     (h : cvW b.data m q nm lps ty = some m') :
     ∃ cvp, (parseCVD st cv).run a = .ok (cvp, a) ∧ MemFrame [DLP] [] m m' ∧
-      topN m' DLP = topN m DLP + cv.levelParams.length ∧
+      topN m' DLP = topN m DLP + cv.levelParams.length ∧ topN m' DLP + 1 ≤ (m'.arr64 DLP).size ∧
       (∀ i, 1 ≤ i → i < q.toNat → wd m' DLP i = wd m DLP i) ∧
       (∀ i, q.toNat + 4 ≤ i → i ≤ topN m DLP → wd m' DLP i = wd m DLP i) ∧
-      (∀ P, AgreesFrom P m' q.toNat → decCV P q.toNat = some cvp) := by
-  have hDR := hD.decls
-  have hps := hDR.psize
-  have hptop : topN m DLP + 1 ≤ (m.arr64 DLP).size := hDR.ptop
+      (∀ P, (∀ i, (q.toNat ≤ i ∧ i < q.toNat + 4) ∨ (topN m DLP < i ∧ i ≤ topN m' DLP) →
+        P[i]? = some (wd m' DLP i)) → decCV P q.toNat = some cvp) := by
+  have hps := hD.psize
+  have hptop : topN m DLP + 1 ≤ (m.arr64 DLP).size := hD.ptop
   unfold cvW at h
   cases hn : lkW m NID nm with
   | none => rw [hn, wK_none] at h; cases h
@@ -159,8 +197,8 @@ theorem cvW_facts {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD : 
   rw [hl, mK_some] at h
   simp only [Option.some.injEq] at h
   subst h
-  obtain ⟨n1, n2⟩ := lkW_name hD a hn
-  obtain ⟨y1, y2⟩ := lkW_expr hD a ht
+  obtain ⟨n1, n2⟩ := lkR_name hD a hn
+  obtain ⟨y1, y2⟩ := lkR_expr hD a ht
   rw [hnm] at n1; rw [hty] at y1
   unfold lpPutW at hl
   split at hl
@@ -190,8 +228,9 @@ theorem cvW_facts {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD : 
     rw [if_neg (by omega), if_neg (by omega), if_neg (by omega), if_neg (by omega)]
   refine ⟨cvp, hpc, F2.trans (by
       unfold cvM; exact ((((MemFrame.set64 _ _ (by decide) _ _).trans (MemFrame.set64 _ _ (by decide) _ _)).trans
-        (MemFrame.set64 _ _ (by decide) _ _)).trans (MemFrame.set64 _ _ (by decide) _ _))), ?_, ?_, ?_, ?_⟩
+        (MemFrame.set64 _ _ (by decide) _ _)).trans (MemFrame.set64 _ _ (by decide) _ _))), ?_, ?_, ?_, ?_, ?_⟩
   · rw [htopF, ← hlen]
+  · rw [htopF]; unfold cvM; simp only [size_set64]; rw [hs1]; rw [F1, hrdN] at F3; omega
   · intro i h1 h2
     rw [cvM_wd _ _ _ _ _ _ i hq3 (by omega)]
     simp only [show i ≠ q.toNat by omega, show i ≠ q.toNat + 1 by omega, show i ≠ q.toNat + 2 by omega,
@@ -203,14 +242,11 @@ theorem cvW_facts {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD : 
       show i ≠ q.toNat + 3 by omega, if_false]
     simp only [wd]; rw [F4 i (by omega) (by rw [hrdN]; omega)]
   · intro P hP
-    have hA : ∀ i, q.toNat ≤ i → i ≤ topN m DLP + (listN b.data lps).length →
-        P[i]? = some (wd (cvM m₁ q nh (rdW (m.arr64 DLP) 0) (lsCntN b.data (lps + 1) 0) th) DLP i) :=
-      fun i h1 h2 => hP i h1 (by rw [htopF]; exact h2)
     have hw := fun j => cvM_wd m₁ q nh (rdW (m.arr64 DLP) 0) (lsCntN b.data (lps + 1) 0) th j hq3 (by omega)
-    have e0 := hA q.toNat (by omega) (by omega)
-    have e1 := hA (q.toNat + 1) (by omega) (by omega)
-    have e2 := hA (q.toNat + 2) (by omega) (by omega)
-    have e3 := hA (q.toNat + 3) (by omega) (by omega)
+    have e0 := hP q.toNat (.inl ⟨by omega, by omega⟩)
+    have e1 := hP (q.toNat + 1) (.inl ⟨by omega, by omega⟩)
+    have e2 := hP (q.toNat + 2) (.inl ⟨by omega, by omega⟩)
+    have e3 := hP (q.toNat + 3) (.inl ⟨by omega, by omega⟩)
     rw [hw] at e0 e1 e2 e3
     simp only [if_pos rfl, show q.toNat + 1 ≠ q.toNat by omega, show q.toNat + 2 ≠ q.toNat by omega,
       show q.toNat + 2 ≠ q.toNat + 1 by omega, show q.toNat + 3 ≠ q.toNat by omega,
@@ -225,7 +261,7 @@ theorem cvW_facts {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD : 
       have hmem : (listN b.data lps)[j]! ∈ listN b.data lps := by
         rw [getElem!_pos (listN b.data lps) j hj]; exact List.getElem_mem hj
       refine ⟨?_, (tbl_read hD.names _ (F6 _ hmem)).2.1⟩
-      rw [ho, hA _ (by omega) (by omega), hw]
+      rw [ho, hP _ (.inr ⟨by omega, by rw [htopF]; omega⟩), hw]
       simp only [show topN m DLP + 1 + j ≠ q.toNat by omega, show topN m DLP + 1 + j ≠ q.toNat + 1 by omega,
         show topN m DLP + 1 + j ≠ q.toNat + 2 by omega, show topN m DLP + 1 + j ≠ q.toNat + 3 by omega,
         if_false]
