@@ -703,14 +703,11 @@ def auxRuleFire : FunDecl := lfn (M, rP) locals (lo, ll, po, pl) {
   return (1, lo, ll, po, pl)
 }
 
-/-- Rebuild each rule record of `(ro, rl)` with the given NESTED fire (its level and pin slices in
-`EREC`), as fresh `EREC` records; the twin's `rules.map`, a self-recursion consing each new record
-pointer onto the rest's slice (`sl_cons`, D18). -/
+/-- `tgt_rule_nested(old, flo, fll, fpo, fpl)`: a fresh 11-word rule record, `old`'s fields with the
+NESTED fire at the record-pool slices `(flo, fll)` (levels), `(fpo, fpl)` (pins). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:498-509 ConRon.Arena.tgtStoredRules
 @[l_impl ConRon.Arena.tgtStoredRules]
-def tgtStoredRulesRemap : FunDecl := lfn (ro, rl, flo, fll, fpo, fpl) locals (old, newp, to, tl, qo, ql) {
-  if rl == 0 { return (0, 0) };
-  old := IW.u64[ro];
+def tgtRuleNested : FunDecl := lfn (old, flo, fll, fpo, fpl) locals (newp) {
   newp := call erec_alloc(11);
   EREC.u64[newp] := EREC.u64[old];
   EREC.u64[newp + 1] := EREC.u64[old + 1];
@@ -723,6 +720,17 @@ def tgtStoredRulesRemap : FunDecl := lfn (ro, rl, flo, fll, fpo, fpl) locals (ol
   EREC.u64[newp + 8] := EREC.u64[old + 8];
   EREC.u64[newp + 9] := EREC.u64[old + 9];
   EREC.u64[newp + 10] := EREC.u64[old + 10];
+  return newp
+}
+
+/-- Rebuild each rule record of `(ro, rl)` with the given NESTED fire (its level and pin slices in
+`EREC`), as fresh `EREC` records; the twin's `rules.map`, a self-recursion consing each new record
+pointer onto the rest's slice (`sl_cons`, D18). -/
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:498-509 ConRon.Arena.tgtStoredRules
+@[l_impl ConRon.Arena.tgtStoredRules]
+def tgtStoredRulesRemap : FunDecl := lfn (ro, rl, flo, fll, fpo, fpl) locals (newp, to, tl, qo, ql) {
+  if rl == 0 { return (0, 0) };
+  newp := call tgt_rule_nested(IW.u64[ro], flo, fll, fpo, fpl);
   (to, tl) := call tgt_stored_rules_remap(ro + 1, rl - 1, flo, fll, fpo, fpl);
   (qo, ql) := call sl_cons(newp, to, tl);
   return (qo, ql)
@@ -768,24 +776,31 @@ def blockNestedBit : FunDecl := lfn (p, ko, kl) locals (flat, r) {
   return r
 }
 
+/-- `rule_copy(b, old)`: the 11 words of the rule record at `old` copied to `EREC[b ‥ b + 11)`. -/
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:517-534 ConRon.Arena.consBlockRecsTF
+@[l_impl ConRon.Arena.consBlockRecsTF]
+def ruleCopy : FunDecl := lfn (b, old) locals () {
+  EREC.u64[b] := EREC.u64[old];
+  EREC.u64[b + 1] := EREC.u64[old + 1];
+  EREC.u64[b + 2] := EREC.u64[old + 2];
+  EREC.u64[b + 3] := EREC.u64[old + 3];
+  EREC.u64[b + 4] := EREC.u64[old + 4];
+  EREC.u64[b + 5] := EREC.u64[old + 5];
+  EREC.u64[b + 6] := EREC.u64[old + 6];
+  EREC.u64[b + 7] := EREC.u64[old + 7];
+  EREC.u64[b + 8] := EREC.u64[old + 8];
+  EREC.u64[b + 9] := EREC.u64[old + 9];
+  EREC.u64[b + 10] := EREC.u64[old + 10];
+  return 0
+}
+
 /-- `rules_to_erec_go(base, ro, rl)`: copy the 11-word rule records `IW[ro ‥ ro + rl)` point to into
 the `EREC` run at `base`, first to last; a self-recursion. -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:517-534 ConRon.Arena.consBlockRecsTF
 @[l_impl ConRon.Arena.consBlockRecsTF]
-def rulesToErecGo : FunDecl := lfn (base, ro, rl) locals (old, u) {
+def rulesToErecGo : FunDecl := lfn (base, ro, rl) locals (u) {
   if rl == 0 { return 0 };
-  old := IW.u64[ro];
-  EREC.u64[base] := EREC.u64[old];
-  EREC.u64[base + 1] := EREC.u64[old + 1];
-  EREC.u64[base + 2] := EREC.u64[old + 2];
-  EREC.u64[base + 3] := EREC.u64[old + 3];
-  EREC.u64[base + 4] := EREC.u64[old + 4];
-  EREC.u64[base + 5] := EREC.u64[old + 5];
-  EREC.u64[base + 6] := EREC.u64[old + 6];
-  EREC.u64[base + 7] := EREC.u64[old + 7];
-  EREC.u64[base + 8] := EREC.u64[old + 8];
-  EREC.u64[base + 9] := EREC.u64[old + 9];
-  EREC.u64[base + 10] := EREC.u64[old + 10];
+  u := call rule_copy(base, IW.u64[ro]);
   u := call rules_to_erec_go(base + 11, ro + 1, rl - 1);
   return 0
 }
@@ -801,12 +816,11 @@ def rulesToErec : FunDecl := lfn (ro, rl) locals (base, u) {
   return (base, rl)
 }
 
-/-- Build the `recInfo` record (kind `5`: `cv`'s 4 words inline, `major`, `pre`, the rules copied
-to one fresh `EREC` run) and `env_push` it. -/
+/-- `rec_info_rec(cv, mI, rP, reo, rel)`: a fresh 9-word `.recInfo` record (kind `5`, `cv`'s 4 words
+inline, `major`, `pre`, the rules' run). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:517-534 ConRon.Arena.consBlockRecsTF
 @[l_impl ConRon.Arena.consBlockRecsTF]
-def consBlockRecsPush : FunDecl := lfn (vis, cv, mI, rP, ro, rl) locals (reo, rel, q, nvis) {
-  (reo, rel) := call rules_to_erec(ro, rl);
+def recInfoRec : FunDecl := lfn (cv, mI, rP, reo, rel) locals (q) {
   q := call erec_alloc(9);
   EREC.u64[q] := 5;
   EREC.u64[q + 1] := EREC.u64[cv];
@@ -817,6 +831,16 @@ def consBlockRecsPush : FunDecl := lfn (vis, cv, mI, rP, ro, rl) locals (reo, re
   EREC.u64[q + 6] := rP;
   EREC.u64[q + 7] := reo;
   EREC.u64[q + 8] := rel;
+  return q
+}
+
+/-- Build the `recInfo` record (kind `5`: `cv`'s 4 words inline, `major`, `pre`, the rules copied
+to one fresh `EREC` run) and `env_push` it. -/
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:517-534 ConRon.Arena.consBlockRecsTF
+@[l_impl ConRon.Arena.consBlockRecsTF]
+def consBlockRecsPush : FunDecl := lfn (vis, cv, mI, rP, ro, rl) locals (reo, rel, q, nvis) {
+  (reo, rel) := call rules_to_erec(ro, rl);
+  q := call rec_info_rec(cv, mI, rP, reo, rel);
   nvis := call env_push(vis, q);
   return nvis
 }
@@ -868,9 +892,9 @@ def recCheckFns : Prog :=
    ("target_k53_heads", targetK53Heads), ("target_k53_args", targetK53Args),
    ("target_k53", targetK53), ("target_pi_doms_with", targetPiDomsWith),
    ("abstract_prefix", abstractPrefix), ("abstract_prefix_list", abstractPrefixList),
-   ("aux_rule_fire", auxRuleFire), ("tgt_stored_rules_remap", tgtStoredRulesRemap),
+   ("aux_rule_fire", auxRuleFire), ("tgt_rule_nested", tgtRuleNested), ("tgt_stored_rules_remap", tgtStoredRulesRemap),
    ("tgt_stored_rules", tgtStoredRules), ("block_nested_bit_go", blockNestedBitGo), ("block_nested_bit", blockNestedBit),
-   ("rules_to_erec_go", rulesToErecGo), ("rules_to_erec", rulesToErec), ("cons_block_recs_push", consBlockRecsPush),
+   ("rule_copy", ruleCopy), ("rules_to_erec_go", rulesToErecGo), ("rec_info_rec", recInfoRec), ("rules_to_erec", rulesToErec), ("cons_block_recs_push", consBlockRecsPush),
    ("cons_block_recs_tf", consBlockRecsTF)]
 
 /-- Stubs for the functions of OTHER modules this module calls.
