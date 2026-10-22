@@ -207,10 +207,13 @@ def dev_table(title, intro, rows, last_col):
     w(intro + "\n")
     if not rows:
         return
-    w(f"| id | effect | owner | what L does | {last_col} |")
+    w(f"| id | effect | deviation | owner | {last_col} |")
     w("|---|---|---|---|---|")
     for did, c in rows:
-        w(f"| {did} | {short(c[3], 60)} | {short(c[4], 40)} | {short(c[2], 110)} | {short(c[5], 90)} |")
+        kind = re.split(r"[\s(;,]", c[3].strip(), maxsplit=1)[0] or c[3]
+        where = re.sub(r"`", "", c[0]).split(";")[0]
+        dev = f"**twin:** {short(c[1], 150)}<br>**L:** {short(c[2], 150)}<br><sub>{short(where, 80)}</sub>"
+        w(f"| {did} | {kind} | {dev} | {short(c[4], 40)} | {short(c[5], 110)} |")
     w("")
 
 w("## Deviations from the twin\n")
