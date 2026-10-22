@@ -122,5 +122,18 @@ import ConAgua.Arena.IndPos2SpecU
 import ConAgua.Arena.IndPos2SpecV
 import ConAgua.Arena.IndTwin
 
+import ConAgua.Arena.RecCheckSpec9
+import ConAgua.Arena.RecCheckSpec10
+import ConAgua.Arena.RecCheckSpec11
+import ConAgua.Arena.RecCheckSpec12
+import ConAgua.Arena.RecCheckSpec13
+import ConAgua.Arena.RecCheckSpec14
+import ConAgua.Arena.RecCheckSpec15
+import ConAgua.Arena.RecCheckSpec16
+import ConAgua.Arena.RecCheckSpec17
+import ConAgua.Arena.RecCheckSpec18
+import ConAgua.Arena.RecCheckSpec19
+import ConAgua.Arena.RecCheckSpec20
+
 /-! # Every refinement file of the inductive stage together (lane `indproofs`): an import check that
 the helpers' files do not clash on names. -/
