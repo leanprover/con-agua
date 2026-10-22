@@ -1,2 +1,3 @@
 docs/velocity.csv merge=union
 docs/deviations.md merge=union
+DESIGN.md merge=union
