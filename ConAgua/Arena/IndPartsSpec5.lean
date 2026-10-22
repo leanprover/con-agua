@@ -336,7 +336,7 @@ theorem erLpsW_dec {n : Nat} {m m' : Mem} {a0 : Nat} {cv : IConstantVal} {r : Li
     r = [r.headD 0, r.getD 1 0] ∧
     decHL m' (r.headD 0).toNat (r.getD 1 0).toNat = some cv.levelParams ∧
     IWGrow m m' ∧ MemFrame [IW] [200] m m' ∧
-    (r.headD 0).toNat + (r.getD 1 0).toNat = iwTop m' := by
+    (r.headD 0).toNat + (r.getD 1 0).toNat = iwTop m' ∧ IWRoom m m' := by
   have hcv' := hcv
   simp only [decCVp, decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hcv'
   obtain ⟨nm, -, lv, hlv, ce, -, hcvT⟩ := hcv'
@@ -363,9 +363,9 @@ theorem erLpsW_dec {n : Nat} {m m' : Mem} {a0 : Nat} {cv : IConstantVal} {r : Li
       UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)
     rw [e4]; simp only [rdW, this]; rw [hw2]; rfl
   rw [hrd1, hrd2] at h
-  obtain ⟨hr, hdec, hgrow, hfr, -, htp⟩ := erToIwW_decS (k := IdxKind.name) h hsz hc hE hsl
+  obtain ⟨hr, hdec, hgrow, hfr, -, htp, hroom⟩ := erToIwW_decS (k := IdxKind.name) h hsz hc hE hsl
   have hh := erToIwW_two h
-  refine ⟨by rw [getD1]; exact hh, ?_, hgrow, hfr, ?_⟩
+  refine ⟨by rw [getD1]; exact hh, ?_, hgrow, hfr, ?_, hroom⟩
   · rw [hr] at hh ⊢
     simp only [List.headD_cons, List.getD_cons_succ, List.getD_cons_zero]
     rw [hdec, ← hlvE]
@@ -394,7 +394,8 @@ theorem lpsOneW_ok (n : Nat) (m m' : Mem) (rc wo wl : Word) (r : List Word) (rec
     (hc : 200 < (m.arr64 CTL).size) (hE : (m.arr64 EREC).size < 2 ^ 64)
     (hrc : decRS m rc.toNat = some rec) (hwant : decHL m wo.toNat wl.toNat = some ns)
     (hwb : wo.toNat + wl.toNat ≤ iwTop m) :
-    r = [if rec.cvR.levelParams == ns then 1 else 0] ∧ IWGrow m m' ∧ MemFrame [IW] [200] m m' := by
+    r = [if rec.cvR.levelParams == ns then 1 else 0] ∧ IWGrow m m' ∧ MemFrame [IW] [200] m m' ∧
+      IWRoom m m' := by
   cases n with
   | zero => simp [lpsOneW] at h
   | succ n =>
@@ -409,7 +410,7 @@ theorem lpsOneW_ok (n : Nat) (m m' : Mem) (rc wo wl : Word) (r : List Word) (rec
   | some rm =>
   obtain ⟨rp, m1⟩ := rm
   rw [hh, loK1_some] at h
-  obtain ⟨hsh, hdec, hg, hf, htp⟩ := erLpsW_dec hh hsz hc hE hcvR
+  obtain ⟨hsh, hdec, hg, hf, htp, hroom⟩ := erLpsW_dec hh hsz hc hE hcvR
   cases he : eqW n m1 (rp.headD 0) (rp.getD 1 0) wo wl with
   | none => rw [he] at h; simp [lpsOneW.loK2] at h
   | some e =>
@@ -428,7 +429,7 @@ theorem lpsOneW_ok (n : Nat) (m m' : Mem) (rc wo wl : Word) (r : List Word) (rec
     omega)
   rw [ofNat_toNat_word, ofNat_toNat_word] at hs2
   have hres := eqW_ok n m1 _ _ _ _ e ws1 ws2 hs1 hs2 he
-  refine ⟨?_, hg, hf⟩
+  refine ⟨?_, hg, hf, hroom⟩
   rw [hn1, hn2, map_decI_beq ws1 ws2 hl1 hl2, hres]
   by_cases hw : ws1 = ws2 <;> simp [hw]
 
@@ -441,7 +442,7 @@ theorem lpsGoW_ok (n : Nat) : ∀ (m0 m m' : Mem) (ro rl wo wl : Word) (r : List
     (∀ m'', IWGrow m0 m'' → decHL m'' wo.toNat wl.toNat = some ns) →
     wo.toNat + wl.toNat ≤ iwTop m0 → ro.toNat + rl.toNat < 2 ^ 64 →
     r = [if recs.all (fun rc => rc.cvR.levelParams == ns) then 1 else 0] ∧ IWGrow m m' ∧
-      MemFrame [IW] [200] m m' := by
+      MemFrame [IW] [200] m m' ∧ IWRoom m m' := by
   induction n with
   | zero => intro m0 m m' ro rl wo wl r recs ns h; simp [lpsGoW] at h
   | succ n ih =>
@@ -457,7 +458,7 @@ theorem lpsGoW_ok (n : Nat) : ∀ (m0 m m' : Mem) (ro rl wo wl : Word) (r : List
           Option.some.injEq] at this
         exact this.symm
       subst hrecs
-      exact ⟨rfl, IWGrow.refl _, MemFrame.refl _ _ _⟩
+      exact ⟨rfl, IWGrow.refl _, MemFrame.refl _ _ _, IWRoom.refl _⟩
     · obtain ⟨k, hk⟩ : ∃ k, rl.toNat = k + 1 := by
         have : rl.toNat ≠ 0 := fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
         exact ⟨rl.toNat - 1, by omega⟩
@@ -479,7 +480,7 @@ theorem lpsGoW_ok (n : Nat) : ∀ (m0 m m' : Mem) (ro rl wo wl : Word) (r : List
       rw [h1] at h
       have hvv : (UInt64.ofNat v).toNat = v := UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; exact hvb)
       have hwb' : wo.toNat + wl.toNat ≤ iwTop m := by have := hg0.1; omega
-      obtain ⟨hr1, hg1, hf1⟩ := lpsOneW_ok n m m1 (UInt64.ofNat v) wo wl r1 rc ns h1 hsz hc
+      obtain ⟨hr1, hg1, hf1, hw1⟩ := lpsOneW_ok n m m1 (UInt64.ofNat v) wo wl r1 rc ns h1 hsz hc
         (by rw [hE]; exact hE64) (by rw [hvv]; exact hrcd) (hdn m hg0) hwb'
       have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := by rw [hf1.2.2.1 IW]; exact hsz
       have hc1 : 200 < (m1.arr64 CTL).size := by rw [hf1.2.2.1 CTL]; exact hc
@@ -498,19 +499,19 @@ theorem lpsGoW_ok (n : Nat) : ∀ (m0 m m' : Mem) (ro rl wo wl : Word) (r : List
         rw [hrec, lgK3_some] at h
         simp only [Option.some.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
-        obtain ⟨hr2, hg2, hf2⟩ := ih m0 m1 m2 (ro + 1) (rl - 1) wo wl r2 rest ns hrec
+        obtain ⟨hr2, hg2, hf2, hw2⟩ := ih m0 m1 m2 (ro + 1) (rl - 1) wo wl r2 rest ns hrec
           (hg0.trans hg1) hE1 hsz1 hc1 hE64
           (fun m'' hg'' => by
             rw [hro1, hrl1]
             exact decPL_tail (by rw [← hk]; exact hdr m'' hg'')) hdn hwb (by rw [hro1, hrl1]; omega)
-        refine ⟨?_, hg1.trans hg2, hf1.trans hf2⟩
+        refine ⟨?_, hg1.trans hg2, hf1.trans hf2, hw1.trans hw2⟩
         rw [hr2]
         simp [List.all_cons, hbeq]
       · have hz : r1.headD 0 = 0 := by rw [hr1]; simp [hbeq]
         rw [lgK1_zero n m1 ro rl wo wl r1 hz] at h
         simp only [Option.some.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl⟩ := h
-        refine ⟨?_, hg1, hf1⟩
+        refine ⟨?_, hg1, hf1, hw1⟩
         simp [List.all_cons, hbeq]
 
 
@@ -541,7 +542,7 @@ theorem lokKey (n : Nat) (m m2 m' : Mem) (p wo wl : Word) (r : List Word) (bs : 
     (hwant : decHL m2 wo.toNat wl.toNat = some ns) (hwb : wo.toNat + wl.toNat ≤ iwTop m2)
     (hgo : lpsGoW n m2 (rdW (m2.arr64 IW) (p + 2)) (rdW (m2.arr64 IW) (p + 3)) wo wl = some (r, m')) :
     r = [if bs.recs.all (fun rc => rc.cvR.levelParams == ns) then 1 else 0] ∧ IWGrow m2 m' ∧
-      MemFrame [IW] [200] m2 m' := by
+      MemFrame [IW] [200] m2 m' ∧ IWRoom m2 m' := by
   obtain ⟨o, l, ho, hl, hrecs⟩ := decAt_some (decBS_some hq).2.1
   have hp64 : p.toNat + 9 < 2 ^ 64 := by
     have h64 : iwTop m < 2 ^ 64 := UInt64.toNat_lt _
@@ -587,7 +588,7 @@ theorem lokW_ok (n : Nat) (m m' : Mem) (p : Word) (r : List Word) (bs : BlockSha
     (hb : p.toNat + 9 ≤ iwTop m) (hsz : (m.arr64 IW).size < 2 ^ 64)
     (hc : 200 < (m.arr64 CTL).size) (hE : (m.arr64 EREC).size < 2 ^ 64) :
     r = [if ConRon.Arena.blockRecLpsOk bs then 1 else 0] ∧ IWGrow m m' ∧
-      MemFrame [IW] [200] m m' := by
+      MemFrame [IW] [200] m m' ∧ IWRoom m m' := by
   cases n with
   | zero => simp [lokW] at h
   | succ n =>
@@ -600,7 +601,7 @@ theorem lokW_ok (n : Nat) (m m' : Mem) (p : Word) (r : List Word) (bs : BlockSha
   | some rm1 =>
   obtain ⟨lr, m1⟩ := rm1
   rw [h1] at h
-  obtain ⟨hlr, hdec1, hg1, hf1, hlt1⟩ := lpsW_dec h1 hsz hc hE hq hp64
+  obtain ⟨hlr, hdec1, hg1, hf1, hlt1, hw1⟩ := lpsW_dec h1 hsz hc hE hq hp64
   have hq1 := hstab m1 hg1
   have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := by rw [hf1.2.2.1 IW]; exact hsz
   have hc1 : 200 < (m1.arr64 CTL).size := by rw [hf1.2.2.1 CTL]; exact hc
@@ -627,6 +628,8 @@ theorem lokW_ok (n : Nat) (m m' : Mem) (p : Word) (r : List Word) (bs : BlockSha
     have hsrc : (lr.headD 0).toNat + (lr.getD 1 0).toNat ≤ iwTop m1 := by rw [hlr0]; exact hlt1
     obtain ⟨hcr, hdec2, hg2, hf2, hl1, htop2⟩ := consW_dec h2 hsz1 hc1 hsrc (by rw [hw5]; exact hw532)
       (by rw [hlr0]; exact hdec1)
+    have hw2 : IWRoom m1 m2 := fun _ => consW_room h2 hsz1 hc1 hsrc (by rw [hw5]; exact hw532)
+      (by rw [hlr0]; exact hdec1)
     have hlargeT : bs.large = true := by rw [← hlarge]; simpa using hL
     have hgm : IWGrow m (m2) := hg1.trans hg2
     have hE2 : m2.arr64 EREC = m.arr64 EREC := by
@@ -647,15 +650,16 @@ theorem lokW_ok (n : Nat) (m m' : Mem) (p : Word) (r : List Word) (bs : BlockSha
       rw [hl1, hw5, hw5I] at hdec2
       rw [hl1]
       exact hdec2
-    obtain ⟨hr3, hg3, hf3⟩ := lokKey n m m2 m3 p (cr.headD 0) (cr.getD 1 0) r3 bs (bs.elim :: bs.lps)
+    obtain ⟨hr3, hg3, hf3, hw3⟩ := lokKey n m m2 m3 p (cr.headD 0) (cr.getD 1 0) r3 bs (bs.elim :: bs.lps)
       hq hstab hb hsz hgm hE2 hsz2 hc2 hE hwant (by
         rw [hcr]; simp only [List.headD_cons, List.getD_cons_succ, List.getD_cons_zero]
         have := htop2; rw [hl1] at this; omega) h3
-    refine ⟨?_, hgm.trans hg3, ?_⟩
+    refine ⟨?_, hgm.trans hg3, ?_, ?_⟩
     · rw [hr3]
       simp only [ConRon.Arena.blockRecLpsOk, hlargeT, if_true]
       rfl
     · exact ((hf1.trans hf2).trans hf3)
+    · exact (hw1.trans hw2).trans hw3
   · have hz : rdW (m1.arr64 IW) (p + 7) = 0 := by simpa using hL
     rw [lokK1_small n m1 p lr hz] at h
     have hlargeF : bs.large = false := by rw [← hlarge, hz]; rfl
@@ -669,9 +673,9 @@ theorem lokW_ok (n : Nat) (m m' : Mem) (p : Word) (r : List Word) (bs : BlockSha
     obtain ⟨rfl, rfl⟩ := h
     have hwant : decHL m1 (lr.headD 0).toNat (lr.getD 1 0).toNat = some bs.lps := by
       rw [hlr0]; exact hdec1
-    obtain ⟨hr3, hg3, hf3⟩ := lokKey n m m1 m3 p (lr.headD 0) (lr.getD 1 0) r3 bs bs.lps
+    obtain ⟨hr3, hg3, hf3, hw3⟩ := lokKey n m m1 m3 p (lr.headD 0) (lr.getD 1 0) r3 bs bs.lps
       hq hstab hb hsz hg1 hE1 hsz1 hc1 hE hwant (by rw [hlr0]; exact hlt1) h3
-    refine ⟨?_, hg1.trans hg3, hf1.trans hf3⟩
+    refine ⟨?_, hg1.trans hg3, hf1.trans hf3, hw1.trans hw3⟩
     rw [hr3]
     simp only [ConRon.Arena.blockRecLpsOk, hlargeF]
     simp
@@ -695,10 +699,10 @@ theorem blockRecLpsOk_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAllo
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_rec_lps_ok" [q]
     ⦃fun r s' => LocEq s' s₀ ∧
       r = [if ConRon.Arena.blockRecLpsOk bs then 1 else 0] ∧ IWGrow s₀.mem s'.mem ∧
-      MemFrame [IW] [200] s₀.mem s'.mem; ⊤⦄ := by
+      MemFrame [IW] [200] s₀.mem s'.mem ∧ IWRoom s₀.mem s'.mem; ⊤⦄ := by
   refine triple_post (blockRecLpsOk_spec p ha hc he hq hcp hsc ho hg hl hp n s₀ q) ?_
   rintro r s' ⟨hlc, hm⟩
-  obtain ⟨hr, hgr, hf⟩ := lokW_ok n s₀.mem s'.mem q r bs hm hdec hstab hb hsz hcl hE
-  exact ⟨hlc, hr, hgr, hf⟩
+  obtain ⟨hr, hgr, hf, hw⟩ := lokW_ok n s₀.mem s'.mem q r bs hm hdec hstab hb hsz hcl hE
+  exact ⟨hlc, hr, hgr, hf, hw⟩
 
 end L.Ind
