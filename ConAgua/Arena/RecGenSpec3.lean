@@ -72,7 +72,7 @@ theorem ccoGuards (mode : ConLeche.CheckMode) {dn : NIdx → Option ConLeche.Nam
   rw [if_neg hb3] at h
   -- `cv_lps(q)`
   have hq3 : decCV (erA m3) q.toNat = some cv := ArrExt.decCV (IWGrow.erecExt hg3) hq
-  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_words hq3
+  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice hq3
   have e1 : rdW (m3.arr64 EREC) (q + 1) = w1 :=
     rdW_of_get? (by rw [UInt64.toNat_add]; simp; omega) hw1
   have e2 : rdW (m3.arr64 EREC) (q + 2) = w2 :=

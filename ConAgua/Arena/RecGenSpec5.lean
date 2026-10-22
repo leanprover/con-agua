@@ -238,7 +238,7 @@ theorem cftW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     have hcvP := decCI_ind_cv hci
     have hcvA : decCV (erA m) ((r2.tail.headD 0).toNat + 1) = some cv :=
       ArrExt.decCV (IWGrow.erecExt (IWGrow.refl m)) hcvP
-    obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_words hcvA
+    obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice hcvA
     have hqE := (Array.getElem?_eq_some_iff.mp hw2).1
     have hE64 := hS.2.2.2.2.1
     have e1 : rdW (m.arr64 EREC) (r2.tail.headD 0 + 2) = w1 :=
