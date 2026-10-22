@@ -445,6 +445,7 @@ at the holes. -/
 def checkAbsCtorSortsOne : FunDecl := lfn (vis, ctx, isProp, nF, tyN, hi) locals
     (srt, ok, fvsO, fvsL, body, so, sl) {
   srt := IW.u64[ctx + 9];
+  if hi + nF < hi { abort };
   (ok, fvsO, fvsL, body) := call open_pis_at_fvars_f(nF, tyN, hi);
   if ok == 0 { abort };
   (so, sl) := call check_struct_field_sorts_i(vis, isProp, 0, srt, hi, fvsO, fvsL, 0, 0, nF);

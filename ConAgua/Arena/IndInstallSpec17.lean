@@ -1,11 +1,11 @@
 import ConAgua.Arena.IndInstallSpec16
+import ConAgua.Arena.IndSumSpec13
 
 /-!
 # Refinements of `IndInstall`, part 17 (lane `indproofs2`, helper `install`): `checkBlockIdxSorts`
 
 Per member: the former's telescope opened (`open_pis_at_fvars_f`'s stub), the index binders'
-universes (`check_struct_field_sorts_i`, the lead's `IndSum`, not proved yet: a pending contract
-below), recursion as the twin's with the pointers consed (D18).
+universes (`check_struct_field_sorts_i`, `IndSumSpec11`'s refinement, `installSimFsorts`), recursion as the twin's with the pointers consed (D18).
 -/
 
 set_option experimental.vcgen true
@@ -21,23 +21,37 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
-/-! ## Pending callee contracts (`sorry` until the owner's refinement lands) -/
+/-! ## `check_struct_field_sorts_i` as a callee (lane `indproofs2`'s `IndSumSpec11`) -/
 
-section pending
-variable (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-
-/-- `check_struct_field_sorts_i(vis, isProp, large, s, nP, fvs.off, fvs.len, idx.off, idx.len, j)`
-(lane `indproofs2`'s `IndSum`, pending): the fields' sorts, a fresh handle slice below the top. -/
-theorem checkStructFieldSortsI_pending (isP large s nP fo fl io il j : Word) (hs : H s)
-    (fvs idx : List EIdx) :
-    RelAM "check_struct_field_sorts_i" [vis, isP, large, s, nP, fo, fl, io, il, j]
-      (fun m a => StageR dn vis fe m a ∧ decHL m fo.toNat fl.toNat = some fvs ∧
+/-- **`check_struct_field_sorts_i(vis, isProp, large, s, nP, fvs.off, fvs.len, idx.off, idx.len,
+j)` as a `Sim`** on its run (`fsortsW_ok`, sorry-free up to its own stubs): the fields' sorts, a
+fresh handle slice below the top. Its hypotheses are the caller's: the stage relation, the two
+slices decoded below the top, `s` a handle, and `nP + j` below `2^64` (the callers' L code guards
+it). -/
+theorem installSimFsorts {p : Prog} (hP : SumProg p) (n : Nat) {dn : NIdx → Option ConLeche.Name}
+    {vis : Word} {fe : IFEnv} {m : Mem} {a : AState} (isP large s nP fo fl io il j : Word) (hs : H s)
+    (fvs idx : List EIdx)
+    (hpre : StageR dn vis fe m a ∧ decHL m fo.toNat fl.toNat = some fvs ∧
         fo.toNat + fl.toNat ≤ iwTop m ∧ decHL m io.toNat il.toNat = some idx ∧
         io.toNat + il.toNat ≤ iwTop m)
-      (checkStructFieldSortsI V fe (isP != 0) (large != 0) (decI s) nP.toNat fvs idx j.toNat)
-      (KeepPost dn vis fe (decRL (fun m => decHL m) 0)) := sorry
-
-end pending
+    (hnj : nP.toNat + j.toNat < 2 ^ 64) :
+    Sim (callW p n "check_struct_field_sorts_i" [vis, isP, large, s, nP, fo, fl, io, il, j] m)
+      (checkStructFieldSortsI V fe (isP != 0) (large != 0) (decI s) nP.toNat fvs idx j.toNat) a
+      (fun r x m' a' => KeepPost dn vis fe (decRL (fun m => decHL m) 0) m m' a' r x) := by
+  rcases n with _ | k
+  · intro r m' e; rw [callW_zero] at e; cases e
+  intro r m' e
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (fsortsW_spec p hP.hg hP.hpw hP.het hP.hcn hP.hfsb hP.hcfg hP.ha hP.hcfs k _ vis isP large s nP
+      fo fl io il j) e
+  obtain ⟨hS, hfd, hfb, hid, hib⟩ := hpre
+  obtain ⟨x, a', h1, hS', hg', hd, hb⟩ :=
+    fsortsW_ok k m a isP large s nP fo fl io il j fvs idx hS hfd hfb hid hib hs hnj r s'.mem hW
+  have g0 : r.getD 0 0 = r.headD 0 := by rcases r with _ | ⟨_, _⟩ <;> rfl
+  have g1 : r.getD (0 + 1) 0 = r.tail.headD 0 := by rcases r with _ | ⟨_, _ | ⟨_, _⟩⟩ <;> rfl
+  refine ⟨x, a', h1, hS', hg', ?_⟩
+  show decHL s'.mem (r.getD 0 0).toNat (r.getD (0 + 1) 0).toNat = some x ∧ _
+  rw [g0, g1]; exact ⟨hd, hb⟩
 
 /-! ## `check_block_idx_sorts_one` -/
 

@@ -23,6 +23,12 @@ open L.Arena
 
 local notation "V" => ConLeche.CheckMode.verified
 
+/-- A word sum that does not wrap. -/
+theorem sumAddNoOv {a b : Word} (h : ¬ a + b < a) : (a + b).toNat = a.toNat + b.toNat := by
+  rw [UInt64.lt_iff_toNat_lt, UInt64.toNat_add] at h
+  have := b.toNat_lt; have := a.toNat_lt
+  rw [UInt64.toNat_add]; omega
+
 /-! ## `check_sum_ctor` at every fuel -/
 
 /-- `check_sum_ctor`'s model at exec fuel `k`. -/
@@ -102,6 +108,8 @@ def sctsW : Nat → Mem → Word → Word → Word → Word → Word → Word �
   | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, _ => none
   | k + 1, m, vis0, vis, T, lo, ll, nP, nIdx, rs, isP, lg, cvTa, cO, cL =>
     if cL = 0 then some ([0, 0, 0, 0], m)
+    else if nP + nIdx < nP then none
+    else if nP + rdW (m.arr64 IW) (rdW (m.arr64 IW) cO + 1) < nP then none
     else sctsK1 (fun m' => sctsW k m' vis0 vis T lo ll nP nIdx rs isP lg cvTa (cO + 1) (cL - 1)) k
       (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO + 1))
       (ctorX k m vis0 vis T lo ll nP nIdx rs isP lg (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO))
@@ -113,12 +121,21 @@ variable (rest : Mem → Option (List Word × Mem)) (k : Nat) (m : Mem)
 theorem sctsW_nil (h : cL = 0) :
     sctsW (k + 1) m vis0 vis T lo ll nP nIdx rs isP lg cvTa cO cL = some ([0, 0, 0, 0], m) := by
   simp [sctsW, h]
-theorem sctsW_cons (h : cL ≠ 0) : sctsW (k + 1) m vis0 vis T lo ll nP nIdx rs isP lg cvTa cO cL =
+theorem sctsW_ov1 (h : cL ≠ 0) (h1 : nP + nIdx < nP) :
+    sctsW (k + 1) m vis0 vis T lo ll nP nIdx rs isP lg cvTa cO cL = none := by
+  simp [sctsW, h, h1]
+theorem sctsW_ov2 (h : cL ≠ 0) (h1 : ¬ nP + nIdx < nP)
+    (h2 : nP + rdW (m.arr64 IW) (rdW (m.arr64 IW) cO + 1) < nP) :
+    sctsW (k + 1) m vis0 vis T lo ll nP nIdx rs isP lg cvTa cO cL = none := by
+  simp [sctsW, h, h1, h2]
+theorem sctsW_cons (h : cL ≠ 0) (h1 : ¬ nP + nIdx < nP)
+    (h2 : ¬ nP + rdW (m.arr64 IW) (rdW (m.arr64 IW) cO + 1) < nP) :
+    sctsW (k + 1) m vis0 vis T lo ll nP nIdx rs isP lg cvTa cO cL =
     sctsK1 (fun m' => sctsW k m' vis0 vis T lo ll nP nIdx rs isP lg cvTa (cO + 1) (cL - 1)) k
       (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO + 1))
       (ctorX k m vis0 vis T lo ll nP nIdx rs isP lg (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO))
         (rdW (m.arr64 IW) (rdW (m.arr64 IW) cO + 1)) cvTa) := by
-  simp [sctsW, h]
+  simp [sctsW, h, h1, h2]
 theorem sctsK6_some : sctsK6 r1 (some (r, m)) =
     some ([r1.headD 0, r1.tail.headD 0, r.headD 0, r.tail.headD 0], m) := rfl
 theorem sctsK5_some : sctsK5 k sH rr (some (r1, m)) =
@@ -130,7 +147,7 @@ theorem sctsK2_some : sctsK2 rest k r (some (rr, m)) =
     sctsK3 rest k (rr.headD 0) (recW m 2 [r.tail.headD 0, r.tail.tail.headD 0]) := rfl
 theorem sctsK1_some : sctsK1 rest k nF (some (r, m)) = sctsK2 rest k r (recW m 2 [r.headD 0, nF]) := rfl
 end arms
-attribute [ind_grind] sctsW_nil sctsW_cons sctsK6_some sctsK5_some sctsK4_some sctsK3_some sctsK2_some sctsK1_some
+attribute [ind_grind] sctsW_nil sctsW_ov1 sctsW_ov2 sctsW_cons sctsK6_some sctsK5_some sctsK4_some sctsK3_some sctsK2_some sctsK1_some
 
 set_option maxHeartbeats 4000000 in
 theorem sctsW_spec (p : Prog) (hP : SumProg p) (k : Nat) : ∀ (s₀ : St)
@@ -223,12 +240,11 @@ the restriction of `fe` to `vis0`: the new constructor list and the sorts lists 
 slices, decoded below the tops. -/
 theorem sctsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     (vis0 T lo ll nP nIdx rs isP lg cvTaw : Word) (lps : List NIdx) (cvTa : IConstantVal)
-    (hT : H T) (hrs : H rs) (hni : nP.toNat + nIdx.toNat < 2 ^ 64) (k : Nat) :
+    (hT : H T) (hrs : H rs) (k : Nat) :
     ∀ (m : Mem) (a : AState) (cO cL : Word) (cs : List (IConstantVal × Nat)),
     StageR dn vis fe m a → decHL m lo.toNat ll.toNat = some lps → lo.toNat + ll.toNat ≤ iwTop m →
     DecB (fun m => decCVp m cvTaw.toNat) m cvTa →
     DecB (fun m => decPL m (decCN m) cO.toNat cL.toNat) m cs →
-    (∀ c ∈ cs, nP.toNat + c.2 < 2 ^ 64) →
     Sim (sctsW k m vis0 vis T lo ll nP nIdx rs isP lg cvTaw cO cL)
       (checkSumCtors V (fe.restrictTo vis0.toNat) fe (decI T) lps nP.toNat nIdx.toNat (decI rs)
         (isP != 0) (lg != 0) cvTa cs) a
@@ -239,9 +255,9 @@ theorem sctsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
           (r.tail.tail.tail.headD 0).toNat) m' x.2 ∧
         (r.tail.tail.headD 0).toNat + (r.tail.tail.tail.headD 0).toNat ≤ iwTop m') := by
   induction k with
-  | zero => intro m a cO cL cs _ _ _ _ _ _; exact Sim.of_none
+  | zero => intro m a cO cL cs _ _ _ _ _; exact Sim.of_none
   | succ k ih =>
-  intro m a cO cL cs hS hlps hlb hta hcs hnfs
+  intro m a cO cL cs hS hlps hlb hta hcs
   have hcl := decPL_length (m := truncM m) hcs
   by_cases hl : cL = 0
   · rw [sctsW_nil (h := hl)]
@@ -249,7 +265,9 @@ theorem sctsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     subst this
     simp only [checkSumCtors]
     exact Sim.ret ⟨hS, IWGrow.refl _, by simp [DecB, decPL], by simp, by simp [DecB, decPL], by simp⟩
-  rw [sctsW_cons (h := hl)]
+  by_cases hov1 : nP + nIdx < nP
+  · rw [sctsW_ov1 (h := hl) (h1 := hov1)]; exact Sim.of_none
+  have hni : nP.toNat + nIdx.toNat < 2 ^ 64 := by rw [← sumAddNoOv hov1]; exact UInt64.toNat_lt _
   obtain ⟨L, hL⟩ : ∃ L, cL.toNat = L + 1 :=
     ⟨cL.toNat - 1, by have : cL.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e)); omega⟩
   have hcs' : decPL (truncM m) (decCN (truncM m)) cO.toNat (L + 1) = some cs := by
@@ -268,10 +286,14 @@ theorem sctsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
   have hw1 : (w + 1).toNat = pv + 1 := by rw [UInt64.toNat_add, hwv]; simp; omega
   have hnF' : iwN (truncM m) (w + 1).toNat = some nF := by rw [hw1]; exact hnF
   obtain ⟨w3, hw3, hw3v, -⟩ := rdW_of_iwN_truncM hnF'
+  by_cases hov2 : nP + rdW (m.arr64 IW) (rdW (m.arr64 IW) cO + 1) < nP
+  · rw [sctsW_ov2 (h := hl) (h1 := hov1) (h2 := hov2)]; exact Sim.of_none
+  rw [sctsW_cons (h := hl) (h1 := hov1) (h2 := hov2)]
+  rw [hw, hw3] at hov2
   rw [hw, hw2, hw3]
   have hcvB : DecB (fun m => decCVp m w2.toNat) m cv := by
     show decCVp (truncM m) w2.toNat = some cv; rw [hw2v]; exact hcv
-  have hnf : nP.toNat + w3.toNat < 2 ^ 64 := by rw [hw3v]; exact hnfs (cv, nF) (by simp)
+  have hnf : nP.toNat + w3.toNat < 2 ^ 64 := by rw [← sumAddNoOv hov2]; exact UInt64.toNat_lt _
   -- the head constructor
   obtain hk | ⟨j, rfl⟩ : k < 3 ∨ ∃ j, k = j + 3 := by
     rcases Nat.lt_or_ge k 3 with h | h
@@ -311,8 +333,7 @@ theorem sctsW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
   refine Sim.bindK (K := sctsK4 (j + 3) (rn.headD 0) (rh.headD 0)) rfl (fun _ _ => rfl)
     (ih m3 a1 (cO + 1) (cL - 1) cs hS3 (by rw [decHL_grow hg03 hlb]; exact hlps)
       (by have := hg03.1; omega) (DecB.grow (OMono.decCVp _) hg03 hta)
-      (by rw [hcO1, hcL1]; exact DecB.grow (OMono.decPL decCN_mono _ _) hg03 htail)
-      (fun c hc => hnfs c (by simp [hc]))) fun rr y m4 a4 hQ => ?_
+      (by rw [hcO1, hcL1]; exact DecB.grow (OMono.decPL decCN_mono _ _) hg03 htail)) fun rr y m4 a4 hQ => ?_
   obtain ⟨hS4, hg4, hD1, hb1, hD2, hb2⟩ := hQ
   obtain ⟨rest, srest⟩ := y
   simp only at hD1 hD2
@@ -365,11 +386,9 @@ theorem checkSumCtors_refines (p : Prog) (hP : SumProg p) (k : Nat) (s₀ : St) 
     (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
     (vis0 vis T lo ll nP nIdx rs isP lg cvTaw cO cL : Word) (lps : List NIdx) (cvTa : IConstantVal)
     (cs : List (IConstantVal × Nat)) (hS : StageR dn vis fe s₀.mem a₀) (hT : H T) (hrs : H rs)
-    (hni : nP.toNat + nIdx.toNat < 2 ^ 64)
     (hlps : decHL s₀.mem lo.toNat ll.toNat = some lps) (hlb : lo.toNat + ll.toNat ≤ iwTop s₀.mem)
     (hta : DecB (fun m => decCVp m cvTaw.toNat) s₀.mem cvTa)
-    (hcs : DecB (fun m => decPL m (decCN m) cO.toNat cL.toNat) s₀.mem cs)
-    (hnfs : ∀ c ∈ cs, nP.toNat + c.2 < 2 ^ 64) :
+    (hcs : DecB (fun m => decPL m (decCN m) cO.toNat cL.toNat) s₀.mem cs) :
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "check_sum_ctors"
       [vis0, vis, T, lo, ll, nP, nIdx, rs, isP, lg, cvTaw, cO, cL]
     ⦃fun r s' => LocEq s' s₀ ∧
@@ -387,7 +406,7 @@ theorem checkSumCtors_refines (p : Prog) (hP : SumProg p) (k : Nat) (s₀ : St) 
   refine triple_post (sctsW_spec p hP k s₀ vis0 vis T lo ll nP nIdx rs isP lg cvTaw cO cL) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨hok, hS', hg', hd1, -, hd2, -⟩ := (sctsW_ok vis0 T lo ll nP nIdx rs isP lg cvTaw lps cvTa hT hrs
-    hni k _ a₀ cO cL cs hS hlps hlb hta hcs hnfs).run hm
+    k _ a₀ cO cL cs hS hlps hlb hta hcs).run hm
   exact ⟨hl, hok, hS', hg', hd1, hd2⟩
 
 end L.Ind

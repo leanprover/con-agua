@@ -7,7 +7,7 @@ import ConAgua.Arena.IndPos2SpecQ
 
 Per constructor: the level parameters' check (`all_level_params_defined`'s stub), `NestCtx.hiAt`
 (`nest_ctx_hi_at`, helper `pos`'s), the fields opened above the holes (`open_pis_at_fvars_f`'s
-stub) and their sorts (`check_struct_field_sorts_i`'s pending contract).
+stub) and their sorts (`check_struct_field_sorts_i`, `installSimFsorts`).
 -/
 
 set_option linter.deprecated false
@@ -41,7 +41,7 @@ theorem installCtxWord9 {m : Mem} {ctx : Word} {c : NestCtx}
   rw [hv]; exact ⟨hv32, hve⟩
 
 /-- **`check_abs_ctor_sorts_one`'s model refines one constructor's fields' universes.** -/
-theorem iaoW_sim {p : Prog} (n : Nat) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+theorem iaoW_sim {p : Prog} (hsum : SumProg p) (n : Nat) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
     {m : Mem} {a : AState} {ctx isP nF tyN hi : Word} {c : NestCtx} {b : Bool}
     (hS : StageR dn vis fe m a) (hc : DecB (fun m => decCtx m ctx.toNat) m c) (hty : H tyN)
     (hhi : hi.toNat = c.hiAt 0) (hb : (isP != 0) = b) :
@@ -49,6 +49,9 @@ theorem iaoW_sim {p : Prog} (n : Nat) {dn : NIdx → Option ConLeche.Name} {vis 
       (fun _ _ m' a' => StageR dn vis fe m' a' ∧ IWGrow m m') := by
   obtain ⟨hs32, hse⟩ := installCtxWord9 hc hS.2.2.2.1
   unfold iaoW absOneAM
+  split
+  · exact Sim.of_none
+  rename_i hov
   refine Sim.bindK (K := iaoK1 p n vis isP nF hi (rdW (m.arr64 IW) (ctx + 9)))
     (body := fun r1 m1 => if r1.headD 0 = 0 then none else iaoK2 (callW p n "check_struct_field_sorts_i"
       [vis, isP, 0, rdW (m.arr64 IW) (ctx + 9), hi, r1.tail.headD 0, r1.tail.tail.headD 0, 0, 0, nF] m1))
@@ -77,8 +80,9 @@ theorem iaoW_sim {p : Prog} (n : Nat) {dn : NIdx → Option ConLeche.Name} {vis 
   show Sim _ (checkStructFieldSortsI V fe b false c.sort (c.hiAt 0) fvs [] nF.toNat >>= fun _ => pure ()) a1 _
   refine Sim.bindK (K := iaoK2) (body := fun _ m2 => some ([0], m2)) rfl (fun _ _ => rfl)
     (by
-      have h := installSimStub (p := p) (n := n) (checkStructFieldSortsI_pending dn vis fe isP 0
-        (rdW (m.arr64 IW) (ctx + 9)) hi _ _ 0 0 nF hs32 fvs []) ⟨hS1, hfd, hfb, by simp [decHL, hslice?], by simp⟩
+      have h := installSimFsorts (dn := dn) (fe := fe) hsum n isP 0
+        (rdW (m.arr64 IW) (ctx + 9)) hi _ _ 0 0 nF hs32 fvs [] ⟨hS1, hfd, hfb, by simp [decHL, hslice?], by simp⟩
+        (by rw [← partsAddNoOv hov]; exact UInt64.toNat_lt _)
       rw [hse, hhi, hb, show ((0 : Word) != 0) = false from rfl] at h
       exact h) ?_
   rintro r2 - m2 a2 ⟨hS2, hg2, -⟩
@@ -107,6 +111,7 @@ structure AbsProg (p : Prog) : Prop where
   one : p.lookup "check_abs_ctor_sorts_one" = some checkAbsCtorSortsOne
   abs : p.lookup "check_abs_ctor_sorts" = some checkAbsCtorSorts
   all : p.lookup "check_abs_ctor_sorts_all" = some checkAbsCtorSortsAll
+  sum : SumProg p
 
 /-- **`check_abs_ctor_sorts`' model refines `checkAbsCtorSorts`.** -/
 theorem iacW_sim {p : Prog} (hP : AbsProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -204,7 +209,7 @@ theorem iacW_sim {p : Prog} (hP : AbsProg p) (dn : NIdx → Option ConLeche.Name
     (Sim.callW_pos (Q := fun _ _ m' a' => StageR dn vis fe m' a' ∧ IWGrow m1 m') (fun k r m' e => by
       obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
         (iao_spec p hP.one k _ vis ctx isP (UInt64.ofNat nF) ew (UInt64.ofNat (c.hiAt 0))) e
-      have := iaoW_sim (p := p) k hS1 (hc.grow (decCtx_mono _) hg1) hew32 hhiw hb r s'.mem hW
+      have := iaoW_sim (p := p) hP.sum k hS1 (hc.grow (decCtx_mono _) hg1) hew32 hhiw hb r s'.mem hW
       rw [UInt64.toNat_ofNat_of_lt' hnFb, hewe] at this; dsimp only at this; exact this) n) ?_
   rintro - - m3 a3 ⟨hS3, hg3⟩
   have hg13 := hg1.trans hg3
