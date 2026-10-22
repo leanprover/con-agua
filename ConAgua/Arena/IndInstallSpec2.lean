@@ -839,4 +839,261 @@ theorem checkBlockPositivityMemberGo_spec (p : Prog) (ha : p.lookup "iw_alloc" =
         rec2_spec p ha h2 n, ih] <;>
       finish (gen := 20) [pmStep, rec2Mem_size]
 
+theorem rdW_eq_of_get {a : Array Word} {i : Word} {w : Word} (h : a[i.toNat]? = some w) :
+    rdW a i = w := by simp [rdW, h]
+
+theorem rdW_of_get_eq {a b : Array Word} {x y : Word} (h : a[x.toNat]? = b[y.toNat]?) :
+    rdW a x = rdW b y := by simp only [rdW, h]
+
+/-- **One step of `check_block_positivity_member_go`**, position by position. -/
+theorem pmStep_get (m : Mem) (kd nd s : Word) (hsz : (m.arr64 IW).size < 2 ^ 64)
+    (hc : 200 < (m.arr64 CTL).size) (hroom : iwTop m + 2 ≤ (m.arr64 IW).size)
+    (hkd : kd.toNat < iwTop m) (hnd : nd.toNat < iwTop m) (hne : kd.toNat ≠ nd.toNat)
+    (E : Word) (hE : rdW (m.arr64 IW) s = E) (he : E.toNat + 3 ≤ kd.toNat) :
+    MemFrame [IW] [200] m (pmStep m kd nd s) ∧
+    rdW ((pmStep m kd nd s).arr64 CTL) 200 = rdW (m.arr64 CTL) 200 + 2 ∧
+    ∀ i, ((pmStep m kd nd s).arr64 IW)[i]? =
+      if i = nd.toNat then (m.arr64 IW)[E.toNat + 2]?
+      else if i = kd.toNat then some (rdW (m.arr64 CTL) 200)
+      else if i = iwTop m then (m.arr64 IW)[E.toNat]?
+      else if i = iwTop m + 1 then (m.arr64 IW)[E.toNat + 1]?
+      else (m.arr64 IW)[i]? := by
+  have hqT : (rdW (m.arr64 CTL) 200).toNat = iwTop m := rfl
+  have hE1 : (E + 1).toNat = E.toNat + 1 := by
+    rw [UInt64.toNat_add]; simp; omega
+  have hE2 : (E + 2).toNat = E.toNat + 2 := by
+    rw [UInt64.toNat_add]; simp; omega
+  have hkdsz : kd.toNat < (m.arr64 IW).size := by omega
+  have hndsz : nd.toNat < (m.arr64 IW).size := by omega
+  have hEsz : E.toNat + 2 < (m.arr64 IW).size := by omega
+  generalize ha : rdW (m.arr64 IW) E = a
+  generalize hb : rdW (m.arr64 IW) (E + 1) = b
+  have hm1 : rec2Mem m a b = wrIW (allocMem m 2) (rdW (m.arr64 CTL) 200) [a, b] := rec2Mem_eq m a b
+  have hIW : (allocMem m 2).arr64 IW = m.arr64 IW := allocMem_IW m 2
+  have hg1 : ∀ i, ((rec2Mem m a b).arr64 IW)[i]? =
+      if iwTop m ≤ i ∧ i < iwTop m + 2 then [a, b][i - iwTop m]? else (m.arr64 IW)[i]? := by
+    intro i
+    rw [hm1, wrIW_get _ _ _ _ (by rw [hIW]; simp; omega) (by rw [hIW]; exact hsz), hIW, hqT]
+    simp
+  have hsz1 : ((rec2Mem m a b).arr64 IW).size = (m.arr64 IW).size := rec2Mem_size m a b
+  have hf1 : MemFrame [IW] [200] m (rec2Mem m a b) := rec2Mem_frame m a b
+  have hr1 : ∀ x : Word, x.toNat < iwTop m → rdW ((rec2Mem m a b).arr64 IW) x = rdW (m.arr64 IW) x := by
+    intro x hx
+    have := hg1 x.toNat
+    rw [if_neg (by omega)] at this
+    exact rdW_of_get_eq this
+  have hf2 : MemFrame [IW] [200] (rec2Mem m a b)
+      ((rec2Mem m a b).set64 IW kd (rdW (m.arr64 CTL) 200)) := set64IW_frame _ _ _
+  have hg2 : ∀ i, (((rec2Mem m a b).set64 IW kd (rdW (m.arr64 CTL) 200)).arr64 IW)[i]? =
+      if i = kd.toNat then some (rdW (m.arr64 CTL) 200) else ((rec2Mem m a b).arr64 IW)[i]? := by
+    intro i
+    rw [set64IW_get, hsz1]
+    by_cases hi : i = kd.toNat
+    · simp [hi, hkdsz]
+    · simp [hi]
+  have hr2 : rdW (((rec2Mem m a b).set64 IW kd (rdW (m.arr64 CTL) 200)).arr64 IW) (E + 2) =
+      rdW (m.arr64 IW) (E + 2) := by
+    have := hg2 (E + 2).toNat
+    rw [if_neg (by omega), hg1, if_neg (by omega)] at this
+    exact rdW_of_get_eq this
+  have hpm : pmStep m kd nd s =
+      (((rec2Mem m a b).set64 IW kd (rdW (m.arr64 CTL) 200)).set64 IW nd
+        (rdW (((rec2Mem m a b).set64 IW kd (rdW (m.arr64 CTL) 200)).arr64 IW) (E + 2))) := by
+    unfold pmStep; simp only [hE, ha, hb]
+  rw [hpm]
+  refine ⟨?_, ?_, fun i => ?_⟩
+  · exact hf1.trans (hf2.trans (set64IW_frame _ _ _))
+  · rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+    simp only [rec2Mem]
+    rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+    exact allocMem_top m 2 hc
+  · have hszA : (((rec2Mem m a b).set64 IW kd (rdW (m.arr64 CTL) 200)).arr64 IW).size =
+        (m.arr64 IW).size := by rw [← hsz1]; exact size_set64 _ _ _ _ _
+    have hrd_get : ∀ x : Word, x.toNat < (m.arr64 IW).size →
+        (m.arr64 IW)[x.toNat]? = some (rdW (m.arr64 IW) x) := by
+      intro x hx; simp [rdW, Array.getElem?_eq_getElem hx]
+    have hv : (m.arr64 IW)[E.toNat + 2]? = some (rdW (m.arr64 IW) (E + 2)) := by
+      have := hrd_get (E + 2) (by omega); rwa [hE2] at this
+    have hEa : (m.arr64 IW)[E.toNat]? = some a := by
+      have := hrd_get E (by omega); rw [ha] at this; exact this
+    have hEb : (m.arr64 IW)[E.toNat + 1]? = some b := by
+      have := hrd_get (E + 1) (by omega); rw [hb, hE1] at this; exact this
+    rw [set64IW_get, hszA, hr2, hg2 i, hg1 i]
+    have n1 : iwTop m ≠ nd.toNat := by omega
+    have n2 : iwTop m ≠ kd.toNat := by omega
+    have n3 : iwTop m + 1 ≠ nd.toNat := by omega
+    have n4 : iwTop m + 1 ≠ kd.toNat := by omega
+    by_cases h1 : i = nd.toNat
+    · simp [h1, hndsz, hv]
+    · by_cases h2 : i = kd.toNat
+      · simp [h1, h2, hne]
+      · by_cases h3 : i = iwTop m
+        · simp [h1, h2, h3, hEa, n1, n2]
+        · by_cases h4 : i = iwTop m + 1
+          · simp [h1, h2, h3, h4, hEb, n3, n4]
+          · simp [h1, h2, h3, h4]
+            intro h5 h6; omega
+
+/-- **What `check_block_positivity_member_go` leaves**: the pointers to the fresh `[off, len]`
+records at `kd + j`, those records (copies of the first two words of `IW[s + j]`) at the old top
+`+ 2 j`, the third words at `nd + j`, everything else below the old top unchanged. -/
+theorem pmGoW_get (n : Nat) : ∀ (m m' : Mem) (kd nd s l : Word), pmGoW n m kd nd s l = some m' →
+    (m.arr64 IW).size < 2 ^ 64 → 200 < (m.arr64 CTL).size →
+    s.toNat + l.toNat ≤ kd.toNat → kd.toNat + l.toNat ≤ nd.toNat → nd.toNat + l.toNat ≤ iwTop m →
+    iwTop m ≤ (m.arr64 IW).size →
+    (∀ j < l.toNat, (rdW (m.arr64 IW) (UInt64.ofNat (s.toNat + j))).toNat + 3 ≤ kd.toNat) →
+    MemFrame [IW] [200] m m' ∧
+    rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 + UInt64.ofNat (2 * l.toNat) ∧
+    iwTop m + 2 * l.toNat ≤ (m.arr64 IW).size ∧
+    (∀ j < l.toNat, (m'.arr64 IW)[kd.toNat + j]? = some (UInt64.ofNat (iwTop m + 2 * j))) ∧
+    (∀ j < l.toNat,
+      (m'.arr64 IW)[iwTop m + 2 * j]? =
+        (m.arr64 IW)[(rdW (m.arr64 IW) (UInt64.ofNat (s.toNat + j))).toNat]? ∧
+      (m'.arr64 IW)[iwTop m + 2 * j + 1]? =
+        (m.arr64 IW)[(rdW (m.arr64 IW) (UInt64.ofNat (s.toNat + j))).toNat + 1]?) ∧
+    (∀ j < l.toNat, (m'.arr64 IW)[nd.toNat + j]? =
+      (m.arr64 IW)[(rdW (m.arr64 IW) (UInt64.ofNat (s.toNat + j))).toNat + 2]?) ∧
+    (∀ i < iwTop m, ¬ (kd.toNat ≤ i ∧ i < kd.toNat + l.toNat) →
+      ¬ (nd.toNat ≤ i ∧ i < nd.toNat + l.toNat) → (m'.arr64 IW)[i]? = (m.arr64 IW)[i]?) := by
+  induction n with
+  | zero => intro m m' kd nd s l h; simp [pmGoW] at h
+  | succ n ih =>
+    intro m m' kd nd s l h hsz hc hs hkn hnT hT hE
+    by_cases hl : l = 0
+    · rw [pmGoW_nil n m kd nd s l hl] at h
+      cases h
+      subst hl
+      refine ⟨MemFrame.refl _ _ _, by simp, by simpa using hT, fun j hj => ?_, fun j hj => ?_,
+        fun j hj => ?_, fun i _ _ _ => rfl⟩ <;> simp at hj
+    · have hl0 : 1 ≤ l.toNat := by
+        rcases Nat.eq_zero_or_pos l.toNat with h0 | h0
+        · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hl
+        · omega
+      by_cases hr : (rdW (m.arr64 CTL) 200).toNat + 2 ≤ (m.arr64 IW).size
+      case neg => rw [pmGoW_full n m kd nd s l hl hr] at h; simp at h
+      rw [pmGoW_step n m kd nd s l hl hr] at h
+      have hr' : iwTop m + 2 ≤ (m.arr64 IW).size := hr
+      have hl1 : (l - 1).toNat = l.toNat - 1 := by rw [UInt64.toNat_sub]; simp; omega
+      have hkd1 : (kd + 1).toNat = kd.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      have hnd1 : (nd + 1).toNat = nd.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      have hs1 : (s + 1).toNat = s.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      have hE0 : (rdW (m.arr64 IW) s).toNat + 3 ≤ kd.toNat := by
+        simpa using hE 0 (by omega)
+      obtain ⟨hf, hCTL, hget⟩ := pmStep_get m kd nd s hsz hc hr' (by omega) (by omega) (by omega)
+        _ rfl hE0
+      have hsz1' : ((pmStep m kd nd s).arr64 IW).size = (m.arr64 IW).size := hf.2.2.1 IW
+      have hsz1 : ((pmStep m kd nd s).arr64 IW).size < 2 ^ 64 := by rw [hsz1']; exact hsz
+      have hc1 : 200 < ((pmStep m kd nd s).arr64 CTL).size := by rw [hf.2.2.1]; exact hc
+      have hT1 : iwTop (pmStep m kd nd s) = iwTop m + 2 := by
+        simp only [iwTop, hCTL, UInt64.toNat_add]; simp; omega
+      -- the input reads, unchanged
+      have hrd1 : ∀ x : Word, x.toNat < kd.toNat →
+          rdW ((pmStep m kd nd s).arr64 IW) x = rdW (m.arr64 IW) x := by
+        intro x hx
+        apply rdW_of_get_eq
+        rw [hget]
+        rw [if_neg (by omega), if_neg (by omega), if_neg (by omega), if_neg (by omega)]
+      have hidx : ∀ k, s.toNat + k < 2 ^ 64 → (UInt64.ofNat (s.toNat + k)).toNat = s.toNat + k :=
+        fun k hk => UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; exact hk)
+      have hx : ∀ j, UInt64.ofNat ((s + 1).toNat + j) = UInt64.ofNat (s.toNat + (j + 1)) := by
+        intro j; rw [hs1, show s.toNat + 1 + j = s.toNat + (j + 1) by omega]
+      have hE' : ∀ j < (l - 1).toNat,
+          (rdW ((pmStep m kd nd s).arr64 IW) (UInt64.ofNat ((s + 1).toNat + j))).toNat + 3 ≤
+            (kd + 1).toNat := by
+        intro j hj
+        rw [hl1] at hj
+        rw [hx j, hrd1 (UInt64.ofNat (s.toNat + (j + 1))) (by rw [hidx (j + 1) (by omega)]; omega), hkd1]
+        have := hE (j + 1) (by omega); omega
+      obtain ⟨hF, hC, hRm, hP1, hP2, hP3, hP4⟩ := ih _ m' (kd + 1) (nd + 1) (s + 1) (l - 1) h hsz1 hc1
+        (by rw [hs1, hkd1, hl1]; omega) (by rw [hkd1, hnd1, hl1]; omega)
+        (by rw [hnd1, hl1, hT1]; omega) (by rw [hT1, hsz1']; omega) hE'
+      have hrdj : ∀ j, j < l.toNat - 1 →
+          rdW ((pmStep m kd nd s).arr64 IW) (UInt64.ofNat ((s + 1).toNat + j)) =
+            rdW (m.arr64 IW) (UInt64.ofNat (s.toNat + (j + 1))) := by
+        intro j hj
+        rw [hx j, hrd1 (UInt64.ofNat (s.toNat + (j + 1))) (by rw [hidx (j + 1) (by omega)]; omega)]
+      have hm1old : ∀ k, k < kd.toNat →
+          ((pmStep m kd nd s).arr64 IW)[k]? = (m.arr64 IW)[k]? := by
+        intro k hk
+        rw [hget]
+        rw [if_neg (by omega), if_neg (by omega), if_neg (by omega), if_neg (by omega)]
+      have hP4' : ∀ i < iwTop m + 2, ¬ (kd.toNat + 1 ≤ i ∧ i < kd.toNat + 1 + (l.toNat - 1)) →
+          ¬ (nd.toNat + 1 ≤ i ∧ i < nd.toNat + 1 + (l.toNat - 1)) →
+          (m'.arr64 IW)[i]? = ((pmStep m kd nd s).arr64 IW)[i]? := by
+        intro i hi h1 h2
+        exact hP4 i (by rw [hT1]; exact hi) (by rw [hkd1, hl1]; exact h1) (by rw [hnd1, hl1]; exact h2)
+      have hP1' : ∀ j < l.toNat - 1, (m'.arr64 IW)[kd.toNat + 1 + j]? =
+          some (UInt64.ofNat (iwTop m + 2 + 2 * j)) := by
+        intro j hj
+        have := hP1 j (by omega)
+        rw [hkd1, hT1] at this
+        exact this
+      have hP2' : ∀ j < l.toNat - 1,
+          (m'.arr64 IW)[iwTop m + 2 + 2 * j]? =
+            (m.arr64 IW)[(rdW (m.arr64 IW) (UInt64.ofNat (s.toNat + (j + 1)))).toNat]? ∧
+          (m'.arr64 IW)[iwTop m + 2 + 2 * j + 1]? =
+            (m.arr64 IW)[(rdW (m.arr64 IW) (UInt64.ofNat (s.toNat + (j + 1)))).toNat + 1]? := by
+        intro j hj
+        have := hP2 j (by omega)
+        rw [hT1, hrdj j hj] at this
+        have hb := hE (j + 1) (by omega)
+        rw [hm1old _ (by omega), hm1old _ (by omega)] at this
+        exact this
+      have hP3' : ∀ j < l.toNat - 1, (m'.arr64 IW)[nd.toNat + 1 + j]? =
+          (m.arr64 IW)[(rdW (m.arr64 IW) (UInt64.ofNat (s.toNat + (j + 1)))).toNat + 2]? := by
+        intro j hj
+        have := hP3 j (by omega)
+        rw [hnd1, hrdj j hj] at this
+        have hb := hE (j + 1) (by omega)
+        rw [hm1old _ (by omega)] at this
+        exact this
+      have hmT : iwTop m = (rdW (m.arr64 CTL) 200).toNat := rfl
+      refine ⟨hf.trans hF, ?_, ?_, ?_, ?_, ?_, ?_⟩
+      · rw [hC, hCTL, hl1]
+        apply UInt64.toNat_inj.mp
+        simp only [UInt64.toNat_add, UInt64.toNat_ofNat]
+        simp
+        omega
+      · rw [hT1, hl1] at hRm; omega
+      · intro j hj
+        cases j with
+        | zero =>
+          have := hP4' kd.toNat (by omega) (by omega) (by omega)
+          simp only [Nat.add_zero, Nat.mul_zero]
+          rw [this, hget, if_neg (by omega), if_pos rfl]
+          rw [← ofNat_toNat_word (rdW (m.arr64 CTL) 200)]; rfl
+        | succ j =>
+          have := hP1' j (by omega)
+          rw [show kd.toNat + (j + 1) = kd.toNat + 1 + j by omega, this,
+            show iwTop m + 2 + 2 * j = iwTop m + 2 * (j + 1) by omega]
+      · intro j hj
+        cases j with
+        | zero =>
+          have h1 := hP4' (iwTop m) (by omega) (by omega) (by omega)
+          have h2 := hP4' (iwTop m + 1) (by omega) (by omega) (by omega)
+          simp only [Nat.mul_zero, Nat.add_zero, Nat.zero_add]
+          refine ⟨?_, ?_⟩
+          · rw [h1, hget, if_neg (by omega), if_neg (by omega), if_pos rfl]
+            simp only [ofNat_toNat_word]
+          · rw [h2, hget, if_neg (by omega), if_neg (by omega), if_neg (by omega), if_pos rfl]
+            simp only [ofNat_toNat_word]
+        | succ j =>
+          have := hP2' j (by omega)
+          rw [show iwTop m + 2 * (j + 1) = iwTop m + 2 + 2 * j by omega,
+            show s.toNat + (j + 1) = s.toNat + (j + 1) from rfl]
+          exact this
+      · intro j hj
+        cases j with
+        | zero =>
+          have h1 := hP4' nd.toNat (by omega) (by omega) (by omega)
+          simp only [Nat.add_zero]
+          rw [h1, hget, if_pos rfl]
+          simp only [ofNat_toNat_word]
+        | succ j =>
+          have := hP3' j (by omega)
+          rw [show nd.toNat + (j + 1) = nd.toNat + 1 + j by omega, this]
+      · intro i hi h1 h2
+        have := hP4' i (by omega) (by omega) (by omega)
+        rw [this, hget, if_neg (by omega), if_neg (by omega), if_neg (by omega), if_neg (by omega)]
+
 end L.Ind
