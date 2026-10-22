@@ -293,11 +293,18 @@ def lpLet : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (fd, j, e0, t, i, f, a
   x := call lp_go(f, ko, kc, vo, vc, fu);
   y := call lp_go(a, ko, kc, vo, vc, fu);
   z := call lp_go(b, ko, kc, vo, vc, fu);
-  if x == f && y == a {
-    if z == b { r := h } else { r := call mk_let(x, y, z); if r >= 4294967296 { abort } }
-  } else { r := call mk_let(x, y, z); if r >= 4294967296 { abort } };
+  r := call lp_rb_let(h, f, a, b, x, y, z);
   (fd, j, e0) := call ilp_find(h, 0);
   u := call ilp_put(h, 0, r, fd, j);
+  return r
+}
+
+/-- `lp_let`'s rebuild: `h` when the three children came back equal, else `mk_let`.
+con-ron: ConRon/Arena/ExprOps.lean:154-155 ConRon.Arena.internRebuiltLetE -/
+def lpRbLet : FunDecl := lfn (h, f, a, b, x, y, z) locals (r) {
+  if x == f && y == a { if z == b { return h } };
+  r := call mk_let(x, y, z);
+  if r >= 4294967296 { abort };
   return r
 }
 
@@ -320,12 +327,29 @@ def lpProj : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (fd, j, e0, t, i, nm,
 
 /-! ## The entries -/
 
+/-- con-ron: none — the substitution's keys checked to be stored names (the twin reads them back,
+`readNamesM`, and fails on a handle that does not view; `keys_ok` aborts there instead) -/
+def keysOk : FunDecl := lfn (o, l) locals (w, g, t, i, r) {
+  if l == 0 { return 0 };
+  w := SPN.u64[o];
+  if w >= 4294967296 { abort };
+  g := w >> 28;
+  t := (w >> 27) & 1;
+  i := w & 134217727;
+  if t != 0 && CTL.u64[1] == 0 { abort };
+  if g >= 3 { abort };
+  if CTL.u64[34 + g * 2 + t] <= i { abort };
+  r := call keys_ok(o + 1, l - 1);
+  return r
+}
+
 /-- con-ron: ConRon/Arena/ExprOps.lean:2251-2268 ConRon.Arena.instLPFast -/
 @[l_impl ConRon.Arena.instLPFast]
 def instLPCore : FunDecl := lfn (ko, kc, us, e) locals (vo, vc, r, u) {
   (vo, vc, r) := call der_b(e);
   if r == 0 { return e & 4294967295 };
   (vo, vc) := call ls_node(us);
+  u := call keys_ok(ko, kc);
   u := call ilp_clear();
   u := call ilpl_clear();
   u := call ilpls_clear();
@@ -388,12 +412,12 @@ def instLPProg : Prog :=
    ("sls_go", slsGo), ("sle_go", sleGo), ("slp_go", slpGo), ("spn_pool", spnPool), ("spn_ls", spnLs),
    ("sl_memo", slMemo), ("sls_memo", slsMemo),
    ("lp_go", lpGo), ("lp_fvar", lpFVar), ("lp_app", lpApp), ("lp_lam", lpLam),
-   ("lp_forall", lpForall), ("lp_let", lpLet), ("lp_proj", lpProj),
+   ("lp_forall", lpForall), ("lp_let", lpLet), ("lp_rb_let", lpRbLet), ("lp_proj", lpProj),
    ("ilp_find", memoFindG lpSch), ("ilp_put", memoPutG lpSch), ("ilp_clear", memoClearG lpSch),
    ("ilpl_find", memoFindG lplSch), ("ilpl_put", memoPutG lplSch), ("ilpl_clear", memoClearG lplSch),
    ("ilpls_find", memoFindG lplsSch), ("ilpls_put", memoPutG lplsSch),
    ("ilpls_clear", memoClearG lplsSch),
-   ("inst_lp_core", instLPCore), ("inst_lp", instLPL), ("inst_lp_fast", instLPFastL),
+   ("keys_ok", keysOk), ("inst_lp_core", instLPCore), ("inst_lp", instLPL), ("inst_lp_fast", instLPFastL),
    ("rec_fire_levels", recFireLevelsL)]
 
 end L.Arena

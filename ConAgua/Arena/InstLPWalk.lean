@@ -360,7 +360,7 @@ def ilwBinW (R : ArrId) (mk : FnName) (p : Prog) (n : Nat) (m : Mem) (h ko kc vo
 /-- `lp_let` after its third child. -/
 def ilwLetK₃ (p : Prog) (n : Nat) (h f a b x y : Word) : Option (List Word × Mem) → Option (Word × Mem)
   | none => none
-  | some (z, m₃) => ilwSetK h (ilwRbLet p n m₃ h f a b x y (z.headD 0))
+  | some (z, m₃) => ilwSetK h (ilwHd (callW p n "lp_rb_let" [h, f, a, b, x, y, z.headD 0] m₃))
 
 /-- `lp_let` after its second child. -/
 def ilwLetK₂ (p : Prog) (n : Nat) (h f a b ko kc vo vc fu x : Word) :
@@ -375,7 +375,8 @@ def ilwLetK₁ (p : Prog) (n : Nat) (h f a b ko kc vo vc fu : Word) :
   | some (x, m₁) => ilwLetK₂ p n h f a b ko kc vo vc fu (x.headD 0) (callW p n "lp_go" [a, ko, kc, vo, vc, fu] m₁)
 
 @[arena_grind =] theorem ilwLetK₃_some (p : Prog) (n : Nat) (h f a b x y : Word) (z : List Word) (m₃ : Mem) :
-    ilwLetK₃ p n h f a b x y (some (z, m₃)) = ilwSetK h (ilwRbLet p n m₃ h f a b x y (z.headD 0)) := rfl
+    ilwLetK₃ p n h f a b x y (some (z, m₃)) =
+      ilwSetK h (ilwHd (callW p n "lp_rb_let" [h, f, a, b, x, y, z.headD 0] m₃)) := rfl
 @[arena_grind =] theorem ilwLetK₂_some (p : Prog) (n : Nat) (h f a b ko kc vo vc fu x : Word) (y : List Word)
     (m₂ : Mem) : ilwLetK₂ p n h f a b ko kc vo vc fu x (some (y, m₂)) =
       ilwLetK₃ p n h f a b x (y.headD 0) (callW p n "lp_go" [b, ko, kc, vo, vc, fu] m₂) := rfl
@@ -446,14 +447,19 @@ def ilwC1 (p : Prog) (n : Nat) (ko kc e vo vc : Word) : Option (List Word × Mem
   | none => none
   | some (_, m) => ilwC2 p n ko kc e vo vc (callW p n "ilpl_clear" [] m)
 
+/-- After `keys_ok`. -/
+def ilwC0 (p : Prog) (n : Nat) (ko kc e vo vc : Word) : Option (List Word × Mem) → Option (Word × Mem)
+  | none => none
+  | some (_, m) => ilwC1 p n ko kc e vo vc (callW p n "ilp_clear" [] m)
+
 /-- `inst_lp_core` after `der_b`: the cut-off, else the values' slice (`ls_node(us)`), the clears,
 the walk. -/
 def ilwCoreD (p : Prog) (n : Nat) (ko kc us e : Word) : Option (List Word × Mem) → Option (Word × Mem)
   | none => none
   | some (d, m₁) =>
     if d.tail.tail.headD 0 = 0 then some (e &&& 4294967295, m₁)
-    else ilwC1 p n ko kc e ((lsNodeW m₁ us).headD 0) ((lsNodeW m₁ us).tail.headD 0)
-      (callW p n "ilp_clear" [] m₁)
+    else ilwC0 p n ko kc e ((lsNodeW m₁ us).headD 0) ((lsNodeW m₁ us).tail.headD 0)
+      (callW p n "keys_ok" [ko, kc] m₁)
 
 section entryK
 variable (p : Prog) (n : Nat) (ko kc us e vo vc r : Word) (x : List Word) (m : Mem)
@@ -472,8 +478,10 @@ variable (p : Prog) (n : Nat) (ko kc us e vo vc r : Word) (x : List Word) (m : M
 @[arena_grind =] theorem ilwCoreD_some :
     ilwCoreD p n ko kc us e (some (x, m)) =
       if x.tail.tail.headD 0 = 0 then some (e &&& 4294967295, m)
-      else ilwC1 p n ko kc e ((lsNodeW m us).headD 0) ((lsNodeW m us).tail.headD 0) (callW p n "ilp_clear" [] m) :=
+      else ilwC0 p n ko kc e ((lsNodeW m us).headD 0) ((lsNodeW m us).tail.headD 0) (callW p n "keys_ok" [ko, kc] m) :=
   rfl
+@[arena_grind =] theorem ilwC0_some :
+    ilwC0 p n ko kc e vo vc (some (x, m)) = ilwC1 p n ko kc e vo vc (callW p n "ilp_clear" [] m) := rfl
 end entryK
 
 /-- **The model of `inst_lp_core`** at L fuel `n + 1`. -/
@@ -515,6 +523,7 @@ structure ILWProg (p : Prog) : Prop where
   pj : p.lookup "lp_proj" = some lpProj
   core : p.lookup "inst_lp_core" = some instLPCore
   lp : p.lookup "inst_lp" = some instLPL
+  rbl : p.lookup "lp_rb_let" = some lpRbLet
   ilpf : p.lookup "ilp_find" = some (memoFindG lpSch)
   ilpp : p.lookup "ilp_put" = some (memoPutG lpSch)
   ilpc : p.lookup "ilp_clear" = some (memoClearG lpSch)
@@ -565,6 +574,15 @@ theorem lpFVar_spec (n : Nat) (s₀ : St) (h ko kc vo vc fu : Word) :
       callW_spec p n "lp_go", callW_spec p n "intern_fvar"] <;>
     finish [ilwFVarW, ilwProbe, msetG, tierW, idxW]
 
+theorem lpRbLet_spec (n : Nat) (s₀ : St) (h f a b x y z : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "lp_rb_let" [h, f, a, b, x, y, z]
+    ⦃fun r s' => LocEq s' s₀ ∧ ilwRbLet p n s₀.mem h f a b x y z = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp.rbl]
+  simp only [callFn, lpRbLet]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "mk_let"] <;>
+    finish
+
 set_option maxHeartbeats 1000000 in
 theorem lpProj_spec (n : Nat) (s₀ : St) (h ko kc vo vc fu : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "lp_proj" [h, ko, kc, vo, vc, fu]
@@ -585,7 +603,7 @@ theorem instLPCore_spec (n : Nat) (s₀ : St) (ko kc us e : Word) :
   simp only [callFn, instLPCore]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "ilp_clear", callW_spec p n "ilpl_clear", callW_spec p n "ilpls_clear",
+      callW_spec p n "keys_ok", callW_spec p n "ilp_clear", callW_spec p n "ilpl_clear", callW_spec p n "ilpls_clear",
       callW_spec p n "der_b", lsNode_spec p hp.lsn n, callW_spec p n "lp_go"] <;>
     finish (gen := 20) [ilwCoreW]
 

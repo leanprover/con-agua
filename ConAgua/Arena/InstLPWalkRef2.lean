@@ -116,7 +116,7 @@ theorem ilw_projArm {m m' : Mem} {a : AState} {M : ModeMaps} {h ko kc vo vc fu r
     (fun _ zs h5 hz => ilw_mkProj p hp n nw iw (xs.headD 0) zs hS₁ hM₁ h5 hz)
 
 /-- **`lp_let` refines `instLPArmLet`.** -/
-theorem ilw_letArm {m m' : Mem} {a : AState} {M : ModeMaps} {h ko kc vo vc fu r : Word}
+theorem ilw_letArm (hil : ILWProg p) {m m' : Mem} {a : AState} {M : ModeMaps} {h ko kc vo vc fu r : Word}
     {ks : List Name} {us : List LIdx} {vs : List Level}
     (hS : CoreS dn m a vis fe M eb) (hM : ILWMemo m a) (hE : ILWEnv m a ko kc vo vc ks us vs) (hh : HW h)
     (hf : HW (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)))
@@ -137,7 +137,7 @@ theorem ilw_letArm {m m' : Mem} {a : AState} {M : ModeMaps} {h ko kc vo vc fu r 
         | none => none
         | some (y, m₂) => match callW p n "lp_go" [bw, ko, kc, vo, vc, fu] m₂ with
           | none => none
-          | some (z, m₃) => ilwRbLet p n m₃ h fw aw bw (x.headD 0) (y.headD 0) (z.headD 0))
+          | some (z, m₃) => ilwHd (callW p n "lp_rb_let" [h, fw, aw, bw, x.headD 0, y.headD 0, z.headD 0] m₃))
     (by
       rw [← hW]; congr 1
       cases callW p n "lp_go" [fw, ko, kc, vo, vc, fu] m with
@@ -175,71 +175,29 @@ theorem ilw_letArm {m m' : Mem} {a : AState} {M : ModeMaps} {h ko kc vo vc fu r 
   refine ILWStep.bind (ih m₂ m₄ a₂ dn vis fe M₂ eb bw ko kc vo vc fu ks us vs zs hS₂ hM₂
     ((hE.keep hSt₁ hg₁).keep hSt₂ hg₂) hb h3) ?_
   intro a₃ M₃ _ hS₃ hM₃ _ _ hz
+  -- the rebuild, `lp_rb_let` at the arm's fuel
+  cases n with
+  | zero => rw [callW_zero] at hY; cases hY
+  | succ k =>
+  cases h5 : callW p (k + 1) "lp_rb_let" [h, fw, aw, bw, xs.headD 0, ys.headD 0, zs.headD 0] m₄ with
+  | none => rw [h5] at hY; cases hY
+  | some q =>
+  obtain ⟨ws, m₅⟩ := q
+  rw [h5, ilwHd_some] at hY
+  obtain ⟨s5, hs5, -, hW5⟩ := triple_of_callW (s₀ := ⟨m₄, Locals.init []⟩)
+    (lpRbLet_spec p hil k _ h fw aw bw (xs.headD 0) (ys.headD 0) (zs.headD 0)) h5
+  rw [hs5] at hW5
+  change ilwRbLet p k m₄ h fw aw bw _ _ _ = some (ws.headD 0, m₅) at hW5
+  rw [hY] at hW5
   exact ilw_rebuild
     (c := decE (xs.headD 0) == decE fw && decE (ys.headD 0) == decE aw && decE (zs.headD 0) == decE bw)
-    (Y := ilwRbLet p n m₄ h fw aw bw (xs.headD 0) (ys.headD 0) (zs.headD 0))
-    (Yn := callW p n "mk_let" [xs.headD 0, ys.headD 0, zs.headD 0] m₄) hS₃ hM₃ hh
+    (Y := ilwRbLet p k m₄ h fw aw bw (xs.headD 0) (ys.headD 0) (zs.headD 0))
+    (Yn := callW p k "mk_let" [xs.headD 0, ys.headD 0, zs.headD 0] m₄) hS₃ hM₃ hh
     (by rw [ilw_beq hx hf, ilw_beq hy ha, ilw_beq hz hb, ilwRbLet]
         generalize xs.headD 0 = x; generalize ys.headD 0 = y; generalize zs.headD 0 = z
-        by_cases e1 : x = fw <;> by_cases e2 : y = aw <;> by_cases e3 : z = bw <;> simp [e1, e2, e3, ilwRbLet2]) hY
-    (fun _ ws h5 hw => ilw_mkLet p hp n _ _ _ ws hS₃ hM₃ h5 hw)
-
-/-- **A two-child arm** (`lp_app`, `lp_lam`, `lp_forall`: record array `R`, node maker `mk`, node
-constructor `C`) refines the twin's. -/
-theorem ilw_binArm (R : ArrId) (mk : FnName) (C : EIdx → EIdx → ENodeView)
-    (hmk : ∀ (m m' : Mem) (a : AState) (M : ModeMaps) (x y : Word) (rs : List Word),
-      CoreS dn m a vis fe M eb → ILWMemo m a → HW x → HW y → callW p n mk [x, y] m = some (rs, m') →
-      HW (rs.headD 0) → ILWStep (internE (C (decE x) (decE y))) a dn m m' vis fe M eb (rs.headD 0))
-    {m m' : Mem} {a : AState} {M : ModeMaps} {h ko kc vo vc fu r : Word}
-    {ks : List Name} {us : List LIdx} {vs : List Level}
-    (hS : CoreS dn m a vis fe M eb) (hM : ILWMemo m a) (hE : ILWEnv m a ko kc vo vc ks us vs) (hh : HW h)
-    (hf : HW (rdW (m.arr64 R) (idxW h * 4 + tierW h * 2)))
-    (ha : HW (rdW (m.arr64 R) (idxW h * 4 + tierW h * 2 + 1)))
-    (hW : ilwBinW R mk p n m h ko kc vo vc fu = some (r, m')) :
-    ILWStep (ilwArmT (decE h) (do
-      let t ← instLPGo ks vs fu.toNat (decE (rdW (m.arr64 R) (idxW h * 4 + tierW h * 2)))
-      let b ← instLPGo ks vs fu.toNat (decE (rdW (m.arr64 R) (idxW h * 4 + tierW h * 2 + 1)))
-      ilwRbT (t == decE (rdW (m.arr64 R) (idxW h * 4 + tierW h * 2)) &&
-        b == decE (rdW (m.arr64 R) (idxW h * 4 + tierW h * 2 + 1))) (decE h) (internE (C t b))))
-      a dn m m' vis fe M eb r := by
-  unfold ilwBinW at hW
-  generalize rdW (m.arr64 R) (idxW h * 4 + tierW h * 2) = fw at hf hW ⊢
-  generalize rdW (m.arr64 R) (idxW h * 4 + tierW h * 2 + 1) = aw at ha hW ⊢
-  refine ilw_arm hS hM hh (Y := match callW p n "lp_go" [fw, ko, kc, vo, vc, fu] m with
-      | none => none
-      | some (x, m₁) => match callW p n "lp_go" [aw, ko, kc, vo, vc, fu] m₁ with
-        | none => none
-        | some (y, m₂) => ilwRb p n mk m₂ h fw aw (x.headD 0) (y.headD 0))
-    (by
-      rw [← hW]; congr 1
-      cases callW p n "lp_go" [fw, ko, kc, vo, vc, fu] m with
-      | none => rfl
-      | some q =>
-        obtain ⟨x, m₁⟩ := q
-        simp only [ilwBinK₁_some]
-        cases callW p n "lp_go" [aw, ko, kc, vo, vc, fu] m₁ <;> rfl) ?_
-  intro r₃ m₃ _ hY
-  cases h1 : callW p n "lp_go" [fw, ko, kc, vo, vc, fu] m with
-  | none => rw [h1] at hY; simp at hY
-  | some q =>
-  obtain ⟨xs, m₁⟩ := q
-  rw [h1] at hY; dsimp only at hY
-  cases h2 : callW p n "lp_go" [aw, ko, kc, vo, vc, fu] m₁ with
-  | none => rw [h2] at hY; simp at hY
-  | some q =>
-  obtain ⟨ys, m₂⟩ := q
-  rw [h2] at hY; dsimp only at hY
-  refine ILWStep.bind (ih m m₁ a dn vis fe M eb fw ko kc vo vc fu ks us vs xs hS hM hE hf h1) ?_
-  intro a₁ M₁ _ hS₁ hM₁ hg₁ hSt₁ hx
-  refine ILWStep.bind (ih m₁ m₂ a₁ dn vis fe M₁ eb aw ko kc vo vc fu ks us vs ys hS₁ hM₁
-    (hE.keep hSt₁ hg₁) ha h2) ?_
-  intro a₂ M₂ _ hS₂ hM₂ _ _ hy
-  exact ilw_rebuild (c := decE (xs.headD 0) == decE fw && decE (ys.headD 0) == decE aw)
-    (Y := ilwRb p n mk m₂ h fw aw (xs.headD 0) (ys.headD 0))
-    (Yn := callW p n mk [xs.headD 0, ys.headD 0] m₂) hS₂ hM₂ hh
-    (by rw [ilw_beq hx hf, ilw_beq hy ha, ilwRb]
-        by_cases e1 : xs.headD 0 = fw <;> by_cases e2 : ys.headD 0 = aw <;> simp [e1, e2]) hY
-    (fun _ zs h5 hz => hmk m₂ _ a₂ M₂ _ _ zs hS₂ hM₂ hx hy h5 hz)
+        by_cases e1 : x = fw <;> by_cases e2 : y = aw <;> by_cases e3 : z = bw <;> simp [e1, e2, e3, ilwRbLet2])
+    hW5
+    (fun _ ws h6 hw => ilw_mkLet p hp k _ _ _ ws hS₃ hM₃ h6 hw)
 
 end armsP
 

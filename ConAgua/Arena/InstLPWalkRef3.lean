@@ -312,7 +312,7 @@ theorem ilwGo_succ {p : Prog} (hp : ILWAllProg p) (n : Nat) (ih : ∀ k, k ≤ n
     obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨m₁, Locals.init []⟩)
       (lpLet_spec p hp.lev.ilw k _ h ko kc vo vc (fu - 1)) h2
     rw [hs2] at hW2
-    exact hrun _ hv _ rfl (ilw_letArm hp.mkp (ih k (by omega)) hS hM hE hh hf ha hb hW2)
+    exact hrun _ hv _ rfl (ilw_letArm hp.mkp (ih k (by omega)) hp.lev.ilw hS hM hE hh hf ha hb hW2)
   by_cases g9 : h >>> 28 = 9
   · obtain ⟨k, rs2, rfl, hvk, h2, rfl⟩ := arm 9 32 "lp_proj" g9 (ilwDispW_proj p n m₁ h ko kc vo vc fu hs g9)
     obtain ⟨hv, -, he⟩ := view_proj m₁ a hR h hh hvk g9
