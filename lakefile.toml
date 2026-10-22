@@ -69,7 +69,9 @@ globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.A
   "ConAgua.E2E.Ser", "ConAgua.E2E.Dump", "ConAgua.E2E.Trace", "ConAgua.E2E.Check",
   "ConAgua.Front.ExprIface", "ConAgua.Front.Preserve", "ConAgua.Front.Driver", "ConAgua.Front.DriverRefine", "ConAgua.Front.DeclIface", "ConAgua.Front.FrontRun", "ConAgua.Front.NatDec", "ConAgua.Front.NatDecLink", "ConAgua.Front.Unescape", "ConAgua.Front.UnescapeLink", "ConAgua.Front.ApplyExpr", "ConAgua.Front.ApplyExprRefine", "ConAgua.Front.FieldsExpr", "ConAgua.Front.FieldsExprLink", "ConAgua.Front.ApplyDecl", "ConAgua.Front.ApplyDeclRefine", "ConAgua.Front.FieldsDecl", "ConAgua.Front.FieldsDeclSpec", "ConAgua.Front.FieldsDeclLink", "ConAgua.Front.IndFields", "ConAgua.Front.IndApply",
   "ConAgua.Rom.PinStream", "ConAgua.Rom.Subst", "ConAgua.Rom.PinRead",
-  "ConAgua.Rom.Dec", "ConAgua.Rom.PinReadSpec", "ConAgua.Rom.DecExpr"]
+  "ConAgua.Rom.PinStream", "ConAgua.Rom.Subst", "ConAgua.Rom.PinRead",
+  "ConAgua.Rom.Dec", "ConAgua.Rom.PinReadSpec", "ConAgua.Rom.DecExpr", "ConAgua.Rom.PinSets",
+  "ConAgua.Rom.Stage"]
 
 # Vendored from con-leche and con-ron (proof/ dir) at the revisions in vendor/UPSTREAM, plus the
 # patch series vendor/patches/ (scripts/bump-con-ron.sh; vendor/README.md).

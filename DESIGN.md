@@ -6285,3 +6285,46 @@ untouched (its write set from the text, `lvlText_closed`). So the stub spec `lvl
 * Unchanged: `Checker.lean` `promoteNew_spec` (helper `decls3-promote` running).
 
 Census at landing 2 (`--no-build`): phase 2 **142 proven, 19 sorry, 80 written, 90 todo**.
+### Landing 3 (lane `romload`): the pin stage, proved; numbers
+
+* **The stage theorems** (`ConAgua/Rom/Stage.lean`, for the real program `P`, whose pin readers
+  read byte array `PB`; all sorry-free, axioms `propext`, `Classical.choice`, `Quot.sound`):
+  * `pbCheck_PB`: a returning `pb_check()` means the buffer `bs` is `romData ++ rest`.
+  * `internReservedPins_PB`: `intern_reserved_pins()` over `PB` refines `internReservedPins`.
+  * **`internAllPins_PB`**: `intern_all_pins()` over `PB` refines **`internAllPins P` for the pin
+    list `P` the buffer decodes to** (`∃ pins ips a', (internAllPins pins).run a₀ = .ok (ips, a') ∧
+    ArenaD s'.mem a' ∧ PinSetsR s'.mem ips ∧ StateOK a' ∧ RsetR s'.mem`). `PinSetsR`
+    (`ConAgua/Rom/PinSets.lean`, helper `romload-sets`, 802 lines: `internPinSetsW_dec`) says the
+    24-word `EREC` records listed at `CTL[150]`/`CTL[151]` hold `ips`; that is what
+    `rom_pin_sets()` and `check_div_mod_pin_loop` read.
+  * Proof route: `triple_subPB` (the run over `PB` is the run of the substituted program, readers
+    at `rom := bs`), the startup items in the encoder direction (`internAllPinsW_fixed`:
+    `internAllPins = internAllPins [] >>= fun _ => internPinSets pins`), the variant list in the
+    decoder direction.
+* **Obligations this leaves to the pipeline composition** (`PipelineRefines`): the hypotheses of
+  `internAllPins_PB`: `PinProg bs (P.subPB bs)` (the assembled program's lookups; the readers by
+  `romName_subPB` etc., every other function by `lookup_subPB_noPB`, a syntactic check), the twin
+  facts `StateOK`/`PinsOK`/`PersPins`/scratch off at that point (as in `stages_frame`), `RsetR`
+  (true on the loaded all-zero memory, `RsetR_zero`, and kept by every stage that leaves `RSET`,
+  `RMEMO`, `CTL[132]`, `CTL[148]` alone: `RsetR.frame`), `pb_check()` called before the first
+  reader; and downstream, `PinSetsR` kept from `intern_all_pins` to the declaration loop (the
+  records lie below `CTL[129]`; every later `EREC` write is above it, `ErecGrow`).
+* **e2e (the twin, `e2e-ref --pins=N`, on con-leche's 313 accepting e2e fixtures, gz ones
+  unpacked)**: with no pins 292 accept (the 21 declines lane `decls2` counted); with the repository
+  toolchain's variant only (`romgen OUT 1`) **296**; with all three committed variants
+  (`romgen OUT 3`, 1 423 897 bytes) **313/313**. Most of the 21 fixtures were exported by older
+  toolchains (v4.33), so the single-variant decision of ROADMAP §3 (c) keeps 17 of them declined;
+  since the pin data is now an input, the harness can simply load the three-variant buffer
+  (completeness only: with several variants L's "no recovery" in `check_div_mod_pin_loop` aborts
+  where the twin would try the next variant after an *error*; a "not defeq" moves on in both).
+  The L checker itself does not accept any fixture yet (lane `e2e`: missing functions); what is
+  tested end to end in L is the pin stage: `romtest` (L interpreter vs the twin) **26/26** handles
+  equal on the 1-variant buffer (55 s) and **78/78** on the 3-variant buffer (580 s). Buffers:
+  `_tmp/romload/pins.bin`, `_tmp/romload/pins3.bin`.
+* Sizes: `ConAgua/Rom/` 3 336 lines (Subst 351, PinRead 214, PinReadSpec 513, Dec 491, DecExpr
+  600, PinSets 802, Stage ~230, PinStream/Gen/Test 170); edits to `Rom*.lean` ≈ +400 lines.
+  Build: every new file under 10 s; `Rom.lean` 3.4 s.
+* Not done: the census link of `internPinSets` itself (only `internAllPins` gets a
+  `refines_part`); a spec of `rom_pin_sets()` against `PinSetsR` (the consumers' lane will want
+  it: `er_to_iw` of the record list); the e2e program does not bind the `PB` readers yet
+  (lane `e2e`, see landing 2).
