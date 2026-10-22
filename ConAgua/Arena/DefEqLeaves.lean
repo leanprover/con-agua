@@ -610,4 +610,104 @@ theorem isNatZero_refines (p : Prog) (hp : DefEqLeafProg p) (n : Nat) (s₀ : St
   all_goals simp only [reduceCtorEq, Option.some.injEq] at hW
   all_goals (rw [← hW]; decide)
 
+/-! ## Definition records -/
+
+/-- A `(kind, height)` hint word pair (`decHint`'s layout; kinds past `2` read as `regular`). -/
+def decHintW (k h : Word) : ConLeche.ReducibilityHint :=
+  if k = 0 then .opaque else if k = 1 then .abbrev else .regular h.toNat
+
+/-- A `head_hint` result. -/
+def decHintR (r : List Word) : ConLeche.ReducibilityHint := decHintW (r.headD 0) (r.tail.headD 0)
+
+theorem mapM_length {β : Type} {f : Nat → Option β} :
+    ∀ {l : List Nat} {r : List β}, l.mapM f = some r → r.length = l.length
+  | [], r, h => by simp at h; subst h; rfl
+  | x :: l, r, h => by
+    simp only [List.mapM_cons, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
+      Option.some.injEq] at h
+    obtain ⟨y, -, ys, hys, rfl⟩ := h
+    simp [mapM_length hys]
+
+/-- Word `q + k` of an extension, read off the decoded array. -/
+theorem rdW_ext {a b : Array Word} (hab : ArrExt a b) (hsz : b.size < 2 ^ 63) {q : Word} {k : Nat}
+    (hk : k < 16) {w : Word} (ha : a[q.toNat + k]? = some w) : rdW b (q + UInt64.ofNat k) = w := by
+  have hb := hab _ _ ha
+  have hlt : q.toNat + k < b.size := by
+    rcases Nat.lt_or_ge (q.toNat + k) b.size with h' | h'
+    · exact h'
+    · simp [Array.getElem?_eq_none h'] at hb
+  have : (q + UInt64.ofNat k).toNat = q.toNat + k := by
+    rw [UInt64.toNat_add, UInt64.toNat_ofNat']; rw [Nat.mod_eq_of_lt (a := k) (by omega)]; omega
+  simp only [rdW, this, hb, Option.getD_some]
+
+/-- The kind word of a decoded constant record says whether it is a definition; a definition's
+level-parameter count is word `q + 3`, its hint words `q + 6`, `q + 7`. -/
+theorem decCI_defn {a b : Array Word} {dn : NIdx → Option ConLeche.Name} {q : Word}
+    {ci : IConstantInfo} (h : decCI a dn q.toNat = some ci) (hab : ArrExt a b)
+    (hsz : b.size < 2 ^ 63) :
+    (rdW b q = 1 → ∃ cv v, ci = .defnInfo cv v (decHintW (rdW b (q + 6)) (rdW b (q + 7))) ∧
+      cv.levelParams.length = (rdW b (q + 3)).toNat ∧ (rdW b (q + 6)).toNat ≤ 2) ∧
+    (rdW b q ≠ 1 → ∀ cv v hint, ci ≠ .defnInfo cv v hint) := by
+  cases hq : a[q.toNat]? with
+  | none => simp [decCI, nat?, hq] at h
+  | some w =>
+  have hrd : rdW b q = w := by
+    have := rdW_ext hab hsz (k := 0) (by decide) (by simpa using hq); simpa using this
+  rw [hrd]
+  simp only [decCI, nat?, hq, Option.map_some, Option.bind_eq_bind, Option.bind_some] at h
+  constructor
+  · intro hw; subst hw
+    simp only [show UInt64.toNat 1 = 1 from rfl, Option.bind_eq_some_iff] at h
+    obtain ⟨cv, hcv, v, -, hint, hhint, hc⟩ := h
+    cases hc
+    refine ⟨cv, v, ?_, ?_, ?_⟩
+    · simp only [decHint, nat?, Option.bind_eq_bind, Option.bind_eq_some_iff,
+        Option.map_eq_some_iff] at hhint
+      obtain ⟨k, ⟨wk, hwk, rfl⟩, hk⟩ := hhint
+      have h6 : rdW b (q + 6) = wk := rdW_ext hab hsz (k := 6) (by decide) hwk
+      rw [h6]
+      rcases hkk : wk.toNat with _ | _ | _ | k
+      · rw [hkk] at hk; cases hk
+        have : wk = 0 := UInt64.toNat_inj.mp (by simpa using hkk)
+        simp [decHintW, this]
+      · rw [hkk] at hk; cases hk
+        have : wk = 1 := UInt64.toNat_inj.mp (by simpa using hkk)
+        simp [decHintW, this]
+      · rw [hkk] at hk
+        simp only [Option.map_eq_some_iff, Option.bind_eq_some_iff, Option.pure_def,
+          Option.some.injEq] at hk
+        obtain ⟨hh, ⟨wh, hwh, rfl⟩, rfl⟩ := hk
+        have h7 : rdW b (q + 7) = wh := rdW_ext hab hsz (k := 7) (by decide)
+          (by simpa [Nat.add_assoc] using hwh)
+        have h0 : wk ≠ 0 := fun e => by subst e; simp at hkk
+        have h1 : wk ≠ 1 := fun e => by subst e; simp at hkk
+        simp [decHintW, h0, h1, h7]
+      · rw [hkk] at hk; simp at hk
+    · simp only [decCV, Option.bind_eq_bind, Option.pure_def, Option.bind_eq_some_iff] at hcv
+      obtain ⟨nm, -, ls, hls, ty, -, hc⟩ := hcv
+      cases hc
+      simp only [hlist?, nat?, Option.bind_eq_bind, Option.bind_eq_some_iff,
+        Option.map_eq_some_iff] at hls
+      obtain ⟨o, -, c, ⟨wc, hwc, rfl⟩, hs⟩ := hls
+      have h3 : rdW b (q + 3) = wc := rdW_ext hab hsz (k := 3) (by decide)
+        (by simpa [Nat.add_assoc] using hwc)
+      rw [h3]
+      simp only [hslice?] at hs
+      rw [mapM_length hs, List.length_range]
+    · simp only [decHint, nat?, Option.bind_eq_bind, Option.bind_eq_some_iff,
+        Option.map_eq_some_iff] at hhint
+      obtain ⟨k, ⟨wk, hwk, rfl⟩, hk⟩ := hhint
+      have h6 : rdW b (q + 6) = wk := rdW_ext hab hsz (k := 6) (by decide) hwk
+      rw [h6]
+      rcases hkk : wk.toNat with _ | _ | _ | k
+      · omega
+      · omega
+      · omega
+      · rw [hkk] at hk; simp at hk
+  · intro hw cv v hint hc
+    subst hc
+    have hne : w.toNat ≠ 1 := fun e => hw (UInt64.toNat_inj.mp (by rw [e]; rfl))
+    rcases hk : w.toNat with _ | _ | _ | _ | _ | _ | _ | k
+    all_goals (rw [hk] at h hne; simp [Option.bind_eq_some_iff] at h hne)
+
 end L.Arena
