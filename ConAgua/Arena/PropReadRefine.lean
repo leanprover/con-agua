@@ -148,10 +148,13 @@ theorem pr_readNamesM_run : ∀ (lps : List NIdx) (a : AState) (ks : List Name),
 theorem CoreS.readCaches {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb)
     (X : Std.HashMap NIdx Name) (Y : Std.HashMap LsIdx (List Level))
-    (hY : ReadLsCOK { a with caches := { a.caches with readNC := X, readLsC := Y } }) :
+    (hY : ReadLsCOK { a with caches := { a.caches with readNC := X, readLsC := Y } })
+    (hX : ReadNCOK { a with caches := { a.caches with readNC := X } }) :
     CoreS dn m { a with caches := { a.caches with readNC := X, readLsC := Y } } vis fe M eb :=
   ⟨hS.arena.caches_irrel _, (hS.core.readNC X).readLsC Y, hS.pins, hS.env, hS.readL, hY, hS.nwf,
-    hS.erec, hS.spn, hS.memos, hS.bstk⟩
+    hS.erec, hS.spn, hS.memos, hS.bstk,
+    hS.den.mono (LsExt.refl _) rfl rfl (fun k x hk => .inr (hX k x hk)) rfl (fun _ _ hv => hv)
+      (fun _ _ _ hv => .inl hv) (hS.den.lvlAll.congr rfl)⟩
 
 /-! ## `residual_pw` -/
 
@@ -415,7 +418,7 @@ theorem spa_ok {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : 
     simp only [substPWAt, StateT.run_bind, hX, except_ok_bind, hY]
     rfl
   have hS' : CoreS dn m₁ { a with caches := { a.caches with readNC := X, readLsC := Y } } vis fe
-      M eb := (CoreS.readCaches ((RdAfter.heap hS he).1) X Y (by exact hcY))
+      M eb := (CoreS.readCaches ((RdAfter.heap hS he).1) X Y (by exact hcY) hcX)
   have hRd : RdAfter dn m m₁ a { a with caches := { a.caches with readNC := X, readLsC := Y } }
       vis fe M eb := ⟨hS', (RdAfter.heap hS he).2.1, (RdAfter.heap hS he).2.2.1, rfl⟩
   simp only [pushedK] at hW

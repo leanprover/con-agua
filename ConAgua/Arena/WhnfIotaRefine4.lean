@@ -94,15 +94,15 @@ structure IotaProg4 (p : Prog) : Prop extends IotaProg' p where
   lvl : LvlCacheProg p
   pinw : p.lookup "pin_word" = some pinWordL
 
-/-- **STUB (invariant `CoreS` should carry).** A `sort` node of the store has a level that reads
-back (`denoteL` is defined at its handle), and so does the pinned zero level. `lvl_eq_c` (lane
+/-- A `sort` node of the store has a level that reads back (`denoteL` is defined at its handle),
+and so does the pinned zero level: `CoreS.den` (`StoreDen.lean`, lane `defeq2`). `lvl_eq_c` (lane
 `levels`/`CoreLevels.lean`'s `lvlEqC_refines`) needs this, the twin's `readLevelM` fails on a
-dangling handle. It is not derivable from `CoreS` as it stands; the fix is a `CoreS` field
-(`sorry` here instead, as the other stubs). -/
+dangling handle. -/
 theorem CoreS.lvl_den {dn : NIdx → Option ConLeche.Name} {m : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} (hS : CoreS dn m a vis fe M eb) :
     (∀ (e : EIdx) (u : LIdx), a.store.view e = some (.sort u) → ∃ l, denoteL a.store.ls u = some l) ∧
-    (∃ l, denoteL a.store.ls a.pins.zeroLevel = some l) := sorry
+    (∃ l, denoteL a.store.ls a.pins.zeroLevel = some l) :=
+  ⟨fun e u hv => hS.den.sort e u hv, hS.den.zero⟩
 
 /-- **What `proof_irrel` needs of the store** (`CoreS.lvl_den`'s statement, as a named
 hypothesis): a `sort` node's level and the pinned zero level read back. -/

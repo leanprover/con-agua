@@ -203,6 +203,7 @@ def short(t, n=140):
     return t if len(t) <= n else t[:n - 1].rstrip() + "…"
 
 def dev_table(title, intro, rows, last_col):
+    rows = [(d, c) for d, c in rows if not c[3].strip().lower().startswith("none")]
     w(f"### {title} ({len(rows)})\n")
     w(intro + "\n")
     if not rows:
@@ -211,6 +212,8 @@ def dev_table(title, intro, rows, last_col):
     w("|---|---|---|---|---|")
     for did, c in rows:
         kind = re.split(r"[\s(;,]", c[3].strip(), maxsplit=1)[0] or c[3]
+        if kind.lower().startswith("none"):
+            continue  # representation only: not visible to users, not reported
         where = re.sub(r"`", "", c[0]).split(";")[0]
         dev = f"**twin:** {short(c[1], 150)}<br>**L:** {short(c[2], 150)}<br><sub>{short(where, 80)}</sub>"
         w(f"| {did} | {kind} | {dev} | {short(c[4], 40)} | {short(c[5], 110)} |")
@@ -218,7 +221,7 @@ def dev_table(title, intro, rows, last_col):
 
 w("## Deviations from the twin\n")
 w("Places where L does something other than con-ron beyond fuel and fixed capacities, from `docs/deviations.md`. "
-  "Effect: completeness = L declines where the twin accepts; performance = same verdicts, more work or memory.\n")
+  "Effect: completeness = L declines where the twin accepts; performance = same verdicts, more work or memory. Representation-only differences (no visible effect) are not listed.\n")
 dev_table("Temporary: to be fixed", "L differs from the twin for now; each row has an owner and a fix.", dev_rows("Temporary"), "fix")
 dev_table("Deliberate: by design", "L differs from the twin on purpose and stays that way.", dev_rows("Deliberate"), "why")
 

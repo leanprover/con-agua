@@ -29,7 +29,7 @@ namespace L.Arena
 open L.Ind
 
 /-- **The twin-side invariants `CoreS` has beyond `CheckR`**, and its two size bounds. -/
-structure TwinOK (m : Mem) (a : AState) : Prop where
+structure TwinOK (m : Mem) (a : AState) (fe : IFEnv) : Prop where
   readL : ReadLCOK a
   readLs : ReadLsCOK a
   nwf : NStoreWF a.store.lss.ls.ns
@@ -37,22 +37,24 @@ structure TwinOK (m : Mem) (a : AState) : Prop where
   spn : (m.arr64 SPN).size < 2 ^ 63
   memos : CoreMemos m
   bstk : (m.arr64 145).size < 2 ^ 63
+  /-- Stored levels read back (`StoreDen.lean`). -/
+  den : StoreDen m a fe
 
 /-- The stage relation with the twin invariants and a filled pin table is `CoreS` (outside the
 eager tower). -/
 theorem StageR.coreS {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
-    {a : AState} (hS : StageR dn vis fe m a) (hT : TwinOK m a) (hflag : pinW m 0 ≠ 0) :
+    {a : AState} (hS : StageR dn vis fe m a) (hT : TwinOK m a fe) (hflag : pinW m 0 ≠ 0) :
     ∃ M, CoreS dn m a vis fe M 0 := by
   obtain ⟨M, hM⟩ := hS.1.core
   exact ⟨M, ⟨hS.1.arena, hM, hS.1.pins.full hflag, hS.1.env, hT.readL, hT.readLs, hT.nwf, hT.erec,
-    hT.spn, hT.memos, hT.bstk⟩⟩
+    hT.spn, hT.memos, hT.bstk, hT.den⟩⟩
 
 /-- `CoreS` (outside the eager tower) is `CheckR` and the twin invariants. -/
 theorem CoreS.checkR {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem}
     {a : AState} {M : ModeMaps} (hS : CoreS dn m a vis fe M 0) :
-    CheckR dn m a vis fe ∧ TwinOK m a :=
+    CheckR dn m a vis fe ∧ TwinOK m a fe :=
   ⟨⟨hS.arena, ⟨M, hS.core⟩, ⟨fun _ => hS.pins⟩, hS.env⟩,
-    ⟨hS.readL, hS.readLs, hS.nwf, hS.erec, hS.spn, hS.memos, hS.bstk⟩⟩
+    ⟨hS.readL, hS.readLs, hS.nwf, hS.erec, hS.spn, hS.memos, hS.bstk, hS.den⟩⟩
 
 /-! ## `lvl_eq_c`'s write set -/
 
@@ -83,10 +85,10 @@ theorem lvlEqC_stage {p : Prog} (hC : CvgProg p) (hL : LvlCacheProg p)
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {m m' : Mem} {u v : Word} {r : List Word}
     (h : callW p n "lvl_eq_c" [u, v] m = some (r, m')) (hS : StageR dn vis fe m a)
-    (hT : TwinOK m a) (hflag : pinW m 0 ≠ 0) (hu : H u) (hv : H v) (lu lv : ConLeche.Level)
+    (hT : TwinOK m a fe) (hflag : pinW m 0 ≠ 0) (hu : H u) (hv : H v) (lu lv : ConLeche.Level)
     (hdu : denoteL a.store.ls (decI u) = some lu) (hdv : denoteL a.store.ls (decI v) = some lv) :
     ∃ a', (lvlEq? (decI u) (decI v)).run a = .ok (decO (r.headD 0), a') ∧
-      StageR dn vis fe m' a' ∧ TwinOK m' a' ∧ IWGrow m m' ∧ HW (r.headD 0) := by
+      StageR dn vis fe m' a' ∧ TwinOK m' a' fe ∧ IWGrow m m' ∧ HW (r.headD 0) := by
   rcases Nat.lt_or_ge n 2 with hn | hn
   · rw [lvlEqC_small p hL.c n hn] at h; cases h
   obtain ⟨k, rfl⟩ : ∃ k, n = k + 2 := ⟨n - 2, by omega⟩
