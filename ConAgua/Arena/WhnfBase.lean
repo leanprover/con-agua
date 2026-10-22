@@ -123,6 +123,42 @@ theorem KeptAll.trans {M₁ M₂ M₃ : ModeMaps} {eb : Word} (h₁ : KeptAll M�
   exact ⟨fun k => (a2 k).trans (a1 k), fun k => (b2 k).trans (b1 k), fun k => (c2 k).trans (c1 k),
     fun k => (d2 k).trans (d1 k), fun k => (e2 k).trans (e1 k), fun k => (f2 k).trans (f1 k)⟩
 
+/-! ## The walk memos the core's walks reuse
+
+`instantiateListFast` (`instLC`, array 50 `ILMEMO`, `CTL[50‥51]`) and `abstract1Fast`/
+`abstractRangeFast` (`abs1C`, array 49 `ABMEMO`, `CTL[48‥49]`) clear their memo on entry and on
+exit, so the twin's map never matters to a caller; but L's clear is an epoch bump, sound only on a
+well-formed memo. `CoreMemos m`: both arrays hold a well-formed memo (of *some* map). A memory-only
+invariant: it survives every writer that avoids the two arrays and their stamp words, whatever the
+twin state does. -/
+
+/-- `InstList.lean`'s `ilSch` (array 50, `CTL[50]`), restated here (`WhnfBase` does not import the
+walks; `ilSch` unfolds to it). -/
+abbrev coreIlSch : MemoSch := ⟨50, 50⟩
+/-- `Abs1.lean`'s `abSch` (array 49, `CTL[48]`), restated here. -/
+abbrev coreAbSch : MemoSch := ⟨49, 48⟩
+
+/-- Both walk memos are well formed (`MemoRG` at some map). -/
+def CoreMemos (m : Mem) : Prop :=
+  (∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRG coreIlSch lfKey decE m mp) ∧
+    (∃ mp : Std.HashMap (EIdx × Nat) EIdx, MemoRG coreAbSch lfKey decE m mp)
+
+theorem coreIlSch_wf : coreIlSch.WF := ⟨by decide, by decide⟩
+theorem coreAbSch_wf : coreAbSch.WF := ⟨by decide, by decide⟩
+
+/-- **`CoreMemos` across a writer** that avoids arrays 49, 50 and `CTL` words 48, 50. -/
+theorem CoreMemos.frame {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+    (hA : (50 : ArrId) ∉ A ∧ (49 : ArrId) ∉ A) (hC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C) (h : CoreMemos m) :
+    CoreMemos m' :=
+  ⟨let ⟨mp, hm⟩ := h.1; ⟨mp, memoRG_frame coreIlSch coreIlSch_wf lfKey decE A C hA.1 hC.1 m m' hf mp hm⟩,
+    let ⟨mp, hm⟩ := h.2; ⟨mp, memoRG_frame coreAbSch coreAbSch_wf lfKey decE A C hA.2 hC.2 m m' hf mp hm⟩⟩
+
+/-- **`CoreMemos` across a writer at or above array 64** (and `CTL` word 64). -/
+theorem CoreMemos.frame_hi {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
+    (hA : ∀ b ∈ A, 64 ≤ b) (hC : ∀ x ∈ C, 64 ≤ x.toNat) (h : CoreMemos m) : CoreMemos m' :=
+  h.frame hf ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide)⟩
+    ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide)⟩
+
 /-- **The core's relation** at explicit cache maps. -/
 structure CoreS (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb : Word) : Prop where
@@ -139,6 +175,11 @@ structure CoreS (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis
   erec : (m.arr64 EREC).size < 2 ^ 63
   /-- The spine stack's size (a capacity checked at entry): slice offsets do not wrap. -/
   spn : (m.arr64 SPN).size < 2 ^ 63
+  /-- The walk memos `instLC`/`abs1C` are well formed (their walks clear them on entry). -/
+  memos : CoreMemos m
+  /-- The binder stack's size (lane `defeq`'s `BSTK`, array 145; a capacity checked at entry):
+  its offsets do not wrap. -/
+  bstk : (m.arr64 145).size < 2 ^ 63
 
 /-- **The relation across a writer outside every tier and the stack**: arrays `≥ 145` (or the
 front's 64‥95), `CTL` words `≥ 137` (or 64‥95): the level heap (`LH`, `CTL[192]`), say. -/
@@ -162,7 +203,9 @@ theorem CoreS.frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AStat
     hS.pins.congr (hf.1 PINS (fun h => by have := hA _ h; simp only [PINS, ArrId] at this; omega)
       (by decide)),
     hS.env.frame (aA 132 144 (by decide) (by decide)) (aC 128 136 (by decide) (by decide)) hf,
-    hS.readL, hS.readLs, hS.nwf, hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn⟩, ?_⟩
+    hS.readL, hS.readLs, hS.nwf, hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn,
+    hS.memos.frame_hi hf (fun b hb => (hA b hb).1) (fun x hx => (hC x hx).1),
+    hf.2.2.1 145 ▸ hS.bstk⟩, ?_⟩
   refine ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
 
 /-- **After a core run** from `m₀` at maps `M`, `G`, generation `g`: the relation holds at some

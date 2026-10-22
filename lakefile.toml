@@ -58,6 +58,7 @@ globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.A
   "ConAgua.Arena.WhnfSpineRefine", "ConAgua.Arena.WhnfSpineArgs", "ConAgua.Arena.WhnfCoreRefine", "ConAgua.Arena.WhnfCoreStep", "ConAgua.Arena.WhnfCoreLoop", "ConAgua.Arena.WhnfCoreApp", "ConAgua.Arena.WhnfCoreAppLoop", "ConAgua.Arena.WhnfCoreProj", "ConAgua.Arena.WhnfDelta", "ConAgua.Arena.WhnfDeltaSlot", "ConAgua.Arena.WhnfDeltaRefine", "ConAgua.Arena.WhnfDeltaRefine2", "ConAgua.Arena.WhnfDeltaRefine3", "ConAgua.Arena.WhnfDeltaRefine4", "ConAgua.Arena.WhnfEntry",
   "ConAgua.Arena.DefEq", "ConAgua.Arena.Infer", "ConAgua.Arena.Knot", "ConAgua.Arena.KnotWF", "ConAgua.Arena.KnotSlot", "ConAgua.Arena.InferLeaves", "ConAgua.Arena.DefEqGrindAttr", "ConAgua.Arena.DefEqLeaves", "ConAgua.Arena.DefEqLeaves2",
   "ConAgua.Arena.InferBodyIntern", "ConAgua.Arena.InferBodyLet", "ConAgua.Arena.InferBodySpine", "ConAgua.Arena.InferBodySpineF", "ConAgua.Arena.InferBodyBind", "ConAgua.Arena.InferBodyBindPi", "ConAgua.Arena.InferBodyDisp",
+  "ConAgua.Arena.DefEqMid", "ConAgua.Arena.DefEqMidLoops", "ConAgua.Arena.DefEqMidPeel", "ConAgua.Arena.DefEqMidLams", "ConAgua.Arena.DefEqMidQuick", "ConAgua.Arena.DefEqMidSpine", "ConAgua.Arena.DefEqMidLazy", "ConAgua.Arena.DefEqMidLazy2",
   "ConAgua.Arena.Walk", "ConAgua.Arena.WalkRefine", "ConAgua.Arena.WalkBench", "ConAgua.Arena.WalkEmit",
   "ConAgua.Arena.WalkBenchLean",
   "ConAgua.Capstone", "ConAgua.Compiler.WFAll", "ConAgua.Compiler.WFAllBench",
@@ -69,7 +70,9 @@ globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.A
   "ConAgua.E2E.Ser", "ConAgua.E2E.Dump", "ConAgua.E2E.Trace", "ConAgua.E2E.Check",
   "ConAgua.Front.ExprIface", "ConAgua.Front.Preserve", "ConAgua.Front.Driver", "ConAgua.Front.DriverRefine", "ConAgua.Front.DeclIface", "ConAgua.Front.FrontRun", "ConAgua.Front.NatDec", "ConAgua.Front.NatDecLink", "ConAgua.Front.Unescape", "ConAgua.Front.UnescapeLink", "ConAgua.Front.ApplyExpr", "ConAgua.Front.ApplyExprRefine", "ConAgua.Front.FieldsExpr", "ConAgua.Front.FieldsExprLink", "ConAgua.Front.ApplyDecl", "ConAgua.Front.ApplyDeclRefine", "ConAgua.Front.FieldsDecl", "ConAgua.Front.FieldsDeclSpec", "ConAgua.Front.FieldsDeclLink", "ConAgua.Front.IndFields", "ConAgua.Front.IndApply",
   "ConAgua.Rom.PinStream", "ConAgua.Rom.Subst", "ConAgua.Rom.PinRead",
-  "ConAgua.Rom.Dec", "ConAgua.Rom.PinReadSpec", "ConAgua.Rom.DecExpr"]
+  "ConAgua.Rom.PinStream", "ConAgua.Rom.Subst", "ConAgua.Rom.PinRead",
+  "ConAgua.Rom.Dec", "ConAgua.Rom.PinReadSpec", "ConAgua.Rom.DecExpr", "ConAgua.Rom.PinSets",
+  "ConAgua.Rom.Stage"]
 
 # Vendored from con-leche and con-ron (proof/ dir) at the revisions in vendor/UPSTREAM, plus the
 # patch series vendor/patches/ (scripts/bump-con-ron.sh; vendor/README.md).
@@ -165,6 +168,11 @@ root = "ConAgua.E2E.Main"
 [[lean_exe]]
 name = "romgen"
 root = "ConAgua.Rom.Gen"
+
+# The e2e lane's per-function differential tests against the twin (`ConAgua/E2E/Diff.lean`).
+[[lean_exe]]
+name = "e2e-diff"
+root = "ConAgua.E2E.Diff"
 
 # Lane `romload`: the L pin stages against the twin's on a pin-data buffer (`ConAgua/Rom/Test.lean`).
 [[lean_exe]]
