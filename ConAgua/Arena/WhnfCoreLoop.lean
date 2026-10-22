@@ -422,7 +422,8 @@ variable (p : Prog) (hp : WhnfCoreProg p) (hwc : WhnfCallees p) (hcc : CoreCalle
 include hp hwc hcc hsup in
 /-- **The knot's `whnfCore` slot, one level up**: given the knot at every fuel up to `n` (for
 the body's callees), `whnf_core` at `n + 1` refines the slot of `coreKnot mode fe id F`,
-`F ≥ n + 1`. The body's own refinement is `whnfCoreBody_refines`. -/
+`F ≥ n + 1`. The body's own refinement is `whnfCoreBody_refines'`. Over the bundles
+`WhnfCallees`, `CoreCallees` and `SupKeep` (`DefEqKnot.lean` builds them from real proofs). -/
 theorem whnfCoreSlot_step (n : Nat) (hk : KnotUpTo p n) : WhnfCoreSlot p (n + 1) := by
   intro F s₀ a₀ dn vis fe MM eb mode cheap d e hF hn hs he
   obtain ⟨F', rfl⟩ : ∃ F', F = F' + 1 := ⟨F - 1, by omega⟩
