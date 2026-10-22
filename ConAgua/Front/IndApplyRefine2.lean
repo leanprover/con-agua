@@ -396,12 +396,12 @@ theorem islice_get {k : IdxKind} (m : Mem) (o l c : Nat) (hc : c < (islice (k :=
 /-- **`vi_map` is a twin `mapM` of lookups**: on a list `xs` whose ids are the records' words, a
 lookup `look` that the model's lookup answers (`hlk`), the twin's `mapM` returns the handles the
 model pushed, the slice `(lo, l)`. -/
-theorem mapW_twin {α : Type} {n : Nat} {m m' : Mem} {o l sz s f lo l' : Word} (hT : TopOK m)
+theorem mapW_twin {α : Type} {kd : IdxKind} {n : Nat} {m m' : Mem} {o l sz s f lo l' : Word} (hT : TopOK m)
     (h : mapW n m o l sz s f = some ((lo, l'), m')) (a : AState) (xs : List α) (ids : α → Nat)
-    (look : Nat → AM NIdx) (hlen : l.toNat = xs.length)
+    (look : Nat → AM (Idx kd)) (hlen : l.toNat = xs.length)
     (hid : ∀ k (hk : k < xs.length), (rdW (m.arr64 IFR) (o + sz * UInt64.ofNat k + s)).toNat = ids xs[k])
     (hlk : ∀ x w, mapLk m f x = some w → (look x.toNat).run a = .ok (decI w, a) ∧ w.toNat < 2 ^ 32) :
-    (xs.mapM fun x => look (ids x)).run a = .ok (islice m' lo.toNat xs.length, a) ∧
+    (xs.mapM fun x => look (ids x)).run a = .ok (islice (k := kd) m' lo.toNat xs.length, a) ∧
       IExt m m' ∧ TopOK m' ∧ l' = l ∧ lo.toNat = topN m IFL + 1 ∧ topN m' IFL = topN m IFL + xs.length ∧
       ∀ c, c < xs.length → (wd m' IFL (lo.toNat + c)).toNat < 2 ^ 32 := by
   cases n with
