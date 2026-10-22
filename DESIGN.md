@@ -6776,6 +6776,110 @@ pin variant "for now" (lanes `integrate`, `decls3`).
 PLAN.md, process rules: a deviation gets its row in `docs/deviations.md` in the commit that
 introduces it; the coordinator reviews the list at each batch of landings.
 
+### Landing 3: six phase-5 targets sorry-free on the real walks (`WhnfTagged.lean`)
+* A dependency scan (each tagged theorem's transitive constants that are `sorry`'d theorems) showed
+  which stub *fields* each tagged statement really used. `beta_peel`, `iota_certs_full(_aux)` used
+  only `WhnfCallees.instList`; `pi_residual`, `inst_spine`, `iota_index_ok` only
+  `IotaCallees.inst1`. Their primed theorems now take `InstListOK p` / `IotaInst1OK p` instead of
+  the bundles, and the tagged ones live in `WhnfTagged.lean` (after `CoreWalks.lean`), given the
+  walks' programs `CoreWalkProg p`: **sorry-free** (`pi_residual` newly tagged).
+* Census, phase 5: **79 proven / 19 sorry / 20 written / 24 todo**; phase 4: 65 proven, 0 sorry.
+* What the remaining phase-5 `sorry`s wait for (scan): `instLP` (`const_ty_at`, `rule_rhs_at`,
+  `inst_spine_pins`, `rec_fire_args`: the phase-4 `instLPFast` walk is not written),
+  `wscoped_bfast`/`leaf_guard` (`fab_scope_ok`), `find_proj`/`fire_ok`/`ProjFound`
+  (`tower_slots_all`, `and_rescue_slots`, the projection arm), the string-literal stubs and
+  `supKeep_twin` (`lit_major_to_ctor`, `proj_lit_to_ctor`), `CoreS.lvl_den` (`proof_irrel`), the
+  knot's `infer`/`defeq` steps (`WhnfCallees.inferStep` …; lane `defeq`), `erecKept*`, and
+  `whnfGrowsUpTo_stub` (`reduce_nat`).
+
+### Open handoffs (lane `whnf2` closing)
+* **`whnfGrowsUpTo_stub`** (the second assumed fact) stays. A `whnf` call must leave the limb pool
+  below its old top alone and the top no lower (`reduce_nat_op` holds the first literal's pool slice
+  across the second `whnf`). Three routes were weighed: (1) a write-set argument (`closedW` with the
+  pool outside the write set) fails because the `Nat` arithmetic does write the pool (above the
+  top), and its frame holds only under argument preconditions a text check cannot see; (2) re-reading
+  the first literal after the second `whnf` needs the twin's store to keep every node's view across
+  `whnf` (a `Keeps`-style induction over the whole knot, ~150 twin definitions); (3) carrying the
+  growth in the core's post: `CoreAfter` (or `StackKept`) gains `PoolGrew m₀ m` (pool below `m₀`'s
+  top unchanged, top no lower, sizes equal), proved at the leaves from frames avoiding `POOL`/
+  `CTL[0]` and from the `Nat` functions' `Grows`, and composed by `CoreAfter.trans`/`comp`. Route
+  (3) is the one; it touches every explicit `StackKept`/`CoreAfter` construction and destructuring
+  (~300 sites, about half in lane `defeq`'s files), so it should be done together with lane
+  `defeq`'s request part 2 (`StackKept` keeps `BSTK`, array 145 / `CTL[137]`), in one sweep when
+  `defeq` is between landings. Suggested shape: `StackKept m m'` becomes a `structure` with named
+  fields (`top`, `size`, `below`, `bstk`, `pool`) so that later additions do not move projections.
+* **`CoreS.lvl_den`** (`proof_irrel`): needs "every stored level handle reads back", a store
+  invariant the twin's WF gives but `CoreS` does not carry; adding it means maintaining it at every
+  level-node and sort-node interning (`CoreS.of_level`, `arena_frame`).
+* Remaining stub fields whose L code does not exist: `instLP` (phase 4 `instLPFast`),
+  `strLitCtor`/`strLitSupported`, `find_proj`/`fire_ok` (+ `ProjFound`, `ProjSmall`),
+  `wscoped_bfast`, `leaf_guard`, `caps_never_zero`, `rec_fire_levels`; `supKeep_twin`,
+  `erecKeptInst_stub` (its `inst_spine` half is provable now from `instEntry_frame`; `inst_lp`'s is
+  not), `erecKeptKnot_stub` and the knot steps (lane `defeq`). The new named hypotheses of the iota
+  proofs (`ErecKeptRec`, `LvlsEqDen`, `RecShape`, `ProofIrrelOKM`) are listed above.
+
+### The knot tied (`DefEqBody.lean`, `DefEqKnot.lean`, helper `defeq-knot`)
+* `defeqBody_refines`: `DefeqBodySpec p n` is a theorem (from `DefeqBodyCallees` = `StuckCallees` +
+  `LazyCallees`); `defeqSlot_step` = `defeq_refines` on it. The twin side is split once
+  (`defeqBodyRestT`, `defeqBody_eq` by `rfl`); the proof is the `callW` chain of ten calls, 356
+  lines, ~8 s CPU. `DefeqBodySpec` gains `n ≤ 2^62` (`defeq_refines` has it).
+* L changes in `defeq_body`: it aborts at `d ≥ 2^63` (as `infer_lam`: `quick_defeq` and the lazy
+  loop need the bound, the slots do not carry it); `if lk != 2 { return lk }` became two tests
+  `lk == 0`/`lk == 1` (`decLR` reads any other word as `.unknown`; `Res3` does not bound `lk`).
+* Hypothesis shapes adjusted to the proved theorems: `ProofIrrelOK` (and `proofIrrel_at`) take
+  `n ≤ 2^62` and the eager bit, `propIrrel_refines` takes `n ≤ 2^62`; `LazyDeltaStepH` takes
+  `d < 2^63`, threaded through `ldprW_ok`/`ldpr_refines`/`ldpr_at`/`projPair_refines`/`projPair_at`/
+  `defeqTail_refines`; `LazyCallees.reduceNat` is `∀ n, n ≤ 2^62 → ReduceNatSpec p n`.
+* Plugged (`DefEqKnot.lean`, one wrapper each): `lazyDeltaStepH_of`, `defeqLstOK_of`,
+  `isEagerReduceH_of`, `reduceNat_of` (lane `whnf`'s `reduceNat_refines'`, over its
+  `NatOpResultOK`/`WhnfGrowsUpTo`), `proofIrrelOK_of` (lane `whnf`'s `proofIrrel_refines`; it uses
+  `CoreS.lvl_den`, a `sorry`, so `ProofIrrelOK` stays a field).
+* **The knot**: `knot_step : KnotUpTo p n → KnotOK p (n + 1)`, `knot_all : ∀ n, KnotOK p n`
+  (fuel `0` by `CoreSpec.zeroLet`), both over `KnotAllProg p` (lookups) and ONE structure
+  `KnotCallees p`; no `sorry` (axioms: `propext`, `Classical.choice`, `Quot.sound`).
+  `whnfCallees_of` gives lane `whnf`'s `WhnfCallees` (its `inferStep`/`inferIOStep`/`defeqStep`
+  are the slot steps; `instLP` an argument). No circularity: no lane `whnf` proof uses those three
+  fields.
+* `KnotCallees`' fields, and why each is left: `whnfCoreStep`, `whnfStep` (lane `whnf`'s
+  `whnfCoreSlot_step` and `whnf_refines` chain are proved over `whnfCallees_stub`/
+  `coreCallees_stub` instantiated inline: `knotWhnfCore_twin`/`knotWhnf_twin` give them modulo
+  those `sorry`s; taking the bundles as hypotheses there would make them plain fields here);
+  `defeq` (`DefeqCallees`: `has_fvar` and the phase-4 walks need the `CoreS` bridge,
+  `not/is_proof_fast`, `field_sort_zero`); `proofIrrel` (above); `inst1`, `instList`
+  (stubs); `reservedContains`, `towerSlots`, `strLitSupported`, `strLitCtor`, `supKeep`, `store`
+  (no proofs yet); `lvlsEqC` (the "stored level lists denote" invariant); `reduceProjCore` and
+  `unfold` (lane `whnf`'s proofs take all of `WhnfCallees`, which holds the steps proved here:
+  generalize them to the fields they use, `instLP`, to plug); `natPred` (`natPred_refines` posts
+  `ResH`, the hypothesis `ResW`); `natOpResult`, `whnfGrows` (lane `whnf`'s); `constTy`, `lit`,
+  `bstk`, `bcap`, `proj` (the inference side, landing 4).
+### Landing 4: the quotient and axiom arms; `and_pin_ok`'s inductive arm in L
+
+* **`checkDecl_loop`: every arm's spec is proved but the definition arm's** (`DeclArmQuot.lean`,
+  `DeclArmAxiom.lean`; `@[refines_part checkDecl "one-constant records"]`). The quotient arm
+  (`quot_pin_hit`: the pinned block's constant at the record's slot, `ci_to_cv`, `cv_canon_eq`) and
+  the axiom arm (`Quot.sound` against the block's slot 4 by `ci_canon_eq`, the constant check,
+  `std_axiom_ok`/`trust_compiler_ok`/`of_reduce_ax_ok` then the push, `propext`/`choice` declining,
+  `sorryAx` skipped) at `LoopR` through the arms' text (now covering both: real interns
+  `intern_zero/succ/sort/nanon/nnum` in `armMasterFns`; `closedA` by `decide +kernel`, 8 s).
+* **Hypotheses instead of the helper's not-yet-landed specs**: `CvCanonSpec p` / `CiCanonSpec p`
+  (fields of `QuotProg`/`AxProg`, inside `CheckDeclProg`): the `RefAM` statements of `cv_canon_eq`,
+  `ci_canon_eq`. Helper `decls3-canon` proves the canonical comparisons; its `canon_expr_eq` takes a
+  literal-injectivity hypothesis (`LitInj`), which these statements will gain when its specs land.
+* **`and_pin_ok` has the inductive arm in L** (`and_block_named` over the block's records in
+  `DLP`, then for a two-parameter block `canon_eq_list` of the block (copied by
+  `ind_block_to_erec`, `er_to_iw`) against `rom_and_pin()`, a new ROM stub with spec
+  `romAndPin_spec`). The proof stays `refines_part … "one-constant records"`: `LoopR` still holds
+  the one-constant `DeclsR`; the inductive arm becomes provable once the loop's relation takes the
+  front's `DeclsF` (lane `indproofs2`'s `DeclAtF`/`IndDeclAt`, now on master) and `canon_eq_list`
+  is in.
+* **For every lane that changes L code reached from `check`**: rerun `scripts/checker_prog.py`
+  (regenerates `ConAgua/Checker/Prog.lean`, lane `integrate`'s whole program); a stale file fails
+  `checkerProg_wf` in the kernel.
+
+`sorry`s now (lane `decls3`): `checkDeclDefn_loop`; the six ROM stub specs (`romAndPin_spec` new);
+`lvlEqStub_spec`; `promoteNew_spec` (helper running). Census at landing 4: phase 2 **146 proven,
+26 sorry, 73 written, 86 todo**.
+
 
 ### Landing 2: the ROM constant records (helper `integrate-romci`)
 

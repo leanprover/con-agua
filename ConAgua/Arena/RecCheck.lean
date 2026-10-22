@@ -257,13 +257,13 @@ def targetParamsDefEq : FunDecl := lfn (vis, d, no, nl, lvls, ho, hl, pfo, pfl, 
   return 1
 }
 
-/-- **`target_class_match`**: levels up to `lvls_eq`, then per-component parameter defeq over the
-recursor prefix `pfvs` with the member holes on top. -/
+/-- **`target_class_match`**: levels up to `lvls_eq_c` (the cached `lvlsEq?`, as the twin), then
+per-component parameter defeq over the recursor prefix `pfvs` with the member holes on top. -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:210-224 ConRon.Arena.targetClassMatch
 @[l_impl ConRon.Arena.targetClassMatch]
 def targetClassMatch : FunDecl := lfn (vis, p, fto, ftl, pfo, pfl, us, dso, dsl, lvls, edso, edsl)
     locals (e, mno, mnl, mo, ml, lpso, lpsl, m0, cvt0, blvls, ho, hl, d, r) {
-  e := call lvls_eq(us, lvls);
+  e := call lvls_eq_c(us, lvls);
   if e != 2 { return 0 };
   (mno, mnl) := call block_shape_member_names(p);
   mo := IW.u64[p];

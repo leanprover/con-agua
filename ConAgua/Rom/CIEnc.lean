@@ -14,7 +14,8 @@ carries no structure, so the ROM holds them a second time, **structured** (`romC
 * a table of `ciSlots` 8-byte offsets, relative to the region's start: slots `0‥4` the raw basis
   blocks (`BasisKind.decls`, kinds `eqK`, `natK`, `emptyK`, `falseK`, `quotK`), `5‥9` the
   annotated ones (`declsA`), `10‥17` the `rom_ci` constants (`romCiT`'s order), `18‥27` the
-  `rom_cv` constant values (`romCvT`'s order), `28‥29` the `rom_expr_pin` expressions;
+  `rom_cv` constant values (`romCvT`'s order), `28‥29` the `rom_expr_pin` expressions, `30` the
+  pinned `And` block (`andPin`, `rom_and_pin`);
 * the entries: a block is its length, then its constants at ONE expression memo (`internCIList`);
   a constant, a constant value or an expression is encoded at a fresh memo (`internCI`,
   `internCV`, `internExpr`).
@@ -146,10 +147,11 @@ def ciEntries : List (List UInt8) :=
   basisKinds.map (fun k => encBlock (ConLeche.BasisKind.declsA k)) ++
   romCiVals.map (fun c => (encCI [] c).1) ++
   romCvVals.map (fun v => (encCV [] v).1) ++
-  romExprVals.map (fun e => (encExprM [] e).1)
+  romExprVals.map (fun e => (encExprM [] e).1) ++
+  [encBlock ConLeche.andPin]
 
 /-- The number of slots. -/
-def ciSlots : Nat := 30
+def ciSlots : Nat := 31
 
 /-- Slot offsets (relative to the region's start), after a table of `n` slots. -/
 def ciTable (start : Nat) : List (List UInt8) → List UInt8

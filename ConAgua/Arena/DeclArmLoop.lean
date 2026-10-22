@@ -1,4 +1,5 @@
 import ConAgua.Arena.DeclReduceSpec
+import ConAgua.Arena.DeclCanonSpec
 
 /-!
 # The `checkDecl` arms at the loop's relation: the text, the theorem arm (lane `decls3`)
@@ -36,7 +37,12 @@ def armMasterFns : Prog :=
   [("pin_at", pinAtL), ("const_e", constEL), ("const_find", constFind), ("const_push", constPush),
    ("intern_const", internConst), ("fvar_find", fvarFind), ("fvar_push", fvarPush),
    ("intern_fvar", internFVar), ("mk_app", mkApp), ("app_find", appFind), ("app_push", appPush),
-   ("intern_app", internApp), ("der_b", derB)]
+   ("intern_app", internApp), ("der_b", derB), ("intern_zero", internZero), ("zero_find", zeroFind),
+   ("zero_push", zeroPush), ("intern_succ", internSucc), ("succ_find", succFind),
+   ("succ_push", succPush), ("intern_sort", internSort), ("sort_find", sortFind),
+   ("sort_push", sortPush), ("intern_nanon", internNAnon), ("nanon_find", nanonFind),
+   ("nanon_push", nanonPush), ("intern_nnum", internNNum), ("nnum_find", nnumFind),
+   ("nnum_push", nnumPush), ("lv_node", lvNode), ("ls_node", lsNode)]
 
 /-- **The arms' text.** -/
 def armText : Prog :=
@@ -65,8 +71,21 @@ def opqArmFns : List FnName :=
    "const_find", "const_push", "intern_fvar", "fvar_find", "fvar_push", "mk_app", "der_b",
    "intern_app", "app_find", "app_push"]
 
+/-- The functions the quotient and axiom arms reach beyond the others'. -/
+def qaxArmFns : List FnName :=
+  ["check_decl_quot", "quot_pin_hit", "rom_basis_decls", "ci_to_cv", "intern_zero", "zero_find",
+   "zero_push", "intern_succ", "succ_find", "succ_push", "intern_sort", "sort_find", "sort_push",
+   "cv_new", "cv_canon_eq", "canon_ctx", "canon_names", "canon_names_go", "intern_nanon",
+   "nanon_find", "nanon_push", "intern_nnum", "nnum_find", "nnum_push", "sl_cons", "iw_copy",
+   "canon_expr_eq", "e_view", "canon_level_eq", "canon_name_map", "sl_find", "sl_getd",
+   "canon_levels_eq", "view_ls", "ls_node", "pool_copy", "canon_level_list_eq", "check_basis_decl",
+   "find_is", "rom_basis_decls_a", "install_basis_decls", "install_basis_decl", "check_decl_axiom",
+   "ci_canon_eq", "ci_canon_defn", "ci_canon_rec", "canon_rules_eq", "std_axiom_ok",
+   "std_ax_family", "find_pinned", "trust_compiler_ok", "find_pinned_cv", "of_reduce_ax_ok",
+   "of_reduce_op", "of_reduce_pin_a"]
+
 /-- The functions the arms reach. -/
-def armFns : List FnName := thmArmFns ++ opqArmFns
+def armFns : List FnName := thmArmFns ++ opqArmFns ++ qaxArmFns
 
 theorem armText_closed : closedA armText stepA stepC armFns = true := by decide +kernel
 

@@ -6,7 +6,7 @@ import ConAgua.Rom.CIRead
 A test, not a proof: the L interpreter runs `pb_check`, `intern_reserved_pins` and
 `intern_all_pins` on a memory whose byte array `PB` holds `pinBuffer []`, then every entry of
 `romCIProg` (`rom_basis_decls(k)`, `rom_basis_decls_a(k)` for `k < 5`, `rom_ci(id)` for `id < 8`,
-`rom_cv(id)` for `id < 10`, `rom_expr_pin(id)` for `id < 2`), each from the memory after the
+`rom_cv(id)` for `id < 10`, `rom_expr_pin(id)` for `id < 2`, `rom_and_pin()`), each from the memory after the
 startup; the twin runs `internReservedPins`, `internAllPins []` and the same interns. The records
 must decode (`decCI`, `decCV`, `basisDec`) to the twin's values, handle for handle; the program
 the readers reach passes the compiler's static check.
@@ -46,7 +46,7 @@ partial def closure (todo : List String) (acc : Prog) (miss : List String) : Pro
 
 /-- The readers' entries. -/
 def roots : List String :=
-  ["rom_basis_decls", "rom_basis_decls_a", "rom_ci", "rom_cv", "rom_expr_pin"]
+  ["rom_basis_decls", "rom_basis_decls_a", "rom_ci", "rom_cv", "rom_expr_pin", "rom_and_pin"]
 
 /-- The program: the startup stages and the readers, with every callee. -/
 def prog : Prog × List String :=
@@ -115,6 +115,12 @@ def checks : Except String (List String) := do
     let (r, _) ← callL m "rom_expr_pin" (UInt64.ofNat i)
     let v ← twin a (L.Ind.romExprT i)
     if r.headD 0 != v.word.toUInt64 then bad := bad ++ [s!"rom_expr_pin({i})"]
+  match L.run prog.1 100000 "rom_and_pin" [] m with
+  | .ok (r, m') =>
+    let v ← twin a andPinDecls
+    if L.Arena.basisDec dn (r.headD 0).toNat (r.tail.headD 0).toNat m' != some v then
+      bad := bad ++ ["rom_and_pin()"]
+  | .error e => throw s!"rom_and_pin(): {repr e}"
   pure bad
 
 -- The checks pass.

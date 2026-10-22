@@ -308,12 +308,20 @@ def romExprPinL : FunDecl := lfn (id) locals (q, z, h) {
   return h
 }
 
+/-- `rom_and_pin()`: the pinned `And` block (`andPinDecls`, `internCIList andPin`), an `IW` slice. -/
+-- con-ron: ConRon/Arena/Basis.lean:94-98 ConRon.Arena.andPinDecls
+@[l_impl ConRon.Arena.andPinDecls]
+def romAndPinL : FunDecl := lfn () locals (o, l) {
+  (o, l) := call rci_block(30);
+  return (o, l)
+}
+
 /-- **The ROM stubs' readers.** The functions they call from other modules: `rom_u64`,
 `rom_name`, `rom_level`, `rom_expr`, `rom_exprs_to`, `rset_clear` (`romProgPB`), `erec_alloc`,
 `iw_alloc` (`IndIface.lean`). -/
 def romCIProg : Prog :=
   [("rom_basis_decls", romBasisDeclsL), ("rom_basis_decls_a", romBasisDeclsAL), ("rom_ci", romCiL),
-   ("rom_cv", romCvL), ("rom_expr_pin", romExprPinL), ("rci_slot", rciSlot), ("rci_fresh", rciFresh),
+   ("rom_cv", romCvL), ("rom_expr_pin", romExprPinL), ("rom_and_pin", romAndPinL), ("rci_slot", rciSlot), ("rci_fresh", rciFresh),
    ("rci_names_to", rciNamesTo), ("rci_name_sl", rciNameSl), ("rci_lvls_to", rciLvlsTo),
    ("rci_cv", rciCv), ("rci_caps", rciCaps), ("rci_rule", rciRule), ("rci_rules_to", rciRulesTo),
    ("rci_ci", rciCi), ("rci_block_to", rciBlockTo), ("rci_block", rciBlock)]

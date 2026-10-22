@@ -502,6 +502,33 @@ theorem hasFvar_core (hp : AbsProg p) (hpf : p.lookup "has_fvar" = some hasFvarL
       simp [h0, h0']
   · unfold ResH HW; rw [← hr0]; split <;> decide
 
+/-- **The walks' programs**, at their names (what `CoreWalks`' bridges need of a program). -/
+structure CoreWalkProg (p : Prog) : Prop where
+  il : InstListProg p
+  ile : p.lookup "inst_list" = some instListL
+  inst : InstProg p
+  ie : p.lookup "inst_entry" = some instEntry
+  le : p.lookup "lift_entry" = some liftEntry
+  /-- The core's call sites name `instantiate1Fast`'s L function `inst1`: the same `FunDecl`. -/
+  i1 : p.lookup "inst1" = some instEntry
+  bvb : BvbProg p
+  abs : AbsProg p
+  ae : p.lookup "abs_entry" = some absEntry
+  ar : ArProg p
+  are : p.lookup "ar_entry" = some arEntry
+  hf : p.lookup "has_fvar" = some hasFvarL
+
+theorem CoreWalkProg.instListOK (hp : CoreWalkProg p) : InstListOK p := instListOK_core hp.il hp.ile
+
+theorem CoreWalkProg.iotaInst1OK (hp : CoreWalkProg p) : IotaInst1OK p :=
+  inst1_core hp.inst hp.ie hp.le "inst_entry" hp.ie
+
+theorem CoreWalkProg.inst1OK (hp : CoreWalkProg p) : Inst1OK p :=
+  fun n s₀ a₀ dn vis fe M eb e v d hS he _ =>
+    inst1_core hp.inst hp.ie hp.le "inst1" hp.i1 n s₀ a₀ dn vis fe M eb e v d hS he
+
+theorem CoreWalkProg.lbbOK (hp : CoreWalkProg p) : LooseBVarsBoundedFastOK p := lbb_core hp.bvb
+
 end bridges
 
 end L.Arena
