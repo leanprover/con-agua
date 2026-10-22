@@ -5881,3 +5881,73 @@ hook; `rec`: `RecClass`/`RecGen`/`RecCheck`; `pos`: `IndPos`/`IndPos2`).
 * L changes: depth-capacity aborts (`d + 1 == 0` in the io binder clauses, `d ≥ 2^63` in
   `infer_lam`/`infer_forall`: the word depth must not wrap where the twin's `Nat` does not); the
   spines abort when `CTL[136]` is past `SPN`'s end.
+## The pin data as an input (2026-10-22, lane `romload`)
+
+**Decision (user, via the coordinator):** the `Nat`-operation pin variants (con-leche's
+`NatOpPinSet`s) are **an input of the checker, like the export file**: the harness loads a
+pin-data buffer into byte array `1` (`PB`), L decodes it at run time, and the final theorem holds
+at whatever pin list the bytes decode to; bytes that do not decode make `check` abort (decline).
+This replaces lane `decls2`'s "decoder-side ROM loader" and avoids its kernel evaluation of the
+data (≥ 6 h per variant): the kernel never sees the pin data at all, and the program `p` does not
+depend on it.
+
+### Does it compose with the final theorem? (checked)
+
+* `TwinAccepts [b]` already quantifies the pin list (`∃ pins …, internAllPins pins sD = .ok …`),
+  and con-leche's soundness holds at every list: `Model.checkDeclsPure_sound_of` needs only
+  `μ.isVerified = true` (`vendor/con-leche/ConLeche/Model/Fold.lean:221`); the model never reads a
+  pin or a proof blob, the certificate *statements* are hand-pinned in con-leche's checker and
+  shared by every variant (`NatOpPinSet.lean`'s module doc). `twinAccepts_model`/`no_False` take
+  the pins from `TwinAccepts` and pass them through unchanged.
+* **Shape change** (`ConAgua/Final/Statement.lean`): `loadMem b pb s8 s64` puts `pb` in byte array
+  `1`; `PipelineRefines p` quantifies `∀ pb` (with `pb.size < 2^63`), and the three theorems take
+  `pb` and `hpb`. Nothing else changes: `TwinAccepts [b]` is about the input only. The obligation
+  for the pipeline proof is that `check`'s pin stage, run on `pb`, refines `internAllPins P` for
+  the list `P` it decoded (`∃ P` in the stage's post).
+* **What else assumes "the real pins"? Nothing in the theorem.** Places that mention a pin list:
+  (1) the e2e reference `e2e-ref` runs the twin "at the program's pin list" (`romPins = []` so far):
+  it must run at the list the buffer decodes to, i.e. `natOpPinSets.take 1` for the generated
+  buffer (lane `e2e`); (2) ROADMAP §3 (c)'s single-toolchain decision: a buffer may hold several
+  variants; L's "no recovery" (abort where the twin's `orElseAttempt` would try the next variant)
+  stays a completeness loss only; (3) **the prelude is not free in `TwinAccepts`**:
+  `builtinPreludeE` is the twin's fixed function on the twin's fixed prelude bytes, so L's prelude
+  bytes must equal them (a proof obligation of lane `prelude`, not a soundness question; making
+  the prelude an input too would need `TwinAccepts` to quantify the prelude bytes; con-leche's
+  side, `stages_frame`, already holds at any `preC`). Not a soundness subtlety: a pin list only
+  enables a `Nat` operation's literal fast path after the stored definition is defeq to the
+  variant's pin and the variant's certificates check against con-leche's own statements.
+* Trusted base: unchanged in kind. The loader now also loads the pin-data file into byte array
+  `1` (`hmem`'s layout); its contents are untrusted (any `pb`), and so is the generator.
+
+### The buffer (`ConAgua/Rom/PinStream.lean`, `ConAgua/Rom/Gen.lean`)
+
+`pinBuffer pins = romData ++ encPinSets pins`: the startup data the twin interns *exactly*
+(`romData`, `Prelude.lean`: pin names, basis blocks, axiom shapes; 9 542 bytes), then the variant
+count and per variant the eight pins (`encExprM []` each: fresh memo, as `internExpr`) and the eight
+certificate lists (length, then the expressions at one memo, as `internExprList`).
+`lake exe romgen OUT` writes it for `natOpPinSets.take 1` (con-leche's repository-toolchain variant):
+**500 540 bytes** (490 998 of pin data), **1.1 s** natively. Expression literals: tag `3` is now a
+`natVal` below `2^64` (the pins use `0`, `1`, `2`); a string literal is tag `11` (no reader).
+
+Why the startup data is in the buffer too: one reader family. `check` first compares
+`PB[0 ‥ |romData|)` with its own copy (`romData`, the program's constant data) and aborts on a
+difference; after that every reader reads `PB`. The readers' proofs stay the ROM proofs: a
+**substitution lemma** (a program that never stores to byte array `PB` runs exactly as the program
+with every `ld8 PB i` replaced by `ldc bs i`, `bs` the buffer) turns the real program into one whose
+readers are literally `romName bs`, `romExpr bs`, … (`rom := bs`). The startup part keeps its
+encoder-direction proofs (`bs = romData ++ rest` by the prefix check); the pin part needs the
+decoder direction: "the reader returned ⇒ the bytes are `encExprM seen e ++ rest` for some `e`",
+then the existing specs apply. Two run-time checks make that true for every byte string:
+* names: every string byte below `128` (ASCII, so the bytes are some `String`'s UTF-8);
+* canonical back references: the encoder writes a compound subterm out only when the twin's memo
+  misses; on arbitrary bytes L would re-intern a subterm the twin's memo hits. L keeps the handles
+  of the current memo in a hash set (`RSET`, the memo library's schema) and aborts when an
+  explicitly encoded compound node's handle is already in it; con-ron's `denoteE_inj` turns that
+  into "the twin's memo misses". (A linear scan of `RMEMO` instead would cost ≈ 1.3·10^8 steps per
+  run on this buffer: Σ n²/2 over the memo calls.)
+
+Memory map additions: byte array `1` = `PB`; word array `150` = `RSET` (`CTL[148]`, `CTL[149]`
+its stamp and count); `CTL[150]`, `CTL[151]` the variant list (`EREC` offset, count).
+
+For lane `e2e`: the harness loads the pin-data file into byte array `1` (`_tmp/romload/pins.bin`,
+from `lake exe romgen`), and the program has `nb = 2`.
