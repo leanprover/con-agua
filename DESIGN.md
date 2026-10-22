@@ -5054,7 +5054,7 @@ helpers (`parts`: `IndParts`/`IndInstall`; `rec`: `Rec*`; `pos`: `IndPos*`) and 
 * Master callees without a stage lemma yet, `sorry`'d as stubs in `IndStubs.lean` by helpers:
   `pin_word(53)` (`zeroLevel`), `lvl_eq`. Both need `PinsR`/level-relation work, not a stub.
 
-### Landing 3 (03:10): round-1 helpers done
+### Landing 3 (03:00): round-1 helpers done
 * Census phase 8: **55 proven, 30 sorry (through stubs), 130 written** (start of lane: 15 / 1 / 199);
   totals 362 proven / 81 sorry of 1352.
 * Lead since landing 2: `struct_ctor_resid_ok` (`IndSumSpec4.lean`; `hd` guarded below `2^32`).
@@ -5087,6 +5087,14 @@ helpers (`parts`: `IndParts`/`IndInstall`; `rec`: `Rec*`; `pos`: `IndPos*`) and 
   `IndAll.lean` (imports every spec file, in the lakefile) now catches them.
 * Round 2 (running): helpers `memo` (`IndSum`'s memo walks), `install` (`IndInstall`), `recb`
   (rest of `RecGen`/`RecCheck`).
+
+### Landing 4 (03:20)
+* Lead: `struct_proj_bodies_go`, `struct_proj_bodies` (`IndSumSpec6.lean`; the `struct_proj_arg_p`
+  result guarded below `2^32`; `structProjBodiesGo` has its equation lemma, the view's arms by
+  `tag_iff`/`eViewW_head6S`).
+* File sizes (coordinator's build statistics): `IndPos2Spec`, `RecClassSpec`, `IndSumSpec2` split
+  by pure moves into `IndPos2SpecA‥D`, `RecClassSpecA/B`, `IndSumSpec2A` (the old module imports
+  its parts, names unchanged); every spec file is now below 1.4k lines.
 
 ### The frontend's inductive lines: not hooked yet (decision)
 The hook is two lines of L (`apply_dline`'s `pl == 25` branch calling `apply_ind_line`, and
@@ -5366,3 +5374,80 @@ only that it interns *some* list `P` the way `internAllPins P` does:
    **not implemented this round**; it is the one piece of work between the L checker and
    accepting ordinary Lean files. The pin-variant check itself (`checkDivModPin`, the certificate
    loop) is lane `decls2`'s translation work either way.
+
+### `check_value_group` refines `checkValueGroup` (`DeclCvg.lean`, `DeclStepSpec.lean`)
+
+**`checkValueGroup_spec` is proved** (`@[refines ConRon.Arena.checkValueGroup]`), through the
+stubs of the core and the walks (`infer_type_core`, `ensure_sort_core`, `is_def_eq_core`,
+`loose_bvars_bounded_fast`, `has_fvar_fast`, `all_level_params_defined`, `consts_resolve_ffast`)
+and one stage spec of a master function (`lvl_eq_c`, below). On lane `indproofs`' template: word
+models (`cvgW`, `ivgW`, `cvLpsW`, `pinWordW`, `iwResetW`; continuations with `rfl` arm lemmas),
+`vcgen` specs with callee *models* only (each one `finish (gen := 20)`, < 1 s), relational lemmas
+(`ivgW_ok`: `install_value_guards` refines `installValueGuards`; `cvgW_ok`), the spec assembled
+with `M.of_run` from two triples of the same run.
+
+* **The loop's relation through stubs: frames from the text.** `LoopR` = the stage relation
+  (`StageR = CheckR ∧ IWOK`, now a field `iw`) + `PendR` + the front's `DeclsR`. A stub's post
+  (`KeepPost`) says nothing about `PEND`/`DECL`/`DLP`/`CTL[130]`, so these come from the program
+  text: `cvgProg` (this lane's functions, lane `induct`'s library and stubs, the real `pin_word`,
+  lane `whnf`'s `lvl_eq_c` + lane `levels`' `lvl_eq` and its 17 helpers), `cvgFns` (its 37
+  reached functions), `cvgProg_closed : closedA cvgProg stepA stepC cvgFns` (`decide +kernel`,
+  0.8 s; `stepA` = every array but 137/67/68, `stepC` = every `CTL` word below 1024 but 130).
+  `CvgProg p` (lookups agree on `cvgFns`) is a field of the skeleton's `DeclCallees`.
+  `LoopR.of_step`: the stage relation after, a frame of `(stepA, stepC)`, the records only
+  extended (`IWGrow.erecPExt`) ⇒ `LoopR` after. The same shape serves `install_step_go`.
+* `check_value_group` now calls lane `whnf`'s **cached** `lvl_eq_c` (the twin's `lvlEq?` reads and
+  fills `lvlEqC`); lane `induct`'s `lvl_eq_fueled`/`lvl_eq_true` call the uncached `lvl_eq`, so
+  under an exact `CoreR` their L runs leave `lvlEqC` behind the twin's (and pay the algorithm on
+  every repeat). **Request to lane `induct`/`indproofs`**: call `lvl_eq_c`; their
+  `lvlEqStub_spec` ("`lvl_eq` refines `lvlEq?`") is not true of the real `lvl_eq`.
+* The skeleton threads `mode = .verified` (L implements that mode only; the final theorem uses
+  it).
+* Numbers: `DeclCvg.lean` 730 lines (models + specs ≈ 330, relational ≈ 400), 7.1 s user;
+  `DeclStepSpec.lean` 0.6 s. For 30 L lines (`check_value_group`, `install_value_guards`): ≈ 25
+  proof lines per L line, two thirds in the relational lemmas (case splits on the model's
+  continuations, the twin's `do` blocks unfolded by `simp only [StateT.run_bind, hrun…,
+  exc_ok_bind']`). Finding: an `if c then do …` without `else` in the twin duplicates the
+  continuation into both branches after `simp`; state the continuation once as a hypothesis
+  (`tail`) and close both branches with it.
+
+### `checkDecl`'s one-constant arms in L (`DeclArms*.lean`, helper `decls2-arms`)
+
+`check_decl` dispatches on the record's kind: `1`–`5` to `check_decl_axiom/defn/thm/opaque/quot(i,
+vis)` (kind `6` to lane `induct`'s `check_ind_decl` as before; the stub `check_decl_const` is gone).
+Translated in full, 109 L functions, 90 tagged `@[l_impl]` (no proofs yet):
+* `DeclArmsCanon.lean` (471 lines, 283 L): `Canon.lean` (`canonNames*`, `canonNameMap`,
+  `canonLevel(s|List)Eq`, `canonExprEq`, `IConstantVal`/`IConstantInfo.canonEq`, `canonRulesEq`,
+  `canonEqList`), `toConstantVal`, `ci_eq` (the twin's derived record equality).
+* `DeclArmsNat.lean` (1114, 721): the structural-`Nat` gate (`natOpGuard`, `natOpDeps`,
+  `natOpStoredOkAll`, `natOpEquations`, `substConst0Pairs`, `certifyNatEqs`) and the whole
+  `Nat.div`-family pin gate (`checkDivModPin`, its variant loop, the eleven `divModCertStmts`).
+* `DeclArms.lean` (607, 363): `checkConstantVal` (real, replacing lane `induct`'s stub of that name
+  in `declStepProg` via `indProgArms`), `checkDefnVal`/`ThmVal`/`OpaqueVal`, `stdAxiomOk`,
+  `trustCompilerOk`, `ofReduceAxOk`, `checkReducePin`, `checkBasisDecl`, `quotPinHit`, the arms.
+* ROM values are stubs (`romStubs`), conventions: `rom_basis_decls(kind)`/`rom_basis_decls_a(kind)`
+  → an `IW` slice of `EREC` constant records (kind 0 `eqK`, 1 `natK`, 2 `emptyK`, 3 `falseK`, 4
+  `quotK`); `rom_ci(id)` → an `EREC` record (0 `eqA`, 1 `natA`, 2‥4 `iff*A`, 5‥7 `nonempty*A`);
+  `rom_cv(id)` → an `EREC` constant value (0 `propextA`, 1 `choiceA`, 2 `trueCvA`, 3
+  `trueIntroCvA`, 4 `trustCompilerA`, 5 `boolCvA`, 6/7 `reduce{Nat,Bool}CvA`, 8/9
+  `ofReduce{Nat,Bool}A`); `rom_expr(id)` (0/1 `reduce{Nat,Bool}DeclPin`); `rom_pin_sets()` → the
+  variant records (24 words: 8 pins, 8 proof slices; empty today). Master functions lane
+  `induct`'s program lacks are stubs too (`intern_succ`, `intern_nnum`, `const_e`,
+  `nat_lit_supported`). Next for the ROM: build these records from ROM items (the interned
+  *values* `RomCI.lean` does not build yet).
+* Completeness: an error inside one pin variant's attempt aborts (the twin's `orElseAttempt`
+  restores and tries the next); nothing today (no variants). Finding: `canonExprEq` compares
+  literals by handle, which needs each literal interned once (the stores' hash-consing).
+* `DeclArms.lean` takes 79 s user (`lake env lean`; the `#guard` runs and the closure check),
+  the others 8.4 s and 3.7 s.
+
+### `sorry`s (lane `decls2`)
+
+* `DeclCvg.lean` `lvlEqCStage_spec`: `lvl_eq_c` under `StageR`. Lane `whnf`'s `lvlEqC_refines`
+  proves it under `CoreS`, whose readback-cache invariants and `NStoreWF` `StageR` lacks (the same
+  gap as lane `indproofs`' `lvlEqStub_spec`); closes when `StageR` carries `CoreS`'s extras.
+* `DeclStepSpec.lean` `installStepGo_spec` (unchanged, in progress).
+
+Census (`--no-build`, this lane before landing 2, against master's last `docs/progress.md`): phase 2
+**130 proven, 8 sorry, 82 written, 111 todo** (was 130 / 5 / 5 / 191); Rust lines with L code
+4341 of 6512 (was 1001).
