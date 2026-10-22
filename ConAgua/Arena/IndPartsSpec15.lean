@@ -630,4 +630,167 @@ theorem bbW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   rintro r x m5 a5 ⟨hR, hS5, hg5⟩
   exact ⟨by cases x <;> exact hR, hS5, hg04.trans hg5⟩
 
+/-! ## `block_shape`, `block_parts` -/
+
+/-- **The model of `block_shape`** (at exec fuel `n + 5`). -/
+def bshW (n : Nat) (m : Mem) (nPd off l : Word) : Option (List Word × Mem) :=
+  match bsW (n + 4) m off l with
+  | none => none
+  | some (r1, m1) =>
+    if r1.headD 0 = 0 then some ([0, 0], m1)
+    else if rdW (m1.arr64 IW) (r1.tail.headD 0 + 1) = 0 ∨ rdW (m1.arr64 IW) (r1.tail.headD 0 + 5) = 0 then
+      some ([0, 0], m1)
+    else bgoK3 (bbW n m1 nPd (rdW (m1.arr64 IW) (r1.tail.headD 0)) (rdW (m1.arr64 IW) (r1.tail.headD 0 + 1))
+      (rdW (m1.arr64 IW) (r1.tail.headD 0 + 2)) (rdW (m1.arr64 IW) (r1.tail.headD 0 + 3))
+      (rdW (m1.arr64 IW) (r1.tail.headD 0 + 4)) (rdW (m1.arr64 IW) (r1.tail.headD 0 + 5)))
+
+theorem bsh_spec (p : Prog) (hP : IndPartsProg5 p) (n : Nat) (s₀ : St) (nPd off l : Word) :
+    ⦃fun st => st = s₀⦄ invoke p (exec p (n + 5)) "block_shape" [nPd, off, l]
+    ⦃fun r s' => LocEq s' s₀ ∧ bshW n s₀.mem nPd off l = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hP.shape]
+  simp only [callFn, blockShape]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      bs_spec p hP.alloc hP.copy hP.cons hP.rec5 hP.rec3 hP.rec6 hP.recs hP.ctors hP.split (n + 4),
+      bb_spec p hP n] <;>
+    finish (gen := 20) [bshW, rdW_eq, bgoK3_some]
+
+theorem partsW0 {α : Type} {f : Mem → Nat → Option α} {xs : List α} {o l : Word} {m : Mem}
+    (h : PSlR f xs o l m) : (l = 0) ↔ xs = [] := by
+  have := decPL_length _ h.1
+  constructor
+  · intro e; subst e; simpa using this
+  · intro e; subst e; exact UInt64.toNat_inj.mp (by simpa using this.symm)
+
+/-- **`block_shape`'s model refines `blockShape?`.** -/
+theorem bshW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
+    {nPd off l : Word} {blk : List IConstantInfo} (hS : StageR dn vis fe m a)
+    (hblk : DecB (fun m => decEBlk dn m off.toNat l.toNat) m blk) :
+    Sim (bshW n m nPd off l) (ConRon.Arena.blockShape? nPd.toNat blk) a
+      (fun r x m' a' => ShapeR x r m' ∧ StageR dn vis fe m' a' ∧ IWGrow m m') := by
+  rw [blockShape_eq]
+  intro r m' e
+  unfold bshW at e
+  cases h1 : bsW (n + 4) m off l with
+  | none => rw [h1] at e; cases e
+  | some x1 =>
+  obtain ⟨r1, m1⟩ := x1
+  rw [h1] at e
+  simp only at e
+  obtain ⟨hS1, hg1, hR1⟩ := bsW_ok (n + 4) m m1 a off l blk r1 h1 hS hblk
+  revert r m' e
+  cases hsp : ConRon.Arena.blockSplit blk with
+  | none =>
+    rw [hsp] at hR1
+    have h0 : r1.headD 0 = 0 := hR1
+    intro r m' e
+    rw [if_pos h0] at e
+    simp only [Option.some.injEq, Prod.mk.injEq] at e
+    obtain ⟨rfl, rfl⟩ := e
+    exact ⟨none, a, rfl, rfl, hS1, hg1⟩
+  | some t =>
+  obtain ⟨cvTs, cs, rs⟩ := t
+  rw [hsp] at hR1
+  obtain ⟨h01, hq6, hts, hcs, hrs⟩ := hR1
+  intro r m' e
+  rw [if_neg (by rw [h01]; decide)] at e
+  dsimp only
+  generalize hq : r1.tail.headD 0 = q at e hq6 hts hcs hrs
+  by_cases hz : rdW (m1.arr64 IW) (q + 1) = 0 ∨ rdW (m1.arr64 IW) (q + 5) = 0
+  · rw [if_pos hz] at e
+    simp only [Option.some.injEq, Prod.mk.injEq] at e
+    obtain ⟨rfl, rfl⟩ := e
+    have : cvTs = [] ∨ rs = [] := by
+      rcases hz with hz | hz
+      · exact Or.inl ((partsW0 hts).mp hz)
+      · exact Or.inr ((partsW0 hrs).mp hz)
+    refine ⟨none, a, ?_, rfl, hS1, hg1⟩
+    rcases this with rfl | rfl
+    · rfl
+    · cases cvTs <;> rfl
+  rw [if_neg hz] at e
+  obtain ⟨cvT0, cvTs', rfl⟩ : ∃ c cs', cvTs = c :: cs' := by
+    cases cvTs with
+    | nil => exact absurd (Or.inl ((partsW0 hts).mpr rfl)) hz
+    | cons c cs' => exact ⟨c, cs', rfl⟩
+  obtain ⟨r0, rs', rfl⟩ : ∃ c cs', rs = c :: cs' := by
+    cases rs with
+    | nil => exact absurd (Or.inr ((partsW0 hrs).mpr rfl)) hz
+    | cons c cs' => exact ⟨c, cs', rfl⟩
+  revert r m' e
+  show Sim _ (buildTwin nPd.toNat (cvT0 :: cvTs') cvT0 cs (r0 :: rs') r0.1) a _
+  refine Sim.k3 (bbW_sim n hS1 hts hcs hrs) ?_
+  rintro r x m2 a2 ⟨hR, hS2, hg2⟩
+  exact ⟨by cases x <;> exact hR, hS2, hg1.trans hg2⟩
+
+/-- `block_parts`' result against the twin's `Option BlockParts`. -/
+def PartsR (x : Option BlockParts) (r : List Word) (m : Mem) : Prop :=
+  match x with
+  | none => r.headD 0 = 0
+  | some bp => r.headD 0 = 1 ∧ DecB (fun m => decBP m (r.tail.headD 0).toNat) m bp
+
+theorem bpa_spec (p : Prog) (hP : IndPartsProg5 p) (n : Nat) (s₀ : St) (nPd off l : Word) :
+    ⦃fun st => st = s₀⦄ invoke p (exec p (n + 6)) "block_parts" [nPd, off, l]
+    ⦃fun r s' => LocEq s' s₀ ∧ bgoK3 (bshW n s₀.mem nPd off l) = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hP.parts]
+  simp only [callFn, blockParts]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, bsh_spec p hP n] <;>
+    finish (gen := 20) [bgoK3_some]
+
+/-- **`block_shape` refines `blockShape?`** (through `strip_pis`, `get_app_fn_f`, `lvl_eq_c`,
+`intern_ls_iw`, `intern_nanon`, `name_rec`-free; capacity aborts: `nP + nIdx`, `nP + nF` wrapping,
+counts and recursor record words past `2^32`): the block an `EREC` slice of constant records decoded
+below the tops; the result `(ok, q)`, `q` a `BlockShape` record decoded below the tops (`ShapeR`). -/
+@[refines ConRon.Arena.blockShape?]
+theorem blockShape_refines (p : Prog) (hP : IndPartsProg5 p) (n : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (nPd off l : Word)
+    (blk : List IConstantInfo) (hS : StageR dn vis fe s₀.mem a₀)
+    (hblk : DecB (fun m => decEBlk dn m off.toNat l.toNat) s₀.mem blk) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 5)) "block_shape" [nPd, off, l]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.blockShape? nPd.toNat blk) a₀ ∧
+      ShapeR (AM.res (ConRon.Arena.blockShape? nPd.toNat blk) a₀) r s'.mem ∧
+      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.blockShape? nPd.toNat blk) a₀) ∧
+      IWGrow s₀.mem s'.mem; ⊤⦄ :=
+  triple_post (bsh_spec p hP n s₀ nPd off l) fun _ _ ⟨hl, hm⟩ =>
+    let ⟨hok, hQ⟩ := Sim.run (bshW_sim n hS hblk) hm
+    ⟨hl, hok, hQ⟩
+
+/-- **`block_parts` refines `blockParts?`** (as `blockShape?`). -/
+@[refines ConRon.Arena.blockParts?]
+theorem blockParts_refines (p : Prog) (hP : IndPartsProg5 p) (n : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (nPd off l : Word)
+    (blk : List IConstantInfo) (hS : StageR dn vis fe s₀.mem a₀)
+    (hblk : DecB (fun m => decEBlk dn m off.toNat l.toNat) s₀.mem blk) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 6)) "block_parts" [nPd, off, l]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.blockParts? nPd.toNat blk) a₀ ∧
+      PartsR (AM.res (ConRon.Arena.blockParts? nPd.toNat blk) a₀) r s'.mem ∧
+      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.blockParts? nPd.toNat blk) a₀) ∧
+      IWGrow s₀.mem s'.mem; ⊤⦄ := by
+  refine triple_post (bpa_spec p hP n s₀ nPd off l) ?_
+  rintro r s' ⟨hl, hm⟩
+  have hsim : Sim (bgoK3 (bshW n s₀.mem nPd off l)) (ConRon.Arena.blockParts? nPd.toNat blk) a₀
+      (fun r x m' a' => PartsR x r m' ∧ StageR dn vis fe m' a' ∧ IWGrow s₀.mem m') := by
+    unfold ConRon.Arena.blockParts?
+    intro r m' e
+    cases h1 : bshW n s₀.mem nPd off l with
+    | none => rw [h1] at e; cases e
+    | some x =>
+    obtain ⟨r1, m1⟩ := x
+    rw [h1, bgoK3_some] at e
+    simp only [Option.some.injEq, Prod.mk.injEq] at e
+    obtain ⟨rfl, rfl⟩ := e
+    obtain ⟨x, a', hrun, hR, hS', hg'⟩ := bshW_sim n hS hblk r1 m1 h1
+    cases x with
+    | none =>
+      exact ⟨none, a', by simp only [StateT.run_bind, hrun]; rfl, hR, hS', hg'⟩
+    | some bs =>
+      obtain ⟨h1', hd⟩ := hR
+      refine ⟨some ⟨bs⟩, a', by simp only [StateT.run_bind, hrun]; rfl, ⟨h1', ?_⟩, hS', hg'⟩
+      show decBP (truncM m1) _ = _
+      simp only [decBP, show decBS (truncM m1) (r1.tail.headD 0).toNat = some bs from hd, bind, pure,
+        Option.bind_some, List.headD_cons, List.tail_cons]
+  obtain ⟨hok, hQ⟩ := Sim.run hsim hm
+  exact ⟨hl, hok, hQ⟩
+
 end L.Ind
