@@ -478,4 +478,156 @@ decreasing_by
 
 end generic
 
+/-! ## The generic list loop -/
+
+/-- The shape of a con-leche list loop `G` (items read by `S`, the item `{` at `i`), on its `ok`
+path. -/
+structure IListLoop (b : ByteArray) {α : Type} (G : USize → List α → Bool → ScanRes (List α))
+    (S : USize → ScanRes α) : Prop where
+  stop : ∀ i acc w l e, ¬ i < b.usize → G i acc w ≠ .ok l e
+  ws : ∀ i acc w, i < b.usize → isWs (byteAt b i) = true → G i acc w = G (i + 1) acc w
+  close : ∀ i acc w l e, i < b.usize → byteAt b i = 93 → G i acc w = .ok l e →
+    l = acc.reverse ∧ e = i + 1
+  comma : ∀ i acc w l e, i < b.usize → byteAt b i = 44 → G i acc w = .ok l e →
+    G (i + 1) acc true = .ok l e
+  item : ∀ i acc w l e, i < b.usize → byteAt b i = 123 → G i acc w = .ok l e →
+    ∃ x e₁, S i = .ok x e₁ ∧ i < e₁ ∧ G e₁ (x :: acc) false = .ok l e
+  other : ∀ i acc w l e, i < b.usize → isWs (byteAt b i) = false → byteAt b i ≠ 93 →
+    byteAt b i ≠ 44 → byteAt b i ≠ 123 → G i acc w ≠ .ok l e
+
+theorem run_bound (o sz j n T : Nat) (hj : j < n) (h : o + sz * n ≤ T) : o + sz * j + sz ≤ T := by
+  have : sz * (j + 1) ≤ sz * n := Nat.mul_le_mul_left sz hj
+  rw [Nat.mul_add, Nat.mul_one] at this; omega
+
+theorem len_le_mul (sz n : Nat) (h : 1 ≤ sz) : n ≤ sz * n := Nat.le_mul_of_pos_left _ h
+
+/-- Growth with the excepted words above the old top is growth. -/
+theorem IGrow.grow {m m' : Mem} {xa : ArrId} {x0 x1 : Nat} (h : IGrow m m' xa x0 x1)
+    (hx : topN m xa < x0) : Grow m m' :=
+  ⟨h.fr, h.top, fun a ha i h1 h2 _ => h.keep a ha i h1 h2 (by
+    rintro ⟨rfl, h3, -⟩; omega)⟩
+
+/-- A run of records of size `sz` of array `A` at `o` (words, below the top). -/
+def RunR {α : Type} (Rec : Nat → α → Mem → Prop) (A : ArrId) (sz : Nat) (m : Mem) (o : Nat)
+    (xs : List α) : Prop :=
+  1 ≤ o ∧ o + sz * xs.length ≤ topN m A + 1 ∧ ∀ j (h : j < xs.length), Rec (o + sz * j) xs[j] m
+
+section glist
+variable (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
+include h64 hsize
+
+/-- **`ind_list`'s loop against a con-leche list loop.** Parameters: the record kind `sub` lives
+in `A` with size `sz`; `Rec` is the record relation, stable under growth that leaves it alone
+(`stab`); `item` is the record's link (`ind_obj` on a freshly allocated record). -/
+theorem ilist_link {α : Type} (G : USize → List α → Bool → ScanRes (List α))
+    (S : USize → ScanRes α) (HG : IListLoop b G S) (sub : Word) (A : ArrId)
+    (hA : A = IFR ∨ A = IFL) (sz : Nat) (hsz1 : 1 ≤ sz) (hsz : (indSizeN sub).toNat = sz)
+    (hfa : ∀ m n, fldAllocW m sub n = allocW m A n)
+    (Rec : Nat → α → Mem → Prop)
+    (stab : ∀ t x m m' x0 x1, Rec t x m → 1 ≤ t → t + sz ≤ topN m A + 1 → IGrow m m' A x0 x1 →
+      t + sz ≤ x0 → Rec t x m')
+    (item : ∀ i (m m₁ : Mem) (q : Word) x e (e₂ : Word) m₂, i < b.usize → byteAt b i = 123 →
+      S i = .ok x e → Room m → allocW m A (indSizeN sub) = some (q, m₁) →
+      objW b.data (flagsW m₁ sub q) i.toUInt64 sub q = some (e₂, m₂) →
+      e₂ = e.toUInt64 ∧ Rec q.toNat x m₂ ∧ IGrow m₁ m₂ A q.toNat (q.toNat + sz) ∧ Room m₂ ∧
+        topN m₂ A = topN m₁ A) :
+    ∀ (i : USize) (acc : List α) (w : Bool) (m : Mem) (o cnt : Word) (l : List α) (e : USize)
+      (r : Word × Word × Word) (m' : Mem),
+      G i acc w = .ok l e → Room m → cnt.toNat = acc.length →
+      o.toNat + sz * acc.length = topN m A + 1 → RunR Rec A sz m o.toNat acc.reverse →
+      listLoopW b.data m sub (indSizeN sub) o cnt i.toUInt64 = some (r, m') →
+      r.1 = o ∧ r.2.1.toNat = l.length ∧ r.2.2 = e.toUInt64 ∧ RunR Rec A sz m' o.toNat l ∧
+        Grow m m' ∧ Room m' ∧ o.toNat + sz * l.length = topN m' A + 1 := by
+  intro i acc w m o cnt l e r m' h hR hc ho hrun hm
+  by_cases hi : i < b.usize
+  · have hiW := (lt_usize_iff b h64 hsize i).mp hi
+    by_cases hws : isWs (byteAt b i) = true
+    · rw [HG.ws i acc w hi hws] at h
+      have hne : ∀ k : Word, (k = 93 ∨ k = 123) → byteW b.data i.toUInt64 ≠ k := by
+        intro k hk h'
+        rw [byteW_eq b h64 hsize] at h'
+        have := (ws_iff _).mp hws
+        rw [h'] at this
+        rcases hk with rfl | rfl <;> revert this <;> decide
+      rw [listLoopW_other _ _ _ _ _ _ _ hiW (hne 93 (.inl rfl)) (hne 123 (.inr rfl)),
+        ← succ_toUInt64 b h64 hsize] at hm
+      exact ilist_link G S HG sub A hA sz hsz1 hsz hfa Rec stab item (i + 1) acc w m o cnt l e r m' h hR hc
+        ho hrun hm
+    by_cases h93 : byteAt b i = 93
+    · obtain ⟨rfl, rfl⟩ := HG.close i acc w l e hi h93 h
+      rw [listLoopW_close _ _ _ _ _ _ _ hiW (by rw [byteW_eq b h64 hsize, h93]; rfl)] at hm
+      simp only [Option.some.injEq, Prod.mk.injEq] at hm
+      obtain ⟨rfl, rfl⟩ := hm
+      refine ⟨rfl, by simp [hc], (succ_toUInt64 b h64 hsize i).symm, hrun, IGrow.refl _ _ _ _, hR,
+        by simpa using ho⟩
+    by_cases h44 : byteAt b i = 44
+    · have h' := HG.comma i acc w l e hi h44 h
+      rw [listLoopW_other _ _ _ _ _ _ _ hiW (by rw [byteW_eq b h64 hsize, h44]; decide)
+        (by rw [byteW_eq b h64 hsize, h44]; decide), ← succ_toUInt64 b h64 hsize] at hm
+      exact ilist_link G S HG sub A hA sz hsz1 hsz hfa Rec stab item (i + 1) acc true m o cnt l e r m' h'
+        hR hc ho hrun hm
+    by_cases h123 : byteAt b i = 123
+    · obtain ⟨x, e₁, hS, hie, h'⟩ := HG.item i acc w l e hi h123 h
+      rw [listLoopW_open _ _ _ _ _ _ _ hiW (by rw [byteW_eq b h64 hsize, h123]; decide)
+        (by rw [byteW_eq b h64 hsize, h123]; rfl), hfa] at hm
+      cases hal : allocW m A (indSizeN sub) with
+      | none => rw [hal, listK1_none] at hm; cases hm
+      | some qm =>
+      obtain ⟨q, m₁⟩ := qm
+      rw [hal, listK1_some] at hm
+      cases hob : objW b.data (flagsW m₁ sub q) i.toUInt64 sub q with
+      | none => rw [hob, listK2_none] at hm; cases hm
+      | some em =>
+      obtain ⟨e₂, m₂⟩ := em
+      rw [hob, listK2_some] at hm
+      obtain ⟨t1, t2, t3, t4, t5⟩ := item i m m₁ q x e₁ e₂ m₂ hi h123 hS hR hal hob
+      subst t1
+      rw [if_pos ((lt_toUInt64_iff _ _).mp hie)] at hm
+      obtain ⟨a1, a2, a3, a4, -, a6, -⟩ := allocW_facts m m₁ A hA _ q hR hal
+      rw [hsz] at a2 a6
+      have hq : q.toNat = o.toNat + sz * acc.length := by rw [a1, ho]
+      have hroom := hR
+      obtain ⟨R1, R2, R3, R4⟩ := hroom
+      have htopA : topN m A < 2 ^ 63 := by rcases hA with rfl | rfl <;> omega
+      have hlen := len_le_mul sz acc.length hsz1
+      have hc1 : (cnt + 1).toNat = (x :: acc).length := by
+        rw [UInt64.toNat_add, hc]; simp; omega
+      have hg : IGrow m m₂ A q.toNat (q.toNat + sz) :=
+        (a4.ex A q.toNat (q.toNat + sz)).trans t3
+      -- the previous records are below `q`
+      have hrun' : RunR Rec A sz m₂ o.toNat (x :: acc).reverse := by
+        obtain ⟨r1, r2, r3⟩ := hrun
+        simp only [List.length_reverse] at r2
+        refine ⟨r1, by simp; rw [t5, a2]; rw [Nat.mul_add]; omega, fun j hj => ?_⟩
+        simp only [List.reverse_cons, List.length_append, List.length_reverse, List.length_cons,
+          List.length_nil] at hj
+        simp only [List.reverse_cons]
+        rw [List.getElem_append]
+        split
+        · rename_i hj'
+          simp only [List.length_reverse] at hj'
+          have := r3 j (by simpa using hj')
+          exact stab _ _ _ _ _ _ this (by omega) (run_bound _ _ _ _ _ hj' r2) hg (by
+            rw [hq]; exact run_bound _ _ _ _ _ hj' (Nat.le_refl _))
+        · rename_i hj'
+          simp only [List.length_reverse, Nat.not_lt] at hj'
+          have hj2 : j = acc.length := by omega
+          subst hj2
+          simp only [Nat.sub_self, List.getElem_cons_zero, List.getElem_singleton]
+          rw [← hq]; exact t2
+      have ho' : o.toNat + sz * (x :: acc).length = topN m₂ A + 1 := by
+        rw [t5, a2]; simp; rw [Nat.mul_add]; omega
+      obtain ⟨c1, c2, c3, c4, c5, c6, c7⟩ := ilist_link G S HG sub A hA sz hsz1 hsz hfa Rec stab item e₁
+        (x :: acc) false m₂ o (cnt + 1) l e r m' h' t4 hc1 ho' hrun' hm
+      exact ⟨c1, c2, c3, c4, (hg.grow (by omega)).trans c5, c6, c7⟩
+    · exact absurd h (HG.other i acc w l e hi (by simpa using hws) h93 h44 h123)
+  · exact absurd h (HG.stop i acc w l e hi)
+termination_by i acc w m o cnt l e r m' => b.size - i.toNat
+decreasing_by
+  all_goals first
+    | (have := usizeStep b i hi; have := usizeInBounds b i hi; omega)
+    | (have := USize.lt_iff_toNat_lt.mp hie; have := usizeInBounds b i hi; omega)
+
+end glist
+
 end L.Front.Ind
