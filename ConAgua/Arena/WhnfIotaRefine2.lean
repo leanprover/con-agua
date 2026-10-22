@@ -603,7 +603,7 @@ theorem towerSlotsAllGo_cont_run (fe : IFEnv) (T : NIdx) (n j : Nat) (a a₁ a�
   simp only [towerSlotsAllGo, StateT.run_bind, h, except_ok_bind, ho]; exact hr
 
 /-- **The `tower_slots_all` loop refines `towerSlotsAllGo`**, by induction on the remaining count. -/
-theorem tsW_ok (p : Prog) (hcc : CoreCallees p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+theorem tsW_ok (p : Prog) (hfp : FindProjOK p) (hpf : ProjFound p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
     (fe : IFEnv) (eb T nF : Word) (hT : HW T) :
     ∀ (K k : Nat) (m : Mem) (a : AState) (M : ModeMaps) (j : Word) (L : List Word) (m' : Mem),
       nF.toNat - j.toNat = K → j.toNat ≤ nF.toNat → CoreS dn m a vis fe M eb →
@@ -640,7 +640,7 @@ theorem tsW_ok (p : Prog) (hcc : CoreCallees p) (dn : NIdx → Option ConLeche.N
     | some q =>
     obtain ⟨r₁, m₁⟩ := q
     obtain ⟨hok, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres, hr₁⟩ := CoreSpec.of_callW
-      (hcc.findProj k ⟨m, Locals.init []⟩ a dn vis fe M eb T j hS hT) hc
+      (hfp k ⟨m, Locals.init []⟩ a dn vis fe M eb T j hS hT) hc
     have hrunF := AM.run_of_ok _ _ hok
     by_cases h0 : r₁.headD 0 = 0
     · rw [tsW_stop p vis T nF k m m₁ j r₁ hlt hc h0] at hL
@@ -654,7 +654,7 @@ theorem tsW_ok (p : Prog) (hcc : CoreCallees p) (dn : NIdx → Option ConLeche.N
       · rw [hstF]; exact hS₁
       · rw [hresF]; simp [decBool]
     · rw [tsW_cont p vis T nF k m m₁ j r₁ hlt hc h0] at hL
-      obtain ⟨tbl, htbl⟩ := hcc.projFound k m a dn vis fe M eb T j r₁ m₁ hS hc h0
+      obtain ⟨tbl, htbl⟩ := hpf k m a dn vis fe M eb T j r₁ m₁ hS hc h0
       have hsome : AM.res (fe.findProj? (decI T) j.toNat) a = some (tbl.entry j.toNat) := by
         rw [hres]; simp only [decEntry, if_neg h0, htbl, Option.map_some]
       rw [hsome] at hrunF
@@ -671,7 +671,7 @@ theorem tsW_ok (p : Prog) (hcc : CoreCallees p) (dn : NIdx → Option ConLeche.N
 
 /-- **`tower_slots_all` refines `towerSlotsAll`** (`find_proj` and its decoding fact as
 `CoreCallees`). -/
-theorem towerSlotsAll_refines' (p : Prog) (hp : IotaProg' p) (hcc : CoreCallees p) :
+theorem towerSlotsAll_refines' (p : Prog) (hp : IotaProg' p) (hfp : FindProjOK p) (hpf : ProjFound p) :
     TowerSlotsAllOK p := by
   intro n s₀ a₀ dn vis fe MM eb T nF hS hT
   cases n with
@@ -686,16 +686,12 @@ theorem towerSlotsAll_refines' (p : Prog) (hp : IotaProg' p) (hcc : CoreCallees 
     (towerSlotsAll_spec p hp.towerSlotsAll n s₀ vis T nF)
   subst hs0
   refine ⟨hloc, ?_⟩
-  obtain ⟨hok, hca, hres, hL1⟩ := tsW_ok p hcc dn vis fe eb T nF hT (nF.toNat - (0 : Word).toNat) (n + 1)
+  obtain ⟨hok, hca, hres, hL1⟩ := tsW_ok p hfp hpf dn vis fe eb T nF hT (nF.toNat - (0 : Word).toNat) (n + 1)
     s.mem a₀ MM 0 r s'.mem rfl (by simp) hS hW
   refine ⟨hok, ?_, ?_, hL1⟩
   · simpa [towerSlotsAll] using hca
   · simpa [towerSlotsAll] using hres
 
-@[refines ConRon.Arena.towerSlotsAll]
-theorem towerSlotsAll_refines (p : Prog) (hp : IotaProg' p) :
-    TowerSlotsAllOK p :=
-  towerSlotsAll_refines' (p := p) (hcc := coreCallees_stub p)  (hp := hp)
 
 /-! ## `inst_spine(ao, an, t, e)` -/
 

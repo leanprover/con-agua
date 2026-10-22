@@ -9,7 +9,8 @@
 #      so the lane fixes it in its own worktree (merge master there first) and runs land.sh again.
 set -euo pipefail
 branch="$1"; shift || true
-targets=("$@"); [ ${#targets[@]} -eq 0 ] && targets=(ConAgua)
+# always build the whole library (ConAgua) plus whatever extra targets the lane names
+targets=(ConAgua "$@")
 root="$(git -C "$(dirname "$0")/.." rev-parse --show-toplevel)"
 # the main checkout is the first worktree
 main="$(git -C "$root" worktree list --porcelain | awk 'NR==1{print $2}')"
@@ -26,8 +27,8 @@ if ! git merge --no-ff --no-edit "$branch"; then
   git merge --abort || true
   echo "land.sh: merge conflict; merge master into $branch in your worktree, then retry" >&2; exit 1
 fi
-if ! timeout 3000 scripts/lake build "${targets[@]}"; then
+if ! timeout 3000 scripts/lake build "${targets[@]}" || ! python3 scripts/core_fns.py --check; then
   git reset --hard "$before"
-  echo "land.sh: build failed after merging; master reset to $before; fix in your worktree and retry" >&2; exit 1
+  echo "land.sh: build or generated-file check (core_fns.py --check) failed after merging; master reset to $before; fix in your worktree and retry" >&2; exit 1
 fi
 echo "land.sh: landed $branch as $(git rev-parse --short HEAD)" >&2

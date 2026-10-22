@@ -7273,6 +7273,160 @@ grows (the memo library's capacity rule, as every L memo). Refinement: not yet (
   `iotaRecAt_refines` no longer takes `ErecKeptRec`). When a stub of the closure gets code that
   calls new functions, regenerate `coreFns`.
 
+### Landing 3: the binder stack and `EREC` from lane `whnf3`'s sweep
+* **`BStkCallees` is gone**: the telescopes (`InferBodyBind`, `InferBodyBindPi`) read the binder
+  stack's preservation off each callee's `CoreAfter` (`StackKept.bstk`, `CoreAfter.bkept`);
+  `BStkCap` is `CoreS.bstk`. `KnotCallees.bstk` removed.
+* **`ErecKept`, `ErecKeptProj` from the core's write set** (`erecKept_of`, `erecKeptProj_of`:
+  `callW_erec_closed`), the program hypothesis `KnotAllProg.hcl : closedA p coreErecA coreErecC
+  coreFns`. `KnotCallees.erecKept`/`erecProj` removed.
+* `KnotCallees` left (14): `whnfCoreStep`, `whnfStep`, `findProj`, `projFound`, `proofIrrel`,
+  `towerSlots`, `reduceProjCore`, `unfold`, `constTy`, `instLP`, `den` (lane `whnf3`'s next
+  landings: `find_proj`/`fire_ok`, the `instLP` family, `CoreS.den`); `strLitSupported`,
+  `strLitCtor`, `supKeep` (helper `defeq2-str`).
+
+### String literals in L (`StrLit*.lean`, helper `defeq2-str`)
+* **L code** (`StrLit.lean`, 389 lines): `str_lit_supported` and its seven stages `str_sup_1…7`
+  (one per tested declaration, the suffixes of the twin's chain), the tests `string_ty_ok`,
+  `char_ty_ok` (one body), `list_ty_ok`, `list_nil_ty_ok`, `list_cons_ty_ok`,
+  `char_of_nat_ty_ok`, `string_of_list_ty_ok`; `str_cv` (`toConstantVal`, including the
+  projection-table arm that interns `Sort 1`); `str_param_sort`, `str_ls1` (`internLsNode [u]`:
+  the word at the pool top, then `intern_ls`); `str_lit_ctor` = `str_ctor_pre` (the
+  literal-independent prefix) + `str_cons_spine` (recursion over the characters, as the twin's)
+  + `String.ofList`. Characters are decoded from the pool's UTF-8 byte words by
+  `str_utf8_char` (`utf8_char` reading `POOL.u64[k] & 255`), linked to Lean's decoder through
+  lane `lext`'s `utf8CharN_eq`: non-ASCII is handled, no deviation. A character's literal is
+  `rom_lit(c)`. `abortStubs` lose `str_lit_ctor`, `str_lit_supported` (`Checker/Prog.lean`
+  regenerated: 1574 functions, 26 stubs).
+* **Proofs**: `strLitCtor_core : StrLitProg p → StrLitCtorOK p` (`StrLitCtor.lean`),
+  `strLitSupported_core : StrLitProg p → StrLitSupportedOK p` (`StrLitSup.lean`),
+  `supKeep_of : ∀ fe, SupKeep fe` (`StrLitKeep.lean`: `VMono`, a twin-side "every stored view is
+  kept" predicate closed under bind/if/match). No new hypotheses. `WhnfBase.lean`'s
+  `supKeep_twin` (a `sorry`) is now redundant: its users should take `supKeep_of` (a Whnf file:
+  lane `whnf3`'s). `KnotCallees.strLitSupported`/`strLitCtor`/`supKeep` can be plugged with
+  these three (`KnotAllProg` needs `StrLitProg`'s lookups; `KnotWF`'s closure list still stubs
+  `str_lit_*`).
+* **New leaves under `CoreS`** (`StrLitBase.lean`): `CoreS.of_ls` (a level-list interning: the
+  list tables only grow, `LsStore.view_intern_mono`), `internParam_core`, `internZero_core`,
+  `internW_core`/`romLitW_core` (a `lit` interning from a pool slice), and `callW` wrappers
+  `param_call`, `succ_call`, `zero_call`, `sort_call`, `bvar_call`, `const_call`,
+  `constE_call`, `app_call`, `romLit_call`, `ls1_call`, all in the `CoreRef` shape for
+  `coreRef_bind` chains. `StrLitCv.lean`: `cv_call`. `StrLitTy.lean`: the `∀`-type tail
+  `faEqT`/`faEqW_ok`, `cref_run`.
+* **Finding**: `str_lit_ctor` reads the literal's record *after* the prefix interning, so the
+  record and the bytes are read at the memory the spine runs on and the twin-side view of `h`
+  carries over by `VMono` alone; reading it first would have needed pool/record frames through
+  every `CoreRef` (which keeps only `CoreS`).
+* Deviation D21 (performance): `str_ls1` and `rom_lit` leave their pushed word at the pool top
+  even when the node exists.
+* Numbers: 389 L lines, 3524 proof lines (`StrLitList` 954, `StrLitChar` 478, `StrLitCtor` 467,
+  `StrLitSup` 455, `StrLitBase` 437, `StrLitCv` 247, `StrLitTy` 213, `StrLitKeep` 147,
+  `StrLitUtf8` 126); user CPU per module ≤ 10 s except `StrLitChar` (~28 s, the
+  `string_of_list_ty_ok` spec at `maxHeartbeats 2000000`). 12:04–12:56, sub-helpers
+  `-keep`, `-utf8`, `-list`, `-sup`.
+
+### Landing 4: string literals plugged (helper `defeq2-str`, section above)
+* `KnotCallees.strLitSupported`, `strLitCtor`, `supKeep` removed: `strLitSupported_core`,
+  `strLitCtor_core` (program field `KnotAllProg.str : StrLitProg p`) and `supKeep_of`.
+  Lane `whnf`'s `supKeep_twin` (`WhnfBase.lean`, a `sorry`) can now be `supKeep_of` (lane
+  `whnf3`'s file). `StrLitBase` adapted to the `StackKept` structure (helper `defeq2-strfix`).
+* `KnotCallees` left (11), all lane `whnf3`'s: `whnfCoreStep`, `whnfStep`, `findProj`,
+  `projFound`, `proofIrrel`, `towerSlots`, `reduceProjCore`, `unfold`, `constTy`, `instLP`, `den`.
+
+
+### Landing 8: helpers `parts` and `rec2` done
+* Helper `parts` (3.2 h): `blockSplitRecs`, `blockSplitCtors`, `blockSplit` (sorry-free),
+  `ctorMember?`, `blockGroups`, `blockRecNameSetOk`, `blockMemberCounts?`, `blockShape?`,
+  `blockParts?`, `piDomsMentionAny`, `blockRawRec`, `BlockShape.nestCtx`, `blockNestCtx` (through
+  stubs). L: capacity guards, `block_shape_nest_ctx` read its inputs after writing the new
+  record — moved before the allocation (a latent bug, harmless while the allocation was fresh
+  memory); D18 (`sl_cons`-built slices, quadratic) added to docs/deviations.md. Open:
+  `blockLargeElimAllowed` (needs `lv_nz`/`readLevelM` under `StageR`, the `CoreS` bridge again),
+  `checkBlock*`, `consBlock*`, `checkAbsCtorSorts*`, `blockCapsAt` (needs a `RelAM` for
+  `lv_zero_caps`). ~6.75k proof lines.
+* Helper `rec2` (3.4 h): `classFieldsOf` (the `nest_occ` memo carried across stubs by
+  `stubM_memoFrame`), `ClassGen.major/motiveTy/minorTy/prefixBinders`, `classGenRecTy`,
+  `classRecTyOk`, `classRecTysOk`, `classGenRule` (through stubs). Open: `classRulesOk`,
+  `classRecsRulesOk` (loops), `classFeR`, `targetAbs(Go)`. Its overflow guards (`d + bl < d`,
+  `rP + nF`, …) are capacity aborts (word arithmetic the twin does in `Nat`), not rows of
+  docs/deviations.md. ~5.4k proof lines.
+* `ConAgua/Checker/Prog.lean` (lane `integrate`'s generated whole program) gained the 29 helper
+  functions the two helpers' rewrites introduced, by hand: `scripts/checker_prog.py` currently
+  stops on an import clash between `PropReadW` and `PromoteCI` (`L.Arena.armK.eq_1`, not this
+  lane's). `checkerProg_wf` holds.
+* Census: phase 8 **72 proven, 79 sorry, 64 written, 8 todo**; totals 670 proven / 124 sorry of 1352.
+
+### Landing 3: the helpers' walks and the projection lookups (helpers `whnf3-walks`, `whnf3-proj`)
+* **`wscoped_bfast`, `leaf_guard`** (helper `whnf3-walks`; `WalkScope`, `WalkLeaves`,
+  `WalkScopeRefine`, `WalkLeavesRefine`, `WalkCore`, 2.4k lines): `wscopedBGo`+arms,
+  `wscopedBFast`, `fvarLeavesGo`+arms, `fvarLeavesFast`, `leafMem`, `leavesSubGo`+arms,
+  `leafGuard` refined sorry-free, exact `coreWalkFuel` counters; `WscopedBFastOK`/`LeafGuardOK`
+  proved under `CoreS` (`wscoped_core`, `leafGuard_core`, from `WsProg`/`LgProg`). The walk-local
+  maps are epoch-cleared memo-library tables: arrays 151 (`wscopedB`, key `(h, d)`), 152
+  (`fvarLeaves`' `seen`), 153 (`leavesSub`), stamp/count `CTL` 152‥157; the leaf list is array 154
+  (`LVS`, newest first, `LeafR`). `CoreMemos` carries their well-formedness (`WalkMemos`), so
+  `CoreMemos.frame`/`frame_hi`, `CoreS.frame` and `arena_frame` gained avoidance auto-params;
+  `CoreS.frameSM`/`frameS`/`frameM`/`frame` (memos given / derived; spine stack written / kept).
+  `finish (instances := 5000) (gen := 12)` was needed on the memo-miss paths.
+* L code only (refinements open): `instantiate1_lift_fast` + arms (`WalkLift.lean`, memo
+  `inst1LC` = array 51, `CTL` 52/53), `inst_pis_at_lift`, `fvar_type_d`, `fvar_type_ds`
+  (`TeleLift.lean`, lane induct's conventions). The `instantiate1Lift` proof will need an exact
+  counter in lane exprops' `lift_entry` and array 51's memo well-formedness in `CoreS`/`StageR`.
+* **`proj_table_name`, `find_proj`, `fire_ok`** (L by this lane, proofs helper `whnf3-proj`;
+  `WhnfProj.lean`, `WhnfProjRefine{,2,3}.lean`, ~1200 proof lines): `projTableName`,
+  `IFEnv.findProj?`, `IProjEntry.fireOk` refined. `CoreS.of_name` carries `CoreS` across name
+  interning (twin step `NameStep`, `NStoreWF` from con-ron's `NStore.intern_spec`, the `ViewOK`
+  from L's validity check of `t`: D22); the nine pool bytes are a `Grows` (D21);
+  `FindProjOK`, `ProjFound` and the `find_proj` half of `ErecKept` proved. `fire_ok`: on master
+  `FieldSortZeroOK` (lane defeq2) now asks for the readbacks, so `fireOk_refines` proves
+  `FireOkOKD` (`FireOkOK` with `us` reading back) from two named hypotheses, `ProjSortDen`
+  (structure sort, zero level) and `FireDen` (name cache, level parameters, guards); both follow
+  from lane defeq2's `StoreDen` once `CoreS` carries it, and `FireOkOKD`'s `us` from
+  `StoreDen.constLs` at the callers.
+* Clashes fixed for `scripts/checker_prog.py`: `PropReadW`'s `armK` → `propArmK` (vs
+  `PromoteCI`), `WhnfProjRefine2`'s `projA` → `projWA` (vs `Promote`). `Checker/Prog.lean`
+  regenerated: 13 stubs; `coreFns` regenerated (498 functions).
+* Not in this landing: helper `whnf3-lp`'s `instLP` family (branch `whnf3-lp`, on `whnf3-next`):
+  its `lv_lookup`/`lv_spw` bindings (keys on the spine stack, `lvLookupG SPN POOL`,
+  `lvSpwG EREC`) clash with lane defeq2's (`lvLookupG EREC POOL`, `lvSpwG LH`): one name, two
+  bodies. To be unified on defeq2's convention first.
+* Census at landing 3: phase 4 **81 proven / 0 sorry / 11 written / 21 todo** (lane start 65 / 0 /
+  0 / 48); phase 5 80 / 19 / 20 / 23 (start 79 / 19 / 20 / 24).
+
+### Landing 5: `find_proj` facts from lane `whnf3`
+* `KnotCallees.findProj`/`projFound` removed: `findProj_refines`, `projFound` (program field
+  `KnotAllProg.projp : ProjProg p`). `towerSlots` still a field: lane `whnf3`'s
+  `towerSlotsAll_refines'` takes all of `CoreCallees` but uses only `findProj` (`tsW_ok`).
+* **Bindings for lane `whnf3`'s `instLP` family**: this lane binds `lv_lookup` to
+  `lvLookupG EREC POOL` (keys an `EREC` name slice, values a `POOL` level slice: `field_sort_zero`,
+  `PropRead`) and `lv_spw` to `PropRead`'s heap variant; one name, one body project-wide, so a
+  different instance needs its own name.
+* `KnotCallees` left (8, after lane `whnf3` landing 4 gave `towerSlots`): `whnfCoreStep`, `whnfStep`, `proofIrrel`,
+  `reduceProjCore`, `unfold`, `constTy`, `instLP`, `den`.
+
+### Landing 4: `tower_slots_all` on the real `find_proj`; the plan for `CoreS.den`
+* `tsW_ok`/`towerSlotsAll_refines'` take `FindProjOK`/`ProjFound` instead of all of
+  `CoreCallees` (lane defeq2's request); the tagged `towerSlotsAll_refines`
+  (`WhnfProjRefine3.lean`) uses `findProj_refines`/`projFound` and is sorry-free given `ProjProg p`.
+* **`CoreS.den : StoreDen m a fe`** (lane defeq2's invariant; it closes `CoreS.lvl_den`,
+  `LvlsEqDen`, `ProjSortDen`, `FireDen`, `CoreDen`) is not added yet. What it takes:
+  memory-only frames keep it when `EREC` is kept (`frameSM`/`frameS`/`frameM`/`frame_stk`: all
+  avoid 136); cache-only steps (`setMemo`, the slots' memo writes, `lvl_eq_c`) when `readNC`,
+  `pins` and the store are unchanged; store steps (`arena_frame`, `of_walk`, `of_app`, …, about 70
+  call sites) need the sort/const views of the new state: for a frame avoiding the `sort` and
+  `const` tables (`SOREC`/`SOSLOT`, `CREC`/`CSLOT`, `CTL` 16‥19) with `cpl` kept, the views are
+  determined by those arrays under `ArenaR` (`view_sort`/`view_const` and their converse, to be
+  written), so `StoreDen` transfers; the interning of a `sort` or `const` node (`of_const`, the
+  inference's `Sort`/`imax` results, `nat_op_result`'s `Bool` constants at the pinned empty list)
+  needs the new level or list to read back, which the callers know from where it came (a stored
+  view, or con-ron's `LStore.intern_spec`/`LsStore.intern_spec` on reading-back children).
+* Helper `whnf3-lp`'s `instLP` family (branch `whnf3-next`): the L code and the level-substitution
+  proofs (`capsNeverZero`, `substLevelsAt`, `substParamLevels`, `recFireLevels`, `internLevel`, at
+  `ArenaD`, on `StoreWF a.store` and the readback caches) keep the keys on the spine stack
+  (`lvLookupG SPN POOL`) and the `PropWhen` names in `EREC` (`lvSpwG EREC`), which clash by name
+  with lane defeq2's `lv_lookup`/`lv_spw`; they need their own names (and so their own copies of
+  `lv_substl`/`lv_substpw`, which call those names) before they can land. D23 (no `lp` cutoff in
+  L's derived words) blocks `InstLPOK`: either an `lp` bit in `DerR` or `StoreWF` in `CoreS`.
 ### What discharging `CvCanonSpec`/`CiCanonSpec` needs (lane `decls3`, open)
 
 Canon's theorems (`cvCanonEq_refines`, `ciCanonEq_refines`) take, beyond `StageR` and the records'
