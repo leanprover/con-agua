@@ -292,5 +292,11 @@
 "model": "opus",
 "status": "running",
 "focus": "Phase 8 proofs continued; inductive lines in the frontend"
+},
+{
+"lane": "e2e",
+"model": "opus",
+"status": "running",
+"focus": "Assemble the whole L checker; differential runs on con-leche/con-ron fixtures"
 }
 ]
