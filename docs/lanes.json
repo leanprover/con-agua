@@ -340,5 +340,11 @@
 "model": "opus",
 "status": "running",
 "focus": "L language features: named globals, record declarations (additive; compiler proof)"
+},
+{
+"lane": "defeq2",
+"model": "opus",
+"status": "running",
+"focus": "Phases 6-7: discharge KnotCallees (infer_proj, level-list invariant, PropRead, real walks, bstk)"
 }
 ]
