@@ -620,6 +620,18 @@ theorem rpArg_refines (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) (a�
     · rw [hres]; unfold decOptR; rw [← hr0, decOpt_ne _ _ (by decide)]
     · unfold ResW; rw [← hr0, ← hr1]; exact ⟨by unfold HW; decide, hwh⟩
 
+/-- `getAppArgs_refines` (`WhnfSpine.lean`, `sorry` there) behind one adapter: it does not take
+`SpineProg p` yet; when its proof lands it will, and only this line changes. -/
+theorem getAppArgs_spec' (p : Prog) (_hp : SpineProg p) (n : Nat) (s₀ : St) (a₀ : AState)
+    (hR : ArenaR s₀.mem a₀) (e : Word) (he : HW e) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "get_app_args" [e]
+    ⦃fun r s' => LocEq s' s₀ ∧ MemFrame [SPN] [136] s₀.mem s'.mem ∧ StackGrew s₀.mem s'.mem ∧
+      r.headD 0 = spTop s₀.mem ∧ spTop s'.mem = spTop s₀.mem + r.tail.headD 0 ∧
+      ∃ xs, (getAppArgs coreWalkFuel (decE e)).run a₀ = .ok (xs, a₀) ∧
+        SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄ :=
+  getAppArgs_refines p n s₀ a₀ hR e he
+
 /-! ## `reduce_proj_fire` -/
 
 /-- The twin at a constant head `k.{us}`: the arguments, the level count, the entry's fire check,
@@ -674,6 +686,253 @@ theorem rpFire_spec (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St)
     St.setLoc_mem, St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal,
     Sig.retOr] <;>
   (intro h1; exact absurd h1 (UInt64.not_lt.mpr ‹_›))
+
+/-! ## Runs that leave their pushed slice on the stack -/
+
+theorem StackGrew.trans {m₁ m₂ m₃ : Mem} (h₁ : StackGrew m₁ m₂) (h₂ : StackGrew m₂ m₃) :
+    StackGrew m₁ m₃ :=
+  ⟨UInt64.le_trans h₁.1 h₂.1, h₂.2.1.trans h₁.2.1,
+    fun i hi => (h₂.2.2 i (UInt64.lt_of_lt_of_le hi h₁.1)).trans (h₁.2.2 i hi)⟩
+
+theorem StackKept.toGrew {m₁ m₂ : Mem} (h : StackKept m₁ m₂) : StackGrew m₁ m₂ :=
+  ⟨h.1 ▸ UInt64.le_refl _, h.2.1, h.2.2⟩
+
+/-- **After a core run that left a slice on the stack**: as `CoreAfter`, the stack below the old top
+kept, the top possibly grown. -/
+def CoreAfterG (dn : NIdx → Option ConLeche.Name) (m₀ m : Mem) (a : AState) (vis : Word)
+    (fe : IFEnv) (M : ModeMaps) (eb : Word) : Prop :=
+  ∃ M', CoreS dn m a vis fe M' eb ∧ KeptAll M M' eb ∧ StackGrew m₀ m
+
+theorem CoreAfter.toG {dn : NIdx → Option ConLeche.Name} {m₀ m : Mem} {a : AState} {vis : Word}
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} (h : CoreAfter dn m₀ m a vis fe M eb) :
+    CoreAfterG dn m₀ m a vis fe M eb :=
+  let ⟨M', hS, hK, hSt⟩ := h
+  ⟨M', hS, hK, hSt.toGrew⟩
+
+/-- `CoreRef` with `CoreAfterG`. -/
+def GrowRef {α : Type} [Inhabited α] (T : AM α) (a₀ : AState) (dec : List Word → α)
+    (dn : NIdx → Option ConLeche.Name) (m₀ : Mem) (vis : Word) (fe : IFEnv) (M : ModeMaps)
+    (eb : Word) (r : List Word) (m : Mem) (ok : List Word → Prop := ResH) : Prop :=
+  AM.ok T a₀ ∧ CoreAfterG dn m₀ m (AM.st T a₀) vis fe M eb ∧ AM.res T a₀ = dec r ∧ ok r
+
+/-- `CoreSpec` with `GrowRef`. -/
+def GrowSpec {α : Type} [Inhabited α] (p : Prog) (n : Nat) (f : FnName) (args : List Word)
+    (T : AM α) (dec : List Word → α) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+    (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb : Word) (ok : List Word → Prop := ResH) : Prop :=
+  ⦃fun s => s = s₀⦄
+  invoke p (exec p n) f args
+  ⦃fun r s' => LocEq s' s₀ ∧ GrowRef T a₀ dec dn s₀.mem vis fe M eb r s'.mem ok; ⊤⦄
+
+theorem GrowSpec.of_callW {α : Type} [Inhabited α] {p : Prog} {n : Nat} {f : FnName}
+    {args : List Word} {T : AM α} {dec : List Word → α} {s₀ : St} {a₀ : AState}
+    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word}
+    {ok : List Word → Prop}
+    (h : GrowSpec p n f args T dec s₀ a₀ dn vis fe M eb ok) {r : List Word} {m' : Mem}
+    (hc : callW p n f args s₀.mem = some (r, m')) :
+    GrowRef T a₀ dec dn s₀.mem vis fe M eb r m' ok := by
+  obtain ⟨t, rfl, -, hr⟩ := triple_of_callW h hc
+  exact hr
+
+/-- A `CoreSpec` is a `GrowSpec`. -/
+theorem GrowSpec.of_core {α : Type} [Inhabited α] {p : Prog} {n : Nat} {f : FnName}
+    {args : List Word} {T : AM α} {dec : List Word → α} {s₀ : St} {a₀ : AState}
+    {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {M : ModeMaps} {eb : Word}
+    {ok : List Word → Prop} (h : CoreSpec p n f args T dec s₀ a₀ dn vis fe M eb ok) :
+    GrowSpec p n f args T dec s₀ a₀ dn vis fe M eb ok := by
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hok, hA, hres, hr⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun h
+  exact ⟨hloc, hok, hA.toG, hres, hr⟩
+
+theorem viewLsLen_run (a : AState) (h : LsIdx) :
+    (viewLsLen h).run a = .ok (a.store.lss.viewLen h, a) := rfl
+
+/-- `ls_node` answers a pair or aborts. -/
+theorem lsNodeW_cases (m : Mem) (h : Word) :
+    lsNodeW m h = [] ∨ ∃ o l, lsNodeW m h = [o, l] := by
+  unfold lsNodeW
+  split
+  · exact .inl rfl
+  split
+  · exact .inl rfl
+  split
+  · exact .inl rfl
+  · exact .inr ⟨_, _, rfl⟩
+
+/-- The twin's shape conditions of `reduceProjCore`, against L's word tests. -/
+theorem fire_cond_iff (tbl : IProjTable) (i k w6 np nf an usl l4 w3 : Word) (ln : Nat)
+    (hk : HW k) (hw6 : HW w6) (hctor : tbl.ctor = decI w6) (hnp : tbl.numParams = np.toNat)
+    (hnf : tbl.numFields = nf.toNat) (hsum : np.toNat + nf.toNat < 2 ^ 64)
+    (hln : ln = an.toNat) (hlp : tbl.levelParams.length = l4.toNat) :
+    (decI k = (tbl.entry i.toNat).ctor ∧ i.toNat < (tbl.entry i.toNat).numFields ∧
+      ln = (tbl.entry i.toNat).numParams + (tbl.entry i.toNat).numFields ∧
+      usl.toNat = (tbl.entry i.toNat).levelParams.length ∧ (w3 != 0) = true) ↔
+    (k = w6 ∧ i < nf ∧ an = np + nf ∧ usl = l4 ∧ w3 ≠ 0) := by
+  simp only [IProjTable.entry]
+  have e1 : (decI k = tbl.ctor) ↔ k = w6 := by
+    rw [hctor]; exact ⟨fun h => decI_inj hk hw6 h, fun h => by rw [h]⟩
+  have e2 : i.toNat < tbl.numFields ↔ i < nf := by
+    rw [hnf]; exact (UInt64.lt_iff_toNat_lt).symm
+  have e3 : ln = tbl.numParams + tbl.numFields ↔ an = np + nf := by
+    rw [hln, hnp, hnf]
+    constructor
+    · intro h; apply UInt64.toNat_inj.mp; rw [UInt64.toNat_add, Nat.mod_eq_of_lt hsum]; exact h
+    · intro h; have := congrArg UInt64.toNat h; rw [UInt64.toNat_add, Nat.mod_eq_of_lt hsum] at this; exact this
+  have e4 : usl.toNat = tbl.levelParams.length ↔ usl = l4 := by
+    rw [hlp]; exact ⟨fun h => UInt64.toNat_inj.mp h, fun h => by rw [h]⟩
+  have e5 : (w3 != 0) = true ↔ w3 ≠ 0 := by simp
+  rw [e1, e2, e3, e4, e5]
+
+theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (hc : CoreCallees p) (n : Nat)
+    (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (MM : ModeMaps) (eb mode e1 q i k us : Word) (tbl : IProjTable)
+    (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he1 : HW e1) (hk : HW k) (hus : HW us)
+    (hq : decTbl (s₀.mem.arr64 EREC) q.toNat = some tbl) :
+    GrowSpec p (n + 1) "reduce_proj_fire" [mode, vis, e1, q, i, k, us]
+      (rpFireT (decMode mode) fe (tbl.entry i.toNat) i.toNat (decE e1) (decI k) (decI us))
+      decOptR s₀ a₀ dn vis fe MM eb ResW := by
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
+    (rpFire_spec p hp n s₀ mode vis e1 q i k us)
+  subst hs0
+  refine ⟨hloc, ?_⟩
+  have hS := hs.rel
+  have hsmall := hc.projSmall dn s.mem a₀ vis fe MM eb q tbl hS hq
+  have hwords := decTbl_words hq hS.erec
+  obtain ⟨hlp, hnp, hw6, hctor, hnf⟩ := hwords
+  unfold rpFireW at hW
+  -- get_app_args
+  cases hc1 : callW p n "get_app_args" [e1] s.mem with
+  | none => simp [hc1] at hW
+  | some q₁ =>
+  obtain ⟨r₁, m₁⟩ := q₁
+  simp only [hc1] at hW
+  obtain ⟨t₁, ht₁, -, hf₁, hg₁, ho₁, htop₁, xs, hxs, hsp₁⟩ := triple_of_callW
+    (getAppArgs_spec' p hp.spine n s a₀ hS.arena.1 e1 he1) hc1
+  rw [ht₁] at hf₁ hg₁ htop₁ hsp₁
+  have hS₁ := hS.frame_stk hf₁ (by simp) (by simp)
+  have hE₁ : m₁.arr64 EREC = s.mem.arr64 EREC := hf₁.1 EREC (by simp [SPN, EREC]) (by decide)
+  -- ls_node
+  cases hc2 : callW p n "ls_node" [us] m₁ with
+  | none => simp [hc2] at hW
+  | some q₂ =>
+  obtain ⟨r₂, m₂⟩ := q₂
+  simp only [hc2] at hW
+  obtain ⟨t₂, ht₂, ht₂s, hne₂, hr₂⟩ := triple_of_callW (lsNode_spec p hp.lsn n { s with mem := m₁ } us) hc2
+  have hm₂ : m₂ = m₁ := by rw [← ht₂, ht₂s]
+  subst hm₂
+  obtain ⟨o₂, l₂, hl₂⟩ : ∃ o l, lsNodeW m₂ us = [o, l] := by
+    rcases lsNodeW_cases m₂ us with h | h
+    · rw [h] at hr₂; exact absurd hr₂ hne₂
+    · exact h
+  have hr₂' : r₂ = [o₂, l₂] := by rw [hr₂]; exact hl₂
+  subst hr₂'
+  have hvl : a₀.store.lss.viewLen (decI us) = some l₂.toNat :=
+    lsNodeW_viewLen hS₁.arena.1 hus hl₂
+  -- fire_ok
+  cases hc3 : callW p n "fire_ok" [q, i, us] m₂ with
+  | none => simp [hc3] at hW
+  | some q₃ =>
+  obtain ⟨r₃, m₃⟩ := q₃
+  simp only [hc3] at hW
+  have hq₂ : decTbl (m₂.arr64 EREC) q.toNat = some tbl := by rw [hE₁]; exact hq
+  have hfok := hc.fireOk n { s with mem := m₂ } a₀ dn vis fe MM eb q i us tbl hS₁ hus hq₂
+  obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, -⟩ := CoreSpec.of_callW hfok hc3
+  have hE₃ : m₃.arr64 EREC = m₂.arr64 EREC := by
+    have := (hc.erec n "fire_ok" [q, i, us] m₂ r₃ m₃ (Or.inr rfl) hc3); exact this
+  have hrunF := AM.run_of_ok _ _ hok3
+  rw [hres3] at hrunF
+  obtain ⟨hlp', hnp', hw6', hctor', hnf'⟩ : tbl.levelParams.length = (rdW (m₃.arr64 EREC) (q + 4)).toNat ∧
+      tbl.numParams = (rdW (m₃.arr64 EREC) (q + 5)).toNat ∧ HW (rdW (m₃.arr64 EREC) (q + 6)) ∧
+      tbl.ctor = decI (rdW (m₃.arr64 EREC) (q + 6)) ∧
+      tbl.numFields = (rdW (m₃.arr64 EREC) (q + 7)).toNat := by
+    rw [hE₃, hE₁]; exact ⟨hlp, hnp, hw6, hctor, hnf⟩
+  -- the twin up to the shape test
+  have hbnd := hsp₁.bound
+  have hlen : xs.length = (r₁.tail.headD 0).toNat := by
+    have := hsp₁.size; simpa using this
+  have hsum : (rdW (m₃.arr64 EREC) (q + 5)).toNat + (rdW (m₃.arr64 EREC) (q + 7)).toNat < 2 ^ 64 := by
+    rw [← hnp', ← hnf']; have := hsmall.1; have := hsmall.2; omega
+  have hcond := fire_cond_iff tbl i k (rdW (m₃.arr64 EREC) (q + 6)) (rdW (m₃.arr64 EREC) (q + 5))
+    (rdW (m₃.arr64 EREC) (q + 7)) (r₁.tail.headD 0) l₂ (rdW (m₃.arr64 EREC) (q + 4)) (r₃.headD 0)
+    xs.length hk hw6' hctor' hnp' hnf' hsum hlen hlp'
+  have hdb : decBool r₃ = (r₃.headD 0 != 0) := rfl
+  have hpreP : (decI k = (tbl.entry i.toNat).ctor ∧ i.toNat < (tbl.entry i.toNat).numFields ∧
+          xs.length = (tbl.entry i.toNat).numParams + (tbl.entry i.toNat).numFields ∧
+          l₂.toNat = (tbl.entry i.toNat).levelParams.length ∧ (r₃.headD 0 != 0) = true) →
+      (rpFireT (decMode mode) fe (tbl.entry i.toNat) i.toNat (decE e1) (decI k) (decI us)).run a₀ =
+        (rpArgT fe (decMode mode).verifiedChecks (decI k) xs
+            ((tbl.entry i.toNat).numParams + i.toNat)).run (AM.st ((tbl.entry i.toNat).fireOk (decI us)) a₀) := by
+    intro h
+    simp only [rpFireT, StateT.run_bind, hxs, except_ok_bind, viewLsLen_run, hvl, hrunF, hdb]
+    rw [if_pos h]
+  have hpreN : ¬ (decI k = (tbl.entry i.toNat).ctor ∧ i.toNat < (tbl.entry i.toNat).numFields ∧
+          xs.length = (tbl.entry i.toNat).numParams + (tbl.entry i.toNat).numFields ∧
+          l₂.toNat = (tbl.entry i.toNat).levelParams.length ∧ (r₃.headD 0 != 0) = true) →
+      (rpFireT (decMode mode) fe (tbl.entry i.toNat) i.toNat (decE e1) (decI k) (decI us)).run a₀ =
+        (pure none : AM (Option EIdx)).run (AM.st ((tbl.entry i.toNat).fireOk (decI us)) a₀) := by
+    intro h
+    simp only [rpFireT, StateT.run_bind, hxs, except_ok_bind, viewLsLen_run, hvl, hrunF, hdb]
+    rw [if_neg h]
+  by_cases hLc : k = rdW (m₃.arr64 EREC) (q + 6) ∧ i < rdW (m₃.arr64 EREC) (q + 7) ∧
+      r₁.tail.headD 0 = rdW (m₃.arr64 EREC) (q + 5) + rdW (m₃.arr64 EREC) (q + 7) ∧
+      ([o₂, l₂] : List Word).tail.headD 0 = rdW (m₃.arr64 EREC) (q + 4) ∧ r₃.headD 0 ≠ 0
+  · rw [if_pos hLc] at hW
+    have hTc := hcond.mpr hLc
+    have hpre := hpreP hTc
+    cases hc4 : callW p n "reduce_proj_arg" [mode, vis, k, r₁.headD 0, r₁.tail.headD 0,
+        rdW (m₃.arr64 EREC) (q + 5) + i] m₃ with
+    | none => simp only [hc4] at hW; cases hW
+    | some q₄ =>
+    obtain ⟨r₄, m₄⟩ := q₄
+    simp only [hc4, Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨hr0, hr1, hm⟩ := hW
+    cases n with
+    | zero => simp [callW_zero] at hc4
+    | succ N =>
+    have hao : (r₁.headD 0).toNat + (r₁.tail.headD 0).toNat ≤ (spTop m₂).toNat := by
+      have h1 := hsp₁.bound
+      have h2 := hS₁.spn
+      rw [htop₁, UInt64.toNat_add, Nat.mod_eq_of_lt (by rw [← ho₁]; omega), ← ho₁]
+      exact Nat.le_refl _
+    have hspR : SpineR m₃ (r₁.headD 0) (r₁.tail.headD 0) xs.toArray :=
+      hsp₁.keep hSt₃.2.1 hSt₃.2.2 hao hS₁.spn
+    have hjn : (rdW (m₃.arr64 EREC) (q + 5) + i).toNat = tbl.numParams + i.toNat := by
+      have hlt := UInt64.lt_iff_toNat_lt.mp hLc.2.1
+      have h1 := hsmall.1
+      have h2 := hsmall.2
+      rw [UInt64.toNat_add, Nat.mod_eq_of_lt, ← hnp']
+      rw [← hnp']
+      omega
+    have harg := rpArg_refines p hp N { s with mem := m₃ }
+      (AM.st ((tbl.entry i.toNat).fireOk (decI us)) a₀)
+      dn vis fe M₃ eb mode k (r₁.headD 0) (r₁.tail.headD 0) (rdW (m₃.arr64 EREC) (q + 5) + i)
+      xs.toArray ⟨hS₃, hs.mode4, hs.eb_mode⟩ hk hspR
+    obtain ⟨hok4, ⟨M₄, hS₄, hK₄, hSt₄⟩, hres4, hrw4⟩ := CoreSpec.of_callW harg hc4
+    have e1 : xs.toArray.toList = xs := rfl
+    rw [e1, hjn] at hok4 hres4 hS₄
+    have hrun4 := AM.run_of_ok _ _ hok4
+    rw [hres4] at hrun4
+    obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ (hpre.trans hrun4)
+    refine ⟨hok, ?_, ?_, ?_⟩
+    · rw [hst, ← hm]
+      exact ⟨M₄, hS₄, hK₃.trans hK₄, (hg₁.trans hSt₃.toGrew).trans hSt₄.toGrew⟩
+    · rw [hres]; unfold decOptR; rw [← hr0, ← hr1]
+    · unfold ResW; rw [← hr0, ← hr1]; exact hrw4
+  · rw [if_neg hLc] at hW
+    have hTc : ¬ (decI k = (tbl.entry i.toNat).ctor ∧ i.toNat < (tbl.entry i.toNat).numFields ∧
+          xs.length = (tbl.entry i.toNat).numParams + (tbl.entry i.toNat).numFields ∧
+          l₂.toNat = (tbl.entry i.toNat).levelParams.length ∧ (r₃.headD 0 != 0) = true) :=
+      fun h => hLc (hcond.mp h)
+    have hpre := hpreN hTc
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨hr0, hr1, hm⟩ := hW
+    obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hpre
+    refine ⟨hok, ?_, ?_, ?_⟩
+    · rw [hst, ← hm]; exact ⟨M₃, hS₃, hK₃, hg₁.trans hSt₃.toGrew⟩
+    · rw [hres]; unfold decOptR; rw [← hr0]; rfl
+    · unfold ResW; rw [← hr0, ← hr1]; exact ⟨by unfold HW; decide, by unfold HW; decide⟩
 
 /-! ## `reduce_proj_core` -/
 
