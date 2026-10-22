@@ -6207,3 +6207,20 @@ start 136 / 11 / 93 / 91); totals 558 proven / 71 sorry of 1352.
   the `CoreS` bridge, landing 1's "tried and dropped").
 * Helper `parts` started (IndParts/IndInstall, stub-free leaves first).
 * Census: phase 8 **67 proven, 57 sorry, 91 written, 8 todo**.
+
+### Landing 5: helper `rec` done
+* Helper `rec` (5.5 h): 12 whole `@[refines]` — `targetMajorAt`, `blockNestedBit`,
+  `targetMajorPins`, `targetOutsideInst`, `classReadMinor`, `classNPcOf`, `classReadSlot(s)`,
+  `classRead`, `classConstOk`, `classRuleOk`, `classFormerTy` (most through stubs:
+  `inst_lp_fast`, `mk_app_n_f`, `infer_type_core`, `open_pis_at_fvars_f`, `fvar_type_d`). Own
+  helpers `RecSim.lean` (`RSim`), `RecStab.lean` (`RecsDec`, from which `classRead` derives its
+  callee's `hstab`). **Bugs** (L): `class_read` computed `IW[rc0+1] - nP` unguarded (wraps when
+  `rP < nP`; the twin's `Nat` subtraction truncates) — now truncated in `class_read_n_slots`;
+  `class_read_slots` the same on `d - np` (`class_read_slots_snoc`). Handle guards after
+  `intern_fvar`, `intern_bvar`, `intern_const`. ~5.3k proof lines for ~300 L lines.
+* Open in Rec*: `classFieldsOf`, `ClassGen.*`, `classGenRecTy/Rule`, `classRecTy(s)Ok`,
+  `classRulesOk`, `classRecsRulesOk`, `classFeR`, `targetAbs(Go)` (helper `rec2`, running);
+  `auxRuleFire` needs a `view_ls` word model; `targetParamsDefEq`, `targetClassMatch`,
+  `targetCtorsOf`, `targetRecPins`, `targetK53`, `class*Agree`, `classCtor(s)Of`, `classMajors`,
+  `classSeeds`, `checkBlockClasses`, `genRecCheck` wait on other lanes' callees.
+* Census: phase 8 **67 proven, 62 sorry, 86 written, 8 todo**.
