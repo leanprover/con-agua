@@ -205,6 +205,75 @@ theorem frOK_step (n : Nat) (hDs : DsOK dn fe vis n) : FrOK dn fe vis (n + 1) :=
       ((hR.frame (posRecW_fr hr1)).frame (posRecW_fr hr2))
     exact ⟨x, a', hrun, hout, RxPost.of_fr hR ((posRecW_fr hr1).trans (posRecW_fr hr2)) hg12 hpost⟩
 
+theorem dsOK_step (n : Nat) (hDg : DsGoOK dn fe vis n) : DsOK dn fe vis (n + 1) := by
+  intro m m' a f o l q l' fm xs M G g h hS hfm hxs hsl hR
+  rw [rxDsW_succ] at h
+  cases hal : allocW m l with
+  | none => rw [hal] at h; simp [dsA] at h
+  | some pr =>
+  obtain ⟨q1, m1⟩ := pr
+  rw [hal, dsA_some] at h
+  obtain ⟨hS1, hg1, hqd, hroom, htop1⟩ := hS.alloc hal
+  have hqt : q1.toNat = iwTop m := by simp only [iwTop, hqd]
+  cases hgo : rxDsGoW n m1 f o l q1 0 with
+  | none => rw [hgo] at h; simp [dsB] at h
+  | some m2 =>
+  rw [hgo, dsB_some] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl, rfl⟩ := h
+  obtain ⟨ys, a', hrun, hdec, hS', hg', ht', M', G', hR', hk', hG'⟩ := hDg m m1 m2 a f o l q1 0 fm xs [] M G g hgo hS1
+    hg1 (by omega) (by omega) hfm hxs hsl (by simp) (by simp [decHL, hslice?]) (hR.frame (allocW_fr hal))
+  refine ⟨ys, a', by simpa using hrun, by simpa using hdec, by omega, M', G', hS', hg', hR', hk', hG'⟩
+
+theorem dsGoOK_step (n : Nat) (hRf : RfOK dn fe vis n) (hDg : DsGoOK dn fe vis n) :
+    DsGoOK dn fe vis (n + 1) := by
+  intro m0 m m' a f o l q j fm xs acc M G g h hS hg0 hq0 hql hfm hxs hsl hj hacc hR
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have hxl := decHL_length m0 hxs
+  have hal := decHL_length m hacc
+  by_cases hd : l ≤ j
+  · rw [rxDsGoW_done (hj := hd)] at h
+    cases h
+    have hjl : j.toNat = l.toNat := by have := UInt64.le_iff_toNat_le.mp hd; omega
+    refine ⟨[], a, ?_, by rw [← hjl]; simpa using hacc, hS, hg0, Nat.le_refl _, M, G, hR, GKeep.refl _ _,
+      UInt64.le_refl _⟩
+    rw [List.drop_eq_nil_of_le (by omega)]; rfl
+  rw [rxDsGoW_step (hj := hd)] at h
+  have hjl : j.toNat < l.toNat := by
+    have : ¬ l.toNat ≤ j.toNat := fun e => hd (UInt64.le_iff_toNat_le.mpr e)
+    omega
+  have hoj := hsl j.toNat hjl
+  obtain ⟨hxH, hxd⟩ := rd_iwH (m := m) (p := o) (i := j)
+    (by rw [iwH_agree (RdS.of_grow hg0) hoj]; exact decHL_getI hxs _ hjl) (by omega)
+  generalize rdW (m.arr64 IW) (o + j) = x at h hxH hxd
+  cases hrf : rxW n m f x with
+  | none => rw [hrf] at h; simp [dgK] at h
+  | some pr =>
+  obtain ⟨r, m1⟩ := pr
+  rw [hrf, dgK_some] at h
+  obtain ⟨a1, hr1, hrH, M1, G1, hS1, hg1, hR1, hk1, hG1⟩ := hRf m m1 a f x fm r M G g hrf hS (hfm.grow hg0) hxH hR
+  have hqj : (q + j).toNat = q.toNat + j.toNat := word_add_toNat (by omega)
+  have hj1 : (j + 1).toNat = j.toNat + 1 := word_add_toNat (show j.toNat + 1 < 2 ^ 64 by have := l.toNat_lt; omega)
+  have hacc1 : decHL m1 q.toNat j.toNat = some acc := by rw [decHL_grow hg1 (by omega)]; exact hacc
+  have hsz1 : (m1.arr64 IW).size < 2 ^ 64 := hS1.2.2.2.1
+  have hdec2 := decHL_write m1 q j r acc hrH hsz1 (by have := hS1.2.1; have := hg1.1; omega) hacc1
+  have hS2 := hS1.set_iw (q + j) r
+  have hg02 : IWGrow m0 (m1.set64 IW (q + j) r) := (hg0.trans hg1).set_iw (q + j) r (by omega)
+  have ht2 : iwTop (m1.set64 IW (q + j) r) = iwTop m1 := by
+    simp only [iwTop]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  obtain ⟨ys, a', hrun, hdec', hS', hg', ht', M', G', hR', hk', hG'⟩ := hDg m0 _ m' a1 f o l q (j + 1) fm xs
+    (acc ++ [decE r]) M1 G1 g h hS2 hg02 hq0 (by rw [ht2]; have := hg1.1; omega) hfm hxs hsl
+    (by rw [hj1]; omega) (by rw [hj1]; exact hdec2) (hR1.frame (RfFr.set_iw _ _ _))
+  refine ⟨decE r :: ys, a', ?_, by simpa using hdec', hS', hg', by have := hg1.1; omega, M', G', hR',
+    hk1.trans hk' hG1, UInt64.le_trans hG1 hG'⟩
+  rw [List.drop_eq_getElem_cons (show j.toNat < xs.length by omega), List.mapM_cons]
+  simp only [StateT.run_bind]
+  rw [← hxd, show (decI x : EIdx) = decE x from rfl, hr1]
+  simp only [except_ok_bind, StateT.run_bind]
+  rw [hj1] at hrun
+  rw [hrun]
+  rfl
+
 end steps
 
 end L.Ind
