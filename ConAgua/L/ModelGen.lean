@@ -451,6 +451,8 @@ meta structure GenState where
   ks : Array KDef := #[]
   dups : Nat := 0
   base : Name := .anonymous
+  /-- the functions called by the function being translated -/
+  called : Array String := #[]
   deriving Inhabited
 
 meta structure Ctx where
@@ -626,6 +628,7 @@ meta partial def transS (E : Env) (ctx : Ctx) : List (TSyntax `lstmt) → GenM M
 meta partial def transCall (E : Env) (ctx : Ctx) (xs : Array Ident) (f : Ident)
     (args : Array (TSyntax `lexpr)) (rest : List (TSyntax `lstmt)) : GenM MR := do
   let fname := f.getId.toString
+  modify fun st => { st with called := st.called.push fname }
   let argsT ← args.mapM fun a => do (← transE E ctx a).render
   let memT ← ctx.mem.render
   let xk ← xs.mapM fun x => match ctx.idx x with
@@ -749,7 +752,7 @@ meta def leaves : MR → List (List (MC × Bool) × MR)
 syntax lmodelFn := term " ↦ " ident (&" ro")?
 
 /-- See the module docstring. -/
-syntax (name := lmodel) "l_model " ident bracketedBinder*
+syntax (name := lmodel) (docComment)? "l_model " ident bracketedBinder*
   &" fns " "[" lmodelFn,* "]"
   (&" specs " "[" term,* "]")?
   (&" grind " "[" ident,* "]")?
@@ -777,6 +780,10 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
 
 @[command_elab lmodel] meta def elabLModel : CommandElab := fun stx => do
   -- `l_model name binders* fns [..] specs? grind? fold? extra? finish? gen? trace?`
+  let doc? : Option (TSyntax `Lean.Parser.Command.docComment) :=
+    if stx[0].getNumArgs == 0 then none else some ⟨stx[0][0]⟩
+  let stx' := stx
+  let stx : Syntax := stx.setArgs (stx.getArgs.extract 1 stx.getNumArgs)
   let specName : Ident := ⟨stx[1]⟩
   let bs : Array (TSyntax ``Lean.Parser.Term.bracketedBinder) := stx[2].getArgs.map (⟨·⟩)
   let fnStx : Array (TSyntax `L.ModelGen.lmodelFn) := stx[5].getSepArgs.map (⟨·⟩)
@@ -789,6 +796,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let genN : Option Nat := if stx[12].getNumArgs == 0 then none else stx[12][1].isNatLit?
   let hbN : Option Nat := if stx[13].getNumArgs == 0 then none else stx[13][1].isNatLit?
   let doTrace := stx[14].getNumArgs != 0
+  let stx := stx'
   let (infos, callees, foldRules) ← runTermElabM fun _ => do
     Term.elabBinders bs fun _ => do
     withLocalDeclD `n (mkConst ``Nat) fun _ => do
@@ -824,12 +832,15 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let E : Env := { group := fis.map fun fi => (fi.lname, fi.model, fi.ro), callees, folds := foldRules }
   -- translate
   let (bodies, st) ← runTermElabM fun _ => do
-    let go : GenM (Array MR) := fis.mapM fun fi => do
-      modify fun st => { st with base := fi.model }
+    let go : GenM (Array (MR × Array String)) := fis.mapM fun fi => do
+      modify fun st => { st with base := fi.model, called := #[] }
       let names := fi.params ++ fi.lcls
       let env := names.mapIdx fun i n => if i < fi.params.size then MT.raw (mkIdent n) else .lit 0
-      transS E { names, env, mem := .raw (mkIdent memIdent), ro := fi.ro } (← blockStmts fi.body)
+      let b ← transS E { names, env, mem := .raw (mkIdent memIdent), ro := fi.ro } (← blockStmts fi.body)
+      return (b, (← get).called)
     go.run {}
+  let calledBy := bodies.map (·.2)
+  let bodies := bodies.map (·.1)
   if st.dups > 0 then
     logInfo m!"l_model: {st.dups} join point(s) duplicated the code after them"
   -- render
@@ -949,20 +960,21 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let userNames : NameSet := bs.foldl (fun acc b => idents b.raw acc) {}
   let pName := mkIdent `p
   let s0 := mkIdent `s₀
-  let conj ← fis.mapM fun fi => do
+  let mkConj (fuel : Term) : CommandElabM (Array Term) := fis.mapM fun fi => do
     let ps : Array Ident := fi.params.map fun x => mkIdent (if userNames.contains x then x.appendAfter "'" else x)
     let pbs ← ps.mapM fun x => `(Lean.Parser.Term.bracketedBinderF| ($x : L.Word))
     let W := mkIdent fi.model
     let post ← if fi.ro then
         `(fun r s' => L.LocEq s' $s0 ∧ L.St.mem s' = L.St.mem $s0 ∧
-          $W $nI (L.St.mem $s0) $ps* = Option.some (List.headD r 0))
+          $W $fuel (L.St.mem $s0) $ps* = Option.some (List.headD r 0))
       else
-        `(fun r s' => L.LocEq s' $s0 ∧ $W $nI (L.St.mem $s0) $ps* = Option.some (List.headD r 0, L.St.mem s'))
+        `(fun r s' => L.LocEq s' $s0 ∧ $W $fuel (L.St.mem $s0) $ps* = Option.some (List.headD r 0, L.St.mem s'))
     let fstr := Syntax.mkStrLit fi.lname
-    `(∀ ($s0 : L.St) $pbs*, Std.WP.Triple (L.invoke $pName (L.exec $pName $nI) $fstr [$ps,*])
+    `(∀ ($s0 : L.St) $pbs*, Std.WP.Triple (L.invoke $pName (L.exec $pName $fuel) $fstr [$ps,*])
         (fun s => s = $s0) $post Lean.Order.top)
+  let conj ← mkConj nI
   let stmt ← conj.pop.foldrM (init := conj.back!) fun c acc => `($c ∧ $acc)
-  -- the proof, as text
+  -- the proofs, as text: one step theorem per member, then the induction
   let pp (t : Syntax) : CommandElabM String := do
     return toString (← liftCoreM (PrettyPrinter.ppTerm ⟨t⟩))
   let k := fis.size
@@ -972,32 +984,49 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let specsTxt ← specTs.toList.mapM (pp ·.raw)
   let extraTxt ← extraTs.toList.mapM (pp ·.raw)
   let hintsTxt ← hintTs.toList.mapM (pp ·.raw)
-  let vcg := String.intercalate ", "
+  let vcgOf (called : Array String) : String := String.intercalate ", "
     (["L.exec", "L.step", "L.evalE", "L.evalC", "L.evalArgs", "L.setLoc", "L.setLocs", "L.ld64"] ++
-      extraTxt ++ specsTxt ++ (List.range k).map fun i => s!"ih{i+1}")
+      extraTxt ++ ((specsTxt.zip callees.toList).filter (called.contains ·.2.1)).map (·.1) ++
+      ((List.range k).filter (called.contains fis[·]!.lname)).map fun i => s!"ih{i+1}")
   let genTxt := match genN with | some g => s!"(gen := {g}) " | none => ""
   let hintsT := if hintsTxt.isEmpty then "" else s!"[{String.intercalate ", " hintsTxt}]"
+  let parseTac (txt : String) : CommandElabM Syntax := do
+    if doTrace then logInfo m!"{txt}"
+    match Parser.runParserCategory (← getEnv) `tactic s!"({txt})" with
+    | .ok t => pure (reposition t stx)
+    | .error e => throwError "l_model: generated proof does not parse: {e}\n{txt}"
+  let withHB (thm : TSyntax `command) : CommandElabM (TSyntax `command) := do
+    match hbN with
+    | some h => `(command| set_option maxHeartbeats $(Syntax.mkNumLit (toString h)):num in $thm)
+    | none => pure thm
+  -- the explicit binders, passed on to the steps
+  let mut explicitArgs : Array String := #[]
+  for b in bs do
+    if let `(Lean.Parser.Term.bracketedBinderF| ($xs* : $_)) := b then
+      for x in xs do explicitArgs := explicitArgs.push (toString x.raw.getId)
+  let argsTxt := String.intercalate " " explicitArgs.toList
+  let nB ← `(Lean.Parser.Term.bracketedBinderF| ($nI : Nat))
+  let ihB ← `(Lean.Parser.Term.bracketedBinderF| ($(mkIdent `ih) : $stmt))
+  let conjS ← mkConj (← `($nI + 1))
   let mut zero := ""
-  let mut succ := ""
-  for fi in fis, i in List.range k do
+  let mut steps : Array String := #[]
+  for fi in fis, i in List.range k, called in calledBy, ci in conjS do
+    let vcg := vcgOf called
     let lk ← pp fi.lookup.raw
     let pre := s!"intros; rw [L.invoke_eq _ ({lk})]; simp only [L.callFn, {fi.decl}]"
     let g := if k == 1 then "" else s!"case g{i+1} => "
     zero := zero ++ s!"\n    {g}({pre}; vcgen [L.exec] <;> grind)"
-    succ := succ ++ s!"\n    {g}({pre}; sym only [{attrsTxt}] => (vcgen [{vcg}] <;> finish {genTxt}{hintsT}))"
+    let ihTxt := if k == 1 then "have ih1 := ih" else s!"obtain ⟨{ihs}⟩ := ih"
+    let tac ← parseTac s!"{ihTxt}; {pre}; sym only [{attrsTxt}] => (vcgen [{vcg}] <;> finish {genTxt}{hintsT})"
+    let stepName := mkIdent (specName.getId ++ Name.mkSimple s!"step{i+1}")
+    emit doTrace (← withHB (← `(command|
+      theorem $stepName:ident $bs* $nB:bracketedBinder $ihB:bracketedBinder : $ci := by $(⟨tac⟩):tactic)))
+    steps := steps.push s!"{specName.getId}.step{i+1} {argsTxt} n ih"
   let refineTxt := if k == 1 then "" else s!"\n    refine ⟨{goals}⟩"
-  let ihTxt := if k == 1 then "have ih1 := ih" else s!"obtain ⟨{ihs}⟩ := ih"
-  let proofTxt := s!"induction n with\n  | zero =>{refineTxt}{zero}\n  | succ n ih =>\n    {ihTxt}{refineTxt}{succ}"
-  if doTrace then logInfo m!"{proofTxt}"
-  let tac ← match Parser.runParserCategory (← getEnv) `tactic s!"({proofTxt})" with
-    | .ok t => pure t
-    | .error e => throwError "l_model: generated proof does not parse: {e}\n{proofTxt}"
-  let nB ← `(Lean.Parser.Term.bracketedBinderF| ($nI : Nat))
-  let tac := reposition tac stx
-  let thm ← `(command| theorem $specName:ident $bs* $nB:bracketedBinder : $stmt := by $(⟨tac⟩):tactic)
-  match hbN with
-  | some h => emit doTrace (← `(command| set_option maxHeartbeats $(Syntax.mkNumLit (toString h)):num in $thm))
-  | none => emit doTrace thm
+  let succTxt := if k == 1 then s!"exact {steps[0]!}" else s!"exact ⟨{String.intercalate ", " steps.toList}⟩"
+  let tac ← parseTac s!"induction n with\n  | zero =>{refineTxt}{zero}\n  | succ n ih => {succTxt}"
+  emit doTrace (← withHB (← `(command|
+    $[$doc?:docComment]? theorem $specName:ident $bs* $nB:bracketedBinder : $stmt := by $(⟨tac⟩):tactic)))
   logInfo m!"l_model: {fis.size} model(s), {st.ks.size} continuation(s), {nEqns} guarded equation(s)"
 
 end L.ModelGen
