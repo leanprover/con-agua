@@ -304,7 +304,7 @@ theorem knotUpTo_all (n : Nat) : KnotUpTo p n := by
 
 include hq in
 /-- **The knot at every L fuel.** -/
-@[refines_part ConRon.Arena.coreKnot "the five slots"]
+@[refines ConRon.Arena.coreKnot]
 theorem knot_all (n : Nat) : KnotOK p n := knotUpTo_all hq n n (Nat.le_refl _)
 
 end knot

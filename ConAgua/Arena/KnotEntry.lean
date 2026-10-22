@@ -1,5 +1,6 @@
 import ConAgua.Arena.DefEqKnot
 import ConAgua.Arena.IndTwin
+import ConAgua.Census.Attr
 
 /-!
 # The knot's entry points, for callers (lane `knotwire`)
@@ -10,7 +11,8 @@ stage call (`whnf_top`, `infer_type_core`, `is_def_eq_core`, `ensure_sort_core`)
 knot hypothesis left:
 
 * **Under `CoreS`** (`L.Arena`, `KnotTopProg p`): `CoreSpec` at L fuel `n + 1` (`n + 2` for
-  `ensure_sort_core`), the twin at verified mode and any fuel `F ≥ n`.
+  `ensure_sort_core`), the twin at verified mode (deliberate deviation D15) and any fuel `F ≥ n`.
+  These are the census refinements of `whnf`, `inferTypeCore`, `isDefEqCore`, `ensureSortCore`.
 * **Under `StageT`** (`L.Ind`, `KnotStageProg p`, lane `indproofs3`'s `IndTwin.lean`): a `Sim` of
   `callW p n f args m` against the twin at `checkFuel`, `StageT` after, the pools unchanged
   (`IWGrow`). These replace `IndStubs`' `whnf_spec`, `inferTypeCore_spec`, `ensureSortCore_spec`,
@@ -41,6 +43,7 @@ theorem KnotTopProg.knotOK (n : Nat) : KnotOK p n := knot_all hq.knot n
 
 include hq in
 /-- **`whnf_top(vis, dep, e)` refines `whnf .verified fe F dep e`** under `CoreS`. -/
+@[refines ConRon.Arena.whnf]
 theorem KnotTopProg.whnfTop_core (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (F : Nat) (hF : n ≤ F) (s₀ : St)
     (a₀ : AState) (M : ModeMaps) (dep e : Word) (hS : CoreS dn s₀.mem a₀ vis fe M 0) (he : HW e) :
     CoreSpec p (n + 1) "whnf_top" [vis, dep, e]
@@ -49,6 +52,7 @@ theorem KnotTopProg.whnfTop_core (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (F : Nat) (hF
 
 include hq in
 /-- **`infer_type_core(vis, dep, e)` refines `inferTypeCore .verified fe F dep e`** under `CoreS`. -/
+@[refines ConRon.Arena.inferTypeCore]
 theorem KnotTopProg.inferTypeCore_core (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (F : Nat) (hF : n ≤ F)
     (s₀ : St) (a₀ : AState) (M : ModeMaps) (dep e : Word) (hS : CoreS dn s₀.mem a₀ vis fe M 0)
     (he : HW e) :
@@ -60,6 +64,7 @@ theorem KnotTopProg.inferTypeCore_core (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (F : Na
 include hq in
 /-- **`is_def_eq_core(vis, dep, x, y)` refines `isDefEqCore .verified fe F dep x y`** under
 `CoreS`. -/
+@[refines ConRon.Arena.isDefEqCore]
 theorem KnotTopProg.isDefEqCore_core (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (F : Nat) (hF : n ≤ F)
     (s₀ : St) (a₀ : AState) (M : ModeMaps) (dep x y : Word) (hS : CoreS dn s₀.mem a₀ vis fe M 0)
     (hx : HW x) (hy : HW y) :
@@ -71,6 +76,7 @@ theorem KnotTopProg.isDefEqCore_core (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (F : Nat)
 include hq in
 /-- **`ensure_sort_core(vis, dep, t)` refines `ensureSortCore .verified fe F dep t`** under
 `CoreS` (at L fuel `n + 2`: `ensure_sort` calls the `whnf` slot one level down). -/
+@[refines ConRon.Arena.ensureSortCore]
 theorem KnotTopProg.ensureSortCore_core (n : Nat) (hn : n + 1 ≤ 2 ^ 62) (F : Nat) (hF : n + 1 ≤ F)
     (s₀ : St) (a₀ : AState) (M : ModeMaps) (dep t : Word) (hS : CoreS dn s₀.mem a₀ vis fe M 0)
     (ht : HW t) :
