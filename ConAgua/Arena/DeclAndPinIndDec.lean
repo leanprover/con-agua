@@ -88,7 +88,7 @@ theorem hslice?_nil {kk : IdxKind} {T : Array Word} {o c : Nat}
   have := L.Ind.mapM_opt_length _ _ _ h
   simpa using this.symm
 
-theorem hslice?_zero {kk : IdxKind} (B : Array Word) (o : Nat) :
+theorem hslice?_zeroAP {kk : IdxKind} (B : Array Word) (o : Nat) :
     (hslice? B o 0 : Option (List (Idx kk))) = some [] := rfl
 
 /-- An empty list whose header words reappear decodes empty. -/

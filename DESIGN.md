@@ -7957,13 +7957,13 @@ child dangled when it was interned (no `StoreWF` needed).
   other word shifted, `ShR`) decodes to the same constant at any name decoder. The copy keeps a
   record's other slices as they are, so it is only right for front-shaped constants.
 * `DeclAndPinIndCopy.lean`/`Copy2.lean`: word models and specs of `dind_copy`, `ind_rec_copy`,
-  `ind_copy_go`, `ind_block_to_erec`; `EW W m m'` (an `EREC` writer changing below the old top only
+  `ind_copy_go`, `ind_block_to_erec`; `ErW W m m'` (an `EREC` writer changing below the old top only
   `W`); `indBlockToErec_ok`: `StageR` kept, `IWGrow`, frame `[EREC] [129]`, the result an `EREC`
-  slice decoding (`decCIs`, `erecP`) to the block. Robust record decodings (`RecOK`: in every array
+  slice decoding (`decCIs`, `erecP`) to the block. Robust record decodings (`RecRob`: in every array
   agreeing on the record's words) survive the later slot writes.
 * **L change**: `dind_copy` aborts on a non-empty source at word `0` (the pool's top word, never a
   record's or a slice's place; `IndDeclAt`'s `trunc` reads it as `0`). Only non-front data hits it.
-* `DeclAndPinIndRef.lean`: `apW` (all of `and_pin_ok`), `apW_ind_ok`, `andPinOkInd_refines`
+* `DeclAndPinIndRef.lean`: `andpW` (all of `and_pin_ok`), `andpW_ind_ok`, `andPinOkInd_refines`
   (`RefAM … (andPinOk (.indDecl block nP)) (KeepPost … decW0B)`, pre `StageR ∧ IndDeclAt ∧
   FrontBlock ∧ StateOK ∧` `DECL`/`DLP` below `2^63`), `andPinOkF_refines` (every `DeclAtF`
   record; `basisDecl` has no front record). Hypotheses: `RomAndPinRef p dn vis fe` (helper

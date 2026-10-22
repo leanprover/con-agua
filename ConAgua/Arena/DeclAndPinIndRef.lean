@@ -6,7 +6,7 @@ import ConAgua.Rom.CIReadSpec
 /-!
 # The `And` pin's inductive arm, part 3: `and_pin_ok(i)` refines `andPinOk (.indDecl block nP)`
 
-`and_pin_ok`'s whole model (`apW`): the flag; for kind `6` the name test over the block
+`and_pin_ok`'s whole model (`andpW`): the flag; for kind `6` the name test over the block
 (`and_block_named`, `abnW_eq`), the parameter count, then the block copied (`ind_block_to_erec`,
 `indBlockToErec_ok`; `er_to_iw`) and compared with the ROM's pinned `And` block (`rom_and_pin`,
 a hypothesis: `RomAndPinRef`, helper `decls4-rom`) by `canon_eq_list` (`canonEqList_refines`,
@@ -67,28 +67,28 @@ section model
 variable (p : Prog)
 
 /-- After the comparison. -/
-def apK4 : Option (List Word × Mem) → Option (List Word × Mem)
+def andpK4 : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r4, m4) => some ([r4.headD 0], m4)
 
 /-- After `rom_and_pin`. -/
-def apK3 (n : Nat) (r2 : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def andpK3 (n : Nat) (r2 : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r3, m3) => apK4 (callW p n "canon_eq_list"
+  | some (r3, m3) => andpK4 (callW p n "canon_eq_list"
       [r2.headD 0, r2.tail.headD 0, r3.headD 0, r3.tail.headD 0] m3)
 
 /-- After `er_to_iw`. -/
-def apK2 (n : Nat) : Option (List Word × Mem) → Option (List Word × Mem)
+def andpK2 (n : Nat) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r2, m2) => apK3 p n r2 (callW p n "rom_and_pin" [] m2)
+  | some (r2, m2) => andpK3 p n r2 (callW p n "rom_and_pin" [] m2)
 
 /-- After `ind_block_to_erec`. -/
-def apK1 (n : Nat) : Option (List Word × Mem) → Option (List Word × Mem)
+def andpK1 (n : Nat) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r1, m1) => apK2 p n (callW p n "er_to_iw" [r1.headD 0, r1.tail.headD 0] m1)
+  | some (r1, m1) => andpK2 p n (callW p n "er_to_iw" [r1.headD 0, r1.tail.headD 0] m1)
 
 /-- **The model of `and_pin_ok(i)`**, every record kind. -/
-def apW : Nat → Mem → Word → Option (List Word × Mem)
+def andpW : Nat → Mem → Word → Option (List Word × Mem)
   | 0, _, _ => none
   | n + 1, m, i =>
     if rdW (m.arr64 PINS) 0 = 0 then none
@@ -96,37 +96,37 @@ def apW : Nat → Mem → Word → Option (List Word × Mem)
       if abnW m (rdW (m.arr64 DECL) (3 + 8 * i)) (rdW (m.arr64 DECL) (4 + 8 * i)).toNat = 0 then
         some ([1], m)
       else if rdW (m.arr64 DECL) (5 + 8 * i) ≠ 2 then some ([0], m)
-      else apK1 p n (callW p n "ind_block_to_erec" [i] m)
+      else andpK1 p n (callW p n "ind_block_to_erec" [i] m)
     else some ([andPinW m i], m)
 
 section arms
 variable (n : Nat) (m m1 m2 m3 m4 : Mem) (i : Word) (r1 r2 r3 r4 : List Word)
-theorem apK1_some : apK1 p n (some (r1, m1)) =
-    apK2 p n (callW p n "er_to_iw" [r1.headD 0, r1.tail.headD 0] m1) := rfl
-theorem apK2_some : apK2 p n (some (r2, m2)) = apK3 p n r2 (callW p n "rom_and_pin" [] m2) := rfl
-theorem apK3_some : apK3 p n r2 (some (r3, m3)) = apK4 (callW p n "canon_eq_list"
+theorem andpK1_some : andpK1 p n (some (r1, m1)) =
+    andpK2 p n (callW p n "er_to_iw" [r1.headD 0, r1.tail.headD 0] m1) := rfl
+theorem andpK2_some : andpK2 p n (some (r2, m2)) = andpK3 p n r2 (callW p n "rom_and_pin" [] m2) := rfl
+theorem andpK3_some : andpK3 p n r2 (some (r3, m3)) = andpK4 (callW p n "canon_eq_list"
     [r2.headD 0, r2.tail.headD 0, r3.headD 0, r3.tail.headD 0] m3) := rfl
-theorem apK4_some : apK4 (some (r4, m4)) = some ([r4.headD 0], m4) := rfl
-theorem apW_step : apW p (n + 1) m i =
+theorem andpK4_some : andpK4 (some (r4, m4)) = some ([r4.headD 0], m4) := rfl
+theorem andpW_step : andpW p (n + 1) m i =
     if rdW (m.arr64 PINS) 0 = 0 then none
     else if rdW (m.arr64 DECL) (1 + 8 * i) = 6 then
       if abnW m (rdW (m.arr64 DECL) (3 + 8 * i)) (rdW (m.arr64 DECL) (4 + 8 * i)).toNat = 0 then
         some ([1], m)
       else if rdW (m.arr64 DECL) (5 + 8 * i) ≠ 2 then some ([0], m)
-      else apK1 p n (callW p n "ind_block_to_erec" [i] m)
+      else andpK1 p n (callW p n "ind_block_to_erec" [i] m)
     else some ([andPinW m i], m) := rfl
 end arms
 
-grind_pattern [ind_grind] apK1_some => apK1 p n (some (r1, m1))
-grind_pattern [ind_grind] apK2_some => apK2 p n (some (r2, m2))
-grind_pattern [ind_grind] apK3_some => apK3 p n r2 (some (r3, m3))
-grind_pattern [ind_grind] apK4_some => apK4 (some (r4, m4))
-grind_pattern [ind_grind] apW_step => apW p (n + 1) m i
+grind_pattern [ind_grind] andpK1_some => andpK1 p n (some (r1, m1))
+grind_pattern [ind_grind] andpK2_some => andpK2 p n (some (r2, m2))
+grind_pattern [ind_grind] andpK3_some => andpK3 p n r2 (some (r3, m3))
+grind_pattern [ind_grind] andpK4_some => andpK4 (some (r4, m4))
+grind_pattern [ind_grind] andpW_step => andpW p (n + 1) m i
 
 theorem andPinOk_specA (hp : p.lookup "and_pin_ok" = some andPinOkL)
     (hab : p.lookup "and_block_named" = some andBlockNamed) (n : Nat) (s₀ : St) (i : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "and_pin_ok" [i]
-    ⦃fun r s' => LocEq s' s₀ ∧ apW p n s₀.mem i = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ andpW p n s₀.mem i = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, andPinOkL]
   cases n with
@@ -211,7 +211,7 @@ theorem decRBlk_canon {dn : NIdx → Option ConLeche.Name} {m : Mem} {r : List W
     omega
 
 /-- A pointer slice decoded in `IW` below its top, in `erecP`, stays decoded as the pools grow. -/
-theorem decPL_grow {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {o l : Nat}
+theorem decPL_growAP {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {o l : Nat}
     {xs : List IConstantInfo} (h : decPL m (fun q => decCI (erecP m) dn q) o l = some xs)
     (hb : o + l ≤ iwTop m) (hg : IWGrow m m') :
     decPL m' (fun q => decCI (erecP m') dn q) o l = some xs := by
@@ -277,19 +277,19 @@ structure AndPinIndProg (p : Prog) : Prop extends IbeProg p where
 the stage relation, the front's record `i` (`IndDeclAt`, a block of the front's shape) and a
 well-formed twin state, the twin's test runs to `b`, the stage relation holds after it, the pools
 only grew, and the result word is `b`. `rom_and_pin` by its refinement (`RomAndPinRef`). -/
-theorem apW_ind_ok {p : Prog} (hp : AndPinIndProg p) {dn : NIdx → Option ConLeche.Name}
+theorem andpW_ind_ok {p : Prog} (hp : AndPinIndProg p) {dn : NIdx → Option ConLeche.Name}
     {vis : Word} {fe : IFEnv} (hR : L.Rom.RomAndPinRef p dn vis fe) {n : Nat} {m m' : Mem}
     {i : Word} {r : List Word} {block : List IConstantInfo} {nP : Nat} {a : AState}
-    (h : apW p n m i = some (r, m')) (hS : StageR dn vis fe m a)
+    (h : andpW p n m i = some (r, m')) (hS : StageR dn vis fe m a)
     (hdecl : IndDeclAt (m.arr64 DECL) (m.arr64 DLP) i.toNat block nP) (hFB : FrontBlock block)
     (hok : ConRon.Bridge.StateOK a)
     (hD : (m.arr64 DECL).size < 2 ^ 63) (hP : (m.arr64 DLP).size < 2 ^ 63) :
     ∃ b a', (andPinOk (.indDecl block nP)).run a = .ok (b, a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' ∧ decW0B m' r b := by
   cases n with
-  | zero => simp [apW] at h
+  | zero => simp [andpW] at h
   | succ n =>
-  rw [apW_step] at h
+  rw [andpW_step] at h
   by_cases hfl : rdW (m.arr64 PINS) 0 = 0
   · rw [if_pos hfl] at h; cases h
   rw [if_neg hfl] at h
@@ -333,14 +333,14 @@ theorem apW_ind_ok {p : Prog} (hp : AndPinIndProg p) {dn : NIdx → Option ConLe
   | none => rw [h1] at h; cases h
   | some x =>
   obtain ⟨r1, m1⟩ := x
-  rw [h1, apK1_some] at h
+  rw [h1, andpK1_some] at h
   obtain ⟨hS1, hg1, -, -, -, hd1, hb1⟩ := indBlockToErec_ok hp.toIbeProg h1 hS hdecl hFB hD hP
   -- `er_to_iw`
   cases h2c : callW p n "er_to_iw" [r1.headD 0, r1.tail.headD 0] m1 with
   | none => rw [h2c] at h; cases h
   | some x =>
   obtain ⟨r2, m2⟩ := x
-  rw [h2c, apK2_some] at h
+  rw [h2c, andpK2_some] at h
   obtain ⟨s2, hs2, -, hW2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
     (L.Ind.erToIw_specW p hp.iw_alloc hp.er_copy hp.er_to_iw n ⟨m1, Locals.init []⟩ _ _) h2c
   subst hs2
@@ -350,18 +350,18 @@ theorem apW_ind_ok {p : Prog} (hp : AndPinIndProg p) {dn : NIdx → Option ConLe
   | none => rw [h3] at h; cases h
   | some x =>
   obtain ⟨r3, m3⟩ := x
-  rw [h3, apK3_some] at h
+  rw [h3, andpK3_some] at h
   obtain ⟨pinned, a1, hrun1, hS3, hg3, hd3⟩ := hR n s2.mem a r3 m3 hS2 h3
   obtain ⟨hok1, hlen1⟩ := andPinDecls_ok hrun1 hok
   obtain ⟨hp3, hpb3⟩ := decRBlk_canon hd3 (by rw [hlen1]; decide)
-  have hd2' := decPL_grow hd2 hb2 hg3
+  have hd2' := decPL_growAP hd2 hb2 hg3
   -- `canon_eq_list`
   cases h4 : callW p n "canon_eq_list"
       [r2.headD 0, r2.tail.headD 0, r3.headD 0, r3.tail.headD 0] m3 with
   | none => rw [h4] at h; cases h
   | some x =>
   obtain ⟨r4, m4⟩ := x
-  rw [h4, apK4_some] at h
+  rw [h4, andpK4_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   rw [hl2] at h4
@@ -394,20 +394,20 @@ theorem andPinOkInd_refines {p : Prog} (hp : AndPinIndProg p) {dn : NIdx → Opt
   intro n s₀ a₀ ⟨hS, hdecl, hFB, hok, hD, hP⟩
   refine triple_post (andPinOk_specA p hp.and_pin_ok hp.and_block_named n s₀ i) ?_
   rintro r s' ⟨hl, hW⟩
-  obtain ⟨b, a', hrun, hS', hg, hd⟩ := apW_ind_ok hp hR hW hS hdecl hFB hok hD hP
+  obtain ⟨b, a', hrun, hS', hg, hd⟩ := andpW_ind_ok hp hR hW hS hdecl hFB hok hD hP
   obtain ⟨hok', hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok', by rw [hst, hres]; exact ⟨hS', hg, hd⟩⟩
 
 /-! ## Every record kind the front produces -/
 
 /-- A one-constant record (kind word not `6`): the name test, memory unchanged. -/
-theorem apW_one {p : Prog} {n : Nat} {m m' : Mem} {i : Word} {r : List Word}
-    (h : apW p n m i = some (r, m')) (hk : rdW (m.arr64 DECL) (1 + 8 * i) ≠ 6) :
+theorem andpW_one {p : Prog} {n : Nat} {m m' : Mem} {i : Word} {r : List Word}
+    (h : andpW p n m i = some (r, m')) (hk : rdW (m.arr64 DECL) (1 + 8 * i) ≠ 6) :
     rdW (m.arr64 PINS) 0 ≠ 0 ∧ m' = m ∧ r = [andPinW m i] := by
   cases n with
-  | zero => simp [apW] at h
+  | zero => simp [andpW] at h
   | succ n =>
-  rw [apW_step] at h
+  rw [andpW_step] at h
   by_cases hfl : rdW (m.arr64 PINS) 0 = 0
   · rw [if_pos hfl] at h; cases h
   rw [if_neg hfl, if_neg hk] at h
@@ -430,7 +430,7 @@ theorem andPinOkOne_ok {p : Prog} (hp : AndPinIndProg p) {dn : NIdx → Option C
     rdW_dwI hD hk.1 rfl (by decide)
   have e2 : rdW (s₀.mem.arr64 DECL) (2 + 8 * i) = dw (s₀.mem.arr64 DECL) i.toNat 1 :=
     rdW_dwI hD hk.1 rfl (by decide)
-  obtain ⟨hfl, hm, hr⟩ := apW_one hW (by rw [e1]; exact hk.2)
+  obtain ⟨hfl, hm, hr⟩ := andpW_one hW (by rw [e1]; exact hk.2)
   have hF : PinsFull s₀.mem a₀.pins := hS.1.pins.full hfl
   obtain ⟨hok', hst, hres⟩ := AM.of_run_ok _ _ _ _ (andPinOk_run hd hF)
   refine ⟨hl, hok', ?_⟩
