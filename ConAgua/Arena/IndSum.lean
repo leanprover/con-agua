@@ -244,7 +244,8 @@ def checkSumCtorsL : FunDecl :=
 }
 
 /-- `ctor_info_rec(cv, nP, nF)`: the `.ctorInfo cv nP nF` constant record in `EREC` (`decCI` kind
-4: `[4, cv's 4 words copied inline, nP, nF]`, 7 words). -/
+4: `[4, cv's 4 words copied inline, nP, nF]`, 7 words). The name word is checked to be a handle
+(lane `indproofs2`: `env_push`'s spec needs it; a decoded constant's name always is). -/
 -- con-ron: ConRon/Arena/Inductives/SumInstall.lean:192-198 ConRon.Arena.consSumCtors
 @[l_impl ConRon.Arena.consSumCtors]
 def ctorInfoRecL : FunDecl := lfn (cv, nP, nF) locals (rec) {
@@ -256,25 +257,25 @@ def ctorInfoRecL : FunDecl := lfn (cv, nP, nF) locals (rec) {
   EREC.u64[rec + 4] := EREC.u64[cv + 3];
   EREC.u64[rec + 5] := nP;
   EREC.u64[rec + 6] := nF;
+  if 4294967296 <= EREC.u64[rec + 1] { abort };
   return rec
 }
 
 /-- `cons_sum_ctors(nP, ctorsOff, ctorsLen, vis)`: the constructors' conses, in order (the twin
 processes the head before recursing on the tail). Pure (the index push touches no term): the only
-effect is the environment push. Returns the new view. -/
+effect is the environment push. Returns the new view. Self-recursive on the slice, as the twin is on
+the list (lane `indproofs2`: rewritten from a `while` loop for the refinement). -/
 -- con-ron: ConRon/Arena/Inductives/SumInstall.lean:192-198 ConRon.Arena.consSumCtors
 @[l_impl ConRon.Arena.consSumCtors]
-def consSumCtorsL : FunDecl := lfn (nP, ctorsOff, ctorsLen, vis) locals (j, c, cv, nF, rec) {
-  j := 0;
-  while j < ctorsLen {
-    c := call sl_get(ctorsOff, ctorsLen, j);
-    cv := IW.u64[c];
-    nF := IW.u64[c + 1];
-    rec := call ctor_info_rec(cv, nP, nF);
-    vis := call env_push(vis, rec);
-    j += 1
-  };
-  return vis
+def consSumCtorsL : FunDecl := lfn (nP, ctorsOff, ctorsLen, vis) locals (c, cv, nF, rec, v, r) {
+  if ctorsLen == 0 { return vis };
+  c := IW.u64[ctorsOff];
+  cv := IW.u64[c];
+  nF := IW.u64[c + 1];
+  rec := call ctor_info_rec(cv, nP, nF);
+  v := call env_push(vis, rec);
+  r := call cons_sum_ctors(nP, ctorsOff + 1, ctorsLen - 1, v);
+  return r
 }
 
 /-- `sum_rules(vis, recName, nP, ctorsOff, ctorsLen, rhssOff, rhssLen)`: the stored rules,
