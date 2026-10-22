@@ -548,41 +548,41 @@ theorem noConstWf_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
     exact noConstW_ok n dn fe vis m m' a no nl lo hi e r ws mp0 hb hS hh hws hwlt hM
 
 mutual
-def pdW : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
+def pdoW : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _ => none
   | k + 1, m, no, nl, lo, hi, n, e =>
     if n = 0 then some ([0], m)
     else if e >>> 28 ≠ 6 then some ([0], m)
     else if eViewW m e = [] then none
-    else pdK1 k no nl lo hi n (eViewW m e) (noConstWf k m no nl lo hi ((eViewW m e).tail.headD 0))
-def pdK1 (k : Nat) (no nl lo hi n : Word) (v : List Word) : Option (Word × Mem) → Option (List Word × Mem)
+    else pdoK1 k no nl lo hi n (eViewW m e) (noConstWf k m no nl lo hi ((eViewW m e).tail.headD 0))
+def pdoK1 (k : Nat) (no nl lo hi n : Word) (v : List Word) : Option (Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r, m1) =>
-    if r ≠ 0 then some ([1], m1) else pdW k m1 no nl lo hi (n - 1) (v.tail.tail.headD 0)
+    if r ≠ 0 then some ([1], m1) else pdoW k m1 no nl lo hi (n - 1) (v.tail.tail.headD 0)
 end
 
 section arms
 variable (k : Nat) (m m1 : Mem) (no nl lo hi n e r : Word) (v : List Word)
-theorem pdW_zero (h : n = 0) : pdW (k + 1) m no nl lo hi n e = some ([0], m) := by simp [pdW, h]
-theorem pdW_notpi (h : ¬ n = 0) (h6 : e >>> 28 ≠ 6) : pdW (k + 1) m no nl lo hi n e = some ([0], m) := by
-  simp [pdW, h, h6]
-theorem pdW_empty (h : ¬ n = 0) (h6 : ¬ e >>> 28 ≠ 6) (hv : eViewW m e = []) :
-    pdW (k + 1) m no nl lo hi n e = none := by
-  simp only [pdW]; rw [if_neg h, if_neg h6, if_pos hv]
-theorem pdW_pi (h : ¬ n = 0) (h6 : ¬ e >>> 28 ≠ 6) (hv : eViewW m e ≠ []) : pdW (k + 1) m no nl lo hi n e =
-    pdK1 k no nl lo hi n (eViewW m e) (noConstWf k m no nl lo hi ((eViewW m e).tail.headD 0)) := by
-  simp only [pdW]; rw [if_neg h, if_neg h6, if_neg hv]
-theorem pdK1_hit (h : r ≠ 0) : pdK1 k no nl lo hi n v (some (r, m1)) = some ([1], m1) := by
-  rw [pdK1, if_pos h]
-theorem pdK1_miss (h : ¬ r ≠ 0) : pdK1 k no nl lo hi n v (some (r, m1)) =
-    pdW k m1 no nl lo hi (n - 1) (v.tail.tail.headD 0) := by rw [pdK1, if_neg h]
+theorem pdoW_zero (h : n = 0) : pdoW (k + 1) m no nl lo hi n e = some ([0], m) := by simp [pdoW, h]
+theorem pdoW_notpi (h : ¬ n = 0) (h6 : e >>> 28 ≠ 6) : pdoW (k + 1) m no nl lo hi n e = some ([0], m) := by
+  simp [pdoW, h, h6]
+theorem pdoW_empty (h : ¬ n = 0) (h6 : ¬ e >>> 28 ≠ 6) (hv : eViewW m e = []) :
+    pdoW (k + 1) m no nl lo hi n e = none := by
+  simp only [pdoW]; rw [if_neg h, if_neg h6, if_pos hv]
+theorem pdoW_pi (h : ¬ n = 0) (h6 : ¬ e >>> 28 ≠ 6) (hv : eViewW m e ≠ []) : pdoW (k + 1) m no nl lo hi n e =
+    pdoK1 k no nl lo hi n (eViewW m e) (noConstWf k m no nl lo hi ((eViewW m e).tail.headD 0)) := by
+  simp only [pdoW]; rw [if_neg h, if_neg h6, if_neg hv]
+theorem pdoK1_hit (h : r ≠ 0) : pdoK1 k no nl lo hi n v (some (r, m1)) = some ([1], m1) := by
+  rw [pdoK1, if_pos h]
+theorem pdoK1_miss (h : ¬ r ≠ 0) : pdoK1 k no nl lo hi n v (some (r, m1)) =
+    pdoW k m1 no nl lo hi (n - 1) (v.tail.tail.headD 0) := by rw [pdoK1, if_neg h]
 end arms
-attribute [ind_grind] pdW_zero pdW_notpi pdW_empty pdW_pi pdK1_hit pdK1_miss
+attribute [ind_grind] pdoW_zero pdoW_notpi pdoW_empty pdoW_pi pdoK1_hit pdoK1_miss
 
 theorem piDomsOcc_spec (p : Prog) (hl : NoLook p) (hp : p.lookup "pi_doms_occ" = some piDomsOccL)
     (k : Nat) : ∀ (s₀ : St) (no nl lo hi n e : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p k) "pi_doms_occ" [no, nl, lo, hi, n, e]
-    ⦃fun r s' => LocEq s' s₀ ∧ pdW k s₀.mem no nl lo hi n e = some ([r.headD 0], s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ pdoW k s₀.mem no nl lo hi n e = some ([r.headD 0], s'.mem); ⊤⦄ := by
   induction k with
   | zero =>
     intro s₀ no nl lo hi n e
@@ -596,20 +596,20 @@ theorem piDomsOcc_spec (p : Prog) (hl : NoLook p) (hp : p.lookup "pi_doms_occ" =
         eView_spec p hl.hv k, nestOcc_spec' p hl k, ih] <;>
       finish (gen := 20)
 
-theorem pdW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo hi : Word)
+theorem pdoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo hi : Word)
     (names : List NIdx) (k : Nat) :
     ∀ (m m' : Mem) (a : AState) (n e : Word) (r : List Word) (mp : Std.HashMap EIdx Bool),
-    pdW k m no nl lo hi n e = some (r, m') → StageR dn vis fe m a → H e →
+    pdoW k m no nl lo hi n e = some (r, m') → StageR dn vis fe m a → H e →
     decHL m no.toNat nl.toNat = some names → (∀ j < nl.toNat, no.toNat + j < iwTop m) →
     noMR m mp →
     ∃ b a' mp', (ConRon.Arena.piDomsOcc names lo.toNat hi.toNat n.toNat (decE e)).run a = .ok (b, a') ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) ∧ noMR m' mp' := by
   induction k with
-  | zero => intro m m' a n e r mp h; simp [pdW] at h
+  | zero => intro m m' a n e r mp h; simp [pdoW] at h
   | succ k ih =>
     intro m m' a n e r mp h hS he hn hnb hM
     by_cases h0 : n = 0
-    · rw [pdW_zero (h := h0)] at h
+    · rw [pdoW_zero (h := h0)] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       subst h0
@@ -617,7 +617,7 @@ theorem pdW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo h
     have hn0 : n.toNat ≠ 0 := fun e' => h0 (UInt64.toNat_inj.mp (by simpa using e'))
     have hsucc : n.toNat = (n.toNat - 1) + 1 := by omega
     by_cases h6 : e >>> 28 ≠ 6
-    · rw [pdW_notpi (h := h0) (h6 := h6)] at h
+    · rw [pdoW_notpi (h := h0) (h6 := h6)] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       refine ⟨false, a, mp, ?_, hS, IWGrow.refl _, rfl, hM⟩
@@ -627,8 +627,8 @@ theorem pdW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo h
     have hg6 : e >>> 28 = 6 := by simpa using h6
     have hR := hS.1.arena.1
     by_cases hr : eViewW m e = []
-    · rw [pdW_empty (h := h0) (h6 := h6) (hv := hr)] at h; simp at h
-    rw [pdW_pi (h := h0) (h6 := h6) (hv := hr)] at h
+    · rw [pdoW_empty (h := h0) (h6 := h6) (hv := hr)] at h; simp at h
+    rw [pdoW_pi (h := h0) (h6 := h6) (hv := hr)] at h
     obtain ⟨hvok, hew⟩ := eViewW_forall m e hg6 hr
     obtain ⟨-, hty, hb⟩ := view_forall m a hR e he hvok hg6
     have hvb := viewBind_forall m a hR e he hvok hg6
@@ -637,7 +637,7 @@ theorem pdW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo h
     generalize hd : rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2) = d at h hty hvb
     generalize hbd : rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2 + 1) = b at h hb hvb
     cases hnc : noConstWf k m no nl lo hi d with
-    | none => rw [hnc] at h; simp [pdK1] at h
+    | none => rw [hnc] at h; simp [pdoK1] at h
     | some pr =>
     obtain ⟨r1, m1⟩ := pr
     rw [hnc] at h
@@ -656,14 +656,14 @@ theorem pdW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis no nl lo h
       simp only [htag, beq_self_eq_true, if_true, StateT.run_bind, viewBind_run' _ a, hvb, except_ok_bind]
       rfl
     by_cases hr1 : r1 ≠ 0
-    · rw [pdK1_hit (h := hr1)] at h
+    · rw [pdoK1_hit (h := hr1)] at h
       simp only [Option.some.injEq, Prod.mk.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       have hcT : c = true := by rw [← hc]; simpa using hr1
       subst hcT
       refine ⟨true, a, ∅, ?_, hS1, hg1, rfl, hM1⟩
       rw [hpre]; simp only [StateT.run_bind, hrun1, except_ok_bind]; rfl
-    · rw [pdK1_miss (h := hr1)] at h
+    · rw [pdoK1_miss (h := hr1)] at h
       simp only [List.tail_cons, List.headD_cons] at h
       have hcF : c = false := by rw [← hc]; simpa using hr1
       subst hcF
@@ -695,7 +695,7 @@ theorem piDomsOcc_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → O
         then 1 else 0) ∧ ∃ mp', noMR s'.mem mp'; ⊤⦄ := by
   refine triple_post (piDomsOcc_spec p hl hp k s₀ no nl lo hi n e) ?_
   rintro r s' ⟨hlc, hm⟩
-  obtain ⟨b, a', mp', hrun, hS', hg, hr, hM'⟩ := pdW_ok dn fe vis no nl lo hi names k _ _ a₀ n e _ mp hm hS
+  obtain ⟨b, a', mp', hrun, hS', hg, hr, hM'⟩ := pdoW_ok dn fe vis no nl lo hi names k _ _ a₀ n e _ mp hm hS
     he hn hnb hM
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hlc, hok, by rw [hst]; exact hS', hg, by rw [hres]; simpa using hr, mp', hM'⟩
