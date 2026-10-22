@@ -412,19 +412,6 @@ given the knot's slots at every fuel up to `n` (`KnotUpTo p n`). -/
 section specs
 variable (p : Prog) (hp : WhnfCoreProg p) (hw : WhnfCallees p) (hc : CoreCallees p)
 
-/-- **`whnf_app` refines `whnfApp`**: `vargs` the slice `(vo, vn)` at the top of the stack, the
-spine's arguments and nodes the slices `(ao, an)`, `(ao + an, an)` below it. -/
-@[refines ConRon.Arena.whnfApp]
-theorem whnfApp_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
-    (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb mode d v hd vo vn same ao an i : Word)
-    (vargs args nodes : Array EIdx) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (hv : HW v)
-    (hhd : HW hd) (hva : SpineR s₀.mem vo vn vargs) (htop : spTop s₀.mem = vo + vn)
-    (har : SpineR s₀.mem ao an args) (hno : SpineR s₀.mem (ao + an) an nodes)
-    (hlo : ao.toNat + an.toNat + an.toNat ≤ vo.toNat) :
-    CoreSpec p (n + 1) "whnf_app" [mode, vis, d, v, hd, vo, vn, same, ao, an, i]
-      (whnfApp (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE v) (decE hd) vargs
-        (same != 0) args nodes i.toNat) decStep s₀ a₀ dn vis fe MM eb ResW := sorry
 
 end specs
 

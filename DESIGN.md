@@ -3558,6 +3558,7 @@ Word arrays (byte arrays are a separate id space: `IN` = byte array 0 is the inp
 | 128‥131 | – | `PinsR` (stub) | the pin table |
 | 132‥143 | – | `EnvR` (stub) | the environment index |
 | 144‥191 | – | argument relations (reserved) | `PMemo`, walk-local memos, `NestState` |
+| 192 | `LH` | levels' heap (per call, no relation: scratch) | level-algorithm heap, nodes `[tag, a, b]`, bump-allocated below `CTL[192]` (lane `levels`) |
 
 `CTL` words:
 
@@ -3578,6 +3579,7 @@ Word arrays (byte arrays are a separate id space: `IN` = byte array 0 is the inp
 | 96‥127 | `CoreR` (stub) | cache stamps/counts, eager depth |
 | 128‥135 | `EnvR` (stub) | environment counters |
 | 136‥191 | argument relations (reserved) | |
+| 192 | levels' heap (per call) | the heap top (lane `levels`) |
 
 A count store writes `CTL[k + (t & 1)]` (item 1). `arenaR_init` needs `CTL` ≥ 64 words; the
 reserved tiers will raise that when they get fields.
@@ -4364,8 +4366,9 @@ be asymptotically slower. con-ron at `_tmp/ref/con-ron` origin/HEAD (`proof/ConR
   writing the stack slice after the fuel-chase loop in one function: `finish` did not close the
   two-stage split; the word models `gaaLoopW`/`gaaFillW` are there).
 * `WhnfCore.lean`: `coreCallees_stub` (`inst1` at `coreWalkFuel`, `find_proj`, `fire_ok`,
-  `iota_rec_at`, and `ErecKept`: `find_proj`/`fire_ok` leave the record pool alone) and the spec
-  of `whnf_app` (a sub-lane on it; `beta_peel` is proved, `WhnfCoreApp.lean`).
+  `iota_rec_at`, and `ErecKept`: `find_proj`/`fire_ok` leave the record pool alone). `whnf_app`
+  and `beta_peel` are proved (`WhnfCoreApp.lean`, sub-lanes: the loop as named blocks, one small
+  spec each, fuel induction).
 * `WhnfBase.lean` `supKeep_twin`: `strLitSupported` keeps every stored node's view (twin-side
   store monotonicity, true, unproved).
 * `WhnfCoreProj.lean`: `reduceProjCore_refines'` (a sub-lane on it; the L function is split into
@@ -4830,6 +4833,52 @@ Next, in order (designs settled, not written):
 * Stale: `installStep`, `installDeclStep`, `checkPending(List)` wait for lane `whnf`'s `CoreR`;
   `checkDecl`/`checkShapelessFormers` are lane `induct`'s L code. Not reviewed (census paused).
 
+### The ROM interner, complete (`RomLevels`, `RomExpr`, `RomExprRef`, `RomItems`, `RomCI`, `Prelude`)
+
+* **Level lists** (`rom_levels` refines `internLevels`, `rom_lvls_go` refines `internLevelList`):
+  the handles go to a stack `RSTK` (138, top `CTL[131]`, a ROM-interner scratch) because a
+  parameter's name writes the pool between two levels; then `stk_pool` copies them to the pool
+  top and `intern_ls` interns the slice.
+* **Expressions with the twin's memo mirrored exactly** (`rom_expr` refines `internExprGo`): the
+  encoder `encExprM seen` threads the list of compound subterms the twin's `EMemo` holds and emits
+  a back reference (tag `9`, index in `seen`) exactly where the memo hits; L keeps the handles in
+  `RMEMO` (139, count `CTL[132]`). `MemoR` (count = `seen.length`, `RMEMO[k]` is `m[seen[k]]`,
+  every key in `seen`) and `encExprM_seen` (the encoder adds only subterms, so a node is never in
+  its own children's `seen`) are the whole argument. No tree comparison in L, no kernel evaluation.
+* **Item streams** (`rom_items` refines `runItems`): every constant interner's store effect is a
+  sequence of primitive interns (name, level, level list, expression, memo reset), so the ROM holds
+  `encItems` of the twin's items and one L function runs any of them. `RomCI.lean`: `Sim x m is
+  proj` (the twin's `x` runs to the state `runItems m is` reaches, `proj` of its result is the
+  memo), compositional (`Sim.bind`), proved for `internNameList`, `internLevelList`,
+  `internExprList`, `internCV`, `internCaps`, `internFire`, `internRule(s)`, `internCI`,
+  `internCIList`; `SimZ` for fresh-memo blocks; `simZ_internAllPins`. The interned *values*
+  (`IConstantInfo`s, pin variants) are not built: their consumers will read `EREC` records.
+* **`intern_all_pins` refines `internAllPins`' store effect** (`refines_part … "the store effect"`),
+  from `ArenaD` at a filled pin table (the pin reads in the walk need it; `PinsReadyP`, kept by
+  every intern: `keeps_runItems` on `cp`).
+* **The program's ROM** (`Prelude.lean`): `romData` = the pin names, then the walk's items
+  (9542 bytes); `romData_len`, `allPins_fits`, `allPins_noProj` by `decide +kernel` (seconds).
+  `internReservedPins_rom`, `internAllPins_rom`: the two startup stages for the program's ROM.
+  **The ROM carries no `Nat`-operation pin variant** (`romPins = []`): the final theorem holds at
+  every pin list, so this costs completeness (pinned `Nat.div`-family definitions are declined),
+  never soundness. A real variant (con-leche's `natOpPinSets`, ~650 KB of proof terms per dump)
+  needs a ROM loader that does not evaluate the data in the kernel.
+* Finding: chained callee posts of the form `s' = s₀` (whole state) made `finish` take ~80 s and
+  its proof term overflow the kernel's stack ("deep recursion"); `LocEq s' s₀ ∧ s'.mem = s₀.mem`
+  is instant. Also a function with many arms is better split (`rom_expr` → `rom_ex_leaf`,
+  `rom_ex_ref`, `rom_ex_one`, `rom_ex_two`, mutual by fuel, one step lemma each).
+
+### Phase A's step and phase B's check in L (`DeclStep.lean`)
+
+`install_step_go`, `check_decl` (an inductive block, kind `6`, is copied from the front's `DIND`
+into `EREC` and checked by lane `induct`'s `check_ind_decl`; every other kind goes to the stub
+`check_decl_const`), `install_header`, `install_value_guards`, `erec_ci`/`erec_vg` (records from
+the front's), `check_value_group`, on lane `induct`'s conventions (`IW`, `EREC`, the view word, the
+stub names of `IndStubs.lean`); `declStepProg_wf` (`Prog.wf` with lane `induct`'s whole stage).
+The two Checker stubs are gone; their specs stay `sorry` until the callees' specs are in. To
+prove them: `LoopR` gets `IWOK`, and the frame on `PEND`/`DECL`/`DLP` comes from the text
+(`closedW` over `declStepProg`).
+
 ### `sorry`s
 
 None new (the four remaining stub specs of `Checker.lean` are lane `pinsenv`'s).
@@ -4986,5 +5035,55 @@ helpers (`parts`: `IndParts`/`IndInstall`; `rec`: `Rec*`; `pos`: `IndPos*`) and 
   Every spec file checks in 5–40 s; a `vcgen` spec is usually one `finish (gen := 20)`, the
   relational lemmas are hand-written case splits on the model's continuations.
 
+### Landing 2 (02:20)
+* Census phase 8: **46 proven, 26 sorry (through stubs), 143 written** (landing 1: 34 / 15 / 166).
+* Lead: `struct_proj_guards_col`/`_row` (rewritten recursive; `used` read with the twin's
+  `getD _ false` — the round-1 `sl_get` aborted out of range where the twin does not),
+  `check_sum_tele_slow`, `check_sum_tele` (`IndSumSpec3.lean`), and in `IndMaster`: `erec_alloc`
+  (`erAllocW`), `wrER`, `StageR.erec` (lane `decls`' `EnvR.grow`), `erRec_stage`, `cv_new`
+  (`cvNew_stage`: the copied record decodes as `{cv with type := ty}`, `decCV_copy`); the
+  `viewSort` bridge (`viewSort_of_view`); `struct_ps_at` under `StageR`.
+* `decRL` (every slice-returning stub post) carries the pool-top bound, at helper `rec`'s request:
+  without it a stub-returned slice cannot be kept decoded across a later growing callee, nor
+  passed to `sl_cons`.
+* Master callees without a stage lemma yet, `sorry`'d as stubs in `IndStubs.lean` by helpers:
+  `pin_word(53)` (`zeroLevel`), `lvl_eq`. Both need `PinsR`/level-relation work, not a stub.
+
 ### `sorry`s
 None new: every `sorry` a refinement inherits is a stub's (`IndStubs.lean`).
+
+## The fvar-range derived column (2026-10-21, lane `exprops3`)
+
+Files: `ViewL.lean` (`packBF`, `packBF_bvar`, `packBF_fvar`), `ExprMk.lean` (`der_f`, packed `mk_*`),
+`DerRel.lean` (`fvP`, packed `cP`, `derFW_ok`, the `fvar_der*` lemmas). No `sorry`.
+
+* **No new arrays.** The five compound `XDER` words (42‥46) now hold both ranges, `packBF b f =
+  b + f * 32768` (bvar range in bits 0‥14, fvar range in bits 15‥29). The earlier brief ("five more
+  arrays or five wider ones") is settled for wider ones: array ids 49‥55 stay free, `CTL` untouched.
+  `der_b` reads `& 32767`, `der_f` reads `>> 15` (`packBF_bvar`/`packBF_fvar`, `omega`).
+* `der_f(h)`: `fvar` reads its own index from `FVREC` (`satSucc`, like `der_b`'s `bvar` arm reads
+  `BREC`), the five compound tags read the packed word, every other tag is `0`. `mk_*` write
+  `packBF (bvar range) (fvar range)`; the fvar range is a plain `max` of the children (a binder or
+  `letE` does not shift an fvar, so no `satPred`; `derOfBind`/`derOfLet`).
+* `DerR` keeps its 10 fields: `zP`/`bvP` gained the fvar conjunct, `fvar` has its own `fvP`
+  (`fvarOfData = satSucc idx`), `cP` relates the packed word. `derFW_ok`: `derFW m h =
+  fvarOfData (a.store.derived (decE h))`; `derBW_ok` re-proved for the mask.
+* `mkLam/Forall/Let_spec` are now slow (`finish (gen := 40)` with `maxHeartbeats 0`; minutes under
+  load). A future pass should split the arithmetic out of `finish`.
+
+### Not done (carry over)
+
+* `abstract1Go`: the cut-off is `fvarB ≤ d` where `fvarB` falls back to `fr_memo` on the saturated
+  branch (not the raw field read of `lift`/`inst1`). L: `fvar_b(h) = x := der_f(h); if x == 32767
+  { x := fr_memo(h) }`. Its refinement needs `DerR` kept across `fr_memo`: a model-level write set
+  for `frW`/`frNodeW` (induction, `msetG_frame frSch` at each miss; `frNodeW_app` … exist). The memo
+  `abs1C` (key `(h, k)`, `lfKey`) is array 49, `CTL[48/49]`: do NOT add it to `MemosR` without also
+  clearing it in `scratch_enter` (`Scratch.lean` lists the four memo clears; `enterScratch` sets
+  `Memos.empty`); a separate `Abs1R`/`ArenaA := ArenaD ∧ Abs1R` tier avoids that. The `fvar` leaf
+  arm needs `.viewFVarIdx` (not `.view`): `getFVarIdx` is `(fvars.node? idx).map (·.idx)`, so a
+  `viewFVarIdx_tier` + `view_fvaridx` pair copying `view_tier`/`view_fvar_idx` suffices. Draft
+  (model, L code, specs, dispatcher, five arm proofs, entry) was written and the model/L/specs
+  built, then lost in the machine restart; `Inst1*.lean` with `d ↦ k`, `v ↦ d` is the template.
+* `instantiateListGo`/`instantiateList`: untouched (pool-slice reader; `PoolSlice.lean` already has
+  the word-slice lemmas).
+None but stubs': `IndStubs.lean`'s stub specs, plus the two master callees above (listed there).

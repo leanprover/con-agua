@@ -1724,4 +1724,96 @@ theorem structProjGuardsRow_refines (p : Prog) (hgd : p.lookup "sl_getd" = some 
   obtain ⟨hok, hst', hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst']; exact hS', hg, by rw [hres]; exact hd, ht⟩
 
+/-! ## `struct_ps_at` under the stage relation -/
+
+theorem psGoW_stage (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) :
+    ∀ (m m' : Mem) (a : AState) (o nP N k : Word) (r : List Word),
+    psGoW n m o nP N k = some (r, m') → StageR dn vis fe m a →
+    o.toNat + nP.toNat < 2 ^ 64 → k.toNat + N.toNat ≤ nP.toNat →
+    ∃ xs a', (structPsAt.go o.toNat nP.toNat N.toNat k.toNat).run a = .ok (xs, a') ∧
+      StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+      decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some xs ∧
+      (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
+  induction n with
+  | zero => intro m m' a o nP N k r h; simp [psGoW] at h
+  | succ n ih =>
+    intro m m' a o nP N k r h hS hon hkN
+    by_cases hN : N = 0
+    · subst hN
+      rw [psGoW_nil n m o nP 0 k rfl] at h
+      cases h0 : allocW m 0 with
+      | none => rw [h0] at h; cases h
+      | some x =>
+      obtain ⟨q, m1⟩ := x
+      rw [h0, psK0_some] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨hS1, hg1, hq, htop⟩ := allocW_stage h0 hS
+      exact ⟨[], a, by simp [structPsAt.go]; rfl, hS1, hg1, by simp [decHL, hslice?], by simp [htop, hq]⟩
+    · rw [psGoW_cons n m o nP N k hN] at h
+      cases hI : binternW m (o + nP - 1 - k) with
+      | none => rw [hI] at h; simp [psK1] at h
+      | some bm =>
+      obtain ⟨b, m1⟩ := bm
+      rw [hI] at h
+      by_cases hb : 4294967296 ≤ b
+      · rw [psK1_big n m1 o nP N k b hb] at h; simp at h
+      rw [psK1_ok n m1 o nP N k b hb] at h
+      have hb32 : b.toNat < 2 ^ 32 := by have : ¬ (4294967296 : Nat) ≤ b.toNat := hb; omega
+      have hN1 : 1 ≤ N.toNat := by
+        have : N.toNat ≠ 0 := fun h0 => hN (UInt64.toNat_inj.mp (by simpa using h0))
+        omega
+      obtain ⟨a1, hrun1, hS1, hg1⟩ := internBVar_stage hS _ hI
+      cases hr : psGoW n m1 o nP (N - 1) (k + 1) with
+      | none => rw [hr] at h; simp [psK2] at h
+      | some rm =>
+      obtain ⟨r2, m2⟩ := rm
+      rw [hr, psK2_some] at h
+      have hk1 : (k + 1).toNat = k.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      have hN1' : (N - 1).toNat = N.toNat - 1 := by rw [UInt64.toNat_sub]; simp; omega
+      obtain ⟨xs, a2, hrun2, hS2, hg2, hd2, ht2⟩ :=
+        ih m1 m2 a1 o nP (N - 1) (k + 1) r2 hr hS1 hon (by rw [hk1, hN1']; omega)
+      cases hcw : consW n m2 b (r2.headD 0) (r2.tail.headD 0) with
+      | none => rw [hcw] at h; simp [psK3] at h
+      | some rm3 =>
+      obtain ⟨r3, m3⟩ := rm3
+      rw [hcw, psK3_some] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage hcw hS2 (Nat.le_of_eq ht2) hb32 hd2
+      refine ⟨decE b :: xs, a2, ?_, hS3, (hg1.trans hg2).trans hg3, by simpa [decE_eq] using hd3,
+        by simpa using ht3⟩
+      have hu : (o + nP - 1 - k).toNat = o.toNat + nP.toNat - 1 - k.toNat := by
+        rw [UInt64.toNat_sub, UInt64.toNat_sub, UInt64.toNat_add]; simp; omega
+      have hNs : N.toNat = (N.toNat - 1) + 1 := by omega
+      rw [hNs]
+      simp only [structPsAt.go]
+      rw [StateT.run_bind, ← hu, hrun1]
+      simp only [bind, Except.bind]
+      rw [← hk1, ← hN1']
+      simp only [StateT.run] at hrun2
+      simp only [StateT.bind, StateT.run, hrun2]
+      rfl
+
+theorem psAtW_stage (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat)
+    (m m' : Mem) (a : AState) (o nP : Word) (r : List Word)
+    (h : psAtW n m o nP = some (r, m')) (hS : StageR dn vis fe m a) (hon : o.toNat + nP.toNat < 2 ^ 64) :
+    ∃ xs a', (structPsAt o.toNat nP.toNat).run a = .ok (xs, a') ∧
+      StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+      decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some xs ∧
+      (r.headD 0).toNat + (r.tail.headD 0).toNat = iwTop m' := by
+  cases n with
+  | zero => cases h
+  | succ n =>
+    rw [psAtW_succ] at h
+    cases hg : psGoW n m o nP nP 0 with
+    | none => rw [hg] at h; cases h
+    | some x =>
+    obtain ⟨r0, m0⟩ := x
+    rw [hg, psK3_some] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨xs, a', hrun, hS', hgr, hd, ht⟩ := psGoW_stage dn vis fe n m m0 a o nP nP 0 r0 hg hS hon (by simp)
+    exact ⟨xs, a', by simpa [structPsAt] using hrun, hS', hgr, by simpa using hd, by simpa using ht⟩
+
 end L.Ind
