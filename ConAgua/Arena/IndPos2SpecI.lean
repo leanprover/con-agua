@@ -277,7 +277,8 @@ include hl
 
 /-- **`nest_inst_type` refines `nestInstType`** (through the `strip_pis`/`inst_lp_fast`/
 `instantiate1_fast`/`lvl_eq` stubs; the key's `ds` slice ends below the top, the `nest_occ` memo well-formed in every stage state). -/
-@[refines ConRon.Arena.nestInstType]
+-- untagged (lane indproofs2): assumes a memo relation in every stage state (`∀ m a, StageR … → ∃ mp, …MR m mp`), not satisfiable (DESIGN.md, landing 9)
+-- @[refines ConRon.Arena.nestInstType]
 theorem nestInstType_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis ctx hi key : Word) (c : NestCtx) (kk : NestKey) (hS : StageR dn vis fe s₀.mem a₀)
     (hU : UCtx dn vis fe s₀.mem ctx c) (hk : decNK s₀.mem key.toNat = some kk)

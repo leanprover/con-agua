@@ -561,7 +561,8 @@ include hl hc he hcv
 
 /-- **`nest_root_canon` refines `nestRootCanon`** (through `inst_lp_fast`'s and `nest_canon_crest`'s
 stubs; the `replace_apps` memo well-formed in every stage state). -/
-@[refines ConRon.Arena.nestRootCanon]
+-- untagged (lane indproofs2): assumes a memo relation in every stage state (`∀ m a, StageR … → ∃ mp, …MR m mp`), not satisfiable (DESIGN.md, landing 9)
+-- @[refines ConRon.Arena.nestRootCanon]
 theorem nestRootCanon_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis ctx cv : Word) (c : NestCtx) (cvv : IConstantVal) (hS : StageR dn vis fe s₀.mem a₀)
     (hcx : decCtx s₀.mem ctx.toNat = some c) (hin : CtxIn s₀.mem ctx.toNat (· < iwTop s₀.mem))
@@ -734,7 +735,8 @@ include hl
 
 /-- **`nest_uniform_ok` refines `nestUniformOk`** (through `nest_root_canon`'s stubs; the
 `replace_apps` and `nest_occ` memos well-formed in every stage state). -/
-@[refines ConRon.Arena.nestUniformOk]
+-- untagged (lane indproofs2): assumes a memo relation in every stage state (`∀ m a, StageR … → ∃ mp, …MR m mp`), not satisfiable (DESIGN.md, landing 9)
+-- @[refines ConRon.Arena.nestUniformOk]
 theorem nestUniformOk_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis ctx cv : Word) (c : NestCtx) (cvv : IConstantVal) (hS : StageR dn vis fe s₀.mem a₀)
     (hcx : decCtx s₀.mem ctx.toNat = some c) (hin : CtxIn s₀.mem ctx.toNat (· < iwTop s₀.mem))

@@ -316,7 +316,8 @@ include hl hc hp
 
 /-- **`nest_uniform` refines `nestUniform`** (through `nest_root_canon`'s stubs; the `replace_apps`
 and `nest_occ` memos well-formed in every stage state). -/
-@[refines ConRon.Arena.nestUniform]
+-- untagged (lane indproofs2): assumes a memo relation in every stage state (`∀ m a, StageR … → ∃ mp, …MR m mp`), not satisfiable (DESIGN.md, landing 9)
+-- @[refines ConRon.Arena.nestUniform]
 theorem nestUniform_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis ctx off l : Word) (c : NestCtx) (css : List (List (IConstantVal × Nat)))
     (hS : StageR dn vis fe s₀.mem a₀) (hU : UCtx dn vis fe s₀.mem ctx c) (hhi : c.hiAt 0 < 2 ^ 64)

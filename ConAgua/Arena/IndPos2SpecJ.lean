@@ -312,7 +312,8 @@ include hl h2 h4 hsn hp
 
 /-- **`nest_grow_group` refines `nestGrowGroup`** (through `nest_inst_type`'s stubs; the hypotheses
 of `nestInstType_refines`, every stage state's constant records' level slices below `EREC`'s top). -/
-@[refines ConRon.Arena.nestGrowGroup]
+-- untagged (lane indproofs2): assumes a memo relation in every stage state (`∀ m a, StageR … → ∃ mp, …MR m mp`), not satisfiable (DESIGN.md, landing 9)
+-- @[refines ConRon.Arena.nestGrowGroup]
 theorem nestGrowGroup_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
     (fe : IFEnv) (vis ctx hi us dO dL cO cL gO gL : Word) (c : NestCtx) (ds : List EIdx) (cs : List NIdx)
     (grp : List (NIdx × EIdx)) (hS : StageR dn vis fe s₀.mem a₀) (hU : UCtx dn vis fe s₀.mem ctx c)

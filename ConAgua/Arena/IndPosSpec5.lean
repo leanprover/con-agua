@@ -402,7 +402,8 @@ include L
 
 /-- **`nest_crest` refines `nestCrest`** (through the stubs below `nest_canon_crest` and `mk_app_n`;
 `replace_apps`' memo well-formed at every stage memory, as `nest_canon_crest` needs). -/
-@[refines ConRon.Arena.nestCrest]
+-- untagged (lane indproofs2): assumes a memo relation in every stage state (`∀ m a, StageR … → ∃ mp, …MR m mp`), not satisfiable (DESIGN.md, landing 9)
+-- @[refines ConRon.Arena.nestCrest]
 theorem nestCrest_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
     (vis no nl us dO dL hO hL cty : Word) (names : List NIdx) (ds holes : List EIdx)
     (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word) (hS : StageR dn vis fe s₀.mem a₀) (hcty : H cty)
