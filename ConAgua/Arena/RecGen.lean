@@ -87,14 +87,13 @@ def classMinorSlotL : FunDecl := lfn (rd, c, cc) locals (cnt, rS, rOff, rLen) {
 /-- `classFieldsOf` helper: the count and (if one) the class of the hits of `ihs` at field `i`. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:340-361 ConRon.Arena.classFieldsOf
 @[l_impl ConRon.Arena.classFieldsOf]
-def classFieldsOfHits : FunDecl := lfn (ihsOff, ihsLen, i) locals (j, q, cnt, cls) {
-  cnt := 0;
-  cls := 0;
-  j := 0;
-  while j < ihsLen {
-    q := IW.u64[ihsOff + j];
-    if IW.u64[q] == i { cnt += 1; cls := IW.u64[q + 1] };
-    j += 1
+def classFieldsOfHits : FunDecl := lfn (ihsOff, ihsLen, i) locals (q, cnt, cls) {
+  if ihsLen == 0 { return (0, 0) };
+  q := IW.u64[ihsOff];
+  (cnt, cls) := call class_fields_of_hits(ihsOff + 1, ihsLen - 1, i);
+  if IW.u64[q] == i {
+    if cnt == 0 { return (1, IW.u64[q + 1]) };
+    return (cnt + 1, cls)
   };
   return (cnt, cls)
 }
@@ -417,15 +416,12 @@ def classRecTysOkL : FunDecl := lfn (vis, g, k, rcsOff, rcsLen, cvsOff, cvsLen, 
 /-- `classRuleOk` helper: `rbs.allM (fun b => constsResolveFFast (feR.restrictTo visT) b)`. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:561-589 ConRon.Arena.classRuleOk
 @[l_impl ConRon.Arena.classRuleOk]
-def classRuleOkDomains : FunDecl := lfn (visT, off, cnt) locals (j, b, ok) {
-  ok := 1;
-  j := 0;
-  while j < cnt {
-    b := call consts_resolve_ffast(visT, IW.u64[off + j]);
-    if b == 0 { ok := 0; break };
-    j += 1
-  };
-  return ok
+def classRuleOkDomains : FunDecl := lfn (visT, off, cnt) locals (b, r) {
+  if cnt == 0 { return 1 };
+  b := call consts_resolve_ffast(visT, IW.u64[off]);
+  if b == 0 { return 0 };
+  r := call class_rule_ok_domains(visT, off + 1, cnt - 1);
+  return r
 }
 
 /-- `class_rule_ok(visT, visR, cvR, n, gen)`: one generated rule, installed as generated. -/
@@ -561,18 +557,15 @@ def classSeedsL : FunDecl := lfn (ctx, holesOff, holesLen, msOff, msLen)
 /-- `classKeyOf` helper: `k2.ds.allM (closed under nP)`, stopping at the first open one. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:651-663 ConRon.Arena.classKeyOf
 @[l_impl ConRon.Arena.classKeyOf]
-def classKeyOfClosed : FunDecl := lfn (nP, dsOff, dsLen) locals (j, e, b, f, ok) {
-  ok := 1;
-  j := 0;
-  while j < dsLen {
-    e := IW.u64[dsOff + j];
-    b := call bvar_b(⟪CWF⟫, e);
-    if b != 0 { ok := 0; break };
-    f := call fvar_b(⟪CWF⟫, e);
-    if nP < f { ok := 0; break };
-    j += 1
-  };
-  return ok
+def classKeyOfClosed : FunDecl := lfn (nP, dsOff, dsLen) locals (e, b, f, r) {
+  if dsLen == 0 { return 1 };
+  e := IW.u64[dsOff];
+  b := call bvar_b(⟪CWF⟫, e);
+  if b != 0 { return 0 };
+  f := call fvar_b(⟪CWF⟫, e);
+  if nP < f { return 0 };
+  r := call class_key_of_closed(nP, dsOff + 1, dsLen - 1);
+  return r
 }
 
 /-- `class_key_of(nP, params.off, params.len, k)`: a class key made checkable. -/
@@ -691,14 +684,11 @@ def classFeRL : FunDecl := lfn (p, cvGsOff, cvGsLen, recClsOff, recClsLen, vis)
 /-- `genRecCheck` helper: `nestedBit || ms.any (·.member.isNone)`'s second disjunct. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:705-758 ConRon.Arena.genRecCheck
 @[l_impl ConRon.Arena.genRecCheck]
-def genRecCheckAnyNoMember : FunDecl := lfn (msOff, msLen) locals (j, m, r) {
-  r := 0;
-  j := 0;
-  while j < msLen {
-    m := IW.u64[msOff + j];
-    if IW.u64[m + 8] == 0 { r := 1; break };
-    j += 1
-  };
+def genRecCheckAnyNoMember : FunDecl := lfn (msOff, msLen) locals (m, r) {
+  if msLen == 0 { return 0 };
+  m := IW.u64[msOff];
+  if IW.u64[m + 8] == 0 { return 1 };
+  r := call gen_rec_check_any_no_member(msOff + 1, msLen - 1);
   return r
 }
 

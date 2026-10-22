@@ -5108,6 +5108,42 @@ helpers (`parts`: `IndParts`/`IndInstall`; `rec`: `Rec*`; `pos`: `IndPos*`) and 
   by pure moves into `IndPos2SpecA‥D`, `RecClassSpecA/B`, `IndSumSpec2A` (the old module imports
   its parts, names unchanged); every spec file is now below 1.4k lines.
 
+### Landing 5 (03:45): round 2, and the lane's totals
+* Census phase 8: **58 proven, 38 sorry (through stubs), 119 written, 8 todo** (lane start: 15 / 1
+  / 199); totals 411 proven / 90 sorry of 1352.
+* Round 2: helper `memo` — `mentionsConstGo`/`mentionsConst` (sorry-free), `hasLooseBVarBIns/Go/Fast`,
+  `structUsedLaterGo`/`structUsedLater`/`structUsedLaterList` (`IndSumSpec5`, `IndSumSpec7`; memo
+  relation `MemoRV` with values exactly `0`/`1`, since L tests `r1 == 1`); helper `recb` —
+  `targetMajorDefault` (through a new `intern_nanon` stub) and eight `RecGen`/`RecCheck` pieces
+  (`RecGenSpec2`, `RecCheckSpec2`); helper `install` — `IndInstall` pieces as `refines_part`
+  (`checkBlockPositivity` init/member, `blockCapsAt` pieces, `checkBlockInds` piece,
+  `checkBlockAgree` one-member body; `IndInstallSpec2‥4`). **Bug** (fixed by the lead):
+  `check_block_agree` opened member 0's telescope and aborted on `ok0 = 0` also for an empty
+  `rest`, where the twin does nothing.
+* **Lane totals.** ~95 `@[refines]`/`@[refines_part]` theorems (89 + 6) over ~100 L functions;
+  24.8k proof lines (spec files, `IndMaster`, library lemmas) against ~1.3k L lines proved, so
+  **~19 proof lines per L line**, flat across modules; the relational lemma is about two thirds.
+  L code: 778 lines added / 356 removed (loops to recursion, guards, two new helpers per loop on
+  average). Wall time 2 h 47 min (lead), 7 sonnet helpers (3 in round 1 ≈ 2 h each, 3 in round 2
+  ≈ 40 min each, plus `memo`), at most 3 at a time; each spec file checks in 5–60 s, `IndAll` (all
+  of them) ~1 min of wall time on the shared cache.
+* **Automation.** `vcgen` + one `finish (gen := 20)` proves almost every L-side spec unchanged
+  from the template (≈ 25 % of the lines); the relational lemmas are hand-written case splits on
+  the model's continuations (`cases h : callee …`, the callee's `_stage`/`RelAM` fact, the twin's
+  run rewritten step by step). `grind` was not used on twin values at all.
+* **Template changes, all rounds:** twins with no equation lemma (unfold by `Nat.brecOn` and an
+  own arm function, `whnfTelescope_eq`, helper `memo`'s `hbArm`); loops become self-recursion;
+  handle guards after master interns; master callees through `IndMaster`'s `_stage` lemmas instead
+  of stubs; `IWOK` and `decRL` strengthened so allocations and stub-returned slices survive later
+  calls; stability of decoded records across pool growth (one `_grow` lemma per decoder; a few
+  helpers took a stability hypothesis instead, listed under landing 3).
+* **Next** (lane or successor): an `env_push` word model under `StageR` (unblocks
+  `consSumCtors`, `checkStructProjTable`, `classFeR`; `envPush_refines` exists but has no memory
+  frame); `lv_leq_top`/`lvl_eq` under `StageR` (unblocks `checkStructFieldSortsI`,
+  `blockLargeElimAllowed`, removes the `lvl_eq` stub); a generic decoder-stability lemma; memo
+  well-formedness inside `StageR` (helper `pos`'s suggestion); then the remaining parents
+  (`checkSumCtor(s)`, `sumRules`, `checkBlock*`, the `nest*` positivity block, `genRecCheck`).
+
 ### The frontend's inductive lines: not hooked yet (decision)
 The hook is two lines of L (`apply_dline`'s `pl == 25` branch calling `apply_ind_line`, and
 `frontAllProg` gaining `indFieldsFns`/`indApplyFns`, which also means moving `indAllProg`'s test
@@ -5121,7 +5157,11 @@ with this template under `StateDR` (the front's relation), then hook in one step
 refinement.
 
 ### `sorry`s
-None but stubs': `IndStubs.lean`'s stub specs, plus the two master callees above (listed there).
+None but stubs': `IndStubs.lean`'s stub specs (now incl. `lvl_eq` and `intern_nanon`, master
+callees without a stage model), and two stub-level statements in `IndSumSpec5.lean` (helper
+`memo`): `bvarBCwf_spec` (`bvar_b` at `CWF` answers as the twin's `bvarB` at any plentiful fuel —
+provable about the twin once `bvar_b` lands) and `stubHbFrame` (`bvar_b`, `strip_pis` leave the `hb`
+memo alone — a write-set fact for the owning lanes).
 
 ## The fvar-range derived column (2026-10-21, lane `exprops3`)
 
