@@ -332,6 +332,7 @@ def classFormerTyL : FunDecl := lfn (vis, cvTasOff, cvTasLen, m) locals (mem, t,
       return EREC.u64[cvp + 3]
     };
     e := call intern_bvar(0);
+    if 4294967296 <= e { abort };
     return e
   };
   (f, q) := call env_find(IW.u64[m], vis);
