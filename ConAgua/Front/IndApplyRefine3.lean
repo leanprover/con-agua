@@ -267,4 +267,76 @@ theorem islice_nodup {m : Mem} {o l : Nat} (hw : ∀ c, c < l → (wd m IFL (o +
   · exact hd i i' h hi' e'
   · exact hd i' i h hi e'.symm
 
+
+/-! ## `ifl_find_last` and the twin's `ctorIx` -/
+
+theorem findLastW_facts : ∀ (n : Nat) (m : Mem) (o x j f k : Word), findLastW n m o x j = some (f, k) →
+    o.toNat + j.toNat < 2 ^ 64 →
+    (f ≠ 0 → k.toNat < j.toNat ∧ wd m IFL (o.toNat + k.toNat) = x ∧
+      ∀ k', k.toNat < k' → k' < j.toNat → wd m IFL (o.toNat + k') ≠ x) := by
+  intro n
+  induction n with
+  | zero => intro m o x j f k h; simp [findLastW] at h
+  | succ n ih =>
+    intro m o x j f k h hb
+    simp only [findLastW] at h
+    split at h
+    · cases h; intro hf; exact absurd rfl hf
+    rename_i hj0
+    have hj0' : j.toNat ≠ 0 := fun e => hj0 (UInt64.toNat_inj.mp (by simpa using e))
+    have hj1 : (j - 1).toNat = j.toNat - 1 := by
+      rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp
+    have hoj : (o + j - 1).toNat = o.toNat + (j.toNat - 1) := by
+      rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by rw [widx2 _ _ hb]; simp; omega)),
+        widx2 _ _ hb]; simp; omega
+    split at h
+    · rename_i hx
+      cases h
+      intro _
+      rw [wd_eq, hoj] at hx
+      exact ⟨by rw [hj1]; omega, by rw [hj1]; exact hx, fun k' h1 h2 => by rw [hj1] at h1; omega⟩
+    · rename_i hx
+      rw [wd_eq, hoj] at hx
+      intro hf
+      obtain ⟨i1, i2, i3⟩ := ih m o x (j - 1) f k h (by rw [hj1]; omega) hf
+      rw [hj1] at i1 i3
+      refine ⟨by omega, i2, fun k' h1 h2 => ?_⟩
+      by_cases hk : k' = j.toNat - 1
+      · subst hk; exact hx
+      · exact i3 k' h1 (by omega)
+
+/-- The twin's `ctorIx` fold: a name's entry is the index of its last occurrence. -/
+theorem ctorIx_last (l : List NIdx) : ∀ (M : Std.HashMap NIdx Nat) (c : Nat) (n : NIdx) (k : Nat)
+    (hk : k < l.length), l[k] = n → (∀ k', k < k' → (hk' : k' < l.length) → l[k'] ≠ n) →
+    ((l.foldl (fun (mi : Std.HashMap NIdx Nat × Nat) x => (mi.1.insert x mi.2, mi.2 + 1)) (M, c)).1)[n]? =
+      some (c + k) := by
+  induction l with
+  | nil => intro M c n k hk; simp at hk
+  | cons x xs ih =>
+    intro M c n k hk h1 h2
+    simp only [List.foldl_cons]
+    cases k with
+    | zero =>
+      simp only [List.getElem_cons_zero] at h1
+      subst h1
+      rw [ctorIx_absent xs _ _ _ (fun k' hk' => h2 (k' + 1) (by omega) (by simp; omega))]
+      simp [Std.HashMap.getElem?_insert]
+    | succ k =>
+      rw [ih _ _ _ k (by simp at hk; omega) (by simpa using h1)
+        (fun k' hk' hk'' => h2 (k' + 1) (by omega) (by simp; omega))]
+      congr 1; omega
+where
+  ctorIx_absent (l : List NIdx) : ∀ (M : Std.HashMap NIdx Nat) (c : Nat) (n : NIdx),
+      (∀ k (hk : k < l.length), l[k] ≠ n) →
+      ((l.foldl (fun (mi : Std.HashMap NIdx Nat × Nat) x => (mi.1.insert x mi.2, mi.2 + 1)) (M, c)).1)[n]? =
+        M[n]? := by
+    induction l with
+    | nil => intro M c n _; rfl
+    | cons x xs ih =>
+      intro M c n h
+      simp only [List.foldl_cons]
+      rw [ih _ _ _ (fun k hk => by have := h (k + 1) (by simp; omega); simpa using this)]
+      have hx : x ≠ n := by have := h 0 (by simp); simpa using this
+      simp [Std.HashMap.getElem?_insert, hx]
+
 end L.Front.Ind
