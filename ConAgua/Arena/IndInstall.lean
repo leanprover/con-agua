@@ -437,51 +437,48 @@ at the holes. -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:239-258 ConRon.Arena.checkAbsCtorSorts
 @[l_impl ConRon.Arena.checkAbsCtorSorts]
 def checkAbsCtorSortsOne : FunDecl := lfn (vis, ctx, isProp, nF, tyN, hi) locals
-    (ok, fvsO, fvsL, body, so, sl) {
+    (srt, ok, fvsO, fvsL, body, so, sl) {
+  srt := IW.u64[ctx + 9];
   (ok, fvsO, fvsL, body) := call open_pis_at_fvars_f(nF, tyN, hi);
   if ok == 0 { abort };
-  (so, sl) := call check_struct_field_sorts_i(vis, isProp, 0, IW.u64[ctx + 9], hi, fvsO, fvsL, 0, 0, nF);
+  (so, sl) := call check_struct_field_sorts_i(vis, isProp, 0, srt, hi, fvsO, fvsL, 0, 0, nF);
   return 0
 }
 
 /-- `check_abs_ctor_sorts(vis, ctx, isProp, c.off, c.len, o.off, o.len)`: the fields' universes at
 the holes, pairwise over the constructors `c` (`[cv, nF]` pointers) and their positivity normal
-forms `o` (`[k.off, k.len, e]` pointers), stopping at the shorter list. -/
+forms `o` (`[k.off, k.len, e]` pointers), stopping at the shorter list; recursion as the
+twin's. -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:239-258 ConRon.Arena.checkAbsCtorSorts
 @[l_impl ConRon.Arena.checkAbsCtorSorts]
 def checkAbsCtorSorts : FunDecl := lfn (vis, ctx, isProp, cOff, cLen, oOff, oLen) locals
-    (n, j, c, o, nF, tyN, ok, hi, u) {
-  n := cLen;
-  if oLen < n { n := oLen };
-  j := 0;
-  while j < n {
-    c := IW.u64[cOff + j];
-    o := IW.u64[oOff + j];
-    nF := IW.u64[c + 1];
-    tyN := IW.u64[o + 2];
-    ok := call all_level_params_defined(IW.u64[ctx + 2], IW.u64[ctx + 3], tyN);
-    if ok == 0 { abort };
-    hi := call nest_ctx_hi_at(ctx, 0);
-    u := call check_abs_ctor_sorts_one(vis, ctx, isProp, nF, tyN, hi);
-    j += 1
-  }
+    (c, o, ok, hi, u) {
+  if cLen == 0 { return 0 };
+  if oLen == 0 { return 0 };
+  c := IW.u64[cOff];
+  o := IW.u64[oOff];
+  ok := call all_level_params_defined(IW.u64[ctx + 2], IW.u64[ctx + 3], IW.u64[o + 2]);
+  if ok == 0 { abort };
+  hi := call nest_ctx_hi_at(ctx, 0);
+  u := call check_abs_ctor_sorts_one(vis, ctx, isProp, IW.u64[c + 1], IW.u64[o + 2], hi);
+  u := call check_abs_ctor_sorts(vis, ctx, isProp, cOff + 1, cLen - 1, oOff + 1, oLen - 1);
+  return 0
 }
 
 /-- `check_abs_ctor_sorts_all(vis, ctx, isProp, cs.off, cs.len, os.off, os.len)`:
-`check_abs_ctor_sorts` on every member's constructors, stopping at the shorter list. -/
+`check_abs_ctor_sorts` on every member's constructors, stopping at the shorter list; recursion as
+the twin's. -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:260-268 ConRon.Arena.checkAbsCtorSortsAll
 @[l_impl ConRon.Arena.checkAbsCtorSortsAll]
 def checkAbsCtorSortsAll : FunDecl := lfn (vis, ctx, isProp, csOff, csLen, osOff, osLen) locals
-    (n, j, cp, op, u) {
-  n := csLen;
-  if osLen < n { n := osLen };
-  j := 0;
-  while j < n {
-    cp := IW.u64[csOff + j];
-    op := IW.u64[osOff + j];
-    u := call check_abs_ctor_sorts(vis, ctx, isProp, IW.u64[cp], IW.u64[cp + 1], IW.u64[op], IW.u64[op + 1]);
-    j += 1
-  }
+    (cp, op, u) {
+  if csLen == 0 { return 0 };
+  if osLen == 0 { return 0 };
+  cp := IW.u64[csOff];
+  op := IW.u64[osOff];
+  u := call check_abs_ctor_sorts(vis, ctx, isProp, IW.u64[cp], IW.u64[cp + 1], IW.u64[op], IW.u64[op + 1]);
+  u := call check_abs_ctor_sorts_all(vis, ctx, isProp, csOff + 1, csLen - 1, osOff + 1, osLen - 1);
+  return 0
 }
 
 /-- `block_nest_ctx(vis, p, cvTas.off, cvTas.len)`: the walk's context — the canonical parameter
@@ -830,7 +827,7 @@ theorem indInstall_wf :
 #guard
   match run (indInstallFns ++ libFns ++ stubFns ++ masterFns ++ indInstallForeign) 100
       "check_abs_ctor_sorts" [0, 0, 0, 0, 0, 0, 0] testMem with
-  | .ok ([], _) => true
+  | .ok ([0], _) => true
   | _ => false
 
 -- `check_block_positivity_init`: a fresh zero `NestState`.
