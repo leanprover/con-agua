@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndPos2SpecK
+import ConAgua.Arena.IndSumSpec7
 
 /-! # `IndPos2`, the `nestPos` block's leaves (lane `indproofs2`, helper `pos2`): word models and
 specs of the block's non-recursive helpers (`nest_frame_mates` with the stage relation,
@@ -703,5 +704,154 @@ theorem caW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (u
       (DecB.grow (OMono.decHL _ _) hg2 hds1) hgL1 hb2 hgr2 hA2 hAb2
     refine ⟨hS', hg12.trans hg', ?_, hAb'⟩
     simpa [hcd] using hA'
+
+end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+/-! ## `nest_cont_params_closed`: the parameters have no local variables -/
+
+mutual
+def cpW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _, _ => none
+  | n + 1, m, hp, dO, dL =>
+    if dL = 0 then some ([1], m) else cpK1 n hp dO dL (bvbW n m (rdW (m.arr64 IW) dO))
+def cpK1 (n : Nat) (hp dO dL : Word) : Option (Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (bb, m1) =>
+    if bb ≠ 0 then some ([0], m1) else cpK2 n hp dO dL (stubM "fvar_b" m1 [CWF, rdW (m1.arr64 IW) dO])
+def cpK2 (n : Nat) (hp dO dL : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m2) => if hp < r.headD 0 then some ([0], m2) else cpW n m2 hp (dO + 1) (dL - 1)
+end
+
+section arms
+variable (n : Nat) (m m1 : Mem) (hp dO dL bb : Word) (r : List Word)
+theorem cpW_nil (h : dL = 0) : cpW (n + 1) m hp dO dL = some ([1], m) := by simp [cpW, h]
+theorem cpW_cons (h : ¬ dL = 0) : cpW (n + 1) m hp dO dL = cpK1 n hp dO dL (bvbW n m (rdW (m.arr64 IW) dO)) := by
+  simp [cpW, h]
+theorem cpK1_b (h : bb ≠ 0) : cpK1 n hp dO dL (some (bb, m1)) = some ([0], m1) := by simp [cpK1, h]
+theorem cpK1_ok (h : ¬ bb ≠ 0) : cpK1 n hp dO dL (some (bb, m1)) =
+    cpK2 n hp dO dL (stubM "fvar_b" m1 [CWF, rdW (m1.arr64 IW) dO]) := by simp [cpK1, h]
+theorem cpK2_out (h : hp < r.headD 0) : cpK2 n hp dO dL (some (r, m1)) = some ([0], m1) := by
+  rw [cpK2, if_pos h]
+theorem cpK2_in (h : ¬ hp < r.headD 0) : cpK2 n hp dO dL (some (r, m1)) = cpW n m1 hp (dO + 1) (dL - 1) := by
+  rw [cpK2, if_neg h]
+end arms
+attribute [ind_grind] cpW_nil cpW_cons cpK1_b cpK1_ok cpK2_out cpK2_in
+
+theorem nestContParamsClosed_spec (p : Prog) (hb : BvbProg p)
+    (hp : p.lookup "nest_cont_params_closed" = some nestContParamsClosedL) (n : Nat) :
+    ∀ (s₀ : St) (hpw dO dL : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_cont_params_closed" [hpw, dO, dL]
+    ⦃fun r s' => LocEq s' s₀ ∧ cpW n s₀.mem hpw dO dL = some ([r.headD 0], s'.mem); ⊤⦄ := by
+  induction n with
+  | zero =>
+    intro s₀ hpw dO dL
+    rw [invoke_eq _ hp]; simp only [callFn, nestContParamsClosedL]; vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ hpw dO dL
+    rw [invoke_eq _ hp]
+    simp only [callFn, nestContParamsClosedL]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        bvarBL_spec p hb n, stubM_spec p "fvar_b" n, ih] <;>
+      finish (gen := 20) [rdW_eq]
+
+/-- The twin's per-parameter test of `nestCont`. -/
+def pcF (hp : Nat) (x : EIdx) : AM Bool := do
+  let bb ← bvarB coreWalkFuel x
+  if bb != 0 then pure false
+  else do
+    let fb ← fvarB coreWalkFuel x
+    pure (decide (fb ≤ hp))
+
+/-- **`nest_cont_params_closed`** is `ds.allM (pcF hp)`. -/
+theorem cpW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hp : Word) (n : Nat)
+    (hn : n ≤ coreWalkFuel) :
+    ∀ (m m' : Mem) (a : AState) (dO dL : Word) (ds : List EIdx) (r : List Word),
+    cpW n m hp dO dL = some (r, m') → StageR dn vis fe m a →
+    decHL m dO.toNat dL.toNat = some ds → (∀ j < dL.toNat, dO.toNat + j < iwTop m) →
+    ∃ b a', (ds.allM (pcF hp.toNat)).run a = .ok (b, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+      r.headD 0 = (if b then 1 else 0) := by
+  induction n with
+  | zero => intro m m' a dO dL ds r h; simp [cpW] at h
+  | succ n ih =>
+    intro m m' a dO dL ds r h hS hds hin
+    by_cases hl0 : dL = 0
+    · rw [cpW_nil (h := hl0)] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      subst hl0
+      have : ds = [] := by simpa [decHL, hslice?] using hds.symm
+      subst this
+      exact ⟨true, a, rfl, hS, IWGrow.refl _, rfl⟩
+    rw [cpW_cons (h := hl0)] at h
+    have hl : dL.toNat ≠ 0 := fun e => hl0 (UInt64.toNat_inj.mp (by simpa using e))
+    obtain ⟨l', hl'⟩ : ∃ l', dL.toNat = l' + 1 := ⟨dL.toNat - 1, by omega⟩
+    have hds' := hds
+    simp only [decHL] at hds'
+    rw [hl', hslice?_succ] at hds'
+    simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at hds'
+    obtain ⟨x, hx, xs, hxs, rfl⟩ := hds'
+    obtain ⟨hxH, hxd⟩ := rd_iwH0E (m := m) (o := dO) (k := IdxKind.expr) (by simpa [iwH, iwA] using hx)
+    have hdO1 : (dO + 1).toNat = dO.toNat + 1 :=
+      word_add_toNat (show dO.toNat + 1 < 2 ^ 64 by have := hin 0 (by omega); have := hS.2.1; have := hS.2.2.2.1; omega)
+    have hl1 : (dL - 1).toNat = l' := by
+      rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
+    rw [List.allM_cons]
+    cases hb : bvbW n m (rdW (m.arr64 IW) dO) with
+    | none => rw [hb] at h; simp [cpK1] at h
+    | some pr =>
+    obtain ⟨bb, m1⟩ := pr
+    rw [hb] at h
+    obtain ⟨a1, hrun1, hS1, hg1, -⟩ := bvbW_stage dn vis fe hS n coreWalkFuel (by omega) _ bb hxH hb
+    rw [decE_eq, hxd] at hrun1
+    by_cases hbb : bb ≠ 0
+    · rw [cpK1_b (h := hbb)] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      refine ⟨false, a1, ?_, hS1, hg1, rfl⟩
+      have : (bb.toNat != 0) = true := by
+        simp only [bne_iff_ne, ne_eq]; intro h0; exact hbb (UInt64.toNat_inj.mp (by simpa using h0))
+      simp only [pcF, StateT.run_bind, hrun1, except_ok_bind, this, if_true]
+      rfl
+    rw [cpK1_ok (h := hbb)] at h
+    have hbb0 : (bb.toNat != 0) = false := by simp at hbb; simp [hbb]
+    have hrd1 : rdW (m1.arr64 IW) dO = rdW (m.arr64 IW) dO := by
+      simp only [rdW]; rw [hg1.2.2.1 _ (by simpa using hin 0 (by omega))]
+    rw [hrd1] at h
+    cases hst : stubM "fvar_b" m1 [CWF, rdW (m.arr64 IW) dO] with
+    | none => rw [hst] at h; simp [cpK2] at h
+    | some pr2 =>
+    obtain ⟨r2, m2⟩ := pr2
+    rw [hst] at h
+    obtain ⟨k, a2, hrun2, hS2, hg2, hk⟩ := fvarB_spec dn vis fe CWF _ hxH _ _ a1 r2 hst hS1
+    rw [CWF_eq, hxd] at hrun2
+    simp only [decW0Nat] at hk
+    by_cases hc : hp < r2.headD 0
+    · rw [cpK2_out (h := hc)] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      have hgt : ¬ k ≤ hp.toNat := by have := UInt64.lt_iff_toNat_lt.mp hc; omega
+      refine ⟨false, a2, ?_, hS2, hg1.trans hg2, rfl⟩
+      simp only [pcF, StateT.run_bind, hrun1, except_ok_bind, hbb0, Bool.false_eq_true, if_false,
+        hrun2, hgt, decide_false]
+      rfl
+    rw [cpK2_in (h := hc)] at h
+    have hle : k ≤ hp.toNat := by
+      have : ¬ hp.toNat < (r2.headD 0).toNat := fun e => hc (UInt64.lt_iff_toNat_lt.mpr e)
+      omega
+    have hg12 := hg1.trans hg2
+    obtain ⟨b, a', hrun, hS', hg', hr⟩ := ih (by omega) m2 m' a2 (dO + 1) (dL - 1) xs r h hS2
+      (by rw [hdO1, hl1, ← hxs, decHL]; exact decHL_agree (RdS.of_grow hg12) (fun j hj => by
+            have := hin (j + 1) (by omega); simp only [decHL] at *; omega))
+      (fun j hj => by rw [hdO1, hl1] at *; have := hin (j + 1) (by omega); have := hg12.1; omega)
+    refine ⟨b, a', ?_, hS', hg12.trans hg', hr⟩
+    simp only [pcF, StateT.run_bind, hrun1, except_ok_bind, hbb0, Bool.false_eq_true, if_false,
+      hrun2, hle, decide_true]
+    exact hrun
 
 end L.Ind
