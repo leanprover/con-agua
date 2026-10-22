@@ -120,8 +120,7 @@ theorem LTables.push_get_cases (t : LTables) (v : LNodeView) (d : LDer) (tr : UI
        · right; simp at h; exact h.symm
        · exact .inl h)
 
-/-- **Interning a level node**: every view of the new store is an old one or the interned one;
-on a miss (with room) the new handle has the interned view and the node count goes up by one. -/
+/-- **Interning a level node**: every view of the new store is an old one or the interned one. -/
 theorem LStore.intern_view_cases (st : LStore) (v : LNodeView) (u : LIdx) (w : LNodeView)
     (h : (st.intern v).1.view u = some w) : st.view u = some w ∨ w = v := by
   unfold LStore.intern at h
@@ -142,6 +141,8 @@ theorem LStore.intern_view_cases (st : LStore) (v : LNodeView) (u : LIdx) (w : L
       · rw [ite_eq_left hp] at h ⊢; exact LTables.push_get_cases _ _ _ _ _ _ h
       · rw [ite_eq_right hp] at h ⊢; rw [ite_eq_right hon] at h; cases h
 
+/-- On a miss (with room), the new level handle has the interned view and the node count goes up
+by one. -/
 theorem LStore.intern_miss {st : LStore} {v : LNodeView} (hf : st.find? v = none)
     (hcap : st.capOK v) :
     (st.intern v).1.view (st.intern v).2 = some v ∧
@@ -245,10 +246,110 @@ theorem lvlAll_internLNode {m : Mem} {a a' : AState} {v : LNodeView} {h : LIdx}
       exact ⟨l, hext.lvl u l hl⟩
     · exact key u hw
 
+/-- `internLNode` extends the level store. -/
+theorem internLNode_lext {a a' : AState} {v : LNodeView} {h : LIdx}
+    (hrun : (internLNode v).run a = .ok (h, a')) : LExt a.store.lss.ls a'.store.lss.ls := by
+  rcases internLNode_run_cases hrun with ⟨-, rfl⟩ | ⟨-, -, hls, -⟩
+  · exact LExt.refl _
+  · change LExt a.store.ls a'.store.ls
+    rw [hls]; exact LStore.intern_ext _ v
+
 /-- An extension that adds no level views beyond readable ones keeps `LvlAll`. -/
 theorem LvlAll.of_lext {a a' : AState} (hall : LvlAll a)
     (hv : ∀ u, (a'.store.ls.view u).isSome → (a.store.ls.view u).isSome)
     (he : LExt a.store.lss.ls a'.store.lss.ls) : LvlAll a' :=
   fun u hu => (hall u (hv u hu)).imp fun _ hl => he.lvl u _ hl
+
+/-! ## `internLsNode` -/
+
+/-- **Under `ArenaR`, a level-list cons hit names a node with the probed view.** -/
+theorem lsview_of_find {m : Mem} {a : AState} (hR : ArenaR m a) {v : LsNodeView} {i : LsIdx}
+    (hf : a.store.lss.find? v = some i) : a.store.lss.view i = some v := by
+  simp only [LsStore.find?] at hf
+  split at hf
+  · rename_i j hp
+    cases hf
+    simp only [LsTables.find?, Tbl.find?] at hp
+    obtain ⟨hn, htag, hpers⟩ := tierR_cons_hit hR.ls.2.2.1 (by decide) (by decide) hp
+    simp [LsStore.view, hpers, LsTables.get, htag, Tbl.node?, hn, lsSch]
+  · by_cases hon : a.store.lss.scratchOn = true
+    · simp only [hon, ↓reduceIte, LsTables.find?, Tbl.find?] at hf
+      obtain ⟨hn, htag, hpers⟩ := tierR_cons_hit hR.ls.2.2.2 (by decide) (by decide) hf
+      simp [LsStore.view, hpers, LsTables.get, htag, Tbl.node?, hn, lsSch, hon]
+    · simp [hon] at hf
+
+/-- On a miss (with room), the new level-list handle has the interned view. -/
+theorem LsStore.intern_miss {st : LsStore} {v : LsNodeView} (hf : st.find? v = none)
+    (hcap : st.capOK v) : (st.intern v).1.view (st.intern v).2 = some v := by
+  simp only [LsStore.capOK] at hcap
+  simp only [LsStore.find?] at hf
+  split at hf
+  · cases hf
+  · rename_i hp
+    simp only [LsStore.intern, hp]
+    by_cases hon : st.scratchOn = true
+    · simp only [hon, ↓reduceIte] at hf hcap ⊢
+      simp only [hf]
+      have hspec := LsTables.push_spec st.scr v (st.derOfView v) Idx.tierS (by decide) hcap
+      have hpp : ((st.scr.push v (st.derOfView v) Idx.tierS).2).isPersistent = false := by
+        show (_ == 0) = false
+        rw [hspec.2]; decide
+      simp only [LsStore.view, hpp]; exact hspec.1
+    · simp only [hon, Bool.false_eq_true, ↓reduceIte] at hcap ⊢
+      have hspec := LsTables.push_spec st.pers v (st.derOfView v) Idx.tierP (by decide) hcap
+      have hpp : ((st.pers.push v (st.derOfView v) Idx.tierP).2).isPersistent = true := by
+        show (_ == 0) = true
+        rw [hspec.2]; decide
+      simp only [LsStore.view, hpp]; exact hspec.1
+
+/-- `internLsNode`'s two outcomes: a cons hit (the state unchanged) or `LsStore.intern`'s push. -/
+theorem internLsNode_run_cases {a a' : AState} {v : LsNodeView} {h : LsIdx}
+    (hrun : (internLsNode v).run a = .ok (h, a')) :
+    (a.store.lss.find? v = some h ∧ a' = a) ∨
+      (a.store.lss.find? v = none ∧ a.store.lss.capOK v ∧
+        a'.store.lss = (a.store.lss.intern v).1 ∧ h = (a.store.lss.intern v).2) := by
+  unfold internLsNode at hrun
+  simp only [StateT.run_bind, StateT.run_get, pure_bind] at hrun
+  split at hrun
+  · rename_i hf
+    simp only [StateT.run_pure] at hrun
+    cases hrun
+    exact .inl ⟨hf, rfl⟩
+  · rename_i hf
+    by_cases hcap : a.store.lss.capOK v
+    · have hc := hcap
+      simp only [LsStore.capOK] at hc
+      simp only [hc, ↓reduceIte, StateT.run_bind, StateT.run_set, StateT.run_pure, pure_bind]
+        at hrun
+      cases hrun
+      exact .inr ⟨hf, hcap, rfl, rfl⟩
+    · have hc := hcap
+      simp only [LsStore.capOK] at hc
+      simp [hc, fail, throwThe, MonadExceptOf.throw, StateT.run, StateT.lift, bind, Except.bind]
+        at hrun
+
+theorem denoteLList_of_all {st : LStore} :
+    ∀ (us : List LIdx), (∀ c ∈ us, ∃ l, denoteL st c = some l) →
+      ∃ ls, denoteLList st us = some ls
+  | [], _ => ⟨[], rfl⟩
+  | u :: us, h => by
+    obtain ⟨l, hl⟩ := h u (by simp)
+    obtain ⟨ls, hls⟩ := denoteLList_of_all us (fun c hc => h c (by simp [hc]))
+    exact ⟨l :: ls, by simp [denoteLList, hl, hls, opt2]⟩
+
+/-- **Interning a level list all of whose elements read back gives a handle that reads back**,
+and extends the level-list store (old list handles keep their readbacks). `ArenaR` is used only
+at a cons hit. -/
+theorem denoteLs_internLsNode {m : Mem} {a a' : AState} {v : LsNodeView} {h : LsIdx}
+    (hR : ArenaR m a) (hel : ∀ c ∈ v, ∃ l, denoteL a.store.ls c = some l)
+    (hrun : (internLsNode v).run a = .ok (h, a')) :
+    (∃ ls, denoteLs a'.store.lss h = some ls) ∧ LsExt a.store.lss a'.store.lss := by
+  obtain ⟨ls, hls⟩ := denoteLList_of_all v hel
+  rcases internLsNode_run_cases hrun with ⟨hf, rfl⟩ | ⟨hf, hcap, hss, rfl⟩
+  · refine ⟨⟨ls, ?_⟩, LsExt.refl _⟩
+    rw [denoteLs, lsview_of_find hR hf]; exact hls
+  · rw [hss]
+    refine ⟨⟨ls, ?_⟩, LsStore.intern_ext _ v⟩
+    rw [denoteLs, LsStore.intern_miss hf hcap, LsStore.ls_intern]; exact hls
 
 end L.Arena
