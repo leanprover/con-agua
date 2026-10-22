@@ -216,3 +216,170 @@ theorem nestArity_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → O
 end census
 
 end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+/-! ## `nest_ctx_hi_at` as a word model -/
+
+/-- The model of `nest_ctx_hi_at(ctx, nf)`. -/
+def hiW (m : Mem) (ctx nf : Word) : Word := rdW (m.arr64 IW) (ctx + 4) + rdW (m.arr64 IW) (ctx + 1) + nf
+
+theorem nestCtxHiAt_specW (p : Prog) (hp : p.lookup "nest_ctx_hi_at" = some nestCtxHiAt) (n : Nat)
+    (s₀ : St) (ctx nf : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_ctx_hi_at" [ctx, nf]
+    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ r.headD 0 = hiW s₀.mem ctx nf; ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, nestCtxHiAt]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
+      finish [hiW, rdW_eq]
+
+theorem hiW_toNat {m : Mem} {ctx nf : Word} {c : NestCtx} (hc : decCtx m ctx.toNat = some c)
+    (hin : CtxIn m ctx.toNat (· < iwTop m)) (hsz : iwTop m < 2 ^ 64)
+    (hhi : c.hiAt nf.toNat < 2 ^ 64) : (hiW m ctx nf).toNat = c.hiAt nf.toNat := by
+  obtain ⟨hn, -, -, -, hnP, -⟩ := ctx_fields hc hin hsz
+  have hl := decHL_length m hn
+  simp only [NestCtx.hiAt] at hhi ⊢
+  simp only [hiW]
+  rw [UInt64.toNat_add, UInt64.toNat_add, hnP, hl]
+  omega
+
+/-- A decoded handle at `o`, as the word L reads there. -/
+theorem rd_iwH0 {k : IdxKind} {m : Mem} {o : Word} {x : Idx k} (h : iwH m o.toNat = some x) :
+    H (rdW (m.arr64 IW) o) ∧ decI (rdW (m.arr64 IW) o) = x := by
+  obtain ⟨w, hw, hl, hx⟩ := hd?_some h
+  simp only [iwA] at hw
+  simp only [rdW, hw, Option.getD_some]
+  exact ⟨hl, hx.symm⟩
+
+/-! ## `nest_ds_closed(_go)`: `ds.allM (fvarB · ≤ hi)` -/
+
+/-- The twin's per-parameter test. -/
+def dsF (hi : Nat) (x : EIdx) : AM Bool := do
+  let b ← fvarB coreWalkFuel x
+  pure (decide (b ≤ hi))
+
+mutual
+def dcGoW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _, _ => none
+  | n + 1, m, hi, off, l =>
+    if l = 0 then some ([1], m)
+    else dcK n hi off l (stubM "fvar_b" m [CWF, rdW (m.arr64 IW) off])
+def dcK (n : Nat) (hi off l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m1) => if hi < r.headD 0 then some ([0], m1) else dcGoW n m1 hi (off + 1) (l - 1)
+end
+
+section arms
+variable (n : Nat) (m m1 : Mem) (hi off l : Word) (r : List Word)
+theorem dcGoW_nil (h : l = 0) : dcGoW (n + 1) m hi off l = some ([1], m) := by simp [dcGoW, h]
+theorem dcGoW_cons (h : ¬ l = 0) : dcGoW (n + 1) m hi off l =
+    dcK n hi off l (stubM "fvar_b" m [CWF, rdW (m.arr64 IW) off]) := by simp [dcGoW, h]
+theorem dcK_out (h : hi < r.headD 0) : dcK n hi off l (some (r, m1)) = some ([0], m1) := by
+  rw [dcK, if_pos h]
+theorem dcK_in (h : ¬ hi < r.headD 0) : dcK n hi off l (some (r, m1)) = dcGoW n m1 hi (off + 1) (l - 1) := by
+  rw [dcK, if_neg h]
+end arms
+attribute [ind_grind] dcGoW_nil dcGoW_cons dcK_out dcK_in
+
+theorem dcGo_spec (p : Prog) (hp : p.lookup "nest_ds_closed_go" = some nestDsClosedGoL) (n : Nat) :
+    ∀ (s₀ : St) (hi off l : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_ds_closed_go" [hi, off, l]
+    ⦃fun r s' => LocEq s' s₀ ∧ dcGoW n s₀.mem hi off l = some ([r.headD 0], s'.mem); ⊤⦄ := by
+  induction n with
+  | zero =>
+    intro s₀ hi off l
+    rw [invoke_eq _ hp]; simp only [callFn, nestDsClosedGoL]; vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ hi off l
+    rw [invoke_eq _ hp]
+    simp only [callFn, nestDsClosedGoL]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        stubM_spec p "fvar_b" n, ih] <;>
+      finish (gen := 20) [rdW_eq]
+
+/-- The model of `nest_ds_closed(ctx, off, l)` at exec fuel `n + 1`. -/
+def dcW (n : Nat) (m : Mem) (ctx off l : Word) : Option (List Word × Mem) := dcGoW n m (hiW m ctx 0) off l
+
+theorem dc_spec (p : Prog) (hh : p.lookup "nest_ctx_hi_at" = some nestCtxHiAt)
+    (hg : p.lookup "nest_ds_closed_go" = some nestDsClosedGoL)
+    (hp : p.lookup "nest_ds_closed" = some nestDsClosedL) (n : Nat) (s₀ : St) (ctx off l : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nest_ds_closed" [ctx, off, l]
+    ⦃fun r s' => LocEq s' s₀ ∧ dcW n s₀.mem ctx off l = some ([r.headD 0], s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, nestDsClosedL]
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      nestCtxHiAt_specW p hh n, dcGo_spec p hg n] <;>
+    finish (gen := 20) [dcW]
+
+theorem dcGoW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis hi : Word) (HI : Nat)
+    (hHI : hi.toNat = HI) (n : Nat) :
+    ∀ (m m' : Mem) (a : AState) (off l : Word) (ds : List EIdx) (r : List Word),
+    dcGoW n m hi off l = some (r, m') → StageR dn vis fe m a →
+    decHL m off.toNat l.toNat = some ds → (∀ j < l.toNat, off.toNat + j < iwTop m) →
+    ∃ b a', (ds.allM (dsF HI)).run a = .ok (b, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
+      r.headD 0 = (if b then 1 else 0) := by
+  induction n with
+  | zero => intro m m' a off l ds r h; simp [dcGoW] at h
+  | succ n ih =>
+    intro m m' a off l ds r h hS hds hin
+    by_cases hl0 : l = 0
+    · rw [dcGoW_nil (h := hl0)] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      subst hl0
+      have : ds = [] := by simpa [decHL, hslice?] using hds.symm
+      subst this
+      exact ⟨true, a, rfl, hS, IWGrow.refl _, rfl⟩
+    rw [dcGoW_cons (h := hl0)] at h
+    have hl : l.toNat ≠ 0 := fun e => hl0 (UInt64.toNat_inj.mp (by simpa using e))
+    obtain ⟨l', hl'⟩ : ∃ l', l.toNat = l' + 1 := ⟨l.toNat - 1, by omega⟩
+    have hds' := hds
+    simp only [decHL] at hds'
+    rw [hl', hslice?_succ] at hds'
+    simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at hds'
+    obtain ⟨x, hx, xs, hxs, rfl⟩ := hds'
+    obtain ⟨hxH, hxd⟩ := rd_iwH0 (m := m) (o := off) (k := IdxKind.expr) (by simpa [iwH, iwA] using hx)
+    have hsz := hS.2.2.2.1
+    have hoff1 : (off + 1).toNat = off.toNat + 1 :=
+      word_add_toNat (show off.toNat + 1 < 2 ^ 64 by have := hin 0 (by omega); have := hS.2.1; omega)
+    have hl1 : (l - 1).toNat = l' := by
+      rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
+    cases hst : stubM "fvar_b" m [CWF, rdW (m.arr64 IW) off] with
+    | none => rw [hst] at h; simp [dcK] at h
+    | some pr =>
+    obtain ⟨r1, m1⟩ := pr
+    rw [hst] at h
+    obtain ⟨k, a1, hrun1, hS1, hg1, hk⟩ := fvarB_spec dn vis fe CWF _ hxH _ _ a r1 hst hS
+    rw [CWF_eq, hxd] at hrun1
+    rw [List.allM_cons]
+    by_cases hc : hi < r1.headD 0
+    · rw [dcK_out (h := hc)] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      have hgt : ¬ k ≤ HI := by
+        have := UInt64.lt_iff_toNat_lt.mp hc; simp only [decW0Nat] at hk; omega
+      refine ⟨false, a1, ?_, hS1, hg1, rfl⟩
+      simp only [dsF, StateT.run_bind, hrun1, except_ok_bind, hgt, decide_false]
+      rfl
+    · rw [dcK_in (h := hc)] at h
+      have hle : k ≤ HI := by
+        have : ¬ hi.toNat < (r1.headD 0).toNat := fun e => hc (UInt64.lt_iff_toNat_lt.mpr e)
+        simp only [decW0Nat] at hk; omega
+      have hRd : RdS m m1 (· < iwTop m) := RdS.of_grow hg1
+      obtain ⟨b, a', hrun, hS', hg', hr⟩ := ih m1 m' a1 (off + 1) (l - 1) xs r h hS1
+        (by rw [hoff1, hl1, ← hxs, decHL]; exact decHL_agree hRd (fun j hj => by
+              have := hin (j + 1) (by omega); simp only [decHL] at *; omega))
+        (fun j hj => by rw [hoff1, hl1] at *; have := hin (j + 1) (by omega); have := hg1.1; omega)
+      refine ⟨b, a', ?_, hS', hg1.trans hg', hr⟩
+      simp only [dsF, StateT.run_bind, hrun1, except_ok_bind, hle, decide_true]
+      exact hrun
+
+end L.Ind
