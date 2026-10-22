@@ -286,14 +286,15 @@ def defeqSpine2L : FunDecl :=
   return r
 }
 
-/-- `defeqSpine`'s comparison on the argument slices. -/
+/-- `defeqSpine`'s comparison on the argument slices (`some true` is any answer word `≥ 2`, as
+`decO` reads it). -/
 -- con-ron: ConRon/Arena/Core.lean:2887-2913 ConRon.Arena.defeqSpine
 @[l_impl ConRon.Arena.defeqSpine]
 def spineCmpL : FunDecl :=
     lfn (mode, vis, d, n, us, n2, us2, ao, an, bo, bn) locals (z, r) {
   if n == n2 && an == bn {
     z := call lvls_eq_c(us, us2);
-    if z == 2 {
+    if 2 <= z {
       r := call defeq_list_rev(mode, vis, d, ao, an, bo, bn);
       return r
     }
