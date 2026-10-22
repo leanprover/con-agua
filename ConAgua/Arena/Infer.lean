@@ -508,10 +508,12 @@ def inferBodyL : FunDecl := lfn (mode, vis, d, e) locals (g, x1, x2, x3, su, r) 
   abort
 }
 
-/-- The io body's `.forallE` clause (chained, one binder). -/
+/-- The io body's `.forallE` clause (chained, one binder). The depth capacity: the body runs at
+`d + 1`, which must not wrap (the twin's depth is a `Nat`). -/
 -- con-ron: ConRon/Arena/Core.lean:2802-2874 ConRon.Arena.inferBodyIO
 @[l_impl ConRon.Arena.inferBodyIO]
 def inferForallIOL : FunDecl := lfn (mode, vis, d, ty, body) locals (tt, hh, t, i, u, fv, ob, bt, v, iu, r) {
+  if d + 1 == 0 { abort };
   tt := call infer_io(mode, vis, d, ty);
   hh := call whnf(mode, vis, d, tt);
   if hh >> 28 != 2 { abort };
@@ -529,10 +531,11 @@ def inferForallIOL : FunDecl := lfn (mode, vis, d, ty, body) locals (tt, hh, t, 
   return r
 }
 
-/-- The io body's `.lam` clause (no domain-sort run). -/
+/-- The io body's `.lam` clause (no domain-sort run; the depth capacity as `infer_forall_io`'s). -/
 -- con-ron: ConRon/Arena/Core.lean:2802-2874 ConRon.Arena.inferBodyIO
 @[l_impl ConRon.Arena.inferBodyIO]
 def inferLamIOL : FunDecl := lfn (mode, vis, d, ty, body) locals (fv, ob, bt, r) {
+  if d + 1 == 0 { abort };
   fv := call intern_fvar(d, ty);
   ob := call inst1(body, fv, 0);
   bt := call infer_io(mode, vis, d + 1, ob);
