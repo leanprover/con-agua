@@ -921,12 +921,25 @@ def structEtaCertL : FunDecl := lfn (mode, vis, d, a, b) locals (s, tb, wtb, r) 
   return r
 }
 
-/-- con-ron: ConRon/Arena/Core.lean:1568-1597 ConRon.Arena.structUnitCert -/
+/-- `structUnitCert` once the family is certified: `b`'s type against `wta` (split off for the
+proofs). -/
+-- con-ron: ConRon/Arena/Core.lean:1568-1597 ConRon.Arena.structUnitCert
 @[l_impl ConRon.Arena.structUnitCert]
-def structUnitCertL : FunDecl :=
-    lfn (mode, vis, d, a, b) locals (top, ta, wta, hh, t, i, T, us2, f, q, to, tn, lo, uslen, rc, tb, wtb, r) {
-  ta := call infer_io(mode, vis, d, a);
-  wta := call whnf(mode, vis, d, ta);
+def structUnitTailL : FunDecl := lfn (mode, vis, d, b, wta) locals (tb, wtb, r) {
+  tb := call infer_io(mode, vis, d, b);
+  wtb := call whnf(mode, vis, d, tb);
+  if wtb >> 28 == 6 { return 0 };
+  r := call defeq(mode, vis, d, wta, wtb);
+  return r
+}
+
+/-- `structUnitCert` past `a`'s type `wta`: its head, family and spine (split off for the proofs).
+The record words are read before the first call after `env_find`, and the twin's pure tests
+(`ls_node`, `reserved_contains`) run before the tests. -/
+-- con-ron: ConRon/Arena/Core.lean:1568-1597 ConRon.Arena.structUnitCert
+@[l_impl ConRon.Arena.structUnitCert]
+def structUnitHeadL : FunDecl :=
+    lfn (mode, vis, d, b, wta) locals (top, hh, t, i, T, us2, f, q, ul, up, lpn, to, tn, lo, uslen, rc, r) {
   hh := call get_app_fn(wta);
   if hh >> 28 != 3 { return 0 };
   t := (hh >> 27) & 1;
@@ -938,19 +951,29 @@ def structUnitCertL : FunDecl :=
   (f, q) := call env_find(T, vis);
   if f == 0 { return 0 };
   if EREC.u64[q] != 3 { return 0 };
+  ul := EREC.u64[q + 9];
+  up := EREC.u64[q + 10];
+  lpn := EREC.u64[q + 3];
   top := CTL.u64[136];
   (to, tn) := call get_app_args(wta);
   CTL.u64[136] := top;
   (lo, uslen) := call ls_node(us2);
   rc := call reserved_contains(T);
-  if EREC.u64[q + 9] != 0 && rc == 0 && tn == EREC.u64[q + 10] && uslen == EREC.u64[q + 3] {
-    tb := call infer_io(mode, vis, d, b);
-    wtb := call whnf(mode, vis, d, tb);
-    if wtb >> 28 == 6 { return 0 };
-    r := call defeq(mode, vis, d, wta, wtb);
-    return r
-  };
-  return 0
+  if ul == 0 { return 0 };
+  if rc != 0 { return 0 };
+  if tn != up { return 0 };
+  if uslen != lpn { return 0 };
+  r := call struct_unit_tail(mode, vis, d, b, wta);
+  return r
+}
+
+/-- con-ron: ConRon/Arena/Core.lean:1568-1597 ConRon.Arena.structUnitCert -/
+@[l_impl ConRon.Arena.structUnitCert]
+def structUnitCertL : FunDecl := lfn (mode, vis, d, a, b) locals (ta, wta, r) {
+  ta := call infer_io(mode, vis, d, a);
+  wta := call whnf(mode, vis, d, ta);
+  r := call struct_unit_head(mode, vis, d, b, wta);
+  return r
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:1627-1635 ConRon.Arena.stuckIrrel -/
@@ -1135,7 +1158,8 @@ def defeqFns : Prog :=
    ("eta_cert", etaCertL), ("eta_ctor_shape", etaCtorShapeL),
    ("struct_eta_cert_tail", structEtaCertTailL), ("struct_eta_cert_go", structEtaCertGoL), ("struct_eta_cert_wtb", structEtaCertWtbL),
    ("struct_eta_cert_with", structEtaCertWithL),
-   ("struct_eta_cert", structEtaCertL), ("struct_unit_cert", structUnitCertL),
+   ("struct_eta_cert", structEtaCertL), ("struct_unit_tail", structUnitTailL),
+   ("struct_unit_head", structUnitHeadL), ("struct_unit_cert", structUnitCertL),
    ("stuck_irrel", stuckIrrelL), ("stuck_str", stuckStrL), ("stuck_app", stuckAppL),
    ("defeq_stuck", defeqStuckL), ("defeq_tail", defeqTailL), ("defeq_body", defeqBodyL)]
 

@@ -39,6 +39,8 @@ structure StuckProg (p : Prog) : Prop where
   setWtb : p.lookup "struct_eta_cert_wtb" = some structEtaCertWtbL
   setWith : p.lookup "struct_eta_cert_with" = some structEtaCertWithL
   setCert : p.lookup "struct_eta_cert" = some structEtaCertL
+  suTail : p.lookup "struct_unit_tail" = some structUnitTailL
+  suHead : p.lookup "struct_unit_head" = some structUnitHeadL
   sunit : p.lookup "struct_unit_cert" = some structUnitCertL
   stuckIrrel : p.lookup "stuck_irrel" = some stuckIrrelL
 
