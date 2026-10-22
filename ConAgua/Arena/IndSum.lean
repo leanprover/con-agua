@@ -54,6 +54,7 @@ def whnfTelescopeL : FunDecl := lfn (vis, i, n, e) locals (e', g, x, y, z, fv, b
   if g == 2 && n == 0 { return (0, 0, x) };
   if g == 6 && n != 0 {
     fv := call intern_fvar(i, x);
+    if 4294967296 <= fv { abort };
     b := call instantiate1_fast(⟪CWF⟫, y, fv, 0);
     (bo, bl, s) := call whnf_telescope(vis, i + 1, n - 1, b);
     (o, l) := call sl_cons(x, bo, bl);
