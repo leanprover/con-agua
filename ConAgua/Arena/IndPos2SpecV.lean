@@ -388,7 +388,8 @@ variable {p : Prog} (L : RsLook p) (n : Nat) (dn : NIdx → Option ConLeche.Name
   (hM : PosMemo dn vis fe)
 
 include L hM in
-@[refines_part ConRon.Arena.nestSeeds "the seed's fuel fold (nest_seeds_fuel)"]
+-- untagged (lane indproofs2): its section assumes `PosMemo`, not satisfiable as stated (DESIGN.md, landing 9)
+-- @[refines_part ConRon.Arena.nestSeeds "the seed's fuel fold (nest_seeds_fuel)"]
 theorem nestSeedsFuel_refines (s₀ : St) (a₀ : AState) (dO dL k f : Word) (ds : List EIdx)
     (hS : StageR dn vis fe s₀.mem a₀) (hlen : ds.length = dL.toNat)
     (hel : ∀ j < dL.toNat, ∃ w, (s₀.mem.arr64 IW)[dO.toNat + j]? = some w ∧ H w ∧ ds[j]? = some (decI w))
@@ -404,7 +405,8 @@ theorem nestSeedsFuel_refines (s₀ : St) (a₀ : AState) (dO dL k f : Word) (ds
 variable (hcs : CtorSums fe)
 include L hM hcs
 
-@[refines ConRon.Arena.nestRoot]
+-- untagged (lane indproofs2): its section assumes `PosMemo`, not satisfiable as stated (DESIGN.md, landing 9)
+-- @[refines ConRon.Arena.nestRoot]
 theorem nestRoot_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx hO hL cO cL ns oO oL : Word)
     (c : NestCtx) (holes : List EIdx) (css : List (List (IConstantVal × Nat))) (NS : NestState)
     (outss : List (List (List NestFieldKind × EIdx))) (hS : StageR dn vis fe s₀.mem a₀)
@@ -424,7 +426,8 @@ theorem nestRoot_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : 
     hhi hpn hho hhob hcl hcb hcss hns hout houtb
   exact ⟨hlc, by simpa using this⟩
 
-@[refines ConRon.Arena.nestSeeds]
+-- untagged (lane indproofs2): its section assumes `PosMemo`, not satisfiable as stated (DESIGN.md, landing 9)
+-- @[refines ConRon.Arena.nestSeeds]
 theorem nestSeeds_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx sO sL ns : Word)
     (c : NestCtx) (seeds : List (NestKey × Nat)) (NS : NestState) (hS : StageR dn vis fe s₀.mem a₀)
     (hU : UCtx dn vis fe s₀.mem ctx c) (hhi : c.hiAt 0 < 2 ^ 64) (hsl : sL.toNat = seeds.length)

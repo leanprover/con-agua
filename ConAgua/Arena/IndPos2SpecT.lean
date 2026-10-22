@@ -20,7 +20,8 @@ variable {p : Prog} (L : NbLook p) (n : Nat) (dn : NIdx → Option ConLeche.Name
   (hM : PosMemo dn vis fe) (hcs : CtorSums fe)
 include L hM hcs
 
-@[refines ConRon.Arena.nestPos]
+-- untagged (lane indproofs2): its section assumes `PosMemo`, not satisfiable as stated (DESIGN.md, landing 9)
+-- @[refines ConRon.Arena.nestPos]
 theorem nestPos_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx fu po pl dep kb e ns : Word)
     (c : NestCtx) (prog : List NestHole) (NS : NestState)
     (h0 : StageR dn vis fe s₀.mem a₀)
@@ -37,7 +38,8 @@ theorem nestPos_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : A
   have := (nbOK_all dn vis fe hM hcs n hn).1 s₀.mem s'.mem a₀ ctx fu po pl dep kb e ns c prog NS _ hm h0 h1 h2 h3
   exact ⟨hlc, by simpa using this⟩
 
-@[refines_part ConRon.Arena.nestPos "binder arm (nest_pos_bind)"]
+-- untagged (lane indproofs2): its section assumes `PosMemo`, not satisfiable as stated (DESIGN.md, landing 9)
+-- @[refines_part ConRon.Arena.nestPos "binder arm (nest_pos_bind)"]
 theorem nestPosBind_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx fu po pl dep kb w ns : Word)
     (c : NestCtx) (prog : List NestHole) (NS : NestState)
     (h0 : StageR dn vis fe s₀.mem a₀)
@@ -55,7 +57,8 @@ theorem nestPosBind_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀
   have := (nbOK_all dn vis fe hM hcs n hn).2.1 s₀.mem s'.mem a₀ ctx fu po pl dep kb w ns c prog NS _ hm h0 h1 h2 h3 h4
   exact ⟨hlc, by simpa using this⟩
 
-@[refines_part ConRon.Arena.nestPos "application arm (nest_pos_app)"]
+-- untagged (lane indproofs2): its section assumes `PosMemo`, not satisfiable as stated (DESIGN.md, landing 9)
+-- @[refines_part ConRon.Arena.nestPos "application arm (nest_pos_app)"]
 theorem nestPosApp_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx fu po pl kb hi w ns : Word)
     (c : NestCtx) (prog : List NestHole) (NS : NestState)
     (h0 : StageR dn vis fe s₀.mem a₀)
@@ -73,7 +76,8 @@ theorem nestPosApp_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ 
   have := (nbOK_all dn vis fe hM hcs n hn).2.2.1 s₀.mem s'.mem a₀ ctx fu po pl kb hi w ns c prog NS _ hm h0 h1 h2 h3 h4
   exact ⟨hlc, by simpa using this⟩
 
-@[refines ConRon.Arena.nestCont]
+-- untagged (lane indproofs2): its section assumes `PosMemo`, not satisfiable as stated (DESIGN.md, landing 9)
+-- @[refines ConRon.Arena.nestCont]
 theorem nestCont_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx fu po pl kb nn us aO aL ns : Word)
     (c : NestCtx) (prog : List NestHole) (args : List EIdx) (NS : NestState)
     (h0 : StageR dn vis fe s₀.mem a₀)
@@ -93,7 +97,8 @@ theorem nestCont_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : 
   have := (nbOK_all dn vis fe hM hcs n hn).2.2.2.1 s₀.mem s'.mem a₀ ctx fu po pl kb nn us aO aL ns c prog args NS _ hm h0 h1 h2 h3 h4 h5 h6
   exact ⟨hlc, by simpa using this⟩
 
-@[refines ConRon.Arena.nestContKey]
+-- untagged (lane indproofs2): its section assumes `PosMemo`, not satisfiable as stated (DESIGN.md, landing 9)
+-- @[refines ConRon.Arena.nestContKey]
 theorem nestContKey_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx fu po pl kb nn us dO dL nPc cty ns : Word)
     (c : NestCtx) (prog : List NestHole) (ds : List EIdx) (NS : NestState)
     (h0 : StageR dn vis fe s₀.mem a₀)
@@ -114,7 +119,8 @@ theorem nestContKey_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀
   have := (nbOK_all dn vis fe hM hcs n hn).2.2.2.2.1 s₀.mem s'.mem a₀ ctx fu po pl kb nn us dO dL nPc cty ns c prog ds NS _ hm h0 h1 h2 h3 h4 h5 h6 h7
   exact ⟨hlc, by simpa using this⟩
 
-@[refines ConRon.Arena.nestContNew]
+-- untagged (lane indproofs2): its section assumes `PosMemo`, not satisfiable as stated (DESIGN.md, landing 9)
+-- @[refines ConRon.Arena.nestContNew]
 theorem nestContNew_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx fu po pl kb nn us dO dL nPc cty ns : Word)
     (c : NestCtx) (prog : List NestHole) (ds : List EIdx) (NS : NestState)
     (h0 : StageR dn vis fe s₀.mem a₀)
@@ -135,7 +141,8 @@ theorem nestContNew_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀
   have := (nbOK_all dn vis fe hM hcs n hn).2.2.2.2.2.1 s₀.mem s'.mem a₀ ctx fu po pl kb nn us dO dL nPc cty ns c prog ds NS _ hm h0 h1 h2 h3 h4 h5 h6 h7
   exact ⟨hlc, by simpa using this⟩
 
-@[refines ConRon.Arena.nestFrame]
+-- untagged (lane indproofs2): its section assumes `PosMemo`, not satisfiable as stated (DESIGN.md, landing 9)
+-- @[refines ConRon.Arena.nestFrame]
 theorem nestFrame_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx fu po pl hi us dO dL nPc gO gL ns : Word)
     (c : NestCtx) (prog : List NestHole) (ds : List EIdx) (grp : List (NIdx × EIdx)) (NS : NestState)
     (h0 : StageR dn vis fe s₀.mem a₀)
@@ -157,7 +164,8 @@ theorem nestFrame_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ :
   have := (nbOK_all dn vis fe hM hcs n hn).2.2.2.2.2.2.1 s₀.mem s'.mem a₀ ctx fu po pl hi us dO dL nPc gO gL ns c prog ds grp NS _ hm h0 h1 h2 h3 h4 h5 h6 h7 h8 h9
   exact ⟨hlc, by simpa using this⟩
 
-@[refines ConRon.Arena.nestCtors]
+-- untagged (lane indproofs2): its section assumes `PosMemo`, not satisfiable as stated (DESIGN.md, landing 9)
+-- @[refines ConRon.Arena.nestCtors]
 theorem nestCtors_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL : Word)
     (c : NestCtx) (prog : List NestHole) (ds : List EIdx) (names : List NIdx) (holes : List EIdx) (cs : List (IConstantVal × Nat)) (NS : NestState) (outs : List (List NestFieldKind × EIdx))
     (h0 : StageR dn vis fe s₀.mem a₀)
@@ -180,7 +188,8 @@ theorem nestCtors_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ :
   have := (nbOK_all dn vis fe hM hcs n hn).2.2.2.2.2.2.2.1 s₀.mem s'.mem a₀ ctx root fu po pl hi us dO dL no nl hO hL cO cL ns oO oL c prog ds names holes cs NS outs _ hm h0 h1 h2 h3 h4 h5 h6 h7 h8
   exact ⟨hlc, by simpa using this⟩
 
-@[refines_part ConRon.Arena.nestCtors "one constructor (nest_ctors_one)"]
+-- untagged (lane indproofs2): its section assumes `PosMemo`, not satisfiable as stated (DESIGN.md, landing 9)
+-- @[refines_part ConRon.Arena.nestCtors "one constructor (nest_ctors_one)"]
 theorem nestCtorsOne_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx root fu po pl hi us dO dL no nl hO hL cv nF ns : Word)
     (c : NestCtx) (prog : List NestHole) (ds : List EIdx) (names : List NIdx) (holes : List EIdx) (cvv : IConstantVal) (NS : NestState)
     (h0 : StageR dn vis fe s₀.mem a₀)
@@ -201,7 +210,8 @@ theorem nestCtorsOne_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a�
   have := (nbOK_all dn vis fe hM hcs n hn).2.2.2.2.2.2.2.2.1 s₀.mem s'.mem a₀ ctx root fu po pl hi us dO dL no nl hO hL cv nF ns c prog ds names holes cvv NS _ hm h0 h1 h2 h3 h4 h5
   exact ⟨hlc, by simpa using this⟩
 
-@[refines_part ConRon.Arena.nestCtors "field walk (nest_ctors_walk)"]
+-- untagged (lane indproofs2): its section assumes `PosMemo`, not satisfiable as stated (DESIGN.md, landing 9)
+-- @[refines_part ConRon.Arena.nestCtors "field walk (nest_ctors_walk)"]
 theorem nestCtorsWalk_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx root fu po pl hi nF crest ns : Word)
     (c : NestCtx) (prog : List NestHole) (NS : NestState)
     (h0 : StageR dn vis fe s₀.mem a₀)
@@ -221,7 +231,8 @@ theorem nestCtorsWalk_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a�
   have := (nbOK_all dn vis fe hM hcs n hn).2.2.2.2.2.2.2.2.2.1 s₀.mem s'.mem a₀ ctx root fu po pl hi nF crest ns c prog NS _ hm h0 h1 h2 h3
   exact ⟨hlc, by simpa using this⟩
 
-@[refines ConRon.Arena.nestFields]
+-- untagged (lane indproofs2): its section assumes `PosMemo`, not satisfiable as stated (DESIGN.md, landing 9)
+-- @[refines ConRon.Arena.nestFields]
 theorem nestFields_refines (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState) (ctx fu po pl base nF j cur ns kO kL dO dL : Word)
     (c : NestCtx) (prog : List NestHole) (NS : NestState) (ks : List NestFieldKind) (nds : List EIdx)
     (h0 : StageR dn vis fe s₀.mem a₀)
