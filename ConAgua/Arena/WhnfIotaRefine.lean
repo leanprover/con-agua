@@ -270,4 +270,96 @@ theorem recRuleK_refines' (p : Prog) (hp : p.lookup "rec_rule_k" = some recRuleK
     | [x], hl => simp at hl; omega
     | _ :: _ :: _, _ => simp
 
+/-! ## Pure reads -/
+
+/-- **A run that reads only**: the twin's run leaves the state as it was, and the L run the
+memory. -/
+theorem CoreRef.of_pure {α : Type} [Inhabited α] {T : AM α} {a₀ : AState} {dec : List Word → α}
+    {dn : NIdx → Option ConLeche.Name} {m₀ m : Mem} {vis : Word} {fe : IFEnv} {M : ModeMaps}
+    {eb : Word} {r : List Word} {ok : List Word → Prop} {v : α}
+    (hS : CoreS dn m₀ a₀ vis fe M eb) (hrun : T.run a₀ = .ok (v, a₀)) (hm : m = m₀)
+    (hv : v = dec r) (hr : ok r) : CoreRef T a₀ dec dn m₀ vis fe M eb r m ok := by
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  subst hm
+  exact ⟨hok, by rw [hst]; exact ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩, by rw [hres, hv], hr⟩
+
+/-! ## `is_str_lit(h)` -/
+
+/-- Model of `is_str_lit`. -/
+def islW (m : Mem) (h : Word) : Option Word :=
+  if h >>> 28 ≠ 8 then some 0
+  else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
+  else if rdW (m.arr64 CTL) (2 + tierW h) ≤ idxW h then none
+  else some (if rdW (m.arr64 REC) (idxW h * 8 + tierW h * 4) = 1 then 1 else 0)
+
+theorem isStrLit_spec (p : Prog) (hp : p.lookup "is_str_lit" = some isStrLitL) (k : Nat)
+    (s₀ : St) (h : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p k) "is_str_lit" [h]
+    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ islW s₀.mem h = some (r.headD 0); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, isStrLitL]
+  cases k with
+  | zero => vcgen [exec] <;> grind
+  | succ k =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;> finish [islW, tierW, idxW]
+
+theorem viewLit_ok (m : Mem) (a : AState) (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
+    (hv : viewOK m h 2) :
+    ∃ l, a.store.viewLit (decE h) = some l ∧ RecRel m (tierW h) (idxW h) ⟨l⟩ := by
+  obtain ⟨k, hk, hkr⟩ := node_of m a h litSch RecRel litH (·.lits) _ hR.lit.2 hv.2
+  refine ⟨k.l, ?_, hkr⟩
+  simp only [EStore.viewLit, EStore.persGetLit]
+  rw [proj_tier m a hR h hh (fun t i => t.getLit i) hv.1]
+  simp only [ETables.getLit, Tbl.node?, decE_idx]
+  rw [hk]; rfl
+
+theorem decE_tag_lit (e : Word) (hh : e.toNat < 2 ^ 32) : ((decE e).tag = ETag.lit) ↔ e >>> 28 = 8 :=
+  decE_tag_eq e hh 8 (by decide)
+
+theorem isStrLit_run_not (a : AState) (e : EIdx) (h : e.tag ≠ ETag.lit) :
+    (isStrLit e).run a = .ok (false, a) := by
+  simp [isStrLit, h]; rfl
+
+theorem isStrLit_run_lit (a : AState) (e : EIdx) (h : e.tag = ETag.lit) (l : ConLeche.Literal)
+    (hl : a.store.viewLit e = some l) :
+    (isStrLit e).run a = .ok (match l with | .strVal _ => true | _ => false, a) := by
+  cases l <;> simp [isStrLit, h, viewLit, hl, StateT.run_bind, StateT.run_get] <;> rfl
+
+/-- **`is_str_lit` refines `isStrLit`.** -/
+theorem isStrLit_refines' (p : Prog) (hp : p.lookup "is_str_lit" = some isStrLitL) :
+    IsStrLitOK p := by
+  intro n s₀ a₀ dn vis fe MM eb h hS hh
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hmem, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (isStrLit_spec p hp n s₀ h)
+  refine ⟨hloc, ?_⟩
+  have hR := hS.arena.1
+  unfold islW at hW
+  by_cases h8 : h >>> 28 = 8
+  · simp only [h8, ne_eq, not_true_eq_false, ↓reduceIte] at hW
+    by_cases hv1 : tierW h ≠ 0 ∧ rdW (s₀.mem.arr64 CTL) 1 = 0
+    · simp [hv1] at hW
+    simp only [hv1, ↓reduceIte] at hW
+    by_cases hv2 : rdW (s₀.mem.arr64 CTL) (2 + tierW h) ≤ idxW h
+    · simp [hv2] at hW
+    simp only [hv2, ↓reduceIte, Option.some.injEq] at hW
+    obtain ⟨l, hl, hrel⟩ := viewLit_ok s₀.mem a₀ hR h hh ⟨hv1, UInt64.not_le.mp hv2⟩
+    refine CoreRef.of_pure hS (isStrLit_run_lit a₀ _ ((decE_tag_lit h hh).mpr h8) l hl) hmem ?_ ?_
+    · cases l with
+      | natVal N =>
+        have := hrel.1
+        show false = _
+        simp only [decBool]; rw [← hW, this]; simp
+      | strVal s =>
+        have := hrel.1
+        show true = _
+        simp only [decBool]; rw [← hW, this]; simp
+    · unfold ResH HW; rw [← hW]; split <;> decide
+  · simp only [ne_eq, h8, not_false_eq_true, ↓reduceIte, Option.some.injEq] at hW
+    refine CoreRef.of_pure hS (isStrLit_run_not a₀ _ (fun e => h8 ((decE_tag_lit h hh).mp e))) hmem ?_ ?_
+    · simp only [decBool]; rw [← hW]; rfl
+    · unfold ResH HW; rw [← hW]; decide
+
 end L.Arena
