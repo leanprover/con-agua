@@ -1,5 +1,6 @@
 import ConAgua.Arena.WhnfSpine
 import ConAgua.Arena.Env
+import ConAgua.Arena.LevelEquiv
 
 /-!
 # `whnfCore`: the knot's slot, the loop, the step, the batched β spine, projections
@@ -224,12 +225,20 @@ def whnfCoreStepProjL : FunDecl := lfn (mode, cheap, vis, d, e, sn, i, pe) local
 /-- con-ron: ConRon/Arena/Core.lean:2296-2329 ConRon.Arena.reduceProjCore -/
 @[l_impl ConRon.Arena.reduceProjCore]
 def reduceProjCoreL : FunDecl :=
-    lfn (mode, vis, d, sn, i, c) locals (top, e1, f, q, hh, t, x, k, us, ao, an, lo, usl, fok, np,
-      nf, b0, arg, ok) {
+    lfn (mode, vis, d, sn, i, c) locals (top, e1, f, q, st, r) {
   top := CTL.u64[136];
   e1 := call proj_lit_to_ctor(mode, vis, d, c);
   (f, q) := call find_proj(vis, sn, i);
   if f == 0 { return (0, 0) };
+  (st, r) := call reduce_proj_head(mode, vis, e1, q, i);
+  CTL.u64[136] := top;
+  return (st, r)
+}
+
+/-- `reduceProjCore` from the scrutinee's head on (`q` the table record): the head must be a
+constant. -/
+def reduceProjHeadL : FunDecl :=
+    lfn (mode, vis, e1, q, i) locals (hh, t, x, k, us, st, r) {
   hh := call get_app_fn(e1);
   if hh >> 28 != 3 { return (0, 0) };
   t := (hh >> 27) & 1;
@@ -238,21 +247,35 @@ def reduceProjCoreL : FunDecl :=
   if CTL.u64[18 + t] <= x { abort };
   k := CREC.u64[x * 4 + t * 2];
   us := CREC.u64[x * 4 + t * 2 + 1];
+  (st, r) := call reduce_proj_fire(mode, vis, e1, q, i, k, us);
+  return (st, r)
+}
+
+/-- `reduceProjCore` at a constant head `k.{us}`: the arguments (pushed on the stack), the
+level count, the entry's fire check, the shape conditions. -/
+def reduceProjFireL : FunDecl :=
+    lfn (mode, vis, e1, q, i, k, us) locals (ao, an, lo, usl, fok, np, nf, st, r) {
   (ao, an) := call get_app_args(e1);
   (lo, usl) := call ls_node(us);
   fok := call fire_ok(q, i, us);
   np := EREC.u64[q + 5];
   nf := EREC.u64[q + 7];
   if k == EREC.u64[q + 6] && i < nf && an == np + nf && usl == EREC.u64[q + 4] && fok != 0 {
-    b0 := call intern_bvar(0);
-    if np + i < an { arg := SPN.u64[ao + np + i] } else { arg := b0 };
-    ok := 1;
-    if mode & 1 == 0 { ok := call proj_cert(vis, k, ao, an) };
-    CTL.u64[136] := top;
-    if ok != 0 { return (1, arg) };
-    return (0, 0)
+    (st, r) := call reduce_proj_arg(mode, vis, k, ao, an, np + i);
+    return (st, r)
   };
-  CTL.u64[136] := top;
+  return (0, 0)
+}
+
+/-- `reduceProjCore`'s fire: argument `j` of the slice `(ao, an)` (else `bvar 0`), certified at
+the verified mode. -/
+def reduceProjArgL : FunDecl :=
+    lfn (mode, vis, k, ao, an, j) locals (b0, arg, ok) {
+  b0 := call intern_bvar(0);
+  if j < an { arg := SPN.u64[ao + j] } else { arg := b0 };
+  ok := 1;
+  if mode & 1 == 0 { ok := call proj_cert(vis, k, ao, an) };
+  if ok != 0 { return (1, arg) };
   return (0, 0)
 }
 
@@ -289,7 +312,8 @@ def whnfCoreFns : Prog :=
   [("whnf_core", whnfCoreL), ("whnf_core_loop", whnfCoreLoopL), ("whnf_core_step", whnfCoreStepL),
    ("whnf_core_app", whnfCoreAppL), ("whnf_core_app2", whnfCoreApp2L),
    ("whnf_app", whnfAppL), ("beta_peel", betaPeelL), ("whnf_core_step_proj", whnfCoreStepProjL),
-   ("reduce_proj_core", reduceProjCoreL), ("proj_cert", projCertL),
+   ("reduce_proj_core", reduceProjCoreL), ("reduce_proj_head", reduceProjHeadL),
+   ("reduce_proj_fire", reduceProjFireL), ("reduce_proj_arg", reduceProjArgL), ("proj_cert", projCertL),
    ("proj_lit_to_ctor", projLitToCtorL)]
 
 /-- What the specs need of a program: these functions and the ones they call by name. -/
@@ -298,12 +322,16 @@ structure WhnfCoreProg (p : Prog) : Prop where
   core : p.lookup "whnf_core" = some whnfCoreL
   loop : p.lookup "whnf_core_loop" = some whnfCoreLoopL
   step : p.lookup "whnf_core_step" = some whnfCoreStepL
+  lsn : p.lookup "ls_node" = some lsNode
   capp : p.lookup "whnf_core_app" = some whnfCoreAppL
   capp2 : p.lookup "whnf_core_app2" = some whnfCoreApp2L
   app : p.lookup "whnf_app" = some whnfAppL
   peel : p.lookup "beta_peel" = some betaPeelL
   sproj : p.lookup "whnf_core_step_proj" = some whnfCoreStepProjL
   rproj : p.lookup "reduce_proj_core" = some reduceProjCoreL
+  rphead : p.lookup "reduce_proj_head" = some reduceProjHeadL
+  rpfire : p.lookup "reduce_proj_fire" = some reduceProjFireL
+  rparg : p.lookup "reduce_proj_arg" = some reduceProjArgL
   cert : p.lookup "proj_cert" = some projCertL
   plit : p.lookup "proj_lit_to_ctor" = some projLitToCtorL
   wcf : p.lookup "wc_find" = some (memoFindG wcSch)
@@ -356,6 +384,13 @@ def IotaRecAtOK (p : Prog) (n : Nat) : Prop :=
       (iotaRecAt (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE hd) xs xs.size)
       decOptR s₀ a₀ dn vis fe M eb ResW
 
+/-- **`find_proj` and `fire_ok` leave the record pool alone** (they intern into the expression and
+level stores); `reduce_proj_core` reads the table's words after them. -/
+def ErecKept (p : Prog) : Prop :=
+  ∀ (n : Nat) (f : FnName) (vs : List Word) (m : Mem) (r : List Word) (m' : Mem),
+    (f = "find_proj" ∨ f = "fire_ok") → callW p n f vs m = some (r, m') →
+    m'.arr64 EREC = m.arr64 EREC
+
 /-- **The callees of this file not written here.** -/
 structure CoreCallees (p : Prog) : Prop where
   inst1 : Inst1OK p
@@ -363,6 +398,7 @@ structure CoreCallees (p : Prog) : Prop where
   fireOk : FireOkOK p
   /-- `iota_rec_at` one level down from the knot at `n` (`WhnfIota.lean`). -/
   iota : ∀ n, KnotUpTo p n → IotaRecAtOK p (n + 1)
+  erec : ErecKept p
 
 /-- The callees' specs, assumed (stubs, phases 4–5; `iota_rec_at` until `WhnfIota.lean`'s
 refinement lands). -/
@@ -389,45 +425,6 @@ theorem whnfApp_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (
     CoreSpec p (n + 1) "whnf_app" [mode, vis, d, v, hd, vo, vn, same, ao, an, i]
       (whnfApp (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE v) (decE hd) vargs
         (same != 0) args nodes i.toNat) decStep s₀ a₀ dn vis fe MM eb ResW := sorry
-
-/-- **`beta_peel` refines `betaPeel t #[a] args i`.** -/
-@[refines ConRon.Arena.betaPeel]
-theorem betaPeel_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb t a ao an i : Word) (args : Array EIdx)
-    (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (ht : HW t) (ha : HW a) (har : SpineR s₀.mem ao an args)
-    (hlo : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat) :
-    CoreSpec p (n + 1) "beta_peel" [t, a, ao, an, i]
-      (betaPeel (decE t) #[decE a] args i.toNat) decStep s₀ a₀ dn vis fe MM eb ResW := sorry
-
-/-- **`whnf_core_step_proj` refines `whnfCoreStepProj`.** -/
-@[refines ConRon.Arena.whnfCoreStepProj]
-theorem whnfCoreStepProj_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F)
-    (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (MM : ModeMaps) (eb mode cheap d e sn i pe : Word)
-    (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he : HW e) (hsn : HW sn) (hpe : HW pe) :
-    CoreSpec p (n + 1) "whnf_core_step_proj" [mode, cheap, vis, d, e, sn, i, pe]
-      (whnfCoreStepProj (decMode mode) (coreKnot (decMode mode) fe id F) fe (cheap != 0) d.toNat
-        (decE e) (decI sn) i.toNat (decE pe)) decStep s₀ a₀ dn vis fe MM eb ResW := sorry
-
-/-- **`reduce_proj_core` refines `reduceProjCore`.** -/
-@[refines ConRon.Arena.reduceProjCore]
-theorem reduceProjCore_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F)
-    (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (MM : ModeMaps) (eb mode d sn i c : Word)
-    (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (hsn : HW sn) (hc' : HW c) :
-    CoreSpec p (n + 1) "reduce_proj_core" [mode, vis, d, sn, i, c]
-      (reduceProjCore (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI sn) i.toNat
-        (decE c)) decOptR s₀ a₀ dn vis fe MM eb ResW := sorry
-
-/-- **`proj_lit_to_ctor` refines `projLitToCtor`.** -/
-@[refines ConRon.Arena.projLitToCtor]
-theorem projLitToCtor_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F)
-    (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word)
-    (fe : IFEnv) (MM : ModeMaps) (eb mode d h : Word) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode)
-    (hh : HW h) :
-    CoreSpec p (n + 1) "proj_lit_to_ctor" [mode, vis, d, h]
-      (projLitToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h)) decH s₀ a₀ dn vis fe
-      MM eb := sorry
 
 end specs
 
