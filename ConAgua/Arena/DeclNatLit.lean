@@ -61,7 +61,7 @@ theorem decCI_tag {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat
   · simp at h
 
 /-- A record's constant value reads: the level-parameter count word and the type word. -/
-theorem cvWords {m : Mem} {q : Word} {cv : IConstantVal} (hsz : (m.arr64 EREC).size < 2 ^ 64)
+theorem natCvWords {m : Mem} {q : Word} {cv : IConstantVal} (hsz : (m.arr64 EREC).size < 2 ^ 64)
     (h : decCV (erecP m) (q.toNat + 1) = some cv) :
     ∃ wt, ((rdW (m.arr64 EREC) (q + 3) = 0) ↔ cv.levelParams.isEmpty = true) ∧
       rdW (m.arr64 EREC) (q + 4) = wt ∧ wt.toNat < 2 ^ 32 ∧ cv.type = decI wt ∧
@@ -189,7 +189,7 @@ theorem natIndOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstantI
       | indInfo cv caps =>
         rw [if_neg (by simpa using h3)] at hw
         have hcvd := ciCv_decodes hci (by rfl : ciCv? (.indInfo cv caps) = some cv)
-        obtain ⟨wt, hiff, hrd, hlt, hty, hstay⟩ := cvWords hsz hcvd
+        obtain ⟨wt, hiff, hrd, hlt, hty, hstay⟩ := natCvWords hsz hcvd
         by_cases hl : rdW (m.arr64 EREC) (q + 3) = 0
         · rw [if_neg (by simpa using hl)] at hw
           cases h1 : callW p k "pin_word" [54] m with
@@ -288,7 +288,7 @@ theorem natZeroOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
       | ctorInfo cv np nf =>
         rw [if_neg (by simpa using h4)] at hw
         have hcvd := ciCv_decodes hci (by rfl : ciCv? (.ctorInfo cv np nf) = some cv)
-        obtain ⟨wt, hiff, hrd, hlt, hty, hstay⟩ := cvWords hsz hcvd
+        obtain ⟨wt, hiff, hrd, hlt, hty, hstay⟩ := natCvWords hsz hcvd
         cases h1 : callW p k "pin_at" [1] m with
         | none => rw [h1] at hw; simp at hw
         | some q1 =>
@@ -408,7 +408,7 @@ theorem natSuccOk_ref (hN : NatLitProg p) (found q : Word) (o : Option IConstant
       | ctorInfo cv np nf =>
         rw [if_neg (by simpa using h4)] at hw
         have hcvd := ciCv_decodes hci (by rfl : ciCv? (.ctorInfo cv np nf) = some cv)
-        obtain ⟨wt, hiff, hrd, hlt, hty, hstay⟩ := cvWords hsz hcvd
+        obtain ⟨wt, hiff, hrd, hlt, hty, hstay⟩ := natCvWords hsz hcvd
         by_cases hl : rdW (m.arr64 EREC) (q + 3) = 0
         · rw [if_neg (by simpa using hl)] at hw
           have hisE : cv.levelParams.isEmpty = true := hiff.mp hl

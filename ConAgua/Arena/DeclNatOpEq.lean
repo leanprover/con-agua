@@ -98,7 +98,7 @@ theorem natEqCtx_specW (p : Prog) (hp : p.lookup "nat_eq_ctx" = some natEqCtx) (
     finish (gen := 20) (instances := 10000) [natEqCtxW, bW, pw]
 
 /-- The context record of the dispatch: eight handle words at `cx`, below the pool's top. -/
-def CtxR (m : Mem) (r : List Word) (c : EIdx × EIdx × EIdx × NIdx × EIdx × EIdx × EIdx × EIdx) :
+def NatCtxR (m : Mem) (r : List Word) (c : EIdx × EIdx × EIdx × NIdx × EIdx × EIdx × EIdx × EIdx) :
     Prop :=
   ∃ wx wy wz wn wsx wsy wt wf : Word, c = (decE wx, decE wy, decE wz, decI wn, decE wsx, decE wsy,
       decE wt, decE wf) ∧ H wx ∧ H wy ∧ H wz ∧ H wn ∧ H wsx ∧ H wsy ∧ H wt ∧ H wf ∧
@@ -121,7 +121,7 @@ theorem pw_of_rec {m m' : Mem} {pi : Word} (hP : PinRecAt m pi) (hI : IWOK m) (h
 theorem natEqCtx_ref (hN : NatSubProg' p) (pi d : Word) :
     CallRef p "nat_eq_ctx" [pi, d]
       (fun m a => StageR dn vis fe m a ∧ PinRecAt m pi ∧ H d)
-      (natEqCtxT d.toNat) (KeepPost dn vis fe CtxR) := by
+      (natEqCtxT d.toNat) (KeepPost dn vis fe NatCtxR) := by
   refine CallRef.of_succ fun k m a r m' ⟨hS, hP, hd⟩ hc => ?_
   have hw := callW_model (M := fun mm => natEqCtxW p k mm pi d) (natEqCtx_specW p hN.lNatEqCtx k · pi d) hc
   unfold natEqCtxW at hw
