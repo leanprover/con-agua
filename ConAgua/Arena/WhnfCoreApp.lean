@@ -8,7 +8,7 @@ import ConAgua.Arena.WhnfCoreStep
 head's growing argument vector (`whnf_app`) pushed at the top of the spine stack (`SPN` = 144,
 top `CTL[136]`).
 
-**Proved here: `betaPeel_refines'`** (the primed `betaPeel_refines`, with the added hypothesis
+**Proved here: `betaPeel_refines`** (with the hypothesis
 `hp : WhnfCoreProg p`). The method follows `WhnfCoreSlot.lean`'s loop: the loop is a named block
 (`betaPeelW`, spliced into `betaPeelL'`, `betaPeelL_eq : betaPeelL = betaPeelL' := rfl`, so
 `WhnfCore.lean` is untouched), its model `peelLoop` is by L fuel (callees through `callW`), the
@@ -761,7 +761,8 @@ theorem peelFull_ref (p : Prog) (hp : SpineProg p) (n : Nat) (ao an : Word) (arg
 
 
 /-- **`beta_peel` refines `betaPeel t #[a] args i`.** -/
-theorem betaPeel_refines' (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) (a₀ : AState)
+@[refines ConRon.Arena.betaPeel]
+theorem betaPeel_refines (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb t a ao an i : Word)
     (args : Array EIdx) (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (ht : HW t) (ha : HW a)
     (har : SpineR s₀.mem ao an args) (hlo : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat) :
