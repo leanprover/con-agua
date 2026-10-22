@@ -103,7 +103,7 @@ written at `[q, q + l)` above it. -/
 theorem nlist_rel : ∀ n : Nat, ∀ (m : Mem) (a : AState) (pm : PMemo) (f o l q : Word)
     (us : List NIdx) (r : List Word) (m' : Mem),
     ArenaD m a → PMemoR m pm → hslice? (m.arr64 EREC) o.toNat l.toNat = some us →
-    o.toNat + l.toNat ≤ q.toNat → q.toNat + l.toNat ≤ (m.arr64 EREC).size →
+    (o.toNat + l.toNat ≤ q.toNat ∨ l = 0) → q.toNat + l.toNat ≤ (m.arr64 EREC).size →
     (m.arr64 EREC).size < 2 ^ 64 → callW p n "promote_n_list" [f, o, l, q] m = some (r, m') →
     ∃ a' pm' us', (promoteNList pm f.toNat us).run a = .ok ((pm', us'), a') ∧ ArenaD m' a' ∧
       PMemoR m' pm' ∧ hslice? (m'.arr64 EREC) q.toNat l.toNat = some us' ∧
@@ -125,6 +125,7 @@ theorem nlist_rel : ∀ n : Nat, ∀ (m : Mem) (a : AState) (pm : PMemo) (f o l 
     subst hus
     refine ⟨a, pm, [], ?_, hD, hP, rfl, fun _ _ => rfl, rfl, rfl, MemFrame.refl _ _ _⟩
     rw [promoteNList_nil]; rfl
+  have hoq : o.toNat + l.toNat ≤ q.toNat := hoq.resolve_right hl
   have hl1 : l.toNat = (l - 1).toNat + 1 := by
     rw [toNat_sub1 l hl]; have := toNat_pred l hl; omega
   rw [hl1, L.Ind.hslice?_succ] at hsl
@@ -166,7 +167,7 @@ theorem nlist_rel : ∀ n : Nat, ∀ (m : Mem) (a : AState) (pm : PMemo) (f o l 
     rw [ho1, ← hus]
     exact hslice?_agree hag (by omega)
   obtain ⟨a₂, pm₂, us₂, hrun₂, hD₂, hP₂, hsl₂, hag₂, hsz₂, hcp₂, hfr₂⟩ :=
-    ih _ a₁ pm₁ f (o + 1) (l - 1) (q + 1) us₀ r₂ _ hD₁' hP₁' hsl₁ (by rw [ho1, hq1]; omega)
+    ih _ a₁ pm₁ f (o + 1) (l - 1) (q + 1) us₀ r₂ _ hD₁' hP₁' hsl₁ (.inl (by rw [ho1, hq1]; omega))
       (by rw [hq1, size_set64, hE₁]; omega) (by rw [size_set64, hE₁]; exact hsz) hcb
   refine ⟨a₂, pm₂, decI (r₁.headD 0) :: us₂, ?_, hD₂, hP₂, ?_, ?_, ?_, hcp₂.trans hcp₁, ?_⟩
   · rw [promoteNList_cons, run_bind_ok hrun₁]
@@ -189,7 +190,7 @@ written at `[q, q + l)` above it. -/
 theorem llist_rel : ∀ n : Nat, ∀ (m : Mem) (a : AState) (pm : PMemo) (f o l q : Word)
     (us : List LIdx) (r : List Word) (m' : Mem),
     ArenaD m a → PMemoR m pm → hslice? (m.arr64 EREC) o.toNat l.toNat = some us →
-    o.toNat + l.toNat ≤ q.toNat → q.toNat + l.toNat ≤ (m.arr64 EREC).size →
+    (o.toNat + l.toNat ≤ q.toNat ∨ l = 0) → q.toNat + l.toNat ≤ (m.arr64 EREC).size →
     (m.arr64 EREC).size < 2 ^ 64 → callW p n "promote_l_list" [f, o, l, q] m = some (r, m') →
     ∃ a' pm' us', (promoteLList pm f.toNat us).run a = .ok ((pm', us'), a') ∧ ArenaD m' a' ∧
       PMemoR m' pm' ∧ hslice? (m'.arr64 EREC) q.toNat l.toNat = some us' ∧
@@ -211,6 +212,7 @@ theorem llist_rel : ∀ n : Nat, ∀ (m : Mem) (a : AState) (pm : PMemo) (f o l 
     subst hus
     refine ⟨a, pm, [], ?_, hD, hP, rfl, fun _ _ => rfl, rfl, rfl, MemFrame.refl _ _ _⟩
     rw [promoteLList_nil]; rfl
+  have hoq : o.toNat + l.toNat ≤ q.toNat := hoq.resolve_right hl
   have hl1 : l.toNat = (l - 1).toNat + 1 := by
     rw [toNat_sub1 l hl]; have := toNat_pred l hl; omega
   rw [hl1, L.Ind.hslice?_succ] at hsl
@@ -252,7 +254,7 @@ theorem llist_rel : ∀ n : Nat, ∀ (m : Mem) (a : AState) (pm : PMemo) (f o l 
     rw [ho1, ← hus]
     exact hslice?_agree hag (by omega)
   obtain ⟨a₂, pm₂, us₂, hrun₂, hD₂, hP₂, hsl₂, hag₂, hsz₂, hcp₂, hfr₂⟩ :=
-    ih _ a₁ pm₁ f (o + 1) (l - 1) (q + 1) us₀ r₂ _ hD₁' hP₁' hsl₁ (by rw [ho1, hq1]; omega)
+    ih _ a₁ pm₁ f (o + 1) (l - 1) (q + 1) us₀ r₂ _ hD₁' hP₁' hsl₁ (.inl (by rw [ho1, hq1]; omega))
       (by rw [hq1, size_set64, hE₁]; omega) (by rw [size_set64, hE₁]; exact hsz) hcb
   refine ⟨a₂, pm₂, decI (r₁.headD 0) :: us₂, ?_, hD₂, hP₂, ?_, ?_, ?_, hcp₂.trans hcp₁, ?_⟩
   · rw [promoteLList_cons, run_bind_ok hrun₁]
@@ -275,7 +277,7 @@ written at `[q, q + l)` above it. -/
 theorem elist_rel : ∀ n : Nat, ∀ (m : Mem) (a : AState) (pm : PMemo) (f o l q : Word)
     (us : List EIdx) (r : List Word) (m' : Mem),
     ArenaD m a → PMemoR m pm → hslice? (m.arr64 EREC) o.toNat l.toNat = some us →
-    o.toNat + l.toNat ≤ q.toNat → q.toNat + l.toNat ≤ (m.arr64 EREC).size →
+    (o.toNat + l.toNat ≤ q.toNat ∨ l = 0) → q.toNat + l.toNat ≤ (m.arr64 EREC).size →
     (m.arr64 EREC).size < 2 ^ 64 → callW p n "promote_e_list" [f, o, l, q] m = some (r, m') →
     ∃ a' pm' us', (promoteEList pm f.toNat us).run a = .ok ((pm', us'), a') ∧ ArenaD m' a' ∧
       PMemoR m' pm' ∧ hslice? (m'.arr64 EREC) q.toNat l.toNat = some us' ∧
@@ -297,6 +299,7 @@ theorem elist_rel : ∀ n : Nat, ∀ (m : Mem) (a : AState) (pm : PMemo) (f o l 
     subst hus
     refine ⟨a, pm, [], ?_, hD, hP, rfl, fun _ _ => rfl, rfl, rfl, MemFrame.refl _ _ _⟩
     rw [promoteEList_nil]; rfl
+  have hoq : o.toNat + l.toNat ≤ q.toNat := hoq.resolve_right hl
   have hl1 : l.toNat = (l - 1).toNat + 1 := by
     rw [toNat_sub1 l hl]; have := toNat_pred l hl; omega
   rw [hl1, L.Ind.hslice?_succ] at hsl
@@ -338,7 +341,7 @@ theorem elist_rel : ∀ n : Nat, ∀ (m : Mem) (a : AState) (pm : PMemo) (f o l 
     rw [ho1, ← hus]
     exact hslice?_agree hag (by omega)
   obtain ⟨a₂, pm₂, us₂, hrun₂, hD₂, hP₂, hsl₂, hag₂, hsz₂, hcp₂, hfr₂⟩ :=
-    ih _ a₁ pm₁ f (o + 1) (l - 1) (q + 1) us₀ r₂ _ hD₁' hP₁' hsl₁ (by rw [ho1, hq1]; omega)
+    ih _ a₁ pm₁ f (o + 1) (l - 1) (q + 1) us₀ r₂ _ hD₁' hP₁' hsl₁ (.inl (by rw [ho1, hq1]; omega))
       (by rw [hq1, size_set64, hE₁]; omega) (by rw [size_set64, hE₁]; exact hsz) hcb
   refine ⟨a₂, pm₂, decI (r₁.headD 0) :: us₂, ?_, hD₂, hP₂, ?_, ?_, ?_, hcp₂.trans hcp₁, ?_⟩
   · rw [promoteEList_cons, run_bind_ok hrun₁]
@@ -366,10 +369,11 @@ include hp
 slice `(o, l)`. -/
 theorem sliceN_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f o l : Word)
     (us : List NIdx) (r : List Word) (m' : Mem) (hD : ArenaD m a) (hP : PMemoR m pm)
-    (hsl : hslice? (m.arr64 EREC) o.toNat l.toNat = some us) (hot : o.toNat + l.toNat ≤ erecTop m)
+    (hsl : hslice? (m.arr64 EREC) o.toNat l.toNat = some us)
+    (hot : o.toNat + l.toNat ≤ erecTop m ∨ l = 0)
     (hsz : (m.arr64 EREC).size < 2 ^ 64)
     (hc : callW p n "promote_slice" [0, f, o, l] m = some (r, m')) :
-    r.headD 0 = etop m ∧ erecTop m' = erecTop m + l.toNat ∧
+    r.headD 0 = etop m ∧ erecTop m' = erecTop m + l.toNat ∧ erecTop m' ≤ (m'.arr64 EREC).size ∧
     ∃ a' pm' us', (promoteNList pm f.toNat us).run a = .ok ((pm', us'), a') ∧ ArenaD m' a' ∧
       PMemoR m' pm' ∧ hslice? (m'.arr64 EREC) (erecTop m) l.toNat = some us' ∧
       (∀ i < erecTop m, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?) ∧
@@ -412,19 +416,21 @@ theorem sliceN_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f o l : Word)
   have h129 : rdW (m₂.arr64 CTL) 129 = q.headD 0 + l := by
     rw [hfr.2.1 129 (by simp)]; rw [rdW_set64]; simp [hctl]
   rw [← hm]
-  refine ⟨by rw [← hr, hq], ?_, a₂, pm₂, us₂, hrun, hD₂, hP₂, by rw [← hqv]; exact hsl₂,
+  refine ⟨by rw [← hr, hq], ?_, ?_, a₂, pm₂, us₂, hrun, hD₂, hP₂, by rw [← hqv]; exact hsl₂,
     fun i hi => by rw [hag i (by omega), hE₁], by rw [hsz₂, hE₁], hcp, ?_⟩
   · simp only [erecTop, h129, hql, hqv]
+  · simp only [erecTop, h129, hql, hsz₂, hE₁]; rw [hqv]; omega
   · exact (hf₁.mono (by simp) (by simp)).trans (hfr.mono (by simp) (by simp))
 
 /-- **`promote_slice(1, f, o, l)`**: a fresh slice at the old top, `promoteLList` of the decoded
 slice `(o, l)`. -/
 theorem sliceL_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f o l : Word)
     (us : List LIdx) (r : List Word) (m' : Mem) (hD : ArenaD m a) (hP : PMemoR m pm)
-    (hsl : hslice? (m.arr64 EREC) o.toNat l.toNat = some us) (hot : o.toNat + l.toNat ≤ erecTop m)
+    (hsl : hslice? (m.arr64 EREC) o.toNat l.toNat = some us)
+    (hot : o.toNat + l.toNat ≤ erecTop m ∨ l = 0)
     (hsz : (m.arr64 EREC).size < 2 ^ 64)
     (hc : callW p n "promote_slice" [1, f, o, l] m = some (r, m')) :
-    r.headD 0 = etop m ∧ erecTop m' = erecTop m + l.toNat ∧
+    r.headD 0 = etop m ∧ erecTop m' = erecTop m + l.toNat ∧ erecTop m' ≤ (m'.arr64 EREC).size ∧
     ∃ a' pm' us', (promoteLList pm f.toNat us).run a = .ok ((pm', us'), a') ∧ ArenaD m' a' ∧
       PMemoR m' pm' ∧ hslice? (m'.arr64 EREC) (erecTop m) l.toNat = some us' ∧
       (∀ i < erecTop m, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?) ∧
@@ -467,19 +473,21 @@ theorem sliceL_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f o l : Word)
   have h129 : rdW (m₂.arr64 CTL) 129 = q.headD 0 + l := by
     rw [hfr.2.1 129 (by simp)]; rw [rdW_set64]; simp [hctl]
   rw [← hm]
-  refine ⟨by rw [← hr, hq], ?_, a₂, pm₂, us₂, hrun, hD₂, hP₂, by rw [← hqv]; exact hsl₂,
+  refine ⟨by rw [← hr, hq], ?_, ?_, a₂, pm₂, us₂, hrun, hD₂, hP₂, by rw [← hqv]; exact hsl₂,
     fun i hi => by rw [hag i (by omega), hE₁], by rw [hsz₂, hE₁], hcp, ?_⟩
   · simp only [erecTop, h129, hql, hqv]
+  · simp only [erecTop, h129, hql, hsz₂, hE₁]; rw [hqv]; omega
   · exact (hf₁.mono (by simp) (by simp)).trans (hfr.mono (by simp) (by simp))
 
 /-- **`promote_slice(2, f, o, l)`**: a fresh slice at the old top, `promoteEList` of the decoded
 slice `(o, l)`. -/
 theorem sliceE_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f o l : Word)
     (us : List EIdx) (r : List Word) (m' : Mem) (hD : ArenaD m a) (hP : PMemoR m pm)
-    (hsl : hslice? (m.arr64 EREC) o.toNat l.toNat = some us) (hot : o.toNat + l.toNat ≤ erecTop m)
+    (hsl : hslice? (m.arr64 EREC) o.toNat l.toNat = some us)
+    (hot : o.toNat + l.toNat ≤ erecTop m ∨ l = 0)
     (hsz : (m.arr64 EREC).size < 2 ^ 64)
     (hc : callW p n "promote_slice" [2, f, o, l] m = some (r, m')) :
-    r.headD 0 = etop m ∧ erecTop m' = erecTop m + l.toNat ∧
+    r.headD 0 = etop m ∧ erecTop m' = erecTop m + l.toNat ∧ erecTop m' ≤ (m'.arr64 EREC).size ∧
     ∃ a' pm' us', (promoteEList pm f.toNat us).run a = .ok ((pm', us'), a') ∧ ArenaD m' a' ∧
       PMemoR m' pm' ∧ hslice? (m'.arr64 EREC) (erecTop m) l.toNat = some us' ∧
       (∀ i < erecTop m, (m'.arr64 EREC)[i]? = (m.arr64 EREC)[i]?) ∧
@@ -522,11 +530,148 @@ theorem sliceE_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f o l : Word)
   have h129 : rdW (m₂.arr64 CTL) 129 = q.headD 0 + l := by
     rw [hfr.2.1 129 (by simp)]; rw [rdW_set64]; simp [hctl]
   rw [← hm]
-  refine ⟨by rw [← hr, hq], ?_, a₂, pm₂, us₂, hrun, hD₂, hP₂, by rw [← hqv]; exact hsl₂,
+  refine ⟨by rw [← hr, hq], ?_, ?_, a₂, pm₂, us₂, hrun, hD₂, hP₂, by rw [← hqv]; exact hsl₂,
     fun i hi => by rw [hag i (by omega), hE₁], by rw [hsz₂, hE₁], hcp, ?_⟩
   · simp only [erecTop, h129, hql, hqv]
+  · simp only [erecTop, h129, hql, hsz₂, hE₁]; rw [hqv]; omega
   · exact (hf₁.mono (by simp) (by simp)).trans (hfr.mono (by simp) (by simp))
 
 end slices
+
+/-! ## The record pool below its top -/
+
+theorem erecP_getElem (m : Mem) (i : Nat) (hi : i < erecTop m) (hs : erecTop m ≤ (m.arr64 EREC).size) :
+    (erecP m)[i]? = (m.arr64 EREC)[i]? := by
+  simp only [erecP, Array.getElem?_extract]
+  rw [if_pos (by simp; omega)]; simp
+
+theorem erecP_size_le (m : Mem) : (erecP m).size ≤ erecTop m := by
+  simp only [erecP, Array.size_extract]; omega
+
+/-- A slice that decodes below the top reads the raw pool. -/
+theorem hslice?_erecP {m : Mem} {o l : Nat} {k : IdxKind} (hs : erecTop m ≤ (m.arr64 EREC).size)
+    (hb : o + l ≤ erecTop m) :
+    (hslice? (erecP m) o l : Option (List (Idx k))) = hslice? (m.arr64 EREC) o l :=
+  (hslice?_agree (fun i hi => (erecP_getElem m i hi hs).symm) hb).symm
+
+/-- A decoded slice of the pool below its top lies below the top. -/
+theorem hslice?_bound {a : Array Word} {o l : Nat} {k : IdxKind} {xs : List (Idx k)}
+    (h : hslice? a o l = some xs) : l = 0 ∨ o + l ≤ a.size := by
+  induction l generalizing o xs with
+  | zero => exact .inl rfl
+  | succ l ih =>
+    right
+    rw [L.Ind.hslice?_succ] at h
+    simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
+      Option.some.injEq] at h
+    obtain ⟨x, hx, xs', hxs, rfl⟩ := h
+    obtain ⟨w, hw, -⟩ := hd?_some hx
+    rcases Array.getElem?_eq_some_iff.mp hw with ⟨hh, -⟩
+    rcases ih hxs with h0 | h0
+    · subst h0; omega
+    · omega
+
+/-- **A promoted constant value's four words** (`promote_cv`'s results) denote `cv` in the pool. -/
+def CVWords (m : Mem) (r : List Word) (cv : IConstantVal) : Prop :=
+  r = [r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, r.tail.tail.tail.headD 0] ∧
+  PW (r.headD 0) ∧ decI (r.headD 0) = cv.name ∧
+  hslice? (erecP m) (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat = some cv.levelParams ∧
+  PW (r.tail.tail.tail.headD 0) ∧ decE (r.tail.tail.tail.headD 0) = cv.type
+
+section cv
+variable (p : Prog) (hp : PromoteProg p)
+include hp
+
+/-- **`promote_cv` refines `promoteCV`.** -/
+theorem cv_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f s : Word) (cv : IConstantVal)
+    (r : List Word) (m' : Mem) (hD : ArenaD m a) (hP : PMemoR m pm)
+    (hcv : decCV (erecP m) s.toNat = some cv) (hsz : (m.arr64 EREC).size < 2 ^ 64)
+    (hc : callW p n "promote_cv" [f, s] m = some (r, m')) :
+    ∃ a' pm' cv', (promoteCV pm f.toNat cv).run a = .ok ((pm', cv'), a') ∧ ArenaD m' a' ∧
+      PMemoR m' pm' ∧ CVWords m' r cv' ∧ ErecGrow m m' ∧ erecTop m' ≤ (m'.arr64 EREC).size ∧
+      cp a' = cp a ∧ MemFrame (EREC :: eArrs) (129 :: eCtl) m m' := by
+  cases n with
+  | zero => rw [callW_zero'] at hc; cases hc
+  | succ n =>
+  obtain ⟨s', rfl, -, hW⟩ := callW_triple (promoteCV_spec p hp n ⟨m, Locals.init []⟩ f s) hc
+  simp only at hW
+  simp only [decCV, hlist?, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
+    Option.some.injEq] at hcv
+  obtain ⟨nm, hnm, lps, ⟨o, ho, l, hl, hsl⟩, ty, hty, rfl⟩ := hcv
+  have raw : ∀ {i : Nat} {v : Word}, (erecP m)[i]? = some v → (m.arr64 EREC)[i]? = some v :=
+    fun h => erecP_get h
+  obtain ⟨w0, hw0, hw0l, rfl⟩ := hd?_some hnm
+  obtain ⟨w3, hw3, hw3l, rfl⟩ := hd?_some hty
+  simp only [nat?, Option.map_eq_some_iff] at ho hl
+  obtain ⟨wo, hwo, rfl⟩ := ho
+  obtain ⟨wl, hwl, rfl⟩ := hl
+  have hlt : s.toNat + 3 < (m.arr64 EREC).size := by
+    rcases Array.getElem?_eq_some_iff.mp (raw hw3) with ⟨hh, -⟩; exact hh
+  have hs1 : (s + 1).toNat = s.toNat + 1 := toNat_add1 s (by omega)
+  have hs2 : (s + 2).toNat = s.toNat + 2 := by rw [UInt64.toNat_add]; simp; omega
+  have hs3 : (s + 3).toNat = s.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
+  have hrd : cvRdW m s = [w0, wo, wl, w3] := by
+    have e0 : rdW (m.arr64 EREC) s = w0 := by rw [rdW, raw hw0]; rfl
+    have e1 : rdW (m.arr64 EREC) (s + 1) = wo := by rw [rdW, hs1, raw hwo]; rfl
+    have e2 : rdW (m.arr64 EREC) (s + 2) = wl := by rw [rdW, hs2, raw hwl]; rfl
+    have e3 : rdW (m.arr64 EREC) (s + 3) = w3 := by rw [rdW, hs3, raw hw3]; rfl
+    simp only [cvRdW, hs1, hs2, hs3, e0, e1, e2, e3]
+    rw [if_neg (by omega)]
+  rw [cvW_eq (h := by rw [hrd]; simp), hrd] at hW
+  simp only [List.headD_cons, List.tail_cons] at hW
+  cases hca : callW p n "promote_n" [f, w0] m with
+  | none => rw [hca] at hW; cases hW
+  | some x =>
+  obtain ⟨r₁, m₁⟩ := x
+  rw [hca, cvK_some] at hW
+  obtain ⟨a₁, pm₁, hrun₁, hD₁, hP₁, hpw₁, hcp₁, hfr₁, -, -, -⟩ :=
+    (pn_rel p hp n).1 m a pm f w0 r₁ m₁ hD hP hw0l hca
+  have hE₁ : m₁.arr64 EREC = m.arr64 EREC := hfr₁.1 EREC (by decide) (by decide)
+  have ht₁ : erecTop m₁ = erecTop m := by simp only [erecTop]; rw [hfr₁.2.1 129 (by decide)]
+  cases hcb : callW p n "promote_slice" [0, f, wo, wl] m₁ with
+  | none => rw [hcb] at hW; cases hW
+  | some x =>
+  obtain ⟨r₂, m₂⟩ := x
+  rw [hcb, cvK₂_some] at hW
+  have hslr : hslice? (m₁.arr64 EREC) wo.toNat wl.toNat = some lps := by
+    rw [hE₁]; exact (erecP_ext m).hslice? hsl
+  have hot : wo.toNat + wl.toNat ≤ erecTop m₁ ∨ wl = 0 := by
+    rcases hslice?_bound hsl with h0 | h0
+    · right; exact UInt64.toNat_inj.mp (by simpa using h0)
+    · left; have := erecP_size_le m; omega
+  obtain ⟨hq, ht₂, hts₂, a₂, pm₂, lps', hrun₂, hD₂, hP₂, hsl₂, hag₂, hsz₂, hcp₂, hfr₂⟩ :=
+    sliceN_rel p hp n m₁ a₁ pm₁ f wo wl lps r₂ m₂ hD₁ hP₁ hslr hot (by rw [hE₁]; exact hsz) hcb
+  cases hcc : callW p n "promote_e" [f, w3] m₂ with
+  | none => rw [hcc] at hW; cases hW
+  | some x =>
+  obtain ⟨r₃, m₃⟩ := x
+  rw [hcc, cvK₃_some] at hW
+  obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
+  obtain ⟨a₃, pm₃, hrun₃, hD₃, hP₃, hpw₃, hcp₃, hfr₃⟩ :=
+    (pe_rel p hp n).1 m₂ a₂ pm₂ f w3 r₃ m₃ hD₂ hP₂ hw3l hcc
+  have hE₃ : m₃.arr64 EREC = m₂.arr64 EREC := hfr₃.1 EREC (by decide) (by decide)
+  have ht₃ : erecTop m₃ = erecTop m₂ := by simp only [erecTop]; rw [hfr₃.2.1 129 (by decide)]
+  have hqv : (r₂.headD 0).toNat = erecTop m := by rw [hq, ← ht₁]; rfl
+  rw [← hm, ← hr]
+  refine ⟨a₃, pm₃, ⟨decI (r₁.headD 0), lps', decE (r₃.headD 0)⟩, ?_, hD₃, hP₃, ?_, ?_, ?_,
+    hcp₃.trans (hcp₂.trans hcp₁), ?_⟩
+  · simp only [promoteCV]
+    rw [run_bind_ok hrun₁]
+    simp only
+    rw [run_bind_ok hrun₂]
+    simp only
+    have hrun₃' : (promoteE pm₂ f.toNat (decI w3)).run a₂ = .ok ((pm₃, decE (r₃.headD 0)), a₃) :=
+      hrun₃
+    rw [run_bind_ok hrun₃']; rfl
+  · refine ⟨rfl, hpw₁, rfl, ?_, hpw₃, rfl⟩
+    simp only [List.headD_cons, List.tail_cons]
+    rw [hslice?_erecP (by rw [ht₃, hE₃]; exact hts₂) (by rw [ht₃, ht₂, hqv, ht₁]; exact Nat.le_refl _)]
+    rw [hE₃, hqv, ← ht₁]; exact hsl₂
+  · refine ⟨by rw [ht₃, ht₂, ht₁]; omega, fun i hi => ?_, by rw [hE₃, hsz₂, hE₁]⟩
+    rw [hE₃, hag₂ i (by rw [ht₁]; exact hi), hE₁]
+  · rw [ht₃, hE₃]; exact hts₂
+  · exact ((hfr₁.mono (by simp) (by simp)).trans hfr₂).trans (hfr₃.mono (by simp) (by simp))
+
+end cv
 
 end L.Arena
