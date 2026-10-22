@@ -4385,7 +4385,14 @@ be asymptotically slower. con-ron at `_tmp/ref/con-ron` origin/HEAD (`proof/ConR
   the memo again after `inst_lp`, `defeq_list` compares the common prefix before the lengths (the
   twin's order of `defeq` calls), `iota_index_ok`/`iota_certs_full` restore the top,
   `inst_spine_pins` raises the top after each store, `and_rescue_slots` runs `fire_ok` first.
-* `WhnfDelta.lean`: the δ/Nat specs (`whnf_step`, `reduce_nat`, `delta_step`, …; 14).
+* `WhnfDelta.lean`: none of its own; the δ/Nat specs are proved (`WhnfDeltaRefine*.lean`, sub-lane)
+  on two assumed facts: `natOpResultOK_stub` (`nat_op_result` refines `natOpResult` under `CoreS`;
+  lane `nat2` proved it over its own program and `ArenaR`) and `whnfGrowsUpTo_stub` (a `whnf` call
+  only grows the limb pool). The sub-lane's L changes: `nat_zero_ok` interns `Nat` first and
+  `reduce_nat` runs `nat_lit_supported` unconditionally (the twin's `do` lifts both out of `&&`),
+  `unfold_definition` restores the stack top, `raw_nat_lit`/`reduce_nat` abort on tags 10‥15 and
+  `unfold_defn_at` on a non-tag-0 level list (the twin's `view` fails there); `reduce_nat` and
+  `unfold_definition` are split into small functions.
 
 ### Lane `exprops4`'s walks as this lane's callees (open)
 

@@ -625,80 +625,19 @@ theorem CoreSpec.of_pure {α : Type} [Inhabited α] (p : Prog) (n : Nat) (f : Fn
 Plain `CoreSpec` for every function that neither calls the knot nor loops; a named, `F`-quantified
 (and, for `whnf_loop`, additionally loop-fuel-`K`-quantified) `Prop` for the three that call
 `whnf`/`whnf_core`, in `WhnfCoreSlot`/`WhnfSlot`'s own shape; `whnf` itself is `WhnfSlot` (already
-in `WhnfBase.lean`). All `sorry` except `nat_bin_op_name` (proved: `CoreSpec.of_pure` plus the
-`natOpResult_sel` recipe of `PinsNatOp.lean`, run on the fourteen binary-op pins instead of the
-fifteen `natOpResult` reads). -/
+in `WhnfBase.lean`). `nat_bin_op_name` is proved here (`CoreSpec.of_pure` plus the
+`natOpResult_sel` recipe of `PinsNatOp.lean`); the others in `WhnfDeltaRefine*.lean`. -/
 
 section specs
 variable (p : Prog) (hp : WhnfDeltaProg p)
 
-/-- **`const_e` refines `constE`.** -/
-@[refines ConRon.Arena.constE]
-theorem constE_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb nm : Word)
-    (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (hnm : HW nm) :
-    CoreSpec p n "const_e" [nm] (constE (decI nm)) decH s₀ a₀ dn vis fe MM eb := sorry
 
-/-- **`nat_lit_to_ctor` refines `natLitToConstructor`** at the literal `n` the slice `(o, cnt)`
-denotes. -/
-@[refines ConRon.Arena.natLitToConstructor]
-theorem natLitToCtor_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb o cnt : Word)
-    (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (hs : SliceOK s₀.mem o cnt)
-    (hnorm : Norm (s₀.mem.arr64 POOL) o.toNat cnt.toNat) :
-    CoreSpec p n "nat_lit_to_ctor" [o, cnt]
-      (natLitToConstructor (pv (s₀.mem.arr64 POOL) o.toNat cnt.toNat)) decH s₀ a₀ dn vis fe MM eb :=
-  sorry
 
-/-- **`nat_ind_ok` refines `natIndOk`** at the `find?` result `(found, q)` decodes to. -/
-@[refines ConRon.Arena.natIndOk]
-theorem natIndOk_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb found q : Word)
-    (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (hq : HW q) :
-    CoreSpec p n "nat_ind_ok" [found, q] (natIndOk (decFound dn s₀.mem found q)) decBool s₀ a₀ dn
-      vis fe MM eb := sorry
 
-/-- **`nat_zero_ok` refines `natZeroOk`.** -/
-@[refines ConRon.Arena.natZeroOk]
-theorem natZeroOk_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb found q : Word)
-    (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (hq : HW q) :
-    CoreSpec p n "nat_zero_ok" [found, q] (natZeroOk (decFound dn s₀.mem found q)) decBool s₀ a₀ dn
-      vis fe MM eb := sorry
 
-/-- **`nat_succ_ok` refines `natSuccOk`.** -/
-@[refines ConRon.Arena.natSuccOk]
-theorem natSuccOk_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb found q : Word)
-    (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (hq : HW q) :
-    CoreSpec p n "nat_succ_ok" [found, q] (natSuccOk (decFound dn s₀.mem found q)) decBool s₀ a₀ dn
-      vis fe MM eb := sorry
 
-/-- **`nat_lit_supported` refines `natLitSupported`.** -/
-@[refines ConRon.Arena.natLitSupported]
-theorem natLitSupported_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb : Word) (hC : CoreS dn s₀.mem a₀ vis fe MM eb) :
-    CoreSpec p n "nat_lit_supported" [vis] (natLitSupported fe) decBool s₀ a₀ dn vis fe MM eb :=
-  sorry
 
-/-- **`lit_to_ctor_if_nat` refines `litToCtorIfNat`.** -/
-@[refines ConRon.Arena.litToCtorIfNat]
-theorem litToCtorIfNat_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb h : Word)
-    (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (hh : HW h) :
-    CoreSpec p n "lit_to_ctor_if_nat" [vis, h] (litToCtorIfNat fe (decE h)) decH s₀ a₀ dn vis fe MM
-      eb := sorry
 
-/-- **`raw_nat_lit` refines `rawNatLit?`**: the result is a flag and the literal's POOL slice
-(`pv`), read-only. -/
-@[refines ConRon.Arena.rawNatLit?]
-theorem rawNatLit_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb h : Word)
-    (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (hh : HW h) :
-    CoreSpec p n "raw_nat_lit" [h] (rawNatLit? (decE h))
-      (fun r => if r.headD 0 = 0 then none
-        else some (pv (s₀.mem.arr64 POOL) (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat))
-      s₀ a₀ dn vis fe MM eb := sorry
 
 /-- `natBinOpName` with its pins read: word `w k` is the absolute `PINS` word `k`, `natOpSel`'s own
 convention (`PinsNatOp.lean`): the fourteen binary ops, `pred` excluded. -/
@@ -784,30 +723,8 @@ theorem natBinOpName_refines (hp : WhnfDeltaProg p) (n : Nat) (s₀ : St) (a₀ 
     simp only [AM.res, hrun, decBool]
     rw [← heq]
 
-/-- **`nat_op_stored` refines `natOpStored`.** -/
-@[refines ConRon.Arena.natOpStored]
-theorem natOpStored_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb c : Word)
-    (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (hc : HW c) :
-    CoreSpec p n "nat_op_stored" [vis, c] (natOpStored fe (decI c)) decBool s₀ a₀ dn vis fe MM eb := sorry
 
-/-- **`const_val_at` refines `constValAt`**, given the level parameters `lps` the slice `(po, pl)`
-of the constant's record holds, and the stub `inst_lp`'s spec (`WhnfCallees`, phase 4). -/
-@[refines ConRon.Arena.constValAt]
-theorem constValAt_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb nm po pl value us : Word) (lps : List NIdx)
-    (hC : CoreS dn s₀.mem a₀ vis fe MM eb) (hnm : HW nm) (hv : HW value) (hu : HW us)
-    (hwc : WhnfCallees p) (hlps : hslice? (s₀.mem.arr64 EREC) po.toNat pl.toNat = some lps) :
-    CoreSpec p n "const_val_at" [nm, po, pl, value, us]
-      (constValAt (decI nm) lps (decE value) (decI us)) decH s₀ a₀ dn vis fe MM eb := sorry
 
-/-- **`unfold_definition` refines `unfoldDefinition`**, given the stub `inst_lp`'s spec. -/
-@[refines ConRon.Arena.unfoldDefinition]
-theorem unfoldDefinition_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
-    (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb e : Word) (hC : CoreS dn s₀.mem a₀ vis fe MM eb)
-    (he : HW e) (hwc : WhnfCallees p) :
-    CoreSpec p n "unfold_definition" [vis, e] (unfoldDefinition fe (decE e)) decOptR s₀ a₀ dn vis fe
-      MM eb ResW := sorry
 
 /-- `reduce_nat(mode, vis, d, e)` refines `reduceNat` at every knot fuel `F ≥ n`, given the knot's
 `whnf` slot at L-fuel `n` (`KnotOK`). -/
@@ -819,9 +736,6 @@ def ReduceNatSpec (p : Prog) (n : Nat) : Prop :=
       (reduceNat (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) decOptR s₀ a₀ dn vis fe MM eb
       ResW
 
-/-- **`reduce_nat` refines `reduceNat`.** -/
-@[refines ConRon.Arena.reduceNat]
-theorem reduceNat_refines (n : Nat) (hwd : WhnfDeltaProg p) : ReduceNatSpec p n := sorry
 
 /-- `whnf_step(mode, vis, d, e)` refines `whnfStep` at every knot fuel `F ≥ n`, given `KnotUpTo p n`
 (its `r.whnfCore false depth e` is `call whnf_core(mode, 0, vis, d, e)`, its `r.whnf` calls are
@@ -834,10 +748,6 @@ def WhnfStepSpec (p : Prog) (n : Nat) : Prop :=
       (whnfStep (coreKnot (decMode mode) fe id F) fe d.toNat (decE e)) decStep s₀ a₀ dn vis fe MM eb
       ResW
 
-/-- **`whnf_step` refines `whnfStep`.** -/
-@[refines ConRon.Arena.whnfStep]
-theorem whnfStep_refines (n : Nat) (hwd : WhnfDeltaProg p) (hrn : ReduceNatSpec p n) :
-    WhnfStepSpec p n := sorry
 
 /-- `whnf_loop(mode, vis, d, e)` refines `whnfLoop` at every knot fuel `F ≥ n` and every loop fuel
 `K ≥ n` (the lead's shape for the `2 ^ 62` loop fuels: `whnf_loop` refines `whnfLoop` directly,
