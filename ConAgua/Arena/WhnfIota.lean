@@ -449,12 +449,8 @@ def prepareMajorL : FunDecl := lfn (mode, vis, d, rec, ro, rc, major)
 
 /-! ## `pi_residual(e, ao, an)` -/
 
-/-- con-leche: `CoreDefs.lean:716-721` `piResidual` — peel a ∀-telescope along an argument
-spine `(ao, an)`. -/
--- con-ron: ConRon/Arena/Core.lean:1326-1337 ConRon.Arena.piResidual
-@[l_impl ConRon.Arena.piResidual]
-def piResidualL : FunDecl := lfn (e, ao, an) locals (i, t, x, body, b2) {
-  i := 0;
+/-- The telescope walk of `pi_residual` (a named block, for the proofs). -/
+def piResidualLoop : Stmt := lblk (e, ao, an, i, t, x, body, b2) {
   while i < an {
     if e >> 28 != 6 { return (0, 0) };
     t := (e >> 27) & 1;
@@ -465,7 +461,16 @@ def piResidualL : FunDecl := lfn (e, ao, an) locals (i, t, x, body, b2) {
     b2 := call inst_entry(body, SPN.u64[ao + i], 0);
     e := b2;
     i += 1
-  };
+  }
+}
+
+/-- con-leche: `CoreDefs.lean:716-721` `piResidual` — peel a ∀-telescope along an argument
+spine `(ao, an)`. -/
+-- con-ron: ConRon/Arena/Core.lean:1326-1337 ConRon.Arena.piResidual
+@[l_impl ConRon.Arena.piResidual]
+def piResidualL : FunDecl := lfn (e, ao, an) locals (i, t, x, body, b2) {
+  i := 0;
+  ⟪piResidualLoop⟫;
   return (1, e)
 }
 

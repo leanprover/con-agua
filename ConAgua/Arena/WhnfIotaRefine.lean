@@ -851,4 +851,221 @@ theorem ruleRhsAt_refines' (p : Prog) (hp : IotaProg' p) (hw : WhnfCallees p) :
   · rw [hres2]; simp only [decH]; rw [← hr]
   · unfold ResH HW; rw [← hr]; exact hwv
 
+/-! ## `pi_residual(e, ao, an)` -/
+
+/-- Model of the `pi_residual` loop at L fuel `k` (each iteration spends one unit, the callee
+runs at the rest): `none` the L code aborts or runs out of fuel, `some ([0, 0], m)` the early
+`return (0, 0)`, `some ([1, e], m)` the loop's normal exit with accumulator `e`. -/
+def pirW (p : Prog) : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _, _, _ => none
+  | k + 1, m, e, ao, an, i =>
+    if i < an then
+      if e >>> 28 ≠ 6 then some ([0, 0], m)
+      else if tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
+      else if rdW (m.arr64 CTL) (30 + tierW e) ≤ idxW e then none
+      else match callW p k "inst_entry"
+          [rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2 + 1), rdW (m.arr64 SPN) (ao + i), 0] m with
+        | none => none
+        | some (r, m₁) => pirW p k m₁ (r.headD 0) ao an (i + 1)
+    else some ([1, e], m)
+
+theorem pirW_end (p : Prog) (k : Nat) (m : Mem) (e ao an i : Word) (h : ¬ i < an) :
+    pirW p (k + 1) m e ao an i = some ([1, e], m) := by
+  simp [pirW, h]
+
+theorem pirW_exit (p : Prog) (k : Nat) (m : Mem) (e ao an i : Word) (h : i < an)
+    (h6 : e >>> 28 ≠ 6) : pirW p (k + 1) m e ao an i = some ([0, 0], m) := by
+  simp [pirW, h, h6]
+
+theorem pirW_ab1 (p : Prog) (k : Nat) (m : Mem) (e ao an i : Word) (h : i < an)
+    (h6 : ¬ e >>> 28 ≠ 6) (h1 : tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) :
+    pirW p (k + 1) m e ao an i = none := by
+  simp [pirW, h, h6, h1]
+
+theorem pirW_ab2 (p : Prog) (k : Nat) (m : Mem) (e ao an i : Word) (h : i < an)
+    (h6 : ¬ e >>> 28 ≠ 6) (h1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
+    (h2 : rdW (m.arr64 CTL) (30 + tierW e) ≤ idxW e) :
+    pirW p (k + 1) m e ao an i = none := by
+  simp only [pirW, h, h6, h1, h2]; simp
+
+theorem pirW_cont (p : Prog) (k : Nat) (m m₁ : Mem) (e ao an i : Word) (r : List Word)
+    (h : i < an) (h6 : ¬ e >>> 28 ≠ 6) (h1 : ¬ (tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0))
+    (h2 : ¬ rdW (m.arr64 CTL) (30 + tierW e) ≤ idxW e)
+    (hc : callW p k "inst_entry"
+          [rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2 + 1), rdW (m.arr64 SPN) (ao + i), 0] m =
+        some (r, m₁)) :
+    pirW p (k + 1) m e ao an i = pirW p k m₁ (r.headD 0) ao an (i + 1) := by
+  simp only [pirW, h, h6, h1, h2, hc]; simp
+
+theorem piResidualLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    exec p k piResidualLoop
+    ⦃fun r s' => r ≠ .brk ∧ pirW p k s₀.mem (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) =
+      some (r.retOr [1, s'.loc 0], s'.mem); ⊤⦄ := by
+  induction k generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ k ih =>
+    rw [exec, step_while (w := piResidualLoop) rfl]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        callW_spec p k "inst_entry", ih] <;>
+      finish [pirW_end, pirW_exit, pirW_ab1, pirW_ab2, pirW_cont, tierW, idxW]
+
+theorem piResidualLoop_step_spec (p : Prog) (k : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    step p (exec p k) piResidualLoop
+    ⦃fun r s' => r ≠ .brk ∧ pirW p (k + 1) s₀.mem (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) =
+      some (r.retOr [1, s'.loc 0], s'.mem); ⊤⦄ :=
+  Triple.step_exec (piResidualLoop_spec p (k + 1) s₀)
+
+theorem piResidual_spec (p : Prog) (hp : p.lookup "pi_residual" = some piResidualL) (k : Nat)
+    (s₀ : St) (e ao an : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p (k + 1)) "pi_residual" [e, ao, an]
+    ⦃fun r s' => LocEq s' s₀ ∧ pirW p (k + 1) s₀.mem e ao an 0 = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, piResidualL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, piResidualLoop_step_spec p k] <;>
+    finish
+
+theorem viewBind_run₀ (h : EIdx) (a : AState) :
+    (ConRon.Arena.viewBind h).run a = .ok (a.store.viewBind h, a) := rfl
+
+theorem piResidual_nil_run (e : EIdx) (a : AState) :
+    (piResidual e []).run a = .ok (some e, a) := by
+  simp [piResidual]; rfl
+
+theorem piResidual_not_run (h a' : EIdx) (as : List EIdx) (a : AState) (ht : h.tag ≠ ETag.forallE) :
+    (piResidual h (a' :: as)).run a = .ok (none, a) := by
+  simp [piResidual, ht]; rfl
+
+theorem piResidual_cons_run (h a' b b' : EIdx) (as : List EIdx) (a a₁ a₂ : AState)
+    (res : Option EIdx) (ht : h.tag = ETag.forallE) (c : EIdx)
+    (hv : a.store.viewBind h = some (c, b))
+    (hi : (instantiate1Fast coreWalkFuel b a' 0).run a = .ok (b', a₁))
+    (hr : (piResidual b' as).run a₁ = .ok (res, a₂)) :
+    (piResidual h (a' :: as)).run a = .ok (res, a₂) := by
+  simp only [piResidual, ht, beq_self_eq_true, ↓reduceIte, StateT.run_bind, viewBind_run₀, hv,
+    except_ok_bind, hi, hr]
+
+/-- **The `pi_residual` loop refines `piResidual`**, by induction on the remaining count. -/
+theorem pirW_ok (p : Prog) (hinst : IotaInst1OK p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+    (fe : IFEnv) (eb ao an : Word) (args : Array EIdx) :
+    ∀ (K k : Nat) (m : Mem) (a : AState) (M : ModeMaps) (e i : Word) (L : List Word) (m' : Mem),
+      an.toNat - i.toNat = K → i.toNat ≤ an.toNat → CoreS dn m a vis fe M eb → HW e →
+      SpineR m ao an args → ao.toNat + an.toNat ≤ (spTop m).toNat →
+      pirW p k m e ao an i = some (L, m') →
+      AM.ok (piResidual (decE e) (args.toList.drop i.toNat)) a ∧
+      CoreAfter dn m m' (AM.st (piResidual (decE e) (args.toList.drop i.toNat)) a) vis fe M eb ∧
+      AM.res (piResidual (decE e) (args.toList.drop i.toNat)) a = decOptR L ∧
+      HW (L.headD 0) ∧ HW (L.tail.headD 0) := by
+  intro K
+  induction K with
+  | zero =>
+    intro k m a M e i L m' hK hi hS he hsp htop hL
+    have hni : ¬ i < an := by
+      intro h; have : i.toNat < an.toNat := h; omega
+    cases k with
+    | zero => simp [pirW] at hL
+    | succ k =>
+    rw [pirW_end p k m e ao an i hni] at hL
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
+    have hdrop : args.toList.drop i.toNat = [] := by
+      apply List.drop_eq_nil_of_le; simp [hsp.size]; omega
+    rw [hdrop]
+    obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ (piResidual_nil_run (decE e) a)
+    refine ⟨hok, ?_, ?_, by simp [HW], he⟩
+    · rw [hst]; exact ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩
+    · rw [hres]; simp [decOptR, decOpt]
+  | succ K ih =>
+    intro k m a M e i L m' hK hi hS he hsp htop hL
+    have hlt : i < an := by
+      have : i.toNat < an.toNat := by omega
+      exact this
+    have hlt' : i.toNat < an.toNat := hlt
+    have hsz : i.toNat < args.size := by rw [hsp.size]; exact hlt'
+    have hdrop : args.toList.drop i.toNat = args[i.toNat] :: args.toList.drop (i.toNat + 1) := by
+      rw [List.drop_eq_getElem_cons (by simpa using hsz)]; simp
+    cases k with
+    | zero => simp [pirW] at hL
+    | succ k =>
+    by_cases h6 : e >>> 28 ≠ 6
+    · rw [pirW_exit p k m e ao an i hlt h6] at hL
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
+      rw [hdrop]
+      have htag : (decE e).tag ≠ ETag.forallE := fun h => h6 ((decE_tag_forall e he).mp h)
+      obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ (piResidual_not_run (decE e) _ _ a htag)
+      refine ⟨hok, ?_, ?_, by simp [HW], by simp [HW]⟩
+      · rw [hst]; exact ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩
+      · rw [hres]; simp [decOptR, decOpt]
+    have h6' : e >>> 28 = 6 := by simpa using h6
+    by_cases hv1 : tierW e ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
+    · rw [pirW_ab1 p k m e ao an i hlt h6 hv1] at hL; cases hL
+    by_cases hv2 : rdW (m.arr64 CTL) (30 + tierW e) ≤ idxW e
+    · rw [pirW_ab2 p k m e ao an i hlt h6 hv1 hv2] at hL; cases hL
+    cases hc : callW p k "inst_entry"
+        [rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2 + 1), rdW (m.arr64 SPN) (ao + i), 0] m with
+    | none => simp [pirW, hlt, h6, hv1, hv2, hc] at hL
+    | some q =>
+    obtain ⟨r₁, m₁⟩ := q
+    rw [pirW_cont p k m m₁ e ao an i r₁ hlt h6 hv1 hv2 hc] at hL
+    obtain ⟨hvb, hbw, -⟩ := view_forall m a hS.arena.1 e he ⟨hv1, UInt64.not_le.mp hv2⟩ h6'
+    have hvb' := viewBind_forall m a hS.arena.1 e he ⟨hv1, UInt64.not_le.mp hv2⟩ h6'
+    obtain ⟨hok, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres, hr₁⟩ := CoreSpec.of_callW
+      (hinst k ⟨m, Locals.init []⟩ a dn vis fe M eb _ (rdW (m.arr64 SPN) (ao + i)) 0 hS (by
+        have := (view_forall m a hS.arena.1 e he ⟨hv1, UInt64.not_le.mp hv2⟩ h6').2.2
+        exact this)) hc
+    have hsp₁ : SpineR m₁ ao an args := hsp.keep hSt₁.2.1 hSt₁.2.2 htop hS.spn
+    have htop₁ : ao.toNat + an.toNat ≤ (spTop m₁).toNat := by rw [hSt₁.1]; exact htop
+    have h1 : (i + 1).toNat = i.toNat + 1 := uint64_succ_toNat an i hlt
+    obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hL1, hL2⟩ :=
+      ih k m₁ (AM.st (instantiate1Fast coreWalkFuel (decE (rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2 + 1)))
+        (decE (rdW (m.arr64 SPN) (ao + i))) (UInt64.toNat 0)) a) M₁ (r₁.headD 0) (i + 1) L m'
+        (by omega) (by omega) hS₁ hr₁ hsp₁ htop₁ hL
+    have hget : args[i.toNat] = decE (rdW (m.arr64 SPN) (ao + i)) := by
+      have := hsp.get i.toNat hsz
+      simpa [spW] using this
+    have hrunT := AM.run_of_ok _ _ hok
+    rw [hres] at hrunT
+    have hrunR := AM.run_of_ok _ _ hok2
+    rw [h1] at hrunR
+    have hrun := piResidual_cons_run (decE e) args[i.toNat] (decE (rdW (m.arr64 FAREC) (idxW e * 4 + tierW e * 2 + 1)))
+      (decH r₁) (args.toList.drop (i.toNat + 1)) a _ _ _ ((decE_tag_forall e he).mpr h6') _ hvb'
+      (by rw [hget]; exact hrunT) hrunR
+    rw [h1] at hS₂ hres2
+    rw [hdrop]
+    obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ hrun
+    refine ⟨hokF, ⟨M₂, ?_, hK₁.trans hK₂, hSt₁.trans hSt₂⟩, ?_, hL1, hL2⟩
+    · rw [hstF]; exact hS₂
+    · rw [hresF]; exact hres2
+
+/-- **`pi_residual` refines `piResidual`.** Statement change: `PiResidualOK` plus
+`ao + an ≤ spTop` (the argument slice lies below the stack top, so the `inst_entry` calls, which
+may use the stack above it, leave it alone). -/
+theorem piResidual_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) :
+    ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (MM : ModeMaps) (eb e ao an : Word) (args : Array EIdx), CoreS dn s₀.mem a₀ vis fe MM eb →
+    HW e → SpineR s₀.mem ao an args → ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat →
+    CoreSpec p n "pi_residual" [e, ao, an] (piResidual (decE e) args.toList) decOptR s₀ a₀ dn vis fe
+      MM eb := by
+  intro n s₀ a₀ dn vis fe MM eb e ao an args hS he hsp htop
+  cases n with
+  | zero =>
+    apply L.M.triple_of_run
+    intro s r s' _ hrun
+    exact (invoke_zero_run _ _ _ _ _ _ hrun).elim
+  | succ n =>
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
+    (piResidual_spec p hp.piResidual n s₀ e ao an)
+  subst hs0
+  refine ⟨hloc, ?_⟩
+  obtain ⟨hok, hca, hres, hL1, hL2⟩ := pirW_ok p hc.inst1 dn vis fe eb ao an args
+    (an.toNat - (0 : Word).toNat) (n + 1) s.mem a₀ MM e 0 r s'.mem rfl (by simp) hS he hsp htop hW
+  refine ⟨hok, ?_, ?_, hL1⟩
+  · simpa using hca
+  · simpa using hres
+
 end L.Arena
