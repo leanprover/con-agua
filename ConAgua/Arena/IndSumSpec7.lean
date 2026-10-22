@@ -50,14 +50,14 @@ section spec
 variable (p : Prog) (hv : p.lookup "e_view" = some eView)
   (hf : p.lookup "hb_find" = some (memoFindG hbSch)) (hput : p.lookup "hb_put" = some (memoPutG hbSch))
   (hins : p.lookup "has_loose_b_var_b_ins" = some hasLooseBVarBInsL)
-  (hgo : p.lookup "has_loose_b_var_b_go" = some hasLooseBVarBGoL)
+  (hgo : p.lookup "has_loose_b_var_b_go" = some hasLooseBVarBGoL) (hbp : BvbProg p)
 
-include hv hf hput hins hgo in
+include hv hf hput hins hgo hbp in
 theorem structUsedLaterGo_spec (hp : p.lookup "struct_used_later_go" = some structUsedLaterGoL)
     (n : Nat) (s₀ : St) (cty nP j : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "struct_used_later_go" [cty, nP, j]
     ⦃fun r s' => LocEq s' s₀ ∧ usgW n s₀.mem cty nP j = some (r.headD 0, s'.mem); ⊤⦄ := by
-  have ih := hbGo_spec p hv hf hput hins hgo n
+  have ih := hbGo_spec p hv hf hput hins hgo hbp n
   unfold HbGoSpec at ih
   rw [invoke_eq _ hp]
   simp only [callFn, structUsedLaterGoL]
@@ -65,7 +65,7 @@ theorem structUsedLaterGo_spec (hp : p.lookup "struct_used_later_go" = some stru
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, stubM_spec p "strip_pis" n, ih] <;>
     finish [usgW]
 
-include hv hf hput hins hgo in
+include hv hf hput hins hgo hbp in
 theorem structUsedLater_spec (hcl : p.lookup "hb_clear" = some (memoClearG hbSch))
     (hfast : p.lookup "has_loose_b_var_b_fast" = some hasLooseBVarBFastL)
     (hp : p.lookup "struct_used_later" = some structUsedLaterL)
@@ -76,7 +76,7 @@ theorem structUsedLater_spec (hcl : p.lookup "hb_clear" = some (memoClearG hbSch
   simp only [callFn, structUsedLaterL]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, stubM_spec p "strip_pis" (n + 1),
-      hbFast_spec p hv hf hput hins hgo hcl hfast n] <;>
+      hbFast_spec p hv hf hput hins hgo hbp hcl hfast n] <;>
     finish [ustW]
 
 end spec
@@ -103,7 +103,7 @@ theorem usgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     obtain ⟨rs, m1⟩ := pr
     rw [hst] at h
     obtain ⟨x, a1, hrun, hS1, hg1, hdec⟩ := stripPis_spec dn vis fe (nP + j + 1) cty hc m m1 a rs hst hS
-    obtain ⟨A, C, hA, hC, hfr⟩ := stubHbFrame "strip_pis" (Or.inr rfl) m m1 _ rs hst
+    obtain ⟨A, C, hA, hC, hfr⟩ := stubHbFrame "strip_pis" rfl m m1 _ rs hst
     have hM1 : hbMR m1 mp :=
       memoRV_frame hbSch hbSch_wf lfKey hbVR A C hA hC m m1 hfr (fun _ _ h => h) mp hM
     rw [add3_toNat hsum] at hrun
@@ -145,7 +145,7 @@ theorem ustW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
     obtain ⟨rs, m1⟩ := pr
     rw [hst] at h
     obtain ⟨x, a1, hrun, hS1, hg1, hdec⟩ := stripPis_spec dn vis fe (nP + j + 1) cty hc m m1 a rs hst hS
-    obtain ⟨A, C, hA, hC, hfr⟩ := stubHbFrame "strip_pis" (Or.inr rfl) m m1 _ rs hst
+    obtain ⟨A, C, hA, hC, hfr⟩ := stubHbFrame "strip_pis" rfl m m1 _ rs hst
     have hM1 : hbMR m1 mp :=
       memoRV_frame hbSch hbSch_wf lfKey hbVR A C hA hC m m1 hfr (fun _ _ h => h) mp hM
     rw [add3_toNat hsum] at hrun
@@ -180,9 +180,9 @@ section census
 variable (p : Prog) (hv : p.lookup "e_view" = some eView)
   (hf : p.lookup "hb_find" = some (memoFindG hbSch)) (hput : p.lookup "hb_put" = some (memoPutG hbSch))
   (hins : p.lookup "has_loose_b_var_b_ins" = some hasLooseBVarBInsL)
-  (hgo : p.lookup "has_loose_b_var_b_go" = some hasLooseBVarBGoL)
+  (hgo : p.lookup "has_loose_b_var_b_go" = some hasLooseBVarBGoL) (hbp : BvbProg p)
 
-include hv hf hput hins hgo in
+include hv hf hput hins hgo hbp in
 /-- **`struct_used_later_go` refines `structUsedLaterGo`** (through the stubs `strip_pis`, `bvar_b`),
 sharing the caller's `hb` memo. -/
 @[refines ConRon.Arena.structUsedLaterGo]
@@ -198,13 +198,13 @@ theorem structUsedLaterGo_refines (hp : p.lookup "struct_used_later_go" = some s
       hbMR s'.mem (AM.res (structUsedLaterGo mp (decI cty) nP.toNat j.toNat) a₀).2 ∧
       StageR dn vis fe s'.mem (AM.st (structUsedLaterGo mp (decI cty) nP.toNat j.toNat) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (structUsedLaterGo_spec p hv hf hput hins hgo hp n s₀ cty nP j) ?_
+  refine triple_post (structUsedLaterGo_spec p hv hf hput hins hgo hbp hp n s₀ cty nP j) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨b, mp', a', hrun, hb, hM', hS', hg⟩ := usgW_ok n _ _ a₀ cty nP j _ mp hn hsum hc hS hM hm
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hres]; exact hb, by rw [hres]; exact hM', by rw [hst]; exact hS', hg⟩
 
-include hv hf hput hins hgo in
+include hv hf hput hins hgo hbp in
 /-- **`struct_used_later` refines `structUsedLater`** (through `strip_pis`, `bvar_b`): clears the `hb`
 memo and walks. -/
 @[refines ConRon.Arena.structUsedLater]
@@ -222,7 +222,7 @@ theorem structUsedLater_refines (hcl : p.lookup "hb_clear" = some (memoClearG hb
       (∃ mp1, hbMR s'.mem mp1) ∧
       StageR dn vis fe s'.mem (AM.st (structUsedLater (decI cty) nP.toNat j.toNat) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (structUsedLater_spec p hv hf hput hins hgo hcl hfast hp n s₀ cty nP j) ?_
+  refine triple_post (structUsedLater_spec p hv hf hput hins hgo hbp hcl hfast hp n s₀ cty nP j) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨b, a', hrun, hb, hM', hS', hg⟩ := ustW_ok n _ _ a₀ cty nP j _ mp hn hsum hc hS hM hm
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
@@ -284,22 +284,22 @@ section ulspec
 variable (p : Prog) (hv : p.lookup "e_view" = some eView)
   (hf : p.lookup "hb_find" = some (memoFindG hbSch)) (hput : p.lookup "hb_put" = some (memoPutG hbSch))
   (hins : p.lookup "has_loose_b_var_b_ins" = some hasLooseBVarBInsL)
-  (hgo : p.lookup "has_loose_b_var_b_go" = some hasLooseBVarBGoL)
+  (hgo : p.lookup "has_loose_b_var_b_go" = some hasLooseBVarBGoL) (hbp : BvbProg p)
   (hsg : p.lookup "struct_used_later_go" = some structUsedLaterGoL)
   (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hc : p.lookup "iw_copy" = some iwCopy) (hsc : p.lookup "sl_cons" = some slCons)
   (hp : p.lookup "struct_used_later_list" = some structUsedLaterListL)
 
-include hv hf hput hins hgo hsg in
+include hv hf hput hins hgo hbp hsg in
 theorem structUsedLaterGo_spec0 (n : Nat) (s₀ : St) (cty nP j : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_used_later_go" [cty, nP, j]
     ⦃fun r s' => LocEq s' s₀ ∧ usg0 n s₀.mem cty nP j = some (r.headD 0, s'.mem); ⊤⦄ := by
   cases n with
   | zero =>
     rw [invoke_eq _ hsg]; simp only [callFn, structUsedLaterGoL]; vcgen [exec] <;> grind
-  | succ n => exact structUsedLaterGo_spec p hv hf hput hins hgo hsg n s₀ cty nP j
+  | succ n => exact structUsedLaterGo_spec p hv hf hput hins hgo hbp hsg n s₀ cty nP j
 
-include hv hf hput hins hgo hsg ha hc hsc hp in
+include hv hf hput hins hgo hbp hsg ha hc hsc hp in
 theorem ulW_spec (n : Nat) : ∀ (s₀ : St) (cty nP m base : Word),
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_used_later_list" [cty, nP, m, base]
     ⦃fun r s' => LocEq s' s₀ ∧ ulW n s₀.mem cty nP m base = some (r, s'.mem); ⊤⦄ := by
@@ -313,7 +313,7 @@ theorem ulW_spec (n : Nat) : ∀ (s₀ : St) (cty nP m base : Word),
     simp only [callFn, structUsedLaterListL]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-        structUsedLaterGo_spec0 p hv hf hput hins hgo hsg n, iwAlloc_specW p ha n,
+        structUsedLaterGo_spec0 p hv hf hput hins hgo hbp hsg n, iwAlloc_specW p ha n,
         slCons_specW p ha hc hsc n, ih] <;> finish (gen := 20)
 
 end ulspec
@@ -423,12 +423,12 @@ section ulCensus
 variable (p : Prog) (hv : p.lookup "e_view" = some eView)
   (hf : p.lookup "hb_find" = some (memoFindG hbSch)) (hput : p.lookup "hb_put" = some (memoPutG hbSch))
   (hins : p.lookup "has_loose_b_var_b_ins" = some hasLooseBVarBInsL)
-  (hgo : p.lookup "has_loose_b_var_b_go" = some hasLooseBVarBGoL)
+  (hgo : p.lookup "has_loose_b_var_b_go" = some hasLooseBVarBGoL) (hbp : BvbProg p)
   (hsg : p.lookup "struct_used_later_go" = some structUsedLaterGoL)
   (ha : p.lookup "iw_alloc" = some iwAlloc)
   (hc : p.lookup "iw_copy" = some iwCopy) (hsc : p.lookup "sl_cons" = some slCons)
   (hp : p.lookup "struct_used_later_list" = some structUsedLaterListL)
-include hv hf hput hins hgo hsg ha hc hsc hp
+include hv hf hput hins hgo hbp hsg ha hc hsc hp
 
 /-- **`struct_used_later_list` refines `structUsedLaterList`** (through `strip_pis`, `bvar_b`): the answers
 as the `0`/`1` numbers of an `IW` slice, all through the caller's shared `hb` memo. -/
@@ -446,7 +446,7 @@ theorem structUsedLaterList_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : 
       (∃ mp1, hbMR s'.mem mp1) ∧
       StageR dn vis fe s'.mem (AM.st (structUsedLaterList (decI cty) nP.toNat mp cnt.toNat base.toNat) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (ulW_spec p hv hf hput hins hgo hsg ha hc hsc hp n s₀ cty nP cnt base) ?_
+  refine triple_post (ulW_spec p hv hf hput hins hgo hbp hsg ha hc hsc hp n s₀ cty nP cnt base) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨bs, mp', a', hrun, hdec, hlen, htop, hM', hS', hg⟩ :=
     ulW_ok n _ _ a₀ cty nP cnt base r mp hn hb hc' hS hM hm
