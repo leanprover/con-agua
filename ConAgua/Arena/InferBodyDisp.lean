@@ -348,4 +348,158 @@ theorem coreRef_of_imp {α : Type} [Inhabited α] {T T' : AM α} {a₀ : AState}
     (h : CoreRef T a₀ dec dn m₀ vis fe M eb r m ok) : CoreRef T' a₀ dec dn m₀ vis fe M eb r m ok :=
   coreRef_congr ((himp _ _ (AM.run_of_ok _ _ h.1)).trans (AM.run_of_ok _ _ h.1).symm) h
 
+theorem getD1 (r : List Word) : r.getD 1 0 = r.tail.headD 0 := by
+  rcases r with _ | ⟨x, _ | ⟨y, t⟩⟩ <;> rfl
+theorem getD2 (r : List Word) : r.getD 2 0 = r.tail.tail.headD 0 := by
+  rcases r with _ | ⟨x, _ | ⟨y, _ | ⟨z, t⟩⟩⟩ <;> rfl
+theorem getD3 (r : List Word) : r.getD 3 0 = r.tail.tail.tail.headD 0 := by
+  rcases r with _ | ⟨x, _ | ⟨y, _ | ⟨z, _ | ⟨w, t⟩⟩⟩⟩ <;> rfl
+
+/-! ## `infer_body` refines `inferBody` -/
+
+/-- **`infer_body` refines `inferBody`** at the knot one level down: `InferBodySpec p n` for every
+`n`, from the programs and the callees with no proof here (`InferCallees`). -/
+@[refines ConRon.Arena.inferBody]
+theorem inferBody_refines (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) :
+    ∀ n, InferBodySpec p n := by
+  intro n F s₀ a₀ dn vis fe MM eb mode d e hF hn hs he hk
+  cases n with
+  | zero => exact CoreSpec.zero p _ _ _ _ s₀ a₀ dn vis fe MM eb _
+  | succ n =>
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (inferBody_spec p hq n s₀ mode vis d e)
+  subst hs0
+  refine ⟨hloc, ?_⟩
+  have hS := hs.rel
+  unfold bodyK at hW
+  cases hc0 : callW p n "e_view" [e] s.mem with
+  | none => rw [hc0] at hW; cases hW
+  | some q =>
+  obtain ⟨r₀, m₀⟩ := q
+  rw [hc0] at hW; dsimp only at hW
+  obtain ⟨t₀, ht₀, hts, hne, hr0⟩ := triple_of_callW (L.Ind.eView_spec p hq.eview n s e) hc0
+  have hm₀ : m₀ = s.mem := by rw [← ht₀, hts]
+  subst hm₀
+  subst hr0
+  obtain ⟨v, hv, hvr⟩ := L.Ind.eViewW_ok s.mem a₀ hS.arena.1 e hne
+  have hhd := eViewW_head s.mem e hne
+  have fin : ∀ {T : AM EIdx} {f : FnName} {vs : List Word},
+      CoreSpec p n f vs T decH ⟨s.mem, Locals.init []⟩ a₀ dn vis fe MM eb →
+      call1W p n f vs s.mem = some (r.headD 0, s'.mem) →
+      CoreRef T a₀ decH dn s.mem vis fe MM eb r s'.mem :=
+    fun hsp h => CoreSpec.of_call1W hsp (fun r r' h => by simp only [decH, h]) h
+  have hsl : SlotPre ⟨s.mem, Locals.init []⟩ a₀ dn vis fe MM eb mode := ⟨hS, hs.mode4, hs.eb_mode⟩
+  have hz : ∀ {f : FnName} {vs : List Word} {w : Word} {m' : Mem}, call1W p 0 f vs s.mem ≠ some (w, m') :=
+    fun h => by simp [call1W, callW_zero] at h
+  cases v with
+  | bvar i =>
+    obtain ⟨hg, -⟩ := hvr
+    simp (config := { decide := true }) only [bodyArmK, hg, ↓reduceIte] at hW
+    cases hW
+  | fvar idx ty =>
+    obtain ⟨hg, hi, hty, hdec⟩ := hvr
+    simp (config := { decide := true }) only [bodyArmK, hg, ↓reduceIte] at hW
+    rw [getD1] at hi; rw [getD2] at hty hdec
+    by_cases hlt : (L.Ind.eViewW s.mem e).tail.headD 0 < d
+    · simp only [hlt, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
+      obtain ⟨hr, hm⟩ := hW
+      have hi' : idx < d.toNat := by rw [← hi]; exact UInt64.lt_iff_toNat_lt.mp hlt
+      have hrun := inferBody_fvar (coreKnot (decMode mode) fe id F) fe d.toNat (decE e) a₀ idx ty hv hi'
+      obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+      refine ⟨hok, ?_, by rw [hres, decH, ← hr, hdec], by unfold ResH; rw [← hr]; exact hty⟩
+      rw [hst, ← hm]; exact ⟨MM, hS, KeptAll.refl _ _, StackKept.refl _⟩
+    · simp only [hlt, ↓reduceIte] at hW; cases hW
+  | sort u =>
+    obtain ⟨hg, hu, hdec⟩ := hvr
+    rw [getD1] at hu hdec
+    simp (config := { decide := true }) only [bodyArmK, hg, ↓reduceIte, sortArmK] at hW
+    cases h1 : callW p n "intern_succ" [(L.Ind.eViewW s.mem e).tail.headD 0] s.mem with
+    | none => rw [h1] at hW; cases hW
+    | some q =>
+    obtain ⟨r₁, m₁⟩ := q
+    rw [h1] at hW; dsimp only at hW
+    obtain ⟨s₁, hs₁, -, hsu⟩ := triple_of_callW (s₀ := ⟨s.mem, Locals.init []⟩)
+      (internSucc_spec p hq.body.suf hq.body.sup hq.body.sui n _ _) h1
+    rw [hs₁] at hsu
+    have h₁ := internSucc_core hS _ hu r₁ hsu
+    rw [hdec] at h₁
+    refine coreRef_congr (inferBody_sort _ fe d.toNat (decE e) a₀ u hv) (coreRef_bind h₁ (fun M₁ hS₁ => ?_))
+    have hso := of_call1W (X := fun m w m' => sointernW m (r₁.headD 0) = some (w, m'))
+      (fun s₀ => internSort_spec p hq.body.sof hq.body.sop hq.body.soi n s₀ (r₁.headD 0)) hW
+    exact internSort_core hS₁ (r₁.headD 0) h₁.2.2.2 r hso
+  | const nm us =>
+    obtain ⟨hg, hn1, hdn, hu2, hdu⟩ := hvr
+    rw [getD1] at hn1 hdn; rw [getD2] at hu2 hdu
+    simp (config := { decide := true }) only [bodyArmK, hg, ↓reduceIte] at hW
+    cases n with
+    | zero => exact absurd hW hz
+    | succ k =>
+    rw [← hdn, ← hdu] at hv
+    exact coreRef_congr (inferBody_const _ fe d.toNat (decE e) a₀ _ _ hv)
+      (fin (inferConst_refines p hq.leaf hc.constTy k _ a₀ dn vis fe MM eb _ _ hS hn1 hu2) hW)
+  | lit l =>
+    have hg : (L.Ind.eViewW s.mem e).headD 0 = 8 := hvr
+    simp (config := { decide := true }) only [bodyArmK, hg, ↓reduceIte] at hW
+    cases n with
+    | zero => exact absurd hW hz
+    | succ k =>
+    have h8 : e >>> 28 = 8 := by rw [← hhd, hg]
+    exact coreRef_congr (inferBody_lit _ fe d.toNat (decE e) a₀ l hv)
+      (fin (inferLit_refines p hq.leaf hc.lit k _ a₀ dn vis fe MM eb e l hS he h8 hv) hW)
+  | forallE ty b =>
+    obtain ⟨hg, h1, hd1, h2, hd2⟩ := hvr
+    rw [getD1] at h1 hd1; rw [getD2] at h2 hd2
+    simp (config := { decide := true }) only [bodyArmK, hg, ↓reduceIte] at hW
+    cases n with
+    | zero => exact absurd hW hz
+    | succ k =>
+    rw [← hd1, ← hd2] at hv
+    exact coreRef_congr (inferBody_forall _ fe d.toNat (decE e) a₀ _ _ hv)
+      (fin (inferForall_refines p hq.leaf hq.bind hq.body hc.instList hc.bstk hc.bcap k (hk.mono (by omega))
+        F (by omega) (by omega) _ a₀ dn vis fe MM eb mode d _ _ hsl h1 h2) hW)
+  | lam ty b =>
+    obtain ⟨hg, h1, hd1, h2, hd2⟩ := hvr
+    rw [getD1] at h1 hd1; rw [getD2] at h2 hd2
+    simp (config := { decide := true }) only [bodyArmK, hg, ↓reduceIte] at hW
+    cases n with
+    | zero => exact absurd hW hz
+    | succ k =>
+    rw [← hd1, ← hd2] at hv
+    exact coreRef_congr (inferBody_lam _ fe d.toNat (decE e) a₀ _ _ hv)
+      (fin (inferLam_refines p hq.leaf hq.bind hq.body hc.instList hc.absRange hc.bstk hc.bcap k
+        (hk.mono (by omega)) F (by omega) (by omega) _ a₀ dn vis fe MM eb mode d _ _ hsl h1 h2) hW)
+  | app f x =>
+    obtain ⟨hg, -⟩ := hvr
+    simp (config := { decide := true }) only [bodyArmK, hg, ↓reduceIte] at hW
+    cases n with
+    | zero => exact absurd hW hz
+    | succ k =>
+    have h4 : e >>> 28 = 4 := by rw [← hhd, hg]
+    exact coreRef_congr (inferBody_app _ fe d.toNat (decE e) a₀ f x hv)
+      (fin (inferApp_refines p hq.leaf hq.knot hq.spf hq.spine hc.eager hc.instList k (hk.mono (by omega))
+        F (by omega) (by omega) _ a₀ dn vis fe MM eb mode d e hsl he h4) hW)
+  | letE ty v b =>
+    obtain ⟨hg, h1, hd1, h2, hd2, h3, hd3⟩ := hvr
+    rw [getD1] at h1 hd1; rw [getD2] at h2 hd2; rw [getD3] at h3 hd3
+    simp (config := { decide := true }) only [bodyArmK, hg, ↓reduceIte] at hW
+    cases n with
+    | zero => exact absurd hW hz
+    | succ k =>
+    rw [← hd1, ← hd2, ← hd3] at hv
+    exact coreRef_congr (inferBody_let _ fe d.toNat (decE e) a₀ _ _ _ hv)
+      (fin (inferLet_refines p hq.leaf hq.body hc.inst1 k (hk.mono (by omega)) F _ a₀ dn vis fe MM eb
+        mode d _ _ _ (by omega) (by omega) hsl h1 h2 h3) hW)
+  | proj sn i pe =>
+    obtain ⟨hg, h1, hd1, h2, h3, hd3⟩ := hvr
+    rw [getD1] at h1 hd1; rw [getD2] at h2; rw [getD3] at h3 hd3
+    simp (config := { decide := true }) only [bodyArmK, hg, ↓reduceIte] at hW
+    cases n with
+    | zero => exact absurd hW hz
+    | succ k =>
+    rw [← hd1, ← h2, ← hd3] at hv
+    exact coreRef_congr (inferBody_proj _ fe d.toNat (decE e) a₀ _ _ _ hv)
+      (fin (hc.proj k (hk.mono (by omega)) F _ a₀ dn vis fe MM eb mode d _ _ _ (by omega) (by omega) hsl
+        h1 h3).1 hW)
+
 end L.Arena
