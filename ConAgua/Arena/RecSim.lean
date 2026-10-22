@@ -28,6 +28,36 @@ namespace L.Ind
 
 open L.Arena
 
+/-! ## Result words -/
+
+theorem getD_one (r : List Word) : r.getD 1 0 = r.tail.headD 0 := by
+  cases r with | nil => rfl | cons a t => cases t <;> rfl
+theorem getD_two (r : List Word) : r.getD 2 0 = r.tail.tail.headD 0 := by
+  rw [show r.getD 2 0 = r.tail.getD 1 0 by cases r <;> rfl, getD_one]
+theorem getD_three (r : List Word) : r.getD 3 0 = r.tail.tail.tail.headD 0 := by
+  rw [show r.getD 3 0 = r.tail.getD 2 0 by cases r <;> rfl, getD_two]
+theorem getD_four (r : List Word) : r.getD 4 0 = r.tail.tail.tail.tail.headD 0 := by
+  rw [show r.getD 4 0 = r.tail.getD 3 0 by cases r <;> rfl, getD_three]
+
+/-! ## Arguments read directly (grind's offset matching of `Locals.init_cons_succ` stops early) -/
+
+theorem loc_init4 (x0 x1 x2 x3 x4 : Word) (r : List Word) :
+    Locals.init (x0 :: x1 :: x2 :: x3 :: x4 :: r) 4 = x4 := rfl
+theorem loc_init5 (x0 x1 x2 x3 x4 x5 : Word) (r : List Word) :
+    Locals.init (x0 :: x1 :: x2 :: x3 :: x4 :: x5 :: r) 5 = x5 := rfl
+theorem loc_init6 (x0 x1 x2 x3 x4 x5 x6 : Word) (r : List Word) :
+    Locals.init (x0 :: x1 :: x2 :: x3 :: x4 :: x5 :: x6 :: r) 6 = x6 := rfl
+theorem loc_init7 (x0 x1 x2 x3 x4 x5 x6 x7 : Word) (r : List Word) :
+    Locals.init (x0 :: x1 :: x2 :: x3 :: x4 :: x5 :: x6 :: x7 :: r) 7 = x7 := rfl
+theorem loc_init8 (x0 x1 x2 x3 x4 x5 x6 x7 x8 : Word) (r : List Word) :
+    Locals.init (x0 :: x1 :: x2 :: x3 :: x4 :: x5 :: x6 :: x7 :: x8 :: r) 8 = x8 := rfl
+theorem loc_init9 (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 : Word) (r : List Word) :
+    Locals.init (x0 :: x1 :: x2 :: x3 :: x4 :: x5 :: x6 :: x7 :: x8 :: x9 :: r) 9 = x9 := rfl
+theorem loc_init10 (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 : Word) (r : List Word) :
+    Locals.init (x0 :: x1 :: x2 :: x3 :: x4 :: x5 :: x6 :: x7 :: x8 :: x9 :: x10 :: r) 10 = x10 := rfl
+theorem loc_init11 (x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 x11 : Word) (r : List Word) :
+    Locals.init (x0 :: x1 :: x2 :: x3 :: x4 :: x5 :: x6 :: x7 :: x8 :: x9 :: x10 :: x11 :: r) 11 = x11 := rfl
+
 /-! ## Fuel `0` -/
 
 /-- A call at fuel `0` never returns. -/
@@ -200,10 +230,10 @@ def recW (m : Mem) (k : Word) (ws : List Word) : Option (List Word × Mem) :=
   | some (q, m1) => some ([q], wrIW m1 q ws)
 
 section recs
-variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (n : Nat) (s₀ : St)
+variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc) (n : Nat)
 include ha
 
-theorem rec2_specW (hp : p.lookup "rec2" = some rec2) (a b : Word) :
+theorem rec2_specW (hp : p.lookup "rec2" = some rec2) (s₀ : St) (a b : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec2" [a, b]
     ⦃fun r s' => LocEq s' s₀ ∧ recW s₀.mem 2 [a, b] = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]; simp only [callFn, rec2]
@@ -215,7 +245,7 @@ theorem rec2_specW (hp : p.lookup "rec2" = some rec2) (a b : Word) :
         iwAlloc_specW p ha n] <;>
       finish [recW, wrIW]
 
-theorem rec3_specW (hp : p.lookup "rec3" = some rec3) (a b c : Word) :
+theorem rec3_specW (hp : p.lookup "rec3" = some rec3) (s₀ : St) (a b c : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec3" [a, b, c]
     ⦃fun r s' => LocEq s' s₀ ∧ recW s₀.mem 3 [a, b, c] = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]; simp only [callFn, rec3]
@@ -227,7 +257,7 @@ theorem rec3_specW (hp : p.lookup "rec3" = some rec3) (a b c : Word) :
         iwAlloc_specW p ha n] <;>
       finish [recW, wrIW, UInt64.add_assoc]
 
-theorem rec4_specW (hp : p.lookup "rec4" = some rec4) (a b c d : Word) :
+theorem rec4_specW (hp : p.lookup "rec4" = some rec4) (s₀ : St) (a b c d : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec4" [a, b, c, d]
     ⦃fun r s' => LocEq s' s₀ ∧ recW s₀.mem 4 [a, b, c, d] = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]; simp only [callFn, rec4]
@@ -239,7 +269,7 @@ theorem rec4_specW (hp : p.lookup "rec4" = some rec4) (a b c d : Word) :
         iwAlloc_specW p ha n] <;>
       finish [recW, wrIW, UInt64.add_assoc]
 
-theorem rec5_specW (hp : p.lookup "rec5" = some rec5) (a b c d e : Word) :
+theorem rec5_specW (hp : p.lookup "rec5" = some rec5) (s₀ : St) (a b c d e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec5" [a, b, c, d, e]
     ⦃fun r s' => LocEq s' s₀ ∧ recW s₀.mem 5 [a, b, c, d, e] = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]; simp only [callFn, rec5]

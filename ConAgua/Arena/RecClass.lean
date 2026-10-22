@@ -101,23 +101,19 @@ def classReadMinorIh1 : FunDecl := lfn (nP, mo, ml, d, x) locals (r, ok, v, t) {
 }
 
 /-- `class_read_minor_ihs(nP, mo, ml, d, fo, fl)`: `classReadMinor`'s inductive-hypothesis list,
-`fvs.filterMapM`. -/
+`fvs.filterMapM` (a self-recursion: the head's hypothesis, the rest, then the cons). -/
 -- con-ron: ConRon/Arena/Inductives/ClassRead.lean:101-145 ConRon.Arena.classReadMinor
 @[l_impl ConRon.Arena.classReadMinor]
-def classReadMinorIhs : FunDecl := lfn (nP, mo, ml, d, fo, fl) locals (q, j, cnt, ok, f, t, rp) {
-  q := call iw_alloc(fl);
-  j := 0;
-  cnt := 0;
-  while j < fl {
-    (ok, f, t) := call class_read_minor_ih1(nP, mo, ml, d, IW.u64[fo + j]);
-    if ok == 1 {
-      rp := call rec2(f, t);
-      IW.u64[q + cnt] := rp;
-      cnt += 1
-    };
-    j += 1
+def classReadMinorIhs : FunDecl := lfn (nP, mo, ml, d, fo, fl) locals (ok, f, t, ro, rl, rp, co, cl) {
+  if fl == 0 { return (0, 0) };
+  (ok, f, t) := call class_read_minor_ih1(nP, mo, ml, d, IW.u64[fo]);
+  (ro, rl) := call class_read_minor_ihs(nP, mo, ml, d, fo + 1, fl - 1);
+  if ok == 1 {
+    rp := call rec2(f, t);
+    (co, cl) := call sl_cons(rp, ro, rl);
+    return (co, cl)
   };
-  return (q, cnt)
+  return (ro, rl)
 }
 
 /-- `class_read_minor_finish(nP, mo, ml, d, fo, fl, hd, c)`: after the conclusion's head is read,
@@ -133,11 +129,25 @@ def classReadMinorFinish : FunDecl := lfn (nP, mo, ml, d, fo, fl, hd, c) locals
   return (1, slot)
 }
 
+/-- `class_read_minor_tail(nP, mo, ml, d, fo, fl, concl, c)`: `classReadMinor` after the class is
+read off the conclusion: its last argument's head, then `class_read_minor_finish`. -/
+-- con-ron: ConRon/Arena/Inductives/ClassRead.lean:101-145 ConRon.Arena.classReadMinor
+@[l_impl ConRon.Arena.classReadMinor]
+def classReadMinorTail : FunDecl := lfn (nP, mo, ml, d, fo, fl, concl, c) locals
+    (cao, cal, last, hd, ok, r) {
+  (cao, cal) := call get_app_args(⟪CWF⟫, concl);
+  if cal == 0 { return (0, 0) };
+  last := IW.u64[cao + cal - 1];
+  hd := call get_app_fn(⟪CWF⟫, last);
+  (ok, r) := call class_read_minor_finish(nP, mo, ml, d, fo, fl, hd, c);
+  return (ok, r)
+}
+
 /-- `class_read_minor(nP, mo, ml, d, dom)`: read one minor premise's type, opened at `d`. -/
 -- con-ron: ConRon/Arena/Inductives/ClassRead.lean:101-145 ConRon.Arena.classReadMinor
 @[l_impl ConRon.Arena.classReadMinor]
 def classReadMinor : FunDecl := lfn (nP, mo, ml, d, dom) locals
-    (bo, bl, body, ok, fo, fl, concl, p, c, cao, cal, last, hd, r) {
+    (bo, bl, body, ok, fo, fl, concl, p, c, r) {
   (bo, bl, body) := call pi_binders(⟪CWF⟫, dom);
   (ok, fo, fl, concl) := call open_pis_at_fvars_f(bl, dom, d);
   if ok == 0 { return (0, 0) };
@@ -145,11 +155,7 @@ def classReadMinor : FunDecl := lfn (nP, mo, ml, d, dom) locals
   if ok == 0 { return (0, 0) };
   (ok, c) := call class_of_motive_var(nP, mo, ml, p);
   if ok == 0 { return (0, 0) };
-  (cao, cal) := call get_app_args(⟪CWF⟫, concl);
-  if cal == 0 { return (0, 0) };
-  last := IW.u64[cao + cal - 1];
-  hd := call get_app_fn(⟪CWF⟫, last);
-  (ok, r) := call class_read_minor_finish(nP, mo, ml, d, fo, fl, hd, c);
+  (ok, r) := call class_read_minor_tail(nP, mo, ml, d, fo, fl, concl, c);
   return (ok, r)
 }
 
@@ -674,7 +680,8 @@ def recClassFns : Prog :=
   [("class_read_classes", classReadClasses), ("class_read_motive_slot", classReadMotiveSlot),
    ("class_of_motive_var", classOfMotiveVar), ("fvar_head", fvarHead),
    ("class_read_minor_ih1", classReadMinorIh1), ("class_read_minor_ihs", classReadMinorIhs),
-   ("class_read_minor_finish", classReadMinorFinish), ("class_read_minor", classReadMinor),
+   ("class_read_minor_finish", classReadMinorFinish), ("class_read_minor_tail", classReadMinorTail),
+   ("class_read_minor", classReadMinor),
    ("class_n_pc_of", classNPcOf), ("class_read_slot", classReadSlot),
    ("class_read_slots", classReadSlots), ("class_read_rec_cls", classReadRecCls),
    ("class_read_finish", classReadFinish), ("class_read", classRead),
