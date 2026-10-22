@@ -1,4 +1,5 @@
 import ConAgua.Arena.RecCheckSpec17
+import ConAgua.Arena.IndInstallSpec14
 
 /-!
 # `RecCheck`: `consBlockRecsTF` (lane `indproofs3`, helper `rec`)
@@ -146,15 +147,6 @@ def ruleWords (m : Mem) (ro : Word) : Nat → List Word
 theorem ruleWords_length (m : Mem) : ∀ (ro : Word) (k : Nat), (ruleWords m ro k).length = 11 * k
   | _, 0 => rfl
   | ro, k + 1 => by simp [ruleWords, recWords, ruleWords_length m (ro + 1) k]; omega
-
-theorem wrER_append : ∀ (xs ys : List Word) (m : Mem) (b : Word),
-    wrER m b (xs ++ ys) = wrER (wrER m b xs) (b + UInt64.ofNat xs.length) ys
-  | [], ys, m, b => by simp [wrER]
-  | x :: xs, ys, m, b => by
-    simp only [List.cons_append, wrER, List.length_cons]
-    rw [wrER_append xs ys]
-    congr 1
-    rw [UInt64.ofNat_add, UInt64.add_assoc, UInt64.add_comm 1]; rfl
 
 set_option maxHeartbeats 2000000 in
 theorem cpMem_eq {m : Mem} {b old : Word} (hlt : old.toNat + 11 ≤ b.toNat) (hb : b.toNat + 11 < 2 ^ 64) :
