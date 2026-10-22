@@ -7069,3 +7069,14 @@ already stated with `sorry` in `IndStubs.lean` for the last three), the adapters
 * Name clashes after merging (both helpers and master): renamed on the helpers' side (`pm*`, `cn*`).
   A whole-tree clash check (every `.olean`'s constant names; `_tmp/decls3-logs/clash/Clash.lean`)
   found them at once where `checker_prog.py` reports one per run.
+
+### Landing 6 (lane `decls3`): `all_level_params_defined` in L
+
+`DeclApd.lean`: `all_level_params_defined(o, l, e)` (the twin's `allLevelParamsDefined`,
+`CheckerBase.lean`), `alpd_go` (the memoized DAG walk, fuel per recursion level as the twin's),
+`alpd_ls` (a `const`'s level list, read in `POOL` via `ls_node`); lane `levels`' `lv_apd`/`lv_mem`
+bound at `A = IW` (the parameters are `cv_lps`'s `IW` slice; handles compare as names). **Memory
+map addition**: word array `151` = `APDM` (walk-local memo, cleared at each call), `CTL[152]`,
+`CTL[153]` its stamp − 1 and live count. The memo aborts at 3/4 load where the twin's `HashMap`
+grows (the memo library's capacity rule, as every L memo). Refinement: not yet (the stub specs in
+`DeclCvg`/`DeclHeader` still use `stubM "all_level_params_defined"`).
