@@ -38,7 +38,7 @@ def fsgW : Nat → Mem → Word → Word → Word → Word → Word → Option (
     else fcK (fsgW n m so sl (j + 1) c cn)
 
 /-- **The model of `class_gen_rule_find_slot`.** -/
-def fsW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
+def gfsW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _ => none
   | n + 1, m, g, c, cn => fcK (fsgW n m (rdW (m.arr64 IW) (g + 7)) (rdW (m.arr64 IW) (g + 8)) 0 c cn)
 
@@ -163,37 +163,37 @@ end
 
 /-! ## The closing, the body, the rule -/
 
-def rcK5 (n : Nat) (body : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def grcK5 (n : Nat) (body : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r5, m5) => c1cK2 (closeLamsW n m5 (r5.headD 0) (r5.tail.headD 0) 0 body)
 
-def rcK4 (n : Nat) (g body : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def grcK4 (n : Nat) (g body : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r4, m4) =>
-    rcK5 n body (appendW n m4 (rdW (m4.arr64 IW) (g + 12)) (rdW (m4.arr64 IW) (g + 13)) (r4.headD 0) (r4.tail.headD 0))
+    grcK5 n body (appendW n m4 (rdW (m4.arr64 IW) (g + 12)) (rdW (m4.arr64 IW) (g + 13)) (r4.headD 0) (r4.tail.headD 0))
 
-def rcK3 (n : Nat) (g fo fl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def grcK3 (n : Nat) (g fo fl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r3, m3) => rcK4 n g (r3.headD 0) (stubM "fvar_type_ds" m3 [fo, fl])
+  | some (r3, m3) => grcK4 n g (r3.headD 0) (stubM "fvar_type_ds" m3 [fo, fl])
 
-def rcK2 (n : Nat) (g fo fl sv : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def grcK2 (n : Nat) (g fo fl sv : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r2, m2) => rcK3 n g fo fl (stubM "mk_app_n_f" m2 [sv, r2.headD 0, r2.tail.headD 0])
+  | some (r2, m2) => grcK3 n g fo fl (stubM "mk_app_n_f" m2 [sv, r2.headD 0, r2.tail.headD 0])
 
-def rcK1 (n : Nat) (g fo fl ihso ihsl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def grcK1 (n : Nat) (g fo fl ihso ihsl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r1, m1) => rcK2 n g fo fl (r1.headD 0) (appendW n m1 fo fl ihso ihsl)
+  | some (r1, m1) => grcK2 n g fo fl (r1.headD 0) (appendW n m1 fo fl ihso ihsl)
 
 /-- **The model of `class_gen_rule_close`.** -/
-def rcW : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
+def grcW : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
   | 0, _, _, _, _, _, _, _ => none
-  | n + 1, m, g, s, fo, fl, ihso, ihsl => rcK1 n g fo fl ihso ihsl (slotVarW m g s)
+  | n + 1, m, g, s, fo, fl, ihso, ihsl => grcK1 n g fo fl ihso ihsl (slotVarW m g s)
 
 def rbK3 (n : Nat) (g s fo fl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r3, m3) =>
     if r3.headD 0 = 0 then some ([0, 0], m3)
-    else fcK (rcW n m3 g s fo fl (r3.tail.headD 0) (r3.tail.tail.headD 0))
+    else fcK (grcW n m3 g s fo fl (r3.tail.headD 0) (r3.tail.tail.headD 0))
 
 def rbK2 (n : Nat) (g rco rcl cgo cgl rlvls x rP s fo fl wso wsl : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
@@ -235,7 +235,7 @@ def ruW : Nat → Mem → Word → Word → Word → Word → Word → Word → 
   | 0, _, _, _, _, _, _, _, _, _ => none
   | n + 1, m, g, rco, rcl, cgo, cgl, rlvls, c, x =>
     ruK1 n g rco rcl cgo cgl rlvls x (rdW (m.arr64 IW) (g + 13))
-      (fsW n m g c (rdW (m.arr64 EREC) (rdW (m.arr64 IW) x)))
+      (gfsW n m g c (rdW (m.arr64 EREC) (rdW (m.arr64 IW) x)))
 
 /-! ## Arms -/
 
@@ -252,7 +252,7 @@ theorem fsgW_miss (h : ¬ sl ≤ j) (h2 : ¬ (rdW (m.arr64 IW) (rdW (m.arr64 IW)
     rdW (m.arr64 IW) (rdW (m.arr64 IW) (so + j) + 1) = c ∧ rdW (m.arr64 IW) (rdW (m.arr64 IW) (so + j) + 2) = cn)) :
     fsgW (n + 1) m so sl j c cn = fcK (fsgW n m so sl (j + 1) c cn) := by
   simp only [fsgW]; rw [if_neg h, if_neg h2]
-theorem fsW_eq : fsW (n + 1) m g c cn = fcK (fsgW n m (rdW (m.arr64 IW) (g + 7)) (rdW (m.arr64 IW) (g + 8)) 0 c cn) :=
+theorem gfsW_eq : gfsW (n + 1) m g c cn = fcK (fsgW n m (rdW (m.arr64 IW) (g + 7)) (rdW (m.arr64 IW) (g + 8)) 0 c cn) :=
   rfl
 theorem pvW_end (h : rP ≤ i) : pvW (n + 1) m g rP i = some ([0, 0], m) := by simp [pvW, h]
 theorem pvW_step (h : ¬ rP ≤ i) : pvW (n + 1) m g rP i = pvK1 n (fun m1 => pvW n m1 g rP (i + 1))
@@ -314,16 +314,16 @@ theorem cgK1_ok (h : r1.headD 0 ≠ 0) :
     cgK1 n g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e nn i (some (r1, m1)) =
       isK2 n (r1.tail.headD 0) (cgW n m1 g x wso wsl fvso fvsl pvo pvl rlvls rco rcl cgo cgl e (nn - 1) (i + 1)) := by
   rw [cgK1, if_neg h]
-theorem rcW_eq : rcW (n + 1) m g s fo fl ihso ihsl = rcK1 n g fo fl ihso ihsl (slotVarW m g s) := rfl
-theorem rcK1_some : rcK1 n g fo fl ihso ihsl (some (r1, m1)) = rcK2 n g fo fl (r1.headD 0) (appendW n m1 fo fl ihso ihsl) :=
+theorem grcW_eq : grcW (n + 1) m g s fo fl ihso ihsl = grcK1 n g fo fl ihso ihsl (slotVarW m g s) := rfl
+theorem grcK1_some : grcK1 n g fo fl ihso ihsl (some (r1, m1)) = grcK2 n g fo fl (r1.headD 0) (appendW n m1 fo fl ihso ihsl) :=
   rfl
-theorem rcK2_some : rcK2 n g fo fl sv (some (r2, m2)) =
-    rcK3 n g fo fl (stubM "mk_app_n_f" m2 [sv, r2.headD 0, r2.tail.headD 0]) := rfl
-theorem rcK3_some : rcK3 n g fo fl (some (r3, m3)) = rcK4 n g (r3.headD 0) (stubM "fvar_type_ds" m3 [fo, fl]) := rfl
-theorem rcK4_some : rcK4 n g body (some (r4, m4)) =
-    rcK5 n body (appendW n m4 (rdW (m4.arr64 IW) (g + 12)) (rdW (m4.arr64 IW) (g + 13)) (r4.headD 0) (r4.tail.headD 0)) :=
+theorem grcK2_some : grcK2 n g fo fl sv (some (r2, m2)) =
+    grcK3 n g fo fl (stubM "mk_app_n_f" m2 [sv, r2.headD 0, r2.tail.headD 0]) := rfl
+theorem grcK3_some : grcK3 n g fo fl (some (r3, m3)) = grcK4 n g (r3.headD 0) (stubM "fvar_type_ds" m3 [fo, fl]) := rfl
+theorem grcK4_some : grcK4 n g body (some (r4, m4)) =
+    grcK5 n body (appendW n m4 (rdW (m4.arr64 IW) (g + 12)) (rdW (m4.arr64 IW) (g + 13)) (r4.headD 0) (r4.tail.headD 0)) :=
   rfl
-theorem rcK5_some : rcK5 n body (some (r5, m5)) = c1cK2 (closeLamsW n m5 (r5.headD 0) (r5.tail.headD 0) 0 body) := rfl
+theorem grcK5_some : grcK5 n body (some (r5, m5)) = c1cK2 (closeLamsW n m5 (r5.headD 0) (r5.tail.headD 0) 0 body) := rfl
 theorem rbW_eq : rbW (n + 1) m g rco rcl cgo cgl rlvls x rP s fo fl =
     rbK1 n g rco rcl cgo cgl rlvls x rP s fo fl (pdW n m fo fl (rdW (m.arr64 IW) (x + 5))) := rfl
 theorem rbK1_fail (h : r1.headD 0 = 0) : rbK1 n g rco rcl cgo cgl rlvls x rP s fo fl (some (r1, m1)) =
@@ -340,9 +340,9 @@ theorem rbK2_ok (h : ¬ rP + rdW (m2.arr64 IW) (x + 1) < rP) :
 theorem rbK3_fail (h : r3.headD 0 = 0) : rbK3 n g s fo fl (some (r3, m3)) = some ([0, 0], m3) := by
   rw [rbK3, if_pos h]
 theorem rbK3_ok (h : r3.headD 0 ≠ 0) : rbK3 n g s fo fl (some (r3, m3)) =
-    fcK (rcW n m3 g s fo fl (r3.tail.headD 0) (r3.tail.tail.headD 0)) := by rw [rbK3, if_neg h]
+    fcK (grcW n m3 g s fo fl (r3.tail.headD 0) (r3.tail.tail.headD 0)) := by rw [rbK3, if_neg h]
 theorem ruW_eq : ruW (n + 1) m g rco rcl cgo cgl rlvls c x = ruK1 n g rco rcl cgo cgl rlvls x
-    (rdW (m.arr64 IW) (g + 13)) (fsW n m g c (rdW (m.arr64 EREC) (rdW (m.arr64 IW) x))) := rfl
+    (rdW (m.arr64 IW) (g + 13)) (gfsW n m g c (rdW (m.arr64 EREC) (rdW (m.arr64 IW) x))) := rfl
 theorem ruK1_fail (h : r1.headD 0 = 0) : ruK1 n g rco rcl cgo cgl rlvls x rP (some (r1, m1)) = some ([0, 0], m1) := by
   rw [ruK1, if_pos h]
 theorem ruK1_ok (h : r1.headD 0 ≠ 0) : ruK1 n g rco rcl cgo cgl rlvls x rP (some (r1, m1)) =
@@ -356,10 +356,10 @@ theorem ruK2_ok (h : r2.headD 0 ≠ 0) : ruK2 n g rco rcl cgo cgl rlvls x rP s (
   rw [ruK2, if_neg h]
 end arms
 
-attribute [ind_grind] fsgW_end fsgW_hit fsgW_miss fsW_eq pvW_end pvW_step pvK1_some pvK2_some c1cW_eq
+attribute [ind_grind] fsgW_end fsgW_hit fsgW_miss gfsW_eq pvW_end pvW_step pvK1_some pvK2_some c1cW_eq
   c1cK1_big c1cK1_ok c1cK2_some c1tW_eq c1tK1_some c1tK2_some c1tK3_big c1tK3_ok c1tK4_some c1tK5_some
   c1tK6_some c1W_eq c1K1_some c1K2_fail c1K2_ok c1K3_fail c1K3_ok cgW_end cgW_rec cgW_ord cgK1_fail cgK1_ok
-  rcW_eq rcK1_some rcK2_some rcK3_some rcK4_some rcK5_some rbW_eq rbK1_fail rbK1_ok rbK2_big rbK2_ok rbK3_fail
+  grcW_eq grcK1_some grcK2_some grcK3_some grcK4_some grcK5_some rbW_eq rbK1_fail rbK1_ok rbK2_big rbK2_ok rbK3_fail
   rbK3_ok ruW_eq ruK1_fail ruK1_ok ruK2_fail ruK2_ok
 
 /-! ## Specs -/
@@ -404,7 +404,7 @@ theorem findSlotGo_spec (n : Nat) : ∀ (s₀ : St) (so sl j c cn : Word),
 
 theorem findSlot_spec (n : Nat) (s₀ : St) (g c cn : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "class_gen_rule_find_slot" [g, c, cn]
-    ⦃fun r s' => LocEq s' s₀ ∧ fsW n s₀.mem g c cn = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ gfsW n s₀.mem g c cn = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.fs]
   simp only [callFn, classGenRuleFindSlot]
   cases n with
@@ -501,7 +501,7 @@ theorem callsGo_spec (n : Nat) : ∀ (s₀ : St) (g x wso wsl fvso fvsl pvo pvl 
 
 theorem ruleClose_spec (n : Nat) (s₀ : St) (g s fo fl ihso ihsl : Word) :
     ⦃fun st => st = s₀⦄ invoke p (exec p n) "class_gen_rule_close" [g, s, fo, fl, ihso, ihsl]
-    ⦃fun r s' => LocEq s' s₀ ∧ rcW n s₀.mem g s fo fl ihso ihsl = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ grcW n s₀.mem g s fo fl ihso ihsl = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.rc]
   simp only [callFn, classGenRuleClose]
   cases n with
@@ -529,7 +529,7 @@ theorem ruleBody_spec (n : Nat) (s₀ : St) (g rco rcl cgo cgl rlvls x rP s fo f
       finish (gen := 20) (instances := 5000) [rdW_eq, loc_init4, loc_init5, loc_init6, loc_init7, loc_init8,
         loc_init9, loc_init10]
 
-theorem rule_spec (n : Nat) (s₀ : St) (g rco rcl cgo cgl rlvls c x : Word) :
+theorem classGenRule_spec (n : Nat) (s₀ : St) (g rco rcl cgo cgl rlvls c x : Word) :
     ⦃fun st => st = s₀⦄ invoke p (exec p n) "class_gen_rule" [g, rco, rcl, cgo, cgl, rlvls, c, x]
     ⦃fun r s' => LocEq s' s₀ ∧ ruW n s₀.mem g rco rcl cgo cgl rlvls c x = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ h.ru]
