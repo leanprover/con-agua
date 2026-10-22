@@ -67,17 +67,14 @@ def nestKeysContainsL : FunDecl := lfn (off, l, k) locals (r) {
 }
 
 /-- `nest_occ_any(namesOff, namesLen, lo, hi, off, l)`: `xs.anyM (nestOcc names lo hi ·)`,
-short-circuiting. -/
+short-circuiting, recursively. -/
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:212-216 ConRon.Arena.nestOcc
-def nestOccAnyL : FunDecl := lfn (namesOff, namesLen, lo, hi, off, l) locals (j, x, b) {
-  j := 0;
-  while j < l {
-    x := IW.u64[off + j];
-    b := call nest_occ(namesOff, namesLen, lo, hi, x);
-    if b != 0 { return 1 };
-    j += 1
-  };
-  return 0
+def nestOccAnyL : FunDecl := lfn (namesOff, namesLen, lo, hi, off, l) locals (b, r) {
+  if l == 0 { return 0 };
+  b := call nest_occ(namesOff, namesLen, lo, hi, IW.u64[off]);
+  if b != 0 { return 1 };
+  r := call nest_occ_any(namesOff, namesLen, lo, hi, off + 1, l - 1);
+  return r
 }
 
 /-- `nest_ds_closed_go(hi0, off, l)`: the loop of `nest_ds_closed`, as a recursion. -/
