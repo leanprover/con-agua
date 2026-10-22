@@ -168,21 +168,29 @@ end leaves
 
 /-! ## Frames: nothing at or above array 64 changes -/
 
-/-- No word array at or above `64` (`NID`, `LID`, `EID`) changes. -/
-def Above64 (m m' : Mem) : Prop := ∀ B : ArrId, 64 ≤ B → m'.arr64 B = m.arr64 B
+/-- No word array and no `CTL` word at or above `64` (the id tables) changes. -/
+def Above64 (m m' : Mem) : Prop := MemFrame (List.range 64) ((List.range 64).map UInt64.ofNat) m m'
 
 theorem Above64.trans {m₁ m₂ m₃ : Mem} (h₁ : Above64 m₁ m₂) (h₂ : Above64 m₂ m₃) : Above64 m₁ m₃ :=
-  fun B hB => (h₂ B hB).trans (h₁ B hB)
+  MemFrame.trans h₁ h₂
 
 theorem MemFrame.above {A : List ArrId} {C : List Word} {m m' : Mem} (hf : MemFrame A C m m')
-    (hA : ∀ b ∈ A, b < 64) : Above64 m m' :=
-  fun B hB => hf.1 B (fun h => absurd (hA B h) (Nat.not_lt.mpr hB)) (fun h => by subst h; exact absurd hB (by decide))
+    (hA : ∀ b ∈ A, b < 64) (hC : ∀ x ∈ C, x.toNat < 64 := by tctl) : Above64 m m' :=
+  hf.mono (fun b hb => List.mem_range.mpr (hA b hb))
+    (fun x hx => by
+      have := hC x hx
+      simp only [List.mem_map, List.mem_range]
+      exact ⟨x.toNat, this, by simp⟩)
 
 theorem StateDR.above {m m' : Mem} {st : StateD} (h : StateDR m st) (hf : Above64 m m') :
     StateDR m' st :=
-  ⟨by rw [hf NID (by decide)]; exact h.names, by rw [hf LID (by decide)]; exact h.levels,
-    by rw [hf EID (by decide)]; exact h.exprs,
-    by rw [hf DECL (by decide), hf DLP (by decide)]; exact h.decls⟩
+  h.frame hf (by simp [NID]) (by simp [LID]) (by simp [EID]) (by simp [DECL]) (by simp [DLP])
+    (fun x hx h => by
+      have := List.mem_range.mp hx
+      simp only [idArrs, List.mem_cons, List.not_mem_nil, or_false] at h
+      rcases h with rfl | rfl | rfl | rfl | rfl | rfl <;> revert this <;> decide) (fun x hx => by
+      simp only [List.mem_map, List.mem_range] at hx
+      obtain ⟨n, hn, rfl⟩ := hx; simp; omega)
 
 theorem mkK_above (A : ArrId) (hA : A < 64) (hC : A ≠ CTL) (c s d r : Word) (m m' : Mem)
     (x : Option (Word × Mem)) (hx : ∀ r₁ m₁, x = some (r₁, m₁) → Above64 m m₁)
@@ -257,16 +265,11 @@ def NodeOK (st : StateD) (r : ExprRec) (a : AState) (m₁ : Mem) (w : Word) : Pr
     StateDR m₁ st
 
 /-- A bound table entry: the table's value, a 32-bit handle, and the id is not `NONE`. -/
-theorem tbl_read {k : IdxKind} {m : Mem} {b : ArrId} {t : IdTable (Idx k)} (h : TblR (m.arr64 b) t)
+theorem tbl_read {k : IdxKind} {m : Mem} {b : ArrId} {t : IdTable (Idx k)} (h : TblR m b t)
     (i : Word) (hok : tblOK m b i = true) :
     t.get? i.toNat = some (decI (tblW m b i)) ∧ (tblW m b i).toNat < 2 ^ 32 ∧ i ≠ NONE := by
   obtain ⟨h1, h2⟩ := h.read _ _ _ _ hok
-  refine ⟨h1, h2, fun hn => ?_⟩
-  have hs := h.size
-  simp only [tblOK, Bool.and_eq_true, decide_eq_true_eq, Mem.len64, UInt64.lt_iff_toNat_lt] at hok
-  rw [toNat_ofNat_size _ hs, hn] at hok
-  have : NONE.toNat = 2 ^ 64 - 1 := rfl
-  omega
+  exact ⟨h1, h2, tblOK_ne_tomb i hok⟩
 
 theorem itemR_eq {x : Word} {n : Nat} (h : ItemR x n) (hx : x ≠ NONE) : n = x.toNat := (h hx).symm
 
@@ -428,7 +431,7 @@ theorem node_lit_str (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 
 
 omit hA hD in
 /-- A universe list whose items are bound level ids: `mapM st.level` is pure. -/
-theorem mapM_level (hL : TblR (m.arr64 LID) st.levels) :
+theorem mapM_level (hL : TblR m LID st.levels) :
     ∀ (xs : List Word) (us : List Nat), ItemsR xs us → (∀ x ∈ xs, tblOK m LID x = true) →
       us.mapM st.level = pure (xs.map fun x => decI (tblW m LID x))
   | [], [], _, _ => rfl
@@ -490,9 +493,7 @@ theorem node_const (x c z : Word) (nm : Nat) (us : List Nat) (hx : ItemR x nm)
     rw [UInt64.toNat_add]; simp; omega
   have hg : Grows m m₂ := ⟨F9, fun j hj => F5 j hj, by rw [F2, htc]; omega,
     by rw [F2, htc]; omega, F3⟩
-  have hab : Above64 m m₂ := fun B hB => by
-    rw [F9.2.2 B (fun h => by subst h; exact absurd hB (by decide)),
-      Mem.arr64_set64_ne _ _ _ _ _ (fun h => by subst h; exact absurd hB (by decide))]
+  have hab : Above64 m m₂ := MemFrame.above (grows_frame _ _ hg) (by simp [POOL])
   have hA₂ := ArenaD.grow m m₂ hg a hA
   -- the twin's universe list
   have hxs : itemsN b.data (c + 1) = listN b.data c := rfl
@@ -558,15 +559,8 @@ theorem node_ok (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63) (
 end node
 
 /-- An unbound table entry: the id is not `NONE`. -/
-theorem tbl_fresh_ne {k : IdxKind} {m : Mem} {b : ArrId} {t : IdTable (Idx k)}
-    (h : TblR (m.arr64 b) t) (i : Word) (hf : tblFresh m b i = true) : i ≠ NONE := by
-  intro hn
-  have hs := h.size
-  simp only [tblFresh, Bool.and_eq_true, decide_eq_true_eq, Mem.len64,
-    UInt64.lt_iff_toNat_lt] at hf
-  rw [toNat_ofNat_size _ hs, hn] at hf
-  have : NONE.toNat = 2 ^ 64 - 1 := rfl
-  omega
+theorem tbl_fresh_ne {m : Mem} {b : ArrId} (i : Word) (hf : tblFresh m b i = true) : i ≠ NONE :=
+  tblFresh_ne_tomb i hf
 
 /-- **`apply_expr`'s model refines `parseExprEntryD`**: on fields `f` that con-leche's scanner
 relates to the expression record `r` (`ExprR`) and an index word read for `i`, a successful
@@ -584,17 +578,17 @@ theorem applyExprW_refines (b : ByteArray) (h64 : System.Platform.numBits = 64)
     Classical.byContradiction fun hf => by simp [hf] at h
   simp only [hfr, ↓reduceIte] at h
   have hnone := hD.exprs.fresh _ _ _ _ hfr
-  rw [itemR_eq hI (tbl_fresh_ne hD.exprs _ hfr)]
-  obtain ⟨w, m₁, hN, hw, hi, rfl⟩ := putK_eq h
+  rw [itemR_eq hI (tbl_fresh_ne _ hfr)]
+  obtain ⟨w, m₁, hN, hw, hp⟩ := putK_eq h
   obtain ⟨h1, h2, h3, h4⟩ := node_ok b m m₁ a₀ st hA hD w h64 hsize f r hE hN
   have hfresh : st.freshExpr f.idx.toNat = pure () := by
     simp [StateD.freshExpr, IdTable.bound_eq, hnone]
   rw [parseExprEntryD_eq, hfresh, pure_bind]
   obtain ⟨hok₂, hst₂, hres₂⟩ := AM.bind_pure _
     (fun e => { st with exprs := st.exprs.insert f.idx.toNat e }) a₀ h1
-  refine ⟨hok₂, by rw [hst₂]; exact ArenaD.setT _ _ h2 _ (.inr (.inr rfl)) _ _, ?_⟩
+  refine ⟨hok₂, by rw [hst₂]; exact ArenaD.putT _ _ _ h2 EID (.inr (.inr rfl)) _ _ hp, ?_⟩
   rw [hres₂, h3]
-  exact h4.putExpr (MemFrame.refl [] [] m₁) (by simp) (by simp) (by simp) f.idx w hi hw _
+  exact h4.putExpr (MemFrame.refl [] [] m₁) (by simp) (by simp) (by simp) f.idx w hp hw _
     (fun j => IdTable.get?_insert _ _ _ _) rfl rfl
 
 end L.Front

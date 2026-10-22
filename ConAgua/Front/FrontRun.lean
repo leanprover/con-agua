@@ -200,7 +200,8 @@ theorem frontAllProg_front : FrontLookups frontAllProg := by constructor <;> rfl
 theorem frontAllProg_expr : ExprLookups frontAllProg := by
   refine ⟨frontAllProg_front, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
     ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
-    ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, frontAllProg_noSt8⟩ <;> rfl
+    ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_,
+    frontAllProg_noSt8⟩ <;> rfl
 
 theorem frontAllProg_dfields : DeclFieldLookups frontAllProg := by constructor <;> rfl
 
@@ -219,8 +220,8 @@ theorem frontAll_refines (b : ByteArray) (h64 : System.Platform.numBits = 64)
   frontRun_refines frontAllProg frontAllProg_scan frontAllProg_front rfl rfl rfl rfl rfl rfl rfl
     frontAllProg_expr rfl frontAllProg_dfields frontAllProg_decl rfl rfl rfl b h64 hsize n s₀ hm hpool a₀ hA hD
 
-/-- A memory with 69 word arrays of 4096 words and the input `s`. -/
-def frontMemOf (s : String) : Mem := { initMem (List.replicate 69 4096) with bytes := #[s.toUTF8.data] }
+/-- A memory with 75 word arrays of 4096 words and the input `s`. -/
+def frontMemOf (s : String) : Mem := { initMem (List.replicate 75 4096) with bytes := #[s.toUTF8.data] }
 
 /- A header, a name, a level, and expression lines of six kinds (a 30-digit literal among them):
 accepted. -/
