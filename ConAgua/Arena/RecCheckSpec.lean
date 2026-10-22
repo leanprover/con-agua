@@ -751,4 +751,263 @@ theorem targetPinTys_refines (p : Prog) (hp : p.lookup "target_pin_tys" = some t
   obtain ⟨hok, hst, -⟩ := AM.of_run_ok _ a₀ a' () hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hg⟩
 
+
+/-! ## `target_pi_doms_with` (loop rewritten as recursion on the binder telescope) -/
+
+mutual
+/-- **The model of `target_pi_doms_with`.** -/
+def pdW : Nat → Mem → Word → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _, _ => none
+  | n + 1, m, xo, xl, e =>
+    if xl = 0 then some ([1, 0, 0], m)
+    else if e >>> 28 ≠ 6 then some ([0, 0, 0], m)
+    else if eViewW m e = [] then none
+    else pdK1 n xo xl ((eViewW m e).tail.headD 0)
+      (stubM "instantiate1_fast" m [CWF, (eViewW m e).tail.tail.headD 0, rdW (m.arr64 IW) xo, 0])
+
+/-- After `instantiate1_fast`. -/
+def pdK1 (n : Nat) (xo xl d : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m1) => pdK2 n d (pdW n m1 (xo + 1) (xl - 1) (r.headD 0))
+
+/-- After the recursive call: `sl_cons`. -/
+def pdK2 (n : Nat) (d : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m2) =>
+    if r.headD 0 = 0 then some ([0, 0, 0], m2)
+    else pdK3 (consW n m2 d (r.tail.headD 0) (r.tail.tail.headD 0))
+
+/-- After `sl_cons`. -/
+def pdK3 : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m3) => some ([1, r.headD 0, r.tail.headD 0], m3)
+end
+
+section arms
+variable (n : Nat) (m m1 m2 m3 : Mem) (xo xl e d : Word) (r : List Word)
+theorem pdW_nil (h : xl = 0) : pdW (n + 1) m xo xl e = some ([1, 0, 0], m) := by simp [pdW, h]
+theorem pdW_nf (h : xl ≠ 0) (h1 : e >>> 28 ≠ 6) : pdW (n + 1) m xo xl e = some ([0, 0, 0], m) := by
+  simp [pdW, h, h1]
+theorem pdW_ev (h : xl ≠ 0) (h1 : ¬ e >>> 28 ≠ 6) (h2 : eViewW m e = []) :
+    pdW (n + 1) m xo xl e = none := by
+  simp only [pdW, h, h1, h2, if_false, if_true]
+theorem pdW_cons (h : xl ≠ 0) (h1 : ¬ e >>> 28 ≠ 6) (h2 : eViewW m e ≠ []) : pdW (n + 1) m xo xl e =
+    pdK1 n xo xl ((eViewW m e).tail.headD 0)
+      (stubM "instantiate1_fast" m [CWF, (eViewW m e).tail.tail.headD 0, rdW (m.arr64 IW) xo, 0]) := by
+  simp only [pdW, h, h1, h2, if_false]
+theorem pdK1_some : pdK1 n xo xl d (some (r, m1)) = pdK2 n d (pdW n m1 (xo + 1) (xl - 1) (r.headD 0)) := by
+  rw [pdK1]
+theorem pdK2_none (h : r.headD 0 = 0) : pdK2 n d (some (r, m2)) = some ([0, 0, 0], m2) := by
+  rw [pdK2, if_pos h]
+theorem pdK2_ok (h : r.headD 0 ≠ 0) : pdK2 n d (some (r, m2)) =
+    pdK3 (consW n m2 d (r.tail.headD 0) (r.tail.tail.headD 0)) := by
+  rw [pdK2, if_neg h]
+theorem pdK3_some : pdK3 (some (r, m3)) = some ([1, r.headD 0, r.tail.headD 0], m3) := by rw [pdK3]
+end arms
+
+grind_pattern [ind_grind] pdW_nil => pdW (n + 1) m xo xl e
+grind_pattern [ind_grind] pdW_nf => pdW (n + 1) m xo xl e
+grind_pattern [ind_grind] pdW_ev => pdW (n + 1) m xo xl e
+grind_pattern [ind_grind] pdW_cons => pdW (n + 1) m xo xl e
+grind_pattern [ind_grind] pdK1_some => pdK1 n xo xl d (some (r, m1))
+grind_pattern [ind_grind] pdK2_none => pdK2 n d (some (r, m2))
+grind_pattern [ind_grind] pdK2_ok => pdK2 n d (some (r, m2))
+grind_pattern [ind_grind] pdK3_some => pdK3 (some (r, m3))
+
+theorem targetPiDomsWith_spec (p : Prog) (hv : p.lookup "e_view" = some eView)
+    (hc : p.lookup "iw_copy" = some iwCopy) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hsc : p.lookup "sl_cons" = some slCons)
+    (hp : p.lookup "target_pi_doms_with" = some targetPiDomsWith) (n : Nat) :
+    ∀ (s₀ : St) (xo xl e : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_pi_doms_with" [xo, xl, e]
+    ⦃fun r s' => LocEq s' s₀ ∧ pdW n s₀.mem xo xl e = some (r, s'.mem); ⊤⦄ := by
+  induction n with
+  | zero =>
+    intro s₀ xo xl e; rw [invoke_eq _ hp]; simp only [callFn, targetPiDomsWith]
+    vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ xo xl e
+    rw [invoke_eq _ hp]
+    simp only [callFn, targetPiDomsWith]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        eView_spec p hv n, stubM_spec p "instantiate1_fast" n, slCons_specW p ha hc hsc n, ih] <;>
+      finish (gen := 20)
+
+
+theorem tpd_step (x d b b' : EIdx) (e : Word) (xs : List EIdx) (a a1 a2 : AState) (res : Option (List EIdx))
+    (htag : ((decE e).tag == ETag.forallE) = true) (hvb : a.store.viewBind (decE e) = some (d, b))
+    (h1 : (instantiate1Fast coreWalkFuel b x 0) a = .ok (b', a1))
+    (h2 : (ConRon.Arena.targetPiDomsWith xs b') a1 = .ok (res, a2)) :
+    (ConRon.Arena.targetPiDomsWith (x :: xs) (decE e)) a =
+      .ok ((match res with | some ds => some (d :: ds) | none => none), a2) := by
+  simp only [ConRon.Arena.targetPiDomsWith, htag, ite_true]
+  have e2 : (ConRon.Arena.viewBind (decE e)) a = .ok (a.store.viewBind (decE e), a) := rfl
+  rw [hvb] at e2
+  simp only [bind, StateT.bind, e2, Except.bind]
+  simp only [h1, Except.bind, h2]
+  cases res <;> rfl
+
+
+theorem viewBind_run' (h : EIdx) (a : AState) :
+    (ConRon.Arena.viewBind h).run a = .ok (a.store.viewBind h, a) := rfl
+
+/-- The result words of `target_pi_doms_with` against the twin's result. -/
+def PdRes (m' : Mem) (r : List Word) : Option (List EIdx) → Prop
+  | none => r.headD 0 = 0
+  | some ds => r.headD 0 = 1 ∧ decHL m' (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat = some ds ∧
+      (r.tail.headD 0).toNat + (r.tail.tail.headD 0).toNat ≤ iwTop m'
+
+theorem pdW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (n : Nat) :
+    ∀ (m m' : Mem) (a : AState) (xo xl e : Word) (r : List Word) (xs : List EIdx),
+    pdW n m xo xl e = some (r, m') → StageR dn vis fe m a → H e →
+    decHL m xo.toNat xl.toNat = some xs → xo.toNat + xl.toNat < 2 ^ 64 →
+    xo.toNat + xl.toNat ≤ iwTop m →
+    ∃ res a', (ConRon.Arena.targetPiDomsWith xs (decI e)).run a = .ok (res, a') ∧
+      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PdRes m' r res := by
+  induction n with
+  | zero => intro m m' a xo xl e r xs h; simp [pdW] at h
+  | succ n ih =>
+    intro m m' a xo xl e r xs h hS he hxs hb hbt
+    by_cases hxl : xl = 0
+    · rw [pdW_nil n m xo xl e hxl] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      have hz : xl.toNat = 0 := by rw [hxl]; rfl
+      rw [hz] at hxs
+      simp [decHL, hslice?] at hxs
+      subst hxs
+      refine ⟨some [], a, rfl, hS, IWGrow.refl m, ?_⟩
+      simp [PdRes, decHL, hslice?]
+    · have hpos : 1 ≤ xl.toNat := by
+        rcases Nat.eq_zero_or_pos xl.toNat with h0 | h0
+        · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hxl
+        · omega
+      obtain ⟨c1, hc1⟩ : ∃ c1, xl.toNat = c1 + 1 := ⟨xl.toNat - 1, by omega⟩
+      rw [hc1] at hxs
+      obtain ⟨x, xs', rfl, hxs', hx⟩ := decHL_cons hxs
+      have hftag : (decE e).tag = ETag.forallE ↔ e >>> 28 = 6 := ctag_iff e he 6 (by decide)
+      by_cases hf : e >>> 28 ≠ 6
+      · rw [pdW_nf n m xo xl e hxl hf] at h
+        simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        refine ⟨none, a, ?_, hS, IWGrow.refl m, rfl⟩
+        have : ¬ (decE e).tag = ETag.forallE := fun hc => hf (hftag.mp hc)
+        have htag' : ((decE e).tag == ETag.forallE) = false := by simpa using this
+        have e1 : (decI e : EIdx) = decE e := rfl
+        rw [e1]
+        simp only [ConRon.Arena.targetPiDomsWith, htag', Bool.false_eq_true, ite_false]
+        rfl
+      have hf6 : e >>> 28 = 6 := by simpa using hf
+      by_cases hev : eViewW m e = []
+      · rw [pdW_ev n m xo xl e hxl (by simpa using hf) hev] at h; simp at h
+      rw [pdW_cons n m xo xl e hxl (by simpa using hf) hev] at h
+      obtain ⟨v, hv, hR⟩ := eViewW_ok m a hS.1.arena.1 e hev
+      have hhead := eViewW_head6 m e hev hf6
+      have hdec : ∃ ty b : EIdx, v = .forallE ty b ∧ (eViewW m e).tail.headD 0 = (eViewW m e).getD 1 0 ∧
+          (eViewW m e).tail.tail.headD 0 = (eViewW m e).getD 2 0 ∧
+          ((eViewW m e).getD 1 0).toNat < 2 ^ 32 ∧ decE ((eViewW m e).getD 1 0) = ty ∧
+          ((eViewW m e).getD 2 0).toNat < 2 ^ 32 ∧ decE ((eViewW m e).getD 2 0) = b := by
+        cases v with
+        | forallE ty b =>
+          simp only [ViewR] at hR
+          refine ⟨ty, b, rfl, ?_, ?_, hR.2.1, hR.2.2.1, hR.2.2.2.1, hR.2.2.2.2⟩ <;>
+          · cases hh : eViewW m e with
+            | nil => exact absurd hh hev
+            | cons a1 t => cases t with
+              | nil => simp
+              | cons a2 t2 => cases t2 <;> simp
+        | bvar i => simp only [ViewR] at hR; exact absurd (hhead.symm.trans hR.1) (by decide)
+        | fvar i ty => simp only [ViewR] at hR; exact absurd (hhead.symm.trans hR.1) (by decide)
+        | sort u => simp only [ViewR] at hR; exact absurd (hhead.symm.trans hR.1) (by decide)
+        | const n us => simp only [ViewR] at hR; exact absurd (hhead.symm.trans hR.1) (by decide)
+        | app f x => simp only [ViewR] at hR; exact absurd (hhead.symm.trans hR.1) (by decide)
+        | lam f x => simp only [ViewR] at hR; exact absurd (hhead.symm.trans hR.1) (by decide)
+        | letE f x y => simp only [ViewR] at hR; exact absurd (hhead.symm.trans hR.1) (by decide)
+        | lit l => simp only [ViewR] at hR; exact absurd (hhead.symm.trans hR) (by decide)
+        | proj f x y => simp only [ViewR] at hR; exact absurd (hhead.symm.trans hR.1) (by decide)
+      obtain ⟨ty, bb, rfl, ht1, ht2, hdlt, hdd, hblt, hbd⟩ := hdec
+      obtain ⟨w, hw1, hw2, hw3⟩ := iwH_rdW hx (by omega)
+      rw [UInt64.ofNat_toNat] at hw1
+      rw [hw1, ht1, ht2] at h
+      have hxl1 : (xl - 1).toNat = c1 := by
+        rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using hpos))]; simp; omega
+      have hxo1 : (xo + 1).toNat = xo.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      cases hi : stubM "instantiate1_fast" m [CWF, (eViewW m e).getD 2 0, w, 0] with
+      | none => rw [hi] at h; simp [pdK1] at h
+      | some rim =>
+        obtain ⟨ri, m1⟩ := rim
+        rw [hi, pdK1_some] at h
+        obtain ⟨t1, a1, hrun1, hS1, hg1, hd11, hd12⟩ :=
+          instantiate1Fast_spec dn vis fe CWF ((eViewW m e).getD 2 0) w 0 hblt hw2 m m1 a ri hi hS
+        cases hr : pdW n m1 (xo + 1) (xl - 1) (ri.headD 0) with
+        | none => rw [hr] at h; simp [pdK2] at h
+        | some rm =>
+          obtain ⟨r2, m2⟩ := rm
+          rw [hr] at h
+          have hxs1 : decHL m1 (xo + 1).toNat (xl - 1).toNat = some xs' := by
+            rw [hxo1, hxl1, decHL_grow hg1 (by omega)]; exact hxs'
+          obtain ⟨res2, a2, hrun2, hS2, hg2, hres2⟩ := ih m1 m2 a1 (xo + 1) (xl - 1) (ri.headD 0) r2 xs' hr hS1 hd11
+            hxs1 (by rw [hxo1, hxl1]; omega) (by rw [hxo1, hxl1]; have := hg1.1; omega)
+          have htag : ((decE e).tag == ETag.forallE) = true := by simpa using hftag.mpr hf6
+          have hvb := EStore.viewBind_of_view_forall _ _ _ _ hv
+          have hrun1' : (instantiate1Fast coreWalkFuel bb (decI w) 0) a = .ok (t1, a1) := by
+            have := hrun1
+            have e3 : (decI ((eViewW m e).getD 2 0) : EIdx) = decE ((eViewW m e).getD 2 0) := rfl
+            have h0 : (0 : Word).toNat = 0 := rfl
+            rw [CWF_eq, e3, hbd, h0] at this
+            exact this
+          have hrun2' : (ConRon.Arena.targetPiDomsWith xs' t1) a1 = .ok (res2, a2) := by
+            rw [← hd12]; exact hrun2
+          have e1 : (decI e : EIdx) = decE e := rfl
+          cases res2 with
+          | none =>
+            have hstep := tpd_step (decI w) ty bb t1 e xs' a a1 a2 none htag hvb hrun1' hrun2'
+            have hr0 : r2.headD 0 = 0 := hres2
+            rw [pdK2_none n m2 (r := r2) (d := (eViewW m e).getD 1 0) hr0] at h
+            simp only [Option.some.injEq, Prod.mk.injEq] at h
+            obtain ⟨rfl, rfl⟩ := h
+            refine ⟨none, a2, ?_, hS2, hg1.trans hg2, rfl⟩
+            rw [e1, ← hw3]; exact hstep
+          | some ds =>
+            have hstep := tpd_step (decI w) ty bb t1 e xs' a a1 a2 (some ds) htag hvb hrun1' hrun2'
+            obtain ⟨hr1, hdd2, hle⟩ := hres2
+            have hr1' : r2.headD 0 ≠ 0 := by rw [hr1]; decide
+            rw [pdK2_ok n m2 (r := r2) (d := (eViewW m e).getD 1 0) hr1'] at h
+            cases hc : consW n m2 ((eViewW m e).getD 1 0) (r2.tail.headD 0) (r2.tail.tail.headD 0) with
+            | none => rw [hc] at h; simp [pdK3] at h
+            | some r3m =>
+              obtain ⟨r3, m3⟩ := r3m
+              rw [hc, pdK3_some] at h
+              simp only [Option.some.injEq, Prod.mk.injEq] at h
+              obtain ⟨rfl, rfl⟩ := h
+              obtain ⟨hS3, hg3, hd3, ht3⟩ := consW_stage hc hS2 hle hdlt hdd2
+              refine ⟨some (ty :: ds), a2, ?_, hS3, (hg1.trans hg2).trans hg3, ?_⟩
+              · rw [e1, ← hw3]; exact hstep
+              · refine ⟨rfl, ?_, ?_⟩
+                · rw [← hdd]; simpa [decE_eq] using hd3
+                · simpa using Nat.le_of_eq ht3
+
+
+/-- **`target_pi_doms_with` refines `targetPiDomsWith`** (through `e_view`, the `instantiate1_fast`
+stub and `sl_cons`). -/
+@[refines ConRon.Arena.targetPiDomsWith]
+theorem targetPiDomsWith_refines (p : Prog) (hv : p.lookup "e_view" = some eView)
+    (hc : p.lookup "iw_copy" = some iwCopy) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hsc : p.lookup "sl_cons" = some slCons)
+    (hp : p.lookup "target_pi_doms_with" = some targetPiDomsWith) (n : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (xo xl e : Word) (xs : List EIdx)
+    (hS : StageR dn vis fe s₀.mem a₀) (he : H e) (hxs : decHL s₀.mem xo.toNat xl.toNat = some xs)
+    (hb : xo.toNat + xl.toNat < 2 ^ 64) (hbt : xo.toNat + xl.toNat ≤ iwTop s₀.mem) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "target_pi_doms_with" [xo, xl, e]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.targetPiDomsWith xs (decI e)) a₀ ∧
+      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.targetPiDomsWith xs (decI e)) a₀) ∧
+      IWGrow s₀.mem s'.mem ∧ PdRes s'.mem r (AM.res (ConRon.Arena.targetPiDomsWith xs (decI e)) a₀);
+      ⊤⦄ := by
+  refine triple_post (targetPiDomsWith_spec p hv hc ha hsc hp n s₀ xo xl e) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨res, a', hrun, hS', hg, hres⟩ := pdW_ok dn vis fe n _ _ a₀ xo xl e r xs hm hS he hxs hb hbt
+  obtain ⟨hok, hst, hrs⟩ := AM.of_run_ok (ConRon.Arena.targetPiDomsWith xs (decI e)) a₀ a' res hrun
+  exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hrs]; exact hres⟩
+
 end L.Ind

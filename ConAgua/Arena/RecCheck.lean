@@ -692,20 +692,17 @@ def targetK53 : FunDecl := lfn (vis, p, fto, ftl, Mc, teo, tel, majDom, f) local
 the earlier `xs`; `(0, 0, 0)` when `e` runs out of binders first. -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:450-464 ConRon.Arena.targetPiDomsWith
 @[l_impl ConRon.Arena.targetPiDomsWith]
-def targetPiDomsWith : FunDecl := lfn (xo, xl, e) locals (q, j, tag, g, d, b, z, xj, cur) {
-  q := call iw_alloc(xl);
-  cur := e;
-  j := 0;
-  while j < xl {
-    tag := cur >> 28;
-    if tag != 6 { return (0, 0, 0) };
-    (g, d, b, z) := call e_view(cur);
-    xj := IW.u64[xo + j];
-    cur := call instantiate1_fast(⟪CWF⟫, b, xj, 0);
-    IW.u64[q + j] := d;
-    j += 1
-  };
-  return (1, q, xl)
+def targetPiDomsWith : FunDecl := lfn (xo, xl, e) locals (tag, g, d, b, z, xj, cur, ok, ro, rl, qo, ql) {
+  if xl == 0 { return (1, 0, 0) };
+  tag := e >> 28;
+  if tag != 6 { return (0, 0, 0) };
+  (g, d, b, z) := call e_view(e);
+  xj := IW.u64[xo];
+  cur := call instantiate1_fast(⟪CWF⟫, b, xj, 0);
+  (ok, ro, rl) := call target_pi_doms_with(xo + 1, xl - 1, cur);
+  if ok == 0 { return (0, 0, 0) };
+  (qo, ql) := call sl_cons(d, ro, rl);
+  return (1, qo, ql)
 }
 
 /-! ## The stored family -/

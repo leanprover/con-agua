@@ -1562,4 +1562,38 @@ theorem EStore.viewConst_of_view (st : EStore) (i : EIdx) (n : NIdx) (us : LsIdx
     · simp only [*, ite_true]; split <;> simp_all [ETables.getConst_of_get _ _ _ _ h]
     · simp at h
 
+
+theorem eViewW_head6 (m : Mem) (w : Word) (hne : eViewW m w ≠ []) (hg : w >>> 28 = 6) :
+    (eViewW m w).headD 0 = 6 := by
+  unfold eViewW at hne ⊢
+  simp (config := {decide := true}) only [hg, ite_true, ite_false] at hne ⊢
+  by_cases c1 : 4294967295 < w
+  · simp [c1] at hne
+  by_cases c2 : tierW w ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
+  · simp [c1, c2] at hne
+  by_cases c3 : rdW (m.arr64 CTL) (30 + tierW w) ≤ idxW w
+  · simp [c1, c2, c3] at hne
+  simp [c1, c2, c3]
+
+theorem ETables.getBind_of_get_forall (t : ETables) (i : EIdx) (ty b : EIdx)
+    (h : t.get i = some (.forallE ty b)) : t.getBind i = some (ty, b) := by
+  unfold ETables.get at h
+  unfold ETables.getBind
+  repeat' (first | (simp at h; done) | split at h)
+  rename_i h1 h2 h3 h4 h5 h6 h7
+  have h7' : Idx.tag i = ETag.forallE := by simpa using h7
+  have hne : ETag.forallE ≠ ETag.lam := by decide
+  cases hn : t.foralls.node? i.idxNat <;> simp [hn, h7', hne] at h ⊢
+  exact h
+
+theorem EStore.viewBind_of_view_forall (st : EStore) (i : EIdx) (ty b : EIdx)
+    (h : st.view i = some (.forallE ty b)) : st.viewBind i = some (ty, b) := by
+  unfold EStore.view at h
+  unfold EStore.viewBind EStore.persGetBind
+  split at h
+  · simp only [*, ite_true]; exact ETables.getBind_of_get_forall _ _ _ _ h
+  · split at h
+    · simp only [*, ite_true]; split <;> simp_all [ETables.getBind_of_get_forall _ _ _ _ h]
+    · simp at h
+
 end L.Ind
