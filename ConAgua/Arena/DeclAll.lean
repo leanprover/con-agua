@@ -47,6 +47,7 @@ import ConAgua.Arena.DeclDivMod4
 import ConAgua.Arena.DeclDivMod5
 import ConAgua.Arena.DeclDivMod6
 import ConAgua.Arena.DeclDivMod7
+import ConAgua.Arena.DeclDivMod8
 -- Every module of the declaration loop's proofs (lane decls3): one build checks them together and
 -- lemma-name clashes between files surface here, as IndAll.lean does for the inductive stage.
 -- Imports only: append new modules at the end.

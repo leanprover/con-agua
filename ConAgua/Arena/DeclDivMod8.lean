@@ -1,0 +1,71 @@
+import ConAgua.Arena.DeclDivMod7
+
+/-!
+# The `Nat.div` family's pin gate, bottom up: the certificates (lane `decls3`, `decls3-divmod`)
+
+Part 8: `check_div_mod_certs`. The inference and the definitional equality are the stubs'
+(`inferTypeCore_spec`, `isDefEqCore_spec`).
+-/
+
+set_option experimental.vcgen true
+set_option linter.deprecated false
+set_option linter.unusedSimpArgs false
+set_option linter.unusedVariables false
+
+open ConRon.Arena
+open Std.WP
+open scoped Lean.Order
+open L.Rom (PinSetR)
+
+namespace L.Ind
+
+open L.Arena
+
+local notation "V" => ConLeche.CheckMode.verified
+
+structure DmProg8 (p : Prog) : Prop extends DmProg7 p where
+  lCheckDivModCerts : p.lookup "check_div_mod_certs" = some checkDivModCertsL
+  lCheckDivModPinAt : p.lookup "check_div_mod_pin_at" = some checkDivModPinAtL
+  lCheckDivModPinLoop : p.lookup "check_div_mod_pin_loop" = some checkDivModPinLoopL
+  lCheckDivModPin : p.lookup "check_div_mod_pin" = some checkDivModPinL
+
+section certs
+variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
+
+def cmW (p : Prog) (n : Nat) (m : Mem) (vs c annVal so sl po pl : Word) : Option (List Word × Mem) :=
+  if sl = 0 ∧ pl = 0 then some ([1], m) else
+  if sl = 0 ∨ pl = 0 then some ([0], m) else
+  bW (callW p n "div_mod_cert_guard" [vs, c, annVal, rdW (m.arr64 IW) (rdW (m.arr64 IW) so),
+    rdW (m.arr64 IW) (rdW (m.arr64 IW) so + 1), rdW (m.arr64 IW) (rdW (m.arr64 IW) so + 2),
+    rdW (m.arr64 IW) po] m) fun r1 m1 =>
+  if r1.headD 0 = 0 then some ([0], m1) else
+  bW (callW p n "subst_const_all" [c, annVal, 4000000000, rdW (m1.arr64 IW) po] m1) fun r2 m2 =>
+  bW (callW p n "subst_const0_list" [c, annVal, rdW (m2.arr64 IW) (rdW (m.arr64 IW) so),
+    rdW (m2.arr64 IW) (rdW (m.arr64 IW) so + 1)] m2) fun r3 m3 =>
+  bW (callW p n "div_mod_cert_applied" [r2.headD 0, r3.headD 0, r3.tail.headD 0] m3) fun r4 m4 =>
+  bW (stubM "infer_type_core" m4 [vs, 4, r4.headD 0]) fun r5 m5 =>
+  bW (callW p n "subst_const0" [c, annVal, 4000000000,
+    rdW (m5.arr64 IW) (rdW (m.arr64 IW) so + 2)] m5) fun r6 m6 =>
+  bW (stubM "is_def_eq_core" m6 [vs, 4, r5.headD 0, r6.headD 0]) fun r7 m7 =>
+  if r7.headD 0 = 0 then some ([0], m7) else
+  bW (callW p n "check_div_mod_certs" [vs, c, annVal, so + 1, sl - 1, po + 1, pl - 1] m7) fun r8 m8 =>
+    some ([r8.headD 0], m8)
+
+set_option maxHeartbeats 3200000 in
+theorem cm_specW (p : Prog) (hp : p.lookup "check_div_mod_certs" = some checkDivModCertsL)
+    (n : Nat) (s₀ : St) (vs c annVal so sl po pl : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "check_div_mod_certs" [vs, c, annVal, so, sl, po, pl]
+    ⦃fun r s' => LocEq s' s₀ ∧ cmW p n s₀.mem vs c annVal so sl po pl = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, checkDivModCertsL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      callW_spec p n "div_mod_cert_guard", callW_spec p n "subst_const_all",
+      callW_spec p n "subst_const0_list", callW_spec p n "div_mod_cert_applied",
+      stubM_spec p "infer_type_core" n, callW_spec p n "subst_const0",
+      stubM_spec p "is_def_eq_core" n, callW_spec p n "check_div_mod_certs"] <;>
+    finish (gen := 30) (instances := 10000) [cmW, bW, rdW_eq]
+
+end certs
+
+end L.Ind
