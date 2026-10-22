@@ -702,4 +702,235 @@ theorem piDomsOcc_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → O
 
 end census
 
+/-! ## `nest_group_ctors` refines `nestGroupCtors` -/
+
+/-- `nest_container` at any exec fuel. -/
+def ntWf : Nat → Mem → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _ => none
+  | k + 1, m, vis, C => ntW k m vis C
+
+theorem nt_spec' (p : Prog) (hl : NtLook p) (k : Nat) (s₀ : St) (vis C : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_container" [vis, C]
+    ⦃fun r s' => LocEq s' s₀ ∧ ntWf k s₀.mem vis C = some (r, s'.mem); ⊤⦄ := by
+  cases k with
+  | zero => rw [invoke_eq _ hl.hnt]; simp only [callFn, nestContainer]; vcgen [exec] <;> grind
+  | succ k => exact nt_spec p hl k s₀ vis C
+
+mutual
+def gcW : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _, _, _, _, _ => none
+  | k + 1, m, vis, nPc, off, l, oo, ol =>
+    if l = 0 then some ([oo, ol], m)
+    else gcK1 k vis nPc off l oo ol (ntWf k m vis (rdW (m.arr64 IW) off))
+def gcK1 (k : Nat) (vis nPc off l oo ol : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m1) =>
+    if r.headD 0 = 0 then none
+    else if r.tail.headD 0 ≠ nPc then
+      (if r.tail.tail.tail.headD 0 ≠ 0 then none
+       else gcK2 k vis nPc off l (appendW k m1 oo ol (r.tail.tail.headD 0) (r.tail.tail.tail.headD 0)))
+    else gcK2 k vis nPc off l (appendW k m1 oo ol (r.tail.tail.headD 0) (r.tail.tail.tail.headD 0))
+def gcK2 (k : Nat) (vis nPc off l : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r2, m2) => gcW k m2 vis nPc (off + 1) (l - 1) (r2.headD 0) (r2.tail.headD 0)
+end
+
+section arms
+variable (k : Nat) (m m1 m2 : Mem) (vis nPc off l oo ol : Word) (r r2 : List Word)
+theorem gcW_nil (h : l = 0) : gcW (k + 1) m vis nPc off l oo ol = some ([oo, ol], m) := by simp [gcW, h]
+theorem gcW_cons (h : ¬ l = 0) : gcW (k + 1) m vis nPc off l oo ol =
+    gcK1 k vis nPc off l oo ol (ntWf k m vis (rdW (m.arr64 IW) off)) := by simp [gcW, h]
+theorem gcK1_none (h : r.headD 0 = 0) : gcK1 k vis nPc off l oo ol (some (r, m1)) = none := by
+  rw [gcK1, if_pos h]
+theorem gcK1_bad (h : ¬ r.headD 0 = 0) (h1 : r.tail.headD 0 ≠ nPc) (h3 : r.tail.tail.tail.headD 0 ≠ 0) :
+    gcK1 k vis nPc off l oo ol (some (r, m1)) = none := by rw [gcK1, if_neg h, if_pos h1, if_pos h3]
+theorem gcK1_empty (h : ¬ r.headD 0 = 0) (h1 : r.tail.headD 0 ≠ nPc) (h3 : ¬ r.tail.tail.tail.headD 0 ≠ 0) :
+    gcK1 k vis nPc off l oo ol (some (r, m1)) =
+      gcK2 k vis nPc off l (appendW k m1 oo ol (r.tail.tail.headD 0) (r.tail.tail.tail.headD 0)) := by
+  rw [gcK1, if_neg h, if_pos h1, if_neg h3]
+theorem gcK1_same (h : ¬ r.headD 0 = 0) (h1 : ¬ r.tail.headD 0 ≠ nPc) :
+    gcK1 k vis nPc off l oo ol (some (r, m1)) =
+      gcK2 k vis nPc off l (appendW k m1 oo ol (r.tail.tail.headD 0) (r.tail.tail.tail.headD 0)) := by
+  rw [gcK1, if_neg h, if_neg h1]
+theorem gcK2_some : gcK2 k vis nPc off l (some (r2, m2)) =
+    gcW k m2 vis nPc (off + 1) (l - 1) (r2.headD 0) (r2.tail.headD 0) := by rw [gcK2]
+end arms
+attribute [ind_grind] gcW_nil gcW_cons gcK1_none gcK1_bad gcK1_empty gcK1_same gcK2_some
+
+theorem nestGroupCtors_spec (p : Prog) (hl : NtLook p) (hc : p.lookup "iw_copy" = some iwCopy)
+    (hap : p.lookup "sl_append" = some slAppend)
+    (hp : p.lookup "nest_group_ctors" = some nestGroupCtorsL) (k : Nat) :
+    ∀ (s₀ : St) (vis nPc off l oo ol : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_group_ctors" [vis, nPc, off, l, oo, ol]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      gcW k s₀.mem vis nPc off l oo ol = some ([r.headD 0, r.tail.headD 0], s'.mem); ⊤⦄ := by
+  induction k with
+  | zero =>
+    intro s₀ vis nPc off l oo ol
+    rw [invoke_eq _ hp]; simp only [callFn, nestGroupCtorsL]; vcgen [exec] <;> grind
+  | succ k ih =>
+    intro s₀ vis nPc off l oo ol
+    rw [invoke_eq _ hp]
+    simp only [callFn, nestGroupCtorsL]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        nt_spec' p hl k, slAppend_specW p hl.ha hc hap k, ih] <;>
+      finish (gen := 20) [rdW_eq]
+
+theorem CNOk.grow {m m' : Mem} {p : Nat} {x : IConstantVal × Nat} (h : CNOk m p x (· < iwTop m))
+    (hg : IWGrow m m') : CNOk m' p x (· < iwTop m') :=
+  (h.agree (RdS.of_grow hg) (GrowX.of_grow (q := 0) (n := 0) hg).erecP).mono
+    fun _ hx => Nat.lt_of_lt_of_le hx hg.1
+
+theorem gcW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis nPc : Word) (hcs : CtorSums fe)
+    (k : Nat) : ∀ (m m' : Mem) (a : AState) (off l oo ol : Word) (cs : List NIdx)
+      (out : List (IConstantVal × Nat)) (r : List Word),
+    gcW k m vis nPc off l oo ol = some (r, m') → StageR dn vis fe m a →
+    decHL m off.toNat l.toNat = some cs → (∀ j < l.toNat, off.toNat + j < iwTop m) →
+    ol.toNat = out.length → oo.toNat + out.length ≤ iwTop m → CsAt m oo.toNat out (· < iwTop m) →
+    ∃ res a', (ConRon.Arena.nestGroupCtors fe nPc.toNat cs out).run a = .ok (res, a') ∧
+      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ (r.tail.headD 0).toNat = res.length ∧
+      (r.headD 0).toNat + res.length ≤ iwTop m' ∧ CsAt m' (r.headD 0).toNat res (· < iwTop m') := by
+  induction k with
+  | zero => intro m m' a off l oo ol cs out r h; simp [gcW] at h
+  | succ k ih =>
+    intro m m' a off l oo ol cs out r h hS hcs' hcb hol hob hout
+    by_cases hl0 : l = 0
+    · rw [gcW_nil (h := hl0)] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      subst hl0
+      have : cs = [] := by simpa [decHL, hslice?] using hcs'.symm
+      subst this
+      exact ⟨out, a, by simp [ConRon.Arena.nestGroupCtors]; rfl, hS, IWGrow.refl _, by simpa using hol,
+        by simpa using hob, by simpa using hout⟩
+    rw [gcW_cons (h := hl0)] at h
+    have hl : l.toNat ≠ 0 := fun e => hl0 (UInt64.toNat_inj.mp (by simpa using e))
+    obtain ⟨l', hl'⟩ : ∃ l', l.toNat = l' + 1 := ⟨l.toNat - 1, by omega⟩
+    have hcs2 := hcs'
+    simp only [decHL] at hcs2
+    rw [hl', hslice?_succ] at hcs2
+    simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at hcs2
+    obtain ⟨c, hc, cs', hcs'', rfl⟩ := hcs2
+    obtain ⟨hcH, hcd⟩ := rd_iwH0E (m := m) (o := off) (k := IdxKind.name) (by simpa [iwH, iwA] using hc)
+    have hsz := hS.2.2.2.1
+    have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hsz
+    have hoff1 : (off + 1).toNat = off.toNat + 1 :=
+      word_add_toNat (show off.toNat + 1 < 2 ^ 64 by have := hcb 0 (by omega); omega)
+    have hl1 : (l - 1).toNat = l' := by
+      rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp; omega
+    cases k with
+    | zero => simp [ntWf, gcK1] at h
+    | succ k =>
+    simp only [ntWf] at h
+    cases hnt : ntW k m vis (rdW (m.arr64 IW) off) with
+    | none => rw [hnt] at h; simp [gcK1] at h
+    | some pr =>
+    obtain ⟨r1, m1⟩ := pr
+    rw [hnt] at h
+    obtain ⟨x, a1, hrun1, hS1, hg1, hnc⟩ := ntW_ok dn fe vis _ hcH hcs k m m1 a r1 hnt hS
+    rw [hcd] at hrun1
+    cases x with
+    | none =>
+      have : r1.headD 0 = 0 := hnc
+      rw [gcK1_none (h := this)] at h; simp at h
+    | some pc =>
+    obtain ⟨nPc2, ctors⟩ := pc
+    obtain ⟨h0, h1, h3, h2b, hcs3⟩ := hnc
+    have hne0 : ¬ r1.headD 0 = 0 := by rw [h0]; decide
+    -- the parameter-count check, and the append
+    have hok : ∀ (r2 : List Word) (m2 : Mem),
+        appendW (k + 1) m1 oo ol (r1.tail.tail.headD 0) (r1.tail.tail.tail.headD 0) = some (r2, m2) →
+        gcW (k + 1) m2 vis nPc (off + 1) (l - 1) (r2.headD 0) (r2.tail.headD 0) = some (r, m') →
+        (nPc2 == nPc.toNat || ctors.length == 0) = true →
+        ∃ res a', (ConRon.Arena.nestGroupCtors fe nPc.toNat (c :: cs') out).run a = .ok (res, a') ∧
+          StageR dn vis fe m' a' ∧ IWGrow m m' ∧ (r.tail.headD 0).toNat = res.length ∧
+          (r.headD 0).toNat + res.length ≤ iwTop m' ∧ CsAt m' (r.headD 0).toNat res (· < iwTop m') := by
+      intro r2 m2 hap hrec hchk
+      obtain ⟨hS2, hg2, hr20, hr21, ht2, hw1, hw2⟩ := appendW_stage hap hS1 (by have := hg1.1; omega)
+        (by rw [h3]; exact h2b)
+      rw [h3] at hr21 ht2 hw2
+      have hcsA : CsAt m2 (r2.headD 0).toNat (out ++ ctors) (· < iwTop m2) := by
+        intro i hi
+        rw [hr20]
+        by_cases hio : i < out.length
+        · obtain ⟨w, hw, hc'⟩ := hout i hio
+          refine ⟨w, ?_, ?_⟩
+          · rw [hw1 i (by omega), hg1.2.2.1 _ (by omega)]; exact hw
+          · rw [List.getElem_append_left hio]; exact (hc'.grow hg1).grow hg2
+        · simp only [List.length_append] at hi
+          obtain ⟨w, hw, hc'⟩ := hcs3 (i - out.length) (by omega)
+          refine ⟨w, ?_, ?_⟩
+          · have := hw2 (i - out.length) (by omega)
+            rw [show iwTop m1 + ol.toNat + (i - out.length) = iwTop m1 + i by omega] at this
+            rw [this]; exact hw
+          · rw [List.getElem_append_right (by omega)]; exact hc'.grow hg2
+      obtain ⟨res, a', hrun, hS', hg', h1', h2', h3'⟩ := ih m2 m' a1 (off + 1) (l - 1) (r2.headD 0)
+        (r2.tail.headD 0) cs' (out ++ ctors) r hrec hS2
+        (by rw [hoff1, hl1, decHL_agree (RdS.of_grow (hg1.trans hg2)) (fun j hj => by
+              have := hcb (j + 1) (by omega); omega)]
+            simpa [decHL] using hcs'')
+        (fun j hj => by rw [hoff1, hl1] at *; have := hcb (j + 1) (by omega); have := hg1.1; have := hg2.1; omega)
+        (by rw [hr21]; simp [hol]) (by rw [hr20]; simp; omega) hcsA
+      refine ⟨res, a', ?_, hS', (hg1.trans hg2).trans hg', h1', h2', h3'⟩
+      rw [ConRon.Arena.nestGroupCtors.eq_2]
+      simp only [StateT.run_bind, hrun1, except_ok_bind]
+      simp only [hchk, Bool.not_true]
+      exact hrun
+    by_cases hp1 : r1.tail.headD 0 ≠ nPc
+    · have hneq : nPc2 ≠ nPc.toNat := fun e => hp1 (UInt64.toNat_inj.mp (by rw [h1, e]))
+      by_cases hp3 : r1.tail.tail.tail.headD 0 ≠ 0
+      · rw [gcK1_bad (h := hne0) (h1 := hp1) (h3 := hp3)] at h; simp at h
+      rw [gcK1_empty (h := hne0) (h1 := hp1) (h3 := hp3)] at h
+      have hlen0 : ctors.length = 0 := by rw [← h3, show r1.tail.tail.tail.headD 0 = 0 by simpa using hp3]; rfl
+      cases hap : appendW (k + 1) m1 oo ol (r1.tail.tail.headD 0) (r1.tail.tail.tail.headD 0) with
+      | none => rw [hap] at h; simp [gcK2] at h
+      | some pr2 =>
+      obtain ⟨r2, m2⟩ := pr2
+      rw [hap, gcK2_some] at h
+      exact hok r2 m2 hap h (by simp [hlen0])
+    · have heq : nPc2 = nPc.toNat := by rw [← h1, show r1.tail.headD 0 = nPc by simpa using hp1]
+      rw [gcK1_same (h := hne0) (h1 := hp1)] at h
+      cases hap : appendW (k + 1) m1 oo ol (r1.tail.tail.headD 0) (r1.tail.tail.tail.headD 0) with
+      | none => rw [hap] at h; simp [gcK2] at h
+      | some pr2 =>
+      obtain ⟨r2, m2⟩ := pr2
+      rw [hap, gcK2_some] at h
+      exact hok r2 m2 hap h (by simp [heq])
+
+section census
+variable (p : Prog) (hl : NtLook p) (hc : p.lookup "iw_copy" = some iwCopy)
+  (hap : p.lookup "sl_append" = some slAppend)
+  (hp : p.lookup "nest_group_ctors" = some nestGroupCtorsL)
+include hl hc hap hp
+
+/-- **`nest_group_ctors` refines `nestGroupCtors`** (through `nest_container`'s stubs; the
+environment's constructor counts sum below `2^64`). -/
+@[refines ConRon.Arena.nestGroupCtors]
+theorem nestGroupCtors_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+    (fe : IFEnv) (vis nPc off l oo ol : Word) (cs : List NIdx) (out : List (IConstantVal × Nat))
+    (hcs : CtorSums fe) (hS : StageR dn vis fe s₀.mem a₀)
+    (hcs' : decHL s₀.mem off.toNat l.toNat = some cs) (hcb : ∀ j < l.toNat, off.toNat + j < iwTop s₀.mem)
+    (hol : ol.toNat = out.length) (hob : oo.toNat + out.length ≤ iwTop s₀.mem)
+    (hout : CsAt s₀.mem oo.toNat out (· < iwTop s₀.mem)) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_group_ctors" [vis, nPc, off, l, oo, ol]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.nestGroupCtors fe nPc.toNat cs out) a₀ ∧
+      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.nestGroupCtors fe nPc.toNat cs out) a₀) ∧
+      IWGrow s₀.mem s'.mem ∧
+      (r.tail.headD 0).toNat = (AM.res (ConRon.Arena.nestGroupCtors fe nPc.toNat cs out) a₀).length ∧
+      (r.headD 0).toNat + (AM.res (ConRon.Arena.nestGroupCtors fe nPc.toNat cs out) a₀).length ≤ iwTop s'.mem ∧
+      CsAt s'.mem (r.headD 0).toNat (AM.res (ConRon.Arena.nestGroupCtors fe nPc.toNat cs out) a₀)
+        (· < iwTop s'.mem); ⊤⦄ := by
+  refine triple_post (nestGroupCtors_spec p hl hc hap hp k s₀ vis nPc off l oo ol) ?_
+  rintro r s' ⟨hlc, hm⟩
+  obtain ⟨res, a', hrun, hS', hg, h1, h2, h3⟩ := gcW_ok dn fe vis nPc hcs k _ _ a₀ off l oo ol cs out _ hm hS
+    hcs' hcb hol hob hout
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  refine ⟨hlc, hok, by rw [hst]; exact hS', hg, ?_, ?_, ?_⟩
+  · rw [hres]; simpa using h1
+  · rw [hres]; exact h2
+  · rw [hres]; exact h3
+
+end census
+
 end L.Ind
