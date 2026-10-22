@@ -3558,6 +3558,7 @@ Word arrays (byte arrays are a separate id space: `IN` = byte array 0 is the inp
 | 128‥131 | – | `PinsR` (stub) | the pin table |
 | 132‥143 | – | `EnvR` (stub) | the environment index |
 | 144‥191 | – | argument relations (reserved) | `PMemo`, walk-local memos, `NestState` |
+| 192 | `LH` | levels' heap (per call, no relation: scratch) | level-algorithm heap, nodes `[tag, a, b]`, bump-allocated below `CTL[192]` (lane `levels`) |
 
 `CTL` words:
 
@@ -3578,6 +3579,7 @@ Word arrays (byte arrays are a separate id space: `IN` = byte array 0 is the inp
 | 96‥127 | `CoreR` (stub) | cache stamps/counts, eager depth |
 | 128‥135 | `EnvR` (stub) | environment counters |
 | 136‥191 | argument relations (reserved) | |
+| 192 | levels' heap (per call) | the heap top (lane `levels`) |
 
 A count store writes `CTL[k + (t & 1)]` (item 1). `arenaR_init` needs `CTL` ≥ 64 words; the
 reserved tiers will raise that when they get fields.
@@ -4686,3 +4688,38 @@ parallel, 20–32 min each (sonnet, 250–320k tokens each); the interface took 
 ### `sorry`s
 
 `IndStubs.lean`: the 34 stub specs (by design, above). No other.
+
+## The fvar-range derived column (2026-10-21, lane `exprops3`)
+
+Files: `ViewL.lean` (`packBF`, `packBF_bvar`, `packBF_fvar`), `ExprMk.lean` (`der_f`, packed `mk_*`),
+`DerRel.lean` (`fvP`, packed `cP`, `derFW_ok`, the `fvar_der*` lemmas). No `sorry`.
+
+* **No new arrays.** The five compound `XDER` words (42‥46) now hold both ranges, `packBF b f =
+  b + f * 32768` (bvar range in bits 0‥14, fvar range in bits 15‥29). The earlier brief ("five more
+  arrays or five wider ones") is settled for wider ones: array ids 49‥55 stay free, `CTL` untouched.
+  `der_b` reads `& 32767`, `der_f` reads `>> 15` (`packBF_bvar`/`packBF_fvar`, `omega`).
+* `der_f(h)`: `fvar` reads its own index from `FVREC` (`satSucc`, like `der_b`'s `bvar` arm reads
+  `BREC`), the five compound tags read the packed word, every other tag is `0`. `mk_*` write
+  `packBF (bvar range) (fvar range)`; the fvar range is a plain `max` of the children (a binder or
+  `letE` does not shift an fvar, so no `satPred`; `derOfBind`/`derOfLet`).
+* `DerR` keeps its 10 fields: `zP`/`bvP` gained the fvar conjunct, `fvar` has its own `fvP`
+  (`fvarOfData = satSucc idx`), `cP` relates the packed word. `derFW_ok`: `derFW m h =
+  fvarOfData (a.store.derived (decE h))`; `derBW_ok` re-proved for the mask.
+* `mkLam/Forall/Let_spec` are now slow (`finish (gen := 40)` with `maxHeartbeats 0`; minutes under
+  load). A future pass should split the arithmetic out of `finish`.
+
+### Not done (carry over)
+
+* `abstract1Go`: the cut-off is `fvarB ≤ d` where `fvarB` falls back to `fr_memo` on the saturated
+  branch (not the raw field read of `lift`/`inst1`). L: `fvar_b(h) = x := der_f(h); if x == 32767
+  { x := fr_memo(h) }`. Its refinement needs `DerR` kept across `fr_memo`: a model-level write set
+  for `frW`/`frNodeW` (induction, `msetG_frame frSch` at each miss; `frNodeW_app` … exist). The memo
+  `abs1C` (key `(h, k)`, `lfKey`) is array 49, `CTL[48/49]`: do NOT add it to `MemosR` without also
+  clearing it in `scratch_enter` (`Scratch.lean` lists the four memo clears; `enterScratch` sets
+  `Memos.empty`); a separate `Abs1R`/`ArenaA := ArenaD ∧ Abs1R` tier avoids that. The `fvar` leaf
+  arm needs `.viewFVarIdx` (not `.view`): `getFVarIdx` is `(fvars.node? idx).map (·.idx)`, so a
+  `viewFVarIdx_tier` + `view_fvaridx` pair copying `view_tier`/`view_fvar_idx` suffices. Draft
+  (model, L code, specs, dispatcher, five arm proofs, entry) was written and the model/L/specs
+  built, then lost in the machine restart; `Inst1*.lean` with `d ↦ k`, `v ↦ d` is the template.
+* `instantiateListGo`/`instantiateList`: untouched (pool-slice reader; `PoolSlice.lean` already has
+  the word-slice lemmas).
