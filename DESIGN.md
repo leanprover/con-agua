@@ -3093,6 +3093,7 @@ cron job, and no lane having to remember a second command. Do not turn `LAKE_ART
 for routine edit-loop builds — every agent writing to the same cache concurrently is unnecessary
 contention for no benefit (reading is already free), and the merge/landing point is the one place
 a "master is up to date and worth caching" check is naturally already happening.
+(Superseded 2026-10-22: every `scripts/lake` build writes, guarded — see "Cache incident".)
 
 **GC**: the cache pins every artifact ever written to it, so it only grows (toolchain bumps,
 renamed modules, abandoned lanes all leave orphans behind). There is no automatic eviction.
@@ -3116,6 +3117,72 @@ from the main tree) lets GNU `du` deduplicate by inode across them, same as the 
 itself does: the combined total is **3.3G — identical to the main tree's `.lake/build` alone**.
 The cache and the fresh worktree's entire 1800-module build directory cost ~0 bytes of *marginal*
 disk; `stat -c %h` on a sample olean shows `links=3` (main tree, cache, worktree, same inode).
+
+## Cache incident (2026-10-22, lane `cachebug`)
+
+**What happened.** Lane `integrate` (landing 3) found that `scripts/lake build` "completed" while
+`ConAgua.Checker.Entry`'s olean lacked `L.Checker.indParamsOkL`, which its source defines; the trace
+was a *synthetic* one (`inputs: []`), i.e. restored from the shared cache. Building without the cache
+fixed it.
+
+**Mechanism: a time-of-check/time-of-use gap in Lake, which the shared cache turns from a local glitch
+into a project-wide one.** Lake (`nightly-2026-10-20`, `Lake/Build/Module.lean`) reads and hashes each
+module's source in the `input` facet (`recFetchInput`) when the build *starts*; the input hash (source,
+import olean hashes, options, toolchain) is fixed then. Lean reads the file again when the module is
+actually compiled (`compileLeanModule`), after all its imports are built — in this project often
+minutes later. If the file changes in between (an agent editing while a background build runs, a
+`git checkout`/`stash`/`merge` in the worktree, `checker_prog.py` regenerating `Prog.lean`), Lake records
+"input hash of text A -> olean of text B": in the local `.trace`, and with cache writes on
+(`fetchCore`, `writeOutputs … (overwrite := true)`) in `_tmp/lake-cache/outputs/<pkg>/<hash>.json`.
+Every later build of text A, in any worktree, then restores B's olean with a synthetic trace and no
+elaboration — exactly the reported symptom. Reproduced in `_tmp/cachebug/repro` (two-module project,
+`Slow` sleeps 6 s): start the build with `B.lean` defining `indParamsOkL`, revert it 3 s in, restore it;
+`lake build` then says "completed", `#check indParamsOkL` fails, and a fresh copy of the project with
+the same cache gets the stale olean with `synthetic: true, inputs: []`. If B's text had a broken proof
+and A's a correct one, the broken proof would build green — in every worktree, and at `land.sh`.
+Ruled out: in-place mutation of hard-linked files (every one of the 13147 artifacts in the cache hashes
+to its own name — `_tmp/cachebug/HashCheck.lean`; Lake deletes outputs before compiling and never
+rewrites an artifact; no worktree has hard-linked `.trace`/`.hash` files), and `restoreAllArtifacts`
+(it only decides whether the files land in `.lake/build`). Writes being on by default since this
+morning made the exposure much larger: before, only `land.sh`'s build in the (lock-protected) main tree
+seeded the cache.
+
+**Fix (`scripts/lake`, now Python).** A build through the wrapper
+1. takes a per-worktree lock (`.lake/scripts-lake.lock`): one Lake build per worktree at a time (two
+   builds in one `.lake/build` race on the same files);
+2. snapshots `(mtime, size)` of every `*.lean` (plus lakefile, toolchain) in the worktree before and
+   after; any difference means the build may have compiled something other than what it hashed;
+3. writes the cache through a private *staging* cache: `artifacts/` is a symlink to the shared one
+   (content-addressed, never rewritten, so sharing it cannot go wrong; hard-link restores stay
+   instant), `outputs/` — the input-hash -> artifact mappings, the only part that can be wrong — is a
+   copy (`cp -rp`, ~0.3 s for 12k mappings). Only when the sources did not change are the new mappings
+   published into the shared `outputs/`, each atomically and never overwriting (`os.link`);
+4. on a change: publishes nothing, deletes the changed modules' local state (trace, olean, `.hash`) so
+   the next build cannot trust it either, and exits non-zero (3 when Lake itself succeeded) with the
+   list of files. `LAKE_ARTIFACT_CACHE=false` builds get 1, 2 and 4 too (a poisoned local trace would
+   otherwise be published later by `getArtifactsUsingTrace?`); `env`/`serve` pass straight through,
+   read-only. Residual hole: plain `lake` in a worktree bypasses all of this (PLAN.md forbids it).
+`land.sh` needs no change: it already treats any non-zero exit as a failed landing.
+
+**Safety net.** `scripts/buildstats.py` (a cache-free build of master in `_tmp/wt/buildstats-run`) now
+records its verdict in `_tmp/buildcheck.json` and shouts on failure; `census.py` and `gist_report.py`
+show "last cache-free build of master: <commit>, OK/FAILED".
+
+**Did anything bad land? No evidence of it, and nothing broken is on master.** A cache-free build of
+master `163e687` (plain `lake`, empty private cache, 2474 jobs, 9 min) succeeds. Its 905 input-hash ->
+output mappings that the old shared cache also had were compared: 879 identical, 26 differing only in
+olean bytes (ilean, IR and C identical; the constants, their types and their `sorry` use, read back
+from both oleans with `_tmp/cachebug/OleanCmp.lean`, identical) — Lean's olean output is not
+bit-for-bit deterministic, not poisoning. So no module of current master was served a stale olean, and
+every landed proof elaborates. What cannot be checked after the fact: an intermediate master state that
+landed green through a poisoned entry and was fixed by a later landing, and census numbers taken from
+such a state; the Entry case itself was caught (`checker_prog.py` saw a stub). The old cache was purged
+anyway (entries for lane-only texts cannot be validated). The wrapper now uses a NEW directory,
+`_tmp/lake-cache-v2`, seeded from that cache-free build: worktrees still on a branch with the old
+wrapper keep writing unguarded into `_tmp/lake-cache` until they merge master, and must not pollute
+the new one. Coordinator: `rm -rf _tmp/lake-cache` again once every lane has merged master.
+Nondeterministic oleans mean a publish may find "same input, different bytes" mappings; the wrapper
+keeps the first and notes the count.
 
 ## Does the relation scale? (2026-10-21, lane `scale`)
 
@@ -6872,6 +6939,27 @@ introduces it; the coordinator reviews the list at each batch of landings.
   discharged by `WhnfDeltaRefine3`'s `internW_hw` as `litInternHW`); `internLit_core` gives the
   handle word bound (`InternSpecW`), `natPredLit_refines_hw` is `natPredLit_refines` with it.
 
+### `infer_proj` (`InferProj.lean`, `InferProj2.lean`, helper `defeq2-proj`)
+* **`InferProjOK p` is a theorem**: `inferProj_refines : InferProjProg p → InferProjCallees p →
+  InferProjOK p` (`@[refines inferProj]`), both grades through one lemma (`inferProj_grade`, the
+  record `R` and its first call as parameters). Pieces: `projTypeAt_refines`
+  (`@[refines IProjEntry.typeAt]`: `inst_lp`, the push of `pe` at the top, `inst_list`),
+  `inferProjAt_refines` (`refines_part`, the twin past the lookup copied as `projAtT`;
+  `inferProj_hit` equates). Models in the callW shape; specs by `vcgen` + `simp_all`. No `sorry`.
+* **Hypotheses** (`InferProjCallees`): `CoreDen`; lane `whnf`'s `FindProjOK`, `ProjFound`,
+  `ErecKept`, `InstLPOK`; new **`ErecKeptProj`** (`lvl_eq_c` and `field_sort_zero` keep `EREC`:
+  `infer_proj_at`/`proj_type_at` read the table's words after them; both write only `LH`,
+  `CTL[192]` and the `lq` memo, frames their proofs build but do not export). `inst_list` from
+  `CoreWalkProg` (`InferProjProg.walk`), `field_sort_zero` from `fieldSortZero_core`.
+* **Twin facts proved**: `findProj?` keeps level-list readbacks (`findProj?_lss`, via
+  `EStore.internName_ext`) and hits only below the field count (`findProj?_lt`); `lvlEq?` keeps the
+  store (`lvlEq?_store`). The subject's level list is read back (`CoreDen.constLs`) at the view
+  before the lookup and carried across it.
+* **L changes** (Infer.lean, same semantics on every run): `infer_proj` reads the head's name and
+  level words (`cT`, `cu`) once, before `find_proj` (it re-read `CREC` after the call, which no
+  spec says `find_proj` keeps); `infer_proj_at` tests `2 <= ok` for `lvl_eq_c`'s `some true`
+  (was `ok == 2`; `decO` reads every word `≥ 2` as `some true`, as `spine_cmp`).
+
 ### Landing 4: the quotient and axiom arms; `and_pin_ok`'s inductive arm in L
 
 * **`checkDecl_loop`: every arm's spec is proved but the definition arm's** (`DeclArmQuot.lean`,
@@ -6964,13 +7052,13 @@ already stated with `sorry` in `IndStubs.lean` for the last three), the adapters
   `CoreS.bstk`; `lit`'s `natLitSup`/`constE` are lane `whnf`'s proofs; `lvlsEqC` is
   `lvlsEqCH_of` (below). `defeqCallees_stub` (a `sorry`) is gone. `KnotWF`'s closure list uses the
   real `field_sort_zero` and `inst1`; `Checker/Prog.lean` regenerated.
-* **`StoreDen m a`** (`StoreDen.lean`): the one store invariant the level readers need, because the
+* **`StoreDen m a fe`** (`StoreDen.lean`): the one store invariant the level readers need, because the
   twin compares levels on their readbacks and L on handles: a `sort` node's level, a `const`
   node's level list, the zero pin, the `readNC` cache's rows, and a projection table record's
   structure sort, field sorts and level-parameter names read back. `CoreDen` (`CoreDen.lean`) is
   "`CoreS` implies `StoreDen`": a `KnotCallees` field now (`den`), replacing `StoreDenotes`
   (`StoreDenotes.of_den`). **Proposal (for lane `whnf3`, after its `StackKept` sweep): a field
-  `den : StoreDen m a` in `CoreS`**, which also closes `CoreS.lvl_den` (`⟨hS.den.sort,
+  `den : StoreDen m a fe` in `CoreS`**, which also closes `CoreS.lvl_den` (`⟨hS.den.sort,
   hS.den.zero⟩`), `LvlsEqDen` (the iota lists are stored constants' or the rule's), and
   `ReadNCOK` (helper `defeq2-fsz`'s proposal). Maintenance: the store only grows inside the core,
   so old handles keep their readbacks; the view clauses need a proof only where a `sort`/`const`
@@ -6986,3 +7074,54 @@ already stated with `sorry` in `IndStubs.lean` for the last three), the adapters
   (`CoreS.lvl_den`), `towerSlots`, `strLitSupported`, `strLitCtor`, `supKeep`, `reduceProjCore`,
   `unfold`, `whnfGrows` (lane `whnf`'s/`whnf3`'s), `den`, `constTy` (`inst_lp`), `bstk` (after
   `whnf3`'s `StackKept` structure), `proj` (helper `defeq2-proj`: `infer_proj`).
+### Landing 5 (lane `decls3`): helpers `promote` and `canon` merged
+
+* **`promoteNew_spec` proved** (helper `decls3-promote`, `PromoteCI*.lean`, 30 files): the constant
+  records' promotion (`promote_ci` and its parts, the erase/re-index loops) refines the twin's
+  14 steps `promoteNList` … `promoteNew` (`PromoteCITags.lean`). Statement change: `k.toNat ≤
+  vis.toNat` (the twin's `c - 1` truncates; the callers pass `k = v2 - vis` or `0`). L: records are
+  written after their parts (`erec_rd*`/`erec_wr*`, `pci_mk`, `rec_block`).
+* **The canonical comparisons proved** (helper `decls3-canon`): `canon_name_map`, `canon_level_eq`
+  (and lists), `canon_expr_eq`, `canon_names(_go)`, `cv_canon_eq`, `canon_rules_eq`, `ci_canon_eq`,
+  `canon_eq_list`, `cv_eq`, `ci_eq`, `find_is`, `ci_to_cv`. Extra hypotheses their callers must
+  supply: `LitInj` (the store hash-conses literals: L compares literal handles, the twin values),
+  `PoolSmall`, `DnInj` (`ci_eq` only); records decoded in `erecP m`. `CvCanonSpec`/`CiCanonSpec` in
+  the quotient and axiom arms are to be replaced by these.
+* Name clashes after merging (both helpers and master): renamed on the helpers' side (`pm*`, `cn*`).
+  A whole-tree clash check (every `.olean`'s constant names; `_tmp/decls3-logs/clash/Clash.lean`)
+  found them at once where `checker_prog.py` reports one per run.
+
+### Landing 6 (lane `decls3`): `all_level_params_defined` in L
+
+`DeclApd.lean`: `all_level_params_defined(o, l, e)` (the twin's `allLevelParamsDefined`,
+`CheckerBase.lean`), `alpd_go` (the memoized DAG walk, fuel per recursion level as the twin's),
+`alpd_ls` (a `const`'s level list, read in `POOL` via `ls_node`); lane `levels`' `lv_apd`/`lv_mem`
+bound at `A = IW` (the parameters are `cv_lps`'s `IW` slice; handles compare as names). **Memory
+map addition**: word array `151` = `APDM` (walk-local memo, cleared at each call), `CTL[152]`,
+`CTL[153]` its stamp − 1 and live count. The memo aborts at 3/4 load where the twin's `HashMap`
+grows (the memo library's capacity rule, as every L memo). Refinement: not yet (the stub specs in
+`DeclCvg`/`DeclHeader` still use `stubM "all_level_params_defined"`).
+
+
+### Landing 2: `PropRead` in L (helper `defeq2-prop`), `infer_proj` (helper `defeq2-proj`)
+* **`not_proof_fast`/`is_proof_fast` have L code and proofs** (`PropRead.lean`: 18 L functions;
+  `PropReadLoops`, `PropReadW`, `PropReadRefine{,2,3,4}`; ~3600 lines, ~35 s CPU):
+  `notProofFast_core`/`isProofFast_core` (`@[refines]`, as are the sub-walks `typeSortPW`,
+  `headTypePW`, `proofPW`, `peelPisW`, `unwrapIdDefs`, `lamProj?`, …). The `PropWhen` datum is
+  three words `(k, o, c)`: `0` none, `1` `never`, `2` `ifAllZero` with the names in `LH[o, o+c)`;
+  both readers reset the level heap on entry. Exact walk fuel: a new `app_count_at(e, f)` gives
+  `getAppFn` and `numArgs` at fuel `f`. `Level.substPW` on heap names: `spwW_ok_lh`, a variant
+  of lane `levels`' `spwW_ok`. Hypotheses: `CoreDen` (plus `ConstLpsDen`, now the new
+  `StoreDen.constLps`: a stored constant's level-parameter names read back) and lane whnf's
+  `FindProjOK`, `ErecKept`, `ProjFound` (lane `whnf3`). No deviation.
+* **`infer_proj`**: see the helper's section above. L changes: `infer_proj` reads the head's
+  name and levels before `find_proj` (no spec says `find_proj` keeps `CREC`); `infer_proj_at`
+  tests `2 <= ok` (`decO`'s reading). New hypothesis `ErecKeptProj` (`lvl_eq_c` and
+  `field_sort_zero` keep `EREC`; to come from lane `whnf3`'s write-set argument, `CoreErec`).
+* `KnotCallees` now: `whnfCoreStep`, `whnfStep`, `proofIrrel`, `towerSlots`, `findProj`,
+  `erecKept`, `projFound`, `reduceProjCore`, `unfold`, `constTy`, `instLP`, `whnfGrows` (lane
+  `whnf3`); `strLitSupported`, `strLitCtor`, `supKeep` (helper `defeq2-str`, running); `den`
+  (the `CoreS` field, lane `whnf3`); `bstk` (after the `StackKept` sweep); `erecProj`.
+* Merging: lemma-name clashes renamed on this side (`hslice?_bound_fsz`, `projBodyW`);
+  `scripts/checker_prog.py` dumps modules it does not build: build `ConAgua.Rom.CIRead` first, or
+  `rom_ci` comes out as a stub and `checkerProg_wf` fails on `reduce_decl_pin`'s arity.

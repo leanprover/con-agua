@@ -13,6 +13,7 @@ import ConAgua.Arena.ConstStore
 import ConAgua.Arena.CoreCaches
 import ConAgua.Arena.CoreLevels
 import ConAgua.Arena.DeclAndPin
+import ConAgua.Arena.DeclApd
 import ConAgua.Arena.DeclArms
 import ConAgua.Arena.DeclArmsCanon
 import ConAgua.Arena.DeclArmsNat
@@ -40,6 +41,7 @@ import ConAgua.Arena.InstListSpec
 import ConAgua.Arena.Knot
 import ConAgua.Arena.LamStore
 import ConAgua.Arena.LetStore
+import ConAgua.Arena.LevelApd
 import ConAgua.Arena.LevelEquiv
 import ConAgua.Arena.LevelHeap
 import ConAgua.Arena.LevelLeq
@@ -128,7 +130,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1524 functions, 29 of them stubs.
+1554 functions, 28 of them stubs.
 -/
 
 namespace L.Checker
@@ -136,7 +138,7 @@ namespace L.Checker
 open L L.Compiler
 
 /-- The called functions with no L code yet (each aborts). -/
-def checkerStubs : List String := ["all_level_params_defined", "caps_never_zero", "consts_resolve_ffast", "find_proj", "fire_ok", "fvar_b", "fvar_type_d", "fvar_type_ds", "inst_lp", "inst_lp_fast", "inst_pis_at_lift", "instantiate1_lift_fast", "intern_ls_iw", "is_proof_fast", "leaf_guard", "lv_zero_caps", "name_rec", "name_rec_i", "not_proof_fast", "open_pis_at_fvars_f", "proj_table_name", "rec_fire_levels", "rec_rule_bits", "reserved_rec_name", "str_lit_ctor", "str_lit_supported", "strip_lams", "strip_pis", "wscoped_bfast"]
+def checkerStubs : List String := ["caps_never_zero", "consts_resolve_ffast", "find_proj", "fire_ok", "fvar_b", "fvar_type_d", "fvar_type_ds", "inst_lp", "inst_lp_fast", "inst_pis_at_lift", "instantiate1_lift_fast", "intern_ls_iw", "is_proof_fast", "leaf_guard", "lv_zero_caps", "name_rec", "name_rec_i", "not_proof_fast", "open_pis_at_fvars_f", "proj_table_name", "rec_fire_levels", "rec_rule_bits", "reserved_rec_name", "str_lit_ctor", "str_lit_supported", "strip_lams", "strip_pis", "wscoped_bfast"]
 
 /-- The frontend functions `builtin_prelude` runs on the prelude's arrays (149; `preFn`,
 `ConAgua/Checker/Prelude.lean`), each bound as `pre_<name>`. -/
@@ -311,9 +313,15 @@ def checkerProg : Prog := [
   ("abstract_prefix", L.Ind.abstractPrefix),
   ("abstract_prefix_list", L.Ind.abstractPrefixList),
   ("add_carry", L.Arena.addCarry),
+  ("all_level_params_defined", L.Ind.allLevelParamsDefinedL),
+  ("alpd_go", L.Ind.alpdGo),
+  ("alpd_ls", L.Ind.alpdLs),
   ("and_block_named", L.Arena.andBlockNamed),
   ("and_pin_ok", L.Arena.andPinOkL),
   ("and_rescue_slots", L.Arena.andRescueSlotsL),
+  ("apd_clear", L.Arena.memoClearG L.Ind.apdSch),
+  ("apd_find", L.Arena.memoFindG L.Ind.apdSch),
+  ("apd_put", L.Arena.memoPutG L.Ind.apdSch),
   ("app_count", L.Arena.appCountL),
   ("app_fill", L.Arena.appFillL),
   ("app_fill_n", L.Arena.appFillNL),
@@ -427,6 +435,8 @@ def checkerProg : Prog := [
   ("caps_eq_a", L.Ind.capsEqA),
   ("caps_eq_b", L.Ind.capsEqB),
   ("caps_eq_c", L.Ind.capsEqC),
+  ("caps_parts", L.Arena.capsParts),
+  ("caps_wr", L.Arena.capsWr),
   ("cert_ctx", L.Ind.certCtxL),
   ("cert_div_mod", L.Ind.certDivModL),
   ("cert_div_mod_eqs", L.Ind.certDivModEqsL),
@@ -691,8 +701,19 @@ def checkerProg : Prog := [
   ("erase_installed", L.Arena.eraseInstalledL),
   ("erec_alloc", L.Ind.erecAlloc),
   ("erec_ci", L.Arena.erecCi),
+  ("erec_cp", L.Arena.erecCp),
   ("erec_push", L.Arena.erecPushL),
+  ("erec_rd1", L.Arena.erecRd1),
+  ("erec_rd2", L.Arena.erecRd2),
+  ("erec_rd3", L.Arena.erecRd3),
+  ("erec_rd4", L.Arena.erecRd4),
+  ("erec_rd5", L.Arena.erecRd5),
   ("erec_vg", L.Arena.erecVg),
+  ("erec_wr1", L.Arena.erecWr1),
+  ("erec_wr2", L.Arena.erecWr2),
+  ("erec_wr3", L.Arena.erecWr3),
+  ("erec_wr4", L.Arena.erecWr4),
+  ("erec_wr5", L.Arena.erecWr5),
   ("esc_one", L.Front.Unescape.escOne),
   ("esc_sur", L.Front.Unescape.escSur),
   ("esp_find", L.Arena.memoFindG (L.Front.spS L.Front.EID)),
@@ -994,6 +1015,7 @@ def checkerProg : Prog := [
   ("lsq_clear", L.Arena.memoClearG L.Arena.lsqSch),
   ("lsq_find", L.Arena.memoFindG L.Arena.lsqSch),
   ("lsq_put", L.Arena.memoPutG L.Arena.lsqSch),
+  ("lv_apd", L.Arena.lvApd),
   ("lv_cases", L.Arena.lvCases),
   ("lv_cases_at", L.Arena.lvCasesAt),
   ("lv_comb", L.Arena.lvComb),
@@ -1008,6 +1030,7 @@ def checkerProg : Prog := [
   ("lv_leq", L.Arena.lvLeq),
   ("lv_leq_top", L.Arena.lvLeqTop),
   ("lv_lookup", L.Arena.lvLookupG L.Arena.EREC L.Arena.POOL),
+  ("lv_mem", L.Arena.lvMemG L.Ind.IW),
   ("lv_node", L.Arena.lvNode),
   ("lv_nz", L.Arena.lvNz),
   ("lv_rest", L.Arena.lvRest),
@@ -1233,12 +1256,14 @@ def checkerProg : Prog := [
   ("parse_rule_d", L.Front.Ind.parseRuleD),
   ("pb_check", L.Rom.pbCheck),
   ("pci_ctor", L.Arena.pciCtor),
-  ("pci_cv", L.Arena.pciCv),
   ("pci_defn", L.Arena.pciDefn),
   ("pci_ind", L.Arena.pciInd),
+  ("pci_mk", L.Arena.pciMk),
+  ("pci_plain", L.Arena.pciPlain),
   ("pci_rec", L.Arena.pciRec),
   ("pe_app", L.Arena.peApp),
   ("pe_arm", L.Arena.peArm),
+  ("pe_at", L.Arena.peAt),
   ("pe_clear", L.Arena.memoClearG L.Arena.peSch),
   ("pe_const", L.Arena.peConst),
   ("pe_find", L.Arena.memoFindG L.Arena.peSch),
@@ -1288,6 +1313,7 @@ def checkerProg : Prog := [
   ("pin_in", L.Arena.pinIn),
   ("pin_word", L.Arena.pinWordL),
   ("pl_arm", L.Arena.plArm),
+  ("pl_at", L.Arena.plAt),
   ("pl_clear", L.Arena.memoClearG L.Arena.plSch),
   ("pl_find", L.Arena.memoFindG L.Arena.plSch),
   ("pl_put", L.Arena.memoPutG L.Arena.plSch),
@@ -1296,17 +1322,21 @@ def checkerProg : Prog := [
   ("pls_find", L.Arena.memoFindG L.Arena.plsSch),
   ("pls_put", L.Arena.memoPutG L.Arena.plsSch),
   ("pn_arm", L.Arena.pnArm),
+  ("pn_at", L.Arena.pnAt),
   ("pn_clear", L.Arena.memoClearG L.Arena.pnSch),
   ("pn_find", L.Arena.memoFindG L.Arena.pnSch),
   ("pn_put", L.Arena.memoPutG L.Arena.pnSch),
   ("pool_copy", L.Ind.poolCopy),
   ("prepare_major", L.Arena.prepareMajorL),
   ("prepare_prelude", L.Checker.preparePreludeL),
+  ("proj_a", L.Arena.projA),
+  ("proj_b", L.Arena.projB),
   ("proj_cert", L.Arena.projCertL),
   ("proj_find", L.Arena.projFind),
   ("proj_lit_to_ctor", L.Arena.projLitToCtorL),
   ("proj_push", L.Arena.projPush),
   ("proj_type_at", L.Arena.projTypeAtL),
+  ("proj_wr", L.Arena.projWr),
   ("promote_caps", L.Arena.promoteCapsL),
   ("promote_ci", L.Arena.promoteCIL),
   ("promote_ci_list", L.Arena.promoteCIListL),
@@ -1330,6 +1360,7 @@ def checkerProg : Prog := [
   ("proof_irrel", L.Arena.proofIrrelL),
   ("proof_irrel_half", L.Arena.proofIrrelHalfL),
   ("prop_irrel", L.Arena.propIrrelL),
+  ("ps_at", L.Arena.psAt),
   ("ptr_list_names", L.Ind.ptrListNames),
   ("ptr_names_copy", L.Ind.ptrNamesCopy),
   ("pw_eq", L.Ind.pwEq),
@@ -1360,6 +1391,7 @@ def checkerProg : Prog := [
   ("rec4", L.Ind.rec4),
   ("rec5", L.Ind.rec5),
   ("rec6", L.Ind.rec6),
+  ("rec_block", L.Arena.recBlock),
   ("rec_decl_line", L.Front.Fields.recDeclLine),
   ("rec_decl_obj", L.Front.Fields.recDeclObj),
   ("rec_expr_loop", L.Front.Fields.recExprLoop),
@@ -1436,6 +1468,7 @@ def checkerProg : Prog := [
   ("rule_eq_b", L.Ind.ruleEqB),
   ("rule_eq_but_rhs", L.Ind.ruleEqButRhs),
   ("rule_rhs_at", L.Arena.ruleRhsAtL),
+  ("rule_wr", L.Arena.ruleWr),
   ("rules_eq", L.Ind.rulesEq),
   ("rules_to_erec", L.Ind.rulesToErec),
   ("same_const_heads", L.Arena.sameConstHeadsL),
@@ -1790,7 +1823,6 @@ def checkerProg : Prog := [
   ("pre_vi_recs", preFn preTree (L.Front.Ind.viRecs)),
   ("pre_vi_recs_go", preFn preTree (L.Front.Ind.viRecsGo)),
   ("pre_vi_tail", preFn preTree (L.Front.Ind.viTail)),
-  ("all_level_params_defined", abortStub 3),
   ("caps_never_zero", abortStub 6),
   ("consts_resolve_ffast", abortStub 2),
   ("find_proj", abortStub 3),

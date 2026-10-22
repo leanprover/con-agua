@@ -38,6 +38,7 @@ import csv
 import datetime
 import os
 import re
+import json
 import signal
 import subprocess
 import sys
@@ -610,6 +611,13 @@ def main():
         return
     rows = summary_rows(targets)
     print(fmt_table(rows))
+    bcf = os.path.join(ROOT, "_tmp", "buildcheck.json")  # scripts/buildstats.py; DESIGN.md "Cache incident"
+    if os.path.exists(bcf):
+        bc = json.load(open(bcf))
+        print(f"\nlast cache-free build of master: {bc['commit'][:10]} ({bc['date']}, {bc['mode']}): "
+              + ("OK" if bc["ok"] else f"FAILED ({bc['detail']})"))
+    else:
+        print("\nlast cache-free build of master: none recorded (run scripts/buildstats.py)")
     nparts = sum(len(t["parts"]) for t in targets.values())
     print(f"\nparts: {nparts} partial refinements "
           f"({sum(1 for t in targets.values() for l in t['parts'] if l['status'] == 'ok')} sorry-free); "

@@ -70,6 +70,17 @@ structure PromoteProg (p : Prog) : Prop where
   promote_n_list : p.lookup "promote_n_list" = some (promoteNListL)
   promote_l_list : p.lookup "promote_l_list" = some (promoteLListL)
   promote_e_list : p.lookup "promote_e_list" = some (promoteEListL)
+  erec_rd1 : p.lookup "erec_rd1" = some (erecRd1)
+  erec_rd2 : p.lookup "erec_rd2" = some (erecRd2)
+  erec_rd3 : p.lookup "erec_rd3" = some (erecRd3)
+  erec_rd4 : p.lookup "erec_rd4" = some (erecRd4)
+  erec_rd5 : p.lookup "erec_rd5" = some (erecRd5)
+  erec_wr1 : p.lookup "erec_wr1" = some (erecWr1)
+  erec_wr2 : p.lookup "erec_wr2" = some (erecWr2)
+  erec_wr3 : p.lookup "erec_wr3" = some (erecWr3)
+  erec_wr4 : p.lookup "erec_wr4" = some (erecWr4)
+  erec_wr5 : p.lookup "erec_wr5" = some (erecWr5)
+  erec_cp : p.lookup "erec_cp" = some (erecCp)
   promote_slice : p.lookup "promote_slice" = some (promoteSlice)
   cv_rd : p.lookup "cv_rd" = some (cvRd)
   cv_wr : p.lookup "cv_wr" = some (cvWr)
@@ -77,12 +88,24 @@ structure PromoteProg (p : Prog) : Prop where
   promote_fire : p.lookup "promote_fire" = some (promoteFireL)
   promote_rule : p.lookup "promote_rule" = some (promoteRuleL)
   promote_rules : p.lookup "promote_rules" = some (promoteRulesL)
+  pn_at : p.lookup "pn_at" = some (pnAt)
+  pl_at : p.lookup "pl_at" = some (plAt)
+  ps_at : p.lookup "ps_at" = some (psAt)
+  pe_at : p.lookup "pe_at" = some (peAt)
+  rule_wr : p.lookup "rule_wr" = some (ruleWr)
+  caps_wr : p.lookup "caps_wr" = some (capsWr)
+  proj_wr : p.lookup "proj_wr" = some (projWr)
+  caps_parts : p.lookup "caps_parts" = some (capsParts)
+  proj_a : p.lookup "proj_a" = some (projA)
+  proj_b : p.lookup "proj_b" = some (projB)
   promote_caps : p.lookup "promote_caps" = some (promoteCapsL)
   promote_proj_table : p.lookup "promote_proj_table" = some (promoteProjTableL)
-  pci_cv : p.lookup "pci_cv" = some (pciCv)
+  pci_mk : p.lookup "pci_mk" = some (pciMk)
+  pci_plain : p.lookup "pci_plain" = some (pciPlain)
   pci_defn : p.lookup "pci_defn" = some (pciDefn)
   pci_ind : p.lookup "pci_ind" = some (pciInd)
   pci_ctor : p.lookup "pci_ctor" = some (pciCtor)
+  rec_block : p.lookup "rec_block" = some (recBlock)
   pci_rec : p.lookup "pci_rec" = some (pciRec)
   promote_ci : p.lookup "promote_ci" = some (promoteCIL)
   promote_ci_list : p.lookup "promote_ci_list" = some (promoteCIListL)
@@ -226,6 +249,9 @@ def promoteProg : Prog :=
    ("promote_n_list", promoteNListL),
    ("promote_l_list", promoteLListL),
    ("promote_e_list", promoteEListL),
+   ("erec_rd1", erecRd1), ("erec_rd2", erecRd2), ("erec_rd3", erecRd3), ("erec_rd4", erecRd4),
+   ("erec_rd5", erecRd5), ("erec_wr1", erecWr1), ("erec_wr2", erecWr2), ("erec_wr3", erecWr3),
+   ("erec_wr4", erecWr4), ("erec_wr5", erecWr5), ("erec_cp", erecCp),
    ("promote_slice", promoteSlice),
    ("cv_rd", cvRd),
    ("cv_wr", cvWr),
@@ -233,12 +259,24 @@ def promoteProg : Prog :=
    ("promote_fire", promoteFireL),
    ("promote_rule", promoteRuleL),
    ("promote_rules", promoteRulesL),
+   ("pn_at", pnAt),
+   ("pl_at", plAt),
+   ("ps_at", psAt),
+   ("pe_at", peAt),
+   ("rule_wr", ruleWr),
+   ("caps_wr", capsWr),
+   ("proj_wr", projWr),
+   ("caps_parts", capsParts),
+   ("proj_a", projA),
+   ("proj_b", projB),
    ("promote_caps", promoteCapsL),
    ("promote_proj_table", promoteProjTableL),
-   ("pci_cv", pciCv),
+   ("pci_mk", pciMk),
+   ("pci_plain", pciPlain),
    ("pci_defn", pciDefn),
    ("pci_ind", pciInd),
    ("pci_ctor", pciCtor),
+   ("rec_block", recBlock),
    ("pci_rec", pciRec),
    ("promote_ci", promoteCIL),
    ("promote_ci_list", promoteCIListL),
