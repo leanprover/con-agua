@@ -5,6 +5,7 @@ import ConAgua.Arena.Pins
 import ConAgua.Arena.LevelArena
 import ConRon.Arena.Core
 import ConAgua.Census.Attr
+import ConAgua.Arena.StoreDen
 
 /-!
 # The whnf family's shared statements: arguments, the spine stack, the relation, the knot
@@ -339,6 +340,9 @@ structure CoreS (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis
   /-- The binder stack's size (lane `defeq`'s `BSTK`, array 145; a capacity checked at entry):
   its offsets do not wrap. -/
   bstk : (m.arr64 145).size < 2 ^ 63
+  /-- **Stored levels read back** (`StoreDen.lean`, lane `defeq2`): what the level readers need,
+  since the twin compares levels on their readbacks. -/
+  den : StoreDen m a fe
 
 /-- **The relation across a writer outside every tier and the spine stack**, the walk memos given
 (`hmem`): arrays `≥ 145` (or the front's 64‥95), `CTL` words `≥ 137` (or 64‥95): the binder stack,
@@ -361,7 +365,9 @@ theorem CoreS.frameSM {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
       (by decide)),
     hS.env.frame (aA 132 144 (by decide) (by decide)) (aC 128 136 (by decide) (by decide)) hf,
     hS.readL, hS.readLs, hS.nwf, hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn,
-    hmem, hf.2.2.1 145 ▸ hS.bstk⟩
+    hmem, hf.2.2.1 145 ▸ hS.bstk,
+    hS.den.frameE (hf.1 EREC (fun h => by have := hA _ h; simp only [EREC, ArrId] at this; omega)
+      (by decide))⟩
 
 /-- `CoreS.frameSM` away from the walk-local memos (arrays 151‥153, `CTL` 152‥157). -/
 theorem CoreS.frameS {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}

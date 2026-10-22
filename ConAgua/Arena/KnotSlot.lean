@@ -226,7 +226,8 @@ theorem CoreS.set_in {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
       hS.env.frame (fun b hb => by simp at hb; subst hb; decide)
         (fun x hx => by simp at hx; subst hx; decide) hf,
       fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf,
-      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.2.2.1 145 ▸ hS.bstk⟩,
+      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.2.2.1 145 ▸ hS.bstk,
+      (hS.den.frameE (hf.1 EREC (by simp [EREC]) (by decide))).caches rfl rfl rfl⟩,
     StackKept.of_frame hf⟩
 
 /-- `inferIOC` gains an entry (copy of `CoreS.set_wh`, at `ioSch`: array 100, `CTL` 104/105). -/
@@ -275,7 +276,8 @@ theorem CoreS.set_io {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
       hS.env.frame (fun b hb => by simp at hb; subst hb; decide)
         (fun x hx => by simp at hx; subst hx; decide) hf,
       fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf,
-      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.2.2.1 145 ▸ hS.bstk⟩,
+      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.2.2.1 145 ▸ hS.bstk,
+      (hS.den.frameE (hf.1 EREC (by simp [EREC]) (by decide))).caches rfl rfl rfl⟩,
     StackKept.of_frame hf⟩
 
 /-- `defeqC` gains a verdict (copy of `CoreS.set_wh`, at `deSch`: array 101, `CTL` 106/107, key
@@ -325,7 +327,8 @@ theorem CoreS.set_de {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASta
       hS.env.frame (fun b hb => by simp at hb; subst hb; decide)
         (fun x hx => by simp at hx; subst hx; decide) hf,
       fun h l e => hS.readL h l e, fun h l e => hS.readLs h l e, hS.nwf,
-      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.2.2.1 145 ▸ hS.bstk⟩,
+      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf (by decide) (by decide), hf.2.2.1 145 ▸ hS.bstk,
+      (hS.den.frameE (hf.1 EREC (by simp [EREC]) (by decide))).caches rfl rfl rfl⟩,
     StackKept.of_frame hf⟩
 
 /-- `KeptAll` across a `infer` memo insert (copy of `KeptAll.wh`). -/
