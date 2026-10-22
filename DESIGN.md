@@ -7682,3 +7682,17 @@ entry. The memo-hit bug (the probe depth returned as the value) was found by thi
   to self-recursion, `target_abs_node`'s arms inlined, a capacity abort on `nP + |slots| + nF`, a
   name-handle guard in `class_fe_r_rec`; D18 extended. ~2.6k proof lines for ~170 L lines.
 * Census: phase 8 **78 proven, 75 sorry, 64 written, 6 todo**; totals 718 proven / 119 sorry.
+
+### Landing 11: helper `posmemo` — the positivity theorems honest again
+* `IndPosMemo.lean`: `PosMR m` (the five walk memos — `nest_occ`, `depth`, `replace_apps`,
+  `has_loose_bvar_b`, the banked `replace_fvars` (`RfInv`) — well formed in *this* memory),
+  `MFr S T m m'` (a frame writing only memo arrays `S`, control words `T`), `PosMR.fr` (across any
+  writer that leaves the memos alone: stubs via `stubM_memoFrame`, interns, IW/EREC records),
+  `PosMR.setNo/Dp/Rp/Hb/Rf/Cr` (across a walk: its own post plus its frame for the others).
+  The 22 tags removed in landing 9 are restored: every theorem now takes `PosMR s₀.mem` (or the one
+  memo relation it needs) and returns `PosMR s'.mem`; `PosMemo`/`hMstage`/`hMra`/`hMno` are gone.
+  Frames for ~40 word models by a small tactic macro `mfr_auto` (a departure from PLAN's "no
+  custom tactics", as `Keeps.lean`'s `prim_keeps` is; it only sequences `MemFrame` lemmas). No L
+  changes. ~1.5k lines, 65 min.
+* Census: phase 8 **78 proven, 92 sorry, 47 written, 6 todo** (the re-tagged theorems go through
+  stubs); totals 718 proven / 136 sorry.
