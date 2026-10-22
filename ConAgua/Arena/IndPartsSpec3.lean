@@ -684,4 +684,463 @@ theorem recTargetOf_refines (p : Prog) (hv : p.lookup "e_view" = some eView)
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hres]; exact hr, by rw [hst]; exact hS', hg⟩
 
+
+/-! ## `block_counts` -/
+
+/-- The pure tail of `block_counts`: from the binder count `bl`, the result's tag `g` and the
+recursor data. -/
+def bcPure (nPd k nC nR bl g rOk rMI rRP : Word) : List Word :=
+  if g = 2 then
+    (if bl < nPd then [0, 0, 0] else [1, nPd, bl - nPd])
+  else if rOk = 0 then [0, 0, 0]
+  else if rRP < nC + k ∨ rMI < rRP then [0, 0, 0]
+  else if rRP - (nC + k) = nPd then [1, nPd, rMI - rRP]
+  else if k < nR ∧ nPd + nR + nC ≤ rRP then [1, nPd, rMI - rRP]
+  else [0, 0, 0]
+
+section pure
+variable (nPd k nC nR bl g rOk rMI rRP : Word)
+theorem bcPure_sort_lt (hg : g = 2) (h : bl < nPd) : bcPure nPd k nC nR bl g rOk rMI rRP = [0, 0, 0] := by
+  simp [bcPure, hg, h]
+theorem bcPure_sort_ge (hg : g = 2) (h : ¬ bl < nPd) :
+    bcPure nPd k nC nR bl g rOk rMI rRP = [1, nPd, bl - nPd] := by simp [bcPure, hg, h]
+theorem bcPure_norec (hg : g ≠ 2) (h : rOk = 0) : bcPure nPd k nC nR bl g rOk rMI rRP = [0, 0, 0] := by
+  simp [bcPure, hg, h]
+theorem bcPure_badrp (hg : g ≠ 2) (h0 : rOk ≠ 0) (h : rRP < nC + k ∨ rMI < rRP) :
+    bcPure nPd k nC nR bl g rOk rMI rRP = [0, 0, 0] := by simp [bcPure, hg, h0, h]
+theorem bcPure_eq1 (hg : g ≠ 2) (h0 : rOk ≠ 0) (h : ¬ (rRP < nC + k ∨ rMI < rRP))
+    (h1 : rRP - (nC + k) = nPd) : bcPure nPd k nC nR bl g rOk rMI rRP = [1, nPd, rMI - rRP] := by
+  simp only [bcPure, hg, h0, h, h1]; simp
+theorem bcPure_eq2 (hg : g ≠ 2) (h0 : rOk ≠ 0) (h : ¬ (rRP < nC + k ∨ rMI < rRP))
+    (h1 : ¬ rRP - (nC + k) = nPd) (h2 : k < nR ∧ nPd + nR + nC ≤ rRP) :
+    bcPure nPd k nC nR bl g rOk rMI rRP = [1, nPd, rMI - rRP] := by
+  simp only [bcPure, hg, h0, h, h1, h2]; simp
+theorem bcPure_none (hg : g ≠ 2) (h0 : rOk ≠ 0) (h : ¬ (rRP < nC + k ∨ rMI < rRP))
+    (h1 : ¬ rRP - (nC + k) = nPd) (h2 : ¬ (k < nR ∧ nPd + nR + nC ≤ rRP)) :
+    bcPure nPd k nC nR bl g rOk rMI rRP = [0, 0, 0] := by
+  simp only [bcPure, hg, h0, h, h1, h2]; simp
+end pure
+
+
+theorem bcPure_three (nPd k nC nR bl g rOk rMI rRP : Word) :
+    bcPure nPd k nC nR bl g rOk rMI rRP = [(bcPure nPd k nC nR bl g rOk rMI rRP).headD 0,
+      (bcPure nPd k nC nR bl g rOk rMI rRP).getD 1 0, (bcPure nPd k nC nR bl g rOk rMI rRP).getD 2 0] := by
+  unfold bcPure
+  repeat' split
+  all_goals rfl
+
+section specp
+local grind_pattern [ind_grind] bcPure_sort_lt => bcPure nPd k nC nR bl g rOk rMI rRP
+local grind_pattern [ind_grind] bcPure_sort_ge => bcPure nPd k nC nR bl g rOk rMI rRP
+local grind_pattern [ind_grind] bcPure_norec => bcPure nPd k nC nR bl g rOk rMI rRP
+local grind_pattern [ind_grind] bcPure_badrp => bcPure nPd k nC nR bl g rOk rMI rRP
+local grind_pattern [ind_grind] bcPure_eq1 => bcPure nPd k nC nR bl g rOk rMI rRP
+local grind_pattern [ind_grind] bcPure_eq2 => bcPure nPd k nC nR bl g rOk rMI rRP
+local grind_pattern [ind_grind] bcPure_none => bcPure nPd k nC nR bl g rOk rMI rRP
+variable (p : Prog) (hpp : p.lookup "block_counts_pure" = some blockCountsPure)
+include hpp
+
+theorem blockCountsPure_spec (n : Nat) (s₀ : St) (nPd k nC nR bl g rOk rMI rRP : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_counts_pure" [nPd, k, nC, nR, bl, g, rOk, rMI, rRP]
+    ⦃fun r s' => s' = s₀ ∧ r = bcPure nPd k nC nR bl g rOk rMI rRP; ⊤⦄ := by
+  rw [invoke_eq _ hpp]
+  simp only [callFn, blockCountsPure]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs] <;>
+      finish (gen := 20)
+
+theorem blockCountsPure_spec' (n : Nat) (s₀ : St) (nPd k nC nR bl g rOk rMI rRP : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_counts_pure" [nPd, k, nC, nR, bl, g, rOk, rMI, rRP]
+    ⦃fun r s' => s' = s₀ ∧ r = bcPure nPd k nC nR bl g rOk rMI rRP ∧
+      r = [r.headD 0, r.getD 1 0, r.getD 2 0]; ⊤⦄ :=
+  triple_post (blockCountsPure_spec p hpp n s₀ nPd k nC nR bl g rOk rMI rRP)
+    (fun r s' ⟨h1, h2⟩ => ⟨h1, h2, by rw [h2]; exact bcPure_three _ _ _ _ _ _ _ _ _⟩)
+
+end specp
+
+/-- **The model of `block_counts_head`**: `(bl, g)` and the memory. -/
+def bchW : Nat → Mem → Word → Option (List Word × Mem)
+  | 0, _, _ => none
+  | n + 1, m, cvT => bchK1 n (piBW n m CWF (rdW (m.arr64 EREC) (cvT + 3)))
+where
+  bchK1 (n : Nat) : Option (List Word × Mem) → Option (List Word × Mem)
+    | none => none
+    | some (rs, m1) => bchK2 (rs.getD 1 0) m1 (eViewW m1 (rs.getD 2 0))
+  bchK2 (bl : Word) (m1 : Mem) : List Word → Option (List Word × Mem)
+    | [] => none
+    | v => some ([bl, v.headD 0], m1)
+
+section arms
+variable (n : Nat) (m m1 : Mem) (cvT bl : Word) (rs v : List Word)
+theorem bchW_step : bchW (n + 1) m cvT =
+    bchW.bchK1 n (piBW n m CWF (rdW (m.arr64 EREC) (cvT + 3))) := rfl
+theorem bchK1_some : bchW.bchK1 n (some (rs, m1)) =
+    bchW.bchK2 (rs.getD 1 0) m1 (eViewW m1 (rs.getD 2 0)) := rfl
+theorem bchK2_ne (h : v ≠ []) : bchW.bchK2 bl m1 v = some ([bl, v.headD 0], m1) := by
+  cases v with
+  | nil => exact absurd rfl h
+  | cons a as => rfl
+end arms
+
+grind_pattern [ind_grind] bchW_step => bchW (n + 1) m cvT
+grind_pattern [ind_grind] bchK1_some => bchW.bchK1 n (some (rs, m1))
+grind_pattern [ind_grind] bchK2_ne => bchW.bchK2 bl m1 v
+
+theorem bchW_two {n : Nat} {m m' : Mem} {cvT : Word} {r : List Word}
+    (h : bchW n m cvT = some (r, m')) : r = [r.headD 0, r.getD 1 0] := by
+  cases n with
+  | zero => simp [bchW] at h
+  | succ n =>
+    rw [bchW_step] at h
+    cases hp : piBW n m CWF (rdW (m.arr64 EREC) (cvT + 3)) with
+    | none => rw [hp] at h; simp [bchW.bchK1] at h
+    | some rm =>
+      obtain ⟨rs, m1⟩ := rm
+      rw [hp, bchK1_some] at h
+      by_cases hr : eViewW m1 (rs.getD 2 0) = []
+      · rw [hr] at h; simp [bchW.bchK2] at h
+      rw [bchK2_ne _ _ _ hr] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, -⟩ := h
+      rfl
+
+section spec
+variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+  (hc : p.lookup "iw_copy" = some iwCopy) (hv : p.lookup "e_view" = some eView)
+  (hs : p.lookup "sl_cons" = some slCons) (hpb : p.lookup "pi_binders" = some piBinders)
+  (hh : p.lookup "block_counts_head" = some blockCountsHead)
+include ha hc hv hs hpb hh
+
+theorem blockCountsHead_spec (n : Nat) (s₀ : St) (cvT : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_counts_head" [cvT]
+    ⦃fun r s' => LocEq s' s₀ ∧ bchW n s₀.mem cvT = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hh]
+  simp only [callFn, blockCountsHead]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        piBinders_spec p ha hc hv hs hpb n, eViewSpec4 p hv n] <;>
+      finish (gen := 20) [rdW_eq, CWF, List.getD_cons_zero, List.getD_cons_succ, List.headD_cons, List.tail_cons]
+
+
+theorem blockCountsHead_spec' (n : Nat) (s₀ : St) (cvT : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_counts_head" [cvT]
+    ⦃fun r s' => LocEq s' s₀ ∧ bchW n s₀.mem cvT = some (r, s'.mem) ∧
+      r = [r.headD 0, r.getD 1 0]; ⊤⦄ :=
+  triple_post (blockCountsHead_spec p ha hc hv hs hpb hh n s₀ cvT)
+    (fun r s' ⟨h1, h2⟩ => ⟨h1, h2, bchW_two h2⟩)
+
+end spec
+
+/-- After `block_counts_head`: the arithmetic tail. -/
+def bcK (nPd k nC nR rOk rMI rRP : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r1, m1) => some (bcPure nPd k nC nR (r1.headD 0) (r1.getD 1 0) rOk rMI rRP, m1)
+
+/-- **The model of `block_counts`.** -/
+def bcW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word →
+    Option (List Word × Mem)
+  | 0, _, _, _, _, _, _, _, _, _ => none
+  | n + 1, m, nPd, k, nC, nR, cvT, rOk, rMI, rRP => bcK nPd k nC nR rOk rMI rRP (bchW n m cvT)
+
+theorem bcK_some (nPd k nC nR rOk rMI rRP : Word) (r1 : List Word) (m1 : Mem) :
+    bcK nPd k nC nR rOk rMI rRP (some (r1, m1)) =
+      some (bcPure nPd k nC nR (r1.headD 0) (r1.getD 1 0) rOk rMI rRP, m1) := rfl
+theorem bcW_def (n : Nat) (m : Mem) (nPd k nC nR cvT rOk rMI rRP : Word) :
+    bcW (n + 1) m nPd k nC nR cvT rOk rMI rRP = bcK nPd k nC nR rOk rMI rRP (bchW n m cvT) := rfl
+grind_pattern [ind_grind] bcK_some => bcK nPd k nC nR rOk rMI rRP (some (r1, m1))
+grind_pattern [ind_grind] bcW_def => bcW (n + 1) m nPd k nC nR cvT rOk rMI rRP
+
+section spec2
+variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+  (hc : p.lookup "iw_copy" = some iwCopy) (hv : p.lookup "e_view" = some eView)
+  (hs : p.lookup "sl_cons" = some slCons) (hpb : p.lookup "pi_binders" = some piBinders)
+  (hh : p.lookup "block_counts_head" = some blockCountsHead)
+  (hpp : p.lookup "block_counts_pure" = some blockCountsPure)
+  (hp : p.lookup "block_counts" = some blockCounts)
+include ha hc hv hs hpb hh hpp hp
+
+theorem blockCounts_spec (n : Nat) (s₀ : St) (nPd k nC nR cvT rOk rMI rRP : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_counts" [nPd, k, nC, nR, cvT, rOk, rMI, rRP]
+    ⦃fun r s' => LocEq s' s₀ ∧ bcW n s₀.mem nPd k nC nR cvT rOk rMI rRP = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, blockCounts]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+        blockCountsHead_spec' p ha hc hv hs hpb hh n, blockCountsPure_spec' p hpp n] <;>
+      finish (gen := 20)
+
+end spec2
+
+
+theorem arenaR_frame_iw {m m' : Mem} {a : AState} (hf : MemFrame [IW] [200] m m')
+    (h : ArenaR m a) : ArenaR m' a :=
+  ArenaR.frame (fun b hb => by simp at hb; subst hb; simp [arenaArrs, storeArrs, memoArrs, IW])
+    (fun x hx => by simp at hx; subst hx; exact not_mem_arenaCtl _ (by decide)) hf h
+
+theorem sort_head_iff (m1 : Mem) (res : Word) (v : ENodeView) (hv : ViewR (eViewW m1 res) v) :
+    (eViewW m1 res).headD 0 = 2 ↔ ∃ u, v = .sort u := by
+  cases v with
+  | sort u => exact ⟨fun _ => ⟨u, rfl⟩, fun _ => hv.1⟩
+  | _ =>
+    simp only [ViewR] at hv
+    constructor
+    · intro hh; first | rw [hv.1] at hh | rw [hv] at hh
+      exact absurd hh (by decide)
+    · rintro ⟨u, hu⟩; cases hu
+
+theorem bchW_ok (n : Nat) (m m1 : Mem) (a : AState) (cvT : Word) (r1 : List Word)
+    (hR : ArenaR m a) (h : bchW n m cvT = some (r1, m1))
+    (hty : (rdW (m.arr64 EREC) (cvT + 3)).toNat < 2 ^ 32)
+    (hsz : (m.arr64 IW).size < 2 ^ 64) (hc : 200 < (m.arr64 CTL).size) :
+    ∃ bs res v, (ConRon.Arena.piBinders coreWalkFuel (decE (rdW (m.arr64 EREC) (cvT + 3)))).run a
+        = .ok ((bs, res), a) ∧ r1 = [r1.headD 0, r1.getD 1 0] ∧ (r1.headD 0).toNat = bs.length ∧
+      a.store.view res = some v ∧ ((r1.getD 1 0 = 2) ↔ ∃ u, v = .sort u) ∧
+      IWGrow m m1 ∧ MemFrame [IW] [200] m m1 := by
+  cases n with
+  | zero => simp [bchW] at h
+  | succ n =>
+    rw [bchW_step] at h
+    cases hp : piBW n m CWF (rdW (m.arr64 EREC) (cvT + 3)) with
+    | none => rw [hp] at h; simp [bchW.bchK1] at h
+    | some rm =>
+      obtain ⟨rs, m1'⟩ := rm
+      rw [hp, bchK1_some] at h
+      by_cases hr : eViewW m1' (rs.getD 2 0) = []
+      · rw [hr] at h; simp [bchW.bchK2] at h
+      rw [bchK2_ne _ _ _ hr] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      obtain ⟨bs, e, hrun, hsh, hdec, hb1, hb2, hg, hf, -⟩ :=
+        piBW_ok n m m1' a CWF _ rs hR hp hty hsz hc
+      have hR1 : ArenaR m1' a := arenaR_frame_iw hf hR
+      obtain ⟨v, hv, hvr⟩ := eViewW_ok m1' a hR1 _ hr
+      have hlen := decHL_length m1' hdec
+      refine ⟨bs, e, v, ?_, rfl, ?_, ?_, ?_, hg, hf⟩
+      · rw [← CWF_eq]; exact hrun
+      · simp only [List.headD_cons]; exact hlen.symm
+      · rw [← hb2]; exact hv
+      · simp only [List.getD_cons_succ, List.getD_cons_zero]
+        exact sort_head_iff _ _ _ hvr
+
+
+theorem decCVp_type {m : Mem} {q : Word} {cv : IConstantVal} (h : decCVp m q.toNat = some cv)
+    (hb : q.toNat + 3 < 2 ^ 64) :
+    (rdW (m.arr64 EREC) (q + 3)).toNat < 2 ^ 32 ∧ decE (rdW (m.arr64 EREC) (q + 3)) = cv.type := by
+  simp only [decCVp, decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  obtain ⟨nm, -, lv, -, ty, hty, hcv⟩ := h
+  have hty' : ty = cv.type := by rw [← hcv]
+  cases hw : (erA m)[q.toNat + 3]? with
+  | none => simp [hd?, hw] at hty
+  | some w =>
+    by_cases hl : w.toNat < 2 ^ 32
+    · simp [hd?, hw, hl] at hty
+      have e : (q + 3).toNat = q.toNat + 3 := by rw [UInt64.toNat_add]; simp; omega
+      have hrd : rdW (m.arr64 EREC) (q + 3) = w := by
+        simp only [rdW, e]; exact (by simpa [erA] using hw : (m.arr64 EREC)[q.toNat + 3]? = some w) ▸ rfl
+      rw [hrd]
+      exact ⟨hl, by rw [← hty', ← hty]; rfl⟩
+    · simp [hd?, hw, hl] at hty
+
+
+/-- `Option (Nat × Nat)` as the words `(ok, a, b)`. -/
+def encONN : Option (Nat × Nat) → List Word
+  | none => [0, 0, 0]
+  | some (p, q) => [1, UInt64.ofNat p, UInt64.ofNat q]
+
+/-- The Nat-level tail of `blockCounts?` past the sort test. -/
+def bcTail (nPd k nC nR : Nat) : Option (Nat × Nat) → Option (Nat × Nat)
+  | none => none
+  | some (mI, rP) =>
+    if rP < nC + k || mI < rP then none
+    else if rP - (nC + k) == nPd then some (nPd, mI - rP)
+    else if k < nR && nPd + nR + nC ≤ rP then some (nPd, mI - rP)
+    else none
+
+theorem bcTail_run (nPd k nC nR : Nat) (rr : Option (Nat × Nat)) (a : AState) :
+    (match rr with
+      | none => (pure none : AM (Option (Nat × Nat)))
+      | some (mI, rP) =>
+        if rP < nC + k || mI < rP then pure none
+        else if rP - (nC + k) == nPd then pure (some (nPd, mI - rP))
+        else if k < nR && nPd + nR + nC ≤ rP then pure (some (nPd, mI - rP))
+        else pure none).run a = .ok (bcTail nPd k nC nR rr, a) := by
+  cases rr with
+  | none => rfl
+  | some q =>
+    obtain ⟨mI, rP⟩ := q
+    simp only [bcTail]
+    repeat' split
+    all_goals rfl
+
+theorem bcPure_nonsort (nPd k nC nR bl g rOk rMI rRP : Word) (hg : g ≠ 2)
+    (h1 : nPd.toNat < 2 ^ 32) (h2 : k.toNat < 2 ^ 32) (h3 : nC.toNat < 2 ^ 32)
+    (h4 : nR.toNat < 2 ^ 32) (h5 : rMI.toNat < 2 ^ 32) (h6 : rRP.toNat < 2 ^ 32) :
+    bcPure nPd k nC nR bl g rOk rMI rRP = encONN (bcTail nPd.toNat k.toNat nC.toNat nR.toNat
+      (if rOk = 0 then none else some (rMI.toNat, rRP.toNat))) := by
+  by_cases h0 : rOk = 0
+  · rw [bcPure_norec _ _ _ _ _ _ _ _ _ hg h0, if_pos h0]; rfl
+  rw [if_neg h0]
+  simp only [bcTail]
+  have e1 : (nC + k).toNat = nC.toNat + k.toNat := by
+    rw [UInt64.toNat_add]; simp; omega
+  have e2 : (nPd + nR + nC).toNat = nPd.toNat + nR.toNat + nC.toNat := by
+    rw [UInt64.toNat_add, UInt64.toNat_add]; simp; omega
+  by_cases c1 : rRP < nC + k ∨ rMI < rRP
+  · rw [bcPure_badrp _ _ _ _ _ _ _ _ _ hg h0 c1]
+    have : (rRP.toNat < nC.toNat + k.toNat || rMI.toNat < rRP.toNat) = true := by
+      rcases c1 with c | c
+      · have := UInt64.lt_iff_toNat_lt.mp c; rw [e1] at this; simp [this]
+      · have := UInt64.lt_iff_toNat_lt.mp c; simp [this]
+    rw [if_pos this]; rfl
+  · have c1' : (rRP.toNat < nC.toNat + k.toNat || rMI.toNat < rRP.toNat) = false := by
+      have a1 : ¬ rRP < nC + k := fun h => c1 (Or.inl h)
+      have a2 : ¬ rMI < rRP := fun h => c1 (Or.inr h)
+      have b1 := (not_congr UInt64.lt_iff_toNat_lt).mp a1
+      have b2 := (not_congr UInt64.lt_iff_toNat_lt).mp a2
+      rw [e1] at b1
+      simp [b1, b2]
+    rw [if_neg (by simp [c1'])]
+    have hle : (nC + k).toNat ≤ rRP.toNat := by
+      have a1 : ¬ rRP < nC + k := fun h => c1 (Or.inl h)
+      have b1 := (not_congr UInt64.lt_iff_toNat_lt).mp a1; omega
+    have hle2 : nC + k ≤ rRP := UInt64.le_iff_toNat_le.mpr hle
+    have hsub : (rRP - (nC + k)).toNat = rRP.toNat - (nC.toNat + k.toNat) := by
+      rw [UInt64.toNat_sub_of_le _ _ hle2, e1]
+    have hrm : rRP ≤ rMI := by
+      have a2 : ¬ rMI < rRP := fun h => c1 (Or.inr h)
+      exact UInt64.not_lt.mp a2
+    have hsub2 : UInt64.ofNat (rMI.toNat - rRP.toNat) = rMI - rRP := by
+      apply UInt64.toNat_inj.mp
+      rw [UInt64.toNat_sub_of_le _ _ hrm, UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)]
+    by_cases c2 : rRP - (nC + k) = nPd
+    · rw [bcPure_eq1 _ _ _ _ _ _ _ _ _ hg h0 c1 c2]
+      have : (rRP.toNat - (nC.toNat + k.toNat) == nPd.toNat) = true := by
+        rw [← hsub, c2]; simp
+      rw [if_pos this]
+      simp only [encONN, hsub2, ofNat_toNat_word]
+    · have c2' : (rRP.toNat - (nC.toNat + k.toNat) == nPd.toNat) = false := by
+        rw [← hsub]; simp only [beq_eq_false_iff_ne, ne_eq]
+        exact fun h => c2 (UInt64.toNat_inj.mp h)
+      rw [if_neg (by simp [c2'])]
+      by_cases c3 : k < nR ∧ nPd + nR + nC ≤ rRP
+      · rw [bcPure_eq2 _ _ _ _ _ _ _ _ _ hg h0 c1 c2 c3]
+        have : (k.toNat < nR.toNat && nPd.toNat + nR.toNat + nC.toNat ≤ rRP.toNat) = true := by
+          have a := UInt64.lt_iff_toNat_lt.mp c3.1
+          have b := UInt64.le_iff_toNat_le.mp c3.2
+          rw [e2] at b
+          simp [a, b]
+        rw [if_pos this]
+        simp only [encONN, hsub2, ofNat_toNat_word]
+      · rw [bcPure_none _ _ _ _ _ _ _ _ _ hg h0 c1 c2 c3]
+        have : (k.toNat < nR.toNat && nPd.toNat + nR.toNat + nC.toNat ≤ rRP.toNat) = false := by
+          by_cases a : k < nR
+          · have b : ¬ nPd + nR + nC ≤ rRP := fun h => c3 ⟨a, h⟩
+            have b' := (not_congr UInt64.le_iff_toNat_le).mp b
+            rw [e2] at b'
+            simp [b']
+          · have a' := (not_congr UInt64.lt_iff_toNat_lt).mp a
+            simp [a']
+        rw [if_neg (by simp [this])]; rfl
+
+theorem bcW_ok (n : Nat) (m m' : Mem) (a : AState) (nPd k nC nR cvT rOk rMI rRP : Word)
+    (r : List Word) (cv : IConstantVal) (rr : Option (Nat × Nat))
+    (hR : ArenaR m a) (h : bcW n m nPd k nC nR cvT rOk rMI rRP = some (r, m'))
+    (hcv : decCVp m cvT.toNat = some cv) (hb : cvT.toNat + 3 < 2 ^ 64)
+    (hrr : rr = if rOk = 0 then none else some (rMI.toNat, rRP.toNat))
+    (h1 : nPd.toNat < 2 ^ 32) (h2 : k.toNat < 2 ^ 32) (h3 : nC.toNat < 2 ^ 32)
+    (h4 : nR.toNat < 2 ^ 32) (h5 : rMI.toNat < 2 ^ 32) (h6 : rRP.toNat < 2 ^ 32)
+    (hsz : (m.arr64 IW).size < 2 ^ 64) (hc : 200 < (m.arr64 CTL).size) :
+    ∃ x, (ConRon.Arena.blockCounts? nPd.toNat k.toNat nC.toNat nR.toNat cv rr).run a = .ok (x, a) ∧
+      r = encONN x ∧ IWGrow m m' ∧ MemFrame [IW] [200] m m' := by
+  cases n with
+  | zero => simp [bcW] at h
+  | succ n =>
+  rw [bcW_def] at h
+  cases hh : bchW n m cvT with
+  | none => rw [hh] at h; simp [bcK] at h
+  | some rm =>
+  obtain ⟨r1, m1⟩ := rm
+  rw [hh, bcK_some] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨hty32, hty⟩ := decCVp_type hcv hb
+  obtain ⟨bs, res, v, hrun, hsh, hlen, hview, hiff, hg, hf⟩ :=
+    bchW_ok n m m1 a cvT r1 hR hh hty32 hsz hc
+  have hvr := view_run res a v hview
+  have hl32 : (r1.headD 0).toNat = bs.length := hlen
+  have hrdy : ∀ X : Option (Nat × Nat), (∀ w, (ENodeView.sort w = v) → True) → True := fun _ _ => trivial
+  by_cases hs : r1.getD 1 0 = 2
+  · obtain ⟨u, rfl⟩ := hiff.mp hs
+    by_cases hl : r1.headD 0 < nPd
+    · have hlt : ¬ nPd.toNat ≤ bs.length := by
+        have := UInt64.lt_iff_toNat_lt.mp hl; omega
+      refine ⟨none, ?_, ?_, hg, hf⟩
+      · unfold ConRon.Arena.blockCounts?
+        rw [← hty]
+        simp only [StateT.run_bind, hrun, except_ok_bind, hvr]
+        rw [if_neg hlt]; rfl
+      · rw [bcPure_sort_lt _ _ _ _ _ _ _ _ _ hs hl]; rfl
+    · have hge : nPd.toNat ≤ bs.length := by
+        have := (not_congr UInt64.lt_iff_toNat_lt).mp hl; omega
+      refine ⟨some (nPd.toNat, bs.length - nPd.toNat), ?_, ?_, hg, hf⟩
+      · unfold ConRon.Arena.blockCounts?
+        rw [← hty]
+        simp only [StateT.run_bind, hrun, except_ok_bind, hvr]
+        rw [if_pos hge]; rfl
+      · rw [bcPure_sort_ge _ _ _ _ _ _ _ _ _ hs hl]
+        simp only [encONN]
+        have e1 : UInt64.ofNat nPd.toNat = nPd := ofNat_toNat_word nPd
+        have e2 : UInt64.ofNat (bs.length - nPd.toNat) = r1.headD 0 - nPd := by
+          apply UInt64.toNat_inj.mp
+          rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by omega))]
+          have := (r1.headD 0).toNat_lt
+          rw [UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)]; omega
+        rw [e1, e2]
+  · have hns : ∀ u, v ≠ ENodeView.sort u := fun u hu => hs (hiff.mpr ⟨u, hu⟩)
+    refine ⟨bcTail nPd.toNat k.toNat nC.toNat nR.toNat rr, ?_, ?_, hg, hf⟩
+    · unfold ConRon.Arena.blockCounts?
+      rw [← hty]
+      simp only [StateT.run_bind, hrun, except_ok_bind, hvr]
+      cases v with
+      | sort u => exact absurd rfl (hns u)
+      | _ => exact bcTail_run _ _ _ _ rr a
+    · rw [bcPure_nonsort _ _ _ _ _ _ _ _ _ hs h1 h2 h3 h4 h5 h6, hrr]
+
+
+/-- **`block_counts` refines `blockCounts?`** (the recursor datum `r` as `(rOk, rMI, rRP)`). -/
+@[refines ConRon.Arena.blockCounts?]
+theorem blockCounts_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hc : p.lookup "iw_copy" = some iwCopy) (hv : p.lookup "e_view" = some eView)
+    (hs : p.lookup "sl_cons" = some slCons) (hpb : p.lookup "pi_binders" = some piBinders)
+    (hh : p.lookup "block_counts_head" = some blockCountsHead)
+    (hpp : p.lookup "block_counts_pure" = some blockCountsPure)
+    (hp : p.lookup "block_counts" = some blockCounts) (n : Nat) (s₀ : St) (a₀ : AState)
+    (nPd k nC nR cvT rOk rMI rRP : Word) (cv : IConstantVal) (rr : Option (Nat × Nat))
+    (hR : ArenaR s₀.mem a₀) (hcv : decCVp s₀.mem cvT.toNat = some cv) (hb : cvT.toNat + 3 < 2 ^ 64)
+    (hrr : rr = if rOk = 0 then none else some (rMI.toNat, rRP.toNat))
+    (h1 : nPd.toNat < 2 ^ 32) (h2 : k.toNat < 2 ^ 32) (h3 : nC.toNat < 2 ^ 32)
+    (h4 : nR.toNat < 2 ^ 32) (h5 : rMI.toNat < 2 ^ 32) (h6 : rRP.toNat < 2 ^ 32)
+    (hsz : (s₀.mem.arr64 IW).size < 2 ^ 64) (hcl : 200 < (s₀.mem.arr64 CTL).size) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_counts" [nPd, k, nC, nR, cvT, rOk, rMI, rRP]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (ConRon.Arena.blockCounts? nPd.toNat k.toNat nC.toNat nR.toNat cv rr) a₀ ∧
+      AM.st (ConRon.Arena.blockCounts? nPd.toNat k.toNat nC.toNat nR.toNat cv rr) a₀ = a₀ ∧
+      r = encONN (AM.res (ConRon.Arena.blockCounts? nPd.toNat k.toNat nC.toNat nR.toNat cv rr) a₀) ∧
+      IWGrow s₀.mem s'.mem ∧ MemFrame [IW] [200] s₀.mem s'.mem; ⊤⦄ := by
+  refine triple_post (blockCounts_spec p ha hc hv hs hpb hh hpp hp n s₀ nPd k nC nR cvT rOk rMI rRP) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨x, hrun, hr, hg, hf⟩ := bcW_ok n s₀.mem s'.mem a₀ nPd k nC nR cvT rOk rMI rRP r cv rr
+    hR hm hcv hb hrr h1 h2 h3 h4 h5 h6 hsz hcl
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, hst, by rw [hres]; exact hr, hg, hf⟩
+
 end L.Ind
