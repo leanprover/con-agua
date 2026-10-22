@@ -1,4 +1,5 @@
 import ConAgua.Arena.StoreLib
+import ConAgua.Arena.SimLib
 import ConAgua.Arena.LetStore
 
 /-!
@@ -247,12 +248,8 @@ theorem internLet_refines (p : Prog) (hpf : p.lookup "letE_find" = some letFind)
     invoke p (exec p n) "intern_letE" [ty, val, body]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internE (.letE (decE ty) (decE val) (decE body))) a₀ ∧
       LetR s'.mem (AM.st (internE (.letE (decE ty) (decE val) (decE body))) a₀) ∧
-      AM.res (internE (.letE (decE ty) (decE val) (decE body))) a₀ = decE (r.headD 0); ⊤⦄ := by
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (internLet_spec p hpf hpp hp n s₀ ty val body)
-  subst hs
-  exact ⟨hloc, leintern_correct s.mem a₀ hR ty val body hty hval hbody _ _ hI⟩
+      AM.res (internE (.letE (decE ty) (decE val) (decE body))) a₀ = decE (r.headD 0); ⊤⦄ :=
+  Sim.tripleD (internLet_spec p hpf hpp hp n s₀ ty val body)
+    (Sim.ofOkD (leintern_correct s₀.mem a₀ hR ty val body hty hval hbody))
 
 end L.Arena

@@ -1,4 +1,5 @@
 import ConAgua.Arena.StoreLib
+import ConAgua.Arena.SimLib
 import ConAgua.Arena.NAnonStore
 
 /-!
@@ -168,11 +169,7 @@ theorem internNAnon_refines (p : Prog) (hpf : p.lookup "nanon_find" = some nanon
     invoke p (exec p n) "intern_nanon" []
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internNNode .anonymous) a₀ ∧
       NAnonR s'.mem (AM.st (internNNode .anonymous) a₀) ∧
-      AM.res (internNNode .anonymous) a₀ = decI (r.headD 0); ⊤⦄ := by
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun (internNAnon_spec p hpf hpp hp n s₀)
-  subst hs
-  exact ⟨hloc, naintern_correct s.mem a₀ hR _ _ hI⟩
+      AM.res (internNNode .anonymous) a₀ = decI (r.headD 0); ⊤⦄ :=
+  Sim.tripleD (internNAnon_spec p hpf hpp hp n s₀) (Sim.ofOkD (naintern_correct s₀.mem a₀ hR))
 
 end L.Arena
