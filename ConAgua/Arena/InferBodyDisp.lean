@@ -657,13 +657,13 @@ end L.Arena
 
 namespace L.Arena
 
-/-- **The knot's `infer` slot one level up** (`WhnfCallees.inferStep`), from the body. -/
+/-- **The knot's `infer` slot one level up**, from the body. -/
 @[refines_part ConRon.Arena.coreKnot "infer (step)"]
 theorem inferSlot_step (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat)
     (hk : KnotUpTo p n) : InferSlot p (n + 1) :=
   infer_refines p hq.knot n hk (inferBody_refines p hq hc n)
 
-/-- **The knot's `inferIO` slot one level up** (`WhnfCallees.inferIOStep`), from the io body. -/
+/-- **The knot's `inferIO` slot one level up**, from the io body. -/
 @[refines_part ConRon.Arena.coreKnot "inferIO (step)"]
 theorem inferIOSlot_step (p : Prog) (hq : InferAllProg p) (hc : InferCallees p) (n : Nat)
     (hk : KnotUpTo p n) : InferIOSlot p (n + 1) :=

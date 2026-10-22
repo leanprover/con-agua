@@ -134,3 +134,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-22,indproofs2,opus,30,30,"landing 9: helper pos2 merged (rest of IndPos2, models/specs); 25 census tags removed whose theorems assumed memo WF in every StageR state (vacuous); phase 8: 73 proven / 72 sorry"
 2026-10-22,whnf4,opus,8,4,"landing 1: whnf3-next instLP family landed under its own names (lp_lookup/lp_substl/lp_spw/lp_substpw); Prog 9 stubs, coreFns 533"
 2026-10-22,decls3,opus,10,2,"merged helper apd: all_level_params_defined refines the twin (sorry-free)"
+2026-10-22,whnf4,opus,20,8,"landing 2 (helper whnf4-knot): KnotCallees whnfCoreStep/whnfStep/proofIrrel/reduceProjCore/unfold/constTy derived from lane whnf primed proofs; 8 leaf fields left"

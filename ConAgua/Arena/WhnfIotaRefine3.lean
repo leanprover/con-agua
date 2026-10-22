@@ -277,7 +277,7 @@ theorem addW13 (q c : Word) (a : Array Word) (hq : q.toNat + 13 < a.size)
   rw [UInt64.toNat_add]; simp; omega
 
 /-- **The `and_rescue_slots` loop refines `andRescueSlotsGo`**. -/
-theorem arW_ok (p : Prog) (hcc : CoreCallees p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+theorem arW_ok (p : Prog) (hcc : ProjCallees p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
     (fe : IFEnv) (eb ctor nP us anW : Word) (hctor : HW ctor) (hus : HW us) (hanW : HW anW) :
     ∀ (K k : Nat) (m : Mem) (a : AState) (M : ModeMaps) (j : Word) (L : List Word) (m' : Mem),
       j.toNat + K = 2 → CoreS dn m a vis fe M eb →
@@ -469,8 +469,8 @@ theorem andRescueSlots_run (fe : IFEnv) (ctor : NIdx) (nP : Nat) (ust : LsIdx) (
   simp only [andRescueSlots, pinAnd, StateT.run_bind, hp, except_ok_bind, hr]
 
 /-- **`and_rescue_slots` refines `andRescueSlots`** (`find_proj`, `fire_ok` and their facts as
-`CoreCallees`). -/
-theorem andRescueSlots_refines' (p : Prog) (hp : IotaProg' p) (hcc : CoreCallees p) :
+`ProjCallees`). -/
+theorem andRescueSlots_refines' (p : Prog) (hp : IotaProg' p) (hcc : ProjCallees p) :
     AndRescueSlotsOK p := by
   intro n s₀ a₀ dn vis fe MM eb ctor nP us hS hctor hus
   cases n with
@@ -509,7 +509,7 @@ theorem andRescueSlots_refines' (p : Prog) (hp : IotaProg' p) (hcc : CoreCallees
 @[refines ConRon.Arena.andRescueSlots]
 theorem andRescueSlots_refines (p : Prog) (hp : IotaProg' p) :
     AndRescueSlotsOK p :=
-  andRescueSlots_refines' (p := p) (hcc := coreCallees_stub p)  (hp := hp)
+  andRescueSlots_refines' (p := p) (hcc := (coreCallees_stub p).toProjCallees)  (hp := hp)
 
 /-! ## `fab_scope_ok(d, fab, major)` -/
 
