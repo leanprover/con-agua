@@ -385,11 +385,7 @@ theorem ptBytes_ctl (m : Mem) (o : Word) : (ptBytes m o).arr64 CTL = m.arr64 CTL
 interns write the name tables only. -/
 theorem ptn_kept {m m₁ m₃ : Mem} (hg : Grows m m₁)
     (hf : MemFrame [NSREC, NSSLOT, NNREC, NNSLOT] [36, 37, 38, 39] m₁ m₃) : StackKept m m₃ := by
-  have h1 : MemFrame [POOL, NSREC, NSSLOT, NNREC, NNSLOT] [0, 36, 37, 38, 39] m m₁ :=
-    (grows_frame m m₁ hg).mono (by simp) (by simp)
-  have h2 : MemFrame [POOL, NSREC, NSSLOT, NNREC, NNSLOT] [0, 36, 37, 38, 39] m₁ m₃ :=
-    hf.mono (by simp) (by simp)
-  exact StackKept.of_frame (h1.trans h2) (by decide) (by decide)
+  exact StackKept.of_frame_grows hg hf
 
 /-- **`proj_table_name` refines `projTableName`** under `CoreS` (the result a name handle). -/
 @[refines ConRon.Arena.projTableName]
