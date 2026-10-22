@@ -161,7 +161,7 @@ def fpK1 (n : Nat) (k ca cb id : Word) : Option (List Word × Mem) → Option (L
     else if rdW (m1.arr64 EREC) (r1.tail.headD 0) ≠ k then some ([0], m1)
     else if k ≠ 3 ∧ (rdW (m1.arr64 EREC) (r1.tail.headD 0 + 5) ≠ ca ∨
         rdW (m1.arr64 EREC) (r1.tail.headD 0 + 6) ≠ cb) then some ([0], m1)
-    else fpK2 p n (r1.tail.headD 0) (stubM "rom_ci" m1 [id])
+    else fpK2 p n (r1.tail.headD 0) (callW p n "rom_ci" [id] m1)
 
 /-- **The model of `find_pinned(vis, n, k, a, b, id)`.** -/
 def fpW : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
@@ -177,7 +177,7 @@ theorem fpK1_some : fpK1 p n k ca cb id (some (r1, m1)) =
     else if rdW (m1.arr64 EREC) (r1.tail.headD 0) ≠ k then some ([0], m1)
     else if k ≠ 3 ∧ (rdW (m1.arr64 EREC) (r1.tail.headD 0 + 5) ≠ ca ∨
         rdW (m1.arr64 EREC) (r1.tail.headD 0 + 6) ≠ cb) then some ([0], m1)
-    else fpK2 p n (r1.tail.headD 0) (stubM "rom_ci" m1 [id]) := rfl
+    else fpK2 p n (r1.tail.headD 0) (callW p n "rom_ci" [id] m1) := rfl
 theorem fpK2_some : fpK2 p n q (some (r2, m2)) = fpK3 q (callW p n "ci_to_cv" [r2.headD 0] m2) :=
   rfl
 theorem fpK3_some : fpK3 q (some (r3, m3)) = mpW m3 (q + 1) (r3.headD 0) := rfl
@@ -205,7 +205,7 @@ theorem fp_specW (h : StdProg p) (n : Nat) (s₀ : St) (vis nm k ca cb id : Word
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        envFind_specW p h.red.ih.ix h.red.ih.rowGet h.red.ih.find n, stubM_spec p "rom_ci" n,
+        envFind_specW p h.red.ih.ix h.red.ih.rowGet h.red.ih.find n, callW_spec p n "rom_ci",
         callW_spec p n "ci_to_cv", mp_specW p h.red.canon h.red.mp n] <;>
       finish (gen := 20) [rdW_eq, mpW]
 
@@ -266,12 +266,12 @@ theorem fpW_ok {p : Prog} (h : StdProg p) {dn : NIdx → Option ConLeche.Name} {
   obtain ⟨cvT, hshape⟩ := fp_pass hsz hk hciA hkw hc
   have hcvP := fpShape_cv hci hshape
   -- the pin's constant
-  cases h2 : stubM "rom_ci" m1 [id] with
+  cases h2 : callW p n "rom_ci" [id] m1 with
   | none => rw [h2] at hW; cases hW
   | some rm2 =>
   obtain ⟨r2, m2⟩ := rm2
   rw [h2, fpK2_some] at hW
-  obtain ⟨pci, a2, hrun2, hS2, hg2, hpci⟩ := romCi_spec dn vis fe id hid m1 m2 a r2 h2 hS
+  obtain ⟨pci, a2, hrun2, hS2, hg2, hpci⟩ := h.red.rom.ci dn vis fe id hid n m1 a r2 m2 hS h2
   have hpciP : decCI (erecP m2) dn (r2.headD 0).toNat = some pci :=
     ArrExt.decCI (truncM_erecP m2) hpci
   -- its constant value

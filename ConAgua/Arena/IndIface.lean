@@ -755,8 +755,10 @@ def stub (k : Nat) : FunDecl := ⟨k, k, .abort⟩
 * `rec_rule_bits(vis, ctor)` → `(k, eta)` (the two bits `recRuleBits` writes).
 * `basis_pin_hit(off, len)` → `(ok, kind)` (the block's record pointers, an `IW` slice);
   `check_basis_decl(vis, kind)` → `vis'`; `ind_params_ok(nP, off, len)` → `0`/`1`.
-* `lv_zero_caps(l, q)` → nothing: `zeronessOf (← readLevelM l)` written as a `PropWhen` at `EREC`
-  word `q` (lane `pinsenv`'s `decPW` layout; `lv_zero` pushes the names on the level heap). -/
+* `lv_zero_caps(l)` → `(tag, off, len)`: `zeronessOf (← readLevelM l)` as the three words of a
+  `PropWhen` (lane `pinsenv`'s `decPW` layout: `0` `never`, `1` `ifAllZero` with the names an
+  `EREC` slice below the record pool's top; lane `indproofs2`: was written at an `EREC` word `q`
+  inside a record already allocated, which the stage relation cannot follow). -/
 def stubFns : Prog :=
   [("whnf_top", stub 3), ("infer_type_core", stub 3), ("ensure_sort_core", stub 3),
    ("is_def_eq_core", stub 4), ("check_constant_val", stub 2), ("consts_resolve_ffast", stub 2),
@@ -770,7 +772,7 @@ def stubFns : Prog :=
    ("intern_ls_iw", stub 2), ("name_rec", stub 1), ("name_rec_i", stub 2),
    ("proj_table_name", stub 1), ("is_proj_fn_shape", stub 1), ("reserved_rec_name", stub 1),
    ("rec_rule_bits", stub 2), ("basis_pin_hit", stub 2), ("check_basis_decl", stub 2),
-   ("ind_params_ok", stub 3), ("lv_zero_caps", stub 2)]
+   ("ind_params_ok", stub 3), ("lv_zero_caps", stub 1)]
 
 /-- The callees that exist on master, as stubs here so that each module's program can be checked
 for closure (`Prog.wf`) on its own: `env_find(w, vis)`, `env_push(vis, q)`,
