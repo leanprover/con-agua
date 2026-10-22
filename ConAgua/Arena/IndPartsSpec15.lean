@@ -134,4 +134,49 @@ theorem plW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
   simp only [paramLevels, StateT.run_bind, hrun1]
   exact hrun2
 
+/-! ## `block_shape_seal` -/
+
+/-- `block_shape`'s result `(ok, q)` against the twin's `Option BlockShape`. -/
+def ShapeR (x : Option BlockShape) (r : List Word) (m : Mem) : Prop :=
+  match x with
+  | none => r.headD 0 = 0
+  | some bs => r.headD 0 = 1 ∧ DecB (fun m => decBS m (r.tail.headD 0).toNat) m bs
+
+/-- A fresh record's words, in the cut pool. -/
+theorem partsFreshGet {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+    {m m' : Mem} {ws : List Word} {q : Word} (h : posRecW m ws = some (q, m'))
+    (hS : StageR dn vis fe m a) (hl : ws.length < 2 ^ 64) :
+    StageR dn vis fe m' a ∧ IWGrow m m' ∧ q.toNat + ws.length = iwTop m' ∧
+      ∀ j (hj : j < ws.length), (iwA (truncM m'))[q.toNat + j]? = some ws[j] := by
+  obtain ⟨hS', hg, hq, htop, hget⟩ := posRecW_stage h hS hl
+  refine ⟨hS', hg, by omega, fun j hj => ?_⟩
+  rw [truncM_iw_eq (by omega)]
+  simp only [iwA, hget j hj, List.getElem?_eq_getElem hj]
+
+/-- **The packed `BlockShape` record, decoded.** -/
+theorem partsPack {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+    {m m' : Mem} {q mo ml ro rl nP elim s lg ip : Word} {ms : List MemberShape} {recs : List RecShape}
+    (h : posRecW m [mo, ml, ro, rl, nP, elim, s, lg, ip] = some (q, m')) (hS : StageR dn vis fe m a)
+    (hms : PSlR decMS ms mo ml m) (hrs : PSlR decRS recs ro rl m) (he : H elim) (hs : H s) :
+    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+      DecB (fun m => decBS m q.toNat) m' ⟨ms, recs, nP.toNat, decI elim, decI s, lg != 0, ip != 0⟩ := by
+  obtain ⟨hS', hg, -, hget⟩ := partsFreshGet h hS (by simp)
+  refine ⟨hS', hg, ?_⟩
+  have g : ∀ j (hj : j < 9), (iwA (truncM m'))[q.toNat + j]? = some ([mo, ml, ro, rl, nP, elim, s, lg, ip][j]'(by simpa using hj)) :=
+    fun j hj => hget j (by simpa using hj)
+  have g0 := g 0 (by omega); have g1 := g 1 (by omega); have g2 := g 2 (by omega); have g3 := g 3 (by omega)
+  have g4 := g 4 (by omega); have g5 := g 5 (by omega); have g6 := g 6 (by omega); have g7 := g 7 (by omega)
+  have g8 := g 8 (by omega)
+  simp only [Nat.add_zero, List.getElem_cons_zero, List.getElem_cons_succ] at g0 g1 g2 g3 g4 g5 g6 g7 g8
+  have hm2 := (hms.grow decMS_mono hg).1
+  have hr2 := (hrs.grow decRS_mono hg).1
+  show decBS (truncM m') q.toNat = _
+  simp only [decBS, decAt, iwN, iwH, iwB, nat?, hd?, bool?, g0, g1, g2, g3, g4, g5, g6, g7, g8, Nat.add_assoc,
+    Option.map_some, Option.bind_some, bind, pure]
+  have he' : elim.toNat < 2 ^ 32 := he
+  have hs' : s.toNat < 2 ^ 32 := hs
+  simp only [show decPL (truncM m') (decMS (truncM m')) mo.toNat ml.toNat = some ms from hm2,
+    show decPL (truncM m') (decRS (truncM m')) ro.toNat rl.toNat = some recs from hr2, he', hs', if_true,
+    Option.bind_some]
+
 end L.Ind
