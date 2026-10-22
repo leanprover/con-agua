@@ -291,7 +291,7 @@ theorem iotaRecC_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     (by omega) (by omega) ⟨s.mem, Locals.init []⟩ a₀ dn vis fe MM eb mode d c us recP so sn cv rules xs hS
     hm4 hebm hcw hus
   simp only [hE0] at hma
-  obtain ⟨ok4, ⟨M4, hS4, hK4, hSt4⟩, res4, hr4⟩ := CoreSpec.of_callW (hma hcv hrules hsa hsat
+  obtain ⟨ok4, ⟨M4, hS4, hK4, hSt4⟩, res4, hr4⟩ := CoreSpec.of_callW (hma hcv hrules ⟨_, _, _, hfind⟩ hsa hsat
     (by omega)) c4
   have hrun4 := AM.run_of_ok _ _ ok4
   rw [res4] at hrun4

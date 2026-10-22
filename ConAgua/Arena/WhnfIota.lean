@@ -827,13 +827,36 @@ def CapsNeverZeroOK (p : Prog) : Prop :=
     CoreSpec p n "caps_never_zero" [po, pc, us, swd, so, sc]
       (capsNeverZeroPW lps (decI us) pw) decBool s₀ a₀ dn vis fe MM eb
 
+/-- **The fire datum at its words, reading back**: kind `0` plain (the constructor's level
+parameters the `EREC` name slice `(qo, qc)`, their names reading back), else nested (the stored
+levels the `EREC` slice `(fvo, fvc)`, reading back). -/
+def FireCore (m : Mem) (a : AState) (fk fvo fvc qo qc : Word) (rl : IRecRule) (cvjLps : List NIdx) :
+    Prop :=
+  (fk = 0 ∧ rl.fire = .plain ∧ hslice? (m.arr64 EREC) qo.toNat qc.toNat = some cvjLps ∧
+      ∃ ks, cvjLps.mapM (denoteN a.store.ns) = some ks) ∨
+    (fk ≠ 0 ∧ ∃ lvls pins, rl.fire = .nested lvls pins ∧
+      hslice? (m.arr64 EREC) fvo.toNat fvc.toNat = some lvls ∧
+      ∀ u ∈ lvls, ∃ L, denoteL a.store.ls u = some L)
+
+/-- **Where a firing rule comes from**: a rule of a recursor of the environment (whose level
+parameters are `lps`), and a constructor of the environment. State-free, so it passes down the
+ι block's calls; the readbacks follow at any state from `StoreDen` (`constLps`, `recRules`). -/
+def FireEnv (fe : IFEnv) (lps : List NIdx) (rule : IRecRule) (cvj : IConstantVal) : Prop :=
+  (∃ c cv mI rP rules, fe.find? c = some (.recInfo cv mI rP rules) ∧ cv.levelParams = lps ∧
+      rule ∈ rules) ∧
+    ∃ c np nf, fe.find? c = some (.ctorInfo cvj np nf)
+
 /-- `rec_fire_levels(fireKind, fvo, fvc, po, pc, us, qo, qc)` refines `recFireLevels rl lps us
 cvjLps` (`rl.fire` decoded from `(fireKind, fvo, fvc)`, `lps` the `EREC` slice `(po, pc)`, `cvjLps`
-the `EREC` slice `(qo, qc)`): a stub, see the module note. -/
+the `EREC` slice `(qo, qc)`), the names and levels it reads reading back (`FireCore`); `us` need
+not: `ls_node` aborts on a list that is not stored. -/
 def RecFireLevelsOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb fireKind fvo fvc po pc us qo qc : Word) (rl : IRecRule) (lps cvjLps : List NIdx),
-    CoreS dn s₀.mem a₀ vis fe MM eb →
+    CoreS dn s₀.mem a₀ vis fe MM eb → HW us →
+    hslice? (s₀.mem.arr64 EREC) po.toNat pc.toNat = some lps →
+    (∃ ks, lps.mapM (denoteN a₀.store.ns) = some ks) →
+    FireCore s₀.mem a₀ fireKind fvo fvc qo qc rl cvjLps →
     CoreSpec p n "rec_fire_levels" [fireKind, fvo, fvc, po, pc, us, qo, qc]
       (recFireLevels rl lps (decI us) cvjLps) decLs s₀ a₀ dn vis fe MM eb
 

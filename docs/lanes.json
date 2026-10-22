@@ -290,7 +290,7 @@
 {
 "lane": "indproofs2",
 "model": "opus",
-"status": "running",
+"status": "done",
 "focus": "Phase 8 proofs continued; inductive lines in the frontend"
 },
 {
@@ -344,7 +344,7 @@
 {
 "lane": "defeq2",
 "model": "opus",
-"status": "running",
+"status": "done",
 "focus": "Phases 6-7: discharge KnotCallees (infer_proj, level-list invariant, PropRead, real walks, bstk)"
 },
 {
@@ -364,5 +364,23 @@
 "model": "opus",
 "status": "running",
 "focus": "Phase 2: StateOK in the stage relation, ROM reader specs, subst_const_all, and_pin_ok proof"
+},
+{
+"lane": "indproofs3",
+"model": "opus",
+"status": "running",
+"focus": "Phase 8: open block functions, StageR\u2192CoreS bridge, Rec* targets; regenerate Prog.lean"
+},
+{
+"lane": "kernelasm",
+"model": "opus",
+"status": "running",
+"focus": "Kernel-checked compiler output: literal checkerAsm with per-function proofs"
+},
+{
+"lane": "proofreview",
+"model": "opus",
+"status": "done",
+"focus": "Fresh review of proof cost on 3\u20134 representative functions"
 }
 ]
