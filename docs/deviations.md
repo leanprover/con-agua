@@ -32,6 +32,7 @@ refinements, the L code's comments, `docs/e2e.md`). Fixed rows move to the end.
 | D15 | DESIGN.md (lane `induct`); ROADMAP §3(b) | every `CheckMode`, `checkFuel` | the `.verified` mode only, no `checkFuel` | none | – | – |
 | D16 | ROADMAP §3(c),(h); `ApplyDecl.lean:23`, `IndApply.lean:15` | declines (unsafe, non-`safe`), invalid and `fail` are separate verdicts | all are `abort`; only `ACCEPT` is read | none | – | – |
 | D17 | Stage B `validate` / `scan_string` (DESIGN.md, lane `stageb`) | `feed_chunk` asks `newline_from`; con-leche decodes a whole string, then checks UTF-8 | does not ask (same error, same line); checks each raw run between escapes (proved equivalent) | none | – | – |
+| D18 | `Arena/RecGen.lean` `class_fields_of_go`, `class_rec_tys_ok`; `Arena/RecClass.lean` `class_gen_minor_ty_ihs_go` | `classFieldsOf`, `classRecTysOk` build their result lists by `::` | the loops became self-recursions that `sl_cons` each element onto the rest's slice (a copy per element, so that every written word lies above the old pool top and the decodings stay stable) | performance (quadratic in a constructor's fields / a block's recursors; small) | rec2 | preallocate and prove the in-place writes (a frame lemma for writes above a slice) if it ever matters |
 
 ## Fixed
 
