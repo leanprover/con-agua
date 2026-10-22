@@ -4780,6 +4780,27 @@ bits (`decI` reads only those, so no bound on the front's word is needed) agains
 stub and its `sorry` are gone from `Checker.lean`; the skeleton theorems take `DeclCallees p`
 (the callees' lookups). `LoopR`, `PendR`, `dsAt`, `vgOut` moved to `DeclBase.lean`.
 
+### Levels, and what comes next
+
+`rom_level(pos)` **refines `internLevel`** (`RomLevel.lean`, same shape as `rom_name`; the
+`.max`/`.imax` arms one template). `internReservedPinsL` (the census link) is
+`internReservedPinsAt 0`: the program's ROM starts with the two pin name lists.
+
+Next, in order (designs settled, not written):
+* `rom_levels` (`internLevels`): the level handles on a stack array `RSTK` (138, top `CTL[131]`),
+  copied to the pool top, then `intern_ls`; a parameter's name writes the pool between levels.
+* `rom_expr` with the twin's `EMemo` **mirrored exactly**: the encoder threads the list of
+  compound subterms already interned in the current call and emits a back reference (tag + index)
+  where the twin's memo hits; L keeps the handles in `RMEMO` (139, count `CTL[132]`), reset per
+  call. The relation (memo keys = the encoder's list, `RMEMO[k]` the handle of entry `k`) needs
+  no kernel evaluation of the ROM.
+* constant records into `EREC` (`internCV`/`internCI`/`internCIList`), then `internAllPins`.
+* `install_step_go` on lane `induct`'s conventions (`StageR`, `RefAM`, the stubs of
+  `IndStubs.lean`); `LoopR` gets `IWOK`; the callees' frame for `PEND`/`DECL`/`DLP` from the text
+  (`closedW` over a concrete `declProg`). `check_value_group` likewise.
+* Stale: `installStep`, `installDeclStep`, `checkPending(List)` wait for lane `whnf`'s `CoreR`;
+  `checkDecl`/`checkShapelessFormers` are lane `induct`'s L code. Not reviewed (census paused).
+
 ### `sorry`s
 
 None new (the four remaining stub specs of `Checker.lean` are lane `pinsenv`'s).
