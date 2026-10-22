@@ -934,10 +934,12 @@ def EtaFabArgsOK (p : Prog) : Prop :=
         SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄
 
 
-/-- con-leche: `CoreDefs.lean:793-806`/`:808-810`/`FEnv.lean:199-201` `andRescueSlots`. -/
+/-- con-leche: `CoreDefs.lean:793-806`/`:808-810`/`FEnv.lean:199-201` `andRescueSlots`, at
+universe arguments that are a stored `const` node's list (`fire_ok`'s hypothesis, `FireOkOK`). -/
 def AndRescueSlotsOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb ctor nP us : Word), CoreS dn s₀.mem a₀ vis fe MM eb → HW ctor → HW us →
+    (∃ (h : EIdx) (c : NIdx), a₀.store.view h = some (.const c (decI us))) →
     CoreSpec p n "and_rescue_slots" [vis, ctor, nP, us]
       (andRescueSlots fe (decI ctor) nP.toNat (decI us)) decBool s₀ a₀ dn vis fe MM eb
 
