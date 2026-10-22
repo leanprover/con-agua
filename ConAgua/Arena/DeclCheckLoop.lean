@@ -170,6 +170,7 @@ theorem arm_callW {p : Prog} {pins : List INatOpPinSet} {dn : NIdx → Option Co
 
 /-- **`check_decl` refines `checkDecl`** at the loop's relation, for the front's record kinds
 (through the arms' specs: every arm's but the definition arm's is proved). -/
+@[refines_part ConRon.Arena.checkDecl "one-constant records (the front's kinds 1-5)"]
 theorem checkDecl_loop {p : Prog} (hP : CheckDeclProg p) (pins : List INatOpPinSet)
     (dn : NIdx → Option ConLeche.Name) (hdn : DnInj dn) (ds : Array IDeclaration) :
     CheckDeclSpec V pins dn ds p := by
