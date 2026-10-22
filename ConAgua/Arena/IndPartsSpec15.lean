@@ -233,6 +233,27 @@ theorem bsealW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv
 
 /-! ## `block_shape_fin` -/
 
+/-- Re-tupling the two result words. -/
+theorem Sim.k3 {α : Type} {mo : Option (List Word × Mem)} {op : AM α} {a : AState}
+    {Q R : List Word → α → Mem → AState → Prop} (h : Sim mo op a Q)
+    (hq : ∀ r x m a', Q r x m a' → R [r.headD 0, r.tail.headD 0] x m a') : Sim (bgoK3 mo) op a R := by
+  intro r m' e
+  cases hm : mo with
+  | none => rw [hm] at e; cases e
+  | some y =>
+    obtain ⟨r1, m1⟩ := y
+    rw [hm, bgoK3_some] at e
+    simp only [Option.some.injEq, Prod.mk.injEq] at e
+    obtain ⟨rfl, rfl⟩ := e
+    obtain ⟨x, a', h1, h2⟩ := h r1 m1 hm
+    exact ⟨x, a', h1, hq _ _ _ _ h2⟩
+
+/-- A `Sim` also records the twin's run. -/
+theorem Sim.withRun {β α : Type} {mo : Option (β × Mem)} {op : AM α} {a : AState}
+    {Q : β → α → Mem → AState → Prop} (h : Sim mo op a Q) :
+    Sim mo op a (fun r x m' a' => Q r x m' a' ∧ op.run a = .ok (x, a')) := by
+  intro r m' e; obtain ⟨x, a', h1, h2⟩ := h r m' e; exact ⟨x, a', h1, h2, h1⟩
+
 /-- `finJP` after `isProp`. -/
 def finRest (nP : Nat) (cvTs : List IConstantVal) (nIdxs : List Nat) (lps : List NIdx)
     (cs : List (IConstantVal × Nat × Nat)) (rs : List (IConstantVal × Nat × Nat × List IRecRule))
@@ -283,5 +304,101 @@ theorem blockGroups_length {names : List NIdx} {lvls : LsIdx} {nP k : Nat} {cs :
     simp [StateT.run, pure, StateT.pure, Except.pure] at h
     rw [← h.1]; simp at hk; simp [hk]
   · rw [partsMapM_length _ _ _ _ _ h]; simp
+
+/-- **`block_shape_fin`'s model refines `finRest`.** -/
+theorem bfW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
+    {nPd cto ctl cso csl rso rsl no nl io lo ll s ip : Word} {cvTs : List IConstantVal} {nIdxs : List Nat}
+    {lps : List NIdx} {cs : List (IConstantVal × Nat × Nat)} {r0 : IConstantVal × Nat × Nat × List IRecRule}
+    {rs : List (IConstantVal × Nat × Nat × List IRecRule)} {sv : LIdx} {isProp : Bool}
+    (hS : StageR dn vis fe m a) (hts : PSlR decCVp cvTs cto ctl m) (hcs : PSlR decSC cs cso csl m)
+    (hrs : PSlR decSR (r0 :: rs) rso rsl m)
+    (hnm : DecB (fun m => decHL m no.toNat nl.toNat) m (cvTs.map (·.name))) (hnb : no.toNat + nl.toNat ≤ iwTop m)
+    (hns : DecB (fun m => decNL m io.toNat ctl.toNat) m nIdxs) (hnsb : io.toNat + ctl.toNat ≤ iwTop m)
+    (hl : decHL m lo.toNat ll.toNat = some lps) (hlb : lo.toNat + ll.toNat ≤ iwTop m)
+    (hs : H s) (hsv : decI s = sv) (hip : (ip != 0) = isProp) :
+    Sim (bfW n m nPd cto ctl cso csl rso rsl no nl io lo ll s ip)
+      (finRest nPd.toNat cvTs nIdxs lps cs (r0 :: rs) r0.1 sv isProp) a
+      (fun r x m' a' => ShapeR x r m' ∧ StageR dn vis fe m' a' ∧ IWGrow m m') := by
+  have hctl : cvTs.length = ctl.toNat := decPL_length _ hts.1
+  -- `cvR0`, read first
+  have hrl : rsl ≠ 0 := by
+    intro e; subst e; exact absurd (partsPSl_nil hrs) (by simp)
+  obtain ⟨pc, r0', rs', he, hw, hpb, hr0, -⟩ := partsPSl_cons hrs hrl
+  simp only [List.cons.injEq] at he; obtain ⟨rfl, rfl⟩ := he
+  obtain ⟨⟨cvp, hcvp, hcv⟩, -, -⟩ := decSR_fields (show decSR (truncM m) pc = some (r0.1, r0.2.1, r0.2.2.1, r0.2.2.2) from hr0)
+  obtain ⟨hcw, hcvb, -⟩ := partsIwRd hcvp (UInt64.toNat_ofNat_of_lt' hpb)
+  intro r m' e
+  unfold bfW at e
+  rw [hw, hcw] at e
+  -- `block_shape_ctors_of` (model only)
+  cases h1 : bctW (n + 1) m cso csl with
+  | none => rw [h1] at e; cases e
+  | some x1 =>
+  obtain ⟨r1, m1⟩ := x1
+  rw [h1, bbK8_some] at e
+  obtain ⟨hS1, hg1, hct⟩ := bctW_ok (n + 1) m m1 a cso csl cs r1 h1 hS hcs
+  revert r m' e
+  unfold finRest
+  -- `param_levels`
+  refine Sim.bindK (K := bbK9 n nPd cto ctl cso csl rso rsl 0 (UInt64.ofNat cvp) no nl io lo ll s ip
+      (r1.headD 0) (r1.tail.headD 0)) (body := fun r2 m2 => bbK10 n nPd cto ctl cso csl rso rsl 0 (UInt64.ofNat cvp)
+      no nl io lo ll s ip (bgW n m2 no nl (r2.headD 0) nPd ctl (r1.headD 0) (r1.tail.headD 0)))
+    rfl (fun _ _ => rfl) (plW_sim hS1 (by rw [decHL_grow3 hg1 hlb]; exact hl) (Nat.le_trans hlb hg1.1)) ?_
+  rintro r2 lvls m2 a2 ⟨hlh, hlv, hS2, hg2⟩
+  have hg02 := hg1.trans hg2
+  -- `block_groups`
+  have hgr := bgW_sim (no := no) (nl := nl) (nP := nPd) (k := ctl) hlh n hS2 (hct.grow decCN_mono hg2)
+    (hnm.grow (OMono.decHL _ _) hg02) (Nat.le_trans hnb hg02.1)
+  rw [hlv, ← hctl] at hgr
+  refine Sim.bindK (K := bbK10 n nPd cto ctl cso csl rso rsl 0 (UInt64.ofNat cvp) no nl io lo ll s ip)
+    (body := fun r3 m3 => bbK11 n nPd cto ctl cso csl rso rsl 0 (UInt64.ofNat cvp) no nl lo ll s ip
+      (bmoW (n + 1) m3 cto ctl io (r3.headD 0))) rfl (fun _ _ => rfl) hgr.withRun ?_
+  rintro r3 gss m3 a3 ⟨⟨hgs, hS3, hg3⟩, hgrun⟩
+  have hg03 := hg02.trans hg3
+  have hgl : (r3.tail.headD 0) = ctl := by
+    apply UInt64.toNat_inj.mp
+    rw [← decPL_length _ hgs.1, blockGroups_length hgrun, hctl]
+  rw [hgl] at hgs
+  -- `block_shape_members_of` (model only)
+  intro r m' e
+  cases h4 : bmoW (n + 1) m3 cto ctl io (r3.headD 0) with
+  | none => rw [h4] at e; cases e
+  | some x4 =>
+  obtain ⟨r4, m4⟩ := x4
+  rw [h4, bbK11_some] at e
+  obtain ⟨hS4, hg4, hms⟩ := bmoW_ok (n + 1) m3 m4 a3 cto ctl io (r3.headD 0) cvTs nIdxs gss r4 h4 hS3
+    (hts.grow (fun _ => OMono.decCVp _) hg03) (hns.grow (OMono.decNL _ _) hg03)
+    (Nat.le_trans hnsb hg03.1) hgs
+  have hg04 := hg03.trans hg4
+  revert r m' e
+  show Sim _ _ a3 _
+  -- `block_shape_recs_of`
+  refine Sim.bindK (K := bbK12 n nPd cto ctl cso csl rso rsl 0 (UInt64.ofNat cvp) lo ll s ip (r4.headD 0)
+      (r4.tail.headD 0)) (body := fun r5 m5 => bbK13' n (r4.headD 0) (r4.tail.headD 0) (r5.headD 0)
+      (r5.tail.headD 0) nPd s ip (bslW n m5 (UInt64.ofNat cvp) lo ll)) rfl (fun _ _ => rfl)
+    (brsW_sim (n + 1) m4 a3 rso rsl (r0 :: rs) hS4 (hrs.grow decSR_mono hg04) (hnm.grow (OMono.decHL _ _) hg04)
+      (Nat.le_trans hnb hg04.1)) ?_
+  rintro r5 recsL m5 a5 ⟨hrsl, hS5, hg5⟩
+  have hg05 := hg04.trans hg5
+  -- `block_shape_large` (model only)
+  intro r m' e
+  cases h6 : bslW n m5 (UInt64.ofNat cvp) lo ll with
+  | none => rw [h6] at e; cases e
+  | some x6 =>
+  obtain ⟨r6, m6⟩ := x6
+  rw [h6] at e
+  simp only [bbK13'] at e
+  obtain ⟨hS6, hg6, hlg⟩ := bslW_ok h6 hS5 (by rw [UInt64.toNat_ofNat_of_lt' hcvb]; exact (show DecB (fun m => decCVp m cvp) m r0.1 from hcv).grow (OMono.decCVp _) hg05)
+    (by rw [decHL_grow3 hg05 hlb]; exact hl) (Nat.le_trans hlb hg05.1)
+  have hlg' : LargeR (largeOf lps r0.1) [r6.headD 0, r6.tail.headD 0] := by
+    cases hx : largeOf lps r0.1 <;> rw [hx] at hlg <;> exact hlg
+  revert r m' e
+  show Sim _ _ a5 _
+  refine Sim.k3 (bsealW_sim n hS6 (hms.grow decMS_mono (hg5.trans hg6)) (hrsl.grow decRS_mono hg6) hs hsv hip hlg') ?_
+  rintro r7 x m7 a7 ⟨hR7, hS7, hg7⟩
+  refine ⟨?_, hS7, hg05.trans (hg6.trans hg7)⟩
+  cases x with
+  | none => exact hR7
+  | some bs => exact hR7
 
 end L.Ind
