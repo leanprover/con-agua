@@ -6939,6 +6939,27 @@ introduces it; the coordinator reviews the list at each batch of landings.
   discharged by `WhnfDeltaRefine3`'s `internW_hw` as `litInternHW`); `internLit_core` gives the
   handle word bound (`InternSpecW`), `natPredLit_refines_hw` is `natPredLit_refines` with it.
 
+### `infer_proj` (`InferProj.lean`, `InferProj2.lean`, helper `defeq2-proj`)
+* **`InferProjOK p` is a theorem**: `inferProj_refines : InferProjProg p → InferProjCallees p →
+  InferProjOK p` (`@[refines inferProj]`), both grades through one lemma (`inferProj_grade`, the
+  record `R` and its first call as parameters). Pieces: `projTypeAt_refines`
+  (`@[refines IProjEntry.typeAt]`: `inst_lp`, the push of `pe` at the top, `inst_list`),
+  `inferProjAt_refines` (`refines_part`, the twin past the lookup copied as `projAtT`;
+  `inferProj_hit` equates). Models in the callW shape; specs by `vcgen` + `simp_all`. No `sorry`.
+* **Hypotheses** (`InferProjCallees`): `CoreDen`; lane `whnf`'s `FindProjOK`, `ProjFound`,
+  `ErecKept`, `InstLPOK`; new **`ErecKeptProj`** (`lvl_eq_c` and `field_sort_zero` keep `EREC`:
+  `infer_proj_at`/`proj_type_at` read the table's words after them; both write only `LH`,
+  `CTL[192]` and the `lq` memo, frames their proofs build but do not export). `inst_list` from
+  `CoreWalkProg` (`InferProjProg.walk`), `field_sort_zero` from `fieldSortZero_core`.
+* **Twin facts proved**: `findProj?` keeps level-list readbacks (`findProj?_lss`, via
+  `EStore.internName_ext`) and hits only below the field count (`findProj?_lt`); `lvlEq?` keeps the
+  store (`lvlEq?_store`). The subject's level list is read back (`CoreDen.constLs`) at the view
+  before the lookup and carried across it.
+* **L changes** (Infer.lean, same semantics on every run): `infer_proj` reads the head's name and
+  level words (`cT`, `cu`) once, before `find_proj` (it re-read `CREC` after the call, which no
+  spec says `find_proj` keeps); `infer_proj_at` tests `2 <= ok` for `lvl_eq_c`'s `some true`
+  (was `ok == 2`; `decO` reads every word `≥ 2` as `some true`, as `spine_cmp`).
+
 ### Landing 4: the quotient and axiom arms; `and_pin_ok`'s inductive arm in L
 
 * **`checkDecl_loop`: every arm's spec is proved but the definition arm's** (`DeclArmQuot.lean`,
@@ -7031,13 +7052,13 @@ already stated with `sorry` in `IndStubs.lean` for the last three), the adapters
   `CoreS.bstk`; `lit`'s `natLitSup`/`constE` are lane `whnf`'s proofs; `lvlsEqC` is
   `lvlsEqCH_of` (below). `defeqCallees_stub` (a `sorry`) is gone. `KnotWF`'s closure list uses the
   real `field_sort_zero` and `inst1`; `Checker/Prog.lean` regenerated.
-* **`StoreDen m a`** (`StoreDen.lean`): the one store invariant the level readers need, because the
+* **`StoreDen m a fe`** (`StoreDen.lean`): the one store invariant the level readers need, because the
   twin compares levels on their readbacks and L on handles: a `sort` node's level, a `const`
   node's level list, the zero pin, the `readNC` cache's rows, and a projection table record's
   structure sort, field sorts and level-parameter names read back. `CoreDen` (`CoreDen.lean`) is
   "`CoreS` implies `StoreDen`": a `KnotCallees` field now (`den`), replacing `StoreDenotes`
   (`StoreDenotes.of_den`). **Proposal (for lane `whnf3`, after its `StackKept` sweep): a field
-  `den : StoreDen m a` in `CoreS`**, which also closes `CoreS.lvl_den` (`⟨hS.den.sort,
+  `den : StoreDen m a fe` in `CoreS`**, which also closes `CoreS.lvl_den` (`⟨hS.den.sort,
   hS.den.zero⟩`), `LvlsEqDen` (the iota lists are stored constants' or the rule's), and
   `ReadNCOK` (helper `defeq2-fsz`'s proposal). Maintenance: the store only grows inside the core,
   so old handles keep their readbacks; the view clauses need a proof only where a `sort`/`const`
@@ -7080,3 +7101,27 @@ map addition**: word array `151` = `APDM` (walk-local memo, cleared at each call
 `CTL[153]` its stamp − 1 and live count. The memo aborts at 3/4 load where the twin's `HashMap`
 grows (the memo library's capacity rule, as every L memo). Refinement: not yet (the stub specs in
 `DeclCvg`/`DeclHeader` still use `stubM "all_level_params_defined"`).
+
+
+### Landing 2: `PropRead` in L (helper `defeq2-prop`), `infer_proj` (helper `defeq2-proj`)
+* **`not_proof_fast`/`is_proof_fast` have L code and proofs** (`PropRead.lean`: 18 L functions;
+  `PropReadLoops`, `PropReadW`, `PropReadRefine{,2,3,4}`; ~3600 lines, ~35 s CPU):
+  `notProofFast_core`/`isProofFast_core` (`@[refines]`, as are the sub-walks `typeSortPW`,
+  `headTypePW`, `proofPW`, `peelPisW`, `unwrapIdDefs`, `lamProj?`, …). The `PropWhen` datum is
+  three words `(k, o, c)`: `0` none, `1` `never`, `2` `ifAllZero` with the names in `LH[o, o+c)`;
+  both readers reset the level heap on entry. Exact walk fuel: a new `app_count_at(e, f)` gives
+  `getAppFn` and `numArgs` at fuel `f`. `Level.substPW` on heap names: `spwW_ok_lh`, a variant
+  of lane `levels`' `spwW_ok`. Hypotheses: `CoreDen` (plus `ConstLpsDen`, now the new
+  `StoreDen.constLps`: a stored constant's level-parameter names read back) and lane whnf's
+  `FindProjOK`, `ErecKept`, `ProjFound` (lane `whnf3`). No deviation.
+* **`infer_proj`**: see the helper's section above. L changes: `infer_proj` reads the head's
+  name and levels before `find_proj` (no spec says `find_proj` keeps `CREC`); `infer_proj_at`
+  tests `2 <= ok` (`decO`'s reading). New hypothesis `ErecKeptProj` (`lvl_eq_c` and
+  `field_sort_zero` keep `EREC`; to come from lane `whnf3`'s write-set argument, `CoreErec`).
+* `KnotCallees` now: `whnfCoreStep`, `whnfStep`, `proofIrrel`, `towerSlots`, `findProj`,
+  `erecKept`, `projFound`, `reduceProjCore`, `unfold`, `constTy`, `instLP`, `whnfGrows` (lane
+  `whnf3`); `strLitSupported`, `strLitCtor`, `supKeep` (helper `defeq2-str`, running); `den`
+  (the `CoreS` field, lane `whnf3`); `bstk` (after the `StackKept` sweep); `erecProj`.
+* Merging: lemma-name clashes renamed on this side (`hslice?_bound_fsz`, `projBodyW`);
+  `scripts/checker_prog.py` dumps modules it does not build: build `ConAgua.Rom.CIRead` first, or
+  `rom_ci` comes out as a stub and `checkerProg_wf` fails on `reduce_decl_pin`'s arity.
