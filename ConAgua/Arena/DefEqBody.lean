@@ -28,7 +28,6 @@ structure DefeqBodyProg (p : Prog) : Prop where
   iota : IotaProg' p
   lazy : LazyProg p
   knot : KnotProg p
-  hasFvar : p.lookup "has_fvar" = some hasFvarL
   body : p.lookup "defeq_body" = some defeqBodyL
 
 /-- The callees `defeq_body`'s refinement assumes. -/
