@@ -50,7 +50,7 @@ theorem hslice_words {k : IdxKind} (a : Array Word) : ∀ (ws : List Word) (o : 
       (fun j hj => by simpa [Nat.add_assoc, Nat.add_comm 1 j] using hget (j + 1) (by simpa using hj))
     simp [hd?, h0, hw, ih]
 
-theorem rdW_grow {m m' : Mem} (hg : IWGrow m m') {i : Word} (hi : i.toNat < erecTop m) :
+theorem rdW_erec_grow {m m' : Mem} (hg : IWGrow m m') {i : Word} (hi : i.toNat < erecTop m) :
     rdW (m'.arr64 EREC) i = rdW (m.arr64 EREC) i := by
   simp only [rdW]; rw [hg.2.2.2 i.toNat hi]
 
@@ -65,7 +65,7 @@ theorem SliceR.grow {m m' : Mem} {o l : Word} {hs : List EIdx} (h : SliceR m o l
     rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by unfold UInt64.size; omega)]
     exact Nat.mod_eq_of_lt (by omega)
   rw [← hv i hi']
-  exact rdW_grow hg (by rw [hx]; omega)
+  exact rdW_erec_grow hg (by rw [hx]; omega)
 
 theorem PinSetR.grow {m m' : Mem} {r : Word} {ip : INatOpPinSet} (h : PinSetR m r ip)
     (hg : IWGrow m m') : PinSetR m' r ip := by
@@ -75,13 +75,13 @@ theorem PinSetR.grow {m m' : Mem} {r : Word} {ip : INatOpPinSet} (h : PinSetR m 
   unfold HdrR at h1 ⊢
   have ht := erecTop_lt m
   have e1 : rdW (m'.arr64 EREC) (r + 8 + 2 * UInt64.ofNat j) = rdW (m.arr64 EREC) (r + 8 + 2 * UInt64.ofNat j) := by
-    apply rdW_grow hg
+    apply rdW_erec_grow hg
     have : (r + 8 + 2 * UInt64.ofNat j).toNat = r.toNat + 8 + 2 * j := by
       rw [UInt64.toNat_add, UInt64.toNat_add, UInt64.toNat_mul, UInt64.toNat_ofNat_of_lt' (by unfold UInt64.size; omega)]
       simp; omega
     omega
   have e2 : rdW (m'.arr64 EREC) (r + 9 + 2 * UInt64.ofNat j) = rdW (m.arr64 EREC) (r + 9 + 2 * UInt64.ofNat j) := by
-    apply rdW_grow hg
+    apply rdW_erec_grow hg
     have : (r + 9 + 2 * UInt64.ofNat j).toNat = r.toNat + 9 + 2 * j := by
       rw [UInt64.toNat_add, UInt64.toNat_add, UInt64.toNat_mul, UInt64.toNat_ofNat_of_lt' (by unfold UInt64.size; omega)]
       simp; omega
