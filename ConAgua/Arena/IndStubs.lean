@@ -47,6 +47,20 @@ theorem stubM_spec (p : Prog) (f : FnName) (n : Nat) (s₀ : St) (args : List Wo
     ⦃fun s => s = s₀⦄ invoke p (exec p n) f args
     ⦃fun r s' => LocEq s' s₀ ∧ stubM f s₀.mem args = some (r, s'.mem); ⊤⦄ := sorry
 
+/-- The names `stubM` stands for: the stubs proper and the two master callees without a stage
+model (`lvl_eq`, `intern_nanon`). -/
+def stubNames : List FnName := stubFns.map (·.1) ++ ["lvl_eq", "intern_nanon"]
+
+/-- **The write set of every stub** (lane `indproofs2`): a stub leaves the stage's per-call memos
+alone (arrays `MAM`‥`MCM` = 201‥208, their control words `CTL[202]`‥`CTL[219]`), and keeps every
+array's size. `sorry` until the owning lanes land the functions, like `stubM_spec`; with it a memo
+relation (`maMR`, `hbMR`, …) is carried across a stub call (`MemoRV` reads the memo's array and
+control words only). Replaces helper `memo`'s `stubHbFrame` (lane `indproofs`). -/
+theorem stubM_memoFrame (f : FnName) (hf : f ∈ stubNames) (m m' : Mem) (args r : List Word)
+    (h : stubM f m args = some (r, m')) :
+    ∃ (A : List ArrId) (C : List Word), (∀ b ∈ A, b < 201 ∨ 208 < b) ∧
+      (∀ x ∈ C, x.toNat < 202 ∨ 219 < x.toNat) ∧ MemFrame A C m m' := sorry
+
 /-- **The twin side of a stub**: a model run of `f(args)` from a memory satisfying `pre` against
 `a` is a successful twin run of `op` with `post` after. -/
 def RelAM {α : Type} (f : FnName) (args : List Word) (pre : Mem → AState → Prop) (op : AM α)

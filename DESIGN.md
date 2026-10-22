@@ -5774,3 +5774,48 @@ import `RecordsSpec`.
   `DefEqLeaves2` (`cplL`, …) from when that file did not build; replace by an import.
 * Lesson: a word model reads memory after a callee returns, where the L code reads it (`callW_spec`
   says nothing about memory kept), else `finish` fails.
+
+## Phase 8 proofs, round 3 (2026-10-22, lane `indproofs2`)
+
+Continues lane `indproofs` (above): the shared pieces its "Next" list named, the two helper-introduced
+`sorry`s, then the parents, with three helpers (`front`: the frontend's inductive lines and their
+hook; `rec`: `RecClass`/`RecGen`/`RecCheck`; `pos`: `IndPos`/`IndPos2`).
+
+### Landing 1
+* **The stubs' write set** (`IndStubs.lean`, `stubM_memoFrame`): every stub (and the two master
+  callees still stubbed, `lvl_eq`, `intern_nanon`) leaves the stage's per-call memos (arrays
+  201‥208, `CTL[202‥219]`) alone and keeps every array's size. One stub-contract statement
+  (`sorry` like `stubM_spec`, for the owning lanes) instead of helper `memo`'s per-use
+  `stubHbFrame`, which is now a corollary; with it a memo relation (`maMR`, `hbMR`, …) is carried
+  across any stub call, so a parent can discharge its callees' memo well-formedness (helper `pos`'s
+  request; memo relations relate memory to a twin map that is not in `AState`, so they cannot live
+  in `StageR`).
+* **`bvar_b` is real** (`IndSumSpec5.lean`, `bvbW_stage`): lane `exprops4`'s `bvarBL` under the stage
+  relation (its model `bvbW` refines `bvarB` at every twin fuel `F + 1 ≥ n`, writes only `BMEMO`
+  and `CTL[24]`, `CTL[25]`, keeps the twin's store, caches and pins). The `hb` walks' model calls
+  `bvbW`, their specs take `BvbProg p`; `bvar_b` moved from `stubFns` to `masterFns`. Helper
+  `memo`'s `bvarBCwf_spec` (`sorry`) is gone. Census: **`hasLooseBVarBGo`, `hasLooseBVarBFast`
+  proven** (were `sorry`). `stubHbFrame` remains for `strip_pis` (a stub). `IndStubs`' `bvarB_spec`
+  (`RelAM` for the stub) still serves `RecGenSpec2`/`RecCheckSpec2`, to be switched.
+* **The generic decoder-stability lemma** (`IndDecStab.lean`): `OMono f` (a reader is monotone under
+  pool extension; one line per decoder from the combinators `OMono.bind`/`mapM`/`decAt`/`decPL`
+  and the readers, by a `repeat' (first | apply … )` over the do-block), `truncM m` (both pools cut
+  at their tops), `DecB f m x := f (truncM m) = some x`, and `DecB.stab : ∀ m', IWGrow m m' →
+  f m' = some x` — exactly lane `indproofs`' `hstab` hypotheses — plus `DecB.grow`, `DecB.get`.
+  `DecB` facts come from bounds: `decHL_decB`, `decNL_decB`, `decRL_decB` (every stub slice post),
+  `iwN/iwH/iwB_truncM` for record words below the top. Every decoder of `IndIface.lean` has its
+  `_mono`; the per-decoder `_grow` lemmas are instances (`decHL_grow'`).
+* **Tried and dropped: the core's invariants inside `StageR`.** A real core callee (`lvl_eq_c`,
+  later `whnf`, `is_def_eq_core`) runs under `CoreS`, which adds to `CheckR` the full pins, the
+  readback caches holding readbacks (`ReadLCOK`, `ReadLsCOK`), `NStoreWF` and two capacities. A
+  `StageX` conjunct in `StageR` was carried through the stage cheaply (level interns: `LsExt` by
+  `EStore.internLevel_ext`; expression interns keep `lss`; IW/EREC writers by frame; 13 call sites
+  patched), but the declaration loop's relation `LoopR` (lane `decls2`'s `DeclBase.lean`) must then
+  carry it too, and `enterScratch` (`Checker.lean`'s `enter_loop`) keeps `ReadLCOK` only if the
+  level stores are well formed (`LsWF`: a cached scratch handle survives `enableScratch` only when
+  the scratch tier was empty) — not provable from `CheckR`. So `StageX` needs `LsWF` (and its
+  preservation by every intern, con-ron's `*_wf` lemmas) in both `StageR` and `LoopR`: a joint
+  step with lanes `decls2`/`whnf`, not done; `lvl_eq` and `lvl_eq_c` stay stubs (lane `decls2`'s
+  `lvlEqCStage_spec` has the same gap). The patch is kept out of the tree (no dead code).
+* Census (`--no-build --list`, this branch on master `1ffa2b1`): phase 8 **60 proven, 36 sorry,
+  119 written, 8 todo** (lane start 58 / 38 / 119 / 8).
