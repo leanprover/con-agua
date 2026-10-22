@@ -101,6 +101,7 @@ import ConAgua.Front.NatDec
 import ConAgua.Front.Unescape
 import ConAgua.L.Examples
 import ConAgua.L.Syntax
+import ConAgua.Rom.CIRead
 import ConAgua.Rom.PinRead
 import ConAgua.Scan.Key
 import ConAgua.Scan.Leaves
@@ -120,7 +121,7 @@ to the `FunDecl` of the lanes' modules: the one body every non-stub binding of t
 (`L.Checker.entryProg` first). `checkerStubs` are the called functions with no L code yet: they
 abort (the checker declines). DESIGN.md, "The checker as one program (lane `integrate`)".
 
-1446 functions, 35 of them stubs.
+1459 functions, 31 of them stubs.
 -/
 
 namespace L.Checker
@@ -128,7 +129,7 @@ namespace L.Checker
 open L L.Compiler
 
 /-- The called functions with no L code yet (each aborts). -/
-def checkerStubs : List String := ["all_level_params_defined", "caps_never_zero", "consts_resolve_ffast", "field_sort_zero", "find_proj", "fire_ok", "fvar_b", "fvar_type_d", "fvar_type_ds", "ind_params_ok", "inst_lp", "inst_lp_fast", "inst_pis_at_lift", "instantiate1_lift_fast", "intern_ls_iw", "is_proof_fast", "leaf_guard", "lv_zero_caps", "name_rec", "name_rec_i", "not_proof_fast", "open_pis_at_fvars_f", "proj_table_name", "rec_fire_levels", "rec_rule_bits", "reserved_rec_name", "rom_basis_decls", "rom_basis_decls_a", "rom_ci", "rom_cv", "str_lit_ctor", "str_lit_supported", "strip_lams", "strip_pis", "wscoped_bfast"]
+def checkerStubs : List String := ["all_level_params_defined", "caps_never_zero", "consts_resolve_ffast", "field_sort_zero", "find_proj", "fire_ok", "fvar_b", "fvar_type_d", "fvar_type_ds", "ind_params_ok", "inst_lp", "inst_lp_fast", "inst_pis_at_lift", "instantiate1_lift_fast", "intern_ls_iw", "is_proof_fast", "leaf_guard", "lv_zero_caps", "name_rec", "name_rec_i", "not_proof_fast", "open_pis_at_fvars_f", "proj_table_name", "rec_fire_levels", "rec_rule_bits", "reserved_rec_name", "str_lit_ctor", "str_lit_supported", "strip_lams", "strip_pis", "wscoped_bfast"]
 
 /-- The frontend functions `builtin_prelude` runs on the prelude's arrays (140; `preFn`,
 `ConAgua/Checker/Prelude.lean`), each bound as `pre_<name>`. -/
@@ -1279,6 +1280,18 @@ def checkerProg : Prog := [
   ("ra_find", L.Arena.memoFindG L.Ind.raSch),
   ("ra_put", L.Arena.memoPutG L.Ind.raSch),
   ("raw_nat_lit", L.Arena.rawNatLitL),
+  ("rci_block", L.Rom.rciBlock),
+  ("rci_block_to", L.Rom.rciBlockTo),
+  ("rci_caps", L.Rom.rciCaps),
+  ("rci_ci", L.Rom.rciCi),
+  ("rci_cv", L.Rom.rciCv),
+  ("rci_fresh", L.Rom.rciFresh),
+  ("rci_lvls_to", L.Rom.rciLvlsTo),
+  ("rci_name_sl", L.Rom.rciNameSl),
+  ("rci_names_to", L.Rom.rciNamesTo),
+  ("rci_rule", L.Rom.rciRule),
+  ("rci_rules_to", L.Rom.rciRulesTo),
+  ("rci_slot", L.Rom.rciSlot),
   ("read_nat", L.Front.Fields.readNat),
   ("rec2", L.Ind.rec2),
   ("rec3", L.Ind.rec3),
@@ -1326,11 +1339,16 @@ def checkerProg : Prog := [
   ("rf_bank_leave", L.Arena.bankLeaveG 218),
   ("rf_find", L.Arena.memoFindG L.Ind.rfSch),
   ("rf_put", L.Arena.memoPutG L.Ind.rfSch),
+  ("rom_basis_decls", L.Rom.romBasisDeclsL),
+  ("rom_basis_decls_a", L.Rom.romBasisDeclsAL),
+  ("rom_ci", L.Rom.romCiL),
+  ("rom_cv", L.Rom.romCvL),
   ("rom_ex_leaf", L.Rom.romExLeaf),
   ("rom_ex_one", L.Rom.romExOne),
   ("rom_ex_ref", L.Rom.romExRef),
   ("rom_ex_two", L.Rom.romExTwo),
   ("rom_expr", (L.Rom.romExpr []).toPB),
+  ("rom_expr_pin", L.Rom.romExprPinL),
   ("rom_exprs_to", L.Rom.romExprsTo),
   ("rom_items", (L.Rom.romItems []).toPB),
   ("rom_level", (L.Rom.romLevel []).toPB),
@@ -1715,10 +1733,6 @@ def checkerProg : Prog := [
   ("rec_fire_levels", abortStub 8),
   ("rec_rule_bits", abortStub 2),
   ("reserved_rec_name", abortStub 1),
-  ("rom_basis_decls", abortStub 1),
-  ("rom_basis_decls_a", abortStub 1),
-  ("rom_ci", abortStub 1),
-  ("rom_cv", abortStub 1),
   ("str_lit_ctor", abortStub 1),
   ("str_lit_supported", abortStub 1),
   ("strip_lams", abortStub 2),

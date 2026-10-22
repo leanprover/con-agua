@@ -299,8 +299,8 @@ def ofReduceAxOkL : FunDecl := lfn (vis, q) locals (c, en, ea, e, p) {
 @[l_impl ConRon.Arena.reduceDeclPin]
 def reduceDeclPinL : FunDecl := lfn (c) locals (rn, e) {
   rn := call pin_at(43);
-  if c == rn { e := call rom_expr(0); return e };
-  e := call rom_expr(1);
+  if c == rn { e := call rom_expr_pin(0); return e };
+  e := call rom_expr_pin(1);
   return e
 }
 
