@@ -456,4 +456,83 @@ theorem btW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   rintro r x m3 a3 ⟨hR, hS3, hg3⟩
   exact ⟨by cases x <;> exact hR, hS3, hg02.trans hg3⟩
 
+/-! ## `block_shape_build` -/
+
+theorem partsBindOk {α β : Type} {x : AM α} {f : α → AM β} {a a' : AState} {v : β}
+    (h : (x >>= f).run a = .ok (v, a')) : ∃ y a1, x.run a = .ok (y, a1) ∧ (f y).run a1 = .ok (v, a') := by
+  simp only [StateT.run_bind] at h
+  obtain ⟨⟨y, a1⟩, h1, h2⟩ := partsExBind h
+  exact ⟨y, a1, h1, h2⟩
+
+theorem bmc_length {nPd k nC : Nat} {names : List NIdx} {rs : List (IConstantVal × Nat × Nat × List IRecRule)} :
+    ∀ (cvTs : List IConstantVal) (mm : Nat) (a a' : AState) (ns : List Nat),
+    (ConRon.Arena.blockMemberCounts? nPd k nC names rs mm cvTs).run a = .ok (some ns, a') →
+    ns.length = cvTs.length
+  | [], mm, a, a', ns, h => by
+    simp [ConRon.Arena.blockMemberCounts?, StateT.run, pure, StateT.pure, Except.pure] at h; simp [← h]
+  | c :: cs, mm, a, a', ns, h => by
+    simp only [ConRon.Arena.blockMemberCounts?] at h
+    obtain ⟨q, a1, -, h⟩ := partsBindOk h
+    obtain ⟨x, a2, -, h⟩ := partsBindOk h
+    cases x with
+    | none => simp [StateT.run, pure, StateT.pure, Except.pure] at h
+    | some c2 =>
+      simp only at h
+      obtain ⟨y, a3, hy, h⟩ := partsBindOk h
+      cases y with
+      | none => simp [StateT.run, pure, StateT.pure, Except.pure] at h
+      | some ns' =>
+        simp [StateT.run, pure, StateT.pure, Except.pure] at h
+        rw [← h.1]; simp [bmc_length cs (mm + 1) a2 a3 ns' hy]
+
+/-- `block_member_counts`' model as a `Sim` (from `blockMemberCounts_refines`' proof). -/
+theorem bmcW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
+    {nPd k nC no nl ro rl cto ctl : Word} {names : List NIdx} {cvTs : List IConstantVal}
+    {rs : List (IConstantVal × Nat × Nat × List IRecRule)}
+    (hS : StageR dn vis fe m a) (hts : PSlR decCVp cvTs cto ctl m)
+    (hrs : PSlR decSR rs ro rl m) (hnm : DecB (fun m => decHL m no.toNat nl.toNat) m names)
+    (hnb : no.toNat + nl.toNat ≤ iwTop m) :
+    Sim (bmcW n m nPd k nC no nl ro rl cto ctl)
+      (ConRon.Arena.blockMemberCounts? nPd.toNat k.toNat nC.toNat names rs 0 cvTs) a
+      (fun r x m' a' => NsR x r m' ∧ StageR dn vis fe m' a' ∧ IWGrow m m') := by
+  intro r m' hm
+  unfold bmcW at hm
+  split at hm
+  · cases hm
+  rename_i hg
+  have b : ∀ w : Word, ¬ 4294967296 ≤ w → w.toNat < 2 ^ 32 := fun w h => by
+    rw [UInt64.le_iff_toNat_le] at h; simpa using h
+  have hsim := bmgW_sim (b nPd (fun h => hg (Or.inl h))) (b k (fun h => hg (Or.inr (Or.inl h))))
+    (b nC (fun h => hg (Or.inr (Or.inr (Or.inl h))))) (b rl (fun h => hg (Or.inr (Or.inr (Or.inr h))))) n
+    m a cto ctl 0 cvTs hS hts hrs hnm hnb (by simp; have := hts.2; omega)
+  cases hb : bmgW n m nPd k nC no nl ro rl cto ctl 0 with
+  | none => rw [hb] at hm; cases hm
+  | some x =>
+  obtain ⟨r1, m1⟩ := x
+  rw [hb, bmfK2_some] at hm
+  simp only [Option.some.injEq, Prod.mk.injEq] at hm
+  obtain ⟨rfl, rfl⟩ := hm
+  obtain ⟨x, a', h1, hR, hS', hg'⟩ := hsim r1 m1 hb
+  exact ⟨x, a', h1, NsR_three hR, hS', hg'⟩
+
+/-- A pins pass that returned read the reserved names: the pins are ready. -/
+theorem bpoW_ready {n : Nat} {m m' : Mem} {nP cto ctl lo ll ro rl cso csl : Word} {r : List Word}
+    (h : bpoW n m nP cto ctl lo ll ro rl cso csl = some (r, m')) (hc : ctl ≠ 0) : pinW m 0 ≠ 0 := by
+  unfold bpoW at h
+  cases h1 : bpfW n m cto ctl lo ll with
+  | none => rw [h1] at h; cases h
+  | some x =>
+  cases n with
+  | zero => simp [bpfW] at h1
+  | succ n =>
+  rw [bpfW_cons n m cto ctl lo ll hc] at h1
+  cases h2 : resContW n m (rdW (m.arr64 EREC) (rdW (m.arr64 IW) cto)) with
+  | none => rw [h2] at h1; simp [bpfK1] at h1
+  | some b =>
+  cases n with
+  | zero => simp [resContW] at h2
+  | succ n =>
+  rw [resContW_step] at h2
+  intro h0; rw [if_pos h0] at h2; cases h2
+
 end L.Ind
