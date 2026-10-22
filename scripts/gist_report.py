@@ -181,7 +181,40 @@ w("|---|---|---|")
 for r in landings[:20]:
     w(f"| {r['at'][5:16].replace('T', ' ')} | {r['lane']} | {r['what'].replace('|', '/')} |")
 w("")
-w(f"Open deviations from the twin (`docs/deviations.md`): **{dev_open}**.\n")
+# deviations
+def dev_rows():
+    if not devf.exists():
+        return []
+    txt = devf.read_text()
+    sec = txt.split("## Open", 1)[1] if "## Open" in txt else ""
+    sec = re.split(r"\n## ", sec, maxsplit=1)[0]
+    rows = []
+    for line in sec.splitlines():
+        m = re.match(r"\|\s*(D\d+)\s*\|(.*)\|\s*$", line)
+        if m:
+            cells = [c.strip() for c in m.group(2).split("|")]
+            if len(cells) >= 6:
+                rows.append((m.group(1), cells))
+    return rows
+
+def short(t, n=140):
+    t = re.sub(r"\s+", " ", t)
+    return t if len(t) <= n else t[:n - 1].rstrip() + "…"
+
+drows = dev_rows()
+w(f"## Deviations from the twin ({len(drows)} open)\n")
+w("Places where L deliberately does something other than con-ron (beyond fuel and fixed capacities), from `docs/deviations.md`. "
+  "Effect: completeness = L declines where the twin accepts; performance = same verdicts, more work or memory.\n")
+if drows:
+    w("| id | effect | owner | what L does |")
+    w("|---|---|---|---|")
+    for did, c in drows:
+        w(f"| {did} | {short(c[3], 60)} | {short(c[4], 40)} | {short(c[2])} |")
+    w("")
+    w("<details><summary>Full rows (twin, L, proposed fix)</summary>\n")
+    for did, c in drows:
+        w(f"- **{did}** ({short(c[0], 120)}). Twin: {c[1]} L: {c[2]} Fix: {c[5]}")
+    w("\n</details>\n")
 
 out.write_text("\n".join(L) + "\n")
 (dash / "phases.svg").write_text(phases_svg())

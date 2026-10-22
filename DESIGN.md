@@ -7427,6 +7427,45 @@ grows (the memo library's capacity rule, as every L memo). Refinement: not yet (
   with lane defeq2's `lv_lookup`/`lv_spw`; they need their own names (and so their own copies of
   `lv_substl`/`lv_substpw`, which call those names) before they can land. D23 (no `lp` cutoff in
   L's derived words) blocks `InstLPOK`: either an `lp` bit in `DerR` or `StoreWF` in `CoreS`.
+
+## The whnf side of the knot finished (2026-10-22, lane `whnf4`)
+
+### Landing 1: helper `whnf3-lp`'s `instLP` family (branch `whnf3-next`)
+* The family's level substitution gets its own names (`LevelSubstLP.lean`): `lp_lookup`
+  (`lvLookupG SPN POOL`'s body), `lp_substl`, `lp_spw` (names in `EREC`), `lp_substpw`, each
+  calling the family's names; the models (`lookupW SPN POOL`, `substLW SPN POOL`,
+  `spwW SPN POOL EREC`, `substPWW …`) and their refinements are lane `levels`' generic ones, only
+  the four call specs are restated (copies of `LevelSubstL`'s). Lane `defeq2`'s `lv_lookup`/
+  `lv_spw` bindings are untouched. Not unified into one parametric function: L calls name their
+  callee literally (`call f(…)`), so a parametric body would need a renaming of statements and
+  specs proved through it; four 10-line copies are cheaper.
+* L code of the walk (`lp_go` and its arms, the three memos, `inst_lp`, `inst_lp_fast`,
+  `rec_fire_levels`, `caps_never_zero`) now in `checkerProg` (`Checker/Prog.lean`: 1690
+  functions, 9 stubs, was 13); `coreFns` 533 functions (was 498), `checkerProg_coreErec` holds.
+  Refinements as landed by the helper: `recFireLevels`, `capsNeverZero`, `substLevelsAt`,
+  `substParamLevels`, `internLevel`, `internLsNode` (ArenaD level). Open: the walk itself
+  (`InstLPOK`), blocked by D23.
+
+### Landing 9: helper `pos2`; vacuous memo hypotheses untagged
+* Helper `pos2` (3 h): word models, specs and relational lemmas for the rest of `IndPos2`
+  (`nestGrowGroup`, `nestAcceptGroup`, the `nestPos` block `nestFields`/`nestCtors`/`nestFrame`/
+  `nestContNew`/`nestContKey`/`nestCont`/`nestPos`, `nestRoot`, `nestSeeds`; L: `nest_root`,
+  `nest_seeds` to self-recursion, `nest_seeds_fuel` split out and added to `checkerProg`).
+* **Finding (lead's review): a family of vacuous hypotheses.** Its census theorems take
+  `PosMemo dn vis fe`, which says *every* memory in the stage relation carries well-formed memos
+  (`∀ m a, StageR dn vis fe m a → ∃ mp, noMR m mp`, likewise `dp`, `hb`, `rp`, `RfInv`). `StageR`
+  says nothing about arrays 201‥208, so this is false (a memory with garbage in a memo array is
+  still in `StageR`), and a theorem assuming it proves nothing. Helper `pos`'s landing-4 theorems
+  had the same pattern (`hMstage`, `hMra`, `hMno`): `nestCanonCrest`, `nestRootCanon`,
+  `nestUniformOk`, `nestUniform`, `nestInstType`, `nestGrowGroup`, `nestCrest`, `nestSeedOf`.
+  **All of them are untagged** (kept as lemmas, with a comment; the census shows them `written`),
+  25 tags in all. The fix is to thread the memo relation of the *current* memory through the posts
+  (as `hasLooseBVarBGo_refines` and the `mentionsAnyGo` walks do: the memo relation in the pre,
+  `∃ mp', …MR m' mp'` in the post, `stubM_memoFrame` across stubs) instead of quantifying over all
+  stage states; or to add "the memos are well formed" (a memory-only `∃ mp` form, plus a weak
+  form that holds for zeroed memory and gives `MemoRV` after a clear) to `StageR` and `LoopR`.
+* Census (master `e49af3c`+ this lane): phase 8 **73 proven, 72 sorry, 70 written, 8 todo**
+  (the untagging moved ~8 targets from `sorry` back to `written`); totals 703 proven / 116 sorry.
 ### What discharging `CvCanonSpec`/`CiCanonSpec` needs (lane `decls3`, open)
 
 Canon's theorems (`cvCanonEq_refines`, `ciCanonEq_refines`) take, beyond `StageR` and the records'
