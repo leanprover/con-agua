@@ -148,10 +148,13 @@ def installValueGuardsL : FunDecl := lfn (vis, q, v) locals (o, l, b, h, a, c) {
 
 /-! ## An inductive block from the front's `DIND` into `EREC` -/
 
-/-- `dind_copy(d, s, l)`: `EREC[d + j] := DIND[s + j]` for `j < l`. -/
+/-- `dind_copy(d, s, l)`: `EREC[d + j] := DIND[s + j]` for `j < l`. A non-empty source at word `0`
+(the pool's top, never a record's or a slice's place: the front writes them at `1 + top`) aborts,
+so that the copy reads only what `IndDeclAt`'s cut pool (`trunc`, word `0` cleared) decodes. -/
 -- con-ron: none — copies the front's records into `EREC` (the twin's `checkDecl` takes the front's values as they are)
 def dindCopy : FunDecl := lfn (d, s, l) locals (u) {
   if l == 0 { return 0 };
+  if s == 0 { abort };
   EREC.u64[d] := DIND.u64[s];
   u := call dind_copy(d + 1, s + 1, l - 1);
   return 0
