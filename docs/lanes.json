@@ -266,7 +266,7 @@
 {
 "lane": "defeq",
 "model": "opus",
-"status": "running",
+"status": "done",
 "focus": "Phases 6-7: defeq, inferType, the knot (top-down)"
 },
 {
