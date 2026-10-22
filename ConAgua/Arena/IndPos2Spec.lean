@@ -5927,7 +5927,8 @@ theorem phsW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
     (m m' : Mem) (a : AState) (nn : Word) (r : List Word)
     (h : phsW k m nn = some (r, m')) (hS : StageR dn vis fe m a) :
     ∃ phs a', (ConRon.Arena.nestPhs nn.toNat).run a = .ok (phs, a') ∧ StageR dn vis fe m' a' ∧
-      IWGrow m m' ∧ decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some phs := by
+      IWGrow m m' ∧ decHL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some phs ∧
+      (r.headD 0).toNat + (r.tail.headD 0).toNat ≤ iwTop m' := by
   unfold phsW at h
   cases hal : allocW m nn with
   | none => rw [hal] at h; simp [phsA] at h
@@ -5946,7 +5947,7 @@ theorem phsW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
         have := hS1.2.1; simp only [iwTop] at htop1 this; omega
       obtain ⟨phs, a', hrun, hS2, hK, hdec⟩ := phsGoW_ok k m1 m2 a q nn 0 [] dn fe vis hl hS1
         (by simp) hroom1 hsz1 (by simp [decHL, hslice?])
-      refine ⟨phs, a', ?_, hS2, ?_, by simpa using hdec⟩
+      refine ⟨phs, a', ?_, hS2, ?_, by simpa using hdec, ?_⟩
       · rw [nestPhs_eq]
         simpa using hrun
       · obtain ⟨hK1, hK2, hK3, hK4, hK5⟩ := hK
@@ -5958,6 +5959,8 @@ theorem phsW_ok (k : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis
             omega
           rw [hK1 idx (Or.inl hq)]; exact hg1.2.2.1 idx hidx
         · rw [hK5]; exact hg1.2.2.2 idx hidx
+      · show q.toNat + nn.toNat ≤ iwTop m2
+        rw [hK.2.1, htop1]; exact Nat.le_refl _
 
 
 section census
@@ -5979,7 +5982,7 @@ theorem nestPhs_refines (k : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Opt
       decHL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat = some (AM.res (ConRon.Arena.nestPhs nn.toNat) a₀); ⊤⦄ := by
   refine triple_post (nestPhs_spec p ha hpw hsf hsp his hff hfp hif hg hp k s₀ nn) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨phs, a', hrun, hS', hgr, hdec⟩ := phsW_ok k dn fe vis _ _ a₀ nn r hm hS
+  obtain ⟨phs, a', hrun, hS', hgr, hdec, -⟩ := phsW_ok k dn fe vis _ _ a₀ nn r hm hS
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hgr, by rw [hres]; exact hdec⟩
 

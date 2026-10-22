@@ -726,6 +726,7 @@ def nestCanonCrest : FunDecl := lfn (namesOff, namesLen, us, n, cty) locals (phO
   (ok, t) := call inst_pis_with(phOff, phLen, cty);
   if ok == 0 { return (0, 0) };
   r := call replace_apps(namesOff, namesLen, us, 0, n, t);
+  if 4294967296 <= r { abort };
   return (1, r)
 }
 
