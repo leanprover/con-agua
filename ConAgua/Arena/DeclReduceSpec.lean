@@ -433,4 +433,199 @@ theorem reduceCertVar_refines (p : Prog) (hp : RcvProg p) (n : Nat) (s₀ : St) 
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst]; exact hS4, hg3.trans hg4, by rw [hres]; rfl⟩
 
+/-! ## `reduce_pin_guard(vis, c)` -/
+
+section rpg
+variable (p : Prog)
+
+/-- After `consts_resolve_ffast`. -/
+def rpgK5 : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r5, m5) => some ([r5.headD 0], m5)
+
+/-- After `all_level_params_defined`. -/
+def rpgK4 (vis e : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r4, m4) =>
+    if r4.headD 0 = 0 then some ([0], m4) else rpgK5 (stubM "consts_resolve_ffast" m4 [vis, e])
+
+/-- After `has_fvar_fast`. -/
+def rpgK3 (vis e : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r3, m3) =>
+    if r3.headD 0 ≠ 0 then some ([0], m3)
+    else rpgK4 vis e (stubM "all_level_params_defined" m3 [0, 0, e])
+
+/-- After `loose_bvars_bounded_fast`. -/
+def rpgK2 (vis e : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r2, m2) =>
+    if r2.headD 0 = 0 then some ([0], m2)
+    else rpgK3 vis e (stubM "has_fvar_fast" m2 [4000000000, e])
+
+/-- After the pin. -/
+def rpgK1 (vis : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r1, m1) =>
+    rpgK2 vis (r1.headD 0) (stubM "loose_bvars_bounded_fast" m1 [4000000000, 0, r1.headD 0])
+
+/-- **The model of `reduce_pin_guard(vis, c)`.** -/
+def rpgW : Nat → Mem → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _ => none
+  | n + 1, m, vis, c => rpgK1 vis (callW p n "reduce_decl_pin" [c] m)
+
+section arms
+variable (n : Nat) (m m1 m2 m3 m4 m5 : Mem) (vis c e : Word) (r1 r2 r3 r4 r5 : List Word)
+theorem rpgW_step : rpgW p (n + 1) m vis c = rpgK1 vis (callW p n "reduce_decl_pin" [c] m) := rfl
+theorem rpgK1_some : rpgK1 vis (some (r1, m1)) =
+    rpgK2 vis (r1.headD 0) (stubM "loose_bvars_bounded_fast" m1 [4000000000, 0, r1.headD 0]) := rfl
+theorem rpgK2_some : rpgK2 vis e (some (r2, m2)) =
+    if r2.headD 0 = 0 then some ([0], m2)
+    else rpgK3 vis e (stubM "has_fvar_fast" m2 [4000000000, e]) := rfl
+theorem rpgK3_some : rpgK3 vis e (some (r3, m3)) =
+    if r3.headD 0 ≠ 0 then some ([0], m3)
+    else rpgK4 vis e (stubM "all_level_params_defined" m3 [0, 0, e]) := rfl
+theorem rpgK4_some : rpgK4 vis e (some (r4, m4)) =
+    if r4.headD 0 = 0 then some ([0], m4) else rpgK5 (stubM "consts_resolve_ffast" m4 [vis, e]) :=
+  rfl
+theorem rpgK5_some : rpgK5 (some (r5, m5)) = some ([r5.headD 0], m5) := rfl
+end arms
+
+grind_pattern [ind_grind] rpgW_step => rpgW p (n + 1) m vis c
+grind_pattern [ind_grind] rpgK1_some => rpgK1 vis (some (r1, m1))
+grind_pattern [ind_grind] rpgK2_some => rpgK2 vis e (some (r2, m2))
+grind_pattern [ind_grind] rpgK3_some => rpgK3 vis e (some (r3, m3))
+grind_pattern [ind_grind] rpgK4_some => rpgK4 vis e (some (r4, m4))
+grind_pattern [ind_grind] rpgK5_some => rpgK5 (some (r5, m5))
+
+theorem rpg_specW (hp : p.lookup "reduce_pin_guard" = some reducePinGuardL) (n : Nat) (s₀ : St)
+    (vis c : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "reduce_pin_guard" [vis, c]
+    ⦃fun r s' => LocEq s' s₀ ∧ rpgW p n s₀.mem vis c = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, reducePinGuardL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+        callW_spec p n "reduce_decl_pin", stubM_spec p "loose_bvars_bounded_fast" n,
+        stubM_spec p "has_fvar_fast" n, stubM_spec p "all_level_params_defined" n,
+        stubM_spec p "consts_resolve_ffast" n] <;>
+      finish (gen := 20)
+
+end rpg
+
+/-- **`reduce_pin_guard(vis, c)` refines `reducePinGuard`** (through the walks' and `rom_expr`'s
+stubs). -/
+@[refines ConRon.Arena.reducePinGuard]
+theorem reducePinGuard_refines (p : Prog) (hpa : p.lookup "pin_at" = some pinAtL)
+    (hpd : p.lookup "reduce_decl_pin" = some reduceDeclPinL)
+    (hp : p.lookup "reduce_pin_guard" = some reducePinGuardL) (n : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis c : Word)
+    (hS : StageR dn vis fe s₀.mem a₀) (hc : c.toNat < 2 ^ 32) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "reduce_pin_guard" [vis, c]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (reducePinGuard fe (decI c)) a₀ ∧
+      KeepPost dn vis fe decW0B s₀.mem s'.mem (AM.st (reducePinGuard fe (decI c)) a₀) r
+        (AM.res (reducePinGuard fe (decI c)) a₀); ⊤⦄ := by
+  refine triple_post (rpg_specW p hp n s₀ vis c) ?_
+  rintro r s' ⟨hl, h⟩
+  refine ⟨hl, ?_⟩
+  suffices ∃ x a', (reducePinGuard fe (decI c)).run a₀ = .ok (x, a') ∧
+      KeepPost dn vis fe decW0B s₀.mem s'.mem a' r x by
+    obtain ⟨x, a', hrun, hP⟩ := this
+    obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+    exact ⟨hok, by rw [hst, hres]; exact hP⟩
+  cases n with
+  | zero => simp [rpgW] at h
+  | succ n =>
+  rw [rpgW_step] at h
+  cases h1 : callW p n "reduce_decl_pin" [c] s₀.mem with
+  | none => rw [h1] at h; cases h
+  | some rm1 =>
+  obtain ⟨r1, m1⟩ := rm1
+  rw [h1, rpgK1_some] at h
+  obtain ⟨s1, hs1, -, hok1, hS1, hg1, he1l, he1⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
+    (reduceDeclPin_refines p hpa n ⟨s₀.mem, Locals.init []⟩ a₀ dn fe vis c hS hc hpd) h1
+  subst hs1
+  have hrun1 := AM.run_of_ok _ _ hok1
+  generalize AM.st (reduceDeclPin (decI c)) a₀ = a1 at hrun1 hS1
+  rw [← he1] at hrun1
+  generalize r1.headD 0 = e at h hrun1 he1l
+  have h00 : (0 : Word).toNat = 0 := rfl
+  have hF : (4000000000 : Word).toNat = coreWalkFuel := rfl
+  -- `loose_bvars_bounded_fast`
+  cases h2 : stubM "loose_bvars_bounded_fast" s1.mem [4000000000, 0, e] with
+  | none => rw [h2] at h; simp [rpgK2] at h
+  | some rm2 =>
+  obtain ⟨r2, m2⟩ := rm2
+  rw [h2, rpgK2_some] at h
+  obtain ⟨x2, a2, hrun2, hS2, hg2, hx2, -⟩ :=
+    looseBVarsBoundedFast_spec dn vis fe 4000000000 0 e he1l s1.mem m2 a1 r2 h2 hS1
+  rw [hF, h00] at hrun2
+  by_cases hb2 : r2.headD 0 = 0
+  · rw [if_pos hb2] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    have ex2 : x2 = false := by rw [← hx2]; simpa using hb2
+    refine ⟨false, a2, ?_, hS2, hg1.trans hg2, by simp [decW0B]⟩
+    simp only [reducePinGuard, StateT.run_bind, hrun1, exc_ok_bind', hrun2, ex2, Bool.not_false,
+      if_true, StateT.run_pure]
+    rfl
+  rw [if_neg hb2] at h
+  have ex2 : x2 = true := by rw [← hx2]; simpa using hb2
+  -- `has_fvar_fast`
+  cases h3 : stubM "has_fvar_fast" m2 [4000000000, e] with
+  | none => rw [h3] at h; simp [rpgK3] at h
+  | some rm3 =>
+  obtain ⟨r3, m3⟩ := rm3
+  rw [h3, rpgK3_some] at h
+  obtain ⟨x3, a3, hrun3, hS3, hg3, hx3, -⟩ :=
+    hasFvarFast_spec dn vis fe 4000000000 e he1l m2 m3 a2 r3 h3 hS2
+  rw [hF] at hrun3
+  by_cases hb3 : r3.headD 0 ≠ 0
+  · rw [if_pos hb3] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    have ex3 : x3 = true := by rw [← hx3]; simpa using hb3
+    refine ⟨false, a3, ?_, hS3, hg1.trans (hg2.trans hg3), by simp [decW0B]⟩
+    simp only [reducePinGuard, StateT.run_bind, hrun1, exc_ok_bind', hrun2, ex2, Bool.not_true,
+      Bool.false_eq_true, if_false, hrun3, ex3, if_true, StateT.run_pure]
+    rfl
+  rw [if_neg hb3] at h
+  have ex3 : x3 = false := by rw [← hx3]; simpa using hb3
+  -- `all_level_params_defined`
+  cases h4 : stubM "all_level_params_defined" m3 [0, 0, e] with
+  | none => rw [h4] at h; simp [rpgK4] at h
+  | some rm4 =>
+  obtain ⟨r4, m4⟩ := rm4
+  rw [h4, rpgK4_some] at h
+  obtain ⟨x4, a4, hrun4, hS4, hg4, hx4, -⟩ :=
+    allLevelParamsDefined_spec dn vis fe 0 0 e he1l [] m3 m4 a3 r4 h4 ⟨hS3, by simp [decHL, hslice?]⟩
+  by_cases hb4 : r4.headD 0 = 0
+  · rw [if_pos hb4] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    have ex4 : x4 = false := by rw [← hx4]; simpa using hb4
+    refine ⟨false, a4, ?_, hS4, hg1.trans (hg2.trans (hg3.trans hg4)), by simp [decW0B]⟩
+    simp only [reducePinGuard, StateT.run_bind, hrun1, exc_ok_bind', hrun2, ex2, Bool.not_true,
+      Bool.false_eq_true, if_false, hrun3, ex3, hrun4, ex4, Bool.not_false, if_true, StateT.run_pure]
+    rfl
+  rw [if_neg hb4] at h
+  have ex4 : x4 = true := by rw [← hx4]; simpa using hb4
+  -- `consts_resolve_ffast`
+  cases h5 : stubM "consts_resolve_ffast" m4 [vis, e] with
+  | none => rw [h5] at h; simp [rpgK5] at h
+  | some rm5 =>
+  obtain ⟨r5, m5⟩ := rm5
+  rw [h5, rpgK5_some] at h
+  obtain ⟨x5, a5, hrun5, hS5, hg5, hx5⟩ :=
+    constsResolveFFast_spec dn vis fe e he1l m4 m5 a4 r5 h5 hS4
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  refine ⟨x5, a5, ?_, hS5, hg1.trans (hg2.trans (hg3.trans (hg4.trans hg5))), hx5⟩
+  simp only [reducePinGuard, StateT.run_bind, hrun1, exc_ok_bind', hrun2, ex2, Bool.not_true,
+    Bool.false_eq_true, if_false, hrun3, ex3, hrun4, ex4]
+  exact hrun5
+
 end L.Arena
