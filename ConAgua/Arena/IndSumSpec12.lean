@@ -536,4 +536,234 @@ theorem ctorW_spec (p : Prog) (hP : SumProg p) (n : Nat) (s₀ : St)
       sdomsW_spec p hP.hg hP.hsd (n + 2), ctlW_spec p hP n] <;>
     finish (gen := 30) (instances := 5000) [ctorW, rdW_eq]
 
+/-! ## `check_sum_ctor`: the relation to the twin -/
+
+/-- **`checkSumCtor` is its head followed by `cscTailT`** (definitionally). -/
+theorem checkSumCtor_eq (fe₀ fe : IFEnv) (T : NIdx) (lps : List NIdx) (nP nIdx : Nat) (resSort : LIdx)
+    (isProp large : Bool) (cvC : IConstantVal) (nF : Nat) (cvTa : IConstantVal) :
+    checkSumCtor V fe₀ fe T lps nP nIdx resSort isProp large cvC nF cvTa = (do
+      checkConstantVal V fe cvC
+      let (_, cbody) ← unwrapOr (← stripPis (nP + nF) cvC.type)
+        (.notImplemented "direct sum: constructor telescope")
+      unless ← structCtorResidOk T lps nP nF nIdx cbody do
+        fail (.invalid "direct sum: invalid constructor return type")
+      let cq ← unwrapOr (← openPisAtFvarsF nP cvC.type 0)
+        (.notImplemented "direct sum: constructor telescope")
+      let tq ← unwrapOr (← openPisAtFvarsF nP cvTa.type 0)
+        (.notImplemented "direct sum: type former telescope")
+      let tdoms ← fvarTypeDs tq.1
+      checkStructDomsAt V fe 0 cq.1 tdoms nP
+      cscTailT fe₀ fe T lps nP nIdx resSort isProp large cvC nF cq) := by
+  rfl
+
+/-- A constant's type word, read where the model reads it. -/
+theorem sumTypeWord {m : Mem} {q : Word} {cv : IConstantVal} (h : decCVp m q.toNat = some cv)
+    (hsz : (m.arr64 EREC).size < 2 ^ 64) :
+    ∃ w, rdW (m.arr64 EREC) (q + 3) = w ∧ H w ∧ decI w = cv.type := by
+  have ht := decCV_type h
+  simp only [hd?, Option.bind_eq_bind, Option.bind_eq_some_iff] at ht
+  obtain ⟨w, hw, hx⟩ := ht
+  split at hx
+  · have hx' := Option.some.inj hx
+    have hlt : q.toNat + 3 < (m.arr64 EREC).size := (Array.getElem?_eq_some_iff.mp hw).1
+    refine ⟨w, rdW_of_get? ?_ hw, by assumption, hx'⟩
+    rw [sum_toNat_add (by simp; omega)]; rfl
+  · cases hx
+
+/-- `check_struct_doms_at` as a `Sim` (an out-of-range count aborts in the model). -/
+theorem sdSim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k : Nat) (m : Mem)
+    (a : AState) (off fo fl dO dl j : Word) (fvs doms : List EIdx) (hS : StageR dn vis fe m a)
+    (hfvs : decHL m fo.toNat fl.toNat = some fvs) (hdoms : decHL m dO.toNat dl.toNat = some doms)
+    (hfb : fo.toNat + fl.toNat ≤ iwTop m) (hdb : dO.toNat + dl.toNat ≤ iwTop m)
+    (hoob : off.toNat + fl.toNat < 2 ^ 64) :
+    Sim (sdomsW k m vis off fo fl dO dl j) (checkStructDomsAt V fe off.toNat fvs doms j.toNat) a
+      (fun _ _ m' a' => StageR dn vis fe m' a' ∧ IWGrow m m') := by
+  intro r m' e
+  rw [sdomsW_eq] at e
+  cases hd : domsW k m vis off fo fl dO dl j with
+  | none => rw [hd] at e; cases e
+  | some x =>
+  obtain ⟨r0, m0⟩ := x
+  rw [hd] at e
+  simp only [Option.map_some, Option.some.injEq, Prod.mk.injEq] at e
+  obtain ⟨-, rfl⟩ := e
+  by_cases hj : j.toNat ≤ fl.toNat ∧ j.toNat ≤ dl.toNat
+  · obtain ⟨a', hrun, hS', hg'⟩ := domsW_ok k dn fe m _ a vis off fo fl dO dl j fvs doms r0 hd hS hfvs
+      hdoms (hS.lt64 hfb) (hS.lt64 hdb) hfb hdb hoob hj.1 hj.2
+    exact ⟨(), a', checkStructDomsAt_of_block fe _ fvs doms _ _ _ hrun, hS', hg'⟩
+  · exfalso
+    cases k with
+    | zero => simp [domsW] at hd
+    | succ k =>
+    have hj0 : j ≠ 0 := by intro h0; subst h0; exact hj ⟨by simp, by simp⟩
+    have hj1 : (j - 1).toNat = j.toNat - 1 := sumToNat_pred hj0
+    by_cases hf : fl ≤ j - 1
+    · simp [domsW, hj0, hf] at hd
+    · have : dl ≤ j - 1 := by
+        rw [UInt64.le_iff_toNat_le, hj1]
+        have : ¬ fl.toNat ≤ (j - 1).toNat := fun e => hf (UInt64.le_iff_toNat_le.mpr e)
+        have hj0' : j.toNat ≠ 0 := fun e => hj0 (UInt64.toNat_inj.mp (by simpa using e))
+        omega
+      simp [domsW, hj0, hf, this] at hd
+
+/-- **`check_sum_ctor`'s model refines `checkSumCtor .verified`**, the pre-block environment the
+restriction of `fe` to `vis0`; the constructor and the type former decoded below the record pool's
+top. -/
+theorem ctorW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) (m : Mem)
+    (a : AState) (vis0 T lo ll nP nIdx rs isP lg cvCw nF cvTaw : Word) (lps : List NIdx)
+    (cvC cvTa : IConstantVal) (hS : StageR dn vis fe m a) (hT : H T)
+    (hlps : decHL m lo.toNat ll.toNat = some lps) (hlb : lo.toNat + ll.toNat ≤ iwTop m)
+    (hcv : DecB (fun m => decCVp m cvCw.toNat) m cvC) (hta : DecB (fun m => decCVp m cvTaw.toNat) m cvTa)
+    (hrs : H rs) (hni : nP.toNat + nIdx.toNat < 2 ^ 64) (hnf : nP.toNat + nF.toNat < 2 ^ 64) :
+    Sim (ctorW n m vis0 vis T lo ll nP nIdx rs isP lg cvCw nF cvTaw)
+      (checkSumCtor V (fe.restrictTo vis0.toNat) fe (decI T) lps nP.toNat nIdx.toNat (decI rs)
+        (isP != 0) (lg != 0) cvC nF.toNat cvTa) a
+      (fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 = cvCw ∧ x.1 = cvC ∧
+        decHL m' (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat = some x.2 ∧
+        (r.tail.headD 0).toNat + (r.tail.tail.headD 0).toNat ≤ iwTop m') := by
+  unfold ctorW
+  rw [checkSumCtor_eq]
+  -- `check_constant_val`
+  refine Sim.bindK (K := ctorK2 n vis0 vis T lo ll nP nIdx rs isP lg nF cvCw cvTaw) rfl
+    (fun _ _ => rfl) (sumSim_of_relAM (checkConstantVal_spec dn vis fe cvCw cvC)
+      ⟨hS, DecB.get (OMono.decCVp _) hcv⟩) fun _ _ m1 a1 hQ => ?_
+  obtain ⟨hS1, hg1, -⟩ := hQ
+  rw [ctorK2_some]
+  -- `strip_pis`
+  obtain ⟨w1, hw1, hw1l, hw1d⟩ := sumTypeWord (hcv.stab (OMono.decCVp _) m1 hg1) hS1.2.2.2.2.1
+  rw [hw1]
+  have h2 := stripPis_spec dn vis fe (nP + nF) w1 hw1l
+  rw [sum_toNat_add hnf, hw1d] at h2
+  refine Sim.bindK (K := ctorK3 n vis0 vis T lo ll nP nIdx rs isP lg nF cvCw cvTaw) rfl
+    (fun _ _ => rfl) (sumSim_of_relAM h2 hS1) fun r2 o2 m2 a2 hQ => ?_
+  obtain ⟨hS2, hg2, hdec2⟩ := hQ
+  by_cases h20 : r2.headD 0 = 0
+  · rw [ctorK3_no (h := h20)]; exact Sim.of_none
+  rw [ctorK3_yes (h := h20)]
+  cases o2 with
+  | none => exact absurd hdec2 h20
+  | some le =>
+  obtain ⟨sl, cb⟩ := le
+  obtain ⟨-, -, hcb, hcbd⟩ := hdec2
+  rw [drop3_eq] at hcb hcbd
+  refine Sim.bind_twin (x := (sl, cb)) (a₁ := a2) rfl ?_
+  subst hcbd
+  have hg02 := hg1.trans hg2
+  have hlps2 : decHL m2 lo.toNat ll.toNat = some lps := by rw [decHL_grow hg02 hlb]; exact hlps
+  -- `struct_ctor_resid_ok`
+  refine Sim.bindK (K := ctorK4 n vis0 vis T lo ll nP nIdx rs isP lg nF cvCw cvTaw) rfl
+    (fun _ _ => rfl) (fun r m' e => by
+      obtain ⟨x, a', h1, h2⟩ := srW_ok dn vis fe (n + 2) m2 m' a2 T lo ll nP nF nIdx _ r lps e hS2 hT hcb
+        hlps2 (hS2.lt64 (by have := hg02.1; omega)) (by have := hg02.1; omega) (by omega) hni
+      exact ⟨x, a', h1, h2⟩) fun r3 b3 m3 a3 hQ => ?_
+  obtain ⟨hS3, hg3, hb3, -⟩ := hQ
+  by_cases h30 : r3.headD 0 = 0
+  · rw [ctorK4_no (h := h30)]; exact Sim.of_none
+  rw [ctorK4_yes (h := h30)]
+  have hb3' : b3 = true := by rw [← hb3]; simpa using h30
+  subst hb3'
+  simp only [ite_true]
+  have hg03 := hg02.trans hg3
+  -- the constructor's opened telescope
+  obtain ⟨w3, hw3, hw3l, hw3d⟩ := sumTypeWord (hcv.stab (OMono.decCVp _) m3 hg03) hS3.2.2.2.2.1
+  rw [hw3]
+  have h4 := openPisAtFvarsF_spec dn vis fe nP w3 0 hw3l
+  rw [hw3d, show (0 : Word).toNat = 0 from rfl] at h4
+  refine Sim.bindK (K := ctorK5 n vis0 vis T lo ll nP nIdx rs isP lg nF cvCw cvTaw) rfl
+    (fun _ _ => rfl) (sumSim_of_relAM h4 hS3) fun r4 o4 m4 a4 hQ => ?_
+  obtain ⟨hS4, hg4, hdec4⟩ := hQ
+  by_cases h40 : r4.headD 0 = 0
+  · rw [ctorK5_no (h := h40)]; exact Sim.of_none
+  rw [ctorK5_yes (h := h40)]
+  cases o4 with
+  | none => exact absurd hdec4 h40
+  | some le =>
+  obtain ⟨cl, cb4⟩ := le
+  obtain ⟨-, ⟨hcl, hclb⟩, hcqB, hcqBd⟩ := hdec4
+  rw [sumGetD1, sumGetD2] at hcl hclb
+  rw [drop3_eq] at hcqB hcqBd
+  refine Sim.bind_twin (x := (cl, cb4)) (a₁ := a4) rfl ?_
+  subst hcqBd
+  have hg04 := hg03.trans hg4
+  -- the type former's opened telescope
+  obtain ⟨w5, hw5, hw5l, hw5d⟩ := sumTypeWord (hta.stab (OMono.decCVp _) m4 hg04) hS4.2.2.2.2.1
+  rw [hw5]
+  have h5 := openPisAtFvarsF_spec dn vis fe nP w5 0 hw5l
+  rw [hw5d, show (0 : Word).toNat = 0 from rfl] at h5
+  refine Sim.bindK (K := ctorK6 n vis0 vis T lo ll nP nIdx rs isP lg nF cvCw _ _ _) rfl
+    (fun _ _ => rfl) (sumSim_of_relAM h5 hS4) fun r5 o5 m5 a5 hQ => ?_
+  obtain ⟨hS5, hg5, hdec5⟩ := hQ
+  by_cases h50 : r5.headD 0 = 0
+  · rw [ctorK6_no (h := h50)]; exact Sim.of_none
+  rw [ctorK6_yes (h := h50)]
+  cases o5 with
+  | none => exact absurd hdec5 h50
+  | some le =>
+  obtain ⟨tl, tb⟩ := le
+  obtain ⟨-, ⟨htl, htlb⟩, -, -⟩ := hdec5
+  rw [sumGetD1, sumGetD2] at htl htlb
+  refine Sim.bind_twin (x := (tl, tb)) (a₁ := a5) rfl ?_
+  -- `fvar_type_ds`
+  refine Sim.bindK (K := ctorK7 n vis0 vis T lo ll nP nIdx rs isP lg nF cvCw _ _ _) rfl
+    (fun _ _ => rfl) (sumSim_of_relAM (fvarTypeDs_spec dn vis fe _ _ tl) ⟨hS5, htl⟩)
+    fun r6 tdoms m6 a6 hQ => ?_
+  obtain ⟨hS6, hg6, htd, htdb⟩ := hQ
+  rw [sumGetD0, sumGetD1] at htd htdb
+  rw [ctorK7_some]
+  -- `check_struct_doms_at`
+  have hg56 := hg5.trans hg6
+  have hcl6 : decHL m6 (r4.tail.headD 0).toNat (r4.tail.tail.headD 0).toNat = some cl := by
+    rw [decHL_grow hg56 hclb]; exact hcl
+  have hclb6 : (r4.tail.headD 0).toNat + (r4.tail.tail.headD 0).toNat ≤ iwTop m6 := by
+    have := hg56.1; omega
+  refine Sim.bindK (K := ctorK8 n vis0 vis T lo ll nP nIdx rs isP lg nF cvCw _ _ _) rfl
+    (fun _ _ => rfl) (sdSim (n + 2) m6 a6 0 _ _ _ _ nP cl tdoms hS6 hcl6 htd hclb6 htdb
+      (by simp only [UInt64.toNat_zero, Nat.zero_add]; have := hS6.lt64 hclb6; omega))
+    fun _ _ m7 a7 hQ => ?_
+  obtain ⟨hS7, hg7⟩ := hQ
+  rw [ctorK8_some]
+  -- the tail
+  have hg06 := (hg04.trans hg56)
+  refine sumSim_map (K := ctorK9 cvCw) rfl (fun _ _ => rfl)
+    (ctlW_ok n m7 a7 vis0 T lo ll nP nIdx rs isP lg nF _ _ _ lps cl cvC hS7 hT
+      (by rw [decHL_grow (hg06.trans hg7) hlb]; exact hlps) (by have := (hg06.trans hg7).1; omega)
+      (by rw [decHL_grow hg7 hclb6]; exact hcl6) (by have := hg7.1; omega) hcqB hrs hni hnf)
+    fun r8 x m8 a8 hQ => ?_
+  obtain ⟨hS8, hg8, hx1, hd8, hb8⟩ := hQ
+  exact ⟨hS8, ((hg06.trans hg7).trans hg8), rfl, hx1, by simpa using hd8, by simpa using hb8⟩
+
+
+/-- **`check_sum_ctor` refines `checkSumCtor .verified`** (through stubs: `check_constant_val`,
+`strip_pis`, `open_pis_at_fvars_f`, `fvar_type_ds`, `get_app_fn_f`, `get_app_args_f`, and the proved
+callees' stubs), the pre-block environment being the restriction of `fe` to the view `vis0`; the
+constructor (`cvC`) and the type former (`cvTa`) decoded below the record pool's top. Returns `cvC`
+itself and the field sorts as a fresh `IW` slice. -/
+@[refines ConRon.Arena.checkSumCtor]
+theorem checkSumCtor_refines (p : Prog) (hP : SumProg p) (n : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
+    (vis0 vis T lo ll nP nIdx rs isP lg cvCw nF cvTaw : Word) (lps : List NIdx)
+    (cvC cvTa : IConstantVal) (hS : StageR dn vis fe s₀.mem a₀) (hT : H T)
+    (hlps : decHL s₀.mem lo.toNat ll.toNat = some lps) (hlb : lo.toNat + ll.toNat ≤ iwTop s₀.mem)
+    (hcv : DecB (fun m => decCVp m cvCw.toNat) s₀.mem cvC)
+    (hta : DecB (fun m => decCVp m cvTaw.toNat) s₀.mem cvTa)
+    (hrs : H rs) (hni : nP.toNat + nIdx.toNat < 2 ^ 64) (hnf : nP.toNat + nF.toNat < 2 ^ 64) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 3)) "check_sum_ctor"
+      [vis0, vis, T, lo, ll, nP, nIdx, rs, isP, lg, cvCw, nF, cvTaw]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (checkSumCtor V (fe.restrictTo vis0.toNat) fe (decI T) lps nP.toNat nIdx.toNat (decI rs)
+        (isP != 0) (lg != 0) cvC nF.toNat cvTa) a₀ ∧
+      StageR dn vis fe s'.mem (AM.st (checkSumCtor V (fe.restrictTo vis0.toNat) fe (decI T) lps
+        nP.toNat nIdx.toNat (decI rs) (isP != 0) (lg != 0) cvC nF.toNat cvTa) a₀) ∧
+      IWGrow s₀.mem s'.mem ∧ r.headD 0 = cvCw ∧
+      (AM.res (checkSumCtor V (fe.restrictTo vis0.toNat) fe (decI T) lps nP.toNat nIdx.toNat (decI rs)
+        (isP != 0) (lg != 0) cvC nF.toNat cvTa) a₀).1 = cvC ∧
+      decHL s'.mem (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat =
+        some (AM.res (checkSumCtor V (fe.restrictTo vis0.toNat) fe (decI T) lps nP.toNat nIdx.toNat
+          (decI rs) (isP != 0) (lg != 0) cvC nF.toNat cvTa) a₀).2; ⊤⦄ := by
+  refine triple_post (ctorW_spec p hP n s₀ vis0 vis T lo ll nP nIdx rs isP lg cvCw nF cvTaw) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨hok, hS', hg', h0, h1, hd, -⟩ := (ctorW_ok n _ a₀ vis0 T lo ll nP nIdx rs isP lg cvCw nF cvTaw
+    lps cvC cvTa hS hT hlps hlb hcv hta hrs hni hnf).run hm
+  exact ⟨hl, hok, hS', hg', h0, h1, hd⟩
+
 end L.Ind
