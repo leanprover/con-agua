@@ -6677,3 +6677,19 @@ Census at landing 3 (`--no-build`): phase 2 **145 proven, 26 sorry, 71 written, 
   phase 4: 63 proven (+1). The `iota` targets stay "sorry": the tagged statements instantiate the
   stub bundles (`iotaCallees_stub`, `whnfCallees_stub`, `coreCallees_stub`, the knot).
 
+### Landing 3: six phase-5 targets sorry-free on the real walks (`WhnfTagged.lean`)
+* A dependency scan (each tagged theorem's transitive constants that are `sorry`'d theorems) showed
+  which stub *fields* each tagged statement really used. `beta_peel`, `iota_certs_full(_aux)` used
+  only `WhnfCallees.instList`; `pi_residual`, `inst_spine`, `iota_index_ok` only
+  `IotaCallees.inst1`. Their primed theorems now take `InstListOK p` / `IotaInst1OK p` instead of
+  the bundles, and the tagged ones live in `WhnfTagged.lean` (after `CoreWalks.lean`), given the
+  walks' programs `CoreWalkProg p`: **sorry-free** (`pi_residual` newly tagged).
+* Census, phase 5: **79 proven / 19 sorry / 20 written / 24 todo**; phase 4: 65 proven, 0 sorry.
+* What the remaining phase-5 `sorry`s wait for (scan): `instLP` (`const_ty_at`, `rule_rhs_at`,
+  `inst_spine_pins`, `rec_fire_args`: the phase-4 `instLPFast` walk is not written),
+  `wscoped_bfast`/`leaf_guard` (`fab_scope_ok`), `find_proj`/`fire_ok`/`ProjFound`
+  (`tower_slots_all`, `and_rescue_slots`, the projection arm), the string-literal stubs and
+  `supKeep_twin` (`lit_major_to_ctor`, `proj_lit_to_ctor`), `CoreS.lvl_den` (`proof_irrel`), the
+  knot's `infer`/`defeq` steps (`WhnfCallees.inferStep` …; lane `defeq`), `erecKept*`, and
+  `whnfGrowsUpTo_stub` (`reduce_nat`).
+
