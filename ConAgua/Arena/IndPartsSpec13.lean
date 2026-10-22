@@ -792,4 +792,109 @@ theorem bsl_spec (p : Prog) (hP : IndPartsProg4 p) (hec : p.lookup "er_copy" = s
       slEq_spec p hseq n, slContains_spec p hP.contains n] <;>
     finish (gen := 20) [bslW, rdW_eq]
 
+/-- **`block_shape_large`**: the twin's eliminator choice. -/
+theorem bslW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
+    {m m' : Mem} {cvR0 lo ll : Word} {r : List Word} {cv : IConstantVal} {lps : List NIdx}
+    (h : bslW n m cvR0 lo ll = some (r, m')) (hS : StageR dn vis fe m a)
+    (hcv : DecB (fun m => decCVp m cvR0.toNat) m cv)
+    (hl : decHL m lo.toNat ll.toNat = some lps) (hlb : lo.toNat + ll.toNat ≤ iwTop m) :
+    StageR dn vis fe m' a ∧ IWGrow m m' ∧ LargeR (largeOf lps cv) r := by
+  have hcv' : decCV (erA (truncM m)) cvR0.toNat = some cv := hcv
+  simp only [decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hcv'
+  obtain ⟨nm, -, lv, hlv, ce, -, hcvT⟩ := hcv'
+  have hlvE : cv.levelParams = lv := by rw [← hcvT]
+  simp only [hlist?, bind, Option.bind_eq_some_iff] at hlv
+  obtain ⟨o', ho, l', hlw, hsl⟩ := hlv
+  have hE : erTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 129).toNat_lt
+  have hq2lt := partsErLt hlw
+  obtain ⟨w1, hw1b, -⟩ := partsErRd (IWGrow.refl m) ho (w := cvR0 + 1) (by rw [UInt64.toNat_add]; simp; omega)
+  obtain ⟨w2, hw2b, -⟩ := partsErRd (IWGrow.refl m) hlw (w := cvR0 + 2) (by rw [UInt64.toNat_add]; simp; omega)
+  unfold bslW at h
+  rw [w1, w2] at h
+  have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
+  by_cases h0 : l' = 0
+  · subst h0
+    rw [if_pos (show (UInt64.ofNat 0 : Word) = 0 from rfl)] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    have : lv = [] := by simpa [hslice?] using hsl.symm
+    refine ⟨hS, IWGrow.refl _, ?_⟩
+    simp only [largeOf, hlvE, this, LargeR]; rfl
+  rw [if_neg (by intro e; apply h0; have := congrArg UInt64.toNat e; rwa [UInt64.toNat_ofNat_of_lt' hw2b] at this)] at h
+  obtain ⟨L, rfl⟩ : ∃ L, l' = L + 1 := ⟨l' - 1, by omega⟩
+  rw [hslice?_succ] at hsl
+  simp only [bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hsl
+  obtain ⟨e, he, relps, hrel, rfl⟩ := hsl
+  obtain ⟨w, hw, hwl, hwe⟩ := hd?_some he
+  obtain ⟨hwlt, hw'⟩ := truncM_er_get hw
+  simp only [erA] at hw'
+  have hrdw : rdW (m.arr64 EREC) (UInt64.ofNat o') = w := rdW_of_get? (UInt64.toNat_ofNat_of_lt' hw1b).symm hw'
+  rw [hrdw] at h
+  have ho1 : (UInt64.ofNat o' + 1).toNat = o' + 1 := by rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' hw1b]; simp; omega
+  have hl1 : (UInt64.ofNat (L + 1) - 1).toNat = L := by
+    rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le, UInt64.toNat_ofNat_of_lt' hw2b]; simp)]
+    rw [UInt64.toNat_ofNat_of_lt' hw2b]; simp
+  cases h1 : erToIwW n m (UInt64.ofNat o' + 1) (UInt64.ofNat (L + 1) - 1) with
+  | none => rw [h1] at h; cases h
+  | some x1 =>
+  obtain ⟨rp, m1⟩ := x1
+  rw [h1] at h
+  simp only at h
+  obtain ⟨hS1, hg1, hd1, ht1⟩ := partsSliceCopy h1 hS (by rw [ho1, hl1]; exact hrel)
+  cases he1 : eqW n m1 (rp.headD 0) (rp.tail.headD 0) lo ll with
+  | none => rw [he1] at h; cases h
+  | some ev =>
+  rw [he1] at h
+  simp only at h
+  have hT1 : iwTop m1 < 2 ^ 64 := (rdW (m1.arr64 CTL) 200).toNat_lt
+  obtain ⟨ws1, hs1, hn1, hl1'⟩ := slR_of_decHL m1 _ _ _ hd1 (by omega)
+  rw [ofNat_toNat_word, ofNat_toNat_word] at hs1
+  have hl' : decHL m1 lo.toNat ll.toNat = some lps := by rw [decHL_grow3 hg1 hlb]; exact hl
+  obtain ⟨ws2, hs2, hn2, hl2⟩ := slR_of_decHL m1 _ _ _ hl' (by have := hg1.1; omega)
+  rw [ofNat_toNat_word, ofNat_toNat_word] at hs2
+  have hres := eqW_ok n m1 _ _ _ _ ev ws1 ws2 hs1 hs2 he1
+  have hbeq : (relps == lps) = decide (ws1 = ws2) := by rw [hn1, hn2, map_decI_beq ws1 ws2 hl1' hl2]
+  by_cases hev : ev = 0
+  · rw [if_pos hev] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    have : (relps == lps) = false := by
+      rw [hbeq]; by_cases hw12 : ws1 = ws2
+      · rw [hres, if_pos hw12] at hev; exact absurd hev (by decide)
+      · simp [hw12]
+    refine ⟨hS1, hg1, ?_⟩
+    simp only [largeOf, hlvE, this, Bool.false_and, LargeR]; rfl
+  rw [if_neg hev] at h
+  have hrt : (relps == lps) = true := by
+    rw [hbeq]; by_cases hw12 : ws1 = ws2
+    · simp [hw12]
+    · rw [hres, if_neg hw12] at hev; exact absurd rfl hev
+  cases hc : containsW n m1 lo ll w with
+  | none => rw [hc] at h; cases h
+  | some hsv =>
+  rw [hc] at h
+  simp only at h
+  have hcv2 := containsW_ok n m1 lo ll w hsv ws2 hs2 hc
+  have hcont : lps.contains e = ws2.contains w := by rw [hn2, hwe]; exact partsContains_decI ws2 w hl2 hwl
+  by_cases hh : hsv ≠ 0
+  · rw [if_pos hh] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    have : lps.contains e = true := by
+      rw [hcont]; cases hcc : ws2.contains w
+      · rw [hcc] at hcv2; exact absurd hcv2 (by simpa using hh)
+      · rfl
+    refine ⟨hS1, hg1, ?_⟩
+    simp only [largeOf, hlvE, hrt, this, Bool.not_true, Bool.and_false, LargeR]; rfl
+  rw [if_neg hh] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  have : lps.contains e = false := by
+    rw [hcont]; cases hcc : ws2.contains w
+    · rfl
+    · rw [hcc] at hcv2; simp at hcv2; exact absurd (by rw [hcv2]; decide) hh
+  refine ⟨hS1, hg1, ?_⟩
+  simp only [largeOf, hlvE, hrt, this, Bool.not_false, Bool.and_true, LargeR, if_true]
+  exact ⟨rfl, hwl, hwe.symm⟩
+
 end L.Ind
