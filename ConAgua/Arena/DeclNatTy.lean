@@ -696,6 +696,106 @@ theorem natOpStoredOk_refines (hN : NatTyProg p) (w : Word) :
       (natOpStoredOk fe (decI w)) (KeepPost dn vis fe decW0B) :=
   (natOpStoredOk_ref hN w).refAM
 
+theorem slice_succ {o l : Word} (hl0 : l ≠ 0) (hb : o.toNat + l.toNat < 2 ^ 64) :
+    (o + 1).toNat = o.toNat + 1 ∧ (l - 1).toNat + 1 = l.toNat := by
+  have hpos : 0 < l.toNat := Nat.pos_of_ne_zero (fun h => hl0 (UInt64.toNat_inj.mp (by simpa using h)))
+  refine ⟨by rw [UInt64.toNat_add]; simp; omega, ?_⟩
+  rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]
+  simp; omega
+
+/-! ### `nat_op_stored_ok_all` -/
+
+def okAllW (p : Prog) (n : Nat) (m : Mem) (vis o l : Word) : Option (List Word × Mem) :=
+  if l = 0 then some ([1], m) else
+  bW (callW p n "nat_op_stored_ok" [vis, rdW (m.arr64 IW) o] m) fun r1 m1 =>
+  if r1.headD 0 = 0 then some ([0], m1) else
+  bW (callW p n "nat_op_stored_ok_all" [vis, o + 1, l - 1] m1) fun r2 m2 => some ([r2.headD 0], m2)
+
+theorem okAll_specW (p : Prog) (hp : p.lookup "nat_op_stored_ok_all" = some natOpStoredOkAllL)
+    (n : Nat) (s₀ : St) (vis o l : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_op_stored_ok_all" [vis, o, l]
+    ⦃fun r s' => LocEq s' s₀ ∧ okAllW p n s₀.mem vis o l = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, natOpStoredOkAllL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      callW_spec p n "nat_op_stored_ok", callW_spec p n "nat_op_stored_ok_all"] <;>
+    finish (gen := 20) [okAllW, bW]
+
+theorem natOpStoredOkAll_nil (fe : IFEnv) : natOpStoredOkAll fe [] = pure true := rfl
+
+theorem okAll_ref (hN : NatTyProg p) (o l : Word) (ns : List NIdx) :
+    ∀ (k : Nat) (m : Mem) (a : AState) (r : List Word) (m' : Mem), StageR dn vis fe m a →
+      decHL m o.toNat l.toNat = some ns → o.toNat + l.toNat ≤ iwTop m →
+      callW p k "nat_op_stored_ok_all" [vis, o, l] m = some (r, m') →
+      ∃ x a', (natOpStoredOkAll fe ns).run a = .ok (x, a') ∧ KeepPost dn vis fe decW0B m m' a' r x := by
+  induction ns generalizing o l with
+  | nil =>
+    intro k m a r m' hS hd hb hc
+    have hl0 : l = 0 := by
+      have : l.toNat = 0 := by simpa [decHL, hslice?] using (decHL_length m hd).symm
+      exact UInt64.toNat_inj.mp (by simpa using this)
+    cases k with
+    | zero => rw [callW_zero] at hc; cases hc
+    | succ k =>
+    have hw := callW_model (M := fun mm => okAllW p k mm vis o l) (okAll_specW p hN.lNatOpStoredOkAll k · vis o l) hc
+    simp only [okAllW, hl0, if_true, Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    exact ⟨true, a, rfl, hS, IWGrow.refl _, by simp [decW0B]⟩
+  | cons n ns ih =>
+    intro k m a r m' hS hd hb hc
+    cases k with
+    | zero => rw [callW_zero] at hc; cases hc
+    | succ k =>
+    obtain ⟨hl0, hwlt, hn, hrest⟩ := decHL_cons_iw hS.2.2.2.1 hd
+    have hw := callW_model (M := fun mm => okAllW p k mm vis o l) (okAll_specW p hN.lNatOpStoredOkAll k · vis o l) hc
+    unfold okAllW at hw
+    rw [if_neg hl0] at hw
+    cases h1 : callW p k "nat_op_stored_ok" [vis, rdW (m.arr64 IW) o] m with
+    | none => rw [h1] at hw; simp at hw
+    | some q1 =>
+    obtain ⟨r1, m1⟩ := q1
+    rw [h1, bW_some] at hw
+    subst hn
+    obtain ⟨x1, a1, hrun1, hS1, hg1, hx1⟩ := natOpStoredOk_ref (dn := dn) (vis := vis) (fe := fe) hN
+      (rdW (m.arr64 IW) o) k m a r1 m1 ⟨hS, hwlt⟩ h1
+    by_cases hz : r1.headD 0 = 0
+    · rw [if_pos hz] at hw
+      simp only [Option.some.injEq, Prod.mk.injEq] at hw
+      obtain ⟨rfl, rfl⟩ := hw
+      have hx : x1 = false := by have := hx1.1; rw [hz] at this; simpa using this.symm
+      refine ⟨false, a1, ?_, hS1, hg1, by simp [decW0B]⟩
+      simp only [natOpStoredOkAll, StateT.run_bind, hrun1, exc_ok_bind', hx, Bool.false_eq_true, if_false]
+      rfl
+    · rw [if_neg hz] at hw
+      have hx : x1 = true := by
+        have := hx1.1; have hne : (r1.headD 0 != 0) = true := by simpa using hz
+        rw [hne] at this; exact this.symm
+      cases h2 : callW p k "nat_op_stored_ok_all" [vis, o + 1, l - 1] m1 with
+      | none => rw [h2] at hw; simp at hw
+      | some q2 =>
+      obtain ⟨r2, m2⟩ := q2
+      rw [h2, bW_some] at hw
+      simp only [Option.some.injEq, Prod.mk.injEq] at hw
+      obtain ⟨rfl, rfl⟩ := hw
+      have hrest1 : decHL m1 (o + 1).toNat (l - 1).toNat = some ns := by
+        obtain ⟨ho1, hl1⟩ := slice_succ hl0 (decHL_bnd m o l hd hS.2.2.2.1)
+        rw [decHL_grow hg1 (by rw [ho1]; omega)]; exact hrest
+      have hb1 : (o + 1).toNat + (l - 1).toNat ≤ iwTop m1 := by
+        obtain ⟨ho1, hl1⟩ := slice_succ hl0 (decHL_bnd m o l hd hS.2.2.2.1)
+        have := hg1.1; rw [ho1]; omega
+      obtain ⟨x, a2, hrun2, hK⟩ := ih (o + 1) (l - 1) k m1 a1 r2 m2 hS1 hrest1 hb1 h2
+      refine ⟨x, a2, ?_, hK.1, hg1.trans hK.2.1, by simpa [decW0B] using hK.2.2⟩
+      simp only [natOpStoredOkAll, StateT.run_bind, hrun1, exc_ok_bind', hx, if_true]
+      exact hrun2
+
+@[refines ConRon.Arena.natOpStoredOkAll]
+theorem natOpStoredOkAll_refines (hN : NatTyProg p) (o l : Word) (ns : List NIdx) :
+    RefAM p "nat_op_stored_ok_all" [vis, o, l]
+      (fun m a => StageR dn vis fe m a ∧ decHL m o.toNat l.toNat = some ns ∧ o.toNat + l.toNat ≤ iwTop m)
+      (natOpStoredOkAll fe ns) (KeepPost dn vis fe decW0B) :=
+  CallRef.refAM (fun k m a r m' ⟨hS, hd, hb⟩ hc => okAll_ref hN o l ns k m a r m' hS hd hb hc)
+
 end ty
 
 end L.Ind
