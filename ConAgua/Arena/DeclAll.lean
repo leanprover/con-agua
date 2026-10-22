@@ -25,3 +25,11 @@ import ConAgua.Arena.DeclAxiomSpec3
 import ConAgua.Arena.DeclAxiomSpec4
 import ConAgua.Arena.DeclArmQuot
 import ConAgua.Arena.DeclArmAxiom
+import ConAgua.Arena.PromoteCITags
+
+/-!
+# Every declaration-loop module (lane `decls3`)
+
+Imports every module of the declaration loop's proofs, so one build checks them together and
+lemma-name clashes between files surface here (as `IndAll.lean` does for the inductive stage).
+-/
