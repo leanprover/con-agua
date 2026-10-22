@@ -93,7 +93,7 @@ end famRun
 /-- **`iota_rec_fam` refines the certificate family.** -/
 theorem iotaRecFam_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     (hw : WhnfCallees p) (hEI : ErecKeptInst p) (hER : ErecKeptRec p) (hEK : ErecKeptKnot p)
-    (hden : LvlsEqDen p) :
+    :
     ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
     ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode d us recP so usj ctorP rl mo mn sn : Word) (lps : List NIdx)
@@ -197,7 +197,7 @@ theorem iotaRecFam_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p
   rw [c3] at hW
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨hr, hm⟩ := hW
-  have hvk := iotaRecVck_refines' p hp hc hw hEI hER hEK hden N (hk.mono (by omega)) F
+  have hvk := iotaRecVck_refines' p hp hc hw hEI hER hEK N (hk.mono (by omega)) F
     (by omega) (by omega) ⟨m2, Locals.init []⟩ _ dn vis fe M2 eb mode d us recP so usj ctorP rl mo mn
     (rv.headD 0) sn lps rule cvj args margs hS2 hm4 hebm hus husj hr1
   simp only [e2] at hvk
@@ -437,7 +437,7 @@ theorem cpl_mkAppN (f : EIdx) (l : List EIdx) (a a' : AState) (x : EIdx)
 /-- **`iota_rec_fire2` refines the fire past the major's arguments.** -/
 theorem iotaRecFire2_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     (hw : WhnfCallees p) (hEI : ErecKeptInst p) (hER : ErecKeptRec p) (hEK : ErecKeptKnot p)
-    (hden : LvlsEqDen p) :
+    :
     ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
     ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode d c us recP so usj ctorP rl mo mn sn : Word) (lps : List NIdx)
@@ -525,7 +525,7 @@ theorem iotaRecFire2_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees
   obtain ⟨rf, m1⟩ := q
   rw [c1] at hW
   simp only at hW
-  have hfm := iotaRecFam_refines' p hp hc hw hEI hER hEK hden N (hk.mono (by omega)) F (by omega)
+  have hfm := iotaRecFam_refines' p hp hc hw hEI hER hEK N (hk.mono (by omega)) F (by omega)
     (by omega) ⟨s.mem, Locals.init []⟩ a₀ dn vis fe MM eb mode d us recP so usj ctorP rl mo mn sn lps
     rule cvj np nf args margs hS hm4 hebm hus husj
   simp only [hE0] at hfm
@@ -644,7 +644,7 @@ theorem iotaRecFire_spec (p : Prog) (hp : p.lookup "iota_rec_fire" = some iotaRe
 /-- **`iota_rec_fire` refines the fire** (the major's arguments, then `iotaRecFire2T`). -/
 theorem iotaRecFire_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     (hw : WhnfCallees p) (hEI : ErecKeptInst p) (hER : ErecKeptRec p) (hEK : ErecKeptKnot p)
-    (hden : LvlsEqDen p) :
+    :
     ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
     ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode d c us recP so usj ctorP rl major sn : Word) (lps : List NIdx)
@@ -699,7 +699,7 @@ theorem iotaRecFire_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees 
   obtain ⟨rf, m2⟩ := q
   rw [c2] at hW
   simp only at hW
-  have hf2 := iotaRecFire2_refines' p hp hc hw hEI hER hEK hden N (hk.mono (by omega)) F (by omega)
+  have hf2 := iotaRecFire2_refines' p hp hc hw hEI hER hEK N (hk.mono (by omega)) F (by omega)
     (by omega) ⟨m1, Locals.init []⟩ a₀ dn vis fe MM eb mode d c us recP so usj ctorP rl (ra.headD 0)
     (ra.tail.headD 0) sn lps rule cvj np nf args xs.toArray hS1 hm4 hebm hcw hus husj
   simp only [e1] at hf2
@@ -1013,7 +1013,7 @@ theorem findRule_found (p : Prog) (hp : p.lookup "find_rule" = some findRuleL) (
 /-- **`iota_rec_major` refines the major's block.** -/
 theorem iotaRecMajor_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
     (hw : WhnfCallees p) (hsup : ∀ fe : IFEnv, SupKeep fe) (hmtc : MajorToCtorOK p)
-    (hEI : ErecKeptInst p) (hER : ErecKeptRec p) (hEK : ErecKeptKnot p) (hden : LvlsEqDen p) :
+    (hEI : ErecKeptInst p) (hER : ErecKeptRec p) (hEK : ErecKeptKnot p) :
     ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
     ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode d c us recP so sn : Word) (cv : IConstantVal) (rules : List IRecRule)
@@ -1193,7 +1193,7 @@ theorem iotaRecMajor_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees
   rw [c6] at hW
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨h0, h1, hm⟩ := hW
-  have hfi := iotaRecFire_refines' p hp hc hw hEI hER hEK hden N (hk.mono (by omega)) F (by omega)
+  have hfi := iotaRecFire_refines' p hp hc hw hEI hER hEK N (hk.mono (by omega)) F (by omega)
     (by omega) ⟨m2, Locals.init []⟩ _ dn vis fe M2 eb mode d c us recP so (rv.tail.tail.headD 0)
     (re.tail.headD 0) (rr.tail.headD 0) (rm.headD 0) sn cv.levelParams rule cvj np nf xs hS2 hm4 hebm
     hcw hus husjw hr1

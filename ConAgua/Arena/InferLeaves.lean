@@ -719,41 +719,6 @@ theorem infer_decCV_words {b : Array Word} {q : Word} {cv : IConstantVal}
   rw [r1, r2, r3, r4]
   exact ⟨hl1, rfl, hl4, rfl, hs⟩
 
-/-- **A level-list handle `ls_node` reads is a node of the store**, its length the record's
-count. -/
-theorem lsNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h.toNat < 2 ^ 32)
-    (hne : lsNodeW m h ≠ []) :
-    ∃ ids : List LIdx, a.store.lss.view (decI h) = some ids ∧
-      (lsNodeW m h).tail.headD 0 = lsL m (tierW h) (idxW h) ∧
-      (lsL m (tierW h) (idxW h)).toNat = ids.length := by
-  have hg : h >>> 28 = 0 := Classical.byContradiction fun c => hne (by simp [lsNodeW, c])
-  have hsc : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun c => hne (by simp [lsNodeW, hg, c])
-  have hc : ¬ rdW (m.arr64 CTL) (40 + tierW h) ≤ idxW h := fun c => hne (by
-    rw [lsNodeW, if_neg (by simpa using hg), if_neg hsc, if_pos c])
-  have hval : lsNodeW m h = [lsO m (tierW h) (idxW h), lsL m (tierW h) (idxW h)] := by
-    rw [lsNodeW, if_neg (by simpa using hg), if_neg hsc, if_neg hc]
-  obtain ⟨x, hx, hr⟩ := storeR_node lsSch LsRecRel lshash m _ _ _ hR.ls (tierW h) (tierW_le h)
-    (idxW h) (by simp only [cntW, lsSch]; simpa using hc)
-  refine ⟨x.us, ?_, by rw [hval]; rfl, ?_⟩
-  · have hfl := hR.ls.2.1
-    have hpers : (decI h : LsIdx).isPersistent = (tierW h == 0) := by
-      rw [isPersistent_decI h hh]; rfl
-    have hget : ∀ T : LsTables, T.lists.nodes[(idxW h).toNat]? = some x →
-        T.get (decI h) = some x.us := fun T hT => by
-      simp only [LsTables.get, decLs_tag0 h hh, hg, beq_self_eq_true, ↓reduceIte, Tbl.node?,
-        decLs_idx h, hT, Option.map_some]
-    unfold LsStore.view
-    rw [hpers]
-    by_cases ht : tierW h = 0
-    · simp only [ht, ↓reduceIte] at hx; simp only [ht, beq_self_eq_true, ↓reduceIte]; exact hget _ hx
-    · simp only [ht, ↓reduceIte] at hx
-      have hon : a.store.lss.scratchOn = true := by
-        rw [← hfl]; simp only [bne_iff_ne, ne_eq]; exact fun h1 => hsc ⟨ht, h1⟩
-      simp only [ht, beq_iff_eq, ↓reduceIte, hon]; exact hget _ hx
-  · have := sliceL_length (m.arr64 POOL) (lsO m (tierW h) (idxW h)).toNat (lsL m (tierW h) (idxW h)).toNat
-    rw [hr.2.1] at this; simpa [lsWords] using this.symm
-
-
 theorem viewLs_run (h : LsIdx) (a : AState) (ids : List LIdx) (hv : a.store.lss.view h = some ids) :
     (viewLs h).run a = .ok (ids, a) := by
   simp [viewLs, hv, StateT.run_bind, StateT.run_get]; rfl

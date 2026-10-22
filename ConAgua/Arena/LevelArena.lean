@@ -442,6 +442,40 @@ theorem lsNodeW_store {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : 
     simp [lsNodeW, g0, hsc, hc]
   · simp [g0] at hg
 
+/-- **A level-list handle `ls_node` reads is a node of the store**, its length the record's
+count. -/
+theorem lsNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h.toNat < 2 ^ 32)
+    (hne : lsNodeW m h ≠ []) :
+    ∃ ids : List LIdx, a.store.lss.view (decI h) = some ids ∧
+      (lsNodeW m h).tail.headD 0 = lsL m (tierW h) (idxW h) ∧
+      (lsL m (tierW h) (idxW h)).toNat = ids.length := by
+  have hg : h >>> 28 = 0 := Classical.byContradiction fun c => hne (by simp [lsNodeW, c])
+  have hsc : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0) := fun c => hne (by simp [lsNodeW, hg, c])
+  have hc : ¬ rdW (m.arr64 CTL) (40 + tierW h) ≤ idxW h := fun c => hne (by
+    rw [lsNodeW, if_neg (by simpa using hg), if_neg hsc, if_pos c])
+  have hval : lsNodeW m h = [lsO m (tierW h) (idxW h), lsL m (tierW h) (idxW h)] := by
+    rw [lsNodeW, if_neg (by simpa using hg), if_neg hsc, if_neg hc]
+  obtain ⟨x, hx, hr⟩ := storeR_node lsSch LsRecRel lshash m _ _ _ hR.ls (tierW h) (tierW_le h)
+    (idxW h) (by simp only [cntW, lsSch]; simpa using hc)
+  refine ⟨x.us, ?_, by rw [hval]; rfl, ?_⟩
+  · have hfl := hR.ls.2.1
+    have hpers : (decI h : LsIdx).isPersistent = (tierW h == 0) := by
+      rw [isPersistent_decI h hh]; rfl
+    have hget : ∀ T : LsTables, T.lists.nodes[(idxW h).toNat]? = some x →
+        T.get (decI h) = some x.us := fun T hT => by
+      simp only [LsTables.get, decLs_tag0 h hh, hg, beq_self_eq_true, ↓reduceIte, Tbl.node?,
+        decLs_idx h, hT, Option.map_some]
+    unfold LsStore.view
+    rw [hpers]
+    by_cases ht : tierW h = 0
+    · simp only [ht, ↓reduceIte] at hx; simp only [ht, beq_self_eq_true, ↓reduceIte]; exact hget _ hx
+    · simp only [ht, ↓reduceIte] at hx
+      have hon : a.store.lss.scratchOn = true := by
+        rw [← hfl]; simp only [bne_iff_ne, ne_eq]; exact fun h1 => hsc ⟨ht, h1⟩
+      simp only [ht, beq_iff_eq, ↓reduceIte, hon]; exact hget _ hx
+  · have := sliceL_length (m.arr64 POOL) (lsO m (tierW h) (idxW h)).toNat (lsL m (tierW h) (idxW h)).toNat
+    rw [hr.2.1] at this; simpa [lsWords] using this.symm
+
 /-- The readback cache of lists holds readbacks. -/
 def ReadLsCOK (a : AState) : Prop :=
   ∀ (h : LsIdx) (ls : List Level), a.caches.readLsC[h]? = some ls → denoteLs a.store.lss h = some ls
@@ -514,7 +548,7 @@ theorem lvlsEq_refines {m m' : Mem} {a : AState} (hR : ArenaR m a)
     obtain ⟨e₁, t₁, s₁⟩ := lsNodeW_store hR hw₁ (by rw [decI_word]; exact hv₁)
     obtain ⟨e₂, t₂, s₂⟩ := lsNodeW_store hR hw₂ (by rw [decI_word]; exact hv₂)
     rw [e₁, e₂] at h
-    simp only [List.headD_cons, List.tail_cons] at h
+    simp only [List.headD_cons, List.tail_cons, reduceCtorEq, or_self, ↓reduceIte] at h
     have hR₀ : ArenaR (m.set64 CTL 192 0) a :=
       ArenaR.frame (by decide) c192_not_arena (reset_frame m) hR
     have hpool : (m.set64 CTL 192 0).arr64 POOL = m.arr64 POOL :=
