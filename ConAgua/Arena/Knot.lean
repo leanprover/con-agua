@@ -181,12 +181,21 @@ def AbstractRangeOK (p : Prog) : Prop :=
     CoreSpec p n "ar_entry" [e, d, k, c]
       (abstractRangeFast coreWalkFuel (decE e) d.toNat k.toNat c.toNat) decH s₀ a₀ dn vis fe M eb
 
+/-- The twin's name readback cache holds readbacks (as `ReadLCOK` for levels; `CoreS` has no
+such field yet: `readNameM` answers a cached row without looking at the store). -/
+def ReadNCOK (a : AState) : Prop :=
+  ∀ (h : NIdx) (x : ConLeche.Name), a.caches.readNC[h]? = some x → denoteN a.store.ns h = some x
+
 /-- `field_sort_zero(po, pl, us, fs)` refines `fieldSortZeroT` (the level parameters an `EREC`
-slice; lane `levels`' heap algorithms, not wired for this use yet). -/
+slice; `InferFieldSort.lean`). The twin's three readbacks fail on a dangling handle, which L
+cannot see: the caller supplies that they succeed (and that the name cache holds readbacks). -/
 def FieldSortZeroOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (M : ModeMaps) (eb po pl us fs : Word) (lps : List NIdx), CoreS dn s₀.mem a₀ vis fe M eb →
     HW us → HW fs → hslice? (s₀.mem.arr64 EREC) po.toNat pl.toNat = some lps →
+    ReadNCOK a₀ → (∃ ks, lps.mapM (denoteN a₀.store.ns) = some ks) →
+    (∃ ls, denoteLs a₀.store.lss (decI us) = some ls) →
+    (∃ l, denoteL a₀.store.ls (decI fs) = some l) →
     CoreSpec p n "field_sort_zero" [po, pl, us, fs] (fieldSortZeroT lps (decI us) (decI fs)) decBool
       s₀ a₀ dn vis fe M eb
 
