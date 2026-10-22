@@ -438,3 +438,136 @@ theorem nestPosFvar_spec (p : Prog) (L : PfLook p) (n : Nat) (s₀ : St) (vis ct
       finish (gen := 20) (instances := 5000) [pfW, pfK1_eq, pfK2_eq, pfK3_eq, rdW_eq]
 
 end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+/-- The twin's `.fvar` arm of `nestPos`, up to the field kind. -/
+def pfT (fe : IFEnv) (c : NestCtx) (prog : List NestHole) (kb hi i : Nat) (args : List EIdx) :
+    AM NestFieldKind :=
+  match ConRon.Arena.nestHoleAt c prog i with
+  | none => fail nestNonValid
+  | some h => do
+    if ← args.anyM (fun x => ConRon.Arena.nestOcc c.names c.nP hi x) then fail nestNonValid
+    else do
+      let ar ← ConRon.Arena.nestArity fe h.key.cname
+      if args.length + h.key.ds.length == ar then pure (holeKind c kb i) else fail nestNonValid
+
+theorem nestHoleAt_nP {c : NestCtx} {prog : List NestHole} {i : Nat} {h : NestHole}
+    (e : ConRon.Arena.nestHoleAt c prog i = some h) : c.nP ≤ i := by
+  unfold ConRon.Arena.nestHoleAt at e; split at e
+  · assumption
+  · cases e
+
+/-- A hole decoded below the top: its key's name and `ds` length as the words L reads. -/
+theorem nh_key_words {m : Mem} {p : Word} {hl : NestHole} (hd : decNH m p.toNat = some hl)
+    (hin : NHIn m p.toNat (· < iwTop m)) (htop : iwTop m < 2 ^ 64) :
+    H (rdW (m.arr64 IW) (rdW (m.arr64 IW) p)) ∧ decI (rdW (m.arr64 IW) (rdW (m.arr64 IW) p)) = hl.key.cname ∧
+      (rdW (m.arr64 IW) (rdW (m.arr64 IW) p + 3)).toNat = hl.key.ds.length := by
+  obtain ⟨k, hk, hK⟩ := decNH_fields hd
+  have hkin := hin.2.2 k hk
+  have hp0 := hin.1
+  have hk0 := hkin.1 0 (by omega)
+  have hklt : k < 2 ^ 64 := by omega
+  have hk' : (UInt64.ofNat k : Word).toNat = k := UInt64.toNat_ofNat_of_lt' hklt
+  have hrd : rdW (m.arr64 IW) p = UInt64.ofNat k := by
+    have := rd_iwN (m := m) (p := p) (i := 0) (by simpa using hk) (by simp; omega)
+    apply UInt64.toNat_inj.mp; rw [hk']
+    simpa using this
+  rw [hrd]
+  obtain ⟨h0, h1, -, -, h4, -, -⟩ := nk_fields (key := UInt64.ofNat k) (by rw [hk']; exact hK) (by rw [hk']; exact hkin) htop
+  exact ⟨h0, h1, by rw [← decHL_length m h4]⟩
+
+theorem pfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (hM : PosMemo dn vis fe)
+    {k : Nat} {m m' : Mem} {a : AState} {ctx po pl kb hi i aO aL : Word} {c : NestCtx}
+    {prog : List NestHole} {args : List EIdx} {r : List Word}
+    (h : pfW k m vis ctx po pl kb hi i aO aL = some (r, m')) (hS : StageR dn vis fe m a)
+    (hU : UCtx dn vis fe m ctx c) (hpr : HSl m po.toNat pl.toNat prog) (hhi : c.hiAt 0 < 2 ^ 64)
+    (hargs : decHL m aO.toNat aL.toNat = some args) (hab : aO.toNat + aL.toNat ≤ iwTop m) :
+    ∃ x a', (pfT fe c prog kb.toNat hi.toNat i.toNat args).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
+      IWGrow m m' ∧ decNFK (r.headD 0) = some x := by
+  cases k with
+  | zero => simp [pfW] at h
+  | succ k =>
+  simp only [pfW] at h
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  cases k with
+  | zero => simp [haWf, pfK1] at h
+  | succ k =>
+  cases hha : haWf (k + 1) m ctx po pl i with
+  | none => rw [hha] at h; simp [pfK1] at h
+  | some pr =>
+  obtain ⟨r1, m1⟩ := pr
+  rw [hha, pfK1_eq] at h
+  obtain ⟨hS1, hg1, hon⟩ := haW_ok k dn fe vis a m m1 ctx po pl i r1 c prog (by simpa [haWf] using hha) hS hU.dec
+    hU.inn hpr
+  cases hnh : ConRon.Arena.nestHoleAt c prog i.toNat with
+  | none =>
+    rw [hnh] at hon; simp only [decONH] at hon
+    rw [if_pos hon] at h; cases h
+  | some hl =>
+  rw [hnh] at hon
+  obtain ⟨hon1, hdec, hnin⟩ := hon
+  rw [if_neg (by rw [hon1]; decide)] at h
+  have hU1 := hU.grow hg1
+  have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
+  obtain ⟨hn1, -, -, -, hnP1, -⟩ := ctx_fields hU1.dec hU1.inn htop1
+  have hne1 := ctx_names_end hU1.dec hU1.inn hU1.sl htop1
+  cases hoa : noaW (k + 1) m1 (rdW (m1.arr64 IW) ctx) (rdW (m1.arr64 IW) (ctx + 1)) (rdW (m1.arr64 IW) (ctx + 4))
+      hi aO aL with
+  | none => rw [hoa] at h; simp [pfK2] at h
+  | some pr2 =>
+  obtain ⟨r2, m2⟩ := pr2
+  rw [hoa, pfK2_eq] at h
+  obtain ⟨b, hrunoa, hS2, hg2, hr2⟩ := noaW_ok dn fe vis _ _ _ _ c.names hM.no (k + 1) m1 m2 a _ _ args r2 hoa hS1
+    hn1 hne1 (by rw [decHL_agree (RdS.of_grow hg1) (fun j hj => by omega)]; exact hargs)
+    (fun j hj => by have := hg1.1; omega)
+  rw [hnP1] at hrunoa
+  cases b with
+  | true => rw [if_pos (by rw [hr2]; decide)] at h; cases h
+  | false =>
+  rw [if_neg (by rw [hr2]; decide)] at h
+  have htop2 : iwTop m2 < 2 ^ 64 := Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1
+  obtain ⟨hd2, hnin2⟩ := hnin.grow hg2
+  rw [← hd2] at hdec
+  obtain ⟨hcH, hcd, hdl⟩ := nh_key_words hdec hnin2 htop2
+  cases hna : naWf (k + 1) m2 vis (rdW (m2.arr64 IW) (rdW (m2.arr64 IW) (r1.tail.headD 0))) with
+  | none => rw [hna] at h; simp [pfK3] at h
+  | some pr3 =>
+  obtain ⟨r3, m3⟩ := pr3
+  rw [hna, pfK3_eq] at h
+  obtain ⟨ar, a3, hrun3, hS3, hg3, hr3⟩ := naW_ok dn fe vis _ hcH k m2 m3 a r3 (by simpa [naWf] using hna) hS2
+  rw [hcd] at hrun3
+  have hal := decHL_length m hargs
+  by_cases hov : aL + rdW (m2.arr64 IW) (rdW (m2.arr64 IW) (r1.tail.headD 0) + 3) < aL
+  · rw [if_pos hov] at h; cases h
+  rw [if_neg hov] at h
+  have hsum : (aL + rdW (m2.arr64 IW) (rdW (m2.arr64 IW) (r1.tail.headD 0) + 3)).toNat =
+      aL.toNat + hl.key.ds.length := by
+    rw [← hdl]
+    rcases Nat.lt_or_ge (aL.toNat + (rdW (m2.arr64 IW) (rdW (m2.arr64 IW) (r1.tail.headD 0) + 3)).toNat) (2 ^ 64)
+      with hl' | hl'
+    · exact word_add_toNat hl'
+    · exfalso; apply hov; apply UInt64.lt_iff_toNat_lt.mpr; rw [UInt64.toNat_add]
+      have := aL.toNat_lt; have := (rdW (m2.arr64 IW) (rdW (m2.arr64 IW) (r1.tail.headD 0) + 3)).toNat_lt; omega
+  by_cases hne : aL + rdW (m2.arr64 IW) (rdW (m2.arr64 IW) (r1.tail.headD 0) + 3) ≠ r3.headD 0
+  · rw [if_pos hne] at h; cases h
+  rw [if_neg hne] at h
+  have heq : args.length + hl.key.ds.length = ar := by
+    rw [hal, ← hsum, ← hr3]; simp only [ne_eq, Decidable.not_not] at hne; rw [hne]
+  cases hk : hkWf (k + 1) m3 ctx kb i with
+  | none => rw [hk] at h; cases h
+  | some w =>
+  rw [hk] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  have hU3 := (hU1.grow hg2).grow hg3
+  have htop3 : iwTop m3 < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.2.1 hS3.2.2.2.1
+  have hw := hkW_ok (by simpa [hkWf] using hk) hU3.dec hU3.inn htop3 hhi (nestHoleAt_nP hnh)
+  refine ⟨holeKind c kb.toNat i.toNat, a3, ?_, hS3, (hg1.trans hg2).trans hg3, by simpa using hw⟩
+  simp only [pfT, hnh, StateT.run_bind, hrunoa, except_ok_bind, Bool.false_eq_true, ite_false, hrun3, heq,
+    beq_self_eq_true, ite_true]
+  rfl
+
+end L.Ind
