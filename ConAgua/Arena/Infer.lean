@@ -424,7 +424,7 @@ def inferProjAtL : FunDecl :=
   if usl != EREC.u64[q + 4] { abort };
   z := call pin_word(53);
   ok := call lvl_eq_c(EREC.u64[q + 8], z);
-  if ok == 2 {
+  if 2 <= ok {
     fs := 0;
     if i < EREC.u64[q + 12] { fs := EREC.u64[EREC.u64[q + 11] + i] };
     ok := call field_sort_zero(EREC.u64[q + 3], EREC.u64[q + 4], us, fs);
@@ -439,7 +439,7 @@ def inferProjAtL : FunDecl :=
 con-ron: ConRon/Arena/Core.lean:296-307 ConRon.Arena.projMissError -/
 @[l_impl ConRon.Arena.inferProj ConRon.Arena.projMissError]
 def inferProjL : FunDecl :=
-    lfn (mode, io, vis, d, sn, i, pe) locals (it, te, hh, t, x, f, q, r) {
+    lfn (mode, io, vis, d, sn, i, pe) locals (it, te, hh, t, x, f, q, r, cT, cu) {
   if io != 0 { it := call infer_io(mode, vis, d, pe) } else { it := call infer(mode, vis, d, pe) };
   te := call whnf(mode, vis, d, it);
   hh := call get_app_fn(te);
@@ -448,9 +448,11 @@ def inferProjL : FunDecl :=
   x := hh & 134217727;
   if t != 0 && CTL.u64[1] == 0 { abort };
   if CTL.u64[18 + t] <= x { abort };
-  (f, q) := call find_proj(vis, CREC.u64[x * 4 + t * 2], i);
+  cT := CREC.u64[x * 4 + t * 2];
+  cu := CREC.u64[x * 4 + t * 2 + 1];
+  (f, q) := call find_proj(vis, cT, i);
   if f == 0 { abort };
-  r := call infer_proj_at(vis, sn, i, pe, te, CREC.u64[x * 4 + t * 2], CREC.u64[x * 4 + t * 2 + 1], q);
+  r := call infer_proj_at(vis, sn, i, pe, te, cT, cu, q);
   return r
 }
 
