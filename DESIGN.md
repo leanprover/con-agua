@@ -6189,6 +6189,24 @@ start 136 / 11 / 93 / 91); totals 558 proven / 71 sorry of 1352.
   caught them.
 * Census: phase 8 **65 proven, 47 sorry, 103 written, 8 todo**.
 
+### Landing 4: helper `pos` done; lane `whnf`'s entry points
+* Helper `pos` (5 h, with one fork of its own): all of `IndPos` (`NestCtx.rootHoles`, `nestHoleAt`
+  sorry-free; `nestContainer`, `fvMapAt`, `nestHoleImg`, `replaceFVarsGo`/`replaceFVars` — one
+  strong induction on the exec fuel, the banked memo as `RfInv` —, `nestCrest` through stubs), and
+  11 of 23 `IndPos2` targets (`nestArity`, `piDomsOcc` sorry-free; `nestCtorNf`, `nestSeedOf`,
+  `nestHoles`, `nestWalkStack`, `nestGroupCtors`, `nestRootCanon`, `nestUniformOk`, `nestUniform`,
+  `nestInstType` through stubs). Open: `nestGrowGroup` (a WIP outside the tree), `nestAcceptGroup`,
+  the `nestPos` block (`nestFields`, `nestCtors`, `nestFrame`, `nestContNew/Key`, `nestCont`,
+  `nestPos`), `nestRoot`, `nestSeeds`. Hypotheses its parents must discharge: `RfInv` before the
+  banked walk, a well-formed `replace_apps` memo (`hMstage`), record/slice bounds (`CtorSums`,
+  `CtxIn`, `CtxSl`, `HSl`, `FMOk`, `CVSl`). L: ten loops to self-recursion, handle guards after
+  `intern_sort`, `intern_const`, `replace_apps`; no bugs found. ~7.2k proof lines for ~420 L lines.
+* **Lane `whnf`'s hand-off done**: the stage's call sites and stubs use `whnf_top`,
+  `get_app_fn_f`, `get_app_args_f`, `mk_app_n_f`, `pi_result_f` (`WhnfEntry.lean`'s conventions);
+  their specs are still `IndStubs`' `sorry`'d `RelAM` statements (the adapters' `StageR` specs need
+  the `CoreS` bridge, landing 1's "tried and dropped").
+* Helper `parts` started (IndParts/IndInstall, stub-free leaves first).
+* Census: phase 8 **67 proven, 57 sorry, 91 written, 8 todo**.
 ### The ROM stubs' specs (`DeclRomStubs.lean`), for lane `romload`
 
 The arms read con-leche values the twin interns at the point of use. Their L readers are the

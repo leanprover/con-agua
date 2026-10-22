@@ -382,7 +382,7 @@ def recTK1 (n : Nat) (no nl : Word) : Option (List Word × Mem) → Option (List
 /-- After the major's `e_view`. -/
 def recTK2 (n : Nat) (no nl : Word) (m1 : Mem) : List Word → Option (List Word × Mem)
   | [] => none
-  | v => recTK3 n no nl (stubM "get_app_fn" m1 [CWF, v.getD 1 0])
+  | v => recTK3 n no nl (stubM "get_app_fn_f" m1 [CWF, v.getD 1 0])
 
 /-- After `get_app_fn`. -/
 def recTK3 (n : Nat) (no nl : Word) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -416,7 +416,7 @@ theorem recTK1_some_f (h : r.headD 0 ≠ 0) (h2 : ¬ r.tail.tail.tail.headD 0 >>
   simp only [recTK1]; rw [if_neg h, if_neg h2]
 theorem recTK2_nil : recTK2 n no nl m1 [] = none := rfl
 theorem recTK2_ne (h : v ≠ []) :
-    recTK2 n no nl m1 v = recTK3 n no nl (stubM "get_app_fn" m1 [CWF, v.getD 1 0]) := by
+    recTK2 n no nl m1 v = recTK3 n no nl (stubM "get_app_fn_f" m1 [CWF, v.getD 1 0]) := by
   cases v with
   | nil => exact absurd rfl h
   | cons a as => rfl
@@ -463,7 +463,7 @@ theorem recTargetOf_spec (n : Nat) (s₀ : St) (no nl mI ty : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "strip_pis" n, stubM_spec p "get_app_fn" n, eViewSpec4 p hv n,
+        stubM_spec p "strip_pis" n, stubM_spec p "get_app_fn_f" n, eViewSpec4 p hv n,
         slFind_spec p hf n] <;>
       finish (gen := 20)
 
@@ -558,7 +558,7 @@ theorem recTW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEn
             tierW (r1.tail.tail.tail.headD 0) * 2) := by rw [hew]; rfl
       have hdomlt : ((eViewW m1 (r1.tail.tail.tail.headD 0)).getD 1 0).toNat < 2 ^ 32 := by
         rw [hdomw]; exact hty2
-      cases hra3 : stubM "get_app_fn" m1 [CWF, (eViewW m1 (r1.tail.tail.tail.headD 0)).getD 1 0] with
+      cases hra3 : stubM "get_app_fn_f" m1 [CWF, (eViewW m1 (r1.tail.tail.tail.headD 0)).getD 1 0] with
       | none => rw [hra3] at hrt; simp [recTK3] at hrt
       | some rm3 =>
       obtain ⟨r3, m3⟩ := rm3

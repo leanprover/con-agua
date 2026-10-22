@@ -488,7 +488,7 @@ theorem classMinorSlot_refines (p : Prog)
 
 /-- The word model of `class_leaf_at`. -/
 def leafAtW (m : Mem) (mm leaf : Word) : Option (List Word × Mem) :=
-  match stubM "get_app_fn" m [CWF, leaf] with
+  match stubM "get_app_fn_f" m [CWF, leaf] with
   | none => none
   | some (r, m1) =>
     if r.headD 0 >>> 28 ≠ 3 then some ([0], m1)
@@ -502,7 +502,7 @@ theorem leafAt_spec (p : Prog) (hp : p.lookup "class_leaf_at" = some classLeafAt
   rw [invoke_eq _ hp]; simp only [callFn, classLeafAtL]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      stubM_spec p "get_app_fn" n, eView_spec p hv n] <;>
+      stubM_spec p "get_app_fn_f" n, eView_spec p hv n] <;>
     finish (gen := 20) [leafAtW, rdW_eq]
 
 theorem leafAtW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
@@ -512,7 +512,7 @@ theorem leafAtW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv
     ∃ b a', (ConRon.Arena.classLeafAt bigM (decI leaf)).run a = .ok (b, a') ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' ∧ (r.headD 0 != 0) = b ∧ (r.headD 0).toNat ≤ 1 := by
   simp only [leafAtW] at h
-  cases hs : stubM "get_app_fn" m [CWF, leaf] with
+  cases hs : stubM "get_app_fn_f" m [CWF, leaf] with
   | none => rw [hs] at h; simp at h
   | some r1m =>
     obtain ⟨r1, m1⟩ := r1m

@@ -27,15 +27,15 @@ theorem simFvarTypeD (hS : StageR dn vis fe m a) {e : Word} (he : H e) :
   (fvarTypeD_spec dn vis fe e he).sim hS
 
 theorem simPiResult (hS : StageR dn vis fe m a) {e : Word} (he : H e) :
-    RSim (stubM "pi_result" m [CWF, e]) (piResult coreWalkFuel (decI e)) a (KP dn vis fe m decW0E) := by
+    RSim (stubM "pi_result_f" m [CWF, e]) (piResult coreWalkFuel (decI e)) a (KP dn vis fe m decW0E) := by
   have h := (piResult_spec dn vis fe CWF e he).sim hS; rw [CWF_eq] at h; exact h
 
 theorem simGetAppFn (hS : StageR dn vis fe m a) {e : Word} (he : H e) :
-    RSim (stubM "get_app_fn" m [CWF, e]) (getAppFn coreWalkFuel (decI e)) a (KP dn vis fe m decW0E) := by
+    RSim (stubM "get_app_fn_f" m [CWF, e]) (getAppFn coreWalkFuel (decI e)) a (KP dn vis fe m decW0E) := by
   have h := (getAppFn_spec dn vis fe CWF e he).sim hS; rw [CWF_eq] at h; exact h
 
 theorem simGetAppArgs (hS : StageR dn vis fe m a) {e : Word} (he : H e) :
-    RSim (stubM "get_app_args" m [CWF, e]) (getAppArgs coreWalkFuel (decI e)) a
+    RSim (stubM "get_app_args_f" m [CWF, e]) (getAppArgs coreWalkFuel (decI e)) a
       (KP dn vis fe m (decRL (fun m => decHL m) 0)) := by
   have h := (getAppArgs_spec dn vis fe CWF e he).sim hS; rw [CWF_eq] at h; exact h
 
