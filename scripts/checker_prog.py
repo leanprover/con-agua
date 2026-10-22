@@ -29,8 +29,10 @@ ROOT = e2e.ROOT
 OUT = os.path.join(ROOT, "ConAgua", "Checker", "Prog.lean")
 ENTRY_SOURCES = ["L.Checker.entryProg", "L.Checker.preludeProg"]
 PRE = "pre_"
-# the frontend's input and parse-state id tables (`ConAgua/Checker/Prelude.lean`, `preFn`)
-TOUCH = re.compile(r"\((?:l8|s8) 0 |\(n8 0\)|\((?:l64|s64) 6[4-6] |\(n64 6[4-6]\)")
+# the frontend's input and parse-state id tables (`ConAgua/Checker/Prelude.lean`, `preFn`): the
+# dense arrays 64-66, the sparse arrays 72-74, their `CTL` words 64-72
+TOUCH = re.compile(r"\((?:l8|s8) 0 |\(n8 0\)|\((?:l64|s64) (?:6[4-6]|7[2-4]) |\(n64 (?:6[4-6]|7[2-4])\)"
+                   r"|\((?:l64|s64) 1 \(c (?:6[4-9]|7[0-2])\)")
 ENTRY = "check"
 # modules never imported: the benchmarks (they clash with `NatBits` on `L.Arena.bv`), the generated
 # file itself and what imports it
@@ -222,7 +224,7 @@ def main():
     imports = sorted({m for f in reach for m in res[f][0]} - {"ConAgua.Checker.Entry", "ConAgua.Checker.Prelude"})
     imports = [m for m in imports if m.startswith("ConAgua.")]
     entries = [f"  ({lean_str(f)}, {res[f][1]})" for f in reach]
-    entries += [f"  ({lean_str(PRE + f)}, preFn preTree {res[f][1]})" for f in pre]
+    entries += [f"  ({lean_str(PRE + f)}, preFn preTree ({res[f][1]}))" for f in pre]
     entries += [f"  ({lean_str(g)}, abortStub {n})" for g, n in sorted(stubs.items())]
     txt = HEADER.format(imports="\n".join(f"import {m}" for m in imports), nfun=len(entries),
                         nstub=len(stubs), stub_names=", ".join(lean_str(g) for g in sorted(stubs)),

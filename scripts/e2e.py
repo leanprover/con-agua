@@ -637,7 +637,8 @@ def report(res, asm, compiled, clashes, args, t0):
 
 
 def max_id(path):
-    """The largest export id (`in`, `il`, `ie`) in a fixture."""
+    """The largest export id (`in`, `il`, `ie`) in a fixture (the dense id tables are sized for it, up
+    to `DIFF_BIG_WORDS`; larger ids go to the tables' sparse overflow)."""
     best = 0
     with open(path, "rb") as fh:
         for m in re.finditer(rb'"i[nle]":(\d+)', fh.read()):
@@ -892,12 +893,12 @@ def main():
                              "con-ron": perf_instr(guard, [CON_RON, "--jobs=1", "--pins", conron_pins, path])}
         if not args.no_diff and fid in diff_set:
             st, out = guard.run([os.path.join(BIN, "e2e-diff"), prog, path, str(DIFF_N), str(DIFF_WORDS),
-                                 str(max_id(path) + 2)], T_DIFF, env=env)
+                                 str(min(max_id(path) + 2, DIFF_BIG_WORDS))], T_DIFF, env=env)
             r["diff"] = parse_diff(out, st)
             if (r["diff"]["front"] or "").startswith("L error") and (r["diff"]["front"] or "").endswith("twin ok"):
                 # capacities: once more with larger arrays (`L.run` holds every array in full)
                 st, out = guard.run([os.path.join(BIN, "e2e-diff"), prog, path, str(DIFF_N), str(DIFF_BIG_WORDS),
-                                     str(max_id(path) + 2)], T_DIFF, env=env)
+                                     str(min(max_id(path) + 2, DIFF_BIG_WORDS))], T_DIFF, env=env)
                 r["diff"] = parse_diff(out, st)
         return r
 

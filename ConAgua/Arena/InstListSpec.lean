@@ -27,9 +27,9 @@ variable (p : Prog) (hp : InstListProg p)
 
 set_option maxHeartbeats 1000000 in
 include hp in
-theorem ilApp_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "il_app" [h, d, o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ ilAppW (n + 1) s₀.mem h d o l = some (r.headD 0, s'.mem); ⊤⦄ := by
+theorem ilApp_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l fu : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "il_app" [h, d, o, l, fu]
+    ⦃fun r s' => LocEq s' s₀ ∧ ilAppW (n + 1) s₀.mem h d o l fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold IlGoSpec at ih
   rw [invoke_eq _ hp.app]
   simp only [callFn, ilApp]
@@ -41,9 +41,9 @@ theorem ilApp_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l : Word) :
 
 set_option maxHeartbeats 1000000 in
 include hp in
-theorem ilLam_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "il_lam" [h, d, o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ ilLamW (n + 1) s₀.mem h d o l = some (r.headD 0, s'.mem); ⊤⦄ := by
+theorem ilLam_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l fu : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "il_lam" [h, d, o, l, fu]
+    ⦃fun r s' => LocEq s' s₀ ∧ ilLamW (n + 1) s₀.mem h d o l fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold IlGoSpec at ih
   rw [invoke_eq _ hp.lam]
   simp only [callFn, ilLam]
@@ -55,9 +55,9 @@ theorem ilLam_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l : Word) :
 
 set_option maxHeartbeats 1000000 in
 include hp in
-theorem ilForall_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "il_forall" [h, d, o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ ilForallW (n + 1) s₀.mem h d o l = some (r.headD 0, s'.mem); ⊤⦄ := by
+theorem ilForall_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l fu : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "il_forall" [h, d, o, l, fu]
+    ⦃fun r s' => LocEq s' s₀ ∧ ilForallW (n + 1) s₀.mem h d o l fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold IlGoSpec at ih
   rw [invoke_eq _ hp.fa]
   simp only [callFn, ilForall]
@@ -69,9 +69,9 @@ theorem ilForall_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l : Word)
 
 set_option maxHeartbeats 1000000 in
 include hp in
-theorem ilLet_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "il_let" [h, d, o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ ilLetW (n + 1) s₀.mem h d o l = some (r.headD 0, s'.mem); ⊤⦄ := by
+theorem ilLet_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l fu : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "il_let" [h, d, o, l, fu]
+    ⦃fun r s' => LocEq s' s₀ ∧ ilLetW (n + 1) s₀.mem h d o l fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold IlGoSpec at ih
   rw [invoke_eq _ hp.le]
   simp only [callFn, ilLet]
@@ -83,9 +83,9 @@ theorem ilLet_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l : Word) :
 
 set_option maxHeartbeats 1000000 in
 include hp in
-theorem ilProj_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "il_proj" [h, d, o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ ilProjW (n + 1) s₀.mem h d o l = some (r.headD 0, s'.mem); ⊤⦄ := by
+theorem ilProj_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l fu : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "il_proj" [h, d, o, l, fu]
+    ⦃fun r s' => LocEq s' s₀ ∧ ilProjW (n + 1) s₀.mem h d o l fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold IlGoSpec at ih
   rw [invoke_eq _ hp.pj]
   simp only [callFn, ilProj]
@@ -97,9 +97,9 @@ theorem ilProj_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l : Word) :
 
 set_option maxHeartbeats 1000000 in
 include hp in
-theorem ilBVar_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "il_bvar" [h, d, o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ ilBVarW (n + 1) s₀.mem h d o l = some (r.headD 0, s'.mem); ⊤⦄ := by
+theorem ilBVar_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l fu : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "il_bvar" [h, d, o, l, fu]
+    ⦃fun r s' => LocEq s' s₀ ∧ ilBVarW (n + 1) s₀.mem h d o l fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold IlGoSpec at ih
   rw [invoke_eq _ hp.bv]
   simp only [callFn, ilBVar]
@@ -111,9 +111,9 @@ theorem ilBVar_step (n : Nat) (ih : IlGoSpec p n) (s₀ : St) (h d o l : Word) :
 
 set_option maxHeartbeats 1000000 in
 include hp in
-theorem ilgApp_step (n : Nat) (ih : IlgGoSpec p n) (s₀ : St) (h d o l : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ilg_app" [h, d, o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ ilgAppW (n + 1) s₀.mem h d o l = some (r.headD 0, s'.mem); ⊤⦄ := by
+theorem ilgApp_step (n : Nat) (ih : IlgGoSpec p n) (s₀ : St) (h d o l fu : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ilg_app" [h, d, o, l, fu]
+    ⦃fun r s' => LocEq s' s₀ ∧ ilgAppW (n + 1) s₀.mem h d o l fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold IlgGoSpec at ih
   rw [invoke_eq _ hp.gapp]
   simp only [callFn, ilgApp]
@@ -125,9 +125,9 @@ theorem ilgApp_step (n : Nat) (ih : IlgGoSpec p n) (s₀ : St) (h d o l : Word) 
 
 set_option maxHeartbeats 1000000 in
 include hp in
-theorem ilgLam_step (n : Nat) (ih : IlgGoSpec p n) (s₀ : St) (h d o l : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ilg_lam" [h, d, o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ ilgLamW (n + 1) s₀.mem h d o l = some (r.headD 0, s'.mem); ⊤⦄ := by
+theorem ilgLam_step (n : Nat) (ih : IlgGoSpec p n) (s₀ : St) (h d o l fu : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ilg_lam" [h, d, o, l, fu]
+    ⦃fun r s' => LocEq s' s₀ ∧ ilgLamW (n + 1) s₀.mem h d o l fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold IlgGoSpec at ih
   rw [invoke_eq _ hp.glam]
   simp only [callFn, ilgLam]
@@ -139,9 +139,9 @@ theorem ilgLam_step (n : Nat) (ih : IlgGoSpec p n) (s₀ : St) (h d o l : Word) 
 
 set_option maxHeartbeats 1000000 in
 include hp in
-theorem ilgForall_step (n : Nat) (ih : IlgGoSpec p n) (s₀ : St) (h d o l : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ilg_forall" [h, d, o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ ilgForallW (n + 1) s₀.mem h d o l = some (r.headD 0, s'.mem); ⊤⦄ := by
+theorem ilgForall_step (n : Nat) (ih : IlgGoSpec p n) (s₀ : St) (h d o l fu : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ilg_forall" [h, d, o, l, fu]
+    ⦃fun r s' => LocEq s' s₀ ∧ ilgForallW (n + 1) s₀.mem h d o l fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold IlgGoSpec at ih
   rw [invoke_eq _ hp.gfa]
   simp only [callFn, ilgForall]
@@ -153,9 +153,9 @@ theorem ilgForall_step (n : Nat) (ih : IlgGoSpec p n) (s₀ : St) (h d o l : Wor
 
 set_option maxHeartbeats 1000000 in
 include hp in
-theorem ilgLet_step (n : Nat) (ih : IlgGoSpec p n) (s₀ : St) (h d o l : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ilg_let" [h, d, o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ ilgLetW (n + 1) s₀.mem h d o l = some (r.headD 0, s'.mem); ⊤⦄ := by
+theorem ilgLet_step (n : Nat) (ih : IlgGoSpec p n) (s₀ : St) (h d o l fu : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ilg_let" [h, d, o, l, fu]
+    ⦃fun r s' => LocEq s' s₀ ∧ ilgLetW (n + 1) s₀.mem h d o l fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold IlgGoSpec at ih
   rw [invoke_eq _ hp.gle]
   simp only [callFn, ilgLet]
@@ -167,9 +167,9 @@ theorem ilgLet_step (n : Nat) (ih : IlgGoSpec p n) (s₀ : St) (h d o l : Word) 
 
 set_option maxHeartbeats 1000000 in
 include hp in
-theorem ilgProj_step (n : Nat) (ih : IlgGoSpec p n) (s₀ : St) (h d o l : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ilg_proj" [h, d, o, l]
-    ⦃fun r s' => LocEq s' s₀ ∧ ilgProjW (n + 1) s₀.mem h d o l = some (r.headD 0, s'.mem); ⊤⦄ := by
+theorem ilgProj_step (n : Nat) (ih : IlgGoSpec p n) (s₀ : St) (h d o l fu : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ilg_proj" [h, d, o, l, fu]
+    ⦃fun r s' => LocEq s' s₀ ∧ ilgProjW (n + 1) s₀.mem h d o l fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold IlgGoSpec at ih
   rw [invoke_eq _ hp.gpj]
   simp only [callFn, ilgProj]
@@ -185,8 +185,8 @@ theorem instList_spec (n : Nat) :
     IlGoSpec p n ∧ IlArmSpec p n ∧ IlgGoSpec p n ∧ IlgArmSpec p n := by
   induction n with
   | zero =>
-    refine ⟨fun s₀ h d o l => ?_, fun s₀ h d o l => ⟨?_, ?_, ?_, ?_, ?_, ?_⟩,
-      fun s₀ h d o l => ?_, fun s₀ h d o l => ⟨?_, ?_, ?_, ?_, ?_⟩⟩ <;>
+    refine ⟨fun s₀ h d o l fu => ?_, fun s₀ h d o l fu => ⟨?_, ?_, ?_, ?_, ?_, ?_⟩,
+      fun s₀ h d o l fu => ?_, fun s₀ h d o l fu => ⟨?_, ?_, ?_, ?_, ?_⟩⟩ <;>
     first
     | (rw [invoke_eq _ hp.go]; simp only [callFn, ilGo]; vcgen [exec] <;> grind)
     | (rw [invoke_eq _ hp.app]; simp only [callFn, ilApp]; vcgen [exec] <;> grind)
@@ -203,34 +203,37 @@ theorem instList_spec (n : Nat) :
     | (rw [invoke_eq _ hp.gpj]; simp only [callFn, ilgProj]; vcgen [exec] <;> grind)
   | succ n ih =>
     obtain ⟨ihG, ihA, ihGG, ihGA⟩ := ih
-    exact ⟨ilGo_step p hp n ihA, fun s₀ h d o l =>
-      ⟨ilApp_step p hp n ihG s₀ h d o l, ilLam_step p hp n ihG s₀ h d o l,
-        ilForall_step p hp n ihG s₀ h d o l, ilLet_step p hp n ihG s₀ h d o l,
-        ilProj_step p hp n ihG s₀ h d o l, ilBVar_step p hp n ihG s₀ h d o l⟩,
-      ilgGo_step p hp n ihGA ihG, fun s₀ h d o l =>
-      ⟨ilgApp_step p hp n ihGG s₀ h d o l, ilgLam_step p hp n ihGG s₀ h d o l,
-        ilgForall_step p hp n ihGG s₀ h d o l, ilgLet_step p hp n ihGG s₀ h d o l,
-        ilgProj_step p hp n ihGG s₀ h d o l⟩⟩
+    exact ⟨ilGo_step p hp n ihA, fun s₀ h d o l fu =>
+      ⟨ilApp_step p hp n ihG s₀ h d o l fu, ilLam_step p hp n ihG s₀ h d o l fu,
+        ilForall_step p hp n ihG s₀ h d o l fu, ilLet_step p hp n ihG s₀ h d o l fu,
+        ilProj_step p hp n ihG s₀ h d o l fu, ilBVar_step p hp n ihG s₀ h d o l fu⟩,
+      ilgGo_step p hp n ihGA ihG, fun s₀ h d o l fu =>
+      ⟨ilgApp_step p hp n ihGG s₀ h d o l fu, ilgLam_step p hp n ihGG s₀ h d o l fu,
+        ilgForall_step p hp n ihGG s₀ h d o l fu, ilgLet_step p hp n ihGG s₀ h d o l fu,
+        ilgProj_step p hp n ihGG s₀ h d o l fu⟩⟩
 
 end specs
 
-/-! ## `inst_list(e, o, l, d)`: `instantiateListFast`, between two clears -/
+/-! ## `inst_list(e, o, l, d)`: `instantiateListFast`, between two clears
+
+The walk's depth counter starts at `coreWalkFuel` (`4000000000`, ROADMAP §3 (b)). -/
 
 /-- After the walk: clear the memo again. -/
 def ilclrK : Option (Word × Mem) → Option (Word × Mem)
   | none => none
-  | some (r, m₁) => if rdW (m₁.arr64 CTL) 50 + 2 = 0 then none else some (r, mclearG ilSch m₁)
+  | some (r, m₁) =>
+    if rdW (m₁.arr64 CTL) 50 + 2 = 0 then none else some (r &&& 4294967295, mclearG ilSch m₁)
 
 /-- **The model of `inst_list`.** -/
 def instListW (n : Nat) (m : Mem) (e o l d : Word) : Option (Word × Mem) :=
-  if rdW (m.arr64 CTL) 50 + 2 = 0 then none else ilclrK (ilgW n (mclearG ilSch m) e d o l)
+  if rdW (m.arr64 CTL) 50 + 2 = 0 then none else ilclrK (ilgW n (mclearG ilSch m) e d o l 4000000000)
 
 theorem instListW_eq (n : Nat) (m : Mem) (e o l d : Word) (h0 : rdW (m.arr64 CTL) 50 + 2 ≠ 0) :
-    instListW n m e o l d = ilclrK (ilgW n (mclearG ilSch m) e d o l) := by
+    instListW n m e o l d = ilclrK (ilgW n (mclearG ilSch m) e d o l 4000000000) := by
   simp [instListW, h0]
 
 theorem ilclrK_some (r : Word) (m₁ : Mem) (h0 : rdW (m₁.arr64 CTL) 50 + 2 ≠ 0) :
-    ilclrK (some (r, m₁)) = some (r, mclearG ilSch m₁) := by simp [ilclrK, h0]
+    ilclrK (some (r, m₁)) = some (r &&& 4294967295, mclearG ilSch m₁) := by simp [ilclrK, h0]
 
 grind_pattern [arena_grind] instListW_eq => instListW n m e o l d
 grind_pattern [arena_grind] ilclrK_some => ilclrK (some (r, m₁))
@@ -239,9 +242,9 @@ grind_pattern [arena_grind] ilclrK_some => ilclrK (some (r, m₁))
 @[l_impl ConRon.Arena.instantiateListFast]
 def instListL : FunDecl := lfn (e, o, l, d) locals (r, u) {
   u := call ilm_clear();
-  r := call ilg_go(e, d, o, l);
+  r := call ilg_go(e, d, o, l, 4000000000);
   u := call ilm_clear();
-  return r
+  return r & 4294967295
 }
 
 theorem instList_spec' (p : Prog) (hp : InstListProg p) (he : p.lookup "inst_list" = some instListL)

@@ -11,9 +11,10 @@ names and the 16 reserved basis names (`intern_reserved_pins`, offset `0`), then
 constants of the ROM stubs (`romCIData`, offset `ciOff`, `ConAgua/Rom/CIEnc.lean`; read by
 `rom_ci`, `rom_basis_decls`, …), then the item stream of `internAllPins` (`intern_all_pins`,
 offset `allPinsOff`; the variant list follows it in the pin-data buffer). The pin list is free (the final
-theorem holds at every pin list, `ConAgua/Final/Twin.lean`); the ROM carries **no** `Nat`-operation
-pin variant for now (`[]`): every pinned `Nat.div`-family definition is then declined (a
-completeness loss, never a soundness one), until the ROM embeds a variant.
+theorem holds at every pin list, `ConAgua/Final/Twin.lean`). The ROM itself carries no
+`Nat`-operation pin variant (`romPins = []`): the checker's variants are an input, the pin-data
+buffer's list after `romData` (`L.Rom.internAllPinsPB`, DESIGN.md "The pin data as an input"); the
+item stream here is the startup walk's part that does not depend on them.
 -/
 
 open ConRon.Arena
@@ -22,7 +23,7 @@ namespace L.Rom
 
 open L.Arena
 
-/-- The pin variants the program carries. -/
+/-- The pin variants in the ROM's own item stream: none (the variants are the pin-data buffer's). -/
 def romPins : List ConLeche.NatOpPinSet := []
 
 /-- The program's ROM. -/

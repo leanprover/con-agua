@@ -50,4 +50,15 @@ import csv
 vrows = list(csv.reader(open(root / "docs/velocity.csv")))
 with open(out / "velocity.csv", "w", newline="") as f:
     csv.writer(f, lineterminator="\n").writerows([r[:5] + [",".join(r[5:])] if len(r) > 6 else r for r in vrows])
+# landings: master's merge commits, newest first (authoritative; velocity notes are optional)
+lg = subprocess.run(["git", "-C", str(root), "log", "--first-parent", "master", "--merges", "-40",
+                     "--format=%cI%x09%s"], capture_output=True, text=True).stdout
+landings = []
+for i, line in enumerate(lg.splitlines()):
+    at, subj = line.split("\t", 1)
+    m = re.match(r"Merge (?:branch )?'?([\w-]+)'?(?: into \w+)?\s*(?:\((.*)\))?", subj)
+    lane = m.group(1) if m else ""
+    what = (m.group(2) if m and m.group(2) else subj)
+    landings.append({"n": i + 1, "at": at, "lane": lane, "what": what})
+(out / "landings.json").write_text(json.dumps(landings, indent=1))
 print("phases:", len(rows), "stale:", len(stale), "running lanes:", sum(l["status"] == "running" for l in lanes))

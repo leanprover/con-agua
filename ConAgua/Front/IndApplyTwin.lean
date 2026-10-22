@@ -53,7 +53,7 @@ theorem applyIndW_twin {b : ByteArray} (h64 : System.Platform.numBits = 64) (hsi
   have hA1 : ArenaD m₁ a :=
     ⟨ArenaR.frame_ext _ _ (by simp [IFR, IFL]) (by simp) _ _ hfr1 _ hA.1,
       DerR.frameT hfr1 (by simp [IFR, IFL]) hA.2⟩
-  have hD1 : StateDR m₁ st := StateDR.frame hfr1 (by decide) (by decide) (by decide) (by decide) (by decide) hD
+  have hD1 : StateDR m₁ st := hD.frame hfr1 (by decide) (by decide) (by decide) (by decide) (by decide)
   have hs1 : (m₁.arr64 IFR).size = (m.arr64 IFR).size := hfr1.2.2.1 IFR
   have hs1' : (m₁.arr64 IFL).size = (m.arr64 IFL).size := hfr1.2.2.1 IFL
   have hT1 : TopOK m₁ := ⟨by have := hRoom.2.1; exact this, Nat.le_of_lt hRoom.2.2.2⟩
@@ -63,7 +63,7 @@ theorem applyIndW_twin {b : ByteArray} (h64 : System.Platform.numBits = 64) (hsi
   have hA2 : ArenaD m₂ a :=
     ⟨ArenaR.frame_ext _ _ (by simp [IFL, LH]) (by simp) _ _ hfr2 _ hA1.1,
       DerR.frameT hfr2 (by simp [IFL, LH]) hA1.2⟩
-  have hD2 : StateDR m₂ st := StateDR.frame hfr2 (by decide) (by decide) (by decide) (by decide) (by decide) hD1
+  have hD2 : StateDR m₂ st := hD1.frame hfr2 (by decide) (by decide) (by decide) (by decide) (by decide)
   have hifr2 : m₂.arr64 IFR = m₁.arr64 IFR := V2.ifr
   have hs2' : (m₂.arr64 IFL).size = (m.arr64 IFL).size := by rw [hfr2.2.2.1 IFL, hs1']
   have hIFR2 : topN m₂ IFR < 2 ^ 62 := by unfold topN wd; rw [hifr2]; exact hIFR1

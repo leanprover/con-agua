@@ -277,10 +277,14 @@ structure WhnfDeltaProg' (p : Prog) : Prop extends WhnfDeltaProg p where
   litMatch' : p.lookup "lit_match" = some litMatch
   litFind' : p.lookup "lit_find" = some litFind
   litPush' : p.lookup "lit_push" = some litPush
-  /-- The write set of the `Nat` functions (`natFns`): the pool, the `lit` and `const` tables.
-  Provable from `closedW_of_agree` and `natArmProg'_closed` whenever `p` agrees with
-  `natArmProg'` on `natFns`. -/
-  natClosed : closedA p natA natC natFns = true
+  /-- `p` agrees with `natArmProg'` on the `Nat` functions (`natFns`): their write set
+  (`natClosed`) and `nat_op_result`'s refinement (`CoreNatOp.lean`) carry over. -/
+  natAgree : ∀ f ∈ natFns, p.lookup f = natArmProg'.lookup f
+
+/-- The write set of the `Nat` functions (`natFns`): the pool, the `lit` and `const` tables. -/
+theorem WhnfDeltaProg'.natClosed {p : Prog} (hp : WhnfDeltaProg' p) :
+    closedA p natA natC natFns = true :=
+  WhnfDeltaProg'.natClosed_of_agree hp.natAgree
 
 theorem CoreSpec.zero {α : Type} [Inhabited α] {p : Prog} {f : FnName} {fd : FunDecl}
     (hf : p.lookup f = some fd) (args : List Word) (T : AM α) (dec : List Word → α) (s₀ : St)

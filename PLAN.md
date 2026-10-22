@@ -160,11 +160,18 @@ per-function separation logic.
   whose statements are already fixed. Keep it shallow: at most about 3 helpers at a time. Larger independent
   work should become a top-level lane, so the coordinator and the dashboard can see it. Name helper worktrees
   `<lane>-<suffix>`.
+- **Commit work in progress often.** Commit to your own branch at least every ~30 minutes and before every long build, even if it doesn't build yet (WIP commits are fine; squash nothing). Machine restarts and rate limits have lost uncommitted work twice. Landing on master can stay less frequent, but keep landings small: one function family or one fix per landing.
 - **Velocity log.** Every lane, at every landing, appends one line to `docs/velocity.csv`:
   `date,lane,model,work_min,overhead_min,note`. `work_min` is time spent on the actual task (design, code,
   proofs). `overhead_min` is the merge red tape: merging master, waiting on builds, re-running tests, fixing
   merge fallout, cleanup. Measure with `date` timestamps, not guesses. The note says what landed.
 - Parallel lanes each own explicit files. Before adding a lemma, grep for an existing one. A lane that started
   before others landed merges `master` into itself before landing.
+- **Deviations from the twin.** L is a close twin of con-ron. Any place where L does something else
+  than its twin (aborts where the twin continues, other than fuel and fixed capacities; a
+  simplified algorithm; a missing arm; an unmirrored cache; a "for now") gets a row in
+  `docs/deviations.md` (where, what the twin does, what L does, effect, owner, proposed fix) in the
+  commit that introduces it, and leaves the row when it is fixed (move it to "Fixed"). The
+  coordinator reviews the list at each batch of landings and assigns the open rows.
 - Write in DESIGN.md (a journal: decisions, measurements, findings). Never use "load-bearing" or "licenses" in
   prose.

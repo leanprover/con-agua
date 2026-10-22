@@ -3552,8 +3552,10 @@ Word arrays (byte arrays are a separate id space: `IN` = byte array 0 is the inp
 | 48 | `FRMEMO` | `MemosR.fvar` | `fvarRange` memo (`fvarBC`) |
 | 49‥55 | – | `MemosR` (reserved) | the other six walk memos |
 | 56‥63 | – | reserved (store tier) | (the scratch epoch is `CTL[62]`, no array; lane `libs`) |
-| 64, 65, 66 | `NID`, `LID`, `EID` | `StateDR` (front) | the export's name/level/expression id tables |
-| 67‥95 | – | reserved (front) | declaration records, `pend` |
+| 64, 65, 66 | `NID`, `LID`, `EID` | `StateDR` (front) | the export's name/level/expression id tables, dense part (lane `twinaudit`) |
+| 67‥71 | `DECL`, `DLP`, `DIND`, `IFR`, `IFL` | `StateDR` (front) | declaration records, inductive lines |
+| 72, 73, 74 | – | `StateDR` (`TblR`) | the id tables' sparse overflow (memo-library tables, `IdTable.lean`) |
+| 75‥95 | – | reserved (front) | |
 | 96‥127 | – | `CoreR` (stub) | the 14 caches and the eager-depth banks |
 | 128‥131 | – | `PinsR` (stub) | the pin table |
 | 132‥143 | – | `EnvR` (stub) | the environment index |
@@ -3576,7 +3578,9 @@ Word arrays (byte arrays are a separate id space: `IN` = byte array 0 is the inp
 | 48‥61 | `MemosR` (reserved) | the other six memos |
 | 62 | `ArenaR` (every table, `StoreR`) | scratch slot base `B` (lane `libs`): tier-1 slots hold `B + i + 1`; `scratch_reset` adds `2^32` |
 | 63 | reserved | |
-| 64‥95 | reserved (front) | |
+| 64‥69 | `StateDR` (`TblR`) | stamp − 1, live count of the id tables' sparse maps (`NID`, `LID`, `EID`) |
+| 70, 71, 72 | `StateDR` (`TblR`) | dense size of `NID`, `LID`, `EID` |
+| 73‥95 | reserved (front) | |
 | 96‥127 | `CoreR` (stub) | cache stamps/counts, eager depth |
 | 128‥135 | `EnvR` (stub) | environment counters |
 | 136‥191 | argument relations (reserved) | |
@@ -6158,7 +6162,7 @@ assembly items, `docs/e2e.md`'s "Assembly" section (any run).
    `inst1(3)` (defeq's stub) vs `inst_entry(3)`. The extra argument is the walk fuel of lane
    induct's convention. Owners: decls2, defeq (rename or adapter). `inst1` is what stops `whnf` on
    a beta-redex in `e2e-diff` (136 handles over the fixtures in an unsampled run).
-5. **Sparse export ids** (`e2e/rounds_huge_gaps`, ids up to `3·10^15`): the frontend's id tables
+5. *(Fixed by lane `twinaudit`: the id tables are `IdTable`s now.)* **Sparse export ids** (`e2e/rounds_huge_gaps`, ids up to `3·10^15`): the frontend's id tables
    are dense arrays (`NID`/`LID`/`EID`, lane front's design), so `name_fresh` aborts at its
    capacity check where the twin's hash maps accept. A completeness loss, not a soundness one;
    owner front (a hash-mapped id table, or accept the loss and say so).
@@ -6567,6 +6571,211 @@ Merge master and adapt new uses:
   `$CON_RON` overrides), run as `con-ron --jobs=1 --pins P` with `P` the same single pin variant
   in its `con-ron-pins/1` format (written by `ConRon.Dump.dumpPins`, now built as a root of
   `ConRonArena`); and `instructions:u` of compiled `check` vs con-ron on fixtures both accept.
+### Landing 3: the opaque arm, the axiom tests (`DeclBasisSpec2`, `DeclReduceSpec2`, `DeclReducePin`, `DeclArmOpaque`, `DeclAxiomSpec*`)
+
+* **Refined** (through the ROM stubs and, for `checkReducePin`, the core's and the walks' stubs):
+  `checkBasisDecl`, `reduceStoredOk`, `reduceElemOk`, `checkReducePin`, `ofReduceAxOk`,
+  `trustCompilerOk`, `stdAxiomOk`; **sorry-free**: `IConstantVal.matchesPin` (helper
+  `decls3-canon`'s `cv_eq`: word equality is the derived `decide (cv = pin)`, `matchesPin_eq`).
+* **The opaque arm at the loop's relation is proved** (`checkDeclOpaque_loop'`): the pushed view
+  `vis2` for `check_reduce_pin`, which runs its gate at the pre-insertion view: `StageR.restrict`
+  (the stage relation at another view of the same index, `EnvR.restrictTo`) and back, no frame
+  argument needed. `CheckDeclProg` gains `crp`; `checkDecl_loop` and the skeleton's
+  `DeclCallees` take **`DnInj dn`** (the name decoding injective: comparing constant records reads
+  `PropWhen`'s names through it; the top level's `dn` is the store's `denoteN`).
+* **The twin's nested matches, flattened.** `trustCompilerOk`/`stdAxiomOk` nest `match fe.find? (←
+  name) with | some (.ctorInfo cv 2 2) => … | _ => pure false` three deep. A relational lemma
+  cannot rewrite with a lemma about such a `match` (the auxiliary matcher of the lemma is not the
+  definition's), so: the shape test as a partial function (`fpShape k a b ci : Option
+  IConstantVal`), one clause `clausePT fe n k a b T` (match on `(fe.find? n).bind (fpShape …)`),
+  and one equation per twin function proving it equals the chain of clauses
+  (`trustCompilerOk_eq`, `stdAxiomOk_eq`: `congr`/`funext` through the binds, `cases` on the
+  stored constant at each clause; generated, ~100 lines). The L clause (`find_pinned`) is then
+  proved once against `clausePT` (`fpW_ok`: the kind and count words against the shape,
+  `fp_fail`/`fp_pass`).
+* L changes: `std_axiom_ok`'s two families are one function `std_ax_family(vis, q, s1, s2, s3, i1,
+  i2, i3, c2, c3, cvid)` (one model; the inline version ran `finish` out of instances); a handle
+  guard after `reduce_cert_var` (`is_def_eq_core`'s spec); words loaded into locals before calls
+  in `of_reduce_ax_ok`. Note on `finish`: `(instances := 5000)` is a valid config item (the default
+  `1000` ran out on an 11-parameter function).
+* Helper `decls3-canon` merged in interim (record equalities `cv_eq`/`ci_eq`/`find_is`, `ci_to_cv`,
+  stage lemmas for `intern_nanon`/`intern_nnum`/`intern_succ`); its `rdW_grow` renamed
+  `cnRdW_grow` (clash with `IndPos2SpecA`).
+
+`sorry`s now (lane `decls3`): `checkDeclAxiom_loop`, `checkDeclDefn_loop`, `checkDeclQuot_loop`
+(the opaque arm's is proved), the five ROM stub specs, `lvlEqStub_spec` (lane `induct`'s, now on
+`lvl_eq_c`), `promoteNew_spec` (helper running).
+
+Census at landing 3 (`--no-build`): phase 2 **145 proven, 26 sorry, 71 written, 89 todo**.
+
+### Landing 6: the stuck/irrelevance side (`DefEqStuck*.lean`, helper `defeq-top`)
+* Refined (no `sorry`, ~4.9k lines, 81 s CPU): `prop_irrel`, `eta_cert`, `eta_ctor_shape`, the
+  structure-η certificate (`struct_eta_cert*`), `struct_unit_cert`, `stuck_irrel`, `stuck_str`,
+  `stuck_app`, `defeq_stuck`, `defeq_proj_pair`, `lazy_delta_proj_reduction`, `defeq_tail`.
+  Hypotheses (`StuckCallees`): `DefeqLstOK`, `LazyDeltaStepH` (both proved by `defeq-mid`: to be
+  plugged in), `ProofIrrelOK` (lane whnf's `proofIrrel_refines` has two more premises, `n ≤ 2^62`
+  and the eager bit: add them here when plugging), `ReduceProjCoreH`, `Inst1OK`,
+  `TowerSlotsAllOK`, `StrLit*`, `SupKeep`, `ReservedContainsOK`, `LvlsEqCH` (needs the "stored
+  level lists denote" invariant, as `InferProjOK`).
+* L: `eta_cert_body` aborts on depth wrap; `defeq_stuck`'s constant arm reads a level verdict
+  `≠ 1` as true (`decO`); proof splits as listed in the helper's commits; one test per `if` took
+  `defeq_stuck`'s spec from ~2 min to 3 s.
+* Merge with lane `integrate`: duplicate top-level names between helper files clash in
+  `scripts/checker_prog.py` (`decDS`, `decOptR_*`, `growRef_*`, the `Inhabited DeltaStepA`
+  instance, now in `DefEq.lean`): the stuck files' copies are suffixed `S`. `Checker/Prog.lean`
+  regenerated (1467 functions).
+* Left for the lane: `defeq_body` itself, plugging the proved specs into the hypotheses, the knot
+  induction (`KnotUpTo p n → KnotOK p (n + 1)`), `infer_proj`, and the `CoreS` invariants above.
+
+### Landing 2: exact walk counters, the walks and `nat_op_result` under `CoreS`, `major_to_ctor`
+* **Exact `coreWalkFuel` counters** (helper `whnf2-walks`, ROADMAP §3 (b)): `fr_go`/`fr_memo`,
+  `bb_go`/`bb_memo`, `inst_go`, `il_go`/`ilg_go`, `abs_go`/`ab_node`, `ar_*` take the twin's depth
+  counter as an L argument (`if f == 0 { abort }`, children at `f - 1`; `abstract1`'s cut-off
+  `ab_fvb(h, f - 1)`, as the twin's `fvarB fuel h` at the decremented fuel). The entries keep their
+  arity and start at `4000000000` (`coreWalkFuel_toNat`); `bvar_b`/`loose_bvars_bounded_fast`/
+  `has_fvar_fast` use their (formerly unused) `f`. Statements: twin at exactly `c.toNat`, any L
+  fuel; the bb/fr walks also at any `F` with `c.toNat ≤ F ∨ n ≤ F` (`*_correctF`, `bvbW_okF`), which
+  lane `indproofs2`'s counter-less `has_loose_b_var_b_go` needs (its `bvbW_stage`; `IndSumSpec5`
+  adapted minimally; that walk itself still has no exact counter: lane `indproofs2`'s).
+* **Result words.** `CoreSpec`'s default post wants the result *word* below `2^32` (callers compute
+  with it; `decE` truncates). The four entries (`inst_entry`, `inst_list`, `abs_entry`,
+  `ar_entry`) return `r & 4294967295` and post `(r.headD 0).toNat < 2^32`; the Boolean ones post
+  `≤ 1`; `reduce_nat_op` normalises `nat_op_result`'s pair (`u64(rf != 0)`, `rh & 4294967295`):
+  the same values under `decE`/`decOpt`, one `and` each.
+* **`CoreWalks.lean`**: `CoreS.of_walk` (an L frame below 64, `cpl` kept, the walk memos given),
+  `Keeps cpl` for every core walk (`keepsL_auto`, `cpl`'s primitives; the memo probes under
+  `with_reducible`, else unification unfolds `instLGet` against `inst1Get` and times out), and the
+  bridges `instListOK_core` (`WhnfCallees.instList`), `inst1_core` (`CoreCallees.inst1`: one
+  `FunDecl`, `instEntry`, at the two names `inst_entry`/`inst1`), `lbb_core` (`IotaCallees`;
+  `fab_scope_ok` now passes the counter), and lane `defeq`'s `abs1_core`, `absRange_core`,
+  `hasFvar_core` (`Knot.lean`'s `Abstract1OK`, `AbstractRangeOK`, `HasFvarOK`, same statements).
+  The walk-memo trick: the twin's run from `a₀` *is* its run from `a₀` with `instLC`/`abs1C`
+  replaced by `CoreMemos`' map (the entry clears it first: `rfl`), and `ArenaD` does not read those
+  memos (`ArenaD.memo_irrel`); `ar_entry` at `k = 0` changes nothing and is a separate case.
+  The stub bundles still carry these fields (`whnfCallees_stub` …): replacing them needs program
+  hypotheses (`InstListProg p`, …) on every census-tagged theorem; done together with the knot.
+* **`nat_op_result` under `CoreS`** (first assumed fact, gone): `CoreAgree.lean`'s
+  `exec_agree`/`invoke_agree` (programs agreeing on a call-closed set run it alike; `closedW` is the
+  closure witness) move lane `pinsenv`'s `natOpResultL_refines` from `natArmProg` to any `p` with
+  `WhnfDeltaProg'.natAgree` (new field; `natClosed` now a theorem); `CoreNatOp.lean`'s `LeafOp`
+  (a twin step interning only `lit`/`const` leaves keeps `cpl` and carries `DerR` at any memory)
+  gives the rest. `natOpResultOK_stub` deleted.
+* **`major_to_ctor`** (helper `whnf2-m2c`): split into 12 L functions (`WhnfM2C.lean`: head,
+  constructor, the constant view, the three arms and their halves, a shared type check), proved
+  (`WhnfM2CRefine{,2..5}.lean`, `majorToCtor_refines'`, axioms `propext`/`Classical.choice`/
+  `Quot.sound`; new hypothesis `ProofIrrelOK`, the statement of `proofIrrel_refines`, which rests
+  on `CoreS.lvl_den`). `major_to_ctor` puts `CTL[136]` back. The tagged `majorToCtor_refines` and
+  `prepareMajor_refines` now live in `WhnfM2CRefine5` (import order). ~150 L lines, 2634 proof
+  lines; `WhnfM2CRefine` 33 s user, the rest 1–3 s.
+* **`iota_rec_at`** (helper `whnf2-rec`): split into nine L functions (`WhnfIotaRec.lean`:
+  head, constructor/rule lookup, major, the verified-checks block and its comparison, the result),
+  proved (`WhnfIotaRecRefine{,2,3}.lean`, `iotaRecAt_refines'`, three standard axioms). New named
+  hypotheses (not `sorry`): `ErecKeptRec` (the iota callees leave the record pool alone),
+  `LvlsEqDen` (a successful `lvls_eq_c` under `CoreS` reads both lists back), `RecShape` (a stored
+  recursor has `rP ≤ mI + 1` and plain rules `ctorParams ≤ rP`: an environment invariant, like
+  `CoreS.lvl_den`). L fixes against the twin: a nested rule's pins are copied from `EREC` to the
+  stack before `rec_fire_args`; `lvls_eq` → the cached `lvls_eq_c` read as `liftFueled` (`0` aborts);
+  `const_ty_at` keyed on the stored constructor name; `peel_pis` before the level-count test;
+  word-overflow-free arity tests; the spurious `len(SPN) < so + rP` abort removed; the stack top
+  restored. ~116 L lines, ~2940 proof lines, 26 s user.
+* Merging: lane `integrate` renamed `reserved_contains` → `reserved_contains_w` (one body per name),
+  the m2c pieces follow; lemma-name clashes with lane `defeq`'s files renamed on this side
+  (`*_m2c`, `*_rec`, `exec_agreeOn`); `ConAgua/Checker/Prog.lean` regenerated
+  (`scripts/checker_prog.py`, `--check` clean).
+* Census, phase 5: **67 proven / 23 sorry / 28 written / 24 todo** (start: 62 / 26 / 29 / 25);
+  phase 4: 63 proven (+1). The `iota` targets stay "sorry": the tagged statements instantiate the
+  stub bundles (`iotaCallees_stub`, `whnfCallees_stub`, `coreCallees_stub`, the knot).
+
+## The id tables as the twin's `IdTable`; the deviations list (2026-10-22, lane `twinaudit`)
+
+### Landing 1: dense array plus sparse overflow (`Front/IdTable.lean`)
+
+The front's id tables were dense word arrays (`NID`/`LID`/`EID`, entry `h + 1`, `0` unset) that
+aborted on an id at or past the array's end, where con-ron's `StateD` keeps con-leche's `IdTable`
+(`Scan/Types.lean:330`): a dense `Array` grown by `push` at its frontier and a `Std.HashMap Nat`
+for gaps and out-of-order ids. `e2e/rounds_huge_gaps` (ids up to `3·10^15`) was declined (e2e
+item 5). Now each table `b` is
+
+* the dense part: array `b` with its size in `CTL[b + 6]` (`70‥72`), entry `i < size` the handle
+  word itself (no `+ 1`);
+* the sparse part: a memo-library table (`MemoLib.lean`, one-word keys, value = handle word) at
+  array `b + 8` (`72‥74`), stamp/count `CTL[2b − 64]`, `CTL[2b − 63]` (`64‥69`).
+
+`tbl_get`/`tbl_fresh`/`tbl_put` are generic in the table (`tblGetG b fnd`, the memo's `find`/`put`
+spliced in as `⟪.call …⟫`), with one `vcgen` proof each; `name_get`, `level_get`, `expr_get`,
+`*_fresh`, `name_put`, `level_put`, `expr_put` are instances. `tbl_put` is `IdTable.insert`
+arm for arm: at the frontier a push (when below the array's capacity), below it an overwrite,
+past it the sparse map. The `apply_*` functions and `front_init` call `*_put` instead of writing
+`ID[i] := h + 1`; their models are unchanged (`putK` now ends in `tblPutW`).
+
+The relation `TblR m b t` (was `TblR (m.arr64 b) t`): the dense entries below the size are `t`'s
+(handle words below `2^32`), and some `sp` with `MemoRV (spS b) idKey hVR m sp` gives `t.get?` at
+every id word at or above the size. Lemmas: `TblR.read`/`fresh` (same statements as before),
+`TblR.put` (one per `insert` arm: `memoRV_set` for the sparse one), `TblR.frame`/`frameD`,
+`TblR.zero`; `tblOK_congr`/`tblW_congr` take a `TblSame m m' b` (the two arrays and the two `CTL`
+words the reads see; `TblSame.of_eq`, `of_frame`, `of_frameD`). `StateDR.frame`,
+`StateDR.put{Name,Level,Expr}` and `levelFinish` take the frame's arrays outside `idArrs` and
+`CTL` words outside `idCtl` (default tactic `tctl`); `StateDR.putX` takes `tblPutW m₁ X i w =
+some m₂` instead of the bound `i < size`; `ArenaD.setT` is `ArenaD.putT`; `Above64`
+(`ApplyExprRefine.lean`) also fixes the `CTL` words `≥ 64`. Nothing else changed: every
+refinement (`frontAll_refines`, `applyNStr_refines`, …, the inductive lines' `IndApply*`) is
+sorry-free as before, and `#guard`s cover ids past the dense array, out of order, and a rebound
+sparse id. `frontAllProg` runs `rounds_huge_gaps` to `front_run = 0` (`#eval`, 4096-word arrays).
+
+Differences from the twin that remain (listed in `docs/deviations.md`): the id word `NONE =
+TOMB = 2^64 − 1` is refused on the sparse path (ids past 18 digits already were); the dense array
+stops at its capacity (the ids go sparse, up to the memo's 3/4 load); `IdTable.bound`'s
+`sparse.isEmpty` shortcut is not mirrored (the memo's count is not tied to the map's emptiness;
+`tbl_fresh` probes one slot when the map is empty).
+
+`scripts/e2e.py` caps `e2e-diff`'s dense id arrays at `DIFF_BIG_WORDS` (they were sized to the
+largest id). For lane `integrate`: test memories need arrays up to `74` and `CTL` up to word `72`
+(`frontMem`, `exprMem`, `declMem` are 75 × 128 words now).
+
+The checker program (lane `integrate`'s `checkerProg`): the prelude parse's copies (`preFn`) rename
+the sparse arrays `72‥74` to `211‥213` and the `CTL` words `64‥72` to `241‥249`
+(`Checker/Prelude.lean`, `preCtl`; `scripts/checker_prog.py`'s `TOUCH` copies every function that
+touches them); `wordArrays` is 214. `checkerProg` was extended by hand (the generator stops at
+import clashes between other lanes' modules on master); a rerun of the generator gives the same
+bindings. `scripts/e2e.py --only huge`: `rounds_huge_gaps` now gets through the front on x64 and
+stops at the stub `rom_basis_decls` (it aborted in `name_fresh` before).
+
+**For other lanes** (mechanical): `TblR (m.arr64 NID) t` → `TblR m NID t`; a frame proof
+`rw [hf.1 NID …]; exact h.names` → `h.names.frame hf (.inl rfl) (by simp [..., idArrs]) (by simp)`;
+`lkW_congr` takes a `TblSame` (`IExt.tbl`).
+
+### Landing 2: the deviations audit (`docs/deviations.md`), and a PLAN.md rule
+
+Every place where L deliberately does something else than its twin (beyond fuel and fixed
+capacities) is now a row of `docs/deviations.md`: where, what the twin does, what L does, the
+effect (completeness / performance / none), the owner, a proposed fix. Sources: this journal
+(grep for "for now", "aborts", "deviat", "simplif", "not represented", …), `docs/progress.md`'s
+partial refinements, the L code's comments, `docs/e2e.md`. First count: 17 open (5
+completeness, 5 performance, 7 none), 13 fixed (among them the id tables, landing 1, and
+`iota_rec_at`'s `lvls_eq`, fixed by lane `whnf2` meanwhile).
+
+The work queue, by priority:
+* **D1 (decls3): `and_pin_ok` has no `indDecl` arm.** The twin's `andPinOk` checks an inductive
+  block that names `And`/`And.intro`/`And.rec` against the pinned block; L reads the record's name
+  word (unset for kind-6 records) and answers "free". Harmless while the declaration loop never
+  sees an inductive record, a soundness gap as soon as it does (the front produces them since
+  indproofs2's landing 6). Must land before the loop accepts kind-6 records.
+* D4 (decls3): `check_div_mod_pin_loop` aborts inside an attempt where `orElseAttempt` recovers;
+  then D5 (integrate): load all three pin variants in the e2e harness.
+* D7 (indproofs2): `target_class_match` calls the uncached `lvls_eq`; call `lvls_eq_c`.
+* D2, D3, D6: exotic inputs (numbers past 18 digits, escaped `safety` strings, unusual pin data).
+* D8 (`tbl_fresh` probes where `IdTable.bound` tests `sparse.isEmpty`), D10‥D12 (append-only
+  pools, byte-per-word strings, no memo compaction): performance.
+
+Trivial fixes made here: stale comments that still described fixed deviations
+(`Front/Line.lean`'s header, `Front/ApplyExpr.lean`'s `strVal`/`natVal` note,
+`Arena/LevelEquiv.lean`'s "`lvlEqC` not represented"). Not touched, for the lanes editing them:
+`Arena/Prelude.lean:12` and `Arena/DeclArmsNat.lean:28,1073` still say the ROM has no `Nat`
+pin variant "for now" (lanes `integrate`, `decls3`).
+
+PLAN.md, process rules: a deviation gets its row in `docs/deviations.md` in the commit that
+introduces it; the coordinator reviews the list at each batch of landings.
+
 
 ### Landing 2: the ROM constant records (helper `integrate-romci`)
 
