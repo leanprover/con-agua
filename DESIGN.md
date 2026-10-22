@@ -957,6 +957,58 @@ with the original (none does).
 
 None.
 
+## Records (2026-10-22, lane `lfeat`)
+
+Struct-of-arrays addressing by hand (`AREC.u64[i * 4 + t * 2 + 1]`) needs the injectivity of the
+address (`Schema.ad_inj`) and bounds in every proof that reads after a write. L now has record
+layouts as **surface syntax plus generic lemmas**: no new constructor, no change to the
+semantics or the compiler (compiler-proof delta 0), so the choice of the smaller compiler delta
+was free. Files: `L/{Syntax,Notation,Records,Examples}.lean`, tests in `Compiler/{Tests,WFAll}.lean`.
+
+### Design
+
+* **Declaration.** `structure Record where arr : ArrId; stride : Nat` and `structure Field where
+  off : Nat`: `abbrev NODE : L.Record := ⟨1, 3⟩`, `abbrev NODE.tag : L.Field := ⟨0⟩`, … (offsets
+  below the stride, distinct).
+* **Syntax.** `NODE[i].tag` reads, `NODE[i].tag := e` writes (the field constant is
+  `NODE.tag`, found by name). Both are `ld64`/`st64` of `NODE.arr` at the address expression
+  `Record.at R i f = i * stride + off`, built by a named function.
+* **Semantics** are those of the word access, so the address wraps around as `UInt64` (as the
+  hand-written form does, and as the compiled code computes it).
+* **Proof support** (`L/Records.lean`, all in `lang_grind`): `evalE_at` (pass it to `vcgen`
+  next to `evalE`: the address is the named word `Record.ad R j f`, not arithmetic), `Mem.fld m R
+  j f` (field `f` of record `j`, `0` out of bounds: what a model is stated with), `fld_getElem`
+  (`vcgen`'s `arr[addr]` read is `Mem.fld`), **`fld_set64`** (a field after a field store is the
+  stored word if it is the same record and field, else the old field, decided on record numbers
+  and offsets), `fld_set64_ne`, `fld_setG`, `fld_set8` (other arrays, globals, byte stores),
+  `Record.ad_inj` (distinct fields or records have distinct addresses), `Record.ad_lt` (a field's
+  bound from a bound on the record number and room for the records). The only side condition is
+  `Record.Ok R j` (`j * stride + stride < 2^64`: no wrap-around), which `grind` discharges from a
+  bound on `j` (`j < 2^32` for any stride below `2^32`).
+
+### Measurements
+
+* Compiler and its proof: unchanged (0 lines). `L/Records.lean` 150 lines, 1.5 s.
+* **Example** (`L/Examples.lean`, `node_mk`): a node `[tag, a, b]` written field by field, a field
+  of another node read, three fields read back; the spec states the results and two frame facts
+  over `Mem.fld`. Proof: the standard `vcgen [… evalE_at …] <;> finish`, no hint, 1.8 s. The
+  same function with raw addresses (`NODES.u64[i * 3 + 1]`, the spec over `rdW … (j * 3 + 1)`,
+  with `arena_grind`/`store_grind`) fails in `finish` after 11 s: `grind` cannot refute
+  `i * 3 + 1 = j * 3 + 1` in `UInt64` without the injectivity lemma.
+* Tests: `node_mk` on Kraken against `L.run`, and an out-of-bounds record.
+
+### How to use
+
+* Declare the layout and the fields as above; write `R[i].f` in `lfn`; pass `evalE_at` (and
+  `ld64`/`st64`) to `vcgen`. State models with `m.fld R j f`. For a store library: its schema can
+  become a `Record` (record number `i * 2 + t` for two tiers) with the field reads `Mem.fld`;
+  `fld_set64` replaces the per-library `ad_inj` reasoning.
+* No migration is forced; existing hand-written addressing keeps working.
+
+### `sorry`s
+
+None.
+
 ## Program well-formedness: guarded, and per function (2026-10-22, lane `lfeat`)
 
 Two requests of the coordinator: `decide +kernel` on the structural `Prog.wf` is a trap
