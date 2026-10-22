@@ -43,6 +43,11 @@ def ConsRecsTFSim (p : Prog) : Prop :=
       (ConRon.Arena.consBlockRecsTF vis2.toNat bs 0 outs fe) a
       (fun r x m' a' => StageR dn (r.headD 0) x m' a' ∧ IWGrow m m' ∧ HbMemo m')
 
+/-- Replace the model by one that returns whatever it returns. -/
+theorem Sim.of_model {β α : Type} {mo mo' : Option (β × Mem)} {op : AM α} {a : AState}
+    {Q : β → α → Mem → AState → Prop} (h : ∀ r m', mo = some (r, m') → mo' = some (r, m'))
+    (hs : Sim mo' op a Q) : Sim mo op a Q := fun r m' e => hs r m' (h r m' e)
+
 /-- The lookups of `check_block_tail`. -/
 structure TailProg (p : Prog) : Prop where
   idx : IdxProg p
@@ -196,10 +201,11 @@ theorem ictlW_sim {p : Prog} (hP : TailProg p) (hRecs : ConsRecsTFSim p) {fs : L
   cases n with
   | zero => rw [callW_zero]; exact Sim.of_none
   | succ k =>
-  intro r m' e
-  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
-    (ictr_spec p hP.tailrec k _ bO bL q (UInt64.ofNat pw) (r2.headD 0) (r4.headD 0)) e
-  refine (?_ : Sim (ictrW p k m3 bO bL q (UInt64.ofNat pw) (r2.headD 0) (r4.headD 0)) _ a3 _) r s'.mem hW
+  refine Sim.of_model (mo' := ictrW p k m3 bO bL q (UInt64.ofNat pw) (r2.headD 0) (r4.headD 0))
+    (fun r m' e => ?_) ?_
+  · obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m3, Locals.init []⟩)
+      (ictr_spec p hP.tailrec k _ bO bL q (UInt64.ofNat pw) (r2.headD 0) (r4.headD 0)) e
+    exact hW
   unfold ictrW
   have hrec : Sim (callW p k "check_block_rec" [r2.headD 0, UInt64.ofNat pw, r4.headD 0,
         rdW (m3.arr64 IW) (q + 12), rdW (m3.arr64 IW) (q + 13), rdW (m3.arr64 IW) (q + 17),
