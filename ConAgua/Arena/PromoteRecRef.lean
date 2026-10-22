@@ -764,4 +764,158 @@ theorem vgStore_facts {m m' : Mem} {d k nm q l t x : Word}
   · exact (((((fr _ _ _).trans (fr _ _ _)).trans (fr _ _ _)).trans (fr _ _ _)).trans
       (fr _ _ _)).trans (fr _ _ _)
 
+section vg
+variable (p : Prog) (hp : PromoteProg p)
+include hp
+
+/-- **`promote_vg` refines `promoteVG PMemo.empty coreWalkFuel`**: the promoted value group is a
+fresh record that decodes to the twin's result. -/
+theorem vg_rel (n : Nat) (m : Mem) (a : AState) (pm₀ : PMemo) (g vis : Word) (vg : ValueGroup)
+    (r : List Word) (m' : Mem) (hD : ArenaD m a) (hP : PMemoR m pm₀)
+    (hvg : decVG (erecP m) g.toNat = some vg) (hsz : (m.arr64 EREC).size < 2 ^ 64)
+    (hc : callW p n "promote_vg" [g, vis] m = some (r, m')) :
+    ∃ a' pm' vg', (promoteVG PMemo.empty coreWalkFuel vg).run a = .ok ((pm', vg'), a') ∧
+      ArenaD m' a' ∧ PMemoR m' pm' ∧ decVG (erecP m') (r.headD 0).toNat = some vg' ∧
+      ErecGrow m m' ∧ erecTop m' ≤ (m'.arr64 EREC).size ∧ cp a' = cp a ∧
+      MemFrame (EREC :: eArrs) (129 :: 140 :: 142 :: 144 :: 146 :: eCtl) m m' := by
+  cases n with
+  | zero => rw [callW_zero'] at hc; cases hc
+  | succ n =>
+  obtain ⟨s', rfl, -, hW⟩ := callW_triple (promoteVG_specW p hp n ⟨m, Locals.init []⟩ g vis) hc
+  simp only [vgW] at hW
+  cases n with
+  | zero => rw [callW_zero'] at hW; cases hW
+  | succ n =>
+  -- the clears
+  cases hca : callW p (n + 1) "promote_clear" [] m with
+  | none => rw [hca] at hW; cases hW
+  | some x =>
+  obtain ⟨r₁, m₁⟩ := x
+  rw [hca] at hW
+  obtain ⟨s₁, hs₁, -, hW₁⟩ := callW_triple (promoteClear_spec p hp n ⟨m, Locals.init []⟩) hca
+  rw [hs₁] at hW₁
+  obtain ⟨hP₁, hf₁⟩ := clear_rel hP hW₁
+  have hD₁ : ArenaD m₁ a :=
+    ⟨ArenaR.frame_ext _ _ (by simp) (by simp) m _ hf₁ a hD.1, DerR.frameM _ _ m _ hf₁ (by simp) a hD.2⟩
+  have hE₁ : m₁.arr64 EREC = m.arr64 EREC := hf₁.1 EREC (by simp) (by decide)
+  have ht₁ : erecTop m₁ = erecTop m := by simp only [erecTop]; rw [hf₁.2.1 129 (by simp)]
+  have hP₁r : erecP m₁ = erecP m := by simp only [erecP, hE₁, ht₁]
+  -- the record's words
+  simp only [decVG, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
+    Option.some.injEq] at hvg
+  obtain ⟨kn, hkn, kd, hkd, cv, hcv, jv, hjv, rfl⟩ := hvg
+  simp only [nat?, Option.map_eq_some_iff] at hkn
+  obtain ⟨kw, hkw, rfl⟩ := hkn
+  obtain ⟨jw, hjw, hjl, rfl⟩ := hd?_some hjv
+  have hg5 : g.toNat + 5 < (m.arr64 EREC).size := by
+    rcases Array.getElem?_eq_some_iff.mp (erecP_get hjw) with ⟨hh, -⟩; exact hh
+  have hg5' : (g + 5).toNat = g.toNat + 5 := by rw [UInt64.toNat_add]; simp; omega
+  have hg1 : (g + 1).toNat = g.toNat + 1 := toNat_add1 g (by omega)
+  have hrd : vgRdW m₁ g = [kw, jw] := by
+    simp only [vgRdW, hE₁, hg5']
+    rw [if_neg (by omega)]
+    simp only [rdW, hg5', erecP_get hkw, erecP_get hjw]; rfl
+  rw [vgK₀_some (h := by rw [hrd]; simp), hrd] at hW
+  simp only [List.headD_cons, List.tail_cons] at hW
+  -- the constant value
+  cases hcb : callW p (n + 1) "promote_cv" [L.Ind.CWF, g + 1] m₁ with
+  | none => rw [hcb] at hW; cases hW
+  | some x =>
+  obtain ⟨c, m₂⟩ := x
+  rw [hcb, vgK_some] at hW
+  obtain ⟨a₂, pm₂, cv', hrun₂, hD₂, hP₂, hcw, hgr₂, hts₂, hcp₂, hfr₂⟩ :=
+    cv_rel p hp (n + 1) m₁ a _ _ _ cv c m₂ hD₁ hP₁ (by rw [hP₁r, hg1]; exact hcv)
+      (by rw [hE₁]; exact hsz) hcb
+  -- the value
+  cases hcc : callW p (n + 1) "promote_e" [L.Ind.CWF, jw] m₂ with
+  | none => rw [hcc] at hW; cases hW
+  | some x =>
+  obtain ⟨xr, m₃⟩ := x
+  rw [hcc, vgK₂_some] at hW
+  obtain ⟨a₃, pm₃, hrun₃, hD₃, hP₃, hpw₃, hcp₃, hfr₃⟩ :=
+    (pe_rel p hp (n + 1)).1 m₂ a₂ pm₂ _ jw xr m₃ hD₂ hP₂ hjl hcc
+  have hE₃ : m₃.arr64 EREC = m₂.arr64 EREC := hfr₃.1 EREC (by decide) (by decide)
+  have ht₃ : erecTop m₃ = erecTop m₂ := by simp only [erecTop]; rw [hfr₃.2.1 129 (by decide)]
+  -- the allocation
+  cases hcd : callW p (n + 1) "erec_alloc" [6] m₃ with
+  | none => rw [hcd] at hW; cases hW
+  | some x =>
+  obtain ⟨dr, m₄⟩ := x
+  rw [hcd, vgK₃_some] at hW
+  obtain ⟨s₄, hs₄, -, hW₄⟩ := callW_triple (erecAlloc_spec p hp.erec_alloc n ⟨m₃, Locals.init []⟩ 6) hcd
+  rw [hs₄, show ({ mem := m₃, loc := Locals.init [] } : St).mem = m₃ from rfl] at hW₄
+  obtain ⟨hdq, rfl, hd6, hroom, hctl⟩ := erAlloc_facts hW₄
+  -- the record's words
+  cases hce : callW p (n + 1) "vg_wr" [dr.headD 0, kw, c.headD 0, c.tail.headD 0,
+      c.tail.tail.headD 0, c.tail.tail.tail.headD 0, xr.headD 0]
+      (m₃.set64 CTL 129 (dr.headD 0 + 6)) with
+  | none => rw [hce] at hW; cases hW
+  | some x =>
+  obtain ⟨r₅, m₅⟩ := x
+  rw [hce, offK_some] at hW
+  obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
+  obtain ⟨s₅, hs₅, -, hW₅⟩ := callW_triple (vgWr_spec p hp (n + 1)
+    ⟨m₃.set64 CTL 129 (dr.headD 0 + 6), Locals.init []⟩ _ _ _ _ _ _ _) hce
+  rw [hs₅, show ({ mem := m₃.set64 CTL 129 (dr.headD 0 + 6), loc := Locals.init [] } : St).mem =
+    m₃.set64 CTL 129 (dr.headD 0 + 6) from rfl] at hW₅
+  have hdv : (dr.headD 0).toNat = erecTop m₃ := by rw [hdq]; rfl
+  have hsz₃ : (m₃.arr64 EREC).size = (m.arr64 EREC).size := by rw [hE₃, hgr₂.2.2, hE₁]
+  have h6 : (6 : Word).toNat = 6 := rfl
+  rw [h6] at hd6 hroom
+  obtain ⟨hlt, w0, w1, w2, w3, w4, w5, hag, hsz₅, hf₅⟩ := vgStore_facts hW₅ (by omega)
+  have hE₄ : (m₃.set64 CTL 129 (dr.headD 0 + 6)).arr64 EREC = m₃.arr64 EREC :=
+    Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  have ht₄ : erecTop (m₃.set64 CTL 129 (dr.headD 0 + 6)) = erecTop m₃ + 6 := by
+    simp only [erecTop]
+    rw [rdW_set64, if_pos ⟨rfl, rfl, by simpa using hctl⟩, hd6, hdv]; rfl
+  have ht₅ : erecTop m₅ = erecTop m₃ + 6 := by
+    simp only [erecTop] at ht₄ ⊢; rw [hf₅.2.1 129 (by simp)]; exact ht₄
+  have hts₅ : erecTop m₅ ≤ (m₅.arr64 EREC).size := by rw [ht₅, hsz₅, hE₄]; omega
+  have rd : ∀ i, i < 6 → (erecP m₅)[(dr.headD 0).toNat + i]? =
+      (m₅.arr64 EREC)[(dr.headD 0).toNat + i]? := fun i hi =>
+    erecP_getElem m₅ _ (by rw [ht₅]; omega) hts₅
+  have hg₂₅ : ErecGrow m₂ m₅ := by
+    refine ⟨by rw [ht₅, ← ht₃]; omega, fun i hi => ?_, by rw [hsz₅, hE₄, hE₃]⟩
+    rw [hag i (by rw [hdv, ht₃]; exact hi), hE₄, hE₃]
+  obtain ⟨hc4, hpw0, hn0, hsl, hpw3, ht3⟩ := hcw
+  rw [← hm, ← hr]
+  refine ⟨a₃, pm₃, ⟨kd, cv', decE (xr.headD 0)⟩, ?_, ?_, ?_, ?_, ?_, hts₅, hcp₃.trans hcp₂, ?_⟩
+  · rw [← L.Ind.CWF_eq]
+    simp only [promoteVG]
+    rw [run_bind_ok hrun₂]
+    simp only
+    have hrun₃' : (promoteE pm₂ L.Ind.CWF.toNat (decI jw)).run a₂ =
+        .ok ((pm₃, decE (xr.headD 0)), a₃) := hrun₃
+    rw [run_bind_ok hrun₃']; rfl
+  · have hf : MemFrame [EREC] [129] m₃ m₅ :=
+      ((MemFrame.setCtl m₃ 129 _).mono (by simp) (by simp)).trans (hf₅.mono (by simp) (by simp))
+    exact ⟨ArenaR.frame_ext _ _ (by simp [EREC]) (by simp) _ _ hf _ hD₃.1,
+      DerR.frameM _ _ _ _ hf (by simp [EREC]) _ hD₃.2⟩
+  · exact (hP₃.frame (by simp) (by simp) (MemFrame.setCtl m₃ 129 _)).frame (by simp [EREC]) (by simp)
+      hf₅
+  · have r0 := rd 0 (by decide); rw [Nat.add_zero, w0] at r0
+    have r1 := rd 1 (by decide); rw [w1] at r1
+    have r2 := rd 2 (by decide); rw [w2] at r2
+    have r3 := rd 3 (by decide); rw [w3] at r3
+    have r4 := rd 4 (by decide); rw [w4] at r4
+    have r5 := rd 5 (by decide); rw [w5] at r5
+    have hsl₅ := (hg₂₅.ext).hslice? hsl
+    simp only [decVG, decCV, hlist?, nat?, hd?, r0, r1, r2, r3, r4, r5, Option.map_some,
+      Option.bind_eq_bind, Option.bind_some, hkd, hpw0.1, hpw3.1, hpw₃.1, ↓reduceIte,
+      UInt64.toNat_ofNat', show (dr.headD 0).toNat + 1 + 1 = (dr.headD 0).toNat + 2 from rfl,
+      show (dr.headD 0).toNat + 1 + 3 = (dr.headD 0).toNat + 4 from rfl,
+      show (dr.headD 0).toNat + 2 + 1 = (dr.headD 0).toNat + 3 from rfl, Option.pure_def]
+    rw [hsl₅]
+    simp only [Option.bind_some, hn0]
+    rw [show (decI (c.tail.tail.tail.headD 0) : EIdx) = cv'.type from ht3]
+    rfl
+  · have := hgr₂.1
+    refine ⟨by rw [ht₅, ht₃]; rw [ht₁] at this; omega, fun i hi => ?_, by rw [hsz₅, hE₄, hsz₃]⟩
+    rw [hag i (by rw [hdv, ht₃]; omega), hE₄, hE₃, hgr₂.2.1 i (by rw [ht₁]; exact hi), hE₁]
+  · exact ((((hf₁.mono (by simp) (by simp)).trans (hfr₂.mono (by simp) (by simp))).trans (hfr₃.mono (by simp)
+      (by simp))).trans ((MemFrame.setCtl m₃ 129 _).mono (by simp) (by simp))).trans
+      (hf₅.mono (by simp) (by simp))
+
+end vg
+
 end L.Arena
