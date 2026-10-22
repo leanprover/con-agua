@@ -308,7 +308,7 @@ def recTargetOf : FunDecl := lfn (no, nl, mI, ty) locals (ok, bo, bl, body, g, x
   if ok == 0 { return nl };
   if body >> 28 != 6 { return nl };
   (g, x, y, z) := call e_view(body);
-  hd := call get_app_fn(⟪CWF⟫, x);
+  hd := call get_app_fn_f(⟪CWF⟫, x);
   if hd >> 28 != 3 { return nl };
   (g, x, y, z) := call e_view(hd);
   (fnd, idx) := call sl_find(no, nl, x);
@@ -363,7 +363,7 @@ def ctorMember : FunDecl := lfn (no, nl, lvls, nP, c) locals (nF, ty, ok, bo, bl
   ty := EREC.u64[IW.u64[c] + 3];
   (ok, bo, bl, body) := call strip_pis(nP + nF, ty);
   if ok == 0 { return (0, 0) };
-  hd := call get_app_fn(⟪CWF⟫, body);
+  hd := call get_app_fn_f(⟪CWF⟫, body);
   (rok, ri) := call member_idx_at(no, nl, lvls, hd);
   return (rok, ri)
 }

@@ -142,7 +142,7 @@ def nestInstTypeL : FunDecl := lfn (vis, ctx, hi, key) locals
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:746-750 ConRon.Arena.nestResHead
 @[l_impl ConRon.Arena.nestResHead]
 def nestResHeadL : FunDecl := lfn (e) locals (hd) {
-  hd := call get_app_fn(⟪CWF⟫, e);
+  hd := call get_app_fn_f(⟪CWF⟫, e);
   return u64((hd >> 28) == 1)
 }
 
@@ -322,7 +322,7 @@ def nestCtorsU4L : FunDecl := lfn (ksOff, nF, closed) locals (i, kind, su) {
 def nestCtorsResOkL : FunDecl := lfn (ctx, hi, cur) locals (rh, argsOff, argsLen, occ) {
   rh := call nest_res_head(cur);
   if rh == 0 { return 0 };
-  (argsOff, argsLen) := call get_app_args(⟪CWF⟫, cur);
+  (argsOff, argsLen) := call get_app_args_f(⟪CWF⟫, cur);
   occ := call nest_occ_any(IW.u64[ctx], IW.u64[ctx + 1], IW.u64[ctx + 4], hi, argsOff, argsLen);
   return u64(occ == 0)
 }
@@ -455,7 +455,7 @@ def nestFrameL : FunDecl :=
         holesLen, hiTot, outsOff, outsLen, nsOut2) {
   if grpLen == 0 { hn := call intern_nanon() } else { hn := IW.u64[IW.u64[grpOff]] };
   hc := call intern_const(hn, us);
-  app := call mk_app_n(hc, dsOff, dsLen);
+  app := call mk_app_n_f(hc, dsOff, dsLen);
   zz := call infer_type_core(vis, hi, app);
   (prog2Off, prog2Len, namesOff, namesLen) :=
     call nest_frame_grp(vis, ctx, hi, us, dsOff, dsLen, progOff, progLen, grpOff, grpLen);
@@ -646,8 +646,8 @@ def nestPosFvarL :=
 def nestPosAppL : FunDecl :=
     lfn (vis, ctx, fuel, progOff, progLen, kb, hi, w, ns) locals
       (argsOff, argsLen, hd, g2, x2, y2, zz, kind2, occA) {
-  (argsOff, argsLen) := call get_app_args(⟪CWF⟫, w);
-  hd := call get_app_fn(⟪CWF⟫, w);
+  (argsOff, argsLen) := call get_app_args_f(⟪CWF⟫, w);
+  hd := call get_app_fn_f(⟪CWF⟫, w);
   (g2, x2, y2, zz) := call e_view(hd);
   if g2 == 1 {
     kind2 := call nest_pos_fvar(vis, ctx, progOff, progLen, kb, hi, x2, argsOff, argsLen);
@@ -692,7 +692,7 @@ def nestPosL : FunDecl :=
   if fuel == 0 { abort };
   fuel -= 1;
   hi := call nest_ctx_hi_at(ctx, progLen);
-  w := call whnf(vis, dep, e);
+  w := call whnf_top(vis, dep, e);
   occW := call nest_occ(IW.u64[ctx], IW.u64[ctx + 1], IW.u64[ctx + 4], hi, w);
   if occW == 0 {
     occE := call nest_occ(IW.u64[ctx], IW.u64[ctx + 1], IW.u64[ctx + 4], hi, e);
