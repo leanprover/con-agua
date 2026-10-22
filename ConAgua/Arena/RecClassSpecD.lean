@@ -309,14 +309,15 @@ theorem ihsW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
 theorem viewConstW {m : Mem} {a : AState} (hR : ArenaR m a) {w : Word} (hne : eViewW m w ≠ [])
     (hg : w >>> 28 = 3) :
     (ConRon.Arena.viewConst (decE w)).run a = .ok (some (decI ((eViewW m w).tail.headD 0),
-      decI ((eViewW m w).tail.tail.headD 0)), a) ∧ H ((eViewW m w).tail.headD 0) := by
+      decI ((eViewW m w).tail.tail.headD 0)), a) ∧ H ((eViewW m w).tail.headD 0) ∧
+      H ((eViewW m w).tail.tail.headD 0) := by
   obtain ⟨v, hv, hR'⟩ := eViewW_ok m a hR w hne
   have hhead := eViewW_head3 m w hne hg
   cases v with
   | const nn us =>
     simp only [ViewR, getD_one, getD_two] at hR'
-    obtain ⟨-, hn1, hn2, -, hu2⟩ := hR'
-    refine ⟨?_, hn1⟩
+    obtain ⟨-, hn1, hn2, hu1, hu2⟩ := hR'
+    refine ⟨?_, hn1, hu1⟩
     show Except.ok (a.store.viewConst (decE w), a) = _
     rw [EStore.viewConst_of_view_r _ _ _ _ hv, hn2, hu2]
   | bvar i => simp only [ViewR] at hR'; exact absurd (hhead.symm.trans hR'.1) (by decide)
@@ -389,7 +390,7 @@ theorem finW_sim (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   have ht : (((decI hd : EIdx)).tag == ETag.const) = true := by
     have : (decE hd).tag = ETag.const := (decE_tag_const hd hH).mpr hg3
     simp only [beq_iff_eq]; exact this
-  obtain ⟨hvc, hcn⟩ := viewConstW hS.1.arena.1 hne hg3
+  obtain ⟨hvc, hcn, -⟩ := viewConstW hS.1.arena.1 hne hg3
   simp only [minorFin]
   rw [if_pos ht]
   refine RSim.tstep hvc ?_
