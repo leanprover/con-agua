@@ -783,24 +783,26 @@ def tgtStoredRules : FunDecl := lfn (vis, cv, rP, M, rhso, rhsl)
   return (no, nl)
 }
 
+/-- `block_nested_bit_go(reco, recl, k)`: some recursor's major is not a member
+(`recs.any (fun rc => !(rc.tgt < k))`), a self-recursion. -/
+-- con-ron: ConRon/Arena/Inductives/RecCheck.lean:511-515 ConRon.Arena.blockNestedBit
+@[l_impl ConRon.Arena.blockNestedBit]
+def blockNestedBitGo : FunDecl := lfn (reco, recl, k) locals (r) {
+  if recl == 0 { return 0 };
+  if k <= IW.u64[IW.u64[reco] + 3] { return 1 };
+  r := call block_nested_bit_go(reco + 1, recl - 1, k);
+  return r
+}
+
 /-- **`block_nested_bit`**: some field kind is not flat, or some recursor's major is not a
 member. -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:511-515 ConRon.Arena.blockNestedBit
 @[l_impl ConRon.Arena.blockNestedBit]
-def blockNestedBit : FunDecl := lfn (p, ko, kl) locals (flat, reco, recl, k, j, rc, tgt) {
+def blockNestedBit : FunDecl := lfn (p, ko, kl) locals (flat, r) {
   flat := call nest_kinds_flat(ko, kl);
   if flat == 0 { return 1 };
-  reco := IW.u64[p + 2];
-  recl := IW.u64[p + 3];
-  k := IW.u64[p + 1];
-  j := 0;
-  while j < recl {
-    rc := IW.u64[reco + j];
-    tgt := IW.u64[rc + 3];
-    if k <= tgt { return 1 };
-    j += 1
-  };
-  return 0
+  r := call block_nested_bit_go(IW.u64[p + 2], IW.u64[p + 3], IW.u64[p + 1]);
+  return r
 }
 
 /-- Copy an `IW` pointer-list of 11-word rule records into one fresh CONSECUTIVE `EREC` run. -/
@@ -899,7 +901,7 @@ def recCheckFns : Prog :=
    ("target_k53", targetK53), ("target_pi_doms_with", targetPiDomsWith),
    ("abstract_prefix", abstractPrefix), ("abstract_prefix_list", abstractPrefixList),
    ("aux_rule_fire", auxRuleFire), ("tgt_stored_rules_remap", tgtStoredRulesRemap),
-   ("tgt_stored_rules", tgtStoredRules), ("block_nested_bit", blockNestedBit),
+   ("tgt_stored_rules", tgtStoredRules), ("block_nested_bit_go", blockNestedBitGo), ("block_nested_bit", blockNestedBit),
    ("rules_to_erec", rulesToErec), ("cons_block_recs_push", consBlockRecsPush),
    ("cons_block_recs_tf", consBlockRecsTF)]
 
