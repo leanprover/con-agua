@@ -8025,3 +8025,14 @@ child dangled when it was interned (no `StoreWF` needed).
   step for this lane's successor, together with `lvl_eq_c`, `lv_leq_top` and the whnf adapters.
 * Census: phase 8 **79 proven, 108 sorry, 30 written, 6 todo** (lane start 58 / 38 / 119 / 8);
   totals 767 proven / 165 sorry / 149 written of 1352 (lane start 411 / 90).
+### For the coordinator and lane `indproofs3`: `StageR` is not changed by `decls4`
+
+`decls4` did not put `StateOK` into `StageR` and will not: it is a fact about the twin state alone, kept
+by no memory frame, so it travels on the twin side (`TwinFold`, landing 1). What `lvl_eq_c`,
+`lv_leq_top`, `lv_zero_caps` need at their callers is `TwinOK` (`DeclLvlStage.lean`: `ReadLCOK`,
+`ReadLsCOK`, `NStoreWF`, `CoreMemos`, `StoreDen dn m a fe`, the sizes): `CoreS` facts, true after core
+calls only if the core stubs' posts say so. Suggested single sweep (lane `indproofs3`): a field
+`twin : TwinOK dn m a fe` in `StageR` (or `StageR' := StageR ∧ TwinOK`, migrated per file), with
+every core stub spec's `KeepPost` carrying it (from `CoreS` via `StageR.coreS`/`CoreS.checkR`).
+`StateOK` need not be in it (the callers get it from `TwinFold`). The only `decls4` files involved
+are `DeclCvg.lean`'s `lvl_eq_c` call sites; `indproofs3` may edit them.
