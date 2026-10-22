@@ -23,10 +23,13 @@
 #   4. writes vendor/UPSTREAM, regenerates scripts/census-rust.tsv from the new Rust;
 #   5. builds (`scripts/lake build` and the census), log in _tmp/bump-<short>/build.log, and
 #      prints the files with errors;
-#   6. runs the census: records the new targets' fingerprints and those of changed targets no
-#      linked target reaches (`--record`), and prints the stale targets: the work queue.
+#   6. runs the census (counts only).
+# TODO: which L code and proofs the bump made stale is not computed here any more (the census
+# fingerprints were dropped); the coming source-citation gate (`con-ron: ConRon/Arena/F.lean:a-b
+# name` doc lines, checked like con-ron's scripts/provenance.py) will report it.
 # Nothing is committed. Afterwards: fix the build (an edit to a vendored file goes into a patch:
-# --refresh-patches), commit, and announce the stale list (DESIGN.md).
+# --refresh-patches), commit, and announce the bump (DESIGN.md): what changed upstream (the
+# changed-files list above).
 set -euo pipefail
 
 root="$(git rev-parse --show-toplevel)"
@@ -210,7 +213,7 @@ bump() {
   if [[ -n "$conflicts" ]]; then
     echo "== conflicts in:$conflicts"
     git diff --name-only --diff-filter=U | sed 's/^/   /'
-    echo "   resolve (git add), then --refresh-patches, build, scripts/census.py --record, --stale" >&2
+    echo "   resolve (git add), then --refresh-patches, build, scripts/census.py" >&2
     exit 1
   fi
   log="$work/build.log"
@@ -220,13 +223,14 @@ bump() {
   if [[ $bok == 1 ]]; then
     echo "   build FAILED; files with errors:"
     grep -o '^error: [^:]*\.lean' "$log" | sort | uniq -c | sed 's/^/   /' || true
-    echo "   (the census needs a build; fix, then run scripts/census.py --record and --stale)"
+    echo "   (the census needs a build; fix, then run scripts/census.py)"
     exit 1
   fi
   echo "   build ok"
-  echo "== the work queue (scripts/census.py --stale)"
-  timeout 1800 python3 scripts/census.py --record >/dev/null
-  timeout 1800 python3 scripts/census.py --no-build --stale
+  echo "== the census"
+  timeout 1800 python3 scripts/census.py
+  # TODO: the stale list (L code and proofs whose cited twin changed), from the coming
+  # source-citation gate.
 }
 
 case "${1:-}" in
