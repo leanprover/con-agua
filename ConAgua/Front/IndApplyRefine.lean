@@ -293,4 +293,168 @@ theorem storeFuelW_ok {m : Mem} {a : AState} (hR : ArenaR m a) {n : Nat} {f : Wo
   simp only [UInt64.toNat_add, UInt64.toNat_zero, UInt64.toNat_one] at *
   omega
 
+
+/-! ## Names: `name_rec_pre` against `viewN` -/
+
+theorem decN_tag (h : Word) (hh : h.toNat < 2 ^ 32) :
+    (decI h : NIdx).tag = (h >>> 28).toUInt32 := by
+  simp only [decI, Idx.tag]
+  apply UInt32.toNat_inj.mp
+  simp [UInt32.toNat_div, UInt64.toNat_toUInt32, UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]
+  omega
+
+theorem decN_idx (h : Word) : (decI h : NIdx).idxNat = (idxW h).toNat := by
+  simp only [decI, Idx.idxNat, Idx.index, idxW]
+  simp [UInt32.toNat_mod, UInt64.toNat_toUInt32, UInt64.toNat_and]
+  have : (134217727 : Nat) = 2 ^ 27 - 1 := rfl
+  rw [this, Nat.and_two_pow_sub_one_eq_mod]
+
+/-- Under the scratch check, the name store's view reads the tier the handle's bit names. -/
+theorem nview_tier {m : Mem} {a : AState} (hR : ArenaR m a) (h : Word) (hh : h.toNat < 2 ^ 32)
+    (hv : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) :
+    a.store.lss.ls.ns.view (decI h) =
+      (if tierW h = 0 then a.store.lss.ls.ns.pers else a.store.lss.ls.ns.scr).get (decI h) := by
+  have hfl := hR.nstr.2.1
+  unfold NStore.view
+  rw [isPersistent_decI h hh]
+  by_cases ht : tierW h = 0
+  · simp [tierW] at ht; simp [ht, tierW]
+  · have hon : a.store.lss.ls.ns.scratchOn = true := by
+      rw [← hfl]; simp only [bne_iff_ne, ne_eq]; exact fun h1 => hv ⟨ht, h1⟩
+    simp only [tierW] at ht
+    simp [ht, hon, tierW]
+
+theorem shr28_lt (h : Word) (hh : h.toNat < 2 ^ 32) : (h >>> 28).toNat < 16 := by
+  simp [UInt64.toNat_shiftRight, Nat.shiftRight_eq_div_pow]; omega
+
+theorem viewN_run {a : AState} {h : NIdx} {v : NNodeView} (hv : a.store.ns.view h = some v) :
+    (viewN h).run a = .ok (v, a) := by
+  simp only [EStore.ns] at hv
+  rw [show (viewN h).run a = (match a.store.lss.ls.ns.view h with
+    | some v => (pure v : AM NNodeView)
+    | none => fail (.internal "arena: dangling name handle")).run a from rfl, hv]
+  rfl
+
+/-- A word read at `o + k` without overflow. -/
+theorem rdW_add (p : Array Word) (o k : Word) (h : o.toNat + k.toNat < 2 ^ 64) :
+    rdW p (o + k) = p[o.toNat + k.toNat]?.getD 0 := by
+  simp only [rdW, UInt64.toNat_add]; congr 2; omega
+
+theorem strWords_rec : strWords "rec" = [114, 101, 99] := by decide
+
+theorem sliceL_three (p : Array Word) (o : Nat) :
+    sliceL p o 3 = [p[o]?.getD 0, p[o + 1]?.getD 0, p[o + 2]?.getD 0] := by
+  simp [sliceL, List.ofFn_succ]
+
+/-- **`name_rec_pre` refines `viewN`, matched against `.str T "rec"`.** -/
+theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrpW m w = some (f, T)) :
+    ∃ v, (viewN (decI w)).run a = .ok (v, a) ∧ (f ≠ 0 → v = .str (decI T) "rec") ∧
+      (f = 0 → ∀ T', v ≠ .str T' "rec") := by
+  unfold nrpW at h
+  split at h
+  · cases h
+  rename_i hb
+  have hw : w.toNat < 2 ^ 32 := by
+    have : ¬ (4294967295 : Nat) < w.toNat := hb
+    omega
+  split at h
+  · cases h
+  rename_i hs
+  have hv := nview_tier hR w hw hs
+  have ht1 : tierW w ≤ 1 := tierW_le w
+  split at h
+  · -- anonymous
+    rename_i hg
+    split at h
+    · cases h
+    rename_i hc
+    cases h
+    obtain ⟨x, hx, -⟩ := storeR_node nanonSch NaRecRel nahash m _ _ _ hR.nanon (tierW w) ht1 (idxW w)
+      (by simp only [cntW, nanonSch]; exact UInt64.not_le.mp hc)
+    refine ⟨.anonymous, viewN_run ?_, by simp, by simp⟩
+    rw [EStore.ns, hv, NTables.get, decN_tag w hw, hg]
+    simp only [NTag.anonymous, decN_idx, Tbl.node?]
+    by_cases ht : tierW w = 0
+    · rw [if_pos ht] at hx; simp [ht, hx]
+    · rw [if_neg ht] at hx; simp [ht, hx]
+  split at h
+  · -- num
+    rename_i hg0 hg
+    split at h
+    · cases h
+    rename_i hc
+    cases h
+    obtain ⟨x, hx, -⟩ := storeR_node nnumSch NnRecRel nnhash m _ _ _ hR.nnum (tierW w) ht1 (idxW w)
+      (by simp only [cntW, nnumSch]; exact UInt64.not_le.mp hc)
+    refine ⟨.num x.pre x.n, viewN_run ?_, by simp, by simp⟩
+    rw [EStore.ns, hv, NTables.get, decN_tag w hw, hg]
+    simp only [NTag.anonymous, NTag.str, NTag.num, decN_idx, Tbl.node?]
+    by_cases ht : tierW w = 0
+    · rw [if_pos ht] at hx; simp [ht, hx]
+    · rw [if_neg ht] at hx; simp [ht, hx]
+  split at h
+  · cases h
+  rename_i hg0 hg2 hg1
+  have hg : w >>> 28 = 1 := by simpa using hg1
+  split at h
+  · cases h
+  rename_i hc
+  obtain ⟨x, hx, hrel⟩ := storeR_node nstrSch NsRecRel nshash m _ _ _ hR.nstr (tierW w) ht1 (idxW w)
+    (by simp only [cntW, nstrSch]; exact UInt64.not_le.mp hc)
+  have hview : (viewN (decI w)).run a = .ok (.str x.pre x.s, a) := by
+    apply viewN_run
+    rw [EStore.ns, hv, NTables.get, decN_tag w hw, hg]
+    simp only [NTag.anonymous, NTag.str, decN_idx, Tbl.node?]
+    by_cases ht : tierW w = 0
+    · rw [if_pos ht] at hx; simp [ht, hx]
+    · rw [if_neg ht] at hx; simp [ht, hx]
+  obtain ⟨hq, hol, hsl, -⟩ := hrel
+  simp only [nsQ, nsO, nsL] at hq hol hsl
+  have hlen := sliceL_length (m.arr64 POOL) (rdW (m.arr64 NSREC) (idxW w * 8 + tierW w * 4 + 1)).toNat
+    (rdW (m.arr64 NSREC) (idxW w * 8 + tierW w * 4 + 2)).toNat
+  rw [hsl] at hlen
+  have htop := UInt64.toNat_lt m.top
+  unfold nrpStr at h
+  generalize ho : rdW (m.arr64 NSREC) (idxW w * 8 + tierW w * 4 + 1) = o at hol hsl hlen h
+  generalize hlw : rdW (m.arr64 NSREC) (idxW w * 8 + tierW w * 4 + 2) = lw at hol hsl hlen h
+  have e1 : lw.toNat = 3 → rdW (m.arr64 POOL) (o + 1) = (m.arr64 POOL)[o.toNat + 1]?.getD 0 :=
+    fun h3 => rdW_add _ _ _ (by simp; omega)
+  have e2 : lw.toNat = 3 → rdW (m.arr64 POOL) (o + 2) = (m.arr64 POOL)[o.toNat + 2]?.getD 0 :=
+    fun h3 => rdW_add _ _ _ (by simp; omega)
+  have e0 : rdW (m.arr64 POOL) o = (m.arr64 POOL)[o.toNat]?.getD 0 := rfl
+  refine ⟨_, hview, ?_, ?_⟩
+  · intro hf
+    split at h
+    · cases h; exact absurd rfl hf
+    rename_i h3
+    split at h
+    · rename_i hrec
+      cases h
+      have hl3 : lw.toNat = 3 := by
+        have : lw = 3 := by simpa using h3
+        rw [this]; rfl
+      rw [hl3, sliceL_three] at hsl
+      obtain ⟨r1, r2, r3⟩ := hrec
+      rw [e0] at r1; rw [e1 hl3] at r2; rw [e2 hl3] at r3
+      rw [r1, r2, r3, ← strWords_rec] at hsl
+      rw [strWords_inj _ _ hsl.symm, hq, decI_word]
+    · cases h; exact absurd rfl hf
+  · intro hf T' heq
+    simp only [NNodeView.str.injEq] at heq
+    obtain ⟨-, hs'⟩ := heq
+    rw [hs', strWords_rec] at hlen hsl
+    simp only [List.length_cons, List.length_nil] at hlen
+    split at h
+    · rename_i h3
+      exact h3 (UInt64.toNat_inj.mp (by simp; omega))
+    split at h
+    · cases h; exact absurd hf (by decide)
+    rename_i h3 hrec
+    apply hrec
+    rw [← hlen, sliceL_three] at hsl
+    simp only [List.cons.injEq] at hsl
+    obtain ⟨s1, s2, s3, -⟩ := hsl
+    rw [e0, e1 hlen.symm, e2 hlen.symm]
+    exact ⟨s1, s2, s3⟩
+
 end L.Front.Ind
