@@ -215,4 +215,102 @@ theorem iacW_sim {p : Prog} (hP : AbsProg p) (dn : NIdx → Option ConLeche.Name
   rintro _ _ _ _ ⟨hS4, hg4⟩
   exact ⟨hS4, hg13.trans hg4⟩
 
+/-- **`check_abs_ctor_sorts` refines `checkAbsCtorSorts`** (through `all_level_params_defined`'s,
+`open_pis_at_fvars_f`'s stubs and `check_struct_field_sorts_i`'s pending contract): the context
+decoded below the tops with its holes' bound below `2^64`, the constructors and their normal forms
+slices decoded below the tops (an empty slice anywhere). -/
+@[refines ConRon.Arena.checkAbsCtorSorts]
+theorem checkAbsCtorSorts_refines (p : Prog) (hP : AbsProg p) (n : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (ctx isP co cl oo ol : Word)
+    (c : NestCtx) (b : Bool) (cs : List (IConstantVal × Nat)) (os : List (List NestFieldKind × EIdx))
+    (hb : (isP != 0) = b) (hhi : c.hiAt 0 < 2 ^ 64) (hS : StageR dn vis fe s₀.mem a₀)
+    (hc : DecB (fun m => decCtx m ctx.toNat) s₀.mem c) (hcs : PSlR0 decCN cs co cl s₀.mem)
+    (hos : PSlR0 decKE os oo ol s₀.mem) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_abs_ctor_sorts" [vis, ctx, isP, co, cl, oo, ol]
+    ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.checkAbsCtorSorts V fe c b cs os) a₀ ∧
+      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.checkAbsCtorSorts V fe c b cs os) a₀) ∧
+      IWGrow s₀.mem s'.mem; ⊤⦄ :=
+  triple_post (iac_spec p hP.abs n s₀ vis ctx isP co cl oo ol) fun _ _ ⟨hl, hm⟩ =>
+    let ⟨hok, hQ⟩ := Sim.run (iacW_sim hP dn vis fe ctx isP c b hb hhi n _ a₀ co cl oo ol cs os hS hc hcs hos) hm
+    ⟨hl, hok, hQ⟩
+
+/-! ## `check_abs_ctor_sorts_all` -/
+
+/-- A member's normal forms: a pointer to `[off, len]` of `[k.off, k.len, e]` pointers. -/
+def decKES (m : Mem) (q : Nat) : Option (List (List NestFieldKind × EIdx)) :=
+  decAt m (fun o l => decPL m (decKE m) o l) q
+
+/-- **`check_abs_ctor_sorts_all`'s model refines `checkAbsCtorSortsAll`.** -/
+theorem iaaW_sim {p : Prog} (hP : AbsProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (ctx isP : Word) (c : NestCtx) (b : Bool) (hb : (isP != 0) = b) (hhi : c.hiAt 0 < 2 ^ 64) (n : Nat) :
+    ∀ (m : Mem) (a : AState) (so sl oo ol : Word) (css : List (List (IConstantVal × Nat)))
+      (oss : List (List (List NestFieldKind × EIdx))),
+    StageR dn vis fe m a → DecB (fun m => decCtx m ctx.toNat) m c →
+    PSlR0 decCNS css so sl m → PSlR0 decKES oss oo ol m →
+    Sim (iaaW p n m vis ctx isP so sl oo ol) (ConRon.Arena.checkAbsCtorSortsAll V fe c b css oss) a
+      (fun _ _ m' a' => StageR dn vis fe m' a' ∧ IWGrow m m') := by
+  induction n with
+  | zero => intro m a so sl oo ol css oss _ _ _ _; rw [iaaW_zero]; exact Sim.of_none
+  | succ n ih =>
+  intro m a so sl oo ol css oss hS hc hcss hoss
+  by_cases hsl : sl = 0
+  · rw [iaaW_nil1 p n m vis ctx isP so sl oo ol hsl, hcss.nil hsl]
+    exact Sim.ret ⟨hS, IWGrow.refl m⟩
+  by_cases hol : ol = 0
+  · rw [iaaW_nil2 p n m vis ctx isP so sl oo ol hsl hol, hoss.nil hol]
+    have : ConRon.Arena.checkAbsCtorSortsAll V fe c b css [] = pure () := by
+      cases css <;> simp [ConRon.Arena.checkAbsCtorSortsAll]
+    rw [this]
+    exact Sim.ret ⟨hS, IWGrow.refl m⟩
+  obtain ⟨qc, cs, css', rfl, hwc, hqcb, hdc, hcss'⟩ := partsPSl_cons (hcss.pslr hsl) hsl
+  obtain ⟨qo, os, oss', rfl, hwo, hqob, hdo, hoss'⟩ := partsPSl_cons (hoss.pslr hol) hol
+  have hqc' : (UInt64.ofNat qc : Word).toNat = qc := UInt64.toNat_ofNat_of_lt' hqcb
+  have hqo' : (UInt64.ofNat qo : Word).toNat = qo := UInt64.toNat_ofNat_of_lt' hqob
+  have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
+  obtain ⟨co, cl, hco, hcl, hcd, hcb⟩ := partsAt decCN_mono (show decAt (truncM m)
+    (decPL (truncM m) (decCN (truncM m))) qc = some cs from hdc)
+  obtain ⟨oo2, ol2, hoo, hol2, hod, hob⟩ := partsAt decKE_mono (show decAt (truncM m)
+    (decPL (truncM m) (decKE (truncM m))) qo = some os from hdo)
+  have l1 := partsIwLt hcl; have l2 := partsIwLt hol2
+  obtain ⟨w1, -, -⟩ := partsIwRd hco (w := UInt64.ofNat qc) hqc'
+  obtain ⟨w2, -, -⟩ := partsIwRd hcl (w := UInt64.ofNat qc + 1) (by rw [UInt64.toNat_add, hqc']; simp; omega)
+  obtain ⟨w3, -, -⟩ := partsIwRd hoo (w := UInt64.ofNat qo) hqo'
+  obtain ⟨w4, -, -⟩ := partsIwRd hol2 (w := UInt64.ofNat qo + 1) (by rw [UInt64.toNat_add, hqo']; simp; omega)
+  rw [UInt64.ofNat_toNat] at w1 w2 w3 w4
+  rw [iaaW_cons p n m vis ctx isP so sl oo ol hsl hol, hwc, hwo, w1, w2, w3, w4]
+  simp only [ConRon.Arena.checkAbsCtorSortsAll]
+  refine Sim.bindK (K := iaaK1 p n vis ctx isP so sl oo ol) (body := fun _ m1 => iaaK2
+      (iaaW p n m1 vis ctx isP (so + 1) (sl - 1) (oo + 1) (ol - 1))) (by simp [iaaK1])
+      (fun r m₁ => iaaK1_some p n m₁ vis ctx isP so sl oo ol r)
+    (fun r m' e => iacW_sim hP dn vis fe ctx isP c b hb hhi n m a co cl oo2 ol2 cs os hS hc ⟨hcd, hcb⟩
+      ⟨hod, hob⟩ r m' (by
+        obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+          (iac_spec p hP.abs n _ vis ctx isP co cl oo2 ol2) e
+        exact hW)) ?_
+  rintro - - m1 a1 ⟨hS1, hg1⟩
+  refine Sim.post (K := iaaK2) rfl (fun _ _ => rfl)
+    (ih m1 a1 (so + 1) (sl - 1) (oo + 1) (ol - 1) css' oss' hS1 (hc.grow (decCtx_mono _) hg1)
+      (PSlR0.grow decCNS_mono (⟨hcss'.1, Or.inr hcss'.2⟩ : PSlR0 decCNS css' (so + 1) (sl - 1) m) hg1)
+      (PSlR0.grow (fun q => OMono.decAt (fun o l => OMono.decPL decKE_mono o l) q) (⟨hoss'.1, Or.inr hoss'.2⟩ : PSlR0 decKES oss' (oo + 1) (ol - 1) m) hg1)) ?_
+  rintro _ _ _ _ ⟨hS2, hg2⟩
+  exact ⟨hS2, hg1.trans hg2⟩
+
+/-- **`check_abs_ctor_sorts_all` refines `checkAbsCtorSortsAll`** (through `check_abs_ctor_sorts`'
+stubs and pending contract): every member's constructors and normal forms as slices of
+`[off, len]` pointers decoded below the tops. -/
+@[refines ConRon.Arena.checkAbsCtorSortsAll]
+theorem checkAbsCtorSortsAll_refines (p : Prog) (hP : AbsProg p) (n : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (ctx isP so sl oo ol : Word)
+    (c : NestCtx) (b : Bool) (css : List (List (IConstantVal × Nat)))
+    (oss : List (List (List NestFieldKind × EIdx))) (hb : (isP != 0) = b) (hhi : c.hiAt 0 < 2 ^ 64)
+    (hS : StageR dn vis fe s₀.mem a₀) (hc : DecB (fun m => decCtx m ctx.toNat) s₀.mem c)
+    (hcss : PSlR0 decCNS css so sl s₀.mem) (hoss : PSlR0 decKES oss oo ol s₀.mem) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_abs_ctor_sorts_all" [vis, ctx, isP, so, sl, oo, ol]
+    ⦃fun _ s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.checkAbsCtorSortsAll V fe c b css oss) a₀ ∧
+      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.checkAbsCtorSortsAll V fe c b css oss) a₀) ∧
+      IWGrow s₀.mem s'.mem; ⊤⦄ :=
+  triple_post (iaa_spec p hP.all n s₀ vis ctx isP so sl oo ol) fun _ _ ⟨hl, hm⟩ =>
+    let ⟨hok, hQ⟩ := Sim.run (iaaW_sim hP dn vis fe ctx isP c b hb hhi n _ a₀ so sl oo ol css oss hS hc hcss hoss) hm
+    ⟨hl, hok, hQ⟩
+
 end L.Ind
