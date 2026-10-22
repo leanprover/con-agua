@@ -31,16 +31,15 @@ open L.Arena
 /-- `class_read_classes(so, sl)`: the motives' keys, in prefix order (`slots.filterMap`). -/
 -- con-ron: ConRon/Arena/Inductives/ClassRead.lean:66-72 ConRon.Arena.ClassRead.classes
 @[l_impl ConRon.Arena.ClassRead.classes]
-def classReadClasses : FunDecl := lfn (so, sl) locals (q, cnt, j, sp) {
-  q := call iw_alloc(sl);
-  cnt := 0;
-  j := 0;
-  while j < sl {
-    sp := IW.u64[so + j];
-    if IW.u64[sp] == 0 { IW.u64[q + cnt] := IW.u64[sp + 1]; cnt += 1 };
-    j += 1
+def classReadClasses : FunDecl := lfn (so, sl) locals (sp, ro, rl, qo, ql) {
+  if sl == 0 { return (0, 0) };
+  sp := IW.u64[so];
+  (ro, rl) := call class_read_classes(so + 1, sl - 1);
+  if IW.u64[sp] == 0 {
+    (qo, ql) := call sl_cons(IW.u64[sp + 1], ro, rl);
+    return (qo, ql)
   };
-  return (q, cnt)
+  return (ro, rl)
 }
 
 /-- `class_read_motive_slot(so, sl, c)`: the prefix position of class `c`'s motive. -/

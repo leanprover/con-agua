@@ -1,3 +1,4 @@
+import ConAgua.Arena.WhnfCoreStep
 import ConAgua.Arena.WhnfCoreProj
 
 /-!

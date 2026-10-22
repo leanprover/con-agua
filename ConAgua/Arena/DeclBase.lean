@@ -1,4 +1,5 @@
 import ConAgua.Arena.Env
+import ConAgua.Arena.IndIface
 import ConAgua.Arena.CoreRefine
 import ConAgua.Front.StateDR
 import ConRon.Arena.Checker
@@ -54,6 +55,20 @@ structure LoopR (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis
   check : CheckR dn m a vis fe
   pend : PendR m pend
   decls : DeclsR (m.arr64 DECL) (m.arr64 DLP) ds
+  /-- The work pool and the record pool are in bounds (lane `induct`'s `IWOK`): the callees of
+  the step run on the stage relation `StageR = CheckR ∧ IWOK`. -/
+  iw : L.Ind.IWOK m
+
+/-- `IWOK` survives a frame that keeps `IW`, `EREC` and the two tops `CTL[129]`, `CTL[200]`. -/
+theorem IWOK.frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
+    (hA : L.Ind.IW ∉ A) (hE : EREC ∉ A) (h129 : (129 : Word) ∉ C) (h200 : (200 : Word) ∉ C)
+    (h : L.Ind.IWOK m) : L.Ind.IWOK m' := by
+  have hI : m'.arr64 L.Ind.IW = m.arr64 L.Ind.IW := hf.1 _ hA (by decide)
+  have hR : m'.arr64 EREC = m.arr64 EREC := hf.1 _ hE (by decide)
+  have hc : (m'.arr64 CTL).size = (m.arr64 CTL).size := hf.2.2.1 CTL
+  obtain ⟨h1, h2, h3, h4, h5⟩ := h
+  simp only [L.Ind.IWOK, L.Ind.iwTop, L.Ind.erTop, hI, hR, hc, hf.2.1 _ h129, hf.2.1 _ h200]
+  exact ⟨h1, h2, h3, h4, h5⟩
 
 /-- Declaration record `i` (a plain function, so that congruence sees through it). -/
 def dsAt (ds : Array IDeclaration) (i : Word) : IDeclaration := ds.getD i.toNat default

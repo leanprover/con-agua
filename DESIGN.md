@@ -4362,34 +4362,39 @@ be asymptotically slower. con-ron at `_tmp/ref/con-ron` origin/HEAD (`proof/ConR
 
 * `WhnfBase.lean` `whnfCallees_stub`: the specs of the callees not written yet (`inst_list`,
   `inst_lp`, `str_lit_ctor`, `str_lit_supported`, the knot's `infer`/`infer_io`/`defeq` steps).
-* `WhnfSpine.lean`: `getAppArgs_refines`, `getAppSpine_refines`, `headAndArgs_refines` (a loop
-  writing the stack slice after the fuel-chase loop in one function: `finish` did not close the
-  two-stage split; the word models `gaaLoopW`/`gaaFillW` are there).
+* `WhnfSpine.lean`: none. The two-loop walks are split into functions (`WhnfSpineArgs.lean`):
+  `app_count` (the `get_app_fn` loop; the count is the fuel spent, and it returns the head),
+  `app_fill`/`app_fill_n` (write the arguments/nodes without checks), and `get_app_args`/
+  `get_app_spine` call them; each spec is `vcgen` + `finish` on a short chain. They need the
+  stack's size below `2^63` (`CoreS.spn`); `head_and_args` also the top within the stack.
 * `WhnfCore.lean`: `coreCallees_stub` (`inst1` at `coreWalkFuel`, `find_proj`, `fire_ok`,
-  `iota_rec_at`, and `ErecKept`: `find_proj`/`fire_ok` leave the record pool alone). `whnf_app`
+  `iota_rec_at`; `ErecKept`: `find_proj`/`fire_ok` leave the record pool alone; `ProjSmall`: a
+  projection table's counts are below `2^32` (L compares `an == np + nf` in words, the twin in
+  `Nat`); `ProjFound`: a found table record decodes). `whnf_app`
   and `beta_peel` are proved (`WhnfCoreApp.lean`, sub-lanes: the loop as named blocks, one small
   spec each, fuel induction).
 * `WhnfBase.lean` `supKeep_twin`: `strLitSupported` keeps every stored node's view (twin-side
   store monotonicity, true, unproved).
-* `WhnfCoreProj.lean`: `reduceProjCore_refines'` (a sub-lane on it; the L function is split into
-  `reduce_proj_core`/`_head`/`_fire`/`_arg` so that each spec is a short chain);
-  `proj_lit_to_ctor` and `whnf_core_step_proj` are proved from it.
+* `WhnfCoreProj.lean`: none of its own. `reduce_proj_core` is proved on its split into
+  `_core`/`_head`/`_fire`/`_arg` (sub-lane); the inner two leave the argument slice on the stack, so
+  their post is `GrowSpec` (`CoreSpec` with `StackGrew`); the outer one restores the top.
 * `WhnfIota.lean`: `iotaCallees_stub` and every spec (28).
 * `WhnfDelta.lean`: the δ/Nat specs (`whnf_step`, `reduce_nat`, `delta_step`, …; 14).
 
-### Lane `induct`'s stubs of this phase (reconciliation, planned)
+### Lane `induct`'s stubs of this phase (adapters, `WhnfEntry.lean`)
 
 Lane `induct` calls `whnf(vis, dep, e)`, `get_app_fn(fuel, e)`, `get_app_args(fuel, e)` (an `IW`
-slice), `mk_app_n(f, off, len)` (an `IW` slice), `pi_result(fuel, e)` with the specs of
-`IndStubs.lean` (`RelAM` over `StageR`). This lane's functions of the same names differ: `whnf`
-takes the mode word first, the spine walks count `coreWalkFuel` internally (no fuel argument; the
-induct call sites pass `⟪CWF⟫` = `coreWalkFuel`), and slices are on the spine stack `SPN`. Plan,
-after the running proof sub-lanes land (they use the names): this lane renames its functions
-(`whnf_m`, `app_fn_c`, `app_args_c`, `mk_app_n_c`, `pi_result_c`; the fuel stays a counter) and
-adds `induct`'s names as adapters with `induct`'s conventions (`whnf` = `whnf_m` at the verified
-mode word; the slice adapters copy between `SPN` and `IW`; the fuel adapters run the counted walk
-when `fuel = coreWalkFuel`, the only fuel `induct` passes, and abort otherwise), with the
-`IndStubs` specs as their refinements at that fuel.
+slice), `mk_app_n(f, off, len)` (an `IW` slice), `pi_result(fuel, e)` (`IndStubs.lean`). This
+lane's functions of those names are used with their own conventions by lane `defeq` too (`whnf`
+takes the mode word, the walks count `coreWalkFuel` themselves, slices are on the stack `SPN`), so
+the names stay, and `WhnfEntry.lean` adds `induct`'s conventions under new names: `whnf_top`
+(`l_impl ConRon.Arena.whnf`, the verified knot entry), `get_app_fn_f`, `pi_result_f` (abort unless
+the fuel is `CWF`, the only fuel `induct` passes), `get_app_args_f` (the stack slice copied to a
+fresh `IW` slice, the top put back), `mk_app_n_f` (the `IW` slice copied to the stack top).
+**Request to lane `induct`**: rename the five call sites and stubs accordingly (`whnf` →
+`whnf_top`, `get_app_fn` → `get_app_fn_f`, `get_app_args` → `get_app_args_f`, `mk_app_n` →
+`mk_app_n_f`, `pi_result` → `pi_result_f`); the adapters' specs against `IndStubs`' `RelAM`
+statements (bridging `StageR` and `CoreS`) are not written yet.
 
 ### Numbers (2026-10-21)
 
@@ -5049,8 +5054,54 @@ helpers (`parts`: `IndParts`/`IndInstall`; `rec`: `Rec*`; `pos`: `IndPos*`) and 
 * Master callees without a stage lemma yet, `sorry`'d as stubs in `IndStubs.lean` by helpers:
   `pin_word(53)` (`zeroLevel`), `lvl_eq`. Both need `PinsR`/level-relation work, not a stub.
 
+### Landing 3 (03:10): round-1 helpers done
+* Census phase 8: **55 proven, 30 sorry (through stubs), 130 written** (start of lane: 15 / 1 / 199);
+  totals 362 proven / 81 sorry of 1352.
+* Lead since landing 2: `struct_ctor_resid_ok` (`IndSumSpec4.lean`; `hd` guarded below `2^32`).
+* Helper `parts` (11 functions, ~4.5k proof lines, `IndPartsSpec2‥6`): `BlockShape.nIdxs`,
+  `.memberNames`, `.lps`, `.allCtors`, `BlockParts.complete`, `piBinders`, `blockCounts?`,
+  `recTargetOf`, `blockRecNamesUnreserved`, `blockRecLpsOk` (with an `sl_eq` model),
+  `checkShapelessFormers`, `checkShapeless`, `BlockShape.withSort` (through `lvl_eq`). **Bug:**
+  `member_names_copy` read `EREC[member]` (a member record's word 0 is the `cvT` pointer).
+* Helper `rec` (21 tags, ~4.3k lines): the `RecClass` readers and generators (`classBinder`,
+  `ClassGen.binder`, `exprGetD`, `fvarHead`, `closeLams`, `ClassGen.slotVar`/`.motVar`,
+  `classRecOf`, `ClassRead.motiveSlot`/`.classes`/`.recCls`, `ClassGen.ihParts`), `classMinorSlot`,
+  `classLeafAt`, `classStreamRecs`, `abstractPrefix(List)`, `targetHoles`, `targetPinTys`,
+  `targetPiDomsWith`, `targetCtorAt` (now whole). **Bug:** `class_gen_ih_parts` read
+  `IW[g+3+t]` for the class record pointer instead of `IW[IW[g+3]+t]`.
+* Helper `pos` (~6.2k lines): `nestKindsFlat`, `nestBlockOf`, `nestResHead`, `nestCtorEntry`,
+  `instPisWith`, `closeTelescope`, `nestCanonSub`, `nestFrameMates(.go)`, the memo walks
+  `mentionsAnyGo`/`Const`, `nestOccGo`/`nestOcc`, `replaceAppsGo`/`replaceApps`, `depthGo`/`depth`,
+  `whnfWalkFuel`, `memberIdxAt?`, `phApp`, `appHole`, `nestPhs`, `nestCanonCrest`.
+* **Hypotheses beyond the stage relation** (preconditions a caller must discharge, listed so they
+  are not forgotten): the memo walks take memo well-formedness (`maMR`, `rpMR`, `dpMR`, `noMR`;
+  stubs give no frame, so it cannot be carried across a stub call — helper `pos` suggests putting it
+  into `StageR`); `class_read_rec_cls` takes `hstab` (records stay decodable as the pool grows),
+  `class_stream_recs` `RecsOK`, `class_read_classes` `SlotsExt` (records below the tops); several
+  take slice bounds. A generic "decoders below the tops are stable under `IWGrow`" lemma (one per
+  decoder today: `decHL_grow`, `decBL_grow`, `decCVp_grow`, helper `rec`'s `decCK_grow`,
+  `decNL_grow`) would discharge most.
+* L code: ~20 loops became self-recursion, ~15 handle/overflow guards after master interns
+  (no bound lemma; master has `mkAppW_hw` for `mk_app` only).
+* Cross-helper lemma-name clashes surfaced only when one file imported two helpers' files;
+  `IndAll.lean` (imports every spec file, in the lakefile) now catches them.
+* Round 2 (running): helpers `memo` (`IndSum`'s memo walks), `install` (`IndInstall`), `recb`
+  (rest of `RecGen`/`RecCheck`).
+
+### The frontend's inductive lines: not hooked yet (decision)
+The hook is two lines of L (`apply_dline`'s `pl == 25` branch calling `apply_ind_line`, and
+`frontAllProg` gaining `indFieldsFns`/`indApplyFns`, which also means moving `indAllProg`'s test
+out of `IndApply.lean`, since it imports `FrontRun`) plus `DeclAt`'s `.indDecl` arm
+(`IndDeclAt`). It is not done: once `apply_dline` calls `apply_ind_line`, `applyDLineW` and the
+front's chain up to `frontRun`'s `refines_part` need `apply_ind_line`'s model and its twin side
+(`processLineCoreD`'s `.ind` arm: `validateIndD`, `installIndD`, 534 L lines, none proved). A
+`sorry`'d spec there would turn the front's proven chain into `sorry` (a census regression), and
+a spec hypothesis would be a dishonest `proven`. Plan: prove `IndFields`/`IndApply` bottom up
+with this template under `StateDR` (the front's relation), then hook in one step with the
+refinement.
+
 ### `sorry`s
-None new: every `sorry` a refinement inherits is a stub's (`IndStubs.lean`).
+None but stubs': `IndStubs.lean`'s stub specs, plus the two master callees above (listed there).
 
 ## The fvar-range derived column (2026-10-21, lane `exprops3`)
 
@@ -5171,3 +5222,74 @@ denser than the Rust).
   (`WhnfCallees.inferStep`/`inferIOStep`/`defeqStep`, lane `whnf`'s stub) are this lane's to prove
   next; nothing is proved yet.
 None but stubs': `IndStubs.lean`'s stub specs, plus the two master callees above (listed there).
+
+## Phase 2, round 3: the step's specs, promotion, the pin variants (2026-10-22, lane `decls2`)
+
+### The stale loop targets (`installStep`, `installDeclStep`, `checkPending`, `checkPendingList`)
+
+Reviewed against the twin at `vendor/UPSTREAM` and lane `whnf`'s `CoreR`, which now carries both
+sets of mode memos (`CoreRM m c M eb`, the eager tower's `eagerMemos` as bank `1`): the L code
+(`Checker.lean`) is the twin's line for line, and the skeleton's proofs go through lane `whnf`'s
+`flushCaches_refinesC`/`scratchEnter_refinesC`/`scratchDrop_refinesC` against the new `CoreR`
+(`flush_loop`, `enter_loop`, `drop_loop` build on master). The flag came from the dropped
+fingerprint census: these four reach the changed `Caches.empty` only through `flushCaches`, which
+is cited and was fixed by lane `whnf` (DESIGN, "Provenance", the `update --old 4c9eaf7` test).
+Nothing left to do; no marker on them.
+
+`LoopR` now carries `IWOK` (lane `induct`'s pool bounds), so the step's callees, which run on
+`StageR = CheckR ∧ IWOK`, can be called from it (`IWOK.frame`: kept by any frame that leaves `IW`,
+`EREC`, `CTL[129]`, `CTL[200]` alone — the bracket's and `pend_push`'s). The two step specs moved
+to `DeclStepSpec.lean`.
+
+### The ROM's pin variants: does declining `Nat.div` decline everything?
+
+**Yes, for every realistic input.** Without a pin variant `checkDivModPin` runs its variant loop
+over `[]` and declines (`notImplemented`) at the install of *any* of the eight pin-certified
+operations (`natDivModNames`: `Nat.div`, `Nat.mod`, `Nat.gcd`, `Nat.land`, `Nat.lor`, `Nat.xor`,
+`Nat.shiftLeft`, `Nat.shiftRight`), not only `Nat.div`. Measured on con-leche's 498 e2e fixtures
+(`_tmp/ref/con-leche/tests/e2e`, expectations from `e2e-expected.txt`; a scan of the `def`/
+`opaque` records by name): of 313 accepting fixtures, **21 (6.7 %) define one of the eight** and
+would become declines; every one of the fixtures that declares `String` or `Char` (`str_lit`,
+`str_proj`, …) defines `Nat.div` and `Nat.mod` — a string literal's type cone reaches them on this
+toolchain — and so does every whole-module export (`Init` itself, `Std`, Mathlib) and every file
+using `/`, `%`, `Fin`/`UInt*` arithmetic or `toString`. What still accepts is pure-logic and
+hand-built cones (the other 292 fixtures). So the L checker as it stands is complete only for
+inputs that never meet these operations: a real completeness gap, still no soundness issue (the
+final theorem holds at every pin list).
+
+**What embedding one variant costs** (the repository toolchain's, con-leche's first, `pins/
+leanprover-lean4-nightly-nightly-2026-09-10.json`, which also covers v4.35.0):
+* Data: 16 terms, **42 036** share-table entries (8 pins 900, 8 certificate lists 41 136; the
+  largest blobs 5–8k entries). The ROM encoding (`encItems [] (itemsPinSet v0)`, the memo mirrored
+  by back references) is **490 465 bytes**, against **9 542** today (the walk's items without
+  variants: 7 942). The three committed variants together ≈ 1.5 MB.
+* Generating it: `#eval` (interpreter) of the encoder ≈ 30 s (the `seen` list is quadratic).
+* **The kernel cannot check it the current way.** The ROM's correctness enters through
+  `romData = … ++ encItems [] (itemsAllPins romPins)` and `decide +kernel` side conditions
+  (`romData_len`, `allPins_fits`, `allPins_noProj`), i.e. the kernel evaluates the encoder on the
+  variant. Measured (`decide +kernel` of `(encItems [] [.ex blob]).length < 2^63`): `Nat.land`'s
+  pin (7 entries, 76 bytes) 0.26 s; `Nat.div`'s pin (277 entries, 3.6 KB) **4.2 s**; `Nat.gcd`'s
+  first certificate (1061 entries, 13.6 KB) **111 s** — growth ≈ entries^2.4 (structural `Expr`
+  equality on the unshared trees behind the `seen` membership tests). Extrapolated quadratically
+  over the 16 blobs: ≥ 6 h of kernel time per variant; really more. Not buildable.
+* Build time otherwise: none to speak of (a 490 KB literal; the x64 binary grows by the same).
+
+**Recommendation: a decoder-side ROM loader, so the kernel never evaluates the variant.** The pin
+list is free in the final theorem, so the L checker need not prove *which* variant its ROM holds,
+only that it interns *some* list `P` the way `internAllPins P` does:
+1. A total decoder `decRom : List UInt8 → List NatOpPinSet` (fuel-bounded, garbage decodes to
+   anything), and the ROM readers' specs restated over it: "if `rom_items` returns, the twin's
+   `internAllPins (decRom bytes)` ran to the related state". Proved once by induction, for all
+   bytes; no evaluation of the data. `P := decRom romBytes` is then simply the program's pin list.
+2. The memo: without the encoder's canonical back references, L may re-intern a subterm the
+   twin's `EMemo` hits; the handles agree by hash-consing, so the one new lemma is the one lane
+   `decls` avoided — "re-interning a denoted tree returns its handle and changes nothing" (store
+   `consP`/`consS`), and `MemoR` relaxed to tolerate duplicate keys.
+3. The bytes: generated by an untrusted `#eval` script into a committed file, embedded with
+   `include_str`; the kernel only checks the length bound (`String.length` of the literal, linear).
+4. Cost estimate: the decoder and the restated reader specs ~1–1.5k proof lines (the five reader
+   files are 3.5k lines today; their arm lemmas carry over, the induction changes from "on `x`
+   with `enc x`" to "on the fuel with `dec`"), the re-intern lemma ~300 lines. Not cheap, so
+   **not implemented this round**; it is the one piece of work between the L checker and
+   accepting ordinary Lean files. The pin-variant check itself (`checkDivModPin`, the certificate
+   loop) is lane `decls2`'s translation work either way.
