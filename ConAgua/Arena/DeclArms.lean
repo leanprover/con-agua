@@ -131,44 +131,45 @@ def findPinned : FunDecl := lfn (vis, n, k, a, b, id) locals (f, r, p, q, e) {
   return e
 }
 
+/-- `std_ax_family(vis, q, s1, s2, s3, i1, i2, i3, c2, c3, cvid)`: one family of `stdAxiomOk`: the
+inductive at pin slot `s1` matching `rom_ci(i1)`, its constructor (`s2`, counts `c2`, `rom_ci(i2)`),
+its recursor (`s3`, counts `c3`, `rom_ci(i3)`), then the axiom `q` against `rom_cv(cvid)`. -/
+-- con-ron: ConRon/Arena/DeclCheck.lean:35-82 ConRon.Arena.stdAxiomOk
+def stdAxFamily : FunDecl :=
+    lfn (vis, q, s1, s2, s3, i1, i2, i3, c2, c3, cvid) locals (n, e, pa) {
+  n := call pin_at(s1);
+  e := call find_pinned(vis, n, 3, 0, 0, i1);
+  if e == 0 { return 0 };
+  n := call pin_at(s2);
+  e := call find_pinned(vis, n, 4, c2, c2, i2);
+  if e == 0 { return 0 };
+  n := call pin_at(s3);
+  e := call find_pinned(vis, n, 5, c3, c3, i3);
+  if e == 0 { return 0 };
+  pa := call rom_cv(cvid);
+  e := call matches_pin(q, pa);
+  return e
+}
+
 /-- `std_axiom_ok(vis, q)`: `stdAxiomOk`: `propext` over the pinned `Eq` and a standard `Iff`
 family, or `Classical.choice` over a standard `Nonempty` family (the `choice` name read only past
 the `propext` test). -/
 -- con-ron: ConRon/Arena/DeclCheck.lean:35-82 ConRon.Arena.stdAxiomOk
 @[l_impl ConRon.Arena.stdAxiomOk]
-def stdAxiomOkL : FunDecl := lfn (vis, q) locals (pn, en, ea, e, n, pa, cn) {
+def stdAxiomOkL : FunDecl := lfn (vis, q) locals (pn, nm, en, ea, e, cn) {
   pn := call pin_at(32);
-  if EREC.u64[q] == pn {
+  nm := EREC.u64[q];
+  if nm == pn {
     en := call pin_at(0);
     ea := call rom_ci(0);
     e := call find_is(vis, en, ea);
     if e == 0 { return 0 };
-    n := call pin_at(34);
-    e := call find_pinned(vis, n, 3, 0, 0, 2);
-    if e == 0 { return 0 };
-    n := call pin_at(35);
-    e := call find_pinned(vis, n, 4, 2, 2, 3);
-    if e == 0 { return 0 };
-    n := call pin_at(36);
-    e := call find_pinned(vis, n, 5, 4, 4, 4);
-    if e == 0 { return 0 };
-    pa := call rom_cv(0);
-    e := call matches_pin(q, pa);
+    e := call std_ax_family(vis, q, 34, 35, 36, 2, 3, 4, 2, 4, 0);
     return e
   };
   cn := call pin_at(33);
-  if EREC.u64[q] == cn {
-    n := call pin_at(37);
-    e := call find_pinned(vis, n, 3, 0, 0, 5);
-    if e == 0 { return 0 };
-    n := call pin_at(38);
-    e := call find_pinned(vis, n, 4, 1, 1, 6);
-    if e == 0 { return 0 };
-    n := call pin_at(39);
-    e := call find_pinned(vis, n, 5, 3, 3, 7);
-    if e == 0 { return 0 };
-    pa := call rom_cv(1);
-    e := call matches_pin(q, pa);
+  if nm == cn {
+    e := call std_ax_family(vis, q, 37, 38, 39, 5, 6, 7, 1, 3, 1);
     return e
   };
   return 0
@@ -540,7 +541,7 @@ def declArmsFns : Prog :=
   [("check_constant_val", checkConstantValL),
    ("check_defn_val", checkDefnValL), ("check_thm_val", checkThmValL),
    ("check_opaque_val", checkOpaqueValL), ("matches_pin", matchesPinL),
-   ("find_pinned", findPinned), ("std_axiom_ok", stdAxiomOkL),
+   ("find_pinned", findPinned), ("std_ax_family", stdAxFamily), ("std_axiom_ok", stdAxiomOkL),
    ("find_pinned_cv", findPinnedCv), ("trust_compiler_ok", trustCompilerOkL),
    ("reduce_op_cv_a", reduceOpCvAL), ("reduce_stored_ok", reduceStoredOkL),
    ("reduce_elem_ok", reduceElemOkL), ("of_reduce_op", ofReduceOpL),
