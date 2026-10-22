@@ -51,11 +51,32 @@ def labelExpr (f : String) (s : String) : Lean.Expr := Id.run do
       return mkApp3 (mkConst ``lbl) (mkStrLit f) (mkRawNatLit ds.toNat!) (mkStrLit m)
   return mkStrLit s
 
-/-- A directive as a term, its labels as `labelExpr`. -/
-def directiveExpr (f : String) (d : Directive) : Lean.Expr :=
-  (toExpr d).replace fun
-    | .lit (.strVal s) => some (labelExpr f s)
+/-- `n : Int64` as an `OfNat` literal (what `toExpr` gives), its value. -/
+def int64Lit? (e : Lean.Expr) : Option Nat :=
+  if e.isAppOfArity ``OfNat.ofNat 3 && e.appFn!.appFn!.appArg! == mkConst ``Int64 then
+    match e.appFn!.appArg! with
+    | .lit (.natVal n) => some n
     | _ => none
+  else none
+
+/-- A directive as a term: its labels as `labelExpr`, its 64-bit integers as `Int64.ofInt i`
+(the form the code generator writes, so that the kernel compares the `Int`s). -/
+def directiveExpr (f : String) (d : Directive) : Lean.Expr :=
+  (toExpr d).replace fun e =>
+    match e with
+    | .lit (.strVal s) => some (labelExpr f s)
+    | _ =>
+      if let some n := int64Lit? e then some (mkApp (mkConst ``Int64.ofInt) (toExpr (n : Int)))
+      else if e.isAppOfArity ``Neg.neg 3 && e.appFn!.appFn!.appArg! == mkConst ``Int64 then
+        (int64Lit? e.appArg!).map fun n => mkApp (mkConst ``Int64.ofInt) (toExpr (-(n : Int)))
+      else none
+
+/-- The code of every function of `p`. -/
+def progCode (tab : Tab) (p : Prog) : List Program := p.map fun x => compileFn tab x.1 x.2
+
+unsafe def evalProgramsU (e : Lean.Expr) : MetaM (List Program) :=
+  evalExpr (List Program) (mkApp (mkConst ``List [0]) (mkApp (mkConst ``List [0]) (mkConst ``Directive))) e
+@[implemented_by evalProgramsU] opaque evalPrograms (e : Lean.Expr) : MetaM (List Program)
 
 def dirTy : Lean.Expr := mkConst ``Directive
 def progTy : Lean.Expr := mkApp (mkConst ``List [0]) dirTy
@@ -82,12 +103,55 @@ partial def listElemsW (e : Lean.Expr) (acc : Array Lean.Expr := #[]) : MetaM (A
 
 /-- Declare `n : Program := lit` (compiled, so that the printer can run it) and
 `n_eq : lhs = n` by `Eq.refl` (the kernel evaluates `lhs`). -/
-def declLit (n : Name) (lhs : Lean.Expr) (f : String) : MetaM Unit := do
-  let v ← evalProgram lhs
+def declLit (n : Name) (lhs : Lean.Expr) (f : String) (v : Program) : MetaM Unit := do
   let lit := programExpr (v.toArray.map (directiveExpr f))
   addAndCompile (.defnDecl (mkDefinitionValEx n [] progTy lit .abbrev .safe []))
   addDecl (.thmDecl { name := n.appendAfter "_eq", levelParams := [], type := mkApp3 (mkConst ``Eq [1]) progTy lhs (mkConst n)
                       value := mkApp2 (mkConst ``Eq.refl [1]) progTy lhs })
+
+/-- The element `x` of a program literal: its name (a string literal) and its pair. -/
+def progElem (i : Nat) (x : Lean.Expr) : MetaM (String × Lean.Expr × Lean.Expr) := do
+  let x ← whnfD x
+  unless x.isAppOfArity ``Prod.mk 4 do throwError "asm_lit: element {i} is not a pair: {x}"
+  let fE := x.appFn!.appArg!
+  let .lit (.strVal f) ← whnfD fE | throwError "asm_lit: the name of element {i} is not a literal: {fE}"
+  return (f, fE, x.appArg!)
+
+/-- Declare `name.f<i>` and `name.f<i>_eq` for the functions `lo ≤ i < hi` of `p` (`elems`), except
+those already declared (by `asm_lit_fns` in an imported module). -/
+def declFns (name : Name) (tabE pE : Lean.Expr) (elems : Array Lean.Expr) (lo hi : Nat) :
+    MetaM (Array Name) := do
+  let hi := min hi elems.size
+  let env ← getEnv
+  let todo := (List.range (hi - lo)).map (· + lo) |>.filter fun i =>
+    !env.contains (name ++ Name.mkSimple s!"f{i}")
+  let mut codes : Array Program := #[]
+  if let some i0 := todo.head? then
+    -- the code of functions `i0 … hi - 1`, by compiled code in one evaluation
+    let slice := mkApp3 (mkConst ``List.take [0]) (mkApp2 (mkConst ``Prod [0, 0]) (mkConst ``String) (mkConst ``FunDecl))
+      (mkRawNatLit (hi - i0)) (mkApp3 (mkConst ``List.drop [0]) (mkApp2 (mkConst ``Prod [0, 0]) (mkConst ``String)
+        (mkConst ``FunDecl)) (mkRawNatLit i0) pE)
+    codes := (← evalPrograms (mkApp2 (mkConst ``progCode) tabE slice)).toArray
+    for i in todo do
+      let (f, fE, fdE) ← progElem i elems[i]!
+      declLit (name ++ Name.mkSimple s!"f{i}") (mkApp3 (mkConst ``compileFn) tabE fE fdE) f codes[i - i0]!
+  return (List.range (hi - lo)).toArray.map fun i => name ++ Name.mkSimple s!"f{i + lo}"
+
+/-- `asm_lit_fns name : tab p lo hi`: the per-function literals and equations of `asm_lit name`
+for the functions `lo ≤ i < hi` only, so that a large program's checks can be spread over several
+modules (built in parallel); `asm_lit` then skips them. -/
+syntax (name := asmLitFns) "asm_lit_fns " ident " : " term:max term:max num num : command
+
+@[command_elab asmLitFns] def elabAsmLitFns : CommandElab := fun stx => do
+  let `(asm_lit_fns $n:ident : $tabS $progS $lo $hi) := stx | throwUnsupportedSyntax
+  let name := (← getCurrNamespace) ++ n.getId
+  liftTermElabM <| withTheReader Core.Context (fun c => { c with maxRecDepth := max c.maxRecDepth 100000, maxHeartbeats := 0 }) do
+    let tabE ← elabTermEnsuringType tabS (mkConst ``Tab)
+    let pE ← elabTermEnsuringType progS (mkConst ``Prog)
+    synthesizeSyntheticMVarsNoPostponing
+    let tabE ← instantiateMVars tabE
+    let pE ← instantiateMVars pE
+    discard <| declFns name tabE pE (← listElemsW pE) lo.getNat hi.getNat
 
 /-- `asm_lit name : tab p entry` -/
 syntax (name := asmLit) (docComment)? "asm_lit " ident " : " term:max term:max term:max : command
@@ -113,18 +177,11 @@ syntax (name := asmLit) (docComment)? "asm_lit " ident " : " term:max term:max t
     let elemTy := mkApp2 (mkConst ``Prod [0, 0]) (mkConst ``String) (mkConst ``FunDecl)
     -- the trampoline
     let trampN := name ++ `tramp
-    declLit trampN (mkApp2 (mkConst ``trampoline) tabE entryE) ""
-    -- the functions
+    let trE := mkApp2 (mkConst ``trampoline) tabE entryE
+    declLit trampN trE "" (← evalProgram trE)
+    -- the functions (those not declared yet by `asm_lit_fns`)
     let elems ← listElemsW pE
-    let mut fnNames : Array Name := #[]
-    for h : i in [0:elems.size] do
-      let x ← whnfD elems[i]
-      unless x.isAppOfArity ``Prod.mk 4 do throwError "asm_lit: element {i} is not a pair: {x}"
-      let fE := x.appFn!.appArg!
-      let .lit (.strVal f) ← whnfD fE | throwError "asm_lit: the name of element {i} is not a literal: {fE}"
-      let fN := name ++ Name.mkSimple s!"f{i}"
-      declLit fN (mkApp3 (mkConst ``compileFn) tabE fE x.appArg!) f
-      fnNames := fnNames.push fN
+    let fnNames ← declFns name tabE pE elems 0 elems.size
     -- `name := tramp ++ (f0 ++ (f1 ++ … ++ []))`, and `flatMap g p = f0 ++ (f1 ++ … ++ [])`
     let nil := mkApp (mkConst ``List.nil [0]) dirTy
     let mut rhs := nil
