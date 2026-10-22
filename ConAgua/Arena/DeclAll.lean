@@ -26,6 +26,15 @@ import ConAgua.Arena.DeclAxiomSpec4
 import ConAgua.Arena.DeclArmQuot
 import ConAgua.Arena.DeclArmAxiom
 import ConAgua.Arena.PromoteCITags
+import ConAgua.Arena.DeclCanonView
+import ConAgua.Arena.DeclCanonView2
+import ConAgua.Arena.DeclCanonLvl
+import ConAgua.Arena.DeclCanonExpr
+import ConAgua.Arena.DeclCanonExpr2
+import ConAgua.Arena.DeclCanonNames
+import ConAgua.Arena.DeclCanonConst
+import ConAgua.Arena.DeclCanonRules
+import ConAgua.Arena.DeclCanonInfo
 
 /-!
 # Every declaration-loop module (lane `decls3`)
