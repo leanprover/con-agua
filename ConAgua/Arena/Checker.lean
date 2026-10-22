@@ -1,5 +1,6 @@
 import ConAgua.Arena.DeclBase
 import ConAgua.Arena.DeclAndPin
+import ConAgua.Arena.DeclStep
 
 /-!
 # The declaration loop in L, top down: `installFold`, `checkPendingList`, `installThenCheck`
@@ -53,10 +54,6 @@ variable (mode : ConLeche.CheckMode) (pins : List INatOpPinSet) (dn : NIdx → O
 
 Each stub is a not-yet-translated callee; the spec is what the real code will have to prove. -/
 
-/-- Stub: `installStepGo` on record `i` at view `vis`: returns the new view and the value group
-(flag, record). -/
--- con-ron: ConRon/Arena/Checker.lean:113-151 ConRon.Arena.installStepGo
-def installStepGoL : FunDecl := lfn (i, vis) locals () { abort }
 /-- Stub: `promoteVG PMemo.empty coreWalkFuel` on the value group record `g`; returns the
 promoted record. -/
 -- con-ron: ConRon/Arena/Promote.lean:327-335 ConRon.Arena.promoteVG
