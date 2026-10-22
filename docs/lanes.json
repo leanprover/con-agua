@@ -308,7 +308,7 @@
 {
 "lane": "decls3",
 "model": "opus",
-"status": "running",
+"status": "done",
 "focus": "Phase 2 proofs: checkDecl arms, promotion, remaining sorries"
 },
 {
@@ -358,5 +358,11 @@
 "model": "opus",
 "status": "running",
 "focus": "instLP family (D23), constTy, reduceProjCore/unfold, whnf steps for the knot"
+},
+{
+"lane": "decls4",
+"model": "opus",
+"status": "running",
+"focus": "Phase 2: StateOK in the stage relation, ROM reader specs, subst_const_all, and_pin_ok proof"
 }
 ]
