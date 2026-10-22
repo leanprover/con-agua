@@ -956,30 +956,87 @@ namespace L.Ind
 
 open L.Arena
 
-/-- **The per-call memos' well-formedness, as hypotheses on the stage** (helper `pos`'s `hMno`,
-`hMstage`, …, bundled): in every memory the stage relation holds of, each walk memo of the
-positivity check is well formed (`nest_occ`, `depth`, `has_loose_bvar_b`, `replace_apps`), and the
-banked `replace_fvars` memo has its invariant. The stage relation does not constrain the memo arrays
-(`201‥208`), so these are not consequences of `StageR` (DESIGN.md, lane `indproofs2`, helper
-`pos2`): they are discharged by adding the memos' well-formedness to the stage relation. -/
-structure PosMemo (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) : Prop where
-  no : ∀ (m : Mem) (a : AState), StageR dn vis fe m a → ∃ mp0, noMR m mp0
-  dp : ∀ (m : Mem) (a : AState), StageR dn vis fe m a → ∃ mp0, dpMR m mp0
-  hb : ∀ (m : Mem) (a : AState), StageR dn vis fe m a → ∃ mp0, hbMR m mp0
-  rp : ∀ (m : Mem) (a : AState), StageR dn vis fe m a → ∃ mp0, rpMR m mp0
-  rf : ∀ (m : Mem) (a : AState), StageR dn vis fe m a → ∃ M G g, RfInv m M G g
+/-! ## Memo frames of the `IndPos2` pieces (helper `posmemo`) -/
+
+theorem nagW_mfr : ∀ (n : Nat) (m m' : Mem) (us dO dL gO gL kO kL : Word) (r : List Word),
+    nagW n m us dO dL gO gL kO kL = some (r, m') → MFr [] [] m m'
+  | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [nagW] at h
+  | n + 1, m, m', us, dO, dL, gO, gL, kO, kL, r, h => by
+    unfold nagW nagK1 nagK2 nagK3 at h
+    mfr_auto h [posRecW_mfr, snocW_mfr, nagW_mfr n _ _ _ _ _ _ _ _ _ _]
+
+theorem matesW_mfr : ∀ (n : Nat) (m m' : Mem) (c off l oO oL : Word) (r : List Word),
+    matesW n m c off l oO oL = some (r, m') → MFr [] [] m m'
+  | 0, _, _, _, _, _, _, _, _, h => by simp [matesW] at h
+  | n + 1, m, m', c, off, l, oO, oL, r, h => by
+    unfold matesW matesK1 matesK2 matesK3 at h
+    mfr_auto h [snocW_mfr, matesW_mfr n _ _ _ _ _ _ _ _]
+
+theorem nboW_mfr {n : Nat} {m m' : Mem} {vis c : Word} {r : List Word} (h : nboW n m vis c = some (r, m')) :
+    MFr [] [] m m' := by
+  cases n with
+  | zero => simp [nboW] at h
+  | succ n =>
+  simp only [nboW] at h
+  unfold nboK at h
+  mfr_auto h [envFindW_mfr]
+
+theorem nfmW_mfr {n : Nat} {m m' : Mem} {vis c : Word} {r : List Word} (h : nfmW n m vis c = some (r, m')) :
+    MFr [] [] m m' := by
+  cases n with
+  | zero => simp [nfmW] at h
+  | succ n =>
+  simp only [nfmW] at h
+  unfold nfmK matesK3 at h
+  mfr_auto h [nboW_mfr, matesW_mfr _ _ _ _ _ _ _ _ _]
+
+theorem fgW_mfr : ∀ (n : Nat) (m m' : Mem) (hi us dO dL gO gL pO pL nO nL : Word) (r : List Word),
+    fgW n m hi us dO dL gO gL pO pL nO nL = some (r, m') → MFr [] [] m m'
+  | 0, _, _, _, _, _, _, _, _, _, _, _, _, _, h => by simp [fgW] at h
+  | n + 1, m, m', hi, us, dO, dL, gO, gL, pO, pL, nO, nL, r, h => by
+    unfold fgW fgK1 fgK2 fgK3 fgK4 at h
+    mfr_auto h [posRecW_mfr, snocW_mfr, fgW_mfr n _ _ _ _ _ _ _ _ _ _ _ _ _]
+
+theorem fhW_mfr : ∀ (n : Nat) (m m' : Mem) (hi gO gL aO aL : Word) (r : List Word),
+    fhW n m hi gO gL aO aL = some (r, m') → MFr [] [] m m'
+  | 0, _, _, _, _, _, _, _, _, h => by simp [fhW] at h
+  | n + 1, m, m', hi, gO, gL, aO, aL, r, h => by
+    unfold fhW fhK1 fhK2 at h
+    mfr_auto h [fvinternW_mfr, snocW_mfr, fhW_mfr n _ _ _ _ _ _ _ _]
+
+theorem caW_mfr : ∀ (n : Nat) (m m' : Mem) (us dO dL gO gL aO aL : Word) (r : List Word),
+    caW n m us dO dL gO gL aO aL = some (r, m') → MFr [] [] m m'
+  | 0, _, _, _, _, _, _, _, _, _, _, h => by simp [caW] at h
+  | n + 1, m, m', us, dO, dL, gO, gL, aO, aL, r, h => by
+    unfold caW caK1 caK2 at h
+    mfr_auto h [posRecW_mfr, snocW_mfr, caW_mfr n _ _ _ _ _ _ _ _ _ _]
+
+theorem new1W_mfr {m m' : Mem} {x : Word} {r : List Word} (h : new1W m x = some (r, m')) : MFr [] [] m m' :=
+  posRecW_mfr (new1W_rec h).1
+
+theorem cpW_mfr : ∀ (n : Nat) (m m' : Mem) (hp dO dL : Word) (r : List Word),
+    cpW n m hp dO dL = some (r, m') → MFr [] [] m m'
+  | 0, _, _, _, _, _, _, h => by simp [cpW] at h
+  | n + 1, m, m', hp, dO, dL, r, h => by
+    unfold cpW cpK1 cpK2 at h
+    mfr_auto h [bvbW_mfr, MFr.ofStub, cpW_mfr n _ _ _ _ _ _]
+
+theorem ustW_mfr {n : Nat} {m m' : Mem} {cty nP j r : Word} (h : ustW n m cty nP j = some (r, m')) : HbFr m m' := by
+  unfold ustW ustK1 at h
+  mfr_auto h [MFr.ofStub, hbFastW_mfr]
 
 /-- **`nest_cont_checks`**: the twin's three checks of `nestCont` pass. -/
-theorem p2ccW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (hM : PosMemo dn vis fe)
+theorem p2ccW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     {k : Nat} (hk : k ≤ coreWalkFuel) {m m' : Mem} {a : AState} {ctx hp nn dO dL iO iL : Word}
     {c : NestCtx} {ds idx : List EIdx} {r : List Word}
     (h : p2ccW k m ctx hp nn dO dL iO iL = some (r, m')) (hS : StageR dn vis fe m a)
     (hU : UCtx dn vis fe m ctx c) (hds : decHL m dO.toNat dL.toNat = some ds)
     (hdsb : ∀ j < dL.toNat, dO.toNat + j < iwTop m) (hidx : decHL m iO.toNat iL.toNat = some idx)
-    (hidxb : ∀ j < iL.toNat, iO.toNat + j < iwTop m) (hnH : H nn) :
+    (hidxb : ∀ j < iL.toNat, iO.toNat + j < iwTop m) (hnH : H nn) (hP : PosMR m) :
     ∃ a1 q a2, (idx.anyM (fun x => ConRon.Arena.nestOcc c.names c.nP hp.toNat x)).run a = .ok (false, a) ∧
       pinQuot.run a = .ok (q, a) ∧ (decI nn == q) = false ∧
-      (ds.allM (pcF hp.toNat)).run a = .ok (true, a2) ∧ a1 = a ∧ StageR dn vis fe m' a2 ∧ IWGrow m m' := by
+      (ds.allM (pcF hp.toNat)).run a = .ok (true, a2) ∧ a1 = a ∧ StageR dn vis fe m' a2 ∧ IWGrow m m' ∧
+      PosMR m' := by
   cases k with
   | zero => simp [p2ccW] at h
   | succ k =>
@@ -992,8 +1049,8 @@ theorem p2ccW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   | some pr =>
   obtain ⟨r1, m1⟩ := pr
   rw [hoa, p2ccK1_eq] at h
-  obtain ⟨b, hrunoa, hS1, hg1, hr1⟩ := noaW_ok dn fe vis _ _ _ _ c.names hM.no k m m1 a _ _ idx r1 hoa hS
-    hn hne hidx hidxb
+  obtain ⟨b, hrunoa, hS1, hg1, hr1, hP1⟩ := noaW_ok dn fe vis _ _ _ _ c.names k m m1 a _ _ idx r1 hoa hS
+    hn hne hidx hidxb hP
   rw [hnP] at hrunoa
   cases b with
   | true => rw [if_pos (by rw [hr1]; decide)] at h; cases h
@@ -1025,7 +1082,8 @@ theorem p2ccW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) 
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
   have hpq : pinQuot = pinAt 47 := rfl
-  refine ⟨a, decI (rq.headD 0), a3, hrunoa, by rw [hpq]; simpa using hqrun, ?_, hrun3, rfl, hS3, hg1.trans hg3⟩
+  refine ⟨a, decI (rq.headD 0), a3, hrunoa, by rw [hpq]; simpa using hqrun, ?_, hrun3, rfl, hS3, hg1.trans hg3,
+    hP1.fr (cpW_mfr _ _ _ _ _ _ _ hcp)⟩
   rw [decI_beq' _ _ hnH hqH]; simpa using hnq
 
 end L.Ind

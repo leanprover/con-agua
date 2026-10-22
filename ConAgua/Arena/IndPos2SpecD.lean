@@ -616,6 +616,22 @@ theorem rpMR_low {m m' : Mem} (hf : LowFr m m') {mp : Std.HashMap EIdx EIdx} (h 
     (fun hmem => by have := hA _ hmem; simp [raSch, RAM] at this)
     (fun hmem => by have := hC _ hmem; simp [raSch] at this) m m' hf mp h
 
+theorem MFr.of_low {m m' : Mem} (h : LowFr m m') : MFr [] [] m m' := by
+  obtain ⟨A, C, hf, hA, hC⟩ := h
+  refine MFr.of_frame hf (fun b hb => ?_) (fun x hx => ?_)
+  · exact .inl (Nat.lt_of_lt_of_le (hA b hb) (by decide))
+  · have := hC x hx; left; omega
+
+theorem rpMR_mfr {S0 : List ArrId} {T0 : List Word} {m m' : Mem} (hf : MFr S0 T0 m m') (hS : RAM ∉ S0)
+    (hT : (210 : Word) ∉ T0) {mp : Std.HashMap EIdx EIdx} (h : rpMR m mp) : rpMR m' mp := by
+  obtain ⟨A, C, f, hA, hC⟩ := hf.memo RAM 210 (by decide) (by decide) hS hT
+  exact memoRG_frame raSch raSch_wf bmKey (fun w : Word => decE w) A C hA hC m m' f mp h
+
+theorem noMR_mfr {S0 : List ArrId} {T0 : List Word} {m m' : Mem} (hf : MFr S0 T0 m m') (hS : NOM ∉ S0)
+    (hT : (204 : Word) ∉ T0) {mp : Std.HashMap EIdx Bool} (h : noMR m mp) : noMR m' mp := by
+  obtain ⟨A, C, f, hA, hC⟩ := hf.memo NOM 204 (by decide) (by decide) hS hT
+  exact memoRG_frame noSch noSch_wf bmKey (fun w : Word => w != 0) A C hA hC m m' f mp h
+
 theorem ahW_low {n : Nat} {m m' : Mem} {no nl us b nn e : Word} {r : List Word}
     (h : ahW n m no nl us b nn e = some (r, m')) : LowFr m m' := by
   unfold ahW at h
