@@ -85,7 +85,7 @@ theorem rdW_rec {b : Array Word} {q : Word} {k : Nat} {w : Word} (hb : b[q.toNat
 
 section top
 variable (p : Prog) (hp : M2CProg' p) (hc : IotaCallees p) (hpi : ProofIrrelOKM p)
-  (hE : ErecKeptKnot p) (hcc : CoreCallees p)
+  (hE : ErecKeptKnot p) (hcc : ProjCallees p)
 include hp hc hpi hE hcc
 
 /-- **`m2c_arms` refines `m2cArmsT`.** -/
@@ -465,7 +465,7 @@ and for `prepare_major` also `whnfCallees_stub`, `supKeep_twin`), as the other Î
 @[refines ConRon.Arena.majorToCtor]
 theorem majorToCtor_refines (p : Prog) (hp : M2CProg' p) (hcl : closedA p coreErecA coreErecC coreFns = true) : MajorToCtorOK p :=
   majorToCtor_refines' p hp (iotaCallees_stub p) (proofIrrel_refines p hp.toIotaProg4)
-    (ErecKeptKnot.of_closed hcl) (coreCallees_stub p)
+    (ErecKeptKnot.of_closed hcl) (coreCallees_stub p).toProjCallees
 
 @[refines ConRon.Arena.prepareMajor]
 theorem prepareMajor_refines (p : Prog) (hp : M2CProg' p) (hcl : closedA p coreErecA coreErecC coreFns = true) :

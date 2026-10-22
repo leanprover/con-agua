@@ -462,9 +462,9 @@ theorem iotaW_const {p : Prog} {k : Nat} {m : Mem} {mode vis d hd vo vn ao an i 
 end appRef0
 
 section appRef
-variable (p : Prog) (hp : WhnfCoreProg p)
+variable (p : Prog) (hp : WhnfCoreProg p) (hwc : WhnfCallees p) (hcc : CoreCallees p)
 
-include hp in
+include hp hwc hcc in
 /-- **The `whnf_app` loop refines `whnfApp`**, by induction on the L fuel. -/
 theorem appFull_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (mode vis d hd vo ao an top : Word) (args nodes : Array EIdx)
@@ -537,7 +537,7 @@ theorem appFull_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
         have hvw : viewOK m v 28 := ⟨c1, UInt64.not_le.mp c2⟩
         obtain ⟨-, -, hbody1⟩ := view_lam m a hS.arena.1 v hv hvw hlam
         have hvb := viewBind_lam m a hS.arena.1 v hv hvw hlam
-        have hbeta := betaPeel_refines' p hp (whnfCallees_stub p).instList k' ⟨m, Locals.init []⟩ a dn vis fe MM eb _
+        have hbeta := betaPeel_refines' p hp hwc.instList k' ⟨m, Locals.init []⟩ a dn vis fe MM eb _
           (rdW (m.arr64 SPN) (ao + i)) ao an (i + 1) args hS hbody1 hvv har
           (by rw [htop, hadd]; omega)
         obtain ⟨hok, ⟨M', hS', hK', hSt'⟩, hres, hrw⟩ := CoreSpec.of_callW hbeta hcall
@@ -650,7 +650,7 @@ theorem appFull_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
           cases k with
           | zero => rw [callW_zero_app] at hcI; cases hcI
           | succ k' =>
-          have hiota := (coreCallees_stub p).iota k' (hk.mono (by omega)) F ⟨m₂, Locals.init []⟩ a₁
+          have hiota := hcc.iota k' (hk.mono (by omega)) F ⟨m₂, Locals.init []⟩ a₁
             dn vis fe MM eb mode d hd vo (vn + 1) _ (by omega) (by omega) ⟨hS₂, hmode, hebm⟩ hhd
             hva₂ (by rw [htop₂, hadd2]; omega)
           obtain ⟨hokI, ⟨M', hS₃, hK₃, hSt₃⟩, hresI, hrwI⟩ := CoreSpec.of_callW hiota hcI
@@ -744,11 +744,10 @@ theorem appFull_ref (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn :
       · exact hS.frame_stk (MemFrame.setCtl m 136 _) (by simp) (by simp)
       · exact StackKept.restore (fun j hj => hb j hj) hsz hbk hpg (by rwa [size_set64] at h136)
 
-include hp in
+include hp hwc hcc in
 /-- **`whnf_app` refines `whnfApp`**: `vargs` the slice `(vo, vn)` at the top of the stack, the
 spine's arguments and nodes the slices `(ao, an)`, `(ao + an, an)` below it. -/
-@[refines ConRon.Arena.whnfApp]
-theorem whnfApp_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
+theorem whnfApp_refines' (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode d v hd vo vn same ao an i : Word)
     (vargs args nodes : Array EIdx) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (hv : HW v)
@@ -768,7 +767,7 @@ theorem whnfApp_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (
   have hS := hs.rel
   have hvn64 : vo.toNat + vn.toNat < 2 ^ 64 := by have := hva.bound; have := hS.spn; omega
   have hadd : (vo + vn).toNat = vo.toNat + vn.toNat := addW _ _ hvn64
-  obtain ⟨x, a', hrun', hx, hrw, M', hS', hK, hSt⟩ := appFull_ref p hp n hk F hF hn mode vis d hd
+  obtain ⟨x, a', hrun', hx, hrw, M', hS', hK, hSt⟩ := appFull_ref p hp hwc hcc n hk F hF hn mode vis d hd
     vo ao an (spTop s.mem) args nodes dn fe eb s.mem hs.mode4 hs.eb_mode hhd har hno hlo
     (by rw [htop, hadd]; omega) rfl hS.spn (n + 1) (Nat.le_refl _) a₀ s.mem v vn same i vargs MM hS
     hv hva htop (by rw [htop]; exact Nat.le_refl _) (fun _ _ => rfl) rfl (BKept.refl _)
@@ -777,6 +776,23 @@ theorem whnfApp_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (
   refine ⟨hok, ?_, ?_, hrw⟩
   · rw [hst]; exact ⟨M', hS', hK, hSt⟩
   · rw [hres, hx]; simp [decStep]
+
+include hp in
+/-- **`whnf_app` refines `whnfApp`**: `vargs` the slice `(vo, vn)` at the top of the stack, the
+spine's arguments and nodes the slices `(ao, an)`, `(ao + an, an)` below it. -/
+@[refines ConRon.Arena.whnfApp]
+theorem whnfApp_refines (n : Nat) (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62)
+    (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (MM : ModeMaps) (eb mode d v hd vo vn same ao an i : Word)
+    (vargs args nodes : Array EIdx) (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (hv : HW v)
+    (hhd : HW hd) (hva : SpineR s₀.mem vo vn vargs) (htop : spTop s₀.mem = vo + vn)
+    (har : SpineR s₀.mem ao an args) (hno : SpineR s₀.mem (ao + an) an nodes)
+    (hlo : ao.toNat + an.toNat + an.toNat ≤ vo.toNat) :
+    CoreSpec p (n + 1) "whnf_app" [mode, vis, d, v, hd, vo, vn, same, ao, an, i]
+      (whnfApp (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE v) (decE hd) vargs
+        (same != 0) args nodes i.toNat) decStep s₀ a₀ dn vis fe MM eb ResW :=
+  whnfApp_refines' p hp (whnfCallees_stub p) (coreCallees_stub p) n hk F hF hn s₀ a₀ dn vis fe MM eb mode d
+    v hd vo vn same ao an i vargs args nodes hs hv hhd hva htop har hno hlo
 
 end appRef
 

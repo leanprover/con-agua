@@ -7446,6 +7446,38 @@ grows (the memo library's capacity rule, as every L memo). Refinement: not yet (
   `substParamLevels`, `internLevel`, `internLsNode` (ArenaD level). Open: the walk itself
   (`InstLPOK`), blocked by D23.
 
+### Helper `whnf4-knot`: `KnotCallees` down to leaves
+* **No slot steps in lane `whnf`'s bundles.** `WhnfCallees` lost `inferStep`/`inferIOStep`/
+  `defeqStep` (no proof used them); it is now `instList`, `instLP`, `strLitCtor`,
+  `strLitSupported`, all built in `DefEqKnot.lean` (`KnotCallees.whnfC`). Narrowed further:
+  `constTyAt_refines'`, `ruleRhsAt_refines'`, the `unfoldDefinition_refines'` chain and
+  `whnfStep_refines'` take `InstLPOK`; `projLitToCtor_refines'`, `reduceProjCore_refines'`,
+  `whnfCoreStepProj_refines'` take the two string-literal facts, `ProjCallees` and `ProjSmall`.
+  **`ProjCallees`** (`findProj`, `fireOk`, `erec`, `projFound`; `CoreCallees` extends it) is what
+  `major_to_ctor`/`and_rescue_slots` take, so `CoreCallees.iota` (from `iotaRecAt_refines'`, which
+  calls `majorToCtor_refines'`) is not circular.
+* **Primed `whnf_core` chain** over `(WhnfCallees, CoreCallees, ∀ fe, SupKeep fe)`:
+  `whnfApp_refines'`, `coreApp(2)_refines`, `whnfCoreStep_refines'`, `coreLoopW_ok`,
+  `whnfCoreLoop_refines'`, `whnfCoreBody_refines'`, `whnfCoreSlot_step`; the tagged statements
+  are unchanged and instantiate the stubs. `proofIrrel_refines'` takes `LvlDen` (`CoreS.lvl_den`'s
+  statement as a hypothesis; `LvlDen.of_den : CoreDen → LvlDen`); the tagged `proofIrrel_refines`
+  still uses the `CoreS.lvl_den` stub.
+* **`KnotCallees` fields gone** (now theorems in `DefEqKnot.lean`): `whnfCoreStep`, `whnfStep`,
+  `proofIrrel`, `reduceProjCore`, `unfold`, `constTy`. New bundles there: `whnfC`, `projC`,
+  `iotaC` (walks `iotaInst1OK`, `lbbOK`, `wscoped_core`, `leafGuard_core`, `findProj_refines`,
+  `litToCtorIfNat_refines`), `iota`, `coreC`; `supKeep_of` for `SupKeep`. `KnotAllProg` gains
+  `core`, `iotaRec`, `m2c`, `ws`, `lg` (lookups).
+* **`KnotCallees` now** (8, all leaves without a proof under `CoreS`): `den`, `instLP`, `fireOk`
+  (lane `whnf3`'s `fireOk_refines` gives `FireOkOKD`: needs the universe list to read back and
+  `FireDen`'s guards past `numFields`, which `StoreDen.proj` does not give), `projSmall`,
+  `capsNeverZero`, `recFireLevels` (proved at `ArenaD` on `StoreWF`, D23), `lvlsEqDen`,
+  `recShape`. `knot_all` and the derived fields use only `propext`, `Classical.choice`,
+  `Quot.sound`.
+* Numbers: 22 files, +323/−172 lines; `DefEqKnot.lean` 313 lines. Rebuild of the touched cone up
+  to `DefEqKnot` + `KnotWF`: ~5 min wall, ~12 CPU-min (`WhnfBase` changed, so every whnf/defeq/infer
+  module elaborates once); per module: `WhnfDeltaRefine2` 10 s, `WhnfCoreLoop` 8 s,
+  `WhnfIotaRefine4` 5 s, `WhnfCoreProj` 4 s, `DefEqKnot` 1.2 s.
+
 ### Landing 9: helper `pos2`; vacuous memo hypotheses untagged
 * Helper `pos2` (3 h): word models, specs and relational lemmas for the rest of `IndPos2`
   (`nestGrowGroup`, `nestAcceptGroup`, the `nestPos` block `nestFields`/`nestCtors`/`nestFrame`/
