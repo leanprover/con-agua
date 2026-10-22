@@ -1,6 +1,10 @@
 import ConAgua.Arena.Knot
 import ConAgua.Arena.IndIface
 import ConAgua.Arena.ExprMk
+import ConAgua.Arena.Abs1Spec
+import ConAgua.Arena.ArRangeSpec
+import ConAgua.Arena.InstListSpec
+import ConAgua.Arena.HasFvar
 
 /-!
 # Phases 6–7 close over their callees (lane `defeq`)
@@ -31,8 +35,9 @@ def defeqExtFns : Prog :=
    ("tower_slots_all", towerSlotsAllL), ("unfold_definition", unfoldDefinitionL),
    ("whnf", whnfL), ("whnf_core", whnfCoreL),
    -- no L code yet
-   ("abstract1", stub 3), ("abstract_range", stub 4), ("field_sort_zero", stub 4),
-   ("find_proj", stub 3), ("has_fvar", stub 1), ("inst1", stub 3), ("inst_list", stub 4),
+   ("abs_entry", absEntry), ("ar_entry", arEntry), ("inst_list", instListL), ("has_fvar", hasFvarL),
+   ("field_sort_zero", stub 4),
+   ("find_proj", stub 3), ("inst1", stub 3), 
    ("inst_lp", stub 4), ("is_proof_fast", stub 2), ("not_proof_fast", stub 2),
    ("str_lit_ctor", stub 1), ("str_lit_supported", stub 1)]
 
