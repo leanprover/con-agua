@@ -377,4 +377,105 @@ theorem idsM_facts (b : Array UInt8) (m m' : Mem) (v : Word) (hR : Room m)
       rw [UInt64.toNat_add, ht, UInt64.toNat_one, Nat.mod_eq_of_lt (by omega)]
     · rw [lsCntN_len b _ _ (by rw [hlist] at *; simp; omega)]; simp [hlist]
 
+/-! ## The generic record loop -/
+
+/-- The shape of a con-leche record loop `F` (state `σ`, record `α`), on its `ok` path, against
+`ind_obj`'s loop on the record of kind `kind` at `p`: `R seen st m` relates con-leche's state to
+the memory, `Fin d m` the record to it. -/
+structure IObjLoop (b : ByteArray) {σ α : Type} (F : USize → Bool → UInt32 → σ → ScanRes α)
+    (kind p : Word) (R : UInt32 → σ → Mem → Prop) (Fin : α → Mem → Prop) : Prop where
+  stop : ∀ i w seen st d e, ¬ i < b.usize → F i w seen st ≠ .ok d e
+  ws : ∀ i w seen st, i < b.usize → isWs (byteAt b i) = true → F i w seen st = F (i + 1) w seen st
+  close : ∀ i w seen st m d e, i < b.usize → byteAt b i = 125 → F i w seen st = .ok d e →
+    R seen st m → e = i + 1 ∧ Fin d m
+  comma : ∀ i w seen st d e, i < b.usize → byteAt b i = 44 → F i w seen st = .ok d e →
+    w = false ∧ F (i + 1) true seen st = .ok d e
+  quote : ∀ i w seen st d e, i < b.usize → byteAt b i = 34 → F i w seen st = .ok d e →
+    w = true ∧ keyEnd b (i + 1) ≠ 0 ∧ valueAt b i (keyEnd b (i + 1)) ≠ i
+  key : ∀ i seen st m d e e' m', i < b.usize → byteAt b i = 34 → keyEnd b (i + 1) ≠ 0 →
+    valueAt b i (keyEnd b (i + 1)) ≠ i → (valueAt b i (keyEnd b (i + 1))).toNat ≤ b.size →
+    F i true seen st = .ok d e → R seen st m →
+    memberW b.data m kind p i.toUInt64
+      (UInt64.ofNat (keyAt b i (keyEnd b (i + 1) - (i + 1))).ctorIdx)
+      (valueAt b i (keyEnd b (i + 1))).toUInt64 = some (e', m') → i.toUInt64 < e' →
+    ∃ (eu : USize) (seen' : UInt32) (st' : σ), eu.toUInt64 = e' ∧ F eu false seen' st' = .ok d e ∧
+      R seen' st' m'
+  other : ∀ i w seen st d e, i < b.usize → isWs (byteAt b i) = false → byteAt b i ≠ 125 →
+    byteAt b i ≠ 44 → byteAt b i ≠ 34 → F i w seen st ≠ .ok d e
+
+section generic
+variable (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
+include h64 hsize
+
+theorem objLoopW_congr (m : Mem) (kind p i w j w' : Word)
+    (h : nextMemberN b.data i w = nextMemberN b.data j w') :
+    objLoopW b.data m kind p i w = objLoopW b.data m kind p j w' := by
+  conv => lhs; rw [objLoopW]
+  conv => rhs; rw [objLoopW]
+  simp only [h]
+
+/-- **`ind_obj`'s loop against a con-leche record loop**: on con-leche's `ok` path, the loop's
+end is con-leche's and the record relation holds of the memory after. -/
+theorem iobj_link {σ α : Type} (F : USize → Bool → UInt32 → σ → ScanRes α) (kind p : Word)
+    (R : UInt32 → σ → Mem → Prop) (Fin : α → Mem → Prop) (H : IObjLoop b F kind p R Fin)
+    (i : USize) (w : Bool) (seen : UInt32) (st : σ) (m : Mem) (d : α) (e : USize) (e' : Word)
+    (m' : Mem) (h : F i w seen st = .ok d e) (hR : R seen st m)
+    (hm : objLoopW b.data m kind p i.toUInt64 (bw w) = some (e', m')) :
+    e' = e.toUInt64 ∧ Fin d m' := by
+  by_cases hi : i < b.usize
+  · have hin := usizeInBounds b i hi
+    by_cases hws : isWs (byteAt b i) = true
+    · rw [H.ws i w seen st hi hws] at h
+      rw [objLoopW_congr b h64 hsize _ _ _ _ _ _ _ (nm_ws b h64 hsize i _ hi hws)] at hm
+      exact iobj_link F kind p R Fin H (i + 1) w seen st m d e e' m' h hR hm
+    by_cases h125 : byteAt b i = 125
+    · obtain ⟨rfl, hF⟩ := H.close i w seen st m d e hi h125 h hR
+      rw [objLoopW_close _ _ _ _ _ _ (by rw [nm_close b h64 hsize i _ hi hws h125]),
+        nm_close b h64 hsize i _ hi hws h125] at hm
+      simp only [Option.some.injEq, Prod.mk.injEq] at hm
+      obtain ⟨rfl, rfl⟩ := hm
+      exact ⟨(succ_toUInt64 b h64 hsize i).symm, hF⟩
+    by_cases h44 : byteAt b i = 44
+    · obtain ⟨rfl, h'⟩ := H.comma i w seen st d e hi h44 h
+      simp only [bw, Bool.false_eq_true, if_false] at hm
+      rw [objLoopW_congr b h64 hsize _ _ _ _ _ _ _ (nm_comma b h64 hsize i hi hws h44)] at hm
+      exact iobj_link F kind p R Fin H (i + 1) true seen st m d e e' m' h' hR
+        (by simpa [bw] using hm)
+    by_cases h34 : byteAt b i = 34
+    · obtain ⟨rfl, hk, hv⟩ := H.quote i w seen st d e hi h34 h
+      have hn := nm_key b h64 hsize i hi h34 hk hv
+      have hvle : (valueAt b i (keyEnd b (i + 1))).toNat ≤ b.size := by
+        have := L.Scan.Member.nextMemberN_val_le b.data i.toUInt64 1
+          (by have : b.data.size = b.size := rfl; omega) (by rw [hn])
+        rw [hn] at this; simpa using this
+      simp only [bw, if_true] at hm
+      rw [objLoopW_key _ _ _ _ _ _ (by rw [hn]; exact (by decide : (2 : Word) ≠ 0))
+        (by rw [hn]; exact (by decide : (2 : Word) ≠ 1))] at hm
+      simp only [hn] at hm
+      cases hmem : memberW b.data m kind p i.toUInt64
+          (UInt64.ofNat (keyAt b i (keyEnd b (i + 1) - (i + 1))).ctorIdx)
+          (valueAt b i (keyEnd b (i + 1))).toUInt64 with
+      | none => rw [hmem, objK_none] at hm; cases hm
+      | some em =>
+        obtain ⟨e₁, m₁⟩ := em
+        rw [hmem, objK_some] at hm
+        split at hm
+        · rename_i hlt
+          obtain ⟨eu, seen', st', heu, h', hR'⟩ :=
+            H.key i seen st m d e e₁ m₁ hi h34 hk hv hvle h hR hmem hlt
+          subst heu
+          have hiu : i < eu := (lt_toUInt64_iff _ _).mpr hlt
+          exact iobj_link F kind p R Fin H eu false seen' st' m₁ d e e' m' h' hR'
+            (by simpa [bw] using hm)
+        · cases hm
+    · exact absurd h (H.other i w seen st d e hi (by simpa using hws) h125 h44 h34)
+  · exact absurd h (H.stop i w seen st d e hi)
+termination_by b.size - i.toNat
+decreasing_by
+  all_goals first
+    | (have := usizeStep b i hi; omega)
+    | (have := USize.lt_iff_toNat_lt.mp hiu; omega)
+
+end generic
+
 end L.Front.Ind
