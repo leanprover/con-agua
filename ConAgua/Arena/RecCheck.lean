@@ -262,27 +262,23 @@ def ctorsHaveName : FunDecl := lfn (co, cl, name) locals (ce, r) {
   return r
 }
 
-/-- **`target_major_nfs`**: the walk's recorded constructor normal forms matching this class,
-examined from the LAST entry to the first (so the class-match calls fire in that order), kept
-in their original relative order. -/
+/-- **`target_major_nfs`**: the walk's recorded constructor normal forms matching this class, as the
+twin's recursion: the tail first (so the class-match calls fire from the last entry to the first),
+each kept entry consed onto the kept tail (`sl_cons`, D18). -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:226-241 ConRon.Arena.targetMajorNfs
 @[l_impl ConRon.Arena.targetMajorNfs]
 def targetMajorNfs : FunDecl := lfn (vis, p, fto, ftl, pfo, pfl, us, dso, dsl, cto, ctl, nfo, nfl)
-    locals (buf, wc, j, eptr, has, keep) {
-  buf := call iw_alloc(nfl);
-  wc := nfl;
-  j := nfl;
-  while j != 0 {
-    j := j - 1;
-    eptr := IW.u64[nfo + j];
-    has := call ctors_have_name(cto, ctl, IW.u64[eptr]);
-    if has != 0 {
-      keep := call target_class_match(vis, p, fto, ftl, pfo, pfl, us, dso, dsl, IW.u64[eptr + 1],
-        IW.u64[eptr + 2], IW.u64[eptr + 3]);
-      if keep != 0 { wc := wc - 1; IW.u64[buf + wc] := eptr }
-    }
-  };
-  return (buf + wc, nfl - wc)
+    locals (ro, rl, eptr, has, keep, qo, ql) {
+  if nfl == 0 { return (0, 0) };
+  (ro, rl) := call target_major_nfs(vis, p, fto, ftl, pfo, pfl, us, dso, dsl, cto, ctl, nfo + 1, nfl - 1);
+  eptr := IW.u64[nfo];
+  has := call ctors_have_name(cto, ctl, IW.u64[eptr]);
+  if has == 0 { return (ro, rl) };
+  keep := call target_class_match(vis, p, fto, ftl, pfo, pfl, us, dso, dsl, IW.u64[eptr + 1],
+    IW.u64[eptr + 2], IW.u64[eptr + 3]);
+  if keep == 0 { return (ro, rl) };
+  (qo, ql) := call sl_cons(eptr, ro, rl);
+  return (qo, ql)
 }
 
 /-- **`target_ctors_of`**: a stored inductive's constructors and parameter count. -/
