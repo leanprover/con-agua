@@ -411,4 +411,129 @@ theorem ctlW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (
   exact Sim.ret ⟨hS8, (((hg1.trans hg15).trans hg67).trans hg8), rfl, by simpa using hd8,
     by simpa using hb8⟩
 
+/-! ## `check_sum_ctor`: the word model -/
+
+/-- After the tail. -/
+def ctorK9 (cvC : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m) => some ([cvC, r.headD 0, r.tail.headD 0], m)
+/-- After `check_struct_doms_at`: the tail. -/
+def ctorK8 (n : Nat) (vis0 vis T lo ll nP nIdx rs isP lg nF cvC cqO cqL cqB : Word) :
+    Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (_, m) => ctorK9 cvC (ctlW n m vis0 vis T lo ll nP nIdx rs isP lg nF cqO cqL cqB)
+/-- After `fvar_type_ds`: the binder domains. -/
+def ctorK7 (n : Nat) (vis0 vis T lo ll nP nIdx rs isP lg nF cvC cqO cqL cqB : Word) :
+    Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rt, m) => ctorK8 n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cqO cqL cqB
+      (sdomsW (n + 2) m vis 0 cqO cqL (rt.headD 0) (rt.tail.headD 0) nP)
+/-- After the type former's opened telescope. -/
+def ctorK6 (n : Nat) (vis0 vis T lo ll nP nIdx rs isP lg nF cvC cqO cqL cqB : Word) :
+    Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rq, m) => if rq.headD 0 = 0 then none
+    else ctorK7 n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cqO cqL cqB
+      (stubM "fvar_type_ds" m [rq.tail.headD 0, rq.tail.tail.headD 0])
+/-- After the constructor's opened telescope. -/
+def ctorK5 (n : Nat) (vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa : Word) :
+    Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rc, m) => if rc.headD 0 = 0 then none
+    else ctorK6 n vis0 vis T lo ll nP nIdx rs isP lg nF cvC (rc.tail.headD 0) (rc.tail.tail.headD 0)
+      (rc.tail.tail.tail.headD 0) (stubM "open_pis_at_fvars_f" m [nP, rdW (m.arr64 EREC) (cvTa + 3), 0])
+/-- After `struct_ctor_resid_ok`. -/
+def ctorK4 (n : Nat) (vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa : Word) :
+    Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rr, m) => if rr.headD 0 = 0 then none
+    else ctorK5 n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa
+      (stubM "open_pis_at_fvars_f" m [nP, rdW (m.arr64 EREC) (cvC + 3), 0])
+/-- After `strip_pis`. -/
+def ctorK3 (n : Nat) (vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa : Word) :
+    Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rs', m) => if rs'.headD 0 = 0 then none
+    else ctorK4 n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa
+      (srW (n + 2) m T lo ll nP nF nIdx (rs'.tail.tail.tail.headD 0))
+/-- After `check_constant_val`. -/
+def ctorK2 (n : Nat) (vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa : Word) :
+    Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (_, m) => ctorK3 n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa
+      (stubM "strip_pis" m [nP + nF, rdW (m.arr64 EREC) (cvC + 3)])
+
+/-- **The model of `check_sum_ctor(vis0, vis, T, lo, ll, nP, nIdx, rs, isP, lg, cvC, nF, cvTa)`**
+(its callees at exec fuel `n + 2`). -/
+def ctorW (n : Nat) (m : Mem) (vis0 vis T lo ll nP nIdx rs isP lg cvC nF cvTa : Word) :
+    Option (List Word × Mem) :=
+  ctorK2 n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa (stubM "check_constant_val" m [vis, cvC])
+
+section arms
+variable (n : Nat) (m : Mem) (vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa cqO cqL cqB : Word)
+  (r : List Word)
+theorem ctorK9_some : ctorK9 cvC (some (r, m)) = some ([cvC, r.headD 0, r.tail.headD 0], m) := rfl
+theorem ctorK8_some : ctorK8 n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cqO cqL cqB (some (r, m)) =
+    ctorK9 cvC (ctlW n m vis0 vis T lo ll nP nIdx rs isP lg nF cqO cqL cqB) := rfl
+theorem ctorK7_some : ctorK7 n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cqO cqL cqB (some (r, m)) =
+    ctorK8 n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cqO cqL cqB
+      (sdomsW (n + 2) m vis 0 cqO cqL (r.headD 0) (r.tail.headD 0) nP) := rfl
+theorem ctorK6_no (h : r.headD 0 = 0) :
+    ctorK6 n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cqO cqL cqB (some (r, m)) = none := by
+  simp only [ctorK6]; rw [if_pos h]
+theorem ctorK6_yes (h : r.headD 0 ≠ 0) :
+    ctorK6 n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cqO cqL cqB (some (r, m)) =
+      ctorK7 n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cqO cqL cqB
+        (stubM "fvar_type_ds" m [r.tail.headD 0, r.tail.tail.headD 0]) := by
+  simp only [ctorK6]; rw [if_neg h]
+theorem ctorK5_no (h : r.headD 0 = 0) :
+    ctorK5 n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa (some (r, m)) = none := by
+  simp only [ctorK5]; rw [if_pos h]
+theorem ctorK5_yes (h : r.headD 0 ≠ 0) :
+    ctorK5 n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa (some (r, m)) =
+      ctorK6 n vis0 vis T lo ll nP nIdx rs isP lg nF cvC (r.tail.headD 0) (r.tail.tail.headD 0)
+        (r.tail.tail.tail.headD 0)
+        (stubM "open_pis_at_fvars_f" m [nP, rdW (m.arr64 EREC) (cvTa + 3), 0]) := by
+  simp only [ctorK5]; rw [if_neg h]
+theorem ctorK4_no (h : r.headD 0 = 0) :
+    ctorK4 n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa (some (r, m)) = none := by
+  simp only [ctorK4]; rw [if_pos h]
+theorem ctorK4_yes (h : r.headD 0 ≠ 0) :
+    ctorK4 n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa (some (r, m)) =
+      ctorK5 n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa
+        (stubM "open_pis_at_fvars_f" m [nP, rdW (m.arr64 EREC) (cvC + 3), 0]) := by
+  simp only [ctorK4]; rw [if_neg h]
+theorem ctorK3_no (h : r.headD 0 = 0) :
+    ctorK3 n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa (some (r, m)) = none := by
+  simp only [ctorK3]; rw [if_pos h]
+theorem ctorK3_yes (h : r.headD 0 ≠ 0) :
+    ctorK3 n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa (some (r, m)) =
+      ctorK4 n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa
+        (srW (n + 2) m T lo ll nP nF nIdx (r.tail.tail.tail.headD 0)) := by
+  simp only [ctorK3]; rw [if_neg h]
+theorem ctorK2_some : ctorK2 n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa (some (r, m)) =
+    ctorK3 n vis0 vis T lo ll nP nIdx rs isP lg nF cvC cvTa
+      (stubM "strip_pis" m [nP + nF, rdW (m.arr64 EREC) (cvC + 3)]) := rfl
+end arms
+attribute [ind_grind] ctorK9_some ctorK8_some ctorK7_some ctorK6_no ctorK6_yes ctorK5_no ctorK5_yes
+  ctorK4_no ctorK4_yes ctorK3_no ctorK3_yes ctorK2_some
+
+set_option maxHeartbeats 4000000 in
+theorem ctorW_spec (p : Prog) (hP : SumProg p) (n : Nat) (s₀ : St)
+    (vis0 vis T lo ll nP nIdx rs isP lg cvC nF cvTa : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 3)) "check_sum_ctor"
+      [vis0, vis, T, lo, ll, nP, nIdx, rs, isP, lg, cvC, nF, cvTa]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      ctorW n s₀.mem vis0 vis T lo ll nP nIdx rs isP lg cvC nF cvTa = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hP.hctor]
+  simp only [callFn, checkSumCtorL]
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      stubM_spec p "check_constant_val" (n + 2), stubM_spec p "strip_pis" (n + 2),
+      srW_spec p hP.ha hP.hc hP.hsc hP.hg hP.hpf hP.hpp hP.hip hP.hplg hP.hpl hP.hcf hP.hcp hP.hic
+        hP.hbf hP.hbp hP.hib hP.hpg hP.hps hP.heq hP.hsr (n + 2),
+      stubM_spec p "open_pis_at_fvars_f" (n + 2), stubM_spec p "fvar_type_ds" (n + 2),
+      sdomsW_spec p hP.hg hP.hsd (n + 2), ctlW_spec p hP n] <;>
+    finish (gen := 30) (instances := 5000) [ctorW, rdW_eq]
+
 end L.Ind
