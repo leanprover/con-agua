@@ -336,3 +336,105 @@ theorem hkW_ok {m : Mem} {ctx kb i r : Word} {c : NestCtx} (h : hkW m ctx kb i =
     simp [holeKind, this, decNFK]
 
 end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+def haWf : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _, _, _ => none
+  | k + 1, m, ctx, po, pl, i => haW k m ctx po pl i
+
+def naWf : Nat → Mem → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _ => none
+  | k + 1, m, vis, c => naW k m vis c
+
+def pfK3 (k : Nat) (ctx kb i aL dL2 : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m3) =>
+    if aL + dL2 < aL then none
+    else if aL + dL2 ≠ r.headD 0 then none
+    else match hkWf k m3 ctx kb i with
+      | none => none
+      | some w => some ([w], m3)
+def pfK2 (k : Nat) (vis ctx kb i aL hp : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m2) =>
+    if r.headD 0 ≠ 0 then none
+    else pfK3 k ctx kb i aL (rdW (m2.arr64 IW) (rdW (m2.arr64 IW) hp + 3))
+      (naWf k m2 vis (rdW (m2.arr64 IW) (rdW (m2.arr64 IW) hp)))
+def pfK1 (k : Nat) (vis ctx kb hi i aO aL : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m1) =>
+    if r.headD 0 = 0 then none
+    else pfK2 k vis ctx kb i aL (r.tail.headD 0) (noaW k m1 (rdW (m1.arr64 IW) ctx) (rdW (m1.arr64 IW) (ctx + 1))
+      (rdW (m1.arr64 IW) (ctx + 4)) hi aO aL)
+/-- The model of `nest_pos_fvar(vis, ctx, progOff, progLen, kb, hi, i, argsOff, argsLen)`. -/
+def pfW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _, _, _, _, _, _, _, _ => none
+  | k + 1, m, vis, ctx, po, pl, kb, hi, i, aO, aL => pfK1 k vis ctx kb hi i aO aL (haWf k m ctx po pl i)
+
+section arms
+variable (k : Nat) (m1 m2 m3 : Mem) (vis ctx kb hi i aO aL hp dL2 : Word) (r : List Word)
+theorem pfK1_eq : pfK1 k vis ctx kb hi i aO aL (some (r, m1)) =
+    if r.headD 0 = 0 then none
+    else pfK2 k vis ctx kb i aL (r.tail.headD 0) (noaW k m1 (rdW (m1.arr64 IW) ctx) (rdW (m1.arr64 IW) (ctx + 1))
+      (rdW (m1.arr64 IW) (ctx + 4)) hi aO aL) := rfl
+theorem pfK2_eq : pfK2 k vis ctx kb i aL hp (some (r, m2)) =
+    if r.headD 0 ≠ 0 then none
+    else pfK3 k ctx kb i aL (rdW (m2.arr64 IW) (rdW (m2.arr64 IW) hp + 3))
+      (naWf k m2 vis (rdW (m2.arr64 IW) (rdW (m2.arr64 IW) hp))) := rfl
+theorem pfK3_eq : pfK3 k ctx kb i aL dL2 (some (r, m3)) =
+    if aL + dL2 < aL then none
+    else if aL + dL2 ≠ r.headD 0 then none
+    else match hkWf k m3 ctx kb i with
+      | none => none
+      | some w => some ([w], m3) := rfl
+end arms
+
+/-- The lookups of `nest_pos_fvar`. -/
+structure PfLook (p : Prog) : Prop where
+  ha : p.lookup "iw_alloc" = some iwAlloc
+  h2 : p.lookup "rec2" = some rec2
+  h4 : p.lookup "rec4" = some rec4
+  hrg : p.lookup "nest_ctx_root_holes_go" = some nestCtxRootHolesGo
+  hr : p.lookup "nest_ctx_root_holes" = some nestCtxRootHoles
+  hc : p.lookup "iw_copy" = some iwCopy
+  hap : p.lookup "sl_append" = some slAppend
+  hha : p.lookup "nest_hole_at" = some nestHoleAt
+  no : NoLook p
+  hoa : p.lookup "nest_occ_any" = some nestOccAnyL
+  na : NaLook p
+  hh : p.lookup "nest_ctx_hi_at" = some nestCtxHiAt
+  hk : p.lookup "nest_pos_hole_kind" = some nestPosHoleKindL
+  hp : p.lookup "nest_pos_fvar" = some nestPosFvarL
+
+theorem nestHoleAt_spec' (p : Prog) (L : PfLook p) (k : Nat) (s₀ : St) (ctx po pl i : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_hole_at" [ctx, po, pl, i]
+    ⦃fun r s' => LocEq s' s₀ ∧ haWf k s₀.mem ctx po pl i = some (r, s'.mem); ⊤⦄ := by
+  cases k with
+  | zero => rw [invoke_eq _ L.hha]; simp only [callFn, nestHoleAt]; vcgen [exec] <;> grind
+  | succ k => exact nestHoleAt_spec p L.ha L.h2 L.h4 L.hrg L.hr L.hc L.hap L.hha k s₀ ctx po pl i
+
+theorem nestArity_spec' (p : Prog) (hl : NaLook p) (k : Nat) (s₀ : St) (vis c : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p k) "nest_arity" [vis, c]
+    ⦃fun r s' => LocEq s' s₀ ∧ naWf k s₀.mem vis c = some (r, s'.mem); ⊤⦄ := by
+  cases k with
+  | zero => rw [invoke_eq _ hl.hp]; simp only [callFn, nestArityL]; vcgen [exec] <;> grind
+  | succ k => exact nestArity_spec p hl k s₀ vis c
+
+theorem nestPosFvar_spec (p : Prog) (L : PfLook p) (n : Nat) (s₀ : St) (vis ctx po pl kb hi i aO aL : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_pos_fvar" [vis, ctx, po, pl, kb, hi, i, aO, aL]
+    ⦃fun r s' => LocEq s' s₀ ∧ pfW n s₀.mem vis ctx po pl kb hi i aO aL = some ([r.headD 0], s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ L.hp]
+  simp only [callFn, nestPosFvarL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        nestHoleAt_spec' p L n, nestOccAny_spec p L.no L.hoa n, nestArity_spec' p L.na n,
+        nestPosHoleKind_spec p L.hh L.hk n] <;>
+      finish (gen := 20) (instances := 5000) [pfW, pfK1_eq, pfK2_eq, pfK3_eq, rdW_eq]
+
+end L.Ind
