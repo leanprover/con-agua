@@ -348,7 +348,7 @@ end refine
 /-- **`front_line(i)` refines con-ron's per-line step**: when it returns `(1, nx)`, con-leche's
 scanner reads a record at `i` whose next position is `nx`, and con-ron's `applyLine` applies it,
 with `ArenaD` and `StateDR` holding of the memory after. -/
-@[refines_part ConRon.Arena.Frontend.applyLine "name, level, expr, declaration lines"]
+@[refines ConRon.Arena.Frontend.applyLine]
 theorem frontLine_refines (p : Prog) (hS : ScanLookups p) (hL : FrontLookups p)
     (hpf : p.lookup "front_line" = some frontLine) (hps : p.lookup "str_put" = some strPut)
     (hpn : p.lookup "apply_nstr" = some applyNStr) (hpu : p.lookup "apply_nnum" = some applyNNum)

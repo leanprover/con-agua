@@ -21,6 +21,7 @@ set_option linter.unusedSimpArgs false
 namespace L.Front.Ind
 
 /-- **`apply_ind` refines the `.ind` arm of `processLineCoreD`.** -/
+@[refines_part ConRon.Arena.Frontend.processLineCoreD "inductive"]
 theorem applyIndW_twin {b : ByteArray} (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
     {n : Nat} {m m' : Mem} {a : AState} {st : StateD}
     (hA : ArenaD m a) (hD : StateDR m st) (hok : ConRon.Bridge.StateOK a) {v : USize}

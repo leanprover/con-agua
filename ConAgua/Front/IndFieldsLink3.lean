@@ -187,6 +187,7 @@ theorem blk_loop (m₁ : Mem) (p : Word) :
 /-- **The fields pass of an `inductive` line, linked**: on con-leche's `ok` path, a successful
 `ind_fields(v)` returns the three lists of the block as runs of records related to con-leche's
 (`IndFR`), and writes only `IFR`/`IFL`. -/
+@[refines_part ConLeche.Frontend.scanIndDecl "the block's records (ind_fields)"]
 theorem indFields_link (m m' : Mem)
     (hsz : (m.arr64 IFR).size < 2 ^ 63 ∧ (m.arr64 IFL).size < 2 ^ 63) (v : USize)
     (tys : List IndTypeRec) (cts : List IndCtorRec) (rcs : List IndRecRec) (e : USize)

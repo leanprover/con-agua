@@ -91,6 +91,7 @@ theorem iext_of_heap {m m' : Mem} (h : MemFrame [LH] [192] m m') : IExt m m' := 
 
 
 /-- **`validate_ind_d` refines `validateIndD`.** -/
+@[refines ConRon.Arena.Frontend.validateIndD]
 theorem validateW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : StateD}
     (hR : ArenaR m a) (hD : StateDR m st) (hok : ConRon.Bridge.StateOK a) (hT : TopOK m)
     {to tn co cn ro rn oo np : Word} {tys : List IndTypeRec} {cts : List IndCtorRec}

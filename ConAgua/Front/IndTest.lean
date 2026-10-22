@@ -4,7 +4,7 @@ import ConAgua.Front.FrontRun
 /-!
 # Tests of the inductive lines (`IndFields.lean`, `IndApply.lean`)
 
-Runs of the whole frontend program on a `Unit`-shaped block.
+Runs of the whole frontend program (`frontAllProg`) on a `Unit`-shaped block.
 -/
 
 open L.Arena
@@ -18,15 +18,6 @@ open L.Front
 -- `ind_caps`' 15 words decode to the default `IIndCaps` (`decI 0` is the default handle).
 #guard decCaps #[0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0] (fun _ => none) 0 ==
   some ({} : ConRon.Arena.IIndCaps)
-
-/-- The whole frontend with the inductive functions, the level comparison and `e_view`; the
-inductive declaration line's hook is `apply_ind_line` called directly. -/
-def indAllProg : Prog :=
-  frontAllProg ++ indFieldsFns ++ indApplyFns ++ L.Arena.levelProg ++ [("e_view", L.Ind.eView)]
-
-/-- A memory with 224 word arrays of 4096 words and the input `s`. -/
-def indMemOf (s : String) : Mem :=
-  { initMem (List.replicate 224 4096) with bytes := #[s.toUTF8.data] }
 
 /-- The lines before the inductive line: name 1 = `Unit`, 2 = `Unit.unit`, 3 = `Unit.rec`,
 4 = `motive`; level 1 = `succ 0`; expressions: 0 = `Sort 1`, 1 = `Unit`, 2 = `Sort 0`
@@ -48,16 +39,11 @@ def unitLine (kr : String) (nf : Nat) : String :=
   \"isReflexive\":false,\"isUnsafe\":false,\"levelParams\":[],\"name\":1,\"numIndices\":0,\
   \"numNested\":0,\"numParams\":0,\"type\":0}]}}"
 
-/-- Run the prefix lines through `front_run`, then `apply_ind_line` on the inductive line placed
-after them (`j` after its `{`). -/
+/-- The whole input through `front_run` (`frontAllProg`, `apply_dline`'s `inductive` hook): the
+memory after, if it accepts. -/
 def unitRun (kr : String) (nf : Nat) : Option Mem :=
-  let s := unitPre ++ unitLine kr nf
-  match run indAllProg 1000000 "front_run" [] (indMemOf unitPre) with
-  | .ok ([0], m) =>
-    match run indAllProg 1000000 "apply_ind_line"
-        [UInt64.ofNat (unitPre.utf8ByteSize + 1)] { m with bytes := #[s.toUTF8.data] } with
-    | .ok (_, m') => some m'
-    | .error _ => none
+  match run frontAllProg 1000000 "front_run" [] (frontMemOf (unitPre ++ unitLine kr nf)) with
+  | .ok ([0], m) => some m
   | _ => none
 
 -- The block validates and installs: one `DECL` record of kind 6 with 3 constants and 0

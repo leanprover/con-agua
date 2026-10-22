@@ -102,6 +102,7 @@ section tele
 variable (m : Mem) (a : AState) (hR : ArenaR m a)
 include hR
 
+@[refines ConRon.Arena.Frontend.piResultD]
 theorem piResW_ok : ∀ (n : Nat) (f h r : Word), piResW n m f h = some r →
     (ConRon.Arena.Frontend.piResultD f.toNat (decE h)).run a = .ok (decE r, a) := by
   intro n
@@ -127,6 +128,7 @@ theorem piResW_ok : ∀ (n : Nat) (f h r : Word), piResW n m f h = some r →
       cases v <;> (try rfl)
       exact absurd (viewR_head hr) h6
 
+@[refines ConRon.Arena.Frontend.indPiTeleLen]
 theorem teleW_ok : ∀ (n : Nat) (f h r : Word), teleW n m f h = some r →
     (ConRon.Arena.Frontend.indPiTeleLen f.toNat (decE h)).run a = .ok (r.toNat, a) ∧
       r.toNat < f.toNat := by
@@ -165,6 +167,7 @@ theorem teleW_ok : ∀ (n : Nat) (f h r : Word), teleW n m f h = some r →
       cases v <;> (try rfl)
       exact absurd (viewR_head hr) h6
 
+@[refines ConRon.Arena.piSortTeleLen?]
 theorem sortTeleW_ok : ∀ (n : Nat) (f h ok r : Word), sortTeleW n m f h = some (ok, r) →
     (piSortTeleLen? f.toNat (decE h)).run a =
       .ok ((if ok = 0 then none else some r.toNat), a) ∧ r.toNat < f.toNat := by
@@ -256,6 +259,7 @@ theorem storeR_cnt {α δ : Type} {k : IdxKind} [BEq α] [Hashable α] {S : Sche
   ⟨hT.2.2.1.1, hT.2.2.1.2.1, hT.2.2.2.1, hT.2.2.2.2.1⟩
 
 /-- **`store_fuel` is the twin's `storeFuel`**: the store's node count `+ 1`. -/
+@[refines ConRon.Arena.Frontend.storeFuel]
 theorem storeFuelW_ok {m : Mem} {a : AState} (hR : ArenaR m a) {n : Nat} {f : Word}
     (h : storeFuelW n m = some f) : f.toNat = a.store.nodeCount + 1 := by
   cases n with
@@ -347,6 +351,7 @@ theorem sliceL_three (p : Array Word) (o : Nat) :
   simp [sliceL, List.ofFn_succ]
 
 /-- **`name_rec_pre` refines `viewN`, matched against `.str T "rec"`.** -/
+@[refines_part ConRon.Arena.viewN "matched against `.str T \"rec\"` (name_rec_pre)"]
 theorem nrpW_ok {m : Mem} {a : AState} (hR : ArenaR m a) (w f T : Word) (h : nrpW m w = some (f, T)) :
     ∃ v, (viewN (decI w)).run a = .ok (v, a) ∧ (f ≠ 0 → v = .str (decI T) "rec" ∧ T.toNat < 2 ^ 32) ∧
       (f = 0 → ∀ T', v ≠ .str T' "rec") := by

@@ -169,6 +169,7 @@ theorem cvM_wd (m : Mem) (q n o l t : Word) (j : Nat) (hq : q.toNat + 3 < (m.arr
 
 /-- **`ind_cv` against `parseCVD`**: the constant value's four words at `q`, its universe
 parameters appended by `lp_put`; they decode as the twin's constant value. -/
+@[refines_part ConRon.Arena.Frontend.parseCVD "a block's constant values (ind_cv)"]
 theorem cvW_facts {b : ByteArray} {m m' : Mem} {st : StateD} (a : AState) (hD : LkR m st)
     {q nm lps ty : Word} {cv : CVRec}
     (hnm : nm.toNat = cv.name) (hty : ty.toNat = cv.type) (hlps : ItemsR (listN b.data lps) cv.levelParams)

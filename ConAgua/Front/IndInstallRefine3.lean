@@ -106,6 +106,7 @@ theorem w_addmul (lo j : Word) (c : Nat) (hc : c < 2 ^ 32) (h : lo.toNat + c * j
   omega
 
 /-- **`parse_rule_d` against `parseRuleD`.** -/
+@[refines ConRon.Arena.Frontend.parseRuleD]
 theorem ruleW_twin {m m' : Mem} {st : StateD} (a : AState) (hD : LkR m st) {q rp : Word} {ru : RuleRec}
     (hR : RuleF m rp.toNat ru) (hrp : rp.toNat + 3 < 2 ^ 63)
     (hs : q.toNat + 11 ≤ (m.arr64 DLP).size) (hq : q.toNat + 11 < 2 ^ 64)

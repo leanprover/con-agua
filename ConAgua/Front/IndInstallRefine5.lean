@@ -74,6 +74,7 @@ theorem getElem?_of_wd {m m' : Mem} {j : Nat} (hs : (m'.arr64 DLP).size = (m.arr
   rw [wd_some _ _ _ (by omega), wd_some _ _ _ hj, h]
 
 /-- **`install_ind_d` refines `installIndD`.** -/
+@[refines ConRon.Arena.Frontend.installIndD]
 theorem installW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st : StateD}
     (hA : ArenaD m a) (hD : StateDR m st)
     {to tn co cn ro rn oo np : Word} {tys : List IndTypeRec} {cts : List IndCtorRec}
