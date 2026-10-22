@@ -604,6 +604,11 @@ theorem CoreS.setMemo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : ASt
       have : (S.cs + 1).toNat = S.cs.toNat + 1 := by
         rw [UInt64.toNat_add]; simp; omega
       omega)
+      (LvlFree.of_ge fun x hx => by
+        simp at hx; subst hx
+        have : (S.cs + 1).toNat = S.cs.toNat + 1 := by
+          rw [UInt64.toNat_add]; simp; omega
+        omega)
 
 /-- **`constTyC`'s `find; put`**: the tier across it. -/
 theorem CoreRM.setCt {m m' : Mem} {c : Caches} {M : ModeMaps} {eb : Word} (h : CoreRM m c M eb)
