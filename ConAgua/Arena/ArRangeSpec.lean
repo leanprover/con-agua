@@ -26,9 +26,9 @@ variable (p : Prog) (hp : ArProg p)
 
 set_option maxHeartbeats 1000000 in
 include hp in
-theorem arApp_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ar_app" [h, c, d, k]
-    ⦃fun r s' => LocEq s' s₀ ∧ arAppW (n + 1) s₀.mem h c d k = some (r.headD 0, s'.mem); ⊤⦄ := by
+theorem arApp_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ar_app" [h, c, d, k, fu]
+    ⦃fun r s' => LocEq s' s₀ ∧ arAppW (n + 1) s₀.mem h c d k fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold ArGoSpec at ih
   rw [invoke_eq _ hp.app]
   simp only [callFn, arApp]
@@ -40,9 +40,9 @@ theorem arApp_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k : Word) :
 
 set_option maxHeartbeats 1000000 in
 include hp in
-theorem arLam_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ar_lam" [h, c, d, k]
-    ⦃fun r s' => LocEq s' s₀ ∧ arLamW (n + 1) s₀.mem h c d k = some (r.headD 0, s'.mem); ⊤⦄ := by
+theorem arLam_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ar_lam" [h, c, d, k, fu]
+    ⦃fun r s' => LocEq s' s₀ ∧ arLamW (n + 1) s₀.mem h c d k fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold ArGoSpec at ih
   rw [invoke_eq _ hp.lam]
   simp only [callFn, arLam]
@@ -54,9 +54,9 @@ theorem arLam_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k : Word) :
 
 set_option maxHeartbeats 1000000 in
 include hp in
-theorem arForall_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ar_forall" [h, c, d, k]
-    ⦃fun r s' => LocEq s' s₀ ∧ arForallW (n + 1) s₀.mem h c d k = some (r.headD 0, s'.mem); ⊤⦄ := by
+theorem arForall_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ar_forall" [h, c, d, k, fu]
+    ⦃fun r s' => LocEq s' s₀ ∧ arForallW (n + 1) s₀.mem h c d k fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold ArGoSpec at ih
   rw [invoke_eq _ hp.fa]
   simp only [callFn, arForall]
@@ -68,9 +68,9 @@ theorem arForall_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k : Word)
 
 set_option maxHeartbeats 1000000 in
 include hp in
-theorem arLet_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ar_let" [h, c, d, k]
-    ⦃fun r s' => LocEq s' s₀ ∧ arLetW (n + 1) s₀.mem h c d k = some (r.headD 0, s'.mem); ⊤⦄ := by
+theorem arLet_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ar_let" [h, c, d, k, fu]
+    ⦃fun r s' => LocEq s' s₀ ∧ arLetW (n + 1) s₀.mem h c d k fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold ArGoSpec at ih
   rw [invoke_eq _ hp.le]
   simp only [callFn, arLet]
@@ -82,9 +82,9 @@ theorem arLet_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k : Word) :
 
 set_option maxHeartbeats 1000000 in
 include hp in
-theorem arProj_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ar_proj" [h, c, d, k]
-    ⦃fun r s' => LocEq s' s₀ ∧ arProjW (n + 1) s₀.mem h c d k = some (r.headD 0, s'.mem); ⊤⦄ := by
+theorem arProj_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ar_proj" [h, c, d, k, fu]
+    ⦃fun r s' => LocEq s' s₀ ∧ arProjW (n + 1) s₀.mem h c d k fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold ArGoSpec at ih
   rw [invoke_eq _ hp.pj]
   simp only [callFn, arProj]
@@ -99,7 +99,8 @@ include hp in
 theorem arGo_spec (n : Nat) : ArGoSpec p n ∧ ArNodeSpec p n ∧ ArArmSpec p n := by
   induction n with
   | zero =>
-    refine ⟨fun s₀ h c d k => ?_, fun s₀ h c d k => ?_, fun s₀ h c d k => ⟨?_, ?_, ?_, ?_, ?_⟩⟩ <;>
+    refine ⟨fun s₀ h c d k fu => ?_, fun s₀ h c d k fu => ?_,
+      fun s₀ h c d k fu => ⟨?_, ?_, ?_, ?_, ?_⟩⟩ <;>
     first
     | (rw [invoke_eq _ hp.go]; simp only [callFn, arGo]; vcgen [exec] <;> grind)
     | (rw [invoke_eq _ hp.node]; simp only [callFn, arNode]; vcgen [exec] <;> grind)
@@ -109,27 +110,29 @@ theorem arGo_spec (n : Nat) : ArGoSpec p n ∧ ArNodeSpec p n ∧ ArArmSpec p n 
     | (rw [invoke_eq _ hp.le]; simp only [callFn, arLet]; vcgen [exec] <;> grind)
     | (rw [invoke_eq _ hp.pj]; simp only [callFn, arProj]; vcgen [exec] <;> grind)
   | succ n ih =>
-    exact ⟨arGo_step p hp n ih.2.1, arNode_step p hp n ih.2.2, fun s₀ h c d k =>
-      ⟨arApp_step p hp n ih.1 s₀ h c d k, arLam_step p hp n ih.1 s₀ h c d k,
-        arForall_step p hp n ih.1 s₀ h c d k, arLet_step p hp n ih.1 s₀ h c d k,
-        arProj_step p hp n ih.1 s₀ h c d k⟩⟩
+    exact ⟨arGo_step p hp n ih.2.1, arNode_step p hp n ih.2.2, fun s₀ h c d k fu =>
+      ⟨arApp_step p hp n ih.1 s₀ h c d k fu, arLam_step p hp n ih.1 s₀ h c d k fu,
+        arForall_step p hp n ih.1 s₀ h c d k fu, arLet_step p hp n ih.1 s₀ h c d k fu,
+        arProj_step p hp n ih.1 s₀ h c d k fu⟩⟩
 
 end specs
 
-/-! ## `ar_entry(e, d, k, c)`: `abstractRangeFast` -/
+/-! ## `ar_entry(e, d, k, c)`: `abstractRangeFast`
+
+The walk's depth counter starts at `coreWalkFuel` (`4000000000`, ROADMAP §3 (b)). -/
 
 /-- **The model of `ar_entry`.** -/
 def arEntryW (n : Nat) (m : Mem) (e d k c : Word) : Option (Word × Mem) :=
   if k = 0 then some (e, m)
   else if rdW (m.arr64 CTL) 48 + 2 = 0 then none
-  else aclrK (arW n (mclearG abSch m) e c d k)
+  else aclrK (arW n (mclearG abSch m) e c d k 4000000000)
 
 theorem arEntryW_zero (n : Nat) (m : Mem) (e d k c : Word) (hk : k = 0) :
     arEntryW n m e d k c = some (e, m) := by simp [arEntryW, hk]
 
 theorem arEntryW_eq (n : Nat) (m : Mem) (e d k c : Word) (hk : k ≠ 0)
     (h0 : rdW (m.arr64 CTL) 48 + 2 ≠ 0) :
-    arEntryW n m e d k c = aclrK (arW n (mclearG abSch m) e c d k) := by
+    arEntryW n m e d k c = aclrK (arW n (mclearG abSch m) e c d k 4000000000) := by
   simp [arEntryW, hk, h0]
 
 grind_pattern [arena_grind] arEntryW_zero => arEntryW n m e d k c
@@ -140,7 +143,7 @@ grind_pattern [arena_grind] arEntryW_eq => arEntryW n m e d k c
 def arEntry : FunDecl := lfn (e, d, k, c) locals (r, u) {
   if k == 0 { return e };
   u := call ab_clear();
-  r := call ar_go(e, c, d, k);
+  r := call ar_go(e, c, d, k, 4000000000);
   u := call ab_clear();
   return r
 }

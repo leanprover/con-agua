@@ -44,11 +44,11 @@ theorem instEntry_runC (fuel F : Nat) (hF : fuel ≤ F) (m : Mem) (a₀ : AState
 
 /-- **`bb_memo` under `CheckR`**: `bbMemo_run` gives `ArenaR`; the walk keeps the store and
 writes only its memo, so `DerR` carries over too. -/
-theorem bbMemo_runC (fuel F : Nat) (hF : fuel ≤ F) (m : Mem) (a₀ : AState) (vis : Word)
-    (fe : IFEnv) {dn : NIdx → Option ConLeche.Name} (hR : CheckR dn m a₀ vis fe) (h : Word) (hh : h.toNat < 2 ^ 32) (r : List Word)
-    (m' : Mem) (hrun : run walkProg fuel "bb_memo" [h] m = .ok (r, m')) :
-    ∃ a', (bvarBoundMemo F (decE h)).run a₀ = .ok ((r.headD 0).toNat, a') ∧ CheckR dn m' a' vis fe := by
-  obtain ⟨a', hr, hR'⟩ := bbMemo_run fuel F hF m a₀ hR.arena.1 h hh r m' hrun
+theorem bbMemo_runC (fuel : Nat) (m : Mem) (a₀ : AState) (vis : Word)
+    (fe : IFEnv) {dn : NIdx → Option ConLeche.Name} (hR : CheckR dn m a₀ vis fe) (h c : Word) (hh : h.toNat < 2 ^ 32) (r : List Word)
+    (m' : Mem) (hrun : run walkProg fuel "bb_memo" [h, c] m = .ok (r, m')) :
+    ∃ a', (bvarBoundMemo c.toNat (decE h)).run a₀ = .ok ((r.headD 0).toNat, a') ∧ CheckR dn m' a' vis fe := by
+  obtain ⟨a', hr, hR'⟩ := bbMemo_run fuel m a₀ hR.arena.1 h c hh r m' hrun
   have hs := (keeps_bvarBoundMemo _ _).run hr
   have hf := bbMemo_frame rfl rfl rfl rfl rfl rfl hrun
   have hD := DerR.of_store m' a₀ a' (DerR.frameM _ _ m m' hf (by decide) _ hR.arena.2)
@@ -56,11 +56,11 @@ theorem bbMemo_runC (fuel F : Nat) (hF : fuel ≤ F) (m : Mem) (a₀ : AState) (
   exact ⟨a', hr, hR.of_walk ⟨hR', hD⟩ hf (by decide) (by simp [walkC]) (congrArg Prod.snd hs)⟩
 
 /-- **`fr_memo` under `CheckR`.** -/
-theorem frMemo_runC (fuel F : Nat) (hF : fuel ≤ F) (m : Mem) (a₀ : AState) (vis : Word)
-    (fe : IFEnv) {dn : NIdx → Option ConLeche.Name} (hR : CheckR dn m a₀ vis fe) (h : Word) (hh : h.toNat < 2 ^ 32) (r : List Word)
-    (m' : Mem) (hrun : run fvarRangeProg fuel "fr_memo" [h] m = .ok (r, m')) :
-    ∃ a', (fvarRangeMemo F (decE h)).run a₀ = .ok ((r.headD 0).toNat, a') ∧ CheckR dn m' a' vis fe := by
-  obtain ⟨a', hr, hR'⟩ := frMemo_run fuel F hF m a₀ hR.arena.1 h hh r m' hrun
+theorem frMemo_runC (fuel : Nat) (m : Mem) (a₀ : AState) (vis : Word)
+    (fe : IFEnv) {dn : NIdx → Option ConLeche.Name} (hR : CheckR dn m a₀ vis fe) (h c : Word) (hh : h.toNat < 2 ^ 32) (r : List Word)
+    (m' : Mem) (hrun : run fvarRangeProg fuel "fr_memo" [h, c] m = .ok (r, m')) :
+    ∃ a', (fvarRangeMemo c.toNat (decE h)).run a₀ = .ok ((r.headD 0).toNat, a') ∧ CheckR dn m' a' vis fe := by
+  obtain ⟨a', hr, hR'⟩ := frMemo_run fuel m a₀ hR.arena.1 h c hh r m' hrun
   have hs := (keeps_fvarRangeMemo _ _).run hr
   have hf := frMemo_frame rfl rfl rfl rfl rfl rfl hrun
   have hD := DerR.of_store m' a₀ a' (DerR.frameM _ _ m m' hf (by decide) _ hR.arena.2)

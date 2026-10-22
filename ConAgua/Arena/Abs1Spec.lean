@@ -26,9 +26,9 @@ variable (p : Prog) (hp : AbsProg p)
 
 set_option maxHeartbeats 1000000 in
 include hp in
-theorem absApp_step (n : Nat) (ih : AbsGoSpec p n) (s₀ : St) (h k d : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "abs_app" [h, k, d]
-    ⦃fun r s' => LocEq s' s₀ ∧ absAppW (n + 1) s₀.mem h k d = some (r.headD 0, s'.mem); ⊤⦄ := by
+theorem absApp_step (n : Nat) (ih : AbsGoSpec p n) (s₀ : St) (h k d fu : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "abs_app" [h, k, d, fu]
+    ⦃fun r s' => LocEq s' s₀ ∧ absAppW (n + 1) s₀.mem h k d fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold AbsGoSpec at ih
   rw [invoke_eq _ hp.app]
   simp only [callFn, absApp]
@@ -40,9 +40,9 @@ theorem absApp_step (n : Nat) (ih : AbsGoSpec p n) (s₀ : St) (h k d : Word) :
 
 set_option maxHeartbeats 1000000 in
 include hp in
-theorem absLam_step (n : Nat) (ih : AbsGoSpec p n) (s₀ : St) (h k d : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "abs_lam" [h, k, d]
-    ⦃fun r s' => LocEq s' s₀ ∧ absLamW (n + 1) s₀.mem h k d = some (r.headD 0, s'.mem); ⊤⦄ := by
+theorem absLam_step (n : Nat) (ih : AbsGoSpec p n) (s₀ : St) (h k d fu : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "abs_lam" [h, k, d, fu]
+    ⦃fun r s' => LocEq s' s₀ ∧ absLamW (n + 1) s₀.mem h k d fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold AbsGoSpec at ih
   rw [invoke_eq _ hp.lam]
   simp only [callFn, absLam]
@@ -54,9 +54,9 @@ theorem absLam_step (n : Nat) (ih : AbsGoSpec p n) (s₀ : St) (h k d : Word) :
 
 set_option maxHeartbeats 1000000 in
 include hp in
-theorem absForall_step (n : Nat) (ih : AbsGoSpec p n) (s₀ : St) (h k d : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "abs_forall" [h, k, d]
-    ⦃fun r s' => LocEq s' s₀ ∧ absForallW (n + 1) s₀.mem h k d = some (r.headD 0, s'.mem); ⊤⦄ := by
+theorem absForall_step (n : Nat) (ih : AbsGoSpec p n) (s₀ : St) (h k d fu : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "abs_forall" [h, k, d, fu]
+    ⦃fun r s' => LocEq s' s₀ ∧ absForallW (n + 1) s₀.mem h k d fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold AbsGoSpec at ih
   rw [invoke_eq _ hp.fa]
   simp only [callFn, absForall]
@@ -68,9 +68,9 @@ theorem absForall_step (n : Nat) (ih : AbsGoSpec p n) (s₀ : St) (h k d : Word)
 
 set_option maxHeartbeats 1000000 in
 include hp in
-theorem absLet_step (n : Nat) (ih : AbsGoSpec p n) (s₀ : St) (h k d : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "abs_let" [h, k, d]
-    ⦃fun r s' => LocEq s' s₀ ∧ absLetW (n + 1) s₀.mem h k d = some (r.headD 0, s'.mem); ⊤⦄ := by
+theorem absLet_step (n : Nat) (ih : AbsGoSpec p n) (s₀ : St) (h k d fu : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "abs_let" [h, k, d, fu]
+    ⦃fun r s' => LocEq s' s₀ ∧ absLetW (n + 1) s₀.mem h k d fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold AbsGoSpec at ih
   rw [invoke_eq _ hp.le]
   simp only [callFn, absLet]
@@ -82,9 +82,9 @@ theorem absLet_step (n : Nat) (ih : AbsGoSpec p n) (s₀ : St) (h k d : Word) :
 
 set_option maxHeartbeats 1000000 in
 include hp in
-theorem absProj_step (n : Nat) (ih : AbsGoSpec p n) (s₀ : St) (h k d : Word) :
-    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "abs_proj" [h, k, d]
-    ⦃fun r s' => LocEq s' s₀ ∧ absProjW (n + 1) s₀.mem h k d = some (r.headD 0, s'.mem); ⊤⦄ := by
+theorem absProj_step (n : Nat) (ih : AbsGoSpec p n) (s₀ : St) (h k d fu : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "abs_proj" [h, k, d, fu]
+    ⦃fun r s' => LocEq s' s₀ ∧ absProjW (n + 1) s₀.mem h k d fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold AbsGoSpec at ih
   rw [invoke_eq _ hp.pj]
   simp only [callFn, absProj]
@@ -99,7 +99,7 @@ include hp in
 theorem absGo_spec (n : Nat) : AbsGoSpec p n ∧ AbsNodeSpec p n ∧ AbsArmSpec p n := by
   induction n with
   | zero =>
-    refine ⟨fun s₀ h k d => ?_, fun s₀ h k d => ?_, fun s₀ h k d => ⟨?_, ?_, ?_, ?_, ?_⟩⟩ <;>
+    refine ⟨fun s₀ h k d fu => ?_, fun s₀ h k d fu => ?_, fun s₀ h k d fu => ⟨?_, ?_, ?_, ?_, ?_⟩⟩ <;>
     first
     | (rw [invoke_eq _ hp.go]; simp only [callFn, absGo]; vcgen [exec] <;> grind)
     | (rw [invoke_eq _ hp.node]; simp only [callFn, absNode]; vcgen [exec] <;> grind)
@@ -109,14 +109,17 @@ theorem absGo_spec (n : Nat) : AbsGoSpec p n ∧ AbsNodeSpec p n ∧ AbsArmSpec 
     | (rw [invoke_eq _ hp.le]; simp only [callFn, absLet]; vcgen [exec] <;> grind)
     | (rw [invoke_eq _ hp.pj]; simp only [callFn, absProj]; vcgen [exec] <;> grind)
   | succ n ih =>
-    exact ⟨absGo_step p hp n ih.2.1, absNode_step p hp n ih.2.2, fun s₀ h k d =>
-      ⟨absApp_step p hp n ih.1 s₀ h k d, absLam_step p hp n ih.1 s₀ h k d,
-        absForall_step p hp n ih.1 s₀ h k d, absLet_step p hp n ih.1 s₀ h k d,
-        absProj_step p hp n ih.1 s₀ h k d⟩⟩
+    exact ⟨absGo_step p hp n ih.2.1, absNode_step p hp n ih.2.2, fun s₀ h k d fu =>
+      ⟨absApp_step p hp n ih.1 s₀ h k d fu, absLam_step p hp n ih.1 s₀ h k d fu,
+        absForall_step p hp n ih.1 s₀ h k d fu, absLet_step p hp n ih.1 s₀ h k d fu,
+        absProj_step p hp n ih.1 s₀ h k d fu⟩⟩
 
 end specs
 
-/-! ## `abs_entry(e, d, k)`: `abstract1Fast`, between two clears -/
+/-! ## `abs_entry(e, d, k)`: `abstract1Fast`, between two clears
+
+The walk's depth counter starts at `coreWalkFuel` (`4000000000`, `ConRon/Arena/Core.lean`): the
+core calls `abstract1Fast coreWalkFuel` (ROADMAP §3 (b)). -/
 
 /-- After the walk: clear the memo again. -/
 def aclrK : Option (Word × Mem) → Option (Word × Mem)
@@ -125,10 +128,10 @@ def aclrK : Option (Word × Mem) → Option (Word × Mem)
 
 /-- **The model of `abs_entry`.** -/
 def absEntryW (n : Nat) (m : Mem) (e d k : Word) : Option (Word × Mem) :=
-  if rdW (m.arr64 CTL) 48 + 2 = 0 then none else aclrK (absW n (mclearG abSch m) e k d)
+  if rdW (m.arr64 CTL) 48 + 2 = 0 then none else aclrK (absW n (mclearG abSch m) e k d 4000000000)
 
 theorem absEntryW_eq (n : Nat) (m : Mem) (e d k : Word) (h0 : rdW (m.arr64 CTL) 48 + 2 ≠ 0) :
-    absEntryW n m e d k = aclrK (absW n (mclearG abSch m) e k d) := by
+    absEntryW n m e d k = aclrK (absW n (mclearG abSch m) e k d 4000000000) := by
   simp [absEntryW, h0]
 
 theorem aclrK_some (r : Word) (m₁ : Mem) (h0 : rdW (m₁.arr64 CTL) 48 + 2 ≠ 0) :
@@ -141,7 +144,7 @@ grind_pattern [arena_grind] aclrK_some => aclrK (some (r, m₁))
 @[l_impl ConRon.Arena.abstract1Fast]
 def absEntry : FunDecl := lfn (e, d, k) locals (r, u) {
   u := call ab_clear();
-  r := call abs_go(e, k, d);
+  r := call abs_go(e, k, d, 4000000000);
   u := call ab_clear();
   return r
 }
