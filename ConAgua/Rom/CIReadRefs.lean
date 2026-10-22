@@ -371,6 +371,84 @@ theorem blockCall (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
         exact ed)
     exact hH.decB (fun i hi => hi.2) (fun i hi => by rw [hik4.1, ht3, ← ho3]; omega)
 
+/-- **`rom_and_pin()` refines `andPinDecls`.** -/
+theorem romAndPinRef_of (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) :
+    RomAndPinRef p dn vis fe := by
+  intro n m a r m' hS hc
+  cases n with
+  | zero => rw [callW_zero] at hc; cases hc
+  | succ n =>
+  have hw := callW_model (M := fun mq => andPinW p n mq) (andPin_specW rom p hL n ·) hc
+  unfold andPinW at hw
+  cases h1 : callW p n "rci_block" [30] m with
+  | none => rw [h1] at hw; simp at hw
+  | some t1 =>
+  obtain ⟨r1, m1⟩ := t1
+  rw [h1, bW_some] at hw
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨rfl, rfl⟩ := hw
+  obtain ⟨ics, a', hrun, hS', hg, hdec, hr1⟩ :=
+    blockCall hL hr rest hrom dn vis fe 30 (by decide) ConLeche.andPin ciEntries_and andPin_fit.1
+      andPin_fit.2 hS h1
+  refine ⟨ics, a', hrun, hS', hg, ?_, rfl⟩
+  simpa using hdec
+
+/-- The raw basis block of a kind `basisPinHit` tries (`eqK`, `natK`, `emptyK`, `falseK`). -/
+theorem romBasisRef_lt4 (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k : Word)
+    (hk : k.toNat < 4) :
+    RomRef p "rom_basis_decls" [k] (StageR dn vis fe) (BasisKind.decls (basisOfW k.toNat))
+      (KeepPost dn vis fe (decRBlk dn)) := by
+  intro n m a r m' hS hc
+  cases n with
+  | zero => rw [callW_zero] at hc; cases hc
+  | succ n =>
+  have hw := callW_model (M := fun mq => basisW p n mq k 0) (basis_specW rom p hL n · k) hc
+  unfold basisW at hw
+  rw [if_neg (by rw [UInt64.le_iff_toNat_le]; simp; omega)] at hw
+  cases h1 : callW p n "rci_block" [k + 0] m with
+  | none => rw [h1] at hw; simp at hw
+  | some t1 =>
+  obtain ⟨r1, m1⟩ := t1
+  rw [h1, bW_some] at hw
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨rfl, rfl⟩ := hw
+  have hk0 : (k + 0).toNat = k.toNat := by simp
+  obtain ⟨hf1, hf2⟩ := basisDecls_fit k.toNat hk
+  obtain ⟨ics, a', hrun, hS', hg, hdec, hr1⟩ :=
+    blockCall hL hr rest hrom dn vis fe (k + 0) (by omega) _
+      (by simp only [hk0]; exact ciEntries_b k.toNat (by omega)) hf1 hf2 hS h1
+  refine ⟨ics, a', ?_, hS', hg, ?_, rfl⟩
+  · rw [basisOfW_eq k.toNat (by omega)]; exact hrun
+  · simpa using hdec
+
+/-- The annotated basis block of a kind `basisPinHit` tries. -/
+theorem romBasisARef_lt4 (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (k : Word)
+    (hk : k.toNat < 4) :
+    RomRef p "rom_basis_decls_a" [k] (StageR dn vis fe) (BasisKind.declsA (basisOfW k.toNat))
+      (KeepPost dn vis fe (decRBlk dn)) := by
+  intro n m a r m' hS hc
+  cases n with
+  | zero => rw [callW_zero] at hc; cases hc
+  | succ n =>
+  have hw := callW_model (M := fun mq => basisW p n mq k 5) (basisA_specW rom p hL n · k) hc
+  unfold basisW at hw
+  rw [if_neg (by rw [UInt64.le_iff_toNat_le]; simp; omega)] at hw
+  cases h1 : callW p n "rci_block" [k + 5] m with
+  | none => rw [h1] at hw; simp at hw
+  | some t1 =>
+  obtain ⟨r1, m1⟩ := t1
+  rw [h1, bW_some] at hw
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨rfl, rfl⟩ := hw
+  have hk5 : (k + 5).toNat = 5 + k.toNat := by rw [UInt64.toNat_add]; simp; omega
+  obtain ⟨hf1, hf2⟩ := basisDeclsA_fit k.toNat hk
+  obtain ⟨ics, a', hrun, hS', hg, hdec, hr1⟩ :=
+    blockCall hL hr rest hrom dn vis fe (k + 5) (by omega) _
+      (by simp only [hk5]; exact ciEntries_bA k.toNat (by omega)) hf1 hf2 hS h1
+  refine ⟨ics, a', ?_, hS', hg, ?_, rfl⟩
+  · rw [basisOfW_eq k.toNat (by omega)]; exact hrun
+  · simpa using hdec
+
 end entries
 
 end L.Rom

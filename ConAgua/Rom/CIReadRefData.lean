@@ -20,16 +20,27 @@ set_option maxRecDepth 100000 in
 theorem romExprVals_fit : romExprVals.all exprFits = true := by decide +kernel
 
 set_option maxRecDepth 100000 in
-theorem basisDecls_fit :
-    ((basisKinds.take 4).map fun k => (ConLeche.BasisKind.decls k).all ciFits) = [true, true, true, true] := by
-  decide +kernel
+theorem basisDecls_fit : ∀ (i : Nat) (hi : i < 4),
+    (ConLeche.BasisKind.decls (basisKinds[i]'(by simp [basisKinds]; omega))).all ciFits = true ∧
+      (ConLeche.BasisKind.decls (basisKinds[i]'(by simp [basisKinds]; omega))).length < 2 ^ 63
+  | 0, _ => by decide +kernel +revert
+  | 1, _ => by decide +kernel +revert
+  | 2, _ => by decide +kernel +revert
+  | 3, _ => by decide +kernel +revert
+  | _ + 4, h => absurd h (by omega)
 
 set_option maxRecDepth 100000 in
-theorem basisDeclsA_fit :
-    ((basisKinds.take 4).map fun k => (ConLeche.BasisKind.declsA k).all ciFits) = [true, true, true, true] := by
-  decide +kernel
+theorem basisDeclsA_fit : ∀ (i : Nat) (hi : i < 4),
+    (ConLeche.BasisKind.declsA (basisKinds[i]'(by simp [basisKinds]; omega))).all ciFits = true ∧
+      (ConLeche.BasisKind.declsA (basisKinds[i]'(by simp [basisKinds]; omega))).length < 2 ^ 63
+  | 0, _ => by decide +kernel +revert
+  | 1, _ => by decide +kernel +revert
+  | 2, _ => by decide +kernel +revert
+  | 3, _ => by decide +kernel +revert
+  | _ + 4, h => absurd h (by omega)
 
 set_option maxRecDepth 100000 in
-theorem andPin_fit : ConLeche.andPin.all ciFits = true := by decide +kernel
+theorem andPin_fit : ConLeche.andPin.all ciFits = true ∧ ConLeche.andPin.length < 2 ^ 63 := by
+  decide +kernel
 
 end L.Rom
