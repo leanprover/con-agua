@@ -291,7 +291,7 @@ def checkBlockAgree : FunDecl := lfn (vis, nP, cvTa0, s0, restO, restL) locals
 /-- `cons_block_inds(p1, is_rec, cvTas.off, cvTas.len, vis, i)`: the members' formers consed, in
 block order, each with its capability record at `is_rec` (member `i` first), by recursion as the
 twin's; the `.indInfo` record (kind `3`, the constant's four words, the capability record's 15) is
-written right after its allocation. Returns the new view. -/
+`ind_info_rec`'s. Returns the new view. -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:181-190 ConRon.Arena.consBlockInds
 @[l_impl ConRon.Arena.consBlockInds]
 def consBlockInds : FunDecl := lfn (p1, isRec, cvO, cvL, vis, i) locals (caps, rec, v1, v2) {
