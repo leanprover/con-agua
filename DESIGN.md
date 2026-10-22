@@ -4464,6 +4464,10 @@ None.
 
 ## Twin fingerprints and the bump machinery (2026-10-21, lane `sync`)
 
+*Superseded in part (2026-10-22, "Census memory"): the fingerprints, the stale flag,
+`--stale`/`--reviewed`/`--record` and `docs/twin-fingerprints.tsv` are gone; the patch series and
+`scripts/bump-con-ron.sh` stay.*
+
 Question: when con-ron moves, which of our L code and proofs must be looked at again? The census
 links (`@[l_impl T]`, `@[refines T]`, `@[refines_part T]`) say which twin target `T` each piece
 stands for; nothing noticed that `T` changed. Pieces: `ConAgua/Census/Main.lean` (fingerprints),
@@ -4719,7 +4723,13 @@ The census lists 28 phase-8 targets as stale after `4c9eaf7 → 12752ca7`. Every
 unchanged; what changed below them is only `readLevelM`/`readLevelsM` (`Monad.lean`), whose diff is
 doc-comment line references only. False positives: to be cleared with `scripts/census.py
 --reviewed` once the census runs again (lane `censusmem`'s memory guard). Also proved since the
-second landing: `classOfMotiveVar` (through `sl_find`'s model, `findW_ok`).
+second landing: `classOfMotiveVar` (through `sl_find`'s model, `findW_ok`); **`checkBlockDomsAt`
+through the stubs** (`IndInstallSpec.lean`: model `domsW` calling `stubM "fvar_type_d"` and `stubM
+"is_def_eq_core"`, the twin side from their `RelAM` statements — census status `sorry`, inherited
+from the stubs only: the first skeleton function refined end to end through stubs; finding: a
+stub may grow memory, so decoded argument slices are carried by `decHL_grow` and the caller passes
+`off + len ≤ iwTop`); `IndCopy2.lean` (worker): models and `_dec` lemmas for `sl_snoc`,
+`sl_append`, `er_copy`/`er_to_iw`, `rec2`‥`rec6`.
 
 ### `sorry`s
 
@@ -4804,3 +4814,31 @@ Next, in order (designs settled, not written):
 ### `sorry`s
 
 None new (the four remaining stub specs of `Checker.lean` are lane `pinsenv`'s).
+
+## Census memory, and the fingerprints dropped (2026-10-22, lane `censusmem`)
+
+The census took the machine down twice (the session has a 50 GB memory cap; the census was seen at
+18 GB). Measured under a watchdog (tree RSS polled every 0.2 s, killed by pid at 8 GB): the target
+pass alone (import `ConAgua.Final.Twin`, walk, fingerprints) peaks at 2.3 GB in 0.8 s, so the
+fingerprints were not the cause (`Expr.hash` is cached in the `Expr`). The link pass was: it
+imported all 165 modules, and on a module clash retried with fewer, all in one process. Lean never
+frees an imported environment, a failed `importModules` leaks what it read, and (presumably) a re-import of an
+olean whose fixed mmap address is taken reads it into the heap: about 2 GB more per attempt
+(measured: root alone 2.3 GB, root plus one more import 4.2 GB; there are seven clash retries). Killed at 8 GB after 4 s.
+
+* **Fix: one import per process.** `lake exe census ROOT MODULE...` is now a driver that runs
+  itself (`IO.appPath`) as `--targets ROOT` and then once per link-group attempt as `--links
+  MODULE...`, one child at a time. A child that hits a clash prints the modules to defer (`C`/`D`
+  lines, exit 3) and the driver retries without them; the driver drops `L` lines of modules an
+  earlier group printed. Same groups as before, same output: `docs/progress.md` regenerated
+  identical at `c33ad06`. Peak 2.8 GB (python + lake + one child), about 38 s.
+* **Guard.** `scripts/census.py` runs the exe with its output in temporary files and polls the
+  resident memory of its process tree every 0.2 s; above `MEM_LIMIT_GB` (6) or after 600 s it
+  kills that tree by pid and exits with an error. `CENSUS_PEAK=1` prints the peak.
+* **Fingerprints dropped** (decision with the user): not how con-ron syncs, and per toolchain.
+  Gone: the `F` lines, the stale flag and section of `docs/progress.md`, `--stale`, `--reviewed`,
+  `--record`, `docs/twin-fingerprints.tsv`. `scripts/bump-con-ron.sh` now builds, runs the census
+  and lists the changed upstream files. TODO: staleness by source citations (`con-ron:
+  ConRon/Arena/File.lean:120-200 name` doc lines on our L code and proofs, a pure-Python gate like
+  con-ron's `scripts/provenance.py`), a separate lane. The dashboard's stale card
+  (`docs/dashboard.html`, `scripts/dashboard_data.py`) now reads an empty list.

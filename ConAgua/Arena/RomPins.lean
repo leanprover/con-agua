@@ -101,14 +101,6 @@ end namesToSpec
 
 /-! ## `rom_names_to` refines `internNameList` -/
 
-theorem ArenaD.frameHi {A : List ArrId} {C : List Word} {m m' : Mem} {a : AState}
-    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, 64 ≤ b) (hC : ∀ x ∈ C, 64 ≤ x.toNat) (h : ArenaD m a) :
-    ArenaD m' a :=
-  ⟨ArenaR.frame_ext A C hA hC m m' hf a h.1,
-   DerR.frame m m' a h.2 (fun B hB => hf.1 B (fun hm => by
-      have := hA B hm; rcases hB with rfl | rfl | rfl | rfl | rfl <;> revert this <;> decide)
-      (by rcases hB with rfl | rfl | rfl | rfl | rfl <;> decide))⟩
-
 theorem pinW_set (m : Mem) (d h : Word) (i : Nat) (hd : d.toNat < (m.arr64 PINS).size) :
     pinW (m.set64 PINS d h) i = if i = d.toNat then h else pinW m i := by
   simp only [pinW, Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]

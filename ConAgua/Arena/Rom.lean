@@ -756,4 +756,13 @@ theorem romName_refines (rom : List UInt8) (p : Prog) (hL : NameProg rom p) (hr 
   subst hs
   exact ⟨hloc, romNameW_ok rom hr x hx n _ a₀ pos rest _ _ _ hA hd hW⟩
 
+/-- `ArenaD` across writes at or above array 64 and `CTL` word 64. -/
+theorem ArenaD.frameHi {A : List ArrId} {C : List Word} {m m' : Mem} {a : AState}
+    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, 64 ≤ b) (hC : ∀ x ∈ C, 64 ≤ x.toNat) (h : ArenaD m a) :
+    ArenaD m' a :=
+  ⟨ArenaR.frame_ext A C hA hC m m' hf a h.1,
+   DerR.frame m m' a h.2 (fun B hB => hf.1 B (fun hm => by
+      have := hA B hm; rcases hB with rfl | rfl | rfl | rfl | rfl <;> revert this <;> decide)
+      (by rcases hB with rfl | rfl | rfl | rfl | rfl <;> decide))⟩
+
 end L.Rom
