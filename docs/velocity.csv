@@ -99,3 +99,4 @@ date,lane,model,work_min,overhead_min,note
 2026-10-22,indproofs2,opus,10,15,"landing 5: helper rec merged (12 Rec* refinements, 2 wrap bugs fixed); helper rec2 started; phase 8: 67 proven / 62 sorry"
 2026-10-22,defeq,opus,10,20,"landing 5: helper defeq-mid merged: defeq middle layer refined (defeq_lst/rev, spine, offset, peel/binders, lams, quick_defeq, lazy-delta step and loop); L word-decoding mismatches fixed"
 2026-10-22,whnf2,opus,15,15,"landing 1: CoreS carries CoreMemos (instLC/abs1C well formed, memory-only) and bstk; 19 construction sites incl. defeq/decls3 files; WhnfDelta citations; helpers m2c/rec/walks started"
+2026-10-22,decls3,opus,60,8,"landing 3: opaque arm proved at LoopR; checkBasisDecl, matchesPin (sorry-free), reduceStoredOk/ElemOk, checkReducePin, ofReduceAxOk, trustCompilerOk, stdAxiomOk via ROM stubs (twin nested matches flattened); canon helper interim merge; phase 2: 145 proven / 26 sorry"
