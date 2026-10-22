@@ -7332,3 +7332,26 @@ grows (the memo library's capacity rule, as every L memo). Refinement: not yet (
   `whnf3`'s file). `StrLitBase` adapted to the `StackKept` structure (helper `defeq2-strfix`).
 * `KnotCallees` left (11), all lane `whnf3`'s: `whnfCoreStep`, `whnfStep`, `findProj`,
   `projFound`, `proofIrrel`, `towerSlots`, `reduceProjCore`, `unfold`, `constTy`, `instLP`, `den`.
+
+
+### Landing 8: helpers `parts` and `rec2` done
+* Helper `parts` (3.2 h): `blockSplitRecs`, `blockSplitCtors`, `blockSplit` (sorry-free),
+  `ctorMember?`, `blockGroups`, `blockRecNameSetOk`, `blockMemberCounts?`, `blockShape?`,
+  `blockParts?`, `piDomsMentionAny`, `blockRawRec`, `BlockShape.nestCtx`, `blockNestCtx` (through
+  stubs). L: capacity guards, `block_shape_nest_ctx` read its inputs after writing the new
+  record — moved before the allocation (a latent bug, harmless while the allocation was fresh
+  memory); D18 (`sl_cons`-built slices, quadratic) added to docs/deviations.md. Open:
+  `blockLargeElimAllowed` (needs `lv_nz`/`readLevelM` under `StageR`, the `CoreS` bridge again),
+  `checkBlock*`, `consBlock*`, `checkAbsCtorSorts*`, `blockCapsAt` (needs a `RelAM` for
+  `lv_zero_caps`). ~6.75k proof lines.
+* Helper `rec2` (3.4 h): `classFieldsOf` (the `nest_occ` memo carried across stubs by
+  `stubM_memoFrame`), `ClassGen.major/motiveTy/minorTy/prefixBinders`, `classGenRecTy`,
+  `classRecTyOk`, `classRecTysOk`, `classGenRule` (through stubs). Open: `classRulesOk`,
+  `classRecsRulesOk` (loops), `classFeR`, `targetAbs(Go)`. Its overflow guards (`d + bl < d`,
+  `rP + nF`, …) are capacity aborts (word arithmetic the twin does in `Nat`), not rows of
+  docs/deviations.md. ~5.4k proof lines.
+* `ConAgua/Checker/Prog.lean` (lane `integrate`'s generated whole program) gained the 29 helper
+  functions the two helpers' rewrites introduced, by hand: `scripts/checker_prog.py` currently
+  stops on an import clash between `PropReadW` and `PromoteCI` (`L.Arena.armK.eq_1`, not this
+  lane's). `checkerProg_wf` holds.
+* Census: phase 8 **72 proven, 79 sorry, 64 written, 8 todo**; totals 670 proven / 124 sorry of 1352.

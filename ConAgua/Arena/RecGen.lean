@@ -98,33 +98,39 @@ def classFieldsOfHits : FunDecl := lfn (ihsOff, ihsLen, i) locals (q, cnt, cls) 
   return (cnt, cls)
 }
 
+/-- `class_fields_of_go(mn.off, mn.len, ihs.off, ihs.len, i, fs.off, fs.len)`: `classFieldsOf`'s
+recursion (from field index `i`), the `ClassField` records consed onto the rest's slice. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:340-361 ConRon.Arena.classFieldsOf
+@[l_impl ConRon.Arena.classFieldsOf]
+def classFieldsOfGo : FunDecl := lfn (mnOff, mnLen, ihsOff, ihsLen, i, fsOff, fsLen)
+    locals (w, occ, hc, hCls, bsOff, bsLen, body, cf, ro, rl, o, l) {
+  if fsLen == 0 { return (0, 0) };
+  w := call fvar_type_d(IW.u64[fsOff]);
+  occ := call nest_occ(mnOff, mnLen, 0, 0, w);
+  (hc, hCls) := call class_fields_of_hits(ihsOff, ihsLen, i);
+  if occ == 0 && hc == 0 {
+    cf := call iw_alloc(1);
+    IW.u64[cf] := 0
+  } else {
+    if occ != 0 && hc == 1 {
+      (bsOff, bsLen, body) := call pi_binders(⟪CWF⟫, w);
+      cf := call rec3(1, hCls, bsLen)
+    } else { abort }
+  };
+  (ro, rl) := call class_fields_of_go(mnOff, mnLen, ihsOff, ihsLen, i + 1, fsOff + 1, fsLen - 1);
+  (o, l) := call sl_cons(cf, ro, rl);
+  return (o, l)
+}
+
 /-- `class_fields_of(p, ihs.off, ihs.len, i0, fs.off, fs.len)`: the `ClassField` of every field of
 `fs`, from index `i0`. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:340-361 ConRon.Arena.classFieldsOf
 @[l_impl ConRon.Arena.classFieldsOf]
 def classFieldsOfL : FunDecl := lfn (p, ihsOff, ihsLen, i0, fsOff, fsLen)
-    locals (mnOff, mnLen, q, j, f, w, occ, hc, hCls, bsOff, bsLen, body, cf) {
+    locals (mnOff, mnLen, o, l) {
   (mnOff, mnLen) := call block_shape_member_names(p);
-  q := call iw_alloc(fsLen);
-  j := 0;
-  while j < fsLen {
-    f := IW.u64[fsOff + j];
-    w := call fvar_type_d(f);
-    occ := call nest_occ(mnOff, mnLen, 0, 0, w);
-    (hc, hCls) := call class_fields_of_hits(ihsOff, ihsLen, i0 + j);
-    if occ == 0 && hc == 0 {
-      cf := call iw_alloc(1);
-      IW.u64[cf] := 0
-    } else {
-      if occ == 1 && hc == 1 {
-        (bsOff, bsLen, body) := call pi_binders(⟪CWF⟫, w);
-        cf := call rec3(1, hCls, bsLen)
-      } else { abort }
-    };
-    IW.u64[q + j] := cf;
-    j += 1
-  };
-  return (q, fsLen)
+  (o, l) := call class_fields_of_go(mnOff, mnLen, ihsOff, ihsLen, i0, fsOff, fsLen);
+  return (o, l)
 }
 
 /-! ## `classNodesAgree`, `classLeafAt`, `classFieldsAgree` -/
@@ -387,14 +393,8 @@ with the stream's `cvRi`. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:527-547 ConRon.Arena.classRecTyOk
 @[l_impl ConRon.Arena.classRecTyOk]
 def classRecTyOkL : FunDecl := lfn (vis, g, k, rc, cvRi, c)
-    locals (ci, memw, memv, ok, gty, cvp, cvG, r, eq) {
-  ci := call target_major_at(IW.u64[g + 3], IW.u64[g + 4], c);
-  memw := IW.u64[ci + 8];
-  memv := k;
-  if memw != 0 { memv := memw - 1 };
-  if IW.u64[rc + 3] != memv { abort };
-  if IW.u64[rc + 1] != IW.u64[g] + IW.u64[g + 8] { abort };
-  if IW.u64[rc + 2] != IW.u64[rc + 1] + IW.u64[ci + 5] { abort };
+    locals (u, ok, gty, cvp, cvG, r, eq) {
+  u := call class_rec_ty_ok_guards(g, k, rc, c);
   (ok, gty) := call class_gen_rec_ty(g, c);
   if ok == 0 { abort };
   cvp := IW.u64[rc];
@@ -405,22 +405,37 @@ def classRecTyOkL : FunDecl := lfn (vis, g, k, rc, cvRi, c)
   return cvG
 }
 
+/-- `class_rec_ty_ok_guards(g, k, rc, c)`: `classRecTyOk`'s guards: the record's member, rule
+prefix and major index are the generated ones (aborts where the twin fails; the word sums must not
+wrap). -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:527-547 ConRon.Arena.classRecTyOk
+@[l_impl ConRon.Arena.classRecTyOk]
+def classRecTyOkGuards : FunDecl := lfn (g, k, rc, c) locals (ci, memw, memv) {
+  ci := call target_major_at(IW.u64[g + 3], IW.u64[g + 4], c);
+  memw := IW.u64[ci + 8];
+  memv := k;
+  if memw != 0 { memv := memw - 1 };
+  if IW.u64[rc + 3] != memv { abort };
+  if IW.u64[rc + 1] != IW.u64[g] + IW.u64[g + 8] { abort };
+  if IW.u64[rc + 1] + IW.u64[ci + 5] < IW.u64[rc + 1] { abort };
+  if IW.u64[rc + 2] != IW.u64[rc + 1] + IW.u64[ci + 5] { abort };
+  return 0
+}
+
 /-- `class_rec_tys_ok(vis, g, k, rcs.off, rcs.len, cvs.off, cvs.len, cs.off, cs.len)`: every
 recursor's generated type, pairwise with `cvs` and `cs` (stops once `rcs` runs out; aborts if
 `cvs`/`cs` run out first). -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:549-559 ConRon.Arena.classRecTysOk
 @[l_impl ConRon.Arena.classRecTysOk]
 def classRecTysOkL : FunDecl := lfn (vis, g, k, rcsOff, rcsLen, cvsOff, cvsLen, csOff, csLen)
-    locals (q, j, x) {
-  q := call iw_alloc(rcsLen);
-  j := 0;
-  while j < rcsLen {
-    if cvsLen <= j || csLen <= j { abort };
-    x := call class_rec_ty_ok(vis, g, k, IW.u64[rcsOff + j], IW.u64[cvsOff + j], IW.u64[csOff + j]);
-    IW.u64[q + j] := x;
-    j += 1
-  };
-  return (q, rcsLen)
+    locals (x, o, l, o2, l2) {
+  if rcsLen == 0 { return (0, 0) };
+  if cvsLen == 0 || csLen == 0 { abort };
+  x := call class_rec_ty_ok(vis, g, k, IW.u64[rcsOff], IW.u64[cvsOff], IW.u64[csOff]);
+  (o, l) := call class_rec_tys_ok(vis, g, k, rcsOff + 1, rcsLen - 1, cvsOff + 1, cvsLen - 1, csOff + 1,
+    csLen - 1);
+  (o2, l2) := call sl_cons(x, o, l);
+  return (o2, l2)
 }
 
 /-! ## `classRuleOk`, `classRulesOk`, `classRecsRulesOk` -/
@@ -853,13 +868,15 @@ def genRecCheckL : FunDecl := lfn
 def recGenFns : Prog :=
   [("class_slot_is_minor", classSlotIsMinor), ("class_minor_slot_go", classMinorSlotGo),
    ("class_minor_slot", classMinorSlotL),
-   ("class_fields_of_hits", classFieldsOfHits), ("class_fields_of", classFieldsOfL),
+   ("class_fields_of_hits", classFieldsOfHits), ("class_fields_of_go", classFieldsOfGo),
+   ("class_fields_of", classFieldsOfL),
    ("class_nodes_agree", classNodesAgreeL), ("class_leaf_at", classLeafAtL),
    ("class_fields_agree", classFieldsAgreeL), ("class_ctor_of_nfs", classCtorOfNfs),
    ("class_ctor_of", classCtorOfL), ("class_ctors_of", classCtorsOfL),
    ("classes_ctors", classesCtorsL), ("class_majors", classMajorsL),
    ("classes_nfs", classesNfsL), ("class_former_ty", classFormerTyL),
    ("class_const_ok_header", classConstOkHeader), ("class_const_ok", classConstOkL), ("class_rec_ty_ok", classRecTyOkL),
+   ("class_rec_ty_ok_guards", classRecTyOkGuards),
    ("class_rec_tys_ok", classRecTysOkL), ("class_rule_ok_domains", classRuleOkDomains),
    ("class_rule_ok_guards", classRuleOkGuards), ("class_rule_ok", classRuleOkL), ("class_rules_ok", classRulesOkL),
    ("class_recs_rules_ok", classRecsRulesOkL), ("class_stream_recs", classStreamRecsL),
