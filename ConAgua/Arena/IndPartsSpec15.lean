@@ -535,4 +535,99 @@ theorem bpoW_ready {n : Nat} {m m' : Mem} {nP cto ctl lo ll ro rl cso csl : Word
   rw [resContW_step] at h2
   intro h0; rw [if_pos h0] at h2; cases h2
 
+/-- **`block_shape_build`'s model refines `buildTwin`.** -/
+theorem bbW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (n : Nat) {m : Mem} {a : AState}
+    {nPd cto ctl cso csl rso rsl : Word} {cvT0 : IConstantVal} {cvTs : List IConstantVal}
+    {cs : List (IConstantVal × Nat × Nat)} {r0 : IConstantVal × Nat × Nat × List IRecRule}
+    {rs : List (IConstantVal × Nat × Nat × List IRecRule)}
+    (hS : StageR dn vis fe m a) (hts : PSlR decCVp (cvT0 :: cvTs) cto ctl m) (hcs : PSlR decSC cs cso csl m)
+    (hrs : PSlR decSR (r0 :: rs) rso rsl m) :
+    Sim (bbW n m nPd cto ctl cso csl rso rsl) (buildTwin nPd.toNat (cvT0 :: cvTs) cvT0 cs (r0 :: rs) r0.1) a
+      (fun r x m' a' => ShapeR x r m' ∧ StageR dn vis fe m' a' ∧ IWGrow m m') := by
+  have hctl : ctl ≠ 0 := by intro e; subst e; exact absurd (partsPSl_nil hts) (by simp)
+  have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
+  obtain ⟨p0, cv0, ts', he, hw, hpb, hcv0, -⟩ := partsPSl_cons hts hctl
+  simp only [List.cons.injEq] at he; obtain ⟨rfl, rfl⟩ := he
+  have hlen : (cvT0 :: cvTs).length = ctl.toNat := decPL_length _ hts.1
+  have hclen : cs.length = csl.toNat := decPL_length _ hcs.1
+  intro r m' e
+  unfold bbW at e
+  rw [hw] at e
+  -- names (model only)
+  cases h1 : bsnW (n + 3) m cto ctl with
+  | none => rw [h1] at e; cases e
+  | some x1 =>
+  obtain ⟨r1, m1⟩ := x1
+  rw [h1, bbH1_some] at e
+  obtain ⟨hS1, hg1, hd1, hb1⟩ := bsnW_ok (n + 3) m m1 a cto ctl (cvT0 :: cvTs) r1 h1 hS hts
+  revert r m' e
+  unfold buildTwin
+  -- member counts
+  have hmc := bmcW_sim (n + 2) (nPd := nPd) (k := ctl) (nC := csl) hS1 (hts.grow (fun _ => OMono.decCVp _) hg1)
+    (hrs.grow decSR_mono hg1) (decHL_decB hd1 hb1) hb1
+  rw [← hlen, ← hclen] at hmc
+  refine Sim.bindK (K := bbH2 n nPd cto ctl cso csl rso rsl (UInt64.ofNat p0) (r1.headD 0) (r1.tail.headD 0))
+    (body := fun r2 m2 => if r2.headD 0 = 0 then some ([0, 0], m2)
+      else bbH3 n nPd cto ctl cso csl rso rsl (r1.headD 0) (r1.tail.headD 0) (r2.tail.headD 0)
+        (r2.tail.tail.headD 0) (erToIwW (n + 3) m2 (rdW (m2.arr64 EREC) (UInt64.ofNat p0 + 1))
+          (rdW (m2.arr64 EREC) (UInt64.ofNat p0 + 2))))
+    rfl (fun _ _ => rfl) hmc.withRun ?_
+  rintro r2 x2 m2 a2 ⟨⟨hR2, hS2, hg2⟩, hrun2⟩
+  have hg02 := hg1.trans hg2
+  cases x2 with
+  | none =>
+    have h0 : r2.headD 0 = 0 := hR2
+    simp only [h0, if_true]
+    exact Sim.ret ⟨rfl, hS2, hg02⟩
+  | some nIdxs =>
+  obtain ⟨h21, hd2, hb2⟩ := hR2
+  simp only [h21, show (1 : Word) ≠ 0 by decide, if_false]
+  -- level parameters (model only)
+  intro r m' e
+  cases h3 : erToIwW (n + 3) m2 (rdW (m2.arr64 EREC) (UInt64.ofNat p0 + 1)) (rdW (m2.arr64 EREC) (UInt64.ofNat p0 + 2)) with
+  | none => rw [h3] at e; cases e
+  | some x3 =>
+  obtain ⟨r3, m3⟩ := x3
+  rw [h3, bbH3_some] at e
+  obtain ⟨hS3, hg3, hd3, ht3⟩ := partsLpsCopy h3 hS2 (hcv0.grow (OMono.decCVp _) hg02) hpb
+  have hg03 := hg02.trans hg3
+  -- the pins
+  cases h4 : bpoW (n + 2) m3 nPd cto ctl (r3.headD 0) (r3.tail.headD 0) rso rsl cso csl with
+  | none => rw [h4] at e; cases e
+  | some x4 =>
+  obtain ⟨r4, m4⟩ := x4
+  rw [h4] at e
+  have h0 := bpoW_ready h4 hctl
+  have hRrun := pinReserved_run (hS3.1.pins.full h0)
+  obtain ⟨hS4, hg4, hr4⟩ := bpoW_ok hRrun h4 hS3 (hts.grow (fun _ => OMono.decCVp _) hg03)
+    (hrs.grow decSR_mono hg03) (hcs.grow decSC_mono hg03) hd3 (Nat.le_of_eq ht3)
+  have hg04 := hg03.trans hg4
+  have hr4' : r4 = [if pinsOf nPd.toNat ((List.range 16).map fun i => decI (pinW m3 (55 + i)))
+      cvT0.levelParams (cvT0 :: cvTs) cs (r0 :: rs) then 1 else 0] := hr4
+  revert r m' e
+  refine Sim.bind_twin hRrun ?_
+  cases hpb : pinsOf nPd.toNat ((List.range 16).map fun i => decI (pinW m3 (55 + i)))
+      cvT0.levelParams (cvT0 :: cvTs) cs (r0 :: rs) with
+  | false =>
+    rw [hpb] at hr4'
+    rw [bbH4_fail (h := by rw [hr4']; rfl)]
+    exact Sim.ret ⟨rfl, hS4, hg04⟩
+  | true =>
+  rw [hpb] at hr4'
+  rw [bbH4_ok (h := by rw [hr4']; decide)]
+  simp only [if_true]
+  have hil : r2.tail.tail.headD 0 = ctl := by
+    apply UInt64.toNat_inj.mp
+    have e1 := mapM_opt_length _ _ _ (show decNL (truncM m2) _ _ = some nIdxs from hd2)
+    simp only [List.length_range] at e1
+    rw [← e1, bmc_length _ _ _ _ _ hrun2, hlen]
+  rw [hil] at hd2 hb2 ⊢
+  refine Sim.k3 (btW_sim n hS4 (hts.grow (fun _ => OMono.decCVp _) hg04) (hcs.grow decSC_mono hg04)
+    (hrs.grow decSR_mono hg04) ((decHL_decB hd1 hb1).grow (OMono.decHL _ _) (hg2.trans (hg3.trans hg4)))
+    (Nat.le_trans hb1 (hg2.trans (hg3.trans hg4)).1) (hd2.grow (OMono.decNL _ _) (hg3.trans hg4))
+    (Nat.le_trans hb2 (hg3.trans hg4).1) (by rw [decHL_grow3 hg4 (Nat.le_of_eq ht3)]; exact hd3)
+    (Nat.le_trans (Nat.le_of_eq ht3) hg4.1)) ?_
+  rintro r x m5 a5 ⟨hR, hS5, hg5⟩
+  exact ⟨by cases x <;> exact hR, hS5, hg04.trans hg5⟩
+
 end L.Ind
