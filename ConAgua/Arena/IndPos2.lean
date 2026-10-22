@@ -839,6 +839,7 @@ written at `q + j`, … (the loop of `nest_seed_of`, as a recursion). -/
 def nestSeedOfGoL : FunDecl := lfn (ctx, f, dsOff, dsLen, q, j) locals (y, z, u) {
   if j >= dsLen { return 0 };
   y := call replace_apps(IW.u64[ctx], IW.u64[ctx + 1], IW.u64[ctx + 10], 0, IW.u64[ctx + 4], IW.u64[dsOff + j]);
+  if 4294967296 <= y { abort };
   z := call replace_fvars(f, y);
   IW.u64[q + j] := z;
   u := call nest_seed_of_go(ctx, f, dsOff, dsLen, q, j + 1);
