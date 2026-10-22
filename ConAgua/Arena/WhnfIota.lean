@@ -136,29 +136,52 @@ def reservedContainsL : FunDecl := lfn (x) locals (j) {
 `caps_never_zero` is a named stub (see the module note); `iota_ctor_never_prop` and `iota_case3`
 are real dispatchers around it, faithful to the twin's own head-symbol/env-lookup/arity gates. -/
 
+/-- A word of the record pool (a one-line reader, so that callers' proofs read it through a call). -/
+-- con-ron: ConRon/Arena/Core.lean:348-365 ConRon.Arena.iotaCtorNeverProp
+def eRecGetL : FunDecl := lfn (k) locals () { return EREC.u64[k] }
+
+/-- The head name of a `const` handle (the view checks, then the stored name). -/
+-- con-ron: ConRon/Arena/Core.lean:348-365 ConRon.Arena.iotaCtorNeverProp
+def constNameOfL : FunDecl := lfn (hh) locals (t, i) {
+  t := (hh >> 27) & 1;
+  i := hh & 134217727;
+  if t != 0 && CTL.u64[1] == 0 { abort };
+  if CTL.u64[18 + t] <= i { abort };
+  return CREC.u64[i * 4 + t * 2]
+}
+
+/-- The family test of `iota_ctor_never_prop` at the inductive's record `indP`: it is an
+inductive, its level-parameter count is `us`' length, and `caps_never_zero`. -/
+-- con-ron: ConRon/Arena/Core.lean:348-365 ConRon.Arena.iotaCtorNeverProp
+def indCapsCheckL : FunDecl := lfn (indP, us) locals (k, uso, usl, lp, po, swd, so, sc, nz) {
+  k := call e_rec_get(indP);
+  if k != 3 { return 0 };
+  (uso, usl) := call ls_node(us);
+  lp := call e_rec_get(indP + 3);
+  if lp != usl { return 0 };
+  po := call e_rec_get(indP + 2);
+  swd := call e_rec_get(indP + 12);
+  so := call e_rec_get(indP + 13);
+  sc := call e_rec_get(indP + 14);
+  nz := call caps_never_zero(po, lp, us, swd, so, sc);
+  return nz
+}
+
 /-- con-leche: `CoreDefs.lean:72-93` `iotaCtorNeverProp` — is the matched constructor's family
 never `Prop` at the comparand levels? `ctorP` is the constructor's `IConstantInfo` pointer
 (`cvj`'s record base); its type's Π-result's head constant is looked up for the family's `caps`. -/
 -- con-ron: ConRon/Arena/Core.lean:348-365 ConRon.Arena.iotaCtorNeverProp
 @[l_impl ConRon.Arena.iotaCtorNeverProp]
 def iotaCtorNeverPropL : FunDecl := lfn (vis, ctorP, us)
-    locals (ty, piRes, hh, t, i, T, indFlag, indP, uso, usl, nz) {
-  ty := EREC.u64[ctorP + 4];
+    locals (ty, piRes, hh, T, indFlag, indP, nz) {
+  ty := call e_rec_get(ctorP + 4);
   piRes := call pi_result(ty);
   hh := call get_app_fn(piRes);
   if hh >> 28 != 3 { return 0 };
-  t := (hh >> 27) & 1;
-  i := hh & 134217727;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[18 + t] <= i { abort };
-  T := CREC.u64[i * 4 + t * 2];
+  T := call const_name_of(hh);
   (indFlag, indP) := call env_find(T, vis);
   if indFlag == 0 { return 0 };
-  if EREC.u64[indP] != 3 { return 0 };
-  (uso, usl) := call ls_node(us);
-  if EREC.u64[indP + 3] != usl { return 0 };
-  nz := call caps_never_zero(EREC.u64[indP + 2], EREC.u64[indP + 3], us,
-    EREC.u64[indP + 12], EREC.u64[indP + 13], EREC.u64[indP + 14]);
+  nz := call ind_caps_check(indP, us);
   return nz
 }
 
@@ -535,13 +558,15 @@ def iotaIndexOkL : FunDecl := lfn (mode, vis, d, mI, rP, cnP, tyCtor, mo, mn, xo
 
 /-! ## `proof_irrel(mode, vis, d, a, b)` -/
 
-/-- con-leche: `Core.lean:298-320` `proofIrrel` — proof irrelevance: both sides' types' sorts are
-`Prop`. `lvl_eq`'s result word is `0` none (a decline, `abort`), `1` false, `2` true. -/
+/-- One side of `proof_irrel`: infer the type's type at the io grade, head-normalize, and compare a
+`Sort`'s level with zero. Result `0`: not a sort; `1`: a sort that is not `Prop`; `2`: `Prop`
+(callers test `!= 1`, which the cache decoder `decO` reads the same as `== 2`).
+`lvl_eq_c`'s answer word is `0` none (a decline, `abort`), `1` false, `2` true. The comparison is the
+CACHED `lvl_eq_c` (the twin's `lvlEq?` consults and fills the verdict cache). -/
 -- con-ron: ConRon/Arena/Core.lean:1360-1385 ConRon.Arena.proofIrrel
-@[l_impl ConRon.Arena.proofIrrel]
-def proofIrrelL : FunDecl := lfn (mode, vis, d, a, b)
-    locals (ta, tta, hh, t, i, uT, z, okA, tb, ttb, hh2, t2, i2, vT, okB) {
-  ta := call infer_io(mode, vis, d, a);
+def proofIrrelHalfL : FunDecl := lfn (mode, vis, d, x)
+    locals (ta, tta, hh, t, i, uT, z, ok) {
+  ta := call infer_io(mode, vis, d, x);
   tta := call infer_io(mode, vis, d, ta);
   hh := call whnf(mode, vis, d, tta);
   if hh >> 28 != 2 { return 0 };
@@ -551,23 +576,21 @@ def proofIrrelL : FunDecl := lfn (mode, vis, d, a, b)
   if CTL.u64[16 + t] <= i { abort };
   uT := SOREC.u64[i * 2 + t];
   z := call pin_word(53);
-  okA := call lvl_eq(uT, z);
-  if okA == 0 { abort };
-  okA := u64(okA == 2);
-  tb := call infer_io(mode, vis, d, b);
-  ttb := call infer_io(mode, vis, d, tb);
-  hh2 := call whnf(mode, vis, d, ttb);
-  if hh2 >> 28 != 2 { return 0 };
-  t2 := (hh2 >> 27) & 1;
-  i2 := hh2 & 134217727;
-  if t2 != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[16 + t2] <= i2 { abort };
-  vT := SOREC.u64[i2 * 2 + t2];
-  z := call pin_word(53);
-  okB := call lvl_eq(vT, z);
-  if okB == 0 { abort };
-  okB := u64(okB == 2);
-  return u64(okA != 0) & u64(okB != 0)
+  ok := call lvl_eq_c(uT, z);
+  if ok == 0 { abort };
+  return ok
+}
+
+/-- con-leche: `Core.lean:298-320` `proofIrrel` — proof irrelevance: both sides' types' sorts are
+`Prop` (two `proof_irrel_half`s; the second only if the first is a sort, as the twin). -/
+-- con-ron: ConRon/Arena/Core.lean:1360-1385 ConRon.Arena.proofIrrel
+@[l_impl ConRon.Arena.proofIrrel]
+def proofIrrelL : FunDecl := lfn (mode, vis, d, a, b) locals (ra, rb) {
+  ra := call proof_irrel_half(mode, vis, d, a);
+  if ra == 0 { return 0 };
+  rb := call proof_irrel_half(mode, vis, d, b);
+  if rb == 0 { return 0 };
+  return u64(ra != 1) & u64(rb != 1)
 }
 
 /-! ## `rule_rhs_at(rec, ctor, po, pl, rhs, us)`, `const_ty_at(n, po, pl, ty, us)`
@@ -669,6 +692,87 @@ def recFireArgsL : FunDecl := lfn (fireKind, pvo, pvc, po, pc, us, ao, rP, ctorP
 
 /-! ## `iota_certs_full(mode, vis, d, h, ao, an)` -/
 
+/-- The domain check of `iota_certs_full_forall`: the argument's FULL-grade inferred type is defeq
+to the domain `ty` opened by the accumulator `(aco, acn)`. -/
+-- con-ron: ConRon/Arena/Core.lean:1285-1317 ConRon.Arena.iotaCertsFullAux
+def iotaCertsFullCheckL : FunDecl := lfn (mode, vis, d, ty, aco, acn, arg) locals (ty2, ta, ok) {
+  ty2 := call inst_list(ty, aco, acn, 0);
+  ta := call infer(mode, vis, d, arg);
+  ok := call defeq(mode, vis, d, ta, ty2);
+  return ok
+}
+
+/-- The view checks of a handle, by tag (`ViewL.lean`'s `viewOK`): the scratch tier open for a
+scratch handle, the index below the tier's count. Aborts on a dangling handle (the twin's `view`
+fails there); returns `0`. -/
+-- con-ron: ConRon/Arena/Core.lean:1285-1317 ConRon.Arena.iotaCertsFullAux
+def exprViewOkL : FunDecl := lfn (h) locals (t, x, g, c) {
+  t := (h >> 27) & 1;
+  x := h & 134217727;
+  g := h >> 28;
+  if t != 0 && CTL.u64[1] == 0 { abort };
+  c := 0;
+  if g == 0 { c := 22 } else {
+    if g == 1 { c := 26 } else {
+      if g == 2 { c := 16 } else {
+        if g == 3 { c := 18 } else {
+          if g == 4 { c := 4 } else {
+            if g == 5 { c := 28 } else {
+              if g == 6 { c := 30 } else {
+                if g == 7 { c := 20 } else {
+                  if g == 8 { c := 2 } else {
+                    if g == 9 { c := 32 } else { abort } } } } } } } } } };
+  if CTL.u64[c + t] <= x { abort };
+  return 0
+}
+
+/-- A control word (a one-line reader, so that callers' proofs read it through a call). -/
+-- con-ron: ConRon/Arena/Core.lean:1319-1324 ConRon.Arena.iotaCertsFull
+def ctlGetL : FunDecl := lfn (k) locals () { return CTL.u64[k] }
+
+/-- A stack word (a one-line reader, so that callers' proofs read it through a call). -/
+-- con-ron: ConRon/Arena/Core.lean:1285-1317 ConRon.Arena.iotaCertsFullAux
+def spnGetL : FunDecl := lfn (k) locals () { return SPN.u64[k] }
+
+/-- The record of a `forallE` handle: its domain and body (the guards of a stored-node read). -/
+-- con-ron: ConRon/Arena/Core.lean:1285-1317 ConRon.Arena.iotaCertsFullAux
+def iotaCertsFullPartsL : FunDecl := lfn (h) locals (t, x) {
+  t := (h >> 27) & 1;
+  x := h & 134217727;
+  if t != 0 && CTL.u64[1] == 0 { abort };
+  if CTL.u64[30 + t] <= x { abort };
+  return (FAREC.u64[x * 4 + t * 2], FAREC.u64[x * 4 + t * 2 + 1])
+}
+
+/-- The `forallE` arm of `iota_certs_full_aux` (split off: the function was too long for `vcgen`):
+`h` a `forallE`; certify the argument `SPN[ao + i]` against its instantiated domain, push it on the
+accumulator, and continue with the body. -/
+-- con-ron: ConRon/Arena/Core.lean:1285-1317 ConRon.Arena.iotaCertsFullAux
+def iotaCertsFullForallL : FunDecl := lfn (mode, vis, d, h, aco, acn, ao, an, i)
+    locals (ty, body, arg, ok, dum) {
+  (ty, body) := call iota_certs_full_parts(h);
+  arg := call spn_get(ao + i);
+  ok := call iota_certs_full_check(mode, vis, d, ty, aco, acn, arg);
+  if ok == 0 { return 0 };
+  if len(SPN.u64) <= aco + acn { abort };
+  SPN.u64[aco + acn] := arg;
+  CTL.u64[136] := aco + acn + 1;
+  dum := call iota_certs_full_aux(mode, vis, d, body, aco, acn + 1, ao, an, i + 1);
+  return dum
+}
+
+/-- The `bvar` arm of `iota_certs_full_aux`: the telescope ran out of syntactic binders with a
+pending substitution; flush the accumulator into `h` and look again (with an empty accumulator at
+the stack top). -/
+-- con-ron: ConRon/Arena/Core.lean:1285-1317 ConRon.Arena.iotaCertsFullAux
+def iotaCertsFullFlushL : FunDecl := lfn (mode, vis, d, h, aco, acn, ao, an, i) locals (ty2, dum) {
+  dum := call expr_view_ok(h);
+  if acn == 0 { return 0 };
+  ty2 := call inst_list(h, aco, acn, 0);
+  dum := call iota_certs_full_aux(mode, vis, d, ty2, aco + acn, 0, ao, an, i);
+  return dum
+}
+
 /-- con-leche: `Kernel/Core.lean:252-267`/`Cached/CoreC.lean:149-181` `iotaCertsFullAux`/
 `iotaCertsFull`/`iotaCertsFullI` — certify a spine against a constructor telescope: every
 argument's FULL-grade inferred type is defeq to the corresponding (instantiated) domain, the
@@ -677,35 +781,17 @@ is the stack slice `(aco, acn)`, pushed directly above the fixed spine `(ao, an)
 intervenes between a growth and the next read, so it stays contiguous. -/
 -- con-ron: ConRon/Arena/Core.lean:1285-1317 ConRon.Arena.iotaCertsFullAux
 @[l_impl ConRon.Arena.iotaCertsFullAux]
-def iotaCertsFullAuxL : FunDecl := lfn (mode, vis, d, h, aco, acn, ao, an, i)
-    locals (t, x, ty, body, arg, ty2, ta, ok, top, dum) {
+def iotaCertsFullAuxL : FunDecl := lfn (mode, vis, d, h, aco, acn, ao, an, i) locals (dum) {
   if i < an {
     if h >> 28 == 6 {
-      t := (h >> 27) & 1;
-      x := h & 134217727;
-      if t != 0 && CTL.u64[1] == 0 { abort };
-      if CTL.u64[30 + t] <= x { abort };
-      ty := FAREC.u64[x * 4 + t * 2];
-      body := FAREC.u64[x * 4 + t * 2 + 1];
-      arg := SPN.u64[ao + i];
-      ty2 := call inst_list(ty, aco, acn, 0);
-      ta := call infer(mode, vis, d, arg);
-      ok := call defeq(mode, vis, d, ta, ty2);
-      if ok == 0 { return 0 };
-      if len(SPN.u64) <= aco + acn { abort };
-      SPN.u64[aco + acn] := arg;
-      CTL.u64[136] := aco + acn + 1;
-      acn := acn + 1;
-      dum := call iota_certs_full_aux(mode, vis, d, body, aco, acn, ao, an, i + 1);
+      dum := call iota_certs_full_forall(mode, vis, d, h, aco, acn, ao, an, i);
       return dum
     };
     if h >> 28 == 0 {
-      if acn == 0 { return 0 };
-      ty2 := call inst_list(h, aco, acn, 0);
-      top := aco + acn;
-      dum := call iota_certs_full_aux(mode, vis, d, ty2, top, 0, ao, an, i);
+      dum := call iota_certs_full_flush(mode, vis, d, h, aco, acn, ao, an, i);
       return dum
     };
+    dum := call expr_view_ok(h);
     return 0
   };
   return 1
@@ -717,7 +803,7 @@ accumulator is scratch; the refinement specs promise `StackKept`). -/
 -- con-ron: ConRon/Arena/Core.lean:1319-1324 ConRon.Arena.iotaCertsFull
 @[l_impl ConRon.Arena.iotaCertsFull]
 def iotaCertsFullL : FunDecl := lfn (mode, vis, d, h, ao, an) locals (top, res) {
-  top := CTL.u64[136];
+  top := call ctl_get(136);
   res := call iota_certs_full_aux(mode, vis, d, h, top, 0, ao, an, 0);
   CTL.u64[136] := top;
   return res
@@ -817,15 +903,20 @@ def iotaRecAtL : FunDecl := lfn (mode, vis, d, hd, so, sn)
 def iotaProg : Prog :=
   [("is_ctor_app", isCtorAppL), ("is_str_lit", isStrLitL), ("find_rule", findRuleL),
    ("rec_rule_k", recRuleKL), ("reserved_contains", reservedContainsL),
-   ("iota_ctor_never_prop", iotaCtorNeverPropL), ("iota_case3", iotaCase3L),
+   ("iota_ctor_never_prop", iotaCtorNeverPropL), ("e_rec_get", eRecGetL),
+   ("const_name_of", constNameOfL), ("ind_caps_check", indCapsCheckL), ("iota_case3", iotaCase3L),
    ("tower_slots_all", towerSlotsAllL), ("eta_projs", etaProjsL),
    ("eta_fab_args", etaFabArgsL), ("and_rescue_slots", andRescueSlotsL),
    ("fab_scope_ok", fabScopeOkL), ("lit_major_to_ctor", litMajorToCtorL),
    ("major_to_ctor", majorToCtorL), ("prepare_major", prepareMajorL),
    ("pi_residual", piResidualL), ("defeq_list", defeqListL), ("iota_index_ok", iotaIndexOkL),
-   ("proof_irrel", proofIrrelL), ("rule_rhs_at", ruleRhsAtL), ("const_ty_at", constTyAtL),
+   ("proof_irrel", proofIrrelL), ("proof_irrel_half", proofIrrelHalfL), ("rule_rhs_at", ruleRhsAtL), ("const_ty_at", constTyAtL),
    ("inst_spine", instSpineL), ("inst_spine_pins", instSpinePinsL),
    ("rec_fire_args", recFireArgsL), ("iota_certs_full_aux", iotaCertsFullAuxL),
+   ("iota_certs_full_forall", iotaCertsFullForallL),
+   ("iota_certs_full_check", iotaCertsFullCheckL),
+   ("iota_certs_full_parts", iotaCertsFullPartsL), ("expr_view_ok", exprViewOkL), ("ctl_get", ctlGetL), ("spn_get", spnGetL),
+   ("iota_certs_full_flush", iotaCertsFullFlushL),
    ("iota_certs_full", iotaCertsFullL), ("iota_rec_at", iotaRecAtL)]
 
 /-- What this file's specs need of a program: its own functions, at their names. -/
@@ -836,6 +927,9 @@ structure IotaProg (p : Prog) : Prop where
   recRuleK : p.lookup "rec_rule_k" = some recRuleKL
   reservedContains : p.lookup "reserved_contains" = some reservedContainsL
   iotaCtorNeverProp : p.lookup "iota_ctor_never_prop" = some iotaCtorNeverPropL
+  eRecGet : p.lookup "e_rec_get" = some eRecGetL
+  constNameOf : p.lookup "const_name_of" = some constNameOfL
+  indCapsCheck : p.lookup "ind_caps_check" = some indCapsCheckL
   iotaCase3 : p.lookup "iota_case3" = some iotaCase3L
   towerSlotsAll : p.lookup "tower_slots_all" = some towerSlotsAllL
   etaProjs : p.lookup "eta_projs" = some etaProjsL
@@ -849,12 +943,20 @@ structure IotaProg (p : Prog) : Prop where
   defeqList : p.lookup "defeq_list" = some defeqListL
   iotaIndexOk : p.lookup "iota_index_ok" = some iotaIndexOkL
   proofIrrel : p.lookup "proof_irrel" = some proofIrrelL
+  proofIrrelHalf : p.lookup "proof_irrel_half" = some proofIrrelHalfL
   ruleRhsAt : p.lookup "rule_rhs_at" = some ruleRhsAtL
   constTyAt : p.lookup "const_ty_at" = some constTyAtL
   instSpine : p.lookup "inst_spine" = some instSpineL
   instSpinePins : p.lookup "inst_spine_pins" = some instSpinePinsL
   recFireArgs : p.lookup "rec_fire_args" = some recFireArgsL
   iotaCertsFullAux : p.lookup "iota_certs_full_aux" = some iotaCertsFullAuxL
+  iotaCertsFullForall : p.lookup "iota_certs_full_forall" = some iotaCertsFullForallL
+  iotaCertsFullCheck : p.lookup "iota_certs_full_check" = some iotaCertsFullCheckL
+  iotaCertsFullParts : p.lookup "iota_certs_full_parts" = some iotaCertsFullPartsL
+  exprViewOk : p.lookup "expr_view_ok" = some exprViewOkL
+  ctlGet : p.lookup "ctl_get" = some ctlGetL
+  spnGet : p.lookup "spn_get" = some spnGetL
+  iotaCertsFullFlush : p.lookup "iota_certs_full_flush" = some iotaCertsFullFlushL
   iotaCertsFull : p.lookup "iota_certs_full" = some iotaCertsFullL
   iotaRecAt : p.lookup "iota_rec_at" = some iotaRecAtL
 
@@ -872,17 +974,36 @@ def IotaInst1OK (p : Prog) : Prop :=
     CoreSpec p n "inst_entry" [e, v, d]
       (instantiate1Fast coreWalkFuel (decE e) (decE v) d.toNat) decH s₀ a₀ dn vis fe MM eb
 
-/-- `caps_never_zero(po, pc, us, swd, so, sc)` refines `(Level.substPW ks vs pw).isNever` at the
-`EREC` name slice `(po, pc)` (read back to `ks`), the level-list handle `us` (read back to `vs`),
-and the `PropWhen` datum `(swd, so, sc)` (`swd = 0` `.never`, `1` `.ifAllZero` with the `EREC` name
-slice `(so, sc)` read back): see the module note on why this is a stub rather than a real
-`lv_substpw` wiring. -/
+/-- A `PropWhen` datum from its three words `(swd, so, sc)` (`swd = 0` `.never`, `1` `.ifAllZero`
+with the `EREC` name slice `(so, sc)`), as `decPW` reads it at consecutive words. -/
+def decPWw (a : Array Word) (dn : NIdx → Option ConLeche.Name) (swd so sc : Word) :
+    Option ConLeche.PropWhen :=
+  match swd.toNat with
+  | 0 => some .never
+  | 1 => do
+    let l : List NIdx ← hslice? a so.toNat sc.toNat
+    pure (.ifAllZero (← l.mapM dn))
+  | _ => none
+
+/-- con-leche: `CoreDefs.lean:60-70` `capsNeverZero`, at a `PropWhen` datum. -/
+def capsNeverZeroPW (lps : List NIdx) (us : LsIdx) (pw : ConLeche.PropWhen) : AM Bool := do
+  let ks ← readNamesM lps
+  let vs ← readLevelsM us
+  pure (ConLeche.Level.substPW ks vs pw).isNever
+
+/-- `caps_never_zero(po, pc, us, swd, so, sc)` refines `capsNeverZero lps us caps` at the recursor's
+own level parameters (`po, pc`, an `EREC` name slice, read back by `readNamesM`), the universe
+arguments `us` (an `LsIdx`, `readLevelsM`), and a `PropWhen` datum `(swd, so, sc)` (`caps.sortZ`).
+**Statement correction**: the stub's `ks`, `vs`, `pw` were arbitrary and its twin a `pure`; the real
+twin runs the two readbacks (`capsNeverZero`), and the datum is linked to the words. -/
 def CapsNeverZeroOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb po pc us swd so sc : Word) (ks : List ConLeche.Name)
-    (vs : List ConLeche.Level) (pw : ConLeche.PropWhen), CoreS dn s₀.mem a₀ vis fe MM eb →
+    (MM : ModeMaps) (eb po pc us swd so sc : Word) (lps : List NIdx) (pw : ConLeche.PropWhen),
+    CoreS dn s₀.mem a₀ vis fe MM eb → HW us →
+    hslice? (s₀.mem.arr64 EREC) po.toNat pc.toNat = some lps →
+    decPWw (s₀.mem.arr64 EREC) dn swd so sc = some pw →
     CoreSpec p n "caps_never_zero" [po, pc, us, swd, so, sc]
-      (pure (ConLeche.Level.substPW ks vs pw).isNever : AM Bool) decBool s₀ a₀ dn vis fe MM eb
+      (capsNeverZeroPW lps (decI us) pw) decBool s₀ a₀ dn vis fe MM eb
 
 /-- `rec_fire_levels(fireKind, fvo, fvc, po, pc, us, qo, qc)` refines `recFireLevels rl lps us
 cvjLps` (`rl.fire` decoded from `(fireKind, fvo, fvc)`, `lps` the `EREC` slice `(po, pc)`, `cvjLps`
@@ -963,30 +1084,6 @@ def IsStrLitOK (p : Prog) : Prop :=
     (MM : ModeMaps) (eb h : Word), CoreS dn s₀.mem a₀ vis fe MM eb → HW h →
     CoreSpec p n "is_str_lit" [h] (isStrLit (decE h)) decBool s₀ a₀ dn vis fe MM eb
 
-/-- con-leche: `CoreDefs.lean:72-93` `iotaCtorNeverProp`. -/
-def IotaCtorNeverPropOK (p : Prog) : Prop :=
-  ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb ctorP us : Word) (cvj : IConstantVal) (cnP cnF : Nat),
-    CoreS dn s₀.mem a₀ vis fe MM eb → HW us →
-    decCI (s₀.mem.arr64 EREC) dn ctorP.toNat = some (.ctorInfo cvj cnP cnF) →
-    CoreSpec p n "iota_ctor_never_prop" [vis, ctorP, us] (iotaCtorNeverProp fe cvj (decI us)) decBool
-      s₀ a₀ dn vis fe MM eb
-
-@[refines ConRon.Arena.iotaCtorNeverProp]
-theorem iotaCtorNeverProp_refines : IotaCtorNeverPropOK p := sorry
-
-/-- con-leche: `CoreDefs.lean:95-104` `iotaCase3`. -/
-def IotaCase3OK (p : Prog) : Prop :=
-  ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb rlk ctorP us : Word) (rl : IRecRule) (cvj : IConstantVal) (cnP cnF : Nat),
-    CoreS dn s₀.mem a₀ vis fe MM eb → HW us → rl.k = (rlk != 0) →
-    decCI (s₀.mem.arr64 EREC) dn ctorP.toNat = some (.ctorInfo cvj cnP cnF) →
-    CoreSpec p n "iota_case3" [rlk, vis, ctorP, us] (iotaCase3 fe rl cvj (decI us)) decBool s₀ a₀ dn
-      vis fe MM eb
-
-@[refines ConRon.Arena.iotaCase3]
-theorem iotaCase3_refines : IotaCase3OK p := sorry
-
 /-- con-leche: `CoreDefs.lean:723-728`/`FEnv.lean:195-197` `towerSlotsAll`. -/
 def TowerSlotsAllOK (p : Prog) : Prop :=
   ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -1053,28 +1150,14 @@ def MajorToCtorOK (p : Prog) : Prop :=
   ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F →
   ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode d rec ro rc major : Word) (rules : List IRecRule),
-    CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → HW major →
-    decRules (s₀.mem.arr64 EREC) ro.toNat rc.toNat = some rules →
+    n ≤ 2 ^ 62 → CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → eb = (mode >>> 1) &&& 1 →
+    HW major → decRules (s₀.mem.arr64 EREC) ro.toNat rc.toNat = some rules →
     CoreSpec p (n + 1) "major_to_ctor" [mode, vis, d, rec, ro, rc, major]
       (majorToCtor (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI rec) rules
         (decE major)) decH s₀ a₀ dn vis fe MM eb
 
 @[refines ConRon.Arena.majorToCtor]
 theorem majorToCtor_refines : MajorToCtorOK p := sorry
-
-/-- con-leche: `Core.lean:701-775`/`Cached/CoreC.lean:553-575` `prepareMajor`. -/
-def PrepareMajorOK (p : Prog) : Prop :=
-  ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F →
-  ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb mode d rec ro rc major : Word) (rules : List IRecRule),
-    CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → HW major →
-    decRules (s₀.mem.arr64 EREC) ro.toNat rc.toNat = some rules →
-    CoreSpec p (n + 1) "prepare_major" [mode, vis, d, rec, ro, rc, major]
-      (prepareMajor (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI rec) rules
-        (decE major)) decH s₀ a₀ dn vis fe MM eb
-
-@[refines ConRon.Arena.prepareMajor]
-theorem prepareMajor_refines : PrepareMajorOK p := sorry
 
 /-- con-leche: `CoreDefs.lean:716-721` `piResidual`. -/
 def PiResidualOK (p : Prog) : Prop :=
@@ -1105,19 +1188,6 @@ def IotaIndexOkOK (p : Prog) : Prop :=
       (iotaIndexOk (coreKnot (decMode mode) fe id F) fe d.toNat mI.toNat rP.toNat cnP.toNat
         (decE tyCtor) margs.toList idx.toList) decBool s₀ a₀ dn vis fe MM eb
 
-
-/-- con-leche: `Core.lean:298-320` `proofIrrel`. -/
-def ProofIrrelOK (p : Prog) : Prop :=
-  ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F →
-  ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb mode d a b : Word), CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → HW a →
-    HW b →
-    CoreSpec p (n + 1) "proof_irrel" [mode, vis, d, a, b]
-      (proofIrrel (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b)) decBool s₀ a₀ dn
-      vis fe MM eb
-
-@[refines ConRon.Arena.proofIrrel]
-theorem proofIrrel_refines : ProofIrrelOK p := sorry
 
 /-- con-leche: none (`ruleRhsAt`'s cache probe). -/
 def RuleRhsAtOK (p : Prog) : Prop :=
@@ -1180,34 +1250,6 @@ def RecFireArgsOK (p : Prog) : Prop :=
       ∃ xs, AM.res (recFireArgs rl lps (decI us) args.toList rP.toNat) a₀ = xs ∧
         SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄
 
-
-/-- con-leche: `ConLeche/Cached/CoreC.lean:149-176` `iotaCertsFullAux`. -/
-def IotaCertsFullAuxOK (p : Prog) : Prop :=
-  ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F →
-  ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb mode d h aco acn ao an i : Word) (acc args : Array EIdx),
-    CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → HW h → SpineR s₀.mem aco acn acc →
-    SpineR s₀.mem ao an args → aco + acn = spTop s₀.mem →
-    CoreSpec p (n + 1) "iota_certs_full_aux" [mode, vis, d, h, aco, acn, ao, an, i]
-      (iotaCertsFullAux (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) acc args i.toNat)
-      decBool s₀ a₀ dn vis fe MM eb
-
-@[refines ConRon.Arena.iotaCertsFullAux]
-theorem iotaCertsFullAux_refines : IotaCertsFullAuxOK p := sorry
-
-/-- con-leche: `Kernel/Core.lean:252-267`/`Cached/CoreC.lean:178-181` `iotaCertsFull`. -/
-def IotaCertsFullOK (p : Prog) : Prop :=
-  ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F →
-  ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-    (MM : ModeMaps) (eb mode d h ao an : Word) (args : Array EIdx),
-    CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → HW h → SpineR s₀.mem ao an args →
-    ao + an = spTop s₀.mem →
-    CoreSpec p (n + 1) "iota_certs_full" [mode, vis, d, h, ao, an]
-      (iotaCertsFull (coreKnot (decMode mode) fe id F) fe d.toNat (decE h) args.toList) decBool s₀
-      a₀ dn vis fe MM eb
-
-@[refines ConRon.Arena.iotaCertsFull]
-theorem iotaCertsFull_refines : IotaCertsFullOK p := sorry
 
 /-- **`iota_rec_at` refines `iotaRecAt`** (the statement is `WhnfCore.lean`'s `IotaRecAtOK`, what
 `whnf_app` assumes). -/

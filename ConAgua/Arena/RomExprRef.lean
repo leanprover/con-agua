@@ -1,4 +1,5 @@
 import ConAgua.Arena.RomExpr
+import ConAgua.Arena.NatArms
 import ConAgua.Census.Attr
 
 /-!
@@ -23,12 +24,12 @@ open L.Arena
 
 /-! ## Frames of the expression constructors -/
 
-/-- The expression interner's frame: the store tier, the stack, the memo. -/
-def ExprA : List ArrId := RMEMO :: RomA
-def ExprC : List Word := 132 :: RomC
+/-- The expression interner's frame: the store tier, the stack, the memo and its handle set. -/
+def ExprA : List ArrId := RMEMO :: RSET :: RomA
+def ExprC : List Word := 132 :: 148 :: 149 :: RomC
 
 theorem frame_exprA {m m' : Mem} (h : MemFrame RomA RomC m m') : MemFrame ExprA ExprC m m' :=
-  h.mono (fun b hb => List.mem_cons_of_mem _ hb) (fun x hx => List.mem_cons_of_mem _ hx)
+  h.mono (fun b hb => by simp [ExprA, hb]) (fun x hx => by simp [ExprC, hx])
 
 theorem frame_storeE {m m' : Mem} (h : MemFrame StoreA StoreC m m') : MemFrame ExprA ExprC m m' :=
   frame_exprA (frame_romA h)
@@ -128,10 +129,19 @@ theorem MemoR.hit {mem : Mem} {seen : List ConLeche.Expr} {m : EMemo} (h : MemoR
   rw [List.getElem_idxOf hk] at h2
   exact ⟨h1, h2⟩
 
-theorem MemoR.push {mem : Mem} {seen : List ConLeche.Expr} {m : EMemo} (h : MemoR mem seen m)
+/-- `memo_push`'s memory without the handle set. -/
+def mpushOld (m : Mem) (h : Word) : Mem := (m.set64 RMEMO (memoCnt m) h).set64 CTL 132 (memoCnt m + 1)
+
+theorem MemoR.of_eq {mem mem' : Mem} {seen : List ConLeche.Expr} {m : EMemo} (h : MemoR mem seen m)
+    (hR : mem'.arr64 RMEMO = mem.arr64 RMEMO) (hc : memoCnt mem' = memoCnt mem)
+    (hs : (mem'.arr64 CTL).size = (mem.arr64 CTL).size) : MemoR mem' seen m :=
+  ⟨by rw [hc]; exact h.cnt, fun k hk => by rw [hR]; exact h.ent k hk, h.keys, h.room,
+    by rw [hs]; exact h.csz⟩
+
+theorem MemoR.push0 {mem : Mem} {seen : List ConLeche.Expr} {m : EMemo} (h : MemoR mem seen m)
     {e : ConLeche.Expr} (he : e ∉ seen) (x : Word)
     (hx : x.toNat < 2 ^ 32) (hsz' : memoCnt mem < mem.len64 RMEMO) :
-    MemoR (mpushMem mem x) (seen ++ [e]) (m.insert e (decI x)) := by
+    MemoR (mpushOld mem x) (seen ++ [e]) (m.insert e (decI x)) := by
   have hcn := h.cnt
   have hl := UInt64.lt_iff_toNat_lt.mp hsz'
   simp only [Mem.len64, UInt64.toNat_ofNat'] at hl
@@ -139,20 +149,20 @@ theorem MemoR.push {mem : Mem} {seen : List ConLeche.Expr} {m : EMemo} (h : Memo
     Nat.lt_of_lt_of_le hl (Nat.mod_le _ _)
   have hroom : (memoCnt mem).toNat + 1 < 2 ^ 64 := by
     have := Nat.mod_lt (mem.arr64 RMEMO).size (show 2 ^ 64 > 0 by decide); omega
-  have hR : ∀ k : Word, rdW ((mpushMem mem x).arr64 RMEMO) k =
+  have hR : ∀ k : Word, rdW ((mpushOld mem x).arr64 RMEMO) k =
       if k = memoCnt mem then x else rdW (mem.arr64 RMEMO) k := by
     intro k
-    simp only [mpushMem, Mem.arr64_set64_ne _ _ _ _ _ (show RMEMO ≠ CTL by decide), Mem.arr64_set64_same,
+    simp only [mpushOld, Mem.arr64_set64_ne _ _ _ _ _ (show RMEMO ≠ CTL by decide), Mem.arr64_set64_same,
       rdW_set!]
     by_cases e' : k = memoCnt mem
     · subst e'; simp [hsz]
     · have : ¬ (memoCnt mem).toNat = k.toNat := fun h' => e' (UInt64.toNat_inj.mp h'.symm)
       simp [e', this]
-  have hcnt' : memoCnt (mpushMem mem x) = memoCnt mem + 1 := by
+  have hcnt' : memoCnt (mpushOld mem x) = memoCnt mem + 1 := by
     have hs : 132 < ((mem.set64 RMEMO (memoCnt mem) x).arr64 CTL).size := by
       rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact h.csz
     simp only [memoCnt] at hs ⊢
-    simp only [mpushMem, memoCnt, Mem.arr64_set64_same, rdW_set!]
+    simp only [mpushOld, memoCnt, Mem.arr64_set64_same, rdW_set!]
     simp [hs]
   refine ⟨?_, fun k hk => ?_, fun e' he' => ?_, by simp; omega, ?_⟩
   · rw [hcnt', UInt64.toNat_add]; simp; omega
@@ -180,8 +190,127 @@ theorem MemoR.push {mem : Mem} {seen : List ConLeche.Expr} {m : EMemo} (h : Memo
     split at he'
     · rename_i heq; right; exact (by simpa using heq : e = e').symm
     · left; exact h.keys e' he'
-  · simp only [mpushMem, Mem.size_arr64_set64, Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ RMEMO by decide)]
+  · simp only [mpushOld, Mem.size_arr64_set64, Mem.arr64_set64_ne _ _ _ _ _ (show CTL ≠ RMEMO by decide)]
     exact h.csz
+
+theorem MemoR.push {mem : Mem} {seen : List ConLeche.Expr} {m : EMemo} (h : MemoR mem seen m)
+    {e : ConLeche.Expr} (he : e ∉ seen) (x : Word)
+    (hx : x.toNat < 2 ^ 32) (hsz' : memoCnt mem < mem.len64 RMEMO) :
+    MemoR (mpushMem mem x) (seen ++ [e]) (m.insert e (decI x)) := by
+  have hf := mputMem_frame rsetSch ⟨by decide, by decide⟩ mem 0 ((mfindG rsetSch mem x 0).tail.headD 0) x 0 1
+  obtain ⟨hc, hl⟩ := mputMem_memo mem ((mfindG rsetSch mem x 0).tail.headD 0) x
+  have h1 := h.of_eq (hf.1 RMEMO (by simp [rsetSch, RSET, RMEMO]) (by decide)) hc (hf.2.2.1 CTL)
+  have := h1.push0 he x hx (by rw [hc, hl]; exact hsz')
+  simpa only [mpushOld, mpushMem, hc] using this
+
+/-! ## The handle set `RSET` holds every memo entry -/
+
+/-- **`RSET` holds the memo's handles**: a memo-library table (`MemoRG`) whose map contains the
+handle of every memo entry. A probe miss for `h` then means `h` is no entry. -/
+def RsetR (mem : Mem) : Prop :=
+  ∃ mp : Std.HashMap EIdx Unit, MemoRG rsetSch bmKey (fun _ => ()) mem mp ∧
+    ∀ k, k < (memoCnt mem).toNat → (decE (rdW (mem.arr64 RMEMO) (UInt64.ofNat k))) ∈ mp
+
+theorem rsetSch_wf : rsetSch.WF := ⟨by decide, by decide⟩
+
+theorem RsetR.frame {A : List ArrId} {C : List Word} {mem mem' : Mem} (h : RsetR mem)
+    (hf : MemFrame A C mem mem') (hA1 : RSET ∉ A) (hA2 : RMEMO ∉ A) (hC1 : (148 : Word) ∉ C)
+    (hC2 : (132 : Word) ∉ C) : RsetR mem' := by
+  obtain ⟨mp, hR, hc⟩ := h
+  have hR' := memoRG_frame rsetSch rsetSch_wf bmKey (fun _ => ()) A C hA1 hC1 mem mem' hf mp hR
+  have hM : mem'.arr64 RMEMO = mem.arr64 RMEMO := hf.1 RMEMO hA2 (by decide)
+  have hK : memoCnt mem' = memoCnt mem := hf.2.1 132 hC2
+  exact ⟨mp, hR', fun k hk => by rw [hM]; rw [hK] at hk; exact hc k hk⟩
+
+theorem RsetR.frameS {mem mem' : Mem} (h : RsetR mem) (hf : MemFrame StoreA StoreC mem mem') :
+    RsetR mem' :=
+  h.frame hf (by simp [StoreA, RSET]) (by simp [StoreA, RMEMO]) (not_mem_storeC _ (by decide))
+    (not_mem_storeC _ (by decide))
+
+theorem RsetR.frameR {mem mem' : Mem} (h : RsetR mem) (hf : MemFrame RomA RomC mem mem') :
+    RsetR mem' :=
+  h.frame hf (by simp [RomA, StoreA, RSET, RSTK]) (by simp [RomA, StoreA, RMEMO, RSTK])
+    (by simp only [RomC, List.mem_cons, not_or]; exact ⟨by decide, not_mem_storeC _ (by decide)⟩)
+    (by simp only [RomC, List.mem_cons, not_or]; exact ⟨by decide, not_mem_storeC _ (by decide)⟩)
+
+/-- **A probe miss means no memo entry**: under `RsetR`, if `memo_push`'s checks passed for `h`,
+no entry of the memo is `h`. -/
+theorem RsetR.miss {mem : Mem} {h : Word} (hR : RsetR mem) (hh : h.toNat < 2 ^ 32) (hok : rsetOK mem h)
+    (k : Nat) (hk : k < (memoCnt mem).toNat) : rdW (mem.arr64 RMEMO) (UInt64.ofNat k) ≠ h := by
+  obtain ⟨mp, hG, hc⟩ := hR
+  obtain ⟨h1, h2, -⟩ := hok
+  have hn := memoRG_miss rsetSch bmKey (fun _ => ()) mem mp hG h 0 ⟨hh, rfl⟩ h1 h2
+  intro he
+  have := hc k hk
+  rw [he] at this
+  simp only [bmKey] at hn
+  exact absurd (Std.HashMap.mem_iff_isSome_getElem?.mp this) (by simp [hn])
+
+theorem RsetR.push {mem mem' : Mem} {h : Word} (hR : RsetR mem) (hh : h.toNat < 2 ^ 32)
+    (hW : mpushW mem h = some mem') : RsetR mem' := by
+  obtain ⟨mp, hG, hc⟩ := hR
+  have hW' := hW
+  unfold mpushW at hW
+  split at hW; · cases hW
+  rename_i h1
+  split at hW; · cases hW
+  rename_i h2
+  split at hW; · cases hW
+  rename_i m₁ hput
+  split at hW
+  case isFalse => cases hW
+  cases hW
+  have hset : msetG rsetSch mem h 0 1 = some m₁ := by
+    simp only [msetG, h1, ite_false]
+    have : (mfindG rsetSch mem h 0).headD 0 = 0 := by simpa using h2
+    rw [this]; exact hput
+  have hG1 := memoRG_set rsetSch rsetSch_wf bmKey (fun _ => ()) mem mp hG h 0 1 ⟨hh, rfl⟩ m₁ hset
+  rename_i hsz
+  have hm₁ : m₁ = mputMem rsetSch mem 0 ((mfindG rsetSch mem h 0).tail.headD 0) h 0 1 := by
+    simp only [mputG, ite_true, true_and] at hput
+    split at hput; · cases hput
+    cases hput; rfl
+  obtain ⟨hc1, -⟩ := mputMem_memo mem ((mfindG rsetSch mem h 0).tail.headD 0) h
+  rw [← hm₁] at hc1
+  have hf1 := (mputMem_frame rsetSch rsetSch_wf mem 0 ((mfindG rsetSch mem h 0).tail.headD 0) h 0 1)
+  rw [← hm₁] at hf1
+  have hR1 : m₁.arr64 RMEMO = mem.arr64 RMEMO := hf1.1 RMEMO (by simp [rsetSch, RSET, RMEMO]) (by decide)
+  have hf2 : MemFrame [RMEMO] [132] m₁ ((m₁.set64 RMEMO (memoCnt m₁) h).set64 CTL 132 (memoCnt m₁ + 1)) :=
+    ((MemFrame.set64 _ RMEMO (by decide) _ _).mono (by simp) (by simp)).trans
+      ((MemFrame.setCtl _ 132 _).mono (by simp) (by simp))
+  have hG2 := memoRG_frame rsetSch rsetSch_wf bmKey (fun _ => ()) [RMEMO] [132] (by simp [rsetSch, RSET, RMEMO])
+    (by simp [rsetSch]) _ _ hf2 _ hG1
+  refine ⟨_, hG2, fun k hk => ?_⟩
+  have hl := UInt64.lt_iff_toNat_lt.mp hsz
+  simp only [Mem.len64, UInt64.toNat_ofNat'] at hl
+  have hsz' : (memoCnt m₁).toNat < (m₁.arr64 RMEMO).size := Nat.lt_of_lt_of_le hl (Nat.mod_le _ _)
+  have hroom : (memoCnt m₁).toNat + 1 < 2 ^ 64 := by
+    have := Nat.mod_lt (m₁.arr64 RMEMO).size (show 2 ^ 64 > 0 by decide); omega
+  have hcs : 132 < ((m₁.set64 RMEMO (memoCnt m₁) h).arr64 CTL).size := by
+    rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+    rw [hf1.2.2.1 CTL]
+    have := hG.1
+    simp [rsetSch] at this; omega
+  have hcnt : memoCnt ((m₁.set64 RMEMO (memoCnt m₁) h).set64 CTL 132 (memoCnt m₁ + 1)) = memoCnt m₁ + 1 := by
+    simp only [memoCnt] at hcs ⊢
+    simp only [Mem.arr64_set64_same, rdW_set!]
+    simp [hcs]
+  rw [hcnt, UInt64.toNat_add] at hk
+  simp at hk
+  simp only [Mem.arr64_set64_ne _ _ _ _ _ (show RMEMO ≠ CTL by decide), Mem.arr64_set64_same, rdW_set!]
+  by_cases hkc : k = (memoCnt m₁).toNat
+  · subst hkc
+    simp [hsz', Std.HashMap.mem_insert, bmKey]
+  · have hk' : k < (memoCnt mem).toNat := by rw [← hc1]; omega
+    have hne : ¬ (memoCnt m₁).toNat = (UInt64.ofNat k).toNat := by
+      rw [UInt64.toNat_ofNat']; rw [Nat.mod_eq_of_lt (by omega)]; omega
+    have := hc k hk'
+    rw [← hR1] at this
+    have hne' : ¬ ((memoCnt m₁).toNat = k % 18446744073709551616) := by
+      rw [Nat.mod_eq_of_lt (by omega)]; omega
+    simp only [Std.HashMap.mem_insert]
+    right
+    simpa [hne'] using this
 
 end L.Rom
 
@@ -263,6 +392,10 @@ theorem iEG_proj (nm : ConLeche.Name) (i : Nat) (sub : ConLeche.Expr) (hn : NIdx
   rw [r1]; simp only
   rw [r2]; rfl
 
+theorem iEG_lit (l : ConLeche.Literal) (r : (internE (.lit l)).run a₀ = .ok (h, a₁)) :
+    (internExprGo m (.lit l)).run a₀ = .ok ((m, h), a₁) := by
+  simp only [internExprGo, StateT.run_bind, r]; rfl
+
 theorem iEG_bvar (i : Nat) (r : (internE (.bvar i)).run a₀ = .ok (h, a₁)) :
     (internExprGo m (.bvar i)).run a₀ = .ok ((m, h), a₁) := by
   simp only [internExprGo, StateT.run_bind, r]; rfl
@@ -287,12 +420,13 @@ end twin
 
 /-! ## The refinement -/
 
-/-- Every datum of the expression fits its encoding; no literal. -/
+/-- Every datum of the expression fits its encoding; no string literal. -/
 def exprFits : ConLeche.Expr → Bool
   | .bvar i => decide (i < 2 ^ 64)
   | .sort u => levelFits u
   | .const n us => nameFits n && us.all levelFits && decide (us.length < 2 ^ 60)
-  | .lit _ => false
+  | .lit (.natVal n) => decide (n < 2 ^ 64)
+  | .lit (.strVal _) => false
   | .fvar i ty => decide (i < 2 ^ 64) && exprFits ty
   | .app f a | .lam f a | .forallE f a => exprFits f && exprFits a
   | .letE t v b => exprFits t && exprFits v && exprFits b
@@ -301,7 +435,7 @@ def exprFits : ConLeche.Expr → Bool
 theorem exNodeK_inv {q h q' : Word} {mem' : Mem} {x : Option (Word × Mem)}
     (hW : exNodeK q x = some (h, q', mem')) :
     ∃ m₃, x = some (h, m₃) ∧ h.toNat < 2 ^ 32 ∧ q' = q ∧
-      memoCnt m₃ < m₃.len64 RMEMO ∧ mem' = mpushMem m₃ h := by
+      memoCnt m₃ < m₃.len64 RMEMO ∧ mpushW m₃ h = some mem' ∧ mem' = mpushMem m₃ h := by
   match x, hW with
   | some (r, m₃), hW =>
     simp only [exNodeK] at hW
@@ -309,11 +443,12 @@ theorem exNodeK_inv {q h q' : Word} {mem' : Mem} {x : Option (Word × Mem)}
     · simp at hW
     rename_i hlt
     split at hW
-    · rename_i hsz
-      simp only [Option.some.injEq, Prod.mk.injEq] at hW
-      obtain ⟨rfl, rfl, rfl⟩ := hW
-      exact ⟨m₃, rfl, by simp at hlt; exact UInt64.lt_iff_toNat_lt.mp hlt, rfl, hsz, rfl⟩
     · simp at hW
+    rename_i m'' hp
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨rfl, rfl, rfl⟩ := hW
+    obtain ⟨hsz, -, he⟩ := mpushW_eq hp
+    exact ⟨m₃, rfl, by simp at hlt; exact UInt64.lt_iff_toNat_lt.mp hlt, rfl, hsz, hp, he⟩
 
 theorem exLeafK_inv {q h q' : Word} {mem' : Mem} {x : Option (Word × Mem)}
     (hW : exLeafK q x = some (h, q', mem')) : x = some (h, mem') ∧ h.toNat < 2 ^ 32 ∧ q' = q := by
@@ -327,9 +462,10 @@ theorem exLeafK_inv {q h q' : Word} {mem' : Mem} {x : Option (Word × Mem)}
     obtain ⟨rfl, rfl, rfl⟩ := hW
     exact ⟨rfl, by simp at hlt; exact UInt64.lt_iff_toNat_lt.mp hlt, rfl⟩
 
-theorem mpushMem_frame1 (m : Mem) (h : Word) : MemFrame [RMEMO] [132] m (mpushMem m h) := by
+theorem mpushMem_frame1 (m : Mem) (h : Word) : MemFrame [RMEMO, RSET] [132, 149] m (mpushMem m h) := by
   simp only [mpushMem]
-  exact ((MemFrame.set64 _ RMEMO (by decide) _ _).mono (by simp) (by simp)).trans
+  exact (((mputMem_frame rsetSch ⟨by decide, by decide⟩ _ _ _ _ _ _).mono (by simp [rsetSch])
+    (by simp [rsetSch])).trans ((MemFrame.set64 _ RMEMO (by decide) _ _).mono (by simp) (by simp))).trans
     ((MemFrame.setCtl _ 132 _).mono (by simp) (by simp))
 
 theorem mpushMem_frame (m : Mem) (h : Word) : MemFrame ExprA ExprC m (mpushMem m h) :=
@@ -437,7 +573,7 @@ def ExprPost (e : ConLeche.Expr) (seen : List ConLeche.Expr) (mem : Mem) (a : AS
   ∃ (m' : EMemo) (a' : AState), (internExprGo m e).run a = .ok ((m', decI h), a') ∧ ArenaD mem' a' ∧
     MemoR mem' (encExprM seen e).2 m' ∧ h.toNat < 2 ^ 32 ∧
     q.toNat = pos.toNat + (encExprM seen e).1.length ∧ MemFrame ExprA ExprC mem mem' ∧
-    stkTop mem' = stkTop mem
+    stkTop mem' = stkTop mem ∧ (RsetR mem → RsetR mem')
 
 /-- A compound subterm the memo already holds: a back reference. -/
 theorem ref_case (e : ConLeche.Expr)
@@ -468,7 +604,7 @@ theorem ref_case (e : ConLeche.Expr)
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨rfl, rfl, rfl⟩ := hW
   obtain ⟨hlt, hm⟩ := hM.hit hin
-  refine ⟨m, a, iEG_hit m a _ e hc hm, hA, hM, hlt, ?_, MemFrame.refl _ _ _, rfl⟩
+  refine ⟨m, a, iEG_hit m a _ e hc hm, hA, hM, hlt, ?_, MemFrame.refl _ _ _, rfl, id⟩
   have hp := drop_pos rom hr pos _ rest hd 9 (by simp [u64B])
   simp only [show UInt64.ofNat 9 = (9 : Word) from rfl] at hp
   rw [hp]; simp [u64B]
@@ -495,11 +631,11 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     cases n with
     | zero => simp [romLeafW] at hW
     | succ n =>
-    rw [romLeafW_bvar rom n mem pos 0 rfl] at hW
     have hd1 : rom.drop (pos + 1).toNat = u64B i ++ rest := by
       have := drop_shift rom hr pos [0] (u64B i) rest (by simpa using hd)
         (pos + 1) (drop_pos rom hr pos _ rest hd 1 (by simp))
       simpa using this
+    rw [romLeafW_bvar rom n mem pos 0 rfl (u64OK_of_drop rom _ _ _ hd1 hr)] at hW
     rw [u64W_of_drop rom (pos + 1) _ _ hd1 he hr] at hW
     obtain ⟨hI, hlt, rfl⟩ := exLeafK_inv hW
     obtain ⟨ok, hR, res⟩ := internBVar_D mem a hA _ h mem' hI
@@ -507,7 +643,7 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     rw [hiN] at ok hR res
     have hf := binternW_store hI
     refine ⟨m, _, iEG_bvar m a _ (decE h) i (by rw [← res]; exact AM.run_of_ok _ _ ok), hR,
-      hM.frame (frame_romA hf), hlt, ?_, frame_storeE hf, frame_exprA_stk hf⟩
+      hM.frame (frame_romA hf), hlt, ?_, frame_storeE hf, frame_exprA_stk hf, fun hz => hz.frameS hf⟩
     have hp := drop_pos rom hr pos _ rest hd 9 (by simp [u64B])
     simp only [show UInt64.ofNat 9 = (9 : Word) from rfl] at hp
     rw [hp]; simp [u64B]
@@ -542,12 +678,13 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
       (by rw [show (decI h : EIdx) = AM.res (internE (.sort (AM.res (internLevel u) a))) (AM.st (internLevel u) a)
             from res2.symm]; exact AM.run_of_ok _ _ ok2), hR2,
       (hM.frame (frame_romA hf1)).frame (frame_romA (frame_store hf2 (by simp [sortSch, SOREC, SOSLOT])
-        (by simp [sortSch]))), hlt, ?_, ?_, ?_⟩
+        (by simp [sortSch]))), hlt, ?_, ?_, ?_, ?_⟩
     · have hp1 := drop_pos rom hr pos _ rest hd 1 (by simp)
       simp only [UInt64.ofNat_one] at hp1
       rw [hq1, hp1]; simp; omega
     · exact frame_storeE (hf1.trans (frame_store hf2 (by simp [sortSch, SOREC, SOSLOT]) (by simp [sortSch])))
     · exact frame_exprA_stk (hf1.trans (frame_store hf2 (by simp [sortSch, SOREC, SOSLOT]) (by simp [sortSch])))
+    · exact fun hz => hz.frameS (hf1.trans (frame_store hf2 (by simp [sortSch, SOREC, SOSLOT]) (by simp [sortSch])))
   | const nm us =>
     intro n mem a pos rest seen m h q mem' hA hM hd hst hc hW
     simp only [exprFits, Bool.and_eq_true, decide_eq_true_eq] at he
@@ -589,13 +726,83 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     have hf3' := frame_store hf3 (by simp [constSch, CREC, CSLOT]) (by simp [constSch])
     refine ⟨m, _, iEG_const m a _ _ _ (decI h) nm us _ _ (AM.run_of_ok _ _ ok1) (AM.run_of_ok _ _ ok2)
       (by rw [show (decI h : EIdx) = _ from res3.symm]; exact AM.run_of_ok _ _ ok3), hR3,
-      ((hM.frame (frame_romA hf1)).frame hf2).frame (frame_romA hf3'), hlt, ?_, ?_, ?_⟩
+      ((hM.frame (frame_romA hf1)).frame hf2).frame (frame_romA hf3'), hlt, ?_, ?_, ?_, ?_⟩
     · have hp1 := drop_pos rom hr pos _ rest hd 1 (by simp)
       simp only [UInt64.ofNat_one] at hp1
       rw [hq2, hq1, hp1]; simp; omega
     · exact (frame_storeE hf1).trans ((frame_exprA hf2).trans (frame_storeE hf3'))
     · rw [frame_exprA_stk hf3', hst2, hst1]
-  | lit l => intro _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _; simp [exprFits] at he
+    · exact fun hz => ((hz.frameS hf1).frameR hf2).frameS hf3'
+  | lit l =>
+    intro n mem a pos rest seen m h q mem' hA hM hd hst hc hW
+    cases l with
+    | strVal _ => simp [exprFits] at he
+    | natVal k =>
+    simp only [exprFits, decide_eq_true_eq] at he
+    unfold ExprPost
+    simp only [encExprM] at hd ⊢
+    have h0 : romB rom pos = 3 := romB_head rom hr pos 3 _ rest hd
+    cases n with
+    | zero => simp [romExprW] at hW
+    | succ n =>
+    rw [romExprW_leaf rom n mem pos (by simp [h0]) (by simp [h0]), h0] at hW
+    cases n with
+    | zero => simp [romLeafW] at hW
+    | succ n =>
+    have hd1 : rom.drop (pos + 1).toNat = u64B k ++ rest := by
+      have := drop_shift rom hr pos [3] (u64B k) rest (by simpa using hd)
+        (pos + 1) (drop_pos rom hr pos _ rest hd 1 (by simp))
+      simpa using this
+    rw [romLeafW_lit rom n mem pos 3 (by simp) (by simp) (by simp) rfl (u64OK_of_drop rom _ _ _ hd1 hr)] at hW
+    rw [u64W_of_drop rom (pos + 1) _ _ hd1 he hr] at hW
+    obtain ⟨hI, hlt, rfl⟩ := exLeafK_inv hW
+    have hkN : (UInt64.ofNat k).toNat = k := by rw [UInt64.toNat_ofNat']; exact Nat.mod_eq_of_lt he
+    have hpool : PoolOK mem := hA.1.lit.1
+    have hq9 : (pos + 9).toNat = pos.toNat + (3 :: u64B k).length := by
+      have hp := drop_pos rom hr pos _ rest hd 9 (by simp [u64B])
+      simp only [show UInt64.ofNat 9 = (9 : Word) from rfl] at hp
+      rw [hp]; simp [u64B]
+    simp only [romLitW] at hI
+    split at hI
+    · cases hI
+    rename_i hroom
+    have hroom' : mem.top.toNat < (mem.arr64 POOL).size := by
+      have := hpool.2.2.1
+      simp only [Mem.len64, UInt64.le_iff_toNat_le, UInt64.toNat_ofNat'] at hroom
+      rw [Nat.mod_eq_of_lt (by omega)] at hroom; omega
+    split at hI
+    · rename_i hk0
+      have hk : k = 0 := by have := congrArg UInt64.toNat hk0; rw [hkN] at this; simpa using this
+      subst hk
+      obtain ⟨ok, hR, res, hf⟩ := L.Front.internLit_D mem a hA h mem' mem.top 0
+        (by simp [SliceOK]) (by simp [Norm]) hI
+      simp only [UInt64.toNat_zero, pv] at ok hR res
+      have hf' := frame_store hf (by simp [litSch, REC, SLOT]) (by simp [litSch])
+      refine ⟨m, _, iEG_lit m a _ (decE h) _ (by rw [← res]; exact AM.run_of_ok _ _ ok), hR,
+        hM.frame (frame_romA hf'), hlt, hq9, frame_storeE hf', frame_exprA_stk hf', fun hz => hz.frameS hf'⟩
+    · rename_i hk0
+      have hg : Grows mem (litWordMem mem (UInt64.ofNat k)) := Grows.push1 mem mem.top (UInt64.ofNat k) rfl hpool hroom'
+      have hA1 := ArenaD.grow _ _ hg _ hA
+      have hc1 : 0 < ((mem.set64 POOL mem.top (UInt64.ofNat k)).arr64 CTL).size := by
+        rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]; exact hpool.2.1
+      have htop1 := Mem.top_set64 (mem.set64 POOL mem.top (UInt64.ofNat k)) (mem.top + 1) hc1
+      have hn1 : (mem.top + 1).toNat = mem.top.toNat + 1 := by
+        have := hpool.2.2.1; rw [UInt64.toNat_add]; simp; omega
+      have hP1 : ((litWordMem mem (UInt64.ofNat k)).arr64 POOL)[mem.top.toNat]? = some (UInt64.ofNat k) := by
+        simp only [litWordMem, Mem.arr64_set64_ne _ _ _ _ _ (show POOL ≠ CTL by decide), Mem.arr64_set64_same]
+        simp [Array.set!_eq_setIfInBounds, hroom']
+      obtain ⟨ok, hR, res, hf⟩ := L.Front.internLit_D (litWordMem mem (UInt64.ofNat k)) a hA1 h mem' mem.top 1
+        (by simp only [SliceOK, litWordMem, htop1, hn1]; simp)
+        (by intro _; simp [hP1]; exact hk0) hI
+      have hpv : pv ((litWordMem mem (UInt64.ofNat k)).arr64 POOL) mem.top.toNat (UInt64.toNat 1) = k := by
+        simp [pv, hP1, wt, hkN]
+      rw [hpv] at ok hR res
+      have hf' := frame_store hf (by simp [litSch, REC, SLOT]) (by simp [litSch])
+      have hg' := frame_grows hg
+      refine ⟨m, _, iEG_lit m a _ (decE h) _ (by rw [← res]; exact AM.run_of_ok _ _ ok), hR,
+        (hM.frame (frame_romA hg')).frame (frame_romA hf'), hlt, hq9,
+        (frame_storeE hg').trans (frame_storeE hf'), by rw [frame_exprA_stk hf', frame_exprA_stk hg'],
+        fun hz => (hz.frameS hg').frameS hf'⟩
   | app f x ihf ihx =>
     intro n mem a pos rest seen m h q mem' hA hM hd hst hc hW
     simp only [exprFits, Bool.and_eq_true] at he
@@ -624,7 +831,7 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     | some r =>
     obtain ⟨hf, q₁, m₁⟩ := r
     rw [hF, exOneK_two (ht := by simp)] at hW
-    obtain ⟨mf, a₁, r1, hR1, hM1, hlt1, hq1, hf1, hs1⟩ := ihf he.1 n mem a (pos + 1) _ seen m hf q₁ m₁ hA hM hd1 hst hc hF
+    obtain ⟨mf, a₁, r1, hR1, hM1, hlt1, hq1, hf1, hs1, hz1⟩ := ihf he.1 n mem a (pos + 1) _ seen m hf q₁ m₁ hA hM hd1 hst hc hF
     have hd2 : rom.drop q₁.toNat = (encExprM (encExprM seen f).2 x).1 ++ rest :=
       drop_shift rom hr (pos + 1) _ _ rest (by rw [hd1, List.append_assoc]) q₁ hq1
     cases hX : romExprW rom n m₁ q₁ with
@@ -632,9 +839,9 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     | some r =>
     obtain ⟨hx, q₂, m₂⟩ := r
     rw [hX, exTwoK_app (ht := rfl)] at hW
-    obtain ⟨mx, a₂, r2, hR2, hM2, hlt2, hq2, hf2, hs2⟩ := ihx he.2 n m₁ a₁ q₁ rest _ mf hx q₂ m₂ hR1 hM1 hd2
+    obtain ⟨mx, a₂, r2, hR2, hM2, hlt2, hq2, hf2, hs2, hz2⟩ := ihx he.2 n m₁ a₁ q₁ rest _ mf hx q₂ m₂ hR1 hM1 hd2
       (by rw [hs1]; exact hst) (by rw [hf1.2.2.1]; exact hc) hX
-    obtain ⟨m₃, hI, hlt, rfl, hsz, rfl⟩ := exNodeK_inv hW
+    obtain ⟨m₃, hI, hlt, rfl, hsz, hpw, rfl⟩ := exNodeK_inv hW
     obtain ⟨ok3, hR3, res3⟩ := mkApp_ok m₂ a₂ hR2 hf hx h m₃ hI
     have hf3 := mkAppW_store hI
     have hfresh : ConLeche.Expr.app f x ∉ (encExprM (encExprM seen f).2 x).2 := by
@@ -647,12 +854,13 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     have hM3 := (hM2.frame (frame_romA hf3)).push hfresh h hlt hsz
     refine ⟨_, _, iEG_app m mf mx a a₁ a₂ _ (decI hf) (decI hx) (decI h) f x (hM.miss hin) r1 r2
       (by rw [show (decI h : EIdx) = _ from res3.symm]; exact AM.run_of_ok _ _ ok3),
-      ArenaD.frameHi (mpushMem_frame1 m₃ h) (by simp [RMEMO]) (by simp) hR3, hM3, hlt, ?_, ?_, ?_⟩
+      ArenaD.frameHi (mpushMem_frame1 m₃ h) (by simp [RMEMO, RSET]) (by simp) hR3, hM3, hlt, ?_, ?_, ?_, ?_⟩
     · have hp1 := drop_pos rom hr pos _ rest hd 1 (by simp)
       simp only [UInt64.ofNat_one] at hp1
       rw [hq2, hq1, hp1]; simp; omega
     · exact hf1.trans (hf2.trans ((frame_storeE hf3).trans (mpushMem_frame m₃ h)))
     · rw [mpushMem_stk, frame_exprA_stk hf3, hs2, hs1]
+    · exact fun hz => RsetR.push ((hz2 (hz1 hz)).frameS hf3) hlt hpw
   | lam f x ihf ihx =>
     intro n mem a pos rest seen m h q mem' hA hM hd hst hc hW
     simp only [exprFits, Bool.and_eq_true] at he
@@ -681,7 +889,7 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     | some r =>
     obtain ⟨hf, q₁, m₁⟩ := r
     rw [hF, exOneK_two (ht := by simp)] at hW
-    obtain ⟨mf, a₁, r1, hR1, hM1, hlt1, hq1, hf1, hs1⟩ := ihf he.1 n mem a (pos + 1) _ seen m hf q₁ m₁ hA hM hd1 hst hc hF
+    obtain ⟨mf, a₁, r1, hR1, hM1, hlt1, hq1, hf1, hs1, hz1⟩ := ihf he.1 n mem a (pos + 1) _ seen m hf q₁ m₁ hA hM hd1 hst hc hF
     have hd2 : rom.drop q₁.toNat = (encExprM (encExprM seen f).2 x).1 ++ rest :=
       drop_shift rom hr (pos + 1) _ _ rest (by rw [hd1, List.append_assoc]) q₁ hq1
     cases hX : romExprW rom n m₁ q₁ with
@@ -689,9 +897,9 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     | some r =>
     obtain ⟨hx, q₂, m₂⟩ := r
     rw [hX, exTwoK_lam (ht := rfl)] at hW
-    obtain ⟨mx, a₂, r2, hR2, hM2, hlt2, hq2, hf2, hs2⟩ := ihx he.2 n m₁ a₁ q₁ rest _ mf hx q₂ m₂ hR1 hM1 hd2
+    obtain ⟨mx, a₂, r2, hR2, hM2, hlt2, hq2, hf2, hs2, hz2⟩ := ihx he.2 n m₁ a₁ q₁ rest _ mf hx q₂ m₂ hR1 hM1 hd2
       (by rw [hs1]; exact hst) (by rw [hf1.2.2.1]; exact hc) hX
-    obtain ⟨m₃, hI, hlt, rfl, hsz, rfl⟩ := exNodeK_inv hW
+    obtain ⟨m₃, hI, hlt, rfl, hsz, hpw, rfl⟩ := exNodeK_inv hW
     obtain ⟨ok3, hR3, res3⟩ := mkLam_ok m₂ a₂ hR2 hf hx h m₃ hI
     have hf3 := mkLamW_store hI
     have hfresh : ConLeche.Expr.lam f x ∉ (encExprM (encExprM seen f).2 x).2 := by
@@ -704,12 +912,13 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     have hM3 := (hM2.frame (frame_romA hf3)).push hfresh h hlt hsz
     refine ⟨_, _, iEG_lam m mf mx a a₁ a₂ _ (decI hf) (decI hx) (decI h) f x (hM.miss hin) r1 r2
       (by rw [show (decI h : EIdx) = _ from res3.symm]; exact AM.run_of_ok _ _ ok3),
-      ArenaD.frameHi (mpushMem_frame1 m₃ h) (by simp [RMEMO]) (by simp) hR3, hM3, hlt, ?_, ?_, ?_⟩
+      ArenaD.frameHi (mpushMem_frame1 m₃ h) (by simp [RMEMO, RSET]) (by simp) hR3, hM3, hlt, ?_, ?_, ?_, ?_⟩
     · have hp1 := drop_pos rom hr pos _ rest hd 1 (by simp)
       simp only [UInt64.ofNat_one] at hp1
       rw [hq2, hq1, hp1]; simp; omega
     · exact hf1.trans (hf2.trans ((frame_storeE hf3).trans (mpushMem_frame m₃ h)))
     · rw [mpushMem_stk, frame_exprA_stk hf3, hs2, hs1]
+    · exact fun hz => RsetR.push ((hz2 (hz1 hz)).frameS hf3) hlt hpw
   | forallE f x ihf ihx =>
     intro n mem a pos rest seen m h q mem' hA hM hd hst hc hW
     simp only [exprFits, Bool.and_eq_true] at he
@@ -738,7 +947,7 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     | some r =>
     obtain ⟨hf, q₁, m₁⟩ := r
     rw [hF, exOneK_two (ht := by simp)] at hW
-    obtain ⟨mf, a₁, r1, hR1, hM1, hlt1, hq1, hf1, hs1⟩ := ihf he.1 n mem a (pos + 1) _ seen m hf q₁ m₁ hA hM hd1 hst hc hF
+    obtain ⟨mf, a₁, r1, hR1, hM1, hlt1, hq1, hf1, hs1, hz1⟩ := ihf he.1 n mem a (pos + 1) _ seen m hf q₁ m₁ hA hM hd1 hst hc hF
     have hd2 : rom.drop q₁.toNat = (encExprM (encExprM seen f).2 x).1 ++ rest :=
       drop_shift rom hr (pos + 1) _ _ rest (by rw [hd1, List.append_assoc]) q₁ hq1
     cases hX : romExprW rom n m₁ q₁ with
@@ -746,9 +955,9 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     | some r =>
     obtain ⟨hx, q₂, m₂⟩ := r
     rw [hX, exTwoK_forall (ht := rfl)] at hW
-    obtain ⟨mx, a₂, r2, hR2, hM2, hlt2, hq2, hf2, hs2⟩ := ihx he.2 n m₁ a₁ q₁ rest _ mf hx q₂ m₂ hR1 hM1 hd2
+    obtain ⟨mx, a₂, r2, hR2, hM2, hlt2, hq2, hf2, hs2, hz2⟩ := ihx he.2 n m₁ a₁ q₁ rest _ mf hx q₂ m₂ hR1 hM1 hd2
       (by rw [hs1]; exact hst) (by rw [hf1.2.2.1]; exact hc) hX
-    obtain ⟨m₃, hI, hlt, rfl, hsz, rfl⟩ := exNodeK_inv hW
+    obtain ⟨m₃, hI, hlt, rfl, hsz, hpw, rfl⟩ := exNodeK_inv hW
     obtain ⟨ok3, hR3, res3⟩ := mkForall_ok m₂ a₂ hR2 hf hx h m₃ hI
     have hf3 := mkForallW_store hI
     have hfresh : ConLeche.Expr.forallE f x ∉ (encExprM (encExprM seen f).2 x).2 := by
@@ -761,12 +970,13 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     have hM3 := (hM2.frame (frame_romA hf3)).push hfresh h hlt hsz
     refine ⟨_, _, iEG_forall m mf mx a a₁ a₂ _ (decI hf) (decI hx) (decI h) f x (hM.miss hin) r1 r2
       (by rw [show (decI h : EIdx) = _ from res3.symm]; exact AM.run_of_ok _ _ ok3),
-      ArenaD.frameHi (mpushMem_frame1 m₃ h) (by simp [RMEMO]) (by simp) hR3, hM3, hlt, ?_, ?_, ?_⟩
+      ArenaD.frameHi (mpushMem_frame1 m₃ h) (by simp [RMEMO, RSET]) (by simp) hR3, hM3, hlt, ?_, ?_, ?_, ?_⟩
     · have hp1 := drop_pos rom hr pos _ rest hd 1 (by simp)
       simp only [UInt64.ofNat_one] at hp1
       rw [hq2, hq1, hp1]; simp; omega
     · exact hf1.trans (hf2.trans ((frame_storeE hf3).trans (mpushMem_frame m₃ h)))
     · rw [mpushMem_stk, frame_exprA_stk hf3, hs2, hs1]
+    · exact fun hz => RsetR.push ((hz2 (hz1 hz)).frameS hf3) hlt hpw
   | letE t v x iht ihv ihx =>
     intro n mem a pos rest seen m h q mem' hA hM hd hst hc hW
     simp only [exprFits, Bool.and_eq_true] at he
@@ -798,7 +1008,7 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     | some r =>
     obtain ⟨ht, q₁, m₁⟩ := r
     rw [hT, exOneK_let (ht := rfl)] at hW
-    obtain ⟨mt, a₁, r1, hR1, hM1, hlt1, hq1, hf1, hs1⟩ := iht he.1.1 n mem a (pos + 1) _ seen m ht q₁ m₁ hA hM hd1 hst hc hT
+    obtain ⟨mt, a₁, r1, hR1, hM1, hlt1, hq1, hf1, hs1, hz1⟩ := iht he.1.1 n mem a (pos + 1) _ seen m ht q₁ m₁ hA hM hd1 hst hc hT
     have hd2 : rom.drop q₁.toNat = (encExprM (encExprM seen t).2 v).1 ++
         ((encExprM (encExprM (encExprM seen t).2 v).2 x).1 ++ rest) :=
       drop_shift rom hr (pos + 1) _ _ _ (by rw [hd1, List.append_assoc]) q₁ hq1
@@ -807,7 +1017,7 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     | some r =>
     obtain ⟨hv, q₂, m₂⟩ := r
     rw [hV, exLet2K_some] at hW
-    obtain ⟨mv, a₂, r2, hR2, hM2, hlt2, hq2, hf2, hs2⟩ := ihv he.1.2 n m₁ a₁ q₁ _ _ mt hv q₂ m₂ hR1 hM1 hd2
+    obtain ⟨mv, a₂, r2, hR2, hM2, hlt2, hq2, hf2, hs2, hz2⟩ := ihv he.1.2 n m₁ a₁ q₁ _ _ mt hv q₂ m₂ hR1 hM1 hd2
       (by rw [hs1]; exact hst) (by rw [hf1.2.2.1]; exact hc) hV
     have hd3 : rom.drop q₂.toNat = (encExprM (encExprM (encExprM seen t).2 v).2 x).1 ++ rest :=
       drop_shift rom hr q₁ _ _ rest (by rw [hd2, List.append_assoc]) q₂ hq2
@@ -816,9 +1026,9 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     | some r =>
     obtain ⟨hx, q₃, m₃⟩ := r
     rw [hX, exLet3K_some] at hW
-    obtain ⟨mx, a₃, r3, hR3, hM3, hlt3, hq3, hf3, hs3⟩ := ihx he.2 n m₂ a₂ q₂ rest _ mv hx q₃ m₃ hR2 hM2 hd3
+    obtain ⟨mx, a₃, r3, hR3, hM3, hlt3, hq3, hf3, hs3, hz3⟩ := ihx he.2 n m₂ a₂ q₂ rest _ mv hx q₃ m₃ hR2 hM2 hd3
       (by rw [hs2, hs1]; exact hst) (by rw [hf2.2.2.1, hf1.2.2.1]; exact hc) hX
-    obtain ⟨m₄, hI, hlt, rfl, hsz, rfl⟩ := exNodeK_inv hW
+    obtain ⟨m₄, hI, hlt, rfl, hsz, hpw, rfl⟩ := exNodeK_inv hW
     obtain ⟨ok4, hR4, res4⟩ := mkLet_ok m₃ a₃ hR3 ht hv hx h m₄ hI
     have hf4 := mkLetW_store hI
     have hfresh : ConLeche.Expr.letE t v x ∉ (encExprM (encExprM (encExprM seen t).2 v).2 x).2 := by
@@ -833,12 +1043,13 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     have hM4 := (hM3.frame (frame_romA hf4)).push hfresh h hlt hsz
     refine ⟨_, _, iEG_let m mt mv mx a a₁ a₂ a₃ _ (decI ht) (decI hv) (decI hx) (decI h) t v x (hM.miss hin)
       r1 r2 r3 (by rw [show (decI h : EIdx) = _ from res4.symm]; exact AM.run_of_ok _ _ ok4),
-      ArenaD.frameHi (mpushMem_frame1 m₄ h) (by simp [RMEMO]) (by simp) hR4, hM4, hlt, ?_, ?_, ?_⟩
+      ArenaD.frameHi (mpushMem_frame1 m₄ h) (by simp [RMEMO, RSET]) (by simp) hR4, hM4, hlt, ?_, ?_, ?_, ?_⟩
     · have hp1 := drop_pos rom hr pos _ rest hd 1 (by simp)
       simp only [UInt64.ofNat_one] at hp1
       rw [hq3, hq2, hq1, hp1]; simp; omega
     · exact hf1.trans (hf2.trans (hf3.trans ((frame_storeE hf4).trans (mpushMem_frame m₄ h))))
     · rw [mpushMem_stk, frame_exprA_stk hf4, hs3, hs2, hs1]
+    · exact fun hz => RsetR.push ((hz3 (hz2 (hz1 hz))).frameS hf4) hlt hpw
   | fvar i ty ih =>
     intro n mem a pos rest seen m h q mem' hA hM hd hst hc hW
     simp only [exprFits, Bool.and_eq_true, decide_eq_true_eq] at he
@@ -857,11 +1068,11 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     cases n with
     | zero => simp [romOneW] at hW
     | succ n =>
-    rw [romOneW_fvar rom n mem pos 4 rfl] at hW
     have hd1 : rom.drop (pos + 1).toNat = u64B i ++ ((encExprM seen ty).1 ++ rest) := by
       have := drop_shift rom hr pos [4] (u64B i ++ (encExprM seen ty).1) rest (by simpa using hd)
         (pos + 1) (drop_pos rom hr pos _ rest hd 1 (by simp))
       simpa using this
+    rw [romOneW_fvar rom n mem pos 4 rfl (u64OK_of_drop rom _ _ _ hd1 hr)] at hW
     rw [u64W_of_drop rom (pos + 1) _ _ hd1 he.1 hr] at hW
     have hp1 := drop_pos rom hr pos _ rest hd 1 (by simp)
     simp only [UInt64.ofNat_one] at hp1
@@ -874,8 +1085,8 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     | some r =>
     obtain ⟨ht, q₁, m₁⟩ := r
     rw [hT, exFvarK_some] at hW
-    obtain ⟨mt, a₁, r1, hR1, hM1, hlt1, hq1, hf1, hs1⟩ := ih he.2 n mem a (pos + 9) rest seen m ht q₁ m₁ hA hM hd9 hst hc hT
-    obtain ⟨m₂, hI, hlt, rfl, hsz, rfl⟩ := exNodeK_inv hW
+    obtain ⟨mt, a₁, r1, hR1, hM1, hlt1, hq1, hf1, hs1, hz1⟩ := ih he.2 n mem a (pos + 9) rest seen m ht q₁ m₁ hA hM hd9 hst hc hT
+    obtain ⟨m₂, hI, hlt, rfl, hsz, hpw, rfl⟩ := exNodeK_inv hW
     obtain ⟨ok2, hR2, res2⟩ := internFVar_D m₁ a₁ hR1 _ ht h hlt1 m₂ hI
     have hiN : (UInt64.ofNat i).toNat = i := by rw [UInt64.toNat_ofNat']; exact Nat.mod_eq_of_lt he.1
     rw [hiN] at ok2 hR2 res2
@@ -888,10 +1099,11 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     have hM2 := (hM1.frame (frame_romA hf2)).push hfresh h hlt hsz
     refine ⟨_, _, iEG_fvar m mt a a₁ _ (decI ht) (decI h) i ty (hM.miss hin) r1
       (by rw [show (decI h : EIdx) = _ from res2.symm]; exact AM.run_of_ok _ _ ok2),
-      ArenaD.frameHi (mpushMem_frame1 m₂ h) (by simp [RMEMO]) (by simp) hR2, hM2, hlt, ?_, ?_, ?_⟩
+      ArenaD.frameHi (mpushMem_frame1 m₂ h) (by simp [RMEMO, RSET]) (by simp) hR2, hM2, hlt, ?_, ?_, ?_, ?_⟩
     · rw [hq1, hp9]; simp [u64B]; omega
     · exact hf1.trans ((frame_storeE hf2).trans (mpushMem_frame m₂ h))
     · rw [mpushMem_stk, frame_exprA_stk hf2, hs1]
+    · exact fun hz => RsetR.push ((hz1 hz).frameS hf2) hlt hpw
   | proj nm i sub ih =>
     intro n mem a pos rest seen m h q mem' hA hM hd hst hc hW
     simp only [exprFits, Bool.and_eq_true, decide_eq_true_eq] at he
@@ -919,10 +1131,11 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     | none => rw [hN] at hW; simp [exProjK] at hW
     | some r =>
     obtain ⟨hn, q₁, m₁⟩ := r
-    rw [hN, exProjK_some] at hW
+    rw [hN] at hW
     obtain ⟨ok1, hR1, res1, hlt1, hq1, hf1⟩ := romNameW_ok rom hr nm he.1.1 n mem a (pos + 1) _ hn q₁ m₁ hA hd1 hN
     have hdq : rom.drop q₁.toNat = u64B i ++ ((encExprM seen sub).1 ++ rest) :=
       drop_shift rom hr (pos + 1) (encName nm) _ _ (by rw [hd1, List.append_assoc]) q₁ hq1
+    rw [exProjK_some (hu := u64OK_of_drop rom _ _ _ hdq hr)] at hW
     rw [u64W_of_drop rom q₁ _ _ hdq he.1.2 hr] at hW
     have hlenq := drop_len rom _ _ _ hdq (by simp [u64B])
     simp only [RomOK] at hr
@@ -935,9 +1148,9 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     | some r =>
     obtain ⟨hs, q₂, m₂⟩ := r
     rw [hS, exProj2K_some] at hW
-    obtain ⟨ms, a₂, r2, hR2, hM2, hlt2, hq2, hf2, hs2⟩ := ih he.2 n m₁ _ (q₁ + 8) rest seen m hs q₂ m₂ hR1
+    obtain ⟨ms, a₂, r2, hR2, hM2, hlt2, hq2, hf2, hs2, hz2⟩ := ih he.2 n m₁ _ (q₁ + 8) rest seen m hs q₂ m₂ hR1
       (hM.frame (frame_romA hf1)) hd8 (by rw [frame_exprA_stk hf1]; exact hst) (by rw [hf1.2.2.1]; exact hc) hS
-    obtain ⟨m₃, hI, hlt, rfl, hsz, rfl⟩ := exNodeK_inv hW
+    obtain ⟨m₃, hI, hlt, rfl, hsz, hpw, rfl⟩ := exNodeK_inv hW
     obtain ⟨ok3, hR3, res3⟩ := mkProj_ok m₂ a₂ hR2 hn _ hs h m₃ hI
     have hiN : (UInt64.ofNat i).toNat = i := by rw [UInt64.toNat_ofNat']; exact Nat.mod_eq_of_lt he.1.2
     rw [hiN] at ok3 hR3 res3
@@ -951,12 +1164,13 @@ theorem romExprW_ok (e : ConLeche.Expr) (he : exprFits e = true) :
     refine ⟨_, _, iEG_proj m ms a _ a₂ _ (decI hs) (decI h) nm i sub (decI hn) (hM.miss hin)
       (by rw [← res1]; exact AM.run_of_ok _ _ ok1) r2
       (by rw [show (decI h : EIdx) = _ from res3.symm]; exact AM.run_of_ok _ _ ok3),
-      ArenaD.frameHi (mpushMem_frame1 m₃ h) (by simp [RMEMO]) (by simp) hR3, hM3, hlt, ?_, ?_, ?_⟩
+      ArenaD.frameHi (mpushMem_frame1 m₃ h) (by simp [RMEMO, RSET]) (by simp) hR3, hM3, hlt, ?_, ?_, ?_, ?_⟩
     · have hp1 := drop_pos rom (by simpa [RomOK] using hr) pos _ rest hd 1 (by simp)
       simp only [UInt64.ofNat_one] at hp1
       rw [hq2, hq8, hq1, hp1]; simp [u64B]; omega
     · exact (frame_storeE hf1).trans (hf2.trans ((frame_storeE hf3).trans (mpushMem_frame m₃ h)))
     · rw [mpushMem_stk, frame_exprA_stk hf3, hs2, frame_exprA_stk hf1]
+    · exact fun hz => RsetR.push ((hz2 (hz.frameS hf1)).frameS hf3) hlt hpw
 
 end main
 

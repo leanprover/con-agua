@@ -1,4 +1,6 @@
 import ConAgua.Arena.RomLevels
+import ConAgua.Arena.MemoLibRel
+import ConAgua.Arena.Store
 import ConLeche.Verify.Cached.Erase
 import ConAgua.Census.Attr
 
@@ -80,8 +82,29 @@ def encExprM (seen : List ConLeche.Expr) : ConLeche.Expr → List UInt8 × List 
 
 /-! ## `memo_push(h)`, `rom_expr(pos)` -/
 
-/-- con-ron: none — the L memo of the ROM expression interner (the twin's `EMemo` insert). -/
-def memoPush : FunDecl := lfn (h) locals (o) {
+/-- **The handles of the memo's entries, as a set** (the memo library's schema: array `150`,
+`CTL[148]`, `CTL[149]`). `memo_push` aborts when the handle is already there: an explicitly encoded
+compound subterm the twin's memo would have hit. The canonical encoding never does that; on
+untrusted bytes (the pin data) the check is what makes the twin's memo miss wherever L interns
+(DESIGN.md, "The pin data as an input"). -/
+abbrev RSET : ArrId := 150
+
+/-- The schema of `RSET`. -/
+def rsetSch : MemoSch := ⟨RSET, 148⟩
+
+/-- `memo_push(h)`'s checks: room in the memo, `h` not in the set, room in the set. -/
+def rsetOK (m : Mem) (h : Word) : Prop :=
+  mfindG rsetSch m h 0 ≠ [] ∧ (mfindG rsetSch m h 0).headD 0 = 0 ∧
+    ¬ (nG rsetSch m >>> 2) * 3 < cntG rsetSch m + 1
+
+instance (m : Mem) (h : Word) : Decidable (rsetOK m h) := by unfold rsetOK; infer_instance
+
+/-- con-ron: none — the L memo of the ROM expression interner (the twin's `EMemo` insert), with the
+canonical-encoding check. -/
+def memoPush : FunDecl := lfn (h) locals (o, f, j, d, z) {
+  (f, j, d) := call rset_find(h, 0);
+  if f != 0 { abort };
+  z := call rset_put(h, 0, 1, f, j);
   o := CTL.u64[132];
   if len(RMEMO.u64) <= o { abort };
   RMEMO.u64[o] := h;
@@ -89,22 +112,66 @@ def memoPush : FunDecl := lfn (h) locals (o) {
   return 0
 }
 
-/-- The memory after recording `h`. -/
-def mpushMem (m : Mem) (h : Word) : Mem := (m.set64 RMEMO (memoCnt m) h).set64 CTL 132 (memoCnt m + 1)
+/-- The memory after recording `h`: in the set, then at the memo's end. -/
+def mpushMem (m : Mem) (h : Word) : Mem :=
+  ((mputMem rsetSch m 0 ((mfindG rsetSch m h 0).tail.headD 0) h 0 1).set64 RMEMO (memoCnt m) h).set64
+    CTL 132 (memoCnt m + 1)
 
-theorem memoPush_spec (p : Prog) (hp : p.lookup "memo_push" = some memoPush) (n : Nat) (s₀ : St) (h : Word) :
+/-- **The model of `memo_push`**: `none` where it aborts. -/
+def mpushW (m : Mem) (h : Word) : Option Mem :=
+  if mfindG rsetSch m h 0 = [] then none
+  else if (mfindG rsetSch m h 0).headD 0 ≠ 0 then none
+  else match mputG rsetSch m h 0 1 0 ((mfindG rsetSch m h 0).tail.headD 0) with
+    | none => none
+    | some m₁ =>
+      if memoCnt m₁ < m₁.len64 RMEMO then
+        some ((m₁.set64 RMEMO (memoCnt m₁) h).set64 CTL 132 (memoCnt m₁ + 1))
+      else none
+
+theorem memoPush_spec (p : Prog) (hp : p.lookup "memo_push" = some memoPush)
+    (hf : p.lookup "rset_find" = some (memoFindG rsetSch))
+    (hu : p.lookup "rset_put" = some (memoPutG rsetSch)) (n : Nat) (s₀ : St) (h : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "memo_push" [h]
-    ⦃fun _ s' => LocEq s' s₀ ∧ memoCnt s₀.mem < s₀.mem.len64 RMEMO ∧
-      s'.mem = mpushMem s₀.mem h; ⊤⦄ := by
+    ⦃fun _ s' => LocEq s' s₀ ∧ mpushW s₀.mem h = some s'.mem; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, memoPush]
   cases n with
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64] <;>
-      finish [mpushMem, memoCnt]
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        memoFindG_spec rsetSch p "rset_find" hf n, memoPutG_spec rsetSch p "rset_put" hu n] <;>
+      finish [mpushW, memoCnt]
+
+theorem mputMem_memo (m : Mem) (j h : Word) :
+    memoCnt (mputMem rsetSch m 0 j h 0 1) = memoCnt m ∧
+      (mputMem rsetSch m 0 j h 0 1).len64 RMEMO = m.len64 RMEMO := by
+  have hf := (mputMem_frame rsetSch ⟨by decide, by decide⟩ m 0 j h 0 1)
+  refine ⟨hf.2.1 132 (by simp [rsetSch]), ?_⟩
+  simp only [Mem.len64, hf.1 RMEMO (by simp [rsetSch, RSET, RMEMO]) (by decide)]
+
+/-- What `memo_push` checked, and its memory. -/
+theorem mpushW_eq {m m' : Mem} {h : Word} (hW : mpushW m h = some m') :
+    memoCnt m < m.len64 RMEMO ∧ rsetOK m h ∧ m' = mpushMem m h := by
+  unfold mpushW at hW
+  split at hW; · cases hW
+  rename_i h1
+  split at hW; · cases hW
+  rename_i h2
+  split at hW; · cases hW
+  rename_i m₁ hput
+  simp only [mputG, ite_true, true_and] at hput
+  split at hput; · cases hput
+  rename_i h3
+  cases hput
+  obtain ⟨hc, hl⟩ := mputMem_memo m ((mfindG rsetSch m h 0).tail.headD 0) h
+  split at hW
+  · rename_i h4
+    cases hW
+    rw [hc, hl] at h4
+    exact ⟨h4, ⟨h1, by simpa using h2, h3⟩, by simp only [mpushMem, hc]⟩
+  · cases hW
 
 /-- The back reference `k` is to an entry of the memo. -/
 def memoOk (m : Mem) (k : Word) : Prop := k < memoCnt m
@@ -145,10 +212,52 @@ def romExRef : FunDecl := lfn (pos) locals (k, h) {
 
 /-- The model of `rom_ex_ref`. -/
 def romRefW (m : Mem) (pos : Word) : Option (Word × Word × Mem) :=
-  if memoOk m (u64W rom (pos + 1)) then some (rdW (m.arr64 RMEMO) (u64W rom (pos + 1)), pos + 9, m)
+  if u64OK rom (pos + 1) ∧ memoOk m (u64W rom (pos + 1)) then
+    some (rdW (m.arr64 RMEMO) (u64W rom (pos + 1)), pos + 9, m)
   else none
 
-/-- `rom_ex_leaf(pos, t)`: a `bvar` (`t = 0`), `sort` (`1`) or `const` (`2`) node. -/
+/-- The memory after the limb `k` went to the pool top. -/
+def litWordMem (m : Mem) (k : Word) : Mem := (m.set64 POOL m.top k).set64 CTL 0 (m.top + 1)
+
+/-- The model of `rom_lit`. -/
+def romLitW (m : Mem) (k : Word) : Option (Word × Mem) :=
+  if m.len64 POOL ≤ m.top then none
+  else if k = 0 then internW m m.top 0 else internW (litWordMem m k) m.top 1
+
+/-- `rom_lit(k)`: intern the `natVal` literal `k` (its one limb at the pool top, none for `0`). -/
+-- con-ron: ConRon/Arena/Frontend/Readback.lean:189-251 ConRon.Arena.Frontend.internExprGo
+def romLit : FunDecl := lfn (k) locals (o, h) {
+  o := CTL.u64[0];
+  if len(POOL.u64) <= o { abort };
+  if k == 0 {
+    h := call intern_lit(o, 0);
+    return h
+  };
+  POOL.u64[o] := k;
+  CTL.u64[0] := o + 1;
+  h := call intern_lit(o, 1);
+  return h
+}
+
+theorem romLit_spec (p : Prog) (hph : p.lookup "lit_hash" = some litHash)
+    (hpe : p.lookup "limbs_eq" = some limbsEq) (hpm : p.lookup "lit_match" = some litMatch)
+    (hpf : p.lookup "lit_find" = some litFind) (hpp : p.lookup "lit_push" = some litPush)
+    (hpi : p.lookup "intern_lit" = some internLit) (hp : p.lookup "rom_lit" = some romLit)
+    (n : Nat) (s₀ : St) (k : Word) (hs : (s₀.mem.arr64 POOL).size < 2 ^ 63) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "rom_lit" [k]
+    ⦃fun r s' => LocEq s' s₀ ∧ romLitW s₀.mem k = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, romLit]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        internLit_spec p hph hpe hpm hpf hpp hpi n] <;>
+      finish [romLitW, litWordMem, Mem.top]
+
+/-- `rom_ex_leaf(pos, t)`: a `bvar` (`t = 0`), `sort` (`1`), `const` (`2`) or literal (`3`) node. -/
 -- con-ron: ConRon/Arena/Frontend/Readback.lean:189-251 ConRon.Arena.Frontend.internExprGo
 def romExLeaf : FunDecl := lfn (pos, t) locals (h, q, a, b, k) {
   if t == 0 {
@@ -162,6 +271,12 @@ def romExLeaf : FunDecl := lfn (pos, t) locals (h, q, a, b, k) {
     h := call intern_sort(a);
     if h >= 4294967296 { abort };
     return (h, q)
+  };
+  if t == 3 {
+    k := call rom_u64(pos + 1);
+    h := call rom_lit(k);
+    if h >= 4294967296 { abort };
+    return (h, pos + 9)
   };
   if t != 2 { abort };
   (a, q) := call rom_name(pos + 1);
@@ -178,7 +293,7 @@ def romExpr : FunDecl := lfn (pos) locals (t, h, q, k) {
     (h, q) := call rom_ex_ref(pos);
     return (h, q)
   };
-  if t == 0 || t == 1 || t == 2 {
+  if t == 0 || t == 1 || t == 2 || t == 3 {
     (h, q) := call rom_ex_leaf(pos, t);
     return (h, q)
   };
@@ -252,7 +367,9 @@ def exNodeK (q : Word) : Option (Word × Mem) → Option (Word × Word × Mem)
   | none => none
   | some (h, m') =>
     if 4294967296 ≤ h then none
-    else if memoCnt m' < m'.len64 RMEMO then some (h, q, mpushMem m' h) else none
+    else match mpushW m' h with
+      | none => none
+      | some m'' => some (h, q, m'')
 
 /-- After a sort's level. -/
 def exSortK : Option (Word × Word × Mem) → Option (Word × Word × Mem)
@@ -282,9 +399,11 @@ def exTwoK (t a : Word) : Option (Word × Word × Mem) → Option (Word × Word 
 def romLeafW : Nat → Mem → Word → Word → Option (Word × Word × Mem)
   | 0, _, _, _ => none
   | n + 1, m, pos, t =>
-    if t = 0 then exLeafK (pos + 9) (binternW m (u64W rom (pos + 1)))
+    if (t = 0 ∨ t = 3) ∧ ¬ u64OK rom (pos + 1) then none
+    else if t = 0 then exLeafK (pos + 9) (binternW m (u64W rom (pos + 1)))
     else if t = 1 then exSortK (romLevelW rom n m (pos + 1))
     else if t = 2 then exConst2KN rom n (romNameW rom n m (pos + 1))
+    else if t = 3 then exLeafK (pos + 9) (romLitW m (u64W rom (pos + 1)))
     else none
 
 mutual
@@ -293,7 +412,8 @@ def romExprW : Nat → Mem → Word → Option (Word × Word × Mem)
   | 0, _, _ => none
   | n + 1, m, pos =>
     if romB rom pos = 9 then romRefW rom m pos
-    else if romB rom pos = 0 ∨ romB rom pos = 1 ∨ romB rom pos = 2 then romLeafW rom n m pos (romB rom pos)
+    else if romB rom pos = 0 ∨ romB rom pos = 1 ∨ romB rom pos = 2 ∨ romB rom pos = 3 then
+      romLeafW rom n m pos (romB rom pos)
     else if romB rom pos = 4 ∨ romB rom pos = 10 then romOneW n m pos (romB rom pos)
     else romTwoW n m pos (romB rom pos)
 
@@ -301,7 +421,7 @@ def romExprW : Nat → Mem → Word → Option (Word × Word × Mem)
 def romOneW : Nat → Mem → Word → Word → Option (Word × Word × Mem)
   | 0, _, _, _ => none
   | n + 1, m, pos, t =>
-    if t = 4 then exFvarK (u64W rom (pos + 1)) (romExprW n m (pos + 9))
+    if t = 4 then (if u64OK rom (pos + 1) then exFvarK (u64W rom (pos + 1)) (romExprW n m (pos + 9)) else none)
     else if t = 10 then exProjK n (romNameW rom n m (pos + 1))
     else none
 
@@ -318,7 +438,7 @@ def exFvarK (k : Word) : Option (Word × Word × Mem) → Option (Word × Word �
 /-- After a projection's name. -/
 def exProjK (n : Nat) : Option (Word × Word × Mem) → Option (Word × Word × Mem)
   | none => none
-  | some (a, q, m₁) => exProj2K a (u64W rom q) (romExprW n m₁ (q + 8))
+  | some (a, q, m₁) => if u64OK rom q then exProj2K a (u64W rom q) (romExprW n m₁ (q + 8)) else none
 
 /-- After a projection's structure. -/
 def exProj2K (a k : Word) : Option (Word × Word × Mem) → Option (Word × Word × Mem)
@@ -349,8 +469,9 @@ variable (rom : List UInt8) (n : Nat) (m m₁ m₂ m₃ : Mem) (pos q t a b c k 
 
 theorem exLeafK_some (hh : ¬ 4294967296 ≤ h) : exLeafK q (some (h, m)) = some (h, q, m) := by
   simp [exLeafK, hh]
-theorem exNodeK_some (hh : ¬ 4294967296 ≤ h) (hc : memoCnt m < m.len64 RMEMO) :
-    exNodeK q (some (h, m)) = some (h, q, mpushMem m h) := by simp [exNodeK, hh, hc]
+theorem exNodeK_some (hh : ¬ 4294967296 ≤ h) :
+    exNodeK q (some (h, m)) = (mpushW m h).map (fun m' => (h, q, m')) := by
+  simp only [exNodeK, hh, ite_false]; cases mpushW m h <;> rfl
 theorem exSortK_some : exSortK (some (a, q, m)) = exLeafK q (sointernW m a) := rfl
 theorem exConst2K_some : exConst2K a (some (b, q, m)) = exLeafK q (ceinternW m a b) := rfl
 theorem exTwoK_app (ht : t = 5) : exTwoK t a (some (b, q, m)) = exNodeK q (mkAppW m a b) := by
@@ -361,17 +482,23 @@ theorem exTwoK_forall (ht : t = 7) : exTwoK t a (some (b, q, m)) = exNodeK q (mk
   simp [exTwoK, ht]
 theorem exConst2KN_some : exConst2KN rom n (some (a, q, m)) = exConst2K a (romLevelsW rom n m q) := by
   simp [exConst2KN]
-theorem romLeafW_bvar (ht : t = 0) :
+theorem romLeafW_bvar (ht : t = 0) (hu : u64OK rom (pos + 1)) :
     romLeafW rom (n + 1) m pos t = exLeafK (pos + 9) (binternW m (u64W rom (pos + 1))) := by
-  simp [romLeafW, ht]
+  simp [romLeafW, ht, hu]
 theorem romLeafW_sort (ht0 : t ≠ 0) (ht : t = 1) :
     romLeafW rom (n + 1) m pos t = exSortK (romLevelW rom n m (pos + 1)) := by simp [romLeafW, ht0, ht]
+theorem romLeafW_u64 (ht : t = 0 ∨ t = 3) (hu : ¬ u64OK rom (pos + 1)) :
+    romLeafW rom (n + 1) m pos t = none := by simp [romLeafW, ht, hu]
 theorem romLeafW_const (ht0 : t ≠ 0) (ht1 : t ≠ 1) (ht : t = 2) :
     romLeafW rom (n + 1) m pos t = exConst2KN rom n (romNameW rom n m (pos + 1)) := by
   simp [romLeafW, ht0, ht1, ht]
+theorem romLeafW_lit (ht0 : t ≠ 0) (ht1 : t ≠ 1) (ht2 : t ≠ 2) (ht : t = 3) (hu : u64OK rom (pos + 1)) :
+    romLeafW rom (n + 1) m pos t = exLeafK (pos + 9) (romLitW m (u64W rom (pos + 1))) := by
+  simp [romLeafW, ht0, ht1, ht2, ht, hu]
 theorem exFvarK_some : exFvarK rom k (some (a, q, m)) = exNodeK q (fvinternW m k a) := by simp [exFvarK]
-theorem exProjK_some : exProjK rom n (some (a, q, m)) = exProj2K rom a (u64W rom q) (romExprW rom n m (q + 8)) := by
-  simp [exProjK]
+theorem exProjK_some (hu : u64OK rom q) :
+    exProjK rom n (some (a, q, m)) = exProj2K rom a (u64W rom q) (romExprW rom n m (q + 8)) := by
+  simp [exProjK, hu]
 theorem exProj2K_some : exProj2K rom a k (some (b, q, m)) = exNodeK q (mkProjW m a k b) := by simp [exProj2K]
 theorem exOneK_let (ht : t = 8) : exOneK rom n t (some (a, q, m)) = exLet2K rom n a (romExprW rom n m q) := by
   simp [exOneK, ht]
@@ -384,20 +511,21 @@ theorem exLet3K_some : exLet3K rom a b (some (c, q, m)) = exNodeK q (mkLetW m a 
 theorem romExprW_ref (h9 : romB rom pos = 9) :
     romExprW rom (n + 1) m pos = romRefW rom m pos := by
   simp [romExprW, h9]
-theorem romExprW_leaf (h9 : romB rom pos ≠ 9) (h2 : romB rom pos = 0 ∨ romB rom pos = 1 ∨ romB rom pos = 2) :
+theorem romExprW_leaf (h9 : romB rom pos ≠ 9)
+    (h2 : romB rom pos = 0 ∨ romB rom pos = 1 ∨ romB rom pos = 2 ∨ romB rom pos = 3) :
     romExprW rom (n + 1) m pos = romLeafW rom n m pos (romB rom pos) := by
   simp [romExprW, h9, h2]
-theorem romExprW_one (h9 : romB rom pos ≠ 9) (h2 : ¬ (romB rom pos = 0 ∨ romB rom pos = 1 ∨ romB rom pos = 2))
+theorem romExprW_one (h9 : romB rom pos ≠ 9) (h2 : ¬ (romB rom pos = 0 ∨ romB rom pos = 1 ∨ romB rom pos = 2 ∨ romB rom pos = 3))
     (h4 : romB rom pos = 4 ∨ romB rom pos = 10) :
     romExprW rom (n + 1) m pos = romOneW rom n m pos (romB rom pos) := by
   simp only [romExprW, h9, h2, h4, ite_false, ite_true]
-theorem romExprW_two (h9 : romB rom pos ≠ 9) (h2 : ¬ (romB rom pos = 0 ∨ romB rom pos = 1 ∨ romB rom pos = 2))
+theorem romExprW_two (h9 : romB rom pos ≠ 9) (h2 : ¬ (romB rom pos = 0 ∨ romB rom pos = 1 ∨ romB rom pos = 2 ∨ romB rom pos = 3))
     (h4 : ¬ (romB rom pos = 4 ∨ romB rom pos = 10)) :
     romExprW rom (n + 1) m pos = romTwoW rom n m pos (romB rom pos) := by
   simp only [romExprW, h9, h2, h4, ite_false]
-theorem romOneW_fvar (ht : t = 4) :
+theorem romOneW_fvar (ht : t = 4) (hu : u64OK rom (pos + 1)) :
     romOneW rom (n + 1) m pos t = exFvarK rom (u64W rom (pos + 1)) (romExprW rom n m (pos + 9)) := by
-  simp [romOneW, ht]
+  simp [romOneW, ht, hu]
 theorem romOneW_proj (ht4 : t ≠ 4) (ht : t = 10) :
     romOneW rom (n + 1) m pos t = exProjK rom n (romNameW rom n m (pos + 1)) := by
   simp [romOneW, ht4, ht]
@@ -406,13 +534,15 @@ theorem romTwoW_eq : romTwoW rom (n + 1) m pos t = exOneK rom n t (romExprW rom 
 end arms
 
 attribute [arena_grind =] exLeafK_some exSortK_some exConst2K_some exTwoK_app exTwoK_lam exTwoK_forall
-  exConst2KN_some exFvarK_some exProjK_some exProj2K_some exOneK_let exOneK_two exLet2K_some exLet3K_some
+  exConst2KN_some exFvarK_some exProj2K_some exOneK_let exOneK_two exLet2K_some exLet3K_some
 grind_pattern [arena_grind] exNodeK_some => exNodeK q (some (h, m))
+grind_pattern [arena_grind] exProjK_some => exProjK rom n (some (a, q, m))
 grind_pattern [arena_grind] romExprW_ref => romExprW rom (n + 1) m pos
 grind_pattern [arena_grind] romExprW_leaf => romExprW rom (n + 1) m pos
 grind_pattern [arena_grind] romLeafW_bvar => romLeafW rom (n + 1) m pos t
 grind_pattern [arena_grind] romLeafW_sort => romLeafW rom (n + 1) m pos t
 grind_pattern [arena_grind] romLeafW_const => romLeafW rom (n + 1) m pos t
+grind_pattern [arena_grind] romLeafW_lit => romLeafW rom (n + 1) m pos t
 grind_pattern [arena_grind] romExprW_one => romExprW rom (n + 1) m pos
 grind_pattern [arena_grind] romExprW_two => romExprW rom (n + 1) m pos
 grind_pattern [arena_grind] romOneW_fvar => romOneW rom (n + 1) m pos t
@@ -428,6 +558,13 @@ structure ExprProg (rom : List UInt8) (p : Prog) : Prop extends LevelsProg rom p
   rom_ex_one : p.lookup "rom_ex_one" = some romExOne
   rom_ex_two : p.lookup "rom_ex_two" = some romExTwo
   memo_push : p.lookup "memo_push" = some memoPush
+  rset_find : p.lookup "rset_find" = some (memoFindG rsetSch)
+  rset_put : p.lookup "rset_put" = some (memoPutG rsetSch)
+  lit_match : p.lookup "lit_match" = some litMatch
+  lit_find : p.lookup "lit_find" = some litFind
+  lit_push : p.lookup "lit_push" = some litPush
+  intern_lit : p.lookup "intern_lit" = some internLit
+  rom_lit : p.lookup "rom_lit" = some romLit
   bvar_find : p.lookup "bvar_find" = some bvarFind
   bvar_push : p.lookup "bvar_push" = some bvarPush
   intern_bvar : p.lookup "intern_bvar" = some internBVar
@@ -502,12 +639,14 @@ theorem romExLeaf_specW (n : Nat) (s₀ : St) (pos t : Word) (hs : (s₀.mem.arr
         romU64_spec rom p hL.rom_u64 n,
         internBVar_spec p hL.bvar_find hL.bvar_push hL.intern_bvar n,
         internSort_spec p hL.sort_find hL.sort_push hL.intern_sort n,
-        internConst_spec p hL.const_find hL.const_push hL.intern_const n] <;>
+        internConst_spec p hL.const_find hL.const_push hL.intern_const n,
+        romLit_spec p hL.lit_hash hL.limbs_eq hL.lit_match hL.lit_find hL.lit_push hL.intern_lit
+          hL.rom_lit n] <;>
       finish [Keep.size]
 
-theorem romRefW_ok (m : Mem) (pos : Word) (h : memoOk m (u64W rom (pos + 1))) :
+theorem romRefW_ok (m : Mem) (pos : Word) (hu : u64OK rom (pos + 1)) (h : memoOk m (u64W rom (pos + 1))) :
     romRefW rom m pos = some (rdW (m.arr64 RMEMO) (u64W rom (pos + 1)), pos + 9, m) := by
-  simp only [romRefW]; rw [if_pos h]
+  simp only [romRefW]; rw [if_pos ⟨hu, h⟩]
 
 attribute [local irreducible] u64W memoOk in
 theorem romExRef_specW (n : Nat) (s₀ : St) (pos : Word) :
@@ -543,7 +682,7 @@ theorem romExpr_stepO (n : Nat) (ih : ExprSpecs rom p n) : SpecO rom p (n + 1) :
   intro s₀ pos t hs
   have hE := fun s₁ pos₁ h₁ => Triple.keep hL.no_st8 (ihE s₁ pos₁ h₁)
   have hn' := fun s₁ pos₁ h₁ => Triple.keep hL.no_st8 (romName_specW rom p hL.toNameProg n s₁ pos₁ h₁)
-  have hmp := fun s₁ h₁ => Triple.keep hL.no_st8 (memoPush_spec p hL.memo_push n s₁ h₁)
+  have hmp := fun s₁ h₁ => Triple.keep hL.no_st8 (memoPush_spec p hL.memo_push hL.rset_find hL.rset_put n s₁ h₁)
   rw [invoke_eq _ hL.rom_ex_one]
   simp only [callFn, romExOne]
   sym only [lang_grind, arena_grind] =>
@@ -551,14 +690,14 @@ theorem romExpr_stepO (n : Nat) (ih : ExprSpecs rom p n) : SpecO rom p (n + 1) :
       romU64_spec rom p hL.rom_u64 n,
       internFVar_spec p hL.fvar_find hL.fvar_push hL.intern_fvar n,
       mkProj_spec p hL.der_b hL.proj_find hL.proj_push hL.intern_proj hL.mk_proj n] <;>
-    finish [Keep.size, memoCnt]
+    finish [Keep.size, memoCnt, Option.map_some]
 
 theorem romExpr_stepT (n : Nat) (ih : ExprSpecs rom p n) : SpecT rom p (n + 1) := by
   obtain ⟨ihE, _, _⟩ := ih
   unfold SpecE at ihE
   intro s₀ pos t hs
   have hE := fun s₁ pos₁ h₁ => Triple.keep hL.no_st8 (ihE s₁ pos₁ h₁)
-  have hmp := fun s₁ h₁ => Triple.keep hL.no_st8 (memoPush_spec p hL.memo_push n s₁ h₁)
+  have hmp := fun s₁ h₁ => Triple.keep hL.no_st8 (memoPush_spec p hL.memo_push hL.rset_find hL.rset_put n s₁ h₁)
   rw [invoke_eq _ hL.rom_ex_two]
   simp only [callFn, romExTwo]
   sym only [lang_grind, arena_grind] =>
@@ -567,7 +706,7 @@ theorem romExpr_stepT (n : Nat) (ih : ExprSpecs rom p n) : SpecT rom p (n + 1) :
       mkLam_spec p hL.der_b hL.lam_find hL.lam_push hL.intern_lam hL.mk_lam n,
       mkForall_spec p hL.der_b hL.forall_find hL.forall_push hL.intern_forall hL.mk_forall n,
       mkLet_spec p hL.der_b hL.letE_find hL.letE_push hL.intern_letE hL.mk_let n] <;>
-    finish (gen := 16) [Keep.size, memoCnt]
+    finish (gen := 16) [Keep.size, memoCnt, Option.map_some]
 
 /-- **`rom_expr`, `rom_ex_one`, `rom_ex_two` compute their models.** -/
 theorem romExpr_specsW (n : Nat) : ExprSpecs rom p n := by

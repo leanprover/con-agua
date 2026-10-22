@@ -200,7 +200,7 @@
 {
 "lane": "whnf",
 "model": "opus",
-"status": "running",
+"status": "done",
 "focus": "Phase 5: CoreR caches, whnf family"
 },
 {
@@ -310,5 +310,11 @@
 "model": "opus",
 "status": "running",
 "focus": "Phase 2 proofs: checkDecl arms, promotion, remaining sorries"
+},
+{
+"lane": "whnf2",
+"model": "opus",
+"status": "running",
+"focus": "Phase 5: iota rest, verified walks in whnf (instLC, coreWalkFuel), remaining stubs"
 }
 ]
