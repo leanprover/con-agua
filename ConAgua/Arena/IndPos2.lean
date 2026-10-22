@@ -234,17 +234,15 @@ group grown by the named containers, each at the frame's instantiation. -/
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:809-817 ConRon.Arena.nestGrowGroup
 @[l_impl ConRon.Arena.nestGrowGroup]
 def nestGrowGroupL : FunDecl := lfn (vis, ctx, hi, us, dsOff, dsLen, csOff, csLen, grpOff, grpLen)
-    locals (j, c, key, nI, cty, pr) {
-  j := 0;
-  while j < csLen {
-    c := IW.u64[csOff + j];
-    key := call rec4(c, us, dsOff, dsLen);
-    (nI, cty) := call nest_inst_type(vis, ctx, hi, key);
-    pr := call rec2(c, cty);
-    (grpOff, grpLen) := call sl_snoc(grpOff, grpLen, pr);
-    j += 1
-  };
-  return (grpOff, grpLen)
+    locals (c, key, nI, cty, pr, r1, r2) {
+  if csLen == 0 { return (grpOff, grpLen) };
+  c := IW.u64[csOff];
+  key := call rec4(c, us, dsOff, dsLen);
+  (nI, cty) := call nest_inst_type(vis, ctx, hi, key);
+  pr := call rec2(c, cty);
+  (grpOff, grpLen) := call sl_snoc(grpOff, grpLen, pr);
+  (r1, r2) := call nest_grow_group(vis, ctx, hi, us, dsOff, dsLen, csOff + 1, csLen - 1, grpOff, grpLen);
+  return (r1, r2)
 }
 
 /-- `nest_accept_group(us, dsOff, dsLen, grpOff, grpLen, keysOff, keysLen)`: a frame's group
