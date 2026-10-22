@@ -3,6 +3,7 @@ import ConAgua.Arena.IndLibSpec
 import ConAgua.Arena.Env
 import ConAgua.Arena.IndPosSpec
 import ConAgua.Arena.IndMaster
+import ConAgua.Arena.Pins
 
 /-!
 # Refinements of `IndPos2` (lane `induct`, worker E, round 2)
@@ -1269,6 +1270,259 @@ theorem closeTelescope_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx 
   refine triple_post (closeTelescope_spec p hd hpf hpp hpi hmk hp n s₀ dO dl i body) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨x, a', hrun, hS', hg, hout⟩ := closeW_ok n dn fe vis _ _ a₀ dO dl i body ds r hm hS hbody hdec hb hit hib
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hout⟩
+
+end census
+
+/-! ## `pin_word` as a word model -/
+
+def pinWordW (m : Mem) (k : Word) : Option Word :=
+  if rdW (m.arr64 PINS) 0 = 0 then none else some (rdW (m.arr64 PINS) k)
+
+theorem pinWord_specW (p : Prog) (hp : p.lookup "pin_word" = some pinWordL) (n : Nat) (s₀ : St) (k : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "pin_word" [k]
+    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ pinWordW s₀.mem k = some (r.headD 0); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, pinWordL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;> finish [pinWordW]
+
+
+/-! ## `nest_canon_sub` -/
+
+def canonK3 : Option (Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m2) => if 4294967296 ≤ r then none else some ([1, r], m2)
+def canonK2 (nn mi : Word) : Option (Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (s, m1) => if 4294967296 ≤ s then none else canonK3 (fvinternW m1 (nn + mi) s)
+def canonK1 (nn mi : Word) (m : Mem) : Option Word → Option (List Word × Mem)
+  | none => none
+  | some z => if 4294967296 ≤ z then none else canonK2 nn mi (sointernW m z)
+def canonK0 (nn : Word) (m : Mem) : Option (List Word) → Option (List Word × Mem)
+  | none => none
+  | some fr => if fr.headD 0 = 0 then some ([0, 0], m)
+      else canonK1 nn (fr.tail.headD 0) m (pinWordW m 53)
+def canonW : Nat → Mem → Word → Word → Word → Word → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _, _, _, _, _ => none
+  | n + 1, m, no, nl, us, nn, c, v =>
+    if v ≠ us then some ([0, 0], m) else canonK0 nn m (findW n m no nl c)
+
+section arms
+variable (n : Nat) (m m1 m2 : Mem) (no nl us nn c v mi r s z : Word) (fr : List Word)
+theorem canonW_ne (h : v ≠ us) : canonW (n + 1) m no nl us nn c v = some ([0, 0], m) := by simp [canonW, h]
+theorem canonW_eq (h : ¬ v ≠ us) : canonW (n + 1) m no nl us nn c v = canonK0 nn m (findW n m no nl c) := by
+  simp only [canonW]; rw [if_neg h]
+theorem canonK0_miss (h : fr.headD 0 = 0) : canonK0 nn m (some fr) = some ([0, 0], m) := by
+  simp only [canonK0]; rw [if_pos h]
+theorem canonK0_hit (h : ¬ fr.headD 0 = 0) :
+    canonK0 nn m (some fr) = canonK1 nn (fr.tail.headD 0) m (pinWordW m 53) := by
+  simp only [canonK0]; rw [if_neg h]
+theorem canonK1_big (h : 4294967296 ≤ z) : canonK1 nn mi m (some z) = none := by simp [canonK1, h]
+theorem canonK1_ok (h : ¬ 4294967296 ≤ z) : canonK1 nn mi m (some z) = canonK2 nn mi (sointernW m z) := by
+  simp only [canonK1]; rw [if_neg h]
+theorem canonK2_big (h : 4294967296 ≤ s) : canonK2 nn mi (some (s, m1)) = none := by simp [canonK2, h]
+theorem canonK2_ok (h : ¬ 4294967296 ≤ s) :
+    canonK2 nn mi (some (s, m1)) = canonK3 (fvinternW m1 (nn + mi) s) := by
+  simp only [canonK2]; rw [if_neg h]
+theorem canonK3_big (h : 4294967296 ≤ r) : canonK3 (some (r, m2)) = none := by simp [canonK3, h]
+theorem canonK3_ok (h : ¬ 4294967296 ≤ r) : canonK3 (some (r, m2)) = some ([1, r], m2) := by
+  simp only [canonK3]; rw [if_neg h]
+end arms
+grind_pattern [ind_grind] canonW_ne => canonW (n + 1) m no nl us nn c v
+grind_pattern [ind_grind] canonW_eq => canonW (n + 1) m no nl us nn c v
+grind_pattern [ind_grind] canonK0_miss => canonK0 nn m (some fr)
+grind_pattern [ind_grind] canonK0_hit => canonK0 nn m (some fr)
+grind_pattern [ind_grind] canonK1_big => canonK1 nn mi m (some z)
+grind_pattern [ind_grind] canonK1_ok => canonK1 nn mi m (some z)
+grind_pattern [ind_grind] canonK2_big => canonK2 nn mi (some (s, m1))
+grind_pattern [ind_grind] canonK2_ok => canonK2 nn mi (some (s, m1))
+grind_pattern [ind_grind] canonK3_big => canonK3 (some (r, m2))
+grind_pattern [ind_grind] canonK3_ok => canonK3 (some (r, m2))
+
+section spec
+variable (p : Prog) (hf : p.lookup "sl_find" = some slFind) (hpw : p.lookup "pin_word" = some pinWordL)
+  (hsf : p.lookup "sort_find" = some sortFind) (hsp : p.lookup "sort_push" = some sortPush)
+  (his : p.lookup "intern_sort" = some internSort)
+  (hff : p.lookup "fvar_find" = some fvarFind) (hfp : p.lookup "fvar_push" = some fvarPush)
+  (hif : p.lookup "intern_fvar" = some internFVar)
+  (hp : p.lookup "nest_canon_sub" = some nestCanonSub)
+include hf hpw hsf hsp his hff hfp hif hp
+
+theorem nestCanonSub_spec (n : Nat) (s₀ : St) (no nl us nn c v : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_canon_sub" [no, nl, us, nn, c, v]
+    ⦃fun r s' => LocEq s' s₀ ∧ canonW n s₀.mem no nl us nn c v = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, nestCanonSub]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        slFind_spec p hf n, pinWord_specW p hpw n, internSort_spec p hsf hsp his n,
+        internFVar_spec p hff hfp hif n] <;> finish (gen := 20) [canonW]
+
+end spec
+
+
+theorem findIdx_decI (ws : List Word) (c : Word) (hws : ∀ w ∈ ws, w.toNat < 2 ^ 32) (hc : c.toNat < 2 ^ 32) :
+    (ws.map (fun w => (decI w : NIdx))).findIdx? (· == (decI c : NIdx)) = ws.findIdx? (· == c) := by
+  induction ws with
+  | nil => rfl
+  | cons w ws ih =>
+    simp only [List.map_cons, List.findIdx?_cons]
+    rw [decI_beq' w c (hws w (by simp)) hc]
+    by_cases h : w = c
+    · simp [h]
+    · simp [h]
+      have := ih (fun x hx => hws x (by simp [hx]))
+      simp only [List.findIdx?_map] at this
+      rw [this]
+
+theorem notbig_of_lt {z : Word} (h : z.toNat < 2 ^ 32) : ¬ 4294967296 ≤ z := by
+  intro hh
+  have := UInt64.le_iff_toNat_le.mp hh
+  have e : (4294967296 : Word).toNat = 4294967296 := by decide
+  omega
+
+theorem lt_of_notbig {z : Word} (h : ¬ 4294967296 ≤ z) : z.toNat < 2 ^ 32 := by
+  have : ¬ (4294967296 : Word).toNat ≤ z.toNat := fun hh => h (UInt64.le_iff_toNat_le.mpr hh)
+  have e : (4294967296 : Word).toNat = 4294967296 := by decide
+  omega
+
+theorem canonW_ok (n : Nat) : ∀ (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
+    (m m' : Mem) (a : AState) (no nl us nn c v : Word) (names : List NIdx) (r : List Word),
+    canonW n m no nl us nn c v = some (r, m') → StageR dn vis fe m a → H c → H us → H v →
+    decHL m no.toNat nl.toNat = some names → no.toNat + nl.toNat < 2 ^ 64 →
+    nn.toNat + names.length < 2 ^ 64 →
+    ∃ x a', (ConRon.Arena.nestCanonSub names (decI us) nn.toNat (decI c) (decI v)).run a = .ok (x, a') ∧
+      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ decOE m' r x := by
+  intro dn fe vis m m' a no nl us nn c v names r h hS hc hus hv hdec hb hnn
+  cases n with
+  | zero => simp [canonW] at h
+  | succ n =>
+  by_cases hvu : v ≠ us
+  · rw [canonW_ne n m no nl us nn c v hvu] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    refine ⟨none, a, ?_, hS, IWGrow.refl _, rfl⟩
+    have : ¬ ((decI v : LsIdx) == decI us) = true := by
+      rw [decI_beq' v us hv hus]; simpa using hvu
+    simp only [ConRon.Arena.nestCanonSub, this, if_false]; rfl
+  · rw [canonW_eq n m no nl us nn c v hvu] at h
+    have hvu' : v = us := by simpa using hvu
+    subst hvu'
+    have hbeq : ((decI v : LsIdx) == decI v) = true := by simp
+    obtain ⟨ws, hws, rfl, hwlt⟩ := slR_of_decHL m _ _ names hdec hb
+    simp only [UInt64.ofNat_toNat] at hws
+    have hlen : ws.length < 2 ^ 64 := by
+      have := decHL_length m hdec; simp at this; omega
+    cases hfw : findW n m no nl c with
+    | none => rw [hfw] at h; simp [canonK0] at h
+    | some fr =>
+      rw [hfw] at h
+      have hfr := findW_ok n _ _ _ _ _ _ hws hfw hlen
+      have hfi := findIdx_decI ws c hwlt hc
+      cases hwi : ws.findIdx? (· == c) with
+      | none =>
+        rw [hwi] at hfr
+        subst hfr
+        rw [canonK0_miss _ _ _ rfl] at h
+        simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        refine ⟨none, a, ?_, hS, IWGrow.refl _, rfl⟩
+        simp only [ConRon.Arena.nestCanonSub, hbeq, ite_true, hfi, hwi]; rfl
+      | some i =>
+        rw [hwi] at hfr
+        subst hfr
+        rw [canonK0_hit _ _ _ (by simp)] at h
+        simp only [List.tail_cons, List.headD_cons] at h
+        cases hpw : pinWordW m 53 with
+        | none => rw [hpw] at h; simp [canonK1] at h
+        | some z =>
+          rw [hpw] at h
+          have hpne : rdW (m.arr64 PINS) 0 ≠ 0 := by
+            intro h0; simp [pinWordW, h0] at hpw
+          have hz : z = pinW m 53 := by
+            simp only [pinWordW, hpne, if_false, Option.some.injEq] at hpw
+            rw [← hpw]; simp [pinW, rdW]
+          have hpin0 : pinW m 0 ≠ 0 := by simpa [pinW, rdW] using hpne
+          have hfull := hS.1.pins.full hpin0
+          have hzlt : z.toNat < 2 ^ 32 := by rw [hz]; exact hfull.lv_lt.2.1
+          rw [canonK1_ok _ _ _ _ (notbig_of_lt hzlt)] at h
+          cases hso : sointernW m z with
+          | none => rw [hso] at h; simp [canonK2] at h
+          | some rm1 =>
+            obtain ⟨s1, m1⟩ := rm1
+            rw [hso] at h
+            by_cases hsb : 4294967296 ≤ s1
+            · rw [canonK2_big _ _ _ _ hsb] at h; simp at h
+            rw [canonK2_ok _ _ _ _ hsb] at h
+            obtain ⟨a1, hrun1, hS1, hg1⟩ := internSort_stage hS z hzlt hso
+            have hs1lt : s1.toNat < 2 ^ 32 := lt_of_notbig hsb
+            cases hfv : fvinternW m1 (nn + UInt64.ofNat i) s1 with
+            | none => rw [hfv] at h; simp [canonK3] at h
+            | some rm2 =>
+              obtain ⟨rr, m2⟩ := rm2
+              rw [hfv] at h
+              by_cases hrb : 4294967296 ≤ rr
+              · rw [canonK3_big _ _ hrb] at h; simp at h
+              rw [canonK3_ok _ _ hrb] at h
+              simp only [Option.some.injEq, Prod.mk.injEq] at h
+              obtain ⟨rfl, rfl⟩ := h
+              obtain ⟨a2, hrun2, hS2, hg2⟩ := internFVar_stage hS1 (nn + UInt64.ofNat i) s1 hs1lt hfv
+              have hilt : i < ws.length := by
+                have := List.findIdx?_eq_some_iff_findIdx_eq.mp hwi
+                exact this.1
+              have hnn' : nn.toNat + ws.length < 2 ^ 64 := by simpa using hnn
+              have hsz : UInt64.size = 2 ^ 64 := rfl
+              have hnn2 : (nn + UInt64.ofNat i).toNat = nn.toNat + i := by
+                rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' (by omega)]
+                exact Nat.mod_eq_of_lt (by omega)
+              refine ⟨some (decE rr), a2, ?_, hS2, (hg1.trans hg2), ?_⟩
+              · have hzl : (zeroLevel).run a = .ok (decI z, a) := by
+                  rw [hz]; exact pinZeroLevel_run hfull
+                simp only [ConRon.Arena.nestCanonSub, hbeq, ite_true, hfi, hwi]
+                simp only [StateT.run_bind]
+                rw [hzl]
+                simp only [except_ok_bind, StateT.run_bind]
+                simp only [ConRon.Arena.internSortE, ConRon.Arena.internFVarE]
+                rw [hrun1]
+                simp only [except_ok_bind, StateT.run_bind]
+                rw [hnn2] at hrun2
+                rw [hrun2]
+                rfl
+              · exact ⟨rfl, lt_of_notbig hrb, rfl⟩
+
+
+section census
+variable (p : Prog) (hf : p.lookup "sl_find" = some slFind) (hpw : p.lookup "pin_word" = some pinWordL)
+  (hsf : p.lookup "sort_find" = some sortFind) (hsp : p.lookup "sort_push" = some sortPush)
+  (his : p.lookup "intern_sort" = some internSort)
+  (hff : p.lookup "fvar_find" = some fvarFind) (hfp : p.lookup "fvar_push" = some fvarPush)
+  (hif : p.lookup "intern_fvar" = some internFVar)
+  (hp : p.lookup "nest_canon_sub" = some nestCanonSub)
+include hf hpw hsf hsp his hff hfp hif hp
+
+/-- **`nest_canon_sub` refines `nestCanonSub`**. -/
+@[refines ConRon.Arena.nestCanonSub]
+theorem nestCanonSub_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+    (fe : IFEnv) (vis no nl us nn c v : Word) (names : List NIdx) (hc : H c) (hus : H us) (hv : H v)
+    (hS : StageR dn vis fe s₀.mem a₀) (hdec : decHL s₀.mem no.toNat nl.toNat = some names)
+    (hb : no.toNat + nl.toNat < 2 ^ 64) (hnn : nn.toNat + names.length < 2 ^ 64) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_canon_sub" [no, nl, us, nn, c, v]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (ConRon.Arena.nestCanonSub names (decI us) nn.toNat (decI c) (decI v)) a₀ ∧
+      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.nestCanonSub names (decI us) nn.toNat (decI c) (decI v)) a₀) ∧
+      IWGrow s₀.mem s'.mem ∧
+      decOE s'.mem r (AM.res (ConRon.Arena.nestCanonSub names (decI us) nn.toNat (decI c) (decI v)) a₀); ⊤⦄ := by
+  refine triple_post (nestCanonSub_spec p hf hpw hsf hsp his hff hfp hif hp n s₀ no nl us nn c v) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨x, a', hrun, hS', hg, hout⟩ := canonW_ok n dn fe vis _ _ a₀ no nl us nn c v names r hm hS hc hus hv hdec hb hnn
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hres]; exact hout⟩
 

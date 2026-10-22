@@ -554,8 +554,11 @@ def nestCanonSub : FunDecl := lfn (namesOff, namesLen, us, n, c, v) locals (ok, 
   (ok, m) := call sl_find(namesOff, namesLen, c);
   if ok == 0 { return (0, 0) };
   z := call pin_word(53);
+  if 4294967296 <= z { abort };
   s := call intern_sort(z);
+  if 4294967296 <= s { abort };
   r := call intern_fvar(n + m, s);
+  if 4294967296 <= r { abort };
   return (1, r)
 }
 
