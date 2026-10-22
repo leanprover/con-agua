@@ -876,4 +876,149 @@ theorem list_arm (m m' : Mem) (kind q K s sub : Word) (i v : USize) (e' : Word)
 
 end arms
 
+/-! ## A record being read -/
+
+/-- The record of `A` at `q` (size `sz`) being read, from the memory `m₁` it was allocated in. -/
+def RecInv (A : ArrId) (sz : Nat) (q : Word) (m₁ m : Mem) : Prop :=
+  IGrow m₁ m A q.toNat (q.toNat + sz) ∧ Room m ∧ topN m A = topN m₁ A ∧ 1 ≤ q.toNat ∧
+    q.toNat + sz ≤ topN m₁ A + 1
+
+/-- A write to slot `s` of the record. -/
+theorem slot_put (A : ArrId) (hA : A = IFR ∨ A = IFL) (sz : Nat) (hsz : sz ≤ 16) (q s x : Word)
+    (m₁ m : Mem) (hI : RecInv A sz q m₁ m) (hs : s.toNat < sz) :
+    RecInv A sz q m₁ (m.set64 A (q + s) x) ∧
+      wd (m.set64 A (q + s) x) A (q.toNat + s.toNat) = x ∧
+      (∀ j, j ≠ q.toNat + s.toNat → wd (m.set64 A (q + s) x) A j = wd m A j) ∧
+      (∀ c j, c ≠ A → wd (m.set64 A (q + s) x) c j = wd m c j) ∧
+      (∀ c, topN (m.set64 A (q + s) x) c = topN m c) := by
+  obtain ⟨g, hR, ht, hq1, hqs⟩ := hI
+  obtain ⟨R1, R2, R3, R4⟩ := hR
+  have hAs : (m.arr64 A).size < 2 ^ 63 ∧ topN m A < (m.arr64 A).size := by
+    rcases hA with rfl | rfl <;> exact ⟨by assumption, by assumption⟩
+  have hqs' : (q + s).toNat = q.toNat + s.toNat := by
+    rw [UInt64.toNat_add]; apply Nat.mod_eq_of_lt; omega
+  obtain ⟨g1, g2, g3⟩ := grow_set m A hA (q + s) x q.toNat (q.toNat + sz) (by omega) (by omega)
+    (by omega)
+  refine ⟨⟨g.trans g1, g2 ⟨R1, R2, R3, R4⟩, by rw [g3, ht], hq1, hqs⟩, ?_, fun j hj => ?_,
+    fun c j hc => wd_set64_ne _ _ _ _ _ _ hc, g3⟩
+  · rw [← hqs']; exact wd_set64_same _ _ _ _ (by omega)
+  · rw [wd_set64_other _ _ _ _ _ (by omega)]
+
+/-- Growth elsewhere (a nested list) while the record is read. -/
+theorem RecInv.grow {A : ArrId} {sz : Nat} {q : Word} {m₁ m m' : Mem} (hI : RecInv A sz q m₁ m)
+    (hg : Grow m m') (hR : Room m') (ht : topN m' A = topN m A) : RecInv A sz q m₁ m' :=
+  ⟨hI.1.trans (hg.ex _ _ _), hR, by rw [ht, hI.2.2.1], hI.2.2.2⟩
+
+/-- A field not seen yet, or seen and related. -/
+def SeenR (seen bit : UInt32) (P : Prop) : Prop := P ∨ seen &&& bit = 0
+
+theorem seenR_zero (bit : UInt32) (P : Prop) : SeenR 0 bit P := .inr (by simp)
+
+theorem seenR_or {seen bit a : UInt32} {P Q : Prop} (h : SeenR seen bit P) (ha : a &&& bit = 0)
+    (hPQ : P → Q) : SeenR (seen ||| a) bit Q := by
+  rcases h with h | h
+  · exact .inl (hPQ h)
+  · exact .inr (by rw [bit_or_and _ _ _ ha, h])
+
+theorem seenR_close {seen bit M : UInt32} {P : Prop} (h : SeenR seen bit P) (hM : seen &&& M = M)
+    (hbM : M &&& bit = bit) (hb : bit ≠ 0) : P := by
+  rcases h with h | h
+  · exact h
+  · exfalso; apply hb
+    rw [← hbM, ← hM, UInt32.and_assoc, hbM, h]
+
+/-! ## The record kinds -/
+
+set_option hygiene false in
+/-- A key's arm of an `IObjLoop`, entering it: the key's `seen` check passed. -/
+macro "iloop_key " f:ident : tactic => `(tactic| (
+  intro i seen st m d e e' m' h hc hk hv hvle hok hR hmem hlt
+  rw [$f:ident, dif_pos h] at hok
+  simp [uget_byteAt _ i h, hc, isWs, hk, hv] at hok
+  have hiv := valueAt_gt b h64 hsize i h hk hv
+  generalize valueAt b i (keyEnd b (i + 1)) = v at hok hvle hmem hiv ⊢
+  generalize keyAt b i (keyEnd b (i + 1) - (i + 1)) = K at hok hmem ⊢
+  cases K
+  all_goals (try (simp at hok; done))))
+
+set_option hygiene false in
+/-- A number key's arm: `hne`, `hie` and the loop's `ok` after it. -/
+macro "ikey_num" : tactic => `(tactic| (
+  simp only at hok
+  split at hok
+  rotate_left
+  · cases hok
+  split at hok
+  · cases hok
+  rename_i hne
+  split at hok
+  rotate_left
+  · cases hok
+  rename_i hie))
+
+section kinds
+variable (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
+include h64 hsize
+
+/-- The rule record read so far. -/
+def RuleLR (m₁ : Mem) (q : Word) (seen : UInt32) (st : Nat × Nat × Nat) (m : Mem) : Prop :=
+  RecInv IFL 3 q m₁ m ∧ SeenR seen 1 (NumW (wd m IFL (q.toNat + 0)) st.1) ∧
+    SeenR seen 2 (NumW (wd m IFL (q.toNat + 1)) st.2.1) ∧
+    SeenR seen 4 (NumW (wd m IFL (q.toNat + 2)) st.2.2)
+
+omit h64 hsize in
+theorem fldPutW_rule (m : Mem) (q s x : Word) : fldPutW m 3 q s x = m.set64 IFL (q + s) x := by
+  simp [fldPutW]
+
+theorem rule_loop (m₁ : Mem) (q : Word) :
+    IObjLoop b (fun i w seen (st : Nat × Nat × Nat) => scanRuleLoop b i w seen st.1 st.2.1 st.2.2)
+      3 q (RuleLR m₁ q) (fun d m => RecInv IFL 3 q m₁ m ∧ RuleF m q.toNat d) := by
+  constructor
+  · dloop_stop scanRuleLoop
+  · dloop_ws scanRuleLoop
+  · dloop_close scanRuleLoop
+    obtain ⟨hI, h1, h2, h3⟩ := hR
+    exact ⟨hI, seenR_close h1 hM (by decide) (by decide), seenR_close h2 hM (by decide) (by decide),
+      seenR_close h3 hM (by decide) (by decide)⟩
+  · dloop_comma scanRuleLoop
+  · dloop_quote scanRuleLoop
+  · iloop_key scanRuleLoop
+    all_goals obtain ⟨hI, h1, h2, h3⟩ := hR
+    case kCtor =>
+      rw [show UInt64.ofNat Key.kCtor.ctorIdx = (10 : Word) from rfl] at hmem
+      ikey_num
+      obtain ⟨he, x, rfl, hx⟩ := num_arm b h64 hsize m m' 3 q 10 0 0 i v e' rfl hne hie hvle hmem
+      subst he
+      rw [fldPutW_rule]
+      obtain ⟨p1, p2, p3, -, -⟩ := slot_put IFL (.inr rfl) 3 (by decide) q 0 x m₁ m hI (by decide)
+      refine ⟨numEnd b v, _, (readNatAt b v (numEnd b v), st.2.1, st.2.2), rfl, hok,
+        p1, .inl (by rw [show q.toNat + 0 = q.toNat + (0 : Word).toNat from rfl, p2]; exact hx),
+        seenR_or h2 (by decide) (by rw [p3 _ (by simp)]; exact id),
+        seenR_or h3 (by decide) (by rw [p3 _ (by simp)]; exact id)⟩
+    case kNfields =>
+      rw [show UInt64.ofNat Key.kNfields.ctorIdx = (36 : Word) from rfl] at hmem
+      ikey_num
+      obtain ⟨he, x, rfl, hx⟩ := num_arm b h64 hsize m m' 3 q 36 1 0 i v e' rfl hne hie hvle hmem
+      subst he
+      rw [fldPutW_rule]
+      obtain ⟨p1, p2, p3, -, -⟩ := slot_put IFL (.inr rfl) 3 (by decide) q 1 x m₁ m hI (by decide)
+      refine ⟨numEnd b v, _, (st.1, readNatAt b v (numEnd b v), st.2.2), rfl, hok,
+        p1, seenR_or h1 (by decide) (by rw [p3 _ (by simp)]; exact id),
+        .inl (by rw [show q.toNat + 1 = q.toNat + (1 : Word).toNat from rfl, p2]; exact hx),
+        seenR_or h3 (by decide) (by rw [p3 _ (by simp)]; exact id)⟩
+    case kRhs =>
+      rw [show UInt64.ofNat Key.kRhs.ctorIdx = (52 : Word) from rfl] at hmem
+      ikey_num
+      obtain ⟨he, x, rfl, hx⟩ := num_arm b h64 hsize m m' 3 q 52 2 0 i v e' rfl hne hie hvle hmem
+      subst he
+      rw [fldPutW_rule]
+      obtain ⟨p1, p2, p3, -, -⟩ := slot_put IFL (.inr rfl) 3 (by decide) q 2 x m₁ m hI (by decide)
+      refine ⟨numEnd b v, _, (st.1, st.2.1, readNatAt b v (numEnd b v)), rfl, hok,
+        p1, seenR_or h1 (by decide) (by rw [p3 _ (by simp)]; exact id),
+        seenR_or h2 (by decide) (by rw [p3 _ (by simp)]; exact id),
+        .inl (by rw [show q.toNat + 2 = q.toNat + (2 : Word).toNat from rfl, p2]; exact hx)⟩
+  · dloop_other scanRuleLoop
+
+end kinds
+
 end L.Front.Ind
