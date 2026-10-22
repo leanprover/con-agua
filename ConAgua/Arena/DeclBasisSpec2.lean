@@ -1,4 +1,5 @@
 import ConAgua.Arena.DeclRomStubs
+import ConAgua.Rom.CIReadSpec
 import ConAgua.Arena.DeclCanonEq
 
 /-!
@@ -44,7 +45,7 @@ def cbdK4 (n : Nat) (vis : Word) : Option (List Word × Mem) → Option (List Wo
 def cbdK3 (n : Nat) (vis k : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (r3, m3) =>
-    if r3.headD 0 = 0 then none else cbdK4 p n vis (stubM "rom_basis_decls_a" m3 [k])
+    if r3.headD 0 = 0 then none else cbdK4 p n vis (callW p n "rom_basis_decls_a" [k] m3)
 
 /-- After `rom_ci(0)`. -/
 def cbdK2 (n : Nat) (vis k en : Word) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -54,25 +55,25 @@ def cbdK2 (n : Nat) (vis k en : Word) : Option (List Word × Mem) → Option (Li
 /-- After the `Eq` pin. -/
 def cbdK1 (n : Nat) (vis k : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r1, m1) => cbdK2 p n vis k (r1.headD 0) (stubM "rom_ci" m1 [0])
+  | some (r1, m1) => cbdK2 p n vis k (r1.headD 0) (callW p n "rom_ci" [0] m1)
 
 /-- **The model of `check_basis_decl(vis, kind)`.** -/
 def cbdW : Nat → Mem → Word → Word → Option (List Word × Mem)
   | 0, _, _, _ => none
   | n + 1, m, vis, k =>
-    if k = 4 then cbdK1 p n vis k (pinAtW m 0) else cbdK4 p n vis (stubM "rom_basis_decls_a" m [k])
+    if k = 4 then cbdK1 p n vis k (pinAtW m 0) else cbdK4 p n vis (callW p n "rom_basis_decls_a" [k] m)
 
 section arms
 variable (n : Nat) (m m1 m2 m3 m4 m5 : Mem) (vis k en : Word) (r1 r2 r3 r4 r5 : List Word)
 theorem cbdW_step : cbdW p (n + 1) m vis k =
-    if k = 4 then cbdK1 p n vis k (pinAtW m 0) else cbdK4 p n vis (stubM "rom_basis_decls_a" m [k]) :=
+    if k = 4 then cbdK1 p n vis k (pinAtW m 0) else cbdK4 p n vis (callW p n "rom_basis_decls_a" [k] m) :=
   rfl
 theorem cbdK1_some : cbdK1 p n vis k (some (r1, m1)) =
-    cbdK2 p n vis k (r1.headD 0) (stubM "rom_ci" m1 [0]) := rfl
+    cbdK2 p n vis k (r1.headD 0) (callW p n "rom_ci" [0] m1) := rfl
 theorem cbdK2_some : cbdK2 p n vis k en (some (r2, m2)) =
     cbdK3 p n vis k (callW p n "find_is" [vis, en, r2.headD 0] m2) := rfl
 theorem cbdK3_some : cbdK3 p n vis k (some (r3, m3)) =
-    if r3.headD 0 = 0 then none else cbdK4 p n vis (stubM "rom_basis_decls_a" m3 [k]) := rfl
+    if r3.headD 0 = 0 then none else cbdK4 p n vis (callW p n "rom_basis_decls_a" [k] m3) := rfl
 theorem cbdK4_some : cbdK4 p n vis (some (r4, m4)) =
     cbdK5 (callW p n "install_basis_decls" [vis, r4.headD 0, r4.tail.headD 0] m4) := rfl
 theorem cbdK5_some : cbdK5 (some (r5, m5)) = some ([r5.headD 0], m5) := rfl
@@ -96,7 +97,7 @@ theorem cbd_specW (hpa : p.lookup "pin_at" = some pinAtL)
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, pinAt_specW p hpa n,
-        stubM_spec p "rom_ci" n, callW_spec p n "find_is", stubM_spec p "rom_basis_decls_a" n,
+        callW_spec p n "rom_ci", callW_spec p n "find_is", callW_spec p n "rom_basis_decls_a",
         callW_spec p n "install_basis_decls"] <;>
       finish (gen := 20)
 
@@ -105,18 +106,18 @@ end model
 local notation "V" => ConLeche.CheckMode.verified
 
 /-- The block install after the read, at the model level. -/
-theorem cbdK4_ok {p : Prog} (hB : BasisProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
+theorem cbdK4_ok {p : Prog} (hB : BasisProg p) (hR : L.Rom.RomRefs p) {dn : NIdx → Option ConLeche.Name} {vis : Word}
     {fe : IFEnv} {a : AState} {n : Nat} {m m' : Mem} {k : Word} {r : List Word} (hk : k.toNat < 5)
-    (h : cbdK4 p n vis (stubM "rom_basis_decls_a" m [k]) = some (r, m'))
+    (h : cbdK4 p n vis (callW p n "rom_basis_decls_a" [k] m) = some (r, m'))
     (hS : StageR dn vis fe m a) :
     ∃ fe' a', (do installBasisDecls fe (← BasisKind.declsA (basisOfW k.toNat))).run a =
       .ok (fe', a') ∧ StageR dn (r.headD 0) fe' m' a' ∧ IWGrow m m' := by
-  cases h4 : stubM "rom_basis_decls_a" m [k] with
+  cases h4 : callW p n "rom_basis_decls_a" [k] m with
   | none => rw [h4] at h; cases h
   | some rm4 =>
   obtain ⟨r4, m4⟩ := rm4
   rw [h4, cbdK4_some] at h
-  obtain ⟨cis, a4, hrun4, hS4, hg4, hD4, -⟩ := romBasisDeclsA_spec dn vis fe k hk m m4 a r4 h4 hS
+  obtain ⟨cis, a4, hrun4, hS4, hg4, hD4, -⟩ := hR.basisA dn vis fe k hk n m a r4 m4 hS h4
   cases h5 : callW p n "install_basis_decls" [vis, r4.headD 0, r4.tail.headD 0] m4 with
   | none => rw [h5] at h; cases h
   | some rm5 =>
@@ -133,7 +134,7 @@ theorem cbdK4_ok {p : Prog} (hB : BasisProg p) {dn : NIdx → Option ConLeche.Na
 
 /-- **`check_basis_decl(vis, kind)` refines `checkBasisDecl`** (through the ROM stubs). -/
 @[refines ConRon.Arena.checkBasisDecl]
-theorem checkBasisDecl_refines (p : Prog) (hB : BasisProg p) (hC : CanonProg p)
+theorem checkBasisDecl_refines (p : Prog) (hB : BasisProg p) (hC : CanonProg p) (hR : L.Rom.RomRefs p)
     (hpa : p.lookup "pin_at" = some pinAtL)
     (hp : p.lookup "check_basis_decl" = some checkBasisDeclL) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (hdn : DnInj dn) (fe : IFEnv) (vis k : Word)
@@ -167,12 +168,12 @@ theorem checkBasisDecl_refines (p : Prog) (hB : BasisProg p) (hC : CanonProg p)
     rw [hm1, hr1] at h
     simp only [List.headD_cons] at h
     -- `eqA`
-    cases h2 : stubM "rom_ci" s₀.mem [0] with
+    cases h2 : callW p n "rom_ci" [0] s₀.mem with
     | none => rw [h2] at h; cases h
     | some rm2 =>
     obtain ⟨r2, m2⟩ := rm2
     rw [h2, cbdK2_some] at h
-    obtain ⟨ea, a2, hrun2, hS2, hg2, hea⟩ := romCi_spec dn vis fe 0 (by decide) _ m2 a₀ r2 h2 hS
+    obtain ⟨ea, a2, hrun2, hS2, hg2, hea⟩ := hR.ci dn vis fe 0 (by decide) n s₀.mem a₀ r2 m2 hS h2
     -- `find_is`
     cases h3 : callW p n "find_is" [vis, pinW s₀.mem (1 + (0 : Word).toNat), r2.headD 0] m2 with
     | none => rw [h3] at h; cases h
@@ -190,7 +191,7 @@ theorem checkBasisDecl_refines (p : Prog) (hB : BasisProg p) (hC : CanonProg p)
     rw [if_neg h0] at h
     have hfind : (fe.find? (decI (pinW s₀.mem (1 + (0 : Word).toNat))) == some ea) = true := by
       rw [← hb3]; simpa using h0
-    obtain ⟨fe', a', hrun', hS', hg'⟩ := cbdK4_ok hB (by decide) h hS3
+    obtain ⟨fe', a', hrun', hS', hg'⟩ := cbdK4_ok hB hR (by decide) h hS3
     refine ⟨fe', a', ?_, hS', hg2.trans (hg3.trans hg')⟩
     simp only [checkBasisDecl, basisOfW, show (4 : Word).toNat = 4 from rfl,
       show (ConLeche.BasisKind.quotK == ConLeche.BasisKind.quotK) = true from rfl, if_true,
@@ -201,7 +202,7 @@ theorem checkBasisDecl_refines (p : Prog) (hB : BasisProg p) (hC : CanonProg p)
     simp only [hfind, if_true]
     exact hrun'
   · rw [if_neg h4] at h
-    obtain ⟨fe', a', hrun', hS', hg'⟩ := cbdK4_ok hB hk h hS
+    obtain ⟨fe', a', hrun', hS', hg'⟩ := cbdK4_ok hB hR hk h hS
     refine ⟨fe', a', ?_, hS', hg'⟩
     have hq : (basisOfW k.toNat == ConLeche.BasisKind.quotK) = false := by
       have : k.toNat ≠ 4 := fun e => h4 (UInt64.toNat_inj.mp (by simpa using e))

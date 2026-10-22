@@ -1,12 +1,15 @@
 import ConAgua.Arena.DeclAxiomSpec4
 import ConAgua.Arena.DeclArmOpaque
+import ConAgua.Arena.DeclCanonInfo
+import ConAgua.Arena.DeclTwin
 
 /-!
 # The quotient pin: `quot_pin_hit(k, q)` (lane `decls3`)
 
 `quotPinHit k cv`: the record is the pinned quotient block's constant at its own slot, compared at
-`toConstantVal` up to the canonical form (`cv_canon_eq`, helper `decls3-canon`, taken here as the
-hypothesis `CvCanonSpec` until it lands). Through the ROM stubs.
+`toConstantVal` up to the canonical form (`cv_canon_eq`, helper `decls3-canon`'s
+`cvCanonEq_refines`, which compares literals by handle: `LitInj`, from the twin state's
+well-formedness `StateOK`, lane `decls4`). Through the ROM stubs.
 -/
 
 open ConRon.Arena
@@ -20,15 +23,6 @@ set_option linter.unusedSimpArgs false
 namespace L.Arena
 
 open L.Ind
-
-/-- What `cv_canon_eq` must refine (helper `decls3-canon`'s statement shape). -/
-def CvCanonSpec (p : Prog) : Prop :=
-  ∀ (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (q r : Word)
-    (cv cv' : IConstantVal),
-    RefAM p "cv_canon_eq" [q, r]
-      (fun m a => StageR dn vis fe m a ∧ decCV (erA m) q.toNat = some cv ∧
-        decCV (erA m) r.toNat = some cv')
-      (cv.canonEq cv') (KeepPost dn vis fe decW0B)
 
 section model
 variable (p : Prog)
@@ -53,11 +47,11 @@ def qphK1 (n : Nat) (k q : Word) : Option (List Word × Mem) → Option (List Wo
 /-- **The model of `quot_pin_hit(k, q)`.** -/
 def qphW : Nat → Mem → Word → Word → Option (List Word × Mem)
   | 0, _, _, _ => none
-  | n + 1, m, k, q => qphK1 p n k q (stubM "rom_basis_decls" m [4])
+  | n + 1, m, k, q => qphK1 p n k q (callW p n "rom_basis_decls" [4] m)
 
 section arms
 variable (n : Nat) (m m1 m2 m3 : Mem) (k q : Word) (r1 r2 r3 : List Word)
-theorem qphW_step : qphW p (n + 1) m k q = qphK1 p n k q (stubM "rom_basis_decls" m [4]) := rfl
+theorem qphW_step : qphW p (n + 1) m k q = qphK1 p n k q (callW p n "rom_basis_decls" [4] m) := rfl
 theorem qphK1_some : qphK1 p n k q (some (r1, m1)) =
     if r1.tail.headD 0 ≤ k then some ([0], m1)
     else qphK2 p n q (callW p n "ci_to_cv" [rdW (m1.arr64 IW) (r1.headD 0 + k)] m1) := rfl
@@ -82,20 +76,26 @@ theorem qph_specW (hp : p.lookup "quot_pin_hit" = some quotPinHitL) (n : Nat) (s
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-        stubM_spec p "rom_basis_decls" n, callW_spec p n "ci_to_cv",
+        callW_spec p n "rom_basis_decls", callW_spec p n "ci_to_cv",
         callW_spec p n "cv_canon_eq"] <;>
       finish (gen := 20) [rdW_eq]
 
 end model
 
+/-- The pool's size bound canon's comparisons take (`LitR`'s `PoolOK`). -/
+theorem poolSmall_of_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+    {m : Mem} {a : AState} (h : StageR dn vis fe m a) : PoolSmall m := by
+  have := h.1.arena.1.lit.1.2.2.1
+  unfold PoolSmall; omega
+
 theorem slot_lt (k : ConLeche.QuotKind) : k.slot < 5 := by cases k <;> decide
 
 /-- **`quot_pin_hit(k, q)` refines `quotPinHit`** at the model level. -/
-theorem qphW_ok {p : Prog} (hC : CanonProg p) (hCV : CvCanonSpec p)
+theorem qphW_ok {p : Prog} (hC : CanonProg p) (hR : L.Rom.RomRefs p)
     {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {n : Nat}
     {m m' : Mem} {q : Word} {r : List Word} {cv : IConstantVal} {k : ConLeche.QuotKind}
     (hW : qphW p n m (UInt64.ofNat k.slot) q = some (r, m')) (hS : StageR dn vis fe m a)
-    (hq : decCV (erecP m) q.toNat = some cv) :
+    (hq : decCV (erecP m) q.toNat = some cv) (hok : ConRon.Bridge.StateOK a) :
     ∃ b a', (quotPinHit k cv).run a = .ok (b, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧
       decW0B m' r b := by
   have hks : (UInt64.ofNat k.slot).toNat = k.slot :=
@@ -104,13 +104,14 @@ theorem qphW_ok {p : Prog} (hC : CanonProg p) (hCV : CvCanonSpec p)
   | zero => simp [qphW] at hW
   | succ n =>
   rw [qphW_step] at hW
-  cases h1 : stubM "rom_basis_decls" m [4] with
+  cases h1 : callW p n "rom_basis_decls" [4] m with
   | none => rw [h1] at hW; cases hW
   | some rm1 =>
   obtain ⟨r1, m1⟩ := rm1
   rw [h1, qphK1_some] at hW
-  obtain ⟨blk, a1, hrun1, hS1, hg1, hD1, hr1⟩ := romBasisDecls_spec dn vis fe 4 (by decide) m m1 a r1 h1 hS
+  obtain ⟨blk, a1, hrun1, hS1, hg1, hD1, hr1⟩ := hR.basis dn vis fe 4 (by decide) n m a r1 m1 hS h1
   have hrun1' : (BasisKind.decls .quotK).run a = .ok (blk, a1) := hrun1
+  have hok1 := (ConRon.Bridge.BasisKind.decls_run hok hrun1').1
   have hlen : blk.length = (r1.tail.headD 0).toNat := decPL_length (truncM m1) hD1
   generalize r1.headD 0 = o at hW hD1 hlen
   generalize r1.tail.headD 0 = l at hW hD1 hlen
@@ -153,6 +154,7 @@ theorem qphW_ok {p : Prog} (hC : CanonProg p) (hCV : CvCanonSpec p)
   have hrun2 := AM.run_of_ok _ _ hok2
   generalize AM.res ci.toConstantVal a1 = pcv at hrun2 hcv2
   generalize AM.st ci.toConstantVal a1 = a2 at hrun2 hS2
+  have hok2' : ConRon.Bridge.StateOK a2 := ConRon.Bridge.toConstantVal_stateOK hok1 hrun2
   -- `cv_canon_eq`
   cases h3 : callW p n "cv_canon_eq" [q, r2.headD 0] s2.mem with
   | none => rw [h3] at hW; cases hW
@@ -162,9 +164,10 @@ theorem qphW_ok {p : Prog} (hC : CanonProg p) (hCV : CvCanonSpec p)
   simp only [Option.some.injEq, Prod.mk.injEq] at hW
   obtain ⟨rfl, rfl⟩ := hW
   have hg12 := hg1.trans hg2
-  obtain ⟨s3, hs3, -, hok3, hS3, hg3, hd3⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
-    (hCV dn vis fe q (r2.headD 0) cv pcv n ⟨s2.mem, Locals.init []⟩ a2
-      ⟨hS2, ArrExt.decCV (IWGrow.erecExt hg12) hq, ArrExt.decCV (erecP_ext _) hcv2⟩) h3
+  obtain ⟨s3, hs3, -, hok3, ⟨⟨hS3, hg3, hd3⟩, -⟩, -⟩ := triple_of_callW (s₀ := ⟨s2.mem, Locals.init []⟩)
+    (cvCanonEq_refines p hC dn vis fe q (r2.headD 0) cv pcv n ⟨s2.mem, Locals.init []⟩ a2
+      ⟨hS2, ArrExt.decCV (IWGrow.erecPExt hg12) hq, hcv2, poolSmall_of_stage hS2,
+        fun x y l hx hy => hok2'.view_inj hx hy⟩) h3
   subst hs3
   have hrun3 := AM.run_of_ok _ _ hok3
   refine ⟨_, _, ?_, hS3, hg12.trans hg3, hd3⟩
@@ -247,7 +250,7 @@ local notation "V" => ConLeche.CheckMode.verified
 /-- The lookups of the quotient arm. -/
 structure QuotProg (p : Prog) : Prop where
   canon : CanonProg p
-  cvc : CvCanonSpec p
+  rom : L.Rom.RomRefs p
   basis : BasisProg p
   qph : p.lookup "quot_pin_hit" = some quotPinHitL
   cbd : p.lookup "check_basis_decl" = some checkBasisDeclL
@@ -260,7 +263,7 @@ theorem cdqW_ok {p : Prog} (hQ : QuotProg p) {dn : NIdx → Option ConLeche.Name
     {ds : Array IDeclaration} {pins : List INatOpPinSet} {k : ConLeche.QuotKind}
     {cv : IConstantVal} (h : cdqW p n m i vis = some (r, m')) (hS : StageR dn vis fe m a)
     (hD : DeclsR (m.arr64 DECL) (m.arr64 DLP) ds) (hi : i.toNat < ds.size)
-    (hd : ds[i.toNat] = .quotDecl k cv) :
+    (hd : ds[i.toNat] = .quotDecl k cv) (hok : ConRon.Bridge.StateOK a) :
     ∃ fe' a', (checkDecl V pins fe (.quotDecl k cv)).run a = .ok (fe', a') ∧
       StageR dn (r.headD 0) fe' m' a' ∧ IWGrow m m' := by
   have hdecl := hD.recs i.toNat hi
@@ -293,7 +296,7 @@ theorem cdqW_ok {p : Prog} (hQ : QuotProg p) {dn : NIdx → Option ConLeche.Name
     (qph_specW p hQ.qph n ⟨m1, Locals.init []⟩ _ _) h2
   rw [hs2] at hW2
   obtain ⟨b, a2, hrun2, hS2, hg2, hd2⟩ :=
-    qphW_ok hQ.canon hQ.cvc hW2 hS1 (by rw [hq1]; exact hcv1)
+    qphW_ok hQ.canon hQ.rom hW2 hS1 (by rw [hq1]; exact hcv1) hok
   by_cases z2 : r2.headD 0 = 0
   · rw [if_pos z2] at h; cases h
   rw [if_neg z2] at h
@@ -312,7 +315,7 @@ theorem cdqW_ok {p : Prog} (hQ : QuotProg p) {dn : NIdx → Option ConLeche.Name
     simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     obtain ⟨s3, hs3, -, hok3, hS3, hg3⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
-      (checkBasisDecl_refines p hQ.basis hQ.canon hQ.pa hQ.cbd n ⟨m2, Locals.init []⟩ a2 dn hdn fe
+      (checkBasisDecl_refines p hQ.basis hQ.canon hQ.rom hQ.pa hQ.cbd n ⟨m2, Locals.init []⟩ a2 dn hdn fe
         vis 4 (by decide) hS2) h3
     subst hs3
     have hrun3 := AM.run_of_ok _ _ hok3
@@ -345,18 +348,19 @@ theorem cdqW_ok {p : Prog} (hQ : QuotProg p) {dn : NIdx → Option ConLeche.Name
       simp only [StateT.run_bind, hrun2, exc_ok_bind', if_true]; rfl
 
 /-- **`check_decl_quot` refines `checkDecl`'s `.quotDecl` arm** at the loop's relation (through the
-ROM stubs and `CvCanonSpec`). -/
+ROM stubs; `StateOK` of the twin state for the canonical comparison). -/
 theorem checkDeclQuot_loop' {p : Prog} (hA : ArmProg p) (hR : RecProg p) (hQ : QuotProg p)
     (pins : List INatOpPinSet) (dn : NIdx → Option ConLeche.Name) (hdn : DnInj dn)
     (ds : Array IDeclaration) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (vis : Word) (fe : IFEnv) (pend : Array PendingCheck)
       (i : Word) (k : ConLeche.QuotKind) (cv : IConstantVal), i.toNat < ds.size →
-      ds[i.toNat]? = some (.quotDecl k cv) → LoopR pins dn s₀.mem a₀ vis fe pend ds →
+      ds[i.toNat]? = some (.quotDecl k cv) → ConRon.Bridge.StateOK a₀ →
+      LoopR pins dn s₀.mem a₀ vis fe pend ds →
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "check_decl_quot" [i, vis]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (checkDecl V pins fe (.quotDecl k cv)) a₀ ∧
       LoopR pins dn s'.mem (AM.st (checkDecl V pins fe (.quotDecl k cv)) a₀) (r.headD 0)
         (AM.res (checkDecl V pins fe (.quotDecl k cv)) a₀) pend ds; ⊤⦄ := by
-  intro n s₀ a₀ vis fe pend i k cv hi hd hLR
+  intro n s₀ a₀ vis fe pend i k cv hi hd hok hLR
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hW⟩ := M.of_run (P := fun s => s = s₀) hs hrun (cdq_specW p hQ.cdq hR n s₀ i vis)
@@ -366,7 +370,7 @@ theorem checkDeclQuot_loop' {p : Prog} (hA : ArmProg p) (hR : RecProg p) (hQ : Q
   have hd' : ds[i.toNat] = .quotDecl k cv := by
     rw [Array.getElem?_eq_getElem hi] at hd; exact Option.some.inj hd
   obtain ⟨fe', a', hrun', hS', hg'⟩ :=
-    cdqW_ok (pins := pins) hQ hdn hW ⟨hLR.check, hLR.iw⟩ hLR.decls hi hd'
+    cdqW_ok (pins := pins) hQ hdn hW ⟨hLR.check, hLR.iw⟩ hLR.decls hi hd' hok
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
   refine ⟨hloc, hok, ?_⟩
   rw [hst, hres]
