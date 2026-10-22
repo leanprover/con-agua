@@ -702,4 +702,89 @@ theorem i1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g t tele wso ws
 
 end sims
 
+/-! ## The inductive hypotheses -/
+
+/-- The twin's `recs` from field `i` on. -/
+def rec2Recs (X : ClassCtor) (i : Nat) : List (Nat × Nat × Nat) :=
+  (List.range' i (X.nF - i)).filterMap fun j =>
+    match X.kinds.getD j .ordinary with
+    | .recursive t tele => some (j, t, tele)
+    | .ordinary => none
+
+theorem rec2Recs_zero (X : ClassCtor) : rec2Recs X 0 = (List.range X.nF).filterMap (fun i =>
+    match X.kinds.getD i ClassField.ordinary with
+    | ClassField.recursive t tele => some (i, t, tele)
+    | ClassField.ordinary => none) := by
+  simp [rec2Recs, List.range_eq_range']
+
+theorem rec2Recs_end {X : ClassCtor} {i : Nat} (h : X.nF ≤ i) : rec2Recs X i = [] := by
+  simp [rec2Recs, show X.nF - i = 0 by omega]
+
+theorem rec2Recs_step {X : ClassCtor} {i : Nat} (h : i < X.nF) : rec2Recs X i =
+    (match X.kinds.getD i .ordinary with
+     | .recursive t tele => [(i, t, tele)]
+     | .ordinary => []) ++ rec2Recs X (i + 1) := by
+  simp only [rec2Recs]
+  rw [show X.nF - i = (X.nF - (i + 1)) + 1 by omega, List.range'_succ, List.filterMap_cons]
+  cases X.kinds.getD i .ordinary <;> simp
+
+/-- The kinds' words: the tag of field `i` and, at a recursive field, its class and telescope. -/
+theorem rec2IsTag {m : Mem} {x i : Word} {X : ClassCtor} (hX : decCC m x.toNat = some X)
+    (hsz : (m.arr64 IW).size < 2 ^ 64) :
+    (X.kinds.getD i.toNat .ordinary = .ordinary → isTag m x i ≠ 1) ∧
+    (∀ t tele, X.kinds.getD i.toNat .ordinary = .recursive t tele →
+      isTag m x i = 1 ∧ rdW (m.arr64 IW) (isKp m x i + 1) = UInt64.ofNat t ∧ t < 2 ^ 64 ∧
+      rdW (m.arr64 IW) (isKp m x i + 2) = UInt64.ofNat tele ∧ tele < 2 ^ 64) := by
+  simp only [decCC, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at hX
+  obtain ⟨q, hq, cv, hcv, nF, hnF, ks, hks, y4, hy4, y5, hy5, rfl⟩ := hX
+  obtain ⟨ko, kl, hko, hkl, hkd⟩ := decAt_some hks
+  obtain ⟨e2, -⟩ := rec2RdN (w := x) (k := 2) hko hsz
+  obtain ⟨e3, t3⟩ := rec2RdN (w := x) (k := 3) (by simpa [Nat.add_assoc] using hkl) hsz
+  have kllt : kl < 2 ^ 64 := (iwN_rdW_at (w := x) (k := 3) (by simpa [Nat.add_assoc] using hkl) hsz).2
+  have kolt : ko < 2 ^ 64 := (iwN_rdW_at (w := x) (k := 2) hko hsz).2
+  simp only [show UInt64.ofNat 2 = (2 : Word) from rfl, show UInt64.ofNat 3 = (3 : Word) from rfl] at e2 e3
+  have hlen := decPL_length m hkd
+  simp only [isTag, isKp, e2, e3]
+  by_cases hi : i.toNat < kl
+  · have hilt : i < UInt64.ofNat kl := UInt64.lt_iff_toNat_lt.mpr (by rw [t3]; exact hi)
+    obtain ⟨v, hv, hcf⟩ := decPL_getH m hkd i.toNat hi
+    have hvlt := iwN_lt hv
+    have ev : rdW (m.arr64 IW) (UInt64.ofNat ko + i) = UInt64.ofNat v := by
+      have := (iwN_rdW hv (by omega)).1
+      rwa [show UInt64.ofNat (ko + i.toNat) = UInt64.ofNat ko + i by simp [UInt64.ofNat_add]] at this
+    have vlt := (iwN_rdW hv (by omega)).2
+    have hget : ks.getD i.toNat .ordinary = ks[i.toNat]'(by omega) := by
+      simp [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem (by omega : i.toNat < ks.length)]
+    rw [hget]
+    simp only [if_pos hilt, ev]
+    revert hcf
+    generalize ks[i.toNat]'(by omega) = k
+    intro hcf
+    simp only [decCF, bind, Option.bind_eq_some_iff] at hcf
+    obtain ⟨tg, htg, hk⟩ := hcf
+    obtain ⟨etg, -⟩ := rec2RdN (w := UInt64.ofNat v) (k := 0) (by simpa [UInt64.toNat_ofNat_of_lt' vlt] using htg) hsz
+    simp only [show UInt64.ofNat 0 = (0 : Word) from rfl, UInt64.add_zero] at etg
+    have tglt := (iwN_rdW htg (by have := iwN_lt htg; omega)).2
+    match tg, hk with
+    | 0, hk =>
+      simp only [pure, Option.some.injEq] at hk; subst hk
+      exact ⟨fun _ => (by rw [etg]; decide), fun t tele e => (by cases e)⟩
+    | 1, hk =>
+      simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at hk
+      obtain ⟨t, ht, tele, htele, rfl⟩ := hk
+      obtain ⟨e1, -⟩ := rec2RdN (w := UInt64.ofNat v) (k := 1) (by simpa [UInt64.toNat_ofNat_of_lt' vlt] using ht) hsz
+      obtain ⟨e2', -⟩ := rec2RdN (w := UInt64.ofNat v) (k := 2) (by simpa [UInt64.toNat_ofNat_of_lt' vlt] using htele) hsz
+      simp only [show UInt64.ofNat 1 = (1 : Word) from rfl, show UInt64.ofNat 2 = (2 : Word) from rfl] at e1 e2'
+      refine ⟨fun e => (by cases e), fun t' tele' e => ?_⟩
+      cases e
+      exact ⟨by rw [etg]; rfl, e1, (iwN_rdW ht (by have := iwN_lt ht; omega)).2, e2',
+        (iwN_rdW htele (by have := iwN_lt htele; omega)).2⟩
+    | (_ + 2), hk => simp at hk
+  · have hilt : ¬ i < UInt64.ofNat kl := fun x => hi (by have := UInt64.lt_iff_toNat_lt.mp x; rwa [t3] at this)
+    have hget : ks.getD i.toNat .ordinary = .ordinary := by
+      simp [List.getD_eq_getElem?_getD, List.getElem?_eq_none (by omega : ks.length ≤ i.toNat)]
+    rw [hget]
+    simp only [if_neg hilt]
+    exact ⟨fun _ => (by decide), fun t tele e => (by cases e)⟩
+
 end L.Ind
