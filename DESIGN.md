@@ -3558,6 +3558,7 @@ Word arrays (byte arrays are a separate id space: `IN` = byte array 0 is the inp
 | 128‥131 | – | `PinsR` (stub) | the pin table |
 | 132‥143 | – | `EnvR` (stub) | the environment index |
 | 144‥191 | – | argument relations (reserved) | `PMemo`, walk-local memos, `NestState` |
+| 146‥149 | `PNM`, `PLM`, `PLSM`, `PEM` | `PMemoR` (`LoopR.pmemo`) | the promotion's four memos (names, levels, level lists, expressions; lane `decls2-promote`) |
 | 192 | `LH` | levels' heap (per call, no relation: scratch) | level-algorithm heap, nodes `[tag, a, b]`, bump-allocated below `CTL[192]` (lane `levels`) |
 
 `CTL` words:
@@ -3579,6 +3580,7 @@ Word arrays (byte arrays are a separate id space: `IN` = byte array 0 is the inp
 | 96‥127 | `CoreR` (stub) | cache stamps/counts, eager depth |
 | 128‥135 | `EnvR` (stub) | environment counters |
 | 136‥191 | argument relations (reserved) | |
+| 140‥147 | `PMemoR` | stamp − 1, live count of `PNM`, `PLM`, `PLSM`, `PEM` (lane `decls2-promote`) |
 | 192 | levels' heap (per call) | the heap top (lane `levels`) |
 
 A count store writes `CTL[k + (t & 1)]` (item 1). `arenaR_init` needs `CTL` ≥ 64 words; the
@@ -4385,7 +4387,14 @@ be asymptotically slower. con-ron at `_tmp/ref/con-ron` origin/HEAD (`proof/ConR
   the memo again after `inst_lp`, `defeq_list` compares the common prefix before the lengths (the
   twin's order of `defeq` calls), `iota_index_ok`/`iota_certs_full` restore the top,
   `inst_spine_pins` raises the top after each store, `and_rescue_slots` runs `fire_ok` first.
-* `WhnfDelta.lean`: the δ/Nat specs (`whnf_step`, `reduce_nat`, `delta_step`, …; 14).
+* `WhnfDelta.lean`: none of its own; the δ/Nat specs are proved (`WhnfDeltaRefine*.lean`, sub-lane)
+  on two assumed facts: `natOpResultOK_stub` (`nat_op_result` refines `natOpResult` under `CoreS`;
+  lane `nat2` proved it over its own program and `ArenaR`) and `whnfGrowsUpTo_stub` (a `whnf` call
+  only grows the limb pool). The sub-lane's L changes: `nat_zero_ok` interns `Nat` first and
+  `reduce_nat` runs `nat_lit_supported` unconditionally (the twin's `do` lifts both out of `&&`),
+  `unfold_definition` restores the stack top, `raw_nat_lit`/`reduce_nat` abort on tags 10‥15 and
+  `unfold_defn_at` on a non-tag-0 level list (the twin's `view` fails there); `reduce_nat` and
+  `unfold_definition` are split into small functions.
 
 ### Lane `exprops4`'s walks as this lane's callees (open)
 
@@ -5443,6 +5452,34 @@ denser than the Rust).
 * Merged master into `defeq-slots` (WhnfCoreApp's `mkAppW_hw` fix). No `sorry`; ~875 lines,
   5.2 s CPU.
 
+### The inference bodies (`InferBody*.lean`, helper `defeq-infer`)
+* **`InferBodySpec p n` and `InferIOBodySpec p n` are theorems** (`inferBody_refines`,
+  `inferBodyIO_refines`, `InferBodyDisp.lean`), hence `inferSlot_step`/`inferIOSlot_step`
+  (`WhnfCallees.inferStep`/`inferIOStep`), from `KnotUpTo p n`, the programs (`InferAllProg`) and
+  `InferCallees`: `inst1`, `inst_list`, `abs_entry`, `ar_entry`, `const_ty_at`, the `infer_lit`
+  callees, `is_eager_reduce`, **`infer_proj` (`InferProjOK`, not proved: the table's `structSort`
+  must denote for `lvl_eq_c`'s refinement, an environment invariant nobody states yet)**, and two
+  binder-stack facts below. Both specs now carry `n ≤ 2^62` (KnotSlot.lean).
+* Every clause is proved: `infer_let`, `infer_lam_io`, `infer_forall_io` (`InferBodyLet`), the
+  spines (`InferBodySpine`, `InferBodySpineF`: loops as named blocks, fuel models, `SpPost`), the
+  telescopes (`InferBodyBind`, `InferBodyBindPi`: `lamsFull_ref`/`pisFull_ref`, `TelPost`), the
+  interning leaves under `CoreS` (`InferBodyIntern`: `CoreS.of_level` for level nodes via
+  `LStore.intern_ext`).
+* **The binder stack is not in `CoreAfter`.** `StackKept` covers `SPN`/`CTL[136]` only, so the
+  telescopes assume `BStkCallees` (`infer`, `whnf`, `inst_list`, `ar_entry`, `ensure_sort` keep
+  `BSTK` below `CTL[137]` and `CTL[137]`) and `BStkCap` (`BSTK` has fewer than `2^63` words under
+  `CoreS`). To discharge them: a field `bstk` in `CoreS` (as `spn`) and `BKept` in `StackKept`,
+  proved by every core body (lane `whnf`'s files construct both about 15 times).
+* **L changes** (Infer.lean): `infer_lam_io`/`infer_forall_io` abort at `d + 1 = 0`;
+  `infer_lam`/`infer_forall` abort at `d ≥ 2^63` (depth capacities: the twin's depth is a `Nat`);
+  `infer_spine`/`infer_spine_io` abort when `CTL[136]` is past the stack (so the empty accumulator
+  is a slice; `head_and_args` at an `app` handle needs no such bound, `headAndArgs_app`).
+* Proof style: `vcgen` + `simp_all` for the specs (`finish` blew up on `List.cons.injEq` with six
+  calls), `ld64_rdW_spec`/`st64_spec` instead of unfolding `ld64`/`st64` (a read's bound proof as
+  an argument blocks `simp_all`). **Kernel deep recursion**: `simp` (`↓reduceIte`) on a goal holding
+  `inferLams …`/`inferPis …` at the literal `peelFuel` made the kernel unfold the structural
+  recursion; `rw [if_pos rfl]` instead. ~4400 lines, ~29 s CPU.
+
 ## Phase 2, round 3: the step's specs, promotion, the pin variants (2026-10-22, lane `decls2`)
 
 ### The stale loop targets (`installStep`, `installDeclStep`, `checkPending`, `checkPendingList`)
@@ -5612,6 +5649,33 @@ Translated in full, 109 L functions, 90 tagged `@[l_impl]` (no proofs yet):
 * The relation behind it all is `StageR` at the callee and `LoopR.of_step` around it: the step's
   callees never see `PEND`/`DECL`/`DLP`, the text says they do not write them.
 
+
+### Promotion in L (`Promote*.lean`, helper `decls2-promote`)
+
+`promoteVG_spec` is **proved**; `promoteN`, `promoteL`, `promoteLs`, `promoteE`, `promoteVG` are
+`@[refines]` with no `sorry` (axioms `propext`, `Classical.choice`, `Quot.sound`). All promotion
+L code is in `Promote.lean` (374 L lines, incl. `promote_ci` and its arms, `erase_installed`,
+`index_promoted`, `promote_new`, with `#guard` runs in `PromoteTest.lean`); ≈ 6.0k proof lines in
+16 files.
+* **`internPersistent` as a flag bracket**: `pi_X` saves `CTL[1]`, clears it, calls the ordinary
+  `intern_*`/`mk_*`, restores it. `ArenaR` reads `CTL[1]` only in each table's flag clause, so the
+  transient state is related; twin side, `internPersistentX v = internX v` at cleared flags (the
+  four stores' flags agree, the children persistent). One interner per kind, no copies.
+* The four `PMemo` maps are memos on arrays 146‥149 (`PNM`, `PLM`, `PLSM`, `PEM`), `CTL` 140‥147,
+  epoch-cleared per declaration; `PMemoR` is the real relation, and `LoopR` carries
+  `pmemo : ∃ pm, PMemoR m pm`. `stepA`/`stepC` exclude them (the step's texts still check).
+* Records are written after their parts (`promote_vg`, `promote_cv`), so later writes sit above
+  every part and the decodings survive (`ErecGrow`/`ArrExt`). `pci_defn`/`pci_ind`/`pci_rec` still
+  allocate first: restructure before proving `promote_ci`.
+* Findings: a word loaded inside a call argument (`call f(A.u64[i])`) makes `finish` fail; load it
+  into a local first. `decide` times out on membership in long write-set lists; `simp` with the
+  ids unfolded works. L copies an inductive's `sortZ` name handles (as the twin does) instead of
+  promoting them: whether they still decode after the drop is the consumers' question.
+* `PromoteProg.lean` 17 s user (lookups over 140 entries), the rest ≤ 8 s.
+
+Census at landing 4: phase 2 **136 proven, 11 sorry, 93 written, 91 todo**; proven Rust lines
+745 of 6512 (was 370 at the lane's start); totals 526 proven of 1352.
+
 ### `sorry`s (lane `decls2`)
 
 * `DeclCvg.lean` `lvlEqCStage_spec`: `lvl_eq_c` under `StageR`. Lane `whnf`'s `lvlEqC_refines`
@@ -5620,6 +5684,8 @@ Translated in full, 109 L functions, 90 tagged `@[l_impl]` (no proofs yet):
 * `DeclStepGo.lean` `checkDecl_loop`: `check_decl` at the loop's relation (the arms' proofs;
   for kind `6` also the front's `DeclAt` for inductive records and lane `induct`'s
   `check_ind_decl`).
+* `Checker.lean` `promoteNew_spec`: `promote_new` (L code written; `promote_ci`'s arms, the erase
+  and re-index loops need specs).
 
 Census (`--no-build`, this lane before landing 2, against master's last `docs/progress.md`): phase 2
 **130 proven, 8 sorry, 82 written, 111 todo** (was 130 / 5 / 5 / 191); Rust lines with L code
@@ -5688,6 +5754,38 @@ links 0 (`@[l_impl]` moved off the ROM readers, which are functions of the ROM, 
   with `dite_eq_left`/`dite_eq_right`. Same statement.
 - **Before/after.** `decE` 6 s → under 0.1 s; module 38 s (contended) → 2.3 s.
 
+### `keyAtG2_spec` (`ConAgua/Scan/Key.lean:678`): short-circuit chains multiply the paths (`L/PureEval.lean`)
+
+- **Cause.** `step` evaluates `if c then S else T` by `evalC c`, and `evalC (.and p q)` is
+  `if (← evalC p) then evalC q else return false`: `vcgen` follows `T` once per exit of the chain.
+  `keyAtG2`'s `kl == 9` arm is four 8-byte `&&` chains in a row (`if A₁ {return}; …; return 0`), so
+  the last tail is reached on ~9⁴ paths. `vcgen` took 26 s uncontended (47.6 s in the build).
+- **Fix.** `L/PureEval.lean`: `Expr.pval`/`Cond.pval`, the value of an expression/condition in a
+  state with reads past the end as `0`, and `evalE_spec`/`evalC_spec`
+  (`⦃s = s₀⦄ evalC c ⦃b s' => s' = s₀ ∧ b = Cond.pval s₀ c; ⊤⦄`, by induction; a throwing run meets
+  `⊤`). With them in `vcgen`'s list instead of `evalE`/`evalC`, each `if` is one split. The VCs then
+  hold `Cond.pval` of concrete conditions; `finish` unfolds them one E-matching generation per level
+  and fails even at `gen := 32`, so the proof is `vcgen`; `simp only [Cond.pval, Expr.pval, …] at *`;
+  `grind (splits := 40)` (recipe in the module doc). Same statement.
+- **Before/after.** File prefix through `keyAtG2_spec`, uncontended: 54 s → 15 s; `keyAtG2_spec`'s
+  `vcgen` 26 s → 1.4 s, largest `grind` 7.8 s; module 100 s (contended) → 17 s (Lake).
+- The same cause is behind `Scan.Line` (`lineLoop_spec`, `||` chains over the key code).
+
+### `Scan.Line` (117 s): not fixed, diagnosis
+
+- Nearly all of it is `lineLoop_spec` (108 s uncontended): `vcgen` takes 1 s and leaves 89 goals;
+  `finish` on them takes the rest (~1.2 s each, part of it shown as `sym`'s own time). With the
+  `finish`es replaced by `sorry` the theorem takes under 2 s.
+- `L.evalC_spec` does not help here: the `||` chains over the key code `k` become disjunctive
+  hypotheses, and `finish` then needs more case splits than the separate paths cost (85 s with 5
+  goals failing at the default split limit; 139 s with `splits := 24`, one goal 55 s). With
+  `[grind norm]` on the `pval` equations `finish` sees the unfolded conditions, so the remaining
+  cost is the splitting itself.
+- What should work: the PLAN recipe, one named block per arm group of the dispatch (the six
+  `else if k == …` groups), each with its own spec, so that each goal sees one arm's callee posts
+  instead of all of them. That changes the L code's shape (not its behaviour), so it is left to the
+  owner of `Scan/Line.lean`.
+
 ### `Scan/Records.lean` split (2270 lines)
 
 Pure move, as in `Front/FieldsDecl*`: `Records.lean` keeps the L code and the models (1357
@@ -5704,6 +5802,189 @@ import `RecordsSpec`.
 * `infer_const` passes the record's own name `EREC[p + 1]` to `const_ty_at` (the twin keys
   `constTyC` by `cv.name`; `EnvR` does not promise `cv.name = n`). Lane `whnf`: the same gap at
   `WhnfIota.lean`'s `const_ty_at(cj, …)` call.
+
+### Landing 3: the defeq leaves (`DefEqLeaves.lean`, `DefEqLeaves2.lean`, helper `defeq-leaves`)
+* `@[refines]`, no `sorry`: `is_bool_true`, `head_is_proj`, `io_neutral`, `is_eager_reduce`,
+  `is_nat_zero`, `head_hint` (`decHintR`), `unfoldable_head`, `same_const_heads`, `nat_pred`
+  (`decOptR`; the `nat_pred_lit` arm interns: `CoreK` = `CoreS` + stack kept, `internLit_core`);
+  `hint_lt` = `hintLtW`, equal to `ReducibilityHint.lt` of the decoded hints; `refines_part`:
+  `er_slice_eq` (`decide (l1 = l2)` on decoded `EREC` slices), `lit_eq` (`l₁ == l₂`).
+* ~1940 proof lines for ~180 L lines (10.5 per L line). CPU: `DefEqLeaves` 150 s (`same_const_heads`
+  alone ~2 min: several node reads in one function slow `grind`; four specs raise
+  `maxHeartbeats`, commented), `DefEqLeaves2` 17 s. Own grind attribute `defeq_grind`
+  (`DefEqGrindAttr.lean`).
+* Copies of `WhnfCoreApp.lean`'s `cpl`/`keeps_cpl_internNodeE`/`CoreS.arena_frame` live in
+  `DefEqLeaves2` (`cplL`, …) from when that file did not build; replace by an import.
+* Lesson: a word model reads memory after a callee returns, where the L code reads it (`callW_spec`
+  says nothing about memory kept), else `finish` fails.
+
+## Phase 8 proofs, round 3 (2026-10-22, lane `indproofs2`)
+
+Continues lane `indproofs` (above): the shared pieces its "Next" list named, the two helper-introduced
+`sorry`s, then the parents, with three helpers (`front`: the frontend's inductive lines and their
+hook; `rec`: `RecClass`/`RecGen`/`RecCheck`; `pos`: `IndPos`/`IndPos2`).
+
+### Landing 1
+* **The stubs' write set** (`IndStubs.lean`, `stubM_memoFrame`): every stub (and the two master
+  callees still stubbed, `lvl_eq`, `intern_nanon`) leaves the stage's per-call memos (arrays
+  201‥208, `CTL[202‥219]`) alone and keeps every array's size. One stub-contract statement
+  (`sorry` like `stubM_spec`, for the owning lanes) instead of helper `memo`'s per-use
+  `stubHbFrame`, which is now a corollary; with it a memo relation (`maMR`, `hbMR`, …) is carried
+  across any stub call, so a parent can discharge its callees' memo well-formedness (helper `pos`'s
+  request; memo relations relate memory to a twin map that is not in `AState`, so they cannot live
+  in `StageR`).
+* **`bvar_b` is real** (`IndSumSpec5.lean`, `bvbW_stage`): lane `exprops4`'s `bvarBL` under the stage
+  relation (its model `bvbW` refines `bvarB` at every twin fuel `F + 1 ≥ n`, writes only `BMEMO`
+  and `CTL[24]`, `CTL[25]`, keeps the twin's store, caches and pins). The `hb` walks' model calls
+  `bvbW`, their specs take `BvbProg p`; `bvar_b` moved from `stubFns` to `masterFns`. Helper
+  `memo`'s `bvarBCwf_spec` (`sorry`) is gone. Census: **`hasLooseBVarBGo`, `hasLooseBVarBFast`
+  proven** (were `sorry`). `stubHbFrame` remains for `strip_pis` (a stub). `IndStubs`' `bvarB_spec`
+  (`RelAM` for the stub) still serves `RecGenSpec2`/`RecCheckSpec2`, to be switched.
+* **The generic decoder-stability lemma** (`IndDecStab.lean`): `OMono f` (a reader is monotone under
+  pool extension; one line per decoder from the combinators `OMono.bind`/`mapM`/`decAt`/`decPL`
+  and the readers, by a `repeat' (first | apply … )` over the do-block), `truncM m` (both pools cut
+  at their tops), `DecB f m x := f (truncM m) = some x`, and `DecB.stab : ∀ m', IWGrow m m' →
+  f m' = some x` — exactly lane `indproofs`' `hstab` hypotheses — plus `DecB.grow`, `DecB.get`.
+  `DecB` facts come from bounds: `decHL_decB`, `decNL_decB`, `decRL_decB` (every stub slice post),
+  `iwN/iwH/iwB_truncM` for record words below the top. Every decoder of `IndIface.lean` has its
+  `_mono`; the per-decoder `_grow` lemmas are instances (`decHL_grow'`).
+* **Tried and dropped: the core's invariants inside `StageR`.** A real core callee (`lvl_eq_c`,
+  later `whnf`, `is_def_eq_core`) runs under `CoreS`, which adds to `CheckR` the full pins, the
+  readback caches holding readbacks (`ReadLCOK`, `ReadLsCOK`), `NStoreWF` and two capacities. A
+  `StageX` conjunct in `StageR` was carried through the stage cheaply (level interns: `LsExt` by
+  `EStore.internLevel_ext`; expression interns keep `lss`; IW/EREC writers by frame; 13 call sites
+  patched), but the declaration loop's relation `LoopR` (lane `decls2`'s `DeclBase.lean`) must then
+  carry it too, and `enterScratch` (`Checker.lean`'s `enter_loop`) keeps `ReadLCOK` only if the
+  level stores are well formed (`LsWF`: a cached scratch handle survives `enableScratch` only when
+  the scratch tier was empty) — not provable from `CheckR`. So `StageX` needs `LsWF` (and its
+  preservation by every intern, con-ron's `*_wf` lemmas) in both `StageR` and `LoopR`: a joint
+  step with lanes `decls2`/`whnf`, not done; `lvl_eq` and `lvl_eq_c` stay stubs (lane `decls2`'s
+  `lvlEqCStage_spec` has the same gap). The patch is kept out of the tree (no dead code).
+* Census (`--no-build --list`, this branch on master `1ffa2b1`): phase 8 **60 proven, 36 sorry,
+  119 written, 8 todo** (lane start 58 / 38 / 119 / 8).
+
+### Landing 4: the inference bodies (helper `defeq-infer`); a request to lane `whnf`
+* `inferBody_refines`, `inferBodyIO_refines`: `InferBodySpec p n`/`InferIOBodySpec p n` are
+  theorems from `KnotUpTo p n` and `InferCallees` (callee hypotheses); with `KnotSlot.lean` they give
+  the slot steps `inferSlot_step`/`inferIOSlot_step`. Files `InferBody{Intern,Let,Spine,SpineF,Bind,
+  BindPi,Disp}.lean` (~4.4k lines, 28 s CPU in all). Left in `InferCallees`: the stubs (`Inst1OK`,
+  `InstListOK`, `Abstract1OK`, `AbstractRangeOK`, `ConstTyAtOK`, `InferLitCallees`), `IsEagerReduceH`
+  (now proved in `DefEqLeaves`: to be plugged in), **`InferProjOK`** (`lvl_eq_c` on the table's
+  `structSort` needs a readback of it: an `EnvR` invariant "every level a stored table names has a
+  `denoteL`" is missing), and **`BStkCallees`/`BStkCap`**.
+* **Request to lane `whnf` (owner of `CoreS`/`StackKept`):** the binder stack (array 145, top
+  `CTL[137]`) must be (1) bounded in `CoreS` (a field `bstk : (m.arr64 145).size < 2 ^ 63`, like
+  `spn`) and (2) kept by every core run (`StackKept` gains "`CTL[137]` and `BSTK` below it unchanged").
+  Every core function already keeps it (only `infer_lams`/`infer_pis` write it, and restore the
+  top); the change touches ~15 constructions of `CoreS`/`StackKept` in the whnf files. Until then
+  the two facts are hypotheses here.
+* L changes: depth-capacity aborts (`d + 1 == 0` in the io binder clauses, `d ≥ 2^63` in
+  `infer_lam`/`infer_forall`: the word depth must not wrap where the twin's `Nat` does not); the
+  spines abort when `CTL[136]` is past `SPN`'s end.
+## The pin data as an input (2026-10-22, lane `romload`)
+
+**Decision (user, via the coordinator):** the `Nat`-operation pin variants (con-leche's
+`NatOpPinSet`s) are **an input of the checker, like the export file**: the harness loads a
+pin-data buffer into byte array `1` (`PB`), L decodes it at run time, and the final theorem holds
+at whatever pin list the bytes decode to; bytes that do not decode make `check` abort (decline).
+This replaces lane `decls2`'s "decoder-side ROM loader" and avoids its kernel evaluation of the
+data (≥ 6 h per variant): the kernel never sees the pin data at all, and the program `p` does not
+depend on it.
+
+### Does it compose with the final theorem? (checked)
+
+* `TwinAccepts [b]` already quantifies the pin list (`∃ pins …, internAllPins pins sD = .ok …`),
+  and con-leche's soundness holds at every list: `Model.checkDeclsPure_sound_of` needs only
+  `μ.isVerified = true` (`vendor/con-leche/ConLeche/Model/Fold.lean:221`); the model never reads a
+  pin or a proof blob, the certificate *statements* are hand-pinned in con-leche's checker and
+  shared by every variant (`NatOpPinSet.lean`'s module doc). `twinAccepts_model`/`no_False` take
+  the pins from `TwinAccepts` and pass them through unchanged.
+* **Shape change** (`ConAgua/Final/Statement.lean`): `loadMem b pb s8 s64` puts `pb` in byte array
+  `1`; `PipelineRefines p` quantifies `∀ pb` (with `pb.size < 2^63`), and the three theorems take
+  `pb` and `hpb`. Nothing else changes: `TwinAccepts [b]` is about the input only. The obligation
+  for the pipeline proof is that `check`'s pin stage, run on `pb`, refines `internAllPins P` for
+  the list `P` it decoded (`∃ P` in the stage's post).
+* **What else assumes "the real pins"? Nothing in the theorem.** Places that mention a pin list:
+  (1) the e2e reference `e2e-ref` runs the twin "at the program's pin list" (`romPins = []` so far):
+  it must run at the list the buffer decodes to, i.e. `natOpPinSets.take 1` for the generated
+  buffer (lane `e2e`); (2) ROADMAP §3 (c)'s single-toolchain decision: a buffer may hold several
+  variants; L's "no recovery" (abort where the twin's `orElseAttempt` would try the next variant)
+  stays a completeness loss only; (3) **the prelude is not free in `TwinAccepts`**:
+  `builtinPreludeE` is the twin's fixed function on the twin's fixed prelude bytes, so L's prelude
+  bytes must equal them (a proof obligation of lane `prelude`, not a soundness question; making
+  the prelude an input too would need `TwinAccepts` to quantify the prelude bytes; con-leche's
+  side, `stages_frame`, already holds at any `preC`). Not a soundness subtlety: a pin list only
+  enables a `Nat` operation's literal fast path after the stored definition is defeq to the
+  variant's pin and the variant's certificates check against con-leche's own statements.
+* Trusted base: unchanged in kind. The loader now also loads the pin-data file into byte array
+  `1` (`hmem`'s layout); its contents are untrusted (any `pb`), and so is the generator.
+
+### The buffer (`ConAgua/Rom/PinStream.lean`, `ConAgua/Rom/Gen.lean`)
+
+`pinBuffer pins = romData ++ encPinSets pins`: the startup data the twin interns *exactly*
+(`romData`, `Prelude.lean`: pin names, basis blocks, axiom shapes; 9 542 bytes), then the variant
+count and per variant the eight pins (`encExprM []` each: fresh memo, as `internExpr`) and the eight
+certificate lists (length, then the expressions at one memo, as `internExprList`).
+`lake exe romgen OUT` writes it for `natOpPinSets.take 1` (con-leche's repository-toolchain variant):
+**500 540 bytes** (490 998 of pin data), **1.1 s** natively. Expression literals: tag `3` is now a
+`natVal` below `2^64` (the pins use `0`, `1`, `2`); a string literal is tag `11` (no reader).
+
+Why the startup data is in the buffer too: one reader family. `check` first compares
+`PB[0 ‥ |romData|)` with its own copy (`romData`, the program's constant data) and aborts on a
+difference; after that every reader reads `PB`. The readers' proofs stay the ROM proofs: a
+**substitution lemma** (a program that never stores to byte array `PB` runs exactly as the program
+with every `ld8 PB i` replaced by `ldc bs i`, `bs` the buffer) turns the real program into one whose
+readers are literally `romName bs`, `romExpr bs`, … (`rom := bs`). The startup part keeps its
+encoder-direction proofs (`bs = romData ++ rest` by the prefix check); the pin part needs the
+decoder direction: "the reader returned ⇒ the bytes are `encExprM seen e ++ rest` for some `e`",
+then the existing specs apply. Two run-time checks make that true for every byte string:
+* names: every string byte below `128` (ASCII, so the bytes are some `String`'s UTF-8);
+* canonical back references: the encoder writes a compound subterm out only when the twin's memo
+  misses; on arbitrary bytes L would re-intern a subterm the twin's memo hits. L keeps the handles
+  of the current memo in a hash set (`RSET`, the memo library's schema) and aborts when an
+  explicitly encoded compound node's handle is already in it; con-ron's `denoteE_inj` turns that
+  into "the twin's memo misses". (A linear scan of `RMEMO` instead would cost ≈ 1.3·10^8 steps per
+  run on this buffer: Σ n²/2 over the memo calls.)
+
+Memory map additions: byte array `1` = `PB`; word array `150` = `RSET` (`CTL[148]`, `CTL[149]`
+its stamp and count); `CTL[150]`, `CTL[151]` the variant list (`EREC` offset, count).
+
+For lane `e2e`: the harness loads the pin-data file into byte array `1` (`_tmp/romload/pins.bin`,
+from `lake exe romgen`), and the program has `nb = 2`.
+
+### Landing 2 (lane `indproofs2`)
+* **`IndSim.lean`: composing relational lemmas.** `Sim mo op a Q` (the model's result `mo` is
+  simulated by the twin run `op` from `a`, `Q` after); `Sim.bindK` composes one callee with the
+  twin's `>>=` through the template's continuation defs (`K none = none`, `K (some (r, m₁)) = body`,
+  both `rfl`), `Sim.bind_twin` a twin-only step (a pin read), `Sim.run` gives the census form
+  (`AM.ok`, the post at `AM.res`/`AM.st`). Plus the blocks every wrapper repeated: `pinZero_stage`
+  (`pin_word(53)` is `zeroLevel`, 9 lines at each of 5 sites before) and `StageR.lt64` (a slice end
+  `≤ iwTop` is `< 2^64` by `IWOK`; most lemmas carry both as hypotheses).
+* **`struct_proj_guards` refines `structProjGuards`** (`IndSumSpec8.lean`, the `Sim` pilot; `sorry`
+  status through `strip_pis` in `structUsedLaterList`). **`cons_sum_ctors` refines
+  `consSumCtors`** (`IndSumSpec9.lean`, sorry-free: `ctor_info_rec` + lane `decls2`'s `env_push`;
+  the constructor list taken as `DecB`, so it stays decoded across the pushes and its constants
+  decode in `erecP`, which `env_push` reads). L changes: `cons_sum_ctors` loop → self-recursion;
+  `ctor_info_rec` aborts unless the copied name word is a handle (`env_push`'s spec needs it).
+  `env_push` enters the model as `callW p n "env_push"` (its spec has a precondition, which
+  `vcgen` cannot discharge — the known gap), turned into `envPushW` in the relational lemma by
+  `triple_of_callW`, as lane `decls2` does.
+* **Proof cost, measured.** The pilots: `structProjGuards` 7 L lines / 212 proof lines,
+  `consSumCtors` + `ctor_info_rec` 20 / 328 — still ~20–30 per L line on wrappers. Where the lines
+  go: (1) **program-lookup hypotheses**, 15–20 lines per section, repeated in the spec section
+  and the census section of every file (a bundle `structure XProg (p) : Prop` per module, as lanes
+  `exprops4`/`decls2` have — `BvbProg`, `RecProg`, `CvgProg` — would make them one line; not
+  retrofitted, every existing statement would change); (2) **record writes**: decoding a freshly
+  written `EREC`/`IW` record is ~80 lines per record kind (`ciRec_stage`, `cvNew_stage`), mostly
+  index arithmetic on `wrER`/`set64` reads (a generic "`wrER` at the top decodes as the decoder of
+  the word list" would remove it; `decCV_shift` is a start); (3) **the twin side of each callee**,
+  `cases h : callee … | none | some` plus rewriting the twin bind — what `Sim.bindK` removes (the
+  pilot's relational lemma is 45 lines for 4 callees, against ~15 per callee before); (4) the
+  `vcgen` spec is cheap (5–10 lines) and was never the problem. The generic decoder lemma
+  (landing 1) replaces the per-decoder `_grow` lemmas and `hstab` hypotheses at no cost per use.
+* Census (this branch on master `9c9e5b6`+): phase 8 **61 proven, 37 sorry, 117 written, 8 todo**.
+* Note for lane `whnf`: `scripts/provenance.py check` reports 9 uncited FunDecls in
+  `WhnfDelta.lean` (master).
 
 ## End-to-end runs (2026-10-22, lane `e2e`)
 

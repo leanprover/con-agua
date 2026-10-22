@@ -31,10 +31,12 @@ namespace L.Arena
 open L.Front (DECL DLP)
 
 /-- The arrays a step may write: all but the pending checks and the declaration records. -/
-def stepA : List ArrId := (List.range 256).filter fun b => b ≠ PEND ∧ b ≠ DECL ∧ b ≠ DLP
+def stepA : List ArrId :=
+  (List.range 256).filter fun b => b ≠ PEND ∧ b ≠ DECL ∧ b ≠ DLP ∧ (b < 146 ∨ 149 < b)
 
 /-- The `CTL` words a step may write: all but the pending checks' count. -/
-def stepC : List Word := ((List.range 1024).filter (· ≠ 130)).map UInt64.ofNat
+def stepC : List Word :=
+  ((List.range 1024).filter fun x => x ≠ 130 ∧ (x < 140 ∨ 147 < x)).map UInt64.ofNat
 
 /-- `check_value_group`'s text: this lane's functions, lane `induct`'s library and stubs, and the
 real master callees it reaches. -/

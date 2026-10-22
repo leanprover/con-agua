@@ -260,7 +260,7 @@
 {
 "lane": "decls2",
 "model": "opus",
-"status": "running",
+"status": "done",
 "focus": "Phase 2: install_step_go, check_value_group, checkDecl arms, promotion; ROM pin variants"
 },
 {
@@ -284,7 +284,7 @@
 {
 "lane": "perf1",
 "model": "opus",
-"status": "running",
+"status": "done",
 "focus": "Slow declarations (grind, Prog.wf checks); split Scan/Records"
 },
 {
@@ -298,5 +298,17 @@
 "model": "opus",
 "status": "running",
 "focus": "Assemble the whole L checker; differential runs on con-leche/con-ron fixtures"
+},
+{
+"lane": "romload",
+"model": "opus",
+"status": "running",
+"focus": "Pin variant without kernel evaluation: untrusted ROM + verified decoder"
+},
+{
+"lane": "decls3",
+"model": "opus",
+"status": "running",
+"focus": "Phase 2 proofs: checkDecl arms, promotion, remaining sorries"
 }
 ]

@@ -55,17 +55,20 @@ globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.A
   "ConAgua.Arena.RecGenSpec2", "ConAgua.Arena.RecCheckSpec2", "ConAgua.Arena.IndPartsSpec2", "ConAgua.Arena.IndPartsSpec3", "ConAgua.Arena.IndPartsSpec4", "ConAgua.Arena.IndPartsSpec5", "ConAgua.Arena.IndPartsSpec6", "ConAgua.Arena.IndSumSpec2", "ConAgua.Arena.IndMaster", "ConAgua.Arena.IndSumSpec3", "ConAgua.Arena.IndSumSpec4", "ConAgua.Arena.IndSumSpec6", "ConAgua.Arena.IndSumSpec2A", "ConAgua.Arena.IndPos2SpecA", "ConAgua.Arena.IndPos2SpecB", "ConAgua.Arena.IndPos2SpecC", "ConAgua.Arena.IndPos2SpecD", "ConAgua.Arena.RecClassSpecA", "ConAgua.Arena.RecClassSpecB", "ConAgua.Arena.IndAll", "ConAgua.Arena.IndSumSpec5", "ConAgua.Arena.IndSumSpec7", "ConAgua.Arena.IndInstallSpec2", "ConAgua.Arena.IndInstallSpec3", "ConAgua.Arena.IndInstallSpec4",
   "ConAgua.Arena.IndPos", "ConAgua.Arena.IndPosSpec", "ConAgua.Arena.IndPos2", "ConAgua.Arena.IndPos2Spec", "ConAgua.Arena.RecClass", "ConAgua.Arena.RecClassSpec",
   "ConAgua.Arena.RecGen", "ConAgua.Arena.RecGenSpec", "ConAgua.Arena.RecCheck", "ConAgua.Arena.RecCheckSpec", "ConAgua.Arena.IndProg", "ConAgua.Arena.IndCopy2",
-  "ConAgua.Arena.WhnfSpineRefine", "ConAgua.Arena.WhnfSpineArgs", "ConAgua.Arena.WhnfCoreRefine", "ConAgua.Arena.WhnfCoreStep", "ConAgua.Arena.WhnfCoreLoop", "ConAgua.Arena.WhnfCoreApp", "ConAgua.Arena.WhnfCoreAppLoop", "ConAgua.Arena.WhnfCoreProj", "ConAgua.Arena.WhnfDelta", "ConAgua.Arena.WhnfDeltaSlot", "ConAgua.Arena.WhnfEntry",
-  "ConAgua.Arena.DefEq", "ConAgua.Arena.Infer", "ConAgua.Arena.Knot", "ConAgua.Arena.KnotWF", "ConAgua.Arena.KnotSlot", "ConAgua.Arena.InferLeaves",
+  "ConAgua.Arena.WhnfSpineRefine", "ConAgua.Arena.WhnfSpineArgs", "ConAgua.Arena.WhnfCoreRefine", "ConAgua.Arena.WhnfCoreStep", "ConAgua.Arena.WhnfCoreLoop", "ConAgua.Arena.WhnfCoreApp", "ConAgua.Arena.WhnfCoreAppLoop", "ConAgua.Arena.WhnfCoreProj", "ConAgua.Arena.WhnfDelta", "ConAgua.Arena.WhnfDeltaSlot", "ConAgua.Arena.WhnfDeltaRefine", "ConAgua.Arena.WhnfDeltaRefine2", "ConAgua.Arena.WhnfDeltaRefine3", "ConAgua.Arena.WhnfDeltaRefine4", "ConAgua.Arena.WhnfEntry",
+  "ConAgua.Arena.DefEq", "ConAgua.Arena.Infer", "ConAgua.Arena.Knot", "ConAgua.Arena.KnotWF", "ConAgua.Arena.KnotSlot", "ConAgua.Arena.InferLeaves", "ConAgua.Arena.DefEqGrindAttr", "ConAgua.Arena.DefEqLeaves", "ConAgua.Arena.DefEqLeaves2",
+  "ConAgua.Arena.InferBodyIntern", "ConAgua.Arena.InferBodyLet", "ConAgua.Arena.InferBodySpine", "ConAgua.Arena.InferBodySpineF", "ConAgua.Arena.InferBodyBind", "ConAgua.Arena.InferBodyBindPi", "ConAgua.Arena.InferBodyDisp",
   "ConAgua.Arena.Walk", "ConAgua.Arena.WalkRefine", "ConAgua.Arena.WalkBench", "ConAgua.Arena.WalkEmit",
   "ConAgua.Arena.WalkBenchLean",
   "ConAgua.Capstone", "ConAgua.Compiler.WFAll", "ConAgua.Compiler.WFAllBench",
   "ConAgua.Final.Twin", "ConAgua.Final.Statement",
   "ConAgua.Arena.DeclBase", "ConAgua.Arena.DeclAndPin", "ConAgua.Arena.RomLevel", "ConAgua.Arena.RomLevels", "ConAgua.Arena.DeclStep", "ConAgua.Arena.DeclHeader", "ConAgua.Arena.RomExpr", "ConAgua.Arena.RomExprRef", "ConAgua.Arena.RomItems", "ConAgua.Arena.RomCI", "ConAgua.Arena.Prelude",
+  "ConAgua.Arena.Promote", "ConAgua.Arena.PromoteProg", "ConAgua.Arena.PromoteMemo", "ConAgua.Arena.PromoteTest", "ConAgua.Arena.PromoteTwin", "ConAgua.Arena.PromoteFlag", "ConAgua.Arena.PromotePi", "ConAgua.Arena.PromotePiE", "ConAgua.Arena.PromoteN", "ConAgua.Arena.PromoteNRef", "ConAgua.Arena.PromoteL", "ConAgua.Arena.PromoteLRef", "ConAgua.Arena.PromoteLsRef", "ConAgua.Arena.PromoteE", "ConAgua.Arena.PromoteERef", "ConAgua.Arena.PromoteRec", "ConAgua.Arena.PromoteRecRef",
   "ConAgua.Front.Fields", "ConAgua.Front.FieldsLink",
   "ConAgua.Front.Apply", "ConAgua.Front.StateDR", "ConAgua.Front.Line", "ConAgua.Front.LineRefine",
   "ConAgua.E2E.Ser", "ConAgua.E2E.Dump", "ConAgua.E2E.Trace", "ConAgua.E2E.Check",
-  "ConAgua.Front.ExprIface", "ConAgua.Front.Preserve", "ConAgua.Front.Driver", "ConAgua.Front.DriverRefine", "ConAgua.Front.DeclIface", "ConAgua.Front.FrontRun", "ConAgua.Front.NatDec", "ConAgua.Front.NatDecLink", "ConAgua.Front.Unescape", "ConAgua.Front.UnescapeLink", "ConAgua.Front.ApplyExpr", "ConAgua.Front.ApplyExprRefine", "ConAgua.Front.FieldsExpr", "ConAgua.Front.FieldsExprLink", "ConAgua.Front.ApplyDecl", "ConAgua.Front.ApplyDeclRefine", "ConAgua.Front.FieldsDecl", "ConAgua.Front.FieldsDeclSpec", "ConAgua.Front.FieldsDeclLink", "ConAgua.Front.IndFields", "ConAgua.Front.IndApply"]
+  "ConAgua.Front.ExprIface", "ConAgua.Front.Preserve", "ConAgua.Front.Driver", "ConAgua.Front.DriverRefine", "ConAgua.Front.DeclIface", "ConAgua.Front.FrontRun", "ConAgua.Front.NatDec", "ConAgua.Front.NatDecLink", "ConAgua.Front.Unescape", "ConAgua.Front.UnescapeLink", "ConAgua.Front.ApplyExpr", "ConAgua.Front.ApplyExprRefine", "ConAgua.Front.FieldsExpr", "ConAgua.Front.FieldsExprLink", "ConAgua.Front.ApplyDecl", "ConAgua.Front.ApplyDeclRefine", "ConAgua.Front.FieldsDecl", "ConAgua.Front.FieldsDeclSpec", "ConAgua.Front.FieldsDeclLink", "ConAgua.Front.IndFields", "ConAgua.Front.IndApply",
+  "ConAgua.Rom.PinStream"]
 
 # Vendored from con-leche and con-ron (proof/ dir) at the revisions in vendor/UPSTREAM, plus the
 # patch series vendor/patches/ (scripts/bump-con-ron.sh; vendor/README.md).
@@ -156,3 +159,8 @@ root = "ConAgua.E2E.Ref"
 [[lean_exe]]
 name = "e2e-l"
 root = "ConAgua.E2E.Main"
+
+# Lane `romload`: the pin-data buffer generator (`ConAgua/Rom/Gen.lean`), `romgen OUT`.
+[[lean_exe]]
+name = "romgen"
+root = "ConAgua.Rom.Gen"
