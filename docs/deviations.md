@@ -35,6 +35,8 @@ refinements, the L code's comments, `docs/e2e.md`). Fixed rows move to the end.
 | D18 | `Checker/Prelude.lean` `hoist_ok` (`prepare_prelude`) | `hoistNatOpGround` reorders the stream when a pinned `Nat` operation precedes its ground | checks that the hoist is the identity and aborts otherwise (`e2e/natop_order`, `natop_before_ble`) | completeness | integrate | `hoistClosure` + `applyHoist` in L (a stable sort of record indices by `hoistKey`) |
 | D19 | `Rom/CIRead.lean` (the ROM constant readers) | `internCI` keeps a `sortZ` name as a value | interns it (only `Quot`'s `u`, already interned as a level parameter) | none | integrate | – |
 | D20 | `Checker/Entry.lean` adapters `abstract1_fast`, `instantiate1_fast`, `inst1` | the walks take `coreWalkFuel` | the fuel argument is dropped; lane exprops4's walks count their own | none (the twin's fuel is never exhausted below `2^62`; ROADMAP §3(b)) | integrate | – |
+| D21 | `Arena/WhnfProj.lean` `proj_table_name` | `projTableName` interns `str T "projTable"`: no allocation when the name exists | writes the nine bytes of `"projTable"` at the pool top and raises the top before `intern_nstr` (whose refinement needs the slice below the top), on every call (`find_proj`) | performance (memory: nine pool words per projection-table lookup; the pool is append-only, D10) | whnf3 | keep one persistent `"projTable"` slice (a `CTL` word holding its offset, an invariant of `CoreS`), or roll the top back when the node existed |
+| D22 | `Arena/WhnfProj.lean` `proj_table_name` | interns the prefix `T` without a check | aborts unless `T` is a name handle of the store (tag, tier, index below its count) | none (the twin's store is well formed: every name it holds is valid) | – | – |
 
 ## Fixed
 

@@ -20,7 +20,7 @@ prefix without a check, but its store is well formed (`NStoreWF`), so every name
 valid; the check gives L the twin's `NStore.ViewOK` for the new `str` node. Then it puts the nine bytes of `"projTable"` at the pool top and raises the top before
 `intern_nstr` (whose refinement needs the slice below the top, `SliceOK`), as the `Nat` arms put
 their constant limbs (`nat_pred_lit`, `nat_succ_lit`). The twin's string interning allocates
-nothing when the name exists; L leaves nine pool words per call (docs/deviations.md, D18).
+nothing when the name exists; L leaves nine pool words per call (docs/deviations.md, D21).
 
 `fire_ok` is `inferProj`'s propositional-structure test (`Infer.lean`'s `infer_proj`) with the
 answer inverted: the twin reads `lvlEq? structSort zeroLevel` and, at `some true` only, the
@@ -38,7 +38,7 @@ set_option experimental.vcgen true
 namespace L.Arena
 
 /-- `proj_table_name(t)`: the reserved name `num (str t "projTable") 0`. -/
--- con-ron: ConRon/Arena/Env.lean:197-199 ConRon.Arena.projTableName
+-- con-ron: ConRon/Arena/Env.lean:195-199 ConRon.Arena.projTableName
 @[l_impl ConRon.Arena.projTableName]
 def projTableNameL : FunDecl := lfn (t) locals (o, s, g, k) {
   if 4294967295 < t { abort };
