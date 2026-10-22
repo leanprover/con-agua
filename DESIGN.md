@@ -7355,3 +7355,40 @@ grows (the memo library's capacity rule, as every L memo). Refinement: not yet (
   stops on an import clash between `PropReadW` and `PromoteCI` (`L.Arena.armK.eq_1`, not this
   lane's). `checkerProg_wf` holds.
 * Census: phase 8 **72 proven, 79 sorry, 64 written, 8 todo**; totals 670 proven / 124 sorry of 1352.
+
+### Landing 3: the helpers' walks and the projection lookups (helpers `whnf3-walks`, `whnf3-proj`)
+* **`wscoped_bfast`, `leaf_guard`** (helper `whnf3-walks`; `WalkScope`, `WalkLeaves`,
+  `WalkScopeRefine`, `WalkLeavesRefine`, `WalkCore`, 2.4k lines): `wscopedBGo`+arms,
+  `wscopedBFast`, `fvarLeavesGo`+arms, `fvarLeavesFast`, `leafMem`, `leavesSubGo`+arms,
+  `leafGuard` refined sorry-free, exact `coreWalkFuel` counters; `WscopedBFastOK`/`LeafGuardOK`
+  proved under `CoreS` (`wscoped_core`, `leafGuard_core`, from `WsProg`/`LgProg`). The walk-local
+  maps are epoch-cleared memo-library tables: arrays 151 (`wscopedB`, key `(h, d)`), 152
+  (`fvarLeaves`' `seen`), 153 (`leavesSub`), stamp/count `CTL` 152‥157; the leaf list is array 154
+  (`LVS`, newest first, `LeafR`). `CoreMemos` carries their well-formedness (`WalkMemos`), so
+  `CoreMemos.frame`/`frame_hi`, `CoreS.frame` and `arena_frame` gained avoidance auto-params;
+  `CoreS.frameSM`/`frameS`/`frameM`/`frame` (memos given / derived; spine stack written / kept).
+  `finish (instances := 5000) (gen := 12)` was needed on the memo-miss paths.
+* L code only (refinements open): `instantiate1_lift_fast` + arms (`WalkLift.lean`, memo
+  `inst1LC` = array 51, `CTL` 52/53), `inst_pis_at_lift`, `fvar_type_d`, `fvar_type_ds`
+  (`TeleLift.lean`, lane induct's conventions). The `instantiate1Lift` proof will need an exact
+  counter in lane exprops' `lift_entry` and array 51's memo well-formedness in `CoreS`/`StageR`.
+* **`proj_table_name`, `find_proj`, `fire_ok`** (L by this lane, proofs helper `whnf3-proj`;
+  `WhnfProj.lean`, `WhnfProjRefine{,2,3}.lean`, ~1200 proof lines): `projTableName`,
+  `IFEnv.findProj?`, `IProjEntry.fireOk` refined. `CoreS.of_name` carries `CoreS` across name
+  interning (twin step `NameStep`, `NStoreWF` from con-ron's `NStore.intern_spec`, the `ViewOK`
+  from L's validity check of `t`: D22); the nine pool bytes are a `Grows` (D21);
+  `FindProjOK`, `ProjFound` and the `find_proj` half of `ErecKept` proved. `fire_ok`: on master
+  `FieldSortZeroOK` (lane defeq2) now asks for the readbacks, so `fireOk_refines` proves
+  `FireOkOKD` (`FireOkOK` with `us` reading back) from two named hypotheses, `ProjSortDen`
+  (structure sort, zero level) and `FireDen` (name cache, level parameters, guards); both follow
+  from lane defeq2's `StoreDen` once `CoreS` carries it, and `FireOkOKD`'s `us` from
+  `StoreDen.constLs` at the callers.
+* Clashes fixed for `scripts/checker_prog.py`: `PropReadW`'s `armK` → `propArmK` (vs
+  `PromoteCI`), `WhnfProjRefine2`'s `projA` → `projWA` (vs `Promote`). `Checker/Prog.lean`
+  regenerated: 13 stubs; `coreFns` regenerated (498 functions).
+* Not in this landing: helper `whnf3-lp`'s `instLP` family (branch `whnf3-lp`, on `whnf3-next`):
+  its `lv_lookup`/`lv_spw` bindings (keys on the spine stack, `lvLookupG SPN POOL`,
+  `lvSpwG EREC`) clash with lane defeq2's (`lvLookupG EREC POOL`, `lvSpwG LH`): one name, two
+  bodies. To be unified on defeq2's convention first.
+* Census at landing 3: phase 4 **81 proven / 0 sorry / 11 written / 21 todo** (lane start 65 / 0 /
+  0 / 48); phase 5 80 / 19 / 20 / 23 (start 79 / 19 / 20 / 24).
