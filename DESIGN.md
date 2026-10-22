@@ -6515,6 +6515,11 @@ Merge master and adapt new uses:
   `instEntry_refines`/`absEntry_refines`.
 * **The inductive line hook**: lane indproofs2 landed it in `Line.lean` (with its proofs) while
   this lane worked; the checker takes `L.Front.applyDLine`, and e2e's patch is gone.
+* **`rom_expr_pin(id)`** (landing 2): lane decls' stub `rom_expr(id)` (the reduce pins,
+  `DeclArms.lean`'s two calls, `DeclRomStubs.romExpr_spec`, `DeclReduceSpec`, `romStubs`) had
+  the same name and arity as romload's ROM expression reader `rom_expr(pos)`, so the assembled
+  checker silently called the reader at position 0/1. Renamed; the generator cannot see such a
+  clash (stubs are not bindings), so a stub's name must not be an existing function's.
 * **New rule: one name, one body, project-wide.** `scripts/checker_prog.py` fails if two non-stub
   bindings of a name (any `Prog` constant, any `p.lookup "f" = some d` in a type) differ, or a
   call's argument count differs from the callee's; it also needs every module importable together.
@@ -6562,3 +6567,18 @@ Merge master and adapt new uses:
   `$CON_RON` overrides), run as `con-ron --jobs=1 --pins P` with `P` the same single pin variant
   in its `con-ron-pins/1` format (written by `ConRon.Dump.dumpPins`, now built as a root of
   `ConRonArena`); and `instructions:u` of compiled `check` vs con-ron on fixtures both accept.
+
+### Landing 2: the ROM constant records (helper `integrate-romci`)
+
+`ConAgua/Rom/CIEnc.lean` (encoder), `CIRead.lean` (L readers), `CIReadTest.lean`: the con-leche
+constants the `checkDecl` arms intern at the point of use (the basis blocks in both forms, the
+eight `rom_ci` constants, the ten `rom_cv` values, the two reduce pins) are a structured region of
+`romData` (`ciOff`, between the reserved names and the item stream: a table of 30 offsets, then
+the entries; numbers as 8 bytes, names/levels/expressions with romload's encoders, each part in the
+twin's intern order). `rom_basis_decls(kind)`, `rom_basis_decls_a(kind)`, `rom_ci(id)`,
+`rom_cv(id)`, `rom_expr_pin(id)` read it from `PB` (after `pb_check`) and write `decCI`/`decCV`
+records (`L.Rom.romCIProg`). `romData` grows from 9542 to 20649 bytes (regenerate `romgen`
+buffers). Test: an `#eval` (3 s) decodes every entry to the twin's value, handle for handle. The
+five `RelAM` specs of `DeclRomStubs.lean` stay `sorry` (now about real code). Small difference:
+the reader interns the `sortZ` names the twin keeps as values (only `Quot`'s `u`, already
+interned as a level parameter).
