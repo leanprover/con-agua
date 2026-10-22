@@ -841,7 +841,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     go.run {}
   let calledBy := bodies.map (·.2)
   let bodies := bodies.map (·.1)
-  if st.dups > 0 then
+  if st.dups > 0 && doTrace then
     logInfo m!"l_model: {st.dups} join point(s) duplicated the code after them"
   -- render
   let wordT ← `(L.Word)
@@ -1027,6 +1027,7 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let tac ← parseTac s!"induction n with\n  | zero =>{refineTxt}{zero}\n  | succ n ih => {succTxt}"
   emit doTrace (← withHB (← `(command|
     $[$doc?:docComment]? theorem $specName:ident $bs* $nB:bracketedBinder : $stmt := by $(⟨tac⟩):tactic)))
-  logInfo m!"l_model: {fis.size} model(s), {st.ks.size} continuation(s), {nEqns} guarded equation(s)"
+  if doTrace then
+    logInfo m!"l_model: {fis.size} model(s), {st.ks.size} continuation(s), {nEqns} guarded equation(s)"
 
 end L.ModelGen
