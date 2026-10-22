@@ -262,7 +262,8 @@ theorem lbbFast_refines (p : Prog) (hp : BvbProg p) (n : Nat) (s₀ : St)
     invoke p (exec p (n + 1)) "loose_bvars_bounded_fast" [f, k, h]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (looseBVarsBoundedFast f.toNat k.toNat (decE h)) a₀ ∧
       ArenaD s'.mem (AM.st (looseBVarsBoundedFast f.toNat k.toNat (decE h)) a₀) ∧
-      AM.res (looseBVarsBoundedFast f.toNat k.toNat (decE h)) a₀ = (r.headD 0 != 0); ⊤⦄ := by
+      AM.res (looseBVarsBoundedFast f.toNat k.toNat (decE h)) a₀ = (r.headD 0 != 0) ∧
+      r.headD 0 ≤ 1; ⊤⦄ := by
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun (lbbFastL_spec p hp n s₀ f k h)
@@ -278,7 +279,7 @@ theorem lbbFast_refines (p : Prog) (hp : BvbProg p) (n : Nat) (s₀ : St)
         .ok (decide (x.toNat ≤ k.toNat), a') := by
       simp only [looseBVarsBoundedFast, StateT.run_bind, ha']; rfl
     obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
-    refine ⟨hloc, hok, hst ▸ hA', ?_⟩
+    refine ⟨hloc, hok, hst ▸ hA', ?_, by rw [← hr]; split <;> decide⟩
     rw [hres, ← hr]
     by_cases hx : x ≤ k
     · simp [hx, UInt64.le_iff_toNat_le.mp hx]

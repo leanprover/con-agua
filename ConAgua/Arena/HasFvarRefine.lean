@@ -15,6 +15,17 @@ open scoped Lean.Order
 
 namespace L.Arena
 
+/-- `hfK`'s result is a Boolean word. -/
+theorem hfK_le (o : Option (Word × Mem)) (r : Word) (m' : Mem) (hb : hfK o = some (r, m')) :
+    r ≤ 1 := by
+  cases o with
+  | none => cases hb
+  | some p =>
+    obtain ⟨x, m₁⟩ := p
+    rw [hfK_some] at hb
+    obtain ⟨rfl, -⟩ := Prod.mk.inj (Option.some.inj hb)
+    split <;> decide
+
 theorem hfK_ok (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaA m a)
     (e f r : Word) (he : e.toNat < 2 ^ 32) (hb : hfK (fvbW n m e f) = some (r, m')) :
     ∃ a', (hasFvarFast f.toNat (decE e)).run a = .ok (r != 0, a') ∧ ArenaA m' a' := by
@@ -42,14 +53,15 @@ theorem hasFvarFast_refines (p : Prog) (hp : AbsProg p)
     invoke p (exec p (n + 1)) "has_fvar_fast" [f, e]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (hasFvarFast f.toNat (decE e)) a₀ ∧
       ArenaA s'.mem (AM.st (hasFvarFast f.toNat (decE e)) a₀) ∧
-      AM.res (hasFvarFast f.toNat (decE e)) a₀ = (r.headD 0 != 0); ⊤⦄ := by
+      AM.res (hasFvarFast f.toNat (decE e)) a₀ = (r.headD 0 != 0) ∧
+      r.headD 0 ≤ 1; ⊤⦄ := by
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun (hasFvarFastL_spec p hp hpf n s₀ f e)
   subst hs
   obtain ⟨a', ha', hA'⟩ := hfK_ok n _ _ a₀ hA e f _ he hI
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ ha'
-  exact ⟨hloc, hok, hst ▸ hA', hres⟩
+  exact ⟨hloc, hok, hst ▸ hA', hres, hfK_le _ _ _ hI⟩
 
 /-- **`has_fvar(e)` refines `hasFvarFast coreWalkFuel e`** (the stub interface `HasFvarOK`'s fuel),
 at every L fuel. -/
@@ -61,7 +73,8 @@ theorem hasFvar_refines (p : Prog) (hp : AbsProg p) (hpf : p.lookup "has_fvar" =
     invoke p (exec p (n + 1)) "has_fvar" [e]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (hasFvarFast coreWalkFuel (decE e)) a₀ ∧
       ArenaA s'.mem (AM.st (hasFvarFast coreWalkFuel (decE e)) a₀) ∧
-      AM.res (hasFvarFast coreWalkFuel (decE e)) a₀ = (r.headD 0 != 0); ⊤⦄ := by
+      AM.res (hasFvarFast coreWalkFuel (decE e)) a₀ = (r.headD 0 != 0) ∧
+      r.headD 0 ≤ 1; ⊤⦄ := by
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun (hasFvarL_spec p hp hpf n s₀ e)
@@ -69,6 +82,6 @@ theorem hasFvar_refines (p : Prog) (hp : AbsProg p) (hpf : p.lookup "has_fvar" =
   obtain ⟨a', ha', hA'⟩ := hfK_ok n _ _ a₀ hA e 4000000000 _ he hI
   rw [coreWalkFuel_toNat] at ha'
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ ha'
-  exact ⟨hloc, hok, hst ▸ hA', hres⟩
+  exact ⟨hloc, hok, hst ▸ hA', hres, hfK_le _ _ _ hI⟩
 
 end L.Arena

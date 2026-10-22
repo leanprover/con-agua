@@ -434,10 +434,25 @@ theorem instFast_run (F : Nat) (e v : EIdx) (d : Nat) (a : AState) :
   simp only [instantiate1Fast, StateT.run_bind, inst1Clear_run, except_ok_bind]
   cases (instantiate1Go v F e d).run (withIC a ∅) <;> rfl
 
+/-- The entries' 32-bit mask keeps the handle (`WhnfDeltaRefine3.lean`'s `decE_mask32`). -/
+theorem decE_and32 (y : Word) : decE (y &&& 4294967295) = decE y := by
+  have h : (y &&& 4294967295).toUInt32 = y.toUInt32 := by
+    apply UInt32.toNat_inj.mp
+    simp only [UInt64.toNat_toUInt32, UInt64.toNat_and]
+    rw [show (4294967295 : UInt64).toNat = 2 ^ 32 - 1 from rfl, Nat.and_two_pow_sub_one_eq_mod,
+      Nat.mod_mod]
+  simp only [decE, h]
+
+/-- The masked word is below `2^32` (`WhnfDeltaRefine3.lean`'s `hw_mask32`). -/
+theorem and32_lt (y : Word) : (y &&& 4294967295).toNat < 2 ^ 32 := by
+  rw [UInt64.toNat_and, show (4294967295 : UInt64).toNat = 2 ^ 32 - 1 from rfl,
+    Nat.and_two_pow_sub_one_eq_mod]
+  exact Nat.mod_lt _ (by decide)
+
 theorem instEntryW_correct (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaD m a)
     (e v d r : Word) (he : e.toNat < 2 ^ 32) (hb : instEntryW n m e v d = some (r, m')) :
     ∃ a', (instantiate1Fast coreWalkFuel (decE e) (decE v) d.toNat).run a = .ok (decE r, a') ∧
-      ArenaD m' a' := by
+      ArenaD m' a' ∧ r.toNat < 2 ^ 32 := by
   simp only [instEntryW] at hb
   by_cases h0 : rdW (m.arr64 CTL) 44 + 2 = 0
   · simp [h0] at hb
@@ -453,7 +468,8 @@ theorem instEntryW_correct (n : Nat) (m m' : Mem) (a : AState) (hA : ArenaD m a)
     obtain ⟨rfl, rfl⟩ := hb
     obtain ⟨a₁, ha₁, hA₁⟩ := (instOK n).1 _ _ _ e d v 4000000000 r₁ hA₀ he hw
     rw [coreWalkFuel_toNat] at ha₁
-    exact ⟨_, by rw [instFast_run, ha₁]; rfl, ArenaD.imemo_clear m₁ a₁ hA₁ h1⟩
+    exact ⟨_, by rw [instFast_run, ha₁, decE_and32]; rfl, ArenaD.imemo_clear m₁ a₁ hA₁ h1,
+      and32_lt r₁⟩
 
 /-- **`inst_entry` refines the arena's `instantiate1Fast coreWalkFuel` under `ArenaD`**, at every
 L fuel (the walk's counter starts at `coreWalkFuel`). -/
@@ -465,21 +481,22 @@ theorem instEntry_refines (p : Prog) (hp : InstProg p) (hpe : p.lookup "inst_ent
     invoke p (exec p (n + 1)) "inst_entry" [e, v, d]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (instantiate1Fast coreWalkFuel (decE e) (decE v) d.toNat) a₀ ∧
       ArenaD s'.mem (AM.st (instantiate1Fast coreWalkFuel (decE e) (decE v) d.toNat) a₀) ∧
-      AM.res (instantiate1Fast coreWalkFuel (decE e) (decE v) d.toNat) a₀ = decE (r.headD 0); ⊤⦄ := by
+      AM.res (instantiate1Fast coreWalkFuel (decE e) (decE v) d.toNat) a₀ = decE (r.headD 0) ∧
+      (r.headD 0).toNat < 2 ^ 32; ⊤⦄ := by
   apply M.triple_of_run
   intro s r s' hs hrun
   obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun (instEntry_spec p hp hpe n s₀ e v d)
   subst hs
-  obtain ⟨a', ha', hA'⟩ := instEntryW_correct n _ _ a₀ hA e v d _ he hI
+  obtain ⟨a', ha', hA', hlt⟩ := instEntryW_correct n _ _ a₀ hA e v d _ he hI
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ ha'
-  exact ⟨hloc, hok, hst ▸ hA', hres⟩
+  exact ⟨hloc, hok, hst ▸ hA', hres, hlt⟩
 
 /-- From an L run of `inst_entry` in `instProg` to the arena run of `instantiate1Fast coreWalkFuel`. -/
 theorem instEntry_run (fuel : Nat) (m : Mem) (a₀ : AState) (hA : ArenaD m a₀)
     (e v d : Word) (he : e.toNat < 2 ^ 32) (r : List Word) (m' : Mem)
     (hrun : run instProg fuel "inst_entry" [e, v, d] m = .ok (r, m')) :
     ∃ a', (instantiate1Fast coreWalkFuel (decE e) (decE v) d.toNat).run a₀ = .ok (decE (r.headD 0), a') ∧
-      ArenaD m' a' := by
+      ArenaD m' a' ∧ (r.headD 0).toNat < 2 ^ 32 := by
   cases fuel with
   | zero =>
     have : (invoke instProg (exec instProg 0) "inst_entry" [e, v, d]).run
@@ -496,7 +513,7 @@ theorem instEntry_run (fuel : Nat) (m : Mem) (a₀ : AState) (hA : ArenaD m a₀
       obtain ⟨rfl, rfl⟩ := Prod.mk.inj hrun
       have := M.of_run (P := fun s => s = { mem := m, loc := Locals.init [] }) rfl hr
         (instEntry_refines instProg instProg_ok rfl n _ a₀ hA e v d he)
-      obtain ⟨-, hok, hA', hres⟩ := this
-      exact ⟨_, by rw [AM.run_of_ok _ _ hok, hres], hA'⟩
+      obtain ⟨-, hok, hA', hres, hlt⟩ := this
+      exact ⟨_, by rw [AM.run_of_ok _ _ hok, hres], hA', hlt⟩
 
 end L.Arena

@@ -123,12 +123,12 @@ The walk's depth counter starts at `coreWalkFuel` (`4000000000`, ROADMAP §3 (b)
 
 /-- **The model of `ar_entry`.** -/
 def arEntryW (n : Nat) (m : Mem) (e d k c : Word) : Option (Word × Mem) :=
-  if k = 0 then some (e, m)
+  if k = 0 then some (e &&& 4294967295, m)
   else if rdW (m.arr64 CTL) 48 + 2 = 0 then none
   else aclrK (arW n (mclearG abSch m) e c d k 4000000000)
 
 theorem arEntryW_zero (n : Nat) (m : Mem) (e d k c : Word) (hk : k = 0) :
-    arEntryW n m e d k c = some (e, m) := by simp [arEntryW, hk]
+    arEntryW n m e d k c = some (e &&& 4294967295, m) := by simp [arEntryW, hk]
 
 theorem arEntryW_eq (n : Nat) (m : Mem) (e d k c : Word) (hk : k ≠ 0)
     (h0 : rdW (m.arr64 CTL) 48 + 2 ≠ 0) :
@@ -141,11 +141,11 @@ grind_pattern [arena_grind] arEntryW_eq => arEntryW n m e d k c
 /-- con-ron: ConRon/Arena/ExprOps.lean:1874-1885 ConRon.Arena.abstractRangeFast -/
 @[l_impl ConRon.Arena.abstractRangeFast]
 def arEntry : FunDecl := lfn (e, d, k, c) locals (r, u) {
-  if k == 0 { return e };
+  if k == 0 { return e & 4294967295 };
   u := call ab_clear();
   r := call ar_go(e, c, d, k, 4000000000);
   u := call ab_clear();
-  return r
+  return r & 4294967295
 }
 
 theorem arEntry_spec (p : Prog) (hp : ArProg p) (he : p.lookup "ar_entry" = some arEntry)
