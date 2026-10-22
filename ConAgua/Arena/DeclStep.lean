@@ -255,7 +255,8 @@ def installStepGoL : FunDecl := lfn (i, vis) locals (k, x, c, v, p, z, g) {
 
 /-- `check_value_group(vis, g)`: `checkValueGroup` on the value group record `g`: the type's
 sort, for a theorem the proposition test and the value's guards, the value's type against the
-declared one. -/
+declared one. The level comparison is lane `whnf`'s cached `lvl_eq_c` (`lvlEq?` consults and fills
+`lvlEqC`; `0` none, `1` false, `2` true). -/
 -- con-ron: ConRon/Arena/CheckerSplit.lean:95-112 ConRon.Arena.checkValueGroup
 @[l_impl ConRon.Arena.checkValueGroup]
 def checkValueGroupL : FunDecl := lfn (vis, g) locals (z, t, v, st, u, zr, e, vt, d) {
@@ -266,8 +267,8 @@ def checkValueGroupL : FunDecl := lfn (vis, g) locals (z, t, v, st, u, zr, e, vt
   u := call ensure_sort_core(vis, 0, st);
   if EREC.u64[g] == 1 {
     zr := call pin_word(53);
-    e := call lvl_eq_fueled(u, zr);
-    if e == 0 { abort };
+    e := call lvl_eq_c(u, zr);
+    if e != 2 { abort };
     z := call install_value_guards(vis, g + 1, v)
   };
   vt := call infer_type_core(vis, 0, v);
@@ -287,7 +288,7 @@ def declStepFns : Prog :=
    ("install_step_go", installStepGoL), ("check_value_group", checkValueGroupL)]
 
 /-- Stubs of this module's callees not written yet. -/
-def declStepStubs : Prog := [("check_decl_const", L.Ind.stub 2)]
+def declStepStubs : Prog := [("check_decl_const", L.Ind.stub 2), ("lvl_eq_c", L.Ind.stub 2)]
 
 /-- The step's program: this module, lane `induct`'s stage (with its stubs), the stubs. -/
 def declStepProg : Prog := declStepFns ++ declStepStubs ++ L.Ind.indProg
