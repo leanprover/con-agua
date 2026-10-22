@@ -6328,3 +6328,21 @@ Census at landing 2 (`--no-build`): phase 2 **142 proven, 19 sorry, 80 written, 
   `refines_part`); a spec of `rom_pin_sets()` against `PinSetsR` (the consumers' lane will want
   it: `er_to_iw` of the record list); the e2e program does not bind the `PB` readers yet
   (lane `e2e`, see landing 2).
+
+
+### Landing 5: helper `rec` done
+* Helper `rec` (5.5 h): 12 whole `@[refines]` — `targetMajorAt`, `blockNestedBit`,
+  `targetMajorPins`, `targetOutsideInst`, `classReadMinor`, `classNPcOf`, `classReadSlot(s)`,
+  `classRead`, `classConstOk`, `classRuleOk`, `classFormerTy` (most through stubs:
+  `inst_lp_fast`, `mk_app_n_f`, `infer_type_core`, `open_pis_at_fvars_f`, `fvar_type_d`). Own
+  helpers `RecSim.lean` (`RSim`), `RecStab.lean` (`RecsDec`, from which `classRead` derives its
+  callee's `hstab`). **Bugs** (L): `class_read` computed `IW[rc0+1] - nP` unguarded (wraps when
+  `rP < nP`; the twin's `Nat` subtraction truncates) — now truncated in `class_read_n_slots`;
+  `class_read_slots` the same on `d - np` (`class_read_slots_snoc`). Handle guards after
+  `intern_fvar`, `intern_bvar`, `intern_const`. ~5.3k proof lines for ~300 L lines.
+* Open in Rec*: `classFieldsOf`, `ClassGen.*`, `classGenRecTy/Rule`, `classRecTy(s)Ok`,
+  `classRulesOk`, `classRecsRulesOk`, `classFeR`, `targetAbs(Go)` (helper `rec2`, running);
+  `auxRuleFire` needs a `view_ls` word model; `targetParamsDefEq`, `targetClassMatch`,
+  `targetCtorsOf`, `targetRecPins`, `targetK53`, `class*Agree`, `classCtor(s)Of`, `classMajors`,
+  `classSeeds`, `checkBlockClasses`, `genRecCheck` wait on other lanes' callees.
+* Census: phase 8 **67 proven, 62 sorry, 86 written, 8 todo**.
