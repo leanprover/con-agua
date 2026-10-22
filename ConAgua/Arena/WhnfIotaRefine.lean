@@ -517,4 +517,52 @@ theorem isCtorApp_refines' (p : Prog) (hp : IotaProg' p) :
     · simp only [decBool]; rw [← hr]; rfl
     · unfold ResH HW; rw [← hr]; decide
 
+/-! ## The relation across a memo write (`ct`, `rr`, `cv`: the constant caches)
+
+A `find; put` into one of the constant caches writes its array (`96 ≤ arr < 128`) and its count
+word `CTL[cs + 1]`; every other relation is framed, the memo's own is `memoRV_set`. -/
+
+theorem CoreS.setMemo {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} (S : MemoSch) (c : Caches)
+    (hS : CoreS dn m a vis fe M eb) (hf : MemFrame [S.arr] [S.cs + 1] m m')
+    (h1 : 96 ≤ S.arr) (h2 : S.arr < 128) (h3 : (96 : Nat) ≤ S.cs.toNat) (h4 : S.cs.toNat + 1 < 128)
+    (hc : CoreRM m' c M eb) (hL : c.readLC = a.caches.readLC) (hLs : c.readLsC = a.caches.readLsC) :
+    CoreS dn m' { a with caches := c } vis fe M eb ∧ StackKept m m' := by
+  obtain ⟨ar, har⟩ : ∃ ar : Nat, ar = S.arr := ⟨_, rfl⟩
+  have n1 : 96 ≤ ar := by rw [har]; exact h1
+  have n2 : ar < 128 := by rw [har]; exact h2
+  have aA : ∀ lo hi : Nat, hi ≤ 96 ∨ 128 ≤ lo → AvoidA lo hi [S.arr] := fun lo hi h b hb => by
+    simp only [List.mem_singleton] at hb; subst hb; rw [← har]; simp only [ArrId]; omega
+  have aC : ∀ lo hi : Nat, hi ≤ 96 ∨ 128 ≤ lo → AvoidC lo hi [S.cs + 1] := fun lo hi h x hx => by
+    simp only [List.mem_singleton] at hx; subst hx
+    have : (S.cs + 1).toNat = S.cs.toNat + 1 := by
+      rw [UInt64.toNat_add]; simp; omega
+    omega
+  have hspn : m'.arr64 SPN = m.arr64 SPN :=
+    hf.1 SPN (fun h => by simp at h; simp only [SPN] at h; rw [← har] at h; rw [← h] at n2; exact absurd n2 (by decide)) (by decide)
+  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 :=
+    hf.2.1 136 (fun h => by
+      simp at h
+      have : (S.cs + 1).toNat = S.cs.toNat + 1 := by
+        rw [UInt64.toNat_add]; simp; omega
+      have h' := congrArg UInt64.toNat h
+      simp at h'; omega)
+  refine ⟨⟨⟨?_, ?_⟩, hc, ?_, ?_, ?_, ?_, hS.nwf, ?_, ?_⟩, ?_⟩
+  · exact (ArenaR.frame_ext [S.arr] [S.cs + 1] (fun b hb => by simp at hb; subst hb; rw [← har]; exact Nat.le_trans (by decide : 64 ≤ 96) n1)
+      (fun x hx => by
+        simp at hx; subst hx
+        have : (S.cs + 1).toNat = S.cs.toNat + 1 := by
+          rw [UInt64.toNat_add]; simp; omega
+        omega) m m' hf a hS.arena.1).caches_irrel c
+  · have := DerR.frameM [S.arr] [S.cs + 1] m m' hf (fun b hb => by simp at hb; subst hb; rw [← har]; exact Or.inr (Nat.lt_of_lt_of_le (by decide : 46 < 96) n1)) a hS.arena.2
+    exact DerR.of_store _ _ _ this rfl
+  · exact hS.pins.congr (hf.1 PINS (fun h => by simp at h; simp only [PINS] at h; rw [← har] at h; rw [← h] at n2; exact absurd n2 (by decide))
+      (by decide))
+  · exact hS.env.frame (aA 132 144 (Or.inr (by omega))) (aC 128 136 (Or.inr (by omega))) hf
+  · intro h l e; exact hS.readL h l (by simpa [hL] using e)
+  · intro h l e; exact hS.readLs h l (by simpa [hLs] using e)
+  · exact hf.2.2.1 EREC ▸ hS.erec
+  · exact hf.2.2.1 SPN ▸ hS.spn
+  · refine ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
+
 end L.Arena
