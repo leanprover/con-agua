@@ -36,7 +36,7 @@ TOUCH = re.compile(r"\((?:l8|s8) 0 |\(n8 0\)|\((?:l64|s64) (?:6[4-6]|7[2-4]) |\(
 ENTRY = "check"
 # modules never imported: the benchmarks (they clash with `NatBits` on `L.Arena.bv`), the generated
 # file itself and what imports it
-SKIP = re.compile(r"^ConAgua\.(Arena\.(LiftBench|Inst1Bench|WalkBench)\w*|Compiler\.WFAllBench|Checker\.(Prog|Wf)|E2E\.Check)$")
+SKIP = re.compile(r"^ConAgua\.(Arena\.(LiftBench|Inst1Bench|WalkBench)\w*|Compiler\.WFAllBench|Checker\.(Prog|Wf|CoreErec)|E2E\.Check)$")
 
 
 def assemble(dumps):

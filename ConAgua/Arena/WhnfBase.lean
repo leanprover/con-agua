@@ -84,22 +84,145 @@ structure SpineR (m : Mem) (off cnt : Word) (xs : Array EIdx) : Prop where
   lt : ∀ i : Nat, i < cnt.toNat → (spW m (off + i.toUInt64)).toNat < 2 ^ 32
   get : ∀ (i : Nat) (h : i < xs.size), xs[i] = decE (spW m (off + i.toUInt64))
 
-/-- The stack below the top is unchanged, and so is the top. -/
-def StackKept (m m' : Mem) : Prop :=
-  spTop m' = spTop m ∧ (m'.arr64 SPN).size = (m.arr64 SPN).size ∧
-    ∀ i : Word, i < spTop m → spW m' i = spW m i
+/-! ### The binder stack and the limb pool across a core run
 
-/-- The stack below the old top is unchanged; the top may have grown (a returned slice). -/
-def StackGrew (m m' : Mem) : Prop :=
-  spTop m ≤ spTop m' ∧ (m'.arr64 SPN).size = (m.arr64 SPN).size ∧
-    ∀ i : Word, i < spTop m → spW m' i = spW m i
+Every core run also keeps lane `defeq`'s binder stack (`BSTK`, array 145, top `CTL[137]`: only the
+telescopes `infer_lams`/`infer_pis` push onto it, and they put the top back) and only appends to
+the limb pool (`POOL` below the old top `CTL[0]` unchanged, the top no lower, the size the same:
+the `Nat` arithmetic and the interning of literals, level lists and string names write above the
+top). Both are fields of `StackKept`/`StackGrew`, so `CoreAfter` carries them (lane `whnf3`). -/
 
-theorem StackKept.refl (m : Mem) : StackKept m m := ⟨rfl, rfl, fun _ _ => rfl⟩
+/-- The binder stack (lane `defeq`'s, `Infer.lean`). -/
+abbrev BSTK : ArrId := 145
+
+/-- The binder stack's top. -/
+def bTop (m : Mem) : Word := rdW (m.arr64 CTL) 137
+
+/-- The binder stack below its top is kept, and so is the top. -/
+def BKept (m m' : Mem) : Prop :=
+  bTop m' = bTop m ∧ (m'.arr64 BSTK).size = (m.arr64 BSTK).size ∧
+    ∀ j : Word, j < bTop m → rdW (m'.arr64 BSTK) j = rdW (m.arr64 BSTK) j
+
+theorem BKept.refl (m : Mem) : BKept m m := ⟨rfl, rfl, fun _ _ => rfl⟩
+
+theorem BKept.trans {m₁ m₂ m₃ : Mem} (h₁ : BKept m₁ m₂) (h₂ : BKept m₂ m₃) : BKept m₁ m₃ :=
+  ⟨h₂.1.trans h₁.1, h₂.2.1.trans h₁.2.1, fun j hj => (h₂.2.2 j (h₁.1 ▸ hj)).trans (h₁.2.2 j hj)⟩
+
+theorem BKept.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
+    (hA : BSTK ∉ A) (hC : (137 : Word) ∉ C) : BKept m m' := by
+  have hb : m'.arr64 BSTK = m.arr64 BSTK := hf.1 BSTK hA (by decide)
+  exact ⟨hf.2.1 137 hC, by rw [hb], fun j _ => by rw [hb]⟩
+
+/-- **The limb pool only grew**: below the old top unchanged, the top no lower, the size the same. -/
+structure PoolGrew (m m' : Mem) : Prop where
+  top : m.top.toNat ≤ m'.top.toNat
+  size : (m'.arr64 POOL).size = (m.arr64 POOL).size
+  below : Agree (m'.arr64 POOL) (m.arr64 POOL) m.top.toNat
+
+theorem PoolGrew.refl (m : Mem) : PoolGrew m m := ⟨Nat.le_refl _, rfl, Agree.refl _ _⟩
+
+theorem PoolGrew.trans {m₁ m₂ m₃ : Mem} (h₁ : PoolGrew m₁ m₂) (h₂ : PoolGrew m₂ m₃) :
+    PoolGrew m₁ m₃ :=
+  ⟨Nat.le_trans h₁.top h₂.top, h₂.size.trans h₁.size,
+    fun j hj => (h₂.below j (Nat.lt_of_lt_of_le hj h₁.top)).trans (h₁.below j hj)⟩
+
+theorem PoolGrew.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
+    (hA : POOL ∉ A) (hC : (0 : Word) ∉ C) : PoolGrew m m' := by
+  have hp : m'.arr64 POOL = m.arr64 POOL := hf.1 POOL hA (by decide)
+  have ht : m'.top = m.top := by
+    have := hf.2.1 0 hC
+    simp only [rdW] at this
+    simpa [Mem.top] using this
+  exact ⟨by rw [ht]; exact Nat.le_refl _, by rw [hp], fun j _ => by rw [hp]⟩
+
+theorem PoolGrew.of_grows {m m' : Mem} (h : Grows m m') : PoolGrew m m' :=
+  ⟨h.2.2.1, h.2.2.2.2, h.2.1⟩
+
+/-- The stack below the top is unchanged, and so is the top; the binder stack is kept and the
+limb pool only grew. -/
+structure StackKept (m m' : Mem) : Prop where
+  top : spTop m' = spTop m
+  size : (m'.arr64 SPN).size = (m.arr64 SPN).size
+  below : ∀ i : Word, i < spTop m → spW m' i = spW m i
+  bstk : BKept m m'
+  pool : PoolGrew m m'
+
+/-- The stack below the old top is unchanged; the top may have grown (a returned slice). The
+binder stack is kept and the limb pool only grew. -/
+structure StackGrew (m m' : Mem) : Prop where
+  top : spTop m ≤ spTop m'
+  size : (m'.arr64 SPN).size = (m.arr64 SPN).size
+  below : ∀ i : Word, i < spTop m → spW m' i = spW m i
+  bstk : BKept m m'
+  pool : PoolGrew m m'
+
+theorem StackKept.refl (m : Mem) : StackKept m m :=
+  ⟨rfl, rfl, fun _ _ => rfl, BKept.refl m, PoolGrew.refl m⟩
 
 theorem StackKept.trans {m₁ m₂ m₃ : Mem} (h₁ : StackKept m₁ m₂) (h₂ : StackKept m₂ m₃) :
     StackKept m₁ m₃ :=
-  ⟨h₂.1.trans h₁.1, h₂.2.1.trans h₁.2.1,
-    fun i hi => (h₂.2.2 i (h₁.1 ▸ hi)).trans (h₁.2.2 i hi)⟩
+  ⟨h₂.top.trans h₁.top, h₂.size.trans h₁.size,
+    fun i hi => (h₂.below i (h₁.top ▸ hi)).trans (h₁.below i hi), h₁.bstk.trans h₂.bstk,
+    h₁.pool.trans h₂.pool⟩
+
+theorem StackGrew.refl (m : Mem) : StackGrew m m :=
+  ⟨UInt64.le_refl _, rfl, fun _ _ => rfl, BKept.refl m, PoolGrew.refl m⟩
+
+theorem StackGrew.trans {m₁ m₂ m₃ : Mem} (h₁ : StackGrew m₁ m₂) (h₂ : StackGrew m₂ m₃) :
+    StackGrew m₁ m₃ :=
+  ⟨UInt64.le_trans h₁.top h₂.top, h₂.size.trans h₁.size,
+    fun i hi => (h₂.below i (UInt64.lt_of_lt_of_le hi h₁.top)).trans (h₁.below i hi),
+    h₁.bstk.trans h₂.bstk, h₁.pool.trans h₂.pool⟩
+
+theorem StackKept.toGrew {m₁ m₂ : Mem} (h : StackKept m₁ m₂) : StackGrew m₁ m₂ :=
+  ⟨by rw [h.top]; exact UInt64.le_refl _, h.size, h.below, h.bstk, h.pool⟩
+
+/-- **A writer of the spine stack alone** (a slice pushed above the top) grows the stack. -/
+theorem StackGrew.of_spnFrame {m m' : Mem} (hf : MemFrame [SPN] [136] m m') (ht : spTop m ≤ spTop m')
+    (hb : ∀ i : Word, i < spTop m → spW m' i = spW m i) : StackGrew m m' :=
+  ⟨ht, hf.2.2.1 SPN, hb, BKept.of_frame hf (by decide) (by decide),
+    PoolGrew.of_frame hf (by decide) (by decide)⟩
+
+/-- **A writer of the spine stack alone** that puts the top back keeps the stack. -/
+theorem StackKept.of_spnFrame {m m' : Mem} (hf : MemFrame [SPN] [136] m m') (ht : spTop m' = spTop m)
+    (hb : ∀ i : Word, i < spTop m → spW m' i = spW m i) : StackKept m m' :=
+  ⟨ht, hf.2.2.1 SPN, hb, BKept.of_frame hf (by decide) (by decide),
+    PoolGrew.of_frame hf (by decide) (by decide)⟩
+
+/-- **A frame that avoids both stacks and the pool keeps them.** -/
+theorem StackKept.of_frame {m m' : Mem} {A : List ArrId} {C : List Word} (hf : MemFrame A C m m')
+    (hA : SPN ∉ A ∧ BSTK ∉ A ∧ POOL ∉ A := by decide)
+    (hC : (136 : Word) ∉ C ∧ (137 : Word) ∉ C ∧ (0 : Word) ∉ C := by decide) : StackKept m m' := by
+  have hspn : m'.arr64 SPN = m.arr64 SPN := hf.1 SPN hA.1 (by decide)
+  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 hC.1
+  exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn],
+    BKept.of_frame hf hA.2.1 hC.2.1, PoolGrew.of_frame hf hA.2.2 hC.2.2⟩
+
+/-- **A frame inside arrays 1‥143 and `CTL` words 1‥135** keeps the stacks and the pool. -/
+theorem StackKept.of_frame_range {m m' : Mem} {A : List ArrId} {C : List Word}
+    (hf : MemFrame A C m m') (hA : ∀ b ∈ A, 1 ≤ b ∧ b < 144)
+    (hC : ∀ x ∈ C, 1 ≤ x.toNat ∧ x.toNat < 136) : StackKept m m' :=
+  StackKept.of_frame hf
+    ⟨fun h => by have := hA _ h; simp only [SPN, ArrId] at this; omega,
+     fun h => by have := hA _ h; simp only [BSTK, ArrId] at this; omega,
+     fun h => by have := hA _ h; simp only [POOL, ArrId] at this; omega⟩
+    ⟨fun h => by have := hC _ h; simp at this, fun h => by have := hC _ h; simp at this,
+     fun h => by have := hC _ h; simp at this⟩
+
+/-- **Appending to the pool** keeps the stacks. -/
+theorem StackKept.of_grows {m m' : Mem} (hg : Grows m m') : StackKept m m' := by
+  have hgf : MemFrame [POOL] [0] m m' := grows_frame m m' hg
+  have hspn : m'.arr64 SPN = m.arr64 SPN := hgf.1 SPN (by decide) (by decide)
+  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hgf.2.1 136 (by decide)
+  exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn],
+    BKept.of_frame hgf (by decide) (by decide), PoolGrew.of_grows hg⟩
+
+/-- **A frame that avoids both stacks and appends to the pool** (`Grows` on the pool's part). -/
+theorem StackKept.of_frame_grows {m m₁ m' : Mem} {A : List ArrId} {C : List Word}
+    (hg : Grows m m₁) (hf : MemFrame A C m₁ m')
+    (hA : SPN ∉ A ∧ BSTK ∉ A ∧ POOL ∉ A := by decide)
+    (hC : (136 : Word) ∉ C ∧ (137 : Word) ∉ C ∧ (0 : Word) ∉ C := by decide) : StackKept m m' := by
+  exact (StackKept.of_grows hg).trans (StackKept.of_frame hf hA hC)
 
 /-! ## The relation the core runs under -/
 
@@ -181,22 +304,18 @@ structure CoreS (dn : NIdx → Option ConLeche.Name) (m : Mem) (a : AState) (vis
   its offsets do not wrap. -/
   bstk : (m.arr64 145).size < 2 ^ 63
 
-/-- **The relation across a writer outside every tier and the stack**: arrays `≥ 145` (or the
-front's 64‥95), `CTL` words `≥ 137` (or 64‥95): the level heap (`LH`, `CTL[192]`), say. -/
-theorem CoreS.frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
+/-- **The relation across a writer outside every tier and the spine stack**: arrays `≥ 145` (or
+the front's 64‥95), `CTL` words `≥ 137` (or 64‥95): the binder stack, the level heap. -/
+theorem CoreS.frameS {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
     {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List ArrId} {C : List Word}
     (hS : CoreS dn m a vis fe M eb) (hf : MemFrame A C m m')
     (hA : ∀ b ∈ A, 64 ≤ b ∧ (b < 96 ∨ 145 ≤ b)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 137 ≤ x.toNat)) :
-    CoreS dn m' a vis fe M eb ∧ StackKept m m' := by
+    CoreS dn m' a vis fe M eb := by
   have aA : ∀ lo hi : Nat, 96 ≤ lo → hi ≤ 145 → AvoidA lo hi A := fun lo hi h1 h2 b hb => by
     have := hA b hb; simp only [ArrId] at this ⊢; omega
   have aC : ∀ lo hi : Nat, 96 ≤ lo → hi ≤ 137 → AvoidC lo hi C := fun lo hi h1 h2 x hx => by
     have := hC x hx; omega
-  have hspn : m'.arr64 SPN = m.arr64 SPN :=
-    hf.1 SPN (fun h => by have := hA _ h; simp only [SPN, ArrId] at this; omega) (by decide)
-  have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 :=
-    hf.2.1 136 (fun h => by have := hC _ h; simp at this)
-  refine ⟨⟨⟨ArenaR.frame_ext A C (fun b hb => (hA b hb).1) (fun x hx => (hC x hx).1) m m' hf a hS.arena.1,
+  exact ⟨⟨ArenaR.frame_ext A C (fun b hb => (hA b hb).1) (fun x hx => (hC x hx).1) m m' hf a hS.arena.1,
       DerR.frameM A C m m' hf (fun b hb => .inr (by have := (hA b hb).1; simp only [ArrId] at this ⊢; omega))
         a hS.arena.2⟩,
     hS.core.frame (aA 96 128 (by decide) (by decide)) (aC 96 128 (by decide) (by decide)) hf,
@@ -205,8 +324,23 @@ theorem CoreS.frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AStat
     hS.env.frame (aA 132 144 (by decide) (by decide)) (aC 128 136 (by decide) (by decide)) hf,
     hS.readL, hS.readLs, hS.nwf, hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn,
     hS.memos.frame_hi hf (fun b hb => (hA b hb).1) (fun x hx => (hC x hx).1),
-    hf.2.2.1 145 ▸ hS.bstk⟩, ?_⟩
-  refine ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
+    hf.2.2.1 145 ▸ hS.bstk⟩
+
+/-- **The relation across a writer outside every tier and the stacks**: arrays `≥ 146` (or the
+front's 64‥95), `CTL` words `≥ 138` (or 64‥95): the level heap (`LH`, `CTL[192]`), say. The stacks
+and the pool are kept. -/
+theorem CoreS.frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a : AState} {vis : Word}
+    {fe : IFEnv} {M : ModeMaps} {eb : Word} {A : List ArrId} {C : List Word}
+    (hS : CoreS dn m a vis fe M eb) (hf : MemFrame A C m m')
+    (hA : ∀ b ∈ A, 64 ≤ b ∧ (b < 96 ∨ 146 ≤ b)) (hC : ∀ x ∈ C, 64 ≤ x.toNat ∧ (x.toNat < 96 ∨ 138 ≤ x.toNat)) :
+    CoreS dn m' a vis fe M eb ∧ StackKept m m' := by
+  refine ⟨hS.frameS hf (fun b hb => by have := hA b hb; simp only [ArrId] at this ⊢; omega) (fun x hx => by have := hC x hx; omega), ?_⟩
+  exact StackKept.of_frame hf
+    ⟨fun h => by have := hA _ h; simp only [SPN, ArrId] at this; omega,
+     fun h => by have := hA _ h; simp only [BSTK, ArrId] at this; omega,
+     fun h => by have := hA _ h; simp only [POOL, ArrId] at this; omega⟩
+    ⟨fun h => by have := hC _ h; simp at this, fun h => by have := hC _ h; simp at this,
+     fun h => by have := hC _ h; simp at this⟩
 
 /-- **After a core run** from `m₀` at maps `M`, `G`, generation `g`: the relation holds at some
 maps that keep every other generation's bank, and the stack below the top is as it was. -/

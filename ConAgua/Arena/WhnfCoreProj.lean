@@ -445,7 +445,7 @@ theorem StackKept.of_bvar_frame {m m' : Mem} (hf : MemFrame [BREC, BSLOT] [22, 2
   have hspn : m'.arr64 SPN = m.arr64 SPN :=
     hf.1 SPN (by simp [BREC, BSLOT, SPN]) (by decide)
   have h136 : rdW (m'.arr64 CTL) 136 = rdW (m.arr64 CTL) 136 := hf.2.1 136 (by simp)
-  exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
+  exact StackKept.of_frame hf
 
 /-- A slice survives a change that leaves the stack array alone. -/
 theorem SpineR.of_spn_core {m m' : Mem} {off cnt : Word} {xs : Array EIdx} (h : SpineR m off cnt xs)
@@ -688,14 +688,6 @@ theorem rpFire_spec (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St)
 
 /-! ## Runs that leave their pushed slice on the stack -/
 
-theorem StackGrew.trans {m₁ m₂ m₃ : Mem} (h₁ : StackGrew m₁ m₂) (h₂ : StackGrew m₂ m₃) :
-    StackGrew m₁ m₃ :=
-  ⟨UInt64.le_trans h₁.1 h₂.1, h₂.2.1.trans h₁.2.1,
-    fun i hi => (h₂.2.2 i (UInt64.lt_of_lt_of_le hi h₁.1)).trans (h₁.2.2 i hi)⟩
-
-theorem StackKept.toGrew {m₁ m₂ : Mem} (h : StackKept m₁ m₂) : StackGrew m₁ m₂ :=
-  ⟨h.1 ▸ UInt64.le_refl _, h.2.1, h.2.2⟩
-
 /-- **After a core run that left a slice on the stack**: as `CoreAfter`, the stack below the old top
 kept, the top possibly grown. -/
 def CoreAfterG (dn : NIdx → Option ConLeche.Name) (m₀ m : Mem) (a : AState) (vis : Word)
@@ -896,7 +888,7 @@ theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (hc : CoreCallees p) (n 
       rw [htop₁, UInt64.toNat_add, Nat.mod_eq_of_lt (by rw [← ho₁]; omega), ← ho₁]
       exact Nat.le_refl _
     have hspR : SpineR m₃ (r₁.headD 0) (r₁.tail.headD 0) xs.toArray :=
-      hsp₁.keep hSt₃.2.1 hSt₃.2.2 hao hS₁.spn
+      hsp₁.keep hSt₃.size hSt₃.below hao hS₁.spn
     have hjn : (rdW (m₃.arr64 EREC) (q + 5) + i).toNat = tbl.numParams + i.toNat := by
       have hlt := UInt64.lt_iff_toNat_lt.mp hLc.2.1
       have h1 := hsmall.1
@@ -1214,12 +1206,13 @@ theorem reduceProjCore_refines' (p : Prog) (hp : WhnfCoreProg p) (hw : WhnfCalle
         hK₁.trans (hK₂.trans hK₃), ?_⟩
       have t1 : spTop m₁ = spTop s.mem := hSt₁.1
       have t2 : spTop m₂ = spTop m₁ := hSt₂.1
-      apply StackKept.restore _ (by rw [hSt₃.2.1, hSt₂.2.1, hSt₁.2.1]) h136
+      apply StackKept.restore _ (by rw [hSt₃.size, hSt₂.size, hSt₁.size])
+        (hSt₁.bstk.trans (hSt₂.bstk.trans hSt₃.bstk)) (hSt₁.pool.trans (hSt₂.pool.trans hSt₃.pool)) h136
       intro j hj
       have hj2 : j < spTop m₂ := by rw [t2, t1]; exact hj
       have hj1 : j < spTop m₁ := by rw [t1]; exact hj
-      rw [hSt₃.2.2 j hj2]
-      exact (hSt₂.2.2 j hj1).trans (hSt₁.2.2 j hj)
+      rw [hSt₃.below j hj2]
+      exact (hSt₂.below j hj1).trans (hSt₁.below j hj)
     · rw [hres]; unfold decOptR; rw [← hr0, ← hr1]
     · unfold ResW; rw [← hr0, ← hr1]; exact hrw3
   · rw [if_neg h136] at hW; cases hW
