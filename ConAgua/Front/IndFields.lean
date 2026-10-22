@@ -36,8 +36,8 @@ is not what the validator accepted, and on a number of more than 18 digits (`NON
 abort; con-leche reads any length).
 
 The functions: `if_reset()`, `ifr_alloc(n)`, `ifl_alloc(n)`, `ifl_push(x)`, `fld_alloc(kind, n)`,
-`fld_put(kind, p, s, x)`, `ind_size(kind)`, `ind_slot(kind, k)`, `ifl_ids(v)`, `ind_member(kind,
-p, ks, k, v)`, `ind_obj(i, kind, p)`, `ind_list(v, sub)`, `ind_fields(v)`.
+`fld_put(kind, p, s, x)`, `ind_size(kind)`, `ind_slot(kind, k)`, `ifl_ids(v)`, `ind_num`,
+`ind_bool`, `ind_nlist`, `ind_member(kind, p, ks, k, v)`, `ind_obj(i, kind, p)`, `ind_list(v, sub)`, `ind_fields(v)`.
 -/
 
 open L.Arena
@@ -176,12 +176,7 @@ def indSlot : FunDecl := lfn (kind, k) {
 
 /-! ## Values -/
 
-/-- `ifl_ids(v)`: the number list whose `[` is at `v`, its items appended to `IFL`;
-`(off, cnt)`. -/
--- con-leche: ConLeche/Frontend/Scan/Fast.lean:2397-2401 ConLeche.Frontend.scanIndDecl
-def iflIds : FunDecl := lfn (v) locals (i, o, cnt, c, e, x) {
-  o := call ifl_alloc(0);
-  i := v + 1;
+def iflIdsLoop : Stmt := lblk (v, i, o, cnt, c, e, x) {
   while 0 == 0 {
     if len(IN.u8) <= i { return (o, cnt) };
     c := IN.u8[i];
@@ -197,8 +192,54 @@ def iflIds : FunDecl := lfn (v) locals (i, o, cnt, c, e, x) {
     } else {
       i += 1
     }
-  };
+  }
+}
+
+/-- `ifl_ids(v)`: the number list whose `[` is at `v`, its items appended to `IFL`;
+`(off, cnt)`. -/
+-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2397-2401 ConLeche.Frontend.scanIndDecl
+def iflIds : FunDecl := lfn (v) locals (i, o, cnt, c, e, x) {
+  o := call ifl_alloc(0);
+  i := v + 1;
+  ⟪iflIdsLoop⟫;
   return (o, cnt)
+}
+
+/-- `ind_num(kind, p, ks, v, h, s)`: a number value at `v` (key quote at `ks`) into slot `s` of the
+record (`h = 6`: an optional number, its flag at `s`, the number at `s + 1`); the end. -/
+-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2397-2401 ConLeche.Frontend.scanIndDecl
+def indNum : FunDecl := lfn (kind, p, ks, v, h, s) locals (e, x, o) {
+  e := call slot_nat(ks, v);
+  x := call read_nat(v, e);
+  if x == 18446744073709551615 { abort };
+  if h == 6 { o := call fld_put(kind, p, s, 1); s += 1 };
+  o := call fld_put(kind, p, s, x);
+  return e
+}
+
+/-- `ind_bool(kind, p, v, h, s)`: a Boolean value at `v` into slot `s` (`h = 8`: read past);
+the end. -/
+-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2397-2401 ConLeche.Frontend.scanIndDecl
+def indBool : FunDecl := lfn (kind, p, v, h, s) locals (o, x, e) {
+  (o, x, e) := call scan_bool(v);
+  if o == 0 { abort };
+  if h == 2 { o := call fld_put(kind, p, s, x) };
+  return e
+}
+
+/-- `ind_nlist(kind, p, v, h, s)`: a number list at `v`: its position into slot `s` (`h = 3`),
+read past (`h = 4`), or its items appended to `IFL` and the slice into slots `s`, `s + 1`
+(`h = 5`); the end. -/
+-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2397-2401 ConLeche.Frontend.scanIndDecl
+def indNList : FunDecl := lfn (kind, p, v, h, s) locals (e, x, o, c) {
+  (e, x) := call scan_nat_list(v);
+  if h == 3 { o := call fld_put(kind, p, s, v) };
+  if h == 5 {
+    (o, c) := call ifl_ids(v);
+    x := call fld_put(kind, p, s, o);
+    x := call fld_put(kind, p, s + 1, c)
+  };
+  return e
 }
 
 /-- `ind_member(kind, p, ks, k, v)`: the member with key `k` (key quote at `ks`, value at `v`) of
@@ -212,30 +253,9 @@ the record of kind `kind` at `p`, read into it; the end of the value. -/
   ConLeche.Frontend.scanIndRec ConLeche.Frontend.scanRule]
 def indMember : FunDecl := lfn (kind, p, ks, k, v) locals (h, s, sub, e, x, o, c) {
   (h, s, sub) := call ind_slot(kind, k);
-  if h == 1 || h == 6 {
-    e := call slot_nat(ks, v);
-    x := call read_nat(v, e);
-    if x == 18446744073709551615 { abort };
-    if h == 6 { o := call fld_put(kind, p, s, 1); s += 1 };
-    o := call fld_put(kind, p, s, x);
-    return e
-  };
-  if h == 2 || h == 8 {
-    (o, x, e) := call scan_bool(v);
-    if o == 0 { abort };
-    if h == 2 { o := call fld_put(kind, p, s, x) };
-    return e
-  };
-  if h == 3 || h == 4 || h == 5 {
-    (e, x) := call scan_nat_list(v);
-    if h == 3 { o := call fld_put(kind, p, s, v) };
-    if h == 5 {
-      (o, c) := call ifl_ids(v);
-      x := call fld_put(kind, p, s, o);
-      x := call fld_put(kind, p, s + 1, c)
-    };
-    return e
-  };
+  if h == 1 || h == 6 { e := call ind_num(kind, p, ks, v, h, s); return e };
+  if h == 2 || h == 8 { e := call ind_bool(kind, p, v, h, s); return e };
+  if h == 3 || h == 4 || h == 5 { e := call ind_nlist(kind, p, v, h, s); return e };
   if h == 7 {
     (o, c, e) := call ind_list(v, sub);
     x := call fld_put(kind, p, s, o);
@@ -245,12 +265,7 @@ def indMember : FunDecl := lfn (kind, p, ks, k, v) locals (h, s, sub, e, x, o, c
   abort
 }
 
-/-- `ind_obj(i, kind, p)`: the object whose `{` is at `i`, read into the record of kind `kind`
-at `p`; the position after its `}`. -/
--- con-leche: ConLeche/Frontend/Scan/Fast.lean:2397-2401 ConLeche.Frontend.scanIndDecl
-def indObj : FunDecl := lfn (i, kind, p) locals (w, tag, ks, k, v, e) {
-  i += 1;
-  w := 1;
+def indObjLoop : Stmt := lblk (i, kind, p, w, tag, ks, k, v, e) {
   while 0 == 0 {
     (tag, ks, w, k, v) := call next_member(i, w);
     if tag == 0 { abort };
@@ -259,8 +274,35 @@ def indObj : FunDecl := lfn (i, kind, p) locals (w, tag, ks, k, v, e) {
     if e <= ks { abort };
     i := e;
     w := 0
-  };
+  }
+}
+
+/-- `ind_obj(i, kind, p)`: the object whose `{` is at `i`, read into the record of kind `kind`
+at `p`; the position after its `}`. -/
+-- con-leche: ConLeche/Frontend/Scan/Fast.lean:2397-2401 ConLeche.Frontend.scanIndDecl
+def indObj : FunDecl := lfn (i, kind, p) locals (w, tag, ks, k, v, e) {
+  i += 1;
+  w := 1;
+  ⟪indObjLoop⟫;
   return 0
+}
+
+def indListLoop : Stmt := lblk (v, sub, i, o, cnt, c, e, q, sz) {
+  while 0 == 0 {
+    if len(IN.u8) <= i { abort };
+    c := IN.u8[i];
+    if c == 93 { return (o, cnt, i + 1) };
+    if c == 123 {
+      q := call fld_alloc(sub, sz);
+      if sub == 1 { IFR.u64[q + 6] := 0; IFR.u64[q + 8] := 0 };
+      e := call ind_obj(i, sub, q);
+      if e <= i { abort };
+      cnt += 1;
+      i := e
+    } else {
+      i += 1
+    }
+  }
 }
 
 /-- `ind_list(v, sub)`: the list of objects whose `[` is at `v`, each read into a fresh record of
@@ -278,21 +320,7 @@ def indList : FunDecl := lfn (v, sub) locals (i, o, cnt, c, e, q, sz) {
   sz := call ind_size(sub);
   o := call fld_alloc(sub, 0);
   i := v + 1;
-  while 0 == 0 {
-    if len(IN.u8) <= i { abort };
-    c := IN.u8[i];
-    if c == 93 { return (o, cnt, i + 1) };
-    if c == 123 {
-      q := call fld_alloc(sub, sz);
-      if sub == 1 { IFR.u64[q + 6] := 0; IFR.u64[q + 8] := 0 };
-      e := call ind_obj(i, sub, q);
-      if e <= i { abort };
-      cnt += 1;
-      i := e
-    } else {
-      i += 1
-    }
-  };
+  ⟪indListLoop⟫;
   return (0, 0, 0)
 }
 
@@ -312,7 +340,8 @@ def indFields : FunDecl := lfn (v) locals (p, e) {
 def indFieldsFns : Prog :=
   [("if_reset", ifReset), ("ifr_alloc", ifrAlloc), ("ifl_alloc", iflAlloc), ("ifl_push", iflPush),
    ("fld_alloc", fldAlloc), ("fld_put", fldPut), ("ind_size", indSize), ("ind_slot", indSlot),
-   ("ifl_ids", iflIds), ("ind_member", indMember), ("ind_obj", indObj), ("ind_list", indList),
+   ("ifl_ids", iflIds), ("ind_num", indNum), ("ind_bool", indBool), ("ind_nlist", indNList),
+   ("ind_member", indMember), ("ind_obj", indObj), ("ind_list", indList),
    ("ind_fields", indFields)]
 
 /-- A stub with `k` parameters (the closure check's stand-in for a callee of another file). -/
