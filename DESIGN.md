@@ -7125,3 +7125,38 @@ grows (the memo library's capacity rule, as every L memo). Refinement: not yet (
 * Merging: lemma-name clashes renamed on this side (`hslice?_bound_fsz`, `projBodyW`);
   `scripts/checker_prog.py` dumps modules it does not build: build `ConAgua.Rom.CIRead` first, or
   `rom_ci` comes out as a stub and `checkerProg_wf` fails on `reduce_decl_pin`'s arity.
+
+### String literals in L (`StrLit*.lean`, helper `defeq2-str`)
+* **L code** (`StrLit.lean`, 389 lines): `str_lit_supported` and its seven stages `str_sup_1…7`
+  (one per tested declaration, the suffixes of the twin's chain), the tests `string_ty_ok`,
+  `char_ty_ok` (one body), `list_ty_ok`, `list_nil_ty_ok`, `list_cons_ty_ok`,
+  `char_of_nat_ty_ok`, `string_of_list_ty_ok`; `str_cv` (`toConstantVal`, including the
+  projection-table arm that interns `Sort 1`); `str_param_sort`, `str_ls1` (`internLsNode [u]`:
+  the word at the pool top, then `intern_ls`); `str_lit_ctor` = `str_ctor_pre` (the
+  literal-independent prefix) + `str_cons_spine` (recursion over the characters, as the twin's)
+  + `String.ofList`. Characters are decoded from the pool's UTF-8 byte words by
+  `str_utf8_char` (`utf8_char` reading `POOL.u64[k] & 255`), linked to Lean's decoder through
+  lane `lext`'s `utf8CharN_eq`: non-ASCII is handled, no deviation. A character's literal is
+  `rom_lit(c)`. `abortStubs` lose `str_lit_ctor`, `str_lit_supported` (`Checker/Prog.lean`
+  regenerated: 1574 functions, 26 stubs).
+* **Proofs**: `strLitCtor_core : StrLitProg p → StrLitCtorOK p` (`StrLitCtor.lean`),
+  `strLitSupported_core : StrLitProg p → StrLitSupportedOK p` (`StrLitSup.lean`),
+  `supKeep_of : ∀ fe, SupKeep fe` (`StrLitKeep.lean`: `VMono`, a twin-side "every stored view is
+  kept" predicate closed under bind/if/match). No new hypotheses. `WhnfBase.lean`'s
+  `supKeep_twin` (a `sorry`) is now redundant: its users should take `supKeep_of` (a Whnf file:
+  lane `whnf3`'s). `KnotCallees.strLitSupported`/`strLitCtor`/`supKeep` can be plugged with
+  these three (`KnotAllProg` needs `StrLitProg`'s lookups; `KnotWF`'s closure list still stubs
+  `str_lit_*`).
+* **New leaves under `CoreS`** (`StrLitBase.lean`): `CoreS.of_ls` (a level-list interning: the
+  list tables only grow, `LsStore.view_intern_mono`), `internParam_core`, `internZero_core`,
+  `internW_core`/`romLitW_core` (a `lit` interning from a pool slice), and `callW` wrappers
+  `param_call`, `succ_call`, `zero_call`, `sort_call`, `bvar_call`, `const_call`,
+  `constE_call`, `app_call`, `romLit_call`, `ls1_call`, all in the `CoreRef` shape for
+  `coreRef_bind` chains. `StrLitCv.lean`: `cv_call`. `StrLitTy.lean`: the `∀`-type tail
+  `faEqT`/`faEqW_ok`, `cref_run`.
+* **Finding**: `str_lit_ctor` reads the literal's record *after* the prefix interning, so the
+  record and the bytes are read at the memory the spine runs on and the twin-side view of `h`
+  carries over by `VMono` alone; reading it first would have needed pool/record frames through
+  every `CoreRef` (which keeps only `CoreS`).
+* Deviation D21 (performance): `str_ls1` and `rom_lit` leave their pushed word at the pool top
+  even when the node exists.
