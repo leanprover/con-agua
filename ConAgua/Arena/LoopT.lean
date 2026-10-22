@@ -59,7 +59,7 @@ structure StageMemos (m : Mem) : Prop where
   ta : ∃ mp, taMR m mp
   ep : ∀ x ∈ stageEpochs, rdW (m.arr64 CTL) x + 2 ≠ 0
 
-theorem memoRG_mfr0 {κ : Type} [BEq κ] [Hashable κ] {S : MemoSch} (hS : S.WF) {K : MemoKey κ}
+theorem memoRG_mfr0 {κ ν : Type} [BEq κ] [Hashable κ] {S : MemoSch} (hS : S.WF) {K : MemoKey κ}
     {dv : Word → ν} {m m' : Mem} (hf : MFr [] [] m m') (hb : 201 ≤ S.arr ∧ S.arr ≤ 208)
     (hx : 202 ≤ S.cs.toNat ∧ S.cs.toNat ≤ 219) {mp : Std.HashMap κ ν} (h : MemoRG S K dv m mp) :
     MemoRG S K dv m' mp := by
