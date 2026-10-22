@@ -7954,6 +7954,53 @@ child dangled when it was interned (no `StoreWF` needed).
   commit `8c21b5d`, adapted to master's `LvlCnt` (list counts) and `CoreS.of_ls`'s `hlsa`/`hlc`.
   The WIP `InstLPWalkLet` is not landed. No L change. Globals rule: the instLP family uses only
   existing slots (`CTL[136]` spine top, `CTL[192]` level-heap top, MemoLib schemas `CTL[54‥59]`).
+### Helper `whnf4-ilp`: `InstLPOK` proved, `KnotCallees` gone
+* **Theorem.** `instLP_refines (p) (hp : ILWEntryProg p) : InstLPOK p` (`InstLPEntry.lean`,
+  `@[refines ConRon.Arena.instLPFast]`), sorry-free, on nothing but `CoreS`. `KnotCallees` is
+  removed: `KnotAllProg` gains `ilw : ILWEntryProg p`, `KnotAllProg.instLP := instLP_refines p
+  hq.ilw`, the bundle theorems are renamed `KnotCallees.*` → `KnotAllProg.*` (`infer` → `inferC`:
+  a field of that name exists). The knot (`knot_all`) now takes only `KnotAllProg p`.
+* **No `StoreWF`, no readback hypothesis.** The level arms (helper `whnf4-ilp-lev`,
+  `InstLPLevel*.lean`) re-prove `lv_intern`/`lv_sub_int` under `CoreS` by the node-by-node
+  induction, keeping `LvlStep`/`StoreDen.lvlAll` (`lvlAll_internLNode`) instead of con-ron's
+  `internLevel_spec`. The universe arguments read back by `StoreDen.lsAll` (`ls_node(us)` aborts on
+  a handle not stored; the model now says so). The keys: a new L function **`keys_ok(o, l)`**
+  checks each key word on the spine stack to be a stored name handle (tag, scratch tier, count);
+  under `ArenaR` such a handle views (`viewN_anon/str/num`), under `CoreS.nwf` it reads back
+  (con-ron's `denoteN_of_view`) — `keysOkW_names`. It runs past the cut-off (where the twin's
+  `readNamesM` runs) and aborts exactly where `readNamesM` fails (a cached name reads back by
+  `StoreDen.readN`, so a cache hit is a stored name): no deviation.
+* **Other L changes (no deviation; same values).** `lp_go`'s `const` arm reads the name word before
+  `sls_memo` (the twin has it from the view; no frame of `sls_memo` over `CREC` needed).
+  `lp_let`'s third child and rebuild moved to **`lp_let_tail`**, its rebuild to **`lp_rb_let`**
+  (helper `whnf4-ilp-let`: `finish` on the 3-child body needed `(instances := 5000)` even then).
+  `Checker/Prog.lean` regenerated (1720 functions, 9 stubs), `coreFns` 536.
+* **The walk memos in `CoreMemos`.** `inst_lp_core` clears arrays 52‥54 by an epoch bump, sound only
+  on a well-formed memo: `WalkMemos` gains a fourth conjunct `LPMemos` (`WhnfBase.lean`, with
+  `coreLpSch`/`coreLplSch`/`coreLplsSch`, `ilKey`, `VI` moved there); `WalkMemos.frame`/
+  `CoreMemos.frame` gain auto-params `hLA`/`hLC` (`decide` on concrete write sets; the abstract
+  ones in `CoreS.of_level`, `CoreS.of_ls`, `WhnfProjRefine`, `CoreS.arena_frame(D)`,
+  `CoreS.arenaFrame` pass them), `CoreMemos.frameLP` for the walk's own memo writes;
+  projections `.2.2.2.2` → `.2.2.2.2.1` in `WalkCore.lean`, `RecFireCore.lean` (`CoreS.ctl136`).
+* **Proof structure.** Models with every callee through `callW` (`InstLPWalk.lean`: one `vcgen`
+  per function; `lp_go`'s dispatch by guarded equations `ilwDispW_*`; specs split into
+  `InstLPWalkGo`/`Arms`/`Let` for build parallelism). The walk's invariants (`InstLPWalkBase`):
+  `ILWMemo` (the three memos hold the twin's maps, level values read back), `ILWEnv` (keys on the
+  stack below its top, values a pool slice below its top), `ILWGrow`; `ILWStep T a … r` (the twin's
+  run, `CoreAfter`, the invariants) with `ILWStep.bind`, `ilw_arm` (probe + write around a body),
+  `ilw_rebuild` (`internRebuilt*`); `ilwGo_ok` (`@[refines instLPGo]`) by induction on the L fuel
+  over all smaller fuels (`ilwGo_succ`); the entry `ilwCore_ok` (cut-off, `ls_node`, `keys_ok`, the
+  clears `ilw_clears`, the walk, the clears); `inst_lp` (`ekCopyW_slice`: the record-pool slice
+  lands on the stack; the top put back).
+* **Also.** `RecFireEnv.lean`'s `decRule_fire` renamed `decRule_fireE` (clashed with
+  `PromoteCIRef2`'s at `checker_prog.py`'s import check).
+* **Numbers.** New: `InstLPWalk` 641 lines, `InstLPWalkBase` 317, `InstLPWalkStep` 139,
+  `InstLPWalkRef` 182, `InstLPWalkRef2` 274, `InstLPWalkRef3` 342, `InstLPKeys` 170,
+  `InstLPEntry` 387, `InstLPWalkGo`/`Arms`/`Let` 39/60/38, `InstLPLevel`/`2` 421/316 (helper);
+  ~3300 lines. Elaboration: `InstLPWalkGo` 52 s, `InstLPWalkArms` 14 s, `InstLPWalkLet` ~6 s, the
+  rest ~1 s each. Rebuild after the `WhnfBase` change: ~10 min wall (`DefEqKnot` cone); full
+  `scripts/lake build ConAgua` ~20 min wall.
+
 ## Phase 2, round 5: the twin's well-formedness, the real ROM readers (2026-10-22, lane `decls4`)
 
 ### Landing 1: `StateOK` from the twin's fold; canon in the arms; the ROM readers as callees; `subst_const_all`
@@ -8106,6 +8153,64 @@ frontend function".
   `decls4-rom`), `AndPinIndProg p` (lookups, `CanonProg`). Both tagged `refines_part`:
   `FrontBlock` of the front's blocks is not proved yet (lane front: a `DeclsF` clause, or from
   `installIndD`'s constants). `StateOK` after `andPinDecls`: con-ron's `internCIList_sstep`.
+
+### Landing 3: `StageT`, the core's write set, the entry points under `StageT`
+Coordinated with the coordinator (and lane `decls4`'s note: `decls4` does not change `StageR`):
+`StageR` keeps its shape; **`StageT`** (`ConAgua/Arena/IndTwin.lean`) is a separate relation by
+named components — `stage : StageR`, `twin : TwinOK` (lane `decls4`'s `DeclLvlStage.lean`: the
+readback caches, `NStoreWF`, `StoreDen` incl. lane `defeq2`'s new `recRules`, the walk memos, three
+capacities), `flag : pinW m 0 ≠ 0` — and a file migrates to it only where a core callee is reached.
+* `StageT.core`: `StageT` is `CoreS` (eager bit `0`), so every `CoreS`-level refinement applies.
+* **The core's write set from the text**: `CoreStageClosed p` (no function the stage's core entry
+  points reach writes `IW`, `EREC`, `PINS`, `CTL[129]`, `CTL[200]`), decided for `checkerProg` in
+  `ConAgua/Checker/IndCore.lean` (`decide +kernel`, as lane `whnf3`'s `CoreErec`). With it
+  `StageT.of_core`: a core run's `CoreAfter` is `StageT` after and the pools are unchanged
+  (`IWGrow`); `StageT.sim_core` turns any `CoreSpec` into a `Sim` on the call's run.
+* **The entry points as `Sim` facts under `StageT`** (the "whnf adapters"; each replaces the
+  `IndStubs` contract of the same name for a caller carrying `StageT`), sorry-free:
+  `whnfTop_simT` (`whnf_top`, from the knot's `whnf` slot; the adapter `whnfTopL` had no spec
+  before), `inferTypeCore_simT`, `isDefEqCore_simT`, `ensureSortCore_simT` (from `KnotSlot`'s and
+  `InferLeaves`' entry refinements), `lvlEqC_simT` (lane `whnf`'s `lvlEqC_refines`). Program
+  hypotheses: `KnotEntryProg p`, `p.lookup "whnf_top"`, `∀ n, KnotOK p n` (lanes `whnf4`/`defeq2`'s
+  `knot_all`), `CoreStageClosed p`; L fuel `n ≤ 2^62` (the twin's `checkFuel`). `lvlEqC_simT` takes
+  the two handles' readbacks, which a caller gets from `StoreDen.lvlAll`/`.sort`/`.zero`.
+* **Frames by component**: `TwinOK.frame_iw` (no part of `TwinOK` reads `IW`/`CTL[200]`, so every
+  pool writer keeps it), `StageT.of_iw` (a pool writer's `StageR` lemma + its frame), and
+  `StageT.of_coreRef` (a master callee's `StageR` lemma + its `CoreS` refinement `CoreRef`, at a
+  frame that leaves `PINS` alone); instances `internSort_stageT`, `internFVar_stageT` (from
+  `IndMaster`'s `_stage` and `InferBodyIntern`'s `_core`).
+* **Not done, and why** (the migration's open ends, in the order a successor meets them):
+  1. *The stage's entry.* `StageT` at `check_ind_decl` must come from the declaration loop: `LoopR`
+     carries neither `TwinOK` nor the flag. `decls4`'s `TwinFold` gives `StateOK` at the arm, but
+     `TwinOK`'s caches/`StoreDen`/memos are `CoreS` facts after the previous declaration's core
+     calls; the loop's arms run their core callees through stubs with `KeepPost` posts, so nothing
+     carries them yet. Until the loop does, every stage theorem stated under `StageT` has a
+     hypothesis its top caller cannot discharge (not vacuous: true in every state the checker
+     reaches, by the twin's own invariants).
+  2. *Stubs under `StageT`.* A stage function with a stub callee (`fvar_type_d`, `strip_pis`,
+     `open_pis_at_fvars_f`, …) cannot move to `StageT` while the stub's contract only gives `StageR`
+     after. Either the stubs get L code (9 of them still abort in `checkerProg`: `lv_zero_caps`,
+     `name_rec`, `name_rec_i`, `rec_rule_bits`, `reserved_rec_name`, `open_pis_at_fvars_f`,
+     `intern_ls_iw`, `fvar_b`, `consts_resolve_ffast`) or one generic `sorry`'d contract "a stub
+     keeps `TwinOK`" in the style of `stubM_memoFrame`.
+  3. *Record-pool writers.* `StoreDen.proj` quantifies over every `EREC` offset that decodes as a
+     projection table (`decTbl (m.arr64 EREC) q`), so appending a record can break it;
+     `StoreDen.frameE` needs `EREC` unchanged. `erec_alloc`/`cv_new`/`env_push` need `proj`
+     restricted to records below `CTL[129]` (owner: lane `defeq2`, `StoreDen.lean`) or a per-writer
+     argument.
+  4. *`lv_leq_top`, `lv_zero_caps`, `blockLargeElimAllowed`.* `lv_leq_top` has a heap-level relation
+     (`leqTopW_ok`, `LvR`); under `StageT` it needs `denoteL_lvR` at the two handles and the
+     `readLevelM` runs (`readLevelM_run'`, `CoreS.withReadLC`) — the same pattern as `lvlEqC_simT`,
+     not done. `lv_zero_caps` has no L code (an `abortStub` in `checkerProg`). `blockLargeElimAllowed`
+     (`lv_nz` on the result sort) would follow the same pattern; its readback of `resSort` needs
+     the shape's result sort to be a `sort` view's level (`StoreDen.sort`), which
+     `blockShape?`'s refinement does not record yet.
+* **A hypothesis no caller could discharge, removed.** `numCtorsOf_refines`,
+  `blockShapeNumCtors_refines` and `blockShapeAllCtors_refines` (lane `indproofs`' helper `parts`)
+  took `hsmall : ∀ i v, iwN m i = some v → v + 3 < 2^64`, a statement about *every* `IW` word that
+  `StageR` does not give. It is only needed at the decoded member pointers, where `decMS` already
+  reads `IW[v + 3]`, so `v + 3 < size < 2^64`: `numCtorsOfW_ok` now takes the pool's size bound
+  (`IWOK`) instead, and the three census theorems follow.
 
 ## Kernel-checked compiler output (2026-10-22, lane `kernelasm`)
 
@@ -8268,3 +8373,12 @@ for kinds `0‥3` sorry-free (axioms `propext`, `Classical.choice`, `Quot.sound`
   totals 789 proven / 165 sorry of 1352. The phase-2 `sorry`s left go through the core's stub specs
   (`isDefEqCore_spec`, `inferTypeCore_spec`, `ensureSortCore_spec`, `whnf_spec`; the knot) and
   `lvl_eq_c`'s `TwinOK` gap (lane `indproofs3`).
+
+### Lane `whnf4` closing
+* `KnotCallees` is gone: `knot_all` needs only `KnotAllProg p` (program lookups). Lane `whnf4` (with
+  helpers `whnf4-knot`, `-leaves`, `-rs`, `-d23`, `-ilp`) discharged `whnfCoreStep`, `whnfStep`,
+  `proofIrrel`, `reduceProjCore`, `unfold`, `constTy`, `projSmall`, `fireOk`, `recShape`,
+  `instLP`; lane `defeq2` `den`, `lvlsEqDen`, `capsNeverZero`, `recFireLevels`. D23 fixed (F15).
+  The census-tagged whnf statements still instantiate the stub bundles (`whnfCallees_stub`,
+  `coreCallees_stub`, `iotaCallees_stub`); re-stating them through `DefEqKnot`'s bundles is
+  the next step for the census (not done here).

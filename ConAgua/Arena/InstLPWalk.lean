@@ -116,21 +116,20 @@ def ilwSortK (p : Prog) (n : Nat) (h x : Word) : Option (List Word × Mem) → O
   | none => none
   | some (y, m₁) => if y.headD 0 = x then some (h, m₁) else ilwChk (callW p n "intern_sort" [y.headD 0] m₁)
 
-/-- The `const` arm after `sls_memo`: unchanged, or the new constant interned (its name read on
-the memory after the call). -/
-def ilwConstK (p : Prog) (n : Nat) (h x : Word) : Option (List Word × Mem) → Option (Word × Mem)
+/-- The `const` arm after `sls_memo`: unchanged, or the new constant interned (its name `c` read
+before the call). -/
+def ilwConstK (p : Prog) (n : Nat) (h c x : Word) : Option (List Word × Mem) → Option (Word × Mem)
   | none => none
   | some (y, m₁) =>
     if y.headD 0 = x then some (h, m₁)
-    else ilwChk (callW p n "intern_const" [rdW (m₁.arr64 CREC) (idxW h * 4 + tierW h * 2), y.headD 0] m₁)
+    else ilwChk (callW p n "intern_const" [c, y.headD 0] m₁)
 
 @[arena_grind =] theorem ilwSortK_some (p : Prog) (n : Nat) (h x : Word) (y : List Word) (m₁ : Mem) :
     ilwSortK p n h x (some (y, m₁)) =
       if y.headD 0 = x then some (h, m₁) else ilwChk (callW p n "intern_sort" [y.headD 0] m₁) := rfl
-@[arena_grind =] theorem ilwConstK_some (p : Prog) (n : Nat) (h x : Word) (y : List Word) (m₁ : Mem) :
-    ilwConstK p n h x (some (y, m₁)) =
-      if y.headD 0 = x then some (h, m₁)
-      else ilwChk (callW p n "intern_const" [rdW (m₁.arr64 CREC) (idxW h * 4 + tierW h * 2), y.headD 0] m₁) :=
+@[arena_grind =] theorem ilwConstK_some (p : Prog) (n : Nat) (h c x : Word) (y : List Word) (m₁ : Mem) :
+    ilwConstK p n h c x (some (y, m₁)) =
+      if y.headD 0 = x then some (h, m₁) else ilwChk (callW p n "intern_const" [c, y.headD 0] m₁) :=
   rfl
 
 /-- **The dispatch of `lp_go`** past the fuel test and the cut-off: the scratch check, then by the
@@ -146,7 +145,8 @@ def ilwDispW (p : Prog) (n : Nat) (m : Mem) (h ko kc vo vc fu : Word) : Option (
        (callW p n "sl_memo" [rdW (m.arr64 SOREC) (idxW h * 2 + tierW h), ko, kc, vo, vc] m))
   else if h >>> 28 = 3 then
     (if rdW (m.arr64 CTL) (18 + tierW h) ≤ idxW h then none
-     else ilwConstK p n h (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1))
+     else ilwConstK p n h (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2))
+       (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1))
        (callW p n "sls_memo" [rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1), ko, kc, vo, vc] m))
   else if h >>> 28 = 1 then
     (if rdW (m.arr64 CTL) (26 + tierW h) ≤ idxW h then none
@@ -195,7 +195,8 @@ theorem ilwDispW_sort (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) (hg 
 theorem ilwDispW_const (hs : ¬ (tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0)) (hg : h >>> 28 = 3) :
     ilwDispW p n m h ko kc vo vc fu =
       if rdW (m.arr64 CTL) (18 + tierW h) ≤ idxW h then none
-      else ilwConstK p n h (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1))
+      else ilwConstK p n h (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2))
+       (rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1))
         (callW p n "sls_memo" [rdW (m.arr64 CREC) (idxW h * 4 + tierW h * 2 + 1), ko, kc, vo, vc] m) := by
   rw [ilwDispW]; simp [hs, hg]
 
@@ -307,18 +308,27 @@ theorem ilwRb_new (p : Prog) (n : Nat) (mk : FnName) (m₂ : Mem) (h f a x y : W
 grind_pattern [arena_grind] ilwRb_same => ilwRb p n mk m₂ h f a x y
 grind_pattern [arena_grind] ilwRb_new => ilwRb p n mk m₂ h f a x y
 
-/-- `internRebuiltLetE`. -/
+/-- `internRebuiltLetE`, in the L code's order: the first two children, then the third. -/
+def ilwRbLet2 (p : Prog) (n : Nat) (m₃ : Mem) (h b x y z : Word) : Option (Word × Mem) :=
+  if z = b then some (h, m₃) else ilwChk (callW p n "mk_let" [x, y, z] m₃)
 def ilwRbLet (p : Prog) (n : Nat) (m₃ : Mem) (h f a b x y z : Word) : Option (Word × Mem) :=
-  if x = f ∧ y = a ∧ z = b then some (h, m₃) else ilwChk (callW p n "mk_let" [x, y, z] m₃)
+  if x = f ∧ y = a then ilwRbLet2 p n m₃ h b x y z else ilwChk (callW p n "mk_let" [x, y, z] m₃)
 
-theorem ilwRbLet_same (p : Prog) (n : Nat) (m₃ : Mem) (h f a b x y z : Word) (hx : x = f) (hy : y = a)
-    (hz : z = b) : ilwRbLet p n m₃ h f a b x y z = some (h, m₃) := by simp [ilwRbLet, hx, hy, hz]
-theorem ilwRbLet_new (p : Prog) (n : Nat) (m₃ : Mem) (h f a b x y z : Word) (hn : ¬ (x = f ∧ y = a ∧ z = b)) :
+theorem ilwRbLet_two (p : Prog) (n : Nat) (m₃ : Mem) (h f a b x y z : Word) (hx : x = f) (hy : y = a) :
+    ilwRbLet p n m₃ h f a b x y z = ilwRbLet2 p n m₃ h b x y z := by simp [ilwRbLet, hx, hy]
+theorem ilwRbLet_new (p : Prog) (n : Nat) (m₃ : Mem) (h f a b x y z : Word) (hn : ¬ (x = f ∧ y = a)) :
     ilwRbLet p n m₃ h f a b x y z = ilwChk (callW p n "mk_let" [x, y, z] m₃) := by
   simp only [ilwRbLet, hn, ↓reduceIte]
+theorem ilwRbLet2_same (p : Prog) (n : Nat) (m₃ : Mem) (h b x y z : Word) (hz : z = b) :
+    ilwRbLet2 p n m₃ h b x y z = some (h, m₃) := by simp [ilwRbLet2, hz]
+theorem ilwRbLet2_new (p : Prog) (n : Nat) (m₃ : Mem) (h b x y z : Word) (hz : ¬ z = b) :
+    ilwRbLet2 p n m₃ h b x y z = ilwChk (callW p n "mk_let" [x, y, z] m₃) := by
+  simp only [ilwRbLet2, hz, ↓reduceIte]
 
-grind_pattern [arena_grind] ilwRbLet_same => ilwRbLet p n m₃ h f a b x y z
+grind_pattern [arena_grind] ilwRbLet_two => ilwRbLet p n m₃ h f a b x y z
 grind_pattern [arena_grind] ilwRbLet_new => ilwRbLet p n m₃ h f a b x y z
+grind_pattern [arena_grind] ilwRbLet2_same => ilwRbLet2 p n m₃ h b x y z
+grind_pattern [arena_grind] ilwRbLet2_new => ilwRbLet2 p n m₃ h b x y z
 
 /-- A two-child arm after its second child. -/
 def ilwBinK₂ (p : Prog) (n : Nat) (mk : FnName) (h f a x : Word) :
@@ -347,16 +357,25 @@ def ilwBinW (R : ArrId) (mk : FnName) (p : Prog) (n : Nat) (m : Mem) (h ko kc vo
     (rdW (m.arr64 R) (idxW h * 4 + tierW h * 2 + 1)) ko kc vo vc fu
     (callW p n "lp_go" [rdW (m.arr64 R) (idxW h * 4 + tierW h * 2), ko, kc, vo, vc, fu] m))
 
-/-- `lp_let` after its third child. -/
-def ilwLetK₃ (p : Prog) (n : Nat) (h f a b x y : Word) : Option (List Word × Mem) → Option (Word × Mem)
+/-- `lp_let_tail` after the third child: the rebuild. -/
+def ilwLetTK (p : Prog) (n : Nat) (h f a b x y : Word) : Option (List Word × Mem) → Option (Word × Mem)
   | none => none
-  | some (z, m₃) => ilwSetK h (ilwRbLet p n m₃ h f a b x y (z.headD 0))
+  | some (z, m₃) => ilwHd (callW p n "lp_rb_let" [h, f, a, b, x, y, z.headD 0] m₃)
 
-/-- `lp_let` after its second child. -/
+@[arena_grind =] theorem ilwLetTK_some (p : Prog) (n : Nat) (h f a b x y : Word) (z : List Word) (m₃ : Mem) :
+    ilwLetTK p n h f a b x y (some (z, m₃)) = ilwHd (callW p n "lp_rb_let" [h, f, a, b, x, y, z.headD 0] m₃) :=
+  rfl
+
+/-- **The model of `lp_let_tail`** at L fuel `n + 1`: the third child, the rebuild. -/
+def ilwLetTW (p : Prog) (n : Nat) (m : Mem) (h f a b x y ko kc vo vc fu : Word) : Option (Word × Mem) :=
+  ilwLetTK p n h f a b x y (callW p n "lp_go" [b, ko, kc, vo, vc, fu] m)
+
+/-- `lp_let` after its second child: the tail, the memo write. -/
 def ilwLetK₂ (p : Prog) (n : Nat) (h f a b ko kc vo vc fu x : Word) :
     Option (List Word × Mem) → Option (Word × Mem)
   | none => none
-  | some (y, m₂) => ilwLetK₃ p n h f a b x (y.headD 0) (callW p n "lp_go" [b, ko, kc, vo, vc, fu] m₂)
+  | some (y, m₂) =>
+    ilwSetK h (ilwHd (callW p n "lp_let_tail" [h, f, a, b, x, y.headD 0, ko, kc, vo, vc, fu] m₂))
 
 /-- `lp_let` after its first child. -/
 def ilwLetK₁ (p : Prog) (n : Nat) (h f a b ko kc vo vc fu : Word) :
@@ -364,11 +383,9 @@ def ilwLetK₁ (p : Prog) (n : Nat) (h f a b ko kc vo vc fu : Word) :
   | none => none
   | some (x, m₁) => ilwLetK₂ p n h f a b ko kc vo vc fu (x.headD 0) (callW p n "lp_go" [a, ko, kc, vo, vc, fu] m₁)
 
-@[arena_grind =] theorem ilwLetK₃_some (p : Prog) (n : Nat) (h f a b x y : Word) (z : List Word) (m₃ : Mem) :
-    ilwLetK₃ p n h f a b x y (some (z, m₃)) = ilwSetK h (ilwRbLet p n m₃ h f a b x y (z.headD 0)) := rfl
 @[arena_grind =] theorem ilwLetK₂_some (p : Prog) (n : Nat) (h f a b ko kc vo vc fu x : Word) (y : List Word)
     (m₂ : Mem) : ilwLetK₂ p n h f a b ko kc vo vc fu x (some (y, m₂)) =
-      ilwLetK₃ p n h f a b x (y.headD 0) (callW p n "lp_go" [b, ko, kc, vo, vc, fu] m₂) := rfl
+      ilwSetK h (ilwHd (callW p n "lp_let_tail" [h, f, a, b, x, y.headD 0, ko, kc, vo, vc, fu] m₂)) := rfl
 @[arena_grind =] theorem ilwLetK₁_some (p : Prog) (n : Nat) (h f a b ko kc vo vc fu : Word) (x : List Word)
     (m₁ : Mem) : ilwLetK₁ p n h f a b ko kc vo vc fu (some (x, m₁)) =
       ilwLetK₂ p n h f a b ko kc vo vc fu (x.headD 0) (callW p n "lp_go" [a, ko, kc, vo, vc, fu] m₁) := rfl
@@ -436,14 +453,20 @@ def ilwC1 (p : Prog) (n : Nat) (ko kc e vo vc : Word) : Option (List Word × Mem
   | none => none
   | some (_, m) => ilwC2 p n ko kc e vo vc (callW p n "ilpl_clear" [] m)
 
+/-- After `keys_ok`. -/
+def ilwC0 (p : Prog) (n : Nat) (ko kc e vo vc : Word) : Option (List Word × Mem) → Option (Word × Mem)
+  | none => none
+  | some (_, m) => ilwC1 p n ko kc e vo vc (callW p n "ilp_clear" [] m)
+
 /-- `inst_lp_core` after `der_b`: the cut-off, else the values' slice (`ls_node(us)`), the clears,
 the walk. -/
 def ilwCoreD (p : Prog) (n : Nat) (ko kc us e : Word) : Option (List Word × Mem) → Option (Word × Mem)
   | none => none
   | some (d, m₁) =>
     if d.tail.tail.headD 0 = 0 then some (e &&& 4294967295, m₁)
-    else ilwC1 p n ko kc e ((lsNodeW m₁ us).headD 0) ((lsNodeW m₁ us).tail.headD 0)
-      (callW p n "ilp_clear" [] m₁)
+    else if lsNodeW m₁ us = [] then none
+    else ilwC0 p n ko kc e ((lsNodeW m₁ us).headD 0) ((lsNodeW m₁ us).tail.headD 0)
+      (callW p n "keys_ok" [ko, kc] m₁)
 
 section entryK
 variable (p : Prog) (n : Nat) (ko kc us e vo vc r : Word) (x : List Word) (m : Mem)
@@ -462,8 +485,11 @@ variable (p : Prog) (n : Nat) (ko kc us e vo vc r : Word) (x : List Word) (m : M
 @[arena_grind =] theorem ilwCoreD_some :
     ilwCoreD p n ko kc us e (some (x, m)) =
       if x.tail.tail.headD 0 = 0 then some (e &&& 4294967295, m)
-      else ilwC1 p n ko kc e ((lsNodeW m us).headD 0) ((lsNodeW m us).tail.headD 0) (callW p n "ilp_clear" [] m) :=
+      else if lsNodeW m us = [] then none
+      else ilwC0 p n ko kc e ((lsNodeW m us).headD 0) ((lsNodeW m us).tail.headD 0) (callW p n "keys_ok" [ko, kc] m) :=
   rfl
+@[arena_grind =] theorem ilwC0_some :
+    ilwC0 p n ko kc e vo vc (some (x, m)) = ilwC1 p n ko kc e vo vc (callW p n "ilp_clear" [] m) := rfl
 end entryK
 
 /-- **The model of `inst_lp_core`** at L fuel `n + 1`. -/
@@ -502,9 +528,11 @@ structure ILWProg (p : Prog) : Prop where
   lam : p.lookup "lp_lam" = some lpLam
   fa : p.lookup "lp_forall" = some lpForall
   le : p.lookup "lp_let" = some lpLet
+  lt : p.lookup "lp_let_tail" = some lpLetTail
   pj : p.lookup "lp_proj" = some lpProj
   core : p.lookup "inst_lp_core" = some instLPCore
   lp : p.lookup "inst_lp" = some instLPL
+  rbl : p.lookup "lp_rb_let" = some lpRbLet
   ilpf : p.lookup "ilp_find" = some (memoFindG lpSch)
   ilpp : p.lookup "ilp_put" = some (memoPutG lpSch)
   ilpc : p.lookup "ilp_clear" = some (memoClearG lpSch)
@@ -555,6 +583,25 @@ theorem lpFVar_spec (n : Nat) (s₀ : St) (h ko kc vo vc fu : Word) :
       callW_spec p n "lp_go", callW_spec p n "intern_fvar"] <;>
     finish [ilwFVarW, ilwProbe, msetG, tierW, idxW]
 
+theorem lpRbLet_spec (n : Nat) (s₀ : St) (h f a b x y z : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "lp_rb_let" [h, f, a, b, x, y, z]
+    ⦃fun r s' => LocEq s' s₀ ∧ ilwRbLet p n s₀.mem h f a b x y z = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp.rbl]
+  simp only [callFn, lpRbLet]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "mk_let"] <;>
+    finish
+
+theorem lpLetTail_spec (n : Nat) (s₀ : St) (h f a b x y ko kc vo vc fu : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "lp_let_tail" [h, f, a, b, x, y, ko, kc, vo, vc, fu]
+    ⦃fun r s' => LocEq s' s₀ ∧ ilwLetTW p n s₀.mem h f a b x y ko kc vo vc fu = some (r.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp.lt]
+  simp only [callFn, lpLetTail]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      callW_spec p n "lp_go", callW_spec p n "lp_rb_let"] <;>
+    finish (gen := 20) [ilwLetTW]  -- eleven parameters: `Locals.init` reads at depth 10
+
 set_option maxHeartbeats 1000000 in
 theorem lpProj_spec (n : Nat) (s₀ : St) (h ko kc vo vc fu : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "lp_proj" [h, ko, kc, vo, vc, fu]
@@ -575,7 +622,7 @@ theorem instLPCore_spec (n : Nat) (s₀ : St) (ko kc us e : Word) :
   simp only [callFn, instLPCore]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      callW_spec p n "ilp_clear", callW_spec p n "ilpl_clear", callW_spec p n "ilpls_clear",
+      callW_spec p n "keys_ok", callW_spec p n "ilp_clear", callW_spec p n "ilpl_clear", callW_spec p n "ilpls_clear",
       callW_spec p n "der_b", lsNode_spec p hp.lsn n, callW_spec p n "lp_go"] <;>
     finish (gen := 20) [ilwCoreW]
 
