@@ -15,17 +15,18 @@ the twin's only where the handles L compares do read back. Which handles those a
 * the pinned zero level (`proof_irrel`, `infer_proj`);
 * the names in the twin's name readback cache (`readNC`: `readNameM` answers a hit unchecked;
   `field_sort_zero`, `PropRead`);
+* a stored constant's level-parameter names (`PropRead`'s `substPWAt`);
 * a projection table's structure sort, its fields' sorts and its level parameters
   (`infer_proj`), read from the table records in `EREC` (`decTbl`).
 
-`StoreDen m a` states all five. **It is meant as one field of `CoreS`** (`CoreS.den`, the twin's
+`StoreDen m a fe` states all six. **It is meant as one field of `CoreS`** (`CoreS.den`, the twin's
 store being well formed: `StoreWF` gives the first four, the environment loader the fifth);
 until that field exists the knot takes `CoreDen` (`DefEqKnot.lean`) as a hypothesis.
 
 Maintenance, when it is a field: the twin's store only grows inside the core (`Ext`), so an old
 handle keeps its readback; the two clauses over node views need a proof only where a `sort` or a
 `const` node is interned (its level or list came from a node that reads back, or was built from
-ones that do); `zero` and `proj` follow from `Ext` and from `EREC` being kept; `readN` where the
+ones that do); `zero`, `constLps` and `proj` follow from `Ext` and from `EREC` being kept; `readN` where the
 name cache is written (`readNameM`, which caches a readback).
 -/
 
@@ -34,7 +35,7 @@ open ConRon.Arena
 namespace L.Arena
 
 /-- **Stored levels read back** (see the module note). -/
-structure StoreDen (m : Mem) (a : AState) : Prop where
+structure StoreDen (m : Mem) (a : AState) (fe : IFEnv) : Prop where
   sort : ∀ (h : EIdx) (u : LIdx), a.store.view h = some (.sort u) →
     ∃ l, denoteL a.store.ls u = some l
   constLs : ∀ (h : EIdx) (c : NIdx) (us : LsIdx), a.store.view h = some (.const c us) →
@@ -42,6 +43,10 @@ structure StoreDen (m : Mem) (a : AState) : Prop where
   zero : ∃ l, denoteL a.store.ls a.pins.zeroLevel = some l
   readN : ∀ (h : NIdx) (x : ConLeche.Name), a.caches.readNC[h]? = some x →
     denoteN a.store.ns h = some x
+  /-- A stored constant's level-parameter names read back (`PropRead`'s `substPWAt`). -/
+  constLps : ∀ (c : NIdx) (ci : IConstantInfo) (cv : IConstantVal), fe.find? c = some ci →
+    ci.isTowerEntry = false → (∀ s, ci.toConstantVal.run s = .ok (cv, s)) →
+    ∃ ks, cv.levelParams.mapM (denoteN a.store.ns) = some ks
   /-- A projection table record's levels read back. -/
   proj : ∀ (q : Nat) (tbl : IProjTable), decTbl (m.arr64 EREC) q = some tbl →
     (∃ l, denoteL a.store.ls tbl.structSort = some l) ∧
