@@ -1585,4 +1585,167 @@ theorem iotaIndexOk_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) 
   · rw [hresF]; simp only [decBool]; rw [← hr3]
   · unfold ResH HW; rw [← hr3]; exact hr₃
 
+/-! ## `tower_slots_all(vis, T, nF)` -/
+
+/-- Model of the `tower_slots_all` loop at L fuel `k`. -/
+def tsW (p : Prog) (vis T nF : Word) : Nat → Mem → Word → Option (List Word × Mem)
+  | 0, _, _ => none
+  | k + 1, m, j =>
+    if j < nF then
+      match callW p k "find_proj" [vis, T, j] m with
+      | none => none
+      | some (r, m₁) => if r.headD 0 = 0 then some ([0], m₁) else tsW p vis T nF k m₁ (j + 1)
+    else some ([1], m)
+
+theorem tsW_end (p : Prog) (vis T nF : Word) (k : Nat) (m : Mem) (j : Word) (h : ¬ j < nF) :
+    tsW p vis T nF (k + 1) m j = some ([1], m) := by
+  simp only [tsW, h, ↓reduceIte]
+
+theorem tsW_stop (p : Prog) (vis T nF : Word) (k : Nat) (m m₁ : Mem) (j : Word) (r : List Word)
+    (h : j < nF) (hc : callW p k "find_proj" [vis, T, j] m = some (r, m₁)) (h0 : r.headD 0 = 0) :
+    tsW p vis T nF (k + 1) m j = some ([0], m₁) := by
+  simp only [tsW, h, ↓reduceIte, hc, h0]
+
+theorem tsW_cont (p : Prog) (vis T nF : Word) (k : Nat) (m m₁ : Mem) (j : Word) (r : List Word)
+    (h : j < nF) (hc : callW p k "find_proj" [vis, T, j] m = some (r, m₁)) (h0 : ¬ r.headD 0 = 0) :
+    tsW p vis T nF (k + 1) m j = tsW p vis T nF k m₁ (j + 1) := by
+  simp only [tsW, h, ↓reduceIte, hc, h0]
+
+theorem towerSlotsAllLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    exec p k towerSlotsAllLoop
+    ⦃fun r s' => r ≠ .brk ∧
+      tsW p (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) k s₀.mem (s₀.loc 3) = some (r.retOr [1], s'.mem); ⊤⦄ := by
+  induction k generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ k ih =>
+    rw [exec, step_while (w := towerSlotsAllLoop) rfl]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs,
+        callW_spec p k "find_proj", ih] <;> finish [tsW_end, tsW_stop, tsW_cont]
+
+theorem towerSlotsAllLoop_step_spec (p : Prog) (k : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    step p (exec p k) towerSlotsAllLoop
+    ⦃fun r s' => r ≠ .brk ∧
+      tsW p (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (k + 1) s₀.mem (s₀.loc 3) =
+        some (r.retOr [1], s'.mem); ⊤⦄ :=
+  Triple.step_exec (towerSlotsAllLoop_spec p (k + 1) s₀)
+
+theorem towerSlotsAll_spec (p : Prog) (hp : p.lookup "tower_slots_all" = some towerSlotsAllL)
+    (k : Nat) (s₀ : St) (vis T nF : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p (k + 1)) "tower_slots_all" [vis, T, nF]
+    ⦃fun r s' => LocEq s' s₀ ∧ tsW p vis T nF (k + 1) s₀.mem 0 = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, towerSlotsAllL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, towerSlotsAllLoop_step_spec p k] <;>
+    finish
+
+theorem towerSlotsAllGo_zero_run (fe : IFEnv) (T : NIdx) (j : Nat) (a : AState) :
+    (towerSlotsAllGo fe T 0 j).run a = .ok (true, a) := by
+  simp [towerSlotsAllGo]; rfl
+
+theorem towerSlotsAllGo_stop_run (fe : IFEnv) (T : NIdx) (n j : Nat) (a a₁ : AState)
+    (o : Option IProjEntry) (h : (fe.findProj? T j).run a = .ok (o, a₁)) (ho : o.isSome = false) :
+    (towerSlotsAllGo fe T (n + 1) j).run a = .ok (false, a₁) := by
+  simp only [towerSlotsAllGo, StateT.run_bind, h, except_ok_bind, ho]; rfl
+
+theorem towerSlotsAllGo_cont_run (fe : IFEnv) (T : NIdx) (n j : Nat) (a a₁ a₂ : AState)
+    (o : Option IProjEntry) (b : Bool) (h : (fe.findProj? T j).run a = .ok (o, a₁))
+    (ho : o.isSome = true) (hr : (towerSlotsAllGo fe T n (j + 1)).run a₁ = .ok (b, a₂)) :
+    (towerSlotsAllGo fe T (n + 1) j).run a = .ok (b, a₂) := by
+  simp only [towerSlotsAllGo, StateT.run_bind, h, except_ok_bind, ho]; exact hr
+
+/-- **The `tower_slots_all` loop refines `towerSlotsAllGo`**, by induction on the remaining count. -/
+theorem tsW_ok (p : Prog) (hcc : CoreCallees p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+    (fe : IFEnv) (eb T nF : Word) (hT : HW T) :
+    ∀ (K k : Nat) (m : Mem) (a : AState) (M : ModeMaps) (j : Word) (L : List Word) (m' : Mem),
+      nF.toNat - j.toNat = K → j.toNat ≤ nF.toNat → CoreS dn m a vis fe M eb →
+      tsW p vis T nF k m j = some (L, m') →
+      AM.ok (towerSlotsAllGo fe (decI T) K j.toNat) a ∧
+      CoreAfter dn m m' (AM.st (towerSlotsAllGo fe (decI T) K j.toNat) a) vis fe M eb ∧
+      AM.res (towerSlotsAllGo fe (decI T) K j.toNat) a = decBool L ∧ HW (L.headD 0) := by
+  intro K
+  induction K with
+  | zero =>
+    intro k m a M j L m' hK hj hS hL
+    have hn : ¬ j < nF := fun h => by
+      have : j.toNat < nF.toNat := h
+      omega
+    cases k with
+    | zero => simp [tsW] at hL
+    | succ k =>
+    rw [tsW_end p vis T nF k m j hn] at hL
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
+    obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ (towerSlotsAllGo_zero_run fe (decI T) j.toNat a)
+    refine ⟨hok, ?_, ?_, by simp [HW]⟩
+    · rw [hst]; exact ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩
+    · rw [hres]; simp [decBool]
+  | succ K ih =>
+    intro k m a M j L m' hK hj hS hL
+    have hlt : j < nF := by
+      have : j.toNat < nF.toNat := by omega
+      exact this
+    cases k with
+    | zero => simp [tsW] at hL
+    | succ k =>
+    cases hc : callW p k "find_proj" [vis, T, j] m with
+    | none => simp [tsW, hlt, hc] at hL
+    | some q =>
+    obtain ⟨r₁, m₁⟩ := q
+    obtain ⟨hok, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres, hr₁⟩ := CoreSpec.of_callW
+      (hcc.findProj k ⟨m, Locals.init []⟩ a dn vis fe M eb T j hS hT) hc
+    have hrunF := AM.run_of_ok _ _ hok
+    by_cases h0 : r₁.headD 0 = 0
+    · rw [tsW_stop p vis T nF k m m₁ j r₁ hlt hc h0] at hL
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
+      have hnone : AM.res (fe.findProj? (decI T) j.toNat) a = none := by
+        rw [hres]; simp only [decEntry, h0, ↓reduceIte]
+      rw [hnone] at hrunF
+      obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _
+        (towerSlotsAllGo_stop_run fe (decI T) K j.toNat a _ none hrunF rfl)
+      refine ⟨hokF, ⟨M₁, ?_, hK₁, hSt₁⟩, ?_, by simp [HW]⟩
+      · rw [hstF]; exact hS₁
+      · rw [hresF]; simp [decBool]
+    · rw [tsW_cont p vis T nF k m m₁ j r₁ hlt hc h0] at hL
+      obtain ⟨tbl, htbl⟩ := hcc.projFound k m a dn vis fe M eb T j r₁ m₁ hS hc h0
+      have hsome : AM.res (fe.findProj? (decI T) j.toNat) a = some (tbl.entry j.toNat) := by
+        rw [hres]; simp only [decEntry, if_neg h0, htbl, Option.map_some]
+      rw [hsome] at hrunF
+      have h1 : (j + 1).toNat = j.toNat + 1 := uint64_succ_toNat nF j hlt
+      obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hL1⟩ := ih k m₁ _ M₁ (j + 1) L m'
+        (by omega) (by omega) hS₁ hL
+      rw [h1] at hok2 hS₂ hres2
+      have hrunR := AM.run_of_ok _ _ hok2
+      obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _
+        (towerSlotsAllGo_cont_run fe (decI T) K j.toNat a _ _ _ _ hrunF rfl hrunR)
+      refine ⟨hokF, ⟨M₂, ?_, hK₁.trans hK₂, hSt₁.trans hSt₂⟩, ?_, hL1⟩
+      · rw [hstF]; exact hS₂
+      · rw [hresF]; exact hres2
+
+/-- **`tower_slots_all` refines `towerSlotsAll`** (`find_proj` and its decoding fact as
+`CoreCallees`). -/
+theorem towerSlotsAll_refines' (p : Prog) (hp : IotaProg' p) (hcc : CoreCallees p) :
+    TowerSlotsAllOK p := by
+  intro n s₀ a₀ dn vis fe MM eb T nF hS hT
+  cases n with
+  | zero =>
+    apply L.M.triple_of_run
+    intro s r s' _ hrun
+    exact (invoke_zero_run _ _ _ _ _ _ hrun).elim
+  | succ n =>
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
+    (towerSlotsAll_spec p hp.towerSlotsAll n s₀ vis T nF)
+  subst hs0
+  refine ⟨hloc, ?_⟩
+  obtain ⟨hok, hca, hres, hL1⟩ := tsW_ok p hcc dn vis fe eb T nF hT (nF.toNat - (0 : Word).toNat) (n + 1)
+    s.mem a₀ MM 0 r s'.mem rfl (by simp) hS hW
+  refine ⟨hok, ?_, ?_, hL1⟩
+  · simpa [towerSlotsAll] using hca
+  · simpa [towerSlotsAll] using hres
+
 end L.Arena

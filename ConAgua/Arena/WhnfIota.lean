@@ -174,17 +174,22 @@ def iotaCase3L : FunDecl := lfn (rlk, vis, ctorP, us) locals (np) {
 
 /-! ## `tower_slots_all(vis, T, nF)`, `eta_projs(T, b, nF)`, `eta_fab_args(…)` -/
 
+/-- The slot walk of `tower_slots_all` (a named block, for the proofs). -/
+def towerSlotsAllLoop : Stmt := lblk (vis, T, nF, j, flag, q) {
+  while j < nF {
+    (flag, q) := call find_proj(vis, T, j);
+    if flag == 0 { return 0 };
+    j += 1
+  }
+}
+
 /-- con-leche: `CoreDefs.lean:723-728`/`FEnv.lean:195-197` `towerSlotsAll` — are all `nF`
 projection slots of `T` table entries? -/
 -- con-ron: ConRon/Arena/Core.lean:1429-1433 ConRon.Arena.towerSlotsAll
 @[l_impl ConRon.Arena.towerSlotsAll]
 def towerSlotsAllL : FunDecl := lfn (vis, T, nF) locals (j, flag, q) {
   j := 0;
-  while j < nF {
-    (flag, q) := call find_proj(vis, T, j);
-    if flag == 0 { return 0 };
-    j += 1
-  };
+  ⟪towerSlotsAllLoop⟫;
   return 1
 }
 
