@@ -554,4 +554,177 @@ theorem ldsSame_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : N
     simp only [hsch, Bool.false_eq_true, ↓reduceIte, pure_bind]
     exact unf _ _ _ hS₁ hW
 
+/-! ## `lds_both` -/
+
+/-- Both heads unfoldable, as the twin's `lazyDeltaStep` does it: the hints decide the side. -/
+def bothT (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (a b : EIdx) :
+    AM DeltaStepA := do
+  let ha ← headHint fe a
+  let hb ← headHint fe b
+  if ConLeche.ReducibilityHint.lt hb ha then ldsOneT mode r fe depth true a b
+  else if ConLeche.ReducibilityHint.lt ha hb then ldsOneT mode r fe depth false a b
+  else sameT mode r fe depth a b ha hb
+
+section bhK
+variable (p : Prog) (n : Nat) (mode vis d a b : Word)
+
+def bhK4 (ra rb : List Word) (res : Option (List Word × Mem)) : Option (Word × Word × Word × Mem) :=
+  match res with
+  | none => none
+  | some (r, m) =>
+    if r.headD 0 ≠ 0 then llK3 (callW p n "lds_right" [mode, vis, d, a, b] m)
+    else llK3 (callW p n "lds_same" [mode, vis, d, a, b, ra.headD 0, ra.tail.headD 0, rb.headD 0,
+      rb.tail.headD 0] m)
+
+def bhK3 (ra rb : List Word) (res : Option (List Word × Mem)) : Option (Word × Word × Word × Mem) :=
+  match res with
+  | none => none
+  | some (r, m) =>
+    if r.headD 0 ≠ 0 then llK3 (callW p n "lds_left" [mode, vis, d, a, b] m)
+    else bhK4 p n mode vis d a b ra rb (callW p n "hint_lt" [ra.headD 0, ra.tail.headD 0, rb.headD 0,
+      rb.tail.headD 0] m)
+
+def bhK2 (ra : List Word) (res : Option (List Word × Mem)) : Option (Word × Word × Word × Mem) :=
+  match res with
+  | none => none
+  | some (rb, m) => bhK3 p n mode vis d a b ra rb (callW p n "hint_lt" [rb.headD 0, rb.tail.headD 0,
+      ra.headD 0, ra.tail.headD 0] m)
+
+def bhK1 (res : Option (List Word × Mem)) : Option (Word × Word × Word × Mem) :=
+  match res with
+  | none => none
+  | some (ra, m) => bhK2 p n mode vis d a b ra (callW p n "head_hint" [vis, b] m)
+
+variable (r ra rb : List Word) (m : Mem)
+theorem bhK4_t (h : r.headD 0 ≠ 0) : bhK4 p n mode vis d a b ra rb (some (r, m)) =
+    llK3 (callW p n "lds_right" [mode, vis, d, a, b] m) := by
+  simp only [bhK4, h, ne_eq, not_false_eq_true, ↓reduceIte]
+theorem bhK4_f (h : r.headD 0 = 0) : bhK4 p n mode vis d a b ra rb (some (r, m)) =
+    llK3 (callW p n "lds_same" [mode, vis, d, a, b, ra.headD 0, ra.tail.headD 0, rb.headD 0,
+      rb.tail.headD 0] m) := by
+  simp only [bhK4, h, ne_eq, not_true_eq_false, ↓reduceIte]
+theorem bhK3_t (h : r.headD 0 ≠ 0) : bhK3 p n mode vis d a b ra rb (some (r, m)) =
+    llK3 (callW p n "lds_left" [mode, vis, d, a, b] m) := by
+  simp only [bhK3, h, ne_eq, not_false_eq_true, ↓reduceIte]
+theorem bhK3_f (h : r.headD 0 = 0) : bhK3 p n mode vis d a b ra rb (some (r, m)) =
+    bhK4 p n mode vis d a b ra rb (callW p n "hint_lt" [ra.headD 0, ra.tail.headD 0, rb.headD 0,
+      rb.tail.headD 0] m) := by
+  simp only [bhK3, h, ne_eq, not_true_eq_false, ↓reduceIte]
+theorem bhK2_s : bhK2 p n mode vis d a b ra (some (rb, m)) = bhK3 p n mode vis d a b ra rb
+    (callW p n "hint_lt" [rb.headD 0, rb.tail.headD 0, ra.headD 0, ra.tail.headD 0] m) := rfl
+theorem bhK1_s : bhK1 p n mode vis d a b (some (ra, m)) =
+    bhK2 p n mode vis d a b ra (callW p n "head_hint" [vis, b] m) := rfl
+end bhK
+
+-- Five callees on the longest path: the default budget runs out.
+set_option maxHeartbeats 1000000 in
+theorem ldsBoth_spec (p : Prog) (hp : LazyProg p) (n : Nat) (s₀ : St) (mode vis d a b : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "lds_both" [mode, vis, d, a, b]
+    ⦃fun r s' => LocEq s' s₀ ∧ bhK1 p n mode vis d a b (callW p n "head_hint" [vis, a] s₀.mem) =
+      some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp.both]
+  simp only [callFn, ldsBothL]
+  sym (gen := 80) (instances := 5000) only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, callW_spec p n "head_hint",
+      callW_spec p n "hint_lt", callW_spec p n "lds_left", callW_spec p n "lds_right",
+      callW_spec p n "lds_same"] <;>
+    finish [bhK1_s, bhK2_s, bhK3_t, bhK3_f, bhK4_t, bhK4_f, llK3_s, St.setLocs_mem']
+
+/-- **`lds_both` refines `bothT`** at the knot. -/
+theorem ldsBoth_refines (p : Prog) (hp : LazyProg p) (hc : LazyCallees p) (n : Nat)
+    (hk : KnotUpTo p n) (F : Nat) (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode d a b : Word)
+    (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (ha : HW a) (hb : HW b) (hd : d.toNat < 2 ^ 63) :
+    CoreSpec p (n + 1) "lds_both" [mode, vis, d, a, b]
+      (bothT (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decE a) (decE b))
+      decDS s₀ a₀ dn vis fe M eb Res3 := by
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun (ldsBoth_spec p hp n s₀ mode vis d a b)
+  subst hs0
+  refine ⟨hloc, ?_⟩
+  have hS := hs.rel
+  unfold bothT
+  cases hc1 : callW p n "head_hint" [vis, a] s.mem with
+  | none => rw [hc1] at hW; cases hW
+  | some q =>
+  obtain ⟨ra, m₁⟩ := q
+  rw [hc1, bhK1_s] at hW
+  obtain ⟨k, rfl⟩ := callW_succ hc1
+  have e₁ := CoreSpec.of_callW (headHint_refines p hp.mid.leaf k s a₀ dn vis fe M eb a hS ha) hc1
+  refine coreRef_bind e₁ (fun M₁ hS₁ => ?_)
+  cases hc2 : callW p (k + 1) "head_hint" [vis, b] m₁ with
+  | none => rw [hc2] at hW; cases hW
+  | some q =>
+  obtain ⟨rb, m₂⟩ := q
+  rw [hc2, bhK2_s] at hW
+  have e₂ := CoreSpec.of_callW (s₀ := ⟨m₁, Locals.init []⟩)
+    (headHint_refines p hp.mid.leaf k _ _ dn vis fe M₁ eb b hS₁ hb) hc2
+  refine coreRef_bind e₂ (fun M₂ hS₂ => ?_)
+  -- the arms after the hints
+  have arm : ∀ (f : FnName) (args : List Word) (m₃ : Mem) (T : AM DeltaStepA) (a₂ : AState),
+      llK3 (callW p (k + 1) f args m₃) = some (r.headD 0, r.tail.headD 0, r.tail.tail.headD 0, s'.mem) →
+      (∀ r₄ m₄, callW p (k + 1) f args m₃ = some (r₄, m₄) →
+        CoreRef T a₂ decDS dn m₃ vis fe M₂ eb r₄ m₄ Res3) →
+      CoreRef T a₂ decDS dn m₃ vis fe M₂ eb r s'.mem Res3 := by
+    intro f args m₃ T a₂ h hT
+    cases hc4 : callW p (k + 1) f args m₃ with
+    | none => rw [hc4] at h; cases h
+    | some q =>
+    obtain ⟨r₄, m₄⟩ := q
+    rw [hc4, llK3_s, Option.some.injEq, Prod.mk.injEq, Prod.mk.injEq, Prod.mk.injEq] at h
+    obtain ⟨g1, g2, g3, hm⟩ := h
+    have e := hT r₄ m₄ hc4
+    rw [← hm]
+    exact coreRef_redec e (decDS_eq g1 g2 g3) (res3_eq g1 g2 g3 e.2.2.2)
+  cases hc3 : callW p (k + 1) "hint_lt" [rb.headD 0, rb.tail.headD 0, ra.headD 0, ra.tail.headD 0] m₂ with
+  | none => rw [hc3] at hW; cases hW
+  | some q =>
+  obtain ⟨rl, m₃⟩ := q
+  rw [hc3] at hW
+  obtain ⟨t₃, ht₃, hm₃, -, hlt₁, -⟩ := triple_of_callW (s₀ := ⟨m₂, Locals.init []⟩)
+    (hintLt_refines p hp.mid.leaf k ⟨m₂, Locals.init []⟩ _ _ _ _) hc3
+  have hm₃' : m₃ = m₂ := by rw [← ht₃, hm₃]
+  subst hm₃'
+  have hdh : ∀ r : List Word, decHintR r = decHintW (r.headD 0) (r.tail.headD 0) := fun _ => rfl
+  rw [hdh ra, hdh rb]
+  by_cases h1 : rl.headD 0 ≠ 0
+  · rw [bhK3_t (h := h1)] at hW
+    have hl : ConLeche.ReducibilityHint.lt (decHintW (rb.headD 0) (rb.tail.headD 0))
+        (decHintW (ra.headD 0) (ra.tail.headD 0)) = true := by rw [← hlt₁]; exact decBool_t h1
+    simp only [hl, ↓reduceIte]
+    exact arm _ _ _ _ _ hW (fun r₄ m₄ hc4 => CoreSpec.of_callW (s₀ := ⟨m₃, Locals.init []⟩)
+      (ldsLeft_refines p hp hc k (hk.mono (by omega)) F (by omega) (by omega) _ _ dn vis fe M₂ eb
+        mode d a b ⟨hS₂, hs.mode4, hs.eb_mode⟩ ha hb hd) hc4)
+  have h1' : rl.headD 0 = 0 := by simpa using h1
+  rw [bhK3_f (h := h1')] at hW
+  have hl : ConLeche.ReducibilityHint.lt (decHintW (rb.headD 0) (rb.tail.headD 0))
+      (decHintW (ra.headD 0) (ra.tail.headD 0)) = false := by rw [← hlt₁]; exact decBool_f h1'
+  simp only [hl, Bool.false_eq_true, ↓reduceIte]
+  cases hc5 : callW p (k + 1) "hint_lt" [ra.headD 0, ra.tail.headD 0, rb.headD 0, rb.tail.headD 0] m₃ with
+  | none => rw [hc5] at hW; cases hW
+  | some q =>
+  obtain ⟨rl₂, m₅⟩ := q
+  rw [hc5] at hW
+  obtain ⟨t₅, ht₅, hm₅, -, hlt₂, -⟩ := triple_of_callW (s₀ := ⟨m₃, Locals.init []⟩)
+    (hintLt_refines p hp.mid.leaf k ⟨m₃, Locals.init []⟩ _ _ _ _) hc5
+  have hm₅' : m₅ = m₃ := by rw [← ht₅, hm₅]
+  subst hm₅'
+  by_cases h2 : rl₂.headD 0 ≠ 0
+  · rw [bhK4_t (h := h2)] at hW
+    have hl2 : ConLeche.ReducibilityHint.lt (decHintW (ra.headD 0) (ra.tail.headD 0))
+        (decHintW (rb.headD 0) (rb.tail.headD 0)) = true := by rw [← hlt₂]; exact decBool_t h2
+    simp only [hl2, ↓reduceIte]
+    exact arm _ _ _ _ _ hW (fun r₄ m₄ hc4 => CoreSpec.of_callW (s₀ := ⟨m₅, Locals.init []⟩)
+      (ldsRight_refines p hp hc k (hk.mono (by omega)) F (by omega) (by omega) _ _ dn vis fe M₂ eb
+        mode d a b ⟨hS₂, hs.mode4, hs.eb_mode⟩ ha hb hd) hc4)
+  have h2' : rl₂.headD 0 = 0 := by simpa using h2
+  rw [bhK4_f (h := h2')] at hW
+  have hl2 : ConLeche.ReducibilityHint.lt (decHintW (ra.headD 0) (ra.tail.headD 0))
+      (decHintW (rb.headD 0) (rb.tail.headD 0)) = false := by rw [← hlt₂]; exact decBool_f h2'
+  simp only [hl2, Bool.false_eq_true, ↓reduceIte]
+  exact arm _ _ _ _ _ hW (fun r₄ m₄ hc4 => CoreSpec.of_callW (s₀ := ⟨m₅, Locals.init []⟩)
+    (ldsSame_refines p hp hc k (hk.mono (by omega)) F (by omega) (by omega) _ _ dn vis fe M₂ eb
+      mode d a b _ _ _ _ ⟨hS₂, hs.mode4, hs.eb_mode⟩ ha hb hd) hc4)
+
 end L.Arena
