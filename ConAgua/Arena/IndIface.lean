@@ -2,6 +2,7 @@ import ConAgua.Arena.Env
 import ConRon.Arena.CheckDecl
 import ConAgua.Census.Attr
 import ConAgua.Compiler.WF
+import ConAgua.Compiler.WFFast
 
 /-!
 # The inductive stage in L: the interface (lane `induct`)
@@ -808,8 +809,8 @@ end L.Ind
 namespace L.Ind
 
 /-- The library closes over itself and the stubs. -/
-theorem libFns_wf : L.Compiler.Prog.wf indTab (libFns ++ stubFns ++ masterFns) = true := by
-  decide +kernel
+theorem libFns_wf : L.Compiler.Prog.wf indTab (libFns ++ stubFns ++ masterFns) = true :=
+  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
 
 end L.Ind
 

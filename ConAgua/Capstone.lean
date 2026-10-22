@@ -4,6 +4,7 @@ import ConAgua.Scan.ValidatorLink
 import ConAgua.Arena.LitRefine
 import ConAgua.Arena.WalkRefine
 import ConAgua.Front.FrontRun
+import ConAgua.Compiler.WFFast
 
 /-!
 # The capstone: the first end-to-end theorems
@@ -504,8 +505,8 @@ open L.Compiler hiding rdW
 /-- The compiler's static check passes for the whole frontend (one byte array, 69 word arrays), so
 `compile_correct` applies to it. (`frontAllProg` returns up to 9 words; see DESIGN.md, lane
 `cresults`.) -/
-theorem frontAllProg_wf : Prog.wf (Prog.tab frontAllProg 1 69) frontAllProg = true := by
-  decide +kernel
+theorem frontAllProg_wf : Prog.wf (Prog.tab frontAllProg 1 69) frontAllProg = true :=
+  L.Compiler.Prog.wf_of_wfFast (by decide +kernel)
 
 /-- `frontAll_refines` for a run of `L.run`. -/
 theorem frontAll_run (b : ByteArray) (h64 : System.Platform.numBits = 64) (hsize : b.size < 2 ^ 63)
