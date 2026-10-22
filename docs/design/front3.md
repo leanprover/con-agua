@@ -297,7 +297,7 @@ Findings:
   `parseChunks` proven, everything below it that only `parseBytes` and `parseChunks` reach is
   covered: phase 1a (scanner) and 1b (records) are 100 % proven.
 * `Arena/InitLink.lean`: `estoreEmpty_refines` (`@[refines EStore.empty]`) = `arenaD_init`.
-* Census (in the worktree, after merging master `fd3650c9`): phase 0 177 proven / 5 written /
+* Census (in the worktree, after merging master `4695cd27`): phase 0 177 proven / 5 written /
   114 todo (976 / 988 / 1305 Lean lines); phase 1 (1a+1b+1c) 128 / 18 / 20 (2662 / 2774 / 2907).
   Before (master `f960919b`, docs/progress.md): phase 0 173 / 3 / 120 (972 / 981 / 1305), phase 1
   53 / 47 / 66 (696 / 1164 / 2907).
