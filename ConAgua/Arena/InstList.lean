@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.Inst1Spec
+public import ConAgua.L.ProgHas
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.Store
 import ConAgua.Census.Attr
@@ -842,25 +843,20 @@ def ilgProj : FunDecl := lfn (h, d, o, l, fu) locals (fd, j, e0, t, i, nm, ix, e
 
 /-! ## The program and the dispatchers' steps -/
 
-/-- What the specs need of the program. -/
-structure InstListProg (p : Prog) : Prop where
-  base : LiftProg p
-  ilf : p.lookup "ilm_find" = some (memoFindG ilSch)
-  ilp : p.lookup "ilm_put" = some (memoPutG ilSch)
-  ilc : p.lookup "ilm_clear" = some (memoClearG ilSch)
-  go : p.lookup "il_go" = some ilGo
-  app : p.lookup "il_app" = some ilApp
-  lam : p.lookup "il_lam" = some ilLam
-  fa : p.lookup "il_forall" = some ilForall
-  le : p.lookup "il_let" = some ilLet
-  pj : p.lookup "il_proj" = some ilProj
-  bv : p.lookup "il_bvar" = some ilBVar
-  ggo : p.lookup "ilg_go" = some ilgGo
-  gapp : p.lookup "ilg_app" = some ilgApp
-  glam : p.lookup "ilg_lam" = some ilgLam
-  gfa : p.lookup "ilg_forall" = some ilgForall
-  gle : p.lookup "ilg_let" = some ilgLet
-  gpj : p.lookup "ilg_proj" = some ilgProj
+/-- The two walks without the entry, over `liftProg`. -/
+def instListWalkProg : Prog :=
+  [("ilm_find", memoFindG ilSch), ("ilm_put", memoPutG ilSch), ("ilm_clear", memoClearG ilSch),
+    ("il_go", ilGo), ("il_app", ilApp), ("il_lam", ilLam), ("il_forall", ilForall),
+    ("il_let", ilLet), ("il_proj", ilProj), ("il_bvar", ilBVar), ("ilg_go", ilgGo),
+    ("ilg_app", ilgApp), ("ilg_lam", ilgLam), ("ilg_forall", ilgForall), ("ilg_let", ilgLet),
+    ("ilg_proj", ilgProj)] ++ liftProg
+
+/-- What the specs need of the program: `instListWalkProg`'s functions. -/
+def InstListProg (p : Prog) : Prop := ProgHas p instListWalkProg
+
+theorem InstListProg.base {p : Prog} (hp : InstListProg p) : LiftProg p := by
+  have h : ProgHas p liftProg := hp.right
+  constructor <;> exact h.get _
 
 section specs
 variable (p : Prog) (hp : InstListProg p)
@@ -914,10 +910,10 @@ theorem ilGo_step (n : Nat) (ih : IlArmSpec p n) : IlGoSpec p (n + 1) := by
   have ihE := fun s h d o l fu => (ih s h d o l fu).2.2.2.1
   have ihP := fun s h d o l fu => (ih s h d o l fu).2.2.2.2.1
   have ihB := fun s h d o l fu => (ih s h d o l fu).2.2.2.2.2
-  rw [invoke_eq _ hp.go]
+  rw [invoke_eq _ (hp.get "il_go")]
   simp only [callFn, ilGo]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, derB_spec p hp.base.derb n,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, derB_spec p (hp.get "der_b") n,
       ihA, ihL, ihF, ihE, ihP, ihB] <;>
     finish
 
@@ -930,10 +926,10 @@ theorem ilgGo_step (n : Nat) (ih : IlgArmSpec p n) (ihl : IlGoSpec p n) : IlgGoS
   have ihF := fun s h d o l fu => (ih s h d o l fu).2.2.1
   have ihE := fun s h d o l fu => (ih s h d o l fu).2.2.2.1
   have ihP := fun s h d o l fu => (ih s h d o l fu).2.2.2.2
-  rw [invoke_eq _ hp.ggo]
+  rw [invoke_eq _ (hp.get "ilg_go")]
   simp only [callFn, ilgGo]
   sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, derB_spec p hp.base.derb n,
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, derB_spec p (hp.get "der_b") n,
       ihA, ihL, ihF, ihE, ihP, ihl] <;>
     finish
 

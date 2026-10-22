@@ -1,4 +1,5 @@
 import ConAgua.Arena.StoreLib
+import ConAgua.Arena.SimLib
 import ConAgua.Arena.NNumStore
 
 /-!
@@ -216,12 +217,8 @@ theorem internNNum_refines (p : Prog) (hpf : p.lookup "nnum_find" = some nnumFin
     invoke p (exec p n) "intern_nnum" [pre, u]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internNNode (.num (decI pre) u.toNat)) a₀ ∧
       NNumR s'.mem (AM.st (internNNode (.num (decI pre) u.toNat)) a₀) ∧
-      AM.res (internNNode (.num (decI pre) u.toNat)) a₀ = decI (r.headD 0); ⊤⦄ := by
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun
-    (internNNum_spec p hpf hpp hp n s₀ pre u)
-  subst hs
-  exact ⟨hloc, nnintern_correct s.mem a₀ hR pre u hpre _ _ hI⟩
+      AM.res (internNNode (.num (decI pre) u.toNat)) a₀ = decI (r.headD 0); ⊤⦄ :=
+  Sim.tripleD (internNNum_spec p hpf hpp hp n s₀ pre u)
+    (Sim.ofOkD (nnintern_correct s₀.mem a₀ hR pre u hpre))
 
 end L.Arena
