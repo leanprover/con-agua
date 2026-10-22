@@ -99,12 +99,12 @@ theorem defeqArg_any (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (he : 
       (defeqArg (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE ta) (decE ty)) decBool
       s₀ a₀ dn vis fe M eb
   | 0, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _, _, _ =>
-      CoreSpec.zero p _ _ _ _ s₀ a₀ dn vis fe M eb _
+      CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
   | k + 1, hk, F, s₀, a₀, dn, vis, fe, M, eb, mode, d, a, ta, ty, hF, hn, hs, ha, hta, hty => by
       have hde : DefeqESlot p k := by
         cases k with
         | zero => intro F s₀ a₀ dn vis fe M eb mode d x y _ _ _ _ _
-                  exact CoreSpec.zero p _ _ _ _ s₀ a₀ dn vis fe M eb _
+                  exact CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
         | succ j => exact defeqE_refines p hkp j (hk j (by omega)).defeq
       exact defeqArg_refines p hp k he (hk k (by omega)).defeq hde F s₀ a₀ dn vis fe M eb mode d a ta ty
         (by omega) (by omega) hs ha hta hty
@@ -293,7 +293,7 @@ theorem inferSpineArg_any (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (
       (inferSpineArgT (coreKnot (decMode mode) fe id F) d.toNat (decE a) (decE dom)) (fun _ => ())
       s₀ a₀ dn vis fe M eb
   | 0, _, _, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _ =>
-      CoreSpec.zero p _ _ _ _ s₀ a₀ dn vis fe M eb _
+      CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
   | n + 1, hk, F, hF, hn, s₀, a₀, dn, vis, fe, M, eb, mode, d, a, dom, hs, ha, hdom =>
       inferSpineArg_refines p hp hkp hq he n (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis
         fe M eb mode d a dom hs ha hdom
@@ -515,7 +515,7 @@ theorem inferSpine_any (p : Prog) (hp : InferLeafProg p) (hkp : KnotProg p) (hq 
       (inferSpine (coreKnot (decMode mode) fe id F) fe d.toNat (decE ty) #[] args 0) decH s₀ a₀ dn
         vis fe M eb
   | 0, _, _, _, _, s₀, a₀, dn, vis, fe, M, eb, _, _, _, _, _, _, _, _, _, _ =>
-      CoreSpec.zero p _ _ _ _ s₀ a₀ dn vis fe M eb _
+      CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
   | n + 1, hk, F, hF, hn, s₀, a₀, dn, vis, fe, M, eb, mode, d, ty, ao, an, args, hs, ht, har, hlo =>
       inferSpine_refines p hp hkp hq he hil n (hk.mono (by omega)) F (by omega) (by omega) s₀ a₀ dn vis
         fe M eb mode d ty ao an args hs ht har hlo

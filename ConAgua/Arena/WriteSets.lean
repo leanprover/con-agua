@@ -1,6 +1,11 @@
 import ConAgua.Arena.Inst1Spec
 import ConAgua.Arena.Walk
 import ConAgua.Arena.FVarRange
+import ConAgua.Arena.Abs1Spec
+import ConAgua.Arena.ArRangeSpec
+import ConAgua.Arena.InstListSpec
+import ConAgua.Arena.HasFvar
+import ConAgua.Arena.BvarB
 import ConAgua.Arena.LitRefine
 import ConAgua.Arena.Frame
 
@@ -8,7 +13,7 @@ import ConAgua.Arena.Frame
 # The write sets of the walks and the store programs, from the text
 
 `closedA` (`Frame.lean`, `L/WriteSet.lean`) checked on the concrete programs (`liftProg`,
-`instProg`, `walkProg`, `fvarRangeProg`, `storeProg`) by `decide +kernel`, then carried to every program that satisfies the walk's program
+`instProg`, `walkProg`, `fvarRangeProg`, `bvbProg`, `absProg`, `hasFvarProg`, `arProg`, `instListProg`, `storeProg`) by `decide +kernel`, then carried to every program that satisfies the walk's program
 predicate (`LiftProg p`, `InstProg p`), since `closedW` reads only the lookups of the functions
 it checks. With `run_keeps`, any memory predicate that is `Stable` under the write set survives
 every run of the entries, with no lemma about the walk.
@@ -148,6 +153,185 @@ theorem frMemo_frame {p : Prog} (hpf : p.lookup "fm_find" = some (memoFindG frSc
     (hpm : p.lookup "fr_memo" = some frMemo) {n : Nat} {vs : List Word} {m : Mem} {rs : List Word}
     {m' : Mem} (h : run p n "fr_memo" vs m = .ok (rs, m')) : MemFrame frA frC m m' :=
   (run_memFrame (fr_closed hpf hps hpc hp hpn hpm) (by decide) h).1
+
+/-! ## `bvar_b`, `loose_bvars_bounded_fast` -/
+
+def bvbFns : List FnName := ["bvar_b", "loose_bvars_bounded_fast", "der_b"] ++ walkFns
+
+theorem bvbProg_closed : closedA bvbProg walkA walkC bvbFns = true := by decide +kernel
+
+theorem bvb_closed {p : Prog} (hp : BvbProg p) : closedA p walkA walkC bvbFns = true :=
+  closedW_of_agree bvbProg_closed (by
+    simp only [bvbFns, walkFns, List.cons_append, List.nil_append, List.forall_mem_cons,
+      List.not_mem_nil, false_imp_iff, implies_true, and_true]
+    exact ⟨hp.bvb.trans rfl, hp.lbb.trans rfl, hp.derb.trans rfl, hp.bmf.trans rfl,
+      hp.bmp.trans rfl, hp.bmc.trans rfl, hp.bbgo.trans rfl, hp.bbnode.trans rfl,
+      hp.bbmemo.trans rfl⟩)
+
+/-- **Every run of `bvar_b` changes only the `bvarBound` memo.** -/
+theorem bvarB_frame {p : Prog} (hp : BvbProg p) {n : Nat} {vs : List Word} {m : Mem}
+    {rs : List Word} {m' : Mem} (h : run p n "bvar_b" vs m = .ok (rs, m')) :
+    MemFrame walkA walkC m m' :=
+  (run_memFrame (bvb_closed hp) (by decide) h).1
+
+/-- **Every run of `loose_bvars_bounded_fast` changes only the `bvarBound` memo.** -/
+theorem lbbFast_frame {p : Prog} (hp : BvbProg p) {n : Nat} {vs : List Word} {m : Mem}
+    {rs : List Word} {m' : Mem} (h : run p n "loose_bvars_bounded_fast" vs m = .ok (rs, m')) :
+    MemFrame walkA walkC m m' :=
+  (run_memFrame (bvb_closed hp) (by decide) h).1
+
+/-! ## The store's `mk_*` and `intern_*`, the `abstract1` walk, `has_fvar` -/
+
+/-- The read of the packed ranges and the `mk_*`/`intern_*` functions of `liftProg`. -/
+def mkFns : List FnName :=
+  ["der_b", "mk_app", "mk_lam", "mk_forall", "mk_let", "mk_proj", "bvar_find", "bvar_push",
+    "intern_bvar", "app_find", "app_push", "intern_app", "lam_find", "lam_push", "intern_lam",
+    "forall_find", "forall_push", "intern_forall", "letE_find", "letE_push", "intern_letE",
+    "proj_find", "proj_push", "intern_proj"]
+
+/-- What they write: `liftA` without the lift memo `LMEMO` (41). -/
+def mkA : List ArrId := [42, 43, 44, 45, 46, 22, 23, 4, 5, 27, 28, 29, 30, 20, 21, 31, 32]
+/-- `liftC` without the lift memo's stamp and count. -/
+def mkC : List Word := [22, 23, 4, 5, 28, 29, 30, 31, 20, 21, 32, 33]
+
+/-- The `abstract1` walk without its entry, the `fvarRange` walk, and `mkFns`. -/
+def absWalkFns : List FnName :=
+  ["ab_find", "ab_put", "ab_clear", "ab_fvb", "abs_go", "ab_node", "abs_app", "abs_lam",
+    "abs_forall", "abs_let", "abs_proj"] ++ frFns ++ mkFns
+
+theorem AbsProg.agree {p : Prog} (hp : AbsProg p) : ∀ f ∈ absWalkFns, p.lookup f = absProg.lookup f := by
+  simp only [absWalkFns, frFns, mkFns, List.cons_append, List.nil_append, List.forall_mem_cons,
+    List.not_mem_nil, false_imp_iff, implies_true, and_true]
+  exact ⟨hp.abf.trans rfl, hp.abp.trans rfl, hp.abc.trans rfl, hp.fvb.trans rfl, hp.go.trans rfl,
+    hp.node.trans rfl, hp.app.trans rfl, hp.lam.trans rfl, hp.fa.trans rfl, hp.le.trans rfl,
+    hp.pj.trans rfl, hp.fmf.trans rfl, hp.fmp.trans rfl, hp.fmc.trans rfl, hp.frgo.trans rfl,
+    hp.frnode.trans rfl, hp.frmemo.trans rfl, hp.base.derb.trans rfl, hp.base.mkapp.trans rfl,
+    hp.base.mklam.trans rfl, hp.base.mkfa.trans rfl, hp.base.mklet.trans rfl,
+    hp.base.mkpj.trans rfl, hp.base.bvf.trans rfl, hp.base.bvp.trans rfl, hp.base.bvi.trans rfl,
+    hp.base.appf.trans rfl, hp.base.appp.trans rfl, hp.base.appi.trans rfl,
+    hp.base.lamf.trans rfl, hp.base.lamp.trans rfl, hp.base.lami.trans rfl,
+    hp.base.faf.trans rfl, hp.base.fap.trans rfl, hp.base.fai.trans rfl, hp.base.lef.trans rfl,
+    hp.base.lep.trans rfl, hp.base.lei.trans rfl, hp.base.pjf.trans rfl, hp.base.pjp.trans rfl,
+    hp.base.pji.trans rfl⟩
+
+/-- The `abstract1` memo `ABMEMO` (49), the `fvarRange` memo, and `mkA`. -/
+def absA : List ArrId := 49 :: frA ++ mkA
+/-- The `abstract1` memo's stamp and count (48, 49), `frC` and `mkC`. -/
+def absC : List Word := 48 :: 49 :: frC ++ mkC
+
+def absFns : List FnName := "abs_entry" :: absWalkFns
+
+theorem absProg_closed : closedA absProg absA absC absFns = true := by decide +kernel
+
+theorem AbsProg.closed {p : Prog} (hp : AbsProg p) (he : p.lookup "abs_entry" = some absEntry) :
+    closedA p absA absC absFns = true :=
+  closedW_of_agree absProg_closed (by
+    simp only [absFns, List.forall_mem_cons]
+    exact ⟨he.trans rfl, hp.agree⟩)
+
+/-- **Every run of `abs_entry` changes only `absA` and `absC`.** -/
+theorem absEntry_frame {p : Prog} (hp : AbsProg p) (he : p.lookup "abs_entry" = some absEntry)
+    {n : Nat} {vs : List Word} {m : Mem} {rs : List Word} {m' : Mem}
+    (h : run p n "abs_entry" vs m = .ok (rs, m')) : MemFrame absA absC m m' :=
+  (run_memFrame (hp.closed he) (by decide) h).1
+
+/-- `has_fvar`, `has_fvar_fast` over `absProg`. -/
+def hasFvarProg : Prog := [("has_fvar", hasFvarL), ("has_fvar_fast", hasFvarFastL)] ++ absProg
+
+def hasFvarFns : List FnName := ["has_fvar", "has_fvar_fast", "ab_fvb", "der_b"] ++ frFns
+
+theorem hasFvarProg_closed : closedA hasFvarProg frA frC hasFvarFns = true := by decide +kernel
+
+theorem hasFvar_closed {p : Prog} (hp : AbsProg p) (h1 : p.lookup "has_fvar" = some hasFvarL)
+    (h2 : p.lookup "has_fvar_fast" = some hasFvarFastL) : closedA p frA frC hasFvarFns = true :=
+  closedW_of_agree hasFvarProg_closed (by
+    simp only [hasFvarFns, frFns, List.cons_append, List.nil_append, List.forall_mem_cons,
+      List.not_mem_nil, false_imp_iff, implies_true, and_true]
+    exact ⟨h1.trans rfl, h2.trans rfl, hp.fvb.trans rfl, hp.base.derb.trans rfl,
+      hp.fmf.trans rfl, hp.fmp.trans rfl, hp.fmc.trans rfl, hp.frgo.trans rfl, hp.frnode.trans rfl,
+      hp.frmemo.trans rfl⟩)
+
+/-- **Every run of `has_fvar` changes only the `fvarRange` memo.** -/
+theorem hasFvar_frame {p : Prog} (hp : AbsProg p) (h1 : p.lookup "has_fvar" = some hasFvarL)
+    (h2 : p.lookup "has_fvar_fast" = some hasFvarFastL) {n : Nat} {vs : List Word} {m : Mem}
+    {rs : List Word} {m' : Mem} (h : run p n "has_fvar" vs m = .ok (rs, m')) :
+    MemFrame frA frC m m' :=
+  (run_memFrame (hasFvar_closed hp h1 h2) (by decide) h).1
+
+/-- **Every run of `has_fvar_fast` changes only the `fvarRange` memo.** -/
+theorem hasFvarFast_frame {p : Prog} (hp : AbsProg p) (h1 : p.lookup "has_fvar" = some hasFvarL)
+    (h2 : p.lookup "has_fvar_fast" = some hasFvarFastL) {n : Nat} {vs : List Word} {m : Mem}
+    {rs : List Word} {m' : Mem} (h : run p n "has_fvar_fast" vs m = .ok (rs, m')) :
+    MemFrame frA frC m m' :=
+  (run_memFrame (hasFvar_closed hp h1 h2) (by decide) h).1
+
+/-! ## `ar_entry` -/
+
+def arFns : List FnName :=
+  ["ar_go", "ar_node", "ar_app", "ar_lam", "ar_forall", "ar_let", "ar_proj", "ar_entry"] ++
+    absWalkFns
+
+theorem arProg_closed : closedA arProg absA absC arFns = true := by decide +kernel
+
+theorem absProg_arProg : ∀ f ∈ absWalkFns, absProg.lookup f = arProg.lookup f := by
+  simp only [absWalkFns, frFns, mkFns, List.cons_append, List.nil_append, List.forall_mem_cons,
+    List.not_mem_nil, false_imp_iff, implies_true, and_true]
+  repeat' apply And.intro
+  all_goals rfl
+
+theorem ArProg.closed {p : Prog} (hp : ArProg p) (he : p.lookup "ar_entry" = some arEntry) :
+    closedA p absA absC arFns = true :=
+  closedW_of_agree arProg_closed (by
+    simp only [arFns, List.cons_append, List.nil_append, List.forall_mem_cons]
+    exact ⟨hp.go.trans rfl, hp.node.trans rfl, hp.app.trans rfl, hp.lam.trans rfl,
+      hp.fa.trans rfl, hp.le.trans rfl, hp.pj.trans rfl, he.trans rfl,
+      fun f hf => (hp.base.agree f hf).trans (absProg_arProg f hf)⟩)
+
+/-- **Every run of `ar_entry` changes only `absA` and `absC`** (the `abstract1` memo is shared). -/
+theorem arEntry_frame {p : Prog} (hp : ArProg p) (he : p.lookup "ar_entry" = some arEntry)
+    {n : Nat} {vs : List Word} {m : Mem} {rs : List Word} {m' : Mem}
+    (h : run p n "ar_entry" vs m = .ok (rs, m')) : MemFrame absA absC m m' :=
+  (run_memFrame (hp.closed he) (by decide) h).1
+
+/-! ## `inst_list` -/
+
+def instListFns : List FnName :=
+  ["ilm_find", "ilm_put", "ilm_clear", "il_go", "il_app", "il_lam", "il_forall", "il_let",
+    "il_proj", "il_bvar", "ilg_go", "ilg_app", "ilg_lam", "ilg_forall", "ilg_let", "ilg_proj",
+    "inst_list"] ++ mkFns
+
+/-- The `instantiateList` memo `ILMEMO` (50) and `mkA`; the spine stack `ILSPN` (144) is only
+read. -/
+def instListA : List ArrId := 50 :: mkA
+/-- The memo's stamp and count (50, 51) and `mkC`. -/
+def instListC : List Word := 50 :: 51 :: mkC
+
+theorem instListProg_closed : closedA instListProg instListA instListC instListFns = true := by
+  decide +kernel
+
+theorem InstListProg.closed {p : Prog} (hp : InstListProg p)
+    (he : p.lookup "inst_list" = some instListL) : closedA p instListA instListC instListFns = true :=
+  closedW_of_agree instListProg_closed (by
+    simp only [instListFns, mkFns, List.cons_append, List.nil_append, List.forall_mem_cons,
+      List.not_mem_nil, false_imp_iff, implies_true, and_true]
+    exact ⟨hp.ilf.trans rfl, hp.ilp.trans rfl, hp.ilc.trans rfl, hp.go.trans rfl,
+      hp.app.trans rfl, hp.lam.trans rfl, hp.fa.trans rfl, hp.le.trans rfl, hp.pj.trans rfl,
+      hp.bv.trans rfl, hp.ggo.trans rfl, hp.gapp.trans rfl, hp.glam.trans rfl, hp.gfa.trans rfl,
+      hp.gle.trans rfl, hp.gpj.trans rfl, he.trans rfl, hp.base.derb.trans rfl,
+      hp.base.mkapp.trans rfl, hp.base.mklam.trans rfl, hp.base.mkfa.trans rfl,
+      hp.base.mklet.trans rfl, hp.base.mkpj.trans rfl, hp.base.bvf.trans rfl,
+      hp.base.bvp.trans rfl, hp.base.bvi.trans rfl, hp.base.appf.trans rfl,
+      hp.base.appp.trans rfl, hp.base.appi.trans rfl, hp.base.lamf.trans rfl,
+      hp.base.lamp.trans rfl, hp.base.lami.trans rfl, hp.base.faf.trans rfl,
+      hp.base.fap.trans rfl, hp.base.fai.trans rfl, hp.base.lef.trans rfl,
+      hp.base.lep.trans rfl, hp.base.lei.trans rfl, hp.base.pjf.trans rfl,
+      hp.base.pjp.trans rfl, hp.base.pji.trans rfl⟩)
+
+/-- **Every run of `inst_list` changes only `instListA` and `instListC`.** -/
+theorem instList_frame {p : Prog} (hp : InstListProg p) (he : p.lookup "inst_list" = some instListL)
+    {n : Nat} {vs : List Word} {m : Mem} {rs : List Word} {m' : Mem}
+    (h : run p n "inst_list" vs m = .ok (rs, m')) : MemFrame instListA instListC m m' :=
+  (run_memFrame (hp.closed he) (by decide) h).1
 
 /-! ## `nat_add_lit` -/
 

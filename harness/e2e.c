@@ -66,8 +66,9 @@ int main(int argc, char **argv) {
     fclose(g);
   }
   for (uint64_t a = 0; a < ca_nb; a++) {
-    T[2 + 2 * a] = a == 0 ? (uint64_t)buf : a == 1 && pins ? (uint64_t)pins : (uint64_t)map(8);
-    T[3 + 2 * a] = a == 0 ? (uint64_t)n : a == 1 ? (uint64_t)np : 0;
+    /* byte arrays from 2 on (the prelude's bytes, lane integrate): CA_WORDS bytes each */
+    T[2 + 2 * a] = a == 0 ? (uint64_t)buf : a == 1 ? (pins ? (uint64_t)pins : (uint64_t)map(8)) : (uint64_t)map(words);
+    T[3 + 2 * a] = a == 0 ? (uint64_t)n : a == 1 ? (uint64_t)np : words;
   }
   for (uint64_t a = 0; a < ca_nw; a++) {
     arr[a] = map(8 * words);

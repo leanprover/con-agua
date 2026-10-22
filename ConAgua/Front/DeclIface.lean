@@ -75,7 +75,8 @@ def DeclR (b : ByteArray) : DeclRec → DFld → Prop
   | .thm cv v, f => f.pl = 22 ∧ CVR b cv f ∧ ItemR f.value v
   | .opaq cv v u, f => f.pl = 23 ∧ CVR b cv f ∧ ItemR f.value v ∧ f.flag = (if u then 1 else 0)
   | .quot cv k, f => f.pl = 24 ∧ CVR b cv f ∧ QuotR k f.flag
-  | .ind _ _ _, f => f.pl = 25
+  | .ind tys cts rcs, f => f.pl = 25 ∧ ∃ v : USize, f.name = v.toUInt64 ∧
+      ∃ e, scanIndDecl b v = .ok (.ind tys cts rcs) e
 
 /-- What a declaration line's words say about con-leche's line record. -/
 def DRecR (b : ByteArray) : LineRec → DFld → Prop

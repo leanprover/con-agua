@@ -268,6 +268,7 @@ level-list handle has tag `0`; the twin's `viewLs` fails on any other tag, so th
 there: whnf-delta2 added the `us >> 28` test). The argument slice `get_app_args` pushes is dropped
 again before returning (`CTL[136]` put back, the `StackKept` contract of a core function; before,
 every unfolding leaked its spine onto the stack: whnf-delta2). -/
+-- con-ron: ConRon/Arena/Core.lean:378-398 ConRon.Arena.unfoldDefinition
 def unfoldDefnAtL : FunDecl :=
   lfn (e, n, us, p) locals (tu, iu, usl, lpl, po, value, v, top, ao, an, r) {
   if us >> 28 != 0 { abort };
@@ -313,6 +314,7 @@ def unfoldDefinitionL : FunDecl :=
 /-- `nat_succ_lit(o, cnt)`: the literal `n + 1`, for the POOL slice `(o, cnt)` of `n`: push a
 one-limb `1` at the pool top, `nat_add_lit`. (`reduce_nat`'s `Nat.succ` arm, as its own function:
 a behaviour-preserving split, whnf-delta2.) -/
+-- con-ron: ConRon/Arena/Core.lean:1223-1277 ConRon.Arena.reduceNat
 def natSuccLitL : FunDecl := lfn (o, cnt) locals (oo, xh) {
   oo := CTL.u64[0];
   if len(POOL.u64) <= oo { abort };
@@ -326,6 +328,7 @@ def natSuccLitL : FunDecl := lfn (o, cnt) locals (oo, xh) {
 `c` (at the empty levels) of `c b` is known: `c` must be `Nat.succ` and the literals supported, then
 `b` is head-normalised and, if a literal `n`, answered by the literal `n + 1`. (A behaviour-preserving
 split of `reduce_nat`, whnf-delta2.) -/
+-- con-ron: ConRon/Arena/Core.lean:1223-1277 ConRon.Arena.reduceNat
 def reduceNatSuccL : FunDecl :=
   lfn (mode, vis, d, c, b) locals (sup, ns, wb, fl1, o1, cnt1, xh) {
   sup := call nat_lit_supported(vis);
@@ -341,7 +344,10 @@ def reduceNatSuccL : FunDecl :=
 
 /-- `reduce_nat_op(mode, vis, d, c, a, b)`: the certified binary operation `c a b` on two literals
 (`a`, then `b`, head-normalised; the second only if the first is a literal). (A split of
-`reduce_nat`, whnf-delta2.) -/
+`reduce_nat`, whnf-delta2.) The result is normalised to a flag word `0`/`1` and a 32-bit handle
+word (`decOpt` reads the same value): `nat_op_result`'s refinement says nothing about its words'
+high bits, and the callers compute with them (lane `whnf2`). -/
+-- con-ron: ConRon/Arena/Core.lean:1223-1277 ConRon.Arena.reduceNat
 def reduceNatOpL : FunDecl :=
   lfn (mode, vis, d, c, a, b) locals (wa, fl1, o1, cnt1, wb, fl2, o2, cnt2, rf, rh) {
   wa := call whnf(mode, vis, d, a);
@@ -351,13 +357,14 @@ def reduceNatOpL : FunDecl :=
   (fl2, o2, cnt2) := call raw_nat_lit(wb);
   if fl2 == 0 { return (0, 0) };
   (rf, rh) := call nat_op_result(c, o1, cnt1, o2, cnt2);
-  return (rf, rh)
+  return (u64(rf != 0), rh & 4294967295)
 }
 
 /-- `nat_op_is_wf(c)`: is `c` one of the eight pinned WF-recursive `Nat` operations (`natOpWfNames`:
 `div`, `mod`, `gcd`, `land`, `lor`, `xor`, `shiftLeft`, `shiftRight`, the pin words `22‥29`)? The pin
 table read inline as `nat_bin_op_name` does, instead of eight `pin_at` calls. (Written for the proof,
 whnf-delta2: the eight `pin_at` reads and the comparison chain were inline in `reduce_nat_wf`.) -/
+-- con-ron: ConRon/Arena/Core.lean:1086-1092 ConRon.Arena.natOpWfNames
 def natOpIsWfL : FunDecl := lfn (c) locals () {
   if PINS.u64[0] == 0 { abort };
   if c == PINS.u64[22] || c == PINS.u64[23] || c == PINS.u64[24] || c == PINS.u64[25] ||
@@ -368,6 +375,7 @@ def natOpIsWfL : FunDecl := lfn (c) locals () {
 /-- `reduce_nat_wf(mode, vis, d, c, a, b)`: the pinned "safety net" operations (division, `mod`, …)
 whose native computation declines: on two literals, an `abort`, else no match. (A split of
 `reduce_nat`, whnf-delta2.) -/
+-- con-ron: ConRon/Arena/Core.lean:1223-1277 ConRon.Arena.reduceNat
 def reduceNatWfL : FunDecl :=
   lfn (mode, vis, d, c, a, b) locals
     (iswf, sup2, wa, fl1, o1, cnt1, wb, fl2, o2, cnt2) {
@@ -389,6 +397,7 @@ def reduceNatWfL : FunDecl :=
 
 /-- `reduce_nat_k(mode, vis, d, f, b)`: `reduce_nat`'s arm for an application `f b` whose head `f` is a
 constant: at the empty levels, `reduce_nat_succ`. (A split of `reduce_nat`, whnf-delta2.) -/
+-- con-ron: ConRon/Arena/Core.lean:1223-1277 ConRon.Arena.reduceNat
 def reduceNatKL : FunDecl :=
   lfn (mode, vis, d, f, b) locals (t2, i2, c, us, el, rf, rh) {
   t2 := (f >> 27) & 1;
@@ -405,6 +414,7 @@ def reduceNatKL : FunDecl :=
 /-- `reduce_nat_ap(mode, vis, d, f, b)`: `reduce_nat`'s arm for an application `f b` whose head `f`
 is itself an application `g a`: for a constant `g` at the empty levels, `reduce_nat_op` (a certified
 binary operation) or `reduce_nat_wf`. (A split of `reduce_nat`, whnf-delta2.) -/
+-- con-ron: ConRon/Arena/Core.lean:1223-1277 ConRon.Arena.reduceNat
 def reduceNatApL : FunDecl :=
   lfn (mode, vis, d, f, b) locals (t2, i2, g, a, t3, i3, c, us, el, isbin, stored, rf, rh) {
   t2 := (f >> 27) & 1;
@@ -435,6 +445,7 @@ def reduceNatApL : FunDecl :=
 head `f` (`view f` is not tag-tested first, so all ten tags get their bound check; only `const` and
 `app` do more). A handle with a tag above `9` is no node: `abort`. (A split of `reduce_nat`,
 whnf-delta2.) -/
+-- con-ron: ConRon/Arena/Core.lean:1223-1277 ConRon.Arena.reduceNat
 def reduceNatHeadL : FunDecl :=
   lfn (mode, vis, d, f, b) locals (tag2, t2, i2, rf, rh) {
   tag2 := f >> 28;

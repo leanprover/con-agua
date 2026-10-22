@@ -247,9 +247,9 @@ def lvlEqW : Nat → Mem → Word → Word → Option (Word × Mem)
   | n + 1, m, u, v => equivW n (m.set64 CTL 192 0) u v
 
 /-- con-ron's `lvlEq?` (`Arena/Core.lean:129`) on two level handles: the level algorithm on a
-fresh heap (the top reset to `0`). The verdict cache `lvlEqC` is not represented (`CoreR` has no
-fields yet): the answer is recomputed, which the twin's cache returns unchanged
-(`LevelArena.lean`, `lvlEq_refines`). -/
+fresh heap (the top reset to `0`). The verdict cache `lvlEqC` is `lvl_eq_c`'s, in front of this
+function (`CoreLevels.lean`); this is the uncached computation (`LevelArena.lean`,
+`lvlEq_refines`). -/
 -- con-ron: ConRon/Arena/Core.lean:132-149 ConRon.Arena.lvlEq?
 @[l_impl ConRon.Arena.lvlEq?]
 def lvlEqL : FunDecl := lfn (u, v) locals (z) {

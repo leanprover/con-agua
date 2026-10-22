@@ -31,7 +31,7 @@ def defeqExtFns : Prog :=
    ("lvl_eq_c", lvlEqCL), ("lvls_eq_c", lvlsEqCL), ("mk_app", mkApp), ("mk_forall", mkForall),
    ("nat_lit_supported", natLitSupportedL), ("nat_pred_lit", natPredLit), ("pin_at", pinAtL),
    ("pin_word", pinWordL), ("proof_irrel", proofIrrelL), ("reduce_nat", reduceNatL),
-   ("reduce_proj_core", reduceProjCoreL), ("reserved_contains", reservedContainsL),
+   ("reduce_proj_core", reduceProjCoreL), ("reserved_contains_w", reservedContainsL),
    ("tower_slots_all", towerSlotsAllL), ("unfold_definition", unfoldDefinitionL),
    ("whnf", whnfL), ("whnf_core", whnfCoreL),
    -- no L code yet

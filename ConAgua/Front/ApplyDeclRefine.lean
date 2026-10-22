@@ -104,13 +104,13 @@ theorem lpLoopM_facts (b : Array UInt8) (top : Word) : ∀ (m : Mem) (i cnt : Wo
       | succ k =>
         simp only [List.getElem_cons_succ]
         have := i5 k (by simpa using hk)
-        rw [hc1, tblW_congr (hP NID (by decide))] at this
+        rw [hc1, tblW_congr (TblSame.of_eq (hP NID (by decide)) (hP _ (by decide)) (hP CTL (by decide)))] at this
         rw [← this]; congr 1; omega
     · intro x hx
       simp only [List.mem_cons] at hx
       rcases hx with rfl | hx
       · exact hok
-      · rw [← tblOK_congr (hP NID (by decide))]; exact i6 x hx
+      · rw [← tblOK_congr (TblSame.of_eq (hP NID (by decide)) (hP _ (by decide)) (hP CTL (by decide)))]; exact i6 x hx
   | case4 m i cnt h1 h2 h3 h4 h5 h6 => intro m' h; cases h
   | case5 m i cnt h1 h2 h3 h4 =>
     intro m' h hr hs
@@ -237,28 +237,45 @@ theorem DeclAt_mono (D D' P P' : Array Word) (i : Nat) (d : IDeclaration)
   | basisDecl _ => exact h.elim
   | indDecl _ _ => exact h.elim
 
-theorem DeclsR.push (D P D' P' : Array Word) (ds : Array IDeclaration) (x : IDeclaration)
-    (h : DeclsR D P ds) (hDs : D'.size = D.size) (hPs : P'.size = P.size)
+theorem DeclAtF_mono (D D' P P' : Array Word) (i : Nat) (d : IDeclaration)
+    (hD : ∀ j, 0 < j → j < 1 + 8 * i + 8 → D'[j]? = D[j]?)
+    (hP : ∀ j, 0 < j → j < 1 + (P[0]?.getD 0).toNat → P'[j]? = P[j]?)
+    (htop : (P[0]?.getD 0).toNat ≤ (P'[0]?.getD 0).toNat) (hPs : P'.size = P.size)
+    (h : DeclAtF D P i d) : DeclAtF D' P' i d := by
+  cases d with
+  | indDecl b nP =>
+    have hw : ∀ k, k < 8 → dw D' i k = dw D i k := fun k hk => by
+      simp only [dw]; rw [hD _ (by omega) (by omega)]
+    obtain ⟨h0, h4, t, ht, hb⟩ := h
+    refine ⟨by rw [hw 0 (by omega)]; exact h0, by rw [hw 4 (by omega)]; exact h4, t, by omega, ?_⟩
+    rw [hw 2 (by omega), hw 3 (by omega), trunc_congr P P' t hPs (fun j h1 h2 => hP j h1 (by omega))]
+    exact hb
+  | axiomDecl _ | defnDecl _ _ _ | thmDecl _ _ | opaqueDecl _ _ | quotDecl _ _ | basisDecl _ =>
+    simp only [DeclAtF] at h ⊢
+    exact DeclAt_mono D D' P P' i _ hD hP htop h
+
+theorem DeclsF.push (D P D' P' : Array Word) (ds : Array IDeclaration) (x : IDeclaration)
+    (h : DeclsF D P ds) (hDs : D'.size = D.size) (hPs : P'.size = P.size)
     (hc : (D'[0]?.getD 0).toNat = ds.size + 1) (hroom : 1 + 8 * (ds.size + 1) ≤ D.size)
     (htop : (P[0]?.getD 0).toNat ≤ (P'[0]?.getD 0).toNat)
     (htop' : (P'[0]?.getD 0).toNat + 1 ≤ P.size)
     (hDo : ∀ j, 0 < j → j < 1 + 8 * ds.size → D'[j]? = D[j]?)
     (hPo : ∀ j, 0 < j → j < 1 + (P[0]?.getD 0).toNat → P'[j]? = P[j]?)
-    (hnew : DeclAt D' P' ds.size x) : DeclsR D' P' (ds.push x) := by
+    (hnew : DeclAtF D' P' ds.size x) : DeclsF D' P' (ds.push x) := by
   refine ⟨by rw [hDs]; exact h.dsize, by rw [hPs]; exact h.psize, by simpa using hc,
     by rw [hDs]; simpa using hroom, by rw [hPs]; exact htop', fun i hi => ?_⟩
   simp only [Array.size_push] at hi
   rw [Array.getElem_push]
   split
   · rename_i hi'
-    exact DeclAt_mono D D' P P' i _ (fun j hj0 hj => hDo j hj0 (by omega)) hPo htop (h.recs i hi')
+    exact DeclAtF_mono D D' P P' i _ (fun j hj0 hj => hDo j hj0 (by omega)) hPo htop hPs (h.recs i hi')
   · have : i = ds.size := by omega
     subst this; exact hnew
 
 /-! ## The twin's common data -/
 
 /-- A universe parameter list whose items are bound name ids: `mapM st.name` is pure. -/
-theorem mapM_name (m : Mem) (st : StateD) (hN : TblR (m.arr64 NID) st.names) :
+theorem mapM_name (m : Mem) (st : StateD) (hN : TblR m NID st.names) :
     ∀ (xs : List Word) (us : List Nat), ItemsR xs us → (∀ x ∈ xs, tblOK m NID x = true) →
       us.mapM st.name = pure (xs.map fun x => decI (tblW m NID x))
   | [], [], _, _ => rfl
@@ -331,8 +348,10 @@ theorem cv_core (b : ByteArray) (m m' : Mem) (a₀ : AState) (st : StateD) (hA :
     · rename_i h234
       split at h
       · rename_i hv
-        rw [tblOK_congr (hP1 EID (by decide) (by decide))] at hv
-        exact ⟨_, by rw [tblW_congr (hP1 EID (by decide) (by decide))] at h; exact h, fun _ => ⟨rfl, hv⟩⟩
+        have hT : TblSame m m₁ EID := TblSame.of_frameD F2 (.inr (.inr rfl)) (by simp [DLP, EID])
+          (by simp [DLP, EID]) (by simp) (by simp)
+        rw [tblOK_congr hT] at hv
+        exact ⟨_, by rw [tblW_congr hT] at h; exact h, fun _ => ⟨rfl, hv⟩⟩
       · cases h
     · rename_i h234; exact ⟨0, h, fun h' => absurd h' h234⟩
   obtain ⟨v, hpu, hv⟩ := hpush
@@ -365,11 +384,12 @@ theorem cv_core (b : ByteArray) (m m' : Mem) (a₀ : AState) (st : StateD) (hA :
     have hP0 : (m'.arr64 DLP)[0]?.getD 0 = rdW (m.arr64 DLP) 0 + lsCntN b.data (f.lps + 1) 0 := by
       rw [hm'P, F7]; rfl
     have hD0 : (m'.arr64 DECL)[0]?.getD 0 = rdW (m.arr64 DECL) 0 + 1 := by rw [G4]; rfl
-    refine ⟨by rw [hfr NID (by decide) (by decide) (by decide)]; exact hD.names,
-      by rw [hfr LID (by decide) (by decide) (by decide)]; exact hD.levels,
-      by rw [hfr EID (by decide) (by decide) (by decide)]; exact hD.exprs, ?_⟩
+    refine ⟨hD.names.frame hf (.inl rfl) (by simp [DLP, DECL, idArrs]) (by simp),
+      hD.levels.frame hf (.inr (.inl rfl)) (by simp [DLP, DECL, idArrs]) (by simp),
+      hD.exprs.frame hf (.inr (.inr rfl)) (by simp [DLP, DECL, idArrs]) (by simp), ?_,
+      by rw [hf.2.2.1, hf.2.2.1]; exact hD.ifs⟩
     rw [hcn'] at G3
-    refine DeclsR.push _ _ _ _ _ _ hDR (by rw [G1.2.2.1, hm'D]) (by rw [hm'P, F2.2.2.1])
+    refine DeclsF.push _ _ _ _ _ _ hDR (by rw [G1.2.2.1, hm'D]) (by rw [hm'P, F2.2.2.1])
       (by rw [hD0, hc1, hcn']) (by rw [← hm'D]; omega)
       (by rw [hP0, htc, ← hrd]; omega) (by rw [hP0, htc]; omega)
       (fun j hj0 hj => by rw [G5 j hj0 (by rw [hcn']; exact hj), hm'D])
@@ -511,13 +531,13 @@ theorem applyDeclW_refines (b : ByteArray) (m m' : Mem) (a₀ : AState) (st : St
     · rw [q3 h']; simp [applyLine, applyDeclD, processLineCoreD, hpc, pushDecl, declOf, quotW, h']
     · rw [q4 h']; simp [applyLine, applyDeclD, processLineCoreD, hpc, pushDecl, declOf, quotW, h']
   | ind tys cts rcs =>
-    have hpl : f.pl = 25 := hE
+    have hpl : f.pl = 25 := hE.1
     rcases hks with ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ | ⟨h1, -⟩ <;>
       (rw [hpl] at h1; exact absurd h1 (by decide))
 
 /-- The same in `AM` terms: `applyLine st (.decl d)` succeeds from `a₀`, leaves the arena state
 alone and gives the parse state `st'`. -/
-@[refines_part ConRon.Arena.Frontend.processLineCoreD "axiom, def, thm, opaque, quot (inductive aborts)"]
+@[refines_part ConRon.Arena.Frontend.processLineCoreD "axiom, def, thm, opaque, quot"]
 theorem applyDeclW_refinesAM (b : ByteArray) (m m' : Mem) (a₀ : AState) (st : StateD)
     (hA : ArenaD m a₀) (hD : StateDR m st) (f : DFld) (d : DeclRec) (hE : DeclR b d f)
     (h : applyDeclW b.data m f.pl f.name f.lps f.type f.value f.hk f.hn f.flag = some m') :
