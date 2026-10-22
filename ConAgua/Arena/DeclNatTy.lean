@@ -662,7 +662,7 @@ theorem natOpStoredOk_ref (hN : NatTyProg p) (w : Word) :
         rcases decCI_defn_cases hci with h | ⟨wk, hwk, hne, -⟩
         · exact h
         · exfalso; have := rdW_erec_of hsz hwk; rw [hk1] at this; exact hne this.symm
-      obtain ⟨wt, hiffc, hrd, hlt, hty, -⟩ := cvWords hsz hcv
+      obtain ⟨wt, hiffc, hrd, hlt, hty, -⟩ := natCvWords hsz hcv
       by_cases hl : rdW (m.arr64 EREC) (rf.tail.headD 0 + 3) = 0
       · rw [if_neg (by simpa using hl)] at hW
         cases h2 : callW p k "nat_op_ty_pinned" [vis, w, rdW (m.arr64 EREC) (rf.tail.headD 0 + 4)] m with
