@@ -150,41 +150,63 @@ theorem fieldSortZeroT_run (a : AState) (lps : List NIdx) (us : LsIdx) (fs : LId
   obtain ⟨X, h₁, -⟩ := readNamesM_run' lps a ks hk hn
   obtain ⟨Y, h₂, hls₂⟩ := readLevelsM_run' { a with caches := { a.caches with readNC := X } } us vs
     hv (fun h l e => hls h l e)
-  obtain ⟨Z, h₃, hl₃⟩ := readLevelM_run' { a with caches := { a.caches with readNC := X,
-    readLsC := Y } } fs f hf (fun h l e => hl h l e)
+  obtain ⟨Z, h₃, hl₃⟩ := readLevelM_run'
+    { a with caches := { a.caches with readNC := X, readLsC := Y } } fs f hf (fun h l e => hl h l e)
   refine ⟨X, Y, Z, ?_, hl₃, fun h l e => hls₂ h l e⟩
   simp only [fieldSortZeroT, StateT.run_bind, h₁, except_ok_bind, h₂, h₃]
   rfl
 
 /-! ## The handles as heap pointers -/
 
+theorem hslice?_succ {k : IdxKind} (a : Array Word) (o n : Nat) :
+    (hslice? a o (n + 1) : Option (List (Idx k))) =
+      (do let x ← hd? a o; let xs ← hslice? a (o + 1) n; pure (x :: xs)) := by
+  simp only [hslice?, List.range_succ_eq_map, List.mapM_cons, List.mapM_map, Nat.add_zero,
+    Function.comp_def, Nat.succ_eq_add_one, ← Nat.add_assoc, Nat.add_right_comm o]
+
+/-- A decoded slice is in bounds. -/
+theorem hslice?_bound {k : IdxKind} (a : Array Word) : ∀ (n o : Nat) (l : List (Idx k)),
+    hslice? a o n = some l → n = 0 ∨ o + n ≤ a.size
+  | 0, _, _, _ => Or.inl rfl
+  | n + 1, o, l, h => by
+    rw [hslice?_succ] at h
+    simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
+      Option.some.injEq] at h
+    obtain ⟨x, hx, xs, hxs, -⟩ := h
+    simp only [hd?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hx
+    obtain ⟨w, hw, -⟩ := hx
+    have := (Array.getElem?_eq_some_iff.mp hw).1
+    rcases hslice?_bound a n (o + 1) xs hxs with h0 | h0 <;> right <;> omega
+
 /-- A decoded `EREC` name slice is related to the names' readbacks (`NmsR`). -/
-theorem nmsR_of_hslice (m : Mem) (ns : NStore) : ∀ (lps : List NIdx) (ks : List Name) (o n : Word),
-    lps.length = n.toNat → o.toNat + n.toNat < 2 ^ 64 →
-    (∀ j, j < n.toNat → ∃ w, (m.arr64 EREC)[o.toNat + j]? = some w ∧ w.toNat < 2 ^ 32 ∧
-      lps[j]? = some (decI w)) →
-    lps.mapM (denoteN ns) = some ks → NmsR (nameN ns) m EREC o n ks
-  | [], ks, o, n, hl, _, _, hd => by
-    simp at hd; subst hd
-    have : n = 0 := UInt64.toNat_inj.mp (by simp at hl; simp [← hl])
-    subst this; exact .nil
-  | h :: hs, ks, o, n, hl, hon, hg, hd => by
+theorem nmsR_of_hslice (m : Mem) (ns : NStore) : ∀ (k : Nat) (lps : List NIdx) (ks : List Name)
+    (o n : Word), n.toNat = k → hslice? (m.arr64 EREC) o.toNat k = some lps →
+    o.toNat + k < 2 ^ 64 → lps.mapM (denoteN ns) = some ks → NmsR (nameN ns) m EREC o n ks
+  | 0, lps, ks, o, n, hn, hs, _, hd => by
+    have : n = 0 := UInt64.toNat_inj.mp (by simpa using hn)
+    subst this
+    simp [hslice?] at hs; subst hs; simp at hd; subst hd; exact .nil
+  | k + 1, lps, ks, o, n, hn, hs, hon, hd => by
+    rw [hslice?_succ] at hs
+    simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
+      Option.some.injEq] at hs
+    obtain ⟨x, hx, xs, hxs, rfl⟩ := hs
     simp only [List.mapM_cons, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def,
       Option.some.injEq] at hd
-    obtain ⟨x, hx, xs, hxs, rfl⟩ := hd
-    simp only [List.length_cons] at hl
-    have hn0 : n ≠ 0 := fun e => by subst e; simp at hl
-    have ho1 : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
-    have hn1 : (n - 1).toNat = n.toNat - 1 := by
-      rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
-    obtain ⟨w, hw, hw32, hj⟩ := hg 0 (by omega)
-    simp only [List.getElem?_cons_zero, Option.some.injEq, Nat.add_zero] at hj hw
-    subst hj
-    refine .cons hn0 ⟨by simpa [rdW, hw] using hw32, by simpa [rdW, hw] using hx⟩
-      (nmsR_of_hslice m ns hs xs (o + 1) (n - 1) (by rw [hn1]; omega) (by rw [ho1, hn1]; omega)
-        (fun j hj => ?_) hxs)
-    obtain ⟨w', hw', h1, h2⟩ := hg (j + 1) (by rw [hn1] at hj; omega)
-    refine ⟨w', by rw [ho1, ← hw']; congr 1; omega, h1, by simpa using h2⟩
+    obtain ⟨y, hy, ys, hys, rfl⟩ := hd
+    simp only [hd?, Option.bind_eq_bind, Option.bind_eq_some_iff] at hx
+    obtain ⟨w, hw, hx⟩ := hx
+    by_cases hw32 : w.toNat < 2 ^ 32
+    · simp only [hw32, ↓reduceIte, Option.some.injEq] at hx
+      subst hx
+      have hn0 : n ≠ 0 := fun e => by subst e; simp at hn
+      have ho1 : (o + 1).toNat = o.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      have hn1 : (n - 1).toNat = k := by
+        rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
+      have hr : rdW (m.arr64 EREC) o = w := by simp [rdW, hw]
+      exact .cons hn0 ⟨by rw [hr]; exact hw32, by rw [hr]; exact hy⟩
+        (nmsR_of_hslice m ns k xs ys (o + 1) (n - 1) hn1 (by rw [ho1]; exact hxs) (by omega) hys)
+    · simp [hw32] at hx
 
 /-- `LvsR` (`POOL`) is `LvsAR` at `POOL`. -/
 theorem LvsR.toAR {N : Word → Name → Prop} {m : Mem} {o k : Word} {ls : List Level}
@@ -225,16 +247,13 @@ theorem fszW_ok {dn : NIdx → Option Name} {m m' : Mem} {a : AState} {vis : Wor
   have htop := m.top.toNat_lt
   have hvs := (lvsR_of_slice hR₀ ids vs _ _ (by rw [hpool]; exact s₁) (by omega) hdl).toAR
   -- the keys
-  obtain ⟨hlen, hget⟩ := hslice?_get hsl
   have hbound : po.toNat + pl.toNat < 2 ^ 64 := by
     have := hS.erec
-    rcases Nat.eq_zero_or_pos pl.toNat with h0 | h0
+    rcases hslice?_bound _ _ _ _ hsl with h0 | h0
     · have := po.toNat_lt; omega
-    · obtain ⟨w, hw, -⟩ := hget (pl.toNat - 1) (by omega)
-      have := (Array.getElem?_eq_some_iff.mp hw).1
-      omega
+    · omega
   have hks : NmsR (nameN a.store.lss.ls.ns) (m.set64 CTL 192 0) EREC po pl ks :=
-    nmsR_of_hslice _ _ lps ks po pl hlen hbound (by rw [herec]; exact hget) hk
+    nmsR_of_hslice _ _ pl.toNat lps ks po pl rfl (by rw [herec]; exact hsl) hbound hk
   -- the field's sort
   have hfl := denoteL_lvR hR₀ (decI fs) f hf
   rw [decI_word_self fs hfs] at hfl
@@ -262,7 +281,7 @@ theorem fszW_ok {dn : NIdx → Option Name} {m m' : Mem} {a : AState} {vis : Wor
   rw [e₄, fszK₃_some] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
-  obtain ⟨he₃, hr⟩ := equivW_ok hN n _ _ _ _ _ (Level.zero) (hx.mono he₂) (.zero hy) e₄
+  obtain ⟨he₃, hr⟩ := equivW_ok hN n _ _ _ _ _ _ Level.zero (hx.mono he₂) (.zero hy) e₄
   -- the frame
   have hf₁ : MemFrame [LH] [192] m m₃ :=
     ((reset_frame m).mono (by simp) (by simp)).trans ((he₁.trans (he₂.trans he₃)).memFrame)
@@ -281,7 +300,12 @@ theorem fszW_ok {dn : NIdx → Option Name} {m m' : Mem} {a : AState} {vis : Wor
 theorem fieldSortZero_core (p : Prog) (hp : FieldSortZeroProg p) : FieldSortZeroOK p := by
   intro n s₀ a₀ dn vis fe M eb po pl us fs lps hS hus hfs hsl hn ⟨ks, hk⟩ ⟨vs, hv⟩ ⟨f, hf⟩
   cases n with
-  | zero => exact CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe M eb _
+  | zero =>
+    -- every L call at fuel `0` fails
+    unfold CoreSpec
+    rw [invoke_eq _ hp.fsz]
+    simp only [callFn]
+    vcgen [exec] <;> grind
   | succ n =>
   apply L.M.triple_of_run
   intro s r s' hs hrun
