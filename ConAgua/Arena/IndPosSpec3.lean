@@ -533,3 +533,313 @@ theorem rxSpec_all (p : Prog) (L : RxLook p) (n : Nat) : RxSpec p n := by
 
 
 end L.Ind
+
+/-! ## The relational side: the banked memo's invariant -/
+
+namespace L.Ind
+
+open L.Arena
+
+theorem rfK_h2 : ∀ k1 k2, bmKey.ok k1 k2 → k2.toNat < 2 ^ 32 := fun _ _ h => by rw [h.2]; decide
+
+/-- The banked memo's keys: a handle and the generation. -/
+def rfK : MemoKey (EIdx × Word) := genKey bmKey rfK_h2
+
+/-- The word values denote handles. -/
+def rfV (_ : Mem) (w : Word) (v : EIdx) : Prop := v = decE w
+
+theorem rfSch_wf : rfSch.WF := ⟨by decide, by decide⟩
+
+/-- **The banked memo's invariant**: the whole map `M`, the last generation `G`, the current `g`. -/
+def RfInv (m : Mem) (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word) : Prop :=
+  MemoRV rfSch rfK rfV m M ∧ BankW 218 m G g ∧ Fresh M G
+
+/-- A writer that leaves the memo's array and its stamp and bank words alone. -/
+def RfFr (m m' : Mem) : Prop :=
+  ∃ (A : List ArrId) (C : List Word), MemFrame A C m m' ∧ RFM ∉ A ∧ (208 : Word) ∉ C ∧
+    (218 : Word) ∉ C ∧ (219 : Word) ∉ C
+
+theorem RfFr.refl (m : Mem) : RfFr m m := ⟨[], [], MemFrame.refl _ _ _, by simp, by simp, by simp, by simp⟩
+
+theorem RfFr.trans {m₁ m₂ m₃ : Mem} (h₁ : RfFr m₁ m₂) (h₂ : RfFr m₂ m₃) : RfFr m₁ m₃ := by
+  obtain ⟨A₁, C₁, f₁, a₁, c₁, d₁, e₁⟩ := h₁
+  obtain ⟨A₂, C₂, f₂, a₂, c₂, d₂, e₂⟩ := h₂
+  exact ⟨A₁ ++ A₂, C₁ ++ C₂, (f₁.mono (fun b hb => List.mem_append_left _ hb) (fun x hx => List.mem_append_left _ hx)).trans
+    (f₂.mono (fun b hb => List.mem_append_right _ hb) (fun x hx => List.mem_append_right _ hx)),
+    by simp [a₁, a₂], by simp [c₁, c₂], by simp [d₁, d₂], by simp [e₁, e₂]⟩
+
+theorem RfFr.of_low {m m' : Mem} (h : LowFr m m') : RfFr m m' := by
+  obtain ⟨A, C, hf, hA, hC⟩ := h
+  exact ⟨A, C, hf, fun hh => by have := hA _ hh; simp [RFM] at this,
+    fun hh => by have := hC _ hh; simp at this, fun hh => by have := hC _ hh; simp at this,
+    fun hh => by have := hC _ hh; simp at this⟩
+
+theorem RfFr.of_iw {m m' : Mem} (h : MemFrame [IW] [200] m m') : RfFr m m' :=
+  ⟨_, _, h, by simp [RFM, IW], by simp, by simp, by simp⟩
+
+theorem RfFr.set_iw (m : Mem) (x v : Word) : RfFr m (m.set64 IW x v) := RfFr.of_iw (set64IW_frame m x v)
+
+theorem RfFr.stub {f : FnName} (hf : f ∈ stubNames) {m m' : Mem} {args r : List Word}
+    (h : stubM f m args = some (r, m')) : RfFr m m' := by
+  obtain ⟨A, C, hA, hC, hfr⟩ := stubM_memoFrame f hf m m' args r h
+  refine ⟨A, C, hfr, fun hh => ?_, fun hh => ?_, fun hh => ?_, fun hh => ?_⟩
+  · have := hA _ hh; simp [RFM] at this
+  all_goals (have := hC _ hh; simp at this)
+
+theorem RfInv.frame {m m' : Mem} {M : Std.HashMap (EIdx × Word) EIdx} {G g : Word} (h : RfInv m M G g)
+    (hf : RfFr m m') : RfInv m' M G g := by
+  obtain ⟨A, C, hfr, hA, hC, h218, h219⟩ := hf
+  obtain ⟨hR, ⟨hB1, hB2, hgG, hGl, hsz⟩, hF⟩ := h
+  refine ⟨memoRV_frame rfSch rfSch_wf rfK rfV A C hA hC m m' hfr (fun _ _ h => h) M hR,
+    ⟨by rw [hfr.2.1 218 h218]; exact hB1, by rw [show (218 : Word) + 1 = 219 from rfl, hfr.2.1 219 h219]; exact hB2,
+      hgG, hGl, by rw [hfr.2.2.1]; exact hsz⟩, hF⟩
+
+theorem ceinternW_low {m m' : Mem} {f x r : Word} (h : ceinternW m f x = some (r, m')) : LowFr m m' := by
+  have h₂ := h; rw [ceinternW_eq] at h₂
+  exact ⟨_, _, internM_frame _ constSch_wf _ _ _ _ _ _ _ _ h₂, by simp [constSch, CREC, CSLOT], by simp [constSch]⟩
+
+theorem posRecW_fr {m m' : Mem} {ws : List Word} {q : Word} (h : posRecW m ws = some (q, m')) : RfFr m m' := by
+  simp only [posRecW] at h
+  cases hal : allocW m (UInt64.ofNat ws.length) with
+  | none => rw [hal] at h; simp at h
+  | some pr =>
+    obtain ⟨q1, m1⟩ := pr
+    rw [hal] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    simp only [allocW] at hal
+    split at hal; · simp at hal
+    split at hal; · simp at hal
+    simp only [Option.some.injEq, Prod.mk.injEq] at hal
+    obtain ⟨rfl, rfl⟩ := hal
+    exact RfFr.of_iw ((allocMem_frame m _).trans (wrIW_frame _ _ _))
+
+theorem allocW_fr {m m' : Mem} {k q : Word} (h : allocW m k = some (q, m')) : RfFr m m' := by
+  simp only [allocW] at h
+  split at h; · simp at h
+  split at h; · simp at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  exact RfFr.of_iw (allocMem_frame m k)
+
+/-- The map at the generations up to `G` is unchanged. -/
+def GKeep (M M' : Std.HashMap (EIdx × Word) EIdx) (G : Word) : Prop :=
+  ∀ (k : EIdx) (gen : Word), gen ≤ G → M'[(k, gen)]? = M[(k, gen)]?
+
+theorem GKeep.refl (M : Std.HashMap (EIdx × Word) EIdx) (G : Word) : GKeep M M G := fun _ _ _ => rfl
+
+theorem GKeep.trans {M₁ M₂ M₃ : Std.HashMap (EIdx × Word) EIdx} {G G' : Word} (h₁ : GKeep M₁ M₂ G)
+    (h₂ : GKeep M₂ M₃ G') (hG : G ≤ G') : GKeep M₁ M₃ G :=
+  fun k gen hg => (h₂ k gen (UInt64.le_trans hg hG)).trans (h₁ k gen hg)
+
+theorem GKeep.bank {M M' : Std.HashMap (EIdx × Word) EIdx} {G g : Word} (h : GKeep M M' G) (hg : g ≤ G)
+    {mp : Std.HashMap EIdx EIdx} (hb : Bank M g mp) : Bank M' g mp :=
+  fun k => (hb k).trans (h k g hg).symm
+
+/-- An optional handle as `(ok, e)`. -/
+def OptE (r0 r1 : Word) : Option EIdx → Prop
+  | none => r0 = 0
+  | some e => r0 ≠ 0 ∧ decE r1 = e
+
+end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+/-- **A `FvMap` record at `f`** (IndIface's layout `[tag, …]`), its reads below the top. -/
+def FMOk (m : Mem) (f : Nat) : FvMap → Prop
+  | .holeImg ctx prog n => iwN m f = some 0 ∧ f + 5 ≤ iwTop m ∧
+      (∃ c, iwN m (f + 1) = some c ∧ decCtx m c = some ctx ∧ CtxIn m c (· < iwTop m)) ∧
+      (∃ po pl, iwN m (f + 2) = some po ∧ iwN m (f + 3) = some pl ∧ HSl m po pl prog) ∧
+      iwN m (f + 4) = some n ∧ ctx.nP + ctx.names.length + n < 2 ^ 64
+  | .keyMap ds holes => iwN m f = some 1 ∧ f + 5 ≤ iwTop m ∧
+      (∃ o l, iwN m (f + 1) = some o ∧ iwN m (f + 2) = some l ∧ decHL m o l = some ds ∧ o + l ≤ iwTop m) ∧
+      (∃ o l, iwN m (f + 3) = some o ∧ iwN m (f + 4) = some l ∧ decHL m o l = some holes ∧ o + l ≤ iwTop m)
+  | .erase => iwN m f = some 2 ∧ f + 1 ≤ iwTop m
+  | .canon pfvs => iwN m f = some 3 ∧ f + 3 ≤ iwTop m ∧
+      (∃ o l, iwN m (f + 1) = some o ∧ iwN m (f + 2) = some l ∧ decHL m o l = some pfvs ∧ o + l ≤ iwTop m)
+
+theorem iwN_grow {m m' : Mem} (hg : IWGrow m m') {i : Nat} (hi : i < iwTop m) : iwN m' i = iwN m i :=
+  iwN_agree (RdS.of_grow hg) hi
+
+theorem FMOk.grow {m m' : Mem} {f : Nat} {fm : FvMap} (h : FMOk m f fm) (hg : IWGrow m m') : FMOk m' f fm := by
+  have ht := hg.1
+  cases fm with
+  | holeImg ctx prog n =>
+    obtain ⟨h0, hb, ⟨c, hc, hdc, hci⟩, ⟨po, pl, hpo, hpl, hs⟩, hn, hlt⟩ := h
+    obtain ⟨e, hci'⟩ := hci.grow hg
+    exact ⟨by rw [iwN_grow hg (by omega)]; exact h0, by omega,
+      ⟨c, by rw [iwN_grow hg (by omega)]; exact hc, by rw [e]; exact hdc, hci'⟩,
+      ⟨po, pl, by rw [iwN_grow hg (by omega)]; exact hpo, by rw [iwN_grow hg (by omega)]; exact hpl, hs.grow hg⟩,
+      by rw [iwN_grow hg (by omega)]; exact hn, hlt⟩
+  | keyMap ds holes =>
+    obtain ⟨h0, hb, ⟨o, l, ho, hl, hd, hol⟩, ⟨o2, l2, ho2, hl2, hd2, hol2⟩⟩ := h
+    exact ⟨by rw [iwN_grow hg (by omega)]; exact h0, by omega,
+      ⟨o, l, by rw [iwN_grow hg (by omega)]; exact ho, by rw [iwN_grow hg (by omega)]; exact hl,
+        by rw [decHL_grow hg hol]; exact hd, by omega⟩,
+      ⟨o2, l2, by rw [iwN_grow hg (by omega)]; exact ho2, by rw [iwN_grow hg (by omega)]; exact hl2,
+        by rw [decHL_grow hg hol2]; exact hd2, by omega⟩⟩
+  | erase =>
+    obtain ⟨h0, hb⟩ := h
+    exact ⟨by rw [iwN_grow hg (by omega)]; exact h0, by omega⟩
+  | canon pfvs =>
+    obtain ⟨h0, hb, ⟨o, l, ho, hl, hd, hol⟩⟩ := h
+    exact ⟨by rw [iwN_grow hg (by omega)]; exact h0, by omega,
+      ⟨o, l, by rw [iwN_grow hg (by omega)]; exact ho, by rw [iwN_grow hg (by omega)]; exact hl,
+        by rw [decHL_grow hg hol]; exact hd, by omega⟩⟩
+
+/-! ### The twin's node step, with its arms named -/
+
+def rfArm (f : FvMap) (memo : Std.HashMap EIdx EIdx) (fuel : Nat) (h : EIdx) :
+    ENodeView → AM (EIdx × Std.HashMap EIdx EIdx)
+  | .app a x => do
+    let (a2, m) ← ConRon.Arena.replaceFVarsGo f memo fuel a
+    let (x2, m2) ← ConRon.Arena.replaceFVarsGo f m fuel x
+    let r ← internAppE a2 x2
+    pure (r, m2)
+  | .lam t body => do
+    let (t2, m) ← ConRon.Arena.replaceFVarsGo f memo fuel t
+    let (b2, m2) ← ConRon.Arena.replaceFVarsGo f m fuel body
+    let r ← internLamE t2 b2
+    pure (r, m2)
+  | .forallE t body => do
+    let (t2, m) ← ConRon.Arena.replaceFVarsGo f memo fuel t
+    let (b2, m2) ← ConRon.Arena.replaceFVarsGo f m fuel body
+    let r ← internForallEE t2 b2
+    pure (r, m2)
+  | .letE t val body => do
+    let (t2, m) ← ConRon.Arena.replaceFVarsGo f memo fuel t
+    let (v2, m2) ← ConRon.Arena.replaceFVarsGo f m fuel val
+    let (b2, m3) ← ConRon.Arena.replaceFVarsGo f m2 fuel body
+    let r ← internLetEE t2 v2 b2
+    pure (r, m3)
+  | .proj s i x => do
+    let (x2, m) ← ConRon.Arena.replaceFVarsGo f memo fuel x
+    let r ← internProjE s i x2
+    pure (r, m)
+  | _ => pure (h, memo)
+
+theorem replaceFVarsGo_succ' (f : FvMap) (memo : Std.HashMap EIdx EIdx) (fuel : Nat) (h : EIdx) :
+    ConRon.Arena.replaceFVarsGo f memo (fuel + 1) h = (do
+      let v ← view h
+      match v with
+      | .bvar _ => pure (h, memo)
+      | .sort _ => pure (h, memo)
+      | .lit _ => pure (h, memo)
+      | .const _ _ => pure (h, memo)
+      | .fvar i _ =>
+        match ← ConRon.Arena.fvMapAt f i with
+        | some r => pure (r, memo)
+        | none => pure (h, memo)
+      | v =>
+        match memo[h]? with
+        | some r => pure (r, memo)
+        | none => do
+          let (r, m) ← rfArm f memo fuel h v
+          pure (r, m.insert h r)) := by
+  rw [ConRon.Arena.replaceFVarsGo.eq_2]
+  congr 1
+  funext v
+  cases v with
+  | app a' x' => simp only [rfArm, bind_assoc, pure_bind]; rfl
+  | lam t body => simp only [rfArm, bind_assoc, pure_bind]; rfl
+  | forallE t body => simp only [rfArm, bind_assoc, pure_bind]; rfl
+  | letE t v' body => simp only [rfArm, bind_assoc, pure_bind]; rfl
+  | proj s i x => simp only [rfArm, bind_assoc, pure_bind]; rfl
+  | bvar _ => rfl
+  | sort _ => rfl
+  | lit _ => rfl
+  | fvar _ _ => rfl
+  | const _ _ => rfl
+
+end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+/-! ### The statements, by exec fuel -/
+
+section stmts
+variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
+
+/-- The common post: the stage relation, the pool grown, the memo's invariant at the same current
+generation, the map unchanged up to the old last generation. -/
+def RxPost (m m' : Mem) (a' : AState) (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word) : Prop :=
+  ∃ M' G', StageR dn vis fe m' a' ∧ IWGrow m m' ∧ RfInv m' M' G' g ∧ GKeep M M' G ∧ G ≤ G'
+
+/-- A frame's hole, read back (`nestHoleImg`'s hit arm). -/
+def frameTwin (c : NestCtx) (prog : List NestHole) (n1 : Nat) : AM (Option EIdx) := do
+  let h := prog.getD n1 default
+  let ds ← h.key.ds.mapM fun x => ConRon.Arena.replaceFVars (.holeImg c prog n1) x
+  let hd ← internConstE h.key.cname h.key.lvls
+  let r ← mkAppN hd ds
+  pure (some r)
+
+theorem nestHoleImg_succ (c : NestCtx) (prog : List NestHole) (n1 i : Nat) :
+    ConRon.Arena.nestHoleImg c prog (n1 + 1) i =
+      if (i == c.hiAt n1) = true then frameTwin c prog n1 else ConRon.Arena.nestHoleImg c prog n1 i := by
+  rw [ConRon.Arena.nestHoleImg.eq_2]; rfl
+
+def MapOK (n : Nat) : Prop :=
+  ∀ (m m' : Mem) (a : AState) (f i : Word) (fm : FvMap) (r0 r1 : Word) (M : Std.HashMap (EIdx × Word) EIdx)
+    (G g : Word), rxMapW n m f i = some (r0, r1, m') → StageR dn vis fe m a → FMOk m f.toNat fm →
+    RfInv m M G g →
+    ∃ x a', (ConRon.Arena.fvMapAt fm i.toNat).run a = .ok (x, a') ∧ OptE r0 r1 x ∧
+      RxPost dn fe vis m m' a' M G g
+
+def ImgOK (n : Nat) : Prop :=
+  ∀ (m m' : Mem) (a : AState) (ctx po pl nn i : Word) (c : NestCtx) (prog : List NestHole) (r0 r1 : Word)
+    (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word), rxImgW n m ctx po pl nn i = some (r0, r1, m') →
+    StageR dn vis fe m a → decCtx m ctx.toNat = some c → CtxIn m ctx.toNat (· < iwTop m) →
+    HSl m po.toNat pl.toNat prog → c.nP + c.names.length + nn.toNat < 2 ^ 64 → RfInv m M G g →
+    ∃ x a', (ConRon.Arena.nestHoleImg c prog nn.toNat i.toNat).run a = .ok (x, a') ∧ OptE r0 r1 x ∧
+      RxPost dn fe vis m m' a' M G g
+
+def FrOK (n : Nat) : Prop :=
+  ∀ (m m' : Mem) (a : AState) (ctx po pl n1 i : Word) (c : NestCtx) (prog : List NestHole) (r0 r1 : Word)
+    (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word), rxFrameW n m ctx po pl n1 i = some (r0, r1, m') →
+    StageR dn vis fe m a → decCtx m ctx.toNat = some c → CtxIn m ctx.toNat (· < iwTop m) →
+    HSl m po.toNat pl.toNat prog → c.nP + c.names.length + n1.toNat + 1 < 2 ^ 64 → RfInv m M G g →
+    ∃ x a', (frameTwin c prog n1.toNat).run a = .ok (x, a') ∧ OptE r0 r1 x ∧ RxPost dn fe vis m m' a' M G g
+
+def DsOK (n : Nat) : Prop :=
+  ∀ (m m' : Mem) (a : AState) (f o l q l' : Word) (fm : FvMap) (xs : List EIdx)
+    (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word), rxDsW n m f o l = some (q, l', m') →
+    StageR dn vis fe m a → FMOk m f.toNat fm → decHL m o.toNat l.toNat = some xs →
+    o.toNat + l.toNat ≤ iwTop m → RfInv m M G g →
+    ∃ ys a', (xs.mapM fun x => ConRon.Arena.replaceFVars fm x).run a = .ok (ys, a') ∧
+      decHL m' q.toNat l'.toNat = some ys ∧ q.toNat + l'.toNat ≤ iwTop m' ∧ RxPost dn fe vis m m' a' M G g
+
+def DsGoOK (n : Nat) : Prop :=
+  ∀ (m0 m m' : Mem) (a : AState) (f o l q j : Word) (fm : FvMap) (xs acc : List EIdx)
+    (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word), rxDsGoW n m f o l q j = some m' →
+    StageR dn vis fe m a → IWGrow m0 m → iwTop m0 ≤ q.toNat → q.toNat + l.toNat ≤ iwTop m →
+    FMOk m0 f.toNat fm → decHL m0 o.toNat l.toNat = some xs → o.toNat + l.toNat ≤ iwTop m0 →
+    j.toNat ≤ l.toNat → decHL m q.toNat j.toNat = some acc → RfInv m M G g →
+    ∃ ys a', ((xs.drop j.toNat).mapM fun x => ConRon.Arena.replaceFVars fm x).run a = .ok (ys, a') ∧
+      decHL m' q.toNat l.toNat = some (acc ++ ys) ∧ StageR dn vis fe m' a' ∧ IWGrow m0 m' ∧
+      iwTop m ≤ iwTop m' ∧ ∃ M' G', RfInv m' M' G' g ∧ GKeep M M' G ∧ G ≤ G'
+
+/-- The map unchanged up to `G` except at the current generation. -/
+def GKeepX (M M' : Std.HashMap (EIdx × Word) EIdx) (G g : Word) : Prop :=
+  ∀ (k : EIdx) (gen : Word), gen ≤ G → gen ≠ g → M'[(k, gen)]? = M[(k, gen)]?
+
+def GoOK (n : Nat) : Prop :=
+  ∀ (m m' : Mem) (a : AState) (f fu h : Word) (fm : FvMap) (mp : Std.HashMap EIdx EIdx) (r : Word)
+    (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word), rxGoW n m f fu h = some (r, m') →
+    StageR dn vis fe m a → FMOk m f.toNat fm → H h → RfInv m M G g → Bank M g mp →
+    ∃ mp' a' M' G', (ConRon.Arena.replaceFVarsGo fm mp fu.toNat (decE h)).run a = .ok ((decE r, mp'), a') ∧
+      StageR dn vis fe m' a' ∧ IWGrow m m' ∧ RfInv m' M' G' g ∧ Bank M' g mp' ∧ GKeepX M M' G g ∧ G ≤ G'
+
+def RfOK (n : Nat) : Prop :=
+  ∀ (m m' : Mem) (a : AState) (f e : Word) (fm : FvMap) (r : Word) (M : Std.HashMap (EIdx × Word) EIdx)
+    (G g : Word), rxW n m f e = some (r, m') → StageR dn vis fe m a → FMOk m f.toNat fm → H e →
+    RfInv m M G g →
+    ∃ a', (ConRon.Arena.replaceFVars fm (decE e)).run a = .ok (decE r, a') ∧ H r ∧
+      RxPost dn fe vis m m' a' M G g
+
+end stmts
+
+end L.Ind
