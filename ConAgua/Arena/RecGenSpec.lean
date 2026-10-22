@@ -705,7 +705,7 @@ theorem RecsOK_grow {m m' : Mem} (hg : IWGrow m m') {ro rl : Nat} {cvs : List IC
   refine ⟨p0, q, cv, ?_, Nat.le_trans hp1 hg.1, ?_, ?_, CVExt_grow hg hext, hcvs⟩
   · rw [hiw _ (by omega)]; exact hp0
   · rw [hiw _ (by omega)]; exact hq
-  · rw [decCVp_grow hg hext]; exact hcv
+  · rw [decCVp_grow_r hg hext]; exact hcv
 
 theorem RecsOK_cons {m : Mem} {ro rl : Nat} {cv : IConstantVal} {cvs : List IConstantVal}
     (h : RecsOK m ro (rl + 1) (cv :: cvs)) :
@@ -822,7 +822,7 @@ theorem csrW_ok (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (n : Nat) :
                 simp only [List.headD_cons, List.tail_cons]
                 rw [hdn3']
                 simp only [Option.bind_some, List.mapM_cons]
-                rw [decCVp_grow hg13 hext, hcv]
+                rw [decCVp_grow_r hg13 hext, hcv]
                 have h2 : ptrs2.mapM (decCVp m2) = some cvs2 := by
                   rw [decPL_eq_bind, hdn2] at hdp2; simpa using hdp2
                 rw [mapM_decCVp_grow hg3 ptrs2 hext2, h2]

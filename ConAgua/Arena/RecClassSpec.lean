@@ -2651,7 +2651,7 @@ def CVExt (m : Mem) (q : Nat) : Prop :=
   q + 4 ≤ erTop m ∧ ∀ o l, nat? (erA m) (q + 1) = some o → nat? (erA m) (q + 2) = some l →
     o + l ≤ erTop m
 
-theorem decCVp_grow {m m' : Mem} (hg : IWGrow m m') {q : Nat} (hq : CVExt m q) :
+theorem decCVp_grow_r {m m' : Mem} (hg : IWGrow m m') {q : Nat} (hq : CVExt m q) :
     decCVp m' q = decCVp m q := by
   have hag : ∀ i, i < erTop m → (erA m')[i]? = (erA m)[i]? := fun i hi => by
     simp only [erA]; exact hg.2.2.2 i hi
@@ -2711,7 +2711,7 @@ theorem mapM_decCVp_grow {m m' : Mem} (hg : IWGrow m m') :
   | [], _ => rfl
   | q :: ps, h => by
     simp only [List.mapM_cons]
-    rw [decCVp_grow hg (h q (List.mem_cons_self ..)),
+    rw [decCVp_grow_r hg (h q (List.mem_cons_self ..)),
       mapM_decCVp_grow hg ps (fun q' hq' => h q' (List.mem_cons_of_mem _ hq'))]
 
 
