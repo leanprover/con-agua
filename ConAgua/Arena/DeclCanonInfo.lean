@@ -408,4 +408,146 @@ theorem ciCanonEq_spec (pr : Prog) (hp : CanonProg pr) (n : Nat) (s₀ : St) (p 
         cvCanonEq_spec pr hp n] <;>
       finish (gen := 20)
 
+
+theorem cieW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+    {a : AState} (k : Nat) {m m' : Mem} {p q x : Word} {c c' : IConstantInfo}
+    (h : cieW k m p q = some (x, m')) (hS : StageR dn vis fe m a)
+    (hp : decCI (erecP m) dn p.toNat = some c) (hq : decCI (erecP m) dn q.toNat = some c')
+    (hP : PoolSmall m) (hL : LitInj a) :
+    ∃ (b : Bool) (a' : AState), (c.canonEq c').run a = .ok (b, a') ∧ x = (if b then 1 else 0) ∧
+      CQ dn vis fe m m' a' := by
+  cases k with
+  | zero => simp [cieW] at h
+  | succ k =>
+  rw [cieW_succ] at h
+  have hsz : (m.arr64 EREC).size < 2 ^ 64 := hS.2.2.2.2.1
+  have hsz' : (erecP m).size < 2 ^ 64 := Nat.lt_of_le_of_lt (by simp [erecP]; exact Nat.min_le_right _ _) hsz
+  obtain ⟨wk, e, hx⟩ := ciD hp
+  obtain ⟨wk', e', hy⟩ := ciD hq
+  have r1 : rdW (m.arr64 EREC) p = wk := rdW_zero' (erecP_rd e)
+  have r2 : rdW (m.arr64 EREC) q = wk' := rdW_zero' (erecP_rd e')
+  rw [r1, r2] at h
+  have wl : ∀ (w : Word) (n : Nat) (hn : n < 2 ^ 64), w.toNat = n → w = UInt64.ofNat n := fun w n hn h =>
+    UInt64.toNat_inj.mp (by rw [h]; simp [UInt64.toNat_ofNat_of_lt' hn])
+  rcases hx with ⟨k0, cv, hcv, rfl⟩ | ⟨k0, cv, v, hi, hcv, hv, hhi, rfl⟩ | ⟨k0, cv, hcv, rfl⟩ |
+      ⟨k0, cv, caps, hcv, hcaps, rfl⟩ | ⟨k0, cv, np, nf, hcv, hnp, hnf, rfl⟩ |
+      ⟨k0, cv, mi, rp, o, cc, rules, hcv, hmi, hrp, ho, hcc, hr, rfl⟩ | ⟨k0, tbl, ht, rfl⟩ <;>
+  rcases hy with ⟨k1, cv', hcv', rfl⟩ | ⟨k1, cv', v', hi', hcv', hv', hhi', rfl⟩ | ⟨k1, cv', hcv', rfl⟩ |
+      ⟨k1, cv', caps', hcv', hcaps', rfl⟩ | ⟨k1, cv', np', nf', hcv', hnp', hnf', rfl⟩ |
+      ⟨k1, cv', mi', rp', o', cc', rules', hcv', hmi', hrp', ho', hcc', hr', rfl⟩ | ⟨k1, tbl', ht', rfl⟩
+  all_goals first
+    | (have hne : wk ≠ wk' := fun h => by have := congrArg UInt64.toNat h; omega
+       rw [if_pos hne] at h
+       obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+       exact ⟨false, a, by simp [IConstantInfo.canonEq]; rfl, rfl, hS, IWGrow.refl _, hP, hL⟩)
+    | skip
+  · -- axiom
+    have e0 := wl wk 0 (by decide) k0
+    have e1 := wl wk' 0 (by decide) k1
+    subst e0 e1
+    simp (config := { decide := true }) only [ne_eq, not_true_eq_false, ↓reduceIte, false_and, if_false, true_and] at h
+    have p1 : (p + 1).toNat = p.toNat + 1 := by
+      obtain ⟨w1, hw1, -⟩ := decCV_name hcv
+      exact toNat_add_of_get hsz' (k := 1) (kn := 1) rfl hw1
+    have q1 : (q + 1).toNat = q.toNat + 1 := by
+      obtain ⟨w1, hw1, -⟩ := decCV_name hcv'
+      exact toNat_add_of_get hsz' (k := 1) (kn := 1) rfl hw1
+    obtain ⟨b, a', hb, hr, hq⟩ := cvceW_ok k h hS (by rw [p1]; exact hcv) (by rw [q1]; exact hcv') hP hL
+    exact ⟨b, a', by simp only [IConstantInfo.canonEq]; exact hb, hr, hq⟩
+  · -- defn
+    have e0 := wl wk 1 (by decide) k0
+    have e1 := wl wk' 1 (by decide) k1
+    subst e0 e1
+    simp (config := { decide := true }) only [ne_eq, not_true_eq_false, ↓reduceIte, false_and, if_false, true_and] at h
+    obtain ⟨b, a', hb, hr, hq⟩ := cdW_ok k h hS hp hq hP hL
+    exact ⟨b, a', hb, hr, hq⟩
+  · -- thm
+    have e0 := wl wk 2 (by decide) k0
+    have e1 := wl wk' 2 (by decide) k1
+    subst e0 e1
+    simp (config := { decide := true }) only [ne_eq, not_true_eq_false, ↓reduceIte, false_and, if_false, true_and] at h
+    have p1 : (p + 1).toNat = p.toNat + 1 := by
+      obtain ⟨w1, hw1, -⟩ := decCV_name hcv
+      exact toNat_add_of_get hsz' (k := 1) (kn := 1) rfl hw1
+    have q1 : (q + 1).toNat = q.toNat + 1 := by
+      obtain ⟨w1, hw1, -⟩ := decCV_name hcv'
+      exact toNat_add_of_get hsz' (k := 1) (kn := 1) rfl hw1
+    obtain ⟨b, a', hb, hr, hq⟩ := cvceW_ok k h hS (by rw [p1]; exact hcv) (by rw [q1]; exact hcv') hP hL
+    exact ⟨b, a', by simp only [IConstantInfo.canonEq]; exact hb, hr, hq⟩
+  · -- ind
+    have e0 := wl wk 3 (by decide) k0
+    have e1 := wl wk' 3 (by decide) k1
+    subst e0 e1
+    simp (config := { decide := true }) only [ne_eq, not_true_eq_false, ↓reduceIte, false_and, if_false, true_and] at h
+    have p1 : (p + 1).toNat = p.toNat + 1 := by
+      obtain ⟨w1, hw1, -⟩ := decCV_name hcv
+      exact toNat_add_of_get hsz' (k := 1) (kn := 1) rfl hw1
+    have q1 : (q + 1).toNat = q.toNat + 1 := by
+      obtain ⟨w1, hw1, -⟩ := decCV_name hcv'
+      exact toNat_add_of_get hsz' (k := 1) (kn := 1) rfl hw1
+    obtain ⟨b, a', hb, hr, hq⟩ := cvceW_ok k h hS (by rw [p1]; exact hcv) (by rw [q1]; exact hcv') hP hL
+    exact ⟨b, a', by simp only [IConstantInfo.canonEq]; exact hb, hr, hq⟩
+  · -- ctor
+    have e0 := wl wk 4 (by decide) k0
+    have e1 := wl wk' 4 (by decide) k1
+    subst e0 e1
+    simp (config := { decide := true }) only [ne_eq, not_true_eq_false, ↓reduceIte, false_and, if_false, true_and] at h
+    have p1 : (p + 1).toNat = p.toNat + 1 := by
+      obtain ⟨w1, hw1, -⟩ := decCV_name hcv
+      exact toNat_add_of_get hsz' (k := 1) (kn := 1) rfl hw1
+    have q1 : (q + 1).toNat = q.toNat + 1 := by
+      obtain ⟨w1, hw1, -⟩ := decCV_name hcv'
+      exact toNat_add_of_get hsz' (k := 1) (kn := 1) rfl hw1
+    obtain ⟨wa, ea, rfl⟩ := natW_ (a := erA m) (q := p) (k := 5) (kn := 5) hsz rfl
+      (ArrExt.nat? (erecP_ext m) hnp)
+    obtain ⟨wb, eb, rfl⟩ := natW_ (a := erA m) (q := p) (k := 6) (kn := 6) hsz rfl
+      (ArrExt.nat? (erecP_ext m) hnf)
+    obtain ⟨wc, ec, rfl⟩ := natW_ (a := erA m) (q := q) (k := 5) (kn := 5) hsz rfl
+      (ArrExt.nat? (erecP_ext m) hnp')
+    obtain ⟨wd, ed, rfl⟩ := natW_ (a := erA m) (q := q) (k := 6) (kn := 6) hsz rfl
+      (ArrExt.nat? (erecP_ext m) hnf')
+    simp only [erA] at ea eb ec ed
+    rw [ea, eb, ec, ed] at h
+    by_cases hc : wa ≠ wc ∨ wb ≠ wd
+    · rw [if_pos hc] at h
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+      have hbb : (wa.toNat == wc.toNat && wb.toNat == wd.toNat) = false := by
+        rcases hc with hc | hc
+        · have : (wa.toNat == wc.toNat) = false := by
+            simpa using fun e => hc (UInt64.toNat_inj.mp e)
+          simp [this]
+        · have : (wb.toNat == wd.toNat) = false := by
+            simpa using fun e => hc (UInt64.toNat_inj.mp e)
+          simp [this]
+      refine ⟨false, a, ?_, rfl, hS, IWGrow.refl _, hP, hL⟩
+      simp only [IConstantInfo.canonEq]
+      rw [hbb]; rfl
+    · rw [if_neg hc] at h
+      have hw : wa = wc ∧ wb = wd := by
+        rw [not_or] at hc; exact ⟨Classical.byContradiction hc.1, Classical.byContradiction hc.2⟩
+      obtain ⟨rfl, rfl⟩ := hw
+      obtain ⟨b, a', hb, hr, hq⟩ := cvceW_ok k h hS (by rw [p1]; exact hcv) (by rw [q1]; exact hcv') hP hL
+      refine ⟨b, a', ?_, hr, hq⟩
+      simp only [IConstantInfo.canonEq, beq_self_eq_true, Bool.and_self, if_true]
+      exact hb
+  · -- rec
+    have e0 := wl wk 5 (by decide) k0
+    have e1 := wl wk' 5 (by decide) k1
+    subst e0 e1
+    simp (config := { decide := true }) only [ne_eq, not_true_eq_false, ↓reduceIte, false_and, if_false, true_and] at h
+    obtain ⟨b, a', hb, hr, hq⟩ := cwW_ok k h hS hp hq hP hL
+    exact ⟨b, a', hb, hr, hq⟩
+  · -- proj
+    have e0 := wl wk 6 (by decide) k0
+    have e1 := wl wk' 6 (by decide) k1
+    subst e0 e1
+    simp (config := { decide := true }) only [ne_eq, not_true_eq_false, ↓reduceIte, false_and, if_false, true_and] at h
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj h)
+    have hB := tblEqB_ok (a := erA m) hsz (p := p) (q := q) (ArrExt.decTbl (erecP_ext m) ht) (ArrExt.decTbl (erecP_ext m) ht')
+    refine ⟨tbl == tbl', a, ?_, ?_, hS, IWGrow.refl _, hP, hL⟩
+    · simp only [IConstantInfo.canonEq]; rfl
+    · simp only [erA] at hB
+      rw [hB]
+      by_cases e : tbl = tbl' <;> simp [e]
+
 end L.Ind
