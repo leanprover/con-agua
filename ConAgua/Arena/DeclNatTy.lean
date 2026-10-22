@@ -295,6 +295,292 @@ theorem natOpCod_refines (hN : NatTyProg p) (c e : Word) :
       (natOpCod fe (decI c) (decI e)) (KeepPost dn vis fe decW0B) :=
   (natOpCod_ref hN c e).refAM
 
+/-! ### `nat_op_ty_pinned` -/
+
+section tpmodel
+variable (p : Prog) (n : Nat) (vis c ty : Word)
+
+def tpK5 : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m) => some ([r.headD 0], m)
+
+def tpK6 (nc : List Word) (d : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rv, m) =>
+    if rv.headD 0 ≠ 6 then some ([0], m)
+    else if d ≠ nc.headD 0 ∨ rv.tail.headD 0 ≠ nc.headD 0 then some ([0], m)
+    else tpK5 (callW p n "nat_op_cod" [vis, c, rv.tail.tail.headD 0] m)
+
+def tpK4 (nc pr : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rv, m) =>
+    if rv.headD 0 ≠ 6 then some ([0], m)
+    else if c = pr.headD 0 then
+      (if rv.tail.headD 0 ≠ nc.headD 0 then some ([0], m)
+       else tpK5 (callW p n "nat_op_cod" [vis, c, rv.tail.tail.headD 0] m))
+    else if rv.tail.tail.headD 0 >>> 28 ≠ 6 then some ([0], m)
+    else tpK6 p n vis c nc (rv.tail.headD 0) (callW p n "e_view" [rv.tail.tail.headD 0] m)
+
+def tpK3 (nc : List Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (pr, m) =>
+    if ty >>> 28 ≠ 6 then some ([0], m)
+    else tpK4 p n vis c nc pr (callW p n "e_view" [ty] m)
+
+def tpK2 : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (nc, m) => tpK3 p n vis c ty nc (callW p n "pin_at" [14] m)
+
+def tpK1 : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r1, m) => tpK2 p n vis c ty (callW p n "const_e" [r1.headD 0] m)
+
+end tpmodel
+
+def natOpTyPinnedW (p : Prog) (n : Nat) (m : Mem) (vis c ty : Word) : Option (List Word × Mem) :=
+  tpK1 p n vis c ty (callW p n "pin_at" [1] m)
+
+section tparms
+variable (p : Prog) (n : Nat) (vis c ty : Word) (r nc pr : List Word) (d : Word) (m : Mem)
+theorem tpK5_some : tpK5 (some (r, m)) = some ([r.headD 0], m) := rfl
+theorem tpK6_some : tpK6 p n vis c nc d (some (r, m)) =
+    if r.headD 0 ≠ 6 then some ([0], m)
+    else if d ≠ nc.headD 0 ∨ r.tail.headD 0 ≠ nc.headD 0 then some ([0], m)
+    else tpK5 (callW p n "nat_op_cod" [vis, c, r.tail.tail.headD 0] m) := rfl
+theorem tpK4_some : tpK4 p n vis c nc pr (some (r, m)) =
+    if r.headD 0 ≠ 6 then some ([0], m)
+    else if c = pr.headD 0 then
+      (if r.tail.headD 0 ≠ nc.headD 0 then some ([0], m)
+       else tpK5 (callW p n "nat_op_cod" [vis, c, r.tail.tail.headD 0] m))
+    else if r.tail.tail.headD 0 >>> 28 ≠ 6 then some ([0], m)
+    else tpK6 p n vis c nc (r.tail.headD 0) (callW p n "e_view" [r.tail.tail.headD 0] m) := rfl
+theorem tpK3_some : tpK3 p n vis c ty nc (some (r, m)) =
+    if ty >>> 28 ≠ 6 then some ([0], m)
+    else tpK4 p n vis c nc r (callW p n "e_view" [ty] m) := rfl
+theorem tpK2_some : tpK2 p n vis c ty (some (r, m)) =
+    tpK3 p n vis c ty r (callW p n "pin_at" [14] m) := rfl
+theorem tpK1_some : tpK1 p n vis c ty (some (r, m)) =
+    tpK2 p n vis c ty (callW p n "const_e" [r.headD 0] m) := rfl
+end tparms
+
+grind_pattern [ind_grind] tpK5_some => tpK5 (some (r, m))
+grind_pattern [ind_grind] tpK6_some => tpK6 p n vis c nc d (some (r, m))
+grind_pattern [ind_grind] tpK4_some => tpK4 p n vis c nc pr (some (r, m))
+grind_pattern [ind_grind] tpK3_some => tpK3 p n vis c ty nc (some (r, m))
+grind_pattern [ind_grind] tpK2_some => tpK2 p n vis c ty (some (r, m))
+grind_pattern [ind_grind] tpK1_some => tpK1 p n vis c ty (some (r, m))
+
+theorem natOpTyPinned_specW (p : Prog) (hp : p.lookup "nat_op_ty_pinned" = some natOpTyPinnedL)
+    (n : Nat) (s₀ : St) (vis c ty : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_op_ty_pinned" [vis, c, ty]
+    ⦃fun r s' => LocEq s' s₀ ∧ natOpTyPinnedW p n s₀.mem vis c ty = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, natOpTyPinnedL]
+  vcgen [exec, step, evalE, L.evalC_spec, evalArgs, setLoc, setLocs, ld64,
+    callW_spec p n "pin_at", callW_spec p n "const_e", callW_spec p n "e_view",
+    callW_spec p n "nat_op_cod"]
+  all_goals (try simp only [Cond.pval, Expr.pval, Cmp.eval, Bool.or_eq_true, decide_eq_true_eq, rd64_eq_rdW] at *)
+  all_goals grind (gen := 20) [lang_grind, arena_grind, ind_grind, natOpTyPinnedW]
+
+theorem getD2 (r : List Word) : r.getD 2 0 = r.tail.tail.headD 0 := by
+  cases r with
+  | nil => simp
+  | cons a t => cases t with
+    | nil => simp
+    | cons b u => cases u <;> simp
+
+theorem viewR_forall {rv : List Word} {v : ENodeView} (h : ViewR rv v) :
+    (rv.headD 0 = 6 ∧ ∃ dom body, v = .forallE dom body ∧ H (rv.tail.headD 0) ∧
+      decE (rv.tail.headD 0) = dom ∧ H (rv.tail.tail.headD 0) ∧ decE (rv.tail.tail.headD 0) = body) ∨
+    (rv.headD 0 ≠ 6 ∧ ∀ dom body, v ≠ .forallE dom body) := by
+  cases v <;> simp only [ViewR] at h
+  all_goals first
+    | (left; obtain ⟨h0, h1, h2, h3, h4⟩ := h
+       refine ⟨h0, _, _, rfl, ?_, ?_, ?_, ?_⟩ <;> simp_all [getD1, getD2, H])
+    | (right; refine ⟨?_, fun _ _ => by simp⟩; simp_all)
+
+theorem natOpTyPinned_ref (hN : NatTyProg p) (c ty : Word) :
+    CallRef p "nat_op_ty_pinned" [vis, c, ty] (fun m a => StageR dn vis fe m a ∧ H c ∧ H ty)
+      (natOpTyPinned fe (decI c) (decI ty)) (KeepPost dn vis fe decW0B) := by
+  refine CallRef.of_succ fun k m a r m' ⟨hS, hc, hty⟩ hcall => ?_
+  have hw := callW_model (M := fun mm => natOpTyPinnedW p k mm vis c ty) (natOpTyPinned_specW p hN.lNatOpTyPinned k · vis c ty) hcall
+  unfold natOpTyPinnedW at hw
+  cases h1 : callW p k "pin_at" [1] m with
+  | none => rw [h1] at hw; simp [tpK1] at hw
+  | some q1 =>
+  obtain ⟨r1, m1⟩ := q1
+  rw [h1, tpK1_some] at hw
+  obtain ⟨hm1, h0, hr1⟩ := pinAt_call hN.lPinAt (j := 2) rfl h1
+  rw [hm1] at hw
+  have hF := hS.1.pins.full h0
+  have hp1 : H (r1.headD 0) := by rw [hr1]; exact hF.names_lt 1 (by decide)
+  have e1 : (pinAt 1).run a = .ok (decI (r1.headD 0), a) := by
+    have := pinAt_run hF 1 (by decide); rw [hr1]; exact this
+  cases h2 : callW p k "const_e" [r1.headD 0] m with
+  | none => rw [h2] at hw; simp [tpK2] at hw
+  | some q2 =>
+  obtain ⟨nc, m2⟩ := q2
+  rw [h2, tpK2_some] at hw
+  obtain ⟨x2, a2, hrun2, hS2, hg2, hx2l, hx2⟩ := constE_ref (dn := dn) (vis := vis) (fe := fe)
+    hN.toMasterProg (r1.headD 0) k m a nc m2 ⟨hS, hp1⟩ h2
+  cases h3 : callW p k "pin_at" [14] m2 with
+  | none => rw [h3] at hw; simp [tpK3] at hw
+  | some q3 =>
+  obtain ⟨pr, m3⟩ := q3
+  rw [h3, tpK3_some] at hw
+  obtain ⟨hm3, h02, hr3⟩ := pinAt_call hN.lPinAt (j := 15) rfl h3
+  rw [hm3] at hw
+  have hF2 := hS2.1.pins.full h02
+  have hp3 : H (pr.headD 0) := by rw [hr3]; exact hF2.names_lt 14 (by decide)
+  have e3 : (pinAt 14).run a2 = .ok (decI (pr.headD 0), a2) := by
+    have := pinAt_run hF2 14 (by decide); rw [hr3]; exact this
+  have htag : ((decI ty : EIdx).tag == ETag.forallE) = decide (ty >>> 28 = 6) := tagForallIff ty hty
+  have hbeqc : ((decI c : NIdx) == decI (pr.headD 0)) = decide (c = pr.headD 0) := decI_beq_word hc hp3
+  have hshort : ¬ ty >>> 28 = 6 → ∃ x a', (natOpTyPinned fe (decI c) (decI ty)).run a = .ok (x, a') ∧ KeepPost dn vis fe decW0B m m' a' r x := by
+    intro h6
+    rw [if_pos (by simpa using h6)] at hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    refine ⟨false, a2, ?_, hS2, hg2, by simp [decW0B]⟩
+    simp only [natOpTyPinned, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hrun2, natPredName_eq, e3,
+      hbeqc, htag, decide_eq_false h6]
+    by_cases hcp : c = pr.headD 0
+    · simp [hcp]; rfl
+    · simp [hcp]; rfl
+  refine (if h6 : ty >>> 28 = 6 then ?_ else hshort h6)
+  rw [if_neg (by simpa using h6)] at hw
+  cases h4 : callW p k "e_view" [ty] m2 with
+  | none => rw [h4] at hw; simp [tpK4] at hw
+  | some q4 =>
+  obtain ⟨rv, m4⟩ := q4
+  rw [h4, tpK4_some] at hw
+  obtain ⟨vv, a4, hrun4, hS4, hg4, hvr⟩ := eView_ref (dn := dn) (vis := vis) (fe := fe) (p := p) ty hN.lEView k m2 a2 rv m4 hS2 h4
+  have hrun4' : (view (decI ty)).run a2 = .ok (vv, a4) := hrun4
+  have hg02 : IWGrow m m2 := hg2
+  have hnonf : (rv.headD 0 ≠ 6 ∧ ∀ dom body, vv ≠ .forallE dom body) →
+      ∃ x a', (natOpTyPinned fe (decI c) (decI ty)).run a = .ok (x, a') ∧
+        KeepPost dn vis fe decW0B m m' a' r x := by
+    rintro ⟨hrvn, hnf⟩
+    rw [if_pos hrvn] at hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    refine ⟨false, a4, ?_, hS4, hg02.trans hg4, by simp [decW0B]⟩
+    simp only [natOpTyPinned, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hrun2, natPredName_eq, e3,
+      hbeqc, htag, decide_eq_true h6, if_true, hrun4']
+    by_cases hcp : c = pr.headD 0
+    · simp only [decide_eq_true hcp, if_true, StateT.run_bind, hrun4', exc_ok_bind']
+      cases vv <;> first | rfl | (exfalso; exact hnf _ _ rfl)
+    · simp only [decide_eq_false hcp, Bool.false_eq_true, if_false, StateT.run_bind, hrun4', exc_ok_bind']
+      cases vv <;> first | rfl | (exfalso; exact hnf _ _ rfl)
+  refine Or.elim (viewR_forall hvr) ?_ hnonf
+  rintro ⟨hrv6, dom, body, hvv, hd0, hdom, hb0, hbody⟩
+  rw [if_neg (by simpa using hrv6)] at hw
+  subst hvv
+  by_cases hcp : c = pr.headD 0
+  · rw [if_pos hcp] at hw
+    have hdn : ((decE (rv.tail.headD 0) : EIdx) == x2) = decide (rv.tail.headD 0 = nc.headD 0) := by
+      rw [← hx2]; exact decI_beq_word hd0 hx2l
+    by_cases hdc : rv.tail.headD 0 = nc.headD 0
+    · rw [if_neg (by simpa using hdc)] at hw
+      cases h5 : callW p k "nat_op_cod" [vis, c, rv.tail.tail.headD 0] m4 with
+      | none => rw [h5] at hw; simp [tpK5] at hw
+      | some q5 =>
+      obtain ⟨rr, m5⟩ := q5
+      rw [h5, tpK5_some] at hw
+      simp only [Option.some.injEq, Prod.mk.injEq] at hw
+      obtain ⟨rfl, rfl⟩ := hw
+      obtain ⟨x5, a5, hrun5, hS5, hg5, hx5⟩ := natOpCod_ref (dn := dn) (vis := vis) (fe := fe) hN c
+        (rv.tail.tail.headD 0) k m4 a4 rr m5 ⟨hS4, hc, hb0⟩ h5
+      refine ⟨x5, a5, ?_, hS5, hg02.trans (hg4.trans hg5), by simpa [decW0B] using hx5⟩
+      have hrun5 : (natOpCod fe (decI c) body).run a4 = .ok (x5, a5) := by rw [← hbody]; exact hrun5
+      simp only [natOpTyPinned, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hrun2, natPredName_eq, e3,
+        hbeqc, htag, decide_eq_true h6, if_true, hrun4', decide_eq_true hcp, ← hdom, hdn, decide_eq_true hdc, if_true, hrun5]
+    · rw [if_pos (by simpa using hdc)] at hw
+      simp only [Option.some.injEq, Prod.mk.injEq] at hw
+      obtain ⟨rfl, rfl⟩ := hw
+      refine ⟨false, a4, ?_, hS4, hg02.trans hg4, by simp [decW0B]⟩
+      simp only [natOpTyPinned, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hrun2, natPredName_eq, e3,
+        hbeqc, htag, decide_eq_true h6, if_true, hrun4', decide_eq_true hcp, ← hdom, hdn, decide_eq_false hdc, Bool.false_eq_true, if_false]
+      rfl
+  · rw [if_neg hcp] at hw
+    have hdn : ((decE (rv.tail.headD 0) : EIdx) == x2) = decide (rv.tail.headD 0 = nc.headD 0) := by
+      rw [← hx2]; exact decI_beq_word hd0 hx2l
+    have htagb : ((decE (rv.tail.tail.headD 0) : EIdx).tag == ETag.forallE) =
+        decide (rv.tail.tail.headD 0 >>> 28 = 6) := tagForallIff _ hb0
+    have hshortb : ¬ rv.tail.tail.headD 0 >>> 28 = 6 → ∃ x a', (natOpTyPinned fe (decI c) (decI ty)).run a = .ok (x, a') ∧
+        KeepPost dn vis fe decW0B m m' a' r x := by
+      intro hb6
+      rw [if_pos (by simpa using hb6)] at hw
+      simp only [Option.some.injEq, Prod.mk.injEq] at hw
+      obtain ⟨rfl, rfl⟩ := hw
+      refine ⟨false, a4, ?_, hS4, hg02.trans hg4, by simp [decW0B]⟩
+      simp only [natOpTyPinned, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hrun2, natPredName_eq, e3,
+        hbeqc, htag, decide_eq_true h6, if_true, hrun4', decide_eq_false hcp, Bool.false_eq_true,
+        if_false, ← hbody, htagb, decide_eq_false hb6]
+      rfl
+    refine (if hb6 : rv.tail.tail.headD 0 >>> 28 = 6 then ?_ else hshortb hb6)
+    rw [if_neg (by simpa using hb6)] at hw
+    cases h5 : callW p k "e_view" [rv.tail.tail.headD 0] m4 with
+    | none => rw [h5] at hw; simp [tpK6] at hw
+    | some q5 =>
+    obtain ⟨rv2, m5⟩ := q5
+    rw [h5, tpK6_some] at hw
+    obtain ⟨vv2, a5, hrun5, hS5, hg5, hvr2⟩ := eView_ref (dn := dn) (vis := vis) (fe := fe) (p := p)
+      (rv.tail.tail.headD 0) hN.lEView k m4 a4 rv2 m5 hS4 h5
+    have hnonf2 : (rv2.headD 0 ≠ 6 ∧ ∀ dom body, vv2 ≠ .forallE dom body) →
+        ∃ x a', (natOpTyPinned fe (decI c) (decI ty)).run a = .ok (x, a') ∧
+          KeepPost dn vis fe decW0B m m' a' r x := by
+      rintro ⟨hrvn, hnf⟩
+      rw [if_pos hrvn] at hw
+      simp only [Option.some.injEq, Prod.mk.injEq] at hw
+      obtain ⟨rfl, rfl⟩ := hw
+      refine ⟨false, a5, ?_, hS5, hg02.trans (hg4.trans hg5), by simp [decW0B]⟩
+      simp only [natOpTyPinned, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hrun2, natPredName_eq, e3,
+        hbeqc, htag, decide_eq_true h6, if_true, hrun4', decide_eq_false hcp, Bool.false_eq_true,
+        if_false, ← hbody, htagb, decide_eq_true hb6, ← hbody, hrun5]
+      cases vv2 <;> first | rfl | (exfalso; exact hnf _ _ rfl)
+    refine Or.elim (viewR_forall hvr2) ?_ hnonf2
+    rintro ⟨hrv26, dom2, body2, hvv2, hd02, hdom2, hb02, hbody2⟩
+    rw [if_neg (by simpa using hrv26)] at hw
+    subst hvv2
+    have hdn2 : ((decE (rv2.tail.headD 0) : EIdx) == x2) = decide (rv2.tail.headD 0 = nc.headD 0) := by
+      rw [← hx2]; exact decI_beq_word hd02 hx2l
+    by_cases hdd : rv.tail.headD 0 = nc.headD 0 ∧ rv2.tail.headD 0 = nc.headD 0
+    · rw [if_neg (fun h => h.elim (fun x => x hdd.1) (fun x => x hdd.2))] at hw
+      cases h6' : callW p k "nat_op_cod" [vis, c, rv2.tail.tail.headD 0] m5 with
+      | none => rw [h6'] at hw; simp [tpK5] at hw
+      | some q6 =>
+      obtain ⟨rr, m6⟩ := q6
+      rw [h6', tpK5_some] at hw
+      simp only [Option.some.injEq, Prod.mk.injEq] at hw
+      obtain ⟨rfl, rfl⟩ := hw
+      obtain ⟨x6, a6, hrun6, hS6, hg6, hx6⟩ := natOpCod_ref (dn := dn) (vis := vis) (fe := fe) hN c
+        (rv2.tail.tail.headD 0) k m5 a5 rr m6 ⟨hS5, hc, hb02⟩ h6'
+      refine ⟨x6, a6, ?_, hS6, hg02.trans (hg4.trans (hg5.trans hg6)), by simpa [decW0B] using hx6⟩
+      have hrun6' : (natOpCod fe (decI c) body2).run a5 = .ok (x6, a6) := by rw [← hbody2]; exact hrun6
+      simp only [natOpTyPinned, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hrun2, natPredName_eq, e3,
+        hbeqc, htag, decide_eq_true h6, if_true, hrun4', decide_eq_false hcp, Bool.false_eq_true,
+        if_false, ← hbody, htagb, decide_eq_true hb6, hrun5, ← hdom, ← hdom2, hdn, hdn2,
+        decide_eq_true hdd.1, decide_eq_true hdd.2, Bool.and_self, if_true, hrun6']
+    · rw [if_pos (by by_cases h1 : rv.tail.headD 0 = nc.headD 0
+                     · exact Or.inr (fun h2 => hdd ⟨h1, h2⟩)
+                     · exact Or.inl h1)] at hw
+      simp only [Option.some.injEq, Prod.mk.injEq] at hw
+      obtain ⟨rfl, rfl⟩ := hw
+      refine ⟨false, a5, ?_, hS5, hg02.trans (hg4.trans hg5), by simp [decW0B]⟩
+      simp only [natOpTyPinned, pinNat_eq, StateT.run_bind, e1, exc_ok_bind', hrun2, natPredName_eq, e3,
+        hbeqc, htag, decide_eq_true h6, if_true, hrun4', decide_eq_false hcp, Bool.false_eq_true,
+        if_false, ← hbody, htagb, decide_eq_true hb6, hrun5, ← hdom, ← hdom2, hdn, hdn2]
+      simp only [Bool.and_eq_true, decide_eq_true_eq]
+      rw [if_neg hdd]
+      rfl
+
+@[refines ConRon.Arena.natOpTyPinned]
+theorem natOpTyPinned_refines (hN : NatTyProg p) (c ty : Word) :
+    RefAM p "nat_op_ty_pinned" [vis, c, ty] (fun m a => StageR dn vis fe m a ∧ H c ∧ H ty)
+      (natOpTyPinned fe (decI c) (decI ty)) (KeepPost dn vis fe decW0B) :=
+  (natOpTyPinned_ref hN c ty).refAM
+
 end ty
 
 end L.Ind
