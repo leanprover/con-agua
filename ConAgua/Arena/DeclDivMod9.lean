@@ -1,4 +1,5 @@
 import ConAgua.Arena.DeclDivMod8
+import ConAgua.Arena.DeclReducePin
 
 /-!
 # The `Nat.div` family's pin gate, bottom up: the variant loop and the gate (lane `decls3`, `decls3-divmod`)
@@ -190,6 +191,16 @@ theorem loop_ref (hD : DmProg9 p) (hs0 : SubstC0 p dn vis fe) (hsA : SubstCAll p
         Bool.false_eq_true, if_false]
       exact hrun4
 
+@[refines_part ConRon.Arena.checkDivModPinLoop "an attempt's error aborts (D4)"]
+theorem checkDivModPinLoop_refines (hD : DmProg9 p) (hs0 : SubstC0 p dn vis fe)
+    (hsA : SubstCAll p dn vis fe) (c value : Word) (hc : H c) (hval : H value)
+    (ips : List INatOpPinSet) (po pl : Word) (tried : List String) :
+    RefAM p "check_div_mod_pin_loop" [vis, c, value, po, pl]
+      (fun m s => StageR dn vis fe m s ∧ PinsIW m po.toNat pl.toNat ips)
+      (checkDivModPinLoop V fe (decI c) (decE value) ips tried) (KeepPost dn vis fe decUnit) :=
+  CallRef.refAM (fun k m a res m' ⟨hS, hI⟩ hcall =>
+    loop_ref hD hs0 hsA c value hc hval ips po pl tried k m a res m' hS hI hcall)
+
 end loop
 
 end L.Ind
@@ -224,5 +235,120 @@ theorem decCI_defn_value {a : Array Word} {dn : NIdx → Option ConLeche.Name} {
       rw [e] at hv2
       exact ⟨w, rfl, hlt, (Option.some.inj hv2).symm⟩
     · simp [hd?, hq, hlt] at hv2
+
+local notation "V" => ConLeche.CheckMode.verified
+
+section pin
+variable {dn : NIdx → Option ConLeche.Name} {p : Prog}
+
+def cpW (p : Prog) (n : Nat) (m : Mem) (po pl vs vs2 c : Word) : Option (List Word × Mem) :=
+  bW (callW p n "div_mod_env_guard" [vs2, c] m) fun r1 m1 =>
+  if r1.headD 0 = 0 then none else
+  bW (callW p n "env_find" [c, vs2] m1) fun r2 m2 =>
+  if r2.headD 0 = 0 then none else
+  if rdW (m2.arr64 EREC) (r2.tail.headD 0) ≠ 1 then none else
+  bW (callW p n "check_div_mod_pin_loop" [vs, c, rdW (m2.arr64 EREC) (r2.tail.headD 0 + 5), po, pl] m2)
+    fun r3 m3 => some ([0], m3)
+
+set_option maxHeartbeats 1600000 in
+theorem cp_specW (p : Prog) (hp : p.lookup "check_div_mod_pin" = some checkDivModPinL) (n : Nat)
+    (s₀ : St) (po pl vs vs2 c : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "check_div_mod_pin" [po, pl, vs, vs2, c]
+    ⦃fun r s' => LocEq s' s₀ ∧ cpW p n s₀.mem po pl vs vs2 c = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, checkDivModPinL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+      callW_spec p n "div_mod_env_guard", callW_spec p n "env_find",
+      callW_spec p n "check_div_mod_pin_loop"] <;>
+    finish (gen := 30) (instances := 10000) [cpW, bW, rdW_eq]
+
+theorem cp_ref (hD : DmProg9 p) (hdn : DnInj dn) {vis vis2 : Word} {fe2 : IFEnv}
+    (hs0 : SubstC0 p dn vis (fe2.restrictTo vis.toNat))
+    (hsA : SubstCAll p dn vis (fe2.restrictTo vis.toNat))
+    (po pl c : Word) (ips : List INatOpPinSet) :
+    CallRef p "check_div_mod_pin" [po, pl, vis, vis2, c]
+      (fun m s => StageR dn vis2 fe2 m s ∧ H c ∧ PinsIW m po.toNat pl.toNat ips)
+      (checkDivModPin V ips (fe2.restrictTo vis.toNat) fe2 (decI c))
+      (KeepPost dn vis2 fe2 decUnit) := by
+  refine CallRef.of_succ fun k m s rr mm ⟨hS, hc, hI⟩ hcall => ?_
+  have hw := callW_model (M := fun mq => cpW p k mq po pl vis vis2 c)
+    (cp_specW p hD.lCheckDivModPin k · po pl vis vis2 c) hcall
+  unfold cpW at hw
+  have hD8 := hD.toDmProg8
+  have hD7 := hD8.toDmProg7
+  obtain ⟨r1, m1, x1, a1, hrun1, ⟨hS1, hg1, hd1⟩, hw⟩ :=
+    (eg_ref hD7 hdn c).bind_ ⟨hS, hc⟩ hw
+  by_cases z1 : r1.headD 0 = 0
+  · rw [if_pos z1] at hw; cases hw
+  rw [if_neg z1] at hw
+  have hx1 := decW0B_true hd1 z1
+  have hrun1' : (divModEnvGuard fe2 (decI c)).run s = .ok (true, a1) := by rw [← hx1]; exact hrun1
+  cases h2 : callW p k "env_find" [c, vis2] m1 with
+  | none => rw [h2] at hw; simp at hw
+  | some q2 =>
+  obtain ⟨r2, m2⟩ := q2
+  rw [h2, bW_some] at hw
+  obtain ⟨hm2, hfd⟩ := envFind_call hD7.toDmProg6.toDmProg5.toMasterProg c hc hS1.1.env h2
+  subst hm2
+  cases hf : fe2.find? (decI c) with
+  | none =>
+    rw [hf] at hfd
+    rw [if_pos (show r2.headD 0 = 0 from hfd)] at hw; cases hw
+  | some ci =>
+  rw [hf] at hfd
+  obtain ⟨hr2, hci⟩ := hfd
+  rw [if_neg (by rw [hr2]; decide)] at hw
+  have hsz := hS1.2.2.2.2.1
+  obtain ⟨cv, v, hint, rfl, hk, hcv⟩ : ∃ cv v hint, ci = .defnInfo cv v hint ∧
+      (erecP m2)[(r2.tail.headD 0).toNat]? = some 1 ∧ decCV (erecP m2) ((r2.tail.headD 0).toNat + 1) = some cv := by
+    rcases decCI_defn_cases hci with h | ⟨w, hw', hne, hnd⟩
+    · exact h
+    · exfalso
+      have := rdW_erec_of hsz hw'
+      rw [if_pos (by rw [this]; exact hne)] at hw; cases hw
+  obtain ⟨-, wv, hwv, hwlt, hvw⟩ := decCI_defn_value hci
+  have hk1 : rdW (m2.arr64 EREC) (r2.tail.headD 0) = 1 := rdW_erec_of hsz hk
+  rw [if_neg (by rw [hk1]; simp)] at hw
+  have hq5 : (r2.tail.headD 0 + 5).toNat = (r2.tail.headD 0).toNat + 5 := by
+    have h1 : (r2.tail.headD 0).toNat + 5 < (erecP m2).size := by
+      have := (Array.getElem?_eq_some_iff.mp hwv).1; omega
+    have h2 : (erecP m2).size ≤ erTop m2 := erecP_size_le' m2
+    have h3 : erTop m2 < 2 ^ 64 := (rdW (m2.arr64 CTL) 129).toNat_lt
+    have h5 : (5 : Word).toNat = 5 := rfl
+    rw [UInt64.toNat_add, h5]; exact Nat.mod_eq_of_lt (by omega)
+  have hval : rdW (m2.arr64 EREC) (r2.tail.headD 0 + 5) = wv := by
+    have : (erecP m2)[(r2.tail.headD 0 + 5).toNat]? = some wv := by rw [hq5]; exact hwv
+    exact rdW_erec_of hsz this
+  rw [hval] at hw
+  cases h3 : callW p k "check_div_mod_pin_loop" [vis, c, wv, po, pl] m2 with
+  | none => rw [h3] at hw; simp at hw
+  | some q3 =>
+  obtain ⟨r3, m3⟩ := q3
+  rw [h3, bW_some] at hw
+  simp only [Option.some.injEq, Prod.mk.injEq] at hw
+  obtain ⟨rfl, rfl⟩ := hw
+  have hS1' := StageR.restrict hS1 vis
+  obtain ⟨x3, a3, hrun3, hS3, hg3, -⟩ := loop_ref hD hs0 hsA c wv hc hwlt ips po pl [] k m2 a1 r3 m3 hS1'
+    (hI.grow hg1) h3
+  have hS3' := StageR.restrict hS3 vis2
+  rw [IFEnv.restrictTo_restrictTo, ← hS.1.env.vis, IFEnv.restrictTo_self] at hS3'
+  refine ⟨(), a3, ?_, hS3', hg1.trans hg3, trivial⟩
+  simp only [checkDivModPin, StateT.run_bind, hrun1', exc_ok_bind', if_true, hf]
+  rw [hvw]
+  exact hrun3
+
+@[refines_part ConRon.Arena.checkDivModPin "the loop's attempt error aborts (D4)"]
+theorem checkDivModPin_refines (hD : DmProg9 p) (hdn : DnInj dn) {vis vis2 : Word} {fe2 : IFEnv}
+    (hs0 : SubstC0 p dn vis (fe2.restrictTo vis.toNat))
+    (hsA : SubstCAll p dn vis (fe2.restrictTo vis.toNat))
+    (po pl c : Word) (ips : List INatOpPinSet) :
+    RefAM p "check_div_mod_pin" [po, pl, vis, vis2, c]
+      (fun m s => StageR dn vis2 fe2 m s ∧ H c ∧ PinsIW m po.toNat pl.toNat ips)
+      (checkDivModPin V ips (fe2.restrictTo vis.toNat) fe2 (decI c))
+      (KeepPost dn vis2 fe2 decUnit) :=
+  (cp_ref hD hdn hs0 hsA po pl c ips).refAM
+
+end pin
 
 end L.Ind
