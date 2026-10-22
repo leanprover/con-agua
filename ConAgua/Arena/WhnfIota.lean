@@ -1181,11 +1181,6 @@ def RecFireArgsOK (p : Prog) : Prop :=
         SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄
 
 
-/-- **`iota_rec_at` refines `iotaRecAt`** (the statement is `WhnfCore.lean`'s `IotaRecAtOK`, what
-`whnf_app` assumes). -/
-@[refines ConRon.Arena.iotaRecAt]
-theorem iotaRecAt_refines (n : Nat) (hk : KnotUpTo p n) : IotaRecAtOK p (n + 1) := sorry
-
 end specs
 
 /-! ## Leaf proofs: `find_rule`, `rec_rule_k`, `is_str_lit`, `defeq_list`, `pi_residual`

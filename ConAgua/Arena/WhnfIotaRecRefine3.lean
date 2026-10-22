@@ -304,4 +304,120 @@ theorem iotaRecC_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
   · rw [hresF]; simp only [decOptR, h0, h1]
   · unfold ResW at hr4 ⊢; rw [← h0, ← h1]; exact hr4
 
+/-! ## `iota_rec_at(mode, vis, d, hd, so, sn)` -/
+
+/-- Model of `iota_rec_at`. -/
+def irAtW (p : Prog) (n : Nat) (m : Mem) (mode vis d hd so sn : Word) : Option (Word × Word × Mem) :=
+  match callW p n "iota_rec_head" [hd] m with
+  | none => none
+  | some (rv, m1) =>
+  if rv.headD 0 = 0 then some (0, 0, m1) else
+  match callW p n "iota_rec_c" [mode, vis, d, rv.tail.headD 0, rv.tail.tail.headD 0, so, sn] m1 with
+  | none => none
+  | some (rc, m2) => some (rc.headD 0, rc.tail.headD 0, m2)
+
+theorem iotaRecAt_spec (p : Prog) (hp : p.lookup "iota_rec_at" = some iotaRecAtL) (n : Nat)
+    (s₀ : St) (mode vis d hd so sn : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p (n + 1)) "iota_rec_at" [mode, vis, d, hd, so, sn]
+    ⦃fun r s' => LocEq s' s₀ ∧ irAtW p n s₀.mem mode vis d hd so sn =
+      some (r.headD 0, r.tail.headD 0, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, iotaRecAtL]
+  vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+    callW_spec p n "iota_rec_head", callW_spec p n "iota_rec_c"] <;>
+  simp_all [irAtW, BinOp.eval, Cmp.eval, LocEq, St.setLocs_cons, St.setLoc_loc, St.setLoc_mem,
+    St.setLocs_nil, Locals.init_cons_zero, Locals.init_cons_succ, Sig.retVal, Sig.retOr]
+
+section atRun
+variable (mode : ConLeche.CheckMode) (r : CoreFnsA) (fe : IFEnv) (depth : Nat) (hd : EIdx)
+  (sargs : Array EIdx) (n : Nat)
+
+theorem at_run_tag (a : AState) (ht : hd.tag ≠ ETag.const) :
+    (iotaRecAt mode r fe depth hd sargs n).run a = .ok (none, a) := by
+  have : (hd.tag == ETag.const) = false := by simpa using ht
+  rw [iotaRecAt_eq]; simp only [this, Bool.false_eq_true, ↓reduceIte]; rfl
+
+theorem at_run_c (a a' : AState) (c : NIdx) (us : LsIdx) (res : Option EIdx)
+    (ht : hd.tag = ETag.const) (hv : a.store.viewConst hd = some (c, us))
+    (h : (iotaRecCT mode r fe depth c us sargs n).run a = .ok (res, a')) :
+    (iotaRecAt mode r fe depth hd sargs n).run a = .ok (res, a') := by
+  have hvr : (viewConst hd).run a = .ok (some (c, us), a) := by
+    show Except.ok (a.store.viewConst hd, a) = _; rw [hv]
+  rw [iotaRecAt_eq]
+  simp only [ht, beq_self_eq_true, ↓reduceIte, StateT.run_bind, hvr, except_ok_bind, h]
+
+end atRun
+
+/-- **`iota_rec_at` refines `iotaRecAt`** (`IotaRecAtOK`, what `whnf_app` assumes), from the
+callees' specs and three new stub assumptions: `ErecKeptRec` (the callees the pieces read the
+record pool after leave it alone), `LvlsEqDen` (a level-list comparison that runs compares lists
+that read back), `RecShape` (a stored recursor's rule prefix and plain rules' parameters fit its
+major index). -/
+theorem iotaRecAt_refines' (p : Prog) (hp : IotaRecProg' p) (hc : IotaCallees p)
+    (hw : WhnfCallees p) (hsup : ∀ fe : IFEnv, SupKeep fe) (hmtc : MajorToCtorOK p)
+    (hEI : ErecKeptInst p) (hER : ErecKeptRec p) (hEK : ErecKeptKnot p) (hden : LvlsEqDen p)
+    (hshape : RecShape) (n : Nat) (hk : KnotUpTo p n) : IotaRecAtOK p (n + 1) := by
+  intro F s₀ a₀ dn vis fe M eb mode d hd so sn xs hnF hn62 hpre hhd hsa hsat
+  have hS := hpre.rel
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
+    (iotaRecAt_spec p hp.iotaRecAt n s₀ mode vis d hd so sn)
+  subst hs0
+  refine ⟨hloc, ?_⟩
+  simp only [irAtW] at hW
+  cases c1 : callW p n "iota_rec_head" [hd] s.mem with
+  | none => rw [c1] at hW; cases hW
+  | some q =>
+  obtain ⟨rv, m1⟩ := q
+  rw [c1] at hW
+  simp only at hW
+  obtain ⟨hm1, hnot, hyes⟩ := irCallW_head p hp.head n s.mem a₀ hS.arena.1 hd hhd rv m1 c1
+  subst m1
+  by_cases v0 : rv.headD 0 = 0
+  · rw [if_pos v0] at hW
+    simp only [Option.some.injEq, Prod.mk.injEq] at hW
+    obtain ⟨h0, h1, hm⟩ := hW
+    obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ (at_run_tag (decMode mode)
+      (coreKnot (decMode mode) fe id F) fe d.toNat (decE hd) xs xs.size a₀ (hnot v0))
+    refine ⟨hokF, ⟨M, by rw [hstF, ← hm]; exact hS, KeptAll.refl _ _, by rw [← hm]; exact StackKept.refl _⟩,
+      ?_, ?_⟩
+    · rw [hresF, decOptR_none r h0.symm]
+    · unfold ResW HW; rw [← h0, ← h1]; decide
+  rw [if_neg v0] at hW
+  obtain ⟨htag, hview, hcw, husw⟩ := hyes v0
+  have hvc := L.Ind.EStore.viewConst_of_view _ _ htag _ _ hview
+  cases n with
+  | zero => rw [callW_zero] at hW; cases hW
+  | succ N =>
+  cases c2 : callW p (N + 1) "iota_rec_c" [mode, vis, d, rv.tail.headD 0, rv.tail.tail.headD 0, so, sn]
+      s.mem with
+  | none => rw [c2] at hW; cases hW
+  | some q =>
+  obtain ⟨rc, m2⟩ := q
+  rw [c2] at hW
+  simp only [Option.some.injEq, Prod.mk.injEq] at hW
+  obtain ⟨h0, h1, hm⟩ := hW
+  obtain ⟨ok2, ⟨M2, hS2, hK2, hSt2⟩, res2, hr2⟩ := CoreSpec.of_callW
+    (iotaRecC_refines' p hp hc hw hsup hmtc hEI hER hEK hden hshape N (hk.mono (by omega)) F
+      (by omega) (by omega) ⟨s.mem, Locals.init []⟩ a₀ dn vis fe M eb mode d _ _ so sn xs hS
+      hpre.mode4 hpre.eb_mode hcw husw hsa hsat) c2
+  have hrun2 := AM.run_of_ok _ _ ok2
+  rw [res2] at hrun2
+  obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ (at_run_c (decMode mode)
+    (coreKnot (decMode mode) fe id F) fe d.toNat (decE hd) xs xs.size a₀ _ _ _ _ htag hvc hrun2)
+  refine ⟨hokF, ⟨M2, by rw [hstF, ← hm]; exact hS2, hK2, by rw [← hm]; exact hSt2⟩, ?_, ?_⟩
+  · rw [hresF]; simp only [decOptR, h0, h1]
+  · unfold ResW at hr2 ⊢; rw [← h0, ← h1]; exact hr2
+
+/-- **`iota_rec_at` refines `iotaRecAt`** (the statement is `WhnfCore.lean`'s `IotaRecAtOK`, what
+`whnf_app` assumes), at the stub bundles; the three new assumptions stay hypotheses. -/
+@[refines ConRon.Arena.iotaRecAt]
+theorem iotaRecAt_refines (p : Prog) (hp : IotaRecProg' p) (hER : ErecKeptRec p)
+    (hden : LvlsEqDen p) (hshape : RecShape) (n : Nat) (hk : KnotUpTo p n) :
+    IotaRecAtOK p (n + 1) :=
+  iotaRecAt_refines' p hp (iotaCallees_stub p) (whnfCallees_stub p) supKeep_twin
+    (majorToCtor_refines p) (erecKeptInst_stub p) hER (erecKeptKnot_stub p) hden hshape n hk
+
 end L.Arena
