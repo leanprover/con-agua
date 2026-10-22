@@ -352,4 +352,90 @@ theorem decCI_of_copy {P B : Array Word} {t : Nat} {dn0 dn : NIdx → Option Con
     intro x v hx hv
     exact hcp x v (by rw [hcw]; exact hx) hv
 
+/-! ## `ind_rec_copy` -/
+
+/-- **A record decoding robustly**: in every array that agrees with `A` on `[lo, hi)`, the
+record at `p` decodes to `c`. -/
+def RecOK (dn : NIdx → Option ConLeche.Name) (A : Array Word) (lo hi p : Nat)
+    (c : IConstantInfo) : Prop :=
+  ∀ B : Array Word, (∀ i, lo ≤ i → i < hi → B[i]? = A[i]?) → decCI B dn p = some c
+
+theorem decCI_front_kind {T : Array Word} {dn0 : NIdx → Option ConLeche.Name} {x : Nat}
+    {c : IConstantInfo} (hc : decCI T dn0 x = some c) (hF : FrontCI c) :
+    ∃ kk, nat? T x = some kk ∧ (kk = 3 ∨ kk = 4 ∨ kk = 5) := by
+  unfold decCI at hc
+  cases hk : nat? T x with
+  | none => simp [hk] at hc
+  | some kk =>
+  refine ⟨kk, rfl, ?_⟩
+  rw [hk] at hc
+  simp only [bind, Option.bind_some] at hc
+  rcases kk with _ | _ | _ | _ | _ | _ | _ | kk
+  · simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at hc
+    obtain ⟨_, -, rfl⟩ := hc; exact hF.elim
+  · simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at hc
+    obtain ⟨_, -, _, -, _, -, rfl⟩ := hc; exact hF.elim
+  · simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at hc
+    obtain ⟨_, -, rfl⟩ := hc; exact hF.elim
+  · simp
+  · simp
+  · simp
+  · simp only [Option.bind_eq_some_iff, pure, Option.some.injEq] at hc
+    obtain ⟨_, -, rfl⟩ := hc; exact hF.elim
+  · simp at hc
+
+/-- The common end of `ind_rec_copy`'s three kinds: the record's copy at the top of `mx`, where
+the level parameters (and a recursor's rules) were already copied. -/
+theorem irc_fin {n : Nat} {m mx m' : Mem} {t : Nat} {dn0 dn : NIdx → Option ConLeche.Name}
+    {s q r nn kw p : Word} {kk : Nat} {c : IConstantInfo}
+    (hT : ircT n s q r nn kw (erAllocW mx nn) = some (p, m'))
+    (hwx : EW (fun i => erTop m ≤ i) m mx)
+    (hC : 129 < (m.arr64 CTL).size) (hE64 : (m.arr64 EREC).size < 2 ^ 64)
+    (hc : decCI (trunc (m.arr64 DLP) t) dn0 s.toNat = some c) (hF : FrontCI c)
+    (hP : (m.arr64 DLP).size < 2 ^ 63)
+    (hkk : nat? (trunc (m.arr64 DLP) t) s.toNat = some kk) (hkw : kw.toNat = kk)
+    (hnn : nn.toNat = if kk = 3 then 20 else if kk = 4 then 7 else 9) (hk345 : kk = 3 ∨ kk = 4 ∨ kk = 5)
+    (hql : erTop m ≤ q.toNat) (hlr : q.toNat + (rdW (m.arr64 DLP) (s + 3)).toNat ≤ erTop mx)
+    (hl : ∀ j < (rdW (m.arr64 DLP) (s + 3)).toNat, (mx.arr64 EREC)[q.toNat + j]? =
+      some (rdW (m.arr64 DLP) (rdW (m.arr64 DLP) (s + 2) + UInt64.ofNat j)))
+    (hl0 : rdW (m.arr64 DLP) (s + 3) ≠ 0 → rdW (m.arr64 DLP) (s + 2) ≠ 0)
+    (hr : kk = 5 → erTop m ≤ r.toNat ∧ r.toNat + 11 * (rdW (m.arr64 DLP) (s + 8)).toNat ≤ erTop mx ∧
+      (∀ x < 11 * (rdW (m.arr64 DLP) (s + 8)).toNat, (mx.arr64 EREC)[r.toNat + x]? =
+        some (rdW (m.arr64 DLP) (rdW (m.arr64 DLP) (s + 7) + UInt64.ofNat x))) ∧
+      (rdW (m.arr64 DLP) (s + 8) ≠ 0 → rdW (m.arr64 DLP) (s + 7) ≠ 0) ∧
+      (rdW (m.arr64 DLP) (s + 8)).toNat < 2 ^ 60) :
+    EW (fun i => erTop m ≤ i) m m' ∧ erTop m ≤ p.toNat ∧
+      RecOK dn (m'.arr64 EREC) (erTop m) (erTop m') p.toNat c := by
+  have hCx : 129 < (mx.arr64 CTL).size := by rw [hwx.csize]; exact hC
+  have hEx : (mx.arr64 EREC).size < 2 ^ 64 := by rw [hwx.esize]; exact hE64
+  have hn3 : 3 ≤ nn.toNat := by rw [hnn]; split <;> (try split) <;> omega
+  have hn5 : kw = 5 → 8 ≤ nn.toNat := fun h5 => by
+    subst h5; rw [hnn]; simp at hkw; subst hkw; decide
+  obtain ⟨hp, ht', hW', hs0, hwords⟩ := ircT_ok hT hCx hEx hwx.2.2.1 hn3 hn5
+  have hPx : mx.arr64 DLP = m.arr64 DLP := hwx.dlp
+  have hmx := hwx.2.1
+  have hkw5' : kw = 5 → kk = 5 := fun h => by subst h; simp at hkw; omega
+  have hall : EW (fun i => erTop m ≤ i) m m' := hwx.trans hW' (fun i _ hi => by have := hwx.2.1; omega)
+  refine ⟨hall, by have := hwx.2.1; omega, fun B hB => ?_⟩
+  -- unchanged words of `mx` below its top
+  have hkeep : ∀ i, erTop m ≤ i → i < erTop mx → B[i]? = (mx.arr64 EREC)[i]? := fun i h1 h2 => by
+    rw [hB i h1 (by omega)]
+    exact hW'.2.2.2 i h2 (by omega)
+  refine decCI_of_copy (qW := q) (rW := r) hc hF hP hs0 (fun kk' hkk' k hk => ?_) ?_ (fun j hj => ?_) hl0 (fun h5 => ?_)
+  · rw [hkk] at hkk'; cases hkk'
+    obtain ⟨hk1, hk2, hk7⟩ := hk
+    have hkn : k < nn.toNat := by rw [hnn]; exact hk1
+    rw [hB _ (by omega) (by omega), hwords k hkn, hPx]
+    rw [if_neg hk2, if_neg (fun ⟨h7, h5⟩ => by subst h5; simp at hkw; exact hk7 hkw.symm h7)]
+  · rw [hB _ (by omega) (by omega), hwords 2 (by omega)]; rfl
+  · rw [hkeep _ (by omega) (by omega)]; exact hl j hj
+  · have h5' : kk = 5 := by rw [hkk] at h5; cases h5; rfl
+    obtain ⟨hr1, hr2, hr3, hr4, hr5⟩ := hr h5'
+    refine ⟨?_, fun x hx => ?_, hr4, hr5⟩
+    · have hkw5 : kw = 5 := UInt64.toNat_inj.mp (by rw [hkw, h5']; rfl)
+      have := hn5 hkw5
+      rw [hB _ (by omega) (by omega), hwords 7 (by omega)]
+      simp [hkw5]
+    · rw [hkeep _ (by omega) (by omega)]; exact hr3 x hx
+
 end L.Arena
