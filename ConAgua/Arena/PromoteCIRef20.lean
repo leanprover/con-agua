@@ -28,6 +28,9 @@ theorem rules_zero_gen {n : Nat} {f s l d : Word} {m m' : Mem} {r : List Word} (
   simp only [rulesW, hl, ↓reduceIte, Option.some.injEq] at hW
   exact hW.symm
 
+theorem preE_size_le (m : Mem) (D : Nat) : (preE m D).size ≤ D := by
+  simp [preE, Nat.min_le_left]
+
 section rel
 variable (p : Prog) (hp : PromoteProg p)
 include hp
@@ -176,7 +179,7 @@ theorem rec_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : 
     rw [u3.2.1 i (by omega) (by omega)]; exact hg02.2.1 i (by omega))
   have hgb : SlotGrow m₂ m₃ (erecTop m₁ + 5) (erecTop m₁ + 5 + 4) := u3
   by_cases hl0 : w8 = 0
-  · have hm := rules_zero_gen p hp hl0 hpr
+  · have hm : m₃ = m₄ := (rules_zero_gen p hp hl0 hpr).symm
     subst hm
     have hl0' : w8.toNat = 0 := by rw [hl0]; rfl
     rw [hl0'] at hrls
@@ -207,10 +210,10 @@ theorem rec_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : 
       · have := preE_size_le m D; omega
     obtain ⟨a3, pm3, rls', hrun3, hD3, hP3, hcp3, hfr3, hgs3, hts3, hdr3⟩ :=
       rules_rel p hp (n + 1) m₃ a1 pm1 f w7 w8 (bl.headD 0) D rls z m₄ hDg hPg hsz3 u5
-        (hlow.decRules hrls) hsD (by omega) (by omega) (by omega) (by omega) hpr
+        (hlow.decRules hrls) hsD (by omega) (by omega) (by omega) hpr
     have hjoin : SlotGrow m₂ m₄ (erecTop m₁ + 5) ((bl.headD 0).toNat + 11 * w8.toNat) :=
-      (hgb.widen (Nat.le_refl _) (by omega)).join (hgs3.widen (by omega) (Nat.le_refl _)) (by omega)
-        (by omega)
+      (hgb.widen (Nat.le_refl _) (show erecTop m₁ + 5 + 4 ≤ (bl.headD 0).toNat by omega)).join hgs3
+        (by omega) (by omega)
     have hg4 : ErecGrow m m₄ :=
       ((SlotGrow.of_grow hg02 (erecTop m₁ + 5) ((bl.headD 0).toNat + 11 * w8.toNat)).trans hjoin
         (Nat.le_refl _) (Nat.le_refl _)).toGrow (by omega)
@@ -220,7 +223,7 @@ theorem rec_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f q : Word) (D : 
     have key : ∀ j, j < 4 → (m₄.arr64 EREC)[erecTop m₁ + 5 + j]? = (m₃.arr64 EREC)[erecTop m₁ + 5 + j]? :=
       fun j hj => hgs3.2.1 _ (by omega) (Or.inl (by omega))
     have hT3 : erecTop m₃ = erecTop m₂ + 11 * w8.toNat := by rw [u2]
-    refine ⟨a3, pm3, (cv', rls'), ⟨a1, pm1, hrun1, hrun3⟩, hD3, hP3, hcp3.trans hcp1, ?_, hg1.trans hg4, hts3,
+    refine ⟨a3, pm3, (cv', rls'), ⟨a1, pm1, hrun1, hrun3⟩, hD3, hP3, hcp3.trans hcp1, ?_, hg4, hts3,
       erecTop m₁, ?_, hg1.1, ?_, ?_, ?_⟩
     · exact ((hfr1.trans (b4.mono (by simp) (by simp))).trans (u4.mono (by simp) (by simp))).trans hfr3
     · rw [← hr]; exact b1
