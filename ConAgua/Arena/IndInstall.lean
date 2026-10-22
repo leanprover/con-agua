@@ -529,22 +529,29 @@ def checkBlockPositivityMemberGo : FunDecl := lfn (kd, nd, s, l) locals (e, k1, 
 (·.2)))`, each member wrapped as a pointer (`List (List …)`). -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:286-302 ConRon.Arena.checkBlockPositivity
 @[l_impl ConRon.Arena.checkBlockPositivity]
-def checkBlockPositivitySplit : FunDecl := lfn (outsO, outsL) locals
-    (kOuter, nOuter, i, mp, moff, mlen, kq, kl, nq, nl, kp, np) {
+def checkBlockPositivitySplit : FunDecl := lfn (outsO, outsL) locals (kOuter, nOuter, u) {
   kOuter := call iw_alloc(outsL);
   nOuter := call iw_alloc(outsL);
-  i := 0;
-  while i < outsL {
-    mp := IW.u64[outsO + i];
-    moff := IW.u64[mp]; mlen := IW.u64[mp + 1];
-    (kq, kl, nq, nl) := call check_block_positivity_member(moff, mlen);
-    kp := call rec2(kq, kl);
-    np := call rec2(nq, nl);
-    IW.u64[kOuter + i] := kp;
-    IW.u64[nOuter + i] := np;
-    i += 1
-  };
+  u := call check_block_positivity_split_go(kOuter, nOuter, outsO, outsL);
   return (kOuter, outsL, nOuter, outsL)
+}
+
+/-- `check_block_positivity_split_go(kd, nd, s, l)`: for each member pointer `mp = IW[s + j]`
+(`[moff, mlen]`), `IW[kd + j]` and `IW[nd + j]` get the pointers wrapping `check_block_positivity_member`'s
+two results (`rec2`), recursively. -/
+-- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:286-302 ConRon.Arena.checkBlockPositivity
+@[l_impl ConRon.Arena.checkBlockPositivity]
+def checkBlockPositivitySplitGo : FunDecl := lfn (kd, nd, s, l) locals
+    (mp, kq, kl, nq, nl, kp, np, u) {
+  if l == 0 { return 0 };
+  mp := IW.u64[s];
+  (kq, kl, nq, nl) := call check_block_positivity_member(IW.u64[mp], IW.u64[mp + 1]);
+  kp := call rec2(kq, kl);
+  np := call rec2(nq, nl);
+  IW.u64[kd] := kp;
+  IW.u64[nd] := np;
+  u := call check_block_positivity_split_go(kd + 1, nd + 1, s + 1, l - 1);
+  return 0
 }
 
 /-- `check_block_positivity(vis, p, cvTas.off, cvTas.len, ctorsAs.off, ctorsAs.len)`: the block's
@@ -770,6 +777,7 @@ def indInstallFns : Prog :=
    ("check_block_positivity_member", checkBlockPositivityMember),
    ("check_block_positivity_member_go", checkBlockPositivityMemberGo),
    ("check_block_positivity_split", checkBlockPositivitySplit),
+   ("check_block_positivity_split_go", checkBlockPositivitySplitGo),
    ("check_block_positivity", checkBlockPositivity),
    ("check_block_idx_sorts_one", checkBlockIdxSortsOne), ("check_block_idx_sorts", checkBlockIdxSorts),
    ("cons_block_ctors", consBlockCtors), ("check_block_pass", checkBlockPass),
