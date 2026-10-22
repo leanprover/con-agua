@@ -1,6 +1,7 @@
 module
 
 public import ConAgua.Arena.ViewL
+public import ConAgua.Arena.LpCol
 public import ConAgua.Arena.AppStore
 public import ConAgua.Arena.LetStore
 public import ConAgua.Arena.BVarStore
@@ -51,11 +52,6 @@ open scoped Lean.Order
 
 namespace L.Arena
 
-abbrev ADER : ArrId := 42
-abbrev LADER : ArrId := 43
-abbrev FADER : ArrId := 44
-abbrev LEDER : ArrId := 45
-abbrev PJDER : ArrId := 46
 
 /-! ## `der_b(h)`: the range field of `derived h` -/
 
@@ -147,30 +143,6 @@ theorem derB_spec (p : Prog) (hp : p.lookup "der_b" = some derB) (n : Nat) (s₀
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
       finish [derBW, derFW, tierW, idxW, satSuccW]
-
-/-! ## The tail of every `mk_*` -/
-
-/-- The sum of a table's two counts `CTL[c] + CTL[c + 1]`. -/
-def cnt2 (m : Mem) (c : Word) : Word := rdW (m.arr64 CTL) c + rdW (m.arr64 CTL) (c + 1)
-
-/-- After `intern_*` (from `m` to `m₁`, result `r`): if the table grew (`cnt2` changed from `s`),
-write the range `d` at `A[idx * 2 + tier]` of `r` (an `abort` past the array). -/
-def derPutW (A : ArrId) (c : Word) (m₁ : Mem) (s r d : Word) : Option Mem :=
-  if cnt2 m₁ c = s then some m₁
-  else if m₁.len64 A ≤ idxW r * 2 + tierW r then none
-  else some (m₁.set64 A (idxW r * 2 + tierW r) d)
-
-/-- The result of a `mk_*`: `r` and the memory after the tail, or `none`. -/
-def mkK (A : ArrId) (c s d : Word) : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (r, m₁) =>
-    match derPutW A c m₁ s r d with
-    | none => none
-    | some m₂ => some (r, m₂)
-
-theorem mkK_some (A : ArrId) (c s d r : Word) (m₁ : Mem) :
-    mkK A c s d (some (r, m₁)) =
-      (match derPutW A c m₁ s r d with | none => none | some m₂ => some (r, m₂)) := rfl
 
 attribute [arena_grind =] mkK_some
 

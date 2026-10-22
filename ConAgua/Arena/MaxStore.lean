@@ -1,6 +1,8 @@
 module
 
 public import ConAgua.Arena.Store
+public import ConAgua.Arena.LpCol
+meta import ConAgua.Arena.LpCol
 meta import ConAgua.L.Semantics
 import ConAgua.Census.Attr
 
@@ -165,24 +167,31 @@ def mcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (10 + t)
 /-- `max_push`'s room checks: the handle index, the record array, the load limit. -/
 def mpushOK (m : Mem) (t : Word) : Bool :=
   decide (mcnt m t < (134217728 : Word)) && decide (mcnt m t < m.len64 MREC >>> (2 : Word)) &&
+    decide (mcnt m t < m.len64 MHP >>> (1 : Word)) &&
     decide (mcnt m t + 1 ≤ (nSlotsM m >>> (2 : Word)) * 3)
 
 /-- The memory after `max_push(t, u, v, j)` appended node `c`. -/
 def mpushMem (m : Mem) (t u v j c : Word) : Mem :=
   ((((m.set64 MREC (c * 4 + t * 2) u).set64 MREC (c * 4 + t * 2 + 1) v).set64 MSLOT (j * 2 + t)
-    (baseW m t + c + 1)).set64 CTL (10 + (t &&& 1)) (c + 1))
+    (baseW m t + c + 1)).set64 CTL (10 + (t &&& 1)) (c + 1)).set64 MHP (c * 2 + t)
+    (lvlHPW m u ||| lvlHPW m v)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def maxPush : FunDecl := lfn (t, u, v, j) locals (c, k) {
+def maxPush : FunDecl := lfn (t, u, v, j) locals (c, k, x, g, ti, ix, y) {
+  ⟪hpBlkM1⟫;
+  ⟪hpBlkM2⟫;
+  x := x | y;
   c := CTL.u64[10 + t];
   if c >= 134217728 { abort };
   if len(MREC.u64) >> 2 <= c { abort };
+  if len(MHP.u64) >> 1 <= c { abort };
   if ((len(MSLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   k := c * 4 + t * 2;
   MREC.u64[k] := u;
   MREC.u64[k + 1] := v;
   MSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[10 + (t & 1)] := c + 1;
+  MHP.u64[c * 2 + t] := x;
   return c
 }
 
@@ -201,7 +210,8 @@ theorem maxPush_spec (n : Nat) (s₀ : St) (t u v j : Word) :
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, hpBlkM1_spec p (exec p n),
+        hpBlkM2_spec p (exec p n)] <;>
       finish [mcnt, mpushOK, mpushMem, nSlotsM, baseW]
 
 end push
@@ -256,7 +266,8 @@ def maxProg : Prog :=
 /-- A memory with 8 `max` nodes and 16 slots per tier, the scratch tier closed or open. -/
 def maxMem (scratch : Word) : Mem :=
   { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[], #[], #[], #[],
-      #[], #[], Array.replicate 32 0, Array.replicate 32 0] }
+      #[], #[], Array.replicate 32 0, Array.replicate 32 0] ++
+      Array.replicate 62 (Array.replicate 32 0) }
 
 /-- Intern each pair in turn; the handles. -/
 def internMaxs (m : Mem) : List (Word × Word) → Option (List Word)

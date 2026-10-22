@@ -1,6 +1,8 @@
 module
 
 public import ConAgua.Arena.Store
+public import ConAgua.Arena.LpCol
+meta import ConAgua.Arena.LpCol
 meta import ConAgua.L.Semantics
 import ConAgua.Census.Attr
 
@@ -162,21 +164,26 @@ def scnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (6 + t)
 /-- `succ_push`'s room checks: the handle index, the record array, the load limit. -/
 def spushOK (m : Mem) (t : Word) : Bool :=
   decide (scnt m t < (134217728 : Word)) && decide (scnt m t < m.len64 SREC >>> (1 : Word)) &&
+    decide (scnt m t < m.len64 SHP >>> (1 : Word)) &&
     decide (scnt m t + 1 ≤ (nSlotsS m >>> (2 : Word)) * 3)
 
 /-- The memory after `succ_push(t, u, j)` appended node `c`. -/
 def spushMem (m : Mem) (t u j c : Word) : Mem :=
-  (((m.set64 SREC (c * 2 + t) u).set64 SSLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (6 + (t &&& 1)) (c + 1))
+  ((((m.set64 SREC (c * 2 + t) u).set64 SSLOT (j * 2 + t) (baseW m t + c + 1)).set64 CTL (6 + (t &&& 1)) (c + 1)).set64
+    SHP (c * 2 + t) (lvlHPW m u))
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def succPush : FunDecl := lfn (t, u, j) locals (c) {
+def succPush : FunDecl := lfn (t, u, j) locals (c, x, g, ti, ix) {
+  ⟪hpBlkS⟫;
   c := CTL.u64[6 + t];
   if c >= 134217728 { abort };
   if len(SREC.u64) >> 1 <= c { abort };
+  if len(SHP.u64) >> 1 <= c { abort };
   if ((len(SSLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   SREC.u64[c * 2 + t] := u;
   SSLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[6 + (t & 1)] := c + 1;
+  SHP.u64[c * 2 + t] := x;
   return c
 }
 
@@ -195,7 +202,7 @@ theorem succPush_spec (n : Nat) (s₀ : St) (t u j : Word) :
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, hpBlkS_spec p (exec p n)] <;>
       finish [scnt, spushOK, spushMem, nSlotsS, baseW]
 
 end push
@@ -250,7 +257,7 @@ def succProg : Prog :=
 /-- A memory with 8 `succ` nodes and 16 slots per tier, the scratch tier closed or open. -/
 def succMem (scratch : Word) : Mem :=
   { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[], #[], Array.replicate 16 0,
-      Array.replicate 32 0] }
+      Array.replicate 32 0] ++ Array.replicate 62 (Array.replicate 32 0) }
 
 /-- Intern each word in turn; the handles. -/
 def internSuccs (m : Mem) : List Word → Option (List Word)

@@ -1,6 +1,8 @@
 module
 
 public import ConAgua.Arena.Store
+public import ConAgua.Arena.LpCol
+meta import ConAgua.Arena.LpCol
 meta import ConAgua.L.Semantics
 import ConAgua.Census.Attr
 
@@ -165,24 +167,31 @@ def imcnt (m : Mem) (t : Word) : Word := rdW (m.arr64 CTL) (12 + t)
 /-- `imax_push`'s room checks: the handle index, the record array, the load limit. -/
 def impushOK (m : Mem) (t : Word) : Bool :=
   decide (imcnt m t < (134217728 : Word)) && decide (imcnt m t < m.len64 IREC >>> (2 : Word)) &&
+    decide (imcnt m t < m.len64 IHP >>> (1 : Word)) &&
     decide (imcnt m t + 1 ≤ (nSlotsI m >>> (2 : Word)) * 3)
 
 /-- The memory after `imax_push(t, u, v, j)` appended node `c`. -/
 def impushMem (m : Mem) (t u v j c : Word) : Mem :=
   ((((m.set64 IREC (c * 4 + t * 2) u).set64 IREC (c * 4 + t * 2 + 1) v).set64 ISLOT (j * 2 + t)
-    (baseW m t + c + 1)).set64 CTL (12 + (t &&& 1)) (c + 1))
+    (baseW m t + c + 1)).set64 CTL (12 + (t &&& 1)) (c + 1)).set64 IHP (c * 2 + t)
+    (lvlHPW m u ||| lvlHPW m v)
 
 /-- con-ron: ConRon/Arena/Store.lean:93-98 ConRon.Arena.Tbl.push -/
-def imaxPush : FunDecl := lfn (t, u, v, j) locals (c, k) {
+def imaxPush : FunDecl := lfn (t, u, v, j) locals (c, k, x, g, ti, ix, y) {
+  ⟪hpBlkM1⟫;
+  ⟪hpBlkM2⟫;
+  x := x | y;
   c := CTL.u64[12 + t];
   if c >= 134217728 { abort };
   if len(IREC.u64) >> 2 <= c { abort };
+  if len(IHP.u64) >> 1 <= c { abort };
   if ((len(ISLOT.u64) >> 1) >> 2) * 3 < c + 1 { abort };
   k := c * 4 + t * 2;
   IREC.u64[k] := u;
   IREC.u64[k + 1] := v;
   ISLOT.u64[j * 2 + t] := CTL.u64[62] * t + c + 1;
   CTL.u64[12 + (t & 1)] := c + 1;
+  IHP.u64[c * 2 + t] := x;
   return c
 }
 
@@ -201,7 +210,8 @@ theorem imaxPush_spec (n : Nat) (s₀ : St) (t u v j : Word) :
   | zero => vcgen [exec] <;> grind
   | succ n =>
     sym only [lang_grind, arena_grind] =>
-      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64] <;>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, ld64, st64, hpBlkM1_spec p (exec p n),
+        hpBlkM2_spec p (exec p n)] <;>
       finish [imcnt, impushOK, impushMem, nSlotsI, baseW]
 
 end push
@@ -256,7 +266,8 @@ def imaxProg : Prog :=
 /-- A memory with 8 `imax` nodes and 16 slots per tier, the scratch tier closed or open. -/
 def imaxMem (scratch : Word) : Mem :=
   { words := #[#[], (#[0, scratch] ++ Array.replicate 62 0), #[], #[], #[], #[], #[],
-      #[], #[], #[], #[], #[], Array.replicate 32 0, Array.replicate 32 0] }
+      #[], #[], #[], #[], #[], Array.replicate 32 0, Array.replicate 32 0] ++
+      Array.replicate 62 (Array.replicate 32 0) }
 
 /-- Intern each pair in turn; the handles. -/
 def internImaxs (m : Mem) : List (Word × Word) → Option (List Word)
