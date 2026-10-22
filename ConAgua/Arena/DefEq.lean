@@ -211,6 +211,16 @@ def erSliceEqL : FunDecl := lfn (o1, n1, o2, n2) locals (i) {
 
 /-! ## Spines compared pairwise -/
 
+/-- `defeq_lst`'s loop (named, for its spec). -/
+def defeqLstLoop : Stmt := lblk (mode, vis, d, ao, an, bo, bn, i, ok) {
+  while 0 == 0 {
+    if an <= i || bn <= i { return u64(an == bn) };
+    ok := call defeq(mode, vis, d, SPN.u64[ao + i], SPN.u64[bo + i]);
+    if ok == 0 { return 0 };
+    i += 1
+  }
+}
+
 /-- `defeq_lst(mode, vis, d, ao, an, bo, bn)`: the twin's `defEqList` on two stack slices, pair by
 pair from the front **until either list ends** (a length mismatch is `false` only after the
 common prefix compared equal, as the twin's list recursion). -/
@@ -218,12 +228,19 @@ common prefix compared equal, as the twin's list recursion). -/
 @[l_impl ConRon.Arena.defEqList]
 def defeqLstL : FunDecl := lfn (mode, vis, d, ao, an, bo, bn) locals (i, ok) {
   i := 0;
-  while i < an && i < bn {
-    ok := call defeq(mode, vis, d, SPN.u64[ao + i], SPN.u64[bo + i]);
-    if ok == 0 { return 0 };
-    i += 1
-  };
-  return u64(an == bn)
+  ⟪defeqLstLoop⟫;
+  abort
+}
+
+/-- `defeq_list_rev`'s loop (named, for its spec). -/
+def defeqListRevLoop : Stmt := lblk (mode, vis, d, ao, an, bo, bn, i, j, ok) {
+  while 0 == 0 {
+    if i == 0 || j == 0 { return u64(an == bn) };
+    i -= 1;
+    j -= 1;
+    ok := call defeq(mode, vis, d, SPN.u64[ao + i], SPN.u64[bo + j]);
+    if ok == 0 { return 0 }
+  }
 }
 
 /-- `defeq_list_rev(mode, vis, d, ao, an, bo, bn)`: `defEqList` on the two REVERSED slices (from
@@ -233,13 +250,8 @@ the last pair to the first), `defeqSpine`'s order. -/
 def defeqListRevL : FunDecl := lfn (mode, vis, d, ao, an, bo, bn) locals (i, j, ok) {
   i := an;
   j := bn;
-  while i != 0 && j != 0 {
-    i -= 1;
-    j -= 1;
-    ok := call defeq(mode, vis, d, SPN.u64[ao + i], SPN.u64[bo + j]);
-    if ok == 0 { return 0 }
-  };
-  return u64(an == bn)
+  ⟪defeqListRevLoop⟫;
+  abort
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:2880-2885 ConRon.Arena.boolTrueShortcut -/
