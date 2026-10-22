@@ -64,6 +64,7 @@ globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.A
   "ConAgua.Arena.DeclBase", "ConAgua.Arena.DeclAndPin", "ConAgua.Arena.RomLevel", "ConAgua.Arena.RomLevels", "ConAgua.Arena.DeclStep", "ConAgua.Arena.DeclHeader", "ConAgua.Arena.RomExpr", "ConAgua.Arena.RomExprRef", "ConAgua.Arena.RomItems", "ConAgua.Arena.RomCI", "ConAgua.Arena.Prelude",
   "ConAgua.Front.Fields", "ConAgua.Front.FieldsLink",
   "ConAgua.Front.Apply", "ConAgua.Front.StateDR", "ConAgua.Front.Line", "ConAgua.Front.LineRefine",
+  "ConAgua.E2E.Ser", "ConAgua.E2E.Dump", "ConAgua.E2E.Trace", "ConAgua.E2E.Check",
   "ConAgua.Front.ExprIface", "ConAgua.Front.Preserve", "ConAgua.Front.Driver", "ConAgua.Front.DriverRefine", "ConAgua.Front.DeclIface", "ConAgua.Front.FrontRun", "ConAgua.Front.NatDec", "ConAgua.Front.NatDecLink", "ConAgua.Front.Unescape", "ConAgua.Front.UnescapeLink", "ConAgua.Front.ApplyExpr", "ConAgua.Front.ApplyExprRefine", "ConAgua.Front.FieldsExpr", "ConAgua.Front.FieldsExprLink", "ConAgua.Front.ApplyDecl", "ConAgua.Front.ApplyDeclRefine", "ConAgua.Front.FieldsDecl", "ConAgua.Front.FieldsDeclSpec", "ConAgua.Front.FieldsDeclLink", "ConAgua.Front.IndFields", "ConAgua.Front.IndApply"]
 
 # Vendored from con-leche and con-ron (proof/ dir) at the revisions in vendor/UPSTREAM, plus the
@@ -136,3 +137,22 @@ root = "ConAgua.Scan.Bench"
 name = "census"
 root = "ConAgua.Census.Main"
 supportInterpreter = true
+
+# The e2e lane's reference (DESIGN.md, lane `e2e`): con-ron's arena checker (the twin) compiled by
+# Lean, `con-ron-lean FILE [--no-pins]` (exit 0 accept, 1 reject, 2 decline, 3 error).
+[[lean_exe]]
+name = "con-ron-lean"
+srcDir = "vendor/con-ron"
+root = "ConRon.Arena.Exe"
+
+# The e2e lane's reference at the program's own pin list, optionally without the prelude
+# (`ConAgua/E2E/Ref.lean`).
+[[lean_exe]]
+name = "e2e-ref"
+root = "ConAgua.E2E.Ref"
+
+# The e2e lane's runner: compile (`asm`) or interpret (`run`) an assembled program file
+# (`ConAgua/E2E/Main.lean`, `scripts/e2e.py`).
+[[lean_exe]]
+name = "e2e-l"
+root = "ConAgua.E2E.Main"
