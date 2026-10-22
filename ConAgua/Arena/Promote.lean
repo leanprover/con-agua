@@ -413,6 +413,91 @@ def promoteEListL : FunDecl := lfn (f, o, l, q) locals (x, r, u) {
   return 0
 }
 
+/-- `erec_rd1(s)`: the 1 word(s) at `EREC[s‥s+1)`. -/
+-- con-ron: none — reads/writes the words of an `EREC` record (the twin's records are values)
+def erecRd1 : FunDecl := lfn (s) locals () {
+  return EREC.u64[s]
+}
+
+/-- `erec_rd2(s)`: the 2 word(s) at `EREC[s‥s+2)`. -/
+-- con-ron: none — reads/writes the words of an `EREC` record (the twin's records are values)
+def erecRd2 : FunDecl := lfn (s) locals () {
+  return (EREC.u64[s], EREC.u64[s + 1])
+}
+
+/-- `erec_rd3(s)`: the 3 word(s) at `EREC[s‥s+3)`. -/
+-- con-ron: none — reads/writes the words of an `EREC` record (the twin's records are values)
+def erecRd3 : FunDecl := lfn (s) locals () {
+  return (EREC.u64[s], EREC.u64[s + 1], EREC.u64[s + 2])
+}
+
+/-- `erec_rd4(s)`: the 4 word(s) at `EREC[s‥s+4)`. -/
+-- con-ron: none — reads/writes the words of an `EREC` record (the twin's records are values)
+def erecRd4 : FunDecl := lfn (s) locals () {
+  return (EREC.u64[s], EREC.u64[s + 1], EREC.u64[s + 2], EREC.u64[s + 3])
+}
+
+/-- `erec_rd5(s)`: the 5 word(s) at `EREC[s‥s+5)`. -/
+-- con-ron: none — reads/writes the words of an `EREC` record (the twin's records are values)
+def erecRd5 : FunDecl := lfn (s) locals () {
+  return (EREC.u64[s], EREC.u64[s + 1], EREC.u64[s + 2], EREC.u64[s + 3], EREC.u64[s + 4])
+}
+
+/-- `erec_wr1(d, ..)`: 1 word(s) written at `EREC[d‥d+1)`. -/
+-- con-ron: none — reads/writes the words of an `EREC` record (the twin's records are values)
+def erecWr1 : FunDecl := lfn (d, a) locals () {
+  EREC.u64[d] := a;
+  return 0
+}
+
+/-- `erec_wr2(d, ..)`: 2 word(s) written at `EREC[d‥d+2)`. -/
+-- con-ron: none — reads/writes the words of an `EREC` record (the twin's records are values)
+def erecWr2 : FunDecl := lfn (d, a, b) locals () {
+  EREC.u64[d] := a;
+  EREC.u64[d + 1] := b;
+  return 0
+}
+
+/-- `erec_wr3(d, ..)`: 3 word(s) written at `EREC[d‥d+3)`. -/
+-- con-ron: none — reads/writes the words of an `EREC` record (the twin's records are values)
+def erecWr3 : FunDecl := lfn (d, a, b, c) locals () {
+  EREC.u64[d] := a;
+  EREC.u64[d + 1] := b;
+  EREC.u64[d + 2] := c;
+  return 0
+}
+
+/-- `erec_wr4(d, ..)`: 4 word(s) written at `EREC[d‥d+4)`. -/
+-- con-ron: none — reads/writes the words of an `EREC` record (the twin's records are values)
+def erecWr4 : FunDecl := lfn (d, a, b, c, e) locals () {
+  EREC.u64[d] := a;
+  EREC.u64[d + 1] := b;
+  EREC.u64[d + 2] := c;
+  EREC.u64[d + 3] := e;
+  return 0
+}
+
+/-- `erec_wr5(d, ..)`: 5 word(s) written at `EREC[d‥d+5)`. -/
+-- con-ron: none — reads/writes the words of an `EREC` record (the twin's records are values)
+def erecWr5 : FunDecl := lfn (d, a, b, c, e, g) locals () {
+  EREC.u64[d] := a;
+  EREC.u64[d + 1] := b;
+  EREC.u64[d + 2] := c;
+  EREC.u64[d + 3] := e;
+  EREC.u64[d + 4] := g;
+  return 0
+}
+
+/-- `erec_cp(d, s, n)`: `EREC[d + j] := EREC[s + j]` for `j < n`, in order. -/
+-- con-ron: none — copies the words of an `EREC` record (the twin's records are values)
+def erecCp : FunDecl := lfn (d, s, n) locals (x, u) {
+  if n == 0 { return 0 };
+  x := EREC.u64[s];
+  EREC.u64[d] := x;
+  u := call erec_cp(d + 1, s + 1, n - 1);
+  return 0
+}
+
 /-- `promote_slice(k, f, o, l)`: a fresh `EREC` slice of the promoted handles of the slice
 `(o, l)`; `k` the kind (`0` names, `1` levels, `2` expressions). Returns its offset. -/
 -- con-ron: none — allocates the `EREC` slice the twin's list functions return as a value
@@ -459,17 +544,15 @@ def promoteCVL : FunDecl := lfn (f, s) locals (n0, o, l, t0, n, q, t) {
 `s` and `d`). -/
 -- con-ron: ConRon/Arena/Promote.lean:237-244 ConRon.Arena.promoteFire
 @[l_impl ConRon.Arena.promoteFire]
-def promoteFireL : FunDecl := lfn (f, s, d) locals (q, r) {
-  if EREC.u64[s + 3] != 1 {
-    EREC.u64[d + 3] := EREC.u64[s + 3];
-    EREC.u64[d + 4] := 0; EREC.u64[d + 5] := 0; EREC.u64[d + 6] := 0; EREC.u64[d + 7] := 0;
+def promoteFireL : FunDecl := lfn (f, s, d) locals (k, a, b, x, y, q, r, u) {
+  (k, a, b, x, y) := call erec_rd5(s + 3);
+  if k != 1 {
+    u := call erec_wr5(d + 3, k, 0, 0, 0, 0);
     return 0
   };
-  q := call promote_slice(1, f, EREC.u64[s + 4], EREC.u64[s + 5]);
-  r := call promote_slice(2, f, EREC.u64[s + 6], EREC.u64[s + 7]);
-  EREC.u64[d + 3] := 1;
-  EREC.u64[d + 4] := q; EREC.u64[d + 5] := EREC.u64[s + 5];
-  EREC.u64[d + 6] := r; EREC.u64[d + 7] := EREC.u64[s + 7];
+  q := call promote_slice(1, f, a, b);
+  r := call promote_slice(2, f, x, y);
+  u := call erec_wr5(d + 3, 1, q, b, r, y);
   return 0
 }
 
@@ -477,16 +560,14 @@ def promoteFireL : FunDecl := lfn (f, s, d) locals (q, r) {
 firing mode, right-hand side). -/
 -- con-ron: ConRon/Arena/Promote.lean:246-252 ConRon.Arena.promoteRule
 @[l_impl ConRon.Arena.promoteRule]
-def promoteRuleL : FunDecl := lfn (f, s, d) locals (c, u, r) {
-  c := call promote_n(f, EREC.u64[s]);
+def promoteRuleL : FunDecl := lfn (f, s, d) locals (c0, w1, w2, x, w9, w10, c, u, r) {
+  (c0, w1, w2) := call erec_rd3(s);
+  (x, w9, w10) := call erec_rd3(s + 8);
+  c := call promote_n(f, c0);
   u := call promote_fire(f, s, d);
-  r := call promote_e(f, EREC.u64[s + 8]);
-  EREC.u64[d] := c;
-  EREC.u64[d + 1] := EREC.u64[s + 1];
-  EREC.u64[d + 2] := EREC.u64[s + 2];
-  EREC.u64[d + 8] := r;
-  EREC.u64[d + 9] := EREC.u64[s + 9];
-  EREC.u64[d + 10] := EREC.u64[s + 10];
+  r := call promote_e(f, x);
+  u := call erec_wr3(d, c, w1, w2);
+  u := call erec_wr3(d + 8, r, w9, w10);
   return 0
 }
 
@@ -500,95 +581,152 @@ def promoteRulesL : FunDecl := lfn (f, s, l, d) locals (u) {
   return 0
 }
 
+/-- `pn_at(f, a)`: `promote_n` of the name handle stored at `EREC[a]`. -/
+-- con-ron: none — reads a handle of an `EREC` record (the twin's records are values)
+def pnAt : FunDecl := lfn (f, a) locals (w, r) {
+  w := call erec_rd1(a);
+  r := call promote_n(f, w);
+  return r
+}
+
+/-- `pl_at(f, a)`: `promote_l` of the level handle stored at `EREC[a]`. -/
+-- con-ron: none — reads a handle of an `EREC` record (the twin's records are values)
+def plAt : FunDecl := lfn (f, a) locals (w, r) {
+  w := call erec_rd1(a);
+  r := call promote_l(f, w);
+  return r
+}
+
+/-- `ps_at(k, f, a)`: `promote_slice(k, f, ..)` of the slice `(off, len)` stored at
+`EREC[a], EREC[a + 1]`. -/
+-- con-ron: none — reads a slice of an `EREC` record (the twin's records are values)
+def psAt : FunDecl := lfn (k, f, a) locals (o, l, r) {
+  (o, l) := call erec_rd2(a);
+  r := call promote_slice(k, f, o, l);
+  return r
+}
+
+/-- `caps_wr(d, c, a, k)`: the three promoted words of a capabilities record written. -/
+-- con-ron: none — writes the words of an `EREC` record (the twin's records are values)
+def capsWr : FunDecl := lfn (d, c, a, k) locals () {
+  EREC.u64[d + 1] := c;
+  EREC.u64[d + 10] := a;
+  EREC.u64[d + 13] := k;
+  return 0
+}
+
+/-- `proj_wr(d, tn, sn, lp, c, ss, bs, gs)`: the seven promoted words of a projection-table
+record written. -/
+-- con-ron: none — writes the words of an `EREC` record (the twin's records are values)
+def projWr : FunDecl := lfn (d, tn, sn, lp, c, ss, bs, gs) locals () {
+  EREC.u64[d + 1] := tn;
+  EREC.u64[d + 2] := sn;
+  EREC.u64[d + 3] := lp;
+  EREC.u64[d + 6] := c;
+  EREC.u64[d + 8] := ss;
+  EREC.u64[d + 9] := bs;
+  EREC.u64[d + 11] := gs;
+  return 0
+}
+
+/-- `caps_parts(f, s)`: the three promoted handles of the capabilities record at `s`
+(`etaCtor`, `all`, `ctors`, in that order). -/
+-- con-ron: ConRon/Arena/Promote.lean:263-271 ConRon.Arena.promoteCaps
+@[l_impl ConRon.Arena.promoteCaps]
+def capsParts : FunDecl := lfn (f, s) locals (c, a, k) {
+  c := call pn_at(f, s + 1);
+  a := call ps_at(0, f, s + 10);
+  k := call ps_at(0, f, s + 13);
+  return (c, a, k)
+}
+
 /-- `promote_caps(f, s, d)`: the 15-word capabilities record at `s` promoted into `d`
 (`etaCtor`, `all`, `ctors`, in that order). `sortZ` is copied as the twin copies it: the twin's
 `PropWhen` holds `ConLeche.Name` values, L's holds name handles read back by the fixed decoder
 `dn`, so the copy decodes to the same value. -/
 -- con-ron: ConRon/Arena/Promote.lean:263-271 ConRon.Arena.promoteCaps
 @[l_impl ConRon.Arena.promoteCaps]
-def promoteCapsL : FunDecl := lfn (f, s, d) locals (c, a, k) {
-  c := call promote_n(f, EREC.u64[s + 1]);
-  a := call promote_slice(0, f, EREC.u64[s + 10], EREC.u64[s + 11]);
-  k := call promote_slice(0, f, EREC.u64[s + 13], EREC.u64[s + 14]);
-  EREC.u64[d] := EREC.u64[s];
-  EREC.u64[d + 1] := c;
-  EREC.u64[d + 2] := EREC.u64[s + 2];
-  EREC.u64[d + 3] := EREC.u64[s + 3];
-  EREC.u64[d + 4] := EREC.u64[s + 4];
-  EREC.u64[d + 5] := EREC.u64[s + 5];
-  EREC.u64[d + 6] := EREC.u64[s + 6];
-  EREC.u64[d + 7] := EREC.u64[s + 7];
-  EREC.u64[d + 8] := EREC.u64[s + 8];
-  EREC.u64[d + 9] := EREC.u64[s + 9];
-  EREC.u64[d + 10] := a;
-  EREC.u64[d + 11] := EREC.u64[s + 11];
-  EREC.u64[d + 12] := EREC.u64[s + 12];
-  EREC.u64[d + 13] := k;
-  EREC.u64[d + 14] := EREC.u64[s + 14];
+def promoteCapsL : FunDecl := lfn (f, s, d) locals (c, a, k, u) {
+  (c, a, k) := call caps_parts(f, s);
+  u := call erec_cp(d, s, 15);
+  u := call caps_wr(d, c, a, k);
   return 0
 }
 
-/-- `promote_proj_table(f, p)`: the projection-table record at `p` (kind `6`, 14 words)
-promoted into a fresh record, returned (`structName`, `tableName`, level parameters, `ctor`,
-`structSort`, bodies, guards, in the twin's order). -/
+/-- `proj_a(f, p)`: the first three promoted handles of the projection-table record at `p`
+(`tableName`, `structName`, level parameters; `structName` is promoted first, as in the twin). -/
 -- con-ron: ConRon/Arena/Promote.lean:273-285 ConRon.Arena.promoteProjTable
 @[l_impl ConRon.Arena.promoteProjTable]
-def promoteProjTableL : FunDecl := lfn (f, p) locals (d, sn, tn, lp, c, ss, bs, gs) {
+def projA : FunDecl := lfn (f, p) locals (sn, tn, lp) {
+  sn := call pn_at(f, p + 2);
+  tn := call pn_at(f, p + 1);
+  lp := call ps_at(0, f, p + 3);
+  return (tn, sn, lp)
+}
+
+/-- `proj_b(f, p)`: the other four promoted handles (`ctor`, `structSort`, bodies, guards). -/
+-- con-ron: ConRon/Arena/Promote.lean:273-285 ConRon.Arena.promoteProjTable
+@[l_impl ConRon.Arena.promoteProjTable]
+def projB : FunDecl := lfn (f, p) locals (c, ss, bs, gs) {
+  c := call pn_at(f, p + 6);
+  ss := call pl_at(f, p + 8);
+  bs := call ps_at(2, f, p + 9);
+  gs := call ps_at(1, f, p + 11);
+  return (c, ss, bs, gs)
+}
+
+/-- `promote_proj_table(f, p)`: the projection-table record at `p` (kind `6`, 14 words)
+promoted into a fresh record, returned. -/
+-- con-ron: ConRon/Arena/Promote.lean:273-285 ConRon.Arena.promoteProjTable
+@[l_impl ConRon.Arena.promoteProjTable]
+def promoteProjTableL : FunDecl := lfn (f, p) locals (d, tn, sn, lp, c, ss, bs, gs, u) {
   d := call erec_alloc(14);
-  sn := call promote_n(f, EREC.u64[p + 2]);
-  tn := call promote_n(f, EREC.u64[p + 1]);
-  lp := call promote_slice(0, f, EREC.u64[p + 3], EREC.u64[p + 4]);
-  c := call promote_n(f, EREC.u64[p + 6]);
-  ss := call promote_l(f, EREC.u64[p + 8]);
-  bs := call promote_slice(2, f, EREC.u64[p + 9], EREC.u64[p + 10]);
-  gs := call promote_slice(1, f, EREC.u64[p + 11], EREC.u64[p + 12]);
-  EREC.u64[d] := 6;
-  EREC.u64[d + 1] := tn;
-  EREC.u64[d + 2] := sn;
-  EREC.u64[d + 3] := lp;
-  EREC.u64[d + 4] := EREC.u64[p + 4];
-  EREC.u64[d + 5] := EREC.u64[p + 5];
-  EREC.u64[d + 6] := c;
-  EREC.u64[d + 7] := EREC.u64[p + 7];
-  EREC.u64[d + 8] := ss;
-  EREC.u64[d + 9] := bs;
-  EREC.u64[d + 10] := EREC.u64[p + 10];
-  EREC.u64[d + 11] := gs;
-  EREC.u64[d + 12] := EREC.u64[p + 12];
-  EREC.u64[d + 13] := EREC.u64[p + 13];
+  (tn, sn, lp) := call proj_a(f, p);
+  (c, ss, bs, gs) := call proj_b(f, p);
+  u := call erec_cp(d, p, 14);
+  u := call proj_wr(d, tn, sn, lp, c, ss, bs, gs);
   return d
 }
 
-/-- `pci_cv(f, p, n)`: a fresh `n`-word record with `p`'s kind and `p`'s constant value
-promoted, allocated after the value's slice (the arms `axiomInfo`, `thmInfo`, and the head of
-the others). -/
+/-- `pci_mk(p, n, nm, q, l, t)`: a fresh `n`-word record with `p`'s kind and the constant value
+`(nm, q, l, t)` (the promoted one), allocated after the value's slice. -/
 -- con-ron: ConRon/Arena/Promote.lean:287-315 ConRon.Arena.promoteCI
 @[l_impl ConRon.Arena.promoteCI]
-def pciCv : FunDecl := lfn (f, p, n) locals (nm, q, l, t, d, u) {
-  (nm, q, l, t) := call promote_cv(f, p + 1);
+def pciMk : FunDecl := lfn (p, n, nm, q, l, t) locals (d, k, u) {
   d := call erec_alloc(n);
-  EREC.u64[d] := EREC.u64[p];
+  k := call erec_rd1(p);
+  u := call erec_wr1(d, k);
   u := call cv_wr(d + 1, nm, q, l, t);
+  return d
+}
+
+/-- `pci_plain(f, p)`: `axiomInfo cv` and `thmInfo cv`. -/
+-- con-ron: ConRon/Arena/Promote.lean:287-315 ConRon.Arena.promoteCI
+@[l_impl ConRon.Arena.promoteCI]
+def pciPlain : FunDecl := lfn (f, p) locals (nm, q, l, t, d) {
+  (nm, q, l, t) := call promote_cv(f, p + 1);
+  d := call pci_mk(p, 5, nm, q, l, t);
   return d
 }
 
 /-- `pci_defn(f, p)`: `defnInfo cv value hint`. -/
 -- con-ron: ConRon/Arena/Promote.lean:287-315 ConRon.Arena.promoteCI
 @[l_impl ConRon.Arena.promoteCI]
-def pciDefn : FunDecl := lfn (f, p) locals (d, x) {
-  d := call pci_cv(f, p, 8);
-  x := call promote_e(f, EREC.u64[p + 5]);
-  EREC.u64[d + 5] := x;
-  EREC.u64[d + 6] := EREC.u64[p + 6];
-  EREC.u64[d + 7] := EREC.u64[p + 7];
+def pciDefn : FunDecl := lfn (f, p) locals (v, w6, w7, nm, q, l, t, x, d, u) {
+  (v, w6, w7) := call erec_rd3(p + 5);
+  (nm, q, l, t) := call promote_cv(f, p + 1);
+  x := call promote_e(f, v);
+  d := call pci_mk(p, 8, nm, q, l, t);
+  u := call erec_wr3(d + 5, x, w6, w7);
   return d
 }
 
 /-- `pci_ind(f, p)`: `indInfo cv caps`. -/
 -- con-ron: ConRon/Arena/Promote.lean:287-315 ConRon.Arena.promoteCI
 @[l_impl ConRon.Arena.promoteCI]
-def pciInd : FunDecl := lfn (f, p) locals (d, u) {
-  d := call pci_cv(f, p, 20);
+def pciInd : FunDecl := lfn (f, p) locals (nm, q, l, t, d, u) {
+  (nm, q, l, t) := call promote_cv(f, p + 1);
+  d := call pci_mk(p, 20, nm, q, l, t);
   u := call promote_caps(f, p + 5, d + 5);
   return d
 }
@@ -596,26 +734,34 @@ def pciInd : FunDecl := lfn (f, p) locals (d, u) {
 /-- `pci_ctor(f, p)`: `ctorInfo cv nP nF`. -/
 -- con-ron: ConRon/Arena/Promote.lean:287-315 ConRon.Arena.promoteCI
 @[l_impl ConRon.Arena.promoteCI]
-def pciCtor : FunDecl := lfn (f, p) locals (d) {
-  d := call pci_cv(f, p, 7);
-  EREC.u64[d + 5] := EREC.u64[p + 5];
-  EREC.u64[d + 6] := EREC.u64[p + 6];
+def pciCtor : FunDecl := lfn (f, p) locals (w5, w6, nm, q, l, t, d, u) {
+  (w5, w6) := call erec_rd2(p + 5);
+  (nm, q, l, t) := call promote_cv(f, p + 1);
+  d := call pci_mk(p, 7, nm, q, l, t);
+  u := call erec_wr2(d + 5, w5, w6);
   return d
+}
+
+/-- `rec_rules(f, s, l)`: the `l` rules at `s` promoted into a fresh slice of `11 l` words, whose
+offset is returned. -/
+-- con-ron: ConRon/Arena/Promote.lean:254-261 ConRon.Arena.promoteRules
+@[l_impl ConRon.Arena.promoteRules]
+def recRules : FunDecl := lfn (f, s, l) locals (q, u) {
+  if 1152921504606846976 <= l { abort };
+  q := call erec_alloc(11 * l);
+  u := call promote_rules(f, s, l, q);
+  return q
 }
 
 /-- `pci_rec(f, p)`: `recInfo cv major pre rules`. -/
 -- con-ron: ConRon/Arena/Promote.lean:287-315 ConRon.Arena.promoteCI
 @[l_impl ConRon.Arena.promoteCI]
-def pciRec : FunDecl := lfn (f, p) locals (d, l, q, u) {
-  d := call pci_cv(f, p, 9);
-  l := EREC.u64[p + 8];
-  if 1152921504606846976 <= l { abort };
-  q := call erec_alloc(11 * l);
-  u := call promote_rules(f, EREC.u64[p + 7], l, q);
-  EREC.u64[d + 5] := EREC.u64[p + 5];
-  EREC.u64[d + 6] := EREC.u64[p + 6];
-  EREC.u64[d + 7] := q;
-  EREC.u64[d + 8] := l;
+def pciRec : FunDecl := lfn (f, p) locals (w5, w6, w7, l, nm, q, cl, t, d, r, u) {
+  (w5, w6, w7, l) := call erec_rd4(p + 5);
+  (nm, q, cl, t) := call promote_cv(f, p + 1);
+  d := call pci_mk(p, 9, nm, q, cl, t);
+  r := call rec_rules(f, w7, l);
+  u := call erec_wr4(d + 5, w5, w6, r, l);
   return d
 }
 
@@ -624,8 +770,8 @@ def pciRec : FunDecl := lfn (f, p) locals (d, l, q, u) {
 -- con-ron: ConRon/Arena/Promote.lean:287-315 ConRon.Arena.promoteCI
 @[l_impl ConRon.Arena.promoteCI]
 def promoteCIL : FunDecl := lfn (f, p) locals (k, d) {
-  k := EREC.u64[p];
-  if k == 0 || k == 2 { d := call pci_cv(f, p, 5); return d };
+  k := call erec_rd1(p);
+  if k == 0 || k == 2 { d := call pci_plain(f, p); return d };
   if k == 1 { d := call pci_defn(f, p); return d };
   if k == 3 { d := call pci_ind(f, p); return d };
   if k == 4 { d := call pci_ctor(f, p); return d };
@@ -638,9 +784,10 @@ def promoteCIL : FunDecl := lfn (f, p) locals (k, d) {
 (newest first, as `IEnv.consts`) promoted, each position overwritten with its new record. -/
 -- con-ron: ConRon/Arena/Promote.lean:317-325 ConRon.Arena.promoteCIList
 @[l_impl ConRon.Arena.promoteCIList]
-def promoteCIListL : FunDecl := lfn (f, j, k) locals (d, u) {
+def promoteCIListL : FunDecl := lfn (f, j, k) locals (d, u, p) {
   if k == 0 { return 0 };
-  d := call promote_ci(f, ECON.u64[j]);
+  p := ECON.u64[j];
+  d := call promote_ci(f, p);
   ECON.u64[j] := d;
   u := call promote_ci_list(f, j - 1, k - 1);
   return 0
@@ -691,9 +838,11 @@ def promoteVGL : FunDecl := lfn (g, vis) locals (k, j, n, q, l, t, x, d, u) {
 j - k + 1` erased (`eraseInstalled`, newest first). -/
 -- con-ron: ConRon/Arena/Promote.lean:339-348 ConRon.Arena.eraseInstalled
 @[l_impl ConRon.Arena.eraseInstalled]
-def eraseInstalledL : FunDecl := lfn (j, k) locals (u) {
+def eraseInstalledL : FunDecl := lfn (j, k) locals (u, p, w) {
   if k == 0 { return 0 };
-  u := call env_erase(EREC.u64[ECON.u64[j] + 1]);
+  p := ECON.u64[j];
+  w := call erec_rd1(p + 1);
+  u := call env_erase(w);
   u := call erase_installed(j - 1, k - 1);
   return 0
 }
@@ -702,10 +851,11 @@ def eraseInstalledL : FunDecl := lfn (j, k) locals (u) {
 the counters `c - 1, c - 2, …` (`indexPromoted`; a row holds the counter plus one). -/
 -- con-ron: ConRon/Arena/Promote.lean:350-356 ConRon.Arena.indexPromoted
 @[l_impl ConRon.Arena.indexPromoted]
-def indexPromotedL : FunDecl := lfn (c, j, k) locals (u, p) {
+def indexPromotedL : FunDecl := lfn (c, j, k) locals (u, p, w) {
   if k == 0 { return 0 };
   p := ECON.u64[j];
-  u := call env_row_set(EREC.u64[p + 1], c, p);
+  w := call erec_rd1(p + 1);
+  u := call env_row_set(w, c, p);
   u := call index_promoted(c - 1, j - 1, k - 1);
   return 0
 }
@@ -742,12 +892,15 @@ def promoteFns : Prog :=
    ("pe_forall", peForall), ("pe_let", peLet), ("pe_proj", peProj), ("pe_arm", peArm),
    ("promote_e", promoteEL), ("promote_n_list", promoteNListL),
    ("promote_l_list", promoteLListL), ("promote_e_list", promoteEListL),
-   ("promote_slice", promoteSlice), ("cv_rd", cvRd), ("cv_wr", cvWr),
+   ("erec_rd1", erecRd1), ("erec_rd2", erecRd2), ("erec_rd3", erecRd3), ("erec_rd4", erecRd4),
+   ("erec_rd5", erecRd5), ("erec_wr1", erecWr1), ("erec_wr2", erecWr2), ("erec_wr3", erecWr3),
+   ("erec_wr4", erecWr4), ("erec_wr5", erecWr5), ("erec_cp", erecCp), ("promote_slice", promoteSlice), ("cv_rd", cvRd), ("cv_wr", cvWr),
    ("promote_cv", promoteCVL), ("promote_fire", promoteFireL),
    ("promote_rule", promoteRuleL), ("promote_rules", promoteRulesL),
-   ("promote_caps", promoteCapsL), ("promote_proj_table", promoteProjTableL),
-   ("pci_cv", pciCv), ("pci_defn", pciDefn), ("pci_ind", pciInd), ("pci_ctor", pciCtor),
-   ("pci_rec", pciRec), ("promote_ci", promoteCIL), ("promote_ci_list", promoteCIListL),
+   ("pn_at", pnAt), ("pl_at", plAt), ("ps_at", psAt), ("caps_wr", capsWr), ("proj_wr", projWr), ("caps_parts", capsParts), ("promote_caps", promoteCapsL), ("proj_a", projA), ("proj_b", projB),
+   ("promote_proj_table", promoteProjTableL),
+   ("pci_mk", pciMk), ("pci_plain", pciPlain), ("pci_defn", pciDefn), ("pci_ind", pciInd), ("pci_ctor", pciCtor),
+   ("rec_rules", recRules), ("pci_rec", pciRec), ("promote_ci", promoteCIL), ("promote_ci_list", promoteCIListL),
    ("promote_clear", promoteClear), ("vg_rd", vgRd), ("vg_wr", vgWr),
    ("promote_vg", promoteVGL),
    ("erase_installed", eraseInstalledL), ("index_promoted", indexPromotedL),
