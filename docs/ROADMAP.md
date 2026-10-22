@@ -454,6 +454,9 @@ factors (the naive compiler, bounds checks, fuel counters, double memo probes), 
 4. **Fixed capacities:** a full table aborts and the harness reruns with doubled sizes, which costs at most about
    2× in total.
 
+**Sparse export ids** (lane `e2e`'s bug 5): fixed by lane `twinaudit` (`Front/IdTable.lean`, dense + sparse
+like the twin's `IdTable`; `docs/deviations.md` F1).
+
 **Rule: every con-ron cache must be mirrored in L.** Skipping one can be asymptotically worse; for example, the
 levels lane recomputes level-equality verdicts that con-ron caches. That cache goes in front of `lv_equiv` once
 `CoreR` has fields. The lanes that fill `CoreR` list every con-ron cache and say where L mirrors it.
