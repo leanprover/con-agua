@@ -715,8 +715,7 @@ theorem constTyAt_run_miss (cv : IConstantVal) (us : LsIdx) (a a₁ : AState) (r
   rfl
 
 /-- **`const_ty_at` refines `constTyAt`** (the `inst_lp` stub as `WhnfCallees.instLP`). -/
-@[refines ConRon.Arena.constTyAt]
-theorem constTyAt_refines (p : Prog) (hp : IotaProg' p) (hw : WhnfCallees p) :
+theorem constTyAt_refines' (p : Prog) (hp : IotaProg' p) (hw : WhnfCallees p) :
     ConstTyAtOK p := by
   intro n s₀ a₀ dn vis fe MM eb nn po pl ty us lps hS hnn hty hus hlps
   cases n with
@@ -780,6 +779,11 @@ theorem constTyAt_refines (p : Prog) (hp : IotaProg' p) (hw : WhnfCallees p) :
   · rw [hres2]; simp only [decH]; rw [← hr]
   · unfold ResH HW; rw [← hr]; exact hwv
 
+@[refines ConRon.Arena.constTyAt]
+theorem constTyAt_refines (p : Prog) (hp : IotaProg' p) :
+    ConstTyAtOK p :=
+  constTyAt_refines' (p := p) (hw := whnfCallees_stub p)  (hp := hp)
+
 theorem ruleRhsAt_run_hit (rec ctor : NIdx) (lps : List NIdx) (rhs : EIdx) (us : LsIdx) (a : AState)
     (r : EIdx) (h : a.caches.ruleRhsC[(rec, ctor, us)]? = some r) :
     (ruleRhsAt rec ctor lps rhs us).run a = .ok (r, a) := by
@@ -794,8 +798,7 @@ theorem ruleRhsAt_run_miss (rec ctor : NIdx) (lps : List NIdx) (rhs : EIdx) (us 
   rfl
 
 /-- **`rule_rhs_at` refines `ruleRhsAt`** (the `inst_lp` stub as `WhnfCallees.instLP`). -/
-@[refines ConRon.Arena.ruleRhsAt]
-theorem ruleRhsAt_refines (p : Prog) (hp : IotaProg' p) (hw : WhnfCallees p) :
+theorem ruleRhsAt_refines' (p : Prog) (hp : IotaProg' p) (hw : WhnfCallees p) :
     RuleRhsAtOK p := by
   intro n s₀ a₀ dn vis fe MM eb rec ctor po pl rhs us lps hS hrec hctor hrhs hus hlps
   cases n with
@@ -863,6 +866,11 @@ theorem ruleRhsAt_refines (p : Prog) (hp : IotaProg' p) (hw : WhnfCallees p) :
   · rw [hst2, ← hm]; exact hS₂
   · rw [hres2]; simp only [decH]; rw [← hr]
   · unfold ResH HW; rw [← hr]; exact hwv
+
+@[refines ConRon.Arena.ruleRhsAt]
+theorem ruleRhsAt_refines (p : Prog) (hp : IotaProg' p) :
+    RuleRhsAtOK p :=
+  ruleRhsAt_refines' (p := p) (hw := whnfCallees_stub p)  (hp := hp)
 
 /-! ## `pi_residual(e, ao, an)` -/
 

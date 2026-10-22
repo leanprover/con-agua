@@ -387,8 +387,7 @@ theorem iotaIndexOk_run_some (r : CoreFnsA) (fe : IFEnv) (d mI rP cnP : Nat) (ty
 
 /-- **`iota_index_ok` refines `iotaIndexOk`.** Statement changes (the callees need them): `n ≤ 2 ^ 62`,
 the eager bit `eb = (mode >>> 1) &&& 1`, and both slices below the stack top. -/
-@[refines ConRon.Arena.iotaIndexOk]
-theorem iotaIndexOk_refines (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) :
+theorem iotaIndexOk_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) :
     ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
     ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode d mI rP cnP tyCtor mo mn xo xn : Word) (margs idx : Array EIdx),
@@ -532,6 +531,19 @@ theorem iotaIndexOk_refines (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) :
   · rw [hresF]; simp only [decBool]; rw [← hr3]
   · unfold ResH HW; rw [← hr3]; exact hr₃
 
+@[refines ConRon.Arena.iotaIndexOk]
+theorem iotaIndexOk_refines (p : Prog) (hp : IotaProg' p) :
+    ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
+    ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (MM : ModeMaps) (eb mode d mI rP cnP tyCtor mo mn xo xn : Word) (margs idx : Array EIdx),
+    CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → eb = (mode >>> 1) &&& 1 → HW tyCtor →
+    SpineR s₀.mem mo mn margs → SpineR s₀.mem xo xn idx →
+    mo.toNat + mn.toNat ≤ (spTop s₀.mem).toNat → xo.toNat + xn.toNat ≤ (spTop s₀.mem).toNat →
+    CoreSpec p (n + 1) "iota_index_ok" [mode, vis, d, mI, rP, cnP, tyCtor, mo, mn, xo, xn]
+      (iotaIndexOk (coreKnot (decMode mode) fe id F) fe d.toNat mI.toNat rP.toNat cnP.toNat
+        (decE tyCtor) margs.toList idx.toList) decBool s₀ a₀ dn vis fe MM eb :=
+  iotaIndexOk_refines' (p := p) (hc := iotaCallees_stub p)  (hp := hp)
+
 /-! ## `tower_slots_all(vis, T, nF)` -/
 
 /-- Model of the `tower_slots_all` loop at L fuel `k`. -/
@@ -674,8 +686,7 @@ theorem tsW_ok (p : Prog) (hcc : CoreCallees p) (dn : NIdx → Option ConLeche.N
 
 /-- **`tower_slots_all` refines `towerSlotsAll`** (`find_proj` and its decoding fact as
 `CoreCallees`). -/
-@[refines ConRon.Arena.towerSlotsAll]
-theorem towerSlotsAll_refines (p : Prog) (hp : IotaProg' p) (hcc : CoreCallees p) :
+theorem towerSlotsAll_refines' (p : Prog) (hp : IotaProg' p) (hcc : CoreCallees p) :
     TowerSlotsAllOK p := by
   intro n s₀ a₀ dn vis fe MM eb T nF hS hT
   cases n with
@@ -695,6 +706,11 @@ theorem towerSlotsAll_refines (p : Prog) (hp : IotaProg' p) (hcc : CoreCallees p
   refine ⟨hok, ?_, ?_, hL1⟩
   · simpa [towerSlotsAll] using hca
   · simpa [towerSlotsAll] using hres
+
+@[refines ConRon.Arena.towerSlotsAll]
+theorem towerSlotsAll_refines (p : Prog) (hp : IotaProg' p) :
+    TowerSlotsAllOK p :=
+  towerSlotsAll_refines' (p := p) (hcc := coreCallees_stub p)  (hp := hp)
 
 /-! ## `inst_spine(ao, an, t, e)` -/
 
@@ -853,8 +869,7 @@ theorem isW_ok (p : Prog) (hinst : IotaInst1OK p) (dn : NIdx → Option ConLeche
 /-- **`inst_spine` refines `instSpine`.** Statement changes: `ao + an ≤ spTop` (the slice is below the
 top, so `inst_entry` leaves it alone) and `an ≤ t + 1` (the L counter `t - 1` wraps where the twin's
 `Nat` subtraction saturates; with `an ≤ t + 1` it is only after the last use). -/
-@[refines ConRon.Arena.instSpine]
-theorem instSpine_refines (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) :
+theorem instSpine_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb ao an t e : Word) (args : Array EIdx), CoreS dn s₀.mem a₀ vis fe MM eb →
     HW e → SpineR s₀.mem ao an args → ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat →
@@ -880,6 +895,16 @@ theorem instSpine_refines (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) :
   refine ⟨hok, ?_, ?_, hr⟩
   · simpa using hca
   · simpa [decH] using hres
+
+@[refines ConRon.Arena.instSpine]
+theorem instSpine_refines (p : Prog) (hp : IotaProg' p) :
+    ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (MM : ModeMaps) (eb ao an t e : Word) (args : Array EIdx), CoreS dn s₀.mem a₀ vis fe MM eb →
+    HW e → SpineR s₀.mem ao an args → ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat →
+    an.toNat ≤ t.toNat + 1 →
+    CoreSpec p n "inst_spine" [ao, an, t, e] (instSpine coreWalkFuel args.toList t.toNat (decE e))
+      decH s₀ a₀ dn vis fe MM eb :=
+  instSpine_refines' (p := p) (hc := iotaCallees_stub p)  (hp := hp)
 
 /-! ## `inst_spine_pins(po, pl, us, ao, rP, pvo, pvc)` -/
 
@@ -1058,6 +1083,9 @@ def ErecKeptInst (p : Prog) : Prop :=
     (f = "inst_lp" ∨ f = "inst_spine") → callW p n f vs m = some (r, m') →
     m'.arr64 EREC = m.arr64 EREC
 
+/-- `ErecKeptInst`, assumed (the callees' write sets; DESIGN.md, lane `whnf`). -/
+theorem erecKeptInst_stub (p : Prog) : ErecKeptInst p := sorry
+
 theorem SpineR.nil_at (m : Mem) (off : Word) (h : off.toNat ≤ (m.arr64 SPN).size) :
     SpineR m off 0 #[] :=
   ⟨rfl, by simpa using h, fun i hi => absurd hi (by simp), fun i hi => absurd hi (by simp)⟩
@@ -1152,7 +1180,7 @@ theorem ispW_ok (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) (hw : WhnfCal
         rw [UInt64.toNat_sub_of_le _ _ (by simp [UInt64.le_iff_toNat_le]; omega)]
         simp; omega
     obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hr₂⟩ := CoreSpec.of_callW
-      (instSpine_refines p hp hc k ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb ao rP (rP - 1) (r₁.headD 0)
+      (instSpine_refines' p hp hc k ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb ao rP (rP - 1) (r₁.headD 0)
         args hS₁ hr₁ hsa₁ hat₁ hrP) hc2
     have hEr2 : m₂.arr64 EREC = m₁.arr64 EREC := hE k "inst_spine" _ m₁ r₂ m₂ (Or.inr rfl) hc2
     have hSt₂ : StackKept m₁ m₂ := hSt₂
@@ -1236,8 +1264,7 @@ theorem ispW_ok (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) (hw : WhnfCal
 /-- **`inst_spine_pins` refines `instSpinePins`.** Statement changes: `CoreAfterG` (the function leaves
 its result slice on the stack: the top grows) in place of `CoreAfter`; both input slices below the
 top; and the L code now raises the top after each store (see `instSpinePinsLoop`). -/
-@[refines ConRon.Arena.instSpinePins]
-theorem instSpinePins_refines (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) (hw : WhnfCallees p)
+theorem instSpinePins_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) (hw : WhnfCallees p)
     (hE : ErecKeptInst p) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb po pl us ao rP pvo pvc : Word) (lps : List NIdx) (args pins : Array EIdx),
@@ -1311,5 +1338,23 @@ theorem instSpinePins_refines (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p)
   · simpa [← hmm] using hca
   · rw [hr1, hr2, ← hmm]
     simpa using hys
+
+@[refines ConRon.Arena.instSpinePins]
+theorem instSpinePins_refines (p : Prog) (hp : IotaProg' p) :
+    ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (MM : ModeMaps) (eb po pl us ao rP pvo pvc : Word) (lps : List NIdx) (args pins : Array EIdx),
+    CoreS dn s₀.mem a₀ vis fe MM eb → HW us →
+    hslice? (s₀.mem.arr64 EREC) po.toNat pl.toNat = some lps → SpineR s₀.mem ao rP args →
+    SpineR s₀.mem pvo pvc pins → ao.toNat + rP.toNat ≤ (spTop s₀.mem).toNat →
+    pvo.toNat + pvc.toNat ≤ (spTop s₀.mem).toNat →
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "inst_spine_pins" [po, pl, us, ao, rP, pvo, pvc]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (instSpinePins lps (decI us) args.toList rP.toNat pins.toList) a₀ ∧
+      CoreAfterG dn s₀.mem s'.mem
+        (AM.st (instSpinePins lps (decI us) args.toList rP.toNat pins.toList) a₀) vis fe MM eb ∧
+      ∃ xs, AM.res (instSpinePins lps (decI us) args.toList rP.toNat pins.toList) a₀ = xs ∧
+        SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄ :=
+  instSpinePins_refines' (p := p) (hc := iotaCallees_stub p) (hw := whnfCallees_stub p) (hE := erecKeptInst_stub p)  (hp := hp)
 
 end L.Arena

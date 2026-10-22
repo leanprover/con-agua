@@ -65,8 +65,7 @@ theorem recFireArgs_plain_run (rl : IRecRule) (lps : List NIdx) (us : LsIdx) (ar
 /-- **`rec_fire_args` refines `recFireArgs`.** Statement changes: `CoreAfterG` (the nested arm leaves a
 slice on the stack), both input slices below the stack top, and `ctorParams ≤ rP` in the plain arm
 (the returned slice is a prefix of the arguments). -/
-@[refines ConRon.Arena.recFireArgs]
-theorem recFireArgs_refines (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) (hw : WhnfCallees p)
+theorem recFireArgs_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) (hw : WhnfCallees p)
     (hE : ErecKeptInst p) :
     ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb fireKind pvo pvc po pc us ao rP ctorParams : Word) (rl : IRecRule)
@@ -109,7 +108,7 @@ theorem recFireArgs_refines (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) (
     simp only [Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨hr, hm⟩ := hW
     obtain ⟨t₁, ht₁, hloc1, hok, hca, xs, hres, hxs⟩ := triple_of_callW
-      (instSpinePins_refines p hp hc hw hE n ⟨s.mem, Locals.init []⟩ a₀ dn vis fe MM eb po pc us ao rP
+      (instSpinePins_refines' p hp hc hw hE n ⟨s.mem, Locals.init []⟩ a₀ dn vis fe MM eb po pc us ao rP
         pvo pvc lps args pins.toArray hS hus hlps hsa hsp hat (hpt h1)) hc1
     rw [recFireArgs_nested_eq rl lps (decI us) args.toList rP.toNat lv pins hfire]
     simp only [List.toList_toArray] at hok hca hres
@@ -134,6 +133,25 @@ theorem recFireArgs_refines (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) (
     · rw [hst, ← hm]; exact ⟨MM, hS, KeptAll.refl _ _, (StackKept.refl _).toGrew⟩
     · rw [hr1, hr2, ← hm, hcp]
       exact hsa.take cp hle |> fun h => by simpa [hcp] using h
+
+@[refines ConRon.Arena.recFireArgs]
+theorem recFireArgs_refines (p : Prog) (hp : IotaProg' p) :
+    ∀ (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (MM : ModeMaps) (eb fireKind pvo pvc po pc us ao rP ctorParams : Word) (rl : IRecRule)
+    (lps : List NIdx) (args : Array EIdx), CoreS dn s₀.mem a₀ vis fe MM eb → HW us →
+    hslice? (s₀.mem.arr64 EREC) po.toNat pc.toNat = some lps → SpineR s₀.mem ao rP args →
+    (fireKind = 1 → ∃ lvls pins, rl.fire = .nested lvls pins ∧ SpineR s₀.mem pvo pvc pins.toArray) →
+    (fireKind ≠ 1 → rl.fire = .plain ∧ ctorParams.toNat ≤ rP.toNat) → rl.ctorParams = ctorParams.toNat →
+    ao.toNat + rP.toNat ≤ (spTop s₀.mem).toNat →
+    (fireKind = 1 → pvo.toNat + pvc.toNat ≤ (spTop s₀.mem).toNat) →
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p n) "rec_fire_args" [fireKind, pvo, pvc, po, pc, us, ao, rP, ctorParams]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (recFireArgs rl lps (decI us) args.toList rP.toNat) a₀ ∧
+      CoreAfterG dn s₀.mem s'.mem (AM.st (recFireArgs rl lps (decI us) args.toList rP.toNat) a₀) vis
+        fe MM eb ∧
+      ∃ xs, AM.res (recFireArgs rl lps (decI us) args.toList rP.toNat) a₀ = xs ∧
+        SpineR s'.mem (r.headD 0) (r.tail.headD 0) xs.toArray; ⊤⦄ :=
+  recFireArgs_refines' (p := p) (hc := iotaCallees_stub p) (hw := whnfCallees_stub p) (hE := erecKeptInst_stub p)  (hp := hp)
 
 /-! ## `and_rescue_slots(vis, ctor, nP, us)` -/
 
@@ -450,8 +468,7 @@ theorem andRescueSlots_run (fe : IFEnv) (ctor : NIdx) (nP : Nat) (ust : LsIdx) (
 
 /-- **`and_rescue_slots` refines `andRescueSlots`** (`find_proj`, `fire_ok` and their facts as
 `CoreCallees`). -/
-@[refines ConRon.Arena.andRescueSlots]
-theorem andRescueSlots_refines (p : Prog) (hp : IotaProg' p) (hcc : CoreCallees p) :
+theorem andRescueSlots_refines' (p : Prog) (hp : IotaProg' p) (hcc : CoreCallees p) :
     AndRescueSlotsOK p := by
   intro n s₀ a₀ dn vis fe MM eb ctor nP us hS hctor hus
   cases n with
@@ -486,6 +503,11 @@ theorem andRescueSlots_refines (p : Prog) (hp : IotaProg' p) (hcc : CoreCallees 
   refine ⟨hokF, ?_, ?_, hL1⟩
   · rw [hstF]; simpa using hca
   · rw [hresF]; simpa using hres
+
+@[refines ConRon.Arena.andRescueSlots]
+theorem andRescueSlots_refines (p : Prog) (hp : IotaProg' p) :
+    AndRescueSlotsOK p :=
+  andRescueSlots_refines' (p := p) (hcc := coreCallees_stub p)  (hp := hp)
 
 /-! ## `fab_scope_ok(d, fab, major)` -/
 
@@ -537,8 +559,7 @@ theorem fabScopeOk_go (d : Nat) (fab major : EIdx) (a a₁ a₂ a₃ : AState) (
     ↓reduceIte, h2, Bool.not_false, h3]
 
 /-- **`fab_scope_ok` refines `fabScopeOk`** (the three walks as `IotaCallees`' stubs). -/
-@[refines ConRon.Arena.fabScopeOk]
-theorem fabScopeOk_refines (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) : FabScopeOkOK p := by
+theorem fabScopeOk_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) : FabScopeOkOK p := by
   intro n s₀ a₀ dn vis fe MM eb d fab major hS hfab hmaj
   cases n with
   | zero =>
@@ -624,6 +645,10 @@ theorem fabScopeOk_refines (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) : 
   · rw [hstF, ← hm]; exact hS₃
   · rw [hresF, hres3]; simp only [decBool]; rw [hr3]
   · unfold ResH HW; rw [← hr3]; exact hr₃
+
+@[refines ConRon.Arena.fabScopeOk]
+theorem fabScopeOk_refines (p : Prog) (hp : IotaProg' p) : FabScopeOkOK p :=
+  fabScopeOk_refines' (p := p) (hc := iotaCallees_stub p)  (hp := hp)
 
 /-! ## `lit_major_to_ctor(mode, vis, d, h)` -/
 
@@ -728,8 +753,7 @@ theorem CoreRef.of_run_eq {α : Type} [Inhabited α] {T T' : AM α} {a₀ : ASta
 /-- **`lit_major_to_ctor` refines `litMajorToCtor`.** Statement changes (the knot's `whnf` slot needs
 them): `n ≤ 2 ^ 62`, the eager bit `eb = (mode >>> 1) &&& 1`; and `SupKeep` (`strLitSupported` keeps the
 store's views: `WhnfBase.supKeep_twin`, a `sorry`) as a hypothesis. -/
-@[refines ConRon.Arena.litMajorToCtor]
-theorem litMajorToCtor_refines (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p)
+theorem litMajorToCtor_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p)
     (hw : WhnfCallees p) (hsup : ∀ fe : IFEnv, SupKeep fe) :
     ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
     ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
@@ -861,6 +885,17 @@ theorem litMajorToCtor_refines (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p
     · rw [← hm]; exact hca
     · rw [hres]; simp only [decH]; rw [hr1]
     · unfold ResH HW at hr₁ ⊢; rw [hr1]; exact hr₁
+
+@[refines ConRon.Arena.litMajorToCtor]
+theorem litMajorToCtor_refines (p : Prog) (hp : IotaProg' p) :
+    ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
+    ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (MM : ModeMaps) (eb mode d h : Word), CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 →
+    eb = (mode >>> 1) &&& 1 → HW h →
+    CoreSpec p (n + 1) "lit_major_to_ctor" [mode, vis, d, h]
+      (litMajorToCtor (coreKnot (decMode mode) fe id F) fe d.toNat (decE h)) decH s₀ a₀ dn vis fe MM
+      eb :=
+  litMajorToCtor_refines' (p := p) (hc := iotaCallees_stub p) (hw := whnfCallees_stub p) (hsup := supKeep_twin)  (hp := hp)
 
 /-! ## `mk_proj` as a run under `CoreS` -/
 
