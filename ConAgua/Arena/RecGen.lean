@@ -283,20 +283,19 @@ class checked as a major. -/
 @[l_impl ConRon.Arena.classMajors]
 def classMajorsL : FunDecl := lfn (vis, p, ctorsAsOff, ctorsAsLen, pfvsOff, pfvsLen, keysOff,
     keysLen)
-    locals (q, j, key, hd, mty, m, r) {
-  q := call iw_alloc(keysLen);
-  j := 0;
-  while j < keysLen {
-    key := IW.u64[keysOff + j];
-    hd := call intern_const(IW.u64[key], IW.u64[key + 1]);
-    mty := call mk_app_n_f(hd, IW.u64[key + 2], IW.u64[key + 3]);
-    m := call target_major_of(vis, p, ctorsAsOff, ctorsAsLen, pfvsOff, pfvsLen, pfvsOff, pfvsLen,
-      mty);
-    r := call target_major_pins(vis, IW.u64[p + 4], m);
-    IW.u64[q + j] := m;
-    j += 1
-  };
-  return (q, keysLen)
+    locals (key, hd, mty, m, r, ro, rl, qo, ql) {
+  if keysLen == 0 { return (0, 0) };
+  key := IW.u64[keysOff];
+  hd := call intern_const(IW.u64[key], IW.u64[key + 1]);
+  if 4294967296 <= hd { abort };
+  mty := call mk_app_n_f(hd, IW.u64[key + 2], IW.u64[key + 3]);
+  m := call target_major_of(vis, p, ctorsAsOff, ctorsAsLen, pfvsOff, pfvsLen, pfvsOff, pfvsLen,
+    mty);
+  r := call target_major_pins(vis, IW.u64[p + 4], m);
+  (ro, rl) := call class_majors(vis, p, ctorsAsOff, ctorsAsLen, pfvsOff, pfvsLen, keysOff + 1,
+    keysLen - 1);
+  (qo, ql) := call sl_cons(m, ro, rl);
+  return (qo, ql)
 }
 
 /-- `classes_nfs(vis, p, ft.off, ft.len, tbl.off, tbl.len, ms.off, ms.len)`: every class with its

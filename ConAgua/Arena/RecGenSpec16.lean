@@ -58,6 +58,16 @@ def tmoOutT (fe : IFEnv) (p : BlockShape) (pfvs args : List EIdx) (I : NIdx) (us
           pure { ind := I, lvls := us, ds := ds, nPc := nPc, nIdx := nIdx,
                  ctors := ctors, member := none, nfs := [], pfvs := pfvs }
 
+/-- `targetMajorOf`'s outside branch after the parameter checks, verbatim. -/
+def tmoTailT (fe : IFEnv) (p : BlockShape) (pfvs ds : List EIdx) (nPc : Nat)
+    (ctors : List (IConstantVal × Nat)) (I : NIdx) (us : LsIdx) : AM TargetMajor := do
+  let (nIdx, sI) ← targetOutsideInst fe I us ds
+  unless ← liftFueled "level comparison" (← lvlEq? sI p.resSort) do
+    fail (.invalid "target rec: the recursor's major lives in another \
+      universe than the block (Q1)")
+  pure { ind := I, lvls := us, ds := ds, nPc := nPc, nIdx := nIdx,
+         ctors := ctors, member := none, nfs := [], pfvs := pfvs }
+
 theorem targetMajorOf_eq (fe : IFEnv) (p : BlockShape) (ctorsAs : List (List (IConstantVal × Nat)))
     (pfvs fvs : List EIdx) (mty : EIdx) :
     targetMajorOf fe p ctorsAs pfvs fvs mty = (do

@@ -328,4 +328,81 @@ theorem tmo_spec (p : Prog) (hp : p.lookup "target_major_of_outside" = some targ
       callW_spec p n "target_major_of_outside_occ", callW_spec p n "target_major_of_outside_tail"] <;>
     finish (gen := 40) (instances := 20000) [tmoW, rdW_eq]
 
+/-- The lookups of `target_major_of_outside_tail`. -/
+structure TmtProg (p : Prog) : Prop where
+  toi : ToiProg p
+  mkTm : p.lookup "mk_target_major" = some mkTargetMajor
+  tail : p.lookup "target_major_of_outside_tail" = some targetMajorOfOutsideTail
+
+/-- **`target_major_of_outside_tail`'s model simulates the outside branch's tail.** -/
+theorem tmtW_sim {p : Prog} (hP : TmtProg p) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+    (n : Nat) {m : Mem} {a : AState} {pp pfo pfl I us dso dsl cso csl : Word} {bs : BlockShape}
+    {pfvs ds : List EIdx} {ctors : List (IConstantVal × Nat)}
+    (hS : StageR dn vis fe m a) (hq : DecB (fun m => decBS m pp.toNat) m bs) (hq9 : pp.toNat + 9 ≤ iwTop m)
+    (hI : H I) (hus : H us) (hds : DecB (fun m => decHL m dso.toNat dsl.toNat) m ds)
+    (hdsb : dso.toNat + dsl.toNat < 2 ^ 64)
+    (hct : DecB (fun m => decPL m (decCN m) cso.toNat csl.toNat) m ctors)
+    (hpf : DecB (fun m => decHL m pfo.toNat pfl.toNat) m pfvs) (hPm : PosMR m) :
+    Sim (tmtW p n m vis pp pfo pfl I us dso dsl cso csl)
+      (tmoTailT fe bs pfvs ds dsl.toNat ctors (decI I) (decI us)) a
+      (fun r x m' a' => DecB (fun m => decTM m (r.headD 0).toNat) m' x ∧ StageR dn vis fe m' a' ∧
+        IWGrow m m' ∧ PosMR m') := by
+  unfold tmtW tmoTailT
+  refine Sim.bindK (K := tmtK1 p n pp I us dso dsl cso csl pfo pfl) rfl (fun _ _ => rfl)
+    (Q := fun r x m' a' => ToiR r x ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧ PosMR m') ?_ ?_
+  · intro r1 m1 e1
+    obtain ⟨s1, rfl, -, hW1⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+      (targetOutsideInst_spec p hP.toi n _ vis I us dso dsl) e1
+    obtain ⟨x, a', hrun, hS1, hg1, hT1⟩ := toiW_ok hW1 hS hI hus hds hdsb
+    exact ⟨x, a', hrun, hT1, hS1, hg1, hPm.fr (toiW_mfr hW1)⟩
+  rintro r1 ⟨nIdx, sI⟩ m1 a1 ⟨⟨hr1, hn1, hsH, hsd⟩, hS1, hg1, hP1⟩
+  obtain ⟨-, -, hrsH, hrsd⟩ := partsShapeWords hg1 hq hq9
+  rw [tmtK1_some]
+  refine Sim.bindK (K := tmtK2 p n I us dso dsl cso csl pfo pfl r1) rfl (fun _ _ => rfl)
+    (Q := fun r x m' a' => decLvlEq m' r x ∧ StageR dn vis fe m' a' ∧ IWGrow m1 m' ∧ PosMR m') ?_ ?_
+  · intro r2 m2 e2
+    obtain ⟨s2, rfl, -, hW2⟩ := triple_of_callW (s₀ := ⟨m1, Locals.init []⟩)
+      (stubM_spec p "lvl_eq_c" n _ [r1.tail.headD 0, rdW (m1.arr64 IW) (pp + 6)]) e2
+    obtain ⟨x, a', hrun, hS2, hg2, hx⟩ := lvlEqStub_spec dn vis fe _ _ hsH hrsH m1 s2.mem a1 r2 hW2 hS1
+    rw [hsd, hrsd] at hrun
+    exact ⟨x, a', hrun, hx, hS2, hg2, hP1.fr (MFr.ofStub hW2)⟩
+  rintro r2 o m2 a2 ⟨hd2, hS2, hg2, hP2⟩
+  rw [tmtK2_some]
+  by_cases h2 : r2.headD 0 ≠ 2
+  · rw [if_pos h2]; exact Sim.of_none
+  rw [if_neg h2]
+  have ho : o = some true := by
+    rcases o with _ | b
+    · simp only [decLvlEq] at hd2; exact absurd (by rw [hd2]; decide) h2
+    · cases b
+      · simp only [decLvlEq] at hd2; exact absurd (by rw [hd2]; decide) h2
+      · rfl
+  subst ho
+  simp only [liftFueled, pure_bind]
+  refine Sim.mstep (K := tmtK3) rfl (fun _ _ => rfl) fun r4 m4 e4 => ?_
+  obtain ⟨s4, rfl, -, hW4⟩ := triple_of_callW (s₀ := ⟨m2, Locals.init []⟩)
+    (mkTargetMajor_spec p hP.toi.alloc hP.mkTm n _ _ _ _ _ _ _ _ _ _ _ _ _ _) e4
+  rw [mkTMW_eq, Option.map_eq_some_iff] at hW4
+  obtain ⟨⟨q, m4'⟩, hpr, he⟩ := hW4
+  simp only [Prod.mk.injEq] at he
+  obtain ⟨rfl, rfl⟩ := he
+  obtain ⟨hS4, hg4, hq4, ht4, hget4⟩ := posRecW_stage hpr hS2 (by simp)
+  simp only [List.length_cons, List.length_nil] at ht4
+  have hg04 := (hg1.trans hg2).trans hg4
+  have hq4' : q.toNat = iwTop m2 := hq4
+  have ht4' : iwTop s4.mem = iwTop m2 + 13 := ht4
+  have hdec := decTM_decB_of (m := s4.mem) (q := q.toNat) (by omega)
+    (by simpa using hget4 0 (by simp)) (by simpa using hget4 1 (by simp)) (by simpa using hget4 2 (by simp))
+    (by simpa using hget4 3 (by simp)) (by simpa using hget4 4 (by simp)) (by simpa using hget4 5 (by simp))
+    (by simpa using hget4 6 (by simp)) (by simpa using hget4 7 (by simp)) (by simpa using hget4 8 (by simp))
+    (by simpa using hget4 9 (by simp)) (by simpa using hget4 10 (by simp)) (by simpa using hget4 11 (by simp))
+    (by simpa using hget4 12 (by simp)) hI hus (hds.grow (OMono.decHL _ _) hg04)
+    (hct.grow (OMono.decPL decCN_mono _ _) hg04)
+    (show decPL (truncM s4.mem) (decNCN (truncM s4.mem)) (0 : Word).toNat (0 : Word).toNat = some [] by
+      simp [decPL])
+    (hpf.grow (OMono.decHL _ _) hg04)
+  have hn1' : (r1.head?.getD 0).toNat = nIdx := by simpa using hn1
+  rw [hn1'] at hdec
+  exact Sim.ret ⟨by simpa [decON] using hdec, hS4, hg04, hP2.fr (posRecW_mfr hpr)⟩
+
 end L.Ind
