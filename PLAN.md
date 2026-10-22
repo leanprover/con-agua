@@ -95,6 +95,11 @@ per-function separation logic.
   predicates, ROM data). Proven means every `@[refines T]` theorem uses only `propext`, `Classical.choice`,
   `Quot.sound`; a target reached only through proven targets counts as proven (only sorry-free ones
   cover: a refinement proved modulo `sorry` counts as `sorry` itself and covers none of its callees).
+  The `sorry` columns (and `sorry`/`lean_sorry` in the CSV) count every target depending on `sorryAx`;
+  of these, **proven locally** (`local`, CSV `local`/`lean_local`, appended at the end of the row) are those
+  whose own proof term (and generated `proof_N`/`match_N`/`eq_N` auxiliaries) has no `sorryAx`: it comes
+  only through other constants. The report lists the nearest such constants ("sorry sources", by number
+  of targets blocked) as a work queue. Locally proven targets still cover none of their callees.
 - **Who runs it.** Lanes add links and may run the census to check their own numbers; only the coordinator
   runs `scripts/census.py --write` (regenerates `docs/progress.md`, appends a line to `docs/progress.csv`),
   on master after each batch of landings, so the time series has one line per master state and lanes never
@@ -112,11 +117,6 @@ per-function separation logic.
   watch list (over 1500 lines or 60 s) get split by a lane; a split keeps statements and names stable.
   Declarations on it (a step over 20 s) are investigated by a separate lane off the critical path.
   **No lane adds time gates to merging**; this report is advisory.
-- **It is also the safety net under the shared Lake cache** (DESIGN.md, "Cache incident"): each run records
-  its verdict on master in `_tmp/buildcheck.json`, and `census.py` and `gist_report.py` print "last cache-free
-  build of master: <commit>, OK/FAILED". A FAILED there means some cached build accepted code that does not
-  build: stop landing, find the module, purge the cache (`rm -rf _tmp/lake-cache-v2`, then reseed it from a cache-free build). Run it (at least
-  incrementally) after every few landings; `--full` once a day.
 
 ## Bumping the twin (con-ron, and the con-leche it pins)
 - **State.** `vendor/UPSTREAM` names the two vendored revisions; `vendor/` is exactly those upstream
