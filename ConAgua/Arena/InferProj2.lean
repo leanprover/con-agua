@@ -144,4 +144,129 @@ theorem inferProj_spec (p : Prog) (hp : InferProjProg p) (n : Nat) (s₀ : St)
     St.setLocs_cons, St.setLoc_loc, St.setLoc_mem, St.setLocs_nil, Sig.retVal, Sig.retOr,
     Locals.init_cons_zero, Locals.init_cons_succ, CTL, CREC, w_lt_false, w_le_false]
 
+/-! ## `infer_proj` refines `inferProj` -/
+
+/-- **A twin run equal to a refined one**, after core runs that kept the maps and the stack. -/
+theorem ipRef_trans {α : Type} [Inhabited α] {T T' : AM α} {a₀ a₁ : AState} {dec : List Word → α}
+    {dn : NIdx → Option ConLeche.Name} {m₀ m₁ m : Mem} {vis : Word} {fe : IFEnv} {M M₁ : ModeMaps}
+    {eb : Word} {r : List Word} {ok : List Word → Prop} (h : T.run a₀ = T'.run a₁)
+    (h' : CoreRef T' a₁ dec dn m₁ vis fe M₁ eb r m ok) (hK : KeptAll M M₁ eb)
+    (hSt : StackKept m₀ m₁) : CoreRef T a₀ dec dn m₀ vis fe M eb r m ok := by
+  obtain ⟨hok, ⟨M', hS', hK', hSt'⟩, hres, hr⟩ := h'
+  have hrun := AM.run_of_ok _ _ hok
+  rw [← h] at hrun
+  exact ipRef_of_run hrun hres hS' (hK.trans hK') (hSt.trans hSt') hr
+
+/-- **`infer_proj` at the grade `io` refines `inferProj` at the record `R`**, whose `whnf` is the
+knot's and whose `infer` the first call refines (`ipFirst`). -/
+theorem inferProj_grade (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees p) (n : Nat)
+    (hk : KnotUpTo p n) (F : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+    (vis : Word) (fe : IFEnv) (M : ModeMaps) (eb mode io d sn i pe : Word) (R : CoreFnsA)
+    (hF : n ≤ F) (hn : n ≤ 2 ^ 62) (hs : SlotPre s₀ a₀ dn vis fe M eb mode) (hpe : HW pe)
+    (hWh : R.whnf = (coreKnot (decMode mode) fe id F).whnf)
+    (hI : ∀ (r : List Word) (m : Mem), ipFirst p n mode io vis d pe s₀.mem = some (r, m) →
+      CoreRef (R.infer d.toNat (decE pe)) a₀ decH dn s₀.mem vis fe M eb r m) :
+    CoreSpec p (n + 1) "infer_proj" [mode, io, vis, d, sn, i, pe]
+      (inferProj R fe d.toNat (decI sn) i.toNat (decE pe)) decH s₀ a₀ dn vis fe M eb := by
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
+    (inferProj_spec p hp n s₀ mode io vis d sn i pe)
+  subst hs0
+  refine ⟨hloc, ?_⟩
+  have hK := hk n (Nat.le_refl _)
+  unfold ipW at hW
+  -- the subject's type
+  cases hc1 : ipFirst p n mode io vis d pe s.mem with
+  | none => rw [hc1] at hW; cases hW
+  | some q₁ =>
+  obtain ⟨r₁, m₁⟩ := q₁
+  rw [hc1] at hW
+  have h₁ := hI r₁ m₁ hc1
+  have hrun1 := ipRun_of_ref h₁
+  obtain ⟨-, ⟨M₁, hS₁, hK₁, hSt₁⟩, -, hrw1⟩ := h₁
+  -- `whnf`
+  simp only [ipK1] at hW
+  obtain ⟨r₂, m₂, hc2, hW⟩ := callW_cases rfl hW
+  have h₂ := CoreSpec.of_callW (hK.whnf F ⟨m₁, Locals.init []⟩ _ dn vis fe M₁ eb mode d (r₁.headD 0)
+    hF hn ⟨hS₁, hs.mode4, hs.eb_mode⟩ hrw1) hc2
+  rw [← hWh] at h₂
+  have hrun2 := ipRun_of_ref h₂
+  obtain ⟨-, ⟨M₂, hS₂, hK₂, hSt₂⟩, -, hrw2⟩ := h₂
+  -- `get_app_fn`
+  simp only [ipK2] at hW
+  cases hc3 : callW p n "get_app_fn" [r₂.headD 0] m₂ with
+  | none => rw [hc3] at hW; cases hW
+  | some q₃ =>
+  obtain ⟨r₃, m₃⟩ := q₃
+  rw [hc3] at hW
+  simp only at hW
+  obtain ⟨rfl, hhw, hgaf⟩ := getAppFn_callW hp.leaf hS₂.arena.1 hrw2 hc3
+  -- the head constant
+  simp only [ipHead] at hW
+  by_cases g1 : r₃.headD 0 >>> 28 ≠ 3
+  · rw [if_pos g1] at hW; cases hW
+  rw [if_neg g1] at hW
+  have g1' : r₃.headD 0 >>> 28 = 3 := Classical.not_not.mp g1
+  by_cases g2 : tierW (r₃.headD 0) ≠ 0 ∧ rdW (m₃.arr64 CTL) 1 = 0
+  · rw [if_pos g2] at hW; cases hW
+  rw [if_neg g2] at hW
+  by_cases g3 : rdW (m₃.arr64 CTL) (18 + tierW (r₃.headD 0)) ≤ idxW (r₃.headD 0)
+  · rw [if_pos g3] at hW; cases hW
+  rw [if_neg g3] at hW
+  have hvOK : viewOK m₃ (r₃.headD 0) 18 := ⟨g2, by simpa using g3⟩
+  obtain ⟨cT, cu, hv, hcT, hcu, hcTw, hcuw⟩ := view_const_words m₃ _ hS₂.arena.1 (r₃.headD 0) hhw hvOK g1'
+  generalize rdW (m₃.arr64 CREC) (idxW (r₃.headD 0) * 4 + tierW (r₃.headD 0) * 2) = wT at hcT hcTw hW
+  generalize rdW (m₃.arr64 CREC) (idxW (r₃.headD 0) * 4 + tierW (r₃.headD 0) * 2 + 1) = wu at hcu hcuw hW
+  subst hcT hcu
+  -- the subject's level list reads back (before the lookup interns the table's name)
+  obtain ⟨lsu, hdu⟩ := (hc.den dn m₃ _ vis fe M₂ eb hS₂).constLs _ _ _ hv
+  -- `find_proj`
+  obtain ⟨r₄, m₄, hc4, hW⟩ := callW_cases (K := ipK4 p n vis sn i pe (r₂.headD 0) wT wu) rfl hW
+  simp only [ipK4] at hW
+  have h₄ := CoreSpec.of_callW (hc.findProj n ⟨m₃, Locals.init []⟩ _ dn vis fe M₂ eb wT i hS₂ hcTw) hc4
+  have hrun4 := ipRun_of_ref h₄
+  obtain ⟨-, ⟨M₄, hS₄, hK₄, hSt₄⟩, -, -⟩ := h₄
+  have hE₄ : m₄.arr64 EREC = m₃.arr64 EREC := hc.erec n "find_proj" _ m₃ r₄ m₄ (Or.inl rfl) hc4
+  by_cases g4 : r₄.headD 0 = 0
+  · rw [if_pos g4] at hW; cases hW
+  rw [if_neg g4] at hW
+  obtain ⟨tbl, hdt⟩ := hc.projFound n m₃ _ dn vis fe M₂ eb wT i r₄ m₄ hS₂ hc4 g4
+  have hde : decEntry (m₃.arr64 EREC) (r₄.headD 0) (r₄.tail.headD 0) i.toNat =
+      some (tbl.entry i.toNat) := by
+    unfold decEntry; rw [if_neg g4, hdt]; rfl
+  rw [hde] at hrun4
+  have hq₄ : decTbl (m₄.arr64 EREC) (r₄.tail.headD 0).toNat = some tbl := by rw [hE₄]; exact hdt
+  have hi : i.toNat < tbl.numFields := findProj?_lt fe _ _ _ _ _ hrun4
+  have hdu₄ := findProj?_lss fe _ _ _ _ _ hrun4 _ _ hdu
+  -- `infer_proj_at`
+  cases n with
+  | zero => simp [call1W, callW_zero] at hW
+  | succ N =>
+  have h₅ := CoreSpec.of_call1W (s₀ := ⟨m₄, Locals.init []⟩) (inferProjAt_refines p hp hc N
+    ⟨m₄, Locals.init []⟩ _ dn vis fe M₄ eb sn i pe (r₂.headD 0) wT wu (r₄.tail.headD 0) tbl hS₄ hq₄
+    hi hcuw hrw2 hpe ⟨lsu, hdu₄⟩) (fun r r' h => by simp only [decH, h]) hW
+  refine ipRef_trans ?_ h₅ (hK₁.trans (hK₂.trans hK₄)) (hSt₁.trans (hSt₂.trans hSt₄))
+  exact inferProj_hit R fe d.toNat (decI sn) i.toNat (decE pe) a₀ _ _ _ _ _ _ _ _ _ hrun1 hrun2 hgaf
+    (by rw [decE_const_tag _ hhw]; simpa using g1') hv hrun4
+
+/-- **`infer_proj` refines `inferProj` at both grades** (`InferProjOK`, `InferBodyDisp.lean`):
+the knot's record at `io = 0`, its io view at `io = 1`. -/
+@[refines ConRon.Arena.inferProj]
+theorem inferProj_refines (p : Prog) (hp : InferProjProg p) (hc : InferProjCallees p) :
+    InferProjOK p := by
+  intro n hk F s₀ a₀ dn vis fe M eb mode d sn i pe hF hn hs _ hpe
+  have hK := hk n (Nat.le_refl _)
+  constructor
+  · refine inferProj_grade p hp hc n hk F s₀ a₀ dn vis fe M eb mode 0 d sn i pe _ hF hn hs hpe rfl ?_
+    intro r m h
+    simp only [ipFirst] at h
+    rw [if_neg (by decide)] at h
+    exact CoreSpec.of_callW (hK.infer F s₀ a₀ dn vis fe M eb mode d pe hF hn hs hpe) h
+  · refine inferProj_grade p hp hc n hk F s₀ a₀ dn vis fe M eb mode 1 d sn i pe _ hF hn hs hpe rfl ?_
+    intro r m h
+    simp only [ipFirst] at h
+    rw [if_pos (by decide)] at h
+    exact CoreSpec.of_callW (hK.inferIO F s₀ a₀ dn vis fe M eb mode d pe hF hn hs hpe) h
+
 end L.Arena
