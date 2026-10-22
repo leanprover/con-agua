@@ -51,7 +51,7 @@ globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.A
   "ConAgua.Arena.IndPartsSpec2", "ConAgua.Arena.IndPartsSpec3", "ConAgua.Arena.IndPartsSpec4", "ConAgua.Arena.IndPartsSpec5", "ConAgua.Arena.IndPartsSpec6", "ConAgua.Arena.IndSumSpec2", "ConAgua.Arena.IndMaster", "ConAgua.Arena.IndSumSpec3", "ConAgua.Arena.IndSumSpec4", "ConAgua.Arena.IndAll",
   "ConAgua.Arena.IndPos", "ConAgua.Arena.IndPosSpec", "ConAgua.Arena.IndPos2", "ConAgua.Arena.IndPos2Spec", "ConAgua.Arena.RecClass", "ConAgua.Arena.RecClassSpec",
   "ConAgua.Arena.RecGen", "ConAgua.Arena.RecGenSpec", "ConAgua.Arena.RecCheck", "ConAgua.Arena.RecCheckSpec", "ConAgua.Arena.IndProg", "ConAgua.Arena.IndCopy2",
-  "ConAgua.Arena.WhnfSpineRefine", "ConAgua.Arena.WhnfSpineArgs", "ConAgua.Arena.WhnfCoreRefine", "ConAgua.Arena.WhnfCoreStep", "ConAgua.Arena.WhnfCoreLoop", "ConAgua.Arena.WhnfCoreApp", "ConAgua.Arena.WhnfCoreProj", "ConAgua.Arena.WhnfDelta", "ConAgua.Arena.WhnfDeltaSlot", "ConAgua.Arena.WhnfEntry",
+  "ConAgua.Arena.WhnfSpineRefine", "ConAgua.Arena.WhnfSpineArgs", "ConAgua.Arena.WhnfCoreRefine", "ConAgua.Arena.WhnfCoreStep", "ConAgua.Arena.WhnfCoreLoop", "ConAgua.Arena.WhnfCoreApp", "ConAgua.Arena.WhnfCoreAppLoop", "ConAgua.Arena.WhnfCoreProj", "ConAgua.Arena.WhnfDelta", "ConAgua.Arena.WhnfDeltaSlot", "ConAgua.Arena.WhnfEntry",
   "ConAgua.Arena.DefEq", "ConAgua.Arena.Infer", "ConAgua.Arena.Knot", "ConAgua.Arena.KnotWF",
   "ConAgua.Arena.Walk", "ConAgua.Arena.WalkRefine", "ConAgua.Arena.WalkBench", "ConAgua.Arena.WalkEmit",
   "ConAgua.Arena.WalkBenchLean",
