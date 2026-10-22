@@ -642,3 +642,33 @@ theorem slGetD_specW (p : Prog) (hp : p.lookup "sl_getd" = some slGetD) (n : Nat
       finish [getDW]
 
 end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+/-! ## The stage relation across a store writer (lane `indproofs`) -/
+
+/-- **A writer below array 64 and `CTL[64]` (an interning, a `mk_*`, a walk) keeps the stage
+relation**, given its `ArenaD` after and the twin keeping caches and pins; the pool is
+untouched, so it only grew. -/
+theorem StageR.of_walk {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+    {m m' : Mem} {a a' : AState} {A : List ArrId} {C : List Word}
+    (hS : StageR dn vis fe m a) (hD : ArenaD m' a') (hf : MemFrame A C m m')
+    (hA : ∀ b ∈ A, b < 64) (hC : ∀ x ∈ C, x.toNat < 64) (hk : cp a' = cp a) :
+    StageR dn vis fe m' a' ∧ IWGrow m m' := by
+  have hI : m'.arr64 IW = m.arr64 IW := hf.1 IW (fun h => by have := hA _ h; simp [IW] at this)
+    (by decide)
+  have hE : m'.arr64 EREC = m.arr64 EREC := hf.1 EREC (fun h => by have := hA _ h; simp [EREC] at this)
+    (by decide)
+  have h200 : rdW (m'.arr64 CTL) 200 = rdW (m.arr64 CTL) 200 :=
+    hf.2.1 200 (fun h => by have := hC _ h; simp at this)
+  have h129 : rdW (m'.arr64 CTL) 129 = rdW (m.arr64 CTL) 129 :=
+    hf.2.1 129 (fun h => by have := hC _ h; simp at this)
+  refine ⟨⟨CheckR.of_walk hS.1 hD hf hA hC hk, ?_⟩, ?_⟩
+  · simp only [IWOK, iwTop, erTop, hI, hE, h200, h129, hf.2.2.1 CTL]; exact hS.2
+  · refine ⟨?_, ?_, fun i _ => by rw [hI], fun i _ => by rw [hE]⟩
+    · simp only [iwTop, h200]; exact Nat.le_refl _
+    · simp only [erTop, h129]; exact Nat.le_refl _
+
+end L.Ind

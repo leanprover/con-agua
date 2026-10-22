@@ -54,6 +54,7 @@ def whnfTelescopeL : FunDecl := lfn (vis, i, n, e) locals (e', g, x, y, z, fv, b
   if g == 2 && n == 0 { return (0, 0, x) };
   if g == 6 && n != 0 {
     fv := call intern_fvar(i, x);
+    if 4294967296 <= fv { abort };
     b := call instantiate1_fast(⟪CWF⟫, y, fv, 0);
     (bo, bl, s) := call whnf_telescope(vis, i + 1, n - 1, b);
     (o, l) := call sl_cons(x, bo, bl);
@@ -122,32 +123,28 @@ def checkStructFieldSortsIL : FunDecl :=
 }
 
 /-- `field_doms_resolve(vis0, off, len)`: every field domain resolves at the pre-block
-environment (stops at the first that does not). -/
+environment (stops at the first that does not). Self-recursive on the slice, as the twin is on
+the list (lane `indproofs`: rewritten from a `while` loop for the refinement). -/
 @[l_impl ConRon.Arena.fieldDomsResolve]
-def fieldDomsResolveL : FunDecl := lfn (vis0, off, n) locals (j, x, t, r) {
-  j := 0;
-  while j < n {
-    x := call sl_get(off, n, j);
-    t := call fvar_type_d(x);
-    r := call consts_resolve_ffast(vis0, t);
-    if r == 0 { return 0 };
-    j += 1
-  };
-  return 1
+def fieldDomsResolveL : FunDecl := lfn (vis0, off, n) locals (t, r) {
+  if n == 0 { return 1 };
+  t := call fvar_type_d(IW.u64[off]);
+  r := call consts_resolve_ffast(vis0, t);
+  if r == 0 { return 0 };
+  r := call field_doms_resolve(vis0, off + 1, n - 1);
+  return r
 }
 
 /-- `idx_args_resolve(vis0, off, len)`: the index expressions never mention the block (stops at
-the first that does). -/
+the first that does). Self-recursive on the slice, as the twin is on the list (lane `indproofs`:
+rewritten from a `while` loop for the refinement). -/
 @[l_impl ConRon.Arena.idxArgsResolve]
-def idxArgsResolveL : FunDecl := lfn (vis0, off, n) locals (j, e, r) {
-  j := 0;
-  while j < n {
-    e := call sl_get(off, n, j);
-    r := call consts_resolve_ffast(vis0, e);
-    if r == 0 { return 0 };
-    j += 1
-  };
-  return 1
+def idxArgsResolveL : FunDecl := lfn (vis0, off, n) locals (r) {
+  if n == 0 { return 1 };
+  r := call consts_resolve_ffast(vis0, IW.u64[off]);
+  if r == 0 { return 0 };
+  r := call idx_args_resolve(vis0, off + 1, n - 1);
+  return r
 }
 
 /-- `check_sum_ctor_tail(vis0, vis, T, lpsOff, lpsLen, nP, nIdx, resSort, isProp, large, nF, cqOff,
