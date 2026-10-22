@@ -4378,7 +4378,13 @@ be asymptotically slower. con-ron at `_tmp/ref/con-ron` origin/HEAD (`proof/ConR
 * `WhnfCoreProj.lean`: none of its own. `reduce_proj_core` is proved on its split into
   `_core`/`_head`/`_fire`/`_arg` (sub-lane); the inner two leave the argument slice on the stack, so
   their post is `GrowSpec` (`CoreSpec` with `StackGrew`); the outer one restores the top.
-* `WhnfIota.lean`: `iotaCallees_stub` and every spec (28).
+* `WhnfIota.lean`: `iotaCallees_stub` and eight specs: `iota_ctor_never_prop`, `iota_case3` (need a
+  corrected `caps_never_zero` stub: its twin runs readbacks), `prepare_major`, `major_to_ctor`,
+  `proof_irrel` (calls `lvl_eq_c`), `iota_certs_full(_aux)`, `iota_rec_at`. Eighteen are proved
+  (`WhnfIotaRefine*.lean`, sub-lane); its fixes to the L code: `const_ty_at`/`rule_rhs_at` probe
+  the memo again after `inst_lp`, `defeq_list` compares the common prefix before the lengths (the
+  twin's order of `defeq` calls), `iota_index_ok`/`iota_certs_full` restore the top,
+  `inst_spine_pins` raises the top after each store, `and_rescue_slots` runs `fire_ok` first.
 * `WhnfDelta.lean`: the δ/Nat specs (`whnf_step`, `reduce_nat`, `delta_step`, …; 14).
 
 ### Lane `exprops4`'s walks as this lane's callees (open)
@@ -5393,7 +5399,49 @@ denser than the Rust).
   `Level.isEquiv (Level.subst ks vs fs) .zero` on the heap). The slots' induction steps
   (`WhnfCallees.inferStep`/`inferIOStep`/`defeqStep`, lane `whnf`'s stub) are this lane's to prove
   next; nothing is proved yet.
-None but stubs': `IndStubs.lean`'s stub specs, plus the two master callees above (listed there).
+
+### The slots one level up (`KnotSlot.lean`, helper `defeq-slots`)
+* `infer_refines`, `inferIO_refines`, `defeq_refines`: `InferSlot`/`InferIOSlot`/`DefeqSlot p (n + 1)`
+  from `KnotUpTo p n` and the body's spec at L-fuel `n` (`InferBodySpec`, `InferIOBodySpec`,
+  `DefeqBodySpec`: hypotheses, the shape of `WhnfLoopSpec`). Copies of lane `whnf`'s `whnf_refines`;
+  new lemmas `CoreS.set_in`/`set_io`/`set_de`, `ModeR.setD` (the `Bool` memo), `KeptAll.inf`/`io`/`de`,
+  `knot_{infer,inferIO,defeq}_{hit,miss}`, the model `memoSlotD` (a hit answers `u64(v != 0)`).
+* **The eager slot needs no relation change.** `DefeqESlot p (n + 1)` from `DefeqSlot p n`
+  (`defeqE_refines`). From an eager mode `defeqE` is `defeq` (`knot_defeqE_eager`); from a plain
+  mode it is the `defeq` slot of `coreKnot mode.toEager … (F + 1)` on the entered caches `enterC`,
+  then `leaveC` (`knot_defeqE_plain`). `CoreS … M 0` on `a` is `CoreS … M 1` on `enterC a.caches` at
+  the same maps (`ModeR.enter`: the stored eager tables are bank 1, the empty slot is `∅`); after the
+  run, `KeptAll M M' 1` gives the plain banks back, so `CoreS … M' 0` holds on the left state
+  (`ModeR.leave`, `CoreS.leave`). The outer `KeptAll` at `eb = 0` is vacuous. `SlotPre`'s
+  `eb = (mode >>> 1) &&& 1` is met by the inner call at `mode ||| 2`.
+* Entry points from the slots at mode 0: `inferTypeCore_refines`, `isDefEqCore_refines`,
+  `ensureSortCore_refines` (the last from `EnsureSortSpec`, a hypothesis: `ensure_sort` has no proof
+  yet); `call1W`/`CoreSpec.of_call1W` for one-call forwarders. Tagged `refines_part` (they rest on
+  slot hypotheses until the knot induction ties them).
+* What is left for `WhnfCallees.inferStep`/`inferIOStep`/`defeqStep`: the three body specs. No
+  `sorry`; ~880 lines, 5.8 s CPU.
+
+### The leaf inference functions (`InferLeaves.lean`, helper `defeq-slots`)
+* `ensureSort_refines : KnotUpTo p n → EnsureSortSpec p (n + 1)` (from the `whnf` slot and
+  `view_sort_f`); `ensureSortCore_refines` now takes only `KnotUpTo` (KnotSlot's old one is
+  `ensureSortCore_of_spec`). `defeqArg_refines` (the two slots, `is_eager_reduce` as the
+  hypothesis `IsEagerReduceH`). `inferLamResult_refines` (`Abstract1OK`; `mk_forall` under
+  `CoreS`: `mkForall_core`, with `mkForallW_hw`/`_frame`, `keeps_cpl_internForall`).
+* Clause fragments, copied from `inferBody` and proved equal to its arm (`inferBody_const`,
+  `inferBody_lit`, `inferBodyIO_lit`): `inferLitT` (`inferLit_refines`, callees as
+  `InferLitCallees`: `nat_lit_supported`/`const_e` are lane `whnf`'s `sorry`s, `str_lit_supported`
+  its stub) and `inferConstT` (`inferConst_refines`, `ConstTyAtOK` a hypothesis: `const_ty_at`
+  is a `sorry` in `WhnfIota.lean`). `inferBodyIO`'s `.const` arm reads `viewLsLen`, a different
+  fragment, not done.
+* **L change**: `infer_const` called `const_ty_at` with the looked-up name `n`; the twin's
+  `constTyAt cv us` keys its cache by `cv.name`, the record's own name word (`p + 1`), and `EnvR`
+  does not promise `cv.name = n`. It now passes `EREC[p + 1]`. Lane `whnf`'s `iota` call site
+  (`WhnfIota.lean:733`, `const_ty_at(cj, …)`) has the same gap.
+* Gap: a guarded model equation with the callee's run as a hypothesis (`callW … = some (r, m₁) →
+  W … = …`) was not instantiated by `finish` in `ensure_sort`; the `memoSlotW` shape (the run as
+  an argument of the model, `W (callW …)`) was. All models here use that shape.
+* Merged master into `defeq-slots` (WhnfCoreApp's `mkAppW_hw` fix). No `sorry`; ~875 lines,
+  5.2 s CPU.
 
 ## Phase 2, round 3: the step's specs, promotion, the pin variants (2026-10-22, lane `decls2`)
 
@@ -5626,3 +5674,33 @@ Census at landing 3 (`--no-build`): phase 2 **130 proven, 11 sorry, 79 written**
 `installHeader`, `installValueGuards`, `checkValueGroup` now `sorry` — through stubs only); bad
 links 0 (`@[l_impl]` moved off the ROM readers, which are functions of the ROM, onto
 `romExprL`/`internAllPinsL` at the program's ROM).
+
+### `decE` (`ConAgua/Scan/Utf8Link.lean:239`): `simp` under a `dite` with proof-carrying branches
+
+- **Cause.** `assemble₄` is `if h₁ : r < 0x10000 then none else if h₂ : 0x10ffff < r then none else
+  some ⟨r, proof(h₁, h₂)⟩`. `simp only [UInt32.lt_iff_toNat_lt, hv, UInt32.reduceToNat]` rewrote both
+  conditions under the binders, so the `Char.valid` proof became `Eq.mpr_not (… hv …) h` casts; any
+  leaf proof that then rewrote with `hr`/`hs` made the kernel spend 6 s (uncontended; 21.9 s in the
+  contended build) checking them. Each of the three leaves alone costs the full 6 s; with all three
+  `sorry`ed, nothing. `decD` (same shape, smaller numbers) is cheap.
+- **Fix.** Leave the `dite`s alone: two `iff`s (`e1`, `e2`: the `UInt32` condition iff its `Nat`
+  form, by `UInt32.lt_iff_toNat_lt` and `v4L`), case on the `Nat` form and step through the `dite`s
+  with `dite_eq_left`/`dite_eq_right`. Same statement.
+- **Before/after.** `decE` 6 s → under 0.1 s; module 38 s (contended) → 2.3 s.
+
+### `Scan/Records.lean` split (2270 lines)
+
+Pure move, as in `Front/FieldsDecl*`: `Records.lean` keeps the L code and the models (1357
+lines), `RecordsSpec.lean` the `specs` section (941 lines, same namespace, names and statements;
+it repeats the local `attribute [local lang_grind] boolEndN`). `Scan/Line.lean` and the root
+import `RecordsSpec`.
+
+### Landing 2 (lane `defeq`)
+* Merged helpers `defeq-slots` (KnotSlot, InferLeaves). The phase-4 callees landed by lane
+  `exprops4` replace three stub names: `abstract1` → `abs_entry`, `abstract_range` → `ar_entry`;
+  `has_fvar`, `inst_list` already had the right names. `DefeqCallees` keeps their `CoreS`-at-
+  `coreWalkFuel` form as an assumption (the refinements are under `ArenaA` at every `F ≥ n`): the
+  bridge (L fuel `≤ coreWalkFuel`, `AbsR` across `scratch_enter`, `ArenaA` from `CoreS`) is next.
+* `infer_const` passes the record's own name `EREC[p + 1]` to `const_ty_at` (the twin keys
+  `constTyC` by `cv.name`; `EnvR` does not promise `cv.name = n`). Lane `whnf`: the same gap at
+  `WhnfIota.lean`'s `const_ty_at(cj, …)` call.
