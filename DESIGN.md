@@ -5404,3 +5404,7 @@ Translated in full, 109 L functions, 90 tagged `@[l_impl]` (no proofs yet):
   proves it under `CoreS`, whose readback-cache invariants and `NStoreWF` `StageR` lacks (the same
   gap as lane `indproofs`' `lvlEqStub_spec`); closes when `StageR` carries `CoreS`'s extras.
 * `DeclStepSpec.lean` `installStepGo_spec` (unchanged, in progress).
+
+Census (`--no-build`, this lane before landing 2, against master's last `docs/progress.md`): phase 2
+**130 proven, 8 sorry, 82 written, 111 todo** (was 130 / 5 / 5 / 191); Rust lines with L code
+4341 of 6512 (was 1001).
