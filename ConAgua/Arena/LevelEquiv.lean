@@ -308,10 +308,12 @@ theorem lsNode_spec (p : Prog) (hp : p.lookup "ls_node" = some lsNode) (n : Nat)
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64] <;>
       finish [lsNodeW, tierW, idxW]
 
-/-- **The model of `lvls_eq`**: the two slices, the heap reset, `lv_equivs`. -/
+/-- **The model of `lvls_eq`**: the two slices (none on a handle `ls_node` aborts on), the heap
+reset, `lv_equivs`. -/
 def lvlsEqW : Nat → Mem → Word → Word → Option (Word × Mem)
   | 0, _, _, _ => none
   | n + 1, m, us, vs =>
+    if lsNodeW m us = [] ∨ lsNodeW m vs = [] then none else
     equivsW n (m.set64 CTL 192 0) ((lsNodeW m us).headD 0) ((lsNodeW m us).tail.headD 0)
       ((lsNodeW m vs).headD 0) ((lsNodeW m vs).tail.headD 0)
 

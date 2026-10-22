@@ -264,8 +264,8 @@ theorem spineCmp_refines (p : Prog) (hp : SpineDProg p) (n : Nat) (hk : KnotUpTo
     | zero => exact absurd hc2 (lvlsEqC_one p hp.quick.lv _ _ _ _ _)
     | succ n₂ =>
     have e₁ := CoreSpec.of_callW (s₀ := ⟨s.mem, Locals.init []⟩)
-      (lvlsEqC_refines p hp.quick.lv n₂ ⟨s.mem, Locals.init []⟩ a₀ dn vis fe M eb hS us us₂ hus hus₂
-        lu lv hdu hdv) hc2
+      (lvlsEqC_refines p hp.quick.lv n₂ ⟨s.mem, Locals.init []⟩ a₀ dn vis fe M eb hS us us₂ hus
+        hus₂) hc2
     refine coreRef_bindS e₁ (fun M₁ hS₁ hst₁ => ?_)
     by_cases h2 : 2 ≤ rz.headD 0
     · rw [scK_t (h := h2)] at hW

@@ -116,9 +116,6 @@ structure KnotCallees (p : Prog) : Prop where
   recursor head's view without the store's growth `Ext`; DESIGN.md, helper `whnf4-leaves`). -/
   capsNeverZero : CapsNeverZeroOK p
   recFireLevels : RecFireLevelsOK p
-  /-- A level-list comparison that runs compares lists that read back (`WhnfIotaRecRefine.lean`;
-  the second list is `rec_fire_levels`' interned result: `StoreWF` again). -/
-  lvlsEqDen : LvlsEqDen p
 
 /-- `reserved_contains_w` refines `reservedContainsT` under `CoreS` (lane `whnf2`'s
 `callW_reservedContains`: memory unchanged, the pins' reserved list). -/
@@ -134,13 +131,13 @@ theorem reservedContainsOK_of (p : Prog) (hp : p.lookup "reserved_contains_w" = 
 
 /-- `LvlsEqCH` from lane `whnf`'s `lvlsEqC_refines` (fuel below two: no run). -/
 theorem lvlsEqCH_of (p : Prog) (hp : LvlCacheProg p) : LvlsEqCH p := by
-  intro n s₀ a₀ dn vis fe M eb us vs hS hu hv ⟨lu, hlu⟩ ⟨lv, hlv⟩
+  intro n s₀ a₀ dn vis fe M eb us vs hS hu hv _ _
   rcases Nat.lt_or_ge n 2 with h | h
   · apply CoreSpec.of_call
     intro r m' hc
     rw [lvlsEqC_small p hp.cs n h] at hc; cases hc
   · obtain ⟨k, rfl⟩ : ∃ k, n = k + 2 := ⟨n - 2, by omega⟩
-    exact lvlsEqC_refines p hp k s₀ a₀ dn vis fe M eb hS us vs hu hv lu lv hlu hlv
+    exact lvlsEqC_refines p hp k s₀ a₀ dn vis fe M eb hS us vs hu hv
 
 /-- `ConstLpsDen` (helper `defeq2-prop`) is `StoreDen.constLps`. -/
 theorem constLpsDen_of (h : CoreDen) : ConstLpsDen :=
@@ -197,7 +194,7 @@ theorem KnotCallees.iota (n : Nat) (hk : KnotUpTo p n) : IotaRecAtOK p (n + 1) :
     (majorToCtor_refines' p hq.m2c (hc.iotaC hq) (hc.proofIrrel hq) (ErecKeptKnot.of_closed hq.hcl)
       (hc.projC hq))
     (ErecKeptInst.of_closed hq.hcl) (ErecKeptRec.of_closed hq.hcl) (ErecKeptKnot.of_closed hq.hcl)
-    hc.lvlsEqDen n hk
+    n hk
 
 include hq hc in
 /-- Lane `whnf`'s `CoreCallees`. -/
