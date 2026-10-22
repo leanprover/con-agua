@@ -261,7 +261,8 @@ theorem bmfW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     StageR dn vis fe m a → PSlR decSR rs ro rl m →
     DecB (fun m => decHL m no.toNat nl.toNat) m names → no.toNat + nl.toNat ≤ iwTop m →
     Sim (bmfW n m no nl ro rl mm) (rs.findM? (bmfPred names mm.toNat)) a
-      (fun r x m' a' => r = encONN (x.map fun q => (q.2.1, q.2.2.1)) ∧ StageR dn vis fe m' a' ∧
+      (fun r x m' a' => r = encONN (x.map fun q => (q.2.1, q.2.2.1)) ∧
+        (∀ q, x = some q → q.2.1 < 2 ^ 64 ∧ q.2.2.1 < 2 ^ 64) ∧ StageR dn vis fe m' a' ∧
         IWGrow m m') := by
   induction n with
   | zero => intro m a ro rl rs _ _ _ _ r m' e; simp [bmfW] at e
@@ -270,7 +271,7 @@ theorem bmfW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     by_cases hl : rl = 0
     · rw [bmfW_nil n m no nl ro rl mm hl]
       subst hl; rw [partsPSl_nil hrs]
-      exact Sim.ret ⟨rfl, hS, IWGrow.refl _⟩
+      exact Sim.ret ⟨rfl, by simp, hS, IWGrow.refl _⟩
     rw [bmfW_cons n m no nl ro rl mm hl]
     obtain ⟨pc, ⟨cv, mI, rP, rules⟩, rs', rfl, hw, hpb, hrs0, hrs'⟩ := partsPSl_cons hrs hl
     obtain ⟨⟨cvp, hcvp, hcv⟩, hmI, hrP⟩ := decSR_fields (show decSR (truncM m) pc = _ from hrs0)
@@ -313,7 +314,8 @@ theorem bmfW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
     · have hb : (t == mm.toNat) = true := hcond.mp hc
       simp only [hc, hb, if_true]
       rw [partsRdIW_grow hg1 (by rw [hp2]; exact hrlt), hrw]
-      exact Sim.ret ⟨rfl, hS1, hg1⟩
+      exact Sim.ret ⟨rfl, fun q e => by simp only [Option.some.injEq] at e; subst e; exact ⟨hmb, hrb⟩,
+        hS1, hg1⟩
     · have hb : (t == mm.toNat) = false := by simpa using (fun e => hc (hcond.mpr e))
       simp only [hc, hb, if_false, Bool.false_eq_true]
       refine Sim.congr (op := List.findM? (bmfPred names mm.toNat) rs' >>= pure) ?_ (bind_pure _)
@@ -321,8 +323,278 @@ theorem bmfW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} 
           r.tail.tail.headD 0], m')) rfl (fun _ _ => rfl)
         (ih m1 a1 (ro + 1) (rl - 1) rs' hS1 (hrs'.grow decSR_mono hg1) (hnm.grow (OMono.decHL _ _) hg1)
           (Nat.le_trans hnb hg1.1)) ?_
-      rintro r x m' a' ⟨rfl, hS', hg'⟩
-      refine Sim.ret ⟨?_, hS', hg1.trans hg'⟩
+      rintro r x m' a' ⟨rfl, hxb, hS', hg'⟩
+      refine Sim.ret ⟨?_, hxb, hS', hg1.trans hg'⟩
       cases x <;> rfl
+
+/-! ## `block_member_counts_go`, `block_member_counts` -/
+
+mutual
+/-- **The model of `block_member_counts_go`.** -/
+def bmgW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
+    Option (List Word × Mem)
+  | 0, _, _, _, _, _, _, _, _, _, _, _ => none
+  | n + 1, m, nPd, k, nC, no, nl, ro, rl, cto, ctl, idx =>
+    if ctl = 0 then some ([1, 0, 0], m)
+    else bmgK1 n nPd k nC no nl ro rl cto ctl idx (rdW (m.arr64 IW) cto) (bmfW n m no nl ro rl idx)
+/-- After `block_member_counts_find`. -/
+def bmgK1 (n : Nat) (nPd k nC no nl ro rl cto ctl idx cv : Word) :
+    Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r1, m1) =>
+    if 4294967296 ≤ r1.tail.headD 0 ∨ 4294967296 ≤ r1.tail.tail.headD 0 then none
+    else bmgK2 n nPd k nC no nl ro rl cto ctl idx
+      (bcW n m1 nPd k nC rl cv (r1.headD 0) (r1.tail.headD 0) (r1.tail.tail.headD 0))
+/-- After `block_counts`. -/
+def bmgK2 (n : Nat) (nPd k nC no nl ro rl cto ctl idx : Word) :
+    Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r2, m2) =>
+    if r2.headD 0 = 0 then some ([0, 0, 0], m2)
+    else bmgK3 n (r2.tail.tail.headD 0) (bmgW n m2 nPd k nC no nl ro rl (cto + 1) (ctl - 1) (idx + 1))
+/-- After the recursive call. -/
+def bmgK3 (n : Nat) (cb : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r3, m3) =>
+    if r3.headD 0 = 0 then some ([0, 0, 0], m3)
+    else bsK3 (consW n m3 cb (r3.tail.headD 0) (r3.tail.tail.headD 0))
+end
+
+section arms
+variable (n : Nat) (m m1 : Mem) (nPd k nC no nl ro rl cto ctl idx cv cb : Word) (r1 : List Word)
+theorem bmgW_nil (h : ctl = 0) : bmgW (n + 1) m nPd k nC no nl ro rl cto ctl idx = some ([1, 0, 0], m) := by
+  simp [bmgW, h]
+theorem bmgW_cons (h : ctl ≠ 0) : bmgW (n + 1) m nPd k nC no nl ro rl cto ctl idx =
+    bmgK1 n nPd k nC no nl ro rl cto ctl idx (rdW (m.arr64 IW) cto) (bmfW n m no nl ro rl idx) := by
+  simp [bmgW, h]
+theorem bmgK1_big (h : 4294967296 ≤ r1.tail.headD 0 ∨ 4294967296 ≤ r1.tail.tail.headD 0) :
+    bmgK1 n nPd k nC no nl ro rl cto ctl idx cv (some (r1, m1)) = none := by
+  simp only [bmgK1]; exact if_pos h
+theorem bmgK1_ok (h : ¬ (4294967296 ≤ r1.tail.headD 0 ∨ 4294967296 ≤ r1.tail.tail.headD 0)) :
+    bmgK1 n nPd k nC no nl ro rl cto ctl idx cv (some (r1, m1)) = bmgK2 n nPd k nC no nl ro rl cto ctl idx
+      (bcW n m1 nPd k nC rl cv (r1.headD 0) (r1.tail.headD 0) (r1.tail.tail.headD 0)) := by
+  simp only [bmgK1]; exact if_neg h
+theorem bmgK2_fail (h : r1.headD 0 = 0) :
+    bmgK2 n nPd k nC no nl ro rl cto ctl idx (some (r1, m1)) = some ([0, 0, 0], m1) := by
+  simp only [bmgK2]; exact if_pos h
+theorem bmgK2_ok (h : r1.headD 0 ≠ 0) :
+    bmgK2 n nPd k nC no nl ro rl cto ctl idx (some (r1, m1)) =
+      bmgK3 n (r1.tail.tail.headD 0) (bmgW n m1 nPd k nC no nl ro rl (cto + 1) (ctl - 1) (idx + 1)) := by
+  simp only [bmgK2]; exact if_neg h
+theorem bmgK3_fail (h : r1.headD 0 = 0) : bmgK3 n cb (some (r1, m1)) = some ([0, 0, 0], m1) := by
+  simp only [bmgK3]; exact if_pos h
+theorem bmgK3_ok (h : r1.headD 0 ≠ 0) : bmgK3 n cb (some (r1, m1)) =
+    bsK3 (consW n m1 cb (r1.tail.headD 0) (r1.tail.tail.headD 0)) := by
+  simp only [bmgK3]; exact if_neg h
+end arms
+attribute [ind_grind] bmgW_nil bmgW_cons bmgK1_big bmgK1_ok bmgK2_fail bmgK2_ok bmgK3_fail bmgK3_ok
+
+theorem bmg_spec (p : Prog) (hP : IndPartsProg4 p) (n : Nat) :
+    ∀ (s₀ : St) (nPd k nC no nl ro rl cto ctl idx : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "block_member_counts_go" [nPd, k, nC, no, nl, ro, rl, cto, ctl, idx]
+    ⦃fun r s' => LocEq s' s₀ ∧ bmgW n s₀.mem nPd k nC no nl ro rl cto ctl idx = some (r, s'.mem); ⊤⦄ := by
+  induction n with
+  | zero =>
+    intro s₀ nPd k nC no nl ro rl cto ctl idx; rw [invoke_eq _ hP.mcGo]
+    simp only [callFn, blockMemberCountsGo]; vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ nPd k nC no nl ro rl cto ctl idx
+    rw [invoke_eq _ hP.mcGo]
+    simp only [callFn, blockMemberCountsGo]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        bmf_spec p hP n, blockCounts_spec p hP.alloc hP.copy hP.view hP.cons hP.piB hP.bcHead hP.bcPure
+          hP.counts n, slCons_specW p hP.alloc hP.copy hP.cons n, ih] <;>
+      finish (gen := 20) [rdW_eq]
+
+/-- `block_member_counts`' result `(ok, off, len)` against the twin's `Option (List Nat)`. -/
+def NsR (x : Option (List Nat)) (r : List Word) (m : Mem) : Prop :=
+  match x with
+  | none => r.headD 0 = 0
+  | some ns => r.headD 0 = 1 ∧ DecB (fun m => decNL m (r.tail.headD 0).toNat (r.tail.tail.headD 0).toNat) m ns ∧
+      (r.tail.headD 0).toNat + (r.tail.tail.headD 0).toNat ≤ iwTop m
+
+theorem NsR_three {x : Option (List Nat)} {r : List Word} {m : Mem} (h : NsR x r m) :
+    NsR x [r.headD 0, r.tail.headD 0, r.tail.tail.headD 0] m := by cases x <;> exact h
+
+theorem stageR_ptop {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m : Mem} {a : AState}
+    (hS : StageR dn vis fe m a) : PTop m := ⟨hS.2.1, hS.2.2.2.1, hS.2.2.2.2.2⟩
+
+/-- **`block_member_counts_go`'s model refines `blockMemberCounts?` from member `idx`.** -/
+theorem bmgW_sim {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {nPd k nC no nl ro rl : Word}
+    {names : List NIdx} {rs : List (IConstantVal × Nat × Nat × List IRecRule)}
+    (h1 : nPd.toNat < 2 ^ 32) (h2 : k.toNat < 2 ^ 32) (h3 : nC.toNat < 2 ^ 32) (h4 : rl.toNat < 2 ^ 32)
+    (n : Nat) :
+    ∀ (m : Mem) (a : AState) (cto ctl idx : Word) (cvTs : List IConstantVal),
+    StageR dn vis fe m a → PSlR decCVp cvTs cto ctl m → PSlR decSR rs ro rl m →
+    DecB (fun m => decHL m no.toNat nl.toNat) m names → no.toNat + nl.toNat ≤ iwTop m →
+    idx.toNat + ctl.toNat ≤ iwTop m →
+    Sim (bmgW n m nPd k nC no nl ro rl cto ctl idx)
+      (ConRon.Arena.blockMemberCounts? nPd.toNat k.toNat nC.toNat names rs idx.toNat cvTs) a
+      (fun r x m' a' => NsR x r m' ∧ StageR dn vis fe m' a' ∧ IWGrow m m') := by
+  induction n with
+  | zero => intro m a cto ctl idx cvTs _ _ _ _ _ _ r m' e; simp [bmgW] at e
+  | succ n ih =>
+    intro m a cto ctl idx cvTs hS hts hrs hnm hnb hix
+    by_cases hl : ctl = 0
+    · rw [bmgW_nil n m nPd k nC no nl ro rl cto ctl idx hl]
+      subst hl; rw [partsPSl_nil hts]
+      exact Sim.ret ⟨⟨rfl, by show decNL _ _ _ = _; simp [decNL], by simp⟩, hS, IWGrow.refl _⟩
+    rw [bmgW_cons n m nPd k nC no nl ro rl cto ctl idx hl]
+    obtain ⟨pc, cv0, ts', rfl, hw, hpb, hcv0, hts'⟩ := partsPSl_cons hts hl
+    rw [hw]
+    simp only [ConRon.Arena.blockMemberCounts?]
+    have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
+    have hpw : (UInt64.ofNat pc).toNat = pc := UInt64.toNat_ofNat_of_lt' hpb
+    have hrl : rs.length = rl.toNat := (decPL_length _ hrs.1)
+    refine Sim.bindK (K := bmgK1 n nPd k nC no nl ro rl cto ctl idx (UInt64.ofNat pc))
+      (body := fun r1 m1 => if 4294967296 ≤ r1.tail.headD 0 ∨ 4294967296 ≤ r1.tail.tail.headD 0 then none
+        else bmgK2 n nPd k nC no nl ro rl cto ctl idx (bcW n m1 nPd k nC rl (UInt64.ofNat pc) (r1.headD 0)
+          (r1.tail.headD 0) (r1.tail.tail.headD 0)))
+      (by simp [bmgK1]) (fun _ _ => by simp only [bmgK1]) (bmfW_sim n m a ro rl rs hS hrs hnm hnb) ?_
+    rintro r1 x m1 a1 ⟨rfl, hxb, hS1, hg1⟩
+    by_cases hbig : 4294967296 ≤ (encONN (x.map fun q => (q.2.1, q.2.2.1))).tail.headD 0 ∨
+        4294967296 ≤ (encONN (x.map fun q => (q.2.1, q.2.2.1))).tail.tail.headD 0
+    · rw [if_pos hbig]; exact Sim.of_none
+    rw [if_neg hbig]
+    have h5 : ((encONN (x.map fun q => (q.2.1, q.2.2.1))).tail.headD 0).toNat < 2 ^ 32 := by
+      have := mt Or.inl hbig; rw [UInt64.le_iff_toNat_le] at this; simpa using this
+    have h6 : ((encONN (x.map fun q => (q.2.1, q.2.2.1))).tail.tail.headD 0).toNat < 2 ^ 32 := by
+      have := mt Or.inr hbig; rw [UInt64.le_iff_toNat_le] at this; simpa using this
+    rw [hrl]
+    have hcv1 : decCVp m1 (UInt64.ofNat pc).toNat = some cv0 := by
+      rw [hpw]; exact hcv0.stab (OMono.decCVp _) m1 hg1
+    have hb3 : (UInt64.ofNat pc).toNat + 3 < 2 ^ 64 := by
+      rw [hpw]
+      obtain ⟨w, hw3, -, -⟩ := hd?_some (decCV_type (show decCV (erA (truncM m)) pc = some cv0 from hcv0))
+      have := (truncM_er_get hw3).1
+      have : erTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 129).toNat_lt
+      omega
+    generalize hE : encONN (x.map fun q => (q.2.1, q.2.2.1)) = E at h5 h6
+    refine Sim.bindK (K := bmgK2 n nPd k nC no nl ro rl cto ctl idx)
+      (body := fun r2 m2 => if r2.headD 0 = 0 then some ([0, 0, 0], m2)
+        else bmgK3 n (r2.tail.tail.headD 0) (bmgW n m2 nPd k nC no nl ro rl (cto + 1) (ctl - 1) (idx + 1)))
+      (by simp [bmgK2]) (fun _ _ => by simp only [bmgK2])
+      (Q := fun r2 x2 m2 a2 => a2 = a1 ∧ r2 = encONN x2 ∧ (∀ p q, x2 = some (p, q) → q < 2 ^ 64) ∧
+        StageR dn vis fe m2 a1 ∧ IWGrow m1 m2) ?_ ?_
+    · revert hE
+      cases x with
+      | none =>
+        intro hE; dsimp only; intro r2 m2 e
+        obtain ⟨x2, hrun, hr2, hq2, hg2, hf2⟩ := bcW_ok n m1 m2 a1 nPd k nC rl (UInt64.ofNat pc) _ _ _ r2
+          cv0 none hS1.1.arena.1 e hcv1 hb3 (by subst hE; rfl) h1 h2 h3 h4 h5 h6 hS1.2.2.2.1 hS1.2.2.2.2.2
+        have hP2 := bcW_ptop e (stageR_ptop hS1)
+        exact ⟨x2, a1, hrun, rfl, hr2, hq2, stage_frame_iw hS1 hf2 (by rw [← hf2.2.2.1 IW]; exact hP2.1), hg2⟩
+      | some q =>
+        intro hE; dsimp only; intro r2 m2 e
+        obtain ⟨b1, b2⟩ := hxb q rfl
+        obtain ⟨x2, hrun, hr2, hq2, hg2, hf2⟩ := bcW_ok n m1 m2 a1 nPd k nC rl (UInt64.ofNat pc) _ _ _ r2
+          cv0 (some (q.2.1, q.2.2.1)) hS1.1.arena.1 e hcv1 hb3
+          (by subst hE; simp [encONN, UInt64.toNat_ofNat_of_lt' b1, UInt64.toNat_ofNat_of_lt' b2])
+          h1 h2 h3 h4 h5 h6 hS1.2.2.2.1 hS1.2.2.2.2.2
+        have hP2 := bcW_ptop e (stageR_ptop hS1)
+        exact ⟨x2, a1, hrun, rfl, hr2, hq2, stage_frame_iw hS1 hf2 (by rw [← hf2.2.2.1 IW]; exact hP2.1), hg2⟩
+    rintro r2 x2 m2 a2 ⟨rfl, rfl, hq2, hS2, hg2⟩
+    have hg02 := hg1.trans hg2
+    cases x2 with
+    | none =>
+      simp only [encONN, List.headD_cons, if_true]
+      exact Sim.ret ⟨rfl, hS2, hg02⟩
+    | some c =>
+    obtain ⟨c1, c2⟩ := c
+    have hc2 := hq2 c1 c2 rfl
+    rw [if_neg (show (encONN (some (c1, c2))).headD 0 ≠ 0 by simp [encONN])]
+    have hcl1 : ctl.toNat ≠ 0 := fun e => hl (UInt64.toNat_inj.mp (by simpa using e))
+    have hcto1 : (cto + 1).toNat = cto.toNat + 1 := by
+      have := hts.2; rw [UInt64.toNat_add]; simp; omega
+    have hidx1 : (idx + 1).toNat = idx.toNat + 1 := by
+      rw [UInt64.toNat_add]; simp; omega
+    have hctl1 : (ctl - 1).toNat = ctl.toNat - 1 := by
+      rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp
+    have hrec := ih m2 _ (cto + 1) (ctl - 1) (idx + 1) ts' hS2 (hts'.grow (fun _ => OMono.decCVp _) hg02)
+      (hrs.grow decSR_mono hg02) (hnm.grow (OMono.decHL _ _) hg02) (Nat.le_trans hnb hg02.1)
+      (by rw [hidx1, hctl1]; have := hg02.1; omega)
+    rw [hidx1] at hrec
+    refine Sim.bindK (K := bmgK3 n ((encONN (some (c1, c2))).tail.tail.headD 0))
+      (body := fun r3 m3 => if r3.headD 0 = 0 then some ([0, 0, 0], m3)
+        else bsK3 (consW n m3 ((encONN (some (c1, c2))).tail.tail.headD 0) (r3.tail.headD 0)
+          (r3.tail.tail.headD 0)))
+      (by simp [bmgK3]) (fun _ _ => by simp only [bmgK3]) hrec ?_
+    rintro r3 x3 m3 a3 ⟨hR3, hS3, hg3⟩
+    cases x3 with
+    | none =>
+      have h0 : r3.headD 0 = 0 := hR3
+      rw [if_pos h0]
+      exact Sim.ret ⟨rfl, hS3, hg02.trans hg3⟩
+    | some ns =>
+    obtain ⟨h1', hd3, hb3'⟩ := hR3
+    rw [if_neg (by rw [h1']; decide)]
+    intro r m' e
+    cases h4 : consW n m3 ((encONN (some (c1, c2))).tail.tail.headD 0) (r3.tail.headD 0) (r3.tail.tail.headD 0) with
+    | none => rw [h4] at e; cases e
+    | some x4 =>
+    obtain ⟨r4, m4⟩ := x4
+    rw [h4, bsK3_some] at e
+    simp only [Option.some.injEq, Prod.mk.injEq] at e
+    obtain ⟨rfl, rfl⟩ := e
+    obtain ⟨hS4, hg4, hd4, ht4⟩ := consW_stageN h4 hS3 hb3' (hd3.get (OMono.decNL _ _))
+    refine ⟨some (c2 :: ns), a3, rfl, ⟨rfl, ?_, by simp only [List.headD_cons, List.tail_cons]; omega⟩, hS4,
+      (hg02.trans hg3).trans hg4⟩
+    have hc2' : ((encONN (some (c1, c2))).tail.tail.headD 0).toNat = c2 := by
+      simp [encONN, UInt64.toNat_ofNat_of_lt' hc2]
+    rw [hc2'] at hd4
+    exact decNL_decB hd4 (Nat.le_of_eq ht4)
+
+/-- **The model of `block_member_counts`** (at exec fuel `n + 1`). -/
+def bmcW (n : Nat) (m : Mem) (nPd k nC no nl ro rl cto ctl : Word) : Option (List Word × Mem) :=
+  if 4294967296 ≤ nPd ∨ 4294967296 ≤ k ∨ 4294967296 ≤ nC ∨ 4294967296 ≤ rl then none
+  else bmfK2 (bmgW n m nPd k nC no nl ro rl cto ctl 0)
+
+theorem bmc_spec (p : Prog) (hP : IndPartsProg4 p) (n : Nat) (s₀ : St) (nPd k nC no nl ro rl cto ctl : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "block_member_counts" [nPd, k, nC, no, nl, ro, rl, cto, ctl]
+    ⦃fun r s' => LocEq s' s₀ ∧ bmcW n s₀.mem nPd k nC no nl ro rl cto ctl = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hP.mc]
+  simp only [callFn, blockMemberCounts]
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, bmg_spec p hP n] <;>
+    finish (gen := 20) [bmcW]
+
+/-- **`block_member_counts` refines `blockMemberCounts?`** from member `0` (through
+`rec_target_of`'s and `block_counts`' stubs; the counts and the recursor records' words past
+`2^32` a capacity abort): the formers a slice of constants, the recursors the split's records,
+both decoded below the tops; the result a number slice decoded below the tops (`NsR`). -/
+@[refines ConRon.Arena.blockMemberCounts?]
+theorem blockMemberCounts_refines (p : Prog) (hP : IndPartsProg4 p) (n : Nat) (s₀ : St) (a₀ : AState)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (nPd k nC no nl ro rl cto ctl : Word)
+    (names : List NIdx) (cvTs : List IConstantVal) (rs : List (IConstantVal × Nat × Nat × List IRecRule))
+    (hS : StageR dn vis fe s₀.mem a₀) (hts : PSlR decCVp cvTs cto ctl s₀.mem)
+    (hrs : PSlR decSR rs ro rl s₀.mem) (hnm : DecB (fun m => decHL m no.toNat nl.toNat) s₀.mem names)
+    (hnb : no.toNat + nl.toNat ≤ iwTop s₀.mem) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "block_member_counts" [nPd, k, nC, no, nl, ro, rl, cto, ctl]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (ConRon.Arena.blockMemberCounts? nPd.toNat k.toNat nC.toNat names rs 0 cvTs) a₀ ∧
+      NsR (AM.res (ConRon.Arena.blockMemberCounts? nPd.toNat k.toNat nC.toNat names rs 0 cvTs) a₀) r s'.mem ∧
+      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.blockMemberCounts? nPd.toNat k.toNat nC.toNat names rs 0 cvTs) a₀) ∧
+      IWGrow s₀.mem s'.mem; ⊤⦄ := by
+  refine triple_post (bmc_spec p hP n s₀ nPd k nC no nl ro rl cto ctl) ?_
+  rintro r s' ⟨hl, hm⟩
+  unfold bmcW at hm
+  split at hm
+  · cases hm
+  rename_i hg
+  have b : ∀ w : Word, ¬ 4294967296 ≤ w → w.toNat < 2 ^ 32 := fun w h => by
+    rw [UInt64.le_iff_toNat_le] at h; simpa using h
+  have hsim := bmgW_sim (b nPd (fun h => hg (Or.inl h))) (b k (fun h => hg (Or.inr (Or.inl h))))
+    (b nC (fun h => hg (Or.inr (Or.inr (Or.inl h))))) (b rl (fun h => hg (Or.inr (Or.inr (Or.inr h))))) n
+    s₀.mem a₀ cto ctl 0 cvTs hS hts hrs hnm hnb (by simp; have := hts.2; omega)
+  cases hb : bmgW n s₀.mem nPd k nC no nl ro rl cto ctl 0 with
+  | none => rw [hb] at hm; cases hm
+  | some x =>
+  obtain ⟨r1, m1⟩ := x
+  rw [hb, bmfK2_some] at hm
+  simp only [Option.some.injEq, Prod.mk.injEq] at hm
+  obtain ⟨rfl, rfl⟩ := hm
+  obtain ⟨hok, hR, hS', hg'⟩ := Sim.run hsim hb
+  exact ⟨hl, hok, NsR_three hR, hS', hg'⟩
 
 end L.Ind
