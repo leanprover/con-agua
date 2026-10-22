@@ -224,7 +224,7 @@ def main():
     imports = sorted({m for f in reach for m in res[f][0]} - {"ConAgua.Checker.Entry", "ConAgua.Checker.Prelude"})
     imports = [m for m in imports if m.startswith("ConAgua.")]
     entries = [f"  ({lean_str(f)}, {res[f][1]})" for f in reach]
-    entries += [f"  ({lean_str(PRE + f)}, preFn preTree {res[f][1]})" for f in pre]
+    entries += [f"  ({lean_str(PRE + f)}, preFn preTree ({res[f][1]}))" for f in pre]
     entries += [f"  ({lean_str(g)}, abortStub {n})" for g, n in sorted(stubs.items())]
     txt = HEADER.format(imports="\n".join(f"import {m}" for m in imports), nfun=len(entries),
                         nstub=len(stubs), stub_names=", ".join(lean_str(g) for g in sorted(stubs)),
