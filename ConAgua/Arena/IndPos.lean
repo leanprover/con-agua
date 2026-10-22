@@ -441,6 +441,7 @@ def fvMapAt : FunDecl := lfn (f, i) locals (tag, ok, e, z, s, v) {
   if tag == 2 {
     z := call pin_word(53);
     s := call intern_sort(z);
+    if 4294967296 <= s { abort };
     v := call intern_fvar(i, s);
     return (1, v)
   };
@@ -458,24 +459,30 @@ def nestHoleImgRoot : FunDecl := lfn (ctx, i) locals (nP, hi, nm, hd, r) {
   if nP <= i && i < hi {
     nm := call sl_getd(IW.u64[ctx], IW.u64[ctx + 1], i - nP, 0);
     hd := call intern_const(nm, IW.u64[ctx + 10]);
+    if 4294967296 <= hd { abort };
     r := call mk_app_n(hd, IW.u64[ctx + 7], IW.u64[ctx + 8]);
     return (1, r)
   };
   return (0, 0)
 }
 
+/-- `nest_hole_img_ds_go(f, dsOff, dsLen, q, j)`: `replaceFVars f` of the rest of the slice, written
+at `q + j`, … (the loop of `nest_hole_img_ds`, as a recursion). -/
+-- con-ron: none — the loop of nest_hole_img_ds as a self-recursive function (proof shape)
+def nestHoleImgDsGo : FunDecl := lfn (f, dsOff, dsLen, q, j) locals (r, u) {
+  if j >= dsLen { return 0 };
+  r := call replace_fvars(f, IW.u64[dsOff + j]);
+  IW.u64[q + j] := r;
+  u := call nest_hole_img_ds_go(f, dsOff, dsLen, q, j + 1);
+  return 0
+}
+
 /-- `nest_hole_img_ds(f, dsOff, dsLen)`: `ds.mapM fun x => replaceFVars f x`, in list order. -/
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:534-559 ConRon.Arena.nestHoleImg
 @[l_impl ConRon.Arena.nestHoleImg]
-def nestHoleImgDs : FunDecl := lfn (f, dsOff, dsLen) locals (q, j, x, r) {
+def nestHoleImgDs : FunDecl := lfn (f, dsOff, dsLen) locals (q, u) {
   q := call iw_alloc(dsLen);
-  j := 0;
-  while j < dsLen {
-    x := IW.u64[dsOff + j];
-    r := call replace_fvars(f, x);
-    IW.u64[q + j] := r;
-    j += 1
-  };
+  u := call nest_hole_img_ds_go(f, dsOff, dsLen, q, 0);
   return (q, dsLen)
 }
 
@@ -491,6 +498,7 @@ def nestHoleImgFrame : FunDecl :=
   f := call rec5(0, ctx, progOff, progLen, n1);
   (dsOff2, dsLen2) := call nest_hole_img_ds(f, IW.u64[keyPtr + 2], IW.u64[keyPtr + 3]);
   hd := call intern_const(IW.u64[keyPtr], IW.u64[keyPtr + 1]);
+  if 4294967296 <= hd { abort };
   r := call mk_app_n(hd, dsOff2, dsLen2);
   return (1, r)
 }
@@ -576,6 +584,7 @@ def replaceFVars : FunDecl := lfn (f, e) locals (s, r, u) {
   s := call rf_bank_enter();
   r := call replace_fvars_go(f, ⟪CWF⟫, e);
   u := call rf_bank_leave(s);
+  if 4294967296 <= r { abort };
   return r
 }
 
@@ -767,7 +776,7 @@ def indPosFns : Prog :=
    ("nest_ctx_hi_at", nestCtxHiAt), ("nest_ctx_root_holes_go", nestCtxRootHolesGo),
    ("nest_ctx_root_holes", nestCtxRootHoles),
    ("nest_hole_at", nestHoleAt), ("nest_key_map", nestKeyMap), ("fv_map_at", fvMapAt),
-   ("nest_hole_img_root", nestHoleImgRoot), ("nest_hole_img_ds", nestHoleImgDs),
+   ("nest_hole_img_root", nestHoleImgRoot), ("nest_hole_img_ds_go", nestHoleImgDsGo), ("nest_hole_img_ds", nestHoleImgDs),
    ("nest_hole_img_frame", nestHoleImgFrame), ("nest_hole_img", nestHoleImg),
    ("replace_fvars_node", replaceFVarsNode), ("replace_fvars_go", replaceFVarsGo),
    ("replace_fvars", replaceFVars),
