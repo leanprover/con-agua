@@ -97,4 +97,158 @@ theorem lview_of_find {m : Mem} {a : AState} (hR : ArenaR m a) {v : LNodeView} {
           LTag.max, LTag.imax, LTag.param, hon]
     · simp [hon] at hf
 
+/-! ## A push onto the level store -/
+
+theorem Tbl.nodes_push' {α ι δ : Type} [BEq α] [Hashable α] (tb : Tbl α ι δ) (a : α) (d : δ)
+    (i : ι) : (tb.push a d i).nodes = tb.nodes.push a := by
+  cases tb; rfl
+
+theorem LTables.count_push (t : LTables) (v : LNodeView) (d : LDer) (tr : UInt32) :
+    (t.push v d tr).1.count = t.count + 1 := by
+  cases v <;> simp [LTables.push, LTables.count, Tbl.nodes_push', Tbl.size] <;> omega
+
+/-- A view of a tier after a push: an old one or the pushed view. -/
+theorem LTables.push_get_cases (t : LTables) (v : LNodeView) (d : LDer) (tr : UInt32) (u : LIdx)
+    (w : LNodeView) (h : (t.push v d tr).1.get u = some w) : t.get u = some w ∨ w = v := by
+  cases v <;> simp only [LTables.push, LTables.get, Tbl.nodes_push', Tbl.node?] at h ⊢ <;>
+    repeat' split at h
+  all_goals simp only [*, ↓reduceIte, Bool.false_eq_true, true_or]
+  all_goals first
+    | exact .inl h
+    | (rw [Array.getElem?_push] at h
+       split at h
+       · right; simp at h; exact h.symm
+       · exact .inl h)
+
+/-- **Interning a level node**: every view of the new store is an old one or the interned one;
+on a miss (with room) the new handle has the interned view and the node count goes up by one. -/
+theorem LStore.intern_view_cases (st : LStore) (v : LNodeView) (u : LIdx) (w : LNodeView)
+    (h : (st.intern v).1.view u = some w) : st.view u = some w ∨ w = v := by
+  unfold LStore.intern at h
+  split at h
+  · exact .inl h
+  · split at h
+    · rename_i hon
+      split at h
+      · exact .inl h
+      · simp only [LStore.view] at h ⊢
+        by_cases hp : u.isPersistent = true
+        · rw [ite_eq_left hp] at h ⊢; exact .inl h
+        · rw [ite_eq_right hp] at h ⊢; rw [ite_eq_left hon] at h ⊢
+          exact LTables.push_get_cases _ _ _ _ _ _ h
+    · rename_i hon
+      simp only [LStore.view] at h ⊢
+      by_cases hp : u.isPersistent = true
+      · rw [ite_eq_left hp] at h ⊢; exact LTables.push_get_cases _ _ _ _ _ _ h
+      · rw [ite_eq_right hp] at h ⊢; rw [ite_eq_right hon] at h; cases h
+
+theorem LStore.intern_miss {st : LStore} {v : LNodeView} (hf : st.find? v = none)
+    (hcap : st.capOK v) :
+    (st.intern v).1.view (st.intern v).2 = some v ∧
+      (st.intern v).1.nodeCount = st.nodeCount + 1 := by
+  simp only [LStore.capOK] at hcap
+  simp only [LStore.find?] at hf
+  split at hf
+  · cases hf
+  · rename_i hp
+    simp only [LStore.intern, hp]
+    by_cases hon : st.scratchOn = true
+    · simp only [hon, ↓reduceIte] at hf hcap ⊢
+      simp only [hf]
+      have hspec := LTables.push_spec st.scr v (st.derOfView v) Idx.tierS (by decide) hcap
+      have hpp : ((st.scr.push v (st.derOfView v) Idx.tierS).2).isPersistent = false := by
+        show (_ == 0) = false
+        rw [hspec.2]; decide
+      refine ⟨?_, ?_⟩
+      · simp only [LStore.view, hpp]; exact hspec.1
+      · simp only [LStore.nodeCount, LStore.persCount, LStore.scrCount, LTables.count_push]
+        omega
+    · simp only [hon, Bool.false_eq_true, ↓reduceIte] at hcap ⊢
+      have hspec := LTables.push_spec st.pers v (st.derOfView v) Idx.tierP (by decide) hcap
+      have hpp : ((st.pers.push v (st.derOfView v) Idx.tierP).2).isPersistent = true := by
+        show (_ == 0) = true
+        rw [hspec.2]; decide
+      refine ⟨?_, ?_⟩
+      · simp only [LStore.view, hpp]; exact hspec.1
+      · simp only [LStore.nodeCount, LStore.persCount, LStore.scrCount, LTables.count_push]
+        omega
+
+/-- A handle whose view's children read back (at the store's node count) reads back. -/
+theorem denoteL_of_view {st : LStore} {u : LIdx} {v : LNodeView} (hv : st.view u = some v)
+    (hch : ∀ c ∈ v.lchildren, ∃ l, denoteLAux st st.nodeCount c = some l)
+    (hn : ∀ n ∈ v.nchildren, ∃ x, denoteN st.ns n = some x) : ∃ l, denoteL st u = some l := by
+  simp only [denoteL, denoteLAux, hv, Option.bind_some]
+  cases v <;> simp only [LNodeView.lchildren, LNodeView.nchildren, List.mem_cons,
+    List.not_mem_nil, or_false, forall_eq_or_imp, forall_eq] at hch hn
+  · exact ⟨_, rfl⟩
+  · obtain ⟨l, hl⟩ := hch; exact ⟨_, by simp [hl]; rfl⟩
+  · obtain ⟨⟨l1, h1⟩, l2, h2⟩ := hch; exact ⟨_, by simp [h1, h2, opt2]; rfl⟩
+  · obtain ⟨⟨l1, h1⟩, l2, h2⟩ := hch; exact ⟨_, by simp [h1, h2, opt2]; rfl⟩
+  · obtain ⟨x, hx⟩ := hn; exact ⟨_, by simp [hx]; rfl⟩
+
+/-! ## `internLNode` -/
+
+/-- `internLNode`'s two outcomes: a cons hit (the state unchanged) or `LStore.intern`'s push. -/
+theorem internLNode_run_cases {a a' : AState} {v : LNodeView} {h : LIdx}
+    (hrun : (internLNode v).run a = .ok (h, a')) :
+    (a.store.ls.find? v = some h ∧ a' = a) ∨
+      (a.store.ls.find? v = none ∧ a.store.ls.capOK v ∧ a'.store.ls = (a.store.ls.intern v).1 ∧
+        h = (a.store.ls.intern v).2) := by
+  unfold internLNode at hrun
+  simp only [StateT.run_bind, StateT.run_get, pure_bind] at hrun
+  split at hrun
+  · rename_i hf
+    simp only [StateT.run_pure] at hrun
+    cases hrun
+    exact .inl ⟨hf, rfl⟩
+  · rename_i hf
+    by_cases hcap : a.store.ls.capOK v
+    · have hc := hcap
+      simp only [LStore.capOK] at hc
+      simp only [hc, ↓reduceIte, StateT.run_bind, StateT.run_set, StateT.run_pure, pure_bind]
+        at hrun
+      cases hrun
+      exact .inr ⟨hf, hcap, rfl, rfl⟩
+    · have hc := hcap
+      simp only [LStore.capOK] at hc
+      simp [hc, fail, throwThe, MonadExceptOf.throw, StateT.run, StateT.lift, bind, Except.bind]
+        at hrun
+
+/-- **Interning a level node keeps every level handle reading back, and the new handle reads
+back**, when the node's children do. `ArenaR` is used only at a cons hit (the hit names a node
+with the probed view). -/
+theorem lvlAll_internLNode {m : Mem} {a a' : AState} {v : LNodeView} {h : LIdx}
+    (hR : ArenaR m a) (hall : LvlAll a)
+    (hch : ∀ c ∈ v.lchildren, ∃ l, denoteL a.store.ls c = some l)
+    (hnch : ∀ n ∈ v.nchildren, ∃ x, denoteN a.store.ls.ns n = some x)
+    (hrun : (internLNode v).run a = .ok (h, a')) :
+    LvlAll a' ∧ ∃ l, denoteL a'.store.ls h = some l := by
+  rcases internLNode_run_cases hrun with ⟨hf, rfl⟩ | ⟨hf, hcap, hls, rfl⟩
+  · exact ⟨hall, hall h (by rw [lview_of_find hR hf]; rfl)⟩
+  · obtain ⟨hv, hcnt⟩ := LStore.intern_miss hf hcap
+    have hext := LStore.intern_ext a.store.ls v
+    have key : ∀ u, (a.store.ls.intern v).1.view u = some v →
+        ∃ l, denoteL (a.store.ls.intern v).1 u = some l := by
+      intro u hu
+      refine denoteL_of_view hu (fun c hc => ?_) (fun n hn => ?_)
+      · obtain ⟨l, hl⟩ := hch c hc
+        rw [hcnt]
+        exact ⟨l, denoteLAux_store_mono (fun _ _ hh => LStore.view_intern_mono _ v hh)
+          (LStore.ns_intern _ v) _ c l hl⟩
+      · rw [LStore.ns_intern]; exact hnch n hn
+    refine ⟨fun u hu => ?_, by rw [hls]; exact key _ hv⟩
+    change (a'.store.ls.view u).isSome at hu
+    rw [hls] at hu ⊢
+    obtain ⟨w, hw⟩ := Option.isSome_iff_exists.mp hu
+    rcases LStore.intern_view_cases _ v u w hw with ho | rfl
+    · obtain ⟨l, hl⟩ := hall u (by rw [ho]; rfl)
+      exact ⟨l, hext.lvl u l hl⟩
+    · exact key u hw
+
+/-- An extension that adds no level views beyond readable ones keeps `LvlAll`. -/
+theorem LvlAll.of_lext {a a' : AState} (hall : LvlAll a)
+    (hv : ∀ u, (a'.store.ls.view u).isSome → (a.store.ls.view u).isSome)
+    (he : LExt a.store.lss.ls a'.store.lss.ls) : LvlAll a' :=
+  fun u hu => (hall u (hv u hu)).imp fun _ hl => he.lvl u _ hl
+
 end L.Arena
