@@ -3552,8 +3552,10 @@ Word arrays (byte arrays are a separate id space: `IN` = byte array 0 is the inp
 | 48 | `FRMEMO` | `MemosR.fvar` | `fvarRange` memo (`fvarBC`) |
 | 49‥55 | – | `MemosR` (reserved) | the other six walk memos |
 | 56‥63 | – | reserved (store tier) | (the scratch epoch is `CTL[62]`, no array; lane `libs`) |
-| 64, 65, 66 | `NID`, `LID`, `EID` | `StateDR` (front) | the export's name/level/expression id tables |
-| 67‥95 | – | reserved (front) | declaration records, `pend` |
+| 64, 65, 66 | `NID`, `LID`, `EID` | `StateDR` (front) | the export's name/level/expression id tables, dense part (lane `twinaudit`) |
+| 67‥71 | `DECL`, `DLP`, `DIND`, `IFR`, `IFL` | `StateDR` (front) | declaration records, inductive lines |
+| 72, 73, 74 | – | `StateDR` (`TblR`) | the id tables' sparse overflow (memo-library tables, `IdTable.lean`) |
+| 75‥95 | – | reserved (front) | |
 | 96‥127 | – | `CoreR` (stub) | the 14 caches and the eager-depth banks |
 | 128‥131 | – | `PinsR` (stub) | the pin table |
 | 132‥143 | – | `EnvR` (stub) | the environment index |
@@ -3576,7 +3578,9 @@ Word arrays (byte arrays are a separate id space: `IN` = byte array 0 is the inp
 | 48‥61 | `MemosR` (reserved) | the other six memos |
 | 62 | `ArenaR` (every table, `StoreR`) | scratch slot base `B` (lane `libs`): tier-1 slots hold `B + i + 1`; `scratch_reset` adds `2^32` |
 | 63 | reserved | |
-| 64‥95 | reserved (front) | |
+| 64‥69 | `StateDR` (`TblR`) | stamp − 1, live count of the id tables' sparse maps (`NID`, `LID`, `EID`) |
+| 70, 71, 72 | `StateDR` (`TblR`) | dense size of `NID`, `LID`, `EID` |
+| 73‥95 | reserved (front) | |
 | 96‥127 | `CoreR` (stub) | cache stamps/counts, eager depth |
 | 128‥135 | `EnvR` (stub) | environment counters |
 | 136‥191 | argument relations (reserved) | |
@@ -5166,17 +5170,50 @@ helpers (`parts`: `IndParts`/`IndInstall`; `rec`: `Rec*`; `pos`: `IndPos*`) and 
   well-formedness inside `StageR` (helper `pos`'s suggestion); then the remaining parents
   (`checkSumCtor(s)`, `sumRules`, `checkBlock*`, the `nest*` positivity block, `genRecCheck`).
 
-### The frontend's inductive lines: not hooked yet (decision)
-The hook is two lines of L (`apply_dline`'s `pl == 25` branch calling `apply_ind_line`, and
-`frontAllProg` gaining `indFieldsFns`/`indApplyFns`, which also means moving `indAllProg`'s test
-out of `IndApply.lean`, since it imports `FrontRun`) plus `DeclAt`'s `.indDecl` arm
-(`IndDeclAt`). It is not done: once `apply_dline` calls `apply_ind_line`, `applyDLineW` and the
-front's chain up to `frontRun`'s `refines_part` need `apply_ind_line`'s model and its twin side
-(`processLineCoreD`'s `.ind` arm: `validateIndD`, `installIndD`, 534 L lines, none proved). A
-`sorry`'d spec there would turn the front's proven chain into `sorry` (a census regression), and
-a spec hypothesis would be a dishonest `proven`. Plan: prove `IndFields`/`IndApply` bottom up
-with this template under `StateDR` (the front's relation), then hook in one step with the
-refinement.
+### The frontend's inductive lines: hooked (2026-10-22, lane `front`)
+
+The front's proven chain (`frontRun_refines` → `parseBytes`, `frontLine_refines` → `applyLine`,
+`processLineCoreD` by parts) now covers `inductive` lines, without `sorry` and without a spec
+hypothesis. Decisions:
+
+* **The hook reads the block where the line scanner found it.** `decl_val` (`FieldsDecl.lean`)
+  keeps an `inductive` member's value position in the `nm` field (`dnameN`), and `apply_dline`
+  calls `apply_ind(nm)` at `pl = 25` (not `apply_ind_line`, which re-finds the first member: the
+  link would need `next_member` ↔ `scanLineLoop` for the first member). `DeclR`'s `.ind` arm says
+  the block scans there (`scanIndDecl b v = .ok (.ind …) e`), proved in `declLine_link`.
+* **A fuel-indexed model under a fuel-free one: `runF`** (`RunModel.lean`). The apply step's
+  models (`validateW`, `installW`, … ~40 of them) carry the interpreter's fuel; the line's model
+  (`applyDLineW`, `frontLineW`, the driver's `lineKW`) does not. `applyDLineW p` takes
+  `apply_ind`'s *run* in `p` as the model (`runF p "apply_ind" [nm] m`, `Classical.choose` of a
+  successful run). It is well defined because the interpreter is monotone in its fuel
+  (`exec_mono`, via `step_mono`: `step p k` is monotone in the continuation `k`) and a call's run
+  does not depend on the caller's locals (`invoke_loc`); `runF_spec` is the callee spec, and the
+  refinement goes back to the fuel-indexed model through `applyInd_spec` (`runF_some`). So the
+  line models gained a `Prog` parameter.
+* **`DIND` is `DLP`** (array 68), not a new array 69: one pool for the declarations' universe
+  parameters and the blocks' constant records, so `DeclAt`/`decl_push` stay as they are.
+  `DeclAt` is unchanged (lane `decls`' `DeclsR` relies on `indDecl` being `False` there); the
+  front's relation is `DeclsF`/`DeclAtF` (`StateDR.lean`), whose `.indDecl` arm is `IndDeclAt`:
+  the block decodes (`decCIs`, lane `pinsenv`'s `decCI` layout) in the pool truncated at a top
+  `t` (`trunc`, so later appends keep it).
+* **`vi_k_expected` compares with a heap `zero`** (`lh_mk(0,0,0)`, `lv_equiv`), which agrees with
+  the twin's `Level.isEquiv _ .zero` only on a well-formed name store: the apply step needs
+  `StateOK`. The driver's invariant `FrontInv` now carries con-ron's bridge invariant `TwinOK`
+  (`StateOK`, scratch off, `PinsOK`, `PersStateD`, `StateDRel` to con-leche's state), kept per line
+  by `ConRon.Bridge.Frontend.applyLine_run` and established by `StateD_init_run`; so
+  `frontRun_refines`/`frontAll_refines`/`frontAll_run`/`frontAll_x64` take `StateOK a₀`,
+  `a₀.store.scratchOn = false` and `PinsOK a₀`.
+* **Scratch arrays**: `IFR`/`IFL` (70, 71) below `2^62` words (`StateDR.ifs`), the level heap at
+  192: `frontAllProg_wf` is over 193 word arrays, `frontMemOf` has 224.
+* Census: `frontLine_refines` is `@[refines applyLine]`, `frontRun_refines` `@[refines
+  parseBytes]`; `processLineCoreD` is `COMPLETE_BY_PARTS` ("axiom, def, thm, opaque, quot",
+  "inductive"); new `@[refines]`: `validateIndD`, `installIndD`, `parseRuleD`, `piResultD`,
+  `indPiTeleLen`, `piSortTeleLen?`, `storeFuel`; parts: `parseCVD` (`ind_cv`), `viewN`
+  (`name_rec_pre`), `scanIndDecl` (`ind_fields`).
+
+Files: `IndRel`, `IndAlloc`, `IndApplySpec{,2,3}`, `IndApplyRefine{,2‥9}`, `IndValidTwin`,
+`IndInstallRefine{,2‥5}`, `IndApplyTwin`, `IndFields{Spec,Link,Link2,Link3}`, `RunModel`,
+`IndTest` (the `Unit` block through `front_run` of `frontAllProg`).
 
 ### `sorry`s
 None but stubs': `IndStubs.lean`'s stub specs (now incl. `lvl_eq` and `intern_nanon`, master
@@ -6023,9 +6060,13 @@ per entry to `docs/e2e.csv`.
   from the callee's parameters is redirected to a stub `__arity_<callee>_<n>` (so `Prog.wf` holds
   and a run that reaches it says so). Names bound to different bodies: the most common binding is
   used and the conflict is reported.
-* **The entry** (`Check.lean`): `check()` is `TwinAccepts`' pipeline: `intern_reserved_pins`,
+* **The entry** (`Check.lean`): `check()` is `TwinAccepts`' pipeline: `pb_check` (the pin-data
+  buffer in byte array 1 starts with `romData`; lane `romload`), `intern_reserved_pins`,
   `builtin_prelude`, `front_run` (`≠ 0`: return `1`, the frontend's reject), `prepare_prelude`,
-  `intern_all_pins`, `install_then_check`, `return ACCEPT`. `builtin_prelude` and
+  `intern_all_pins` (lane romload's `internAllPinsPB`, bound explicitly: three bodies carry the
+  name on master), `install_then_check`, `return ACCEPT`. The harness loads `lake exe romgen`'s
+  buffer (`natOpPinSets.take 1`, the single latest-toolchain variant) and the reference runs at
+  the same list (`e2e-ref --pins=1`). `builtin_prelude` and
   `prepare_prelude` have no L code, so every run of `check` stops there; `check_np()` is the same
   pipeline without the two prelude stages, a test entry whose reference is the twin's pipeline
   without them (`e2e-ref --no-prelude`). Not in `check` yet: the capacity checks at entry (in L a
@@ -6059,9 +6100,22 @@ per entry to `docs/e2e.csv`.
   a fixture where compiled code and `L.run` differ is listed separately (a compiler or harness
   bug).
 
-### First results (master `119a47c`, 675 fixtures)
+### Per-function differential tests (`e2e-diff`, `Diff.lean`)
 
-1176 functions with L code reachable from the entries, 48 stubs. `check`: all 675 stop at
+From one fixture, the twin's state after `internReservedPins`, `parseBytes`, `internAllPins` and
+L's memory after `e2e_front()` (the same stages): first the stores (node counts of all 19 cons
+tables, both tiers: what `ArenaR` relates), then up to 200 persistent expression handles, evenly
+over the ten expression tags, through `whnf`, `whnf_core` and `infer` on both sides (verified mode,
+the empty environment, depth 0), each from the same two states: agreement is the same handle word
+(`decE`) and equal store counts after. Under `L.run` the pin stage alone takes about 2 minutes (the
+interpreter copies the arrays a callee writes), so `e2e.py` runs `e2e-diff` on 24 fixtures and
+`L.run` on 12, spread over the files up to 20 KB (`--diff-sample`, `--interp-sample`); a full run
+takes about 17 minutes on 12 jobs. The comparison caught the e2e assembly's own mistake on its first
+run (an older `intern_all_pins` body: the stores differed on all 634 fixtures).
+
+### First results (master `3b96365`, 675 fixtures)
+
+1209 functions with L code reachable from the entries, 47 stubs. `check`: all 675 stop at
 `builtin_prelude`. `check_np`: 1 agree-accept (`long_line_5mib`: the frontend and the fold on a
 file without declarations to check), 38 agree-reject (35 by an `abort`; every one at the same
 stage as the twin: the inductive validation `validate_ind_d`/`vi_rec`/`vi_ctor` where the twin
@@ -6070,7 +6124,10 @@ missing (`basis_pin_hit` 552, `is_proj_fn_shape` 81, `rom_basis_decls` 2), 1 l-e
 disagreement. Compiled code and `L.run` agree on every fixture both ran. So far, wherever the
 twin's frontend accepts a file, L's does too (the unproved inductive lines included; the one
 exception is item 5 below), and the fold stops at its first stub on the first inductive or
-projection-shaped declaration.
+projection-shaped declaration. `e2e-diff`: the stores agree on all 22 sampled fixtures; `whnf`
+and `whnf_core` agree on 4317 of 4408 handles, both fail on 88, and 3 reach a stub (`find_proj`,
+`inst1`); `infer` (the empty environment: most terms name constants) agrees on 29 and both fail on
+the rest; no disagreement.
 
 ### Bugs found by e2e
 
@@ -6078,15 +6135,14 @@ Owners as in `docs/lanes.json`; reproducers are `scripts/e2e.py --only <fixture>
 assembly items, `docs/e2e.md`'s "Assembly" section (any run).
 
 1. **Modules that cannot be imported together** (one Lean file assembling the checker is
-   impossible until fixed; the e2e assembly works around it through text). At master `119a47c`:
-   `Arena/InferLeaves.lean` (defeq) and `Arena/DeclCvg.lean` (decls2) both define
-   `L.Arena.decCV_words`; `Arena/WhnfCoreProj.lean` (whnf) and `Arena/DefEqLeaves.lean` (defeq)
-   both define `L.Arena.lsNodeW_viewLen`; `Arena/WhnfDeltaRefine.lean` (whnf) and
-   `Arena/InferBodyLet.lean` (defeq) both define `L.Arena.CoreSpec.zero`;
-   `Arena/PromoteERef.lean` (decls2) and `Arena/DefEqLeaves2.lean` (defeq) both define
-   `L.Arena.lit_rec`; `Arena/PromoteRec.lean` (decls2) and `Arena/Walk.lean` (walk, done) both
-   define `L.Arena.clrK` (its `eq_1`). Earlier the same day also `WhnfCoreLoop`/`InferLeaves`
-   (`coreRef_congr`) and `WhnfCoreProj`/`InstListRefine` (`SpineR.of_spn`), since fixed.
+   impossible until fixed; the e2e assembly works around it through text). At master `3b96365`:
+   `Arena/DeclValRef.lean` (decls2) vs `Arena/DefEqLeaves.lean` (defeq), `decCI_defn`'s
+   auxiliary `_proof_1_6`, and vs `Arena/InferLeaves.lean` (defeq), `L.Arena.toNat_add_small`;
+   `Arena/WhnfCoreProj.lean` (whnf) vs `Arena/InstListRefine.lean` (exprops4),
+   `L.Arena.SpineR.of_spn`, and vs `DefEqLeaves` (defeq), `L.Arena.lsNodeW_viewLen`;
+   `Arena/PromoteRec.lean` (decls2) vs `Arena/Walk.lean` (done), `L.Arena.clrK`. Fixed during the
+   day: `InferLeaves`/`DeclCvg` (`decCV_words`), `WhnfCoreLoop`/`InferLeaves` (`coreRef_congr`),
+   `WhnfDeltaRefine`/`InferBodyLet` (`CoreSpec.zero`), `PromoteERef`/`DefEqLeaves2` (`lit_rec`).
    (`LiftBench`/`NatBits`, `L.Arena.bv`, is the known benchmark clash.) The current list is in
    `docs/e2e.md`.
 2. **Arity mismatches between call sites and definitions** (each would fail `Prog.wf`):
@@ -6096,14 +6152,17 @@ assembly items, `docs/e2e.md`'s "Assembly" section (any run).
    `whnf_top` exist (`WhnfEntry.lean`), the renames at about 25 call sites do not (owner:
    indproofs2). `fab_scope_ok` (`WhnfIota.lean`, whnf) calls `loose_bvars_bounded_fast` with 2
    arguments; exprops4's (`BvarB.lean`) takes 3 `(f, k, h)` (owner: whnf).
-3. **One name, two bodies**: `reserved_contains` is `reservedContains` (`IndIface.lean`, induct;
+3. **One name, several bodies**: `intern_all_pins` has three (`internAllPinsPB` in
+   `L.Rom.romProgPB`, an older one through `PinProg`, and `internAllPins_rom`'s ROM version; owner
+   romload: retire the old lookups). `reserved_contains` is `reservedContains` (`IndIface.lean`, induct;
    `DeclHeader.lean`'s lookups, decls2) and `reservedContainsL` (`WhnfIota.lean`, whnf; also
    `KnotWF.lean`). Pick one (owners: whnf, decls2).
 4. **Stub names that look implemented under another name and convention**: `abstract1_fast(4)`
    and `instantiate1_fast(4)` (decls2's stubs) vs exprops4's `abs_entry(3)`, `inst_entry(3)`;
    `inst1(3)` (defeq's stub) vs `inst_entry(3)`. The extra argument is the walk fuel of lane
-   induct's convention. Owners: decls2, defeq (rename or adapter).
-5. **Sparse export ids** (`e2e/rounds_huge_gaps`, ids up to `3·10^15`): the frontend's id tables
+   induct's convention. Owners: decls2, defeq (rename or adapter). `inst1` is what stops `whnf` on
+   a beta-redex in `e2e-diff` (136 handles over the fixtures in an unsampled run).
+5. *(Fixed by lane `twinaudit`: the id tables are `IdTable`s now.)* **Sparse export ids** (`e2e/rounds_huge_gaps`, ids up to `3·10^15`): the frontend's id tables
    are dense arrays (`NID`/`LID`/`EID`, lane front's design), so `name_fresh` aborts at its
    capacity check where the twin's hash maps accept. A completeness loss, not a soundness one;
    owner front (a hash-mapped id table, or accept the loss and say so).
@@ -6346,3 +6405,472 @@ Census at landing 2 (`--no-build`): phase 2 **142 proven, 19 sorry, 80 written, 
   `targetCtorsOf`, `targetRecPins`, `targetK53`, `class*Agree`, `classCtor(s)Of`, `classMajors`,
   `classSeeds`, `checkBlockClasses`, `genRecCheck` wait on other lanes' callees.
 * Census: phase 8 **67 proven, 62 sorry, 86 written, 8 todo**.
+### The middle layer (`DefEqMid*.lean`, helper `defeq-mid`)
+* Refined, no `sorry` (eight files, ~5800 lines, ~98 s CPU): `defeq_no_fvars`, `lazy_fold_ok`,
+  `bool_true_shortcut`, `try_unfold_proj_app`, `delta_quick`, `defeq_offset`, `defeq_lams_inner`
+  (`DefEqMid`); `defeq_lst`, `defeq_list_rev` (`DefEqMidLoops`); `defeq_peel`, `defeq_binders`
+  (`DefEqMidPeel`); `defeq_lams` (`DefEqMidLams`); `quick_defeq` (`DefEqMidQuick`, closes
+  `QuickDefeqSpec`); `defeq_spine` (`DefEqMidSpine`); `lds_left`/`lds_right`/`lds_both`,
+  `lazy_delta_step` (`DefEqMidLazy`); `lazy_delta_reduction` (`DefEqMidLazy2`). Each at L fuel
+  `n + 1` from `KnotUpTo p n`, against `coreKnot (decMode mode) fe id F`, `F ≥ n`.
+* **L split for the proofs** (same semantics, new functions with citations): `peel_leaf`,
+  `peel_dom`, `peel_step(2)`, `peel_push`; `lams_open`, `lams_inst`, `lam_pair`; `quick_sort`,
+  `quick_forall`, `quick_lam`; `spine_head`, `defeq_spine2`, `spine_cmp`; `lds_unfold2`,
+  `lds_same`; `lazy_nat`, `lazy_iter`; the loops of `defeq_lst`, `defeq_list_rev`, `defeq_peel`,
+  `defeq_lams`, `lazy_delta_reduction` as named blocks. `defeq_binders` pushes through
+  `peel_push`. Node reads go through `e_view`.
+* **L fixes** (words the twin reads differently): `spine_cmp` takes any `lvls_eq_c` word `≥ 2` as
+  `some true` and `lds_same` any hint kind `≥ 2` as regular (`decO`/`decHintW`'s readings);
+  `lazy_nat`/`lazy_iter` normalise a verdict word to `0`/`1`, and `lazy_iter` continues only on a
+  step answer `0` (any other word but `1`, `2` is `.unknown`, as `decDS`).
+* **Hypotheses** (`LazyCallees`): `InstListOK`, `Inst1OK`, `HasFvarOK`; `NatPredW` (`nat_pred`
+  with `ResW`: `natPred_refines` proves `ResH` only); `UnfoldDefOK`, `ReduceNatSpec` (lane `whnf`'s
+  theorems are `sorry`); `StoreDenotes` (a stored sort's level and a stored constant's level list
+  read back, which `lvl(s)_eq_c`'s refinements take as hypotheses). Depth `< 2^63` throughout.
+* The twin's `defeqPeel`, `defeqLams`, `lazyDeltaReduction` get no equation lemmas in the
+  heartbeat budget; their one-level unfoldings are stated with the recursion abstracted
+  (`peelLvl`, `lamsLvl`, `lazyLvl`) and proved by `delta` + `rfl`, as con-ron's bridge does.
+* Findings: (1) `finish (gen := N)` did not raise the term-generation limit here (the diagnostics
+  still said `gen := 8`); `sym (gen := 80) (instances := 5000) only [...]` did, and made the
+  specs with three or more calls and 4–5-tuple results pass. (2) A multi-pattern arm lemma whose
+  only binding of a variable is its right side is never instantiated: state the callee's run as
+  a hypothesis instead (`lamsW_inner`). (3) `omega` with `2^24` and `2^64` produced a proof the
+  kernel rejects (deep recursion), `docs/gaps/omega-kernel-deep-recursion-2pow24.lean`; stated
+  with the `@[noinline]` `peelFuel` it is an atom and fine.
+
+## Phase 5 finished: ι, the verified walks in the core, the stubs (2026-10-22, lane `whnf2`)
+
+### Landing 1: `CoreS` carries the walk memos and the binder stack bound
+* **`CoreS.memos : CoreMemos m`**: arrays 49 (`abs1C`) and 50 (`instLC`) hold well-formed memos
+  (`MemoRG` at *some* map). `instantiateListFast`, `abstract1Fast` and `abstractRangeFast` clear
+  their memo on entry and exit, so the twin's map never matters to a caller; what L needs is that
+  its epoch-bump clear starts from a well-formed memo (`memoRG_clear` assumes one). Stated over
+  the memory alone, the invariant survives every writer that avoids arrays 49/50 and `CTL[48]`/
+  `CTL[50]` (`CoreMemos.frame`, `frame_hi`), whatever the twin state does: no twin-side frame
+  needed. A walk call replaces the twin's map by any map (the first clear overwrites it).
+* **`CoreS.bstk`**: lane `defeq`'s binder stack (array 145) below `2^63` (their request, part 1;
+  part 2, `StackKept` keeping `BSTK`, is not done yet).
+* Construction sites (19, also in lane `defeq`'s `KnotSlot`, `DefEqLeaves2`, `InferBodyIntern`):
+  two more terms each; `arena_frame`/`arenaFrame` gain two auto-param avoidance hypotheses
+  (`:= by decide`), so their callers are unchanged; `CoreS.of_proj` now takes `mk_proj`'s fine
+  frame (`mkProjW_frameA`; the ROM's `StoreA` frame is all of arrays 0‥63); `CoreS.of_level`'s
+  counts are below 42 (was 64). `WhnfIotaRefine`'s `frW` is now `findRuleW` (it clashed with
+  `FVarRange.frW` once the walks are imported).
+* Provenance: the nine split functions of `WhnfDelta.lean` had no citation (`check` failed on
+  master); cited.
+
+
+### Landing 6: the frontend hook (helper `front`)
+* The front's chain covers `inductive` lines with no `sorry`: `validate_ind_d`/`install_ind_d`
+  refine `validateIndD`/`installIndD`, `apply_ind` the `.ind` arm of `processLineCoreD` (now in
+  `COMPLETE_BY_PARTS`), and `frontLine_refines` is `@[refines applyLine]`, `frontRun_refines`
+  `@[refines parseBytes]` (the "(inductive lines abort)" labels are gone). Details in helper
+  `front`'s own section above (route via `apply_ind` in `decl_val`, `Prog`-indexed line models,
+  `FrontInv` carrying con-ron's `StateOK`/`PinsOK`/scratch-off: new hypotheses of the capstone on
+  `a₀`, `DIND` = `DLP`). ~9.9k lines, 6.25 h.
+* Census: **parseBytes, applyLine, processLineCoreD, validateIndD, installIndD proven**; totals
+  586 proven / 105 sorry / 244 written / 417 todo of 1352 (before this landing 537 / 104 / 279 /
+  432); phase 8 unchanged at 67 / 62.
+
+## The checker as one program (2026-10-22, lane `integrate`)
+
+Lane `e2e` assembled the checker through a text dump because the lanes' modules could not be
+imported together and disagreed at call sites. This lane makes it one Lean program:
+`L.Checker.checkerProg` (`ConAgua/Checker/Prog.lean`), assembled by import.
+
+### Migration notes (integrate)
+
+Every edit in another lane's file is a rename or a call-site fix; no statement changed meaning.
+Merge master and adapt new uses:
+
+* **Declaration renames** (they made modules impossible to import together; the side renamed is
+  the one with fewer uses):
+  `WhnfIotaRefine3`: `arW` → `iotaArW` (clashed with `ArRange.arW`);
+  `DefEqMidPeel`: `internFVar_core` → `peel_internFVar_core`, `keeps_cpl_internFVar` →
+  `peel_keeps_cpl_internFVar`, `pushK` → `peelPushK`, `word_add_toNat` → `peel_word_add_toNat`
+  (and the use in `DefEqMidLams`);
+  `DefEqLeaves`: `lsNodeW_viewLen` → `defeq_lsNodeW_viewLen` (use in `DefEqMidPeel`),
+  `view_lit_nat` → `defeq_view_lit_nat`;
+  `DefEqMidQuick`: `eViewW_head` → `quick_eViewW_head`;
+  `InferLeaves`: `toNat_add_small` → `infer_toNat_add_small`, `decCV_words` → `infer_decCV_words`;
+  `InferBodyLet`: `CoreSpec.zero` → `CoreSpec.zeroLet` (uses in `InferBody{Bind,BindPi,Disp,Spine,SpineF}`);
+  `InferBodyBind`: `lamsW` → `inferLamsW`;
+  `WhnfCoreLoop`: `coreRef_congr` → `whnf_coreRef_congr`;
+  `WhnfCoreProj`: `SpineR.of_spn` → `SpineR.of_spn_core`;
+  `WhnfDeltaRefine2`: `viewLs_run` → `whnf_viewLs_run`;
+  `DeclValRef`: `decCI_defn` → `decls_decCI_defn`;
+  `PromoteLsRef`: `viewLs_run` → `promote_viewLs_run`, `lsNodeW_view` → `promote_lsNodeW_view`;
+  `PromoteERef`: `lit_rec` → `promote_lit_rec`.
+  Left: `LiftBench`/`NatBits` (`L.Arena.bv`), benchmarks only (not imported by the checker).
+* **Call sites.** `fab_scope_ok` (`WhnfIota.lean`) calls `loose_bvars_bounded_fast(4000000000,
+  0, fab)` (lane exprops4's `(fuel, k, e)`); `LooseBVarsBoundedFastOK` and `fsW`
+  (`WhnfIotaRefine3`) take the fuel word `4000000000` too. (indproofs2's `get_app_fn`/`get_app_args`/
+  `pi_result`/`whnf` call sites were already fixed on master.)
+* **One name, one body.** `reserved_contains`: the whnf/knot/defeq loop version
+  (`reservedContainsL`) is now the L function **`reserved_contains_w`** (`WhnfIota.lean`'s calls
+  and `IotaProg` field, `KnotWF.lean`, `DefEq.lean`'s three calls); `reserved_contains` is
+  `IndIface.reservedContains` (lanes induct/decls). `intern_all_pins`: `L.Rom.internAllPinsPB`;
+  the ROM-only versions (`RomCI.internAllPinsAt`, `Prelude.internAllPinsL`) are bound as
+  **`intern_all_pins_rom`** in their theorems (dead in the checker: lane romload may delete them).
+* **Adapters** (`ConAgua/Checker/Entry.lean`): `abstract1_fast(f, e, d, k)` → `abs_entry(e, d, k)`,
+  `instantiate1_fast(f, e, v, d)` → `inst_entry(e, v, d)`, `inst1(e, v, d)` → `inst_entry(e, v,
+  d)` (lane exprops4's entries; the fuel is unused). The stub specs of these names
+  (`IotaInst1OK`, lane induct's `RelAM`s) are now about the adapters: discharge them from
+  `instEntry_refines`/`absEntry_refines`.
+* **The inductive line hook**: lane indproofs2 landed it in `Line.lean` (with its proofs) while
+  this lane worked; the checker takes `L.Front.applyDLine`, and e2e's patch is gone.
+* **New rule: one name, one body, project-wide.** `scripts/checker_prog.py` fails if two non-stub
+  bindings of a name (any `Prog` constant, any `p.lookup "f" = some d` in a type) differ, or a
+  call's argument count differs from the callee's; it also needs every module importable together.
+  Run it (`--check` to verify `Prog.lean` is current) when you add or rename an L function.
+
+### Landing 1: `checkerProg`, the prelude stages, `check`'s entry
+
+* **`ConAgua/Checker/Prog.lean`** (generated by `scripts/checker_prog.py`; `--check` says whether
+  it is current): `checkerProg`, 1419 functions reachable from `check`, each the lanes' own
+  `FunDecl` constant, imported (110 modules); `checkerProg_wf : Prog.wf checkerTab checkerProg`
+  by `Prog.wf_of_wfFast (by decide +kernel)` (35 s with the file's `#guard`). `Prog.wf` includes
+  "every called name defined exactly once with the caller's arity" (`Nodup` of the names, every call
+  resolved). The generator imports all 391 non-benchmark modules in one closure (the clash list is
+  empty), asks `ConAgua/Checker/Sources.lean` for each binding's Lean term, and fails on two bodies
+  for one name or an arity mismatch. Called functions with no L code are `abortStub n`, listed in
+  `checkerStubs` (35).
+* **`ConAgua/Checker/Entry.lean`**: `check()` (moved from `E2E/Check.lean`), now first
+  `cap_check()`: every word array below `2^63` words and `CTL` at least 256 words, else abort
+  (ROADMAP §3's requirement; `arenaR_init`'s `64 ≤ |CTL|`, its pool bound). Not checkable in L:
+  an array of `2^64` words or more (`len` is mod `2^64`); `MemRel` in the final theorem rules
+  such arrays out, `PipelineRefines` (any `s64`) does not yet: it needs a size premise.
+  Also the adapters, `is_proj_fn_shape` (`NIdx.isProjFnShape`: the
+  `num`/`str` views, the pool bytes of `proj`/`projTable`) and `basis_pin_hit` (`basisPinHit`:
+  per kind, `rom_basis_decls(kind)`, the name pre-filter on the records' word 1, then
+  `canon_eq_list`).
+* **`ConAgua/Checker/Prelude.lean`**: `builtin_prelude()` runs **the frontend's own L code on
+  the prelude**: `preFn` renames a frontend function onto byte array `PRE` (2; the bytes copied
+  from the program constant `preludeBytes`, `preludeBytes_eq : preludeBytes =
+  preludeText.data.toList` by the kernel, 15 s) and the id tables `PNID`/`PLID`/`PEID`
+  (208‥210, so the stream's parse starts with empty id tables, as the twin's second `parseBytes`).
+  The generator copies the 129 functions reachable from `front_run` that touch the input or the
+  id tables (`pre_<name>`). `DECL`/`DLP`/`DIND` are shared: the prelude's records first, their
+  count in `CTL[240]`. `prepare_prelude()` is `frontOf` on `DECL` (each prelude record replaced by
+  the stream's first record declaring its key, which leaves the stream), then `hoist_ok`: the
+  ground hoist must be the identity (no pinned `Nat` operation's `natOpDeps` ground first declared
+  after it), else abort (a decline; the twin would reorder), then `DECL` rewritten in that order.
+  Proof obligations (no theorem yet): `preFn` preserves the frontend's refinement with the arrays
+  renamed; `frontRun_refines` from a `DECL` that already holds records; the two stages'
+  refinements.
+* **e2e** (`scripts/e2e.py`): the program is `checkerProg` plus `E2E/Check.lean`'s test entries
+  (`L.E2E.writeChecker`); `--text-dump` keeps the old assembly as a fallback. Byte arrays from 2
+  on get `CA_WORDS` bytes in the harness (and under `L.run`). A second reference: con-ron's Rust
+  binary (`nix develop` in a worktree of `_tmp/ref/con-ron` at `vendor/UPSTREAM`'s revision,
+  `cargo build --release -p con-ron`, `_tmp/ref/con-ron-integrate/target/release/con-ron`;
+  `$CON_RON` overrides), run as `con-ron --jobs=1 --pins P` with `P` the same single pin variant
+  in its `con-ron-pins/1` format (written by `ConRon.Dump.dumpPins`, now built as a root of
+  `ConRonArena`); and `instructions:u` of compiled `check` vs con-ron on fixtures both accept.
+### Landing 3: the opaque arm, the axiom tests (`DeclBasisSpec2`, `DeclReduceSpec2`, `DeclReducePin`, `DeclArmOpaque`, `DeclAxiomSpec*`)
+
+* **Refined** (through the ROM stubs and, for `checkReducePin`, the core's and the walks' stubs):
+  `checkBasisDecl`, `reduceStoredOk`, `reduceElemOk`, `checkReducePin`, `ofReduceAxOk`,
+  `trustCompilerOk`, `stdAxiomOk`; **sorry-free**: `IConstantVal.matchesPin` (helper
+  `decls3-canon`'s `cv_eq`: word equality is the derived `decide (cv = pin)`, `matchesPin_eq`).
+* **The opaque arm at the loop's relation is proved** (`checkDeclOpaque_loop'`): the pushed view
+  `vis2` for `check_reduce_pin`, which runs its gate at the pre-insertion view: `StageR.restrict`
+  (the stage relation at another view of the same index, `EnvR.restrictTo`) and back, no frame
+  argument needed. `CheckDeclProg` gains `crp`; `checkDecl_loop` and the skeleton's
+  `DeclCallees` take **`DnInj dn`** (the name decoding injective: comparing constant records reads
+  `PropWhen`'s names through it; the top level's `dn` is the store's `denoteN`).
+* **The twin's nested matches, flattened.** `trustCompilerOk`/`stdAxiomOk` nest `match fe.find? (←
+  name) with | some (.ctorInfo cv 2 2) => … | _ => pure false` three deep. A relational lemma
+  cannot rewrite with a lemma about such a `match` (the auxiliary matcher of the lemma is not the
+  definition's), so: the shape test as a partial function (`fpShape k a b ci : Option
+  IConstantVal`), one clause `clausePT fe n k a b T` (match on `(fe.find? n).bind (fpShape …)`),
+  and one equation per twin function proving it equals the chain of clauses
+  (`trustCompilerOk_eq`, `stdAxiomOk_eq`: `congr`/`funext` through the binds, `cases` on the
+  stored constant at each clause; generated, ~100 lines). The L clause (`find_pinned`) is then
+  proved once against `clausePT` (`fpW_ok`: the kind and count words against the shape,
+  `fp_fail`/`fp_pass`).
+* L changes: `std_axiom_ok`'s two families are one function `std_ax_family(vis, q, s1, s2, s3, i1,
+  i2, i3, c2, c3, cvid)` (one model; the inline version ran `finish` out of instances); a handle
+  guard after `reduce_cert_var` (`is_def_eq_core`'s spec); words loaded into locals before calls
+  in `of_reduce_ax_ok`. Note on `finish`: `(instances := 5000)` is a valid config item (the default
+  `1000` ran out on an 11-parameter function).
+* Helper `decls3-canon` merged in interim (record equalities `cv_eq`/`ci_eq`/`find_is`, `ci_to_cv`,
+  stage lemmas for `intern_nanon`/`intern_nnum`/`intern_succ`); its `rdW_grow` renamed
+  `cnRdW_grow` (clash with `IndPos2SpecA`).
+
+`sorry`s now (lane `decls3`): `checkDeclAxiom_loop`, `checkDeclDefn_loop`, `checkDeclQuot_loop`
+(the opaque arm's is proved), the five ROM stub specs, `lvlEqStub_spec` (lane `induct`'s, now on
+`lvl_eq_c`), `promoteNew_spec` (helper running).
+
+Census at landing 3 (`--no-build`): phase 2 **145 proven, 26 sorry, 71 written, 89 todo**.
+
+### Landing 6: the stuck/irrelevance side (`DefEqStuck*.lean`, helper `defeq-top`)
+* Refined (no `sorry`, ~4.9k lines, 81 s CPU): `prop_irrel`, `eta_cert`, `eta_ctor_shape`, the
+  structure-η certificate (`struct_eta_cert*`), `struct_unit_cert`, `stuck_irrel`, `stuck_str`,
+  `stuck_app`, `defeq_stuck`, `defeq_proj_pair`, `lazy_delta_proj_reduction`, `defeq_tail`.
+  Hypotheses (`StuckCallees`): `DefeqLstOK`, `LazyDeltaStepH` (both proved by `defeq-mid`: to be
+  plugged in), `ProofIrrelOK` (lane whnf's `proofIrrel_refines` has two more premises, `n ≤ 2^62`
+  and the eager bit: add them here when plugging), `ReduceProjCoreH`, `Inst1OK`,
+  `TowerSlotsAllOK`, `StrLit*`, `SupKeep`, `ReservedContainsOK`, `LvlsEqCH` (needs the "stored
+  level lists denote" invariant, as `InferProjOK`).
+* L: `eta_cert_body` aborts on depth wrap; `defeq_stuck`'s constant arm reads a level verdict
+  `≠ 1` as true (`decO`); proof splits as listed in the helper's commits; one test per `if` took
+  `defeq_stuck`'s spec from ~2 min to 3 s.
+* Merge with lane `integrate`: duplicate top-level names between helper files clash in
+  `scripts/checker_prog.py` (`decDS`, `decOptR_*`, `growRef_*`, the `Inhabited DeltaStepA`
+  instance, now in `DefEq.lean`): the stuck files' copies are suffixed `S`. `Checker/Prog.lean`
+  regenerated (1467 functions).
+* Left for the lane: `defeq_body` itself, plugging the proved specs into the hypotheses, the knot
+  induction (`KnotUpTo p n → KnotOK p (n + 1)`), `infer_proj`, and the `CoreS` invariants above.
+
+### Landing 2: exact walk counters, the walks and `nat_op_result` under `CoreS`, `major_to_ctor`
+* **Exact `coreWalkFuel` counters** (helper `whnf2-walks`, ROADMAP §3 (b)): `fr_go`/`fr_memo`,
+  `bb_go`/`bb_memo`, `inst_go`, `il_go`/`ilg_go`, `abs_go`/`ab_node`, `ar_*` take the twin's depth
+  counter as an L argument (`if f == 0 { abort }`, children at `f - 1`; `abstract1`'s cut-off
+  `ab_fvb(h, f - 1)`, as the twin's `fvarB fuel h` at the decremented fuel). The entries keep their
+  arity and start at `4000000000` (`coreWalkFuel_toNat`); `bvar_b`/`loose_bvars_bounded_fast`/
+  `has_fvar_fast` use their (formerly unused) `f`. Statements: twin at exactly `c.toNat`, any L
+  fuel; the bb/fr walks also at any `F` with `c.toNat ≤ F ∨ n ≤ F` (`*_correctF`, `bvbW_okF`), which
+  lane `indproofs2`'s counter-less `has_loose_b_var_b_go` needs (its `bvbW_stage`; `IndSumSpec5`
+  adapted minimally; that walk itself still has no exact counter: lane `indproofs2`'s).
+* **Result words.** `CoreSpec`'s default post wants the result *word* below `2^32` (callers compute
+  with it; `decE` truncates). The four entries (`inst_entry`, `inst_list`, `abs_entry`,
+  `ar_entry`) return `r & 4294967295` and post `(r.headD 0).toNat < 2^32`; the Boolean ones post
+  `≤ 1`; `reduce_nat_op` normalises `nat_op_result`'s pair (`u64(rf != 0)`, `rh & 4294967295`):
+  the same values under `decE`/`decOpt`, one `and` each.
+* **`CoreWalks.lean`**: `CoreS.of_walk` (an L frame below 64, `cpl` kept, the walk memos given),
+  `Keeps cpl` for every core walk (`keepsL_auto`, `cpl`'s primitives; the memo probes under
+  `with_reducible`, else unification unfolds `instLGet` against `inst1Get` and times out), and the
+  bridges `instListOK_core` (`WhnfCallees.instList`), `inst1_core` (`CoreCallees.inst1`: one
+  `FunDecl`, `instEntry`, at the two names `inst_entry`/`inst1`), `lbb_core` (`IotaCallees`;
+  `fab_scope_ok` now passes the counter), and lane `defeq`'s `abs1_core`, `absRange_core`,
+  `hasFvar_core` (`Knot.lean`'s `Abstract1OK`, `AbstractRangeOK`, `HasFvarOK`, same statements).
+  The walk-memo trick: the twin's run from `a₀` *is* its run from `a₀` with `instLC`/`abs1C`
+  replaced by `CoreMemos`' map (the entry clears it first: `rfl`), and `ArenaD` does not read those
+  memos (`ArenaD.memo_irrel`); `ar_entry` at `k = 0` changes nothing and is a separate case.
+  The stub bundles still carry these fields (`whnfCallees_stub` …): replacing them needs program
+  hypotheses (`InstListProg p`, …) on every census-tagged theorem; done together with the knot.
+* **`nat_op_result` under `CoreS`** (first assumed fact, gone): `CoreAgree.lean`'s
+  `exec_agree`/`invoke_agree` (programs agreeing on a call-closed set run it alike; `closedW` is the
+  closure witness) move lane `pinsenv`'s `natOpResultL_refines` from `natArmProg` to any `p` with
+  `WhnfDeltaProg'.natAgree` (new field; `natClosed` now a theorem); `CoreNatOp.lean`'s `LeafOp`
+  (a twin step interning only `lit`/`const` leaves keeps `cpl` and carries `DerR` at any memory)
+  gives the rest. `natOpResultOK_stub` deleted.
+* **`major_to_ctor`** (helper `whnf2-m2c`): split into 12 L functions (`WhnfM2C.lean`: head,
+  constructor, the constant view, the three arms and their halves, a shared type check), proved
+  (`WhnfM2CRefine{,2..5}.lean`, `majorToCtor_refines'`, axioms `propext`/`Classical.choice`/
+  `Quot.sound`; new hypothesis `ProofIrrelOK`, the statement of `proofIrrel_refines`, which rests
+  on `CoreS.lvl_den`). `major_to_ctor` puts `CTL[136]` back. The tagged `majorToCtor_refines` and
+  `prepareMajor_refines` now live in `WhnfM2CRefine5` (import order). ~150 L lines, 2634 proof
+  lines; `WhnfM2CRefine` 33 s user, the rest 1–3 s.
+* **`iota_rec_at`** (helper `whnf2-rec`): split into nine L functions (`WhnfIotaRec.lean`:
+  head, constructor/rule lookup, major, the verified-checks block and its comparison, the result),
+  proved (`WhnfIotaRecRefine{,2,3}.lean`, `iotaRecAt_refines'`, three standard axioms). New named
+  hypotheses (not `sorry`): `ErecKeptRec` (the iota callees leave the record pool alone),
+  `LvlsEqDen` (a successful `lvls_eq_c` under `CoreS` reads both lists back), `RecShape` (a stored
+  recursor has `rP ≤ mI + 1` and plain rules `ctorParams ≤ rP`: an environment invariant, like
+  `CoreS.lvl_den`). L fixes against the twin: a nested rule's pins are copied from `EREC` to the
+  stack before `rec_fire_args`; `lvls_eq` → the cached `lvls_eq_c` read as `liftFueled` (`0` aborts);
+  `const_ty_at` keyed on the stored constructor name; `peel_pis` before the level-count test;
+  word-overflow-free arity tests; the spurious `len(SPN) < so + rP` abort removed; the stack top
+  restored. ~116 L lines, ~2940 proof lines, 26 s user.
+* Merging: lane `integrate` renamed `reserved_contains` → `reserved_contains_w` (one body per name),
+  the m2c pieces follow; lemma-name clashes with lane `defeq`'s files renamed on this side
+  (`*_m2c`, `*_rec`, `exec_agreeOn`); `ConAgua/Checker/Prog.lean` regenerated
+  (`scripts/checker_prog.py`, `--check` clean).
+* Census, phase 5: **67 proven / 23 sorry / 28 written / 24 todo** (start: 62 / 26 / 29 / 25);
+  phase 4: 63 proven (+1). The `iota` targets stay "sorry": the tagged statements instantiate the
+  stub bundles (`iotaCallees_stub`, `whnfCallees_stub`, `coreCallees_stub`, the knot).
+
+## The id tables as the twin's `IdTable`; the deviations list (2026-10-22, lane `twinaudit`)
+
+### Landing 1: dense array plus sparse overflow (`Front/IdTable.lean`)
+
+The front's id tables were dense word arrays (`NID`/`LID`/`EID`, entry `h + 1`, `0` unset) that
+aborted on an id at or past the array's end, where con-ron's `StateD` keeps con-leche's `IdTable`
+(`Scan/Types.lean:330`): a dense `Array` grown by `push` at its frontier and a `Std.HashMap Nat`
+for gaps and out-of-order ids. `e2e/rounds_huge_gaps` (ids up to `3·10^15`) was declined (e2e
+item 5). Now each table `b` is
+
+* the dense part: array `b` with its size in `CTL[b + 6]` (`70‥72`), entry `i < size` the handle
+  word itself (no `+ 1`);
+* the sparse part: a memo-library table (`MemoLib.lean`, one-word keys, value = handle word) at
+  array `b + 8` (`72‥74`), stamp/count `CTL[2b − 64]`, `CTL[2b − 63]` (`64‥69`).
+
+`tbl_get`/`tbl_fresh`/`tbl_put` are generic in the table (`tblGetG b fnd`, the memo's `find`/`put`
+spliced in as `⟪.call …⟫`), with one `vcgen` proof each; `name_get`, `level_get`, `expr_get`,
+`*_fresh`, `name_put`, `level_put`, `expr_put` are instances. `tbl_put` is `IdTable.insert`
+arm for arm: at the frontier a push (when below the array's capacity), below it an overwrite,
+past it the sparse map. The `apply_*` functions and `front_init` call `*_put` instead of writing
+`ID[i] := h + 1`; their models are unchanged (`putK` now ends in `tblPutW`).
+
+The relation `TblR m b t` (was `TblR (m.arr64 b) t`): the dense entries below the size are `t`'s
+(handle words below `2^32`), and some `sp` with `MemoRV (spS b) idKey hVR m sp` gives `t.get?` at
+every id word at or above the size. Lemmas: `TblR.read`/`fresh` (same statements as before),
+`TblR.put` (one per `insert` arm: `memoRV_set` for the sparse one), `TblR.frame`/`frameD`,
+`TblR.zero`; `tblOK_congr`/`tblW_congr` take a `TblSame m m' b` (the two arrays and the two `CTL`
+words the reads see; `TblSame.of_eq`, `of_frame`, `of_frameD`). `StateDR.frame`,
+`StateDR.put{Name,Level,Expr}` and `levelFinish` take the frame's arrays outside `idArrs` and
+`CTL` words outside `idCtl` (default tactic `tctl`); `StateDR.putX` takes `tblPutW m₁ X i w =
+some m₂` instead of the bound `i < size`; `ArenaD.setT` is `ArenaD.putT`; `Above64`
+(`ApplyExprRefine.lean`) also fixes the `CTL` words `≥ 64`. Nothing else changed: every
+refinement (`frontAll_refines`, `applyNStr_refines`, …, the inductive lines' `IndApply*`) is
+sorry-free as before, and `#guard`s cover ids past the dense array, out of order, and a rebound
+sparse id. `frontAllProg` runs `rounds_huge_gaps` to `front_run = 0` (`#eval`, 4096-word arrays).
+
+Differences from the twin that remain (listed in `docs/deviations.md`): the id word `NONE =
+TOMB = 2^64 − 1` is refused on the sparse path (ids past 18 digits already were); the dense array
+stops at its capacity (the ids go sparse, up to the memo's 3/4 load); `IdTable.bound`'s
+`sparse.isEmpty` shortcut is not mirrored (the memo's count is not tied to the map's emptiness;
+`tbl_fresh` probes one slot when the map is empty).
+
+`scripts/e2e.py` caps `e2e-diff`'s dense id arrays at `DIFF_BIG_WORDS` (they were sized to the
+largest id). For lane `integrate`: test memories need arrays up to `74` and `CTL` up to word `72`
+(`frontMem`, `exprMem`, `declMem` are 75 × 128 words now).
+
+The checker program (lane `integrate`'s `checkerProg`): the prelude parse's copies (`preFn`) rename
+the sparse arrays `72‥74` to `211‥213` and the `CTL` words `64‥72` to `241‥249`
+(`Checker/Prelude.lean`, `preCtl`; `scripts/checker_prog.py`'s `TOUCH` copies every function that
+touches them); `wordArrays` is 214. `checkerProg` was extended by hand (the generator stops at
+import clashes between other lanes' modules on master); a rerun of the generator gives the same
+bindings. `scripts/e2e.py --only huge`: `rounds_huge_gaps` now gets through the front on x64 and
+stops at the stub `rom_basis_decls` (it aborted in `name_fresh` before).
+
+**For other lanes** (mechanical): `TblR (m.arr64 NID) t` → `TblR m NID t`; a frame proof
+`rw [hf.1 NID …]; exact h.names` → `h.names.frame hf (.inl rfl) (by simp [..., idArrs]) (by simp)`;
+`lkW_congr` takes a `TblSame` (`IExt.tbl`).
+
+### Landing 2: the deviations audit (`docs/deviations.md`), and a PLAN.md rule
+
+Every place where L deliberately does something else than its twin (beyond fuel and fixed
+capacities) is now a row of `docs/deviations.md`: where, what the twin does, what L does, the
+effect (completeness / performance / none), the owner, a proposed fix. Sources: this journal
+(grep for "for now", "aborts", "deviat", "simplif", "not represented", …), `docs/progress.md`'s
+partial refinements, the L code's comments, `docs/e2e.md`. First count: 17 open (5
+completeness, 5 performance, 7 none), 13 fixed (among them the id tables, landing 1, and
+`iota_rec_at`'s `lvls_eq`, fixed by lane `whnf2` meanwhile).
+
+The work queue, by priority:
+* **D1 (decls3): `and_pin_ok` has no `indDecl` arm.** The twin's `andPinOk` checks an inductive
+  block that names `And`/`And.intro`/`And.rec` against the pinned block; L reads the record's name
+  word (unset for kind-6 records) and answers "free". Harmless while the declaration loop never
+  sees an inductive record, a soundness gap as soon as it does (the front produces them since
+  indproofs2's landing 6). Must land before the loop accepts kind-6 records.
+* D4 (decls3): `check_div_mod_pin_loop` aborts inside an attempt where `orElseAttempt` recovers;
+  then D5 (integrate): load all three pin variants in the e2e harness.
+* D7 (indproofs2): `target_class_match` calls the uncached `lvls_eq`; call `lvls_eq_c`.
+* D2, D3, D6: exotic inputs (numbers past 18 digits, escaped `safety` strings, unusual pin data).
+* D8 (`tbl_fresh` probes where `IdTable.bound` tests `sparse.isEmpty`), D10‥D12 (append-only
+  pools, byte-per-word strings, no memo compaction): performance.
+
+Trivial fixes made here: stale comments that still described fixed deviations
+(`Front/Line.lean`'s header, `Front/ApplyExpr.lean`'s `strVal`/`natVal` note,
+`Arena/LevelEquiv.lean`'s "`lvlEqC` not represented"). Not touched, for the lanes editing them:
+`Arena/Prelude.lean:12` and `Arena/DeclArmsNat.lean:28,1073` still say the ROM has no `Nat`
+pin variant "for now" (lanes `integrate`, `decls3`).
+
+PLAN.md, process rules: a deviation gets its row in `docs/deviations.md` in the commit that
+introduces it; the coordinator reviews the list at each batch of landings.
+
+### Landing 3: six phase-5 targets sorry-free on the real walks (`WhnfTagged.lean`)
+* A dependency scan (each tagged theorem's transitive constants that are `sorry`'d theorems) showed
+  which stub *fields* each tagged statement really used. `beta_peel`, `iota_certs_full(_aux)` used
+  only `WhnfCallees.instList`; `pi_residual`, `inst_spine`, `iota_index_ok` only
+  `IotaCallees.inst1`. Their primed theorems now take `InstListOK p` / `IotaInst1OK p` instead of
+  the bundles, and the tagged ones live in `WhnfTagged.lean` (after `CoreWalks.lean`), given the
+  walks' programs `CoreWalkProg p`: **sorry-free** (`pi_residual` newly tagged).
+* Census, phase 5: **79 proven / 19 sorry / 20 written / 24 todo**; phase 4: 65 proven, 0 sorry.
+* What the remaining phase-5 `sorry`s wait for (scan): `instLP` (`const_ty_at`, `rule_rhs_at`,
+  `inst_spine_pins`, `rec_fire_args`: the phase-4 `instLPFast` walk is not written),
+  `wscoped_bfast`/`leaf_guard` (`fab_scope_ok`), `find_proj`/`fire_ok`/`ProjFound`
+  (`tower_slots_all`, `and_rescue_slots`, the projection arm), the string-literal stubs and
+  `supKeep_twin` (`lit_major_to_ctor`, `proj_lit_to_ctor`), `CoreS.lvl_den` (`proof_irrel`), the
+  knot's `infer`/`defeq` steps (`WhnfCallees.inferStep` …; lane `defeq`), `erecKept*`, and
+  `whnfGrowsUpTo_stub` (`reduce_nat`).
+
+### Open handoffs (lane `whnf2` closing)
+* **`whnfGrowsUpTo_stub`** (the second assumed fact) stays. A `whnf` call must leave the limb pool
+  below its old top alone and the top no lower (`reduce_nat_op` holds the first literal's pool slice
+  across the second `whnf`). Three routes were weighed: (1) a write-set argument (`closedW` with the
+  pool outside the write set) fails because the `Nat` arithmetic does write the pool (above the
+  top), and its frame holds only under argument preconditions a text check cannot see; (2) re-reading
+  the first literal after the second `whnf` needs the twin's store to keep every node's view across
+  `whnf` (a `Keeps`-style induction over the whole knot, ~150 twin definitions); (3) carrying the
+  growth in the core's post: `CoreAfter` (or `StackKept`) gains `PoolGrew m₀ m` (pool below `m₀`'s
+  top unchanged, top no lower, sizes equal), proved at the leaves from frames avoiding `POOL`/
+  `CTL[0]` and from the `Nat` functions' `Grows`, and composed by `CoreAfter.trans`/`comp`. Route
+  (3) is the one; it touches every explicit `StackKept`/`CoreAfter` construction and destructuring
+  (~300 sites, about half in lane `defeq`'s files), so it should be done together with lane
+  `defeq`'s request part 2 (`StackKept` keeps `BSTK`, array 145 / `CTL[137]`), in one sweep when
+  `defeq` is between landings. Suggested shape: `StackKept m m'` becomes a `structure` with named
+  fields (`top`, `size`, `below`, `bstk`, `pool`) so that later additions do not move projections.
+* **`CoreS.lvl_den`** (`proof_irrel`): needs "every stored level handle reads back", a store
+  invariant the twin's WF gives but `CoreS` does not carry; adding it means maintaining it at every
+  level-node and sort-node interning (`CoreS.of_level`, `arena_frame`).
+* Remaining stub fields whose L code does not exist: `instLP` (phase 4 `instLPFast`),
+  `strLitCtor`/`strLitSupported`, `find_proj`/`fire_ok` (+ `ProjFound`, `ProjSmall`),
+  `wscoped_bfast`, `leaf_guard`, `caps_never_zero`, `rec_fire_levels`; `supKeep_twin`,
+  `erecKeptInst_stub` (its `inst_spine` half is provable now from `instEntry_frame`; `inst_lp`'s is
+  not), `erecKeptKnot_stub` and the knot steps (lane `defeq`). The new named hypotheses of the iota
+  proofs (`ErecKeptRec`, `LvlsEqDen`, `RecShape`, `ProofIrrelOKM`) are listed above.
+
+### The knot tied (`DefEqBody.lean`, `DefEqKnot.lean`, helper `defeq-knot`)
+* `defeqBody_refines`: `DefeqBodySpec p n` is a theorem (from `DefeqBodyCallees` = `StuckCallees` +
+  `LazyCallees`); `defeqSlot_step` = `defeq_refines` on it. The twin side is split once
+  (`defeqBodyRestT`, `defeqBody_eq` by `rfl`); the proof is the `callW` chain of ten calls, 356
+  lines, ~8 s CPU. `DefeqBodySpec` gains `n ≤ 2^62` (`defeq_refines` has it).
+* L changes in `defeq_body`: it aborts at `d ≥ 2^63` (as `infer_lam`: `quick_defeq` and the lazy
+  loop need the bound, the slots do not carry it); `if lk != 2 { return lk }` became two tests
+  `lk == 0`/`lk == 1` (`decLR` reads any other word as `.unknown`; `Res3` does not bound `lk`).
+* Hypothesis shapes adjusted to the proved theorems: `ProofIrrelOK` (and `proofIrrel_at`) take
+  `n ≤ 2^62` and the eager bit, `propIrrel_refines` takes `n ≤ 2^62`; `LazyDeltaStepH` takes
+  `d < 2^63`, threaded through `ldprW_ok`/`ldpr_refines`/`ldpr_at`/`projPair_refines`/`projPair_at`/
+  `defeqTail_refines`; `LazyCallees.reduceNat` is `∀ n, n ≤ 2^62 → ReduceNatSpec p n`.
+* Plugged (`DefEqKnot.lean`, one wrapper each): `lazyDeltaStepH_of`, `defeqLstOK_of`,
+  `isEagerReduceH_of`, `reduceNat_of` (lane `whnf`'s `reduceNat_refines'`, over its
+  `NatOpResultOK`/`WhnfGrowsUpTo`), `proofIrrelOK_of` (lane `whnf`'s `proofIrrel_refines`; it uses
+  `CoreS.lvl_den`, a `sorry`, so `ProofIrrelOK` stays a field).
+* **The knot**: `knot_step : KnotUpTo p n → KnotOK p (n + 1)`, `knot_all : ∀ n, KnotOK p n`
+  (fuel `0` by `CoreSpec.zeroLet`), both over `KnotAllProg p` (lookups) and ONE structure
+  `KnotCallees p`; no `sorry` (axioms: `propext`, `Classical.choice`, `Quot.sound`).
+  `whnfCallees_of` gives lane `whnf`'s `WhnfCallees` (its `inferStep`/`inferIOStep`/`defeqStep`
+  are the slot steps; `instLP` an argument). No circularity: no lane `whnf` proof uses those three
+  fields.
+* `KnotCallees`' fields, and why each is left: `whnfCoreStep`, `whnfStep` (lane `whnf`'s
+  `whnfCoreSlot_step` and `whnf_refines` chain are proved over `whnfCallees_stub`/
+  `coreCallees_stub` instantiated inline: `knotWhnfCore_twin`/`knotWhnf_twin` give them modulo
+  those `sorry`s; taking the bundles as hypotheses there would make them plain fields here);
+  `defeq` (`DefeqCallees`: `has_fvar` and the phase-4 walks need the `CoreS` bridge,
+  `not/is_proof_fast`, `field_sort_zero`); `proofIrrel` (above); `inst1`, `instList`
+  (stubs); `reservedContains`, `towerSlots`, `strLitSupported`, `strLitCtor`, `supKeep`, `store`
+  (no proofs yet); `lvlsEqC` (the "stored level lists denote" invariant); `reduceProjCore` and
+  `unfold` (lane `whnf`'s proofs take all of `WhnfCallees`, which holds the steps proved here:
+  generalize them to the fields they use, `instLP`, to plug); `natPred` (`natPred_refines` posts
+  `ResH`, the hypothesis `ResW`); `natOpResult`, `whnfGrows` (lane `whnf`'s); `constTy`, `lit`,
+  `bstk`, `bcap`, `proj` (the inference side, landing 4).
+### Landing 4: the quotient and axiom arms; `and_pin_ok`'s inductive arm in L
+
+* **`checkDecl_loop`: every arm's spec is proved but the definition arm's** (`DeclArmQuot.lean`,
+  `DeclArmAxiom.lean`; `@[refines_part checkDecl "one-constant records"]`). The quotient arm
+  (`quot_pin_hit`: the pinned block's constant at the record's slot, `ci_to_cv`, `cv_canon_eq`) and
+  the axiom arm (`Quot.sound` against the block's slot 4 by `ci_canon_eq`, the constant check,
+  `std_axiom_ok`/`trust_compiler_ok`/`of_reduce_ax_ok` then the push, `propext`/`choice` declining,
+  `sorryAx` skipped) at `LoopR` through the arms' text (now covering both: real interns
+  `intern_zero/succ/sort/nanon/nnum` in `armMasterFns`; `closedA` by `decide +kernel`, 8 s).
+* **Hypotheses instead of the helper's not-yet-landed specs**: `CvCanonSpec p` / `CiCanonSpec p`
+  (fields of `QuotProg`/`AxProg`, inside `CheckDeclProg`): the `RefAM` statements of `cv_canon_eq`,
+  `ci_canon_eq`. Helper `decls3-canon` proves the canonical comparisons; its `canon_expr_eq` takes a
+  literal-injectivity hypothesis (`LitInj`), which these statements will gain when its specs land.
+* **`and_pin_ok` has the inductive arm in L** (`and_block_named` over the block's records in
+  `DLP`, then for a two-parameter block `canon_eq_list` of the block (copied by
+  `ind_block_to_erec`, `er_to_iw`) against `rom_and_pin()`, a new ROM stub with spec
+  `romAndPin_spec`). The proof stays `refines_part … "one-constant records"`: `LoopR` still holds
+  the one-constant `DeclsR`; the inductive arm becomes provable once the loop's relation takes the
+  front's `DeclsF` (lane `indproofs2`'s `DeclAtF`/`IndDeclAt`, now on master) and `canon_eq_list`
+  is in.
+* **For every lane that changes L code reached from `check`**: rerun `scripts/checker_prog.py`
+  (regenerates `ConAgua/Checker/Prog.lean`, lane `integrate`'s whole program); a stale file fails
+  `checkerProg_wf` in the kernel.
+
+`sorry`s now (lane `decls3`): `checkDeclDefn_loop`; the six ROM stub specs (`romAndPin_spec` new);
+`lvlEqStub_spec`; `promoteNew_spec` (helper running). Census at landing 4: phase 2 **146 proven,
+26 sorry, 73 written, 86 todo**.

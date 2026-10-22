@@ -18,7 +18,7 @@ meta import ConAgua.Arena.ProjStore
 
 `bb_bench(n, k)` builds the left-nested term `app (… (app (bvar k) (bvar k)) …) (bvar k)` with `n`
 applications by interning (`intern_bvar`, `intern_app`) and returns its handle (`k ≥ 2^63`: the
-build only) or `bb_memo` of it (`k + 1`). The walk recurses `n` deep through the `f` children.
+build only) or `bb_memo` of it (`k + 1`), at the depth counter `n + 10` (`WalkBenchLean.lean`'s twin fuel). The walk recurses `n` deep through the `f` children.
 `#guard`s run the walk on small terms in the L interpreter; `WalkEmit.lean` compiles `benchProg`
 for `harness/walk.c`, which runs it natively.
 -/
@@ -35,7 +35,7 @@ def bbBench : FunDecl := lfn (n, k) locals (b, x, i, r) {
     i += 1
   };
   if k >> 63 != 0 { return x };
-  r := call bb_memo(x);
+  r := call bb_memo(x, n + 10);
   return r
 }
 
@@ -72,7 +72,7 @@ def walkRun (fuel : Nat) (f : FnName) (args : List Word) (m : Mem) : Option (Wor
     | some (b2, m) => match walkRun 100 "intern_sort" [0x10000000] m with
       | some (s, m) => match walkRun 100 "intern_app" [b2, b0] m with
         | some (ap, m) => match walkRun 100 "intern_letE" [b0, s, ap] m with
-          | some (le, m) => (walkRun 100 "bb_memo" [le] m).map (·.1) == some 2
+          | some (le, m) => (walkRun 100 "bb_memo" [le, 100] m).map (·.1) == some 2
           | none => false
         | none => false
       | none => false
@@ -89,13 +89,20 @@ def walkRun (fuel : Nat) (f : FnName) (args : List Word) (m : Mem) : Option (Wor
         | some (b3, m) => match walkRun 100 "intern_proj" [0x10000000, 0, b3] m with
           | some (pj, m) => match walkRun 100 "intern_forall" [b1, pj] m with
             | some (fa, m) => match walkRun 100 "intern_lam" [fv, fa] m with
-              | some (la, m) => (walkRun 100 "bb_memo" [la] m).map (·.1) == some 2
+              | some (la, m) => (walkRun 100 "bb_memo" [la, 100] m).map (·.1) == some 2
               | none => false
             | none => false
           | none => false
         | none => false
       | none => false
     | none => false
+  | none => false
+
+/- The depth counter: `bvar 0` needs one level; at `0` the walk aborts (the twin throws). -/
+#guard
+  match walkRun 100 "intern_bvar" [0] (walkMem 16) with
+  | some (b0, m) => (walkRun 100 "bb_memo" [b0, 0] m).isNone &&
+      (walkRun 100 "bb_memo" [b0, 1] m).map (·.1) == some 1
   | none => false
 
 /- Not enough fuel for 50 nested applications: no answer. -/

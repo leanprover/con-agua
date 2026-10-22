@@ -448,7 +448,7 @@ theorem StackKept.of_bvar_frame {m m' : Mem} (hf : MemFrame [BREC, BSLOT] [22, 2
   exact ⟨by simp only [spTop, h136], by rw [hspn], fun i _ => by simp only [spW, hspn]⟩
 
 /-- A slice survives a change that leaves the stack array alone. -/
-theorem SpineR.of_spn {m m' : Mem} {off cnt : Word} {xs : Array EIdx} (h : SpineR m off cnt xs)
+theorem SpineR.of_spn_core {m m' : Mem} {off cnt : Word} {xs : Array EIdx} (h : SpineR m off cnt xs)
     (hs : m'.arr64 SPN = m.arr64 SPN) : SpineR m' off cnt xs := by
   obtain ⟨h1, h2, h3, h4⟩ := h
   refine ⟨h1, by rw [hs]; exact h2, fun i hi => ?_, fun i hi => ?_⟩
@@ -538,7 +538,7 @@ theorem rpArg_refines (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) (a�
     have := AM.run_of_ok _ _ hok1
     rw [hres1, ← ha₁] at this; exact this
   have hspn : m₁.arr64 SPN = s.mem.arr64 SPN := hfr1.1 SPN (by simp [BREC, BSLOT, SPN]) (by decide)
-  have har₁ : SpineR m₁ ao an args := har.of_spn hspn
+  have har₁ : SpineR m₁ ao an args := har.of_spn_core hspn
   have hSt₁ : StackKept s.mem m₁ := StackKept.of_bvar_frame hfr1
   have hMD := decMode_verified mode hs.mode4
   -- the argument word and its decoding

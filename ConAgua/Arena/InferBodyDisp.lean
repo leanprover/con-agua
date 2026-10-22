@@ -364,7 +364,7 @@ theorem inferBody_refines (p : Prog) (hq : InferAllProg p) (hc : InferCallees p)
     ∀ n, InferBodySpec p n := by
   intro n F s₀ a₀ dn vis fe MM eb mode d e hF hn hs he hk
   cases n with
-  | zero => exact CoreSpec.zero p _ _ _ _ s₀ a₀ dn vis fe MM eb _
+  | zero => exact CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe MM eb _
   | succ n =>
   apply L.M.triple_of_run
   intro s r s' hs0 hrun
@@ -509,7 +509,7 @@ theorem inferBodyIO_refines (p : Prog) (hq : InferAllProg p) (hc : InferCallees 
     ∀ n, InferIOBodySpec p n := by
   intro n F s₀ a₀ dn vis fe MM eb mode d e hF hn hs he hk
   cases n with
-  | zero => exact CoreSpec.zero p _ _ _ _ s₀ a₀ dn vis fe MM eb _
+  | zero => exact CoreSpec.zeroLet p _ _ _ _ s₀ a₀ dn vis fe MM eb _
   | succ n =>
   apply L.M.triple_of_run
   intro s r s' hs0 hrun

@@ -19,14 +19,14 @@ not need: the model's memory changes under stack writes, so each step shows `Spi
 growing accumulator after the push (`SpineR.push`) and `CoreS` across the write
 (`CoreS.frame_stk`), and across `mk_app_n_from` (`CoreS.of_app`: `ArenaD` from the callee, the
 rest of what `CoreS` reads kept by `keeps_cpl_mkAppNFrom`). `inst_list` is used through
-`(whnfCallees_stub p).instList`, so the theorem depends on that stub's `sorry`.
+`hil`, so the theorem depends on that stub's `sorry`.
 
 **Handle words of `mk_app`/`mk_app_n_from` results.** `mkAppNFrom_refines` dropped `HW (r.headD 0)`;
 `callW_mkApp`/`callW_mkAppNFrom` re-derive it from the store (`internM_hw`: a hit's index is below
 the tier's node count, a push's below `2^27`).
 
 **Proved here: `whnfApp_refines`** (with `hp : WhnfCoreProg p`; it depends on the stubs'
-`sorry`s: `(whnfCallees_stub p).instList` through `betaPeel_refines`, and
+`sorry`s: `hil` through `betaPeel_refines`, and
 `(coreCallees_stub p).iota` for `iota_rec_at`). The loop of `whnfAppL` is spliced from named blocks
 (`whnfAppW` is `while i < an { ⟪whnfAppBodyW⟫ }`, the body is `a := ..; node := ..; ⟪whnfAppLamW⟫;
 ⟪whnfAppRestW⟫`, the rest contains the ι arm `⟪whnfAppIotaW⟫`; `whnfAppL_eq := rfl`; a spliced block
@@ -100,13 +100,15 @@ theorem CoreS.arena_frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a
     (h128 : ∀ b ∈ A, b < 96 ∨ 128 ≤ b) (hpins : (128 : ArrId) ∉ A)
     (henv : ∀ b ∈ A, b < 132 ∨ 144 ≤ b)
     (hC128 : ∀ x ∈ C, x.toNat < 96 ∨ 128 ≤ x.toNat)
-    (hCenv : ∀ x ∈ C, x.toNat < 128 ∨ 136 ≤ x.toNat) :
+    (hCenv : ∀ x ∈ C, x.toNat < 128 ∨ 136 ≤ x.toNat)
+    (hmA : (50 : ArrId) ∉ A ∧ (49 : ArrId) ∉ A := by decide) (hmC : (50 : Word) ∉ C ∧ (48 : Word) ∉ C := by decide) :
     CoreS dn m' a' vis fe M eb := by
   simp only [cpl, Prod.mk.injEq] at hcpl
   obtain ⟨hc, hp, hl⟩ := hcpl
   refine ⟨hD, ?_, ?_, hS.env.frame (fun b hb => (henv b hb).elim (fun h => .inl h) (fun h => .inr h))
       (fun x hx => (hCenv x hx).elim (fun h => .inl h) (fun h => .inr h)) hf, ?_, ?_, ?_,
-      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn⟩
+      hf.2.2.1 EREC ▸ hS.erec, hf.2.2.1 SPN ▸ hS.spn, hS.memos.frame hf hmA hmC,
+      hf.2.2.1 145 ▸ hS.bstk⟩
   · rw [hc]
     exact CoreRM.frame (A := A) (C := C)
       (fun b hb => (h128 b hb).elim (fun h => .inl h) (fun h => .inr h))
@@ -610,7 +612,7 @@ def PeelPost (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM 
   ∃ x a', T.run a = .ok (x, a') ∧ x = decStep [st, r] ∧ ResW [st, r] ∧
     ∃ M', CoreS dn mF a' vis fe M' eb ∧ KeptAll MM M' eb ∧ StackKept m₀ mF
 
-theorem peelFull_ref (p : Prog) (hp : SpineProg p) (n : Nat) (ao an : Word) (args : Array EIdx)
+theorem peelFull_ref (p : Prog) (hp : SpineProg p) (hil : InstListOK p) (n : Nat) (ao an : Word) (args : Array EIdx)
     (co : Word) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps)
     (eb : Word) (a : AState) (m₀ : Mem) (har₀ : SpineR m₀ ao an args) (hco : co = spTop m₀)
     (hlo : ao.toNat + an.toNat ≤ co.toNat) :
@@ -702,7 +704,7 @@ theorem peelFull_ref (p : Prog) (hp : SpineProg p) (n : Nat) (ao an : Word) (arg
         rw [h2] at hF; dsimp only at hF
         simp only [Option.some.injEq, Prod.mk.injEq] at hF
         obtain ⟨rfl, rfl, rfl⟩ := hF
-        have hinst := (whnfCallees_stub p).instList k ⟨m, Locals.init []⟩ a dn vis fe MM eb t co cn 0
+        have hinst := hil k ⟨m, Locals.init []⟩ a dn vis fe MM eb t co cn 0
           acc hS ht hacc (by rw [hspT]; omega)
         obtain ⟨hok, ⟨M', hS', hK', hSt'⟩, hres, hrw⟩ := CoreSpec.of_callW hinst h1
         have h0 : (0 : Word).toNat = 0 := rfl
@@ -748,7 +750,7 @@ theorem peelFull_ref (p : Prog) (hp : SpineProg p) (n : Nat) (ao an : Word) (arg
       rw [h1] at hF
       simp only [Option.some.injEq, Prod.mk.injEq] at hF
       obtain ⟨rfl, rfl, rfl⟩ := hF
-      have hinst := (whnfCallees_stub p).instList n ⟨m, Locals.init []⟩ a dn vis fe MM eb t co cn 0
+      have hinst := hil n ⟨m, Locals.init []⟩ a dn vis fe MM eb t co cn 0
         acc hS ht hacc (by rw [hspT]; omega)
       obtain ⟨hok, ⟨M', hS', hK', hSt'⟩, hres, hrw⟩ := CoreSpec.of_callW hinst h1
       have h0 : (0 : Word).toNat = 0 := rfl
@@ -769,8 +771,7 @@ theorem peelFull_ref (p : Prog) (hp : SpineProg p) (n : Nat) (ao an : Word) (arg
 
 
 /-- **`beta_peel` refines `betaPeel t #[a] args i`.** -/
-@[refines ConRon.Arena.betaPeel]
-theorem betaPeel_refines (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) (a₀ : AState)
+theorem betaPeel_refines' (p : Prog) (hp : WhnfCoreProg p) (hil : InstListOK p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (MM : ModeMaps) (eb t a ao an i : Word)
     (args : Array EIdx) (hS : CoreS dn s₀.mem a₀ vis fe MM eb) (ht : HW t) (ha : HW a)
     (har : SpineR s₀.mem ao an args) (hlo : ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat) :
@@ -813,7 +814,7 @@ theorem betaPeel_refines (p : Prog) (hp : WhnfCoreProg p) (n : Nat) (s₀ : St) 
     rw [spW_setCtl, spW_set64_ne _ _ _ _ (fun h => by
       have := UInt64.lt_iff_toNat_lt.mp hj
       rw [← h] at this; omega)]
-  obtain ⟨x, a', hrun', hx, hrw, M', hS', hK, hSt⟩ := peelFull_ref p hp.spine n ao an args co dn vis
+  obtain ⟨x, a', hrun', hx, hrw, M', hS', hK, hSt⟩ := peelFull_ref p hp.spine hil n ao an args co dn vis
     fe MM eb a₀ s.mem har hco (by rw [hco]; exact hlo) (n + 1) _ t i 1 #[decE a] hS1 ht hacc htop1 hb1
     (by simp only [size_set64]) (by simp only [size_set64]; exact h136i) _ _ _ hW h136
   obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun'
