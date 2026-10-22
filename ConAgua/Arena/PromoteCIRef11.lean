@@ -12,16 +12,15 @@ set_option linter.unusedSimpArgs false
 
 namespace L.Arena
 
-theorem decTbl_move {a b : Array Word} {q d : Nat} {tbl : IProjTable} {tn sn c ss : NIdx}
-    {lp gs : List NIdx} {bs : List EIdx}
+theorem decTbl_move {a b : Array Word} {q d : Nat} {tbl : IProjTable} {tn sn c : NIdx} {ss : LIdx}
+    {lp : List NIdx} {gs : List LIdx} {bs : List EIdx}
     (hA : decTbl a q = some tbl)
     (hw5 : b[d + 5]? = a[q + 5]?) (hw7 : b[d + 7]? = a[q + 7]?) (hw13 : b[d + 13]? = a[q + 13]?)
     (htn : hd? b (d + 1) = some tn) (hsn : hd? b (d + 2) = some sn)
     (hlp : hlist? b (d + 3) = some lp) (hc : hd? b (d + 6) = some c)
     (hss : hd? b (d + 8) = some ss) (hbs : hlist? b (d + 9) = some bs)
     (hgs : hlist? b (d + 11) = some gs) :
-    decTbl b d = some { tbl with tableName := tn, structName := sn, levelParams := lp, ctor := c,
-      structSort := ss, bodies := bs.toArray, guards := gs } := by
+    decTbl b d = some ⟨sn, tn, lp, tbl.numParams, c, tbl.numFields, ss, bs.toArray, gs, tbl.off⟩ := by
   unfold decTbl at hA ⊢
   simp only [Option.bind_eq_bind, Option.bind_eq_some_iff, Option.pure_def, Option.some.injEq] at hA ⊢
   obtain ⟨e1, h1, e2, h2, e3, h3, e4, h4, e5, h5, e6, h6, e7, h7, e8, h8, e9, h9, e10, h10,
@@ -54,7 +53,7 @@ theorem alloc_rel {n : Nat} {k : Word} {m m' : Mem} {r : List Word}
   rw [hs₁] at hW₁
   obtain ⟨hdq, rfl, hd6, hroom, hctl⟩ := erAlloc_facts hW₁
   have hdv : (r.headD 0).toNat = erecTop m := by rw [hdq]; rfl
-  refine ⟨hdv, ?_, by omega, MemFrame.setCtl m 129 _, Mem.arr64_set64_ne _ _ _ _ _ (by decide)⟩
+  refine ⟨hdv, ?_, by have h := hroom; simp only at h; omega, MemFrame.setCtl m 129 _, Mem.arr64_set64_ne _ _ _ _ _ (by decide)⟩
   simp only [erecTop]
   rw [rdW_set64, if_pos ⟨rfl, rfl, by simpa using hctl⟩, hd6, hdv]; rfl
 
