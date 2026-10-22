@@ -1,6 +1,7 @@
 import ConAgua.Arena.WhnfBase
 import ConAgua.Arena.StoreDenLvl
 import ConAgua.Arena.LevelView
+import ConAgua.Arena.InferLeaves
 
 /-!
 # The level tables only grow (lane `defeq2`)
@@ -51,10 +52,12 @@ twin level tables that only grew give `LvlCnt`. -/
 theorem lvlCnt_of_arena {m m' : Mem} {a a' : AState} (hR : ArenaR m a) (hR' : ArenaR m' a')
     (hflag : rdW (m'.arr64 CTL) 1 = rdW (m.arr64 CTL) 1)
     (hp : LTGrow a.store.lss.ls.pers a'.store.lss.ls.pers)
-    (hs : LTGrow a.store.lss.ls.scr a'.store.lss.ls.scr) : LvlCnt m m' := by
+    (hs : LTGrow a.store.lss.ls.scr a'.store.lss.ls.scr)
+    (hlp : a.store.lss.pers.lists.nodes.size ≤ a'.store.lss.pers.lists.nodes.size)
+    (hls : a.store.lss.scr.lists.nodes.size ≤ a'.store.lss.scr.lists.nodes.size) : LvlCnt m m' := by
   refine ⟨hflag, fun x hx => ?_⟩
   simp only [lvlCtlW, List.mem_cons, List.mem_nil_iff, or_false] at hx
-  rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
+  rcases hx with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl
   · rw [hflag]; exact Nat.le_refl _
   · exact cnt_le hR.succ.2.2.1.1 hR'.succ.2.2.1.1 hp.succs (by decide)
   · exact cnt_le hR.succ.2.2.2.1 hR'.succ.2.2.2.1 hs.succs (by decide)
@@ -66,6 +69,8 @@ theorem lvlCnt_of_arena {m m' : Mem} {a a' : AState} (hR : ArenaR m a) (hR' : Ar
   · exact cnt_le hR.imax.2.2.2.1 hR'.imax.2.2.2.1 hs.imaxs (by decide)
   · exact cnt_le hR.param.2.2.1.1 hR'.param.2.2.1.1 hp.params (by decide)
   · exact cnt_le hR.param.2.2.2.1 hR'.param.2.2.2.1 hs.params (by decide)
+  · exact cnt_le hR.ls.2.2.1.1 hR'.ls.2.2.1.1 hlp (by decide)
+  · exact cnt_le hR.ls.2.2.2.1 hR'.ls.2.2.2.1 hls (by decide)
 
 /-- **A level interning grows the level tables** (a hit changes nothing, a miss is
 `LStore.intern`). -/
@@ -187,5 +192,98 @@ theorem lvNodeW_of_den {m : Mem} {a : AState} (hR : ArenaR m a) {u : Word} (hu :
     | some v => exact ⟨v, e⟩
   obtain ⟨v, hv⟩ := hv
   rw [lvNodeW_store hR hu hv]; cases v <;> simp [lvEnc]
+
+/-! ## Level lists -/
+
+theorem lsNodeW_mono {m m' : Mem} (hl : LvlCnt m m') {u : Word} (h : lsNodeW m u ≠ []) :
+    lsNodeW m' u ≠ [] := by
+  have ht := tierW_le u
+  unfold lsNodeW at h ⊢
+  by_cases g : u >>> 28 ≠ 0
+  · rw [if_pos g] at h; exact absurd rfl h
+  rw [if_neg g] at h ⊢
+  rw [hl.flag]
+  by_cases hs : tierW u ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
+  · rw [if_pos hs] at h; exact absurd rfl h
+  rw [if_neg hs] at h ⊢
+  by_cases c : rdW (m.arr64 CTL) (40 + tierW u) ≤ idxW u
+  · rw [if_pos c] at h; exact absurd rfl h
+  have hx : 40 + tierW u ∈ lvlCtlW := by
+    rcases word_le_one (tierW u) ht with e | e <;> rw [e] <;> decide
+  have := hl.cnt _ hx
+  rw [if_neg (fun c' => c (by rw [UInt64.le_iff_toNat_le] at c' ⊢; omega))]
+  simp
+
+/-- A list that reads back is stored, and `ls_node` accepts it. -/
+theorem lsNodeW_of_den {m : Mem} {a : AState} (hR : ArenaR m a) {u : Word} (hu : HW u)
+    (hd : ∃ ls, denoteLs a.store.lss (decI u) = some ls) : lsNodeW m u ≠ [] := by
+  obtain ⟨ls, hl⟩ := hd
+  unfold denoteLs at hl
+  cases e : a.store.lss.view (decI u) with
+  | none => rw [e] at hl; cases hl
+  | some ids => rw [(lsNodeW_store hR hu e).1]; simp
+
+/-- **A list read back before a core run reads back after it.** -/
+theorem ls_den_later {m m' : Mem} {a a' : AState} {fe : IFEnv} (hR : ArenaR m a)
+    (hR' : ArenaR m' a') (hD' : StoreDen m' a' fe) (hl : LvlCnt m m') {u : Word} (hu : HW u)
+    (hd : ∃ ls, denoteLs a.store.lss (decI u) = some ls) :
+    ∃ ls, denoteLs a'.store.lss (decI u) = some ls := by
+  obtain ⟨ids, hv, -⟩ := lsNodeW_view hR' hu (lsNodeW_mono hl (lsNodeW_of_den hR hu hd))
+  exact hD'.lsAll _ (by rw [hv]; rfl)
+
+theorem LsTables.push_get (t : LsTables) (v : LsNodeView) (d : LDer) (tier : UInt32) (i : LsIdx)
+    (w : LsNodeView) (h : (t.push v d tier).1.get i = some w) : t.get i = some w ∨ w = v := by
+  simp only [LsTables.push, LsTables.get, Tbl.push, Tbl.node?] at h ⊢
+  split at h
+  · rename_i ht
+    rw [if_pos ht]
+    rw [Array.getElem?_push] at h
+    split at h
+    · right; simp at h; exact h.symm
+    · left; exact h
+  · cases h
+
+theorem LsStore.intern_view (st : LsStore) (v : LsNodeView) (i : LsIdx) (w : LsNodeView)
+    (h : (st.intern v).1.view i = some w) : st.view i = some w ∨ w = v := by
+  unfold LsStore.intern at h
+  split at h
+  · exact .inl h
+  · split at h
+    · rename_i hon
+      split at h
+      · exact .inl h
+      · simp only [LsStore.view] at h ⊢
+        by_cases hp : i.isPersistent = true
+        · rw [if_pos hp] at h ⊢; exact .inl h
+        · rw [if_neg hp] at h ⊢; rw [if_pos hon] at h ⊢
+          exact LsTables.push_get _ _ _ _ _ _ h
+    · rename_i hon
+      simp only [LsStore.view] at h ⊢
+      by_cases hp : i.isPersistent = true
+      · rw [if_pos hp] at h ⊢; exact LsTables.push_get _ _ _ _ _ _ h
+      · rw [if_neg hp] at h ⊢; rw [if_neg hon] at h; cases h
+
+/-- **`LsAll` across a level-list interning** whose levels read back; the new list reads back. -/
+theorem lsAll_internLsNode {m : Mem} {a a' : AState} {v : LsNodeView} {h : LsIdx}
+    (hR : ArenaR m a) (hall : LsAll a) (hel : ∀ c ∈ v, ∃ l, denoteL a.store.ls c = some l)
+    (hrun : (internLsNode v).run a = .ok (h, a')) :
+    LsAll a' ∧ (∃ ls, denoteLs a'.store.lss h = some ls) := by
+  obtain ⟨hd, hx⟩ := denoteLs_internLsNode hR hel hrun
+  refine ⟨fun i hi => ?_, hd⟩
+  obtain ⟨ls, hls⟩ := denoteLList_of_all v hel
+  rcases internLsNode_run_cases hrun with ⟨-, rfl⟩ | ⟨-, -, hss, -⟩
+  · exact hall i hi
+  · cases e : a'.store.lss.view i with
+    | none => rw [e] at hi; cases hi
+    | some w =>
+      have e' : (a.store.lss.intern v).1.view i = some w := by rw [← hss]; exact e
+      rcases LsStore.intern_view _ _ _ _ e' with ho | rfl
+      · obtain ⟨l, hl⟩ := hall i (by rw [ho]; rfl)
+        exact ⟨l, hx.lst _ _ hl⟩
+      · refine ⟨ls, ?_⟩
+        unfold denoteLs; rw [e]
+        have hls' : a'.store.lss.ls = a.store.lss.ls := by
+          rw [hss]; exact LsStore.ls_intern _ _
+        rw [hls']; exact hls
 
 end L.Arena

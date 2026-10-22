@@ -189,7 +189,8 @@ theorem internParam_core (hS : CoreS dn m a vis fe M eb) (u : Word) (hu : HW u)
         simp only [LNodeView.nchildren, List.mem_cons, List.mem_nil_iff, or_false] at hn
         subst hn; exact hdn) (AM.run_of_ok _ _ hok)).1
     (lvlCnt_of_arena hS.arena.1 hR' (hf.2.1 1 (by decide))
-      (LTGrow.internLNode (AM.run_of_ok _ _ hok)).1 (LTGrow.internLNode (AM.run_of_ok _ _ hok)).2)
+      (LTGrow.internLNode (AM.run_of_ok _ _ hok)).1 (LTGrow.internLNode (AM.run_of_ok _ _ hok)).2
+      (by simp [hL.lsp]) (by simp [hL.lss]))
   have hw := internM_hw paramSch PRecRel phash paramSch_wf m _ _ _ hS.arena.1.param (pMt m u) _ _ _ _
     (probe_homeG paramSch m 0 _ _ (pprobeW_arm m u 0) _)
     (probe_homeG paramSch m 1 _ _ (pprobeW_arm m u 1) _) _ (ppushOK_room m) _ _ _ m' hI₂
@@ -215,7 +216,8 @@ theorem internZero_core (hS : CoreS dn m a vis fe M eb)
       (fun c hc => by simp [LNodeView.lchildren] at hc)
       (fun n hn => by simp [LNodeView.nchildren] at hn) (AM.run_of_ok _ _ hok)).1
     (lvlCnt_of_arena hS.arena.1 hR' (hf.2.1 1 (by decide))
-      (LTGrow.internLNode (AM.run_of_ok _ _ hok)).1 (LTGrow.internLNode (AM.run_of_ok _ _ hok)).2)
+      (LTGrow.internLNode (AM.run_of_ok _ _ hok)).1 (LTGrow.internLNode (AM.run_of_ok _ _ hok)).2
+      (by simp [hL.lsp]) (by simp [hL.lss]))
   have hw := internM_hw zeroSch ZRecRel zhash zeroSch_wf m _ _ _ hS.arena.1.zero (zMt m) _ _ _ _
     (probe_homeG zeroSch m 0 _ _ (zprobeW_arm m 0) _)
     (probe_homeG zeroSch m 1 _ _ (zprobeW_arm m 1) _) _ (zpushOK_room m) _ _ _ m' hI₂
