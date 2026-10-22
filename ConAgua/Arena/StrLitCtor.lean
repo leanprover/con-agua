@@ -350,7 +350,7 @@ end spine
 /-! ## `str_lit_ctor` -/
 
 /-- The model of `str_lit_ctor` (`o`, `cnt`: the literal's record, read after the prefix). -/
-def ctorW (p : Prog) (n : Nat) (m : Mem) (h : Word) : Option (Word × Mem) :=
+def strCtorW (p : Prog) (n : Nat) (m : Mem) (h : Word) : Option (Word × Mem) :=
   match callW p n "str_ctor_pre" [] m with
   | none => none
   | some (t, m₁) =>
@@ -377,14 +377,14 @@ def ctorW (p : Prog) (n : Nat) (m : Mem) (h : Word) : Option (Word × Mem) :=
 theorem strLitCtor_spec (p : Prog) (hp : p.lookup "str_lit_ctor" = some strLitCtorL) (n : Nat)
     (s₀ : St) (h : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "str_lit_ctor" [h]
-    ⦃fun r s' => LocEq s' s₀ ∧ ctorW p n s₀.mem h = some (r.headD 0, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ strCtorW p n s₀.mem h = some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, strLitCtorL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "str_ctor_pre", callW_spec p n "str_cons_spine", callW_spec p n "pin_at",
       callW_spec p n "const_e", callW_spec p n "mk_app"] <;>
-    finish (gen := 20) [ctorW, tierW, idxW]
+    finish (gen := 20) [strCtorW, tierW, idxW]
 
 section ctor
 variable (p : Prog) (hp : StrLitProg p) {n : Nat} {dn : NIdx → Option ConLeche.Name} {m m' : Mem}
@@ -399,7 +399,7 @@ theorem ctor_call (hS : CoreS dn m a vis fe M eb) {h : Word} (hh : HW h) {s : St
   | zero => rw [callW_zero] at hc; cases hc
   | succ n =>
   obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩) (strLitCtor_spec p hp.strLitCtor n _ h) hc
-  unfold ctorW at hW
+  unfold strCtorW at hW
   wstep hW, h1 : callW p n "str_ctor_pre" [] m => t, m₁
   by_cases g8 : h >>> 28 ≠ 8
   · rw [if_pos g8] at hW; cases hW

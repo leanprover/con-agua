@@ -82,7 +82,7 @@ theorem strCiD {a : Array Word} {dn : NIdx → Option ConLeche.Name} {p : Nat} {
   · simp at h
 
 /-- The model of `str_cv`. -/
-def cvW (p : Prog) (n : Nat) (m : Mem) (q : Word) : Option (List Word × Mem) :=
+def strCvW (p : Prog) (n : Nat) (m : Mem) (q : Word) : Option (List Word × Mem) :=
   if rdW (m.arr64 EREC) q ≤ 5 then
     some ([rdW (m.arr64 EREC) (q + 2), rdW (m.arr64 EREC) (q + 3), rdW (m.arr64 EREC) (q + 4)], m)
   else if rdW (m.arr64 EREC) q ≠ 6 then none
@@ -100,13 +100,13 @@ def cvW (p : Prog) (n : Nat) (m : Mem) (q : Word) : Option (List Word × Mem) :=
 theorem strCv_spec (p : Prog) (hp : p.lookup "str_cv" = some strCvL) (n : Nat) (s₀ : St)
     (q : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "str_cv" [q]
-    ⦃fun r s' => LocEq s' s₀ ∧ cvW p n s₀.mem q = some (r, s'.mem); ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ strCvW p n s₀.mem q = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, strCvL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       callW_spec p n "intern_zero", callW_spec p n "intern_succ", callW_spec p n "intern_sort"] <;>
-    finish [cvW]
+    finish [strCvW]
 
 /-- A projection table's level parameters, read at `q + 3`, `q + 4`. -/
 theorem decTbl_lps {a b : Array Word} {q : Word} {tbl : IProjTable} (hab : ArrExt a b)
@@ -174,7 +174,7 @@ theorem cv_call (hS : CoreS dn m a vis fe M eb) {q : Word} {ci : IConstantInfo}
         cv.levelParams.length = (r.tail.headD 0).toNat ∧
         cv.type = decI (r.tail.tail.headD 0) ∧ HW (r.tail.tail.headD 0) := by
     intro cv hcv hpure h5
-    simp only [cvW, h5, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
+    simp only [strCvW, h5, ↓reduceIte, Option.some.injEq, Prod.mk.injEq] at hW
     obtain ⟨rfl, hm⟩ := hW
     rw [← hm]
     obtain ⟨hsl, hlen, hty, hhw⟩ := decCV_rd (erecP_ext m) hS.erec hcv
@@ -196,7 +196,7 @@ theorem cv_call (hS : CoreS dn m a vis fe M eb) {q : Word} {ci : IConstantInfo}
     rw [hrd, UInt64.le_iff_toNat_le, k6]; simp
   have h6 : rdW (m.arr64 EREC) q = 6 := by rw [hrd]; exact UInt64.toNat_inj.mp (by rw [k6]; rfl)
   obtain ⟨hsl, hlen⟩ := decTbl_lps (erecP_ext m) hS.erec ht
-  simp only [cvW, hn5, h6, ↓reduceIte, ne_eq, not_true_eq_false] at hW
+  simp only [strCvW, hn5, h6, ↓reduceIte, ne_eq, not_true_eq_false] at hW
   cases h1 : callW p n "intern_zero" [] m with
   | none => rw [h1] at hW; cases hW
   | some q₁ =>
