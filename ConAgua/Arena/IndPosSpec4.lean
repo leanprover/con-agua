@@ -86,7 +86,7 @@ variable (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis : Word)
 theorem frameTail (n : Nat) (hDs : DsOK dn fe vis n) (mh m' : Mem) (a : AState) (ctx po pl n1 h : Word)
     (c : NestCtx) (prog : List NestHole) (H0 : NestHole) (r0 r1 : Word)
     (M : Std.HashMap (EIdx × Word) EIdx) (G g : Word)
-    (hk : frK2 n (rdW (mh.arr64 IW) h) (posRecW mh [0, ctx, po, pl, n1]) = some (r0, r1, m'))
+    (hk : pfrK2 n (rdW (mh.arr64 IW) h) (posRecW mh [0, ctx, po, pl, n1]) = some (r0, r1, m'))
     (hS : StageR dn vis fe mh a) (hc : decCtx mh ctx.toNat = some c) (hin : CtxIn mh ctx.toNat (· < iwTop mh))
     (hs : HSl mh po.toNat pl.toNat prog) (hb : c.nP + c.names.length + n1.toNat + 1 < 2 ^ 64)
     (hh : decNH mh h.toNat = some H0) (hhin : NHIn mh h.toNat (· < iwTop mh)) (hR : RfInv mh M G g) :
@@ -101,10 +101,10 @@ theorem frameTail (n : Nat) (hDs : DsOK dn fe vis n) (mh m' : Mem) (a : AState) 
   have hrk : (rdW (mh.arr64 IW) h).toNat = k := rdIW0 hk0
   have hNK := hhin.2.2 k hk0
   cases hrec : posRecW mh [0, ctx, po, pl, n1] with
-  | none => rw [hrec] at hk; simp [frK2] at hk
+  | none => rw [hrec] at hk; simp [pfrK2] at hk
   | some pr =>
   obtain ⟨f, m2⟩ := pr
-  rw [hrec, frK2_some] at hk
+  rw [hrec, pfrK2_some] at hk
   obtain ⟨hS2, hg2, hf2, ht2, hget2⟩ := posRecW_stage hrec hS (by simp)
   simp only [List.length_cons, List.length_nil] at ht2
   have hR2 := hR.frame (posRecW_fr hrec)
@@ -131,10 +131,10 @@ theorem frameTail (n : Nat) (hDs : DsOK dn fe vis n) (mh m' : Mem) (a : AState) 
   have hsl : ∀ j < l, o + j < iwTop m2 := fun j hj =>
     Nat.lt_of_lt_of_le (hNK2.2 o l ho (by simpa using hl) j hj) hg2.1
   cases hdsr : rxDsW n m2 f (rdW (m2.arr64 IW) (rdW (mh.arr64 IW) h + 2)) (rdW (m2.arr64 IW) (rdW (mh.arr64 IW) h + 3)) with
-  | none => rw [hdsr] at hk; simp [frK3] at hk
+  | none => rw [hdsr] at hk; simp [pfrK3] at hk
   | some pr3 =>
   obtain ⟨q, l3, m3⟩ := pr3
-  rw [hdsr, frK3_some] at hk
+  rw [hdsr, pfrK3_some] at hk
   obtain ⟨ys, a3, hrun3, hdec3, hq3, hpost3⟩ := hDs m2 m3 a f _ _ q l3 _ H0.key.ds M G g hdsr hS2 hfm
     (by rw [ro, rl]; exact hdsl) (by rw [ro, rl]; exact hsl) hR2
   obtain ⟨M3, G3, hS3, hg3, hR3, hk3, hG3⟩ := hpost3
@@ -186,7 +186,7 @@ theorem frOK_step (n : Nat) (hDs : DsOK dn fe vis n) : FrOK dn fe vis (n + 1) :=
   obtain ⟨hpl, hpb, hH⟩ := hs
   unfold frameTwin
   by_cases hn : n1 < pl
-  · rw [rxFrameW_in (hn := hn), frK1_some] at h
+  · rw [rxFrameW_in (hn := hn), pfrK1_some] at h
     have hn' : n1.toNat < pl.toNat := UInt64.lt_iff_toNat_lt.mp hn
     obtain ⟨w, hw, hd, hni⟩ := hH n1.toNat hn'
     have hrw : rdW (m.arr64 IW) (po + n1) = w := by
@@ -210,10 +210,10 @@ theorem frOK_step (n : Nat) (hDs : DsOK dn fe vis n) : FrOK dn fe vis (n + 1) :=
     rw [hr1, frK0_some] at h
     obtain ⟨hS1, hg1, hk1, ht1, hget1⟩ := posRecW_stage hr1 hS (by simp)
     cases hr2 : posRecW m1 [k, 0] with
-    | none => rw [hr2] at h; simp [frK1] at h
+    | none => rw [hr2] at h; simp [pfrK1] at h
     | some p2 =>
     obtain ⟨hh, m2⟩ := p2
-    rw [hr2, frK1_some] at h
+    rw [hr2, pfrK1_some] at h
     obtain ⟨hS2, hg2, hk2, ht2, hget2⟩ := posRecW_stage hr2 hS1 (by simp)
     simp only [List.length_cons, List.length_nil] at ht1 ht2
     have hkw : ∀ j < 4, (m2.arr64 IW)[k.toNat + j]? = some 0 := fun j hj => by

@@ -69,7 +69,7 @@ section recspecs
 variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
 include ha
 
-theorem rec2_specW (h2 : p.lookup "rec2" = some rec2) (n : Nat) (s₀ : St) (a b : Word) :
+theorem posRec2_specW (h2 : p.lookup "rec2" = some rec2) (n : Nat) (s₀ : St) (a b : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec2" [a, b]
     ⦃fun r s' => LocEq s' s₀ ∧ posRecW s₀.mem [a, b] = some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [← posRec2_eq, invoke_eq _ h2]
@@ -82,7 +82,7 @@ theorem rec2_specW (h2 : p.lookup "rec2" = some rec2) (n : Nat) (s₀ : St) (a b
         iwAlloc_specW p ha n] <;>
       finish [rec2Mem, allocMem, allocW]
 
-theorem rec4_specW (h4 : p.lookup "rec4" = some rec4) (n : Nat) (s₀ : St) (a b c d : Word) :
+theorem posRec4_specW (h4 : p.lookup "rec4" = some rec4) (n : Nat) (s₀ : St) (a b c d : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec4" [a, b, c, d]
     ⦃fun r s' => LocEq s' s₀ ∧ posRecW s₀.mem [a, b, c, d] = some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [← posRec4_eq, invoke_eq _ h4]
@@ -95,7 +95,7 @@ theorem rec4_specW (h4 : p.lookup "rec4" = some rec4) (n : Nat) (s₀ : St) (a b
         iwAlloc_specW p ha n] <;>
       finish [rec4Mem, allocMem, allocW]
 
-theorem rec5_specW (h5 : p.lookup "rec5" = some rec5) (n : Nat) (s₀ : St) (a b c d e : Word) :
+theorem posRec5_specW (h5 : p.lookup "rec5" = some rec5) (n : Nat) (s₀ : St) (a b c d e : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "rec5" [a, b, c, d, e]
     ⦃fun r s' => LocEq s' s₀ ∧ posRecW s₀.mem [a, b, c, d, e] = some (r.headD 0, s'.mem); ⊤⦄ := by
   rw [← posRec5_eq, invoke_eq _ h5]
@@ -335,7 +335,7 @@ theorem rhGo_spec (k : Nat) : ∀ (s₀ : St) (no nl lv po pl nP q j : Word),
     simp only [callFn, nestCtxRootHolesGo]
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        rec4_specW p ha h4 k, rec2_specW p ha h2 k, ih] <;>
+        posRec4_specW p ha h4 k, posRec2_specW p ha h2 k, ih] <;>
       finish (gen := 20) [rdW_eq]
 
 include ha h2 h4 hg in
@@ -1092,7 +1092,7 @@ theorem ncGo_spec (k : Nat) : ∀ (s₀ : St) (vis C co cl cs ol fp : Word),
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
         envFind_specW p hl.hx hl.hg hl.hf k, nestCtorEntry_spec p hl.hs hl.hv hl.he k,
-        rec2_specW p hl.ha hl.h2 k, ih] <;>
+        posRec2_specW p hl.ha hl.h2 k, ih] <;>
       finish (gen := 20) [rdW_eq, St.setLocs_mem']
 
 include hl in
@@ -1124,7 +1124,7 @@ end spec
 
 /-! ### `nest_container`: the relational side -/
 
-theorem rowPW_eq (m : Mem) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : tagW w ≤ 2) :
+theorem posRowPW_eq (m : Mem) (w : Word) (hw : w.toNat < 2 ^ 32) (ht : tagW w ≤ 2) :
     rowPW m w = rowP m w := by
   have h1 := tagW_toNat w
   have h2 := ixW_toNat w hw
@@ -1155,7 +1155,7 @@ theorem envFindW_hit {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
     have : ¬ (2 : Word).toNat < (tagW w).toNat := fun e => ht (UInt64.lt_iff_toNat_lt.mpr e)
     exact UInt64.le_iff_toNat_le.mpr (by omega)
   have htag : rowTag w ≤ 2 := by rw [← tagW_toNat]; exact UInt64.le_iff_toNat_le.mp ht2
-  rw [EnvR.find?_eq hE w hw htag, ← rowCW_eq m w hw ht2, ← rowPW_eq m w hw ht2]
+  rw [EnvR.find?_eq hE w hw htag, ← rowCW_eq m w hw ht2, ← posRowPW_eq m w hw ht2]
   by_cases hc : rowCW m w = 0
   · rw [if_pos hc] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
     rw [← h.1] at h0; simp at h0
@@ -1164,7 +1164,7 @@ theorem envFindW_hit {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFE
   · rw [if_pos hv] at h; simp only [Option.some.injEq, Prod.mk.injEq] at h
     obtain ⟨rfl, rfl⟩ := h
     have hrc : rowC m w ≠ 0 := by rw [← rowCW_eq m w hw ht2]; exact hc
-    refine ⟨rfl, ?_, by rw [List.tail_cons, List.headD_cons, rowPW_eq m w hw ht2]; exact EnvR.row_dec hE w hw htag hrc⟩
+    refine ⟨rfl, ?_, by rw [List.tail_cons, List.headD_cons, posRowPW_eq m w hw ht2]; exact EnvR.row_dec hE w hw htag hrc⟩
     have hc' : (rowCW m w).toNat ≠ 0 := fun e => hc (UInt64.toNat_inj.mp (by simpa using e))
     have : (rowCW m w).toNat - 1 < vis.toNat := by
       have := UInt64.lt_iff_toNat_lt.mp hv

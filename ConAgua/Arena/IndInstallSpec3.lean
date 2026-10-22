@@ -23,7 +23,7 @@ local notation "V" => ConLeche.CheckMode.verified
 
 /-- The model of `lvl_eq_fueled(u, v)`: the stub `lvl_eq`, `none` (word `0`) aborts. -/
 def lveW (m : Mem) (u v : Word) : Option (List Word × Mem) :=
-  match stubM "lvl_eq" m [u, v] with
+  match stubM "lvl_eq_c" m [u, v] with
   | none => none
   | some (r, m1) => if r.headD 0 = 0 then none else some ([if r.headD 0 = 2 then 1 else 0], m1)
 
@@ -38,7 +38,7 @@ theorem lvlEqFueled_spec (p : Prog) (hp : p.lookup "lvl_eq_fueled" = some lvlEqF
   | succ n =>
     sym only [lang_grind, arena_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        stubM_spec p "lvl_eq" n] <;>
+        stubM_spec p "lvl_eq_c" n] <;>
       finish (gen := 20) [lveW]
 
 /-- **`lvl_eq_fueled` is `liftFueled (← lvlEq? u v)`**, through the `lvl_eq` stub. -/
@@ -47,7 +47,7 @@ theorem lveW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (
     (h : lveW m u v = some (r, m')) (hS : StageR dn vis fe m a) :
     ∃ b a', (lvlEq? (decI u) (decI v)).run a = .ok (some b, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' ∧ r.headD 0 = (if b then 1 else 0) := by
   simp only [lveW] at h
-  cases hs : stubM "lvl_eq" m [u, v] with
+  cases hs : stubM "lvl_eq_c" m [u, v] with
   | none => simp [hs] at h
   | some rm1 =>
     obtain ⟨r1, m1⟩ := rm1

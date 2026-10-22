@@ -1,0 +1,9 @@
+-- Every module of the declaration loop's proofs (lane decls3): one build checks them together and
+-- lemma-name clashes between files surface here, as IndAll.lean does for the inductive stage.
+-- Imports only: append new modules at the end.
+import ConAgua.Arena.Checker
+import ConAgua.Arena.DeclArms
+import ConAgua.Arena.DeclCvg
+import ConAgua.Arena.DeclValSpec
+import ConAgua.Arena.DeclValRef
+import ConAgua.Arena.DeclBasisSpec

@@ -300,14 +300,10 @@ def declStepFns : Prog :=
    ("install_value", installValueL), ("install_step_go", installStepGoL),
    ("check_value_group", checkValueGroupL)]
 
-/-- Master callees lane `induct`'s program lacks, as stubs here (the whole program has the real
-ones): lane `whnf`'s cached level comparison. -/
-def declStepStubs : Prog := [("lvl_eq_c", L.Ind.stub 2)]
-
 /-- The step's program: this module, the arms (`DeclArms*.lean`, with their ROM stubs and the
 master functions lane `induct`'s program lacks), lane `induct`'s stage (with its stubs, but for
 the two the arms provide: `L.Ind.armsReplaced`). -/
-def declStepProg : Prog := declStepFns ++ declStepStubs ++ L.Ind.declArmsAll ++ L.Ind.indProgArms
+def declStepProg : Prog := declStepFns ++ L.Ind.declArmsAll ++ L.Ind.indProgArms
 
 theorem declStepProg_wf : L.Compiler.Prog.wf L.Ind.indTab declStepProg = true :=
   L.Compiler.Prog.wf_of_wfFast (by decide +kernel)

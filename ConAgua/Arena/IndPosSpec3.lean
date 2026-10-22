@@ -111,7 +111,7 @@ def frK5 : Option (List Word × Mem) → Option (Word × Word × Mem)
 def frK4 (q l : Word) : Option (Word × Mem) → Option (Word × Word × Mem)
   | none => none
   | some (hd, m4) => if 4294967296 ≤ hd then none else frK5 (stubM "mk_app_n" m4 [hd, q, l])
-def frK3 (kp : Word) : Option (Word × Word × Mem) → Option (Word × Word × Mem)
+def pfrK3 (kp : Word) : Option (Word × Word × Mem) → Option (Word × Word × Mem)
   | none => none
   | some (q, l, m3) => frK4 q l (ceinternW m3 (rdW (m3.arr64 IW) kp) (rdW (m3.arr64 IW) (kp + 1)))
 def dsB (q l : Word) : Option Mem → Option (Word × Word × Mem)
@@ -166,17 +166,17 @@ def rxImgW : Nat → Mem → Word → Word → Word → Word → Word → Option
 def rxFrameW : Nat → Mem → Word → Word → Word → Word → Word → Option (Word × Word × Mem)
   | 0, _, _, _, _, _, _ => none
   | n + 1, m, ctx, po, pl, n1, _ =>
-    if n1 < pl then frK1 n ctx po pl n1 (some (rdW (m.arr64 IW) (po + n1), m))
+    if n1 < pl then pfrK1 n ctx po pl n1 (some (rdW (m.arr64 IW) (po + n1), m))
     else frK0 n ctx po pl n1 (posRecW m [0, 0, 0, 0])
 def frK0 (n : Nat) (ctx po pl n1 : Word) : Option (Word × Mem) → Option (Word × Word × Mem)
   | none => none
-  | some (k, m1) => frK1 n ctx po pl n1 (posRecW m1 [k, 0])
-def frK1 (n : Nat) (ctx po pl n1 : Word) : Option (Word × Mem) → Option (Word × Word × Mem)
+  | some (k, m1) => pfrK1 n ctx po pl n1 (posRecW m1 [k, 0])
+def pfrK1 (n : Nat) (ctx po pl n1 : Word) : Option (Word × Mem) → Option (Word × Word × Mem)
   | none => none
-  | some (h, m1) => frK2 n (rdW (m1.arr64 IW) h) (posRecW m1 [0, ctx, po, pl, n1])
-def frK2 (n : Nat) (kp : Word) : Option (Word × Mem) → Option (Word × Word × Mem)
+  | some (h, m1) => pfrK2 n (rdW (m1.arr64 IW) h) (posRecW m1 [0, ctx, po, pl, n1])
+def pfrK2 (n : Nat) (kp : Word) : Option (Word × Mem) → Option (Word × Word × Mem)
   | none => none
-  | some (f, m2) => frK3 kp (rxDsW n m2 f (rdW (m2.arr64 IW) (kp + 2)) (rdW (m2.arr64 IW) (kp + 3)))
+  | some (f, m2) => pfrK3 kp (rxDsW n m2 f (rdW (m2.arr64 IW) (kp + 2)) (rdW (m2.arr64 IW) (kp + 3)))
 /-- `nest_hole_img_ds(f, dsOff, dsLen)`. -/
 def rxDsW : Nat → Mem → Word → Word → Word → Option (Word × Word × Mem)
   | 0, _, _, _, _ => none
@@ -266,16 +266,16 @@ theorem rxImgW_next (h0 : ¬ nn = 0) (hh : ¬ i = hiW m ctx (nn - 1)) :
     rxImgW (n + 1) m ctx po pl nn i = rxImgW n m ctx po pl (nn - 1) i := by
   simp only [rxImgW]; rw [if_neg h0, if_neg hh]
 theorem rxFrameW_in (hn : n1 < pl) : rxFrameW (n + 1) m ctx po pl n1 i =
-    frK1 n ctx po pl n1 (some (rdW (m.arr64 IW) (po + n1), m)) := by simp [rxFrameW, hn]
+    pfrK1 n ctx po pl n1 (some (rdW (m.arr64 IW) (po + n1), m)) := by simp [rxFrameW, hn]
 theorem rxFrameW_def (hn : ¬ n1 < pl) : rxFrameW (n + 1) m ctx po pl n1 i =
     frK0 n ctx po pl n1 (posRecW m [0, 0, 0, 0]) := by simp [rxFrameW, hn]
-theorem frK0_some : frK0 n ctx po pl n1 (some (k, m1)) = frK1 n ctx po pl n1 (posRecW m1 [k, 0]) := by
+theorem frK0_some : frK0 n ctx po pl n1 (some (k, m1)) = pfrK1 n ctx po pl n1 (posRecW m1 [k, 0]) := by
   rw [frK0]
-theorem frK1_some : frK1 n ctx po pl n1 (some (h, m1)) =
-    frK2 n (rdW (m1.arr64 IW) h) (posRecW m1 [0, ctx, po, pl, n1]) := by rw [frK1]
-theorem frK2_some : frK2 n kp (some (f, m2)) =
-    frK3 kp (rxDsW n m2 f (rdW (m2.arr64 IW) (kp + 2)) (rdW (m2.arr64 IW) (kp + 3))) := by rw [frK2]
-theorem frK3_some : frK3 kp (some (q, l, m3)) =
+theorem pfrK1_some : pfrK1 n ctx po pl n1 (some (h, m1)) =
+    pfrK2 n (rdW (m1.arr64 IW) h) (posRecW m1 [0, ctx, po, pl, n1]) := by rw [pfrK1]
+theorem pfrK2_some : pfrK2 n kp (some (f, m2)) =
+    pfrK3 kp (rxDsW n m2 f (rdW (m2.arr64 IW) (kp + 2)) (rdW (m2.arr64 IW) (kp + 3))) := by rw [pfrK2]
+theorem pfrK3_some : pfrK3 kp (some (q, l, m3)) =
     frK4 q l (ceinternW m3 (rdW (m3.arr64 IW) kp) (rdW (m3.arr64 IW) (kp + 1))) := rfl
 theorem frK4_big (hb : 4294967296 ≤ hd) : frK4 q l (some (hd, m4)) = none := by simp [frK4, hb]
 theorem frK4_ok (hb : ¬ 4294967296 ≤ hd) : frK4 q l (some (hd, m4)) = frK5 (stubM "mk_app_n" m4 [hd, q, l]) := by
@@ -335,7 +335,7 @@ theorem rxL3_some : rxL3 a2 x2 (some (c2, m3)) = rpMkW m3 7 a2 x2 c2 0 0 := rfl
 theorem rxP1_some : rxP1 x y (some (a2, m1)) = rpMkW m1 9 a2 0 0 y x := rfl
 end arms
 attribute [ind_grind] rxMapW_img rxMapW_km rxMapW_er rxMapW_cin rxMapW_cout rxImgW_root rxImgW_frame
-  rxImgW_next rxFrameW_in rxFrameW_def frK0_some frK1_some frK2_some frK3_some frK4_big frK4_ok frK5_some
+  rxImgW_next rxFrameW_in rxFrameW_def frK0_some pfrK1_some pfrK2_some pfrK3_some frK4_big frK4_ok frK5_some
   rxDsW_succ dsA_some dsB_some rxDsGoW_done rxDsGoW_step dgK_some rxW_big rxW_ok rxK1_big rxK1_ok
   rxGoW_abort rxGoW_view rxG1_abort rxG1_leaf rxG1_fvar rxG1_node rxH_some rxG3_abort rxG3_hit rxG3_miss
   rxG4_some rxG5_some rxNodeW_bin rxNodeW_let rxNodeW_proj rxB1_some rxB2_some rxL1_some rxL2_some
@@ -463,7 +463,7 @@ theorem rxFrame_step (s₀ : St) (ctx po pl n1 i : Word) :
   simp only [callFn, nestHoleImgFrame]
   sym only [lang_grind, arena_grind, ind_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, hDs,
-      rec2_specW p L.ha L.h2 n, rec4_specW p L.ha L.h4 n, rec5_specW p L.ha L.h5 n,
+      posRec2_specW p L.ha L.h2 n, posRec4_specW p L.ha L.h4 n, posRec5_specW p L.ha L.h5 n,
       internConst_spec p L.cf L.cp L.ci n, stubM_spec p "mk_app_n" n] <;>
     finish (gen := 20) [rdW_eq]
 
@@ -661,7 +661,7 @@ def FMOk (m : Mem) (f : Nat) : FvMap → Prop
   | .canon pfvs => iwN m f = some 3 ∧ f + 3 ≤ iwTop m ∧
       (∃ o l, iwN m (f + 1) = some o ∧ iwN m (f + 2) = some l ∧ decHL m o l = some pfvs ∧ o + l ≤ iwTop m)
 
-theorem iwN_grow {m m' : Mem} (hg : IWGrow m m') {i : Nat} (hi : i < iwTop m) : iwN m' i = iwN m i :=
+theorem posIwN_grow {m m' : Mem} (hg : IWGrow m m') {i : Nat} (hi : i < iwTop m) : iwN m' i = iwN m i :=
   iwN_agree (RdS.of_grow hg) hi
 
 theorem FMOk.grow {m m' : Mem} {f : Nat} {fm : FvMap} (h : FMOk m f fm) (hg : IWGrow m m') : FMOk m' f fm := by
@@ -670,24 +670,24 @@ theorem FMOk.grow {m m' : Mem} {f : Nat} {fm : FvMap} (h : FMOk m f fm) (hg : IW
   | holeImg ctx prog n =>
     obtain ⟨h0, hb, ⟨c, hc, hdc, hci⟩, ⟨po, pl, hpo, hpl, hs⟩, hn, hlt⟩ := h
     obtain ⟨e, hci'⟩ := hci.grow hg
-    exact ⟨by rw [iwN_grow hg (by omega)]; exact h0, by omega,
-      ⟨c, by rw [iwN_grow hg (by omega)]; exact hc, by rw [e]; exact hdc, hci'⟩,
-      ⟨po, pl, by rw [iwN_grow hg (by omega)]; exact hpo, by rw [iwN_grow hg (by omega)]; exact hpl, hs.grow hg⟩,
-      by rw [iwN_grow hg (by omega)]; exact hn, hlt⟩
+    exact ⟨by rw [posIwN_grow hg (by omega)]; exact h0, by omega,
+      ⟨c, by rw [posIwN_grow hg (by omega)]; exact hc, by rw [e]; exact hdc, hci'⟩,
+      ⟨po, pl, by rw [posIwN_grow hg (by omega)]; exact hpo, by rw [posIwN_grow hg (by omega)]; exact hpl, hs.grow hg⟩,
+      by rw [posIwN_grow hg (by omega)]; exact hn, hlt⟩
   | keyMap ds holes =>
     obtain ⟨h0, hb, ⟨o, l, ho, hl, hd, hol⟩, ⟨o2, l2, ho2, hl2, hd2, hol2⟩⟩ := h
-    exact ⟨by rw [iwN_grow hg (by omega)]; exact h0, by omega,
-      ⟨o, l, by rw [iwN_grow hg (by omega)]; exact ho, by rw [iwN_grow hg (by omega)]; exact hl,
+    exact ⟨by rw [posIwN_grow hg (by omega)]; exact h0, by omega,
+      ⟨o, l, by rw [posIwN_grow hg (by omega)]; exact ho, by rw [posIwN_grow hg (by omega)]; exact hl,
         by rw [decHL_grow hg hol]; exact hd, by omega⟩,
-      ⟨o2, l2, by rw [iwN_grow hg (by omega)]; exact ho2, by rw [iwN_grow hg (by omega)]; exact hl2,
+      ⟨o2, l2, by rw [posIwN_grow hg (by omega)]; exact ho2, by rw [posIwN_grow hg (by omega)]; exact hl2,
         by rw [decHL_grow hg hol2]; exact hd2, by omega⟩⟩
   | erase =>
     obtain ⟨h0, hb⟩ := h
-    exact ⟨by rw [iwN_grow hg (by omega)]; exact h0, by omega⟩
+    exact ⟨by rw [posIwN_grow hg (by omega)]; exact h0, by omega⟩
   | canon pfvs =>
     obtain ⟨h0, hb, ⟨o, l, ho, hl, hd, hol⟩⟩ := h
-    exact ⟨by rw [iwN_grow hg (by omega)]; exact h0, by omega,
-      ⟨o, l, by rw [iwN_grow hg (by omega)]; exact ho, by rw [iwN_grow hg (by omega)]; exact hl,
+    exact ⟨by rw [posIwN_grow hg (by omega)]; exact h0, by omega,
+      ⟨o, l, by rw [posIwN_grow hg (by omega)]; exact ho, by rw [posIwN_grow hg (by omega)]; exact hl,
         by rw [decHL_grow hg hol]; exact hd, by omega⟩⟩
 
 /-! ### The twin's node step, with its arms named -/
