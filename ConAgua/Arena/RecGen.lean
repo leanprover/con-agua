@@ -435,11 +435,11 @@ def classRuleOkDomains : FunDecl := lfn (visT, off, cnt) locals (b, r) {
   return r
 }
 
-/-- `class_rule_ok(visT, visR, cvR, n, gen)`: one generated rule, installed as generated. -/
+/-- `class_rule_ok_guards(visR, cvR, gen)`: `classRuleOk`'s first guards: closed, its level
+parameters the recursor's, resolving. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:561-589 ConRon.Arena.classRuleOk
 @[l_impl ConRon.Arena.classRuleOk]
-def classRuleOkL : FunDecl := lfn (visT, visR, cvR, n, gen)
-    locals (b, s, f, ok, rbsOff, rbsLen, bodyD, closed, lo, ll) {
+def classRuleOkGuards : FunDecl := lfn (visR, cvR, gen) locals (b, lo, ll) {
   b := call loose_bvars_bounded_fast(⟪CWF⟫, 0, gen);
   if b == 0 { abort };
   b := call has_fvar_fast(⟪CWF⟫, gen);
@@ -449,6 +449,15 @@ def classRuleOkL : FunDecl := lfn (visT, visR, cvR, n, gen)
   if b == 0 { abort };
   b := call consts_resolve_ffast(visR, gen);
   if b == 0 { abort };
+  return 0
+}
+
+/-- `class_rule_ok(visT, visR, cvR, n, gen)`: one generated rule, installed as generated. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:561-589 ConRon.Arena.classRuleOk
+@[l_impl ConRon.Arena.classRuleOk]
+def classRuleOkL : FunDecl := lfn (visT, visR, cvR, n, gen)
+    locals (u, s, f, ok, rbsOff, rbsLen, bodyD, closed) {
+  u := call class_rule_ok_guards(visR, cvR, gen);
   s := call infer_type_core(visR, 0, gen);
   f := call flush_caches();
   (ok, rbsOff, rbsLen, bodyD) := call strip_lams(n, gen);
@@ -851,7 +860,7 @@ def recGenFns : Prog :=
    ("classes_nfs", classesNfsL), ("class_former_ty", classFormerTyL),
    ("class_const_ok_header", classConstOkHeader), ("class_const_ok", classConstOkL), ("class_rec_ty_ok", classRecTyOkL),
    ("class_rec_tys_ok", classRecTysOkL), ("class_rule_ok_domains", classRuleOkDomains),
-   ("class_rule_ok", classRuleOkL), ("class_rules_ok", classRulesOkL),
+   ("class_rule_ok_guards", classRuleOkGuards), ("class_rule_ok", classRuleOkL), ("class_rules_ok", classRulesOkL),
    ("class_recs_rules_ok", classRecsRulesOkL), ("class_stream_recs", classStreamRecsL),
    ("class_key_canon", classKeyCanonL), ("class_seeds", classSeedsL),
    ("class_key_of_closed", classKeyOfClosed), ("class_key_of", classKeyOfL),
