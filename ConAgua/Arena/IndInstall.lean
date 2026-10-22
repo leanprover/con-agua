@@ -412,24 +412,30 @@ def checkBlockCtorsOne : FunDecl := lfn (vis0, vis, p, lpsO, lpsL, ms, cvTa) loc
 
 /-- `check_block_ctors(vis0, vis, p, ms.off, ms.len, cvTa.off, cvTa.len)`: every member's
 constructors beside its checked former (stopping at the shorter list), each wrapped as a pointer
-(`List (List …)`). -/
+(`List (List …)`); the block's level parameters read once. -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:224-237 ConRon.Arena.checkBlockCtors
 @[l_impl ConRon.Arena.checkBlockCtors]
 def checkBlockCtors : FunDecl := lfn (vis0, vis, p, msO, msL, cvO, cvL) locals
-    (n, lpsO, lpsL, q, q2, j, h1, h2) {
-  n := msL;
-  if cvL < n { n := cvL };
+    (lpsO, lpsL, aO, aL, bO, bL) {
   (lpsO, lpsL) := call block_shape_lps(p);
-  q := call iw_alloc(n);
-  q2 := call iw_alloc(n);
-  j := 0;
-  while j < n {
-    (h1, h2) := call check_block_ctors_one(vis0, vis, p, lpsO, lpsL, IW.u64[msO + j], IW.u64[cvO + j]);
-    IW.u64[q + j] := h1;
-    IW.u64[q2 + j] := h2;
-    j += 1
-  };
-  return (q, n, q2, n)
+  (aO, aL, bO, bL) := call check_block_ctors_go(vis0, vis, p, lpsO, lpsL, msO, msL, cvO, cvL);
+  return (aO, aL, bO, bL)
+}
+
+/-- `check_block_ctors_go(vis0, vis, p, lps.off, lps.len, ms.off, ms.len, cvTa.off, cvTa.len)`:
+recursion as the twin's, each member's two pointers consed onto the rest's slices (`sl_cons`,
+D18). -/
+-- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:224-237 ConRon.Arena.checkBlockCtors
+@[l_impl ConRon.Arena.checkBlockCtors]
+def checkBlockCtorsGo : FunDecl := lfn (vis0, vis, p, lpsO, lpsL, msO, msL, cvO, cvL) locals
+    (h1, h2, aO, aL, bO, bL, o1, l1, o2, l2) {
+  if msL == 0 { return (0, 0, 0, 0) };
+  if cvL == 0 { return (0, 0, 0, 0) };
+  (h1, h2) := call check_block_ctors_one(vis0, vis, p, lpsO, lpsL, IW.u64[msO], IW.u64[cvO]);
+  (aO, aL, bO, bL) := call check_block_ctors_go(vis0, vis, p, lpsO, lpsL, msO + 1, msL - 1, cvO + 1, cvL - 1);
+  (o1, l1) := call sl_cons(h1, aO, aL);
+  (o2, l2) := call sl_cons(h2, bO, bL);
+  return (o1, l1, o2, l2)
 }
 
 /-- `check_abs_ctor_sorts_one(vis, ctx, isProp, nF, tyN, hi)`: one constructor's fields' universes
@@ -775,7 +781,7 @@ def indInstallFns : Prog :=
    ("check_block_agree_one", checkBlockAgreeOne), ("check_block_agree", checkBlockAgree),
    ("cons_block_inds", consBlockInds), ("ind_info_rec", indInfoRec), ("er_put5", erPut5), ("check_block_inds_cv_tas", checkBlockIndsCvTas), ("check_block_inds_cv_tas_go", checkBlockIndsCvTasGo),
    ("check_block_inds", checkBlockInds), ("block_shape_nest_ctx", blockShapeNestCtx),
-   ("check_block_ctors_one", checkBlockCtorsOne), ("check_block_ctors", checkBlockCtors),
+   ("check_block_ctors_one", checkBlockCtorsOne), ("check_block_ctors", checkBlockCtors), ("check_block_ctors_go", checkBlockCtorsGo),
    ("check_abs_ctor_sorts_one", checkAbsCtorSortsOne), ("check_abs_ctor_sorts", checkAbsCtorSorts),
    ("check_abs_ctor_sorts_all", checkAbsCtorSortsAll), ("block_nest_ctx", blockNestCtx),
    ("check_block_positivity_init", checkBlockPositivityInit),

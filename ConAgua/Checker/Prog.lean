@@ -493,6 +493,7 @@ def checkerProg : Prog := [
   ("check_block_classes", L.Ind.checkBlockClassesL),
   ("check_block_classes_keys", L.Ind.checkBlockClassesKeys),
   ("check_block_classes_one_per_member", L.Ind.checkBlockClassesOnePerMember),
+  ("check_block_ctors_go", L.Ind.checkBlockCtorsGo),
   ("check_block_ctors", L.Ind.checkBlockCtors),
   ("check_block_ctors_one", L.Ind.checkBlockCtorsOne),
   ("check_block_doms_at", L.Ind.checkBlockDomsAt),
