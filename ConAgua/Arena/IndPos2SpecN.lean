@@ -117,7 +117,8 @@ def nbAppK2 (n : Nat) (contF : MW11) (vis ctx fu po pl kb hi ns aO aL : Word) :
     Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
   | some (rh, m2) =>
-    if (eViewW m2 (rh.headD 0)).headD 0 = 1 then
+    if eViewW m2 (rh.headD 0) = [] then none
+    else if (eViewW m2 (rh.headD 0)).headD 0 = 1 then
       nbAppK4 ns (pfW n m2 vis ctx po pl kb hi ((eViewW m2 (rh.headD 0)).tail.headD 0) aO aL)
     else if (eViewW m2 (rh.headD 0)).headD 0 = 3 then
       nbAppK5 contF m2 vis ctx fu po pl kb ns aO aL (eViewW m2 (rh.headD 0))
@@ -360,7 +361,8 @@ def nbPosW : Nat → MW9
 def nbBindW : Nat → MW9
   | 0, _, _, _, _, _, _, _, _, _, _ => none
   | n + 1, m, vis, ctx, fu, po, pl, dep, kb, w, ns =>
-    nbBindK1 (nbPosW n) vis ctx fu po pl dep kb (eViewW m w) ns
+    if eViewW m w = [] then none
+    else nbBindK1 (nbPosW n) vis ctx fu po pl dep kb (eViewW m w) ns
       (noConstWf n m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) (rdW (m.arr64 IW) (ctx + 4))
         (nhiW m ctx pl) ((eViewW m w).tail.headD 0))
 /-- `nest_pos_app(vis, ctx, fuel, progOff, progLen, kb, hi, w, ns)`. -/
@@ -419,6 +421,7 @@ def nbFieldsW : Nat → MW14
     else if cur >>> 28 ≠ 6 then none
     else if base + j < base then none
     else if base + j + 1 = 0 then none
+    else if eViewW m cur = [] then none
     else nbFieldsK1 k (nbFieldsW k) vis ctx fu po pl base nF j kO kL dO dL (eViewW m cur)
       (nbPosW k m vis ctx fu po pl (base + j) 0 ((eViewW m cur).tail.headD 0) ns)
 end
@@ -469,7 +472,8 @@ theorem nbAppK5_some (contF : MW11) (m2 : Mem) (vis ctx fu po pl kb ns aO aL : W
     else nbAppK6 (contF m2 vis ctx fu po pl kb (v.tail.headD 0) (v.tail.tail.headD 0) aO aL ns) := rfl
 theorem nbAppK2_some (n : Nat) (contF : MW11) (vis ctx fu po pl kb hi ns aO aL : Word) (rh : List Word) (m2 : Mem) :
     nbAppK2 n contF vis ctx fu po pl kb hi ns aO aL (some (rh, m2)) =
-    if (eViewW m2 (rh.headD 0)).headD 0 = 1 then
+    if eViewW m2 (rh.headD 0) = [] then none
+    else if (eViewW m2 (rh.headD 0)).headD 0 = 1 then
       nbAppK4 ns (pfW n m2 vis ctx po pl kb hi ((eViewW m2 (rh.headD 0)).tail.headD 0) aO aL)
     else if (eViewW m2 (rh.headD 0)).headD 0 = 3 then
       nbAppK5 contF m2 vis ctx fu po pl kb ns aO aL (eViewW m2 (rh.headD 0))
@@ -623,7 +627,8 @@ theorem nbPosW_succ (n : Nat) (m : Mem) (vis ctx fu po pl dep kb e ns : Word) :
   rw [nbPosW]
 theorem nbBindW_succ (n : Nat) (m : Mem) (vis ctx fu po pl dep kb w ns : Word) :
     nbBindW (n + 1) m vis ctx fu po pl dep kb w ns =
-nbBindK1 (nbPosW n) vis ctx fu po pl dep kb (eViewW m w) ns
+      if eViewW m w = [] then none
+      else nbBindK1 (nbPosW n) vis ctx fu po pl dep kb (eViewW m w) ns
         (noConstWf n m (rdW (m.arr64 IW) ctx) (rdW (m.arr64 IW) (ctx + 1)) (rdW (m.arr64 IW) (ctx + 4))
           (nhiW m ctx pl) ((eViewW m w).tail.headD 0)) := by
   rw [nbBindW]
@@ -665,6 +670,7 @@ theorem nbFieldsW_succ (k : Nat) (m : Mem) (vis ctx fu po pl base nF j cur ns kO
       else if cur >>> 28 ≠ 6 then none
       else if base + j < base then none
       else if base + j + 1 = 0 then none
+      else if eViewW m cur = [] then none
       else nbFieldsK1 k (nbFieldsW k) vis ctx fu po pl base nF j kO kL dO dL (eViewW m cur)
         (nbPosW k m vis ctx fu po pl (base + j) 0 ((eViewW m cur).tail.headD 0) ns) := by
   rw [nbFieldsW]
