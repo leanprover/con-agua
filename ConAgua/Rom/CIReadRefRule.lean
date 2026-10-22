@@ -226,4 +226,100 @@ theorem rule_rel {m₀ : Mem} {a₀ : AState} (seen : List ConLeche.Expr) (memo 
 
 end rule
 
+section rules
+variable {rom : List UInt8} {p : Prog} (hL : RomCIProg rom p) (hr : RomOK rom)
+include hL hr
+
+/-- **`rci_rules_to` refines `Frontend.internRules`**, into the 11-word records at `o`, `o + 11`, …. -/
+theorem rulesTo_rel {m₀ : Mem} {a₀ : AState} :
+    ∀ (rs : List ConLeche.RecRule), rs.all ruleFits = true → ∀ (seen : List ConLeche.Expr) (memo : EMemo)
+      (k : Nat) (m : Mem) (a : AState) (q o kw : Word) (rest : List UInt8) (r : List Word) (m' : Mem),
+      RInv m₀ a₀ m a → MemoR m seen memo → stkTop m = 0 →
+      rom.drop q.toNat = (encRules seen rs).1 ++ rest → kw.toNat = rs.length →
+      erTop m₀ ≤ o.toNat → o.toNat + 11 * rs.length ≤ erTop m →
+      callW p k "rci_rules_to" [q, o, kw] m = some (r, m') →
+      ∃ (memo' : EMemo) (irs : List IRecRule) (a' : AState),
+        (Frontend.internRules memo rs).run a = .ok ((memo', irs), a') ∧ irs.length = rs.length ∧
+        RInv m₀ a₀ m' a' ∧ MemoR m' (encRules seen rs).2 memo' ∧ stkTop m' = 0 ∧
+        (r.headD 0).toNat = q.toNat + (encRules seen rs).1.length ∧
+        EKeep (fun i => o.toNat ≤ i ∧ i < o.toNat + 11 * rs.length) m m' ∧ erTop m' = erTop m ∧
+        m'.arr64 IW = m.arr64 IW ∧
+        ∀ j (hj : j < irs.length), Holds (fun i => o.toNat + 11 * j ≤ i ∧ i < o.toNat + 11 * j + 11)
+          (fun _ => False) (fun m => decRule (erA m) (o.toNat + 11 * j)) m' irs[j] := by
+  intro rs
+  induction rs with
+  | nil =>
+    intro _ seen memo k m a q o kw rest r m' hI hM hst hd hk ho hot hc
+    cases k with
+    | zero => rw [callW_zero] at hc; cases hc
+    | succ k =>
+    have hw := callW_model (M := fun mq => rulesToW p k mq q o kw) (rulesTo_specW rom p hL k · q o kw) hc
+    have hk0 : kw = 0 := by apply UInt64.toNat_inj.mp; simpa using hk
+    simp only [rulesToW, hk0, if_true, Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    exact ⟨memo, [], a, rfl, rfl, hI, hM, hst, by simp [encRules], EKeep.refl _ _, rfl, rfl,
+      fun j hj => by simp at hj⟩
+  | cons rl rs ih =>
+    intro hfit seen memo k m a q o kw rest r m' hI hM hst hd hk ho hot hc
+    simp only [List.all_cons, Bool.and_eq_true] at hfit
+    cases k with
+    | zero => rw [callW_zero] at hc; cases hc
+    | succ k =>
+    have hw := callW_model (M := fun mq => rulesToW p k mq q o kw) (rulesTo_specW rom p hL k · q o kw) hc
+    have hk0 : kw ≠ 0 := fun h => by subst h; simp at hk
+    simp only [rulesToW, hk0, if_false] at hw
+    cases k with
+    | zero => rw [callW_zero] at hw; simp at hw
+    | succ k =>
+    cases h1 : callW p (k + 1) "rci_rule" [q, o] m with
+    | none => rw [h1] at hw; simp at hw
+    | some t1 =>
+    obtain ⟨r1, m1⟩ := t1
+    rw [h1, bW_some] at hw
+    simp only [List.length_cons] at hot hk
+    have hd0 : rom.drop q.toNat = (encRule seen rl).1 ++ ((encRules (encRule seen rl).2 rs).1 ++ rest) := by
+      rw [hd]; simp [encRules, List.append_assoc]
+    obtain ⟨memo1, irl, a1, hrun1, hI1, hM1, hs1, hq1, hek1, ht1, hIW1, hH1⟩ :=
+      rule_rel hL hr seen memo rl hfit.1 k m a q o _ _ m1 hI hM hst hd0 ho (by omega) h1
+    have hlt := hI.er_lt
+    have ho11 : (o + 11).toNat = o.toNat + 11 := by rw [UInt64.toNat_add]; simp; omega
+    have hk1' : (kw - 1).toNat = rs.length := by
+      rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
+    cases h2 : callW p (k + 1) "rci_rules_to" [r1.headD 0, o + 11, kw - 1] m1 with
+    | none => rw [h2] at hw; simp at hw
+    | some t2 =>
+    obtain ⟨r2, m2⟩ := t2
+    rw [h2, bW_some] at hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    have hd1 : rom.drop (r1.headD 0).toNat = (encRules (encRule seen rl).2 rs).1 ++ rest :=
+      drop_shift rom hr q _ _ _ (by rw [hd0, List.append_assoc]) _ hq1
+    obtain ⟨memo2, irs, a2, hrun2, hlen2, hI2, hM2, hs2, hq2, hek2, ht2, hIW2, hH2⟩ :=
+      ih hfit.2 _ memo1 (k + 1) m1 a1 _ (o + 11) (kw - 1) rest r2 m2 hI1 hM1 hs1 hd1 hk1'
+        (by omega) (by omega) h2
+    refine ⟨memo2, irl :: irs, a2, ?_, by simp [hlen2], hI2, ?_, hs2, ?_, ?_, by rw [ht2, ht1],
+      by rw [hIW2, hIW1], ?_⟩
+    · simp only [Frontend.internRules]
+      rw [run_bind_of _ _ _ _ _ hrun1, run_bind_of _ _ _ _ _ hrun2]
+      rfl
+    · simpa [encRules] using hM2
+    · simp only [List.headD_cons]; rw [hq2, hq1]; simp [encRules]; omega
+    · rw [ho11] at hek2
+      exact (hek1.mono fun i hi => ⟨by omega, by simp; omega⟩).trans
+        (hek2.mono fun i hi => ⟨by omega, by simp; omega⟩)
+    · intro j hj
+      cases j with
+      | zero =>
+        simp only [List.getElem_cons_zero, Nat.mul_zero, Nat.add_zero]
+        exact hH1.ekeep hek2 (fun i hi => ⟨by omega, by omega⟩) hIW2
+      | succ j =>
+        simp only [List.getElem_cons_succ]
+        have := hH2 j (by simp at hj; omega)
+        rw [ho11] at this
+        have e : o.toNat + 11 + 11 * j = o.toNat + 11 * (j + 1) := by omega
+        rw [e] at this
+        exact this
+
+end rules
+
 end L.Rom
