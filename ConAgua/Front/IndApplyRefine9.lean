@@ -38,6 +38,11 @@ theorem psum_fpos {b : ByteArray} {m : Mem} {to : Word} {tys : List IndTypeRec}
       List.getElem?_eq_getElem (show i < tys.length by omega), Option.map_some, Option.some.injEq] at this
     rw [this]; exact h4
 
+theorem ordList_get (m : Mem) (oo co : Nat) (cts : List IndCtorRec) (l p : Nat)
+    (hp : p < (ordList m oo co cts l).length) :
+    (ordList m oo co cts l)[p] = cts.getD (((wd m IFL (oo + p)).toNat - co) / 10) default := by
+  simp [ordList]
+
 theorem fpos_lt (LS : List (List NIdx)) (i c : Nat) (hi : i < LS.length) (hc : c < LS[i].length) :
     fpos LS i + c < LS.flatten.length := by
   induction LS generalizing i with
@@ -253,6 +258,75 @@ theorem validateW_twin {b : ByteArray} {n : Nat} {m m' : Mem} {a : AState} {st :
       refine ⟨by omega, ?_⟩
       rw [hkeep34 p hp]; exact l8 p hp)
     (by rw [hps4 _ (by omega), hTn, ← hLSl, fpos_full, hflen]; exact Nat.le_refl _) h10
+  have e15 := e14.trans o2
+  have hR₅ : ArenaR m₅ a := ArenaR.frame_ext [IFL, LH] [192] (by decide) (by simp) m m₅ e15.frame a hR
+  -- `kExpected?`
+  obtain ⟨k1, k2, k3⟩ := kExpW_twin hR₅ hok h11
+  have e56 := iext_of_heap k1
+  have e16 := e15.trans e56
+  have hR₆ : ArenaR m' a := ArenaR.frame_ext [IFL, LH] [192] (by decide) (by simp) m m' e16.frame a hR
+  have hD₆ : StateDR m' st := hD.frame e16.frame (by decide) (by decide) (by decide) (by decide) (by decide)
+  have hIFL56 : m'.arr64 IFL = m₅.arr64 IFL := k1.1 IFL (by decide) (by decide)
+  -- the words the twin's lists are read from
+  have hTNw : ∀ i, i < tys.length → wd m' IFL (tyn.toNat + i) = wd m₁ IFL (tyn.toNat + i) := fun i hi =>
+    ((u2.trans (l2.trans (v2.trans (o2.trans e56)))).keep _ (by omega) (by omega))
+  have hTTw : ∀ i, i < tys.length → wd m' IFL (tyt.toNat + i) = wd m₂ IFL (tyt.toNat + i) := fun i hi =>
+    ((l2.trans (v2.trans (o2.trans e56))).keep _ (by omega) (by omega))
+  have hTN : islice (k := .name) m' tyn.toNat tn.toNat = islice m₁ tyn.toNat tys.length := by
+    rw [hTn]; simp only [islice]; apply List.map_congr_left; intro i hi
+    simp only [List.mem_range] at hi; rw [hTNw i hi]
+  have hTT : islice (k := .expr) m' tyt.toNat tn.toNat = islice m₂ tyt.toNat tys.length := by
+    rw [hTn]; simp only [islice]; apply List.map_congr_left; intro i hi
+    simp only [List.mem_range] at hi; rw [hTTw i hi]
+  have hke : ke = 0 ∨ ke = 1 ∨ ke = 2 := by
+    by_cases hc : tn = 1 ∧ rdW (m₅.arr64 IFR) (to + 4) = 1
+    · obtain ⟨r, v, -, -, hn, hs⟩ := k3 hc.1 hc.2
+      by_cases hv : ∃ s, v = .sort s
+      · obtain ⟨s, hs'⟩ := hv
+        obtain ⟨L, -, hk⟩ := hs s hs'
+        rw [hk]; split <;> simp
+      · exact .inl (hn (fun s hs' => hv ⟨s, hs'⟩))
+    · exact .inr (.inl (k2 (by
+        rcases Classical.not_and_iff_not_or_not.mp hc with h | h
+        · exact .inl h
+        · exact .inr h)))
+  -- the recursors
+  cases n with
+  | zero => simp [recsW] at h12
+  | succ n =>
+  simp only [recsW] at h12
+  cases h13 : nestedW n m' to tn 0 with
+  | none => rw [h13, wK_none] at h12; cases h12
+  | some un =>
+  rw [h13, wK_some] at h12
+  have hTy₆ : ListF (TyF b m') m' 11 to.toNat tys := hTy.ext e16 (fun _ _ x => x.ext e16)
+  have hRc₆ : ListF (RecF b m') m' 11 ro.toNat rcs := hRc.ext e16 (fun _ _ x => x.ext e16)
+  obtain ⟨n1, n2⟩ := nestedW_twin hTy₆ hTn hto n 0 un h13
+  have hrecs : ∀ r ∈ (if (tys.any fun x => x.numNested != 0) = true then [] else rcs),
+      RecOK st a (islice m₁ tyn.toNat tys.length) (islice m₂ tyt.toNat tys.length) np.toNat
+        tys.length (ordList m₅ oo.toNat co.toNat cts cts.length).length (keOf ke) fuel.toNat r := by
+    intro r hr
+    by_cases hun : un = 0
+    · have hany : (tys.any fun x => x.numNested != 0) = false := by
+        rw [List.any_eq_false]
+        intro x hx
+        obtain ⟨k, hk, rfl⟩ := List.getElem_of_mem hx
+        simp [n1 hun k hk (Nat.zero_le _)]
+      rw [hany] at hr
+      simp only [Bool.false_eq_true, if_false] at hr
+      rw [if_neg (by simpa using hun)] at h12
+      obtain ⟨k, hk, rfl⟩ := List.getElem_of_mem hr
+      have := recsGoW_twin hR₆ hD₆ hRc₆ hRn hro np3 hke
+        (by have := t3.1; have := t3.2; have := u2.top; have := l2.top; have := v2.top; omega)
+        (by have := u3.1; have := u3.2; omega)
+        (fun i hi => by rw [hTn] at hi; rw [hTNw i hi]; exact t7 i hi) n 0 h12 k hk (Nat.zero_le _)
+      rw [hTN, hTT, hTn, hCn] at this
+      rw [ordList_length]; exact this
+    · obtain ⟨k, hk, hk'⟩ := n2 hun
+      have hany : (tys.any fun x => x.numNested != 0) = true := by
+        rw [List.any_eq_true]; exact ⟨tys[k], List.getElem_mem hk, by simpa using hk'⟩
+      rw [hany] at hr
+      simp at hr
   sorry
 
 end L.Front.Ind

@@ -31,8 +31,8 @@ def RecOK (st : StateD) (a : AState) (TN : List NIdx) (TT : List EIdx) (nPd nTyp
 def keOf (ke : Word) : Option Bool := if ke = 0 then none else some (ke = 2)
 
 theorem recIdxW_twin {m : Mem} {a : AState} (hR : ArenaR m a) {T ni np tn tyn tyt fuel : Word}
-    (hnp : np.toNat < 10 ^ 18) (hni : ni.toNat < 10 ^ 18) (hb : tyn.toNat + tn.toNat < 2 ^ 63)
-    (hb' : tyt.toNat + tn.toNat < 2 ^ 63) :
+    (hnp : np.toNat < 10 ^ 18) (hni : ni.toNat < 10 ^ 18) (hb : tyn.toNat + tn.toNat ≤ 2 ^ 63)
+    (hb' : tyt.toNat + tn.toNat ≤ 2 ^ 63) :
     ∀ n j, recIdxW n m T ni np tn tyn tyt fuel j = some () →
       ∀ k, j.toNat ≤ k → k < tn.toNat → wd m IFL (tyn.toNat + k) = T →
         ∃ o, (piSortTeleLen? fuel.toNat (decE (wd m IFL (tyt.toNat + k)))).run a = .ok (o, a) ∧
@@ -89,8 +89,8 @@ theorem recIdxW_twin {m : Mem} {a : AState} (hR : ArenaR m a) {T ni np tn tyn ty
 theorem recW_twin {b : ByteArray} {n : Nat} {m : Mem} {a : AState} {st : StateD} (hR : ArenaR m a)
     (hD : StateDR m st) {rc : IndRecRec} {r np tn cn ke tyn tyt fuel : Word}
     (hrec : RecF b m r.toNat rc) (hr : r.toNat + 11 < 2 ^ 63) (hnp : np.toNat < 10 ^ 18)
-    (hke : ke = 0 ∨ ke = 1 ∨ ke = 2) (hb : tyn.toNat + tn.toNat < 2 ^ 63)
-    (hb' : tyt.toNat + tn.toNat < 2 ^ 63)
+    (hke : ke = 0 ∨ ke = 1 ∨ ke = 2) (hb : tyn.toNat + tn.toNat ≤ 2 ^ 63)
+    (hb' : tyt.toNat + tn.toNat ≤ 2 ^ 63)
     (hTN : ∀ k, k < tn.toNat → (wd m IFL (tyn.toNat + k)).toNat < 2 ^ 32)
     (h : recW n m r np tn cn ke tyn tyt fuel = some ()) :
     RecOK st a (islice m tyn.toNat tn.toNat) (islice m tyt.toNat tn.toNat) np.toNat tn.toNat cn.toNat
@@ -170,8 +170,8 @@ theorem recsGoW_twin {b : ByteArray} {m : Mem} {a : AState} {st : StateD} (hR : 
     (hD : StateDR m st) {rcs : List IndRecRec} {ro rn np tn cn ke tyn tyt fuel : Word}
     (hL : ListF (RecF b m) m 11 ro.toNat rcs) (hrn : rn.toNat = rcs.length)
     (hro : ro.toNat + 11 * rcs.length < 2 ^ 63) (hnp : np.toNat < 10 ^ 18)
-    (hke : ke = 0 ∨ ke = 1 ∨ ke = 2) (hb : tyn.toNat + tn.toNat < 2 ^ 63)
-    (hb' : tyt.toNat + tn.toNat < 2 ^ 63)
+    (hke : ke = 0 ∨ ke = 1 ∨ ke = 2) (hb : tyn.toNat + tn.toNat ≤ 2 ^ 63)
+    (hb' : tyt.toNat + tn.toNat ≤ 2 ^ 63)
     (hTN : ∀ k, k < tn.toNat → (wd m IFL (tyn.toNat + k)).toNat < 2 ^ 32) :
     ∀ n j, recsGoW n m ro rn np tn cn ke tyn tyt fuel j = some () →
       ∀ k (hk : k < rcs.length), j.toNat ≤ k →
