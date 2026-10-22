@@ -1,4 +1,5 @@
 import ConAgua.Arena.IndPartsSpec3
+import ConAgua.Arena.IndPos2Spec
 
 /-!
 # Refinements of `IndParts`, part 4 (lane `indproofs`, helper `parts`)
@@ -506,11 +507,11 @@ mutual
 /-- **The model of `block_shape_with_sort`.** -/
 def wsW : Nat → Mem → Word → Word → Option (List Word × Mem)
   | 0, _, _, _ => none
-  | n + 1, m, p, s => wsK1 p s (stubM "pin_word" m [53])
+  | n + 1, m, p, s => wsK1 p s m (pinWordV m 53)
 
-def wsK1 (p s : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def wsK1 (p s : Word) (m : Mem) : Option Word → Option (List Word × Mem)
   | none => none
-  | some (r1, m1) => wsK2 p s (stubM "lvl_eq" m1 [s, r1.headD 0])
+  | some z => wsK2 p s (stubM "lvl_eq" m [s, z])
 
 def wsK2 (p s : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
@@ -522,21 +523,22 @@ end
 
 section arms
 variable (n : Nat) (m m1 m2 : Mem) (p s : Word) (r1 r2 : List Word)
-theorem wsW_step : wsW (n + 1) m p s = wsK1 p s (stubM "pin_word" m [53]) := rfl
-theorem wsK1_some : wsK1 p s (some (r1, m1)) = wsK2 p s (stubM "lvl_eq" m1 [s, r1.headD 0]) := rfl
+theorem wsW_step : wsW (n + 1) m p s = wsK1 p s m (pinWordV m 53) := rfl
+theorem wsK1_some (z : Word) : wsK1 p s m (some z) = wsK2 p s (stubM "lvl_eq" m [s, z]) := rfl
 theorem wsK2_some : wsK2 p s (some (r2, m2)) = (match allocW m2 9 with
     | none => none
     | some (q, m3) => some ([q], wsWrites m3 q p s (if r2.headD 0 = 2 then 1 else 0))) := rfl
 end arms
 
 grind_pattern [ind_grind] wsW_step => wsW (n + 1) m p s
-grind_pattern [ind_grind] wsK1_some => wsK1 p s (some (r1, m1))
+grind_pattern [ind_grind] wsK1_some => wsK1 p s m (some z)
 grind_pattern [ind_grind] wsK2_some => wsK2 p s (some (r2, m2))
 
 section spec
 variable (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+  (hpw : p.lookup "pin_word" = some pinWordL)
   (hp : p.lookup "block_shape_with_sort" = some blockShapeWithSort)
-include ha hp
+include ha hpw hp
 
 set_option maxHeartbeats 1600000 in
 theorem blockShapeWithSort_spec (n : Nat) (s₀ : St) (q s : Word) :
@@ -549,7 +551,7 @@ theorem blockShapeWithSort_spec (n : Nat) (s₀ : St) (q s : Word) :
   | succ n =>
     sym only [lang_grind, arena_grind, ind_grind] =>
       vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
-        stubM_spec p "pin_word" n, stubM_spec p "lvl_eq" n, iwAlloc_specW p ha n] <;>
+        pinWord_specV p hpw n, stubM_spec p "lvl_eq" n, iwAlloc_specW p ha n] <;>
       finish (gen := 20) [wsWrites, cpyIW]
 
 end spec
@@ -725,19 +727,26 @@ theorem wsW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
   | zero => simp [wsW] at h
   | succ n =>
   rw [wsW_step] at h
-  cases hra : stubM "pin_word" m [53] with
-  | none => rw [hra] at h; simp [wsK1] at h
-  | some rm1 =>
-  obtain ⟨r1, m1⟩ := rm1
-  rw [hra, wsK1_some] at h
-  obtain ⟨x1, a1, hrun1, hS1, hg1, hdl1, hdI1⟩ := pinWordZero_spec dn vis fe m m1 a r1 hra hS
-  cases hrb : stubM "lvl_eq" m1 [s, r1.headD 0] with
+  cases hpz : pinWordV m 53 with
+  | none => rw [hpz] at h; simp [wsK1] at h
+  | some z =>
+  rw [hpz, wsK1_some] at h
+  have hpne : rdW (m.arr64 PINS) 0 ≠ 0 := by
+    intro h0; simp [pinWordV, h0] at hpz
+  have hz : z = pinW m 53 := by
+    simp only [pinWordV, hpne, if_false, Option.some.injEq] at hpz
+    rw [← hpz]; rfl
+  have hpin0 : pinW m 0 ≠ 0 := hpne
+  have hfull := hS.1.pins.full hpin0
+  have hzlt : z.toNat < 2 ^ 32 := by rw [hz]; exact hfull.lv_lt.2.1
+  have hrun1 : (zeroLevel).run a = .ok (decI z, a) := by rw [hz]; exact pinZeroLevel_run hfull
+  cases hrb : stubM "lvl_eq" m [s, z] with
   | none => rw [hrb] at h; simp [wsK2] at h
   | some rm2 =>
   obtain ⟨r2, m2⟩ := rm2
   rw [hrb, wsK2_some] at h
   obtain ⟨x2, a2, hrun2, hS2, hg2, hdec2⟩ :=
-    lvlEqStub_spec dn vis fe s (r1.headD 0) hs hdl1 m1 m2 a1 r2 hrb hS1
+    lvlEqStub_spec dn vis fe s z hs hzlt m m2 a r2 hrb hS
   cases hal : allocW m2 9 with
   | none => rw [hal] at h; simp at h
   | some qm =>
@@ -745,7 +754,7 @@ theorem wsW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
   rw [hal] at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
   obtain ⟨rfl, rfl⟩ := h
-  have hg12 : IWGrow m m2 := hg1.trans hg2
+  have hg12 : IWGrow m m2 := hg2
   obtain ⟨hI2, hE2, hIsz2, hEsz2, hCsz2⟩ := hS2.2
   obtain ⟨hq, hm3, hroom⟩ := allocW_facts hal hIsz2
   subst hm3
@@ -805,7 +814,6 @@ theorem wsW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
     stage_frame_iw hS2 hfr2 (by rw [← hfr2.2.2.1 IW]; exact htop'), hgm⟩
   unfold BlockShape.withSort
   simp only [StateT.run_bind, hrun1, except_ok_bind]
-  rw [hdI1] at hrun2
   simp only [hrun2, except_ok_bind]
   rw [hprop]
   rfl
@@ -816,6 +824,7 @@ theorem wsW_ok (n : Nat) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv) (vis 
 and flag. The old record must keep decoding as the pool grows (`hstab`). -/
 @[refines ConRon.Arena.BlockShape.withSort]
 theorem blockShapeWithSort_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hpw : p.lookup "pin_word" = some pinWordL)
     (hp : p.lookup "block_shape_with_sort" = some blockShapeWithSort)
     (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (fe : IFEnv)
     (vis q s : Word) (bs : BlockShape) (hS : StageR dn vis fe s₀.mem a₀) (hs : s.toNat < 2 ^ 32)
@@ -827,7 +836,7 @@ theorem blockShapeWithSort_refines (p : Prog) (ha : p.lookup "iw_alloc" = some i
       decBS s'.mem (r.headD 0).toNat = some (AM.res (BlockShape.withSort bs (decI s)) a₀) ∧
       StageR dn vis fe s'.mem (AM.st (BlockShape.withSort bs (decI s)) a₀) ∧
       IWGrow s₀.mem s'.mem; ⊤⦄ := by
-  refine triple_post (blockShapeWithSort_spec p ha hp n s₀ q s) ?_
+  refine triple_post (blockShapeWithSort_spec p ha hpw hp n s₀ q s) ?_
   rintro r s' ⟨hl, hm⟩
   obtain ⟨bs', a', q', hrun, hr, hdec, hS', hg⟩ := wsW_ok n dn fe vis s₀.mem s'.mem a₀ q s r bs hm
     hS hs hstab hq
