@@ -93,7 +93,7 @@ theorem wsNodeA_run (memo : Std.HashMap (EIdx × Nat) Bool) (F d : Nat) (h : EId
 def WsGoOK (n : Nat) : Prop :=
   ∀ (m m' : Mem) (a : AState) (memo : Std.HashMap (EIdx × Nat) Bool) (h d c r : Word),
     ArenaD m a → MemoRG wsSch lfKey decBW m memo → h.toNat < 2 ^ 32 →
-    wsW n m h d c = some (r, m') →
+    wscW n m h d c = some (r, m') →
     ∃ memo', (wscopedBGo memo c.toNat d.toNat (decE h)).run a = .ok ((r != 0, memo'), a) ∧
       MemoRG wsSch lfKey decBW m' memo' ∧ r ≤ 1 ∧ WsFrame m m'
 
@@ -108,11 +108,11 @@ def WsNodeOK (n : Nat) : Prop :=
 theorem wsGoOK_succ (n : Nat) (ih : WsNodeOK n) : WsGoOK (n + 1) := by
   intro m m' a memo h d c r hD hM hh hb
   by_cases hc : c = 0
-  · rw [wsW] at hb; simp [hc] at hb
+  · rw [wscW] at hb; simp [hc] at hb
   rw [ctrW_toNat c hc, wscopedBGo_succ', StateT.run_bind, derivedE_run, except_ok_bind]
   rw [← derFW_ok m a hD.1 hD.2 h hh]
   by_cases hf : derFW m h = 0
-  · rw [wsW_cut n m h d c hc hf] at hb
+  · rw [wscW_cut n m h d c hc hf] at hb
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     refine ⟨memo, by rw [hf]; rfl, hM, by decide, MemFrame.refl _ _ _⟩
   have hf' : ((derFW m h).toNat == 0) = false := by
@@ -121,10 +121,10 @@ theorem wsGoOK_succ (n : Nat) (ih : WsNodeOK n) : WsGoOK (n + 1) := by
   rw [hf']
   simp only [Bool.false_eq_true, ↓reduceIte]
   by_cases hr : mfindG wsSch m h d = []
-  · rw [wsW] at hb; simp [hc, hf, hr] at hb
+  · rw [wscW] at hb; simp [hc, hf, hr] at hb
   have hk : lfKey.ok h d := hh
   by_cases hh0 : (mfindG wsSch m h d).headD 0 ≠ 0
-  · rw [wsW_hit n m h d c hc hf hr hh0] at hb
+  · rw [wscW_hit n m h d c hc hf hr hh0] at hb
     obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hb)
     have e := memoRG_hit wsSch lfKey decBW m memo hM h d hr hh0 hk
     simp only [lfKey] at e
@@ -138,7 +138,7 @@ theorem wsGoOK_succ (n : Nat) (ih : WsNodeOK n) : WsGoOK (n + 1) := by
     · have : rdW (m.arr64 WSM) ((mfindG wsSch m h d).tail.headD 0 * 4 + 3) = 0 := by simpa using hv
       simp only [this]; rfl
   · simp only [ne_eq, Decidable.not_not] at hh0
-    rw [wsW_miss n m h d c hc hf hr hh0] at hb
+    rw [wscW_miss n m h d c hc hf hr hh0] at hb
     have e := memoRG_miss wsSch lfKey decBW m memo hM h d hk hr hh0
     simp only [lfKey] at e
     rw [e]
@@ -163,13 +163,13 @@ theorem wsGoOK_succ (n : Nat) (ih : WsNodeOK n) : WsGoOK (n + 1) := by
 theorem wsAnd_ok (n : Nat) (ih : WsGoOK n) (m m' : Mem) (a : AState)
     (memo : Std.HashMap (EIdx × Nat) Bool) (hD : ArenaD m a) (hM : MemoRG wsSch lfKey decBW m memo)
     (fw bw d c r : Word) (hf : fw.toNat < 2 ^ 32) (hb' : bw.toNat < 2 ^ 32)
-    (hb : wsAndK n bw d c (wsW n m fw d c) = some (r, m')) :
+    (hb : wsAndK n bw d c (wscW n m fw d c) = some (r, m')) :
     ∃ memo', (do
         let (rf, memo) ← wscopedBGo memo c.toNat d.toNat (decE fw)
         if rf then wscopedBGo memo c.toNat d.toNat (decE bw) else pure (false, memo) :
           AM (Bool × Std.HashMap (EIdx × Nat) Bool)).run a = .ok ((r != 0, memo'), a) ∧
       MemoRG wsSch lfKey decBW m' memo' ∧ r ≤ 1 ∧ WsFrame m m' := by
-  cases h1 : wsW n m fw d c with
+  cases h1 : wscW n m fw d c with
   | none => simp only [h1, wsAndK, reduceCtorEq] at hb
   | some q =>
     obtain ⟨x, m₁⟩ := q
@@ -253,7 +253,7 @@ theorem wsNodeOK_succ (n : Nat) (ih : WsGoOK n) : WsNodeOK (n + 1) := by
     rw [wsNodeW_let n m h d c (vok 20 hc) g7] at hb
     rw [wsNodeA_run _ _ _ _ a _ hv]
     simp only [wsArm, wscopedBGoArmLet]
-    cases h1 : wsW n m (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) d c with
+    cases h1 : wscW n m (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) d c with
     | none => simp only [h1, wsLetK, reduceCtorEq] at hb
     | some q =>
       obtain ⟨x, m₁⟩ := q
@@ -304,7 +304,7 @@ theorem wsNodeOK_succ (n : Nat) (ih : WsGoOK n) : WsNodeOK (n + 1) := by
 theorem wsGoOK (n : Nat) : WsGoOK n ∧ WsNodeOK n := by
   induction n with
   | zero =>
-    exact ⟨fun _ _ _ _ _ _ _ _ _ _ _ hb => by simp [wsW] at hb,
+    exact ⟨fun _ _ _ _ _ _ _ _ _ _ _ hb => by simp [wscW] at hb,
       fun _ _ _ _ _ _ _ _ _ _ _ hb => by simp [wsNodeW] at hb⟩
   | succ n ih => exact ⟨wsGoOK_succ n ih.2, wsNodeOK_succ n ih.1⟩
 

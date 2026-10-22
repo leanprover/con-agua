@@ -40,7 +40,7 @@ abbrev FLM : ArrId := 152
 abbrev flSch : MemoSch := ⟨FLM, 154⟩
 /-- `leavesSubGo`'s memo. -/
 abbrev LSM : ArrId := 153
-abbrev lsSch : MemoSch := ⟨LSM, 156⟩
+abbrev lsbSch : MemoSch := ⟨LSM, 156⟩
 /-- The leaf list (`fvarLeavesGo`'s accumulator): `(idx, ty)` at words `2 j`, `2 j + 1`. -/
 abbrev LVS : ArrId := 154
 
@@ -352,26 +352,26 @@ end flgo
 /-! ## `leaf_mem(k, x, y)`: membership in the first `k` leaves, newest first -/
 
 /-- **The model of `leaf_mem`'s loop** from the cursor `j` down. -/
-def lmW (a : Array Word) (x y j : Word) : Word :=
+def lfmW (a : Array Word) (x y j : Word) : Word :=
   if j = 0 then 0
   else if rdW a ((j - 1) * 2) = x ∧ rdW a ((j - 1) * 2 + 1) = y then 1
-  else lmW a x y (j - 1)
+  else lfmW a x y (j - 1)
 termination_by j.toNat
 decreasing_by
   have : j.toNat ≠ 0 := fun e => ‹¬ j = 0› (UInt64.toNat_inj.mp (by simpa using e))
   rw [UInt64.toNat_sub_of_le _ _ (by rw [UInt64.le_iff_toNat_le]; simp; omega)]; simp; omega
 
-theorem lmW_zero (a : Array Word) (x y : Word) : lmW a x y 0 = 0 := by rw [lmW]; simp
-theorem lmW_hit (a : Array Word) (x y j : Word) (hj : j ≠ 0)
-    (h : rdW a ((j - 1) * 2) = x ∧ rdW a ((j - 1) * 2 + 1) = y) : lmW a x y j = 1 := by
-  rw [lmW]; simp [hj, h.1, h.2]
-theorem lmW_next (a : Array Word) (x y j : Word) (hj : j ≠ 0)
-    (h : ¬ (rdW a ((j - 1) * 2) = x ∧ rdW a ((j - 1) * 2 + 1) = y)) : lmW a x y j = lmW a x y (j - 1) := by
-  rw [lmW]; simp only [hj, ↓reduceIte, h]
+theorem lfmW_zero (a : Array Word) (x y : Word) : lfmW a x y 0 = 0 := by rw [lfmW]; simp
+theorem lfmW_hit (a : Array Word) (x y j : Word) (hj : j ≠ 0)
+    (h : rdW a ((j - 1) * 2) = x ∧ rdW a ((j - 1) * 2 + 1) = y) : lfmW a x y j = 1 := by
+  rw [lfmW]; simp [hj, h.1, h.2]
+theorem lfmW_next (a : Array Word) (x y j : Word) (hj : j ≠ 0)
+    (h : ¬ (rdW a ((j - 1) * 2) = x ∧ rdW a ((j - 1) * 2 + 1) = y)) : lfmW a x y j = lfmW a x y (j - 1) := by
+  rw [lfmW]; simp only [hj, ↓reduceIte, h]
 
-grind_pattern [arena_grind] lmW_zero => lmW a x y 0
-grind_pattern [arena_grind] lmW_hit => lmW a x y j
-grind_pattern [arena_grind] lmW_next => lmW a x y j
+grind_pattern [arena_grind] lfmW_zero => lfmW a x y 0
+grind_pattern [arena_grind] lfmW_hit => lfmW a x y j
+grind_pattern [arena_grind] lfmW_next => lfmW a x y j
 
 def lmLoop : Stmt := lblk (k, x, y, j) {
   while j != 0 {
@@ -394,7 +394,7 @@ theorem lmLoop_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     exec p n lmLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      r.retOr [0] = [lmW (s₀.mem.arr64 LVS) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3)]; ⊤⦄ := by
+      r.retOr [0] = [lfmW (s₀.mem.arr64 LVS) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3)]; ⊤⦄ := by
   induction n generalizing s₀ with
   | zero => vcgen [exec] <;> grind
   | succ n ih =>
@@ -406,14 +406,14 @@ theorem lmLoop_step_spec (n : Nat) (s₀ : St) :
     ⦃fun s => s = s₀⦄
     step p (exec p n) lmLoop
     ⦃fun r s' => s'.mem = s₀.mem ∧ r ≠ .brk ∧
-      r.retOr [0] = [lmW (s₀.mem.arr64 LVS) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3)]; ⊤⦄ :=
+      r.retOr [0] = [lfmW (s₀.mem.arr64 LVS) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3)]; ⊤⦄ :=
   Triple.step_exec (lmLoop_spec p (n + 1) s₀)
 
 include hp in
 theorem leafMem_spec (n : Nat) (s₀ : St) (k x y : Word) :
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "leaf_mem" [k, x, y]
-    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ r.headD 0 = lmW (s₀.mem.arr64 LVS) x y k; ⊤⦄ := by
+    ⦃fun r s' => LocEq s' s₀ ∧ s'.mem = s₀.mem ∧ r.headD 0 = lfmW (s₀.mem.arr64 LVS) x y k; ⊤⦄ := by
   rw [invoke_eq _ hp]
   simp only [callFn, leafMemL]
   cases n with
@@ -427,28 +427,28 @@ end lm
 /-! ## `ls_go`: every leaf of `fab` among the first `k` leaves -/
 
 /-- Record the result `r` at `h` and return it. -/
-def lsSet (m : Mem) (h r : Word) : Option (Word × Mem) :=
-  match msetG lsSch m h 0 r with
+def lsbSet (m : Mem) (h r : Word) : Option (Word × Mem) :=
+  match msetG lsbSch m h 0 r with
   | none => none
   | some m' => some (r, m')
 
 mutual
 /-- **The model of `ls_go`**. -/
-def lsW : Nat → Mem → Word → Word → Word → Option (Word × Mem)
+def lsbW : Nat → Mem → Word → Word → Word → Option (Word × Mem)
   | 0, _, _, _, _ => none
   | n + 1, m, h, k, c =>
     if c = 0 then none
     else if derFW m h = 0 then some (1, m)
-    else if mfindG lsSch m h 0 = [] then none
-    else if (mfindG lsSch m h 0).headD 0 ≠ 0 then
-      some (if rdW (m.arr64 LSM) ((mfindG lsSch m h 0).tail.headD 0 * 4 + 3) ≠ 0 then 1 else 0, m)
+    else if mfindG lsbSch m h 0 = [] then none
+    else if (mfindG lsbSch m h 0).headD 0 ≠ 0 then
+      some (if rdW (m.arr64 LSM) ((mfindG lsbSch m h 0).tail.headD 0 * 4 + 3) ≠ 0 then 1 else 0, m)
     else
-      match lsNodeW n m h k (c - 1) with
+      match lsbNodeW n m h k (c - 1) with
       | none => none
-      | some (r, m₁) => lsSet m₁ h r
+      | some (r, m₁) => lsbSet m₁ h r
 
 /-- **The model of `ls_node`**. -/
-def lsNodeW : Nat → Mem → Word → Word → Word → Option (Word × Mem)
+def lsbNodeW : Nat → Mem → Word → Word → Word → Option (Word × Mem)
   | 0, _, _, _, _ => none
   | n + 1, m, h, k, c =>
     if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
@@ -456,44 +456,44 @@ def lsNodeW : Nat → Mem → Word → Word → Word → Option (Word × Mem)
       if rdW (m.arr64 CTL) (22 + tierW h) ≤ idxW h then none else some (1, m)
     else if h >>> 28 = 1 then
       if rdW (m.arr64 CTL) (26 + tierW h) ≤ idxW h then none
-      else if lmW (m.arr64 LVS) (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2))
+      else if lfmW (m.arr64 LVS) (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2))
           (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2 + 1)) k = 0 then some (0, m)
-      else lsW n m (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2 + 1)) k c
+      else lsbW n m (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2 + 1)) k c
     else if h >>> 28 = 4 then
       if rdW (m.arr64 CTL) (4 + tierW h) ≤ idxW h then none
       else
-        match lsW n m (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2)) k c with
+        match lsbW n m (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2)) k c with
         | none => none
         | some (x, m₁) =>
-          if x = 0 then some (0, m₁) else lsW n m₁ (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2 + 1)) k c
+          if x = 0 then some (0, m₁) else lsbW n m₁ (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2 + 1)) k c
     else if h >>> 28 = 5 then
       if rdW (m.arr64 CTL) (28 + tierW h) ≤ idxW h then none
       else
-        match lsW n m (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2)) k c with
+        match lsbW n m (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2)) k c with
         | none => none
         | some (x, m₁) =>
-          if x = 0 then some (0, m₁) else lsW n m₁ (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1)) k c
+          if x = 0 then some (0, m₁) else lsbW n m₁ (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1)) k c
     else if h >>> 28 = 6 then
       if rdW (m.arr64 CTL) (30 + tierW h) ≤ idxW h then none
       else
-        match lsW n m (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2)) k c with
+        match lsbW n m (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2)) k c with
         | none => none
         | some (x, m₁) =>
-          if x = 0 then some (0, m₁) else lsW n m₁ (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1)) k c
+          if x = 0 then some (0, m₁) else lsbW n m₁ (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1)) k c
     else if h >>> 28 = 9 then
       if rdW (m.arr64 CTL) (32 + tierW h) ≤ idxW h then none
-      else lsW n m (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)) k c
+      else lsbW n m (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)) k c
     else if h >>> 28 = 7 then
       if rdW (m.arr64 CTL) (20 + tierW h) ≤ idxW h then none
       else
-        match lsW n m (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) k c with
+        match lsbW n m (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) k c with
         | none => none
         | some (x, m₁) =>
           if x = 0 then some (0, m₁) else
-          match lsW n m₁ (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1)) k c with
+          match lsbW n m₁ (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1)) k c with
           | none => none
           | some (y, m₂) =>
-            if y = 0 then some (0, m₂) else lsW n m₂ (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2)) k c
+            if y = 0 then some (0, m₂) else lsbW n m₂ (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2)) k c
     else if h >>> 28 = 2 then
       if rdW (m.arr64 CTL) (16 + tierW h) ≤ idxW h then none else some (1, m)
     else if h >>> 28 = 3 then
@@ -503,131 +503,131 @@ def lsNodeW : Nat → Mem → Word → Word → Word → Option (Word × Mem)
     else none
 end
 
-def lsK (h : Word) : Option (Word × Mem) → Option (Word × Mem)
+def lsbK (h : Word) : Option (Word × Mem) → Option (Word × Mem)
   | none => none
-  | some (r, m₁) => lsSet m₁ h r
+  | some (r, m₁) => lsbSet m₁ h r
 
-def lsAndK (n : Nat) (b k c : Word) : Option (Word × Mem) → Option (Word × Mem)
+def lsbAndK (n : Nat) (b k c : Word) : Option (Word × Mem) → Option (Word × Mem)
   | none => none
-  | some (x, m₁) => if x = 0 then some (0, m₁) else lsW n m₁ b k c
+  | some (x, m₁) => if x = 0 then some (0, m₁) else lsbW n m₁ b k c
 
-def lsLetK (n : Nat) (v b k c : Word) : Option (Word × Mem) → Option (Word × Mem)
+def lsbLetK (n : Nat) (v b k c : Word) : Option (Word × Mem) → Option (Word × Mem)
   | none => none
-  | some (x, m₁) => if x = 0 then some (0, m₁) else lsAndK n b k c (lsW n m₁ v k c)
+  | some (x, m₁) => if x = 0 then some (0, m₁) else lsbAndK n b k c (lsbW n m₁ v k c)
 
 section lsArms
 variable (n : Nat) (m m₁ : Mem) (h r x k c b v : Word)
 
-theorem lsK_some : lsK h (some (r, m₁)) = lsSet m₁ h r := rfl
-theorem lsAndK_zero : lsAndK n b k c (some (0, m₁)) = some (0, m₁) := by simp [lsAndK]
-theorem lsAndK_ne (hx : x ≠ 0) : lsAndK n b k c (some (x, m₁)) = lsW n m₁ b k c := by
-  simp [lsAndK, hx]
-theorem lsLetK_zero : lsLetK n v b k c (some (0, m₁)) = some (0, m₁) := by simp [lsLetK]
-theorem lsLetK_ne (hx : x ≠ 0) : lsLetK n v b k c (some (x, m₁)) = lsAndK n b k c (lsW n m₁ v k c) := by
-  simp [lsLetK, hx]
-theorem lsSet_eq : lsSet m h r = wsSetK r (msetG lsSch m h 0 r) := by
-  unfold lsSet wsSetK; cases msetG lsSch m h 0 r <;> rfl
+theorem lsbK_some : lsbK h (some (r, m₁)) = lsbSet m₁ h r := rfl
+theorem lsbAndK_zero : lsbAndK n b k c (some (0, m₁)) = some (0, m₁) := by simp [lsbAndK]
+theorem lsbAndK_ne (hx : x ≠ 0) : lsbAndK n b k c (some (x, m₁)) = lsbW n m₁ b k c := by
+  simp [lsbAndK, hx]
+theorem lsbLetK_zero : lsbLetK n v b k c (some (0, m₁)) = some (0, m₁) := by simp [lsbLetK]
+theorem lsbLetK_ne (hx : x ≠ 0) : lsbLetK n v b k c (some (x, m₁)) = lsbAndK n b k c (lsbW n m₁ v k c) := by
+  simp [lsbLetK, hx]
+theorem lsbSet_eq : lsbSet m h r = wsSetK r (msetG lsbSch m h 0 r) := by
+  unfold lsbSet wsSetK; cases msetG lsbSch m h 0 r <;> rfl
 
-theorem lsW_cut (hc : c ≠ 0) (hf : derFW m h = 0) : lsW (n + 1) m h k c = some (1, m) := by
-  rw [lsW]; simp [hc, hf]
+theorem lsbW_cut (hc : c ≠ 0) (hf : derFW m h = 0) : lsbW (n + 1) m h k c = some (1, m) := by
+  rw [lsbW]; simp [hc, hf]
 
-theorem lsW_hit (hc : c ≠ 0) (hf : derFW m h ≠ 0) (hr : mfindG lsSch m h 0 ≠ [])
-    (hh : (mfindG lsSch m h 0).headD 0 ≠ 0) :
-    lsW (n + 1) m h k c =
-      some (if rdW (m.arr64 LSM) ((mfindG lsSch m h 0).tail.headD 0 * 4 + 3) ≠ 0 then 1 else 0, m) := by
-  rw [lsW]; simp only [hc, hf, hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
+theorem lsbW_hit (hc : c ≠ 0) (hf : derFW m h ≠ 0) (hr : mfindG lsbSch m h 0 ≠ [])
+    (hh : (mfindG lsbSch m h 0).headD 0 ≠ 0) :
+    lsbW (n + 1) m h k c =
+      some (if rdW (m.arr64 LSM) ((mfindG lsbSch m h 0).tail.headD 0 * 4 + 3) ≠ 0 then 1 else 0, m) := by
+  rw [lsbW]; simp only [hc, hf, hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
 
-theorem lsW_miss (hc : c ≠ 0) (hf : derFW m h ≠ 0) (hr : mfindG lsSch m h 0 ≠ [])
-    (hh : (mfindG lsSch m h 0).headD 0 = 0) :
-    lsW (n + 1) m h k c = lsK h (lsNodeW n m h k (c - 1)) := by
-  rw [lsW]; simp only [hc, hf, hr, hh, ↓reduceIte, ne_eq, not_true_eq_false, lsK]
+theorem lsbW_miss (hc : c ≠ 0) (hf : derFW m h ≠ 0) (hr : mfindG lsbSch m h 0 ≠ [])
+    (hh : (mfindG lsbSch m h 0).headD 0 = 0) :
+    lsbW (n + 1) m h k c = lsbK h (lsbNodeW n m h k (c - 1)) := by
+  rw [lsbW]; simp only [hc, hf, hr, hh, ↓reduceIte, ne_eq, not_true_eq_false, lsbK]
 
-theorem lsNodeW_bvar (hg : h >>> 28 = 0) (hv : viewOK m h 22) : lsNodeW (n + 1) m h k c = some (1, m) := by
+theorem lsbNodeW_bvar (hg : h >>> 28 = 0) (hv : viewOK m h 22) : lsbNodeW (n + 1) m h k c = some (1, m) := by
   obtain ⟨hv1, hv2⟩ := hv
-  rw [lsNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2]
+  rw [lsbNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2]
 
-theorem lsNodeW_sort (hg : h >>> 28 = 2) (hv : viewOK m h 16) : lsNodeW (n + 1) m h k c = some (1, m) := by
+theorem lsbNodeW_sort (hg : h >>> 28 = 2) (hv : viewOK m h 16) : lsbNodeW (n + 1) m h k c = some (1, m) := by
   obtain ⟨hv1, hv2⟩ := hv
-  rw [lsNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2]
+  rw [lsbNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2]
 
-theorem lsNodeW_const (hg : h >>> 28 = 3) (hv : viewOK m h 18) : lsNodeW (n + 1) m h k c = some (1, m) := by
+theorem lsbNodeW_const (hg : h >>> 28 = 3) (hv : viewOK m h 18) : lsbNodeW (n + 1) m h k c = some (1, m) := by
   obtain ⟨hv1, hv2⟩ := hv
-  rw [lsNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2]
+  rw [lsbNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2]
 
-theorem lsNodeW_lit (hg : h >>> 28 = 8) (hv : viewOK m h 2) : lsNodeW (n + 1) m h k c = some (1, m) := by
+theorem lsbNodeW_lit (hg : h >>> 28 = 8) (hv : viewOK m h 2) : lsbNodeW (n + 1) m h k c = some (1, m) := by
   obtain ⟨hv1, hv2⟩ := hv
-  rw [lsNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2]
+  rw [lsbNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2]
 
-theorem lsNodeW_fvar_in (hg : h >>> 28 = 1) (hv : viewOK m h 26)
-    (hl : lmW (m.arr64 LVS) (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2))
+theorem lsbNodeW_fvar_in (hg : h >>> 28 = 1) (hv : viewOK m h 26)
+    (hl : lfmW (m.arr64 LVS) (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2))
           (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2 + 1)) k ≠ 0) :
-    lsNodeW (n + 1) m h k c = lsW n m (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2 + 1)) k c := by
+    lsbNodeW (n + 1) m h k c = lsbW n m (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2 + 1)) k c := by
   obtain ⟨hv1, hv2⟩ := hv
-  rw [lsNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2, hl]
+  rw [lsbNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2, hl]
 
-theorem lsNodeW_fvar_out (hg : h >>> 28 = 1) (hv : viewOK m h 26)
-    (hl : lmW (m.arr64 LVS) (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2))
+theorem lsbNodeW_fvar_out (hg : h >>> 28 = 1) (hv : viewOK m h 26)
+    (hl : lfmW (m.arr64 LVS) (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2))
           (rdW (m.arr64 FVREC) (idxW h * 4 + tierW h * 2 + 1)) k = 0) :
-    lsNodeW (n + 1) m h k c = some (0, m) := by
+    lsbNodeW (n + 1) m h k c = some (0, m) := by
   obtain ⟨hv1, hv2⟩ := hv
-  rw [lsNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2, hl]
+  rw [lsbNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2, hl]
 
-theorem lsNodeW_app (hv : viewOK m h 4) (hg : h >>> 28 = 4) :
-    lsNodeW (n + 1) m h k c = lsAndK n (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2 + 1)) k c
-      (lsW n m (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2)) k c) := by
+theorem lsbNodeW_app (hv : viewOK m h 4) (hg : h >>> 28 = 4) :
+    lsbNodeW (n + 1) m h k c = lsbAndK n (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2 + 1)) k c
+      (lsbW n m (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2)) k c) := by
   obtain ⟨hv1, hv2⟩ := hv
-  rw [lsNodeW]; simp only [hv1, hg, ↓reduceIte, UInt64.not_le.mpr hv2, lsAndK]
+  rw [lsbNodeW]; simp only [hv1, hg, ↓reduceIte, UInt64.not_le.mpr hv2, lsbAndK]
   simp
 
-theorem lsNodeW_lam (hv : viewOK m h 28) (hg : h >>> 28 = 5) :
-    lsNodeW (n + 1) m h k c = lsAndK n (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1)) k c
-      (lsW n m (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2)) k c) := by
+theorem lsbNodeW_lam (hv : viewOK m h 28) (hg : h >>> 28 = 5) :
+    lsbNodeW (n + 1) m h k c = lsbAndK n (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1)) k c
+      (lsbW n m (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2)) k c) := by
   obtain ⟨hv1, hv2⟩ := hv
-  rw [lsNodeW]; simp only [hv1, hg, ↓reduceIte, UInt64.not_le.mpr hv2, lsAndK]
+  rw [lsbNodeW]; simp only [hv1, hg, ↓reduceIte, UInt64.not_le.mpr hv2, lsbAndK]
   simp
 
-theorem lsNodeW_forall (hv : viewOK m h 30) (hg : h >>> 28 = 6) :
-    lsNodeW (n + 1) m h k c = lsAndK n (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1)) k c
-      (lsW n m (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2)) k c) := by
+theorem lsbNodeW_forall (hv : viewOK m h 30) (hg : h >>> 28 = 6) :
+    lsbNodeW (n + 1) m h k c = lsbAndK n (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1)) k c
+      (lsbW n m (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2)) k c) := by
   obtain ⟨hv1, hv2⟩ := hv
-  rw [lsNodeW]; simp only [hv1, hg, ↓reduceIte, UInt64.not_le.mpr hv2, lsAndK]
+  rw [lsbNodeW]; simp only [hv1, hg, ↓reduceIte, UInt64.not_le.mpr hv2, lsbAndK]
   simp
 
-theorem lsNodeW_proj (hv : viewOK m h 32) (hg : h >>> 28 = 9) :
-    lsNodeW (n + 1) m h k c = lsW n m (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)) k c := by
+theorem lsbNodeW_proj (hv : viewOK m h 32) (hg : h >>> 28 = 9) :
+    lsbNodeW (n + 1) m h k c = lsbW n m (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)) k c := by
   obtain ⟨hv1, hv2⟩ := hv
-  rw [lsNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2]
+  rw [lsbNodeW]; simp [hv1, hg, UInt64.not_le.mpr hv2]
 
-theorem lsNodeW_let (hv : viewOK m h 20) (hg : h >>> 28 = 7) :
-    lsNodeW (n + 1) m h k c = lsLetK n (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1))
+theorem lsbNodeW_let (hv : viewOK m h 20) (hg : h >>> 28 = 7) :
+    lsbNodeW (n + 1) m h k c = lsbLetK n (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1))
       (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2)) k c
-      (lsW n m (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) k c) := by
+      (lsbW n m (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) k c) := by
   obtain ⟨hv1, hv2⟩ := hv
-  rw [lsNodeW]; simp only [hv1, hg, ↓reduceIte, UInt64.not_le.mpr hv2, lsLetK, lsAndK]
+  rw [lsbNodeW]; simp only [hv1, hg, ↓reduceIte, UInt64.not_le.mpr hv2, lsbLetK, lsbAndK]
   split <;> simp_all
 
 end lsArms
 
-attribute [arena_grind =] lsK_some lsAndK_zero lsLetK_zero lsSet_eq
-grind_pattern [arena_grind] lsAndK_ne => lsAndK n b k c (some (x, m₁))
-grind_pattern [arena_grind] lsLetK_ne => lsLetK n v b k c (some (x, m₁))
-grind_pattern [arena_grind] lsW_cut => lsW (n + 1) m h k c
-grind_pattern [arena_grind] lsW_hit => lsW (n + 1) m h k c
-grind_pattern [arena_grind] lsW_miss => lsW (n + 1) m h k c
-grind_pattern [arena_grind] lsNodeW_bvar => lsNodeW (n + 1) m h k c
-grind_pattern [arena_grind] lsNodeW_sort => lsNodeW (n + 1) m h k c
-grind_pattern [arena_grind] lsNodeW_const => lsNodeW (n + 1) m h k c
-grind_pattern [arena_grind] lsNodeW_lit => lsNodeW (n + 1) m h k c
-grind_pattern [arena_grind] lsNodeW_fvar_in => lsNodeW (n + 1) m h k c
-grind_pattern [arena_grind] lsNodeW_fvar_out => lsNodeW (n + 1) m h k c
-grind_pattern [arena_grind] lsNodeW_app => lsNodeW (n + 1) m h k c
-grind_pattern [arena_grind] lsNodeW_lam => lsNodeW (n + 1) m h k c
-grind_pattern [arena_grind] lsNodeW_forall => lsNodeW (n + 1) m h k c
-grind_pattern [arena_grind] lsNodeW_proj => lsNodeW (n + 1) m h k c
-grind_pattern [arena_grind] lsNodeW_let => lsNodeW (n + 1) m h k c
+attribute [arena_grind =] lsbK_some lsbAndK_zero lsbLetK_zero lsbSet_eq
+grind_pattern [arena_grind] lsbAndK_ne => lsbAndK n b k c (some (x, m₁))
+grind_pattern [arena_grind] lsbLetK_ne => lsbLetK n v b k c (some (x, m₁))
+grind_pattern [arena_grind] lsbW_cut => lsbW (n + 1) m h k c
+grind_pattern [arena_grind] lsbW_hit => lsbW (n + 1) m h k c
+grind_pattern [arena_grind] lsbW_miss => lsbW (n + 1) m h k c
+grind_pattern [arena_grind] lsbNodeW_bvar => lsbNodeW (n + 1) m h k c
+grind_pattern [arena_grind] lsbNodeW_sort => lsbNodeW (n + 1) m h k c
+grind_pattern [arena_grind] lsbNodeW_const => lsbNodeW (n + 1) m h k c
+grind_pattern [arena_grind] lsbNodeW_lit => lsbNodeW (n + 1) m h k c
+grind_pattern [arena_grind] lsbNodeW_fvar_in => lsbNodeW (n + 1) m h k c
+grind_pattern [arena_grind] lsbNodeW_fvar_out => lsbNodeW (n + 1) m h k c
+grind_pattern [arena_grind] lsbNodeW_app => lsbNodeW (n + 1) m h k c
+grind_pattern [arena_grind] lsbNodeW_lam => lsbNodeW (n + 1) m h k c
+grind_pattern [arena_grind] lsbNodeW_forall => lsbNodeW (n + 1) m h k c
+grind_pattern [arena_grind] lsbNodeW_proj => lsbNodeW (n + 1) m h k c
+grind_pattern [arena_grind] lsbNodeW_let => lsbNodeW (n + 1) m h k c
 
 @[l_impl ConRon.Arena.leavesSubGo]
-def lsGo : FunDecl := lfn (h, k, c) locals (b, x, fd, j, e, r, u) {
+def lsbGo : FunDecl := lfn (h, k, c) locals (b, x, fd, j, e, r, u) {
   if c == 0 { abort };
   (b, x) := call der_b(h);
   if x == 0 { return 1 };
@@ -641,7 +641,7 @@ def lsGo : FunDecl := lfn (h, k, c) locals (b, x, fd, j, e, r, u) {
 
 @[l_impl ConRon.Arena.leavesSubGo ConRon.Arena.leavesSubArmApp ConRon.Arena.leavesSubArmBind
   ConRon.Arena.leavesSubArmLet]
-def lsNode : FunDecl := lfn (h, k, c) locals (g, t, i, f, a, b, x) {
+def lsbNode : FunDecl := lfn (h, k, c) locals (g, t, i, f, a, b, x) {
   g := h >> 28;
   t := (h >> 27) & 1;
   i := h & 134217727;
@@ -709,51 +709,51 @@ def lsNode : FunDecl := lfn (h, k, c) locals (g, t, i, f, a, b, x) {
 
 section lsgo
 variable (p : Prog) (hpd : p.lookup "der_b" = some derB)
-  (hpf : p.lookup "ls_find" = some (memoFindG lsSch))
-  (hps : p.lookup "ls_put" = some (memoPutG lsSch)) (hp : p.lookup "ls_go" = some lsGo)
-  (hpn : p.lookup "ls_node" = some lsNode) (hpm : p.lookup "leaf_mem" = some leafMemL)
+  (hpf : p.lookup "ls_find" = some (memoFindG lsbSch))
+  (hps : p.lookup "ls_put" = some (memoPutG lsbSch)) (hp : p.lookup "ls_go" = some lsbGo)
+  (hpn : p.lookup "ls_node" = some lsbNode) (hpm : p.lookup "leaf_mem" = some leafMemL)
 
-def LsGoSpec (n : Nat) : Prop := ∀ (s₀ : St) (h k c : Word),
+def LsbGoSpec (n : Nat) : Prop := ∀ (s₀ : St) (h k c : Word),
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "ls_go" [h, k, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ lsW n s₀.mem h k c = some (r.headD 0, s'.mem); ⊤⦄
+    ⦃fun r s' => LocEq s' s₀ ∧ lsbW n s₀.mem h k c = some (r.headD 0, s'.mem); ⊤⦄
 
-def LsNodeSpec (n : Nat) : Prop := ∀ (s₀ : St) (h k c : Word),
+def LsbNodeSpec (n : Nat) : Prop := ∀ (s₀ : St) (h k c : Word),
     ⦃fun s => s = s₀⦄
     invoke p (exec p n) "ls_node" [h, k, c]
-    ⦃fun r s' => LocEq s' s₀ ∧ lsNodeW n s₀.mem h k c = some (r.headD 0, s'.mem); ⊤⦄
+    ⦃fun r s' => LocEq s' s₀ ∧ lsbNodeW n s₀.mem h k c = some (r.headD 0, s'.mem); ⊤⦄
 
 include hpd hpf hps hp in
-theorem lsGo_step (n : Nat) (ih : LsNodeSpec p n) : LsGoSpec p (n + 1) := by
-  unfold LsNodeSpec at ih
+theorem lsbGo_step (n : Nat) (ih : LsbNodeSpec p n) : LsbGoSpec p (n + 1) := by
+  unfold LsbNodeSpec at ih
   intro s₀ h k c
   rw [invoke_eq _ hp]
-  simp only [callFn, lsGo]
+  simp only [callFn, lsbGo]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, derB_spec p hpd n,
-      memoFindG_spec lsSch p _ hpf n, memoPutG_spec lsSch p _ hps n, ih] <;>
+      memoFindG_spec lsbSch p _ hpf n, memoPutG_spec lsbSch p _ hps n, ih] <;>
     -- as `wsGo_step`: the miss path is deep
     finish (instances := 5000) (gen := 12)
 
 set_option maxHeartbeats 1000000 in
 include hpn hpm in
-theorem lsNode_step (n : Nat) (ih : LsGoSpec p n) : LsNodeSpec p (n + 1) := by
-  unfold LsGoSpec at ih
+theorem lsbNode_step (n : Nat) (ih : LsbGoSpec p n) : LsbNodeSpec p (n + 1) := by
+  unfold LsbGoSpec at ih
   intro s₀ h k c
   rw [invoke_eq _ hpn]
-  simp only [callFn, lsNode]
+  simp only [callFn, lsbNode]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, leafMem_spec p hpm n, ih] <;>
     finish [viewOK, tierW, idxW]
 
 include hpd hpf hps hp hpn hpm in
-theorem lsGo_spec (n : Nat) : LsGoSpec p n ∧ LsNodeSpec p n := by
+theorem lsbGo_spec (n : Nat) : LsbGoSpec p n ∧ LsbNodeSpec p n := by
   induction n with
   | zero =>
     constructor
-    · intro s₀ h k c; rw [invoke_eq _ hp]; simp only [callFn, lsGo]; vcgen [exec] <;> grind
-    · intro s₀ h k c; rw [invoke_eq _ hpn]; simp only [callFn, lsNode]; vcgen [exec] <;> grind
-  | succ n ih => exact ⟨lsGo_step p hpd hpf hps hp n ih.2, lsNode_step p hpn hpm n ih.1⟩
+    · intro s₀ h k c; rw [invoke_eq _ hp]; simp only [callFn, lsbGo]; vcgen [exec] <;> grind
+    · intro s₀ h k c; rw [invoke_eq _ hpn]; simp only [callFn, lsbNode]; vcgen [exec] <;> grind
+  | succ n ih => exact ⟨lsbGo_step p hpd hpf hps hp n ih.2, lsbNode_step p hpn hpm n ih.1⟩
 
 end lsgo
 
@@ -763,7 +763,7 @@ end lsgo
 def lgK (n : Nat) (fab : Word) : Option (Word × Mem) → Option (Word × Mem)
   | none => none
   | some (k, m₁) =>
-    if rdW (m₁.arr64 CTL) 156 + 2 = 0 then none else lsW n (mclearG lsSch m₁) fab k 4000000000
+    if rdW (m₁.arr64 CTL) 156 + 2 = 0 then none else lsbW n (mclearG lsbSch m₁) fab k 4000000000
 
 /-- **The model of `leaf_guard`.** -/
 def lgW (n : Nat) (m : Mem) (fab base : Word) : Option (Word × Mem) :=
@@ -777,7 +777,7 @@ theorem lgW_go (n : Nat) (m : Mem) (fab base : Word) (h : derFW m fab ≠ 0)
     (h0 : rdW (m.arr64 CTL) 154 + 2 ≠ 0) :
     lgW n m fab base = lgK n fab (flW n (mclearG flSch m) base 0 4000000000) := by simp [lgW, h, h0]
 theorem lgK_some (n : Nat) (fab k : Word) (m₁ : Mem) (h0 : rdW (m₁.arr64 CTL) 156 + 2 ≠ 0) :
-    lgK n fab (some (k, m₁)) = lsW n (mclearG lsSch m₁) fab k 4000000000 := by simp [lgK, h0]
+    lgK n fab (some (k, m₁)) = lsbW n (mclearG lsbSch m₁) fab k 4000000000 := by simp [lgK, h0]
 
 grind_pattern [arena_grind] lgW_cut => lgW n m fab base
 grind_pattern [arena_grind] lgW_go => lgW n m fab base
@@ -802,11 +802,11 @@ structure LgProg (p : Prog) : Prop where
   flc : p.lookup "fl_clear" = some (memoClearG flSch)
   flgo : p.lookup "fl_go" = some flGo
   flnode : p.lookup "fl_node" = some flNode
-  lsf : p.lookup "ls_find" = some (memoFindG lsSch)
-  lsp : p.lookup "ls_put" = some (memoPutG lsSch)
-  lsc : p.lookup "ls_clear" = some (memoClearG lsSch)
-  lsgo : p.lookup "ls_go" = some lsGo
-  lsnode : p.lookup "ls_node" = some lsNode
+  lsf : p.lookup "ls_find" = some (memoFindG lsbSch)
+  lsp : p.lookup "ls_put" = some (memoPutG lsbSch)
+  lsc : p.lookup "ls_clear" = some (memoClearG lsbSch)
+  lsgo : p.lookup "ls_go" = some lsbGo
+  lsnode : p.lookup "ls_node" = some lsbNode
   lm : p.lookup "leaf_mem" = some leafMemL
   lg : p.lookup "leaf_guard" = some leafGuardL
 
@@ -815,22 +815,22 @@ theorem leafGuard_spec (p : Prog) (hp : LgProg p) (n : Nat) (s₀ : St) (fab bas
     invoke p (exec p (n + 1)) "leaf_guard" [fab, base]
     ⦃fun r s' => LocEq s' s₀ ∧ lgW n s₀.mem fab base = some (r.headD 0, s'.mem); ⊤⦄ := by
   have ihf := (flGo_spec p hp.derb hp.flf hp.flp hp.flgo hp.flnode n).1
-  have ihs := (lsGo_spec p hp.derb hp.lsf hp.lsp hp.lsgo hp.lsnode hp.lm n).1
+  have ihs := (lsbGo_spec p hp.derb hp.lsf hp.lsp hp.lsgo hp.lsnode hp.lm n).1
   unfold FlGoSpec at ihf
-  unfold LsGoSpec at ihs
+  unfold LsbGoSpec at ihs
   rw [invoke_eq _ hp.lg]
   simp only [callFn, leafGuardL]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, derB_spec p hp.derb n,
-      memoClearG_spec flSch p _ hp.flc n, memoClearG_spec lsSch p _ hp.lsc n, ihf, ihs] <;>
+      memoClearG_spec flSch p _ hp.flc n, memoClearG_spec lsbSch p _ hp.lsc n, ihf, ihs] <;>
     finish (instances := 5000) (gen := 12)
 
 /-- The leaf guard as one program. -/
 def lgProg : Prog :=
   [("der_b", derB), ("fl_find", memoFindG flSch), ("fl_put", memoPutG flSch),
     ("fl_clear", memoClearG flSch), ("fl_go", flGo), ("fl_node", flNode),
-    ("ls_find", memoFindG lsSch), ("ls_put", memoPutG lsSch), ("ls_clear", memoClearG lsSch),
-    ("ls_go", lsGo), ("ls_node", lsNode), ("leaf_mem", leafMemL), ("leaf_guard", leafGuardL)]
+    ("ls_find", memoFindG lsbSch), ("ls_put", memoPutG lsbSch), ("ls_clear", memoClearG lsbSch),
+    ("ls_go", lsbGo), ("ls_node", lsbNode), ("leaf_mem", leafMemL), ("leaf_guard", leafGuardL)]
 
 theorem lgProg_ok : LgProg lgProg := ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
