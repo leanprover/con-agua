@@ -37,6 +37,82 @@ theorem installIwB {m : Mem} {w : Word} {k : Nat} {b : Bool} (h : iwB (truncM m)
     rw [UInt64.toNat_add, UInt64.toNat_ofNat_of_lt' hk]; exact Nat.mod_eq_of_lt hwk
   rw [rdW_of_get? he.symm hx']
 
+/-! ## Member slices with their bound
+
+A member's constructor slice `(o, l)` decoded below the tops says nothing about `o` when `l = 0`;
+the positivity walk (`CssAt`) wants `o + l ≤ iwTop` for every member. `decPLB` carries the bound in
+the decoding (below the tops the pool's size is its top), so it survives `sl_cons` and growth. -/
+
+/-- A pointer slice whose end lies within the pool. -/
+def decPLB {α : Type} (m : Mem) (f : Nat → Option α) (o l : Nat) : Option (List α) :=
+  if o + l ≤ (iwA m).size then decPL m f o l else none
+
+/-- A member's constructors with their slice's bound. -/
+def decCNSB (m : Mem) (q : Nat) : Option (List (IConstantVal × Nat)) :=
+  decAt m (fun o l => decPLB m (decCN m) o l) q
+
+theorem iwA_size_mono {m m' : Mem} (he : PoolExt m m') : (iwA m).size ≤ (iwA m').size := by
+  rcases Nat.eq_zero_or_pos (iwA m).size with h0 | h0
+  · omega
+  · have h1 : (iwA m)[(iwA m).size - 1]? = some ((iwA m)[(iwA m).size - 1]'(by omega)) :=
+      Array.getElem?_eq_getElem _
+    have := (Array.getElem?_eq_some_iff.mp (he.1 _ _ h1)).1
+    omega
+
+theorem decPLB_omono {α : Type} {f : Mem → Nat → Option α} (hf : ∀ q, OMono (fun m => f m q)) (o l : Nat) :
+    OMono (fun m => decPLB m (f m) o l) := by
+  refine ⟨fun m m' x he h => ?_⟩
+  simp only [decPLB] at h ⊢
+  split at h
+  · rename_i hb
+    rw [if_pos (Nat.le_trans hb (iwA_size_mono he))]
+    exact (OMono.decPL hf o l).mono m m' x he h
+  · cases h
+
+theorem decCNSB_mono (q : Nat) : OMono (fun m => decCNSB m q) :=
+  OMono.decAt (fun o l => decPLB_omono decCN_mono o l) q
+
+/-- Below the tops, the pool's size is at most its top. -/
+theorem iwA_truncM_size_le (m : Mem) : (iwA (truncM m)).size ≤ iwTop m := by
+  apply Nat.le_of_not_lt
+  intro h
+  have := truncM_iw_get? m (iwTop m)
+  rw [if_neg (Nat.lt_irrefl _)] at this
+  rw [Array.getElem?_eq_getElem h] at this
+  cases this
+
+/-- … and at least every bound below the top, when the top lies within the pool. -/
+theorem le_iwA_truncM_size {m : Mem} {k : Nat} (hk : k ≤ iwTop m) (hT : iwTop m ≤ (iwA m).size) :
+    k ≤ (iwA (truncM m)).size := by
+  rcases Nat.eq_zero_or_pos k with h0 | h0
+  · omega
+  · have e := truncM_iw_get? m (k - 1)
+    rw [if_pos (by omega), Array.getElem?_eq_getElem (show k - 1 < (iwA m).size by omega)] at e
+    have := (Array.getElem?_eq_some_iff.mp e).1
+    omega
+
+/-- A `[off, len]` member record decoded with its bound: the bound. -/
+theorem decCNSB_bound {m : Mem} {q : Nat} {cs : List (IConstantVal × Nat)}
+    (h : DecB (fun m => decCNSB m q) m cs) :
+    ∃ o l, iwN (truncM m) q = some o ∧ iwN (truncM m) (q + 1) = some l ∧ o + l ≤ iwTop m ∧
+      decPL (truncM m) (decCN (truncM m)) o l = some cs := by
+  have h' : decCNSB (truncM m) q = some cs := h
+  simp only [decCNSB, decAt, Option.bind_eq_bind, Option.bind_eq_some_iff] at h'
+  obtain ⟨o, ho, l, hl, hd⟩ := h'
+  simp only [decPLB] at hd
+  split at hd
+  · rename_i hb
+    exact ⟨o, l, ho, hl, Nat.le_trans hb (iwA_truncM_size_le m), hd⟩
+  · cases hd
+
+/-- With the bound dropped. -/
+theorem decCNSB_decCNS {m : Mem} {q : Nat} {cs : List (IConstantVal × Nat)}
+    (h : DecB (fun m => decCNSB m q) m cs) : DecB (fun m => decCNS m q) m cs := by
+  obtain ⟨o, l, ho, hl, -, hd⟩ := decCNSB_bound h
+  show decAt (truncM m) _ q = some cs
+  simp only [decAt, ho, hl, Option.bind_eq_bind, Option.bind_some]
+  exact hd
+
 /-- The lookups of `check_block_ctors`. -/
 structure CtorsProg (p : Prog) : Prop extends CstProg p where
   rec2 : p.lookup "rec2" = some rec2
@@ -74,6 +150,31 @@ theorem installRec2PSl {p : Prog} (hP : CtorsProg p) {n : Nat} {α : Type} {f : 
   simp only [decAt, List.headD_cons, w0, w1, Option.bind_eq_bind, Option.bind_some]
   exact hd
 
+/-- **A `rec2` header `[off, len]` of a slice below the tops**, decoded with its bound. -/
+theorem installRec2PSlB {p : Prog} (hP : CtorsProg p) {n : Nat} {α : Type} {f : Mem → Nat → Option α}
+    (hf : ∀ q, OMono (fun m => f m q)) {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+    {a : AState} {m m' : Mem} {o l : Word} {r : List Word} {xs : List α}
+    (h : callW p n "rec2" [o, l] m = some (r, m')) (hS : StageR dn vis fe m a) (hx : PSlR f xs o l m) :
+    DecB (fun m => decAt m (fun o l => decPLB m (f m) o l) (r.headD 0).toNat) m' xs := by
+  obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
+    (rec2_specW p hP.alloc n hP.rec2 _ _ _) h
+  obtain ⟨hS', hg, hr, hget, htop⟩ := recW_stage hW hS rfl
+  subst hr
+  have hq0 : (rdW (m.arr64 CTL) 200).toNat < iwTop s'.mem := by rw [htop]; simp [iwTop]
+  have hq1 : (rdW (m.arr64 CTL) 200).toNat + 1 < iwTop s'.mem := by rw [htop]; simp [iwTop]
+  have w0 : iwN (truncM s'.mem) (rdW (m.arr64 CTL) 200).toNat = some o.toNat := by
+    rw [iwN_truncM hq0]; have := hget 0 (by simp); simp only [Nat.add_zero] at this
+    simp [iwN, nat?, iwA, this]
+  have w1 : iwN (truncM s'.mem) ((rdW (m.arr64 CTL) 200).toNat + 1) = some l.toNat := by
+    rw [iwN_truncM hq1]; have := hget 1 (by simp)
+    simp only [List.getElem?_cons_succ, List.getElem?_cons_zero] at this
+    simp [iwN, nat?, iwA, this]
+  have hd := hx.1.grow (OMono.decPL hf _ _) hg
+  show decAt (truncM s'.mem) _ _ = some xs
+  simp only [decAt, List.headD_cons, w0, w1, Option.bind_eq_bind, Option.bind_some, decPLB]
+  rw [if_pos (le_iwA_truncM_size (Nat.le_trans hx.2 hg.1) hS'.2.1)]
+  exact hd
+
 /-- **`check_block_ctors_one`'s model refines one member's `checkSumCtors`.** -/
 theorem icboW_sim {p : Prog} (hP : CtorsProg p) (n : Nat) {dn : NIdx → Option ConLeche.Name}
     {vis : Word} {fe : IFEnv} {m : Mem} {a : AState} {pp lo ll ms cv : Word} {bs : BlockShape}
@@ -85,7 +186,8 @@ theorem icboW_sim {p : Prog} (hP : CtorsProg p) (n : Nat) {dn : NIdx → Option 
       (checkSumCtors V fe fe msh.cvT.name bs.lps bs.nP msh.nIdx bs.resSort bs.isProp bs.large cvv msh.ctors) a
       (fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧
         DecB (fun m => decCNS m (r.headD 0).toNat) m' x.1 ∧
-        DecB (fun m => decISS m (r.tail.headD 0).toNat) m' x.2) := by
+        DecB (fun m => decISS m (r.tail.headD 0).toNat) m' x.2 ∧
+        DecB (fun m => decCNSB m (r.headD 0).toNat) m' x.1) := by
   have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
   have hsz := hS.2.2.2.1
   obtain ⟨-, hq9, -⟩ := partsShapeFacts hq hsrc
@@ -124,6 +226,7 @@ theorem icboW_sim {p : Prog} (hP : CtorsProg p) (n : Nat) {dn : NIdx → Option 
   obtain ⟨r2, m2⟩ := x2
   rw [h2, icboK2_some] at e
   obtain ⟨hS2, hg2, hd2⟩ := installRec2PSl hP decCN_mono h2 hS1 hcs1
+  have hd2b := installRec2PSlB hP decCN_mono h2 hS1 hcs1
   cases h3 : callW p n "rec2" [r1.tail.tail.headD 0, r1.tail.tail.tail.headD 0] m2 with
   | none => rw [h3] at e; cases e
   | some x3 =>
@@ -132,7 +235,7 @@ theorem icboW_sim {p : Prog} (hP : CtorsProg p) (n : Nat) {dn : NIdx → Option 
   simp only [Option.some.injEq, Prod.mk.injEq] at e
   obtain ⟨rfl, rfl⟩ := e
   obtain ⟨hS3, hg3, hd3⟩ := installRec2PSl hP decIS_mono h3 hS2 (hss1.grow decIS_mono hg2)
-  exact ⟨hS3, (hg1.trans hg2).trans hg3, hd2.grow (decCNS_mono _) hg3, hd3⟩
+  exact ⟨hS3, (hg1.trans hg2).trans hg3, hd2.grow (decCNS_mono _) hg3, hd3, hd2b.grow (decCNSB_mono _) hg3⟩
 
 /-- **`check_block_ctors_go`'s model refines `checkBlockCtors`.** -/
 theorem icbgW_sim {p : Prog} (hP : CtorsProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
@@ -144,7 +247,8 @@ theorem icbgW_sim {p : Prog} (hP : CtorsProg p) (dn : NIdx → Option ConLeche.N
     Sim (icbgW p n m vis vis pp lo ll mo ml co cl) (ConRon.Arena.checkBlockCtors V fe fe bs mss cvs) a
       (fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧
         PSlR decCNS x.1 (r.headD 0) (r.tail.headD 0) m' ∧
-        PSlR decISS x.2 (r.tail.tail.headD 0) (r.tail.tail.tail.headD 0) m') := by
+        PSlR decISS x.2 (r.tail.tail.headD 0) (r.tail.tail.tail.headD 0) m' ∧
+        PSlR decCNSB x.1 (r.headD 0) (r.tail.headD 0) m') := by
   induction n with
   | zero => intro m a mo ml co cl mss cvs _ _ _ _ _ _ _; rw [icbgW_zero]; exact Sim.of_none
   | succ n ih =>
@@ -155,7 +259,7 @@ theorem icbgW_sim {p : Prog} (hP : CtorsProg p) (dn : NIdx → Option ConLeche.N
       have h := hmss.1; simp only [DecB, hml] at h
       simpa [decPL] using h.symm
     subst this
-    exact Sim.ret ⟨hS, IWGrow.refl m, PSlR.nil decCNS m, PSlR.nil decISS m⟩
+    exact Sim.ret ⟨hS, IWGrow.refl m, PSlR.nil decCNS m, PSlR.nil decISS m, PSlR.nil decCNSB m⟩
   by_cases hcl : cl = 0
   · rw [icbgW_nil2 p n m vis vis pp lo ll mo ml co cl hml hcl]
     have : cvs = [] := by
@@ -165,7 +269,7 @@ theorem icbgW_sim {p : Prog} (hP : CtorsProg p) (dn : NIdx → Option ConLeche.N
     have : ConRon.Arena.checkBlockCtors V fe fe bs mss [] = pure ([], []) := by
       cases mss <;> simp [ConRon.Arena.checkBlockCtors]
     rw [this]
-    exact Sim.ret ⟨hS, IWGrow.refl m, PSlR.nil decCNS m, PSlR.nil decISS m⟩
+    exact Sim.ret ⟨hS, IWGrow.refl m, PSlR.nil decCNS m, PSlR.nil decISS m, PSlR.nil decCNSB m⟩
   obtain ⟨q, msh, rest, rfl, hw, hqb, hdm, hrest⟩ := partsPSl_cons hmss hml
   obtain ⟨c, cvv, cvs', rfl, hwc, hcb, hdc, hcvs'⟩ := partsPSl_cons hcvs hcl
   rw [icbgW_cons p n m vis vis pp lo ll mo ml co cl hml hcl, hw, hwc]
@@ -177,11 +281,12 @@ theorem icbgW_sim {p : Prog} (hP : CtorsProg p) (dn : NIdx → Option ConLeche.N
       (fun r m₁ => icbgK1_some p n m₁ vis vis pp lo ll mo ml co cl r)
     (Sim.callW_pos (Q := fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow m m' ∧
         DecB (fun m => decCNS m (r.headD 0).toNat) m' x.1 ∧
-        DecB (fun m => decISS m (r.tail.headD 0).toNat) m' x.2) (fun k r m' e => by
+        DecB (fun m => decISS m (r.tail.headD 0).toNat) m' x.2 ∧
+        DecB (fun m => decCNSB m (r.headD 0).toNat) m' x.1) (fun k r m' e => by
       obtain ⟨s', rfl, -, hW⟩ := triple_of_callW (s₀ := ⟨m, Locals.init []⟩)
         (icbo_spec p hP.one k _ vis vis pp lo ll (UInt64.ofNat q) (UInt64.ofNat c)) e
       exact icboW_sim hP k hS hq hsrc hlps hlb (by rw [hq']; exact hdm) (by rw [hc']; exact hdc) r s'.mem hW) n) ?_
-  rintro r1 ⟨cs, ss⟩ m1 a1 ⟨hS1, hg1, hd1, he1⟩
+  rintro r1 ⟨cs, ss⟩ m1 a1 ⟨hS1, hg1, hd1, he1, hb1⟩
   dsimp only
   obtain ⟨-, hq9, -⟩ := partsShapeFacts hq hsrc
   refine Sim.bindK (K := icbgK2 p n r1) (body := fun r2 m2 => icbgK3 p n r1 r2 (callW p n "sl_cons"
@@ -189,20 +294,22 @@ theorem icbgW_sim {p : Prog} (hP : CtorsProg p) (dn : NIdx → Option ConLeche.N
     (ih m1 a1 (mo + 1) (ml - 1) (co + 1) (cl - 1) rest cvs' hS1 (hq.grow (decBS_mono _) hg1)
       (partsHsrc_grow hg1 hq9 hsrc) (by rw [decHL_grow3 hg1 hlb]; exact hlps) (Nat.le_trans hlb hg1.1)
       (hrest.grow decMS_mono hg1) (hcvs'.grow (fun q => OMono.decCVp q) hg1)) ?_
-  rintro r2 ⟨rc, rs⟩ m2 a2 ⟨hS2, hg2, hc2, hs2⟩
+  rintro r2 ⟨rc, rs⟩ m2 a2 ⟨hS2, hg2, hc2, hs2, hcb2⟩
   dsimp only
   refine Sim.mstep (K := icbgK3 p n r1 r2) rfl (fun _ _ => rfl) fun r3 m3 h3 => ?_
   obtain ⟨hS3, hg3, hd3⟩ := installConsRun hP.toCstProg decCNS_mono h3 hS2 hc2 (hd1.grow (decCNS_mono _) hg2)
+  obtain ⟨-, -, hb3⟩ := installConsRun hP.toCstProg decCNSB_mono h3 hS2 hcb2 (hb1.grow (decCNSB_mono _) hg2)
   refine Sim.mstep (K := icbgK4 r3) rfl (fun _ _ => rfl) fun r4 m4 h4 => ?_
   obtain ⟨hS4, hg4, hd4⟩ := installConsRun hP.toCstProg decISS_mono h4 hS3 (hs2.grow decISS_mono hg3)
     (he1.grow (decISS_mono _) (hg2.trans hg3))
   exact Sim.ret ⟨hS4, ((hg1.trans hg2).trans hg3).trans hg4, by simpa using hd3.grow decCNS_mono hg4,
-    by simpa using hd4⟩
+    by simpa using hd4, by simpa using hb3.grow decCNSB_mono hg4⟩
 
 /-- **`check_block_ctors` refines `checkBlockCtors`** (at one environment, `vis0 = vis`, as
 `check_block_pass` calls it): the shape, member and
 former slices decoded below the tops; the stored constructors and their fields' sorts, per member,
-two slices of `[off, len]` pointers decoded below the tops (`sl_cons`-built, D18). -/
+two slices of `[off, len]` pointers decoded below the tops (`sl_cons`-built, D18); the constructors
+also with each member slice's bound (`decCNSB`, for the positivity walk). -/
 @[refines ConRon.Arena.checkBlockCtors]
 theorem checkBlockCtors_refines (p : Prog) (hP : CtorsProg p) (n : Nat) (s₀ : St) (a₀ : AState)
     (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (pp mo ml co cl : Word)
@@ -216,13 +323,16 @@ theorem checkBlockCtors_refines (p : Prog) (hP : CtorsProg p) (n : Nat) (s₀ : 
       PSlR decCNS (AM.res (ConRon.Arena.checkBlockCtors V fe fe bs mss cvs) a₀).1 (r.headD 0)
         (r.tail.headD 0) s'.mem ∧
       PSlR decISS (AM.res (ConRon.Arena.checkBlockCtors V fe fe bs mss cvs) a₀).2 (r.tail.tail.headD 0)
-        (r.tail.tail.tail.headD 0) s'.mem; ⊤⦄ := by
+        (r.tail.tail.tail.headD 0) s'.mem ∧
+      PSlR decCNSB (AM.res (ConRon.Arena.checkBlockCtors V fe fe bs mss cvs) a₀).1 (r.headD 0)
+        (r.tail.headD 0) s'.mem; ⊤⦄ := by
   refine triple_post (ict_spec p hP.ctors n s₀ vis vis pp mo ml co cl) ?_
   rintro r s' ⟨hl, hm⟩
   have hsim : Sim (ictW p n s₀.mem vis vis pp mo ml co cl) (ConRon.Arena.checkBlockCtors V fe fe bs mss cvs) a₀
       (fun r x m' a' => StageR dn vis fe m' a' ∧ IWGrow s₀.mem m' ∧
         PSlR decCNS x.1 (r.headD 0) (r.tail.headD 0) m' ∧
-        PSlR decISS x.2 (r.tail.tail.headD 0) (r.tail.tail.tail.headD 0) m') := by
+        PSlR decISS x.2 (r.tail.tail.headD 0) (r.tail.tail.tail.headD 0) m' ∧
+        PSlR decCNSB x.1 (r.headD 0) (r.tail.headD 0) m') := by
     unfold ictW
     refine Sim.mstep (K := ictK1 p n vis vis pp mo ml co cl) rfl (fun _ _ => rfl) fun r1 m1 h1 => ?_
     obtain ⟨s1, rfl, -, hW1, -⟩ := triple_of_callW (s₀ := ⟨s₀.mem, Locals.init []⟩)
@@ -235,8 +345,8 @@ theorem checkBlockCtors_refines (p : Prog) (hP : CtorsProg p) (n : Nat) (s₀ : 
         obtain ⟨s2, rfl, -, hW2⟩ := triple_of_callW (s₀ := ⟨s1.mem, Locals.init []⟩)
           (icbg_spec p hP.go n _ vis vis pp (r1.headD 0) (r1.tail.headD 0) mo ml co cl) e
         exact hW2)) ?_
-    rintro r2 x m2 a2 ⟨h1, h2, h3, h4⟩
-    exact ⟨h1, hg1.trans h2, h3, h4⟩
+    rintro r2 x m2 a2 ⟨h1, h2, h3, h4, h5⟩
+    exact ⟨h1, hg1.trans h2, h3, h4, h5⟩
   obtain ⟨hok, hQ⟩ := Sim.run hsim hm
   exact ⟨hl, hok, hQ⟩
 
