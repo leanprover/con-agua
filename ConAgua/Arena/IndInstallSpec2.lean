@@ -756,3 +756,87 @@ theorem capsErCopyW_post {n : Nat} {m m' : Mem} {o l : Word} {r : List Word}
     simp; omega
   · rw [hqe, hS]; omega
   · rw [hA IW (by decide), hI]
+
+/-- **`block_caps_at_er_copy` copies an `IW` slice into fresh `EREC` words** (`IIndCaps`'s `all` and
+`ctors` fields): the new `EREC` slice at the old top holds the `IW` slice; everything the stage
+relation needs from a writer of `EREC` (`StageR.erec`) is stated. -/
+@[refines_part ConRon.Arena.blockCapsAt "an IW slice copied into fresh EREC words"]
+theorem blockCapsAtErCopy_refines (p : Prog) (ha : p.lookup "erec_alloc" = some erecAlloc)
+    (hc : p.lookup "block_caps_at_er_copy_go" = some blockCapsAtErCopyGo)
+    (hp : p.lookup "block_caps_at_er_copy" = some blockCapsAtErCopy) (n : Nat) (s₀ : St)
+    (o l : Word) (hsz : (s₀.mem.arr64 IW).size < 2 ^ 64) (hEs : (s₀.mem.arr64 EREC).size < 2 ^ 64)
+    (hcl : 129 < (s₀.mem.arr64 CTL).size) (hsrc : o.toNat + l.toNat ≤ (s₀.mem.arr64 IW).size) :
+    ⦃fun st => st = s₀⦄ invoke p (exec p n) "block_caps_at_er_copy" [o, l]
+    ⦃fun r s' => LocEq s' s₀ ∧ r = [rdW (s₀.mem.arr64 CTL) 129, l] ∧
+      (rdW (s₀.mem.arr64 CTL) 129).toNat = erTop s₀.mem ∧
+      (∀ j < l.toNat, (s'.mem.arr64 EREC)[erTop s₀.mem + j]? = (s₀.mem.arr64 IW)[o.toNat + j]?) ∧
+      MemFrame [EREC] [129] s₀.mem s'.mem ∧
+      (∀ i < erTop s₀.mem, (s'.mem.arr64 EREC)[i]? = (s₀.mem.arr64 EREC)[i]?) ∧
+      erTop s'.mem = erTop s₀.mem + l.toNat ∧ erTop s₀.mem + l.toNat ≤ (s'.mem.arr64 EREC).size ∧
+      s'.mem.arr64 IW = s₀.mem.arr64 IW; ⊤⦄ := by
+  refine triple_post (blockCapsAtErCopy_spec p ha hc hp n s₀ o l) ?_
+  rintro r s' ⟨hl, hm⟩
+  exact ⟨hl, capsErCopyW_post hm hsz hEs hcl hsrc⟩
+
+/-! ## `check_block_positivity_member` -/
+
+theorem rec2Mem_size (m : Mem) (a b : Word) :
+    ((rec2Mem m a b).arr64 IW).size = (m.arr64 IW).size := by
+  simp only [rec2Mem, Mem.arr64_set64_same, allocMem, Array.set!_eq_setIfInBounds,
+    Array.size_setIfInBounds]
+  rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+
+/-- One step of `check_block_positivity_member_go`: the `rec2` record `[IW[e], IW[e+1]]` at the
+top, its pointer stored at `kd`, `IW[e + 2]` stored at `nd`. -/
+def pmStep (m : Mem) (kd nd s : Word) : Mem :=
+  let e := rdW (m.arr64 IW) s
+  let m1 := rec2Mem m (rdW (m.arr64 IW) e) (rdW (m.arr64 IW) (e + 1))
+  let m2 := m1.set64 IW kd (rdW (m.arr64 CTL) 200)
+  m2.set64 IW nd (rdW (m2.arr64 IW) (e + 2))
+
+/-- The model of `check_block_positivity_member_go` (each step needs room for the `rec2` record). -/
+def pmGoW : Nat → Mem → Word → Word → Word → Word → Option Mem
+  | 0, _, _, _, _, _ => none
+  | n + 1, m, kd, nd, s, l =>
+    if l = 0 then some m
+    else if (rdW (m.arr64 CTL) 200).toNat + 2 ≤ (m.arr64 IW).size then
+      pmGoW n (pmStep m kd nd s) (kd + 1) (nd + 1) (s + 1) (l - 1)
+    else none
+
+section arms
+variable (n : Nat) (m : Mem) (kd nd s l : Word)
+theorem pmGoW_nil (hl : l = 0) : pmGoW (n + 1) m kd nd s l = some m := by simp [pmGoW, hl]
+theorem pmGoW_step (hl : l ≠ 0) (hr : (rdW (m.arr64 CTL) 200).toNat + 2 ≤ (m.arr64 IW).size) :
+    pmGoW (n + 1) m kd nd s l = pmGoW n (pmStep m kd nd s) (kd + 1) (nd + 1) (s + 1) (l - 1) := by
+  simp [pmGoW, hl, hr]
+theorem pmGoW_full (hl : l ≠ 0) (hr : ¬ (rdW (m.arr64 CTL) 200).toNat + 2 ≤ (m.arr64 IW).size) :
+    pmGoW (n + 1) m kd nd s l = none := by
+  simp [pmGoW, hl, hr]
+end arms
+
+grind_pattern [ind_grind] pmGoW_nil => pmGoW (n + 1) m kd nd s l
+grind_pattern [ind_grind] pmGoW_step => pmGoW (n + 1) m kd nd s l
+grind_pattern [ind_grind] pmGoW_full => pmGoW (n + 1) m kd nd s l
+
+theorem checkBlockPositivityMemberGo_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (h2 : p.lookup "rec2" = some rec2)
+    (hp : p.lookup "check_block_positivity_member_go" = some checkBlockPositivityMemberGo)
+    (n : Nat) :
+    ∀ (s₀ : St) (kd nd s l : Word), (s₀.mem.arr64 IW).size < 2 ^ 64 →
+    ⦃fun st => st = s₀⦄ invoke p (exec p n) "check_block_positivity_member_go" [kd, nd, s, l]
+    ⦃fun _ s' => LocEq s' s₀ ∧ pmGoW n s₀.mem kd nd s l = some s'.mem; ⊤⦄ := by
+  induction n with
+  | zero =>
+    intro s₀ kd nd s l hsz; rw [invoke_eq _ hp]
+    simp only [callFn, checkBlockPositivityMemberGo]
+    vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ kd nd s l hsz
+    rw [invoke_eq _ hp]
+    simp only [callFn, checkBlockPositivityMemberGo]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        rec2_spec p ha h2 n, ih] <;>
+      finish (gen := 20) [pmStep, rec2Mem_size]
+
+end L.Ind
