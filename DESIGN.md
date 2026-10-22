@@ -6455,3 +6455,15 @@ Census at landing 2 (`--no-build`): phase 2 **142 proven, 19 sorry, 80 written, 
 * Provenance: the nine split functions of `WhnfDelta.lean` had no citation (`check` failed on
   master); cited.
 
+
+### Landing 6: the frontend hook (helper `front`)
+* The front's chain covers `inductive` lines with no `sorry`: `validate_ind_d`/`install_ind_d`
+  refine `validateIndD`/`installIndD`, `apply_ind` the `.ind` arm of `processLineCoreD` (now in
+  `COMPLETE_BY_PARTS`), and `frontLine_refines` is `@[refines applyLine]`, `frontRun_refines`
+  `@[refines parseBytes]` (the "(inductive lines abort)" labels are gone). Details in helper
+  `front`'s own section above (route via `apply_ind` in `decl_val`, `Prog`-indexed line models,
+  `FrontInv` carrying con-ron's `StateOK`/`PinsOK`/scratch-off: new hypotheses of the capstone on
+  `a₀`, `DIND` = `DLP`). ~9.9k lines, 6.25 h.
+* Census: **parseBytes, applyLine, processLineCoreD, validateIndD, installIndD proven**; totals
+  586 proven / 105 sorry / 244 written / 417 todo of 1352 (before this landing 537 / 104 / 279 /
+  432); phase 8 unchanged at 67 / 62.
