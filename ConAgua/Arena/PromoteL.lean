@@ -148,7 +148,7 @@ def plsK (p : Prog) (n : Nat) (q l : Word) : Option (List Word × Mem) → Optio
 
 /-- **The model of `pls_arm(f, h)`**: the slice `(o, l)` of `ls_node`, the top `q`. -/
 def plsArmW (p : Prog) (n : Nat) (m : Mem) (f h : Word) : Option (Word × Mem) :=
-  if 4294967295 < h then none
+  if 4294967295 < h ∨ lsNodeW m h = [] then none
   else if (m.arr64 CTL).size = 0 then none
   else if m.len64 POOL < m.top then none
   else if m.len64 POOL - m.top < (lsNodeW m h).tail.headD 0 then none
@@ -180,11 +180,11 @@ theorem plsK_some (hc : (m₁.arr64 CTL).size ≠ 0) :
     plsK p n q l (some (r, m₁)) = hd1 (callW p n "pi_ls" [q, l] (m₁.set64 CTL 0 (q + l))) := by
   simp only [plsK, hc, ↓reduceIte]
 
-theorem plsArmW_eq (hh : ¬ 4294967295 < h) (hc : (m.arr64 CTL).size ≠ 0)
+theorem plsArmW_eq (hh : ¬ 4294967295 < h) (hne : lsNodeW m h ≠ []) (hc : (m.arr64 CTL).size ≠ 0)
     (h1 : ¬ m.len64 POOL < m.top) (h2 : ¬ m.len64 POOL - m.top < (lsNodeW m h).tail.headD 0) :
     plsArmW p n m f h = plsK p n m.top ((lsNodeW m h).tail.headD 0)
       (callW p n "promote_l_pool" [f, (lsNodeW m h).headD 0, (lsNodeW m h).tail.headD 0, m.top] m) := by
-  simp only [plsArmW, hh, hc, h1, h2, ↓reduceIte]
+  simp only [plsArmW, hh, hne, hc, h1, h2, or_self, ↓reduceIte]
 
 theorem plsW_pers (ht : tierW h = 0) : plsW p n m f h = some (h, m) := by simp [plsW, ht]
 

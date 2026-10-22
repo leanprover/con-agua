@@ -1,4 +1,5 @@
 import ConAgua.Arena.PromoteLRef
+import ConAgua.Census.Attr
 
 /-!
 # `promote_ls` refines `promoteLs`
@@ -196,5 +197,241 @@ theorem pool_rel : ∀ n : Nat, ∀ (m : Mem) (a : AState) (pm : PMemo) (f o l q
       ((MemFrame.set64 _ POOL (by decide) _ _).mono (by simp) (by simp))).trans hfr₂
 
 end pool
+
+/-! ## `pls_arm`, `promote_ls` -/
+
+/-- The twin's arm of `promoteLs` after a memo miss. -/
+def plsArmT (m : PMemo) (fuel : Nat) (h : LsIdx) : AM (PMemo × LsIdx) := do
+  let (m, us) ← promoteLList m fuel (← viewLs h)
+  let r ← internPersistentLs us
+  pure (m, r)
+
+theorem promoteLs_eq (m : PMemo) (fuel : Nat) (h : LsIdx) :
+    promoteLs m fuel h =
+      if h.isPersistent then pure (m, h)
+      else match m.lsM[h]? with
+        | some r => pure (m, r)
+        | none => (do
+          let (m, r) ← plsArmT m fuel h
+          pure ({ m with lsM := m.lsM.insert h r }, r)) := by
+  rw [promoteLs]
+  by_cases hp : h.isPersistent
+  · simp only [hp, ↓reduceIte]
+  · simp only [hp, Bool.false_eq_true, ↓reduceIte]
+    cases hm : m.lsM[h]? with
+    | some r => rfl
+    | none =>
+      simp only [plsArmT, bind_assoc]
+      apply bind_congr; intro v
+      apply bind_congr; intro w
+      cases w; simp
+
+theorem viewLs_run {a : AState} {h : LsIdx} {v : LsNodeView} (hw : a.store.lss.view h = some v) :
+    (viewLs h).run a = .ok (v, a) := by
+  simp only [viewLs, StateT.run_bind, StateT.run_get, pure_bind, hw]; rfl
+
+/-- **L's view of a level-list handle is the arena's**: a returning `ls_node` read a node. -/
+theorem lsNodeW_view {m : Mem} {a : AState} (hR : ArenaR m a) {h : Word} (hh : h.toNat < 2 ^ 32)
+    (hne : lsNodeW m h ≠ []) : ∃ ids, a.store.lss.view (decI h) = some ids := by
+  have hfl := hR.ls.2.1
+  unfold lsNodeW at hne
+  by_cases g0 : h >>> 28 ≠ 0
+  · simp [g0] at hne
+  by_cases hsc : tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0
+  · simp [g0, hsc] at hne
+  by_cases hc : rdW (m.arr64 CTL) (40 + tierW h) ≤ idxW h
+  · simp [g0, hsc, hc] at hne
+  have hview : a.store.lss.view (decI h) =
+      (if tierW h = 0 then a.store.lss.pers else a.store.lss.scr).get (decI h) := by
+    unfold LsStore.view
+    rw [isPersistent_decI h hh]
+    by_cases ht : tierW h = 0
+    · simp only [show (h >>> 27) &&& 1 = tierW h from rfl, ht, beq_self_eq_true, ↓reduceIte]
+    · have hon : a.store.lss.scratchOn = true := by
+        rw [← hfl]; simp only [bne_iff_ne, ne_eq]; exact fun e => hsc ⟨ht, e⟩
+      simp only [show (h >>> 27) &&& 1 = tierW h from rfl, beq_iff_eq, ht, ↓reduceIte, hon]
+  rw [hview]
+  obtain ⟨x, hx, -⟩ := storeR_node lsSch LsRecRel lshash m _ _ _ hR.ls (tierW h) (tierW_le h)
+    (idxW h) (by simpa [cntW, lsSch] using hc)
+  simp only [LsTables.get, decLs_tag0 h hh, show h >>> 28 = 0 from by simpa using g0,
+    beq_self_eq_true, ↓reduceIte, Tbl.node?, decLs_idx, apply_ite LsTables.lists, hx,
+    Option.map_some]
+  exact ⟨_, rfl⟩
+
+/-- The arrays and `CTL` words a level-list promotion writes. -/
+abbrev lsArrs : List ArrId := POOL :: lArrs ++ [LSREC, LSSLOT, PLSM]
+abbrev lsCtl : List Word := lCtl ++ [0, 40, 41, 145]
+
+theorem plsSch_wf : plsSch.WF := ⟨by decide, by decide⟩
+
+/-- The level-list memo gains an entry. -/
+theorem PMemoR.setLs {m m' : Mem} {pm : PMemo} (hP : PMemoR m pm) (h r : Word)
+    (hh : h.toNat < 2 ^ 32) (hr : PW r) (hs : msetG plsSch m h 0 r = some m') :
+    PMemoR m' { pm with lsM := pm.lsM.insert (decI h) (decI r) } := by
+  have hf := msetG_frame plsSch plsSch_wf m m' h 0 r hs
+  exact ⟨memoRV_frame pnSch pnSch_wf _ _ _ _ (by decide) (by decide) m m' hf
+      (fun _ _ h => h) _ hP.n,
+    memoRV_frame plSch plSch_wf _ _ _ _ (by decide) (by decide) m m' hf
+      (fun _ _ h => h) _ hP.l,
+    memoRV_set plsSch plsSch_wf (hKey .levels) (VP .levels) (vp_stable _ _) m pm.lsM hP.ls h 0 r
+      ⟨hh, rfl⟩ (decI r) ⟨rfl, hr.1, hr.2⟩ m' hs,
+    memoRV_frame peSch ⟨by decide, by decide⟩ _ _ _ _ (by decide) (by decide) m m' hf
+      (fun _ _ h => h) _ hP.e⟩
+
+/-- **What a successful run of a level-list promotion gives.** -/
+def PLsOk (op : AM (PMemo × LsIdx)) (m : Mem) (a : AState) (pm : PMemo) (r : Word) (m' : Mem) :
+    Prop :=
+  ∃ a' pm', op.run a = .ok ((pm', decI r), a') ∧ ArenaD m' a' ∧ PMemoR m' pm' ∧ PW r ∧
+    cp a' = cp a ∧ MemFrame lsArrs lsCtl m m' ∧ pm'.eM = pm.eM
+
+section pls
+variable (p : Prog) (hp : PromoteProg p)
+include hp
+
+theorem plsArm_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f h : Word) (r : List Word)
+    (m' : Mem) (hD : ArenaD m a) (hP : PMemoR m pm) (hh : h.toNat < 2 ^ 32)
+    (hc : callW p n "pls_arm" [f, h] m = some (r, m')) :
+    PLsOk (plsArmT pm f.toNat (decI h)) m a pm (r.headD 0) m' := by
+  cases n with
+  | zero => rw [callW_zero'] at hc; cases hc
+  | succ n =>
+  obtain ⟨s', rfl, -, hW⟩ := callW_triple (plsArm_spec p hp n ⟨m, Locals.init []⟩ f h) hc
+  simp only at hW
+  have hh' : ¬ 4294967295 < h := fun e => by
+    have : (4294967295 : Nat) < h.toNat := e
+    omega
+  by_cases hne : lsNodeW m h = []
+  · simp [plsArmW, hne] at hW
+  have hc0 : (m.arr64 CTL).size ≠ 0 := by have := ctl_pos hD.1; omega
+  by_cases h1 : m.len64 POOL < m.top
+  · simp [plsArmW, hh', hne, hc0, h1] at hW
+  by_cases h2 : m.len64 POOL - m.top < (lsNodeW m h).tail.headD 0
+  · unfold plsArmW at hW
+    rw [if_neg (by simp [hh', hne]), if_neg hc0, if_neg h1, if_pos h2] at hW; cases hW
+  rw [plsArmW_eq p n m f h hh' hne hc0 h1 h2] at hW
+  obtain ⟨ids, hv⟩ := lsNodeW_view hD.1 hh hne
+  obtain ⟨hw, hol, hsl⟩ := lsNodeW_store hD.1 hh hv
+  rw [hw] at hW h2
+  simp only [List.headD_cons, List.tail_cons] at hW h2
+  have hps := hD.1.lit.1.2.2.1
+  have hpt := hD.1.lit.1.2.2.2
+  have hlen : m.len64 POOL = UInt64.ofNat (m.arr64 POOL).size := len64_eq _ _
+  have h1' : m.top.toNat ≤ (m.arr64 POOL).size := hpt
+  have hroom : m.top.toNat + (lsL m (tierW h) (idxW h)).toNat ≤ (m.arr64 POOL).size := by
+    rw [hlen] at h2
+    have h2' := UInt64.not_lt.mp h2
+    rw [UInt64.le_iff_toNat_le, UInt64.toNat_sub_of_le _ _ (by
+      rw [UInt64.le_iff_toNat_le]; simp; omega)] at h2'
+    simp at h2'; omega
+  cases hca : callW p n "promote_l_pool"
+      [f, lsO m (tierW h) (idxW h), lsL m (tierW h) (idxW h), m.top] m with
+  | none => rw [hca] at hW; cases hW
+  | some x =>
+  obtain ⟨r₁, m₁⟩ := x
+  rw [hca] at hW
+  obtain ⟨a₁, pm₁, us', hrun₁, hD₁, hP₁, hsl₁, hk₁, hcp₁, htop₁, hag₁, hsz₁, hfr₁, he₁, hls₁⟩ :=
+    pool_rel p hp n m a pm f _ _ m.top ids r₁ m₁ hD hP hsl hol (Nat.le_refl _) hroom hca
+  have hc₁ : (m₁.arr64 CTL).size ≠ 0 := by have := ctl_pos hD₁.1; omega
+  rw [plsK_some (hc := hc₁)] at hW
+  cases n with
+  | zero => rw [callW_zero', hd1] at hW; cases hW
+  | succ n =>
+  cases hcb : callW p (n + 1) "pi_ls" [m.top, lsL m (tierW h) (idxW h)]
+      (m₁.set64 CTL 0 (m.top + lsL m (tierW h) (idxW h))) with
+  | none => rw [hcb] at hW; cases hW
+  | some x =>
+  obtain ⟨r₂, m₂⟩ := x
+  rw [hcb, hd1_some] at hW
+  obtain ⟨hr, hm⟩ := Prod.mk.inj (Option.some.inj hW)
+  have hT : (m.top + lsL m (tierW h) (idxW h)).toNat =
+      m.top.toNat + (lsL m (tierW h) (idxW h)).toNat := by
+    rw [UInt64.toNat_add]; simp; omega
+  have hg : Grows m₁ (m₁.set64 CTL 0 (m.top + lsL m (tierW h) (idxW h))) :=
+    grows_top m₁ _ (by omega) (by rw [htop₁, hT]; omega) (by rw [hT, hsz₁]; exact hroom)
+  have hD₂ := ArenaD.grow _ _ hg _ hD₁
+  have hP₂ := pmemo_grow hg hP₁
+  have htop₂ := Mem.top_set64 m₁ (m.top + lsL m (tierW h) (idxW h)) (by omega)
+  have hpool₂ : (m₁.set64 CTL 0 (m.top + lsL m (tierW h) (idxW h))).arr64 POOL = m₁.arr64 POOL :=
+    Mem.arr64_set64_ne _ _ _ _ _ (by decide)
+  obtain ⟨s₂, hs₂, -, hW₂⟩ := callW_triple (piLs_spec p hp n ⟨_, Locals.init []⟩ _ _) hcb
+  rw [hs₂] at hW₂
+  obtain ⟨a₂, hrun₂, hD₂', hpw₂, hcp₂, hfr₂⟩ := piLs_rel p hp n _ a₁ hD₂ m.top
+    (lsL m (tierW h) (idxW h)) (by simp only [SliceOK, htop₂, hT]; omega) us'
+    (by rw [hpool₂]; exact hsl₁) hk₁ _ _ hW₂
+  rw [← hm]
+  refine ⟨a₂, pm₁, ?_, hD₂', hP₂.frameLo (by simp [LSREC, LSSLOT]) (by simp) hfr₂, hr ▸ hpw₂,
+    hcp₂.trans hcp₁, ?_, he₁⟩
+  · unfold plsArmT
+    rw [run_bind_ok (viewLs_run hv), run_bind_ok hrun₁]
+    simp only
+    rw [run_bind_ok hrun₂, ← hr]; rfl
+  · exact ((hfr₁.mono (by simp) (by simp)).trans
+      ((MemFrame.setCtl _ 0 _).mono (by simp) (by simp))).trans (hfr₂.mono (by simp) (by simp))
+
+/-- **`promote_ls` refines `promoteLs`** (the fuel passed on unchanged). -/
+theorem pls_rel (n : Nat) (m : Mem) (a : AState) (pm : PMemo) (f h : Word) (r : List Word)
+    (m' : Mem) (hD : ArenaD m a) (hP : PMemoR m pm) (hh : h.toNat < 2 ^ 32)
+    (hc : callW p n "promote_ls" [f, h] m = some (r, m')) :
+    PLsOk (promoteLs pm f.toNat (decI h)) m a pm (r.headD 0) m' := by
+  cases n with
+  | zero => rw [callW_zero'] at hc; cases hc
+  | succ n =>
+  obtain ⟨s', rfl, -, hW⟩ := callW_triple (promoteLs_spec p hp n ⟨m, Locals.init []⟩ f h) hc
+  simp only at hW
+  rw [promoteLs_eq]
+  by_cases ht : tierW h = 0
+  · rw [plsW_pers p n m f h ht] at hW
+    obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    have hpers : (decI h : LsIdx).isPersistent = true := PW.pers ⟨hh, ht⟩
+    rw [if_pos hpers, ← hr]
+    exact ⟨a, pm, rfl, hD, hP, ⟨hh, ht⟩, rfl, MemFrame.refl _ _ _, rfl⟩
+  have hnp : (decI h : LsIdx).isPersistent = false := by
+    rw [isPersistent_decI h hh]; exact beq_eq_false_iff_ne.mpr ht
+  rw [if_neg (by simp [hnp])]
+  have hk : (hKey .levels).ok h 0 := ⟨hh, rfl⟩
+  by_cases h0 : mfindG plsSch m h 0 = []
+  · simp [plsW, ht, h0] at hW
+  by_cases h1 : (mfindG plsSch m h 0).headD 0 ≠ 0
+  · obtain ⟨v, hv, hvr⟩ := memoRV_hit plsSch (hKey .levels) (VP .levels) m pm.lsM hP.ls h 0 h0 h1 hk
+    rw [plsW_hit p n m f h ht h0 h1] at hW
+    obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+    have hv' : pm.lsM[decI h]? = some v := hv
+    rw [hv']
+    obtain ⟨rfl, hw1, hw2⟩ := hvr
+    rw [← hr]
+    exact ⟨_, pm, rfl, hD, hP, ⟨hw1, hw2⟩, rfl, MemFrame.refl _ _ _, rfl⟩
+  have h1' : (mfindG plsSch m h 0).headD 0 = 0 := by simpa using h1
+  rw [plsW_miss p n m f h ht h0 h1'] at hW
+  have hmiss : pm.lsM[decI h]? = none :=
+    memoRV_miss plsSch (hKey .levels) (VP .levels) m pm.lsM hP.ls h 0 hk h0 h1'
+  rw [hmiss]
+  cases hca : callW p n "pls_arm" [f, h] m with
+  | none => rw [hca] at hW; cases hW
+  | some q =>
+  obtain ⟨r₁, m₁⟩ := q
+  rw [hca] at hW
+  cases hs : msetG plsSch m₁ h 0 (r₁.headD 0) with
+  | none => simp only [memoK, hs] at hW; cases hW
+  | some m₂ =>
+  rw [memoK_some _ _ _ _ _ hs] at hW
+  obtain ⟨hr, rfl⟩ := Prod.mk.inj (Option.some.inj hW)
+  obtain ⟨a₁, pm₁, hrun, hD₁, hP₁, hpw, hcp, hfr, he⟩ := plsArm_rel p hp n m a pm f h r₁ m₁ hD hP hh hca
+  refine ⟨a₁, { pm₁ with lsM := pm₁.lsM.insert (decI h) (decI (r₁.headD 0)) }, ?_,
+    hD₁.memo plsSch plsSch_wf (by decide) (by decide) h _ hs,
+    hP₁.setLs h _ hh hpw hs, by rw [← hr]; exact hpw, hcp, ?_, he⟩
+  · rw [run_bind_ok hrun, ← hr]; rfl
+  · exact hfr.trans ((msetG_frame plsSch plsSch_wf _ _ _ _ _ hs).mono (by simp) (by simp))
+
+/-- **`promote_ls` refines `promoteLs`** (`PLsOk`). -/
+@[refines ConRon.Arena.promoteLs]
+theorem promoteLs_refines (n : Nat) (s₀ : St) (a₀ : AState) (pm : PMemo) (f h : Word)
+    (hD : ArenaD s₀.mem a₀) (hP : PMemoR s₀.mem pm) (hh : h.toNat < 2 ^ 32) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "promote_ls" [f, h]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      PLsOk (promoteLs pm f.toNat (decI h)) s₀.mem a₀ pm (r.headD 0) s'.mem; ⊤⦄ :=
+  triple_post (callW_spec p n "promote_ls" [f, h] s₀) fun _ _ ⟨hl, hc⟩ =>
+    ⟨hl, pls_rel p hp n _ _ _ _ _ _ _ hD hP hh hc⟩
+
+end pls
 
 end L.Arena
