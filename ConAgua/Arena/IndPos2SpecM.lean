@@ -104,3 +104,156 @@ theorem nsb_rec6 {m' : Mem} {q kO kL aO aL nO nL : Word} {keys act : List NestKe
     Option.pure_def]
 
 end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+/-! ## `nest_cont_new_finish`: the group cached when closed, the active list restored -/
+
+/-- The kind word of `.nested (kb != 0)`. -/
+def nestedW (kb : Word) : Word := 4 + 8 * (if kb ≠ 0 then 1 else 0)
+
+def cfK3 (kb : Word) : Option (Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (q, m3) => some ([nestedW kb, q], m3)
+def cfK2 (ns2 aO aL kb : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m2) => cfK3 kb (posRecW m2 [r.headD 0, r.tail.headD 0, aO, aL, rdW (m2.arr64 IW) (ns2 + 4),
+      rdW (m2.arr64 IW) (ns2 + 5)])
+def cfK1 (k : Nat) (us dO dL gO gL ns2 aO aL kb : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m1) =>
+    if r.headD 0 ≠ 0 then
+      cfK2 ns2 aO aL kb (nagW k m1 us dO dL gO gL (rdW (m1.arr64 IW) ns2) (rdW (m1.arr64 IW) (ns2 + 1)))
+    else cfK2 ns2 aO aL kb (some ([rdW (m1.arr64 IW) ns2, rdW (m1.arr64 IW) (ns2 + 1)], m1))
+/-- The model of `nest_cont_new_finish(ctx, us, dsOff, dsLen, grpOff, grpLen, ns2, actOff, actLen, kb)`. -/
+def cfW : Nat → Mem → Word → Word → Word → Word → Word → Word → Word → Word → Word → Word →
+    Option (List Word × Mem)
+  | 0, _, _, _, _, _, _, _, _, _, _, _ => none
+  | k + 1, m, ctx, us, dO, dL, gO, gL, ns2, aO, aL, kb => cfK1 k us dO dL gO gL ns2 aO aL kb (dcWf k m ctx dO dL)
+
+section arms
+variable (k : Nat) (m1 m2 m3 : Mem) (us dO dL gO gL ns2 aO aL kb q : Word) (r : List Word)
+theorem cfK3_some : cfK3 kb (some (q, m3)) = some ([nestedW kb, q], m3) := rfl
+theorem cfK2_some : cfK2 ns2 aO aL kb (some (r, m2)) = cfK3 kb (posRecW m2 [r.headD 0, r.tail.headD 0, aO, aL,
+    rdW (m2.arr64 IW) (ns2 + 4), rdW (m2.arr64 IW) (ns2 + 5)]) := rfl
+theorem cfK1_acc (h : r.headD 0 ≠ 0) : cfK1 k us dO dL gO gL ns2 aO aL kb (some (r, m1)) =
+    cfK2 ns2 aO aL kb (nagW k m1 us dO dL gO gL (rdW (m1.arr64 IW) ns2) (rdW (m1.arr64 IW) (ns2 + 1))) := by
+  rw [cfK1, if_pos h]
+theorem cfK1_open (h : ¬ r.headD 0 ≠ 0) : cfK1 k us dO dL gO gL ns2 aO aL kb (some (r, m1)) =
+    cfK2 ns2 aO aL kb (some ([rdW (m1.arr64 IW) ns2, rdW (m1.arr64 IW) (ns2 + 1)], m1)) := by
+  rw [cfK1, if_neg h]
+end arms
+attribute [ind_grind] cfK3_some cfK2_some cfK1_acc cfK1_open
+
+theorem nestContNewFinish_spec (p : Prog) (L : NagLook p) (hd : DcLook p) (h6 : p.lookup "rec6" = some rec6)
+    (hp : p.lookup "nest_cont_new_finish" = some nestContNewFinishL) (n : Nat) (s₀ : St)
+    (ctx us dO dL gO gL ns2 aO aL kb : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "nest_cont_new_finish" [ctx, us, dO, dL, gO, gL, ns2, aO, aL, kb]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      cfW n s₀.mem ctx us dO dL gO gL ns2 aO aL kb = some ([r.headD 0, r.tail.headD 0], s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, nestContNewFinishL]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        dc_spec' p hd.hh hd.hg hd.hp n, nestAcceptGroup_spec p L n, rec6_specW p L.ha h6 n] <;>
+      finish (gen := 20) (instances := 5000) [cfW, nestedW, rdW_eq]
+
+end L.Ind
+
+namespace L.Ind
+
+open L.Arena
+
+/-- The twin's tail of `nestContNew`. -/
+def cfT (c : NestCtx) (us : LsIdx) (ds : List EIdx) (grp : List (NIdx × EIdx)) (ns2 : NestState)
+    (act : List NestKey) (kb : Nat) : AM (NestFieldKind × NestState) := do
+  let closed ← ds.allM (dsF (c.hiAt 0))
+  let keys := if closed then nestAcceptGroup us ds grp ns2.keys else ns2.keys
+  pure (.nested (kb != 0), { keys, active := act, ctorNfs := ns2.ctorNfs })
+
+/-- `decNFK` of a `.nested` kind word. -/
+theorem decNFK_nestedW (kb : Word) : decNFK (nestedW kb) = some (.nested (kb.toNat != 0)) := by
+  by_cases h : kb = 0
+  · subst h; decide
+  · have : kb.toNat ≠ 0 := fun e => h (UInt64.toNat_inj.mp (by simpa using e))
+    simp only [nestedW, h, ne_eq, not_false_eq_true, if_true]
+    simp [decNFK, this]
+
+theorem cfW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) {k : Nat} {m m' : Mem} {a : AState}
+    {ctx us dO dL gO gL ns2 aO aL kb : Word} {c : NestCtx} {ds : List EIdx} {grp : List (NIdx × EIdx)}
+    {NS2 : NestState} {act : List NestKey} {r : List Word}
+    (h : cfW k m ctx us dO dL gO gL ns2 aO aL kb = some (r, m')) (hS : StageR dn vis fe m a)
+    (hU : UCtx dn vis fe m ctx c) (hhi : c.hiAt 0 < 2 ^ 64) (hus : H us)
+    (hds : DecB (fun m => (decHL m dO.toNat dL.toNat : Option (List EIdx))) m ds)
+    (hdsb : dO.toNat + dL.toNat ≤ iwTop m)
+    (hgl : gL.toNat = grp.length) (hgb : gO.toNat + grp.length ≤ iwTop m) (hgrp : GrpAt m gO.toNat grp)
+    (hns : NSB m ns2 NS2) (hact : KsB m aO.toNat aL.toNat act) (hab : aO.toNat + aL.toNat ≤ iwTop m) :
+    ∃ x a', (cfT c (decI us) ds grp NS2 act kb.toNat).run a = .ok (x, a') ∧ StageR dn vis fe m' a' ∧
+      IWGrow m m' ∧ r.headD 0 = nestedW kb ∧ decNFK (r.headD 0) = some x.1 ∧ NSB m' (r.tail.headD 0) x.2 := by
+  cases k with
+  | zero => simp [cfW] at h
+  | succ k =>
+  simp only [cfW] at h
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  have hdsD := hds.get (OMono.decHL _ _)
+  cases hdc : dcWf k m ctx dO dL with
+  | none => rw [hdc] at h; simp [cfK1] at h
+  | some pr =>
+  obtain ⟨r1, m1⟩ := pr
+  rw [hdc] at h
+  obtain ⟨b, a1, hrun1, hS1, hg1, hr1⟩ := dcWf_ok dn fe vis k m m1 a ctx dO dL c ds r1 hdc hS hU.dec hU.inn hhi hdsD
+    (fun j hj => by omega)
+  have htop1 : iwTop m1 < 2 ^ 64 := Nat.lt_of_le_of_lt hS1.2.1 hS1.2.2.2.1
+  have hns1 := hns.grow hg1 htop
+  obtain ⟨hp6, hk1, -, hn1⟩ := nsb_words hns1 htop1
+  have hkb1 := hns1.b0
+  -- the keys, cached or not
+  have hkeys : ∃ (rk : List Word) (mk : Mem), cfK1 k us dO dL gO gL ns2 aO aL kb (some (r1, m1)) =
+      cfK2 ns2 aO aL kb (some (rk, mk)) ∧ StageR dn vis fe mk a1 ∧ IWGrow m1 mk ∧
+      KsB mk (rk.headD 0).toNat (rk.tail.headD 0).toNat
+        (if b then nestAcceptGroup (decI us) ds grp NS2.keys else NS2.keys).toList ∧
+      (rk.headD 0).toNat + (rk.tail.headD 0).toNat ≤ iwTop mk := by
+    cases b with
+    | true =>
+      rw [cfK1_acc (h := by rw [hr1]; decide)]
+      cases hag : nagW k m1 us dO dL gO gL (rdW (m1.arr64 IW) ns2) (rdW (m1.arr64 IW) (ns2 + 1)) with
+      | none => rw [cfK1_acc (h := by rw [hr1]; decide), hag] at h; simp [cfK2] at h
+      | some pr2 =>
+      obtain ⟨rk, mk⟩ := pr2
+      obtain ⟨h1, h2, h3, h4⟩ := nagW_ok dn vis fe us dO dL ds hus k m1 mk a1 gO gL _ _ grp NS2.keys rk hag hS1
+        (DecB.grow (OMono.decHL _ _) hg1 hds) hgl (by have := hg1.1; omega) (hgrp.grow hgb hg1) hk1 hkb1
+      exact ⟨rk, mk, rfl, h1, h2, by simpa using h3, h4⟩
+    | false =>
+      rw [cfK1_open (h := by rw [hr1]; decide)]
+      exact ⟨_, m1, rfl, hS1, IWGrow.refl _, by simpa using hk1, by simpa using hkb1⟩
+  obtain ⟨rk, mk, hk, hSk, hgk, hksk, hkbk⟩ := hkeys
+  rw [hk, cfK2_some] at h
+  cases hq : posRecW mk [rk.headD 0, rk.tail.headD 0, aO, aL, rdW (mk.arr64 IW) (ns2 + 4),
+      rdW (mk.arr64 IW) (ns2 + 5)] with
+  | none => rw [hq] at h; simp [cfK3] at h
+  | some pr3 =>
+  obtain ⟨q, m3⟩ := pr3
+  rw [hq, cfK3_some] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨hS3, hg3, hqq, ht3, hget3⟩ := posRecW_stage hq hSk (by simp)
+  simp only [List.length_cons, List.length_nil] at ht3
+  have hg13 := hg1.trans (hgk.trans hg3)
+  have htop3 : iwTop m3 < 2 ^ 64 := Nat.lt_of_le_of_lt hS3.2.1 hS3.2.2.2.1
+  have hnk := (hns1.grow hgk htop1)
+  obtain ⟨-, -, -, hnk'⟩ := nsb_words hnk (Nat.lt_of_le_of_lt hSk.2.1 hSk.2.2.2.1)
+  refine ⟨(.nested (kb.toNat != 0), (NestState.mk (if b then nestAcceptGroup (decI us) ds grp NS2.keys
+    else NS2.keys) act NS2.ctorNfs)), a1, ?_, hS3, hg13, rfl, by simpa using decNFK_nestedW kb, ?_⟩
+  · simp only [cfT, StateT.run_bind, hrun1, except_ok_bind]; rfl
+  · have := nsb_rec6 (m' := m3) (q := q) (keys := (if b then nestAcceptGroup (decI us) ds grp NS2.keys
+        else NS2.keys).toList) (act := act) (nfs := NS2.ctorNfs.toList) (by omega) htop3 hget3
+      (hksk.grow hg3) (by have := hg3.1; omega) ((hact.grow hg1).grow (hgk.trans hg3))
+      (by have := hg13.1; omega) (hnk'.grow hg3) (by have := hnk.b4; have := hg3.1; omega)
+    simpa using this
+
+end L.Ind
