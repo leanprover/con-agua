@@ -476,18 +476,24 @@ def piResidualL : FunDecl := lfn (e, ao, an) locals (i, t, x, body, b2) {
 
 /-! ## `defeq_list(mode, vis, d, ao, an, bo, bn)` -/
 
-/-- con-leche: `Core.lean:269-278` `defEqList` — pairwise definitional equality of two spines. -/
--- con-ron: ConRon/Arena/Core.lean:1339-1346 ConRon.Arena.defEqList
-@[l_impl ConRon.Arena.defEqList]
-def defeqListL : FunDecl := lfn (mode, vis, d, ao, an, bo, bn) locals (i, ok) {
-  if an != bn { return 0 };
-  i := 0;
-  while i < an {
+/-- The pairwise walk of `defeq_list` (a named block, for the proofs). -/
+def defeqListLoop : Stmt := lblk (mode, vis, d, ao, an, bo, bn, i, ok) {
+  while i < an && i < bn {
     ok := call defeq(mode, vis, d, SPN.u64[ao + i], SPN.u64[bo + i]);
     if ok == 0 { return 0 };
     i += 1
-  };
-  return 1
+  }
+}
+
+/-- con-leche: `Core.lean:269-278` `defEqList` — pairwise definitional equality of two spines. As the
+twin, it compares the common prefix pairwise (stopping at the first `false`) and only then the
+lengths: an early length test would skip the twin's `defeq` calls and their cache writes. -/
+-- con-ron: ConRon/Arena/Core.lean:1339-1346 ConRon.Arena.defEqList
+@[l_impl ConRon.Arena.defEqList]
+def defeqListL : FunDecl := lfn (mode, vis, d, ao, an, bo, bn) locals (i, ok) {
+  i := 0;
+  ⟪defeqListLoop⟫;
+  return u64(an == bn)
 }
 
 /-! ## `iota_index_ok(mode, vis, d, mI, rP, cnP, tyCtor, mo, mn, xo, xn)` -/

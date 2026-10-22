@@ -1068,4 +1068,261 @@ theorem piResidual_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p) :
   · simpa using hca
   · simpa using hres
 
+/-! ## `defeq_list(mode, vis, d, ao, an, bo, bn)` -/
+
+/-- Model of the `defeq_list` loop at L fuel `k`. -/
+def dlW (p : Prog) (mode vis d ao an bo bn : Word) : Nat → Mem → Word → Option (List Word × Mem)
+  | 0, _, _ => none
+  | k + 1, m, i =>
+    if i < an ∧ i < bn then
+      match callW p k "defeq" [mode, vis, d, rdW (m.arr64 SPN) (ao + i), rdW (m.arr64 SPN) (bo + i)] m with
+      | none => none
+      | some (r, m₁) => if r.headD 0 = 0 then some ([0], m₁) else dlW p mode vis d ao an bo bn k m₁ (i + 1)
+    else some ([Cmp.eq.evalW an bn], m)
+
+theorem dlW_end (p : Prog) (mode vis d ao an bo bn : Word) (k : Nat) (m : Mem) (i : Word)
+    (h : ¬ (i < an ∧ i < bn)) :
+    dlW p mode vis d ao an bo bn (k + 1) m i = some ([Cmp.eq.evalW an bn], m) := by
+  simp only [dlW, h, ↓reduceIte]
+
+theorem dlW_stop (p : Prog) (mode vis d ao an bo bn : Word) (k : Nat) (m m₁ : Mem) (i : Word)
+    (r : List Word) (h : i < an ∧ i < bn)
+    (hc : callW p k "defeq" [mode, vis, d, rdW (m.arr64 SPN) (ao + i), rdW (m.arr64 SPN) (bo + i)] m =
+      some (r, m₁)) (h0 : r.headD 0 = 0) :
+    dlW p mode vis d ao an bo bn (k + 1) m i = some ([0], m₁) := by
+  simp only [dlW, h.1, h.2, and_self, ↓reduceIte, hc, h0]
+
+theorem dlW_cont (p : Prog) (mode vis d ao an bo bn : Word) (k : Nat) (m m₁ : Mem) (i : Word)
+    (r : List Word) (h : i < an ∧ i < bn)
+    (hc : callW p k "defeq" [mode, vis, d, rdW (m.arr64 SPN) (ao + i), rdW (m.arr64 SPN) (bo + i)] m =
+      some (r, m₁)) (h0 : ¬ r.headD 0 = 0) :
+    dlW p mode vis d ao an bo bn (k + 1) m i = dlW p mode vis d ao an bo bn k m₁ (i + 1) := by
+  simp only [dlW, h.1, h.2, and_self, ↓reduceIte, hc, h0]
+
+theorem defeqListLoop_spec (p : Prog) (k : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    exec p k defeqListLoop
+    ⦃fun r s' => r ≠ .brk ∧ s'.loc 4 = s₀.loc 4 ∧ s'.loc 6 = s₀.loc 6 ∧
+      dlW p (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5)
+      (s₀.loc 6) k s₀.mem (s₀.loc 7) =
+        some (r.retOr [Cmp.eq.evalW (s₀.loc 4) (s₀.loc 6)], s'.mem); ⊤⦄ := by
+  induction k generalizing s₀ with
+  | zero => vcgen [exec] <;> grind
+  | succ k ih =>
+    rw [exec, step_while (w := defeqListLoop) rfl]
+    sym only [lang_grind, arena_grind] =>
+      vcgen [step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
+        callW_spec p k "defeq", ih] <;> finish [dlW_end, dlW_stop, dlW_cont]
+
+theorem defeqListLoop_step_spec (p : Prog) (k : Nat) (s₀ : St) :
+    ⦃fun s => s = s₀⦄
+    step p (exec p k) defeqListLoop
+    ⦃fun r s' => r ≠ .brk ∧ s'.loc 4 = s₀.loc 4 ∧ s'.loc 6 = s₀.loc 6 ∧
+      dlW p (s₀.loc 0) (s₀.loc 1) (s₀.loc 2) (s₀.loc 3) (s₀.loc 4) (s₀.loc 5)
+      (s₀.loc 6) (k + 1) s₀.mem (s₀.loc 7) =
+        some (r.retOr [Cmp.eq.evalW (s₀.loc 4) (s₀.loc 6)], s'.mem); ⊤⦄ :=
+  Triple.step_exec (defeqListLoop_spec p (k + 1) s₀)
+
+theorem defeqList_spec (p : Prog) (hp : p.lookup "defeq_list" = some defeqListL) (k : Nat)
+    (s₀ : St) (mode vis d ao an bo bn : Word) :
+    ⦃fun s => s = s₀⦄
+    invoke p (exec p (k + 1)) "defeq_list" [mode, vis, d, ao, an, bo, bn]
+    ⦃fun r s' => LocEq s' s₀ ∧ dlW p mode vis d ao an bo bn (k + 1) s₀.mem 0 = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, defeqListL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, defeqListLoop_step_spec p k] <;>
+    finish
+
+theorem defEqList_nil_run (r : CoreFnsA) (fe : IFEnv) (d : Nat) (a : AState) :
+    (defEqList r fe d [] []).run a = .ok (true, a) := by
+  simp [defEqList]; rfl
+
+theorem defEqList_nil_cons_run (r : CoreFnsA) (fe : IFEnv) (d : Nat) (b : EIdx) (bs : List EIdx)
+    (a : AState) : (defEqList r fe d [] (b :: bs)).run a = .ok (false, a) := by
+  simp [defEqList]; rfl
+
+theorem defEqList_cons_nil_run (r : CoreFnsA) (fe : IFEnv) (d : Nat) (x : EIdx) (xs : List EIdx)
+    (a : AState) : (defEqList r fe d (x :: xs) []).run a = .ok (false, a) := by
+  simp [defEqList]; rfl
+
+theorem defEqList_stop_run (r : CoreFnsA) (fe : IFEnv) (d : Nat) (x y : EIdx) (xs ys : List EIdx)
+    (a a₁ : AState) (h : (r.defeq d x y).run a = .ok (false, a₁)) :
+    (defEqList r fe d (x :: xs) (y :: ys)).run a = .ok (false, a₁) := by
+  simp only [defEqList, StateT.run_bind, h, except_ok_bind]; rfl
+
+theorem defEqList_cont_run (r : CoreFnsA) (fe : IFEnv) (d : Nat) (x y : EIdx) (xs ys : List EIdx)
+    (a a₁ a₂ : AState) (res : Bool) (h : (r.defeq d x y).run a = .ok (true, a₁))
+    (hr : (defEqList r fe d xs ys).run a₁ = .ok (res, a₂)) :
+    (defEqList r fe d (x :: xs) (y :: ys)).run a = .ok (res, a₂) := by
+  simp only [defEqList, StateT.run_bind, h, except_ok_bind, if_true]; exact hr
+
+theorem toUInt64_toNat_self (i : Word) : i.toNat.toUInt64 = i := by
+  simp [Nat.toUInt64]
+
+/-- The loop's exit: one of the two spines is used up. -/
+theorem dl_exit (r : CoreFnsA) (fe : IFEnv) (d : Nat) (an bn i : Word) (aas bs : Array EIdx)
+    (hna : aas.size = an.toNat) (hnb : bs.size = bn.toNat) (hia : i.toNat ≤ an.toNat)
+    (hib : i.toNat ≤ bn.toNat) (hn : ¬ (i < an ∧ i < bn)) (a : AState) :
+    (defEqList r fe d (aas.toList.drop i.toNat) (bs.toList.drop i.toNat)).run a =
+      .ok (decide (an = bn), a) := by
+  have h1 : ¬ (i.toNat < an.toNat ∧ i.toNat < bn.toNat) := fun h => hn ⟨h.1, h.2⟩
+  by_cases hab : an = bn
+  · subst hab
+    have : aas.toList.drop i.toNat = [] := List.drop_eq_nil_of_le (by simp [hna]; omega)
+    have h2 : bs.toList.drop i.toNat = [] := List.drop_eq_nil_of_le (by simp [hnb]; omega)
+    rw [this, h2]; simpa using defEqList_nil_run r fe d a
+  · have hne : an.toNat ≠ bn.toNat := fun h => hab (UInt64.toNat_inj.mp h)
+    simp only [hab, decide_false]
+    by_cases hi : i.toNat < an.toNat
+    · have hb : bn.toNat ≤ i.toNat := by omega
+      have h2 : bs.toList.drop i.toNat = [] := List.drop_eq_nil_of_le (by simp [hnb]; omega)
+      rw [h2, List.drop_eq_getElem_cons (by simp [hna]; omega)]
+      exact defEqList_cons_nil_run r fe d _ _ a
+    · have h2 : aas.toList.drop i.toNat = [] := List.drop_eq_nil_of_le (by simp [hna]; omega)
+      rw [h2, List.drop_eq_getElem_cons (by simp [hnb]; omega)]
+      exact defEqList_nil_cons_run r fe d _ _ a
+
+/-- **The `defeq_list` loop refines `defEqList`**, by induction on the remaining count. -/
+theorem dlW_ok (p : Prog) (n F : Nat) (hknot : KnotUpTo p n) (hnF : n ≤ F) (hn62 : n ≤ 2 ^ 62)
+    (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (eb mode d ao an bo bn : Word)
+    (hm4 : mode < 4) (hebm : eb = (mode >>> 1) &&& 1) (aas bs : Array EIdx) :
+    ∀ (K k : Nat) (m : Mem) (a : AState) (M : ModeMaps) (i : Word) (L : List Word) (m' : Mem),
+      an.toNat - i.toNat = K → i.toNat ≤ an.toNat → i.toNat ≤ bn.toNat → k ≤ n + 1 →
+      CoreS dn m a vis fe M eb → SpineR m ao an aas → SpineR m bo bn bs →
+      ao.toNat + an.toNat ≤ (spTop m).toNat → bo.toNat + bn.toNat ≤ (spTop m).toNat →
+      dlW p mode vis d ao an bo bn k m i = some (L, m') →
+      AM.ok (defEqList (coreKnot (decMode mode) fe id F) fe d.toNat (aas.toList.drop i.toNat)
+        (bs.toList.drop i.toNat)) a ∧
+      CoreAfter dn m m' (AM.st (defEqList (coreKnot (decMode mode) fe id F) fe d.toNat
+        (aas.toList.drop i.toNat) (bs.toList.drop i.toNat)) a) vis fe M eb ∧
+      AM.res (defEqList (coreKnot (decMode mode) fe id F) fe d.toNat (aas.toList.drop i.toNat)
+        (bs.toList.drop i.toNat)) a = decBool L ∧ HW (L.headD 0) := by
+  intro K
+  induction K with
+  | zero =>
+    intro k m a M i L m' hK hia hib hk hS hsa hsb hta htb hL
+    have hn : ¬ (i < an ∧ i < bn) := fun h => by
+      have : i.toNat < an.toNat := h.1
+      omega
+    cases k with
+    | zero => simp [dlW] at hL
+    | succ k =>
+    rw [dlW_end p mode vis d ao an bo bn k m i hn] at hL
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
+    obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _
+      (dl_exit (coreKnot (decMode mode) fe id F) fe d.toNat an bn i aas bs hsa.size hsb.size hia hib hn a)
+    refine ⟨hok, ?_, ?_, ?_⟩
+    · rw [hst]; exact ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩
+    · rw [hres]; simp only [decBool, Cmp.evalW, Cmp.eval]; by_cases h : an = bn <;> simp [h]
+    · simp only [Cmp.evalW]; split <;> simp [HW]
+  | succ K ih =>
+    intro k m a M i L m' hK hia hib hk hS hsa hsb hta htb hL
+    cases k with
+    | zero => simp [dlW] at hL
+    | succ k =>
+    rcases Classical.em ¬(i < an ∧ i < bn) with hn | hn
+    · rw [dlW_end p mode vis d ao an bo bn k m i hn] at hL
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
+      obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _
+        (dl_exit (coreKnot (decMode mode) fe id F) fe d.toNat an bn i aas bs hsa.size hsb.size hia hib hn a)
+      refine ⟨hok, ?_, ?_, ?_⟩
+      · rw [hst]; exact ⟨M, hS, KeptAll.refl _ _, StackKept.refl _⟩
+      · rw [hres]; simp only [decBool, Cmp.evalW, Cmp.eval]; by_cases h : an = bn <;> simp [h]
+      · simp only [Cmp.evalW]; split <;> simp [HW]
+    replace hn := Classical.not_not.mp hn
+    have hia' : i.toNat < an.toNat := hn.1
+    have hib' : i.toNat < bn.toNat := hn.2
+    have hsza : i.toNat < aas.size := by rw [hsa.size]; exact hia'
+    have hszb : i.toNat < bs.size := by rw [hsb.size]; exact hib'
+    have hdra : aas.toList.drop i.toNat = aas[i.toNat] :: aas.toList.drop (i.toNat + 1) := by
+      rw [List.drop_eq_getElem_cons (by simpa using hsza)]; simp
+    have hdrb : bs.toList.drop i.toNat = bs[i.toNat] :: bs.toList.drop (i.toNat + 1) := by
+      rw [List.drop_eq_getElem_cons (by simpa using hszb)]; simp
+    have hga : aas[i.toNat] = decE (rdW (m.arr64 SPN) (ao + i)) := by
+      have := hsa.get i.toNat hsza
+      simpa [spW, toUInt64_toNat_self] using this
+    have hgb : bs[i.toNat] = decE (rdW (m.arr64 SPN) (bo + i)) := by
+      have := hsb.get i.toNat hszb
+      simpa [spW, toUInt64_toNat_self] using this
+    have hxa : HW (rdW (m.arr64 SPN) (ao + i)) := by
+      have := hsa.lt i.toNat hia'
+      unfold HW; simpa [spW, toUInt64_toNat_self] using this
+    have hxb : HW (rdW (m.arr64 SPN) (bo + i)) := by
+      have := hsb.lt i.toNat hib'
+      unfold HW; simpa [spW, toUInt64_toNat_self] using this
+    rw [hga] at hdra
+    rw [hgb] at hdrb
+    cases hc : callW p k "defeq" [mode, vis, d, rdW (m.arr64 SPN) (ao + i), rdW (m.arr64 SPN) (bo + i)] m with
+    | none => simp [dlW, hn.1, hn.2, hc] at hL
+    | some q =>
+    obtain ⟨r₁, m₁⟩ := q
+    obtain ⟨hok, ⟨M₁, hS₁, hK₁, hSt₁⟩, hres, hr₁⟩ := CoreSpec.of_callW
+      ((hknot k (by omega)).defeq F ⟨m, Locals.init []⟩ a dn vis fe M eb mode d _ _ (by omega)
+        (by omega) ⟨hS, hm4, hebm⟩ hxa hxb) hc
+    have hrunT := AM.run_of_ok _ _ hok
+    by_cases h0 : r₁.headD 0 = 0
+    · rw [dlW_stop p mode vis d ao an bo bn k m m₁ i r₁ hn hc h0] at hL
+      obtain ⟨rfl, rfl⟩ := Prod.mk.inj (Option.some.inj hL)
+      have hres' : AM.res ((coreKnot (decMode mode) fe id F).defeq d.toNat
+          (decE (rdW (m.arr64 SPN) (ao + i))) (decE (rdW (m.arr64 SPN) (bo + i)))) a = false := by
+        rw [hres]; simpa [decBool] using h0
+      rw [hres'] at hrunT
+      have hrun := defEqList_stop_run (coreKnot (decMode mode) fe id F) fe d.toNat _ _
+        (aas.toList.drop (i.toNat + 1)) (bs.toList.drop (i.toNat + 1)) a _ hrunT
+      rw [hdra, hdrb]
+      obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ hrun
+      refine ⟨hokF, ⟨M₁, ?_, hK₁, hSt₁⟩, ?_, by simp [HW]⟩
+      · rw [hstF]; exact hS₁
+      · rw [hresF]; simp [decBool]
+    · rw [dlW_cont p mode vis d ao an bo bn k m m₁ i r₁ hn hc h0] at hL
+      have hsa₁ : SpineR m₁ ao an aas := hsa.keep hSt₁.2.1 hSt₁.2.2 hta hS.spn
+      have hsb₁ : SpineR m₁ bo bn bs := hsb.keep hSt₁.2.1 hSt₁.2.2 htb hS.spn
+      have hta₁ : ao.toNat + an.toNat ≤ (spTop m₁).toNat := by rw [hSt₁.1]; exact hta
+      have htb₁ : bo.toNat + bn.toNat ≤ (spTop m₁).toNat := by rw [hSt₁.1]; exact htb
+      have h1 : (i + 1).toNat = i.toNat + 1 := uint64_succ_toNat an i hn.1
+      obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hL1⟩ := ih k m₁ _ M₁ (i + 1) L m'
+        (by omega) (by omega) (by omega) (by omega) hS₁ hsa₁ hsb₁ hta₁ htb₁ hL
+      have hres' : AM.res ((coreKnot (decMode mode) fe id F).defeq d.toNat
+          (decE (rdW (m.arr64 SPN) (ao + i))) (decE (rdW (m.arr64 SPN) (bo + i)))) a = true := by
+        rw [hres]; simpa [decBool] using h0
+      rw [hres'] at hrunT
+      have hrunR := AM.run_of_ok _ _ hok2
+      rw [h1] at hrunR
+      rw [h1] at hS₂ hres2
+      have hrun := defEqList_cont_run (coreKnot (decMode mode) fe id F) fe d.toNat _ _
+        (aas.toList.drop (i.toNat + 1)) (bs.toList.drop (i.toNat + 1)) a _ _ _
+        hrunT hrunR
+      rw [hdra, hdrb]
+      obtain ⟨hokF, hstF, hresF⟩ := AM.of_run_ok _ _ _ _ hrun
+      refine ⟨hokF, ⟨M₂, ?_, hK₁.trans hK₂, hSt₁.trans hSt₂⟩, ?_, hL1⟩
+      · rw [hstF]; exact hS₂
+      · rw [hresF]; exact hres2
+
+/-- **`defeq_list` refines `defEqList`.** Statement changes (the knot's `defeq` slot needs them):
+`n ≤ 2 ^ 62`, the eager bit `eb = (mode >>> 1) &&& 1`, and both slices below the stack top. -/
+theorem defeqList_refines' (p : Prog) (hp : IotaProg' p) :
+    ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
+    ∀ (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
+    (MM : ModeMaps) (eb mode d ao an bo bn : Word) (aas bs : Array EIdx),
+    CoreS dn s₀.mem a₀ vis fe MM eb → mode < 4 → eb = (mode >>> 1) &&& 1 →
+    SpineR s₀.mem ao an aas → SpineR s₀.mem bo bn bs →
+    ao.toNat + an.toNat ≤ (spTop s₀.mem).toNat → bo.toNat + bn.toNat ≤ (spTop s₀.mem).toNat →
+    CoreSpec p (n + 1) "defeq_list" [mode, vis, d, ao, an, bo, bn]
+      (defEqList (coreKnot (decMode mode) fe id F) fe d.toNat aas.toList bs.toList) decBool s₀ a₀ dn
+      vis fe MM eb := by
+  intro n hk F hnF hn62 s₀ a₀ dn vis fe MM eb mode d ao an bo bn aas bs hS hm4 hebm hsa hsb hta htb
+  apply L.M.triple_of_run
+  intro s r s' hs0 hrun
+  obtain ⟨hloc, hW⟩ := L.M.of_run (P := fun s => s = s₀) hs0 hrun
+    (defeqList_spec p hp.defeqList n s₀ mode vis d ao an bo bn)
+  subst hs0
+  refine ⟨hloc, ?_⟩
+  obtain ⟨hok, hca, hres, hL1⟩ := dlW_ok p n F hk hnF hn62 dn vis fe eb mode d ao an bo bn hm4 hebm aas bs
+    (an.toNat - (0 : Word).toNat) (n + 1) s.mem a₀ MM 0 r s'.mem rfl (by simp) (by simp) (Nat.le_refl _)
+    hS hsa hsb hta htb hW
+  refine ⟨hok, ?_, ?_, hL1⟩
+  · simpa using hca
+  · simpa using hres
+
 end L.Arena
