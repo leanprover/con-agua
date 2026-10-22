@@ -2,6 +2,7 @@ import ConAgua.Arena.DeclHeader
 import ConAgua.Arena.WhnfCoreApp
 import ConAgua.Arena.WhnfDelta
 import ConAgua.Arena.IndView
+import ConAgua.Arena.DeclMasterStage
 
 /-!
 # The structural-`Nat` gate: shared pieces (lane `decls3`, helper `decls3-nat`)
@@ -337,17 +338,19 @@ theorem slNew1_fref (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
 theorem ceinternW_hw' (m : Mem) (a : AState) (hR : ConstR m a) (f x : Word) (hf : f.toNat < 2 ^ 32)
     (hx : x.toNat < 2 ^ 32) (w : Word) (m' : Mem) (hI : ceinternW m f x = some (w, m')) :
     w.toNat < 2 ^ 32 := by
-  rw [ceinternW_eq] at hI
+  rw [ceinternW_eqK (hctl := hR.1.1)] at hI
+  obtain ⟨_, hI, -⟩ := mkK_split _ _ _ _ _ _ _ hI
   exact internM_hw constSch CeRecRel cehash constSch_wf m _ _ _ hR (ceMt m f x) _ _ _ _
     (probe_homeG constSch m 0 _ _ (ceprobeW_arm m f x 0) _)
-    (probe_homeG constSch m 1 _ _ (ceprobeW_arm m f x 1) _) _ (cepushOK_room m) _ _ w m' hI
+    (probe_homeG constSch m 1 _ _ (ceprobeW_arm m f x 1) _) _ (cepushOK_room m) _ _ w _ hI
 
 theorem fvinternW_hw (m : Mem) (a : AState) (hR : FVarR m a) (u ty : Word) (w : Word) (m' : Mem)
     (hI : fvinternW m u ty = some (w, m')) : w.toNat < 2 ^ 32 := by
-  rw [fvinternW_eq] at hI
+  rw [fvinternW_eqK (hctl := hR.1.1)] at hI
+  obtain ⟨_, hI, -⟩ := mkK_split _ _ _ _ _ _ _ hI
   exact internM_hw fvarSch FVRecRel fvhash fvarSch_wf m _ _ _ hR (fvMt m u ty) _ _ _ _
     (probe_homeG fvarSch m 0 _ _ (fvprobeW_arm m u ty 0) _)
-    (probe_homeG fvarSch m 1 _ _ (fvprobeW_arm m u ty 1) _) _ (fvpushOK_room m) _ _ w m' hI
+    (probe_homeG fvarSch m 1 _ _ (fvprobeW_arm m u ty 1) _) _ (fvpushOK_room m) _ _ w _ hI
 
 theorem lainternW_hw (m : Mem) (a : AState) (hR : LamR m a) (t b : Word) (w : Word) (m' : Mem)
     (hI : lainternW m t b = some (w, m')) : w.toNat < 2 ^ 32 := by
@@ -443,10 +446,11 @@ theorem mkProjW_hw' (m : Mem) (a : AState) (hA : ArenaD m a) (n i e r : Word) (m
 
 theorem sinternW_hw (m : Mem) (a : AState) (hR : SuccR m a) (u : Word) (w : Word) (m' : Mem)
     (hI : sinternW m u = some (w, m')) : w.toNat < 2 ^ 32 := by
-  rw [sinternW_eq] at hI
+  rw [sinternW_eqK (hctl := hR.1.1)] at hI
+  obtain ⟨_, hI, -⟩ := mkK_split _ _ _ _ _ _ _ hI
   exact internM_hw succSch SRecRel shash succSch_wf m _ _ _ hR (sMt m u) _ _ _ _
     (probe_homeG succSch m 0 _ _ (sprobeW_arm m u 0) _)
-    (probe_homeG succSch m 1 _ _ (sprobeW_arm m u 1) _) _ (spushOK_room m) _ _ w m' hI
+    (probe_homeG succSch m 1 _ _ (sprobeW_arm m u 1) _) _ (spushOK_room m) _ _ w _ hI
 
 /-- `intern_succ` under the stage relation. -/
 theorem internSuccN_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem}
@@ -454,14 +458,7 @@ theorem internSuccN_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe 
     (hI : sinternW m u = some (r, m')) :
     ∃ a', (internLNode (.succ (decI u))).run a = .ok (decI r, a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' := by
-  have hR := hS.1.arena.1
-  obtain ⟨hok, hX, hres⟩ := sintern_correct m a hR.succ u hu _ _ hI
-  have hI₂ := hI; rw [sinternW_eq] at hI₂
-  have hfr := internM_frame _ succSch_wf _ _ _ _ _ _ _ _ hI₂
-  exact stage_of_level hS (internLNode_succ_run _ a) hok
-    (hR.lift_succ _ _ _ _ hX hfr (AM.st_proto succLens _ _ _ _ _ _ a (internLNode_succ_run _ a) hok))
-    hres hfr (by simp [succSch, SREC, SSLOT]) (by simp [succSch]) (fun _ => ⟨DerR.lvl, rfl⟩)
-    (fun _ => ⟨DerR.lvl, rfl⟩)
+  exact internSucc_stage hS u hu hI
 
 
 /-- The lookups of master's interners, the environment and the pin readers that the gate's
