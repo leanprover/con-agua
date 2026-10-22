@@ -117,7 +117,7 @@ def OneOK (n : Nat) : Prop :=
     (NS : NestState) (r : List Word),
     nbOneW n m vis ctx root fu po pl hi us dO dL no nl hO hL cv nF ns = some (r, m') →
     StageR dn vis fe m a → WCtx dn vis fe m ctx po pl c prog → CtorsCtx m us dO dL no nl hO hL ds names holes →
-    decCVp m cv.toNat = some cvv → cv.toNat + 3 < 2 ^ 64 → NSB m ns NS →
+    decCV (erecP m) cv.toNat = some cvv → cv.toNat + 3 < 2 ^ 64 → NSB m ns NS →
     ∃ ks closed NS3 a', (∀ {β : Type} (K : List NestFieldKind × EIdx → NestState → AM β),
         (oneK V fe c fu.toNat prog (decide (root ≠ 0)) hi.toNat (decI us) ds names holes cvv nF.toNat NS K).run a =
           (K (ks, closed) NS3).run a') ∧

@@ -241,6 +241,138 @@ theorem walkOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbO
     simp only [walkK, hdec]
     rfl
 
+include hM in
+theorem oneOK_step (n : Nat) (hk : 2 ^ 31 + (n + 1) ≤ coreWalkFuel) (ih : NbOK dn vis fe n) :
+    OneOK dn vis fe (n + 1) := by
+  obtain ⟨-, -, -, -, -, -, -, -, -, hWalk, -⟩ := ih
+  intro m m' a ctx root fu po pl hi us dO dL no nl hO hL cv nF ns c prog ds names holes cvv NS r h hS hW hC hcv
+    hcv3 hns
+  have htop : iwTop m < 2 ^ 64 := Nat.lt_of_le_of_lt hS.2.1 hS.2.2.2.1
+  rw [nbOneW_succ] at h
+  -- the crest, typed
+  cases hct : p2ctW n m vis no nl us dO dL hO hL cv hi with
+  | none => rw [hct] at h; simp [nbOneK1] at h
+  | some pr =>
+  obtain ⟨rc, m1⟩ := pr
+  rw [hct, nbOneK1_some] at h
+  obtain ⟨cty, a1, crest, a2, ty, a3, so, a4, hnod, hrun1, hrun2, hrun3, hrun4, hS1, hg1, hcrH, hcrd⟩ :=
+    p2ctW_ok dn vis fe hM hct hS hC.hus hC.hnames hC.hnamesb hC.hnn (hC.hds.get (OMono.decHL _ _)) hC.hdsb
+      hC.hholes hC.hholesb ((erecP_ext m).decCV hcv) hcv3
+  -- the walk
+  cases hwk : nbWalkW n m1 vis ctx root fu po pl hi nF (rc.headD 0) ns with
+  | none => rw [hwk] at h; simp [nbOneK2] at h
+  | some pr2 =>
+  obtain ⟨rw, m2⟩ := pr2
+  rw [hwk, nbOneK2_some] at h
+  obtain ⟨ks, nds, cur, ns2, closed, a5, hW5, hS2, hg2, hks, hksb, hksl, hcurH, hcurd, hclH, hcld, hns2⟩ :=
+    hWalk m1 m2 a4 ctx root fu po pl hi nF (rc.headD 0) ns c prog NS rw hwk hS1 (hW.grow hg1) hcrH
+      (hns.grow hg1 htop)
+  -- U4
+  have hkl : (rw.tail.headD 0).toNat = nF.toNat := by rw [← hks.length, hksl]
+  have hksT : decKL (truncM m2) (rw.headD 0).toNat nF.toNat = some ks := by rw [← hkl]; exact hks
+  cases hu : u4W n m2 (rw.headD 0) nF (rw.tail.tail.tail.headD 0) 0 with
+  | none => rw [hu] at h; simp [nbOneK3] at h
+  | some pr3 =>
+  obtain ⟨ru, m3⟩ := pr3
+  rw [hu, nbOneK3_some] at h
+  obtain ⟨bu, a6, hrun6, hS3, hg3, hru⟩ := u4W_ok dn vis fe hM (m0 := m2) _ nF _ ks hclH hksT n m2 m3 a5 0 ru
+    (by omega) hu hS2 (IWGrow.refl _) (by simp)
+  cases bu with
+  | true => rw [if_pos (by rw [hru]; decide)] at h; cases h
+  | false =>
+  rw [if_neg (by rw [hru]; decide)] at h
+  -- the result's head
+  have hU3 := (((hW.grow hg1).grow hg2).grow hg3).u
+  cases hro : roW n m3 ctx hi (rw.tail.tail.headD 0) with
+  | none => rw [hro] at h; simp [nbOneK4] at h
+  | some pr4 =>
+  obtain ⟨rr, m4⟩ := pr4
+  rw [hro, nbOneK4_some] at h
+  obtain ⟨bo, a7, hrun7, hS4, hg4, hrr⟩ := roW_ok dn vis fe hM hro hS3 hU3 hcurH
+  cases bo with
+  | false => rw [if_pos (by rw [hrr]; rfl)] at h; cases h
+  | true =>
+  rw [if_neg (by rw [hrr]; decide)] at h
+  -- the constructor's record
+  have hg14 := ((hg1.trans hg2).trans hg3).trans hg4
+  have hW4 := hW.grow hg14
+  cases n with
+  | zero => simp [ncnWf, nbOneK5] at h
+  | succ n' =>
+  simp only [ncnWf] at h
+  cases hnf : ncnW n' m4 ctx po pl us dO dL cv (rw.tail.tail.tail.headD 0) with
+  | none => rw [hnf] at h; simp [nbOneK5] at h
+  | some pr5 =>
+  obtain ⟨nf, m5⟩ := pr5
+  rw [hnf] at h
+  simp only [nbOneK5_some, List.headD_cons] at h
+  obtain ⟨M, G, g, hR⟩ := hM.rf m4 a7 hS4
+  have htop4 : iwTop m4 < 2 ^ 64 := Nat.lt_of_le_of_lt hS4.2.1 hS4.2.2.2.1
+  obtain ⟨x, a8, hrun8, hnfd, hnfb, M', G', hS5, hg5, -⟩ := ncnW_ok dn fe vis n' m4 m5 a7 ctx po pl us dO dL cv _ nf c prog
+    ds cvv M G g hnf hS4 hW4.u.dec hW4.u.inn hW4.hs (by have := hW.hb; simp [NestCtx.hiAt] at this; omega) hC.hus
+    ((hC.hds.grow (OMono.decHL _ _) hg14).get (OMono.decHL _ _)) (fun j hj => by have := hC.hdsb; have := hg14.1; omega)
+    hclH ((GrowX.of_grow (q := 0) (n := 0) hg14).erecP.decCV hcv) hR
+  have htop5 : iwTop m5 < 2 ^ 64 := Nat.lt_of_le_of_lt hS5.2.1 hS5.2.2.2.1
+  have hns5 := hns2.grow ((hg3.trans hg4).trans hg5) (Nat.lt_of_le_of_lt hS2.2.1 hS2.2.2.2.1)
+  obtain ⟨hp6, hk5, ha5, hn5⟩ := nsb_words hns5 htop5
+  -- the record appended to the state's constructor list
+  cases hsn : snocW (n' + 1) m5 (rdW (m5.arr64 IW) (rw.tail.tail.tail.tail.headD 0 + 4))
+      (rdW (m5.arr64 IW) (rw.tail.tail.tail.tail.headD 0 + 5)) nf with
+  | none => rw [hsn] at h; simp [nbOneK6] at h
+  | some pr6 =>
+  obtain ⟨rs, m6⟩ := pr6
+  rw [hsn, nbOneK6_some] at h
+  obtain ⟨hS6, hg6, h60, h61, ht6, hw6, hx6⟩ := snocW_words hsn hS5 hns5.b4
+  have hnfs6 : NfsB m6 (rs.headD 0).toNat (rs.tail.headD 0).toNat (ns2.ctorNfs.toList ++ [x]) := by
+    rw [h60, h61]
+    exact pos2_decB_snoc decNCN_mono hn5 hg6 (by omega) hw6 hx6 (DecB.grow (decNCN_mono _) hg6 hnfd)
+  have hrd : ∀ i : Word, i.toNat < 4 → rdW (m6.arr64 IW) (rw.tail.tail.tail.tail.headD 0 + i) =
+      rdW (m5.arr64 IW) (rw.tail.tail.tail.tail.headD 0 + i) := fun i hi => by
+    have e : (rw.tail.tail.tail.tail.headD 0 + i).toNat = (rw.tail.tail.tail.tail.headD 0).toNat + i.toNat :=
+      word_add_toNat (by omega)
+    simp only [rdW, e]; rw [hg6.2.2.1 _ (by omega)]
+  have hrd0 : rdW (m6.arr64 IW) (rw.tail.tail.tail.tail.headD 0) = rdW (m5.arr64 IW) (rw.tail.tail.tail.tail.headD 0) := by
+    simpa using hrd 0 (by decide)
+  rw [hrd0, hrd 1 (by decide), hrd 2 (by decide), hrd 3 (by decide)] at h
+  cases hq : posRecW m6 [rdW (m5.arr64 IW) (rw.tail.tail.tail.tail.headD 0),
+      rdW (m5.arr64 IW) (rw.tail.tail.tail.tail.headD 0 + 1), rdW (m5.arr64 IW) (rw.tail.tail.tail.tail.headD 0 + 2),
+      rdW (m5.arr64 IW) (rw.tail.tail.tail.tail.headD 0 + 3), rs.headD 0, rs.tail.headD 0] with
+  | none => rw [hq] at h; simp [nbOneK7] at h
+  | some pr7 =>
+  obtain ⟨q, m7⟩ := pr7
+  rw [hq, nbOneK7_some] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  obtain ⟨hS7, hg7, hqq, ht7, hget7⟩ := posRecW_stage hq hS6 (by simp)
+  simp only [List.length_cons, List.length_nil] at ht7
+  have hg67 := hg6.trans hg7
+  have hNS3 := nsb_rec6 (m' := m7) (q := q) (keys := ns2.keys.toList) (act := ns2.active)
+    (nfs := ns2.ctorNfs.toList ++ [x]) (by omega) (Nat.lt_of_le_of_lt hS7.2.1 hS7.2.2.2.1) hget7 (hk5.grow hg67)
+    (by have := hns5.b0; have := hg67.1; omega) (ha5.grow hg67) (by have := hns5.b2; have := hg67.1; omega)
+    (hnfs6.grow hg7) (by rw [h60, h61]; have := hg7.1; omega)
+  have hgall := (hg14.trans hg5).trans hg67
+  refine ⟨ks, closed, { ns2 with ctorNfs := ns2.ctorNfs.push x }, a8, fun K => ?_, hS7, hgall,
+    ?_, ?_, hclH, hcld, ?_⟩
+  · have hr6 : ((List.range nF.toNat).anyM (u4F ks closed)).run a5 = .ok (false, a6) := by
+      rw [List.range_eq_range', ← hcld]; simpa using hrun6
+    have hr8 : (ConRon.Arena.nestCtorNf c prog (decI us) ds cvv closed).run a7 = .ok (x, a8) := by
+      rw [← hcld]; simpa [decE_eq] using hrun8
+    rw [hcrd] at hW5
+    rw [hcurd] at hrun7
+    simp only [oneK, hnod, Bool.not_true, Bool.false_eq_true, ite_false, StateT.run_bind, hrun1, except_ok_bind,
+      hrun2, hrun3, hrun4]
+    rw [hW5]
+    simp only [StateT.run_bind, hr6, except_ok_bind, Bool.false_eq_true, ite_false]
+    rw [hrun7]
+    simp only [Bool.not_true, Bool.false_eq_true, ite_false, StateT.run_bind, hr8, except_ok_bind]
+  · simp only [List.headD_cons, List.tail_cons]
+    exact hks.grow ((((hg3.trans hg4).trans hg5).trans hg6).trans hg7)
+  · simp only [List.headD_cons, List.tail_cons]
+    have := hg3.1; have := hg4.1; have := hg5.1; have := hg6.1; have := hg7.1; omega
+  · simp only [List.headD_cons, List.tail_cons]
+    have e : (ns2.ctorNfs.toList ++ [x]).toArray = ns2.ctorNfs.push x := Array.ext' (by simp)
+    simpa [e] using hNS3
+
 end steps
 
 end L.Ind
