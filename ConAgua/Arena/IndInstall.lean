@@ -56,15 +56,9 @@ open L.Arena
 fresh in `IW`. -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:47-92 ConRon.Arena.blockCapsAt
 @[l_impl ConRon.Arena.blockCapsAt]
-def blockCapsCtorNames : FunDecl := lfn (o, l) locals (q, j, c, cv) {
+def blockCapsCtorNames : FunDecl := lfn (o, l) locals (q, u) {
   q := call iw_alloc(l);
-  j := 0;
-  while j < l {
-    c := IW.u64[o + j];
-    cv := IW.u64[c];
-    IW.u64[q + j] := EREC.u64[cv];
-    j += 1
-  };
+  u := call member_names_copy(q, o, l);
   return (q, l)
 }
 
@@ -72,11 +66,20 @@ def blockCapsCtorNames : FunDecl := lfn (o, l) locals (q, j, c, cv) {
 `er_to_iw`), for `IIndCaps`'s `all`/`ctors` fields (both EREC slices). -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:47-92 ConRon.Arena.blockCapsAt
 @[l_impl ConRon.Arena.blockCapsAt]
-def blockCapsAtErCopy : FunDecl := lfn (o, l) locals (q, j) {
+def blockCapsAtErCopy : FunDecl := lfn (o, l) locals (q, u) {
   q := call erec_alloc(l);
-  j := 0;
-  while j < l { EREC.u64[q + j] := IW.u64[o + j]; j += 1 };
+  u := call block_caps_at_er_copy_go(q, o, l);
   return (q, l)
+}
+
+/-- `block_caps_at_er_copy_go(d, s, l)`: `EREC[d + j] := IW[s + j]` for `j < l`, recursively. -/
+-- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:47-92 ConRon.Arena.blockCapsAt
+@[l_impl ConRon.Arena.blockCapsAt]
+def blockCapsAtErCopyGo : FunDecl := lfn (d, s, l) locals (u) {
+  if l == 0 { return 0 };
+  EREC.u64[d] := IW.u64[s];
+  u := call block_caps_at_er_copy_go(d + 1, s + 1, l - 1);
+  return 0
 }
 
 /-- `block_caps_at_finish(p, caps, coff, clen)`: the fields shared by both ctor-count branches —
@@ -319,12 +322,23 @@ def consBlockInds : FunDecl := lfn (p1, isRec, cvO, cvL, vis) locals (i, cv, cap
 formers' constants, fresh in `IW`. -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:192-209 ConRon.Arena.checkBlockInds
 @[l_impl ConRon.Arena.checkBlockInds]
-def checkBlockIndsCvTas : FunDecl := lfn (cvTa0, restO, restL) locals (q, j, rp) {
+def checkBlockIndsCvTas : FunDecl := lfn (cvTa0, restO, restL) locals (q, u) {
   q := call iw_alloc(restL + 1);
   IW.u64[q] := cvTa0;
-  j := 0;
-  while j < restL { rp := IW.u64[restO + j]; IW.u64[q + 1 + j] := IW.u64[rp]; j += 1 };
+  u := call check_block_inds_cv_tas_go(q + 1, restO, restL);
   return (q, restL + 1)
+}
+
+/-- `check_block_inds_cv_tas_go(d, s, l)`: `IW[d + j] := IW[IW[s + j]]` for `j < l` (each former's
+constant, the first word of its `(cv, s)` pointer), recursively. -/
+-- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:192-209 ConRon.Arena.checkBlockInds
+@[l_impl ConRon.Arena.checkBlockInds]
+def checkBlockIndsCvTasGo : FunDecl := lfn (d, s, l) locals (rp, u) {
+  if l == 0 { return 0 };
+  rp := IW.u64[s];
+  IW.u64[d] := IW.u64[rp];
+  u := call check_block_inds_cv_tas_go(d + 1, s + 1, l - 1);
+  return 0
 }
 
 /-- `check_block_inds(vis, p, is_rec)`: **stage 1** — the k type formers, checked, agreed and
@@ -490,18 +504,25 @@ eidx)` pointer list `(o, l)` — `kinds` a fresh pointer per ctor (`[k.off, k.le
 `e` words, fresh in `IW`. -/
 -- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:286-302 ConRon.Arena.checkBlockPositivity
 @[l_impl ConRon.Arena.checkBlockPositivity]
-def checkBlockPositivityMember : FunDecl := lfn (o, l) locals (kq, nq, j, e, k1) {
+def checkBlockPositivityMember : FunDecl := lfn (o, l) locals (kq, nq, u) {
   kq := call iw_alloc(l);
   nq := call iw_alloc(l);
-  j := 0;
-  while j < l {
-    e := IW.u64[o + j];
-    k1 := call rec2(IW.u64[e], IW.u64[e + 1]);
-    IW.u64[kq + j] := k1;
-    IW.u64[nq + j] := IW.u64[e + 2];
-    j += 1
-  };
+  u := call check_block_positivity_member_go(kq, nq, o, l);
   return (kq, l, nq, l)
+}
+
+/-- `check_block_positivity_member_go(kd, nd, s, l)`: for `j < l` and `e = IW[s + j]`:
+`IW[kd + j] := rec2(IW[e], IW[e + 1])`, `IW[nd + j] := IW[e + 2]`, recursively. -/
+-- con-ron: ConRon/Arena/Inductives/BlockInstall.lean:286-302 ConRon.Arena.checkBlockPositivity
+@[l_impl ConRon.Arena.checkBlockPositivity]
+def checkBlockPositivityMemberGo : FunDecl := lfn (kd, nd, s, l) locals (e, k1, u) {
+  if l == 0 { return 0 };
+  e := IW.u64[s];
+  k1 := call rec2(IW.u64[e], IW.u64[e + 1]);
+  IW.u64[kd] := k1;
+  IW.u64[nd] := IW.u64[e + 2];
+  u := call check_block_positivity_member_go(kd + 1, nd + 1, s + 1, l - 1);
+  return 0
 }
 
 /-- `check_block_positivity_split(outs.off, outs.len)`: `(outs.map (·.map (·.1)), outs.map (·.map
@@ -733,19 +754,21 @@ def checkBlock : FunDecl := lfn (vis, blockO, blockL, p0) locals
 /-- This module's L functions. -/
 def indInstallFns : Prog :=
   [("block_caps_ctor_names", blockCapsCtorNames), ("block_caps_at_er_copy", blockCapsAtErCopy),
+   ("block_caps_at_er_copy_go", blockCapsAtErCopyGo),
    ("block_caps_at_finish", blockCapsAtFinish), ("block_caps_at_one", blockCapsAtOne),
    ("block_caps_at_rest", blockCapsAtRest), ("block_caps_at", blockCapsAt),
    ("pi_doms_mention_any", piDomsMentionAny), ("block_raw_rec_member", blockRawRecMember),
    ("block_raw_rec", blockRawRec), ("check_block_tele", checkBlockTele),
    ("check_block_teles", checkBlockTeles), ("check_block_doms_at", checkBlockDomsAt),
    ("check_block_agree_one", checkBlockAgreeOne), ("check_block_agree", checkBlockAgree),
-   ("cons_block_inds", consBlockInds), ("check_block_inds_cv_tas", checkBlockIndsCvTas),
+   ("cons_block_inds", consBlockInds), ("check_block_inds_cv_tas", checkBlockIndsCvTas), ("check_block_inds_cv_tas_go", checkBlockIndsCvTasGo),
    ("check_block_inds", checkBlockInds), ("block_shape_nest_ctx", blockShapeNestCtx),
    ("check_block_ctors_one", checkBlockCtorsOne), ("check_block_ctors", checkBlockCtors),
    ("check_abs_ctor_sorts_one", checkAbsCtorSortsOne), ("check_abs_ctor_sorts", checkAbsCtorSorts),
    ("check_abs_ctor_sorts_all", checkAbsCtorSortsAll), ("block_nest_ctx", blockNestCtx),
    ("check_block_positivity_init", checkBlockPositivityInit),
    ("check_block_positivity_member", checkBlockPositivityMember),
+   ("check_block_positivity_member_go", checkBlockPositivityMemberGo),
    ("check_block_positivity_split", checkBlockPositivitySplit),
    ("check_block_positivity", checkBlockPositivity),
    ("check_block_idx_sorts_one", checkBlockIdxSortsOne), ("check_block_idx_sorts", checkBlockIdxSorts),
@@ -766,7 +789,7 @@ def indInstallForeign : Prog :=
    ("block_shape_lps", stub 1), ("block_shape_n_idxs", stub 1),
    ("block_shape_all_ctors", stub 1), ("check_block_classes", stub 6),
    ("class_seeds", stub 5), ("gen_rec_check", stub 14), ("block_nested_bit", stub 3),
-   ("cons_block_recs_tf", stub 6)]
+   ("cons_block_recs_tf", stub 6), ("member_names_copy", stub 3)]
 
 theorem indInstall_wf :
     L.Compiler.Prog.wf indTab
