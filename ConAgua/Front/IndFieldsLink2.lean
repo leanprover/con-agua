@@ -239,6 +239,9 @@ macro "rfields" : tactic => `(tactic| (
     | exact .inl hx
     | exact .inl rfl
     | exact seenR_or ‹_› (by decide) id
+    | assumption
+    | exact hx
+    | rfl
     | refine ⟨?_, ?_⟩)))
 
 set_option hygiene false in
@@ -482,6 +485,103 @@ theorem recs_link (v : USize) (m : Mem) (l : List IndRecRec) (e : USize) (r : Wo
         seenR_zero _ _, seenR_zero _ _, seenR_zero _ _, seenR_zero _ _, seenR_zero _ _⟩)
       i m₁ q x e e₂ m₂ hS hI hob
     exact ⟨t1, t4, t2.1, t2.2.1, t3, trivial⟩
+
+/-- An optional number's two words. -/
+def OptR (w0 w1 : Word) : Option Nat → Prop
+  | none => w0 = 0
+  | some n => w0 = 1 ∧ NumW w1 n
+
+/-- con-leche's constructor loop state. -/
+structure CtSt where
+  isUns : Bool
+  lps : List Nat
+  nm : Nat
+  nF : Nat
+  nP : Nat
+  ty : Nat
+  ci : Option Nat
+  ind : Option Nat
+
+/-- The constructor record read so far. -/
+def CtLR (m₁ : Mem) (q : Word) (seen : UInt32) (st : CtSt) (m : Mem) : Prop :=
+  RecInv IFR 10 q m₁ m ∧ topN m IFR = topN m₁ IFR ∧
+    SeenR seen 16 (NumW (wd m IFR (q.toNat + 0)) st.nm) ∧
+    SeenR seen 8 (ItemsR (listN b.data (wd m IFR (q.toNat + 1))) st.lps) ∧
+    SeenR seen 128 (NumW (wd m IFR (q.toNat + 2)) st.ty) ∧
+    SeenR seen 32 (NumW (wd m IFR (q.toNat + 4)) st.nF) ∧
+    SeenR seen 64 (NumW (wd m IFR (q.toNat + 5)) st.nP) ∧
+    OptR (wd m IFR (q.toNat + 6)) (wd m IFR (q.toNat + 7)) st.ci ∧
+    OptR (wd m IFR (q.toNat + 8)) (wd m IFR (q.toNat + 9)) st.ind
+
+set_option maxHeartbeats 2000000 in
+theorem ct_loop (m₁ : Mem) (q : Word) :
+    IObjLoop b (fun i w seen (st : CtSt) => scanIndCtorLoop b i w seen st.isUns st.lps st.nm st.nF
+        st.nP st.ty st.ci st.ind) 1 q (CtLR b m₁ q)
+      (fun d m => (RecInv IFR 10 q m₁ m ∧ topN m IFR = topN m₁ IFR) ∧ CtF b m q.toNat d) := by
+  constructor
+  · dloop_stop scanIndCtorLoop
+  · dloop_ws scanIndCtorLoop
+  · dloop_close scanIndCtorLoop
+    obtain ⟨hI, ht, h1, h2, h3, h4, h5, o6, o8⟩ := hR
+    exact ⟨⟨hI, ht⟩, ⟨seenR_close h1 hM (by decide) (by decide), seenR_close h2 hM (by decide) (by decide),
+      seenR_close h3 hM (by decide) (by decide)⟩, seenR_close h4 hM (by decide) (by decide),
+      seenR_close h5 hM (by decide) (by decide), o6, o8⟩
+  · dloop_comma scanIndCtorLoop
+  · dloop_quote scanIndCtorLoop
+  · iloop_key scanIndCtorLoop
+    all_goals obtain ⟨hI, ht, h1, h2, h3, h4, h5, o6, o8⟩ := hR
+    case kName =>
+      rw [show UInt64.ofNat Key.kName.ctorIdx = (34 : Word) from rfl] at hmem
+      rnum_arm 34, 1, 0, 10, { st with nm := readNatAt b v (numEnd b v) }
+    case kType =>
+      rw [show UInt64.ofNat Key.kType.ctorIdx = (61 : Word) from rfl] at hmem
+      rnum_arm 61, 1, 2, 10, { st with ty := readNatAt b v (numEnd b v) }
+    case kNumFields =>
+      rw [show UInt64.ofNat Key.kNumFields.ctorIdx = (39 : Word) from rfl] at hmem
+      rnum_arm 39, 1, 4, 10, { st with nF := readNatAt b v (numEnd b v) }
+    case kNumParams =>
+      rw [show UInt64.ofNat Key.kNumParams.ctorIdx = (44 : Word) from rfl] at hmem
+      rnum_arm 44, 1, 5, 10, { st with nP := readNatAt b v (numEnd b v) }
+    case kIsUnsafe =>
+      rw [show UInt64.ofNat Key.kIsUnsafe.ctorIdx = (26 : Word) from rfl] at hmem
+      rbool_arm 26, 1, 3, 10, { st with isUns := xv }
+    case kLevelParams =>
+      rw [show UInt64.ofNat Key.kLevelParams.ctorIdx = (31 : Word) from rfl] at hmem
+      ikey_res
+      obtain ⟨he, rfl, hx⟩ := lps_arm b h64 hsize m m' 1 q _ 31 1 0 v xv ev e' rfl hx hmem
+      subst he
+      rput 1, 10, v.toUInt64, { st with lps := xv }, ev
+    case kCidx =>
+      rw [show UInt64.ofNat Key.kCidx.ctorIdx = (8 : Word) from rfl] at hmem
+      ikey_num
+      obtain ⟨he, x, rfl, hx⟩ := opt_arm b h64 hsize m m' 1 q 8 6 0 i v e' rfl hne hie hvle hmem
+      subst he
+      rw [fldPutW_R _ _ _ _ _ (by decide), fldPutW_R _ _ _ _ _ (by decide),
+        show (6 : Word) + 1 = 7 from rfl]
+      obtain ⟨p1, -, -, -, p5⟩ := slot_put IFR (.inl rfl) 10 (by decide) q 6 1 m₁ m hI (by decide)
+      have e1 := slot_view IFR (.inl rfl) 10 (by decide) q 6 1 m₁ m hI (by decide)
+      obtain ⟨p1', -, -, -, p5'⟩ := slot_put IFR (.inl rfl) 10 (by decide) q 7 x m₁ _ p1 (by decide)
+      have e1' := slot_view IFR (.inl rfl) 10 (by decide) q 7 x m₁ _ p1 (by decide)
+      refine ⟨numEnd b v, _, { st with ci := some (readNatAt b v (numEnd b v)) }, rfl, hok, p1',
+        by rw [p5', p5, ht], ?_⟩
+      simp (config := {decide := true}) only [e1', e1, ↓reduceIte]
+      rfields
+    case kInduct =>
+      rw [show UInt64.ofNat Key.kInduct.ctorIdx = (22 : Word) from rfl] at hmem
+      ikey_num
+      obtain ⟨he, x, rfl, hx⟩ := opt_arm b h64 hsize m m' 1 q 22 8 0 i v e' rfl hne hie hvle hmem
+      subst he
+      rw [fldPutW_R _ _ _ _ _ (by decide), fldPutW_R _ _ _ _ _ (by decide),
+        show (8 : Word) + 1 = 9 from rfl]
+      obtain ⟨p1, -, -, -, p5⟩ := slot_put IFR (.inl rfl) 10 (by decide) q 8 1 m₁ m hI (by decide)
+      have e1 := slot_view IFR (.inl rfl) 10 (by decide) q 8 1 m₁ m hI (by decide)
+      obtain ⟨p1', -, -, -, p5'⟩ := slot_put IFR (.inl rfl) 10 (by decide) q 9 x m₁ _ p1 (by decide)
+      have e1' := slot_view IFR (.inl rfl) 10 (by decide) q 9 x m₁ _ p1 (by decide)
+      refine ⟨numEnd b v, _, { st with ind := some (readNatAt b v (numEnd b v)) }, rfl, hok, p1',
+        by rw [p5', p5, ht], ?_⟩
+      simp (config := {decide := true}) only [e1', e1, ↓reduceIte]
+      rfields
+  · dloop_other scanIndCtorLoop
 
 end kinds
 
