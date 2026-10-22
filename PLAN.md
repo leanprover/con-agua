@@ -90,7 +90,7 @@ per-function separation logic.
 ## Build statistics (file size, elaboration time)
 - `scripts/buildstats.py` measures lines per `.lean` file under `ConAgua/`, elaboration seconds per module, and
   every elaboration step above 1 s (Lean profiler, with `file:line`), in its own worktree
-  `_tmp/wt/buildstats-run` built without the shared Lake cache, niced, on at most 16 cores, killed above 20 GB.
+  `_tmp/wt/buildstats-run` built without the shared Lake cache, niced, on 16 cores, killed above 20 GB (PSS).
   Default is incremental (only modules changed since the last run are re-measured); `--full` re-measures
   everything (~20 CPU-minutes); `--lines-only` needs no build; `--write` regenerates `docs/buildstats.md`
   and appends to `docs/buildstats.csv` (measurements live in `docs/buildstats.json`). Thresholds are

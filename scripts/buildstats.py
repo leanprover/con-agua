@@ -18,7 +18,7 @@ so modules really elaborate and nothing is written to the shared cache. Lean's p
 `-Dprofiler=true -Dprofiler.threshold=1000` is added to the worktree's lakefile.toml as `moreLeanArgs`
 (never committed), so every elaboration step above 1 s is logged as `file:line:col: <step> took Ns`.
 The per-module time is Lake's own `Built X (Ns)` line. The build runs under `nice -n 19`, pinned to
-CPUS cores, and is killed (by pid) above MEM_LIMIT_GB resident memory in total or after TIMEOUT_S.
+CPUS cores, and is killed (by pid) above MEM_LIMIT_GB (PSS) memory in total or after TIMEOUT_S.
 
 Incremental mode keeps the worktree's `.lake/build`, so Lake rebuilds only the modules whose sources
 (or imports) changed; their numbers replace the stored ones in docs/buildstats.json, the rest stay.
@@ -39,7 +39,7 @@ import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from census import tree_pids, tree_rss  # noqa: E402  (the memory-guard helpers)
+from census import tree_pids  # noqa: E402  (the memory-guard helper)
 
 # ---- thresholds (the watch list) -------------------------------------------------------------
 FILE_LINES_WATCH = 1500   # files over this many lines should be split
@@ -49,7 +49,7 @@ PROFILER_THRESHOLD_MS = 1000  # the profiler logs steps above this
 TOP_FILES, TOP_TIMES, TOP_DECLS = 25, 25, 40
 # ---- resources -------------------------------------------------------------------------------
 CPUS = "0-15"             # taskset list: at most 16 cores
-MEM_LIMIT_GB = 20         # kill the whole build above this much resident memory
+MEM_LIMIT_GB = 20         # kill the whole build above this much (proportional) resident memory
 TIMEOUT_S = 3 * 3600
 
 RUN_WT = os.path.join(ROOT, "_tmp", "wt", "buildstats-run")
@@ -87,6 +87,19 @@ def prepare_worktree(full):
     return rev
 
 
+def tree_pss(pid):
+    """Proportional resident memory (bytes) of `pid` and its descendants. Not RSS: every Lean job
+    mmaps the same .olean files, and RSS counts those shared pages once per process."""
+    total = 0
+    for p in tree_pids(pid):
+        try:
+            with open(f"/proc/{p}/smaps_rollup") as fh:
+                total += next((int(l.split()[1]) * 1024 for l in fh if l.startswith("Pss:")), 0)
+        except (OSError, ValueError):
+            pass
+    return total
+
+
 def run_guarded(cmd, env):
     """Run `cmd` (output to LOG); kill its process tree above MEM_LIMIT_GB or after TIMEOUT_S."""
     os.makedirs(os.path.dirname(LOG), exist_ok=True)
@@ -95,7 +108,7 @@ def run_guarded(cmd, env):
                              start_new_session=True)
         t0, peak, why = time.time(), 0, None
         while p.poll() is None:
-            m = tree_rss(p.pid)
+            m = tree_pss(p.pid)
             peak = max(peak, m)
             if m > MEM_LIMIT_GB * 2**30:
                 why = f"used {m / 2**30:.1f} GB, over MEM_LIMIT_GB = {MEM_LIMIT_GB}"
