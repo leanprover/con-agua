@@ -322,7 +322,10 @@ def litMajorToCtorL : FunDecl := lfn (mode, vis, d, h) locals (t, i, kind, sup, 
 /-! ## `major_to_ctor(mode, vis, d, rec, ro, rc, major)`
 
 `rec` (the recursor's own name) is unused by the twin (`_recName`) and so by this code too: it is
-accepted only to match the twin's argument list. -/
+accepted only to match the twin's argument list. The body is split into small functions
+(`WhnfM2C.lean`, `m2c_head` and its callees); this one saves the stack top and puts it back (the
+K and `And` arms leave slices on the spine stack; the twin has no stack, so restoring is always
+faithful). -/
 
 /-- con-leche: `Core.lean:502-663`/`Cached/CoreC.lean:428-453` `majorToCtor`/`majorToCtorI` — the
 stuck-major rescue: K-flagged, η-capable, or the pinned `And`. No certificate on a fabricated
@@ -330,130 +333,11 @@ spine; the K and `And` fabrications keep the type check, and the proof-irrelevan
 certificate family (off at `.trusted`). -/
 -- con-ron: ConRon/Arena/Core.lean:1705-1820 ConRon.Arena.majorToCtor
 @[l_impl ConRon.Arena.majorToCtor]
-def majorToCtorL : FunDecl := lfn (mode, vis, d, rec, ro, rc, major)
-    locals (ok, cvjFlag, cvjP, cvjTy, cnP, piRes, hh, t, i, T,
-            indFlag, indP, rlK, rlEta, vck,
-            ioa, tmaj, hh2, t2, i2, T2, ust, usto, ustl, to, tn, hd, fab,
-            scopeOk, ioa2, defOk, irOk,
-            nz, resT, resEC, slotsOk, fo, fn,
-            an2, p0, p1, ars) {
-  ok := call is_ctor_app(vis, major);
-  if ok != 0 { return major };
-  if rc != 1 { return major };
-  (cvjFlag, cvjP) := call env_find(EREC.u64[ro], vis);
-  if cvjFlag == 0 { return major };
-  if EREC.u64[cvjP] != 4 { return major };
-  cvjTy := EREC.u64[cvjP + 4];
-  cnP := EREC.u64[cvjP + 5];
-  piRes := call pi_result(cvjTy);
-  hh := call get_app_fn(piRes);
-  if hh >> 28 != 3 { return major };
-  t := (hh >> 27) & 1;
-  i := hh & 134217727;
-  if t != 0 && CTL.u64[1] == 0 { abort };
-  if CTL.u64[18 + t] <= i { abort };
-  T := CREC.u64[i * 4 + t * 2];
-  (indFlag, indP) := call env_find(T, vis);
-  if indFlag == 0 { return major };
-  if EREC.u64[indP] != 3 { return major };
-  rlK := EREC.u64[ro + 9];
-  rlEta := EREC.u64[ro + 10];
-  vck := u64(mode & 1 == 0);
-  if rlK != 0 {
-    ioa := call infer_io(mode, vis, d, major);
-    tmaj := call whnf(mode, vis, d, ioa);
-    hh2 := call get_app_fn(tmaj);
-    if hh2 >> 28 != 3 { return major };
-    t2 := (hh2 >> 27) & 1;
-    i2 := hh2 & 134217727;
-    if t2 != 0 && CTL.u64[1] == 0 { abort };
-    if CTL.u64[18 + t2] <= i2 { abort };
-    T2 := CREC.u64[i2 * 4 + t2 * 2];
-    ust := CREC.u64[i2 * 4 + t2 * 2 + 1];
-    (usto, ustl) := call ls_node(ust);
-    if T2 != T { return major };
-    if EREC.u64[cvjP + 3] != ustl { return major };
-    (to, tn) := call get_app_args(tmaj);
-    if tn < cnP { return major };
-    hd := call intern_const(EREC.u64[ro], ust);
-    fab := call mk_app_n(hd, to, cnP);
-    scopeOk := call fab_scope_ok(d, fab, major);
-    if scopeOk == 0 { return major };
-    ioa2 := call infer_io(mode, vis, d, fab);
-    defOk := call defeq(mode, vis, d, tmaj, ioa2);
-    if defOk == 0 { return major };
-    if vck != 0 { irOk := call proof_irrel(mode, vis, d, fab, major) } else { irOk := 1 };
-    if irOk != 0 { return fab } else { return major }
-  } else {
-    if rlEta != 0 {
-      ioa := call infer_io(mode, vis, d, major);
-      tmaj := call whnf(mode, vis, d, ioa);
-      hh2 := call get_app_fn(tmaj);
-      if hh2 >> 28 != 3 { return major };
-      t2 := (hh2 >> 27) & 1;
-      i2 := hh2 & 134217727;
-      if t2 != 0 && CTL.u64[1] == 0 { abort };
-      if CTL.u64[18 + t2] <= i2 { abort };
-      T2 := CREC.u64[i2 * 4 + t2 * 2];
-      ust := CREC.u64[i2 * 4 + t2 * 2 + 1];
-      (usto, ustl) := call ls_node(ust);
-      (to, tn) := call get_app_args(tmaj);
-      nz := call caps_never_zero(EREC.u64[indP + 2], EREC.u64[indP + 3], ust,
-        EREC.u64[indP + 12], EREC.u64[indP + 13], EREC.u64[indP + 14]);
-      if T2 != T { return major };
-      if tn != EREC.u64[indP + 7] { return major };
-      if ustl != EREC.u64[indP + 3] { return major };
-      if nz == 0 { return major };
-      resT := call reserved_contains(T);
-      if resT != 0 { return major };
-      resEC := call reserved_contains(EREC.u64[indP + 6]);
-      if resEC != 0 { return major };
-      slotsOk := call tower_slots_all(vis, T, EREC.u64[indP + 8]);
-      if slotsOk == 0 { return major };
-      (fo, fn) := call eta_fab_args(T, to, tn, major, EREC.u64[indP + 8]);
-      hd := call intern_const(EREC.u64[indP + 6], ust);
-      fab := call mk_app_n(hd, fo, fn);
-      scopeOk := call fab_scope_ok(d, fab, major);
-      if scopeOk == 0 { return major };
-      return fab
-    } else {
-      an2 := call pin_at(11);
-      if T != an2 { return major };
-      ioa := call infer_io(mode, vis, d, major);
-      tmaj := call whnf(mode, vis, d, ioa);
-      hh2 := call get_app_fn(tmaj);
-      if hh2 >> 28 != 3 { return major };
-      t2 := (hh2 >> 27) & 1;
-      i2 := hh2 & 134217727;
-      if t2 != 0 && CTL.u64[1] == 0 { abort };
-      if CTL.u64[18 + t2] <= i2 { abort };
-      T2 := CREC.u64[i2 * 4 + t2 * 2];
-      ust := CREC.u64[i2 * 4 + t2 * 2 + 1];
-      (usto, ustl) := call ls_node(ust);
-      (to, tn) := call get_app_args(tmaj);
-      ars := call and_rescue_slots(vis, EREC.u64[ro], cnP, ust);
-      if T2 != T { return major };
-      if tn != cnP { return major };
-      if EREC.u64[cvjP + 3] != ustl { return major };
-      if ars == 0 { return major };
-      p0 := call mk_proj(T, 0, major);
-      p1 := call mk_proj(T, 1, major);
-      if len(SPN.u64) <= to + tn { abort };
-      SPN.u64[to + tn] := p0;
-      if len(SPN.u64) <= to + tn + 1 { abort };
-      SPN.u64[to + tn + 1] := p1;
-      CTL.u64[136] := to + tn + 2;
-      hd := call intern_const(EREC.u64[ro], ust);
-      fab := call mk_app_n(hd, to, tn + 2);
-      scopeOk := call fab_scope_ok(d, fab, major);
-      if scopeOk == 0 { return major };
-      ioa2 := call infer_io(mode, vis, d, fab);
-      defOk := call defeq(mode, vis, d, tmaj, ioa2);
-      if defOk == 0 { return major };
-      if vck != 0 { irOk := call proof_irrel(mode, vis, d, fab, major) } else { irOk := 1 };
-      if irOk != 0 { return fab } else { return major }
-    }
-  }
+def majorToCtorL : FunDecl := lfn (mode, vis, d, rec, ro, rc, major) locals (top, r) {
+  top := CTL.u64[136];
+  r := call m2c_head(mode, vis, d, ro, rc, major);
+  CTL.u64[136] := top;
+  return r
 }
 
 /-! ## `prepare_major(mode, vis, d, rec, ro, rc, major)` -/
@@ -1155,9 +1039,6 @@ def MajorToCtorOK (p : Prog) : Prop :=
     CoreSpec p (n + 1) "major_to_ctor" [mode, vis, d, rec, ro, rc, major]
       (majorToCtor (decMode mode) (coreKnot (decMode mode) fe id F) fe d.toNat (decI rec) rules
         (decE major)) decH s₀ a₀ dn vis fe MM eb
-
-@[refines ConRon.Arena.majorToCtor]
-theorem majorToCtor_refines : MajorToCtorOK p := sorry
 
 /-- con-leche: `CoreDefs.lean:716-721` `piResidual`. -/
 def PiResidualOK (p : Prog) : Prop :=
