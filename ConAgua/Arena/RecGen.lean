@@ -98,33 +98,39 @@ def classFieldsOfHits : FunDecl := lfn (ihsOff, ihsLen, i) locals (q, cnt, cls) 
   return (cnt, cls)
 }
 
+/-- `class_fields_of_go(mn.off, mn.len, ihs.off, ihs.len, i, fs.off, fs.len)`: `classFieldsOf`'s
+recursion (from field index `i`), the `ClassField` records consed onto the rest's slice. -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:340-361 ConRon.Arena.classFieldsOf
+@[l_impl ConRon.Arena.classFieldsOf]
+def classFieldsOfGo : FunDecl := lfn (mnOff, mnLen, ihsOff, ihsLen, i, fsOff, fsLen)
+    locals (w, occ, hc, hCls, bsOff, bsLen, body, cf, ro, rl, o, l) {
+  if fsLen == 0 { return (0, 0) };
+  w := call fvar_type_d(IW.u64[fsOff]);
+  occ := call nest_occ(mnOff, mnLen, 0, 0, w);
+  (hc, hCls) := call class_fields_of_hits(ihsOff, ihsLen, i);
+  if occ == 0 && hc == 0 {
+    cf := call iw_alloc(1);
+    IW.u64[cf] := 0
+  } else {
+    if occ != 0 && hc == 1 {
+      (bsOff, bsLen, body) := call pi_binders(⟪CWF⟫, w);
+      cf := call rec3(1, hCls, bsLen)
+    } else { abort }
+  };
+  (ro, rl) := call class_fields_of_go(mnOff, mnLen, ihsOff, ihsLen, i + 1, fsOff + 1, fsLen - 1);
+  (o, l) := call sl_cons(cf, ro, rl);
+  return (o, l)
+}
+
 /-- `class_fields_of(p, ihs.off, ihs.len, i0, fs.off, fs.len)`: the `ClassField` of every field of
 `fs`, from index `i0`. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:340-361 ConRon.Arena.classFieldsOf
 @[l_impl ConRon.Arena.classFieldsOf]
 def classFieldsOfL : FunDecl := lfn (p, ihsOff, ihsLen, i0, fsOff, fsLen)
-    locals (mnOff, mnLen, q, j, f, w, occ, hc, hCls, bsOff, bsLen, body, cf) {
+    locals (mnOff, mnLen, o, l) {
   (mnOff, mnLen) := call block_shape_member_names(p);
-  q := call iw_alloc(fsLen);
-  j := 0;
-  while j < fsLen {
-    f := IW.u64[fsOff + j];
-    w := call fvar_type_d(f);
-    occ := call nest_occ(mnOff, mnLen, 0, 0, w);
-    (hc, hCls) := call class_fields_of_hits(ihsOff, ihsLen, i0 + j);
-    if occ == 0 && hc == 0 {
-      cf := call iw_alloc(1);
-      IW.u64[cf] := 0
-    } else {
-      if occ == 1 && hc == 1 {
-        (bsOff, bsLen, body) := call pi_binders(⟪CWF⟫, w);
-        cf := call rec3(1, hCls, bsLen)
-      } else { abort }
-    };
-    IW.u64[q + j] := cf;
-    j += 1
-  };
-  return (q, fsLen)
+  (o, l) := call class_fields_of_go(mnOff, mnLen, ihsOff, ihsLen, i0, fsOff, fsLen);
+  return (o, l)
 }
 
 /-! ## `classNodesAgree`, `classLeafAt`, `classFieldsAgree` -/
@@ -853,7 +859,8 @@ def genRecCheckL : FunDecl := lfn
 def recGenFns : Prog :=
   [("class_slot_is_minor", classSlotIsMinor), ("class_minor_slot_go", classMinorSlotGo),
    ("class_minor_slot", classMinorSlotL),
-   ("class_fields_of_hits", classFieldsOfHits), ("class_fields_of", classFieldsOfL),
+   ("class_fields_of_hits", classFieldsOfHits), ("class_fields_of_go", classFieldsOfGo),
+   ("class_fields_of", classFieldsOfL),
    ("class_nodes_agree", classNodesAgreeL), ("class_leaf_at", classLeafAtL),
    ("class_fields_agree", classFieldsAgreeL), ("class_ctor_of_nfs", classCtorOfNfs),
    ("class_ctor_of", classCtorOfL), ("class_ctors_of", classCtorsOfL),
