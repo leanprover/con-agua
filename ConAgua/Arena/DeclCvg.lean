@@ -400,7 +400,7 @@ theorem erToIwW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IF
     · rw [hfr.2.2.1 CTL]; exact hc
 
 /-- Destructuring a constant value: its name, its universe-parameter slice, its type. -/
-theorem decCV_words {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV a q = some cv) :
+theorem decCV_slice {a : Array Word} {q : Nat} {cv : IConstantVal} (h : decCV a q = some cv) :
     ∃ w1 w2, a[q + 1]? = some w1 ∧ a[q + 2]? = some w2 ∧
       hslice? a w1.toNat w2.toNat = some cv.levelParams := by
   simp only [decCV, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
@@ -428,7 +428,7 @@ theorem ivgW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     (hq : decCV (erA m) q.toNat = some cv) (hqb : q.toNat + 3 < 2 ^ 64) (hv : v.toNat < 2 ^ 32) :
     ∃ a', (installValueGuards fe cv (decI v)).run a = .ok ((), a') ∧ StageR dn vis fe m' a' ∧
       IWGrow m m' := by
-  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_words hq
+  obtain ⟨w1, w2, hw1, hw2, hsl⟩ := decCV_slice hq
   have e1 : rdW (m.arr64 EREC) (q + 1) = w1 :=
     rdW_of_get? (by rw [UInt64.toNat_add]; simp; omega) hw1
   have e2 : rdW (m.arr64 EREC) (q + 2) = w2 :=

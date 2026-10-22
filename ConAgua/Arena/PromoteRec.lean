@@ -232,12 +232,12 @@ end specs2
 /-! ## `promote_clear`, `promote_vg` -/
 
 /-- One memo cleared, if its stamp does not wrap. -/
-def clrK (S : MemoSch) : Option Mem → Option Mem
+def pmClrK (S : MemoSch) : Option Mem → Option Mem
   | none => none
   | some m => if rdW (m.arr64 CTL) S.cs + 2 = 0 then none else some (mclearG S m)
 
 /-- **The model of `promote_clear()`**: the four memos cleared. -/
-def clearW (m : Mem) : Option Mem := clrK peSch (clrK plsSch (clrK plSch (clrK pnSch (some m))))
+def clearW (m : Mem) : Option Mem := pmClrK peSch (pmClrK plsSch (pmClrK plSch (pmClrK pnSch (some m))))
 
 /-- `vg_rd`'s model. -/
 def vgRdW (m : Mem) (g : Word) : List Word :=
@@ -282,8 +282,8 @@ def vgW (p : Prog) (n : Nat) (m : Mem) (g : Word) : Option (Word × Mem) :=
 section eqs3
 variable (p : Prog) (n : Nat) (m m₁ : Mem) (g k j d x : Word) (r : List Word) (S : MemoSch)
 
-theorem clrK_some (h : rdW (m.arr64 CTL) S.cs + 2 ≠ 0) : clrK S (some m) = some (mclearG S m) := by
-  simp [clrK, h]
+theorem pmClrK_some (h : rdW (m.arr64 CTL) S.cs + 2 ≠ 0) : pmClrK S (some m) = some (mclearG S m) := by
+  simp [pmClrK, h]
 theorem vgK_some : vgK p n k j (some (r, m₁)) =
     vgK.vgK₂ p n k r (callW p n "promote_e" [L.Ind.CWF, j] m₁) := rfl
 theorem vgK₂_some (c : List Word) : vgK.vgK₂ p n k c (some (r, m₁)) =
@@ -311,7 +311,7 @@ theorem promoteClear_spec :
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
       memoClearG_spec pnSch p _ hp.pn_clear n, memoClearG_spec plSch p _ hp.pl_clear n,
       memoClearG_spec plsSch p _ hp.pls_clear n, memoClearG_spec peSch p _ hp.pe_clear n] <;>
-    finish [clearW, clrK_some]
+    finish [clearW, pmClrK_some]
 
 theorem vgRd_spec (g : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p n) "vg_rd" [g]
