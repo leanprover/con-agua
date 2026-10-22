@@ -41,7 +41,7 @@ def cvM (m : Mem) (q n o l t : Word) : Mem :=
 
 /-- **The model of `ind_cv(q, nm, lps, ty)`.** -/
 def cvW (b : Array UInt8) (m : Mem) (q nm lps ty : Word) : Option Mem :=
-  wK (fun nh => wK (fun th => memK (fun m₁ =>
+  wK (fun nh => wK (fun th => mK (fun m₁ =>
       some (cvM m₁ q nh (rdW (m.arr64 DLP) 0) (lsCntN b (lps + 1) 0) th)) (lpPutW b m lps))
     (lkW m EID ty)) (lkW m NID nm)
 
@@ -68,7 +68,7 @@ def rulesGoW : Nat → Mem → Word → Word → Word → Word → Option Mem
   | 0, _, _, _, _, _ => none
   | n + 1, m, lo, o, l, j =>
     if l ≤ j then some m
-    else memK (fun m₁ => rulesGoW n m₁ lo o l (j + 1)) (ruleW m (lo + 11 * j) (o + 3 * j))
+    else mK (fun m₁ => rulesGoW n m₁ lo o l (j + 1)) (ruleW m (lo + 11 * j) (o + 3 * j))
 
 /-- **The model of `ind_rules(o, l)`**: the slice `(lo, l)`. -/
 def rulesW : Nat → Mem → Word → Word → Option ((Word × Word) × Mem)
@@ -79,14 +79,14 @@ def rulesW : Nat → Mem → Word → Word → Option ((Word × Word) × Mem)
 
 /-- **The model of `ind_type(t)`**: the record's pointer. -/
 def typeW (b : Array UInt8) (m : Mem) (t : Word) : Option (Word × Mem) :=
-  allocK (fun q m₁ => memK (fun m₂ => some (q, capsM m₂ (q + 5)))
+  allocK (fun q m₁ => mK (fun m₂ => some (q, capsM m₂ (q + 5)))
       (cvW b (m₁.set64 DLP q 3) (q + 1) (rdW (m₁.arr64 IFR) t) (rdW (m₁.arr64 IFR) (t + 1))
         (rdW (m₁.arr64 IFR) (t + 2))))
     (allocW m DLP 20)
 
 /-- **The model of `ind_ctor(c)`**: the record's pointer. -/
 def ctorRW (b : Array UInt8) (m : Mem) (c : Word) : Option (Word × Mem) :=
-  allocK (fun q m₁ => memK (fun m₂ =>
+  allocK (fun q m₁ => mK (fun m₂ =>
       some (q, (m₂.set64 DLP (q + 5) (rdW (m₂.arr64 IFR) (c + 5))).set64 DLP (q + 6)
         (rdW (m₂.arr64 IFR) (c + 4))))
       (cvW b (m₁.set64 DLP q 4) (q + 1) (rdW (m₁.arr64 IFR) c) (rdW (m₁.arr64 IFR) (c + 1))
@@ -104,7 +104,7 @@ def recTailM (m : Mem) (q r lo ln : Word) : Mem :=
 def recRW : Nat → Array UInt8 → Mem → Word → Option (Word × Mem)
   | 0, _, _, _ => none
   | n + 1, b, m, r =>
-    allocK (fun q m₁ => pmK (fun lo ln m₃ => memK (fun m₄ => some (q, recTailM m₄ q r lo ln))
+    allocK (fun q m₁ => pmK (fun lo ln m₃ => mK (fun m₄ => some (q, recTailM m₄ q r lo ln))
         (cvW b m₃ (q + 1) (rdW (m₃.arr64 IFR) r) (rdW (m₃.arr64 IFR) (r + 1)) (rdW (m₃.arr64 IFR) (r + 2))))
       (rulesW n (m₁.set64 DLP q 5) (rdW (m₁.arr64 IFR) (r + 9)) (rdW (m₁.arr64 IFR) (r + 10))))
     (allocW m DLP 9)
@@ -138,7 +138,7 @@ def installW : Nat → Array UInt8 → Mem → Word → Word → Word → Word �
   | 0, _, _, _, _, _, _, _, _, _ => none
   | n + 1, b, m, to, tn, oo, on, ro, rn, np =>
     if 4294967296 ≤ tn ∨ 4294967296 ≤ on ∨ 4294967296 ≤ rn then none
-    else allocK (fun bo m₁ => memK (fun m₂ => memK (fun m₃ => memK (fun m₄ =>
+    else allocK (fun bo m₁ => mK (fun m₂ => mK (fun m₃ => mK (fun m₄ =>
           pushW m₄ 6 0 bo (tn + on + rn) np 0 0 0)
         (instRecsW n b m₃ (bo + tn + on) ro rn 0)) (instCtorsW n b m₂ (bo + tn) oo on 0))
         (instTypesW n b m₁ bo to tn 0))

@@ -79,9 +79,9 @@ theorem listedGoW_twin : ∀ (n : Nat) (m m' : Mem) (j : Word), listedGoW n m to
     have hi4 : (to + 11 * j + 4).toNat = to.toNat + 11 * j.toNat + 4 :=
       widx _ _ _ _ (by simp; omega)
     cases hg : idsGoW n m (rdW (m.arr64 IFR) (to + 11 * j + 3)) (rdW (m.arr64 IFR) (to + 11 * j + 4)) 0 with
-    | none => rw [hg, memK_none] at h; cases h
+    | none => rw [hg, mK_none] at h; cases h
     | some m₁ =>
-    rw [hg, memK_some] at h
+    rw [hg, mK_some] at h
     rw [wd_eq, wd_eq, hi3, hi4, hE.wdR, hE.wdR] at hg
     have hnums' := hnums.ext hE
     obtain ⟨n1, n2, n3⟩ := hnums'

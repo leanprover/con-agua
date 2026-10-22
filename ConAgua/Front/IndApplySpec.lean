@@ -403,20 +403,20 @@ def idsGoW : Nat → Mem → Word → Word → Word → Option Mem
     else restK (fun m₁ => idsGoW n m₁ o l (k + 1)) (lkPushK m (lkW m NID (rdW (m.arr64 IFL) (o + k))))
 
 /-- After a call that returns only its memory: the rest. -/
-def memK {α : Type} (rest : Mem → Option α) : Option Mem → Option α
+def mK {α : Type} (rest : Mem → Option α) : Option Mem → Option α
   | none => none
   | some m => rest m
 
-@[arena_grind =] theorem memK_none {α : Type} (rest : Mem → Option α) : memK rest none = none := rfl
-@[arena_grind =] theorem memK_some {α : Type} (rest : Mem → Option α) (m : Mem) :
-    memK rest (some m) = rest m := rfl
+@[arena_grind =] theorem mK_none {α : Type} (rest : Mem → Option α) : mK rest none = none := rfl
+@[arena_grind =] theorem mK_some {α : Type} (rest : Mem → Option α) (m : Mem) :
+    mK rest (some m) = rest m := rfl
 
 /-- **The model of `vi_listed_go(to, tn, j)`.** -/
 def listedGoW : Nat → Mem → Word → Word → Word → Option Mem
   | 0, _, _, _, _ => none
   | n + 1, m, to, tn, j =>
     if tn ≤ j then some m
-    else memK (fun m₁ => listedGoW n m₁ to tn (j + 1))
+    else mK (fun m₁ => listedGoW n m₁ to tn (j + 1))
       (idsGoW n m (rdW (m.arr64 IFR) (to + 11 * j + 3)) (rdW (m.arr64 IFR) (to + 11 * j + 4)) 0)
 
 /-- After `vi_listed_go`: the slice from `lo` to the top. -/
@@ -623,7 +623,7 @@ def orderW : Nat → Mem → Word → Word → Word → Word → Word → Word �
     Option (Word × Mem)
   | 0, _, _, _, _, _, _, _, _, _, _ => none
   | n + 1, m, to, tn, tyn, fo, cno, co, cn, fuel, np =>
-    allocK (fun oo m₁ => memK (fun m₂ => some (oo, m₂)) (orderGoW n m₁ to tn tyn fo cno co cn fuel np oo 0 0))
+    allocK (fun oo m₁ => mK (fun m₂ => some (oo, m₂)) (orderGoW n m₁ to tn tyn fo cno co cn fuel np oo 0 0))
       (allocW m IFL cn)
 
 /-- `vi_k_expected` after `lv_equiv`. -/

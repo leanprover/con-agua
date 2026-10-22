@@ -6,7 +6,7 @@ import ConAgua.Front.ApplyDeclRefine
 
 `IExt m m'`: what the validation does to the memory (`IFL` appended to, the level heap and its
 top `CTL[192]` written, every word of `IFL` up to its old top kept). The allocator's and the push's
-facts (`allocW_facts`, `pushLW_facts`), the table lookups against `StateD.name`/`getDeclD`
+facts (`allocW_factsA`, `pushLW_factsA`), the table lookups against `StateD.name`/`getDeclD`
 (`lkW_name`, `lkW_expr`), word indices without overflow (`widx`).
 -/
 
@@ -22,7 +22,7 @@ namespace L.Front.Ind
 
 theorem wd_eq (m : Mem) (A : ArrId) (x : Word) : rdW (m.arr64 A) x = wd m A x.toNat := rfl
 
-theorem wd_set64 (m : Mem) (A B : ArrId) (i v : Word) (j : Nat) :
+theorem wd_setA (m : Mem) (A B : ArrId) (i v : Word) (j : Nat) :
     wd (m.set64 A i v) B j =
       if A = B ∧ i.toNat = j ∧ j < (m.arr64 A).size then v else wd m B j := by
   by_cases hAB : A = B
@@ -79,7 +79,7 @@ theorem IExt.other {m m' : Mem} (h : IExt m m') (A : ArrId) (h1 : A ≠ IFL) (h2
   h.frame.1 A (by simp [h1, h2]) h3
 
 /-- The allocator's facts. -/
-theorem allocW_facts {m m' : Mem} {A : ArrId} {k o : Word} (hA : A ≠ CTL)
+theorem allocW_factsA {m m' : Mem} {A : ArrId} {k o : Word} (hA : A ≠ CTL)
     (hs : (m.arr64 A).size < 2 ^ 63) (ht : topN m A < 2 ^ 63) (h : allocW m A k = some (o, m')) :
     o.toNat = topN m A + 1 ∧ topN m' A = topN m A + k.toNat ∧
     topN m A + 1 + k.toNat ≤ (m.arr64 A).size ∧ (∀ i, i ≠ 0 → wd m' A i = wd m A i) ∧
@@ -108,13 +108,13 @@ theorem allocW_facts {m m' : Mem} {A : ArrId} {k o : Word} (hA : A ≠ CTL)
     rw [this, widx2 _ _ (by rw [hw0]; simp [topN] at ht ⊢; omega)]
     simp [topN, hw0]
   refine ⟨e1, ?_, by omega, fun i hi => ?_, MemFrame.set64 _ _ hA _ _⟩
-  · simp only [topN, wd_set64, show (0 : Word).toNat = 0 from rfl, true_and]
+  · simp only [topN, wd_setA, show (0 : Word).toNat = 0 from rfl, true_and]
     rw [if_pos (by omega)]
     exact e2
-  · rw [wd_set64, if_neg (by simp; omega)]
+  · rw [wd_setA, if_neg (by simp; omega)]
 
 /-- The push's facts. -/
-theorem pushLW_facts {m m' : Mem} {x o : Word} (hs : (m.arr64 IFL).size < 2 ^ 63)
+theorem pushLW_factsA {m m' : Mem} {x o : Word} (hs : (m.arr64 IFL).size < 2 ^ 63)
     (ht : topN m IFL < 2 ^ 63) (h : pushLW m x = some (o, m')) :
     o.toNat = topN m IFL + 1 ∧ topN m' IFL = topN m IFL + 1 ∧ o.toNat < (m.arr64 IFL).size ∧
     wd m' IFL o.toNat = x ∧ (∀ i, i ≠ 0 → i ≠ o.toNat → wd m' IFL i = wd m IFL i) ∧
@@ -126,21 +126,21 @@ theorem pushLW_facts {m m' : Mem} {x o : Word} (hs : (m.arr64 IFL).size < 2 ^ 63
   obtain ⟨o', m₁⟩ := q
   rw [ha, pushK_some] at h
   cases h
-  obtain ⟨a1, a2, a3, a4, a5⟩ := allocW_facts (by decide) hs ht ha
+  obtain ⟨a1, a2, a3, a4, a5⟩ := allocW_factsA (by decide) hs ht ha
   have hs1 : (m₁.arr64 IFL).size = (m.arr64 IFL).size := a5.2.2.1 IFL
   simp only [show (1 : Word).toNat = 1 from rfl] at a2 a3
   refine ⟨a1, ?_, by omega, ?_, fun i h1 h2 => ?_, a5.trans (MemFrame.set64 _ _ (by decide) _ _)⟩
-  · simp only [topN, wd_set64]
+  · simp only [topN, wd_setA]
     rw [if_neg (by simp; omega)]
     exact a2
-  · rw [wd_set64, if_pos ⟨rfl, rfl, by omega⟩]
-  · rw [wd_set64, if_neg (by simp; omega), a4 i h1]
+  · rw [wd_setA, if_pos ⟨rfl, rfl, by omega⟩]
+  · rw [wd_setA, if_neg (by simp; omega), a4 i h1]
 
 /-- A push as an `IExt`, with the pushed word on top. -/
 theorem pushLW_ext {m m' : Mem} {x o : Word} (hs : (m.arr64 IFL).size < 2 ^ 63)
     (ht : topN m IFL < 2 ^ 63) (h : pushLW m x = some (o, m')) :
     IExt m m' ∧ topN m' IFL = topN m IFL + 1 ∧ wd m' IFL (topN m IFL + 1) = x := by
-  obtain ⟨p1, p2, -, p4, p5, p6⟩ := pushLW_facts hs ht h
+  obtain ⟨p1, p2, -, p4, p5, p6⟩ := pushLW_factsA hs ht h
   refine ⟨⟨p6.mono (by simp) (by simp), by omega, fun i h1 h2 => p5 i (by omega) (by omega)⟩, p2, ?_⟩
   rw [← p1]; exact p4
 
@@ -149,7 +149,7 @@ theorem allocW_ext {m m' : Mem} {k o : Word} (hs : (m.arr64 IFL).size < 2 ^ 63)
     (ht : topN m IFL < 2 ^ 63) (h : allocW m IFL k = some (o, m')) :
     IExt m m' ∧ o.toNat = topN m IFL + 1 ∧ topN m' IFL = topN m IFL + k.toNat ∧
       topN m IFL + 1 + k.toNat ≤ (m.arr64 IFL).size := by
-  obtain ⟨a1, a2, a3, a4, a5⟩ := allocW_facts (by decide) hs ht h
+  obtain ⟨a1, a2, a3, a4, a5⟩ := allocW_factsA (by decide) hs ht h
   exact ⟨⟨a5.mono (by simp) (by simp), by omega, fun i h1 _ => a4 i (by omega)⟩, a1, a2, a3⟩
 
 /-! ## Lookups -/
@@ -185,7 +185,7 @@ def TopOK (m : Mem) : Prop := (m.arr64 IFL).size < 2 ^ 63 ∧ topN m IFL ≤ (m.
 theorem pushLW_ok {m m' : Mem} {x o : Word} (hT : TopOK m) (h : pushLW m x = some (o, m')) :
     IExt m m' ∧ TopOK m' ∧ topN m' IFL = topN m IFL + 1 ∧ wd m' IFL (topN m IFL + 1) = x := by
   have ht : topN m IFL < 2 ^ 63 := by have := hT.1; have := hT.2; omega
-  obtain ⟨p1, p2, p3, -, -, -⟩ := pushLW_facts hT.1 ht h
+  obtain ⟨p1, p2, p3, -, -, -⟩ := pushLW_factsA hT.1 ht h
   obtain ⟨e1, e2, e3⟩ := pushLW_ext hT.1 ht h
   exact ⟨e1, ⟨by rw [e1.size]; exact hT.1, by rw [e1.size, e2]; omega⟩, e2, e3⟩
 
