@@ -1,5 +1,7 @@
 # con-agua design journal
 
+> **Frozen as history (2026-10-22).** New journal entries go to `docs/design/<lane>.md` (one file per lane; see `docs/design/README.md`).
+
 Decisions, measurements and findings, newest section last. `PLAN.md` has the goal and the
 milestones; `docs/survey.md` has the survey of the reference code.
 
