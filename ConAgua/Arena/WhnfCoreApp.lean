@@ -146,8 +146,7 @@ theorem CoreS.arena_frame {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a
   have hk := hcpl
   simp only [cpl, Prod.mk.injEq] at hk
   exact hS.arena_frameD hD hcpl hf h128 hpins henv hC128 hCenv
-    (hS.den.of_arena hS.arena.1 hD.1 hk.1 hk.2.1 hk.2.2 hf
-      (fun h => by have := henv _ h; simp [EREC] at this) hscA hscC) hmA hmC hmWA hmWC hmLA hmLC
+    (hS.den.of_arena hS.arena.1 hD.1 hk.1 hk.2.1 hk.2.2 hf hscA hscC) hmA hmC hmWA hmWC hmLA hmLC
 
 /-! ## Handle words of the interning functions' results
 

@@ -786,7 +786,8 @@ theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (hc : ProjCallees p)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode e1 q i k us : Word) (tbl : IProjTable)
     (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he1 : HW e1) (hk : HW k) (hus : HW us)
-    (hq : decTbl (s₀.mem.arr64 EREC) q.toNat = some tbl) (hlt : i.toNat < tbl.numFields)
+    (hq : decTbl (s₀.mem.arr64 EREC) q.toNat = some tbl)
+    (hfe : ∃ c, fe.find? c = some (.projInfo tbl)) (hlt : i.toNat < tbl.numFields)
     (hvus : ∃ (h : EIdx) (c : NIdx), a₀.store.view h = some (.const c (decI us))) :
     GrowSpec p (n + 1) "reduce_proj_fire" [mode, vis, e1, q, i, k, us]
       (rpFireT (decMode mode) fe (tbl.entry i.toNat) i.toNat (decE e1) (decI k) (decI us))
@@ -836,7 +837,7 @@ theorem rpFire_refines (p : Prog) (hp : WhnfCoreProg p) (hc : ProjCallees p)
   obtain ⟨r₃, m₃⟩ := q₃
   simp only [hc3] at hW
   have hq₂ : decTbl (m₂.arr64 EREC) q.toNat = some tbl := by rw [hE₁]; exact hq
-  have hfok := hc.fireOk n { s with mem := m₂ } a₀ dn vis fe MM eb q i us tbl hS₁ hus hq₂ hlt hvus
+  have hfok := hc.fireOk n { s with mem := m₂ } a₀ dn vis fe MM eb q i us tbl hS₁ hus hq₂ hfe hlt hvus
   obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, -⟩ := CoreSpec.of_callW hfok hc3
   have hE₃ : m₃.arr64 EREC = m₂.arr64 EREC := by
     have := (hc.erec n "fire_ok" [q, i, us] m₂ r₃ m₃ (Or.inr rfl) hc3); exact this
@@ -997,7 +998,8 @@ theorem rpHead_refines (p : Prog) (hp : WhnfCoreProg p) (hc : ProjCallees p)
     (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
     (MM : ModeMaps) (eb mode e1 q i : Word) (tbl : IProjTable)
     (hs : SlotPre s₀ a₀ dn vis fe MM eb mode) (he1 : HW e1)
-    (hq : decTbl (s₀.mem.arr64 EREC) q.toNat = some tbl) (hlt : i.toNat < tbl.numFields) :
+    (hq : decTbl (s₀.mem.arr64 EREC) q.toNat = some tbl)
+    (hfe : ∃ c, fe.find? c = some (.projInfo tbl)) (hlt : i.toNat < tbl.numFields) :
     GrowSpec p (n + 1) "reduce_proj_head" [mode, vis, e1, q, i]
       (rpHeadT (decMode mode) fe (tbl.entry i.toNat) i.toNat (decE e1))
       decOptR s₀ a₀ dn vis fe MM eb ResW := by
@@ -1054,7 +1056,7 @@ theorem rpHead_refines (p : Prog) (hp : WhnfCoreProg p) (hc : ProjCallees p)
   cases n with
   | zero => simp [callW_zero] at hc2
   | succ N =>
-  have hfire := rpFire_refines p hp hc N s a₀ dn vis fe MM eb mode e1 q i _ _ tbl hs he1 hhn hhus hq hlt
+  have hfire := rpFire_refines p hp hc N s a₀ dn vis fe MM eb mode e1 q i _ _ tbl hs he1 hhn hhus hq hfe hlt
     ⟨_, n', by rw [hv, hus]⟩
   obtain ⟨hok2, ⟨M₂, hS₂, hK₂, hSt₂⟩, hres2, hrw2⟩ := GrowSpec.of_callW hfire hc2
   have hrun2 := AM.run_of_ok _ _ hok2
@@ -1181,7 +1183,7 @@ theorem reduceProjCore_refines' (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrL
     · rw [hres]; unfold decOptR; rw [← hr0]; rfl
     · unfold ResW; rw [← hr0, ← hr1]; exact ⟨by unfold HW; decide, by unfold HW; decide⟩
   rw [if_neg hf] at hW
-  obtain ⟨tbl, hdt⟩ := hc.projFound (N + 1) m₁ _ dn vis fe M₁ eb sn i r₂ m₂ hS₁ hc2 hf
+  obtain ⟨tbl, hdt, hfe⟩ := hc.projFound (N + 1) m₁ _ dn vis fe M₁ eb sn i r₂ m₂ hS₁ hc2 hf
   have hde : decEntry (m₁.arr64 EREC) (r₂.headD 0) (r₂.tail.headD 0) i.toNat =
       some (tbl.entry i.toNat) := by
     unfold decEntry; rw [if_neg hf, hdt]; rfl
@@ -1193,7 +1195,7 @@ theorem reduceProjCore_refines' (p : Prog) (hp : WhnfCoreProg p) (hStrSup : StrL
   obtain ⟨r₃, m₃⟩ := q₃
   simp only [hc3] at hW
   have hhead := rpHead_refines p hp hc N { s with mem := m₂ } _ dn vis fe M₂ eb mode (r₁.headD 0)
-    (r₂.tail.headD 0) i tbl ⟨hS₂, hs.mode4, hs.eb_mode⟩ hrw1 hq
+    (r₂.tail.headD 0) i tbl ⟨hS₂, hs.mode4, hs.eb_mode⟩ hrw1 hq hfe
     (by simpa [IProjTable.entry] using findProj?_lt hrun2)
   obtain ⟨hok3, ⟨M₃, hS₃, hK₃, hSt₃⟩, hres3, hrw3⟩ := GrowSpec.of_callW hhead hc3
   have hrun3 := AM.run_of_ok _ _ hok3
