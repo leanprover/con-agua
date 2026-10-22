@@ -22,7 +22,11 @@ def raw_url(name):
     gf = root / "docs" / "gist.txt"
     gid = gf.read_text().strip() if gf.exists() else "GIST"
     # the query string defeats GitHub's image cache between updates
-    return f"https://gist.githubusercontent.com/nomeata/{gid}/raw/{name}?v={git('rev-parse', '--short', 'HEAD')}"
+    # a hash of the file's content defeats GitHub's image cache exactly when the image changed
+    import hashlib
+    f = dash / name
+    v = hashlib.sha1(f.read_bytes()).hexdigest()[:10] if f.exists() else git('rev-parse', '--short', 'HEAD')
+    return f"https://gist.githubusercontent.com/nomeata/{gid}/raw/{name}?v={v}"
 
 
 def phases_svg():
@@ -82,7 +86,7 @@ def trend_svg(pts):
     n = len(pts)
     xs = [ml + (W - ml - mr) * (i / max(1, n - 1)) for i in range(n)]
     lean = [100 * int(p["lean_proven"]) / int(p["lean_all"]) for p in pts]
-    cnt = [100 * int(p["proven"]) / int(p["targets"]) for p in pts]
+    cnt = [100 * (int(p["lean_proven"]) + int(p.get("lean_local") or p.get("lean_sorry") or 0)) / int(p["lean_all"]) for p in pts]
     wr = [100 * (int(p["lean_proven"]) + int(p["lean_sorry"]) + int(p["lean_written"])) / int(p["lean_all"]) for p in pts]
     loc = loc_series([p["commit"] for p in pts])
     lk = [a / 1000 for a, _ in loc]; pk = [b / 1000 for _, b in loc]
@@ -105,8 +109,8 @@ def trend_svg(pts):
     def line(vals, y, color, dash=""):
         d = " ".join(f"{'M' if i == 0 else 'L'}{xs[i]:.1f},{y(v):.1f}" for i, v in enumerate(vals))
         o.append(f'<path d="{d}" fill="none" stroke="{color}" stroke-width="2" stroke-linejoin="round" {dash}/>')
-    series = [("proven, Lean lines", lean, yl, "#2e7d5b", ""), ("proven, targets", cnt, yl, "#7aa6d6", ""),
-              ("L written, Lean lines", wr, yl, "#d9a520", ""),
+    series = [("proven", lean, yl, "#2e7d5b", ""), ("proven locally", cnt, yl, "#7aa6d6", ""),
+              ("L written", wr, yl, "#d9a520", ""),
               ("proof lines (k)", pk, yr, "#8a5cb8", 'stroke-dasharray="6 4"'), ("L code lines (k)", lk, yr, "#c0504d", 'stroke-dasharray="6 4"')]
     for name, vals, y, c, dash in series:
         line(vals, y, c, dash)
@@ -133,6 +137,9 @@ progress = list(csv.DictReader(open(dash / "progress.csv")))
 lanes = json.loads((dash / "lanes.json").read_text())
 landings = json.loads((dash / "landings.json").read_text())
 velocity = list(csv.DictReader(open(dash / "velocity.csv")))
+# the images first: the report links them by a hash of their content
+(dash / "phases.svg").write_text(phases_svg())
+(dash / "trend.svg").write_text(trend_svg(progress[-40:]))
 
 S = lambda k: sum(p[k] for p in phases)
 targets, proven, sorry, written = S("targets"), S("proven"), S("sorry"), S("written")
@@ -176,20 +183,17 @@ w = L.append
 w("# con-agua: a Lean checker in verified x64\n")
 w(f"_Progress report, generated {now} from master `{head}` by `scripts/gist_report.py`._\n")
 w(f"**{proven} of {targets}** functions of con-ron's checker have L code refined against con-ron's model, "
-  f"down to verified x64: **{pct(lean_share)}** of the model by Lean lines, **{pct(rust_share)}** by Rust lines.\n")
-w("| Proven (count) | Proven (Lean lines) | Proven (Rust lines) | L written (Lean lines) | Proven with `sorry` | Projected completion | Lanes running | Merge overhead |")
-w("|---:|---:|---:|---:|---:|---:|---:|---:|")
+  f"down to verified x64: **{pct(lean_share)}** of the model. Percentages are of the twin's Lean lines.\n")
+w("| Proven | Proven locally | L written | Projected completion | Lanes running | Merge overhead |")
+w("|---:|---:|---:|---:|---:|---:|")
 eta_s = eta_when.strftime("%b %-d") if eta_when else "—"
-w(f"| {proven} / {targets} | {pct(lean_share)} | {pct(rust_share)} | {pct(lean_l)} | {sorry} | **{eta_s}** | {len(running)} | {pct(over / max(1, work + over))} |\n")
-# the safety net under the shared Lake cache (DESIGN.md, "Cache incident"), written by scripts/buildstats.py
-bcf = root / "_tmp" / "buildcheck.json"
-if bcf.exists():
-    bc = json.loads(bcf.read_text())
-    behind = git("rev-list", "--count", f"{bc['commit']}..HEAD") if bc.get("commit", "?") != "?" else "?"
-    w(f"Last cache-free build of master: `{bc['commit'][:10]}` ({behind} commits behind HEAD, {bc['date']}, "
-      f"{bc['mode']}): " + ("**OK**" if bc["ok"] else f"**FAILED** ({bc['detail']})") + "\n")
-else:
-    w("Last cache-free build of master: **none recorded** (run `scripts/buildstats.py`).\n")
+# "proven locally": own proof complete, any sorry only in callees' stub specs (census status `local`);
+# older census rows lack the column, then all `sorry` targets count (they were all local when measured)
+_last = progress[-1] if progress else {}
+_loc = _last.get("lean_local") or _last.get("lean_sorry")
+sorry_share = int(_loc) / int(_last["lean_all"]) if _loc else None
+w(f"| **{pct(lean_share)}** | {pct(lean_share + sorry_share) if sorry_share is not None else '—'} | {pct(lean_l)} | **{eta_s}** | {len(running)} | {pct(over / max(1, work + over))} |\n")
+w("_The three shares are cumulative: proven ⊆ proven locally (own proof complete; `sorry` only in callees' stub specs) ⊆ L code written._\n")
 if eta_rate:
     w(f"_Projected completion: at the least-squares rate of the last 3 days of census runs, {eta_rate:,.0f} Lean lines proven per day; "
       "a straight-line extrapolation, so treat it as a trend, not a promise._\n")
@@ -202,7 +206,7 @@ cnt = [round(100 * int(p["proven"]) / int(p["targets"]), 1) for p in pts]
 wr = [round(100 * (int(p["lean_proven"]) + int(p["lean_sorry"]) + int(p["lean_written"])) / int(p["lean_all"]), 1) for p in pts]
 top = max(wr + lean + cnt + [10])
 w("## Proven over time\n")
-w("Left axis: share of the twin proven by Lean lines, by target count, and with L code written. "
+w("Left axis: share of the twin's Lean lines proven, proven locally (own proof complete, `sorry` only in callees' stubs), and with L code written. "
   "Right axis: lines of L code and of proofs in `ConAgua/` (thousands), so infrastructure work shows too. One point per census run.\n")
 w(f"![Proven share and lines of code per census run]({raw_url('trend.svg')})\n")
 
@@ -279,8 +283,6 @@ dev_table("Temporary: to be fixed", "L differs from the twin for now; each row h
 dev_table("Deliberate: by design", "L differs from the twin on purpose and stays that way.", dev_rows("Deliberate"), "why")
 
 out.write_text("\n".join(L) + "\n")
-(dash / "phases.svg").write_text(phases_svg())
-(dash / "trend.svg").write_text(trend_svg(progress[-40:]))
 print("wrote", out)
 
 if "--publish" in sys.argv:
@@ -288,7 +290,7 @@ if "--publish" in sys.argv:
     if gf.exists():
         gid = gf.read_text().strip()
         subprocess.run(["gh", "gist", "edit", gid, "-f", out.name, str(out)], check=True)
-        for extra in ("phases.svg", "trend.svg", "progress.csv"):  # the chart, and the census history (durable copy)
+        for extra in ("phases.svg", "trend.svg", "progress.csv", "lanes.json"):  # the chart, and the census history (durable copy)
             r = subprocess.run(["gh", "gist", "edit", gid, "-f", extra, str(dash / extra)])
             if r.returncode != 0:  # first time: add the file
                 subprocess.run(["gh", "gist", "edit", gid, "-a", str(dash / extra)], check=True)

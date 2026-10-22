@@ -197,9 +197,10 @@ def lpGo : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (g, t, i, x, y, r) {
   if g == 3 {
     if CTL.u64[18 + t] <= i { abort };
     x := CREC.u64[i * 4 + t * 2 + 1];
+    r := CREC.u64[i * 4 + t * 2];
     y := call sls_memo(x, ko, kc, vo, vc);
     if y == x { return h };
-    r := call intern_const(CREC.u64[i * 4 + t * 2], y);
+    r := call intern_const(r, y);
     if r >= 4294967296 { abort };
     return r
   };
@@ -281,7 +282,7 @@ def lpForall : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (fd, j, e0, t, i, f
 
 /-- con-ron: ConRon/Arena/ExprOps.lean:2191-2204 ConRon.Arena.instLPArmLet -/
 @[l_impl ConRon.Arena.instLPArmLet]
-def lpLet : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (fd, j, e0, t, i, f, a, b, x, y, z, r, u) {
+def lpLet : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (fd, j, e0, t, i, f, a, b, x, y, r, u) {
   (fd, j, e0) := call ilp_find(h, 0);
   if fd != 0 { return LPMEMO.u64[j * 4 + 3] };
   t := (h >> 27) & 1;
@@ -291,10 +292,26 @@ def lpLet : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (fd, j, e0, t, i, f, a
   b := LEREC.u64[i * 6 + t * 3 + 2];
   x := call lp_go(f, ko, kc, vo, vc, fu);
   y := call lp_go(a, ko, kc, vo, vc, fu);
-  z := call lp_go(b, ko, kc, vo, vc, fu);
-  if x == f && y == a && z == b { r := h } else { r := call mk_let(x, y, z); if r >= 4294967296 { abort } };
+  r := call lp_let_tail(h, f, a, b, x, y, ko, kc, vo, vc, fu);
   (fd, j, e0) := call ilp_find(h, 0);
   u := call ilp_put(h, 0, r, fd, j);
+  return r
+}
+
+/-- `lp_let`'s third child and rebuild (split out so that each function's spec stays small).
+con-ron: none — the tail of `instLPArmLet` (ExprOps.lean:2191-2204), split out of `lp_let` -/
+def lpLetTail : FunDecl := lfn (h, f, a, b, x, y, ko, kc, vo, vc, fu) locals (z, r) {
+  z := call lp_go(b, ko, kc, vo, vc, fu);
+  r := call lp_rb_let(h, f, a, b, x, y, z);
+  return r
+}
+
+/-- `lp_let`'s rebuild: `h` when the three children came back equal, else `mk_let`.
+con-ron: ConRon/Arena/ExprOps.lean:153-155 ConRon.Arena.internRebuiltLetE -/
+def lpRbLet : FunDecl := lfn (h, f, a, b, x, y, z) locals (r) {
+  if x == f && y == a { if z == b { return h } };
+  r := call mk_let(x, y, z);
+  if r >= 4294967296 { abort };
   return r
 }
 
@@ -317,12 +334,29 @@ def lpProj : FunDecl := lfn (h, ko, kc, vo, vc, fu) locals (fd, j, e0, t, i, nm,
 
 /-! ## The entries -/
 
+/-- con-ron: none — the substitution's keys checked to be stored names (the twin reads them back,
+`readNamesM`, and fails on a handle that does not view; `keys_ok` aborts there instead) -/
+def keysOk : FunDecl := lfn (o, l) locals (w, g, t, i, r) {
+  if l == 0 { return 0 };
+  w := SPN.u64[o];
+  if w >= 4294967296 { abort };
+  g := w >> 28;
+  t := (w >> 27) & 1;
+  i := w & 134217727;
+  if t != 0 && CTL.u64[1] == 0 { abort };
+  if g >= 3 { abort };
+  if CTL.u64[34 + g * 2 + t] <= i { abort };
+  r := call keys_ok(o + 1, l - 1);
+  return r
+}
+
 /-- con-ron: ConRon/Arena/ExprOps.lean:2251-2268 ConRon.Arena.instLPFast -/
 @[l_impl ConRon.Arena.instLPFast]
 def instLPCore : FunDecl := lfn (ko, kc, us, e) locals (vo, vc, r, u) {
   (vo, vc, r) := call der_b(e);
   if r == 0 { return e & 4294967295 };
   (vo, vc) := call ls_node(us);
+  u := call keys_ok(ko, kc);
   u := call ilp_clear();
   u := call ilpl_clear();
   u := call ilpls_clear();
@@ -385,12 +419,12 @@ def instLPProg : Prog :=
    ("sls_go", slsGo), ("sle_go", sleGo), ("slp_go", slpGo), ("spn_pool", spnPool), ("spn_ls", spnLs),
    ("sl_memo", slMemo), ("sls_memo", slsMemo),
    ("lp_go", lpGo), ("lp_fvar", lpFVar), ("lp_app", lpApp), ("lp_lam", lpLam),
-   ("lp_forall", lpForall), ("lp_let", lpLet), ("lp_proj", lpProj),
+   ("lp_forall", lpForall), ("lp_let", lpLet), ("lp_let_tail", lpLetTail), ("lp_rb_let", lpRbLet), ("lp_proj", lpProj),
    ("ilp_find", memoFindG lpSch), ("ilp_put", memoPutG lpSch), ("ilp_clear", memoClearG lpSch),
    ("ilpl_find", memoFindG lplSch), ("ilpl_put", memoPutG lplSch), ("ilpl_clear", memoClearG lplSch),
    ("ilpls_find", memoFindG lplsSch), ("ilpls_put", memoPutG lplsSch),
    ("ilpls_clear", memoClearG lplsSch),
-   ("inst_lp_core", instLPCore), ("inst_lp", instLPL), ("inst_lp_fast", instLPFastL),
+   ("keys_ok", keysOk), ("inst_lp_core", instLPCore), ("inst_lp", instLPL), ("inst_lp_fast", instLPFastL),
    ("rec_fire_levels", recFireLevelsL)]
 
 end L.Arena

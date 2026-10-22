@@ -5,6 +5,7 @@ public import ConAgua.Arena.ExprMk
 meta import ConAgua.L.Semantics
 meta import ConAgua.Arena.Store
 import ConAgua.Census.Attr
+public import ConAgua.L.ModelGen
 
 @[expose] public section
 
@@ -29,7 +30,9 @@ entry `lift_loose_bvars_fast` (`liftLooseBVarsFast`): bump every loose bound var
 `lift_entry(h, k, c)` is `liftLooseBVarsFast`: `lf_clear(); r := lift_go(h, c, k); lf_clear()`.
 The memo is the library's (`lfSch`: array 41, `CTL[42]`, `CTL[43]`), keys `(h, c)`.
 
-The models `liftW`/`lift*W` follow the code with L's fuel (one level per call).
+The models `liftW`/`lift*W`, their continuations `lift*W.kᵢ`, their guarded equations
+`lift*W.armᵢ` and the specs `liftGo_spec` are generated from the L text by `l_model`
+(`L/ModelGen.lean`).
 -/
 
 set_option experimental.vcgen true
@@ -38,356 +41,6 @@ open Std.WP
 open scoped Lean.Order
 
 namespace L.Arena
-
-/-- Record `r` at `(h, c)` in the lift memo and return it. -/
-def lsetK (h c : Word) : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (r, m₁) =>
-    match msetG lfSch m₁ h c r with
-    | none => none
-    | some m₂ => some (r, m₂)
-
-mutual
-/-- **The model of `lift_go`** at L fuel `n`. -/
-def liftW : Nat → Mem → Word → Word → Word → Option (Word × Mem)
-  | 0, _, _, _, _ => none
-  | n + 1, m, h, c, k =>
-    if derBW m h < 32767 ∧ derBW m h ≤ c then some (h, m)
-    else if tierW h ≠ 0 ∧ rdW (m.arr64 CTL) 1 = 0 then none
-    else if h >>> 28 = 0 then
-      if rdW (m.arr64 CTL) (22 + tierW h) ≤ idxW h then none
-      else if rdW (m.arr64 BREC) (idxW h * 2 + tierW h) < c then some (h, m)
-      else if rdW (m.arr64 BREC) (idxW h * 2 + tierW h) + k <
-          rdW (m.arr64 BREC) (idxW h * 2 + tierW h) then none
-      else binternW m (rdW (m.arr64 BREC) (idxW h * 2 + tierW h) + k)
-    else if h >>> 28 = 4 then
-      if rdW (m.arr64 CTL) (4 + tierW h) ≤ idxW h then none else liftAppW n m h c k
-    else if h >>> 28 = 5 then
-      if rdW (m.arr64 CTL) (28 + tierW h) ≤ idxW h then none else liftLamW n m h c k
-    else if h >>> 28 = 6 then
-      if rdW (m.arr64 CTL) (30 + tierW h) ≤ idxW h then none else liftForallW n m h c k
-    else if h >>> 28 = 7 then
-      if rdW (m.arr64 CTL) (20 + tierW h) ≤ idxW h then none else liftLetW n m h c k
-    else if h >>> 28 = 9 then
-      if rdW (m.arr64 CTL) (32 + tierW h) ≤ idxW h then none else liftProjW n m h c k
-    else if h >>> 28 = 1 then
-      if rdW (m.arr64 CTL) (26 + tierW h) ≤ idxW h then none else some (h, m)
-    else if h >>> 28 = 2 then
-      if rdW (m.arr64 CTL) (16 + tierW h) ≤ idxW h then none else some (h, m)
-    else if h >>> 28 = 3 then
-      if rdW (m.arr64 CTL) (18 + tierW h) ≤ idxW h then none else some (h, m)
-    else if h >>> 28 = 8 then
-      if rdW (m.arr64 CTL) (2 + tierW h) ≤ idxW h then none else some (h, m)
-    else none
-
-/-- **The model of `lift_app`.** -/
-def liftAppW : Nat → Mem → Word → Word → Word → Option (Word × Mem)
-  | 0, _, _, _, _ => none
-  | n + 1, m, h, c, k =>
-    if mfindG lfSch m h c = [] then none
-    else if (mfindG lfSch m h c).headD 0 ≠ 0 then
-      some (rdW (m.arr64 LMEMO) ((mfindG lfSch m h c).tail.headD 0 * 4 + 3), m)
-    else
-      match liftW n m (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2)) c k with
-      | none => none
-      | some (x, m₁) =>
-        match liftW n m₁ (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2 + 1)) c k with
-        | none => none
-        | some (y, m₂) => lsetK h c (mkAppW m₂ x y)
-
-/-- **The model of `lift_lam`.** -/
-def liftLamW : Nat → Mem → Word → Word → Word → Option (Word × Mem)
-  | 0, _, _, _, _ => none
-  | n + 1, m, h, c, k =>
-    if c + 1 = 0 then none
-    else if mfindG lfSch m h c = [] then none
-    else if (mfindG lfSch m h c).headD 0 ≠ 0 then
-      some (rdW (m.arr64 LMEMO) ((mfindG lfSch m h c).tail.headD 0 * 4 + 3), m)
-    else
-      match liftW n m (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2)) c k with
-      | none => none
-      | some (x, m₁) =>
-        match liftW n m₁ (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1)) (c + 1) k with
-        | none => none
-        | some (y, m₂) => lsetK h c (mkLamW m₂ x y)
-
-/-- **The model of `lift_forall`.** -/
-def liftForallW : Nat → Mem → Word → Word → Word → Option (Word × Mem)
-  | 0, _, _, _, _ => none
-  | n + 1, m, h, c, k =>
-    if c + 1 = 0 then none
-    else if mfindG lfSch m h c = [] then none
-    else if (mfindG lfSch m h c).headD 0 ≠ 0 then
-      some (rdW (m.arr64 LMEMO) ((mfindG lfSch m h c).tail.headD 0 * 4 + 3), m)
-    else
-      match liftW n m (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2)) c k with
-      | none => none
-      | some (x, m₁) =>
-        match liftW n m₁ (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1)) (c + 1) k with
-        | none => none
-        | some (y, m₂) => lsetK h c (mkForallW m₂ x y)
-
-/-- **The model of `lift_let`.** -/
-def liftLetW : Nat → Mem → Word → Word → Word → Option (Word × Mem)
-  | 0, _, _, _, _ => none
-  | n + 1, m, h, c, k =>
-    if c + 1 = 0 then none
-    else if mfindG lfSch m h c = [] then none
-    else if (mfindG lfSch m h c).headD 0 ≠ 0 then
-      some (rdW (m.arr64 LMEMO) ((mfindG lfSch m h c).tail.headD 0 * 4 + 3), m)
-    else
-      match liftW n m (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) c k with
-      | none => none
-      | some (x, m₁) =>
-        match liftW n m₁ (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1)) c k with
-        | none => none
-        | some (y, m₂) =>
-          match liftW n m₂ (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2)) (c + 1) k with
-          | none => none
-          | some (z, m₃) => lsetK h c (mkLetW m₃ x y z)
-
-/-- **The model of `lift_proj`.** -/
-def liftProjW : Nat → Mem → Word → Word → Word → Option (Word × Mem)
-  | 0, _, _, _, _ => none
-  | n + 1, m, h, c, k =>
-    if mfindG lfSch m h c = [] then none
-    else if (mfindG lfSch m h c).headD 0 ≠ 0 then
-      some (rdW (m.arr64 LMEMO) ((mfindG lfSch m h c).tail.headD 0 * 4 + 3), m)
-    else
-      match liftW n m (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)) c k with
-      | none => none
-      | some (x, m₁) =>
-        lsetK h c (mkProjW m₁ (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3))
-          (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 1)) x)
-end
-
-/-! ### Continuations and guarded equations -/
-
-/-- The arms after each child (first-order continuations: `grind` instantiates their equations
-by matching, which a continuation given as a `fun` defeats). -/
-def appK₁ (n : Nat) (h c k aw : Word) : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (x, m₁) => appK₂ h c x (liftW n m₁ aw c k)
-where appK₂ (h c x : Word) : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (y, m₂) => lsetK h c (mkAppW m₂ x y)
-
-def lamK₁ (n : Nat) (h c k bw : Word) : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (x, m₁) => lamK₂ h c x (liftW n m₁ bw (c + 1) k)
-where lamK₂ (h c x : Word) : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (y, m₂) => lsetK h c (mkLamW m₂ x y)
-
-def faK₁ (n : Nat) (h c k bw : Word) : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (x, m₁) => faK₂ h c x (liftW n m₁ bw (c + 1) k)
-where faK₂ (h c x : Word) : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (y, m₂) => lsetK h c (mkForallW m₂ x y)
-
-def leK₁ (n : Nat) (h c k vw bw : Word) : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (x, m₁) => leK₂ n h c k bw x (liftW n m₁ vw c k)
-where
-  leK₂ (n : Nat) (h c k bw x : Word) : Option (Word × Mem) → Option (Word × Mem)
-    | none => none
-    | some (y, m₂) => leK₃ h c x y (liftW n m₂ bw (c + 1) k)
-  leK₃ (h c x y : Word) : Option (Word × Mem) → Option (Word × Mem)
-    | none => none
-    | some (z, m₃) => lsetK h c (mkLetW m₃ x y z)
-
-def pjK₁ (h c nw iw : Word) : Option (Word × Mem) → Option (Word × Mem)
-  | none => none
-  | some (x, m₁) => lsetK h c (mkProjW m₁ nw iw x)
-
-section ks
-variable (n : Nat) (h c k aw bw vw nw iw x y z : Word) (m₁ m₂ m₃ : Mem)
-theorem appK₁_some' : appK₁ n h c k aw (some (x, m₁)) = appK₁.appK₂ h c x (liftW n m₁ aw c k) := rfl
-theorem appK₂_some' : appK₁.appK₂ h c x (some (y, m₂)) = lsetK h c (mkAppW m₂ x y) := rfl
-theorem lamK₁_some : lamK₁ n h c k bw (some (x, m₁)) = lamK₁.lamK₂ h c x (liftW n m₁ bw (c + 1) k) :=
-  rfl
-theorem lamK₂_some : lamK₁.lamK₂ h c x (some (y, m₂)) = lsetK h c (mkLamW m₂ x y) := rfl
-theorem faK₁_some : faK₁ n h c k bw (some (x, m₁)) = faK₁.faK₂ h c x (liftW n m₁ bw (c + 1) k) :=
-  rfl
-theorem faK₂_some : faK₁.faK₂ h c x (some (y, m₂)) = lsetK h c (mkForallW m₂ x y) := rfl
-theorem leK₁_some : leK₁ n h c k vw bw (some (x, m₁)) = leK₁.leK₂ n h c k bw x (liftW n m₁ vw c k) :=
-  rfl
-theorem leK₂_some :
-    leK₁.leK₂ n h c k bw x (some (y, m₂)) = leK₁.leK₃ h c x y (liftW n m₂ bw (c + 1) k) := rfl
-theorem leK₃_some : leK₁.leK₃ h c x y (some (z, m₃)) = lsetK h c (mkLetW m₃ x y z) := rfl
-theorem pjK₁_some : pjK₁ h c nw iw (some (x, m₁)) = lsetK h c (mkProjW m₁ nw iw x) := rfl
-theorem lsetK_some (r : Word) :
-    lsetK h c (some (r, m₁)) =
-      (match msetG lfSch m₁ h c r with | none => none | some m₂ => some (r, m₂)) := rfl
-end ks
-
-attribute [arena_grind =] appK₁_some' appK₂_some' lamK₁_some lamK₂_some faK₁_some faK₂_some
-  leK₁_some leK₂_some leK₃_some pjK₁_some lsetK_some
-
-section arms
-variable (n : Nat) (m : Mem) (h c k : Word)
-
-theorem liftW_cut (hc : derBW m h < 32767 ∧ derBW m h ≤ c) :
-    liftW (n + 1) m h c k = some (h, m) := by
-  rw [liftW]; simp only [hc, and_self, ↓reduceIte]
-
-theorem liftW_bvar_lt (hc : ¬ (derBW m h < 32767 ∧ derBW m h ≤ c)) (hv : viewOK m h 22)
-    (hg : h >>> 28 = 0) (hl : rdW (m.arr64 BREC) (idxW h * 2 + tierW h) < c) :
-    liftW (n + 1) m h c k = some (h, m) := by
-  obtain ⟨hv1, hv2⟩ := hv
-  rw [liftW]; simp only [hc, hv1, hg, ↓reduceIte, hl]; simp [UInt64.not_le.mpr hv2]
-
-theorem liftW_bvar_ge (hc : ¬ (derBW m h < 32767 ∧ derBW m h ≤ c)) (hv : viewOK m h 22)
-    (hg : h >>> 28 = 0) (hl : ¬ rdW (m.arr64 BREC) (idxW h * 2 + tierW h) < c)
-    (ho : ¬ rdW (m.arr64 BREC) (idxW h * 2 + tierW h) + k <
-      rdW (m.arr64 BREC) (idxW h * 2 + tierW h)) :
-    liftW (n + 1) m h c k = binternW m (rdW (m.arr64 BREC) (idxW h * 2 + tierW h) + k) := by
-  obtain ⟨hv1, hv2⟩ := hv
-  rw [liftW]; simp only [hc, hv1, hg, ↓reduceIte, hl, ho]; simp [UInt64.not_le.mpr hv2]
-
-theorem liftW_fvar (hc : ¬ (derBW m h < 32767 ∧ derBW m h ≤ c)) (hv : viewOK m h 26)
-    (hg : h >>> 28 = 1) : liftW (n + 1) m h c k = some (h, m) := by
-  obtain ⟨hv1, hv2⟩ := hv
-  rw [liftW]; simp [hc, hv1, hg, UInt64.not_le.mpr hv2]
-
-theorem liftW_sort (hc : ¬ (derBW m h < 32767 ∧ derBW m h ≤ c)) (hv : viewOK m h 16)
-    (hg : h >>> 28 = 2) : liftW (n + 1) m h c k = some (h, m) := by
-  obtain ⟨hv1, hv2⟩ := hv
-  rw [liftW]; simp [hc, hv1, hg, UInt64.not_le.mpr hv2]
-
-theorem liftW_const (hc : ¬ (derBW m h < 32767 ∧ derBW m h ≤ c)) (hv : viewOK m h 18)
-    (hg : h >>> 28 = 3) : liftW (n + 1) m h c k = some (h, m) := by
-  obtain ⟨hv1, hv2⟩ := hv
-  rw [liftW]; simp [hc, hv1, hg, UInt64.not_le.mpr hv2]
-
-theorem liftW_lit (hc : ¬ (derBW m h < 32767 ∧ derBW m h ≤ c)) (hv : viewOK m h 2)
-    (hg : h >>> 28 = 8) : liftW (n + 1) m h c k = some (h, m) := by
-  obtain ⟨hv1, hv2⟩ := hv
-  rw [liftW]; simp [hc, hv1, hg, UInt64.not_le.mpr hv2]
-
-theorem liftW_app (hc : ¬ (derBW m h < 32767 ∧ derBW m h ≤ c)) (hv : viewOK m h 4)
-    (hg : h >>> 28 = 4) : liftW (n + 1) m h c k = liftAppW n m h c k := by
-  obtain ⟨hv1, hv2⟩ := hv
-  rw [liftW]; simp [hc, hv1, hg, UInt64.not_le.mpr hv2]
-
-theorem liftW_lam (hc : ¬ (derBW m h < 32767 ∧ derBW m h ≤ c)) (hv : viewOK m h 28)
-    (hg : h >>> 28 = 5) : liftW (n + 1) m h c k = liftLamW n m h c k := by
-  obtain ⟨hv1, hv2⟩ := hv
-  rw [liftW]; simp [hc, hv1, hg, UInt64.not_le.mpr hv2]
-
-theorem liftW_forall (hc : ¬ (derBW m h < 32767 ∧ derBW m h ≤ c)) (hv : viewOK m h 30)
-    (hg : h >>> 28 = 6) : liftW (n + 1) m h c k = liftForallW n m h c k := by
-  obtain ⟨hv1, hv2⟩ := hv
-  rw [liftW]; simp [hc, hv1, hg, UInt64.not_le.mpr hv2]
-
-theorem liftW_let (hc : ¬ (derBW m h < 32767 ∧ derBW m h ≤ c)) (hv : viewOK m h 20)
-    (hg : h >>> 28 = 7) : liftW (n + 1) m h c k = liftLetW n m h c k := by
-  obtain ⟨hv1, hv2⟩ := hv
-  rw [liftW]; simp [hc, hv1, hg, UInt64.not_le.mpr hv2]
-
-theorem liftW_proj (hc : ¬ (derBW m h < 32767 ∧ derBW m h ≤ c)) (hv : viewOK m h 32)
-    (hg : h >>> 28 = 9) : liftW (n + 1) m h c k = liftProjW n m h c k := by
-  obtain ⟨hv1, hv2⟩ := hv
-  rw [liftW]; simp [hc, hv1, hg, UInt64.not_le.mpr hv2]
-
-/-- An arm's memo hit (the same for every arm: `c + 1 ≠ 0` for the binders). -/
-theorem liftAppW_hit (hr : mfindG lfSch m h c ≠ []) (hh : (mfindG lfSch m h c).headD 0 ≠ 0) :
-    liftAppW (n + 1) m h c k =
-      some (rdW (m.arr64 LMEMO) ((mfindG lfSch m h c).tail.headD 0 * 4 + 3), m) := by
-  rw [liftAppW]; simp only [hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
-
-theorem liftAppW_miss (hr : mfindG lfSch m h c ≠ []) (hh : (mfindG lfSch m h c).headD 0 = 0) :
-    liftAppW (n + 1) m h c k =
-      appK₁ n h c k (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2 + 1))
-        (liftW n m (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2)) c k) := by
-  rw [liftAppW]; simp only [hr, hh, ↓reduceIte, ne_eq, not_true_eq_false]
-  cases liftW n m (rdW (m.arr64 AREC) (idxW h * 4 + tierW h * 2)) c k <;> rfl
-
-theorem liftLamW_hit (h1 : c + 1 ≠ 0) (hr : mfindG lfSch m h c ≠ [])
-    (hh : (mfindG lfSch m h c).headD 0 ≠ 0) :
-    liftLamW (n + 1) m h c k =
-      some (rdW (m.arr64 LMEMO) ((mfindG lfSch m h c).tail.headD 0 * 4 + 3), m) := by
-  rw [liftLamW]; simp only [h1, hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
-
-theorem liftLamW_miss (h1 : c + 1 ≠ 0) (hr : mfindG lfSch m h c ≠ [])
-    (hh : (mfindG lfSch m h c).headD 0 = 0) :
-    liftLamW (n + 1) m h c k =
-      lamK₁ n h c k (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2 + 1))
-        (liftW n m (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2)) c k) := by
-  rw [liftLamW]; simp only [h1, hr, hh, ↓reduceIte, ne_eq, not_true_eq_false]
-  cases liftW n m (rdW (m.arr64 LAREC) (idxW h * 4 + tierW h * 2)) c k <;> rfl
-
-theorem liftForallW_hit (h1 : c + 1 ≠ 0) (hr : mfindG lfSch m h c ≠ [])
-    (hh : (mfindG lfSch m h c).headD 0 ≠ 0) :
-    liftForallW (n + 1) m h c k =
-      some (rdW (m.arr64 LMEMO) ((mfindG lfSch m h c).tail.headD 0 * 4 + 3), m) := by
-  rw [liftForallW]; simp only [h1, hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
-
-theorem liftForallW_miss (h1 : c + 1 ≠ 0) (hr : mfindG lfSch m h c ≠ [])
-    (hh : (mfindG lfSch m h c).headD 0 = 0) :
-    liftForallW (n + 1) m h c k =
-      faK₁ n h c k (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2 + 1))
-        (liftW n m (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2)) c k) := by
-  rw [liftForallW]; simp only [h1, hr, hh, ↓reduceIte, ne_eq, not_true_eq_false]
-  cases liftW n m (rdW (m.arr64 FAREC) (idxW h * 4 + tierW h * 2)) c k <;> rfl
-
-theorem liftLetW_hit (h1 : c + 1 ≠ 0) (hr : mfindG lfSch m h c ≠ [])
-    (hh : (mfindG lfSch m h c).headD 0 ≠ 0) :
-    liftLetW (n + 1) m h c k =
-      some (rdW (m.arr64 LMEMO) ((mfindG lfSch m h c).tail.headD 0 * 4 + 3), m) := by
-  rw [liftLetW]; simp only [h1, hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
-
-theorem liftLetW_miss (h1 : c + 1 ≠ 0) (hr : mfindG lfSch m h c ≠ [])
-    (hh : (mfindG lfSch m h c).headD 0 = 0) :
-    liftLetW (n + 1) m h c k =
-      leK₁ n h c k (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1))
-        (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 2))
-        (liftW n m (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) c k) := by
-  rw [liftLetW]; simp only [h1, hr, hh, ↓reduceIte, ne_eq, not_true_eq_false]
-  cases liftW n m (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3)) c k with
-  | none => rfl
-  | some p =>
-    obtain ⟨x, m₁⟩ := p
-    cases liftW n m₁ (rdW (m.arr64 LEREC) (idxW h * 6 + tierW h * 3 + 1)) c k <;> rfl
-
-theorem liftProjW_hit (hr : mfindG lfSch m h c ≠ []) (hh : (mfindG lfSch m h c).headD 0 ≠ 0) :
-    liftProjW (n + 1) m h c k =
-      some (rdW (m.arr64 LMEMO) ((mfindG lfSch m h c).tail.headD 0 * 4 + 3), m) := by
-  rw [liftProjW]; simp only [hr, hh, ↓reduceIte, ne_eq, not_false_eq_true]
-
-theorem liftProjW_miss (hr : mfindG lfSch m h c ≠ []) (hh : (mfindG lfSch m h c).headD 0 = 0) :
-    liftProjW (n + 1) m h c k =
-      pjK₁ h c (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3))
-        (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 1))
-        (liftW n m (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)) c k) := by
-  rw [liftProjW]; simp only [hr, hh, ↓reduceIte, ne_eq, not_true_eq_false]
-  cases liftW n m (rdW (m.arr64 PJREC) (idxW h * 6 + tierW h * 3 + 2)) c k <;> rfl
-
-end arms
-
-grind_pattern [arena_grind] liftW_cut => liftW (n + 1) m h c k
-grind_pattern [arena_grind] liftW_bvar_lt => liftW (n + 1) m h c k
-grind_pattern [arena_grind] liftW_bvar_ge => liftW (n + 1) m h c k
-grind_pattern [arena_grind] liftW_fvar => liftW (n + 1) m h c k
-grind_pattern [arena_grind] liftW_sort => liftW (n + 1) m h c k
-grind_pattern [arena_grind] liftW_const => liftW (n + 1) m h c k
-grind_pattern [arena_grind] liftW_lit => liftW (n + 1) m h c k
-grind_pattern [arena_grind] liftW_app => liftW (n + 1) m h c k
-grind_pattern [arena_grind] liftW_lam => liftW (n + 1) m h c k
-grind_pattern [arena_grind] liftW_forall => liftW (n + 1) m h c k
-grind_pattern [arena_grind] liftW_let => liftW (n + 1) m h c k
-grind_pattern [arena_grind] liftW_proj => liftW (n + 1) m h c k
-grind_pattern [arena_grind] liftAppW_hit => liftAppW (n + 1) m h c k
-grind_pattern [arena_grind] liftAppW_miss => liftAppW (n + 1) m h c k
-grind_pattern [arena_grind] liftLamW_hit => liftLamW (n + 1) m h c k
-grind_pattern [arena_grind] liftLamW_miss => liftLamW (n + 1) m h c k
-grind_pattern [arena_grind] liftForallW_hit => liftForallW (n + 1) m h c k
-grind_pattern [arena_grind] liftForallW_miss => liftForallW (n + 1) m h c k
-grind_pattern [arena_grind] liftLetW_hit => liftLetW (n + 1) m h c k
-grind_pattern [arena_grind] liftLetW_miss => liftLetW (n + 1) m h c k
-grind_pattern [arena_grind] liftProjW_hit => liftProjW (n + 1) m h c k
-grind_pattern [arena_grind] liftProjW_miss => liftProjW (n + 1) m h c k
 
 /-! ## The L code -/
 
@@ -548,44 +201,19 @@ structure LiftProg (p : Prog) : Prop where
   pjp : p.lookup "proj_push" = some projPush
   pji : p.lookup "intern_proj" = some internProj
 
-section specs
-variable (p : Prog) (hp : LiftProg p)
+/-! ## The models and the specs (generated) -/
 
-/-- The spec of `lift_go` at fuel `n`. -/
-def LiftGoSpec (n : Nat) : Prop := ∀ (s₀ : St) (h c k : Word),
-    ⦃fun s => s = s₀⦄
-    invoke p (exec p n) "lift_go" [h, c, k]
-    ⦃fun r s' => LocEq s' s₀ ∧ liftW n s₀.mem h c k = some (r.headD 0, s'.mem); ⊤⦄
-
-/-- The specs of the five arms at fuel `n`. -/
-def LiftArmSpec (n : Nat) : Prop := ∀ (s₀ : St) (h c k : Word),
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "lift_app" [h, c, k]
-    ⦃fun r s' => LocEq s' s₀ ∧ liftAppW n s₀.mem h c k = some (r.headD 0, s'.mem); ⊤⦄ ∧
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "lift_lam" [h, c, k]
-    ⦃fun r s' => LocEq s' s₀ ∧ liftLamW n s₀.mem h c k = some (r.headD 0, s'.mem); ⊤⦄ ∧
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "lift_forall" [h, c, k]
-    ⦃fun r s' => LocEq s' s₀ ∧ liftForallW n s₀.mem h c k = some (r.headD 0, s'.mem); ⊤⦄ ∧
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "lift_let" [h, c, k]
-    ⦃fun r s' => LocEq s' s₀ ∧ liftLetW n s₀.mem h c k = some (r.headD 0, s'.mem); ⊤⦄ ∧
-    ⦃fun s => s = s₀⦄ invoke p (exec p n) "lift_proj" [h, c, k]
-    ⦃fun r s' => LocEq s' s₀ ∧ liftProjW n s₀.mem h c k = some (r.headD 0, s'.mem); ⊤⦄
-
-include hp in
-set_option maxHeartbeats 1000000 in
-theorem liftGo_step (n : Nat) (ih : LiftArmSpec p n) : LiftGoSpec p (n + 1) := by
-  intro s₀ h c k
-  have ihA := fun s h c k => (ih s h c k).1
-  have ihL := fun s h c k => (ih s h c k).2.1
-  have ihF := fun s h c k => (ih s h c k).2.2.1
-  have ihE := fun s h c k => (ih s h c k).2.2.2.1
-  have ihP := fun s h c k => (ih s h c k).2.2.2.2
-  rw [invoke_eq _ hp.go]
-  simp only [callFn, liftGo]
-  sym only [lang_grind, arena_grind] =>
-    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, derB_spec p hp.derb n,
-      internBVar_spec p hp.bvf hp.bvp hp.bvi n, ihA, ihL, ihF, ihE, ihP] <;>
-    finish [viewOK, tierW, idxW]
-
-end specs
+/-- **`lift_go` and its arms are their models** `liftW`, `liftAppW`, …, at every fuel. -/
+l_model liftGo_spec (p : Prog) (hp : LiftProg p)
+  fns [hp.go ↦ liftW, hp.app ↦ liftAppW, hp.lam ↦ liftLamW, hp.fa ↦ liftForallW,
+    hp.le ↦ liftLetW, hp.pj ↦ liftProjW]
+  specs [derB_spec p hp.derb n, internBVar_spec p hp.bvf hp.bvp hp.bvi n,
+    memoFindG_spec lfSch p _ hp.lff n, memoPutG_spec lfSch p _ hp.lfp n,
+    mkApp_spec p hp.derb hp.appf hp.appp hp.appi hp.mkapp n,
+    mkLam_spec p hp.derb hp.lamf hp.lamp hp.lami hp.mklam n,
+    mkForall_spec p hp.derb hp.faf hp.fap hp.fai hp.mkfa n,
+    mkLet_spec p hp.derb hp.lef hp.lep hp.lei hp.mklet n,
+    mkProj_spec p hp.derb hp.pjf hp.pjp hp.pji hp.mkpj n]
+  grind [arena_grind] fold [tierW, idxW] finish [tierW, idxW] gen 20 heartbeats 1000000
 
 end L.Arena

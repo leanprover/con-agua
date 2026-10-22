@@ -1,4 +1,5 @@
 import ConAgua.Arena.StoreLib
+import ConAgua.Arena.SimLib
 import ConAgua.Arena.ParamStore
 import ConAgua.Arena.LpColRel
 
@@ -202,11 +203,8 @@ theorem internParam_refines (p : Prog) (hpf : p.lookup "param_find" = some param
     invoke p (exec p n) "intern_param" [u]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internLNode (.param (decI u))) a₀ ∧
       ParamR s'.mem (AM.st (internLNode (.param (decI u))) a₀) ∧
-      AM.res (internLNode (.param (decI u))) a₀ = decI (r.headD 0); ⊤⦄ := by
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun (internParam_spec p hpf hpp hp n s₀ u)
-  subst hs
-  exact ⟨hloc, pintern_correct s.mem a₀ hR u hu _ _ hI⟩
+      AM.res (internLNode (.param (decI u))) a₀ = decI (r.headD 0); ⊤⦄ :=
+  Sim.tripleD (internParam_spec p hpf hpp hp n s₀ u)
+    (Sim.ofOkD (pintern_correct s₀.mem a₀ hR u hu))
 
 end L.Arena

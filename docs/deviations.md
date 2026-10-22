@@ -67,6 +67,7 @@ D18, D21).
 | D19 | `Rom/CIRead.lean` (the ROM constant readers) | `internCI` keeps a `sortZ` name as a value | interns it (only `Quot`'s `u`, already interned as a level parameter) | none | integrate | by design: representation only |
 | D20 | `Checker/Entry.lean` adapters `abstract1_fast`, `instantiate1_fast`, `inst1` | the walks take `coreWalkFuel` | the fuel argument is dropped; lane exprops4's walks count their own | none (the twin's fuel is never exhausted below `2^62`; ROADMAP §3(b)) | integrate | by design: the twin's fuel is never exhausted; the walks count their own |
 | D22 | `Arena/WhnfProj.lean` `proj_table_name` | interns the prefix `T` without a check | aborts unless `T` is a name handle of the store (tag, tier, index below its count) | none (the twin's store is well formed: every name it holds is valid) | – | by design: the twin's store is well formed; the check is defensive |
+| D27 | `Arena/DeclStep.lean` `dind_copy` (via `ind_block_to_erec`) | copies the block's constants by value | aborts on a non-empty copy starting at word 0 of `DLP` (word 0 is the pool's top) | none (the front writes every record and slice at `1 + top`; decls4-andpin) | – | by design: defensive; makes the copy agree with `IndDeclAt`'s cut pool |
 
 ## Fixed
 

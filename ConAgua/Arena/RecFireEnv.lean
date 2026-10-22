@@ -28,7 +28,7 @@ theorem decCI_ctorInfo_cv {b : Array Word} {dn : NIdx → Option ConLeche.Name} 
 
 /-- **A rule record's fire datum at its words**: kind `0` plain, else nested with its levels the
 slice at words 4, 5. -/
-theorem decRule_fire {b : Array Word} {q : Word} {rl : IRecRule} (hsz : b.size < 2 ^ 63)
+theorem decRule_fireE {b : Array Word} {q : Word} {rl : IRecRule} (hsz : b.size < 2 ^ 63)
     (h : decRule b q.toNat = some rl) :
     (rdW b (q + 3) = 0 ∧ rl.fire = .plain) ∨
     (rdW b (q + 3) ≠ 0 ∧ ∃ lvls pins, rl.fire = .nested lvls pins ∧
@@ -81,7 +81,7 @@ theorem fireCore_of (hS : CoreS dn m a vis fe M eb) {lps : List NIdx} {rule : IR
       (rdW (m.arr64 EREC) (rl + 5)) (rdW (m.arr64 EREC) (ctorP + 2))
       (rdW (m.arr64 EREC) (ctorP + 3)) rule cvj.levelParams := by
   obtain ⟨⟨c, cv, mI, rP, rules, hf, -, hmem⟩, ⟨cj, np', nf', hfj⟩⟩ := hfe
-  rcases decRule_fire hS.erec hrule with ⟨h0, hpl⟩ | ⟨h0, lvls, pins, hn, hsl⟩
+  rcases decRule_fireE hS.erec hrule with ⟨h0, hpl⟩ | ⟨h0, lvls, pins, hn, hsl⟩
   · obtain ⟨-, -, hlp, -⟩ := decCV_rd1 hS.erec (decCI_ctorInfo_cv hci)
     exact .inl ⟨h0, hpl, hlp, hS.den.constLps cj _ cvj hfj rfl (fun _ => rfl)⟩
   · exact .inr ⟨h0, lvls, pins, hn, hsl, hS.den.recRules c cv mI rP rules hf rule hmem lvls pins hn⟩
