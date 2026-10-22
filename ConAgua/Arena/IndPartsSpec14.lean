@@ -189,17 +189,21 @@ def bbK14 (mo ml ro2 rl2 nPd s ip : Word) : Option (List Word × Mem) → Option
   | none => none
   | some (r, m) => bbPack (posRecW m [mo, ml, ro2, rl2, nPd, r.headD 0, s, 0, ip])
 
+/-- **The model of `block_shape_seal`** (at exec fuel `n + 1`). -/
+def bsealW (n : Nat) (m : Mem) (mo ml ro2 rl2 nPd s ip lg elim : Word) : Option (List Word × Mem) :=
+  if lg ≠ 0 then bbPack (posRecW m [mo, ml, ro2, rl2, nPd, elim, s, 1, ip])
+  else bbK14 mo ml ro2 rl2 nPd s ip (stubM "intern_nanon" m [])
+
 /-- After `block_shape_large`. -/
-def bbK13 (mo ml ro2 rl2 nPd s ip : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def bbK13' (n : Nat) (mo ml ro2 rl2 nPd s ip : Word) : Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r, m) =>
-    if r.headD 0 ≠ 0 then bbPack (posRecW m [mo, ml, ro2, rl2, nPd, r.tail.headD 0, s, 1, ip])
-    else bbK14 mo ml ro2 rl2 nPd s ip (stubM "intern_nanon" m [])
+  | some (r, m) => bgoK3 (bsealW n m mo ml ro2 rl2 nPd s ip (r.headD 0) (r.tail.headD 0))
 
 /-- After `block_shape_recs_of`. -/
-def bbK12 (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 cvR0 : Word) (lo ll s ip mo ml : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+def bbK12 (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 cvR0 : Word) (lo ll s ip mo ml : Word) :
+    Option (List Word × Mem) → Option (List Word × Mem)
   | none => none
-  | some (r, m) => bbK13 mo ml (r.headD 0) (r.tail.headD 0) nPd s ip (bslW n m cvR0 lo ll)
+  | some (r, m) => bbK13' n mo ml (r.headD 0) (r.tail.headD 0) nPd s ip (bslW n m cvR0 lo ll)
 
 /-- After `block_shape_members_of`. -/
 def bbK11 (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 cvR0 : Word) (no nl lo ll s ip : Word) : Option (List Word × Mem) → Option (List Word × Mem)
@@ -227,13 +231,10 @@ variable (n : Nat) (nPd cto ctl cso csl rso rsl cvT0 cvR0 : Word) (m : Mem) (r :
 theorem bbPack_some : bbPack (some (q, m)) = some ([1, q], m) := rfl
 theorem bbK14_some (ro2 rl2 : Word) : bbK14 mo ml ro2 rl2 nPd s ip (some (r, m)) =
     bbPack (posRecW m [mo, ml, ro2, rl2, nPd, r.headD 0, s, 0, ip]) := rfl
-theorem bbK13_large (ro2 rl2 : Word) (h : r.headD 0 ≠ 0) : bbK13 mo ml ro2 rl2 nPd s ip (some (r, m)) =
-    bbPack (posRecW m [mo, ml, ro2, rl2, nPd, r.tail.headD 0, s, 1, ip]) := by
-  simp only [bbK13]; exact if_pos h
-theorem bbK13_small (ro2 rl2 : Word) (h : ¬ r.headD 0 ≠ 0) : bbK13 mo ml ro2 rl2 nPd s ip (some (r, m)) =
-    bbK14 mo ml ro2 rl2 nPd s ip (stubM "intern_nanon" m []) := by simp only [bbK13]; exact if_neg h
 theorem bbK12_some : bbK12 n nPd cto ctl cso csl rso rsl cvT0 cvR0 lo ll s ip mo ml (some (r, m)) =
-    bbK13 mo ml (r.headD 0) (r.tail.headD 0) nPd s ip (bslW n m cvR0 lo ll) := rfl
+    bbK13' n mo ml (r.headD 0) (r.tail.headD 0) nPd s ip (bslW n m cvR0 lo ll) := rfl
+theorem bbK13'_some (ro2 rl2 : Word) : bbK13' n mo ml ro2 rl2 nPd s ip (some (r, m)) =
+    bgoK3 (bsealW n m mo ml ro2 rl2 nPd s ip (r.headD 0) (r.tail.headD 0)) := rfl
 theorem bbK11_some : bbK11 n nPd cto ctl cso csl rso rsl cvT0 cvR0 no nl lo ll s ip (some (r, m)) =
     bbK12 n nPd cto ctl cso csl rso rsl cvT0 cvR0 lo ll s ip (r.headD 0) (r.tail.headD 0)
       (brsW (n + 1) m no nl rso rsl) := rfl
@@ -247,7 +248,7 @@ theorem bbK8_some : bbK8 n nPd cto ctl cso csl rso rsl cvT0 cvR0 no nl io lo ll 
     bbK9 n nPd cto ctl cso csl rso rsl cvT0 cvR0 no nl io lo ll s ip (r.headD 0) (r.tail.headD 0)
       (plW (n + 1) m lo ll) := rfl
 end arms
-attribute [ind_grind] bbPack_some bbK14_some bbK13_large bbK13_small bbK12_some bbK11_some bbK10_some
+attribute [ind_grind] bbPack_some bbK14_some bbK13'_some bbK12_some bbK11_some bbK10_some
   bbK9_some bbK8_some
 
 /-- **The model of `block_shape_fin`** (at exec fuel `n + 2`). -/
@@ -371,13 +372,24 @@ structure IndPartsProg5 (p : Prog) : Prop extends IndPartsProg4 p where
   recsOf : p.lookup "block_shape_recs_of" = some blockShapeRecsOf
   large : p.lookup "block_shape_large" = some blockShapeLarge
   pack : p.lookup "block_shape_pack" = some blockShapePack
+  sealF : p.lookup "block_shape_seal" = some blockShapeSeal
   fin : p.lookup "block_shape_fin" = some blockShapeFin
   tail : p.lookup "block_shape_tail" = some blockShapeTail
   build : p.lookup "block_shape_build" = some blockShapeBuild
   shape : p.lookup "block_shape" = some blockShape
   parts : p.lookup "block_parts" = some blockParts
 
-set_option maxHeartbeats 3200000 in
+theorem bseal_spec (p : Prog) (hP : IndPartsProg5 p) (n : Nat) (s₀ : St) (mo ml ro2 rl2 nPd s ip lg elim : Word) :
+    ⦃fun st => st = s₀⦄ invoke p (exec p (n + 1)) "block_shape_seal" [mo, ml, ro2, rl2, nPd, s, ip, lg, elim]
+    ⦃fun r s' => LocEq s' s₀ ∧ bsealW n s₀.mem mo ml ro2 rl2 nPd s ip lg elim = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hP.sealF]
+  simp only [callFn, blockShapeSeal]
+  sym only [lang_grind, arena_grind, ind_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+      stubM_spec p "intern_nanon" n, bsp_spec p hP.alloc hP.pack n] <;>
+    finish (gen := 20) [bsealW]
+
+set_option maxHeartbeats 20000000 in
 theorem bf_spec (p : Prog) (hP : IndPartsProg5 p) (n : Nat) (s₀ : St)
     (nPd cto ctl cso csl rso rsl no nl io lo ll s ip : Word) :
     ⦃fun st => st = s₀⦄ invoke p (exec p (n + 2)) "block_shape_fin"
@@ -385,7 +397,7 @@ theorem bf_spec (p : Prog) (hP : IndPartsProg5 p) (n : Nat) (s₀ : St)
     ⦃fun r s' => LocEq s' s₀ ∧ bfW n s₀.mem nPd cto ctl cso csl rso rsl no nl io lo ll s ip = some (r, s'.mem); ⊤⦄ := by
   rw [invoke_eq _ hP.fin]
   simp only [callFn, blockShapeFin]
-  sym only [lang_grind, arena_grind, ind_grind] =>
+  sym (gen := 24) (instances := 30000) only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
       bct_spec p hP.toIndPartsProg4 hP.ctorsOf (n + 1),
       plW_spec p hP.alloc hP.copy hP.cons hP.slGet hP.paramFind hP.paramPush hP.internParam hP.plGo hP.pl (n + 1),
@@ -393,7 +405,8 @@ theorem bf_spec (p : Prog) (hP : IndPartsProg5 p) (n : Nat) (s₀ : St)
       bmo_spec p hP.toIndPartsProg4 hP.rec4 hP.membersOf (n + 1),
       brs_spec p hP.toIndPartsProg4 hP.rec6 hP.rhssOf hP.recsOf (n + 1),
       bsl_spec p hP.toIndPartsProg4 hP.erCopy hP.erToIw hP.slEq hP.large n,
-      stubM_spec p "intern_nanon" (n + 1), bsp_spec p hP.alloc hP.pack (n + 1)] <;>
-    finish (gen := 20) (instances := 4000) [bfW, rdW_eq]
+      bseal_spec p hP n] <;>
+    finish (gen := 20) [bfW, rdW_eq, bbK8_some, bbK9_some, bbK10_some, bbK11_some, bbK12_some,
+      bbK13'_some, bgoK3_some]
 
 end L.Ind

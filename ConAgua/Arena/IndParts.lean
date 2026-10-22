@@ -714,13 +714,26 @@ def blockShapePack : FunDecl := lfn (mo, ml, ro, rl, nP, elim, s, large, isProp)
   return q
 }
 
+/-- `block_shape_seal`: which eliminator, then the record (split off `block_shape_build`). -/
+-- con-ron: ConRon/Arena/Inductives/BlockParts.lean:327-384 ConRon.Arena.blockShape?
+@[l_impl ConRon.Arena.blockShape?]
+def blockShapeSeal : FunDecl := lfn (mo, ml, ro2, rl2, nPd, s, isProp, largeOk, elim) locals (e, q) {
+  if largeOk != 0 {
+    q := call block_shape_pack(mo, ml, ro2, rl2, nPd, elim, s, 1, isProp);
+    return (1, q)
+  };
+  e := call intern_nanon();
+  q := call block_shape_pack(mo, ml, ro2, rl2, nPd, e, s, 0, isProp);
+  return (1, q)
+}
+
 /-- `block_shape_fin`: `blockShape?`'s last stretch — the constructors, the levels, the groups,
 the members and recursors, which eliminator, the record (lane `indproofs2`: split off
 `block_shape_build`). -/
 -- con-ron: ConRon/Arena/Inductives/BlockParts.lean:327-384 ConRon.Arena.blockShape?
 @[l_impl ConRon.Arena.blockShape?]
 def blockShapeFin : FunDecl := lfn (nPd, cto, ctl, cso, csl, rso, rsl, no, nl, io, lo, ll, s, isProp)
-    locals (cvR0, cof, cl2, lvls, go, gl, mo, ml, ro2, rl2, largeOk, elim, q) {
+    locals (cvR0, cof, cl2, lvls, go, gl, mo, ml, ro2, rl2, largeOk, elim, ok, q) {
   cvR0 := IW.u64[IW.u64[rso]];
   (cof, cl2) := call block_shape_ctors_of(cso, csl);
   lvls := call param_levels(lo, ll);
@@ -728,13 +741,8 @@ def blockShapeFin : FunDecl := lfn (nPd, cto, ctl, cso, csl, rso, rsl, no, nl, i
   (mo, ml) := call block_shape_members_of(cto, ctl, io, go);
   (ro2, rl2) := call block_shape_recs_of(no, nl, rso, rsl);
   (largeOk, elim) := call block_shape_large(cvR0, lo, ll);
-  if largeOk != 0 {
-    q := call block_shape_pack(mo, ml, ro2, rl2, nPd, elim, s, 1, isProp);
-    return (1, q)
-  };
-  elim := call intern_nanon();
-  q := call block_shape_pack(mo, ml, ro2, rl2, nPd, elim, s, 0, isProp);
-  return (1, q)
+  (ok, q) := call block_shape_seal(mo, ml, ro2, rl2, nPd, s, isProp, largeOk, elim);
+  return (ok, q)
 }
 
 /-- `block_shape_tail`: the result sort and `isProp`, then `block_shape_fin` (split off
@@ -885,7 +893,7 @@ def indPartsFns : Prog :=
    ("block_shape_ctors_of", blockShapeCtorsOf), ("block_shape_members_of", blockShapeMembersOf),
    ("block_shape_rhss_of", blockShapeRhssOf), ("block_shape_recs_of", blockShapeRecsOf),
    ("block_shape_large", blockShapeLarge), ("block_shape_pack", blockShapePack),
-   ("block_shape_fin", blockShapeFin), ("block_shape_tail", blockShapeTail), ("block_shape_build", blockShapeBuild), ("block_shape", blockShape), ("block_parts", blockParts),
+   ("block_shape_seal", blockShapeSeal), ("block_shape_fin", blockShapeFin), ("block_shape_tail", blockShapeTail), ("block_shape_build", blockShapeBuild), ("block_shape", blockShape), ("block_parts", blockParts),
    ("block_large_elim_allowed", blockLargeElimAllowed),
    ("check_shapeless_formers", checkShapelessFormers), ("check_shapeless", checkShapeless),
    ("check_ind_decl", checkIndDecl)]
