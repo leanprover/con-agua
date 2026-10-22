@@ -214,4 +214,85 @@ theorem ruleWords_congr {m m' : Mem} (hI : m'.arr64 IW = m.arr64 IW) {B : Nat}
           rw [UInt64.ofNat_add]; ac_rfl
         rw [e]; exact h (j + 1) (by omega))
 
+
+theorem ruleWords_get (m : Mem) : ∀ (ro : Word) (k j i : Nat), j < k → i < 11 →
+    (ruleWords m ro k)[11 * j + i]? = some (rdW (m.arr64 EREC) (rdW (m.arr64 IW) (ro + UInt64.ofNat j) + UInt64.ofNat i))
+  | _, 0, _, _, hj, _ => absurd hj (by omega)
+  | ro, k + 1, 0, i, _, hi => by
+    simp only [ruleWords, Nat.mul_zero, Nat.zero_add, show (UInt64.ofNat 0 : Word) = 0 from rfl, UInt64.add_zero]
+    rw [List.getElem?_append_left (by simp [recWords]; omega)]
+    rcases (show i = 0 ∨ i = 1 ∨ i = 2 ∨ i = 3 ∨ i = 4 ∨ i = 5 ∨ i = 6 ∨ i = 7 ∨ i = 8 ∨ i = 9 ∨ i = 10 by omega)
+      with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> simp [recWords] <;> rfl
+  | ro, k + 1, j + 1, i, hj, hi => by
+    simp only [ruleWords]
+    rw [List.getElem?_append_right (by simp [recWords]; omega)]
+    have e : 11 * (j + 1) + i - (recWords (m.arr64 EREC) (rdW (m.arr64 IW) ro)).length = 11 * j + i := by
+      simp [recWords]; omega
+    rw [e, ruleWords_get m (ro + 1) k j i (by omega) hi]
+    have e2 : ro + 1 + UInt64.ofNat j = ro + UInt64.ofNat (j + 1) := by rw [UInt64.ofNat_add]; ac_rfl
+    rw [e2]
+
+theorem rteGoW_mem (n : Nat) : ∀ (m m' : Mem) (b ro rl : Word) (r : List Word),
+    rteGoW n m b ro rl = some (r, m') →
+    (∀ j < rl.toNat, (rdW (m.arr64 IW) (ro + UInt64.ofNat j)).toNat + 11 ≤ b.toNat) →
+    b.toNat + 11 * rl.toNat ≤ (m.arr64 EREC).size → (m.arr64 EREC).size < 2 ^ 64 →
+    m' = wrER m b (ruleWords m ro rl.toNat) := by
+  induction n with
+  | zero => intro m m' b ro rl r h; simp [rteGoW] at h
+  | succ n ih =>
+  intro m m' b ro rl r h hold hsz hEs
+  by_cases h0 : rl = 0
+  · rw [rteGoW_nil (h := h0)] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
+    subst h0; rfl
+  rw [rteGoW_cons (h := h0)] at h
+  have hl0 : rl.toNat ≠ 0 := fun e => h0 (UInt64.toNat_inj.mp (by simpa using e))
+  have h00 := hold 0 (by omega)
+  simp only [show (UInt64.ofNat 0 : Word) = 0 from rfl, UInt64.add_zero] at h00
+  have hb11 : b.toNat + 11 < 2 ^ 64 := by omega
+  rw [cpMem_eq h00 hb11] at h
+  cases h1 : rteGoW n (wrER m b (recWords (m.arr64 EREC) (rdW (m.arr64 IW) ro))) (b + 11) (ro + 1) (rl - 1) with
+  | none => rw [h1] at h; cases h
+  | some x =>
+  obtain ⟨r1, m1⟩ := x
+  rw [h1, rteK1_some] at h
+  simp only [Option.some.injEq, Prod.mk.injEq] at h; obtain ⟨-, rfl⟩ := h
+  generalize hW : wrER m b (recWords (m.arr64 EREC) (rdW (m.arr64 IW) ro)) = W at h1
+  have hfr := wrER_frame (recWords (m.arr64 EREC) (rdW (m.arr64 IW) ro)) m b
+  rw [hW] at hfr
+  have hI : W.arr64 IW = m.arr64 IW := hfr.1 IW (by decide) (by decide)
+  have hEsz : (W.arr64 EREC).size = (m.arr64 EREC).size := hfr.2.2.1 EREC
+  have hlow : ∀ i < b.toNat, (W.arr64 EREC)[i]? = (m.arr64 EREC)[i]? := fun i hi => by
+    rw [← hW, wrER_get _ m b i (by simp [recWords]; omega) hEs]
+    rw [if_neg (by omega)]
+  have hb1 : (b + 11).toNat = b.toNat + 11 := by rw [UInt64.toNat_add]; simp; omega
+  have hl1 : (rl - 1).toNat = rl.toNat - 1 := by
+    rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simp; omega))]; simp
+  have hshift : ∀ j < (rl - 1).toNat, (rdW (W.arr64 IW) (ro + 1 + UInt64.ofNat j)).toNat + 11 ≤ (b + 11).toNat := by
+    intro j hj
+    have e2 : ro + 1 + UInt64.ofNat j = ro + UInt64.ofNat (j + 1) := by rw [UInt64.ofNat_add]; ac_rfl
+    rw [hI, e2, hb1]; have := hold (j + 1) (by omega); omega
+  have := ih W m1 (b + 11) (ro + 1) (rl - 1) r1 h1 hshift (by rw [hb1, hEsz, hl1]; omega) (by rw [hEsz]; exact hEs)
+  rw [this, hl1]
+  have hcong : ruleWords W (ro + 1) (rl.toNat - 1) = ruleWords m (ro + 1) (rl.toNat - 1) :=
+    ruleWords_congr hI hlow (ro + 1) _ (fun j hj => by
+      have e2 : ro + 1 + UInt64.ofNat j = ro + UInt64.ofNat (j + 1) := by rw [UInt64.ofNat_add]; ac_rfl
+      rw [e2]; exact hold (j + 1) (by omega))
+  rw [hcong, ← hW]
+  obtain ⟨k, hk⟩ : ∃ k, rl.toNat = k + 1 := ⟨rl.toNat - 1, by omega⟩
+  rw [hk, show k + 1 - 1 = k from rfl]
+  simp only [ruleWords]
+  rw [wrER_append]
+  rfl
+
+theorem mapM_range_some {α : Type} : ∀ (xs : List α) (f : Nat → Option α),
+    (∀ j (hj : j < xs.length), f j = some xs[j]) → (List.range xs.length).mapM f = some xs
+  | [], f, _ => rfl
+  | x :: xs, f, h => by
+    simp only [List.length_cons, List.range_succ_eq_map, List.mapM_cons, List.mapM_map]
+    have h0 : f 0 = some x := h 0 (by simp)
+    have ih := mapM_range_some xs (f ∘ Nat.succ) (fun j hj => h (j + 1) (by simp; omega))
+    simp only [h0, Option.bind_eq_bind, Option.bind_some]
+    rw [ih]; rfl
+
 end L.Ind
