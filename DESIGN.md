@@ -6985,13 +6985,13 @@ already stated with `sorry` in `IndStubs.lean` for the last three), the adapters
   `CoreS.bstk`; `lit`'s `natLitSup`/`constE` are lane `whnf`'s proofs; `lvlsEqC` is
   `lvlsEqCH_of` (below). `defeqCallees_stub` (a `sorry`) is gone. `KnotWF`'s closure list uses the
   real `field_sort_zero` and `inst1`; `Checker/Prog.lean` regenerated.
-* **`StoreDen m a`** (`StoreDen.lean`): the one store invariant the level readers need, because the
+* **`StoreDen m a fe`** (`StoreDen.lean`): the one store invariant the level readers need, because the
   twin compares levels on their readbacks and L on handles: a `sort` node's level, a `const`
   node's level list, the zero pin, the `readNC` cache's rows, and a projection table record's
   structure sort, field sorts and level-parameter names read back. `CoreDen` (`CoreDen.lean`) is
   "`CoreS` implies `StoreDen`": a `KnotCallees` field now (`den`), replacing `StoreDenotes`
   (`StoreDenotes.of_den`). **Proposal (for lane `whnf3`, after its `StackKept` sweep): a field
-  `den : StoreDen m a` in `CoreS`**, which also closes `CoreS.lvl_den` (`⟨hS.den.sort,
+  `den : StoreDen m a fe` in `CoreS`**, which also closes `CoreS.lvl_den` (`⟨hS.den.sort,
   hS.den.zero⟩`), `LvlsEqDen` (the iota lists are stored constants' or the rule's), and
   `ReadNCOK` (helper `defeq2-fsz`'s proposal). Maintenance: the store only grows inside the core,
   so old handles keep their readbacks; the view clauses need a proof only where a `sort`/`const`
@@ -7007,3 +7007,26 @@ already stated with `sorry` in `IndStubs.lean` for the last three), the adapters
   (`CoreS.lvl_den`), `towerSlots`, `strLitSupported`, `strLitCtor`, `supKeep`, `reduceProjCore`,
   `unfold`, `whnfGrows` (lane `whnf`'s/`whnf3`'s), `den`, `constTy` (`inst_lp`), `bstk` (after
   `whnf3`'s `StackKept` structure), `proj` (helper `defeq2-proj`: `infer_proj`).
+
+### Landing 2: `PropRead` in L (helper `defeq2-prop`), `infer_proj` (helper `defeq2-proj`)
+* **`not_proof_fast`/`is_proof_fast` have L code and proofs** (`PropRead.lean`: 18 L functions;
+  `PropReadLoops`, `PropReadW`, `PropReadRefine{,2,3,4}`; ~3600 lines, ~35 s CPU):
+  `notProofFast_core`/`isProofFast_core` (`@[refines]`, as are the sub-walks `typeSortPW`,
+  `headTypePW`, `proofPW`, `peelPisW`, `unwrapIdDefs`, `lamProj?`, …). The `PropWhen` datum is
+  three words `(k, o, c)`: `0` none, `1` `never`, `2` `ifAllZero` with the names in `LH[o, o+c)`;
+  both readers reset the level heap on entry. Exact walk fuel: a new `app_count_at(e, f)` gives
+  `getAppFn` and `numArgs` at fuel `f`. `Level.substPW` on heap names: `spwW_ok_lh`, a variant
+  of lane `levels`' `spwW_ok`. Hypotheses: `CoreDen` (plus `ConstLpsDen`, now the new
+  `StoreDen.constLps`: a stored constant's level-parameter names read back) and lane whnf's
+  `FindProjOK`, `ErecKept`, `ProjFound` (lane `whnf3`). No deviation.
+* **`infer_proj`**: see the helper's section above. L changes: `infer_proj` reads the head's
+  name and levels before `find_proj` (no spec says `find_proj` keeps `CREC`); `infer_proj_at`
+  tests `2 <= ok` (`decO`'s reading). New hypothesis `ErecKeptProj` (`lvl_eq_c` and
+  `field_sort_zero` keep `EREC`; to come from lane `whnf3`'s write-set argument, `CoreErec`).
+* `KnotCallees` now: `whnfCoreStep`, `whnfStep`, `proofIrrel`, `towerSlots`, `findProj`,
+  `erecKept`, `projFound`, `reduceProjCore`, `unfold`, `constTy`, `instLP`, `whnfGrows` (lane
+  `whnf3`); `strLitSupported`, `strLitCtor`, `supKeep` (helper `defeq2-str`, running); `den`
+  (the `CoreS` field, lane `whnf3`); `bstk` (after the `StackKept` sweep); `erecProj`.
+* Merging: lemma-name clashes renamed on this side (`hslice?_bound_fsz`, `projBodyW`);
+  `scripts/checker_prog.py` dumps modules it does not build: build `ConAgua.Rom.CIRead` first, or
+  `rom_ci` comes out as a stub and `checkerProg_wf` fails on `reduce_decl_pin`'s arity.
