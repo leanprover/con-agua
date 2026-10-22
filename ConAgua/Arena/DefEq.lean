@@ -738,10 +738,39 @@ def propIrrelL : FunDecl := lfn (mode, vis, d, a, b) locals (na, nb, ia, ib, r) 
   return r
 }
 
+/-- `etaCert`'s verified-mode check: the λ body's full-grade type against the ∀'s codomain at
+the fresh variable `fv` (split off for the proofs). -/
+-- con-ron: ConRon/Arena/Core.lean:1599-1625 ConRon.Arena.etaCert
+@[l_impl ConRon.Arena.etaCert]
+def etaCertTyL : FunDecl := lfn (mode, vis, d, lhs, cod2, fv) locals (t1, t2, ok) {
+  t1 := call infer(mode, vis, d + 1, lhs);
+  t2 := call inst1(cod2, fv, 0);
+  ok := call defeq(mode, vis, d + 1, t1, t2);
+  return ok
+}
+
+/-- `etaCert` once the domains agree: the bodies at a fresh variable (split off for the
+proofs). The depth capacity: the word `d + 1` must not wrap where the twin's `Nat` does not. -/
+-- con-ron: ConRon/Arena/Core.lean:1599-1625 ConRon.Arena.etaCert
+@[l_impl ConRon.Arena.etaCert]
+def etaCertBodyL : FunDecl := lfn (mode, vis, d, ty1, body1, b, cod2) locals (fv, lhs, rhs, ok) {
+  if d + 1 == 0 { abort };
+  fv := call intern_fvar(d, ty1);
+  lhs := call inst1(body1, fv, 0);
+  rhs := call mk_app(b, fv);
+  ok := call defeq(mode, vis, d + 1, lhs, rhs);
+  if ok == 0 { return 0 };
+  if mode & 1 == 0 {
+    ok := call eta_cert_ty(mode, vis, d, lhs, cod2, fv);
+    return ok
+  };
+  return 1
+}
+
 /-- con-ron: ConRon/Arena/Core.lean:1599-1625 ConRon.Arena.etaCert -/
 @[l_impl ConRon.Arena.etaCert]
 def etaCertL : FunDecl :=
-    lfn (mode, vis, d, ty1, body1, b) locals (nt, tb, hh, t, i, ty2, cod2, ok, fv, lhs, rhs, t1, t2) {
+    lfn (mode, vis, d, ty1, body1, b) locals (nt, tb, hh, t, i, ty2, cod2, ok) {
   nt := call io_neutral(b);
   if nt == 0 { return 0 };
   tb := call infer_io(mode, vis, d, b);
@@ -755,18 +784,8 @@ def etaCertL : FunDecl :=
   cod2 := FAREC.u64[i * 4 + t * 2 + 1];
   ok := call defeq(mode, vis, d, ty2, ty1);
   if ok == 0 { return 0 };
-  fv := call intern_fvar(d, ty1);
-  lhs := call inst1(body1, fv, 0);
-  rhs := call mk_app(b, fv);
-  ok := call defeq(mode, vis, d + 1, lhs, rhs);
-  if ok == 0 { return 0 };
-  if mode & 1 == 0 {
-    t1 := call infer(mode, vis, d + 1, lhs);
-    t2 := call inst1(cod2, fv, 0);
-    ok := call defeq(mode, vis, d + 1, t1, t2);
-    return ok
-  };
-  return 1
+  ok := call eta_cert_body(mode, vis, d, ty1, body1, b, cod2);
+  return ok
 }
 
 /-- con-ron: ConRon/Arena/Core.lean:1540-1555 ConRon.Arena.etaCtorShape -/
@@ -1087,7 +1106,8 @@ def defeqFns : Prog :=
    ("lds_left", ldsLeftL), ("lds_right", ldsRightL), ("lds_both", ldsBothL),
    ("lazy_delta_step", lazyDeltaStepL), ("lazy_delta_reduction", lazyDeltaReductionL),
    ("lazy_delta_proj_reduction", lazyDeltaProjReductionL), ("defeq_proj_pair", defeqProjPairL),
-   ("prop_irrel", propIrrelL), ("eta_cert", etaCertL), ("eta_ctor_shape", etaCtorShapeL),
+   ("prop_irrel", propIrrelL), ("eta_cert_ty", etaCertTyL), ("eta_cert_body", etaCertBodyL),
+   ("eta_cert", etaCertL), ("eta_ctor_shape", etaCtorShapeL),
    ("struct_eta_cert_go", structEtaCertGoL), ("struct_eta_cert_with", structEtaCertWithL),
    ("struct_eta_cert", structEtaCertL), ("struct_unit_cert", structUnitCertL),
    ("stuck_irrel", stuckIrrelL), ("stuck_str", stuckStrL), ("stuck_app", stuckAppL),

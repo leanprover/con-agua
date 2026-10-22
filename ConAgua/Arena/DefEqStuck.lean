@@ -26,12 +26,18 @@ namespace L.Arena
 
 /-- What the stuck side's specs need of a program. -/
 structure StuckProg (p : Prog) : Prop where
+  leaf : DefEqLeafProg p
+  body : InferBodyProg p
   propIrrel : p.lookup "prop_irrel" = some propIrrelL
+  etaCert : p.lookup "eta_cert" = some etaCertL
+  etaCertBody : p.lookup "eta_cert_body" = some etaCertBodyL
+  etaCertTy : p.lookup "eta_cert_ty" = some etaCertTyL
 
 /-- The callees the stuck side assumes. -/
 structure StuckCallees (p : Prog) : Prop where
   defeq : DefeqCallees p
   proofIrrel : ProofIrrelOK p
+  inst1 : Inst1OK p
 
 /-- `proof_irrel` at every L fuel up to `n + 1` from the knot up to `n`. -/
 theorem proofIrrel_at (p : Prog) (hc : StuckCallees p) :

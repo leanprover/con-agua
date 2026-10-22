@@ -57,7 +57,7 @@ globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.A
   "ConAgua.Arena.RecGen", "ConAgua.Arena.RecGenSpec", "ConAgua.Arena.RecCheck", "ConAgua.Arena.RecCheckSpec", "ConAgua.Arena.IndProg", "ConAgua.Arena.IndCopy2",
   "ConAgua.Arena.WhnfSpineRefine", "ConAgua.Arena.WhnfSpineArgs", "ConAgua.Arena.WhnfCoreRefine", "ConAgua.Arena.WhnfCoreStep", "ConAgua.Arena.WhnfCoreLoop", "ConAgua.Arena.WhnfCoreApp", "ConAgua.Arena.WhnfCoreAppLoop", "ConAgua.Arena.WhnfCoreProj", "ConAgua.Arena.WhnfDelta", "ConAgua.Arena.WhnfDeltaSlot", "ConAgua.Arena.WhnfDeltaRefine", "ConAgua.Arena.WhnfDeltaRefine2", "ConAgua.Arena.WhnfDeltaRefine3", "ConAgua.Arena.WhnfDeltaRefine4", "ConAgua.Arena.WhnfEntry",
   "ConAgua.Arena.DefEq", "ConAgua.Arena.Infer", "ConAgua.Arena.Knot", "ConAgua.Arena.KnotWF", "ConAgua.Arena.KnotSlot", "ConAgua.Arena.InferLeaves", "ConAgua.Arena.DefEqGrindAttr", "ConAgua.Arena.DefEqLeaves", "ConAgua.Arena.DefEqLeaves2",
-  "ConAgua.Arena.InferBodyIntern", "ConAgua.Arena.InferBodyLet", "ConAgua.Arena.InferBodySpine", "ConAgua.Arena.InferBodySpineF", "ConAgua.Arena.InferBodyBind", "ConAgua.Arena.InferBodyBindPi", "ConAgua.Arena.InferBodyDisp", "ConAgua.Arena.DefEqStuck",
+  "ConAgua.Arena.InferBodyIntern", "ConAgua.Arena.InferBodyLet", "ConAgua.Arena.InferBodySpine", "ConAgua.Arena.InferBodySpineF", "ConAgua.Arena.InferBodyBind", "ConAgua.Arena.InferBodyBindPi", "ConAgua.Arena.InferBodyDisp", "ConAgua.Arena.DefEqStuck", "ConAgua.Arena.DefEqStuckEta",
   "ConAgua.Arena.Walk", "ConAgua.Arena.WalkRefine", "ConAgua.Arena.WalkBench", "ConAgua.Arena.WalkEmit",
   "ConAgua.Arena.WalkBenchLean",
   "ConAgua.Capstone", "ConAgua.Compiler.WFAll", "ConAgua.Compiler.WFAllBench",
