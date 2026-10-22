@@ -7427,3 +7427,21 @@ grows (the memo library's capacity rule, as every L memo). Refinement: not yet (
   with lane defeq2's `lv_lookup`/`lv_spw`; they need their own names (and so their own copies of
   `lv_substl`/`lv_substpw`, which call those names) before they can land. D23 (no `lp` cutoff in
   L's derived words) blocks `InstLPOK`: either an `lp` bit in `DerR` or `StoreWF` in `CoreS`.
+
+## The whnf side of the knot finished (2026-10-22, lane `whnf4`)
+
+### Landing 1: helper `whnf3-lp`'s `instLP` family (branch `whnf3-next`)
+* The family's level substitution gets its own names (`LevelSubstLP.lean`): `lp_lookup`
+  (`lvLookupG SPN POOL`'s body), `lp_substl`, `lp_spw` (names in `EREC`), `lp_substpw`, each
+  calling the family's names; the models (`lookupW SPN POOL`, `substLW SPN POOL`,
+  `spwW SPN POOL EREC`, `substPWW …`) and their refinements are lane `levels`' generic ones, only
+  the four call specs are restated (copies of `LevelSubstL`'s). Lane `defeq2`'s `lv_lookup`/
+  `lv_spw` bindings are untouched. Not unified into one parametric function: L calls name their
+  callee literally (`call f(…)`), so a parametric body would need a renaming of statements and
+  specs proved through it; four 10-line copies are cheaper.
+* L code of the walk (`lp_go` and its arms, the three memos, `inst_lp`, `inst_lp_fast`,
+  `rec_fire_levels`, `caps_never_zero`) now in `checkerProg` (`Checker/Prog.lean`: 1690
+  functions, 9 stubs, was 13); `coreFns` 533 functions (was 498), `checkerProg_coreErec` holds.
+  Refinements as landed by the helper: `recFireLevels`, `capsNeverZero`, `substLevelsAt`,
+  `substParamLevels`, `internLevel`, `internLsNode` (ArenaD level). Open: the walk itself
+  (`InstLPOK`), blocked by D23.
