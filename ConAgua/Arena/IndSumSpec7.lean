@@ -229,3 +229,228 @@ theorem structUsedLater_refines (hcl : p.lookup "hb_clear" = some (memoClearG hb
   exact ⟨hl, hok, by rw [hres]; exact hb, hM', by rw [hst]; exact hS', hg⟩
 
 end census
+
+/-! ## `struct_used_later_list`: the word model -/
+
+/-- `usgW` at the callee's own exec fuel (zero: the call cannot return). -/
+def usg0 : Nat → Mem → Word → Word → Word → Option (Word × Mem)
+  | 0, _, _, _, _ => none
+  | n + 1, m, cty, nP, j => usgW n m cty nP j
+
+/-- The empty slice. -/
+def ulK0 : Option (Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (q, m1) => some ([q, 0], m1)
+/-- After the cons. -/
+def ulK3 : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rc, m3) => some ([rc.headD 0, rc.tail.headD 0], m3)
+/-- After the recursion: the cons. -/
+def ulK2 (k : Nat) (r : Word) : Option (List Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (rr, m2) => ulK3 (consW k m2 r (rr.headD 0) (rr.tail.headD 0))
+
+mutual
+def ulW : Nat → Mem → Word → Word → Word → Word → Option (List Word × Mem)
+  | 0, _, _, _, _, _ => none
+  | k + 1, m, cty, nP, n, base =>
+    if n = 0 then ulK0 (allocW m 0) else ulK1 k cty nP n base (usg0 k m cty nP base)
+/-- After `struct_used_later_go`: the recursion. -/
+def ulK1 (k : Nat) (cty nP n base : Word) : Option (Word × Mem) → Option (List Word × Mem)
+  | none => none
+  | some (r, m1) => ulK2 k r (ulW k m1 cty nP (n - 1) (base + 1))
+end
+
+section ulArms
+variable (k : Nat) (m m1 m2 : Mem) (cty nP n base r q : Word) (rr : List Word)
+theorem ulW_zero (hn : n = 0) : ulW (k + 1) m cty nP n base = ulK0 (allocW m 0) := by simp [ulW, hn]
+theorem ulW_succ (hn : n ≠ 0) :
+    ulW (k + 1) m cty nP n base = ulK1 k cty nP n base (usg0 k m cty nP base) := by simp [ulW, hn]
+theorem ulK0_some : ulK0 (some (q, m1)) = some ([q, 0], m1) := rfl
+theorem ulK1_some : ulK1 k cty nP n base (some (r, m1)) = ulK2 k r (ulW k m1 cty nP (n - 1) (base + 1)) := by
+  rw [ulK1]
+theorem ulK2_some : ulK2 k r (some (rr, m2)) = ulK3 (consW k m2 r (rr.headD 0) (rr.tail.headD 0)) := rfl
+theorem ulK3_some (rc : List Word) : ulK3 (some (rc, m2)) = some ([rc.headD 0, rc.tail.headD 0], m2) := rfl
+end ulArms
+
+grind_pattern [ind_grind] ulW_zero => ulW (k + 1) m cty nP n base
+grind_pattern [ind_grind] ulW_succ => ulW (k + 1) m cty nP n base
+grind_pattern [ind_grind] ulK0_some => ulK0 (some (q, m1))
+grind_pattern [ind_grind] ulK1_some => ulK1 k cty nP n base (some (r, m1))
+grind_pattern [ind_grind] ulK2_some => ulK2 k r (some (rr, m2))
+grind_pattern [ind_grind] ulK3_some => ulK3 (some (rc, m2))
+
+section ulspec
+variable (p : Prog) (hv : p.lookup "e_view" = some eView)
+  (hf : p.lookup "hb_find" = some (memoFindG hbSch)) (hput : p.lookup "hb_put" = some (memoPutG hbSch))
+  (hins : p.lookup "has_loose_b_var_b_ins" = some hasLooseBVarBInsL)
+  (hgo : p.lookup "has_loose_b_var_b_go" = some hasLooseBVarBGoL)
+  (hsg : p.lookup "struct_used_later_go" = some structUsedLaterGoL)
+  (ha : p.lookup "iw_alloc" = some iwAlloc)
+  (hc : p.lookup "iw_copy" = some iwCopy) (hsc : p.lookup "sl_cons" = some slCons)
+  (hp : p.lookup "struct_used_later_list" = some structUsedLaterListL)
+
+include hv hf hput hins hgo hsg in
+theorem structUsedLaterGo_spec0 (n : Nat) (s₀ : St) (cty nP j : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_used_later_go" [cty, nP, j]
+    ⦃fun r s' => LocEq s' s₀ ∧ usg0 n s₀.mem cty nP j = some (r.headD 0, s'.mem); ⊤⦄ := by
+  cases n with
+  | zero =>
+    rw [invoke_eq _ hsg]; simp only [callFn, structUsedLaterGoL]; vcgen [exec] <;> grind
+  | succ n => exact structUsedLaterGo_spec p hv hf hput hins hgo hsg n s₀ cty nP j
+
+include hv hf hput hins hgo hsg ha hc hsc hp in
+theorem ulW_spec (n : Nat) : ∀ (s₀ : St) (cty nP m base : Word),
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_used_later_list" [cty, nP, m, base]
+    ⦃fun r s' => LocEq s' s₀ ∧ ulW n s₀.mem cty nP m base = some (r, s'.mem); ⊤⦄ := by
+  induction n with
+  | zero =>
+    intro s₀ cty nP m base; rw [invoke_eq _ hp]; simp only [callFn, structUsedLaterListL]
+    vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ cty nP m base
+    rw [invoke_eq _ hp]
+    simp only [callFn, structUsedLaterListL]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
+        structUsedLaterGo_spec0 p hv hf hput hins hgo hsg n, iwAlloc_specW p ha n,
+        slCons_specW p ha hc hsc n, ih] <;> finish (gen := 20)
+
+end ulspec
+
+/-! ## `struct_used_later_list`: the relation to the twin -/
+
+/-- The numbers a list of answers is stored as. -/
+def bnums (bs : List Bool) : List Nat := bs.map (fun b => if b then 1 else 0)
+
+theorem ulW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} (k : Nat) :
+    ∀ (m m' : Mem) (a : AState) (cty nP n base : Word) (r : List Word)
+      (mp : Std.HashMap (EIdx × Nat) Bool),
+    2 ^ 31 + k ≤ coreWalkFuel → nP.toNat + base.toNat + n.toNat + 1 < 2 ^ 64 → H cty →
+    StageR dn vis fe m a → hbMR m mp → ulW k m cty nP n base = some (r, m') →
+    ∃ bs mp' a', (structUsedLaterList (decI cty) nP.toNat mp n.toNat base.toNat).run a = .ok (bs, a') ∧
+      decNL m' (r.headD 0).toNat (r.tail.headD 0).toNat = some (bnums bs) ∧ r.tail.headD 0 = n ∧
+      (r.headD 0).toNat + n.toNat = iwTop m' ∧ hbMR m' mp' ∧ StageR dn vis fe m' a' ∧ IWGrow m m' := by
+  induction k with
+  | zero => intro m m' a cty nP n base r mp _ _ _ _ _ h; simp [ulW] at h
+  | succ k ih =>
+    intro m m' a cty nP n base r mp hk hb hc hS hM h
+    by_cases hn0 : n = 0
+    · rw [ulW_zero k m cty nP n base hn0] at h
+      cases hal : allocW m 0 with
+      | none => rw [hal] at h; simp [ulK0] at h
+      | some pr =>
+        obtain ⟨q, m1⟩ := pr
+        rw [hal, ulK0_some] at h
+        simp only [Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        obtain ⟨hS1, hg1, hq, htop⟩ := allocW_stage hal hS
+        obtain ⟨hI1, hE1, hsz, hEs, hc200⟩ := hS.2
+        obtain ⟨rfl, rfl, -⟩ := allocW_facts hal hsz
+        have hM1 : hbMR (allocMem m 0) mp :=
+          memoRV_frame hbSch hbSch_wf lfKey hbVR [IW] [200] (by simp [IW, HBM, hbSch]) (by simp [hbSch])
+            m _ (allocMem_frame m 0) (fun _ _ h => h) mp hM
+        subst hn0
+        refine ⟨[], mp, a, ?_, ?_, rfl, ?_, hM1, hS1, hg1⟩
+        · simp [structUsedLaterList]; rfl
+        · simp [decNL, bnums]
+        · simp only [List.headD_cons, List.tail_cons]; rw [htop, ← hq]
+    · rw [ulW_succ k m cty nP n base hn0] at h
+      have hn1 : (n - 1).toNat = n.toNat - 1 := by
+        have : 1 ≤ n.toNat := by
+          rcases Nat.eq_zero_or_pos n.toNat with h0 | h0
+          · exact absurd (UInt64.toNat_inj.mp (by simpa using h0)) hn0
+          · omega
+        rw [UInt64.toNat_sub_of_le _ _ (UInt64.le_iff_toNat_le.mpr (by simpa using this))]; simp
+      have hb1 : (base + 1).toNat = base.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      have hnn : n.toNat = (n.toNat - 1) + 1 := by
+        have : n.toNat ≠ 0 := fun h0 => hn0 (UInt64.toNat_inj.mp (by simpa using h0))
+        omega
+      cases k with
+      | zero => simp [usg0, ulK1] at h
+      | succ k' =>
+        have hu : usg0 (k' + 1) m cty nP base = usgW k' m cty nP base := rfl
+        rw [hu] at h
+        cases hg : usgW k' m cty nP base with
+        | none => rw [hg] at h; simp [ulK1] at h
+        | some pg =>
+          obtain ⟨rg, m1⟩ := pg
+          rw [hg, ulK1_some] at h
+          obtain ⟨b, mp1, a1, hrun1, hrg, hM1, hS1, hg1⟩ :=
+            usgW_ok k' m m1 a cty nP base rg mp (by omega) (by omega) hc hS hM hg
+          cases hl : ulW (k' + 1) m1 cty nP (n - 1) (base + 1) with
+          | none => rw [hl] at h; simp [ulK2] at h
+          | some pl =>
+            obtain ⟨rr, m2⟩ := pl
+            rw [hl, ulK2_some] at h
+            obtain ⟨bs, mp2, a2, hrun2, hdec, hlen, htop, hM2, hS2, hg2⟩ :=
+              ih m1 m2 a1 cty nP (n - 1) (base + 1) rr mp1 (by omega) (by rw [hn1, hb1]; omega) hc hS1 hM1 hl
+            cases hcw : consW (k' + 1) m2 rg (rr.headD 0) (rr.tail.headD 0) with
+            | none => rw [hcw] at h; simp [ulK3] at h
+            | some pc =>
+              obtain ⟨rc, m3⟩ := pc
+              rw [hcw, ulK3_some] at h
+              simp only [Option.some.injEq, Prod.mk.injEq] at h
+              obtain ⟨rfl, rfl⟩ := h
+              obtain ⟨hI2, hE2, hsz2, hEs2, hc2⟩ := hS2.2
+              have hlen' : (rr.tail.headD 0).toNat = n.toNat - 1 := by rw [hlen, hn1]
+              have hsrc : (rr.headD 0).toNat + (rr.tail.headD 0).toNat ≤ iwTop m2 := by
+                rw [hlen', ← hn1]; exact Nat.le_of_eq htop
+              rw [hn1, hb1] at hrun2
+              obtain ⟨hrc, -, -, hfr3, -, -⟩ := consW_decN hcw hsz2 hc2 hsrc hdec
+              obtain ⟨hS3, hg3, hdec3, htop3⟩ := consW_stageN hcw hS2 hsrc hdec
+              have hM3 : hbMR m3 mp2 :=
+                memoRV_frame hbSch hbSch_wf lfKey hbVR [IW] [200] (by simp [IW, HBM, hbSch]) (by simp [hbSch])
+                  m2 m3 hfr3 (fun _ _ h => h) mp2 hM2
+              have hlen3 : rc.tail.headD 0 = n := by
+                rw [hrc]; simp only [List.tail_cons, List.headD_cons]
+                rw [hlen]; simp
+              refine ⟨b :: bs, mp2, a2, ?_, ?_, ?_, ?_, hM3, hS3, hg1.trans (hg2.trans hg3)⟩
+              · rw [hnn, structUsedLaterList.eq_2]
+                simp only [StateT.run_bind]
+                rw [hrun1]
+                simp only [except_ok_bind, StateT.run_bind]
+                rw [hrun2]
+                simp only [except_ok_bind]
+                rfl
+              · have hrt : rg.toNat = (if b then 1 else 0) := by rw [hrg]; cases b <;> rfl
+                simp only [List.headD_cons, List.tail_cons]
+                rw [hdec3, hrt]; rfl
+              · simp only [List.headD_cons, List.tail_cons]; exact hlen3
+              · rw [hlen3] at htop3; simpa only [List.headD_cons, List.tail_cons] using htop3
+
+section ulCensus
+variable (p : Prog) (hv : p.lookup "e_view" = some eView)
+  (hf : p.lookup "hb_find" = some (memoFindG hbSch)) (hput : p.lookup "hb_put" = some (memoPutG hbSch))
+  (hins : p.lookup "has_loose_b_var_b_ins" = some hasLooseBVarBInsL)
+  (hgo : p.lookup "has_loose_b_var_b_go" = some hasLooseBVarBGoL)
+  (hsg : p.lookup "struct_used_later_go" = some structUsedLaterGoL)
+  (ha : p.lookup "iw_alloc" = some iwAlloc)
+  (hc : p.lookup "iw_copy" = some iwCopy) (hsc : p.lookup "sl_cons" = some slCons)
+  (hp : p.lookup "struct_used_later_list" = some structUsedLaterListL)
+include hv hf hput hins hgo hsg ha hc hsc hp
+
+/-- **`struct_used_later_list` refines `structUsedLaterList`** (through `strip_pis`, `bvar_b`): the answers
+as the `0`/`1` numbers of an `IW` slice, all through the caller's shared `hb` memo. -/
+@[refines ConRon.Arena.structUsedLaterList]
+theorem structUsedLaterList_refines (n : Nat) (s₀ : St) (a₀ : AState) (dn : NIdx → Option ConLeche.Name)
+    (fe : IFEnv) (vis cty nP cnt base : Word) (mp : Std.HashMap (EIdx × Nat) Bool)
+    (hn : 2 ^ 31 + n ≤ coreWalkFuel) (hb : nP.toNat + base.toNat + cnt.toNat + 1 < 2 ^ 64) (hc' : H cty)
+    (hS : StageR dn vis fe s₀.mem a₀) (hM : hbMR s₀.mem mp) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p n) "struct_used_later_list" [cty, nP, cnt, base]
+    ⦃fun r s' => LocEq s' s₀ ∧
+      AM.ok (structUsedLaterList (decI cty) nP.toNat mp cnt.toNat base.toNat) a₀ ∧
+      decNL s'.mem (r.headD 0).toNat (r.tail.headD 0).toNat =
+        some (bnums (AM.res (structUsedLaterList (decI cty) nP.toNat mp cnt.toNat base.toNat) a₀)) ∧
+      r.tail.headD 0 = cnt ∧ (r.headD 0).toNat + cnt.toNat = iwTop s'.mem ∧
+      (∃ mp1, hbMR s'.mem mp1) ∧
+      StageR dn vis fe s'.mem (AM.st (structUsedLaterList (decI cty) nP.toNat mp cnt.toNat base.toNat) a₀) ∧
+      IWGrow s₀.mem s'.mem; ⊤⦄ := by
+  refine triple_post (ulW_spec p hv hf hput hins hgo hsg ha hc hsc hp n s₀ cty nP cnt base) ?_
+  rintro r s' ⟨hl, hm⟩
+  obtain ⟨bs, mp', a', hrun, hdec, hlen, htop, hM', hS', hg⟩ :=
+    ulW_ok n _ _ a₀ cty nP cnt base r mp hn hb hc' hS hM hm
+  obtain ⟨hok, hst, hres⟩ := AM.of_run_ok _ _ _ _ hrun
+  exact ⟨hl, hok, by rw [hres]; exact hdec, hlen, htop, ⟨mp', hM'⟩, by rw [hst]; exact hS', hg⟩
+
+end ulCensus
