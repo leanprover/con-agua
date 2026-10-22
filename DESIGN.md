@@ -7565,3 +7565,15 @@ must supply before the `stubM "all_level_params_defined"` uses can go: `ApdEnv a
 (`NStoreWF` and `StoreDen`'s level fields — again the twin's well-formedness the stage relation
 lacks, as for `LitInj`/`TwinOK`), the parameter names read back, and some memo in `APDM` on
 entry. The memo-hit bug (the probe depth returned as the value) was found by this spec.
+
+### Landing 10: helper `rec3`
+* Helper `rec3` (73 min): sorry-free `targetAbsGo`/`targetAbs` (the `ta` memo of the current
+  memory threaded through pre and post), `classFeR`, `ClassRead.classes`; through stubs
+  `classRulesOk`, `classRecsRulesOk`, `auxRuleFire` (with `PoolSmall`, lane decls3's), and
+  `classStreamRecs`. The hypotheses `RecsOK` (class_stream_recs) and `SlotsExt`
+  (class_read_classes) are now derived from `DecB` inputs plus the caller's slice bound
+  (`rec3RecsOK_of_decB`, `rec3SlotsExt_of_decB`); `CVExt`/`CKExt` accept an empty slice at any
+  offset (and `decCV_copy`/`cvNew_stage`/`decCVp_grow`'s matching hypothesis likewise). L: loops
+  to self-recursion, `target_abs_node`'s arms inlined, a capacity abort on `nP + |slots| + nF`, a
+  name-handle guard in `class_fe_r_rec`; D18 extended. ~2.6k proof lines for ~170 L lines.
+* Census: phase 8 **78 proven, 75 sorry, 64 written, 6 todo**; totals 718 proven / 119 sorry.
