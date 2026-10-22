@@ -69,6 +69,9 @@ per-function separation logic.
 - Do not `simp` the condition of a `dite` whose branches hold proofs that use the hypothesis (a
   `Char`'s validity, a `Fin` bound): the casts it leaves cost the kernel seconds. Step through it with
   `dite_eq_left`/`dite_eq_right` and an `iff` for the condition.
+- A long `&&`/`||` chain in an `if` costs `vcgen` one path per exit, and consecutive chains multiply.
+  Pass `L.evalC_spec`/`L.evalE_spec` (`L/PureEval.lean`) instead of `evalC`/`evalE`, then
+  `simp only [Cond.pval, Expr.pval, …] at *` before `grind`.
 - Known vcgen gaps: no `eq_def` fallback; `ite` equations are ignored; an over-applied `ite` doesn't split; specs
   aren't found through projections; precondition-only arguments stay metavariables; pattern lambdas from another
   module don't match; equation generation fails for structural recursion that matches under a bind. Kraken's
