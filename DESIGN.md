@@ -5452,6 +5452,34 @@ denser than the Rust).
 * Merged master into `defeq-slots` (WhnfCoreApp's `mkAppW_hw` fix). No `sorry`; ~875 lines,
   5.2 s CPU.
 
+### The inference bodies (`InferBody*.lean`, helper `defeq-infer`)
+* **`InferBodySpec p n` and `InferIOBodySpec p n` are theorems** (`inferBody_refines`,
+  `inferBodyIO_refines`, `InferBodyDisp.lean`), hence `inferSlot_step`/`inferIOSlot_step`
+  (`WhnfCallees.inferStep`/`inferIOStep`), from `KnotUpTo p n`, the programs (`InferAllProg`) and
+  `InferCallees`: `inst1`, `inst_list`, `abs_entry`, `ar_entry`, `const_ty_at`, the `infer_lit`
+  callees, `is_eager_reduce`, **`infer_proj` (`InferProjOK`, not proved: the table's `structSort`
+  must denote for `lvl_eq_c`'s refinement, an environment invariant nobody states yet)**, and two
+  binder-stack facts below. Both specs now carry `n ≤ 2^62` (KnotSlot.lean).
+* Every clause is proved: `infer_let`, `infer_lam_io`, `infer_forall_io` (`InferBodyLet`), the
+  spines (`InferBodySpine`, `InferBodySpineF`: loops as named blocks, fuel models, `SpPost`), the
+  telescopes (`InferBodyBind`, `InferBodyBindPi`: `lamsFull_ref`/`pisFull_ref`, `TelPost`), the
+  interning leaves under `CoreS` (`InferBodyIntern`: `CoreS.of_level` for level nodes via
+  `LStore.intern_ext`).
+* **The binder stack is not in `CoreAfter`.** `StackKept` covers `SPN`/`CTL[136]` only, so the
+  telescopes assume `BStkCallees` (`infer`, `whnf`, `inst_list`, `ar_entry`, `ensure_sort` keep
+  `BSTK` below `CTL[137]` and `CTL[137]`) and `BStkCap` (`BSTK` has fewer than `2^63` words under
+  `CoreS`). To discharge them: a field `bstk` in `CoreS` (as `spn`) and `BKept` in `StackKept`,
+  proved by every core body (lane `whnf`'s files construct both about 15 times).
+* **L changes** (Infer.lean): `infer_lam_io`/`infer_forall_io` abort at `d + 1 = 0`;
+  `infer_lam`/`infer_forall` abort at `d ≥ 2^63` (depth capacities: the twin's depth is a `Nat`);
+  `infer_spine`/`infer_spine_io` abort when `CTL[136]` is past the stack (so the empty accumulator
+  is a slice; `head_and_args` at an `app` handle needs no such bound, `headAndArgs_app`).
+* Proof style: `vcgen` + `simp_all` for the specs (`finish` blew up on `List.cons.injEq` with six
+  calls), `ld64_rdW_spec`/`st64_spec` instead of unfolding `ld64`/`st64` (a read's bound proof as
+  an argument blocks `simp_all`). **Kernel deep recursion**: `simp` (`↓reduceIte`) on a goal holding
+  `inferLams …`/`inferPis …` at the literal `peelFuel` made the kernel unfold the structural
+  recursion; `rw [if_pos rfl]` instead. ~4400 lines, ~29 s CPU.
+
 ## Phase 2, round 3: the step's specs, promotion, the pin variants (2026-10-22, lane `decls2`)
 
 ### The stale loop targets (`installStep`, `installDeclStep`, `checkPending`, `checkPendingList`)
@@ -5743,6 +5771,21 @@ links 0 (`@[l_impl]` moved off the ROM readers, which are functions of the ROM, 
   `vcgen` 26 s → 1.4 s, largest `grind` 7.8 s; module 100 s (contended) → 17 s (Lake).
 - The same cause is behind `Scan.Line` (`lineLoop_spec`, `||` chains over the key code).
 
+### `Scan.Line` (117 s): not fixed, diagnosis
+
+- Nearly all of it is `lineLoop_spec` (108 s uncontended): `vcgen` takes 1 s and leaves 89 goals;
+  `finish` on them takes the rest (~1.2 s each, part of it shown as `sym`'s own time). With the
+  `finish`es replaced by `sorry` the theorem takes under 2 s.
+- `L.evalC_spec` does not help here: the `||` chains over the key code `k` become disjunctive
+  hypotheses, and `finish` then needs more case splits than the separate paths cost (85 s with 5
+  goals failing at the default split limit; 139 s with `splits := 24`, one goal 55 s). With
+  `[grind norm]` on the `pval` equations `finish` sees the unfolded conditions, so the remaining
+  cost is the splitting itself.
+- What should work: the PLAN recipe, one named block per arm group of the dispatch (the six
+  `else if k == …` groups), each with its own spec, so that each goal sees one arm's callee posts
+  instead of all of them. That changes the L code's shape (not its behaviour), so it is left to the
+  owner of `Scan/Line.lean`.
+
 ### `Scan/Records.lean` split (2270 lines)
 
 Pure move, as in `Front/FieldsDecl*`: `Records.lean` keeps the L code and the models (1357
@@ -5819,3 +5862,92 @@ hook; `rec`: `RecClass`/`RecGen`/`RecCheck`; `pos`: `IndPos`/`IndPos2`).
   `lvlEqCStage_spec` has the same gap). The patch is kept out of the tree (no dead code).
 * Census (`--no-build --list`, this branch on master `1ffa2b1`): phase 8 **60 proven, 36 sorry,
   119 written, 8 todo** (lane start 58 / 38 / 119 / 8).
+
+### Landing 4: the inference bodies (helper `defeq-infer`); a request to lane `whnf`
+* `inferBody_refines`, `inferBodyIO_refines`: `InferBodySpec p n`/`InferIOBodySpec p n` are
+  theorems from `KnotUpTo p n` and `InferCallees` (callee hypotheses); with `KnotSlot.lean` they give
+  the slot steps `inferSlot_step`/`inferIOSlot_step`. Files `InferBody{Intern,Let,Spine,SpineF,Bind,
+  BindPi,Disp}.lean` (~4.4k lines, 28 s CPU in all). Left in `InferCallees`: the stubs (`Inst1OK`,
+  `InstListOK`, `Abstract1OK`, `AbstractRangeOK`, `ConstTyAtOK`, `InferLitCallees`), `IsEagerReduceH`
+  (now proved in `DefEqLeaves`: to be plugged in), **`InferProjOK`** (`lvl_eq_c` on the table's
+  `structSort` needs a readback of it: an `EnvR` invariant "every level a stored table names has a
+  `denoteL`" is missing), and **`BStkCallees`/`BStkCap`**.
+* **Request to lane `whnf` (owner of `CoreS`/`StackKept`):** the binder stack (array 145, top
+  `CTL[137]`) must be (1) bounded in `CoreS` (a field `bstk : (m.arr64 145).size < 2 ^ 63`, like
+  `spn`) and (2) kept by every core run (`StackKept` gains "`CTL[137]` and `BSTK` below it unchanged").
+  Every core function already keeps it (only `infer_lams`/`infer_pis` write it, and restore the
+  top); the change touches ~15 constructions of `CoreS`/`StackKept` in the whnf files. Until then
+  the two facts are hypotheses here.
+* L changes: depth-capacity aborts (`d + 1 == 0` in the io binder clauses, `d ≥ 2^63` in
+  `infer_lam`/`infer_forall`: the word depth must not wrap where the twin's `Nat` does not); the
+  spines abort when `CTL[136]` is past `SPN`'s end.
+## The pin data as an input (2026-10-22, lane `romload`)
+
+**Decision (user, via the coordinator):** the `Nat`-operation pin variants (con-leche's
+`NatOpPinSet`s) are **an input of the checker, like the export file**: the harness loads a
+pin-data buffer into byte array `1` (`PB`), L decodes it at run time, and the final theorem holds
+at whatever pin list the bytes decode to; bytes that do not decode make `check` abort (decline).
+This replaces lane `decls2`'s "decoder-side ROM loader" and avoids its kernel evaluation of the
+data (≥ 6 h per variant): the kernel never sees the pin data at all, and the program `p` does not
+depend on it.
+
+### Does it compose with the final theorem? (checked)
+
+* `TwinAccepts [b]` already quantifies the pin list (`∃ pins …, internAllPins pins sD = .ok …`),
+  and con-leche's soundness holds at every list: `Model.checkDeclsPure_sound_of` needs only
+  `μ.isVerified = true` (`vendor/con-leche/ConLeche/Model/Fold.lean:221`); the model never reads a
+  pin or a proof blob, the certificate *statements* are hand-pinned in con-leche's checker and
+  shared by every variant (`NatOpPinSet.lean`'s module doc). `twinAccepts_model`/`no_False` take
+  the pins from `TwinAccepts` and pass them through unchanged.
+* **Shape change** (`ConAgua/Final/Statement.lean`): `loadMem b pb s8 s64` puts `pb` in byte array
+  `1`; `PipelineRefines p` quantifies `∀ pb` (with `pb.size < 2^63`), and the three theorems take
+  `pb` and `hpb`. Nothing else changes: `TwinAccepts [b]` is about the input only. The obligation
+  for the pipeline proof is that `check`'s pin stage, run on `pb`, refines `internAllPins P` for
+  the list `P` it decoded (`∃ P` in the stage's post).
+* **What else assumes "the real pins"? Nothing in the theorem.** Places that mention a pin list:
+  (1) the e2e reference `e2e-ref` runs the twin "at the program's pin list" (`romPins = []` so far):
+  it must run at the list the buffer decodes to, i.e. `natOpPinSets.take 1` for the generated
+  buffer (lane `e2e`); (2) ROADMAP §3 (c)'s single-toolchain decision: a buffer may hold several
+  variants; L's "no recovery" (abort where the twin's `orElseAttempt` would try the next variant)
+  stays a completeness loss only; (3) **the prelude is not free in `TwinAccepts`**:
+  `builtinPreludeE` is the twin's fixed function on the twin's fixed prelude bytes, so L's prelude
+  bytes must equal them (a proof obligation of lane `prelude`, not a soundness question; making
+  the prelude an input too would need `TwinAccepts` to quantify the prelude bytes; con-leche's
+  side, `stages_frame`, already holds at any `preC`). Not a soundness subtlety: a pin list only
+  enables a `Nat` operation's literal fast path after the stored definition is defeq to the
+  variant's pin and the variant's certificates check against con-leche's own statements.
+* Trusted base: unchanged in kind. The loader now also loads the pin-data file into byte array
+  `1` (`hmem`'s layout); its contents are untrusted (any `pb`), and so is the generator.
+
+### The buffer (`ConAgua/Rom/PinStream.lean`, `ConAgua/Rom/Gen.lean`)
+
+`pinBuffer pins = romData ++ encPinSets pins`: the startup data the twin interns *exactly*
+(`romData`, `Prelude.lean`: pin names, basis blocks, axiom shapes; 9 542 bytes), then the variant
+count and per variant the eight pins (`encExprM []` each: fresh memo, as `internExpr`) and the eight
+certificate lists (length, then the expressions at one memo, as `internExprList`).
+`lake exe romgen OUT` writes it for `natOpPinSets.take 1` (con-leche's repository-toolchain variant):
+**500 540 bytes** (490 998 of pin data), **1.1 s** natively. Expression literals: tag `3` is now a
+`natVal` below `2^64` (the pins use `0`, `1`, `2`); a string literal is tag `11` (no reader).
+
+Why the startup data is in the buffer too: one reader family. `check` first compares
+`PB[0 ‥ |romData|)` with its own copy (`romData`, the program's constant data) and aborts on a
+difference; after that every reader reads `PB`. The readers' proofs stay the ROM proofs: a
+**substitution lemma** (a program that never stores to byte array `PB` runs exactly as the program
+with every `ld8 PB i` replaced by `ldc bs i`, `bs` the buffer) turns the real program into one whose
+readers are literally `romName bs`, `romExpr bs`, … (`rom := bs`). The startup part keeps its
+encoder-direction proofs (`bs = romData ++ rest` by the prefix check); the pin part needs the
+decoder direction: "the reader returned ⇒ the bytes are `encExprM seen e ++ rest` for some `e`",
+then the existing specs apply. Two run-time checks make that true for every byte string:
+* names: every string byte below `128` (ASCII, so the bytes are some `String`'s UTF-8);
+* canonical back references: the encoder writes a compound subterm out only when the twin's memo
+  misses; on arbitrary bytes L would re-intern a subterm the twin's memo hits. L keeps the handles
+  of the current memo in a hash set (`RSET`, the memo library's schema) and aborts when an
+  explicitly encoded compound node's handle is already in it; con-ron's `denoteE_inj` turns that
+  into "the twin's memo misses". (A linear scan of `RMEMO` instead would cost ≈ 1.3·10^8 steps per
+  run on this buffer: Σ n²/2 over the memo calls.)
+
+Memory map additions: byte array `1` = `PB`; word array `150` = `RSET` (`CTL[148]`, `CTL[149]`
+its stamp and count); `CTL[150]`, `CTL[151]` the variant list (`EREC` offset, count).
+
+For lane `e2e`: the harness loads the pin-data file into byte array `1` (`_tmp/romload/pins.bin`,
+from `lake exe romgen`), and the program has `nb = 2`.
