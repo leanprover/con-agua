@@ -289,4 +289,29 @@ theorem tmfW_sim {p : Prog} (hP : TmfProg p) {dn : NIdx → Option ConLeche.Name
   rintro r x' m' a' ⟨h1, h2, h3, h4⟩
   exact ⟨by simpa using h1, h2, hg12.trans h3, h4⟩
 
+/-- **`target_major_of` refines `targetMajorOf`** (through the `get_app_fn`/`get_app_args`,
+`mk_app_n`, `lvl_eq_c`, `inst_lp_fast`, `fvar_b` stubs; `bvar_b` the master's walk): the block's shape
+decoded below the tops with its members' slice below the top, the members' constructors as `checkBlockCtors`
+returns them, the parameter slices decoded below the tops; the walk memos well formed (`PosMR`), the
+environment's constructor records' counts word-sized (`CtorSums`, as for `nestContainer`), the exec fuel
+below `coreWalkFuel`. -/
+@[refines ConRon.Arena.targetMajorOf]
+theorem targetMajorOf_refines {p : Prog} (hP : TmfProg p) (dn : NIdx → Option ConLeche.Name) (vis : Word)
+    (fe : IFEnv) (hcs : CtorSums fe) (n : Nat) (hn : 2 ^ 31 + n ≤ coreWalkFuel) (s₀ : St) (a₀ : AState)
+    (pp cao cal pfo pfl fvo fvl mty : Word) (bs : BlockShape) (css : List (List (IConstantVal × Nat)))
+    (pfvs fvs : List EIdx) (hS : StageR dn vis fe s₀.mem a₀) (hq : DecB (fun m => decBS m pp.toNat) s₀.mem bs)
+    (hsrc : ShapeSrc s₀.mem pp) (hcss : PSlR decCNS css cao cal s₀.mem)
+    (hpf : DecB (fun m => decHL m pfo.toNat pfl.toNat) s₀.mem pfvs)
+    (hfv : DecB (fun m => decHL m fvo.toNat fvl.toNat) s₀.mem fvs) (hfvb : fvo.toNat + fvl.toNat ≤ iwTop s₀.mem)
+    (hmty : H mty) (hPm : PosMR s₀.mem) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "target_major_of" [vis, pp, cao, cal, pfo, pfl, fvo, fvl, mty]
+    ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (ConRon.Arena.targetMajorOf fe bs css pfvs fvs (decI mty)) a₀ ∧
+      DecB (fun m => decTM m (r.headD 0).toNat) s'.mem
+        (AM.res (ConRon.Arena.targetMajorOf fe bs css pfvs fvs (decI mty)) a₀) ∧
+      StageR dn vis fe s'.mem (AM.st (ConRon.Arena.targetMajorOf fe bs css pfvs fvs (decI mty)) a₀) ∧
+      IWGrow s₀.mem s'.mem ∧ PosMR s'.mem; ⊤⦄ :=
+  triple_post (tmf_spec p hP.tmf n s₀ vis pp cao cal pfo pfl fvo fvl mty) fun _ _ ⟨hl, hm⟩ =>
+    let ⟨hok, hQ⟩ := Sim.run (tmfW_sim hP hcs n hn hS hq hsrc hcss hpf hfv hfvb hmty hPm) hm
+    ⟨hl, hok, hQ⟩
+
 end L.Ind
