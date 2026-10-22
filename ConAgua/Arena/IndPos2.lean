@@ -67,32 +67,33 @@ def nestKeysContainsL : FunDecl := lfn (off, l, k) locals (r) {
 }
 
 /-- `nest_occ_any(namesOff, namesLen, lo, hi, off, l)`: `xs.anyM (nestOcc names lo hi ·)`,
-short-circuiting. -/
+short-circuiting, recursively. -/
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:212-216 ConRon.Arena.nestOcc
-def nestOccAnyL : FunDecl := lfn (namesOff, namesLen, lo, hi, off, l) locals (j, x, b) {
-  j := 0;
-  while j < l {
-    x := IW.u64[off + j];
-    b := call nest_occ(namesOff, namesLen, lo, hi, x);
-    if b != 0 { return 1 };
-    j += 1
-  };
-  return 0
+def nestOccAnyL : FunDecl := lfn (namesOff, namesLen, lo, hi, off, l) locals (b, r) {
+  if l == 0 { return 0 };
+  b := call nest_occ(namesOff, namesLen, lo, hi, IW.u64[off]);
+  if b != 0 { return 1 };
+  r := call nest_occ_any(namesOff, namesLen, lo, hi, off + 1, l - 1);
+  return r
+}
+
+/-- `nest_ds_closed_go(hi0, off, l)`: the loop of `nest_ds_closed`, as a recursion. -/
+-- con-ron: none — the loop of nest_ds_closed as a self-recursive function (proof shape)
+def nestDsClosedGoL : FunDecl := lfn (hi0, off, l) locals (b, r) {
+  if l == 0 { return 1 };
+  b := call fvar_b(⟪CWF⟫, IW.u64[off]);
+  if hi0 < b { return 0 };
+  r := call nest_ds_closed_go(hi0, off + 1, l - 1);
+  return r
 }
 
 /-- `nest_ds_closed(ctx, off, l)`: `ds.allM (fun x => do let b ← fvarB coreWalkFuel x; pure (b ≤
 ctx.hiAt 0))`, short-circuiting. -/
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:1038-1097 ConRon.Arena.nestPos
-def nestDsClosedL : FunDecl := lfn (ctx, off, l) locals (hi0, j, x, b) {
+def nestDsClosedL : FunDecl := lfn (ctx, off, l) locals (hi0, r) {
   hi0 := call nest_ctx_hi_at(ctx, 0);
-  j := 0;
-  while j < l {
-    x := IW.u64[off + j];
-    b := call fvar_b(⟪CWF⟫, x);
-    if hi0 < b { return 0 };
-    j += 1
-  };
-  return 1
+  r := call nest_ds_closed_go(hi0, off, l);
+  return r
 }
 
 /-! ## `nestInstType`: the container's former -/
@@ -141,7 +142,7 @@ def nestInstTypeL : FunDecl := lfn (vis, ctx, hi, key) locals
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:746-750 ConRon.Arena.nestResHead
 @[l_impl ConRon.Arena.nestResHead]
 def nestResHeadL : FunDecl := lfn (e) locals (hd) {
-  hd := call get_app_fn(⟪CWF⟫, e);
+  hd := call get_app_fn_f(⟪CWF⟫, e);
   return u64((hd >> 28) == 1)
 }
 
@@ -150,17 +151,9 @@ record, read back through `FvMap.holeImg ctx prog prog.length`. -/
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:752-762 ConRon.Arena.nestCtorNf
 @[l_impl ConRon.Arena.nestCtorNf]
 def nestCtorNfL : FunDecl := lfn (ctx, progOff, progLen, us, dsOff, dsLen, cv, closed) locals
-    (f, ds2Off, ds2Len, j, x, y, ty, nf) {
+    (f, ds2Off, ds2Len, ty, nf) {
   f := call rec5(0, ctx, progOff, progLen, progLen);
-  ds2Off := 0;
-  ds2Len := 0;
-  j := 0;
-  while j < dsLen {
-    x := IW.u64[dsOff + j];
-    y := call replace_fvars(f, x);
-    (ds2Off, ds2Len) := call sl_snoc(ds2Off, ds2Len, y);
-    j += 1
-  };
+  (ds2Off, ds2Len) := call nest_hole_img_ds(f, dsOff, dsLen);
   ty := call replace_fvars(f, closed);
   nf := call rec5(EREC.u64[cv], us, ds2Off, ds2Len, ty);
   return nf
@@ -226,17 +219,14 @@ in the slice, looked up and appended. -/
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:766-778 ConRon.Arena.nestGroupCtors
 @[l_impl ConRon.Arena.nestGroupCtors]
 def nestGroupCtorsL : FunDecl := lfn (vis, nPc, off, l, outOff, outLen) locals
-    (j, c, ok, nPc2, csOff, csLen) {
-  j := 0;
-  while j < l {
-    c := IW.u64[off + j];
-    (ok, nPc2, csOff, csLen) := call nest_container(vis, c);
-    if ok == 0 { abort };
-    if nPc2 != nPc && csLen != 0 { abort };
-    (outOff, outLen) := call sl_append(outOff, outLen, csOff, csLen);
-    j += 1
-  };
-  return (outOff, outLen)
+    (ok, nPc2, csOff, csLen, r1, r2) {
+  if l == 0 { return (outOff, outLen) };
+  (ok, nPc2, csOff, csLen) := call nest_container(vis, IW.u64[off]);
+  if ok == 0 { abort };
+  if nPc2 != nPc && csLen != 0 { abort };
+  (outOff, outLen) := call sl_append(outOff, outLen, csOff, csLen);
+  (r1, r2) := call nest_group_ctors(vis, nPc, off + 1, l - 1, outOff, outLen);
+  return (r1, r2)
 }
 
 /-- `nest_grow_group(vis, ctx, hi, us, dsOff, dsLen, csOff, csLen, grpOff, grpLen)`: a frame's
@@ -244,17 +234,15 @@ group grown by the named containers, each at the frame's instantiation. -/
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:809-817 ConRon.Arena.nestGrowGroup
 @[l_impl ConRon.Arena.nestGrowGroup]
 def nestGrowGroupL : FunDecl := lfn (vis, ctx, hi, us, dsOff, dsLen, csOff, csLen, grpOff, grpLen)
-    locals (j, c, key, nI, cty, pr) {
-  j := 0;
-  while j < csLen {
-    c := IW.u64[csOff + j];
-    key := call rec4(c, us, dsOff, dsLen);
-    (nI, cty) := call nest_inst_type(vis, ctx, hi, key);
-    pr := call rec2(c, cty);
-    (grpOff, grpLen) := call sl_snoc(grpOff, grpLen, pr);
-    j += 1
-  };
-  return (grpOff, grpLen)
+    locals (c, key, nI, cty, pr, r1, r2) {
+  if csLen == 0 { return (grpOff, grpLen) };
+  c := IW.u64[csOff];
+  key := call rec4(c, us, dsOff, dsLen);
+  (nI, cty) := call nest_inst_type(vis, ctx, hi, key);
+  pr := call rec2(c, cty);
+  (grpOff, grpLen) := call sl_snoc(grpOff, grpLen, pr);
+  (r1, r2) := call nest_grow_group(vis, ctx, hi, us, dsOff, dsLen, csOff + 1, csLen - 1, grpOff, grpLen);
+  return (r1, r2)
 }
 
 /-- `nest_accept_group(us, dsOff, dsLen, grpOff, grpLen, keysOff, keysLen)`: a frame's group
@@ -334,7 +322,7 @@ def nestCtorsU4L : FunDecl := lfn (ksOff, nF, closed) locals (i, kind, su) {
 def nestCtorsResOkL : FunDecl := lfn (ctx, hi, cur) locals (rh, argsOff, argsLen, occ) {
   rh := call nest_res_head(cur);
   if rh == 0 { return 0 };
-  (argsOff, argsLen) := call get_app_args(⟪CWF⟫, cur);
+  (argsOff, argsLen) := call get_app_args_f(⟪CWF⟫, cur);
   occ := call nest_occ_any(IW.u64[ctx], IW.u64[ctx + 1], IW.u64[ctx + 4], hi, argsOff, argsLen);
   return u64(occ == 0)
 }
@@ -467,7 +455,7 @@ def nestFrameL : FunDecl :=
         holesLen, hiTot, outsOff, outsLen, nsOut2) {
   if grpLen == 0 { hn := call intern_nanon() } else { hn := IW.u64[IW.u64[grpOff]] };
   hc := call intern_const(hn, us);
-  app := call mk_app_n(hc, dsOff, dsLen);
+  app := call mk_app_n_f(hc, dsOff, dsLen);
   zz := call infer_type_core(vis, hi, app);
   (prog2Off, prog2Len, namesOff, namesLen) :=
     call nest_frame_grp(vis, ctx, hi, us, dsOff, dsLen, progOff, progLen, grpOff, grpLen);
@@ -658,8 +646,8 @@ def nestPosFvarL :=
 def nestPosAppL : FunDecl :=
     lfn (vis, ctx, fuel, progOff, progLen, kb, hi, w, ns) locals
       (argsOff, argsLen, hd, g2, x2, y2, zz, kind2, occA) {
-  (argsOff, argsLen) := call get_app_args(⟪CWF⟫, w);
-  hd := call get_app_fn(⟪CWF⟫, w);
+  (argsOff, argsLen) := call get_app_args_f(⟪CWF⟫, w);
+  hd := call get_app_fn_f(⟪CWF⟫, w);
   (g2, x2, y2, zz) := call e_view(hd);
   if g2 == 1 {
     kind2 := call nest_pos_fvar(vis, ctx, progOff, progLen, kb, hi, x2, argsOff, argsLen);
@@ -704,7 +692,7 @@ def nestPosL : FunDecl :=
   if fuel == 0 { abort };
   fuel -= 1;
   hi := call nest_ctx_hi_at(ctx, progLen);
-  w := call whnf(vis, dep, e);
+  w := call whnf_top(vis, dep, e);
   occW := call nest_occ(IW.u64[ctx], IW.u64[ctx + 1], IW.u64[ctx + 4], hi, w);
   if occW == 0 {
     occE := call nest_occ(IW.u64[ctx], IW.u64[ctx + 1], IW.u64[ctx + 4], hi, e);
@@ -723,29 +711,23 @@ def nestPosL : FunDecl :=
 /-! ## The member holes and the root frame's crest -/
 
 /-- `nestHoles.go`: the member holes, member by member — the former's type instantiated at the
-canonical parameters; aborts (the twin's `none`) when a member is not a stored former or its
-type does not bind the parameters. -/
+canonical parameters, recursively over the names; `(0, _, _)` (the twin's `none`) when a member
+is not a stored former or its type does not bind the parameters. -/
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:1103-1120 ConRon.Arena.nestHoles.go
 @[l_impl ConRon.Arena.nestHoles.go]
 def nestHolesGoL : FunDecl := lfn (vis, ctx, mm, off, l, outOff, outLen) locals
-    (j, n, found, q, kind, parOff, parLen, ok2, t, v) {
-  parOff := IW.u64[ctx + 7];
-  parLen := IW.u64[ctx + 8];
-  j := 0;
-  while j < l {
-    n := IW.u64[off + j];
-    (found, q) := call env_find(n, vis);
-    if found == 0 { return (0, 0, 0) };
-    kind := EREC.u64[q];
-    if kind != 3 { return (0, 0, 0) };
-    (ok2, t) := call inst_pis_with(parOff, parLen, EREC.u64[q + 4]);
-    if ok2 == 0 { return (0, 0, 0) };
-    v := call intern_fvar(IW.u64[ctx + 4] + mm, t);
-    (outOff, outLen) := call sl_snoc(outOff, outLen, v);
-    mm += 1;
-    j += 1
-  };
-  return (1, outOff, outLen)
+    (found, q, ok2, t, v, r0, r1, r2) {
+  if l == 0 { return (1, outOff, outLen) };
+  (found, q) := call env_find(IW.u64[off], vis);
+  if found == 0 { return (0, 0, 0) };
+  if EREC.u64[q] != 3 { return (0, 0, 0) };
+  (ok2, t) := call inst_pis_with(IW.u64[ctx + 7], IW.u64[ctx + 8], EREC.u64[q + 4]);
+  if ok2 == 0 { return (0, 0, 0) };
+  v := call intern_fvar(IW.u64[ctx + 4] + mm, t);
+  if 4294967296 <= v { abort };
+  (outOff, outLen) := call sl_snoc(outOff, outLen, v);
+  (r0, r1, r2) := call nest_holes_go(vis, ctx, mm + 1, off + 1, l - 1, outOff, outLen);
+  return (r0, r1, r2)
 }
 
 /-- `nest_holes(vis, ctx)`: the member holes (`go 0 ctx.names []`). -/
@@ -775,17 +757,14 @@ def nestRootCanonL : FunDecl := lfn (ctx, cv) locals (lo, ll, t, ok, e) {
 first `n` binder domains of `e`? -/
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:1131-1143 ConRon.Arena.piDomsOcc
 @[l_impl ConRon.Arena.piDomsOcc]
-def piDomsOccL : FunDecl := lfn (namesOff, namesLen, lo, hi, n, e) locals (tag, g, d, b, occ) {
-  while n > 0 {
-    tag := e >> 28;
-    if tag != 6 { return 0 };
-    (g, d, b, occ) := call e_view(e);
-    occ := call nest_occ(namesOff, namesLen, lo, hi, d);
-    if occ != 0 { return 1 };
-    e := b;
-    n -= 1
-  };
-  return 0
+def piDomsOccL : FunDecl := lfn (namesOff, namesLen, lo, hi, n, e) locals (g, d, b, z, occ, r) {
+  if n == 0 { return 0 };
+  if e >> 28 != 6 { return 0 };
+  (g, d, b, z) := call e_view(e);
+  occ := call nest_occ(namesOff, namesLen, lo, hi, d);
+  if occ != 0 { return 1 };
+  r := call pi_doms_occ(namesOff, namesLen, lo, hi, n - 1, b);
+  return r
 }
 
 /-- `nest_uniform_ok(ctx, cv)`: official's `check_uniform_ind_occs` at one constructor. -/
@@ -802,26 +781,28 @@ def nestUniformOkL : FunDecl := lfn (ctx, cv) locals (hi0, occ1, ok, e, occ2) {
   return u64(occ2 == 0)
 }
 
+/-- `nest_uniform_cs(ctx, csOff, csLen)`: `cs.allM (fun c => nestUniformOk ctx c.1)` over a slice of
+`[cv, nF]` pointers, short-circuiting (the inner loop of `nest_uniform`, as a recursion). -/
+-- con-ron: none — the inner loop of nest_uniform as a self-recursive function (proof shape)
+def nestUniformCsL : FunDecl := lfn (ctx, csOff, csLen) locals (ok, r) {
+  if csLen == 0 { return 1 };
+  ok := call nest_uniform_ok(ctx, IW.u64[IW.u64[csOff]]);
+  if ok == 0 { return 0 };
+  r := call nest_uniform_cs(ctx, csOff + 1, csLen - 1);
+  return r
+}
+
 /-- `nest_uniform(ctx, off, l)`: `nestUniformOk` at every stored constructor of every member,
-stopping at the first failure. -/
+stopping at the first failure (recursively over the members). -/
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:1158-1166 ConRon.Arena.nestUniform
 @[l_impl ConRon.Arena.nestUniform]
-def nestUniformL : FunDecl := lfn (ctx, off, l) locals (j, hdr, csOff, csLen, k, cPtr, cv, ok) {
-  j := 0;
-  while j < l {
-    hdr := IW.u64[off + j];
-    csOff := IW.u64[hdr];
-    csLen := IW.u64[hdr + 1];
-    k := 0;
-    while k < csLen {
-      cPtr := IW.u64[csOff + k];
-      cv := IW.u64[cPtr];
-      ok := call nest_uniform_ok(ctx, cv);
-      if ok == 0 { abort };
-      k += 1
-    };
-    j += 1
-  }
+def nestUniformL : FunDecl := lfn (ctx, off, l) locals (hdr, b, u) {
+  if l == 0 { return 0 };
+  hdr := IW.u64[off];
+  b := call nest_uniform_cs(ctx, IW.u64[hdr], IW.u64[hdr + 1]);
+  if b == 0 { abort };
+  u := call nest_uniform(ctx, off + 1, l - 1);
+  return 0
 }
 
 /-! ## The root frame and the seeds -/
@@ -850,25 +831,29 @@ def nestRootL : FunDecl :=
   return (outsOff, outsLen, ns)
 }
 
+/-- `nest_seed_of_go(ctx, f, dsOff, dsLen, q, j)`: the rest of the class's parameters read back,
+written at `q + j`, … (the loop of `nest_seed_of`, as a recursion). -/
+-- con-ron: none — the loop of nest_seed_of as a self-recursive function (proof shape)
+def nestSeedOfGoL : FunDecl := lfn (ctx, f, dsOff, dsLen, q, j) locals (y, z, u) {
+  if j >= dsLen { return 0 };
+  y := call replace_apps(IW.u64[ctx], IW.u64[ctx + 1], IW.u64[ctx + 10], 0, IW.u64[ctx + 4], IW.u64[dsOff + j]);
+  if 4294967296 <= y { abort };
+  z := call replace_fvars(f, y);
+  IW.u64[q + j] := z;
+  u := call nest_seed_of_go(ctx, f, dsOff, dsLen, q, j + 1);
+  return 0
+}
+
 /-- `nest_seed_of(ctx, holesOff, holesLen, ind, us, dsOff, dsLen, nPc)`: a resolved class as a
 seed, its parameters read back through the walk's representation. -/
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:1184-1194 ConRon.Arena.nestSeedOf
 @[l_impl ConRon.Arena.nestSeedOf]
 def nestSeedOfL :=
-    lfn (ctx, holesOff, holesLen, ind, us, dsOff, dsLen, nPc) locals
-      (f, ds2Off, ds2Len, j, x, y, z, key) {
+    lfn (ctx, holesOff, holesLen, ind, us, dsOff, dsLen, nPc) locals (f, q, u, key) {
   f := call rec5(1, IW.u64[ctx + 7], IW.u64[ctx + 8], holesOff, holesLen);
-  ds2Off := 0;
-  ds2Len := 0;
-  j := 0;
-  while j < dsLen {
-    x := IW.u64[dsOff + j];
-    y := call replace_apps(IW.u64[ctx], IW.u64[ctx + 1], IW.u64[ctx + 10], 0, IW.u64[ctx + 4], x);
-    z := call replace_fvars(f, y);
-    (ds2Off, ds2Len) := call sl_snoc(ds2Off, ds2Len, z);
-    j += 1
-  };
-  key := call rec4(ind, us, ds2Off, ds2Len);
+  q := call iw_alloc(dsLen);
+  u := call nest_seed_of_go(ctx, f, dsOff, dsLen, q, 0);
+  key := call rec4(ind, us, q, dsLen);
   return (key, nPc)
 }
 
@@ -905,7 +890,8 @@ def nestSeedsL : FunDecl := lfn (vis, ctx, seedsOff, seedsLen, ns) locals
 /-- All of this module's L functions. -/
 def indPos2Fns : Prog :=
   [("nest_key_eq", nestKeyEqL), ("nest_keys_contains", nestKeysContainsL),
-   ("nest_occ_any", nestOccAnyL), ("nest_ds_closed", nestDsClosedL),
+   ("nest_occ_any", nestOccAnyL), ("nest_ds_closed_go", nestDsClosedGoL),
+   ("nest_ds_closed", nestDsClosedL),
    ("nest_inst_type_ty", nestInstTypeTyL), ("nest_inst_type", nestInstTypeL),
    ("nest_res_head", nestResHeadL), ("nest_ctor_nf", nestCtorNfL),
    ("nest_block_of", nestBlockOfL), ("nest_frame_mates_go", nestFrameMatesGoL),
@@ -925,8 +911,9 @@ def indPos2Fns : Prog :=
    ("nest_pos_bind", nestPosBindL), ("nest_pos", nestPosL),
    ("nest_holes_go", nestHolesGoL), ("nest_holes", nestHolesL),
    ("nest_root_canon", nestRootCanonL), ("pi_doms_occ", piDomsOccL),
-   ("nest_uniform_ok", nestUniformOkL), ("nest_uniform", nestUniformL),
-   ("nest_root", nestRootL), ("nest_seed_of", nestSeedOfL), ("nest_seeds", nestSeedsL)]
+   ("nest_uniform_ok", nestUniformOkL), ("nest_uniform_cs", nestUniformCsL),
+   ("nest_uniform", nestUniformL),
+   ("nest_root", nestRootL), ("nest_seed_of_go", nestSeedOfGoL), ("nest_seed_of", nestSeedOfL), ("nest_seeds", nestSeedsL)]
 
 /-- Stubs for the functions of OTHER modules this module calls: `nest_occ`, `nest_container`,
 `nest_crest`, `nest_canon_crest`, `replace_fvars`, `replace_apps`, `inst_pis_with`,
@@ -937,7 +924,7 @@ def indPos2Foreign : Prog :=
    ("nest_canon_crest", stub 5), ("replace_fvars", stub 2), ("replace_apps", stub 6),
    ("inst_pis_with", stub 3), ("close_telescope", stub 4), ("whnf_walk_fuel", stub 1),
    ("nest_ctx_hi_at", stub 2), ("nest_hole_at", stub 4), ("pi_binders", stub 2),
-   ("struct_used_later", stub 3)]
+   ("struct_used_later", stub 3), ("nest_hole_img_ds", stub 3)]
 
 theorem indPos2_wf :
     L.Compiler.Prog.wf indTab

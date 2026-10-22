@@ -306,11 +306,33 @@ def nestCtorEntryStrip : FunDecl := lfn (ciq) locals (cv, nPc, nF, ok, bsOff, bs
 def nestCtorEntry : FunDecl := lfn (C, ciq) locals (ok0, cv, nPc, nF, body, hd, g, n, us, z) {
   (ok0, cv, nPc, nF, body) := call nest_ctor_entry_strip(ciq);
   if ok0 == 0 { return (0, 0, 0, 0) };
-  hd := call get_app_fn(⟪CWF⟫, body);
+  hd := call get_app_fn_f(⟪CWF⟫, body);
   if hd >> 28 != 3 { return (0, 0, 0, 0) };
   (g, n, us, z) := call e_view(hd);
   if n != C { return (0, 0, 0, 0) };
   return (1, cv, nPc, nF)
+}
+
+/-- `nest_container_ctors_go(vis, C, ctorsOff, ctorsLen, csOff, outLen, firstNPc)`: the rest of
+`caps.ctors` (an `EREC` slice) looked up and filtered, each accepted `[cv, nF]` record written at
+`csOff + outLen`; returns the final count and the first accepted entry's parameter count (the loop
+of `nest_container_ctors`, as a recursion). -/
+-- con-ron: none — the loop of nest_container_ctors as a self-recursive function (proof shape)
+def nestContainerCtorsGo : FunDecl :=
+    lfn (vis, C, ctorsOff, ctorsLen, csOff, outLen, firstNPc) locals (found, ciq, ok, cv, nPc, nF, r1, r2) {
+  if ctorsLen == 0 { return (outLen, firstNPc) };
+  (found, ciq) := call env_find(EREC.u64[ctorsOff], vis);
+  if found != 0 {
+    (ok, cv, nPc, nF) := call nest_ctor_entry(C, ciq);
+    if ok != 0 {
+      ciq := call rec2(cv, nF);
+      IW.u64[csOff + outLen] := ciq;
+      if outLen == 0 { firstNPc := nPc };
+      outLen += 1
+    }
+  };
+  (r1, r2) := call nest_container_ctors_go(vis, C, ctorsOff + 1, ctorsLen - 1, csOff, outLen, firstNPc);
+  return (r1, r2)
 }
 
 /-- `nest_container_ctors(vis, C, ctorsOff, ctorsLen)`: `caps.ctors.filterMapM (nestCtorEntry C ∘
@@ -319,24 +341,9 @@ fe.find?)`, as the `[cv, nF]` records accepted and the first accepted entry's pa
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:386-402 ConRon.Arena.nestContainer
 @[l_impl ConRon.Arena.nestContainer]
 def nestContainerCtors : FunDecl :=
-    lfn (vis, C, ctorsOff, ctorsLen) locals (csOff, outLen, firstNPc, j, found, ciq, ok, cv, nPc, nF) {
+    lfn (vis, C, ctorsOff, ctorsLen) locals (csOff, outLen, firstNPc) {
   csOff := call iw_alloc(ctorsLen);
-  outLen := 0;
-  firstNPc := 0;
-  j := 0;
-  while j < ctorsLen {
-    (found, ciq) := call env_find(EREC.u64[ctorsOff + j], vis);
-    if found != 0 {
-      (ok, cv, nPc, nF) := call nest_ctor_entry(C, ciq);
-      if ok != 0 {
-        ciq := call rec2(cv, nF);
-        IW.u64[csOff + outLen] := ciq;
-        if outLen == 0 { firstNPc := nPc };
-        outLen += 1
-      }
-    };
-    j += 1
-  };
+  (outLen, firstNPc) := call nest_container_ctors_go(vis, C, ctorsOff, ctorsLen, csOff, 0, 0);
   return (csOff, outLen, firstNPc)
 }
 
@@ -434,6 +441,7 @@ def fvMapAt : FunDecl := lfn (f, i) locals (tag, ok, e, z, s, v) {
   if tag == 2 {
     z := call pin_word(53);
     s := call intern_sort(z);
+    if 4294967296 <= s { abort };
     v := call intern_fvar(i, s);
     return (1, v)
   };
@@ -451,24 +459,30 @@ def nestHoleImgRoot : FunDecl := lfn (ctx, i) locals (nP, hi, nm, hd, r) {
   if nP <= i && i < hi {
     nm := call sl_getd(IW.u64[ctx], IW.u64[ctx + 1], i - nP, 0);
     hd := call intern_const(nm, IW.u64[ctx + 10]);
-    r := call mk_app_n(hd, IW.u64[ctx + 7], IW.u64[ctx + 8]);
+    if 4294967296 <= hd { abort };
+    r := call mk_app_n_f(hd, IW.u64[ctx + 7], IW.u64[ctx + 8]);
     return (1, r)
   };
   return (0, 0)
 }
 
+/-- `nest_hole_img_ds_go(f, dsOff, dsLen, q, j)`: `replaceFVars f` of the rest of the slice, written
+at `q + j`, … (the loop of `nest_hole_img_ds`, as a recursion). -/
+-- con-ron: none — the loop of nest_hole_img_ds as a self-recursive function (proof shape)
+def nestHoleImgDsGo : FunDecl := lfn (f, dsOff, dsLen, q, j) locals (r, u) {
+  if j >= dsLen { return 0 };
+  r := call replace_fvars(f, IW.u64[dsOff + j]);
+  IW.u64[q + j] := r;
+  u := call nest_hole_img_ds_go(f, dsOff, dsLen, q, j + 1);
+  return 0
+}
+
 /-- `nest_hole_img_ds(f, dsOff, dsLen)`: `ds.mapM fun x => replaceFVars f x`, in list order. -/
 -- con-ron: ConRon/Arena/Inductives/Positivity.lean:534-559 ConRon.Arena.nestHoleImg
 @[l_impl ConRon.Arena.nestHoleImg]
-def nestHoleImgDs : FunDecl := lfn (f, dsOff, dsLen) locals (q, j, x, r) {
+def nestHoleImgDs : FunDecl := lfn (f, dsOff, dsLen) locals (q, u) {
   q := call iw_alloc(dsLen);
-  j := 0;
-  while j < dsLen {
-    x := IW.u64[dsOff + j];
-    r := call replace_fvars(f, x);
-    IW.u64[q + j] := r;
-    j += 1
-  };
+  u := call nest_hole_img_ds_go(f, dsOff, dsLen, q, 0);
   return (q, dsLen)
 }
 
@@ -484,7 +498,8 @@ def nestHoleImgFrame : FunDecl :=
   f := call rec5(0, ctx, progOff, progLen, n1);
   (dsOff2, dsLen2) := call nest_hole_img_ds(f, IW.u64[keyPtr + 2], IW.u64[keyPtr + 3]);
   hd := call intern_const(IW.u64[keyPtr], IW.u64[keyPtr + 1]);
-  r := call mk_app_n(hd, dsOff2, dsLen2);
+  if 4294967296 <= hd { abort };
+  r := call mk_app_n_f(hd, dsOff2, dsLen2);
   return (1, r)
 }
 
@@ -569,6 +584,7 @@ def replaceFVars : FunDecl := lfn (f, e) locals (s, r, u) {
   s := call rf_bank_enter();
   r := call replace_fvars_go(f, ⟪CWF⟫, e);
   u := call rf_bank_leave(s);
+  if 4294967296 <= r { abort };
   return r
 }
 
@@ -756,11 +772,11 @@ def indPosFns : Prog :=
    ("nest_field_kind_flat", nestFieldKindFlat), ("nest_kinds_flat_inner", nestKindsFlatInner),
    ("nest_kinds_flat_mid", nestKindsFlatMid), ("nest_kinds_flat", nestKindsFlat),
    ("nest_ctor_entry_strip", nestCtorEntryStrip), ("nest_ctor_entry", nestCtorEntry),
-   ("nest_container_ctors", nestContainerCtors), ("nest_container", nestContainer),
+   ("nest_container_ctors_go", nestContainerCtorsGo), ("nest_container_ctors", nestContainerCtors), ("nest_container", nestContainer),
    ("nest_ctx_hi_at", nestCtxHiAt), ("nest_ctx_root_holes_go", nestCtxRootHolesGo),
    ("nest_ctx_root_holes", nestCtxRootHoles),
    ("nest_hole_at", nestHoleAt), ("nest_key_map", nestKeyMap), ("fv_map_at", fvMapAt),
-   ("nest_hole_img_root", nestHoleImgRoot), ("nest_hole_img_ds", nestHoleImgDs),
+   ("nest_hole_img_root", nestHoleImgRoot), ("nest_hole_img_ds_go", nestHoleImgDsGo), ("nest_hole_img_ds", nestHoleImgDs),
    ("nest_hole_img_frame", nestHoleImgFrame), ("nest_hole_img", nestHoleImg),
    ("replace_fvars_node", replaceFVarsNode), ("replace_fvars_go", replaceFVarsGo),
    ("replace_fvars", replaceFVars),

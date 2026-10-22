@@ -4380,10 +4380,17 @@ be asymptotically slower. con-ron at `_tmp/ref/con-ron` origin/HEAD (`proof/ConR
 * `WhnfCoreProj.lean`: none of its own. `reduce_proj_core` is proved on its split into
   `_core`/`_head`/`_fire`/`_arg` (sub-lane); the inner two leave the argument slice on the stack, so
   their post is `GrowSpec` (`CoreSpec` with `StackGrew`); the outer one restores the top.
-* `WhnfIota.lean`: `iotaCallees_stub` and eight specs: `iota_ctor_never_prop`, `iota_case3` (need a
-  corrected `caps_never_zero` stub: its twin runs readbacks), `prepare_major`, `major_to_ctor`,
-  `proof_irrel` (calls `lvl_eq_c`), `iota_certs_full(_aux)`, `iota_rec_at`. Eighteen are proved
-  (`WhnfIotaRefine*.lean`, sub-lane); its fixes to the L code: `const_ty_at`/`rule_rhs_at` probe
+* `WhnfIota.lean`: `iotaCallees_stub`, `major_to_ctor`, `iota_rec_at` (both large: they need splitting,
+  and `major_to_ctor`'s K and `And` arms leave a slice on the stack, so `CoreAfterG`). The other 24
+  are proved (`WhnfIotaRefine{,2..6}.lean`, sub-lanes); the census-tagged statements instantiate the
+  stub bundles (`iotaCallees_stub`, `whnfCallees_stub`, `coreCallees_stub`, `supKeep_twin`) and three
+  new assumptions: `erecKeptInst_stub` (`inst_lp`/`inst_spine` leave `EREC` alone),
+  `erecKeptKnot_stub` (the knot's slots and `major_to_ctor` do), `CoreS.lvl_den` (a sort node's level
+  and the pinned zero level denote; a `CoreS` field would be the fix). L changes: `proof_irrel` calls
+  the cached `lvl_eq_c` (the twin's `lvlEq?` fills the cache), `expr_view_ok` aborts on a dangling
+  handle (the twin's `view` fails), `iota_certs_full_aux`/`iota_ctor_never_prop` split;
+  `caps_never_zero`'s stub statement corrected (its twin runs readbacks). The first sub-lane's
+  fixes to the L code: `const_ty_at`/`rule_rhs_at` probe
   the memo again after `inst_lp`, `defeq_list` compares the common prefix before the lengths (the
   twin's order of `defeq` calls), `iota_index_ok`/`iota_certs_full` restore the top,
   `inst_spine_pins` raises the top after each store, `and_rescue_slots` runs `fire_ok` first.
@@ -6171,6 +6178,35 @@ start 136 / 11 / 93 / 91); totals 558 proven / 71 sorry of 1352.
 * Next: `internPinSetsW_dec` (the variant list in the decoder direction, `PinSetsR` the records'
   relation; helper `romload-sets`), then the stage theorem for the real program via `triple_subPB`.
 
+### Landing 3 (interim: helpers `rec`, `pos` merged at their current heads)
+* Helper `rec`: `classNPcOf`, `blockNestedBit` (proven), `classReadMinor`, `classReadSlot(s)`,
+  `classRead`, `targetMajorAt` (`sorry` through stubs); its own composition helper `RSim`
+  (`RecSim.lean`) and `RecStab.lean`. Helper `pos`: `NestCtx.rootHoles`, `nestHoleAt` (proven),
+  `fvMapAt`, `nestHoleImg`, `replaceFVars(Go)`, `nestContainer` (through `mk_app_n`'s stub),
+  `nestUniform`/`nestOccAny` pieces. L changes by both: loops to self-recursion, handle guards.
+* Lemma-name clashes between the two helpers' files (`rec2/4/5_specW`, `frK*`, `rowPW_eq`,
+  `iwN_grow`) were renamed on `pos`'s side at the merge (`posRec*_specW`, `pfrK*`, …); `IndAll`
+  caught them.
+* Census: phase 8 **65 proven, 47 sorry, 103 written, 8 todo**.
+
+### Landing 4: helper `pos` done; lane `whnf`'s entry points
+* Helper `pos` (5 h, with one fork of its own): all of `IndPos` (`NestCtx.rootHoles`, `nestHoleAt`
+  sorry-free; `nestContainer`, `fvMapAt`, `nestHoleImg`, `replaceFVarsGo`/`replaceFVars` — one
+  strong induction on the exec fuel, the banked memo as `RfInv` —, `nestCrest` through stubs), and
+  11 of 23 `IndPos2` targets (`nestArity`, `piDomsOcc` sorry-free; `nestCtorNf`, `nestSeedOf`,
+  `nestHoles`, `nestWalkStack`, `nestGroupCtors`, `nestRootCanon`, `nestUniformOk`, `nestUniform`,
+  `nestInstType` through stubs). Open: `nestGrowGroup` (a WIP outside the tree), `nestAcceptGroup`,
+  the `nestPos` block (`nestFields`, `nestCtors`, `nestFrame`, `nestContNew/Key`, `nestCont`,
+  `nestPos`), `nestRoot`, `nestSeeds`. Hypotheses its parents must discharge: `RfInv` before the
+  banked walk, a well-formed `replace_apps` memo (`hMstage`), record/slice bounds (`CtorSums`,
+  `CtxIn`, `CtxSl`, `HSl`, `FMOk`, `CVSl`). L: ten loops to self-recursion, handle guards after
+  `intern_sort`, `intern_const`, `replace_apps`; no bugs found. ~7.2k proof lines for ~420 L lines.
+* **Lane `whnf`'s hand-off done**: the stage's call sites and stubs use `whnf_top`,
+  `get_app_fn_f`, `get_app_args_f`, `mk_app_n_f`, `pi_result_f` (`WhnfEntry.lean`'s conventions);
+  their specs are still `IndStubs`' `sorry`'d `RelAM` statements (the adapters' `StageR` specs need
+  the `CoreS` bridge, landing 1's "tried and dropped").
+* Helper `parts` started (IndParts/IndInstall, stub-free leaves first).
+* Census: phase 8 **67 proven, 57 sorry, 91 written, 8 todo**.
 ### Landing 3 (lane `romload`): the pin stage, proved; numbers
 
 * **The stage theorems** (`ConAgua/Rom/Stage.lean`, for the real program `P`, whose pin readers
