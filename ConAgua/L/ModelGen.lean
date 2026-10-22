@@ -472,11 +472,22 @@ meta structure GenState where
   called : Array String := #[]
   deriving Inhabited
 
+/-- A join point: its name, whether it takes the fuel, the locals it takes, whether it takes the
+memory. -/
+meta structure Join where
+  name : Name
+  fuel : Bool
+  caps : Array Nat
+  capMem : Bool
+  deriving Inhabited
+
 meta structure Ctx where
   names : Array Name
   env : Array MT
   mem : MT
   ro : Bool
+  /-- where the end of the statement list goes (a join point), if not to the function's end -/
+  ft : Option Join := none
 
 meta def memIdent : Name := `m
 meta def mem1Ident : Name := `m₁
@@ -593,7 +604,10 @@ meta def setEnv (ctx : Ctx) (k : Nat) (v : MT) : Ctx := { ctx with env := ctx.en
 
 mutual
 meta partial def transS (E : Env) (ctx : Ctx) : List (TSyntax `lstmt) → GenM MR
-  | [] => pure (if ctx.ro then .someW (.lit 0) else .some (.lit 0) ctx.mem)
+  | [] => match ctx.ft with
+    | some j => pure (.tail (.app j.name ((if j.fuel then #[MT.raw (mkIdent `n)] else #[]) ++
+        j.caps.map (ctx.env[·]!) ++ (if j.capMem then #[ctx.mem] else #[]))))
+    | none => pure (if ctx.ro then .someW (.lit 0) else .some (.lit 0) ctx.mem)
   | s :: rest => do
     let assignOp (x : Ident) (o : String) (e : TSyntax `lexpr) : GenM MR := do
       let v ← transE E ctx e
@@ -612,7 +626,10 @@ meta partial def transS (E : Env) (ctx : Ctx) : List (TSyntax `lstmt) → GenM M
     let ite (c : TSyntax `lcond) (t e : List (TSyntax `lstmt)) : GenM MR := do
       let c ← transC E ctx c
       if !rest.isEmpty && !terminates t && !terminates e then
-        modify fun st => { st with dups := st.dups + 1 }
+        -- both branches fall through: the rest becomes a join point
+        let ft ← mkJoin E ctx rest
+        let ctxJ := { ctx with ft := some ft }
+        return .ite c (← transS E ctxJ t) (← transS E ctxJ e)
       return .ite c (← transS E ctx (t ++ rest)) (← transS E ctx (e ++ rest))
     match s with
     | `(lstmt| $x:ident := call $f:ident($args,*)) =>
@@ -675,9 +692,12 @@ meta partial def transCall (E : Env) (ctx : Ctx) (xs : Array Ident) (f : Ident)
     match g with
     | `($a ≠ $b) => return .cmp "=" (.raw a) (.raw b)
     | _ => return .not (.cmp "=" (.raw (← `(decide $g))) (.raw (← `(true))))
-  if let some (_, w, _) := E.group.find? (·.1 == fname) then
-    if ctx.ro then throwErrorAt f "l_model: a read-only model calls an effectful one"
+  if let some (_, w, wro) := E.group.find? (·.1 == fname) then
     let t ← `($(mkIdent w) $(mkIdent `n) $memT $argsT*)
+    if wro then
+      if ctx.ro && isTail then return .tail (.raw t)
+      return ← mkK E ctx 2 xk[0]? xk (.raw t) rest
+    if ctx.ro then throwErrorAt f "l_model: a read-only model calls an effectful one"
     return ← effK (.raw t) isTail xk
   let some (_, c) := E.callees.find? (·.1 == fname)
     | throwErrorAt f "l_model: no spec given for the callee {fname}"
@@ -767,6 +787,36 @@ meta partial def mkK (E : Env) (ctx : Ctx) (binder : Nat) (res : Option Nat) (xk
   let args := (if fuel then #[MT.raw (mkIdent `n)] else #[]) ++ capVals ++
     (if capMem then #[ctx.mem] else #[]) ++ #[callT]
   return .tail (.app name args)
+
+/-- Make a join point: the rest of the code after an `if` both of whose branches fall through,
+as a definition over the locals it reads and the memory; the branches end by applying it. -/
+meta partial def mkJoin (E : Env) (ctx : Ctx) (rest : List (TSyntax `lstmt)) :
+    GenM Join := do
+  let env : Array MT := ctx.names.map fun n => .raw (mkIdent n)
+  let ctx' : Ctx := { ctx with env, mem := .raw (mkIdent memIdent) }
+  let body ← transS E ctx' rest
+  let bodyT ← body.render
+  let used := idents bodyT.raw
+  let fuel := used.contains `n
+  let capMem := used.contains memIdent
+  let mut caps : Array Name := #[]
+  let mut capIdx : Array Nat := #[]
+  for i in [0:ctx.names.size] do
+    if used.contains ctx.names[i]! then
+      caps := caps.push ctx.names[i]!
+      capIdx := capIdx.push i
+  let k := toString (fuel, caps, capMem, 3, key bodyT)
+  let st ← get
+  let name ← match st.ks.find? (·.key == k) with
+    | some kd => pure kd.name
+    | none => do
+      let cnt := (st.ks.filter (·.name.getPrefix == st.base)).size
+      let name := st.base ++ Name.mkSimple s!"k{cnt + 1}"
+      let refs := st.ks.filterMap fun kd => if used.contains kd.name then some kd.name else none
+      let kd : KDef := { name, fuel, caps, capMem, binder := 3, res := `r, body, key := k, refs }
+      modify fun st => { st with ks := st.ks.push kd }
+      pure name
+  return { name, fuel, caps := capIdx, capMem }
 end
 
 /-! ## Leaves and guarded equations -/
@@ -911,10 +961,13 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
   let plainKs := kDefs.filter (!mutK.contains ·.1.name)
   let wf := !fuelKs.isEmpty
   for (kd, binders, argT, pat, body, rT) in plainKs do
-    emit doTrace (← `(command|
-      def $(mkIdent kd.name):ident $binders* : $argT → $rT
-        | Option.none => Option.none
-        | $pat => $body))
+    if kd.binder == 3 then
+      emit doTrace (← `(command| def $(mkIdent kd.name):ident $binders* : $rT := $body))
+    else
+      emit doTrace (← `(command|
+        def $(mkIdent kd.name):ident $binders* : $argT → $rT
+          | Option.none => Option.none
+          | $pat => $body))
   let mut defs : Array (TSyntax `command) := #[]
   for fi in fis, b in bodies do
     let pbs ← fi.params.mapM fun x => `(Lean.Parser.Term.bracketedBinderF| ($(mkIdent x) : L.Word))
@@ -937,11 +990,16 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     defs := defs.push d
   for (kd, binders, argT, pat, body, rT) in fuelKs do
     let dep := depth.getD kd.name 1
-    defs := defs.push (← `(command|
-      def $(mkIdent kd.name):ident $binders* : $argT → $rT
-        | Option.none => Option.none
-        | $pat => $body
-      termination_by _ => ($nI, $(mkNum dep))))
+    if kd.binder == 3 then
+      defs := defs.push (← `(command|
+        def $(mkIdent kd.name):ident $binders* : $rT := $body
+        termination_by ($nI, $(mkNum dep))))
+    else
+      defs := defs.push (← `(command|
+        def $(mkIdent kd.name):ident $binders* : $argT → $rT
+          | Option.none => Option.none
+          | $pat => $body
+        termination_by _ => ($nI, $(mkNum dep))))
   if defs.size == 1 then emit doTrace defs[0]!
   else emit doTrace (← `(command| mutual $defs* end))
   -- guarded equations, one per leaf that is not `none`
@@ -949,9 +1007,9 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
     for a in attrIds do
       emit doTrace (← `(command| grind_pattern [$a:ident] $thm:ident => $lhs))
   let eqns (name : Name) (binders : Array (TSyntax ``Lean.Parser.Term.bracketedBinder)) (lhs : Term)
-      (body : MR) : CommandElabM Nat := do
+      (body : MR) (eqLemma : Name := `eq_2) : CommandElabM Nat := do
     let ls := leaves body
-    let eq2 := mkIdent (name ++ `eq_2)
+    let eq2 := mkIdent (name ++ eqLemma)
     let mut k := 0
     for (path, leaf) in ls do
       k := k + 1
@@ -985,11 +1043,16 @@ meta def emit (doTrace : Bool) (cmd : Syntax) : CommandElabM Unit := do
       | 0 => pure #[← `(Lean.Parser.Term.bracketedBinderF| ($(mkIdent kd.res) : L.Word)),
                     ← `(Lean.Parser.Term.bracketedBinderF| ($(mkIdent mem1Ident) : L.Mem))]
       | 1 => pure #[← `(Lean.Parser.Term.bracketedBinderF| ($(mkIdent mem1Ident) : L.Mem))]
-      | _ => pure #[← `(Lean.Parser.Term.bracketedBinderF| ($(mkIdent kd.res) : L.Word))]
+      | 2 => pure #[← `(Lean.Parser.Term.bracketedBinderF| ($(mkIdent kd.res) : L.Word))]
+      | _ => pure #[]
     let args : Array Term := (if kd.fuel then #[(nI : Term)] else #[]) ++ kd.caps.map (mkIdent ·) ++
       (if kd.capMem then #[(mkIdent memIdent : Term)] else #[])
-    let lhs ← `($(mkIdent kd.name) $args* $pat)
-    nEqns := nEqns + (← eqns kd.name (binders ++ resB) lhs kd.body)
+    if kd.binder == 3 then
+      let lhs ← `($(mkIdent kd.name) $args*)
+      nEqns := nEqns + (← eqns kd.name binders lhs kd.body `eq_1)
+    else
+      let lhs ← `($(mkIdent kd.name) $args* $pat)
+      nEqns := nEqns + (← eqns kd.name (binders ++ resB) lhs kd.body)
   -- the spec of the group
   let userNames : NameSet := bs.foldl (fun acc b => idents b.raw acc) {}
   let pName := mkIdent `p
