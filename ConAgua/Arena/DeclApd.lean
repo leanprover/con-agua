@@ -19,7 +19,8 @@ on the node (fresh per call), at `coreWalkFuel`. In L:
 * the fuel is the twin's: one unit per level of recursion, `0` aborts (the twin's `.internal`).
 
 `alpd_go` re-probes before its put: the recursive calls may have filled the slot the first probe
-returned.
+returned. A hit returns the slot's value word `APDM.u64[j * 4 + 3]` (`d` is the probe depth, not
+the value: the first version returned `d`; helper `decls3-apd`'s spec exposed it).
 -/
 
 open ConRon.Arena
@@ -51,7 +52,7 @@ def alpdLs : FunDecl := lfn (o, l, lo, ll) locals (r) {
 def alpdGo : FunDecl := lfn (o, l, f, h) locals (fd, j, d, g, x, y, w, r, lo, ll) {
   if f == 0 { abort };
   (fd, j, d) := call apd_find(h, 0);
-  if fd != 0 { return d };
+  if fd != 0 { return APDM.u64[j * 4 + 3] };
   (g, x, y, w) := call e_view(h);
   r := 1;
   if g == 2 { r := call lv_apd(x, o, l) }

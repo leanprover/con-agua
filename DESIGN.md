@@ -7466,3 +7466,15 @@ grows (the memo library's capacity rule, as every L memo). Refinement: not yet (
   form that holds for zeroed memory and gives `MemoRV` after a clear) to `StageR` and `LoopR`.
 * Census (master `e49af3c`+ this lane): phase 8 **73 proven, 72 sorry, 70 written, 8 todo**
   (the untagging moved ~8 targets from `sorry` back to `written`); totals 703 proven / 116 sorry.
+### What discharging `CvCanonSpec`/`CiCanonSpec` needs (lane `decls3`, open)
+
+Canon's theorems (`cvCanonEq_refines`, `ciCanonEq_refines`) take, beyond `StageR` and the records'
+decodings, `PoolSmall m` and `LitInj a`. `PoolSmall` follows from `StageR` (`LitR`'s `PoolOK`:
+the pool is below `2^63`), and decoding in `erA m` transfers to `erecP m` (`ArrExt.decCV`/`decCI`
+with `erecP_ext`). **`LitInj a` does not follow from `StageR`**: it is con-ron's
+`EWFAt.view_inj` (the twin store's cons maps are consistent and the tiers fresh), i.e. a
+consequence of `StateOK a`. So the arms need `StateOK` at the comparison: carried by `LoopR` (the
+twin's `FoldOK` has it) and kept across the arms' earlier callees (`find_pinned`'s reads keep the
+state; `rom_ci`'s interns need con-ron's `intern*` well-formedness lemmas, or a `StateOK` clause in
+the ROM stubs' `KeepPost`). This is the same gap as `lvlEqStub_spec`'s `TwinOK`: the stage
+relation should carry the twin's well-formedness (`StateOK`, which gives `NStoreWF` too).
