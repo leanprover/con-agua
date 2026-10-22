@@ -7923,7 +7923,7 @@ child dangled when it was interned (no `StoreWF` needed).
   dn` (`div_mod_env_guard`'s `find_is`). L: `cert_ctx` split, `rec2`/`rec3` slices.
 * **`checkDeclDefn_loop`** composes them: `CheckDeclProg` gained the gates' program facts
   (`natSub`, `natGate`, `natCert`, `natText`, `dm`, `dgClosed`) and two walk specs still open as
-  fields: `subst0` (`SubstC0`; `DeclNatSub`'s `substConst0` refinement should discharge it) and
+  fields: `subst0` (now discharged: `substC0_of`, from `DeclNatSub`.s `sc0_ref`) and
   `substAll` (`SubstCAll`, `subst_const_all`, not yet proved).
 * Clashes on merging (helpers vs canon vs master): renamed on the helpers' side (`nt*`, `dm*`,
   `CertCtxR`); `DeclNatBase`'s interning lemmas ported to master's `*_eqK`/`mkK_split` pushes.
