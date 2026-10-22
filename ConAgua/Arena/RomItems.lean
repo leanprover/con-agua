@@ -191,6 +191,22 @@ end spec
 
 /-! ## `rom_items` refines `runItems` -/
 
+theorem RsetR.reset {m : Mem} (hR : RsetR m) (hok : rclearOK m) : RsetR (resetMem m) := by
+  obtain ⟨mp, hG, -⟩ := hR
+  have hG1 := memoRG_frame rsetSch rsetSch_wf bmKey (fun _ => ()) [] [132] (by simp) (by simp [rsetSch])
+    _ _ ((MemFrame.setCtl m 132 0).mono (by simp) (by simp)) mp hG
+  have hG2 := memoRG_clear rsetSch rsetSch_wf bmKey (fun _ => ()) _ mp hG1 hok
+  refine ⟨_, hG2, fun k hk => ?_⟩
+  have hc : memoCnt (resetMem m) = 0 := by
+    have := hG.1
+    simp only [rsetSch] at this
+    simp only [memoCnt, resetMem, mclearG, rsetSch, rdW_set64]
+    have h148 : (UInt64.toNat 148) = 148 := rfl
+    rw [h148] at this
+    simp
+    omega
+  rw [hc] at hk; simp at hk
+
 theorem resetMem_frame1 (m : Mem) : MemFrame [] [132, 148, 149] m (resetMem m) :=
   ((MemFrame.setCtl m 132 0).mono (by simp) (by simp)).trans
     ((mclearG_frame rsetSch _).mono (by simp) (by simp [rsetSch]))
@@ -367,7 +383,7 @@ theorem romItemsW_ok (is : List Item) (hfit : is.all itemFits = true) :
       | some r =>
       obtain ⟨h₁, q₁, m₁⟩ := r
       rw [hN, itK_some] at hW
-      obtain ⟨me, a₁, r1, hR1, hM1, -, hq1, hf1, hs1⟩ := romExprW_ok rom hr e hfit.1 n mem a (pos + 1) _ seen m
+      obtain ⟨me, a₁, r1, hR1, hM1, -, hq1, hf1, hs1, -⟩ := romExprW_ok rom hr e hfit.1 n mem a (pos + 1) _ seen m
         h₁ q₁ m₁ hA hM hd1 hst hc hN
       have hd2 : rom.drop q₁.toNat = encItems (encExprM seen e).2 is ++ rest :=
         drop_shift rom hr (pos + 1) _ _ rest (by rw [hd1, List.append_assoc]) q₁ hq1
