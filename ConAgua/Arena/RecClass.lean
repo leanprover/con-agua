@@ -491,12 +491,21 @@ the inductive hypothesis after its telescope and indices are read. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:161-208 ConRon.Arena.ClassGen.minorTy
 @[l_impl ConRon.Arena.ClassGen.minorTy]
 def classGenMinorTyIh1Tail : FunDecl := lfn (g, t, xso, xsl, idxo, idxl, fvso, fvsl, i, e) locals
-    (f, fx, mt, appo, appl, body, bso, bsl, ih) {
+    (f, fx, mt, appo, appl, body, r0, r1) {
   f := call expr_get_d(fvso, fvsl, i);
   fx := call mk_app_n_f(f, xso, xsl);
   mt := call class_gen_mot_var(g, t);
   (appo, appl) := call sl_snoc(idxo, idxl, fx);
   body := call mk_app_n_f(mt, appo, appl);
+  (r0, r1) := call class_gen_minor_ty_ih1_close(xso, xsl, e, body);
+  return (r0, r1)
+}
+
+/-- `class_gen_minor_ty_ih1_close(xs.off, xs.len, e, body)`: the inductive hypothesis closed over its
+telescope's binders at depth `e` (the depth must not wrap). -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:161-208 ConRon.Arena.ClassGen.minorTy
+@[l_impl ConRon.Arena.ClassGen.minorTy]
+def classGenMinorTyIh1Close : FunDecl := lfn (xso, xsl, e, body) locals (bso, bsl, ih) {
   (bso, bsl) := call fvar_type_ds(xso, xsl);
   if e + bsl < e { abort };
   ih := call close_telescope(bso, bsl, e, body);
@@ -584,13 +593,22 @@ the inductive hypotheses. -/
 -- con-ron: ConRon/Arena/Inductives/GenRec.lean:161-208 ConRon.Arena.ClassGen.minorTy
 @[l_impl ConRon.Arena.ClassGen.minorTy]
 def classGenMinorTyConcl2 : FunDecl := lfn (g, c, d, nPc, fo, fl, ihso, ihsl, rao, ral, capp)
-    locals (mc, dOff, dLen, bo, bl, res, fbso, fbsl, allo, alll, r) {
+    locals (mc, dOff, dLen, bo, bl, res, r0, r1) {
   mc := call class_gen_mot_var(g, c);
   dOff := rao;
   dLen := ral;
   if nPc < ral { dOff := rao + nPc; dLen := ral - nPc } else { dLen := 0 };
   (bo, bl) := call sl_snoc(dOff, dLen, capp);
   res := call mk_app_n_f(mc, bo, bl);
+  (r0, r1) := call class_gen_minor_ty_close(fo, fl, ihso, ihsl, d, res);
+  return (r0, r1)
+}
+
+/-- `class_gen_minor_ty_close(fvs.off, fvs.len, ihs.off, ihs.len, d, concl)`: the conclusion closed
+over the fields' binders and the inductive hypotheses at depth `d` (the depth must not wrap). -/
+-- con-ron: ConRon/Arena/Inductives/GenRec.lean:161-208 ConRon.Arena.ClassGen.minorTy
+@[l_impl ConRon.Arena.ClassGen.minorTy]
+def classGenMinorTyClose : FunDecl := lfn (fo, fl, ihso, ihsl, d, res) locals (fbso, fbsl, allo, alll, r) {
   (fbso, fbsl) := call fvar_type_ds(fo, fl);
   (allo, alll) := call sl_append(fbso, fbsl, ihso, ihsl);
   if d + alll < d { abort };
@@ -840,9 +858,11 @@ def recClassFns : Prog :=
    ("class_gen_motive_ty", classGenMotiveTy), ("class_gen_ih_parts", classGenIhParts),
    ("class_gen_minor_ty_ih1", classGenMinorTyIh1),
    ("class_gen_minor_ty_ihs_go", classGenMinorTyIhsGo), ("class_gen_minor_ty", classGenMinorTy),
-   ("class_gen_minor_ty_ih1_tail", classGenMinorTyIh1Tail), ("class_gen_minor_ci", classGenMinorCi),
+   ("class_gen_minor_ty_ih1_tail", classGenMinorTyIh1Tail),
+   ("class_gen_minor_ty_ih1_close", classGenMinorTyIh1Close), ("class_gen_minor_ci", classGenMinorCi),
    ("class_gen_minor_ty_body", classGenMinorTyBody), ("class_gen_minor_ty_concl", classGenMinorTyConcl),
    ("class_gen_minor_ty_concl2", classGenMinorTyConcl2),
+   ("class_gen_minor_ty_close", classGenMinorTyClose),
    ("class_gen_prefix_binders_find_ctor", classGenPrefixBindersFindCtor),
    ("class_gen_prefix_binders_slots_go", classGenPrefixBindersSlotsGo),
    ("class_gen_prefix_binders", classGenPrefixBinders), ("class_gen_rec_ty", classGenRecTy),
