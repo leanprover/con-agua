@@ -185,4 +185,80 @@ theorem consW_stage {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEn
   · rw [hE]; exact hEs
   · rw [hf.2.2.1 CTL]; exact hc
 
+/-! ## Level interning under the stage relation -/
+
+/-- `DerR` reads only the expression tables. -/
+theorem DerR.lvl {m : Mem} {a a' : AState} (h1 : a'.store.pers = a.store.pers := by rfl)
+    (h2 : a'.store.scr = a.store.scr := by rfl) (hD : DerR m a) : DerR m a' := by
+  obtain ⟨b, f, s, c, l, ap, la, fa, le, pj⟩ := hD
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> simp only [DerT2, h1, h2] <;> assumption
+
+section levels
+variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {m m' : Mem} {a : AState}
+  {r : Word}
+
+/-- A level interning (a proto run over a level lens) from the stage relation: the expression
+tables, caches and pins are untouched, so `DerR` and `cp` carry over. -/
+theorem stage_of_level {β : Type} [BEq β] [Hashable β] {L : Lens β LDer .level} {op : AM LIdx}
+    {key : β} {tag : UInt32} {pf : Option LIdx} {d : LDer} {err : CheckError}
+    {A : List ArrId} {C : List Word}
+    (hS : StageR dn vis fe m a) (hrun : op.run a = protoRun L key tag pf d err a) (hok : AM.ok op a)
+    (hR : ArenaR m' (AM.st op a)) (hres : AM.res op a = decI r) (hf : MemFrame A C m m')
+    (hA : ∀ b ∈ A, b < 42) (hC : ∀ x ∈ C, x.toNat < 64)
+    (hset : ∀ t, (DerR m' a → DerR m' (L.setP a t)) ∧ cp (L.setP a t) = cp a)
+    (hsetS : ∀ t, (DerR m' a → DerR m' (L.setS a t)) ∧ cp (L.setS a t) = cp a) :
+    ∃ a', op.run a = .ok (decI r, a') ∧ StageR dn vis fe m' a' ∧ IWGrow m m' := by
+  have hD₁ : DerR m' a := DerR.frameM _ _ m m' hf (fun b hb => .inl (hA b hb)) a hS.1.arena.2
+  have hcs := AM.st_proto L op key tag pf d err a hrun hok
+  have hDk : DerR m' (AM.st op a) ∧ cp (AM.st op a) = cp a := by
+    rcases hcs with h | ⟨t, h⟩ | ⟨t, h⟩ <;> rw [h]
+    · exact ⟨hD₁, rfl⟩
+    · exact ⟨(hset t).1 hD₁, (hset t).2⟩
+    · exact ⟨(hsetS t).1 hD₁, (hsetS t).2⟩
+  have hrun' := AM.run_of_ok op a hok
+  rw [hres] at hrun'
+  obtain ⟨h1, h2⟩ := StageR.of_walk hS ⟨hR, hDk.1⟩ hf (fun b hb => Nat.lt_trans (hA b hb) (by decide))
+    hC hDk.2
+  exact ⟨_, hrun', h1, h2⟩
+
+theorem internParam_stage (hS : StageR dn vis fe m a) (u : Word) (hu : u.toNat < 2 ^ 32)
+    (hI : pinternW m u = some (r, m')) :
+    ∃ a', (internLNode (.param (decI u))).run a = .ok (decI r, a') ∧ StageR dn vis fe m' a' ∧
+      IWGrow m m' := by
+  have hR := hS.1.arena.1
+  obtain ⟨hok, hX, hres⟩ := pintern_correct m a hR.param u hu _ _ hI
+  have hI₂ := hI; rw [pinternW_eq] at hI₂
+  have hfr := internM_frame _ paramSch_wf _ _ _ _ _ _ _ _ hI₂
+  exact stage_of_level hS (internLNode_param_run _ a) hok
+    (hR.lift_param _ _ _ _ hX hfr (AM.st_proto paramLens _ _ _ _ _ _ a (internLNode_param_run _ a) hok))
+    hres hfr (by simp [paramSch, PREC, PSLOT]) (by simp [paramSch]) (fun _ => ⟨DerR.lvl, rfl⟩)
+    (fun _ => ⟨DerR.lvl, rfl⟩)
+
+theorem internZero_stage (hS : StageR dn vis fe m a) (hI : zinternW m = some (r, m')) :
+    ∃ a', (internLNode .zero).run a = .ok (decI r, a') ∧ StageR dn vis fe m' a' ∧
+      IWGrow m m' := by
+  have hR := hS.1.arena.1
+  obtain ⟨hok, hX, hres⟩ := zintern_correct m a hR.zero _ _ hI
+  have hI₂ := hI; rw [zinternW_eq] at hI₂
+  have hfr := internM_frame _ zeroSch_wf _ _ _ _ _ _ _ _ hI₂
+  exact stage_of_level hS (internLNode_zero_run a) hok
+    (hR.lift_zero _ _ _ _ hX hfr (AM.st_proto zeroLens _ _ _ _ _ _ a (internLNode_zero_run a) hok))
+    hres hfr (by simp [zeroSch, ZREC, ZSLOT]) (by simp [zeroSch]) (fun _ => ⟨DerR.lvl, rfl⟩)
+    (fun _ => ⟨DerR.lvl, rfl⟩)
+
+theorem internMax_stage (hS : StageR dn vis fe m a) (u v : Word) (hu : u.toNat < 2 ^ 32)
+    (hv : v.toNat < 2 ^ 32) (hI : minternW m u v = some (r, m')) :
+    ∃ a', (internLNode (.max (decI u) (decI v))).run a = .ok (decI r, a') ∧
+      StageR dn vis fe m' a' ∧ IWGrow m m' := by
+  have hR := hS.1.arena.1
+  obtain ⟨hok, hX, hres⟩ := mintern_correct m a hR.max u v hu hv _ _ hI
+  have hI₂ := hI; rw [minternW_eq] at hI₂
+  have hfr := internM_frame _ maxSch_wf _ _ _ _ _ _ _ _ hI₂
+  exact stage_of_level hS (internLNode_max_run _ _ a) hok
+    (hR.lift_max _ _ _ _ hX hfr (AM.st_proto maxLens _ _ _ _ _ _ a (internLNode_max_run _ _ a) hok))
+    hres hfr (by simp [maxSch, MREC, MSLOT]) (by simp [maxSch]) (fun _ => ⟨DerR.lvl, rfl⟩)
+    (fun _ => ⟨DerR.lvl, rfl⟩)
+
+end levels
+
 end L.Ind
