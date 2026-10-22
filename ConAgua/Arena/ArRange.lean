@@ -517,16 +517,15 @@ def arProj : FunDecl := lfn (h, c, d, k, fu) locals (fd, j, e0, t, i, nm, ix, e,
 
 /-! ## The program and its specs -/
 
-/-- What the specs need of the program. -/
-structure ArProg (p : Prog) : Prop where
-  base : AbsProg p
-  go : p.lookup "ar_go" = some arGo
-  node : p.lookup "ar_node" = some arNode
-  app : p.lookup "ar_app" = some arApp
-  lam : p.lookup "ar_lam" = some arLam
-  fa : p.lookup "ar_forall" = some arForall
-  le : p.lookup "ar_let" = some arLet
-  pj : p.lookup "ar_proj" = some arProj
+/-- The walk without its entry, over `absWalkProg`. -/
+def arWalkProg : Prog :=
+  [("ar_go", arGo), ("ar_node", arNode), ("ar_app", arApp), ("ar_lam", arLam),
+    ("ar_forall", arForall), ("ar_let", arLet), ("ar_proj", arProj)] ++ absWalkProg
+
+/-- What the specs need of the program: `arWalkProg`'s functions. -/
+def ArProg (p : Prog) : Prop := ProgHas p arWalkProg
+
+theorem ArProg.base {p : Prog} (hp : ArProg p) : AbsProg p := hp.right
 
 section specs
 variable (p : Prog) (hp : ArProg p)
@@ -560,7 +559,7 @@ include hp in
 theorem arGo_step (n : Nat) (ih : ArNodeSpec p n) : ArGoSpec p (n + 1) := by
   unfold ArNodeSpec at ih
   intro s₀ h c d k fu
-  rw [invoke_eq _ hp.go]
+  rw [invoke_eq _ (hp.get "ar_go")]
   simp only [callFn, arGo]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, abFvb_spec p hp.base n, ih] <;>
@@ -574,11 +573,12 @@ theorem arNode_step (n : Nat) (ih : ArArmSpec p n) : ArNodeSpec p (n + 1) := by
   have ihF := fun s h c d k fu => (ih s h c d k fu).2.2.1
   have ihE := fun s h c d k fu => (ih s h c d k fu).2.2.2.1
   have ihP := fun s h c d k fu => (ih s h c d k fu).2.2.2.2
-  rw [invoke_eq _ hp.node]
+  rw [invoke_eq _ (hp.get "ar_node")]
   simp only [callFn, arNode]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      internBVar_spec p hp.base.base.bvf hp.base.base.bvp hp.base.base.bvi n, ihA, ihL, ihF, ihE, ihP] <;>
+      internBVar_spec p (hp.get "bvar_find") (hp.get "bvar_push") (hp.get "intern_bvar") n, ihA,
+          ihL, ihF, ihE, ihP] <;>
     finish [viewOK, tierW, idxW]
 
 end specs

@@ -163,6 +163,10 @@ theorem CoreS.of_name {dn : NIdx → Option ConLeche.Name} {m m' : Mem} {a a' : 
         ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide),
           fun h => absurd (hA _ h) (by decide)⟩
         ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide),
+          fun h => absurd (hC _ h) (by decide)⟩
+        ⟨fun h => absurd (hA _ h) (by decide), fun h => absurd (hA _ h) (by decide),
+          fun h => absurd (hA _ h) (by decide)⟩
+        ⟨fun h => absurd (hC _ h) (by decide), fun h => absurd (hC _ h) (by decide),
           fun h => absurd (hC _ h) (by decide)⟩,
       hf.2.2.1 145 ▸ hS.bstk,
       hS.den.mono hN.lsext (by rw [hN.pins]) (by rw [hN.pins]) (fun _ _ hk => .inl (hN.caches ▸ hk))

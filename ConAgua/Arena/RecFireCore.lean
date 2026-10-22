@@ -33,7 +33,7 @@ variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {M : Mod
 it (`CoreMemos`). -/
 theorem CoreS.ctl136 {m : Mem} {a : AState} (hS : CoreS dn m a vis fe M eb) :
     136 < (m.arr64 CTL).size := by
-  obtain ⟨mp, h⟩ := hS.memos.2.2.2.2
+  obtain ⟨mp, h⟩ := hS.memos.2.2.2.2.1
   unfold MemoRG MemoRV at h
   have := h.1
   simp only [coreLsbSch] at this

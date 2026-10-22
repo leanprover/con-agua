@@ -1,4 +1,5 @@
 import ConAgua.Arena.StoreLib
+import ConAgua.Arena.SimLib
 import ConAgua.Arena.MaxStore
 import ConAgua.Arena.LpColRel
 
@@ -260,11 +261,8 @@ theorem internMax_refines (p : Prog) (hpf : p.lookup "max_find" = some maxFind)
     invoke p (exec p n) "intern_max" [u, v]
     ⦃fun r s' => LocEq s' s₀ ∧ AM.ok (internLNode (.max (decI u) (decI v))) a₀ ∧
       MaxR s'.mem (AM.st (internLNode (.max (decI u) (decI v))) a₀) ∧
-      AM.res (internLNode (.max (decI u) (decI v))) a₀ = decI (r.headD 0); ⊤⦄ := by
-  apply M.triple_of_run
-  intro s r s' hs hrun
-  obtain ⟨hloc, hI⟩ := M.of_run (P := fun s => s = s₀) hs hrun (internMax_spec p hpf hpp hp n s₀ u v)
-  subst hs
-  exact ⟨hloc, mintern_correct s.mem a₀ hR u v hu hv _ _ hI⟩
+      AM.res (internLNode (.max (decI u) (decI v))) a₀ = decI (r.headD 0); ⊤⦄ :=
+  Sim.tripleD (internMax_spec p hpf hpp hp n s₀ u v)
+    (Sim.ofOkD (mintern_correct s₀.mem a₀ hR u v hu hv))
 
 end L.Arena

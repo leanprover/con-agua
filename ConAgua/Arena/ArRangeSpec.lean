@@ -30,12 +30,14 @@ theorem arApp_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Word)
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ar_app" [h, c, d, k, fu]
     ⦃fun r s' => LocEq s' s₀ ∧ arAppW (n + 1) s₀.mem h c d k fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold ArGoSpec at ih
-  rw [invoke_eq _ hp.app]
+  rw [invoke_eq _ (hp.get "ar_app")]
   simp only [callFn, arApp]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      memoFindG_spec abSch p _ hp.base.abf n, memoPutG_spec abSch p _ hp.base.abp n, ih,
-      mkApp_spec p hp.base.base.derb hp.base.base.appf hp.base.base.appp hp.base.base.appi hp.base.base.mkapp n] <;>
+      memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
+          ih,
+      mkApp_spec p (hp.get "der_b") (hp.get "app_find") (hp.get "app_push") (hp.get "intern_app")
+          (hp.get "mk_app") n] <;>
     finish (gen := 20) [viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
@@ -44,12 +46,14 @@ theorem arLam_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Word)
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ar_lam" [h, c, d, k, fu]
     ⦃fun r s' => LocEq s' s₀ ∧ arLamW (n + 1) s₀.mem h c d k fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold ArGoSpec at ih
-  rw [invoke_eq _ hp.lam]
+  rw [invoke_eq _ (hp.get "ar_lam")]
   simp only [callFn, arLam]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      memoFindG_spec abSch p _ hp.base.abf n, memoPutG_spec abSch p _ hp.base.abp n, ih,
-      mkLam_spec p hp.base.base.derb hp.base.base.lamf hp.base.base.lamp hp.base.base.lami hp.base.base.mklam n] <;>
+      memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
+          ih,
+      mkLam_spec p (hp.get "der_b") (hp.get "lam_find") (hp.get "lam_push") (hp.get "intern_lam")
+          (hp.get "mk_lam") n] <;>
     finish (gen := 20) [viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
@@ -58,12 +62,14 @@ theorem arForall_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Wo
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ar_forall" [h, c, d, k, fu]
     ⦃fun r s' => LocEq s' s₀ ∧ arForallW (n + 1) s₀.mem h c d k fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold ArGoSpec at ih
-  rw [invoke_eq _ hp.fa]
+  rw [invoke_eq _ (hp.get "ar_forall")]
   simp only [callFn, arForall]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      memoFindG_spec abSch p _ hp.base.abf n, memoPutG_spec abSch p _ hp.base.abp n, ih,
-      mkForall_spec p hp.base.base.derb hp.base.base.faf hp.base.base.fap hp.base.base.fai hp.base.base.mkfa n] <;>
+      memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
+          ih,
+      mkForall_spec p (hp.get "der_b") (hp.get "forall_find") (hp.get "forall_push")
+          (hp.get "intern_forall") (hp.get "mk_forall") n] <;>
     finish (gen := 20) [viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
@@ -72,12 +78,14 @@ theorem arLet_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Word)
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ar_let" [h, c, d, k, fu]
     ⦃fun r s' => LocEq s' s₀ ∧ arLetW (n + 1) s₀.mem h c d k fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold ArGoSpec at ih
-  rw [invoke_eq _ hp.le]
+  rw [invoke_eq _ (hp.get "ar_let")]
   simp only [callFn, arLet]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      memoFindG_spec abSch p _ hp.base.abf n, memoPutG_spec abSch p _ hp.base.abp n, ih,
-      mkLet_spec p hp.base.base.derb hp.base.base.lef hp.base.base.lep hp.base.base.lei hp.base.base.mklet n] <;>
+      memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
+          ih,
+      mkLet_spec p (hp.get "der_b") (hp.get "letE_find") (hp.get "letE_push")
+          (hp.get "intern_letE") (hp.get "mk_let") n] <;>
     finish (gen := 20) [viewOK, tierW, idxW]
 
 set_option maxHeartbeats 1000000 in
@@ -86,12 +94,14 @@ theorem arProj_step (n : Nat) (ih : ArGoSpec p n) (s₀ : St) (h c d k fu : Word
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "ar_proj" [h, c, d, k, fu]
     ⦃fun r s' => LocEq s' s₀ ∧ arProjW (n + 1) s₀.mem h c d k fu = some (r.headD 0, s'.mem); ⊤⦄ := by
   unfold ArGoSpec at ih
-  rw [invoke_eq _ hp.pj]
+  rw [invoke_eq _ (hp.get "ar_proj")]
   simp only [callFn, arProj]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64,
-      memoFindG_spec abSch p _ hp.base.abf n, memoPutG_spec abSch p _ hp.base.abp n, ih,
-      mkProj_spec p hp.base.base.derb hp.base.base.pjf hp.base.base.pjp hp.base.base.pji hp.base.base.mkpj n] <;>
+      memoFindG_spec abSch p _ (hp.get "ab_find") n, memoPutG_spec abSch p _ (hp.get "ab_put") n,
+          ih,
+      mkProj_spec p (hp.get "der_b") (hp.get "proj_find") (hp.get "proj_push")
+          (hp.get "intern_proj") (hp.get "mk_proj") n] <;>
     finish (gen := 20) [viewOK, tierW, idxW]
 
 include hp in
@@ -102,13 +112,13 @@ theorem arGo_spec (n : Nat) : ArGoSpec p n ∧ ArNodeSpec p n ∧ ArArmSpec p n 
     refine ⟨fun s₀ h c d k fu => ?_, fun s₀ h c d k fu => ?_,
       fun s₀ h c d k fu => ⟨?_, ?_, ?_, ?_, ?_⟩⟩ <;>
     first
-    | (rw [invoke_eq _ hp.go]; simp only [callFn, arGo]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ hp.node]; simp only [callFn, arNode]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ hp.app]; simp only [callFn, arApp]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ hp.lam]; simp only [callFn, arLam]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ hp.fa]; simp only [callFn, arForall]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ hp.le]; simp only [callFn, arLet]; vcgen [exec] <;> grind)
-    | (rw [invoke_eq _ hp.pj]; simp only [callFn, arProj]; vcgen [exec] <;> grind)
+    | (rw [invoke_eq _ (hp.get "ar_go")]; simp only [callFn, arGo]; vcgen [exec] <;> grind)
+    | (rw [invoke_eq _ (hp.get "ar_node")]; simp only [callFn, arNode]; vcgen [exec] <;> grind)
+    | (rw [invoke_eq _ (hp.get "ar_app")]; simp only [callFn, arApp]; vcgen [exec] <;> grind)
+    | (rw [invoke_eq _ (hp.get "ar_lam")]; simp only [callFn, arLam]; vcgen [exec] <;> grind)
+    | (rw [invoke_eq _ (hp.get "ar_forall")]; simp only [callFn, arForall]; vcgen [exec] <;> grind)
+    | (rw [invoke_eq _ (hp.get "ar_let")]; simp only [callFn, arLet]; vcgen [exec] <;> grind)
+    | (rw [invoke_eq _ (hp.get "ar_proj")]; simp only [callFn, arProj]; vcgen [exec] <;> grind)
   | succ n ih =>
     exact ⟨arGo_step p hp n ih.2.1, arNode_step p hp n ih.2.2, fun s₀ h c d k fu =>
       ⟨arApp_step p hp n ih.1 s₀ h c d k fu, arLam_step p hp n ih.1 s₀ h c d k fu,
@@ -159,18 +169,12 @@ theorem arEntry_spec (p : Prog) (hp : ArProg p) (he : p.lookup "ar_entry" = some
   simp only [callFn, arEntry]
   sym only [lang_grind, arena_grind] =>
     vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs,
-      memoClearG_spec abSch p _ hp.base.abc n, ih] <;>
+      memoClearG_spec abSch p _ (hp.get "ab_clear") n, ih] <;>
     finish
 
 /-- The walk, `absProg` (its memo, `ab_fvb`, `fvarRangeProg`, `liftProg`), as one program. -/
-def arProg : Prog :=
-  [("ar_go", arGo), ("ar_node", arNode), ("ar_app", arApp), ("ar_lam", arLam),
-    ("ar_forall", arForall), ("ar_let", arLet), ("ar_proj", arProj), ("ar_entry", arEntry)] ++
-  absProg
+def arProg : Prog := arWalkProg ++ [("ar_entry", arEntry)] ++ [("abs_entry", absEntry)]
 
-theorem arProg_ok : ArProg arProg := by
-  refine ⟨?_, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
-  refine ⟨?_, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
-  constructor <;> rfl
+theorem arProg_ok : ArProg arProg := (ProgHas.refl _).left.left
 
 end L.Arena

@@ -5,3 +5,6 @@ __pycache__/
 docs/progress.md
 docs/progress.csv
 docs/lanes.json
+docs/buildstats.md
+docs/buildstats.csv
+docs/buildstats.json
