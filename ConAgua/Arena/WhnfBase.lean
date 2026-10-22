@@ -32,9 +32,8 @@ capacity, as every table's).
 environment. After a core run: `CoreAfter` (some maps that, inside the eager tower, keep the plain
 banks, `KeptAll`, and the stack below the top).
 
-**Stubs.** Callees whose L code does not exist yet are named L functions with an abstract
-spec (`WhnfCallees`); the refinements are proved from it, and the census-tagged theorems
-instantiate it with `whnfCallees_stub` (a `sorry`) until the callees land.
+**Callees.** The refinements take their callees' specs as a bundle (`WhnfCallees`); the knot
+(`DefEqKnot.lean`) proves it, and the census-tagged theorems (`KnotTagged.lean`) use that.
 -/
 
 open ConRon.Arena
@@ -745,11 +744,11 @@ def KnotUpTo (p : Prog) (n : Nat) : Prop := ∀ k, k ≤ n → KnotOK p k
 theorem KnotUpTo.mono {p : Prog} {n m : Nat} (h : KnotUpTo p n) (hm : m ≤ n) : KnotUpTo p m :=
   fun k hk => h k (Nat.le_trans hk hm)
 
-/-! ## Stubs: callees whose L code is not written yet
+/-! ## The callees of the whnf family
 
-Each is a named L function with the spec its twin will get. `WhnfCallees p` bundles them; the
+Each is a named L function with the spec of its twin. `WhnfCallees p` bundles them; the
 whnf family's refinements take it as a hypothesis, the census-tagged ones get it from
-`whnfCallees_stub` (a `sorry`, listed in DESIGN.md). -/
+`KnotAllProg.whnfC` (`DefEqKnot.lean`; tagged statements in `KnotTagged.lean`). -/
 
 /-- `inst_list(e, off, cnt, d)` refines `instantiateListFast coreWalkFuel e xs d` (phase 4),
 the accumulator a stack slice. -/

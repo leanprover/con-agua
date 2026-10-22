@@ -457,10 +457,4 @@ theorem majorToCtor_refines' : MajorToCtorOK p := by
 
 end top
 
-/-! ## The census-tagged statements
-
-They instantiate the stub bundles (`iotaCallees_stub`, `coreCallees_stub`,
-`proofIrrel_refines` (on the `CoreS.lvl_den` stub),
-and for `prepare_major` also `whnfCallees_stub`, `supKeep_twin`), as the other ι refinements do. -/
-
 end L.Arena

@@ -720,7 +720,7 @@ theorem CoreRef.of_run_eq {α : Type} [Inhabited α] {T T' : AM α} {a₀ : ASta
 
 /-- **`lit_major_to_ctor` refines `litMajorToCtor`.** Statement changes (the knot's `whnf` slot needs
 them): `n ≤ 2 ^ 62`, the eager bit `eb = (mode >>> 1) &&& 1`; and `SupKeep` (`strLitSupported` keeps the
-store's views: `WhnfBase.supKeep_twin`, a `sorry`) as a hypothesis. -/
+store's views: `StrLitKeep.supKeep_of`) as a hypothesis. -/
 theorem litMajorToCtor_refines' (p : Prog) (hp : IotaProg' p) (hc : IotaCallees p)
     (hw : WhnfCallees p) (hsup : ∀ fe : IFEnv, SupKeep fe) :
     ∀ (n : Nat), KnotUpTo p n → ∀ (F : Nat), n ≤ F → n ≤ 2 ^ 62 →
