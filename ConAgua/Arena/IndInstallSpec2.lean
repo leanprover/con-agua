@@ -243,4 +243,313 @@ theorem blockCapsCtorNames_refines (p : Prog) (ha : p.lookup "iw_alloc" = some i
   simp only [List.map_map] at this
   exact ⟨hl, this⟩
 
+/-! ## `check_block_inds_cv_tas` -/
+
+/-- The model of `check_block_inds_cv_tas_go`. -/
+def cvGoW : Nat → Mem → Word → Word → Word → Option Mem
+  | 0, _, _, _, _ => none
+  | n + 1, m, d, s, l =>
+    if l = 0 then some m
+    else cvGoW n (m.set64 IW d (rdW (m.arr64 IW) (rdW (m.arr64 IW) s))) (d + 1) (s + 1) (l - 1)
+
+section arms
+variable (n : Nat) (m : Mem) (d s l : Word)
+theorem cvGoW_nil (hl : l = 0) : cvGoW (n + 1) m d s l = some m := by simp [cvGoW, hl]
+theorem cvGoW_step (hl : l ≠ 0) :
+    cvGoW (n + 1) m d s l =
+      cvGoW n (m.set64 IW d (rdW (m.arr64 IW) (rdW (m.arr64 IW) s))) (d + 1) (s + 1) (l - 1) := by
+  simp [cvGoW, hl]
+end arms
+
+grind_pattern [ind_grind] cvGoW_nil => cvGoW (n + 1) m d s l
+grind_pattern [ind_grind] cvGoW_step => cvGoW (n + 1) m d s l
+
+theorem checkBlockIndsCvTasGo_spec (p : Prog)
+    (hp : p.lookup "check_block_inds_cv_tas_go" = some checkBlockIndsCvTasGo) (n : Nat) :
+    ∀ (s₀ : St) (d s l : Word),
+    ⦃fun st => st = s₀⦄ invoke p (exec p n) "check_block_inds_cv_tas_go" [d, s, l]
+    ⦃fun _ s' => LocEq s' s₀ ∧ cvGoW n s₀.mem d s l = some s'.mem; ⊤⦄ := by
+  induction n with
+  | zero =>
+    intro s₀ d s l; rw [invoke_eq _ hp]; simp only [callFn, checkBlockIndsCvTasGo]
+    vcgen [exec] <;> grind
+  | succ n ih =>
+    intro s₀ d s l
+    rw [invoke_eq _ hp]
+    simp only [callFn, checkBlockIndsCvTasGo]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64, ih] <;>
+      finish (gen := 20)
+
+/-- **What `check_block_inds_cv_tas_go` leaves.** -/
+theorem cvGoW_get (n : Nat) : ∀ (m m' : Mem) (d s l : Word), cvGoW n m d s l = some m' →
+    s.toNat + l.toNat ≤ d.toNat → d.toNat + l.toNat ≤ (m.arr64 IW).size →
+    (m.arr64 IW).size < 2 ^ 64 →
+    (∀ j < l.toNat, (rdW (m.arr64 IW) (UInt64.ofNat (s.toNat + j))).toNat < d.toNat) →
+    (∀ b, b ≠ IW → m'.arr64 b = m.arr64 b) ∧ (m'.arr64 IW).size = (m.arr64 IW).size ∧
+    m'.words.size = m.words.size ∧
+    ∀ i, (m'.arr64 IW)[i]? =
+      if d.toNat ≤ i ∧ i < d.toNat + l.toNat
+      then some (rdW (m.arr64 IW) (rdW (m.arr64 IW) (UInt64.ofNat (s.toNat + (i - d.toNat)))))
+      else (m.arr64 IW)[i]? := by
+  induction n with
+  | zero => intro m m' d s l h; simp [cvGoW] at h
+  | succ n ih =>
+    intro m m' d s l h hsd hd hsz hptr
+    by_cases hl : l = 0
+    · rw [cvGoW_nil n m d s l hl] at h
+      cases h
+      subst hl
+      refine ⟨fun _ _ => rfl, rfl, rfl, fun i => ?_⟩
+      have : ¬ (d.toNat ≤ i ∧ i < d.toNat + (0 : Word).toNat) := by
+        simp only [UInt64.toNat_zero]; omega
+      simp only [this, if_false]
+    · rw [cvGoW_step n m d s l hl] at h
+      have hl0 : 0 < l.toNat := by
+        have : l.toNat ≠ 0 := fun h0 => hl (UInt64.toNat_inj.mp (by simpa using h0))
+        omega
+      have hl1 : (l - 1).toNat = l.toNat - 1 := by rw [UInt64.toNat_sub]; simp; omega
+      have hd1 : (d + 1).toNat = d.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      have hs1 : (s + 1).toNat = s.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+      have hslt : s.toNat < (m.arr64 IW).size := by omega
+      have hdlt : d.toNat < (m.arr64 IW).size := by omega
+      have hp0 : (rdW (m.arr64 IW) s).toNat < d.toNat := by
+        have := hptr 0 hl0; simpa using this
+      obtain ⟨v, hv⟩ : ∃ v : Word, v = rdW (m.arr64 IW) (rdW (m.arr64 IW) s) := ⟨_, rfl⟩
+      rw [← hv] at h
+      obtain ⟨m1, hm1⟩ : ∃ m1, m1 = m.set64 IW d v := ⟨_, rfl⟩
+      rw [← hm1] at h
+      have hsz1 : (m1.arr64 IW).size = (m.arr64 IW).size := by
+        rw [hm1, Mem.arr64_set64_same]; simp
+      have hm1get : ∀ i, (m1.arr64 IW)[i]? = if i = d.toNat then some v else (m.arr64 IW)[i]? := by
+        intro i
+        rw [hm1, Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds]
+        by_cases hi : d.toNat = i
+        · subst hi; simp only [hdlt, true_and, if_true]
+        · simp [hi, Ne.symm hi]
+      have hrd : ∀ x : Word, x.toNat ≠ d.toNat → rdW (m1.arr64 IW) x = rdW (m.arr64 IW) x := by
+        intro x hx; rw [hm1]; exact rdW_set64_IW_ne m d v x hx
+      have hidx : ∀ k, s.toNat + k < 2 ^ 64 → (UInt64.ofNat (s.toNat + k)).toNat = s.toNat + k :=
+        fun k hk => UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; exact hk)
+      have hptr1 : ∀ j < (l - 1).toNat,
+          (rdW (m1.arr64 IW) (UInt64.ofNat ((s + 1).toNat + j))).toNat < (d + 1).toNat := by
+        intro j hj
+        have hj' : j + 1 < l.toNat := by rw [hl1] at hj; omega
+        have hbase := hptr (j + 1) hj'
+        have e1 : (s + 1).toNat + j = s.toNat + (j + 1) := by omega
+        rw [e1, hrd _ (by rw [hidx _ (by omega)]; omega), hd1]; omega
+      obtain ⟨hA, hS, hW, hG⟩ := ih m1 m' (d + 1) (s + 1) (l - 1) h
+        (by rw [hs1, hd1, hl1]; omega) (by rw [hd1, hl1, hsz1]; omega) (by rw [hsz1]; exact hsz)
+        hptr1
+      refine ⟨fun b hb => (hA b hb).trans ?_, hS.trans hsz1, hW.trans ?_, fun i => ?_⟩
+      · rw [hm1, Mem.arr64_set64_ne _ _ _ _ _ hb]
+      · rw [hm1]; exact Mem.words_size_set64 _ _ _ _
+      · rw [hG i, hd1, hl1, hs1]
+        by_cases hi : d.toNat ≤ i ∧ i < d.toNat + l.toNat
+        · rw [if_pos hi]
+          by_cases hid : i = d.toNat
+          · subst hid
+            have hnot : ¬ (d.toNat + 1 ≤ d.toNat ∧ d.toNat < d.toNat + 1 + (l.toNat - 1)) := by omega
+            rw [if_neg hnot]
+            have e3 : s.toNat + (d.toNat - d.toNat) = s.toNat := by omega
+            rw [e3, ofNat_toNat_word, hm1get, if_pos rfl, hv]
+          · have h2 : d.toNat + 1 ≤ i ∧ i < d.toNat + 1 + (l.toNat - 1) := by omega
+            rw [if_pos h2]
+            have e4 : s.toNat + 1 + (i - (d.toNat + 1)) = s.toNat + (i - d.toNat) := by omega
+            rw [e4]
+            have hb2 := hptr (i - d.toNat) (by omega)
+            have hi2 := hidx (i - d.toNat) (by omega)
+            have e5 : rdW (m1.arr64 IW) (UInt64.ofNat (s.toNat + (i - d.toNat))) =
+                rdW (m.arr64 IW) (UInt64.ofNat (s.toNat + (i - d.toNat))) :=
+              hrd _ (by rw [hi2]; omega)
+            rw [e5, hrd _ (by omega)]
+        · rw [if_neg hi, if_neg (by omega), hm1get, if_neg (by omega)]
+
+/-- A pointer slice whose words decode one by one decodes as the list. -/
+theorem decPL_of_get {m : Mem} {α : Type} (f : Nat → Option α) : ∀ (xs : List α) (o : Nat),
+    (∀ j (hj : j < xs.length), ∃ v, iwN m (o + j) = some v ∧ f v = some xs[j]) →
+    decPL m f o xs.length = some xs
+  | [], o, _ => by simp [decPL]
+  | x :: xs, o, h => by
+    obtain ⟨v0, hv0, hf0⟩ := h 0 (by simp)
+    have ih := decPL_of_get f xs (o + 1) (fun j hj => by
+      obtain ⟨v, hv, hf⟩ := h (j + 1) (by simpa using hj)
+      refine ⟨v, ?_, by simpa using hf⟩
+      have e : o + (j + 1) = o + 1 + j := by omega
+      simpa [e] using hv)
+    rw [List.length_cons, decPL_succ]
+    simp only [Nat.add_zero] at hv0
+    simp [hv0, hf0, ih]
+
+/-- The model of `check_block_inds_cv_tas(cvTa0, restO, restL)` at the caller's fuel `n`. -/
+def cvTasW (n : Nat) (m : Mem) (c0 ro rl : Word) : Option (List Word × Mem) :=
+  match allocW m (rl + 1) with
+  | none => none
+  | some (q, m1) =>
+    match cvGoW (n - 1) (m1.set64 IW q c0) (q + 1) ro rl with
+    | none => none
+    | some m2 => some ([q, rl + 1], m2)
+
+theorem checkBlockIndsCvTas_spec (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hc : p.lookup "check_block_inds_cv_tas_go" = some checkBlockIndsCvTasGo)
+    (hp : p.lookup "check_block_inds_cv_tas" = some checkBlockIndsCvTas) (n : Nat) (s₀ : St)
+    (c0 ro rl : Word) :
+    ⦃fun st => st = s₀⦄ invoke p (exec p n) "check_block_inds_cv_tas" [c0, ro, rl]
+    ⦃fun r s' => LocEq s' s₀ ∧ cvTasW n s₀.mem c0 ro rl = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, checkBlockIndsCvTas]
+  cases n with
+  | zero => vcgen [exec] <;> grind
+  | succ n =>
+    have hmod : ∀ q m1 m2, allocW s₀.mem (rl + 1) = some (q, m1) →
+        cvGoW n (m1.set64 IW q c0) (q + 1) ro rl = some m2 →
+        cvTasW (n + 1) s₀.mem c0 ro rl = some ([q, rl + 1], m2) := by
+      intro q m1 m2 h1 h2
+      simp [cvTasW, h1, h2]
+    sym only [lang_grind, arena_grind, ind_grind] =>
+      vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+        iwAlloc_specW p ha n, checkBlockIndsCvTasGo_spec p hc n] <;>
+      finish (gen := 20)
+
+/-- **What `check_block_inds_cv_tas` builds**: `cvTa0 :: rest.map (·.1)`, a fresh `IW` slice of
+`EREC` constant pointers. -/
+theorem cvTasW_dec {n : Nat} {m m' : Mem} {c0 ro rl : Word} {r : List Word}
+    (h : cvTasW n m c0 ro rl = some (r, m')) (hsz : (m.arr64 IW).size < 2 ^ 64)
+    (hc : 200 < (m.arr64 CTL).size) (hrl : rl.toNat + 1 < 2 ^ 64)
+    (hsrc : ro.toNat + rl.toNat ≤ iwTop m)
+    (cv0 : IConstantVal) (hcv0 : decCVp m c0.toNat = some cv0)
+    (cvs : List IConstantVal) (hlen : cvs.length = rl.toNat)
+    (hcv : ∀ j (hj : j < rl.toNat), ∃ v a, iwN m (ro.toNat + j) = some v ∧ v < iwTop m ∧
+      iwN m v = some a ∧ decCVp m a = some cvs[j]) :
+    r = [rdW (m.arr64 CTL) 200, rl + 1] ∧
+    decPL m' (decCVp m') (rdW (m.arr64 CTL) 200).toNat (rl.toNat + 1) = some (cv0 :: cvs) ∧
+    IWGrow m m' ∧ MemFrame [IW] [200] m m' ∧
+    (rdW (m.arr64 CTL) 200).toNat + (rl.toNat + 1) = iwTop m' := by
+  have hrl1 : (rl + 1).toNat = rl.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  simp only [cvTasW] at h
+  cases hal : allocW m (rl + 1) with
+  | none => simp [hal] at h
+  | some qm =>
+  obtain ⟨q, m1⟩ := qm
+  obtain ⟨hq', hm1, hroom⟩ := allocW_facts hal hsz
+  simp only [hal] at h
+  cases hcp : cvGoW (n - 1) (m1.set64 IW q c0) (q + 1) ro rl with
+  | none => simp [hcp] at h
+  | some m2 =>
+  simp only [hcp, Option.some.injEq, Prod.mk.injEq] at h
+  obtain ⟨rfl, rfl⟩ := h
+  subst hq' hm1
+  rw [hrl1] at hroom
+  generalize hqq : rdW (m.arr64 CTL) 200 = q at *
+  have hIW := allocMem_IW m (rl + 1)
+  have hEE : (allocMem m (rl + 1)).arr64 EREC = m.arr64 EREC := by
+    simp only [allocMem]; rw [Mem.arr64_set64_ne _ _ _ _ _ (by decide)]
+  have hqt : iwTop m = q.toNat := by simp only [iwTop, hqq]
+  have hq1 : (q + 1).toNat = q.toNat + 1 := by rw [UInt64.toNat_add]; simp; omega
+  have hqlt : q.toNat < (m.arr64 IW).size := by omega
+  have hszA : (((allocMem m (rl + 1)).set64 IW q c0).arr64 IW).size = (m.arr64 IW).size := by
+    rw [Mem.arr64_set64_same]; simp [hIW]
+  have hAget : ∀ i, (((allocMem m (rl + 1)).set64 IW q c0).arr64 IW)[i]? =
+      if i = q.toNat then some c0 else (m.arr64 IW)[i]? := by
+    intro i
+    rw [Mem.arr64_set64_same, Array.set!_eq_setIfInBounds, Array.getElem?_setIfInBounds, hIW]
+    by_cases hi : q.toNat = i
+    · subst hi; simp [hqlt]
+    · simp [hi, Ne.symm hi]
+  have hrdA : ∀ x : Word, x.toNat ≠ q.toNat →
+      rdW (((allocMem m (rl + 1)).set64 IW q c0).arr64 IW) x = rdW (m.arr64 IW) x := by
+    intro x hx; rw [rdW_set64_IW_ne _ q c0 x hx, hIW]
+  have hidx : ∀ k, ro.toNat + k < 2 ^ 64 → (UInt64.ofNat (ro.toNat + k)).toNat = ro.toNat + k :=
+    fun k hk => UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; exact hk)
+  have hptr' : ∀ j < rl.toNat,
+      (rdW (((allocMem m (rl + 1)).set64 IW q c0).arr64 IW) (UInt64.ofNat (ro.toNat + j))).toNat <
+        (q + 1).toNat := by
+    intro j hj
+    obtain ⟨v, a, hv, hvb, -, -⟩ := hcv j hj
+    obtain ⟨hv', -⟩ := iwN_rdW hv (by omega)
+    rw [hrdA _ (by rw [hidx j (by omega)]; omega), hv', hq1]
+    rw [UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)]; omega
+  obtain ⟨hA, hS, hW, hG⟩ := cvGoW_get (n - 1) _ _ _ _ _ hcp
+    (by rw [hq1]; omega) (by rw [hq1, hszA]; omega) (by rw [hszA]; exact hsz) hptr'
+  have hfr : MemFrame [IW] [200] m m2 :=
+    (allocMem_frame m _).trans ((set64IW_frame _ q c0).trans (copy_frame hA hS hW))
+  have htop : rdW (m2.arr64 CTL) 200 = q + (rl + 1) := by
+    rw [hA CTL (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide), allocMem_top m _ hc, hqq]
+  have hsum : (q + (rl + 1)).toNat = q.toNat + (rl.toNat + 1) := by
+    rw [UInt64.toNat_add, hrl1]; simp; omega
+  have hE2 : m2.arr64 EREC = m.arr64 EREC := by
+    rw [hA EREC (by decide), Mem.arr64_set64_ne _ _ _ _ _ (by decide), hEE]
+  have hdec2 : decCVp m2 = decCVp m := by
+    funext a; simp only [decCVp, erA, hE2]
+  refine ⟨rfl, ?_, ?_, hfr, ?_⟩
+  · have := decPL_of_get (m := m2) (decCVp m2) (cv0 :: cvs) q.toNat (fun j hj => by
+      rw [hdec2]
+      cases j with
+      | zero =>
+        have hg := hG q.toNat
+        rw [if_neg (by omega), hAget, if_pos rfl] at hg
+        refine ⟨c0.toNat, ?_, by simpa using hcv0⟩
+        simp [iwN, nat?, iwA, hg]
+      | succ j =>
+        have hj' : j < rl.toNat := by simpa [hlen] using hj
+        obtain ⟨v, a, hv, hvb, hva, hcv'⟩ := hcv j hj'
+        have hGj := hG (q.toNat + (j + 1))
+        rw [if_pos (by rw [hq1]; omega), hq1] at hGj
+        have e2 : q.toNat + (j + 1) - (q.toNat + 1) = j := by omega
+        rw [e2] at hGj
+        obtain ⟨hv', -⟩ := iwN_rdW hv (by omega)
+        obtain ⟨hva', hab⟩ := iwN_rdW hva (by omega)
+        have e3 : rdW (((allocMem m (rl + 1)).set64 IW q c0).arr64 IW)
+            (UInt64.ofNat (ro.toNat + j)) = UInt64.ofNat v := by
+          rw [hrdA _ (by rw [hidx j (by omega)]; omega), hv']
+        have e4 : rdW (((allocMem m (rl + 1)).set64 IW q c0).arr64 IW) (UInt64.ofNat v) =
+            UInt64.ofNat a := by
+          rw [hrdA _ (by rw [UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega)]; omega), hva']
+        rw [e3, e4] at hGj
+        refine ⟨a, ?_, by simpa using hcv'⟩
+        simp only [iwN, nat?, iwA, hGj, Option.map_some]
+        congr 1
+        exact UInt64.toNat_ofNat_of_lt' (by rw [UInt64_size_eq]; omega))
+    simpa [hlen] using this
+  · refine iwGrow_of_frame hfr (N := rl + 1) ?_ ?_ hsz ?_
+    · rw [htop, hqq]
+    · simp only [iwTop, hqq, hrl1]; omega
+    · intro i hi
+      simp only [iwTop, hqq] at hi
+      rw [hG, if_neg (by omega), hAget, if_neg (by omega)]
+  · simp only [iwTop, htop, hsum]
+
+/-- The constant at the first word of a record pointer (`rp ↦ rp.1` of a `(cv, _)` pair). -/
+def decCV1 (m : Mem) (rp : Nat) : Option IConstantVal := do decCVp m (← iwN m rp)
+
+/-- **`check_block_inds_cv_tas` is `cvTa₀ :: cvs.map (·.1)`** of `checkBlockInds`: the new `IW`
+slice of `EREC` constant pointers decodes as `cv0 :: rest`, where `rest` is the formers' constants
+read off the first words of the `(cv, _)` pointers of `(restO, restL)`. -/
+@[refines_part ConRon.Arena.checkBlockInds "the formers' constants list cvTas"]
+theorem checkBlockIndsCvTas_refines (p : Prog) (ha : p.lookup "iw_alloc" = some iwAlloc)
+    (hc : p.lookup "check_block_inds_cv_tas_go" = some checkBlockIndsCvTasGo)
+    (hp : p.lookup "check_block_inds_cv_tas" = some checkBlockIndsCvTas) (n : Nat) (s₀ : St)
+    (c0 ro rl : Word) (cv0 : IConstantVal) (rest : List IConstantVal)
+    (hcv0 : decCVp s₀.mem c0.toNat = some cv0)
+    (hrest : decPL s₀.mem (decCV1 s₀.mem) ro.toNat rl.toNat = some rest)
+    (hsz : (s₀.mem.arr64 IW).size < 2 ^ 64) (hcl : 200 < (s₀.mem.arr64 CTL).size)
+    (hrl : rl.toNat + 1 < 2 ^ 64) (hsrc : ro.toNat + rl.toNat ≤ iwTop s₀.mem)
+    (hptr : ∀ j v, j < rl.toNat → iwN s₀.mem (ro.toNat + j) = some v → v < iwTop s₀.mem) :
+    ⦃fun st => st = s₀⦄ invoke p (exec p n) "check_block_inds_cv_tas" [c0, ro, rl]
+    ⦃fun r s' => LocEq s' s₀ ∧ r = [rdW (s₀.mem.arr64 CTL) 200, rl + 1] ∧
+      decPL s'.mem (decCVp s'.mem) (rdW (s₀.mem.arr64 CTL) 200).toNat (rl.toNat + 1) =
+        some (cv0 :: rest) ∧
+      IWGrow s₀.mem s'.mem ∧ MemFrame [IW] [200] s₀.mem s'.mem ∧
+      (rdW (s₀.mem.arr64 CTL) 200).toNat + (rl.toNat + 1) = iwTop s'.mem; ⊤⦄ := by
+  refine triple_post (checkBlockIndsCvTas_spec p ha hc hp n s₀ c0 ro rl) ?_
+  rintro r s' ⟨hl, hm⟩
+  have hlen := decPL_length _ hrest
+  exact ⟨hl, cvTasW_dec hm hsz hcl hrl hsrc cv0 hcv0 rest hlen (fun j hj => by
+    obtain ⟨v, y, hv, hy, hget⟩ := decPL_get rl.toNat ro.toNat rest hrest j hj
+    have hj' : j < rest.length := by omega
+    have hy' : rest[j] = y := by simpa [List.getElem?_eq_getElem hj'] using hget
+    simp only [decCV1, bind, Option.bind_eq_some_iff] at hy
+    obtain ⟨a, ha', hy2⟩ := hy
+    exact ⟨v, a, hv, hptr j v hj hv, ha', by rw [hy']; exact hy2⟩)⟩
+
 end L.Ind
