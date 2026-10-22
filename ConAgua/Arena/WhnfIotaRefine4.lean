@@ -568,6 +568,7 @@ def ErecKeptKnot (p : Prog) : Prop :=
       "prepare_major", "proof_irrel", "defeq_list", "iota_index_ok"] →
     callW p n f vs m = some (r, m') → m'.arr64 EREC = m.arr64 EREC
 
+set_option maxRecDepth 8192 in
 /-- `ErecKeptKnot` from the core's write set (`CoreErec.lean`). -/
 theorem ErecKeptKnot.of_closed {p : Prog} (hcl : closedA p coreErecA coreErecC coreFns = true) :
     ErecKeptKnot p :=

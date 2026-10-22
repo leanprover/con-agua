@@ -140,6 +140,7 @@ def preS (t : NTree) : Stmt → Stmt
   | .while c s => .while (preC c) (preS t s)
   | .ret es => .ret (es.map preE)
   | .call xs f args => .call xs (preName t f) (args.map preE)
+  | .gset g e => .gset g (preE e)
   | s => s
 
 /-- **A frontend function, renamed onto the prelude's arrays** (`t`: the copied functions). -/

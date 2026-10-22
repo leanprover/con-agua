@@ -858,6 +858,105 @@ has hypotheses before the triple).
   `num_end` `sorry` is gone. No `sorry` anywhere in `ConAgua`.
 
 
+## Global variables (2026-10-22, lane `lfeat`)
+
+Counters, tops, epochs and flags have lived in the `CTL` word array (`CTL[62]`, `CTL[192]`,
+`CTL[k + (t & 1)]`), with frames over `CTL` indices stated and proved by hand. L now has
+**statically declared global word variables**, additively: no existing constructor, lemma name or
+statement changed, and nothing has to migrate. Files: `L/{Syntax,Semantics,Logic,PureEval,
+Notation,WriteSet,Examples}.lean`, `Compiler/{Compile,WF,WFFast,Run,Rel,SimExpr,RunEq,SimStmt,
+SimStore,SimCall,Correct,Main,Tests,WFAll}.lean`, `harness/e2e.c`, `Compiler/harness/run.c`; one
+arm each in the other passes over L syntax (`Front/{Preserve,RunModel}`, `Rom/{Subst,PinRead,Stage}`,
+`E2E/{Ser,Trace}`, `Checker/Prelude`), one field in `Arena/Frame.lean` (`wFr_wframe`), one
+anonymous constructor in `Arena/IndDecStab.lean`.
+
+### Design
+
+* **Syntax.** `structure GVar where id : Nat` (a global is a number, as an array is);
+  `Expr.glob g` and `Stmt.gset g e`, appended as the last constructors. Notation: an identifier
+  that is not a local names a global, so `HTOP` reads it and `HTOP := e`, `HTOP += e` write it.
+  Declare one as `abbrev HTOP : L.GVar := ⟨3⟩` (distinct globals need distinct numbers; a
+  `GVar` cannot be confused with an `ArrId`, which a plain `Nat` could).
+* **Semantics.** A separate store in the memory: `Mem.glob : GVar → Word` (default `0`), written
+  by `Mem.setG`. A global access never fails (no bounds, no `oob`).
+* **Proof support** (`lang_grind`): `Mem.setG_glob` (read after write, decided on the numbers
+  `h.id = g.id`, which `grind` settles for literal globals; stating it over `GVar` equality left
+  `grind` unable to refute `⟨1⟩ = ⟨0⟩`), every array/global non-interference equation in applied
+  form (`(m.set64 a i v).glob g = m.glob g`: the unapplied form `(m.set64 a i v).glob = m.glob`
+  is a partial application `grind` does not use, as with `St.loc`), `Expr.pval` of a global.
+  `vcgen` needs `setG` in its list for a write (as `setLoc`).
+* **Write sets by name** (`L/WriteSet.lean`). `closedG p G fs`: every function of the
+  call-closed set `fs` writes only the globals in the list `G` (array stores unrestricted); then
+  every run keeps the others, `GFrame G m m'` (`run_gframe`, `invoke_gframe`). For a caller's
+  `vcgen`, `Triple.gframe hclosed hf spec` adds `GFrame G s₀.mem s.mem` to a callee's spec, and
+  `GFrame.glob` (pattern `GFrame G m m', m'.glob g`) with `GVar.mem_cons` gives `grind` every
+  untouched global: **the frame is by construction**, a callee's spec says nothing about
+  globals it does not write. `closedW`/`closedA` (the array write sets) ignore globals: a
+  `WFrame` gained one field, `setG` (closure under any global write), which `MemFrame`-based
+  frames prove by `h` (`Arena/Frame.lean`, one line).
+* **Compiler.** Global `g` is the word at `T + Tab.globOff g`: a **global area** in the
+  descriptor table after the result area, before the entry arguments (`Tab.ng` words;
+  `Prog.tab` takes one more than the largest global the program names). A read is
+  `mov rax, [r15 + off]`, a write `compileE e; mov [r15 + off], rax`: two existing instruction
+  forms, so no new step lemma. For `ng = 0` the code and the table are unchanged (every `Emit*`
+  driver prints the same assembly). `Prog.wf`/`wfFast`: every global below `tab.ng`, and the
+  table offsets with the area below `maxOff`.
+* **The proof.** `MemRel` gained `glob` (the area holds `m.glob`); `Layout.InGlob`, `globAddr`;
+  `MemRel.onlyG` (the old `onlyD` body, generalized to a memory with the same arrays and any
+  globals the machine holds) gives `onlyD` (now also requiring the change to avoid the area) and
+  `MemRel.storeG`; `Pres` allows changes in the area; `sim_expr`'s `glob` case is `len64`'s;
+  `sim_gset` is `sim_set` with a table store (`Inv.storeG`, `Pres.storeG`). `compile_correct`'s
+  statement is unchanged (`MemRel` now also says the area holds the globals; `InTab` covers it);
+  no `sorry`, `#print axioms`: `propext`, `Classical.choice`, `Quot.sound`.
+* **Harness.** `asmText` emits `ca_ng`; `harness/e2e.c` sizes the table `+ ca_ng` (mmap zeroes
+  the globals: `L.run` starts them at `0` too), `run.c` places the arguments after them.
+  `runKraken` stores the memory's globals. `harness/check-asm.sh` now builds with `scripts/lake`
+  (scan 303, store 1313, walk 6794 instructions: OK).
+
+### Measurements
+
+* Compiler proof: **+173 lines** (`Rel` +77, `SimStore` +71, `SimExpr` +10, `SimStmt` +7, `RunEq`
+  +6, `SimCall` +1, `Correct` +1; `Main`, `SimFun`, `Step`, `Mem` unchanged); compiler +41
+  (`Compile` +33, `WF` +3, `WFFast` +1, `Run` +4). Build time (`lake env lean`, user s, machine
+  shared): `Rel` 2.1 → 2.5, `SimStore` 3.0 → 3.6, the other compiler modules within noise;
+  `L/WriteSet` 1.2 → 2.0 (the `closedG` induction).
+* Tests (`Compiler/Tests.lean`, on Kraken against `L.run`): `globProg`, two globals across calls,
+  in a condition and with `+=`, nine results (result area and global area side by side), the
+  initial globals from the memory.
+* **Demo** (`L/Examples.lean`, `bump`/`bump_user`): the two words a callee writes and the one its
+  caller keeps across the call were `CTL.u64[0]`, `[1]`, `[2]`; now `LAST`, `CALLS`, `MARK`.
+  Before (with the arena's `rdW`, `store_grind` and `arena_grind`): 48 non-blank lines, a size
+  precondition on each spec, a hand-stated frame `CtlFrame` (the other `CTL` words and the size,
+  with `rdW` and `getElem` forms and three patterns, 14 lines; the first attempt without the
+  `getElem` form failed), and array lemmas in both `finish` calls. After: 31 non-blank lines
+  (with the three declarations and the one-line write set `bump_closed : closedG … := by
+  decide`), no precondition, no frame in `bump`'s spec, `finish` with no arguments. Both check
+  in about 1 s.
+
+### How to use
+
+* Declare: `abbrev CNT : L.GVar := ⟨k⟩`, a number no other global of the program uses. Read
+  `CNT`, write `CNT := e` / `CNT += e` in `lfn`. Pass `setG` to `vcgen`. A model reads
+  `m.glob CNT`.
+* Frames: prove `closedG prog [CNT, …] ["f", …] = true := by decide` for the function set, and pass
+  `Triple.gframe hclosed (by decide) (f_spec …)` to the caller's `vcgen`. A run-level user gets
+  `run_gframe`.
+* A program with globals runs with `harness/e2e.c`/`run.c` unchanged in use (`ca_ng` from the
+  assembly).
+
+### Migration notes (every lane)
+
+Nothing has to change to keep building. If you write a function over L syntax by pattern
+matching without a wildcard, it needs arms for `Expr.glob` and `Stmt.gset` (done for every one
+on master); an anonymous `Mem` constructor needs the third field (`m.glob`); a `WFrame` instance
+needs `setG _ _ _ _ h := h` if the frame does not look at globals. `Checker/Prelude.lean`'s
+renaming copies globals unrenamed: a copied frontend function that uses a global would share it
+with the original (none does).
+
+### `sorry`s
+
+None.
+
 ## The `lit` store, `intern_lit`, and the state relation (2026-10-21, lane `store`)
 
 Files: `ConAgua/Arena/Store.lean` (L code, word-level models, `vcgen` specs),
@@ -7165,7 +7264,7 @@ grows (the memo library's capacity rule, as every L memo). Refinement: not yet (
 ### The record pool from the program text (`CoreErec.lean`)
 * `ErecKept`, `ErecKeptInst`, `ErecKeptKnot`, `ErecKeptRec` ("a call of `f` leaves `EREC`") are
   facts about the text: no function the core reaches stores into `EREC`. `coreFns` (the call
-  closure of `coreRoots` in `checkerProg`, a literal list, 422 functions) and
+  closure of `coreRoots` in `checkerProg`, a literal list regenerated by `scripts/core_fns.py`, 443 functions) and
   `closedA p coreErecA coreErecC coreFns` (all arrays but `EREC`, every `CTL` word below 256);
   `callW_erec_closed`; `ErecKept*.of_closed`. At `checkerProg` it is
   `L.Checker.checkerProg_coreErec` (`decide +kernel`, 74 s). `erecKeptInst_stub` and

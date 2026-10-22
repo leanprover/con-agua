@@ -124,7 +124,7 @@ theorem sim_zero (sp : Nat) (Q : MachineState → Prop) :
 end
 
 section
-variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres < maxOff) (p : Prog)
+variable [Host] {G : Layout} (hG : G.Ok) (hTab : 16 + 16 * (G.tab.nb + G.tab.nw) + 8 * G.tab.romWords + 8 * G.tab.nxres + 8 * G.tab.ng < maxOff) (p : Prog)
 include hG hTab
 
 theorem funSim (hwfp : ∀ f fd, p.lookup f = some fd → FunDecl.wf p G.tab fd = true) (n : Nat)
