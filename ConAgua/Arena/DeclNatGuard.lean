@@ -1,4 +1,5 @@
 import ConAgua.Arena.DeclNatLit
+import ConAgua.Arena.DeclNatDeps
 
 /-!
 # The structural-`Nat` gate: `bool_ctor_ok` and `nat_op_guard` (lane `decls3`, helper `decls3-nat`)
@@ -450,6 +451,155 @@ theorem boolCtors_ref (hN : NatGuardProg p) :
         refine ⟨x2, a2, ?_, hS2, hg1.trans hg2, hx2⟩
         simp only [natBoolCtorsT, boolTrueName_eq, StateT.run_bind, e1', exc_ok_bind', hf, hrun1, hx,
           Bool.not_true, Bool.false_eq_true, if_false, boolFalseName_eq, e4', hf2, hrun2]
+
+theorem getD0 (r : List Word) : r.getD 0 0 = r.headD 0 := by cases r <;> simp
+theorem getD1 (r : List Word) : r.getD 1 0 = r.tail.headD 0 := by
+  cases r with
+  | nil => simp
+  | cons a t => cases t <;> simp
+
+theorem natOpGuard_unfold (fe : IFEnv) (c : NIdx) : natOpGuard fe c = (do
+    if !(← natLitSupported fe) then pure false else do
+      let deps ← natOpDeps c
+      if !(← natOpDepsStored fe deps) then pure false else do
+        let be ← natBeqName
+        let bl ← natBleName
+        let dm ← natDivModNames
+        if c == be || c == bl || dm.contains c then natBoolCtorsT fe else pure true) := rfl
+
+theorem natOpGuard_ref (hN : NatGuardProg p) (c : Word) :
+    CallRef p "nat_op_guard" [vis, c] (fun m a => StageR dn vis fe m a ∧ H c)
+      (natOpGuard fe (decI c)) (KeepPost dn vis fe decW0B) := by
+  refine CallRef.of_succ fun k m a r m' ⟨hS, hc⟩ hcall => ?_
+  have hw := callW_model (M := fun mm => natOpGuardW p k mm vis c) (natOpGuard_specW p hN.lNatOpGuard k · vis c) hcall
+  unfold natOpGuardW at hw
+  rw [natOpGuard_unfold]
+  -- literals supported
+  cases h1 : callW p k "nat_lit_supported" [vis] m with
+  | none => rw [h1] at hw; simp [ngK1] at hw
+  | some q1 =>
+  obtain ⟨r1, m1⟩ := q1
+  rw [h1, ngK1_some] at hw
+  obtain ⟨x1, a1, hrun1, hS1, hg1, hx1⟩ := natLitSupported_ref (dn := dn) (vis := vis) (fe := fe)
+    hN.toNatLitProg k m a r1 m1 hS h1
+  by_cases hz1 : r1.headD 0 = 0
+  · rw [if_pos hz1] at hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    have hx : x1 = false := by have := hx1.1; rw [hz1] at this; simpa using this.symm
+    refine ⟨false, a1, ?_, hS1, hg1, by simp [decW0B]⟩
+    simp only [StateT.run_bind, hrun1, exc_ok_bind', hx, Bool.not_false, if_true]
+    rfl
+  rw [if_neg hz1] at hw
+  have hx : x1 = true := by
+    have := hx1.1; have hne : (r1.headD 0 != 0) = true := by simpa using hz1
+    rw [hne] at this; exact this.symm
+  -- the dependencies
+  cases h2 : callW p k "nat_op_deps" [c] m1 with
+  | none => rw [h2] at hw; simp [ngK2] at hw
+  | some q2 =>
+  obtain ⟨r2, m2⟩ := q2
+  rw [h2, ngK2_some] at hw
+  obtain ⟨deps, a2, hrun2, hS2, hg2, hx2⟩ := natOpDeps_ref (dn := dn) (vis := vis) (fe := fe)
+    hN.toNatGateProg c k m1 a1 r2 m2 ⟨hS1, hc⟩ h2
+  have hd2 : decHL m2 (r2.headD 0).toNat (r2.tail.headD 0).toNat = some deps := by
+    have := hx2.1; rw [getD0, getD1] at this; exact this
+  cases h3 : callW p k "nat_op_deps_stored" [vis, r2.headD 0, r2.tail.headD 0] m2 with
+  | none => rw [h3] at hw; simp [ngK3] at hw
+  | some q3 =>
+  obtain ⟨r3, m3⟩ := q3
+  rw [h3, ngK3_some] at hw
+  obtain ⟨x3, a3, hrun3, hS3, hg3, hx3⟩ := natOpDepsStored_ref (dn := dn) (vis := vis) (fe := fe)
+    hN.toNatGateProg (r2.headD 0) (r2.tail.headD 0) deps k m2 a2 r3 m3 ⟨hS2, hd2⟩ h3
+  by_cases hz3 : r3.headD 0 = 0
+  · rw [if_pos hz3] at hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    have hx' : x3 = false := by have := hx3.1; rw [hz3] at this; simpa using this.symm
+    refine ⟨false, a3, ?_, hS3, hg1.trans (hg2.trans hg3), by simp [decW0B]⟩
+    simp only [StateT.run_bind, hrun1, exc_ok_bind', hx, Bool.not_true, Bool.false_eq_true, if_false,
+      hrun2, hrun3, hx']
+    rfl
+  rw [if_neg hz3] at hw
+  have hx' : x3 = true := by
+    have := hx3.1; have hne : (r3.headD 0 != 0) = true := by simpa using hz3
+    rw [hne] at this; exact this.symm
+  -- the two pinned comparison names, the division family, its membership test
+  cases h4 : callW p k "pin_at" [19] m3 with
+  | none => rw [h4] at hw; simp [ngK4] at hw
+  | some q4 =>
+  obtain ⟨r4, m4⟩ := q4
+  rw [h4, ngK4_some] at hw
+  obtain ⟨hm4, h0, hr4⟩ := pinAt_call hN.lPinAt (j := 20) rfl h4
+  rw [hm4] at hw
+  cases h5 : callW p k "pin_at" [20] m3 with
+  | none => rw [h5] at hw; simp [ngK5] at hw
+  | some q5 =>
+  obtain ⟨r5, m5⟩ := q5
+  rw [h5, ngK5_some] at hw
+  obtain ⟨hm5, -, hr5⟩ := pinAt_call hN.lPinAt (j := 21) rfl h5
+  rw [hm5] at hw
+  have hF3 := hS3.1.pins.full h0
+  have hp4 : H (r4.headD 0) := by rw [hr4]; exact hF3.names_lt 19 (by decide)
+  have hp5 : H (r5.headD 0) := by rw [hr5]; exact hF3.names_lt 20 (by decide)
+  have e4 : (pinAt 19).run a3 = .ok (decI (r4.headD 0), a3) := by
+    have := pinAt_run hF3 19 (by decide)
+    rw [hr4]; exact this
+  have e5 : (pinAt 20).run a3 = .ok (decI (r5.headD 0), a3) := by
+    have := pinAt_run hF3 20 (by decide)
+    rw [hr5]; exact this
+  cases h6 : callW p k "nat_div_mod_names" [] m3 with
+  | none => rw [h6] at hw; simp [ngK6] at hw
+  | some q6 =>
+  obtain ⟨r6, m6⟩ := q6
+  rw [h6, ngK6_some] at hw
+  obtain ⟨dm, a6, hrun6, hS6, hg6, hx6⟩ := natDivModNames_ref (dn := dn) (vis := vis) (fe := fe)
+    hN.toNatGateProg k m3 a3 r6 m6 hS3 h6
+  have hd6 : decHL m6 (r6.headD 0).toNat (r6.tail.headD 0).toNat = some dm := by
+    have := hx6.1; rw [getD0, getD1] at this; exact this
+  cases h7 : callW p k "sl_contains" [r6.headD 0, r6.tail.headD 0, c] m6 with
+  | none => rw [h7] at hw; simp [ngK7] at hw
+  | some q7 =>
+  obtain ⟨r7, m7⟩ := q7
+  rw [h7, ngK7_some] at hw
+  obtain ⟨x7, a7, hrun7, hS7, hg7, hx7⟩ := slContains_ref (dn := dn) (vis := vis) (fe := fe)
+    hN.lSlContains (r6.headD 0) (r6.tail.headD 0) c dm hc k m6 a6 r7 m7 ⟨hS6, hd6⟩ h7
+  have hx7' : x7 = dm.contains (decI c) := by
+    have := hrun7
+    simp only [StateT.run_pure, Except.ok.injEq, Prod.mk.injEq] at this
+    exact this.1.symm
+  have hcond : (decI c == decI (r4.headD 0) || decI c == decI (r5.headD 0) || dm.contains (decI c)) =
+      decide (c = r4.headD 0 ∨ c = r5.headD 0 ∨ r7.headD 0 ≠ 0) := by
+    rw [decI_beq_word hc hp4, decI_beq_word hc hp5, ← hx7']
+    have := hx7.1
+    rw [← this]
+    by_cases h : r7.headD 0 = 0 <;> simp [h]
+  have hg67 : IWGrow m m7 := hg1.trans (hg2.trans (hg3.trans (hg6.trans hg7)))
+  by_cases hP : c = r4.headD 0 ∨ c = r5.headD 0 ∨ r7.headD 0 ≠ 0
+  · rw [if_pos hP] at hw
+    cases h8 : callW p k "nat_op_bool_ctors" [vis] m7 with
+    | none => rw [h8] at hw; simp [ngK8] at hw
+    | some q8 =>
+    obtain ⟨r8, m8⟩ := q8
+    rw [h8, ngK8_some] at hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    obtain ⟨x8, a8, hrun8, hS8, hg8, hx8⟩ := boolCtors_ref (dn := dn) (vis := vis) (fe := fe) hN
+      k m7 a7 r8 m8 hS7 h8
+    refine ⟨x8, a8, ?_, hS8, hg67.trans hg8, by simpa [decW0B] using hx8⟩
+    simp only [StateT.run_bind, hrun1, exc_ok_bind', hx, Bool.not_true, Bool.false_eq_true,
+      if_false, hrun2, hrun3, hx', natBeqName_eq, natBleName_eq, e4, e5, hrun6, hrun7, hcond,
+      decide_eq_true hP, Bool.not_false, if_true]
+    sorry
+  · rw [if_neg hP] at hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨rfl, rfl⟩ := hw
+    refine ⟨true, a7, ?_, hS7, hg67, by simp [decW0B]⟩
+    simp only [StateT.run_bind, hrun1, exc_ok_bind', hx, Bool.not_true, Bool.false_eq_true,
+      if_false, hrun2, hrun3, hx', natBeqName_eq, natBleName_eq, e4, e5, hrun6, hrun7, hcond,
+      decide_eq_false hP]
+    sorry
+
 
 end guard
 
