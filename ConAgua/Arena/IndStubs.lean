@@ -237,15 +237,4 @@ theorem indParamsOk_spec (nP o l : Word) (blk : List IConstantInfo) :
 end specs
 
 
-/-! ## Master callees without a model yet (lane indproofs)
-
-Master functions the stage calls whose word models exist only under `ArenaR` (the `intern*_refinesA`
-lemmas), not under `StageR`: lifting them across `CheckR` (`ArenaD` including `DerR`, the upper
-tiers) is not done, so a stage proof treats them as stubs, with these `RelAM` statements. -/
-
-section masterstubs
-variable (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv)
-
-end masterstubs
-
 end L.Ind
