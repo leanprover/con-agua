@@ -3,6 +3,7 @@ import ConAgua.Arena.Walk
 import ConAgua.Arena.FVarRange
 import ConAgua.Arena.Abs1Spec
 import ConAgua.Arena.ArRangeSpec
+import ConAgua.Arena.InstListSpec
 import ConAgua.Arena.HasFvar
 import ConAgua.Arena.BvarB
 import ConAgua.Arena.LitRefine
@@ -12,7 +13,7 @@ import ConAgua.Arena.Frame
 # The write sets of the walks and the store programs, from the text
 
 `closedA` (`Frame.lean`, `L/WriteSet.lean`) checked on the concrete programs (`liftProg`,
-`instProg`, `walkProg`, `fvarRangeProg`, `bvbProg`, `absProg`, `hasFvarProg`, `arProg`, `storeProg`) by `decide +kernel`, then carried to every program that satisfies the walk's program
+`instProg`, `walkProg`, `fvarRangeProg`, `bvbProg`, `absProg`, `hasFvarProg`, `arProg`, `instListProg`, `storeProg`) by `decide +kernel`, then carried to every program that satisfies the walk's program
 predicate (`LiftProg p`, `InstProg p`), since `closedW` reads only the lookups of the functions
 it checks. With `run_keeps`, any memory predicate that is `Stable` under the write set survives
 every run of the entries, with no lemma about the walk.
@@ -290,6 +291,46 @@ theorem ArProg.closed {p : Prog} (hp : ArProg p) (he : p.lookup "ar_entry" = som
 theorem arEntry_frame {p : Prog} (hp : ArProg p) (he : p.lookup "ar_entry" = some arEntry)
     {n : Nat} {vs : List Word} {m : Mem} {rs : List Word} {m' : Mem}
     (h : run p n "ar_entry" vs m = .ok (rs, m')) : MemFrame absA absC m m' :=
+  (run_memFrame (hp.closed he) (by decide) h).1
+
+/-! ## `inst_list` -/
+
+def instListFns : List FnName :=
+  ["ilm_find", "ilm_put", "ilm_clear", "il_go", "il_app", "il_lam", "il_forall", "il_let",
+    "il_proj", "il_bvar", "ilg_go", "ilg_app", "ilg_lam", "ilg_forall", "ilg_let", "ilg_proj",
+    "inst_list"] ++ mkFns
+
+/-- The `instantiateList` memo `ILMEMO` (50) and `mkA`; the spine stack `ILSPN` (144) is only
+read. -/
+def instListA : List ArrId := 50 :: mkA
+/-- The memo's stamp and count (50, 51) and `mkC`. -/
+def instListC : List Word := 50 :: 51 :: mkC
+
+theorem instListProg_closed : closedA instListProg instListA instListC instListFns = true := by
+  decide +kernel
+
+theorem InstListProg.closed {p : Prog} (hp : InstListProg p)
+    (he : p.lookup "inst_list" = some instListL) : closedA p instListA instListC instListFns = true :=
+  closedW_of_agree instListProg_closed (by
+    simp only [instListFns, mkFns, List.cons_append, List.nil_append, List.forall_mem_cons,
+      List.not_mem_nil, false_imp_iff, implies_true, and_true]
+    exact ⟨hp.ilf.trans rfl, hp.ilp.trans rfl, hp.ilc.trans rfl, hp.go.trans rfl,
+      hp.app.trans rfl, hp.lam.trans rfl, hp.fa.trans rfl, hp.le.trans rfl, hp.pj.trans rfl,
+      hp.bv.trans rfl, hp.ggo.trans rfl, hp.gapp.trans rfl, hp.glam.trans rfl, hp.gfa.trans rfl,
+      hp.gle.trans rfl, hp.gpj.trans rfl, he.trans rfl, hp.base.derb.trans rfl,
+      hp.base.mkapp.trans rfl, hp.base.mklam.trans rfl, hp.base.mkfa.trans rfl,
+      hp.base.mklet.trans rfl, hp.base.mkpj.trans rfl, hp.base.bvf.trans rfl,
+      hp.base.bvp.trans rfl, hp.base.bvi.trans rfl, hp.base.appf.trans rfl,
+      hp.base.appp.trans rfl, hp.base.appi.trans rfl, hp.base.lamf.trans rfl,
+      hp.base.lamp.trans rfl, hp.base.lami.trans rfl, hp.base.faf.trans rfl,
+      hp.base.fap.trans rfl, hp.base.fai.trans rfl, hp.base.lef.trans rfl,
+      hp.base.lep.trans rfl, hp.base.lei.trans rfl, hp.base.pjf.trans rfl,
+      hp.base.pjp.trans rfl, hp.base.pji.trans rfl⟩)
+
+/-- **Every run of `inst_list` changes only `instListA` and `instListC`.** -/
+theorem instList_frame {p : Prog} (hp : InstListProg p) (he : p.lookup "inst_list" = some instListL)
+    {n : Nat} {vs : List Word} {m : Mem} {rs : List Word} {m' : Mem}
+    (h : run p n "inst_list" vs m = .ok (rs, m')) : MemFrame instListA instListC m m' :=
   (run_memFrame (hp.closed he) (by decide) h).1
 
 /-! ## `nat_add_lit` -/
