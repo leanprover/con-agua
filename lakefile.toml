@@ -78,7 +78,7 @@ globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.A
   "ConAgua.Rom.CIReadSpec", "ConAgua.Rom.CIReadRefW", "ConAgua.Rom.CIReadRefBase",
   "ConAgua.Rom.CIReadRefNames", "ConAgua.Rom.CIReadRefCV", "ConAgua.Rom.CIReadRefCaps",
   "ConAgua.Rom.CIReadRefRule", "ConAgua.Rom.CIReadRefCI", "ConAgua.Rom.CIReadRefBlock",
-  "ConAgua.Rom.CIReadRefLayout", "ConAgua.Arena.DeclTwin"]
+  "ConAgua.Rom.CIReadRefLayout", "ConAgua.Rom.CIReadRefData", "ConAgua.Arena.DeclTwin"]
 
 # Vendored from con-leche and con-ron (proof/ dir) at the revisions in vendor/UPSTREAM, plus the
 # patch series vendor/patches/ (scripts/bump-con-ron.sh; vendor/README.md).
