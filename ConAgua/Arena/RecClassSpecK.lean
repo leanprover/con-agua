@@ -563,4 +563,143 @@ theorem classGenMinorTy_spec (n : Nat) (s₀ : St) (g c x d : Word) :
 
 end specs
 
+/-! ## Relational lemmas: the inductive hypothesis -/
+
+theorem rec2CG_cls {m : Mem} {g : Nat} {G : ClassGen} (h : decCG m g = some G) :
+    decAt m (decPL m (decTM m)) (g + 3) = some G.cls := by
+  simp only [decCG, bind, Option.bind_eq_some_iff, pure, Option.some.injEq] at h
+  obtain ⟨nP, hnP, ps, hps, cls, hcls, ft, hft, sl, hsl, cts, hcts, el, hel, pre, hpre, rfl⟩ := h
+  exact hcls
+
+section sims
+variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv}
+
+theorem rec2SimIh (n : Nat) {m : Mem} {a : AState} (hS : StageR dn vis fe m a) {g : Word} {G : ClassGen}
+    (hG : DecB (fun m => decCG m g.toNat) m G) (t tele : Word) {w : Word} (hw : H w) (d : Word) :
+    RSim (rec2IhF n m g t tele w d) (G.ihParts t.toNat tele.toNat (decI w) d.toNat) a
+      (fun b a' x => StageR dn vis fe b.2 a' ∧ IWGrow m b.2 ∧ IhRes b.2 b.1 x) := by
+  cases n with
+  | zero => exact RSim.none
+  | succ n =>
+  rintro ⟨r, m'⟩ h
+  obtain ⟨res, a', hrun, hS', hg, hres⟩ := ihW_ok dn vis fe m m' a g t tele w d G r hS hw
+    (rec2CG_cls (hG.get (decCG_mono _))) hS.2.2.2.1 h
+  exact ⟨res, a', hrun, hS', hg, hres⟩
+
+/-- `class_gen_minor_ty_ih1`, in continuation form: the twin's body of `ihsGo` at one recursive
+field, then `REST` at the inductive hypothesis. -/
+theorem i1W_sim {β γ : Type} (n : Nat) (m : Mem) (a : AState) (g t tele wso wsl fvso fvsl i e : Word)
+    (G : ClassGen) (ws fvs : List EIdx) (hS : StageR dn vis fe m a) (hG : DecB (fun m => decCG m g.toNat) m G)
+    (hns : G.nP + G.slots.length < 2 ^ 64)
+    (hws : decHL m wso.toNat wsl.toNat = some ws) (hwb : wso.toNat + wsl.toNat ≤ iwTop m)
+    (hfvs : decHL m fvso.toNat fvsl.toNat = some fvs) (hfb : fvso.toNat + fvsl.toNat ≤ iwTop m)
+    (K : Option (List Word × Mem) → Option β) (hK : K none = none) (REST : EIdx → AM (Option γ))
+    (Q : β → AState → Option γ → Prop)
+    (hnone : ∀ m' a', StageR dn vis fe m' a' → IWGrow m m' → RSim (K (some ([0, 0], m'))) (pure none) a' Q)
+    (hsome : ∀ m' a' w, StageR dn vis fe m' a' → IWGrow m m' → H w →
+      RSim (K (some ([1, w], m'))) (REST (decI w)) a' Q) :
+    RSim (K (i1W (n + 1) m g t tele wso wsl fvso fvsl i e)) (do
+      let w ← ConRon.Arena.exprGetD ws i.toNat
+      let __do_lift ← G.ihParts t.toNat tele.toNat w e.toNat
+      match __do_lift with
+      | none => pure none
+      | some (xs, idx) => do
+        let f ← ConRon.Arena.exprGetD fvs i.toNat
+        let fx ← mkAppN f xs
+        let mt ← G.motVar t.toNat
+        let body ← mkAppN mt (idx ++ [fx])
+        let bs ← List.mapM G.binder xs
+        let ih ← ConRon.Arena.closeTelescope bs e.toNat body
+        REST ih) a Q := by
+  rw [i1W_eq]
+  refine RSim.bind (K := fun o => K (i1K1 n g t tele fvso fvsl i e o)) hK
+    (rec2SimExprGetD n hS hws (hS.lt64 hwb)) ?_
+  rintro ⟨r1, m1⟩ w a1 - ⟨hS1, hg1, hwH, hwd⟩
+  dsimp only at hS1 hg1 hwH hwd
+  subst hwd
+  rw [i1K1_some]
+  refine RSim.bind (K := fun o => K (i1K2 n g t fvso fvsl i e o)) hK
+    (rec2SimIh n hS1 (hG.grow (decCG_mono _) hg1) t tele hwH e) ?_
+  rintro ⟨r2, m2⟩ o a2 - ⟨hS2, hg2, ho⟩
+  dsimp only at hS2 hg2 ho
+  have hg12 := hg1.trans hg2
+  cases o with
+  | none => rw [i1K2_fail (h := ho)]; exact hnone m2 a2 hS2 hg12
+  | some p2 =>
+  obtain ⟨xs, idx⟩ := p2
+  obtain ⟨h21, hxs, hxb, hidx, hidb⟩ := ho
+  rw [i1K2_ok (h := by rw [h21]; decide)]
+  cases n with
+  | zero => rw [show (itW 0 _ _ _ _ _ _ _ _ _ _ _) = none from rfl]; exact (by rw [show i1K3 none = none from rfl, hK]; exact RSim.none)
+  | succ n =>
+  rw [itW_eq]
+  refine RSim.bind (K := fun o => K (i1K3 (itK1 n g t _ _ _ _ e o))) hK
+    (rec2SimExprGetD n hS2 (by rw [decHL_grow hg12 hfb]; exact hfvs) (hS2.lt64 (Nat.le_trans hfb hg12.1))) ?_
+  rintro ⟨r3, m3⟩ f a3 - ⟨hS3, hg3, hfH, hfd⟩
+  dsimp only at hS3 hg3 hfH hfd
+  subst hfd
+  rw [itK1_some]
+  refine RSim.bind (K := fun o => K (i1K3 (itK2 n g t _ _ _ _ e o))) hK
+    ((mkAppN_spec dn vis fe _ _ _ hfH xs).sim ⟨hS3, by rw [decHL_grow hg3 hxb]; exact hxs⟩) ?_
+  rintro ⟨r4, m4⟩ fx a4 - ⟨hS4, hg4, hfxH, hfxd⟩
+  dsimp only at hS4 hg4 hfxH hfxd
+  subst hfxd
+  rw [itK2_some]
+  have hg24 := hg3.trans hg4
+  refine RSim.bind (K := fun o => K (i1K3 (itK3 n _ _ _ _ e (r4.headD 0) o))) hK
+    (rec2SimMotVar n hS4 t (hG.grow (decCG_mono _) (hg12.trans hg24)) hns) ?_
+  rintro ⟨r5, m5⟩ mt a5 - ⟨hS5, hg5, hmtH, hmtd⟩
+  dsimp only at hS5 hg5 hmtH hmtd
+  subst hmtd
+  rw [itK3_some]
+  have hg25 := hg24.trans hg5
+  refine RSim.lstep (K := fun o => K (i1K3 (itK4 n _ _ e (r5.headD 0) o))) hK fun ⟨r6, m6⟩ h6 => ?_
+  obtain ⟨hr6, hd6, hg6, -, -, ht6⟩ := snocW_dec h6 hS5.2.2.2.1 hS5.2.2.2.2.2 (Nat.le_trans hidb hg25.1) hfxH
+    (by rw [decHL_grow hg25 hidb]; exact hidx)
+  have hS6 := snocW_stage h6 hS5
+  rw [itK4_some, hr6]
+  simp only [List.headD_cons, List.tail_cons]
+  refine RSim.bind (K := fun o => K (i1K3 (itK4b n _ _ e o))) hK
+    ((mkAppN_spec dn vis fe _ _ _ hmtH (idx ++ [decI (r4.headD 0)])).sim ⟨hS6, hd6⟩) ?_
+  rintro ⟨r7, m7⟩ body a7 - ⟨hS7, hg7, hbH, hbd⟩
+  dsimp only at hS7 hg7 hbH hbd
+  subst hbd
+  rw [itK4b_some]
+  have hg27 := hg25.trans (hg6.trans hg7)
+  rw [rec2MapM_genBinder]
+  -- `class_gen_minor_ty_ih1_close`
+  cases n with
+  | zero =>
+    rw [show (iclW 0 _ _ _ _ _) = none from rfl]
+    exact (by rw [show itK5 none = none from rfl, show i1K3 none = none from rfl, hK]; exact RSim.none)
+  | succ n =>
+  rw [iclW_eq]
+  refine RSim.bind (K := fun o => K (i1K3 (itK5 (iclK1 n e (r7.headD 0) o)))) hK
+    ((fvarTypeDs_spec dn vis fe _ _ xs).sim ⟨hS7, by rw [decHL_grow hg27 hxb]; exact hxs⟩) ?_
+  rintro ⟨r8, m8⟩ bs a8 - ⟨hS8, hg8, hbs, hbb⟩
+  dsimp only at hS8 hg8 hbs hbb
+  simp only [getD_zero, Nat.zero_add, getD_one] at hbs hbb
+  by_cases hov : e + r8.tail.headD 0 < e
+  · rw [iclK1_big (h := hov)]; simp only [show itK5 none = none from rfl, show i1K3 none = none from rfl, hK]
+    exact RSim.none
+  rw [iclK1_ok (h := hov)]
+  have hel : e.toNat + (r8.tail.headD 0).toNat < 2 ^ 64 := by
+    have : ¬ (e + r8.tail.headD 0).toNat < e.toNat := fun x => hov (UInt64.lt_iff_toNat_lt.mpr x)
+    rw [UInt64.toNat_add] at this
+    have h1 := e.toNat_lt; have h2 := (r8.tail.headD 0).toNat_lt
+    omega
+  refine RSim.bind (K := fun o => K (i1K3 (itK5 (iclK2 o)))) hK (Q1 := fun b a' x =>
+    StageR dn vis fe b.2 a' ∧ IWGrow m8 b.2 ∧ decW0E b.2 b.1 x) ?_ ?_
+  · rintro ⟨r9, m9⟩ h9
+    obtain ⟨x, a', hrun, hS', hg, hx⟩ := closeW_ok n dn fe vis m8 m9 a8 _ _ e _ bs r9 h9 hS8 hbH hbs
+      (hS8.lt64 hbb) hbb hel
+    exact ⟨x, a', hrun, hS', hg, hx⟩
+  rintro ⟨r9, m9⟩ ih a9 - ⟨hS9, hg9, hih, hihd⟩
+  dsimp only at hS9 hg9 hih hihd
+  subst hihd
+  simp only [iclK2_some, itK5_some, i1K3_some, List.headD_cons, List.tail_cons]
+  exact hsome m9 a9 _ hS9 (hg12.trans (hg27.trans (hg8.trans hg9))) hih
+
+end sims
+
 end L.Ind
