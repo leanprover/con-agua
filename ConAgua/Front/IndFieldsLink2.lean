@@ -122,14 +122,13 @@ theorem item_gen {σ α : Type} (F : USize → Bool → UInt32 → σ → ScanRe
     (st0 : σ)
     (S : USize → ScanRes α) (hS : ∀ i x e, S i = .ok x e → F (i + 1) true 0 st0 = .ok x e)
     (H : ∀ m₁ q, IObjLoop b F kind q (R m₁ q) (Fn m₁ q))
-    (h0 : ∀ m₁ q, RecInv A sz q m₁ m₁ → R m₁ q 0 st0 m₁)
     (i : USize) (m₁ : Mem) (q : Word) (x : α) (e : USize) (e₂ : Word) (m₂ : Mem)
-    (hS' : S i = .ok x e) (hI : RecInv A sz q m₁ m₁)
+    (hS' : S i = .ok x e) (h0 : R m₁ q 0 st0 m₁)
     (hob : objW b.data m₁ i.toUInt64 kind q = some (e₂, m₂)) :
     e₂ = e.toUInt64 ∧ Fn m₁ q x m₂ := by
   rw [objW_eq, ← succ_toUInt64 b h64 hsize, show (1 : Word) = bw true from rfl] at hob
   exact iobj_link b h64 hsize F kind q (R m₁ q) _ (H m₁ q) (i + 1) true 0 st0 m₁ x e
-    e₂ m₂ (hS i x e hS') (h0 m₁ q hI) hob
+    e₂ m₂ (hS i x e hS') h0 hob
 
 omit h64 hsize in
 /-- A freshly allocated record is being read. -/
@@ -211,8 +210,7 @@ theorem rules_link (v : USize) (m : Mem) (l : List RuleRec) (e : USize) (r : Wor
         unfold scanRule at h; split at h
         · exact h
         · cases h) (rule_loop b h64 hsize)
-      (fun m₁ q hI => ⟨hI, rfl, rfl, seenR_zero _ _, seenR_zero _ _, seenR_zero _ _⟩)
-      i m₁ q x e e₂ m₂ hS hI hob
+      i m₁ q x e e₂ m₂ hS ⟨hI, rfl, rfl, seenR_zero _ _, seenR_zero _ _, seenR_zero _ _⟩ hob
     exact ⟨t1, t4, t2.1, t2.2.1, t3, t5⟩
 
 set_option hygiene false in
@@ -481,9 +479,8 @@ theorem recs_link (v : USize) (m : Mem) (l : List IndRecRec) (e : USize) (r : Wo
         unfold scanIndRec at h; split at h
         · exact h
         · cases h) (rec_loop b h64 hsize)
-      (fun m₁ q hI => ⟨hI, rfl, seenR_zero _ _, seenR_zero _ _, seenR_zero _ _, seenR_zero _ _,
-        seenR_zero _ _, seenR_zero _ _, seenR_zero _ _, seenR_zero _ _, seenR_zero _ _⟩)
-      i m₁ q x e e₂ m₂ hS hI hob
+      i m₁ q x e e₂ m₂ hS ⟨hI, rfl, seenR_zero _ _, seenR_zero _ _, seenR_zero _ _, seenR_zero _ _,
+        seenR_zero _ _, seenR_zero _ _, seenR_zero _ _, seenR_zero _ _, seenR_zero _ _⟩ hob
     exact ⟨t1, t4, t2.1, t2.2.1, t3, trivial⟩
 
 /-- An optional number's two words. -/
@@ -582,6 +579,75 @@ theorem ct_loop (m₁ : Mem) (q : Word) :
       simp (config := {decide := true}) only [e1', e1, ↓reduceIte]
       rfields
   · dloop_other scanIndCtorLoop
+
+omit h64 hsize in
+theorem ctF_stab (t : Nat) (x : IndCtorRec) (m m' : Mem) (x0 x1 : Nat) (h : CtF b m t x)
+    (h1 : 1 ≤ t) (h2 : t + 10 ≤ topN m IFR + 1) (hg : IGrow m m' IFR x0 x1)
+    (hd : t + 10 ≤ x0 ∨ x1 ≤ t) : CtF b m' t x := by
+  have hw := irec_keep t 10 m m' x0 x1 hg h1 h2 hd
+  obtain ⟨⟨c1, c2, c3⟩, f4, f5, o6, o8⟩ := h
+  have hopt : ∀ i, i + 1 < 10 → ∀ o, OptW m (t + i) o → OptW m' (t + i) o := by
+    intro i hi o ho
+    cases o with
+    | none => exact (hw i (by omega)).trans ho
+    | some n =>
+      refine ⟨(hw i (by omega)).trans ho.1, ?_⟩
+      have h' := hw (i + 1) hi
+      show NumW (wd m' IFR (t + i + 1)) n
+      rw [show t + i + 1 = t + (i + 1) by omega, h']
+      exact ho.2
+  refine ⟨⟨?_, ?_, ?_⟩, ?_, ?_, hopt 6 (by decide) _ o6, hopt 8 (by decide) _ o8⟩
+  · rw [show t = t + 0 from rfl, hw 0 (by decide)]; exact c1
+  · rw [hw 1 (by decide)]; exact c2
+  · rw [hw 2 (by decide)]; exact c3
+  · rw [hw 4 (by decide)]; exact f4
+  · rw [hw 5 (by decide)]; exact f5
+
+theorem ctList_shape : IListLoop b (scanIndCtorListLoop b) (scanIndCtor b) := by
+  ilist_shape scanIndCtorListLoop
+
+/-- The constructors of a block: a run of constructor records in `IFR`. -/
+theorem cts_link (v : USize) (m : Mem) (l : List IndCtorRec) (e : USize) (r : Word × Word × Word)
+    (m' : Mem) (h : scanIndCtors b v = .ok l e) (hR : Room m)
+    (hm : listW b.data m v.toUInt64 1 = some (r, m')) :
+    r.2.2 = e.toUInt64 ∧ r.2.1.toNat = l.length ∧
+      RunR (fun t x m => CtF b m t x) IFR 10 m' r.1.toNat l ∧ Grow m m' ∧ Room m' ∧
+      r.1.toNat = topN m IFR + 1 ∧ r.1.toNat + 10 * l.length = topN m' IFR + 1 := by
+  refine (fun H => ⟨H.1, H.2.1, H.2.2.1, H.2.2.2.1, H.2.2.2.2.1, H.2.2.2.2.2.1,
+    H.2.2.2.2.2.2.1⟩) (ilistW_link b h64 hsize (scanIndCtorListLoop b)
+    (scanIndCtor b) (ctList_shape b h64 hsize) (scanIndCtors b) (fun v l e h => by
+      unfold scanIndCtors at h; split at h
+      · rename_i h91; exact ⟨by simpa using h91, h⟩
+      · cases h) 1 IFR (.inl rfl) 10 (by decide) rfl
+    (fun m n => by simp [fldAllocW]) (fun t x m => CtF b m t x)
+    (fun t x m m' x0 x1 h1 h2 h3 hg h4 => ctF_stab b t x m m' x0 x1 h1 h2 h3 hg (.inl h4))
+    (fun _ _ => True) (fun _ => trivial) (fun _ _ _ _ _ => trivial) (fun _ _ _ _ _ => trivial) ?_
+    v m l e r m' h hR hm)
+  · intro i m m₁ q x e e₂ m₂ hi h123 hS hR hal hob
+    rw [show flagsW m₁ 1 q = (m₁.set64 IFR (q + 6) 0).set64 IFR (q + 8) 0 by simp [flagsW]] at hob
+    have hI := recInv_alloc IFR (.inl rfl) 10 _ q m m₁ hR rfl hal
+    obtain ⟨f1, -, -, -, f5⟩ := slot_put IFR (.inl rfl) 10 (by decide) q 6 0 m₁ m₁ hI (by decide)
+    have g1 := slot_view IFR (.inl rfl) 10 (by decide) q 6 0 m₁ m₁ hI (by decide)
+    obtain ⟨f1', -, -, -, f5'⟩ := slot_put IFR (.inl rfl) 10 (by decide) q 8 0 m₁ _ f1 (by decide)
+    have g1' := slot_view IFR (.inl rfl) 10 (by decide) q 8 0 m₁ _ f1 (by decide)
+    generalize hF : (m₁.set64 IFR (q + 6) 0).set64 IFR (q + 8) 0 = mF at hob f1' f5' g1'
+    have hIF : RecInv IFR 10 q mF mF := ⟨IGrow.refl _ _ _ _, f1'.2.1, f1'.2.2.1,
+      by rw [f5', f5]; exact f1'.2.2.2⟩
+    obtain ⟨t1, ⟨t2, t3⟩, t4⟩ := item_gen b h64 hsize
+      (fun i w seen (st : CtSt) => scanIndCtorLoop b i w seen st.isUns st.lps st.nm st.nF
+        st.nP st.ty st.ci st.ind) 1 IFR 10
+      (fun m₁ q d m => (RecInv IFR 10 q m₁ m ∧ topN m IFR = topN m₁ IFR) ∧ CtF b m q.toNat d)
+      (CtLR b) ⟨false, [], 0, 0, 0, 0, none, none⟩ (scanIndCtor b) (fun i x e h => by
+        unfold scanIndCtor at h; split at h
+        · exact h
+        · cases h) (ct_loop b h64 hsize)
+      i mF q x e e₂ m₂ hS ⟨hIF, rfl, seenR_zero _ _, seenR_zero _ _, seenR_zero _ _,
+        seenR_zero _ _, seenR_zero _ _,
+        (by show wd mF IFR (q.toNat + 6) = 0
+            rw [g1', if_neg (by decide), g1, if_pos (by decide)]),
+        (by show wd mF IFR (q.toNat + 8) = 0
+            rw [g1', if_pos (by decide)])⟩ hob
+    exact ⟨t1, t4, f1'.1.trans t2.1, t2.2.1, ⟨by rw [t3, f5', f5], trivial⟩⟩
 
 end kinds
 
