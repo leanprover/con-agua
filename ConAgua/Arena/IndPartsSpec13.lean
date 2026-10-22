@@ -448,4 +448,164 @@ theorem bpfW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {
     refine ⟨hS2, hg1.trans hg2, ?_⟩
     rw [hr2]; simp only [List.all_cons, hcn, heq, Bool.not_false, Bool.true_and]; rfl
 
+/-- **`block_shape_pins_recs`**: no recursor's name reserved. -/
+theorem bprW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState}
+    {R : List NIdx} (hR : reservedBasisNames.run a = .ok (R, a)) (n : Nat) :
+    ∀ (m m' : Mem) (ro rl : Word) (rs : List (IConstantVal × Nat × Nat × List IRecRule)) (r : List Word),
+    bprW n m ro rl = some (r, m') → StageR dn vis fe m a → PSlR decSR rs ro rl m →
+    m' = m ∧ r = [if rs.all (fun r => !R.contains r.1.name) then 1 else 0] := by
+  induction n with
+  | zero => intro m m' ro rl rs r h; simp [bprW] at h
+  | succ n ih =>
+    intro m m' ro rl rs r h hS hrs
+    by_cases hc : rl = 0
+    · rw [bprW_nil n m ro rl hc] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      subst hc; rw [partsPSl_nil hrs]
+      exact ⟨rfl, rfl⟩
+    rw [bprW_cons n m ro rl hc] at h
+    obtain ⟨pc, ⟨cv, mI, rP, rules⟩, rs', rfl, hw, hpb, hrs0, hrs'⟩ := partsPSl_cons hrs hc
+    obtain ⟨⟨cvp, hcvp, hcv⟩, -, -⟩ := decSR_fields (show decSR (truncM m) pc = _ from hrs0)
+    obtain ⟨hcw, hcvb, -⟩ := partsIwRd hcvp (UInt64.toNat_ofNat_of_lt' hpb)
+    rw [hw, hcw] at h
+    obtain ⟨hnl, hne⟩ := partsCVName (IWGrow.refl m) (show DecB (fun m => decCVp m cvp) m cv from hcv) hcvb
+    cases hb : resContW n m (rdW (m.arr64 EREC) (UInt64.ofNat cvp)) with
+    | none => rw [hb] at h; cases h
+    | some b =>
+    rw [hb] at h
+    simp only at h
+    obtain ⟨R', hR', hbv⟩ := partsResCont hnl hb hS.1.pins
+    rw [partsResR hR hR', hne] at hbv
+    by_cases hb0 : b ≠ 0
+    · rw [if_pos hb0] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      have : R.contains cv.name = true := by
+        cases hcc : R.contains cv.name
+        · rw [hcc] at hbv; exact absurd (by simpa using hbv) hb0
+        · rfl
+      exact ⟨rfl, by simp only [List.all_cons, this, Bool.not_true, Bool.false_and]; rfl⟩
+    rw [if_neg hb0] at h
+    have hcn : R.contains cv.name = false := by
+      cases hcc : R.contains cv.name
+      · rfl
+      · rw [hcc] at hbv; simp at hbv; exact absurd (by rw [hbv]; decide) hb0
+    cases h2 : bprW n m (ro + 1) (rl - 1) with
+    | none => rw [h2] at h; cases h
+    | some x2 =>
+    obtain ⟨r2, m2⟩ := x2
+    rw [h2, pinK4_some] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨rfl, hr2⟩ := ih m m2 (ro + 1) (rl - 1) rs' r2 h2 hS hrs'
+    refine ⟨rfl, ?_⟩
+    rw [hr2]; simp only [List.all_cons, hcn, Bool.not_false, Bool.true_and]; rfl
+
+/-- **`block_shape_pins_ctors`**: every constructor at `nP` and `lps`, no name reserved. -/
+theorem bpcW_ok {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {a : AState} {nP lo ll : Word}
+    {lps R : List NIdx} (hR : reservedBasisNames.run a = .ok (R, a)) (n : Nat) :
+    ∀ (m m' : Mem) (cso csl : Word) (cs : List (IConstantVal × Nat × Nat)) (r : List Word),
+    bpcW n m nP cso csl lo ll = some (r, m') → StageR dn vis fe m a → PSlR decSC cs cso csl m →
+    decHL m lo.toNat ll.toNat = some lps → lo.toNat + ll.toNat ≤ iwTop m →
+    StageR dn vis fe m' a ∧ IWGrow m m' ∧
+      r = [if cs.all (fun c => c.2.1 == nP.toNat && c.1.levelParams == lps && !R.contains c.1.name)
+        then 1 else 0] := by
+  induction n with
+  | zero => intro m m' cso csl cs r h; simp [bpcW] at h
+  | succ n ih =>
+    intro m m' cso csl cs r h hS hcs hl hlb
+    by_cases hc : csl = 0
+    · rw [bpcW_nil n m nP cso csl lo ll hc] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      subst hc; rw [partsPSl_nil hcs]
+      exact ⟨hS, IWGrow.refl _, rfl⟩
+    obtain ⟨pc, ⟨cv0, nP0, nF0⟩, cs', rfl, hw, hpb, hc0, hcs'⟩ := partsPSl_cons hcs hc
+    have hd0 : decSC (truncM m) pc = some (cv0, nP0, nF0) := hc0
+    simp only [decSC, bind, Option.bind_eq_some_iff, pure, Option.some.injEq, Prod.mk.injEq] at hd0
+    obtain ⟨cvp, hcvp, cv, hcv, nP1, hnP, nF, hnF, e1, e2, e3⟩ := hd0
+    subst e1 e2 e3
+    have hpw : (UInt64.ofNat pc).toNat = pc := UInt64.toNat_ofNat_of_lt' hpb
+    have hT : iwTop m < 2 ^ 64 := (rdW (m.arr64 CTL) 200).toNat_lt
+    have hp1 : (UInt64.ofNat pc + 1).toNat = pc + 1 := by
+      have := partsIwLt hnP; rw [UInt64.toNat_add, hpw]; simp; omega
+    obtain ⟨hcw, hcvb, -⟩ := partsIwRd hcvp hpw
+    obtain ⟨hpw1, hnPb, -⟩ := partsIwRd hnP hp1
+    have hnpeq : (UInt64.ofNat nP1 = nP) ↔ (nP1 == nP.toNat) = true := by
+      simp only [beq_iff_eq]
+      constructor
+      · intro e; rw [← e, UInt64.toNat_ofNat_of_lt' hnPb]
+      · intro e; rw [e, ofNat_toNat_word]
+    by_cases hnp : rdW (m.arr64 IW) (rdW (m.arr64 IW) cso + 1) ≠ nP
+    · rw [bpcW_np n m nP cso csl lo ll hc hnp] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      rw [hw, hpw1] at hnp
+      have : (nP1 == nP.toNat) = false := by
+        cases hcc : (nP1 == nP.toNat)
+        · rfl
+        · exact absurd (hnpeq.mpr hcc) hnp
+      exact ⟨hS, IWGrow.refl _, by simp only [List.all_cons, this, Bool.false_and]; rfl⟩
+    rw [bpcW_cons n m nP cso csl lo ll hc hnp] at h
+    have hnpt : (nP1 == nP.toNat) = true := by
+      rw [hw, hpw1] at hnp; exact hnpeq.mp (by simpa using hnp)
+    rw [hw, hcw] at h
+    obtain ⟨hnl, hne⟩ := partsCVName (IWGrow.refl m) (show DecB (fun m => decCVp m cvp) m cv from hcv) hcvb
+    cases hb : resContW n m (rdW (m.arr64 EREC) (UInt64.ofNat cvp)) with
+    | none => rw [hb] at h; simp [bpcK1] at h
+    | some b =>
+    rw [hb] at h
+    obtain ⟨R', hR', hbv⟩ := partsResCont hnl hb hS.1.pins
+    rw [partsResR hR hR', hne] at hbv
+    by_cases hb0 : b ≠ 0
+    · rw [bpcK1_res n m nP cso csl lo ll _ b hb0] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      have : R.contains cv.name = true := by
+        cases hcc : R.contains cv.name
+        · rw [hcc] at hbv; exact absurd (by simpa using hbv) hb0
+        · rfl
+      exact ⟨hS, IWGrow.refl _, by simp only [List.all_cons, this, Bool.not_true, Bool.and_false, Bool.false_and]; rfl⟩
+    rw [bpcK1_ok n m nP cso csl lo ll _ b hb0] at h
+    have hcn : R.contains cv.name = false := by
+      cases hcc : R.contains cv.name
+      · rfl
+      · rw [hcc] at hbv; simp at hbv; exact absurd (by rw [hbv]; decide) hb0
+    cases h1 : erToIwW n m (rdW (m.arr64 EREC) (UInt64.ofNat cvp + 1)) (rdW (m.arr64 EREC) (UInt64.ofNat cvp + 2)) with
+    | none => rw [h1] at h; simp [bpcK2] at h
+    | some x1 =>
+    obtain ⟨rp, m1⟩ := x1
+    rw [h1, bpcK2_some] at h
+    cases he : eqW n m1 (rp.headD 0) (rp.tail.headD 0) lo ll with
+    | none => rw [he] at h; simp [bpcK3] at h
+    | some e =>
+    rw [he] at h
+    obtain ⟨hS1, hg1, hev⟩ := partsLpsEq h1 he hS (show DecB (fun m => decCVp m cvp) m cv from hcv) hcvb hl hlb
+    by_cases he0 : e = 0
+    · rw [bpcK3_ne n m1 nP cso csl lo ll e he0] at h
+      simp only [Option.some.injEq, Prod.mk.injEq] at h
+      obtain ⟨rfl, rfl⟩ := h
+      have : (cv.levelParams == lps) = false := by
+        cases hcc : (cv.levelParams == lps)
+        · rfl
+        · rw [hcc] at hev; simp at hev; rw [hev] at he0; exact absurd he0 (by decide)
+      exact ⟨hS1, hg1, by simp only [List.all_cons, this, Bool.and_false, Bool.false_and]; rfl⟩
+    rw [bpcK3_eq n m1 nP cso csl lo ll e he0] at h
+    have heq : (cv.levelParams == lps) = true := by
+      cases hcc : (cv.levelParams == lps)
+      · rw [hcc] at hev; exact absurd (by simpa using hev) he0
+      · rfl
+    cases h2 : bpcW n m1 nP (cso + 1) (csl - 1) lo ll with
+    | none => rw [h2] at h; cases h
+    | some x2 =>
+    obtain ⟨r2, m2⟩ := x2
+    rw [h2, pinK4_some] at h
+    simp only [Option.some.injEq, Prod.mk.injEq] at h
+    obtain ⟨rfl, rfl⟩ := h
+    obtain ⟨hS2, hg2, hr2⟩ := ih m1 m2 (cso + 1) (csl - 1) cs' r2 h2 hS1 (hcs'.grow decSC_mono hg1)
+      (by rw [decHL_grow3 hg1 hlb]; exact hl) (Nat.le_trans hlb hg1.1)
+    refine ⟨hS2, hg1.trans hg2, ?_⟩
+    rw [hr2]; simp only [List.all_cons, hcn, heq, hnpt, Bool.not_false, Bool.true_and, Bool.and_true]; rfl
+
 end L.Ind
