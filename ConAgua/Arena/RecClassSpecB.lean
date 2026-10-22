@@ -886,7 +886,7 @@ theorem decHL_drop {k' : IdxKind} {m : Mem} : ∀ (k : Nat) {o l : Nat} {xs : Li
 /-- The `nPc` word `class_gen_ih_parts` reads, against the twin's `(g.cls[t]?).map nPc`. -/
 theorem ihNPc_word {m : Mem} {g t : Word} {cls : List TargetMajor}
     (hcls : decAt m (decPL m (decTM m)) (g.toNat + 3) = some cls)
-    (hsz : (m.arr64 IW).size + 5 < 2 ^ 64) :
+    (hsz : (m.arr64 IW).size < 2 ^ 64) :
     (if t < rdW (m.arr64 IW) (g + 4) then
         rdW (m.arr64 IW) (rdW (m.arr64 IW) (rdW (m.arr64 IW) (g + 3) + t) + 4) else 0) =
       UInt64.ofNat (match cls[t.toNat]? with | some M => M.nPc | none => 0) ∧
@@ -957,7 +957,7 @@ def IhRes (m' : Mem) (r : List Word) : Option (List EIdx × List EIdx) → Prop
 theorem ihW_ok (dn : NIdx → Option ConLeche.Name) (vis : Word) (fe : IFEnv) (m m' : Mem)
     (a : AState) (g t tele w d : Word) (G : ClassGen) (r : List Word) (hS : StageR dn vis fe m a)
     (hw : H w) (hcls : decAt m (decPL m (decTM m)) (g.toNat + 3) = some G.cls)
-    (hsz : (m.arr64 IW).size + 5 < 2 ^ 64)
+    (hsz : (m.arr64 IW).size < 2 ^ 64)
     (h : ihW m g t tele w d = some (r, m')) :
     ∃ res a', (ConRon.Arena.ClassGen.ihParts G t.toNat tele.toNat (decI w) d.toNat).run a = .ok (res, a') ∧
       StageR dn vis fe m' a' ∧ IWGrow m m' ∧ IhRes m' r res := by
@@ -1110,7 +1110,7 @@ theorem classGenIhParts_refines (p : Prog) (hp : p.lookup "class_gen_ih_parts" =
       ⊤⦄ := by
   refine triple_post (classGenIhParts_spec p hp n s₀ g t tele w d) ?_
   rintro r s' ⟨hl, hm⟩
-  obtain ⟨res, a', hrun, hS', hg, hres⟩ := ihW_ok dn vis fe _ _ a₀ g t tele w d G r hS hw hcls hsz hm
+  obtain ⟨res, a', hrun, hS', hg, hres⟩ := ihW_ok dn vis fe _ _ a₀ g t tele w d G r hS hw hcls (by omega) hm
   obtain ⟨hok, hst, hrs⟩ := AM.of_run_ok (ConRon.Arena.ClassGen.ihParts G t.toNat tele.toNat (decI w) d.toNat) a₀ a' res hrun
   exact ⟨hl, hok, by rw [hst]; exact hS', hg, by rw [hrs]; exact hres⟩
 
