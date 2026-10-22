@@ -34,6 +34,7 @@ globs = ["ConAgua", "ConAgua.Arena.Refine", "ConAgua.Arena.StoreRel", "ConAgua.A
   "ConAgua.Arena.Abs1", "ConAgua.Arena.Abs1Spec", "ConAgua.Arena.Abs1Refine",
   "ConAgua.Arena.InstList", "ConAgua.Arena.InstListSpec", "ConAgua.Arena.InstListRefine",
   "ConAgua.Arena.ArRange", "ConAgua.Arena.ArRangeSpec", "ConAgua.Arena.ArRangeRefine",
+  "ConAgua.Arena.HasFvar", "ConAgua.Arena.HasFvarRefine",
   "ConAgua.Arena.LiftBenchComp", "ConAgua.Arena.LiftEmit",
   "ConAgua.Arena.Inst1BenchComp", "ConAgua.Arena.Inst1Emit",
   "ConAgua.Arena.LsStore", "ConAgua.Arena.LsRefine", "ConAgua.Arena.PoolSlice",

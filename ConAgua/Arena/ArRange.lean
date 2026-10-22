@@ -16,8 +16,8 @@ con-ron's executed `abstractRangeGo d k` (Lean twin `Arena/ExprOps.lean`, con-le
 range `(d, k)` for the single `d` and the cursor `c` for `k`: the same cut-off (`ab_fvb`, `fvarB ≤
 d`), the same memo `abs1C` keyed `(h, c)` (`Abs1.lean`; the two walks never nest, each entry clears
 it), the same rebuild on change (`rbAppW` …). The new pieces: the `fvar` arm's range test, the
-entry's `k = 0` identity, and two capacity checks the twin (over `Nat`) does not need: `d + k` and
-`c + (d + k - 1 - i)` must not wrap.
+entry's `k = 0` identity, and two capacity checks in the `fvar` arm the twin (over `Nat`) does not
+need: `d + k` and `c + (d + k - 1 - i)` must not wrap.
 -/
 
 set_option experimental.vcgen true
