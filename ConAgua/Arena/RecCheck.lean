@@ -594,11 +594,12 @@ def targetRecPins : FunDecl := lfn (p, blocko, blockl)
 instantiated at the major's levels. -/
 -- con-ron: ConRon/Arena/Inductives/RecCheck.lean:401-407 ConRon.Arena.targetCtorAt
 @[l_impl ConRon.Arena.targetCtorAt]
-def targetCtorAt : FunDecl := lfn (M, c) locals (mem, r, lo, ll) {
+def targetCtorAt : FunDecl := lfn (M, c) locals (mem, r, lo, ll, us) {
   mem := IW.u64[M + 8];
   if mem != 0 { return EREC.u64[c + 3] };
+  us := IW.u64[M + 1];
   (lo, ll) := call cv_lps(c);
-  r := call inst_lp_fast(⟪CWF⟫, lo, ll, IW.u64[M + 1], EREC.u64[c + 3]);
+  r := call inst_lp_fast(⟪CWF⟫, lo, ll, us, EREC.u64[c + 3]);
   return r
 }
 
