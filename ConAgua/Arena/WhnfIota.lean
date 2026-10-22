@@ -89,16 +89,21 @@ def isStrLitL : FunDecl := lfn (h) locals (t, i) {
 
 Both read only the 11-word rule records at `(ro, rc)` in `EREC`; neither touches `AM`. -/
 
+/-- The scan of `find_rule` (a named block, for the proofs). -/
+def findRuleLoop : Stmt := lblk (ro, rc, c, i) {
+  while i < rc {
+    if EREC.u64[ro + 11 * i] == c { return (1, ro + 11 * i) };
+    i += 1
+  }
+}
+
 /-- con-leche: `Core.lean:777-876` (`iotaRec`'s own lookup) `findRule` — the rule whose
 constructor is `c`, as a linear scan of the rule-record slice. -/
 -- con-ron: ConRon/Arena/Core.lean:2005-2010 ConRon.Arena.findRule
 @[l_impl ConRon.Arena.findRule]
 def findRuleL : FunDecl := lfn (ro, rc, c) locals (i) {
   i := 0;
-  while i < rc {
-    if EREC.u64[ro + 11 * i] == c { return (1, ro + 11 * i) };
-    i += 1
-  };
+  ⟪findRuleLoop⟫;
   return (0, 0)
 }
 
