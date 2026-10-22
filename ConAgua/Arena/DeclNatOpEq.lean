@@ -44,6 +44,7 @@ end keepsp
 
 structure NatSubProg' (p : Prog) : Prop extends NatSubProg p where
   lNatEqCtx : p.lookup "nat_eq_ctx" = some natEqCtx
+  lNatEqDisp : p.lookup "nat_eq_disp" = some natEqDisp
 
 section opeq
 variable {dn : NIdx → Option ConLeche.Name} {vis : Word} {fe : IFEnv} {p : Prog}
@@ -288,7 +289,7 @@ theorem natEqCtx_ref (hN : NatSubProg' p) (pi d : Word) :
 /-! ### The dispatch -/
 
 def natEqDispW (p : Prog) (n : Nat) (m : Mem) (c pi cx : Word) : Option (List Word × Mem) :=
-  let fin := fun (r : List Word) (m' : Mem) => some ([r.headD 0, r.getD 1 0], m')
+  let fin := fun (r : List Word) (m' : Mem) => some ([r.headD 0, r.tail.headD 0], m')
   if c = pw m pi 0 then bW (callW p n "nat_eq_pr" [c, pw m cx 2, pw m cx 0, pw m cx 4] m) fin else
   if c = pw m pi 1 then bW (callW p n "nat_eq_un" [c, pw m cx 0, pw m cx 1, pw m cx 2, pw m cx 5, pw m cx 3] m) fin else
   if c = pw m pi 2 then bW (callW p n "nat_eq_un" [c, pw m cx 0, pw m cx 1, pw m cx 2, pw m cx 5, pw m pi 0] m) fin else
@@ -298,6 +299,7 @@ def natEqDispW (p : Prog) (n : Nat) (m : Mem) (c pi cx : Word) : Option (List Wo
   if c = pw m pi 6 then bW (callW p n "nat_eq_bl" [c, pw m cx 0, pw m cx 1, pw m cx 2, pw m cx 4, pw m cx 5, pw m cx 6, pw m cx 7] m) fin else
   some ([0, 0], m)
 
+set_option maxHeartbeats 6400000 in
 theorem natEqDisp_specW (p : Prog) (hp : p.lookup "nat_eq_disp" = some natEqDisp) (n : Nat) (s₀ : St)
     (c pi cx : Word) :
     ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_eq_disp" [c, pi, cx]
@@ -309,6 +311,217 @@ theorem natEqDisp_specW (p : Prog) (hp : p.lookup "nat_eq_disp" = some natEqDisp
       callW_spec p n "nat_eq_pr", callW_spec p n "nat_eq_un", callW_spec p n "nat_eq_mu",
       callW_spec p n "nat_eq_po", callW_spec p n "nat_eq_be", callW_spec p n "nat_eq_bl"] <;>
     finish (gen := 20) (instances := 10000) [natEqDispW, bW, pw]
+
+def natEqDispT (c pr ad su mu po be bl : NIdx) (x y z : EIdx) (sN : NIdx) (sx sy bT bF : EIdx) :
+    AM (List (EIdx × EIdx)) :=
+  if c == pr then natEqPrT c z x sx
+  else if c == ad then natEqUnT c x y z sy sN
+  else if c == su then natEqUnT c x y z sy pr
+  else if c == mu then natEqMuT c x y z sy ad
+  else if c == po then natEqPoT c x y z sy sN mu
+  else if c == be then natEqBeT c x y z sx sy bT bF
+  else if c == bl then natEqBlT c x y z sx sy bT bF
+  else pure []
+
+theorem decEqRL_norm {m : Mem} {r : List Word} {ps : List (EIdx × EIdx)} (h : decEqRL m r ps) :
+    decEqRL m [r.headD 0, r.tail.headD 0] ps := by
+  cases r with
+  | nil => simpa [decEqRL] using h
+  | cons a t => cases t <;> simpa [decEqRL] using h
+
+theorem natEqDisp_ref (hN : NatSubProg' p) (c pi cx p0 p1 p2 p3 p4 p5 p6 x y z sN sx sy bT bF : Word) :
+    CallRef p "nat_eq_disp" [c, pi, cx]
+      (fun m a => StageR dn vis fe m a ∧ H c ∧ H p0 ∧ H p1 ∧ H p2 ∧ H p3 ∧ H p4 ∧ H p5 ∧ H p6 ∧
+        H x ∧ H y ∧ H z ∧ H sN ∧ H sx ∧ H sy ∧ H bT ∧ H bF ∧
+        pw m pi 0 = p0 ∧ pw m pi 1 = p1 ∧ pw m pi 2 = p2 ∧ pw m pi 3 = p3 ∧ pw m pi 4 = p4 ∧
+        pw m pi 5 = p5 ∧ pw m pi 6 = p6 ∧ pw m cx 0 = x ∧ pw m cx 1 = y ∧ pw m cx 2 = z ∧
+        pw m cx 3 = sN ∧ pw m cx 4 = sx ∧ pw m cx 5 = sy ∧ pw m cx 6 = bT ∧ pw m cx 7 = bF)
+      (natEqDispT (decI c) (decI p0) (decI p1) (decI p2) (decI p3) (decI p4) (decI p5) (decI p6)
+        (decE x) (decE y) (decE z) (decI sN) (decE sx) (decE sy) (decE bT) (decE bF))
+      (KeepPost dn vis fe decEqRL) := by
+  refine CallRef.of_succ fun k m a r m' ⟨hS, hc, h0, h1, h2, h3, h4, h5, h6, hx, hy, hz, hsN, hsx, hsy, hbT, hbF,
+    e0, e1, e2, e3, e4, e5, e6, f0, f1, f2, f3, f4, f5, f6, f7⟩ hw => ?_
+  have hw := callW_model (M := fun mm => natEqDispW p k mm c pi cx) (natEqDisp_specW p hN.lNatEqDisp k · c pi cx) hw
+  have hE := hN.toNatSubProg.toNatEqProg
+  unfold natEqDispW at hw
+  simp only [e0, e1, e2, e3, e4, e5, e6, f0, f1, f2, f3, f4, f5, f6, f7] at hw
+  have bb : ∀ q : Word, H q → ((decI c : NIdx) == decI q) = decide (c = q) := fun q hq => decI_beq_word hc hq
+  by_cases b0 : c = p0
+  · have T : natEqDispT (decI c) (decI p0) (decI p1) (decI p2) (decI p3) (decI p4) (decI p5) (decI p6)
+        (decE x) (decE y) (decE z) (decI sN) (decE sx) (decE sy) (decE bT) (decE bF) = natEqPrT (decI c) (decE z) (decE x) (decE sx) := by
+      have e0 : ((decI c : NIdx) == decI p0) = true := by rw [bb p0 h0]; simp [b0]
+      simp only [natEqDispT, e0, Bool.false_eq_true, if_false, if_true]
+    rw [T]
+    simp only [if_pos b0] at hw
+    cases hcall : callW p k "nat_eq_pr" [c, z, x, sx] m with
+    | none => simp [hcall, bW] at hw
+    | some q =>
+    obtain ⟨r1, m1⟩ := q
+    rw [hcall, bW_some] at hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨hr, hm⟩ := hw
+    subst hr hm
+    obtain ⟨xx, a', hrun, hpost⟩ := natEqPr_ref hE c z x sx k m a r1 m1 ⟨hS, hc, hz, hx, hsx⟩ hcall
+    exact ⟨xx, a', hrun, hpost.1, hpost.2.1, decEqRL_norm hpost.2.2⟩
+  by_cases b1 : c = p1
+  · have T : natEqDispT (decI c) (decI p0) (decI p1) (decI p2) (decI p3) (decI p4) (decI p5) (decI p6)
+        (decE x) (decE y) (decE z) (decI sN) (decE sx) (decE sy) (decE bT) (decE bF) = natEqUnT (decI c) (decE x) (decE y) (decE z) (decE sy) (decI sN) := by
+      have e0 : ((decI c : NIdx) == decI p0) = false := by rw [bb p0 h0]; simp [b0]
+      have e1 : ((decI c : NIdx) == decI p1) = true := by rw [bb p1 h1]; simp [b1]
+      simp only [natEqDispT, e0, e1, Bool.false_eq_true, if_false, if_true]
+    rw [T]
+    simp only [if_neg b0, if_pos b1] at hw
+    cases hcall : callW p k "nat_eq_un" [c, x, y, z, sy, sN] m with
+    | none => simp [hcall, bW] at hw
+    | some q =>
+    obtain ⟨r1, m1⟩ := q
+    rw [hcall, bW_some] at hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨hr, hm⟩ := hw
+    subst hr hm
+    obtain ⟨xx, a', hrun, hpost⟩ := natEqUn_ref hE c x y z sy sN k m a r1 m1 ⟨hS, hc, hx, hy, hz, hsy, hsN⟩ hcall
+    exact ⟨xx, a', hrun, hpost.1, hpost.2.1, decEqRL_norm hpost.2.2⟩
+  by_cases b2 : c = p2
+  · have T : natEqDispT (decI c) (decI p0) (decI p1) (decI p2) (decI p3) (decI p4) (decI p5) (decI p6)
+        (decE x) (decE y) (decE z) (decI sN) (decE sx) (decE sy) (decE bT) (decE bF) = natEqUnT (decI c) (decE x) (decE y) (decE z) (decE sy) (decI p0) := by
+      have e0 : ((decI c : NIdx) == decI p0) = false := by rw [bb p0 h0]; simp [b0]
+      have e1 : ((decI c : NIdx) == decI p1) = false := by rw [bb p1 h1]; simp [b1]
+      have e2 : ((decI c : NIdx) == decI p2) = true := by rw [bb p2 h2]; simp [b2]
+      simp only [natEqDispT, e0, e1, e2, Bool.false_eq_true, if_false, if_true]
+    rw [T]
+    simp only [if_neg b0, if_neg b1, if_pos b2] at hw
+    cases hcall : callW p k "nat_eq_un" [c, x, y, z, sy, p0] m with
+    | none => simp [hcall, bW] at hw
+    | some q =>
+    obtain ⟨r1, m1⟩ := q
+    rw [hcall, bW_some] at hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨hr, hm⟩ := hw
+    subst hr hm
+    obtain ⟨xx, a', hrun, hpost⟩ := natEqUn_ref hE c x y z sy p0 k m a r1 m1 ⟨hS, hc, hx, hy, hz, hsy, h0⟩ hcall
+    exact ⟨xx, a', hrun, hpost.1, hpost.2.1, decEqRL_norm hpost.2.2⟩
+  by_cases b3 : c = p3
+  · have T : natEqDispT (decI c) (decI p0) (decI p1) (decI p2) (decI p3) (decI p4) (decI p5) (decI p6)
+        (decE x) (decE y) (decE z) (decI sN) (decE sx) (decE sy) (decE bT) (decE bF) = natEqMuT (decI c) (decE x) (decE y) (decE z) (decE sy) (decI p1) := by
+      have e0 : ((decI c : NIdx) == decI p0) = false := by rw [bb p0 h0]; simp [b0]
+      have e1 : ((decI c : NIdx) == decI p1) = false := by rw [bb p1 h1]; simp [b1]
+      have e2 : ((decI c : NIdx) == decI p2) = false := by rw [bb p2 h2]; simp [b2]
+      have e3 : ((decI c : NIdx) == decI p3) = true := by rw [bb p3 h3]; simp [b3]
+      simp only [natEqDispT, e0, e1, e2, e3, Bool.false_eq_true, if_false, if_true]
+    rw [T]
+    simp only [if_neg b0, if_neg b1, if_neg b2, if_pos b3] at hw
+    cases hcall : callW p k "nat_eq_mu" [c, x, y, z, sy, p1] m with
+    | none => simp [hcall, bW] at hw
+    | some q =>
+    obtain ⟨r1, m1⟩ := q
+    rw [hcall, bW_some] at hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨hr, hm⟩ := hw
+    subst hr hm
+    obtain ⟨xx, a', hrun, hpost⟩ := natEqMu_ref hE c x y z sy p1 k m a r1 m1 ⟨hS, hc, hx, hy, hz, hsy, h1⟩ hcall
+    exact ⟨xx, a', hrun, hpost.1, hpost.2.1, decEqRL_norm hpost.2.2⟩
+  by_cases b4 : c = p4
+  · have T : natEqDispT (decI c) (decI p0) (decI p1) (decI p2) (decI p3) (decI p4) (decI p5) (decI p6)
+        (decE x) (decE y) (decE z) (decI sN) (decE sx) (decE sy) (decE bT) (decE bF) = natEqPoT (decI c) (decE x) (decE y) (decE z) (decE sy) (decI sN) (decI p3) := by
+      have e0 : ((decI c : NIdx) == decI p0) = false := by rw [bb p0 h0]; simp [b0]
+      have e1 : ((decI c : NIdx) == decI p1) = false := by rw [bb p1 h1]; simp [b1]
+      have e2 : ((decI c : NIdx) == decI p2) = false := by rw [bb p2 h2]; simp [b2]
+      have e3 : ((decI c : NIdx) == decI p3) = false := by rw [bb p3 h3]; simp [b3]
+      have e4 : ((decI c : NIdx) == decI p4) = true := by rw [bb p4 h4]; simp [b4]
+      simp only [natEqDispT, e0, e1, e2, e3, e4, Bool.false_eq_true, if_false, if_true]
+    rw [T]
+    simp only [if_neg b0, if_neg b1, if_neg b2, if_neg b3, if_pos b4] at hw
+    cases hcall : callW p k "nat_eq_po" [c, x, y, z, sy, sN, p3] m with
+    | none => simp [hcall, bW] at hw
+    | some q =>
+    obtain ⟨r1, m1⟩ := q
+    rw [hcall, bW_some] at hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨hr, hm⟩ := hw
+    subst hr hm
+    obtain ⟨xx, a', hrun, hpost⟩ := natEqPo_ref hE c x y z sy sN p3 k m a r1 m1 ⟨hS, hc, hx, hy, hz, hsy, hsN, h3⟩ hcall
+    exact ⟨xx, a', hrun, hpost.1, hpost.2.1, decEqRL_norm hpost.2.2⟩
+  by_cases b5 : c = p5
+  · have T : natEqDispT (decI c) (decI p0) (decI p1) (decI p2) (decI p3) (decI p4) (decI p5) (decI p6)
+        (decE x) (decE y) (decE z) (decI sN) (decE sx) (decE sy) (decE bT) (decE bF) = natEqBeT (decI c) (decE x) (decE y) (decE z) (decE sx) (decE sy) (decE bT) (decE bF) := by
+      have e0 : ((decI c : NIdx) == decI p0) = false := by rw [bb p0 h0]; simp [b0]
+      have e1 : ((decI c : NIdx) == decI p1) = false := by rw [bb p1 h1]; simp [b1]
+      have e2 : ((decI c : NIdx) == decI p2) = false := by rw [bb p2 h2]; simp [b2]
+      have e3 : ((decI c : NIdx) == decI p3) = false := by rw [bb p3 h3]; simp [b3]
+      have e4 : ((decI c : NIdx) == decI p4) = false := by rw [bb p4 h4]; simp [b4]
+      have e5 : ((decI c : NIdx) == decI p5) = true := by rw [bb p5 h5]; simp [b5]
+      simp only [natEqDispT, e0, e1, e2, e3, e4, e5, Bool.false_eq_true, if_false, if_true]
+    rw [T]
+    simp only [if_neg b0, if_neg b1, if_neg b2, if_neg b3, if_neg b4, if_pos b5] at hw
+    cases hcall : callW p k "nat_eq_be" [c, x, y, z, sx, sy, bT, bF] m with
+    | none => simp [hcall, bW] at hw
+    | some q =>
+    obtain ⟨r1, m1⟩ := q
+    rw [hcall, bW_some] at hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨hr, hm⟩ := hw
+    subst hr hm
+    obtain ⟨xx, a', hrun, hpost⟩ := natEqBe_ref hE c x y z sx sy bT bF k m a r1 m1 ⟨hS, hc, hx, hy, hz, hsx, hsy, hbT, hbF⟩ hcall
+    exact ⟨xx, a', hrun, hpost.1, hpost.2.1, decEqRL_norm hpost.2.2⟩
+  by_cases b6 : c = p6
+  · have T : natEqDispT (decI c) (decI p0) (decI p1) (decI p2) (decI p3) (decI p4) (decI p5) (decI p6)
+        (decE x) (decE y) (decE z) (decI sN) (decE sx) (decE sy) (decE bT) (decE bF) = natEqBlT (decI c) (decE x) (decE y) (decE z) (decE sx) (decE sy) (decE bT) (decE bF) := by
+      have e0 : ((decI c : NIdx) == decI p0) = false := by rw [bb p0 h0]; simp [b0]
+      have e1 : ((decI c : NIdx) == decI p1) = false := by rw [bb p1 h1]; simp [b1]
+      have e2 : ((decI c : NIdx) == decI p2) = false := by rw [bb p2 h2]; simp [b2]
+      have e3 : ((decI c : NIdx) == decI p3) = false := by rw [bb p3 h3]; simp [b3]
+      have e4 : ((decI c : NIdx) == decI p4) = false := by rw [bb p4 h4]; simp [b4]
+      have e5 : ((decI c : NIdx) == decI p5) = false := by rw [bb p5 h5]; simp [b5]
+      have e6 : ((decI c : NIdx) == decI p6) = true := by rw [bb p6 h6]; simp [b6]
+      simp only [natEqDispT, e0, e1, e2, e3, e4, e5, e6, Bool.false_eq_true, if_false, if_true]
+    rw [T]
+    simp only [if_neg b0, if_neg b1, if_neg b2, if_neg b3, if_neg b4, if_neg b5, if_pos b6] at hw
+    cases hcall : callW p k "nat_eq_bl" [c, x, y, z, sx, sy, bT, bF] m with
+    | none => simp [hcall, bW] at hw
+    | some q =>
+    obtain ⟨r1, m1⟩ := q
+    rw [hcall, bW_some] at hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨hr, hm⟩ := hw
+    subst hr hm
+    obtain ⟨xx, a', hrun, hpost⟩ := natEqBl_ref hE c x y z sx sy bT bF k m a r1 m1 ⟨hS, hc, hx, hy, hz, hsx, hsy, hbT, hbF⟩ hcall
+    exact ⟨xx, a', hrun, hpost.1, hpost.2.1, decEqRL_norm hpost.2.2⟩
+  · have T : natEqDispT (decI c) (decI p0) (decI p1) (decI p2) (decI p3) (decI p4) (decI p5) (decI p6)
+        (decE x) (decE y) (decE z) (decI sN) (decE sx) (decE sy) (decE bT) (decE bF) = pure [] := by
+      have e0 : ((decI c : NIdx) == decI p0) = false := by rw [bb p0 h0]; simp [b0]
+      have e1 : ((decI c : NIdx) == decI p1) = false := by rw [bb p1 h1]; simp [b1]
+      have e2 : ((decI c : NIdx) == decI p2) = false := by rw [bb p2 h2]; simp [b2]
+      have e3 : ((decI c : NIdx) == decI p3) = false := by rw [bb p3 h3]; simp [b3]
+      have e4 : ((decI c : NIdx) == decI p4) = false := by rw [bb p4 h4]; simp [b4]
+      have e5 : ((decI c : NIdx) == decI p5) = false := by rw [bb p5 h5]; simp [b5]
+      have e6 : ((decI c : NIdx) == decI p6) = false := by rw [bb p6 h6]; simp [b6]
+      simp only [natEqDispT, e0, e1, e2, e3, e4, e5, e6, Bool.false_eq_true, if_false]
+    rw [T]
+    simp only [if_neg b0, if_neg b1, if_neg b2, if_neg b3, if_neg b4, if_neg b5, if_neg b6] at hw
+    simp only [Option.some.injEq, Prod.mk.injEq] at hw
+    obtain ⟨hr, hm⟩ := hw
+    subst hr hm
+    refine ⟨[], a, rfl, hS, IWGrow.refl m, ?_⟩
+    simp [decEqRL, EqL]
+
+/-! ### `nat_op_equations` -/
+
+def natOpEquationsW (p : Prog) (n : Nat) (m : Mem) (d c : Word) : Option (List Word × Mem) :=
+  bW (callW p n "nat_op_pins" [] m) fun rp m1 =>
+  bW (callW p n "nat_eq_ctx" [rp.headD 0, d] m1) fun rc m2 =>
+  bW (callW p n "nat_eq_disp" [c, rp.headD 0, rc.headD 0] m2) fun rr m3 =>
+  some ([rr.headD 0, rr.tail.headD 0], m3)
+
+theorem natOpEquations_specW (p : Prog) (hp : p.lookup "nat_op_equations" = some natOpEquationsL)
+    (n : Nat) (s₀ : St) (d c : Word) :
+    ⦃fun s => s = s₀⦄ invoke p (exec p (n + 1)) "nat_op_equations" [d, c]
+    ⦃fun r s' => LocEq s' s₀ ∧ natOpEquationsW p n s₀.mem d c = some (r, s'.mem); ⊤⦄ := by
+  rw [invoke_eq _ hp]
+  simp only [callFn, natOpEquationsL]
+  sym only [lang_grind, arena_grind] =>
+    vcgen [exec, step, evalE, evalC, evalArgs, setLoc, setLocs, ld64, st64,
+      callW_spec p n "nat_op_pins", callW_spec p n "nat_eq_ctx", callW_spec p n "nat_eq_disp"] <;>
+    finish (gen := 20) (instances := 10000) [natOpEquationsW, bW]
 
 end opeq
 
