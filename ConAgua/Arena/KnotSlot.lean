@@ -139,7 +139,7 @@ end spec
 /-! ## `defeqC`'s `find; put` at the eager bit -/
 
 /-- `dKeyG`'s decoding at two handle words and an eager bit. -/
-theorem dKeyG_dk (a b eb : Word) (ha : a.toNat < 2 ^ 32) (hb : b.toNat < 2 ^ 32) (heb : eb ≤ 1) :
+theorem dKeyG_dk (a b eb : Word) (hb : b.toNat < 2 ^ 32) (heb : eb ≤ 1) :
     dKeyG.dk a (genW b eb) = ((decE a, decE b), eb) := by
   have hg : eb.toNat < 2 ^ 32 := by rw [UInt64.le_iff_toNat_le] at heb; simp at heb; omega
   show (pairKey.dk a (genW b eb &&& 0xFFFFFFFF), genW b eb >>> 32) = _
