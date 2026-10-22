@@ -66,6 +66,19 @@ def binderDomL : FunDecl := lfn (k, e) locals (t, x) {
   return (0, 0)
 }
 
+/-- `app_count_at(e, f)`'s loop: `get_app_fn`'s (`getAppFnLoop`), the start counter `f0` kept. -/
+def appCountAtLoop : Stmt := lblk (e, f, t, x, f0) {
+  while e >> 28 == 4 {
+    if f == 0 { abort };
+    f -= 1;
+    t := (e >> 27) & 1;
+    x := e & 134217727;
+    if t != 0 && CTL.u64[1] == 0 { abort };
+    if CTL.u64[4 + t] <= x { abort };
+    e := AREC.u64[x * 4 + t * 2]
+  }
+}
+
 /-- `app_count_at(e, f)`: `getAppFn f e` and `numArgs f e` in one walk at the counter `f`:
 `(count, head)`. -/
 -- con-ron: ConRon/Arena/PropRead.lean:76-89 ConRon.Arena.numArgs
@@ -73,7 +86,7 @@ def binderDomL : FunDecl := lfn (k, e) locals (t, x) {
 @[l_impl ConRon.Arena.numArgs ConRon.Arena.getAppFn]
 def appCountAtL : FunDecl := lfn (e, f) locals (t, x, f0) {
   f0 := f;
-  ⟪getAppFnLoop⟫;
+  ⟪appCountAtLoop⟫;
   if f == 0 { abort };
   return (f0 - f, e)
 }
